@@ -1,0 +1,42 @@
+self_development_policy:
+  schema: 1
+  principle: capability_before_tool
+  stages:
+    - OBSERVE
+    - DETECT_GAP
+    - COLLECT_EVIDENCE
+    - CAPABILITY_ADMISSION
+    - CLASSIFY
+    - PLAN
+    - REVIEW_PLAN
+    - CREATE_DEV_JOB
+    - PREPARE_DEVELOPMENT_ENVIRONMENT
+    - BUILD_CONTEXT_MANIFEST
+    - DELEGATE
+    - BUILD_CANDIDATE
+    - TEST
+    - VERIFY
+    - COMPARE_BASELINE
+    - DECIDE
+    - ACTIVATE_OR_GATE
+    - POST_INTEGRATION_TEST
+    - AUDIT_AND_LEARN
+    - CHECKPOINT
+  evolution_levels:
+    E1:
+      build_candidate: true
+      auto_activate_default: false
+    E2:
+      build_candidate: true
+      captain_gate: true
+    E3:
+      build_candidate: true
+      captain_gate: true
+      auto_activate: never
+  invariants:
+    - stable_is_not_development_workspace
+    - evidence_before_evolution
+    - existing_capabilities_checked_before_new_tool
+    - creator_is_not_sole_approver
+    - no_permission_escalation
+    - no_silent_cloud_fallback

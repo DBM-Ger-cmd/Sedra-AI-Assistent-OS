@@ -1,0 +1,20 @@
+tool:
+  id: intent
+  name: "Vorhaben"
+  description: "Der Satz, um den es geht – und die Aufgaben, die daraus geworden sind."
+  version: 1.0.0
+  kind: object
+  handles: [intent]
+  order: 14
+  slot: inhalt
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - POST /api/objects
+    - POST /api/actions
+    - POST /api/intent/create
+  events:
+    emits: [object.open]
+    listens: [task.changed, tools.refresh]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

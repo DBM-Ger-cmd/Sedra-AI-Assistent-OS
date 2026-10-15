@@ -1,0 +1,64 @@
+skill:
+  id: ui-design
+  name: Oberfläche und Bedienabläufe
+  version: 1.0.0
+  owner_module: planning-context
+  description: Oberfläche und Bedienabläufe als begrenzter Workflow-Blueprint.
+  topics:
+  - interface
+  capabilities:
+  - ui_design
+  triggers:
+  - benutzeroberfläche
+  - benutzeroberflaeche
+  - ui design
+  - dashboard design
+  - bedienablauf
+  - wireframe
+  tool_hints:
+  - filesystem
+  workflow:
+  - stage: observe
+    tool: filesystem
+    operation: list_dir
+    binding:
+      path: <project-root>
+    read_only: true
+  - stage: plan
+    action: map_user_tasks_and_ui_states
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: draft_accessible_layout_and_error_states
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: define_visual_and_keyboard_acceptance
+    execution: planning_only
+    read_only: true
+  inputs:
+  - user tasks
+  - screen constraints
+  outputs:
+  - UI draft
+  - acceptance criteria
+  execution_support: blueprint_only; parameter_binder_pending
+  acceptance_criteria:
+  - Inputs and scope are explicit
+  - Claims distinguish evidence from assumptions
+  - No action outside selected tools and Guard
+  boundaries:
+  - No automatic deployment, publishing or hardware writes
+  - Planning actions require a later validated execution binding
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.11.0
+  status: enabled

@@ -1,0 +1,38 @@
+GUPPI OS – Guard + Human Gate v1
+
+Zweck:
+Guard schützt die Ausführungsebene. Er entscheidet vor kritischen Aktionen,
+ob eine Aktion erlaubt, blockiert oder dem Captain vorgelegt wird.
+
+Entscheidungen:
+ALLOW
+BLOCK
+CAPTAIN_REQUIRED
+
+Ablauf:
+1. Modul erzeugt Guard Request.
+2. Guard prüft Aktion, Ziel, Rechte, Risiko, Kosten und Regeln.
+3. ALLOW -> Aktion darf ausgeführt werden.
+4. BLOCK -> Aktion wird nicht ausgeführt.
+5. CAPTAIN_REQUIRED -> Human Gate wird erzeugt.
+6. Captain genehmigt, lehnt ab oder ändert den Auftrag.
+7. Eine Freigabe gilt nur für den exakt genehmigten Scope.
+
+Kernregeln:
+- Guard darf von Modulen nicht umgangen werden.
+- BLOCK hat Vorrang vor allen anderen Entscheidungen.
+- Ein Modul darf seine eigene Human-Gate-Freigabe nicht erteilen.
+- Core-Invarianten dürfen nicht über normale Updates verändert werden.
+- Stable darf sich nicht stillschweigend selbst ersetzen.
+- Freigaben sind standardmäßig einmalig.
+- Kritische Änderungen müssen auditierbar sein.
+
+Typische Captain-Gates:
+- Löschen
+- Überschreiben bestehender Daten
+- externe Schreibaktionen
+- Deployment
+- Credential-Zugriff
+- kostenpflichtige Aktionen
+- Systemänderungen
+- Core-Updates

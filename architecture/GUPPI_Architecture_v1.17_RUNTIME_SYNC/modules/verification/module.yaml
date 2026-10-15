@@ -1,0 +1,92 @@
+module:
+  id: "verification"
+  name: "Verification"
+  version: "0.1.0"
+  core_contract: 1
+
+  purpose:
+    - "Ergebnisse unabhängig gegen Mission und Acceptance Criteria prüfen."
+    - "Tests, Regressionen, Evidenz und Release-Bereitschaft bewerten."
+    - "Fehler als Rework-Aufträge an GUPPI zurückmelden."
+
+  capabilities:
+    - "requirement_verification"
+    - "artifact_validation"
+    - "test_orchestration"
+    - "regression_check"
+    - "evidence_review"
+    - "release_readiness"
+    - "rework_feedback"
+
+  inputs:
+    required:
+      - name: "mission_id"
+        type: "string"
+      - name: "captain_intent"
+        type: "string"
+      - name: "acceptance_criteria"
+        type: "array"
+      - name: "execution_result"
+        type: "object"
+    optional:
+      - name: "artifacts"
+        type: "array"
+      - name: "test_results"
+        type: "array"
+      - name: "risk_constraints"
+        type: "array"
+
+  outputs:
+    - name: "verification_report"
+      type: "object"
+    - name: "status"
+      type: "enum[PASS,FAIL,INCONCLUSIVE]"
+    - name: "findings"
+      type: "array"
+    - name: "evidence"
+      type: "array"
+    - name: "rework_request"
+      type: "object|null"
+
+  permissions:
+    read:
+      - "mission"
+      - "captain_intent"
+      - "plan"
+      - "acceptance_criteria"
+      - "execution"
+      - "artifacts"
+      - "audit"
+    write:
+      - "verification"
+      - "findings"
+      - "evidence"
+
+  prohibited:
+    - "change_captain_intent"
+    - "modify_source_artifacts_without_rework"
+    - "approve_without_evidence"
+    - "bypass_guard"
+    - "modify_core_invariants"
+
+  communicates_with:
+    - "control-master"
+    - "planning-context"
+
+  message_types:
+    accepts:
+      - "verification_request"
+      - "execution_complete"
+      - "artifact_created"
+    emits:
+      - "verification_pass"
+      - "verification_fail"
+      - "verification_inconclusive"
+      - "verification_retest"
+      - "rework_request"
+
+  completion:
+    pass_when:
+      - "all_required_acceptance_criteria_met"
+      - "required_tests_pass"
+      - "no_blocking_finding_open"

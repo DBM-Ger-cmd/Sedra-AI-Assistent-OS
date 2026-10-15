@@ -1,0 +1,23 @@
+tool:
+  id: git
+  name: Controlled Git
+  version: 0.2.0
+  provider: local
+  capabilities:
+  - status
+  - diff
+  - log
+  - rev-parse
+  - ls-files
+  - init
+  guard:
+    action_class: git
+    protected: true
+  permissions:
+    required: []
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.3.0
+  health:
+    check: tool_health
+  status: enabled

@@ -1,0 +1,17 @@
+tool:
+  id: meter
+  name: "Guppy-Meter"
+  description: "Token, Zeilen und das Münzloch – was die Arbeit kostet."
+  version: 1.0.0
+  kind: object
+  handles: [meter]
+  order: 60
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/meter
+  events:
+    emits: [object.open]
+    listens: [task.changed]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

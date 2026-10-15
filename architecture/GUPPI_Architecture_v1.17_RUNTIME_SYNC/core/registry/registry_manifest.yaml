@@ -1,0 +1,20 @@
+registry:
+  id: guppi-registry
+  version: 0.1.0
+  core_contract: 1
+  catalogs:
+    modules: module_registry.yaml
+    skills: skill_registry.yaml
+    tools: tool_registry.yaml
+    services: service_registry.yaml
+  responsibilities:
+  - discover_components
+  - validate_manifests
+  - check_compatibility
+  - publish_capabilities
+  - track_component_versions
+  - reject_invalid_components
+  invariants:
+  - unregistered_components_cannot_receive_runtime_work
+  - incompatible_components_are_not_loaded
+  - duplicate_component_ids_are_rejected

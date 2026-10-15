@@ -1,0 +1,6 @@
+Review of syntax_note.py (attempt_01_20261010_213850), Captain/Claude 2026-10-10:
+1. DEFECT: the caret line is added even when the source line was NOT added (lineno outside the text). The task says: the caret line only when the source line is shown AND offset is an int >= 1. Put the caret check inside the line check.
+2. `except (SyntaxError, IndentationError)`: IndentationError is a SyntaxError, catch SyntaxError only.
+3. note: the if chain over the suffixes can be a small dict suffix -> check function.
+4. _check_py splits the text into lines before it knows that there is an error: split only in the error case.
+Change nothing else.

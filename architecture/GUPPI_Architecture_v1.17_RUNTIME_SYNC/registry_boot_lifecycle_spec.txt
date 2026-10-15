@@ -1,0 +1,60 @@
+GUPPI OS – Registry + Boot/Lifecycle v1
+
+REGISTRY
+
+GUPPI verwaltet drei zentrale Kataloge:
+- Module Registry
+- Skill Registry
+- Tool Registry
+
+Nur registrierte und kompatible Komponenten dürfen produktiv verwendet werden.
+
+Beim Registrieren werden mindestens geprüft:
+- eindeutige ID
+- Version
+- Manifest
+- Core-Contract-Kompatibilität
+- Berechtigungen
+- Guard-Klassifizierung
+- Health Check, wenn erforderlich
+
+BOOT
+
+Startreihenfolge:
+1. Systemmanifest laden
+2. Core-Invarianten prüfen
+3. Guard laden
+4. Registries laden
+5. Komponenten-Manifeste validieren
+6. Kompatibilität prüfen
+7. Health Checks
+8. Pflichtmodule laden
+9. optionale Komponenten laden
+10. Message Bus starten
+11. GUPPI Brain starten
+12. READY setzen
+
+Guard wird bewusst vor normalen Modulen geladen.
+
+LIFECYCLE
+
+Wichtige Zustände:
+OFFLINE
+BOOTING
+SAFE_MODE
+READY
+BUSY
+UPDATING
+RECOVERING
+DEGRADED
+HALTED
+
+RECOVERY
+
+Fehlerhafte Updates ersetzen Stable nicht dauerhaft.
+Schlägt der Health Check eines neuen Kandidaten fehl, wird die vorherige Stable-Version wiederhergestellt.
+
+SAFE MODE
+
+Safe Mode lädt nur die Komponenten, die für Diagnose, Guard, Registry,
+Recovery und Captain-Kommunikation notwendig sind.

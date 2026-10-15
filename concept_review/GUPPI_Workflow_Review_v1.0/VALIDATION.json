@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-30",
+  "kind": "concept_review_not_runtime_integration",
+  "base": "GUPPI_Runtime_v1.13",
+  "handoff_sha256": "a246a568997b02a5a5a988403dd3352ad07f731e05c03409353e0567534784c0",
+  "documents_read": 3,
+  "tests": {
+    "command": "PYTHONPATH=src python3 -m unittest discover -s tests -q",
+    "count": 219,
+    "result": "PASS",
+    "runtime_seconds": 24.246,
+    "localhost_test_servers_allowed": true
+  },
+  "initial_restricted_subset": {
+    "count": 142,
+    "passed": 141,
+    "errors": 1,
+    "error_cause": "environment denied localhost socket creation, resolved on full suite with permitted local servers"
+  },
+  "isolated_probe": {
+    "gate_content_change_accepted": true,
+    "location": "temporary directory only",
+    "original_runtime_modified": false
+  },
+  "limitations": [
+    "no actual VM execution",
+    "no real Windows/hardware qualification",
+    "no autonomous LLM coding evaluation",
+    "proposed contracts not implemented"
+  ]
+}

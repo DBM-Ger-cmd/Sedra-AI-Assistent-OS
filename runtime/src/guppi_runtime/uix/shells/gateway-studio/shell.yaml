@@ -1,0 +1,11 @@
+# KI GateWay Studio – eine Shell aus Vorgabe (Captain 15.10., 10:13): das GateWay hat die Bühne. Die Orte fahren nur heraus,
+# wenn man den linken Rand anfährt; die Instrumente nur am oberen Rand. Kein Code – der Rahmen ui/frame.js baut sie.
+shell:
+  id: gateway-studio
+  name: "KI GateWay Studio"
+  description: "Das KI GateWay im Mittelpunkt: Anfrage prüfen, Freigabe, Entwurf. Orte und Instrumente bleiben am Rand verborgen und erscheinen beim Anfahren."
+  version: 1.0.0
+  vorgabe: shell.vorgabe.yaml
+  layout: {persist: browser}
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

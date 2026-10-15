@@ -1,0 +1,7 @@
+{
+  "steps": [
+    {"id": "PLAN", "content": "GUPPI-Demo: drei lokale Artefakte nacheinander erstellen. Kein autonomes Coden oder Testen."},
+    {"id": "NOTES", "depends_on": ["PLAN"], "content": "Die Schrittfortsetzung speichert Ergebnisse und prüft bestehende Artefakte beim Wiederanlauf."},
+    {"id": "REVIEW", "depends_on": ["NOTES"], "content": "Das Ergebnis ist ARTIFACT_ONLY. Echte Code- und Sandbox-Tests bleiben separate Nachweise."}
+  ]
+}

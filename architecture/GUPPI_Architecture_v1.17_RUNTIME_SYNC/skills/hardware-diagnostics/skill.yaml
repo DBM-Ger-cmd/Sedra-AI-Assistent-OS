@@ -1,0 +1,46 @@
+skill:
+  id: hardware-diagnostics
+  name: Hardware Diagnostics
+  version: 1.0.0
+  owner_module: planning-context
+  description: Read hardware inventory, telemetry and runtime admission before controlled
+    profile changes.
+  capabilities:
+  - hardware_diagnostics
+  - hardware_inventory
+  - live_telemetry
+  - runtime_admission
+  - hardware_profile
+  triggers:
+  - hardware
+  - gpu temperatur
+  - lüfter
+  - gigabyte
+  - power
+  tool_hints:
+  - hardware-manager
+  workflow:
+  - stage: observe
+    tool: hardware-manager
+    operation: get_inventory
+    read_only: true
+  - stage: observe
+    tool: hardware-manager
+    operation: get_state
+    read_only: true
+  - stage: decide
+    action: admission_check
+    read_only: true
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.10.0
+  status: enabled
+  execution_support: blueprint_only; parameter_binder_pending

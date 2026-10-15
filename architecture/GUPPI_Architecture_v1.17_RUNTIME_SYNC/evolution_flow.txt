@@ -1,0 +1,35 @@
+GUPPI EVOLUTION FLOW v1
+
+MISSION / VERIFY / AUDIT
+          |
+          v
+      OBSERVE
+          |
+          v
+   CAPABILITY GAP
+          |
+          v
+   COLLECT EVIDENCE
+          |
+          v
+  DEDUPLICATE / GROUP
+          |
+          v
+      CLASSIFY
+     /    |    \
+   E1     E2     E3
+          |
+          v
+  EVOLUTION PROPOSAL
+          |
+          v
+       DECIDE
+   +------+------+------+
+   |      |      |      |
+ACCEPT  DEFER  MERGE  REJECT
+   |
+   v
+GUPPI_EVOLUTION.yaml
+   |
+   v
+DEVELOPMENT PIPELINE

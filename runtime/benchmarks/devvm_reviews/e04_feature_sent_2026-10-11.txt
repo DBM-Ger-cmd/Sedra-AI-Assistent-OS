@@ -1,0 +1,8 @@
+New requirement for replay_log.py (attempt_01_20261010_224430), Captain/Claude 2026-10-11, from the first measurement: the recordings hold the model's answers, but not what the model was SENT (the tool results it saw), so a run cannot be diagnosed afterwards.
+Recorder: every record gets one more key "sent": the messages of this request that the previous request of the same Recorder did not have, as a deep copy.
+- First request of a Recorder: all of body["messages"].
+- Later request: body["messages"][n:] where n = the number of messages of the previous request; when the new request has FEWER messages than the previous one (the history was shortened), all of body["messages"].
+- A body without a list under "messages": [] (and it counts as 0 messages for the next request).
+- The record of a failed post gets "sent" too: {"key": ..., "error": ..., "sent": [...]}.
+- The key (request_key) does not change, Player ignores "sent", and records without "sent" (older recordings) still load and replay.
+Keep everything else exactly.

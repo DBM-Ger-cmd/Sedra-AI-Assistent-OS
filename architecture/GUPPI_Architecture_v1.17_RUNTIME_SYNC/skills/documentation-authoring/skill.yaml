@@ -1,0 +1,65 @@
+skill:
+  id: documentation-authoring
+  name: Dokumentation und Übergabe
+  version: 1.0.0
+  owner_module: planning-context
+  description: Dokumentation und Übergabe als begrenzter Workflow-Blueprint.
+  topics:
+  - documentation
+  capabilities:
+  - documentation_authoring
+  triggers:
+  - readme
+  - handbuch
+  - handoff
+  - übergabe
+  - uebergabe
+  - documentation
+  - anleitung
+  tool_hints:
+  - filesystem
+  workflow:
+  - stage: observe
+    tool: filesystem
+    operation: list_dir
+    binding:
+      path: <project-root>
+    read_only: true
+  - stage: plan
+    action: collect_verified_implementation_facts
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: draft_user_and_developer_documentation
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: check_claims_against_evidence
+    execution: planning_only
+    read_only: true
+  inputs:
+  - project-root
+  - audience
+  outputs:
+  - documentation draft
+  - handoff
+  execution_support: blueprint_only; parameter_binder_pending
+  acceptance_criteria:
+  - Inputs and scope are explicit
+  - Claims distinguish evidence from assumptions
+  - No action outside selected tools and Guard
+  boundaries:
+  - No automatic deployment, publishing or hardware writes
+  - Planning actions require a later validated execution binding
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.11.0
+  status: enabled

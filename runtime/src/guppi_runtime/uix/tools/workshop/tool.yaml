@@ -1,0 +1,20 @@
+tool:
+  id: workshop
+  name: "Werkstatt"
+  description: "Modelle laden, entladen und testen; Rezepte lesen."
+  version: 1.0.0
+  kind: object
+  handles: [model]
+  order: 30
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/models
+    - POST /api/model/load
+    - POST /api/model/unload
+    - POST /api/model/test
+  events:
+    emits: [object.open]
+    listens: [model.changed]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

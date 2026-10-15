@@ -1,0 +1,32 @@
+step_journal:
+  schema: 1
+  plan_fields:
+  - plan_digest
+  - cursor
+  - steps
+  step_fields:
+  - id
+  - status
+  - attempts
+  - attempt_id
+  - request_digest
+  - result
+  statuses:
+  - PENDING
+  - RUNNING
+  - COMPLETED
+  - WAITING
+  - GATE
+  - BLOCKED
+  - FAILED
+  - ABORTED
+  limits:
+    steps: 32
+    dispatch_attempts_per_step: 3
+    completed_artifact_bytes: 4000000
+  rules:
+  - result_and_artifacts_saved_before_cursor
+  - unknown_write_never_replayed
+  - depends_on_references_prior_steps_only
+  - bound_inspection_and_candidate_require_single_step
+  - read_only_recovery_requires_bound_Captain_gate

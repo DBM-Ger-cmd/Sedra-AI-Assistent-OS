@@ -1,0 +1,42 @@
+skill:
+  id: debug-and-test
+  name: Debug and Test
+  version: 1.1.0
+  owner_module: planning-context
+  description: Reproduce failures, inspect code and run bounded tests.
+  capabilities:
+  - debugging
+  - code_analysis
+  - test_execution
+  - isolated_code_execution
+  triggers:
+  - fehler
+  - bug
+  - debug
+  - tests schlagen fehl
+  tool_hints:
+  - filesystem
+  - git
+  - sandbox
+  workflow:
+  - stage: reproduce
+    action: identify_test_target
+  - stage: verify
+    tool: sandbox
+    operation: run
+    binding:
+      plan: <sandbox-plan>
+    guard: required
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.10.0
+  status: enabled
+  execution_support: blueprint_only; parameter_binder_pending

@@ -1,0 +1,93 @@
+/* Paperclip-Shell (Entwurf D). Nur .pc-*, keine Farbe ohne Token.
+   Dunkle Navigation links, helle Seiten rechts; das Gespräch als Schublade. Die Werkzeuge bringen ihren Stil selbst mit. */
+
+.pc{
+  position: fixed; inset: 0;
+  display: grid; grid-template-columns: 210px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr);
+  background: var(--bg); color: var(--text);
+}
+
+/* ---- Navigation */
+.pc-nav{
+  background: var(--live-bg); color: var(--live-text); min-height: 0;
+  padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto;
+}
+.pc-company{ display: flex; align-items: center; gap: 8px; padding: 6px 10px 14px; font-weight: 700; color: var(--live-text); font-size: var(--size-l); }
+.pc-mark{ width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, var(--guppy-1), var(--guppy-2)); display: inline-block; }
+.pc-nav-row{ display: flex; align-items: center; padding: 7px 10px; border-radius: 7px; font-size: var(--size); cursor: default; }
+.pc-nav-row:hover, .pc-nav-row:focus{ background: var(--veil-light-1); outline: none; }
+.pc-nav-row.on{ background: var(--veil-light-2); color: var(--live-text); }
+.pc-nav-section{ display: block; margin: 12px 10px 4px; font-size: var(--size-xs); letter-spacing: .08em; text-transform: uppercase; color: var(--live-muted); }
+.pc-badge{ margin-left: auto; background: var(--accent); color: var(--accent-text); border-radius: 999px; padding: 0 7px; font-size: var(--size-xs); line-height: 16px; }
+
+/* ---- Kopfzeile und Seite */
+.pc-main-col{ display: grid; grid-template-rows: 48px minmax(0, 1fr); min-width: 0; min-height: 0; }
+.pc-top{
+  display: flex; align-items: center; gap: var(--gap-2); padding: 0 18px;
+  background: var(--panel); border-bottom: 1px solid var(--line);
+}
+.pc-top h1{ margin: 0; font-size: var(--size-l); color: var(--heading); white-space: nowrap; }
+.pc-back:disabled{ opacity: .4; }
+.pc-verbs{ display: flex; gap: 6px; }
+.pc-spacer{ flex: 1; }
+.pc-search{ position: relative; }
+.pc-search input{ width: 340px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 7px; font: inherit; background: var(--panel-2); }
+.pc-search input:focus{ outline: 2px solid var(--accent); outline-offset: -1px; background: var(--panel); }
+.pc-search-results{
+  position: absolute; right: 0; top: 36px; width: 380px; z-index: 50;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-2); box-shadow: var(--shadow); padding: 6px;
+}
+.pc-search-row{ padding: 6px 8px; border-radius: var(--radius); cursor: default; }
+.pc-search-row.on, .pc-search-row:hover{ background: var(--panel-2); }
+.pc-search-row b{ display: block; font-size: var(--size); }
+.pc-search-row small{ color: var(--muted); }
+
+.pc-page{ overflow: auto; padding: 14px 18px; min-height: 0; }
+
+/* ---- Dashboard: Kacheln und Karten */
+.pc-grid{ display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; }
+.pc-kpis{ grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.pc-kpi{
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  display: flex; align-items: center; gap: var(--gap);
+}
+.pc-kpi > div{ display: flex; flex-direction: column; min-width: 0; }
+.pc-kpi small{ color: var(--muted); font-size: var(--size-small); text-transform: uppercase; letter-spacing: .04em; }
+.pc-kpi b{ font-size: var(--size-xl); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-kpi i{ font-style: normal; color: var(--muted); font-size: var(--size-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-kpi.warn b{ color: var(--warn); }
+.pc-kpi.bad b{ color: var(--bad); }
+.pc-kpi.ok b{ color: var(--ok); }
+.pc-card{ background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0;
+          max-height: 460px; overflow: auto; display: flex; flex-direction: column; }
+.pc-card > .pc-tool{ flex: 1; min-height: 0; }
+.pc-card.wide{ grid-column: 1 / -1; }
+.pc-card h3{ margin: 0 0 10px; font-size: var(--size-small); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; justify-content: space-between; }
+.pc-card h3 small{ text-transform: none; letter-spacing: 0; }
+.pc-tool{ min-width: 0; }
+
+/* ---- Sammlung und einzelnes Objekt */
+.pc-single{ background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.pc-object{ display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.pc-object.with-side{ grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr); }
+.pc-main{ background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.pc-side{ display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+/* ---- Schublade und Knopf */
+.pc-drawer[hidden]{ display: none; }       /* `hidden` muss gegen display:grid gewinnen */
+.pc-drawer{
+  position: fixed; right: 0; top: 0; bottom: 0; width: 420px; z-index: 200;
+  background: var(--panel); border-left: 1px solid var(--line); box-shadow: var(--shadow);
+  display: grid; grid-template-rows: 44px minmax(0, 1fr);
+}
+.pc-drawer-head{ display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-bottom: 1px solid var(--line-soft); }
+.pc-drawer-body{ display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; overflow: hidden; }
+.pc-fab{
+  position: fixed; right: 18px; bottom: 18px; z-index: 150;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--accent); color: var(--accent-text); border: 0; border-radius: 999px;
+  padding: 10px 16px; font: inherit; font-weight: 600; box-shadow: var(--shadow); cursor: pointer;
+}
+.pc-fab.on{ display: none; }
+.pc-fab-count:empty{ display: none; }
+.pc-fab-count{ background: var(--panel); color: var(--accent); border-radius: 999px; padding: 0 7px; font-size: var(--size-small); line-height: 18px; }

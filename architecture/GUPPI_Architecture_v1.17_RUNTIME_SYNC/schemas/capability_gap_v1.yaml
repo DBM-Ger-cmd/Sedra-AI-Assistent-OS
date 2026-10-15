@@ -1,0 +1,32 @@
+capability_gap:
+  schema: 1
+
+  identity:
+    gap_id: "GAP-0001"
+    detected_at: null
+
+  source:
+    missions: []
+    modules: []
+    verification_findings: []
+
+  type: "missing_capability"
+  # missing_capability, repeated_failure, repeated_workaround,
+  # performance_limit, integration_gap, safety_gap
+
+  description: ""
+
+  evidence:
+    occurrences: 1
+    events: []
+
+  impact:
+    severity: "medium"
+    affected_capabilities: []
+
+  suspected_target:
+    component_type: null
+    component_id: null
+
+  status: "open"
+  # open, grouped, proposed, resolved, dismissed

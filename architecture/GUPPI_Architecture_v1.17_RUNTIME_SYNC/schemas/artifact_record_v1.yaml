@@ -1,0 +1,20 @@
+artifact:
+  schema: 1
+
+  artifact_id: "ART-0001"
+  mission_id: "M-0001"
+
+  path: ""
+  type: "file"
+  version: "1"
+
+  provenance:
+    created_by: ""
+    source_component: ""
+    evolution_id: null
+
+  integrity:
+    algorithm: "sha256"
+    hash: null
+
+  status: "active"

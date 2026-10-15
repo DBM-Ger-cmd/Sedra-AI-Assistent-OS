@@ -1,0 +1,27 @@
+human_gate:
+  schema: 1
+  identity:
+    gate_id: HG-0001
+    mission_id: M-0001
+    guard_request_id: GRQ-0001
+  request:
+    summary: ''
+    exact_action: ''
+    targets: []
+    expected_effect: ''
+    risks: []
+    rollback_available: false
+    request_digest: null
+  options:
+  - APPROVE_ONCE
+  - REJECT
+  - MODIFY_REQUEST
+  status: pending
+  resolution:
+    decision: null
+    decided_at: null
+    scope: []
+    note: null
+  validity:
+    single_use: true
+    expires_at: null

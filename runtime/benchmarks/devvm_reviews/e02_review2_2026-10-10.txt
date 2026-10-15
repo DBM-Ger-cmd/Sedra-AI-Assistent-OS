@@ -1,0 +1,3 @@
+Second review of think_guard.py (attempt_02_20261010_222229), Captain/Claude 2026-10-10: the cleanup of the first review is right, ONE defect came in with it.
+DEFECT: patch() returns dict(self._patch_value()), a SHALLOW copy. The inner dict {"enable_thinking": False} is still the one inside the class table _FAMILY_PATCH. A caller that changes the returned value, for example p = g.patch(); p["chat_template_kwargs"]["enable_thinking"] = True, changes the table, and every later patch() of every ThinkGuard returns the wrong value. The task says: every call returns a NEW dict, changing it must not change the guard. Return a deep copy (copy.deepcopy) or build the dict fresh in every call.
+Change nothing else.

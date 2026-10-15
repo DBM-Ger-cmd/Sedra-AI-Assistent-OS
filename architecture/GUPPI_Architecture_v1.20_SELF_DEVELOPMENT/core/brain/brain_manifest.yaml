@@ -1,0 +1,30 @@
+brain:
+  id: "guppi-brain"
+  name: "GUPPI Brain"
+  version: "0.1.0"
+  core_contract: 1
+
+  responsibilities:
+    - "captain_intent_understanding"
+    - "mission_state_ownership"
+    - "next_action_decision"
+    - "module_delegation"
+    - "human_gate_escalation"
+    - "mission_completion_decision"
+
+  owns:
+    - "captain_intent"
+    - "objective"
+    - "lifecycle"
+    - "final_decisions"
+
+  delegates_to:
+    - "planning-context"
+    - "control-master"
+    - "verification"
+
+  must_not:
+    - "bypass_guard"
+    - "silently_change_captain_intent"
+    - "promote_failed_candidate"
+    - "modify_core_invariants_during_runtime"

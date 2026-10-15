@@ -1,0 +1,18 @@
+tool:
+  id: costs
+  name: "Kosten"
+  description: "Das Münzloch: Token und Aufrufe dieser Aufgabe, mit Herkunft der Zahlen."
+  version: 1.0.0
+  kind: object
+  handles: [task]
+  order: 19
+  slot: nachweis
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - POST /api/cost
+  events:
+    emits: [object.open]
+    listens: [task.changed, live.line]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

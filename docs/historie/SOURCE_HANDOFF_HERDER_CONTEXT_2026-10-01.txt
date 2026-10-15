@@ -1,0 +1,1262 @@
+GUPPI OS – CODER HANDOFF
+Herder-Integrationsauftrag + Context/Token Management
+Stand: 2026-10-01
+
+======================================================================
+0. AUFTRAG / ZIEL
+======================================================================
+
+Dieses Dokument ist ein konkreter Arbeitsauftrag für den Coder.
+
+Ziel ist NICHT, Herder oder einen anderen Harness einfach in GUPPI
+einzubauen oder GUPPI durch ein fremdes Agenten-Framework zu ersetzen.
+
+Ziel ist:
+
+1. die besten Architekturideen aus Herder/Agent-Harnesses zu übernehmen,
+2. sie GUPPI-nativ in die bestehende Architektur zu integrieren,
+3. bestehende Komponenten nicht zu duplizieren oder zu umgehen,
+4. GUPPI als zentrales Gehirn / First Officer zu erhalten,
+5. AI Control Master als Runtime-/Modell-/Tool-/Ressourcen-Schicht zu erhalten,
+6. die GUPPI Entwicklungsumgebung als isolierten Ort für Änderungen,
+   Tests und Selbstweiterentwicklung zu verwenden,
+7. den Kernprozess
+   PLANEN -> PRÜFEN -> CODEN -> TESTEN -> VERIFIZIEREN -> ÜBERNEHMEN
+   belastbarer zu machen,
+8. zusätzlich ein bewusstes Context-/Token-Management einzubauen, damit
+   lange Sessions und Subagenten nicht an überladenen Kontextfenstern,
+   wiederholtem Ballast oder unnötig teuren Tool-Outputs scheitern.
+
+Leitgedanke:
+
+    „Die besten Muster integrieren, ohne GUPPI zu verlieren.“
+
+GUPPI soll langfristig ein lokal laufender KI-Assistent sein, der eigene
+Fähigkeitslücken erkennt, Verbesserungen plant, Code/Skills/Module in
+einer isolierten Entwicklungsumgebung erzeugt, testet, verifiziert und
+nur kontrolliert in den produktiven Stand übernimmt.
+
+======================================================================
+1. NICHT VERHANDELBARE ARCHITEKTURGRENZEN
+======================================================================
+
+1.1 Captain
+-----------
+Der Mensch bleibt oberste Instanz.
+
+- Captain setzt Ziele und Grenzen.
+- Kritische Aktionen benötigen Human Gates.
+- GUPPI darf sich weiterentwickeln, aber nicht selbst seine
+  Sicherheitsgrenzen entfernen oder umgehen.
+
+1.2 GUPPI
+---------
+GUPPI bleibt das zentrale Gehirn und der „First Officer“.
+
+GUPPI verantwortet:
+- Intent-Verständnis
+- Planung
+- Aufgabenzerlegung
+- Auswahl benötigter Rollen/Fähigkeiten
+- Bewertung von Ergebnissen
+- Fähigkeitslücken
+- Verbesserungsvorschläge
+- Projektkontext
+- Memory / Knowledge / Skills
+- Capability Registry
+- Entwicklungs- und Projekthistorie
+- Captain-Regeln und Policies
+
+Der neue Supervisor darf NICHT zu einem zweiten Gehirn werden.
+
+1.3 AI Control Master
+---------------------
+AI Control Master bleibt der „Maschinenraum“.
+
+Control Master verantwortet:
+- konkrete Modellwahl
+- Runtime-Wahl
+- Tool-/Provider-Routing
+- API-/CLI-/lokale Runtime-Anbindung
+- Ressourcenverwaltung
+- Hardware-Abgleich
+- Runtime-Presets
+- technische Fallbacks
+- Ausführung angeforderter Capabilities
+
+Der Job Supervisor darf Control Master nicht umgehen.
+
+1.4 GUPPI Entwicklungsumgebung
+------------------------------
+Codeänderungen, neue Skills, neue Module und Tests erfolgen grundsätzlich
+in der isolierten GUPPI Entwicklungsumgebung.
+
+Sie dient als:
+- isolierte Arbeitskopie
+- Testumgebung
+- Build-Umgebung
+- Verifikationsumgebung
+- Rollback-fähiger Integrationsraum
+
+1.5 Sicherheitsprinzip
+----------------------
+Keine direkte Selbstmodifikation im produktiven Kern.
+
+Vor Übernahme einer Änderung:
+- Plan vorhanden
+- Scope klar
+- Berechtigungen geprüft
+- Tests erfolgreich
+- Verifikation erfolgreich
+- relevante Human Gates erfüllt
+- Rollback-Punkt vorhanden
+- Audit-Eintrag erzeugt
+
+======================================================================
+2. HERDER / HARNESS ALS REFERENZ – NICHT ALS NEUER KERN
+======================================================================
+
+Interessante Muster:
+- persistente Job Queue
+- Worker-/Agenten-Routing
+- rollenbasierte Ausführung
+- Retry und Fallback
+- Heartbeat / Lease
+- Erkennung hängender Worker
+- Provider Cooldown
+- Parallelitäts-/Concurrency-Regeln
+- Berechtigungsmodi
+- Approve / Reject
+- deklarative Agentenprofile
+- strukturierte Logs und Statusinformationen
+- Token-/Kostenmetriken
+- Context-Grenzen und Task-Grenzen
+- sparsamer Umgang mit Tool-Ausgaben
+- Vermeidung unnötig geerbten Kontextes
+
+Diese Muster sollen analysiert und bei Eignung GUPPI-nativ umgesetzt
+werden.
+
+NICHT gewünscht:
+- Herder als zentrale Orchestrierung über GUPPI
+- GUPPI nur noch als Frontend
+- Ersatz des Control Master
+- doppelte Capability-/Hardware-/Runtime-Logik
+- blindes Kopieren eines fremden Harness
+- harte Abhängigkeit, wenn ein GUPPI-natives Modul sinnvoller ist
+
+Grundsatz:
+
+    „Übernehme Muster, nicht unkritisch Abhängigkeiten.“
+
+Vor direktem Fremdcode-Einsatz:
+- Lizenz prüfen
+- Reifegrad prüfen
+- Kopplungsrisiko bewerten
+- Update-/Wartungsrisiko bewerten
+- Sicherheitsauswirkung dokumentieren
+- interne Umsetzung als Alternative bewerten
+
+======================================================================
+3. NEUE KOMPONENTE: GUPPI JOB SUPERVISOR
+======================================================================
+
+Architektur:
+
+CAPTAIN
+   |
+   v
+GUPPI
+   |
+   v
+GUPPI JOB SUPERVISOR
+   |
+   v
+AI CONTROL MASTER
+   |
+   +--> Local Models
+   +--> Cloud Models
+   +--> CLI Agents
+   +--> Tools
+   +--> APIs
+   +--> Hardware / Runtime Layer
+
+Der Supervisor ist Infrastruktur, kein eigenes Gehirn.
+
+Aufgaben:
+- Job Queue
+- Job State Machine
+- Dependency Management
+- Rollen-/Capability-Anforderungen
+- Retry
+- Fallback-Trigger
+- Heartbeat
+- Lease
+- Dead-/Stuck-Erkennung
+- Timeout
+- Cooldown
+- Concurrency-Gruppen
+- Approval Gates
+- Audit Events
+- Result Collection
+- Fehlerklassifikation
+- Eskalation an GUPPI / Captain
+- Context-/Token-Budget je Job verwalten oder an Context Manager delegieren
+
+Nicht-Aufgaben:
+- eigene strategische Zielsetzung
+- eigenes Projektgedächtnis als Konkurrenz zu GUPPI
+- direkte Modellwahl außerhalb Control Master
+- direkte Hardwaresteuerung
+- autonome Policy-Änderung
+
+======================================================================
+4. JOB STATE MACHINE
+======================================================================
+
+Mindestzustände:
+
+CREATED
+PLANNING
+READY
+WAITING_APPROVAL
+QUEUED
+CLAIMED
+RUNNING
+VERIFYING
+PASSED
+COMPLETED
+
+Fehler-/Nebenpfade:
+
+RETRY_PENDING
+BLOCKED
+FAILED
+DEAD
+CANCELLED
+ROLLBACK_PENDING
+ROLLED_BACK
+ESCALATED_TO_GUPPI
+ESCALATED_TO_CAPTAIN
+
+Anforderungen:
+- jeder Zustandswechsel auditierbar
+- valide Übergänge prüfen
+- keine willkürlichen Sprünge
+- Idempotenz
+- Crash-Recovery
+- persistenter Zustand
+- Wiederaufnahme nach Neustart
+- eindeutige Job-ID
+- Parent-/Child-Jobs
+- Dependency Graph vorbereiten
+- Retry-Limit
+- Retry-Grund
+- letzter Fehler
+- letzter Checkpoint
+
+======================================================================
+5. ROLE -> CAPABILITY -> PROVIDER ROUTING
+======================================================================
+
+GUPPI fordert bevorzugt Rollen/Capabilities an, nicht konkrete Modelle.
+
+Beispiel:
+
+ROLE: coder
+CAPABILITY: python_local_coding
+
+REQUIREMENTS:
+- offline_preferred: true
+- max_vram_gb: 8
+- filesystem_scope: development_environment
+- network: denied
+- test_required: true
+
+Routing:
+
+ROLE
+ -> CAPABILITY
+ -> Anforderungen
+ -> Control Master
+ -> Provider / Runtime / Modell / Tool
+
+Beispielrollen:
+- planner
+- coder
+- reviewer
+- verifier
+- tester
+- researcher
+- tool_operator
+- hardware_engineer
+- documentation
+- security_reviewer
+- context_curator
+
+WICHTIG:
+Supervisor übergibt Anforderungen und Policies.
+Control Master wählt die konkrete Ausführung.
+
+======================================================================
+6. HEARTBEAT, LEASE, STUCK-DETECTION
+======================================================================
+
+Jeder aktive Worker/Agent erhält:
+- worker_id
+- job_id
+- lease_until
+- last_heartbeat
+- last_progress
+- runtime/provider
+- current_state
+- resource_snapshot optional
+- current_step optional
+- context_usage optional
+
+Heartbeat und Fortschritt sind getrennt.
+
+Speichern:
+- heartbeat_timestamp
+- progress_timestamp
+- progress_marker / step hash
+
+Bei Lease-Ablauf:
+1. Worker als suspect markieren
+2. Healthcheck
+3. Grace Period
+4. Job freigeben / Retry
+5. Worker/Provider ggf. Cooldown
+6. Audit Event
+7. bei kritischem Job eskalieren
+
+======================================================================
+7. RETRY, FALLBACK UND PROVIDER COOLDOWN
+======================================================================
+
+Fehlerklassen:
+- transient_provider_error
+- timeout
+- rate_limit
+- runtime_crash
+- model_unavailable
+- hardware_pressure
+- context_overflow
+- context_quality_degraded
+- validation_failure
+- policy_denied
+- deterministic_test_failure
+- unknown_failure
+
+Nicht jeder Fehler darf blind wiederholt werden.
+
+Beispiele:
+- Rate Limit -> später / anderer Provider
+- Runtime Crash -> Neustart, dann Fallback
+- Test Failure -> nicht unveränderten Code erneut ausführen
+- Policy Denied -> niemals durch Fallback umgehen
+- Hardware Pressure -> Queue / kleineres Modell / andere Runtime
+- Context Overflow -> Kontext reduzieren, nicht bloß gleichen Prompt wiederholen
+- Context Quality Degraded -> neuen Task-Kontext aus Curated Context erzeugen
+
+Provider Health:
+
+HEALTHY
+DEGRADED
+COOLDOWN
+UNAVAILABLE
+
+======================================================================
+8. CONCURRENCY / HARDWARE-AWARE SCHEDULING
+======================================================================
+
+Ressourcenanforderungen eines Jobs:
+- RAM
+- VRAM
+- CPU Threads
+- GPU
+- Kontextfenster
+- erwarteter KV Cache
+- temporärer Speicherplatz
+- Netzwerkbedarf
+- Laufzeitklasse
+- Exklusivitätsbedarf
+
+Abgleich mit:
+- Hardware Manager
+- Hardware-Model-Pass
+- Runtime Presets
+- aktuelle Systemlast
+- Temperatur
+- RAM-/VRAM-Reserve
+- laufende Jobs
+- Modellprofile
+
+Beispiel:
+
+Aktiv:
+Qwen Coder
+VRAM 8.5 GB
+KV Cache 3.5 GB
+
+Neuer Job:
++6 GB erwartet
+
+Verfügbar:
+16 GB VRAM
+
+Sicherheitsreserve:
+2 GB
+
+=> NICHT parallel starten
+
+Mögliche Alternativen:
+- Queue
+- kleineres Modell
+- CPU Offload
+- Cloud Fallback
+- anderer Worker
+
+======================================================================
+9. CONTEXT- UND TOKEN-MANAGEMENT – VERBINDLICHE ERWEITERUNG
+======================================================================
+
+Dieses Modul ist ausdrücklich Teil des Integrationsauftrags.
+
+Problem:
+Lange Agenten-Sessions, große Tool-Ausgaben und unkritisch vererbter
+Projektkontext können:
+- Kontextfenster füllen,
+- relevante Informationen verdrängen,
+- Kosten erhöhen,
+- Antwortqualität verschlechtern,
+- Modelle in alten Lösungswegen festhalten,
+- Subagenten unnötig mit fremdem Ballast starten lassen,
+- KV-Cache-/Speicherbedarf erhöhen.
+
+Ziel:
+GUPPI soll nicht „möglichst viel Kontext“ liefern, sondern
+„den kleinsten ausreichend vollständigen Kontext“.
+
+Leitregel:
+
+    Kontext ist eine Ressource wie RAM oder VRAM.
+
+--------------------------------------------------
+9.1 GUPPI Context Budget Manager
+--------------------------------------------------
+
+Es soll eine klar definierte Context-Management-Komponente geben.
+
+Mögliche Position:
+
+GUPPI
+  |
+  +--> Context Budget Manager
+  |      |
+  |      +--> Context Manifest
+  |      +--> Token Budget
+  |      +--> Relevance Selection
+  |      +--> Summaries
+  |      +--> Artifact References
+  |      +--> Checkpoints
+  |      +--> Context Health
+  |
+  v
+Job Supervisor
+  |
+  v
+Control Master
+
+Prüfe zuerst, ob bereits eine vergleichbare Komponente existiert.
+Keine Duplikation.
+
+--------------------------------------------------
+9.2 Token-Budget pro Job
+--------------------------------------------------
+
+Jeder Job sollte ein Budget besitzen:
+
+context_budget:
+  max_input_tokens
+  reserved_output_tokens
+  reserved_reasoning_tokens optional
+  system_budget
+  project_context_budget
+  task_context_budget
+  tool_result_budget
+  recent_history_budget
+  safety_margin
+
+Beispiel:
+
+Modell-Kontextfenster: 128k
+
+Reserviere:
+- 8k Output
+- 8k Sicherheitsreserve
+- 12k System/Tools
+- 20k Projektrelevanz
+- 50k Task-/Arbeitskontext
+- Rest für aktuelle Tool-Ergebnisse / Verlauf
+
+Die Werte dürfen NICHT statisch für jedes Modell gelten.
+Control Master / Model Profile muss das reale Fenster kennen.
+
+--------------------------------------------------
+9.3 Context Watermarks
+--------------------------------------------------
+
+Definiere Schwellenwerte.
+
+Beispiel:
+GREEN  < 55 %
+YELLOW 55–70 %
+ORANGE 70–85 %
+RED    > 85 %
+
+Aktionen:
+
+GREEN:
+- normal arbeiten
+
+YELLOW:
+- Tool-Ausgaben stärker kürzen
+- unnötige Historie vermeiden
+
+ORANGE:
+- Checkpoint erzeugen
+- alten Verlauf zusammenfassen
+- erledigte Arbeit aus aktivem Kontext entfernen
+- große Artefakte nur referenzieren
+
+RED:
+- keinen großen neuen Tooldump injizieren
+- Context Rebuild / Fresh Task erwägen
+- kompakten Hand-off erzeugen
+- nur Minimum Working Context übernehmen
+
+Schwellwerte konfigurierbar.
+
+--------------------------------------------------
+9.4 Context Manifest statt Volltextdump
+--------------------------------------------------
+
+Subagenten sollen NICHT standardmäßig den gesamten Parent-Chat erhalten.
+
+Jeder Child Job erhält ein Context Manifest:
+
+- goal
+- current_task
+- constraints
+- relevant_decisions
+- required_files
+- exact_symbols/functions
+- open_questions
+- acceptance_criteria
+- known_failures
+- permissions
+- artifact_refs
+- parent_job_id
+- checkpoint_id
+
+Nur erforderliche Dokumentabschnitte/Artefakte nachladen.
+
+Prinzip:
+
+    index first -> detail on demand
+
+--------------------------------------------------
+9.5 Progressive Disclosure
+--------------------------------------------------
+
+Kontextschichten:
+
+LAYER 0 – SYSTEM / POLICIES
+immer vorhanden
+
+LAYER 1 – TASK CONTRACT
+immer vorhanden
+
+LAYER 2 – CURRENT PROJECT SNAPSHOT
+kompakt
+
+LAYER 3 – RELEVANT FILES / SYMBOLS
+bei Bedarf
+
+LAYER 4 – HISTORICAL DETAILS
+nur Retrieval
+
+LAYER 5 – RAW LOGS / LARGE TOOL OUTPUTS
+nicht direkt, sondern als Artefakt
+
+Subagenten dürfen Details nachfordern.
+
+--------------------------------------------------
+9.6 Tool Output Offloading
+--------------------------------------------------
+
+Große Tool-Ergebnisse nicht dauerhaft in den Prompt kopieren.
+
+Stattdessen:
+1. vollständiges Ergebnis als Artefakt speichern
+2. kurze strukturierte Zusammenfassung in aktiven Kontext
+3. Referenz / ID / Pfad mitgeben
+4. bei Bedarf gezielt Teilbereiche nachladen
+
+Beispiel:
+
+NICHT:
+50.000 Zeilen Build-Log in den Chat.
+
+SONDERN:
+
+Build result:
+- status: failed
+- errors: 3
+- first_error: module X / line 281
+- log_artifact: ART-2026-1042
+- relevant_ranges: [...]
+
+--------------------------------------------------
+9.7 Context Checkpoints
+--------------------------------------------------
+
+Nach wichtigen Task-Grenzen erzeugen:
+
+CHECKPOINT:
+- Ziel
+- was geändert wurde
+- Dateien/Artefakte
+- Tests
+- Ergebnisse
+- offene Fehler
+- Entscheidungen
+- nächste Schritte
+- relevante IDs
+- Permission State
+
+Der Checkpoint muss kurz genug sein, um eine neue Session aufzubauen.
+
+Er ersetzt NICHT das Audit Log.
+Er ist ein Arbeitskontext-Snapshot.
+
+--------------------------------------------------
+9.8 Fresh-Context / Task Boundary
+--------------------------------------------------
+
+Ein neuer Agentenjob sollte bevorzugt mit frischem, kuratiertem Kontext
+starten, wenn die vorherige Arbeit abgeschlossen ist.
+
+Nicht jeden historischen Turn mitschleppen.
+
+Fresh Context darf aber NICHT bedeuten:
+- wichtige Entscheidungen vergessen
+- Constraints verlieren
+- Sicherheitsregeln verlieren
+- ungelöste Fehler verwerfen
+
+Darum immer:
+Fresh Context = System + Policies + Task Contract + Checkpoint +
+               relevante Artefakte.
+
+--------------------------------------------------
+9.9 Summaries sind verlustbehaftet
+--------------------------------------------------
+
+Eine LLM-Zusammenfassung darf niemals alleinige Quelle kritischer Fakten sein.
+
+Kritische Informationen:
+- Policies
+- Genehmigungen
+- Testresultate
+- Codeänderungen
+- Hashes
+- Versionen
+- Fehlermeldungen
+- Dateipfade
+- Sicherheitsentscheidungen
+
+müssen strukturiert / referenzierbar gespeichert werden.
+
+Zusammenfassung dient Navigation, nicht Beweisführung.
+
+--------------------------------------------------
+9.10 Relevance statt recency only
+--------------------------------------------------
+
+Nicht nur „letzte N Nachrichten“ behalten.
+
+Context Selection soll berücksichtigen:
+- Task-Bezug
+- Datei-/Symbol-Bezug
+- Parent-/Child-Abhängigkeit
+- offene Entscheidung
+- Sicherheitsrelevanz
+- Aktualität
+- Verlässlichkeit
+- explizit gepinnte Fakten
+
+--------------------------------------------------
+9.11 Context Health Metric
+--------------------------------------------------
+
+Zusätzlich zur Token-Auslastung einen Context-Health-Status vorbereiten:
+
+- token_fill_ratio
+- duplicate_ratio optional
+- tool_output_ratio
+- historical_context_ratio
+- unresolved_decision_count
+- stale_context_candidates
+- summary_age
+- last_checkpoint
+- estimated_relevance_density
+
+Keine komplexe KI nötig für v1.
+Beginne mit messbaren Heuristiken.
+
+--------------------------------------------------
+9.12 Context Failure Recovery
+--------------------------------------------------
+
+Wenn ein Modell:
+- Kontextlimit überschreitet,
+- wiederholt alte Anweisungen verfolgt,
+- relevante aktuelle Daten ignoriert,
+- große Tool-Ausgaben wiederholt verarbeitet,
+- nach mehreren Turns keinen Fortschritt macht,
+
+dann nicht nur RETRY.
+
+Stattdessen:
+
+CONTEXT_REPAIR:
+1. aktuellen Arbeitsstand checkpointen
+2. irrelevanten Verlauf entfernen
+3. relevanten Kontext neu assemblieren
+4. optional anderen Worker / anderes Modell verwenden
+5. Job mit gleicher Job-ID bzw. nachvollziehbarer Attempt-ID fortsetzen
+
+--------------------------------------------------
+9.13 Token-/Kontext-Metriken
+--------------------------------------------------
+
+Pro Job/Attempt nach Möglichkeit erfassen:
+- input_tokens
+- output_tokens
+- cached_tokens falls Provider liefert
+- context_window
+- peak_context_fill
+- compaction_count
+- checkpoint_count
+- fresh_context_count
+- tool_output_offloaded_bytes
+- estimated_tokens_saved
+- provider_cost optional
+
+Diese Metriken dienen:
+- Optimierung
+- Benchmarking
+- Hardware-/Model-Pass
+- Routing
+- Kostenkontrolle
+- Erkennung schlechter Harness-Konfigurationen
+
+Keine Optimierung ausschließlich auf „wenigste Tokens“.
+Qualität und Vollständigkeit bleiben vorrangig.
+
+======================================================================
+10. PERMISSION LEVELS UND HUMAN GATES
+======================================================================
+
+LEVEL 0 – READ ONLY
+LEVEL 1 – PROJECT READ
+LEVEL 2 – DEV ENV WRITE
+LEVEL 3 – TEST EXECUTION
+LEVEL 4 – PROJECT WRITE
+LEVEL 5 – SYSTEM CHANGE
+LEVEL 6 – EXTERNAL ACTION
+
+Default:
+LEVEL 0-2: automatisch, wenn Policy erlaubt
+LEVEL 3: policy-abhängig / isoliert
+LEVEL 4: Review + Verifikation
+LEVEL 5: Captain Approval
+LEVEL 6: Captain Approval
+
+Fallback darf niemals Permissions umgehen.
+
+======================================================================
+11. CAPABILITY / AGENT RECIPES
+======================================================================
+
+Capabilities sollen deklarativ registrierbar sein.
+
+Beispiel:
+
+capability:
+  id: coder.qwen_local
+  version: 1
+
+type:
+  agent
+
+roles:
+  - coder
+  - reviewer
+
+runtime:
+  type: llama_cpp
+
+requirements:
+  min_ram_gb: 16
+  min_vram_gb: 8
+
+permissions:
+  max_level: 2
+
+network:
+  allowed: false
+
+context:
+  max_budget: auto
+  prefers_fresh_task_context: true
+  tool_output_offloading: true
+
+tests:
+  - capability_smoke_test
+  - syntax_test
+  - deterministic_task_test
+
+rollback:
+  supported: true
+
+metadata:
+  source: builtin
+  trust_level: known_good
+
+Herkunft:
+- BUILT_IN
+- KNOWN_GOOD
+- CAPTAIN_CUSTOM
+- GUPPI_GENERATED
+- EXTERNAL_UNVERIFIED
+
+GUPPI_GENERATED wird nie automatisch KNOWN_GOOD.
+
+======================================================================
+12. SELBSTENTWICKLUNGS-PROZESS
+======================================================================
+
+Soll-Prozess:
+
+1. OBSERVE
+   GUPPI erkennt Fähigkeitslücke.
+
+2. PLAN
+   Änderungsplan.
+
+3. REVIEW PLAN
+   Scope / Risiko / Rechte / Tests.
+
+4. CREATE DEV JOB
+   Parent Job.
+
+5. PREPARE DEVELOPMENT ENVIRONMENT
+   isolierte Arbeitskopie / Snapshot.
+
+6. BUILD CONTEXT MANIFEST
+   Nur relevanten Arbeitskontext bereitstellen.
+
+7. DELEGATE
+   planner / coder / tester / reviewer / verifier.
+
+8. CODE
+   nur Entwicklungsumgebung.
+
+9. TEST
+   deterministisch + funktional.
+
+10. INDEPENDENT VERIFY
+    möglichst anderer Agent/anderes Modell als Coder.
+
+11. COMPARE
+    vorher/nachher; Regressionen.
+
+12. DECIDE
+    reject / retry / revise / ready_for_merge.
+
+13. HUMAN GATE
+    falls erforderlich.
+
+14. MERGE / ACTIVATE
+    kontrolliert.
+
+15. POST-INTEGRATION TEST
+    finaler Smoke Test.
+
+16. AUDIT + LEARN
+    Logbuch, Capability Registry, Lessons Learned.
+
+17. CONTEXT CHECKPOINT
+    kompakter Stand für nachfolgende Jobs.
+
+======================================================================
+13. AUDIT / LOGBUCH
+======================================================================
+
+Mindestens:
+- job_id
+- parent_job_id
+- created_by
+- requested_role
+- selected_capability
+- provider/runtime
+- permission_level
+- policy snapshot/hash
+- context_manifest_id
+- checkpoint_id
+- input refs
+- state transitions
+- retries
+- fallback decisions
+- health events
+- resource events
+- context events
+- outputs/artifacts
+- tests
+- verification
+- approval events
+- merge/rollback
+- final status
+
+Keine Secrets im Klartext.
+
+======================================================================
+14. DATENMODELL – MINDESTVORSCHLAG
+======================================================================
+
+Vor Einführung prüfen, ob bereits vorhanden:
+
+Job
+JobDependency
+JobAttempt
+Worker
+WorkerLease
+ProviderHealth
+Capability
+RoleBinding
+ApprovalRequest
+AuditEvent
+ResourceSnapshot
+Artifact
+VerificationResult
+ContextManifest
+ContextCheckpoint
+ContextMetric
+
+Keine parallelen Datenmodelle erzeugen, wenn gleichwertige Strukturen existieren.
+
+======================================================================
+15. INTEGRATIONSSTRATEGIE
+======================================================================
+
+PHASE 1 – BESTANDSAUFNAHME
+- Queue
+- Agent Manager
+- Control-Master-Schnittstellen
+- Capability Registry
+- Entwicklungsumgebung
+- Audit / Log
+- Policy / Permissions
+- Hardware Manager
+- Model Pass
+- bestehendes Context-/Memory-System
+- bestehende Token-Metriken
+
+Ergebnis:
+ARCHITECTURE_GAP_REPORT.md
+
+PHASE 2 – SCHNITTSTELLEN
+Definiere:
+GUPPI
+<-> Context Manager
+<-> Job Supervisor
+<-> AI Control Master
+<-> Development Environment
+<-> Audit
+<-> Hardware Layer
+
+Ergebnis:
+JOB_SUPERVISOR_CONTRACTS.md
+CONTEXT_MANAGER_CONTRACTS.md
+
+PHASE 3 – MINIMAL SUPERVISOR
+- persistente Queue
+- State Machine
+- Lease
+- Heartbeat
+- Retry
+- Cancel
+- Recovery
+
+PHASE 4 – CONTEXT V1
+- Context Manifest
+- Token Budget
+- Tool Output Offloading
+- Checkpoints
+- Watermarks
+- Context Metrics
+
+PHASE 5 – ROUTING
+- Role -> Capability
+- Provider Health
+- Fallback
+- Cooldown
+
+PHASE 6 – PERMISSIONS
+- Permission Levels
+- Approval Gates
+- Dev-Environment-Bindung
+
+PHASE 7 – HARDWARE AWARENESS
+- Concurrency
+- Reservations
+- Model Pass
+- Runtime Presets
+- Temperatur-/Lastsignale
+
+PHASE 8 – SELF-DEVELOPMENT
+Erst wenn 1-7 stabil.
+
+======================================================================
+16. CODING-REGELN
+======================================================================
+
+- vorhandene Architektur zuerst lesen
+- bestehende Services wiederverwenden
+- kleine, testbare Änderungen
+- Abhängigkeiten minimieren
+- keine zweite Orchestrierung neben Control Master
+- keine zweite Memory-Schicht neben GUPPI
+- keine Provider-Hardcodierung in GUPPI
+- keine Safety-Gates entfernen
+- keine produktive Self-Modification ohne Dev Environment
+- Konfiguration vor Hardcoding
+- typisierte Interfaces
+- explizite Fehlerklassifikation
+- Tests
+- Migrationen dokumentieren
+- Backward Compatibility prüfen
+- Feature Flags für riskante Funktionen
+- große Tool-Ausgaben niemals unkontrolliert in Child-Agent-Kontext kopieren
+
+======================================================================
+17. TESTANFORDERUNGEN
+======================================================================
+
+A. Job Lifecycle
+B. Crash Recovery
+C. Retry
+D. Provider Fallback
+E. Permission Enforcement
+F. Policy Enforcement
+G. Hardware Concurrency
+H. Independent Verification
+I. Rollback
+J. Restart Persistence
+
+Zusätzliche Context-Tests:
+
+K. Context Budget
+- Budget überschritten
+- Watermark-Aktion ausgelöst
+
+L. Tool Offloading
+- sehr großer Tool-Output
+- vollständig als Artefakt gespeichert
+- nur Kurzfassung im aktiven Kontext
+
+M. Child Context Isolation
+- Child Job erhält NICHT kompletten Parent-Verlauf
+- erhält korrektes Context Manifest
+
+N. Critical Fact Preservation
+- Policy / Pfad / Testresultat darf durch Summary nicht verloren gehen
+
+O. Context Repair
+- künstlich überladene Session
+- Checkpoint
+- neuer kuratierter Kontext
+- Job erfolgreich fortgesetzt
+
+P. Fresh Task Boundary
+- abgeschlossener Subtask
+- nächster Job startet mit Checkpoint + relevanten Artefakten,
+  nicht kompletter Historie
+
+Q. Token Metrics
+- Input/Output/Peak-Fill nachvollziehbar
+
+======================================================================
+18. ABNAHMEKRITERIEN
+======================================================================
+
+[ ] GUPPI bleibt zentrale Planungs-/Entscheidungsinstanz
+[ ] Control Master besitzt konkrete Runtime/Provider-Auswahl
+[ ] Supervisor ist recoverbar
+[ ] Jobs sind persistent
+[ ] Heartbeat und Progress getrennt
+[ ] Stuck Jobs erkannt
+[ ] Retry klassifiziert
+[ ] Cooldown funktioniert
+[ ] Fallback respektiert Policies
+[ ] Permissions nicht umgehbar
+[ ] Entwicklungsumgebung erzwingbar
+[ ] Hardware-Signale nutzbar
+[ ] Rollen nicht hart an Modelle gekoppelt
+[ ] Audit Trail vollständig
+[ ] Capabilities deklarativ registrierbar
+[ ] GUPPI-generierte Capabilities getestet
+[ ] Rollback vorhanden
+[ ] Context Manifest vorhanden
+[ ] Child Agent bekommt nur relevanten Kontext
+[ ] Token Budget pro Modell/Job möglich
+[ ] Context Watermarks funktionieren
+[ ] große Tool-Ausgaben werden offloaded
+[ ] Context Checkpoints funktionieren
+[ ] Critical Facts bleiben strukturiert erhalten
+[ ] Context Repair statt blindem Retry möglich
+[ ] Token-/Kontextmetriken sind messbar
+[ ] Token-Sparen verschlechtert nicht die fachliche Vollständigkeit
+
+======================================================================
+19. ENTSCHEIDUNGSREGEL
+======================================================================
+
+Bei jeder neuen Komponente fragen:
+
+„Ist das Intelligenz, Kontextaufbereitung, Ausführungssteuerung
+oder Infrastruktur?“
+
+Wenn Intelligenz:
+-> GUPPI
+
+Wenn Kontextauswahl / Token-Budget / Checkpoints:
+-> Context Manager
+
+Wenn Runtime-/Tool-/Modell-/Hardware-Auswahl:
+-> AI Control Master
+
+Wenn Queue/Lease/Heartbeat/Jobstatus/Retry:
+-> Job Supervisor
+
+Wenn Codeänderung/Test:
+-> GUPPI Entwicklungsumgebung
+
+Wenn Grenze/Freigabe:
+-> Policy / Captain Gate
+
+Diese Trennung ist wichtiger als eine schnelle Implementierung.
+
+======================================================================
+20. CHAT-/ENTSCHEIDUNGSKONTEXT
+======================================================================
+
+Zusammenfassung der bisherigen Diskussion:
+
+1. Ausgangspunkt war das GitHub-Projekt „Herder“ bzw. dessen Ansatz als
+   lokaler Supervisor/Harness für KI-Agenten.
+2. Herder wurde nicht als Ersatz für GUPPI bewertet, sondern als
+   Architektur-Referenz.
+3. Besonders wertvoll:
+   - Job Queue
+   - Rollen
+   - Retry/Fallback
+   - Heartbeat/Lease
+   - Provider Cooldown
+   - Concurrency
+   - Permissions
+   - deklarative Agentenprofile
+4. GUPPI darf durch die Integration nicht zu einem Frontend degradiert werden.
+5. Schiffskonzept bleibt:
+   - Captain = Mensch
+   - GUPPI = First Officer / Gehirn
+   - AI Control Master = Maschinenraum
+   - Modelle/APIs/Tools = Maschinen
+   - Hardware Manager / Model Pass = Ressourcenkenntnis
+   - GUPPI Entwicklungsumgebung = isolierte Werkstatt
+   - Audit / History = Logbuch
+6. Neu vorgeschlagen:
+   „GUPPI Job Supervisor“ als Infrastruktur.
+7. Supervisor ist kein eigenes Gehirn.
+8. Rollen sind wichtiger als Modellnamen.
+9. GUPPI fordert z.B. „coder“ an; Control Master wählt die konkrete Runtime.
+10. Hardware Awareness soll RAM, VRAM, KV Cache, CPU, GPU, Temperatur,
+    Kontextfenster, Parallelität und Reserven berücksichtigen.
+11. Provider können DEGRADED / COOLDOWN / UNAVAILABLE werden.
+12. Permissions werden in Levels strukturiert.
+13. Fallback darf Policies niemals umgehen.
+14. Capabilities sollen deklarativ registrierbar sein.
+15. GUPPI soll langfristig Fähigkeitslücken erkennen und in der
+    Entwicklungsumgebung neue Fähigkeiten bauen, testen und verifizieren.
+16. Kernprozess:
+    PLANEN -> PRÜFEN -> CODEN -> TESTEN -> VERIFIZIEREN -> ÜBERNEHMEN.
+17. Produktidentität:
+    „GUPPI – dein KI-Assistent, der sich selbst entwickelt und weiterbaut.“
+18. Selbstentwicklung bedeutet NICHT unkontrollierte Selbstmodifikation.
+19. Neue Erkenntnis aus dem weiteren Vergleich:
+    Context-/Token-Management ist ein eigener Architekturbaustein.
+20. Modelle scheitern nicht nur an zu wenig Fähigkeiten, sondern auch an
+    überladenem, redundantem oder veraltetem Kontext.
+21. Deshalb soll GUPPI künftig:
+    - Kontextbudgets kennen
+    - Task-Grenzen erkennen
+    - Child Agents mit kuratiertem Kontext starten
+    - große Tool-Ausgaben auslagern
+    - Checkpoints erstellen
+    - Kontext bei Bedarf reparieren
+    - Token-/Context-Metriken erfassen
+22. Ziel ist NICHT maximal aggressives Kürzen.
+    Ziel ist „Minimum Sufficient Context“:
+    so wenig wie möglich, so viel wie nötig.
+23. Dieses Context Management soll mit dem Hardware-Model-Pass verzahnt
+    werden, weil Kontextfenster und KV Cache reale RAM-/VRAM-Kosten haben.
+24. Die besten Herder-/Harness-Muster sollen übernommen werden,
+    ohne GUPPI, Control Master oder bestehende Sicherheitsgrenzen zu verlieren.
+
+======================================================================
+21. ERWARTETE ERSTE AUSGABE DES CODERS
+======================================================================
+
+NICHT sofort alles umbauen.
+
+Zuerst liefern:
+
+1. ARCHITECTURE_GAP_REPORT.md
+   - Was existiert bereits?
+   - Was fehlt?
+   - Wo gibt es Überschneidungen?
+   - Welche Herder-/Harness-Muster passen?
+   - Welche nicht?
+
+2. INTEGRATION_PLAN.md
+   - konkrete Dateien/Module
+   - neue Interfaces
+   - Migrationen
+   - Risiken
+   - Reihenfolge
+
+3. CONTEXT_TOKEN_PLAN.md
+   - vorhandenes Context-/Memory-Verhalten
+   - aktueller Tokenfluss
+   - Tool-Output-Verhalten
+   - Child-Agent-Kontext
+   - proposed Context Budget Manager
+   - Teststrategie
+
+4. Erst danach:
+   minimale, rückbaubare Implementierung.
+
+ENDE DES HANDOFFS

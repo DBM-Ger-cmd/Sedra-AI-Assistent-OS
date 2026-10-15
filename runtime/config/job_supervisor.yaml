@@ -1,0 +1,59 @@
+job_supervisor:
+  schema: 1
+  enabled: false              # Feature flag. Default OFF: GUPPI behaves exactly like v1.20.
+  workers: 1                  # Phase 2: exactly one worker, no parallelism.
+  claim_timeout_s: 30
+  lease_s: 120
+  max_lease_s: 900
+  heartbeat_interval_s: 20
+  suspect_after_s: 60
+  grace_s: 60
+  stall_after_s: 300
+  reap_interval_s: 30
+  retry:
+    limit: 3
+    timeout_retry_limit: 2
+    backoff_base_s: 2
+    backoff_max_s: 120
+  critical:
+    min_priority: 8
+    min_permission_level: 4
+  dependency_satisfied_states:
+    - READY_FOR_ACCEPTANCE
+    - ACTIVATION_PENDING
+    - ACTIVATED
+  # Roles are configuration, not code. `mutates` decides what happens when the outcome of an
+  # attempt is unknown: a mutating role is never replayed automatically.
+  roles:
+    planner:           {mutates: false, capability: planning}
+    researcher:        {mutates: false, capability: research}
+    reviewer:          {mutates: false, capability: code_review}
+    verifier:          {mutates: false, capability: verification, independent_of: [coder, documentation, tool_operator, hardware_engineer]}
+    tester:            {mutates: false, capability: test_execution}
+    security_reviewer: {mutates: false, capability: security_review, independent_of: [coder, documentation, tool_operator, hardware_engineer]}
+    context_curator:   {mutates: false, capability: context_curation}
+    coder:             {mutates: true,  capability: python_local_coding}
+    tool_operator:     {mutates: true,  capability: tool_operation}
+    hardware_engineer: {mutates: true,  capability: hardware_tuning}
+    documentation:     {mutates: true,  capability: documentation}
+
+# Context Manager (docs/CONTEXT_MANAGER_CONTRACTS.md). Every number below is a STARTING VALUE
+# without measurement behind it; the metrics the manager records exist to replace them.
+context_manager:
+  schema: 1
+  enabled: false              # Feature flag. Default OFF: no metrics, no offloading, no checkpoints.
+  default_context_window: 8192     # used only when neither model, hardware pass nor runtime know the window
+  watermarks: {green: 0.55, yellow: 0.70, orange: 0.85}
+  estimator:
+    code_chars_per_token: 3.0
+    prose_chars_per_token: 3.5
+    safety_factor: 1.15            # pessimistic on purpose
+    calibrate_after: 20            # measurements per model before the factor may be relaxed
+  tool_output_inline_max_tokens: 1500
+  max_offload_bytes: 67108864      # 64 MiB; larger output is refused, not truncated silently
+  artifact_read_max_bytes: 65536
+  checkpoint_max_tokens: 3000
+  stale_after_s: 3600
+  repair: {max_per_job: 2, repeat_threshold: 3}          # used from Phase 4
+  retention: {artifacts_days: 14, metrics_days: 60}      # not enforced yet
+  relevance_weights: {task: 3, file: 3, decision: 2, safety: 4, pinned: 4, recency: 1, done_penalty: 2}

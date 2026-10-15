@@ -1,0 +1,66 @@
+mission_state:
+  schema: 1
+  identity:
+    mission_id: M-0001
+    created_at: null
+    created_by: captain
+    mission_class: S1
+  captain_intent:
+    original: ''
+    immutable: true
+  objective:
+    current: ''
+    version: 1
+  lifecycle:
+    phase: UNDERSTAND
+    status: active
+  context:
+    refs: []
+    active_context_pack: null
+    unresolved_questions: []
+  plan:
+    version: null
+    status: missing
+    steps: []
+    dependencies: []
+    acceptance_criteria: []
+  modules:
+    planning-context:
+      state: idle
+    control-master:
+      state: idle
+    verification:
+      state: idle
+  execution:
+    current_step: null
+    requests: []
+    results: []
+    artifacts: []
+    errors: []
+    step_journal: null
+    candidate_attempts: []
+  verification:
+    status: pending
+    findings: []
+    evidence: []
+    rework_request: null
+  risk:
+    level: low
+    findings: []
+  human_gates:
+    pending: []
+    resolved: []
+  decisions: []
+  capability_gaps: []
+  audit:
+    last_event_id: null
+    event_count: 0
+  routing:
+    status: pending
+    route: null
+  plan_revision: 0
+  wait: null
+  result:
+    kind: null
+    qualification: PENDING
+    evidence_refs: []

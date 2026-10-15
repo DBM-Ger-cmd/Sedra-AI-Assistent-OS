@@ -1,0 +1,16 @@
+tool:
+  id: gauge-model
+  name: "Modell"
+  description: "Welches Modell geladen ist, mit Kontext."
+  version: 1.0.0
+  kind: instrument
+  handles: []
+  order: 11
+  entry: {js: tool.js}
+  api:
+    - GET /api/strip
+  events:
+    emits: [object.open]
+    listens: [task.changed, decision.pending, decision.answered, model.changed, system.state]
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

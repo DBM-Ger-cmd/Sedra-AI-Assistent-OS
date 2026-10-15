@@ -1,0 +1,23 @@
+# Phase 8a: make the resolved context window the one the provider really applies (LM Studio via the `lms` CLI).
+# Off by default. Only used by the job supervisor after a reservation was granted; never downloads anything.
+model_loader:
+  enabled: false
+  # A model already loaded with another context: "reload" unloads that instance of THIS model and loads it again;
+  # "refuse" fails the start instead. Other models are never touched.
+  on_context_mismatch: reload
+  # One prediction slot. LM Studio's per-model default can be 2 (qwen here), which splits the KV cache for a second request
+  # this single-worker setup never makes.
+  parallel: 1
+  # Speculative MTP drafting stays OFF. Measured on this PC (qwen3.5-9b-mtp in LM Studio, 5 long generations each, run while another
+  # client was also using the engine, so treat the counts as indicative): with one slot and MTP on, the engine died with
+  # "CUDA error: an illegal memory access" in 5 of 5 runs; without MTP 0 of 5 (slower: about 48 s instead of 17-33 s per 3000 tokens).
+  mtp: false
+  # Ask LM Studio for its own memory estimate first and refuse when it exceeds the reservation (plus slack).
+  # Off: measured on this PC, the estimate is far too high for large windows (gemma at 65536: estimated 16.8 GiB, loaded 8.7 GiB),
+  # so it would refuse starts that fit. The recipes carry measured VRAM instead.
+  check_estimate: false
+  estimate_slack_gb: 0.5
+  # Two models that do not fit on the card together (this PC: qwen 8.3 GiB + gemma 7.7 GiB on 12 GB) can only take turns.
+  # true: when a start is refused for lack of VRAM, models that no running attempt uses are unloaded and the start is
+  # tried once more. Off by default because a model loaded for the Captain's own chat counts as idle as well.
+  evict_idle_models: false

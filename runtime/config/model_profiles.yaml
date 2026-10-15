@@ -1,0 +1,166 @@
+hardware_model_profiles:
+  schema: 2
+  strategy: qwen3.5_plus_kev_local_first
+  presets:
+    safe-cpu-default:
+      hardware_classes: [cpu_small]
+      runtime: llama-cpp-server
+      model: Qwen3.5-0.8B
+      quantization: Q4_K_M
+      verification:
+        provider: kev
+        model: Kev-0.8B
+        base_model: Qwen3.5-0.8B-Base
+        execution_mode: SWAP_MODE
+      context: {recommended: 4096, maximum: 8192}
+      kv_cache: {precision: q8_0, placement: cpu}
+      batch_size: 128
+      microbatch_size: 64
+      gpu_layers: 0
+      cpu_threads: auto
+      parallelism: 1
+      memory_reserve_gb: 3
+    cpu-balanced-16plus:
+      hardware_classes: [cpu_16plus, cpu_32plus, cpu_64plus]
+      runtime: llama-cpp-server
+      model: Qwen3.5-4B
+      quantization: Q4_K_M
+      verification:
+        provider: kev
+        model: Kev-0.8B
+        base_model: Qwen3.5-0.8B-Base
+        execution_mode: SWAP_MODE
+      context: {recommended: 8192, maximum: 16384}
+      kv_cache: {precision: q8_0, placement: cpu}
+      batch_size: 128
+      microbatch_size: 64
+      gpu_layers: 0
+      cpu_threads: auto
+      parallelism: 1
+      memory_reserve_gb: 4
+    nvidia-small-safe:
+      hardware_classes: [nvidia_small]
+      runtime: llama-cpp-server
+      model: Qwen3.5-0.8B
+      quantization: Q4_K_M
+      verification:
+        provider: kev
+        model: Kev-0.8B
+        base_model: Qwen3.5-0.8B-Base
+        execution_mode: SWAP_MODE
+      context: {recommended: 4096, maximum: 8192}
+      kv_cache: {precision: q8_0, placement: mixed}
+      batch_size: 128
+      microbatch_size: 64
+      gpu_layers: auto
+      cpu_threads: auto
+      parallelism: 1
+      memory_reserve_gb: 3
+    nvidia-6-8gb-safe:
+      hardware_classes: [nvidia_6_8]
+      runtime: llama-cpp-server
+      model: Qwen3.5-4B
+      quantization: Q4_K_M
+      verification:
+        provider: kev
+        model: Kev-0.8B
+        base_model: Qwen3.5-0.8B-Base
+        execution_mode: SWAP_MODE
+      context: {recommended: 8192, maximum: 16384}
+      kv_cache: {precision: q8_0, placement: mixed}
+      batch_size: 256
+      microbatch_size: 128
+      gpu_layers: auto
+      cpu_threads: auto
+      parallelism: 1
+      memory_reserve_gb: 3
+    nvidia-10-12gb-safe:
+      hardware_classes: [nvidia_10_12]
+      runtime: llama-cpp-server
+      model: Qwen3.5-4B
+      quantization: Q5_K_M
+      verification:
+        provider: kev
+        model: Kev-4B
+        base_model: Qwen3.5-4B-Base
+        execution_mode: SWAP_MODE
+      context: {recommended: 16384, maximum: 32768}
+      kv_cache: {precision: q8_0, placement: gpu_preferred}
+      batch_size: 512
+      microbatch_size: 256
+      gpu_layers: auto
+      cpu_threads: auto
+      parallelism: 1
+      memory_reserve_gb: 4
+    nvidia-16plus-safe:
+      hardware_classes: [nvidia_16plus]
+      runtime: llama-cpp-server
+      model: Qwen3.5-9B
+      quantization: Q4_K_M
+      verification:
+        provider: kev
+        model: Kev-4B
+        base_model: Qwen3.5-4B-Base
+        execution_mode: SWAP_MODE
+      context: {recommended: 24576, maximum: 65536}
+      kv_cache: {precision: q8_0, placement: gpu_preferred}
+      batch_size: 512
+      microbatch_size: 256
+      gpu_layers: auto
+      cpu_threads: auto
+      parallelism: 1
+      memory_reserve_gb: 5
+    nvidia-24plus-local-high:
+      hardware_classes: [nvidia_24plus]
+      runtime: llama-cpp-server
+      model: Qwen3.5-9B
+      quantization: Q5_K_M
+      verification:
+        provider: kev
+        model: Kev-9B
+        base_model: Qwen3.5-9B-Base
+        execution_mode: SWAP_MODE
+      context: {recommended: 32768, maximum: 65536}
+      kv_cache: {precision: q8_0, placement: gpu}
+      batch_size: 512
+      microbatch_size: 256
+      gpu_layers: auto
+      cpu_threads: auto
+      parallelism: 1
+      memory_reserve_gb: 6
+    apple-unified-small-safe:
+      hardware_classes: [apple_unified_small]
+      runtime: llama-cpp-server
+      model: Qwen3.5-0.8B
+      quantization: Q4_K_M
+      verification:
+        provider: kev
+        model: Kev-0.8B
+        base_model: Qwen3.5-0.8B-Base
+        execution_mode: SWAP_MODE
+      context: {recommended: 4096, maximum: 8192}
+      kv_cache: {precision: q8_0, placement: unified}
+      batch_size: 128
+      microbatch_size: 64
+      gpu_layers: auto
+      cpu_threads: auto
+      parallelism: 1
+      memory_reserve_gb: 3
+    apple-unified-safe:
+      hardware_classes: [apple_unified_16plus, apple_unified_32plus, apple_unified_64plus]
+      runtime: llama-cpp-server
+      model: Qwen3.5-4B
+      quantization: Q5_K_M
+      verification:
+        provider: kev
+        model: Kev-4B
+        base_model: Qwen3.5-4B-Base
+        execution_mode: SWAP_MODE
+      context: {recommended: 16384, maximum: 32768}
+      kv_cache: {precision: q8_0, placement: unified}
+      batch_size: 512
+      microbatch_size: 256
+      gpu_layers: auto
+      cpu_threads: auto
+      parallelism: 1
+      memory_reserve_gb: 4

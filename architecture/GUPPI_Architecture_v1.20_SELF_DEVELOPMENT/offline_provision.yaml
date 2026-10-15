@@ -1,0 +1,20 @@
+offline_provision:
+  schema: 1
+  image_guard_action: sandbox_image_import
+  archive_limit_bytes: 2147483648
+  archive_and_manifest_digests_separate: true
+  shared_execution_interlock: active.lock
+  unknown_outcome: manual_review_no_auto_clear
+  success: IMPORTED_NOT_QUALIFIED
+  changes_policy: false
+  starts_vm: false
+  binary_assets_bundled:
+    sdk_windows_x64: '0.7.4'
+    embedded_python: false
+    pyyaml_windows: false
+    guest_image: false
+  portable_builder:
+    network: no_downloads
+    overwrite_existing: false
+    qualification: ASSEMBLED_NOT_PC_TESTED
+  windows_launcher_qualified: false

@@ -1,0 +1,29 @@
+model_tuning_contract:
+  schema: 1
+  version: 1.6.0
+  coordinator: GUPPI
+  executor: Control Master / model-runtime
+  provider: llama-cpp-server
+  preview_operation: tuning_plan
+  execution_operation: tuning_run
+  authorization:
+    action: model_runtime_control
+    target: "tuning:<sha256-of-plan>"
+    single_use: true
+    binds: [model_content, hardware_fingerprint, base_profile, candidates, run_limits]
+  limits:
+    maximum_candidates: 24
+    default_candidates: 12
+    maximum_cartesian_combinations: 128
+    repeats: [2, 4]
+    warmups: [0, 1]
+    max_tokens: [8, 256]
+    failure_limit: [1, 3]
+    budget_seconds: [30, 3600]
+    budget_semantics: checked_between_candidates
+  axes: [context, batch_size, gpu_layers, kv_precision]
+  recommendation:
+    requires: PASS plus exact provider token usage
+    ranking: median_request_tokens_per_second
+    auto_promote: false
+  excludes: [full_context_stress_test, VRAM_qualification, LM_Studio_tuning]

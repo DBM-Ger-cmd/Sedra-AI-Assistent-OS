@@ -1,0 +1,5 @@
+{
+  "archive_path": "offline-assets/guest-image.tar",
+  "expected_archive_sha256": "REPLACE_WITH_VERIFIED_ARCHIVE_SHA256",
+  "image_reference": "REPLACE_WITH_IMAGE_NAME@sha256:REPLACE_WITH_MANIFEST_DIGEST"
+}

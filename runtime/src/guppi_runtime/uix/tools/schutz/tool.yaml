@@ -1,0 +1,17 @@
+tool:
+  id: schutz
+  name: "KI GateWay · Schutz"
+  description: "Der Nachweis neben dem Vorgang: was der Inhaltsschutz von ganz SEDRA tut – Zählungen, Regeln, Verlauf, selbst ausprobieren."
+  version: 1.0.0
+  handles: [gateway]
+  kind: object
+  slot: nachweis
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/guard/status
+    - POST /api/guard/probe
+    - GET /api/decisions
+    - POST /api/decisions/answer
+  events: {emits: [decision.answered], listens: [decision.pending, decision.answered]}
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

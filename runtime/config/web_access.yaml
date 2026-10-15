@@ -1,0 +1,7 @@
+# GUPPI's read-only web access (tools/web.py, 2026-10-03). Captain's choice: hosts on this list are read WITHOUT a gate per call
+# (Guard rule GR-027 external_read: ALLOW); every other host is blocked by the tool and never contacted. https + GET only.
+# Fetched text is stored under runtime_data/external/ as untrusted data. Add a domain here only on the Captain's word.
+web_access:
+  allowed_domains: [youtube.com, youtu.be, github.com, raw.githubusercontent.com, huggingface.co]
+  max_bytes: 2000000
+  timeout_s: 30

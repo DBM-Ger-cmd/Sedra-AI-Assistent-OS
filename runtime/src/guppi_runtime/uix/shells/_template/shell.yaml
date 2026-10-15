@@ -1,0 +1,15 @@
+# Vorlage für eine Shell (§7.4). Genau eine Shell ist aktiv; welche, steht in local_config/uix.yaml.
+shell:
+  id: beispiel
+  name: "Beispiel-Shell"
+  description: "Ein Satz: welche Form sie dem Bildschirm gibt."
+  version: 1.0.0
+  entry: {js: shell.js, css: shell.css}
+  provides: [dock, talk]            # welche Slots sie anbietet (strip, tree, dock, talk, palette, windows, menubar, notify, inbox)
+  layout: {persist: browser}
+  api:
+    - GET /api/strip
+    - GET /api/decisions
+    - POST /api/decisions/answer
+  trust: CAPTAIN
+  needs: {ui: ">=1.0 <2"}

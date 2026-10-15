@@ -1,0 +1,72 @@
+proposal:
+  version: '1.0'
+  status: REVIEW_ONLY_NOT_IMPLEMENTED
+  base_runtime: '1.13'
+  keep_mission_id_format: 'M-XXXXXXXX'
+  no_new_supervisor: true
+  priority_order: [gate_binding, result_qualification, feasibility_contract, step_resume, qualified_sandbox_tests, controlled_accept]
+  execution_requirements:
+    schema: 1
+    identity_fields: [mission_id, step_id, attempt_id, plan_version, requirements_digest]
+    constraints:
+      hard: [required_capabilities, allowed_execution_locations, data_class, permissions]
+      conditional: [context_min_tokens, runtime_versions, model_identity, resource_estimate, target_qualification]
+      preference: [preferred_profile, preferred_provider, priority]
+    rules:
+      - requirements come from validated configuration and task inputs
+      - router recommendations never grant permissions
+      - classify unknown data conservatively until project or Captain rule resolves it
+      - resource estimates are not reservations
+  feasibility_response:
+    schema: 1
+    statuses: [EXECUTABLE, NOT_NOW, BLOCKED, UNSUPPORTED]
+    fields: [mission_id, step_id, requirements_digest, status, reason_code, checked_at, expires_at, evidence_refs, alternatives]
+    reason_examples: [GPU_BUSY, JOB_LIMIT, MEMORY_UNKNOWN, THERMAL_LIMIT, PROVIDER_UNAVAILABLE, POLICY_DENIED, NO_HANDLER, TARGET_UNQUALIFIED]
+    alternatives_are_proposals: true
+    recheck_before_execution: true
+    reservation_fields_only_if_real: [lease_id, reserved_resources, expires_at, release_required]
+  mission_extension:
+    retain_existing_lifecycle_phases: true
+    proposed_fields:
+      wait: [reason_code, blocked_step_id, since, resume_condition, next_check_at]
+      result: [kind, qualification, evidence_refs]
+    scheduler_prerequisites: [persistent_step_cursor, attempt_budget, result_checkpoint, dependency_rules, crash_recovery]
+    task_tree_after_prerequisites: true
+  action_classes:
+    A0: READ
+    A1: ANALYZE
+    A2: CREATE_LOCAL
+    A3: MODIFY_SANDBOX
+    A4: MODIFY_PROJECT
+    A5: EXTERNAL_SEND
+    A6: SYSTEM_CHANGE
+    A7: SECURITY_CRITICAL
+    rules:
+      - classes do not define automatic authorization
+      - Guard remains authoritative
+      - retain current sandbox_execute Captain gate
+      - verifier PASS never grants a write permission
+  gate_binding:
+    required: [mission_id, step_id, action, canonical_targets, request_digest, plan_version]
+    conditional: [source_digest, recipient, provider, payload_digest, policy_version]
+    check_at_execution: true
+    single_use_atomic_consumption: true
+    explicit_scope_required: true
+  evidence:
+    fields: [mission_id, step_id, attempt_id, kind, producer, version_digest, status, limits, artifact_refs]
+    candidate_qualifications: [PREPARED_NOT_TESTED, TESTED_PASS, ACCEPTED]
+    qualification_transition_requires_new_evidence: true
+    not_required_requires_explicit_rule: true
+  external_timeout:
+    outcome: UNKNOWN_REMOTE_OUTCOME
+    retry_allowed_only_after: status_or_idempotency_resolution
+  topic_promotion:
+    persistent_draft_allowed_on_first_gap: true
+    draft_grants_permissions: false
+    promotion_requires: [distinct_mission_evidence, duplicate_review, explicit_activation_rule]
+    repeated_route_calls_are_not_distinct_cases: true
+  non_goals_next_package:
+    - full task scheduler and autonomous agents
+    - cloud provider execution
+    - hardware fan or firmware writes
+    - automatic candidate accept or merge

@@ -1,0 +1,14 @@
+health_report:
+  schema: 1
+
+  component_id: ""
+  timestamp: null
+  state: "UNKNOWN"
+
+  checks: []
+  blocking_findings: []
+  warnings: []
+
+  recommendation:
+    action: null
+    # NONE, RESTART_COMPONENT, SAFE_MODE, RECOVERY, HALT

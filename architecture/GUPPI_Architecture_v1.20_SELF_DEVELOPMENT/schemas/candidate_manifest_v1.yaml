@@ -1,0 +1,33 @@
+candidate:
+  schema: 1
+
+  identity:
+    candidate_id: "CAND-0001"
+    evolution_id: "EV-0001"
+    base_version: "0.6.0"
+    candidate_version: "0.7.0-rc1"
+
+  classification:
+    level: "E2"
+
+  changes:
+    added: []
+    modified: []
+    removed: []
+
+  compatibility:
+    core_contract: 1
+    required_migrations: []
+
+  verification:
+    status: "pending"
+    required_tests: []
+    passed_tests: []
+    failed_tests: []
+
+  rollback:
+    supported: true
+    bundle: null
+
+  status: "built"
+  # planned, built, testing, verified, rejected, packaged, installed

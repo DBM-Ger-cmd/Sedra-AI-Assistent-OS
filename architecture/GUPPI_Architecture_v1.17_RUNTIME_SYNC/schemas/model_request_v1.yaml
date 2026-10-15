@@ -1,0 +1,12 @@
+model_request:
+  schema: 1
+  mission_id: M-0001
+  provider: null
+  model: null
+  messages: []
+  generation:
+    temperature: null
+    max_tokens: null
+    top_p: null
+  locality:
+    local_only: true

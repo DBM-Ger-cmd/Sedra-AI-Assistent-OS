@@ -1,0 +1,20 @@
+GUPPI v1.20 – Self-Development Foundation / PC-Testpaket
+
+1. ZIP vollstaendig in einen beschreibbaren Ordner entpacken.
+2. ERSTER_START.bat starten. Die Ersteinrichtung fragt vor Downloads.
+3. Danach START_GUPPI.bat (eigenes Fenster) nutzen. Das ist der einzige Start und laeuft ueber den Standardstart (guppi_runtime.uix_start): kein zweiter Start neben einem laufenden, uebrig gebliebene Modell-Server werden beendet,
+   der GPU-Lease-Halter wird angezeigt. Laeuft schon eine GUPPI, ersetzt der Zusatz --replace sie. Beenden: Fenster schliessen.
+4. READY_TEST_WINDOWS.bat prueft die PC-Voraussetzungen.
+5. Die bestehende Kandidaten-/Sandbox-/Captain-Gate-Logik aus v1.19 bleibt erhalten.
+6. Neu: Self-Development-Status ist ueber die Runtime/UIX-API sichtbar.
+7. Qwen3.5 ist die primaere Modellfamilie; Kev ist als lokaler Verification Provider vorbereitet.
+8. Kev ist standardmaessig deaktiviert, bis ein lokaler, qualifizierter Kev-Server bereitsteht.
+9. E1 Auto-Development und Auto-Activation sind standardmaessig AUS.
+10. E2 und E3 werden nicht automatisch aktiviert; E3 kann niemals auto-aktiviert werden.
+
+WICHTIG:
+Dieses Paket beweist noch keine vollautonome Eigenentwicklung auf dem Ziel-PC.
+Windows, lokales Qwen3.5, lokaler Kev-Server und Gastimage muessen auf realer Hardware qualifiziert werden.
+Kein unsicherer Host-Fallback fuer isolierte Tests wurde eingefuehrt.
+
+Details: HANDOFF_v1.20.md und IMPLEMENTATION_REPORT_3_PHASES.md.

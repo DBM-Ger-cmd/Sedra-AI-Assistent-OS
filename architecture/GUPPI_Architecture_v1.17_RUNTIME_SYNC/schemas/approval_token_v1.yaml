@@ -1,0 +1,17 @@
+approval_token:
+  schema: 1
+  identity:
+    token_id: APR-0001
+    mission_id: M-0001
+    gate_id: HG-0001
+  grants:
+    action_type: ''
+    targets: []
+    scope: []
+    request_digest: null
+  limits:
+    single_use: true
+    max_uses: 1
+    expires_at: null
+  status: active
+  used_at: null

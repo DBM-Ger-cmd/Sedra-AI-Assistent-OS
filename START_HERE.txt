@@ -1,0 +1,38 @@
+GUPPI OS / SEDRA - Start (Stand 14.10.2026, Build 7)
+
+1. Ordner an einen beschreibbaren Ort legen.
+2. ERSTER_START.bat starten. Die Ersteinrichtung fragt vor Downloads.
+3. Danach immer START_GUPPI.bat (eigenes Fenster). Das ist der einzige Start (guppi_runtime.uix_start):
+   - kein zweiter Start neben einem laufenden,
+   - uebrig gebliebene Modell-Server werden beendet,
+   - der Halter der GPU-Lease wird angezeigt.
+   Laeuft schon eine GUPPI, ersetzt START_GUPPI.bat --replace sie. Beenden: Fenster schliessen (nie hart beenden).
+4. READY_TEST_WINDOWS.bat prueft die PC-Voraussetzungen.
+
+NEU IN BUILD 7: die Oberflaeche ist das Cockpit (Leiste - Baum - Werkbank - Gespraech unten, Strg+K fuer das Kommando).
+Ein Eingabefeld: das Gespraech. Es versteht Auftraege, Fragen, kurze Navigationsphrasen ("Modelle", "Logbuch") und
+"einmal ja" als Antwort auf eine wartende Freigabe. Entscheidungen haben einen Ort: den Block an der Werkbank.
+Die Oberflaeche von Build 6 bleibt vollstaendig erreichbar: dieselbe Adresse mit /retro am Ende.
+Was gilt und was bewusst offen ist: docs/BUILD_7_DESK_2026-10-14.md.
+
+NEU IN BUILD 20 (19 + 19b zusammengefuehrt): das KI GateWay (Werkzeug "gateway", Shell "KI GateWay Studio",
+docs/BUILD_19_GATEWAY_2026-10-15.md) und:
+START_SEDRA.bat ist der Start (Uebersicht der Oberflaechen; START_SEDRA.bat minimal direkt hinein).
+GUPPI oeffnet Fenster und schlaegt Handlungen als Knopf vor ("oeffne den Maschinenraum", "lade das Coder-Modell") -
+ausgefuehrt wird erst mit deinem Klick, Freigaben wie gewohnt. In Minimal: Haus oben links = zurueck zur Uebersicht,
+"+ Neu" in der Ablage legt eigene Felder mit Bildzeichen an (Rechtsklick: verschieben, aendern, entfernen).
+Details: docs/BUILD_19_GUPPI_BEWEGT_SICH_2026-10-15.md (als Build 19b parallel entstanden)
+
+Modelle (GGUF) und die llama.cpp-Engine liegen ausserhalb des Pakets und werden ueber Rezepte eingebunden.
+Hauptmodell ist Qwen3.6-35B-A3B; Engine b11160 mit Flash Attention und KV q8_0.
+Selbstentwicklung (E1/E2/E3) aktiviert nie etwas automatisch; jede Uebernahme gibt der Captain frei.
+
+Dokumentation: README.md und docs/README.md
+  docs/BETRIEB.md      Einrichtung, Start, Konfiguration, GPU, Tests, Stoerungen
+  docs/ENTWICKLUNG.md  wie GUPPI sich selbst weiterbaut, Regeln fuer alle Sitzungen
+  docs/SHELL_WERKZEUG_VERTRAG_v1.md   der Vertrag fuer Shells und Werkzeuge (Desktop-Module)
+  docs/COCKPIT_MODUL_v1.md            die festgelegte Form der ersten Shell
+Alte Paketnotizen (v1.2 bis v1.20): docs/historie/
+
+macOS / Linux: ./start_sedra.sh (oder START_SEDRA.command per Doppelklick). Erster Lauf legt runtime/.venv an.
+Ohne llama.cpp-Engine fuer macOS/Linux oeffnet sich die Oberflaeche, es antwortet aber kein Modell (docs/BETRIEB.md, Abschnitt macOS).

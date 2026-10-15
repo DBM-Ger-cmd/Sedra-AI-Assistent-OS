@@ -1,0 +1,37 @@
+skill:
+  id: knowledge-retrieval
+  name: Knowledge Retrieval
+  version: 1.0.0
+  owner_module: planning-context
+  description: Retrieve project decisions and relevant context without broad context
+    flooding.
+  capabilities:
+  - context_retrieval
+  - knowledge_search
+  - decision_lookup
+  triggers:
+  - was wissen wir
+  - entscheidung
+  - kontext
+  - dokumentation
+  tool_hints: []
+  workflow:
+  - stage: retrieve
+    action: knowledge_search
+    read_only: true
+  - stage: rank
+    action: context_ranking
+    read_only: true
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.10.0
+  status: enabled
+  execution_support: blueprint_only; parameter_binder_pending

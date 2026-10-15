@@ -1,0 +1,24 @@
+# Phase 8c: how a model call spends tokens. Off by default (then calls behave as before: provider defaults, caller's max_tokens).
+#
+# Measured on this PC (LM Studio, one prompt, two models): `reasoning_effort: none` cut qwen3.5-9b from 1342 to 77 output
+# tokens and gemma-4-12b from 489 to 65, with answers of the same length. "low", enable_thinking=false and "/no_think" did not
+# work reliably. Whether answers get WORSE without thinking was not measured: that is why it is a per-role choice.
+token_policy:
+  enabled: false
+  min_output_tokens: 128          # less room than this in the window means the context must shrink first (context_overflow)
+  default: {reasoning_effort: null, max_output_tokens: 1024, output_cap: 4096}     # null = the model's own default
+  # One bounded second try when an answer is cut off by the output limit: bigger budget, never a blind resend.
+  escalation: {max_retries: 1, factor: 2}
+  roles:
+    # Work where the thinking is mostly overhead: summarising, reviewing text, documentation, tool plumbing.
+    reviewer:          {reasoning_effort: none, max_output_tokens: 1024, output_cap: 4096}
+    documentation:     {reasoning_effort: none, max_output_tokens: 2048, output_cap: 8192}
+    context_curator:   {reasoning_effort: none, max_output_tokens: 1024, output_cap: 4096}
+    tool_operator:     {reasoning_effort: none, max_output_tokens: 512,  output_cap: 2048}
+    tester:            {reasoning_effort: none, max_output_tokens: 1024, output_cap: 4096}
+    # Judging and building keep the model's own thinking and get a budget that fits it (qwen spent ~1200 tokens thinking).
+    planner:           {reasoning_effort: null, max_output_tokens: 4096, output_cap: 12288}
+    researcher:        {reasoning_effort: null, max_output_tokens: 4096, output_cap: 12288}
+    coder:             {reasoning_effort: null, max_output_tokens: 6144, output_cap: 16384}
+    verifier:          {reasoning_effort: null, max_output_tokens: 3072, output_cap: 8192}
+    security_reviewer: {reasoning_effort: null, max_output_tokens: 3072, output_cap: 8192}

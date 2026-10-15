@@ -1,0 +1,17 @@
+tool:
+  id: sandbox
+  name: Integrated GUPPI Development Environment Broker
+  version: 0.3.0
+  provider: local
+  capabilities: [doctor, preview, run, history, verify, image_preview, image_import]
+  guard:
+    action_class: sandbox_execute
+    protected: true
+  permissions:
+    required: []
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.7.0
+  health:
+    check: tool_health
+  status: enabled

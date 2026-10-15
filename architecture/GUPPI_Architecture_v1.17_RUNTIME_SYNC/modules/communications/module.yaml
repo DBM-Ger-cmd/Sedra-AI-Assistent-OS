@@ -1,0 +1,49 @@
+module:
+  id: "communications"
+  name: "Communications"
+  version: "0.1.0"
+  core_contract: 1
+
+  purpose:
+    - "Externe Kommunikationskanäle kontrolliert bereitstellen."
+    - "Web, APIs, MCP, Plugins und andere Connectoren kapseln."
+
+  capabilities:
+    - "external_read"
+    - "external_write"
+    - "api_request"
+    - "mcp_request"
+    - "plugin_request"
+
+  inputs:
+    required:
+      - "mission_id"
+      - "communication_request"
+
+  outputs:
+    - "communication_result"
+    - "external_refs"
+    - "errors"
+
+  permissions:
+    read:
+      - "tool_registry"
+      - "mission"
+    write:
+      - "communication_results"
+
+  guard:
+    external_write: "CAPTAIN_REQUIRED"
+    credential_access: "CAPTAIN_REQUIRED"
+    paid_action: "CAPTAIN_REQUIRED"
+
+  prohibited:
+    - "store_credentials_in_logs"
+    - "bypass_guard"
+    - "change_mission_objective"
+
+  communicates_with:
+    - "planning-context"
+    - "control-master"
+    - "verification"
+    - "knowledge"

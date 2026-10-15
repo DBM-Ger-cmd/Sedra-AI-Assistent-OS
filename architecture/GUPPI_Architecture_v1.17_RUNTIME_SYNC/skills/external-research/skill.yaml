@@ -1,0 +1,37 @@
+skill:
+  id: external-research
+  name: External Research
+  version: 1.0.0
+  owner_module: planning-context
+  description: Route external read-only research through the communications module.
+  capabilities:
+  - external_read
+  - api_mcp_routing
+  - context_retrieval
+  triggers:
+  - web recherche
+  - internet suchen
+  - api
+  - mcp
+  - plugin
+  tool_hints: []
+  workflow:
+  - stage: research
+    action: communications_external_read
+    read_only: true
+  - stage: store
+    action: knowledge_link_sources
+    read_only: true
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.10.0
+  status: enabled
+  execution_support: blueprint_only; parameter_binder_pending

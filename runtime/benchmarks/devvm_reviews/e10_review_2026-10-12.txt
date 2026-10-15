@@ -1,0 +1,15 @@
+Review of self_repo_guard.py (attempt of 2026-10-12 09:45, stage "shell" passed, stages "check" and "all" failed). Fix exactly this, keep everything else:
+
+1. --git-dir / --work-tree: the decision depends on the FOLDER the command runs in (cwd, after any -C before it), NOT on the path written after the option.
+   An argument that starts with "--git-dir" or "--work-tree" (with or without "=value") ends the scan at once: return "git_dir_override" when the folder is inside a protected root, else None.
+   Do not read a separate value after it and do not normalise or compare the option's path.
+   Examples (P = ["/guppi/runtime", "/guppi/workspace/"]):
+     check(["git", "--git-dir=/other/.git", "status"], "/guppi/runtime", P) == "git_dir_override"
+     check(["git", "--work-tree=/x", "status"], "/guppi/runtime", P) == "git_dir_override"
+     check(["git", "--git-dir=/other/.git", "status"], "/tmp", P) is None
+
+2. The two copies of the --git-dir and --work-tree branches become one branch (one condition: arg.startswith("--git-dir") or arg.startswith("--work-tree")).
+
+3. "-c" takes exactly one value: compare arg == "-c" (today arg.startswith("-c") would also catch other options). Skip it together with its value.
+
+No comments, no docstrings.

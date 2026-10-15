@@ -1,0 +1,4 @@
+/* Werkzeug „Werkstatt“ – inside .t-shop only. */
+.t-shop-row{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);display:flex;flex-direction:column;gap:6px}
+.t-shop-row.on{border-color:var(--ok-line);background:var(--ok-bg)}
+.t-shop-row .s-row{flex-wrap:wrap}

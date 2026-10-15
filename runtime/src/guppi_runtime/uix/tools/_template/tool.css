@@ -1,0 +1,3 @@
+/* Vorlage: jeder Selektor beginnt mit .t-<id>, jede Farbe ist ein Token aus ui/tokens.css. Beides prüft test_uix_contract. */
+.t-beispiel-row{padding:7px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+.t-beispiel-row.warn{background:var(--warn-bg);border-color:var(--warn-line)}

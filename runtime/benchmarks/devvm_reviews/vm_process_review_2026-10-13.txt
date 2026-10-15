@@ -1,0 +1,5 @@
+Review of vm_process.py (Claude, 2026-10-13). Fix exactly these points, keep everything else.
+
+1. `VmProcess.terminate()`: a process that is already abandoned must stay as it is. Today `terminate()` after `kill()` overwrites the code -9 with -15. Make `terminate()` return at once when `self._abandoned` is True (and keep the early return for a process that has ended normally).
+2. `VmProcess.__init__` has an extra public parameter `_gate` that only `make_spawn` uses. Remove it: the constructor is `VmProcess(run, argv)`. In `make_spawn` start the process with `VmProcess(run, argv)` directly (the counting thread may be started right after).
+3. `_worker` writes `_exit_code`, `_output` and `_finished` without the lock while `read()` and `poll()` read them under the lock. Take `self._lock` for those writes (one `with self._lock:` block per outcome, before `self._done_event.set()`).

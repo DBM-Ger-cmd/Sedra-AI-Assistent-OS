@@ -1,0 +1,29 @@
+GUPPI v1.19 – Paket fuer den ersten Windows-PC-Test
+
+1. ZIP vollstaendig in einen beschreibbaren Ordner entpacken.
+2. ERSTER_START.bat starten. Die Ersteinrichtung fragt vor dem Download.
+   Python und PyYAML werden im Paketordner eingerichtet, ohne globale Installation.
+   Erstes Einrichten benoetigt Internet oder die in runtime/Ersteinrichtung.ps1
+   genannten, exakt passenden Dateien in runtime/portable/downloads.
+   Wenn Windows PowerShell das Skript blockiert, Richtlinie/Dateifreigabe pruefen;
+   das Paket umgeht keine Ausfuehrungsrichtlinie.
+3. Danach startet die lokale Retro-Oberflaeche. Spaeter START_GUPPI.bat nutzen.
+4. READY_TEST_WINDOWS.bat erzeugt workspace/GUPPI_OS/runtime_data/reports/
+   PC_DIAGNOSE_v1.19.json mit Voraussetzungen und offenem Schwachstellen-Backlog.
+5. Im Desktop Projekt anlegen und per Doppelklick auswaehlen. Projektdateien vorerst
+   manuell im angezeigten verwalteten Ordner bereitstellen. Keine beliebigen
+   Host-Verzeichnisse anbinden. Fuer Codekandidaten Quelldateien und benoetigte
+   tests/*.py ausdruecklich auswaehlen. Tests werden nicht vom Modell geaendert.
+6. Bridge zeigt Missionen, Ergebnisse und einzelne Captain-Freigaben. Ein vorbereiteter
+   Chat fuehrt noch nichts aus. Kandidaten pruefen, Ergebnis verifizieren, vollstaendigen
+   Uebernahmeplan lesen, dann dessen genaue Aktion freigeben und anwenden.
+
+Grenzen dieses Pakets
+Windows-Start und portable Einrichtung wurden hier nicht auf Windows ausgefuehrt.
+Ein qualifiziertes Gastimage und ein einsatzbereites lokales LLM samt Modell fehlen.
+Deshalb noch keine vollstaendige PC-Abnahme oder lauffaehige autonome Entwicklung.
+Es gibt keinen unsicheren Host-Ersatz fuer VM-Tests. Diagnose bleibt Voraussetzungen-
+pruefung. Abbrueche bei Uebernahme koennen Teilwirkungen hinterlassen und werden als
+REVIEW_REQUIRED/RUNNING gesperrt; keine automatische Wiederholung.
+
+Details: HANDOFF_v1.19.txt. Aeltere Anleitungen dokumentieren historische Staende.

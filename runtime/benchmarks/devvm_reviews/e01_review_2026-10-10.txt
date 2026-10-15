@@ -1,0 +1,4 @@
+Review of read_tracker.py (attempt_01_20261010_205410), Captain/Claude 2026-10-10:
+1. note_edit decides "all lines of the old version were seen" by comparing the STORED ranges with [(1, n)]. note_read stores the ranges without merging them, so a file read in two parts (lines 1-150, then 151-300, or in the other order) is fully seen, but note_edit treats it as partly seen and drops the seen lines. After that check_overwrite gives "partial" instead of "ok". Use the same merged view of the seen ranges everywhere (note_edit, seen, check_overwrite); best keep the stored ranges merged after every note_read.
+2. _is_str, _valid_path, _valid_text and _valid_input wrap the same isinstance check several times: keep one small helper.
+Keep all other behaviour.

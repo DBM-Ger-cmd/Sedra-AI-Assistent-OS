@@ -1,0 +1,47 @@
+# Permission levels 0-6 as a CEILING on Guard actions (docs/JOB_SUPERVISOR_CONTRACTS.md section 9).
+# This file grants nothing. The Guard still decides every action (ALLOW / CAPTAIN_REQUIRED / BLOCK); a job's level only
+# says which actions it may ask for at all. Derived from guard_rules.yaml v1.20 (all 28 rules read).
+# tests/test_permission_levels.py fails if this file and the Guard rules drift apart.
+permission_levels:
+  schema: 1
+  names:
+    0: READ_ONLY
+    1: PROJECT_READ
+    2: DEV_ENV_WRITE
+    3: TEST_EXECUTION
+    4: PROJECT_WRITE
+    5: SYSTEM_CHANGE
+    6: EXTERNAL_ACTION
+  # path_scoped: the target is a path and must lie inside the job's scope roots (its development environment).
+  actions:
+    read_project_file:        {level: 1, path_scoped: true}
+    git_read:                 {level: 1, path_scoped: true}
+    external_read:            {level: 1, path_scoped: false}   # web.py, domain list only (2026-10-03)
+    create_new_artifact:      {level: 2, path_scoped: true}
+    sandbox_execute:          {level: 3, path_scoped: false}
+    shell_execute:            {level: 3, path_scoped: false}
+    overwrite_existing:       {level: 4, path_scoped: true}
+    filesystem_move:          {level: 4, path_scoped: true}
+    file_delete:              {level: 4, path_scoped: true}
+    git_init:                 {level: 4, path_scoped: true}
+    candidate_accept:         {level: 4, path_scoped: false}
+    candidate_rollback:       {level: 4, path_scoped: false}
+    execution_recovery:       {level: 4, path_scoped: false}
+    model_runtime_control:    {level: 5, path_scoped: false}
+    model_profile_promote:    {level: 5, path_scoped: false}
+    model_remove:             {level: 5, path_scoped: false}   # model_removal.py, quarantine only (2026-10-03)
+    hardware_profile_control: {level: 5, path_scoped: false}
+    sandbox_image_import:     {level: 5, path_scoped: false}
+    core_update_install:      {level: 5, path_scoped: false}
+    # GUPPI's own code (self_integration.py, 2026-10-02). Level 5: an E1 job (level 2) can never ask for it itself.
+    self_integration:          {level: 5, path_scoped: false}
+    self_integration_rollback: {level: 5, path_scoped: false}
+    external_write:           {level: 6, path_scoped: false}
+    deployment:               {level: 6, path_scoped: false}
+    credential_access:        {level: 6, path_scoped: false}
+    paid_action:              {level: 6, path_scoped: false}
+  # Never available to a job at any level, whatever the Guard or a Captain token says.
+  never_automatic:
+    - modify_core_invariants
+    - bypass_guard
+    - silent_stable_replacement

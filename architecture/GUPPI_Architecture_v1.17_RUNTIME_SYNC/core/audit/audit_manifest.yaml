@@ -1,0 +1,23 @@
+audit:
+  id: "guppi-audit"
+  version: "1.0.0"
+  core_contract: 1
+
+  storage:
+    format: "jsonl"
+    append_only: true
+    default_path: "audit/events.jsonl"
+
+  responsibilities:
+    - "record_mission_events"
+    - "record_guard_decisions"
+    - "record_module_messages"
+    - "record_artifact_changes"
+    - "record_update_and_rollback_events"
+    - "provide_evidence_for_evolution"
+
+  invariants:
+    - "events_are_append_only"
+    - "event_ids_are_unique"
+    - "source_mission_is_preserved_when_available"
+    - "security_sensitive_values_are_not_logged_in_plaintext"

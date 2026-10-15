@@ -1,0 +1,99 @@
+guard_rules:
+  schema: 1
+  defaults:
+    unknown_action: CAPTAIN_REQUIRED
+    missing_permission: BLOCK
+    expired_approval: CAPTAIN_REQUIRED
+  rules:
+  - id: GR-001
+    action: read_project_file
+    decision: ALLOW
+  - id: GR-002
+    action: create_new_artifact
+    decision: ALLOW
+  - id: GR-003
+    action: overwrite_existing
+    decision: CAPTAIN_REQUIRED
+  - id: GR-004
+    action: file_delete
+    decision: CAPTAIN_REQUIRED
+  - id: GR-005
+    action: external_write
+    decision: CAPTAIN_REQUIRED
+  - id: GR-006
+    action: deployment
+    decision: CAPTAIN_REQUIRED
+  - id: GR-007
+    action: credential_access
+    decision: CAPTAIN_REQUIRED
+  - id: GR-008
+    action: paid_action
+    decision: CAPTAIN_REQUIRED
+  - id: GR-009
+    action: modify_core_invariants
+    decision: BLOCK
+  - id: GR-010
+    action: bypass_guard
+    decision: BLOCK
+  - id: GR-011
+    action: silent_stable_replacement
+    decision: BLOCK
+  - id: GR-012
+    action: core_update_install
+    decision: CAPTAIN_REQUIRED
+  - id: GR-013
+    action: git_read
+    decision: ALLOW
+  - id: GR-014
+    action: git_init
+    decision: CAPTAIN_REQUIRED
+  - id: GR-015
+    action: shell_execute
+    decision: CAPTAIN_REQUIRED
+  - id: GR-016
+    action: filesystem_move
+    decision: CAPTAIN_REQUIRED
+  - id: GR-017
+    action: model_runtime_control
+    decision: CAPTAIN_REQUIRED
+  - id: GR-018
+    action: model_profile_promote
+    decision: CAPTAIN_REQUIRED
+  - id: GR-019
+    action: sandbox_execute
+    decision: CAPTAIN_REQUIRED
+  - id: GR-020
+    action: hardware_profile_control
+    decision: CAPTAIN_REQUIRED
+  - id: GR-021
+    action: execution_recovery
+    decision: CAPTAIN_REQUIRED
+  - id: GR-022
+    action: sandbox_image_import
+    decision: CAPTAIN_REQUIRED
+  - id: GR-023
+    action: candidate_accept
+    decision: CAPTAIN_REQUIRED
+  - id: GR-024
+    action: candidate_rollback
+    decision: CAPTAIN_REQUIRED
+  # 2026-10-02: taking a self-developed E1 capability into GUPPI's own code (runtime/self_integration.py) and undoing it.
+  - id: GR-025
+    action: self_integration
+    decision: CAPTAIN_REQUIRED
+  - id: GR-026
+    action: self_integration_rollback
+    decision: CAPTAIN_REQUIRED
+  # 2026-10-03: read-only web access to the hosts in config/web_access.yaml (tools/web.py). The Captain chose no gate per call;
+  # hosts off the list are blocked by the tool itself. Writing to the web stays external_write (level 6).
+  - id: GR-027
+    action: external_read
+    decision: ALLOW
+  # 2026-10-03: moving local model files into quarantine (model_removal.py). Nothing is deleted; the Captain approves each plan.
+  - id: GR-028
+    action: model_remove
+    decision: CAPTAIN_REQUIRED
+  precedence:
+  - BLOCK
+  - CAPTAIN_REQUIRED
+  - ALLOW

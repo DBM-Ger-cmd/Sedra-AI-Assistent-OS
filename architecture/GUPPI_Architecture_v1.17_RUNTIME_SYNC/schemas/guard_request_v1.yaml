@@ -1,0 +1,34 @@
+guard_request:
+  schema: 1
+
+  identity:
+    request_id: "GRQ-0001"
+    mission_id: "M-0001"
+
+  requester:
+    module: "control-master"
+
+  action:
+    type: "overwrite_existing"
+    target: ""
+    description: ""
+    scope: []
+    reversible: true
+
+  risk:
+    level: "medium"
+    reasons: []
+
+  permissions:
+    required: []
+    present: []
+
+  cost:
+    estimated: null
+    currency: null
+
+  decision:
+    status: "pending"
+    result: null
+    rule_id: null
+    reason: null

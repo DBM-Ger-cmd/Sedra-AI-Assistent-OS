@@ -1,0 +1,5 @@
+Review of coder_ext.py (attempt_01_20261011_085146), Captain/Claude 2026-10-11: two defects in after_tool / _bookkeeping. Everything else is right, keep it exactly.
+1. DEFECT: _bookkeeping for "read_file" passes args.get("start") and args.get("end") straight to note_read. read_file shows at most 150 lines: a read without start/end of a 300-line file shows lines 1-150 only, but the tracker then counts all 300 as seen. The task says: use shown_range. Replace the call by
+       self.tracker.note_read(args.get("path"), current, *shown_range(current, args.get("start"), args.get("end")))
+2. DEFECT: after_tool appends the return value of _bookkeeping ("") to parts, so the joined text can start with an empty part and a stray "\n". Bookkeeping adds NO part: call self._bookkeeping(name, args, current) without appending, and let _bookkeeping return nothing.
+Change nothing else.

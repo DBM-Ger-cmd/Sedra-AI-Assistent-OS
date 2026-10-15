@@ -1,0 +1,20 @@
+tool:
+  id: boundaries
+  name: "Modus und Grenzen"
+  description: "Die vier Stellen, an denen der Mensch steht – je Projekt, einmal bestätigt."
+  version: 1.0.0
+  kind: object
+  handles: [boundary]
+  order: 12
+  slot: inhalt
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/boundaries
+    - POST /api/boundaries/request
+    - POST /api/actions
+  events:
+    emits: [object.open]
+    listens: [decision.answered]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

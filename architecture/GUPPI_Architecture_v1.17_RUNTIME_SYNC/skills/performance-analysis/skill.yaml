@@ -1,0 +1,75 @@
+skill:
+  id: performance-analysis
+  name: Leistung und Ressourcen
+  version: 1.0.0
+  owner_module: planning-context
+  description: Leistung und Ressourcen als begrenzter Workflow-Blueprint.
+  topics:
+  - performance
+  capabilities:
+  - performance_analysis
+  triggers:
+  - leistungsanalyse
+  - performance analysis
+  - engpass
+  - bottleneck
+  - durchsatz
+  - profiling
+  tool_hints:
+  - hardware-manager
+  - model-runtime
+  - filesystem
+  workflow:
+  - stage: observe
+    tool: filesystem
+    operation: list_dir
+    binding:
+      path: <project-root>
+    read_only: true
+  - stage: observe
+    tool: hardware-manager
+    operation: get_inventory
+    read_only: true
+  - stage: observe
+    tool: model-runtime
+    operation: status
+    read_only: true
+  - stage: plan
+    action: separate_measured_and_estimated_metrics
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: correlate_benchmark_and_hardware_records
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: propose_bounded_comparison_without_automatic_retuning
+    execution: planning_only
+    read_only: true
+  inputs:
+  - benchmark-id
+  - hardware records
+  - workload
+  outputs:
+  - performance report
+  - comparison plan
+  execution_support: blueprint_only; parameter_binder_pending
+  acceptance_criteria:
+  - Inputs and scope are explicit
+  - Claims distinguish evidence from assumptions
+  - No action outside selected tools and Guard
+  boundaries:
+  - No automatic deployment, publishing or hardware writes
+  - Planning actions require a later validated execution binding
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.11.0
+  status: enabled

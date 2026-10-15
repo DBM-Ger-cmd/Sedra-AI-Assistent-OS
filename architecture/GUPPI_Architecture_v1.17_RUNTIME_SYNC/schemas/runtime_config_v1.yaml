@@ -1,0 +1,22 @@
+runtime_config:
+  schema: 1
+
+  system:
+    strict_mode: true
+    default_mission_class: "S1"
+
+  brain:
+    max_rework_cycles: 3
+
+  guard:
+    default_unknown_action: "CAPTAIN_REQUIRED"
+
+  observability:
+    health_checks_enabled: true
+
+  audit:
+    enabled: true
+    format: "jsonl"
+
+  secrets:
+    provider: "external_or_os_store"

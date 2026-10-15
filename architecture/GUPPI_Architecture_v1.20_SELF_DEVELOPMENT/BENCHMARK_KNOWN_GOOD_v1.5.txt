@@ -1,0 +1,25 @@
+GUPPI OS – Benchmark + Known-Good Profile Learning v1.5
+
+Ziel:
+Reale Hardware-/Modellkombinationen messen und nach erfolgreicher Verifikation
+als KNOWN-GOOD-Profil bestätigen.
+
+Messwerte:
+- Runtime-Startzeit (bei verwaltetem llama.cpp Start)
+- Inferenzdauer
+- Completion Tokens
+- Tokens/Sekunde
+- Prozess-RSS, sofern auf dem Host messbar
+- Fehlerrate / Erfolgsrate
+
+Profilklassen:
+1. BUILT-IN PRESET – sichere Startwerte
+2. KNOWN-GOOD – durch Benchmark bestätigte reale Kombination
+3. CAPTAIN/CUSTOM – manuell konfigurierte Profile
+
+Regeln:
+- Ein Benchmark verändert Stable nicht.
+- Managed Runtime Start läuft durch Guard.
+- KNOWN-GOOD Promotion benötigt Captain-Freigabe.
+- Ein FAIL-Benchmark darf nicht als KNOWN-GOOD gespeichert werden.
+- Matching erfolgt über Hardware-Fingerprint + Modell-ID + Runtime.

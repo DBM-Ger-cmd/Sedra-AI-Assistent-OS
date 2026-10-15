@@ -1,0 +1,861 @@
+capability_router:
+  schema: 1
+  version: '1.4'
+  selection:
+    max_intent_families: 3
+    max_skills: 5
+    max_tools: 6
+    minimum_intent_score: 1
+    enforce_selected_tools: true
+  defaults:
+    modules:
+    - planning-context
+    - control-master
+    - verification
+    model_policy:
+      required: false
+      profile: general
+      local_first: true
+    risk_level: low
+  capability_aliases:
+    project_inspection:
+    - list_dir
+    - read_text
+    - stat
+    - status
+    - diff
+    - log
+    - ls-files
+    file_discovery:
+    - list_dir
+    - read_text
+    - stat
+    version_control_inspection:
+    - status
+    - diff
+    - log
+    - rev-parse
+    - ls-files
+    code_analysis:
+    - read_text
+    - list_dir
+    - diff
+    code_editing:
+    - write_text
+    - copy
+    - move
+    file_write:
+    - write_text
+    - copy
+    - move
+    - mkdir
+    test_execution:
+    - run
+    isolated_code_execution:
+    - run
+    - preview
+    model_management:
+    - status
+    - scan
+    - list_models
+    - provider_models
+    - loaded_models
+    model_benchmark:
+    - benchmark
+    - benchmark_list
+    - tuning_plan
+    - tuning_run
+    hardware_diagnostics:
+    - hardware_inventory
+    - live_telemetry
+    - runtime_admission
+    hardware_profile:
+    - captain_profiles
+    - bounded_power_plan_control
+    sandbox_execution:
+    - doctor
+    - preview
+    - run
+    - history
+  intents:
+    project_analysis:
+      keywords:
+      - analysiere
+      - analyse
+      - prüfe
+      - pruefe
+      - untersuche
+      - inspect
+      - analyze
+      - review
+      - projekt
+      - repository
+      - repo
+      - codebase
+      - struktur
+      phrases:
+      - guck dir das projekt an
+      - schau dir das projekt an
+      - analyse this project
+      - review this project
+      required_capabilities:
+      - project_inspection
+      - file_discovery
+      - version_control_inspection
+      preferred_skills:
+      - project-inspection
+      preferred_tools:
+      - filesystem
+      - git
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: low
+      topics:
+      - development
+      runtime_requirements:
+      - project_inspection
+      - file_discovery
+      - version_control_inspection
+    code_change:
+      keywords:
+      - implementiere
+      - ändere
+      - aendere
+      - baue
+      - entwickle
+      - code
+      - feature
+      - refactor
+      - fix
+      - repariere
+      - modify
+      - implement
+      - change
+      phrases:
+      - arbeite damit weiter
+      - setze das um
+      - integriere das
+      - integrate this
+      required_capabilities:
+      - code_analysis
+      - code_editing
+      - file_write
+      - test_execution
+      preferred_skills:
+      - safe-code-change
+      - debug-and-test
+      preferred_tools:
+      - filesystem
+      - git
+      - sandbox
+      preferred_modules: []
+      model_policy:
+        required: true
+        profile: coding
+        local_first: true
+      risk_level: medium
+      topics:
+      - development
+      runtime_requirements:
+      - code_analysis
+      - code_editing
+      - file_write
+      - test_execution
+    debugging:
+      keywords:
+      - fehler
+      - bug
+      - debug
+      - kaputt
+      - traceback
+      - exception
+      - failed
+      - failure
+      - funktioniert nicht
+      - testfehler
+      phrases:
+      - tests schlagen fehl
+      - finde den fehler
+      - fix the bug
+      required_capabilities:
+      - code_analysis
+      - test_execution
+      - isolated_code_execution
+      preferred_skills:
+      - debug-and-test
+      preferred_tools:
+      - filesystem
+      - git
+      - sandbox
+      preferred_modules: []
+      model_policy:
+        required: true
+        profile: coding
+        local_first: true
+      risk_level: medium
+      topics:
+      - development
+      runtime_requirements:
+      - code_analysis
+      - test_execution
+      - isolated_code_execution
+    test_validation:
+      keywords:
+      - test
+      - tests
+      - prüfen
+      - validieren
+      - validate
+      - verification
+      - regression
+      - compile
+      phrases:
+      - führe tests aus
+      - run tests
+      - hardening runde
+      required_capabilities:
+      - test_execution
+      - isolated_code_execution
+      preferred_skills:
+      - debug-and-test
+      - sandbox-development
+      preferred_tools:
+      - sandbox
+      preferred_modules:
+      - verification
+      model_policy:
+        required: false
+        profile: coding
+        local_first: true
+      risk_level: medium
+      topics:
+      - acceptance
+      runtime_requirements:
+      - test_execution
+      - isolated_code_execution
+    model_runtime:
+      keywords:
+      - modell
+      - model
+      - llm
+      - llama
+      - qwen
+      - lm studio
+      - lmstudio
+      - gguf
+      - runtime
+      - quantisierung
+      - quantization
+      - benchmark
+      - tokens
+      phrases:
+      - model on usb
+      - portable model
+      - hardware model pass
+      required_capabilities:
+      - model_management
+      - model_benchmark
+      preferred_skills:
+      - model-runtime-ops
+      preferred_tools:
+      - model-runtime
+      - hardware-manager
+      preferred_modules: []
+      model_policy:
+        required: false
+        profile: runtime-management
+        local_first: true
+      risk_level: medium
+      topics:
+      - local-ai
+      runtime_requirements:
+      - model_management
+      - model_benchmark
+    hardware_diagnostics:
+      keywords:
+      - hardware
+      - gpu
+      - cpu
+      - ram
+      - vram
+      - temperatur
+      - temperature
+      - lüfter
+      - luefter
+      - fan
+      - power
+      - gigabyte
+      - sensor
+      phrases:
+      - hardware manager
+      - pc daten
+      - gpu temperatur
+      - fan control
+      required_capabilities:
+      - hardware_diagnostics
+      - hardware_profile
+      preferred_skills:
+      - hardware-diagnostics
+      preferred_tools:
+      - hardware-manager
+      preferred_modules: []
+      model_policy:
+        required: false
+        profile: general
+        local_first: true
+      risk_level: medium
+      topics:
+      - hardware
+      runtime_requirements:
+      - hardware_diagnostics
+      - hardware_profile
+    sandbox_execution:
+      keywords:
+      - sandbox
+      - isoliert
+      - isolated
+      - microvm
+      - microsandbox
+      phrases:
+      - sicher ausführen
+      - safe execution
+      - in der sandbox
+      required_capabilities:
+      - sandbox_execution
+      - isolated_code_execution
+      preferred_skills:
+      - sandbox-development
+      preferred_tools:
+      - sandbox
+      preferred_modules: []
+      model_policy:
+        required: false
+        profile: coding
+        local_first: true
+      risk_level: medium
+      topics:
+      - isolation
+      runtime_requirements:
+      - sandbox_execution
+      - isolated_code_execution
+    knowledge_lookup:
+      keywords:
+      - wissen
+      - kontext
+      - context
+      - entscheidung
+      - decision
+      - dokumentation
+      - docs
+      - erinnerst
+      - history
+      phrases:
+      - was wissen wir
+      - was haben wir entschieden
+      required_capabilities:
+      - context_retrieval
+      - knowledge_search
+      preferred_skills:
+      - knowledge-retrieval
+      preferred_tools: []
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: low
+      topics:
+      - knowledge
+      runtime_requirements:
+      - context_retrieval
+      - knowledge_search
+    external_research:
+      keywords:
+      - web
+      - internet
+      - online
+      - api
+      - mcp
+      - plugin
+      - recherche
+      - research
+      phrases:
+      - im internet suchen
+      - online nachsehen
+      - search the web
+      required_capabilities:
+      - external_read
+      preferred_skills:
+      - external-research
+      preferred_tools: []
+      preferred_modules:
+      - communications
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: false
+      risk_level: low
+      topics:
+      - research
+      runtime_requirements:
+      - external_read
+    architecture_design:
+      keywords: &id001
+      - architektur
+      - systementwurf
+      - architecture
+      - system design
+      phrases: *id001
+      topics:
+      - development
+      required_capabilities:
+      - architecture_design
+      runtime_requirements: []
+      preferred_skills:
+      - architecture-design
+      preferred_tools:
+      - filesystem
+      - git
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: low
+    security_review:
+      keywords: &id002
+      - sicherheitsprüfung
+      - sicherheitspruefung
+      - security review
+      - threat model
+      - bedrohungsmodell
+      phrases: *id002
+      topics:
+      - security
+      required_capabilities:
+      - security_review
+      runtime_requirements: []
+      preferred_skills:
+      - security-review
+      preferred_tools:
+      - filesystem
+      - git
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: medium
+    documentation_authoring:
+      keywords: &id003
+      - readme
+      - handbuch
+      - handoff
+      - übergabe
+      - uebergabe
+      - documentation
+      - anleitung
+      phrases: *id003
+      topics:
+      - documentation
+      required_capabilities:
+      - documentation_authoring
+      runtime_requirements: []
+      preferred_skills:
+      - documentation-authoring
+      preferred_tools:
+      - filesystem
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: low
+    data_analysis:
+      keywords: &id004
+      - datenanalyse
+      - csv
+      - datenauswertung
+      - data analysis
+      - dataset
+      phrases: *id004
+      topics:
+      - data
+      required_capabilities:
+      - data_analysis
+      runtime_requirements:
+      - file_discovery
+      - isolated_code_execution
+      preferred_skills:
+      - data-analysis
+      preferred_tools:
+      - filesystem
+      - sandbox
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: medium
+    workflow_design:
+      keywords: &id005
+      - automatisierung
+      - workflow
+      - prozessablauf
+      - automation
+      - process mapping
+      phrases: *id005
+      topics:
+      - automation
+      required_capabilities:
+      - workflow_design
+      runtime_requirements: []
+      preferred_skills:
+      - workflow-design
+      preferred_tools:
+      - filesystem
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: low
+    connector_design:
+      keywords: &id006
+      - schnittstelle
+      - connector
+      - api integration
+      - mcp integration
+      - schnittstellenvertrag
+      phrases: *id006
+      topics:
+      - integrations
+      required_capabilities:
+      - connector_design
+      runtime_requirements: []
+      preferred_skills:
+      - connector-design
+      preferred_tools:
+      - filesystem
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: medium
+    ui_design:
+      keywords: &id007
+      - benutzeroberfläche
+      - benutzeroberflaeche
+      - ui design
+      - dashboard design
+      - bedienablauf
+      - wireframe
+      phrases: *id007
+      topics:
+      - interface
+      required_capabilities:
+      - ui_design
+      runtime_requirements: []
+      preferred_skills:
+      - ui-design
+      preferred_tools:
+      - filesystem
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: low
+    acceptance_planning:
+      keywords: &id008
+      - abnahme
+      - ready test
+      - ready-test
+      - acceptance
+      - prüfprotokoll
+      - pruefprotokoll
+      phrases: *id008
+      topics:
+      - acceptance
+      required_capabilities:
+      - acceptance_planning
+      runtime_requirements: []
+      preferred_skills:
+      - acceptance-planning
+      preferred_tools:
+      - filesystem
+      - hardware-manager
+      - sandbox
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: low
+    portable_deployment:
+      keywords: &id009
+      - usb
+      - offline paket
+      - offline package
+      - portable
+      - portabel
+      - all in one
+      - all-in-one
+      phrases: *id009
+      topics:
+      - portability
+      required_capabilities:
+      - portable_deployment
+      runtime_requirements: []
+      preferred_skills:
+      - portable-deployment
+      preferred_tools:
+      - filesystem
+      - model-runtime
+      - sandbox
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: medium
+    performance_analysis:
+      keywords: &id010
+      - leistungsanalyse
+      - performance analysis
+      - engpass
+      - bottleneck
+      - durchsatz
+      - profiling
+      phrases: *id010
+      topics:
+      - performance
+      required_capabilities:
+      - performance_analysis
+      runtime_requirements: []
+      preferred_skills:
+      - performance-analysis
+      preferred_tools:
+      - hardware-manager
+      - model-runtime
+      - filesystem
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: low
+    source_evaluation:
+      keywords: &id011
+      - quellenbewertung
+      - quellenvergleich
+      - source evaluation
+      - fact check
+      - faktencheck
+      phrases: *id011
+      topics:
+      - research
+      required_capabilities:
+      - source_evaluation
+      runtime_requirements: []
+      preferred_skills:
+      - source-evaluation
+      preferred_tools:
+      - filesystem
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: low
+    software_inventory:
+      keywords: &id012
+      - softwareinventar
+      - software inventory
+      - herstellersoftware
+      - vendor software
+      - fancontrol
+      - msi center
+      - asus armoury crate
+      phrases: *id012
+      topics:
+      - hardware
+      required_capabilities:
+      - software_inventory
+      runtime_requirements:
+      - hardware_inventory
+      preferred_skills:
+      - software-inventory
+      preferred_tools:
+      - hardware-manager
+      - filesystem
+      preferred_modules:
+      - knowledge
+      model_policy:
+        required: true
+        profile: reasoning
+        local_first: true
+      risk_level: low
+  risk_signals:
+    high:
+    - löschen
+    - loeschen
+    - delete
+    - deploy
+    - produktion
+    - production
+    - credential
+    - passwort
+    - password
+    - api key
+    - kostenpflichtig
+    - paid
+    - installiere systemweit
+    - formatieren
+    medium:
+    - überschreiben
+    - ueberschreiben
+    - overwrite
+    - ändern
+    - aendern
+    - modify
+    - write
+    - send
+    - senden
+    - apply profile
+    - power limit
+    - lüfter steuern
+    - fan control
+  tool_semantic_capabilities:
+    filesystem:
+    - project_inspection
+    - file_discovery
+    - code_analysis
+    - code_editing
+    - file_write
+    git:
+    - project_inspection
+    - version_control_inspection
+    - code_analysis
+    shell: []
+    sandbox:
+    - test_execution
+    - isolated_code_execution
+    - sandbox_execution
+    model-runtime:
+    - model_management
+    - model_benchmark
+    - model_selection
+    - runtime_selection
+    - hardware_model_pass
+    hardware-manager:
+    - hardware_diagnostics
+    - hardware_profile
+    - hardware_inventory
+    - live_telemetry
+    - runtime_admission
+  topics:
+    development:
+      label: Softwareentwicklung
+      description: Projektanalyse, Architektur, Coden und Debugging.
+    security:
+      label: Sicherheit
+      description: Vertrauensgrenzen, Berechtigungen und Sicherheitsnachweise.
+    documentation:
+      label: Dokumentation
+      description: Anleitungen, Übergaben und belegbare Implementierungsstände.
+    data:
+      label: Datenanalyse
+      description: Lokale Daten, reproduzierbare Auswertung und Ergebnisgrenzen.
+    automation:
+      label: Automatisierung
+      description: Prozesse, Freigaben und kontrollierte Abläufe.
+    integrations:
+      label: Schnittstellen
+      description: API-, MCP- und Connector-Verträge.
+    interface:
+      label: Oberfläche
+      description: Bedienbarkeit, Fehlerzustände und visuelle Abnahme.
+    acceptance:
+      label: Abnahme
+      description: Voraussetzungen, Testfälle und unabhängige Nachweise.
+    portability:
+      label: Portabilität
+      description: USB, Offline-Bundle und reproduzierbarer Start.
+    performance:
+      label: Leistung
+      description: Messwerte, Benchmarks und Ressourcenvergleich.
+    research:
+      label: Recherche
+      description: Quellenqualität und externe Zugriffslücken.
+    hardware:
+      label: Hardware
+      description: Telemetrie, Ressourcen und gerätespezifische Software.
+    local-ai:
+      label: Lokale KI
+      description: Modelle, Runtimes, Hardware-Pass und Tuning.
+    knowledge:
+      label: Projektwissen
+      description: Kontext, Entscheidungen und nachvollziehbare Historie.
+    isolation:
+      label: Isolation
+      description: Sandbox-Voraussetzungen und sichere Codeausführung.
+  module_semantic_capabilities:
+    knowledge:
+    - context_retrieval
+    - knowledge_search
+  runtime_requirement_signals:
+    fan_control_write:
+    - lüfter steuern
+    - luefter steuern
+    - fan control
+    - fans steuern
+    vendor_profile_write:
+    - gcc profil umschalten
+    - gcc profile switch
+    external_write:
+    - email senden
+    - e-mail senden
+    - send email
+    - veröffentliche
+    - publish
+    deployment:
+    - deploy
+    - deployen
+    - deploye
+  execution_binders:
+    project_analysis:
+      workflow: project-inspection-v1
+      required_inputs:
+      - project_path
+      optional_inputs:
+      - files
+      scope: bounded read-only inventory
+    code_change:
+      workflow: code-candidate-v1
+      required_inputs:
+      - project_path
+      - files
+      - changes
+      optional_inputs:
+      - test_commands
+      scope: supplied replacements; separate selected-file candidate; no tests or
+        merge

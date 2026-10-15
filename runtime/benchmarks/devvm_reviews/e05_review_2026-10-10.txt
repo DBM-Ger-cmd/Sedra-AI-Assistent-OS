@@ -1,0 +1,6 @@
+Review of result_pruner.py (attempt_01_20261010_215005), Captain/Claude 2026-10-10:
+1. DEFECT: _is_shortenable uses the fixed number 40 instead of max_lines. With max_lines=10 a result of 30 lines is not cut; with max_lines=100 a result of 50 lines is cut and the note says a negative number of lines. Pass max_lines in and compare with it.
+2. _check_keep_last and _check_max_lines are the same check with another lower bound: one helper (value, lowest, name). `type(v) is not int or isinstance(v, bool)` is double: type(v) is not int already excludes bool.
+3. _count_tool_messages, _find_dup_tool_indices and the loop in prune each decide "is a tool message with str content" again: one helper; _find_dup_tool_indices also has a misleading name (it returns all tool indices).
+4. _shorten_content: `k = cut` is a copy of a variable; `if keep_last > 0` is always true (max_lines >= 4).
+Change nothing else.

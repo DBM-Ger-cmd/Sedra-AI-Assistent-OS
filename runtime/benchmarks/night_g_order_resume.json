@@ -1,0 +1,4 @@
+[
+  {"spec": "build_log", "seed": "resume_seeds/build_log", "from_stage": "end", "review": "reviews/build_log_end.md"},
+  {"spec": "build_request", "seed": "resume_seeds/build_request", "from_stage": "render", "review": "reviews/build_request_render.md"}
+]

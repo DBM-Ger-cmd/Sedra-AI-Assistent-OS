@@ -1,0 +1,77 @@
+/* UI contract 1.0 – der Rahmen (ui/frame.js): Flächen einer Shell aus Vorgabe. Nur Token aus ui/tokens.css; eine Shell aus
+   Vorgabe darf in ihrer shell.css Farben und Abstände nachstellen (.fr-…), nie in ein Werkzeug hineingreifen. */
+
+.fr{display:grid;height:100%;min-width:0;overflow:hidden;background:var(--bg);position:relative}
+.fr-row{display:grid;min-height:0;min-width:0;overflow:hidden}
+.fr-zone{min-height:0;min-width:0;overflow:hidden;display:flex;flex-direction:column}
+.fr-zone-leer{background:var(--panel-2)}
+
+/* ---- leiste */
+.fr-zone-leiste{flex-direction:row;gap:6px;align-items:stretch;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line);min-height:var(--strip-h);overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+.fr-gauge{flex:0 0 auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:4px 10px;display:flex;flex-direction:column;justify-content:center;min-width:132px}
+.fr-gauge small{color:var(--muted);font-size:var(--size-xs);text-transform:uppercase;letter-spacing:var(--tracking-label);margin-right:6px}
+.fr-gauge b{font-size:var(--size);font-weight:600}
+.fr-gauge i{font-style:normal;color:var(--muted);font-size:var(--size-xs);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr-gauge.ok b{color:var(--ok)} .fr-gauge.warn b{color:var(--warn)} .fr-gauge.bad b{color:var(--bad)}
+.fr-gauge.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.fr-leiste-right{flex:0 0 auto;margin-left:auto;display:flex;gap:8px;align-items:center;color:var(--muted)}
+.fr-hint{font-size:var(--size-xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr-search{font:inherit;font-size:var(--size-small);padding:5px 9px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel-2);color:var(--text);min-width:220px}
+
+/* ---- orte */
+.fr-zone-orte{background:var(--panel-2);border-right:1px solid var(--line);padding:10px;overflow:auto;font-size:var(--size-small);gap:2px}
+.fr-ort{padding:5px 8px;border-radius:6px;display:flex;flex-direction:column;cursor:pointer;border:1px solid transparent}
+.fr-ort:hover{background:var(--panel)}
+.fr-ort.on{background:var(--panel);border-color:var(--line);font-weight:600}
+.fr-ort small{color:var(--muted);font-size:var(--size-xs);font-weight:400}
+
+/* ---- werkstueck */
+.fr-zone-werkstueck{background:var(--panel)}
+.fr-head{display:flex;align-items:center;gap:var(--gap-2);padding:8px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.fr-title{font-size:var(--size-l);font-weight:600;margin-right:auto}
+.fr-verbs{display:flex;gap:6px;flex-wrap:wrap}
+.fr-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden}
+.fr-mode-umschalter{grid-template-rows:auto minmax(0,1fr);grid-template-columns:minmax(0,1fr)}
+.fr-col{min-height:0;min-width:0;overflow:auto;padding:var(--gap-2)}
+.fr-nachweis{border-left:1px solid var(--line);background:var(--panel-2)}
+.fr-mode-umschalter .fr-nachweis{border-left:0}
+.fr-mode-spalten .fr-nachweis{border-left:1px solid var(--line)}
+.fr-tool{min-width:0}
+.fr-tool + .fr-tool{margin-top:var(--gap-3);padding-top:var(--gap-2);border-top:1px solid var(--line-soft)}
+.fr-seg{display:flex;gap:2px;padding:6px 14px 0;border-bottom:1px solid var(--line);background:var(--panel)}
+.fr-seg-item{font:inherit;font-size:var(--size-small);padding:5px 12px;border:1px solid transparent;border-bottom:0;border-radius:var(--radius) var(--radius) 0 0;background:transparent;color:var(--muted);cursor:pointer}
+.fr-seg-item.on{background:var(--panel-2);border-color:var(--line);color:var(--text);font-weight:600}
+
+/* ---- gespraech */
+.fr-zone-gespraech{background:var(--panel);border-top:1px solid var(--line)}
+.fr-zone-gespraech .fr-tool,.fr-drawer .fr-tool{flex:1;min-height:0;display:flex;flex-direction:column}
+/* geschlossen auch visibility:hidden – sonst zieht ein Fokus im Gespräch den Rahmen zur Schublade und alles rutscht nach links (Fund 15.10.) */
+.fr-drawer{position:absolute;right:0;top:0;bottom:0;width:min(440px,90vw);background:var(--panel);border-left:1px solid var(--line);box-shadow:var(--shadow);display:flex;flex-direction:column;transform:translateX(100%);visibility:hidden;transition:transform .18s ease,visibility 0s .18s;z-index:30}
+.fr-drawer.on{transform:none;visibility:visible;transition:transform .18s ease}
+.fr-drawer-btn{white-space:nowrap}
+
+/* ---- entscheidungen */
+.fr-zone-entscheidungen,.fr-karte{background:var(--panel-2);border-left:1px solid var(--line);overflow:auto;padding:var(--gap-2)}
+.fr-karte{position:absolute;right:12px;top:calc(var(--strip-h) + 12px);width:min(360px,80vw);max-height:60vh;border:1px solid var(--warn-line);border-radius:var(--radius-2);box-shadow:var(--shadow);z-index:20}
+
+/* ---- palette */
+.fr-pal{position:fixed;inset:0;background:var(--veil-dark);display:flex;align-items:flex-start;justify-content:center;padding-top:12vh;z-index:40}
+.fr-pal-box{width:min(640px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-2);box-shadow:var(--shadow);overflow:hidden}
+.fr-pal-box input{width:100%;box-sizing:border-box;font:inherit;font-size:var(--size-l);padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);outline:none}
+.fr-pal-list{max-height:50vh;overflow:auto}
+.fr-pal-row{display:flex;flex-direction:column;padding:8px 14px;cursor:pointer}
+.fr-pal-row.on{background:var(--panel-2)}
+.fr-pal-row small{color:var(--muted);font-size:var(--size-xs)}
+
+/* hidden schlägt jede display-Regel – sonst liegt die Palette sichtbar über der Seite (Fund der Abnahme, 15.10.) */
+.fr [hidden],.fr-pal[hidden],.fr-karte[hidden],.fr-drawer[hidden]{display:none !important}
+
+/* ---- Zonen am Rand (einblenden: rand): verborgen, fahren beim Anfahren des Rands heraus – das Werkstück hat die Bühne */
+.fr-sensor{position:absolute;z-index:31}
+.fr-sensor-links{left:0;top:0;bottom:0;width:10px}
+.fr-sensor-oben{left:0;right:0;top:0;height:8px}
+.fr-rand{position:absolute;z-index:32;box-shadow:var(--shadow);transition:transform .18s ease,visibility 0s .18s;visibility:hidden}
+.fr-rand.on{transform:none;visibility:visible;transition:transform .18s ease}
+.fr-rand-links{left:0;top:0;bottom:0;transform:translateX(-100%);border-right:1px solid var(--line)}
+.fr-rand-oben{left:0;right:0;top:0;transform:translateY(-100%);border-bottom:1px solid var(--line)}
+.fr-rand-links::after,.fr-rand-oben::after{content:'';position:absolute;background:var(--line)}

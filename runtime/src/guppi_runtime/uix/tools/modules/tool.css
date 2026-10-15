@@ -1,0 +1,27 @@
+/* Werkzeug „Module“ – nur .t-modules*, keine Farbe ohne Token.
+   Eine Zeile je Modul: links, worum es geht, rechts, was man damit tun kann. Knöpfe bleiben so breit wie ihr Wort. */
+.t-modules{ display: block; }
+
+.t-modules-row{
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--gap-2);
+  padding: var(--gap) var(--gap-2); border: 1px solid var(--line-soft); border-radius: var(--radius-2);
+  background: var(--panel); margin-bottom: 6px;
+}
+.t-modules-row.on{ border-color: var(--ok-line); background: var(--ok-bg); }
+.t-modules-row.off{ opacity: .6; }
+.t-modules-row.warn{ border-color: var(--warn-line); background: var(--warn-bg); color: var(--warn); }
+.t-modules-row b{ color: var(--heading); }
+.t-modules-row > div:first-child{ min-width: 0; }
+.t-modules-row .s-muted{ font-size: 12px; }
+.t-modules-row .s-row{ justify-self: end; gap: 6px; }
+.t-modules-row .s-note{ justify-self: end; margin: 0; white-space: nowrap; }
+
+/* Die zwei Wege, etwas dazuzubauen: eine Spalte, Eingabefeld und Knopf nebeneinander */
+.t-modules-add{ margin-top: var(--gap-3); }
+.t-modules-add .t-modules-row{ grid-template-columns: 1fr; }
+.t-modules-add input{
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; font: inherit; width: 100%;
+}
+.t-modules-add button{ justify-self: start; }
+
+.t-modules-reload{ display: flex; align-items: center; justify-content: space-between; gap: var(--gap-2); }

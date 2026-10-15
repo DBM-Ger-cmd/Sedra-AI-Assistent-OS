@@ -1,0 +1,4 @@
+/* Werkzeug „Tests“ – nur im eigenen Container. */
+.t-tests .s-ok{color:var(--ok)}
+.t-tests .s-bad{color:var(--bad)}
+.t-tests .s-table td:first-child{font-family:var(--mono);font-size:12px}

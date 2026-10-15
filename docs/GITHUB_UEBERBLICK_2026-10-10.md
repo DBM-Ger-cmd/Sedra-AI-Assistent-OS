@@ -1,0 +1,44 @@
+# Gibt es fertige Lösungen, die wir anpassen können statt ein Modul zu bauen? (Recherche 2026-10-10)
+
+Frage des Captains: vor dem Bau von S0 (Anbindungsprüfung) und weiteren Modulen andere GitHub-Projekte ansehen. Quellen: Suchergebnisse, README-Seiten, die lokale Kopie von little-coder (gelesen). **Kein Projekt wurde installiert oder ausgeführt.** Aussagen, die nur aus Blogs stammen, sind als solche gekennzeichnet.
+
+## Unsere Randbedingungen (was ein Kandidat erfüllen müsste)
+Windows-Rechner; Qwen3.6-35B-A3B über llama.cpp mit 32k-Fenster; **alle Ausführung in unserer microVM**, nie frei auf dem Host; Captain-Gates; geteilte GPU mit Lease; **versteckte Abnahmetests** und Messdateien; ein Entwickler mit gutem Werkzeug (Solo).
+
+## Kandidaten
+| Projekt | Was es ist | Passt zu uns | Passt nicht / offen |
+|---|---|---|---|
+| **little-coder** (Apache-2.0, TypeScript auf `pi`) | Agent für kleine lokale Modelle; Qwen3.6-35B-A3B auf llama.cpp ist das Hauptziel; 177/225 auf Aider-Polyglot (Eigenmessung). Viel Arbeit in genau den Schichten 1 bis 3: `output-parser` (repariert kaputte Werkzeugaufrufe), `llama-cpp-provider`, `context-watchdog`, `thinking-budget`, `quality-monitor`, `write-guard`, `read-guard`. RPC-Modus (`pi --mode rpc`) mit Python-Client im Repo; Erweiterungen in TypeScript. | Modell, Server, Fenster, Windows-Skript (PowerShell-Installer). Wächter und Werkzeugregeln sind das, was wir heute einzeln nachgebaut haben. | Werkzeuge laufen auf dem Host (`bash`); Aufgaben im Benchmark sind klein; npm-Abhängigkeiten (Lieferkette); Node 22 nötig. |
+| **OpenCode** (MIT, TypeScript/Bun) | Terminal-Agent mit `build`- und `plan`-Agent, Windows (Scoop, Chocolatey, Beta-App). Ein Nutzer berichtet, Qwen3.6-35B über llama.cpp funktioniere damit „am einfachsten" (Einzelaussage, Reddit). | Plan-Agent schreibgeschützt, Unter-Agent. | Seite nennt llama.cpp, Headless/SDK, MCP und Sandbox **nicht**; unbekannt. |
+| **Qwen Code** (Apache-2.0, TypeScript) | Terminal-Agent der Qwen-Entwickler; `qwen -p "..."` ohne Oberfläche; MCP, Hooks, Skills; Python- und Java-SDK. | Gebaut für die Qwen-Reihe, Headless, MCP. | „Lokale Modelle" nur mit Ollama/vLLM genannt; Kompression nicht beschrieben. |
+| **Hermes Agent** (Nous, MIT, Python 3.14 plus Node) | Selbstverbessernder Agent mit Gedächtnis, Cron, Messenger-Anbindung, 40+ Werkzeuge, MCP; **sieben Ausführungsumgebungen** (lokal, Docker, SSH, Singularity, Modal, Daytona, Vercel). | Ausführung über Umgebungen trennbar; Fähigkeiten-System. | Gängige Probleme mit llama.cpp laut Blogs: falsche `/v1`-Adresse, falscher Modellname, fehlendes `--jinja`, Werkzeugaufrufe als Text, Fenster/Cache (**Modell und Anbindung**, wie der Captain sagt). Kein Windows-Sandbox-Weg. |
+| **Goose** (Apache-2.0, Rust) | Agent mit MCP und mehreren Agenten. | Einzelne Datei, MCP. | Keine Angaben zu lokalen kleinen Modellen. |
+| **Aider** (Apache-2.0, Python) | Git-nativ; Architekt/Editor, Repo-Karte. | Ausgereift, Benchmark (Polyglot). | Kein MCP (laut Verzeichnis); die Zahlen stammen aus Läufen mit Aider-Polyglot. |
+| **mini-swe-agent / SWE-agent / SWE-ReX** (MIT, Python) | Kleinster Agent (nur Bash, linearer Verlauf, **keine Verdichtung**); SWE-ReX = Schicht, die Befehle in Docker oder Modal ausführt. | SWE-ReX als Muster für „Befehle in anderer Umgebung". | Läuft bei langen Läufen über; kein Windows-VM-Weg. |
+| **OpenHands** (Docker-Laufzeit) | Großer Agent mit Verdichter („Kondensierer"), Docker-Sandbox. | Verdichtung, Sandbox. | Braucht große Fenster; für uns zu schwer. |
+| **Firecracker-Sandboxen** (SmolVM, CubeSandbox, BunkerVM, E2B) | microVMs für Agentencode. | Gleiche Idee wie unsere microVM. | Linux/KVM; wir haben schon eine eigene, geprüfte microVM. |
+| **Cline / Roo / Kilo** | VS-Code-Agenten. | Haben wir getestet (siehe `CLINE_ANALYSE`): 61 Min, 34 von 109 Aufrufen fehlerhaft. | Ohne Gates, Messdateien, VM. |
+
+## Was das für "bauen oder anpassen" heißt
+1. **Eine fertige Komplettlösung für unsere Bedingungen gibt es nicht** (Windows + eigene microVM + Gates + versteckte Tests). Verwertbar ist die **Schicht darunter**: Modell- und Anbindungsarbeit, in die little-coder (laut Änderungsprotokoll über viele Versionen) schon viel investiert hat.
+2. **Der günstigste Zugang ist eine Schnittstelle, nicht ein Umbau:** unseren Arbeitsbereich samt `run_python` in der microVM, dem Bericht des versteckten Tests und den Gates als **Werkzeug-Server (MCP)** anbieten. Dann kann jeder Agent (little-coder, Qwen Code, OpenCode, Goose) mit seinen eigenen Wächtern und seiner Anbindung gegen **unsere** Sicherheit und **unsere** Messung antreten. Das passt zum längst geplanten MCP-Zugang des Agent Managers.
+3. **Entscheidung nach Messung statt nach Gefühl:** denselben Standardtest und dieselbe Einzelstufe mit unserem Solo und mit little-coder fahren (Werkzeuge ohne `bash`, Ergebnis im Arbeitsbereich, Urteil durch unsere microVM) und die Schichtentabelle vergleichen.
+4. **Zwei Punkte aus der Recherche, die schon jetzt Schicht 1 und 2 betreffen:**
+   - **Quantisierung:** Unser Qwen3.6 ist `UD-IQ4_XS` (17,7 GB, Datei vom 2026-10-03); little-coder nutzt `UD-Q4_K_M` (22,1 GB). Ein Blog (Mai 2026) führt Werkzeugaufruf-Fehler bei Agenten oft auf zu niedrige Quantisierung zurück (Befolgen von Anweisungen und sauber strukturierte Ausgabe leiden zuerst). Die Experten liegen bei uns im RAM, der VRAM-Bedarf ändert sich kaum; der Preis ist etwas Tempo. Ein Download von etwa 22 GB bräuchte Ihre Erlaubnis.
+   - **Unsloth-Aktualisierung:** Die Hersteller-GGUF nennt Verbesserungen bei geschachtelten Werkzeugaufrufen und Rollenunterstützung. Unsere Datei ist von Anfang Oktober; ob sie davor liegt, ist nicht geprüft.
+
+## Offene Fragen an den Captain
+- Darf ich little-coder in einem **eigenen Ordner** testweise einrichten (Node 22 und `npm install` laden Pakete aus dem Netz; ich würde sie vorher auflisten)?
+- Soll die MCP-Schnittstelle zur microVM der nächste größere Baustein sein (statt S0 als eigener Prüfer)?
+- Soll die Quantisierungsfrage mit einem Download von `Qwen3.6-35B-A3B-UD-Q4_K_M` (etwa 22 GB) geklärt werden?
+
+## Nachtrag: lokale Kopie von Qwen Code (`<projekte>\qwen-code-main\qwen-code-main`, nur gelesen)
+- **Headless:** `qwen -p "..."` mit Text- oder JSON-Ausgabe, Sitzungen fortsetzbar (`docs/users/features/headless.md`); dazu Python- und TypeScript-SDK (`packages/sdk-python`, `sdk-typescript`) und ein Hintergrunddienst (`qwen serve`).
+- **Werkzeuge einschränken:** `permissions.deny` mit Regeln ganzer Werkzeuge entfernt diese **vor dem Modell** (die alten `tools.core` / `tools.exclude` sind veraltet); eigene Werkzeuge über `mcpServers.<Name>` (mit `excludeTools`). Damit wäre ein Aufbau möglich, bei dem das Modell **nur unsere Werkzeuge** sieht.
+- **Eigene Server:** `modelProviders` mit `baseUrl` auf einen OpenAI-kompatiblen Server (llama.cpp ist in den Benutzerseiten nicht ausdrücklich genannt; im Entwurfsdokument zur Werkzeug-Grammatik schon).
+- **Anbindungs-Funde, die uns direkt betreffen** (Entwurf `openai-tool-schema-grammar-compatibility.md`): llama.cpp übersetzt **alle** Werkzeugbeschreibungen einer Anfrage in **eine** Grammatik; **leere `properties`-Tabellen** und **Längen- und Mengengrenzen ab 1999** lassen ältere Builds die ganze Anfrage ablehnen. Qwen Code entfernt diese Angaben in der Kopie, die über die Leitung geht, und prüft die Argumente selbst. Bei uns hatten `git_status` und `run_tests` leere `properties`; ein HTTP 500 „Unexpected empty grammar stack" sahen wir mit b11530 am 2026-10-09. **Übernommen** (2026-10-10): `relax_schema` in `model_tools.py`, Test dazu. Ob das den b11530-Fehler beseitigt, ist nicht gemessen.
+- **Stabiler Anfang für den Cache** (Entwurf `managed-memory-cache-prefix.md`): wechselnde Inhalte (Gedächtnisliste) gehören ans **Ende** der Anfrage, nicht in den Systemtext. Bei uns ändern sich Systemtext und Werkzeuge im Gespräch nicht; unser Kürzen verändert dagegen ältere Nachrichten (einmal je Schwelle, dann bleibt der Anfang gleich).
+- **Ausführungs-Sandbox:** eigener Entwurf für Datei- und Shell-Werkzeuge in einer Linux-Sandbox (Lima, Landlock-Pläne); unter Windows nicht verwendbar. Ihre eigene Baseline erwähnt: ohne Sandbox sind **Schreibzugriffe außerhalb des Arbeitsordners unbeschränkt**.
+
+## Sicherheitsentscheidung vom 2026-10-10
+Der Versuch, little-coder (mit Dateiwerkzeugen auf dem Rechner, ohne microVM) in die Bau-Pipeline einzuhängen (`--agent little-coder`), wurde vom Sicherheitssystem abgelehnt ("Create Unsafe Agents"). Er wurde **nicht** umgangen. Das Modul `src/guppi_runtime/external_agent.py` liegt unverdrahtet im Quelltext und wird nicht benutzt. Sicherer Weg: das Modell sieht ausschließlich **unsere** Werkzeuge (MCP-Server vor dem Arbeitsordner und der microVM), die eingebauten Datei- und Shell-Werkzeuge des fremden Agenten werden vor dem Modell entfernt (bei Qwen Code `permissions.deny`).

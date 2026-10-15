@@ -1,0 +1,35 @@
+self_development:
+  schema: 1
+  feature_flags:
+    auto_develop_e1: false
+    auto_activate_e1: false
+  policy:
+    E1:
+      may_plan: true
+      may_build: true
+      may_test: true
+      may_verify: true
+      may_activate: false
+      captain_gate: false
+    E2:
+      may_plan: true
+      may_build: true
+      may_test: true
+      may_verify: true
+      may_activate: false
+      captain_gate: true
+    E3:
+      may_plan: true
+      may_build: true
+      may_test: true
+      may_verify: true
+      may_activate: false
+      captain_gate: true
+  invariants:
+    - capability_before_tool
+    - evidence_before_evolution
+    - candidate_before_stable
+    - verify_before_accept
+    - no_permission_escalation
+    - no_silent_cloud_fallback
+    - e3_never_auto_activates

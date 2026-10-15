@@ -1,0 +1,10 @@
+id: gateway-studio
+name: "KI GateWay Studio"
+raster: [leiste, "orte|werkstueck", gespraech]
+leiste: {einblenden: rand}
+orte: {einblenden: rand, breite: 220, liste: [gateway, decisions, tasks, boundary, logbook, modules]}
+werkstueck: {nachweise: seitenleiste, nachweis_breite: 380}
+gespraech: {art: zone, hoehe: 96}
+entscheidungen: karte
+suche: strg-k
+start: {type: gateway, id: alle, title: KI GateWay}

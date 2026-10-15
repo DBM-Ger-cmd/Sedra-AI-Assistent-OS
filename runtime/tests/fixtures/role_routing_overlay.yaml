@@ -1,0 +1,494 @@
+# Test data (2026-10-12): a frozen copy of this PC's recipe file of 2026-10-12 07:47, local folders replaced by placeholders.
+# The UIX routing tests used to read the live file, which changes whenever the Captain changes a recipe.
+# Machine-specific routing for THIS PC (RTX 4070 Ti 12 GB, 31 GB RAM). Created 2026-10-01 together with the Captain.
+# Overlays runtime/config/role_routing.yaml; the shipped file stays generic.
+#
+# `enabled: true` since 2026-10-01 (the Captain asked for the switches to be turned on). Nothing starts by itself.
+#
+# TWO WAYS TO RUN EACH MODEL, in this order of preference (the router takes the first one that is usable, and falls back on a
+# provider failure):
+#   1. provider llama-cpp-server: a llama-server that GUPPI starts and watches itself (llama_server_runtime.py). Every option is
+#      explicit; the model file, KV type, MTP and reasoning options are in `profile.server`.
+#   2. provider lm-studio: through LM Studio's own server. Its engine crashed under long generations on this PC (CUDA illegal memory
+#      access), MTP stays off there (model_loader.yaml), so it is the fallback.
+#
+# Facts behind the numbers (measured on this PC, not assumed):
+#  - Weights ids are the SHA-256 of the exact GGUF files:
+#      qwen3.5-9b-mtp           -> unsloth/Qwen3.5-9B-MTP-GGUF/Qwen3.5-9B-UD-Q4_K_XL.gguf              6,135,034,208 bytes
+#      google/gemma-4-12b-qat   -> lmstudio-community/gemma-4-12B-it-QAT-GGUF/gemma-4-12B-it-QAT-Q4_0.gguf  6,975,879,008 bytes
+#  - llama-server (GUPPI's own start, --no-mmproj, one slot, idle after start, GPU baseline 0.53 GiB subtracted):
+#      qwen  MTP off  ctx  8192 5.50  16384 5.67  32768 6.02  65536 6.71 GiB
+#      qwen  MTP on   ctx  8192 5.92  16384 6.14  32768 6.53  65536 7.35 GiB      (about twice the speed: 140 vs 69 tokens/s)
+#      gemma          ctx  8192 7.41  16384 7.54  32768 7.80  65536 8.33 GiB
+#    The recipes carry these plus 0.3 GiB for the compute buffers that grow during generation.
+#  - LM Studio path (same models, with its stored KV defaults qwen q8_0 / gemma f16, mmproj loaded):
+#      qwen   ctx  8192 7.96  65536 9.39 GiB      gemma  ctx 16384 7.87  65536 8.66 GiB
+#  - Contexts are tiers: a job loads the smallest tier that holds what it needs (requirements.context_min_tokens).
+#  - Coder and verifier are different families (qwen3.5 vs gemma4), which is what the independence rule needs.
+#    They do not fit in VRAM together next to the desktop; they run one after the other (SWAP_MODE).
+role_routing:
+  enabled: true
+  capabilities:
+    # 1a. gpt-oss-20b: FIRST CHOICE from 2026-10-02 until 2026-10-03, then id coder.llama_gptoss (Qwen3-Coder took coder.local_primary). It carried the shipped id `coder.local_primary`
+    #     because the overlay replaces a shipped recipe in place and the shipped position is what makes it first; a new id would land
+    #     behind it. Previous file: role_routing.yaml.bak-2026-10-02-before-gptoss-first. To go back, swap the two ids again.
+    # coder side, gpt-oss-20b (OpenAI, MoE with 3.6B active parameters, MXFP4). 12.1 GB of weights: the expert weights of the first
+    # n_cpu_moe layers stay in host RAM so that the rest fits next to the desktop. Measured 2026-10-02 with moe_modelltest.py (ctx 65536, KV q8_0,
+    # NVIDIA Studio driver 616.92, GPU debug mode = reference clocks): n_cpu_moe 4 -> 11.0 GB, 837 tokens/s prompt, 85 tokens/s generation;
+    # n_cpu_moe 3 -> 11.4 GB, 1047 / 94; n_cpu_moe 2 -> 11.5 GB spills out of VRAM (generation drops to 41). Always thinks; it knows low / medium / high,
+    # not "none". 4 keeps about 0.4 GB of room for the desktop, so that is the recipe's value.
+    - id: coder.llama_gptoss
+      version: 5
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      model: gpt-oss-20b
+      model_family: gpt-oss
+      weights_id: sha256:27cd6c432c7672cb812a92f611cf3ba7bbc35928262bb1e1253ff4ee6ae35901
+      location: local
+      requirements: {min_ram_gb: 12, min_vram_gb: 0}
+      model_size_gb: 11.28
+      # n_cpu_moe 5 since 2026-10-03 (Captain: "dauerhaft Luft schaffen"): with 4, the 16k tier missed the 1 GiB reserve by 14-110 MB whenever
+      # Steam or a browser held GPU memory. With 5: 8192 9.28 / 16384 9.40 / 32768 9.63 GiB incl. probe (with 4: 9.62 / 9.72 / 9.94);
+      # generation 81.5 tokens/s at 16k (with 4: ~85). Backup: role_routing.yaml.bak-2026-10-03-before-n_cpu_moe-5
+      # 48k window since 2026-10-03 (Captain: "64k zum coden, 32k akzeptiert wenn besser"; measurements context_ladder_* / context_coding_*):
+      #   - KV q8_0 turned to garbage at 48k (needle test, even with 2 GiB free) and at 64k (coding 1 of 4); KV f16 + n_cpu_moe 7: 48k needle
+      #     3/3, coding 98 % (9 tasks, ~34k input tokens), 1.61 GiB free while working, ~65 tokens/s generation, ~520 tokens/s prompt.
+      #   - 64k is NOT offered: above ~40k INPUT tokens gpt-oss runs away (8000 tokens without an answer) with q8 and with f16 alike.
+      #   Backup: role_routing.yaml.bak-2026-10-03-before-context-measurements
+      measured_vram_gb: 8.82        # measured 2026-10-03 (recipe_measure)
+      measured_context: 8192        # measured 2026-10-03 (recipe_measure)
+      kv_cache_gb_per_1k_tokens: 0.024        # measured 2026-10-03 (recipe_measure)
+      profile:
+        # recommended 8192 since 2026-10-02 (was 16384): with the desktop at ~1.0 GiB, 16384 missed the 1 GiB safety reserve by ~25 MB and the
+        # router fell back to qwen3.5. Jobs that need more still ask for a bigger tier via requirements.context_min_tokens.
+        context: {recommended: 8192, maximum: 49152, measured_maximum: 49152, tiers: [8192, 16384, 32768, 49152]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        server: {gguf: '<modelle>\ggml-org\gpt-oss-20b-GGUF\gpt-oss-20b-MXFP4.gguf', kv_cache_type: f16, mtp: false, reasoning: auto, n_cpu_moe: 7, jinja: false}
+        # jinja: false (2026-10-02): with the Jinja template the server's Harmony parser rejects a correct `<|constrain|>JSON` answer with
+        # HTTP 500 (default and reasoning_format none failed 1-3 of 3; --no-jinja 3 of 3 OK). GUPPI's adapter splits the raw Harmony output.
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # 1b. coder side, qwen3.5 on GUPPI's own llama-server (was first choice as coder.local_primary v3 until 2026-10-02).
+    - id: coder.llama_qwen35
+      enabled: false   # guppi-model-remove RM-20261003T185920
+      version: 1
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      model: qwen3.5-9b-mtp
+      model_family: qwen3.5
+      weights_id: sha256:362f85a2d7dbc0259e926d5ac33ca0d0f17fd3753496d65bfd2106384c929d3f
+      location: local
+      requirements: {min_ram_gb: 4, min_vram_gb: 0}
+      model_size_gb: 5.71
+      measured_vram_gb: 6.2        # MTP on, ctx 8192: 5.92 measured + 0.3 margin
+      measured_context: 8192
+      kv_cache_gb_per_1k_tokens: 0.026   # measured 0.0249 (MTP on) between 8192 and 65536
+      profile:
+        # Capped at 16384: qwen3.5 (hybrid) crashed with CUDA illegal memory access at prompts of ~23k tokens and above (7k and 15k stable; all
+        # flags, KV types, MTP on/off and versions tried). The working set keeps prompts under this. See docs/PHASE9_STATUS.md.
+        context: {recommended: 8192, maximum: 16384, measured_maximum: 16384, tiers: [8192, 16384]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        # mtp: true uses speculative MTP drafting if llama_server.mtp (local switches / llama_server.yaml) allows it. Set false to turn it off for this model.
+        server: {gguf: '<modelle>\unsloth\Qwen3.5-9B-MTP-GGUF\Qwen3.5-9B-UD-Q4_K_XL.gguf', kv_cache_type: q8_0, mtp: true, reasoning: auto}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # 1b. verifier side, GUPPI's own llama-server.
+    - id: verifier.llama_gemma
+      version: 1
+      roles: [verifier, security_reviewer]
+      provider: llama-cpp-server
+      model: google/gemma-4-12b-qat
+      model_family: gemma4
+      weights_id: sha256:f568ac5de71c8fcac5d5794494388ad94db9e18b4368ca897e21b30d2448eeec
+      location: local
+      requirements: {min_ram_gb: 4, min_vram_gb: 0}
+      model_size_gb: 6.50
+      measured_vram_gb: 7.7        # ctx 8192: 7.41 measured + 0.3 margin
+      measured_context: 8192
+      kv_cache_gb_per_1k_tokens: 0.017   # measured 0.0160 between 8192 and 65536
+      profile:
+        # 102400 added 2026-10-02: 5 of 5 changing prompts of ~63-69k and ~87-95k tokens answered correctly (30 s / 47 s each), 8.9 GiB at 102400.
+        context: {recommended: 8192, maximum: 102400, measured_maximum: 102400, tiers: [8192, 16384, 32768, 65536, 102400]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        server: {gguf: '<modelle>\lmstudio-community\gemma-4-12B-it-QAT-GGUF\gemma-4-12B-it-QAT-Q4_0.gguf', kv_cache_type: f16, mtp: false, reasoning: auto}
+      permissions: {max_level: 1}
+      network: {allowed: false}
+      tests: [capability_smoke_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # 1c. coder side, other lineage: DeepSeek-R1-0528-Qwen3-8B (plain Qwen3 attention, no hybrid layers). Always thinks, so give it
+    # max_tokens >= 400. Stable at 14-16k and 24-28k token prompts (5/5 each, ctx 32768, KV q8_0, ~4400 tokens/s prompt processing).
+    # With ctx 102400 it spilled out of VRAM (30-40 tokens/s), so the maximum is 32768.
+    - id: coder.llama_deepseek
+      enabled: false   # guppi-model-remove RM-20261003T185920
+      version: 1
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      model: deepseek-r1-0528-qwen3-8b
+      model_family: deepseek-r1-qwen3
+      weights_id: sha256:713d3a7a93f306763a6de2b5e9f9350e3aeee3bbfe8c3ee0066b61939feaa332
+      location: local
+      requirements: {min_ram_gb: 4, min_vram_gb: 0}
+      model_size_gb: 4.68
+      measured_vram_gb: 5.54        # measured 2026-10-02 (recipe_measure)
+      measured_context: 8192        # measured 2026-10-02 (recipe_measure)
+      kv_cache_gb_per_1k_tokens: 0.076        # measured 2026-10-02 (recipe_measure)
+      profile:
+        context: {recommended: 16384, maximum: 32768, measured_maximum: 32768, tiers: [8192, 16384, 32768]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        server: {gguf: '<modelle>\lmstudio-community\DeepSeek-R1-0528-Qwen3-8B-GGUF\DeepSeek-R1-0528-Qwen3-8B-Q4_K_M.gguf', kv_cache_type: q8_0, mtp: false, reasoning: auto}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # 1d. coder side, Qwen3-14B (plain Qwen3 attention, no hybrid layers: not affected by the qwen3.5 crash). Official Qwen file; a second
+    # build from lmstudio-community (sha256 712c0791...) lies next to it unused. 9 GB of weights leave little room for the window on 12 GB.
+    # Numbers below are measured with benchmarks/measure_recipe.py; stability under long prompts is not measured yet.
+    - id: coder.llama_qwen3_14b
+      enabled: false   # guppi-model-remove RM-20261003T185920
+      version: 1
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      model: qwen3-14b
+      model_family: qwen3
+      weights_id: sha256:500a8806e85ee9c83f3ae08420295592451379b4f8cf2d0f41c15dffeb6b81f0
+      location: local
+      requirements: {min_ram_gb: 4, min_vram_gb: 0}
+      model_size_gb: 8.38
+      measured_vram_gb: 9.29        # measured 2026-10-02 (recipe_measure)
+      measured_context: 8192        # measured 2026-10-02 (recipe_measure)
+      kv_cache_gb_per_1k_tokens: 0.082        # measured 2026-10-02 (recipe_measure)
+      profile:
+        context: {recommended: 8192, maximum: 16384, measured_maximum: 16384, tiers: [8192, 16384]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        server: {gguf: '<modelle>\Qwen\Qwen3-14B-GGUF\Qwen3-14B-Q4_K_M.gguf', kv_cache_type: q8_0, mtp: false, reasoning: auto}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # 1e. coder side, Qwen3-Coder-30B-A3B-Instruct (added 2026-10-03, Captain: 64k for coding). MoE, 3.3B active of 30.5B, 48 layers,
+    # 4 KV heads: native 256k window, but f16 KV costs ~96 KiB per token (64k = 6 GiB). So ALL expert weights stay in host RAM
+    # (n_cpu_moe 48 = every layer) and the card holds attention + KV only. Does not think (no runaway like gpt-oss). unsloth UD-Q4_K_XL,
+    # sha256 from the Hugging Face listing. Placed behind gpt-oss on purpose: first choice only after the ladder + coding measurements.
+    # The VRAM numbers below are ESTIMATES until benchmarks/measure_recipe.py --apply replaces them.
+    # FIRST CHOICE since 2026-10-03 (Captain: "Qwen3-Coder wird der neue Standard-Coder ... gute Balance aus Experten-Layern und Kontext").
+    # It carries the shipped id so it is first; gpt-oss is coder.llama_gptoss. To go back: swap the ids again
+    # (backup role_routing.yaml.bak-2026-10-03-before-qwen3coder-first).
+    # Tuning (benchmarks/moe_sweep.py, 48k window, 11.6k-token prompt): ubatch 512 -> 2048 = prompt 117 -> 380 tokens/s at the same VRAM;
+    # n_cpu_moe 48/44/40/36 at ubatch 2048: 380/~410/449/498 prompt, 32/~35/38/41 generation tokens/s, 5.2/~3.8/2.5/1.2 GiB free.
+    # 44 keeps ~2.3 GiB free even at 64k for desktop apps on top of the 1 GiB reserve.
+    # mmap: false (2026-10-03): with the file mapped, the server held 22.7 GB (14.7 private + mapped pages) and left 0.6 GB RAM free.
+    # Window: needle test safe to 48k (41.7k-token prompts). At 64k the second probe crashed with "CUDA error: an illegal memory access"
+    # and 6 nvlddmkm events (no TDR), so the maximum stays 48k until that is understood (same symptom as qwen3.5 >= 23k).
+    - id: coder.llama_qwen3_coder
+      version: 7      # 2026-10-09: no longer first choice (Qwen3.6 is coder.local_primary since the Captain's decision); to go back swap the two ids again
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      model: qwen3-coder-30b-a3b
+      model_family: qwen3
+      weights_id: sha256:2841aa314d916434860cfb8990347528dcdfe5c350dbcb9d1461dbee88ff2533
+      location: local
+      requirements: {min_ram_gb: 18, min_vram_gb: 0}   # experts of 44 of 48 layers (~15 GB) + server; 24 refused it at 22.5 GB free (2026-10-03)
+      model_size_gb: 16.45
+      measured_vram_gb: 3.85        # measured 2026-10-03 (recipe_measure)
+      measured_context: 8192        # measured 2026-10-03 (recipe_measure)
+      kv_cache_gb_per_1k_tokens: 0.095        # measured 2026-10-03 (recipe_measure)
+      profile:
+        context: {recommended: 16384, maximum: 49152, measured_maximum: 49152, tiers: [8192, 16384, 32768, 49152]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        # flash_attn off (2026-10-05, benchmarks/cuda_crash_hunt.py, MESSUNGEN.md 3c): with it on the server dies with `CUDA error: illegal memory access`
+        # (1 of 2 runs, also with engine b11160); with it off 2 of 2 runs stayed clean. Cost about 2 % (CPU-bound MoE).
+        server: {gguf: '<modelle>\unsloth\Qwen3-Coder-30B-A3B-Instruct-GGUF\Qwen3-Coder-30B-A3B-Instruct-UD-Q4_K_XL.gguf', kv_cache_type: f16, mtp: false, reasoning: auto, n_cpu_moe: 44, ubatch: 2048, mmap: false, flash_attn: 'off'}
+        # 2026-10-09 (moe_sweep, 32k): for a window above the recommended one the DevVM benchmarks start with ubatch 1024 and n_cpu_moe 46 (10.6 GiB, prompts 1.7x faster than ubatch 512 / moe 44)
+        big_window_server: {ubatch: 1024, n_cpu_moe: 46}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # 1c. Qwen3.6-35B-A3B (hybrid Gated DeltaNet + MoE, 40 layers, thinking on by default). Downloaded + sha-verified 2026-10-03.
+    #     Off until measured: same kernel family as Qwen3.5, which crashed >=23k on this card.
+    # FIRST CHOICE since 2026-10-09 (Captain: "Qwen3.6 als Standard-Coder setzen und dann optimieren"). Reasons (docs/MODELL_VERGLEICH_ERGEBNISSE.md): standard benchmark bench_std 4/4 in 374 s against 4/4 in 1062 s for Qwen3-Coder;
+    # am008_meter build 3710 s against 4740 s; generation 45 tokens/s at n_cpu_moe 28 (32k, ubatch 1024). It thinks by default: for the DevVM the server runs with reasoning off (otherwise answers are cut, 2026-10-09).
+    # To go back: swap the ids again (backup role_routing.yaml.bak-2026-10-09-before-qwen36-first).
+    - id: coder.local_primary
+      version: 2
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      model: qwen3.6-35b-a3b
+      model_family: qwen3.6
+      weights_id: sha256:649d7508507b84638732c4f52c24c8b15843c6dca2f3ff793ae07c14a67ebbb3
+      location: local
+      requirements: {min_ram_gb: 18, min_vram_gb: 0}
+      model_size_gb: 17.73
+      measured_vram_gb: 10.4        # measured 2026-10-09 (moe_sweep 32k, n_cpu_moe 28, ubatch 1024: 1.52 GiB free of 12.0)
+      profile:
+        context: {recommended: 16384, maximum: 32768, tiers: [8192, 16384, 32768]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        server: {gguf: '<modelle>\unsloth\Qwen3.6-35B-A3B-GGUF\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf', kv_cache_type: f16, mtp: false, reasoning: 'off', n_cpu_moe: 28, ubatch: 1024, mmap: false, flash_attn: 'off', cache_ram: 0}
+        # 2026-10-09 (moe_sweep, 32k, ubatch 1024): n_cpu_moe 40/36/32/28 -> 227/251/282/317 tokens/s prompt, 35.5/38.5/41.7/45.0 generation, 5.9/4.4/2.9/1.5 GiB free; 28 stays inside the 11.5 GB ceiling
+        big_window_server: {ubatch: 1024, n_cpu_moe: 28}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+    # 1e. Q4_K_M of Qwen3.6-35B-A3B (2026-10-10): the same model in a higher quantisation (IQ4_XS -> Q4_K_M), to find out whether the tool-call and instruction faults of the agents come from the quantisation.
+    - id: coder.local_q4km
+      version: 1
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      enabled: false      # 2026-10-10: Q4_K_M of the standard coder (22.1 GB, downloaded with the Captain's permission, SHA-256 checked) - test candidate against the IQ4_XS of coder.local_primary
+      model: qwen3.6-35b-a3b
+      model_family: qwen3.6
+      weights_id: sha256:ac0e2c1189e055faa36eff361580e79c5bd6f8e76bffb4ce547f167d53e31a61
+      location: local
+      requirements: {min_ram_gb: 18, min_vram_gb: 0}
+      model_size_gb: 22.13
+      measured_vram_gb: null       # moe_sweep 2026-10-10: 1.46 GiB free at n_cpu_moe 32, window 32k (no separate VRAM figure taken)
+      profile:
+        context: {recommended: 16384, maximum: 32768, tiers: [8192, 16384, 32768]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        server: {gguf: '<modelle>\unsloth\Qwen3.6-35B-A3B-GGUF\Qwen3.6-35B-A3B-UD-Q4_K_M.gguf', kv_cache_type: f16, mtp: false, reasoning: 'off', n_cpu_moe: 32, ubatch: 1024, mmap: false, flash_attn: 'off', cache_ram: 0}
+        # 2026-10-10 (moe_sweep of THIS Q4_K_M, 32k, ubatch 1024, run-3aae202a4a27): n_cpu_moe 44/40/36/32/28 -> 186/186/205/229/191 tokens/s prompt, 41.3/42.4/44.4/48.1/43.1 generation, 5.07/5.19/3.3/1.46/0.43 GiB free; 32 is the last inside the 1 GiB reserve (28 is not)
+        big_window_server: {ubatch: 1024, n_cpu_moe: 32}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # 1e2. Qwen3.8-27B (2026-10-10): a DENSE 27B model (hybrid Gated DeltaNet + attention, architecture qwen35, 64 layers + 1 MTP layer), the Captain's test candidate for better tool calls than the MoE with 3B active parameters.
+    - id: coder.local_q38
+      version: 1
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      enabled: false      # 2026-10-10: downloaded with the Captain's permission (SHA-256 checked); OFF until dense_probe has measured the layers on the GPU
+      model: qwen3.8-27b
+      model_family: qwen3.8
+      location: local
+      requirements: {min_ram_gb: 12, min_vram_gb: 0}
+      model_size_gb: 16.46
+      measured_vram_gb: null       # NOT measured yet. Dense: no experts to put in RAM, so n_gpu_layers decides how much of the 16.5 GB sits on the card (the rest runs on the CPU).
+      profile:
+        context: {recommended: 16384, maximum: 32768, tiers: [8192, 16384, 32768]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        server: {gguf: '<modelle>\unsloth\Qwen3.8-27B-GGUF\Qwen3.8-27B-UD-Q4_K_M.gguf', kv_cache_type: f16, mtp: false, reasoning: 'off', n_gpu_layers: 36, ubatch: 512, mmap: false, flash_attn: 'off', cache_ram: 0}
+        # the main file already holds one MTP layer (nextn_predict_layers 1); the separate MTP/mtp-Qwen3.8-27B-Q4_0.gguf is not used yet
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # Qwen3.5-9B Q6_K (unsloth, no MTP head), 2026-10-11: stable with the NVIDIA debug mode (FA on, KV q8_0, ubatch 512, 1 slot): soak 40/40 and needle 12/12 up to 62k on b11160
+    # and LM Studio 2.55 (<modelle-test>\qwen35-9b-q6). OFF: added for the model comparison of 2026-10-11; KV f16/bf16 with FA gave garbage there.
+    - id: coder.llama_qwen35_q6
+      enabled: false
+      version: 1
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      model: qwen3.5-9b-q6
+      model_family: qwen3.5
+      weights_id: sha256:91898433cf5ce0a8f45516a4cc3e9343b6e01d052d01f684309098c66a326c59
+      location: local
+      requirements: {min_ram_gb: 4, min_vram_gb: 0}
+      model_size_gb: 6.95
+      measured_vram_gb: 9.41      # LM Studio 2.55 at 65536, q8_0 KV (qualitaet_soak.jsonl)
+      profile:
+        context: {recommended: 32768, maximum: 65536, tiers: [8192, 16384, 32768, 65536]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        server: {gguf: '<modelle>\unsloth\Qwen3.5-9B-GGUF\Qwen3.5-9B-Q6_K.gguf', kv_cache_type: q8_0, mtp: false, reasoning: 'off', ubatch: 512, flash_attn: 'on'}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # 1f. NEW MODELS of 2026-10-09 (Captain downloaded them for coding tests; all three are OFF until measured: enabled false). Tested with benchmarks/probes/stdbench_probe.py (bench_std).
+    # Hermes-4-14B (NousResearch, Qwen3-14B base, dense, hybrid thinking). Dense: no n_cpu_moe; 9.0 GB of weights, q8 KV, so the window is limited to 16k like Qwen3-14B.
+    - id: coder.llama_hermes4_14b
+      enabled: false   # 2026-10-09: not measured yet
+      version: 1
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      model: hermes-4-14b
+      model_family: qwen3
+      weights_id: sha256:7ad9be1e446e3da0c149fdf55284c90be666d3e13c6e2581587853f4f9538073
+      location: local
+      requirements: {min_ram_gb: 4, min_vram_gb: 0}
+      model_size_gb: 9.0
+      profile:
+        context: {recommended: 8192, maximum: 8192, tiers: [8192]}      # f16 KV: a quantized V cache needs flash attention, which stays off here; 0.16 MB per token, so 9.0 GB weights + 1.3 GB KV at 8k
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        server: {gguf: '<modelle>\bartowski\NousResearch_Hermes-4-14B-GGUF\NousResearch_Hermes-4-14B-Q4_K_M.gguf', kv_cache_type: f16, mtp: false, reasoning: auto, flash_attn: 'off'}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # DeepSeek-Coder-V2-Lite-Instruct (16B MoE, 2.4B active, 27 layers, MLA attention: small KV). 10.4 GB of weights: a few expert layers stay in RAM so that it fits next to the desktop (n_cpu_moe to be measured with moe_sweep.py).
+    - id: coder.llama_deepseek_v2_lite
+      enabled: false   # 2026-10-09: not measured yet
+      version: 1
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      model: deepseek-coder-v2-lite-instruct
+      model_family: deepseek2
+      weights_id: sha256:603bd3f8a0281d16571da7c08bd661ee17ff0d1be6fcbd1b42242da257ef0bb8
+      location: local
+      requirements: {min_ram_gb: 8, min_vram_gb: 0}
+      model_size_gb: 10.36
+      profile:
+        context: {recommended: 8192, maximum: 8192, tiers: [8192]}      # 2026-10-09 moe_sweep: at 32k without flash attention MLA needs a huge KV cache (prompt 17, generation 0.3 tokens/s, VRAM full); at 8k: n_cpu_moe 8 -> prompt 561 / generation 73 tokens/s, 1.27 GiB free
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        server: {gguf: '<modelle>\bartowski\DeepSeek-Coder-V2-Lite-Instruct-GGUF\DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf', kv_cache_type: f16, mtp: false, reasoning: 'off', n_cpu_moe: 8, ubatch: 512, mmap: false, flash_attn: 'off'}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # Qwen3-30B-A3B-Instruct-2507 (general instruct model of the Qwen3-Coder generation, same architecture and size class as Qwen3-Coder-30B: same settings as coder.local_primary).
+    - id: coder.llama_qwen3_30b_2507
+      enabled: false   # guppi-model-remove RM-20261010T065753
+      enabled: false   # 2026-10-09: not measured yet
+      version: 1
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      model: qwen3-30b-a3b-instruct-2507
+      model_family: qwen3
+      weights_id: sha256:6c997b8af17debdfb01d890214400ccbab00db6acc0ba8da5de1cc906c4774d0
+      location: local
+      requirements: {min_ram_gb: 18, min_vram_gb: 0}
+      model_size_gb: 17.28
+      profile:
+        context: {recommended: 16384, maximum: 32768, tiers: [8192, 16384, 32768]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        server: {gguf: '<modelle>\unsloth\Qwen3-30B-A3B-Instruct-2507-GGUF\Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf', kv_cache_type: f16, mtp: false, reasoning: auto, n_cpu_moe: 44, ubatch: 2048, mmap: false, flash_attn: 'off'}
+        big_window_server: {ubatch: 1024, n_cpu_moe: 46}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # 1e. small coder: Jan-code-4b (Qwen3 4B, tool-trained). With tools 10/10 repairs (small_team.py); plain text 6/10. Sampling temperature 0.1. Use through model_tools (read_file, check_syntax, submit_fix).
+    - id: coder.llama_jan
+      enabled: false   # 2026-10-05: tested with tools in benchmarks/small_team.py, not routed until the Captain decides
+      version: 1
+      roles: [coder]
+      provider: llama-cpp-server
+      model: jan-code-4b
+      model_family: qwen3
+      weights_id: sha256:6f9bcb1fdced9494fc477af6ca7e6c0e203540da5343d370eb89c1391b3644e0
+      location: local
+      requirements: {min_ram_gb: 4, min_vram_gb: 0}
+      model_size_gb: 2.72
+      profile:
+        context: {recommended: 16384, maximum: 16384, tiers: [8192, 16384]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        # flash_attn off: with it on this model's server died after 3-21 requests (cuda_crash_hunt 2026-10-05); VRAM and context not measured yet.
+        server: {gguf: '<modelle>\janhq\Jan-code-4b-gguf\Jan-code-4b-Q4_K_M.gguf', kv_cache_type: f16, mtp: false, reasoning: auto, flash_attn: 'off'}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # 1f. small reviewer: SWE-Review-8B (Qwen3 8B). With tools 12 s per review (inline text 28 s); verdicts are not reliable alone (false rejections), let a test decide. Temperature 0.6.
+    - id: reviewer.llama_swe
+      enabled: false   # 2026-10-05: tested with tools in benchmarks/small_team.py, not routed until the Captain decides
+      version: 1
+      roles: [reviewer]
+      provider: llama-cpp-server
+      model: swe-review-8b
+      model_family: qwen3
+      weights_id: sha256:4a161ba0236030586d018cf8703c72ba917f89af588c6753704598403c03021b
+      location: local
+      requirements: {min_ram_gb: 4, min_vram_gb: 0}
+      model_size_gb: 5.03
+      profile:
+        context: {recommended: 16384, maximum: 16384, tiers: [8192, 16384]}
+        gpu_layers: 99
+        kv_cache: {placement: gpu}
+        # flash_attn off: with it on this model's server died after 3-21 requests (cuda_crash_hunt 2026-10-05); VRAM and context not measured yet.
+        server: {gguf: '<modelle>\mradermacher\SWE-Review-8B-i1-GGUF\SWE-Review-8B.i1-Q4_K_M.gguf', kv_cache_type: f16, mtp: false, reasoning: auto, flash_attn: 'off'}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # 2a. coder side through LM Studio (fallback)
+    - id: coder.lmstudio_qwen
+      enabled: false   # 2026-10-03, Captain: "nicht LM Studio nutzen, nur GUPPI" (also: qwen3.5 crashes >=23k, this offered 64k)
+      version: 1
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: lm-studio
+      model: qwen3.5-9b-mtp
+      model_family: qwen3.5
+      weights_id: sha256:362f85a2d7dbc0259e926d5ac33ca0d0f17fd3753496d65bfd2106384c929d3f
+      location: local
+      requirements: {min_ram_gb: 4, min_vram_gb: 0}
+      model_size_gb: 5.71
+      measured_vram_gb: 8.3      # at measured_context, --parallel 1, KV q8_0 (LM Studio's stored default for this model); +0.3 GiB margin on 7.96
+      measured_context: 8192
+      kv_cache_gb_per_1k_tokens: 0.026   # measured 0.0248 between 8192 and 65536
+      profile: {context: {recommended: 8192, maximum: 65536, measured_maximum: 65536, tiers: [8192, 16384, 32768, 65536]}, gpu_layers: 99, kv_cache: {placement: gpu}}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+
+    # 2b. verifier side through LM Studio (fallback)
+    - id: verifier.lmstudio_gemma
+      enabled: false   # 2026-10-03, Captain: "nicht LM Studio nutzen, nur GUPPI" (also: qwen3.5 crashes >=23k, this offered 64k)
+      version: 1
+      roles: [verifier, security_reviewer]
+      provider: lm-studio
+      model: google/gemma-4-12b-qat
+      model_family: gemma4
+      weights_id: sha256:f568ac5de71c8fcac5d5794494388ad94db9e18b4368ca897e21b30d2448eeec
+      location: local
+      requirements: {min_ram_gb: 4, min_vram_gb: 0}
+      model_size_gb: 6.50
+      measured_vram_gb: 8.1      # at measured_context, --parallel 1, KV f16 (LM Studio's stored default for this model); +0.3 GiB margin on ~7.8
+      measured_context: 8192
+      kv_cache_gb_per_1k_tokens: 0.017   # measured 0.0162 between 16384 and 65536
+      profile: {context: {recommended: 8192, maximum: 65536, measured_maximum: 65536, tiers: [8192, 16384, 32768, 65536]}, gpu_layers: 99, kv_cache: {placement: gpu}}
+      permissions: {max_level: 1}
+      network: {allowed: false}
+      tests: [capability_smoke_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}

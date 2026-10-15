@@ -1,0 +1,20 @@
+capability_route:
+  schema: 1
+  status: resolved
+  primary_intent: project_analysis
+  intent_families: []
+  required_capabilities: []
+  modules: []
+  skills: []
+  tools: []
+  unavailable_tools: []
+  model_policy: {}
+  risk: {}
+  execution_blueprint: []
+  unresolved: []
+  enforce_tool_allowlist: true
+  provenance: {}
+  topics: []
+  proposed_topics: []
+  runtime_requirements: []
+  execution_status: blueprint_only; parameter_binder_pending

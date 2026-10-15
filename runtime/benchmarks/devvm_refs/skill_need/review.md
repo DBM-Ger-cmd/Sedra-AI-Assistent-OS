@@ -1,0 +1,3 @@
+- Critical: find_user builds the SQL query by string concatenation, which allows SQL injection; use a parameterized query.
+- Nit: ProcessData does not follow the snake_case naming of the module; rename it.
+- Optional: add a test for find_user.

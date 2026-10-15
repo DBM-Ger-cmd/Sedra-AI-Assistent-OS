@@ -1,0 +1,80 @@
+/* Cockpit shell – only the shell's own surfaces (strip, tree, dock, Gespräch, palette). Every colour and measure is a token of
+   ui/tokens.css; a tool styles itself under .t-<id> and never reaches in here. Form follows COCKPIT_MODUL_v1 §1 and the sketch uix2_C. */
+
+.ck{display:grid;grid-template-rows:var(--strip-h) minmax(0,1fr) var(--talk-h);height:100%;min-width:0;overflow:hidden;background:var(--bg)}
+.ck-middle{display:grid;grid-template-columns:var(--tree-w) minmax(0,1fr);min-height:0;min-width:0;overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+
+/* ---- strip */
+.ck-strip{display:flex;gap:6px;align-items:stretch;padding:6px 10px;background:var(--panel);overflow:hidden}
+.ck-gauge{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:4px 10px;display:flex;flex-direction:column;justify-content:center;min-width:132px}
+.ck-gauge small{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-right:6px}
+.ck-gauge b{font-size:13px;font-weight:600}
+.ck-gauge i{font-style:normal;color:var(--muted);font-size:10.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ck-gauge.ok b{color:var(--ok)}
+.ck-gauge.warn b{color:var(--warn)}
+.ck-gauge.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.ck-gauge.bad b{color:var(--bad)}
+.ck-gauge[role="button"]{cursor:pointer}
+.ck-gauge[role="button"]:hover{background:var(--panel-2)}
+.ck-hint small{text-transform:none;letter-spacing:0;margin:0}
+.ck-hint{flex:1;min-width:0;justify-content:center;color:var(--muted);border-style:dashed}
+.ck-bar{height:3px;background:var(--line-soft);border-radius:2px;margin-top:3px;overflow:hidden}
+.ck-bar span{display:block;height:100%;background:var(--accent)}
+
+/* ---- tree */
+.ck-tree{background:var(--panel-2);border-right:1px solid var(--line);padding:10px;overflow:auto;font-size:12.5px}
+.ck-tree h4{margin:12px 0 4px}
+.ck-tree h4:first-child{margin-top:0}
+.tr-row{padding:4px 8px;border-radius:6px;display:flex;flex-direction:column;cursor:pointer;border:1px solid transparent}
+.tr-row:hover{background:var(--panel)}
+.tr-row.on{background:var(--panel);border-color:var(--line);font-weight:600}
+.tr-row.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.tr-row.ok .tr-note{color:var(--ok)}
+.tr-note{color:var(--muted);font-size:var(--size-small)}
+.tr-empty{padding:4px 8px;color:var(--muted);font-size:var(--size-small)}
+
+/* ---- dock */
+.ck-bench{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;background:var(--panel)}
+.dk-split{display:grid;min-height:0;flex:1}
+.dk-row{grid-auto-flow:column;grid-auto-columns:1fr}
+.dk-column{grid-auto-flow:row;grid-auto-rows:1fr}
+.dk-split>.dk-group+.dk-group,.dk-split>.dk-split+.dk-group{border-left:1px solid var(--line)}
+.dk-group{display:flex;flex-direction:column;min-height:0;min-width:0;flex:1}
+.dk-bar{display:flex;align-items:stretch;border-bottom:1px solid var(--line);background:var(--panel-2);min-width:0}
+.dk-bar-fixed{display:flex;align-items:center;gap:6px;padding:6px 10px 6px 6px;flex:none}
+.dk-tabs{flex:1;display:flex;gap:4px;align-items:center;padding:6px 0 0 10px;overflow-x:auto;min-width:0;scrollbar-width:thin}
+.dk-tabs.drop{background:var(--ok-bg)}
+.dk-tab{display:flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid transparent;border-bottom:0;border-radius:7px 7px 0 0;color:var(--muted);cursor:pointer;white-space:nowrap}
+.dk-tab.on{background:var(--panel);border-color:var(--line);color:var(--text);font-weight:600}
+.dk-x{border:0;background:none;color:var(--muted);cursor:pointer;padding:0 2px;line-height:1}
+.dk-x:hover{color:var(--bad)}
+.dk-new{border-style:dashed;color:var(--accent);font-weight:600;flex:none}
+.dk-tab{flex:none}
+.dk-split-btn{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:4px 8px;cursor:pointer;color:var(--muted)}
+.dk-verbs{display:flex;gap:6px;align-items:center;padding:7px 16px;border-bottom:1px solid var(--line);background:var(--panel-2);flex-wrap:wrap;min-height:38px}
+.dk-body{flex:1;min-height:0;overflow:auto;padding:12px 16px;display:flex;flex-direction:column;gap:var(--gap-2)}
+.dk-tool{min-height:0}
+.dk-pane{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap-3);min-height:0}
+.dk-pane-col{display:flex;flex-direction:column;gap:var(--gap-2);min-width:0}
+.dk-pane-evidence{border-left:1px solid var(--line-soft);padding-left:var(--gap-3)}
+@media (max-width: 1100px){.dk-pane{grid-template-columns:1fr}.dk-pane-evidence{border-left:0;padding-left:0;border-top:1px solid var(--line-soft);padding-top:var(--gap-2)}}
+
+/* ---- Gespräch */
+.ck-talk{background:var(--panel);display:flex;flex-direction:column;min-height:0}
+
+/* ---- palette (Strg+K) */
+.pal{position:fixed;inset:0;background:var(--veil-dark);display:flex;align-items:flex-start;justify-content:center;z-index:50}
+.pal[hidden]{display:none}
+.pal-box{margin-top:12vh;width:min(620px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-2);box-shadow:var(--shadow);overflow:hidden}
+.pal-box input{width:100%;border:0;border-bottom:1px solid var(--line);padding:12px 14px;background:var(--panel)}
+.pal-box input:focus{outline:none}
+.pal-list{max-height:52vh;overflow:auto}
+.pal-row{padding:8px 14px;display:flex;flex-direction:column;cursor:pointer}
+.pal-row small{color:var(--muted)}
+.pal-row.on{background:var(--panel-2)}
+
+/* ---- ＋ Neu menu */
+.ck-menu{position:fixed;z-index:60;width:240px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.ck-menu-item{padding:7px 12px;cursor:pointer;display:flex;flex-direction:column}
+.ck-menu-item small{color:var(--muted);font-size:var(--size-small)}
+.ck-menu-item:hover{background:var(--panel-2)}

@@ -1,0 +1,97 @@
+module:
+  id: control-master
+  name: AI Control Master
+  version: 0.2.4
+  core_contract: 1
+  purpose:
+  - Ausführungsaufträge in konkrete Modell-, Tool- und Runtime-Aktionen übersetzen.
+  - Lokale und externe Ressourcen kontrolliert orchestrieren.
+  - Code- und Systemaktionen mit reproduzierbaren Ergebnissen ausführen.
+  capabilities:
+  - model_selection
+  - runtime_selection
+  - tool_routing
+  - hardware_model_pass
+  - code_execution
+  - file_operations
+  - test_execution
+  - api_mcp_routing
+  - execution_reporting
+  - local_model_inference
+  - model_provider_routing
+  - hardware_profile_use
+  inputs:
+    required:
+    - name: mission_id
+      type: string
+    - name: execution_request
+      type: object
+    - name: mission_state
+      type: object
+    optional:
+    - name: hardware_profile
+      type: object
+    - name: runtime_profile
+      type: object
+    - name: tool_constraints
+      type: array
+  outputs:
+  - name: execution_result
+    type: object
+  - name: artifacts
+    type: array
+  - name: tool_events
+    type: array
+  - name: runtime_report
+    type: object
+  - name: errors
+    type: array
+  permissions:
+    read:
+    - mission
+    - plan
+    - tool_registry
+    - skill_registry
+    - profiles
+    - artifacts
+    write:
+    - execution
+    - artifacts
+    - runtime_status
+    - tool_events
+  guard:
+    required_for:
+    - file_write
+    - file_delete
+    - external_api
+    - deployment
+    - credential_access
+    - paid_action
+    - system_change
+  prohibited:
+  - change_captain_intent
+  - change_mission_objective
+  - bypass_guard
+  - self_promote_candidate
+  - modify_core_invariants
+  communicates_with:
+  - planning-context
+  - verification
+  - communications
+  - knowledge
+  message_types:
+    accepts:
+    - execution_request
+    - capability_query
+    - verification_retest
+    emits:
+    - capability_response
+    - execution_progress
+    - execution_complete
+    - execution_failed
+    - artifact_created
+  completion:
+    success_when:
+    - requested_actions_finished
+    - artifacts_recorded
+    - execution_report_written

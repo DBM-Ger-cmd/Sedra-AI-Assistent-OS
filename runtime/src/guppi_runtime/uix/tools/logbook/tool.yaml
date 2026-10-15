@@ -1,0 +1,17 @@
+tool:
+  id: logbook
+  name: "Logbuch"
+  description: "Die Audit-Kette: Zeit, Ereignis, Teil."
+  version: 1.0.0
+  kind: object
+  handles: [logbook]
+  order: 70
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/audit
+  events:
+    emits: [object.open]
+    listens: [task.changed, decision.answered]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

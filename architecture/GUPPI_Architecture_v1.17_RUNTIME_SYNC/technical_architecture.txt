@@ -1,0 +1,115 @@
+GUPPI OS – Technische Zielarchitektur v0.1
+
+VERZEICHNISSTRUKTUR
+
+guppi-os/
+  core/
+    brain/
+    state/
+    messaging/
+    guard/
+    registry/
+    lifecycle/
+
+  modules/
+    planning-context/
+    control-master/
+    verification/
+    knowledge/
+    communications/
+
+  skills/
+  tools/
+  profiles/
+  knowledge/
+  artifacts/
+  runtime/
+
+  development/
+    GUPPI_EVOLUTION.yaml
+    proposals/
+    workspace/
+    patches/
+    tests/
+    reports/
+    builds/
+
+  audit/
+  guppi.manifest.yaml
+
+
+CORE RESPONSIBILITIES
+
+brain/
+- Intent verstehen
+- Missionsschleife
+- Entscheidungen
+- Delegation
+
+state/
+- zentraler Mission State
+- Zustandsvalidierung
+
+messaging/
+- Message Bus
+- Modulkommunikation
+- Event Routing
+
+guard/
+- Policies
+- Permissions
+- Human Gates
+
+registry/
+- Module Registry
+- Skill Registry
+- Tool Registry
+
+lifecycle/
+- Boot
+- Candidate Build
+- Update
+- Rollback
+- Recovery
+
+
+MISSION FLOW
+
+Captain
+  -> GUPPI Brain
+  -> Planning/Context
+  -> Control Master
+  -> Verification
+  -> GUPPI
+  -> Captain
+
+Module können bei Bedarf direkt miteinander kommunizieren.
+GUPPI bleibt jedoch Besitzer von Mission, Intent und finaler Entscheidung.
+
+
+DEVELOPMENT FLOW
+
+Stable
+  -> Capability Gap / Improvement
+  -> GUPPI_EVOLUTION.yaml
+  -> Planning
+  -> Development Workspace
+  -> Code
+  -> Candidate Build
+  -> Tests
+  -> Verification
+  -> Captain Gate (wenn erforderlich)
+  -> Update Package
+  -> Install
+  -> Health Check
+  -> Stable oder Rollback
+
+
+UPDATE RULES
+
+- Stable wird niemals direkt aus dem Development Workspace überschrieben.
+- Core-Updates benötigen Rollback.
+- Guard muss vor dem Laden normaler Module aktiv sein.
+- Ein Update muss Source-Version und Zielversion deklarieren.
+- Failed Verification = keine Promotion.
+- Audit-Events werden append-only protokolliert.

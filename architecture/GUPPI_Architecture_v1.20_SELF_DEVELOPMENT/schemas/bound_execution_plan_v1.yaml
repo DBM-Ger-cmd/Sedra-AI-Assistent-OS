@@ -1,0 +1,13 @@
+bound_execution_plan:
+  schema: 1
+  workflow: project-inspection-v1
+  required_inputs:
+  - project_path
+  optional_inputs:
+  - files
+  status:
+  - ready
+  - needs_input
+  argument_policy: closed read-only recipe
+  source_policy: live bounded metadata revalidation; execution source hashes
+  arbitrary_tool_args: false

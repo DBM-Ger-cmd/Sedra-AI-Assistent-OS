@@ -1,0 +1,12 @@
+/* Werkzeug „Kandidat“ – nur im eigenen Container. */
+.t-cand-file{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--panel)}
+.t-cand-head{display:flex;align-items:baseline;gap:10px;padding:7px 10px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+.t-cand-count{color:var(--muted);margin-left:auto;font-family:var(--mono)}
+.t-cand-diff{font-family:var(--mono);font-size:12px;line-height:1.5;overflow:auto;max-height:52vh}
+.t-cand-line{display:flex;white-space:pre}
+.t-cand-line.rein{background:var(--add-bg)}
+.t-cand-line.raus{background:var(--del-bg)}
+.t-cand-no{width:44px;flex:none;text-align:right;padding-right:8px;color:var(--muted);user-select:none}
+.t-cand-sign{width:14px;flex:none;color:var(--muted)}
+.t-cand-text{white-space:pre-wrap;word-break:break-word}
+.t-cand-gap{padding:2px 10px;color:var(--muted);background:var(--panel-2);border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)}

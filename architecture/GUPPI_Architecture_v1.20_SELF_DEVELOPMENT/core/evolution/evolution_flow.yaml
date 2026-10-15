@@ -1,0 +1,20 @@
+evolution_flow:
+  schema: 1
+
+  stages:
+    - "OBSERVE"
+    - "DETECT_GAP"
+    - "COLLECT_EVIDENCE"
+    - "DEDUPLICATE"
+    - "CLASSIFY"
+    - "PROPOSE"
+    - "DECIDE"
+    - "CREATE_EVOLUTION_REQUEST"
+    - "HANDOFF_TO_DEVELOPMENT"
+
+  rules:
+    - "proposal_is_not_an_update"
+    - "proposal_does_not_modify_stable"
+    - "classification_uses_highest_applicable_level"
+    - "E3_never_self_approves"
+    - "source_evidence_is_preserved"

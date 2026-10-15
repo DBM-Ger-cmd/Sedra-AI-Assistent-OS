@@ -1,0 +1,32 @@
+GUPPI GUARD – Ablauf v1
+
+MODULE
+  |
+  v
+GUARD REQUEST
+  |
+  v
+RULE + PERMISSION + RISK CHECK
+  |
+  +--> ALLOW ------------> EXECUTE
+  |
+  +--> BLOCK ------------> STOP + REPORT TO GUPPI
+  |
+  +--> CAPTAIN_REQUIRED
+           |
+           v
+       HUMAN GATE
+           |
+      +----+----+
+      |         |
+   APPROVE    REJECT
+      |         |
+      v         v
+ APPROVAL     STOP
+  TOKEN
+      |
+      v
+  EXECUTE ONCE
+      |
+      v
+ RESULT -> GUPPI

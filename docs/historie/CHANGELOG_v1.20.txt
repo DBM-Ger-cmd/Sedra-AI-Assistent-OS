@@ -1,0 +1,32 @@
+GUPPI v1.20 SELF-DEVELOPMENT FOUNDATION
+
+ADDED
+- Capability Admission Gate
+- Development/Context/Candidate/Verification contracts
+- Context Budget Manager
+- Development Evidence Chain
+- persistent Self-Development Job Store
+- Evolution E1/E2/E3 Policy
+- Kev loopback-only verification provider
+- Capability Learning Store
+- Self-Development UIX ViewModel/API
+- Qwen3.5 + Kev model pair presets
+- Hardware Model Pass pair-fit/match-level/preset-status
+
+CHANGED
+- Runtime package version 1.20.0
+- Built-in local model presets migrated from Qwen3 to Qwen3.5
+- Evolution Manager can hand off proposals into controlled Self-Development
+
+UNCHANGED / REUSED
+- Guard and Captain Gates
+- Candidate Lifecycle
+- Sandbox/GUPPI Entwicklungsumgebung
+- Candidate tests, acceptance and rollback
+- Control Master authority
+
+DEFAULT SAFETY
+- auto_develop_e1 = false
+- auto_activate_e1 = false
+- E2 activation requires gate
+- E3 auto activation impossible

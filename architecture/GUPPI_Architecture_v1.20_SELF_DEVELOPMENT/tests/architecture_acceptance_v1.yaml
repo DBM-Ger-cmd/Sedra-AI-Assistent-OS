@@ -1,0 +1,42 @@
+architecture_acceptance:
+  schema: 1
+
+  required_checks:
+    - id: "AC-001"
+      check: "captain_intent_is_immutable"
+
+    - id: "AC-002"
+      check: "protected_actions_pass_guard"
+
+    - id: "AC-003"
+      check: "modules_cannot_complete_mission_directly"
+
+    - id: "AC-004"
+      check: "verification_required_for_S1_and_S2"
+
+    - id: "AC-005"
+      check: "audit_is_append_only"
+
+    - id: "AC-006"
+      check: "secrets_not_stored_in_plaintext"
+
+    - id: "AC-007"
+      check: "failed_candidate_does_not_replace_stable"
+
+    - id: "AC-008"
+      check: "rollback_available_for_E2_and_E3"
+
+    - id: "AC-009"
+      check: "incompatible_components_not_loaded"
+
+    - id: "AC-010"
+      check: "evolution_proposal_does_not_modify_stable"
+
+    - id: "AC-011"
+      check: "artifact_provenance_is_preserved"
+
+    - id: "AC-012"
+      check: "boot_starts_guard_before_normal_modules"
+
+  release_gate:
+    pass_condition: "all_required_checks_pass"

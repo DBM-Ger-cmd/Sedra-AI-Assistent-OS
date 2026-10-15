@@ -1,0 +1,53 @@
+mission_loop:
+  schema: 1
+  id: guppi-mission-loop-v1
+  entry_state: NEW
+  terminal_states:
+  - COMPLETE
+  - FAILED
+  - PAUSED
+  - CANDIDATE_REVIEW
+  loop:
+  - step: observe
+    action: read_mission_state
+  - step: understand
+    when: captain_intent_or_objective_is_missing
+    action: resolve_intent
+  - step: plan
+    when: plan_required_and_not_ready
+    delegate: planning-context
+  - step: guard
+    when: next_action_is_protected
+    action: request_guard_decision
+  - step: captain_gate
+    when: guard_decision_is_CAPTAIN_REQUIRED
+    action: request_captain_approval
+  - step: execute
+    when: plan_ready_and_execution_required
+    delegate: control-master
+  - step: verify
+    when: execution_completed_and_verification_required
+    delegate: verification
+  - step: rework
+    when: verification_status_is_FAIL
+    action: create_rework_cycle
+  - step: candidate_review
+    when: candidate_preparation_verified_but_tests_and_captain_review_pending
+    action: stop_in_CANDIDATE_REVIEW
+  - step: complete
+    when: acceptance_criteria_met_and_no_blocking_gate
+    action: mark_complete
+  invariants:
+  - original_captain_intent_remains_immutable
+  - guard_precedes_protected_actions
+  - verification_precedes_completion_for_S1_and_S2
+  - failed_verification_never_completes_mission
+  - candidate_preparation_PASS_is_not_test_or_merge_qualification
+  - NOT_NOW_pauses_without_FAILURE
+  - feasibility_is_not_authorization_or_reservation
+  - resume_requires_fresh_check_and_is_bounded
+  - planning_revision_increases_for_each_plan_build
+  - all_plan_steps_checkpointed_before_VERIFICATION
+  - unknown_execution_outcome_never_replayed_automatically
+  - completed_artifacts_hash_checked_on_resume
+  - replan_after_effects_requires_new_explicit_contract

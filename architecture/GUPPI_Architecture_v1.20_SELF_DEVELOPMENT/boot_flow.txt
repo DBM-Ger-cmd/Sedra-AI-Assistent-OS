@@ -1,0 +1,40 @@
+GUPPI BOOT FLOW v1
+
+OFFLINE
+   |
+   v
+BOOTING
+   |
+   v
+Manifest
+   |
+   v
+Core Invariants
+   |
+   v
+GUARD
+   |
+   v
+Registries
+   |
+   v
+Compatibility
+   |
+   v
+Health Checks
+   |
+   v
+Required Modules
+   |
+   v
+Message Bus
+   |
+   v
+GUPPI Brain
+   |
+   v
+READY
+
+Required failure -> SAFE_MODE
+Guard/Core invariant failure -> HALTED
+Failed update health check -> RECOVERING -> previous Stable

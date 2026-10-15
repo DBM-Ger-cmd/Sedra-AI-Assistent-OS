@@ -1,0 +1,43 @@
+GUPPI RELEASE FLOW v1
+
+GUPPI_EVOLUTION.yaml
+        |
+        v
+VALIDATE REQUEST
+        |
+        v
+ISOLATED WORKSPACE
+        |
+        v
+BUILD CANDIDATE
+        |
+        v
+RUN TEST MATRIX
+        |
+        v
+VERIFY
+   +----+----+
+   |         |
+ FAIL       PASS
+   |         |
+REJECT    CAPTAIN GATE? ----> REJECT
+             |
+             v
+        PACKAGE UPDATE
+             |
+             v
+       CREATE ROLLBACK
+             |
+             v
+      PREINSTALL SNAPSHOT
+             |
+             v
+         INSTALL
+             |
+             v
+        HEALTH CHECK
+        +----+----+
+        |         |
+      FAIL       PASS
+        |         |
+    ROLLBACK    STABLE

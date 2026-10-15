@@ -1,0 +1,10 @@
+/* Werkzeug „Vorhaben“ – nur im eigenen Container. */
+.t-intent-row{padding:7px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);display:flex;flex-direction:column;cursor:pointer}
+.t-intent-row:hover{background:var(--panel-2)}
+.t-intent-row.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.t-intent-title{font-size:15px;font-weight:600}
+.t-intent-text{white-space:pre-wrap;color:var(--muted)}
+.t-intent-form{border-top:1px solid var(--line-soft);padding-top:var(--gap-2)}
+.t-intent-form input,.t-intent-form textarea{border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;background:var(--panel);width:100%}
+.t-intent-form textarea{min-height:64px;resize:vertical}
+.t-intent-form button{align-self:flex-start}

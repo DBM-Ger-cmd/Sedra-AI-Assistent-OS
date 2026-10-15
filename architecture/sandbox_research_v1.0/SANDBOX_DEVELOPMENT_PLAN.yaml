@@ -1,0 +1,52 @@
+sandbox_development_plan:
+  schema: 1
+  date: '2026-09-30'
+  base_runtime: 'GUPPI 1.6.0'
+  status: planned_not_implemented
+  captain_requirement: integrated_all_in_one
+  preferred_poc_backend: microsandbox
+  backend_selection: provisional_pending_target_hardware_acceptance
+  docker_required: false
+  cloud_required: false
+  host_requirements:
+    windows: Windows Hypervisor Platform
+    linux: KVM
+    macos: Apple Silicon
+  integration:
+    owner: Control Master
+    port: SandboxProvider
+    host_trusted: [brain, guard, audit, sandbox_broker, local_model_runtime]
+    guest_untrusted: [generated_code, project_tests, build_commands]
+    interface: [capabilities, create, execute, export_candidate, cancel, destroy]
+  package:
+    runtime_distribution: bundled_and_version_pinned
+    images: preprovisioned_and_verified
+    offline_after_setup: required
+    implicit_runtime_downloads: forbidden
+    license_and_notice_review: required_before_distribution
+  policy:
+    workspace: private_copy
+    original_repository_writable: false
+    network_default: deny
+    host_secrets: forbidden
+    host_management_sockets: forbidden
+    unsafe_fallback: forbidden
+    resource_limits: [cpu, ram, processes, disk, execution_deadline]
+    unsupported_policy: block_execution
+    candidate_promotion: captain_gate_after_verification
+  milestones:
+    - id: SBX-01
+      goal: Pin and bundle compatible SDK, binary and image components
+    - id: SBX-02
+      goal: Prove native Windows microVM lifecycle and offline operation
+    - id: SBX-03
+      goal: Prove filesystem, network, resource and cancellation boundaries
+    - id: SBX-04
+      goal: Add broker to registry, guard and audit
+    - id: SBX-05
+      goal: Repository PLAN VERIFY CODE VERIFY cycle with candidate export
+  evidence:
+    github_and_documentation_reviewed: true
+    backend_installed: false
+    real_microvm_tested: false
+    security_accepted: false

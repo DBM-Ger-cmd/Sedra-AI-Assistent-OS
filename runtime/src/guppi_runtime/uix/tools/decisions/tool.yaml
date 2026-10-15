@@ -1,0 +1,18 @@
+tool:
+  id: decisions
+  name: "Entscheidungen"
+  description: "Gates, Änderungsanträge und (ab Build 9) Grenzen – an einem Ort beantwortet."
+  version: 1.0.0
+  kind: object
+  handles: [decision]
+  order: 20
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/decisions
+    - POST /api/decisions/answer
+  events:
+    emits: [object.open]
+    listens: [decision.pending, decision.answered]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

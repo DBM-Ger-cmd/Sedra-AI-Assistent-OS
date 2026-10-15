@@ -1,0 +1,4 @@
+GUPPI Architecture Runtime Sync v1.2
+
+Synchronisiert mit der ausführbaren Runtime v1.2.
+Neu: sichere Tool-Schicht, persistente Guard-Freigaben, lokaler Model Router und Hardware-Model-Pass-Baseline.

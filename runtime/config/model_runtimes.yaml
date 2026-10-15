@@ -1,0 +1,21 @@
+model_runtimes:
+  lm-studio:
+    enabled: false   # 2026-10-12: LM Studio became "Bionic"; its service hangs and lms.exe reopens it. GUPPI uses llama-server directly.
+    endpoint: http://127.0.0.1:1234
+    executable: null
+
+  llama-cpp-server:
+    enabled: true
+    endpoint: http://127.0.0.1:8080
+    executable: null
+
+portable:
+  models_dir: models
+  providers_dir: providers
+  catalog_dir: catalog
+
+security:
+  local_endpoints_only: true
+  auto_download_models: false
+  auto_start_external_binaries: false
+  runtime_control_requires_captain: true

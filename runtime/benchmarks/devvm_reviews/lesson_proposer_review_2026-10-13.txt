@@ -1,0 +1,6 @@
+Review of lesson_proposer.py (Claude, 2026-10-13). Fix exactly these points, keep everything else.
+
+1. `_check_placeholder_write`, first pattern `\[written: \d+ characters\]`: the text that must match is `[written: 1704 characters, they are in the file now]`, so a `]` does NOT follow `characters`. The pattern is `\[written: \d+ characters` (no closing bracket).
+2. `_check_placeholder_write`, second pattern `\[.*cut.*\]`: far too loose (it matches any text with "cut" between brackets). The task asks for the literal text `[...cut...]`: use `re.escape("[...cut...]")` or the pattern `\[\.\.\.cut\.\.\.\]`.
+3. `propose(text)` is not what the task asks for: `propose(failures, run_id, known=None, limit=3)` returns a list of {"text", "source"} (see the second stage). Replace the stub by the real function.
+4. `_check_missing_module` is fine for stage 1, but for `propose` the module name is needed: capture it with `ModuleNotFoundError: No module named '([A-Za-z0-9_.]+)`.

@@ -1,0 +1,37 @@
+evolution_proposal:
+  schema: 1
+
+  identity:
+    proposal_id: "EP-0001"
+    created_at: null
+    created_by: "guppi-evolution-manager"
+
+  sources:
+    capability_gaps: []
+    missions: []
+
+  problem:
+    summary: ""
+    evidence: []
+
+  proposed_change:
+    objective: ""
+    target_type: "skill"
+    target_id: null
+    classification: "E1"
+
+  expected_benefit:
+    capabilities_added: []
+    failures_reduced: []
+
+  risk:
+    level: "low"
+    reasons: []
+
+  development:
+    recommended: true
+    requires_captain_gate: false
+    suggested_tests: []
+
+  status: "proposed"
+  # proposed, accepted, rejected, merged, sent_to_development

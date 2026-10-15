@@ -1,0 +1,17 @@
+tool:
+  id: system
+  name: "System"
+  description: "Maschinenraum und Hardware: Teile, Entwicklungsumgebung, GPU."
+  version: 1.0.0
+  kind: object
+  handles: [machine, hardware]
+  order: 80
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/status
+  events:
+    emits: [object.open]
+    listens: [system.state, model.changed]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

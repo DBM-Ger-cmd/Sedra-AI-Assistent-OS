@@ -1,0 +1,20 @@
+sandbox_contract:
+  schema: 1
+  version: 1.7.0
+  coordinator: GUPPI Brain
+  executor: Control Master / sandbox broker
+  backend: microsandbox
+  sdk_pin: 0.7.4
+  isolation_acceptance: pending_real_pc
+  guard_action: sandbox_execute
+  approval_target: "sandbox:<plan_digest>"
+  operations: [doctor, preview, run, history]
+  input: private_project_copy
+  host_mounts: forbidden
+  network: deny
+  host_project_execution: forbidden
+  outputs: explicit_candidate_files_only
+  candidate_promotion: captain_review_required
+  cleanup_unconfirmed: retain_lock_and_block_subsequent_jobs
+  cloud: forbidden
+  automatic_runtime_or_image_download: forbidden

@@ -1,0 +1,26 @@
+{
+  "project_path": "demo-project",
+  "files": [
+    "README.md",
+    "app.py",
+    "tests/test_app.py"
+  ],
+  "changes": [
+    {
+      "path": "app.py",
+      "expected_sha256": "c37dff33e2ca17950812f26c3df98352b23df25e9ef41308b0610b6bfe7a0b35",
+      "content": "def greet(name):\n    return f\"Hello, {name}!\"\n"
+    }
+  ],
+  "test_commands": [
+    [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-v"
+    ]
+  ]
+}

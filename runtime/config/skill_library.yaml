@@ -1,0 +1,22 @@
+# Skill libraries (Claude 2026-10-13): where the skills come from and how a library is built. No local paths here: <skillsets> is the folder of THIS PC (config/local_paths.yaml, not in git).
+# Build: .venv\Scripts\python.exe -m guppi_runtime.skill_library build core      (or `all`)      List: ... list
+# `devvm_build.py --skills core` uses the library by its name.
+skill_library:
+  libraries:
+    core:
+      output: runtime_data/skill_library_core
+      license: MIT
+      note: 63 skills for the coder (context engineering, superpowers, addyosmani agent-skills); equal skills are merged, the first source wins
+      sources:
+        addy: <skillsets>/agent-skills-main/agent-skills-main
+        superpowers: <skillsets>/superpowers-main/superpowers-main
+        context: <skillsets>/Agent-Skills-for-Context-Engineering-main/Agent-Skills-for-Context-Engineering-main
+      release:
+        - browser-testing-with-devtools
+        - source-driven-development
+    full:
+      output: runtime_data/skill_library
+      license: MIT
+      note: 366 skills of claude-skills (A. Rezvani), all domains; for lookups, not the default of the coder
+      sources:
+        claude-skills: <skillsets>/claude-skills-main/claude-skills-main

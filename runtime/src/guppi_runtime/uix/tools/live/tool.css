@@ -1,0 +1,10 @@
+/* Werkzeug „Live“ – nur im eigenen Container. */
+.t-live-box{max-height:46vh;min-height:120px}
+.t-live-line{display:flex;gap:8px}
+.t-live-sign{width:12px;flex:none;color:var(--live-muted)}
+.t-live-text{white-space:pre-wrap;word-break:break-word}
+.t-live-line.ok .t-live-sign{color:var(--live-ok)}
+.t-live-line.bad{color:var(--live-warn)}
+.t-live-line.gate .t-live-sign{color:var(--live-warn)}
+.t-live-line.note{color:var(--live-muted)}
+.t-live-line.out{color:var(--live-muted);padding-left:20px}

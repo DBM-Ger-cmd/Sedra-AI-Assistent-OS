@@ -1,0 +1,12 @@
+hardware_snapshot:
+  schema: 1
+  os: ""
+  architecture: ""
+  cpu: ""
+  cpu_threads: 0
+  ram_gb: null
+  gpu_vendor: null
+  gpu_name: null
+  vram_gb: null
+  apple_unified_memory: false
+  hardware_class: unknown

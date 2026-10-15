@@ -1,0 +1,20 @@
+# Die Start-Shell: der Einstieg. Standard, solange local_config/uix.yaml keine Shell nennt.
+shell:
+  id: start
+  name: "Start"
+  description: "Der Einstieg: Oberfläche wählen, eine eigene anlegen oder eine von außen vorlegen."
+  version: 1.0.0
+  entry: {js: shell.js, css: shell.css}
+  provides: [chooser, talk, notify, inbox]
+  layout: {persist: none}
+  api:
+    - GET /api/uix/modules
+    - POST /api/uix/shell
+    - POST /api/uix/scaffold
+    - GET /api/uix/vorgaben
+    - POST /api/uix/vorgabe
+    - POST /api/uix/install
+    - GET /api/decisions
+    - POST /api/decisions/answer
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

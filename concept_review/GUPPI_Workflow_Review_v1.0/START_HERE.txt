@@ -1,0 +1,8 @@
+GUPPI Workflow-Konzeptprüfung v1.0
+
+1. PRUEFBERICHT.md: Urteil, direkter Codeabgleich und notwendige Korrekturen.
+2. CONTRACT_PROPOSAL.yaml: vorgeschlagene minimale Verträge, nicht implementiert.
+3. ABNAHMEMATRIX.md: korrigierte Zieltests und offene PC-Ready-Nachweise.
+4. VALIDATION.json: erneuter Testlauf und isolierte Reproduktion.
+
+Keine Produktcodeänderung. Das ursprüngliche Handoff bleibt unverändert.

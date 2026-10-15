@@ -1,0 +1,21 @@
+tool:
+  id: library
+  name: "Bibliothek"
+  description: "Fähigkeiten, eigene Skills und die Regale – lesen frei, schreiben nur nach Freigabe."
+  version: 1.0.0
+  kind: object
+  handles: [skill]
+  order: 40
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/library
+    - POST /api/library/search
+    - POST /api/library/read
+    - POST /api/library/text
+    - POST /api/library/custom/request
+  events:
+    emits: [object.open]
+    listens: [decision.answered]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

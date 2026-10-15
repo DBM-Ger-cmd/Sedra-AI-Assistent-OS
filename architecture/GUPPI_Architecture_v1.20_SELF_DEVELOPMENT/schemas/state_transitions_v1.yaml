@@ -1,0 +1,53 @@
+state_transitions:
+  schema: 1
+  allowed:
+    NEW:
+    - UNDERSTAND
+    - PAUSED
+    UNDERSTAND:
+    - PLAN
+    - READY
+    - PAUSED
+    - FAILED
+    PLAN:
+    - READY
+    - PAUSED
+    - FAILED
+    READY:
+    - EXECUTE
+    - CAPTAIN_REVIEW
+    - PAUSED
+    EXECUTE:
+    - VERIFY
+    - CAPTAIN_REVIEW
+    - REWORK
+    - PAUSED
+    - FAILED
+    VERIFY:
+    - COMPLETE
+    - CAPTAIN_REVIEW
+    - REWORK
+    - FAILED
+    - CANDIDATE_REVIEW
+    REWORK:
+    - PLAN
+    - EXECUTE
+    - PAUSED
+    - FAILED
+    CAPTAIN_REVIEW:
+    - EXECUTE
+    - COMPLETE
+    - PAUSED
+    - FAILED
+    PAUSED:
+    - UNDERSTAND
+    - PLAN
+    - READY
+    - EXECUTE
+    - VERIFY
+    - FAILED
+    COMPLETE: []
+    FAILED: []
+    CANDIDATE_REVIEW:
+    - PAUSED
+    - FAILED

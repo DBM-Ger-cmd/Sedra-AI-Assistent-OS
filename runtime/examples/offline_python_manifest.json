@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "platform": "windows-x64",
+  "python_version": "REPLACE_WITH_REVIEWED_VERSION",
+  "python": {"file": "REPLACE_WITH_EMBED_AMD64_ZIP", "sha256": "REPLACE_WITH_OFFICIAL_VERIFIED_SHA256"},
+  "pyyaml": {"file": "REPLACE_WITH_MATCHING_WINDOWS_X64_WHEEL", "sha256": "REPLACE_WITH_INDEPENDENTLY_VERIFIED_SHA256"}
+}

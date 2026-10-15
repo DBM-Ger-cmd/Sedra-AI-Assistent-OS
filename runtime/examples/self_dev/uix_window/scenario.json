@@ -1,0 +1,11 @@
+{
+  "capability": "uix_desktop_window",
+  "target_type": "skill",
+  "objective": "Implement every function in uix_window.py exactly as its docstring says, so that all tests in tests/test_uix_window.py pass. Use only the Python standard library (re is fine). Keep DEFAULT_SIZE and BROWSERS unchanged. Change only uix_window.py. Do not touch the tests.",
+  "files": ["uix_window.py", "tests/test_uix_window.py"],
+  "generation": {"context_min_tokens": 32768, "max_tokens": 20000},
+  "evidence": [
+    {"source": "2026-10-03 Captain request", "detail": "GUPPI's UIX should be usable as its own Windows window, not as a page in the normal browser"},
+    {"source": "2026-10-03 inventory", "detail": "uix_server only has --open (default browser tab); Edge is installed, pywebview is not; nothing may be downloaded for this"}
+  ]
+}

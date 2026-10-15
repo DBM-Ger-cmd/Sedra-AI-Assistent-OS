@@ -1,0 +1,72 @@
+GUPPI OS – Modul-Schnittstellen v0.2
+
+1. PLANNING + CONTEXT
+Input:
+- Mission-ID
+- Captain-Intent
+- Mission State
+- optional: Wissen, Constraints, frühere Entscheidungen
+
+Output:
+- Context Pack
+- Mission Plan
+- Abhängigkeiten
+- Acceptance Criteria
+- Risiken
+- Capability Gaps
+
+Planning plant und sammelt Kontext, führt aber keine Tools direkt aus.
+
+2. CONTROL MASTER
+Input:
+- Mission-ID
+- Execution Request
+- Mission State
+- optional: Hardware-, Runtime- und Tool-Profile
+
+Output:
+- Execution Result
+- Artefakte
+- Tool Events
+- Runtime Report
+- Fehler
+
+Control Master führt aus, darf Mission und Captain-Intent aber nicht ändern.
+Kritische Aktionen müssen durch Guard.
+
+3. VERIFICATION
+Input:
+- Mission-ID
+- Captain-Intent
+- Acceptance Criteria
+- Execution Result
+- optional: Artefakte, Testresultate, Constraints
+
+Output:
+- PASS / FAIL / INCONCLUSIVE
+- Verification Report
+- Findings
+- Evidence
+- optional: Rework Request
+
+Verification prüft gegen den ursprünglichen Auftrag und darf die zu prüfenden Artefakte nicht stillschweigend selbst korrigieren.
+
+4. KOMMUNIKATION
+Module dürfen direkt über den Message Bus kommunizieren.
+Mission, Intent und finale Entscheidungen bleiben Eigentum von GUPPI.
+
+5. STANDARD-FLOW
+Captain
+-> GUPPI
+-> Planning + Context
+-> Control Master
+-> Verification
+-> GUPPI
+-> Captain
+
+Bei Bedarf:
+Planning <-> Control Master
+Verification <-> Control Master
+Planning <-> Verification
+
+Alle relevanten Ergebnisse werden in den zentralen Mission State zurückgeführt.

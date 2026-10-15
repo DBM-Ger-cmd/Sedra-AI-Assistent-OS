@@ -1,0 +1,3 @@
+/* Werkzeug „Projekt“ – nur im eigenen Container. */
+.t-files-row{padding:5px 10px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+.t-files-row:hover{background:var(--panel-2)}

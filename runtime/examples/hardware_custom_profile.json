@@ -1,0 +1,13 @@
+{
+  "profile_id": "custom-mein-pc",
+  "profile": {
+    "label": "Mein GIGABYTE PC",
+    "hardware_fingerprint": "REPLACE_WITH_HARDWARE_INVENTORY_FINGERPRINT",
+    "ram_reserve_gib": 3,
+    "max_jobs": 1,
+    "cpu_thread_cap": 4,
+    "power_plan": null,
+    "thermal_limits": [],
+    "vendor_profile_reference": "GCC: hier den eigenen Profilnamen hinterlegen; manuell aktiviert"
+  }
+}

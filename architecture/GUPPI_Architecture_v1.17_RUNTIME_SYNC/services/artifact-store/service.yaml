@@ -1,0 +1,21 @@
+service:
+  id: "artifact-store"
+  name: "Artifact Store"
+  version: "0.1.0"
+  core_contract: 1
+
+  purpose:
+    - "Dateien und Build-Artefakte missionsbezogen registrieren."
+    - "Version, Herkunft und Integrität nachverfolgbar halten."
+
+  capabilities:
+    - "artifact_register"
+    - "artifact_lookup"
+    - "artifact_version"
+    - "artifact_hash"
+    - "artifact_status"
+
+  invariants:
+    - "artifact_id_is_unique"
+    - "provenance_is_preserved"
+    - "hash_is_updated_after_change"

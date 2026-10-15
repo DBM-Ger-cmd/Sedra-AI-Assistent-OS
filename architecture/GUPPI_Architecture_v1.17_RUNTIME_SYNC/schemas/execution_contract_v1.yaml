@@ -1,0 +1,36 @@
+execution_contract:
+  schema: 1
+  implemented_requirements:
+    allowed_execution_locations:
+    - local
+    data_class: internal
+    context_min_tokens: 0
+  response_fields:
+  - mission_id
+  - step_id
+  - plan_revision
+  - request_digest
+  - requirements_digest
+  - status
+  - reason_code
+  - checked_at
+  - expires_at
+  - reservation
+  - authorization
+  - evidence_refs
+  - alternatives
+  statuses:
+  - EXECUTABLE
+  - NOT_NOW
+  - BLOCKED
+  - UNSUPPORTED
+  constraints:
+  - positive_context_minimum_is_UNSUPPORTED_until_capacity_qualified
+  - no_reservation_or_authorization
+  - explicit_resume_limit_3
+  - unknown_fields_fail_closed
+  result_qualifications:
+  - PENDING
+  - ARTIFACT_ONLY
+  - VERIFIED_INVENTORY
+  - PREPARED_NOT_TESTED

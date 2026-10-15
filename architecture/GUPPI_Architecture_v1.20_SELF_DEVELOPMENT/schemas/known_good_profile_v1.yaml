@@ -1,0 +1,15 @@
+known_good_profile:
+  schema: 1
+  id: kgp-example
+  status: confirmed
+  confirmed_at: null
+  runtime: llama-cpp-server
+  hardware:
+    fingerprint: ""
+    hardware_class: ""
+  model:
+    id: ""
+    filename: ""
+  benchmark_id: ""
+  score: 0.0
+  profile: {}

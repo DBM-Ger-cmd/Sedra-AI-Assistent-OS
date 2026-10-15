@@ -1,0 +1,38 @@
+tool_registry:
+  schema: 1
+  tools:
+    filesystem:
+      version: 0.2.0
+      manifest: tools/filesystem/tool.yaml
+      enabled: true
+      required: true
+    git:
+      version: 0.2.0
+      manifest: tools/git/tool.yaml
+      enabled: true
+      required: false
+    shell:
+      version: 0.2.0
+      manifest: tools/shell/tool.yaml
+      enabled: true
+      required: true
+    model-runtime:
+      version: 0.2.0
+      manifest: tools/model-runtime/tool.yaml
+      enabled: true
+      required: false
+    sandbox:
+      version: 0.1.0
+      manifest: tools/sandbox/tool.yaml
+      enabled: true
+      required: false
+    hardware-manager:
+      version: 0.1.0
+      manifest: tools/hardware-manager/tool.yaml
+      enabled: true
+      required: false
+  load_policy:
+    require_manifest: true
+    require_guard_classification: true
+    reject_duplicate_ids: true
+    disabled_by_default_if_untrusted: true

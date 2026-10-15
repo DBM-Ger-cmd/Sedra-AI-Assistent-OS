@@ -1,0 +1,56 @@
+# Role -> capability -> provider routing (docs/JOB_SUPERVISOR_CONTRACTS.md section 8).
+# GUPPI asks for a role; the Control Master resolves it against these declarative recipes. Provider and model names
+# live here, never in code. Numbers are starting values without measurement behind them.
+role_routing:
+  schema: 1
+  enabled: false                 # Feature flag. Default OFF: model selection behaves exactly like v1.20.
+
+  policy:
+    # GUPPI_GENERATED and EXTERNAL_UNVERIFIED can never be listed here (refused at load): a capability GUPPI built itself
+    # is not trusted automatically, and only the Captain can promote it.
+    allowed_trust_levels: [BUILT_IN, KNOWN_GOOD, CAPTAIN_CUSTOM]
+    cloud_allowed: false         # a cloud recipe additionally needs an explicit Captain approval per resolution
+
+  provider_health:
+    degraded_after: 2            # consecutive provider faults before DEGRADED
+    cooldown_after: 3            # ... before COOLDOWN
+    base_cooldown_s: 30
+    max_cooldown_s: 600
+
+  capabilities:
+    - id: coder.local_primary
+      version: 1
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      provider: llama-cpp-server
+      model: null                # null: whatever the runtime has loaded
+      model_family: qwen3.5
+      weights_id: null           # set the exact weights id once a model is chosen; until then independence cannot be proven
+      location: local
+      requirements: {min_ram_gb: 16, min_vram_gb: 0}
+      model_size_gb: null        # set to enable the hardware fit check
+      profile: {context: {recommended: 8192, maximum: 32768}, gpu_layers: 0}
+      permissions: {max_level: 2}
+      network: {allowed: false}
+      tests: [capability_smoke_test, syntax_test, deterministic_task_test]
+      rollback: {supported: true}
+      metadata: {source: builtin, trust_level: BUILT_IN}
+
+    # The local verification layer. Disabled on purpose: no Kev server or weights are bundled, so nothing may claim to
+    # verify with it until a qualified local server exists and the Captain enables this recipe.
+    - id: verifier.local_kev
+      version: 1
+      enabled: false
+      roles: [verifier, security_reviewer]
+      provider: kev
+      model: null
+      model_family: kev
+      weights_id: null
+      location: local
+      requirements: {min_ram_gb: 4, min_vram_gb: 0}
+      model_size_gb: null
+      profile: {context: {recommended: 4096, maximum: 8192}, gpu_layers: 0}
+      permissions: {max_level: 1}
+      network: {allowed: false}
+      tests: [capability_smoke_test]
+      rollback: {supported: true}
+      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}

@@ -1,0 +1,126 @@
+/* Werkzeug „KI GateWay · Schutz“ – nur .t-schutz*, Farben ausschließlich aus ui/tokens.css (Build 19: CORE, Ersatzwerte entfernt). */
+.t-schutz {
+  --ts-card: var(--panel); --ts-line: var(--line); --ts-panel: var(--panel-2);
+  --ts-text: var(--text); --ts-muted: var(--muted); --ts-head: var(--heading); --ts-accent: var(--accent);
+  --ts-ok-bg: var(--ok-bg); --ts-ok-fg: var(--ok); --ts-ok-line: var(--ok-line);
+  --ts-warn-bg: var(--warn-bg); --ts-warn-fg: var(--warn); --ts-warn-line: var(--warn-line);
+  --ts-bad-bg: var(--bad-bg); --ts-bad-fg: var(--bad); --ts-bad-line: var(--bad-line);
+  --ts-r: var(--radius);
+  display: flex; flex-direction: column; min-height: 100%; background: var(--ts-panel); color: var(--ts-text);
+  font: var(--size)/1.45 var(--font);
+}
+.t-schutz h2 { margin: 0; font-size: 20px; color: var(--ts-head); }
+.t-schutz h3 { margin: 0 0 4px; font-size: 14px; color: var(--ts-head); }
+.t-schutz p { margin: 0; }
+.t-schutz-hint { color: var(--ts-muted); font-size: 12px; }
+.t-schutz-head { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; padding: 14px 16px 10px; }
+.t-schutz-title { display: flex; gap: 12px; align-items: center; }
+.t-schutz-title p { color: var(--ts-muted); }
+.t-schutz-shield { width: 34px; height: 40px; flex: none; border-radius: 4px 4px 17px 17px; position: relative;
+  background: linear-gradient(180deg, var(--guppy-1), var(--guppy-2)); border: 1px solid var(--guppy-line); }
+.t-schutz-shield::after { content: ""; position: absolute; left: 11px; top: 10px; width: 9px; height: 15px; border: solid var(--accent-text);
+  border-width: 0 3px 3px 0; transform: rotate(45deg); }
+.t-schutz-state { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; max-width: 360px; text-align: right; }
+.t-schutz-tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 0 16px; border-bottom: 1px solid var(--ts-line); }
+.t-schutz-tab { font: inherit; padding: 7px 12px; border: 1px solid transparent; border-bottom: 0; border-radius: 4px 4px 0 0;
+  background: transparent; color: var(--ts-muted); cursor: pointer; margin-bottom: -1px; }
+.t-schutz-tab:hover { color: var(--ts-text); }
+.t-schutz-tab.on { background: var(--ts-card); border-color: var(--ts-line); color: var(--ts-head); font-weight: bold; }
+.t-schutz-tab:focus-visible, .t-schutz-btn:focus-visible, .t-schutz-seg button:focus-visible { outline: 2px solid var(--ts-accent); outline-offset: 1px; }
+.t-schutz-count { display: inline-block; min-width: 18px; margin-left: 6px; padding: 0 5px; border-radius: 999px; font-size: 11px;
+  background: var(--ts-warn-fg); color: var(--accent-text); text-align: center; }
+.t-schutz-body { flex: 1; padding: 14px 16px 18px; overflow: auto; }
+.t-schutz-stack { display: flex; flex-direction: column; gap: 12px; }
+.t-schutz-sec { display: flex; flex-direction: column; gap: 8px; }
+.t-schutz-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.t-schutz-pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 11px; font-weight: bold; border: 1px solid; white-space: nowrap; }
+.t-schutz-ok { background: var(--ts-ok-bg); color: var(--ts-ok-fg); border-color: var(--ts-ok-line); }
+.t-schutz-warn { background: var(--ts-warn-bg); color: var(--ts-warn-fg); border-color: var(--ts-warn-line); }
+.t-schutz-bad { background: var(--ts-bad-bg); color: var(--ts-bad-fg); border-color: var(--ts-bad-line); }
+.t-schutz-muted { background: var(--ts-card); color: var(--ts-muted); border-color: var(--ts-line); }
+
+/* Der Weg einer Anfrage */
+.t-schutz-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; counter-reset: st; }
+.t-schutz-station { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 12px; background: var(--ts-card);
+  border: 1px solid var(--ts-line); border-radius: var(--ts-r); }
+.t-schutz-station + .t-schutz-station::before { content: ""; position: absolute; left: -18px; top: 50%; border: 7px solid transparent;
+  border-left: 10px solid var(--ts-line); transform: translateY(-50%); }
+.t-schutz-step { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: bold; background: var(--ts-accent); color: var(--accent-text); }
+.t-schutz-big { font-size: 26px; font-weight: bold; color: var(--ts-head); line-height: 1.2; }
+.t-schutz-flow.small .t-schutz-station { padding: 9px 10px; }
+.t-schutz-flow.small .t-schutz-station:nth-child(2) { animation-delay: .25s; }
+.t-schutz-flow.small .t-schutz-station:nth-child(3) { animation-delay: .5s; }
+.t-schutz-flow.small .t-schutz-station:nth-child(4) { animation-delay: .75s; }
+.t-schutz-station.done { border-color: var(--ts-ok-line); background: var(--ts-ok-bg); }
+.t-schutz-station.done .t-schutz-step { background: var(--ts-ok-fg); }
+/* wartet = Achtung (Manifest §5), nicht rot */
+.t-schutz-station.watch, .t-schutz-station.wait { border-color: var(--ts-warn-line); background: var(--ts-warn-bg); }
+.t-schutz-station.watch .t-schutz-step, .t-schutz-station.wait .t-schutz-step { background: var(--ts-warn-fg); }
+.t-schutz-station.stop { border-color: var(--ts-bad-line); background: var(--ts-bad-bg); }
+.t-schutz-station.stop .t-schutz-step { background: var(--ts-bad-fg); }
+.t-schutz-station.skip { opacity: .55; }
+.t-schutz-station.skip .t-schutz-step { background: var(--ts-muted); }
+
+@media (prefers-reduced-motion: reduce) { .t-schutz-flow.small .t-schutz-station { animation: none; } }
+
+.t-schutz-banner { padding: 9px 12px; border-radius: var(--ts-r); border: 1px solid var(--ts-line); background: var(--ts-card); }
+.t-schutz-banner.ok { background: var(--ts-ok-bg); border-color: var(--ts-ok-line); color: var(--ts-ok-fg); }
+.t-schutz-banner.warn { background: var(--ts-warn-bg); border-color: var(--ts-warn-line); color: var(--ts-warn-fg); }
+.t-schutz-banner.bad { background: var(--ts-bad-bg); border-color: var(--ts-bad-line); color: var(--ts-bad-fg); }
+.t-schutz-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--ts-card); border: 1px solid var(--ts-line); border-radius: var(--ts-r); }
+.t-schutz-card.warn { border-color: var(--ts-warn-line); box-shadow: inset 4px 0 0 var(--ts-warn-fg); }
+.t-schutz-card.active { border-color: var(--ts-accent); box-shadow: inset 0 0 0 1px var(--ts-accent); }
+.t-schutz-card ul, .t-schutz-result ul { margin: 2px 0 0; padding-left: 18px; }
+.t-schutz-btn { font: inherit; font-size: 12px; padding: 5px 12px; border-radius: 4px; cursor: pointer; color: var(--ts-text);
+  border: 1px solid var(--line); background: var(--panel); }
+.t-schutz-btn.primary { border-color: var(--accent); color: var(--accent); font-weight: bold;
+  background: var(--panel); }
+.t-schutz-btn.small { padding: 2px 8px; }
+.t-schutz-btn:disabled { opacity: .55; cursor: default; }
+.t-schutz-error { color: var(--ts-bad-fg); }
+
+/* Regeln */
+.t-schutz-rule { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px; align-items: center; padding: 10px 12px;
+  background: var(--ts-card); border: 1px solid var(--ts-line); border-radius: var(--ts-r); }
+.t-schutz-rule.fixed { background: transparent; border-style: dashed; }
+.t-schutz-rcount { white-space: nowrap; }
+.t-schutz-seg { display: inline-flex; border: 1px solid var(--ts-line); border-radius: 999px; overflow: hidden; background: var(--ts-panel); }
+.t-schutz-seg button { font: inherit; font-size: 12px; padding: 4px 12px; border: 0; background: transparent; color: var(--ts-muted); cursor: pointer; }
+.t-schutz-seg button.on:first-child { background: var(--ts-warn-bg); color: var(--ts-warn-fg); font-weight: bold; }
+.t-schutz-seg button.on:last-child { background: var(--ts-ok-fg); color: var(--accent-text); font-weight: bold; }
+
+/* Ausprobieren */
+.t-schutz-input { font: 13px/1.45 var(--mono); width: 100%; box-sizing: border-box; padding: 8px;
+  border: 1px solid var(--line); border-radius: 4px; background: var(--ts-card); color: var(--ts-text); resize: vertical; }
+.t-schutz select { font: inherit; padding: 3px; border: 1px solid var(--line); border-radius: 4px; background: var(--ts-card); color: var(--ts-text); }
+.t-schutz label { font-size: 12px; color: var(--ts-muted); }
+.t-schutz-marked, .t-schutz-pre { margin: 0; padding: 10px; white-space: pre-wrap; word-break: break-word; background: var(--ts-card);
+  border: 1px solid var(--ts-line); border-radius: 4px; font: 12.5px/1.6 var(--mono); }
+.t-schutz-m { padding: 0 2px; border-radius: 3px; border-bottom: 2px solid; color: inherit; background: transparent; }
+.t-schutz-legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.t-schutz-legend .t-schutz-m { font-size: 11px; padding: 1px 6px; }
+.t-schutz-m.bad { background: var(--ts-bad-bg); border-color: var(--ts-bad-fg); }
+.t-schutz-m.warn { background: var(--ts-warn-bg); border-color: var(--ts-warn-fg); }
+.t-schutz-m.watch { background: var(--ts-warn-bg); border-color: var(--ts-warn-line); border-bottom-style: dashed; }
+.t-schutz-m.info { background: transparent; border-color: var(--ts-line); }
+
+/* Vorführung, Verlauf */
+.t-schutz-cases { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.t-schutz-cases .t-schutz-card .t-schutz-btn { align-self: flex-start; margin-top: auto; }
+.t-schutz-play { border-color: var(--ts-accent); }
+.t-schutz-play summary { cursor: pointer; font-weight: bold; color: var(--ts-head); margin-bottom: 4px; }
+.t-schutz-events { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; background: var(--ts-line);
+  border: 1px solid var(--ts-line); border-radius: var(--ts-r); overflow: hidden; }
+.t-schutz-events li { display: grid; grid-template-columns: 62px 150px minmax(0, 1fr); gap: 10px; align-items: baseline; padding: 7px 10px; background: var(--ts-card); }
+.t-schutz-events .t-schutz-pill { justify-self: start; }
+.t-schutz-time { font: 12px var(--mono); color: var(--ts-muted); }
+.t-schutz-etext em { color: var(--ts-muted); }
+
+@media (max-width: 720px) {
+  .t-schutz-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .t-schutz-station + .t-schutz-station::before { display: none; }
+  .t-schutz-rule { grid-template-columns: 1fr; }
+  .t-schutz-events li { grid-template-columns: 1fr; gap: 2px; }
+  .t-schutz-state { align-items: flex-start; text-align: left; }
+}

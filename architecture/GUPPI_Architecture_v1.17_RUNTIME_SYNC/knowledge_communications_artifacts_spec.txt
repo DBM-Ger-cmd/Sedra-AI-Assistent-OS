@@ -1,0 +1,17 @@
+GUPPI OS – Knowledge, Communications und Artifacts v1
+
+KNOWLEDGE
+Speichert Projektwissen, Entscheidungen und Quellen mit Provenance.
+Liefert gezielte Context Packs statt ungefiltertem Gesamtwissen.
+
+COMMUNICATIONS
+Kapselt externe Kanäle wie Web, APIs, MCP und Plugins.
+Externe Schreibaktionen und Credential-Zugriffe laufen durch Guard.
+
+ARTIFACT STORE
+Registriert Dateien, Builds und andere Projektergebnisse mit Mission-ID,
+Version, Herkunft und SHA-256-Integrität.
+
+OBSERVABILITY
+Überwacht Komponentenstatus und meldet HEALTHY, DEGRADED, UNHEALTHY oder UNKNOWN.
+Kritische Health-Funde werden an Lifecycle/Recovery gemeldet.

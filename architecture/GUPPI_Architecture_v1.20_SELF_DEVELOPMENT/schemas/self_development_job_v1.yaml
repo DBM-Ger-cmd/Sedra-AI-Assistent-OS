@@ -1,0 +1,27 @@
+self_development_job:
+  schema: 1
+  states:
+    - CREATED
+    - PLANNING
+    - READY
+    - BUILDING
+    - TESTING
+    - VERIFYING
+    - REWORK
+    - READY_FOR_ACCEPTANCE
+    - ACTIVATION_PENDING
+    - ACTIVATED
+    - BLOCKED
+    - REJECTED
+    - ROLLED_BACK
+  required:
+    - job_id
+    - admission
+    - contract
+    - state
+    - attempts
+    - last_heartbeat
+    - last_progress
+    - candidate
+    - verification
+    - comparison

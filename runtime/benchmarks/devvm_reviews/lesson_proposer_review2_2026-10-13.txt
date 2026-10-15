@@ -1,0 +1,7 @@
+Review 2 of lesson_proposer.py (Claude, 2026-10-13). One defect remains, everything else stays.
+
+In `propose`, the branch `if m == "missing_module":` builds the lesson with the FULL module name from `_get_missing_module_name` (for `No module named 'numpy.linalg'` it writes 'numpy.linalg'). The task says NAME is the part of the module name BEFORE THE FIRST DOT, so the lesson must say 'numpy'.
+Change `name = _get_missing_module_name(f["text"])` so that the name is shortened: `name = name.split(".")[0]` right after the None check. The `seen_mistakes` key then uses the shortened name too (two modules of the same package give ONE lesson).
+
+The failing hidden assertion compares the whole result list; the expected third entry is exactly:
+{'text': "The module 'numpy' is not available in the sandbox. Use only the Python standard library and the modules of the project.", 'source': 'run:R:c'}

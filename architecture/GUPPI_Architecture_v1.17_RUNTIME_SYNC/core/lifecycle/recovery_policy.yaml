@@ -1,0 +1,30 @@
+recovery:
+  schema: 1
+
+  triggers:
+    - "boot_failure"
+    - "required_module_failure"
+    - "failed_update_health_check"
+    - "registry_corruption"
+    - "core_integrity_failure"
+
+  actions:
+    failed_update_health_check:
+      - "stop_candidate"
+      - "restore_previous_stable"
+      - "validate_restored_version"
+      - "boot_previous_stable"
+
+    required_module_failure:
+      - "enter_safe_mode"
+      - "disable_failed_component_if_optional"
+      - "report_to_guppi"
+
+    registry_corruption:
+      - "enter_safe_mode"
+      - "restore_last_known_registry"
+      - "validate_registry"
+
+  never:
+    - "continue_normal_operation_after_core_integrity_failure"
+    - "promote_unverified_candidate"

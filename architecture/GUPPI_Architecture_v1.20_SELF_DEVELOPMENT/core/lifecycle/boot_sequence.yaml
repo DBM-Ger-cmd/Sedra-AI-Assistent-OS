@@ -1,0 +1,57 @@
+boot_sequence:
+  schema: 1
+  id: "guppi-boot-v1"
+
+  steps:
+    - order: 10
+      id: "load_manifest"
+      required: true
+
+    - order: 20
+      id: "validate_core_invariants"
+      required: true
+
+    - order: 30
+      id: "load_guard"
+      required: true
+
+    - order: 40
+      id: "load_registries"
+      required: true
+
+    - order: 50
+      id: "validate_component_manifests"
+      required: true
+
+    - order: 60
+      id: "check_contract_compatibility"
+      required: true
+
+    - order: 70
+      id: "run_required_health_checks"
+      required: true
+
+    - order: 80
+      id: "load_required_modules"
+      required: true
+
+    - order: 90
+      id: "load_optional_components"
+      required: false
+
+    - order: 100
+      id: "start_message_bus"
+      required: true
+
+    - order: 110
+      id: "start_brain"
+      required: true
+
+    - order: 120
+      id: "set_system_ready"
+      required: true
+
+  failure_policy:
+    required_step_failure: "SAFE_MODE"
+    guard_failure: "HALT"
+    invariant_failure: "HALT"

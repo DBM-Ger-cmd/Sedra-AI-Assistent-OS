@@ -1,0 +1,30 @@
+update_builder:
+  id: "guppi-update-builder"
+  version: "0.1.0"
+  core_contract: 1
+
+  input:
+    - "development/GUPPI_EVOLUTION.yaml"
+    - "guppi.manifest.yaml"
+
+  responsibilities:
+    - "validate_evolution_request"
+    - "verify_base_version"
+    - "prepare_isolated_workspace"
+    - "collect_changed_files"
+    - "build_candidate"
+    - "run_required_checks"
+    - "create_update_package"
+    - "create_rollback_bundle"
+
+  must_not:
+    - "modify_running_stable_directly"
+    - "skip_required_verification"
+    - "promote_failed_candidate"
+    - "install_without_required_captain_gate"
+
+  outputs:
+    - "candidate_manifest"
+    - "verification_bundle"
+    - "update_manifest"
+    - "rollback_bundle"

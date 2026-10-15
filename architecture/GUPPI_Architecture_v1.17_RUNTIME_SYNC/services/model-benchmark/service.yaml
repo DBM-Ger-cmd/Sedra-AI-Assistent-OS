@@ -1,0 +1,17 @@
+service:
+  id: model-benchmark
+  name: Model Benchmark and Known-Good Learning
+  version: 0.1.0
+  core_contract: 1
+  capabilities:
+    - active_runtime_benchmark
+    - managed_llamacpp_benchmark
+    - startup_time_measurement
+    - token_rate_measurement
+    - process_memory_measurement
+    - benchmark_qualification
+    - known_good_profile_promotion
+  security:
+    local_endpoints_only: true
+    managed_start_requires_guard: true
+    profile_promotion_requires_captain: true

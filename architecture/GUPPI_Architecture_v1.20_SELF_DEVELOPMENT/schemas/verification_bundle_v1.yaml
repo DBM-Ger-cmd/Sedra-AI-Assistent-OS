@@ -1,0 +1,18 @@
+verification_bundle:
+  schema: 1
+
+  candidate_id: "CAND-0001"
+
+  tests:
+    basic: {required: true, status: "pending"}
+    unit: {required: false, status: "pending"}
+    integration: {required: false, status: "pending"}
+    regression: {required: false, status: "pending"}
+    rollback: {required: false, status: "pending"}
+    boot: {required: false, status: "pending"}
+    compatibility: {required: true, status: "pending"}
+
+  final:
+    status: "pending"
+    blocking_findings: []
+    evidence: []

@@ -1,0 +1,20 @@
+config:
+  id: "guppi-config"
+  version: "1.0.0"
+
+  layers:
+    - "defaults"
+    - "system"
+    - "captain"
+    - "mission"
+
+  precedence:
+    - "mission"
+    - "captain"
+    - "system"
+    - "defaults"
+
+  rules:
+    - "config_changes_are_validated_before_activation"
+    - "unknown_keys_are_rejected_in_strict_mode"
+    - "secrets_are_referenced_not_embedded"

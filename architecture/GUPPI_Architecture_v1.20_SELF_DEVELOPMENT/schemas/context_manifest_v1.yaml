@@ -1,0 +1,19 @@
+context_manifest:
+  schema: 1
+  required:
+    - manifest_id
+    - goal
+    - current_task
+    - constraints
+    - relevant_decisions
+    - required_files
+    - acceptance_criteria
+    - permissions
+    - artifact_refs
+    - budget
+    - manifest_digest
+  principle: minimum_sufficient_context
+  rules:
+    - child_job_does_not_inherit_full_parent_history_by_default
+    - large_tool_output_is_referenced_as_artifact
+    - critical_facts_remain_structured

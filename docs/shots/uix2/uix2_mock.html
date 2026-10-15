@@ -1,0 +1,59 @@
+<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>SEDRA UIX 2.0 – Skizze</title>
+<style>
+:root{--bg:#eef1f5;--panel:#fff;--line:#d9dee6;--text:#1f2937;--muted:#6b7480;--accent:#2f6fed;--ok:#28763a;--okbg:#e6f6e8;--warn:#8b6517;--warnbg:#fff3da;--warnline:#ecd49a;--sky1:#58b8ff;--sky2:#2584e8}
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:var(--text);background:linear-gradient(180deg,var(--sky1),var(--sky2));height:100vh;display:grid;grid-template-rows:40px 1fr 34px}
+.pult{display:flex;align-items:center;gap:14px;padding:0 14px;background:rgba(255,255,255,.92);border-bottom:1px solid var(--line)}
+.pult b{color:#124da8}.pill{padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid var(--line)}
+.pill.ok{background:var(--okbg);color:var(--ok);border-color:#bce1c2}.pill.warn{background:var(--warnbg);color:var(--warn);border-color:var(--warnline)}
+.pult .sp{flex:1}.pult input{width:360px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;font:inherit}
+.main{display:grid;grid-template-columns:420px 1fr 260px;gap:10px;padding:10px;min-height:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.panel h3{margin:0;padding:10px 14px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.body{padding:12px 14px;overflow:auto;flex:1}
+.msg{margin-bottom:12px}.msg b{display:block;color:#124da8;font-size:11px;margin-bottom:2px}.msg.me b{color:#6b7480}
+.card{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:9px 11px;margin-top:6px;background:#fafbfc}
+.card.gate{border-left-color:var(--warnline);background:#fffaf0}.card small{display:block;color:var(--muted);margin-top:2px}
+.btn{display:inline-block;padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:#fff;font-size:12px;margin:6px 6px 0 0}.btn.p{background:var(--accent);color:#fff;border-color:var(--accent)}
+.compose{border-top:1px solid var(--line);padding:10px 12px;display:flex;gap:8px}.compose input{flex:1;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font:inherit}
+.tabs{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);background:#f7f8fa}.tab{padding:4px 10px;border-radius:7px;border:1px solid transparent;font-size:12px;color:var(--muted)}.tab.on{background:#fff;border-color:var(--line);color:var(--text);font-weight:600}
+.tools{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--line)}
+.sea{height:70px;border-radius:8px;background:#dbeafe;position:relative;margin:8px 0}.sea:before{content:"";position:absolute;left:30px;right:30px;top:36px;border-top:2px dashed #93b4f5}
+.dot{position:absolute;top:30px;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid var(--accent)}.dot.d{background:var(--accent)}
+.ship{position:absolute;top:22px;left:46%;font-size:18px}.bar{position:absolute;top:22px;left:62%;width:3px;height:28px;background:#e0a100}
+.code{font:12px/1.5 Consolas,monospace;background:#f3f4f6;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre}
+.side .row{padding:8px 0;border-bottom:1px solid var(--line)}.side .row b{display:block;font-size:12px}.side .row small{color:var(--muted)}
+.dock{display:flex;align-items:center;gap:8px;padding:0 12px;background:rgba(255,255,255,.92);border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.dock span{padding:4px 9px;border-radius:7px;border:1px solid var(--line);background:#fff;color:var(--text)}
+.guppy{width:26px;height:18px;border-radius:50% 60% 60% 50%;background:linear-gradient(180deg,#9ff1ff,#0f84b5);border:1px solid #09668e}
+</style></head><body>
+<div class="pult"><div class="guppy"></div><b>SEDRA</b> <span class="pill ok">READY</span> <span>Qwen3.5 9B · 16k</span> <span class="pill ok">GPU 1,9 GB</span> <span class="pill warn">1 Entscheidung</span> <span>1 Aufgabe läuft</span> <span class="pill">Vertrauen: Sandbox frei · Übernahme fragt</span> <span class="sp"></span><input placeholder="Was willst du tun?  ·  Strg+K"><span class="pill">Retro · Klar · Nacht</span></div>
+<div class="main">
+ <div class="panel"><h3>Gespräch mit GUPPI <span>Neu · Verlauf</span></h3><div class="body">
+  <div class="msg me"><b>Du</b>Baue einen CSV-Parser für den Export und teste ihn.</div>
+  <div class="msg"><b>GUPPI</b>Mache ich im Projekt <i>Export</i> – in der Entwicklungsumgebung, ohne Rückfragen. Ich melde mich, wenn es ins Projekt soll.
+   <small style="color:var(--muted)">Parser schreiben ✓ · Tests erzeugen ✓ · Tests laufen … (Sandbox, 12 s)</small></div>
+  <div class="msg"><b>GUPPI</b>Fertig: 12 von 12 Tests bestanden. Der Kandidat liegt rechts. <b style="display:inline;color:var(--text)">Eine</b> Entscheidung von dir:
+   <div class="card gate"><b>Ins Projekt übernehmen?</b><small>schreibt 2 Dateien nach workspace/export · Rücknahme möglich · das ist die einzige Stelle, an der ich frage</small><span class="btn p">Übernehmen</span><span class="btn">Erst ansehen</span><span class="btn">Verwerfen</span></div></div>
+ </div><div class="compose"><input placeholder="Antwort, Frage oder nächster Auftrag …  (Anhängen per Ziehen)"><span class="btn p">Senden</span></div></div>
+ <div class="panel"><h3>Arbeitsplatz <span>Projekt Export · Aufgabe „CSV-Parser“</span></h3>
+  <div class="tabs"><span class="tab">Dateien</span><span class="tab on">Aufgabe</span><span class="tab">Kandidat (Diff)</span><span class="tab">Tests</span><span class="tab">Logbuch</span></div>
+  <div class="tools"><span class="btn p">Übernehmen</span><span class="btn">Verwerfen</span><span class="btn">Mit GUPPI besprechen</span><span class="btn">Als Skill festhalten</span></div>
+  <div class="body"><b>CSV-Parser für den Export</b><small style="color:var(--muted)"> · fertig, wartet auf Übernahme</small>
+   <div class="sea"><span class="dot d" style="left:24px"></span><span class="dot d" style="left:33%"></span><span class="dot d" style="left:55%"></span><span class="dot" style="right:24px"></span><span class="ship">⛵</span><span class="bar"></span></div>
+   <div class="code">+ def parse_export(path):
++     with open(path, newline="", encoding="utf-8") as fh:
++         rows = list(csv.DictReader(fh, delimiter=";"))
++     return [normalize(r) for r in rows]</div>
+   <small style="color:var(--muted)">Kandidat in der Entwicklungsumgebung · 2 Dateien · 84 Zeilen · Übernahme ins Projekt erst nach deiner Prüfung.</small></div></div>
+ <div class="panel side"><h3>Besatzung &amp; Maschine</h3><div class="body">
+  <div class="row"><b>Coder</b><small>Qwen3.5 9B · geladen · 40 Token/s</small></div>
+  <div class="row"><b>Prüfer</b><small>Gemma 4 12B · bereit</small></div>
+  <div class="row"><b>Planer</b><small>gpt-oss 20B · nicht geladen</small></div>
+  <div class="row"><b>Entwicklungsumgebung</b><small>microVM READY</small></div>
+  <div class="row"><b>Token heute</b><small>12.400 · 3 Läufe</small></div>
+  <div class="row"><b>Nächste Routine</b><small>Nachtkette 02:00 · 3 Specs</small></div>
+  <div class="row"><b>Bibliothek</b><small>Eigene 2 · Core 63</small></div>
+ </div></div>
+</div>
+<div class="dock"><span>⌂ Deck</span><span>● Gespräch</span><span>Werkstatt</span><span>Besatzung</span><span>Bibliothek</span><span>System ▾</span><span style="margin-left:auto;border:0;background:transparent">17:52</span></div>
+</body></html>

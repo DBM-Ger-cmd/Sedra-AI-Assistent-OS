@@ -1,0 +1,12 @@
+model_catalog_record:
+  schema: 1
+  id: GGUF-EXAMPLE
+  name: Example
+  filename: example.Q4_K_M.gguf
+  path: null
+  format: gguf
+  size_bytes: 0
+  size_gb: 0
+  quantization: Q4_K_M
+  parameters_hint: null
+  registered_at: null

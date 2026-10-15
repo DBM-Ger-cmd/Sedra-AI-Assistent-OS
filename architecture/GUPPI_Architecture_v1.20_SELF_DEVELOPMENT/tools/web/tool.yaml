@@ -1,0 +1,19 @@
+tool:
+  id: web
+  name: Read-only web access (domain list)
+  version: 0.1.0
+  provider: local
+  capabilities:
+  - get
+  - youtube_transcript
+  guard:
+    action_class: external_read
+    protected: true
+  permissions:
+    required: []
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.20.0
+  health:
+    check: tool_health
+  status: enabled

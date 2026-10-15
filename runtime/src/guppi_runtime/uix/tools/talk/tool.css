@@ -1,0 +1,13 @@
+/* Werkzeug „Gespräch“ – only inside its own container (.t-talk), only tokens. */
+.t-talk{display:grid;grid-template-rows:1fr auto;min-height:0;height:100%;border-top:1px solid var(--line)}
+.t-talk-log{padding:8px 14px;overflow:auto;font-size:12.5px}
+.t-talk-line{margin:0 0 6px}
+.t-talk-line b{color:var(--accent)}
+.t-talk-line.me b{color:var(--muted)}
+.t-talk-line.note{color:var(--muted)}
+.t-talk-line.warn{color:var(--warn)}
+.t-talk-in{display:flex;gap:8px;padding:8px 14px;border-top:1px solid var(--line)}
+.t-talk-in input{flex:1;border:1px solid var(--line);background:var(--panel);border-radius:var(--radius);padding:8px 11px}
+.t-talk-offer{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 8px 52px}
+.t-talk-offer .s-btn{font-size:12px;padding:4px 10px}
+.t-talk-done{color:var(--ok);font-size:12px;align-self:center}

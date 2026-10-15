@@ -1,0 +1,4 @@
+Review 3 of lesson_proposer.py (Claude, 2026-10-13). One defect, everything else stays.
+
+`_get_missing_module_name` uses `re.search`, so only the FIRST missing module of a text is found. When one text holds several (`No module named 'aaa'` and, on another line, `No module named 'bbb.c'`) the task wants one lesson for EACH distinct name, in the order they appear: 'aaa', then 'bbb'.
+Change it to return ALL names (`re.findall`, each cut at the first dot, without repeats, in order) and, in `propose`, create one lesson per name (the `seen_mistakes` check per name stays). The lesson text is unchanged. The limit still applies to the total number of lessons.

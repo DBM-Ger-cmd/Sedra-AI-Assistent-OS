@@ -1,0 +1,63 @@
+skill:
+  id: source-evaluation
+  name: Quellen und technische Recherche
+  version: 1.0.0
+  owner_module: planning-context
+  description: Quellen und technische Recherche als begrenzter Workflow-Blueprint.
+  topics:
+  - research
+  capabilities:
+  - source_evaluation
+  triggers:
+  - quellenbewertung
+  - quellenvergleich
+  - source evaluation
+  - fact check
+  - faktencheck
+  tool_hints:
+  - filesystem
+  workflow:
+  - stage: observe
+    tool: filesystem
+    operation: list_dir
+    binding:
+      path: <project-root>
+    read_only: true
+  - stage: plan
+    action: compare_source_date_authority_and_claims
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: mark_contradictions_and_unsupported_statements
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: record_sources_and_uncertainties
+    execution: planning_only
+    read_only: true
+  inputs:
+  - provided sources
+  - claims
+  outputs:
+  - source matrix
+  - evidence report
+  execution_support: blueprint_only; parameter_binder_pending
+  acceptance_criteria:
+  - Inputs and scope are explicit
+  - Claims distinguish evidence from assumptions
+  - No action outside selected tools and Guard
+  boundaries:
+  - No automatic deployment, publishing or hardware writes
+  - Planning actions require a later validated execution binding
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.11.0
+  status: enabled

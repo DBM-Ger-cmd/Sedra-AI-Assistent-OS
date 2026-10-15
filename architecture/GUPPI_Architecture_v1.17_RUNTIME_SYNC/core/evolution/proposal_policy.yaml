@@ -1,0 +1,44 @@
+proposal_policy:
+  schema: 1
+
+  proposal_triggers:
+    - id: "PT-001"
+      type: "repeated_failure"
+      threshold: 3
+      action: "create_proposal"
+
+    - id: "PT-002"
+      type: "repeated_workaround"
+      threshold: 3
+      action: "create_proposal"
+
+    - id: "PT-003"
+      type: "explicit_capability_gap"
+      threshold: 1
+      action: "create_proposal"
+
+    - id: "PT-004"
+      type: "captain_request"
+      threshold: 1
+      action: "create_proposal"
+
+    - id: "PT-005"
+      type: "verification_systemic_finding"
+      threshold: 1
+      action: "create_proposal"
+
+  merge_policy:
+    same_root_cause: true
+    same_target_component: true
+    preserve_source_missions: true
+
+  suppression:
+    - "duplicate_open_proposal"
+    - "known_rejected_without_new_evidence"
+    - "temporary_external_failure"
+
+  safety:
+    auto_develop_E1: false
+    auto_develop_E2: false
+    auto_develop_E3: false
+    # Manager may propose; development start is a separate decision.

@@ -1,0 +1,74 @@
+skill:
+  id: acceptance-planning
+  name: Abnahme und Nachweisplanung
+  version: 1.0.0
+  owner_module: planning-context
+  description: Abnahme und Nachweisplanung als begrenzter Workflow-Blueprint.
+  topics:
+  - acceptance
+  capabilities:
+  - acceptance_planning
+  triggers:
+  - abnahme
+  - ready test
+  - ready-test
+  - acceptance
+  - prüfprotokoll
+  - pruefprotokoll
+  tool_hints:
+  - filesystem
+  - hardware-manager
+  - sandbox
+  workflow:
+  - stage: observe
+    tool: filesystem
+    operation: list_dir
+    binding:
+      path: <project-root>
+    read_only: true
+  - stage: observe
+    tool: hardware-manager
+    operation: get_inventory
+    read_only: true
+  - stage: preflight
+    tool: sandbox
+    operation: doctor
+    read_only: true
+  - stage: plan
+    action: separate_software_checks_from_real_pc_evidence
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: define_expected_results_and_failure_cases
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: prepare_captain_acceptance_record
+    execution: planning_only
+    read_only: true
+  inputs:
+  - package version
+  - target inventory
+  outputs:
+  - acceptance checklist
+  - evidence template
+  execution_support: blueprint_only; parameter_binder_pending
+  acceptance_criteria:
+  - Inputs and scope are explicit
+  - Claims distinguish evidence from assumptions
+  - No action outside selected tools and Guard
+  boundaries:
+  - No automatic deployment, publishing or hardware writes
+  - Planning actions require a later validated execution binding
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.11.0
+  status: enabled

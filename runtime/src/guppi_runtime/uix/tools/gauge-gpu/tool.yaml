@@ -1,0 +1,16 @@
+tool:
+  id: gauge-gpu
+  name: "GPU"
+  description: "Grafikspeicher und wer die Sperre hält."
+  version: 1.0.0
+  kind: instrument
+  handles: []
+  order: 12
+  entry: {js: tool.js}
+  api:
+    - GET /api/strip
+  events:
+    emits: [object.open]
+    listens: [task.changed, decision.pending, decision.answered, model.changed, system.state]
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

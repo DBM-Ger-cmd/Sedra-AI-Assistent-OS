@@ -1,0 +1,19 @@
+tool:
+  id: files
+  name: "Projekt"
+  description: "Dateien des Projekts; eine Datei öffnet als eigener Reiter."
+  version: 1.0.0
+  kind: object
+  handles: [project, file]
+  order: 25
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/projects
+    - POST /api/project/files
+    - POST /api/project/file
+  events:
+    emits: [object.open]
+    listens: [task.changed]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

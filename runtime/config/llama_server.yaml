@@ -1,0 +1,45 @@
+# Phase 8f: GUPPI starts and watches its own llama-server instead of going through LM Studio. Off by default.
+# The engine is the llama-server.exe that ships with LM Studio (extensions/backends/llama.cpp-*), pinned by version. Nothing is
+# downloaded or installed, and LM Studio's folders are only read. The model file, KV type and reasoning options of each model come
+# from its recipe (profile.server in role_routing.yaml); this file holds what is the same for every model.
+#
+# Measured on this PC (2026-10-01, version 2.49.0): qwen3.5-9b and gemma-4-12b each ran 4 long generations without a crash,
+# MTP off. Start takes 3.6 s (qwen) and 5.6 s (gemma).
+llama_server:
+  enabled: false
+  backend_version: "2.49.0"      # an exact version, or "latest". The tested one is pinned so an LM Studio update cannot change it silently.
+  host: 127.0.0.1                # loopback only (enforced)
+  port: 8089
+  startup_timeout_s: 180
+  stop_timeout_s: 20
+  flash_attn: "on"
+  # Speculative MTP drafting on this direct path: on or off. Measured: 0 crashes in 4 of 4 long runs and about twice the speed (qwen:
+  # 140 instead of 69 tokens/s). A model only uses it if its recipe asks for it too (profile.server.mtp: true).
+  # (Through LM Studio's engine MTP stays off: see model_loader.yaml.)
+  mtp: true
+  # GPU canary (Captain 2026-10-11): before the first model load after a Windows start, and after every server crash, a small model runs the
+  # sequence that used to crash with the factory overclock (3 x 16k + 30k prompt with a hidden code; about 25 s, own server on its own port).
+  # A failed canary blocks model loads with gpu_canary_failed (check the NVIDIA debug mode). Result: <GUPPI_Runtime>/runtime_data/gpu_canary.json.
+  # Settings of the stable runs (lokale-modelle-test/qwen35-9b-q6): engine b11160, FA on, KV q8_0, ubatch 512, 1 slot.
+  canary:
+    enabled: true
+    gguf: '<modelle>\unsloth\Qwen3.5-9B-MTP-GGUF\Qwen3.5-9B-Q6_K.gguf'      # <modelle>: runtime/config/local_paths.yaml (not in git); unset = no canary. 2026-10-12: the file without MTP head is gone; same model with head (canary runs without MTP)
+    engine_build: b11371
+    port: 8093
+    context: 32768
+    timeout_s: 300
+  log_dir: llama_server          # under runtime_data/
+  # backend_dir / vendor_dir: set both to use a llama-server somewhere else (for example your own build) instead of LM Studio's.
+  # GUPPI's own engine (2026-10-03, Captain: "nicht LM Studio, nur GUPPI"): the official llama.cpp release, installed by
+  # benchmarks/engine_install.py into <GUPPI_Runtime>/engines/llama.cpp/<engine_build>/ after its zips matched these SHA256 pins
+  # (from the GitHub release API). With engine_source: guppi there is no fallback to LM Studio; a missing or changed engine shows as
+  # "not available" (status: engine_check). Switch back to lmstudio here if the own engine has to be taken out of service.
+  engine_source: guppi
+  # Where the model files live (model_removal.py moves removed ones to <models_root>/_guppi_entfernt/).
+  models_root: '<modelle>'      # the folder of this PC is in runtime/config/local_paths.yaml (not in git)
+  # 2026-10-12 (Captain approval 2026-10-11): b11160 is the engine of the stable runs (FA on, KV q8_0; night run 2026-10-11: 0 crashes, 0 driver events).
+  # b11371 stays installed; to go back set engine_build: b11371 (its zip pins below stay for engine_install).
+  engine_build: b11371
+  engine_assets:
+    llama-b11371-bin-win-cuda-12.4-x64.zip: 72cd63b7daea25bcf9e638e144588c1b53351127c2ad9e1810ee9188d3d82abf
+    cudart-llama-bin-win-cuda-12.4-x64.zip: 8c79a9b226de4b3cacfd1f83d24f962d0773be79f1e7b75c6af4ded7e32ae1d6

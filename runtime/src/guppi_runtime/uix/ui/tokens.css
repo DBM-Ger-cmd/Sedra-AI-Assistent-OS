@@ -1,0 +1,139 @@
+/* UI contract 1.0 – the tokens every shell and tool uses (UIX_STYLE_MANIFEST_v0.2, Cockpit rule 10: skin, not structure).
+   A module never writes a raw colour: it uses these names. A theme is a second block with the same names (bottom of this file),
+   switched with html[data-theme]; a module that keeps to the tokens follows every theme without knowing about it. */
+:root{
+  /* surfaces */
+  --bg:#e4e8ee;
+  --panel:#ffffff;
+  --panel-2:#f3f5f8;
+  --line:#cdd3dc;
+  --line-soft:#e2e6ec;
+  --shadow:0 10px 24px rgba(16,30,54,.10);
+  /* text */
+  --text:#1f2937;
+  --muted:#66717f;
+  --heading:#36404d;
+  /* meaning (never a colour without one) */
+  --accent:#2563c9;
+  --accent-text:#ffffff;
+  --ok:#2f7a3f;
+  --ok-bg:#e4f1e4;
+  --ok-line:#bcdcc0;
+  --warn:#8a5a12;
+  --warn-bg:#fbefd6;
+  --warn-line:#e3c88e;
+  --bad:#a13b32;
+  --bad-bg:#fbe3df;
+  --bad-line:#e6b4ad;
+  --add-bg:#e4f1e4;
+  --del-bg:#fbe3df;
+  /* the live console: dark in every theme, it shows a terminal */
+  --live-bg:#111827;
+  --live-text:#d1d5db;
+  --live-muted:#9ca3af;
+  --live-ok:#8fd9a0;
+  --live-warn:#f0c86a;
+  /* the sea chart */
+  --sea-bg:#dcecf2;
+  --sea-line:#7fb2c6;
+  /* GUPPI itself, small in the first instrument */
+  --guppy-1:#9ff1ff;
+  --guppy-2:#0f84b5;
+  --guppy-line:#09668e;
+  /* veils over a dark or light surface: a hover, a scrim – so no shell writes its own rgba */
+  --veil-light-1:rgba(255,255,255,.06);
+  --veil-light-2:rgba(255,255,255,.14);
+  --veil-dark:rgba(16,24,40,.28);
+  /* measures: one scale, so tools and shells line up */
+  --gap:8px;
+  --gap-2:12px;
+  --gap-3:16px;
+  --radius:8px;
+  --radius-2:10px;
+  --strip-h:60px;
+  --tree-w:230px;
+  --talk-h:104px;
+  --font:"Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:Consolas,"DejaVu Sans Mono",monospace;
+  /* type scale: four steps, nothing in between – a shell picks a step, it does not invent 11.5px */
+  --size-xs:10.5px;
+  --size-small:11.5px;
+  --size:13px;
+  --size-l:15px;
+  --size-head:16px;
+  --size-xl:20px;
+  --tracking-label:.05em;
+  /* Platzhalter-Typen des KI GateWay (Studio Flow v1.1, Build 19): je Typ eine Fläche und eine Schrift – damit Original und Übergabe gleich markiert sind */
+  --tag-person-bg:#eee5f5; --tag-person:#56356d;
+  --tag-company-bg:#e1eef9; --tag-company:#255a7a;
+  --tag-email-bg:#ddf2f0; --tag-email:#1d6260;
+  --tag-phone-bg:#f4ebcf; --tag-phone:#695515;
+  --tag-id-bg:#e7ebf9; --tag-id:#2838a3;
+  --tag-address-bg:#f1c7e1; --tag-address:#71394f;
+}
+
+html[data-theme="nacht"]{
+  --bg:#171c24;
+  --panel:#1f2630;
+  --panel-2:#232b36;
+  --line:#333d4b;
+  --line-soft:#2a323d;
+  --shadow:0 10px 24px rgba(0,0,0,.45);
+  --text:#e6ebf2;
+  --muted:#9aa6b4;
+  --heading:#c6d0dc;
+  --accent:#4f8ae0;
+  --ok:#74c686;
+  --ok-bg:#1e2d22;
+  --ok-line:#2f5438;
+  --warn:#e2b56b;
+  --warn-bg:#32291a;
+  --warn-line:#5c4a2a;
+  --bad:#e0897f;
+  --bad-bg:#33201e;
+  --bad-line:#5e3833;
+  --add-bg:#1e2d22;
+  --del-bg:#33201e;
+  --sea-bg:#1c2b33;
+  --sea-line:#3f6c7f;
+  --tag-person-bg:#3a2a4a; --tag-person:#d9c4ea;
+  --tag-company-bg:#1f3345; --tag-company:#a9cde6;
+  --tag-email-bg:#1c3634; --tag-email:#9fd9d3;
+  --tag-phone-bg:#3a3420; --tag-phone:#e6d49a;
+  --tag-id-bg:#272d4a; --tag-id:#b8c2f0;
+  --tag-address-bg:#432a38; --tag-address:#ecb9d3;
+}
+
+/* base: everything a module may rely on without writing its own rule */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:var(--size)/1.45 var(--font)}
+button,input,textarea,select{font:inherit;color:inherit}
+h1,h2,h3,h4,h5{margin:0;font-weight:600}
+a{color:var(--accent)}
+pre,code{font-family:var(--mono)}
+
+.s-btn{padding:5px 11px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer}
+.s-btn:hover{background:var(--panel-2)}
+.s-btn:disabled{opacity:.55;cursor:default}
+.s-btn.p{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+/* every thing that acts like a button shows the same focus – a shell's rows (role=button) included */
+button:focus-visible,[role="button"]:focus-visible,.s-row:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.s-head{font-size:var(--size-small);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.s-muted{color:var(--muted)}
+.s-small{font-size:var(--size-small)}
+.s-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:var(--gap-2)}
+.s-note{border-radius:var(--radius);padding:8px 10px;border:1px solid var(--line);background:var(--panel-2)}
+.s-note.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
+.s-note.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.s-note.bad{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad)}
+.s-row{display:flex;gap:var(--gap);align-items:center}
+.s-col{display:flex;flex-direction:column;gap:var(--gap)}
+.s-table{width:100%;border-collapse:collapse}
+.s-table td,.s-table th{padding:4px 8px;border-bottom:1px solid var(--line-soft);text-align:left;font-weight:400}
+.s-table th{color:var(--muted);font-size:var(--size-small);text-transform:uppercase;letter-spacing:.06em}
+.s-pre{font-family:var(--mono);font-size:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px;white-space:pre-wrap;overflow:auto}
+.s-live{font-family:var(--mono);font-size:12px;background:var(--live-bg);color:var(--live-text);border-radius:var(--radius);padding:10px;white-space:pre-wrap;overflow:auto}
+.s-empty{color:var(--muted);padding:10px 0}
+
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}

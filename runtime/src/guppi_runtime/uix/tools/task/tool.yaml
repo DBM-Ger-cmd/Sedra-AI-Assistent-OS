@@ -1,0 +1,18 @@
+tool:
+  id: task
+  name: "Aufgabe"
+  description: "Aufgaben als Satz, Fortschrittszeile und Ergebnis – keine Karten, keine IDs."
+  version: 1.0.0
+  kind: object
+  handles: [task]
+  order: 15
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - POST /api/objects
+    - POST /api/actions
+  events:
+    emits: [object.open]
+    listens: [task.changed, decision.answered]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}
