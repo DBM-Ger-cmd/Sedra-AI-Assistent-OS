@@ -69,6 +69,21 @@ class CloudChatTest(unittest.TestCase):
                 labor.cloud_chat(config(enabled=False), 'nvidia', 'm', [{'role': 'user', 'content': 'hallo'}])
         self.assertEqual(str(ctx.exception), 'cloud_off')
 
+    def test_produktiv_blocks_personal_data_and_test_mode_replaces_it(self):
+        seen = {}
+        class Adapter(FakeAdapter):
+            def chat(self, messages, model=None, **kwargs):
+                seen['sent'] = messages
+                return {'content': 'Antwort'}
+        with mock.patch.object(labor, 'provider_adapter', return_value=Adapter([])):
+            strict = labor.cloud_chat(config(), 'nvidia', 'm/x', [{'role': 'user', 'content': 'Schreib an max.mustermann@example.com'}])
+            self.assertEqual(strict['status'], 'blocked')
+            self.assertNotIn('sent', seen)
+            testing = dict(config(), modus='test')
+            ok = labor.cloud_chat(testing, 'nvidia', 'm/x', [{'role': 'user', 'content': 'Schreib an max.mustermann@example.com'}])
+            self.assertEqual(ok['status'], 'completed')
+            self.assertNotIn('max.mustermann@example.com', str(seen['sent']))
+
     def test_personal_data_is_not_sent_to_the_cloud(self):
         seen = {}
 
@@ -79,8 +94,8 @@ class CloudChatTest(unittest.TestCase):
 
         with mock.patch.object(labor, 'provider_adapter', return_value=Adapter([])):
             res = labor.cloud_chat(config(), 'nvidia', 'm/x', [{'role': 'user', 'content': 'Schreib an max.mustermann@example.com'}])
-        self.assertEqual(res['status'], 'completed', 'personal data is replaced by own terms, the question still goes through')
-        self.assertNotIn('max.mustermann@example.com', str(seen['sent']), 'the address never leaves the machine')
+        self.assertEqual(res['status'], 'blocked', 'produktiv: personal data is not sent (Klaus, 16.10.2026)')
+        self.assertNotIn('sent', seen, 'the adapter is never called')
 
 
 class ModelTest(unittest.TestCase):

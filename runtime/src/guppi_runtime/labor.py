@@ -98,7 +98,13 @@ def cloud_chat(config, provider_id, model, messages, environ=None, key_store=Non
     guard = ContentGuard(cloud_enabled=True)
     # Persönliche Angaben werden nicht blockiert, sondern vorher durch eigene Begriffe ersetzt (redesign_prep). Die Zuordnung
     # bleibt lokal. Was danach noch auffällt, prüft der Inhaltsschutz wie gewohnt.
-    messages = [dict(m, content=pseudonymize(m["content"])[0]) if isinstance(m.get("content"), str) else m for m in messages]
+    # Testrunde: Ersetzen durch eigene Begriffe. Produktiv (Standard) gilt die strenge Regel: Personenbezug wird nicht gesendet.
+    if config.get("modus", "produktiv") == "test":
+        messages = [dict(m, content=pseudonymize(m["content"])[0]) if isinstance(m.get("content"), str) else m for m in messages]
+    else:
+        for m in messages:
+            if isinstance(m.get("content"), str) and pseudonymize(m["content"])[1]:
+                return {"status": "blocked", "reasons": ["SG_PERSONAL_CLOUD"], "provider": provider_id, "model": model}
     try:
         result = guard.call(messages, model=model, route="cloud",
                             complete=lambda msgs: adapter.chat(msgs, model=model, max_tokens=CHAT_MAX_TOKENS)["content"])
