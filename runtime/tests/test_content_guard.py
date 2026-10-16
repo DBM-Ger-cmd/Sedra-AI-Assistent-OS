@@ -346,11 +346,11 @@ class S5_Modus(unittest.TestCase):
         self.assertIn('SG_CLOUD_DISABLED', ctx.exception.result.reasons)
         g = guard('vertraut', cloud_enabled=True)
         seen = []
-        r = g.call([user('Schreib an Max Mustermann, max@example.de')], model='claude', route='cloud',
-                   complete=lambda m: seen.append(m) or 'Brief an ' + m[0]['content'].split(', ')[-1])
-        self.assertNotIn('Mustermann', seen[-1][0]['content'])
-        self.assertNotIn('max@example.de', seen[-1][0]['content'])
-        self.assertEqual(r.text, 'Brief an <EMAIL_001>')                 # Cloud: anonymisiert, nicht zurückübersetzt
+        with self.assertRaises(ContentGuardStop) as ctx:                   # Personenbezug geht nicht in die Cloud (Klaus, 16.10.2026)
+            g.call([user('Schreib an Max Mustermann, max@example.de')], model='claude', route='cloud',
+                   complete=lambda m: seen.append(m) or 'Brief')
+        self.assertEqual(seen, [], 'nothing is sent')
+        self.assertEqual(ctx.exception.result.status, 'BLOCKED')
         with self.assertRaises(ContentGuardStop) as ctx:                   # ein Passwort geht nie in die Cloud, auch nicht vertraut
             g.call([user('password: hunter2hunter2')], model='claude', route='cloud', complete=lambda m: 'x')
         self.assertEqual(ctx.exception.result.status, 'BLOCKED')

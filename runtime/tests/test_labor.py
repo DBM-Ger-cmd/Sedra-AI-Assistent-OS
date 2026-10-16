@@ -69,7 +69,7 @@ class CloudChatTest(unittest.TestCase):
                 labor.cloud_chat(config(enabled=False), 'nvidia', 'm', [{'role': 'user', 'content': 'hallo'}])
         self.assertEqual(str(ctx.exception), 'cloud_off')
 
-    def test_answer_comes_back_and_personal_data_is_pseudonymized(self):
+    def test_personal_data_is_not_sent_to_the_cloud(self):
         seen = {}
 
         class Adapter(FakeAdapter):
@@ -79,8 +79,8 @@ class CloudChatTest(unittest.TestCase):
 
         with mock.patch.object(labor, 'provider_adapter', return_value=Adapter([])):
             res = labor.cloud_chat(config(), 'nvidia', 'm/x', [{'role': 'user', 'content': 'Schreib an max.mustermann@example.com'}])
-        self.assertEqual((res['status'], res['reply']), ('completed', 'Antwort'))
-        self.assertNotIn('max.mustermann@example.com', str(seen['sent']), 'the address never leaves the machine in clear text')
+        self.assertEqual(res['status'], 'blocked', 'personal data stops before the cloud (Klaus, 16.10.2026)')
+        self.assertNotIn('sent', seen, 'the adapter is never called')
 
 
 class ModelTest(unittest.TestCase):

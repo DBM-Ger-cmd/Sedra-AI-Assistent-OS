@@ -109,3 +109,8 @@ Vor den Redesign-Arbeiten: `Sicherheitskopie_GUPPI_Runtime_v1.20_2026-10-16_1105
 1. **Personenbezug in der Cloud:** Klaus fordert eine einheitliche Regel auf rechtlicher Grundlage. Bis diese vorliegt, gilt die Cloud für Personenbezug als nicht freigegeben. Der Inhaltsschutz wird entsprechend angepasst, sobald die Regel steht.
 2. **Schreibzugriff des Cloud-Modells:** Der Captain gibt die Freigabe für den gewählten Arbeitsbereich (`workspace/GUPPI_OS/redesign/`). Live-Dateien sind davon ausgenommen. Übernahme nur nach Prüfung und Freigabe.
 3. **Commit:** Stand `6c4d462` im lokalen Repository, nicht gepusht.
+
+### Ergänzung: Freigabe Arbeitsbereich und Inhaltsschutz
+
+- **Freigabe Schreibzugriff (Captain):** Arbeitsbereich ist die Shell und die Umgebung `E:\Sedra Umgebung\SEDRA_Build_024_Cockpit_Paperclip_Arbeitsplatz_2026-10-15\GUPPI_Runtime_v1.20`. Technisch schreibt ein Lauf nur in `workspace\GUPPI_OSedesign\` innerhalb dieses Ordners, pro Lauf mit Dateiliste. Live-Code wird nur nach Prüfung übernommen.
+- **Inhaltsschutz, Personenbezug (Klaus):** Personenbezug geht nicht in die Cloud (Blockade statt Pseudonymisierung), bis eine einheitliche Regel auf rechtlicher Grundlage vorliegt. Betroffen sind Gespräch, KI Labor und Läufe. Begriffe aus fremden Auszügen (`redesign_prep.py`) entfernen Personenbezug vor dem Versand, nur Nicht-Personenbezogenes geht hinaus.

@@ -214,7 +214,7 @@ def judge(rule_id, trust, route):
     if r in SENSITIVE:
         return (BLOCK, 'SG_SENSITIVE_CLOUD') if cloud else (NOTE, 'SG_SENSITIVE_LOCAL')
     if r in PERSONAL or r.startswith(('PERSON_', 'ADDRESS_', 'FILTER_')):
-        return (PSEUDO, 'SG_PERSONAL_CLOUD') if cloud else (NOTE, 'SG_PERSONAL_LOCAL')
+        return (BLOCK, 'SG_PERSONAL_CLOUD') if cloud else (NOTE, 'SG_PERSONAL_LOCAL')   # Klaus: bis zu einer einheitlichen Regel auf rechtlicher Grundlage keine Cloud für Personenbezug
     return REVIEW, 'SG_RULE_UNKNOWN'
 
 
@@ -267,7 +267,7 @@ TEXT = {
     'SG_INVISIBLE_UNTRUSTED': 'Fremder Inhalt enthält unsichtbare Zeichen.',
     'SG_PLACEHOLDER_CLOUD': 'Der Text enthält Platzhalter der Pseudonymisierung; die Rückübersetzung wäre angreifbar.',
     'SG_SENSITIVE_CLOUD': 'Besondere Daten (Gesundheit, Bank, Kalkulation, NDA …) würden den Rechner verlassen.',
-    'SG_PERSONAL_CLOUD': 'Personenbezug: vor einem Cloudaufruf wird lokal pseudonymisiert.',
+    'SG_PERSONAL_CLOUD': 'Personenbezug geht nicht in die Cloud, bis eine einheitliche Regel auf rechtlicher Grundlage vorliegt.',
     'SG_RULE_UNKNOWN': 'Ein Fund, den diese Policy noch nicht kennt. Unbekannt ist nicht frei.',
     'SG_CLOUD_DISABLED': 'Cloud ist ausgeschaltet. Es gibt keinen stillen Ausweichweg.',
     'SG_DECISION_REQUIRED': 'Wartet auf eine Entscheidung des Captains.',

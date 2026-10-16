@@ -217,14 +217,15 @@ class GuardTest(unittest.TestCase):
         self.assertIn('SG_CLOUD_DISABLED', ctx.exception.result.reasons)
         self.assertEqual(called, [])
 
-    def test_personal_data_is_pseudonymized_before_cloud(self):
+    def test_personal_data_never_goes_to_the_cloud(self):
+        # Klaus (16.10.2026): bis zu einer einheitlichen Regel auf rechtlicher Grundlage kein Personenbezug in die Cloud
         guard = ContentGuard(cloud_enabled=True)
         sent = []
-        guard.call([{'role': 'user', 'content': 'Kontakt: max.mustermann@example.com bitte antworten.'}], model='m',
-                   route='cloud', complete=lambda msgs: sent.append(msgs) or 'ok')
-        self.assertEqual(len(sent), 1)
-        outgoing = json.dumps(sent[0], ensure_ascii=False)
-        self.assertNotIn('max.mustermann@example.com', outgoing)
+        with self.assertRaises(ContentGuardStop) as ctx:
+            guard.call([{'role': 'user', 'content': 'Kontakt: max.mustermann@example.com bitte antworten.'}], model='m',
+                       route='cloud', complete=lambda msgs: sent.append(msgs) or 'ok')
+        self.assertEqual(sent, [], 'nothing is sent')
+        self.assertEqual(ctx.exception.result.status, 'BLOCKED')
 
     def test_personal_data_stays_allowed_locally(self):
         guard = ContentGuard(cloud_enabled=False)
