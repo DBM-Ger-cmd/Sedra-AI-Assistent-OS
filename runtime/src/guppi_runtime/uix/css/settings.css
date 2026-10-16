@@ -1,0 +1,11 @@
+/* API und Modelle: Tabs, Modellkatalog-Karten (Vorbild build.nvidia.com). Nur für das Fenster „settingsWindow“. */
+#settingsWindow .settings-tabs{display:flex;gap:6px;margin:6px 0 10px}
+#settingsWindow .mcat-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+#settingsWindow .mcat-bar input[type=search]{min-width:220px}
+#settingsWindow .mcat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:10px}
+#settingsWindow .mcat-card{border:1px solid currentColor;border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px}
+#settingsWindow .mcat-card.is-default{border-width:2px}
+#settingsWindow .mcat-pub{font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.04em}
+#settingsWindow .mcat-name{font-weight:600;word-break:break-all}
+#settingsWindow .mcat-badge{display:inline-block;font-size:11px;padding:1px 6px;margin-right:4px;border:1px solid currentColor;border-radius:4px}
+#settingsWindow .mcat-badge.ok{font-weight:700}

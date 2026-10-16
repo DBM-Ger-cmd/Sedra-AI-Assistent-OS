@@ -1,0 +1,23 @@
+tool:
+  id: labor
+  name: "KI Labor"
+  description: "Cloud-Anbieter, Schlüssel, Modelle und Tests: die Kette vom Schlüssel bis zur beantworteten Nachricht."
+  version: 1.0.0
+  kind: object
+  handles: [labor]
+  order: 40
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/cloud
+    - GET /api/labor/runs
+    - POST /api/cloud/save
+    - POST /api/cloud/key
+    - POST /api/cloud/models
+    - POST /api/cloud/module-model
+    - POST /api/labor/connection
+    - POST /api/labor/models-test
+  events:
+    emits: [object.open]
+    listens: []
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

@@ -6,7 +6,7 @@
   const KEY = 'sedra.theme';
 
   function setTheme(name){
-    const theme = THEMES.indexOf(name) >= 0 ? name : 'klar';
+    const theme = THEMES.indexOf(name) >= 0 ? name : 'nacht';
     document.documentElement.dataset.theme = theme;
     try{ localStorage.setItem(KEY, theme); }catch(_e){}      // a private window refuses: the look still works, it is just not remembered
     return theme;
@@ -16,7 +16,7 @@
     let stored = null;
     try{ stored = localStorage.getItem(KEY); }catch(_e){}
     if(!stored && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) stored = 'nacht';
-    document.documentElement.dataset.theme = THEMES.indexOf(stored) >= 0 ? stored : 'klar';
+    document.documentElement.dataset.theme = THEMES.indexOf(stored) >= 0 ? stored : 'nacht';
   }
 
   // a problem the Captain must see, before any shell exists: plain text in the root, in his language

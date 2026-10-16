@@ -2,7 +2,7 @@ tool:
   id: talk
   name: "Gespräch"
   description: "Das eine Eingabefeld – Antwort, Auftrag, Navigation, „einmal ja“."
-  version: 1.2.0
+  version: 1.3.0
   kind: panel
   handles: []
   order: 10
@@ -12,6 +12,9 @@ tool:
     - GET /api/decisions
     - POST /api/actions          # Build 19: ein Knopf unter GUPPIs Antwort – derselbe Weg wie jeder Werkzeugknopf, Gates darunter
     - POST /api/intent/create    # Build 19: „Als Vorhaben anlegen“ – führt nichts aus
+    - GET /api/cloud             # Wahl neben Senden: welche Cloud-Modelle bereit sind (nur lesen)
+    - POST /api/cloud/models     # ... und ihre Modellliste beim Anbieter (nur lesen)
+    - POST /api/chat/cloud       # Gespräch mit einem gewählten Cloud-Modell, durch den Inhaltsschutz
   events:
     emits: [object.open]
     listens: [talk.context, decision.pending, decision.answered, live.line, object.open]   # B6-G-03: der offene GateWay-Vorgang

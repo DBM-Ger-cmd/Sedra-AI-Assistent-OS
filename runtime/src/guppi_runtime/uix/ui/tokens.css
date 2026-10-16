@@ -1,41 +1,43 @@
 /* UI contract 1.0 – the tokens every shell and tool uses (UIX_STYLE_MANIFEST_v0.2, Cockpit rule 10: skin, not structure).
    A module never writes a raw colour: it uses these names. A theme is a second block with the same names (bottom of this file),
-   switched with html[data-theme]; a module that keeps to the tokens follows every theme without knowing about it. */
+   switched with html[data-theme]; a module that keeps to the tokens follows every theme without knowing about it.
+   Redesign Phase A (16.10.2026): „Deep Space Command“ is the default (dark); „Klar“ stays as the light theme. The palette is
+   checked against 5:1 on the panels by test_ui_tokens.py. */
 :root{
   /* surfaces */
-  --bg:#e4e8ee;
-  --panel:#ffffff;
-  --panel-2:#f3f5f8;
-  --line:#cdd3dc;
-  --line-soft:#e2e6ec;
-  --shadow:0 10px 24px rgba(16,30,54,.10);
+  --bg:#0b0b0d;
+  --panel:#161619;
+  --panel-2:#1e1e23;
+  --line:#2a2a2e;
+  --line-soft:#1f1f24;
+  --shadow:0 8px 24px rgba(0,0,0,.55);
   /* text */
-  --text:#1f2937;
-  --muted:#5b6673;   /* B6-G-04: Kontrast ≥ 5:1 auf --panel */
-  --heading:#36404d;
+  --text:#eaeaef;
+  --muted:#9b9ba4;   /* B6-G-04: Kontrast ≥ 5:1 auf --panel und --panel-2 (test_ui_tokens.py) */
+  --heading:#d8d8df;
   /* meaning (never a colour without one) */
-  --accent:#2563c9;
-  --accent-text:#ffffff;
-  --ok:#2f7a3f;
-  --ok-bg:#e4f1e4;
-  --ok-line:#bcdcc0;
-  --warn:#8a5a12;
-  --warn-bg:#fbefd6;
-  --warn-line:#e3c88e;
-  --bad:#a13b32;
-  --bad-bg:#fbe3df;
-  --bad-line:#e6b4ad;
-  --add-bg:#e4f1e4;
-  --del-bg:#fbe3df;
+  --accent:#00d9a5;
+  --accent-text:#0b0b0d;
+  --ok:#34c759;
+  --ok-bg:#0f2a1c;
+  --ok-line:#1f5a3a;
+  --warn:#ffb74d;
+  --warn-bg:#2e2412;
+  --warn-line:#5c4620;
+  --bad:#ff6b5e;
+  --bad-bg:#33191a;
+  --bad-line:#5e2c2c;
+  --add-bg:#0f2a1c;
+  --del-bg:#33191a;
   /* the live console: dark in every theme, it shows a terminal */
-  --live-bg:#111827;
-  --live-text:#d1d5db;
-  --live-muted:#9ca3af;
+  --live-bg:#0a0a0c;
+  --live-text:#d4d4da;
+  --live-muted:#9b9ba4;
   --live-ok:#8fd9a0;
   --live-warn:#f0c86a;
   /* the sea chart */
-  --sea-bg:#dcecf2;
-  --sea-line:#7fb2c6;
+  --sea-bg:#12232a;
+  --sea-line:#2f6478;
   /* GUPPI itself, small in the first instrument */
   --guppy-1:#9ff1ff;
   --guppy-2:#0f84b5;
@@ -43,7 +45,7 @@
   /* veils over a dark or light surface: a hover, a scrim – so no shell writes its own rgba */
   --veil-light-1:rgba(255,255,255,.06);
   --veil-light-2:rgba(255,255,255,.14);
-  --veil-dark:rgba(16,24,40,.28);
+  --veil-dark:rgba(0,0,0,.45);
   /* measures: one scale, so tools and shells line up */
   --gap:8px;
   --gap-2:12px;
@@ -64,12 +66,12 @@
   --size-xl:22px;
   --tracking-label:.05em;
   /* Platzhalter-Typen des KI GateWay (Studio Flow v1.1, Build 19): je Typ eine Fläche und eine Schrift – damit Original und Übergabe gleich markiert sind */
-  --tag-person-bg:#eee5f5; --tag-person:#56356d;
-  --tag-company-bg:#e1eef9; --tag-company:#255a7a;
-  --tag-email-bg:#ddf2f0; --tag-email:#1d6260;
-  --tag-phone-bg:#f4ebcf; --tag-phone:#695515;
-  --tag-id-bg:#e7ebf9; --tag-id:#2838a3;
-  --tag-address-bg:#f1c7e1; --tag-address:#71394f;
+  --tag-person-bg:#3a2a4a; --tag-person:#d9c4ea;
+  --tag-company-bg:#1f3345; --tag-company:#a9cde6;
+  --tag-email-bg:#1c3634; --tag-email:#9fd9d3;
+  --tag-phone-bg:#3a3420; --tag-phone:#e6d49a;
+  --tag-id-bg:#272d4a; --tag-id:#b8c2f0;
+  --tag-address-bg:#432a38; --tag-address:#ecb9d3;
 }
 
 /* Schrift „Groß“ (Umschalter, ui/wechsel.js): dieselben Stufen, zwei Pixel mehr – Shells und Werkzeuge folgen, weil sie nur Stufen kennen */
@@ -84,36 +86,44 @@ html[data-scale="gross"]{
   --talk-h:116px;
 }
 
-html[data-theme="nacht"]{
-  --bg:#171c24;
-  --panel:#1f2630;
-  --panel-2:#232b36;
-  --line:#333d4b;
-  --line-soft:#2a323d;
-  --shadow:0 10px 24px rgba(0,0,0,.45);
-  --text:#e6ebf2;
-  --muted:#9aa6b4;
-  --heading:#c6d0dc;
-  --accent:#4f8ae0;
-  --ok:#74c686;
-  --ok-bg:#1e2d22;
-  --ok-line:#2f5438;
-  --warn:#e2b56b;
-  --warn-bg:#32291a;
-  --warn-line:#5c4a2a;
-  --bad:#e0897f;
-  --bad-bg:#33201e;
-  --bad-line:#5e3833;
-  --add-bg:#1e2d22;
-  --del-bg:#33201e;
-  --sea-bg:#1c2b33;
-  --sea-line:#3f6c7f;
-  --tag-person-bg:#3a2a4a; --tag-person:#d9c4ea;
-  --tag-company-bg:#1f3345; --tag-company:#a9cde6;
-  --tag-email-bg:#1c3634; --tag-email:#9fd9d3;
-  --tag-phone-bg:#3a3420; --tag-phone:#e6d49a;
-  --tag-id-bg:#272d4a; --tag-id:#b8c2f0;
-  --tag-address-bg:#432a38; --tag-address:#ecb9d3;
+/* Klar: das helle Thema, wie es bis Build 24 der Standard war */
+html[data-theme="klar"]{
+  --bg:#e4e8ee;
+  --panel:#ffffff;
+  --panel-2:#f3f5f8;
+  --line:#cdd3dc;
+  --line-soft:#e2e6ec;
+  --shadow:0 10px 24px rgba(16,30,54,.10);
+  --text:#1f2937;
+  --muted:#5b6673;
+  --heading:#36404d;
+  --accent:#2563c9;
+  --accent-text:#ffffff;
+  --ok:#2f7a3f;
+  --ok-bg:#e4f1e4;
+  --ok-line:#bcdcc0;
+  --warn:#8a5a12;
+  --warn-bg:#fbefd6;
+  --warn-line:#e3c88e;
+  --bad:#a13b32;
+  --bad-bg:#fbe3df;
+  --bad-line:#e6b4ad;
+  --add-bg:#e4f1e4;
+  --del-bg:#fbe3df;
+  --live-bg:#111827;
+  --live-text:#d1d5db;
+  --live-muted:#9ca3af;
+  --live-ok:#8fd9a0;
+  --live-warn:#f0c86a;
+  --sea-bg:#dcecf2;
+  --sea-line:#7fb2c6;
+  --veil-dark:rgba(16,24,40,.28);
+  --tag-person-bg:#eee5f5; --tag-person:#56356d;
+  --tag-company-bg:#e1eef9; --tag-company:#255a7a;
+  --tag-email-bg:#ddf2f0; --tag-email:#1d6260;
+  --tag-phone-bg:#f4ebcf; --tag-phone:#695515;
+  --tag-id-bg:#e7ebf9; --tag-id:#2838a3;
+  --tag-address-bg:#f1c7e1; --tag-address:#71394f;
 }
 
 /* base: everything a module may rely on without writing its own rule */

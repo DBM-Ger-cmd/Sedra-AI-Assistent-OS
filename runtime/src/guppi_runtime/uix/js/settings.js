@@ -3,7 +3,7 @@
 // Speichern ist der Klick des Captains; die Einstellungen wirken nach dem nächsten Start.
 // Classic script: shares the page's global scope with the other files in uix/js.
 
-const settingsState = {data: null, error: '', msg: '', busy: false};
+const settingsState = {data: null, error: '', msg: '', busy: false, tab: 'anbieter', modelsProvider: '', modelsQuery: ''};
 
 async function openSettings(){
   showWindow('settingsWindow');
@@ -13,7 +13,29 @@ async function openSettings(){
 async function refreshSettings(){
   try{ settingsState.data = await api('/api/cloud'); settingsState.error = ''; }
   catch(err){ settingsState.error = err.message; }
+  // Was der Captain schon eingetragen hatte, bleibt nach einer Modellabfrage stehen (kein stilles Verwerfen)
+  if(settingsState.draft && settingsState.data){
+    const dr = settingsState.draft;
+    settingsState.data.enabled = dr.enabled;
+    for(const p of settingsState.data.providers){
+      const c = dr.providers[p.id];
+      if(c){ p.enabled = c.enabled; p.base_url = c.base_url; if(c.default_model) p.default_model = c.default_model; }
+    }
+    settingsState.draft = null;
+  }
   renderSettings();
+}
+
+// Die Modelle beim Anbieter abfragen – auf Klick, nur lesen. Eingetragenes bleibt erhalten.
+async function fetchModels(provider){
+  settingsState.draft = collectSettings();
+  settingsState.msg = 'Modelle werden beim Anbieter abgefragt …';
+  try{
+    const out = await api('/api/cloud/models', {method: 'POST', body: JSON.stringify({provider})});
+    settingsState.models = Object.assign({}, settingsState.models || {}, {[provider]: out.models});
+    settingsState.msg = out.models.length ? out.models.length + ' Modelle von ' + provider + ' geladen.' : 'Der Anbieter meldet keine Modelle für diesen Schlüssel.';
+  }catch(err){ settingsState.msg = 'Modelle nicht abgefragt: ' + err.message; }
+  await refreshSettings();
 }
 
 function settingsEl(tag, text, cls){
@@ -33,12 +55,25 @@ function renderSettings(){
   const body = document.getElementById('settingsBody');
   if(!body) return;
   body.replaceChildren();
+  if(!settingsState.error && settingsState.data){
+    body.append(modelsTabBar());
+    if(settingsState.tab === 'modelle'){ renderModels(body, settingsState.data); return; }
+  }
   if(settingsState.error){ body.append(settingsEl('div', 'Einstellungen nicht lesbar: ' + settingsState.error, 'mnote mbad')); return; }
   const d = settingsState.data;
   if(!d){ body.append(settingsEl('div', 'Einstellungen werden geladen ...')); return; }
 
   body.append(settingsEl('h3', 'API-Einstellungen (Cloud-Modelle)'));
   body.append(settingsEl('p', 'Standard: aus. Was den Rechner verlässt, prüft der Inhaltsschutz bei jedem Aufruf. Personenbezug wird vor dem Versand pseudonymisiert und anonymisiert. Gesperrte Kategorien bleiben lokal. Änderungen wirken nach dem nächsten Start.', 'mnote'));
+
+  // Der Gesamtzustand in einem Satz: was wirkt, was nur gespeichert ist
+  const live = d.live || [];
+  let summary, tone;
+  if(!d.enabled){ summary = 'Cloud-Modelle sind AUS. Kein Anbieter kann antworten, auch wenn er unten angehakt ist.'; tone = 'off'; }
+  else if(live.length){ summary = 'Läuft: ' + live.join(', ') + '.'; tone = 'ok'; }
+  else { summary = 'Hauptschalter an, aber kein Anbieter läuft. Ein Anbieter braucht Modell und Schlüssel, danach ein Neustart.'; tone = 'warn'; }
+  body.append(settingsEl('div', summary, 's-note ' + tone));
+  if(d.restart_needed) body.append(settingsEl('div', 'Gespeichert, aber noch nicht wirksam: Neustart der Oberfläche nötig.', 's-note warn'));
 
   const master = document.createElement('label');
   const masterBox = settingsEl('input'); masterBox.type = 'checkbox'; masterBox.id = 'cloudMaster'; masterBox.checked = !!d.enabled;
@@ -55,9 +90,21 @@ function renderSettings(){
     on.append(onBox, ' Anbieter aktiv');
     box.append(on);
 
-    const model = settingsEl('input'); model.type = 'text'; model.className = 'cp-model'; model.value = p.default_model || '';
-    model.placeholder = 'Modellname des Anbieters'; model.maxLength = 120;
-    box.append(settingsEl('label', 'Modell'), model);
+    // Status: aus · nicht bereit (mit Grund) · bereit; und ob der laufende Server ihn schon hat
+    let status = 'Status: ' + (p.status === 'bereit' ? 'bereit' : p.status === 'nicht bereit' ? 'nicht bereit – ' + p.reasons.join(', ') : 'aus');
+    if(p.status === 'bereit') status += p.live ? ' · läuft jetzt' : ' · läuft nach dem nächsten Start';
+    box.append(settingsEl('div', status, 'mnote ' + (p.status === 'bereit' ? 'ok' : p.status === 'nicht bereit' ? 'warn' : '')));
+
+    // Modell: Auswahl aus der Liste, die der Anbieter selbst meldet (Knopf „Modelle abfragen“)
+    const model = settingsEl('select'); model.className = 'cp-model';
+    const none = document.createElement('option'); none.value = ''; none.textContent = '(kein Modell gewählt)';
+    model.append(none);
+    const offered = [...new Set([p.default_model, ...((settingsState.models || {})[p.id] || [])].filter(Boolean))];
+    offered.forEach(name=>{ const o = document.createElement('option'); o.value = name; o.textContent = name; model.append(o); });
+    model.value = p.default_model || '';
+    const fetchBtn = settingsEl('button', 'Modelle abfragen', 'tool'); fetchBtn.type = 'button';
+    fetchBtn.onclick = ()=>fetchModels(p.id);
+    box.append(settingsEl('label', 'Modell'), model, fetchBtn);
 
     const url = settingsEl('input'); url.type = 'text'; url.className = 'cp-url'; url.value = p.base_url; url.maxLength = 200;
     box.append(settingsEl('label', 'Adresse (https)'), url);

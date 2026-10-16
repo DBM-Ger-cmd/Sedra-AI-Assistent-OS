@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SEDRA – Desktop</title>
 <link rel="stylesheet" href="/uix/css/desktop.css">
+<link rel="stylesheet" href="/uix/css/settings.css">
 </head>
 <body>
 <div class="desktop" id="desktop">
@@ -249,9 +250,9 @@
     <div class="content lib-main-wrap" id="libraryBody">Bibliothek wird geladen ...</div>
   </div>
 
-  <div class="window" id="settingsWindow" role="dialog" aria-label="Einstellungen">
+  <div class="window" id="settingsWindow" role="dialog" aria-label="API und Modelle">
     <div class="titlebar">
-      <div class="title-left"><div class="title-icon"></div><span>Einstellungen</span></div>
+      <div class="title-left"><div class="title-icon"></div><span>API und Modelle</span></div>
       <div class="controls"><div class="ctrl" title="Minimieren" onclick="minimizeWindow('settingsWindow')">—</div><div class="ctrl" title="Maximieren" onclick="toggleMaximize('settingsWindow')">□</div><div class="ctrl close" title="Schließen" onclick="closeWindow('settingsWindow')">×</div></div>
     </div>
     <div class="toolbar">
@@ -323,7 +324,7 @@
         <div class="menuitem" onclick="openModels();toggleStart()"><b>Werkstatt</b><span>Modelle, Teststrecke</span></div>
         <div class="menuitem" onclick="openAgents();toggleStart()"><b>Besatzung</b><span>Organigramm, Agenten</span></div>
         <div class="menuitem" onclick="openLibrary();toggleStart()"><b>Bibliothek</b><span>Skills ansehen, eigene schreiben</span></div>
-        <div class="menuitem" onclick="openSettings();toggleStart()"><b>Einstellungen</b><span>API-Einstellungen für Cloud-Modelle</span></div>
+        <div class="menuitem" onclick="openSettings();toggleStart()"><b>API und Modelle</b><span>Anbieter, Schlüssel, Modellauswahl</span></div>
         <div class="menuitem" onclick="openBridge();toggleStart()"><b>Karten</b><span>Brücke</span></div>
         <div class="menuitem" onclick="openProjectRegistry();toggleStart()"><b>Projekte</b></div>
         <div class="menuitem" onclick="openMeter();toggleStart()"><b>Guppy-Meter</b></div>
@@ -378,6 +379,7 @@
 <script src="/uix/js/org.js"></script>
 <script src="/uix/js/library.js"></script>
 <script src="/uix/js/settings.js"></script>
+<script src="/uix/js/settings_models.js"></script>
 <script src="/uix/js/deck.js"></script>
 <script src="/uix/js/main.js"></script>
 </body>

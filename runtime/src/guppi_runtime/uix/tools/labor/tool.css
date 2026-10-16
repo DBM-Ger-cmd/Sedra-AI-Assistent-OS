@@ -1,0 +1,32 @@
+/* KI Labor – nur im eigenen Container. Farben nur über die Tokens (ui/tokens.css), damit das Werkzeug zur Oberfläche passt. */
+.t-labor{background:var(--bg);color:var(--text);padding:12px;border-radius:var(--radius)}
+.t-labor .s-muted{color:var(--muted)}
+.t-labor .ok{color:var(--ok)}
+.t-labor .warn{color:var(--live-warn)}
+.t-labor input[type=text],.t-labor input[type=password],.t-labor input[type=search],.t-labor select{background:var(--panel);color:var(--text);border:1px solid var(--line);padding:4px 6px}
+.t-labor button{background:var(--panel);color:var(--text);border:1px solid var(--line);padding:4px 10px;cursor:pointer}
+.t-labor button.p{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:600}
+.t-labor button:disabled{opacity:.45;cursor:default}
+.t-labor .labor-head{align-items:center;gap:10px;padding:6px 0 10px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.t-labor .labor-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);display:inline-block}
+.t-labor .labor-dot.ok{background:var(--ok)}
+.t-labor .labor-tabs{gap:6px;margin-bottom:12px}
+.t-labor .labor-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px;margin:8px 0;display:flex;flex-direction:column;gap:6px}
+.t-labor .labor-bar{flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.t-labor .labor-cols{display:grid;grid-template-columns:minmax(160px,210px) 1fr;gap:16px;align-items:start}
+.t-labor .labor-aside{display:flex;flex-direction:column;gap:6px;font-size:12px}
+.t-labor .labor-head-small{font-weight:600;color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.05em}
+.t-labor .labor-facet{display:flex;align-items:center;gap:4px}
+.t-labor .labor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:10px}
+.t-labor .labor-model{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:6px}
+.t-labor .labor-model.is-default{border-color:var(--accent)}
+.t-labor .labor-pub{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.t-labor .labor-name{font-weight:600;word-break:break-all}
+.t-labor .labor-badge{display:inline-block;font-size:11px;padding:1px 7px;margin:0 4px 4px 0;border:1px solid var(--line);border-radius:4px;color:var(--muted)}
+.t-labor .labor-badge.ok{border-color:var(--accent);color:var(--accent)}
+.t-labor .labor-badge.warn{border-color:var(--live-warn);color:var(--live-warn)}
+.t-labor .labor-pager{align-items:center;margin-top:12px;gap:8px}
+.t-labor .labor-steps{margin:6px 0 0 18px;padding:0}
+.t-labor .labor-steps li{margin:3px 0}
+.t-labor table{width:100%;border-collapse:collapse;font-size:12px}
+.t-labor td{border-top:1px solid var(--line);padding:4px 6px;vertical-align:top}

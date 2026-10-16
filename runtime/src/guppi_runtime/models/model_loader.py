@@ -247,7 +247,8 @@ class ModelLoader:
             ctl.load_model(key, context_length=want, gpu=gpu_argument(profile.get("gpu_layers")), identifier=key, yes=True,
                            parallel=self.config.parallel, mtp=self.config.mtp, **extra)
         except (RuntimeControlError, ValueError, OSError) as exc:
-            detail = str(exc)[:160] if isinstance(exc, RuntimeControlError) else type(exc).__name__
+            # The reason is the point: a bare "ValueError" hid whether the GGUF, the canary or a setting was at fault (16.10.2026).
+            detail = str(exc)[:160] if isinstance(exc, RuntimeControlError) else f"{type(exc).__name__}:{str(exc)[:160]}"
             raise LoadError("provider_unavailable", f"load_failed:{detail}") from exc
         after = [i for i in self._instances(key, ctl) if i["identifier"] == key]
         if not after or after[0]["context"] != want:

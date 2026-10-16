@@ -20,7 +20,7 @@ from .registry import MODULE_ID, Registry
 
 UI_VERSION = (1, 0)
 OBJECT_TYPES = ('project', 'intent', 'task', 'candidate', 'file', 'model', 'skill', 'agent', 'decision', 'routine', 'boundary',
-                'module', 'logbook', 'meter', 'hardware', 'machine', 'gateway', 'settings')   # the last six are places of the system; gateway since Build 19; settings: API-Einstellungen (Kern, 16.10.2026)
+                'module', 'logbook', 'meter', 'hardware', 'machine', 'gateway', 'labor')   # the last six are places of the system; gateway since Build 19; labor: KI Labor (Werkstatt, 16.10.2026)
 TOOL_KINDS = ('object', 'instrument', 'panel')
 # Ein Hinweis für die Shell, kein Befehl: das Cockpit stellt „inhalt“ nach links und „nachweis“ nach rechts (COCKPIT_MODUL_v1 §1).
 # Eine Shell ohne zwei Spalten ignoriert ihn – deshalb ist er ein Wort im Manifest und keine Vorschrift im Vertrag.

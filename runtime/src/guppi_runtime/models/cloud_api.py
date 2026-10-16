@@ -48,6 +48,25 @@ def require_https_url(url):
     return url.rstrip("/")
 
 
+def _error_detail(exc, headers=None):
+    """Der Grund aus der Antwort des Anbieters, kurz, ohne Schlüssel. Der Text kann Prompt-Teile oder den Schlüssel spiegeln:
+    deshalb werden die Kopfwerte und alles, was wie ein Schlüssel aussieht, geschwärzt."""
+    try:
+        raw = exc.read(400).decode("utf-8", "replace")
+    except Exception:
+        raw = ""
+    try:
+        data = json.loads(raw)
+        text = str(data.get("detail") or data.get("title") or data.get("message") or "") if isinstance(data, dict) else raw
+    except ValueError:
+        text = raw
+    for value in (headers or {}).values():
+        for part in str(value).split():          # „Bearer <schlüssel>“: der Schlüssel allein muss verschwinden
+            if len(part) > 12: text = text.replace(part, "[geschwärzt]")
+    text = re.sub(r"(nvapi|sk)-[A-Za-z0-9_\-]{8,}", "[geschwärzt]", text)
+    return " ".join(text.split())[:160]
+
+
 class _CloudAdapter(BaseModelAdapter):
     route = "cloud"
 
@@ -79,6 +98,21 @@ class _CloudAdapter(BaseModelAdapter):
     def list_models(self):
         return [self.default_model] if self.default_model else []
 
+    def fetch_models(self):
+        """Die Modelle, die der Anbieter für diesen Schlüssel anbietet. Nur ein Lesen: es geht kein Prompt hinaus, nur der Schlüssel."""
+        data = self._get(self.models_path, self._auth_headers())
+        return sorted({m["id"] for m in (data.get("data") or []) if isinstance(m, dict) and isinstance(m.get("id"), str) and m["id"]})
+
+    def _get(self, path, headers):
+        req = Request(self.base_url + path, method="GET", headers=dict(headers))
+        try:
+            with urlopen(req, timeout=self.timeout) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except HTTPError as exc:
+            raise ModelAdapterError(f"cloud_api_http_{exc.code}:{_error_detail(exc, headers)}") from None
+        except (URLError, TimeoutError, OSError, ValueError) as exc:
+            raise ModelAdapterError(f"cloud_api_error:{type(exc).__name__}") from None
+
     def _post(self, path, payload, headers):
         body = json.dumps(payload).encode("utf-8")
         req = Request(self.base_url + path, data=body, method="POST", headers=dict(headers, **{"Content-Type": "application/json"}))
@@ -86,8 +120,7 @@ class _CloudAdapter(BaseModelAdapter):
             with urlopen(req, timeout=self.timeout) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except HTTPError as exc:
-            # Der Antworttext kann den Schlüssel oder Prompt-Teile spiegeln: er wird nicht weitergegeben, nur der Statuscode.
-            raise ModelAdapterError(f"cloud_api_http_{exc.code}") from None
+            raise ModelAdapterError(f"cloud_api_http_{exc.code}:{_error_detail(exc, headers)}") from None
         except (URLError, TimeoutError, OSError, ValueError) as exc:
             raise ModelAdapterError(f"cloud_api_error:{type(exc).__name__}") from None
 
@@ -109,6 +142,10 @@ class _CloudAdapter(BaseModelAdapter):
 
 class CloudOpenAICompatibleAdapter(_CloudAdapter):
     """POST {base}/chat/completions mit Bearer-Schlüssel (NVIDIA, OpenAI, Mistral, Groq, OpenRouter …)."""
+    models_path = "/models"
+
+    def _auth_headers(self):
+        return {"Authorization": "Bearer " + self._key()}
 
     def chat(self, messages, model=None, **kwargs):
         if not isinstance(messages, list) or not messages: raise ModelAdapterError("messages_required")
@@ -128,6 +165,10 @@ class CloudOpenAICompatibleAdapter(_CloudAdapter):
 
 class CloudAnthropicAdapter(_CloudAdapter):
     """POST {base}/v1/messages (Anthropic Messages API). System-Nachrichten gehen in das Feld `system`."""
+    models_path = "/v1/models"
+
+    def _auth_headers(self):
+        return {"x-api-key": self._key(), "anthropic-version": ANTHROPIC_VERSION}
 
     def chat(self, messages, model=None, **kwargs):
         if not isinstance(messages, list) or not messages: raise ModelAdapterError("messages_required")
@@ -151,6 +192,25 @@ class CloudAnthropicAdapter(_CloudAdapter):
 
 
 KINDS = {"openai_compatible": CloudOpenAICompatibleAdapter, "anthropic": CloudAnthropicAdapter}
+
+
+def provider_adapter(config, provider_id, environ=None, key_store=None):
+    """Der Adapter eines Anbieters aus der gespeicherten Konfiguration, eingeschaltet oder nicht. Für Abfragen und Tests."""
+    entry = (config.get("providers") or {}).get(provider_id) if isinstance(config, dict) else None
+    if not isinstance(entry, dict): raise ValueError("unknown_provider")
+    kind = KINDS.get(entry.get("kind"))
+    if kind is None: raise ValueError("cloud_provider_kind_unknown")
+    try:
+        return kind(provider_id, entry.get("base_url") or "", entry.get("api_key") or "", entry.get("default_model"),
+                    timeout=entry.get("timeout_s", 60), environ=environ, key_store=key_store)
+    except ModelAdapterError as exc:
+        raise ValueError(f"cloud_provider_invalid:{exc}") from None
+
+
+def provider_models(config, provider_id, environ=None, key_store=None):
+    """Die Modellliste eines Anbieters vom Anbieter selbst. Ob der Anbieter eingeschaltet ist, spielt hier keine Rolle:
+    man soll das Modell wählen können, bevor man ihn einschaltet. Fehler kommen ohne Schlüssel zurück."""
+    return provider_adapter(config, provider_id, environ, key_store).fetch_models()
 
 
 def build_cloud_adapters(config, environ=None, key_store=None):

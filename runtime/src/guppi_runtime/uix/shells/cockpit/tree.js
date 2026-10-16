@@ -45,6 +45,7 @@
     many('Modelle', {type: 'model', id: 'alle', title: 'Werkstatt'}, (models.recipes || []).length + (loaded ? ' · ' + loaded.id + ' geladen' : ' · keins geladen'), loaded ? 'ok' : '');
     row('Modell hinzufügen', {type: 'model', id: 'neu', title: 'Neues Modell'}, 'GGUF wählen, Rezept prüfen, Freigabe');
     row('Teststrecke', {type: 'model', id: 'teststrecke', title: 'Teststrecke'}, loaded ? 'Standardtest für ' + loaded.id : 'braucht ein geladenes Modell');
+    row('KI Labor', {type: 'labor', id: 'ki', title: 'KI Labor'}, 'Anbieter, Modelle, Tests');
 
     head('Besatzung');
     const instances = (agents.instances || []).length;
@@ -56,8 +57,7 @@
 
     head('System');
     // Einstellungen: API, Hardware und Maschinenraum liegen in einer Untergruppe, die man aufklappt
-    group('Einstellungen', 'API · Hardware · Maschinenraum');
-    row('API', {type: 'settings', id: 'api', title: 'Einstellungen · API'}, 'Cloud-Modelle, Schlüssel', '', 'Einstellungen');
+    group('Einstellungen', 'Hardware · Maschinenraum');
     row('Hardware', {type: 'hardware', id: 'hardware', title: 'Hardware'}, '', '', 'Einstellungen');
     row('Maschinenraum', {type: 'machine', id: 'machine', title: 'Maschinenraum'}, '', '', 'Einstellungen');
     row('Module', {type: 'module', id: 'alle', title: 'Module', collection: true},

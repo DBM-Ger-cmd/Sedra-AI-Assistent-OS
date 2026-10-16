@@ -116,6 +116,20 @@ def load_config(project_root: Path) -> dict:
     return (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("cloud_providers", {}) or {}
 
 
+MODULE_NAME = re.compile(r"^[a-z][a-z0-9_]{1,30}$")
+
+
+def module_model(config: dict, module: str):
+    """Das Modell, das ein Modul nutzen soll: (Anbieter, Modell) aus `module_models` in der Konfiguration, oder None.
+    Ein Eintrag mit unbekanntem Anbieter zählt nicht; so ein Modul fällt auf keinen Anbieter still um."""
+    if not MODULE_NAME.match(module or ""): return None
+    entry = ((config or {}).get("module_models") or {}).get(module)
+    if not isinstance(entry, dict): return None
+    pid, model = entry.get("provider"), entry.get("model")
+    if pid not in ((config or {}).get("providers") or {}) or not isinstance(model, str) or not model.strip(): return None
+    return pid, model.strip()
+
+
 def _key_state(provider_id, store, environ):
     env_name = "GUPPI_SECRET_" + provider_id.upper().replace("-", "_") + "_API_KEY"
     if (environ or {}).get(env_name, "").strip(): return "umgebung"
@@ -123,15 +137,54 @@ def _key_state(provider_id, store, environ):
     return "fehlt"
 
 
+def provider_status(master: bool, enabled: bool, base_url: str, model, key: str):
+    """Was mit einem Anbieter gerade los ist, in einem Wort und den Gründen dazu. Gespeichert heißt „bereit“, nicht „läuft“:
+    ob er läuft, sagt der laufende Server (`live`)."""
+    if not master: return "aus", ["Hauptschalter aus"]
+    if not enabled: return "aus", ["Anbieter aus"]
+    reasons = []
+    if not model: reasons.append("kein Modell eingetragen")
+    if key == "fehlt": reasons.append("kein Schlüssel")
+    if not (base_url or "").startswith("https://"): reasons.append("Adresse ist nicht https")
+    return ("nicht bereit" if reasons else "bereit"), reasons
+
+
 def view(project_root: Path, store: CloudKeyStore, environ=None) -> dict:
     cfg = load_config(project_root)
+    master = bool(cfg.get("enabled", False))
     providers = []
     for pid, entry in (cfg.get("providers") or {}).items():
         entry = entry or {}
-        providers.append({"id": pid, "kind": entry.get("kind"), "enabled": bool(entry.get("enabled", False)),
+        enabled = bool(entry.get("enabled", False))
+        key = _key_state(pid, store, environ)
+        status, reasons = provider_status(master, enabled, entry.get("base_url") or "", entry.get("default_model"), key)
+        providers.append({"id": pid, "kind": entry.get("kind"), "enabled": enabled,
                           "base_url": entry.get("base_url") or "", "default_model": entry.get("default_model"),
-                          "key": _key_state(pid, store, environ), "key_store_available": CloudKeyStore.available()})
-    return {"enabled": bool(cfg.get("enabled", False)), "providers": providers, "path": str(settings_path(project_root))}
+                          "key": key, "key_store_available": CloudKeyStore.available(), "status": status, "reasons": reasons})
+    return {"enabled": master, "providers": providers, "path": str(settings_path(project_root)),
+            "module_models": {m: {"provider": e.get("provider"), "model": e.get("model")} for m, e in (cfg.get("module_models") or {}).items()
+                              if isinstance(e, dict)}}
+
+
+def set_module_model(project_root: Path, module: str, provider, model):
+    """Setzt oder löscht (provider None) das Modell eines Moduls. Nur bekannte Anbieter; alles andere bleibt unverändert."""
+    if not MODULE_NAME.match(module or ""): raise ValueError("module_name_invalid")
+    cfg = load_config(project_root)
+    if provider is None:
+        models = dict(cfg.get("module_models") or {})
+        models.pop(module, None)
+    else:
+        if provider not in (cfg.get("providers") or {}): raise ValueError("unknown_provider")
+        if not isinstance(model, str) or not MODEL_NAME.match(model.strip()): raise ValueError("model_name_invalid")
+        models = dict(cfg.get("module_models") or {})
+        models[module] = {"provider": provider, "model": model.strip()}
+    cfg = dict(cfg, module_models=models)
+    path = settings_path(project_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    header = ("# Captain-Einstellungen für Cloud-Modelle (über das Fenster Einstellungen geschrieben).\n"
+              "# Schlüssel stehen NICHT hier, sondern in cloud_keys.json (verschlüsselt) oder in den Umgebungsvariablen.\n")
+    path.write_text(header + yaml.safe_dump({"cloud_providers": cfg}, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    return models
 
 
 def save(project_root: Path, payload: dict) -> dict:
@@ -142,7 +195,8 @@ def save(project_root: Path, payload: dict) -> dict:
     if type(payload.get("enabled")) is not bool: raise ValueError("enabled_must_be_boolean")
     wanted = payload.get("providers")
     if not isinstance(wanted, dict): raise ValueError("providers_invalid")
-    out = {"schema": 1, "enabled": payload["enabled"], "providers": {}}
+    out = {"schema": 1, "enabled": payload["enabled"], "providers": {},
+           "module_models": cfg.get("module_models") or {}}          # die Zuordnung Modul → Modell bleibt beim Speichern erhalten
     for pid, entry in known.items():
         entry = dict(entry or {})
         change = wanted.get(pid, {}) if isinstance(wanted.get(pid), dict) else {}

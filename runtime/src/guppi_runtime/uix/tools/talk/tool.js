@@ -59,10 +59,16 @@
       this.input = d().el('input');
       this.input.placeholder = 'Antwort oder Auftrag · Enter sendet';
       this.input.setAttribute('aria-label', 'Gespräch mit GUPPI');
-      this.input.onkeydown = e=>{ if(e.key === 'Enter'){ e.preventDefault(); const t = this.input.value.trim(); this.input.value = ''; if(t) this.send(t); } };
-      const send = d().button('Senden', ()=>{ const t = this.input.value.trim(); this.input.value = ''; if(t) return this.send(t); }, 'p');
-      bar.append(this.input, send);
-      el.replaceChildren(this.log, bar);
+      this.input.onkeydown = e=>{ if(e.key === 'Enter'){ e.preventDefault(); this.submit(); } };
+      // Wahl neben Senden: GUPPI lokal (Standard) oder ein Cloud-Modell aus der KI Labor
+      this.picker = d().el('select', 't-talk-pick');
+      this.picker.setAttribute('aria-label', 'Modell für diese Frage');
+      const local = d().el('option', null, 'GUPPI lokal'); local.value = '';
+      this.picker.append(local);
+      const send = d().button('Senden', ()=>this.submit(), 'p');
+      bar.append(this.input, this.picker, send);
+      el.replaceChildren(this.grip(el), this.log, bar);
+      this.loadCloud();
 
       ctx.bus.on('talk.context', e=>{ this.object = e.object || null; });
       // B6-G-03: der zuletzt geöffnete GateWay-Vorgang geht mit jeder Frage mit – so weiß die Wissensbasis, worum es geht
@@ -77,6 +83,89 @@
     },
 
     unmount(){ this.el.replaceChildren(); this.el.classList.remove('t-talk'); },
+
+    // Eingabe absenden: mit gewähltem Cloud-Modell in die Cloud, sonst wie bisher zu GUPPI
+    submit(){
+      const t = this.input.value.trim();
+      this.input.value = '';
+      if(!t) return;
+      if(this.picker.value) return this.sendCloud(this.picker.value, t);
+      return this.send(t);
+    },
+
+    // Griff oben am Gespräch: nach oben ziehen macht es höher, nach unten niedriger. Die Höhe bleibt pro Anzeige gespeichert.
+    grip(el){
+      const g = d().el('div', 't-talk-grip');
+      g.setAttribute('role', 'separator');
+      g.setAttribute('aria-label', 'Höhe des Gesprächs ändern (ziehen)');
+      g.onpointerdown = e=>{
+        e.preventDefault();
+        const shell = el.closest('.ck') || el.parentElement;
+        const box = el.closest('.ck-talk') || el;
+        const startY = e.clientY, startH = box.getBoundingClientRect().height;
+        const move = ev=>{
+          const h = Math.max(96, Math.min(root.innerHeight * 0.75, startH + (startY - ev.clientY)));
+          shell.style.setProperty('--talk-h', Math.round(h) + 'px');
+        };
+        const up = ()=>{ root.removeEventListener('pointermove', move); root.removeEventListener('pointerup', up); };
+        root.addEventListener('pointermove', move); root.addEventListener('pointerup', up);
+      };
+      return g;
+    },
+
+    // Die Cloud-Modelle, die im Labor bereit sind (nur lesen). Ist die Cloud aus, bleibt die Wahl bei „GUPPI lokal“.
+    async loadCloud(){
+      try{
+        const v = await this.ctx.api('/api/cloud');
+        if(!v.enabled) return;
+        for(const p of v.providers || []){
+          if(p.status !== 'bereit') continue;
+          let list = [];
+          try{ list = ((await this.ctx.api('/api/cloud/models', {method: 'POST', body: {provider: p.id}})).models || []).slice(); }
+          catch(_err){ list = []; }
+          if(p.default_model && !list.includes(p.default_model)) list.unshift(p.default_model);
+          if(!list.length) continue;
+          const group = d().el('optgroup');
+          group.label = 'Cloud · ' + p.id;
+          list.forEach(id=>{ const o = d().el('option', null, id); o.value = 'cloud:' + p.id + '|' + id; group.append(o); });
+          this.picker.append(group);
+        }
+        // Die Zuordnung „chat“ (KI Labor, module_models) ist die Vorgabe: neue Fragen gehen dorthin, „GUPPI lokal“ bleibt wählbar
+        const pre = (v.module_models || {}).chat;
+        if(pre && pre.provider && pre.model){
+          const value = 'cloud:' + pre.provider + '|' + pre.model;
+          if(![...this.picker.options].some(o=>o.value === value)){
+            const group = d().el('optgroup'); group.label = 'Vorgabe';
+            const o = d().el('option', null, pre.model); o.value = value; group.append(o);
+            this.picker.append(group);
+          }
+          this.picker.value = value;
+        }
+      }catch(_err){ /* ohne Cloud gibt es nur GUPPI lokal */ }
+    },
+
+    // Eine Frage an ein Cloud-Modell. Der Inhaltsschutz läuft auf dem Server; die Antwort steht mit Modellnamen im Gespräch.
+    async sendCloud(value, text){
+      const [pid, model] = value.slice('cloud:'.length).split('|');
+      this.line('Du', text, 'me');
+      this.history.push({role: 'user', content: text});
+      const who = 'Cloud · ' + pid + ' / ' + model;
+      const row = this.line(who, 'Denkt nach …', 'note');
+      try{
+        const out = await this.ctx.api('/api/chat/cloud', {method: 'POST', body: {provider: pid, model, text, history: this.history.slice(0, -1)}});
+        row.remove();
+        if(out.status === 'completed'){
+          this.line(who, out.reply || '(leere Antwort)', '');
+          this.history.push({role: 'assistant', content: out.reply || ''});
+        }else{
+          this.history.pop();
+          this.line('GUPPI', 'Die Cloud hat die Frage nicht beantwortet: ' + ((out.reasons || []).join(', ') || out.status), 'warn');
+        }
+      }catch(err){
+        this.history.pop(); row.remove();
+        this.line('GUPPI', 'Cloud-Antwort fehlgeschlagen: ' + err.message, 'warn');
+      }
+    },
 
     // a line in the log; who said it decides how it looks
     line(who, text, tone){

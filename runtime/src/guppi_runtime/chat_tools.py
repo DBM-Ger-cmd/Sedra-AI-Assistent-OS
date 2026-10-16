@@ -12,6 +12,7 @@ Hat der Captain im selben Satz selbst ums Öffnen gebeten, ist das die Freigabe 
 from __future__ import annotations
 
 import json
+import os
 
 
 def _fn(name, description):
@@ -27,6 +28,10 @@ def _propose(name, description, properties, required):
 SCHEMAS = {
     "get_model_status": _fn("get_model_status", "Which model runs now, its context length, KV-cache type, whether MTP is on, and who holds the GPU."),
     "list_models": _fn("list_models", "All model recipes of this PC: id, model, enabled, loaded, roles, recommended and maximum context."),
+    "test_cloud_connection": _propose("test_cloud_connection",
+        "Check a cloud provider in the KI Labor: the key, the provider's model list, and one short test message that must come back. "
+        "Only works when the Captain has switched cloud on and the provider on in the settings. Sends one fixed test sentence, no personal data.",
+        {"provider": {"type": "string", "description": "provider id, e.g. nvidia"}}, ["provider"]),
     "get_routing_profile": _fn("get_routing_profile", "The active model combination (routing profile) and what each profile prefers."),
     "get_switches": _fn("get_switches", "The machine-local feature switches (on/off) such as the automatic model loader and the own llama-server."),
     "list_projects": _fn("list_projects", "The projects (folders) registered in GUPPI: name and id."),
@@ -141,6 +146,11 @@ class ChatTools:
                                    "kv_cache_type": server.get("kv_cache_type"), "mtp": server.get("spec_type") == "draft-mtp",
                                    "gpu_lease": (f"{lease['owner']} ({lease['purpose']})" if lease else "frei"),
                                    "model_loader_enabled": v.get("loader_enabled")}, ensure_ascii=False)
+            if name == "test_cloud_connection":
+                # KI Labor: der Verbindungstest, wie ihn der Captain auf der Seite auslöst. Nur mit eingeschaltetem Anbieter.
+                from . import labor
+                cfg, pid = self.hub._labor_provider({"provider": (args or {}).get("provider")})
+                return json.dumps(labor.connection_test(cfg, pid, os.environ, self.hub.runtime.cloud_key_store), ensure_ascii=False)
             if name == "list_models":
                 return json.dumps([{"id": r["id"], "model": r["model"], "enabled": r["enabled"], "loaded": r["loaded"], "roles": r["roles"],
                                     "context_recommended": r["context_recommended"], "context_maximum": r["context_maximum"]}

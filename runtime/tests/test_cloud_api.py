@@ -115,8 +115,9 @@ class OpenAICompatibleTest(unittest.TestCase):
         with mock.patch.object(cloud_api, 'urlopen', side_effect=err):
             with self.assertRaises(ModelAdapterError) as ctx:
                 openai_adapter().chat([{'role': 'user', 'content': 'x'}])
-        self.assertEqual(str(ctx.exception), 'cloud_api_http_401')
-        self.assertNotIn('test-key-not-real', str(ctx.exception))
+        self.assertTrue(str(ctx.exception).startswith('cloud_api_http_401:'))
+        self.assertNotIn('test-key-not-real', str(ctx.exception), 'the key is redacted from the provider text')
+        self.assertIn('[geschwärzt]', str(ctx.exception))
 
     def test_health_needs_key_and_model_and_makes_no_request(self):
         with mock.patch.object(cloud_api, 'urlopen', side_effect=AssertionError('no network in health')):
@@ -152,6 +153,38 @@ class AnthropicTest(unittest.TestCase):
         self.assertEqual(out['finish_reason'], 'length')
         self.assertTrue(out['truncated'])
         self.assertEqual(out['usage'], {'input_tokens': 5, 'output_tokens': 2})
+
+
+class FetchModelsTest(unittest.TestCase):
+    def test_openai_compatible_lists_ids_with_bearer_and_no_prompt(self):
+        seen = {}
+
+        class Resp(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        def fake_urlopen(req, timeout):
+            seen['url'] = req.full_url
+            seen['method'] = req.get_method()
+            seen['auth'] = req.get_header('Authorization')
+            seen['body'] = req.data
+            return Resp(json.dumps({'data': [{'id': 'b-model'}, {'id': 'a-model'}, {'object': 'x'}]}).encode('utf-8'))
+
+        with mock.patch.object(cloud_api, 'urlopen', side_effect=fake_urlopen):
+            models = openai_adapter().fetch_models()
+        self.assertEqual(models, ['a-model', 'b-model'])
+        self.assertEqual(seen['url'], 'https://api.example.test/v1/models')
+        self.assertEqual(seen['method'], 'GET')
+        self.assertEqual(seen['auth'], 'Bearer test-key-not-real')
+        self.assertIsNone(seen['body'], 'a model list call sends no prompt')
+
+    def test_provider_models_refuses_unknown_and_reports_missing_key_without_value(self):
+        cfg = {'providers': {'nvidia': {'enabled': False, 'kind': 'openai_compatible', 'base_url': 'https://x.test/v1',
+                                        'api_key': 'secret://nvidia/api-key'}}}
+        with self.assertRaises(ValueError): cloud_api.provider_models(cfg, 'gibt-es-nicht', environ={})
+        with self.assertRaises(ModelAdapterError) as ctx:
+            cloud_api.provider_models(cfg, 'nvidia', environ={}, key_store=None)
+        self.assertEqual(str(ctx.exception), 'secret_not_set:GUPPI_SECRET_NVIDIA_API_KEY')
 
 
 class RouterTest(unittest.TestCase):
@@ -251,6 +284,47 @@ class SettingsTest(unittest.TestCase):
     def test_key_store_refuses_outside_windows(self):
         if self.cs.CloudKeyStore.available(): self.skipTest('Windows: the DPAPI path is used')
         with self.assertRaises(ValueError): self.store.set('nvidia', 'abcdefgh12345')
+
+    def test_module_model_needs_a_known_provider_and_a_model(self):
+        from guppi_runtime.cloud_settings import module_model
+        cfg = {'providers': {'nvidia': {}}, 'module_models': {
+            'redesign': {'provider': 'nvidia', 'model': 'nvidia/x'},
+            'chat': {'provider': 'gibt-es-nicht', 'model': 'm'},
+            'labor': {'provider': 'nvidia', 'model': ''}}}
+        self.assertEqual(module_model(cfg, 'redesign'), ('nvidia', 'nvidia/x'))
+        self.assertIsNone(module_model(cfg, 'chat'), 'an unknown provider falls back to nothing, never silently')
+        self.assertIsNone(module_model(cfg, 'labor'))
+        self.assertIsNone(module_model(cfg, 'nicht-da'))
+        self.assertIsNone(module_model(cfg, '../etc'))
+
+    def test_module_model_can_be_set_and_cleared_only_for_known_providers(self):
+        from guppi_runtime.cloud_settings import set_module_model
+        set_module_model(self.root, 'chat', 'nvidia', 'nvidia/x')
+        self.assertEqual(self.cs.load_config(self.root)['module_models']['chat'], {'provider': 'nvidia', 'model': 'nvidia/x'})
+        self.assertEqual(self.cs.view(self.root, self.store, {})['module_models']['chat']['model'], 'nvidia/x')
+        set_module_model(self.root, 'chat', None, None)
+        self.assertNotIn('chat', self.cs.load_config(self.root).get('module_models') or {})
+        with self.assertRaises(ValueError): set_module_model(self.root, 'chat', 'gibt-es-nicht', 'm')
+        with self.assertRaises(ValueError): set_module_model(self.root, '../x', 'nvidia', 'm')
+        with self.assertRaises(ValueError): set_module_model(self.root, 'chat', 'nvidia', 'mit leerzeichen; rm')
+
+    def test_saving_keeps_the_module_models(self):
+        self.cs.save(self.root, {'enabled': True, 'providers': {}})
+        import yaml
+        path = self.cs.settings_path(self.root)
+        cfg = yaml.safe_load(path.read_text(encoding='utf-8'))
+        cfg['cloud_providers']['module_models'] = {'redesign': {'provider': 'nvidia', 'model': 'nvidia/x'}}
+        path.write_text(yaml.safe_dump(cfg, allow_unicode=True), encoding='utf-8')
+        self.cs.save(self.root, {'enabled': False, 'providers': {}})
+        self.assertEqual(self.cs.load_config(self.root)['module_models']['redesign']['model'], 'nvidia/x')
+
+    def test_status_says_what_really_happens(self):
+        from guppi_runtime.cloud_settings import provider_status
+        self.assertEqual(provider_status(False, True, 'https://x.test', 'm', 'gespeichert'), ('aus', ['Hauptschalter aus']))
+        self.assertEqual(provider_status(True, False, 'https://x.test', 'm', 'gespeichert'), ('aus', ['Anbieter aus']))
+        self.assertEqual(provider_status(True, True, 'https://x.test', None, 'fehlt'), ('nicht bereit', ['kein Modell eingetragen', 'kein Schlüssel']))
+        self.assertEqual(provider_status(True, True, 'http://x.test', 'm', 'gespeichert'), ('nicht bereit', ['Adresse ist nicht https']))
+        self.assertEqual(provider_status(True, True, 'https://x.test', 'm', 'gespeichert'), ('bereit', []))
 
     def test_signature_changes_when_a_setting_changes(self):
         before = self.cs.signature(self.root, self.store, {})

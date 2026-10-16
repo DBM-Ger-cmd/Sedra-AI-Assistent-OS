@@ -24,7 +24,7 @@ from .job_supervisor import FINAL_STATES, JobError
 from .mission import ALLOWED
 from .util import atomic_write_json, load_json, utcnow
 from .local_switches import ALLOWED as SWITCH_ALLOWED, LocalSwitches
-from . import cloud_settings
+from . import cloud_settings, labor_runs
 from .cloud_settings import CloudKeyStore
 from .role_routing import RoutingConfig
 from .rework_watch import ReworkWatch
@@ -2013,6 +2013,11 @@ class UIXHub:
         rt = self.runtime
         view = cloud_settings.view(rt.project_root, rt.cloud_key_store, os.environ)
         view['restart_needed'] = cloud_settings.signature(rt.project_root, rt.cloud_key_store, os.environ) != rt.cloud_boot_signature
+        # Was der laufende Server wirklich hat: nur diese Anbieter können antworten (ohne Neustart nichts Neues).
+        live = sorted(aid for aid, a in rt.model_router.adapters.items() if getattr(a, 'route', 'local') == 'cloud')
+        view['live'] = live
+        for p in view['providers']:
+            p['live'] = p['id'] in live
         view['error'] = getattr(rt, 'cloud_providers_error', None)
         view['key_store_available'] = CloudKeyStore.available()
         return view
@@ -2022,6 +2027,62 @@ class UIXHub:
         self.runtime.audit.append('CLOUD_SETTINGS_SAVED', component='desk',
                                   payload={'enabled': res['enabled'], 'providers': sorted((payload.get('providers') or {}).keys())})
         return {'saved': True, 'restart_needed': True}
+
+    def cloud_models(self, payload):
+        """Die Modelle eines Anbieters beim Anbieter abfragen (nur lesen; kein Prompt geht hinaus). Auf Klick, nie automatisch."""
+        from .models.cloud_api import provider_models
+        pid = payload.get('provider') if isinstance(payload, dict) else None
+        cfg = cloud_settings.load_config(self.runtime.project_root)
+        if not isinstance(pid, str) or pid not in (cfg.get('providers') or {}) or not cloud_settings.PROVIDER_ID.match(pid):
+            raise ValueError('unknown_provider')
+        models = provider_models(cfg, pid, os.environ, self.runtime.cloud_key_store)
+        self.runtime.audit.append('CLOUD_MODELS_QUERIED', component='desk', payload={'provider': pid, 'count': len(models)})
+        return {'provider': pid, 'models': models}
+
+    def _labor_provider(self, payload):
+        pid = payload.get('provider') if isinstance(payload, dict) else None
+        cfg = cloud_settings.load_config(self.runtime.project_root)
+        if not isinstance(pid, str) or pid not in (cfg.get('providers') or {}) or not cloud_settings.PROVIDER_ID.match(pid):
+            raise ValueError('unknown_provider')
+        return cfg, pid
+
+    def labor_connection(self, payload):
+        """KI Labor: die Kette vom Schlüssel bis zu einer beantworteten Testnachricht, in Schritten. Auf Klick."""
+        from . import labor
+        cfg, pid = self._labor_provider(payload)
+        res = labor.connection_test(cfg, pid, os.environ, self.runtime.cloud_key_store)
+        self.runtime.audit.append('LABOR_CONNECTION_TEST', component='desk', payload={'provider': pid, 'ok': res['ok']})
+        return res
+
+    def chat_cloud(self, payload):
+        """Das Gespräch mit einem Cloud-Modell, auf Wahl im Gespräch. Geht durch den Inhaltsschutz; nur wenn eingeschaltet.
+        Der Text selbst kommt nie ins Audit, nur Anbieter, Modell und Ergebnis."""
+        from . import labor
+        cfg, pid = self._labor_provider(payload)
+        text = str((payload or {}).get('text') or '').strip()
+        if not text or len(text) > 4000: raise ValueError('text_invalid')
+        history = [h for h in ((payload or {}).get('history') or [])[-10:]
+                   if isinstance(h, dict) and h.get('role') in ('user', 'assistant') and isinstance(h.get('content'), str)]
+        messages = history + [{'role': 'user', 'content': text}]
+        res = labor.cloud_chat(cfg, pid, str((payload or {}).get('model') or ''), messages, os.environ, self.runtime.cloud_key_store)
+        self.runtime.audit.append('CLOUD_CHAT', component='desk', payload={'provider': pid, 'model': res.get('model'), 'status': res.get('status')})
+        return res
+
+    def labor_model_test(self, payload):
+        """KI Labor: jedes Modell des Anbieters einmal ansprechen. Kostet Anbieter-Tokens; deshalb nur auf Klick."""
+        from . import labor
+        cfg, pid = self._labor_provider(payload)
+        res = labor.model_test(cfg, pid, os.environ, self.runtime.cloud_key_store)
+        self.runtime.audit.append('LABOR_MODEL_TEST', component='desk', payload={'provider': pid, 'passed': res.get('passed'), 'total': res.get('total')})
+        return res
+
+    def cloud_module_model(self, payload):
+        """Welches Modell ein Modul nutzt (KI Labor). Provider None löscht die Zuordnung. Wirkt sofort für neue Aufrufe."""
+        p = payload if isinstance(payload, dict) else {}
+        models = cloud_settings.set_module_model(self.runtime.project_root, str(p.get('module') or ''),
+                                                 p.get('provider') or None, p.get('model'))
+        self.runtime.audit.append('CLOUD_MODULE_MODEL_SET', component='desk', payload={'module': p.get('module'), 'provider': p.get('provider') or None})
+        return {'module_models': models}
 
     def cloud_key(self, payload):
         pid = payload.get('provider') if isinstance(payload, dict) else None
@@ -2666,6 +2727,7 @@ def make_server(hub: UIXHub, port=0):
                     '/api/audit': hub.audit_view,                           # read-only
                     '/api/switches': hub.switches_view,                     # read-only
                     '/api/cloud': hub.cloud_view,                           # read-only: Einstellungen Cloud-Modelle, ohne Schlüssel
+                    '/api/labor/runs': lambda: {'runs': labor_runs.list_runs(hub.runtime.project_root)},   # read-only: was die Läufe tun
                     '/api/routing-config': hub.routing_config_view,         # read-only
                     '/api/models': hub.models_view,                         # read-only
                     '/api/standard-test': hub.standard_test_status,         # read-only: progress and result of the Standardtest
@@ -2756,7 +2818,12 @@ def make_server(hub: UIXHub, port=0):
                     '/api/switch/request': hub.switch_request,
                     '/api/switch/apply': hub.switch_apply,
                     '/api/cloud/save': hub.cloud_save,                      # Einstellungen schreiben (Captain-Klick, wirkt nach Neustart)
-                    '/api/cloud/key': hub.cloud_key,                        # Schlüssel verschlüsselt ablegen oder löschen; nie zurückgeben
+                    '/api/cloud/models': hub.cloud_models,          # Modellliste beim Anbieter abfragen (auf Klick, nur lesen)
+                    '/api/labor/connection': hub.labor_connection,  # KI Labor: Verbindungstest in Schritten (auf Klick)
+                    '/api/labor/models-test': hub.labor_model_test, # KI Labor: alle Modelle einmal testen (auf Klick)
+                    '/api/chat/cloud': hub.chat_cloud,              # Gespräch mit einem Cloud-Modell (Wahl neben Senden); Inhaltsschutz
+                    '/api/cloud/key': hub.cloud_key,
+                    '/api/cloud/module-model': hub.cloud_module_model,   # welches Modell ein Modul nutzt (KI Labor)                        # Schlüssel verschlüsselt ablegen oder löschen; nie zurückgeben
                     '/api/routing-config/request': hub.routing_request,
                     '/api/routing-config/apply': hub.routing_apply,
                     '/api/model/pick': hub.model_pick,              # opens the file dialog of this PC, reads nothing else

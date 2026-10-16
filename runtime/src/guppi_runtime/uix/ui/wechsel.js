@@ -74,7 +74,7 @@
         else list.append(row(e.label, e.hint, async()=>{ await api('/api/uix/shell', {method: 'POST', body: {shell: e.id}}); location.reload(); }));
       });
       look.replaceChildren(
-        segment('Darstellung', [['klar', 'Klar'], ['nacht', 'Nacht']], document.documentElement.dataset.theme || 'klar', v=>root.sedraBoot.setTheme(v)),
+        segment('Darstellung', [['klar', 'Klar'], ['nacht', 'Nacht']], document.documentElement.dataset.theme || 'nacht', v=>root.sedraBoot.setTheme(v)),
         segment('Schrift', [['normal', 'Normal'], ['gross', 'Groß']], document.documentElement.dataset.scale || 'normal', v=>setScale(v)));
     }
     function open(){ panel.hidden = false; chip.setAttribute('aria-expanded', 'true'); fill().then(()=>{ const first = panel.querySelector('.sx-item'); if(first) first.focus(); }); }

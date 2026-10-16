@@ -20,7 +20,7 @@ const COMMANDS = [
   {id:'machine',    label:'Maschinenraum',                 hint:'Live-Status der Runtime',                          words:['maschinenraum','runtime','status','system']},
   {id:'dev',        label:'Entwicklungsumgebung',          hint:'Isolierte Ausführung, Blocker',                    words:['entwicklung','entwicklungsumgebung','sandbox','devvm','microvm']},
   {id:'switches',   label:'Schalter',                      hint:'Modell-Loader, llama-server, Richtlinien',          words:['schalter','loader']},
-  {id:'settings',   label:'Einstellungen',                 hint:'API-Einstellungen für Cloud-Modelle und Schlüssel', words:['einstellung','einstellungen','api','api-einstellungen','schlüssel','schluessel','cloud']},
+  {id:'settings',   label:'API und Modelle',               hint:'Anbieter, Schlüssel, Modellauswahl',                words:['einstellung','einstellungen','api','api und modelle','api-modelle','schlüssel','schluessel','cloud']},
   {id:'library',    label:'Bibliothek',                    hint:'Skills ansehen, eigene schreiben',                 words:['bibliothek','skill','skills','skill-bibliothek','nachschlagen']},
   {id:'theme',      label:'Erscheinungsbild wechseln',     hint:'Retro, Klar oder Nacht – z. B. „thema nacht“',      words:['thema','theme','erscheinungsbild','aussehen','dunkel','hell','nachtmodus','desktop wechseln','desktop anpassen','skin']}
 ];
