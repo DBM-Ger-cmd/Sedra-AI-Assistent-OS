@@ -79,8 +79,8 @@ class CloudChatTest(unittest.TestCase):
 
         with mock.patch.object(labor, 'provider_adapter', return_value=Adapter([])):
             res = labor.cloud_chat(config(), 'nvidia', 'm/x', [{'role': 'user', 'content': 'Schreib an max.mustermann@example.com'}])
-        self.assertEqual(res['status'], 'blocked', 'personal data stops before the cloud (Klaus, 16.10.2026)')
-        self.assertNotIn('sent', seen, 'the adapter is never called')
+        self.assertEqual(res['status'], 'completed', 'personal data is replaced by own terms, the question still goes through')
+        self.assertNotIn('max.mustermann@example.com', str(seen['sent']), 'the address never leaves the machine')
 
 
 class ModelTest(unittest.TestCase):

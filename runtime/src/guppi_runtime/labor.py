@@ -10,6 +10,7 @@ import time
 from .core.content_guard import ContentGuard, ContentGuardStop
 from .models.base import ModelAdapterError
 from .models.cloud_api import provider_adapter
+from .redesign_prep import pseudonymize
 
 PING = [{"role": "user", "content": "Antworte nur mit dem Wort OK."}]
 CHAT_MAX_TOKENS = 1024           # Antwort im Gespräch; Reasoning-Modelle brauchen Luft zum Denken
@@ -95,6 +96,9 @@ def cloud_chat(config, provider_id, model, messages, environ=None, key_store=Non
         raise ValueError("model_required")
     adapter = provider_adapter(config, provider_id, environ, key_store)
     guard = ContentGuard(cloud_enabled=True)
+    # Persönliche Angaben werden nicht blockiert, sondern vorher durch eigene Begriffe ersetzt (redesign_prep). Die Zuordnung
+    # bleibt lokal. Was danach noch auffällt, prüft der Inhaltsschutz wie gewohnt.
+    messages = [dict(m, content=pseudonymize(m["content"])[0]) if isinstance(m.get("content"), str) else m for m in messages]
     try:
         result = guard.call(messages, model=model, route="cloud",
                             complete=lambda msgs: adapter.chat(msgs, model=model, max_tokens=CHAT_MAX_TOKENS)["content"])
