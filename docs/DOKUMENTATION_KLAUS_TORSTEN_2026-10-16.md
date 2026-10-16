@@ -103,3 +103,9 @@ Vor den Redesign-Arbeiten: `Sicherheitskopie_GUPPI_Runtime_v1.20_2026-10-16_1105
 - Architektur: `docs/ARCHITEKTUR.md`
 - Betrieb: `docs/BETRIEB.md`
 - Verträge: Regelwerk `REGELWERK_DATENKATEGORIEN_CLOUDSPERRE_v0.1` (im Projekt unter `runtime/src/guppi_runtime/gateway/klassen.py`)
+
+## 13. Entscheidungen (nachgetragen am 16.10.2026)
+
+1. **Personenbezug in der Cloud:** Klaus fordert eine einheitliche Regel auf rechtlicher Grundlage. Bis diese vorliegt, gilt die Cloud für Personenbezug als nicht freigegeben. Der Inhaltsschutz wird entsprechend angepasst, sobald die Regel steht.
+2. **Schreibzugriff des Cloud-Modells:** Der Captain gibt die Freigabe für den gewählten Arbeitsbereich (`workspace/GUPPI_OS/redesign/`). Live-Dateien sind davon ausgenommen. Übernahme nur nach Prüfung und Freigabe.
+3. **Commit:** Stand `6c4d462` im lokalen Repository, nicht gepusht.
