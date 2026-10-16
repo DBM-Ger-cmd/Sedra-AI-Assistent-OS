@@ -156,6 +156,12 @@ def run_canary(canary, executable_dir, *, popen=subprocess.Popen, steps_runner=r
         state.update(passed=False, result="port_in_use", detail=f"port {canary.port} already answers")
         write_state(state, state_path)
         return state
+    if not Path(canary.gguf).is_file():
+        # 2026-10-16: build_command used to raise ValueError("valid_gguf_model_required") here, which read as a broken MODEL recipe.
+        # The canary model is simply not where runtime/config/local_paths.yaml puts it: say so, and refuse as a failed canary.
+        state.update(passed=False, result="gguf_missing", detail=str(canary.gguf))
+        write_state(state, state_path)
+        return state
     argv = build_command(Path(executable_dir) / "llama-server.exe", gguf=canary.gguf, context=canary.context, host="127.0.0.1", port=canary.port,
                          alias="gpu-canary", gpu_layers=99, parallel=1, kv_type="q8_0", flash_attn="on", reasoning="off", ubatch=512, jinja=True)
     env = dict(os.environ)

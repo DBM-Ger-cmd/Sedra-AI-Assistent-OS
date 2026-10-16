@@ -637,3 +637,20 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   self.assertEqual(get('/api/rework')[0],403)                            # needs the token like every API call
   status,body=get('/api/rework',{'X-GUPPI-Token':token})
   self.assertEqual((status,json.loads(body)),(200,{'stalled':[]}))
+
+
+class LoadFailureLog(unittest.TestCase):
+ """2026-10-16: MODEL_LOAD_FAILED names the recipe's model file. The server profile is in `load_profile`; `profile` is the
+ routing profile's NAME, so the old lookup logged gguf '' for every failure."""
+ def test_the_failure_carries_the_recipe_file_and_whether_it_exists(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   hub=UIXHub(Path(tmp)/'project',ARCH)
+   gguf=Path(tmp)/'m.gguf';gguf.write_bytes(b'GGUF')
+   resolution={'provider_ref':'llama-cpp-server','profile':'Standard','load_profile':{'server':{'gguf':str(gguf)}}}
+   with unittest.mock.patch.object(hub.runtime.audit,'append') as append:
+    hub._log_load_failure('coder.local_qwen3_5_9b_q6_k',resolution,ValueError('valid_gguf_model_required'))
+  name,=append.call_args.args
+  payload=append.call_args.kwargs['payload']
+  self.assertEqual(name,'MODEL_LOAD_FAILED')
+  self.assertEqual((payload['recipe_id'],payload['gguf'],payload['gguf_exists']),('coder.local_qwen3_5_9b_q6_k',str(gguf),True))
+  self.assertEqual((payload['exception'],payload['detail']),('ValueError','valid_gguf_model_required'))

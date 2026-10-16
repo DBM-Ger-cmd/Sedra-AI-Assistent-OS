@@ -159,5 +159,33 @@ class RuntimeHook(Base):
             self.assertEqual(LlamaServerConfig({"enabled": True, "engine_source": "guppi", "engine_build": "b11371"}).engine_build, "b11371")
 
 
+class MissingCanaryFile(Base):
+    """2026-10-16: a canary model that is not on disk is a failed canary with its own reason. It used to surface as
+    ValueError('valid_gguf_model_required') out of build_command, which read as a broken MODEL recipe."""
+    def setUp(self):
+        super().setUp()
+        self.missing = self.root / "unsloth" / "nicht-da.gguf"
+        self.state = self.root / "gpu_canary.json"
+
+    def test_the_canary_reports_the_missing_file_and_starts_nothing(self):
+        canary = gpu_canary.CanaryConfig(canary_raw(self.missing))
+        state = gpu_canary.run_canary(canary, self.backend, healthy=lambda endpoint: False, state_path=self.state, popen=self.env.popen, sleep=lambda s: None)
+        self.assertEqual((state["passed"], state["result"]), (False, "gguf_missing"))
+        self.assertEqual(state["detail"], str(self.missing))
+        self.assertEqual(self.env.procs, [])
+        self.assertFalse(gpu_canary.passed_this_boot(self.state))
+
+    def test_a_load_is_refused_with_the_canary_reason_and_no_server_starts(self):
+        rt = self.runtime(canary=canary_raw(self.missing))
+        def real_canary(canary, executable_dir, **kw):
+            return gpu_canary.run_canary(canary, executable_dir, healthy=lambda endpoint: False, state_path=self.state, popen=self.env.popen, sleep=lambda s: None)
+        with mock.patch.object(gpu_canary, "ensure", side_effect=real_canary):
+            with self.assertRaises(RuntimeControlError) as cm:
+                rt.load_model("m", context_length=4096, server={"gguf": str(self.gguf)})
+        self.assertIn(f"gpu_canary_gguf_missing:{self.missing}", str(cm.exception))
+        self.assertNotIn("valid_gguf_model_required", str(cm.exception))
+        self.assertEqual(self.env.procs, [])
+
+
 if __name__ == "__main__":
     unittest.main()

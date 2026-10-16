@@ -2381,7 +2381,8 @@ class UIXHub:
     def _log_load_failure(self, recipe_id, resolution, exc):
         # Ein Fehlschlag mit allem, was man zur Ursache braucht: Rezept, geprüfter Pfad, ob die Datei da ist, Ausnahme
         try:
-            server = ((resolution or {}).get('profile') or {}).get('server') or {}
+            # 2026-10-16: the server profile is in load_profile; 'profile' is the routing profile's NAME, so this lookup always logged gguf ''
+            server = ((resolution or {}).get('load_profile') or {}).get('server') or {}
             gguf = str(server.get('gguf') or '')
             self.runtime.audit.append('MODEL_LOAD_FAILED', component='uix', payload={
                 'recipe_id': recipe_id, 'gguf': gguf, 'gguf_exists': bool(gguf) and Path(gguf).is_file(),
