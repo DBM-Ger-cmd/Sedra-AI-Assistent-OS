@@ -41,12 +41,14 @@
     });
 
     head('Werkstatt');
+    row('Master-Chat', {type: 'talk', id: 'master', title: 'Master-Chat'}, 'das Gespräch unten');
     const loaded = (models.recipes || []).find(r=>r.loaded);
     many('Modelle', {type: 'model', id: 'alle', title: 'Werkstatt'}, (models.recipes || []).length + (loaded ? ' · ' + loaded.id + ' geladen' : ' · keins geladen'), loaded ? 'ok' : '');
     row('Modell hinzufügen', {type: 'model', id: 'neu', title: 'Neues Modell'}, 'GGUF wählen, Rezept prüfen, Freigabe');
     row('Teststrecke', {type: 'model', id: 'teststrecke', title: 'Teststrecke'}, loaded ? 'Standardtest für ' + loaded.id : 'braucht ein geladenes Modell');
     row('KI Labor', {type: 'labor', id: 'ki', title: 'KI Labor'}, 'Anbieter, Modelle, Tests');
     row('Master-Chat', {type: 'entwurf', id: 'chat', title: 'Master-Chat · Befehle und Vorschau'}, 'großes Gespräch, Vorschau aus- und einblendbar');
+    row('Läufe', {type: 'labor', id: 'laeufe', title: 'KI Labor · Läufe'}, 'Protokolle der Modellläufe');
 
     head('Besatzung');
     const instances = (agents.instances || []).length;

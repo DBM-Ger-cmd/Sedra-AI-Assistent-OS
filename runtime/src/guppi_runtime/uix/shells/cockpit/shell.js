@@ -93,6 +93,8 @@
     // every way into an object goes through here: tree, palette, a link inside a tool, the Gespräch
     openObject(object){
       if(!object || !object.type || !object.id) return;
+      // der Master-Chat ist das Gespräch unten: kein Reiter, nur der Cursor in das Eingabefeld
+      if(object.type === 'talk'){ const field = this.el.talk.querySelector('textarea, input'); if(field) field.focus(); return; }
       this.dock.open(object);
       this.tree.mark(object);
       this.ctx.bus.emit('talk.context', {object: {type: object.type, id: object.id, title: object.title || ''}});
