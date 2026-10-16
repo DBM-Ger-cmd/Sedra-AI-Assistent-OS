@@ -1,0 +1,21 @@
+{
+  "format": "guppi-auftrag",
+  "version": 1,
+  "name": "bewerte-beispiel",
+  "art": "bewerten",
+  "beschreibung": "Beispielauftrag: bewertet eine Quelldatei und schreibt einen kurzen Bericht",
+  "modell": {
+    "provider": "nvidia",
+    "model": "nvidia/nemotron-3.5-super-vl-120b-a12b"
+  },
+  "spezifikation": "spezifikation.md",
+  "lab": "beispiel_lab",
+  "eingaben": ["quelle/README.md"],
+  "schreibbereich": ["out"],
+  "ausgaben": ["out/bewertung.md"],
+  "pruefregeln": ["schreibbereich", "ausgaben_vollstaendig", "belege"],
+  "abbruchregeln": {
+    "max_schritte": 20,
+    "max_wiederholungen": 2
+  }
+}
