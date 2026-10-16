@@ -1,0 +1,42 @@
+skill:
+  id: sandbox-development
+  name: Sandbox Development
+  version: 1.0.0
+  owner_module: planning-context
+  description: Preview and run generated development operations in the isolated sandbox.
+  capabilities:
+  - sandbox_execution
+  - isolated_code_execution
+  - test_execution
+  triggers:
+  - sandbox
+  - isoliert ausführen
+  - microvm
+  tool_hints:
+  - sandbox
+  workflow:
+  - stage: preview
+    tool: sandbox
+    operation: preview
+    binding:
+      request: <sandbox-request>
+    read_only: true
+  - stage: execute
+    tool: sandbox
+    operation: run
+    binding:
+      plan: <approved-plan>
+    guard: required
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.10.0
+  status: enabled
+  execution_support: blueprint_only; parameter_binder_pending

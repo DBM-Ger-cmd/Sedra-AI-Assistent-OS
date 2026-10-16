@@ -1,0 +1,13 @@
+project_inspection_report:
+  schema: 1
+  kind: project_inspection
+  required:
+  - mission_id
+  - binding_digest
+  - project_path
+  - entries
+  - files
+  - tool_evidence
+  source_verification: SHA256 and bounded independent UTF-8 read
+  semantic_code_review: false
+  tests_executed: false

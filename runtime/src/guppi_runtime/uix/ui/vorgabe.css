@@ -1,0 +1,16 @@
+/* UI contract 1.0 – der Creator einer Shell aus Vorgabe (ui/vorgabe.js): Satz, Vorlagen, Skizze, „So anlegen“. Nur Token. */
+.vg{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-2);background:var(--panel-2)}
+.vg-text{font:inherit;font-size:var(--size-small);padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--text);resize:vertical;min-height:44px}
+.vg-ids{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vg-ids input{font:inherit;font-size:var(--size-small);padding:6px 9px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--text);min-width:0}
+.vg-buttons{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.vg-preview{display:flex;flex-direction:column;gap:8px;padding-top:8px;border-top:1px solid var(--line-soft)}
+.vg-sketch{display:flex;flex-direction:column;gap:3px;height:120px;max-width:320px;padding:4px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+.vg-row{display:grid;gap:3px;min-height:0;align-items:stretch}
+.vg-cell{display:flex;align-items:center;justify-content:center;min-width:0;padding:2px 3px;border:1px solid var(--line-soft);border-radius:4px;background:var(--panel-2)}
+.vg-cell span{font-size:var(--size-xs);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.vg-werkstueck{background:var(--panel)} .vg-werkstueck span{color:var(--text);font-weight:600}
+.vg-gespraech{background:var(--sea-bg);border-color:var(--sea-line)}
+.vg-entscheidungen{background:var(--warn-bg);border-color:var(--warn-line)}
+.vg-drawer{align-self:flex-end;font-size:var(--size-xs);color:var(--muted);padding:2px 6px;border:1px dashed var(--line);border-radius:4px}
+.vg-sentence{margin:0;font-size:var(--size-small)}

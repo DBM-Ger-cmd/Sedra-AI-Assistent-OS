@@ -1,0 +1,20 @@
+provenance:
+  schema: 1
+
+  object_id: ""
+  object_type: ""
+
+  created:
+    timestamp: null
+    component: ""
+    mission_id: null
+    evolution_id: null
+
+  derived_from: []
+
+  models_tools:
+    models: []
+    tools: []
+
+  approvals: []
+  verification_refs: []

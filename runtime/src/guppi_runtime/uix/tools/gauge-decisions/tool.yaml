@@ -1,0 +1,16 @@
+tool:
+  id: gauge-decisions
+  name: "Entscheidungen (Instrument)"
+  description: "Wie viele Entscheidungen warten."
+  version: 1.0.0
+  kind: instrument
+  handles: []
+  order: 13
+  entry: {js: tool.js}
+  api:
+    - GET /api/strip
+  events:
+    emits: [object.open]
+    listens: [task.changed, decision.pending, decision.answered, model.changed, system.state]
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

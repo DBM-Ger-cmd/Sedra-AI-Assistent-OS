@@ -1,0 +1,5 @@
+Second review of no_call_monitor.py (attempt_01_20261010_222526), Captain/Claude 2026-10-10: the cleanup added COPIED code. Keep the behaviour exactly.
+1. _classify_and_extract is a full copy of classify (the same 18 lines, only with the calls added). classify must USE it: `return _classify_and_extract(message, tool_names)[0]`, and its own body goes away.
+2. _TEXTS is built again in every call of _text_for_kind: make it a module constant next to _UNUSED_RE (the prose text with a {} placeholder for the terminal).
+3. _parse_candidate builds set(tool_names) for every candidate; `name is None or name not in ...` is the same as `name not in ...` when tool_names holds str only. Keep it simple.
+Change nothing else.

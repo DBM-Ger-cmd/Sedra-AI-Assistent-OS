@@ -1,0 +1,8 @@
+runtime_provider:
+  schema: 1
+  id: llama-cpp-server
+  available: false
+  executable: null
+  endpoint: http://127.0.0.1:8080
+  healthy: false
+  local_only: true

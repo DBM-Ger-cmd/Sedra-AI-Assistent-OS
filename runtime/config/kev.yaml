@@ -1,0 +1,24 @@
+# Local Kev verification layer. Disabled until a qualified local Kev server runs.
+# Kev is a separate project (torch + transformers, Python 3.12/3.13, a GPU or Apple Silicon); nothing of it is bundled here.
+# Start it yourself, for example:  uv run --extra serve python -m kev.serve --run jaredpalmer/kev-4b --port 8008
+# Its answer is a calibrated opinion of a small model: GUPPI records it as a model assessment, never as a test result.
+kev:
+  schema: 1
+  enabled: false
+  endpoint: http://127.0.0.1:8008/v1/systemone    # kev.serve default port; loopback only, enforced in code
+  model: kev-latest
+  api_key_env: KEV_API_KEY                        # name of the environment variable holding the server's bearer key, if it has one
+  local_only: true
+  models:
+    - id: Kev-0.8B
+      base: Qwen3.5-0.8B-Base
+      role: smallest_local_verifier
+    - id: Kev-4B
+      base: Qwen3.5-4B-Base
+      role: default_local_verifier
+    - id: Kev-9B
+      base: Qwen3.5-9B-Base
+      role: high_accuracy_local_verifier
+    - id: Kev-27B                                 # needs an 80 GB GPU (51 GB of full weights); listed for completeness
+      base: Qwen3.8-27B
+      role: highest_accuracy_verifier_large_gpu

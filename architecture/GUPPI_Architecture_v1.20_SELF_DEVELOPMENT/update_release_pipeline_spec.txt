@@ -1,0 +1,36 @@
+GUPPI OS – Update Builder + Candidate/Release Pipeline v1
+
+Ziel:
+GUPPI entwickelt niemals direkt im laufenden Stable-System.
+Aus GUPPI_EVOLUTION.yaml wird zuerst ein isolierter Candidate erzeugt.
+
+Ablauf:
+1. Evolution Request validieren.
+2. Base-Version gegen installierte Stable-Version prüfen.
+3. isolierten Development Workspace vorbereiten.
+4. Candidate bauen.
+5. Testumfang anhand E1/E2/E3 bestimmen.
+6. Candidate prüfen.
+7. erforderlichen Captain Gate durchführen.
+8. Update-Paket und Rollback-Bundle erzeugen.
+9. vor Installation Snapshot/Recovery sicherstellen.
+10. Candidate installieren.
+11. Health Check durchführen.
+12. PASS -> Stable; FAIL -> Rollback.
+
+Update-Klassen:
+E1 – Skills, Knowledge, Profile.
+E2 – Module.
+E3 – Core.
+
+E3 benötigt mindestens:
+- Unit Tests
+- Integration Tests
+- Regression Tests
+- Rollback Test
+- Boot Test
+- Compatibility Check
+- Captain Gate
+
+Kernregel:
+Ein fehlgeschlagener Candidate verändert die bekannte Stable-Version nicht dauerhaft.

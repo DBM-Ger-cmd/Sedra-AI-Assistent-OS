@@ -1,0 +1,15 @@
+# Arbeitsplatz-Wissen dieses Moduls (Build 24, Ticket B6-G-06; Klaus 15.10.2026 19:36: „Arbeitsplatzwissen bleibt immer im Modul“).
+# desk/arbeitsplatz.py liest diese Datei ein; SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen, nichts läuft von allein.
+# Erlaubt: satz, zonen [{name, wo}], woerter {wort: {ist, objekt}}, anleitungen [{id, titel, schritte, ort, stich}], begriffe {wort: text}.
+arbeitsplatz:
+  anleitungen:
+  - id: logbuch
+    titel: Nachsehen, was passiert ist
+    schritte:
+    - Logbuch öffnen (System/Werkzeuge).
+    - 'Die Audit-Kette: jedes Ereignis mit Zeit, Art und Komponente; „Kette intakt“ steht oben.'
+    ort:
+      type: logbook
+      id: audit
+      title: Logbuch
+    stich: logbuch audit verlauf protokoll was ist passiert nachsehen

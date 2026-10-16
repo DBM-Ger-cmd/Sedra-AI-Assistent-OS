@@ -1,0 +1,23 @@
+sandbox:
+  backend: microsandbox
+  cleanup_timeout_seconds: 15
+  command_timeout_seconds: 30
+  cpus: 2
+  image: python:3.12-slim@sha256:b0f67293da34138769ff0ae9838dcc85bc6c894dae0b0a11be466c8736721844   # imported 2026-10-02 (mission M-3E8064C0, gate HG-94AD5BF2); local digest after msb save/load
+  image_archive_sha256: b5f4a99f1456e6f55b366481233c4a3f3832e68847368cf0729f3f229b41b4a6   # offline-assets/python-3.12-slim.tar
+  job_timeout_seconds: 120
+  max_export_bytes: 4194304
+  max_file_bytes: 1048576
+  max_files: 200
+  max_input_bytes: 4194304
+  max_log_bytes: 32768
+  max_processes: 64
+  memory_mib: 1024
+  network: deny
+  root_disk_mib: 256
+  schema: 1
+  sdk_version: 0.7.4
+  target_qualified: true   # Captain released 2026-10-02 after boundary check (docs/SANDBOX_BOUNDARY_STATUS.md) and DNS capture dns_capture_20261002T185451Z: NO_QUERY_LEFT_THE_HOST
+  # allow_export_dirs: true   # OFF (key absent). Captain's switch for directory export (DevVM Phase 1, 2026-10-06): a plan may then name directories instead of single files,
+  #                           the worker lists them with the SDK (symlinks and special files refuse the whole export) and the broker checks every returned file against the approved
+  #                           directories and the file-type rules; results still land in a candidate that needs the Captain's review. See docs/DEVVM_PHASE1_BERICHT_2026-10-06.md.

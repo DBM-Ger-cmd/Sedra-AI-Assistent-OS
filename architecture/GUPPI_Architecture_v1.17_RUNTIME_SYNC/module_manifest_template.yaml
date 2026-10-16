@@ -1,0 +1,30 @@
+module:
+  id: "example-module"
+  name: "Example Module"
+  version: "0.1.0"
+  core_contract: 1
+
+  capabilities: []
+
+  permissions:
+    read: []
+    write: []
+
+  communicates_with: []
+
+  message_types:
+    accepts: []
+    emits: []
+
+  guard:
+    level: "standard"
+
+  lifecycle:
+    startup_required: false
+    hot_reload_supported: false
+
+  health:
+    check: "module_health"
+
+  compatibility:
+    min_guppi_version: "0.1.0"

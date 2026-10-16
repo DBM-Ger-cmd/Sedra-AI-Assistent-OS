@@ -1,0 +1,5 @@
+Review of replay_log.py (attempt_01_20261010_212206), Captain/Claude 2026-10-10: remove dead and copied code before the integration, keep the behaviour exactly.
+1. Player.__call__: the branch for a non-strict mismatch and the normal path both do `self._index += 1; self.used += 1; return copy.deepcopy(record["response"])`. Keep ONE path: after the mismatch check (raise or count) fall through to the common end.
+2. _index and used always have the same value: keep only used.
+3. dumps: the `if not records: return ""` special case is not needed when every line gets its own "\n" ("".join of the lines).
+Change nothing else.

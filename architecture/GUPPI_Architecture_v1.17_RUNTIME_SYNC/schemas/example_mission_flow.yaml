@@ -1,0 +1,15 @@
+example_mission:
+  mission_id: "M-0042"
+  captain_intent: "Implementiere eine neue GUPPI-Funktion kontrolliert und prüfbar."
+
+  flow:
+    - {from: "guppi-core", to: "planning-context", message: "planning_request"}
+    - {from: "planning-context", to: "control-master", message: "capability_query"}
+    - {from: "planning-context", to: "guppi-core", message: "plan_ready"}
+    - {from: "guppi-core", to: "control-master", message: "execution_request"}
+    - {from: "control-master", to: "guppi-core", message: "execution_complete"}
+    - {from: "guppi-core", to: "verification", message: "verification_request"}
+    - {from: "verification", to: "control-master", message: "verification_retest"}
+    - {from: "verification", to: "guppi-core", message: "verification_pass"}
+
+  final_state: "COMPLETE"

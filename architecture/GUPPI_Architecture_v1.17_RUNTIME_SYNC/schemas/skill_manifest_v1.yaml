@@ -1,0 +1,21 @@
+skill:
+  id: example-skill
+  name: Example Skill
+  version: 0.1.0
+  owner_module: planning-context
+  capabilities: []
+  inputs: []
+  outputs: []
+  permissions:
+    read: []
+    write: []
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 0.1.0
+  status: enabled
+  topics: []
+  execution_support: blueprint_only
+  acceptance_criteria: []
+  boundaries: []

@@ -1,0 +1,122 @@
+[
+  {
+    "intent": "Entwirf die Architektur und Systemgrenzen",
+    "skill": "architecture-design",
+    "topic": "development"
+  },
+  {
+    "intent": "Design the system architecture",
+    "skill": "architecture-design",
+    "topic": "development"
+  },
+  {
+    "intent": "Erstelle ein Bedrohungsmodell und eine Sicherheitsprüfung",
+    "skill": "security-review",
+    "topic": "security"
+  },
+  {
+    "intent": "Perform a security review and threat model",
+    "skill": "security-review",
+    "topic": "security"
+  },
+  {
+    "intent": "Schreibe ein Handbuch und eine README",
+    "skill": "documentation-authoring",
+    "topic": "documentation"
+  },
+  {
+    "intent": "Write documentation and a README",
+    "skill": "documentation-authoring",
+    "topic": "documentation"
+  },
+  {
+    "intent": "Analysiere diese CSV für die Datenanalyse",
+    "skill": "data-analysis",
+    "topic": "data"
+  },
+  {
+    "intent": "Analyze this dataset for data analysis",
+    "skill": "data-analysis",
+    "topic": "data"
+  },
+  {
+    "intent": "Entwirf einen Prozessablauf zur Automatisierung",
+    "skill": "workflow-design",
+    "topic": "automation"
+  },
+  {
+    "intent": "Design an automation workflow",
+    "skill": "workflow-design",
+    "topic": "automation"
+  },
+  {
+    "intent": "Entwirf einen Connector und Schnittstellenvertrag",
+    "skill": "connector-design",
+    "topic": "integrations"
+  },
+  {
+    "intent": "Design an API integration connector",
+    "skill": "connector-design",
+    "topic": "integrations"
+  },
+  {
+    "intent": "Entwirf eine Benutzeroberfläche als Wireframe",
+    "skill": "ui-design",
+    "topic": "interface"
+  },
+  {
+    "intent": "Create a UI design and wireframe",
+    "skill": "ui-design",
+    "topic": "interface"
+  },
+  {
+    "intent": "Bereite die PC Abnahme und ein Prüfprotokoll vor",
+    "skill": "acceptance-planning",
+    "topic": "acceptance"
+  },
+  {
+    "intent": "Prepare PC acceptance and a ready test",
+    "skill": "acceptance-planning",
+    "topic": "acceptance"
+  },
+  {
+    "intent": "Plane ein portables USB Offline Paket",
+    "skill": "portable-deployment",
+    "topic": "portability"
+  },
+  {
+    "intent": "Plan a portable USB offline package",
+    "skill": "portable-deployment",
+    "topic": "portability"
+  },
+  {
+    "intent": "Untersuche den Engpass mit einer Leistungsanalyse",
+    "skill": "performance-analysis",
+    "topic": "performance"
+  },
+  {
+    "intent": "Perform bottleneck and performance analysis",
+    "skill": "performance-analysis",
+    "topic": "performance"
+  },
+  {
+    "intent": "Erstelle einen Quellenvergleich und Faktencheck",
+    "skill": "source-evaluation",
+    "topic": "research"
+  },
+  {
+    "intent": "Perform source evaluation and fact check",
+    "skill": "source-evaluation",
+    "topic": "research"
+  },
+  {
+    "intent": "Erstelle ein Softwareinventar der Herstellersoftware",
+    "skill": "software-inventory",
+    "topic": "hardware"
+  },
+  {
+    "intent": "Inspect vendor software with a software inventory",
+    "skill": "software-inventory",
+    "topic": "hardware"
+  }
+]

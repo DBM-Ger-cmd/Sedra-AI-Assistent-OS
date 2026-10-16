@@ -1,0 +1,57 @@
+# Arbeitsplatz-Wissen dieses Moduls (Build 24, Ticket B6-G-06; Klaus 15.10.2026 19:36: „Arbeitsplatzwissen bleibt immer im Modul“).
+# desk/arbeitsplatz.py liest diese Datei ein; SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen, nichts läuft von allein.
+# Erlaubt: satz, zonen [{name, wo}], woerter {wort: {ist, objekt}}, anleitungen [{id, titel, schritte, ort, stich}], begriffe {wort: text}.
+arbeitsplatz:
+  satz: Ein Werkstück vorn, die Nachweise daneben, das Gespräch unten.
+  zonen:
+  - name: Instrumentenleiste
+    wo: 'oben: Zustand, Modell, GPU, Entscheidungen, Aufgaben, Modus – ein Klick öffnet den Ort'
+  - name: Baum
+    wo: 'links: Projekt, Vorhaben, Aufgaben, Werkstatt, Besatzung, Bibliothek, System – eine Zeile öffnet einen Reiter'
+  - name: Werkbank
+    wo: 'Mitte: die offenen Reiter; die Zeile darüber zeigt die Handlungen des Werkstücks (Verben)'
+  - name: Gespräch
+    wo: 'unten: das eine Eingabefeld – Auftrag, Frage oder ein Ort'
+  - name: ＋ Neu
+    wo: 'oben rechts: Vorhaben, Projekt, Datei, Modell hinzufügen'
+  woerter:
+    entscheidungen:
+      ist: das Instrument „Entscheidungen“ oben – ein Klick öffnet die Liste
+      objekt:
+        type: decision
+        id: alle
+        title: Entscheidungen
+        collection: true
+    aufgaben:
+      ist: Baum links unter „Aufgaben“, Instrument oben
+      objekt:
+        type: task
+        id: alle
+        title: Aufgaben
+        collection: true
+    werkstatt:
+      ist: 'Baum links: Modelle, Modell hinzufügen, Teststrecke; Instrument „Modell“ oben'
+      objekt:
+        type: model
+        id: alle
+        title: Werkstatt
+        collection: true
+    dateien:
+      ist: Baum links unter „Projekt“
+      objekt:
+        type: project
+        id: projekt
+        title: Projekt
+    logbuch:
+      ist: Baum links unter „System“
+      objekt:
+        type: logbook
+        id: audit
+        title: Logbuch
+  begriffe:
+    werkbank: 'Die Mitte des Cockpits: die offenen Reiter (je ein Objekt) und darüber die Zeile mit den Handlungen des Werkstücks. Teilen und
+      Ziehen ordnen die Reiter.'
+    werkstück: Das Objekt, das vorn liegt (Aufgabe, Vorgang, Modell …). Die Verben darüber gelten ihm.
+    nachweis: 'Was neben dem Werkstück steht und es belegt: Kandidat, Tests, Live-Zeilen, Kosten.'
+    instrument: 'Eine Zelle der Leiste: ein Wert aus /api/strip; ein Klick öffnet den Ort.'
+    reiter: Ein offenes Objekt an der Werkbank; Reiter tragen Namen, Zeilen tragen Zustand.

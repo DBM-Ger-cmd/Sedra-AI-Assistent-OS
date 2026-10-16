@@ -1,0 +1,27 @@
+core_invariants:
+  version: 1
+
+  rules:
+    - id: "CI-001"
+      rule: "The Captain remains the highest authority."
+
+    - id: "CI-002"
+      rule: "Stable must never silently replace or modify itself."
+
+    - id: "CI-003"
+      rule: "Modules and skills must not bypass Guard or Human Gates."
+
+    - id: "CI-004"
+      rule: "The original Captain intent is immutable."
+
+    - id: "CI-005"
+      rule: "Failed verification must never promote a candidate to Stable."
+
+    - id: "CI-006"
+      rule: "Core updates require rollback support."
+
+    - id: "CI-007"
+      rule: "Every installed update must declare its source version."
+
+    - id: "CI-008"
+      rule: "Only GUPPI may change the mission objective or mission state authority fields."

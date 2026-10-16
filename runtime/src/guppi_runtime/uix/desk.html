@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="klar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SEDRA</title>
+<!-- The page of the desk (Build 7). It carries no layout of its own: the UI contract loads the active shell, the shell builds
+     the screen and gives the tools their containers. Everything here is code, no data; no inline script (ENTWICKLUNG, Regel:
+     Top-Level-Code nur in shell.js bzw. tool.js). The Captain's old desktop stays reachable under /retro. -->
+<link rel="stylesheet" href="/uix/ui/tokens.css">
+<link rel="stylesheet" href="/uix/ui/vorgabe.css">
+<link rel="stylesheet" href="/uix/ui/wechsel.css">
+</head>
+<body>
+<div id="sedra-root" role="application" aria-label="SEDRA Cockpit"></div>
+<noscript>Diese Oberfläche braucht JavaScript. Ohne JavaScript bleibt die Kommandozeile: <code>python -m guppi_runtime.cli</code>.</noscript>
+<script src="/uix/ui/api.js"></script>
+<script src="/uix/ui/bus.js"></script>
+<script src="/uix/ui/dom.js"></script>
+<script src="/uix/ui/places.js"></script>
+<script src="/uix/ui/vorgabe.js"></script>
+<script src="/uix/ui/lifecycle.js"></script>
+<script src="/uix/ui/wechsel.js"></script>
+<script src="/uix/ui/loader.js"></script>
+<script src="/uix/ui/start.js"></script>
+</body>
+</html>

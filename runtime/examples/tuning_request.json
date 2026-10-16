@@ -1,0 +1,27 @@
+{
+  "model_id": "REPLACE_WITH_CATALOG_GGUF_ID",
+  "profile_id": "safe-cpu-default",
+  "axes": {
+    "context": [
+      2048,
+      4096
+    ],
+    "batch_size": [
+      64,
+      128
+    ],
+    "gpu_layers": [
+      0
+    ],
+    "kv_precision": [
+      "fp16"
+    ]
+  },
+  "max_candidates": 4,
+  "repeats": 3,
+  "warmups": 1,
+  "max_tokens": 128,
+  "port": 18080,
+  "max_failures": 2,
+  "budget_seconds": 1800
+}

@@ -1,0 +1,65 @@
+skill:
+  id: security-review
+  name: Sicherheits- und Berechtigungsprüfung
+  version: 1.0.0
+  owner_module: planning-context
+  description: Sicherheits- und Berechtigungsprüfung als begrenzter Workflow-Blueprint.
+  topics:
+  - security
+  capabilities:
+  - security_review
+  triggers:
+  - sicherheitsprüfung
+  - sicherheitspruefung
+  - security review
+  - threat model
+  - bedrohungsmodell
+  tool_hints:
+  - filesystem
+  - git
+  workflow:
+  - stage: observe
+    tool: filesystem
+    operation: list_dir
+    binding:
+      path: <project-root>
+    read_only: true
+  - stage: plan
+    action: map_trust_boundaries
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: review_permissions_and_secret_handling
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: prioritize_findings_with_evidence
+    execution: planning_only
+    read_only: true
+  inputs:
+  - project-root
+  - approved scope
+  outputs:
+  - threat model
+  - findings
+  - mitigations
+  execution_support: blueprint_only; parameter_binder_pending
+  acceptance_criteria:
+  - Inputs and scope are explicit
+  - Claims distinguish evidence from assumptions
+  - No action outside selected tools and Guard
+  boundaries:
+  - No automatic deployment, publishing or hardware writes
+  - Planning actions require a later validated execution binding
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.11.0
+  status: enabled

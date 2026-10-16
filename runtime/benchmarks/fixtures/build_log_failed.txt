@@ -1,0 +1,22 @@
+S0 connection check: coder.local_primary ok
+# run devvm_build_assert_catalog started 2026-10-13T18:02:29 config {"spec": "assert_catalog", "attempts": 1}
+   load qwen3.6-35b-a3b with a window of 32768 tokens in each of 1 slot(s)
+   agent solo developer         qwen3.6-35b-a3b        hand_in     30 calls  702.6 s 13595 tokens, 325550 prompt, peak 17470
+   agent solo developer (rework 1) qwen3.6-35b-a3b        answer_cut   8 calls  702.9 s 25409 tokens, 139247 prompt, peak 15151
+   agent solo developer (rework 2) qwen3.6-35b-a3b        hand_in     10 calls 1078.9 s 25848 tokens, 202640 prompt, peak 20595
+   stage core: hidden PASSED (own check accepted=UNJUDGED, own tests none, 712.9 s)
+   lesson for stage more: In Python 3 `\d` on a str also matches Unicode digits such as Arabic-I...
+   agent solo developer         qwen3.6-35b-a3b        hand_in     20 calls  367.0 s 6688 tokens, 191553 prompt, peak 16605
+   agent solo developer (rework 1) qwen3.6-35b-a3b        hand_in     14 calls  687.6 s 20049 tokens, 223102 prompt, peak 20239
+   stage more: hidden PASSED (own check accepted=UNJUDGED, own tests none, 367.0 s)
+   lesson for stage rest: In Python 3 `\d` on a str also matches Unicode digits such as Arabic-I...
+   agent solo developer         qwen3.6-35b-a3b        hand_in     34 calls  974.6 s 22927 tokens, 419004 prompt, peak 19875
+   agent solo developer (rework 1) qwen3.6-35b-a3b        hand_in      6 calls  348.2 s 12028 tokens, 77131 prompt, peak 16227
+   agent solo developer (rework 2) qwen3.6-35b-a3b        hand_in     17 calls  822.2 s 8162 tokens, 304982 prompt, peak 20828
+   agent solo developer (rework 3) qwen3.6-35b-a3b        hand_in      6 calls  111.3 s 2894 tokens, 99071 prompt, peak 17729
+   stage rest: hidden FAILED (own check accepted=UNJUDGED, own tests none, 974.7 s)
+   stopped after the failed stage rest; skipped: all (--keep-going builds them anyway)
+   resume: benchmarks/devvm_build.py <project> --spec assert_catalog --from-stage rest --seed "..\workspace\GUPPI_OS\runtime_data\devvm_snapshots\assert_catalog\20261013_180229\after_more" (plus the options of this run)
+attempt 1: hidden test FAILED | own check accepted=UNJUDGED | 5845.0 s, 9 agent runs, 145 calls -> ..\workspace\GUPPI_OS\runtime_data\devvm_candidates\assert_catalog\attempt_01_20261013_193955
+# run ended: done
+DONE -> devvm_build_assert_catalog_2026-10-13_180229.json

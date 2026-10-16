@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guppi-runtime"
+version = "1.20.0"
+description = "Executable baseline runtime for the GUPPI OS architecture"
+requires-python = ">=3.11"
+dependencies = ["PyYAML>=6.0"]
+
+[project.scripts]
+guppi = "guppi_runtime.cli:main"
+guppi-uix = "guppi_runtime.uix_server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"guppi_runtime.hardware_manager" = ["dashboard.html"]
+"guppi_runtime" = ["uix/*.html"]

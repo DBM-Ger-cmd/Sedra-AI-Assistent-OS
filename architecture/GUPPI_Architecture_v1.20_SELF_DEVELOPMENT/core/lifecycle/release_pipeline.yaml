@@ -1,0 +1,53 @@
+release_pipeline:
+  schema: 1
+  id: "guppi-release-pipeline-v1"
+
+  stages:
+    - id: "validate_request"
+      requires:
+        - "valid_evolution_schema"
+        - "matching_base_version"
+
+    - id: "prepare_workspace"
+      requires:
+        - "isolated_development_workspace"
+
+    - id: "build_candidate"
+      produces:
+        - "candidate_manifest"
+        - "candidate_payload"
+
+    - id: "run_tests"
+      required_for:
+        E1: ["basic", "compatibility"]
+        E2: ["unit", "integration", "regression", "compatibility"]
+        E3: ["unit", "integration", "regression", "rollback", "boot", "compatibility"]
+
+    - id: "verify_candidate"
+      produces:
+        - "verification_report"
+
+    - id: "captain_gate"
+      when:
+        - "classification == E3"
+        - "evolution.captain_gate.required == true"
+
+    - id: "package_update"
+      requires:
+        - "verification_status == PASS"
+
+    - id: "preinstall_snapshot"
+      requires:
+        - "rollback_bundle_ready"
+
+    - id: "install_candidate"
+      mode: "atomic_if_supported"
+
+    - id: "postinstall_health_check"
+      on_pass: "PROMOTE_STABLE"
+      on_fail: "ROLLBACK"
+
+  terminal_states:
+    - "STABLE"
+    - "ROLLED_BACK"
+    - "REJECTED"

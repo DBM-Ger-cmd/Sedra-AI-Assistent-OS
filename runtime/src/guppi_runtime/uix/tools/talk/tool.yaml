@@ -1,0 +1,20 @@
+tool:
+  id: talk
+  name: "Gespräch"
+  description: "Das eine Eingabefeld – Antwort, Auftrag, Navigation, „einmal ja“."
+  version: 1.2.0
+  kind: panel
+  handles: []
+  order: 10
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - POST /api/chat/reply
+    - GET /api/decisions
+    - POST /api/actions          # Build 19: ein Knopf unter GUPPIs Antwort – derselbe Weg wie jeder Werkzeugknopf, Gates darunter
+    - POST /api/intent/create    # Build 19: „Als Vorhaben anlegen“ – führt nichts aus
+  events:
+    emits: [object.open]
+    listens: [talk.context, decision.pending, decision.answered, live.line, object.open]   # B6-G-03: der offene GateWay-Vorgang
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

@@ -1,0 +1,43 @@
+/* Start-Shell – der Einstieg. Nur .st-*, keine Farbe ohne Token. Eine Spalte, ruhig; die Karten tragen das Bild. */
+.st{
+  position: fixed; inset: 0;
+  display: grid; grid-template-rows: 56px minmax(0, 1fr) var(--talk-h);
+  background: var(--bg); color: var(--text);
+}
+.st-head{ display: flex; align-items: center; gap: var(--gap-2); padding: 0 24px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.st-head b{ font-size: var(--size-l); color: var(--heading); letter-spacing: .02em; }
+.st-head-text{ color: var(--muted); margin-left: var(--gap-2); }
+.st-mark{ width: 22px; height: 15px; border-radius: 50% 60% 60% 50%; background: linear-gradient(180deg, var(--guppy-1), var(--guppy-2)); border: 1px solid var(--guppy-line); }
+
+.st-body{ display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 0; }
+.st-main{ overflow: auto; padding: 24px; }
+.st-col{ max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.st-side{ width: 380px; border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: var(--gap-2); }
+.st-side[hidden]{ display: none; }
+.st-talk{ border-top: 1px solid var(--line); background: var(--panel); }
+.st-tool{ min-height: 0; height: 100%; }
+
+/* ---- die Karten */
+.st-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.st-card{
+  display: flex; flex-direction: column; gap: var(--gap-2);
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-2); padding: var(--gap-2);
+}
+.st-card.on{ border-color: var(--accent); box-shadow: var(--shadow); }
+.st-pic{
+  aspect-ratio: 16 / 10; border-radius: var(--radius); overflow: hidden;
+  background: var(--panel-2); border: 1px solid var(--line-soft); display: grid; place-items: center;
+}
+.st-pic img{ width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; }
+.st-pic-none{ color: var(--muted); font-size: var(--size-small); }
+.st-card-text h2{ font-size: var(--size-l); color: var(--heading); margin-bottom: 4px; }
+.st-card-text p{ margin: 0 0 4px; color: var(--text); }
+
+/* ---- anlegen und vorlegen */
+.st-make{ display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.st-make-row{
+  display: flex; flex-direction: column; gap: var(--gap); align-items: flex-start;
+  background: var(--panel); border: 1px solid var(--line-soft); border-radius: var(--radius-2); padding: var(--gap-2);
+}
+.st-make-row b{ color: var(--heading); }
+.st-make-row input{ width: 100%; border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; font: inherit; }

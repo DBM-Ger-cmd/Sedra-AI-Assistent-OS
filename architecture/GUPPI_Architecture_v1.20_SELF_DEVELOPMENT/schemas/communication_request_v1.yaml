@@ -1,0 +1,23 @@
+communication_request:
+  schema: 1
+
+  request_id: "COM-0001"
+  mission_id: "M-0001"
+
+  channel:
+    type: "api"
+    provider: ""
+
+  operation:
+    mode: "read"
+    action: ""
+    parameters: {}
+
+  guard:
+    required: false
+    decision: null
+
+  result:
+    status: "pending"
+    refs: []
+    error: null

@@ -1,0 +1,18 @@
+tool:
+  id: crew
+  name: "Besatzung"
+  description: "Rollen aus den Rezepten und die Agenten, die wirklich existieren."
+  version: 1.0.0
+  kind: object
+  handles: [agent]
+  order: 50
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/agents
+    - GET /api/models
+  events:
+    emits: [object.open]
+    listens: [task.changed]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

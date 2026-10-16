@@ -1,0 +1,27 @@
+tool:
+  id: gateway
+  name: "KI GateWay"
+  description: "Ein Vorgang nach dem Studio Flow: Anfrage prüfen, Platzhalter, Empfehlung, Freigabe, Entwurf, menschliche Prüfung. Kein Versand."
+  version: 1.1.0
+  kind: object
+  handles: [gateway]
+  order: 14
+  slot: inhalt
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/gateway/vorgaenge
+    - POST /api/gateway/vorgang
+    - POST /api/gateway/neu
+    - POST /api/gateway/pruefen
+    - POST /api/gateway/freigabe
+    - POST /api/gateway/pruefung
+    - POST /api/gateway/verwerfen
+    - POST /api/gateway/frage      # B6-G-03: „Frag SEDRA“ – Wissensbasis, kein Modell
+    - POST /api/gateway/wissen     # B6-G-03: eigener Eintrag des Nutzers (nur Audit, kein Gate)
+    - GET /api/decisions
+    - POST /api/decisions/answer
+  events:
+    emits: [object.open, decision.answered]
+    listens: [decision.answered, tools.refresh]
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

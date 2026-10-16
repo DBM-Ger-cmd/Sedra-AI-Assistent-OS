@@ -1,0 +1,47 @@
+module:
+  id: "knowledge"
+  name: "Knowledge"
+  version: "0.1.0"
+  core_contract: 1
+
+  purpose:
+    - "Projektwissen, Entscheidungen und Quellen auffindbar bereitstellen."
+    - "Kontextpakete für Planning und Verification liefern."
+    - "Wissen mit Herkunft und Gültigkeitsbereich speichern."
+
+  capabilities:
+    - "knowledge_search"
+    - "context_pack_building"
+    - "decision_lookup"
+    - "source_linking"
+    - "knowledge_write_proposal"
+
+  inputs:
+    required:
+      - "mission_id"
+      - "knowledge_request"
+
+  outputs:
+    - "knowledge_results"
+    - "context_refs"
+    - "source_provenance"
+
+  permissions:
+    read:
+      - "knowledge"
+      - "decisions"
+      - "artifacts_metadata"
+    write:
+      - "knowledge_records"
+      - "context_refs"
+
+  prohibited:
+    - "change_captain_intent"
+    - "overwrite_source_provenance"
+    - "store_credentials"
+
+  communicates_with:
+    - "planning-context"
+    - "control-master"
+    - "verification"
+    - "communications"

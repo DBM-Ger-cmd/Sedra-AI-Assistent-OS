@@ -1,0 +1,65 @@
+skill:
+  id: safe-code-change
+  name: Safe Code Change
+  version: 1.1.0
+  owner_module: planning-context
+  description: Guarded code changes with file provenance and verification.
+  capabilities:
+  - code_analysis
+  - code_editing
+  - file_write
+  - test_execution
+  triggers:
+  - implementiere
+  - ändere code
+  - feature bauen
+  - refactor
+  tool_hints:
+  - filesystem
+  - git
+  - sandbox
+  workflow:
+  - stage: bind
+    action: validate_explicit_candidate_request_and_source_sha256
+  - stage: prepare
+    action: stage_selected_files_and_supplied_replacements
+    guard: tool_policy_required
+  - stage: plan_tests
+    tool: sandbox
+    operation: preview
+    binding:
+      source: <candidate-source>
+      commands: <test-commands>
+      exports: []
+    read_only: true
+  - stage: verify
+    action: verify_candidate_hashes_diff_and_source_preservation
+  - stage: review
+    action: await_captain_candidate_review
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.13.0
+  status: enabled
+  execution_support: code-candidate-v1; supplied replacement preparation only
+  inputs:
+  - project_path
+  - files
+  - changes
+  - test_commands (optional)
+  outputs:
+  - separate candidate directory
+  - candidate-report.json
+  - diff and optional sandbox plan
+  boundaries:
+  - Preparation only; no autonomous model generation
+  - No original project modification
+  - No host or guest code execution
+  - Tests pending; no merge or deployment

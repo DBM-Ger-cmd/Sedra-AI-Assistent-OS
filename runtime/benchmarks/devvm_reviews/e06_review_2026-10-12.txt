@@ -1,0 +1,14 @@
+Review of bg_jobs.py (attempt of 2026-10-11, stage "table" passed, stage "poll" failed). Fix exactly these points, keep everything else:
+
+1. poll(): the "exit" event is never created. When code is not None and wake_on["exit"] is true, append {"job": id, "reason": "exit", "detail": code} AFTER the match event of this job. A wake_on dict without "exit" means exit False; wake_on None means exit True.
+
+2. poll(): the match search is wrong. Today it joins ALL kept lines plus the pending piece and returns m.group(0). Required: look only at the NEW complete lines of this poll (the list _process_output returns), take the FIRST line where re.search finds the pattern, and put the WHOLE line into "detail". Never search old lines (they would match again in every poll) and never the pending piece.
+   Example: read() gives "boot\nlist" (no match, "list" waits as pending), next read() gives "ening on 80\nok\n" -> new lines ["listening on 80", "ok"] -> event detail "listening on 80".
+
+3. poll(): the silence event may only fire while the job is still running. Put the silence check in the branch where code is None (after match), so the order per job is: match, exit, silence. Compute now = clock() once per job inside the loop.
+
+4. log(): return only the kept complete lines, never the pending piece. Example: after "boot\nlist" the log is "boot" and status lines is 1.
+
+5. status() must not read output or create events (delete the read/match block there); stop() must not read output either. Output is read only in poll().
+
+Remove the now unused self._events list. No comments, no docstrings.

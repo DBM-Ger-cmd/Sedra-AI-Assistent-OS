@@ -1,0 +1,25 @@
+# Not part of the source repository: programs, models, run data, secrets, backups
+engines/
+workspace/
+archiv/
+runtime/.venv/
+runtime/portable/
+runtime/.pytest_cache/
+runtime/runtime_data/
+**/__pycache__/
+*.pyc
+*.sqlite
+*.sqlite-journal
+*.log
+*.lock
+*.gguf
+*.zip
+*.tar
+*.bak-*
+*.model-original-*
+**/tokens.json
+**/*.token
+.env
+.env.*
+/runtime_data/
+runtime/config/local_paths.yaml

@@ -1,0 +1,24 @@
+lifecycle:
+  schema: 1
+
+  states:
+    - "OFFLINE"
+    - "BOOTING"
+    - "SAFE_MODE"
+    - "READY"
+    - "BUSY"
+    - "UPDATING"
+    - "RECOVERING"
+    - "DEGRADED"
+    - "HALTED"
+
+  allowed_transitions:
+    OFFLINE: ["BOOTING"]
+    BOOTING: ["READY", "SAFE_MODE", "HALTED"]
+    SAFE_MODE: ["RECOVERING", "HALTED", "BOOTING"]
+    READY: ["BUSY", "UPDATING", "DEGRADED", "HALTED"]
+    BUSY: ["READY", "DEGRADED", "HALTED"]
+    UPDATING: ["BOOTING", "RECOVERING", "HALTED"]
+    RECOVERING: ["BOOTING", "SAFE_MODE", "HALTED"]
+    DEGRADED: ["READY", "RECOVERING", "HALTED"]
+    HALTED: ["BOOTING"]

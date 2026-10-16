@@ -1,0 +1,18 @@
+GUPPI v1 Architecture Release Checklist
+
+[ ] Alle YAML-Dateien syntaktisch valide
+[ ] Stable Core klar von Modulen/Services getrennt
+[ ] Core Contract dokumentiert
+[ ] Mission State vorhanden
+[ ] Message Bus vorhanden
+[ ] Guard/Human Gate vorhanden
+[ ] Registries vollständig
+[ ] Boot/Lifecycle/Recovery vorhanden
+[ ] Audit/Event Log vorhanden
+[ ] Knowledge + Communications definiert
+[ ] Artifact Store + Observability definiert
+[ ] Evolution Manager vorhanden
+[ ] Candidate/Update/Rollback Pipeline vorhanden
+[ ] Config/Secret Policy vorhanden
+[ ] Provenance/Checksums vorhanden
+[ ] Architecture Acceptance Checks vorhanden

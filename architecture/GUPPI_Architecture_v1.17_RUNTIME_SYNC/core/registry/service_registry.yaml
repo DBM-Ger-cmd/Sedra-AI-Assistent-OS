@@ -1,0 +1,26 @@
+service_registry:
+  schema: 1
+  services:
+    artifact-store:
+      version: 0.1.0
+      manifest: services/artifact-store/service.yaml
+      enabled: true
+      required: true
+    observability:
+      version: 0.1.0
+      manifest: services/observability/service.yaml
+      enabled: true
+      required: true
+    model-router:
+      version: 0.1.0
+      manifest: services/model-router/service.yaml
+      enabled: true
+      required: false
+    model-benchmark:
+      version: 0.1.0
+      manifest: services/model-benchmark/service.yaml
+      enabled: true
+      required: false
+  load_policy:
+    reject_duplicate_ids: true
+    require_health_check: false

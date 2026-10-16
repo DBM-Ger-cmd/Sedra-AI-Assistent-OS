@@ -1,0 +1,23 @@
+tool:
+  id: "example-tool"
+  name: "Example Tool"
+  version: "0.1.0"
+
+  provider: "local"
+  capabilities: []
+
+  guard:
+    action_class: "standard"
+    protected: false
+
+  permissions:
+    required: []
+
+  compatibility:
+    core_contract: 1
+    min_guppi_version: "0.1.0"
+
+  health:
+    check: "tool_health"
+
+  status: "enabled"

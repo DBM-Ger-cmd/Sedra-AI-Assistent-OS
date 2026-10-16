@@ -1,0 +1,21 @@
+# Shell E (Minimal) – der Schreibtisch: Menüleiste, freie Fenster, Ablage. Genau eine Shell ist aktiv (local_config/uix.yaml).
+shell:
+  id: minimal
+  name: "Minimal"
+  description: "Freie Fenster statt Reiter: Menüleiste oben, Ablage unten, die Entscheidung rechts oben (Entwurf E)."
+  version: 1.1.0
+  entry:
+    js: [icons.js, windows.js, menubar.js, shelfedit.js, shelf.js, shell.js]     # shell.js zuletzt: es registriert
+    css: shell.css
+  provides: [menubar, windows, talk, notify]
+  layout: {persist: browser}
+  api:
+    - GET /api/strip
+    - GET /api/decisions
+    - POST /api/decisions/answer
+    - GET /api/uix/modules          # Build 19: Menü „SEDRA“ – die anderen Oberflächen
+    - POST /api/uix/shell           # Build 19: zur Übersicht (nur dieser Lauf) oder in eine andere Oberfläche
+    - GET /api/uix/shelf            # Build 19: die eigene Ablage
+    - POST /api/uix/shelf
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

@@ -1,0 +1,71 @@
+skill:
+  id: project-inspection
+  name: Project Inspection
+  version: 1.1.0
+  owner_module: planning-context
+  description: Read-only project/repository inspection and context collection.
+  capabilities:
+  - project_inspection
+  - file_discovery
+  - version_control_inspection
+  - code_analysis
+  - context_retrieval
+  triggers:
+  - projekt analysieren
+  - repository prüfen
+  - repo analysieren
+  - project review
+  tool_hints:
+  - filesystem
+  - git
+  workflow:
+  - stage: bind
+    action: validate_project_inspection_inputs
+  - stage: observe
+    tool: filesystem
+    operation: list_dir
+    binding:
+      path: <project_path>
+      limit: 200
+      bounded: true
+    read_only: true
+  - stage: observe
+    tool: filesystem
+    operation: sha256
+    binding:
+      path: <selected_file>
+      max_bytes: 65536
+    read_only: true
+  - stage: observe
+    tool: filesystem
+    operation: read_text
+    binding:
+      path: <selected_file>
+      encoding: utf-8
+      max_bytes: 65536
+    read_only: true
+  - stage: verify
+    action: verify_inspection_artifact_and_source_evidence
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.12.0
+  status: enabled
+  execution_support: project-inspection-v1; bounded inventory only
+  inputs:
+  - project_path
+  - files (optional)
+  outputs:
+  - verified inspection.json
+  boundaries:
+  - No project writes or host code execution
+  - Root inventory and selected UTF-8 files only
+  - No Git commands in bound workflow
+  - No semantic quality or test verdict

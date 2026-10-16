@@ -1,0 +1,16 @@
+GUPPI OS – Audit/Event Log v1
+
+Das Audit Log ist append-only und bildet die nachvollziehbare Systemhistorie.
+
+Es protokolliert:
+- Missionszustände
+- Planungsereignisse
+- Tool- und Ausführungsereignisse
+- Verification
+- Guard/Human Gates
+- Evolution/Updates/Rollbacks
+- Boot/Recovery/Health
+
+Geheimnisse und Credentials werden niemals im Klartext protokolliert.
+
+Der Evolution Manager darf Audit-Ereignisse als Evidenz nutzen.

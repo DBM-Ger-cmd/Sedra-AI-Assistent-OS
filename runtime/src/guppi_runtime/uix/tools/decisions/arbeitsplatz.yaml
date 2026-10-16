@@ -1,0 +1,19 @@
+# Arbeitsplatz-Wissen dieses Moduls (Build 24, Ticket B6-G-06; Klaus 15.10.2026 19:36: „Arbeitsplatzwissen bleibt immer im Modul“).
+# desk/arbeitsplatz.py liest diese Datei ein; SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen, nichts läuft von allein.
+# Erlaubt: satz, zonen [{name, wo}], woerter {wort: {ist, objekt}}, anleitungen [{id, titel, schritte, ort, stich}], begriffe {wort: text}.
+arbeitsplatz:
+  anleitungen:
+  - id: entscheidung
+    titel: Eine Entscheidung beantworten (Freigabe)
+    schritte:
+    - Instrument „Entscheidungen“ (Cockpit) oder „Posteingang“ (Paperclip) öffnen.
+    - Lesen, was gebunden ist (Inhalt, Weg, Zweck, Person).
+    - „Freigeben und anwenden“ oder „Ablehnen“ – jede Antwort ist ein Audit-Ereignis mit Einmal-Token.
+    ort:
+      type: decision
+      id: alle
+      title: Entscheidungen
+      collection: true
+    stich: entscheidung freigabe freigeben ablehnen gate posteingang genehmigen bestätigen
+  begriffe:
+    gate: Eine Entscheidung mit Bindung und Einmal-Token. Ohne Antwort läuft nichts weiter.

@@ -1,0 +1,49 @@
+guppi:
+  architecture_package: '0.3'
+  version: 1.17.0
+  channel: stable-spec
+  core:
+    version: 0.1.0
+    contract: 1
+  modules:
+    planning-context: 0.1.0
+    control-master: 0.2.4
+    verification: 0.1.0
+    knowledge: 0.1.0
+    communications: 0.1.0
+  catalogs:
+    skills: 1
+    tools: 1
+  schemas:
+    mission: 1
+    message: 1
+    evolution: 1
+    module_manifest: 1
+    guard: 1
+    human_gate: 1
+    audit_event: 1
+    capability_gap: 1
+    evolution_proposal: 1
+    candidate_manifest: 1
+    update_manifest: 1
+    knowledge_record: 1
+    artifact_record: 1
+    health_report: 1
+    runtime_config: 1
+    provenance: 1
+    capability_route: 1
+  development:
+    evolution_file: development/GUPPI_EVOLUTION.yaml
+    mode: stable-does-not-self-modify
+  architecture_status: runtime-capability-router-integrated
+  services:
+    artifact-store: 0.1.0
+    observability: 0.1.0
+  hardware_manager:
+    version: 0.1.0
+    tool_id: hardware-manager
+    fan_control: target_adapter_pending
+  capability_router:
+    version: 1.0.0
+    skills: 8
+    tool_allowlist_enforced: true

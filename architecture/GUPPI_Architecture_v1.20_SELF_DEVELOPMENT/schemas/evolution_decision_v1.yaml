@@ -1,0 +1,20 @@
+evolution_decision:
+  schema: 1
+
+  proposal_id: "EP-0001"
+
+  decision:
+    result: null
+    # ACCEPT_FOR_DEVELOPMENT, REJECT, DEFER, MERGE
+    reason: ""
+
+  classification:
+    confirmed_level: null
+
+  development:
+    create_evolution_file: false
+    target_path: "development/GUPPI_EVOLUTION.yaml"
+
+  captain_gate:
+    required: false
+    gate_id: null

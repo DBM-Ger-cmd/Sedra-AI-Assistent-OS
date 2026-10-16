@@ -1,0 +1,18 @@
+# Arbeitsplatz-Wissen dieses Moduls (Build 24, Ticket B6-G-06; Klaus 15.10.2026 19:36: „Arbeitsplatzwissen bleibt immer im Modul“).
+# desk/arbeitsplatz.py liest diese Datei ein; SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen, nichts läuft von allein.
+# Erlaubt: satz, zonen [{name, wo}], woerter {wort: {ist, objekt}}, anleitungen [{id, titel, schritte, ort, stich}], begriffe {wort: text}.
+arbeitsplatz:
+  anleitungen:
+  - id: grenzen
+    titel: Modus und Grenzen bestätigen
+    schritte:
+    - Instrument „Modus“ oder Baum/Navigation „Modus und Grenzen“.
+    - Vorschlag lesen (Sandbox; Projekt, Netz, Löschen, Kosten).
+    - „Bestätigen“ → die Entscheidung im Posteingang freigeben.
+    ort:
+      type: boundary
+      id: projekt
+      title: Modus und Grenzen
+    stich: modus grenzen bestätigen sandbox nicht bestätigt rechte netz löschen kosten
+  begriffe:
+    sandbox: 'Der Modus des Projekts: Netz zu, Löschen zu, Projekt und Kosten fragen – bis du etwas anderes bestätigst.'

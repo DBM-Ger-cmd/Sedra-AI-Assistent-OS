@@ -1,0 +1,25 @@
+GUPPI OS - Portable Model Runtime v1.4
+
+Goals:
+- Keep models on the portable GUPPI data carrier.
+- Detect local llama.cpp and LM Studio/lms runtimes.
+- Keep runtime endpoints loopback-only by default.
+- Route runtime-changing operations through Guard/Captain Gate.
+- Validate hardware/model profiles before starting a model.
+- Allow Captain custom profiles without replacing built-in safe presets.
+
+Providers:
+1. llama.cpp / llama-server
+   - GGUF model catalog
+   - command preparation using context, threads, batch, microbatch, GPU layers, parallelism and KV cache precision
+   - localhost-only server binding
+
+2. LM Studio / llmster / lms
+   - list local models
+   - list loaded models
+   - daemon/server status
+   - load/unload model
+   - context and GPU offload controls
+
+No model binaries or third-party runtimes are bundled in this archive.
+Downloads remain explicit Captain actions.

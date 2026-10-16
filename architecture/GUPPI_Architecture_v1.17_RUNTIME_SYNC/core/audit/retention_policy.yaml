@@ -1,0 +1,20 @@
+retention:
+  schema: 1
+
+  rules:
+    mission_events:
+      retain: "project_lifetime"
+
+    update_and_rollback_events:
+      retain: "project_lifetime"
+
+    security_events:
+      retain: "project_lifetime"
+
+    verbose_runtime_events:
+      retain: "configurable"
+
+  privacy:
+    redact_secrets: true
+    redact_credentials: true
+    minimize_external_payloads: true

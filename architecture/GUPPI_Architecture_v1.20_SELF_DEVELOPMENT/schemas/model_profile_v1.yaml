@@ -1,0 +1,21 @@
+model_profile:
+  schema: 1
+  id: example-profile
+  hardware_classes: []
+  runtime: llama-cpp-server
+  model: ''
+  quantization: ''
+  context:
+    recommended: 4096
+    maximum: 8192
+  kv_cache:
+    precision: fp16
+    placement: cpu
+  batch_size: 128
+  microbatch_size: 64
+  gpu_layers: 0
+  cpu_threads: auto
+  parallelism: 1
+  memory_reserve_gb: 3
+  profile_kind: built-in
+  benchmark_id: null

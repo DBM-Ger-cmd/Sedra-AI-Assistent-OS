@@ -1,0 +1,8 @@
+/* Werkzeug „Projekt“ – nur im eigenen Container. Nur Token aus ui/tokens.css. */
+.t-files-row{padding:5px 10px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+.t-files-row:hover{background:var(--panel-2)}
+/* Build 24: Neues Projekt */
+.t-files-new{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel-2)}
+.t-files-form{flex-wrap:wrap;align-items:center}
+.t-files-input{flex:1;min-width:220px;padding:6px 9px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--text);font:inherit;font-size:var(--size)}
+.t-files-input:focus{outline:2px solid var(--accent);outline-offset:-1px}

@@ -1,0 +1,12 @@
+# Arbeitsplatz-Wissen dieses Moduls (Build 24, Ticket B6-G-06; Klaus 15.10.2026 19:36: „Arbeitsplatzwissen bleibt immer im Modul“).
+# desk/arbeitsplatz.py liest diese Datei ein; SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen, nichts läuft von allein.
+# Erlaubt: satz, zonen [{name, wo}], woerter {wort: {ist, objekt}}, anleitungen [{id, titel, schritte, ort, stich}], begriffe {wort: text}.
+arbeitsplatz:
+  anleitungen:
+  - id: gateway_vorgang
+    titel: Einen GateWay-Vorgang anlegen
+    schritte:
+    - 'In die Oberfläche „KI GateWay Studio“ wechseln: Umschalter unten rechts (Alt+S) → „Wechseln zu KI GateWay Studio“.'
+    - Dort Titel, Weg (lokal / Cloud simuliert), „Neuer Vorgang“; dann der Leitfaden (7 Schritte) im Werkzeug – „Frag SEDRA“ hilft.
+    ort: null
+    stich: gateway vorgang anlegen kundenanfrage prüfen datenschutz neuer vorgang studio

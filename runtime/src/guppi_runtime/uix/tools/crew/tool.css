@@ -1,0 +1,2 @@
+/* Werkzeug „Besatzung“ – nur im eigenen Container. */
+.t-crew-row{padding:7px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);display:flex;flex-direction:column}

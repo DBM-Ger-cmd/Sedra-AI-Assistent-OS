@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sedra-ui/tool.schema.json",
+  "title": "tool.yaml – a SEDRA desktop tool (UI contract 1.0)",
+  "description": "The readable form of the rules desk/gateway.py enforces. The server decides; this file is for editors and for people.",
+  "type": "object",
+  "required": ["tool"],
+  "additionalProperties": false,
+  "properties": {
+    "tool": {
+      "type": "object",
+      "required": ["id", "name", "version", "kind", "entry", "trust", "needs"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9-]{2,40}$", "description": "unique, and the name of the folder"},
+        "name": {"type": "string", "minLength": 1, "maxLength": 60},
+        "description": {"type": "string", "maxLength": 200},
+        "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+        "kind": {"enum": ["object", "instrument", "panel"], "description": "object: a container per object; instrument: a cell in the strip; panel: Gespräch, Palette"},
+        "handles": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9-]{2,40}$"}, "description": "Objekttypen des Vertrags: project intent task candidate file model skill agent decision routine boundary module logbook meter hardware machine. Ein eigenes oder fremdes Werkzeug darf eigene Typen mitbringen; ein CORE-Werkzeug nicht."},
+        "order": {"type": "integer", "minimum": 0, "maximum": 1000, "description": "lower comes first; uix.yaml can override it"},
+        "slot": {"enum": ["inhalt", "nachweis"], "description": "Hinweis an die Shell: Werkstück oder Nachweis. Das Cockpit stellt Nachweise rechts daneben; andere Shells dürfen ihn ignorieren."},
+        "entry": {
+          "type": "object",
+          "required": ["js"],
+          "additionalProperties": false,
+          "properties": {
+            "js": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
+            "css": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]}
+          }
+        },
+        "api": {"type": "array", "items": {"type": "string", "pattern": "^(GET|POST) /(api|uix)(/[A-Za-z0-9_.-]+)*(/\\*)?$"},
+                "description": "allowlist; the server answers 403 tool_route_not_allowed for everything else. '*' only at the end."},
+        "events": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "emits": {"type": "array", "items": {"type": "string"}},
+            "listens": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "trust": {"enum": ["CORE", "CAPTAIN", "GUPPI_BUILT", "COMMUNITY"]},
+        "tests": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_.-]+\\.js$"}},
+        "needs": {
+          "type": "object",
+          "required": ["ui"],
+          "additionalProperties": false,
+          "properties": {"ui": {"type": "string", "description": "range against the contract version, e.g. '>=1.0 <2'"}}
+        }
+      }
+    }
+  }
+}

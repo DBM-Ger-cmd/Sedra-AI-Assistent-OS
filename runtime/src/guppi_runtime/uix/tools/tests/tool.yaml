@@ -1,0 +1,19 @@
+tool:
+  id: tests
+  name: "Tests"
+  description: "Was über den Kandidaten nachgewiesen ist – und was ausdrücklich nicht."
+  version: 1.0.0
+  kind: object
+  handles: [candidate]
+  order: 17
+  slot: nachweis
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - POST /api/candidate/report
+    - POST /api/actions
+  events:
+    emits: [object.open]
+    listens: [task.changed]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

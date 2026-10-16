@@ -1,0 +1,11 @@
+{
+  "capability": "tool_loop_guard",
+  "target_type": "skill",
+  "objective": "Implement signature, outcome_hash and the LoopGuard class in loop_guard.py exactly as their docstrings say, so that all tests in tests/test_loop_guard.py pass. Use only the Python standard library. Keep the constants unchanged. Change only loop_guard.py. Do not touch the tests.",
+  "files": ["loop_guard.py", "tests/test_loop_guard.py"],
+  "generation": {"context_min_tokens": 32768, "max_tokens": 20000},
+  "evidence": [
+    {"source": "2026-10-03 rework loop", "detail": "gpt-oss at temperature 0.1 looped through 20000 tokens; the uix_window rework ran 12 generations, several with the same cause, and nothing flagged the repetition"},
+    {"source": "2026-10-04 cognithor review", "detail": "cognithor core/loop_detector.py detects generic_repeat (same call, same result, N times) and ping_pong (two calls alternating without new information) with a sliding window; GUPPI has no equivalent"}
+  ]
+}

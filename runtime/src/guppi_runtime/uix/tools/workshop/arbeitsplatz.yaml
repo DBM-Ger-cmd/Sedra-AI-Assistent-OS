@@ -1,0 +1,44 @@
+# Arbeitsplatz-Wissen dieses Moduls (Build 24, Ticket B6-G-06; Klaus 15.10.2026 19:36: „Arbeitsplatzwissen bleibt immer im Modul“).
+# desk/arbeitsplatz.py liest diese Datei ein; SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen, nichts läuft von allein.
+# Erlaubt: satz, zonen [{name, wo}], woerter {wort: {ist, objekt}}, anleitungen [{id, titel, schritte, ort, stich}], begriffe {wort: text}.
+arbeitsplatz:
+  anleitungen:
+  - id: modell_hinzufuegen
+    titel: Ein Modell hinzufügen (GGUF)
+    schritte:
+    - Werkstatt → Abschnitt „Neues Modell“ (Baum „Modell hinzufügen“ oder „＋ Neu“).
+    - 'Datei wählen: Dialog dieses PCs, Modellordner oder Pfad eingeben → „Prüfen“.'
+    - 'Rezept prüfen: Rezept-ID, Rollen, Standard-Kontext; „Rezept anlegen (Freigabe)“.'
+    - In den Entscheidungen „freigeben und anwenden“ – erst dann wird role_routing.yaml geschrieben.
+    - 'Zurück in der Werkstatt: „Laden“, dann „Testen“.'
+    ort:
+      type: model
+      id: neu
+      title: Neues Modell
+    stich: modell hinzufügen hinzufuegen neues modell gguf rezept anlegen einbinden installieren datei wählen
+  - id: modell_laden
+    titel: Ein Modell laden oder entladen
+    schritte:
+    - Werkstatt öffnen (Instrument „Modell“ oder Baum/Navigation).
+    - Beim Rezept „Laden“ – braucht den eingeschalteten Modell-Lader (Schalter) und ein hinterlegtes Modell.
+    - „Entladen“ beim geladenen Rezept; „Testen“ stellt eine kurze Frage mit Zeit und Token/s.
+    ort:
+      type: model
+      id: alle
+      title: Werkstatt
+      collection: true
+    stich: modell laden entladen testen werkstatt rezept gguf wechseln
+  - id: teststrecke
+    titel: Die Teststrecke (Standardtest) fahren
+    schritte:
+    - Ein Modell laden.
+    - 'Werkstatt → „Teststrecke: Standardtest“: Dauer (5/15/90 Min.) und Kriterien wählen, „Standardtest starten“.'
+    - Warten – das Modell wird mit mehreren Kontexten neu geladen; der Fortschritt steht im Abschnitt.
+    - Ergebnis lesen; „Empfehlung als Freigabe anlegen“ → Entscheidungen.
+    ort:
+      type: model
+      id: teststrecke
+      title: Teststrecke
+    stich: teststrecke standardtest kontext messen test fahren token geschwindigkeit stabilität
+  begriffe:
+    rezept: Ein Modell mit Rollen, Kontextstufen und Schaltern (local_config/role_routing.yaml). Ändern = Entscheidung.

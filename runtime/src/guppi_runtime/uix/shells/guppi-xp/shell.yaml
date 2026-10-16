@@ -1,0 +1,13 @@
+# GUPPI XP – der Desktop aus Build 6, archiviert unter /retro und hier als Wahl im Einstieg (Captain 15.10.2026, 09:22).
+# Diese Shell baut nichts nach: sie führt beim Start auf die alte Seite. Zurück in eine neue Oberfläche: START_SEDRA (Übersicht).
+shell:
+  id: guppi-xp
+  name: "GUPPI XP"
+  description: "Der alte Desktop aus Build 6 – Fenster, Karten, Kommandozeile. Unverändert, zum Vergleichen; die Werkzeuge des Vertrags gibt es dort nicht."
+  version: 1.0.0
+  entry: {js: shell.js}
+  provides: [windows]
+  layout: {persist: browser}
+  api: []
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

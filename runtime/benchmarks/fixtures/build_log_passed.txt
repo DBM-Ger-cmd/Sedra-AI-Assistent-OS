@@ -1,0 +1,15 @@
+S0 connection check: coder.local_primary ok
+# run devvm_build_skill_unify started 2026-10-13T14:23:06 config {"spec": "skill_unify", "attempts": 1}
+   load qwen3.6-35b-a3b with a window of 32768 tokens in each of 1 slot(s)
+   agent solo developer         qwen3.6-35b-a3b        hand_in      5 calls   30.1 s 553 tokens, 11255 prompt, peak 2491
+   stage names: hidden PASSED (own check accepted=UNJUDGED, own tests none, 40.9 s)
+   agent solo developer         qwen3.6-35b-a3b        hand_in      5 calls   36.5 s 1158 tokens, 13890 prompt, peak 3439
+   stage groups: hidden PASSED (own check accepted=UNJUDGED, own tests none, 36.5 s)
+   agent solo developer         qwen3.6-35b-a3b        hand_in      5 calls   31.7 s 848 tokens, 15153 prompt, peak 3792
+   stage primary: hidden PASSED (own check accepted=UNJUDGED, own tests none, 31.8 s)
+   agent solo developer         qwen3.6-35b-a3b        hand_in     15 calls   94.0 s 1848 tokens, 72827 prompt, peak 6657
+   agent solo developer (rework 1) qwen3.6-35b-a3b        hand_in     11 calls  207.5 s 4295 tokens, 86857 prompt, peak 9479
+   stage all: hidden PASSED (own check accepted=UNJUDGED, own tests none, 94.1 s)
+attempt 1: hidden test PASSED | own check accepted=UNJUDGED | 420.5 s, 5 agent runs, 41 calls -> ..\workspace\GUPPI_OS\runtime_data\devvm_candidates\skill_unify\attempt_01_20261013_143008
+# run ended: done
+DONE -> devvm_build_skill_unify_2026-10-13_142306.json

@@ -1,0 +1,16 @@
+{
+  "source": "sandbox-demo",
+  "commands": [
+    [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "."
+    ]
+  ],
+  "exports": [
+    "example.py"
+  ]
+}

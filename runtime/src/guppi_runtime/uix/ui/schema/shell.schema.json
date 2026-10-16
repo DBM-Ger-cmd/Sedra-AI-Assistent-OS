@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sedra-ui/shell.schema.json",
+  "title": "shell.yaml – a SEDRA shell (UI contract 1.0)",
+  "description": "Exactly one shell is active. It owns the screen and gives the tools their containers; it never reaches into a tool.",
+  "type": "object",
+  "required": ["shell"],
+  "additionalProperties": false,
+  "properties": {
+    "shell": {
+      "type": "object",
+      "required": ["id", "name", "version", "entry", "provides", "trust", "needs"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9-]{2,40}$"},
+        "name": {"type": "string", "minLength": 1, "maxLength": 60},
+        "description": {"type": "string", "maxLength": 200},
+        "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+        "entry": {
+          "type": "object",
+          "required": ["js"],
+          "additionalProperties": false,
+          "properties": {
+            "js": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
+            "css": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]}
+          }
+        },
+        "provides": {"type": "array", "minItems": 1, "items": {"enum": ["strip", "tree", "dock", "talk", "palette", "windows", "menubar", "notify", "inbox", "chooser"]},
+                     "description": "which slots this shell offers; a tool asks for none of them, it only gets a container"},
+        "layout": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {"persist": {"enum": ["browser", "none"]}}
+        },
+        "api": {"type": "array", "items": {"type": "string", "pattern": "^(GET|POST) /(api|uix)(/[A-Za-z0-9_.-]+)*(/\\*)?$"}},
+        "trust": {"enum": ["CORE", "CAPTAIN", "GUPPI_BUILT", "COMMUNITY"]},
+        "needs": {
+          "type": "object",
+          "required": ["ui"],
+          "additionalProperties": false,
+          "properties": {"ui": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

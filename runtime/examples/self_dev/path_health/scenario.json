@@ -1,0 +1,11 @@
+{
+  "capability": "path_health_check",
+  "target_type": "skill",
+  "objective": "Implement the three functions in path_health.py (vm_path_budget, stale_bindings, path_health) exactly as their docstrings say, so that all tests in tests/test_path_health.py pass. Use only the Python standard library. Keep MSB_SUFFIX and WINDOWS_LIMIT unchanged. Change only path_health.py. Do not touch the tests.",
+  "files": ["path_health.py", "tests/test_path_health.py"],
+  "generation": {"context_min_tokens": 16384, "max_tokens": 12000},
+  "evidence": [
+    {"source": "2026-10-02 VM start failure", "detail": "msb path 262 > 260 characters with a 43-character VM name; job SBX-96875c51adf94b76921018261c2aadbc"},
+    {"source": "2026-10-02 project folder rename", "detail": "prepared candidate M-372CA76F bound to the old folder: candidate_binding_changed_replan_required"}
+  ]
+}

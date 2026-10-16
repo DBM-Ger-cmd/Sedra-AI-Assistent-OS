@@ -1,0 +1,23 @@
+rollback_bundle:
+  schema: 1
+
+  identity:
+    rollback_id: "RB-0001"
+    update_id: "UPD-0001"
+
+  source:
+    stable_version: "0.6.0"
+
+  restore:
+    files: []
+    registries: []
+    manifests: []
+
+  validation:
+    required:
+      - "core_integrity"
+      - "registry_integrity"
+      - "required_modules_health"
+      - "brain_boot"
+
+  status: "ready"

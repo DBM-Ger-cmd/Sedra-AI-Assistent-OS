@@ -1,0 +1,19 @@
+GUPPI OS – Message Bus v1
+
+Zweck:
+Kontrollierte horizontale Kommunikation zwischen Modulen, ohne dass GUPPI jede Nachricht manuell weiterreichen muss.
+
+Regeln:
+1. Jede Nachricht hat mission_id und message_id.
+2. Sender und Empfänger müssen registriert sein.
+3. Nachrichtentypen müssen erlaubt sein.
+4. Kritische Aktionen benötigen Guard-Prüfung.
+5. Module dürfen Informationen austauschen, aber die Mission nicht umdefinieren.
+6. Relevante Ergebnisse werden zusätzlich in den Mission State geschrieben.
+7. Nachrichten werden protokolliert.
+8. Antwortketten nutzen reply_to und optional correlation_id.
+
+Guard-Entscheidungen:
+ALLOW
+BLOCK
+CAPTAIN_REQUIRED

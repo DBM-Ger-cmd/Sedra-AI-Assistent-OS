@@ -1,0 +1,22 @@
+GUPPI UPDATE PACKAGE LAYOUT v1
+
+GUPPI_Update_<version>/
+  update.manifest.yaml
+  payload/
+  migrations/
+  verification/
+    report.yaml
+    test-results/
+  rollback/
+    rollback.manifest.yaml
+    payload/
+  release_notes.txt
+  provenance.yaml
+  checksums.yaml
+
+Pflicht:
+- update.manifest.yaml
+- verification/report.yaml
+- rollback/ bei E2/E3
+- provenance.yaml
+- checksums.yaml

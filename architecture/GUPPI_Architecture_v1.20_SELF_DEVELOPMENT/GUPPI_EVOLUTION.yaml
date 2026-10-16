@@ -1,0 +1,45 @@
+evolution:
+  schema: 1
+  id: EV-0001
+  created_by: guppi
+  status: proposed
+  base:
+    guppi_version: 0.1.0
+    core_contract: 1
+  trigger:
+    type: capability_gap
+    source_missions: []
+    observation: Describe why this change is needed.
+  objective:
+    description: Describe the intended next capability.
+  classification:
+    level: E2
+  scope:
+    affected: []
+    forbidden_changes:
+    - captain_authority
+    - original_intent_immutability
+    - guard_bypass
+    - silent_stable_replacement
+  implementation:
+    planned_changes: []
+    workspace: development/workspace/EV-0001
+  verification:
+    required:
+    - unit
+    - integration
+    - regression
+    rollback_test_required: true
+  acceptance:
+    criteria: []
+  risk:
+    level: medium
+  captain_gate:
+    required: true
+  result:
+    candidate_version: null
+    build_path: null
+    verification_status: pending
+    package_path: null
+  source_proposals: []
+  source_capability_gaps: []

@@ -1,0 +1,22 @@
+/* UI contract 1.0 – der Umschalter (ui/wechsel.js): in jeder Shell unten rechts. Nur Token aus ui/tokens.css. */
+.sx-host{position:fixed;right:14px;bottom:calc(var(--talk-h) + 12px);z-index:9000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font:var(--size)/1.5 var(--font);color:var(--text)}
+.sx-chip{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);box-shadow:var(--shadow);cursor:pointer;font-size:var(--size-small)}
+.sx-chip:hover{background:var(--panel-2)}
+.sx-chip-mark{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-text);font-weight:700;font-size:var(--size-small)}
+.sx-chip-text{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sx-panel[hidden]{display:none}
+.sx-panel{width:320px;max-width:calc(100vw - 28px);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-2);box-shadow:var(--shadow);padding:10px;display:grid;gap:10px}
+.sx-head{display:flex;flex-direction:column;gap:2px}.sx-head b{font-size:var(--size-l)}.sx-head small{color:var(--muted)}
+.sx-list{display:grid;gap:4px}
+.sx-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px;border:1px solid transparent;border-radius:var(--radius);background:var(--panel-2);color:var(--text);cursor:pointer}
+.sx-item:hover,.sx-item:focus-visible{border-color:var(--accent);background:var(--panel)}
+.sx-item b{font-size:var(--size)}.sx-item small{color:var(--muted);font-size:var(--size-small);line-height:1.35}
+.sx-look{display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:1px solid var(--line-soft);padding-top:10px}
+.sx-seg{display:flex;flex-direction:column;gap:4px}.sx-seg>small{color:var(--muted);font-size:var(--size-xs);text-transform:uppercase;letter-spacing:var(--tracking-label)}
+.sx-seg-group{display:flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.sx-seg-btn{flex:1;padding:5px 0;border:0;background:var(--panel);color:var(--text);cursor:pointer;font-size:var(--size-small)}
+.sx-seg-btn+.sx-seg-btn{border-left:1px solid var(--line)}
+.sx-seg-btn.on{background:var(--accent);color:var(--accent-text)}
+.sx-foot{color:var(--muted);font-size:var(--size-xs)}
+.sx-note{color:var(--bad);font-size:var(--size-small)}
+@media print{.sx-host{display:none}}

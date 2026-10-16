@@ -1,0 +1,19 @@
+# Arbeitsplatz-Wissen dieses Moduls (Build 24, Ticket B6-G-06; Klaus 15.10.2026 19:36: „Arbeitsplatzwissen bleibt immer im Modul“).
+# desk/arbeitsplatz.py liest diese Datei ein; SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen, nichts läuft von allein.
+# Erlaubt: satz, zonen [{name, wo}], woerter {wort: {ist, objekt}}, anleitungen [{id, titel, schritte, ort, stich}], begriffe {wort: text}.
+arbeitsplatz:
+  anleitungen:
+  - id: vorhaben
+    titel: Ein Vorhaben aufschreiben
+    schritte:
+    - „＋ Neu → Vorhaben“ (Cockpit) oder „Ziele“ (Paperclip).
+    - Den Satz schreiben, um den es geht – daraus macht SEDRA Aufgaben.
+    - Aufgaben laufen erst nach deiner Freigabe.
+    ort:
+      type: intent
+      id: alle
+      title: Vorhaben
+      collection: true
+    stich: vorhaben ziel ziele aufschreiben auftrag plan
+  begriffe:
+    vorhaben: Der Satz, um den es geht. Eine Aufgabe ist die Arbeit daraus – zweierlei.

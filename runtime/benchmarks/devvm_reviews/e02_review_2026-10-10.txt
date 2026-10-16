@@ -1,0 +1,5 @@
+Review of think_guard.py (attempt_01_20261010_212738), Captain/Claude 2026-10-10: remove dead and copied code before the integration, keep the behaviour exactly.
+1. ThinkGuard keeps every parameter twice (limit/_limit, family/_family, max_notes/_max_notes): keep only the public attributes limit, family, max_notes and use them.
+2. reasoning_tokens: `if isinstance(val, bool): pass` followed by `elif` is a roundabout way of writing one condition; write one helper "is a real int" (also usable for the three checks in __init__, which repeat it).
+3. _patch_value: a small dict from family to the chat_template_kwargs value is enough instead of the if/elif/else chain.
+Change nothing else.

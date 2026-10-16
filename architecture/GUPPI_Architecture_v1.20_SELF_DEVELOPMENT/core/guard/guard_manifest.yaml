@@ -1,0 +1,33 @@
+guard:
+  id: "guppi-guard"
+  name: "GUPPI Guard"
+  version: "0.1.0"
+  core_contract: 1
+
+  purpose:
+    - "Aktionen vor Ausführung gegen Regeln und Berechtigungen prüfen."
+    - "Kritische Aktionen an den Captain eskalieren."
+    - "Guard-Entscheidungen revisionssicher protokollieren."
+
+  decisions:
+    - "ALLOW"
+    - "BLOCK"
+    - "CAPTAIN_REQUIRED"
+
+  protected_action_classes:
+    - "file_delete"
+    - "overwrite_existing"
+    - "external_write"
+    - "deployment"
+    - "credential_access"
+    - "paid_action"
+    - "system_change"
+    - "core_change"
+    - "security_change"
+    - "mass_operation"
+
+  invariants:
+    - "guard_cannot_be_bypassed_by_modules"
+    - "captain_gate_cannot_be_self_approved"
+    - "blocked_action_must_not_execute"
+    - "approval_is_bound_to_exact_action_scope"

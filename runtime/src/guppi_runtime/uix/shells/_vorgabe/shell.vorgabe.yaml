@@ -1,0 +1,13 @@
+# Was wo steht. Geprüft gegen ui/schema/vorgabe.schema.json – unbekannte Schlüssel werden mit Satz abgewiesen.
+id: beispiel
+name: "Beispiel aus Vorgabe"
+raster:                              # Zeilen von oben nach unten; mit | werden Spalten
+  - leiste
+  - orte|werkstueck
+  - gespraech
+orte: {breite: 220}                  # liste: [tasks, intents, decisions, models, logbook, modules] – sonst alle Orte
+werkstueck: {nachweise: seitenleiste}  # seitenleiste · umschalter · spalten · keine
+gespraech: {art: zone, hoehe: 112}   # zone (braucht die Zeile im Raster) · schublade (Knopf in der Leiste)
+entscheidungen: karte                # karte (erscheint, sobald eine wartet) · werkzeug (nur als Werkstück)
+suche: strg-k                        # strg-k · feld · keine
+start: {type: task, id: alle, title: Aufgaben}

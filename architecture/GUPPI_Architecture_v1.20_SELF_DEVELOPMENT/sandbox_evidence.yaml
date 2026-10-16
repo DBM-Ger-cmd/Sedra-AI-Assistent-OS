@@ -1,0 +1,17 @@
+sandbox_evidence:
+  schema: 1
+  tool_version: '0.2.0'
+  candidate_entry_phase: CANDIDATE_REVIEW
+  candidate_test_attempt_limit: 1
+  states: [WAITING, RUNNING, FINISHED, FAILED]
+  unknown_outcome: block_without_retry
+  required_pass:
+    - exact ordered argv for all approved commands
+    - integer exit code zero and success true
+    - bounded string output and no error
+    - cleanup confirmed true
+    - current input and policy equal approved plan
+    - receipt SHA256 and export inventory checks
+  qualifiers: [MICROVM_RESULT, SIMULATED_INTERFACE]
+  qualifies_pc_acceptance: false
+  ready_for_merge: false

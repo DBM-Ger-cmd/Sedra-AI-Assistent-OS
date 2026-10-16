@@ -1,0 +1,81 @@
+skill:
+  id: data-analysis
+  name: Lokale Datenanalyse
+  version: 1.0.0
+  owner_module: planning-context
+  description: Lokale Datenanalyse als begrenzter Workflow-Blueprint.
+  topics:
+  - data
+  capabilities:
+  - data_analysis
+  triggers:
+  - datenanalyse
+  - csv
+  - datenauswertung
+  - data analysis
+  - dataset
+  tool_hints:
+  - filesystem
+  - sandbox
+  workflow:
+  - stage: observe
+    tool: filesystem
+    operation: list_dir
+    binding:
+      path: <project-root>
+    read_only: true
+  - stage: preflight
+    tool: sandbox
+    operation: doctor
+    read_only: true
+  - stage: plan
+    action: check_data_schema_units_and_missing_values
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: prepare_reproducible_analysis_candidate
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: validate_results_and_explain_limits
+    execution: planning_only
+    read_only: true
+  - stage: prepare
+    tool: sandbox
+    operation: preview
+    binding:
+      request: <analysis-request>
+    read_only: true
+  - stage: verify
+    tool: sandbox
+    operation: run
+    binding:
+      plan: <sandbox-plan>
+    guard: required
+  inputs:
+  - data-path
+  - question
+  - export-path
+  outputs:
+  - analysis candidate
+  - result report
+  execution_support: blueprint_only; parameter_binder_pending
+  acceptance_criteria:
+  - Inputs and scope are explicit
+  - Claims distinguish evidence from assumptions
+  - No action outside selected tools and Guard
+  boundaries:
+  - No automatic deployment, publishing or hardware writes
+  - Planning actions require a later validated execution binding
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.11.0
+  status: enabled

@@ -1,0 +1,20 @@
+tool:
+  id: files
+  name: "Projekt"
+  description: "Dateien des Projekts; eine Datei öffnet als eigener Reiter. Neues Projekt anlegen (Build 24)."
+  version: 1.1.0
+  kind: object
+  handles: [project, file]
+  order: 25
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/projects
+    - POST /api/project/files
+    - POST /api/project/file
+    - POST /api/project/create    # Build 24 (B6-G-06): ein Ordner unter projects/ über das Dateisystem-Werkzeug der Runtime, mit Audit
+  events:
+    emits: [object.open]
+    listens: [task.changed]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

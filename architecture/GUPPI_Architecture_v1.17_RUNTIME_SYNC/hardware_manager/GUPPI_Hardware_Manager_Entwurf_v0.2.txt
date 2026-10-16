@@ -1,0 +1,206 @@
+GUPPI Hardware Manager — Parallelentwurf v0.2
+Stand: 30.09.2026 | Status: KONZEPT / NICHT IMPLEMENTIERT
+Erweitert den Thermal-&-Fan-Control-Entwurf v0.1.
+Kein bestehendes Entwicklerarchiv wurde verändert.
+
+1. Verbindliche Ausrichtung
+Der Manager wird multifunktional, bleibt jedoch auf zwei Aufgaben konzentriert:
+GUPPI belastbare Informationen über die reale Hardware geben und den Betrieb
+durch passende, freigegebene Einstellungen an die aktuelle Situation anpassen.
+Lüfter und Temperatur sind ein Teil dieses Hardware Managers.
+GIGABYTEs vorhandene Mainboard-/Grafikkarten-Software ist der erste
+Integrationskandidat für bestehende individuelle Konfigurationen.
+
+Captain = Betriebsziele und Profile festlegen.
+GUPPI = Zustand verstehen, erklären und ein freigegebenes Profil anfordern.
+Control Master = Daten erfassen, Fähigkeiten prüfen und Änderungen ausführen.
+Hardware Manager = gemeinsames Inventar, Telemetrie, Profile, Adapter und Audit.
+
+2. Funktionsumfang ohne aufgeblähte Oberfläche
+Hardware: CPU, GPU/VRAM, RAM, Mainboard/Revision, Betriebssystem,
+Treiber-/Firmwarestände und Datenträger einschließlich USB-Modellmedium.
+Live-Daten: Auslastung, freie Speicherreserven, Temperatur, Lüfter, Takt,
+Leistungsaufnahme und Drosselungsindikatoren, soweit messbar.
+Datenträger: freier Platz, Aktivität und beobachteter Durchsatz, damit GUPPI
+Modellladezeiten und Engpässe einordnen kann.
+KI-Lauf: Runtime, Modell, Kontext, Tokens/s, Laufstatus und Ressourcenverbrauch.
+Die KI-Daten kommen aus der Runtime und sind keine Hardware-Sensormessungen.
+
+Steuerung in Stufen:
+- Runtime: parallele Jobs, Threads, Batch, Kontext und GPU-Offload über
+  freigegebene Hardware-Model-Pass-Profile, soweit unterstützt.
+- System: geprüftes Energie-/Betriebsprofil über einen dokumentierten Adapter.
+- Kühlung: Herstellerprofile bzw. validierte Kurven für unterstützte Kanäle.
+- Energiegrenzen: später ein separat validierter Adapter für gerätespezifische
+  Power-Limits innerhalb der Herstellergrenzen; kein freies Tuning durch LLM.
+Nicht jede Einstellung lässt sich während eines laufenden Jobs ändern.
+Änderungen mit Neustartbedarf werden geplant und sichtbar ausgewiesen.
+
+Keine eigenständigen RGB-, Update-, Übertaktungs- oder Wartungssuiten.
+Treiber-/BIOSstände werden informativ erfasst. Firmwareflash, Spannungstuning,
+Abschaltgrenzen und automatische Treiberinstallation sind keine Manager-Aufgabe.
+RGB kann später als einfacher Statusindikator geprüft werden, ist kein Kernumfang.
+
+3. GIGABYTE zuerst: vorhandene Konfigurationen nutzen
+GCC (GIGABYTE Control Center), bei älteren Geräten SIV/App Center bzw.
+AORUS Engine, werden nur passend zum konkreten Produkt geprüft.
+Die offizielle GCC-Seite bestätigt Lüfter- und Leistungsfunktionen für
+unterstützte Produkte. Daraus folgt keine belegte Automatisierungsschnittstelle.
+
+Integrationsreihenfolge:
+a) Hardware und installierte Herstellerkomponenten mit Version erkennen.
+b) Prüfen, welche Statusdaten/Profile über dokumentierte, unterstützte Wege
+   gelesen oder aktiviert werden können.
+c) Captain kann vorhandene Herstellerprofile als Referenz mit Zweck und
+   Gerätebindung hinterlegen. Ohne auslesbares Format bleibt dies eine
+   manuelle Zuordnung; keine behauptete automatische Übernahme.
+d) Falls offiziell unterstützt: Profilzugriff über API/SDK/CLI bzw. dokumentiertes
+   Import-/Exportformat implementieren und Rücklesung nachweisen.
+e) Andernfalls: eigene freigegebene Profile über geprüfte Hardwareadapter
+   umsetzen oder Herstellerprofil manuell aktivieren lassen.
+
+Stand der Recherche: Eine öffentliche allgemeine GCC-Schnittstelle für
+Lüfter-/Leistungsprofile wurde in den geprüften offiziellen Quellen nicht
+nachgewiesen. Das veröffentlichte RGB Fusion SDK betrifft Beleuchtung und
+belegt keine Lüftersteuerung. Es wird kein inoffizielles „GIGABYTE“-GitHub-
+Repository als Herstellerquelle oder Downloadquelle verwendet.
+UI-Klickautomation ist kein verlässlicher Temperatur-Regelkreis.
+Geschlossene Profilformate und private Dienste werden nicht als sichere
+Integrationsbasis vorausgesetzt.
+
+Zuständigkeit pro Kanal:
+Entweder Herstellerprogramm regelt, und GUPPI wählt unterstützte Profile,
+oder der geprüfte Control-Master-Adapter regelt diesen Kanal.
+Kein gleichzeitiges Schreiben durch GCC, FanControl und GUPPI.
+Rückgabe an Herstellerautomatik ist ein eigenes, getestetes Adaptermerkmal.
+
+4. Einheitliche Daten und Fähigkeiten
+Jeder Wert: Geräte-/Sensor-ID, Quelle, Einheit, Zeitstempel und Qualität.
+Zustände: valid, unavailable, stale, error.
+Messwert, abgeleiteter Wert und Empfehlung bleiben unterscheidbar.
+CPU Package, GPU Core, Hotspot und Speichertemperatur werden getrennt geführt.
+Pro Lüfter: Kanal, Sollwert, Rücklesewert und echte Drehzahl, falls vorhanden.
+Prozent-Sollwerte werden nicht als gemessene RPM dargestellt.
+
+Jedes Gerät meldet Fähigkeiten getrennt:
+read_supported, write_supported, permissions_required,
+restart_required, restore_supported, validation_status.
+Ein Gerät kann vollständig lesbar und trotzdem nicht steuerbar sein.
+Bei fehlenden Werten oder Schreibrechten bleibt der übrige Manager nutzbar.
+
+5. Gemeinsame Betriebsprofile
+Auto, Leise, Ausgewogen, KI-Dauerlast sowie Captain/Custom Profiles.
+Ein Profil verbindet Kühlung, erlaubte Ressourcen und Runtime-Einstellungen.
+Beispiel, ohne vorgegebene Hardwarewerte:
+„KI-Dauerlast“ = geprüfte Kühlung, ausreichende RAM/VRAM-Reserve,
+begrenzte Parallelität, getestete Runtime-Parameter und Lastschutz.
+„Leise“ reduziert nötigenfalls GUPPI-Leistung, statt Temperaturgrenzen anzuheben.
+
+Ein Profil speichert Hardware-/Softwarebindung, zulässige Werte,
+Temperaturgrenzen pro Sensor, Hysterese, Haltezeiten, Rückgabeweg,
+Testergebnis, Ersteller und Version.
+Nicht unterstützte Profilteile werden vor Aktivierung gemeldet.
+Known-Good gilt nur für die geprüfte Geräte-/Treiber-/Adapterkombination.
+
+6. Regelung und sichere Anpassung
+Ein deterministischer lokaler Regler arbeitet unabhängig von der LLM.
+GUPPI fordert Profile an; die LLM schreibt keine beliebigen Rohwerte.
+Zustände: NORMAL, WARM, HOT, CRITICAL, SENSOR_FAULT und RECOVERY.
+Bei zunehmender Wärme: geprüfte Kühlung erhöhen, neue KI-Jobs begrenzen,
+dann eigene KI-Arbeit kontrolliert reduzieren/pausieren.
+Rückkehr erst nach stabiler Abkühlung mit frischen Messwerten.
+Keine pauschalen Celsius-Grenzen für alle CPUs/GPUs.
+Ohne validierte Grenzen und Rückgabeverhalten keine manuelle Kühlungsregelung.
+Ein GPU-zu-CPU-Wechsel ist kein allgemeiner Kühlungstrick und wird separat geprüft.
+Fremde Prozesse werden nicht beendet.
+
+Jede Änderung: Ausgangszustand erfassen, Fähigkeiten/Grenzen prüfen,
+Anwenden, Ergebnis zurücklesen, Wirkung beobachten, Audit protokollieren.
+Teilfehler bei Profilen führen zu Rücknahme bestätigter Änderungen, soweit
+möglich; ein nur teilweise angewandtes Profil darf nicht als aktiv erscheinen.
+Fortbestehende Änderungen und fehlgeschlagene Rücknahmen sichtbar melden.
+
+7. Fehlerpfad
+Separater lokaler Supervisor, Heartbeat und befristete Steuerberechtigung.
+Bei Sensorverlust, Controllerabsturz, USB-Entfernung, Standby oder Treiberreset:
+eigene Last stoppen/reduzieren; geprüfte Auto-Rückgabe anfordern und bestätigen.
+Falls Rückgabe fehlschlägt und ein Kanal erreichbar ist, die validierte
+gerätespezifische Schutzstellung verwenden. Niemals pauschal Lüfter auf Null.
+Ein Software-Supervisor garantiert keine Rückgabe bei vollständigem OS-Ausfall.
+Ist eine ausreichend verlässliche Rückgabe nicht nachweisbar, bleibt der
+Adapter im Beobachtungsmodus. Bestehende Hardware-Schutzfunktionen bleiben aktiv.
+Pumpenregelung wird erst nach einer gesonderten gerätespezifischen Prüfung ergänzt.
+
+8. Kleine Tool-Schnittstelle für GUPPI
+hardware.get_inventory(): Geräte, Versionen, verfügbare Ressourcen.
+hardware.get_capabilities(): lesbare/steuerbare Funktionen und Teststatus.
+hardware.get_state(): aktueller Zustand einschließlich aktiver Profile.
+hardware.get_history(run_id): synchroner Hardware-/KI-Verlauf.
+hardware.preview_profile(profile_id): konkrete Änderungen und Grenzen.
+hardware.apply_profile(profile_id): freigegebenes Profil über Policy ausführen.
+hardware.restore_defaults(scope): geprüfte vorherige/Herstellerregelung.
+hardware.record_run(): Messung für Benchmark/Ready-Test.
+
+Lesen ist Standard. Schreibfunktionen werden pro Gerät/Funktion im Captain-
+Profil aktiviert. Erhöhte Rechte bleiben im kleinen lokalen Hardware-Broker
+mit enger authentifizierter Schnittstelle. Keine freie Shell für Hardwarezugriff.
+Nicht verfügbare Fähigkeiten werden erklärt, nicht vom LLM improvisiert.
+
+9. Kompakte grafische Oberfläche
+Drei Ansichten:
+Übersicht: Hardwarekarte, CPU/GPU/RAM/VRAM, Temperatur, Kühlungszustand,
+Datenträgerreserve und aktuelles Betriebsprofil.
+Verlauf: synchronisierte Temperatur, Lüfter, Auslastung, Leistung und Tokens/s
+mit Markierungen aller Anpassungen.
+Profile: Captain-Konfigurationen, Herstellerzuordnungen, Vorschau und Rückgabe.
+Details nur bei Bedarf aufklappen.
+Begründung jeder Aktion: „GPU-Speicher knapp – keine weiteren Modelljobs“
+oder „Temperatur steigt – Kühlungsprofil angepasst und Parallelität reduziert“.
+Dies sind illustrative Texte, keine aktuellen Messungen.
+
+10. Entwicklung und PC-Ready-Test
+HM-01: Inventar, Telemetrieschema, Capability-Erkennung, Dashboard.
+HM-02: GIGABYTE-PoC auf dem Ziel-PC: Produkt, Software, dokumentierte
+       Profilzugriffe, Rücklesung und eindeutige Zuständigkeit prüfen.
+HM-03: Hardware-Model-Pass- und Captain-Profile zusammenführen.
+HM-04: deterministischer Regler mit simulierten Temperatur-/Speicherengpässen.
+HM-05: erster validierter Schreibadapter, Supervisor, Rollback und Audit.
+HM-06: echter Ready-Test und gerätegebundenes Known-Good-Profil.
+
+Abnahme:
+Hardware und Lüfterkanäle richtig zugeordnet; keine Nullwerte bei Sensorverlust;
+Herstellerprofile nur bei belegtem Zugriff automatisiert; Konflikte gesperrt;
+Änderungen und Teilfehler zurückgelesen; Auto-Rückgabe praktisch geprüft;
+Controller-/Sensor-/Standbyfehler getestet; Runtime-Neustartbedarf korrekt;
+Ressourcenreserve und Temperaturgrenzen bei repräsentativer KI-Last eingehalten.
+Fehler zuerst simulieren; Hardware nicht absichtlich überhitzen.
+
+11. Offene Fakten für die spätere Implementierung
+Exakte Mainboard-/GPU-Modelle und Revisionen; Kühlungsart; Betriebssystem;
+installierte GCC/SIV/AORUS-Versionen; vorhandene Profile und Steuerprogramme.
+Diese Angaben blockieren den Entwurf nicht, bestimmen später den Adapter.
+All-in-one bleibt Ziel: Oberfläche/Profilverwaltung portable, erforderliche
+Hardwaredienste/Treiber gegebenenfalls lokal. Universalzugriff wird nicht versprochen.
+Dieser Entwurf erweitert v0.1; die Begrenzung auf ein reines Thermal-Modul
+und dessen Ausschluss von Power-Limits wird durch den abgestuften Umfang
+in Abschnitt 2 ersetzt. Sämtliche Schreibfunktionen sind noch unimplementiert.
+
+12. Primärquellen — geprüft am 30.09.2026
+GIGABYTE Control Center: Funktionen und unterstützte Produkte
+https://www.gigabyte.com/Consumer/Software/GIGABYTE-Control-Center/
+GIGABYTE Mainboard-GCC-Handbuch (AM4, gerätespezifisch):
+https://download.gigabyte.com/FileList/Manual/mb_manual_am4-gcc.pdf
+GIGABYTE SIV-Dokumentation (ältere Produktgeneration):
+https://www.gigabyte.com/WebPage/340/images/features.pdf
+RGB Fusion SDK (Beleuchtung, keine belegte allgemeine Hardware-API):
+https://www.gigabyte.com/mb/rgb/sdk
+NVIDIA NVML Device Commands:
+https://docs.nvidia.com/deploy/nvml-api/latest/api/group__nvmlDeviceCommands.html
+NVIDIA dokumentiert, dass manuelle Lüftersteuerung die automatische Regelung
+ersetzt; Temperaturüberwachung und Rückgabe müssen berücksichtigt werden.
+LibreHardwareMonitor:
+https://github.com/LibreHardwareMonitor/LibreHardwareMonitor
+FanControl als Kurven-/Adapterreferenz:
+https://github.com/Rem0o/FanControl.Releases
+Abschnitte 1–11 sind unser Architekturentwurf, keine zugesicherte Herstellerfunktion.
+

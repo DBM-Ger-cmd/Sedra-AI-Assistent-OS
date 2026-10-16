@@ -1,0 +1,86 @@
+module:
+  id: planning-context
+  name: Planning + Context
+  version: 0.1.0
+  core_contract: 1
+  purpose:
+  - Captain-Intent in einen ausführbaren Missionsplan überführen.
+  - Nur relevanten Projektkontext sammeln und strukturieren.
+  - Abhängigkeiten, Risiken und Acceptance Criteria bestimmen.
+  capabilities:
+  - mission_decomposition
+  - context_retrieval
+  - context_ranking
+  - dependency_mapping
+  - acceptance_criteria
+  - execution_planning
+  - capability_gap_detection
+  - intent_routing
+  - skill_selection
+  - toolset_selection
+  inputs:
+    required:
+    - name: mission_id
+      type: string
+    - name: captain_intent
+      type: string
+    - name: mission_state
+      type: object
+    optional:
+    - name: knowledge_refs
+      type: array
+    - name: constraints
+      type: array
+    - name: prior_decisions
+      type: array
+  outputs:
+  - name: context_pack
+    type: object
+  - name: mission_plan
+    type: object
+  - name: dependencies
+    type: array
+  - name: acceptance_criteria
+    type: array
+  - name: risks
+    type: array
+  - name: capability_gaps
+    type: array
+  permissions:
+    read:
+    - mission
+    - knowledge
+    - decisions
+    - module_registry
+    - skill_registry
+    write:
+    - plan
+    - requirements
+    - context_refs
+    - risks
+    - acceptance_criteria
+  prohibited:
+  - change_captain_intent
+  - execute_tools_directly
+  - approve_own_plan
+  - modify_core_invariants
+  communicates_with:
+  - control-master
+  - verification
+  - knowledge
+  message_types:
+    accepts:
+    - planning_request
+    - context_response
+    - capability_response
+    - verification_feedback
+    emits:
+    - context_request
+    - capability_query
+    - plan_ready
+    - capability_gap
+  completion:
+    success_when:
+    - plan_is_actionable
+    - acceptance_criteria_defined
+    - required_context_resolved

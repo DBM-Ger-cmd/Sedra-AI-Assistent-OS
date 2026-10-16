@@ -1,0 +1,37 @@
+GUPPI OS – Brain / Mission Loop v1
+
+Ziel:
+GUPPI ist das zentrale ansprechbare Gehirn. Der Brain-Core besitzt die Mission
+und entscheidet, welches Modul als Nächstes benötigt wird.
+
+Kernzyklus:
+OBSERVE -> UNDERSTAND -> PLAN -> GUARD -> ACT -> VERIFY -> DECIDE
+
+Direkte Modulkommunikation ist erlaubt, aber:
+- Mission und Captain-Intent bleiben Eigentum von GUPPI.
+- Module dürfen das Missionsziel nicht eigenmächtig ändern.
+- Relevante Resultate werden in den Mission State zurückgeführt.
+- Kritische Aktionen müssen vor Ausführung durch Guard.
+- S1/S2-Missionen werden erst nach Verification abgeschlossen.
+
+Entscheidungsreihenfolge:
+1. Sicherheit / Guard
+2. Captain Gate
+3. fehlender Kontext
+4. Planning
+5. Execution
+6. Verification
+7. Rework
+8. Completion
+
+Missionklassen:
+S0 Direct: kurze, risikoarme Aufgabe.
+S1 Managed: Plan -> Execute -> Verify.
+S2 Controlled: zusätzlicher Guard und Captain Gate.
+
+Rework:
+Ein FAIL erzeugt keine neue Mission. GUPPI setzt die bestehende Mission auf REWORK
+und entscheidet, ob erneut geplant oder direkt nachgebessert wird.
+
+Completion:
+Nur GUPPI darf eine Mission auf COMPLETE setzen.

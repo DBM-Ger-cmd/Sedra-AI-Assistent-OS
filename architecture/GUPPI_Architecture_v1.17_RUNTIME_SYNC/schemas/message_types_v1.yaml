@@ -1,0 +1,18 @@
+message_types:
+  schema: 1
+
+  planning-context:
+    accepts: [planning_request, context_response, capability_response, verification_feedback]
+    emits: [context_request, capability_query, plan_ready, capability_gap]
+
+  control-master:
+    accepts: [execution_request, capability_query, verification_retest]
+    emits: [capability_response, execution_progress, execution_complete, execution_failed, artifact_created]
+
+  verification:
+    accepts: [verification_request, execution_complete, artifact_created]
+    emits: [verification_pass, verification_fail, verification_inconclusive, verification_retest, rework_request]
+
+  core:
+    accepts: [plan_ready, capability_gap, execution_complete, execution_failed, verification_pass, verification_fail, verification_inconclusive, rework_request]
+    emits: [planning_request, execution_request, verification_request, mission_state_changed, captain_gate_required]

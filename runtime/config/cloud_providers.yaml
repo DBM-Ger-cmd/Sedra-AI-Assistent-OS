@@ -1,0 +1,40 @@
+# Cloud-Modelle über API-Schlüssel (models/cloud_api.py). Captain-Entscheidung 16.10.2026: Schalter, das Gateway prüft jeden Aufruf.
+#
+# Standard: AUS. Solange `enabled: false` steht, wird kein Cloud-Adapter gebaut, und der Inhaltsschutz lässt keinen Cloudweg zu.
+# Einschalten: den Hauptschalter UND den Anbieter auf true setzen, das Modell eintragen, den Schlüssel als Umgebungsvariable setzen.
+#
+# Schlüssel: nur der Verweis steht hier (secret://anbieter/schluessel-id). Der Wert kommt aus der Umgebungsvariable
+#   GUPPI_SECRET_<ANBIETER>_<SCHLUESSEL_ID>   (Bindestriche werden zu Unterstrichen, Großbuchstaben)
+#   Beispiel für den Anbieter nvidia: GUPPI_SECRET_NVIDIA_API_KEY
+#   Windows (dauerhaft, für den Benutzer): setx GUPPI_SECRET_NVIDIA_API_KEY "..."   (danach SEDRA neu starten)
+#
+# Was den Rechner verlässt, regelt das Regelwerk (gateway/klassen.py, R-01 bis R-16): Personenbezug und besondere Daten
+# bleiben lokal, Zugangsdaten werden nie gesendet. Jeder Cloudaufruf steht im Audit-Log (SG_MODEL_CALL, route=cloud).
+cloud_providers:
+  schema: 1
+  enabled: false                     # Hauptschalter. Aus = keine Cloud, egal was unten steht.
+
+  providers:
+    nvidia:
+      enabled: false
+      kind: openai_compatible        # NVIDIA-API (OpenAI-kompatibel)
+      base_url: https://integrate.api.nvidia.com/v1
+      api_key: secret://nvidia/api-key
+      default_model: null            # Modellname des Anbieters eintragen, z. B. eine Llama-Kennung aus dem NVIDIA-Katalog
+      timeout_s: 60
+
+    openai:
+      enabled: false
+      kind: openai_compatible
+      base_url: https://api.openai.com/v1
+      api_key: secret://openai/api-key
+      default_model: null
+      timeout_s: 60
+
+    anthropic:
+      enabled: false
+      kind: anthropic                # Anthropic Messages API
+      base_url: https://api.anthropic.com
+      api_key: secret://anthropic/api-key
+      default_model: null            # z. B. die Claude-Modellkennung aus der Anthropic-Dokumentation
+      timeout_s: 60

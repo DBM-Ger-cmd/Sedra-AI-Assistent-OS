@@ -1,0 +1,52 @@
+skill:
+  id: model-runtime-ops
+  name: Model Runtime Operations
+  version: 1.0.0
+  owner_module: planning-context
+  description: Portable LLM runtime inspection, model pass, benchmark and tuning workflows.
+  capabilities:
+  - model_management
+  - model_selection
+  - runtime_selection
+  - hardware_model_pass
+  - model_benchmark
+  triggers:
+  - llm
+  - modell
+  - llama.cpp
+  - lm studio
+  - benchmark
+  - qwen
+  tool_hints:
+  - model-runtime
+  - hardware-manager
+  workflow:
+  - stage: observe
+    tool: model-runtime
+    operation: status
+    read_only: true
+  - stage: select
+    tool: model-runtime
+    operation: hardware_pass
+    binding:
+      model_id: <model-id>
+    read_only: true
+  - stage: benchmark
+    tool: model-runtime
+    operation: benchmark
+    binding:
+      model_id: <model-id>
+    guard: conditional
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.10.0
+  status: enabled
+  execution_support: blueprint_only; parameter_binder_pending

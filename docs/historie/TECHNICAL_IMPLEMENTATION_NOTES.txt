@@ -1,0 +1,27 @@
+GUPPI Runtime v1.2 – Technische Hinweise
+
+Python: >= 3.11
+Abhängigkeit: PyYAML >= 6.0
+
+Runtime Data:
+runtime/runtime_data/
+
+Tool Workspace:
+runtime_data/tool_workspace/
+
+Guard Approval Store:
+runtime_data/guard/approval_tokens.json
+
+Model-Konfiguration:
+runtime/config/model_runtimes.yaml
+runtime/config/model_profiles.yaml
+
+Custom Profiles:
+runtime_data/profiles/custom_profiles.yaml
+
+Lokale Model-Endpunkte:
+LM Studio: standardmäßig http://127.0.0.1:1234
+llama.cpp server: standardmäßig http://127.0.0.1:8080
+
+Der Model Router akzeptiert absichtlich nur Loopback-Adressen.
+Er startet keine Binary und lädt keine Modelle automatisch herunter.

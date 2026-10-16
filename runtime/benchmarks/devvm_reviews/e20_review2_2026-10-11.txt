@@ -1,0 +1,5 @@
+Second review of coder_ext.py (attempt_01_20261011_102524), Captain/Claude 2026-10-11: one defect and two copies. Keep everything else exactly.
+1. DEFECT: _check_overwrite, lines 102-103: `if not seen: seen = [(1, 150)]` invents a range the model never saw. The task says: ranges is "none" when tracker.seen(path) is empty. Remove these two lines and write ranges = ", ".join(...) or "none".
+2. _parse_start and _parse_end are the same function: remove both and use `v if _is_int(v) else None` through ONE helper in shown_range.
+3. parse_enabled: `text == ""` is already covered by `text.strip().lower()` checks: check `text is None or text.strip().lower() in ("", "none")`.
+Change nothing else.

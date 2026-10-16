@@ -1,0 +1,3 @@
+/* Werkzeug „Bibliothek“ – inside .t-lib only. */
+.t-lib-row{padding:7px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);display:flex;flex-direction:column}
+.t-lib-row.off{opacity:.6}

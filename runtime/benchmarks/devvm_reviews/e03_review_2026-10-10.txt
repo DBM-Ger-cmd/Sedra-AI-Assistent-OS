@@ -1,0 +1,7 @@
+Review of no_call_monitor.py (attempt_01_20261010_213530), Captain/Claude 2026-10-10: remove dead and copied code before the integration, keep the behaviour exactly.
+1. _parse_candidate: `except (json.JSONDecodeError, ValueError)` — JSONDecodeError is a ValueError, catch ValueError only.
+2. _parse_candidate skips objects without a name and extract_calls filters by tool_names afterwards: check `name in tool_names` once in one place.
+3. NoCallMonitor.feed runs extract_calls a second time for "text_call" although classify already did: compute the calls once (for example a private helper that returns kind and calls, used by classify and feed).
+4. _text_for_kind: a dict of the four texts is enough instead of the if chain.
+5. Two blank lines between top-level definitions (one is missing before _check_max_corrections).
+Change nothing else.

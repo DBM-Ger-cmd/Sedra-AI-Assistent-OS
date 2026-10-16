@@ -1,0 +1,138 @@
+"""The desk's event stream (SHELL_WERKZEUG_VERTRAG_v1 §5, §10.4): what changed between two looks, the ring buffer a reconnecting
+shell reads from, and the SSE wire format. The poller is driven by hand here, so the test never waits for a thread."""
+import io
+import json
+import threading
+import unittest
+
+from host_isolation import setUpModule, tearDownModule  # noqa: F401
+
+from guppi_runtime.desk.events import EventStream, Poller, diff, sse, stream_to
+
+
+def mission(mid, phase="EXECUTE", done=0, pending=0, steps=3):
+    return {"mission_id": mid, "phase": phase, "status": "active", "steps": ["a", "b", "c"][:steps], "steps_done": done,
+            "pending_gates": pending, "intent": "Parser bauen"}
+
+
+def decision(did, kind="gate"):
+    return {"id": did, "kind": kind, "title": "Netzgrenze", "describe": "pypi.org", "mission_id": "M-1", "gate_id": "HG-1"}
+
+
+class Diff(unittest.TestCase):
+    def test_nothing_changed_means_no_event(self):
+        snap = {"missions": [mission("M-1")], "decisions": [], "model": {"running": False}, "state": "READY"}
+        self.assertEqual(diff(snap, dict(snap)), [])
+
+    def test_a_step_forward_is_one_task_event(self):
+        before = {"missions": [mission("M-1", done=1)], "decisions": [], "model": {}, "state": "READY"}
+        after = {"missions": [mission("M-1", done=2)], "decisions": [], "model": {}, "state": "READY"}
+        events = diff(before, after)
+        self.assertEqual([n for n, _ in events], ["task.changed"])
+        self.assertEqual(events[0][1]["step"], 2)
+        self.assertEqual(events[0][1]["id"], "M-1")
+
+    def test_a_new_decision_arrives_and_an_answered_one_leaves(self):
+        empty = {"missions": [], "decisions": [], "model": {}, "state": "READY"}
+        waiting = {"missions": [], "decisions": [decision("gate:HG-1")], "model": {}, "state": "READY"}
+        self.assertEqual([(n, p["id"]) for n, p in diff(empty, waiting)], [("decision.pending", "gate:HG-1")])
+        self.assertEqual([(n, p["id"]) for n, p in diff(waiting, empty)], [("decision.answered", "gate:HG-1")])
+
+    def test_a_task_that_disappears_is_not_silently_dropped(self):
+        before = {"missions": [mission("M-1")], "decisions": [], "model": {}, "state": "READY"}
+        after = {"missions": [], "decisions": [], "model": {}, "state": "READY"}
+        self.assertEqual([(n, p["phase"]) for n, p in diff(before, after)], [("task.changed", "GONE")])
+
+    def test_model_and_state_changes_are_their_own_events(self):
+        before = {"missions": [], "decisions": [], "model": {"running": False}, "state": "READY"}
+        after = {"missions": [], "decisions": [], "model": {"running": True, "model": "qwen"}, "state": "SAFE_MODE"}
+        self.assertEqual([n for n, _ in diff(before, after)], ["model.changed", "system.state"])
+
+    def test_the_first_look_tells_everything_that_is_already_there(self):
+        after = {"missions": [mission("M-1")], "decisions": [decision("gate:HG-1")], "model": {}, "state": "READY"}
+        self.assertEqual(sorted(n for n, _ in diff(None, after)), ["decision.pending", "system.state", "task.changed"])
+
+
+class Stream(unittest.TestCase):
+    def test_events_are_numbered_and_the_ring_keeps_the_last_ones(self):
+        s = EventStream(ring=3)
+        for i in range(5):
+            s.publish("task.changed", {"id": "M-%d" % i})
+        self.assertEqual(s.last_id, 5)
+        missed, lost = s.since(0)
+        self.assertEqual([e["id"] for e in missed], [3, 4, 5])
+        self.assertFalse(lost, "a shell that connects for the first time has missed nothing")
+        self.assertTrue(s.since(1)[1], "a shell that was away too long must be told to read everything again")
+        missed, lost = s.since(4)
+        self.assertEqual([e["id"] for e in missed], [5])
+        self.assertFalse(lost)
+
+    def test_the_wire_format_is_one_event_per_block(self):
+        line = sse({"id": 7, "event": "decision.pending", "data": {"id": "gate:HG-1", "title": "Netz"}})
+        text = line.decode("utf-8")
+        self.assertTrue(text.startswith("id: 7\nevent: decision.pending\ndata: "))
+        self.assertTrue(text.endswith("\n\n"))
+        self.assertEqual(json.loads(text.split("data: ", 1)[1])["id"], "gate:HG-1")
+
+    def test_a_reader_gets_what_it_missed_and_then_stops_when_asked(self):
+        s = EventStream()
+        s.publish("task.changed", {"id": "M-1"})
+        s.publish("task.changed", {"id": "M-2"})
+        stop = threading.Event()
+        out = io.BytesIO()
+        out.flush = lambda: None
+        done = []
+        thread = threading.Thread(target=lambda: done.append(stream_to(out, s, 0, stop=stop, heartbeat=0.05)), daemon=True)
+        thread.start()
+        s.publish("decision.pending", {"id": "gate:HG-1"})
+        stop.set()
+        thread.join(timeout=5)
+        self.assertFalse(thread.is_alive(), "the stream must end when the server stops")
+        text = out.getvalue().decode("utf-8")
+        self.assertIn("event: task.changed", text)
+        self.assertIn("gate:HG-1", text)
+        self.assertEqual(done, [3])
+
+    def test_a_shell_that_was_away_too_long_is_told_to_read_again(self):
+        s = EventStream(ring=2)
+        for i in range(5):
+            s.publish("task.changed", {"id": "M-%d" % i})
+        out = io.BytesIO()
+        out.flush = lambda: None
+        stop = threading.Event()
+        stop.set()
+        stream_to(out, s, 1, stop=stop)
+        self.assertIn("event: desk.resync", out.getvalue().decode("utf-8"))
+
+
+class PollerTests(unittest.TestCase):
+    def test_the_poller_publishes_only_what_changed(self):
+        snaps = [
+            {"missions": [mission("M-1", done=0)], "decisions": [], "model": {}, "state": "READY"},
+            {"missions": [mission("M-1", done=0)], "decisions": [], "model": {}, "state": "READY"},
+            {"missions": [mission("M-1", done=1)], "decisions": [decision("gate:HG-1")], "model": {}, "state": "READY"},
+        ]
+        s = EventStream()
+        p = Poller(None, s, snapshot=lambda: snaps.pop(0))
+        self.assertEqual([e["event"] for e in p.tick()], ["task.changed", "system.state"])     # the first look reports what is there
+        self.assertEqual(p.tick(), [])
+        self.assertEqual(sorted(e["event"] for e in p.tick()), ["decision.pending", "task.changed"])
+
+    def test_a_broken_view_is_reported_once_and_does_not_kill_the_stream(self):
+        s = EventStream()
+        state = {"fail": True}
+
+        def snapshot():
+            if state["fail"]:
+                raise RuntimeError("missions kaputt")
+            return {"missions": [], "decisions": [], "model": {}, "state": "READY"}
+        p = Poller(None, s, snapshot=snapshot)
+        self.assertEqual([e["event"] for e in p.tick()], ["desk.error"])
+        self.assertEqual(p.tick(), [], "the same problem is not repeated every three seconds")
+        state["fail"] = False
+        p.tick()
+        self.assertIsNone(p.error)
+
+
+if __name__ == "__main__":
+    unittest.main()

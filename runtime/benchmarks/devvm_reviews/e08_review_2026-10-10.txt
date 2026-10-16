@@ -1,0 +1,6 @@
+Review of fuzzy_edit.py (attempt_01_20261010_211626), Captain/Claude 2026-10-10: remove dead code before the integration, keep the behaviour exactly.
+1. In _reindent: the lines `line_idx = idx` and `if line_idx <= same_line_idx: pass` do nothing; the variable same_line_idx and the parameter end are never used. Remove them (and the end argument at the call in apply).
+2. _reindent takes file_indent from the first non-blank text line of the match; the task says: the text line at the SAME index as the first non-blank line of old. Use that index (it gives the same result today, but follow the task).
+3. apply repeats the checks of _valid by hand: use _valid(text, old) plus the check of new.
+4. _normalize_trailing / _normalize_indent only call str.rstrip / str.strip: use those directly in _NORMALIZERS.
+Change nothing else.

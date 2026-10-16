@@ -1,0 +1,41 @@
+update:
+  schema: 1
+
+  identity:
+    update_id: "UPD-0001"
+    evolution_id: "EV-0001"
+    candidate_id: "CAND-0001"
+
+  versions:
+    from: "0.6.0"
+    to: "0.7.0"
+
+  classification:
+    level: "E2"
+
+  payload:
+    path: "payload/"
+    files: []
+
+  migrations:
+    required: false
+    steps: []
+
+  verification:
+    status: "PASS"
+    report: "verification/report.yaml"
+
+  guard:
+    captain_approval_required: false
+    approval_token: null
+
+  rollback:
+    supported: true
+    bundle: "rollback/"
+
+  integrity:
+    checksums: {}
+
+  install:
+    mode: "atomic_if_supported"
+    health_check_required: true

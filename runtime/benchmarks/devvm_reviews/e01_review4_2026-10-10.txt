@@ -1,0 +1,4 @@
+Fourth review of read_tracker.py (attempt_01_20261010_224855), Captain/Claude 2026-10-10: one defect left. Keep everything else exactly.
+DEFECT: note_edit stores the range (1, n) also when the new text has 0 lines, i.e. (1, 0). Example: note_read("a.py", "a = 1\n"); note_edit("a.py", ""). Then seen("a.py") gives [(1, 0)] instead of [], and check_overwrite("a.py", "") gives "partial" instead of "ok".
+Fix: store the full range the same way note_write does (no range when the text has 0 lines). Best: one small private helper "full range of a text" that note_write and note_edit both use.
+Change nothing else.

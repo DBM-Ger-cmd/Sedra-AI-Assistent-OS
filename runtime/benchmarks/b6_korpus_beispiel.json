@@ -1,0 +1,17 @@
+{
+ "hinweis": "Synthetische Beispieldatei im Schema der KIMOAN-Testdaten (Ticket B6-G-01, G-06). Nur zum Prüfen des Adapters; nicht der B6-Korpus.",
+ "test_cases": [
+  {"case_id": "BSP-SK0-01", "input": {"text": "Bitte fasse die Öffnungszeiten unseres Ladens freundlich zusammen.", "source": {"declared_class": "SK0"}, "context": {"requested_processing": "CLOUD_MODEL", "purpose": "zusammenfassung"}},
+   "expected": {"policy_status": "AUTO_APPROVED", "route": "CLOUD_ALLOWED_SIMULATED", "attributes": {}}},
+  {"case_id": "BSP-SK1-01", "input": {"text": "Frau Erika Musterfrau (erika.musterfrau@example.org) fragt nach dem Liefertermin.", "source": {"declared_class": "SK1"}, "context": {"requested_processing": "CLOUD_MODEL", "purpose": "antwortentwurf"}},
+   "expected": {"policy_status": "AUTO_APPROVED", "route": "CLOUD_AFTER_PSEUDONYMIZATION", "attributes": {"P01": "CONFIRMED"}}},
+  {"case_id": "BSP-SK2-01", "input": {"text": "Bitte Rückzahlung auf DE89 3704 0044 0532 0130 00 veranlassen.", "source": {"declared_class": "SK2"}, "context": {"requested_processing": "LOCAL_MODEL", "purpose": "antwortentwurf"}},
+   "expected": {"policy_status": "AUTO_APPROVED", "route": "LOCAL_ONLY", "attributes": {"F01": "CONFIRMED"}}},
+  {"case_id": "BSP-SK3-01", "input": {"text": "Kunde schreibt, er sei wegen seiner Depression krankgeschrieben und bittet um Fristverlängerung.", "source": {"declared_class": "SK3"}, "context": {"requested_processing": "LOCAL_MODEL", "purpose": "antwortentwurf"}},
+   "expected": {"policy_status": "HUMAN_REVIEW_REQUIRED", "route": "LOCAL_ONLY", "attributes": {"P02": "SUSPECTED"}}},
+  {"case_id": "BSP-BLOCK-01", "input": {"text": "Karte 4111 1111 1111 1111, CVV 123, bitte belasten.", "source": {"declared_class": "SK3"}, "context": {"requested_processing": "LOCAL_MODEL", "purpose": "antwortentwurf"}},
+   "expected": {"policy_status": "BLOCKED", "route": null, "attributes": {"F03": "CONFIRMED"}}},
+  {"case_id": "BSP-ANHANG-01", "input": {"text": "Bitte prüfen.", "attachments": ["vertrag.pdf"], "source": {"declared_class": "SK1"}, "context": {"requested_processing": "LOCAL_MODEL"}},
+   "expected": {"policy_status": "BLOCKED", "route": null}}
+ ]
+}

@@ -1,0 +1,35 @@
+evolution_manager:
+  id: "guppi-evolution-manager"
+  version: "0.1.0"
+  core_contract: 1
+
+  responsibilities:
+    - "observe_capability_gaps"
+    - "cluster_repeated_failures"
+    - "detect_repeated_workarounds"
+    - "identify_missing_skills_modules_or_core_capabilities"
+    - "classify_change_level"
+    - "create_evolution_proposal"
+    - "route_proposal_to_development"
+    - "track_proposal_status"
+
+  inputs:
+    - "mission_results"
+    - "verification_findings"
+    - "capability_gaps"
+    - "audit_events"
+    - "module_health"
+    - "captain_requests"
+
+  outputs:
+    - "capability_gap_record"
+    - "evolution_proposal"
+    - "classification"
+    - "development_recommendation"
+
+  must_not:
+    - "modify_stable_directly"
+    - "install_own_update"
+    - "change_core_invariants"
+    - "auto_approve_E3"
+    - "hide_failed_attempts"

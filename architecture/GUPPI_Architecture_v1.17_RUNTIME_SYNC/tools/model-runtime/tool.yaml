@@ -1,0 +1,31 @@
+tool:
+  id: model-runtime
+  name: Portable Model Runtime Manager
+  version: 0.2.0
+  provider: local
+  capabilities:
+  - status
+  - scan
+  - list_models
+  - hardware_pass
+  - provider_models
+  - loaded_models
+  - runtime_action
+  - benchmark
+  - benchmark_list
+  - known_good_list
+  - promote_known_good
+  - tuning_plan
+  - tuning_list
+  - tuning_run
+  guard:
+    action_class: model_runtime_control
+    protected: true
+  permissions:
+    required: []
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.6.0
+  health:
+    check: tool_health
+  status: enabled

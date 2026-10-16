@@ -1,0 +1,32 @@
+GUPPI Architecture Package v1.0
+
+Status: ARCHITECTURE BASELINE COMPLETE
+
+Enthalten:
+- Stable Core Definition
+- Core Contract
+- Brain / Mission Loop
+- Mission State
+- Message Bus
+- Guard / Human Gates
+- Module/Skill/Tool/Service Registries
+- Boot / Lifecycle / Recovery
+- Update Builder / Candidate Pipeline
+- Evolution Manager
+- Audit/Event Log
+- Knowledge Module
+- Communications Module
+- Artifact Store
+- Observability
+- Config / Secret Reference Model
+- Provenance / Checksums
+- Acceptance Tests
+- Implementierungsreihenfolge
+
+Nicht enthalten:
+- produktiver Runtime-Code
+- echte Tool-/API-Adapter
+- reale Modellruntime
+- UI
+
+Das Paket ist damit eine vollständige technische Spezifikationsbasis für die Implementierung.

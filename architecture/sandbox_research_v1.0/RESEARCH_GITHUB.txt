@@ -1,0 +1,57 @@
+GUPPI – Sandbox-Recherche, Stand 30.09.2026
+Projektinhaber: David Bennöhr
+Status: Recherche und Integrationsplanung. Keine Runtime installiert oder abgenommen.
+
+VERBINDLICHE PRODUKTVORGABE
+GUPPI soll eine integrierte Entwicklungs-Sandbox erhalten. Bevorzugt wird ein
+All-in-one-Paket: eine Bedienoberfläche, gebündelte Runtime, von GUPPI verwaltete
+Kindprozesse. Separat vom Nutzer betriebene Zusatzprogramme sind nicht das Ziel.
+Ein All-in-one-Paket kann trotzdem Betriebssystem-Virtualisierung voraussetzen.
+
+1. MICROSANDBOX – BEVORZUGTER KANDIDAT FÜR EINEN PoC
+Repository: https://github.com/superradcompany/microsandbox
+Dokumentation: https://docs.microsandbox.dev/getting-started/introduction
+Lizenz laut Repository: Apache-2.0.
+Der Anbieter beschreibt lokale MicroVMs mit eigenem Kernel, OCI-Images,
+Python-/Rust-/TypeScript-/Go-SDKs und Einbettung ohne dauerhaft laufenden Daemon.
+Windows wird unterstützt; Windows Hypervisor Platform muss aktiviert sein.
+Linux setzt KVM, macOS Apple Silicon voraus. Das Repository kennzeichnet die
+Software ausdrücklich als Beta mit möglichen inkompatiblen Änderungen.
+Unsere Bewertung: die passendste der hier geprüften Architekturen für ein
+GUPPI-geführtes All-in-one-Paket. Das ist eine Integrationshypothese, keine
+Bestätigung der Sicherheit oder Funktionsfähigkeit auf Davids Rechner.
+SDK, Runtime-Binary, Gastbestandteile und Image müssen gemeinsam festgelegt werden;
+eine pip-Abhängigkeit allein ist noch kein offline nutzbares Komplettpaket.
+
+2. OPENSANDBOX – ALTERNATIVE FÜR EINEN VERWALTETEN SANDBOX-DIENST
+Repository: https://github.com/opensandbox-group/OpenSandbox
+Lizenz laut Repository: Apache-2.0.
+Bietet Sandbox-Lifecycle-, Command- und Filesystem-APIs, Python-SDK sowie
+Docker-/Kubernetes-Backends. Der lokale Einstieg verlangt Docker und einen Server.
+Unsere Bewertung: gut als API-/Lifecycle-Vorbild, zusätzlicher Infrastrukturaufwand
+für das gewünschte All-in-one-Produkt. Keine erste Abhängigkeit für GUPPI vorgesehen.
+
+3. OPENHANDS SOFTWARE AGENT SDK – VORBILD FÜR DEN CODING-WORKFLOW
+Repository: https://github.com/OpenHands/software-agent-sdk
+Lizenz laut Repository: MIT.
+Bietet Agenten für Code-Aufgaben sowie lokale und flüchtige Docker-/Kubernetes-
+Workspaces über den Agent Server. Unsere Bewertung: hilfreiches Vorbild für
+Repository-Aufgaben und Prüfabläufe; ersetzt keine gewählte Isolationsgrenze.
+GUPPI Brain und Captain-Guard bleiben eigene führende Komponenten.
+
+4. DOCKER SANDBOXES – VERGLEICHSARCHITEKTUR
+Quellen: https://docs.docker.com/ai/sandboxes/security/
+https://docs.docker.com/ai/sandboxes/install/
+Die aktuelle Docker-Dokumentation beschreibt MicroVM-Isolation und sbx als
+Standalone-CLI ohne Pflicht zu Docker Desktop/Engine. Windows-Voraussetzungen:
+Windows 11, x64 Intel/AMD und WHP für lokale Sandboxes.
+Direkt gemountete Workspaces sind schreibbar; --clone nutzt eine private Kopie.
+Unsere Bewertung: gutes Vorbild für Kopien und Netzwerkgrenzen; keine Pflicht-
+Komponente für GUPPI. Gewöhnliche Docker-Container und Docker Sandboxes sind
+unterschiedliche Isolationsarchitekturen.
+
+RECHERCHEGRENZE
+Herstellerdokumentation und GitHub-READMEs geprüft, keinen Sicherheitsaudit oder
+praktischen Backend-Test durchgeführt. Keine Leistungsversprechen übernommen.
+Vor Bundling konkreten Release, Prüfsummen, Lizenz-/NOTICE-Dateien und alle
+weiterverteilten Runtime-/Image-Komponenten prüfen. Kein Cloud-Konto einplanen.

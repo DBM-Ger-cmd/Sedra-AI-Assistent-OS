@@ -1,0 +1,25 @@
+tool:
+  id: modules
+  name: "Module"
+  description: "Welche Shell läuft, welche Werkzeuge geladen sind – und wie ein neues dazukommt."
+  version: 1.0.0
+  kind: object
+  handles: [module]
+  order: 13
+  slot: inhalt
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/uix/modules
+    - POST /api/uix/shell
+    - POST /api/uix/enabled
+    - POST /api/uix/scaffold
+    - GET /api/uix/vorgaben
+    - POST /api/uix/vorgabe
+    - POST /api/uix/install
+    - POST /api/uix/trust
+    - POST /api/uix/remove
+  events:
+    emits: [object.open]
+    listens: [tools.refresh, decision.answered]
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

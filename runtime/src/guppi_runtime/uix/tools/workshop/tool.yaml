@@ -1,0 +1,27 @@
+tool:
+  id: workshop
+  name: "Werkstatt"
+  description: "Modelle laden, entladen und testen; Rezepte lesen. Neues Modell aus einer GGUF-Datei (Freigabe als Entscheidung) und die Teststrecke (Standardtest) – Build 24."
+  version: 1.1.0
+  kind: object
+  handles: [model]
+  order: 30
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/models
+    - POST /api/model/load
+    - POST /api/model/unload
+    - POST /api/model/test
+    - POST /api/model/pick            # Build 24 (B6-G-06): der Dateidialog dieses PCs – liest nichts sonst
+    - POST /api/model/browse          # nur der Modellordner, nur lesen
+    - POST /api/model/inspect         # was die Datei über sich sagt; ändert nichts
+    - POST /api/model/add/request     # legt das Gate vor – geschrieben wird erst nach „freigeben und anwenden“ im Werkzeug Entscheidungen
+    - GET /api/standard-test          # Fortschritt und Ergebnis der Teststrecke
+    - POST /api/standard-test/start
+    - POST /api/routing-config/request   # die Empfehlung der Teststrecke als Änderungsantrag (Gate), nie direkt
+  events:
+    emits: [object.open, decision.pending]
+    listens: [model.changed, decision.answered]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

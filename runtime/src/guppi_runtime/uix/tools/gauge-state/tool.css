@@ -1,0 +1,8 @@
+/* Instrument „Zustand“ – der Guppy gehört dem Werkzeug, nicht der Shell (Fund beim Bau von Shell E). */
+.t-gauge-state{ display: flex; flex-direction: row; align-items: center; gap: var(--gap); }
+.t-gauge-state-fish{
+  width: 26px; height: 17px; flex: none;
+  border-radius: 50% 60% 60% 50%;
+  background: linear-gradient(180deg, var(--guppy-1), var(--guppy-2));
+  border: 1px solid var(--guppy-line);
+}

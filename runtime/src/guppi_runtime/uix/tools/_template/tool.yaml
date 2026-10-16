@@ -1,0 +1,20 @@
+# Vorlage für ein Werkzeug (SHELL_WERKZEUG_VERTRAG_v1 §7.4). Kopieren, umbenennen, ausfüllen – der Ordner `_template`
+# selbst wird nie geladen (der Lader überspringt Ordner mit führendem _).
+tool:
+  id: beispiel                      # [a-z0-9-]{2,40}, muss der Ordnername sein
+  name: "Beispiel"                  # was im Reiter steht
+  description: "Ein Satz: wofür es da ist."
+  version: 1.0.0
+  kind: object                      # object (ein Container je Objekt) | instrument (eine Zelle der Leiste) | panel
+  handles: [task]                   # welche Objekttypen dieses Werkzeug zeichnet
+  order: 100                        # kleiner kommt früher
+  slot: inhalt                      # inhalt (Werkstück, links) | nachweis (rechts daneben)
+  entry: {js: tool.js, css: tool.css}
+  api:                              # die Allowlist: alles andere beantwortet der Server mit 403
+    - POST /api/objects
+  events:
+    emits: [object.open]            # nur was hier steht, darf das Werkzeug senden
+    listens: [task.changed]
+  trust: CAPTAIN                    # CORE nur im Paket; von GUPPI gebaut: GUPPI_BUILT; fremd: COMMUNITY
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

@@ -1,0 +1,23 @@
+GUPPI OS – Mission State v1
+
+Zweck:
+Der Mission State ist die zentrale strukturierte Wahrheit einer Mission.
+
+Regeln:
+1. captain_intent.original ist unveränderlich.
+2. Nur GUPPI Core darf objective.current und lifecycle.phase autoritativ ändern.
+3. Planning schreibt Plan, Dependencies, Acceptance Criteria und Context-Referenzen.
+4. Control Master schreibt Execution Results, Artifacts und Tool-/Runtime-Ergebnisse.
+5. Verification schreibt Findings, Evidence und PASS/FAIL/INCONCLUSIVE.
+6. Guard/Human Gates dürfen nicht umgangen werden.
+7. Jede relevante Änderung erzeugt ein Audit-Event.
+
+Phasen:
+NEW -> UNDERSTAND -> PLAN -> READY -> EXECUTE -> VERIFY
+VERIFY PASS -> CAPTAIN_REVIEW oder COMPLETE
+VERIFY FAIL -> REWORK -> EXECUTE
+
+Missionklassen:
+S0 Direct – einfache Aufgaben.
+S1 Managed – Plan -> Execute -> Verify.
+S2 Controlled – zusätzliche Guard- und Captain-Gates.

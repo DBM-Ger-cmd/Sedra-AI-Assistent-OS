@@ -1,0 +1,13 @@
+# Hardware-aware admission with reservations (docs/JOB_SUPERVISOR_CONTRACTS.md; Herdr handoff section 8).
+# A job asks for RAM, VRAM and KV cache before it starts. It is granted only if BOTH the ledger of what is already promised
+# AND the live measurement leave room, after a safety reserve. Numbers are starting values without measurement behind them.
+resource_scheduler:
+  schema: 1
+  enabled: false                 # Feature flag. Default OFF: nothing is reserved, behaviour is v1.20.
+  vram_reserve_gb: 0.7           # Captain 2026-10-13: the GPU safety margin may be 0.7 to 1.0 GB; the lower value (was 1.0): never promise the last 0.7 GB of a GPU
+  ram_reserve_gb: 1.5            # Captain 2026-10-13: the RAM safety limit is 1.5 GB (was 3.0 since 2026-10-04); whatever hardware profile is active (null would use the profile value)
+  warm_max_reservations: 1       # while the host is WARM only one job at a time (same rule as the hardware manager's admission)
+  # What to do when VRAM is requested but no GPU telemetry exists (the collector only reads NVIDIA cards via nvidia-smi):
+  #   deny           refuse the request (safe default)
+  #   declared_only  trust the ledger alone; set this only if you accept that the live check is missing
+  unknown_vram_telemetry: deny

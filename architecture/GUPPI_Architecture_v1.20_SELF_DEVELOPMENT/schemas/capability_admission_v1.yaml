@@ -1,0 +1,6 @@
+capability_admission:
+  schema: 1
+  decisions: [ADMIT, REUSE_EXISTING, BLOCK]
+  required_checks: [skills, tools, modules]
+  new_tool_rule: explicit_gap_and_rationale_required
+  principle: capability_before_tool

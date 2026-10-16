@@ -1,0 +1,4 @@
+Third review of read_tracker.py (attempt_01_20261010_223529), Captain/Claude 2026-10-10: one point of the second review is still open. Keep the behaviour exactly.
+1. check_overwrite, lines 86-91, repeats the checks of check_edit (path not a str, path unknown, text differs). Write it as: verdict = self.check_edit(path, text); if verdict != "ok": return verdict; then only the "partial" decision (lines 92-98).
+2. _all_seen and the n == 0 case in check_overwrite say the same thing ("0 lines or the whole range seen"): use ONE private helper for both.
+Change nothing else.

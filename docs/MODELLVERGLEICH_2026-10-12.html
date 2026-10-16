@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>GUPPI Modellvergleich 2026-10-12</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm 12mm 14mm 12mm; }
+  :root { --ink:#1d2430; --muted:#5b6575; --line:#d5dbe3; --head:#eef2f7; --good:#1f7a4d; --warn:#a15c00; --bad:#a3262e; --accent:#2c5aa0; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: var(--ink); font-size: 9.2pt; line-height: 1.35; margin: 0; background:#fff; }
+  h1 { font-size: 18pt; margin: 0 0 2mm 0; color: var(--accent); }
+  h2 { font-size: 12.5pt; margin: 6mm 0 2mm 0; color: var(--accent); border-bottom: 1.5px solid var(--accent); padding-bottom: 1mm; }
+  p { margin: 1mm 0 2mm 0; }
+  .sub { color: var(--muted); font-size: 9pt; }
+  .box { border: 1px solid var(--line); border-left: 4px solid var(--accent); background: #f7f9fc; padding: 2.5mm 3.5mm; margin: 3mm 0; }
+  .box b { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; margin: 1.5mm 0 2mm 0; page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  th, td { border: 1px solid var(--line); padding: 1.4mm 1.8mm; vertical-align: top; text-align: left; }
+  th { background: var(--head); font-weight: 600; font-size: 8.6pt; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  .good { color: var(--good); font-weight: 600; }
+  .warn { color: var(--warn); font-weight: 600; }
+  .bad  { color: var(--bad);  font-weight: 600; }
+  .tag { display:inline-block; padding: 0 1.5mm; border-radius: 2mm; font-size: 8pt; font-weight: 600; border:1px solid var(--line); }
+  .t-main { background:#e3f1e9; color:var(--good); border-color:#b9dcc8; }
+  .t-side { background:#fff3df; color:var(--warn); border-color:#f0d3a3; }
+  .t-off  { background:#f4e3e4; color:var(--bad); border-color:#e3bcbf; }
+  .small { font-size: 8.2pt; color: var(--muted); }
+  .bar { height: 3mm; background: var(--accent); display:inline-block; vertical-align: middle; border-radius: 1mm; }
+  .bar.mtp { background: var(--good); }
+  .bar.moe { background: #6f8fc4; }
+  .speed td { padding-top: 1.1mm; padding-bottom: 1.1mm; }
+  .pb { page-break-before: always; }
+  ul { margin: 1mm 0 2mm 5mm; padding: 0; }
+  li { margin: 0.6mm 0; }
+</style>
+</head>
+<body>
+
+<h1>GUPPI – Vergleich der lokalen Modelle</h1>
+<div class="sub">Stand 12.10.2026 · Daten aus GUPPIs eigenen Messungen (Standardtest <i>bench_std</i>, DevVM-Bauläufe mit versteckten Tests, Kontext-Leiter, Tempo-Messungen, Kleinteam-Test). Nichts geschätzt: Wo ein Wert fehlt, steht „–“.</div>
+
+<div class="box">
+<b>Hardware:</b> NVIDIA GeForce RTX 4070 Ti (12 GB VRAM, Treiber 617.42) · AMD Ryzen 7 7700X (8 Kerne) · 31 GB RAM ·
+<b>Engine:</b> GUPPIs eigener llama.cpp-Server b11160 (CUDA 13) · <b>Standard-Einstellung seit 11./12.10.:</b> Flash Attention an, KV-Cache q8_0, ubatch 512, 1 Slot ·
+MoE-Modelle (Qwen3.6, Qwen3-Coder) legen einen Teil der Experten-Schichten in den Arbeitsspeicher (<i>n_cpu_moe</i>), daher sind sie langsamer als ihre aktive Größe vermuten lässt.
+</div>
+
+<div class="box">
+<b>Kurzempfehlung</b><br>
+<b>Hauptagent / Hauptcoder:</b> Qwen3.6-35B-A3B (IQ4_XS) – bestes Gesamtergebnis, wenigste Werkzeugaufrufe, 131k Kontext. ·
+<b>Schnelle Unteragenten:</b> Qwen3.5-9B Q6 mit MTP – ca. 109 Token/s, 131k Kontext, klein. ·
+<b>Zweiter Coder für lange, sorgfältige Aufgaben:</b> Qwen3-Coder-30B-A3B. ·
+<b>Prüfer / Leser langer Texte:</b> Gemma-4-12B. ·
+<b>Kleinstaufgaben im Team:</b> Jan-code-4b + SWE-Review-8B (nur mit Test als Richter).
+</div>
+
+<h2>1. Übersicht: wofür jedes Modell gut ist</h2>
+<table>
+<tr><th style="width:15%">Modell (Datei)</th><th style="width:9%">Art · Größe</th><th style="width:12%">Rezept · Status</th><th style="width:16%">Gut für</th><th style="width:25%">Was es kann (Belege)</th><th style="width:23%">Schwächen</th></tr>
+<tr><td><b>Qwen3.6-35B-A3B</b><br><span class="small">UD-IQ4_XS</span></td><td>MoE, 3B aktiv · 17,7 GB</td><td>coder.local_primary<br><span class="tag t-main">Standard-Coder</span></td>
+<td>Hauptagent, Coder, Werkzeug-Arbeit, Selbstentwicklung</td>
+<td>Standardtest in allen Solo-Läufen 4/4 (zuletzt 126–161 s, ca. 24 Aufrufe). Gebaut: Coder-Erweiterungen E-01…E-09, E-20, mcp_shield 4/4, core_boundary 4/4 (713 s), am009 3/3, e06 nach Nacharbeit 3/3.</td>
+<td>Sehr große Stufen (am007, 30k Token Code) scheitern am 32k-Fenster; S0-Werkzeugprüfung vom 12.10. ohne Werkzeugaufruf (Prüfung wird noch untersucht).</td></tr>
+<tr><td><b>Qwen3.5-9B Q6 mit MTP</b><br><span class="small">Qwen3.5-9B-MTP-GGUF/Q6_K</span></td><td>dicht, 9B · 7,2 GB</td><td>coder.llama_qwen35<br><span class="tag t-side">aus, neu eingestellt</span></td>
+<td>Schnelle Unteragenten, viele kleine Aufgaben, Zusammenfassen</td>
+<td>Gleiche Gewichte wie Q6 unten plus MTP-Kopf: ca. 109 statt 56 Token/s, 80 % der Vorschläge angenommen. Kontext-Leiter sicher bis 131k.</td>
+<td>Mit MTP noch kein Bau-Test. Rezept steht noch auf 16k-Grenze (Freigabe zum Anheben offen).</td></tr>
+<tr><td><b>Qwen3.5-9B Q6</b><br><span class="small">Qwen3.5-9B-GGUF/Q6_K</span></td><td>dicht, 9B · 7,0 GB</td><td>coder.llama_qwen35_q6<br><span class="tag t-side">aus · GPU-Canary</span></td>
+<td>Kleiner Coder, Canary-Modell (GPU-Selbsttest)</td>
+<td>Standardtest 4/4 und 4/4 (102 s / 286 s), layer_summary 3/3 im ersten Anlauf, Dauertest 40/40, Nadeltest bis 131k.</td>
+<td>Schwankende Laufzeit; früher (b11371, ohne FA) Treiberfehler ab ca. 24k – mit den neuen Einstellungen behoben.</td></tr>
+<tr><td><b>Qwen3-Coder-30B-A3B</b><br><span class="small">UD-Q4_K_XL</span></td><td>MoE, 3B aktiv · 16,5 GB</td><td>coder.llama_qwen3_coder<br><span class="tag t-main">aktiv</span></td>
+<td>Zweiter Coder, lange und sorgfältige Bauten</td>
+<td>Standardtest 4/4 und 4/4 (ca. 265 s). Gebaut: am002–am005, am008 (Referenzbau 4740 s), e11 3/3 im ersten Anlauf. Kontext sicher bis 131k.</td>
+<td>Langsamer als Qwen3.6; e10 nur 1/3; am006/am007/am009 nicht bestanden. Früher CUDA-Abstürze mit FA auf b11371.</td></tr>
+<tr><td><b>Gemma-4-12B (QAT)</b><br><span class="small">Q4_0</span></td><td>dicht, 12B · 6,5 GB</td><td>verifier.llama_gemma<br><span class="tag t-main">Prüfer</span></td>
+<td>Prüfer/Verifier, lange Texte lesen, Reviews</td>
+<td>Standardtest 4/4 und 4/4; Codieraufgaben 92 % bei 32k und 64k; Kontext sicher bis 131k mit viel Reserve (2,5 GB frei).</td>
+<td>Braucht viele Aufrufe (60–97 im Standardtest); eigener Bau e10 0/3; Denk-Ausreißer. Als handelnder Agent ungeeignet.</td></tr>
+<tr><td><b>SWE-Review-8B</b><br><span class="small">i1-Q4_K_M</span></td><td>dicht, 8B · 5,0 GB</td><td>reviewer.llama_swe<br><span class="tag t-side">aus</span></td>
+<td>Reviewer im Kleinteam</td>
+<td>Im Team mit Jan: ca. 12 s je Review im Werkzeugmodus; 13 von 19 Urteilen richtig.</td>
+<td>Kein verlässlicher Richter (falsche Ablehnungen und falsche Freigaben) – nur zusammen mit einem Test.</td></tr>
+<tr><td><b>Jan-code-4b</b><br><span class="small">Q4_K_M</span></td><td>dicht, 4B · 2,7 GB</td><td>coder.llama_jan<br><span class="tag t-side">aus</span></td>
+<td>Kleinstaufgaben, schnelle Einzelfixes</td>
+<td>Mit Werkzeugen 10/10 einfache Aufgaben; im Team mit Test 16/16. Sehr schnell.</td>
+<td>Standardtest nur 1/4; zu viele „Lektionen“ im Prompt verschlechtern es; nicht für größere Bauten.</td></tr>
+<tr><td>Qwen3-30B-A3B-2507</td><td>MoE · 17,3 GB</td><td>coder.llama_qwen3_30b_2507<br><span class="tag t-side">aus</span></td><td>–</td><td>Standardtest 2/4.</td><td>Schwächer als Qwen3.6 bei gleicher Größe.</td></tr>
+<tr><td>DeepSeek-R1-0528-Qwen3-8B</td><td>dicht, 8B · 4,7 GB</td><td>coder.llama_deepseek<br><span class="tag t-side">aus</span></td><td>–</td><td>Codieraufgaben 68 % bei 32k, Kontext sicher bis 64k (Messung 03.10.).</td><td>38 % bei 64k; nicht weiter getestet.</td></tr>
+<tr><td>Qwen3-14B</td><td>dicht, 14B · 8,4 GB</td><td>coder.llama_qwen3_14b<br><span class="tag t-side">aus</span></td><td>–</td><td>Nur Kontextmessung: sicher bis 16k (VRAM-Grenze).</td><td>Zu groß für mehr Kontext auf 12 GB.</td></tr>
+</table>
+
+<h2 class="pb">2. Token-Erzeugung und Kontext auf dieser Hardware</h2>
+<p class="small"><b>Server-Messung</b> = Zeiten des llama-Servers selbst (reines Erzeugen bzw. Einlesen). <b>Bau-Durchsatz</b> = erzeugte Token ÷ Laufzeit eines ganzen Baulaufs (enthält Einlesen, Werkzeuge, Prüfungen) – nur zum Vergleich der Modelle untereinander, nicht mit der Server-Messung.</p>
+<table class="speed">
+<tr><th style="width:17%">Modell</th><th class="num">Erzeugen<br>Token/s (Server)</th><th style="width:18%"></th><th class="num">Einlesen<br>Token/s (Server)</th><th>Mess-Einstellung</th><th class="num">Bau-Durchsatz<br>Token/s</th><th class="num">Kontext<br>sicher bis</th><th class="num">VRAM belegt / frei<br>beim Maximum</th></tr>
+<tr><td><b>Qwen3.5-9B Q6 + MTP</b></td><td class="num good">109,4</td><td><span class="bar mtp" style="width:100%"></span></td><td class="num">ca. 3.370</td><td>32k, 6k Prompt, 512 Token Code, 12.10.</td><td class="num">–</td><td class="num">131k</td><td class="num">10,5 / 1,5 GB</td></tr>
+<tr><td><b>Qwen3.5-9B Q6</b> (ohne MTP)</td><td class="num">55,7</td><td><span class="bar" style="width:51%"></span></td><td class="num">ca. 3.850</td><td>wie oben</td><td class="num">49–55</td><td class="num">131k</td><td class="num">10,3 / 1,7 GB</td></tr>
+<tr><td><b>Qwen3.6-35B-A3B</b> IQ4_XS</td><td class="num">44–47</td><td><span class="bar moe" style="width:42%"></span></td><td class="num">316–339</td><td>32k, n_cpu_moe 26–28, ubatch 1024</td><td class="num">18–36</td><td class="num">131k</td><td class="num">9,6 / 2,4 GB</td></tr>
+<tr><td><b>Qwen3-Coder-30B-A3B</b></td><td class="num">33–41</td><td><span class="bar moe" style="width:34%"></span></td><td class="num">117–155 (ub 512)<br>380–498 (ub 2048)</td><td>49k, n_cpu_moe 36–48</td><td class="num">13–28</td><td class="num">131k</td><td class="num">10,2 / 1,7 GB</td></tr>
+<tr><td><b>Gemma-4-12B</b></td><td class="num">–</td><td></td><td class="num">–</td><td>keine reine Server-Messung</td><td class="num">37–44</td><td class="num">131k</td><td class="num">9,5 / 2,5 GB</td></tr>
+<tr><td><b>Jan-code-4b</b></td><td class="num">–</td><td></td><td class="num">–</td><td>keine reine Server-Messung</td><td class="num">27–89</td><td class="num">16k (Rezept)</td><td class="num">–</td></tr>
+<tr><td><b>SWE-Review-8B</b></td><td class="num">–</td><td></td><td class="num">–</td><td>ca. 12 s je Review</td><td class="num">–</td><td class="num">16k (Rezept)</td><td class="num">–</td></tr>
+<tr><td>Qwen3-30B-A3B-2507</td><td class="num">–</td><td></td><td class="num">–</td><td>–</td><td class="num">22</td><td class="num">32k (Rezept)</td><td class="num">–</td></tr>
+</table>
+
+<h2>3. Standardtest und Bauläufe</h2>
+<p class="small">Standardtest <i>bench_std</i>: dieselbe Aufgabe in 4 Stufen für alle Modelle, versteckte Tests entscheiden, Solo-Modus, 32k-Fenster. Werte der Nacht 11./12.10. (je 2 Läufe).</p>
+<table>
+<tr><th style="width:18%">Modell</th><th>Standardtest (Nacht)</th><th class="num">Dauer s</th><th class="num">Aufrufe</th><th>Eigene Bauten (versteckte Tests)</th></tr>
+<tr><td><b>Qwen3.6-35B-A3B</b></td><td class="good">4/4 · 4/4 (ohne Coder-Erw.: 4/4 · 4/4)</td><td class="num">161 / 126</td><td class="num">23 / 24</td><td>mcp_shield 4/4 · core_boundary 4/4 · e06 1/3, nach Nacharbeit 3/3 · E-01…E-09, E-20 bestanden</td></tr>
+<tr><td><b>Qwen3-Coder-30B-A3B</b></td><td class="good">4/4 · 4/4</td><td class="num">270 / 262</td><td class="num">34 / 38</td><td>e11_lesson_cards 3/3 · e10_self_repo_guard 1/3 · am002–am005, am008 bestanden</td></tr>
+<tr><td><b>Qwen3.5-9B Q6</b></td><td class="good">4/4 · 4/4</td><td class="num">102 / 286</td><td class="num">30 / 28</td><td>layer_summary 3/3</td></tr>
+<tr><td><b>Gemma-4-12B</b></td><td class="good">4/4 · 4/4</td><td class="num">206 / 475</td><td class="num">60 / 97</td><td class="bad">e10_self_repo_guard 0/3</td></tr>
+<tr><td>Jan-code-4b</td><td class="bad">1/4 (09.10.)</td><td class="num">250</td><td class="num">82</td><td>Kleinteam-Aufgaben 16/16 mit Test</td></tr>
+<tr><td>Qwen3-30B-A3B-2507</td><td class="warn">2/4 (09.10.)</td><td class="num">663</td><td class="num">76</td><td>–</td></tr>
+</table>
+
+<h2>4. Entfernte Modelle (12.10.2026, Quarantäne RM-20261012T055725)</h2>
+<table>
+<tr><th style="width:18%">Modell</th><th class="num">Größe</th><th>Gemessen</th><th>Grund für das Entfernen</th></tr>
+<tr><td>Qwen3.6-35B-A3B Q4_K_M</td><td class="num">22,1 GB</td><td>Erzeugen 41–48 Token/s, Standardtest 3/3 bestanden</td><td>Doppelt zur IQ4_XS-Variante, größer, nicht besser</td></tr>
+<tr><td>Qwen3.8-27B (+ MTP-Datei)</td><td class="num">17,8 GB</td><td>Standardtest 4/4 · 4/4, s0_conn_check 3/3; aber ca. 312 s je Standardlauf, Bau-Durchsatz ca. 4 Token/s</td><td>Dicht und zu groß für 12 GB (nur 36 von 64 Schichten auf der GPU), am langsamsten, Kontext nur 49k</td></tr>
+<tr><td>gpt-oss-20b</td><td class="num">12,1 GB</td><td>ca. 65 Token/s; Codieren 98–99 % bis 32k; Nacht: 0/4 (HTTP 500 bei Werkzeugaufrufen)</td><td>Keine Werkzeugaufrufe im Agentenbetrieb; bricht über ca. 40k Eingabe ein</td></tr>
+<tr><td>DeepSeek-Coder-V2-Lite</td><td class="num">10,4 GB</td><td>73–81 Token/s bei 8k, aber 0,3 Token/s bei 32k</td><td>Standardtest 0/4</td></tr>
+<tr><td>Hermes-4-14B</td><td class="num">9,0 GB</td><td>Bau-Durchsatz ca. 42 Token/s</td><td>Standardtest 1/4</td></tr>
+</table>
+<p class="small">Zurückgeholt: Qwen3.5-9B Q6 <b>mit</b> MTP-Kopf (7,7 GB) – war im Löschvorschlag fälschlich als doppelt geführt.</p>
+
+<h2>5. Vorbehalte</h2>
+<ul>
+<li>Die Verbindungsprüfung S0 (Werkzeugaufruf, lange Argumente, Fenster füllen) vom 12.10. ist bei <b>allen</b> Modellen nicht bestanden, meist mit gleichem Fehler (Fenster-Füllung HTTP 400, lange Argumente). Das deutet auf die Prüfung selbst; sie wird noch untersucht. Die Rangfolge für den Agentenbetrieb gilt daher unter Vorbehalt.</li>
+<li>Werte aus verschiedenen Tagen und Engine-Ständen (03.10. b11371 ohne FA, ab 11.10. b11160 mit FA und q8). Die Kontext-Leitern der Hauptmodelle sind alle vom 11./12.10. mit den aktuellen Einstellungen.</li>
+<li>Bau-Durchsatz hängt stark von der Aufgabe und der Zahl der Werkzeugaufrufe ab; für reines Tempo zählt die Server-Messung.</li>
+</ul>
+<p class="small">Quellen: docs/MODELL_VERGLEICH_ERGEBNISSE.md, measurements/night_2026-10-11/summary.json, day_2026-10-12/queue.log, context_ladder_*_2026-10-1[12].json, mtp_tune_qwen35_2026-10-12.json, moe_sweep_*.json, smallteam_*.json, docs/LOGBUCH_AGENT_MANAGER.md.</p>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "id": "STEP-1",
+  "action": "model_inference",
+  "messages": [{"role": "user", "content": "Antworte kurz mit bereit."}],
+  "execution_requirements": {
+    "allowed_execution_locations": ["local"],
+    "data_class": "internal",
+    "context_min_tokens": 0
+  }
+}

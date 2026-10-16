@@ -1,0 +1,4 @@
+fix: use a parameterized query in find_user
+
+The query was built by string concatenation, which allowed SQL injection.
+A bound parameter keeps the name out of the SQL text.

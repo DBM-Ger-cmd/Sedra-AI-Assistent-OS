@@ -1,0 +1,108 @@
+skill_registry:
+  schema: 1
+  skills:
+    project-inspection:
+      version: 1.1.0
+      manifest: skills/project-inspection/skill.yaml
+      enabled: true
+      required: false
+    safe-code-change:
+      version: 1.1.0
+      manifest: skills/safe-code-change/skill.yaml
+      enabled: true
+      required: false
+    debug-and-test:
+      version: 1.1.0
+      manifest: skills/debug-and-test/skill.yaml
+      enabled: true
+      required: false
+    model-runtime-ops:
+      version: 1.0.0
+      manifest: skills/model-runtime-ops/skill.yaml
+      enabled: true
+      required: false
+    hardware-diagnostics:
+      version: 1.0.0
+      manifest: skills/hardware-diagnostics/skill.yaml
+      enabled: true
+      required: false
+    sandbox-development:
+      version: 1.0.0
+      manifest: skills/sandbox-development/skill.yaml
+      enabled: true
+      required: false
+    knowledge-retrieval:
+      version: 1.0.0
+      manifest: skills/knowledge-retrieval/skill.yaml
+      enabled: true
+      required: false
+    external-research:
+      version: 1.0.0
+      manifest: skills/external-research/skill.yaml
+      enabled: true
+      required: false
+    architecture-design:
+      version: 1.0.0
+      manifest: skills/architecture-design/skill.yaml
+      enabled: true
+      required: false
+    security-review:
+      version: 1.0.0
+      manifest: skills/security-review/skill.yaml
+      enabled: true
+      required: false
+    documentation-authoring:
+      version: 1.0.0
+      manifest: skills/documentation-authoring/skill.yaml
+      enabled: true
+      required: false
+    data-analysis:
+      version: 1.0.0
+      manifest: skills/data-analysis/skill.yaml
+      enabled: true
+      required: false
+    workflow-design:
+      version: 1.0.0
+      manifest: skills/workflow-design/skill.yaml
+      enabled: true
+      required: false
+    connector-design:
+      version: 1.0.0
+      manifest: skills/connector-design/skill.yaml
+      enabled: true
+      required: false
+    ui-design:
+      version: 1.0.0
+      manifest: skills/ui-design/skill.yaml
+      enabled: true
+      required: false
+    acceptance-planning:
+      version: 1.0.0
+      manifest: skills/acceptance-planning/skill.yaml
+      enabled: true
+      required: false
+    portable-deployment:
+      version: 1.0.0
+      manifest: skills/portable-deployment/skill.yaml
+      enabled: true
+      required: false
+    performance-analysis:
+      version: 1.0.0
+      manifest: skills/performance-analysis/skill.yaml
+      enabled: true
+      required: false
+    source-evaluation:
+      version: 1.0.0
+      manifest: skills/source-evaluation/skill.yaml
+      enabled: true
+      required: false
+    software-inventory:
+      version: 1.0.0
+      manifest: skills/software-inventory/skill.yaml
+      enabled: true
+      required: false
+  load_policy:
+    require_manifest: true
+    require_owner_module: true
+    reject_duplicate_ids: true
+    disabled_by_default_if_untrusted: true

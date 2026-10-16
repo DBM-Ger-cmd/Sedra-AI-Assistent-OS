@@ -1,0 +1,6 @@
+Second review of read_tracker.py (attempt_01_20261010_220114), Captain/Claude 2026-10-10: remove dead and copied code before the integration, keep the behaviour.
+1. DEFECT: note_write (and note_edit) store the range (1, 0) for a text with 0 lines, so seen() returns [(1, 0)] instead of []. Store no range when the text has 0 lines (a file with 0 lines counts as fully seen anyway). Then _all_seen does not need the special case `old_seen == [(1, 0)]`.
+2. The stored ranges are merged after every note_read now: seen() and check_overwrite do not need to merge them again; seen returns a copy of the stored list.
+3. check_overwrite repeats the "unread" / "changed" checks of check_edit: call check_edit first and only add the "partial" decision.
+4. _get_seen / _set_seen are only needed in note_read: write that part directly.
+Change nothing else.

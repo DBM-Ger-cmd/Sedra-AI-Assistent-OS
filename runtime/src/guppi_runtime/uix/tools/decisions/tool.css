@@ -1,0 +1,4 @@
+/* Werkzeug „Entscheidungen“ – inside .t-dec only. */
+.t-dec-card{display:flex;flex-direction:column;gap:6px}
+.t-dec-what{color:var(--text)}
+.t-dec-card .s-row{flex-wrap:wrap}

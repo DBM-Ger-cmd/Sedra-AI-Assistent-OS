@@ -1,0 +1,32 @@
+module_registry:
+  schema: 1
+  modules:
+    planning-context:
+      version: 0.1.0
+      manifest: modules/planning-context/module.yaml
+      enabled: true
+      required: true
+    control-master:
+      version: 0.2.4
+      manifest: modules/control-master/module.yaml
+      enabled: true
+      required: true
+    verification:
+      version: 0.1.0
+      manifest: modules/verification/module.yaml
+      enabled: true
+      required: true
+    knowledge:
+      version: 0.1.0
+      manifest: modules/knowledge/module.yaml
+      enabled: true
+      required: true
+    communications:
+      version: 0.1.0
+      manifest: modules/communications/module.yaml
+      enabled: true
+      required: false
+  load_policy:
+    reject_unknown_contract: true
+    reject_duplicate_ids: true
+    require_health_check: true

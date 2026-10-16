@@ -1,0 +1,34 @@
+GUPPI OS – Evolution Manager v1
+
+Zweck:
+Der Evolution Manager beobachtet den Betrieb und erkennt Fähigkeitslücken,
+wiederkehrende Fehler und wiederkehrende Workarounds.
+
+Er darf Verbesserungen vorschlagen, aber Stable niemals direkt verändern.
+
+Ablauf:
+1. Beobachten.
+2. Capability Gap erfassen.
+3. Evidenz sammeln.
+4. doppelte oder gleiche Ursachen zusammenführen.
+5. Änderung als E1, E2 oder E3 klassifizieren.
+6. Evolution Proposal erzeugen.
+7. Entwicklung freigeben, ablehnen, verschieben oder zusammenführen.
+8. bei Freigabe GUPPI_EVOLUTION.yaml erzeugen/aktualisieren.
+9. an Development Pipeline übergeben.
+
+Klassifikation:
+E1 = Skills, Wissen, Profile, Templates.
+E2 = Module, Modul-Logik, privilegierte Adapter.
+E3 = Brain, State, Message Bus, Guard, Registry, Lifecycle, Updater, Core Contract.
+
+Standard-Trigger:
+- 3 gleiche Fehler
+- 3 gleiche Workarounds
+- 1 explizite Fähigkeitslücke
+- 1 Captain-Anforderung
+- 1 systemischer Verification-Fund
+
+Wichtig:
+Erkennen -> Vorschlagen -> Entwickeln -> Testen -> Update
+sind getrennte Schritte.

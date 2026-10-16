@@ -1,0 +1,4 @@
+/* Werkzeug „Einstellungen“ – nur im eigenen Container. */
+.t-set .s-field{display:flex;flex-direction:column;gap:4px;margin:6px 0}
+.t-set .s-field input[type=text],.t-set .s-field input[type=password]{width:100%}
+.t-set .s-provider{border:1px solid currentColor;padding:8px;margin:10px 0}

@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Gegenentwurf D – Paperclip-Desktop</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--line:#e3e6eb;--text:#1f2937;--muted:#6b7480;--accent:#5b5bd6;--ok:#2f7a3f;--okbg:#e6f6e8;--warn:#8a5a12;--warnbg:#fff3da;--bad:#a13b32;--badbg:#fbe3df;--mono:Consolas,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:13px/1.45 "Segoe UI",system-ui,sans-serif;height:100vh;display:grid;grid-template-columns:210px 1fr}
+.nav{background:#1b1f2a;color:#cfd4dd;padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.nav .co{font-weight:700;color:#fff;font-size:14px;padding:6px 10px 14px;display:flex;align-items:center;gap:8px}.nav .co i{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#9ff1ff,#0f84b5);display:inline-block}
+.nav div{padding:7px 10px;border-radius:7px;font-size:12.5px}.nav div.on{background:#2b3142;color:#fff}.nav small{display:block;margin:12px 10px 4px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#7b8396}
+.nav .badge{float:right;background:var(--accent);color:#fff;border-radius:999px;padding:0 7px;font-size:10px}
+.main{display:grid;grid-template-rows:48px 1fr;min-height:0}
+.top{display:flex;align-items:center;gap:12px;padding:0 18px;background:var(--panel);border-bottom:1px solid var(--line)}.top h1{margin:0;font-size:15px}.top .sp{flex:1}.top input{width:320px;padding:6px 10px;border:1px solid var(--line);border-radius:7px;font:inherit}
+.btn{display:inline-block;padding:5px 11px;border-radius:7px;border:1px solid var(--line);background:#fff;font-size:12px}.btn.p{background:var(--accent);color:#fff;border-color:var(--accent)}
+.grid{display:grid;grid-template-columns:1.2fr 1fr;grid-template-rows:auto 1fr;gap:12px;padding:14px 18px;min-height:0;overflow:auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.card h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;justify-content:space-between}
+.kpis{grid-column:1/-1;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}.kpi small{color:var(--muted);font-size:11px}.kpi b{display:block;font-size:20px;font-weight:600}
+.inbox .item{padding:9px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:#fafbfc}.inbox .item b{display:block}.inbox .item small{color:var(--muted)}
+.item.gate{border-left:4px solid #e0a100;background:var(--warnbg)}
+.kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.kanban h4{margin:0 0 6px;font-size:11px;color:var(--muted);text-transform:uppercase}.tk{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:6px;font-size:12px}.tk small{display:block;color:var(--muted)}.av{display:inline-block;width:16px;height:16px;border-radius:50%;background:#c7d2fe;vertical-align:middle;margin-right:4px;font-size:9px;text-align:center;line-height:16px;color:#3730a3;font-weight:700}
+.org{display:flex;flex-direction:column;align-items:center}.node{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:#fff;min-width:170px;text-align:center;font-size:12px}.node b{display:block}.node small{color:var(--muted)}.link{width:2px;height:12px;background:var(--line)}.row{display:flex;gap:8px;border-top:2px solid var(--line);padding-top:10px}
+.bud{height:5px;background:#eef0f3;border-radius:3px;margin-top:5px;overflow:hidden}.bud span{display:block;height:100%;background:var(--accent)}
+.chatfab{position:fixed;right:18px;bottom:18px;background:var(--accent);color:#fff;border-radius:999px;padding:10px 16px;font-weight:600;box-shadow:0 8px 24px rgba(91,91,214,.35)}
+</style></head><body>
+<div class="nav"><div class="co"><i></i>SEDRA Werft GmbH</div>
+ <div class="on">Dashboard</div><div>Posteingang <span class="badge">1</span></div><div>Issues</div><div>Ziele</div><div>Agenten</div><div>Routinen</div><div>Kosten</div>
+ <small>Werkzeuge</small><div>Werkstatt (Modelle)</div><div>Bibliothek</div><div>Logbuch</div>
+ <small>Projekte</small><div>Export</div><div>Importer</div></div>
+<div class="main">
+ <div class="top"><h1>Dashboard</h1><span class="btn">Heute</span><span class="sp"></span><input placeholder="Suchen oder Befehl …  Strg+K"><span class="btn p">＋ Issue</span></div>
+ <div class="grid">
+  <div class="kpis">
+   <div class="kpi"><small>Agenten aktiv</small><b>2 / 3</b></div><div class="kpi"><small>Issues offen</small><b>4</b></div><div class="kpi"><small>Freigaben</small><b style="color:var(--warn)">1</b></div><div class="kpi"><small>Kosten heute</small><b>12.400 Tok</b><div class="bud"><span style="width:12%"></span></div></div><div class="kpi"><small>Nächster Heartbeat</small><b>02:00</b></div>
+  </div>
+  <div class="card inbox"><h3>Posteingang <span>Board = Captain</span></h3>
+   <div class="item gate"><b>Freigabe: Netzzugriff pypi.org · Issue #12 CSV-Parser</b><small>Coder-Agent „Qwen“ · will python-dateutil installieren · Budget 1.820/20.000 Tok</small><span class="btn p">Genehmigen</span> <span class="btn">Ablehnen</span> <span class="btn">Issue öffnen</span></div>
+   <div class="item"><b>Bericht: Issue #11 Importer-Doku · 60 %</b><small>Doku-Agent · Heartbeat 17:40 · keine Blocker</small></div>
+   <div class="item"><b>Einstellung vorgeschlagen: Prüfer-Agent „Gemma“</b><small>Rolle Review · Budget 50.000 Tok/Monat · braucht deine Zustimmung</small><span class="btn">Ansehen</span></div>
+  </div>
+  <div class="card"><h3>Organigramm</h3><div class="org">
+   <div class="node"><b>Captain</b><small>Board · entscheidet Freigaben</small></div><div class="link"></div>
+   <div class="node"><b>GUPPI · CEO-Agent</b><small>plant, delegiert, berichtet</small></div><div class="link"></div>
+   <div class="row"><div class="node"><b>Coder „Qwen“</b><small>Qwen3.5 9B · aktiv</small><div class="bud"><span style="width:9%"></span></div></div><div class="node"><b>Prüfer „Gemma“</b><small>Gemma 4 12B · Einstellung offen</small></div><div class="node"><b>Planer</b><small>gpt-oss 20B · pausiert</small></div></div>
+  </div></div>
+  <div class="card" style="grid-column:1/-1"><h3>Issues · Projekt Export <span>Kanban</span></h3><div class="kanban">
+   <div><h4>Offen</h4><div class="tk"><span class="av">P</span>#13 Datumsfelder normalisieren<small>Ziel: Export v2 · niemand</small></div><div class="tk"><span class="av">D</span>#14 README Export<small>Ziel: Export v2</small></div></div>
+   <div><h4>In Arbeit</h4><div class="tk"><span class="av">Q</span>#12 CSV-Parser<small>Coder Qwen · wartet auf Freigabe · 12/12 Tests</small></div><div class="tk"><span class="av">D</span>#11 Importer-Doku<small>Doku-Agent · 60 %</small></div></div>
+   <div><h4>Fertig</h4><div class="tk"><span class="av">Q</span>#10 Testdaten anlegen<small>gestern · 2.100 Tok</small></div></div>
+  </div></div>
+ </div>
+</div>
+<div class="chatfab">💬 Mit GUPPI sprechen</div>
+</body></html>

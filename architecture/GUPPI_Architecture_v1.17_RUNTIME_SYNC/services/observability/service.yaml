@@ -1,0 +1,22 @@
+service:
+  id: "observability"
+  name: "Observability"
+  version: "0.1.0"
+  core_contract: 1
+
+  capabilities:
+    - "health_check"
+    - "component_status"
+    - "mission_metrics"
+    - "error_rate"
+    - "runtime_diagnostics"
+
+  health_states:
+    - "HEALTHY"
+    - "DEGRADED"
+    - "UNHEALTHY"
+    - "UNKNOWN"
+
+  rules:
+    - "observability_does_not_change_mission"
+    - "health_failures_are_reported_to_lifecycle"

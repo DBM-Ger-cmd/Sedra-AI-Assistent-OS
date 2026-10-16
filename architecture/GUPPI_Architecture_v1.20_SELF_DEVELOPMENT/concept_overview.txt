@@ -1,0 +1,49 @@
+GUPPI OS – Architekturkonzept v0.1
+
+1. GUPPI ist das zentrale ansprechbare Gehirn.
+Der Captain kommuniziert mit GUPPI, nicht mit einzelnen Modulen.
+
+2. GUPPI hält:
+- Intent
+- Mission
+- Entscheidungen
+- Working Memory
+- Delegation
+- Mission State
+
+3. Module liegen um GUPPI herum.
+Kernmodule:
+- Planning + Context
+- Control Master
+- Verification
+- Knowledge
+- Communications
+
+4. Module dürfen untereinander kommunizieren.
+Diese Kommunikation läuft kontrolliert über einen Message Bus.
+Module dürfen Informationen austauschen, aber nicht eigenständig die Mission verändern.
+
+5. Guard ist eine Querschnittsfunktion.
+Guard prüft kritische Aktionen vor der Ausführung.
+Mögliche Ergebnisse:
+- ALLOW
+- BLOCK
+- CAPTAIN_REQUIRED
+
+6. Stable und Development sind getrennt.
+Stable führt Missionen aus.
+Development erstellt Kandidaten für die nächste Version.
+
+7. Selbstentwicklung bedeutet nicht Live-Selbstmodifikation.
+Der laufende GUPPI entwickelt seinen Nachfolger.
+Ein Kandidat muss geplant, gebaut, getestet und verifiziert werden.
+
+8. GUPPI_EVOLUTION.yaml beschreibt die gewünschte Änderung.
+Sie ist die maschinenlesbare Quelle für Entwicklung, Tests und Update-Erstellung.
+
+9. Update-Klassen:
+E1 – Skills, Knowledge, Profile
+E2 – Module
+E3 – Core
+
+10. Ein fehlgeschlagener Kandidat verändert Stable nicht.

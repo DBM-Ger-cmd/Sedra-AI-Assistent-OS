@@ -1,0 +1,65 @@
+GUPPI – Integrierte Entwicklungs-Sandbox
+Basis: Developer Archive v1.6. Status: geplant, noch nicht implementiert.
+
+ZIEL
+Captain startet GUPPI. GUPPI prüft die Host-Voraussetzungen und verwaltet selbst
+Sandbox-Erstellung, Start, Ausführung, Stop und Bereinigung. Kein separater
+Docker-Dienst ist Produktvoraussetzung. Microsandbox ist PoC-Kandidat, nicht
+abschließend abgenommener Unterbau.
+
+VERTRAUENSGRENZEN
+GUPPI Brain, Guard, Audit und Sandbox-Broker laufen im vertrauenswürdigen
+Host-Teil. Der Broker ist ein neuer Port unter Control Master. Nur er darf
+Sandbox-Instanzen erzeugen und kontrollierte Artefakte entgegennehmen.
+Vom LLM erzeugter Code, Projekt-Testskripte und Buildbefehle laufen im Gast.
+Der Gast erhält eine Projektkopie, keine schreibbare Original-Repository-Freigabe.
+Er erhält keine Host-Zugangsdaten, Home-Verzeichnisse oder Management-Sockets.
+Audit und Sicherheitsregeln bleiben außerhalb seines Schreibzugriffs.
+
+LLM UND AUSFÜHRUNGS-SANDBOX
+Zunächst bleibt Qwen3.5/Kev-Inferenz ein separater, von GUPPI verwalteter lokaler
+Prozess. Der Host koordiniert Modellantworten und lässt Code über den Broker im
+Gast ausführen. Dadurch benötigt die Code-Sandbox weder GPU-Zugriff noch Zugang
+zum LLM-Endpunkt. Eine Sandbox isoliert ausgeführten Code; Modellgewichte selbst
+sind keine ausgeführten Coding-Befehle. Modell-Runtime-Hardening bleibt ein
+separater Prüfpunkt, insbesondere Modell-Parser und lokale Service-Endpunkte.
+Inference innerhalb einer eigenen GPU-Sandbox ist ein späterer eigener PoC.
+
+NETZWERK
+Gastnetzwerk im Standardprofil vollständig sperren. Das Betriebssystem muss
+auch direkten IP-Zugriff und Zugriff auf Host-/Metadaten-Adressen sperren.
+Benötigte Abhängigkeiten werden zunächst in freigegebenen Images vorbereitet.
+Netzwerkfreigaben gelten nur für einen konkreten Auftrag und geprüfte Ziele.
+Falls das Backend diese Regeln nicht durchsetzen kann, Ausführung blockieren.
+
+PRODUKTPAKET
+Geplant: GUPPI-App plus gebündelte Sandbox-Runtime und vorbereitete Gast-Images.
+Erstinstallation und Updates prüfen signierte/hashed Artefakte. Keine Downloads
+während des normalen Offline-Laufs. SDK-Autodownload-Verhalten explizit abschalten
+oder durch eigenen freigegebenen Installationsschritt ersetzen.
+Versionen gemeinsam festsetzen. Python-Code und Runtime-Binary nicht unabhängig
+aktualisieren. Beta-Abhängigkeit hinter eigener SandboxProvider-Schnittstelle kapseln.
+
+WINDOWS / PORTABILITÄT
+WHP ist eine Windows-Komponente, kein zusätzliches dauerhaft zu bedienendes
+Programm. Aktivierung kann Administratorrechte und einen Neustart erfordern.
+GUPPI Doctor meldet den Zustand; keine ungefragte Änderung am Betriebssystem.
+Bei fehlender Virtualisierung bleiben Chat/Planung/Dateivorschau verfügbar;
+unvertrauenswürdige Code-Ausführung bleibt blockiert. Kein unisolierter Fallback.
+USB kann App, Modelle und Images transportieren; Host-Fähigkeiten sind trotzdem
+notwendig. Sandbox-Images/VM-Disks und Modellgewichte getrennt verwalten.
+
+ABNAHME
+1. Windows-Host: Start/Stop einer MicroVM aus gebündelter GUPPI-Runtime.
+2. Gast kann Original-Repository, Home, Geheimnisse und Guard-Dateien nicht lesen
+   oder verändern. Grenzen durch echte Zugriffsversuche nachweisen.
+3. Netzwerk-Deny nachweisen, nicht aus gesetzten SDK-Feldern ableiten.
+4. CPU-, RAM-, Prozess-, Speicherplatz- und Laufzeitgrenzen praktisch testen.
+5. Timeout, Cancel und GUPPI-Absturz stoppen die zugeordnete VM zuverlässig.
+6. Nur geprüfte Diffs/Artefakte exportieren; Pfade, Symlinks, Größe und Hash prüfen.
+7. Candidate benötigt Verifikation und Captain-Gate vor Übernahme ins Original.
+8. Erstinstallation danach offline wiederholbar; kein externer Daemon nötig.
+
+NÄCHSTER SCHRITT
+Gezielter Microsandbox-PoC mit gepinntem Release und Windows-Abnahme. Erst nach
+bestandenen Grenztests wird das Backend für den GUPPI-Entwicklungszyklus freigegeben.

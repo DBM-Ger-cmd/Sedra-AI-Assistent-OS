@@ -1,0 +1,26 @@
+knowledge_record:
+  schema: 1
+
+  id: "KN-0001"
+  type: "decision"
+  title: ""
+
+  content:
+    summary: ""
+    data: {}
+
+  provenance:
+    source_type: ""
+    source_ref: ""
+    mission_id: null
+    created_at: null
+
+  scope:
+    project: "GUPPI"
+    tags: []
+    validity: "current"
+
+  confidence:
+    level: "unknown"
+
+  status: "active"

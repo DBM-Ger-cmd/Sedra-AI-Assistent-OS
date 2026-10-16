@@ -1,0 +1,36 @@
+SEDRA (technischer Name GUPPI) - Start (Stand 15.10.2026, Build 24)
+
+WINDOWS
+1. Ordner an einen beschreibbaren Ort legen (nicht unter Programme).
+2. START_SEDRA.bat - der eine Start. Beim ersten Mal richtet er Python und PyYAML im Paketordner ein
+   (fragt vor Downloads; ohne Netz: die Dateien nach runtime\portable\downloads legen, Liste in
+   runtime\Ersteinrichtung.ps1), fragt nach dem Modellordner und prueft die llama.cpp-Engine.
+   Fehlt runtime\portable\sandbox (das SDK der DevVM), richtet er ohne SDK ein und sagt das - SEDRA laeuft
+   trotzdem; nur die Selbstentwicklung (DevVM) braucht das SDK spaeter. Fehlt die Engine, startet die
+   Oberflaeche trotzdem; es antwortet dann kein Modell.
+3. Danach fragt START_SEDRA.bat, welche Oberflaeche starten soll (0 = Uebersicht). Direkt:
+   START_SEDRA.bat cockpit | minimal | paperclip | gateway-studio | guppi-xp   (nur dieser Start)
+   START_SEDRA.bat --gewaehlt (die in uix.yaml gewaehlte) · --uebersicht · --replace (laufenden SEDRA beenden)
+4. Fenster schliessen = Server und Modell beenden. Protokoll: runtime\einrichtung.log
+5. READY_TEST_WINDOWS.bat prueft die PC-Voraussetzungen; runtime\run_tests.bat die Testsuite.
+
+MACOS / LINUX
+   sh start_sedra.sh            (Uebersicht)   ·   sh start_sedra.sh cockpit   ·   sh start_sedra.sh --gewaehlt
+   macOS: START_SEDRA.command per Doppelklick. Erster Lauf legt runtime/.venv an (python3 >= 3.11 noetig).
+   Ohne llama.cpp-Engine fuer macOS/Linux oeffnet sich die Oberflaeche, es antwortet aber kein Modell.
+
+IN JEDER OBERFLAECHE: der runde Knopf unten rechts (Alt+S) - Uebersicht der Oberflaechen, Wechsel in eine andere,
+Darstellung Klar/Nacht, Schrift Normal/Gross. Strg+K sucht einen Ort. Im Gespraech kennt SEDRA seinen Arbeitsplatz:
+"Wo finde ich ...?", "Wie lege ich ... an?", "Was muss ich als Naechstes machen?" beantwortet er ohne Modell, mit Knopf.
+Werkstatt: Neues Modell (GGUF -> Rezept -> Freigabe) und Teststrecke (Standardtest); Projekt: Neues Projekt.
+
+DAS KI GATEWAY (Shell "KI GateWay Studio" oder Ort "KI GateWay" in jeder Shell): Anfrage pruefen nach dem
+Regelwerk Datenkategorien und Cloudsperre v0.1 (R-01..R-16), Freigabe als Entscheidung, Entwurf mit dem lokalen
+Modell, menschliche Pruefung. Kein Versand, Cloud nur simuliert. Der Leitfaden (7 Schritte) steht im Werkzeug;
+"Frag SEDRA" beantwortet "Was muss ich als Naechstes machen?" und "Wo ist der Fehler in diesem Text: ..." ohne Modell.
+
+Modelle (GGUF) und die llama.cpp-Engine liegen ausserhalb des Pakets und werden ueber Rezepte eingebunden
+(docs/BETRIEB.md). Hauptmodell Qwen3.6-35B-A3B; Engine b11160. Selbstentwicklung aktiviert nie etwas automatisch.
+
+Dokumentation: README.md und docs/README.md · docs/BETRIEB.md · docs/ENTWICKLUNG.md · docs/CHANGELOG.md
+Entwickler-Einstieg (Stand Build 19, Archiv): docs/entwickler_archiv_build19/

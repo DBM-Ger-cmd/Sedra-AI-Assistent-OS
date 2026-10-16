@@ -1,0 +1,50 @@
+classification_rules:
+  schema: 1
+
+  levels:
+    E1:
+      name: "Extension"
+      applies_to:
+        - "skill"
+        - "knowledge"
+        - "profile"
+        - "prompt_template"
+        - "non_privileged_tool_config"
+      default_captain_gate: false
+
+    E2:
+      name: "Module"
+      applies_to:
+        - "new_module"
+        - "module_logic"
+        - "module_interface"
+        - "privileged_tool_adapter"
+      default_captain_gate: true
+
+    E3:
+      name: "Core"
+      applies_to:
+        - "brain"
+        - "mission_state"
+        - "message_bus"
+        - "guard"
+        - "registry"
+        - "lifecycle"
+        - "updater"
+        - "core_contract"
+      default_captain_gate: true
+
+  escalation:
+    - condition: "change_touches_core"
+      classify_as: "E3"
+    - condition: "change_alters_permissions_or_guard"
+      classify_as: "E3"
+    - condition: "change_requires_new_module_contract"
+      classify_as: "E2"
+    - condition: "change_only_adds_reusable_procedure"
+      classify_as: "E1"
+
+  precedence:
+    - "E3"
+    - "E2"
+    - "E1"

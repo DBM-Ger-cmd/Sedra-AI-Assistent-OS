@@ -1,0 +1,167 @@
+/* Minimal-Shell (Entwurf E). Nur .sh-min*, keine Farbe ohne Token (UIX_STYLE_MANIFEST).
+   Die Werkzeuge bringen ihren eigenen Stil mit (.t-<id>) – hier steht nur, wo sie liegen. */
+
+.sh-min{
+  position: fixed; inset: 0;
+  display: grid; grid-template-rows: 28px 1fr auto;
+  background: linear-gradient(165deg, var(--sea-bg) 0%, var(--guppy-2) 160%);
+  overflow: hidden;
+}
+
+/* ---- Menüleiste */
+.sh-min-bar-top{
+  display: flex; align-items: center; gap: var(--gap-2);
+  padding: 0 var(--gap-2);
+  background: var(--panel); border-bottom: 1px solid var(--line);
+  font-size: var(--size); white-space: nowrap; overflow: hidden;
+}
+.sh-min-bar-top > b{ color: var(--heading); letter-spacing: .02em; }
+.sh-min-mark{
+  width: 16px; height: 11px; border-radius: 50% 60% 60% 50%;
+  background: linear-gradient(180deg, var(--guppy-1), var(--guppy-2));
+  border: 1px solid var(--guppy-line); display: inline-block;
+}
+.sh-min-menu-name{ color: var(--text); padding: 2px 6px; border-radius: var(--radius); cursor: default; }
+.sh-min-menu-name:hover, .sh-min-menu-name:focus{ background: var(--panel-2); outline: none; }
+.sh-min-spacer{ flex: 1; }
+/* Ein Instrument zeichnet Label (small), Wert (b) und einen Nebensatz (i). In einer Menüleiste ist für den Nebensatz kein
+   Platz – er steht weiter im `title`. Jede Zelle hat ihre eigene Breite und schneidet sauber ab, statt in die nächste zu laufen. */
+.sh-min-gauge{
+  display: flex; align-items: baseline; gap: 4px; flex: none;
+  max-width: 170px; overflow: hidden; white-space: nowrap;
+  padding-left: var(--gap-2); border-left: 1px solid var(--line-soft);
+  color: var(--muted); font-size: var(--size-small);
+}
+.sh-min-gauge > div{ display: flex; align-items: baseline; gap: 5px; overflow: hidden; }
+.sh-min-gauge small{ text-transform: uppercase; letter-spacing: .04em; font-size: var(--size-xs); }
+.sh-min-gauge b{ color: var(--text); font-size: var(--size-small); overflow: hidden; text-overflow: ellipsis; }
+.sh-min-gauge i{ display: none; }
+.sh-min-gauge.warn b{ color: var(--warn); }
+.sh-min-gauge.bad b{ color: var(--bad); }
+.sh-min-gauge.ok b{ color: var(--ok); }
+.sh-min-gauge .t-gauge-state-fish{ width: 18px; height: 12px; }
+
+/* ---- Menüs */
+.sh-min-menu{
+  position: fixed; z-index: 9000; min-width: 240px; max-width: 320px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-2);
+  box-shadow: var(--shadow); padding: 6px; max-height: 70vh; overflow: auto;
+}
+.sh-min-menu input{
+  width: 100%; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 6px 8px; font: inherit; margin-bottom: 4px;
+}
+.sh-min-menu-item{ padding: 6px 8px; border-radius: var(--radius); cursor: default; }
+.sh-min-menu-item:hover, .sh-min-menu-item:focus{ background: var(--panel-2); outline: none; }
+.sh-min-menu-item b{ display: block; font-weight: 600; font-size: var(--size); }
+.sh-min-menu-item small{ color: var(--muted); font-size: var(--size-small); }
+
+/* ---- Fenster */
+.sh-min-desk{ position: relative; }
+.sh-min-win{
+  position: absolute; display: flex; flex-direction: column;
+  background: var(--panel); border-radius: var(--radius-2);
+  box-shadow: var(--shadow); border: 1px solid var(--line);
+  overflow: hidden;
+}
+.sh-min-win.on{ border-color: var(--accent); }
+.sh-min-bar{
+  display: flex; align-items: center; gap: var(--gap);
+  height: 34px; padding: 0 var(--gap-2); flex: none;
+  background: var(--panel-2); border-bottom: 1px solid var(--line-soft);
+  cursor: move; user-select: none;
+}
+.sh-min-bar b{ font-size: var(--size); color: var(--heading); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh-min-bar small{ margin-left: auto; color: var(--muted); font-size: var(--size-small); }
+.sh-min-close{
+  width: 12px; height: 12px; border-radius: 50%; flex: none;
+  background: var(--bad); border: 1px solid var(--bad-line); cursor: pointer;
+}
+.sh-min-seg{ display: flex; gap: 2px; padding: 6px var(--gap-2) 0; flex: none; overflow-x: auto; }
+.sh-min-seg-item{
+  padding: 4px 10px; border-radius: var(--radius); font-size: var(--size-small);
+  color: var(--muted); background: var(--panel-2); white-space: nowrap; cursor: default;
+}
+.sh-min-seg-item.on{ background: var(--accent); color: var(--accent-text); }
+.sh-min-body{ flex: 1; overflow: auto; padding: var(--gap-2); }
+.sh-min-tool{ min-height: 0; }
+.sh-min-verbs{
+  display: flex; gap: var(--gap); flex-wrap: wrap; flex: none;
+  padding: var(--gap) var(--gap-2); border-top: 1px solid var(--line-soft); background: var(--panel-2);
+}
+.sh-min-verbs:empty{ display: none; }
+.sh-min-corner{
+  position: absolute; right: 0; bottom: 0; width: 16px; height: 16px;
+  cursor: nwse-resize; background: linear-gradient(135deg, transparent 50%, var(--line) 50%);
+}
+
+/* ---- Entscheidungskarte */
+.sh-min-note{
+  position: absolute; right: 14px; top: 12px; width: 340px; z-index: 8000;
+  background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn);
+  border-radius: var(--radius-2); box-shadow: var(--shadow); padding: 10px 12px;
+}
+.sh-min-note b{ display: block; color: var(--heading); font-size: var(--size); }
+.sh-min-note small{ display: block; color: var(--text); margin: 2px 0 8px; font-size: var(--size-small); }
+.sh-min-note-ways{ display: flex; gap: var(--gap); flex-wrap: wrap; }
+.sh-min-note-more{ margin-top: 8px; cursor: pointer; text-decoration: underline; }
+
+/* ---- Ablage */
+.sh-min-shelf{
+  display: flex; gap: var(--gap-2); justify-content: center; align-items: center;
+  padding: var(--gap) var(--gap-2) var(--gap-2);
+}
+.sh-min-app{
+  width: 76px; height: 54px; border-radius: var(--radius-2);
+  display: grid; place-items: center; text-align: center;
+  background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
+  font-size: var(--size-small); color: var(--text); cursor: default; position: relative;
+}
+.sh-min-app:hover, .sh-min-app:focus{ border-color: var(--accent); outline: none; }
+.sh-min-app.on::after{
+  content: ""; position: absolute; bottom: -5px; width: 4px; height: 4px;
+  border-radius: 50%; background: var(--panel);
+}
+
+/* ---- Build 19: Haus-Knopf, Bildzeichen, eigene Ablage */
+.sh-min-home{
+  display: inline-grid; place-items: center; width: 22px; height: 22px; flex: none;
+  border-radius: var(--radius); color: var(--heading); cursor: pointer;
+}
+.sh-min-home:hover, .sh-min-home:focus{ background: var(--panel-2); outline: none; }
+.sh-min-brand{ display: inline-flex; align-items: center; gap: 6px; }
+.sh-min-brand b{ color: var(--heading); letter-spacing: .02em; }
+.sh-min-icon{ fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.sh-min-shelf{ flex-wrap: wrap; }
+.sh-min-app{
+  width: 72px; height: 60px; gap: 3px;
+  grid-template-rows: 26px auto; align-content: center; padding: 4px 2px;
+}
+.sh-min-app .sh-min-icon{ color: var(--accent); }
+.sh-min-app > span{ max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.15; }
+.sh-min-app.order .sh-min-icon{ color: var(--warn); }
+.sh-min-app.add{ background: transparent; border-style: dashed; box-shadow: none; color: var(--muted); }
+.sh-min-app.add .sh-min-icon{ color: var(--muted); }
+.sh-min-app.on::after{ background: var(--accent); }
+.sh-min-edit{
+  position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 9100;
+  width: min(420px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 8px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-2);
+  box-shadow: var(--shadow); padding: 12px 14px;
+}
+.sh-min-edit > b{ color: var(--heading); font-size: var(--size); }
+.sh-min-edit .sh-min-seg{ padding: 0; }
+.sh-min-edit-body{ display: flex; flex-direction: column; gap: 6px; }
+.sh-min-edit-body small{ color: var(--muted); font-size: var(--size-small); }
+.sh-min-edit select, .sh-min-edit input, .sh-min-edit textarea{
+  width: 100%; border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px;
+  font: inherit; background: var(--panel); color: var(--text); box-sizing: border-box;
+}
+.sh-min-edit-icons{ display: grid; grid-template-columns: repeat(auto-fill, 32px); gap: 4px; }
+.sh-min-edit-icon{
+  width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--radius);
+  border: 1px solid var(--line-soft); color: var(--text); cursor: pointer;
+}
+.sh-min-edit-icon:hover, .sh-min-edit-icon:focus{ border-color: var(--accent); outline: none; }
+.sh-min-edit-icon.on{ background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.sh-min-edit-said{ color: var(--warn); min-height: 1em; }

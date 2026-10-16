@@ -1,0 +1,36 @@
+message:
+  schema: 1
+
+  identity:
+    message_id: "MSG-0001"
+    mission_id: "M-0001"
+    correlation_id: null
+    reply_to: null
+
+  routing:
+    from: "planning-context"
+    to: "control-master"
+
+  type: "capability_query"
+  priority: "normal"  # low, normal, high, critical
+  payload: {}
+
+  contract:
+    expects_response: true
+    response_types: []
+
+  guard:
+    required: false
+    decision: null  # ALLOW, BLOCK, CAPTAIN_REQUIRED
+
+  status: "created"
+  # created, queued, delivered, processed, replied, failed, rejected
+
+  timestamps:
+    created_at: null
+    delivered_at: null
+    completed_at: null
+
+  result:
+    success: null
+    error: null

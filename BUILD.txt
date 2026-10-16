@@ -1,0 +1,5 @@
+build: 24
+date: 2026-10-15
+version: 1.20
+name: SEDRA (technischer Name GUPPI)
+nachtrag: Tickets B6-G-01/03/04/05/06 - Cockpit und Paperclip ohne Platzhalter, SEDRA kennt seinen Arbeitsplatz (15.10.2026, nicht abgenommen) - siehe docs/CHANGELOG.md

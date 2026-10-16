@@ -1,0 +1,11 @@
+# Vorlage für eine Shell aus einer Vorgabe (SPEC_SHELL_AUS_VORGABE_v1). Kein Code: der Rahmen ui/frame.js baut den Bildschirm
+# aus shell.vorgabe.yaml. Hier stehen nur Name und Vertrauen; Routen und Slots gehören dem Rahmen.
+shell:
+  id: beispiel
+  name: "Beispiel aus Vorgabe"
+  description: "Ein Satz: welche Form sie dem Bildschirm gibt."
+  version: 1.0.0
+  vorgabe: shell.vorgabe.yaml
+  layout: {persist: browser}
+  trust: CAPTAIN
+  needs: {ui: ">=1.0 <2"}

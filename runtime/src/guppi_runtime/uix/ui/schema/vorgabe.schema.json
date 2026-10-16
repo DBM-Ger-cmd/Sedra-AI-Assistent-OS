@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "shell.vorgabe.yaml – eine Shell aus einer Vorgabe (SPEC_SHELL_AUS_VORGABE_v1)",
+  "description": "Sagt, was wo steht; der Rahmen (ui/frame.js) baut daraus die Shell. Flache Teilmenge von JSON Schema (models/structured.py): dasselbe Schema zwingt ein lokales Modell, eine gültige Vorgabe zu liefern.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "raster"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9-]{2,40}$", "description": "muss dem Ordnernamen und der id in shell.yaml gleichen"},
+    "name": {"type": "string", "minLength": 1, "maxLength": 60},
+    "raster": {
+      "type": "array", "minItems": 1, "maxItems": 5,
+      "description": "Zeilen von oben nach unten; eine Zeile mit | sind Spalten von links nach rechts. Zonen: leiste · orte · werkstueck · gespraech · entscheidungen · leer. werkstueck muss vorkommen; jede Zone höchstens einmal.",
+      "items": {"type": "string", "pattern": "^(leiste|orte|werkstueck|gespraech|entscheidungen|leer)(\\|(leiste|orte|werkstueck|gespraech|entscheidungen|leer)){0,3}$"}
+    },
+    "leiste": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "einblenden": {"type": "string", "enum": ["fest", "rand"], "description": "fest: immer sichtbar; rand: verborgen, erscheint beim Anfahren des oberen Rands (Standard fest)"}
+      }
+    },
+    "orte": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "einblenden": {"type": "string", "enum": ["fest", "rand"], "description": "fest: immer sichtbar; rand: verborgen, erscheint beim Anfahren des linken Rands (Standard fest)"},
+        "breite": {"type": "integer", "minimum": 140, "maximum": 400, "description": "Breite der Spalte in Pixeln (Standard 220)"},
+        "liste": {"type": "array", "minItems": 1, "maxItems": 14,
+                  "items": {"type": "string", "enum": ["tasks", "intents", "boundary", "decisions", "models", "library", "crew", "meter", "logbook", "hardware", "machine", "modules", "project", "gateway"]},
+                  "description": "welche Orte der Ortskunde gezeigt werden, in dieser Reihenfolge (Standard: alle)"}
+      }
+    },
+    "werkstueck": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "nachweise": {"type": "string", "enum": ["seitenleiste", "umschalter", "spalten", "keine"], "description": "wie Nachweise neben dem Werkstück stehen (Standard seitenleiste)"},
+        "nachweis_breite": {"type": "integer", "minimum": 200, "maximum": 600}
+      }
+    },
+    "gespraech": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "art": {"type": "string", "enum": ["zone", "schublade"], "description": "feste Zone im Raster oder Schublade mit Knopf (Standard zone; eine Schublade braucht keine Zeile im Raster)"},
+        "hoehe": {"type": "integer", "minimum": 64, "maximum": 400, "description": "Höhe der Zone in Pixeln (Standard 112)"}
+      }
+    },
+    "entscheidungen": {"type": "string", "enum": ["karte", "werkzeug"], "description": "karte: eine Karte erscheint, sobald eine wartet (in der Raster-Zone oder rechts schwebend); werkzeug: nur als Werkstück (Standard karte)"},
+    "suche": {"type": "string", "enum": ["strg-k", "feld", "keine"], "description": "Palette mit Strg+K, ein Suchfeld in der Leiste, oder nichts (Standard strg-k)"},
+    "start": {
+      "type": "object", "additionalProperties": false, "required": ["type", "id"],
+      "properties": {
+        "type": {"type": "string", "enum": ["task", "intent", "boundary", "decision", "model", "skill", "agent", "meter", "logbook", "hardware", "machine", "module", "project", "gateway"]},
+        "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,40}$"},
+        "title": {"type": "string", "maxLength": 60}
+      },
+      "description": "was beim Start offen ist, wenn nichts gemerkt wurde (Standard: Aufgaben)"
+    }
+  }
+}

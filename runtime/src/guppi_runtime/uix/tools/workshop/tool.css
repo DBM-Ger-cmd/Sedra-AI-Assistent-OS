@@ -1,0 +1,22 @@
+/* Werkzeug „Werkstatt“ – inside .t-shop only. Nur Token aus ui/tokens.css. */
+.t-shop-row{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);display:flex;flex-direction:column;gap:6px}
+.t-shop-row.on{border-color:var(--ok-line);background:var(--ok-bg)}
+.t-shop-row .s-row{flex-wrap:wrap}
+/* Build 24: die beiden Abschnitte „Neues Modell“ und „Teststrecke“ */
+.t-shop-section{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel-2);padding:0}
+.t-shop-section>summary{cursor:pointer;padding:9px 12px;font-size:var(--size);list-style:revert}
+.t-shop-section>summary small{font-size:var(--size-small)}
+.t-shop-section[open]>summary{border-bottom:1px solid var(--line-soft)}
+.t-shop-body{padding:10px 12px 12px;gap:10px}
+.t-shop-form{flex-wrap:wrap;align-items:center}
+.t-shop-input{flex:1;min-width:220px;padding:6px 9px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--text);font:inherit;font-size:var(--size)}
+.t-shop-input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.t-shop-crumb{font-size:var(--size-small);color:var(--muted)}
+.t-shop-crumb a{color:var(--accent);cursor:pointer;text-decoration:underline}
+.t-shop-files{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px}
+.t-shop-file{display:flex;justify-content:space-between;gap:8px;padding:6px 9px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);cursor:pointer;font-size:var(--size-small);min-width:0}
+.t-shop-file>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-shop-file:hover,.t-shop-file:focus-visible{border-color:var(--accent)}
+.t-shop-facts{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 14px;align-items:center;font-size:var(--size)}
+.t-shop-facts>span:nth-child(even){overflow-wrap:anywhere}
+.t-shop-check{display:inline-flex;align-items:center;gap:4px;font-size:var(--size);cursor:pointer}

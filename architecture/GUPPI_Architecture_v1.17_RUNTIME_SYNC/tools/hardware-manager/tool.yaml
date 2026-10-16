@@ -1,0 +1,13 @@
+tool:
+  id: hardware-manager
+  version: 0.1.0
+  core_contract: 1
+  capabilities:
+  - hardware_inventory
+  - live_telemetry
+  - captain_profiles
+  - bounded_power_plan_control
+  - runtime_admission
+  guard_classification: read_or_captain_profile_control
+  fan_write_supported: false
+  gcc_profile_write_supported: false

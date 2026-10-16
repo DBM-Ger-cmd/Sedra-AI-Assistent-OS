@@ -1,0 +1,17 @@
+code_candidate_report:
+  schema: 1
+  kind: code_candidate_preparation
+  qualification: PREPARED_NOT_TESTED
+  required:
+  - mission_id
+  - binding_digest
+  - source
+  - candidate
+  - source_files
+  - candidate_files
+  - static_checks
+  - diff
+  source_modified: false
+  tests_executed: false
+  ready_for_merge: false
+  captain_review: PENDING

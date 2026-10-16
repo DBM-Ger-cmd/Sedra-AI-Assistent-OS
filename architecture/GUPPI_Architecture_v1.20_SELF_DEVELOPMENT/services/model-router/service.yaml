@@ -1,0 +1,17 @@
+service:
+  id: model-router
+  name: Local Model Router
+  version: 0.1.0
+  core_contract: 1
+  capabilities:
+    - local_model_discovery
+    - local_chat_completion
+    - provider_routing
+    - hardware_profile_recommendation
+  security:
+    loopback_only: true
+    auto_download_models: false
+    auto_start_external_binaries: false
+  providers:
+    - lm-studio
+    - llama-cpp-server

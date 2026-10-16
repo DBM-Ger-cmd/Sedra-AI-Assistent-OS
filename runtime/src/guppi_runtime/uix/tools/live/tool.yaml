@@ -1,0 +1,18 @@
+tool:
+  id: live
+  name: "Live"
+  description: "Was gerade passiert: die Zeilen dieser Aufgabe, vom Strom nachgeschickt."
+  version: 1.0.0
+  kind: object
+  handles: [task]
+  order: 18
+  slot: nachweis
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - POST /api/live
+  events:
+    emits: [object.open]
+    listens: [live.line, task.changed]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

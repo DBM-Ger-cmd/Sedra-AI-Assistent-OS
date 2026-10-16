@@ -1,0 +1,28 @@
+candidate_lifecycle:
+  schema: 1
+  fields:
+  - attempt_id
+  - stage
+  - binding_digest
+  - created_at
+  - status
+  - calls
+  - reason
+  max_attempts: 3
+  statuses:
+  - PREPARING
+  - GATE
+  - BLOCKED
+  - FAILED
+  - REPORT_PENDING
+  - READY_UNVERIFIED
+  - VERIFIED_PREPARATION
+  - DISCARDED
+  rules:
+  - persist_stage_before_effects
+  - reuse_only_same_mission_and_binding
+  - compare_existing_files_before_resume
+  - cleanup_only_stopped_incomplete_or_unverified_attempt
+  - cleanup_uses_existing_content_bound_file_delete_gate
+  - no_source_delete
+  - verified_preparation_is_not_test_pass

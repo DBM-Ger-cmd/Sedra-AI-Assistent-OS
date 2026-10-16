@@ -1,0 +1,42 @@
+GUPPI BRAIN – Pseudocode v1
+
+while mission.state not in [COMPLETE, FAILED]:
+
+    state = observe_mission()
+
+    if missing_intent_or_objective(state):
+        resolve_intent()
+        continue
+
+    if protected_action_pending(state):
+        decision = guard_check()
+
+        if decision == BLOCK:
+            fail_or_replan()
+            continue
+
+        if decision == CAPTAIN_REQUIRED:
+            request_captain_gate()
+            continue
+
+    if planning_needed(state):
+        delegate("planning-context")
+        continue
+
+    if execution_needed(state):
+        delegate("control-master")
+        continue
+
+    if verification_needed(state):
+        delegate("verification")
+        continue
+
+    if verification_failed(state):
+        set_state("REWORK")
+        continue
+
+    if acceptance_complete(state):
+        set_state("COMPLETE")
+        break
+
+    request_more_context_or_pause()

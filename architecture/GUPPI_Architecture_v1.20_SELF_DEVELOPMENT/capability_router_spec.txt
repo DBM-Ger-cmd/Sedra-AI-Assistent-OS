@@ -1,0 +1,13 @@
+v1.11: Themen, Drafts, Runtime-Capability-Lücken und Blueprint-Operationchecks.
+Details: TECHNICAL_IMPLEMENTATION_v1.11.txt und SELF_EXTENDING_TOPICS_v1.11.txt.
+
+Historische v1.10-Basis:
+GUPPI CORE – CAPABILITY ROUTER v1
+
+Position: Brain pre-planning stage.
+Input: captain_intent, objective, mission_class, registries.
+Output: intent families, capabilities, modules, skills, tools, model policy, risk, execution blueprint.
+
+The router does not execute tools. It may only select registered components.
+Control Master may enforce the selected tool list. Guard remains authoritative.
+Concrete execution arguments are bound after routing/planning.

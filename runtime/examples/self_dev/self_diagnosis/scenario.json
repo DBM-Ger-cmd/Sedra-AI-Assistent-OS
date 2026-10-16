@@ -1,0 +1,11 @@
+{
+  "capability": "self_diagnosis_findings",
+  "target_type": "skill",
+  "objective": "Implement every function in self_diagnosis.py exactly as its docstring says, so that all tests in tests/test_self_diagnosis.py pass. Use only the Python standard library. Keep GIB and SEVERITY_ORDER unchanged. Change only self_diagnosis.py. Do not touch the tests.",
+  "files": ["self_diagnosis.py", "tests/test_self_diagnosis.py"],
+  "generation": {"context_min_tokens": 16384, "max_tokens": 12000},
+  "evidence": [
+    {"source": "2026-10-02 core review", "detail": "pc_diagnose checks 7 prerequisites but none of: hash chains, stuck missions (REWORK waiting_captain, PAUSED), DEAD/BLOCKED jobs, GPU driver errors (1405 nvlddmkm events in 60 days), disk use (5 x 132 MB staged copies), path_health"},
+    {"source": "2026-10-02 job supervisor", "detail": "successful jobs ended DEAD after lease expiry; nothing reported it"}
+  ]
+}

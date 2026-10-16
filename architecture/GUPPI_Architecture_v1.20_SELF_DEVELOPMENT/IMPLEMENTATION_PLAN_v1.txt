@@ -1,0 +1,38 @@
+GUPPI OS – Implementation Plan nach Architektur-Freeze
+
+PHASE 1 – Core Runtime
+1. Mission State
+2. Message Bus
+3. Registry Loader
+4. Guard
+5. Audit Log
+6. Brain Mission Loop
+
+PHASE 2 – Kernmodule
+7. Planning + Context
+8. Control Master Adapter
+9. Verification
+10. Knowledge
+11. Communications
+
+PHASE 3 – Services
+12. Artifact Store
+13. Observability
+14. Config Loader / Secret References
+
+PHASE 4 – Evolution
+15. Evolution Manager
+16. Candidate Workspace
+17. Test/Verification Pipeline
+18. Update Builder
+19. Rollback / Recovery
+
+PHASE 5 – Hardening
+20. Contract Tests
+21. Failure Injection
+22. Safe Mode Tests
+23. Update/Rollback Tests
+24. Security/Permission Tests
+
+Ab diesem Punkt endet die Architekturphase.
+Der nächste Schritt ist Implementierung und Test gegen diese Verträge.

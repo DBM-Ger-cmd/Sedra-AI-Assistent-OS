@@ -1,0 +1,17 @@
+# Shell D (Paperclip) – eine Firma statt eines Cockpits: Navigation links, Seiten, das Gespräch als Schublade.
+shell:
+  id: paperclip
+  name: "Paperclip"
+  description: "Dashboard mit Posteingang, Organigramm und Issues; Navigation links, das Gespräch als Schublade (Entwurf D)."
+  version: 1.1.0
+  entry:
+    js: [pages.js, nav.js, topbar.js, shell.js]     # shell.js zuletzt: es registriert
+    css: shell.css
+  provides: [tree, dock, talk, notify, palette, inbox]
+  layout: {persist: browser}
+  api:
+    - GET /api/strip
+    - GET /api/decisions
+    - POST /api/decisions/answer
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

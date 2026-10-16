@@ -1,0 +1,57 @@
+<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Entwurf E – Minimal-Shell (Desktop)</title>
+<style>
+:root{--text:#1d1d1f;--muted:#6e6e73;--line:rgba(0,0,0,.08);--glass:rgba(255,255,255,.72);--accent:#0a84ff;--ok:#2f7a3f;--warn:#8a5a12;--warnbg:#fff3da}
+*{box-sizing:border-box}body{margin:0;height:100vh;overflow:hidden;font:13px/1.45 -apple-system,"SF Pro Text","Segoe UI",system-ui,sans-serif;color:var(--text);
+ background:radial-gradient(1200px 700px at 70% 20%,#9fd3ff 0,#4d8fe6 35%,#1f3f8a 75%,#0f1f4a 100%)}
+.menubar{position:absolute;inset:0 0 auto 0;height:26px;background:var(--glass);backdrop-filter:blur(20px);display:flex;align-items:center;gap:18px;padding:0 14px;font-size:12.5px;border-bottom:1px solid var(--line)}
+.menubar b{font-weight:700}.menubar .sp{flex:1}.menubar .st{display:flex;gap:14px;color:var(--text);font-size:12px;align-items:center}
+.pill{padding:1px 8px;border-radius:999px;background:rgba(0,0,0,.08);font-size:11px}.pill.w{background:var(--warnbg);color:var(--warn)}
+.win{position:absolute;background:rgba(255,255,255,.96);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.08);overflow:hidden;display:flex;flex-direction:column}
+.tb{height:38px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#f3f3f5;border-bottom:1px solid var(--line);font-weight:600;font-size:13px}
+.tl{display:flex;gap:7px;margin-right:6px}.tl i{width:12px;height:12px;border-radius:50%;display:inline-block}.tl i:nth-child(1){background:#ff5f57}.tl i:nth-child(2){background:#febc2e}.tl i:nth-child(3){background:#28c840}
+.tb small{font-weight:400;color:var(--muted);margin-left:auto}
+.body{padding:12px 14px;overflow:auto;flex:1}
+.seg{display:inline-flex;background:#e9e9ec;border-radius:8px;padding:2px;margin-bottom:10px}.seg span{padding:4px 12px;border-radius:6px;font-size:12px;color:var(--muted)}.seg span.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.code{font:12px/1.5 "SF Mono",Consolas,monospace;background:#fafafa;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre}.code .a{background:#e3f5e6}.code .r{background:#fde2de}
+.btn{display:inline-block;padding:5px 12px;border-radius:7px;border:1px solid var(--line);background:#fff;font-size:12px}.btn.p{background:var(--accent);color:#fff;border-color:var(--accent)}
+.note{position:absolute;right:14px;top:36px;width:360px;background:var(--glass);backdrop-filter:blur(20px);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:12px 14px;border:1px solid rgba(255,255,255,.6)}
+.note b{display:block}.note small{color:var(--muted);display:block;margin:2px 0 8px}
+.chat .msgs{display:flex;flex-direction:column;gap:8px}.m{max-width:85%;padding:8px 12px;border-radius:16px;font-size:13px}.m.g{background:#e9e9eb;align-self:flex-start}.m.me{background:var(--accent);color:#fff;align-self:flex-end}
+.chat .in{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}.chat input{flex:1;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font:inherit}
+.dock{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:10px;padding:8px 12px;background:rgba(255,255,255,.35);backdrop-filter:blur(24px);border-radius:20px;border:1px solid rgba(255,255,255,.5)}
+.dock div{width:52px;height:52px;border-radius:13px;display:grid;place-items:center;font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);font-weight:600;position:relative}
+.dock div:after{content:"";position:absolute;bottom:-6px;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.9);opacity:0}.dock div.on:after{opacity:1}
+.d1{background:linear-gradient(135deg,#9ff1ff,#0f84b5)}.d2{background:linear-gradient(135deg,#ffd27a,#e08a1e)}.d3{background:linear-gradient(135deg,#c4b5fd,#6d28d9)}.d4{background:linear-gradient(135deg,#86efac,#15803d)}.d5{background:linear-gradient(135deg,#fca5a5,#b91c1c)}.d6{background:linear-gradient(135deg,#cbd5e1,#475569)}.d7{background:linear-gradient(135deg,#93c5fd,#1d4ed8)}
+.guppy{width:16px;height:11px;border-radius:50% 60% 60% 50%;background:linear-gradient(180deg,#9ff1ff,#0f84b5);display:inline-block;vertical-align:middle}
+</style></head><body>
+<div class="menubar"><span class="guppy"></span><b>SEDRA</b><span>Ablage</span><span>Aufgabe</span><span>Werkzeuge</span><span>Fenster</span><span>Hilfe</span><span class="sp"></span>
+ <div class="st"><span>Qwen3.5 9B · 40 T/s</span><span>GPU 1,9 GB</span><span class="pill">Export · Sandbox</span><span class="pill w">1 Entscheidung</span><span>⌘K</span><span>18:39</span></div></div>
+
+<div class="note"><b>Entscheidung · Netzgrenze pypi.org</b><small>GUPPI will python-dateutil nachladen · im Modus Sandbox ist Netz zu</small><span class="btn p">Einmal öffnen</span> <span class="btn">Grenze ändern…</span> <span class="btn">Ablehnen</span></div>
+
+<div class="win" style="left:60px;top:70px;width:760px;height:560px">
+ <div class="tb"><div class="tl"><i></i><i></i><i></i></div>Aufgabe · CSV-Parser für den Export<small>läuft · Schritt 3 von 3 · Projekt Export</small></div>
+ <div class="body"><div class="seg"><span class="on">Kandidat</span><span>Live</span><span>Tests · 12/12</span><span>Verlauf</span><span>Kosten · 4.120</span></div>
+  <div class="code">  import csv
+<span class="a">+ def parse_export(path):</span>
+<span class="a">+     with open(path, newline="", encoding="utf-8") as fh:</span>
+<span class="a">+         rows = list(csv.DictReader(fh, delimiter=";"))</span>
+<span class="r">-     return rows</span>
+<span class="a">+     return [normalize(r) for r in rows]</span></div>
+  <p style="color:var(--muted);font-size:12px">2 Dateien · +24 −3 · Übernahme vom Modus gedeckt und erledigt · Rückgängig im Menü „Aufgabe“.</p>
+  <span class="btn">Anhalten</span> <span class="btn">Erneut testen</span> <span class="btn">Rückgängig</span></div></div>
+
+<div class="win chat" style="right:60px;top:200px;width:380px;height:420px">
+ <div class="tb"><div class="tl"><i></i><i></i><i></i></div>GUPPI<small>Vorhaben CSV-Export</small></div>
+ <div class="body"><div class="msgs"><div class="m me">Baue einen CSV-Parser für den Export und teste ihn.</div><div class="m g">Mache ich in der Sandbox, ohne Rückfragen; ich melde mich, wenn es ins Projekt soll.</div><div class="m g">Fertig: 12 von 12 Tests. Für die Datumsfelder bräuchte ich python-dateutil – das ist die Netzgrenze; die Entscheidung liegt oben rechts.</div></div></div>
+ <div class="in"><input placeholder="Nachricht oder Befehl …"><span class="btn p">↑</span></div></div>
+
+<div class="win" style="left:200px;top:470px;width:520px;height:230px;opacity:.97">
+ <div class="tb"><div class="tl"><i></i><i></i><i></i></div>Projekt Export<small>Vorhaben · Aufgaben · Dateien</small></div>
+ <div class="body" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:12px">
+  <div><b>Vorhaben</b><br>CSV-Export · 2 Aufgaben<br><span style="color:var(--muted)">Routinen · 02:00</span></div>
+  <div><b>Aufgaben</b><br>CSV-Parser · läuft<br>Importer-Doku · läuft</div>
+  <div><b>Dateien</b><br>src/export/<br>tests/</div></div></div>
+
+<div class="dock"><div class="d1 on">GUPPI</div><div class="d2 on">Projekt</div><div class="d3 on">Aufgabe</div><div class="d4">Werkstatt</div><div class="d5">Besatzung</div><div class="d7">Bibliothek</div><div class="d6">Logbuch</div></div>
+</body></html>

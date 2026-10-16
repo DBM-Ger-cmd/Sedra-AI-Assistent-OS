@@ -1,0 +1,40 @@
+GUPPI OS – System Architecture v1.0
+
+CAPTAIN
+  |
+  v
+GUPPI BRAIN
+  |
+  +-- Planning + Context
+  +-- Control Master
+  +-- Verification
+  +-- Knowledge
+  +-- Communications
+  |
+  +-- Shared Mission State
+  +-- Message Bus
+  +-- Artifact Store
+  +-- Observability
+  |
+  +-- Guard / Human Gates
+  +-- Audit / Event Log
+  +-- Registries
+  +-- Config / Secret References
+  |
+  +-- Evolution Manager
+  +-- Candidate Builder
+  +-- Verification Pipeline
+  +-- Update / Rollback
+
+GRUNDPRINZIPIEN
+
+1. GUPPI ist das zentrale ansprechbare Gehirn.
+2. Module dürfen kontrolliert untereinander kommunizieren.
+3. Mission und Captain-Intent bleiben Eigentum von GUPPI.
+4. Guard schützt kritische Aktionen.
+5. Verification prüft unabhängig gegen Acceptance Criteria.
+6. Audit macht Entscheidungen und Änderungen nachvollziehbar.
+7. Stable verändert sich nicht live selbst.
+8. Stable entwickelt einen Candidate.
+9. Nur ein verifizierter Candidate kann Update werden.
+10. Fehlgeschlagene Updates führen zu Rollback.

@@ -1,0 +1,69 @@
+# Arbeitsplatz-Wissen dieses Moduls (Build 24, Ticket B6-G-06; Klaus 15.10.2026 19:36: „Arbeitsplatzwissen bleibt immer im Modul“).
+# desk/arbeitsplatz.py liest diese Datei ein; SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen, nichts läuft von allein.
+# Erlaubt: satz, zonen [{name, wo}], woerter {wort: {ist, objekt}}, anleitungen [{id, titel, schritte, ort, stich}], begriffe {wort: text}.
+arbeitsplatz:
+  satz: 'Eine Firma statt eines Cockpits: Navigation links, Seiten in der Mitte, das Gespräch als Schublade rechts.'
+  zonen:
+  - name: Navigation
+    wo: 'links: Dashboard, Posteingang, Issues, Ziele, Agenten, Kosten; Werkzeuge; Projekt'
+  - name: Kopfzeile
+    wo: 'oben: Titel der Seite, Zurück, die Verben des Werkstücks, das Suchfeld (Strg+K)'
+  - name: Dashboard
+    wo: Kennzahlen, Posteingang, Organigramm, Issues auf einer Seite
+  - name: Schublade
+    wo: 'rechts: das Gespräch – Knopf „Mit GUPPI sprechen“ unten rechts; zählt, was ankam, solange sie zu war'
+  woerter:
+    posteingang:
+      ist: die Entscheidungen (Freigaben und Grenzen) – Navigation links, Karte auf dem Dashboard
+      objekt:
+        type: decision
+        id: alle
+        title: Posteingang
+        collection: true
+    issues:
+      ist: die Aufgaben – Navigation links, Karte unten auf dem Dashboard
+      objekt:
+        type: task
+        id: alle
+        title: Issues
+        collection: true
+    ziele:
+      ist: die Vorhaben – Navigation links
+      objekt:
+        type: intent
+        id: alle
+        title: Ziele
+        collection: true
+    agenten:
+      ist: die Besatzung (Rollen aus den Rezepten) – Navigation links, „Organigramm“ auf dem Dashboard
+      objekt:
+        type: agent
+        id: alle
+        title: Agenten
+        collection: true
+    organigramm:
+      ist: die Besatzung – Karte auf dem Dashboard
+      objekt:
+        type: agent
+        id: alle
+        title: Organigramm
+        collection: true
+    kosten:
+      ist: das Guppy-Meter – Navigation links
+      objekt:
+        type: meter
+        id: meter
+        title: Kosten
+    werkstatt:
+      ist: 'die Modelle: laden, entladen, testen, neues Modell, Teststrecke – Navigation „Werkzeuge“'
+      objekt:
+        type: model
+        id: alle
+        title: Werkstatt
+        collection: true
+  begriffe:
+    schublade: 'Das Gespräch in Paperclip: Knopf unten rechts; das Werkzeug bleibt, nur der Container wird gezeigt oder verborgen.'
+    posteingang: Paperclip-Wort für die Entscheidungen.
+    issues: Paperclip-Wort für die Aufgaben.
+    ziele: Paperclip-Wort für die Vorhaben.
+    verlauf: Die zuletzt besuchten Seiten; „Zurück“ in der Kopfzeile geht sie rückwärts, beim Neuladen kommt die letzte Seite wieder.

@@ -1,0 +1,12 @@
+# Arbeitsplatz-Wissen dieses Moduls (Build 24, Ticket B6-G-06; Klaus 15.10.2026 19:36: „Arbeitsplatzwissen bleibt immer im Modul“).
+# desk/arbeitsplatz.py liest diese Datei ein; SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen, nichts läuft von allein.
+# Erlaubt: satz, zonen [{name, wo}], woerter {wort: {ist, objekt}}, anleitungen [{id, titel, schritte, ort, stich}], begriffe {wort: text}.
+arbeitsplatz:
+  satz: 'Die Oberfläche nur für das KI GateWay: Vorgänge links, der Vorgang in der Mitte, Schutz und Regelbuch daneben.'
+  zonen:
+  - name: Orte
+    wo: 'links: die Vorgänge'
+  - name: Werkstück
+    wo: 'Mitte: der Vorgang nach dem Studio Flow'
+  - name: Nachweise
+    wo: 'rechts: Schutz (Platzhalter) und Regelbuch'

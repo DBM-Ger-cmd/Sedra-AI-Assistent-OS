@@ -1,0 +1,75 @@
+<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Richtung C</title><style>
+:root{--bg:#e4e8ee;--panel:#ffffff;--panel2:#f3f5f8;--line:#cdd3dc;--text:#1f2937;--muted:#66717f;--accent:#2563c9;--ok:#2f7a3f;--okbg:#e4f1e4;--warn:#8a5a12;--warnbg:#fbefd6;--warnline:#e3c88e;--mono:Consolas,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:13px/1.45 "Segoe UI",system-ui,sans-serif;height:100vh;display:grid;grid-template-rows:auto 1fr 104px;gap:8px;padding:8px;gap:0}
+.top{display:flex;align-items:center;gap:12px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.top b{color:var(--accent);font-size:15px}.chip{padding:2px 9px;border-radius:999px;border:1px solid var(--line);font-size:11px;background:var(--panel2)}.chip.ok{background:var(--okbg);color:var(--ok)}.chip.warn{background:var(--warnbg);color:var(--warn);border-color:var(--warnline)}
+.top input{margin-left:auto;width:380px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+.wrap{display:grid;grid-template-columns:230px 1fr;min-height:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tree{background:var(--panel2);border-right:1px solid var(--line);padding:10px;overflow:auto;font-size:12.5px}
+.tree h4{margin:10px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.tree div{padding:4px 8px;border-radius:6px}.tree .on{background:#fff;border:1px solid var(--line);font-weight:600}.tree .sub{padding-left:22px;color:var(--muted)}
+.bench{display:flex;flex-direction:column;min-height:0;background:var(--panel)}
+.bench .head{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)}.bench .head h2{margin:0;font-size:16px}.bench .head small{color:var(--muted)}
+.tools{display:flex;gap:6px;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}.btn{display:inline-block;padding:5px 11px;border-radius:7px;border:1px solid var(--line);background:#fff;font-size:12px}.btn.p{background:var(--accent);color:#fff;border-color:var(--accent)}
+.split{display:grid;grid-template-columns:1fr 1fr;min-height:0;flex:1}.col{padding:12px 16px;overflow:auto;border-right:1px solid var(--line)}.col:last-child{border-right:0}
+.col h5{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.code{font-family:var(--mono);font-size:12px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre;line-height:1.5}.code .a{background:#e4f1e4}.code .r{background:#fbe3df}
+.tests td{padding:4px 8px;border-bottom:1px solid var(--line);font-size:12px}.tests .ok{color:var(--ok);font-weight:600}
+.sea{height:60px;border-radius:8px;background:#dcecf2;position:relative;margin:6px 0 12px}.sea:before{content:"";position:absolute;left:24px;right:24px;top:30px;border-top:2px dashed #7fb2c6}.dot{position:absolute;top:24px;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid var(--accent)}.dot.d{background:var(--accent)}.ship{position:absolute;top:16px;left:60%;font-size:18px}
+.decide{margin-top:12px;padding:10px 12px;border:1px solid var(--warnline);background:var(--warnbg);border-radius:8px}.decide b{display:block}.decide small{color:var(--muted)}
+.rail{border-left:1px solid var(--line);background:var(--panel2);display:grid;grid-template-rows:auto 1fr auto;min-height:0}
+.rail h3{margin:0;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--line)}
+.rail .log{padding:10px 12px;overflow:auto;font-size:12.5px}.rail .log p{margin:0 0 10px}.rail .log b{color:var(--accent)}.rail .log .me b{color:var(--muted)}
+.rail .in{padding:10px 12px;border-top:1px solid var(--line)}.rail textarea{width:100%;height:56px;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;resize:none;background:#fff}
+.guppy{width:26px;height:17px;border-radius:50% 60% 60% 50%;background:linear-gradient(180deg,#9ff1ff,#0f84b5);border:1px solid #09668e}
+</style><style>
+.gauges{display:grid;grid-template-columns:repeat(6,auto) 1fr;gap:6px}
+.g{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 10px 3px;position:relative;display:flex;flex-direction:column;justify-content:center;min-width:120px}
+.g small{display:inline;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-right:6px}.g b{font-size:13px;font-weight:600;display:inline}.g i{font-style:normal;color:var(--muted);font-size:10.5px;display:block;white-space:nowrap}
+.bar{height:3px;background:#e4e8ee;border-radius:2px;margin-top:3px;overflow:hidden}.bar span{display:block;height:100%;background:var(--accent)}
+.g.ok b{color:var(--ok)}.g.warn b{color:var(--warn)}.g.cmd{display:flex;flex-direction:row;align-items:center;gap:8px;min-width:0}.g.cmd input{flex:1;background:#fff;border:1px solid var(--line);padding:6px 10px;border-radius:7px;font:inherit}
+.guppy{position:static;margin-right:8px}
+.talk{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:grid;grid-template-rows:1fr auto;overflow:hidden}
+.talk .log{padding:8px 12px;overflow:auto;font-size:12.5px}.talk .log b{color:var(--accent)}.talk .in{display:flex;gap:8px;padding:8px 12px;border-top:1px solid var(--line)}.talk input{flex:1;border:1px solid var(--line);padding:8px 11px;border-radius:8px;font:inherit}
+.tabsbar{display:flex;gap:4px;padding:6px 10px 0;border-bottom:1px solid var(--line);background:var(--panel2)}.tabsbar span{padding:5px 11px;border:1px solid var(--line);border-bottom:0;border-radius:7px 7px 0 0;background:#fff;font-size:12px}.tabsbar span.off{background:transparent;color:var(--muted);border-color:transparent}
+.tree h4{cursor:pointer}
+</style></head><body><div class="gauges">
+ <div class="g ok" style="flex-direction:row;align-items:center;gap:4px"><div class="guppy"></div><div><small>SEDRA</small><b>READY</b><i>20 Fähigkeiten · Audit intakt</i></div></div>
+ <div class="g"><small>Modell</small><b>Qwen3.5 9B</b><i>Kontext 16k · 40 Token/s</i><div class="bar"><span style="width:62%"></span></div></div>
+ <div class="g"><small>GPU</small><b>1,9 / 24 GB</b><i>Sperre frei</i><div class="bar"><span style="width:8%"></span></div></div>
+ <div class="g warn"><small>Entscheidungen</small><b>1</b><i>Netzgrenze · pypi.org</i></div>
+ <div class="g"><small>Aufgaben</small><b>2</b><i>1 läuft · 1 wartet</i></div>
+ <div class="g"><small>Modus · Export</small><b>Sandbox</b><i>Projekt: fragt · Netz: zu · Löschen: zu · Kosten: 100k</i></div>
+ <div class="g" style="min-width:0;justify-content:center;color:var(--muted);font-size:11px">Strg+K Kommando · Enter im Gespräch sendet · Esc schließt</div>
+</div>
+<div class="wrap"><div class="tree">
+  <h4>Projekt Export</h4><div>Dateien</div><div class="sub">src/export/</div><div class="sub">tests/</div>
+  <h4>Vorhaben</h4><div>CSV-Export <span style="color:var(--muted)">· 2 Aufgaben</span></div><div class="on sub" style="padding-left:18px">CSV-Parser · wartet auf dich</div><div class="sub" style="padding-left:18px">Importer-Doku · läuft</div><div>Routinen <span style="color:var(--muted)">· Nachtkette 02:00</span></div>
+  <h4>Werkstatt</h4><div>Modelle · 3</div><div>Teststrecke</div>
+  <h4>Besatzung</h4><div>Coder · Prüfer · Planer</div><div>Agenten · 0</div>
+  <h4>Bibliothek</h4><div>Eigene · 2</div><div>Core · 63</div>
+  <h4>System</h4><div>Logbuch</div><div>Hardware</div><div>Maschinenraum</div>
+ </div>
+ <div class="bench">
+  
+  <div class="tabsbar"><span>Aufgabe · CSV-Parser</span><span class="off">parser.py</span><span class="off">Werkstatt</span><span class="off">Bibliothek</span><span class="off" style="margin-left:auto;border:1px dashed var(--line);color:var(--accent);font-weight:600" title="Neues Vorhaben · Neues Projekt · Datei öffnen · Modell hinzufügen">＋ Neu ▾</span></div>
+  <div class="tools"><small style="color:var(--muted);align-self:center">CSV-Parser für den Export · läuft · Schritt 3 von 3 · Kandidat 2 Dateien</small><span class="btn" style="margin-left:auto">Anhalten</span><span class="btn">Erneut testen</span><span class="btn">Rückgängig</span></div>
+  <div class="split">
+   <div class="col"><h5>Kandidat · src/export/parser.py</h5><div class="code">  import csv
+<span class="a">+ def parse_export(path):</span>
+<span class="a">+     with open(path, newline="", encoding="utf-8") as fh:</span>
+<span class="a">+         rows = list(csv.DictReader(fh, delimiter=";"))</span>
+<span class="r">-     return rows</span>
+<span class="a">+     return [normalize(r) for r in rows]</span></div>
+    <div class="decide" style="margin-top:0"><b>Entscheidung · Netzgrenze: pypi.org</b><small>GUPPI will „python-dateutil“ nachladen · im Modus Sandbox ist Netz zu · einmal öffnen, Grenze für dieses Projekt ändern oder ablehnen</small><span class="btn p">Einmal öffnen</span><span class="btn">Grenze ändern …</span><span class="btn">Ablehnen</span></div></div>
+   <div class="col"><h5>Live · Schritt 3: Tests ausführen</h5><div class="code" style="background:#111827;color:#d1d5db;border-color:#111827;max-height:150px;overflow:hidden">$ pytest tests/test_export.py -q
+<span style="color:#8fd9a0">............</span>                                   [100%]
+12 passed in 9.8s
+› Coder schreibt src/export/parser.py  <span style="color:#9ca3af">(+24 −3, 1.820 Token, 38 Token/s)</span>
+› nächster Aufruf: pip install python-dateutil  <span style="color:#f0c86a">⟂ nicht im Plan</span></div>
+    <h5 style="margin-top:12px">Verlauf</h5><div class="sea"><span class="dot d" style="left:20px"></span><span class="dot d" style="left:38%"></span><span class="dot d" style="left:62%"></span><span class="dot" style="right:20px"></span><span class="ship">⛵</span></div>
+    <h5>Tests · Sandbox · 9,8 s</h5><table class="tests"><tr><td>test_parse_semicolon</td><td class="ok">ok</td></tr><tr><td>test_umlauts</td><td class="ok">ok</td></tr><tr><td>test_empty_file</td><td class="ok">ok</td></tr><tr><td>… 9 weitere</td><td class="ok">ok</td></tr></table>
+    <h5 style="margin-top:12px">Kosten</h5><div style="display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted)"><div style="width:120px;height:34px;border-radius:50%/40%;background:radial-gradient(ellipse at 50% 60%,#2b2b2b 0 38%,#d8d3c0 40%);border:1px solid var(--line)"></div><div>4.120 Token · 1 Min 40 s GPU · Coder Qwen3.5 9B<br><span style="font-size:11px">Kupfer 41 · Silber 4 · Gold 0 – Münzen fallen live, während das Modell arbeitet</span></div></div></div>
+  </div>
+ </div>
+ </div><div class="talk"><div class="log"><b>GUPPI</b> Der Parser ist fertig und getestet; die Übernahme ist im Plan erteilt und erledigt (2 Dateien, Rücknahme im Logbuch). Für die Datumsfelder bräuchte ich python-dateutil – das überschreitet die Netzgrenze. Die Entscheidung liegt an der Werkbank (oder antworte hier mit „einmal ja“). <br><b>Du</b> ja, und zeig mir danach den Diff.</div><div class="in"><input placeholder="Antwort oder Auftrag · Enter sendet · Ziehen hängt an"><span class="btn p" style="margin:0">Senden</span></div></div>
+</body></html>

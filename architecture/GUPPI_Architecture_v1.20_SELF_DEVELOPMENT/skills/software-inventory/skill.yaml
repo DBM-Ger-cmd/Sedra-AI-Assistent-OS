@@ -1,0 +1,72 @@
+skill:
+  id: software-inventory
+  name: Hardware-Software und Anbietererkennung
+  version: 1.0.0
+  owner_module: planning-context
+  description: Hardware-Software und Anbietererkennung als begrenzter Workflow-Blueprint.
+  topics:
+  - hardware
+  capabilities:
+  - software_inventory
+  triggers:
+  - softwareinventar
+  - software inventory
+  - herstellersoftware
+  - vendor software
+  - fancontrol
+  - msi center
+  - asus armoury crate
+  tool_hints:
+  - hardware-manager
+  - filesystem
+  workflow:
+  - stage: observe
+    tool: filesystem
+    operation: list_dir
+    binding:
+      path: <project-root>
+    read_only: true
+  - stage: observe
+    tool: hardware-manager
+    operation: get_inventory
+    read_only: true
+  - stage: plan
+    action: inventory_available_vendor_evidence_without_installation
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: compare_vendor_software_purpose_and_channel_ownership
+    execution: planning_only
+    read_only: true
+  - stage: plan
+    action: record_unverified_providers_as_adapter_candidates
+    execution: planning_only
+    read_only: true
+  inputs:
+  - target inventory
+  - provided software list
+  outputs:
+  - software map
+  - adapter candidates
+  execution_support: blueprint_only; parameter_binder_pending
+  acceptance_criteria:
+  - Inputs and scope are explicit
+  - Claims distinguish evidence from assumptions
+  - No action outside selected tools and Guard
+  boundaries:
+  - No automatic deployment, publishing or hardware writes
+  - Planning actions require a later validated execution binding
+  - Only existing collector and provided evidence; no new vendor scanner or adapter
+  - ASUS/MSI/FanControl names are candidates, not supported write APIs
+  permissions:
+    read:
+    - mission
+    - registry
+    write:
+    - plan
+  guard:
+    level: standard
+  compatibility:
+    core_contract: 1
+    min_guppi_version: 1.11.0
+  status: enabled

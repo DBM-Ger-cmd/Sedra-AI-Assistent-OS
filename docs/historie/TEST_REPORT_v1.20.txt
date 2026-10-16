@@ -1,0 +1,75 @@
+GUPPI v1.20 SELF-DEVELOPMENT FOUNDATION – TEST REPORT
+Date: 2026-10-01
+
+Executed successfully
+=====================
+
+1) New Self-Development tests
+Command:
+  PYTHONPATH=src python -m unittest tests.test_self_development -v
+Result:
+  Ran 15 tests in 2.506s
+  OK
+
+2) Core runtime / capability router / UIX regression
+Command:
+  PYTHONPATH=src python -m unittest tests.test_runtime tests.test_capability_router tests.test_uix_server -q
+Result:
+  Ran 69 tests in 13.083s
+  OK
+
+3) Candidate / generation / execution binder regression
+Command:
+  PYTHONPATH=src python -m unittest tests.test_code_candidate tests.test_code_generation tests.test_execution_binder -q
+Result:
+  Ran 62 tests in 13.199s
+  OK
+
+4) Hardware manager / tuning regression
+Command:
+  PYTHONPATH=src python -m unittest tests.test_hardware_manager tests.test_tuning -q
+Result:
+  Ran 33 tests in 6.603s
+  OK
+
+5) Workflow / PC workflow / readiness / skills / step journal regression
+Command:
+  PYTHONPATH=src python -m unittest tests.test_workflow_contract tests.test_pc_workflow tests.test_readiness tests.test_skill_topics tests.test_step_journal -q
+Result:
+  Ran 109 tests in 20.725s
+  OK
+
+6) Acceptance qualification / offline bundle static regression
+Command:
+  PYTHONPATH=src python -m unittest tests.test_acceptance_qualification tests.test_offline_bundle -q
+Result:
+  Ran 15 tests in 0.046s
+  OK
+
+TOTAL SUCCESSFULLY EXECUTED IN THE LISTED NON-OVERLAPPING TEST SETS: 303 tests
+
+Architecture YAML validation
+============================
+Command:
+  PYTHONPATH=src python validate_package.py
+Result:
+  OK: 116 architecture YAML files parsed
+
+Python syntax/bytecode validation
+=================================
+Command:
+  PYTHONPATH=src python -m compileall -q src
+Result:
+  OK (exit code 0)
+
+Not claimed as passed
+=====================
+A broader combined unittest invocation that included additional sandbox/offline tests exceeded the execution time available in this build environment. It is NOT counted as a pass and is NOT used as evidence for full-suite completion.
+
+Real-hardware qualification still required
+==========================================
+- Windows/PowerShell target PC
+- actual local Qwen3.5 weights/runtime
+- actual local Kev server/weights
+- qualified microVM guest image
+- end-to-end autonomous E1 development candidate on target hardware

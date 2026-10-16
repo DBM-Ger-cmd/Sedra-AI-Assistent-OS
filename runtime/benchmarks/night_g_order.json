@@ -1,0 +1,9 @@
+[
+  {"spec": "gate_bar"},
+  {"spec": "buildflow_core"},
+  {"spec": "build_log"},
+  {"spec": "review_report"},
+  {"spec": "adopt_plan"},
+  {"spec": "build_request", "seed": "g1_seed"},
+  {"spec": "spec_standards", "seed": "g2_seed"}
+]

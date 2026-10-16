@@ -1,0 +1,5 @@
+Second review of fuzzy_edit.py (attempt_01_20261010_220636), Captain/Claude 2026-10-10: the first review is done, three small leftovers of dead or copied code. Keep the behaviour exactly.
+1. In _reindent: `for idx, nl in enumerate(...)`: idx is never used, loop over the lines directly.
+2. In _reindent: the branch `if old_indent == "" and file_indent == ""` is not needed, the next branch (file_indent.startswith(old_indent)) gives the same result with an empty prefix.
+3. In _reindent: the loop that finds old_indent and the loop that finds first_old_nonblank search the same first non-blank line of old: find its index once and take old_indent from it.
+Change nothing else.

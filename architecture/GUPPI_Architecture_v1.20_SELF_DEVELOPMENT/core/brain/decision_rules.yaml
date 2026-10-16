@@ -1,0 +1,47 @@
+decision_rules:
+  schema: 1
+  priority_order:
+  - safety_and_guard
+  - captain_gate
+  - missing_required_context
+  - planning
+  - execution
+  - verification
+  - rework
+  - completion
+  rules:
+  - id: DR-001
+    if: mission_class == S0 and task_is_low_risk and direct_answer_possible
+    then: DIRECT
+  - id: DR-002
+    if: required_context_missing
+    then: PLANNING_CONTEXT
+  - id: DR-003
+    if: plan_missing or plan_status != ready
+    then: PLANNING_CONTEXT
+  - id: DR-004
+    if: protected_action_pending
+    then: GUARD
+  - id: DR-005
+    if: guard_decision == CAPTAIN_REQUIRED
+    then: CAPTAIN_GATE
+  - id: DR-006
+    if: plan_ready and execution_pending
+    then: CONTROL_MASTER
+  - id: DR-007
+    if: execution_completed and verification_required
+    then: VERIFICATION
+  - id: DR-008
+    if: verification_status == FAIL
+    then: REWORK
+  - id: DR-009
+    if: verification_status == INCONCLUSIVE
+    then: REQUEST_MORE_EVIDENCE
+  - id: DR-011
+    if: workflow == code-candidate-v1 and preparation_verification == PASS
+    then: CANDIDATE_REVIEW
+  - id: DR-010
+    if: all_acceptance_criteria_met and no_blocking_gate and workflow != code-candidate-v1
+    then: COMPLETE
+  conflict_rule:
+    description: Bei mehreren gleichzeitig passenden Regeln gilt priority_order.

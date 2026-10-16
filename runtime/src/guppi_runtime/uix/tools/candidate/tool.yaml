@@ -1,0 +1,19 @@
+tool:
+  id: candidate
+  name: "Kandidat"
+  description: "Was GUPPI an den Dateien ändern will – Diff, Zeile für Zeile, mit den Verben des Zustands."
+  version: 1.0.0
+  kind: object
+  handles: [candidate]
+  order: 16
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - POST /api/objects
+    - POST /api/candidate/diff
+    - POST /api/actions
+  events:
+    emits: [object.open]
+    listens: [task.changed, decision.answered]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

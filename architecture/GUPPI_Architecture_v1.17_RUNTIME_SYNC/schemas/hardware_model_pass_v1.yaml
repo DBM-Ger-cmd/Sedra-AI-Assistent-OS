@@ -1,0 +1,15 @@
+hardware_model_pass:
+  schema: 1
+  hardware_class: null
+  source_profile: {}
+  effective_profile: {}
+  adjustments: []
+  warnings: []
+  fit:
+    system_memory: unknown
+    full_gpu: unknown
+    model_size_gb: null
+    ram_gb: null
+    vram_gb: null
+    memory_reserve_gb: null
+  status: PASS

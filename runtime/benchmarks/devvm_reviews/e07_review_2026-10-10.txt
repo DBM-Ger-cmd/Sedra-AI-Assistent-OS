@@ -1,0 +1,4 @@
+Review of tool_cards.py (attempt_01_20261010_215217), Captain/Claude 2026-10-10:
+1. DEFECT: CardPicker.__init__ does `[tuple(r) for r in rules]`, which raises for a rule that is not iterable (for example 5), although pick skips such rules silently. Keep the rules as they are (a list copy) and let pick skip invalid ones.
+2. _valid_rule compiles the pattern and _match_rule compiles it again via re.search: compile once (for example _valid_rule returns the compiled pattern or None).
+Change nothing else.

@@ -1,0 +1,15 @@
+GUPPI OS – Control Master Runtime v1.2
+
+Neu implementierte Runtime-Verträge:
+- Tool Registry / Tool Manager
+- Filesystem Tool
+- Git Tool
+- Restricted Process Runner
+- Local Model Router
+- LM Studio Adapter
+- llama.cpp Server Adapter
+- Hardware Snapshot
+- Hardware/Model Profile Store
+
+Die integrierten Model Adapter verwenden nur lokale Loopback-Endpunkte.
+Model Download und Binary Lifecycle bleiben separate, spätere Komponenten.
