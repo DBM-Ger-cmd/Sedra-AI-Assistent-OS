@@ -9,8 +9,13 @@
     'cdn.jsdelivr.net). Wenn du eine Vorschau willst, antworte mit genau einem vollständigen HTML-Dokument in einem Codeblock, ' +
     'der mit ```html beginnt. Schreibe davor höchstens drei kurze Sätze, was du gemacht hast. Keine anderen Netzadressen. ' +
     'Als Vorarbeiter darfst du diese Aktionen auslösen, indem du einen Codeblock mit ```vorarbeiter und einem JSON-Objekt schreibst: ' +
-    '{"aktion": "lauf_status"} · {"aktion": "lauf_starten", "args": {"lauf": "shells" | "spec" | "pipeline"}} · ' +
+    '{"aktion": "lauf_status"} · {"aktion": "lauf_starten", "args": {"lauf": "shells" | "spec" | "pipeline" | "<eigener Name>"}} · ' +
+    '{"aktion": "rendern", "args": {"ordner": "workbench", "datei": "<name>.scad"}} · ' +
+    '{"aktion": "lauf_anlegen","args": {"name": "…", "art": "bewerten" | "bauen", "lab": "…", "model": "…", "task": "…", "allow": ["…"], "outputs": ["…"]}}. ' +
+    'Bevor du einen Lauf anlegst, frage im Gespräch nach, was fehlt: wo gearbeitet und gespeichert werden soll (Ordner unter redesign/), ' +
+    'welche Dateien geschrieben werden dürfen und was am Ende herauskommen soll. Erfinde keinen Ordner und keinen Modellnamen. ' +
     '{"aktion": "pruefen", "args": {"ordner": "drache_lab" | "paperclip_lab"}}. Sonst nichts Weiteres.');
+  const AMPEL_ZEICHEN = {gruen: '✓ schnell', gelb: '◐ langsam', rot: '✗ antwortet nicht', grau: '○ ungeprüft'};
   const CODE = /```html\s*([\s\S]*?)```/;
   const ACTION = /```vorarbeiter\s*([\s\S]*?)```/;
 
@@ -36,7 +41,19 @@
       this.input.setAttribute('aria-label', 'Nachricht an das Modell');
       this.input.onkeydown = e=>{ if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); this.send(); } };
       const row = d().el('div', 'et-row');
-      row.append(this.picker, d().button('Senden', ()=>this.send(), 'p'), d().button('Neu beginnen', ()=>this.reset()));
+      const vorschau = d().button('Vorschau aus', ()=>{
+        const aus = el.classList.toggle('et-ohne-vorschau');
+        vorschau.textContent = aus ? 'Vorschau ein' : 'Vorschau aus';
+      });
+      const seiten = d().button('Seiten tauschen', ()=>el.classList.toggle('et-getauscht'));
+      const blasen = d().button('Ohne Blasen', ()=>{
+        const aus = el.classList.toggle('et-ohne-blasen');
+        blasen.textContent = aus ? 'Mit Blasen' : 'Ohne Blasen';
+      });
+      this.ampel = d().el('span', 'et-ampel aus');
+      this.picker.addEventListener('change', ()=>this.ampelZeigen());
+      this.gruen = d().button('Grüne zuerst', ()=>this.gruenZeigen());
+      row.append(this.picker, this.ampel, this.gruen, d().button('Senden', ()=>this.send(), 'p'), d().button('Neu beginnen', ()=>this.reset()), vorschau, seiten, blasen);
       left.append(this.log, this.input, row);
 
       const right = d().el('section', 'et-preview');
@@ -47,8 +64,9 @@
       this.frame.setAttribute('sandbox', 'allow-scripts');
       this.frame.setAttribute('title', 'Vorschau des Entwurfs');
       right.append(d().el('div', 'et-bar', null), this.frame);
-      right.firstChild.append(this.drafts, d().button('Aktualisieren', ()=>this.listDrafts()));
-      el.replaceChildren(left, right);
+      right.firstChild.append(d().el('b', 'et-titel', 'Vorschau Fenster'), this.drafts, d().button('Aktualisieren', ()=>this.listDrafts()));
+      left.prepend(d().el('div', 'et-kopf', 'Chat Fenster'));
+      el.replaceChildren(right, left);
 
       this.say('Schreib, was du entwerfen willst. Ich antworte im Gespräch; eine Seite erscheint rechts in der Vorschau.', 'note');
       this.loadModels();
@@ -76,18 +94,46 @@
         if(!v.enabled) return this.say('Die Cloud ist aus. Für den Entwurf erst in der KI Labor einschalten.', 'warn');
         for(const p of v.providers || []){
           if(p.status !== 'bereit') continue;
-          let list = [];
-          try{ list = ((await this.ctx.api('/api/cloud/models', {method: 'POST', body: {provider: p.id}})).models || []).slice(); }
+          let list = [], zust = {};
+          try{ const r = await this.ctx.api('/api/cloud/models', {method: 'POST', body: {provider: p.id}}); list = (r.models || []).slice(); zust = r.zustand || {}; }
           catch(_err){ list = []; }
           if(p.default_model && !list.includes(p.default_model)) list.unshift(p.default_model);
           if(!list.length) continue;
           const group = d().el('optgroup'); group.label = p.id;
-          list.forEach(id=>{ const o = d().el('option', null, id); o.value = 'cloud:' + p.id + '|' + id; group.append(o); });
+          list.forEach(id=>{
+            const a = (zust[id] || {}).ampel || 'grau';
+            const o = d().el('option', null, id + '  ' + AMPEL_ZEICHEN[a]); o.value = 'cloud:' + p.id + '|' + id; o.dataset.ampel = a;
+            group.append(o);
+          });
           this.picker.append(group);
         }
         const pre = (v.module_models || {}).chat;
         if(pre && pre.provider && pre.model) this.picker.value = 'cloud:' + pre.provider + '|' + pre.model;
+        this.ampelZeigen();
       }catch(err){ this.say('Modelle nicht lesbar: ' + err.message, 'warn'); }
+    },
+
+    // Schalter „Grüne zuerst“: oben in der Auswahl eine Gruppe mit allen grünen Modellen (gleiche Werte, also gleiche Wahl)
+    gruenZeigen(){
+      this.gruenZuerst = !this.gruenZuerst;
+      this.gruen.textContent = this.gruenZuerst ? 'Grüne: an' : 'Grüne zuerst';
+      this.picker.querySelectorAll('optgroup[data-kandidaten]').forEach(g=>g.remove());
+      if(!this.gruenZuerst) return;
+      const gruen = [...this.picker.options].filter(o=>o.dataset.ampel === 'gruen');
+      if(!gruen.length){ this.say('Noch kein grünes Modell: erst eins benutzen oder im KI Labor testen.', 'note'); return; }
+      const group = d().el('optgroup'); group.label = 'Grüne Kandidaten'; group.dataset.kandidaten = '1';
+      gruen.forEach(o=>{ const c = d().el('option', null, o.textContent); c.value = o.value; c.dataset.ampel = 'gruen'; group.append(c); });
+      this.picker.insertBefore(group, this.picker.children[1] || null);
+    },
+
+    // der Punkt zeigt den Zustand des gewählten Modells; bei „GUPPI lokal“ bleibt er aus
+    ampelZeigen(){
+      if(!this.ampel) return;
+      const o = this.picker.selectedOptions && this.picker.selectedOptions[0];
+      if(!this.picker.value || !o){ this.ampel.className = 'et-ampel aus'; this.ampel.title = 'GUPPI lokal'; return; }
+      const a = o.dataset.ampel || 'grau';
+      this.ampel.className = 'et-ampel ' + a;
+      this.ampel.title = AMPEL_ZEICHEN[a] || AMPEL_ZEICHEN.grau;
     },
 
     async send(){

@@ -14,3 +14,10 @@
 .t-talk-offer{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 8px 52px}
 .t-talk-offer .s-btn{font-size:12px;padding:4px 10px}
 .t-talk-done{color:var(--ok);font-size:12px;align-self:center}
+/* Zustand des Modells neben der Auswahl: ein Punkt in der Farbe des Zustands */
+.t-talk-ampel{align-self:center;width:10px;height:10px;border-radius:50%;flex:0 0 10px;background:var(--muted)}
+.t-talk-ampel.gruen{background:var(--ok)}
+.t-talk-ampel.gelb{background:var(--warn)}
+.t-talk-ampel.rot{background:var(--bad)}
+.t-talk-ampel.grau{background:var(--muted)}
+.t-talk-ampel.aus{display:none}

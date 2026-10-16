@@ -109,17 +109,19 @@
 
       box.append(d().el('h5', 's-head', 'Rezepte'));
       (view.recipes || []).forEach(r=>{
-        const row = d().el('div', 't-shop-row' + (r.loaded ? ' on' : ''));
+        const zuletzt = !!view.zuletzt && view.zuletzt === r.id;      // das zuletzt geladene Modell ist die Vorgabe
+        const row = d().el('div', 't-shop-row' + (r.loaded ? ' on' : '') + (zuletzt ? ' zuletzt' : ''));
         const head = d().el('div', 's-row');
         head.append(d().el('b', null, r.id));
         if(r.loaded) head.append(d().el('span', 's-note ok s-small', 'geladen'));
+        if(zuletzt && !r.loaded) head.append(d().el('span', 's-note s-small', 'zuletzt verwendet'));
         row.append(head, d().el('small', 's-muted', recipeLine(r)));
         const verbs = d().el('div', 's-row');
         if(r.loaded){
           verbs.append(d().button('Entladen', ()=>this.ctx.api('/api/model/unload', {method: 'POST', body: {}}).then(()=>this.refresh())));
           verbs.append(d().button('Testen', ()=>this.test(r.id)));
         }else if(r.enabled && r.model && view.loader_enabled){
-          verbs.append(d().button('Laden', ()=>this.ctx.api('/api/model/load', {method: 'POST', body: {recipe_id: r.id}}).then(()=>this.refresh()), 'p'));
+          verbs.append(d().button(zuletzt ? 'Laden (zuletzt)' : 'Laden', ()=>this.ctx.api('/api/model/load', {method: 'POST', body: {recipe_id: r.id}}).then(()=>this.refresh()), zuletzt ? 'p' : ''));
         }
         row.append(verbs);
         box.append(row);

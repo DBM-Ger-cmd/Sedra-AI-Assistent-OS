@@ -46,7 +46,7 @@
     row('Modell hinzufügen', {type: 'model', id: 'neu', title: 'Neues Modell'}, 'GGUF wählen, Rezept prüfen, Freigabe');
     row('Teststrecke', {type: 'model', id: 'teststrecke', title: 'Teststrecke'}, loaded ? 'Standardtest für ' + loaded.id : 'braucht ein geladenes Modell');
     row('KI Labor', {type: 'labor', id: 'ki', title: 'KI Labor'}, 'Anbieter, Modelle, Tests');
-    row('Entwurf', {type: 'entwurf', id: 'chat', title: 'Entwurf · Chat und Vorschau'}, 'Gespräch und Vorschau nebeneinander');
+    row('Master-Chat', {type: 'entwurf', id: 'chat', title: 'Master-Chat · Befehle und Vorschau'}, 'großes Gespräch, Vorschau aus- und einblendbar');
 
     head('Besatzung');
     const instances = (agents.instances || []).length;

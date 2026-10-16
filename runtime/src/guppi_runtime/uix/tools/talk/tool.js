@@ -43,6 +43,10 @@
     return '';
   }
 
+  // Zustand eines Cloud-Modells als Zeichen und Wort (grün schnell, gelb langsam, rot antwortet nicht, grau ungeprüft)
+  const AMPEL_ZEICHEN = {gruen: '✓ schnell', gelb: '◐ langsam', rot: '✗ antwortet nicht', grau: '○ ungeprüft'};
+  function ampelText(a){ return AMPEL_ZEICHEN[a] || AMPEL_ZEICHEN.grau; }
+
   const tool = {
     id: 'talk',
     history: [],
@@ -65,8 +69,12 @@
       this.picker.setAttribute('aria-label', 'Modell für diese Frage');
       const local = d().el('option', null, 'GUPPI lokal'); local.value = '';
       this.picker.append(local);
+      // Zustand des gewählten Modells: Punkt neben der Auswahl
+      this.ampel = d().el('span', 't-talk-ampel aus');
+      this.picker.addEventListener('change', ()=>this.ampelZeigen());
+      this.gruen = d().button('Grüne zuerst', ()=>this.gruenZeigen());
       const send = d().button('Senden', ()=>this.submit(), 'p');
-      bar.append(this.input, this.picker, send);
+      bar.append(this.input, this.picker, this.ampel, this.gruen, send);
       el.replaceChildren(this.grip(el), this.log, bar);
       this.loadCloud();
 
@@ -120,14 +128,18 @@
         if(!v.enabled) return;
         for(const p of v.providers || []){
           if(p.status !== 'bereit') continue;
-          let list = [];
-          try{ list = ((await this.ctx.api('/api/cloud/models', {method: 'POST', body: {provider: p.id}})).models || []).slice(); }
+          let list = [], zust = {};
+          try{ const r = await this.ctx.api('/api/cloud/models', {method: 'POST', body: {provider: p.id}}); list = (r.models || []).slice(); zust = r.zustand || {}; }
           catch(_err){ list = []; }
           if(p.default_model && !list.includes(p.default_model)) list.unshift(p.default_model);
           if(!list.length) continue;
           const group = d().el('optgroup');
           group.label = 'Cloud · ' + p.id;
-          list.forEach(id=>{ const o = d().el('option', null, id); o.value = 'cloud:' + p.id + '|' + id; group.append(o); });
+          list.forEach(id=>{
+            const a = (zust[id] || {}).ampel || 'grau';
+            const o = d().el('option', null, id + '  ' + ampelText(a)); o.value = 'cloud:' + p.id + '|' + id; o.dataset.ampel = a;
+            group.append(o);
+          });
           this.picker.append(group);
         }
         // Die Zuordnung „chat“ (KI Labor, module_models) ist die Vorgabe: neue Fragen gehen dorthin, „GUPPI lokal“ bleibt wählbar
@@ -141,7 +153,31 @@
           }
           this.picker.value = value;
         }
+        this.ampelZeigen();
       }catch(_err){ /* ohne Cloud gibt es nur GUPPI lokal */ }
+    },
+
+    // Schalter „Grüne zuerst“: oben in der Auswahl eine Gruppe mit allen grünen Modellen (gleiche Werte, also gleiche Wahl)
+    gruenZeigen(){
+      this.gruenZuerst = !this.gruenZuerst;
+      this.gruen.textContent = this.gruenZuerst ? 'Grüne: an' : 'Grüne zuerst';
+      this.picker.querySelectorAll('optgroup[data-kandidaten]').forEach(g=>g.remove());
+      if(!this.gruenZuerst) return;
+      const gruen = [...this.picker.options].filter(o=>o.dataset.ampel === 'gruen');
+      if(!gruen.length){ this.say('Noch kein grünes Modell: erst eins benutzen oder im KI Labor testen.', 'note'); return; }
+      const group = d().el('optgroup'); group.label = 'Grüne Kandidaten'; group.dataset.kandidaten = '1';
+      gruen.forEach(o=>{ const c = d().el('option', null, o.textContent); c.value = o.value; c.dataset.ampel = 'gruen'; group.append(c); });
+      this.picker.insertBefore(group, this.picker.children[1] || null);
+    },
+
+    // der Punkt zeigt den Zustand des gewählten Modells; bei „GUPPI lokal“ bleibt er aus
+    ampelZeigen(){
+      if(!this.ampel) return;
+      const o = this.picker.selectedOptions && this.picker.selectedOptions[0];
+      if(!this.picker.value || !o){ this.ampel.className = 't-talk-ampel aus'; this.ampel.title = 'GUPPI lokal'; return; }
+      const a = o.dataset.ampel || 'grau';
+      this.ampel.className = 't-talk-ampel ' + a;
+      this.ampel.title = ampelText(a);
     },
 
     // Eine Frage an ein Cloud-Modell. Der Inhaltsschutz läuft auf dem Server; die Antwort steht mit Modellnamen im Gespräch.

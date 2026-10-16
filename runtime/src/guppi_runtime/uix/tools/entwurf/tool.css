@@ -1,0 +1,49 @@
+/* Werkzeug Entwurf (Master-Chat): Gespräch links, Vorschau rechts; Vorschau ausblendbar, dann Chat über die volle Breite. */
+
+.t-entwurf { display: flex; height: 100%; min-height: 0; background: var(--bg); color: var(--text); }
+.t-entwurf .et-chat { flex: 1 1 50%; display: flex; flex-direction: column; min-width: 0; gap: var(--gap); padding: var(--gap-2); }
+.t-entwurf .et-preview { flex: 1 1 50%; display: flex; flex-direction: column; min-width: 0; border-right: 2px solid var(--line); }
+.t-entwurf .et-kopf, .t-entwurf .et-titel { color: var(--heading); font-weight: 600; }
+.t-entwurf .et-kopf { padding: 0 var(--gap); }
+.t-entwurf .et-titel { padding-right: var(--gap); }
+
+.t-entwurf .et-log { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: var(--gap-2); padding: var(--gap); background: var(--panel); border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.t-entwurf .et-line { margin: 0; max-width: 80%; padding: var(--gap) var(--gap-2); white-space: pre-wrap; word-break: break-word; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-2); }
+.t-entwurf .et-line.me { align-self: flex-end; border-color: var(--accent); }
+.t-entwurf .et-line b { color: var(--heading); }
+.t-entwurf .et-line.me b { color: var(--accent); }
+.t-entwurf .et-line.note { color: var(--muted); }
+.t-entwurf .et-line.warn { color: var(--warn); }
+.t-entwurf .et-offer { display: flex; }
+
+.t-entwurf .et-input { width: 100%; min-height: 96px; resize: vertical; box-sizing: border-box; padding: var(--gap); background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius); font: inherit; }
+.t-entwurf .et-row { display: flex; gap: var(--gap); align-items: center; flex-wrap: wrap; }
+.t-entwurf .et-ampel { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 10px; background: var(--muted); }
+.t-entwurf .et-ampel.gruen { background: var(--ok); }
+.t-entwurf .et-ampel.gelb { background: var(--warn); }
+.t-entwurf .et-ampel.rot { background: var(--bad); }
+.t-entwurf .et-ampel.aus { display: none; }
+.t-entwurf .et-pick, .t-entwurf .et-drafts { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px var(--gap); font: inherit; max-width: 100%; }
+
+.t-entwurf .et-bar { display: flex; gap: var(--gap); align-items: center; padding: var(--gap); border-bottom: 1px solid var(--line-soft); }
+.t-entwurf .et-drafts { flex: 1 1 auto; min-width: 0; }
+.t-entwurf .et-frame { flex: 1 1 auto; width: 100%; min-height: 0; border: 0; background: var(--panel); }
+
+/* Seiten tauschen: die Vorschau links, der Chat rechts (oder umgekehrt) */
+.t-entwurf.et-getauscht { flex-direction: row-reverse; }
+.t-entwurf.et-getauscht .et-preview { border-right: 0; border-left: 2px solid var(--line); }
+
+/* Ohne Blasen: Nachrichten als einfacher Text statt als Sprechkasten */
+.t-entwurf.et-ohne-blasen .et-line { max-width: none; padding: var(--gap) 0; background: none; border: 0; border-radius: 0; }
+.t-entwurf.et-ohne-blasen .et-line.me { align-self: stretch; border: 0; }
+
+/* Master-Modus: die Vorschau ist ausgeblendet, der Chat nutzt die volle Breite */
+.t-entwurf.et-ohne-vorschau .et-preview { display: none; }
+.t-entwurf.et-ohne-vorschau .et-chat { flex: 1 1 100%; padding: var(--gap-3); }
+.t-entwurf .et-log { font-size: 1rem; }
+.t-entwurf.et-ohne-vorschau .et-log { font-size: 1.05rem; }
+
+@media (max-width: 720px) {
+  .t-entwurf { flex-direction: column; }
+  .t-entwurf .et-preview { border-left: 0; border-top: 1px solid var(--line); min-height: 40vh; }
+}

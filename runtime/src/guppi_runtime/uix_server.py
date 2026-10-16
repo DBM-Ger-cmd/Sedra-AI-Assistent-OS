@@ -31,6 +31,26 @@ from .rework_watch import ReworkWatch
 from .model_loader import LoadError
 from .testlab import TestLab, default_path
 from .runtime import GuppiRuntime
+
+
+def quelle_pruefen(payload):
+    """Der Ordner eines Imports, bevor irgendetwas gelesen wird. Liefert (Art, Ordner) oder wirft einen Satz mit dem nächsten Schritt.
+    Eigener Schritt, damit der Import einheitlich prüft (Auftrag AUFTRAG_EINHEITLICHER_IMPORT_2026-10-16, Abschnitt 3.1)."""
+    p = payload if isinstance(payload, dict) else {}
+    kind = str(p.get('kind') or '').strip()
+    if kind not in ('tool', 'shell'):
+        raise ValueError('Bitte zuerst wählen, ob es eine Shell oder ein Werkzeug ist.')
+    source = str(p.get('source') or '').strip()
+    if not source:
+        raise ValueError('Bitte den vollständigen Ordnerpfad eingeben, zum Beispiel D:\\Shells\\meine-shell.')
+    folder = Path(source)
+    if not folder.is_absolute() or '..' in folder.parts:
+        raise ValueError('Der Ordnerpfad muss vollständig sein und darf kein „..“ enthalten, zum Beispiel D:\\Shells\\meine-shell.')
+    if not folder.is_dir():
+        raise ValueError(f'Dieser Ordner gibt es nicht: {folder}. Pfad prüfen oder den Ordner über den Dialog wählen.')
+    if not (folder / f'{kind}.yaml').is_file():
+        raise ValueError(f'In diesem Ordner fehlt die Datei {kind}.yaml. Ohne sie gibt es nichts zu importieren.')
+    return kind, folder
 from . import local_paths
 from .models import model_add
 from .chat_tools import ChatTools
@@ -251,15 +271,7 @@ class UIXHub:
         """Ein Modul zur Freigabe vorlegen: Manifest, jede Datei mit Hash, und was die Durchsicht gefunden hat.
 
         Geschrieben wird hier nichts. Der Ordner wird gelesen, geprüft und beschrieben; eingebaut wird er erst nach der Freigabe."""
-        kind = str(payload.get('kind') or 'tool')
-        if kind not in ('tool', 'shell'):
-            raise ValueError('kind_must_be_tool_or_shell')
-        source = str(payload.get('source') or '').strip()
-        if not source:
-            raise ValueError('source_required')
-        folder = Path(source)
-        if not folder.is_absolute() or '..' in folder.parts:
-            raise ValueError('source_must_be_an_absolute_path_without_dotdot')
+        kind, folder = quelle_pruefen(payload)
         area = 'tools' if kind == 'tool' else 'shells'
         read = desk_install.read_module(folder, area)
         doc = yaml.safe_load((folder / (f'{kind}.yaml')).read_text(encoding='utf-8'))
@@ -271,9 +283,10 @@ class UIXHub:
             doc[kind]['trust'] = 'COMMUNITY'
         manifest, errors = check(doc, folder, 'local')
         if errors:
-            raise ValueError('manifest_refused:' + ','.join(errors)[:200])
+            raise ValueError('Das Manifest wurde abgelehnt: ' + ', '.join(errors)[:300] + '. Die Angaben in ' + kind + '.yaml korrigieren und erneut vorlegen.')
         if manifest['id'] in (self.gateway.tools() if kind == 'tool' else self.gateway.shells()):
-            raise ValueError('module_id_already_installed')
+            raise ValueError(f'Die Kennung „{manifest["id"]}“ ist schon vergeben (eingebaute {"Shell" if kind == "shell" else "Werkzeug"} oder früherer Import). '
+                             f'Im Manifest eine andere id setzen oder die alte Fassung zuerst entfernen.')
         describe = (f'Modul „{manifest["name"]}“ ({manifest["id"]}) einbauen · {len(read["files"])} Datei(en) · '
                     f'als COMMUNITY, nur Leserouten ({len(manifest["api"])}) · {desk_install.summary(read["findings"])}'
                     + (' · bringt eigene Objekttypen: ' + ', '.join(manifest.get('own_types') or []) if manifest.get('own_types') else ''))
@@ -2037,7 +2050,8 @@ class UIXHub:
             raise ValueError('unknown_provider')
         models = provider_models(cfg, pid, os.environ, self.runtime.cloud_key_store)
         self.runtime.audit.append('CLOUD_MODELS_QUERIED', component='desk', payload={'provider': pid, 'count': len(models)})
-        return {'provider': pid, 'models': models}
+        from . import modell_zustand
+        return {'provider': pid, 'models': models, 'zustand': modell_zustand.fuer_anbieter(self.runtime.project_root, pid)}
 
     def _labor_provider(self, payload):
         pid = payload.get('provider') if isinstance(payload, dict) else None
@@ -2064,7 +2078,17 @@ class UIXHub:
         history = [h for h in ((payload or {}).get('history') or [])[-10:]
                    if isinstance(h, dict) and h.get('role') in ('user', 'assistant') and isinstance(h.get('content'), str)]
         messages = history + [{'role': 'user', 'content': text}]
-        res = labor.cloud_chat(cfg, pid, str((payload or {}).get('model') or ''), messages, os.environ, self.runtime.cloud_key_store)
+        from . import modell_zustand
+        modell = str((payload or {}).get('model') or '')
+        t0 = time.monotonic()
+        try:
+            res = labor.cloud_chat(cfg, pid, modell, messages, os.environ, self.runtime.cloud_key_store)
+        except Exception:
+            # ein Anbieterfehler ist ein Befund über das Modell: rot. Eine Sperre des Inhaltsschutzes ist keiner (siehe unten).
+            modell_zustand.merken(self.runtime.project_root, pid, modell, False, (time.monotonic() - t0) * 1000)
+            raise
+        if res.get('status') == 'completed':
+            modell_zustand.merken(self.runtime.project_root, pid, modell, True, (time.monotonic() - t0) * 1000)
         self.runtime.audit.append('CLOUD_CHAT', component='desk', payload={'provider': pid, 'model': res.get('model'), 'status': res.get('status')})
         return res
 
@@ -2093,6 +2117,11 @@ class UIXHub:
         from . import labor
         cfg, pid = self._labor_provider(payload)
         res = labor.model_test(cfg, pid, os.environ, self.runtime.cloud_key_store)
+        from . import modell_zustand
+        for r in res.get('results') or []:
+            # der Test ist ein Befund über jedes Modell: die Auswahl zeigt danach den Stand. Sperren des Inhaltsschutzes zählen nicht.
+            if str(r.get('detail') or '').startswith('Inhaltsschutz'): continue
+            modell_zustand.merken(self.runtime.project_root, pid, r.get('model') or '', bool(r.get('ok')), r.get('ms') or 0)
         self.runtime.audit.append('LABOR_MODEL_TEST', component='desk', payload={'provider': pid, 'passed': res.get('passed'), 'total': res.get('total')})
         return res
 
@@ -2230,7 +2259,7 @@ class UIXHub:
                             'loaded': bool(loaded_key and r['provider'] == 'llama-cpp-server' and r['model'] == loaded_key)})
         holder = self.lab.holder()
         profiles = rt.routing_profiles.view() if rt.routing_profiles else None
-        return {'recipes': recipes,
+        return {'recipes': recipes, 'zuletzt': self._last_recipe(),
                 'server': managed,
                 'lease': ({'owner': holder['owner'], 'purpose': holder['purpose'], 'stale': holder['stale'], 'mine': self.gpu_token is not None and holder['owner'] == self.LEASE_OWNER}
                           if holder else None),
@@ -2335,8 +2364,33 @@ class UIXHub:
         if self.gpu_token is not None:
             self.lab.release(self.gpu_token); self.gpu_token = None
 
+    def _last_file(self):
+        return Path(self.runtime.project_root) / 'local_config' / 'zuletzt_geladen.json'
+
+    def _last_recipe(self):
+        # das zuletzt erfolgreich geladene Rezept; fehlt die Datei oder ist sie kaputt, gibt es keine Vorgabe
+        try: return str(json.loads(self._last_file().read_text(encoding='utf-8')).get('recipe_id') or '')
+        except Exception: return ''
+
+    def _remember_recipe(self, recipe_id):
+        try:
+            path = self._last_file(); path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps({'recipe_id': recipe_id}, ensure_ascii=False), encoding='utf-8')
+        except Exception: pass                                  # die Merkhilfe darf das Laden nicht verhindern
+
+    def _log_load_failure(self, recipe_id, resolution, exc):
+        # Ein Fehlschlag mit allem, was man zur Ursache braucht: Rezept, geprüfter Pfad, ob die Datei da ist, Ausnahme
+        try:
+            server = ((resolution or {}).get('profile') or {}).get('server') or {}
+            gguf = str(server.get('gguf') or '')
+            self.runtime.audit.append('MODEL_LOAD_FAILED', component='uix', payload={
+                'recipe_id': recipe_id, 'gguf': gguf, 'gguf_exists': bool(gguf) and Path(gguf).is_file(),
+                'provider': (resolution or {}).get('provider_ref'), 'exception': type(exc).__name__, 'detail': str(exc)[:300]})
+        except Exception:
+            pass                                                    # das Protokoll darf das Laden nicht zusätzlich brechen
+
     def load_model(self, payload):
-        recipe_id = payload.get('recipe_id')
+        recipe_id = payload.get('recipe_id') or self._last_recipe()          # ohne Auswahl: das zuletzt geladene Modell
         if not isinstance(recipe_id, str) or not recipe_id: raise ValueError('recipe_id_required')
         rt = self.runtime
         if rt.role_router is None or getattr(rt, 'model_loader', None) is None or not rt.model_loader.enabled: raise ValueError('model_loader_unavailable')
@@ -2365,11 +2419,14 @@ class UIXHub:
                     server.unload_model(all_models=True)          # one model on the GPU at a time
                 out = rt.model_loader.ensure(resolution)
             except LoadError as exc:
+                self._log_load_failure(recipe_id, resolution, exc)
                 self._release_gpu() if not (getattr(rt, 'llama_server', None) and rt.llama_server.loaded_models()) else None
                 raise ValueError(str(exc))
-            except Exception:
+            except Exception as exc:
+                self._log_load_failure(recipe_id, resolution, exc)
                 self._release_gpu()
                 raise
+            self._remember_recipe(recipe_id)
         return dict(out, recipe_id=recipe_id)
 
     def unload_model(self, payload):
