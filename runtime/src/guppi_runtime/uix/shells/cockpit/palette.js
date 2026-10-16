@@ -7,8 +7,14 @@
   const d = ()=>root.sedraDom;
 
   const P = ()=>root.sedraPlaces;                 // die Ortskunde steht im Vertrag (ui/places.js), nicht in dieser Shell
-  const PLACES = P().PLACES, routeText = P().routeText, matchPlaces = P().matchPlaces,
-        paletteRows = P().paletteRows, normalize = P().normalize;
+  const PLACES = P().PLACES, normalize = P().normalize;
+  // Werkzeuge der Werkstatt, die im Ortsverzeichnis des Vertrags (ui/places.js) noch fehlen: nur das Cockpit kennt sie hier
+  const COCKPIT_PLACES = PLACES.concat([
+    {id: 'master', label: 'Master-Chat', hint: 'das Gespräch unten', words: ['master', 'chat', 'gespräch', 'gespraech'], object: {type: 'talk', id: 'master', title: 'Master-Chat'}},
+    {id: 'labor', label: 'KI Labor', hint: 'Anbieter, Schlüssel, Modelle, Tests', words: ['labor', 'anbieter', 'schlüssel', 'schluessel', 'cloud'], object: {type: 'labor', id: 'ki', title: 'KI Labor'}},
+    {id: 'runs', label: 'KI Labor · Läufe', hint: 'Protokolle der Modellläufe', words: ['läufe', 'laeufe', 'lauf', 'protokolle'], object: {type: 'labor', id: 'laeufe', title: 'KI Labor · Läufe'}}
+  ]);
+  const paletteRows = text=>P().paletteRows(text, COCKPIT_PLACES);
 
   function makePalette(shell){
     let host = null, index = 0, input = null;
