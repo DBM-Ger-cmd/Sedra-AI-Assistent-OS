@@ -364,6 +364,9 @@ class LlamaServerRuntime:
         failed = gpu_canary.ensure(self.config.canary, engine)
         if failed is not None:
             self._audit("GPU_CANARY_FAILED", result=failed.get("result"), steps=failed.get("steps"))
+            if failed.get("result") == "gguf_missing":
+                # not a GPU fault: the canary's model file is not at the folder of runtime/config/local_paths.yaml (2026-10-16)
+                raise RuntimeControlError(f"gpu_canary_gguf_missing:{failed.get('detail')}")
             raise RuntimeControlError(f"gpu_canary_failed:{failed.get('result')}: {gpu_canary.HINT}")
 
     def unload_model(self, model_key=None, *, all_models=False):

@@ -2335,8 +2335,34 @@ class UIXHub:
         if self.gpu_token is not None:
             self.lab.release(self.gpu_token); self.gpu_token = None
 
+    def _last_file(self):
+        return Path(self.runtime.project_root) / 'local_config' / 'zuletzt_geladen.json'
+
+    def _last_recipe(self):
+        # das zuletzt erfolgreich geladene Rezept; fehlt die Datei oder ist sie kaputt, gibt es keine Vorgabe
+        try: return str(json.loads(self._last_file().read_text(encoding='utf-8')).get('recipe_id') or '')
+        except Exception: return ''
+
+    def _remember_recipe(self, recipe_id):
+        try:
+            path = self._last_file(); path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps({'recipe_id': recipe_id}, ensure_ascii=False), encoding='utf-8')
+        except Exception: pass                                  # die Merkhilfe darf das Laden nicht verhindern
+
+    def _log_load_failure(self, recipe_id, resolution, exc):
+        # Ein Fehlschlag mit allem, was man zur Ursache braucht: Rezept, geprüfter Pfad, ob die Datei da ist, Ausnahme
+        try:
+            # 2026-10-16: the server profile is in load_profile; 'profile' is the routing profile's NAME, so this lookup always logged gguf ''
+            server = ((resolution or {}).get('load_profile') or {}).get('server') or {}
+            gguf = str(server.get('gguf') or '')
+            self.runtime.audit.append('MODEL_LOAD_FAILED', component='uix', payload={
+                'recipe_id': recipe_id, 'gguf': gguf, 'gguf_exists': bool(gguf) and Path(gguf).is_file(),
+                'provider': (resolution or {}).get('provider_ref'), 'exception': type(exc).__name__, 'detail': str(exc)[:300]})
+        except Exception:
+            pass                                                    # das Protokoll darf das Laden nicht zusätzlich brechen
+
     def load_model(self, payload):
-        recipe_id = payload.get('recipe_id')
+        recipe_id = payload.get('recipe_id') or self._last_recipe()          # ohne Auswahl: das zuletzt geladene Modell
         if not isinstance(recipe_id, str) or not recipe_id: raise ValueError('recipe_id_required')
         rt = self.runtime
         if rt.role_router is None or getattr(rt, 'model_loader', None) is None or not rt.model_loader.enabled: raise ValueError('model_loader_unavailable')
@@ -2365,11 +2391,14 @@ class UIXHub:
                     server.unload_model(all_models=True)          # one model on the GPU at a time
                 out = rt.model_loader.ensure(resolution)
             except LoadError as exc:
+                self._log_load_failure(recipe_id, resolution, exc)
                 self._release_gpu() if not (getattr(rt, 'llama_server', None) and rt.llama_server.loaded_models()) else None
                 raise ValueError(str(exc))
-            except Exception:
+            except Exception as exc:
+                self._log_load_failure(recipe_id, resolution, exc)
                 self._release_gpu()
                 raise
+            self._remember_recipe(recipe_id)
         return dict(out, recipe_id=recipe_id)
 
     def unload_model(self, payload):
