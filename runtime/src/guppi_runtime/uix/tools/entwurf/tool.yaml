@@ -1,0 +1,23 @@
+tool:
+  id: entwurf
+  name: "Entwurf"
+  description: "Gespräch mit einem Cloud-Modell links, Vorschau des Entwurfs rechts. Entwürfe bleiben im Entwurfsordner."
+  version: 1.0.0
+  kind: object
+  handles: [entwurf]
+  order: 42
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/cloud
+    - POST /api/cloud/models
+    - POST /api/chat/cloud
+    - POST /api/entwurf/save
+    - POST /api/entwurf/read
+    - POST /api/entwurf/list
+    - POST /api/chat/reply
+    - POST /api/vorarbeiter/aktion
+  events:
+    emits: [object.open]
+    listens: []
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

@@ -2068,6 +2068,26 @@ class UIXHub:
         self.runtime.audit.append('CLOUD_CHAT', component='desk', payload={'provider': pid, 'model': res.get('model'), 'status': res.get('status')})
         return res
 
+    def vorarbeiter(self, payload):
+        """Vorarbeiter-Aktion aus dem Entwurfsfenster: feste Liste, für Cloud- und lokale Modelle gleich."""
+        from . import vorarbeiter
+        p = payload if isinstance(payload, dict) else {}
+        return vorarbeiter.aktion(self.runtime.project_root, str(p.get('aktion') or ''), p.get('args'), audit=self.runtime.audit)
+
+    def entwurf_save(self, payload):
+        from . import entwurf
+        p = payload if isinstance(payload, dict) else {}
+        name = str(p.get('name') or '') or entwurf.new_name(str(p.get('ext') or 'html'))
+        return entwurf.save(self.runtime.project_root, name, p.get('content'))
+
+    def entwurf_read(self, payload):
+        from . import entwurf
+        return entwurf.read(self.runtime.project_root, str((payload or {}).get('name') or ''))
+
+    def entwurf_list(self, payload=None):
+        from . import entwurf
+        return {'entwuerfe': entwurf.listing(self.runtime.project_root)}
+
     def labor_model_test(self, payload):
         """KI Labor: jedes Modell des Anbieters einmal ansprechen. Kostet Anbieter-Tokens; deshalb nur auf Klick."""
         from . import labor
@@ -2821,6 +2841,10 @@ def make_server(hub: UIXHub, port=0):
                     '/api/cloud/models': hub.cloud_models,          # Modellliste beim Anbieter abfragen (auf Klick, nur lesen)
                     '/api/labor/connection': hub.labor_connection,  # KI Labor: Verbindungstest in Schritten (auf Klick)
                     '/api/labor/models-test': hub.labor_model_test, # KI Labor: alle Modelle einmal testen (auf Klick)
+                    '/api/vorarbeiter/aktion': hub.vorarbeiter,     # feste Vorarbeiter-Aktionen (Entwurfsfenster)
+                    '/api/entwurf/save': hub.entwurf_save,         # Entwurf speichern (nur im Entwurfsordner)
+                    '/api/entwurf/read': hub.entwurf_read,
+                    '/api/entwurf/list': hub.entwurf_list,
                     '/api/chat/cloud': hub.chat_cloud,              # Gespräch mit einem Cloud-Modell (Wahl neben Senden); Inhaltsschutz
                     '/api/cloud/key': hub.cloud_key,
                     '/api/cloud/module-model': hub.cloud_module_model,   # welches Modell ein Modul nutzt (KI Labor)                        # Schlüssel verschlüsselt ablegen oder löschen; nie zurückgeben
