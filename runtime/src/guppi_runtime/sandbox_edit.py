@@ -12,7 +12,7 @@ import json
 import re
 from pathlib import Path
 
-WRITABLE = {".css", ".js", ".html", ".md", ".yaml", ".yml", ".txt"}
+WRITABLE = {".css", ".js", ".html", ".md", ".yaml", ".yml", ".txt", ".scad"}
 MAX_WRITE_BYTES = 200_000
 MAX_READ_CHARS = 12_000
 MAX_LIST = 300

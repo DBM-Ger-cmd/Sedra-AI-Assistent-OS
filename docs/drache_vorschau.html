@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Seedrache – Vorschau</title>
+<style>
+  html,body{margin:0;height:100%;background:radial-gradient(ellipse at 60% 30%,#0f2a3a,#05080c 70%);}
+  #bühne{position:fixed;top:0;left:0;width:100%;height:100%;}
+</style></head>
+<body>
+<div id="bühne"></div>
+<script src="../runtime/src/guppi_runtime/uix/ui/figur/drache.js"></script>
+<script>
+  sedraDrache.mount(document.getElementById('bühne')).then(function(h){ window.drache = h; });
+</script>
+</body></html>
