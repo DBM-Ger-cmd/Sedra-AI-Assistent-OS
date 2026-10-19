@@ -9,6 +9,7 @@ tool:
   entry: {js: tool.js, css: tool.css}
   api:
     - GET /api/status
+    - POST /api/update/suche   # Update-Suche auf Klick (nur lesen)
   events:
     emits: [object.open]
     listens: [system.state, model.changed]

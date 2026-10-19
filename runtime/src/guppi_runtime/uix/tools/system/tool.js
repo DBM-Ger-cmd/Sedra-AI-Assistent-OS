@@ -17,6 +17,26 @@
 
     unmount(){ this.el.classList.remove('t-sys'); this.el.replaceChildren(); },
 
+    // Updates: nur nachsehen, auf Klick. Eine neue Version wird angezeigt; übernommen wird nichts ohne Bestätigung.
+    updateAbschnitt(){
+      const box = d().el('div', 's-col t-sys-update');
+      box.append(d().el('h5', 's-head', 'Updates'), d().el('small', 's-muted', 'Installiert: ' + (this.updateStand ? this.updateStand.installiert : '…')));
+      const ergebnis = d().el('div');
+      const knopf = d().button('Nach Updates suchen', async()=>{
+        ergebnis.replaceChildren(d().el('small', 's-muted', 'Suche …'));
+        try{
+          const r = await this.ctx.api('/api/update/suche', {method: 'POST', body: {}});
+          this.updateStand = r;
+          if(r.status === 'neu') ergebnis.replaceChildren(d().el('div', 's-note warn', 'Neue Version ' + r.neueste + ' ist verfügbar. Übernommen wird erst nach deiner Bestätigung.'));
+          else if(r.status === 'aktuell') ergebnis.replaceChildren(d().el('div', 's-note ok', 'Die neueste Version ist installiert (' + r.installiert + ').'));
+          else if(r.status === 'keine_releases') ergebnis.replaceChildren(d().el('small', 's-muted', 'Auf GitHub gibt es noch keine Version.'));
+          else ergebnis.replaceChildren(d().el('div', 's-note bad', 'GitHub ist nicht erreichbar. Die Suche ändert nichts.'));
+        }catch(err){ ergebnis.replaceChildren(d().el('div', 's-note bad', 'Suche fehlgeschlagen: ' + err.message)); }
+      }, 'p');
+      box.append(knopf, ergebnis);
+      return box;
+    },
+
     async refresh(){
       if(!this.el) return;
       let st;
@@ -25,6 +45,7 @@
       const box = d().el('div', 's-col');
       box.append(d().el('div', 's-note ' + (st.system_state === 'READY' ? 'ok' : 'warn'),
         st.system_state === 'READY' ? 'Alle Teile gesund.' : 'Sicherer Modus: mindestens ein Teil meldet ein Problem.'));
+      box.append(this.updateAbschnitt());
 
       if(this.view === 'hardware'){
         const hw = st.hardware || {};

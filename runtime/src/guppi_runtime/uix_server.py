@@ -653,6 +653,13 @@ class UIXHub:
             raise ValueError(str(exc))
         raise exc
 
+    def update_suche(self, payload=None):
+        """POST /api/update/suche – nur nachsehen, auf Klick: die Versions-Tags des öffentlichen Repositorys. Schreibt nichts."""
+        from .update_suche import suche
+        r = suche()
+        self.runtime.audit.append('UPDATE_SUCHE', component='update', payload={'status': r['status'], 'neueste': r['neueste']})
+        return r
+
     def gateway_cloud(self):
         """Der Cloudweg des GateWay. `anbieter`: die eingeschalteten Cloud-Anbieter (config/cloud_providers.yaml, Schlüssel per Umgebungsvariable),
         `bereit`: die davon, deren Schlüssel gesetzt ist (health() liest nur den Schlüssel, kein Netzwerk). Ohne Anbieter ist es die Simulation."""
@@ -3145,6 +3152,7 @@ def make_server(hub: UIXHub, port=0):
                     '/api/gateway/vorgaben': hub.gateway_vorgaben_liste,
                     '/api/gateway/vorgabe/merken': hub.gateway_vorgabe_merken,
                     '/api/gateway/vorgabe/loeschen': hub.gateway_vorgabe_loeschen,
+                    '/api/update/suche': hub.update_suche,
                     '/api/gateway/vorschau': hub.gateway_vorschau,
                     '/api/gateway/ausgabe': hub.gateway_ausgabe,
                     '/api/gateway/arbeitskopie': hub.gateway_arbeitskopie,
