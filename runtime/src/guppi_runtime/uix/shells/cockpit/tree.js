@@ -106,6 +106,8 @@
         d().clickable(line, ()=>{ current = key; shell.openObject(r.object); render(); });
         box.append(line);
       });
+      // Unter dem Menü: die Seite wählen (links oder rechts) – dieselbe Einstellung wie im Umschalter unten rechts
+      if(root.sedraWechsel && root.sedraWechsel.menuWahl) box.append(root.sedraWechsel.menuWahl());
       host.replaceChildren(box);
     }
 

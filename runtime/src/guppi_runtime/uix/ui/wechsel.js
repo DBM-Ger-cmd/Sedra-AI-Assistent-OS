@@ -78,7 +78,8 @@
       });
       look.replaceChildren(
         segment('Darstellung', [['klar', 'Klar'], ['nacht', 'Nacht']], document.documentElement.dataset.theme || 'nacht', v=>root.sedraBoot.setTheme(v)),
-        segment('Schrift', [['normal', 'Normal'], ['gross', 'Groß']], document.documentElement.dataset.scale || 'normal', v=>setScale(v)));
+        segment('Schrift', [['normal', 'Normal'], ['gross', 'Groß']], document.documentElement.dataset.scale || 'normal', v=>setScale(v)),
+        segment('Menü', [['links', 'Links'], ['rechts', 'Rechts']], menuSeite(), v=>setMenuSeite(v)));
     }
     function open(){ panel.hidden = false; chip.setAttribute('aria-expanded', 'true'); fill().then(()=>{ const first = panel.querySelector('.sx-item'); if(first) first.focus(); }); }
     function close(){ panel.hidden = true; chip.setAttribute('aria-expanded', 'false'); }
@@ -96,6 +97,39 @@
     return {chip, panel, open, close, fill};
   }
 
-  root.sedraWechsel = {mount, entries, setScale, restoreScale, scales: SCALES};
+  // Die Seite des Menüs: links (Standard) oder rechts. Die Wahl steht am Baum und im Umschalter; sie gilt pro Browser
+  // (localStorage, nur eine Bequemlichkeit – ein Fehler dort ändert nichts am Ablauf).
+  const MENU_SEITEN = ['links', 'rechts'];
+  function menuSeite(){
+    try{ const v = localStorage.getItem('sedra.menuSeite'); return MENU_SEITEN.indexOf(v) >= 0 ? v : 'links'; }
+    catch(_err){ return 'links'; }
+  }
+  function setMenuSeite(v){
+    if(MENU_SEITEN.indexOf(v) < 0 || typeof document === 'undefined') return;
+    document.documentElement.dataset.menu = v;
+    try{ localStorage.setItem('sedra.menuSeite', v); }catch(_err){}
+  }
+  // Auswahl „Links | Rechts“ – an beiden Stellen derselbe Baustein
+  function menuWahl(){
+    const box = document.createElement('div'); box.className = 'tr-menuwahl';
+    const titel = document.createElement('small'); titel.textContent = 'Menü auf der Seite';
+    const group = document.createElement('div'); group.className = 'sx-seg-group'; group.setAttribute('role', 'group'); group.setAttribute('aria-label', 'Menü auf der Seite');
+    const aktuell = menuSeite();
+    MENU_SEITEN.forEach(v=>{
+      const b = document.createElement('button'); b.type = 'button'; b.dataset.value = v;
+      b.className = 'sx-seg-btn' + (v === aktuell ? ' on' : ''); b.textContent = v === 'links' ? 'Links' : 'Rechts';
+      b.setAttribute('aria-pressed', v === aktuell ? 'true' : 'false');
+      b.addEventListener('click', ()=>{
+        setMenuSeite(v);
+        group.querySelectorAll('.sx-seg-btn').forEach(x=>{ const on = x.dataset.value === v; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+      });
+      group.append(b);
+    });
+    box.append(titel, group);
+    return box;
+  }
+  if(typeof document !== 'undefined') setMenuSeite(menuSeite());          // beim Laden die gespeicherte Seite setzen
+
+  root.sedraWechsel = {mount, entries, setScale, restoreScale, scales: SCALES, menuWahl, menuSeite, setMenuSeite, MENU_SEITEN};
   if(typeof module !== 'undefined' && module.exports) module.exports = {entries, scales: SCALES};
 })();

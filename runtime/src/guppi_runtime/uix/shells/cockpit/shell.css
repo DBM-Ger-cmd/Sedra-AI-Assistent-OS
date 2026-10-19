@@ -202,3 +202,10 @@
     transition:none !important;
   }
 }
+
+/* Menü auf der rechten Seite (Auswahl unter dem Baum oder im Umschalter; :root[data-menu] setzt ui/wechsel.js) */
+:root[data-menu="rechts"] .ck-middle{grid-template-columns:minmax(0,1fr) var(--tree-w)}
+:root[data-menu="rechts"] .ck-middle.has-detail{grid-template-columns:minmax(0,1fr) var(--tree-w) 320px}
+:root[data-menu="rechts"] .ck-tree{order:2;border-right:0;border-left:1px solid var(--line)}
+:root[data-menu="rechts"] .ck-detail{order:3}
+.tr-menuwahl{display:flex;flex-direction:column;gap:4px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
