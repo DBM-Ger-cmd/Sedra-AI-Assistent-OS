@@ -30,10 +30,13 @@
     document.documentElement.dataset.scale = SCALES.indexOf(stored) >= 0 ? stored : 'normal';
   }
 
+  // Der Kern-Zugang wird beim Laden gemerkt; der Loader entfernt die globale Kopie danach (Stufe A)
+  const CORE_API = root.sedraApi ? root.sedraApi.api : null;
+
   function mount(manifest){
     if(typeof document === 'undefined' || !manifest || !manifest.shell || manifest.shell.id === 'start') return null;
     if(document.querySelector('.sx-chip')) return null;
-    const api = root.sedraApi.api;
+    const api = CORE_API;
     const el = (tag, cls, text)=>{ const n = document.createElement(tag); if(cls) n.className = cls; if(text != null) n.textContent = text; return n; };
 
     const chip = el('button', 'sx-chip'); chip.type = 'button'; chip.title = 'Oberfläche wechseln (Alt+S)';

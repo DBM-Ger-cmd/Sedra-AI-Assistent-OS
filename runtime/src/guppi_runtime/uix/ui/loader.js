@@ -6,6 +6,9 @@
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
+  // Der Kern-Zugang des Loaders: beim Laden übernommen, danach ist die globale Kopie weg (Stufe A)
+  const kern = root.sedraApi;
+  delete root.sedraApi;
 
   function addScript(src){
     return new Promise((ok, bad)=>{
@@ -48,7 +51,9 @@
 
   function makeContext(manifest, object, bus, shell, say){
     checkShellApi(shell, manifest, say);
-    const ctx = {object: object || null, api: root.sedraApi.forModule({kind: 'tool', id: manifest.id}),
+    // Freigaben erteilt nur der Kern (Entscheidung 2026-10-19): ein Werkzeug außerhalb des Pakets bekommt die Shell ohne decide
+    const shellFuer = manifest.trust === 'CORE' ? shell : Object.freeze(Object.assign({}, shell, {decide: ()=>{ throw new Error('Freigaben erteilt nur der Kern, nicht ein Modul.'); }}));
+    const ctx = {object: object || null, api: kern.forModule({kind: 'tool', id: manifest.id}),
                  bus: null, tokens: getComputedStyle(document.documentElement), shell, manifest, _offs: []};
     const own = bus.forModule((manifest.events || {}).emits || []);
     ctx.bus = {emit: own.emit, on: (name, fn)=>{ const off = own.on(name, fn); ctx._offs.push(off); return off; }};
@@ -59,7 +64,7 @@
   function connectEvents(bus, onState){
     let source = null, tries = 0;
     function open(){
-      source = new EventSource('/api/events?token=' + encodeURIComponent(root.sedraApi.token));
+      source = kern.events();
       Object.keys(root.sedraBus.EVENTS).forEach(name=>{
         source.addEventListener(name, e=>{
           let data = {};
@@ -82,7 +87,7 @@
   async function boot(onProblem){
     const say = onProblem || ((where, err)=>console.warn('[uix]', where, err));
     const bus = root.sedraBus.makeBus((name, why)=>say('Bus', new Error(name + ': ' + why)));
-    const manifest = await root.sedraApi.api('/uix/manifest');
+    const manifest = await kern.api('/uix/manifest');
     if(!manifest.shell) throw new Error('Keine Shell verfügbar: ' + ((manifest.rejected || []).map(r=>r.id + ' (' + r.reasons.join(', ') + ')').join('; ') || 'uix.yaml prüfen'));
     (manifest.rejected || []).forEach(r=>say('Modul abgelehnt', new Error(r.kind + ' ' + r.id + ': ' + r.reasons.join(', '))));
 
@@ -104,7 +109,7 @@
     if(!shellMod) throw new Error('Die Shell ' + manifest.shell.id + ' hat sich nicht registriert.');
 
     const registry = makeRegistry(entries);
-    const ctx = {api: root.sedraApi.forModule({kind: 'shell', id: manifest.shell.id}), bus, tools: registry, manifest,
+    const ctx = {api: kern.forModule({kind: 'shell', id: manifest.shell.id}), bus, tools: registry, manifest,
                  makeContext: (m, object, shell)=>makeContext(m, object, bus, shell, say), onProblem: say};
     await shellMod.start(ctx);
     // B6-G-04: der Umschalter gehört zur Seite – in jeder Shell derselbe Weg zur Übersicht, in eine andere Oberfläche, zu Darstellung und Schrift

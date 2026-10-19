@@ -40,6 +40,8 @@
 4. Tests: ein Modul kann eine fremde Kennung nicht wählen; ein Modul ohne Route bekommt `403`; der Token ist in Modulcode nicht lesbar.
 5. Bestehende Werkzeuge prüfen (Gateway, Gespräch, Schutz, Entscheidungen, Labor, Arbeitsplatz), dass sie weiter funktionieren.
 
+**Stand Stufe A (umgesetzt, nicht committet bis zur Freigabe):** `window.sedraApi` gibt nur noch `forModule`, `api` (Kern) und `events`; der Token verlässt die Kernfunktionen nicht mehr. Der Loader übernimmt den Zugang beim Start und entfernt die globale Kopie. Werkzeuge außerhalb des Pakets bekommen die Shell ohne `decide`. Grenze: Code auf derselben Seite kann die Adresse lesen; die echte Grenze ist Stufe C. Die Browser-Tests der Oberfläche schlagen auch vor dieser Änderung fehl, sie sind noch nicht als Nachweis geeignet.
+
 ## 4. Auto-Update aus GitHub
 
 ### 4.1 Quelle und Versionen

@@ -1,7 +1,9 @@
 // UI contract 1.0 – the one way to the runtime (SHELL_WERKZEUG_VERTRAG_v1 §2, §6).
 // A tool never calls fetch itself: it uses the ctx.api() the shell hands it, which adds the module header the server checks
 // against the manifest's allowlist. Errors arrive in German, as sentences the Captain can act on.
-// Classic script: it defines window.sedraApi; load order is set in desk.html.
+// Classic script: it defines window.sedraApi; load order is set in desk.html. The loader takes this object at start and removes
+// the global copy, so no module can reach the runtime with the Captain's rights (Stufe A, Entscheidung 2026-10-19).
+// Honest limit: code on the same page can still read the token from the address; the real boundary is isolation (Stufe C).
 
 (function(){
   const TOKEN = decodeURIComponent((location.hash || '').replace(/^#/, ''));
@@ -34,5 +36,8 @@
     return fn;
   }
 
-  window.sedraApi = {token: TOKEN, call, forModule, api: forModule(null)};
+  // Der Event-Strom braucht den Token in der Adresse. Modulen gibt es nur das Ergebnis, nicht den Token.
+  function events(){ return new EventSource('/api/events?token=' + encodeURIComponent(TOKEN)); }
+
+  window.sedraApi = {forModule, api: forModule(null), events};
 })();
