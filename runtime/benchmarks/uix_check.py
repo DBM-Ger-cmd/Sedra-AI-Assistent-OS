@@ -54,7 +54,6 @@ OBJECTS = {
     # Build 19: das KI GateWay – die Liste der Vorgänge; `schutz` ist der Nachweis daneben
     'gateway': {'type': 'gateway', 'id': 'alle', 'title': 'KI GateWay', 'collection': True},
     'schutz': {'type': 'gateway', 'id': None, 'title': 'Vorgang'},          # der Nachweis steht neben einem Vorgang, nicht neben der Liste
-    'regelbuch': {'type': 'gateway', 'id': None, 'title': 'Vorgang'},       # B6-G-03: das Regelbuch als zweiter Nachweis
     # Build 8: diese drei stehen neben einem Werkstück, nicht allein – uix_check öffnet sie über ihr Objekt
     'candidate': {'type': 'candidate', 'id': None, 'title': 'Kandidat'},
     'tests': {'type': 'candidate', 'id': None, 'title': 'Kandidat'},

@@ -7,13 +7,15 @@ tool:
   handles: [gateway]
   order: 14
   slot: inhalt
-  entry: {js: tool.js, css: tool.css}
+  entry: {js: [regeln.js, arbeit.js, tool.js], css: tool.css}
   api:
     - GET /api/gateway/vorgaenge
     - POST /api/gateway/vorgang
     - POST /api/gateway/neu
     - POST /api/gateway/pruefen
     - POST /api/gateway/upload     # Datei manuell in den Eingang legen (ohne Projekt)
+    - POST /api/gateway/vorschau   # Vorschau einer hochgeladenen Datei (nur Lesen)
+    - POST /api/gateway/ausgabe   # Speichern unter in den Ausgang, mit Vermerk
     - POST /api/gateway/arbeitskopie   # Arbeitskopie eines Originals (Ablage, Spezifikation Abschnitt 6)
     - POST /api/gateway/speichern-unter   # bearbeitete Fassung in den Ausgang, mit Vermerk
     - POST /api/gateway/freigabe

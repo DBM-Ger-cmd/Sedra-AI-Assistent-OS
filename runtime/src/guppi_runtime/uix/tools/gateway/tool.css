@@ -90,3 +90,15 @@
 .t-gateway-leitfaden li,.t-gateway-leitfaden li details div{font-size:var(--size-small);line-height:1.5}
 .t-gateway-leitfaden li b{font-size:var(--size)}
 .t-gateway-mvp,.t-gateway-verlauf{font-size:var(--size-small)}
+/* Regelbuch – nur unter .t-regelbuch, nur Token */
+.t-regelbuch{min-width:0;overflow:hidden}
+.t-regelbuch-box{display:grid;gap:8px;padding:8px;min-width:0;overflow-wrap:anywhere}
+.t-regelbuch-head{display:flex;flex-direction:column;gap:2px}.t-regelbuch-head small{overflow-wrap:anywhere}.t-regelbuch-head h3{margin:0;font-size:var(--size-l)}
+.t-regelbuch-box input{font:inherit;font-size:var(--size-small);padding:6px 9px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--text)}
+.t-regelbuch-rows{display:grid;gap:6px}
+.t-regelbuch-row{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel-2);padding:8px 10px;font-size:var(--size-small);line-height:1.45;display:grid;gap:4px;min-width:0}
+.t-regelbuch-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.t-regelbuch-pill{flex:1 1 100%;font-size:var(--size-xs);padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:normal;line-height:1.35}
+.t-regelbuch-pill.bad{color:var(--bad);border-color:var(--bad)}.t-regelbuch-pill.ok{color:var(--ok);border-color:var(--ok)}.t-regelbuch-pill.warn{color:var(--warn);border-color:var(--warn)}
+.t-regelbuch-tun{color:var(--text)}
+.t-regelbuch-foot{line-height:1.4}

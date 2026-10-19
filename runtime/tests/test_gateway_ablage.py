@@ -57,3 +57,52 @@ class Ablage(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class VorschauUndAusgabe(unittest.TestCase):
+    """Vorschau und Ausgabe über den Server (Spezifikation Abschnitt 3 und 5): das Original bleibt, die Ausgabe trägt Platzhalter."""
+
+    def setUp(self):
+        from unittest import mock
+        from guppi_runtime.uix_server import UIXHub
+        self.tmp = tempfile.TemporaryDirectory(prefix='vorschau-')
+        self.addCleanup(self.tmp.cleanup)
+        arch = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+        self.hub = UIXHub(Path(self.tmp.name) / 'project', arch)
+        self.addCleanup(self.hub.close)
+        self.eingang = self.hub.gateway_eingang()
+        self.original = self.eingang / 'Anfrage.txt'
+        self.original.write_text('Ich wohne in der Hauptstraße 1 in Beierswerder. Lena Beispiel schreibt. '
+                                 'Lena Beispiel bittet um einen Stand. Es hat in DEF geknallt.', encoding='utf-8')
+        self.hash_vorher = ablage.sha256_datei(self.original)
+
+    def test_the_preview_finds_the_places_and_keeps_the_original(self):
+        v = self.hub.gateway_vorschau({'name': 'Anfrage.txt'})
+        orte = [f['text'] for f in v['fundstellen'] if f['typ'] == 'ORT']
+        self.assertEqual(orte, ['Beierswerder'])
+        self.assertNotIn('DEF', [f['text'] for f in v['fundstellen']], 'ein Ereignis bleibt stehen')
+        self.assertEqual(ablage.sha256_datei(self.original), self.hash_vorher)
+
+    def test_the_output_replaces_all_equal_places_and_keeps_the_rest(self):
+        v = self.hub.gateway_vorschau({'name': 'Anfrage.txt'})
+        auswahl = [{'id': f['id'], 'art': 'ersetzen'} for f in v['fundstellen'] if f['typ'] in ('ORT', 'PERSON')]
+        out = self.hub.gateway_ausgabe({'name': 'Anfrage.txt', 'auswahl': auswahl, 'ziel': 'Anfrage_anonymisiert.txt'})
+        fassung = (ablage.ordner(self.hub.project_root)['ausgang'] / 'Anfrage_anonymisiert.txt').read_text(encoding='utf-8')
+        self.assertIn('<ORT_001>', fassung)
+        self.assertNotIn('Beierswerder', fassung)
+        self.assertNotIn('Lena Beispiel', fassung, 'gleiche Stellen werden überall ersetzt')
+        self.assertEqual(fassung.count('<PERSON_001>'), 2)
+        self.assertIn('DEF', fassung, 'das Ereignis bleibt')
+        self.assertEqual(out['vermerk']['original_sha256'], self.hash_vorher)
+        self.assertEqual(ablage.sha256_datei(self.original), self.hash_vorher, 'das Original bleibt')
+
+    def test_behalten_keeps_a_place_and_bad_choices_are_refused(self):
+        v = self.hub.gateway_vorschau({'name': 'Anfrage.txt'})
+        orte = [f['id'] for f in v['fundstellen'] if f['typ'] == 'ORT']
+        self.hub.gateway_ausgabe({'name': 'Anfrage.txt', 'auswahl': [{'id': orte[0], 'art': 'behalten'}], 'ziel': 'b.txt'})
+        fassung = (ablage.ordner(self.hub.project_root)['ausgang'] / 'b.txt').read_text(encoding='utf-8')
+        self.assertIn('Beierswerder', fassung)
+        with self.assertRaisesRegex(ValueError, 'vorgabe_unbekannt'):
+            self.hub.gateway_ausgabe({'name': 'Anfrage.txt', 'auswahl': [{'id': orte[0], 'art': 'löschen'}], 'ziel': 'c.txt'})
+        with self.assertRaisesRegex(ValueError, 'fundstelle_unbekannt'):
+            self.hub.gateway_ausgabe({'name': 'Anfrage.txt', 'auswahl': [{'id': 999, 'art': 'ersetzen'}], 'ziel': 'd.txt'})

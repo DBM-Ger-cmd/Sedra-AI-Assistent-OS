@@ -138,6 +138,28 @@ class Flows(unittest.TestCase):
             self.assertEqual(switches, [False, False], 'Gespräch und Module haben keinen Schalter')
         self.run_in('cockpit', flow)
 
+    def test_upload_preview_edit_and_save_under_in_the_gateway(self):
+        """Die Arbeitsstrecke im Browser: hochladen, Dateien, Vorschau mit Markierungen, Vorgabe, Speichern unter (Spezifikation 3)."""
+        import base64
+        from pathlib import Path as _P
+        docx = _P(__file__).resolve().parents[1] / 'testdaten' / 'gateway' / 'Kundenanfrage_Test.docx'
+        data = base64.b64encode(docx.read_bytes()).decode('ascii')
+        def flow(page, wait):
+            page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})")
+            page.wait_for_selector('.t-gateway-new input', timeout=15000)
+            up = page.evaluate("(d)=>fetch('/api/gateway/upload', {method:'POST', headers:{'Content-Type':'application/json','X-GUPPI-Token':decodeURIComponent(location.hash.slice(1))}, body: JSON.stringify({name:'Kundenanfrage_Test.docx', data:d})}).then(r=>r.status)", data)
+            self.assertEqual(up, 200)
+            page.click('.t-gateway-tabs button:has-text("Dateien")')
+            page.wait_for_selector('.t-gateway-dateien button:has-text("Vorschau")', timeout=15000)
+            page.click('.t-gateway-dateien button:has-text("Vorschau")')
+            page.wait_for_selector('.t-gw-fund', timeout=15000)
+            self.assertTrue(page.query_selector_all('.t-gw-fund'), 'die Fundstellen sind markiert')
+            self.assertIn('Lena Beispiel', page.text_content('.t-gateway-arbeit .t-gateway-vorgaben') or 'Lena Beispiel', 'die Auswahl kennt die Personen')
+            page.click('.t-gateway-arbeit button:has-text("Speichern unter")')
+            page.wait_for_function("()=>/Im Ausgang gespeichert/.test(document.querySelector('.t-gateway-arbeit').textContent)", timeout=20000)
+            self.assertIn('Original unverändert', page.text_content('.t-gateway-arbeit'))
+        self.run_in('cockpit', flow)
+
     def test_the_gateway_studio_flow_from_request_to_checked_draft(self):
         """Build 19: 01 Wunsch · 02 Anfrage prüfen (Platzhalter rechts) · 03 lokal freigeben = das Gate · 04 Entwurf, geprüft. Kein Versand."""
         import uix_check

@@ -748,11 +748,78 @@ class UIXHub:
         self.runtime.audit.append('GW_DATEI_HOCHGELADEN', component='gateway', payload={'endung': target.suffix.lower(), 'bytes': len(raw)})
         return {'name': name, 'bytes': len(raw)}
 
+    # ---- Vorschau und Ausgabe (Spezifikation Gateway, Abschnitt 3): nur das Original wird gelesen; die Ausgabe geht in den Ausgang
+    GW_REGEL = {'ORT': 'O-1', 'ADDRESS': 'O-1', 'PERSON': 'R-01', 'COMPANY': 'R-01', 'EMAIL': 'R-01', 'PHONE': 'R-01',
+                'CUSTOMER_ID': 'R-01', 'TERM': 'R-01'}
+
+    def _gw_fundstellen(self, name):
+        """(Dateiname, Text, Fundstellen) eines Originals im Eingang. Dieselbe Erkennung wie beim Prüfen (b6core)."""
+        from .gateway import ablage
+        from .gateway.dokumente import lies_datei, DokumentFehler
+        from .core.b6core import pseudo
+        from .core.b6core.normalize import normalize
+        from .core.b6core.privacy import scan_text
+        try:
+            path = self.gateway_eingang() / ablage.sicherer_name(name)
+        except ablage.AblageFehler as exc:
+            raise ValueError(str(exc))
+        if not path.is_file(): raise ValueError('original_nicht_gefunden')
+        try: raw = lies_datei(path)
+        except DokumentFehler as exc: raise ValueError('dokument_nicht_lesbar:' + str(exc)[:80])
+        text = normalize(raw).clean
+        spans = pseudo.collect_spans(text, scan_text('GW', text))
+        fund = [{'id': i, 'start': a, 'end': b, 'text': text[a:b], 'typ': t, 'regel': self.GW_REGEL.get(t, '')} for i, (a, b, t) in enumerate(spans)]
+        return path.name, text, fund
+
+    def gateway_vorschau(self, payload):
+        """POST /api/gateway/vorschau {name} – der Text des Originals mit allen Fundstellen. Nur lesen, kein Modell."""
+        name, text, fund = self._gw_fundstellen(str((payload or {}).get('name') or ''))
+        return {'name': name, 'text': text, 'fundstellen': fund}
+
+    def gateway_ausgabe(self, payload):
+        """POST /api/gateway/ausgabe {name, auswahl:[{id, art}], ziel} – gewählte Stellen ersetzen (art: ersetzen | behalten | entfernen),
+        gleicher Text wird überall gleich ersetzt, und die Fassung geht in den Ausgang. Das Original bleibt unverändert."""
+        from .gateway import ablage
+        p = payload or {}
+        name, text, fund = self._gw_fundstellen(str(p.get('name') or ''))
+        by_id = {f['id']: f for f in fund}
+        ersatz, nummern, vorgaben = {}, {}, []
+        for sel in (p.get('auswahl') or []):
+            try:
+                f = by_id[int(sel.get('id'))]
+            except (TypeError, ValueError, KeyError):
+                raise ValueError('fundstelle_unbekannt')
+            art = str(sel.get('art') or '')
+            if art not in ('ersetzen', 'behalten', 'entfernen'): raise ValueError('vorgabe_unbekannt')
+            key = (f['typ'], f['text'].casefold())
+            if art == 'behalten':
+                vorgaben.append({'art': 'behalten', 'typ': f['typ']}); continue
+            if art == 'entfernen':
+                repl = ''
+            else:
+                if key not in nummern:
+                    nummern[key] = sum(1 for k in nummern if k[0] == f['typ']) + 1
+                repl = '<%s_%03d>' % (f['typ'], nummern[key])
+            vorgaben.append({'art': art, 'typ': f['typ'], 'platzhalter': repl})
+            for g in fund:                                   # für alle gleichen Stellen im Dokument
+                if (g['typ'], g['text'].casefold()) == key: ersatz[g['start']] = (g['end'], repl)
+        out = text
+        for a in sorted(ersatz, reverse=True):
+            b, repl = ersatz[a]
+            out = out[:a] + repl + out[b:]
+        try:
+            v = ablage.speichern_unter(self.project_root, name, out, str(p.get('ziel') or ''), vorgaben)
+        except ablage.AblageFehler as exc:
+            raise ValueError(str(exc))
+        self.runtime.audit.append('GW_AUSGABE_GESPEICHERT', component='gateway',
+                                  payload={'ziel': v['name'], 'original_sha256': v['original_sha256'], 'vorgaben': len(vorgaben)})
+        return {'name': v['name'], 'ordner': 'Ausgang', 'vermerk': v}
+
     def gateway_arbeitskopie(self, payload):
         """POST /api/gateway/arbeitskopie {name} – eine Arbeitskopie des Originals (Original bleibt, bekommt einen Vermerk)."""
         from .gateway import ablage
         try:
-            kopie = ablage.arbeitskopie(self.project_root / 'local_config' / 'gateway', str((payload or {}).get('name') or ''))
+            kopie = ablage.arbeitskopie(self.project_root, str((payload or {}).get('name') or ''))
         except ablage.AblageFehler as exc:
             raise ValueError(str(exc))
         self.runtime.audit.append('GW_ARBEITSKOPIE', component='gateway', payload={'endung': kopie.suffix.lower()})
@@ -764,7 +831,7 @@ class UIXHub:
         from .gateway import ablage
         p = payload or {}
         try:
-            v = ablage.speichern_unter(self.project_root / 'local_config' / 'gateway', str(p.get('quelle') or ''), str(p.get('text') or ''),
+            v = ablage.speichern_unter(self.project_root, str(p.get('quelle') or ''), str(p.get('text') or ''),
                                        str(p.get('ziel') or ''), p.get('vorgaben') or [])
         except ablage.AblageFehler as exc:
             raise ValueError(str(exc))
@@ -3025,6 +3092,8 @@ def make_server(hub: UIXHub, port=0):
                     '/api/guard/probe': hub.guard_probe,            # read-only in der Sache: prüft nur, ruft kein Modell, speichert nichts
                     '/api/gateway/vorgang': lambda p: hub.gateway_get(str((p or {}).get('id') or '')),   # read-only: ein Vorgang mit Entwurf
                     '/api/gateway/neu': hub.gateway_new,
+                    '/api/gateway/vorschau': hub.gateway_vorschau,
+                    '/api/gateway/ausgabe': hub.gateway_ausgabe,
                     '/api/gateway/arbeitskopie': hub.gateway_arbeitskopie,
                     '/api/gateway/speichern-unter': hub.gateway_speichern_unter,
                     '/api/gateway/upload': hub.gateway_upload,      # Datei in den Eingang des GateWay legen (ohne Projekt)
