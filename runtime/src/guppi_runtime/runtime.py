@@ -269,13 +269,16 @@ class GuppiRuntime:
     def _configure_llama_server(self,data):
         """GUPPI's own llama-server (llama_server_runtime.py). Off by default. When on, the model router's `llama-cpp-server` provider
         points at the endpoint GUPPI manages instead of the generic 8080 one."""
-        self.llama_server=None; self.llama_server_error=None
+        self.llama_server=None; self.llama_server_error=None; self.llama_canary_warning=None
         try:
             config=LlamaServerConfig.load(self.config_root/"llama_server.yaml")
             config.enabled=self.switches.apply("llama_server","enabled",config.enabled)
             config.mtp=self.switches.apply("llama_server","mtp",config.mtp)
             if not config.enabled: return
             self.llama_server=LlamaServerRuntime(config,data/config.log_dir,audit=self.audit)
+            if config.canary.config_error:      # Entscheidung 2026-10-19: der Server läuft ohne Canary; die Ursache steht im Audit und im Status
+                self.llama_canary_warning=config.canary.config_error
+                self.audit.append("LLAMA_CANARY_OFF",component="runtime",payload={"grund":config.canary.config_error})
             if not self.llama_server.available(): self.llama_server_error="llama_server_executable_not_found"
             self.model_router.adapters["llama-cpp-server"]=LlamaCppServerAdapter(self.llama_server.endpoint,timeout=600)
         except ValueError as exc:
@@ -288,6 +291,8 @@ class GuppiRuntime:
             self.switches=LocalSwitches.load(self.project_root/"local_config"/"switches.yaml")
         except ValueError as exc:
             self.switches=LocalSwitches(); self.switches_error=str(exc)
+        if self.switches.problems:      # ungültige Abschnitte werden übersprungen, aber nicht still
+            self.audit.append("LOCAL_SWITCHES_PARTLY_IGNORED",component="runtime",payload={"problems":self.switches.problems})
         if self.switches.values:
             self.audit.append("LOCAL_SWITCHES_APPLIED",component="runtime",payload=self.switches.summary())
         elif self.switches_error:
@@ -413,7 +418,7 @@ class GuppiRuntime:
             "role_routing":self.routing_status(),
             "permissions":self.permission_status(),
             "resources":resources,
-            "local_switches":{**self.switches.summary(),"error":self.switches_error},
+            "local_switches":{**self.switches.summary(),"error":self.switches_error,"ignored":list(self.switches.problems)},
             "model_loader":{"enabled":bool(self.model_loader and self.model_loader.enabled),
                             "evict_idle_models":bool(self.model_loader and self.model_loader.config.evict_idle_models),"error":self.model_loader_error},
             "token_policy":{"enabled":bool(self.token_policy and self.token_policy.enabled),"error":self.token_policy_error},

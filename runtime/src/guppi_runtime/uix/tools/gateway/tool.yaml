@@ -20,7 +20,6 @@ tool:
     - POST /api/gateway/frage      # B6-G-03: „Frag SEDRA“ – Wissensbasis, kein Modell
     - POST /api/gateway/wissen     # B6-G-03: eigener Eintrag des Nutzers (nur Audit, kein Gate)
     - GET /api/decisions
-    - POST /api/decisions/answer
   events:
     emits: [object.open, decision.answered]
     listens: [decision.answered, tools.refresh]

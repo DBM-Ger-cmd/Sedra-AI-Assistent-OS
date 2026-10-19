@@ -11,7 +11,6 @@ tool:
     - GET /api/guard/status
     - POST /api/guard/probe
     - GET /api/decisions
-    - POST /api/decisions/answer
   events: {emits: [decision.answered], listens: [decision.pending, decision.answered]}
   trust: CORE
   needs: {ui: ">=1.0 <2"}

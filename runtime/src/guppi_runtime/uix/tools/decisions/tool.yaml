@@ -9,7 +9,6 @@ tool:
   entry: {js: tool.js, css: tool.css}
   api:
     - GET /api/decisions
-    - POST /api/decisions/answer
   events:
     emits: [object.open]
     listens: [decision.pending, decision.answered]

@@ -57,10 +57,13 @@ class Config(unittest.TestCase):
         self.assertFalse(gpu_canary.CanaryConfig(None).enabled)
         self.assertFalse(LlamaServerConfig({"enabled": True}).canary.enabled)
 
-    def test_invalid_values_are_refused(self):
+    def test_invalid_values_switch_the_canary_off_with_a_reason_instead_of_stopping_the_server(self):
+        # Entscheidung des Captains (2026-10-19): der llama-server läuft auch ohne gültigen Canary, der Grund wird gemeldet
         for bad in ({"gguf": "model.bin"}, {"port": 80}, {"context": 65536}, {"engine_build": "latest"}, {"timeout_s": 5}):
-            with self.assertRaises(ValueError):
-                gpu_canary.CanaryConfig({**canary_raw("m.gguf"), **bad})
+            c = gpu_canary.CanaryConfig({**canary_raw("m.gguf"), **bad})
+            self.assertFalse(c.enabled, bad)
+            self.assertTrue(c.config_error and c.config_error.startswith('llama_server_config_invalid:canary'), bad)
+            self.assertEqual(c.disabled_reason, c.config_error)
 
 
 class State(unittest.TestCase):

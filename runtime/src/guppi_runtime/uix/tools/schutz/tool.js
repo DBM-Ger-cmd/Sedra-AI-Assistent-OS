@@ -136,7 +136,7 @@
 
     answer: function (id, way) {
       var self = this;
-      return this.call('/api/decisions/answer', { id: id, way: way }).then(function (r) {
+      return this.ctx.shell.decide(id, way).then(function (r) {
         self.ctx.bus.emit('decision.answered', { id: id, kind: 'model_guard' });
         if (r && r.ergebnis) { self.play = r.ergebnis; }
         return self.refresh();

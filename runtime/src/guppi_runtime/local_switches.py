@@ -35,6 +35,7 @@ class LocalSwitches:
     def __init__(self, values=None, source=None):
         self.values = values or {}
         self.source = source
+        self.problems = []
 
     @classmethod
     def load(cls, path):
@@ -50,17 +51,21 @@ class LocalSwitches:
         switches = data.get("switches") or {}
         if not isinstance(switches, dict):
             raise ValueError("local_switches_invalid:switches")
-        clean = {}
+        # Entscheidung des Captains (2026-10-19): gültige Abschnitte gelten, auch wenn ein anderer ungültig ist.
+        # Der ungültige Abschnitt wird übersprungen und gemeldet (problems), er schaltet nicht mehr alle Schalter ab.
+        clean, problems = {}, []
         for section, item in switches.items():
             if section not in ALLOWED:
-                raise ValueError(f"local_switches_invalid:unknown_section:{section}")
+                problems.append(f"unknown_section:{section}"); continue
             if not isinstance(item, dict) or set(item) - ALLOWED[section]:
-                raise ValueError(f"local_switches_invalid:unknown_key:{section}")
-            for key, value in item.items():
-                if not isinstance(value, bool):
-                    raise ValueError(f"local_switches_invalid:not_boolean:{section}.{key}")
+                problems.append(f"unknown_key:{section}"); continue
+            bad = [key for key, value in item.items() if not isinstance(value, bool)]
+            if bad:
+                problems.append(f"not_boolean:{section}.{bad[0]}"); continue
             clean[section] = dict(item)
-        return cls(clean, str(path))
+        loaded = cls(clean, str(path))
+        loaded.problems = problems
+        return loaded
 
     def apply(self, section, key, shipped):
         """The machine's value if the file sets it, else the shipped one."""

@@ -30,11 +30,25 @@ class ParseTest(unittest.TestCase):
             self.assertTrue(switches.apply('token_policy', 'enabled', False)); self.assertFalse(switches.apply('job_supervisor', 'enabled', False))
             self.assertTrue(switches.apply('job_supervisor', 'enabled', True))
 
-    def test_anything_unknown_or_not_boolean_is_refused(self):
+    def test_unknown_or_not_boolean_sections_are_ignored_and_reported(self):
+        # Entscheidung des Captains (2026-10-19): ungültige Abschnitte werden übersprungen und gemeldet, gültige gelten
         with tempfile.TemporaryDirectory() as tmp:
             for text in ('switches:\n  kev: {enabled: true}\n', 'switches:\n  model_loader: {parallel: 4}\n', 'switches:\n  token_policy: {enabled: "yes"}\n',
-                         'switches:\n  token_policy: {enabled: 1}\n', 'other: 1\n', 'switches: [a]\n', 'switches:\n  token_policy: true\n', 'a: [unclosed\n'):
+                         'switches:\n  token_policy: {enabled: 1}\n', 'switches:\n  token_policy: true\n'):
+                sw = LocalSwitches.load(write(tmp, text))
+                self.assertEqual(sw.values, {}, text)
+                self.assertTrue(sw.problems, text)
+
+    def test_a_broken_file_as_a_whole_is_still_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for text in ('other: 1\n', 'switches: [a]\n', 'a: [unclosed\n'):
                 with self.assertRaises(ValueError, msg=text): LocalSwitches.load(write(tmp, text))
+
+    def test_valid_sections_apply_next_to_an_invalid_one(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            sw = LocalSwitches.load(write(tmp, 'switches:\n  token_policy: {enabled: true}\n  kev: {enabled: true}\n'))
+            self.assertTrue(sw.apply('token_policy', 'enabled', False))
+            self.assertEqual(sw.problems, ['unknown_section:kev'])
 
     def test_role_routing_is_not_switched_here(self):
         self.assertNotIn('role_routing', ALLOWED)
@@ -61,12 +75,12 @@ class RuntimeTest(unittest.TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(rt.boot()['local_switches']['values']['token_policy'], {'enabled': True})
 
-    def test_a_broken_file_applies_nothing_and_is_reported(self):
+    def test_a_partly_broken_file_applies_the_valid_part_and_reports_the_rest(self):
         rt = self.runtime('switches:\n  job_supervisor: {enabled: true}\n  kev: {enabled: true}\n')
-        self.assertFalse(rt.job_supervisor.enabled)
+        self.assertTrue(rt.job_supervisor.enabled)
         status = rt.boot()
-        self.assertIn('unknown_section:kev', status['local_switches']['error'])
-        self.assertTrue(any('LOCAL_SWITCHES_REFUSED' in e for e in rt.audit.path.read_text(encoding='utf-8').splitlines()))
+        self.assertIn('unknown_section:kev', status['local_switches']['ignored'])
+        self.assertTrue(any('LOCAL_SWITCHES_PARTLY_IGNORED' in e for e in rt.audit.path.read_text(encoding='utf-8').splitlines()))
 
 
 if __name__ == '__main__':

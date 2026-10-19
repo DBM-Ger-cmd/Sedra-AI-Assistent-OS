@@ -48,16 +48,20 @@ class CanaryConfig:
         self.port = raw.get("port", 8093)
         self.context = raw.get("context", 32768)
         self.timeout_s = raw.get("timeout_s", 300)
-        if self.enabled and (not isinstance(self.gguf, str) or not self.gguf.lower().endswith(".gguf")):
-            raise ValueError("llama_server_config_invalid:canary.gguf")
-        if self.engine_build is not None and not (isinstance(self.engine_build, str) and re.fullmatch(r"b\d{3,6}", self.engine_build)):
-            raise ValueError("llama_server_config_invalid:canary.engine_build")
-        if type(self.port) is not int or not 1024 <= self.port <= 65535:
-            raise ValueError("llama_server_config_invalid:canary.port")
-        if self.context not in (16384, 32768):
-            raise ValueError("llama_server_config_invalid:canary.context")
-        if type(self.timeout_s) is not int or not 60 <= self.timeout_s <= 1800:
-            raise ValueError("llama_server_config_invalid:canary.timeout_s")
+        self.config_error = self._problem()
+        if self.config_error:
+            # Entscheidung des Captains (2026-10-19): der Server startet trotzdem, ohne Canary; der Grund steht im Status und im Audit
+            self.enabled, self.disabled_reason = False, self.config_error
+
+    def _problem(self):
+        """Der erste Fehler der Canary-Einstellungen oder None. Gilt nur, wenn der Canary eingeschaltet ist."""
+        if not self.enabled: return None
+        if not isinstance(self.gguf, str) or not self.gguf.lower().endswith(".gguf"): return "llama_server_config_invalid:canary.gguf"
+        if self.engine_build is not None and not (isinstance(self.engine_build, str) and re.fullmatch(r"b\d{3,6}", self.engine_build)): return "llama_server_config_invalid:canary.engine_build"
+        if type(self.port) is not int or not 1024 <= self.port <= 65535: return "llama_server_config_invalid:canary.port"
+        if self.context not in (16384, 32768): return "llama_server_config_invalid:canary.context"
+        if type(self.timeout_s) is not int or not 60 <= self.timeout_s <= 1800: return "llama_server_config_invalid:canary.timeout_s"
+        return None
 
 
 def boot_time():
