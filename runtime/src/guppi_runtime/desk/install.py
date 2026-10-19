@@ -34,6 +34,13 @@ FLAGS = (
     ('document.write', re.compile(r'\bdocument\.write\b')),
     ('innerHTML', re.compile(r'\binnerHTML\b')),
     ('fremde Adresse', re.compile(r'https?://(?!127\.0\.0\.1|localhost)')),
+    # Stufe B der Modul-Isolation (Plan 2026-10-19): der Kern-Zugang, die Adresse mit dem Token, Cookies und das Elternfenster
+    ('sedraApi', re.compile(r'\bsedraApi\b')),
+    ('location', re.compile(r'\blocation\s*\.\s*(hash|href|search)\b')),
+    ('document.cookie', re.compile(r'\bdocument\s*\.\s*cookie\b')),
+    ('window.parent/top', re.compile(r'\bwindow\s*\.\s*(parent|top|opener)\b|\b(parent|top)\s*\.\s*(postMessage|location|document)\b')),
+    ('window[...]', re.compile(r'\bwindow\s*\[')),
+    ('sessionStorage', re.compile(r'\bsessionStorage\b')),
 )
 
 FLAG_WORD = {
@@ -47,6 +54,12 @@ FLAG_WORD = {
     'document.write': 'schreibt Markup in die Seite',
     'innerHTML': 'setzt Markup aus Daten zusammen',
     'fremde Adresse': 'nennt eine Adresse außerhalb dieses Rechners',
+    'sedraApi': 'greift auf den Kern-Zugang der Oberfläche zu (Token, fremde Kennungen)',
+    'location': 'liest die Adresse, in der der Token steht',
+    'document.cookie': 'liest oder schreibt Cookies der Seite',
+    'window.parent/top': 'greift über das eigene Fenster hinaus',
+    'window[...]': 'greift dynamisch auf Fensterwerte zu, nicht prüfbar',
+    'sessionStorage': 'schreibt in den Sitzungsspeicher der Shell',
 }
 
 
