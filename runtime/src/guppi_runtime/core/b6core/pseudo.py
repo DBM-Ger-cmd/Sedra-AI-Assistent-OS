@@ -20,19 +20,41 @@ from .contracts import FindingKind
 from .normalize import normalize
 from .privacy import scan_text
 
-TYPES = ('PERSON', 'EMAIL', 'PHONE', 'CUSTOMER_ID', 'COMPANY', 'TERM', 'ADDRESS')
+TYPES = ('PERSON', 'EMAIL', 'PHONE', 'CUSTOMER_ID', 'COMPANY', 'TERM', 'ADDRESS', 'ORT')
 KNOWN_LIMITS = ('NAMEN_AUSSERHALB_DER_REGELN', 'KEINE_ANONYMISIERUNG', 'ROLLE_ALLEIN_KANN_INDIREKT_IDENTIFIZIEREN',
                 'FREITEXT_IDENTIFIKATOREN_NICHT_ERKANNT')
 DEFAULT_TTL_SECONDS = 86400          # Testdefault (Klaus-Empfehlung), keine Produktpolicy
 MAX_TTL_SECONDS = 7 * 86400
 DEFAULT_MAX_ENTRIES = 100            # Testdefault (B6-P0-12), keine Produktpolicy
 MAX_ENTRIES_LIMIT = 10000
-_PRIORITY = {t: i for i, t in enumerate(('EMAIL', 'PHONE', 'CUSTOMER_ID', 'ADDRESS', 'PERSON', 'COMPANY', 'TERM'))}
+_PRIORITY = {t: i for i, t in enumerate(('EMAIL', 'PHONE', 'CUSTOMER_ID', 'ADDRESS', 'ORT', 'PERSON', 'COMPANY', 'TERM'))}
 _TYPE_ALT = '|'.join(TYPES)
 STRICT_RX = re.compile(rf'<(?:{_TYPE_ALT})_\d{{3}}>')
 _INPUT_RX = re.compile(rf'<(?:{_TYPE_ALT}|ROLE)_\d{{1,4}}>')
 _LOOSE_RX = re.compile(rf'[<\[{{(]{{1,2}}\s*(?:{_TYPE_ALT}|ROLE)\s*[_\- ]?\s*\d+\s*[>\]}})]{{1,2}}', re.IGNORECASE)
 _CUSTOMER_RX = re.compile(r'(?i)\b(?:kundennummer|kundennr\.?|kunden-nr\.?|kd\.?-?\s?nr\.?)[ \t]*[:#]?[ \t]*((?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{3,19})(?![\w-])')
+# Ortsnamen (Spezifikation Gateway, Abschnitt 6b, Regeln O-1 und O-2). Ersetzt wird nur bei Anschrift oder Wohnbezug;
+# ein Ortsname bei einem Ereignis oder Thema (z. B. "in DEF geknallt") bleibt stehen.
+_STRASSENWORT = r'(?i:Stra(?:ß|ss)e|Str\.|Weg|Platz|Gasse|Allee|Ring|Damm)'
+_STRASSE_NAME_RX = re.compile(rf'{_STRASSENWORT}[ \t]+([A-ZÄÖÜ][\wäöüß-]{{1,40}})')                  # "Straße XYZ" → Anschrift
+_ORT_NACH_PLZ_RX = re.compile(r'\b\d{5}[ \t]+([A-ZÄÖÜ][\wäöüß-]{1,40})\b')                               # "12345 DEF"
+_ORT_NACH_NUMMER_RX = re.compile(rf'{_STRASSENWORT}[ \t]*\d+[a-z]?[ \t]*,?[ \t]*(?:in[ \t]+)?([A-ZÄÖÜ][\wäöüß-]{{1,40}})\b')  # "Hauptstraße 1 in DEF"
+_ORT_WOHNEN_RX = re.compile(r'\b(?:wohne|wohnhaft|wohnt|wohnen|lebt)[ \t]+(?:in|im)[ \t]+(?:(?:der|dem|den)[ \t]+)?([A-ZÄÖÜ][\wäöüß-]{1,40})\b')  # "ich wohne in DEF"
+_KEIN_ORT_RX = re.compile(rf'(?i:{_STRASSENWORT}$)')          # Endung: "Hauptstraße" ist eine Straße, kein Ort
+
+
+def _orte_spans(text):
+    spans = []
+    for m in _STRASSE_NAME_RX.finditer(text):
+        if not _KEIN_ORT_RX.search(m.group(1)): spans.append((m.start(1), m.end(1), 'ADDRESS'))
+    for rx in (_ORT_NACH_PLZ_RX, _ORT_NACH_NUMMER_RX, _ORT_WOHNEN_RX):
+        for m in rx.finditer(text):
+            name = m.group(1)
+            if _KEIN_ORT_RX.search(name) or name in _LEAD_STOP: continue
+            spans.append((m.start(1), m.end(1), 'ORT'))
+    return spans
+
+
 _UC = 'A-ZÄÖÜ'
 _COMPANY_RX = re.compile(rf'\b((?:[{_UC}][\wäöüßÄÖÜ&.-]*[ \t]+){{1,4}}'
                          r'(?:GmbH(?:[ \t]*&[ \t]*Co\.?[ \t]*KG)?|AG|UG(?:[ \t]*\(haftungsbeschränkt\))?|KG|OHG|GbR|e\.K\.|mbH))(?![\w])')
@@ -97,6 +119,7 @@ def collect_spans(text, scan):
         t = _typ_of(f)
         if t: spans.append((f.offset_start, f.offset_end, t))
     for m in _CUSTOMER_RX.finditer(text): spans.append((m.start(1), m.end(1), 'CUSTOMER_ID'))
+    spans.extend(_orte_spans(text))
     if spans:                                                     # Firmenname nur mit Personenbezug im selben Vorgang
         for a, b in _company_spans(text): spans.append((a, b, 'COMPANY'))
     spans = [s for s in spans if 0 <= s[0] < s[1] <= len(text)]
