@@ -100,13 +100,7 @@ Ziel: Die Regeln entscheiden anhand der Formulierung. Niemand wird bei jedem Ort
 **Offen (für den Captain):** Soll O-3 beim Speichern eine einmalige Bestätigung verlangen, wenn ein unbewerteter Ortsname im Text vorkommt? *Empfehlung:* nein, nur als Hinweis in der Vorschau; Blockaden bleiben den Sperren des Regelwerks vorbehalten.
 
 
-Ein Ortsname ist nur dann personenbezogen, wenn er zu einer Person, Firma, Kundennummer oder Anschrift gehört. Ein Ortsname allein („Wetter in Beierswerder“) wird nicht ersetzt, sonst ist die Frage nicht mehr beantwortbar.
-
-**Drei Stufen, in dieser Reihenfolge:**
-
-1. **Personenbezug (ersetzen):** Der Ort steht in einem Zusammenhang mit einer Person, Firma, Kundennummer, E-Mail oder Anschrift (gleicher Satz oder Absatz, z. B. „Herr Muster aus Beierswerder“, „Lieferadresse: Hauptstr. 1, Beierswerder“). Dann wird `<ORT_001>` vergeben. Der Zusammenhang wird über die bestehende Erkennung der Personen- und Firmen-Platzhalter bestimmt.
-2. **Ortsfrage ohne Personenbezug (behalten):** Der Ort steht ohne Person in der Anfrage, z. B. „Wetter in Beierswerder“. Er bleibt unverändert, im Vermerk steht „Ort nicht ersetzt: kein Personenbezug“.
-3. **Unklar (Vorschau, Entscheidung des Nutzers):** Der Ort steht in einem Satz, der zugleich eine Person nennt, aber nicht eindeutig zu ihr gehört. Er wird in der Vorschau markiert, mit der Frage „ersetzen oder behalten?“. Ohne Antwort wird ersetzt (fail-closed).
+**Entschieden (2026-10-19):** O-3 markiert nur, es wird nicht gefragt. Später nachschärfbar.
 
 **Behalten als Vorgabe:** Jede Fundstelle kann im Bearbeiten-Modus als „Behalten“ markiert werden. Die Vorgabe „Behalten“ wirkt nur für Ortsnamen, nie für Sperren (R-07, R-08).
 
