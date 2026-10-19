@@ -83,6 +83,22 @@ Keine Vorgabe kann eine Sperre der Regeln aufheben. Eine Fundstelle, die das Reg
 
 Der Vermerk im Ausgang nennt das Original (Dateiname, Prüfsumme), die angewendeten Vorgaben und den Zeitpunkt. So ist immer nachvollziehbar, woher eine Fassung stammt, egal wo das Original liegt.
 
+## 6b. Ortsnamen: die Logik (Vorschlag, Stand 19.10.2026)
+
+Ein Ortsname ist nur dann personenbezogen, wenn er zu einer Person, Firma, Kundennummer oder Anschrift gehört. Ein Ortsname allein („Wetter in Beierswerder“) wird nicht ersetzt, sonst ist die Frage nicht mehr beantwortbar.
+
+**Drei Stufen, in dieser Reihenfolge:**
+
+1. **Personenbezug (ersetzen):** Der Ort steht in einem Zusammenhang mit einer Person, Firma, Kundennummer, E-Mail oder Anschrift (gleicher Satz oder Absatz, z. B. „Herr Muster aus Beierswerder“, „Lieferadresse: Hauptstr. 1, Beierswerder“). Dann wird `<ORT_001>` vergeben. Der Zusammenhang wird über die bestehende Erkennung der Personen- und Firmen-Platzhalter bestimmt.
+2. **Ortsfrage ohne Personenbezug (behalten):** Der Ort steht ohne Person in der Anfrage, z. B. „Wetter in Beierswerder“. Er bleibt unverändert, im Vermerk steht „Ort nicht ersetzt: kein Personenbezug“.
+3. **Unklar (Vorschau, Entscheidung des Nutzers):** Der Ort steht in einem Satz, der zugleich eine Person nennt, aber nicht eindeutig zu ihr gehört. Er wird in der Vorschau markiert, mit der Frage „ersetzen oder behalten?“. Ohne Antwort wird ersetzt (fail-closed).
+
+**Behalten als Vorgabe:** Jede Fundstelle kann im Bearbeiten-Modus als „Behalten“ markiert werden. Die Vorgabe „Behalten“ wirkt nur für Ortsnamen, nie für Sperren (R-07, R-08).
+
+**Rückübersetzung:** Eine Antwort mit `<ORT_001>` wird wie bei anderen Platzhaltern zurückübersetzt. Ortsfragen ohne Personenbezug bekommen den Ort im Original und brauchen deshalb keine Rückübersetzung.
+
+**Offen (für den Captain):** Reicht die Erkennung über Anschrift-Merkmale (Straße, PLZ, Hausnummer), oder soll jede Ortsnennung in einem Satz mit einer Person als „unklar“ (Stufe 3) gelten?
+
 ## 6a. Offene Fragen an den Captain (nach Entscheidung)
 
 4. **Speichern unter:** Welche Endungen sind erlaubt? *Empfehlung:* .md und .txt sofort; .docx nur, wenn der Text unverändert übernommen wird.
