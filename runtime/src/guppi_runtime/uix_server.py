@@ -32,6 +32,8 @@ from .model_loader import LoadError
 from .testlab import TestLab, default_path
 from .runtime import GuppiRuntime
 
+INSTALLATION = Path(__file__).resolve().parents[3]     # das Programmverzeichnis (runtime/src/guppi_runtime/..), Ziel der Updates
+
 
 def quelle_pruefen(payload):
     """Der Ordner eines Imports, bevor irgendetwas gelesen wird. Liefert (Art, Ordner) oder wirft einen Satz mit dem nächsten Schritt.
@@ -658,6 +660,42 @@ class UIXHub:
         from .update_suche import suche
         r = suche()
         self.runtime.audit.append('UPDATE_SUCHE', component='update', payload={'status': r['status'], 'neueste': r['neueste']})
+        return r
+
+    def update_vorschau(self, payload=None):
+        """POST /api/update/vorschau – lädt den gewählten Release-Tag in den Staging-Ordner (nicht ins Programm), prüft das Manifest
+        und nennt Dateien und Rechteänderungen. Übernommen wird erst mit /api/update/uebernehmen und der Rechte-Bestätigung."""
+        from .update_holen import herunterladen
+        from .update_anwenden import MANIFEST, plan
+        tag = str((payload or {}).get('tag') or '')
+        stand = herunterladen(INSTALLATION, tag)
+        manifest = stand / MANIFEST
+        if not manifest.is_file():
+            raise ValueError('update_manifest_fehlt')
+        p = plan(stand, INSTALLATION, manifest.read_text(encoding='utf-8'))
+        self.runtime.audit.append('UPDATE_VORSCHAU', component='update', payload={'tag': tag, 'geaendert': len(p['dateien_geaendert']), 'rechte': len(p['rechte'])})
+        return {'tag': tag, 'anzahl': p['anzahl'], 'geaendert': p['dateien_geaendert'], 'entfallen': p['dateien_entfallen'],
+                'rechte': p['rechte'], 'rechte_schluessel': p['rechte_schluessel'], 'wirkt': 'nach dem Neustart von SEDRA'}
+
+    def update_uebernehmen(self, payload=None):
+        """POST /api/update/uebernehmen – übernimmt den vorbereiteten Stand. `rechte_schluessel` muss die Rechteliste aus der Vorschau bestätigen."""
+        from .update_anwenden import MANIFEST, anwenden
+        from .update_holen import TAG
+        tag = str((payload or {}).get('tag') or '')
+        if not TAG.match(tag):
+            raise ValueError('tag_ungueltig')
+        stand = INSTALLATION / 'local_config' / 'update' / 'staging' / tag
+        if not (stand / MANIFEST).is_file():
+            raise ValueError('update_nicht_vorbereitet')
+        r = anwenden(stand, INSTALLATION, (stand / MANIFEST).read_text(encoding='utf-8'), str((payload or {}).get('rechte_schluessel') or ''), tag)
+        self.runtime.audit.append('UPDATE_UEBERNOMMEN', component='update', payload={'tag': tag, 'geaendert': r['geaendert'], 'entfallen': r['entfallen']})
+        return r
+
+    def update_zurueck(self, payload=None):
+        """POST /api/update/zurueck – stellt die letzte Sicherung wieder her. Wirkung nach dem Neustart."""
+        from .update_anwenden import zurueck
+        r = zurueck(INSTALLATION)
+        self.runtime.audit.append('UPDATE_ZURUECKGESETZT', component='update', payload={'version': r['version']})
         return r
 
     def gateway_cloud(self):
@@ -3153,6 +3191,9 @@ def make_server(hub: UIXHub, port=0):
                     '/api/gateway/vorgabe/merken': hub.gateway_vorgabe_merken,
                     '/api/gateway/vorgabe/loeschen': hub.gateway_vorgabe_loeschen,
                     '/api/update/suche': hub.update_suche,
+                    '/api/update/vorschau': hub.update_vorschau,         # lädt in den Staging-Ordner, schreibt nichts ins Programm
+                    '/api/update/uebernehmen': hub.update_uebernehmen,   # braucht die Rechte-Bestätigung aus der Vorschau
+                    '/api/update/zurueck': hub.update_zurueck,
                     '/api/gateway/vorschau': hub.gateway_vorschau,
                     '/api/gateway/ausgabe': hub.gateway_ausgabe,
                     '/api/gateway/arbeitskopie': hub.gateway_arbeitskopie,
