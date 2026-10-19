@@ -393,7 +393,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
             if target['id'] is None:
                 target['id'] = found['candidate'] if target['type'] == 'candidate' else LAST_VORGANG if target['type'] == 'gateway' else found['task']
             if target['id'] is None:
-                check('tool:' + tid, False, 'im Prüfprojekt gibt es kein Objekt dieses Typs')
+                check('tool:' + tid, None, 'nicht geprüft – im Prüfprojekt gibt es kein Objekt dieses Typs (kein Fehler des Werkzeugs)')
                 continue
             page.evaluate("(o)=>window.sedraBoot.ctx.bus.emit('object.open', o)", target)
             page.wait_for_timeout(1400)

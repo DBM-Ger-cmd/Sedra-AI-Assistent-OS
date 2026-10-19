@@ -48,7 +48,7 @@
     if(s.includes('gguf_magic_missing')) return 'Die Datei beginnt nicht wie eine GGUF-Datei; vermutlich unvollständig heruntergeladen.';
     if(s.includes('recipe_id_taken')) return 'Diese Rezept-ID gibt es schon; bitte eine andere wählen.';
     if(s.includes('recipe_id_invalid')) return 'Rezept-ID: kleinbuchstaben.kleinbuchstaben, z. B. coder.local_mein_modell';
-    if(s.includes('absolute_path_required')) return 'Bitte den vollständigen Pfad angeben (z. B. D:\\Modelle\\x.gguf).';
+    if(s.includes('absolute_path_required')) return 'Bitte den vollständigen Pfad zur GGUF-Datei angeben (z. B. D:\\Modelle\\x.gguf).';
     if(s.includes('path_not_found')) return 'Datei nicht gefunden.';
     if(s.includes('path_required')) return 'Bitte eine Datei wählen oder den Pfad eingeben.';
     if(s.includes('no_model_loaded')) return 'Kein Modell geladen. Erst oben ein Rezept laden, dann die Teststrecke starten.';

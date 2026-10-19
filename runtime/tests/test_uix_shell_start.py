@@ -143,7 +143,8 @@ class InTheBrowser(unittest.TestCase):
                 # der Satz an GUPPI
                 page.fill('.vg-text', 'nur das Werkstück, das Gespräch als Schublade, keine Suche, Start im Logbuch')
                 page.fill('.vg input[aria-label="id der Oberfläche"]', 'schlicht')
-                page.click('.vg button:has-text("GUPPI fragen")'); page.wait_for_timeout(1500)
+                page.click('.vg button:has-text("GUPPI fragen")')
+                page.wait_for_function("()=>{ const e=document.querySelector('.vg-sentence'); return e && e.textContent.length > 0; }", timeout=20000)
                 sentence = page.evaluate("()=>(document.querySelector('.vg-sentence') || {}).textContent || ''")
                 self.assertIn('Schublade', sentence); self.assertIn('Logbuch', sentence)
                 self.assertEqual(page.evaluate("()=>document.querySelectorAll('.vg-sketch .vg-cell').length"), 1)
