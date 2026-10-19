@@ -81,7 +81,7 @@
       head.append(d().el('h3', null, 'KI GateWay'), d().el('small', 's-muted', 'Kundenanfrage → Datenschutz prüfen → Freigabe → Entwurf → deine Prüfung. Kein Versand.'));
       box.append(head, root.sedraGatewayArbeit.reiter(this, list));
       // Der Menüpunkt Regeln und die Dateien haben ihre eigene Ansicht; die Vorgänge bleiben wie sie sind
-      if(this.ansicht === 'regeln'){ box.append(root.sedraGatewayRegeln.draw(list)); this.el.replaceChildren(box); return; }
+      if(this.ansicht === 'regeln'){ box.append(root.sedraGatewayRegeln.draw(list)); this.el.replaceChildren(box); root.sedraGatewayArbeit.vorgabenListe(this, box); return; }
       if(this.ansicht === 'dateien'){ box.append(root.sedraGatewayArbeit.dateien(this, list)); this.el.replaceChildren(box); return; }
       const form = d().el('div', 't-gateway-new');
       const titel = d().el('input'); titel.placeholder = 'Titel des Vorgangs, z. B. Projektabstimmung vorbereiten'; titel.setAttribute('aria-label', 'Titel');

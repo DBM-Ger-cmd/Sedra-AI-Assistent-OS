@@ -61,7 +61,7 @@
     box.append(markierterText(v.text, v.fundstellen));
     // je gleichem Text eine Zeile; der Server ersetzt alle Vorkommen gleich
     const gruppen = new Map();
-    v.fundstellen.forEach(f=>{ const k = f.typ + '|' + f.text.toLowerCase(); if(!gruppen.has(k)) gruppen.set(k, {f, art: 'ersetzen'}); });
+    v.fundstellen.forEach(f=>{ const k = f.typ + '|' + f.text.toLowerCase(); if(!gruppen.has(k)) gruppen.set(k, {f, art: (v.vorschlaege && v.vorschlaege[f.id] ? v.vorschlaege[f.id].art : 'ersetzen'), vorschlag: (v.vorschlaege || {})[f.id] || null, merken: false}); });
     const zeilen = d().el('div', 't-gateway-vorgaben');
     zeilen.append(d().el('h4', null, 'Vorgaben je Fundstelle'));
     if(!gruppen.size) zeilen.append(d().empty('Keine Fundstelle. Die Datei kann so in den Ausgang.'));
@@ -69,8 +69,11 @@
       const row = d().el('div', 't-gateway-row');
       const sel = d().el('select'); sel.setAttribute('aria-label', 'Vorgabe für ' + g.f.text);
       AUSWAHL.forEach(a=>{ const o = d().el('option', null, ART_WORT[a]); o.value = a; sel.append(o); });
-      sel.onchange = ()=>{ g.art = sel.value; };
-      row.append(d().el('b', null, g.f.text), d().el('small', 's-muted', ' ' + g.f.typ + ' · Regel ' + (g.f.regel || '–')), sel);
+      sel.value = g.art; sel.onchange = ()=>{ g.art = sel.value; };
+      const merke = d().el('input'); merke.type = 'checkbox'; merke.onchange = ()=>{ g.merken = merke.checked; };
+      const lab = d().el('label', null, merke, ' als Vorgabe merken');
+      row.append(d().el('b', null, g.f.text), d().el('small', 's-muted', ' ' + g.f.typ + ' · Regel ' + (g.f.regel || '–')), sel, lab);
+      if(g.vorschlag) row.append(d().el('small', 's-muted', ' Vorschlag aus gemerkter Vorgabe (' + (g.vorschlag.datum || '').slice(0, 10) + ')'));
       zeilen.append(row);
     });
     box.append(zeilen);
@@ -79,18 +82,36 @@
     const ziel = d().el('input'); ziel.value = stamm + '_anonymisiert' + (endung === '.docx' ? '.txt' : endung); ziel.setAttribute('aria-label', 'Name der Ausgabe');
     const hinweis = d().el('small', 's-muted', 'Gespeichert wird im Ausgang, nie über dem Original.');
     box.append(ziel, hinweis, d().button('Speichern unter', async()=>{ await speichern(tool, name, v, [...gruppen.values()], ziel.value, box); }, 'p'));
+    box.append(d().el('small', 's-muted', 'Angekreuzte Vorgaben werden beim Speichern gemerkt und gelten als Vorschlag für neue Dokumente.'));
     tool.el.replaceChildren(box);
   }
 
   // Speichern unter: die gewählten Vorgaben gehen an den Server; das Ergebnis mit Vermerk wird gezeigt.
   async function speichern(tool, name, v, gruppen, ziel, box){
     const auswahl = gruppen.map(g=>({id: g.f.id, art: g.art}));
+    for(const g of gruppen){ if(g.merken){ try{ await tool.ctx.api('/api/gateway/vorgabe/merken', {method: 'POST', body: {text: g.f.text, typ: g.f.typ, art: g.art}}); }catch(_e){} } }
     try{
       const out = await tool.ctx.api('/api/gateway/ausgabe', {method: 'POST', body: {name, auswahl, ziel}});
       box.append(d().el('div', 's-note ok', 'Im Ausgang gespeichert: ' + out.name + ' · Original unverändert (Prüfsumme ' + (out.vermerk.original_sha256 || '').slice(0, 12) + '…)'));
     }catch(err){ box.append(d().el('div', 's-note bad', 'Nicht gespeichert: ' + err.message)); }
   }
 
-  root.sedraGatewayArbeit = {reiter, dateien, vorschau, markierterText};
+  // Der Abschnitt „Gemerkte Vorgaben“ im Reiter Regeln: was gemerkt ist, wirkt als Vorschlag, und man kann es wieder löschen.
+  async function vorgabenListe(tool, box){
+    const kopf = d().el('h4', null, 'Gemerkte Vorgaben');
+    box.append(kopf);
+    let liste;
+    try{ liste = (await tool.ctx.api('/api/gateway/vorgaben')).vorgaben || []; }
+    catch(err){ box.append(d().el('div', 's-note bad', 'Die gemerkten Vorgaben sind nicht lesbar: ' + err.message)); return; }
+    if(!liste.length) box.append(d().empty('Noch keine Vorgabe gemerkt. In der Vorschau einer Datei ankreuzen: „als Vorgabe merken“.'));
+    liste.forEach(e=>{
+      const row = d().el('div', 't-gateway-row');
+      row.append(d().el('b', null, e.text), d().el('small', 's-muted', ' ' + e.typ + ' · ' + ART_WORT[e.art] + ' · seit ' + (e.datum || '').slice(0, 10) + ' · global, wirkt als Vorschlag'));
+      row.append(d().button('Löschen', async()=>{ try{ await tool.ctx.api('/api/gateway/vorgabe/loeschen', {method: 'POST', body: {id: e.id}}); await tool.refresh(); }catch(err){ alert('Nicht gelöscht: ' + err.message); } }));
+      box.append(row);
+    });
+  }
+
+  root.sedraGatewayArbeit = {reiter, dateien, vorschau, markierterText, vorgabenListe};
   if(typeof module !== 'undefined' && module.exports) module.exports = {markierterText};
 })();

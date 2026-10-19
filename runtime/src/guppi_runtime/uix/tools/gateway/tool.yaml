@@ -14,6 +14,9 @@ tool:
     - POST /api/gateway/neu
     - POST /api/gateway/pruefen
     - POST /api/gateway/upload     # Datei manuell in den Eingang legen (ohne Projekt)
+    - GET /api/gateway/vorgaben   # gemerkte Vorgaben (Liste)
+    - POST /api/gateway/vorgabe/merken   # eine Vorgabe merken
+    - POST /api/gateway/vorgabe/loeschen   # eine gemerkte Vorgabe löschen
     - POST /api/gateway/vorschau   # Vorschau einer hochgeladenen Datei (nur Lesen)
     - POST /api/gateway/ausgabe   # Speichern unter in den Ausgang, mit Vermerk
     - POST /api/gateway/arbeitskopie   # Arbeitskopie eines Originals (Ablage, Spezifikation Abschnitt 6)

@@ -768,13 +768,63 @@ class UIXHub:
         except DokumentFehler as exc: raise ValueError('dokument_nicht_lesbar:' + str(exc)[:80])
         text = normalize(raw).clean
         spans = pseudo.collect_spans(text, scan_text('GW', text))
-        fund = [{'id': i, 'start': a, 'end': b, 'text': text[a:b], 'typ': t, 'regel': self.GW_REGEL.get(t, '')} for i, (a, b, t) in enumerate(spans)]
+        # Gemerkte Vorgaben gelten vor den Regeln (Spezifikation 6b): jedes Vorkommen eines gemerkten Textes wird Fundstelle,
+        # auch wenn die Regeln es übersehen. Überlappt eine Regel-Fundstelle, bleibt die Regel.
+        import re as _re
+        from .gateway import vorgaben_text as _vt
+        try:
+            gemerkt = _vt.laden(self.project_root)
+        except _vt.VorgabeFehler:
+            gemerkt = []
+        for e in gemerkt:
+            if not e.get('text'): continue
+            for m in _re.finditer(_re.escape(e['text']), text, _re.IGNORECASE):
+                a, b = m.start(), m.end()
+                if any(a < sb and sa < b for sa, sb, _ in spans): continue
+                spans.append((a, b, e.get('typ', 'TERM')))
+        spans.sort()
+        fund = [{'id': i, 'start': a, 'end': b, 'text': text[a:b], 'typ': t, 'regel': 'Vorgabe' if any(e.get('typ') == t and str(e.get('text', '')).casefold() == text[a:b].casefold() for e in gemerkt) else self.GW_REGEL.get(t, '')} for i, (a, b, t) in enumerate(spans)]
         return path.name, text, fund
+
+    # ---- gemerkte Vorgaben (Spezifikation 5.3): global, Vorschlag statt stiller Ersetzung; das Audit nennt nie den Text
+    def gateway_vorgaben_liste(self, payload=None):
+        from .gateway import vorgaben_text as vt
+        try:
+            return {'vorgaben': vt.laden(self.project_root)}
+        except vt.VorgabeFehler as exc:
+            raise ValueError(str(exc))
+
+    def gateway_vorgabe_merken(self, payload):
+        from .gateway import vorgaben_text as vt
+        p = payload or {}
+        try:
+            e = vt.merken(self.project_root, str(p.get('text') or ''), str(p.get('typ') or ''), str(p.get('art') or ''),
+                          str(p.get('platzhalter') or ''))
+        except vt.VorgabeFehler as exc:
+            raise ValueError(str(exc))
+        self.runtime.audit.append('GW_VORGABE_GEMERKT', component='gateway', payload={'typ': e['typ'], 'art': e['art']})
+        return e
+
+    def gateway_vorgabe_loeschen(self, payload):
+        from .gateway import vorgaben_text as vt
+        vid = str((payload or {}).get('id') or '')
+        try:
+            ok = vt.loeschen(self.project_root, vid)
+        except vt.VorgabeFehler as exc:
+            raise ValueError(str(exc))
+        if not ok: raise ValueError('vorgabe_nicht_gefunden')
+        self.runtime.audit.append('GW_VORGABE_GELOESCHT', component='gateway', payload={'id': vid})
+        return {'status': 'geloescht', 'id': vid}
 
     def gateway_vorschau(self, payload):
         """POST /api/gateway/vorschau {name} – der Text des Originals mit allen Fundstellen. Nur lesen, kein Modell."""
+        from .gateway import vorgaben_text as vt
         name, text, fund = self._gw_fundstellen(str((payload or {}).get('name') or ''))
-        return {'name': name, 'text': text, 'fundstellen': fund}
+        try:
+            vorschlaege = vt.vorschlaege(vt.laden(self.project_root), fund)
+        except vt.VorgabeFehler as exc:
+            raise ValueError(str(exc))
+        return {'name': name, 'text': text, 'fundstellen': fund, 'vorschlaege': vorschlaege}
 
     def gateway_ausgabe(self, payload):
         """POST /api/gateway/ausgabe {name, auswahl:[{id, art}], ziel} – gewählte Stellen ersetzen (art: ersetzen | behalten | entfernen),
@@ -3092,6 +3142,9 @@ def make_server(hub: UIXHub, port=0):
                     '/api/guard/probe': hub.guard_probe,            # read-only in der Sache: prüft nur, ruft kein Modell, speichert nichts
                     '/api/gateway/vorgang': lambda p: hub.gateway_get(str((p or {}).get('id') or '')),   # read-only: ein Vorgang mit Entwurf
                     '/api/gateway/neu': hub.gateway_new,
+                    '/api/gateway/vorgaben': hub.gateway_vorgaben_liste,
+                    '/api/gateway/vorgabe/merken': hub.gateway_vorgabe_merken,
+                    '/api/gateway/vorgabe/loeschen': hub.gateway_vorgabe_loeschen,
                     '/api/gateway/vorschau': hub.gateway_vorschau,
                     '/api/gateway/ausgabe': hub.gateway_ausgabe,
                     '/api/gateway/arbeitskopie': hub.gateway_arbeitskopie,
