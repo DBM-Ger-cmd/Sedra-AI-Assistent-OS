@@ -273,7 +273,8 @@ class ContentGuard:
                 self.recent.append({'at': self.clock(), 'event': event, 'task': data.get('mission_id', ''), **row})
                 del self.recent[:-200]
         if self.audit is None:
-            return True
+            # Ohne Logbuch geht kein Cloudaufruf: der Inhaltsschutz schreibt, sonst gibt es nichts, was man prüfen kann (Befund G1)
+            return not self.cloud_enabled
         try:
             self.audit.append(event, component='content-guard', mission_id=data.get('mission_id') or None,
                               payload={k: v for k, v in data.items() if k != 'segments'} | {'segments': len(data.get('segments') or [])})

@@ -150,7 +150,7 @@ class ChatTools:
                 # KI Labor: der Verbindungstest, wie ihn der Captain auf der Seite auslöst. Nur mit eingeschaltetem Anbieter.
                 from . import labor
                 cfg, pid = self.hub._labor_provider({"provider": (args or {}).get("provider")})
-                return json.dumps(labor.connection_test(cfg, pid, os.environ, self.hub.runtime.cloud_key_store), ensure_ascii=False)
+                return json.dumps(labor.connection_test(cfg, pid, os.environ, self.hub.runtime.cloud_key_store, audit=self.hub.runtime.audit), ensure_ascii=False)
             if name == "list_models":
                 return json.dumps([{"id": r["id"], "model": r["model"], "enabled": r["enabled"], "loaded": r["loaded"], "roles": r["roles"],
                                     "context_recommended": r["context_recommended"], "context_maximum": r["context_maximum"]}

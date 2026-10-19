@@ -2162,7 +2162,7 @@ class UIXHub:
         """KI Labor: die Kette vom Schlüssel bis zu einer beantworteten Testnachricht, in Schritten. Auf Klick."""
         from . import labor
         cfg, pid = self._labor_provider(payload)
-        res = labor.connection_test(cfg, pid, os.environ, self.runtime.cloud_key_store)
+        res = labor.connection_test(cfg, pid, os.environ, self.runtime.cloud_key_store, audit=self.runtime.audit)
         self.runtime.audit.append('LABOR_CONNECTION_TEST', component='desk', payload={'provider': pid, 'ok': res['ok']})
         return res
 
@@ -2180,7 +2180,7 @@ class UIXHub:
         modell = str((payload or {}).get('model') or '')
         t0 = time.monotonic()
         try:
-            res = labor.cloud_chat(cfg, pid, modell, messages, os.environ, self.runtime.cloud_key_store)
+            res = labor.cloud_chat(cfg, pid, modell, messages, os.environ, self.runtime.cloud_key_store, audit=self.runtime.audit)
         except Exception:
             # ein Anbieterfehler ist ein Befund über das Modell: rot. Eine Sperre des Inhaltsschutzes ist keiner (siehe unten).
             modell_zustand.merken(self.runtime.project_root, pid, modell, False, (time.monotonic() - t0) * 1000)
@@ -2249,7 +2249,7 @@ class UIXHub:
         """KI Labor: jedes Modell des Anbieters einmal ansprechen. Kostet Anbieter-Tokens; deshalb nur auf Klick."""
         from . import labor
         cfg, pid = self._labor_provider(payload)
-        res = labor.model_test(cfg, pid, os.environ, self.runtime.cloud_key_store)
+        res = labor.model_test(cfg, pid, os.environ, self.runtime.cloud_key_store, audit=self.runtime.audit)
         from . import modell_zustand
         for r in res.get('results') or []:
             # der Test ist ein Befund über jedes Modell: die Auswahl zeigt danach den Stand. Sperren des Inhaltsschutzes zählen nicht.

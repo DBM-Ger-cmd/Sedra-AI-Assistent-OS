@@ -194,6 +194,18 @@ class S2_Router(unittest.TestCase):
         self.assertEqual(out['tool_calls'][0]['arguments']['cmd'], 'ls')
         self.assertIn('Ich prüfe das.', out['content'])
 
+    def test_a_cloud_call_without_a_log_never_reaches_the_model(self):
+        # Befund G1 (Gesamtprüfung): ohne Logbuch darf die Cloud nichts erhalten – der Aufruf endet, bevor das Modell gefragt wird
+        calls = []
+        g = ContentGuard(audit=None, cloud_enabled=True)
+        with self.assertRaises(ContentGuardStop) as ctx:
+            g.call([user('Eine Übersicht bitte.')], model='m', route='cloud', complete=lambda msgs: calls.append(msgs) or 'x')
+        self.assertEqual(calls, [], 'das Modell darf nicht gefragt werden')
+        self.assertIn('SG_AUDIT_FAILED', ctx.exception.result.reasons)
+        # lokal bleibt ein Aufruf ohne Logbuch möglich (Tests und Werkzeuge ohne Runtime)
+        out = ContentGuard(audit=None, cloud_enabled=False).call([user('hallo')], model='m', route='local', complete=lambda msgs: 'ok')
+        self.assertEqual(out.text, 'ok')
+
     def test_without_a_model_name_the_adapter_id_binds(self):
         router = ModelRouter(); router.content_guard = guard(); router.register(FakeAdapter())
         self.assertEqual(router.chat('M', [user('hi')])['content'], 'Alles klar.')

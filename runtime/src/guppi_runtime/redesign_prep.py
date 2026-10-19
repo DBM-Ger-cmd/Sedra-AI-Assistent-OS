@@ -58,7 +58,7 @@ def _once(text):
 def prepare(src, dst, mapping_dir=None, audit=None):
     """Kopiert Textdateien von src nach dst, mit eigenen Begriffen. Die Zuordnungen landen in mapping_dir (lokal, nie gesendet)."""
     src, dst = Path(src), Path(dst)
-    guard = ContentGuard(cloud_enabled=True)
+    guard = ContentGuard(audit=audit, cloud_enabled=True)
     report = []
     for path in sorted(src.rglob("*")):
         if not path.is_file() or path.suffix.lower() not in TEXT_SUFFIXES: continue

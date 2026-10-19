@@ -33,10 +33,10 @@ def _enabled(config, provider_id):
     return bool(config.get("enabled", False)) and bool(entry.get("enabled", False))
 
 
-def _ping(adapter, model):
+def _ping(adapter, model, audit=None):
     """Eine Testnachricht an ein Modell. Gibt ein Ergebnis-Dict zurück, nie einen Schlüssel und nie eine Ausnahme."""
     started = time.monotonic()
-    guard = ContentGuard(cloud_enabled=True)     # aufgerufen wird nur, wenn `_enabled` die gespeicherte Konfiguration bestätigt hat
+    guard = ContentGuard(audit=audit, cloud_enabled=True)     # aufgerufen wird nur, wenn `_enabled` die gespeicherte Konfiguration bestätigt hat
     try:
         result = guard.call(PING, model=model, route="cloud",
                             complete=lambda msgs: adapter.chat(msgs, model=model, max_tokens=PING_MAX_TOKENS, temperature=0)["content"])
@@ -53,7 +53,7 @@ def _ms(started):
     return int((time.monotonic() - started) * 1000)
 
 
-def connection_test(config, provider_id, environ=None, key_store=None):
+def connection_test(config, provider_id, environ=None, key_store=None, audit=None):
     """Die Kette in Schritten: Schlüssel da, Anbieter erreichbar und Modelle gemeldet, eine Testnachricht beantwortet."""
     steps = []
     if not _enabled(config, provider_id):
@@ -81,13 +81,13 @@ def connection_test(config, provider_id, environ=None, key_store=None):
         steps.append({"step": "Testnachricht", "ok": False, "detail": "kein Modell zum Testen"})
         return {"provider": provider_id, "ok": False, "steps": steps}
     for model in candidates[:CONNECTION_TRIES]:
-        answer = _ping(adapter, model)
+        answer = _ping(adapter, model, audit)
         steps.append({"step": "Testnachricht an " + model, "ok": answer["ok"], "detail": answer.get("reply") or answer["detail"], "ms": answer["ms"]})
         if answer["ok"]: return {"provider": provider_id, "ok": True, "steps": steps, "model": model}
     return {"provider": provider_id, "ok": False, "steps": steps}
 
 
-def cloud_chat(config, provider_id, model, messages, environ=None, key_store=None):
+def cloud_chat(config, provider_id, model, messages, environ=None, key_store=None, audit=None):
     """Eine Gesprächsantwort aus der Cloud, für das Gespräch im Cockpit. Geht durch den Inhaltsschutz wie jeder Cloudaufruf:
     Personenbezug wird pseudonymisiert und anonymisiert, die Antwort bleibt mit Platzhaltern. Nur eingeschaltet."""
     if not _enabled(config, provider_id):
@@ -95,7 +95,7 @@ def cloud_chat(config, provider_id, model, messages, environ=None, key_store=Non
     if not isinstance(model, str) or not model.strip():
         raise ValueError("model_required")
     adapter = provider_adapter(config, provider_id, environ, key_store)
-    guard = ContentGuard(cloud_enabled=True)
+    guard = ContentGuard(audit=audit, cloud_enabled=True)
     # Persönliche Angaben werden nicht blockiert, sondern vorher durch eigene Begriffe ersetzt (redesign_prep). Die Zuordnung
     # bleibt lokal. Was danach noch auffällt, prüft der Inhaltsschutz wie gewohnt.
     # Testrunde: Ersetzen durch eigene Begriffe. Produktiv (Standard) gilt die strenge Regel: Personenbezug wird nicht gesendet.
@@ -113,13 +113,13 @@ def cloud_chat(config, provider_id, model, messages, environ=None, key_store=Non
     return {"status": "completed", "reply": result.text or "", "provider": provider_id, "model": model}
 
 
-def model_test(config, provider_id, environ=None, key_store=None):
+def model_test(config, provider_id, environ=None, key_store=None, audit=None):
     """Jedes Modell des Anbieters einmal mit einer Testnachricht ansprechen. Gibt je Modell ok, Dauer und Grund zurück."""
     if not _enabled(config, provider_id):
         return {"provider": provider_id, "ok": False, "results": [], "detail": "Hauptschalter oder Anbieter ist aus."}
     adapter = provider_adapter(config, provider_id, environ, key_store)
     adapter.timeout = min(adapter.timeout, TEST_TIMEOUT_S)
     models = adapter.fetch_models()[:MAX_MODELS_PER_RUN]
-    results = [_ping(adapter, m) for m in models]
+    results = [_ping(adapter, m, audit) for m in models]
     passed = sum(1 for r in results if r["ok"])
     return {"provider": provider_id, "ok": passed == len(results), "passed": passed, "total": len(results), "results": results}
