@@ -299,6 +299,8 @@ class Gateway:
             if man.get('frame'):                                  # der Rahmen ist Vertragscode: er kommt aus ui/, nicht aus dem Ordner
                 pub['js'] = ['/uix/ui/frame.js'] + pub['js']
                 pub['css'] = ['/uix/ui/frame.css'] + pub['css']
+            if kind == 'tools' and man.get('trust') != 'CORE':      # Stufe C: die Brücke des Kerns prüft die Routen dieses Werkzeugs
+                pub['api'] = list(man.get('api') or [])
             return pub
         return {'ui': '%d.%d' % UI_VERSION,
                 'shell': public('shells', shells[active][1]) if active else None,
@@ -307,6 +309,23 @@ class Gateway:
                 'disabled': sorted(disabled & set(tools)),
                 'rejected': rejected,
                 'config': {'shell': cfg['shell'], 'from_file': cfg['from_file']}}
+
+    def frame_page(self, tool_id):
+        """Stufe C: die Seite des Rahmens für ein Nicht-CORE-Werkzeug. Ohne Token und ohne Daten; die Dateien des Werkzeugs
+        stehen im Manifest. None, wenn es das Werkzeug nicht gibt oder es zum Paket gehört (CORE läuft in der Seite)."""
+        import html as _html
+        import json as _json
+        t = {x['id']: x for x in self.manifest()['tools']}.get(tool_id)
+        if not t or t.get('trust') == 'CORE':
+            return None
+        links = ''.join(f'<link rel="stylesheet" href="{_html.escape(h)}">' for h in t['css'])
+        scripts = ''.join(f'<script src="{_html.escape(h)}"></script>' for h in ['/uix/ui/dom.js', '/uix/ui/rahmen.js'] + t['js'])
+        info = _json.dumps({'id': t['id'], 'name': t['name'], 'api': t.get('api', []), 'events': t.get('events', {})}, ensure_ascii=False)
+        info = info.replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
+        return ('<!doctype html><html lang="de"><head><meta charset="utf-8">'
+                '<meta name="viewport" content="width=device-width, initial-scale=1">'
+                f'<title>{_html.escape(t["name"])}</title>{links}</head>'
+                '<body><div id="werk"></div>' + scripts + f'<script>sedraRahmen.start({info});</script></body></html>')
 
     def file(self, area, module, name):
         """The path of a file a URL may serve, or None. area: 'ui', 'shells' or 'tools'."""

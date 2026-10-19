@@ -2967,6 +2967,7 @@ STATIC_FILE = re.compile(r'/uix/(css|js)/([a-z_]+)\.\1')
 STATIC_TYPES = {'css': 'text/css; charset=utf-8', 'js': 'text/javascript; charset=utf-8'}
 # Files of the desktop modules (Build 7): /uix/ui/<file>, /uix/ui/schema/<file>, /uix/shells/<id>/<file>, /uix/tools/<id>/<file>
 MODULE_FILE = re.compile(r'/uix/(ui|shells|tools)/(?:([a-z0-9_-]{2,40})/)?([a-z0-9_.-]{1,60})')
+FRAME_PAGE = re.compile(r'/uix/frame/([a-z0-9-]{2,40})')
 
 
 def make_server(hub: UIXHub, port=0):
@@ -3097,6 +3098,14 @@ def make_server(hub: UIXHub, port=0):
             # token header. Like the page's own uix/css and uix/js they are served before the token check; only registered folders,
             # no '..', and only the file types the gateway allows.
             if self._module_file(path):
+                return
+            frame = FRAME_PAGE.fullmatch(path)
+            if frame:           # Stufe C: die Seite eines abgeschotteten Werkzeug-Rahmens; ohne Token, ohne Daten (siehe desk/gateway.frame_page)
+                page = hub.gateway.frame_page(frame.group(1))
+                if page is None:
+                    self.send_error(404)
+                    return
+                self._send(200, page, 'text/html; charset=utf-8', frame_self=True)
                 return
             if not self._authorized():
                 self.send_error(403)

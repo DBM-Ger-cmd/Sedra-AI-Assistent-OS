@@ -35,6 +35,11 @@
 
   // One living instance of a tool in one container. The shell holds it; the tool itself knows nothing about docks or windows.
   function mountTool(mod, el, ctx, onError){
+    // Stufe C: ein Werkzeug im Rahmen wird nicht in der Seite gezeichnet, sondern vom Stellvertreter eingehängt
+    if(mod && mod.frame && typeof mod.mountFrame === 'function'){
+      try{ return mod.mountFrame(el, ctx, onError); }
+      catch(err){ onError && onError(mod.id, err); return {id: mod.id, el, ctx, mod, mounted: false, ready: Promise.resolve()}; }
+    }
     const state = {id: mod.id, el, ctx, mod, mounted: false, ready: Promise.resolve()};
     try{
       const out = mod.mount(el, ctx);
@@ -49,6 +54,7 @@
   function unmountTool(state, onError){
     if(!state || !state.mounted) return;
     state.mounted = false;
+    if(typeof state.abbau === 'function'){ try{ state.abbau(); }catch(_e){} }     // Stufe C: den Rahmen abmelden
     try{ state.mod.unmount(); }
     catch(err){ onError && onError(state.id, err); }
     try{ state.el.replaceChildren(); }catch(_e){}

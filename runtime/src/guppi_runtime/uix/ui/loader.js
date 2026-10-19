@@ -91,8 +91,30 @@
     if(!manifest.shell) throw new Error('Keine Shell verfügbar: ' + ((manifest.rejected || []).map(r=>r.id + ' (' + r.reasons.join(', ') + ')').join('; ') || 'uix.yaml prüfen'));
     (manifest.rejected || []).forEach(r=>say('Modul abgelehnt', new Error(r.kind + ' ' + r.id + ': ' + r.reasons.join(', '))));
 
+    // Stufe C: die Brücke zum Rahmen. Werkzeuge außerhalb des Pakets (nicht CORE) laufen in einem abgeschotteten iframe;
+    // ihr Code kommt nie in diese Seite. Der Stellvertreter hier hält nur das Manifest und hängt den Rahmen ein.
+    const bruecke = root.sedraBruecke.makeBruecke({kern, shell: null, bus, onProblem: (id, err)=>say('Rahmen ' + id, err instanceof Error ? err : new Error(String(err)))});
+    root.sedraBruecke.einhaengen(bruecke);
+    function frameMod(t){
+      return {
+        id: t.id, frame: true,
+        mount(){}, unmount(){}, actions(){ return []; },
+        mountFrame(el, ctx){
+          const fenster = document.createElement('iframe');
+          fenster.setAttribute('sandbox', 'allow-scripts');
+          fenster.className = 'sx-rahmen';
+          fenster.title = t.name || t.id;
+          fenster.src = '/uix/frame/' + encodeURIComponent(t.id);
+          el.replaceChildren(fenster);
+          bruecke.register(fenster.contentWindow, t, ctx.shell);
+          return {id: t.id, el, ctx, mod: this, mounted: true, ready: Promise.resolve(), abbau(){ bruecke.abmelden(fenster.contentWindow); }};
+        }
+      };
+    }
+
     const entries = [];
     for(const t of manifest.tools){
+      if(t.trust !== 'CORE'){ entries.push({manifest: t, mod: frameMod(t)}); continue; }
       try{
         t.css.forEach(addStyle);
         for(const js of t.js) await addScript(js);

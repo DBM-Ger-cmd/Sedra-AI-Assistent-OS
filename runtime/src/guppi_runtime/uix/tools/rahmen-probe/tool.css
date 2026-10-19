@@ -1,0 +1,2 @@
+/* Rahmen-Probe: nur Abstände; die Farben und Schriften kommen aus dem Design der Seite. */
+.t-rahmen-probe-zeile { display: flex; flex-direction: column; gap: 4px; }

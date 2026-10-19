@@ -64,19 +64,20 @@
         }catch(err){ antworte(e, msg.id, {ok: false, fehler: String(err && err.message || err)}); }
         return;
       }
-      // shell
+      // shell: die Shell, aus deren Kontext dieser Rahmen gebaut wurde
       try{
-        if(typeof shell[msg.name] !== 'function') throw new Error('shell_fehlt:' + msg.name);
+        const sh = e.shell || shell;
+        if(!sh || typeof sh[msg.name] !== 'function') throw new Error('shell_fehlt:' + msg.name);
         const args = Array.isArray(msg.args) ? msg.args.slice(0, 2) : [];
-        const daten = await shell[msg.name](...args);
+        const daten = await sh[msg.name](...args);
         antworte(e, msg.id, {ok: true, daten: daten === undefined ? null : daten});
       }catch(err){ antworte(e, msg.id, {ok: false, fehler: String(err && err.message || err)}); }
     }
 
     return {
       // einen Rahmen anmelden: nur die Ereignisse, die das Manifest listet
-      register(fenster, manifest){
-        const e = {fenster, manifest, abos: []};
+      register(fenster, manifest, eigeneShell){
+        const e = {fenster, manifest, shell: eigeneShell || null, abos: []};
         eintraege.push(e);
         const hoert = (manifest.events && manifest.events.listens) || [];
         hoert.forEach(name=>{

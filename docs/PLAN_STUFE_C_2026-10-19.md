@@ -91,3 +91,15 @@ Geschätzter Umfang: C1 klein, C2 mittel, C3 klein, C4 mittel, C5 klein. C2 und 
 - **C2 erledigt:** `runtime/src/guppi_runtime/uix/ui/bruecke.js` mit den reinen Regeln (`pruefeNachricht`, `routeErlaubt`) und der Kern-Brücke (`makeBruecke`). Quelle wird über das Fenster zugeordnet, Routen über Methode und Pfad gegen das Manifest geprüft, `decide` ist über die Brücke nicht erreichbar, Ereignisse gehen nur laut `events.listens`. Test: `runtime/tests/test_stufe_c_bruecke.py` (12 Tests, node), alle grün.
 - **Noch nicht verdrahtet:** Der Loader und die Shells nutzen die Brücke noch nicht. Dadurch ändert C2 das laufende Verhalten nicht.
 - **Offen:** C3 (Rahmen-Client im Frame, Auslieferung der Frame-Seite über den Server, Einbau in `mountTool`, Pilot als Test-Modul, Browser-Test), C4 (Umstellung, nur für Nicht-CORE, im Alltag ohne Gegenstand), C5 (Gegenprüfung mit einem Angriffs-Testmodul im Browser).
+
+## 10. Stand nach C3, C4 und C5 (19.10.2026)
+
+- **C3 erledigt:** Der Rahmen läuft. Der Loader (`ui/loader.js`) lädt den Code von Nicht-CORE-Werkzeugen nicht mehr in die Seite; er hängt stattdessen ein `iframe sandbox="allow-scripts"` ein (`mountFrame`). `ui/lifecycle.js` leitet `mountTool` dorthin. Der Rahmen selbst ist `ui/rahmen.js` (läuft im iframe, nur `postMessage`) und die Seite `/uix/frame/<id>`, die der Server ohne Token ausliefert (`desk/gateway.frame_page`).
+- **C4 erledigt im Code:** Die Umstellung gilt für jedes Werkzeug außerhalb des Pakets. Im Alltag ist das der Pilot `rahmen-probe`, sonst keines.
+- **C5 erledigt als Browser-Test:** `runtime/tests/test_stufe_c_rahmen.py` klickt im Rahmen jeden verbotenen Versuch (fremde Route, Freigabe, Lesen der Shell-Seite, Token-Zugang) und prüft, dass er verweigert wird. Außerdem: Der Code des Pilots steht nicht in der Seite, der Token-Zugang `window.sedraApi` fehlt in der Seite, die Sandbox hat kein `allow-same-origin`.
+- **Tests:** Vertrag, Server, Isolation A/B, Brücke (12), Rahmen (1, Browser), Oberflächen-Browser-Suiten: alle grün.
+- **Bekannte Grenzen:**
+  - Der Rahmen hat nur das Werkzeug-CSS, nicht das Design der Seite. Darstellung im Rahmen ist daher noch schlicht.
+  - Ereignisse aus dem Rahmen heraus sind nicht möglich (`bus.emit` ist im Rahmen leer), nur Empfang laut Manifest.
+  - Getestet ist der Rahmen nur in der Cockpit-Shell; Minimal und Paperclip sind nicht im Browser geprüft.
+  - Der Pilot `rahmen-probe` ist als Instrument sichtbar. Er kann nach Abnahme ausgeblendet werden.

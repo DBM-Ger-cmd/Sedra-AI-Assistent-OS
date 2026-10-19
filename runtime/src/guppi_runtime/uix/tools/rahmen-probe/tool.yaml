@@ -1,0 +1,17 @@
+tool:
+  id: rahmen-probe
+  name: "Rahmen-Probe"
+  description: "Prüft den abgeschotteten Rahmen (Stufe C): was ein Werkzeug außerhalb der Seite darf und was nicht."
+  version: 1.0.0
+  kind: instrument
+  handles: []
+  order: 990
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/status            # die einzige Route dieses Werkzeugs; alles andere wird über die Brücke verweigert
+  events:
+    emits: []
+    listens: []
+  trust: CAPTAIN
+  tests: []
+  needs: {ui: ">=1.0 <2"}
