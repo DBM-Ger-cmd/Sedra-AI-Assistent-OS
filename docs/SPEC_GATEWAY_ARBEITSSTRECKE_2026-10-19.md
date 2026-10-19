@@ -83,7 +83,22 @@ Keine Vorgabe kann eine Sperre der Regeln aufheben. Eine Fundstelle, die das Reg
 
 Der Vermerk im Ausgang nennt das Original (Dateiname, Prüfsumme), die angewendeten Vorgaben und den Zeitpunkt. So ist immer nachvollziehbar, woher eine Fassung stammt, egal wo das Original liegt.
 
-## 6b. Ortsnamen: die Logik (Vorschlag, Stand 19.10.2026)
+## 6b. Ortsnamen: Regeln statt Rückfragen (Stand 19.10.2026)
+
+Ziel: Die Regeln entscheiden anhand der Formulierung. Niemand wird bei jedem Ortsnamen gefragt. Die Regeln blockieren nie; sie ersetzen oder lassen stehen, und die Vorschau zeigt, was passiert ist.
+
+**Regel O-1: Anschrift ersetzen.** Ein Ortsname wird ersetzt, wenn er Teil einer Anschrift ist oder den Wohnort einer Person angibt. Erkennungsmerkmale: Straßenwort (Straße, Str., Weg, Platz, Gasse, Allee), Hausnummer, PLZ, sowie Wohnbezug („ich wohne in“, „wohnhaft in“, „lebt in“, „Adresse“, „Lieferadresse“, „aus“ bei einer genannten Person). Beispiel: „Ich wohne in der Hauptstraße 1 in DEF“ → Straße und Ort werden ersetzt.
+
+**Regel O-2: Ereignis oder Thema behalten.** Ein Ortsname bleibt, wenn der Satz ein Ereignis, eine Auskunft oder ein Thema beschreibt und keine Person an den Ort gebunden ist. Erkennungsmerkmale: „in DEF passiert“, „es hat geknallt in DEF“, „Wetter in DEF“, „Verkehr in DEF“, „Öffnungszeiten in DEF“, „ob etwas passiert ist“. Beispiel: „Gestern Abend hat es in DEF geknallt, ich wollte wissen, ob etwas passiert ist“ → DEF bleibt, die Frage ist beantwortbar.
+
+**Regel O-3: Unklar, keine Blockade.** Trifft keine der beiden Regeln zu, bleibt der Ortsname stehen und wird in der Vorschau als „Ort unbewertet“ markiert. Es gibt keine Rückfrage vor dem Speichern. Die Vorschau zeigt die Markierung; eine Vorgabe (ersetzen oder behalten) kann sie jederzeit ändern.
+
+**Vorgaben wirken vor den Regeln:** Eine gemerkte Vorgabe für einen Ortsnamen (z. B. „DEF immer behalten“) gilt vor O-1 bis O-3 und wird in der Vorschau als Vorgabe ausgewiesen.
+
+**Grenze, die im Vermerk steht:** Ein stehen gelassener Ortsname ist keine Anonymisierung. Zusammen mit anderen Angaben kann er jemanden erkennbar machen. Deshalb zeigt die Vorschau die Zahl der stehen gelassenen Ortsnamen, und der Vermerk nennt die angewendete Regel (O-1, O-2 oder Vorgabe).
+
+**Offen (für den Captain):** Soll O-3 beim Speichern eine einmalige Bestätigung verlangen, wenn ein unbewerteter Ortsname im Text vorkommt? *Empfehlung:* nein, nur als Hinweis in der Vorschau; Blockaden bleiben den Sperren des Regelwerks vorbehalten.
+
 
 Ein Ortsname ist nur dann personenbezogen, wenn er zu einer Person, Firma, Kundennummer oder Anschrift gehört. Ein Ortsname allein („Wetter in Beierswerder“) wird nicht ersetzt, sonst ist die Frage nicht mehr beantwortbar.
 
