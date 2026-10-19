@@ -97,21 +97,36 @@ class ModelRouter:
     @staticmethod
     def _guarded(guard, adapter, mission_id, messages, model, kwargs):
         """Jeder Aufruf geht durch den Inhaltsschutz: vorher Scan und Bewertung, nachher die Antwortprüfung (SPEC_EIN_SICHERER_WEG S2).
-        Der Guard sieht nur Text; Werkzeugaufrufe einer Antwort werden ihm als JSON gezeigt, damit auch deren Argumente geprüft sind."""
+        Der Guard sieht nur Text. Hat eine Antwort Werkzeugaufrufe, gehen Text und Aufrufe zusammen durch den Guard (getrennt durch ein
+        festes Zeichen), damit auch die Argumente der Aufrufe geprüft sind – auch dann, wenn die Antwort zusätzlich Text hat.
+        Verschwindet das Trennzeichen bei der Prüfung, werden die Werkzeugaufrufe verworfen (fail-closed)."""
         box={}
+        sep="\n\n[[WERKZEUGAUFRUF]]\n\n"
         def complete(prepared):
             res=adapter.chat(prepared,model=model,**kwargs)
             box["result"]=res
             content=res.get("content") if isinstance(res,dict) else None
-            if isinstance(content,str) and content.strip(): return content
+            text=content if isinstance(content,str) else ""
             calls=res.get("tool_calls") if isinstance(res,dict) else None
-            if calls: box["calls"]=True; return json.dumps(calls,ensure_ascii=False,sort_keys=True)
-            return content if isinstance(content,str) else ""
+            if calls:
+                box["calls"]=True
+                return text+sep+json.dumps(calls,ensure_ascii=False,sort_keys=True)
+            return text
         name=model or getattr(adapter,"default_model",None) or adapter.id
         verdict=guard.call(messages,model=str(name),route=getattr(adapter,"route","local"),mission_id=mission_id or "",complete=complete)
         result=box["result"]
         if box.get("calls"):
-            result["tool_calls"]=json.loads(verdict.text)   # zurückübersetzt, falls pseudonymisiert
+            head,found,tail=verdict.text.partition(sep)
+            calls=None
+            if found:
+                try: calls=json.loads(tail)                   # zurückübersetzt, falls pseudonymisiert
+                except ValueError: calls=None
+            if calls is None:
+                result["tool_calls"]=None
+                head="[Werkzeugaufruf zurückgehalten: Prüfung nicht eindeutig.]"+("\n\n"+head if head.strip() else "")
+            else:
+                result["tool_calls"]=calls
+            result["content"]=head
         else:
             result["content"]=verdict.text
         result["guard"]={"binding":verdict.binding,"observed":list(verdict.observed),"flags":list(verdict.output_flags)}

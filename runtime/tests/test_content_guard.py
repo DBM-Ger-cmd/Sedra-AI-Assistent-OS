@@ -179,6 +179,21 @@ class S2_Router(unittest.TestCase):
         out = router.chat('M', [user('mach')], model='m')
         self.assertEqual(out['tool_calls'][0]['arguments']['cmd'], 'ls')
 
+    def test_tool_call_arguments_are_checked_even_when_the_answer_also_has_text(self):
+        # Befund (Architekturreview, router.py): Hatte die Antwort Text, wurden Werkzeugargumente nicht geprüft.
+        router = ModelRouter(); router.content_guard = guard()
+        router.register(FakeAdapter({'content': 'Ich führe das aus.', 'tool_calls': [{'name': 'shell', 'arguments': {'cmd': 'echo ' + TOKEN}}]}))
+        try:
+            out = router.chat('M', [user('mach')], model='m')
+        except ContentGuardStop:
+            out = None                                  # gesperrt ist richtig
+        self.assertFalse(out and TOKEN in json.dumps(out, ensure_ascii=False), 'der Schlüssel darf nicht im Ergebnis stehen')
+        router = ModelRouter(); router.content_guard = guard()
+        router.register(FakeAdapter({'content': 'Ich prüfe das.', 'tool_calls': [{'name': 'shell', 'arguments': {'cmd': 'ls'}}]}))
+        out = router.chat('M', [user('mach')], model='m')
+        self.assertEqual(out['tool_calls'][0]['arguments']['cmd'], 'ls')
+        self.assertIn('Ich prüfe das.', out['content'])
+
     def test_without_a_model_name_the_adapter_id_binds(self):
         router = ModelRouter(); router.content_guard = guard(); router.register(FakeAdapter())
         self.assertEqual(router.chat('M', [user('hi')])['content'], 'Alles klar.')
