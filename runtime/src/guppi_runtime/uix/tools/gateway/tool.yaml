@@ -14,6 +14,8 @@ tool:
     - POST /api/gateway/neu
     - POST /api/gateway/pruefen
     - POST /api/gateway/upload     # Datei manuell in den Eingang legen (ohne Projekt)
+    - POST /api/gateway/arbeitskopie   # Arbeitskopie eines Originals (Ablage, Spezifikation Abschnitt 6)
+    - POST /api/gateway/speichern-unter   # bearbeitete Fassung in den Ausgang, mit Vermerk
     - POST /api/gateway/freigabe
     - POST /api/gateway/pruefung
     - POST /api/gateway/verwerfen

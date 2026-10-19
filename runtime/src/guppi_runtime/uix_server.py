@@ -745,6 +745,30 @@ class UIXHub:
         self.runtime.audit.append('GW_DATEI_HOCHGELADEN', component='gateway', payload={'endung': target.suffix.lower(), 'bytes': len(raw)})
         return {'name': name, 'bytes': len(raw)}
 
+    def gateway_arbeitskopie(self, payload):
+        """POST /api/gateway/arbeitskopie {name} – eine Arbeitskopie des Originals (Original bleibt, bekommt einen Vermerk)."""
+        from .gateway import ablage
+        try:
+            kopie = ablage.arbeitskopie(self.project_root / 'local_config' / 'gateway', str((payload or {}).get('name') or ''))
+        except ablage.AblageFehler as exc:
+            raise ValueError(str(exc))
+        self.runtime.audit.append('GW_ARBEITSKOPIE', component='gateway', payload={'endung': kopie.suffix.lower()})
+        return {'name': kopie.name, 'ordner': 'Arbeitskopien'}
+
+    def gateway_speichern_unter(self, payload):
+        """POST /api/gateway/speichern-unter {quelle, ziel, text, vorgaben} – die bearbeitete Fassung in den Ausgang, mit Vermerk.
+        Das Audit enthält Namen, Prüfsumme und die Art der Vorgaben, nie den Text."""
+        from .gateway import ablage
+        p = payload or {}
+        try:
+            v = ablage.speichern_unter(self.project_root / 'local_config' / 'gateway', str(p.get('quelle') or ''), str(p.get('text') or ''),
+                                       str(p.get('ziel') or ''), p.get('vorgaben') or [])
+        except ablage.AblageFehler as exc:
+            raise ValueError(str(exc))
+        self.runtime.audit.append('GW_AUSGABE_GESPEICHERT', component='gateway',
+                                  payload={'ziel': v['name'], 'original_sha256': v['original_sha256'], 'vorgaben': len(v['vorgaben'])})
+        return {'name': v['name'], 'ordner': 'Ausgang', 'vermerk': v}
+
     def gateway_pruefen(self, payload):
         """POST /api/gateway/pruefen {id, anfrage, dokument?, wunsch?, manuell?, zweck?, verantwortlich?} – liest die Datei aus dem Projekt;
         nichts verlässt den Rechner. Zweck und verantwortliche Person (G-05) werden Teil der Bindung."""
@@ -2998,6 +3022,8 @@ def make_server(hub: UIXHub, port=0):
                     '/api/guard/probe': hub.guard_probe,            # read-only in der Sache: prüft nur, ruft kein Modell, speichert nichts
                     '/api/gateway/vorgang': lambda p: hub.gateway_get(str((p or {}).get('id') or '')),   # read-only: ein Vorgang mit Entwurf
                     '/api/gateway/neu': hub.gateway_new,
+                    '/api/gateway/arbeitskopie': hub.gateway_arbeitskopie,
+                    '/api/gateway/speichern-unter': hub.gateway_speichern_unter,
                     '/api/gateway/upload': hub.gateway_upload,      # Datei in den Eingang des GateWay legen (ohne Projekt)
                     '/api/gateway/pruefen': hub.gateway_pruefen,    # Datenschutz prüfen: lokal, nichts verlässt den Rechner
                     '/api/gateway/freigabe': hub.gateway_freigabe,  # legt das Gate vor
