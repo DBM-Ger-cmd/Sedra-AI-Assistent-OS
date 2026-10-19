@@ -19,7 +19,9 @@ import yaml
 from .registry import MODULE_ID, Registry
 
 UI_VERSION = (1, 0)
-OBJECT_TYPES = ('project', 'intent', 'task', 'candidate', 'file', 'model', 'skill', 'agent', 'decision', 'routine', 'boundary',
+OBJECT_TYPES = ('project', 'intent', 'task', 'candidate', 'file', 'model', 'skill', 'agent', 'decision', 'routine', 'boundary', 'planung',
+                'uebersetzung', 'nachrichten', 'transkript',       # Fisch (19.10.2026)
+                'aufnahme',                                        # Kern Sprache (19.10.2026): der Rekorder, für jede Shell
                 'module', 'logbook', 'meter', 'hardware', 'machine', 'gateway', 'labor', 'entwurf')   # the last six are places of the system; gateway since Build 19; labor: KI Labor (Werkstatt, 16.10.2026)
 TOOL_KINDS = ('object', 'instrument', 'panel')
 # Ein Hinweis für die Shell, kein Befehl: das Cockpit stellt „inhalt“ nach links und „nachweis“ nach rechts (COCKPIT_MODUL_v1 §1).

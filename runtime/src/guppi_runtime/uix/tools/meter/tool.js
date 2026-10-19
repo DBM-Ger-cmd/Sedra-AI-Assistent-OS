@@ -57,7 +57,7 @@
 
       const lines = (v.ranges || {}).all || {};
       box.append(d().el('h5', 's-head', 'Zeilen'));
-      box.append(d().el('div', null, d().fmtNumber(lines.total_lines || 0) + ' Zeilen insgesamt · GUPPI ' + Math.round((lines.guppi_share || 0) * 100) + ' %'));
+      box.append(d().el('div', null, d().fmtNumber(lines.total_lines || 0) + ' Zeilen insgesamt · SEDRA ' + Math.round((lines.guppi_share || 0) * 100) + ' %'));
       if(v.note) box.append(d().el('small', 's-muted', v.note));
       this.el.replaceChildren(box);
     },

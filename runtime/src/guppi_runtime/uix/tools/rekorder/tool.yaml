@@ -1,0 +1,26 @@
+# Werkzeug „Rekorder“ (Kern Sprache, 19.10.2026): aufnehmen (Mikrofon, Stücke an den Kern), abspielen, Sprache → Text mit dem
+# Provider des Rechners (whisperx, whisper) oder Abschrift von Hand. Für jede Shell: es zeichnet den Typ `aufnahme`.
+tool:
+  id: rekorder
+  name: "Rekorder"
+  description: "Aufnehmen, abspielen, Sprache → Text (lokaler Provider oder Abschrift von Hand) – die Aufnahme bleibt im Projekt."
+  version: 1.0.0
+  kind: object
+  handles: [aufnahme]
+  order: 43
+  slot: inhalt
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/sprache/aufnahmen
+    - POST /api/sprache/aufnahme                     # read-only: der Record mit den Daten (base64) zum Abspielen
+    - POST /api/sprache/aufnahme/beginnen            # ui/sprache.js ruft diese drei mit der api() des Werkzeugs
+    - POST /api/sprache/aufnahme/stueck
+    - POST /api/sprache/aufnahme/beenden
+    - POST /api/sprache/aufnahme/loeschen
+    - POST /api/sprache/aufnahme/transkribieren      # Provider im Hintergrund oder {text}: Abschrift von Hand
+  events:
+    emits: []
+    listens: []
+  trust: CORE
+  tests: []
+  needs: {ui: ">=1.0 <2"}

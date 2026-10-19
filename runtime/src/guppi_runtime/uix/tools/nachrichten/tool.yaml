@@ -1,0 +1,21 @@
+# Werkzeug „Nachrichten“ (Fisch, 19.10.2026): das News-Profil und der Brief – ehrlich ohne Netz: aus Quellen, die der Captain gibt.
+tool:
+  id: nachrichten
+  name: "Nachrichten"
+  description: "Profil und persönlicher Brief – aus den Quellen, die du gibst; nichts aus dem Netz, nichts erfunden."
+  version: 1.0.0
+  kind: object
+  handles: [nachrichten]
+  order: 41
+  slot: inhalt
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/fisch/profil
+    - POST /api/fisch/profil/speichern
+    - POST /api/fisch/brief           # ein Modellaufruf durch den Control Master (Mission, Audit, Inhaltsschutz)
+  events:
+    emits: []
+    listens: [model.changed]
+  trust: CORE
+  tests: []
+  needs: {ui: ">=1.0 <2"}

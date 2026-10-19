@@ -34,7 +34,7 @@
       this.log.setAttribute('role', 'log');
       this.picker = d().el('select', 'et-pick');
       this.picker.setAttribute('aria-label', 'Modell für den Entwurf');
-      const first = d().el('option', null, 'GUPPI lokal'); first.value = 'local';
+      const first = d().el('option', null, 'SEDRA lokal'); first.value = 'local';
       this.picker.append(first);
       this.input = d().el('textarea', 'et-input');
       this.input.placeholder = 'Beschreibe, was du sehen willst · Strg+Enter sendet';
@@ -83,7 +83,7 @@
       return row;
     },
 
-    say(text, tone){ this.line('GUPPI', text, tone === 'warn' ? 'warn' : 'note'); },
+    say(text, tone){ this.line('SEDRA', text, tone === 'warn' ? 'warn' : 'note'); },
 
     reset(){ this.history = []; this.log.replaceChildren(); this.say('Neues Gespräch. Was soll entstehen?', 'note'); },
 
@@ -126,11 +126,11 @@
       this.picker.insertBefore(group, this.picker.children[1] || null);
     },
 
-    // der Punkt zeigt den Zustand des gewählten Modells; bei „GUPPI lokal“ bleibt er aus
+    // der Punkt zeigt den Zustand des gewählten Modells; bei „SEDRA lokal“ bleibt er aus
     ampelZeigen(){
       if(!this.ampel) return;
       const o = this.picker.selectedOptions && this.picker.selectedOptions[0];
-      if(!this.picker.value || !o){ this.ampel.className = 'et-ampel aus'; this.ampel.title = 'GUPPI lokal'; return; }
+      if(!this.picker.value || !o){ this.ampel.className = 'et-ampel aus'; this.ampel.title = 'SEDRA lokal'; return; }
       const a = o.dataset.ampel || 'grau';
       this.ampel.className = 'et-ampel ' + a;
       this.ampel.title = AMPEL_ZEICHEN[a] || AMPEL_ZEICHEN.grau;
@@ -141,7 +141,7 @@
       this.input.value = '';
       if(!text) return;
       const local = this.picker.value === 'local' || !this.picker.value;
-      const who = local ? 'GUPPI lokal' : this.picker.value.slice('cloud:'.length).replace('|', ' / ');
+      const who = local ? 'SEDRA lokal' : this.picker.value.slice('cloud:'.length).replace('|', ' / ');
       this.line('Du', text, 'me');
       if(!this.history.length) this.history.push({role: 'user', content: GUIDE}, {role: 'assistant', content: 'Verstanden.'});
       this.history.push({role: 'user', content: text});

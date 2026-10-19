@@ -34,7 +34,7 @@ function workbenchModel(v, switches, quick, std){
   } else if(quickOk) steps.push({id:'test', title:'2 · Teststrecke', state:'done', text:'Kurztest bestanden: '+quick.seconds+' s'+(quick.tokens_per_s ? ' · '+quick.tokens_per_s+' Token/s' : '')+'. Der Standardtest findet den besten Kontext.', action:{label:'Standardtest', id:'std'}});
   else steps.push({id:'test', title:'2 · Teststrecke', state:'active', text:'Noch nicht getestet. Der Kurztest dauert Sekunden, der Standardtest ab 5 Minuten.', action:{label:'Kurztest', id:'quick', recipe: loaded ? loaded.id : null}});
   // 3 bereit
-  if(ready) steps.push({id:'go', title:'3 · Bereit', state:(quickOk || stdDone) ? 'done' : 'active', text:(loaded ? modelName(loaded) : 'Das Modell')+' antwortet im Chat und plant Karten.', action:{label:'Mit GUPPI sprechen', id:'chat'}});
+  if(ready) steps.push({id:'go', title:'3 · Bereit', state:(quickOk || stdDone) ? 'done' : 'active', text:(loaded ? modelName(loaded) : 'Das Modell')+' antwortet im Chat und plant Karten.', action:{label:'Mit SEDRA sprechen', id:'chat'}});
   else steps.push({id:'go', title:'3 · Bereit', state:'open', text:'Ohne Modell plant der Chat nur.', action:null});
   return steps;
 }

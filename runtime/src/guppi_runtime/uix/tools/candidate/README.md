@@ -1,6 +1,6 @@
 # Werkzeug `candidate` – Kandidat
 
-Das Werkstück: was GUPPI an den Dateien ändern will, Zeile für Zeile. Der Diff wird hier gerechnet und gezeichnet – ohne Bibliothek, mit einer LCS-Tabelle über die Zeilen; lange unveränderte Strecken werden gefaltet.
+Das Werkstück: was SEDRA an den Dateien ändern will, Zeile für Zeile. Der Diff wird hier gerechnet und gezeichnet – ohne Bibliothek, mit einer LCS-Tabelle über die Zeilen; lange unveränderte Strecken werden gefaltet.
 
 Die Verben kommen vom Desk (`/api/objects`), nicht aus diesem Werkzeug: „Übernehmen“ erscheint erst, wenn die Runtime den Kandidaten auch übernehmen würde.
 

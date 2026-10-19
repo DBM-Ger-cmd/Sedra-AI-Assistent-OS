@@ -86,6 +86,36 @@ class Files(unittest.TestCase):
                     bad.append(f'{f.relative_to(UIX)}: {forbidden}')
         self.assertEqual(bad, [])
 
+    def test_every_api_route_a_module_names_exists_in_the_server(self):
+        """Das Schutz-Werkzeug der Lieferung rief `/api/guard/group` und `/api/guard/demo` – Routen, die der Server bewusst nicht
+        hat (Build 16: die Schärfe kommt aus dem Modus). Ein Knopf, der ins Leere läuft, fällt sonst erst dem Captain auf. Statisch:
+        jede `/api/…`-Zeichenkette in Shell und Werkzeug muss im Server als Route stehen."""
+        server = (UIX.parent / 'uix_server.py').read_text(encoding='utf-8')
+        routes = set(re.findall(r"'(/api/[A-Za-z0-9_/.-]+)'\s*:", server)) | set(re.findall(r"path\s*==\s*'(/api/[A-Za-z0-9_/.-]+)'", server))
+        self.assertIn('/api/guard/status', routes, 'die Routen des Servers werden gelesen')
+        bad = []
+        for f in sorted(p for p in UIX.rglob('*.js') if not p.parent.name.startswith('_')):
+            for route in sorted(set(re.findall(r"'(/api/[A-Za-z0-9_/.-]+)'", f.read_text(encoding='utf-8')))):
+                if route not in routes:
+                    bad.append(f'{f.relative_to(UIX)}: {route}')
+        self.assertEqual(bad, [], 'eine Route, die der Server nicht kennt, ist ein toter Knopf')
+
+    def test_every_route_a_tool_calls_stands_in_its_own_manifest(self):
+        """Der Server lässt ein Werkzeug nur auf die Routen seines Manifests (§6, X-SEDRA-Tool). Das Gespräch rief für „lade …“
+        `/api/models` und `/api/model/load`, die nicht im Manifest standen – der Befehl endete in einem 403 (Verbindungsprüfung 19.10.2026).
+        Statisch: jede `/api/…`-Zeichenkette im JS eines Werkzeugs steht in seiner api-Liste. Die Rahmen-Probe ruft absichtlich eine fremde
+        Route (sie prüft genau dieses Nein) und bleibt außen vor."""
+        import yaml
+        bad = []
+        for man in sorted(p for p in (UIX / 'tools').glob('*/tool.yaml') if not p.parent.name.startswith('_') and p.parent.name != 'rahmen-probe'):
+            tool = yaml.safe_load(man.read_text(encoding='utf-8'))['tool']
+            allowed = {r.split()[1] for r in tool.get('api') or []}
+            for js in sorted(man.parent.glob('*.js')):
+                for route in sorted(set(re.findall(r"'(/api/[A-Za-z0-9_/.-]+)", js.read_text(encoding='utf-8')))):
+                    if route not in allowed:
+                        bad.append(f'{tool["id"]}: {route}')
+        self.assertEqual(bad, [], 'eine Route außerhalb des Manifests ist ein Knopf, der 403 bekommt')
+
     def test_the_page_carries_no_inline_code_and_loads_only_the_contract(self):
         html = (UIX / 'desk.html').read_text(encoding='utf-8')
         self.assertNotIn('onclick=', html)

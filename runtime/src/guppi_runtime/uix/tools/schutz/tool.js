@@ -1,5 +1,6 @@
 /* Werkzeug „KI GateWay“ (sedra-ui 1.0). Zeigt, was das KI GateWay vor der KI tut, und lässt den Captain
-   Regeln scharf schalten, Entscheidungen beantworten und Texte selbst ausprobieren.
+   Entscheidungen beantworten und Texte selbst ausprobieren. Die Schärfe der Regeln kommt aus dem Modus des Projekts
+   (Build 16: kein zweiter Schalter) – dieses Werkzeug zeigt sie, es stellt sie nicht.
    Regeln des Vertrags: zeichnet nur in `el`, spricht nur über ctx.api und ctx.bus, nur textContent, kein Speicher. */
 (function (root) {
   'use strict';
@@ -32,7 +33,7 @@
     teilweise: ['Teilweise scharf', 'warn', 'Einzelne Regeln greifen, die übrigen beobachte ich nur.'],
     schuetzt: ['Schützt', 'ok', 'Alle Regeln greifen.']
   };
-  var TABS = [['ueberblick', 'Überblick'], ['regeln', 'Regeln'], ['probe', 'Selbst ausprobieren'], ['vorfuehrung', 'Vorführung'], ['verlauf', 'Verlauf']];
+  var TABS = [['ueberblick', 'Überblick'], ['regeln', 'Regeln'], ['probe', 'Selbst ausprobieren'], ['verlauf', 'Verlauf']];
   // Die Ansichten des Menüs im Baum links auf die Reiter dieses Werkzeugs
   var TAB_VON_ANSICHT = {uebersicht: 'ueberblick', regeln: 'regeln', ausprobieren: 'probe', verlauf: 'verlauf'};
   var TRUST = [['captain', 'Von mir'], ['project', 'Aus einer Projektdatei'], ['untrusted', 'Fremd: Webseite, Werkzeug, Datei']];
@@ -47,7 +48,7 @@
     id: 'schutz',
 
     mount: function (host, ctx) {
-      this.host = host; this.ctx = ctx; this.state = null; this.play = null; this.ask = null;
+      this.host = host; this.ctx = ctx; this.state = null;
       // Eingebettet (im Menü des GateWay links): die Ansicht gibt das Menü vor, die eigenen Reiter entfallen
       var ansicht = ctx.object && ctx.object.ansicht;
       this.tab = TAB_VON_ANSICHT[ansicht] || 'ueberblick';
@@ -76,13 +77,6 @@
         function (err) { self.body.replaceChildren(el('p', { cls: 't-schutz-error', text: 'Das KI GateWay antwortet nicht: ' + err.message })); });
     },
 
-    call: function (path, body) {
-      var self = this;
-      return this.ctx.api(path, { method: 'POST', body: body }).catch(function (err) {
-        self.toast = 'Das hat nicht geklappt: ' + err.message; self.render(); throw err;
-      });
-    },
-
     render: function () {
       var st = this.state, m = MODE[st.mode] || MODE.beobachtet, self = this;
       this.head.replaceChildren(
@@ -91,16 +85,14 @@
             el('p', { text: 'Jede Anfrage an die KI und jede Antwort geht hier durch. Der Assistent denkt, das GateWay prüft.' }))),
         el('div', { cls: 't-schutz-state' }, pill(m[0] + ' · ' + st.sharp + ' von ' + st.of + ' Regeln scharf', m[1]),
           el('span', { cls: 't-schutz-hint', text: m[2] })));
-      this.tabs.replaceChildren.apply(this.tabs, TABS.filter(function (t) { return t[0] !== 'vorfuehrung' || st.demo; }).map(function (t) {
+      this.tabs.replaceChildren.apply(this.tabs, TABS.map(function (t) {
         var n = t[0] === 'ueberblick' ? st.pending.length : 0;
         return el('button', { type: 'button', role: 'tab', cls: 't-schutz-tab' + (self.tab === t[0] ? ' on' : ''), 'aria-selected': String(self.tab === t[0]),
           onclick: function () { self.tab = t[0]; self.render(); } }, t[1], n ? el('span', { cls: 't-schutz-count', text: String(n) }) : null);
       }));
       var view = { ueberblick: this.overview, regeln: this.rules, probe: function () { return this.probePanel; },
-        vorfuehrung: this.demo, verlauf: this.history }[this.tab] || this.overview;
-      var parts = [view.call(this)];
-      if (this.toast) { parts.unshift(el('p', { cls: 't-schutz-error', text: this.toast })); this.toast = null; }
-      this.body.replaceChildren.apply(this.body, parts);
+        verlauf: this.history }[this.tab] || this.overview;
+      this.body.replaceChildren(view.call(this));
     },
 
     /* ---------------- Überblick ---------------- */
@@ -144,7 +136,6 @@
       var self = this;
       return this.ctx.shell.decide(id, way).then(function (r) {
         self.ctx.bus.emit('decision.answered', { id: id, kind: 'model_guard' });
-        if (r && r.ergebnis) { self.play = r.ergebnis; }
         return self.refresh();
       });
     },
@@ -159,45 +150,21 @@
 
     /* ---------------- Regeln ---------------- */
     rules: function () {
-      var self = this, sec = section('Regeln', 'Beobachten heißt: ich lasse durch und schreibe auf, was ich angehalten hätte. Schützen heißt: ich halte an oder frage dich.');
-      var all = el('div', { cls: 't-schutz-row' },
-        el('button', { type: 'button', cls: 't-schutz-btn', text: 'Alle scharf schalten', onclick: function () { self.setAll(true); } }),
-        el('button', { type: 'button', cls: 't-schutz-btn', text: 'Alle nur beobachten', onclick: function () { self.ask = '*'; self.render(); } }));
-      sec.appendChild(all);
-      if (this.ask === '*') sec.appendChild(this.confirmRow('Alle Regeln nur noch beobachten? Lokal geht dann alles durch.', function () { self.setAll(false); }));
-      this.state.rules.forEach(function (r) {
+      var st = this.state;
+      var sec = section('Regeln', 'Beobachten heißt: ich lasse durch und schreibe auf, was ich angehalten hätte. Schützen heißt: ich halte an oder frage dich.');
+      sec.appendChild(el('div', { cls: 't-schutz-banner ' + (st.mode === 'schuetzt' ? 'ok' : 'warn') },
+        el('strong', { text: 'Die Schärfe kommt aus dem Modus des Projekts. ' }),
+        'Sandbox: alle Regeln scharf. Beobachten und Vertraut: ich beobachte. Was den Rechner verlässt und der Grundschutz sind immer scharf. ' +
+        'Umstellen unter „Modus und Grenzen“ – hier gibt es keinen zweiten Schalter.'));
+      st.rules.forEach(function (r) {
         var count = r.sharp ? (r.stopped ? 'heute ' + r.stopped + '× angehalten' : 'heute nichts angehalten')
           : (r.would ? 'hätte heute ' + r.would + '× angehalten' : 'hätte heute nichts angehalten');
-        var ctl = r.fixed ? pill('Immer aktiv', 'ok') : el('div', { cls: 't-schutz-seg', role: 'group', 'aria-label': r.name },
-          el('button', { type: 'button', cls: !r.sharp ? 'on' : '', 'aria-pressed': String(!r.sharp), text: 'Beobachten',
-            onclick: function () { if (r.sharp) { self.ask = r.id; self.render(); } } }),
-          el('button', { type: 'button', cls: r.sharp ? 'on' : '', 'aria-pressed': String(r.sharp), text: 'Schützen',
-            onclick: function () { if (!r.sharp) self.setGroup(r.id, true); } }));
-        var row = el('div', { cls: 't-schutz-rule' + (r.fixed ? ' fixed' : '') },
+        var ctl = r.fixed ? pill('Immer scharf', 'ok') : (r.sharp ? pill('Scharf', 'ok') : pill('Beobachtet', 'warn'));
+        sec.appendChild(el('div', { cls: 't-schutz-rule' + (r.fixed ? ' fixed' : '') },
           el('div', null, el('strong', { text: r.name }), el('p', { cls: 't-schutz-hint', text: r.says })),
-          el('span', { cls: 't-schutz-hint t-schutz-rcount', text: count }), ctl);
-        sec.appendChild(row);
-        if (self.ask === r.id) sec.appendChild(self.confirmRow('„' + r.name + '“ nur noch beobachten? Lokal geht das dann durch.', function () { self.setGroup(r.id, false); }));
+          el('span', { cls: 't-schutz-hint t-schutz-rcount', text: count }), ctl));
       });
       return sec;
-    },
-
-    confirmRow: function (text, yes) {
-      var self = this;
-      return el('div', { cls: 't-schutz-banner warn t-schutz-row' }, el('span', { text: text }),
-        el('button', { type: 'button', cls: 't-schutz-btn', text: 'Ja, nur beobachten', onclick: function () { self.ask = null; yes(); } }),
-        el('button', { type: 'button', cls: 't-schutz-btn', text: 'Abbrechen', onclick: function () { self.ask = null; self.render(); } }));
-    },
-
-    setGroup: function (id, sharp) {
-      var self = this;
-      return this.call('/api/guard/group', { group: id, sharp: sharp }).then(function (st) { st.demo = self.state.demo; st.faelle = self.state.faelle; self.state = st; self.render(); });
-    },
-
-    setAll: function (sharp) {
-      var self = this, ids = this.state.rules.filter(function (r) { return !r.fixed && r.sharp !== sharp; }).map(function (r) { return r.id; });
-      return ids.reduce(function (p, id) { return p.then(function () { return self.call('/api/guard/group', { group: id, sharp: sharp }); }); }, Promise.resolve())
-        .then(function () { return self.refresh(); });
     },
 
     /* ---------------- Selbst ausprobieren ---------------- */
@@ -247,40 +214,6 @@
         r.notes.length ? el('p', { cls: 't-schutz-hint', text: (r.route === 'cloud' ? 'Vor der Cloud durch Platzhalter ersetzt: ' : 'Nur vermerkt, weil der Text auf diesem Rechner bleibt: ') + r.notes.join(', ') + '.' }) : null,
         r.cloud_preview ? el('div', null, el('strong', { text: 'So sähe die Cloud den Text:' }), el('pre', { cls: 't-schutz-pre', text: r.cloud_preview })) : null,
         r.cloud_failed ? el('p', { cls: 't-schutz-error', text: 'Die Pseudonymisierung hat die zweite Prüfung nicht bestanden – der Text ginge nicht in die Cloud.' }) : null);
-    },
-
-    /* ---------------- Vorführung ---------------- */
-    demo: function () {
-      var self = this, out = el('div', { cls: 't-schutz-stack' }, section('Vorführung', 'Sechs Fälle mit Testdaten. Das GateWay läuft echt; die KI ist eine Attrappe, die Cloud ist simuliert.'));
-      var grid = el('div', { cls: 't-schutz-cases' });
-      (this.state.faelle || []).forEach(function (f) {
-        grid.appendChild(el('div', { cls: 't-schutz-card' + (self.play && self.play.fall === f.id ? ' active' : '') },
-          el('div', { cls: 't-schutz-row' }, el('strong', { text: f.titel }), pill(f.route === 'cloud' ? 'Cloud' : 'lokal', 'muted')),
-          el('p', { cls: 't-schutz-hint', text: f.erzaehlt }),
-          el('button', { type: 'button', cls: 't-schutz-btn primary', text: 'Abspielen', onclick: function () {
-            self.call('/api/guard/demo', { fall: f.id }).then(function (r) { self.play = r; return self.refresh(); });
-          } })));
-      });
-      out.appendChild(grid);
-      if (this.play) out.appendChild(this.playView(this.play));
-      return out;
-    },
-
-    playView: function (p) {
-      var self = this;
-      return el('div', { cls: 't-schutz-card t-schutz-play' },
-        el('div', { cls: 't-schutz-row' }, el('strong', { text: p.titel }), pill(p.kopf, p.ton)),
-        el('ol', { cls: 't-schutz-flow small' }, p.stations.map(function (s, i) {
-          return el('li', { cls: 't-schutz-station ' + s.state, style: null }, el('span', { cls: 't-schutz-step', text: String(i + 1) }),
-            el('strong', { text: s.name }), el('span', { cls: 't-schutz-hint', text: s.note }));
-        })),
-        el('p', { text: p.satz }),
-        p.entscheidung ? el('div', { cls: 't-schutz-row' },
-          el('button', { type: 'button', cls: 't-schutz-btn primary', text: 'Einmal erlauben', onclick: function () { self.answer(p.entscheidung, 'einmal'); } }),
-          el('button', { type: 'button', cls: 't-schutz-btn', text: 'Ablehnen', onclick: function () { self.play = null; self.answer(p.entscheidung, 'ablehnen'); } })) : null,
-        p.gesendet.length ? el('details', { open: true }, el('summary', { text: 'Was die KI bekommen hat' }),
-          p.gesendet.map(function (g) { return el('pre', { cls: 't-schutz-pre', text: g }); })) : null,
-        p.antwort ? el('details', { open: true }, el('summary', { text: 'Antwort an den Assistenten' }), el('pre', { cls: 't-schutz-pre', text: p.antwort })) : null);
     },
 
     /* ---------------- Verlauf ---------------- */

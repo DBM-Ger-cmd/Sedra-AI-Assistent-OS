@@ -1,4 +1,4 @@
-// GUPPI Chat window in the style of the Claude Desktop app: session list on the left, conversation on the right.
+// SEDRA Chat window in the style of the Claude Desktop app: session list on the left, conversation on the right.
 // Classic script (shares the page's global scope). Sessions live in this browser (localStorage); answers come from /api/chat/reply (text only, nothing is executed).
 
 const CC_KEY = 'guppi.cchat.v1';
@@ -34,7 +34,7 @@ function ccRender(){
   const box = document.getElementById('ccMsgs'), s = ccSession();
   box.replaceChildren();
   if(!s || !s.messages.length){
-    const e = el('div','cc-empty'); e.append(el('h2',null,'Wie kann GUPPI helfen?'), el('div',null,'Die Antworten kommen vom lokalen Modell, es wird nichts ausgeführt.')); box.append(e); return;
+    const e = el('div','cc-empty'); e.append(el('h2',null,'Wie kann SEDRA helfen?'), el('div',null,'Die Antworten kommen vom lokalen Modell, es wird nichts ausgeführt.')); box.append(e); return;
   }
   s.messages.forEach(m=>ccBubble(m));
   box.scrollTop = box.scrollHeight;

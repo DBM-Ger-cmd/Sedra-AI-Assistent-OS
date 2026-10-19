@@ -1,0 +1,45 @@
+# Arbeitsplatz-Wissen der Shell „Fisch“ (19.10.2026): SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen.
+arbeitsplatz:
+  satz: 'Ein Goldfischglas, eine Wolke als Eingabe, Antworten als Blasen: Übersetzen zwischen Rollen, ein Nachrichten-Brief aus deinen Quellen, Aufnahme mit Sprache → Text, Transkripte mit Erkenntnissen von SEDRA.'
+  zonen:
+  - name: Kopf
+    wo: 'oben: die Marke, die vier Modi Übersetzen · News · Aufnahme · Transkript, der Hinweis zu Strg+K und Alt+S'
+  - name: Wolke
+    wo: 'links oben: die Eingabe; Enter sendet den Satz in den Modus (Übersetzung, Interessen des Briefs oder Suche im Transkript)'
+  - name: Glas
+    wo: 'links: das Goldfischglas mit dem Fisch – er hört, denkt und antwortet (Zustände), nur zum Ansehen'
+  - name: Blasen
+    wo: 'rechts: die Antwort des Modus als Blase – das Werkzeug des Modus; Nachweise in einer Seitenspalte'
+  - name: Schublade
+    wo: 'rechts: das Gespräch – Knopf „Mit SEDRA sprechen“ unten rechts'
+  woerter:
+    uebersetzen:
+      ist: der Modus Übersetzen – eine Nachricht für eine andere Rolle (Alltag, Business, Management, IT, Einkauf, Vertrieb) neu formulieren
+      objekt:
+        type: uebersetzung
+        id: wolke
+        title: Übersetzen
+    news:
+      ist: der Modus News – Profil und ein Brief aus den Quellen, die du gibst; kein Netz, nichts erfunden
+      objekt:
+        type: nachrichten
+        id: brief
+        title: Nachrichten
+    aufnahme:
+      ist: der Modus Aufnahme – der Rekorder des Kerns; aufnehmen, abspielen, Sprache → Text mit whisperx oder whisper auf dem Rechner, sonst Abschrift von Hand
+      objekt:
+        type: aufnahme
+        id: rekorder
+        title: Rekorder
+    transkript:
+      ist: der Modus Transkript – importieren (TXT, SRT, VTT), suchen, pseudonymisieren, prüfen, freigeben, exportieren; „Erkenntnisse mit SEDRA“ liest die Fassung
+      objekt:
+        type: transkript
+        id: alle
+        title: Transkripte
+  begriffe:
+    wolke: 'Die Eingabe der Fisch-Shell. Der Satz geht in den gewählten Modus; das Werkzeug macht daraus seine Arbeit.'
+    blase: 'Die Antwort der Fisch-Shell: das Werkzeug des Modus in einer Blase rechts vom Glas.'
+    golden record: 'Ein freigegebenes Transkript: die Fassung ist eingefroren, Export nennt sie; eine neue Fassung gibt es erst nach Zurücknahme.'
+    erkenntnisse: 'Was SEDRA aus einer Fassung liest: Zusammenfassung, Entscheidungen, offene Fragen, Aufgaben – an die Fassung gebunden; aus einer Aufgabe wird ein Auftrag.'
+    provider: 'Das Programm auf dem Rechner, das Sprache zu Text macht (whisperx, whisper). Fehlt es, sagt der Rekorder das und zeigt den Befehl.'

@@ -3,15 +3,15 @@
 // Drei Arten, wie der Captain sie im Test am PC beschrieben hat:
 //   Ort       ein Ort aus der Ortskunde des Vertrags (Maschinenraum, Werkstatt, …) – öffnet sein Fenster
 //   Fenster   das Fenster, das gerade vorn steht – z. B. eine bestimmte Aufgabe oder ein Modell
-//   Auftrag   ein Satz an GUPPI („Lade das Coder-Modell“, „öffne den Maschinenraum“) – geht beim Klick ins Gespräch und dort
-//             den gewohnten Weg; was GUPPI daraus vorschlägt, bekommt der Captain als Knopf. Ausgeführt wird hier nichts.
+//   Auftrag   ein Satz an SEDRA („Lade das Coder-Modell“, „öffne den Maschinenraum“) – geht beim Klick ins Gespräch und dort
+//             den gewohnten Weg; was SEDRA daraus vorschlägt, bekommt der Captain als Knopf. Ausgeführt wird hier nichts.
 // Dazu Name und Bildzeichen. `entryFrom` ist rein und wird mit node geprüft – die Prüfung im Server ist dieselbe Form.
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
 
-  const KINDS = [['place', 'Ort'], ['object', 'Fenster vorn'], ['auftrag', 'Auftrag an GUPPI']];
+  const KINDS = [['place', 'Ort'], ['object', 'Fenster vorn'], ['auftrag', 'Auftrag an SEDRA']];
 
   // Aus dem, was im Formular steht, ein Eintrag – oder ein Satz, was fehlt (rein)
   function entryFrom(form, places, iconFor){
@@ -29,7 +29,7 @@
       entry = {kind: 'object', object, label: label || object.title.slice(0, 24), icon: form.icon || iconFor(o.type)};
     }else if(form.kind === 'auftrag'){
       const text = String(form.text || '').trim();
-      if(!text) return {error: 'Bitte den Satz an GUPPI schreiben.'};
+      if(!text) return {error: 'Bitte den Satz an SEDRA schreiben.'};
       if(text.length > 400) return {error: 'Höchstens 400 Zeichen.'};
       entry = {kind: 'auftrag', text, label: label || text.slice(0, 24), icon: form.icon || 'auftrag'};
     }else return {error: 'Bitte eine Art wählen.'};
@@ -82,11 +82,11 @@
       }else{
         const ta = d().el('textarea');
         ta.rows = 2; ta.maxLength = 400;
-        ta.placeholder = 'Ein Satz an GUPPI, z. B. „Lade das Coder-Modell“ oder „öffne den Maschinenraum“';
-        ta.setAttribute('aria-label', 'Auftrag an GUPPI');
+        ta.placeholder = 'Ein Satz an SEDRA, z. B. „Lade das Coder-Modell“ oder „öffne den Maschinenraum“';
+        ta.setAttribute('aria-label', 'Auftrag an SEDRA');
         ta.value = state.text;
         ta.oninput = ()=>{ state.text = ta.value; };
-        body.append(ta, d().el('small', null, 'Beim Klick geht der Satz ins Gespräch. GUPPI schlägt vor – du entscheidest per Knopf.'));
+        body.append(ta, d().el('small', null, 'Beim Klick geht der Satz ins Gespräch. SEDRA schlägt vor – du entscheidest per Knopf.'));
       }
       const name = d().el('input');
       name.maxLength = 24; name.placeholder = 'Name (leer: aus dem Ort oder Satz)';

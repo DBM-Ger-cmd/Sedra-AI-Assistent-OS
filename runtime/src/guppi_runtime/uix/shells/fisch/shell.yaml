@@ -1,0 +1,14 @@
+# Shell „Fisch“ (19.10.2026) – nach dem Translator-Fisch-Konzept v0.1: ein Goldfischglas, ein Goldfisch, die Eingabe als Wolke,
+# Antworten als Blasen; Modus Übersetzen | News | Aufnahme | Transkript. Die Werkzeuge zeichnen den Inhalt der Blase; die Shell kennt keins beim Namen
+# (außer dem Gespräch, das der Vertrag nennt – es ist eine Schublade wie in Paperclip).
+shell:
+  id: fisch
+  name: "Fisch"
+  description: "Goldfischglas, Wolke und Blasen: Übersetzen zwischen Rollen, Nachrichten-Brief aus Quellen, Aufnahme und Sprache → Text, Transkripte – klein, freundlich, lokal."
+  version: 1.0.0
+  entry: {js: shell.js, css: shell.css}
+  provides: [dock, talk, notify]
+  layout: {persist: browser}
+  api: []
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

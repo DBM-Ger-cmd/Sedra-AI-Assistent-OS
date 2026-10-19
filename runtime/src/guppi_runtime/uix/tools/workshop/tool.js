@@ -2,7 +2,7 @@
 // It writes nothing by itself: loading goes through the runtime's own route, every change of a recipe is a decision at the desk.
 //
 // Build 24 (Ticket B6-G-06, Klaus 15.10.2026: „keine Dummys“): zwei Abschnitte, die der Baum des Cockpits seit Build 7 versprach und die
-// nur das alte GUPPI-XP-Fenster hatte (uix/js/model_add.js, standard_test.js) – hier mit denselben Routen des Servers:
+// nur das alte SEDRA-XP-Fenster hatte (uix/js/model_add.js, standard_test.js) – hier mit denselben Routen des Servers:
 //   Neues Modell   GGUF wählen (Dialog dieses PCs, Modellordner oder Pfad) → Datei lesen → Rezept prüfen → Freigabe als Entscheidung.
 //                  Geschrieben wird erst nach der Freigabe (POST /api/model/add/request legt das Gate vor; das Anwenden ist die Antwort
 //                  „freigeben und anwenden“ im Werkzeug Entscheidungen – derselbe Weg wie jede Änderung an role_routing.yaml).

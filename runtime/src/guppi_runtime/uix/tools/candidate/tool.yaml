@@ -1,7 +1,7 @@
 tool:
   id: candidate
   name: "Kandidat"
-  description: "Was GUPPI an den Dateien ändern will – Diff, Zeile für Zeile, mit den Verben des Zustands."
+  description: "Was SEDRA an den Dateien ändern will – Diff, Zeile für Zeile, mit den Verben des Zustands."
   version: 1.0.0
   kind: object
   handles: [candidate]

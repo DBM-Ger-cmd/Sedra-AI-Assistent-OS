@@ -75,7 +75,7 @@
 
     // Ablage: anlegen. Dieselben Wege wie „＋ Neu“ im Cockpit (Regel 8), nur als Menü.
     function fileMenu(box){
-      item(box, 'Vorhaben', 'der Satz, um den es geht – GUPPI macht Aufgaben daraus',
+      item(box, 'Vorhaben', 'der Satz, um den es geht – SEDRA macht Aufgaben daraus',
            ()=>shell.openObject({type: 'intent', id: 'alle', title: 'Vorhaben', collection: true}));
       item(box, 'Projekt', 'einen Ordner als Projekt anlegen', ()=>shell.openObject({type: 'project', id: 'neu', title: 'Neues Projekt'}));
       item(box, 'Modell hinzufügen', 'GGUF wählen, Rezept prüfen, laden', ()=>shell.openObject({type: 'model', id: 'neu', title: 'Modell hinzufügen'}));
@@ -124,7 +124,7 @@
       if(list.length > 1) item(box, 'Alle schließen', 'bis auf das Gespräch', ()=>shell.windows.closeAll());
       const front = shell.windows.front();
       if(front && front.type !== 'talk') item(box, 'An die Ablage heften', (front.title || front.type) + ' – als Feld unten', ()=>shell.shelf.pin(front));
-      item(box, 'Feld in der Ablage anlegen …', 'Ort, Fenster oder Auftrag an GUPPI, mit Bildzeichen', ()=>shell.shelf.pin(null));
+      item(box, 'Feld in der Ablage anlegen …', 'Ort, Fenster oder Auftrag an SEDRA, mit Bildzeichen', ()=>shell.shelf.pin(null));
     }
 
     function helpMenu(box){

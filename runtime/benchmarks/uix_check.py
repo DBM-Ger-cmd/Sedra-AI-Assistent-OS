@@ -178,6 +178,30 @@ PROFILES = {
         'menu': {'box': '.sh-min-menu', 'input': '.sh-min-menu input', 'rows': "()=>[...document.querySelectorAll('.sh-min-menu-item b')].map(b=>b.textContent)",
                  'closed': "()=>!document.querySelector('.sh-min-menu')"},
     },
+    # Shell „Fisch“ (19.10.2026): Kopf, Glas, Wolke, Blasen; das Gespräch ist eine Schublade (Knopf unten rechts), Nachweise in der Blase
+    'fisch': {
+        'zones': ('fi-kopf', 'fi-glas', 'fi-wolke', 'fi-blasen'),
+        'gauges': '[data-tool^="gauge-"]',
+        'pane': MEASURE_PANE_GENERIC,
+        'segment': None,
+        'leftovers': "()=>[...document.querySelectorAll('.fi-blasen .fi-tool')].map(s=>s.dataset.tool)",
+        'count': None,                     # eine Blase zur Zeit; was ein Neuladen übersteht, ist der Modus (test_uix_shell_fisch)
+        'count_word': '',
+        'menu': None,
+        'before_talk': "()=>{ const f = document.querySelector('.fi-fab'); if(f && getComputedStyle(f).display !== 'none') f.click(); }",
+    },
+    # Shell „KI Gateway für KMU“ (Folien-Design): Kopf, Werkstück, Gespräch; die vier Schritte des Ablaufs sind ihre Messwerte
+    'gateway-kmu': {
+        'zones': ('sh-gateway-kmu-kopf', 'sh-gateway-kmu-body', 'sh-gateway-kmu-talk'),
+        'gauges': '.sh-gateway-kmu-schritt',
+        'pane': "(tool) => {const slot = document.querySelector('.sh-gateway-kmu-tool[data-tool=\"' + tool + '\"]'); if(!slot) return {missing:true, note:'das Werkzeug hat keinen Container'}; const r = slot.getBoundingClientRect(); return {text: slot.innerText.trim().length, slots: document.querySelectorAll('.sh-gateway-kmu-tool').length, filled: slot.innerText.trim().length > 0 || slot.childElementCount > 0, evidence: false, actions: document.querySelectorAll('.sh-gateway-kmu-verbs button').length, inside: r.right <= innerWidth + 1, scroll: 0};}",
+        'segment': None,
+        'leftovers': "()=>[...document.querySelectorAll('.sh-gateway-kmu-werkstueck .sh-gateway-kmu-tool')].map(s=>s.dataset.tool)",
+        'no_evidence': True,     # die Shell zeigt Nachweise (slot: nachweis) bewusst nicht daneben – das Gateway hat seinen Überblick selbst
+        'count': None,
+        'count_word': '',
+        'menu': None,
+    },
 }
 
 
@@ -393,6 +417,9 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
                 target['id'] = found['candidate'] if target['type'] == 'candidate' else LAST_VORGANG if target['type'] == 'gateway' else found['task']
             if target['id'] is None:
                 check('tool:' + tid, None, 'nicht geprüft – im Prüfprojekt gibt es kein Objekt dieses Typs (kein Fehler des Werkzeugs)')
+                continue
+            if profile.get('no_evidence') and manifest_slot.get(tid) == 'nachweis':
+                check('tool:' + tid, None, 'nicht geprüft – diese Shell zeigt keine Nachweise daneben (Profil)')
                 continue
             page.evaluate("(o)=>window.sedraBoot.ctx.bus.emit('object.open', o)", target)
             page.wait_for_timeout(1400)

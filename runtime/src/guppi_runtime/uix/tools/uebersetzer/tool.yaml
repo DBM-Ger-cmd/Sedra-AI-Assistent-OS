@@ -1,0 +1,21 @@
+# Werkzeug „Übersetzer“ (Fisch, 19.10.2026): eine Nachricht für eine andere Rolle neu formulieren – Alltag, Business, Management,
+# IT/Entwicklung, Einkauf, Vertrieb. Bedeutung vor Stil, nichts erfinden, Unsicherheit bleibt sichtbar (Translator Fisch v0.1).
+tool:
+  id: uebersetzer
+  name: "Übersetzer"
+  description: "Eine Nachricht für eine andere Rolle neu formulieren – Bedeutung erhalten, nichts erfinden, Unsicherheit sichtbar."
+  version: 1.0.0
+  kind: object
+  handles: [uebersetzung]
+  order: 40
+  slot: inhalt
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/fisch/rollen
+    - POST /api/fisch/uebersetzen    # ein Modellaufruf durch den Control Master (Mission, Audit, Inhaltsschutz)
+  events:
+    emits: []
+    listens: [model.changed]
+  trust: CORE
+  tests: []
+  needs: {ui: ">=1.0 <2"}

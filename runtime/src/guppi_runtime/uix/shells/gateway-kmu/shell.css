@@ -1,0 +1,217 @@
+/* Shell „KI Gateway für KMU“ – Gestaltung der Präsentation (Folien B6, Designvorschlag V4.2 von Klaus, 19.10.2026).
+   Farben nur über die Tokens --kmu-… (ui/tokens.css); Mischungen mit color-mix aus denselben Tokens. Kein Hex in dieser Datei. */
+
+/* Die Tokens der Werkzeuge auf dieses Design umlegen: die Werkzeuge folgen ohne eigene Änderung. */
+.sh-gateway-kmu{
+  --bg:var(--kmu-bg);
+  --panel:var(--kmu-box-2);
+  --panel-2:var(--kmu-box);
+  --line:var(--kmu-line);
+  --line-soft:color-mix(in srgb,var(--kmu-line) 60%,transparent);
+  --text:var(--kmu-text);
+  --muted:var(--kmu-sub);
+  --heading:var(--kmu-title);
+  --accent:var(--kmu-accent);
+  --accent-text:var(--kmu-deep);
+  --radius:12px;
+  --radius-2:16px;
+  --shadow:0 18px 50px color-mix(in srgb,var(--kmu-deep) 70%,transparent);
+  --kmu-glow:color-mix(in srgb,var(--kmu-accent) 28%,transparent);
+  --kmu-glass:color-mix(in srgb,var(--kmu-box) 72%,transparent);
+  --kmu-glass-line:color-mix(in srgb,var(--kmu-accent) 30%,var(--kmu-line));
+  display:flex;
+  flex-direction:column;
+  height:100vh;                /* Kopf und Gespräch bleiben stehen, das Werkstück rollt dazwischen (App, keine Seite) */
+  background:radial-gradient(ellipse at 85% 0%,color-mix(in srgb,var(--kmu-box) 55%,transparent),transparent 55%),var(--kmu-bg);
+  color:var(--kmu-text);
+  font-family:var(--font);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- Kopf: Bühne mit dem Bogen aus Folie 11 rechts, Marke links, der Ablauf als Stepper unten ---------- */
+.sh-gateway-kmu-kopf{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:24px;
+  min-height:280px;
+  padding:30px 40px 24px;
+  transition:min-height .25s ease,padding .25s ease;
+  background:var(--kmu-deep);
+  border-bottom:1px solid var(--kmu-line);
+}
+.sh-gateway-kmu-grafik{
+  position:absolute;
+  z-index:-1;
+  inset:0 0 0 auto;
+  width:min(64%,960px);
+  height:100%;
+  object-fit:cover;
+  object-position:right 28%;
+  pointer-events:none;
+  mask-image:linear-gradient(90deg,transparent 0%,black 42%);
+  -webkit-mask-image:linear-gradient(90deg,transparent 0%,black 42%);
+}
+.sh-gateway-kmu-kopf::after{                 /* weicher Übergang in den Hintergrund des Werkstücks */
+  content:"";position:absolute;z-index:-1;inset:auto 0 0 0;height:90px;pointer-events:none;
+  background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--kmu-bg) 85%,transparent));
+}
+.sh-gateway-kmu-marke{position:relative;max-width:620px}
+.sh-gateway-kmu-eyebrow{
+  margin:0 0 14px;
+  font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--kmu-accent);
+}
+.sh-gateway-kmu-titel{
+  margin:0;
+  font-size:clamp(30px,3.2vw,var(--kmu-titel-groesse));
+  font-weight:800;
+  line-height:1.08;
+  letter-spacing:-.025em;
+  color:var(--kmu-title);
+}
+.sh-gateway-kmu-titel::after{content:"";display:block;width:56px;height:3px;margin-top:16px;border-radius:2px;background:var(--kmu-accent)}
+.sh-gateway-kmu-sub{margin:16px 0 0;font-size:var(--kmu-sub-groesse);font-weight:600;color:var(--kmu-title)}
+.sh-gateway-kmu-satz{margin:6px 0 0;max-width:46ch;line-height:1.5;color:var(--kmu-sub)}
+
+/* Der Ablauf: fünf Schritte als nummerierte Glas-Pillen mit Verbindungslinie; nur zum Lesen, der letzte ist der Mensch */
+.sh-gateway-kmu-ablauf{position:relative;display:flex;flex-wrap:wrap;gap:10px 0;list-style:none;margin:0;padding:0;counter-reset:schritt}
+.sh-gateway-kmu-schritt{
+  position:relative;
+  display:inline-flex;align-items:center;gap:10px;
+  padding:7px 18px 7px 8px;
+  border-radius:999px;
+  border:1px solid var(--kmu-glass-line);
+  background:var(--kmu-glass);
+  backdrop-filter:blur(8px);
+  color:var(--kmu-title);
+  font-size:14px;font-weight:600;letter-spacing:.01em;
+  white-space:nowrap;
+}
+.sh-gateway-kmu-schritt b{font-weight:inherit}
+.sh-gateway-kmu-schritt::before{
+  counter-increment:schritt;content:counter(schritt);
+  display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;
+  background:var(--kmu-accent);color:var(--kmu-deep);font-size:12px;font-weight:800;
+}
+.sh-gateway-kmu-schritt[data-pfeil]{margin-right:26px}
+.sh-gateway-kmu-schritt[data-pfeil]::after{      /* die Linie zum nächsten Schritt statt eines Pfeilzeichens */
+  content:"";position:absolute;left:100%;top:50%;width:26px;height:1px;
+  background:linear-gradient(90deg,var(--kmu-accent),color-mix(in srgb,var(--kmu-accent) 35%,transparent));
+}
+.sh-gateway-kmu-schritt:last-child{background:var(--kmu-accent);border-color:var(--kmu-accent);color:var(--kmu-deep)}
+.sh-gateway-kmu-schritt:last-child::before{background:var(--kmu-deep);color:var(--kmu-accent)}
+
+/* Beim Rollen im Werkstück wird der Kopf kompakt: Titel und Ablauf bleiben, der Rest weicht */
+.sh-gateway-kmu-kompakt{min-height:0;padding:14px 40px 14px;flex-direction:row;align-items:center;justify-content:flex-start;gap:28px}
+.sh-gateway-kmu-kompakt .sh-gateway-kmu-eyebrow,.sh-gateway-kmu-kompakt .sh-gateway-kmu-sub,.sh-gateway-kmu-kompakt .sh-gateway-kmu-satz,
+.sh-gateway-kmu-kompakt .sh-gateway-kmu-titel::after,.sh-gateway-kmu-kompakt::after{display:none}
+.sh-gateway-kmu-kompakt .sh-gateway-kmu-titel{font-size:20px;white-space:nowrap}
+.sh-gateway-kmu-kompakt .sh-gateway-kmu-schritt{padding:4px 12px 4px 5px;font-size:12.5px}
+.sh-gateway-kmu-kompakt .sh-gateway-kmu-schritt::before{width:20px;height:20px;font-size:11px}
+.sh-gateway-kmu-kompakt .sh-gateway-kmu-schritt[data-pfeil]{margin-right:16px}
+.sh-gateway-kmu-kompakt .sh-gateway-kmu-schritt[data-pfeil]::after{width:16px}
+.sh-gateway-kmu-kompakt .sh-gateway-kmu-grafik{opacity:.55}
+
+/* ---------- Werkstück: Verben als Leiste, darunter das Werkzeug; die Kugel aus Folie 4 leuchtet schwach im Hintergrund ---------- */
+.sh-gateway-kmu-body{position:relative;isolation:isolate;display:flex;flex-direction:column;gap:14px;flex:1 1 auto;min-height:0;overflow:auto;padding:22px 40px 28px}
+.sh-gateway-kmu-glow{
+  position:fixed;z-index:-1;right:-40px;bottom:calc(36vh - 60px);width:min(34vw,460px);height:auto;
+  opacity:.32;pointer-events:none;
+  mask-image:radial-gradient(ellipse at center,black 35%,transparent 72%);
+  -webkit-mask-image:radial-gradient(ellipse at center,black 35%,transparent 72%);
+}
+.sh-gateway-kmu-verbs{display:flex;flex-wrap:wrap;gap:10px;flex:0 0 auto}
+.sh-gateway-kmu-verbs:empty{display:none}
+.sh-gateway-kmu-werkstueck{flex:1 0 auto;min-width:0}
+.sh-gateway-kmu-tool{min-width:0}
+
+/* Schaltflächen des Vertrags (ui/tokens.css .s-btn) in dieser Shell: Pillen, ruhig, mit Licht beim Zeigen */
+.sh-gateway-kmu .s-btn{
+  padding:8px 16px;
+  border-radius:999px;
+  border:1px solid var(--kmu-glass-line);
+  background:var(--kmu-glass);
+  color:var(--kmu-title);
+  font-weight:600;
+  line-height:1.2;
+  transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .15s ease;
+}
+.sh-gateway-kmu .s-btn:hover{background:var(--kmu-box);border-color:var(--kmu-accent);box-shadow:0 8px 22px var(--kmu-glow);transform:translateY(-1px)}
+.sh-gateway-kmu .s-btn:active{transform:translateY(0);box-shadow:none}
+.sh-gateway-kmu .s-btn:disabled{transform:none;box-shadow:none}
+.sh-gateway-kmu .s-btn.p,.sh-gateway-kmu-verbs .s-btn:first-child{background:var(--kmu-accent);border-color:var(--kmu-accent);color:var(--kmu-deep)}
+.sh-gateway-kmu .s-btn.p:hover,.sh-gateway-kmu-verbs .s-btn:first-child:hover{background:color-mix(in srgb,var(--kmu-accent) 85%,var(--kmu-title))}
+.sh-gateway-kmu .s-btn:focus-visible{outline:2px solid var(--kmu-accent);outline-offset:3px}
+
+/* Eingaben in dieser Shell: dunkle Felder mit Akzentrand beim Fokus */
+.sh-gateway-kmu input,.sh-gateway-kmu textarea,.sh-gateway-kmu select{
+  background:var(--kmu-deep);color:var(--kmu-text);border:1px solid var(--kmu-line);border-radius:10px;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.sh-gateway-kmu input:focus-visible,.sh-gateway-kmu textarea:focus-visible,.sh-gateway-kmu select:focus-visible{
+  outline:none;border-color:var(--kmu-accent);box-shadow:0 0 0 3px var(--kmu-glow);
+}
+
+/* ---------- Gespräch unten: Glasleiste mit Lichtkante, begrenzte Höhe, hochscrollbar, in der Höhe zu ziehen ---------- */
+.sh-gateway-kmu-talk{
+  position:relative;
+  flex:0 0 auto;
+  height:var(--talk-h);        /* das Werkzeug „Gespräch“ zieht die Höhe selbst (Griff oben) und setzt --talk-h auf diese Zone */
+  --talk-h:160px;
+  overflow:hidden;
+  padding:0 40px 10px;
+  border-top:1px solid var(--kmu-line);
+  background:color-mix(in srgb,var(--kmu-deep) 92%,var(--kmu-box));
+  backdrop-filter:blur(10px);
+  box-shadow:0 -18px 40px color-mix(in srgb,var(--kmu-deep) 60%,transparent);
+}
+.sh-gateway-kmu-talk::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;pointer-events:none}   /* die Lichtkante, bewegt: siehe unten */
+
+/* ---------- Bewegung: nur transform und opacity, lange Wege, alles ruhig. prefers-reduced-motion schaltet in tokens.css alles ab ---------- */
+@keyframes kmu-schweben{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-10px,-8px,0) scale(1.06)}}
+@keyframes kmu-atmen{from{opacity:.22;transform:scale(1) rotate(0deg)}to{opacity:.4;transform:scale(1.08) rotate(6deg)}}
+@keyframes kmu-erscheinen{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes kmu-licht{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes kmu-puls{0%,100%{box-shadow:0 0 0 0 var(--kmu-glow)}50%{box-shadow:0 0 0 7px transparent}}
+.sh-gateway-kmu-grafik{
+  animation:kmu-schweben 22s ease-in-out infinite alternate;
+  translate:calc(var(--kmu-px,0) * 14px) calc(var(--kmu-py,0) * 10px);   /* Parallaxe mit der Maus (shell.js setzt --kmu-px/--kmu-py) */
+  transition:translate .6s ease-out,opacity .25s ease;
+  will-change:transform,translate;
+}
+.sh-gateway-kmu-glow{animation:kmu-atmen 11s ease-in-out infinite alternate;transform-origin:center;will-change:transform,opacity}
+.sh-gateway-kmu-marke>*,.sh-gateway-kmu-schritt{animation:kmu-erscheinen .7s cubic-bezier(.2,.7,.2,1) both}
+.sh-gateway-kmu-marke>:nth-child(1){animation-delay:.05s}
+.sh-gateway-kmu-marke>:nth-child(2){animation-delay:.15s}
+.sh-gateway-kmu-marke>:nth-child(3){animation-delay:.25s}
+.sh-gateway-kmu-marke>:nth-child(4){animation-delay:.32s}
+.sh-gateway-kmu-schritt:nth-child(1){animation-delay:.35s}
+.sh-gateway-kmu-schritt:nth-child(2){animation-delay:.43s}
+.sh-gateway-kmu-schritt:nth-child(3){animation-delay:.51s}
+.sh-gateway-kmu-schritt:nth-child(4){animation-delay:.59s}
+.sh-gateway-kmu-schritt:nth-child(5){animation-delay:.67s}
+.sh-gateway-kmu-schritt:last-child::before{animation:kmu-puls 3.2s ease-out 1.2s infinite}
+.sh-gateway-kmu-talk::before{
+  background:linear-gradient(90deg,transparent 20%,var(--kmu-accent) 50%,transparent 80%);
+  background-size:200% 100%;
+  animation:kmu-licht 7s linear infinite;
+}
+.sh-gateway-kmu-kompakt .sh-gateway-kmu-grafik{animation-play-state:paused}   /* kompakt: der Kopf ist klein, Bewegung lenkt nur ab */
+
+/* Rollbalken in den Farben der Shell */
+.sh-gateway-kmu *{scrollbar-width:thin;scrollbar-color:var(--kmu-box) transparent}
+
+@media (max-width: 900px){
+  .sh-gateway-kmu-kopf{padding:24px 20px 20px;min-height:0;gap:20px}
+  .sh-gateway-kmu-grafik{width:100%;opacity:.45;mask-image:linear-gradient(180deg,transparent 0%,black 60%);-webkit-mask-image:linear-gradient(180deg,transparent 0%,black 60%)}
+  .sh-gateway-kmu-marke{max-width:100%}
+  .sh-gateway-kmu-schritt[data-pfeil]{margin-right:10px}
+  .sh-gateway-kmu-schritt[data-pfeil]::after{display:none}
+  .sh-gateway-kmu-body,.sh-gateway-kmu-talk{padding-left:16px;padding-right:16px}
+  .sh-gateway-kmu-glow{display:none}
+}

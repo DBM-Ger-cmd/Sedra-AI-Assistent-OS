@@ -1,4 +1,4 @@
-// Guppy meter window: how much code GUPPI and Claude have written (cards plus a weekly grid, like the example picture of the Captain of 2026-10-08).
+// Guppy meter window: how much code SEDRA and Claude have written (cards plus a weekly grid, like the example picture of the Captain of 2026-10-08).
 // Classic script (shares the page's global scope). Read-only: it only reads /api/meter.
 
 const METER_RANGES = [['today','Heute'],['7','7d'],['30','30T'],['all','Alle']];
@@ -21,7 +21,7 @@ function meterGrid(grid){
     const line = el('div','meter-row'); line.append(el('span','meter-day',METER_DAYS[r]));
     row.forEach(cell=>{
       const c = el('span','meter-cell'+(cell ? ' l'+cell.level : ' none'));
-      if(cell) c.title = cell.date+': '+meterNumber(cell.lines)+' Zeilen (GUPPI '+meterNumber(cell.guppi)+', Claude '+meterNumber(cell.claude)+')';
+      if(cell) c.title = cell.date+': '+meterNumber(cell.lines)+' Zeilen (SEDRA '+meterNumber(cell.guppi)+', Claude '+meterNumber(cell.claude)+')';
       line.append(c);
     });
     box.append(line);
@@ -30,7 +30,7 @@ function meterGrid(grid){
 }
 
 
-// Coin hole (coin_hole.js, built by GUPPI): coins of the tokens used fall into a hole. The first reading drops the coins of the last run, later ones the new tokens.
+// Coin hole (coin_hole.js, built by SEDRA): coins of the tokens used fall into a hole. The first reading drops the coins of the last run, later ones the new tokens.
 function meterTokens(){ return meterView && meterView.tokens; }
 
 function feedCoinHole(){
@@ -92,11 +92,11 @@ function renderMeter(){
   if(!v){ box.append(el('div','muted','Daten werden geladen ...'), stale); return; }
   const c = v.ranges[meterRange] || v.ranges.all;
   const cards = el('div','meter-cards');
-  cards.append(meterCard('Zeilen gesamt', meterNumber(c.total_lines)), meterCard('Von GUPPI', meterNumber(c.guppi_lines)+' ('+c.guppi_share+' %)'), meterCard('Von Claude', meterNumber(c.claude_lines)),
+  cards.append(meterCard('Zeilen gesamt', meterNumber(c.total_lines)), meterCard('Von SEDRA', meterNumber(c.guppi_lines)+' ('+c.guppi_share+' %)'), meterCard('Von Claude', meterNumber(c.claude_lines)),
                meterCard('Aktive Tage', meterNumber(c.active_days)), meterCard('Spitzentag', c.peak_date || '–'), meterCard('Letzte 30 Tage', meterNumber(c.last_30_lines)));
-  const share = el('div','meter-share'); share.title = 'Anteil von GUPPI am geschriebenen Code (Ziel: mindestens 50 %)';
+  const share = el('div','meter-share'); share.title = 'Anteil von SEDRA am geschriebenen Code (Ziel: mindestens 50 %)';
   const fill = el('div','meter-share-fill'); fill.style.width = Math.max(0, Math.min(100, c.guppi_share))+'%'; share.append(fill);
-  box.append(cards, share, el('small','meter-foot','GUPPI-Anteil '+c.guppi_share+' % · Ziel mindestens 50 %'), meterGrid(v.grid));
+  box.append(cards, share, el('small','meter-foot','SEDRA-Anteil '+c.guppi_share+' % · Ziel mindestens 50 %'), meterGrid(v.grid));
   const legend = el('div','meter-legend'); legend.append(el('span',null,'weniger'));
   [0,1,2,3,4].forEach(l=>legend.append(el('span','meter-cell l'+l))); legend.append(el('span',null,'mehr'));
   const tokens = tokenPanel();

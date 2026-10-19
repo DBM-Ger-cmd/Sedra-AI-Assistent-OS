@@ -14,7 +14,7 @@ Kopieren, Ordner und `id` umbenennen, ausfüllen. Der Ordner `_template` wird ni
 - Stil nur unter `.t-<id>`; keine Farbe ohne Token.
 - ≤ 400 Zeilen je Datei; eine `README.md` je Modul.
 
-## Für GUPPI (Vertrag §7)
+## Für SEDRA (Vertrag §7)
 Eine Spec in `benchmarks/devvm_specs/tool_<id>.py` beschreibt Zielobjekt, Handlungen, Routen und Ereignisse; die reinen Teile
 werden als Node-Tests geprüft, der Browser-Teil über `uix_check`. Ein so gebautes Werkzeug trägt `trust: GUPPI_BUILT` und geht
 durch denselben Install-Gate wie ein fremdes Modul.

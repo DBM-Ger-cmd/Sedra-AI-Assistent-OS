@@ -1,6 +1,6 @@
 // UI contract 1.0 – der Creator einer Shell aus Vorgabe, der Teil im Browser (Build 17, Schritt 3).
 //
-// Ein Block, den das Werkzeug „Module“ und der Einstieg gleich zeigen: ein Satz an GUPPI oder eine der drei Vorlagen, dann
+// Ein Block, den das Werkzeug „Module“ und der Einstieg gleich zeigen: ein Satz an SEDRA oder eine der drei Vorlagen, dann
 // Satz und Skizze der Vorgabe, dann „So anlegen“. Der Server macht die Vorgabe (desk/vorgabe.py, Schema-Zwang am Modell) und
 // legt sie an (module_scaffold mit vorgabe); hier wird nichts erfunden – nur gezeigt und gefragt.
 // Classic script: definiert window.sedraVorgabe; die Skizze (sketchRows) ist rein und läuft in node.
@@ -61,10 +61,10 @@
         }, 'p'));
     };
 
-    const ask = d().button('GUPPI fragen', async()=>{
+    const ask = d().button('SEDRA fragen', async()=>{
       const mid = id.value.trim() || 'meine';
       const out = await api('/api/uix/vorgabe', {method: 'POST', body: {text: text.value, id: mid, name: name.value.trim()}});
-      show(out.vorgabe, out.sentence, 'Vorschlag von GUPPI (' + (out.model || 'lokales Modell') + ', ' + out.rounds + ' Runde' + (out.rounds > 1 ? 'n' : '') + ') – geprüft gegen das Schema. Nichts ist angelegt.');
+      show(out.vorgabe, out.sentence, 'Vorschlag von SEDRA (' + (out.model || 'lokales Modell') + ', ' + out.rounds + ' Runde' + (out.rounds > 1 ? 'n' : '') + ') – geprüft gegen das Schema. Nichts ist angelegt.');
     }, 'p');
     buttons.append(ask);
     box.append(head, hint, text, idRow, buttons, preview);

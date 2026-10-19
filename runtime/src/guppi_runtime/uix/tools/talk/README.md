@@ -5,7 +5,7 @@ Das eine Eingabefeld des Cockpits. Antwort, Auftrag, Navigationsphrase und „ei
 Es ruft `/api/chat/reply`; Entscheidungen beantwortet es über die Shell, nie selbst. Ein „ja“ oder „nein“ liest die
 wartenden Entscheidungen frisch (Build 19) – es beantwortet die angekündigte, sonst die einzige; warten mehrere, fragt es nach.
 
-**GUPPI bewegt sich in der Oberfläche (Build 19).** Das Modell hat Werkzeuge zum Öffnen (`open_place`, `open_object`), zum
+**SEDRA bewegt sich in der Oberfläche (Build 19).** Das Modell hat Werkzeuge zum Öffnen (`open_place`, `open_object`), zum
 Nachsehen (`list_actions`) und zum Vorschlagen (`propose_action`, `propose_intent`). Keines tut etwas: die Antwort trägt
 `ui_actions`, und dieses Werkzeug zeichnet dafür Knöpfe unter die Antwort. Erst der Klick öffnet das Fenster oder ruft
 `POST /api/actions` – denselben Weg wie jeder Werkzeugknopf, mit Warnsatz (`confirm`) und Gate darunter. Hat der Captain im

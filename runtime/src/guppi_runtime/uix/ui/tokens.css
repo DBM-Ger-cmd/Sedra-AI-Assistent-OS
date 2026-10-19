@@ -38,7 +38,7 @@
   /* the sea chart */
   --sea-bg:#12232a;
   --sea-line:#2f6478;
-  /* GUPPI itself, small in the first instrument */
+  /* SEDRA itself, small in the first instrument */
   --guppy-1:#9ff1ff;
   --guppy-2:#0f84b5;
   --guppy-line:#09668e;
@@ -160,3 +160,47 @@ button:focus-visible,[role="button"]:focus-visible,.s-row:focus-visible,input:fo
 .s-empty{color:var(--muted);padding:10px 0}
 
 @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+
+/* Gestaltung „KI Gateway für KMU“ (Shell gateway-kmu, Folien B6, 19.10.2026): Farben aus den Folien gemessen.
+   Nur für diese Shell; die übrigen Shells und Werkzeuge kennen die Namen nicht und bleiben unverändert. */
+:root{
+  --kmu-bg:#0d174e;        /* Folienhintergrund */
+  --kmu-deep:#080d33;      /* Schlussfolie, tiefer Hintergrund */
+  --kmu-box:#243269;       /* Kästchen des Ablaufs */
+  --kmu-box-2:#1a2862;     /* innere Fläche */
+  --kmu-line:#2c3d86;      /* feine Linie */
+  --kmu-accent:#53ddd0;    /* türkiser Akzentstrich */
+  --kmu-title:#ffffff;     /* Überschrift */
+  --kmu-sub:#b4c2ec;       /* Untertitel */
+  --kmu-text:#e8edff;      /* Fließtext */
+  --kmu-titel-groesse:34px;   /* Titel der Folien */
+  --kmu-sub-groesse:17px;     /* Untertitel */
+}
+
+/* Gestaltung „Fisch“ (Shell fisch, Translator-Fisch-Konzept v0.1, 19.10.2026): helle, freundliche Oberfläche, ein Goldfischglas,
+   ein Goldfisch, Wolke und Blasen. Nur für diese Shell; die Werkzeuge darin folgen den allgemeinen Tokens (Thema Klar/Nacht). */
+:root{
+  --fisch-himmel:#dff1fb;      /* der Raum um das Glas (hell) */
+  --fisch-himmel-2:#f6fbfe;    /* oben heller */
+  --fisch-wasser:#8fd3f4;      /* Wasser oben */
+  --fisch-wasser-2:#3f9fd6;    /* Wasser unten */
+  --fisch-glas:#ffffff;        /* Glanz des Glases */
+  --fisch-glasrand:#7fb6d4;    /* Rand des Glases */
+  --fisch-orange:#ff8a3d;      /* der Goldfisch */
+  --fisch-orange-2:#ffb347;    /* Flosse, Licht */
+  --fisch-auge:#1b2a38;        /* Auge */
+  --fisch-blase:#ffffff;       /* Blasen */
+  --fisch-wolke:#ffffff;       /* die Eingabewolke */
+  --fisch-wolke-rand:#bcd7e6;
+  --fisch-text:#173040;        /* Schrift auf hellem Grund */
+  --fisch-muted:#5a7587;
+  --fisch-sand:#f0dfb6;        /* Boden des Glases */
+}
+html[data-theme="nacht"], :root:not([data-theme="klar"]){
+  --fisch-himmel:#0f1b2b;      /* nachts: dunkler Raum, das Glas leuchtet */
+  --fisch-himmel-2:#16263a;
+  --fisch-wolke:#1d2f44;
+  --fisch-wolke-rand:#3b5570;
+  --fisch-text:#e6eef5;
+  --fisch-muted:#9db3c4;
+}

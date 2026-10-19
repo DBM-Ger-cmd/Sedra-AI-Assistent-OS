@@ -54,7 +54,7 @@ class DirectStart(unittest.TestCase):
                 self.assertIsNone(choose_start_shell(hub, None))
                 with self.assertRaises(ValueError) as ctx:
                     choose_start_shell(hub, 'gibt-es-nicht')
-                self.assertIn('Vorhanden: cockpit, gateway-studio, guppi-xp, minimal, paperclip, start', str(ctx.exception))
+                self.assertIn('Vorhanden: cockpit, fisch, gateway-kmu, gateway-studio, guppi-xp, minimal, paperclip, start', str(ctx.exception))
                 self.assertEqual(hub.gateway.manifest()['shell']['id'], 'minimal', 'ein Fehler ändert nichts')
             finally:
                 hub.close()
@@ -87,7 +87,7 @@ class InTheBrowser(unittest.TestCase):
                 errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
                 page.goto(url); wait_until_started(page); page.wait_for_timeout(1200)
                 names = page.evaluate("()=>[...document.querySelectorAll('.st-card h2')].map(h=>h.textContent)")
-                self.assertEqual(sorted(names), ['Cockpit', 'GUPPI XP', 'KI GateWay Studio', 'Minimal', 'Paperclip'], 'die Auswahl selbst steht nicht zur Wahl; der alte Desktop schon')
+                self.assertEqual(sorted(names), ['Cockpit', 'Fisch', 'KI GateWay Studio', 'KI Gateway für KMU', 'Minimal', 'Paperclip', 'SEDRA XP'], 'die Auswahl selbst steht nicht zur Wahl; der alte Desktop schon')
                 page.fill('.st-make-row input[aria-label="Name der neuen Oberfläche"]', 'meine-bruecke')
                 page.click('.st-make-row button:has-text("Anlegen")'); page.wait_for_timeout(1200)
                 names = page.evaluate("()=>[...document.querySelectorAll('.st-card h2')].map(h=>h.textContent)")
@@ -143,7 +143,7 @@ class InTheBrowser(unittest.TestCase):
                 # der Satz an GUPPI
                 page.fill('.vg-text', 'nur das Werkstück, das Gespräch als Schublade, keine Suche, Start im Logbuch')
                 page.fill('.vg input[aria-label="id der Oberfläche"]', 'schlicht')
-                page.click('.vg button:has-text("GUPPI fragen")')
+                page.click('.vg button:has-text("SEDRA fragen")')
                 page.wait_for_function("()=>{ const e=document.querySelector('.vg-sentence'); return e && e.textContent.length > 0; }", timeout=20000)
                 sentence = page.evaluate("()=>(document.querySelector('.vg-sentence') || {}).textContent || ''")
                 self.assertIn('Schublade', sentence); self.assertIn('Logbuch', sentence)

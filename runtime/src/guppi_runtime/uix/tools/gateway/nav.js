@@ -12,7 +12,7 @@
     ['uebersicht', 'Überblick', 'Stationen und was wartet'],
     ['vorgaenge', 'Vorgänge', 'Anfragen anlegen und prüfen'],
     ['dateien', 'Dateien', 'Originale und Fassungen'],
-    ['regeln', 'Regeln', 'Schalter und Regelbuch'],
+    ['regeln', 'Regeln', 'Regelbuch und Schärfe'],
     ['ausprobieren', 'Selbst ausprobieren', 'Text prüfen, Übung, Frage'],
     ['verlauf', 'Verlauf', 'Vorgänge und Schutz heute']
   ];

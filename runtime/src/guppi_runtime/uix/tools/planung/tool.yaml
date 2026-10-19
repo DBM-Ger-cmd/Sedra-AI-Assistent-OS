@@ -1,0 +1,25 @@
+# Werkzeug „Planungstisch“ (19.10.2026): die Arbeitsumgebung für KI-Assistenten in Paperclip – im Gespräch mit einer Rolle
+# werden Ziele (Vorhaben mit Stufen) und Aufträge (Aufgaben) festgelegt. Nichts davon läuft ohne den Klick des Captains.
+tool:
+  id: planung
+  name: "Planungstisch"
+  description: "Mit einem Assistenten im Gespräch Ziele und Aufträge festlegen – jeder Vorschlag ist ein Knopf, erst der Klick legt an."
+  version: 1.0.0
+  kind: object
+  handles: [planung]
+  order: 15
+  slot: inhalt
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - POST /api/planung/reply      # das Gespräch am Planungstisch (Rolle, Werkzeuge des Planens; Control Master, Audit, Inhaltsschutz)
+    - POST /api/intent/create      # „Übernehmen“ eines Ziels – führt nichts aus
+    - POST /api/chat               # „Übernehmen“ eines Auftrags: eine Aufgabe, geplant, nicht ausgeführt
+    - POST /api/actions            # ein vorgeschlagenes Verb – derselbe Weg wie jeder Knopf, Gates darunter
+    - GET /api/models              # die Rollen aus den Rezepten (wie die Besatzung)
+    - POST /api/objects            # der Stand: Ziele und Aufgaben, die heute festgelegt wurden
+  events:
+    emits: [object.open]
+    listens: [task.changed, tools.refresh]
+  trust: CORE
+  tests: []
+  needs: {ui: ">=1.0 <2"}

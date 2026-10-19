@@ -11,8 +11,10 @@ tool:
     - POST /api/chat/reply
     - POST /api/chat/kombi
     - GET /api/decisions
-    - POST /api/actions          # Build 19: ein Knopf unter GUPPIs Antwort – derselbe Weg wie jeder Werkzeugknopf, Gates darunter
-    - POST /api/intent/create    # Build 19: „Als Vorhaben anlegen“ – führt nichts aus
+    - POST /api/actions          # Build 19: ein Knopf unter SEDRAs Antwort – derselbe Weg wie jeder Werkzeugknopf, Gates darunter
+    - POST /api/intent/create    # Build 19: „Als Vorhaben anlegen“ – führt nichts aus; seit 19.10. mit Stufen
+    - POST /api/chat             # „Als Auftrag anlegen“ (propose_task): eine Aufgabe, geplant, nicht ausgeführt
+    - POST /api/objects          # „lade …“ im Gespräch: die Modelle lesen (read-only); das Laden geht als Verb über /api/actions – vorher rief das Gespräch /api/models und /api/model/load außerhalb des Manifests, 403 (Verbindungsprüfung 19.10.)
     - GET /api/cloud             # Wahl neben Senden: welche Cloud-Modelle bereit sind (nur lesen)
     - POST /api/cloud/models     # ... und ihre Modellliste beim Anbieter (nur lesen)
     - POST /api/chat/cloud       # Gespräch mit einem gewählten Cloud-Modell, durch den Inhaltsschutz

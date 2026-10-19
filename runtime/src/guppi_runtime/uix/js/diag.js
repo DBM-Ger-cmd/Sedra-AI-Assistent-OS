@@ -1,5 +1,5 @@
 // Chat diagnosis: the state bar (/api/diagnose), chat commands (/status, /fehler, /rebind, /modelle, /log, /hilfe) and the details under an error.
-// Classic script; uses slashCommand, rowsText and worstState of diag_panel.js (built by GUPPI). Reads only, except `/rebind ja`, which the Captain types or confirms himself.
+// Classic script; uses slashCommand, rowsText and worstState of diag_panel.js (built by SEDRA). Reads only, except `/rebind ja`, which the Captain types or confirms himself.
 
 let diagTimer = null;
 
