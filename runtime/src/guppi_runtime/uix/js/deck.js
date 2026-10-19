@@ -27,7 +27,7 @@ function deckChips(st, models, gates, projects){
   if(models && !loaded) chips.push(withModel && withModel.length ? ['Modell laden', ()=>openModels()] : ['Neues Modell hinzufügen', ()=>openModelAdd()]);
   if(models && loaded) chips.push(['Teststrecke', ()=>openModelsAt('Teststrecke')]);
   if(projects && !projects.length) chips.push(['Neues Projekt anlegen', ()=>createProject()]);
-  chips.push(['Mit GUPPI sprechen', ()=>openGuppi()]);
+  chips.push(['Mit SEDRA sprechen', ()=>openGuppi()]);
   if(loaded) chips.push(['Als Karte planen …', ()=>{ const i = document.getElementById('deckInput'); i.value = '/plan '; i.focus(); }]);
   return chips.slice(0, 4);
 }

@@ -1,5 +1,5 @@
 // Werkzeug „Modus und Grenzen“ – die vier Stellen, an denen der Mensch steht (COCKPIT_MODUL_v1 Regel 7, §3).
-// Es zeigt, was gilt, oder – beim ersten Mal – was GUPPI vorschlägt und warum. Bestätigen und Ändern sind Freigaben; beides
+// Es zeigt, was gilt, oder – beim ersten Mal – was SEDRA vorschlägt und warum. Bestätigen und Ändern sind Freigaben; beides
 // geht über die Entscheidung, nicht an ihr vorbei. `frei` gibt es für Netz und Löschen nicht: der Knopf fehlt, nicht nur die Wirkung.
 
 (function(){

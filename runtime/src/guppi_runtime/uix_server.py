@@ -242,29 +242,67 @@ class UIXHub:
         return store
 
     def intent_create(self, payload):
-        """Ein Vorhaben anlegen. Ohne Gate – es wird nichts ausgeführt, es ist der Satz, um den es geht."""
+        """Ein Vorhaben anlegen. Ohne Gate – es wird nichts ausgeführt, es ist der Satz, um den es geht.
+        Mit `stufen` (Liste) oder `vorlage` (Kennung aus GET /api/intent/vorlagen) bekommt es seine Stufen (19.10.2026)."""
+        from .desk import vorhaben_vorlagen as vv
         project = self._active_project(payload.get('project_id'))
-        entry = self.intents.add(payload.get('title'), payload.get('text'), (project or {}).get('project_id'), utcnow())
-        self.runtime.audit.append('INTENT_CREATED', component='desk', payload={'id': entry['id'], 'title': entry['title'][:80]})
+        stufen, vorlage = payload.get('stufen'), payload.get('vorlage')
+        title, text = payload.get('title'), payload.get('text')
+        if vorlage and vorlage != 'leer':
+            v = vv.finde(vorlage)
+            if v is None:
+                raise ValueError('unknown_vorlage')
+            stufen = stufen or v['stufen']
+            title, text = title or v['titel'], text or v['satz']
+        entry = self.intents.add(title, text, (project or {}).get('project_id'), utcnow(), stufen=stufen, vorlage=vorlage)
+        self.runtime.audit.append('INTENT_CREATED', component='desk', payload={'id': entry['id'], 'title': entry['title'][:80],
+                                                                                'stufen': len(entry.get('stufen') or [])})
         self.events.publish('tools.refresh', {})
         return entry
 
-    def intent_to_task(self, intent_id, extra=None):
-        """GUPPI macht aus dem Vorhaben eine Aufgabe: geplant, nicht ausgeführt – wie jede Aufgabe aus dem Gespräch."""
+    def intent_vorlagen(self, payload=None):
+        """GET /api/intent/vorlagen – die Vorlagen für Vorhaben mit Stufen. Nur Text, legt nichts an."""
+        from .desk import vorhaben_vorlagen as vv
+        return {'vorlagen': vv.liste()}
+
+    def intent_to_task(self, intent_id, extra=None, stufe=None):
+        """GUPPI macht aus dem Vorhaben eine Aufgabe: geplant, nicht ausgeführt – wie jede Aufgabe aus dem Gespräch.
+        Mit `stufe` (Index) wird die Stufe zur Aufgabe: ihr Text ist der Auftrag, das Vorhaben der Rahmen; die Aufgabe hängt an der Stufe."""
         entry = self.intents.get(intent_id)
         if entry is None:
             raise ValueError('unknown_intent')
-        text = (str(extra or '').strip() or entry['text'] or entry['title'])
+        stufen = entry.get('stufen') or []
+        if stufe is not None:
+            try:
+                stufe = int(stufe)
+            except (TypeError, ValueError):
+                raise ValueError('unknown_stufe')
+            if not 0 <= stufe < len(stufen):
+                raise ValueError('unknown_stufe')
+            s = stufen[stufe]
+            text = f"{entry['title']} – Stufe {stufe + 1} von {len(stufen)}: {s.get('name')}. " + (str(extra or '').strip() or s.get('text') or '')
+        else:
+            text = (str(extra or '').strip() or entry['text'] or entry['title'])
         out = self.create_chat_mission({'intent': text[:400], 'project_id': entry.get('project_id')})
         mission_id = out['mission']['mission_id']
-        self.intents.attach(entry['id'], mission_id)
-        self.runtime.audit.append('INTENT_TASK_CREATED', component='desk', payload={'intent': entry['id'], 'mission_id': mission_id})
-        return {'intent': entry['id'], 'mission_id': mission_id, 'mission': out['mission']}
+        self.intents.attach(entry['id'], mission_id, stufe=stufe)
+        self.runtime.audit.append('INTENT_TASK_CREATED', component='desk', payload={'intent': entry['id'], 'mission_id': mission_id,
+                                                                                     'stufe': stufe})
+        return {'intent': entry['id'], 'mission_id': mission_id, 'mission': out['mission'], 'stufe': stufe}
 
     def _intent_object(self, entry):
         missions = {m['mission_id']: m for m in self.missions()}
         state, summary = desk_intents.state_of(entry, missions)
-        return desk_objects.intent_object(entry, state, summary)
+        obj = desk_objects.intent_object(entry, state, summary)
+        obj['stufen'] = desk_intents.stufen_of(entry, missions)
+        obj['vorlage'] = entry.get('vorlage') or ''
+        if obj['stufen']:
+            done = sum(1 for s in obj['stufen'] if s['state'] == 'fertig')
+            cur = next((s for s in obj['stufen'] if s['current']), None)
+            obj['summary'] = entry['title'] + f" – {done} von {len(obj['stufen'])} Stufen fertig" + (f" · jetzt: {cur['name']}" if cur else '')
+            if state == 'noch keine Aufgabe':
+                obj['state'] = 'offen'
+        return obj
 
     # ---- Build 9: ein fremdes Modul einbauen (Vertrag §6 „Installation“, §7)
     INSTALL_ACTION = 'install_module'
@@ -592,6 +630,24 @@ class UIXHub:
             from .gateway.wissen import GatewayWissen
             w = self.__dict__['_gw_wissen'] = GatewayWissen(self.project_root, self.gw)
         return w
+
+    @property
+    def fisch(self):
+        """Der Fisch (19.10.2026, fisch/hub.py): Übersetzer, Nachrichten aus gegebenen Quellen, Transkripte – die Werkzeuge der Shell „Fisch“."""
+        f = self.__dict__.get('_fisch')
+        if f is None:
+            from .fisch.hub import FischHub
+            f = self.__dict__['_fisch'] = FischHub(self)
+        return f
+
+    @property
+    def sprache(self):
+        """Der Kern „Sprache“ (19.10.2026, sprache/hub.py): Aufnehmen und Sprache → Text für jede Shell – Provider auf dem Rechner (whisperx, whisper)."""
+        s = self.__dict__.get('_sprache')
+        if s is None:
+            from .sprache.hub import SpracheHub
+            s = self.__dict__['_sprache'] = SpracheHub(self)
+        return s
 
     @property
     def arbeitsplatz(self):
@@ -1622,7 +1678,9 @@ class UIXHub:
                         + (' · Sperre ' + ('belegt: ' + str(lease.get('purpose'))[:40] if lease else 'frei')), 'tone': 'warn' if lease and not lease.get('mine') else 'off'},
                 'decisions': {'value': len(snap['decisions']), 'hint': (snap['decisions'][0]['title'][:48] if snap['decisions'] else 'nichts wartet'),
                               'tone': 'warn' if snap['decisions'] else 'ok'},
-                'tasks': {'value': len(running), 'hint': f"{len(running)} läuft · {len(waiting)} wartet", 'tone': 'off'},
+                'tasks': {'value': len(running),
+                          'hint': f"{len(running)} {'läuft' if len(running) == 1 else 'laufen'} · {len(waiting)} {'wartet' if len(waiting) == 1 else 'warten'} auf dich",
+                          'tone': 'warn' if waiting else 'off'},
                 'cloud': self._cloud_gauge(),
                 'mode': self._mode_gauge()}
 
@@ -1665,13 +1723,29 @@ class UIXHub:
             'message': 'Mission vorbereitet. Noch keine Ausführung gestartet.',
         }
 
-    CHAT_SYSTEM = ('Du bist GUPPI, der Assistent des Captains in SEDRA. Antworte kurz und auf Deutsch, in einfachem Text. '
+    CHAT_SYSTEM = ('Du bist SEDRA, der Assistent des Captains. Antworte kurz und auf Deutsch, in einfachem Text. '
                    'Du bewegst dich in der Oberfläche über deine Werkzeuge: Fenster öffnen (open_place, open_object), nachsehen, was mit '
                    'einem Objekt geht (list_actions), und Handlungen vorschlagen (propose_action, propose_intent). Was du vorschlägst, '
                    'bekommt der Captain als Knopf; erst sein Klick führt es aus, und was eine Freigabe braucht, läuft danach über die '
                    'Entscheidungen. Du änderst keine Dateien und startest keine Programme außerhalb dieser Handlungen. '
                    'Dateien und Ordner siehst du nur, wenn der Captain sie anhängt; dann steht ihr Inhalt in der Nachricht. '
                    'Behaupte nie, etwas getan zu haben – sag, was du vorgeschlagen oder geöffnet hast.')
+
+    # Der Planungstisch (19.10.2026): ein Assistent in einer Rolle plant mit dem Captain – jede Festlegung ist ein Vorschlag (Knopf)
+    PLANUNG_SYSTEM = ('Du bist {rolle} am Planungstisch der Firma und planst mit dem Captain. Antworte kurz und auf Deutsch, in einfachem Text. '
+                      'Deine Aufgabe: aus dem Gespräch Ziele und Aufträge machen. Ein Ziel mit mehreren Schritten legst du mit propose_intent an '
+                      '(Titel, Satz, und die Stufen in der Reihenfolge, 2 bis 12); einen einzelnen Auftrag mit klarem Ergebnis mit propose_task. '
+                      'Frag nach, wenn das Ziel oder das Ergebnis unklar ist – aber höchstens eine Rückfrage, dann schlag vor. '
+                      'Was du vorschlägst, bekommt der Captain als Knopf; erst sein Klick legt es an, und es wird nichts ausgeführt. '
+                      'Behaupte nie, etwas angelegt zu haben. Wo du stehst, siehst du mit arbeitsplatz_stand und list_missions.')
+    PLANUNG_ROLLEN = {'planner': 'der Planer', 'researcher': 'der Rechercheur', 'coder': 'der Entwickler', 'reviewer': 'der Prüfer',
+                      'documentation': 'der Dokumentar', 'context curator': 'der Kontextpfleger'}
+
+    def planung_reply(self, payload):
+        """POST /api/planung/reply {text, history, rolle, mission_id} – das Gespräch am Planungstisch: derselbe Weg wie chat_reply
+        (Control Master, Audit, Inhaltsschutz), nur mit dem Systemsatz der Rolle und den Werkzeugen des Planens (chat_tools.PLANUNG_TOOLS)."""
+        rolle = str(payload.get('rolle') or 'planner').strip().lower()[:40]
+        return self.chat_reply(dict(payload, modus='planung', rolle=rolle))
 
     CHAT_STATE_WORDS = ('modell', 'kontext', 'profil', 'schalter', 'geladen', 'läuft', 'laeuft', 'gpu', 'grafikspeicher', 'einstellung', 'kv-cache',
                         'projekt', 'karte', 'mission', 'audit', 'verlauf', 'doku', 'dokument',
@@ -1812,10 +1886,17 @@ class UIXHub:
                 mission = rt.missions.load(mission_id)
             # The model may call the read-only environment tools (chat_tools.py) before it answers. Every model turn goes through the
             # Control Master like a plain chat call (feasibility, usage, audit); the tool calls are audited below.
-            box = ChatTools(self)
-            # Build 24: das Modell weiß, in welcher Oberfläche es arbeitet (Zonen, eigene Wörter, Wege) – aus dem Code, nicht geraten
-            messages = [{'role': 'system', 'content': self.CHAT_SYSTEM + ' ' + self.arbeitsplatz.beschreibung(shell) + self.CHAT_TOOL_NOTE}, *turns,
-                        {'role': 'user', 'content': attached + text}]
+            planung = payload.get('modus') == 'planung'
+            if planung:
+                from .chat_tools import PLANUNG_TOOLS
+                box = ChatTools(self, PLANUNG_TOOLS)
+                rolle = str(payload.get('rolle') or 'planner')
+                system = self.PLANUNG_SYSTEM.format(rolle=self.PLANUNG_ROLLEN.get(rolle, 'der Assistent „' + rolle[:40] + '“')) + ' ' + self.arbeitsplatz.beschreibung(shell)
+            else:
+                box = ChatTools(self)
+                # Build 24: das Modell weiß, in welcher Oberfläche es arbeitet (Zonen, eigene Wörter, Wege) – aus dem Code, nicht geraten
+                system = self.CHAT_SYSTEM + ' ' + self.arbeitsplatz.beschreibung(shell) + self.CHAT_TOOL_NOTE
+            messages = [{'role': 'system', 'content': system}, *turns, {'role': 'user', 'content': attached + text}]
 
             # A question about the system (model, context, profile, switches) must be looked up: the first turn then forces a tool call.
             # Without this a small model answers from memory (2026-10-14: a right-looking context value that no tool had read).
@@ -1837,7 +1918,7 @@ class UIXHub:
 
             res = run_tool_loop(post, model, messages, box, {'temperature': 0.7}, max_tokens=2048 if attached else 1024)   # the model reasons first; answers about attachments are longer
         self.runtime.audit.append('UIX_CHAT_TOOLS', component='uix', payload={'model': model, 'calls': box.calls, 'turns': res.get('turns'), 'finish': res.get('finish'),
-                                                                             'offered': [a['kind'] for a in box.ui_actions]})
+                                                                             'offered': [a['kind'] for a in box.ui_actions], 'modus': 'planung' if planung else 'gespraech'})
         if res.get('error'):
             return {'status': 'failed', 'message': str(res['error'])[:300]}
         content = res.get('content')
@@ -1934,7 +2015,7 @@ class UIXHub:
         with self.lock:
             m = self.runtime.brain.create_mission(f'Schalter {section}.{key} auf {"an" if value else "aus"} stellen', None, 'S1')
             gate = self.runtime.guard.create_gate(m['identity']['mission_id'], self.SWITCH_ACTION, target,
-                                                  risks=['wirkt erst nach Neustart der GUPPI-Oberfläche'], rollback_available=True, request_binding=binding)
+                                                  risks=['wirkt erst nach Neustart der SEDRA-Oberfläche'], rollback_available=True, request_binding=binding)
             m['human_gates']['pending'].append(gate)
             m['context']['switch_request'] = binding
             self.runtime.missions.save(m)
@@ -3122,6 +3203,13 @@ def make_server(hub: UIXHub, port=0):
                     '/api/strip': hub.strip_view,                           # read-only: the instruments of the Cockpit strip
                     '/api/boundaries': lambda: hub.boundaries_view(),        # read-only: Modus und Grenzen dieses Projekts
                     '/api/guard/status': hub.guard_status,                  # read-only: der Inhaltsschutz (Build 16) – nie Text
+                    '/api/intent/vorlagen': hub.intent_vorlagen,            # read-only: Vorlagen für Vorhaben mit Stufen (19.10.2026)
+                    '/api/fisch/rollen': hub.fisch.rollen,                  # read-only: Rollen des Übersetzers (Fisch)
+                    '/api/fisch/profil': hub.fisch.profil,                  # read-only: das News-Profil des Projekts (Fisch)
+                    '/api/fisch/transkripte': hub.fisch.transkripte,        # read-only: die Transkripte und die Auskunft zum STT-Provider (Fisch)
+                    '/api/sprache/status': hub.sprache.status,             # read-only: der STT-Provider dieses Rechners (Kern Sprache)
+                    '/api/sprache/aufnahmen': hub.sprache.aufnahmen,       # read-only: die Aufnahmen (ohne Daten)
+                    '/api/gateway/vorgaben': hub.gateway_vorgaben_liste,    # read-only: die gemerkten Vorgaben – das Werkzeug liest sie per GET (tool.yaml), bisher stand die Route nur unter POST
                     '/api/uix/vorgaben': hub.vorgaben_view,                 # read-only: die drei Vorlagen einer Shell aus Vorgabe (Build 17)
                     '/api/gateway/vorgaenge': hub.gateway_list,             # read-only: Vorgänge, Vorgaben, Textdateien des Projekts (Build 19)
                     '/api/projects': hub.projects.list,
@@ -3230,6 +3318,24 @@ def make_server(hub: UIXHub, port=0):
                     '/api/project/files': hub.project_files,        # read-only
                     '/api/project/file': hub.project_file,          # read-only
                     '/api/chat/reply': hub.chat_reply,
+                    '/api/planung/reply': hub.planung_reply,
+                    # Fisch (19.10.2026): Übersetzung und Brief rufen das Modell (Mission, Audit, Inhaltsschutz); Transkripte schreiben nur ins Projekt
+                    '/api/fisch/uebersetzen': hub.fisch.uebersetzen,
+                    '/api/fisch/profil/speichern': hub.fisch.profil_speichern,
+                    '/api/fisch/brief': hub.fisch.brief,
+                    '/api/fisch/transkript': hub.fisch.transkript,
+                    '/api/fisch/transkript/import': hub.fisch.transkript_import,
+                    '/api/fisch/transkript/suche': hub.fisch.transkript_suche,
+                    '/api/fisch/transkript/pseudonymisieren': hub.fisch.transkript_pseudonymisieren,
+                    '/api/fisch/transkript/status': hub.fisch.transkript_status,
+                    '/api/fisch/transkript/export': hub.fisch.transkript_export,
+                    '/api/fisch/transkript/erkenntnisse': hub.fisch.transkript_erkenntnisse,   # SEDRA liest die Fassung: Zusammenfassung, Entscheidungen, Fragen, Aufgaben
+                    '/api/sprache/aufnahme': hub.sprache.abspielen,                    # read-only: ein Record mit den Daten (Kern Sprache, 19.10.2026)
+                    '/api/sprache/aufnahme/beginnen': hub.sprache.beginnen,
+                    '/api/sprache/aufnahme/stueck': hub.sprache.stueck,
+                    '/api/sprache/aufnahme/beenden': hub.sprache.beenden,
+                    '/api/sprache/aufnahme/loeschen': hub.sprache.loeschen,
+                    '/api/sprache/aufnahme/transkribieren': hub.sprache.transkribieren,   # Provider im Hintergrund oder Abschrift von Hand        # der Planungstisch (19.10.2026): Rolle, Werkzeuge des Planens, sonst wie chat_reply
                     '/api/chat/attach': hub.chat_attach,            # read-only
                     '/api/diagnose/explain': uix_diag.explain,      # read-only
                     '/api/diagnose/command': lambda payload: uix_diag.command(hub, payload),      # reads; only `/rebind ja` changes the hardware binding
@@ -3334,7 +3440,7 @@ def serve(project_root: Path, architecture_root: Path, port=0, open_browser=Fals
     except ValueError as exc:
         print(str(exc), flush=True); hub.close(); return 4
     server, url = make_server(hub, port)
-    print('SEDRA Desktop (GUPPI UIX):', url, flush=True)
+    print('SEDRA Desktop (UIX):', url, flush=True)
     if chosen:
         print(f'Oberfläche für diesen Start: {chosen} (die Wahl in uix.yaml bleibt unverändert).', flush=True)
     print('Loopback-only. Captain gates remain enforced by the runtime.', flush=True)

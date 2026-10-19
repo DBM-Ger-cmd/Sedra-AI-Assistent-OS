@@ -1,0 +1,33 @@
+/* Werkzeug „Planungstisch“ – nur im eigenen Container, nur Tokens. Links das Gespräch, rechts der Tisch. */
+.t-planung{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);gap:var(--gap-3);min-height:480px;align-items:start}
+.t-planung-gespraech{display:flex;flex-direction:column;gap:var(--gap-2);min-width:0;min-height:480px;border:1px solid var(--line);border-radius:var(--radius-2);background:var(--panel);padding:12px 14px}
+.t-planung-kopf{display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--line-soft)}
+.t-planung-rolle{border:1px solid var(--line);border-radius:var(--radius);padding:4px 8px;background:var(--panel-2);color:var(--text);font-size:var(--size-small)}
+.t-planung-log{flex:1 1 auto;min-height:260px;max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:6px;padding:4px 2px}
+.t-planung-line{margin:0;line-height:1.5;font-size:var(--size)}
+.t-planung-line b{color:var(--accent);margin-right:2px}
+.t-planung-line.me b{color:var(--muted)}
+.t-planung-line.note{color:var(--muted);font-size:var(--size-small)}
+.t-planung-line.warn{color:var(--warn)}
+.t-planung-eingabe{display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid var(--line-soft)}
+.t-planung-eingabe textarea{width:100%;resize:vertical;min-height:52px;border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;background:var(--panel-2);color:var(--text)}
+.t-planung-knoepfe{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.t-planung-knoepfe small{margin-left:auto}
+
+.t-planung-tisch{display:flex;flex-direction:column;gap:10px;min-width:0}
+.t-planung-vorschlaege,.t-planung-festgelegt{display:flex;flex-direction:column;gap:8px}
+.t-planung-karte{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius);background:var(--panel)}
+.t-planung-karte.task{border-left-color:var(--ok)}
+.t-planung-karte.verb{border-left-color:var(--warn)}
+.t-planung-karte.open{border-left-color:var(--muted)}
+.t-planung-karte-kopf{display:flex;align-items:baseline;gap:8px}
+.t-planung-karte-kopf b{min-width:0;overflow-wrap:anywhere}
+.t-planung-art{flex:0 0 auto;font-size:var(--size-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.t-planung-karte-text{margin:0;color:var(--muted);font-size:var(--size-small);line-height:1.45;white-space:pre-wrap}
+.t-planung-stufen{margin:0;padding-left:20px;font-size:var(--size-small);line-height:1.5;columns:2;column-gap:18px}
+.t-planung-stufen li{break-inside:avoid}
+.t-planung-karte-row{display:flex;gap:6px}
+.t-planung-fest{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line-soft);border-radius:var(--radius);background:var(--panel-2);cursor:pointer}
+.t-planung-fest:hover{border-color:var(--line)}
+.t-planung-fest span:nth-child(2){flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width: 900px){.t-planung{grid-template-columns:1fr}.t-planung-stufen{columns:1}}

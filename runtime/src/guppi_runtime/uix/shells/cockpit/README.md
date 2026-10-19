@@ -9,6 +9,13 @@ Registrierung, wer einen Objekttyp zeichnet.
 Build 24 (B6-G-06): „Modell hinzufügen“ und „Teststrecke“ öffnen die Abschnitte der Werkstatt; keine Zeile ohne Werkzeug dahinter (Routinen entfernt). Schrift nur in Token-Stufen. **`arbeitsplatz.yaml`** – das Wissen über diese Oberfläche (Satz, Zonen, wo was ist, Begriffe), aus dem SEDRA im Gespräch antwortet; es gehört zur Shell (Klaus 15.10.).
 **Slots:** strip, tree, dock, talk, palette · **Layout:** je Browser gemerkt · **Vertrauen:** CORE
 
+Politur 19.10.2026 (Charakter unverändert – Leiste, Baum, Reiter, Nachweise daneben, Gespräch unten): `shell.css` trägt wieder die
+Regeln für Dock (`.dk-*`), Palette (`.pal*`) und Menü „＋ Neu“ (`.ck-menu`), die in Build 24 fehlten – Reiter lagen als nackte
+Zeilen übereinander. Dazu: Baumzeilen mit Titel und Zustand untereinander, aktive Zeile mit Akzentstreifen, klebende Gruppenköpfe,
+der Baum rollt zur markierten Zeile; Reiter mit Akzentkante, Schließkreuz beim Zeigen, mittlere Maustaste schließt, das Rad rollt
+die Reiterreihe; Instrumente geben nach, statt dass die Leiste überhängt; Nachweisspalte bleibt beim Rollen stehen; Palette und Menü
+mit Hervorhebung; Schrift nur in Token-Stufen, Mischungen per `color-mix`, kein Hex.
+
 ## Dateien
 - `dock.js` – das eigene kleine Dock (Reiter, Teilen, Ziehen, Layout als JSON). Gehört in die Shell, nicht in den Kern (§3a).
 - `tree.js` – Navigation; eine Zeile sendet `object.open`, mehr tut sie nicht.

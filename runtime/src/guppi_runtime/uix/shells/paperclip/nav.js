@@ -17,6 +17,9 @@
     {label: 'Ziele', object: {type: 'intent', id: 'alle', title: 'Ziele', collection: true}},
     {label: 'Agenten', object: {type: 'agent', id: 'alle', title: 'Agenten', collection: true}},
     {label: 'Kosten', object: {type: 'meter', id: 'meter', title: 'Kosten'}},
+    {section: 'Assistenten'},     // 19.10.2026: die Arbeitsumgebung der KI-Assistenten – im Gespräch Ziele und Aufträge festlegen
+    {label: 'Planungstisch', object: {type: 'planung', id: 'tisch', title: 'Planungstisch'}},
+    {label: 'Rekorder', object: {type: 'aufnahme', id: 'rekorder', title: 'Rekorder'}},      // Kern Sprache (19.10.): aufnehmen, Sprache → Text
     {section: 'Werkzeuge'},
     {label: 'Werkstatt (Modelle)', object: {type: 'model', id: 'alle', title: 'Werkstatt', collection: true}},
     {label: 'Bibliothek', object: {type: 'skill', id: 'own', title: 'Bibliothek'}},

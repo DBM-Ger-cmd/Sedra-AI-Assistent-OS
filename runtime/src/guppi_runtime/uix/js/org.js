@@ -1,5 +1,5 @@
 // Organigramm in the Besatzung window: who reports to whom and what each one holds – the model of an agent company (Paperclip:
-// board, org chart, goals, approvals, budgets) mapped onto what SEDRA already has. Captain = board (the gates), GUPPI = the one
+// board, org chart, goals, approvals, budgets) mapped onto what SEDRA already has. Captain = board (the gates), SEDRA = the one
 // agent that steers, the roles = the recipes of the routing with the model each one uses. orgModel() is pure; everything is read-only.
 // Classic script: shares the page's global scope with the other files in uix/js; load order is set in retro_desktop.html.
 
@@ -45,7 +45,7 @@ async function renderOrgChart(body){
   const cap = orgNode('captain', 'Captain (du)', ['entscheidet jede Freigabe – kein Agent handelt ohne sie', o.captain.gates ? (o.captain.gates === 1 ? 'eine Freigabe wartet' : o.captain.gates+' Freigaben warten') : 'nichts wartet'], o.captain.gates ? {tone:'warn', text:'Freigaben offen'} : {tone:'ok', text:'frei'});
   cap.setAttribute('role','button'); cap.tabIndex = 0; cap.onclick = ()=>openBridge(); cap.style.cursor = 'pointer';
   wrap.append(cap, el('div','org-link'));
-  const g = orgNode('guppi', 'GUPPI · Steuermann', [o.guppi.model ? 'spricht mit '+o.guppi.model+(o.guppi.context ? ' · Kontext '+o.guppi.context : '') : 'kein Modell geladen – plant nur', (o.guppi.skills !== null ? o.guppi.skills+' Skills · ' : '')+(o.captain.running ? o.captain.running+' Karte(n) in Arbeit' : 'keine Karte in Arbeit')], {tone: o.guppi.state === 'offline' ? 'bad' : o.guppi.model ? 'ok' : 'warn', text: o.guppi.state});
+  const g = orgNode('guppi', 'SEDRA · Steuermann', [o.guppi.model ? 'spricht mit '+o.guppi.model+(o.guppi.context ? ' · Kontext '+o.guppi.context : '') : 'kein Modell geladen – plant nur', (o.guppi.skills !== null ? o.guppi.skills+' Skills · ' : '')+(o.captain.running ? o.captain.running+' Karte(n) in Arbeit' : 'keine Karte in Arbeit')], {tone: o.guppi.state === 'offline' ? 'bad' : o.guppi.model ? 'ok' : 'warn', text: o.guppi.state});
   g.setAttribute('role','button'); g.tabIndex = 0; g.onclick = ()=>openGuppi(); g.style.cursor = 'pointer';
   wrap.append(g, el('div','org-link'));
   const roles = el('div','org-roles');

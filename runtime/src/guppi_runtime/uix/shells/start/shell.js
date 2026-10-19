@@ -129,7 +129,7 @@
                        await this.decisions();
                      }));
       box.append(own);
-      if(root.sedraVorgabe){            // Build 17: aus einer Vorgabe – Satz an GUPPI oder Vorlage, Skizze, anlegen und gleich nehmen
+      if(root.sedraVorgabe){            // Build 17: aus einer Vorgabe – Satz an SEDRA oder Vorlage, Skizze, anlegen und gleich nehmen
         const vg = d().el('div', 'st-make-row');
         vg.append(root.sedraVorgabe.block(this.api, (t, tone)=>this.notify(t, tone), async out=>{
           await this.api('/api/uix/shell', {method: 'POST', body: {shell: out.id}});

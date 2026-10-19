@@ -1,6 +1,6 @@
 # Werkzeug `crew` – Besatzung
 
-Wer an Bord ist: der Captain, GUPPI, die Rollen aus den Rezepten und die Agenten, die wirklich existieren.
+Wer an Bord ist: der Captain, SEDRA, die Rollen aus den Rezepten und die Agenten, die wirklich existieren.
 
 Demo-Zeilen und echte Zeilen werden nie vermischt.
 

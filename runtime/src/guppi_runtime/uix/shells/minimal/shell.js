@@ -68,7 +68,7 @@
         return;
       }
       const screen = {w: window.innerWidth, h: window.innerHeight};
-      this.windows.open({type: 'talk', id: 'guppi', title: 'GUPPI'},
+      this.windows.open({type: 'talk', id: 'guppi', title: 'SEDRA'},
                         {manifests: [manifest], closable: false,
                          box: {x: screen.w - 420, y: 220, w: 380, h: 420}});
     },

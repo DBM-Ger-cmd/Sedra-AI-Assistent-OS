@@ -6,6 +6,16 @@ import cuda_crash_hunt as hunt
 import small_team as st
 from guppi_runtime.llama_server_runtime import build_command
 
+# Genau die Dateien, die diese Tests brauchen – nicht nur die Ordner. Fehlen sie, steht der Grund im Lauf (statt rot).
+ENGINE_DA = (hunt.RUNTIME.parent / 'engines' / 'llama.cpp' / hunt.VARIANTS['engine_b11160']['engine_build']).is_dir()
+def _modelle_da():
+    try:
+        project = Path(__file__).resolve().parents[2] / 'workspace' / 'GUPPI_OS'
+        return all(Path(hunt.model_spec(n, project)['server']['gguf']).is_file() for n in ('jan', 'swe', 'qwen3coder'))
+    except Exception:
+        return False
+MODELLE_DA = _modelle_da()
+
 class CrashHuntTests(unittest.TestCase):
  @env_skip.needs_pc_files
  def test_every_variant_builds_a_valid_server_command(self):
@@ -19,12 +29,12 @@ class CrashHuntTests(unittest.TestCase):
  def test_baseline_changes_nothing_and_the_env_variants_name_a_real_switch(self):
   self.assertEqual(hunt.VARIANTS['baseline'], {})
   self.assertEqual(hunt.VARIANTS['graphs_off']['env'], {'GGML_CUDA_DISABLE_GRAPHS': '1'})
- @env_skip.needs_pc_files
+ @unittest.skipUnless(ENGINE_DA, 'Engine-Build dieser Variante liegt nicht auf diesem Rechner (engines/llama.cpp)')
  def test_engine_variant_exists_on_disk(self):
   self.assertTrue((hunt.RUNTIME.parent / 'engines' / 'llama.cpp' / hunt.VARIANTS['engine_b11160']['engine_build']).is_dir())
 
 class ModelsTests(unittest.TestCase):
- @env_skip.needs_pc_files
+ @unittest.skipUnless(MODELLE_DA, 'Modelldateien (jan, swe, qwen3coder) liegen nicht auf diesem Rechner')
  def test_model_specs_and_variants_cover_the_three_models(self):
   project = Path(__file__).resolve().parents[2] / 'workspace' / 'GUPPI_OS'
   for name, workload in (('jan', 'repair'), ('swe', 'review'), ('qwen3coder', 'repair')):

@@ -1,0 +1,4 @@
+# Shell-Skripte brauchen LF: sh liest ein \r als Teil des Befehls, und test_uix_start prüft das.
+# Nur diese Endungen sind hier festgelegt; alle übrigen Dateien bleiben, wie der Checkout sie hält.
+*.sh text eol=lf
+*.command text eol=lf

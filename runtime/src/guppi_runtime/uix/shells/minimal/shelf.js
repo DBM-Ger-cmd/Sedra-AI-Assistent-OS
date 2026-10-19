@@ -2,7 +2,7 @@
 //
 // Die Ablage öffnet Fenster; ein Punkt unter einem Feld heißt „dieses Fenster ist offen“. Seit Build 19 (Captain 15.10.:
 // „man sollte selber unten weitere Aufgaben und Icons dazu anlegen können“) gehört sie dem Captain: Felder mit Bildzeichen,
-// „＋“ legt eines an (ein Ort, das Fenster vorn, oder ein Auftrag an GUPPI), Rechtsklick verschiebt, benennt um, entfernt.
+// „＋“ legt eines an (ein Ort, das Fenster vorn, oder ein Auftrag an SEDRA), Rechtsklick verschiebt, benennt um, entfernt.
 // Gemerkt wird sie in uix.yaml über `POST /api/uix/shelf` – nicht im Browser, denn SEDRA startet jedes Mal auf einem anderen
 // Port, und der Browser-Speicher gehört dem Port. Ein Auftrag führt nichts aus: er geht als Satz ins Gespräch.
 //
@@ -95,7 +95,7 @@
         const field = d().el('div', 'sh-min-app' + (entry.kind === 'auftrag' ? ' order' : ''));
         const object = resolve(entry, places());
         if(object) field.dataset.object = object.type + ':' + object.id;
-        field.title = entry.kind === 'auftrag' ? 'Auftrag an GUPPI: ' + entry.text : entry.label + ' öffnen · Rechtsklick: anpassen';
+        field.title = entry.kind === 'auftrag' ? 'Auftrag an SEDRA: ' + entry.text : entry.label + ' öffnen · Rechtsklick: anpassen';
         field.append(root.sedraMinIcons.iconEl(entry.icon || root.sedraMinIcons.typeIcon(object && object.type)), d().el('span', null, entry.label));
         d().clickable(field, ()=>use(entry));
         field.oncontextmenu = e=>{ e.preventDefault(); menuFor(field, i); };
@@ -103,7 +103,7 @@
         return field;
       });
       const add = d().el('div', 'sh-min-app add');
-      add.title = 'Eigenes Feld anlegen: Ort, Fenster oder Auftrag an GUPPI';
+      add.title = 'Eigenes Feld anlegen: Ort, Fenster oder Auftrag an SEDRA';
       add.append(root.sedraMinIcons.iconEl('plus'), d().el('span', null, 'Neu'));
       d().clickable(add, ()=>edit(null));
       host.append(add);

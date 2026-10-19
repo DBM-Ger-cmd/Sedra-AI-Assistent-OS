@@ -173,6 +173,8 @@ class LibraryHubTests(unittest.TestCase):
         self.assertGreaterEqual(len(v['own']), 1); self.assertIn('debug-and-test', [s['id'] for s in v['own']])
         self.assertIn('name:', v['template'])
 
+    @unittest.skipUnless((Path(__file__).resolve().parents[1] / 'runtime_data' / 'skill_library_core' / 'index.json').is_file(),
+                         'Skill-Bibliothek nicht gebaut (runtime_data fehlt auf diesem Rechner)')
     def test_search_and_read_are_read_only_and_paged(self):
         hits = self.desk.search({'library': 'core', 'query': 'code review'})['hits']
         self.assertTrue(hits); sid = hits[0]['id']

@@ -1,7 +1,7 @@
 tool:
   id: intent
   name: "Vorhaben"
-  description: "Der Satz, um den es geht – und die Aufgaben, die daraus geworden sind."
+  description: "Der Satz, um den es geht, seine Stufen – und die Aufgaben, die daraus geworden sind."
   version: 1.0.0
   kind: object
   handles: [intent]
@@ -12,6 +12,7 @@ tool:
     - POST /api/objects
     - POST /api/actions
     - POST /api/intent/create
+    - GET /api/intent/vorlagen     # Vorlagen für Vorhaben mit Stufen (19.10.2026)
   events:
     emits: [object.open]
     listens: [task.changed, tools.refresh]

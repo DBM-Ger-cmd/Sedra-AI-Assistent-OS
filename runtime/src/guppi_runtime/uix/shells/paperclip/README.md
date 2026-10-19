@@ -14,9 +14,10 @@ Im Werkzeug „Module“ auf „Diese Shell nehmen“, oder in `local_config/uix
 |---|---|---|
 | Posteingang | die Entscheidungsliste (`decision:alle`) | `decisions` |
 | Issues | die Aufgaben (`task:alle`) | `task` |
-| Ziele | die Vorhaben (`intent:alle`) | `intent` |
+| Ziele | die Vorhaben mit Stufen (`intent:alle`) – seit 19.10. die erste Karte des Dashboards; eine Stufe wird ein Issue | `intent` |
 | Agenten / Organigramm | die Besatzung (`agent:alle`) | `crew` |
 | Kosten | das Guppy-Meter | `meter` |
+| Assistenten · Planungstisch | die Arbeitsumgebung der KI-Assistenten (`planung:tisch`, 19.10.): im Gespräch mit einer Rolle werden Ziele mit Stufen und Aufträge vorgeschlagen; „Übernehmen“ legt an | `planung` |
 
 Die Shell benennt um, sie baut nichts nach. Jede Seite ist ein Objekt, das ein vorhandenes Werkzeug zeichnet.
 
@@ -32,7 +33,7 @@ Die Shell benennt um, sie baut nichts nach. Jede Seite ist ein Objekt, das ein v
 | Layout | der Verlauf (`sedra.paperclip.history`); die zuletzt besuchte Seite kommt beim Neuladen zurück |
 
 **Das Suchfeld ist kein zweites Gespräch.** Ein Ort öffnet sich; ein Auftrag oder eine Frage wandert in die Schublade und wird
-dort gesendet – derselbe Weg wie die Zeile „An GUPPI senden“ in der Palette des Cockpits.
+dort gesendet – derselbe Weg wie die Zeile „An SEDRA senden“ in der Palette des Cockpits.
 
 ## Dateien
 

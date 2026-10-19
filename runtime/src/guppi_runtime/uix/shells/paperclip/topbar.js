@@ -1,7 +1,7 @@
 // Paperclip-Shell – die Kopfzeile (Entwurf D, Spec §5.1/§5.2).
 // Titel der Seite, „Zurück“, die Verben des Werkstücks, und ein Suchfeld. Das Suchfeld ist die Ortskunde (ui/places.js),
 // kein zweites Gespräch: ein Ort öffnet sich, ein Auftrag oder eine Frage wandert in die Schublade – gesendet wird nur dort
-// (Regel 1: ein Eingabefeld, das an GUPPI schickt).
+// (Regel 1: ein Eingabefeld, das an SEDRA schickt).
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
@@ -19,7 +19,7 @@
       const spacer = d().el('span', 'pc-spacer');
       const search = d().el('div', 'pc-search');
       input = d().el('input');
-      input.placeholder = 'Ort suchen oder GUPPI etwas sagen …  Strg+K';
+      input.placeholder = 'Ort suchen oder SEDRA etwas sagen …  Strg+K';
       input.setAttribute('aria-label', 'Ort suchen');
       results = d().el('div', 'pc-search-results');
       results.hidden = true;
@@ -34,7 +34,7 @@
       document.addEventListener('mousedown', e=>{ if(!search.contains(e.target)) close(); });
     }
 
-    // Die Zeilen unter dem Suchfeld: Orte zuerst, wenn der Text wie Navigation aussieht; sonst „an GUPPI“ zuerst
+    // Die Zeilen unter dem Suchfeld: Orte zuerst, wenn der Text wie Navigation aussieht; sonst „an SEDRA“ zuerst
     function draw(){
       const rows = root.sedraPlaces.paletteRows(input.value).slice(0, 8);
       results.replaceChildren();

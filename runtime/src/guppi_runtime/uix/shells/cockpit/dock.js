@@ -240,6 +240,8 @@
         const tab = d().el('div', 'dk-tab' + (pane.key === group.active ? ' on' : ''));
         tab.draggable = true;
         tab.append(d().el('span', null, pane.object.title));
+        tab.title = pane.object.title;                       // der volle Name, wenn der Reiter ihn kürzt
+        tab.onauxclick = e=>{ if(e.button === 1){ e.preventDefault(); close(pane.key); } };   // mittlere Maustaste schließt, wie im Browser
         const x = d().el('button', 'dk-x', '✕');
         x.title = 'Schließen'; x.setAttribute('aria-label', 'Reiter schließen: ' + pane.object.title);
         x.onclick = e=>{ e.stopPropagation(); close(pane.key); };
@@ -259,6 +261,8 @@
       split.setAttribute('aria-label', 'Werkbank teilen');
       split.onclick = ()=>{ state.layout = splitGroup(state.layout, group.id, 'row', 'g' + state.nextId++); render(); save(); };
       fixed.append(split);
+      // viele Reiter: das Rad rollt die Reihe waagerecht, statt die Seite zu verbreitern
+      bar.onwheel = e=>{ if(bar.scrollWidth > bar.clientWidth && !e.shiftKey){ bar.scrollLeft += e.deltaY; e.preventDefault(); } };
       const barRow = d().el('div', 'dk-bar');
       barRow.append(bar, fixed);
       box.append(barRow);

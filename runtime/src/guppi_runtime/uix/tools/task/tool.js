@@ -62,7 +62,7 @@
       const open = items.filter(o=>o.state !== 'fertig' && o.state !== 'fehlgeschlagen');
       const done = items.filter(o=>o.state === 'fertig' || o.state === 'fehlgeschlagen').slice(-5).reverse();
       box.append(d().el('h5', 's-head', 'Aufgaben · ' + open.length + ' offen'));
-      if(!open.length) box.append(d().empty('Nichts offen. Schreib unten, was gebaut werden soll – GUPPI macht Aufgaben daraus.'));
+      if(!open.length) box.append(d().empty('Nichts offen. Schreib unten, was gebaut werden soll – SEDRA macht Aufgaben daraus.'));
       open.forEach(o=>box.append(this.row(o)));
       if(done.length){
         box.append(d().el('h5', 's-head', 'Zuletzt abgeschlossen'));

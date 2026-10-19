@@ -49,7 +49,7 @@
           row.append(d().el('b', null, s.id || s.name), d().el('small', 's-muted', s.description || ''));
           box.append(row);
         });
-        if(!(view.custom || []).length) box.append(d().empty('Noch keiner. Im Gespräch sagen, was der Skill können soll – GUPPI schlägt ihn vor, du gibst ihn frei.'));
+        if(!(view.custom || []).length) box.append(d().empty('Noch keiner. Im Gespräch sagen, was der Skill können soll – SEDRA schlägt ihn vor, du gibst ihn frei.'));
       }else{
         (view.libraries || []).forEach(l=>{
           const row = d().el('div', 't-lib-row' + (l.available ? '' : ' off'));

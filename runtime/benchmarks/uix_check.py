@@ -145,6 +145,7 @@ PROFILES = {
         'gauges': '.ck-gauge:not(.ck-hint)',
         'pane': MEASURE_PANE,
         'segment': None,                       # im Cockpit stehen Werkstück und Nachweise zugleich im Reiter
+        'eingebettet': ('schutz',),            # Build 19: der Schutz läuft im Menü des GateWay, hat hier keinen eigenen Reiter (nicht geprüft)
         'leftovers': "()=>[...document.querySelectorAll('.dk-body .dk-tool')].map(s=>s.dataset.tool)",
         'count': "()=>document.querySelectorAll('.dk-tab').length",
         'count_word': 'Reiter',
@@ -177,6 +178,30 @@ PROFILES = {
         'count_word': 'Fenster',
         'menu': {'box': '.sh-min-menu', 'input': '.sh-min-menu input', 'rows': "()=>[...document.querySelectorAll('.sh-min-menu-item b')].map(b=>b.textContent)",
                  'closed': "()=>!document.querySelector('.sh-min-menu')"},
+    },
+    # Shell „Fisch“ (19.10.2026): Kopf, Glas, Wolke, Blasen; das Gespräch ist eine Schublade (Knopf unten rechts), Nachweise in der Blase
+    'fisch': {
+        'zones': ('fi-kopf', 'fi-glas', 'fi-wolke', 'fi-blasen'),
+        'gauges': '[data-tool^="gauge-"]',
+        'pane': MEASURE_PANE_GENERIC,
+        'segment': None,
+        'leftovers': "()=>[...document.querySelectorAll('.fi-blasen .fi-tool')].map(s=>s.dataset.tool)",
+        'count': None,                     # eine Blase zur Zeit; was ein Neuladen übersteht, ist der Modus (test_uix_shell_fisch)
+        'count_word': '',
+        'menu': None,
+        'before_talk': "()=>{ const f = document.querySelector('.fi-fab'); if(f && getComputedStyle(f).display !== 'none') f.click(); }",
+    },
+    # Shell „KI Gateway für KMU“ (Folien-Design): Kopf, Werkstück, Gespräch; die vier Schritte des Ablaufs sind ihre Messwerte
+    'gateway-kmu': {
+        'zones': ('sh-gateway-kmu-kopf', 'sh-gateway-kmu-body', 'sh-gateway-kmu-talk'),
+        'gauges': '.sh-gateway-kmu-schritt',
+        'pane': "(tool) => {const slot = document.querySelector('.sh-gateway-kmu-tool[data-tool=\"' + tool + '\"]'); if(!slot) return {missing:true, note:'das Werkzeug hat keinen Container'}; const r = slot.getBoundingClientRect(); return {text: slot.innerText.trim().length, slots: document.querySelectorAll('.sh-gateway-kmu-tool').length, filled: slot.innerText.trim().length > 0 || slot.childElementCount > 0, evidence: false, actions: document.querySelectorAll('.sh-gateway-kmu-verbs button').length, inside: r.right <= innerWidth + 1, scroll: 0};}",
+        'segment': None,
+        'leftovers': "()=>[...document.querySelectorAll('.sh-gateway-kmu-werkstueck .sh-gateway-kmu-tool')].map(s=>s.dataset.tool)",
+        'no_evidence': True,     # die Shell zeigt Nachweise (slot: nachweis) bewusst nicht daneben – das Gateway hat seinen Überblick selbst
+        'count': None,
+        'count_word': '',
+        'menu': None,
     },
 }
 
@@ -366,7 +391,8 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
 
         if profile.get('before_tools'):
             page.evaluate(profile['before_tools']); page.wait_for_timeout(800)
-        strip = page.evaluate("(sel)=>[...document.querySelectorAll(sel)].map(g=>({tool: g.dataset.tool || '?', value: (g.querySelector('b')||{}).textContent || ''}))", profile['gauges'])
+        # Ein Instrument im abgeschotteten Rahmen zeichnet seinen Wert im Rahmen (eigenes Dokument): die Zelle zählt dann als gefüllt
+        strip = page.evaluate("(sel)=>[...document.querySelectorAll(sel)].map(g=>({tool: g.dataset.tool || '?', value: g.querySelector('iframe') ? 'im Rahmen' : ((g.querySelector('b')||{}).textContent || '')}))", profile['gauges'])
         empty = [g['tool'] for g in strip if not g['value'].strip() or g['value'] == '…']
         if not strip and 'strip' not in provides and 'menubar' not in provides:
             check('strip', None, 'nicht geprüft – diese Shell verspricht keine Instrumente (provides ohne strip/menubar)')
@@ -393,6 +419,12 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
                 target['id'] = found['candidate'] if target['type'] == 'candidate' else LAST_VORGANG if target['type'] == 'gateway' else found['task']
             if target['id'] is None:
                 check('tool:' + tid, None, 'nicht geprüft – im Prüfprojekt gibt es kein Objekt dieses Typs (kein Fehler des Werkzeugs)')
+                continue
+            if tid in profile.get('eingebettet', ()):
+                check('tool:' + tid, None, 'nicht geprüft – eingebettet im Menü des KI GateWay (kein eigener Reiter, Build 19)')
+                continue
+            if profile.get('no_evidence') and manifest_slot.get(tid) == 'nachweis':
+                check('tool:' + tid, None, 'nicht geprüft – diese Shell zeigt keine Nachweise daneben (Profil)')
                 continue
             page.evaluate("(o)=>window.sedraBoot.ctx.bus.emit('object.open', o)", target)
             page.wait_for_timeout(1400)

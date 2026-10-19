@@ -305,7 +305,7 @@
         const P = root.sedraPlaces; let index = 0;
         const host = d().el('div', 'fr-pal'); host.hidden = true;
         const box = d().el('div', 'fr-pal-box'); const input = d().el('input'); const list = d().el('div', 'fr-pal-list');
-        input.placeholder = 'Wohin oder was? – ein Ort, oder ein Auftrag für GUPPI'; input.setAttribute('aria-label', 'Kommando');
+        input.placeholder = 'Wohin oder was? – ein Ort, oder ein Auftrag für SEDRA'; input.setAttribute('aria-label', 'Kommando');
         const render = ()=>{
           const rows = P.paletteRows(input.value); index = Math.max(0, Math.min(index, rows.length - 1));
           list.replaceChildren(...rows.map((r, i)=>{ const line = d().el('div', 'fr-pal-row' + (i === index ? ' on' : ''));

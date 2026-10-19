@@ -1,0 +1,33 @@
+/* Werkzeug „Nachrichten“ – nur im eigenen Container, nur Tokens. */
+.t-nachrichten{display:flex;flex-direction:column;gap:12px;min-width:0}
+.t-nachrichten input,.t-nachrichten textarea,.t-nachrichten select{border:1px solid var(--line);border-radius:var(--radius);padding:6px 9px;background:var(--panel-2);color:var(--text);font-size:var(--size-small)}
+.t-nachrichten textarea{width:100%;resize:vertical;min-height:72px}
+.t-nw-profil{border:1px solid var(--line);border-radius:var(--radius-2);padding:8px 12px;background:var(--panel)}
+.t-nw-profil summary{cursor:pointer;font-weight:600;color:var(--heading)}
+.t-nw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 12px;margin:10px 0}
+.t-nw-feld{display:flex;flex-direction:column;gap:3px;font-size:var(--size-xs);color:var(--muted)}
+.t-nw-feld input,.t-nw-feld select{width:100%}
+.t-nw-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.t-nw-row input:first-child{flex:1 1 220px}
+.t-nw-quellen{display:flex;flex-direction:column;gap:8px}
+.t-nw-qliste{display:flex;flex-direction:column;gap:4px}
+.t-nw-quelle{display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid var(--line-soft);border-radius:var(--radius);background:var(--panel-2)}
+.t-nw-quelle b{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-nw-out{display:flex;flex-direction:column;gap:8px}
+.t-nw-brief{display:flex;flex-direction:column;gap:10px}
+.t-nw-meldung{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius-2);background:var(--panel)}
+.t-nw-meldung.unsicher{border-left-color:var(--warn)}
+.t-nw-mkopf{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.t-nw-mkopf b{flex:1 1 auto;font-size:var(--size-l)}
+.t-nw-vertrauen{font-size:var(--size-xs);padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.t-nw-vertrauen.hoch{color:var(--ok);border-color:var(--ok-line);background:var(--ok-bg)}
+.t-nw-vertrauen.niedrig{color:var(--warn);border-color:var(--warn-line);background:var(--warn-bg)}
+.t-nw-ebenen{display:flex;gap:4px;flex-wrap:wrap}
+.t-nw-ebenen button{font-size:var(--size-xs);padding:3px 10px;border-radius:999px}
+.t-nw-ebenen button.on{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.t-nw-ebene{line-height:1.55;white-space:pre-wrap}
+.t-nw-warum summary{cursor:pointer;color:var(--muted);font-size:var(--size-small)}
+.t-nw-warum div{padding:6px 0 0;color:var(--text);font-size:var(--size-small)}
+.t-nw-tags{display:flex;gap:4px;flex-wrap:wrap}
+.t-nw-tags span{font-size:var(--size-xs);padding:1px 8px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line-soft);color:var(--muted)}
+.t-nw-wartet{opacity:.7;font-style:italic}   /* Keyframes gehören nicht in ein Werkzeug (Vertrag: nur .t-… Selektoren) */

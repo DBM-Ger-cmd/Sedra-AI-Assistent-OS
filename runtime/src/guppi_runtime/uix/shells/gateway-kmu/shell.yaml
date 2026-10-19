@@ -1,0 +1,11 @@
+shell:
+  id: gateway-kmu
+  name: "KI Gateway für KMU"
+  description: "Das KI Gateway im Design der Präsentation: Kopf mit dem Ablauf, das Werkstück in der Mitte, das Gespräch unten."
+  version: 1.0.0
+  entry: {js: shell.js, css: shell.css}
+  provides: [dock, talk]
+  layout: {persist: browser}
+  api: []
+  trust: CAPTAIN
+  needs: {ui: ">=1.0 <2"}

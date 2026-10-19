@@ -16,6 +16,9 @@ ID = re.compile(r'^V-[0-9A-F]{8}$')
 MAX_TITLE = 120
 MAX_TEXT = 4000
 MAX_INTENTS = 500      # eine Datei, die ein Mensch liest – darüber hinaus ist etwas anderes kaputt
+MAX_STUFEN = 12        # Stufen eines Vorhabens (19.10.2026): ein Weg mit mehr Schritten ist zwei Vorhaben
+MAX_STUFE_NAME = 80
+MAX_STUFE_TEXT = 600
 
 
 def new_id(seed):
@@ -31,6 +34,56 @@ def check(title, text):
     if len(text) > MAX_TEXT:
         raise ValueError('text_too_long')
     return title, text
+
+
+def check_stufen(stufen):
+    """Die Stufen eines Vorhabens: Name und Satz je Stufe, in der Reihenfolge, wie sie gegangen werden. Leer ist erlaubt."""
+    if stufen in (None, '', []):
+        return []
+    if not isinstance(stufen, list) or len(stufen) > MAX_STUFEN:
+        raise ValueError('stufen_invalid')
+    out = []
+    for s in stufen:
+        if isinstance(s, str):
+            s = {'name': s}
+        if not isinstance(s, dict):
+            raise ValueError('stufen_invalid')
+        name = str(s.get('name') or '').strip()
+        text = str(s.get('text') or '').strip()
+        if not 1 <= len(name) <= MAX_STUFE_NAME or len(text) > MAX_STUFE_TEXT:
+            raise ValueError('stufen_invalid')
+        out.append({'name': name, 'text': text, 'tasks': []})
+    return out
+
+
+def _tasks_state(tasks):
+    """Der Zustand aus einer Liste von Aufgaben (Missionen): wartet auf dich · in Arbeit · fertig · offen."""
+    if not tasks:
+        return 'offen'
+    if any((t.get('pending_gates') or 0) for t in tasks):
+        return 'wartet auf dich'
+    if any(t.get('status') == 'active' and (t.get('phase') or '') not in ('COMPLETE', 'FAILED') for t in tasks):
+        return 'in Arbeit'
+    if all(t.get('phase') == 'COMPLETE' for t in tasks):
+        return 'fertig'
+    return 'offen'
+
+
+def stufen_of(entry, missions_by_id):
+    """Die Stufen mit ihrem Zustand aus den Aufgaben, die an ihnen hängen – die erste, die nicht fertig ist, ist die aktuelle."""
+    out, current = [], None
+    for i, s in enumerate(entry.get('stufen') or []):
+        tasks = [missions_by_id.get(t) for t in (s.get('tasks') or [])]
+        tasks = [t for t in tasks if t]
+        state = _tasks_state(tasks)
+        if current is None and state != 'fertig':
+            current = i
+        out.append({'index': i, 'name': s.get('name') or f'Stufe {i + 1}', 'text': s.get('text') or '', 'state': state,
+                    'tasks': [{'id': t.get('mission_id'), 'title': str(t.get('intent') or t.get('mission_id'))[:60],
+                               'phase': t.get('phase') or '', 'waits': bool(t.get('pending_gates'))} for t in tasks]})
+    for s in out:
+        s['current'] = (s['index'] == current)
+    return out
 
 
 def state_of(entry, missions_by_id):
@@ -79,17 +132,21 @@ class Store:
         tmp.write_text(yaml.safe_dump({'intents': items}, allow_unicode=True, sort_keys=True), encoding='utf-8')
         tmp.replace(self.path)
 
-    def add(self, title, text, project_id, now):
+    def add(self, title, text, project_id, now, stufen=None, vorlage=None):
         title, text = check(title, text)
+        stufen = check_stufen(stufen)
         items = self.all()
         if len(items) >= MAX_INTENTS:               # Härtung: nichts, was in einer Schleife unbegrenzt wächst
             raise ValueError('too_many_intents')
         iid = new_id(f'{project_id}:{title}:{now}')
-        items[iid] = {'title': title, 'text': text, 'project_id': project_id, 'created_at': now, 'tasks': []}
+        items[iid] = {'title': title, 'text': text, 'project_id': project_id, 'created_at': now, 'tasks': [], 'stufen': stufen}
+        if vorlage:
+            items[iid]['vorlage'] = str(vorlage)[:40]
         self._write(items)
         return dict(items[iid], id=iid)
 
-    def attach(self, intent_id, mission_id):
+    def attach(self, intent_id, mission_id, stufe=None):
+        """Eine Aufgabe an das Vorhaben hängen – und, wenn gesagt, an eine seiner Stufen (Index)."""
         items = self.all()
         entry = items.get(str(intent_id))
         if not isinstance(entry, dict):
@@ -98,5 +155,14 @@ class Store:
         if mission_id not in tasks:
             tasks.append(mission_id)
         entry['tasks'] = tasks
+        if stufe is not None:
+            stufen = entry.get('stufen') or []
+            if not isinstance(stufe, int) or not 0 <= stufe < len(stufen):
+                raise ValueError('unknown_stufe')
+            own = list(stufen[stufe].get('tasks') or [])
+            if mission_id not in own:
+                own.append(mission_id)
+            stufen[stufe]['tasks'] = own
+            entry['stufen'] = stufen
         self._write(items)
         return dict(entry, id=str(intent_id))

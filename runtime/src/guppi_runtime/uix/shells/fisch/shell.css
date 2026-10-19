@@ -1,0 +1,112 @@
+/* Shell „Fisch“ – Goldfischglas, Goldfisch, Wolke, Blasen (Translator-Fisch-Konzept v0.1, 19.10.2026).
+   Farben nur über Tokens: --fisch-… für Glas, Fisch, Wolke (ui/tokens.css); die Werkzeuge in der Blase folgen dem Thema (Klar/Nacht).
+   Der Fisch ist eine eigene Zeichnung aus Flächen und Rundungen – keine Bilddatei, keine fremde Figur. Bewegung nur transform/opacity. */
+
+.sh-fisch{
+  --fi-glas-groesse:min(42vw,420px);
+  position:fixed;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr);
+  background:linear-gradient(180deg,var(--fisch-himmel-2),var(--fisch-himmel));
+  color:var(--fisch-text);font-family:var(--font);overflow:hidden;
+}
+
+/* ---------- Kopf ---------- */
+.fi-kopf{display:flex;align-items:center;gap:18px;padding:12px 24px;flex-wrap:wrap}
+.fi-marke{font-size:var(--size-xl);font-weight:800;letter-spacing:-.02em;color:var(--fisch-text)}
+.fi-marke::before{content:"";display:inline-block;width:14px;height:14px;margin-right:10px;border-radius:50% 60% 60% 50%;background:var(--fisch-orange);vertical-align:-1px}
+.fi-marke-sub{color:var(--fisch-muted);font-size:var(--size-small)}
+.fi-modus{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--fisch-wolke);border:1px solid var(--fisch-wolke-rand);margin-left:auto}
+.fi-modus-btn{border:0;border-radius:999px;padding:7px 16px;background:transparent;color:var(--fisch-muted);font:inherit;font-size:var(--size-small);font-weight:600;cursor:pointer;transition:background .15s ease,color .15s ease}
+.fi-modus-btn:hover{color:var(--fisch-text)}
+.fi-modus-btn.on{background:var(--fisch-orange);color:var(--fisch-glas)}
+.fi-hinweis{color:var(--fisch-muted);font-size:var(--size-xs)}
+
+/* ---------- Raum: links Wolke und Glas, rechts die Blasen ---------- */
+.fi-raum{display:grid;grid-template-columns:minmax(300px,var(--fi-glas-groesse)) minmax(0,1fr);gap:28px;padding:8px 24px 24px;min-height:0}
+.fi-seite{display:flex;flex-direction:column;align-items:center;gap:18px;min-width:0}
+
+/* Die Wolke: die Eingabe, weich gerundet, mit kleinen Wölkchen an den Rändern */
+.fi-wolke{position:relative;width:100%;padding:14px 16px 12px;border-radius:28px;background:var(--fisch-wolke);border:1px solid var(--fisch-wolke-rand);box-shadow:var(--shadow)}
+.fi-wolke::before,.fi-wolke::after{content:"";position:absolute;background:var(--fisch-wolke);border:1px solid var(--fisch-wolke-rand);border-radius:50%}
+.fi-wolke::before{width:46px;height:46px;left:22px;top:-18px}
+.fi-wolke::after{width:30px;height:30px;right:30px;top:-12px}
+.fi-wolke textarea{position:relative;z-index:1;width:100%;resize:none;border:0;outline:none;background:transparent;color:var(--fisch-text);font:inherit;font-size:var(--size-l);line-height:1.45}
+.fi-wolke textarea::placeholder{color:var(--fisch-muted)}
+.fi-wolke-row{display:flex;align-items:center;gap:10px;margin-top:6px}
+.fi-senden{border:0;border-radius:999px;padding:8px 18px;background:var(--fisch-orange);color:var(--fisch-glas);font:inherit;font-weight:700;cursor:pointer;transition:transform .12s ease,filter .12s ease}
+.fi-senden:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.fi-wolke-hint{color:var(--fisch-muted);font-size:var(--size-xs)}
+
+/* Das Glas: eine Kugel mit abgeflachtem Hals, Wasser bis knapp unter den Rand, Sand am Boden */
+.fi-glas{position:relative;width:var(--fi-glas-groesse);height:var(--fi-glas-groesse);flex:0 0 auto}
+.fi-glasrand{position:absolute;left:22%;right:22%;top:0;height:9%;border-radius:0 0 40% 40% / 0 0 100% 100%;border:3px solid var(--fisch-glasrand);border-top:0;opacity:.7}
+.fi-wasser{
+  position:absolute;inset:6% 2% 2% 2%;border-radius:50%;overflow:hidden;
+  background:radial-gradient(ellipse at 35% 20%,color-mix(in srgb,var(--fisch-wasser) 60%,var(--fisch-glas)) 0,var(--fisch-wasser) 35%,var(--fisch-wasser-2) 100%);
+  border:3px solid var(--fisch-glasrand);
+  box-shadow:inset 0 -18px 40px color-mix(in srgb,var(--fisch-wasser-2) 60%,transparent),0 20px 40px color-mix(in srgb,var(--fisch-wasser-2) 25%,transparent);
+}
+.fi-wasser::before{content:"";position:absolute;left:0;right:0;top:0;height:10%;background:linear-gradient(180deg,var(--fisch-glas),transparent);opacity:.55}
+.fi-glanz{position:absolute;z-index:2;left:14%;top:16%;width:12%;height:30%;border-radius:50%;background:linear-gradient(180deg,var(--fisch-glas),transparent);opacity:.6;transform:rotate(-18deg);pointer-events:none}
+.fi-sand{position:absolute;left:-5%;right:-5%;bottom:-6%;height:22%;border-radius:50%;background:var(--fisch-sand);opacity:.9}
+
+/* Der Fisch: Körper, Schwanz, Flosse, Auge – schwimmt hin und her, wendet an den Rändern */
+.fi-fisch{position:absolute;left:50%;top:48%;width:22%;height:12%;transform:translate(-50%,-50%);animation:fi-schwimmen 11s ease-in-out infinite;will-change:transform}
+.fi-koerper{position:absolute;inset:0;border-radius:50% 60% 60% 50%/50% 50% 50% 50%;background:radial-gradient(ellipse at 35% 35%,var(--fisch-orange-2),var(--fisch-orange) 70%)}
+.fi-schwanz{position:absolute;right:-26%;top:14%;width:34%;height:72%;background:var(--fisch-orange-2);clip-path:polygon(100% 0,0 50%,100% 100%,70% 50%);transform-origin:left center;animation:fi-wedeln .7s ease-in-out infinite alternate}
+.fi-flosse{position:absolute;left:30%;top:-36%;width:30%;height:48%;background:var(--fisch-orange-2);clip-path:polygon(0 100%,40% 0,100% 100%);opacity:.9}
+.fi-auge{position:absolute;left:14%;top:28%;width:14%;height:30%;border-radius:50%;background:var(--fisch-glas)}
+.fi-auge::after{content:"";position:absolute;left:30%;top:28%;width:48%;height:48%;border-radius:50%;background:var(--fisch-auge)}
+@keyframes fi-schwimmen{
+  0%{transform:translate(-50%,-50%) translateX(-110%) scaleX(1)}
+  45%{transform:translate(-50%,-50%) translateX(110%) translateY(-18%) scaleX(1)}
+  50%{transform:translate(-50%,-50%) translateX(110%) translateY(-18%) scaleX(-1)}
+  95%{transform:translate(-50%,-50%) translateX(-110%) translateY(10%) scaleX(-1)}
+  100%{transform:translate(-50%,-50%) translateX(-110%) scaleX(1)}
+}
+@keyframes fi-wedeln{from{transform:rotate(-16deg)}to{transform:rotate(16deg)}}
+/* Zustände: Hören (Blick zur Wolke, oben), Denken (mehr Blubber), Antworten (große Blasen) */
+.fi-fisch[data-zustand="listening"]{animation-play-state:paused;transform:translate(-50%,-50%) translateY(-60%) rotate(-18deg)}
+.fi-glas[data-zustand="thinking"] .fi-blubber{animation-duration:1.6s;opacity:.95}
+.fi-glas[data-zustand="answering"] .fi-blubber,.fi-glas[data-zustand="news"] .fi-blubber{width:calc(8px + var(--i) * 3px);height:calc(8px + var(--i) * 3px)}
+
+/* Blubberblasen im Glas: klein, steigen ständig auf; die Größe und der Takt kommen aus --i */
+.fi-blubber{position:absolute;bottom:14%;left:calc(30% + var(--i) * 8%);width:calc(5px + var(--i) * 1.5px);height:calc(5px + var(--i) * 1.5px);border-radius:50%;
+  background:var(--fisch-blase);opacity:.7;border:1px solid color-mix(in srgb,var(--fisch-glasrand) 60%,transparent);
+  animation:fi-steigen calc(4s + var(--i) * .9s) linear infinite;animation-delay:calc(var(--i) * -1.3s)}
+@keyframes fi-steigen{from{transform:translateY(0) translateX(0);opacity:.75}60%{transform:translateY(-220px) translateX(8px)}to{transform:translateY(-360px) translateX(-6px);opacity:0}}
+
+/* ---------- Die Antwortblasen: rechts, steigen beim Öffnen auf ---------- */
+.fi-blasen{min-width:0;min-height:0;overflow:auto;padding:4px 4px 90px;display:flex;flex-direction:column;gap:14px}
+.fi-blase{
+  position:relative;display:flex;flex-direction:column;gap:12px;padding:18px 20px 20px;
+  border-radius:28px 28px 28px 8px;background:var(--panel);color:var(--text);border:1px solid var(--line);box-shadow:var(--shadow);
+  animation:fi-aufsteigen .45s cubic-bezier(.2,.8,.2,1) both;
+}
+.fi-blase::before{content:"";position:absolute;left:-14px;bottom:18px;width:12px;height:12px;border-radius:50%;background:var(--panel);border:1px solid var(--line)}
+.fi-blase::after{content:"";position:absolute;left:-24px;bottom:4px;width:7px;height:7px;border-radius:50%;background:var(--panel);border:1px solid var(--line)}
+.fi-blase-titel{font-size:var(--size-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fi-verbs{display:flex;gap:6px;flex-wrap:wrap}
+.fi-blase-koerper{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;min-width:0}
+.fi-blase-koerper.mit-nachweis{grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr)}
+.fi-blase-nachweis{display:flex;flex-direction:column;gap:10px;min-width:0;padding-left:16px;border-left:1px solid var(--line-soft)}
+.fi-tool{min-width:0}
+@keyframes fi-aufsteigen{from{opacity:0;transform:translateY(24px) scale(.98)}to{opacity:1;transform:none}}
+
+/* ---------- Gespräch: Schublade rechts und der Knopf (wie Paperclip) ---------- */
+.fi-drawer[hidden]{display:none}
+.fi-drawer{position:fixed;right:0;top:0;bottom:0;width:420px;z-index:200;background:var(--panel);color:var(--text);border-left:1px solid var(--line);box-shadow:var(--shadow);display:grid;grid-template-rows:44px minmax(0,1fr)}
+.fi-drawer-head{display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--line-soft)}
+.fi-drawer-body{display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0;overflow:hidden}
+.fi-fab{position:fixed;right:18px;bottom:18px;z-index:150;display:flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:10px 16px;background:var(--fisch-orange);color:var(--fisch-glas);font:inherit;font-weight:700;box-shadow:var(--shadow);cursor:pointer}
+.fi-fab.on{display:none}
+.fi-fab-count:empty{display:none}
+.fi-fab-count{background:var(--fisch-glas);color:var(--fisch-orange);border-radius:999px;padding:0 7px;font-size:var(--size-small);line-height:18px}
+.sh-fisch ~ .sx-host{bottom:70px;right:18px}
+.sh-fisch:has(.fi-drawer:not([hidden])) ~ .sx-host{right:438px;bottom:18px}
+
+@media (max-width: 900px){
+  .fi-raum{grid-template-columns:1fr;gap:16px}
+  .sh-fisch{--fi-glas-groesse:min(70vw,300px)}
+  .fi-blase-koerper.mit-nachweis{grid-template-columns:1fr}
+  .fi-drawer{width:100%}
+}

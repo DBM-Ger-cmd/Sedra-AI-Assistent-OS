@@ -62,10 +62,17 @@ SCHEMAS = {
          "id": {"type": "string"}, "verb": {"type": "string", "description": "verb from list_actions, e.g. laden, entladen, ausfuehren"}},
         ["type", "id", "verb"]),
     "propose_intent": _propose("propose_intent",
-        "Propose to write down an intent (Vorhaben): the sentence the Captain wants done. The Captain gets a button; from an intent a task "
-        "is made later. Use this when the Captain gives an order that is bigger than one action.",
+        "Propose to write down an intent (Vorhaben, Ziel): the sentence the Captain wants done. The Captain gets a button; from an intent "
+        "tasks are made later. Use this when the Captain gives an order that is bigger than one action. Give stages (stufen) when the work "
+        "has several steps: 2 to 12 short stage names in the order they are done; each stage later becomes one task.",
         {"title": {"type": "string", "description": "short title, at most 80 characters"},
-         "text": {"type": "string", "description": "the full sentence of what should be done"}}, ["title"]),
+         "text": {"type": "string", "description": "the full sentence of what should be done"},
+         "stufen": {"type": "array", "items": {"type": "string"}, "description": "stage names in order, e.g. [\"Nische festlegen\", \"Modellieren\"]"}},
+        ["title"]),
+    "propose_task": _propose("propose_task",
+        "Propose one order (Auftrag, Aufgabe) for SEDRA: a single piece of work with a clear result. The Captain gets a button; only his "
+        "click creates the task, planned, not executed. Use this for one concrete job; for a bigger goal with steps use propose_intent.",
+        {"text": {"type": "string", "description": "what should be done and what the result is, one to three sentences"}}, ["text"]),
     "list_decisions": _fn("list_decisions", "The decisions that wait for the Captain (approvals): id, title, the ways to answer."),
     # Ticket B6-G-03: das KI GateWay ist SEDRAs Arbeitsumgebung – lesende Werkzeuge auf Regelbuch, Leitfaden und Live-Zustand (gateway/wissen.py).
     # Sie liefern nie den Anfragetext eines Vorgangs. Die Wissensbasis antwortet im Studio ohnehin vor dem Modell; hier kann das Modell nachschlagen.
@@ -107,7 +114,13 @@ PLACES = {
     'machine': ('Maschinenraum', 'Zustand der Runtime'), 'modules': ('Module', 'Shell, Werkzeuge, Vorlagen'),
     'project': ('Projekt und Dateien', 'Dateien des Projekts'),
     'gateway': ('KI GateWay', 'Anfrage prüfen, Entwurf, Prüfung'),
+    'planung': ('Planungstisch', 'mit einem Assistenten Ziele und Aufträge festlegen'),
+    'uebersetzung': ('Übersetzer', 'eine Nachricht für eine andere Rolle (Fisch)'),
+    'transkript': ('Transkripte', 'importieren, suchen, freigeben, exportieren (Fisch)'),
+    'aufnahme': ('Rekorder', 'aufnehmen, abspielen, Sprache → Text (Kern)'),
 }
+# Der Planungstisch (19.10.2026): nur die Werkzeuge, mit denen ein Assistent plant – lesen, wo die Firma steht, und vorschlagen
+PLANUNG_TOOLS = ('propose_intent', 'propose_task', 'list_missions', 'list_decisions', 'arbeitsplatz_stand', 'list_actions', 'propose_action', 'open_object')
 OBJECT_TYPES = ('task', 'candidate', 'model', 'intent', 'project', 'gateway')
 VERB_TYPES = ('task', 'candidate', 'model', 'intent', 'boundary')
 MAX_UI_ACTIONS = 4        # mehr Knöpfe in einer Antwort liest niemand – und ein Modell in einer Schleife soll nicht die Seite füllen
@@ -122,9 +135,9 @@ def _limit(args, default, top):
 class ChatTools:
     """Duck-typed like devenv.model_tools.ToolBox, so run_tool_loop can drive it. `hub` is the UIXHub (models_view, switches_view)."""
 
-    def __init__(self, hub):
+    def __init__(self, hub, names=None):
         self.hub = hub
-        self.names = tuple(SCHEMAS)
+        self.names = tuple(n for n in (names or SCHEMAS) if n in SCHEMAS)
         self.proposals = []           # change requests made in this chat turn, for the audit and the reply
         self.ui_actions = []          # Build 19: what the surface offers as buttons after the answer (open, verb, intent) – nothing ran
         self.terminal = None          # no ending call: the loop ends when the model answers without a tool
@@ -207,7 +220,15 @@ class ChatTools:
                 title = str(args.get("title") or "").strip()[:80]
                 if not title: raise ValueError("title_required")
                 text = str(args.get("text") or "").strip()[:2000]
-                return self._offer({"kind": "intent", "title": title, "text": text}, f"Vorhaben „{title}“")
+                raw = args.get("stufen")
+                stufen = [str(s).strip()[:80] for s in raw if str(s).strip()][:12] if isinstance(raw, list) else []
+                offer = {"kind": "intent", "title": title, "text": text}
+                if stufen: offer["stufen"] = stufen
+                return self._offer(offer, f"Vorhaben „{title}“" + (f" mit {len(stufen)} Stufen" if stufen else ""))
+            if name == "propose_task":
+                text = str(args.get("text") or "").strip()[:2000]
+                if not text: raise ValueError("text_required")
+                return self._offer({"kind": "task", "text": text, "title": text[:60]}, f"Auftrag „{text[:60]}“")
             if name == "gateway_status":
                 return json.dumps(self.hub.gw_wissen.vorgaenge()[:20], ensure_ascii=False)
             if name == "gateway_vorgang":

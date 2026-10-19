@@ -15,7 +15,9 @@
   // Die vier Karten des Dashboards: Objekte, keine Werkzeugnamen – wer sie zeichnet, sagt die Registrierung
   // Build 24 (Ticket B6-G-06): die Hinweise sagen, was die Karte ist, nicht wer der Nutzer ist. Das KI GateWay bleibt in seiner
   // eigenen Oberfläche (Klaus 15.10. 19:34).
+  // 19.10.2026: die Ziele zuerst – ein Ziel ist ein Vorhaben mit Stufen (Werkflow), die Firma arbeitet daran entlang
   const CARDS = [
+    {object: {type: 'intent', id: 'alle', title: 'Ziele', collection: true, kompakt: true}, title: 'Ziele', hint: 'Vorhaben mit Stufen – jede Stufe wird eine Aufgabe (Issue); neue Ziele unter „Ziele“', wide: true},
     {object: {type: 'decision', id: 'alle', title: 'Posteingang', collection: true}, title: 'Posteingang', hint: 'Freigaben und Grenzen – jede Antwort hier ist ein Audit-Ereignis'},
     {object: {type: 'agent', id: 'alle', title: 'Organigramm', collection: true}, title: 'Organigramm', hint: 'Rollen aus den Rezepten; wer gerade arbeitet'},
     {object: {type: 'task', id: 'alle', title: 'Issues', collection: true}, title: 'Issues', hint: 'dieselbe Liste wie „Aufgaben“ im Cockpit', wide: true}

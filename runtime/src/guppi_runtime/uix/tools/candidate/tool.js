@@ -1,4 +1,4 @@
-// Werkzeug „Kandidat“ – das Werkstück: was GUPPI an den Dateien ändern will, Zeile für Zeile (COCKPIT_MODUL_v1 §1, Regel 5).
+// Werkzeug „Kandidat“ – das Werkstück: was SEDRA an den Dateien ändern will, Zeile für Zeile (COCKPIT_MODUL_v1 §1, Regel 5).
 // Der Diff wird hier gerechnet und gezeichnet, ohne Bibliothek: eine LCS-Tabelle über die Zeilen reicht für Dateien dieser Größe,
 // und sie bleibt lesbar – diff2html lag nur als Vorschlag im Konzept, eine Abhängigkeit ist dafür nicht nötig.
 

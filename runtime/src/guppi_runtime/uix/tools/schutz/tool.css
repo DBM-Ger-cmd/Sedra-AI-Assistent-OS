@@ -26,7 +26,7 @@
   background: transparent; color: var(--ts-muted); cursor: pointer; margin-bottom: -1px; }
 .t-schutz-tab:hover { color: var(--ts-text); }
 .t-schutz-tab.on { background: var(--ts-card); border-color: var(--ts-line); color: var(--ts-head); font-weight: bold; }
-.t-schutz-tab:focus-visible, .t-schutz-btn:focus-visible, .t-schutz-seg button:focus-visible { outline: 2px solid var(--ts-accent); outline-offset: 1px; }
+.t-schutz-tab:focus-visible, .t-schutz-btn:focus-visible { outline: 2px solid var(--ts-accent); outline-offset: 1px; }
 .t-schutz-count { display: inline-block; min-width: 18px; margin-left: 6px; padding: 0 5px; border-radius: 999px; font-size: 11px;
   background: var(--ts-warn-fg); color: var(--accent-text); text-align: center; }
 .t-schutz-body { flex: 1; padding: 14px 16px 18px; overflow: auto; }
@@ -85,10 +85,6 @@
   background: var(--ts-card); border: 1px solid var(--ts-line); border-radius: var(--ts-r); }
 .t-schutz-rule.fixed { background: transparent; border-style: dashed; }
 .t-schutz-rcount { white-space: nowrap; }
-.t-schutz-seg { display: inline-flex; border: 1px solid var(--ts-line); border-radius: 999px; overflow: hidden; background: var(--ts-panel); }
-.t-schutz-seg button { font: inherit; font-size: 12px; padding: 4px 12px; border: 0; background: transparent; color: var(--ts-muted); cursor: pointer; }
-.t-schutz-seg button.on:first-child { background: var(--ts-warn-bg); color: var(--ts-warn-fg); font-weight: bold; }
-.t-schutz-seg button.on:last-child { background: var(--ts-ok-fg); color: var(--accent-text); font-weight: bold; }
 
 /* Ausprobieren */
 .t-schutz-input { font: 13px/1.45 var(--mono); width: 100%; box-sizing: border-box; padding: 8px;
@@ -105,11 +101,7 @@
 .t-schutz-m.watch { background: var(--ts-warn-bg); border-color: var(--ts-warn-line); border-bottom-style: dashed; }
 .t-schutz-m.info { background: transparent; border-color: var(--ts-line); }
 
-/* Vorführung, Verlauf */
-.t-schutz-cases { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
-.t-schutz-cases .t-schutz-card .t-schutz-btn { align-self: flex-start; margin-top: auto; }
-.t-schutz-play { border-color: var(--ts-accent); }
-.t-schutz-play summary { cursor: pointer; font-weight: bold; color: var(--ts-head); margin-bottom: 4px; }
+/* Verlauf */
 .t-schutz-events { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; background: var(--ts-line);
   border: 1px solid var(--ts-line); border-radius: var(--ts-r); overflow: hidden; }
 .t-schutz-events li { display: grid; grid-template-columns: 62px 150px minmax(0, 1fr); gap: 10px; align-items: baseline; padding: 7px 10px; background: var(--ts-card); }

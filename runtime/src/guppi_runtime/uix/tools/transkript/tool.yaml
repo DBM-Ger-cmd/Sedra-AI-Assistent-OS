@@ -1,0 +1,28 @@
+# Werkzeug „Transkript“ (Fisch, 19.10.2026): Transkripte importieren (TXT/SRT/VTT), durchsuchen, pseudonymisieren, prüfen,
+# freigeben (Golden Record) und exportieren – nach LocalScribe und VoiceBrief. Sprache → Text macht der Kern (Rekorder); SEDRA liest Erkenntnisse.
+tool:
+  id: transkript
+  name: "Transkript"
+  description: "Transkripte: importieren, suchen, pseudonymisieren, prüfen, freigeben, exportieren – der Record bleibt, Export ändert ihn nie."
+  version: 1.0.0
+  kind: object
+  handles: [transkript]
+  order: 42
+  slot: inhalt
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/fisch/transkripte
+    - POST /api/fisch/transkript
+    - POST /api/fisch/transkript/import
+    - POST /api/fisch/transkript/suche
+    - POST /api/fisch/transkript/pseudonymisieren   # kein Modell: b6core, Mapping getrennt
+    - POST /api/fisch/transkript/status             # entwurf → geprüft → freigegeben
+    - POST /api/fisch/transkript/export             # in <Projekt>/fisch/export/, Record unverändert
+    - POST /api/fisch/transkript/erkenntnisse       # SEDRA liest die Fassung (lokales Modell): vier Blöcke, an die Fassung gebunden
+    - POST /api/chat                                # „Als Auftrag anlegen“ aus einer Aufgabe – geplant, nicht ausgeführt
+  events:
+    emits: []
+    listens: []
+  trust: CORE
+  tests: []
+  needs: {ui: ">=1.0 <2"}

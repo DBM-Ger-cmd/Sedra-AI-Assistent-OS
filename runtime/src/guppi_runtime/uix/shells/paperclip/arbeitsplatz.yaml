@@ -5,13 +5,13 @@ arbeitsplatz:
   satz: 'Eine Firma statt eines Cockpits: Navigation links, Seiten in der Mitte, das Gespräch als Schublade rechts.'
   zonen:
   - name: Navigation
-    wo: 'links: Dashboard, Posteingang, Issues, Ziele, Agenten, Kosten; Werkzeuge; Projekt'
+    wo: 'links: Dashboard, Posteingang, Issues, Ziele, Agenten, Kosten; Assistenten (Planungstisch); Werkzeuge; Projekt'
   - name: Kopfzeile
     wo: 'oben: Titel der Seite, Zurück, die Verben des Werkstücks, das Suchfeld (Strg+K)'
   - name: Dashboard
     wo: Kennzahlen, Posteingang, Organigramm, Issues auf einer Seite
   - name: Schublade
-    wo: 'rechts: das Gespräch – Knopf „Mit GUPPI sprechen“ unten rechts; zählt, was ankam, solange sie zu war'
+    wo: 'rechts: das Gespräch – Knopf „Mit SEDRA sprechen“ unten rechts; zählt, was ankam, solange sie zu war'
   woerter:
     posteingang:
       ist: die Entscheidungen (Freigaben und Grenzen) – Navigation links, Karte auf dem Dashboard
@@ -28,12 +28,18 @@ arbeitsplatz:
         title: Issues
         collection: true
     ziele:
-      ist: die Vorhaben – Navigation links
+      ist: die Vorhaben mit ihren Stufen (Werkflow) – Navigation links, Karte oben auf dem Dashboard
       objekt:
         type: intent
         id: alle
         title: Ziele
         collection: true
+    planungstisch:
+      ist: die Arbeitsumgebung der KI-Assistenten – im Gespräch mit einer Rolle werden Ziele (mit Stufen) und Aufträge festgelegt; Navigation links unter „Assistenten“
+      objekt:
+        type: planung
+        id: tisch
+        title: Planungstisch
     agenten:
       ist: die Besatzung (Rollen aus den Rezepten) – Navigation links, „Organigramm“ auf dem Dashboard
       objekt:
@@ -65,5 +71,7 @@ arbeitsplatz:
     schublade: 'Das Gespräch in Paperclip: Knopf unten rechts; das Werkzeug bleibt, nur der Container wird gezeigt oder verborgen.'
     posteingang: Paperclip-Wort für die Entscheidungen.
     issues: Paperclip-Wort für die Aufgaben.
-    ziele: Paperclip-Wort für die Vorhaben.
+    ziele: Paperclip-Wort für die Vorhaben. Ein Ziel hat Stufen; jede Stufe kann ein Issue (eine Aufgabe) werden, die erste nicht fertige Stufe ist die aktuelle.
+    planungstisch: Paperclip-Ort, an dem ein Assistent (Planer, Rechercheur, …) im Gespräch Ziele und Aufträge vorschlägt; erst „Übernehmen“ legt an, nichts wird ausgeführt.
+    stufe: Ein Schritt eines Ziels mit Name und Satz; „Aufgabe daraus machen“ an der Stufe plant ein Issue und hängt es an die Stufe. Vorlagen geben Stufen vor.
     verlauf: Die zuletzt besuchten Seiten; „Zurück“ in der Kopfzeile geht sie rückwärts, beim Neuladen kommt die letzte Seite wieder.

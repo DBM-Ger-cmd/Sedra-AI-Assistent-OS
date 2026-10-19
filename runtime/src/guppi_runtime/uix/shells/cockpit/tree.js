@@ -25,7 +25,7 @@
     gateway('Überblick', 'uebersicht', 'Stationen und was wartet');
     gateway('Vorgänge', 'vorgaenge', 'Anfragen anlegen und prüfen');
     gateway('Dateien', 'dateien', 'Originale und Fassungen');
-    gateway('Regeln', 'regeln', 'Schalter und Regelbuch');
+    gateway('Regeln', 'regeln', 'Regelbuch und Schärfe');
     gateway('Selbst ausprobieren', 'ausprobieren', 'Text prüfen, Übung, Frage');
     gateway('Verlauf', 'verlauf', 'Vorgänge und Schutz heute');
 
@@ -57,7 +57,9 @@
     row('Modell hinzufügen', {type: 'model', id: 'neu', title: 'Neues Modell'}, 'GGUF wählen, Rezept prüfen, Freigabe');
     row('Teststrecke', {type: 'model', id: 'teststrecke', title: 'Teststrecke'}, loaded ? 'Standardtest für ' + loaded.id : 'braucht ein geladenes Modell');
     row('KI Labor', {type: 'labor', id: 'ki', title: 'KI Labor'}, 'Anbieter, Modelle, Tests');
-    row('Master-Chat', {type: 'entwurf', id: 'chat', title: 'Master-Chat · Befehle und Vorschau'}, 'großes Gespräch, Vorschau aus- und einblendbar');
+    row('Rekorder', {type: 'aufnahme', id: 'rekorder', title: 'Rekorder'}, 'aufnehmen, Sprache → Text');   // Kern Sprache (19.10.)
+    row('Transkripte', {type: 'transkript', id: 'alle', title: 'Transkripte'}, 'suchen, prüfen, Erkenntnisse');
+    row('Entwurf', {type: 'entwurf', id: 'chat', title: 'Entwurf · großes Gespräch'}, 'Gespräch mit Befehlen und Vorschau, groß');   // stand zweimal als „Master-Chat“ im Baum (19.10.)
     row('Läufe', {type: 'labor', id: 'laeufe', title: 'KI Labor · Läufe'}, 'Protokolle der Modellläufe');
 
     head('Besatzung');
@@ -71,15 +73,15 @@
     head('System');
     // Einstellungen: API, Hardware und Maschinenraum liegen in einer Untergruppe, die man aufklappt
     group('Einstellungen', 'Hardware · Maschinenraum');
-    row('Hardware', {type: 'hardware', id: 'hardware', title: 'Hardware'}, '', '', 'Einstellungen');
-    row('Maschinenraum', {type: 'machine', id: 'machine', title: 'Maschinenraum'}, '', '', 'Einstellungen');
+    row('Hardware', {type: 'hardware', id: 'hardware', title: 'Hardware'}, 'GPU, Speicher, Engine', '', 'Einstellungen');
+    row('Maschinenraum', {type: 'machine', id: 'machine', title: 'Maschinenraum'}, 'Prozesse, Sperren, Dienste', '', 'Einstellungen');
     row('Module', {type: 'module', id: 'alle', title: 'Module', collection: true},
         (data.tools || 0) ? (data.tools + ' Werkzeuge') : '');
     row('Modus und Grenzen', {type: 'boundary', id: 'projekt', title: 'Modus und Grenzen'},
         (data.boundaries || {}).confirmed === false ? 'nicht bestätigt' : ((data.boundaries || {}).mode || ''),
         (data.boundaries || {}).confirmed === false ? 'warn' : '');
-    row('Logbuch', {type: 'logbook', id: 'audit', title: 'Logbuch'}, '');
-    row('Guppy-Meter', {type: 'meter', id: 'meter', title: 'Guppy-Meter'}, '');
+    row('Logbuch', {type: 'logbook', id: 'audit', title: 'Logbuch'}, 'jedes Ereignis, mit Prüfsumme');
+    row('Guppy-Meter', {type: 'meter', id: 'meter', title: 'Guppy-Meter'}, 'Token, Zeilen, Kosten');
     return rows;
   }
 
@@ -122,6 +124,9 @@
       // Unter dem Menü: die Seite wählen (links oder rechts) – dieselbe Einstellung wie im Umschalter unten rechts
       if(root.sedraWechsel && root.sedraWechsel.menuWahl) box.append(root.sedraWechsel.menuWahl());
       host.replaceChildren(box);
+      // der Baum folgt dem Werkstück: die markierte Zeile bleibt sichtbar, unter dem klebenden Gruppenkopf (scroll-margin in shell.css)
+      const on = box.querySelector('.tr-row.on');
+      if(on && on.scrollIntoView) on.scrollIntoView({block: 'nearest'});
     }
 
     async function refresh(){

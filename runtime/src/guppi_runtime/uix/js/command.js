@@ -1,11 +1,11 @@
 // Kommando: one input for everything ("Was willst du tun?") – on the Deck and as a palette (Strg+K) from every window.
-// A short navigation phrase opens the right place; everything else goes to GUPPI (the chat with its environment tools), and an order
+// A short navigation phrase opens the right place; everything else goes to SEDRA (the chat with its environment tools), and an order
 // can be planned as a card from there. routeCommand() and matchCommands() are pure (text in, plain objects out) so node can judge them.
 // Classic script: shares the page's global scope with the other files in uix/js; load order is set in retro_desktop.html.
 
 const COMMANDS = [
   {id:'deck',       label:'Deck',                          hint:'Was wartet, was läuft, Besatzung',                words:['deck','start','übersicht','uebersicht','home']},
-  {id:'chat',       label:'Mit GUPPI sprechen',            hint:'Frage oder Auftrag im Chat',                       words:['chat','guppi','sprechen','fragen']},
+  {id:'chat',       label:'Mit SEDRA sprechen',            hint:'Frage oder Auftrag im Chat',                       words:['chat','guppi','sprechen','fragen']},
   {id:'plan',       label:'Als Karte planen',              hint:'Auftrag planen, Freigabe, Ausführung',             words:['karte planen','auftrag planen','mission planen','neue karte','neue mission']},
   {id:'model_add',  label:'Neues Modell hinzufügen',       hint:'GGUF wählen, Rezept prüfen, laden, testen',        words:['neues modell','modell hinzufügen','modell hinzufuegen','gguf','modell anlegen']},
   {id:'models',     label:'Werkstatt: Modelle',            hint:'Modell laden, wechseln, entladen',                 words:['modell','modelle','werkstatt','laden','entladen','wechseln']},
@@ -28,7 +28,7 @@ const COMMANDS = [
 // orders start like this: the palette then offers "Als Karte planen" next to the chat
 const ORDER_WORDS = ['erstelle','erstell','baue','bau','schreibe','schreib','implementiere','programmiere','entwickle','ändere','aendere','repariere','behebe','füge','fuege','lege','teste','prüfe','pruefe','refaktoriere','optimiere','erweitere','generiere','migriere','dokumentiere'];
 
-// questions and explanations are for GUPPI, never a window: first word or a question mark decides
+// questions and explanations are for SEDRA, never a window: first word or a question mark decides
 const QUESTION_WORDS = ['was','wie','warum','wieso','weshalb','welche','welcher','welches','wer','wann','wo','wozu','erkläre','erklär','erklaere','beschreibe','sag','sage','zeig','zeige','kannst','kann','ist','sind','hat','gibt','soll','hilf','hilfe'];
 
 function normalizeCommand(text){
@@ -112,7 +112,7 @@ let paletteIndex = 0;
 function paletteRows(text){
   const route = routeCommand(text) || {kind:'chat', text:'', order:false};
   const rows = [], hits = matchCommands(text).slice(0, 6);
-  const chat = {id:'__chat', label:'An GUPPI senden: '+text.trim().slice(0,60), hint: route.order ? 'Der Chat antwortet; von dort aus „Als Auftrag planen“' : 'Frage, Auftrag oder /status, /plan …'};
+  const chat = {id:'__chat', label:'An SEDRA senden: '+text.trim().slice(0,60), hint: route.order ? 'Der Chat antwortet; von dort aus „Als Auftrag planen“' : 'Frage, Auftrag oder /status, /plan …'};
   if(route.kind === 'command') rows.push(...hits, chat);                    // a navigation phrase: the window first, the chat as the way out
   else { if(text.trim()) rows.push(chat); if(route.order) rows.push({id:'__plan', label:'Als Karte planen: '+text.trim().slice(0,60), hint:'Plan, Freigabe, Ausführung – ohne Umweg über den Chat'}); rows.push(...hits); }
   if(!text.trim()) COMMANDS.slice(0, 8).forEach(c=>rows.push(c));

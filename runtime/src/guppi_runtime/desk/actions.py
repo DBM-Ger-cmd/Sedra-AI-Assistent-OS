@@ -86,8 +86,9 @@ def _candidate_verbs():
 
 def _intent_verbs():
     return [
+        # args.stufe (Index): die Stufe wird zur Aufgabe und hängt an ihr; ohne Stufe wie bisher das ganze Vorhaben
         Verb('aufgabe_machen', 'Aufgabe daraus machen',
-             lambda hub, oid, args: hub.intent_to_task(oid, args.get('text')),
+             lambda hub, oid, args: hub.intent_to_task(oid, args.get('text'), stufe=args.get('stufe')),
              when=lambda o: o['state'] != 'fertig'),
     ]
 

@@ -11,7 +11,7 @@ function setGuppyMood(mood, gates){
   fig.classList.remove('idle','busy','offline','gate');
   fig.classList.add(mood);
   if(gates > 0 && mood !== 'offline'){ fig.classList.add('gate'); badge.textContent = String(gates); badge.title = gates + (gates === 1 ? ' offene Freigabe' : ' offene Freigaben') + ' – Brücke öffnen'; }
-  fig.title = mood === 'offline' ? 'GUPPI: keine Verbindung zur Runtime' : mood === 'busy' ? 'GUPPI: ein Modell arbeitet' : 'GUPPI: bereit';
+  fig.title = mood === 'offline' ? 'SEDRA: keine Verbindung zur Runtime' : mood === 'busy' ? 'SEDRA: ein Modell arbeitet' : 'SEDRA: bereit';
 }
 
 async function refreshGuppyMood(){

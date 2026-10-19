@@ -2,6 +2,7 @@
 
 Die Zusagen: vor der Freigabe wird nichts kopiert, im Gate steht jede Datei mit ihrem Hash und jeder Fund der Durchsicht, ein
 fremdes Modul bekommt nur Leserouten, und zwischen Vorlegen und Einbauen darf sich keine Datei geändert haben."""
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -205,6 +206,19 @@ class Intents(unittest.TestCase):
             self.hub.intent_create({'title': '   ', 'text': 'egal'})
 
 
+def _links_moeglich():
+    """Windows erlaubt symbolische Links nur mit Administratorrechten oder Entwicklermodus. Ohne sie ist der Test nicht ausführbar."""
+    with tempfile.TemporaryDirectory() as d:
+        try:
+            (Path(d) / 'ziel').write_text('x', encoding='utf-8')
+            os.symlink(Path(d) / 'ziel', Path(d) / 'link')
+            return True
+        except OSError:
+            return False
+
+
+LINKS_DA = _links_moeglich()
+
 class Hardening(unittest.TestCase):
     """Härtungsrunde 14.10. (abends): was ein fremdes Modul versuchen könnte, und was die Durchsicht nicht übersehen darf."""
 
@@ -216,6 +230,7 @@ class Hardening(unittest.TestCase):
         (self.root / 'tool.yaml').write_text('tool: {}\n', encoding='utf-8')
         (self.root / 'tool.js').write_text('const a = 1;\n', encoding='utf-8')
 
+    @unittest.skipUnless(LINKS_DA, 'Symbolische Links brauchen Administratorrechte oder den Entwicklermodus (Windows)')
     def test_a_link_out_of_the_module_is_refused_not_followed(self):
         """Sonst käme eine fremde Datei mit – und das Gateway lieferte sie aus, weil sie auf `.js` endet."""
         secret = Path(self.tmp.name) / 'geheim.txt'
@@ -225,6 +240,7 @@ class Hardening(unittest.TestCase):
             install.read_module(self.root)
         self.assertIn('symlink_refused', str(caught.exception))
 
+    @unittest.skipUnless(LINKS_DA, 'Symbolische Links brauchen Administratorrechte oder den Entwicklermodus (Windows)')
     def test_a_linked_folder_is_refused_instead_of_silently_skipped(self):
         anders = Path(self.tmp.name) / 'anderswo'
         anders.mkdir()

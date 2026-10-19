@@ -21,7 +21,7 @@ Danach die Seite neu laden – der Loader lädt genau eine Shell beim Start.
 - **Haus-Knopf** ganz links in der Menüleiste: zur Übersicht der Oberflächen – nur für diesen Lauf, die Wahl in `uix.yaml` bleibt.
   Das Menü **„SEDRA“** wechselt direkt in eine andere Oberfläche.
 - **Ablage mit Bildzeichen** (`icons.js`, eigene Linienzeichen, folgen dem Thema).
-- **„＋ Neu“**: ein eigenes Feld – *Ort*, *Fenster vorn* (eine bestimmte Aufgabe, ein Modell) oder *Auftrag an GUPPI* (ein Satz,
+- **„＋ Neu“**: ein eigenes Feld – *Ort*, *Fenster vorn* (eine bestimmte Aufgabe, ein Modell) oder *Auftrag an SEDRA* (ein Satz,
   der beim Klick ins Gespräch geht). Name und Zeichen wählbar. **Rechtsklick** auf ein Feld: verschieben, ändern, entfernen,
   Ablage zurücksetzen. Menü „Fenster“: „An die Ablage heften“.
 - Gemerkt in `local_config/uix.yaml` (`uix.shelf.minimal`) über `GET/POST /api/uix/shelf` – nicht im Browser, weil SEDRA bei

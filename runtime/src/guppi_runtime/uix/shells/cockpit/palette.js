@@ -1,5 +1,5 @@
 // Cockpit shell – the palette (Strg+K) and the router of the one input (COCKPIT_MODUL_v1 rule 1).
-// There is no second permanent field: the Gespräch is the input, and a short navigation phrase opens a place instead of asking GUPPI.
+// There is no second permanent field: the Gespräch is the input, and a short navigation phrase opens a place instead of asking SEDRA.
 // routeText() and matchPlaces() are pure, as in Build 6's command.js – that is what node tests; the browser part is the overlay.
 
 (function(){
@@ -24,7 +24,7 @@
       host.hidden = true;
       const box = d().el('div', 'pal-box');
       input = d().el('input');
-      input.placeholder = 'Wohin oder was? – „Entscheidungen“, „Modelle“, oder ein Auftrag für GUPPI';
+      input.placeholder = 'Wohin oder was? – „Entscheidungen“, „Modelle“, oder ein Auftrag für SEDRA';
       input.setAttribute('aria-label', 'Kommando');
       const list = d().el('div', 'pal-list');
       input.oninput = ()=>{ index = 0; renderList(list); };

@@ -107,7 +107,7 @@ async function modelAction(label, path, body){
   await refreshModels();
 }
 
-// What runs on the PC right now (GUPPI's llama-servers, runs, jobs) and the way to stop it.
+// What runs on the PC right now (SEDRA's llama-servers, runs, jobs) and the way to stop it.
 async function renderRunning(box){
   box.append(el('h3',null,'Läuft gerade'));
   let p;

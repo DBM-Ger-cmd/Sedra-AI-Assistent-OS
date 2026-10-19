@@ -20,7 +20,7 @@
 
   <div class="guppi-dock">
     <div class="guppi-bubble" id="desktopGuppiBubble">Verbindung zu SEDRA wird aufgebaut ...</div>
-    <div class="guppi idle" id="guppyFigure" title="GUPPI">
+    <div class="guppi idle" id="guppyFigure" title="SEDRA">
       <div class="gtail"></div><div class="gbody"></div><div class="geye"></div><div class="gmouth"></div>
       <div class="gbadge" id="guppyBadge" role="button" tabindex="0" title="Offene Freigaben – Brücke öffnen" onclick="openBridge()">0</div>
     </div>
@@ -44,7 +44,7 @@
       <div class="controls"><div class="ctrl" title="Minimieren" onclick="minimizeWindow('projectWindow')">—</div><div class="ctrl" title="Maximieren" onclick="toggleMaximize('projectWindow')">□</div><div class="ctrl close" title="Schließen" onclick="closeWindow('projectWindow')">×</div></div>
     </div>
     <div class="toolbar">
-      <button class="tool" onclick="openGuppi()">Mit GUPPI weiterarbeiten</button>
+      <button class="tool" onclick="openGuppi()">Mit SEDRA weiterarbeiten</button>
       <button class="tool" onclick="openDevEnv()">Entwicklungsumgebung</button>
     </div>
     <div class="content project-layout">
@@ -81,7 +81,7 @@
         <div id="missionList"><div class="mission"><span>Missionen werden geladen ...</span><span class="badge">LIVE</span></div></div>
 
         <div class="actionbar">
-          <button class="action" onclick="openGuppi()">Mit GUPPI weiterarbeiten</button>
+          <button class="action" onclick="openGuppi()">Mit SEDRA weiterarbeiten</button>
           <button class="action" onclick="openDevEnv()">Entwicklungsumgebung starten</button>
         </div>
       </section>
@@ -90,7 +90,7 @@
 
   <div class="window" id="guppiWindow">
     <div class="titlebar">
-      <div class="title-left"><div class="title-icon" style="border-radius:50%;background:linear-gradient(180deg,#91ecff,#148dbd)"></div><span>GUPPI</span></div>
+      <div class="title-left"><div class="title-icon" style="border-radius:50%;background:linear-gradient(180deg,#91ecff,#148dbd)"></div><span>SEDRA</span></div>
       <div class="controls"><div class="ctrl" title="Minimieren" onclick="minimizeWindow('guppiWindow')">—</div><div class="ctrl" title="Maximieren" onclick="toggleMaximize('guppiWindow')">□</div><div class="ctrl close" title="Schließen" onclick="closeWindow('guppiWindow')">×</div></div>
     </div>
     <div class="toolbar">
@@ -137,7 +137,7 @@
         <div class="info-card">
           <b>Sicherheitsprinzip</b>
           <p style="margin:7px 0 0;color:var(--muted);line-height:1.4">
-            GUPPI und Agenten arbeiten zunächst nur in dieser Umgebung. Das Originalprojekt bleibt unverändert, bis der Captain die Änderungen übernimmt.
+            SEDRA und Agenten arbeiten zunächst nur in dieser Umgebung. Das Originalprojekt bleibt unverändert, bis der Captain die Änderungen übernimmt.
           </p>
         </div>
       </aside>
@@ -167,7 +167,7 @@
 
         <div class="dev-actions">
           <button class="dev-primary" onclick="refreshDevEnvironment()">Status neu prüfen</button>
-          <button class="dev-secondary" onclick="openGuppi()">Mit GUPPI planen</button>
+          <button class="dev-secondary" onclick="openGuppi()">Mit SEDRA planen</button>
           <button class="dev-secondary" onclick="loadMissionsIntoChat()">Missionen anzeigen</button>
         </div>
       </section>
@@ -195,9 +195,9 @@
     <div class="content model-main" id="modelBody">Modelle werden geladen ...</div>
   </div>
 
-  <div class="window" id="cchatWindow" role="dialog" aria-label="GUPPI Chat">
+  <div class="window" id="cchatWindow" role="dialog" aria-label="SEDRA Chat">
     <div class="titlebar">
-      <div class="title-left"><div class="title-icon"></div><span>GUPPI Chat</span></div>
+      <div class="title-left"><div class="title-icon"></div><span>SEDRA Chat</span></div>
       <div class="controls"><div class="ctrl" title="Minimieren" onclick="minimizeWindow('cchatWindow')">—</div><div class="ctrl" title="Maximieren" onclick="toggleMaximize('cchatWindow')">□</div><div class="ctrl close" title="Schließen" onclick="closeWindow('cchatWindow')">×</div></div>
     </div>
     <div class="cc">
@@ -209,7 +209,7 @@
       <section class="cc-main">
         <div class="cc-msgs" id="ccMsgs"></div>
         <div class="cc-composer">
-          <textarea id="ccInput" rows="2" placeholder="Wie kann GUPPI helfen?"></textarea>
+          <textarea id="ccInput" rows="2" placeholder="Wie kann SEDRA helfen?"></textarea>
           <div class="cc-bar"><select id="ccModel" title="Modell"></select><span class="cc-hint">Enter sendet · Umschalt+Enter neue Zeile</span><button id="ccSend" onclick="ccSend()">Senden</button></div>
         </div>
       </section>
@@ -267,7 +267,7 @@
       <div class="controls"><div class="ctrl" title="Minimieren" onclick="minimizeWindow('processorWindow')">—</div><div class="ctrl" title="Maximieren" onclick="toggleMaximize('processorWindow')">□</div><div class="ctrl close" title="Schließen" onclick="closeWindow('processorWindow')">×</div></div>
     </div>
     <div class="toolbar">
-      <button class="tool" onclick="openGuppi()">Mit GUPPI öffnen</button>
+      <button class="tool" onclick="openGuppi()">Mit SEDRA öffnen</button>
     </div>
     <div class="content processor">
       <div class="preview" id="processorPreview">
@@ -279,7 +279,7 @@
           Inhalt kann aus der Zwischenablage oder über eine Datei geladen werden.
         </div>
         <div class="proc-actions">
-          <button onclick="openGuppi()">💬 Mit GUPPI besprechen</button>
+          <button onclick="openGuppi()">💬 Mit SEDRA besprechen</button>
           <button onclick="openDevEnv()">🧪 Entwicklungsumgebung ansehen</button>
         </div>
       </aside>
@@ -300,7 +300,7 @@
     <div class="ctx-item" onclick="pasteFromClipboard()"><span class="ctx-ico">📋</span>Aus Zwischenablage einfügen</div>
     <div class="ctx-item" onclick="pickFile()"><span class="ctx-ico">📄</span>Dokument / Bild öffnen...</div>
     <div class="ctx-sep"></div>
-    <div class="ctx-item" onclick="openDevEnv()"><span class="ctx-ico">🧪</span>GUPPI Entwicklungsumgebung</div>
+    <div class="ctx-item" onclick="openDevEnv()"><span class="ctx-ico">🧪</span>SEDRA Entwicklungsumgebung</div>
     <div class="ctx-item" onclick="openProjectRegistry()"><span class="ctx-ico">📁</span>Projekte öffnen</div>
     <div class="ctx-sep"></div>
     <div class="ctx-item" onclick="openMachineRoom()"><span class="ctx-ico">⚙</span>Maschinenraum</div>
@@ -314,7 +314,7 @@
       <div class="menu-main">
         <div class="menuitem" onclick="openPalette();toggleStart()"><b>Kommando</b><span>Was willst du tun? (Strg+K)</span></div>
         <div class="menuitem" onclick="openDeck();toggleStart()"><b>Deck</b><span>Was wartet, was läuft, wer an Bord ist</span></div>
-        <div class="menuitem" onclick="openGuppi()"><b>GUPPI</b><span>Mit dem Assistenten sprechen</span></div>
+        <div class="menuitem" onclick="openGuppi()"><b>SEDRA</b><span>Mit dem Assistenten sprechen</span></div>
         <div class="menuitem" onclick="newChat();toggleStart()"><b>Neue Karte</b><span>Auftrag planen, freigeben, ausführen</span></div>
         <div class="menuitem" onclick="createProject();toggleStart()"><b>Neues Projekt</b><span>Projektordner und Arbeitsbereich anlegen</span></div>
         <div class="menuitem" onclick="openModelAdd();toggleStart()"><b>Neues Modell</b><span>GGUF wählen, prüfen, laden, testen</span></div>
@@ -341,7 +341,7 @@
     <div class="task-left">
       <div class="start" onclick="toggleStart()"><div class="start-dot"></div>SEDRA</div>
       <div class="taskbtn launcher" data-window="deckWindow" onclick="openDeck()" title="Deck öffnen">⌂ Deck</div>
-      <div class="taskbtn launcher" data-window="guppiWindow" onclick="openGuppi()" title="Mit GUPPI sprechen">● GUPPI</div>
+      <div class="taskbtn launcher" data-window="guppiWindow" onclick="openGuppi()" title="Mit SEDRA sprechen">● SEDRA</div>
       <div class="taskbtn launcher" data-window="modelWindow" onclick="openModels()" title="Werkstatt: Modelle und Teststrecke">🧠 Werkstatt</div>
       <div class="taskbtn launcher" data-window="agentWindow" onclick="openAgents()" title="Besatzung öffnen">👥 Besatzung</div>
       <div class="taskbtn launcher" data-window="libraryWindow" onclick="openLibrary()" title="Bibliothek: Skills ansehen und eigene schreiben">📚 Bibliothek</div>

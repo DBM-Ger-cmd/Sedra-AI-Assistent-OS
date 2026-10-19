@@ -1,0 +1,37 @@
+/* Werkzeug „Transkript“ – nur im eigenen Container, nur Tokens. Liste links, der Record rechts. */
+.t-transkript{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,2.2fr);gap:var(--gap-3);min-width:0;align-items:start}
+.t-tk-liste{display:flex;flex-direction:column;gap:6px;min-width:0}
+.t-tk-stt{font-size:var(--size-xs);line-height:1.4}
+.t-tk-row{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);cursor:pointer}
+.t-tk-row:hover{background:var(--panel-2)}
+.t-tk-row.on{border-color:var(--accent)}
+.t-tk-row b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-tk-pill{align-self:flex-start;font-size:var(--size-xs);padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--panel-2)}
+.t-tk-pill.ok{color:var(--ok);border-color:var(--ok-line);background:var(--ok-bg)}
+.t-tk-pill.done{color:var(--accent-text);background:var(--accent);border-color:var(--accent)}
+.t-tk-import{border:1px solid var(--line-soft);border-radius:var(--radius);padding:6px 10px;background:var(--panel-2)}
+.t-tk-import summary{cursor:pointer;font-weight:600;font-size:var(--size-small)}
+.t-transkript input,.t-transkript textarea,.t-transkript select{border:1px solid var(--line);border-radius:var(--radius);padding:6px 9px;background:var(--panel);color:var(--text);font-size:var(--size-small)}
+.t-transkript textarea{width:100%;resize:vertical;min-height:90px;margin:6px 0}
+.t-tk-row2{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}
+.t-tk-row2 input:first-child{flex:1 1 160px}
+.t-tk-detail{display:flex;flex-direction:column;gap:10px;min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-2);background:var(--panel)}
+.t-tk-kopf{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.t-tk-titel{font-size:var(--size-l);font-weight:600}
+.t-tk-verbs,.t-tk-versionen,.t-tk-such{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.t-tk-such input{flex:1 1 220px}
+.t-tk-meldung{font-size:var(--size-small);color:var(--muted);min-height:1.2em}
+.t-tk-cues{display:flex;flex-direction:column;gap:2px;max-height:52vh;overflow:auto;padding-right:4px}
+.t-tk-cue{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;padding:5px 8px;border-radius:var(--radius);line-height:1.5}
+.t-tk-cue:nth-child(even){background:var(--panel-2)}
+.t-tk-cue.hit{background:var(--warn-bg);outline:1px solid var(--warn-line)}
+.t-tk-zeit{font-family:var(--mono);font-size:var(--size-xs);color:var(--muted);white-space:nowrap;padding-top:2px}
+.t-tk-erk{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius);background:var(--panel-2)}
+.t-tk-erk-kopf{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.t-tk-erk-kopf b{margin-right:auto}
+.t-tk-erk-text{margin:0;line-height:1.5}
+.t-tk-erk-block h6{margin:0 0 4px;font-size:var(--size-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.t-tk-erk-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid var(--line-soft);font-size:var(--size-small);line-height:1.45}
+.t-tk-erk-row span{flex:1 1 auto;min-width:0}
+.t-tk-erk-row button{flex:0 0 auto;white-space:nowrap}
+@media (max-width: 900px){.t-transkript{grid-template-columns:1fr}}

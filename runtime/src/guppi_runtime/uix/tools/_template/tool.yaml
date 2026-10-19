@@ -15,6 +15,6 @@ tool:
   events:
     emits: [object.open]            # nur was hier steht, darf das Werkzeug senden
     listens: [task.changed]
-  trust: CAPTAIN                    # CORE nur im Paket; von GUPPI gebaut: GUPPI_BUILT; fremd: COMMUNITY
+  trust: CAPTAIN                    # CORE nur im Paket; von SEDRA gebaut: GUPPI_BUILT; fremd: COMMUNITY
   tests: [test.spec.js]
   needs: {ui: ">=1.0 <2"}

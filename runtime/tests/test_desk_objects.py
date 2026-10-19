@@ -183,7 +183,7 @@ class CandidateThroughTheHub(unittest.TestCase):
         folder.mkdir(parents=True, exist_ok=True)
         self.old = 'def greet(name):\n    return name\n'
         self.new = 'def greet(name):\n    return "Hallo " + name\n'
-        (folder / 'app.py').write_text(self.old, encoding='utf-8')
+        (folder / 'app.py').write_bytes(self.old.encode('utf-8'))      # Bytes: write_text würde unter Windows \r\n schreiben und den Hash brechen
         request = {'project_path': 'demo', 'files': ['app.py'],
                    'changes': [{'path': 'app.py', 'expected_sha256': hashlib.sha256(self.old.encode()).hexdigest(), 'content': self.new}]}
         mission = rt.brain.create_mission('Ändere Code als Kandidat', inputs=request)

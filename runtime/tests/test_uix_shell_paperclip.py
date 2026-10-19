@@ -69,7 +69,7 @@ class PureParts(unittest.TestCase):
         self.assertEqual(out['dash'], 'dashboard')
         self.assertEqual(out['all'], 'collection')
         self.assertEqual(out['one'], 'object')
-        self.assertEqual(out['cards'], ['decision', 'agent', 'task'], 'Posteingang, Organigramm, Issues – Objekte, keine Werkzeugnamen')
+        self.assertEqual(out['cards'], ['intent', 'decision', 'agent', 'task'], 'Ziele, Posteingang, Organigramm, Issues – Objekte, keine Werkzeugnamen')
 
     def test_the_history_skips_repeats_and_never_grows_without_end(self):
         out = run_js([PAPERCLIP / 'pages.js'], """

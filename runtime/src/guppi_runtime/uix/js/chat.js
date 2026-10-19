@@ -15,7 +15,7 @@ function greetingHtml(){
 
 function addGuppiMessage(html){
   const chat = document.getElementById('chat');
-  chat.insertAdjacentHTML('beforeend','<div class="msg"><div class="av"></div><div class="bub"><b>GUPPI:</b> ' + html + '</div></div>');
+  chat.insertAdjacentHTML('beforeend','<div class="msg"><div class="av"></div><div class="bub"><b>SEDRA:</b> ' + html + '</div></div>');
   chat.scrollTop = chat.scrollHeight;
 }
 
@@ -28,7 +28,7 @@ function focusInput(){
 function refocusInput(){
   const win = document.getElementById('guppiWindow');
   const a = document.activeElement;
-  if(win && win.classList.contains('focused') && (!a || a === document.body)) focusInput();      // only when GUPPI is the front window (the Deck has its own input)
+  if(win && win.classList.contains('focused') && (!a || a === document.body)) focusInput();      // only when SEDRA is the front window (the Deck has its own input)
 }
 
 function initChat(prefix){
@@ -47,12 +47,12 @@ function openGuppi(){
   focusInput();
 }
 
-// A GUPPI message whose body is built with DOM calls (no HTML from mission data); returns the body element.
+// A SEDRA message whose body is built with DOM calls (no HTML from mission data); returns the body element.
 function addGuppiBlock(){
   const chat = document.getElementById('chat');
   const msg = el('div','msg'), bub = el('div','bub');
   msg.append(el('div','av'), bub);
-  bub.append(el('b',null,'GUPPI: '));
+  bub.append(el('b',null,'SEDRA: '));
   const body = el('span'); bub.append(body);
   chat.append(msg);
   chat.scrollTop = chat.scrollHeight;

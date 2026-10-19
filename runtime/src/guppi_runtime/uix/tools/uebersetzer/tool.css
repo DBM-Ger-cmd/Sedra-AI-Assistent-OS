@@ -1,0 +1,14 @@
+/* Werkzeug „Übersetzer“ – nur im eigenen Container, nur Tokens. */
+.t-uebersetzer{display:flex;flex-direction:column;gap:10px;min-width:0}
+.t-ue-kopf{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.t-ue-feld{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:var(--size-small)}
+.t-ue-kopf select{border:1px solid var(--line);border-radius:var(--radius);padding:5px 8px;background:var(--panel-2);color:var(--text);font-size:var(--size-small)}
+.t-uebersetzer textarea{width:100%;resize:vertical;min-height:84px;border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;background:var(--panel-2);color:var(--text);line-height:1.5}
+.t-ue-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.t-ue-out{display:flex;flex-direction:column;gap:8px}
+.t-ue-ergebnis{display:flex;flex-direction:column;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-2);background:var(--panel)}
+.t-ue-weg{font-size:var(--size-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.t-ue-text{white-space:pre-wrap;line-height:1.6;font-size:var(--size-l)}
+.t-ue-liste{display:flex;flex-direction:column;gap:3px;padding:8px 10px;border-radius:var(--radius);background:var(--panel-2);border:1px solid var(--line-soft);font-size:var(--size-small)}
+.t-ue-liste.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.t-ue-wartet{opacity:.7;font-style:italic}   /* Keyframes gehören nicht in ein Werkzeug (Vertrag: nur .t-… Selektoren) */

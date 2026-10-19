@@ -1,4 +1,4 @@
-// Werkzeug „Besatzung“ – who is on board: the Captain, GUPPI, the roles from the recipes, and the agents that really exist.
+// Werkzeug „Besatzung“ – who is on board: the Captain, SEDRA, the roles from the recipes, and the agents that really exist.
 // Demo rows and real rows are never mixed (the Build-5 rule): what the agent manager has not created is named as a role, not an agent.
 
 (function(){
@@ -34,7 +34,7 @@
       if(!this.el) return;
       const [agents, models] = await Promise.all([this.ctx.api('/api/agents').catch(e=>({error: e.message})), this.ctx.api('/api/models').catch(()=>({}))]);
       const box = d().el('div', 's-col');
-      box.append(d().el('div', 's-note', 'Der Captain entscheidet, GUPPI plant und baut. Darunter stehen die Rollen – jede Rolle ist ein Rezept, kein eigener Prozess.'));
+      box.append(d().el('div', 's-note', 'Der Captain entscheidet, SEDRA plant und baut. Darunter stehen die Rollen – jede Rolle ist ein Rezept, kein eigener Prozess.'));
       if(agents.error){ box.append(d().el('div', 's-note bad', 'Besatzung nicht lesbar: ' + agents.error)); this.el.replaceChildren(box); return; }
 
       const instances = agents.instances || [], assignments = agents.assignments || [];

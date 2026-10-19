@@ -77,7 +77,7 @@ function syncTaskbar(){
     if(!open) return;
     const b = document.createElement('div');
     b.className = 'taskbtn' + (el.classList.contains('focused') ? ' on' : '');
-    b.textContent = windowTitle(el).replace(/^GUPPI /,'');
+    b.textContent = windowTitle(el).replace(/^SEDRA /,'');
     b.title = windowTitle(el) + (el.classList.contains('minimized') ? ' – wiederherstellen' : el.classList.contains('focused') ? ' – minimieren' : ' – in den Vordergrund');
     b.onclick = ()=>{
       if(el.classList.contains('minimized')) showWindow(el.id);

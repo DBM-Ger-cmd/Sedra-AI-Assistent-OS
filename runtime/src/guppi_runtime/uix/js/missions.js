@@ -19,7 +19,7 @@ async function loadMissionsIntoChat(){
     const missions=await api('/api/missions');
     const chat=document.getElementById('chat');
     const lines=missions.length?missions.slice(-8).reverse().map(m=>'• '+escapeHtml(String(m.mission_id))+' · '+escapeHtml(String(m.phase))+' · '+escapeHtml(String(m.intent||m.objective||''))).join('<br>'):'Noch keine Missionen vorhanden.';
-    chat.insertAdjacentHTML('beforeend','<div class="msg"><div class="av"></div><div class="bub"><b>GUPPI:</b> Aktuelle Missionen:<br>'+lines+'</div></div>');
+    chat.insertAdjacentHTML('beforeend','<div class="msg"><div class="av"></div><div class="bub"><b>SEDRA:</b> Aktuelle Missionen:<br>'+lines+'</div></div>');
   }catch(err){console.warn(err);}
 }
 
@@ -228,7 +228,7 @@ async function missionWorkflow(mid){
 
 async function requestCodeCandidate(){
  if(!activeProjectId){alert('Zuerst einen registrierten Projektordner öffnen.');return;}
- const intent=prompt('Welche Codeänderung soll GUPPI als Kandidat entwickeln?');if(!intent)return;
+ const intent=prompt('Welche Codeänderung soll SEDRA als Kandidat entwickeln?');if(!intent)return;
  const selection=prompt('Ausgewählte relative Dateien, durch Komma getrennt. Tests müssen mit ausgewählt sein, wenn sie im Gast laufen sollen.');if(!selection)return;
  const files=selection.split(',').map(x=>x.trim()).filter(Boolean);
  const out=await api('/api/code/generate',{method:'POST',body:JSON.stringify({project_id:activeProjectId,intent,files})});showData('Codekandidat – noch nicht getestet',out);

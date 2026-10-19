@@ -83,7 +83,7 @@
       else console.warn('[cockpit]', text);
     },
 
-    // the one input routes here (palette.js decides): a place, or a line for GUPPI
+    // the one input routes here (palette.js decides): a place, or a line for SEDRA
     talk(text){
       const mod = this.ctx.tools.mod('talk');
       if(mod && mod.send) return mod.send(text);
@@ -118,7 +118,7 @@
         d().clickable(item, ()=>{ menu.remove(); fn(); });
         menu.append(item);
       };
-      add('Vorhaben', 'den Satz aufschreiben, um den es geht – GUPPI macht Aufgaben daraus', ()=>this.openObject({type: 'intent', id: 'alle', title: 'Vorhaben', collection: true}));
+      add('Vorhaben', 'den Satz aufschreiben, um den es geht – SEDRA macht Aufgaben daraus', ()=>this.openObject({type: 'intent', id: 'alle', title: 'Vorhaben', collection: true}));
       add('Projekt', 'einen Ordner unter projects/ als Projekt anlegen', ()=>this.openObject({type: 'project', id: 'neu', title: 'Neues Projekt'}));
       add('Datei öffnen', 'eine Datei des Projekts als eigener Reiter', ()=>this.openObject({type: 'project', id: 'dateien', title: 'Dateien'}));
       add('Modell hinzufügen', 'GGUF wählen, Rezept prüfen, Freigabe – dann laden', ()=>this.openObject({type: 'model', id: 'neu', title: 'Neues Modell'}));

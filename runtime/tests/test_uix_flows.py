@@ -81,9 +81,9 @@ class Flows(unittest.TestCase):
             page.fill('.t-talk-in input', 'was steht denn im Verlauf an'); page.keyboard.press('Enter'); page.wait_for_timeout(1500)
             page.click('.t-talk-offer button:has-text("Öffnen: Logbuch")'); page.wait_for_timeout(800)
             self.assertTrue(page.query_selector('.sh-min-win[data-object="logbook:audit"]'), 'der Knopf unter der Antwort öffnet')
-            # eigenes Feld: Auftrag an GUPPI mit Bildzeichen, steht danach in uix.yaml
+            # eigenes Feld: Auftrag an SEDRA mit Bildzeichen, steht danach in uix.yaml
             page.click('.sh-min-app.add'); page.wait_for_timeout(300)
-            page.click('.sh-min-edit .sh-min-seg-item:has-text("Auftrag an GUPPI")')
+            page.click('.sh-min-edit .sh-min-seg-item:has-text("Auftrag an SEDRA")')
             page.fill('.sh-min-edit textarea', 'öffne die Hardware'); page.fill('.sh-min-edit input', 'Hardware')
             page.click('.sh-min-edit-icon[title="Blitz"]'); page.click('.sh-min-edit button:has-text("Anlegen")'); page.wait_for_timeout(900)
             doc = yaml.safe_load(self.hub.gateway.registry.config_path.read_text(encoding='utf-8'))
@@ -235,7 +235,8 @@ class Flows(unittest.TestCase):
             self.assertTrue(page.evaluate("()=>document.querySelector('.sx-panel').hidden"), 'Esc schließt')
             page.keyboard.press('Alt+s'); page.wait_for_timeout(300)
             self.assertFalse(page.evaluate("()=>document.querySelector('.sx-panel').hidden"), 'Alt+S öffnet')
-            page.click('.sx-item:has-text("Übersicht der Oberflächen")'); page.wait_for_timeout(2500)
+            page.click('.sx-item:has-text("Übersicht der Oberflächen")')
+            page.wait_for_selector('.st-head-text', timeout=15000)      # der Wechsel lädt die Start-Shell neu; auf langsamen Rechnern dauert das über 2,5 s
             self.assertTrue(page.query_selector('.st-head-text'), 'die Übersicht der Oberflächen ist da')
             self.assertFalse(page.query_selector('.sx-chip'), 'in der Übersicht gibt es den Umschalter nicht – sie ist selbst die Wahl')
             self.assertEqual(page.evaluate("()=>document.documentElement.dataset.scale"), 'gross', 'die Schriftwahl bleibt über das Neuladen')

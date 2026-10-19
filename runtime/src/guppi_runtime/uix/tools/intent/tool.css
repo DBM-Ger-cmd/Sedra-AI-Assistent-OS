@@ -1,10 +1,53 @@
-/* Werkzeug „Vorhaben“ – nur im eigenen Container. */
-.t-intent-row{padding:7px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);display:flex;flex-direction:column;cursor:pointer}
+/* Werkzeug „Vorhaben“ – nur im eigenen Container, nur Tokens. Seit 19.10.2026 mit Stufen (Werkflow) und Vorlagen. */
+.t-intent-row{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);display:flex;flex-direction:column;gap:4px;cursor:pointer}
 .t-intent-row:hover{background:var(--panel-2)}
 .t-intent-row.warn{background:var(--warn-bg);border-color:var(--warn-line)}
-.t-intent-title{font-size:15px;font-weight:600}
+.t-intent-row-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.t-intent-row-head b{flex:1 1 auto;min-width:0}
+.t-intent-title{font-size:var(--size-l);font-weight:600}
 .t-intent-text{white-space:pre-wrap;color:var(--muted)}
+
+/* Zustand als Pille: offen · in Arbeit · wartet auf dich · fertig */
+.t-intent-pill{flex:0 0 auto;padding:1px 9px;border-radius:999px;font-size:var(--size-xs);font-weight:600;border:1px solid var(--line);color:var(--muted);background:var(--panel-2)}
+.t-intent-pill.ok{color:var(--ok);background:var(--ok-bg);border-color:var(--ok-line)}
+.t-intent-pill.warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn-line)}
+.t-intent-pill.done{color:var(--accent-text);background:var(--accent);border-color:var(--accent)}
+
+/* Fortschritt: ein Segment je Stufe */
+.t-intent-progress{display:flex;gap:3px;height:6px}
+.t-intent-seg{flex:1 1 0;border-radius:3px;background:var(--line)}
+.t-intent-seg.ok{background:var(--ok)}
+.t-intent-seg.warn{background:var(--warn)}
+.t-intent-seg.done{background:var(--accent)}
+
+/* Die Stufen als Weg: eine Linie links, die aktuelle Stufe hervorgehoben */
+.t-intent-stufen{list-style:none;margin:0;padding:0 0 0 18px;display:flex;flex-direction:column;gap:10px;position:relative}
+.t-intent-stufen::before{content:"";position:absolute;left:5px;top:14px;bottom:14px;width:2px;background:var(--line)}
+.t-intent-stufe{position:relative;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);display:flex;flex-direction:column;gap:6px}
+.t-intent-stufe::before{content:"";position:absolute;left:-18px;top:16px;width:12px;height:12px;border-radius:50%;background:var(--panel);border:2px solid var(--line)}
+.t-intent-stufe.ok::before{border-color:var(--ok)}
+.t-intent-stufe.warn::before{border-color:var(--warn);background:var(--warn)}
+.t-intent-stufe.done::before{border-color:var(--accent);background:var(--accent)}
+.t-intent-stufe.current{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 22%,transparent)}
+.t-intent-stufe.done{opacity:.8}
+.t-intent-stufe-head{display:flex;align-items:center;gap:10px}
+.t-intent-stufe-head b{flex:1 1 auto;min-width:0}
+.t-intent-num{flex:0 0 auto;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line);font-size:var(--size-xs);font-weight:700;color:var(--muted)}
+.t-intent-stufe.current .t-intent-num{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.t-intent-stufe-text{margin:0;color:var(--muted);font-size:var(--size-small);line-height:1.45}
+.t-intent-task{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border-radius:var(--radius);background:var(--panel-2);border:1px solid var(--line-soft);cursor:pointer;font-size:var(--size-small)}
+.t-intent-task:hover{border-color:var(--line)}
+.t-intent-task.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.t-intent-stufe-btn{align-self:flex-start}
+
+/* Neu anlegen: Titel, Satz, Vorlage; die Stufen der Vorlage als Vorschau */
 .t-intent-form{border-top:1px solid var(--line-soft);padding-top:var(--gap-2)}
 .t-intent-form input,.t-intent-form textarea{border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;background:var(--panel);width:100%}
 .t-intent-form textarea{min-height:64px;resize:vertical}
-.t-intent-form button{align-self:flex-start}
+.t-intent-form-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.t-intent-vorlage-label{color:var(--muted);font-size:var(--size-small);margin-left:auto}
+.t-intent-vorlage{max-width:360px;border:1px solid var(--line);border-radius:var(--radius);padding:6px 8px;background:var(--panel);color:var(--text);font-size:var(--size-small)}
+.t-intent-preview{display:flex;flex-direction:column;gap:4px}
+.t-intent-preview:empty{display:none}
+.t-intent-preview-list{margin:0;padding-left:22px;columns:2;column-gap:24px;font-size:var(--size-small);color:var(--text)}
+.t-intent-preview-list li{break-inside:avoid;padding:2px 0}

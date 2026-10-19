@@ -25,7 +25,11 @@
     {id: 'machine',   label: 'Maschinenraum',         hint: 'Zustand der Runtime',             words: ['maschinenraum', 'runtime', 'system', 'status', 'entwicklungsumgebung', 'sandbox'], object: {type: 'machine', id: 'machine', title: 'Maschinenraum'}},
     {id: 'modules',   label: 'Module',                hint: 'Shell, Werkzeuge, Vorlagen',      words: ['modul', 'module', 'werkzeuge', 'shell', 'shells', 'erweiterung', 'plugin'],    object: {type: 'module', id: 'alle', title: 'Module', collection: true}},
     {id: 'gateway',   label: 'KI GateWay',            hint: 'Anfrage prüfen, Entwurf, Prüfung', words: ['gateway', 'gate', 'datenschutz', 'pseudonym', 'pseudonymisieren', 'anfrage', 'kundenanfrage'], object: {type: 'gateway', id: 'alle', title: 'KI GateWay', collection: true}},
-    {id: 'project',   label: 'Projekt und Dateien',   hint: 'Dateien des Projekts',            words: ['projekt', 'projekte', 'datei', 'dateien', 'ordner'],                          object: {type: 'project', id: 'projekt', title: 'Projekt'}}
+    {id: 'project',   label: 'Projekt und Dateien',   hint: 'Dateien des Projekts',            words: ['projekt', 'projekte', 'datei', 'dateien', 'ordner'],                          object: {type: 'project', id: 'projekt', title: 'Projekt'}},
+    {id: 'uebersetzung', label: 'Übersetzer',         hint: 'eine Nachricht für eine andere Rolle (Fisch)', words: ['übersetzer', 'uebersetzer', 'übersetzen', 'uebersetzen', 'übersetzung', 'uebersetzung'], object: {type: 'uebersetzung', id: 'wolke', title: 'Übersetzen'}},
+    {id: 'transkript', label: 'Transkripte',          hint: 'importieren, suchen, freigeben, exportieren (Fisch)', words: ['transkript', 'transkripte', 'untertitel', 'srt', 'vtt'], object: {type: 'transkript', id: 'alle', title: 'Transkripte'}},
+    {id: 'aufnahme',  label: 'Rekorder',              hint: 'aufnehmen, abspielen, Sprache → Text (Kern)', words: ['rekorder', 'aufnahme', 'aufnahmen', 'aufnehmen', 'mikrofon', 'diktat', 'diktieren', 'sprachaufnahme'], object: {type: 'aufnahme', id: 'rekorder', title: 'Rekorder'}},
+    {id: 'planung',   label: 'Planungstisch',         hint: 'mit einem Assistenten Ziele und Aufträge festlegen', words: ['planungstisch', 'planung', 'planen', 'assistent', 'assistenten'], object: {type: 'planung', id: 'tisch', title: 'Planungstisch'}}
   ];
 
   const ORDER_WORDS = ['erstelle', 'erstell', 'baue', 'bau', 'schreibe', 'schreib', 'implementiere', 'programmiere', 'entwickle', 'ändere', 'aendere',
@@ -95,9 +99,9 @@
     const route = routeText(text, places) || {kind: 'talk', text: '', order: false};
     const hits = matchPlaces(text, places).slice(0, 6);
     const rows = [];
-    const talk = {id: '__talk', label: text.trim() ? 'An GUPPI senden: ' + text.trim().slice(0, 60) : 'An GUPPI senden',
-                  hint: route.order ? 'GUPPI antwortet im Gespräch und macht daraus Aufgaben' : 'Frage, Auftrag oder /status'};
-    // a place first whenever the text looks like navigation (also half-typed: „entscheid“); an order or a question goes to GUPPI first
+    const talk = {id: '__talk', label: text.trim() ? 'An SEDRA senden: ' + text.trim().slice(0, 60) : 'An SEDRA senden',
+                  hint: route.order ? 'SEDRA antwortet im Gespräch und macht daraus Aufgaben' : 'Frage, Auftrag oder /status'};
+    // a place first whenever the text looks like navigation (also half-typed: „entscheid“); an order or a question goes to SEDRA first
     const navigation = route.kind === 'place' || (hits.length && !route.order && !String(text).trim().endsWith('?') && String(text).trim().split(/\s+/).length <= 3);
     if(navigation){ rows.push(...hits); if(text.trim()) rows.push(talk); }
     else { if(text.trim()) rows.push(talk); rows.push(...hits); }

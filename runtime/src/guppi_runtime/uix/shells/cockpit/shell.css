@@ -1,10 +1,15 @@
-/* Cockpit shell – Layout Phase B (COCKPIT_MODUL_v1 §1, uix2_C).
-   Strip oben, schmale linke Navigation mit Gruppen, zentrales Raster für die Ansicht,
-   rechte Detailspalte (erscheint nur bei gewähltem Objekt), Gespräch unten.
-   Jede Farbe und jedes Maß ist ein Token aus ui/tokens.css – keine Hex-Werte hier.
-   Keine externen Schriften, Bilder oder Skripte. Verläufe/Muster nur CSS oder inline SVG. */
+/* Cockpit shell – Layout Phase B (COCKPIT_MODUL_v1 §1, uix2_C), Politur 19.10.2026.
+   Leiste oben, Baum links, Werkbank mit Reitern in der Mitte (Werkstück vorn, Nachweise daneben), Gespräch unten, Palette (Strg+K).
+   Jede Farbe und jedes Maß ist ein Token aus ui/tokens.css – keine Hex-Werte hier; Schrift nur in Token-Stufen.
+   Keine externen Schriften, Bilder oder Skripte. Mischungen (Hauch von Akzent) nur per color-mix aus Tokens.
+   Die Regeln für Dock (.dk-*), Palette (.pal*) und Menü (.ck-menu) fehlten in Build 24 – die Reiter lagen als nackte Zeilen übereinander. */
 
-/* ---- Root: drei horizontale Zonen – Statusleiste, Mitte, Gespräch */
+/* ---- Root: drei horizontale Zonen – Leiste, Mitte, Gespräch */
+.ck,.pal,.ck-menu{                       /* Palette und Menü hängen am body, nicht in .ck – sie brauchen dieselben Werte */
+  --ck-hover:var(--veil-light-1);
+  --ck-on:color-mix(in srgb,var(--accent) 14%,transparent);
+  --ck-on-line:color-mix(in srgb,var(--accent) 45%,transparent);
+}
 .ck{
   display:grid;
   grid-template-rows:var(--strip-h) minmax(0,1fr) var(--talk-h);
@@ -12,200 +17,256 @@
   min-width:0;
   overflow:hidden;
   background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  font-size:var(--size);
 }
+.ck *{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 
-/* ---- Strip: Statusleiste oben, volle Breite */
+/* ---- Leiste: die Instrumente, volle Breite; viele Zellen rollen in der Leiste, nie über den Rand */
 .ck-strip{
   display:flex;
-  gap:6px;
+  gap:var(--gap);
   align-items:stretch;
-  padding:6px 10px;
+  padding:8px 12px;
   background:var(--panel);
   border-bottom:1px solid var(--line);
-  overflow:hidden;
-  flex:0 0 auto;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
 }
-
+.ck-strip::-webkit-scrollbar{display:none}
 .ck-gauge{
+  flex:0 1 auto;                           /* Zellen geben nach, bevor die Leiste rollt (Abnahme: kein Überhang) */
+  display:flex;
+  flex-direction:column;
+  justify-content:safe center;
+  align-items:stretch;                     /* nie zentriert: ein zu breiter Inhalt wird rechts beschnitten, nicht links (der Guppy stand links abgeschnitten) */
+  gap:0;
+  min-width:96px;
+  max-width:260px;
+  padding:3px 12px;
+  line-height:1.3;
   background:var(--panel-2);
   border:1px solid var(--line);
   border-radius:var(--radius);
-  padding:4px 10px;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  min-width:120px;
-  flex:0 1 auto;
-}
-.ck-gauge small{
-  color:var(--muted);
-  font-size:var(--size-xs);
-  text-transform:uppercase;
-  letter-spacing:var(--tracking-label);
-}
-.ck-gauge b{
-  font-size:var(--size);
-  font-weight:600;
-  white-space:nowrap;
-}
-.ck-gauge i{
-  font-style:normal;
-  color:var(--muted);
-  font-size:var(--size-xs);
-  display:block;
-  white-space:nowrap;
   overflow:hidden;
-  text-overflow:ellipsis;
+  transition:border-color .15s ease,background .15s ease;
 }
-.ck-gauge.ok b{color:var(--ok)}
-.ck-gauge.ok{background:var(--ok-bg);border-color:var(--ok-line)}
-.ck-gauge.warn b{color:var(--warn)}
-.ck-gauge.warn{background:var(--warn-bg);border-color:var(--warn-line)}
-.ck-gauge.bad b{color:var(--bad)}
-.ck-gauge.bad{background:var(--bad-bg);border-color:var(--bad-line)}
+.ck-gauge:hover{border-color:var(--ck-on-line)}
+.ck-gauge small{color:var(--muted);font-size:var(--size-xs);text-transform:uppercase;letter-spacing:var(--tracking-label);white-space:nowrap;margin-right:6px}
+.ck-gauge b{font-size:var(--size);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ck-gauge i{font-style:normal;color:var(--muted);font-size:var(--size-xs);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ck-gauge.ok{background:var(--ok-bg);border-color:var(--ok-line)}      .ck-gauge.ok b{color:var(--ok)}
+.ck-gauge.warn{background:var(--warn-bg);border-color:var(--warn-line)} .ck-gauge.warn b{color:var(--warn)}
+.ck-gauge.bad{background:var(--bad-bg);border-color:var(--bad-line)}    .ck-gauge.bad b{color:var(--bad)}
+.ck-gauge>*{min-width:0}
+.ck-gauge iframe{width:100%;max-width:240px;height:100%;border:0}     /* ein Werkzeug im abgeschotteten Rahmen (Stufe C) bekommt die Zelle, nicht 300×150 */
+.ck-hint{margin-left:auto;background:transparent;border-style:dashed;max-width:none;min-width:0;flex:0 4 auto}
+.ck-hint small{text-transform:none;letter-spacing:0;white-space:normal;line-height:1.35;max-width:260px;overflow:hidden}
 
-/* ---- Mittelzone: Navigation links, Ansicht mittig, optional Detail rechts */
+/* ---- Mitte: Baum links, Werkbank, optional Detail rechts */
 .ck-middle{
   display:grid;
   grid-template-columns:var(--tree-w) minmax(0,1fr);
   min-height:0;
   min-width:0;
   overflow:hidden;
-  border-top:1px solid var(--line);
-  border-bottom:1px solid var(--line);
 }
+.ck-middle.has-detail{grid-template-columns:var(--tree-w) minmax(0,1fr) 320px}
+.ck-detail{min-width:0;overflow:auto;background:var(--panel);border-left:1px solid var(--line);display:none}
+.ck-middle.has-detail .ck-detail{display:block}
 
-.ck-middle.has-detail{
-  grid-template-columns:var(--tree-w) minmax(0,1fr) 320px;
-}
-
-/* Rechte Detailspalte: erscheint erst, wenn ein Objekt gewählt ist. */
-.ck-detail{
+/* ---- Baum: Gruppen als Kopfzeile, Zeilen mit Titel und Zustand darunter; die aktive Zeile trägt einen Akzentstreifen */
+.ck-tree{
   min-width:0;
   overflow:auto;
-  background:var(--panel);
-  border-left:1px solid var(--line);
-  display:none;
-}
-.ck-middle.has-detail .ck-detail{
-  display:block;
-}
-
-/* ---- Baum: schmale linke Navigation mit Gruppen */
-.ck-tree{
+  padding:8px 8px 14px;
   background:var(--panel-2);
   border-right:1px solid var(--line);
-  padding:10px;
-  overflow:auto;
   font-size:var(--size-small);
 }
-
-.tr-list{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-.tr-row{
-  padding:5px 8px;
-  border-radius:6px;
-  cursor:pointer;
-  background:transparent;
-  color:var(--text);
-  border:1px solid transparent;
-}
-
-.tr-row.on{
-  background:var(--accent);
-  color:var(--accent-text);
-}
-
-.tr-row.warn{
-  color:var(--warn);
-}
-
-.tr-row.group{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+.tr-list{display:flex;flex-direction:column;gap:2px}
+.ck-tree .s-head{
+  position:sticky;top:0;z-index:1;
+  margin:0 0 2px;padding:14px 8px 5px;        /* der Abstand nach oben ist Innenabstand: so deckt der klebende Kopf die Lücke */
+  background:var(--panel-2);
   font-weight:600;
-  border-bottom:1px solid var(--line-soft);
 }
-
+.ck-tree .s-head:first-child{padding-top:4px}
+.ck-tree .s-head .tr-note{margin-left:6px;text-transform:none;letter-spacing:0;font-weight:500}
+.tr-row{
+  position:relative;
+  scroll-margin:40px 0 8px;               /* beim Nachrollen nicht unter dem klebenden Gruppenkopf verschwinden */
+  display:flex;
+  flex-direction:column;
+  gap:1px;
+  padding:6px 10px 6px 12px;
+  border-radius:var(--radius);
+  border:1px solid transparent;
+  color:var(--text);
+  cursor:pointer;
+  transition:background .12s ease,border-color .12s ease;
+}
+.tr-row:hover{background:var(--ck-hover)}
+.tr-row::before{                         /* der Streifen links: sichtbar nur auf der aktiven Zeile */
+  content:"";position:absolute;left:3px;top:7px;bottom:7px;width:3px;border-radius:2px;
+  background:var(--accent);opacity:0;transition:opacity .12s ease;
+}
+.tr-row.on{background:var(--ck-on);border-color:var(--ck-on-line)}
+.tr-row.on::before{opacity:1}
+.tr-row.on .tr-title{color:var(--heading);font-weight:600}
+.tr-row.warn .tr-title{color:var(--warn)}
+.tr-row.ok .tr-note{color:var(--ok)}
 .tr-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr-note{color:var(--muted);font-size:var(--size-xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr-group{flex-direction:row;align-items:center;justify-content:space-between;gap:8px;font-weight:600;color:var(--heading);margin-top:6px}
+.tr-group .tr-note{font-weight:400}
+.tr-empty{color:var(--muted);padding:6px 10px;font-size:var(--size-xs);line-height:1.4}
+.tr-menuwahl{display:flex;flex-direction:column;gap:4px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
 
-.tr-note{
-  color:var(--muted);
-  font-size:var(--size-xs);
-  margin-left:auto;
-  white-space:nowrap;
-}
+/* ---- Werkbank: Reiterzeile, Handlungszeile, Inhalt; der Inhalt rollt, die zwei Zeilen stehen */
+.ck-bench{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;background:var(--panel)}
+.dk-split{display:flex;flex:1 1 auto;min-height:0;min-width:0}
+.dk-split.dk-row{flex-direction:row}
+.dk-split.dk-column{flex-direction:column}
+.dk-split.dk-row>*{flex:1 1 0;min-width:0;border-left:1px solid var(--line)}
+.dk-split.dk-row>*:first-child{border-left:0}
+.dk-split.dk-column>*{flex:1 1 0;min-height:0;border-top:1px solid var(--line)}
+.dk-split.dk-column>*:first-child{border-top:0}
+.dk-group{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;min-width:0;height:100%}
 
-.tr-empty{
-  color:var(--muted);
-  padding:10px 8px;
-  font-size:var(--size-xs);
-}
-
-/* ---- Bench: zentrale Ansicht, ein Raster für die Werkbank */
-.ck-bench{
-  min-width:0;
-  min-height:0;
-  overflow:hidden;
-  background:var(--panel);
-}
-
-.dk-body{
-  min-width:0;
-  min-height:0;
-  overflow:auto;
-  padding:16px;
-}
-
-/* Die Reihe der Werkbank: Reiter und Werkzeugzeile behalten ihre Höhe, der Inhalt füllt den Rest und scrollt selbst.
-   Vorher hatte die Gruppe keine Regel: Ein langes Werkzeug wuchs über den Bereich hinaus und wurde abgeschnitten. */
-.ck-bench{
+.dk-bar{
   display:flex;
-  flex-direction:column;
-}
-
-.dk-group{
-  display:flex;
-  flex-direction:column;
-  flex:1 1 auto;
-  min-height:0;
-  height:100%;
-}
-
-.dk-bar,
-.dk-verbs{
+  align-items:flex-end;
+  gap:var(--gap);
+  padding:6px 10px 0;
+  background:var(--panel-2);
+  border-bottom:1px solid var(--line);
   flex:0 0 auto;
 }
-
-.dk-body{
-  flex:1 1 auto;
+.dk-tabs{display:flex;gap:2px;min-width:0;flex:1 1 auto;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.dk-tabs::-webkit-scrollbar{display:none}
+.dk-tabs.drop{box-shadow:inset 0 -2px var(--accent)}
+.dk-tab{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  flex:0 0 auto;
+  max-width:260px;
+  margin-bottom:-1px;
+  padding:7px 8px 7px 12px;
+  border:1px solid transparent;
+  border-bottom:0;
+  border-radius:var(--radius) var(--radius) 0 0;
+  color:var(--muted);
+  font-size:var(--size-small);
+  cursor:pointer;
+  user-select:none;
+  transition:background .12s ease,color .12s ease;
 }
+.dk-tab>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dk-tab:hover{background:var(--ck-hover);color:var(--text)}
+.dk-tab.on{background:var(--panel);border-color:var(--line);color:var(--heading);font-weight:600}
+.dk-tab.on::after{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;border-radius:2px 2px 0 0;background:var(--accent)}
+.dk-x{
+  flex:0 0 auto;
+  width:18px;height:18px;
+  border:0;border-radius:50%;
+  background:transparent;color:var(--muted);
+  font-size:var(--size-xs);line-height:1;
+  cursor:pointer;opacity:0;
+  transition:opacity .12s ease,background .12s ease;
+}
+.dk-tab:hover .dk-x,.dk-tab.on .dk-x{opacity:1}
+.dk-x:hover{background:var(--veil-light-2);color:var(--text)}
+.dk-bar-fixed{display:flex;gap:6px;align-items:center;flex:0 0 auto;padding-bottom:6px}
+.dk-new{font-weight:600;white-space:nowrap}
+.dk-split-btn{
+  width:30px;height:30px;
+  border:1px solid var(--line);border-radius:7px;
+  background:var(--panel);color:var(--muted);
+  cursor:pointer;line-height:1;
+  transition:background .12s ease,color .12s ease,border-color .12s ease;
+}
+.dk-split-btn:hover{color:var(--text);border-color:var(--ck-on-line);background:var(--ck-on)}
 
-/* ---- Gespräch: unten, immer präsent */
-.ck-talk{
+.dk-verbs{
   display:flex;
-  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  flex:0 0 auto;
+  min-height:38px;
+  padding:5px 16px;
+  border-bottom:1px solid var(--line-soft);
   background:var(--panel);
-  border-top:1px solid var(--line);
-  overflow:hidden;
-  flex:0 0 var(--talk-h);
 }
+.dk-verbs>small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.dk-verbs .s-btn{white-space:nowrap}
+.dk-body{flex:1 1 auto;min-width:0;min-height:0;overflow:auto;padding:var(--gap-3)}
 
-/* ---- Utility: reduzierte Bewegung respektieren */
-@media (prefers-reduced-motion: reduce){
-  .ck, .ck-middle {
-    transition:none !important;
-  }
+/* Werkstück links, Nachweise rechts: zwei Spalten, jede rollt für sich */
+.dk-pane{display:grid;grid-template-columns:minmax(0,3fr) minmax(280px,2fr);gap:var(--gap-3);min-height:100%;align-items:start}
+.dk-pane-col{min-width:0;display:flex;flex-direction:column;gap:var(--gap-2)}
+.dk-pane-evidence{position:sticky;top:0;padding-left:var(--gap-3);border-left:1px solid var(--line-soft)}
+.dk-tool{min-width:0}
+
+/* ---- Schaltflächen des Vertrags in dieser Shell: ruhig, deutlich beim Zeigen; die erste Handlung gefüllt (.p) */
+.ck .s-btn{transition:background .12s ease,border-color .12s ease,box-shadow .12s ease}
+.ck .s-btn:hover{border-color:var(--ck-on-line)}
+.ck .s-btn.p:hover{box-shadow:0 4px 14px color-mix(in srgb,var(--accent) 30%,transparent)}
+.ck input,.ck textarea,.ck select{transition:border-color .12s ease,box-shadow .12s ease}
+
+/* ---- Gespräch: unten, immer da */
+.ck-talk{display:flex;flex-direction:column;background:var(--panel);border-top:1px solid var(--line);overflow:hidden;flex:0 0 var(--talk-h)}
+
+/* ---- Palette (Strg+K): ein Feld über allem, die Treffer darunter */
+.pal{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-start;justify-content:center;padding-top:12vh;background:var(--veil-dark)}
+.pal[hidden]{display:none}
+.pal-box{
+  width:min(640px,92vw);
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius-2);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+  animation:ck-auf .14s ease-out;
 }
+.pal-box input{
+  width:100%;box-sizing:border-box;
+  font:inherit;font-size:var(--size-l);
+  padding:14px 16px;
+  border:0;border-bottom:1px solid var(--line);
+  background:transparent;color:var(--text);outline:none;
+}
+.pal-list{max-height:50vh;overflow:auto;padding:6px}
+.pal-row{display:flex;flex-direction:column;gap:1px;padding:8px 12px;border-radius:var(--radius);cursor:pointer}
+.pal-row b{font-weight:600;color:var(--text)}
+.pal-row small{color:var(--muted);font-size:var(--size-xs)}
+.pal-row.on{background:var(--ck-on);outline:1px solid var(--ck-on-line)}
+.pal-row.on b{color:var(--heading)}
+
+/* ---- Menü „＋ Neu“: klappt unter dem Knopf auf */
+.ck-menu{
+  position:fixed;z-index:50;
+  width:280px;padding:6px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius-2);
+  box-shadow:var(--shadow);
+  animation:ck-auf .12s ease-out;
+}
+.ck-menu-item{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:var(--radius);cursor:pointer}
+.ck-menu-item:hover{background:var(--ck-on)}
+.ck-menu-item b{font-weight:600}
+.ck-menu-item small{color:var(--muted);font-size:var(--size-xs);line-height:1.35}
+
+@keyframes ck-auf{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.ck,.ck-middle,.pal-box,.ck-menu{transition:none !important;animation:none !important}}
 
 /* Menü auf der rechten Seite (Auswahl unter dem Baum oder im Umschalter; :root[data-menu] setzt ui/wechsel.js) */
 :root[data-menu="rechts"] .ck-middle{grid-template-columns:minmax(0,1fr) var(--tree-w)}
 :root[data-menu="rechts"] .ck-middle.has-detail{grid-template-columns:minmax(0,1fr) var(--tree-w) 320px}
 :root[data-menu="rechts"] .ck-tree{order:2;border-right:0;border-left:1px solid var(--line)}
 :root[data-menu="rechts"] .ck-detail{order:3}
-.tr-menuwahl{display:flex;flex-direction:column;gap:4px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}

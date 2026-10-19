@@ -96,6 +96,6 @@ async function openProjectRegistry(){
  const icons=[...document.querySelectorAll('#realProjects .desktop-icon')];
  icons.forEach(i=>{ i.classList.add('selected'); setTimeout(()=>i.classList.remove('selected'),2500); });
  document.getElementById('desktopGuppiBubble').textContent = icons.length
-  ? icons.length+' Projektordner liegen oben links auf dem Desktop. Doppelklick öffnet ein Projekt; die Ordner liegen im verwalteten GUPPI-Arbeitsbereich.'
-  : 'Noch kein Projekt. „Neues Projekt“ oben links legt einen Ordner im verwalteten GUPPI-Arbeitsbereich an.';
+  ? icons.length+' Projektordner liegen oben links auf dem Desktop. Doppelklick öffnet ein Projekt; die Ordner liegen im verwalteten SEDRA-Arbeitsbereich.'
+  : 'Noch kein Projekt. „Neues Projekt“ oben links legt einen Ordner im verwalteten SEDRA-Arbeitsbereich an.';
 }

@@ -33,7 +33,7 @@
       this.el.drawer.setAttribute('aria-label', 'Gespräch');
       this.el.drawer.hidden = true;
       this.el.main.append(this.el.top, this.el.page);
-      this.el.fab.append(d().el('span', null, 'Mit GUPPI sprechen'), d().el('b', 'pc-fab-count'));
+      this.el.fab.append(d().el('span', null, 'Mit SEDRA sprechen'), d().el('b', 'pc-fab-count'));
       this.el.fab.onclick = ()=>this.toggleTalk();
       host.append(this.el.nav, this.el.main, this.el.drawer, this.el.fab);
 
@@ -74,7 +74,7 @@
         return;
       }
       const head = d().el('div', 'pc-drawer-head');
-      head.append(d().el('b', null, 'GUPPI'));
+      head.append(d().el('b', null, 'SEDRA'));
       const close = d().el('button', 's-btn', 'Schließen');
       close.onclick = ()=>this.toggleTalk(false);
       head.append(close);
@@ -96,7 +96,7 @@
       }
     },
 
-    // Aus dem Suchfeld: kein Ort, also ein Satz für GUPPI – gesendet wird im Gespräch (derselbe Weg wie die Palette des Cockpits)
+    // Aus dem Suchfeld: kein Ort, also ein Satz für SEDRA – gesendet wird im Gespräch (derselbe Weg wie die Palette des Cockpits)
     handTo(text){
       this.toggleTalk(true);
       const mod = this.ctx.tools.mod('talk');
