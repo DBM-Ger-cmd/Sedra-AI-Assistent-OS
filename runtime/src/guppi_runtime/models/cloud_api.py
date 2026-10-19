@@ -11,11 +11,21 @@ from __future__ import annotations
 import json
 import os
 import re
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from .base import BaseModelAdapter, ModelAdapterError
 from .openai_local import normalize_usage
+
+class _KeineWeiterleitung(HTTPRedirectHandler):
+    """Eine Weiterleitung nimmt die Schlüssel-Kopfzeilen mit an einen anderen Host oder an http (Befund F2). Sie wird abgelehnt."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise HTTPError(req.full_url, code, "weiterleitung_abgelehnt", headers, fp)
+
+
+_OPENER = build_opener(_KeineWeiterleitung)
+
 
 SECRET_REF = re.compile(r"^secret://([a-z0-9-]+)/([a-z0-9-]+)$")
 ANTHROPIC_VERSION = "2023-06-01"
@@ -106,7 +116,7 @@ class _CloudAdapter(BaseModelAdapter):
     def _get(self, path, headers):
         req = Request(self.base_url + path, method="GET", headers=dict(headers))
         try:
-            with urlopen(req, timeout=self.timeout) as resp:
+            with _OPENER.open(req, timeout=self.timeout) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except HTTPError as exc:
             raise ModelAdapterError(f"cloud_api_http_{exc.code}:{_error_detail(exc, headers)}") from None
@@ -117,7 +127,7 @@ class _CloudAdapter(BaseModelAdapter):
         body = json.dumps(payload).encode("utf-8")
         req = Request(self.base_url + path, data=body, method="POST", headers=dict(headers, **{"Content-Type": "application/json"}))
         try:
-            with urlopen(req, timeout=self.timeout) as resp:
+            with _OPENER.open(req, timeout=self.timeout) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except HTTPError as exc:
             raise ModelAdapterError(f"cloud_api_http_{exc.code}:{_error_detail(exc, headers)}") from None

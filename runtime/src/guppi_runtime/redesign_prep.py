@@ -63,6 +63,13 @@ def prepare(src, dst, mapping_dir=None, audit=None):
     for path in sorted(src.rglob("*")):
         if not path.is_file() or path.suffix.lower() not in TEXT_SUFFIXES: continue
         rel = path.relative_to(src)
+        if path.is_symlink():
+            # Befund F3: ein Link kann auf eine Datei außerhalb des Ordners zeigen – er wird nicht gelesen und nicht kopiert
+            entry = {"file": str(rel).replace("\\", "/"), "begriffe": 0, "bestanden": False, "grund": "symlink_abgelehnt"}
+            report.append(entry)
+            if audit is not None:
+                audit.append("TEXT_BEGRIFFE_ERSETZT", component="redesign-prep", payload=entry)
+            continue
         clean, mapping = pseudonymize(path.read_text(encoding="utf-8", errors="replace"))
         # ALLOW, oder PSEUDONYMIZE: der Schutz ersetzt Personenbezug beim Versand selbst (route cloud), nichts Gesperrtes bleibt
         outcome = guard.check([{"role": "user", "content": clean}], model="m", route="cloud")[1].outcome if mapping is not None else "BLOCK"

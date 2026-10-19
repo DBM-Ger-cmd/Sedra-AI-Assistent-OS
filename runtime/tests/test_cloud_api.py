@@ -1,6 +1,7 @@
 import io
 import json
 import unittest
+from pathlib import Path
 from unittest import mock
 from urllib.error import HTTPError
 
@@ -89,7 +90,7 @@ class OpenAICompatibleTest(unittest.TestCase):
                     'usage': {'prompt_tokens': 3, 'completion_tokens': 1}}
             return Resp(json.dumps(body).encode('utf-8'))
 
-        with mock.patch.object(cloud_api, 'urlopen', side_effect=fake_urlopen):
+        with mock.patch.object(cloud_api._OPENER, 'open', side_effect=fake_urlopen):
             out = openai_adapter().chat([{'role': 'user', 'content': 'ping'}], temperature=0.2)
         self.assertEqual(seen['url'], 'https://api.example.test/v1/chat/completions')
         self.assertEqual(seen['auth'], 'Bearer test-key-not-real')
@@ -112,7 +113,7 @@ class OpenAICompatibleTest(unittest.TestCase):
 
     def test_http_error_hides_body_and_key(self):
         err = HTTPError('https://api.example.test/v1/chat/completions', 401, 'nope', None, io.BytesIO(b'key test-key-not-real echoed'))
-        with mock.patch.object(cloud_api, 'urlopen', side_effect=err):
+        with mock.patch.object(cloud_api._OPENER, 'open', side_effect=err):
             with self.assertRaises(ModelAdapterError) as ctx:
                 openai_adapter().chat([{'role': 'user', 'content': 'x'}])
         self.assertTrue(str(ctx.exception).startswith('cloud_api_http_401:'))
@@ -120,7 +121,7 @@ class OpenAICompatibleTest(unittest.TestCase):
         self.assertIn('[geschwärzt]', str(ctx.exception))
 
     def test_health_needs_key_and_model_and_makes_no_request(self):
-        with mock.patch.object(cloud_api, 'urlopen', side_effect=AssertionError('no network in health')):
+        with mock.patch.object(cloud_api._OPENER, 'open', side_effect=AssertionError('no network in health')):
             self.assertTrue(openai_adapter().health())
             self.assertFalse(openai_adapter(environ={}).health())
             self.assertFalse(openai_adapter(model=None).health())
@@ -142,7 +143,7 @@ class AnthropicTest(unittest.TestCase):
             return Resp(json.dumps(body).encode('utf-8'))
 
         msgs = [{'role': 'system', 'content': 'Sei knapp.'}, {'role': 'user', 'content': 'Hi'}]
-        with mock.patch.object(cloud_api, 'urlopen', side_effect=fake_urlopen):
+        with mock.patch.object(cloud_api._OPENER, 'open', side_effect=fake_urlopen):
             out = anthropic_adapter().chat(msgs)
         self.assertEqual(seen['body']['system'], 'Sei knapp.')
         self.assertEqual(seen['body']['messages'], [{'role': 'user', 'content': 'Hi'}])
@@ -170,7 +171,7 @@ class FetchModelsTest(unittest.TestCase):
             seen['body'] = req.data
             return Resp(json.dumps({'data': [{'id': 'b-model'}, {'id': 'a-model'}, {'object': 'x'}]}).encode('utf-8'))
 
-        with mock.patch.object(cloud_api, 'urlopen', side_effect=fake_urlopen):
+        with mock.patch.object(cloud_api._OPENER, 'open', side_effect=fake_urlopen):
             models = openai_adapter().fetch_models()
         self.assertEqual(models, ['a-model', 'b-model'])
         self.assertEqual(seen['url'], 'https://api.example.test/v1/models')
@@ -335,3 +336,31 @@ class SettingsTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class KeineWeiterleitung(unittest.TestCase):
+    def test_a_redirect_is_refused_so_key_headers_never_follow_it(self):
+        # Befund F2 (Gesamtprüfung): eine Weiterleitung darf die Schlüssel-Kopfzeilen nicht an einen anderen Ort tragen
+        from urllib.error import HTTPError
+        from urllib.request import Request
+        handler = cloud_api._KeineWeiterleitung()
+        req = Request('https://example.com/v1/chat/completions', headers={'Authorization': 'Bearer test'})
+        with self.assertRaises(HTTPError) as ctx:
+            handler.redirect_request(req, None, 302, 'Found', {}, 'http://anderer.example/x')
+        self.assertEqual(ctx.exception.code, 302)
+
+
+class SchluesselAblageKaputt(unittest.TestCase):
+    def test_an_unreadable_key_file_is_never_overwritten_as_if_empty(self):
+        # Befund F4 (Gesamtprüfung): eine kaputte Schlüsseldatei gilt nicht als leer – das Löschen würde sonst alle Schlüssel vernichten
+        import tempfile
+        from guppi_runtime import cloud_settings
+        with tempfile.TemporaryDirectory(prefix='keys-') as d:
+            path = Path(d) / 'cloud_keys.json'
+            path.write_text('{kaputt', encoding='utf-8')
+            store = cloud_settings.CloudKeyStore(path)
+            self.assertFalse(store.has('nvidia'))
+            with self.assertRaises(cloud_settings.KeyStoreError):
+                store.delete('nvidia')
+            self.assertEqual(path.read_text(encoding='utf-8'), '{kaputt', 'die Datei bleibt unverändert')
+

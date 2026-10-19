@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import ctypes
 import json
+import secrets
 import os
 import re
 import sys
@@ -56,24 +57,38 @@ class CloudKeyStore:
         return sys.platform == "win32"
 
     def _load(self) -> dict:
+        """Die gespeicherten Schlüssel. Eine vorhandene, aber unlesbare Datei ist ein Fehler – sie gilt nicht als leer,
+        sonst würde das nächste Speichern alle Schlüssel löschen (Befund F4 der Gesamtprüfung)."""
         if not self.path.exists(): return {}
         try:
-            return json.loads(self.path.read_text(encoding="utf-8")).get("keys", {}) or {}
+            data = json.loads(self.path.read_text(encoding="utf-8"))
         except (ValueError, OSError):
-            return {}
+            raise KeyStoreError("key_store_unreadable")
+        if not isinstance(data, dict) or not isinstance(data.get("keys", {}), dict):
+            raise KeyStoreError("key_store_unreadable")
+        return data.get("keys", {}) or {}
 
     def _save(self, keys: dict):
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"schema": 1, "keys": keys}, indent=2), encoding="utf-8")
+        tmp = self.path.with_name(self.path.name + "." + secrets.token_hex(4) + ".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps({"schema": 1, "keys": keys}, indent=2))
+            f.flush()
+            os.fsync(f.fileno())
         os.replace(tmp, self.path)
 
     def has(self, provider_id: str) -> bool:
-        return provider_id in self._load()
+        try:
+            return provider_id in self._load()
+        except KeyStoreError:
+            return False
 
     def get(self, provider_id: str):
         """Der Klartext-Schlüssel, nur im Speicher des Aufrufers. Ohne Windows oder ohne Eintrag: None."""
-        blob = self._load().get(provider_id)
+        try:
+            blob = self._load().get(provider_id)
+        except KeyStoreError:
+            return None
         if not blob or not self.available(): return None
         try:
             return _dpapi(base64.b64decode(blob), protect=False).decode("utf-8")
