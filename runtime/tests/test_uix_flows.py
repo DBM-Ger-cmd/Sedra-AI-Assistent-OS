@@ -131,6 +131,8 @@ class Flows(unittest.TestCase):
             page.click('.t-modules-reload button'); page.wait_for_timeout(1500); wait(page); page.wait_for_timeout(1200)
             self.assertEqual(page.evaluate("()=>window.sedraBoot.ctx.manifest.shell.id"), 'minimal', 'neu geladen: die andere Shell')
             page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'module', id:'alle', title:'Module', collection:true})")
+            # das Modul-Werkzeug öffnet standardmäßig den Reiter „Shells“; die Werkzeuge stehen im Reiter „Werkzeuge“
+            page.click('.t-modules button:has-text("Werkzeuge")'); page.wait_for_timeout(300)
             page.wait_for_function("()=>[...document.querySelectorAll('.t-modules-row b')].some(b=>b.textContent==='Gespräch')", timeout=15000)
             switches = page.evaluate("()=>[...document.querySelectorAll('.t-modules-row')].filter(r=>['Gespräch', 'Module'].includes((r.querySelector('b')||{}).textContent)).map(r=>!!r.querySelector('button'))")
             self.assertEqual(switches, [False, False], 'Gespräch und Module haben keinen Schalter')

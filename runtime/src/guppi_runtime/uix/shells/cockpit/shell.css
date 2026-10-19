@@ -162,6 +162,30 @@
   padding:16px;
 }
 
+/* Die Reihe der Werkbank: Reiter und Werkzeugzeile behalten ihre Höhe, der Inhalt füllt den Rest und scrollt selbst.
+   Vorher hatte die Gruppe keine Regel: Ein langes Werkzeug wuchs über den Bereich hinaus und wurde abgeschnitten. */
+.ck-bench{
+  display:flex;
+  flex-direction:column;
+}
+
+.dk-group{
+  display:flex;
+  flex-direction:column;
+  flex:1 1 auto;
+  min-height:0;
+  height:100%;
+}
+
+.dk-bar,
+.dk-verbs{
+  flex:0 0 auto;
+}
+
+.dk-body{
+  flex:1 1 auto;
+}
+
 /* ---- Gespräch: unten, immer präsent */
 .ck-talk{
   display:flex;
