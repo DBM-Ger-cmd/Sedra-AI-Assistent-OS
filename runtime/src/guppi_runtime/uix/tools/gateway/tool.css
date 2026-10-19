@@ -102,3 +102,23 @@
 .t-regelbuch-pill.bad{color:var(--bad);border-color:var(--bad)}.t-regelbuch-pill.ok{color:var(--ok);border-color:var(--ok)}.t-regelbuch-pill.warn{color:var(--warn);border-color:var(--warn)}
 .t-regelbuch-tun{color:var(--text)}
 .t-regelbuch-foot{line-height:1.4}
+/* Menü links, Inhalt rechts – Skizze des Captains (19.10.2026). Farben nur Token, Status über ok/warn/bad. */
+.t-gateway-layout{display:grid;grid-template-columns:minmax(170px,220px) minmax(0,1fr);gap:var(--gap-2);align-items:start}
+.t-gateway-nav{display:flex;flex-direction:column;gap:4px;min-width:0}
+.t-gateway-navitem{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 6px;align-items:center;text-align:left;width:100%;padding:8px 10px;border:1px solid var(--line);border-left:3px solid transparent;border-radius:var(--radius);background:var(--panel);color:var(--text);font:inherit;cursor:pointer}
+.t-gateway-navitem small{grid-column:1 / -1}
+.t-gateway-navitem:hover{background:var(--panel-2)}
+.t-gateway-navitem.on{border-left-color:var(--accent);background:var(--panel-2)}
+.t-gateway-navn{font-size:var(--size-xs);font-weight:600;padding:1px 7px;border-radius:6px;background:var(--panel-2);color:var(--muted)}
+.t-gateway-navn.warn{background:var(--warn-bg);color:var(--warn)}
+.t-gateway-inhalt{min-width:0;display:flex;flex-direction:column;gap:var(--gap-2)}
+.t-gateway-banner{font-size:var(--size-small);padding:6px 10px;border-radius:var(--radius);border:1px solid var(--line)}
+.t-gateway-banner.ok{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.t-gateway-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--gap-2)}
+.t-gateway-tile{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--radius);background:var(--panel);cursor:pointer;min-width:0}
+.t-gateway-tile.ok{border-left-color:var(--ok);background:var(--ok-bg)}
+.t-gateway-tile.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+.t-gateway-tile.bad{border-left-color:var(--bad);background:var(--bad-bg)}
+.t-gateway-tile-zahl{font-size:var(--size-head)}
+.t-gateway-vorgaenge,.t-gateway-try,.t-gateway-verlauf-liste,.t-gateway-ueb{display:flex;flex-direction:column;gap:var(--gap-2);min-width:0}
+@media (max-width: 640px){.t-gateway-layout{grid-template-columns:minmax(0,1fr)}}

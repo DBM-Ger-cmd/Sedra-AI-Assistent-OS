@@ -7,7 +7,7 @@ tool:
   handles: [gateway]
   order: 14
   slot: inhalt
-  entry: {js: [regeln.js, arbeit.js, tool.js], css: tool.css}
+  entry: {js: [regeln.js, arbeit.js, nav.js, tool.js], css: tool.css}
   api:
     - GET /api/gateway/vorgaenge
     - POST /api/gateway/vorgang

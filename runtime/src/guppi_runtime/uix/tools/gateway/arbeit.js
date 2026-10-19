@@ -8,14 +8,6 @@
   const ART_WORT = {ersetzen: 'durch Platzhalter ersetzen', behalten: 'behalten', entfernen: 'entfernen'};
 
   // Die Reiter oben: Vorgänge, Dateien, Regeln. Klick wechselt die Ansicht des Werkzeugs.
-  function reiter(tool, list){
-    const bar = d().el('div', 't-gateway-tabs');
-    [['vorgaenge', 'Vorgänge'], ['dateien', 'Dateien'], ['regeln', 'Regeln']].forEach(([id, label])=>{
-      bar.append(d().button(label, ()=>{ tool.ansicht = id; tool.refresh(); }, (tool.ansicht || 'vorgaenge') === id ? 'p' : undefined));
-    });
-    return bar;
-  }
-
   // Die hochgeladenen Dateien (der Eingang) mit ihrer Vorschau. Projektdateien sind hier nicht gemeint.
   function dateien(tool, list){
     const box = d().el('div', 't-gateway-dateien');
@@ -112,6 +104,6 @@
     });
   }
 
-  root.sedraGatewayArbeit = {reiter, dateien, vorschau, markierterText, vorgabenListe};
+  root.sedraGatewayArbeit = {dateien, vorschau, markierterText, vorgabenListe};
   if(typeof module !== 'undefined' && module.exports) module.exports = {markierterText};
 })();

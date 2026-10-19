@@ -146,10 +146,10 @@ class Flows(unittest.TestCase):
         data = base64.b64encode(docx.read_bytes()).decode('ascii')
         def flow(page, wait):
             page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})")
-            page.wait_for_selector('.t-gateway-new input', timeout=15000)
+            page.wait_for_selector('.t-gateway-nav', timeout=15000)
             up = page.evaluate("(d)=>fetch('/api/gateway/upload', {method:'POST', headers:{'Content-Type':'application/json','X-GUPPI-Token':decodeURIComponent(location.hash.slice(1))}, body: JSON.stringify({name:'Kundenanfrage_Test.docx', data:d})}).then(r=>r.status)", data)
             self.assertEqual(up, 200)
-            page.click('.t-gateway-tabs button:has-text("Dateien")')
+            page.click('.t-gateway-nav button:has-text("Dateien")')
             page.wait_for_selector('.t-gateway-dateien button:has-text("Vorschau")', timeout=15000)
             page.click('.t-gateway-dateien button:has-text("Vorschau")')
             page.wait_for_selector('.t-gw-fund', timeout=15000)
@@ -167,7 +167,9 @@ class Flows(unittest.TestCase):
         def flow(page, wait):
             hub = uix_check.LAST_HUB
             hub.runtime.model_router.register(FakeAdapter(lambda m: 'Sehr geehrte <PERSON_001>, der Stand folgt; offene Punkte sind offen. Kontakt <EMAIL_001>.'))
-            page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})"); page.wait_for_selector('.t-gateway-new input', timeout=15000)
+            page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})")
+            page.wait_for_selector('.t-gateway-nav', timeout=15000); page.click('.t-gateway-nav button:has-text("Vorgänge")')
+            page.wait_for_selector('.t-gateway-new input', timeout=15000)
             page.fill('.t-gateway-new input', 'Projektabstimmung'); page.click('.t-gateway-new button'); page.wait_for_timeout(1200)
             self.assertTrue(page.query_selector('.t-gateway-flow'), 'der neue Vorgang ist offen')
             page.fill('.t-gateway-text', 'Lena Beispiel fragt per lena@example.com nach dem Stand von NORD-42. Kundennummer K-1042.')
@@ -203,9 +205,9 @@ class Flows(unittest.TestCase):
             self.assertIn('menschlich geprüft: ja', page.evaluate("()=>document.querySelector('.t-gateway-kennz').textContent"))
             self.assertEqual(hub.content_guard.counts.get('SG_MODEL_CALL'), 1, 'genau ein Modellaufruf, durch den Inhaltsschutz')
             # A01 von Hand: ein neuer Vorgang mit Hochrisiko-Kontext wird SK3 mit R-13
-            for _ in range(4):                                   # zurück zur Liste: der Reiter des Vorgangs steht noch vorn – zweimal anstoßen ist erlaubt
-                page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})"); page.wait_for_selector('.t-gateway-new input', timeout=15000)
-                if page.query_selector('.t-gateway-new input'): break
+            page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})")
+            page.wait_for_selector('.t-gateway-nav', timeout=15000); page.click('.t-gateway-nav button:has-text("Vorgänge")')
+            page.wait_for_selector('.t-gateway-new input', timeout=15000)
             page.fill('.t-gateway-new input', 'Bewerbung'); page.click('.t-gateway-new button'); page.wait_for_timeout(1200)
             page.fill('.t-gateway-text', 'Bitte eine Antwort auf die Bewerbung entwerfen.')
             page.check('.t-gateway-check:has-text("A01") input'); page.click('.t-gateway button:has-text("Datenschutz prüfen")'); page.wait_for_timeout(1200)

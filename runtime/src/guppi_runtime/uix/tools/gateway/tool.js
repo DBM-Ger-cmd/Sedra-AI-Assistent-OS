@@ -75,31 +75,41 @@
       return c.bereit && c.bereit.length ? 'Anbieter ' + c.bereit.join(', ') : 'Anbieter ohne Schlüssel';
     },
 
+    // Die Liste ist das Gerüst: links das Menü (nav.js), rechts die gewählte Ansicht. Kein Reiter-Band mehr.
     renderList(list){
       const box = d().el('div', 't-gateway-list');
       const head = d().el('div', 't-gateway-head');
       head.append(d().el('h3', null, 'KI GateWay'), d().el('small', 's-muted', 'Kundenanfrage → Datenschutz prüfen → Freigabe → Entwurf → deine Prüfung. Kein Versand.'));
-      box.append(head, root.sedraGatewayArbeit.reiter(this, list));
-      // Der Menüpunkt Regeln und die Dateien haben ihre eigene Ansicht; die Vorgänge bleiben wie sie sind
-      if(this.ansicht === 'regeln'){ box.append(root.sedraGatewayRegeln.draw(list)); this.el.replaceChildren(box); root.sedraGatewayArbeit.vorgabenListe(this, box); return; }
-      if(this.ansicht === 'dateien'){ box.append(root.sedraGatewayArbeit.dateien(this, list)); this.el.replaceChildren(box); return; }
+      box.append(head, root.sedraGatewayNav.gerust(this, list));
+      this.el.replaceChildren(box);
+    },
+
+    // Die Vorgangsansicht: neuer Vorgang, Liste (nach Filter aus der Übersicht), Leitfaden
+    vorgaengeBox(list){
+      const box = d().el('div', 't-gateway-vorgaenge');
       const form = d().el('div', 't-gateway-new');
       const titel = d().el('input'); titel.placeholder = 'Titel des Vorgangs, z. B. Projektabstimmung vorbereiten'; titel.setAttribute('aria-label', 'Titel');
       const wunsch = d().el('select'); wunsch.setAttribute('aria-label', 'Wunsch');
       [['local', 'Lokale KI' + (list.modell ? ' · ' + list.modell : ' · kein Modell geladen')], ['cloud', 'Cloud-KI · ' + this.cloudWort(list)]].forEach(([v, t])=>{ const op = d().el('option', null, t); op.value = v; wunsch.append(op); });
       form.append(titel, wunsch, d().button('Neuer Vorgang', async()=>{ await this.neu(titel.value, wunsch.value); titel.value = ''; }, 'p'));
       box.append(form);
+      // Filter aus der Übersicht: sichtbar als Chip, mit einem Klick wieder weg
+      if(this.filter){
+        box.append(d().button(root.sedraGatewayNav.filterName(this.filter) + ' · alle zeigen ×', ()=>{ this.filter = null; this.refresh(); }));
+      }
       const rows = d().el('div', 't-gateway-rows');
+      const sichtbar = list.vorgaenge.filter(v=>root.sedraGatewayNav.passt(v, this.filter));
       if(!list.vorgaenge.length) rows.append(d().empty('Noch kein Vorgang. Leg einen an – die Anfrage bleibt auf diesem Rechner.'));
-      list.vorgaenge.forEach(v=>{
+      else if(!sichtbar.length) rows.append(d().empty('Kein Vorgang in diesem Zustand.'));
+      sichtbar.forEach(v=>{
         const row = d().el('div', 't-gateway-row');
         row.append(d().el('b', null, v.titel), d().el('span', 't-gateway-pill ' + this.tone(v), v.zustand_wort || v.zustand),
                    d().el('small', 's-muted', [v.id, v.klasse, v.weg ? WEG[v.weg] : ''].filter(Boolean).join(' · ')));
         d().clickable(row, ()=>this.ctx.shell.open({type: 'gateway', id: v.id, title: v.titel}));
         rows.append(row);
       });
-      box.append(rows, this.leitfaden(list, null), this.fragSedra(null), this.mvpNote(list));
-      this.el.replaceChildren(box);
+      box.append(rows, this.leitfaden(list, null), this.mvpNote(list));
+      return box;
     },
 
     // B6-G-03: der Leitfaden – so arbeitet ein Mensch mit dem GateWay, vom Anlegen bis zum Ablegen. Teil des Moduls, aus der Wissensbasis.
@@ -117,29 +127,6 @@
       });
       det.append(ol);
       return det;
-    },
-
-    // B6-G-03: „Frag SEDRA“ – die Wissensbasis antwortet ohne Modell; Knöpfe öffnen, nichts läuft von allein.
-    fragSedra(v){
-      const box = d().el('div', 't-gateway-frag');
-      const inp = d().el('input'); inp.placeholder = 'Frag SEDRA: Was muss ich als Nächstes machen? Wo ist der Fehler in diesem Text: …'; inp.setAttribute('aria-label', 'Frage an SEDRA');
-      const out = d().el('div', 't-gateway-frag-out');
-      const ask = async()=>{
-        const frage = inp.value.trim(); if(!frage) return;
-        try{
-          const a = await this.ctx.api('/api/gateway/frage', {method: 'POST', body: {frage, vorgang: v ? v.id : ''}});
-          out.replaceChildren();
-          const note = d().el('div', 's-note'); note.textContent = a.reply; out.append(note);
-          const row = d().el('div', 's-row');
-          (a.ui_actions || []).forEach(x=>{ if(x.kind === 'open' && x.object) row.append(d().button(x.title || 'Öffnen', ()=>this.ctx.shell.open(x.object))); });
-          row.append(d().button('Merken', async()=>{ await this.ctx.api('/api/gateway/wissen', {method: 'POST', body: {frage, antwort: a.reply}}); this.ctx.shell.notify('Gemerkt – steht beim nächsten Mal in der Wissensbasis.', 'note'); }));
-          row.append(d().el('small', 's-muted', a.quelle || ''));
-          out.append(row);
-        }catch(err){ out.replaceChildren(d().el('div', 's-note bad', 'Keine Antwort: ' + err.message)); }
-      };
-      inp.addEventListener('keydown', e=>{ if(e.key === 'Enter') ask(); });
-      box.append(d().el('div', 't-gateway-colhead', 'Frag SEDRA'), inp, d().button('Fragen', ask), out);
-      return box;
     },
 
     tone(v){ return v.zustand === 'GESPERRT' || v.zustand === 'FEHLER' ? 'bad' : v.zustand === 'ENTWURF' || v.zustand === 'WARTET' ? 'warn' : v.zustand === 'ABGESCHLOSSEN' ? 'ok' : ''; },
@@ -165,10 +152,12 @@
       const head = d().el('div', 't-gateway-head');
       head.append(d().el('h3', null, v.titel), d().el('span', 't-gateway-pill ' + this.tone(v), v.zustand_wort),
                   d().el('small', 's-muted', v.id + ' · ' + (v.erstellt || '').replace('T', ' ').slice(0, 16)));
+      // Zurück in das Menü: der Vorgang bleibt, die Liste kommt wieder in die Ansicht Überblick
+      head.append(d().button('← Zur Übersicht', ()=>{ this.ansicht = 'uebersicht'; this.filter = null; this.ctx.object = {type: 'gateway', id: 'alle', collection: true}; this.refresh(); }));
       box.append(head);
       this.list = list;
       box.append(this.station01(v, list), this.station02(v, list), this.station03(v), this.station04(v));
-      box.append(this.leitfaden(list, v), this.fragSedra(v));
+      box.append(this.leitfaden(list, v), root.sedraGatewayNav.frageSedra(this, v));
       if(v.verlauf && v.verlauf.length){
         const vl = d().el('details', 't-gateway-verlauf'); vl.append(d().el('summary', null, 'Verlauf'));
         v.verlauf.slice().reverse().forEach(x=>vl.append(d().el('div', 's-muted', (x.at || '').slice(11, 16) + ' · ' + x.text)));
