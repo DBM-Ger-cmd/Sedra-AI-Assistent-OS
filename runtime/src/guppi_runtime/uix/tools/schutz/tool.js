@@ -33,6 +33,8 @@
     schuetzt: ['Schützt', 'ok', 'Alle Regeln greifen.']
   };
   var TABS = [['ueberblick', 'Überblick'], ['regeln', 'Regeln'], ['probe', 'Selbst ausprobieren'], ['vorfuehrung', 'Vorführung'], ['verlauf', 'Verlauf']];
+  // Die Ansichten des Menüs im Baum links auf die Reiter dieses Werkzeugs
+  var TAB_VON_ANSICHT = {uebersicht: 'ueberblick', regeln: 'regeln', ausprobieren: 'probe', verlauf: 'verlauf'};
   var TRUST = [['captain', 'Von mir'], ['project', 'Aus einer Projektdatei'], ['untrusted', 'Fremd: Webseite, Werkzeug, Datei']];
   var ROUTE = [['local', 'Lokale KI auf diesem Rechner'], ['cloud', 'Cloud (erst lokal geprüft)']];
   var SAMPLES = [
@@ -45,10 +47,14 @@
     id: 'schutz',
 
     mount: function (host, ctx) {
-      this.host = host; this.ctx = ctx; this.tab = 'ueberblick'; this.state = null; this.play = null; this.ask = null;
+      this.host = host; this.ctx = ctx; this.state = null; this.play = null; this.ask = null;
+      // Eingebettet (im Menü des GateWay links): die Ansicht gibt das Menü vor, die eigenen Reiter entfallen
+      var ansicht = ctx.object && ctx.object.ansicht;
+      this.tab = TAB_VON_ANSICHT[ansicht] || 'ueberblick';
       host.classList.add('t-schutz');
       this.head = el('div', { cls: 't-schutz-head' });
       this.tabs = el('div', { cls: 't-schutz-tabs', role: 'tablist', 'aria-label': 'Bereiche des KI GateWay' });
+      if (ctx.object && ctx.object.eingebettet) this.tabs.style.display = 'none';     // der Stil des Werkzeugs würde das Attribut hidden überschreiben
       this.body = el('div', { cls: 't-schutz-body' });
       this.probePanel = this.buildProbe();
       host.append(this.head, this.tabs, this.body);

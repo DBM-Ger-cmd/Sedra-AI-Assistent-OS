@@ -43,7 +43,7 @@
       this.offs.push(ctx.bus.on('decision.answered', ()=>this.refresh()));
       await this.refresh();
     },
-    unmount(){ (this.offs || []).forEach(off=>off()); this.el.replaceChildren(); },
+    unmount(){ (this.offs || []).forEach(off=>off()); root.sedraGatewayNav.aufraeumen(this); this.el.replaceChildren(); },
 
     actions(){
       const o = this.ctx.object || {};
@@ -58,6 +58,7 @@
 
     async refresh(){
       const o = this.ctx.object || {type: 'gateway', id: 'alle', collection: true};
+      if(o.ansicht) this.ansicht = o.ansicht;             // die Ansicht kommt vom Menü im Baum
       try{
         const list = await this.ctx.api('/api/gateway/vorgaenge');
         if(o.collection || o.id === 'alle'){ this.state = {list}; this.renderList(list); return; }
@@ -93,15 +94,9 @@
       [['local', 'Lokale KI' + (list.modell ? ' · ' + list.modell : ' · kein Modell geladen')], ['cloud', 'Cloud-KI · ' + this.cloudWort(list)]].forEach(([v, t])=>{ const op = d().el('option', null, t); op.value = v; wunsch.append(op); });
       form.append(titel, wunsch, d().button('Neuer Vorgang', async()=>{ await this.neu(titel.value, wunsch.value); titel.value = ''; }, 'p'));
       box.append(form);
-      // Filter aus der Übersicht: sichtbar als Chip, mit einem Klick wieder weg
-      if(this.filter){
-        box.append(d().button(root.sedraGatewayNav.filterName(this.filter) + ' · alle zeigen ×', ()=>{ this.filter = null; this.refresh(); }));
-      }
       const rows = d().el('div', 't-gateway-rows');
-      const sichtbar = list.vorgaenge.filter(v=>root.sedraGatewayNav.passt(v, this.filter));
       if(!list.vorgaenge.length) rows.append(d().empty('Noch kein Vorgang. Leg einen an – die Anfrage bleibt auf diesem Rechner.'));
-      else if(!sichtbar.length) rows.append(d().empty('Kein Vorgang in diesem Zustand.'));
-      sichtbar.forEach(v=>{
+      list.vorgaenge.forEach(v=>{
         const row = d().el('div', 't-gateway-row');
         row.append(d().el('b', null, v.titel), d().el('span', 't-gateway-pill ' + this.tone(v), v.zustand_wort || v.zustand),
                    d().el('small', 's-muted', [v.id, v.klasse, v.weg ? WEG[v.weg] : ''].filter(Boolean).join(' · ')));
@@ -153,7 +148,7 @@
       head.append(d().el('h3', null, v.titel), d().el('span', 't-gateway-pill ' + this.tone(v), v.zustand_wort),
                   d().el('small', 's-muted', v.id + ' · ' + (v.erstellt || '').replace('T', ' ').slice(0, 16)));
       // Zurück in das Menü: der Vorgang bleibt, die Liste kommt wieder in die Ansicht Überblick
-      head.append(d().button('← Zur Übersicht', ()=>{ this.ansicht = 'uebersicht'; this.filter = null; this.ctx.object = {type: 'gateway', id: 'alle', collection: true}; this.refresh(); }));
+      head.append(d().button('← Zur Übersicht', ()=>{ this.ansicht = 'uebersicht'; this.ctx.object = {type: 'gateway', id: 'alle', collection: true}; this.refresh(); }));
       box.append(head);
       this.list = list;
       box.append(this.station01(v, list), this.station02(v, list), this.station03(v), this.station04(v));

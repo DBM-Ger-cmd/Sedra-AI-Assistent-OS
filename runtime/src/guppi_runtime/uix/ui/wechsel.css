@@ -5,7 +5,7 @@
 .sx-chip-mark{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-text);font-weight:700;font-size:var(--size-small)}
 .sx-chip-text{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sx-panel[hidden]{display:none}
-.sx-panel{width:320px;max-width:calc(100vw - 28px);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-2);box-shadow:var(--shadow);padding:10px;display:grid;gap:10px}
+.sx-panel{width:320px;max-width:calc(100vw - 28px);max-height:calc(100vh - 110px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-2);box-shadow:var(--shadow);padding:10px;display:grid;gap:10px}
 .sx-head{display:flex;flex-direction:column;gap:2px}.sx-head b{font-size:var(--size-l)}.sx-head small{color:var(--muted)}
 .sx-list{display:grid;gap:4px}
 .sx-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px;border:1px solid transparent;border-radius:var(--radius);background:var(--panel-2);color:var(--text);cursor:pointer}

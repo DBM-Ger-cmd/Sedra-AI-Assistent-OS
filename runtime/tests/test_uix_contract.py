@@ -388,7 +388,7 @@ class CockpitPure(unittest.TestCase):
         self.assertIn('task', out['types'])
         self.assertIn('logbook', out['types'])
         self.assertNotIn('routine', out['types'], 'Build 24 (B6-G-06): kein Eintrag ohne Werkzeug dahinter')
-        self.assertNotIn('gateway', out['types'], 'Build 24 (Klaus 19:34): das KI GateWay bleibt in seiner eigenen Oberfläche')
+        self.assertIn('gateway', out['types'], 'das KI GateWay steht links im Baum mit seinen Ansichten (Captain-Entscheidung 19.10.2026)')
 
     def test_the_tree_opens_the_workshop_sections_it_promises(self):
         # Build 24 (B6-G-06): „Modell hinzufügen“ und „Teststrecke“ sind Objekte, die die Werkstatt als Abschnitt öffnet (sectionFor)

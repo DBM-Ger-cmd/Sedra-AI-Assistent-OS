@@ -37,7 +37,9 @@
     eachGroup(layout, g=>{ if(!where && (g.panes || []).some(p=>p.key === key)) where = g; });
     if(where){ where.active = key; return {group: where, created: false}; }
     const group = (groupId && findGroup(layout, groupId)) || firstGroup(layout);
-    group.panes.push({key, object: {type: object.type, id: object.id, title: object.title || object.id, collection: !!object.collection}});
+    // ansicht: welche Ansicht eines Werkzeugs gezeigt wird (das GateWay im Baum); imBaum: das Menü steht schon im Baum
+    group.panes.push({key, object: {type: object.type, id: object.id, title: object.title || object.id, collection: !!object.collection,
+                                    ansicht: object.ansicht || undefined, imBaum: !!object.imBaum || undefined}});
     group.active = key;
     return {group, created: true};
   }
@@ -120,6 +122,14 @@
     }
 
     function open(object, groupId){
+      // Dasselbe Objekt, andere Ansicht (z. B. das GateWay im Baum): das Fenster bleibt, die Ansicht wird neu gezeichnet
+      const key = paneKey(object);
+      let alt = null;
+      eachGroup(state.layout, g=>(g.panes || []).forEach(p=>{ if(p.key === key) alt = p; }));
+      if(alt && object.ansicht !== undefined && alt.object.ansicht !== object.ansicht){
+        unmountPane(key);
+        alt.object = Object.assign({}, alt.object, {ansicht: object.ansicht, imBaum: !!object.imBaum || undefined, title: object.title || alt.object.title});
+      }
       const {group} = addPane(state.layout, object, groupId);
       render();
       save();
@@ -165,7 +175,8 @@
       }
       const content = tools.filter(t=>(t.slot || 'inhalt') !== 'nachweis');
       // Nachweise gehören an ein Werkstück, nicht an eine Liste: eine Sammlung („alle Aufgaben“) trägt `collection` und bekommt keine.
-      const evidence = pane.object.collection ? [] : tools.filter(t=>(t.slot || 'inhalt') === 'nachweis');
+      // Das GateWay hat seinen Nachweis im Menü links (Schutz-Ansichten), daneben keine zweite Spalte.
+      const evidence = (pane.object.collection || pane.object.type === 'gateway') ? [] : tools.filter(t=>(t.slot || 'inhalt') === 'nachweis');
       let left = box, right = null;
       if(content.length && evidence.length){
         const split = d().el('div', 'dk-pane');

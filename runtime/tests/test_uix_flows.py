@@ -146,10 +146,10 @@ class Flows(unittest.TestCase):
         data = base64.b64encode(docx.read_bytes()).decode('ascii')
         def flow(page, wait):
             page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})")
-            page.wait_for_selector('.t-gateway-nav', timeout=15000)
+            page.wait_for_selector('.t-gateway-schutz', timeout=15000)
             up = page.evaluate("(d)=>fetch('/api/gateway/upload', {method:'POST', headers:{'Content-Type':'application/json','X-GUPPI-Token':decodeURIComponent(location.hash.slice(1))}, body: JSON.stringify({name:'Kundenanfrage_Test.docx', data:d})}).then(r=>r.status)", data)
             self.assertEqual(up, 200)
-            page.click('.t-gateway-nav button:has-text("Dateien")')
+            page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay · Dateien', collection:true, ansicht:'dateien', imBaum:true})")
             page.wait_for_selector('.t-gateway-dateien button:has-text("Vorschau")', timeout=15000)
             page.click('.t-gateway-dateien button:has-text("Vorschau")')
             page.wait_for_selector('.t-gw-fund', timeout=15000)
@@ -168,7 +168,7 @@ class Flows(unittest.TestCase):
             hub = uix_check.LAST_HUB
             hub.runtime.model_router.register(FakeAdapter(lambda m: 'Sehr geehrte <PERSON_001>, der Stand folgt; offene Punkte sind offen. Kontakt <EMAIL_001>.'))
             page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})")
-            page.wait_for_selector('.t-gateway-nav', timeout=15000); page.click('.t-gateway-nav button:has-text("Vorgänge")')
+            page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay · Vorgänge', collection:true, ansicht:'vorgaenge', imBaum:true})")
             page.wait_for_selector('.t-gateway-new input', timeout=15000)
             page.fill('.t-gateway-new input', 'Projektabstimmung'); page.click('.t-gateway-new button'); page.wait_for_timeout(1200)
             self.assertTrue(page.query_selector('.t-gateway-flow'), 'der neue Vorgang ist offen')
@@ -206,7 +206,7 @@ class Flows(unittest.TestCase):
             self.assertEqual(hub.content_guard.counts.get('SG_MODEL_CALL'), 1, 'genau ein Modellaufruf, durch den Inhaltsschutz')
             # A01 von Hand: ein neuer Vorgang mit Hochrisiko-Kontext wird SK3 mit R-13
             page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})")
-            page.wait_for_selector('.t-gateway-nav', timeout=15000); page.click('.t-gateway-nav button:has-text("Vorgänge")')
+            page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay · Vorgänge', collection:true, ansicht:'vorgaenge', imBaum:true})")
             page.wait_for_selector('.t-gateway-new input', timeout=15000)
             page.fill('.t-gateway-new input', 'Bewerbung'); page.click('.t-gateway-new button'); page.wait_for_timeout(1200)
             page.fill('.t-gateway-text', 'Bitte eine Antwort auf die Bewerbung entwerfen.')
@@ -293,7 +293,8 @@ class Build24(unittest.TestCase):
             self.assertIn('Kein Modell geladen', page.text_content('.t-shop-section[data-section=teststrecke]'))
             # Baum: keine Routinen, kein GateWay-Block (bleibt im Studio)
             tree = page.text_content('.ck-tree')
-            self.assertNotIn('Routinen', tree); self.assertNotIn('KI GateWay', tree)
+            self.assertNotIn('Routinen', tree)
+            self.assertIn('KI GateWay', tree, 'das GateWay steht links im Baum mit seinen Ansichten')
             # Gespräch: der Arbeitsplatz antwortet ohne Modell, mit Knopf
             page.fill('.t-talk input', 'Was muss ich als Nächstes machen?'); page.keyboard.press('Enter'); page.wait_for_timeout(1500)
             log = page.text_content('.t-talk-log')

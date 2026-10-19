@@ -2,7 +2,7 @@
 // It is navigation, nothing else: a row sends object.open and the dock decides what to draw. The tree never draws an object itself.
 // treeModel() is pure (data in, rows out) so node can judge it without a browser.
 // Build 24 (Ticket B6-G-06, Klaus 15.10.2026): die Zeile „Routinen – noch nicht gebaut“ ist weg – kein Eintrag ohne Werkzeug dahinter
-// (Nachtkette bleibt OPEN im Register). Das KI GateWay bleibt in seiner eigenen Oberfläche (Klaus 19:34); erreichbar über Strg+K und den Umschalter.
+// (Nachtkette bleibt OPEN im Register). Das KI GateWay steht links im Baum mit seinen Ansichten (Captain-Entscheidung 19.10.2026, ersetzt Klaus 19:34).
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
@@ -18,6 +18,16 @@
     const group = (title, note)=>rows.push({kind: 'group', title, note: note || ''});
     // Eine Sammlung ist kein Werkstück: sie bekommt keine Nachweise daneben (siehe dock.js).
     const many = (title, object, note, tone)=>row(title, Object.assign({collection: true}, object), note, tone);
+
+    // Das KI GateWay im Menü links, wie die anderen Punkte: jede Ansicht ist ein Eintrag. Das Fenster bleibt eins; die Ansicht steht im Objekt.
+    group('KI GateWay', 'Anfragen · Schutz');
+    const gateway = (title, ansicht, note)=>row(title, {type: 'gateway', id: 'alle', title: 'KI GateWay · ' + title, collection: true, ansicht, imBaum: true}, note || '', '', 'KI GateWay');
+    gateway('Überblick', 'uebersicht', 'Stationen und was wartet');
+    gateway('Vorgänge', 'vorgaenge', 'Anfragen anlegen und prüfen');
+    gateway('Dateien', 'dateien', 'Originale und Fassungen');
+    gateway('Regeln', 'regeln', 'Schalter und Regelbuch');
+    gateway('Selbst ausprobieren', 'ausprobieren', 'Text prüfen, Übung, Frage');
+    gateway('Verlauf', 'verlauf', 'Vorgänge und Schutz heute');
 
     head('Projekt ' + (project.name || '–'));
     row('Dateien', {type: 'project', id: project.id || project.name || 'projekt', title: 'Projekt ' + (project.name || '')}, project.path || '');
@@ -73,11 +83,14 @@
     return rows;
   }
 
+  // der Schlüssel einer Zeile: Objekt und – falls da – seine Ansicht (das GateWay hat mehrere Einträge)
+  function keyOf(object){ return object.type + ':' + object.id + (object.ansicht ? ':' + object.ansicht : ''); }
+
   function makeTree(host, shell){
     let rows = [], current = null;
 
     // Untergruppen (z. B. System · Einstellungen): der Gruppenkopf klappt auf und zu; eine Zeile mit `parent` sieht man nur offen.
-    const opened = new Set();
+    const opened = new Set(['KI GateWay']);      // das GateWay ist beim Start offen: seine Ansichten sind sofort da
 
     function render(){
       const box = d().el('div', 'tr-list');
@@ -98,7 +111,7 @@
           return;
         }
         if(r.parent && !opened.has(r.parent)) return;
-        const key = r.object.type + ':' + r.object.id;
+        const key = keyOf(r.object);
         const line = d().el('div', 'tr-row' + (key === current ? ' on' : '') + (r.tone ? ' ' + r.tone : ''));
         if(r.parent) line.style.paddingLeft = '1.4em';
         line.append(d().el('span', 'tr-title', r.title));
@@ -126,7 +139,7 @@
       render();
     }
 
-    function mark(object){ current = object ? object.type + ':' + object.id : null; render(); }
+    function mark(object){ current = object ? keyOf(object) : null; render(); }
 
     return {refresh, render, mark};
   }

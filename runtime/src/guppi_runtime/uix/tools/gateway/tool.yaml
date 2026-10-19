@@ -27,6 +27,10 @@ tool:
     - POST /api/gateway/frage      # B6-G-03: „Frag SEDRA“ – Wissensbasis, kein Modell
     - POST /api/gateway/wissen     # B6-G-03: eigener Eintrag des Nutzers (nur Audit, kein Gate)
     - GET /api/decisions
+    - GET /api/guard/status      # Überblick und Regeln: der eingebettete Schutz liest den Zustand des GateWay
+    - POST /api/guard/group      # Regeln scharf schalten oder nur beobachten (Schutz, eingebettet)
+    - POST /api/guard/probe      # Selbst ausprobieren: einen Text prüfen, ohne die KI zu rufen
+    - POST /api/guard/demo       # Vorführung: einen der Testfälle abspielen
   events:
     emits: [object.open, decision.answered]
     listens: [decision.answered, tools.refresh]

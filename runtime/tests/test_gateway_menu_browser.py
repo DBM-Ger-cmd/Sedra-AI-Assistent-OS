@@ -1,4 +1,4 @@
-"""KI GateWay: das linke Menü im Browser. Jeder Menüpunkt und jede Kachel muss etwas Sichtbares tun; kein Knopf ohne Wirkung."""
+"""KI GateWay im Cockpit: das Menü steht links im Baum, jede Ansicht hat eine Funktion, kein zweites Menü und kein Panel rechts."""
 import sys
 import unittest
 from pathlib import Path
@@ -16,8 +16,8 @@ def browser_or_skip():
         raise unittest.SkipTest('playwright fehlt – pip install playwright && python -m playwright install chromium')
 
 
-class GatewayMenu(unittest.TestCase):
-    def test_every_menu_item_and_tile_does_something(self):
+class GatewayImBaum(unittest.TestCase):
+    def test_every_entry_in_the_tree_opens_its_view_and_nothing_is_doubled(self):
         sync_playwright = browser_or_skip()
         from uix_check import start_server, wait_until_started
         url, stop = start_server(lambda *a: None, shell='cockpit')
@@ -30,15 +30,23 @@ class GatewayMenu(unittest.TestCase):
                 page.on('dialog', lambda d: d.accept())
                 page.goto(url); wait_until_started(page); page.wait_for_timeout(800)
                 try:
-                    page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})")
-                    page.wait_for_selector('.t-gateway-nav', timeout=15000)
+                    # Der Baum links hat die Gruppe „KI GateWay“ mit sechs Einträgen
+                    page.wait_for_selector('.ck-tree .tr-row:has-text("Selbst ausprobieren")', timeout=15000)
+                    for name in ['Überblick', 'Vorgänge', 'Dateien', 'Regeln', 'Selbst ausprobieren', 'Verlauf']:
+                        self.assertTrue(page.query_selector(f'.ck-tree .tr-row:has-text("{name}")'), f'„{name}“ steht im Baum')
 
-                    # Überblick: vier Kacheln mit Status, Banner mit den Regeln
-                    self.assertEqual(page.locator('.t-gateway-tile').count(), 4, 'vier Kacheln wie in der Skizze')
-                    self.assertIn('Regeln greifen', page.text_content('.t-gateway-banner'))
-                    self.assertTrue(page.query_selector('.t-gateway-navitem.on:has-text("Überblick")'), 'der Überblick ist aktiv')
+                    # Kein zweites Menü im Werkzeug, kein Nachweis-Panel rechts neben dem GateWay
+                    page.click('.ck-tree .tr-row:has-text("Überblick")')
+                    page.wait_for_selector('.t-gateway-schutz .t-schutz-station', timeout=15000)
+                    self.assertEqual(page.locator('.t-gateway-nav').count(), 0, 'das Menü steht nur links, nicht noch einmal im Werkzeug')
+                    self.assertEqual(page.locator('.dk-pane-evidence').count(), 0, 'rechts kein Nachweis-Panel beim GateWay')
+                    self.assertFalse(page.is_visible('.t-schutz-tabs'), 'die Reiter des Schutzes entfallen, das Menü links hat sie')
 
-                    # jeder Menüpunkt öffnet seine Ansicht und ist danach aktiv
+                    # Überblick: die vier Stationen mit Funktion
+                    stationen = page.locator('.t-gateway-schutz .t-schutz-station strong').all_inner_texts()
+                    self.assertEqual(stationen, ['Eingang prüfen', 'Entscheiden', 'KI', 'Antwort prüfen'])
+
+                    # jeder Eintrag zeigt seine Ansicht
                     erwartet = {
                         'Vorgänge': '.t-gateway-new input',
                         'Dateien': '.t-gateway-dateien',
@@ -47,26 +55,21 @@ class GatewayMenu(unittest.TestCase):
                         'Verlauf': '.t-gateway-verlauf-liste',
                     }
                     for name, selector in erwartet.items():
-                        page.click(f'.t-gateway-nav button:has-text("{name}")')
+                        page.click(f'.ck-tree .tr-row:has-text("{name}")')
                         page.wait_for_selector(selector, timeout=15000)
-                        self.assertTrue(page.query_selector(f'.t-gateway-navitem.on:has-text("{name}")'), f'{name} ist aktiv')
+                        self.assertTrue(page.query_selector(f'.ck-tree .tr-row.on:has-text("{name}")'), f'„{name}“ ist im Baum markiert')
 
-                    # Selbst ausprobieren: die Frage an SEDRA ist da und antwortet
-                    page.click('.t-gateway-nav button:has-text("Selbst ausprobieren")')
+                    # Selbst ausprobieren: die Frage an SEDRA antwortet
+                    page.click('.ck-tree .tr-row:has-text("Selbst ausprobieren")')
                     page.wait_for_selector('.t-gateway-frag input', timeout=15000)
                     page.fill('.t-gateway-frag input', 'Was muss ich als Nächstes machen?'); page.press('.t-gateway-frag input', 'Enter')
                     page.wait_for_selector('.t-gateway-frag-out .s-note', timeout=15000)
 
-                    # Übung anlegen öffnet den Vorgang; „Zur Übersicht“ führt zurück ins Menü
+                    # Übung anlegen öffnet den Vorgang; „Zur Übersicht“ führt zurück zu den Stationen
                     page.click('.t-gateway-try button:has-text("Übung anlegen")')
                     page.wait_for_selector('.t-gateway-flow', timeout=15000)
                     page.click('.t-gateway-flow button:has-text("Zur Übersicht")')
-                    page.wait_for_selector('.t-gateway-tiles', timeout=15000)
-
-                    # Kachel „Eingang prüfen“ führt in die Vorgänge; Filter lässt sich wieder aufheben
-                    page.click('.t-gateway-tile:has-text("Eingang prüfen")')
-                    page.wait_for_selector('.t-gateway-new input', timeout=15000)
-                    self.assertTrue(page.query_selector('.t-gateway-navitem.on:has-text("Vorgänge")'))
+                    page.wait_for_selector('.t-gateway-schutz .t-schutz-station', timeout=15000)
                     self.assertEqual(fehler, [], 'keine Seitenfehler beim Durchklicken')
                 finally:
                     browser.close()
