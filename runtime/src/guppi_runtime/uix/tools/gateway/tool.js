@@ -8,7 +8,7 @@
   const d = ()=>root.sedraDom;
   const PH = /<(PERSON|COMPANY|EMAIL|PHONE|CUSTOMER_ID|ADDRESS|ROLE|TERM)_(\d{3})>/g;
   const TYP = {PERSON: 'Person', COMPANY: 'Organisation', EMAIL: 'E-Mail', PHONE: 'Telefon', CUSTOMER_ID: 'Kunden-ID', ADDRESS: 'Adresse', ROLE: 'Rolle', TERM: 'Begriff'};
-  const WEG = {LOCAL_ONLY: 'Lokal freigeben', CLOUD_AFTER_PSEUDONYMIZATION: 'Cloud freigeben (simuliert, mit Platzhaltern)', CLOUD_ALLOWED: 'Cloud freigeben (simuliert)'};
+  const WEG = {LOCAL_ONLY: 'Lokal freigeben', CLOUD_AFTER_PSEUDONYMIZATION: 'Cloud freigeben (mit Platzhaltern)', CLOUD_ALLOWED: 'Cloud freigeben'};
 
   // rein: Text mit Platzhaltern -> Teile [{text}|{token, typ}] (node prüft das)
   function tokenize(text){
@@ -69,15 +69,21 @@
     },
 
     // ---------------------------------------------------------------- die Liste
+    cloudWort(list){
+      const c = (list || {}).cloud || {};
+      if(c.modus !== 'anbieter') return 'Simulation';
+      return c.bereit && c.bereit.length ? 'Anbieter ' + c.bereit.join(', ') : 'Anbieter ohne Schlüssel';
+    },
+
     renderList(list){
       const box = d().el('div', 't-gateway-list');
       const head = d().el('div', 't-gateway-head');
-      head.append(d().el('h3', null, 'KI GateWay'), d().el('small', 's-muted', 'Kundenanfrage → Datenschutz prüfen → Freigabe → Entwurf → deine Prüfung. Kein Versand; Cloud nur simuliert.'));
+      head.append(d().el('h3', null, 'KI GateWay'), d().el('small', 's-muted', 'Kundenanfrage → Datenschutz prüfen → Freigabe → Entwurf → deine Prüfung. Kein Versand.'));
       box.append(head);
       const form = d().el('div', 't-gateway-new');
       const titel = d().el('input'); titel.placeholder = 'Titel des Vorgangs, z. B. Projektabstimmung vorbereiten'; titel.setAttribute('aria-label', 'Titel');
       const wunsch = d().el('select'); wunsch.setAttribute('aria-label', 'Wunsch');
-      [['local', 'Lokale KI' + (list.modell ? ' · ' + list.modell : ' · kein Modell geladen')], ['cloud', 'Cloud-KI · Simulation']].forEach(([v, t])=>{ const op = d().el('option', null, t); op.value = v; wunsch.append(op); });
+      [['local', 'Lokale KI' + (list.modell ? ' · ' + list.modell : ' · kein Modell geladen')], ['cloud', 'Cloud-KI · ' + this.cloudWort(list)]].forEach(([v, t])=>{ const op = d().el('option', null, t); op.value = v; wunsch.append(op); });
       form.append(titel, wunsch, d().button('Neuer Vorgang', async()=>{ await this.neu(titel.value, wunsch.value); titel.value = ''; }, 'p'));
       box.append(form);
       const rows = d().el('div', 't-gateway-rows');
@@ -181,7 +187,7 @@
       const grid = d().el('div', 't-gateway-models');
       const locked = v.zustand === 'WARTET' || v.zustand === 'ENTWURF';
       [['local', 'Lokale KI', list.modell ? 'Verarbeitung auf diesem Rechner · ' + list.modell : 'Kein Modell geladen – in der Werkstatt laden'],
-       ['cloud', 'Cloud-KI', 'Nur über einen von der Policy erlaubten Weg – im MVP Simulation']].forEach(([id, name, hint])=>{
+       ['cloud', 'Cloud-KI', 'Nur über einen von der Policy erlaubten Weg · ' + this.cloudWort(list)]].forEach(([id, name, hint])=>{
         const card = d().el('div', 't-gateway-model' + (v.wunsch === id ? ' on' : ''));
         card.append(d().el('span', 't-gateway-radio'), d().el('b', null, name), d().el('small', 's-muted', hint));
         if(!locked) d().clickable(card, ()=>{ v.wunsch = id; this.render(v, list); });
@@ -273,7 +279,7 @@
       const e = v.einstufung;
       if(!e){ sec.append(this.step('03 / Empfehlung & Freigabe', 'Erst prüfen'), d().el('small', 's-muted', 'Die Empfehlung kommt aus der Prüfung – Schutzklasse, Merkmale, erlaubte Wege.')); return sec; }
       const tone = e.policy === 'BLOCKED' ? 'bad' : e.policy === 'HUMAN_REVIEW_REQUIRED' ? 'warn' : 'ok';
-      sec.append(this.step('03 / Empfehlung & Freigabe', e.policy === 'BLOCKED' ? 'Verarbeitung gesperrt' : 'Empfehlung: ' + (e.wege[0] === 'LOCAL_ONLY' ? 'lokale Verarbeitung' : 'Cloud zulässig – simuliert'), [e.policy_wort, tone], v.zustand === 'WARTET' ? 5 : 4));
+      sec.append(this.step('03 / Empfehlung & Freigabe', e.policy === 'BLOCKED' ? 'Verarbeitung gesperrt' : 'Empfehlung: ' + (e.wege[0] === 'LOCAL_ONLY' ? 'lokale Verarbeitung' : 'Cloud zulässig – ' + this.cloudWort(this.list)), [e.policy_wort, tone], v.zustand === 'WARTET' ? 5 : 4));
       const facts = d().el('div', 't-gateway-facts');
       const fact = (k, val)=>{ const f = d().el('div'); f.append(d().el('small', 's-muted', k), d().el('b', null, val)); facts.append(f); };
       fact('Schutzklasse', e.klasse + ' · ' + e.klasse_wort);
@@ -302,7 +308,7 @@
         if(!wege.length) rel.append(d().el('div', 's-note bad', 'Für diesen Wunsch gibt es keinen erlaubten Weg.'));
         wege.forEach(w=>rel.append(d().button(WEG[w] + ' →', ()=>this.freigeben(v, w), w === 'LOCAL_ONLY' ? 'p' : '')));
         if(v.wunsch === 'cloud' && !wege.includes('CLOUD_AFTER_PSEUDONYMIZATION') && !wege.includes('CLOUD_ALLOWED')) rel.append(d().el('small', 's-muted', 'Cloud ist hier nicht erlaubt – nur lokal.'));
-        rel.append(d().el('small', 's-muted', 'Die Freigabe ist eine Entscheidung mit Bindung: Anfrage, Dokument, Klasse, Merkmale, Weg, Übergabeprompt, Zweck und verantwortliche Person. Cloud: nur Simulation.'));
+        rel.append(d().el('small', 's-muted', 'Die Freigabe ist eine Entscheidung mit Bindung: Anfrage, Dokument, Klasse, Merkmale, Weg, Übergabeprompt, Zweck und verantwortliche Person. Cloud: ' + this.cloudWort(this.list) + '.'));
       }else if(e.policy === 'BLOCKED'){
         rel.append(d().el('div', 's-note bad', 'Kein Modellaufruf, auch nicht lokal. Es gibt kein „trotzdem“ – entferne den Grund und prüfe neu.'));
       }
@@ -321,7 +327,7 @@
       sec.append(d().el('div', 't-gateway-kennz', e.kennzeichnung || 'KI-Entwurf'));            // R-14: KI-Kennzeichnung (EU AI Act Art. 50)
       const ans = d().el('div', 't-gateway-answer'); ans.textContent = e.text; sec.append(ans);
       const foot = d().el('div', 't-gateway-foot');
-      foot.append(d().el('small', 's-muted', (e.weg === 'LOCAL_ONLY' ? 'Lokal · ' : 'Cloud simuliert · ') + e.modell + ' · ' + (e.erstellt || '').replace('T', ' ').slice(0, 16)
+      foot.append(d().el('small', 's-muted', (e.weg === 'LOCAL_ONLY' ? 'Lokal · ' : 'Cloud · ') + e.modell + ' · ' + (e.erstellt || '').replace('T', ' ').slice(0, 16)
                          + ' · wird gelöscht am ' + (e.loeschen_am || '').slice(0, 10)));
       const rc = d().el('small', 's-muted', (e.rechecks || []).join(' · ')); foot.append(rc);
       if(e.pruefung === 'offen'){
@@ -349,7 +355,9 @@
       if(!mid){
         const out = await this.ctx.api('/api/gateway/freigabe', {method: 'POST', body: {id: v.id, weg}});
         mid = out.mission_id;
-        if(!confirm('Genau das einmal freigeben?\n\n' + ((out.binding || {}).describe || '') + '\n\nCloud ist simuliert; nichts verlässt den Rechner.')){ await this.refresh(); return; }
+        const hinweis = weg === 'LOCAL_ONLY' ? 'Nichts verlässt den Rechner.' : this.cloudWort(this.list) === 'Simulation'
+          ? 'Cloud ist simuliert; nichts verlässt den Rechner.' : 'Der Übergabeprompt geht an den Cloud-Anbieter, nach Inhaltsschutz und Regelwerk.';
+        if(!confirm('Genau das einmal freigeben?\n\n' + ((out.binding || {}).describe || '') + '\n\n' + hinweis)){ await this.refresh(); return; }
       }
       await this.ctx.shell.decide('request:' + mid, 'freigeben_und_anwenden');
       await this.refresh();

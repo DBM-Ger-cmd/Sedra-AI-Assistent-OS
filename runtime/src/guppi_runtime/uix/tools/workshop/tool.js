@@ -105,7 +105,7 @@
         ? 'Geladen: ' + (server.model || '?') + (server.context ? ' · Kontext ' + server.context : '')
         : 'Kein Modell geladen. Ohne Modell antwortet das Gespräch nicht; alles andere läuft weiter.'));
       if(view.lease) box.append(d().el('small', 's-muted', 'GPU-Sperre: ' + (view.lease.owner || '?') + ' · ' + (view.lease.purpose || '')));
-      if(!view.loader_enabled) box.append(d().el('div', 's-note warn', 'Der Modell-Lader ist ausgeschaltet (Schalter). Laden ist erst nach einer Freigabe und einem Neustart möglich.'));
+      if(!view.loader_enabled) box.append(d().el('div', 's-note warn', 'Der Modell-Lader ist gerade nicht bereit. Ein Laden braucht keine Freigabe; die Einstellungen werden beim Start gelesen – nach einer Korrektur SEDRA neu starten.'));
 
       box.append(d().el('h5', 's-head', 'Rezepte'));
       (view.recipes || []).forEach(r=>{

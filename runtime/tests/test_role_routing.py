@@ -260,6 +260,18 @@ class ContextTierTests(Base):
         low = self.tiered(maximum=16384, measured_maximum=65536)
         self.assertEqual(reason(low, {'context_min_tokens': 20000}), 'context_capacity')              # measurement cannot exceed the recipe's own maximum
 
+    def test_a_chosen_window_that_was_measured_is_loaded_as_chosen(self):
+        # Der Nutzer wählt 64k im Dropdown (context_recommended), der Hardware-Check kappt auf 32k; mit gemessener Grenze gilt 64k.
+        def chosen(recommended, **kw):
+            context = {'recommended': recommended, 'maximum': 65536, 'tiers': [8192, 16384, 32768, 65536]}
+            context.update(kw)
+            base = dict(profile={'context': context, 'gpu_layers': 99, 'kv_cache': {'placement': 'gpu'}}, model_size_gb=6.0,
+                        measured_vram_gb=8.0, measured_context=8192, kv_cache_gb_per_1k_tokens=0.025)
+            return self.router(routing_raw([recipe('c.t', ['coder'], 'pt', 'ft', 'wt', model='m-t', **base)]), snapshot=self.GPU)
+        self.assertEqual(chosen(65536, measured_maximum=65536).resolve_role('coder')['context_window'], 65536)
+        self.assertEqual(chosen(32768).resolve_role('coder')['context_window'], 32768)          # ohne Messung gilt die Kappe
+        self.assertEqual(chosen(16384, measured_maximum=65536).resolve_role('coder')['context_window'], 16384)   # gewählt, was klein ist
+
     def test_moe_offload_uses_the_measurement_even_below_the_size_rule(self):
         # gpt-oss-20b: 11.28 GB of weights, 9.92 GiB measured with n_cpu_moe 4 (experts partly in host RAM)
         server = {'gguf': 'x.gguf', 'n_cpu_moe': 4}

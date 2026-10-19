@@ -653,6 +653,14 @@ class UIXHub:
             raise ValueError(str(exc))
         raise exc
 
+    def gateway_cloud(self):
+        """Der Cloudweg des GateWay. `anbieter`: die eingeschalteten Cloud-Anbieter (config/cloud_providers.yaml, Schlüssel per Umgebungsvariable),
+        `bereit`: die davon, deren Schlüssel gesetzt ist (health() liest nur den Schlüssel, kein Netzwerk). Ohne Anbieter ist es die Simulation."""
+        adapters = [a for a in self.runtime.model_router.adapters.values() if getattr(a, 'route', 'local') == 'cloud']
+        ready = [a.id for a in adapters if a.health()]
+        return {'modus': 'anbieter' if adapters else 'simuliert', 'anbieter': [a.id for a in adapters], 'bereit': ready,
+                'fehler': getattr(self.runtime, 'cloud_providers_error', None)}
+
     def gateway_list(self, payload=None):
         """GET /api/gateway/vorgaenge – die Vorgänge, die Vorgaben und die Textdateien des Projekts, die ein Vorgang mitnehmen darf."""
         from .gateway import klassen, wissen
@@ -672,12 +680,14 @@ class UIXHub:
         except Exception:
             model = None
         return {'vorgaenge': self.gw.liste(), 'vorgaben': self.gw.vorgaben(), 'dateien': files, 'modell': model, 'zwecke': self.gw.zwecke(),
+                'cloud': self.gateway_cloud(),
                 'merkmale': [{'id': k, 'name': v[0], 'klasse': v[1], 'manuell': k in klassen.MANUELL} for k, v in klassen.MERKMALE.items()],
                 'klassen': [{'id': k, 'name': klassen.KLASSE_WORT[k]} for k in klassen.KLASSEN],
                 'regeln': [klassen.regel(r) for r in klassen.REGELN], 'policy_version': klassen.POLICY_VERSION, 'regelwerk': klassen.REGELWERK,
                 'leitfaden': wissen.leitfaden(), 'schritt_von_zustand': dict(wissen.SCHRITT_VON_ZUSTAND),
-                'nicht_im_mvp': ['Kein Versand – der Entwurf bleibt hier.', 'Cloud nur simuliert; ein echter Cloudweg ist ein eigener Beschluss.',
-                                 'Anhänge nur .md und .txt; PDF/DOCX sind MVP 2.', 'Keine Rollen: der Nutzer ist die Prüfung.',
+                'nicht_im_mvp': ['Kein Versand – der Entwurf bleibt hier.',
+                                 'Cloud nur über einen eingeschalteten Anbieter; ohne Anbieter bleibt es bei der Simulation. Personenbezug geht nie in die Cloud (R-01).',
+                                 'Anhänge nur .md, .txt und .docx; PDF und .doc sind nicht dabei.', 'Keine Rollen: der Nutzer ist die Prüfung.',
                                  'MCP/Agenten nur dokumentiert, nicht angebunden.']}
 
     def gateway_get(self, vid):
@@ -721,9 +731,10 @@ class UIXHub:
                 raise
             except Exception:
                 raise ValueError('dokument_nicht_gefunden')
+            from .gateway.dokumente import lies_datei, DokumentFehler
             try:
-                dokument = (name, path.read_text(encoding='utf-8'))
-            except UnicodeDecodeError:
+                dokument = (name, lies_datei(path))
+            except DokumentFehler:
                 raise ValueError('dokument_nicht_lesbar')
         try:
             v = self.gw.get(vid)
@@ -750,11 +761,21 @@ class UIXHub:
             self._gw_error(exc)
         e = v.einstufung
         review = e['review'] == 'PENDING'
+        cloud = self.gateway_cloud()
+        if weg != 'LOCAL_ONLY' and cloud['modus'] == 'anbieter' and not cloud['bereit']:
+            # fail-closed: ein Cloudweg, dessen Anbieter keinen Schlüssel hat, wird gar nicht erst zur Freigabe vorgelegt
+            raise ValueError('cloud_anbieter_nicht_bereit')
         describe = (f'Vorgang „{v.titel}“ freigeben: {klassen.WEG_WORT[weg]} · {e["klasse"]} {e["klasse_wort"]} · '
                     + (', '.join(m['id'] for m in e['merkmale']) or 'keine Merkmale') + ' · ' + e['policy_wort']
                     + f' · Zweck: {ZWECKE.get(v.zweck, v.zweck)} · verantwortlich: {v.verantwortlich}'
                     + (' – deine Prüfung (R1) ist die Freigabe' if review else ''))
-        risks = list(e['gruende'])[:4] + (['Cloud ist simuliert: nichts verlässt den Rechner.'] if weg != 'LOCAL_ONLY' else [])
+        if weg == 'LOCAL_ONLY':
+            cloud_risk = []
+        elif cloud['modus'] == 'anbieter':
+            cloud_risk = [f'Cloud-Anbieter {cloud["bereit"][0]}: der Übergabeprompt verlässt den Rechner (nach Inhaltsschutz und Regelwerk).']
+        else:
+            cloud_risk = ['Cloud ist simuliert (kein Anbieter eingeschaltet): nichts verlässt den Rechner.']
+        risks = list(e['gruende'])[:4] + cloud_risk
         full = dict(binding_payload, describe=describe, binding=binding, vorgang_id=vid)
         with self.lock:
             m = self.runtime.brain.create_mission(describe[:160], None, 'S1')
@@ -769,7 +790,8 @@ class UIXHub:
         return self._remember('gateway', {'mission_id': m['identity']['mission_id'], 'gate': gate, 'binding': full})
 
     def gateway_apply(self, payload):
-        """Nach der Freigabe: der Aufruf – lokal durch den Inhaltsschutz, Cloud simuliert. Mit Einmal-Token und Bindungsprüfung."""
+        """Nach der Freigabe: der Aufruf – lokal oder über den Cloud-Anbieter, jeweils durch den Inhaltsschutz (Router). Ohne Anbieter
+        bleibt es bei der Simulation. Mit Einmal-Token und Bindungsprüfung."""
         mission_id = str((payload or {}).get('mission_id') or '').strip()
         if not mission_id:
             raise ValueError('mission_id_required')
@@ -792,17 +814,29 @@ class UIXHub:
                 out = rt.model_router.chat(mission_id, messages)
                 model = out.get('model') or out.get('provider')
                 return out.get('content') or ''
+            cloud = self.gateway_cloud()
+            complete_cloud = None
+            if weg != 'LOCAL_ONLY' and cloud['modus'] == 'anbieter':
+                # Der Anbieter, der bereit ist – sonst den ersten, damit der Router den Fehler sichtbar macht (kein stiller Rückfall)
+                provider = (cloud['bereit'] or cloud['anbieter'])[0]
+                def complete_cloud(messages):
+                    nonlocal model
+                    out = rt.model_router.chat(mission_id, messages, provider=provider)
+                    model = f'{provider} · {out.get("model") or provider}'
+                    return out.get('content') or ''
             try:
-                e = self.gw.ausfuehren(vid, weg, full['binding'], complete_local)
+                e = self.gw.ausfuehren(vid, weg, full['binding'], complete_local, complete_cloud=complete_cloud)
             except Exception as exc:
                 m['execution'].pop('approval_token', None)
                 m['result'] = {'kind': 'gateway', 'status': 'fehler', 'grund': str(exc)[:200]}
                 m['lifecycle']['status'] = 'closed'
                 rt.missions.save(m)
-                self._gw_error(exc) if not isinstance(exc, ValueError) else None
-                raise ValueError('gateway_fehler:' + str(exc)[:160])
-            if model and e.modell == 'lokales Modell':
-                e.modell = str(model); e.kennzeichnen(); self.gw._entwurf_speichern(e)
+                # Jeder Fehler des Aufrufs – auch ein Anbieterfehler oder ein Inhaltsschutz-Stopp – wird ein Vorgangsfehler mit Grund,
+                # nicht eine rohe Ausnahme beim Aufrufer (vorher ging _gw_error hier durch und ließ alles Fremde unbehandelt).
+                raise ValueError('gateway_fehler:' + str(exc)[:160]) from None
+            if model and e.modell in ('lokales Modell', 'Cloud'):
+                e.modell = (('Cloud · ' + str(model)) if e.modell == 'Cloud' else str(model))
+                e.kennzeichnen(); self.gw._entwurf_speichern(e)
             m['execution'].pop('approval_token', None)
             m['result'] = {'kind': 'gateway', 'vorgang': vid, 'weg': weg, 'entwurf_sha256': e.sha256}
             m['lifecycle']['status'] = 'closed'
@@ -1362,7 +1396,17 @@ class UIXHub:
                 'decisions': {'value': len(snap['decisions']), 'hint': (snap['decisions'][0]['title'][:48] if snap['decisions'] else 'nichts wartet'),
                               'tone': 'warn' if snap['decisions'] else 'ok'},
                 'tasks': {'value': len(running), 'hint': f"{len(running)} läuft · {len(waiting)} wartet", 'tone': 'off'},
+                'cloud': self._cloud_gauge(),
                 'mode': self._mode_gauge()}
+
+    def _cloud_gauge(self):
+        """Die Online-KI in der Leiste: bereit (Schlüssel gesetzt), Schlüssel fehlt, oder kein Anbieter eingeschaltet."""
+        c = self.gateway_cloud()
+        if c['bereit']:
+            return {'value': 'Cloud · ' + c['bereit'][0], 'hint': 'Anbieter bereit · Klick schaltet die Gesprächsauswahl', 'tone': 'ok'}
+        if c['anbieter']:
+            return {'value': 'Cloud · ohne Schlüssel', 'hint': 'Anbieter ' + c['anbieter'][0] + ' braucht einen Schlüssel', 'tone': 'warn'}
+        return {'value': 'Cloud · aus', 'hint': 'kein Anbieter eingeschaltet', 'tone': 'off'}
 
     def route(self, payload):
         return self.runtime.capability_router.route(
@@ -1828,7 +1872,7 @@ class UIXHub:
         describe = f"{recipe['id']}: {self.ROUTING_FIELDS[field]} {old if old is not None else 'nicht gesetzt'} → {value}"
         binding = {'recipe_id': recipe['id'], 'field': field, 'old': old, 'new': value, 'file_sha256': self._file_digest(self._routing_path()), 'describe': describe}
         return self._remember('routing', self._gate_request(f'Routing ändern: {describe}', self.ROUTING_ACTION, f"routing:{recipe['id']}.{field}", binding,
-                                  ['wirkt erst nach Neustart der GUPPI-Oberfläche', 'ändert, welches Modell wie geladen wird'], 'routing_request'))
+                                  ['wirkt beim nächsten Laden des Modells (ohne Neustart)', 'ändert, welches Modell wie geladen wird'], 'routing_request'))
 
     def routing_apply(self, payload):
         mission_id = str(payload.get('mission_id') or '').strip()
@@ -1847,11 +1891,13 @@ class UIXHub:
             except Exception as exc:            # never leave an overlay the runtime would refuse
                 self._write_raw(path, old_text); raise ValueError(f'routing_overlay_invalid:{exc}')
             m['execution'].pop('approval_token', None)
-            m['result'] = {'kind': 'routing_change', **{k: binding[k] for k in ('recipe_id', 'field', 'old', 'new')}, 'backup': backup.name, 'effective': 'next_start'}
+            m['result'] = {'kind': 'routing_change', **{k: binding[k] for k in ('recipe_id', 'field', 'old', 'new')}, 'backup': backup.name, 'effective': 'naechstes_laden'}
             m['lifecycle']['status'] = 'closed'
             rt.missions.save(m)
             rt.audit.append('ROUTING_OVERLAY_CHANGED', component='uix', mission_id=mission_id, payload={k: m['result'][k] for k in ('recipe_id', 'field', 'old', 'new')})
-        return {'status': 'applied', 'recipe_id': binding['recipe_id'], 'field': binding['field'], 'new': binding['new'], 'effective': 'next_start'}
+            rt.reload_role_routing()          # ohne Neustart: die Änderung gilt beim nächsten Laden
+            self._routing_boot = self._routing_values()     # damit die Ansicht nicht „Neustart nötig“ zeigt
+        return {'status': 'applied', 'recipe_id': binding['recipe_id'], 'field': binding['field'], 'new': binding['new'], 'effective': 'naechstes_laden'}
 
     # ---- a new model the short way (Captain 2026-10-14): pick the GGUF, see the proposed recipe, approve once, load, test
     PICK_TIMEOUT_S = 600
@@ -2091,6 +2137,34 @@ class UIXHub:
             modell_zustand.merken(self.runtime.project_root, pid, modell, True, (time.monotonic() - t0) * 1000)
         self.runtime.audit.append('CLOUD_CHAT', component='desk', payload={'provider': pid, 'model': res.get('model'), 'status': res.get('status')})
         return res
+
+    def chat_kombi(self, payload):
+        """Lokal + KI in einem Fenster: das lokale Modell erstellt den ersten Entwurf (wie im normalen Gespräch), die Cloud prüft
+        und verbessert ihn. Beide Schritte gehen durch den Inhaltsschutz. Sperrt der Inhaltsschutz den Cloud-Schritt, bleibt der
+        lokale Entwurf, und die Antwort sagt warum. Das Audit enthält nur Anbieter, Modell und Ausgang, nie den Text."""
+        from .core.content_guard import ContentGuardStop
+        p = payload or {}
+        text = str(p.get('text') or '').strip()
+        if not text or len(text) > 4000: raise ValueError('text_invalid')
+        provider, model = str(p.get('provider') or ''), str(p.get('model') or '')
+        if not provider or not model: raise ValueError('cloud_model_required')
+        history = (p.get('history') or [])[-8:]
+        local = self.chat_reply({'text': text, 'history': history, 'mission_id': p.get('mission_id') or ''})
+        if local.get('status') != 'completed':
+            return {'status': 'no_local', 'local': None, 'cloud': None, 'reason': local.get('message') or local.get('status')}
+        draft = str(local.get('reply') or '')[:3000]
+        prompt = ('Aufgabe des Nutzers:\n' + text + '\n\nErster Entwurf des lokalen Modells:\n' + draft +
+                  '\n\nPrüfe den Entwurf, verbessere ihn und nenne offene Punkte ausdrücklich als offen.')
+        try:
+            cloud = self.chat_cloud({'text': prompt, 'history': history, 'provider': provider, 'model': model})
+        except ContentGuardStop as exc:
+            self.runtime.audit.append('KOMBI_CLOUD_GESPERRT', component='uix', payload={'provider': provider, 'grund': str(exc)[:80]})
+            return {'status': 'cloud_gesperrt', 'local': draft, 'cloud': None, 'reason': 'Der Inhaltsschutz hat den Cloud-Schritt gesperrt; der lokale Entwurf bleibt.'}
+        except ValueError as exc:
+            return {'status': 'cloud_fehler', 'local': draft, 'cloud': None, 'reason': str(exc)[:160]}
+        self.runtime.audit.append('KOMBI_CHAT', component='uix', payload={'provider': provider, 'model': model, 'status': cloud.get('status')})
+        return {'status': 'completed', 'local': draft, 'cloud': cloud.get('reply'), 'model': model, 'provider': provider,
+                'local_model': local.get('model')}
 
     def vorarbeiter(self, payload):
         """Vorarbeiter-Aktion aus dem Entwurfsfenster: feste Liste, für Cloud- und lokale Modelle gleich."""
@@ -2903,6 +2977,7 @@ def make_server(hub: UIXHub, port=0):
                     '/api/entwurf/save': hub.entwurf_save,         # Entwurf speichern (nur im Entwurfsordner)
                     '/api/entwurf/read': hub.entwurf_read,
                     '/api/entwurf/list': hub.entwurf_list,
+                    '/api/chat/kombi': hub.chat_kombi,              # Lokal + KI: erst das lokale Modell, dann die Cloud prüft (ein Fenster)
                     '/api/chat/cloud': hub.chat_cloud,              # Gespräch mit einem Cloud-Modell (Wahl neben Senden); Inhaltsschutz
                     '/api/cloud/key': hub.cloud_key,
                     '/api/cloud/module-model': hub.cloud_module_model,   # welches Modell ein Modul nutzt (KI Labor)                        # Schlüssel verschlüsselt ablegen oder löschen; nie zurückgeben

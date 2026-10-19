@@ -6,9 +6,10 @@ tool:
   kind: panel
   handles: []
   order: 10
-  entry: {js: tool.js, css: tool.css}
+  entry: {js: [kombi.js, tool.js], css: tool.css}
   api:
     - POST /api/chat/reply
+    - POST /api/chat/kombi
     - GET /api/decisions
     - POST /api/actions          # Build 19: ein Knopf unter GUPPIs Antwort – derselbe Weg wie jeder Werkzeugknopf, Gates darunter
     - POST /api/intent/create    # Build 19: „Als Vorhaben anlegen“ – führt nichts aus

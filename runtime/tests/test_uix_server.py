@@ -530,11 +530,13 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   self.assertEqual((r['coder.llama_gptoss']['n_cpu_moe'],r['coder.llama_gptoss']['context_recommended'],r['coder.llama_gptoss']['kv_cache_type']),(7,8192,'f16'))
   self.assertIs(r['coder.llama_qwen35']['enabled'],False);self.assertIn(8192,r['coder.llama_gptoss']['context_tiers'])
  def test_routing_change_touches_one_line_and_keeps_the_rest(self):
-  f=self._routing_overlay();before=f.read_text(encoding='utf-8')
+  f=self._routing_overlay();before=f.read_text(encoding='utf-8');old_config=self.hub.runtime.role_router.config
   self._routing_apply('coder.llama_gptoss','n_cpu_moe',6)
+  self.assertIsNot(self.hub.runtime.role_router.config,old_config,'die laufende Router-Konfiguration ist nach der Freigabe neu geladen')
   changed,extra=self._changed_lines(before,f.read_text(encoding='utf-8'))
   self.assertEqual((len(changed),extra),(1,0));self.assertIn('n_cpu_moe: 6',changed[0][1]);self.assertIn('gguf:',changed[0][1])
-  self.assertTrue(list(f.parent.glob('role_routing.yaml.bak-*-uix')));self.assertTrue(self.hub.routing_config_view()['restart_needed'])
+  self.assertTrue(list(f.parent.glob('role_routing.yaml.bak-*-uix')))
+  self.assertFalse(self.hub.routing_config_view()['restart_needed'],'eine freigegebene Änderung braucht keinen Neustart mehr')
  def test_routing_enable_context_kv_and_new_key(self):
   f=self._routing_overlay();before=f.read_text(encoding='utf-8')
   self._routing_apply('coder.llama_qwen35','enabled',True)

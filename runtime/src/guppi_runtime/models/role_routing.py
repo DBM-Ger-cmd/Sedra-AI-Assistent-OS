@@ -429,6 +429,10 @@ class RoleRouter:
             # The generic hardware-class cap is a rule of thumb; a window that was really loaded and measured on this machine
             # (declared by the Captain in the overlay) may raise it, but never above the recipe's own maximum.
             context = min(measured_max, int(((recipe["profile"].get("context") or {}).get("maximum")) or measured_max))
+            # Die gemessene Grenze hebt auch das Fenster, das der Nutzer gewählt hat (context_recommended), sonst bliebe die
+            # Schutzkappe des Hardware-Checks (32768) als Wunsch stehen, obwohl 64k gemessen und freigegeben ist.
+            declared = int(((recipe["profile"].get("context") or {}).get("recommended")) or 0)
+            if declared: working_context = min(declared, context)
         if req["context_min_tokens"] and (context is None or context < req["context_min_tokens"]):
             return None, no("static", "context_capacity")
         tiers = (recipe["profile"].get("context") or {}).get("tiers")

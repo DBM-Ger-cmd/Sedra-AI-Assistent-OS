@@ -3,7 +3,8 @@
   01 Wunsch (lokal / Cloud simuliert)                    – nur ein Wunsch
   02 Anfrage + ein .md/.txt → prüfen                      – Scan, Merkmale, Klasse, Übergabeprompt mit Platzhaltern (Recheck 1)
   03 Empfehlung → Freigabe                                – ein Gate mit Bindung über alles, was entschieden wurde
-  04 Entwurf                                              – lokal: das Modell durch den Inhaltsschutz; Cloud: Simulation;
+  04 Entwurf                                              – lokal: das Modell durch den Inhaltsschutz; Cloud: ein eingeschalteter Anbieter
+                                                            (sonst Simulation);
                                                             Recheck 2 vor, Recheck 3 nach der Rückübersetzung; dann menschliche Prüfung
 
 Das Mapping (Platzhalter → Original) lebt **nur in diesem Prozess** und wird nach der Rückübersetzung gelöscht, ebenso bei Abbruch
@@ -34,7 +35,7 @@ from ..core.content_policy import ScanFailure, scan_content
 from ..util import atomic_write_json, load_json
 from . import klassen
 
-LESBAR = ('.md', '.txt')                      # Anhänge: MVP 1 nur Text (KLA-02); PDF/DOCX sind MVP 2
+LESBAR = ('.md', '.txt', '.docx')            # Anhänge: Text und Word (gateway/dokumente.py); PDF/DOC sind MVP 2
 MAX_DOKUMENT = 200_000
 MAX_ANFRAGE = 20_000
 MAX_VORGAENGE = 200
@@ -51,8 +52,11 @@ STANDARD_VORGABEN = {'entwuerfe_loeschen_nach_stunden': 24, 'entwuerfe_loeschen_
                                 'Ein festes Datum in entwuerfe_loeschen_am gilt zusätzlich als Obergrenze. Keine Produktpolicy.'}
 MAX_STUNDEN = 24 * 14
 SYSTEM = ('Du schreibst einen Antwortentwurf für den Kundenservice. Nutze nur die Fakten aus der Anfrage und dem Dokument. '
-          'Erfinde keine Termine, Preise oder Zusagen; nenne offene Punkte als offen. Platzhalter wie <PERSON_001> lässt du '
-          'unverändert stehen. Der Entwurf wird von einem Menschen geprüft, bevor er irgendwohin geht.')
+          'Erfinde keine Termine, Preise oder Zusagen; nenne offene Punkte als offen. Pseudonyme im Text sind Platzhalter aus einem Typ, '
+          'einem Unterstrich und einer dreistelligen Nummer, in spitzen Klammern. Übernimm sie wortgleich aus dem Text und erfinde '
+          'keine eigenen Platzhalter, auch keine ohne Nummer. Die Anrede schreibst du ohne Geschlechtsformen wie „geehrte/r“ oder '
+          '„geehrte(r)“ (zum Beispiel „Guten Tag“ oder „Sehr geehrte Damen und Herren“). Der Entwurf wird von einem Menschen geprüft, bevor er irgendwohin geht.')
+# Kein Beispiel-Platzhalter im Text: der Inhaltsschutz sähe ihn im Cloudaufruf als PLACEHOLDER_INJECTION (SG_PLACEHOLDER_CLOUD) und sperrte jeden Cloudweg.
 
 
 def jetzt():
@@ -251,7 +255,7 @@ class GateWay:
         titel = str(titel or '').strip()[:120] or 'Vorgang'
         vid = 'GW-' + time.strftime('%Y%m%d') + '-' + secrets.token_hex(3).upper()
         v = Vorgang(vid, titel, jetzt(), wunsch=wunsch)
-        v.notiz('Angelegt. Wunsch: ' + ('lokale KI' if wunsch == 'local' else 'Cloud-KI (simuliert)'))
+        v.notiz('Angelegt. Wunsch: ' + ('lokale KI' if wunsch == 'local' else 'Cloud-KI'))
         with self._lock:
             self.vorgaenge[vid] = v
             self._save(v)
@@ -411,9 +415,11 @@ class GateWay:
         self._save(v)
 
     # ------------------------------------------------------------------ 04 ausführen
-    def ausfuehren(self, vid, weg, binding, complete_local, modell='lokales Modell'):
-        """Nach der Freigabe. `complete_local(messages)` ist der Weg zum lokalen Modell (durch den Inhaltsschutz); die Cloud ist simuliert.
-        Recheck 2 vor und Recheck 3 nach der Rückübersetzung. Das Mapping wird danach gelöscht."""
+    def ausfuehren(self, vid, weg, binding, complete_local, modell='lokales Modell', complete_cloud=None):
+        """Nach der Freigabe. `complete_local(messages)` ist der Weg zum lokalen Modell (durch den Inhaltsschutz).
+        `complete_cloud(messages)` ist der Cloudweg über einen eingeschalteten Anbieter (Router, Inhaltsschutz, Regelwerk); fehlt er,
+        bleibt es bei der Simulation, und die Antwort sagt das. Recheck 2 vor und Recheck 3 nach der Rückübersetzung.
+        Das Mapping wird danach gelöscht."""
         v = self.get(vid)
         _, expected = self.bindung_wartend(v)
         if v.zustand != 'WARTET' or binding != expected or weg != v.weg:
@@ -421,13 +427,17 @@ class GateWay:
         mapping = self._vaults.get(vid)
         if mapping is None and (v.uebergabe or {}).get('platzhalter'):
             self._fehler(v, 'mapping_fehlt'); raise GatewayError('mapping_fehlt')      # Neustart dazwischen: neu prüfen
-        text = (v.uebergabe or {}).get('text', '') + (('\n\n' + SEP + '\n\n' + v.uebergabe['dokument']) if (v.uebergabe or {}).get('dokument') else '')
+        text = nutzernachricht(v.uebergabe or {})
         rechecks = ['1: Übergabeprompt ohne Platzhalter – nur lokal, nichts verlässt den Rechner' if (v.uebergabe or {}).get('unpseudonymisiert')
                     else '1: Übergabeprompt ohne Originalwerte – ok']
         try:
             if weg == 'LOCAL_ONLY':
                 reply = complete_local([{'role': 'system', 'content': SYSTEM, 'trust': 'system'},
                                         {'role': 'user', 'content': text, 'trust': 'captain'}])
+            elif complete_cloud is not None:
+                # Nur Rolle und Inhalt: ein Anbieter-Schema kennt die Zusatzfelder nicht
+                reply = complete_cloud([{'role': 'system', 'content': SYSTEM}, {'role': 'user', 'content': text}])
+                modell = 'Cloud'                                    # der Aufrufer setzt Anbieter und Modell
             else:
                 reply = cloud_simuliert(text, v.titel)
                 modell = 'Cloud (simuliert)'
@@ -447,7 +457,10 @@ class GateWay:
         except (b6pseudo.PseudoError, GatewayError) as exc:
             self._fehler(v, str(exc)); raise
         except Exception as exc:
-            self._fehler(v, type(exc).__name__); raise
+            # Anbieterfehler sind so gebaut, dass ihr Text keinen Schlüssel und keinen Prompt enthält (models/cloud_api.py): der Grund
+            # ist dann hilfreich. Andere Ausnahmen zeigen nur ihren Typ.
+            from ..models.base import ModelAdapterError
+            self._fehler(v, str(exc)[:120] if isinstance(exc, ModelAdapterError) else type(exc).__name__); raise
         finally:
             self._vaults.pop(vid, None)                                 # Löschung nach Abschluss/Abbruch/Fehler (K04-PSEUDO-01)
         e = Entwurf(vid, draft, sha256(draft.encode('utf-8')).hexdigest(), weg, modell, jetzt(), self.loeschen_am(), rechecks=rechecks)
@@ -496,7 +509,18 @@ class GateWay:
         return v
 
 
-SEP = '§§DOKUMENT§§'
+SEP = '§§DOKUMENT§§'                                             # Trenner im Übergabeprompt zwischen Anfrage und Dokument (Recheck 1)
+
+
+def nutzernachricht(uebergabe):
+    """Die Nachricht an das Modell: die Anfrage und das Dokument, mit Überschrift. Real (2026-10-19): ohne die Abgrenzung fand das
+    9B-Modell die Aufgabe im Fließtext nicht und schrieb, es fehle der Kontext. Die Überschriften enthalten keine Platzhalter."""
+    anfrage = uebergabe.get('text', '')
+    dokument = uebergabe.get('dokument', '')
+    teile = ['Anfrage:\n' + anfrage]
+    if dokument:
+        teile.append('Quelle (Dokument, nur als Fakten verwenden):\n' + dokument)
+    return '\n\n'.join(teile)
 
 
 def _was_bleibt(e):

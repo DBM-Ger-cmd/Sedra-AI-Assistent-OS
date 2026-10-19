@@ -220,6 +220,16 @@ class GuppiRuntime:
             self.self_development.independence_check=lambda builder,verifier: check_independence(
                 self.role_router.key_for_role(builder),self.role_router.key_for_role(verifier))
 
+    def reload_role_routing(self):
+        """Das Routing-Overlay ohne Neustart neu lesen: eine im Menü freigegebene Änderung (z. B. der Kontext eines Modells) wirkt beim
+        nächsten Laden. Der Router liest seine Rezepte bei jedem Aufruf aus `config`; die Gesundheit der Anbieter bleibt erhalten.
+        Ein ungültiges Overlay wirft, und die bisherige Konfiguration bleibt (fail-closed)."""
+        if self.role_router is None: raise ValueError("role_routing_unavailable")
+        config=RoutingConfig.load(self.config_root/"role_routing.yaml",self.project_root/"local_config"/"role_routing.yaml")
+        self.role_router.config=config
+        self.audit.append("ROUTING_RELOADED",component="runtime",payload={"recipes":[r["id"] for r in config.recipes]})
+        return config
+
     def _configure_role_routing(self,data):
         """Role routing stays off (and says why) when its config is missing or invalid. Provider health only
         reaches the model router when routing is enabled, so v1.20 behaviour is unchanged otherwise."""

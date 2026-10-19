@@ -18,6 +18,32 @@
     return '';
   }
 
+  // „lade Modell XY“ / „lade qwen 9b“: a plain chat command – no model and no gate needed; the „ja“ after the question is the approval.
+  // Returns the words after „lade“ or null. Pure, node tests it.
+  function ladeBefehl(text){
+    const t = String(text || '').toLowerCase().replace(/[!?]/g, ' ').replace(/\s+/g, ' ').trim();
+    const m = t.match(/^(?:bitte )?(?:lade|lad)(?: mir)?(?: das| den| die)? (?:modell )?(.+?)(?: bitte)?$/);
+    return m ? m[1].trim() : null;
+  }
+
+  // Which recipe the words name: every word must occur in its id or model name. {recipe} | {many: [ids]} | {none: true}. Pure.
+  function waehleRezept(query, recipes){
+    const words = String(query || '').toLowerCase().split(' ').filter(Boolean);
+    const list = (Array.isArray(recipes) ? recipes : []).filter(r => r && r.id);
+    if(!words.length) return {none: true};
+    const hits = list.filter(r => { const hay = (r.id + ' ' + (r.model || '')).toLowerCase(); return words.every(w => hay.includes(w)); });
+    if(hits.length === 1) return {recipe: hits[0]};
+    return hits.length ? {many: hits.map(r => r.id)} : {none: true};
+  }
+
+  // „ja 2“ / „nein 1“: a number picks one of several waiting decisions. {answer, index} or null. Pure, node tests it.
+  function nummerierteAntwort(text){
+    const t = String(text || '').toLowerCase().replace(/[.,!?]/g, ' ').replace(/\s+/g, ' ').trim();
+    const m = t.match(/^(ja|nein|einmal ja|ja einmal|freigeben|ablehnen) (\d{1,2})$/);
+    if(!m) return null;
+    return {answer: /nein|ablehnen/.test(m[1]) ? 'ablehnen' : 'einmal', index: Number(m[2])};
+  }
+
   // Which decision a plain „ja“/„nein“ answers: the one GUPPI announced if it still waits, else the only one. Pure, node tests it.
   // (PC-Test 15.10.: „ja“ ging ans Modell, weil die gemerkte Ankündigung weg war – jetzt wird die Liste frisch gelesen.)
   function pickDecision(items, announced){
@@ -69,9 +95,19 @@
       this.picker.setAttribute('aria-label', 'Modell für diese Frage');
       const local = d().el('option', null, 'GUPPI lokal'); local.value = '';
       this.picker.append(local);
+      // Lokal + KI: das lokale Modell erstellt den Entwurf, das Cloud-Modell prüft ihn – in diesem einen Fenster
+      const kombi = d().el('option', null, 'Lokal + KI (zusammen)'); kombi.value = 'kombi';
+      this.picker.append(kombi);
       // Zustand des gewählten Modells: Punkt neben der Auswahl
       this.ampel = d().el('span', 't-talk-ampel aus');
-      this.picker.addEventListener('change', ()=>this.ampelZeigen());
+      this.picker.addEventListener('change', ()=>{ this.ampelZeigen(); this.ctx.bus.emit('talk.mode', {mode: this.picker.value ? 'cloud' : 'local'}); });
+      // Die Leiste (Online-KI) schaltet die Auswahl: lokal = „GUPPI lokal“, cloud = das erste Cloud-Modell der Liste
+      ctx.bus.on('talk.mode', e=>{
+        if(!e || !this.picker) return;
+        if(e.mode === 'local'){ this.picker.value = ''; }
+        else if(e.mode === 'cloud'){ const c = [...this.picker.options].find(o=>o.value.startsWith('cloud:')); if(c) this.picker.value = c.value; }
+        this.ampelZeigen();
+      });
       this.gruen = d().button('Grüne zuerst', ()=>this.gruenZeigen());
       const send = d().button('Senden', ()=>this.submit(), 'p');
       bar.append(this.input, this.picker, this.ampel, this.gruen, send);
@@ -97,6 +133,7 @@
       const t = this.input.value.trim();
       this.input.value = '';
       if(!t) return;
+      if(this.picker.value === 'kombi') return this.sendKombi(t);
       if(this.picker.value) return this.sendCloud(this.picker.value, t);
       return this.send(t);
     },
@@ -181,6 +218,7 @@
     },
 
     // Eine Frage an ein Cloud-Modell. Der Inhaltsschutz läuft auf dem Server; die Antwort steht mit Modellnamen im Gespräch.
+    async sendKombi(text){ return root.sedraTalkKombi.sendKombi(this, text); },
     async sendCloud(value, text){
       const [pid, model] = value.slice('cloud:'.length).split('|');
       this.line('Du', text, 'me');
@@ -212,17 +250,49 @@
       return row;
     },
 
+    // „lade …“: die Rezepte lesen, eindeutig treffen, fragen – das Laden kommt erst nach „ja“
+    async ladeBefehl(query){
+      let recipes = [];
+      try{ recipes = ((await this.ctx.api('/api/models')) || {}).recipes || []; }
+      catch(err){ this.line('GUPPI', 'Die Modelle sind gerade nicht lesbar: ' + err.message, 'warn'); return; }
+      const pick = waehleRezept(query, recipes);
+      if(pick.recipe){
+        this.pendingLoad = pick.recipe.id;
+        this.line('GUPPI', 'Modell „' + (pick.recipe.model || pick.recipe.id) + '“ laden? Antworte mit ja oder nein.', 'note');
+        return;
+      }
+      this.line('GUPPI', pick.many ? 'Mehrere passen: ' + pick.many.join(', ') + '. Genauer benennen.' : 'Kein Modell „' + query + '“ gefunden.', 'warn');
+    },
+
+    async laden(recipeId){
+      this.line('GUPPI', 'Lade … das dauert einen Moment.', 'note');
+      try{
+        const out = await this.ctx.api('/api/model/load', {method: 'POST', body: {recipe_id: recipeId}});
+        this.line('GUPPI', 'Geladen: ' + (out.identifier || recipeId) + ' · Kontext ' + (out.context_length || '?') + '.', 'note');
+      }catch(err){ this.line('GUPPI', 'Laden fehlgeschlagen: ' + err.message, 'warn'); }
+    },
+
     // the shell speaks through here (problems, hints); never a question
     say(text, tone){ if(this.log) this.line('GUPPI', text, tone === 'warn' ? 'warn' : 'note'); },
 
     async send(text){
       this.line('Du', text, 'me');
+      if(this.pendingLoad){                                                 // die Rückfrage von „lade …“ wartet auf ja/nein
+        const recipe = this.pendingLoad; this.pendingLoad = null;
+        const answer = yesNo(text);
+        if(answer === 'einmal'){ await this.laden(recipe); return; }
+        if(answer === 'ablehnen'){ this.line('GUPPI', 'Laden abgebrochen.', 'note'); return; }
+      }
+      const befehl = ladeBefehl(text);
+      if(befehl !== null){ await this.ladeBefehl(befehl); return; }
       const route = root.sedraPlaces && root.sedraPlaces.routeText(text);   // Ortskunde aus dem Vertrag, nicht aus einer Shell
       if(route && route.kind === 'place'){
         this.ctx.shell.open(route.object);
         this.line('GUPPI', 'Geöffnet: ' + route.object.title + '.', 'note');
         return;
       }
+      const numbered = nummerierteAntwort(text);
+      if(numbered && await this.answerDecision(numbered.answer, numbered.index)) return;
       const answer = yesNo(text);
       if(answer && await this.answerDecision(answer)) return;
       const row = this.line('GUPPI', 'Denkt nach …', 'note');
@@ -251,14 +321,20 @@
     },
 
     // „ja“/„nein“ on a waiting decision. Returns false when there is nothing to answer – then the sentence goes to GUPPI.
-    async answerDecision(answer){
+    async answerDecision(answer, index){
       let items;
       try{ items = ((await this.ctx.api('/api/decisions')) || {}).items || []; }
       catch(_e){ return false; }
       if(!items.length){ this.pending = null; return false; }
-      const target = pickDecision(items, this.pending && this.pending.id);
+      let target = index ? items[index - 1] : pickDecision(items, this.pending && this.pending.id);
+      if(index && !target){
+        this.line('GUPPI', 'Die Nummer ' + index + ' gibt es nicht. Es warten ' + items.length + ' Entscheidungen.', 'warn');
+        return true;
+      }
       if(!target){
-        this.line('GUPPI', 'Es warten ' + items.length + ' Entscheidungen – welche meinst du? Sie stehen auf der Karte und im Fenster „Entscheidungen“.', 'warn');
+        // Mehrere warten und keine ist angekündigt: die Liste mit Nummern zeigen, nicht raten
+        this.line('GUPPI', 'Es warten ' + items.length + ' Entscheidungen: ' + items.map((it, i)=>(i + 1) + ') ' + (it.title || it.id)).join(' · ')
+          + '. Antworte z. B. „ja 1“ oder „nein 2“.', 'warn');
         return true;
       }
       try{
@@ -319,6 +395,6 @@
   };
 
   if(root.sedra) root.sedra.registerTool(tool);            // in node only the pure part is read
-  root.sedraTalkPure = {yesNo, pickDecision, wayFor, actionLabel};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {yesNo, pickDecision, wayFor, actionLabel};
+  root.sedraTalkPure = {yesNo, pickDecision, wayFor, actionLabel, ladeBefehl, waehleRezept, nummerierteAntwort};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {yesNo, pickDecision, wayFor, actionLabel, ladeBefehl, waehleRezept, nummerierteAntwort};
 })();

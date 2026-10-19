@@ -38,8 +38,8 @@ MERKMALE = {
 }
 MANUELL = ('R01', 'A01')           # was kein Scanner findet: der Nutzer setzt es
 WEGE = ('LOCAL_ONLY', 'CLOUD_AFTER_PSEUDONYMIZATION', 'CLOUD_ALLOWED')
-WEG_WORT = {'LOCAL_ONLY': 'nur lokal', 'CLOUD_AFTER_PSEUDONYMIZATION': 'Cloud nach Pseudonymisierung (simuliert)',
-            'CLOUD_ALLOWED': 'Cloud zulässig (simuliert)'}
+WEG_WORT = {'LOCAL_ONLY': 'nur lokal', 'CLOUD_AFTER_PSEUDONYMIZATION': 'Cloud nach Pseudonymisierung', 'CLOUD_ALLOWED': 'Cloud zulässig'}
+# Ob der Cloudweg ein eingeschalteter Anbieter ist oder die Simulation, sagt die Oberfläche am Vorgang (cloud.modus), nicht das Wort.
 STATUS_WORT = {'AUTO_APPROVED': 'Automatisch erlaubt', 'HUMAN_REVIEW_REQUIRED': 'Menschliche Prüfung nötig', 'BLOCKED': 'Verarbeitung gesperrt'}
 
 # Das Regelbuch: id -> (Merkmal oder Sonderfall, Kategorie, Rechtsbezug [Annahme], lokal, cloud, review, Satz für den Nutzer, was tun)
@@ -78,8 +78,8 @@ REGELN = {
              'Prüfen, ob der Entwurf eine Entscheidung über eine Person vorbereitet; dann bleibt die Entscheidung beim Menschen.'),
     'R-14': ('KENNZEICHNUNG', 'KI-Kennzeichnung des Entwurfs', 'EU AI Act Art. 50', '–', '–', '–',
              'Jeder Entwurf trägt den Hinweis „KI-Entwurf, menschlich geprüft: ja/nein“.', 'Vor einer Weitergabe den Entwurf als geprüft markieren.'),
-    'R-15': ('KEINE', 'Keine Kategorie getroffen, Scan vollständig', '–', 'ja', 'ja (simuliert)', 'nein',
-             'Keine Schutzmerkmale gefunden. Cloud wäre zulässig – im MVP simuliert. Kein Treffer heißt nicht unbedenklich.', 'Lokal oder Cloud (simuliert) freigeben.'),
+    'R-15': ('KEINE', 'Keine Kategorie getroffen, Scan vollständig', '–', 'ja', 'ja', 'nein',
+             'Keine Schutzmerkmale gefunden. Cloud wäre zulässig. Kein Treffer heißt nicht unbedenklich.', 'Lokal oder Cloud freigeben.'),
     'R-16': ('UNCLASSIFIED', 'Scan unvollständig, Datei unlesbar, Regelkonflikt', 'fail-closed (Projektanweisung)', 'nein', 'nein', 'ja',
              'Die Prüfung ist unvollständig (Datei nicht lesbar oder Scanner-Fehler). Ungeklärt ist keine Freigabe.', 'Datei prüfen (nur .md/.txt, UTF-8) und neu prüfen.'),
 }
@@ -198,7 +198,7 @@ def einstufen(hits_anfrage=(), hits_dokument=(), *, scan_ok=True, manuell=()):
         e.policy, e.review = 'AUTO_APPROVED', 'NOT_REQUIRED'
         e.wege = ['LOCAL_ONLY', 'CLOUD_AFTER_PSEUDONYMIZATION'] if RECHTSGRUNDLAGE_CLOUD else ['LOCAL_ONLY']
         _grund(e, 'R-01', None if not RECHTSGRUNDLAGE_CLOUD else
-               'Personenbezug: lokal ohne weitere Prüfung; in die Cloud nur mit Platzhaltern (Rechtsgrundlage und AVV liegen im Register) – im MVP nur simuliert.')
+               'Personenbezug: lokal ohne weitere Prüfung; in die Cloud nur mit Platzhaltern (Rechtsgrundlage und AVV liegen im Register).')
     else:
         e.policy, e.review, e.wege = 'AUTO_APPROVED', 'NOT_REQUIRED', ['LOCAL_ONLY', 'CLOUD_ALLOWED']
         _grund(e, 'R-15')

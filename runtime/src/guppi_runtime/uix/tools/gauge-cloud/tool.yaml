@@ -1,0 +1,16 @@
+tool:
+  id: gauge-cloud
+  name: "Online-KI"
+  description: "Ob ein Cloud-Anbieter bereit ist; ein Klick wählt Cloud oder lokal für das Gespräch."
+  version: 1.0.0
+  kind: instrument
+  handles: []
+  order: 12
+  entry: {js: tool.js}
+  api:
+    - GET /api/strip
+  events:
+    emits: [talk.mode]
+    listens: [talk.mode, task.changed, decision.pending, decision.answered, model.changed, system.state]
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

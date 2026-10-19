@@ -30,7 +30,7 @@ LEITFADEN = [
      'ablegen': 'Das Dokument bleibt im Projektordner; das GateWay kopiert es nicht.',
      'sedra': 'Zeigt die Dateien des Projekts, nennt die Regeln (R-01…R-16) und prüft einen Text vorab: „Wo ist der Fehler in diesem Text: …“.'},
     {'nr': 2, 'station': '01', 'zustand': 'NEU', 'titel': 'Vorgang anlegen',
-     'mensch': 'Im KI GateWay „Neuer Vorgang“: Titel eintragen, Wunsch wählen – lokale KI (das geladene Modell) oder Cloud-KI (nur Simulation). Der Wunsch darf später nur restriktiver werden, nie offener.',
+     'mensch': 'Im KI GateWay „Neuer Vorgang“: Titel eintragen, Wunsch wählen – lokale KI (das geladene Modell) oder Cloud-KI (ein eingeschalteter Anbieter; ohne Anbieter Simulation). Der Wunsch darf später nur restriktiver werden, nie offener.',
      'warten': '–', 'pruefen': 'Ist ein Modell geladen (Maschinenraum)? Sonst antwortet in Station 04 niemand.',
      'ablegen': 'Der Vorgang bekommt eine Nummer GW-… und liegt unter local_config/gateway/vorgaenge/.',
      'sedra': 'Öffnet das GateWay, sagt, ob ein Modell geladen ist, und erklärt den Weg.'},
@@ -47,7 +47,7 @@ LEITFADEN = [
      'ablegen': 'Die Entscheidung steht mit Bindung im Logbuch (Audit, ohne Text).',
      'sedra': 'Erklärt die Einstufung, öffnet die Entscheidungen und nennt die Bindung.'},
     {'nr': 5, 'station': '03→04', 'zustand': 'WARTET', 'titel': 'Auf die Auswertung warten',
-     'mensch': 'Nach „freigeben und anwenden“ nichts am Vorgang ändern. Das lokale Modell bekommt den Übergabeprompt durch den Inhaltsschutz; die Cloud ist simuliert. Die Antwort durchläuft Recheck 2 (vor der Rückübersetzung) und Recheck 3 (danach).',
+     'mensch': 'Nach „freigeben und anwenden“ nichts am Vorgang ändern. Das lokale Modell bekommt den Übergabeprompt durch den Inhaltsschutz; die Cloud geht über den Anbieter, sonst ist sie simuliert. Die Antwort durchläuft Recheck 2 (vor der Rückübersetzung) und Recheck 3 (danach).',
      'warten': 'Je nach Modell Sekunden bis Minuten. Ergebnis ist ENTWURF oder FEHLER (dann ist nichts hinausgegangen, die Zuordnung ist gelöscht).',
      'pruefen': 'Bei FEHLER den Code lesen: entwurf_zurueckgehalten = der Entwurf enthielt Schlüssel/Kartenprüfwert; mapping_fehlt = Neustart dazwischen → neu prüfen.',
      'ablegen': 'Der Entwurf liegt getrennt unter local_config/gateway/entwuerfe/ mit Löschdatum; der Vorgang trägt nur seinen Hash.',
@@ -88,10 +88,10 @@ ZUSTAENDE = {
 FEHLER = {
     'anfrage_leer': ('Die Anfrage ist leer.', 'Text in das Feld „Eingabeprompt“ eintragen.'),
     'anfrage_zu_lang': ('Die Anfrage ist länger als 20.000 Zeichen.', 'Kürzen oder in mehrere Vorgänge teilen.'),
-    'dokument_nur_md_txt': ('Nur .md und .txt sind im MVP 1 erlaubt.', 'PDF/DOCX sind MVP 2. Den Inhalt als .txt im Projekt ablegen.'),
+    'dokument_nur_md_txt': ('Nur .md, .txt und .docx sind erlaubt.', 'PDF und das alte .doc sind nicht dabei. Als .docx oder .txt im Projekt ablegen.'),
     'dokument_zu_gross': ('Das Dokument ist größer als 200.000 Zeichen.', 'Den relevanten Ausschnitt als eigene Datei ablegen.'),
     'dokument_nicht_gefunden': ('Die Datei liegt nicht im Projektordner oder der Pfad zeigt hinaus.', 'Nur Dateien unterhalb des Projektordners wählen.'),
-    'dokument_nicht_lesbar': ('Die Datei ist kein UTF-8-Text.', 'Als UTF-8 speichern.'),
+    'dokument_nicht_lesbar': ('Die Datei lässt sich nicht lesen (kein UTF-8-Text bzw. kein gültiges .docx).', 'Als UTF-8-.txt oder als .docx ohne Kennwort speichern.'),
     'zweck_unbekannt': ('Der Zweck ist nicht aus der Liste.', 'Einen Zweck aus der Auswahl nehmen (Antwortentwurf, Zusammenfassung, Übersetzung, Frage).'),
     'verantwortlich_fehlt': ('Die verantwortliche Person fehlt.', 'Namen eintragen – er ist Teil der Freigabe.'),
     'vorgang_laeuft': ('Der Vorgang wartet auf Freigabe oder hat schon einen Entwurf.', 'Erst ablehnen, verwerfen oder prüfen, dann neu prüfen.'),
@@ -115,7 +115,7 @@ BEGRIFFE = {
     'schutzklasse': ('SK0 öffentlich · SK1 intern · SK2 vertraulich · SK3 streng vertraulich.', 'Die Klasse ist die höchste der getroffenen Merkmale; kein Merkmal = SK0. Schutzklassen sind keine EU-AI-Act-Risikoklassen.'),
     'bindung': ('Die Freigabe ist an alles gebunden, was entschieden wurde.', 'Hash über Anfrage, Dokument, Policyversion, Klasse, Merkmale, Weg, Übergabeprompt, Zweck und verantwortliche Person. Ändert sich eines, gilt die Freigabe nicht mehr.'),
     'recheck': ('Drei Rechecks.', '1 nach der Pseudonymisierung (keine Originale im Übergabeprompt), 2 nach der Antwort vor der Rückübersetzung (keine Originale, keine fremden Platzhalter), 3 nach der Rückübersetzung (kein Schlüssel, kein Kartenprüfwert im Entwurf).'),
-    'cloud': ('Cloud ist im MVP immer simuliert.', 'Nichts verlässt den Rechner. CLOUD_ALLOWED und AUTO_APPROVED sind Policy-Ergebnisse, keine Übermittlung. Ein echter Cloudweg ist ein eigener Beschluss (KLA-O6, Build S6).'),
+    'cloud': ('Cloud geht nur über einen eingeschalteten Anbieter (config/cloud_providers.yaml, Schlüssel per Umgebungsvariable); ohne Anbieter ist sie simuliert.', 'Was den Rechner verlässt, entscheidet das Regelwerk: Personenbezug (R-01) nie. CLOUD_ALLOWED und AUTO_APPROVED sind Policy-Ergebnisse; die Übermittlung passiert erst nach der Freigabe.'),
     'hard block': ('Ein Hard Block ist nicht übersteuerbar.', 'Zugangsdaten, Schlüssel, Kartendaten mit Prüfwert (R-07) und Anweisungen an die KI im Dokument (R-08): kein Modellaufruf, auch nicht lokal.'),
     'review': ('R1 = Prüfung vor dem Modellaufruf, R2 = Prüfung des Entwurfs.', 'Bei HUMAN_REVIEW_REQUIRED ist deine Freigabe (R1) die Prüfung. R2 ist Station 04: „Geprüft“ oder „Verwerfen“. Es gibt keine Rollen – der Nutzer ist die Prüfung.'),
     'versand': ('Kein Versand.', 'Der Entwurf bleibt hier. Versand ist nicht Teil dieses MVP.'),
@@ -188,7 +188,7 @@ class GatewayWissen:
                          f'Du: {st["mensch"]} Warten: {st["warten"]} Prüfen: {st["pruefen"]} Ablage: {st["ablegen"]}', st['sedra'],
                          ' '.join([st['titel'], st['station'], st['mensch'], st['pruefen'], st['ablegen'], 'leitfaden anleitung schritt']).lower()))
         rows.append(('A-ABLAUF', 'ablauf', 'Der Weg eines Vorgangs',
-                     '01 Wunsch (lokal oder Cloud simuliert) → 02 Anfrage + Dokument, Zweck, Person → „Datenschutz prüfen“ (Scan, Merkmale, Klasse, Übergabeprompt mit Platzhaltern, Recheck 1) → 03 Empfehlung und Freigabe (Gate mit Bindung) → 04 Entwurf (lokal durch den Inhaltsschutz; Rechecks 2 und 3) → deine Prüfung (R2). Kein Versand.',
+                     '01 Wunsch (lokal oder Cloud) → 02 Anfrage + Dokument, Zweck, Person → „Datenschutz prüfen“ (Scan, Merkmale, Klasse, Übergabeprompt mit Platzhaltern, Recheck 1) → 03 Empfehlung und Freigabe (Gate mit Bindung) → 04 Entwurf (lokal durch den Inhaltsschutz; Rechecks 2 und 3) → deine Prüfung (R2). Kein Versand.',
                      'Mit „Neuer Vorgang“ in Station 01 beginnen.', 'ablauf stationen weg vorgang anlegen neu beginnen studio flow'))
         with self._lock:
             self._db.execute('DELETE FROM wissen')
