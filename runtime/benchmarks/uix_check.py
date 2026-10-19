@@ -376,7 +376,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
 
         # Aufgaben dieses Prüfprojekts: der Kandidat für candidate/tests, die Aufgabe für live/costs
         found = page.evaluate("""async ()=>{
-          const ms = await window.sedraApi.api('/api/missions');
+          const ms = await (await fetch('/api/missions', {headers: {'X-GUPPI-Token': decodeURIComponent(location.hash.slice(1))}})).json();
           return {candidate: (ms.find(m=>m.phase === 'CANDIDATE_REVIEW') || {}).mission_id || null, task: (ms[0] || {}).mission_id || null};
         }""")
         # Ein fremdes Werkzeug mit eigenem Objekttyp steht nicht in OBJECTS: sein Objekt ist dann seine Sammlung (handles[0], 'alle')

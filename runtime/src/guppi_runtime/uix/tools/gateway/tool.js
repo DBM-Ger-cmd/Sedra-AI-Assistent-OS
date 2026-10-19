@@ -150,7 +150,10 @@
 
     async neu(titel, wunsch){
       const out = await this.ctx.api('/api/gateway/neu', {method: 'POST', body: {titel: titel || 'Vorgang', wunsch: wunsch || 'local'}});
-      this.ctx.shell.open({type: 'gateway', id: out.id, title: out.titel});
+      // Der neue Vorgang erscheint in derselben Ansicht, nicht in einem zweiten Reiter: ein Werkzeug hat nur einen Zustand
+      // (this.ctx, this.el), zwei Reiter desselben Werkzeugs würden sich gegenseitig überschreiben.
+      this.ctx.object = {type: 'gateway', id: out.id, title: out.titel};
+      await this.refresh();
     },
 
     // ---------------------------------------------------------------- der Vorgang: vier Stationen

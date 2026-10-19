@@ -131,7 +131,7 @@ class Flows(unittest.TestCase):
             page.click('.t-modules-reload button'); page.wait_for_timeout(1500); wait(page); page.wait_for_timeout(1200)
             self.assertEqual(page.evaluate("()=>window.sedraBoot.ctx.manifest.shell.id"), 'minimal', 'neu geladen: die andere Shell')
             page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'module', id:'alle', title:'Module', collection:true})")
-            page.wait_for_timeout(900)
+            page.wait_for_function("()=>[...document.querySelectorAll('.t-modules-row b')].some(b=>b.textContent==='Gespräch')", timeout=15000)
             switches = page.evaluate("()=>[...document.querySelectorAll('.t-modules-row')].filter(r=>['Gespräch', 'Module'].includes((r.querySelector('b')||{}).textContent)).map(r=>!!r.querySelector('button'))")
             self.assertEqual(switches, [False, False], 'Gespräch und Module haben keinen Schalter')
         self.run_in('cockpit', flow)
@@ -143,12 +143,13 @@ class Flows(unittest.TestCase):
         def flow(page, wait):
             hub = uix_check.LAST_HUB
             hub.runtime.model_router.register(FakeAdapter(lambda m: 'Sehr geehrte <PERSON_001>, der Stand folgt; offene Punkte sind offen. Kontakt <EMAIL_001>.'))
-            page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})"); page.wait_for_timeout(900)
+            page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})"); page.wait_for_selector('.t-gateway-new input', timeout=15000)
             page.fill('.t-gateway-new input', 'Projektabstimmung'); page.click('.t-gateway-new button'); page.wait_for_timeout(1200)
             self.assertTrue(page.query_selector('.t-gateway-flow'), 'der neue Vorgang ist offen')
             page.fill('.t-gateway-text', 'Lena Beispiel fragt per lena@example.com nach dem Stand von NORD-42. Kundennummer K-1042.')
             page.fill('.t-gateway-bind input', 'Torsten (Workflow)')          # G-05: die Person steht in der Bindung und im Gate
-            page.click('.t-gateway button:has-text("Datenschutz prüfen")'); page.wait_for_timeout(1200)
+            page.click('.t-gateway button:has-text("Datenschutz prüfen")')
+            page.wait_for_function("()=>{ const p=document.querySelector('.t-gateway-right .t-gateway-pre'); return p && p.textContent.length > 0; }", timeout=15000)
             right = page.evaluate("()=>document.querySelector('.t-gateway-right .t-gateway-pre').textContent")
             self.assertIn('<PERSON_001>', right); self.assertNotIn('Lena', right)
             self.assertEqual(page.evaluate("()=>document.querySelectorAll('.t-gateway-right .t-gateway-pre .t-gateway-tok').length"), 3, 'drei Platzhalter im Text (die Legende zählt extra)')
@@ -166,7 +167,8 @@ class Flows(unittest.TestCase):
             self.assertEqual(hub.content_guard.counts.get('SG_MODEL_CALL', 0), 0, 'die Wissensbasis ruft kein Modell')
             self.assertEqual(page.evaluate("()=>[...document.querySelectorAll('.t-gateway-release button')].map(b=>b.textContent)"), ['Lokal freigeben →'],
                              'Wunsch lokal: nur der lokale Weg wird angeboten')
-            page.click('.t-gateway-release button'); page.wait_for_timeout(2500)
+            page.click('.t-gateway-release button')
+            page.wait_for_function("()=>{ const a=document.querySelector('.t-gateway-answer'); return a && a.textContent.length > 0; }", timeout=20000)
             answer = page.evaluate("()=>(document.querySelector('.t-gateway-answer') || {}).textContent || ''")
             self.assertIn('Lena Beispiel', answer, 'zurückübersetzt – der Captain sieht die echten Namen')
             self.assertIn('lena@example.com', answer)
@@ -178,7 +180,7 @@ class Flows(unittest.TestCase):
             self.assertEqual(hub.content_guard.counts.get('SG_MODEL_CALL'), 1, 'genau ein Modellaufruf, durch den Inhaltsschutz')
             # A01 von Hand: ein neuer Vorgang mit Hochrisiko-Kontext wird SK3 mit R-13
             for _ in range(4):                                   # zurück zur Liste: der Reiter des Vorgangs steht noch vorn – zweimal anstoßen ist erlaubt
-                page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})"); page.wait_for_timeout(900)
+                page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})"); page.wait_for_selector('.t-gateway-new input', timeout=15000)
                 if page.query_selector('.t-gateway-new input'): break
             page.fill('.t-gateway-new input', 'Bewerbung'); page.click('.t-gateway-new button'); page.wait_for_timeout(1200)
             page.fill('.t-gateway-text', 'Bitte eine Antwort auf die Bewerbung entwerfen.')
@@ -250,7 +252,7 @@ class Build24(unittest.TestCase):
             page.click('.ck-menu-item:has-text("Projekt")'); page.wait_for_timeout(900)
             page.fill('.t-files-input', 'Zweites Projekt'); page.keyboard.press('Enter'); page.wait_for_timeout(1200)
             self.assertIn('ist angelegt', page.text_content('.t-files .s-note.ok'))
-            self.assertEqual(page.evaluate("()=>window.sedraApi.api('/api/projects').then(p=>p.length)"), 2, 'der Ordner ist wirklich da')
+            self.assertEqual(page.evaluate("()=>fetch('/api/projects', {headers: {'X-GUPPI-Token': decodeURIComponent(location.hash.slice(1))}}).then(r=>r.json()).then(p=>p.length)"), 2, 'der Ordner ist wirklich da')
             page.click('.t-files .s-note.ok button:has-text("Modus und Grenzen")'); page.wait_for_timeout(900)
             self.assertTrue(page.query_selector('.dk-tab.on:has-text("Modus und Grenzen")'), 'der Knopf führt zu den Grenzen')
             # Baum → Modell hinzufügen: der Abschnitt ist offen; ein falscher Pfad gibt einen klaren Satz, kein Rezept

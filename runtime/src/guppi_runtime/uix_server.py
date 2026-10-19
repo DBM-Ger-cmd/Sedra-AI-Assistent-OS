@@ -675,8 +675,11 @@ class UIXHub:
                         files.append({'pfad': p.relative_to(ws).as_posix(), 'bytes': p.stat().st_size})
             except Exception:
                 files = []
+        # Das geladene Modell aus dem Serverstatus, nicht über choose(): choose() prüft jeden Anbieter mit Zeitlimit (2 s ohne Modell)
         try:
-            model = self.runtime.model_router.choose().id
+            server = getattr(self.runtime, 'llama_server', None)
+            loaded = server.loaded_models() if server is not None else []
+            model = (loaded[0].get('identifier') or loaded[0].get('modelKey')) if loaded else None
         except Exception:
             model = None
         # Hochgeladene Dateien (Eingang) stehen vor den Projektdateien; ihr Name ist der Schlüssel, unter dem sie geprüft werden
