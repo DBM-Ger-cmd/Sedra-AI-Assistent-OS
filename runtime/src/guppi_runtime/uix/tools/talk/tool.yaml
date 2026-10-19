@@ -17,7 +17,7 @@ tool:
     - POST /api/cloud/models     # ... und ihre Modellliste beim Anbieter (nur lesen)
     - POST /api/chat/cloud       # Gespräch mit einem gewählten Cloud-Modell, durch den Inhaltsschutz
   events:
-    emits: [object.open]
+    emits: [object.open, talk.mode]
     listens: [talk.context, decision.pending, decision.answered, live.line, object.open]   # B6-G-03: der offene GateWay-Vorgang
   trust: CORE
   tests: [test.spec.js]

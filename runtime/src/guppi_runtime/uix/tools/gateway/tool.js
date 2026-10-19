@@ -220,7 +220,12 @@
       const none = d().el('option', null, 'Kein Dokument'); none.value = ''; sel.append(none);
       (list.dateien || []).forEach(f=>{ const op = d().el('option', null, f.pfad + ' (' + d().fmtBytes(f.bytes) + ')'); op.value = f.pfad; if((v.dokument || {}).name === f.pfad) op.selected = true; sel.append(op); });
       sel.disabled = locked; this.sel = sel;
-      attach.append(sel, d().el('small', 's-muted', 'Nur .md und .txt aus dem Projekt · weitere Formate erst ab MVP 2'));
+      // Datei manuell einfügen: sie kommt in den Eingang des GateWay (ohne Projekt) und ist danach im Auswahlfeld
+      const up = d().el('input'); up.type = 'file'; up.accept = '.md,.txt,.docx'; up.disabled = locked; up.setAttribute('aria-label', 'Datei hochladen');
+      up.onchange = ()=>{ const f = up.files && up.files[0]; if(!f) return; const r = new FileReader();
+        r.onload = async()=>{ try{ await this.ctx.api('/api/gateway/upload', {method: 'POST', body: {name: f.name, data: String(r.result).split(',')[1]}}); await this.refresh(); }
+          catch(err){ alert('Hochladen fehlgeschlagen: ' + err.message); } }; r.readAsDataURL(f); };
+      attach.append(sel, up, d().el('small', 's-muted', 'Nur .md, .txt und .docx · Datei hochladen oder aus dem Projekt'));
       left.append(attach);
       // G-05 (Ticket B6-G-01): Zweck und verantwortliche Person – beide gehen in die Bindung der Freigabe.
       const bind = d().el('div', 't-gateway-attach t-gateway-bind');

@@ -17,6 +17,7 @@ class DieWissensbasis(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.gw = GateWay(self.root)
         self.w = GatewayWissen(self.root, self.gw)
+        self.addCleanup(self.w.close)           # vor dem Löschen des Ordners schließen (Windows sperrt die Datei sonst)
 
     def frage(self, text, vid=None):
         return self.w.antwort(text, vid)
@@ -116,6 +117,7 @@ class DieWissensbasis(unittest.TestCase):
     def test_own_entries_survive_a_new_instance_and_are_found(self):
         self.w.eintragen('Wie heißt unser Testkunde?', 'Nordwerk Muster GmbH (synthetisch).')
         w2 = GatewayWissen(self.root, self.gw)
+        self.addCleanup(w2.close)
         out = w2.antwort('Wie heißt unser Testkunde?')
         self.assertIn('Nordwerk', out['reply']); self.assertEqual(out['art'], 'wissen')
         self.assertEqual(len(w2.suche('Testkunde')), 1)

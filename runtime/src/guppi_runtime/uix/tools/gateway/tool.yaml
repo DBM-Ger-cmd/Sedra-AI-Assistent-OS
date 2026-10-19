@@ -13,6 +13,7 @@ tool:
     - POST /api/gateway/vorgang
     - POST /api/gateway/neu
     - POST /api/gateway/pruefen
+    - POST /api/gateway/upload     # Datei manuell in den Eingang legen (ohne Projekt)
     - POST /api/gateway/freigabe
     - POST /api/gateway/pruefung
     - POST /api/gateway/verwerfen

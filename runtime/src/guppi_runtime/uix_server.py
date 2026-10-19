@@ -679,6 +679,9 @@ class UIXHub:
             model = self.runtime.model_router.choose().id
         except Exception:
             model = None
+        # Hochgeladene Dateien (Eingang) stehen vor den Projektdateien; ihr Name ist der Schlüssel, unter dem sie geprüft werden
+        eingang = [{'pfad': p.name, 'bytes': p.stat().st_size, 'eingang': True} for p in sorted(self.gateway_eingang().iterdir()) if p.is_file()]
+        files = eingang + files
         return {'vorgaenge': self.gw.liste(), 'vorgaben': self.gw.vorgaben(), 'dateien': files, 'modell': model, 'zwecke': self.gw.zwecke(),
                 'cloud': self.gateway_cloud(),
                 'merkmale': [{'id': k, 'name': v[0], 'klasse': v[1], 'manuell': k in klassen.MANUELL} for k, v in klassen.MERKMALE.items()],
@@ -711,6 +714,37 @@ class UIXHub:
         self.events.publish('tools.refresh', {})
         return self.gateway_get(v.id)
 
+    def gateway_eingang(self):
+        """Der Eingang des GateWay für Dateien, die der Nutzer hochlädt (ohne Projekt). Liegt unter local_config, nie in git."""
+        folder = self.project_root / 'local_config' / 'gateway' / 'eingang'
+        folder.mkdir(parents=True, exist_ok=True)
+        return folder
+
+    def gateway_upload(self, payload):
+        """POST /api/gateway/upload {name, data} – eine Datei (.md, .txt, .docx, bis 2 MB, Base64) in den Eingang des GateWay legen.
+        Nichts wird ausgeführt. Ist der Text nicht lesbar, wird die Datei sofort wieder entfernt."""
+        import base64, binascii
+        from .gateway.dokumente import lies_datei, DokumentFehler
+        p = payload or {}
+        name = Path(str(p.get('name') or '').strip()).name
+        if not name or name.startswith('.') or Path(name).suffix.lower() not in ('.md', '.txt', '.docx'):
+            raise ValueError('dateityp_nicht_erlaubt')
+        try:
+            raw = base64.b64decode(str(p.get('data') or ''), validate=True)
+        except (binascii.Error, ValueError):
+            raise ValueError('daten_ungueltig')
+        if not raw or len(raw) > 2_000_000:
+            raise ValueError('datei_zu_gross_oder_leer')
+        target = self.gateway_eingang() / name
+        target.write_bytes(raw)
+        try:
+            lies_datei(target)
+        except DokumentFehler as exc:
+            target.unlink(missing_ok=True)
+            raise ValueError('dokument_nicht_lesbar:' + str(exc)[:80])
+        self.runtime.audit.append('GW_DATEI_HOCHGELADEN', component='gateway', payload={'endung': target.suffix.lower(), 'bytes': len(raw)})
+        return {'name': name, 'bytes': len(raw)}
+
     def gateway_pruefen(self, payload):
         """POST /api/gateway/pruefen {id, anfrage, dokument?, wunsch?, manuell?, zweck?, verantwortlich?} – liest die Datei aus dem Projekt;
         nichts verlässt den Rechner. Zweck und verantwortliche Person (G-05) werden Teil der Bindung."""
@@ -719,18 +753,22 @@ class UIXHub:
         dokument = None
         name = str(p.get('dokument') or '').strip()
         if name:
-            project = self._active_project()
-            if not project:
-                raise ValueError('no_project')
-            ws = self.runtime.filesystem_tool._resolve(project['workspace_path'], must_exist=True)
-            path = (ws / name)
-            try:
-                if not path.resolve().is_relative_to(ws.resolve()) or not path.is_file():
+            eingang = self.gateway_eingang()
+            if Path(name).name == name and (eingang / name).is_file():
+                path = eingang / name                 # eine hochgeladene Datei hat Vorrang vor dem Projekt
+            else:
+                project = self._active_project()
+                if not project:
+                    raise ValueError('no_project')
+                ws = self.runtime.filesystem_tool._resolve(project['workspace_path'], must_exist=True)
+                path = (ws / name)
+                try:
+                    if not path.resolve().is_relative_to(ws.resolve()) or not path.is_file():
+                        raise ValueError('dokument_nicht_gefunden')
+                except ValueError:
+                    raise
+                except Exception:
                     raise ValueError('dokument_nicht_gefunden')
-            except ValueError:
-                raise
-            except Exception:
-                raise ValueError('dokument_nicht_gefunden')
             from .gateway.dokumente import lies_datei, DokumentFehler
             try:
                 dokument = (name, lies_datei(path))
@@ -1571,7 +1609,10 @@ class UIXHub:
         rt = self.runtime
         server = getattr(rt, 'llama_server', None)
         loaded = server.loaded_models() if server is not None else []
-        if not loaded: return {'status': 'no_model', 'message': 'Kein Modell geladen.'}
+        if not loaded:
+            # Befund M1 (Architekturreview): ein ungültiger Wert in der Konfiguration schaltet den Server still ab – der Grund gehört in den Chat
+            grund = getattr(rt, 'llama_server_error', None)
+            return {'status': 'no_model', 'message': 'Kein Modell geladen.' + (' Grund: ' + str(grund) if grund else '')}
         model = loaded[0].get('identifier') or loaded[0].get('modelKey')
         with self.lock:
             if not mission_id:
@@ -1723,6 +1764,17 @@ class UIXHub:
             pending = {g.get('gate_id') for g in (m.get('human_gates') or {}).get('pending', [])}
             if req['gate'].get('gate_id') in pending: out.append({'kind': req['kind'], 'mission_id': mid, 'gate': req['gate'], 'binding': req['binding']})
             else: self.open_requests.pop(mid, None)
+        # Nach einem Neustart ist die Merkliste leer, das Gate aber steht noch in der Mission. Offene GateWay-Freigaben daher
+        # zusätzlich aus den Missionen lesen – sonst zeigt der Knopf „Jetzt freigeben“ auf eine Entscheidung, die es nicht gibt.
+        known = {r['mission_id'] for r in out}
+        for m in self.runtime.missions.list():
+            mid = (m.get('identity') or {}).get('mission_id')
+            binding = (m.get('context') or {}).get('gateway_request')
+            if not mid or mid in known or not binding: continue
+            for gate in (m.get('human_gates') or {}).get('pending', []):
+                if isinstance(gate, dict) and gate.get('gate_id'):
+                    out.append({'kind': 'gateway', 'mission_id': mid, 'gate': gate, 'binding': binding})
+                    break
         return out
 
     @staticmethod
@@ -2162,6 +2214,13 @@ class UIXHub:
             return {'status': 'cloud_gesperrt', 'local': draft, 'cloud': None, 'reason': 'Der Inhaltsschutz hat den Cloud-Schritt gesperrt; der lokale Entwurf bleibt.'}
         except ValueError as exc:
             return {'status': 'cloud_fehler', 'local': draft, 'cloud': None, 'reason': str(exc)[:160]}
+        if cloud.get('status') != 'completed':
+            # Der Inhaltsschutz sperrt meist als Ergebnis, nicht als Ausnahme (labor.cloud_chat): dann bleibt der lokale Entwurf
+            status = 'cloud_gesperrt' if cloud.get('status') == 'blocked' else 'cloud_fehler'
+            self.runtime.audit.append('KOMBI_CLOUD_' + status.upper(), component='uix', payload={'provider': provider, 'grund': ','.join(cloud.get('reasons') or [])[:80]})
+            reason = ('Der Inhaltsschutz hat den Cloud-Schritt gesperrt; der lokale Entwurf bleibt.' if status == 'cloud_gesperrt'
+                      else 'Der Cloud-Schritt ist nicht gelaufen; der lokale Entwurf bleibt.')
+            return {'status': status, 'local': draft, 'cloud': None, 'reason': reason, 'reasons': list(cloud.get('reasons') or [])}
         self.runtime.audit.append('KOMBI_CHAT', component='uix', payload={'provider': provider, 'model': model, 'status': cloud.get('status')})
         return {'status': 'completed', 'local': draft, 'cloud': cloud.get('reply'), 'model': model, 'provider': provider,
                 'local_model': local.get('model')}
@@ -2939,6 +2998,7 @@ def make_server(hub: UIXHub, port=0):
                     '/api/guard/probe': hub.guard_probe,            # read-only in der Sache: prüft nur, ruft kein Modell, speichert nichts
                     '/api/gateway/vorgang': lambda p: hub.gateway_get(str((p or {}).get('id') or '')),   # read-only: ein Vorgang mit Entwurf
                     '/api/gateway/neu': hub.gateway_new,
+                    '/api/gateway/upload': hub.gateway_upload,      # Datei in den Eingang des GateWay legen (ohne Projekt)
                     '/api/gateway/pruefen': hub.gateway_pruefen,    # Datenschutz prüfen: lokal, nichts verlässt den Rechner
                     '/api/gateway/freigabe': hub.gateway_freigabe,  # legt das Gate vor
                     '/api/gateway/apply': hub.gateway_apply,

@@ -76,12 +76,10 @@ class DieReinenTeile(unittest.TestCase):
 class DieWissensbasis(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='arbeitsplatz-')
+        self.addCleanup(self.tmp.cleanup)     # Reihenfolge: erst die Verbindung schließen (w.close), dann den Ordner löschen
         self.live = {'shell': 'cockpit', 'entscheidungen': 1, 'gateway_wartend': 0, 'gateway_gesamt': 0, 'aufgaben_wartend': 0,
                      'grenzen_bestaetigt': True, 'modell_geladen': None, 'projekte': 1}
         self.w = ap.ArbeitsplatzWissen(Path(self.tmp.name), lambda: self.live, module()); self.addCleanup(self.w.close)
-
-    def tearDown(self):
-        self.tmp.cleanup()
 
     def test_die_datei_entsteht_und_traegt_alle_arten(self):
         self.assertTrue((Path(self.tmp.name) / 'local_config' / 'sedra' / 'arbeitsplatz.sqlite').is_file())

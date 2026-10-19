@@ -68,7 +68,9 @@ class S1_Kern(unittest.TestCase):
         lines = [l.split() for l in (folder / 'HERKUNFT.sha256').read_text(encoding='utf-8').splitlines() if l.strip()]
         self.assertEqual(len(lines), 7)
         for digest, name in lines:
-            self.assertEqual(hashlib.sha256((folder / name).read_bytes()).hexdigest(), digest, name)
+            # Zeilenenden normalisieren: der Windows-Checkout hat CRLF, die Herkunftsprüfsumme ist für LF gebildet (Befund I6).
+            data = (folder / name).read_bytes().replace(b'\r\n', b'\n')
+            self.assertEqual(hashlib.sha256(data).hexdigest(), digest, name)
 
     def test_b6core_does_not_reach_the_network(self):
         for p in (SRC / 'core' / 'b6core').glob('*.py'):
@@ -183,11 +185,9 @@ class S2_Router(unittest.TestCase):
         # Befund (Architekturreview, router.py): Hatte die Antwort Text, wurden Werkzeugargumente nicht geprüft.
         router = ModelRouter(); router.content_guard = guard()
         router.register(FakeAdapter({'content': 'Ich führe das aus.', 'tool_calls': [{'name': 'shell', 'arguments': {'cmd': 'echo ' + TOKEN}}]}))
-        try:
-            out = router.chat('M', [user('mach')], model='m')
-        except ContentGuardStop:
-            out = None                                  # gesperrt ist richtig
-        self.assertFalse(out and TOKEN in json.dumps(out, ensure_ascii=False), 'der Schlüssel darf nicht im Ergebnis stehen')
+        with self.assertRaises(ContentGuardStop) as ctx:      # ein Schlüssel im Werkzeugargument wird gesperrt, nicht durchgereicht
+            router.chat('M', [user('mach')], model='m')
+        self.assertEqual(ctx.exception.result.status, 'WITHHELD')
         router = ModelRouter(); router.content_guard = guard()
         router.register(FakeAdapter({'content': 'Ich prüfe das.', 'tool_calls': [{'name': 'shell', 'arguments': {'cmd': 'ls'}}]}))
         out = router.chat('M', [user('mach')], model='m')

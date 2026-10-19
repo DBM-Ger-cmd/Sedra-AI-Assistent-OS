@@ -13,6 +13,7 @@ class UIXTests(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
   self.hub=UIXHub(Path(self.tmp.name)/'project',ARCH)
+  self.addCleanup(self.hub.close)   # vor dem Löschen des Ordners schließen (SQLite-Sperre unter Windows)
  def test_runtime_status(self):
   status=self.hub.status();self.assertIn(status['system_state'],{'READY','SAFE_MODE'})
   self.assertGreaterEqual(status['capability_router']['skills'],1)

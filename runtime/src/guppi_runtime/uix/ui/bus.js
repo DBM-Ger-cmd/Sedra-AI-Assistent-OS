@@ -14,6 +14,7 @@
     'model.changed':      [],
     'live.line':          ['line'],
     'talk.context':       [],
+    'talk.mode':          ['mode'],
     'system.state':       ['state'],
     'desk.error':         ['message'],
     'desk.resync':        [],
