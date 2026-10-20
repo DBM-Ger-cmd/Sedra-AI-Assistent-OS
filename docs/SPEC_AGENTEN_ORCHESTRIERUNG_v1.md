@@ -511,6 +511,179 @@ Erstes Team (Captain, 20.10.2026): Unterarbeiter, Planer, Coder, Reviewer, Reche
 | ORC-13 | Jede Aufgabe SOLL ihre Zielkette (Ziel → Projekt → Aufgabe) an den Agenten mitgeben. | Die Mission enthält die Zielkette im Kontext |
 | ORC-14 | WENN der Captain dem Team eine Anweisung gibt, DANN SOLL sie beim Unterarbeiter ankommen; er zerlegt sie in Aufgaben, weist sie den Agenten unter ihm zu und meldet dem Captain das Ergebnis. Nur der Unterarbeiter delegiert (Captain, 20.10.2026). | Eine Anweisung im Gespräch mit dem Unterarbeiter (Shell D, UIX-04) erzeugt Aufgaben bei den Agenten unter ihm, am Ende einen Bericht an den Captain; der Planer kann nicht zuweisen; jeder Lauf braucht `wake_agent` |
 
+### Abgleich gegen den Code (G1)
+
+Stand 20.10.2026, geprüft gegen Branch `spec1/orchestrierung` (Commit `3abb023`), Paperclip-Kopie Version 0.3.1. Gelesen, nicht ausgeführt: es lief kein Test, keine Oberfläche, kein Modell. Die Anforderungen oben bleiben unverändert stehen; Korrekturen stehen weiter unten als Vorschlag (alt neben neu) und werden erst mit G1 gültig.
+
+#### O1.1 Agent Manager und Rollen
+
+Befund `agent_manager/`:
+
+| Baustein | Stand | Folge für Spec 1 |
+| --- | --- | --- |
+| Vorlagen (`service.py`, `agent_import.py`) | `template.yaml` mit Rolle (Freitext), SOUL, Werkzeugen, `permissions`, `capabilities`; der Import erzwingt `network_mode: deny`, `external_write: false`, `privileged: false` und lässt nur die Effekte `read_only` bis `reversible_write` zu; Vertrauen immer `UNVERIFIED`. Es gibt sieben Vorlagen aus `devvm_templates.py` (coder, reviewer, tester, planner, explorer, solo, step_planner), alle für die DevVM. | Es gibt keine Vorlage für Unterarbeiter und Recherche. Eine Vorlage kann kein Netz erlauben (siehe Recherche unten). |
+| Instanzen (`instances.py`) | Einstellen = Gate `agent.instantiate` (CLI `hire`, dann `create`); Instanz startet `UNVERIFIED`, Lebenszyklus `ACTIVE`/`QUARANTINED`, Zulassung (`admission`) erst nach `promote` (Gate `agent.promote`, verlangt Suite-Lauf, Review eines anderen Modells und Entscheidung). `revoke` ohne Gate. Kein Desk-Verb, nur CLI. | Kein `reports_to`, kein Budget, kein Rezept, kein Pausieren oder Beenden. Eine Vorlage ohne Suite (Unterarbeiter, Recherche) kann nie `VERIFIED` werden (`no_suite_declared`). |
+| Crews (`crews.py`) | Slots mit Pin auf Vorlage und Digest, Workflow-Graph, Unabhängigkeitsregeln; `assemble` empfiehlt nur. | Vorbild für Teamzusammenstellung, aber kein Organigramm: ein Crew-Workflow ist ein Ablauf, keine Berichtslinie. |
+| Läufe (`bridge.py`, `run_worker.py`) | Gate `agent.assign` bindet die **Vorlagen-Referenz**, Mission und Eingabe; der Lauf ist ein DevVM-Bau von ein bis zwei Stunden (`benchmarks/devvm_build.py`), Verbrauch nur nachträglich aus Build-Logs (`token_records.py`). | Das ist kein Lauf „Aufgabe des Bretts“ im Sinne von ORC-07; ein Agentenlauf des Teams ist eine Brain-Mission (siehe ORC-07). |
+| Rechte der Vorlage | Keine Stufenzahl. Die Stufen 0 bis 6 stehen in `permission_levels.yaml` (Obergrenze je Job) und `max_level` je Rezept in `role_routing.yaml` (Rezept `coder.local_primary`: 2). | `agents.permission_level` (D3.3) hat keine Quelle; Abbildung nötig (Vorschlag unten). |
+
+Befund Rollen und Rezepte:
+
+| Rolle | `role_routing.yaml` | `job_supervisor.yaml` | `token_policy.yaml` | Befund |
+| --- | --- | --- | --- | --- |
+| planner, coder, reviewer | Rezept `coder.local_primary` listet sie (und tester, researcher u. a.); `enabled: false`, `max_level: 2`, kein Netz, `weights_id: null` | `planner`, `reviewer`, `coder` (coder `mutates: true`) | je ein Eintrag | vorhanden. Nur ein lokales Rezept: Unabhängigkeit Coder/Reviewer ist nicht beweisbar. Das stört nicht, solange der Reviewer nur Hinweise gibt. |
+| researcher | im selben Rezept gelistet | `researcher` (Fähigkeit `research`) | Eintrag | Rolle vorhanden, aber ohne Werkzeug dahinter: `tools/web.py` hängt an `runtime.web_tool`, nicht an einer Vorlage. |
+| Unterarbeiter | – | – | – | fehlt in allen drei Dateien |
+
+Web-Zugang: `config/web_access.yaml` erlaubt `youtube.com`, `youtu.be`, `github.com`, `raw.githubusercontent.com`, `huggingface.co`; nur `https` und `GET`, 2 MB, 30 s; Guard-Aktion `external_read` (GR-027, ALLOW); Treffer liegen als `untrusted_external` unter `runtime_data/external/`. Für Recherche ist das schmal (keine Suchmaschine, keine Dokumentationsseiten).
+
+Empfehlung zur Frage „Agent Manager erweitern oder `orchestra/org.py`“: **`orchestra/org.py`, der Agent Manager bleibt unverändert.** Begründung:
+
+1. Der Agent Manager beschreibt Zulassung und Qualifikation (`VERIFIED`, Suite, Review). Das Organigramm beschreibt Führung (Vorgesetzter, Budget, Weckrecht). Das sind zwei Fragen mit zwei Gates; in einer Registry vermischt, hinge ein Wechsel der Berichtslinie an der `registry.sqlite` des Agent Managers, die mit Gate-Dateien, Outbox und DevVM verwoben ist (3424 Zeilen).
+2. D3.1 verbietet `orchestra/` den Import von `agent_manager` (wegen `test_core_boundary_src` über `runtime.py`); eine Erweiterung dort wäre aus `orchestra/` nur über den Desk-Adapter erreichbar, `org.py` müsste also ohnehin getrennt bleiben.
+3. `agents.instance_id` (D3.3) verbindet beides ohne Änderung am Agent Manager: Einstellen = `agent.instantiate` (vorhanden) plus `set_org` (GA-01).
+4. Das Wiederverwenden von `hire`/`create` bringt die vorhandene Prüfung des Vorlagen-Digests gratis mit.
+
+Offen dabei: Die AM-Zulassung (`VERIFIED`) verlangt eine Suite je Vorlage. Vorschlag: Orchestra-Läufe (Brain-Missionen) verlangen **keine** AM-Zulassung, weil sie über `wake_agent` und die Guard-Prüfung der Mission laufen; die AM-Zulassung bleibt Voraussetzung nur für DevVM-Bauaufträge (`agent.assign`). Das ist Gate G1-S1-02.
+
+#### ORC-01 bis ORC-14 gegen den Code
+
+Maßstab „prüfbar“: Lässt sich das Abnahmekriterium als automatischer Test mit Fixture oder Fake-Uhr schreiben, ohne Modell und ohne Oberfläche?
+
+| ID | Was existiert | Was fehlt | Prüfbar? |
+| --- | --- | --- | --- |
+| ORC-01 | `agent.instantiate` mit Gate (CLI `hire`); der Desk-Typ `agent` ist nur ein Platzhalter. | `reports_to`, Rolle als feste Kennung, Rezept, Rechte-Stufe, Budget, Desk-Verb `einstellen`. Zwei Gates (instantiate + `set_org`) statt „ein Gate“. | ja, nach Korrektur (Gates benennen) |
+| ORC-02 | nichts (Crews kennen nur Workflow-Abhängigkeiten, mit Zyklusprüfung `_has_cycle`). | Organigramm, Zyklus- und Wurzelprüfung, Tiefe (`max_depth: 6`), Verhalten beim Beenden eines Vorgesetzten. „außer dem obersten“ ist durch OP-6 entschieden (genau ein Unterarbeiter). | ja; Wurzel und Beenden fehlen im Kriterium |
+| ORC-03 | Missionen haben keinen Bearbeiter (`created_by` ist fest `captain`). | Typ `issue` mit `assignee` (D3.3); Umhängen während des Checkouts ist ungeregelt. | ja |
+| ORC-04 | Muster: `core/mission_lock.py` (nicht blockierende Betriebssystem-Sperre, `mission_execution_busy`) und der Lease des `job_supervisor`. Für Aufgaben des Bretts: nichts. | `BEGIN IMMEDIATE`-Checkout in `board.py`; Freigabe bei Prozessende. | ja: `multiprocessing` mit temporärer Datenbank, 100 Durchläufe |
+| ORC-05 | `job_supervisor` kennt `depends_on` und `dependency_satisfied_states` für **Jobs**; `step_journal` kennt `depends_on` nur innerhalb einer Mission. | Blocker zwischen Aufgaben des Bretts, Zyklusprüfung der Blocker. Das Kriterium „Wecken einer blockierten Aufgabe“ ist zweideutig (Agent wecken oder Aufgabe übernehmen). | nein, erst nach Klärung |
+| ORC-06 | Das Wort „Herzschlag“ gibt es nur als **Lease-Herzschlag** eines Workers (`job_supervisor.heartbeat`, `reap` alle 30 s im `job_worker`); er weckt keinen Agenten. Keine Zusammenfassung von Weckrufen. | Tabelle `wakeups`, Zusammenfassen (`coalesce_s`), Auslöser „Antwort auf Rückfrage“ (eine Rückfrage-Mechanik ist nirgends definiert). | ja mit Fake-Uhr; Rückfrage unklar |
+| ORC-07 | `Brain.create_mission` (Mission, Zustandsautomat, Guard, Audit) und `job_supervisor.create_job`. | Der Adapter „Aufgabe → Mission“. Wecken ohne Gate geht nicht: `wake_agent` ist `CAPTAIN_REQUIRED`. Die Mission trägt keinen Agenten (`created_by` fest `captain`). | ja (Mission-ID, Audit); Gate-Folge offen (OP-4) |
+| ORC-08 | `create_job` prüft `permission_level <= contract.permission_level`; Stufen aus `permission_levels.yaml`. | Richtungsprüfung im Organigramm. Widerspruch zu ORC-14: „nur der Unterarbeiter delegiert“ macht ORC-08 für alle anderen leer. „höchstens seinen Rechten“ ist missverständlich (siehe Vorschlag). | ja, nach Korrektur |
+| ORC-09 | `token_policy.py` begrenzt nur die Ausgabe **je Aufruf**; `desk/boundaries.py` kennt die Grenze `kosten` (Token je Aufgabe, je Projekt; `fragt`/`zu`/Zahl); `agent_manager/usage_meter.py` summiert nachträglich Build-Logs. | Buchung des Verbrauchs (`spend`), Summe je Agent, 80-%-Warnung, Pause, Entscheidung an den Captain (`decisions.collect` kennt keine Art „Budget“). Die Quelle der Tokenzahl je Lauf ist offen (nicht geprüft, ob `llamacpp.py` sie liefert). Der Euro-Teil hängt an Spec 3. | teilweise (Token ja, Euro erst mit Spec 3) |
+| ORC-10 | nichts. `routine` stand im Vertrag, der Eintrag wurde in Build 24 entfernt; `benchmarks/day_queue_*.py` sind feste Ketten ohne Cron. | Cron-Auswertung, Nachhol-Regel, `routine_runs`. Abhängigkeiten: nur `PyYAML`, kein `croniter`; `zoneinfo` kommt im Code nirgends vor (unter Windows braucht es das Paket `tzdata`). | ja mit Fake-Uhr |
+| ORC-11 | `job_supervisor.reap`: Lease abgelaufen **und** Herzschlag still, dann `JOB_LEASE_*`/`JOB_ABANDONED`; Stillstand = Herzschläge ohne Fortschritt über `stall_after_s` (300 s), dann `JOB_STALLED`; Fortschritt zählt nur bei geändertem Schrittmarker. | Freigabe des **Checkouts** bei diesen Ereignissen; `reap` läuft nur, solange ein Worker läuft und der Supervisor an ist (Standard aus). `checkout.stall_s: 900` (D3.4) und `stall_after_s: 300` sind zwei Zahlen für dasselbe. Nach einem Absturz von SEDRA bleibt ein Checkout stehen. | ja, nach Korrektur |
+| ORC-12 | AM `revoke` (Quarantäne, ohne Gate), `job_supervisor.cancel` (Abbruch mit Quittung des Workers), Mission `PAUSED` (aus den meisten Zuständen erlaubt). | Verben `pausieren`/`fortsetzen`/`beenden` (GA-05 bis GA-07), saubere Freigabe der Aufgabe, Behandlung der Untergebenen. | ja |
+| ORC-13 | Missionen tragen `captain_intent` (unveränderlich), `objective`, `context.refs`; Ziel = Vorhaben (`intent`), Projekt = `project` (OP-8). | Auflösung der Kette beim Wecken, Form im Kontext, Umgang mit einem gelöschten Glied. Ob und wie der Kontext-Zusammenbau (`context_assembly`) `context.refs` liest, ist nicht geprüft. | nein, „im Kontext“ ist nicht messbar formuliert |
+| ORC-14 | `chat_tools` (Gespräch liest `list_actions`/`propose_action`), Verb `intent.aufgabe_machen`. UIX-04 (Agentenfenster) ist eine Anforderung von Spec 4, noch nicht gebaut. | Verb zum Anweisen, Zerlegung, Zuweisungsrecht nur für den Unterarbeiter, Bericht. Das Kriterium hängt an der Oberfläche (Spec 4) und ist ohne sie nicht prüfbar. Viele Gates: Jeder Lauf braucht `wake_agent` (OP-4). | nein, erst nach Korrektur (Weg über die Kern-API) |
+
+#### Korrekturvorschläge (alte und neue Fassung)
+
+Alle Fassungen gelten für Typ `issue` (OP-1) und das Datenmodell D3.3. Die alte Fassung steht oben in der Anforderungstabelle.
+
+| ID | Alte Fassung | Neue Fassung (Vorschlag) | Grund |
+| --- | --- | --- | --- |
+| ORC-01 | WENN der Captain einen Agenten einstellt, DANN SOLL das System ihn mit Rolle, Rezept, Vorgesetztem und Budget registrieren. Abnahme: Objekt `agent` mit `reports_to`; Einstellen läuft über ein Gate. | WENN der Captain einen Agenten einstellt (Verb `einstellen` am Typ `agent`), DANN SOLL das System aus einer Vorlage eine Instanz anlegen (Gate `agent.instantiate`), sie mit Rolle, Rezept, Vorgesetztem, Rechte-Stufe und Budget ins Organigramm eintragen (Gate `set_org`) und beides in **einem** Antrag zur Entscheidung stellen. Abnahme: `POST /api/actions` (`agent`, `einstellen`) erzeugt eine Mission mit beiden gebundenen Gates; nach der Freigabe liefert `POST /api/objects {type:"agent", id}` `reports_to`, Rolle, Stufe, Budget; ohne Freigabe entsteht keine Zeile in `agents`. | Zwei Gates sind im Code Tatsache; „ein Gate“ war nicht prüfbar. |
+| ORC-02 | Jeder Agent außer dem obersten SOLL genau einen Vorgesetzten haben. Abnahme: Ein Zyklus wird abgelehnt. | Jeder aktive Agent außer dem Unterarbeiter SOLL genau einen Vorgesetzten haben; es gibt genau einen aktiven Agenten ohne Vorgesetzten (OP-6). `org.py` lehnt ab: Zyklus, zweite Wurzel, Tiefe über `max_depth`, Beenden eines Agenten mit aktiven Untergebenen. Abnahme: je ein Test für diese vier Fälle mit Fehlercode. | OP-6 ist entschieden, der Wortlaut „außer dem obersten“ ist offen geblieben; das Beenden eines Vorgesetzten fehlte. |
+| ORC-03 | WENN eine Aufgabe zugewiesen wird, DANN SOLL sie genau einen Bearbeiter haben. Abnahme: Zweite Zuweisung ersetzt die erste und schreibt Audit. | WENN eine Aufgabe (`issue`) zugewiesen wird, DANN SOLL sie genau einen aktiven Bearbeiter haben. Eine zweite Zuweisung ersetzt die erste und schreibt `ORC_TASK_ASSIGNED` mit altem und neuem Bearbeiter, außer die Aufgabe ist ausgecheckt (dann `task_checked_out`; umhängen erst nach der Freigabe). Zuweisung an pausierte oder beendete Agenten wird abgelehnt. | Umhängen während eines Laufs hätte zwei Läufe erzeugt. |
+| ORC-04 | WENN zwei Agenten dieselbe Aufgabe gleichzeitig übernehmen wollen, DANN SOLL genau einer Erfolg haben. Abnahme: Paralleltest mit 2 Prozessen, 100 Durchläufe, nie zwei Halter. | Anforderung unverändert; Abnahme geschärft: In 100 Durchläufen mit je einer neuen Aufgabe und zwei Prozessen gewinnt genau einer, der andere bekommt `task_already_checked_out`, danach steht `checkout_by` auf dem Sieger. Test auf einer temporären Datenbank. | schon prüfbar; nur der Fehlercode (D5) fehlte im Kriterium. |
+| ORC-05 | WENN eine Aufgabe einen offenen Blocker hat, DANN SOLL sie nicht ausgeführt werden. Abnahme: Wecken einer blockierten Aufgabe führt zu keinem Lauf. | WENN eine Aufgabe einen offenen Blocker hat, DANN SOLL ihr Checkout mit `task_blocked` abgelehnt werden; ein Weckruf, der nur blockierte Aufgaben betrifft, endet ohne Mission und ohne Modellstart. WENN der letzte Blocker erledigt ist, DANN SOLL ein Weckruf (Grund `antwort`) für den Bearbeiter entstehen. Blocker-Zyklen werden abgelehnt. | „Wecken“ meinte zwei Dinge; der zweite Satz schließt die Lücke, dass eine erledigte Blockade niemanden weckt. |
+| ORC-06 | WENN einem Agenten Arbeit zugewiesen wird oder eine Antwort auf seine Rückfrage eingeht, DANN SOLL der Herzschlag ihn wecken; mehrere Weckrufe kurz nacheinander werden zusammengefasst. Abnahme: 3 Zuweisungen in 1 s ergeben 1 Lauf. | WENN einem Agenten Arbeit zugewiesen wird, der Captain ihm eine Anweisung gibt oder ein Kommentar an einer seiner Aufgaben eingeht, DANN SOLL der Herzschlag einen Weckruf eintragen; Weckrufe desselben Agenten innerhalb von `coalesce_s` werden zu einem zusammengefasst. Ein Weckruf wird nur mit gültiger Freigabe zum Lauf (`wake_agent`: einzeln oder Dauerfreigabe, ORC-15). Abnahme (Fake-Uhr, ohne Modell): 3 Zuweisungen in 1 s ergeben 1 Weckruf; ohne Freigabe entsteht 1 Entscheidung und kein Lauf. „Rückfrage“ entfällt als eigener Begriff: Antwort = Kommentar. | Der Herzschlag des Supervisors ist ein Lease-Takt, kein Wecken; ohne den Freigabe-Satz würde das Kriterium „1 Lauf“ am Gate scheitern. |
+| ORC-07 | WENN ein Agent geweckt wird, DANN SOLL seine Arbeit als Mission mit Guard-Prüfung und Audit laufen. Abnahme: Jeder Lauf hat eine Mission-ID und Audit-Einträge. | WENN ein Agent mit gültiger Freigabe geweckt wird, DANN SOLL seine Arbeit als Brain-Mission laufen, deren `captain_intent` aus der Aufgabe gebildet wird (nie aus Modellausgabe), mit Guard-Prüfung der Mission und Audit `ORC_WAKE` (Agent, Aufgabe, Mission-ID). Abnahme: Jeder Lauf hat eine Mission-ID in `tasks.mission_id` und `ORC_WAKE`; die Mission nennt den Agenten in `context.refs`. DevVM-Bauaufträge für Coder laufen weiter über `agent.assign` (zweites Gate). | Der Agent Manager startet DevVM-Builds, keine Brain-Missionen; die Mission kennt keinen Agenten (`created_by` fest `captain`; `core/` bleibt unberührt). |
+| ORC-08 | WENN ein Agent eine Teilaufgabe erstellt, DANN SOLL sie nur an Agenten unter ihm im Organigramm gehen, mit höchstens seinen Rechten. Abnahme: Delegation nach oben oder zur Seite wird abgelehnt. | WENN ein Agent eine Teilaufgabe erstellt (`delegate_task`), DANN SOLL das nur gehen, wenn er delegieren darf (Rolle Unterarbeiter, ORC-14) und der Empfänger unter ihm im Organigramm steht. Die Teilaufgabe erhält die Obergrenze `min(Obergrenze der Elternaufgabe, Stufe des Empfängers)`. Abnahme: Unterarbeiter → Coder erlaubt; Coder → Unterarbeiter (oben), Coder → Reviewer (Seite), Planer → Coder (`delegation_not_allowed`) abgelehnt; die Obergrenze der Teilaufgabe ist nie höher als die der Elternaufgabe. | „höchstens seine Rechte“ würde Coder-Aufgaben vom Unterarbeiter mit Stufe 1 ausschließen. Die Obergrenze wird deshalb von der Aufgabe geerbt (neue Spalte, G1-S1-24). |
+| ORC-09 | WENN ein Agent 80 % seines Budgets erreicht, DANN SOLL das System warnen; bei 100 % SOLL es den Agenten pausieren und eine Entscheidung an den Captain stellen. Abnahme: Budget in Token (lokal) und Euro (Cloud); Pause wird ausgelöst. | (a) Nach jedem Lauf bucht das System den Verbrauch in `spend`. (b) Vor jedem Lauf prüft es: Restbudget ≥ Ausgabegrenze des Laufs (`token_policy`), sonst kein Lauf. (c) Bei 80 % `ORC_BUDGET_WARNING` und Hinweis im Posteingang; bei 100 % Agent `pausiert`, `ORC_BUDGET_STOP`, eine Entscheidung „Budget erhöhen und fortsetzen?“ (ein Antrag mit `set_budget` und `resume_agent`). (d) Die Projekt-Grenze `kosten` aus `desk/boundaries.py` gilt zusätzlich; die strengere gewinnt. Abnahme: Fixture-Verbräuche lösen Warnung, Pause und Entscheidung aus; ein Lauf mit zu wenig Restbudget startet nicht. Euro-Budget erst mit Spec 3 (Startphase 0 €). | Ohne Vorabprüfung überschreitet ein Lauf das Budget um bis zu `output_cap`; Pause allein löst die Entscheidung nicht aus. |
+| ORC-10 | WENN der Zeitpunkt einer Routine erreicht ist, DANN SOLL eine Aufgabe für den zuständigen Agenten entstehen; verpasste Läufe werden nach Regel nachgeholt oder ausgelassen. | Anforderung unverändert. Ergänzt: Pro Termin entsteht höchstens eine Aufgabe (`routine_runs`); ist die Aufgabe der vorigen Auslösung noch offen, entsteht keine neue (Vorbild Paperclip `coalesce_if_active`); `max_catch_up` begrenzt das Nachholen; Cron und Zeitzone ohne neue Abhängigkeit (Eigenbau über die Standardbibliothek, `tzdata` nur wenn die Zeitzone gebraucht wird). Abnahme: Fake-Uhr mit Termin, Nachholfall, Sommerzeitwechsel, doppeltem Takt. | Ohne Überlappungsregel häuft eine langsame Routine Aufgaben an. |
+| ORC-11 | WENN ein Lauf länger als die eingestellte Zeit keinen Fortschritt meldet, DANN SOLL das System Stillstand melden und die Aufgabe freigeben. Abnahme: Mechanik aus `job_supervisor` wiederverwendet. | Zwei Fälle. (a) Läuft der Lauf als Supervisor-Job, gibt `orchestra` den Checkout frei, sobald `JOB_STALLED` oder `JOB_ABANDONED` kommt. (b) Beim Start der Orchestrierung gibt sie jeden Checkout frei, dessen Lauf nicht mehr lebt. Eine Zahl für „Stillstand“: `stall_after_s` des Supervisors; `checkout.stall_s` entfällt. Abnahme: Test mit Fake-Uhr für (a) und mit künstlich verwaistem Checkout für (b). | `reap` läuft nur mit Worker; ein Absturz ohne Neustart-Abgleich hinterließe Aufgaben, die niemand mehr anfasst. |
+| ORC-12 | Der Captain SOLL jeden Agenten pausieren, fortsetzen und beenden können; eine laufende Aufgabe wird dabei sauber freigegeben. Abnahme: Nach Beenden hat die Aufgabe keinen Halter mehr. | Anforderung unverändert; ergänzt: Pausieren und Beenden brechen einen laufenden Lauf ab (`job_supervisor.cancel`, Mission `PAUSED`), die Aufgabe geht auf `offen` ohne Bearbeiter mit Systemkommentar; ein pausierter Agent bekommt keine Weckrufe; der Unterarbeiter ist nicht beendbar, solange aktive Untergebene da sind. Quarantäne im Agent Manager (`revoke`) pausiert den Agenten auch im Organigramm. Abnahme: Halter leer, Lauf abgebrochen, Audit, kein neuer Weckruf. | Der Abbruch des Laufs fehlte im Kriterium. |
+| ORC-13 | Jede Aufgabe SOLL ihre Zielkette (Ziel → Projekt → Aufgabe) an den Agenten mitgeben. Abnahme: Die Mission enthält die Zielkette im Kontext. | WENN ein Lauf beginnt, DANN SOLL das System die Kette Vorhaben (`goal_ref`) → Projekt (`project_id`) → Elternaufgaben → Aufgabe zum Zeitpunkt des Weckens auflösen und dem Lauf als abgegrenzten, in der Länge begrenzten Textblock mitgeben. Fehlt ein Glied, läuft der Lauf mit dem Hinweis „Glied nicht gefunden“, ohne Absturz. Abnahme: Der Kontext des Laufs enthält die Glieder in dieser Reihenfolge; ein gelöschtes Vorhaben erzeugt den Hinweis. | „im Kontext“ ist nicht messbar; Reihenfolge, Grenze und Fehlerfall fehlten. |
+| ORC-14 | WENN der Captain dem Team eine Anweisung gibt, DANN SOLL sie beim Unterarbeiter ankommen; er zerlegt sie in Aufgaben, weist sie den Agenten unter ihm zu und meldet dem Captain das Ergebnis. Nur der Unterarbeiter delegiert. Abnahme über Shell D (UIX-04). | WENN der Captain dem Team eine Anweisung gibt (Verb `anweisen` am Typ `agent`, Ziel Unterarbeiter, Gate `create_new_artifact`), DANN SOLL eine Aufgabe für den Unterarbeiter mit Kommentar des Captains und ein Weckruf (Grund `captain`) entstehen. Der Unterarbeiter zerlegt, weist den Agenten unter ihm zu und meldet dem Captain das Ergebnis (ORC-18). Nur der Unterarbeiter delegiert. Abnahme über die Kern-API, ohne Oberfläche: `anweisen` erzeugt Aufgabe und Weckruf; ein Fixture-Lauf des Unterarbeiters legt Teilaufgaben bei Planer, Coder und Reviewer an; `delegate_task` des Planers wird abgelehnt; jeder Lauf trägt `ORC_WAKE`. UIX-04 prüft Spec 4 getrennt. | Die Abnahme darf nicht an einer Oberfläche hängen, die erst Spec 4 baut. |
+
+#### Neue Anforderungen (Vorschlag)
+
+| ID | Anforderung (EARS) | Abnahmekriterium |
+| --- | --- | --- |
+| ORC-15 | WENN der Captain für einen Agenten eine Dauerfreigabe für `wake_agent` erteilt, DANN SOLL der Guard Weckrufe dieses Agenten ohne weitere Rückfrage zulassen, solange Agent, Rechte-Stufe, Rezept, Vorgesetzter und Budget-Obergrenze unverändert sind, das Budget nicht aufgebraucht ist, das Ablaufdatum nicht erreicht ist und die Zahl erlaubter Läufe nicht überschritten ist. | Tests am Guard: Lauf mit Dauerfreigabe erlaubt und gezählt; nach Ablauf, nach Änderung von Stufe oder Rezept, nach Pause, bei Budget 100 %, nach Widerruf und nach der letzten erlaubten Nutzung verweigert; jede Nutzung und jedes Ende im Audit; die Dauerfreigabe gilt nur für `wake_agent`, nie für ein anderes Gate |
+| ORC-16 | WENN der Schalter `orchestra` an ist und die Oberfläche läuft, DANN SOLL ein Takt alle `tick_s` Sekunden Weckrufe, Routinen und Stillstand prüfen; es darf immer nur ein Takter laufen. | Fake-Uhr: Der Takt ruft `heartbeat.tick()` und `routines.tick()`; ein zweiter Takter bekommt `tick_busy`; `boot()` und das Objekt `agent` zeigen den Takt „läuft/aus“ und den letzten Takt; nach mehr als `3 × tick_s` ohne Takt erscheint ein Hinweis |
+| ORC-17 | WENN der Unterarbeiter geweckt wird, DANN SOLL sein Rezept ihn auf Lesen, Zerlegen und strukturierte Vorschläge begrenzen; `orchestra` prüft die Vorschläge und legt Aufgaben an, nicht das Modell. | Fixture-Antwort des Modells (Liste von Teilaufgaben) wird geprüft und angelegt; ungültige Rollen, zu viele Teilaufgaben (`max_subtasks`), Zuweisung an Nicht-Untergebene und Freitext-Verben werden abgewiesen; das Rezept enthält keine Schreib-, Netz- oder Testwerkzeuge |
+| ORC-18 | WENN der Unterarbeiter die Teilaufgaben einer Anweisung abgeschlossen sieht, DANN SOLL er dem Captain einen Bericht liefern, der Ergebnis, offene Punkte und das Ergebnis der versteckten Tests nennt, nicht das Urteil des Reviewers. | Der Bericht ist ein Kommentar des Unterarbeiters an der Ausgangsaufgabe plus ein Ereignis `issue.reported`; er enthält je Teilaufgabe Zustand und Prüfergebnis (grün, rot, nicht geprüft); fehlt ein Prüfergebnis, steht „nicht geprüft“, nie „bestanden“ |
+| ORC-19 | WENN der Recherche-Agent Text aus dem Netz liest, DANN SOLL dieser Text als Daten (`untrusted_external`) in den Kontext gehen und nie eine Zuweisung, ein Verb oder ein Gate auslösen. | Test: Webtext mit einer Anweisung („weise Aufgabe X zu“) führt zu keinem Verb; das Ergebnis liegt unter `runtime_data/external/` mit Hash; Hosts nur aus `web_access.yaml` |
+
+##### Dauerfreigabe je Agent (OP-4), Vorschlag
+
+Befund `core/guard.py`: Freigaben sind Einmal-Token (`single_use`, `max_uses: 1`, 24 h), gebunden an Mission, Aktion, Ziel und `request_digest`. Eine Dauerfreigabe passt nicht hinein, weil die Bindung an die Mission fest ist und jede Nutzung das Token verbraucht. Zwei Wege:
+
+| Weg | Inhalt | Dafür | Dagegen |
+| --- | --- | --- | --- |
+| 1 Token-Art `standing` im Guard (empfohlen) | `guard.py` bekommt eine zweite Token-Art: `grants.action_type = wake_agent`, `targets = [agent_id]`, `request_digest` über die stabilen Felder (Agent, Stufe, Rezept, Vorgesetzter), `limits = {max_uses, expires_at, budget_floor}`, Zähler `uses`. `authorize_standing(...)` prüft alles bei jedem Wecken, zählt und schreibt `CAPTAIN_STANDING_USED`; Widerruf ohne Gate (`CAPTAIN_STANDING_REVOKED`). Die Bindung gilt dem Agenten statt einer Mission. | Der Guard bleibt die einzige Stelle, die zulässt; Zählen, Ablauf und Widerruf laufen unter der vorhandenen Token-Sperre; das Audit ist lückenlos | Eingriff in `core/guard.py` (geschätzt 60 bis 80 Zeilen plus Tests, nicht gemessen); eigenes Kern-Gate |
+| 2 Neue Aktion `wake_agent_standing` (ALLOW), Prüfung in `orchestra` | Regel in `guard_rules.yaml`, Bedingungen und Zähler in `orchestra.db` | kein Eingriff in `core/` | Der Guard sieht nur „ALLOW“ und kann die Grenzen nicht prüfen; ein Fehler in `orchestra` öffnet das Wecken ohne Gegenkontrolle des Guards; das widerspricht „strenger als Paperclip“ |
+
+Vorschlag für die Grenzen (Startwerte ohne Messung): nur Agenten mit Stufe ≤ 3 (die Stufen 4 bis 6 behalten Einmal-Freigaben); Ablauf Standard 7 Tage, höchstens 30; höchstens 50 Läufe je Dauerfreigabe; Erteilen ist `CAPTAIN_REQUIRED` mit Anzeige von Agent, Stufe, Rezept, Budget, Ablauf und Lauf-Zahl; ein Antrag darf mehrere Agenten enthalten, entschieden wird je Agent (Regel 6); die Dauerfreigabe deckt **nur** das Wecken: Folge-Gates im Lauf (`agent.assign`, `paid_action`, `external_write`, `install_module`) bleiben einzeln. Sie erlischt bei Ablauf, Verbrauch, Budget 100 %, Pause, Beenden, Quarantäne, Änderung von Stufe, Rezept, Vorgesetztem oder Budget-Obergrenze und auf Widerruf.
+
+##### Takt des Herzschlags (OP-9), Vorschlag
+
+Befund: Einen Takt für Agenten gibt es nicht. `job_worker.Worker` reapt alle `reap_every` (30 s), aber nur, solange ein Worker-Thread läuft und der Supervisor an ist. `uix_server.py` startet Daemon-Threads für Einzelaufgaben, keinen Dauertakt für die Orchestrierung (nicht im Detail geprüft). Empfehlung: **Takt in der Oberfläche** (wie in D3.2), `tick()` idempotent und durch eine Betriebssystem-Sperre (Muster `mission_lock.exclusive`, Datei `orchestra/tick.lock`) auf einen Takter begrenzt. Damit lässt sich später ein eigener Dienst (`guppi orchestra run`) hinzufügen, ohne zwei Takter zu riskieren. Ein eigener Dienst ist erst nötig, wenn Routinen nachts ohne Oberfläche laufen sollen; bis dahin trägt die Nachhol-Regel (E2E-6).
+
+##### Rezept und Vorlage des Unterarbeiters, Vorschlag
+
+- Vorlage `guppi.orchestra.foreman` (Anzeigename Unterarbeiter), Effekt `proposal_only`, `workspace_mode: read_only`, `network_mode: deny`; gebaut im Harness (Vorlagen entstehen durch KI-Sitzungen, Datei mit Prüfsumme), Vertrauen `UNVERIFIED`.
+- Rolle `foreman` in `job_supervisor.yaml` (`mutates: false`, Fähigkeit `orchestration`), in `role_routing.yaml` im Rezept `coder.local_primary` gelistet (`max_level` 2), in `token_policy.yaml` zunächst wie `planner` (Denken an, 4096 Ausgabe). Die Zahlen sind Startwerte, gemessen ist nichts.
+- Das Modell bekommt die Anweisung, die Zielkette, die Liste der Agenten unter ihm (Rolle, Stufe, offene Aufgaben) und das Budget; es liefert **nur eine strukturierte Liste** (Titel, Rolle, Blocker, Akzeptanz). `orchestra` prüft und legt an (ORC-17). So bleibt das Modell ohne Verb, und Webtext aus der Recherche kann kein Verb erreichen (ORC-19).
+- Schleifenschutz: Obergrenze für Teilaufgaben je Anweisung, ein Zerlegungslauf je Elternaufgabe; `jobs/loop_guard.py` und `jobs/runaway_guard.py` sind Kandidaten (nicht auf Eignung geprüft).
+- Der Planer hilft: Der Unterarbeiter kann dem Planer eine Aufgabe „Zerlegung vorschlagen“ zuweisen; der Vorschlag kommt als Kommentar zurück, entschieden und angelegt wird beim Unterarbeiter.
+
+##### Recherche, Vorschlag
+
+Vorlage `guppi.orchestra.researcher`, Effekt `read_only`. Das Web-Werkzeug bleibt ein **Host-Werkzeug** (`tools/web.py`, Guard `external_read`), weil Vorlagen `network_mode: deny` erzwingen und der Import nichts anderes zulässt. Der Recherche-Lauf ist deshalb eine Brain-Mission, kein DevVM-Lauf. Die Hostliste (fünf Domains) wird für Spec 1 nicht geändert; eine Erweiterung ist eine eigene Captain-Entscheidung (G1-S1-23).
+
+##### Abbildung Vorlage → Rechte-Stufe, Vorschlag
+
+`agents.permission_level` = `min(Stufe aus dem Effekt der Vorlage, max_level des Rezepts)`; Effekt `read_only` → 1, `proposal_only` → 1, `reversible_write` (Sandbox-Arbeitsbereich) → 2, `preview` → 3. Stufe 4 und höher bekommt kein Teammitglied. Die Delegation kann die Stufe nur senken.
+
+#### Vergleich mit Paperclip (Kopie 0.3.1), nur Lehrreiches
+
+| Thema | Paperclip | Lehre für SEDRA |
+| --- | --- | --- |
+| Organigramm | `agents.reportsTo` (Selbstverweis), Kette per Aufstieg über `reportsTo` (`server/src/services/agents.ts`) | Selbstverweis genügt; Zyklus durch Aufstieg prüfen. SEDRA ergänzt Wurzelregel und Beenden-Regel. |
+| Aufgaben und Checkout | `issues.assigneeAgentId`, `checkoutRunId`, `executionRunId`, `executionLockedAt`; Checkout und Freigabe binden an einen **Lauf**; PostgreSQL | Checkout an den Lauf binden (D3.3 hat `checkout_run`); beim Lauf-Ende wird freigegeben. SQLite mit `BEGIN IMMEDIATE` genügt. |
+| Weckrufe | Tabelle `agent_wakeup_requests` mit `source` (timer, assignment, on_demand, automation), `status`, `coalescedCount`, `idempotencyKey`, `runId`; die Zuweisung löst den Weckruf aus (`issue-assignment-wakeup.ts`) | Idempotenzschlüssel ergänzen: derselbe Auslöser (z. B. Kommentar-ID) erzeugt nie zwei Weckrufe (G1-S1-24). `wakeups.reason` deckt die Quelle, `done_at` den Status. |
+| Takt | `setInterval` im Serverprozess (`server/src/index.ts`, `heartbeat.tickTimers`) | Takt im Hauptprozess ist dort Standard; bestätigt OP-9. |
+| Budget | `budget_policies`: Bereich (Agent, Projekt, Firma), Fenster, `warnPercent` 80, `hardStopEnabled`, Reservierung (`reservationCents`), Vorfälle (`budget_incidents`); `agents.pauseReason` | Die Reservierung vor dem Lauf entspricht der Vorabprüfung in ORC-09. Ein Vorfallsdatensatz je Überschreitung wäre für die Entscheidung des Captains nützlich (G1-S1-25). |
+| Routinen | `routines` mit `concurrencyPolicy` (Vorgabe `coalesce_if_active`), `catchUpPolicy` (Vorgabe `skip_missed`), Revisionen | Überlappungsregel übernommen (ORC-10); die Vorgabe „auslassen“ statt „nachholen“ ist die vorsichtigere Voreinstellung. Revisionen einer Routine bleiben weggelassen. |
+| Freigaben | `approvals`, `issue_approvals` | SEDRA bleibt strenger; ein Gegenstück zu Einmal-Token mit Bindung hat Paperclip nicht gezeigt (nicht vertieft geprüft), die Dauerfreigabe ist SEDRA-eigen. |
+
+Bewusst nicht übernommen: mehrere Firmen, Export/Import, Plugins, Identitätsschlüssel je Agent, Chat-Kanäle (siehe Ist-Stand-Tabelle).
+
+#### Offene Fragen für den Captain
+
+1. Sollen Orchestra-Läufe ohne AM-Zulassung (`VERIFIED`) erlaubt sein (G1-S1-02)?
+2. Rollenkennung `foreman` oder `unterarbeiter` in Konfigurationsdateien (G1-S1-20)?
+3. Dauerfreigabe: Weg 1 (Kern) oder Weg 2 (kein Kern)? Zahlen 7 Tage, 30 Tage, 50 Läufe, Stufe ≤ 3 (G1-S1-16 bis 18)?
+4. Welche Hosts braucht die Recherche zusätzlich (G1-S1-23)?
+
+Nicht geprüft: Ausführen von Tests oder Oberfläche; ob lokale Modellantworten Tokenzahlen liefern (Quelle für `spend`); `context_assembly` und `context.refs`; ob `loop_guard`/`runaway_guard` für den Unterarbeiter taugen; Tiefe von Shell D (`uix/shells/paperclip/`); die Hintergrundthreads in `uix_server.py` im Detail; Paperclip nur an den genannten Dateien gelesen.
+
+#### Gate-Liste G1 Spec 1
+
+Jede Zeile wird einzeln entschieden (Vorschlag: alle wie empfohlen).
+
+| Gate | Gegenstand | Vorschlag |
+| --- | --- | --- |
+| G1-S1-01 | Ort des Organigramms: `orchestra/org.py`, Agent Manager unverändert | ja |
+| G1-S1-02 | ORC-01 neu: Einstellen in einem Antrag (`agent.instantiate` + `set_org`); Orchestra-Läufe brauchen keine AM-Zulassung, DevVM-Bauaufträge schon | ja |
+| G1-S1-03 | ORC-02 neu (Wurzel, Zyklus, Tiefe, Beenden mit Untergebenen) | ja |
+| G1-S1-04 | ORC-03 neu (kein Umhängen während des Checkouts) | ja |
+| G1-S1-05 | ORC-04 geschärft (Fehlercode, 100 Durchläufe) | ja |
+| G1-S1-06 | ORC-05 neu (`task_blocked`, Weckruf bei erledigtem Blocker) | ja |
+| G1-S1-07 | ORC-06 neu (Weckruf statt Lauf, Freigabe-Satz, „Rückfrage“ entfällt) | ja |
+| G1-S1-08 | ORC-07 neu: Agentenlauf = Brain-Mission; Coder-Bauaufträge zusätzlich über `agent.assign` | ja |
+| G1-S1-09 | ORC-08 neu (Delegationsrecht, vererbte Obergrenze) | ja |
+| G1-S1-10 | ORC-09 neu (Buchung, Vorabprüfung, Pause mit Entscheidung, Zusammenspiel mit der Grenze `kosten`) | ja |
+| G1-S1-11 | ORC-10 ergänzt (keine Überlappung, Cron im Eigenbau, `tzdata` nur bei Bedarf) | ja |
+| G1-S1-12 | ORC-11 neu (Freigabe bei Supervisor-Ereignis, Neustart-Abgleich, eine Zahl) | ja |
+| G1-S1-13 | ORC-12 ergänzt (Lauf abbrechen, Quarantäne pausiert) | ja |
+| G1-S1-14 | ORC-13 neu (Kette zum Weckzeitpunkt, begrenzt, Fehlerfall) | ja |
+| G1-S1-15 | ORC-14 neu (Verb `anweisen`, Abnahme über die Kern-API) | ja |
+| G1-S1-16 | ORC-15 Dauerfreigabe: Weg 1 (Token-Art `standing` im Guard) statt Weg 2 | ja (Weg 1) |
+| G1-S1-17 | Kern-Gate (Grundsatz): Änderung an `core/guard.py` für G1-S1-16; Diff und Tests folgen in Stufe 2 zur Einzelfreigabe | ja, nur Grundsatz |
+| G1-S1-18 | Grenzen der Dauerfreigabe: Stufe ≤ 3, Standard 7 Tage, höchstens 30, höchstens 50 Läufe, deckt nur das Wecken | ja |
+| G1-S1-19 | ORC-16 Takt in der Oberfläche mit Takt-Sperre; eigener Dienst später | ja |
+| G1-S1-20 | ORC-17 Rezept des Unterarbeiters (Vorlage `proposal_only`, Rolle `foreman` oder `unterarbeiter`, Modell liefert nur eine strukturierte Liste) | ja, Kennung `foreman` |
+| G1-S1-21 | ORC-18 Bericht des Unterarbeiters (Kommentar plus Ereignis, Prüfergebnis statt Reviewer-Urteil) | ja |
+| G1-S1-22 | ORC-19 Recherche: Web-Werkzeug bleibt Host-Werkzeug, Text ist Daten, nie Verb | ja |
+| G1-S1-23 | Hostliste `web_access.yaml` für die Recherche: unverändert lassen | ja (unverändert) |
+| G1-S1-24 | Datenmodell-Nachträge für O1.2: `tasks.max_level`, `agents.can_delegate`, Tabelle `standing_approvals` (Spiegel der Guard-Token), `wakeups.idempotency_key` | ja |
+| G1-S1-25 | Paperclip-Lehren: Vorfallsdatensatz je Budget-Überschreitung; Voreinstellung „auslassen“ bei Routinen | ja, Voreinstellung `auslassen` |
+
 ### Design (Vorschlag)
 
 Datenmodell in `orchestra.db`:
@@ -532,7 +705,7 @@ Datenmodell in `orchestra.db`:
 
 ### Aufgaben
 
-- [ ] O1.1 Agent Manager auf Berichtslinien und Instanz-Status prüfen; Erweiterung oder neues `org.py` festlegen
+- [x] O1.1 Agent Manager auf Berichtslinien und Instanz-Status prüfen; Erweiterung oder neues `org.py` festlegen → Empfehlung `org.py` (G1-S1-01, 20.10.2026)
 - [ ] O1.2 Datenmodell final, Migration für bestehende Agenten → G2
 - [ ] O1.3 Bau-Specs schreiben: `orc_org`, `orc_board`, `orc_heartbeat`, `orc_budget`, `orc_routines` in `devvm_specs/`, je mit Referenz und `spec_check.py` = ok → G3
 - [ ] O1.4 Neue Guard-Aktionen und Desk-Registrierung (Harness, KI-Sitzung)
