@@ -114,7 +114,7 @@ Dafür kommt KERN-07 hinzu: WENN Paperclip als Orchestrator angebunden wird, DAN
 
 | ID | Anforderung (EARS) | Abnahmekriterium |
 | --- | --- | --- |
-| KERN-01 | Das System SOLL Agenten, Aufgaben, Routinen und Budgets als Desk-Objekte in der Form `{type, id, title, state, summary, actions, links}` anbieten. | `POST /api/objects {type: "agent", id}` und `POST /api/objects {type: "task"}` liefern diese Form (G1-S0-b: keine neue GET-Route) |
+| KERN-01 | Das System SOLL Agenten, Aufgaben, Routinen und Budgets als Desk-Objekte in der Form `{type, id, title, state, summary, actions, links}` anbieten. | `POST /api/objects {type: "agent", id}` und `POST /api/objects {type: "issue"}` liefern diese Form (G1-S0-b: keine neue GET-Route; Aufgabe des Bretts ist Typ `issue`, `task` bleibt die Mission – OP-1, G2) |
 | KERN-02 | WENN ein Verb auf einem Objekt ausgeführt wird, DANN SOLL es über `POST /api/actions` und das Gate dieses Verbs laufen. | Gleiches Verb aus Shell, Gespräch und CLI erzeugt denselben Audit-Eintrag `UIX_ACTION`; er unterscheidet sich nur im Feld `client` (`shell`, `chat`, `cli`, `mcp`; G1-S0-c) |
 | KERN-03 | Das Paket `core/` SOLL nur über einzeln freigegebene Gates geändert werden (Grundsatzfreigabe des Captains vom 20.10.2026). | Diff in `core/` nur mit Gate-ID im Logbuch; `tests.test_core_boundary_src` grün |
 | KERN-04 | WENN ein neuer Anwendungsfall dazukommt, DANN SOLL er als Objekttyp, Verben und Werkzeug ergänzt werden können, ohne `uix_server.py` zu ändern. | Ein Beispiel-Objekttyp wird nur über Registrierung eingebunden. Die Registrierung selbst ändert `uix_server.py` und `desk/` einmal (G1-S0-d); danach gilt die Anforderung ohne Ausnahme |
@@ -399,14 +399,14 @@ KERN-07 (nur Bedingung): Ein Paperclip-Adapter ist ein weiterer externer Client 
 - [x] K0.2 Ist-Tabelle oben Zeile für Zeile gegen den Code prüfen und korrigieren
 - [x] K0.3 Desk-Stand prüfen: Welche Objekttypen und Verben gibt es in `desk/objects.py` und `desk/actions.py`?
 - [x] K0.4 Variante A mit Befunden aus K0.1–K0.3 gegen den Code bestätigen → G1 (erteilt 20.10.2026, G1-S0-a bis f)
-- [ ] K0.5 Design `orchestra/` mit Datenmodell und neuen Guard-Aktionen ausarbeiten → G2 (ausgearbeitet 20.10.2026, Abschnitt „Design“ D1 bis D6; wartet auf G2)
+- [x] K0.5 Design `orchestra/` mit Datenmodell und neuen Guard-Aktionen ausarbeiten → G2 (ausgearbeitet 20.10.2026, Abschnitt „Design“ D1 bis D6; G2 erteilt 20.10.2026)
 - [ ] K0.6 Nach Freigabe: Logbuch-Eintrag, Doku (README, `ENTWICKLUNG.md`) auf Local First, Cloud Second anpassen
 
 ## Spec 1 – Orchestrierung: Agenten, Aufgaben, Herzschlag
 
 Spec 1 macht aus den einzelnen Agenten des Agent Managers ein Team: Organigramm, zugewiesene Aufgaben mit atomarem Checkout, Wecken bei Arbeit, Budgets und Routinen. Ausgeführt wird jede Agentenarbeit weiterhin als Mission durch Brain und Guard.
 
-Erstes Team (Captain, 20.10.2026): Unterarbeiter, Planer, Coder, Reviewer, Recherche. Der **Unterarbeiter** steht oben im Organigramm: Er ist die Instanz direkt unter dem Inhaber (Captain) und beaufsichtigt Planer, Coder, Reviewer und Recherche (OP-6, Captain 20.10.2026; ersetzt „Planer oben“). Offen für Spec 1: ob der Planer selbst an Coder, Reviewer und Recherche delegieren darf (ORC-08 erlaubt Delegation nur nach unten) und welches Rezept der Unterarbeiter bekommt. Die Rezepte kommen aus den vorhandenen Rollen `planner`, `coder` und `reviewer` in `role_routing.yaml`; für Recherche wird eine Rolle mit dem lesenden Web-Werkzeug angelegt (Hosts aus `config/web_access.yaml`). Der Reviewer gibt Hinweise, entscheidet aber keine Abnahme: Laut `ENTWICKLUNG.md` sind Modell-Reviewer unzuverlässig, Richter bleibt der versteckte Test.
+Erstes Team (Captain, 20.10.2026): Unterarbeiter, Planer, Coder, Reviewer, Recherche. Der **Unterarbeiter** steht oben im Organigramm: Er ist die Instanz direkt unter dem Inhaber (Captain) und beaufsichtigt Planer, Coder, Reviewer und Recherche (OP-6, Captain 20.10.2026; ersetzt „Planer oben“). Anweisungen des Captains an das Team gehen an den Unterarbeiter; er zerlegt, verteilt und berichtet, der Planer hilft beim Zerlegen, delegiert aber nicht (ORC-14). Offen für Spec 1: welches Rezept der Unterarbeiter bekommt. Die Rezepte kommen aus den vorhandenen Rollen `planner`, `coder` und `reviewer` in `role_routing.yaml`; für Recherche wird eine Rolle mit dem lesenden Web-Werkzeug angelegt (Hosts aus `config/web_access.yaml`). Der Reviewer gibt Hinweise, entscheidet aber keine Abnahme: Laut `ENTWICKLUNG.md` sind Modell-Reviewer unzuverlässig, Richter bleibt der versteckte Test.
 
 ### Anforderungen
 
@@ -425,6 +425,7 @@ Erstes Team (Captain, 20.10.2026): Unterarbeiter, Planer, Coder, Reviewer, Reche
 | ORC-11 | WENN ein Lauf länger als die eingestellte Zeit keinen Fortschritt meldet, DANN SOLL das System Stillstand melden und die Aufgabe freigeben. | Mechanik aus `job_supervisor` wiederverwendet |
 | ORC-12 | Der Captain SOLL jeden Agenten pausieren, fortsetzen und beenden können; eine laufende Aufgabe wird dabei sauber freigegeben. | Nach Beenden hat die Aufgabe keinen Halter mehr |
 | ORC-13 | Jede Aufgabe SOLL ihre Zielkette (Ziel → Projekt → Aufgabe) an den Agenten mitgeben. | Die Mission enthält die Zielkette im Kontext |
+| ORC-14 | WENN der Captain dem Team eine Anweisung gibt, DANN SOLL sie beim Unterarbeiter ankommen; er zerlegt sie in Aufgaben, weist sie den Agenten unter ihm zu und meldet dem Captain das Ergebnis. Nur der Unterarbeiter delegiert (Captain, 20.10.2026). | Eine Anweisung im Gespräch mit dem Unterarbeiter (Shell D, UIX-04) erzeugt Aufgaben bei den Agenten unter ihm, am Ende einen Bericht an den Captain; der Planer kann nicht zuweisen; jeder Lauf braucht `wake_agent` |
 
 ### Design (Vorschlag)
 
@@ -728,6 +729,22 @@ G1 Spec 0 (Captain, 20.10.2026), nach Prüfung K0.1 bis K0.4:
 | G1-S0-d | Die Registrierung für KERN-04 ändert `uix_server.py` einmal |
 | G1-S0-e | Spec 3 baut den vorhandenen `cloud_api.py` aus und rüstet die Gates des KI-Labors nach |
 | G1-S0-f | Die DPAPI-verschlüsselte Datei `local_config/cloud_keys.json` gilt als Secret-Speicher im Sinne von CLD-08 |
+
+G2 Spec 0 (Captain, 20.10.2026): Design D1 bis D6 freigegeben, alles wie vom Vorarbeiter empfohlen.
+
+| Gate | Entscheidung |
+| --- | --- |
+| G2-S0-01 bis G2-S0-14 | freigegeben wie D6 |
+| G2-S0-GA-01 bis GA-10 | freigegeben wie D4: `set_org`, `wake_agent`, `resume_agent`, `terminate_agent`, `set_budget`, `set_routine` CAPTAIN_REQUIRED; `assign_task`, `delegate_task`, `pause_agent`, `fire_routine` ALLOW (GR-029 bis GR-038) |
+| OP-1 | Aufgabe des Bretts ist Typ `issue`; `task` bleibt die Mission; KERN-01 angepasst |
+| OP-4 | `wake_agent` bleibt CAPTAIN_REQUIRED; Dauerfreigabe je Agent wird in Spec 1 entworfen (Kern-Gate) |
+| OP-5 | `orchestra.db` sichert sich über Transaktionen und WAL; `core/util.py` nur für Dateien |
+| OP-6 | genau ein oberster Agent: der Unterarbeiter, direkt unter dem Captain; dazu ORC-14 |
+| OP-7 | Budget-Zeitraum `gesamt` oder `monat`, Standard `gesamt` |
+| OP-8 | Ziel = Vorhaben (`intent`), Projekt = `project`; keine Ziel-Tabelle |
+| OP-9 | Takt des Herzschlags in der Oberfläche; eigener Dienst wird in Spec 1 entschieden |
+| OP-10 | `orchestra/` und Desk-Teile werden nach Review übernommen (G4), nicht über `self_integration`; diese wird nicht geweitet |
+| OP-11 | Architekturversion von `test_desk_objects` (v1.17 gegen v1.20) wird im Bau geklärt |
 
 ## Vorarbeiter-Prompt
 
