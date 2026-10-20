@@ -55,6 +55,17 @@ class BundleCase(unittest.TestCase):
             info=zipfile.ZipInfo('yaml/link.py');info.create_system=3;info.external_attr=0o120777<<16;z.writestr(info,'outside')
         self.record['pyyaml']['sha256']=builder.sha256(self.yaml);self.save()
         with self.assertRaises(ValueError):builder.build(self.manifest,self.runtime)
+    def test_audio_wheels_for_the_recorder_are_assembled_and_checked(self):
+        # Aufnahme im Kern: sounddevice, cffi, pycparser – dieselbe Prüfung wie PyYAML (Namen, Prüfsumme, keine Pfade nach außen)
+        sd=self.assets/'sounddevice-0.5.6-py3-none-win_amd64.whl';cf=self.assets/'cffi-2.1.1-cp312-cp312-win_amd64.whl';pc=self.assets/'pycparser-3.11-py3-none-any.whl'
+        self.writezip(sd,{'sounddevice.py':b'fixture'});self.writezip(cf,{'cffi/__init__.py':b'fixture'});self.writezip(pc,{'pycparser/__init__.py':b'fixture'})
+        self.record['audio']=[{'file':x.name,'sha256':builder.sha256(x)} for x in (sd,cf,pc)];self.save()
+        out=builder.build(self.manifest,self.runtime);target=self.runtime/'portable/python/current'
+        self.assertEqual(out['audio'],[sd.name,cf.name,pc.name]);self.assertTrue((target/'Lib/site-packages/sounddevice.py').is_file())
+    def test_audio_wheel_with_a_foreign_name_is_refused(self):
+        bad=self.assets/'evil-1.0-py3-none-any.whl';self.writezip(bad,{'sounddevice.py':b'x'})
+        self.record['audio']=[{'file':bad.name,'sha256':builder.sha256(bad)}];self.save()
+        with self.assertRaises(ValueError):builder.build(self.manifest,self.runtime)
     def test_reserved_receipt_path_rejected(self):
         self.writezip(self.python,{'python.exe':b'fixture','python312.dll':b'fixture','python312.zip':b'fixture','python312._pth':b'old','bundle-receipt.json':b'bad'})
         self.record['python']['sha256']=builder.sha256(self.python);self.save()

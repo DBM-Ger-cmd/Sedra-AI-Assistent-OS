@@ -70,12 +70,18 @@ def build(manifest_path,runtime_root):
     manifest_path=Path(manifest_path).resolve();runtime_root=Path(runtime_root).resolve()
     if manifest_path.stat().st_size>65536:raise ValueError('manifest_oversize')
     manifest=json.loads(manifest_path.read_text(encoding='utf-8-sig'))
-    if set(manifest)!={'schema','platform','python_version','python','pyyaml'} or manifest['schema']!=1 or manifest['platform']!='windows-x64':raise ValueError('unsupported_bundle_manifest')
+    # Build 25 (Sprache im Kern): optional 'audio' – Wheels für die Aufnahme (sounddevice, cffi, pycparser), dieselbe Prüfung wie PyYAML
+    if set(manifest)-{'audio'}!={'schema','platform','python_version','python','pyyaml'} or manifest['schema']!=1 or manifest['platform']!='windows-x64':raise ValueError('unsupported_bundle_manifest')
     version=manifest['python_version']
     if not isinstance(version,str) or not re.fullmatch(r'3\.(11|12|13|14)\.\d+',version):raise ValueError('unsupported_python_version')
     abi=''.join(version.split('.')[:2]);python=asset(manifest['python'],manifest_path.parent);yaml=asset(manifest['pyyaml'],manifest_path.parent)
     if python.name!=f'python-{version}-embed-amd64.zip':raise ValueError('embedded_python_filename_mismatch')
     if not re.fullmatch(rf'(?i)pyyaml-6\.\d+(?:\.\d+)?-cp{abi}-cp{abi}-win_amd64\.whl',yaml.name):raise ValueError('pyyaml_wheel_abi_mismatch')
+    audio_records=manifest.get('audio',[])
+    if not isinstance(audio_records,list) or len(audio_records)>8:raise ValueError('audio_list_invalid')
+    audio=[asset(r,manifest_path.parent) for r in audio_records]
+    for a in audio:
+        if not re.fullmatch(rf'(?i)(sounddevice-\d+\.\d+\.\d+-py3-none-win_amd64|cffi-\d+\.\d+(?:\.\d+)?-cp{abi}-cp{abi}-win_amd64|pycparser-\d+\.\d+(?:\.\d+)?-py3-none-any)\.whl',a.name):raise ValueError('audio_wheel_name_mismatch')
     # Build 23 (Klaus 15.10.2026: sauberer Erststart): das Sandbox-SDK (microsandbox, nur fuer die DevVM) ist optional. Fehlt der ganze
     # Ordner portable/sandbox, wird ohne SDK paketiert (receipt sdk_version 'none'); ist er da, muss er genau stimmen (Pinning bleibt).
     sandbox=runtime_root/'portable/sandbox'
@@ -94,18 +100,21 @@ def build(manifest_path,runtime_root):
         extract_reviewed(python,stage,occupied,budget)
         packages=stage/'Lib/site-packages'
         extract_reviewed(yaml,packages,occupied,budget)
+        for a in audio:extract_reviewed(a,packages,occupied,budget)
         if sdk is not None:extract_reviewed(sdk,packages,occupied,budget)
         pths=list(stage.glob('*._pth'))
         if len(pths)!=1 or pths[0].name!=f'python{abi}._pth':raise ValueError('embedded_python_path_config_mismatch')
         for name in ['python.exe',f'python{abi}.dll',f'python{abi}.zip']:
             if not (stage/name).is_file():raise ValueError('embedded_python_component_missing')
+        if audio and not all((packages/m).exists() for m in ('sounddevice.py','cffi/__init__.py','pycparser/__init__.py')):raise ValueError('audio_layout_mismatch')
         if not (packages/'yaml/__init__.py').is_file() or (sdk is not None and not (packages/'microsandbox/__init__.py').is_file()):raise ValueError('package_layout_mismatch')
         # Embedded search path, no site processing, user site, pip or environment hooks.
         pths[0].write_text(f'python{abi}.zip\n.\nLib/site-packages\n../../../src\n',encoding='ascii')
         if (stage/'bundle-receipt.json').exists():raise ValueError('reserved_bundle_receipt_path')
         files=[{'path':p.relative_to(stage).as_posix(),'bytes':p.stat().st_size,'sha256':sha256(p)} for p in sorted(stage.rglob('*')) if p.is_file()]
-        receipt={'schema':1,'platform':'windows-x64','python_version':version,'sdk_version':'0.7.4' if sdk is not None else 'none','qualification':'ASSEMBLED_NOT_PC_TESTED','files':files,'source_manifest':manifest}
+        receipt={'schema':1,'platform':'windows-x64','python_version':version,'audio':[a.name for a in audio],'sdk_version':'0.7.4' if sdk is not None else 'none','qualification':'ASSEMBLED_NOT_PC_TESTED','files':files,'source_manifest':manifest}
         (stage/'bundle-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+        if any(sha256(a)!=r['sha256'] for a,r in zip(audio,audio_records)):raise ValueError('asset_changed_during_build')
         if sha256(python)!=manifest['python']['sha256'] or sha256(yaml)!=manifest['pyyaml']['sha256'] or (sdk is not None and sha256(sdk)!=rec['digests']['sha256']):raise ValueError('asset_changed_during_build')
         stage.rename(target);return receipt
     finally:

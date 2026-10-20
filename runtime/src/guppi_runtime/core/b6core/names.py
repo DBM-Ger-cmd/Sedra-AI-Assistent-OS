@@ -17,7 +17,7 @@ Marie Marion Mark Markus Marlene Martin Martina Mara Matthias Max Melanie Michae
 Norbert Olaf Oliver Paul Paula Peter Petra Philipp Piet Rainer Ralf Reinhard Renate Robert Roland Sabine Sandra Sarah
 Sebastian Silke Simon Sophie Stefan Stefanie Susanne Sven Tanja Thomas Tim Tobias Torsten Ulrike Ulrich Ursula Uwe Vera
 Verena Viktoria Walter Werner Wolfgang Yvonne
-'''.split())
+ Mira Tom Oskar Ina Ben Mia Luis Finn'''.split())
 FIRST_NAMES = frozenset(n for n in FIRST_NAMES if n not in {'Mark', 'Marc'})   # Mehrdeutig (Nomen/Eigenname): bewusst nicht gefuehrt
 
 _UC, _LC = 'A-ZÄÖÜ', 'a-zäöüß'

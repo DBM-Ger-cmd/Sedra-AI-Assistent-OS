@@ -33,7 +33,7 @@ from ..core.b6core.normalize import normalize
 from ..core.b6core.privacy import scan_text
 from ..core.content_policy import ScanFailure, scan_content
 from ..util import atomic_write_json, load_json
-from . import klassen
+from . import klassen, zusatz
 
 LESBAR = ('.md', '.txt', '.docx')            # Anhänge: Text und Word (gateway/dokumente.py); PDF/DOC sind MVP 2
 MAX_DOKUMENT = 200_000
@@ -311,8 +311,9 @@ class GateWay:
         dok_n = normalize(dok_text).clean if dok_text else ''
         scan_ok = True
         try:
-            hits_a = [(h.rule_id, h.kind) for h in scan_content(anfrage_n)]
-            hits_d = [(h.rule_id, h.kind) for h in scan_content(dok_n)] if dok_n else []
+            # Der B6-Scanner plus die Erkennung der Prüffälle (gateway/zusatz.py): Zugangsdaten, Konditionen, Gehalt, Personalnummern
+            hits_a = [(h.rule_id, h.kind) for h in scan_content(anfrage_n)] + zusatz.treffer(anfrage_n)
+            hits_d = [(h.rule_id, h.kind) for h in scan_content(dok_n)] + zusatz.treffer(dok_n) if dok_n else []
         except ScanFailure:
             hits_a, hits_d, scan_ok = [], [], False
         e = klassen.einstufen(hits_a, hits_d, scan_ok=scan_ok, manuell=manuell)
