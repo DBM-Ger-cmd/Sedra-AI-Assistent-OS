@@ -23,6 +23,8 @@ sys.path.insert(0, str(RUNTIME / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import devvm_agents_bench as bench                                                   # noqa: E402
+import spec_stamp                                                                    # noqa: E402
+from devvm_vm import sandbox_text, vm_env                                            # noqa: E402
 from guppi_runtime.devvm import DevWorkspace
 from guppi_runtime.devvm_evidence import DRIVER, bug_report, parse as parse_evidence
 from guppi_runtime.devvm_style import snapshot as ws_snapshot                                         # noqa: E402
@@ -34,8 +36,6 @@ from guppi_runtime.layer_summary import cell as layer_cell, summary as layer_tab
 from guppi_runtime.s0_status import status as s0_state                              # noqa: E402
 from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
 from guppi_runtime.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.sandbox.broker import SandboxBroker                               # noqa: E402
-from guppi_runtime.sandbox.provider import MicrosandboxProvider                      # noqa: E402
 from guppi_runtime.testlab import TestLab, default_path                              # noqa: E402
 
 
@@ -103,17 +103,6 @@ def propose_lessons(project, spec_name, stamp, stage_rows, agent_runs, say):
         if made: say(f"   lesson proposals: {made} new (guppi lessons list)")
     except Exception as exc:
         say(f"   lesson proposals skipped: {type(exc).__name__}: {str(exc)[:120]}")
-
-
-def sandbox_text(bg_jobs):
-    """The sandbox config of this build (a copy, the shipped runtime/config/sandbox.yaml stays as it is). With --bg-jobs a VM command may run 100 s instead of 30 and a whole VM run 150 s instead of 120, so a
-    background job can be longer than a normal run_python (the broker's own limits are 120 s and 600 s)."""
-    text = (RUNTIME / "config" / "sandbox.yaml").read_text(encoding="utf-8")
-    if not bg_jobs: return text
-    for old, new in (("command_timeout_seconds: 30", "command_timeout_seconds: 100"), ("job_timeout_seconds: 120", "job_timeout_seconds: 150")):
-        if old not in text: raise SystemExit(f"sandbox.yaml has no line '{old}': --bg-jobs cannot raise the VM limit")
-        text = text.replace(old, new, 1)
-    return text
 
 
 def clean_old_work(work_root, max_age_s=24 * 3600):
@@ -297,6 +286,21 @@ def s0_report(project, keys, extras, engine_build):
         out.append(s0_state(project, rid, {**bench.hunt.model_spec(key, project)["server"], **extras}, engine_build))
     return out
 
+def spec_stamp_gate(project, spec_name, skip, bench=None):
+    """L2 (Captain 2026-10-20): no build without a green spec_check of exactly this spec and reference (benchmarks/spec_stamp.py). Returns the lines for the log;
+    a missing or stale stamp stops the build before a model is loaded, unless --skip-spec-stamp (then a warning in the log)."""
+    reason, stamp = spec_stamp.check(project, spec_name, bench)
+    if reason is None:
+        lines = [f"spec stamp: {stamp['level']} ok ({stamp.get('python') or '?'}, {stamp.get('checked_at')})"]
+        if stamp["level"] != "vm":
+            lines.append(f"   WARNING: spec stamp level {stamp['level']}: checked on the host python only, not in the microVM (weaker; run spec_check.py {spec_name} --vm)")
+        return lines
+    hint = f"{reason}: run `benchmarks/spec_check.py {spec_name} --vm --project <project>` first (stamp {spec_stamp.stamp_path(project, spec_name)})"
+    if not skip:
+        raise SystemExit(hint)
+    return [f"WARNING: --skip-spec-stamp: building WITHOUT a valid spec stamp ({reason})"]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("project"); ap.add_argument("--spec", required=True); ap.add_argument("--attempts", type=int, default=2)
@@ -335,36 +339,25 @@ def main():
     ap.add_argument("--coder-ext-record", action="store_true", help="no effect any more: recording is on by default (see --no-record)")
     ap.add_argument("--no-record", action="store_true", help="do NOT save the server answers and what was sent of every agent run (runtime_data/devvm_replays); recording is on by default since 2026-10-12")
     ap.add_argument("--think-limit", type=int, default=2000, help="with e02: thinking tokens per answer before the note, then thinking is switched down")
+    ap.add_argument("--skip-spec-stamp", action="store_true", help="build although spec_check has no valid stamp for this spec (L2 exception; a warning goes into the log)")
     ap.add_argument("--think-family", choices=["qwen", "gptoss", "other"], help="with e02: how the model switches thinking down (default: from the model key)")
     args = ap.parse_args()
     apply_mode_defaults(args)
     coder_ext = coder_ext_config(args)
     project = Path(args.project)
+    stamp_lines = spec_stamp_gate(project, args.spec, args.skip_spec_stamp)
     if args.pidfile: Path(args.pidfile).write_text(str(os.getpid()), encoding="utf-8")
     spec = importlib.import_module(f"devvm_specs.{args.spec}")
     all_stages = getattr(spec, "STAGES", None) or [{"name": "all", "task": spec.TASK, "hidden": spec.HIDDEN}]
     run_stages = select_stages(all_stages, args.only, args.from_stage)
     log = RunLog(project / "runtime_data" / "measurements", f"devvm_build_{args.spec}", config={"spec": args.spec, "attempts": args.attempts})
     log_stamp = time.strftime("%Y%m%d_%H%M%S")
+    for line in stamp_lines: log.say(line)
     work_root = project / "runtime_data" / "devvm_work"      # not %TEMP%: a cleaner or another program there took away the git folder of a running build (2026-10-13, NotGitRepository)
     work_root.mkdir(parents=True, exist_ok=True)
     clean_old_work(work_root)
     tool_root = Path(tempfile.mkdtemp(prefix="build_", dir=work_root))
-    cfg_path = tool_root / "sandbox-build.yaml"; cfg_path.write_text(sandbox_text(args.bg_jobs), encoding="utf-8")
-    broker = SandboxBroker(tool_root, tool_root / "sandbox-data", cfg_path, MicrosandboxProvider(project / "runtime_data" / "sandboxes" / "backend_home", RUNTIME), None, None)
-    counter = {"n": 0}
-
-    def vm_copy(ws, commands, extra):
-        counter["n"] += 1
-        copy = DevWorkspace(tool_root, f"M-CHK{counter['n']:05d}", policy=broker.policy()); copy.create()
-        for path in ws.tree(): copy.write(path, ws.read(path))
-        for path, text in extra.items(): copy.write(path, text)
-        try:
-            out = broker._run("M-BUILD", copy.vm_preview(broker, commands))
-        except Exception as exc:
-            return {"status": "failed", "output": f"{type(exc).__name__}: {exc}"}
-        rec = out.get("sandbox") or {}
-        return {"status": out["status"], "output": "\n".join(c.get("output", "") for c in rec.get("commands", []))}
+    broker, vm_copy = vm_env(project, tool_root, args.bg_jobs)      # the same VM environment spec_check --vm uses (devvm_vm.py)
 
     keys = {"planner": DEFAULT_MODEL, "coder": args.coder, "reviewer": "swe", "coder_strong": DEFAULT_MODEL}
     if args.checker: keys["planner"] = args.checker
