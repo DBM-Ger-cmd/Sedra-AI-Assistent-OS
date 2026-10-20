@@ -6,6 +6,7 @@ shell:
   entry: {js: shell.js, css: shell.css}
   provides: [dock, talk]
   layout: {persist: browser}
-  api: []
+  api:
+    - POST /api/decisions/answer   # Freigabe „Jetzt freigeben“ / „Ablehnen“ – derselbe Weg wie in den anderen Oberflächen
   trust: CAPTAIN
   needs: {ui: ">=1.0 <2"}

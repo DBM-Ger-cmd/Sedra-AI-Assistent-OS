@@ -1,0 +1,68 @@
+diff --git a/runtime/benchmarks/uix_check.py b/runtime/benchmarks/uix_check.py
+index bece35b..c411a4f 100644
+--- a/runtime/benchmarks/uix_check.py
++++ b/runtime/benchmarks/uix_check.py
+@@ -178,6 +178,17 @@ PROFILES = {
+         'menu': {'box': '.sh-min-menu', 'input': '.sh-min-menu input', 'rows': "()=>[...document.querySelectorAll('.sh-min-menu-item b')].map(b=>b.textContent)",
+                  'closed': "()=>!document.querySelector('.sh-min-menu')"},
+     },
++    # Shell „KI Gateway für KMU“ (Folien-Design): Kopf, Werkstück, Gespräch; die vier Schritte des Ablaufs sind ihre Messwerte
++    'gateway-kmu': {
++        'zones': ('sh-gateway-kmu-kopf', 'sh-gateway-kmu-body', 'sh-gateway-kmu-talk'),
++        'gauges': '.sh-gateway-kmu-schritt',
++        'pane': "(tool) => {const slot = document.querySelector('.sh-gateway-kmu-tool[data-tool=\"' + tool + '\"]'); if(!slot) return {missing:true, note:'das Werkzeug hat keinen Container'}; const r = slot.getBoundingClientRect(); return {text: slot.innerText.trim().length, slots: document.querySelectorAll('.sh-gateway-kmu-tool').length, filled: slot.innerText.trim().length > 0 || slot.childElementCount > 0, evidence: false, actions: document.querySelectorAll('.sh-gateway-kmu-verbs button').length, inside: r.right <= innerWidth + 1, scroll: 0};}",
++        'segment': None,
++        'leftovers': "()=>[...document.querySelectorAll('.sh-gateway-kmu-werkstueck .sh-gateway-kmu-tool')].map(s=>s.dataset.tool)",
++        'count': None,
++        'count_word': '',
++        'menu': None,
++    },
+ }
+ 
+ 
+diff --git a/runtime/src/guppi_runtime/uix/ui/tokens.css b/runtime/src/guppi_runtime/uix/ui/tokens.css
+index 6283506..007c793 100644
+--- a/runtime/src/guppi_runtime/uix/ui/tokens.css
++++ b/runtime/src/guppi_runtime/uix/ui/tokens.css
+@@ -160,3 +160,19 @@ button:focus-visible,[role="button"]:focus-visible,.s-row:focus-visible,input:fo
+ .s-empty{color:var(--muted);padding:10px 0}
+ 
+ @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
++
++/* Gestaltung „KI Gateway für KMU“ (Shell gateway-kmu, Folien B6, 19.10.2026): Farben aus den Folien gemessen.
++   Nur für diese Shell; die übrigen Shells und Werkzeuge kennen die Namen nicht und bleiben unverändert. */
++:root{
++  --kmu-bg:#0d174e;        /* Folienhintergrund */
++  --kmu-deep:#080d33;      /* Schlussfolie, tiefer Hintergrund */
++  --kmu-box:#243269;       /* Kästchen des Ablaufs */
++  --kmu-box-2:#1a2862;     /* innere Fläche */
++  --kmu-line:#2c3d86;      /* feine Linie */
++  --kmu-accent:#53ddd0;    /* türkiser Akzentstrich */
++  --kmu-title:#ffffff;     /* Überschrift */
++  --kmu-sub:#b4c2ec;       /* Untertitel */
++  --kmu-text:#e8edff;      /* Fließtext */
++  --kmu-titel-groesse:34px;   /* Titel der Folien */
++  --kmu-sub-groesse:17px;     /* Untertitel */
++}
+diff --git a/runtime/tests/test_uix_shell_start.py b/runtime/tests/test_uix_shell_start.py
+index 97bf594..c228211 100644
+--- a/runtime/tests/test_uix_shell_start.py
++++ b/runtime/tests/test_uix_shell_start.py
+@@ -54,7 +54,7 @@ class DirectStart(unittest.TestCase):
+                 self.assertIsNone(choose_start_shell(hub, None))
+                 with self.assertRaises(ValueError) as ctx:
+                     choose_start_shell(hub, 'gibt-es-nicht')
+-                self.assertIn('Vorhanden: cockpit, gateway-studio, guppi-xp, minimal, paperclip, start', str(ctx.exception))
++                self.assertIn('Vorhanden: cockpit, gateway-kmu, gateway-studio, guppi-xp, minimal, paperclip, start', str(ctx.exception))
+                 self.assertEqual(hub.gateway.manifest()['shell']['id'], 'minimal', 'ein Fehler ändert nichts')
+             finally:
+                 hub.close()
+@@ -87,7 +87,7 @@ class InTheBrowser(unittest.TestCase):
+                 errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+                 page.goto(url); wait_until_started(page); page.wait_for_timeout(1200)
+                 names = page.evaluate("()=>[...document.querySelectorAll('.st-card h2')].map(h=>h.textContent)")
+-                self.assertEqual(sorted(names), ['Cockpit', 'GUPPI XP', 'KI GateWay Studio', 'Minimal', 'Paperclip'], 'die Auswahl selbst steht nicht zur Wahl; der alte Desktop schon')
++                self.assertEqual(sorted(names), ['Cockpit', 'GUPPI XP', 'KI GateWay Studio', 'KI Gateway für KMU', 'Minimal', 'Paperclip'], 'die Auswahl selbst steht nicht zur Wahl; der alte Desktop schon')
+                 page.fill('.st-make-row input[aria-label="Name der neuen Oberfläche"]', 'meine-bruecke')
+                 page.click('.st-make-row button:has-text("Anlegen")'); page.wait_for_timeout(1200)
+                 names = page.evaluate("()=>[...document.querySelectorAll('.st-card h2')].map(h=>h.textContent)")

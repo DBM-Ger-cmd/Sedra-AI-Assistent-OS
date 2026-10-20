@@ -1,0 +1,24 @@
+{
+  "quelle": "KI-Gateway-fur-KMU-B6-SEDRA-2.pdf (Folien 960x540), Farben per Pixelmessung am gerenderten Folienbild",
+  "farben": {
+    "bg": "#0d174e",
+    "deep": "#080d33",
+    "box": "#243269",
+    "box-2": "#1a2862",
+    "accent": "#53ddd0",
+    "titel": "#ffffff",
+    "untertitel": "#b4c2ec",
+    "text": "#e8edff"
+  },
+  "typografie": {
+    "titel_px": 34,
+    "untertitel_px": 17,
+    "schrift": "geometrische Groteske, fett fuer Titel (Folienschrift nicht eingebettet, nicht gesichert)"
+  },
+  "elemente": {
+    "akzentstrich": "kurz, 3px, Teal",
+    "ablauf": "Kaestchen mit Pfeil, Folie 6",
+    "grafik": "Glas-3D-Motive, siehe kopf-ausschnitt"
+  },
+  "hinweis": "Ableitungen fuer die Einbindung; keine Aussage zur Rechtskonformitaet."
+}

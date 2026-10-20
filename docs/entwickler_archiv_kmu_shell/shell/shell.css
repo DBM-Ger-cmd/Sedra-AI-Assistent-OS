@@ -1,0 +1,90 @@
+/* Shell „KI Gateway für KMU“ – Gestaltung der Präsentation (Folien B6). Farben nur über die Tokens --kmu-… (ui/tokens.css). */
+
+/* Die Tokens der Werkzeuge auf dieses Design umlegen: das Gateway-Werkzeug folgt ohne eigene Änderung. */
+.sh-gateway-kmu{
+  --bg:var(--kmu-bg);
+  --panel:var(--kmu-box-2);
+  --panel-2:var(--kmu-box);
+  --line:var(--kmu-line);
+  --line-soft:var(--kmu-line);
+  --text:var(--kmu-text);
+  --muted:var(--kmu-sub);
+  --heading:var(--kmu-title);
+  --accent:var(--kmu-accent);
+  --accent-text:var(--kmu-deep);
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  background:var(--kmu-bg);
+  color:var(--kmu-text);
+  font-family:var(--font);
+}
+
+/* Kopf: Titel links, Ablauf darunter, die Grafik rechts oben */
+.sh-gateway-kmu-kopf{
+  position:relative;
+  padding:28px 32px 24px;
+  background:linear-gradient(90deg,var(--kmu-bg),var(--kmu-deep));
+  border-bottom:1px solid var(--kmu-line);
+}
+.sh-gateway-kmu-marke{position:relative;max-width:62%}
+.sh-gateway-kmu-titel{
+  margin:0;
+  font-size:var(--kmu-titel-groesse);
+  font-weight:800;
+  letter-spacing:-0.01em;
+  color:var(--kmu-title);
+}
+.sh-gateway-kmu-titel::after{
+  content:"";
+  display:block;
+  width:56px;
+  height:3px;
+  margin-top:12px;
+  border-radius:2px;
+  background:var(--kmu-accent);
+}
+.sh-gateway-kmu-sub{margin:14px 0 0;font-size:var(--kmu-sub-groesse);font-weight:600;color:var(--kmu-sub)}
+.sh-gateway-kmu-satz{margin:4px 0 0;color:var(--kmu-sub)}
+.sh-gateway-kmu-grafik{
+  position:absolute;
+  right:28px;
+  top:14px;
+  width:220px;
+  height:auto;
+  pointer-events:none;
+}
+
+/* Der Ablauf: vier Schritte und der Schluss, mit Pfeilen dazwischen; nur zum Lesen */
+.sh-gateway-kmu-ablauf{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:20px 0 0;padding:0}
+.sh-gateway-kmu-schritt{
+  padding:10px 14px;
+  border-radius:var(--radius);
+  background:var(--kmu-box);
+  color:var(--kmu-title);
+  font-weight:600;
+}
+.sh-gateway-kmu-schritt[data-pfeil]::after{content:attr(data-pfeil);margin-left:8px;color:var(--kmu-accent)}
+
+/* Das Werkstück in der Mitte: Verben oben, dann das Werkzeug */
+.sh-gateway-kmu-body{display:flex;flex-direction:column;gap:12px;flex:1 1 auto;min-height:0;padding:20px 32px}
+.sh-gateway-kmu-verbs{display:flex;flex-wrap:wrap;gap:8px}
+.sh-gateway-kmu-werkstueck{flex:1 1 auto;min-width:0}
+.sh-gateway-kmu-tool{min-width:0}
+
+/* Das Gespräch unten: begrenzte Höhe, hochscrollbar, und in der Höhe zu ziehen */
+.sh-gateway-kmu-talk{
+  max-height:36vh;
+  overflow:auto;
+  resize:vertical;
+  padding:12px 32px;
+  border-top:1px solid var(--kmu-line);
+  background:var(--kmu-deep);
+}
+
+@media (max-width: 760px){
+  .sh-gateway-kmu-kopf{padding:20px 16px}
+  .sh-gateway-kmu-marke{max-width:100%}
+  .sh-gateway-kmu-grafik{display:none}
+  .sh-gateway-kmu-body,.sh-gateway-kmu-talk{padding-left:16px;padding-right:16px}
+}
