@@ -944,11 +944,187 @@ Im Cockpit gibt es schon das Werkzeug „KI-Labor“ mit den API-Anbindungen. Es
 
 ### Aufgaben
 
-- [ ] C3.1 `SPEC_EIN_SICHERER_WEG_v1.md` und `SPEC_GATEWAY_VORGANG_v1.md` lesen: Schutzklassen und Matrix übernehmen, nicht neu erfinden
-- [ ] C3.2 Entwurf der Grundsatzänderung für README und `ENTWICKLUNG.md` → Captain-Gate
+- [x] C3.1 `SPEC_EIN_SICHERER_WEG_v1.md` und `SPEC_GATEWAY_VORGANG_v1.md` lesen: Schutzklassen und Matrix übernehmen, nicht neu erfinden
+- [x] C3.2 Entwurf der Grundsatzänderung für README und `ENTWICKLUNG.md` (siehe „Abgleich gegen den Code (G1)“) → Captain-Gate G1-S3-10
 - [ ] C3.3 Design Adapter, Regeln, Budget → G2
 - [ ] C3.4 Bau-Spec `cld_rules` (Regelprüfung, Budget) mit versteckten Tests; Adapter und Router-Stufe als Harness → G3
 - [ ] C3.5 Test mit einem Anbieter und kleinem Budget, danach Abnahme → G4
+
+### Abgleich gegen den Code (G1)
+
+Stufe 1 der Spec 3, Stand 20.10.2026, Branch `spec3/cloud-gateway` (Basis Commit `3abb023`). Nur gelesen: kein Cloud-Aufruf, kein Schlüssel gelesen, kein Test ausgeführt. „Geprüft“ heißt: Code gelesen, nicht gelaufen.
+
+#### Schutzklassen und Matrix (C3.1, übernommen)
+
+Quellen: `SPEC_EIN_SICHERER_WEG_v1.md` (S1 bis S7), `SPEC_GATEWAY_VORGANG_v1.md` (13 Merkmale, Matrix), `REGELWERK_DATENKATEGORIEN_CLOUDSPERRE_v0.1` (R-01 bis R-16) und der Code `gateway/klassen.py` (`POLICY_VERSION = b6-datenregeln-0.1`, `RECHTSGRUNDLAGE_CLOUD = False`). Spec 3 erfindet nichts Neues; die Matrix bleibt Sache des GateWay.
+
+| Klasse | Beispiele (Merkmal) | Wohin darf sie heute | Review |
+| --- | --- | --- | --- |
+| Hard Block | Zugangsdaten (S01), Karte mit Prüfwert (F03), Anweisungen an die KI im Dokument (S02) | nirgends, auch nicht lokal | nicht übersteuerbar |
+| UNCLASSIFIED | Scan unvollständig, Datei unlesbar | nirgends, bis der Captain prüft | ja |
+| SK3 streng vertraulich | besondere Kategorien (P02), Strafsachen (P03), amtliche Kennungen (P04), Geschäftsgeheimnis (G01), Minderjährige (V01), Hochrisiko-Kontext (A01, von Hand) | nur lokal, nach Review | ja |
+| SK2 vertraulich | Bankverbindung (F01), Kartendaten (F02), NDA (G02), Rechtsstreit (R01, von Hand) | nur lokal | nein |
+| SK1 intern | Personenbezug (P01) | nur lokal; `CLOUD_AFTER_PSEUDONYMIZATION` erst mit Rechtsgrundlage und AVV (R-01) | nein |
+| SK0 öffentlich | kein Merkmal, Scan vollständig | lokal oder Cloud | nein |
+
+Heute darf also **nur SK0** in die Cloud. Zusätzlich sperrt der Inhaltsschutz (`core/content_policy.py`, `judge`) auf der Route `cloud` jeden Scanner-Treffer für Personenbezug, sensible Daten, Platzhalter und Schlüssel (`SG_PERSONAL_CLOUD`, `SG_SENSITIVE_CLOUD`, `SG_SECRET_CLOUD`, `SG_PLACEHOLDER_CLOUD`, `SG_KEY_FORMAT`). Der Modus (Sandbox, Beobachten, Vertraut) ändert daran nichts: was den Rechner verlässt, ist immer scharf (S5, `enforced`). Zwei Ebenen also: **Scanner-Ebene** (`content_policy`, bei jedem Aufruf) und **Klassen-Ebene** (`klassen.einstufen`, nur im GateWay-Vorgang). Die Klassen-Ebene sieht auch das, was kein Scanner findet (R01, A01 von Hand).
+
+#### Abgleich CLD-01 bis CLD-10
+
+| ID | Befund | Stand | Beleg |
+| --- | --- | --- | --- |
+| CLD-01 | `ModelRouter.choose` wählt Cloud nie von selbst; nur ein Aufruf mit Anbieter-Name erreicht sie. Aber es gibt keine „Cloud-Regel“. Auch `labor.cloud_chat`, `redesign_*`, `spec_lab`, Standardläufe und `paperclip_pipeline` rufen `provider_adapter` direkt auf und umgehen den Router. Nach Klick oder Lauf-Start geht der Aufruf hinaus. | teilweise | `models/router.py` `choose`; `labor.py`, `redesign_agent.py` |
+| CLD-02 | Der Inhaltsschutz prüft jeden Cloudaufruf (Scanner-Ebene). Die Schutzklassen von `klassen.einstufen` sind **nicht** auf dem Cloudweg: Gespräch, Kurztest und Läufe stufen nicht ein; R01 und A01 greifen dort nie. Die Matrix kennt keinen Anbieter, nur „Cloud“. Zudem baut `labor.py` ein eigenes `ContentGuard(cloud_enabled=True)` statt `runtime.content_guard`: Zähler, Modus und Anzeige von `schutz` sehen diese Aufrufe nicht. Außerdem gibt es in `labor.cloud_chat` einen Konfigurationswert `modus: test`, der Personenbezug pseudonymisiert und sendet, statt zu sperren; das widerspricht R-01 und gehört entfernt oder hinter ein Gate. | teilweise | `labor.py` Z. 39, 98 ff.; `gateway/vorgang.py` ist der einzige Aufrufer von `einstufen` |
+| CLD-03 | Fehlt. Kein Guard-Gate, keine Regeldatei `cloud_rules.yaml`, keine Regelbindung im Audit. Der Klick des Captains im Labor oder im Gespräch ist heute die einzige „Entscheidung“, ohne Bindung an Agent, Klasse, Anbieter, Budget. | fehlt | `uix_server.py` `labor_connection`, `chat_cloud` ohne `_gate_request` |
+| CLD-04 | Das Audit kennt `SG_MODEL_CALL` (Route, Modell, Policy, Bindungs-Hash, ohne Text) und `TOOL_CALLED` (Router). Es fehlen: Anbieter im `SG_MODEL_CALL`, Token, Kosten, Schutzklasse. `CLOUD_CALL` gibt es nicht. Token stehen in `result["usage"]`, werden aber nirgends ins Audit geschrieben. | teilweise | `core/content_guard.py` `info`; `labor.py` |
+| CLD-05 | Fehlt. Kein Zähler, kein `spend`, keine Grenze pro Minute oder Tag, kein Euro-Stand, keine 80-%-Warnung. **Risiko:** `model_test` sendet bis zu 120 Anfragen hintereinander (`MAX_MODELS_PER_RUN`), `connection_test` bis zu 4 Testnachrichten; beides läge über 30 pro Minute. Läufe starten als eigene Prozesse (`vorarbeiter.lauf_starten`), ein Zähler im Speicher reicht deshalb nicht. | fehlt | `labor.py` `model_test`, `vorarbeiter.py` |
+| CLD-06 | Im Kombi-Pfad steht „Cloud · Anbieter / Modell“ vor der Antwort. Das Ergebnis von `cloud_chat` trägt `provider`, `model`, aber kein einheitliches Kennzeichen; für Aufgaben und Issues gibt es nichts, weil Cloud-Läufe keine Aufgabe tragen. Der normale Cloud-Pfad im Gespräch wurde nicht im Browser geprüft. | teilweise | `uix/tools/talk/kombi.js`, `uix_server.py` `chat_cloud` |
+| CLD-07 | Kein stiller Wechsel: Der Router fällt nie auf Cloud zurück; bei Cloud-Fehler bleibt in `chat_kombi` der lokale Entwurf, und die Antwort sagt warum. Es gibt aber kein „warten“ (kein Wiederholen, kein Rezept-Feld `fallback`); die Gegenrichtung (lokal überlastet → Cloud, SCH-07) hängt an Spec 2. Ein Cloud-Ausfall im Lauf bricht den Lauf ab. | teilweise | `models/router.py`, `uix_server.py` `chat_kombi` |
+| CLD-08 | Weitgehend erfüllt: Verweis `secret://anbieter/id`, Umgebungsvariable `GUPPI_SECRET_*`, DPAPI-Datei `local_config/cloud_keys.json` (nur Windows), Audit ohne Wert, Fehlertexte geschwärzt, Weiterleitungen mit Schlüssel abgelehnt. Lücken: (1) Der Speicher ist nach Anbieter geschlüsselt, nicht nach Verweis; `_key_state` nimmt fest `_API_KEY`, ein Verweis mit anderer ID wird dort nicht aufgelöst. (2) Mammouth: Schlüsselformat unbekannt; `_error_detail` kennt nur `nvapi-` und `sk-`. (3) DPAPI ohne zusätzliche Entropie: jeder Prozess desselben Benutzers kann entschlüsseln, auch ein Lauf-Prozess. (4) Ein Test „kein Schlüssel im Klartext in Dateien“ wurde nicht gefunden (nicht gezielt gesucht). | erfüllt mit Lücken | `cloud_settings.py`, `models/cloud_api.py` |
+| CLD-09 | Fehlt. Der Anthropic-Adapter ist eine API, kein Agent-Adapter (Claude Code, Codex), und es gibt keinen DevVM-Anschluss. | fehlt | – |
+| CLD-10 | Abweichung vom Spec-Text: Der Schalter steht **nicht** in `switches.yaml` (`local_switches.ALLOWED` kennt keinen Abschnitt `cloud`), sondern als Hauptschalter `enabled` in `cloud_providers.yaml` (Standard aus). Bei aus baut `runtime._configure_cloud_providers` keinen Adapter, der Router kennt keine Cloud-Ziele: dieses Kriterium ist erfüllt. Aber Labor-Tests und Läufe lesen den Schalter zur Laufzeit aus der Datei (`labor._enabled`) und sind nicht an den Router-Stand beim Start gebunden. Zwei Wahrheiten. | abweichend | `runtime.py` `_configure_cloud_providers`, `labor.py` `_enabled` |
+
+Abnahmekriterien: CLD-01, 02, 04, 05, 08, 10 sind prüfbar, sobald `CLOUD_CALL` und der Zähler existieren. Nicht prüfbar wie formuliert: **CLD-03** („Regel ist im Audit gebunden“ braucht eine definierte Regel-ID im Audit), **CLD-06** („Kennzeichen in Gespräch und Aufgabe“ braucht eine Festlegung, was das Kennzeichen ist), **CLD-07** („Ausfall-Test ohne stillen Wechsel“ braucht eine Definition von „wartet“), **CLD-09** (microVM-Anschluss hängt an Spec 0 und der DevVM).
+
+#### Abgleich LAB-01 bis LAB-07
+
+| ID | Befund | Stand |
+| --- | --- | --- |
+| LAB-01 | Das Werkzeug `labor` hat Manifest (`kind: object`, `trust: CORE`, `handles: [labor]`, 8 `api`-Einträge) und nur `tool.js`/`tool.css`. Im Cockpit hängt es in `palette.js` und `tree.js`. Shell D (`shell.yaml` v1.1.0) hat keinen Eintrag; das gehört nach Spec 4. `uix_check --tool labor` wurde nicht ausgeführt. | teilweise |
+| LAB-02 | Anbieter **anlegen** geht nicht: `cloud_settings.save` lehnt unbekannte Anbieter ab; bekannt sind nur `nvidia`, `openai`, `anthropic` aus `config/cloud_providers.yaml`. **Mammouth fehlt.** Eintragen von Basis-URL und Modell geht ohne Gate; der Schlüssel (`/api/cloud/key`) landet nur in DPAPI, im Audit steht `CLOUD_KEY_CHANGED` ohne Wert. Gate fehlt. | teilweise |
+| LAB-03 | Kurztest existiert (`connection_test`), aber mehr als „eine Frage“: ein `GET /models` plus bis zu 4 Testnachrichten, mit einer fest eingebauten Modellliste vom 16.10.2026. Audit nur `LABOR_CONNECTION_TEST` (ok/nicht ok), kein `CLOUD_CALL`, kein Gate, keine Einstufung (die Testnachricht ist fest und harmlos, geht aber nur durch den Scanner). Auch `fetch_models` ist ein Netzzugriff auf den Anbieter-Host ohne Guard-Regel. `model_test` (alle Modelle) sprengt die Startphasen-Grenzen. | teilweise |
+| LAB-04 | Fehlt: keine Grenzen, keine Anzeige, keine `cloud_rules.yaml`. | fehlt |
+| LAB-05 | Fehlt: keine Tabelle `spend`, kein Ereignis `budget.warning` (der Ereigniskatalog wurde nicht gelesen; im Spec-Ist-Stand ist es nicht aufgeführt). | fehlt |
+| LAB-06 | Nicht vorhanden. Die Matrix ist global („Cloud“), nicht je Anbieter. Geändert wird sie heute nur im Code (`klassen.py`, `RECHTSGRUNDLAGE_CLOUD`). Eine Anbieter-Zeile (Obergrenze) muss neu entstehen. | fehlt |
+| LAB-07 | Der Hauptschalter ist im Labor sichtbar und umschaltbar (`laborMaster`), speichert über `/api/cloud/save` **ohne Gate** und wirkt erst nach dem Neustart (`restart_needed`). Der Satz „Cloud-Stufe aus“ steht dort nicht. | teilweise |
+
+Abnahmekriterien: LAB-02 bis LAB-07 sind prüfbar (Audit, `spend`, Anzeige). LAB-01 braucht für Shell D den Spec-4-Eintrag. LAB-03: „Kurztest der Werkstatt“ meint das „Testen“ lokaler Modelle (Antwort des Captains); das Ergebnisformat ist damit festgelegt.
+
+#### Korrekturvorschläge (alt / neu)
+
+| ID | alt | neu (Vorschlag) |
+| --- | --- | --- |
+| CLD-01 | Jeder Modellaufruf SOLL lokal laufen, solange keine Cloud-Regel greift. Ohne Regel: 0 Cloud-Aufrufe im Audit. | Jeder Modellaufruf SOLL lokal laufen, solange keine freigegebene Regel in `cloud_rules.yaml` (oder eine Entscheidung des Captains) den Cloudweg für genau diesen Aufruf öffnet. Alle Cloud-Zugriffe (Gespräch, Labor, Läufe, Pipelines) gehen durch **eine** Stelle, die `CLOUD_CALL` schreibt. Abnahme: Ohne Regel keine Zeile `CLOUD_CALL`; ein Test zählt jeden `provider_adapter`-Aufruf. |
+| CLD-02 | … stuft das GateWay die Anfrage nach Schutzklasse ein; gesperrte Schutzklassen gehen nie in die Cloud. | … stuft `gateway/klassen.einstufen` vor jedem Cloudaufruf ein, zusätzlich zum Scanner des Inhaltsschutzes. In die Cloud darf nur SK0 mit Weg `CLOUD_ALLOWED`. Die Obergrenze je Anbieter (Tabelle in `cloud_rules.yaml`) macht den Weg enger, nie weiter als die Matrix (K-03). Abnahme: ein Testfall je Klasse und je Anbieter. |
+| CLD-03 | … brauchen eine Entscheidung des Captains, außer eine freigegebene Regel deckt … | … Regel: Agent, Schutzklasse, Anbieter, Budget; Bindung im Audit mit Regel-ID und Hash der Regeldatei. Ohne Deckung entsteht eine Entscheidung (`desk/decisions`). Ein Klick des Captains im Gespräch oder Labor zählt als Entscheidung für **diesen einen** Aufruf (G1-S3-05). |
+| CLD-04 | … Anbieter, Modell, Token, Kosten und Schutzklasse … | zusätzlich: Regel-ID oder Entscheidungs-ID, Agent, Aufrufer (`chat`, `labor`, `lauf`), Dauer, Ergebnis (`ok`, `blocked`, `limit`, `error`). Kosten in Euro nur mit Preisliste, sonst 0 und Anzahl. Kein Text. |
+| CLD-05 | … in Euro, Anfragen pro Minute oder pro Tag … Hard-Stop. | Zähler **prozessübergreifend** (Tabelle `spend` in einer Datenbank mit Sperre, nicht im Speicher), weil Läufe eigene Prozesse sind. Pro Anbieter und gesamt, je Agent. Stopp bei 100 %, Warnung bei 80 % (`budget.warning`). Auch Kurztest und Modelltest zählen. Bei Limit bleibt der Lauf lokal oder wartet (Minutenlimit: höchstens bis zur nächsten Minute; Tageslimit: bleibt lokal). |
+| CLD-06 | … sichtbar kennzeichnen. Kennzeichen in Gespräch und Aufgabe. | Jedes Ergebnis trägt `route: cloud`, `provider`, `model`. Die Oberfläche zeigt „Cloud · Anbieter / Modell“ an jeder Antwort im Gespräch und am Kommentar oder Ergebnis einer Aufgabe. Abnahme: `uix_check` und Klicktest. |
+| CLD-07 | … lokal weiterarbeiten oder warten; nie still wechseln. | Bei Ausfall: Meldung mit Grund, **kein** automatischer Wechsel der Stufe, in keine Richtung. Das Rezept-Feld `fallback` führt nur zu einer sichtbaren Entscheidung oder zu einer freigegebenen Regel, nie zu einem stillen Wechsel. |
+| CLD-08 | … Secret-Speicher heißt … | zusätzlich: Speicher nach Verweis geschlüsselt (`secret://anbieter/id`); Muster für Mammouth-Schlüssel in die Schlüsselerkennung; DPAPI mit Entropie je Installation (Entscheidung offen); ein Test, der `local_config`, Logs und Audit nach Schlüsseln durchsucht. |
+| CLD-09 | … Adapter hinter derselben Prüfung, nur in der DevVM. | In die **Nach-Startphase** verschieben: Die Startphase hat Budget 0 und Coder nur lokal; Claude Code und Codex sind Coder-Dienste mit eigenem Abo. Eigene Spec nach G4 von Spec 3. |
+| CLD-10 | Ein Schalter `cloud` in `switches.yaml` … | Ein Hauptschalter: `cloud_providers.enabled` in `local_config/cloud_providers.yaml` (Standard aus). Er gilt für **alle** Pfade, auch Labor und Läufe, und wird bei jedem Aufruf frisch gelesen. Umschalten ist ein Gate. (Alternative: `switches.yaml` um den Abschnitt `cloud` erweitern, siehe G1-S3-09.) |
+| LAB-02 | WENN der Captain einen Anbieter anlegt … | Anbieter anlegen heißt: Eintrag in `local_config/cloud_providers.yaml` (Name, Basis-URL nur https, Modelle, Verweis `secret://…`). Gate `set_cloud_provider`; der Schlüssel läuft getrennt über `credential_access`. Startbestand: `nvidia`, `mammouth`. |
+| LAB-03 | … eine Frage, Antwortzeit, Token; externe Aktion mit Gate und durch das GateWay. | Der Kurztest sendet **genau eine** feste Testnachricht an das Standardmodell, kein `GET /models`. Er zählt gegen das Budget und schreibt `CLOUD_CALL`. Modellliste und Test aller Modelle sind eigene Aktionen; der Test aller Modelle ist in der Startphase aus. Das Ergebnis zeigt wie das „Testen“ der Werkstatt Antwortzeit und Token. |
+| LAB-05 | … Verbrauch live zeigen und bei 80 % warnen. | Anzeige je Anbieter und Agent; Warnung als Ereignis `budget.warning` und im Posteingang. Der Ereigniskatalog wird erweitert (eigenes Gate, kein `core/`). |
+| LAB-07 | … Schalter `cloud` zeigen; Umschalten ist ein Gate. | wie CLD-10; bei aus zeigt das Labor „Cloud-Stufe aus“ und sperrt alle Test-Knöpfe. |
+
+#### Guard-Aktionen für die Cloud-Stufe
+
+Vorhanden (`guard_rules.yaml`, `permission_levels.yaml`): `external_write` (GR-005, CAPTAIN_REQUIRED, Stufe 6), `credential_access` (GR-007, CAPTAIN_REQUIRED, Stufe 6), `paid_action` (GR-008, CAPTAIN_REQUIRED, Stufe 6), `external_read` (GR-027, ALLOW; gilt für die Hosts aus `config/web_access.yaml`). Für die Cloud-Stufe genügen sie nicht allein: Ein Gate je Aufruf wäre bei 500 Anfragen am Tag unbrauchbar, und eine unbekannte Aktion läuft ohnehin als CAPTAIN_REQUIRED.
+
+| Gate | Aktion | Bedeutung | Vorschlag | Stufe | Begründung |
+| --- | --- | --- | --- | --- | --- |
+| G1-S3-GA-01 | `credential_access` (vorhanden) | Schlüssel für einen Anbieter ablegen oder löschen (`/api/cloud/key`) | CAPTAIN_REQUIRED, unverändert | 6 | nur im Secret-Speicher; Gate nachrüsten, die Regel besteht |
+| G1-S3-GA-02 | `set_cloud_provider` (neu) | Anbieter anlegen oder ändern (Name, Basis-URL, Modelle) | CAPTAIN_REQUIRED | 5 | neues Ziel im Netz (CLD-08, LAB-02) |
+| G1-S3-GA-03 | `change_switch` (vorhanden) oder neu `set_cloud_switch` | Hauptschalter Cloud und Schalter je Anbieter | CAPTAIN_REQUIRED | 5 | CLD-10, LAB-07; mit `change_switch` braucht es keine neue Regel |
+| G1-S3-GA-04 | `set_cloud_rules` (neu) | `cloud_rules.yaml` ändern: Grenzen, Freigaben je Agent und Anbieter, Obergrenze der Klassen | CAPTAIN_REQUIRED | 5 | Budget und Freigaben sind Grenzen des Captains (LAB-04); wie `set_budget` in Spec 0 |
+| G1-S3-GA-05 | `cloud_call` (neu) | ein einzelner Cloudaufruf, ausgelöst durch einen Agenten oder Lauf | CAPTAIN_REQUIRED, außer eine freigegebene Regel deckt Agent, Klasse, Anbieter und Budget (dann ALLOW mit Regel-ID) | 6 | CLD-03. Eine Aktion statt `external_write` plus `paid_action`; das Gate entscheidet über die Regel, nicht über den Text |
+| G1-S3-GA-06 | `cloud_probe` (neu) | Kurztest und Modellliste auf Klick des Captains | ALLOW nach Klick (der Klick ist die Entscheidung), nur bei Schalter an und freiem Budget | 4 | LAB-03; ein Gate pro Klick wäre doppelt |
+| G1-S3-GA-07 | `paid_action` (vorhanden) | Aufruf, der Geld kostet (Mammouth über das Abo-Guthaben hinaus, Euro über 0) | BLOCK in der Startphase | 6 | Startphase: 0 € extra; nur ein Gate des Captains öffnet das |
+
+Die neuen Aktionen brauchen je einen Eintrag in `guard_rules.yaml` (fortlaufend nach den Nummern aus Spec 0) und in `permission_levels.yaml`; `tests/test_permission_levels.py` hält beides gleich. Das Audit bekommt `CLOUD_CALL` neben `CLOUD_SETTINGS_SAVED`, `CLOUD_KEY_CHANGED`, `LABOR_CONNECTION_TEST`. Die Regeldatei liegt unter `architecture/…/core/guard/`; jede Änderung dort ist ein eigenes Gate (Regel 1).
+
+#### Entwurf Grundsatzänderung „Local First, Cloud Second“ (C3.2)
+
+Nur Text. `README.md` und `docs/ENTWICKLUNG.md` werden erst nach Freigabe der Spec geändert.
+
+**README.md, Zeile „Läuft vollständig lokal“**
+
+alt: „**Läuft vollständig lokal:** eigener llama.cpp-Server, keine Cloud-Modelle. Hauptmodell ist Qwen3.6-35B-A3B auf einer RTX 4070 Ti (12 GB).“
+
+neu: „**Local First, Cloud Second:** Alles läuft zuerst lokal (eigener llama.cpp-Server, Hauptmodell Qwen3.6-35B-A3B auf einer RTX 4070 Ti, 12 GB). Eine Cloud-Stufe ist eine zweite Möglichkeit und standardmäßig aus. Sie ist nur über einen Schalter erreichbar, geht bei jedem Aufruf durch den Router, den Inhaltsschutz und die Einstufung des KI-GateWay, ist budgetiert und im Audit sichtbar. Personenbezogene und vertrauliche Daten (alles über SK0) verlassen den Rechner nicht. Coder-Agenten laufen nur lokal.“
+
+**README.md, Abschnitt „Grenzen“**
+
+alt: „Es gibt keinen stillen Wechsel auf ein Cloud-Modell.“
+
+neu: „Es gibt keinen stillen Wechsel auf ein Cloud-Modell, in keiner Richtung: Die Cloud wird nur über eine freigegebene Regel oder eine Entscheidung des Captains erreicht, und jede Antwort aus der Cloud ist als solche gekennzeichnet.“
+
+**README.md, GateWay-Zeile („Cloud nur simuliert“)**
+
+Ersetzen durch „Cloud nur über das GateWay; Anbieter und Budget stehen im KI-Labor“, sobald G4 von Spec 3 bestanden ist. Bis dahin bleibt „simuliert“ stehen, weil der GateWay-Vorgang selbst den echten Cloudweg noch nicht nutzt.
+
+**docs/ENTWICKLUNG.md, neuer Grundsatz** (neben „Captain First“ und „Kern geschützt“)
+
+„**Local First, Cloud Second.** Jeder Modellaufruf läuft lokal, solange nichts anderes ausdrücklich erlaubt ist. Die Cloud ist eine zweite Stufe hinter dem Schalter `cloud` (Standard aus). Jeder Cloudaufruf geht durch den Router, den Inhaltsschutz und die GateWay-Einstufung, braucht eine Entscheidung des Captains oder eine von ihm freigegebene Regel, hat ein Budget, schreibt `CLOUD_CALL` ins Audit und wird in der Oberfläche gekennzeichnet. Schlüssel stehen nur im Secret-Speicher. Es gibt keinen stillen Wechsel der Stufe. Coder-Agenten arbeiten nur lokal. Vor Freigabe von Spec 3 gibt es keine Cloud-Aufrufe durch Agenten oder Tests.“
+
+**docs/ENTWICKLUNG.md, bestehende Netz-Regel**
+
+Zusatz: „Ausgenommen sind die Hosts der freigegebenen Cloud-Anbieter in `cloud_rules.yaml`; jeder neue Host ist ein Gate.“ Der Wortlaut der bestehenden Regel wurde nicht abgeglichen; er ist beim Einarbeiten zu prüfen.
+
+#### Gate-Liste G1-S3
+
+Alles ist ein Vorschlag des Vorarbeiters. Jedes Gate entscheidet der Captain einzeln.
+
+| Gate | Entscheidung, die der Captain trifft | Empfehlung |
+| --- | --- | --- |
+| G1-S3-01 | Abgleich gegen den Code (CLD-01 bis CLD-10, LAB-01 bis LAB-07) als richtig freigeben | ja |
+| G1-S3-02 | Korrekturen der Tabelle „alt / neu“ übernehmen (CLD-01 bis CLD-08, CLD-10, LAB-02, 03, 05, 07) | ja |
+| G1-S3-03 | CLD-09 (Claude Code und Codex als Adapter) in die Nach-Startphase verschieben | ja |
+| G1-S3-04 | Eine Cloud-Stelle: alle Pfade (Gespräch, Labor, Läufe, Pipelines) laufen durch einen Aufrufer mit `CLOUD_CALL`, Einstufung und Budget; die direkten `provider_adapter`-Aufrufe entfallen. Der Konfigurationswert `modus: test` (pseudonymisiert und sendet Personenbezug) entfällt | ja |
+| G1-S3-05 | Klick des Captains (Gespräch, Kurztest) zählt als Entscheidung für diesen einen Aufruf, bleibt aber im Budget und in der Einstufung | ja |
+| G1-S3-06 | Einstufung nach `klassen.einstufen` plus Anbieter-Obergrenze; die Anbieter-Tabelle ist nur enger als die Matrix (K-03) | ja |
+| G1-S3-07 | Zähler in einer Datenbank mit Sperre (prozessübergreifend) statt im Speicher | ja |
+| G1-S3-08 | Startphasen-Grenzen aus der Spec übernehmen: NVIDIA 30 pro Minute und 500 pro Tag, Mammouth nur Abo-Guthaben, Coder nur lokal; „Test aller Modelle“ in der Startphase aus | ja |
+| G1-S3-09 | Ort des Hauptschalters: `cloud_providers.yaml` (ein Ort, wie heute) oder `switches.yaml` (Spec-Text; ändert `local_switches.py`) | `cloud_providers.yaml` |
+| G1-S3-10 | Grundsatztext C3.2 für README und `ENTWICKLUNG.md` (Entwurf oben) freigeben; eingearbeitet wird erst nach G1 | ja |
+| G1-S3-GA-01 bis GA-07 | die sieben Guard-Aktionen der Tabelle, jede einzeln | wie vorgeschlagen |
+
+#### Antworten des Captains auf die offenen Fragen (20.10.2026)
+
+1. Mammouth (URL, Modelle, Schlüsselformat, Guthaben-Abfrage): wird später eingetragen; der Schlüssel ist noch nicht beantragt. (URL und Guthaben-Abfrage stehen inzwischen in der API-Doku, siehe unten.) Bis dahin steht Mammouth nicht im Startbestand der Anbieter (LAB-02), und das Muster für sein Schlüsselformat (CLD-08) bleibt offen.
+2. NVIDIA: ob die Grenze in Anfragen als einzige Bremse genügt, wird erst im Betrieb geklärt (C3.5).
+3. „Kurztest der Werkstatt“ (LAB-03): gemeint ist das „Testen“ lokaler Modelle in der Werkstatt (eine kurze Frage mit Zeit und Token/s, `workshop/arbeitsplatz.yaml`). Der Verweis bleibt; der Cloud-Kurztest zeigt dasselbe Ergebnisformat (Antwortzeit, Token). Die Korrektur in der Tabelle „alt / neu“ (Streichung des Verweises) entfällt.
+4. Lauf-Prozesse dürfen den vorhandenen Schlüssel lesen, weil er für Testzwecke angelegt ist. Das gilt nur für diesen Testschlüssel; für den produktiven Schlüssel entscheidet G2 neu (CLD-08, Punkt 3).
+5. SK0-only genügt für Planer und Recherche.
+6. Nutzungsbedingungen beider Anbieter: geprüft am 20.10.2026, Ergebnis im nächsten Abschnitt. Für Mammouth fehlt noch der Primärtext.
+
+
+#### Prüfung der Nutzungsbedingungen (20.10.2026)
+
+Gelesen wurden öffentliche Seiten; es gab keinen Aufruf der Anbieter-APIs. Rechtsprüfung ist das nicht.
+
+**NVIDIA API Catalog.** Primärtext: „NVIDIA API Trial Terms of Service“ (PDF von NVIDIA, Stand Oktober 2025), gelesen. Befunde:
+
+| Punkt | Inhalt der Bedingungen | Folge für Spec 3 |
+| --- | --- | --- |
+| Zweck | Zugang „for limited trial purposes only“, ohne Einsatz des Dienstes oder der erzeugten Inhalte in Produktion (1.2); ohne Subskription nur interner Test und Evaluation (1.4) | Der Dauerbetrieb von Planer und Recherche mit der kostenlosen Stufe ist **nicht** gedeckt, sobald er „Produktion“ ist. Die Grenze „Startphase“ muss als Test und Evaluation geführt werden (G1-S3-11) |
+| Umfang | Nutzung begrenzt nach Zahl der Zugriffe oder Dauer; Credits (laut Forum 1000 beim Start, bis 5000); danach braucht es eine Subskription (1.4) | Die Grenze 500 pro Tag ist **unsere** Vorsicht, keine Zusage von NVIDIA. Das Tageslimit kann früher enden (Credits) und der Zugang ganz (Trial endet). Die Zahl „bis zu 40 pro Minute“ steht nicht in den Bedingungen (nur in Foren); CLD-05 muss mit Ablehnung durch den Anbieter (HTTP 429) rechnen |
+| Eingaben | Keine vertraulichen oder sensiblen Daten, keine Personendaten, keine Zahlungsdaten (2.6, 4.3) | deckt sich mit „nur SK0“; auch SK1 bleibt draußen |
+| Verwendung der Eingaben | NVIDIA darf Eingaben und Ergebnisse zur Verbesserung seiner Produkte „einschließlich KI-Modelle“ verwenden und protokolliert Nutzung für Sicherheit (3.3) | SK0 muss wirklich **öffentlich** sein. Ein Entwurf, der später nicht für Dritte gedacht ist, ist kein SK0. Das gehört in die GateWay-Beschreibung von SK0 (G1-S3-12) |
+| Weiteres | Vorabversionen ohne Gewähr (1.3); Schiedsklausel (14) | Verfügbarkeit nicht zugesichert; CLD-07 gilt auch für den Ausfall |
+
+**Mammouth.** Primärquelle ist nur die API-Dokumentation (`info.mammouth.ai/docs/api-quick-start`), gelesen. Die Nutzungsbedingungen, die Datenschutzseite und die Auftragsverarbeitung liegen hinter der Anmeldung oder waren nicht abrufbar; **nicht geprüft**. Was die API-Doku sagt:
+
+- Basis-URL `https://api.mammouth.ai/v1`, Anmeldung mit Bearer-Schlüssel, Endpunkte `POST /v1/chat/completions` (OpenAI-kompatibel), `POST /v1/embeddings`, `GET /key/info` (verbrauchte Credits je Schlüssel).
+- Abo-Credits für die API monatlich: Starter 2 $, Standard 4 $, Expert 10 $ (in Dollar, nicht Euro); zusätzliche Credits kaufbar; die Doku nennt „nie mehr als der angezeigte Preis“ als Obergrenze. Ratenlimits nennt sie nicht (nur 429 als Fehler).
+- Modellliste im „Model Explorer“, nicht über eine feste Liste. Das Muster für das Schlüsselformat nennt sie nicht.
+- Mammouth leitet an Modelle fremder Hersteller weiter; was diese mit Eingaben tun, steht laut Doku auf einer Seite „Privacy with model providers“, die ich nicht lesen konnte. Dritte Quellen nennen Löschung von Protokollen nach höchstens 30 Tagen und kein Training mit Eingaben; das ist **nicht bestätigt**.
+
+Folgen für die Spec: (1) Das Guthaben ist abfragbar (`GET /key/info`); damit ist die Euro-Grenze für Mammouth ohne Schätzung prüfbar (CLD-05), ist aber ein weiterer Netzzugriff (Aktion `cloud_probe`, GA-06). (2) Die Währung ist Dollar; „0 € extra“ heißt in der Regeldatei: Credits, die das Abo enthält, kein Zukauf. (3) Vor dem ersten Mammouth-Aufruf liest der Vorarbeiter Nutzungsbedingungen und „Privacy with model providers“ nach Anmeldung (G1-S3-13).
+
+Neue Gates aus der Prüfung:
+
+| Gate | Entscheidung, die der Captain trifft | Empfehlung |
+| --- | --- | --- |
+| G1-S3-11 | NVIDIA wird in der Startphase ausdrücklich als Test und Evaluation geführt (Prototyp-Zweck); ein Dauerbetrieb im Alltag braucht vorher eine Subskription oder einen anderen Anbieter. Diese Einordnung steht in der Spec und im Labor (LAB-04) | ja |
+| G1-S3-12 | SK0 bedeutet für die Cloud „öffentlich, ohne Rücksicht auf Verwendung durch den Anbieter“: Entwürfe und interne Texte gelten nicht als SK0, auch wenn kein Merkmal anschlägt (Text in `gateway/wissen.py`, Gate in Stufe 2) | ja |
+| G1-S3-13 | Mammouth erst nach Lesen von Nutzungsbedingungen und Datenschutzseite (nach Anmeldung) in den Startbestand; Freigabe als eigenes Gate | ja |
+
+#### Nicht geprüft
+
+Kein Testlauf (`pytest`, `uix_check`), keine Browserprüfung, kein Cloud-Aufruf; `local_config/` und `cloud_keys.json` nicht geöffnet. Nicht gelesen: `desk/events.py`, `desk/decisions.py`, `provider_health`, die Tests im Einzelnen, der Wortlaut der Regeln in `docs/ENTWICKLUNG.md`, Preislisten; Mammouth-Nutzungsbedingungen und -Datenschutzseite (nicht abrufbar, siehe Prüfung der Nutzungsbedingungen).
 
 ## Spec 4 – Oberfläche: die Paperclip-Shell (D)
 
