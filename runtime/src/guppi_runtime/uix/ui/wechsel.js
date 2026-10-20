@@ -39,11 +39,11 @@
     const api = CORE_API;
     const el = (tag, cls, text)=>{ const n = document.createElement(tag); if(cls) n.className = cls; if(text != null) n.textContent = text; return n; };
 
-    const chip = el('button', 'sx-chip'); chip.type = 'button'; chip.title = 'Oberfläche wechseln (Alt+S)';
+    const chip = el('button', 'sx-chip sx-umschalter'); chip.type = 'button'; chip.title = 'Oberfläche wechseln (Alt+S)';
     chip.setAttribute('aria-label', 'SEDRA – Oberfläche wechseln, Darstellung, Schrift'); chip.setAttribute('aria-haspopup', 'menu'); chip.setAttribute('aria-expanded', 'false');
     chip.append(el('span', 'sx-chip-mark', 'S'), el('span', 'sx-chip-text', manifest.shell.name || manifest.shell.id));
 
-    const panel = el('div', 'sx-panel'); panel.setAttribute('role', 'menu'); panel.hidden = true;
+    const panel = el('div', 'sx-panel sx-umschalter-panel'); panel.setAttribute('role', 'menu'); panel.hidden = true;
     const head = el('div', 'sx-head'); head.append(el('b', null, 'SEDRA'), el('small', null, 'Oberfläche: ' + (manifest.shell.name || manifest.shell.id)));
     const list = el('div', 'sx-list');
     const look = el('div', 'sx-look');
@@ -92,7 +92,8 @@
     });
     document.addEventListener('click', e=>{ if(!panel.hidden && !panel.contains(e.target) && e.target !== chip && !chip.contains(e.target)) close(); });
 
-    const host = el('div', 'sx-host'); host.append(panel, chip);
+    const rek = mountRekorder();
+    const host = el('div', 'sx-host'); host.append(rek.panel, rek.chip, panel, chip);
     document.body.append(host);
     return {chip, panel, open, close, fill};
   }
@@ -129,6 +130,88 @@
     return box;
   }
   if(typeof document !== 'undefined') setMenuSeite(menuSeite());          // beim Laden die gespeicherte Seite setzen
+
+
+  // Die Rekorder-Leiste: in jeder Shell gleich. Die Aufnahme läuft im Kern; die Leiste steuert und zeigt sie. Das Pult im Translator-Modus „Aufnahme“ ist ein eigenes Werkzeug.
+  // Start ist der Aufnahme-Modus der Fisch-Shell (Captain-Wunsch 20.10.2026); von dort oder aus jeder Shell über diese Leiste.
+  function mountRekorder(){
+    const mk = (tag, cls, text)=>{ const n = document.createElement(tag); if(cls) n.className = cls; if(text != null) n.textContent = text; return n; };
+    const chip = mk('button', 'sx-chip'); chip.type = 'button'; chip.setAttribute('aria-label', 'Rekorder – Aufnahme');
+    const punkt = mk('span', 'sx-chip-mark', '●'), chipText = mk('span', 'sx-chip-text', 'Rekorder');
+    chip.append(punkt, chipText);
+    const panel = mk('div', 'sx-panel sx-rekorder-panel'); panel.hidden = true;
+    const kopf = mk('div', 'sx-rek-kopf');
+    const kopfPunkt = mk('span', 'sx-rek-punkt'), kopfTitel = mk('b', null, 'Rekorder'), kopfZeit = mk('span', 'sx-rek-zeit', '00:00'), kopfStatus = mk('span', 'sx-rek-status', 'Bereit');
+    kopf.append(kopfPunkt, kopfTitel, kopfStatus, kopfZeit);
+    const titel = mk('input', 'sx-rek-titel'); titel.placeholder = 'Titel, z. B. Teamrunde';
+    const SEGS = 16, segs = [];
+    const pegel = mk('div', 'sx-rek-pegel'); pegel.setAttribute('aria-hidden', 'true');
+    for(let i = 0; i < SEGS; i++){ const b = mk('span'); b.style.height = (20 + Math.round(i * 80 / (SEGS - 1))) + '%'; if(i >= SEGS * 0.75) b.classList.add('hoch'); segs.push(b); pegel.append(b); }
+    // Empfindlichkeit des Pegels (nur die Anzeige; die Aufnahme bleibt unverändert). Die Wahl bleibt je Browser gemerkt.
+    const EMPF_KEY = 'sedra.rekorder.empfindlichkeit';
+    const empfRegler = mk('input', 'sx-rek-empf'); empfRegler.type = 'range'; empfRegler.min = '0'; empfRegler.max = '24'; empfRegler.step = '1';
+    let empfStart = 12; try{ const v = Number(localStorage.getItem(EMPF_KEY)); if(v >= 0 && v <= 24) empfStart = v; }catch(_err){}
+    empfRegler.value = String(empfStart); empfRegler.setAttribute('aria-label', 'Empfindlichkeit des Pegels');
+    empfRegler.addEventListener('input', ()=>{ try{ localStorage.setItem(EMPF_KEY, empfRegler.value); }catch(_err){} zeigen(); });
+    const empfZeile = mk('div', 'sx-rek-empfzeile'), empfText = mk('small', 'sx-rek-label', 'Empfindlichkeit');
+    empfZeile.append(empfText, empfRegler);
+    const info = mk('small', 'sx-foot', '');
+    const zeile = mk('div', 'sx-seg-group');
+    const knopf = (text, fn)=>{ const b = mk('button', 'sx-seg-btn', text); b.type = 'button'; b.addEventListener('click', fn); return b; };
+    // Das Pult der Leiste steuert die Aufnahme im Kern (sprache/kern.py): der Rechner nimmt auf, nicht die Seite. Ein Shell-Wechsel
+    // lädt die Seite neu; das Pult holt den Stand danach wieder ab.
+    let stand = {status: 'aus', sekunden: 0}, meldung = '';
+    const holen = async()=>{ try{ stand = await CORE_API('/api/sprache/kern/stand'); }catch(_err){} zeigen(); };
+    const tun = async(pfad, body)=>{
+      try{ return await CORE_API(pfad, {method: 'POST', body: body || {}}); }
+      catch(err){ meldung = err.message; return null; }
+      finally{ await holen(); }
+    };
+    // Ohne Titel bekommt die Aufnahme einen Namen aus dem, was gerade läuft: „Translator · Aufnahme 20.10. 12:30“
+    const autoTitel = ()=>{
+      const shell = ((document.querySelector('.sx-umschalter .sx-chip-text') || {}).textContent || '').trim();
+      const jetzt = new Date(), z = n=>String(n).padStart(2, '0');
+      return (shell ? shell + ' · ' : '') + 'Aufnahme ' + z(jetzt.getDate()) + '.' + z(jetzt.getMonth() + 1) + '. ' + z(jetzt.getHours()) + ':' + z(jetzt.getMinutes());
+    };
+    const starten = async()=>{
+      if(stand.status !== 'aus') return;
+      meldung = '';
+      if(await tun('/api/sprache/kern/start', {titel: titel.value.trim() || autoTitel(), sprache: 'de'})) titel.value = '';
+    };
+    const pausieren = ()=>{ meldung = ''; return tun(stand.status === 'pause' ? '/api/sprache/kern/weiter' : '/api/sprache/kern/pause'); };
+    const stoppen = async()=>{
+      meldung = '';
+      const a = await tun('/api/sprache/kern/stopp');
+      if(a){ meldung = 'Gesichert: „' + a.titel + '“'; zeigen(); }
+    };
+    const verwerfen = async()=>{ meldung = ''; if(await tun('/api/sprache/kern/verwerfen')){ meldung = 'Verworfen – nichts gespeichert.'; zeigen(); } };
+    holen();
+    // Abfragen nur, solange das Pult offen ist oder eine Aufnahme läuft – sonst keine Hintergrundaufrufe
+    setInterval(()=>{ if(!panel.hidden || stand.status !== 'aus') holen(); }, 1000);
+    zeile.append(knopf('Start', starten), knopf('Pause', pausieren), knopf('Stopp', stoppen), knopf('Verwerfen', verwerfen));
+    zeile.children[2].classList.add('stopp');
+    panel.append(kopf, titel, pegel, empfZeile, zeile, info);
+    const zeigen = ()=>{
+      const s = stand, rec = s.status === 'laeuft', pause = s.status === 'pause', lauft = rec || pause;
+      const m = Math.floor(s.sekunden || 0), zeit = String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+      chipText.textContent = lauft ? zeit : 'Rekorder';
+      punkt.classList.toggle('rec', rec); punkt.classList.toggle('pause', pause);
+      kopfPunkt.classList.toggle('rec', rec); kopfPunkt.classList.toggle('pause', pause);
+      kopfZeit.textContent = zeit;
+      kopfTitel.textContent = lauft && s.titel ? s.titel : 'Rekorder';
+      kopfStatus.textContent = rec ? 'Nimmt auf' : (pause ? 'Pause' : 'Bereit');
+      kopfStatus.className = 'sx-rek-status' + (rec ? ' rec' : (pause ? ' pause' : ''));
+      // Pegel aus dem Kern liegt in 0..1 für −60…0 dB; der Regler hebt die Anzeige um 0…24 dB an
+      const db = (s.pegel || 0) * 60 - 60 + Number(empfRegler.value);
+      const n = rec ? Math.round(Math.max(0, Math.min(1, (db + 60) / 60)) * SEGS) : 0;
+      segs.forEach((b, i)=>b.classList.toggle('on', i < n));
+      info.textContent = lauft ? (rec ? 'Die Aufnahme läuft im Kern – ein Shell-Wechsel unterbricht sie nicht.' : 'Pause – „Weiter“ setzt fort.') : (meldung || 'Bereit. Die Aufnahme läuft im Kern am Rechner.');
+      info.className = /kein_|Keine|nicht|ging|Nicht|Verwerfen/.test(info.textContent) && !lauft && meldung ? 'sx-note' : 'sx-foot';
+    };
+    chip.addEventListener('click', ()=>{ panel.hidden = !panel.hidden; });
+    zeigen();
+    return {chip, panel};
+  }
 
   root.sedraWechsel = {mount, entries, setScale, restoreScale, scales: SCALES, menuWahl, menuSeite, setMenuSeite, MENU_SEITEN};
   if(typeof module !== 'undefined' && module.exports) module.exports = {entries, scales: SCALES};

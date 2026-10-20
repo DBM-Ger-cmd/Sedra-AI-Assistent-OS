@@ -219,11 +219,11 @@ class Flows(unittest.TestCase):
     def test_the_switcher_is_in_every_shell_and_leads_to_the_overview(self):
         """B6-G-04 (Klaus 15.10.): in jeder Shell derselbe Knopf – Übersicht, andere Oberfläche, Darstellung, Schrift. Alt+S öffnet ihn."""
         def flow(page, wait):
-            self.assertTrue(page.query_selector('.sx-chip'), 'der Umschalter ist da')
-            self.assertFalse(page.is_visible('.sx-panel'), 'zu ist zu – auch sichtbar, nicht nur als Attribut')
+            self.assertTrue(page.query_selector('.sx-umschalter'), 'der Umschalter ist da')
+            self.assertFalse(page.is_visible('.sx-umschalter-panel'), 'zu ist zu – auch sichtbar, nicht nur als Attribut')
             self.assertEqual(page.evaluate("()=>document.documentElement.scrollWidth - document.documentElement.clientWidth"), 0, 'kein waagerechter Überlauf')
-            page.click('.sx-chip'); page.wait_for_timeout(600)
-            self.assertTrue(page.is_visible('.sx-panel'))
+            page.click('.sx-umschalter'); page.wait_for_timeout(600)
+            self.assertTrue(page.is_visible('.sx-umschalter-panel'))
             labels = page.evaluate("()=>[...document.querySelectorAll('.sx-item b')].map(b=>b.textContent)")
             self.assertEqual(labels[0], 'Übersicht der Oberflächen')
             self.assertTrue(any('Minimal' in l for l in labels) and any('GateWay Studio' in l for l in labels), labels)
@@ -232,21 +232,21 @@ class Flows(unittest.TestCase):
             self.assertEqual(page.evaluate("()=>document.documentElement.dataset.theme + '/' + document.documentElement.dataset.scale"), 'nacht/gross')
             self.assertGreaterEqual(float(page.evaluate("()=>getComputedStyle(document.body).fontSize")[:-2]), 16, 'Groß wirkt auf die Grundschrift')
             page.keyboard.press('Escape'); page.wait_for_timeout(200)
-            self.assertTrue(page.evaluate("()=>document.querySelector('.sx-panel').hidden"), 'Esc schließt')
+            self.assertTrue(page.evaluate("()=>document.querySelector('.sx-umschalter-panel').hidden"), 'Esc schließt')
             page.keyboard.press('Alt+s'); page.wait_for_timeout(300)
-            self.assertFalse(page.evaluate("()=>document.querySelector('.sx-panel').hidden"), 'Alt+S öffnet')
+            self.assertFalse(page.evaluate("()=>document.querySelector('.sx-umschalter-panel').hidden"), 'Alt+S öffnet')
             page.click('.sx-item:has-text("Übersicht der Oberflächen")')
             page.wait_for_selector('.st-head-text', timeout=15000)      # der Wechsel lädt die Start-Shell neu; auf langsamen Rechnern dauert das über 2,5 s
             self.assertTrue(page.query_selector('.st-head-text'), 'die Übersicht der Oberflächen ist da')
-            self.assertFalse(page.query_selector('.sx-chip'), 'in der Übersicht gibt es den Umschalter nicht – sie ist selbst die Wahl')
+            self.assertFalse(page.query_selector('.sx-umschalter'), 'in der Übersicht gibt es den Umschalter nicht – sie ist selbst die Wahl')
             self.assertEqual(page.evaluate("()=>document.documentElement.dataset.scale"), 'gross', 'die Schriftwahl bleibt über das Neuladen')
         self.run_in('cockpit', flow)
 
     def test_the_switcher_also_sits_in_a_shell_from_vorgabe(self):
         def flow(page, wait):
-            self.assertTrue(page.query_selector('.sx-chip'))
-            self.assertIn('GateWay Studio', page.evaluate("()=>document.querySelector('.sx-chip-text').textContent"))
-            page.click('.sx-chip'); page.wait_for_timeout(600)
+            self.assertTrue(page.query_selector('.sx-umschalter'))
+            self.assertIn('GateWay Studio', page.evaluate("()=>document.querySelector('.sx-umschalter .sx-chip-text').textContent"))
+            page.click('.sx-umschalter'); page.wait_for_timeout(600)
             self.assertTrue(any('Cockpit' in l for l in page.evaluate("()=>[...document.querySelectorAll('.sx-item b')].map(b=>b.textContent)")))
         self.run_in('gateway-studio', flow)
 

@@ -12,6 +12,12 @@ tool:
   entry: {js: tool.js, css: tool.css}
   api:
     - GET /api/sprache/aufnahmen
+    - GET /api/sprache/kern/stand                    # der Stand der Aufnahme im Kern (überlebt den Shell-Wechsel)
+    - POST /api/sprache/kern/start                   # die Aufnahme läuft im Kern, nicht im Browser
+    - POST /api/sprache/kern/pause
+    - POST /api/sprache/kern/weiter
+    - POST /api/sprache/kern/stopp
+    - POST /api/sprache/kern/verwerfen
     - POST /api/sprache/aufnahme                     # read-only: der Record mit den Daten (base64) zum Abspielen
     - POST /api/sprache/aufnahme/beginnen            # ui/sprache.js ruft diese drei mit der api() des Werkzeugs
     - POST /api/sprache/aufnahme/stueck

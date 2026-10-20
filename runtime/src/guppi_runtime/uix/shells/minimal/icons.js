@@ -34,7 +34,7 @@
     haus:       ['Übersicht',  ['M3 11l9-7l9 7', 'M5 10v10h5v-6h4v6h5V10']],
     gateway:    ['KI GateWay', ['M12 3l8 3v6c0 4.5-3.4 8.1-8 9c-4.6-.9-8-4.5-8-9V6z', 'M9 12h6', 'M12 9v6']],
     planung:    ['Planungstisch', ['M3 9h18', 'M5 9v10', 'M19 9v10', 'M8 5h8', 'M12 5v4', 'M9 14h6']],   // ein Tisch mit Lampe (19.10.)
-    fisch:      ['Fisch',      ['M3 12c3-4 7-6 11-6l5 4-5 4c-4 0-8-2-11-6z', 'M14 6l6 6-6 6', 'M8 11h.5']],   // Übersetzer: der Fisch (19.10.)
+    fisch:      ['Translator',      ['M3 12c3-4 7-6 11-6l5 4-5 4c-4 0-8-2-11-6z', 'M14 6l6 6-6 6', 'M8 11h.5']],   // Übersetzer: der Fisch (19.10.)
     transkript: ['Transkript', ['M5 4h14v16H5z', 'M8 9h8', 'M8 13h8', 'M8 17h5']],
     aufnahme:   ['Rekorder',   ['M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z', 'M6 11a6 6 0 0 0 12 0', 'M12 17v4', 'M9 21h6']],   // ein Mikrofon (19.10.)
     plus:       ['Neu',        ['M12 5v14', 'M5 12h14']]

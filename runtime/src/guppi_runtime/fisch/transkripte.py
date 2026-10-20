@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 
 STATUS = ('entwurf', 'geprueft', 'freigegeben')
-FORMATE = ('txt', 'srt', 'vtt', 'json')
+FORMATE = ('txt', 'srt', 'vtt', 'json', 'md')
 MAX_TEXT = 400_000
 MAX_TITEL = 120
 SPRACHEN = ('de', 'en', 'fr', 'es', 'it')
@@ -116,10 +116,30 @@ def export_json(t, cues):
     return json.dumps(doc, ensure_ascii=False, sort_keys=True, indent=2) + '\n'
 
 
+def _mmss(sek):
+    return f"{int(sek // 60):02d}:{int(sek % 60):02d}"
+
+
+def export_md(t, cues, erk=None):
+    """Das Protokoll ohne KI (Markdown): Kopf, Erkenntnisse nur wenn gelesen, dann die Abschrift mit Zeiten. Ohne Modell entsteht nichts dazu."""
+    kopf = [f"# {t['titel']}", '', f"- Sprache: {t['sprache']}", f"- Quelle: {t.get('quelle') or '–'}", f"- Fassung: {fassung(t)['version']} ({t['status']})", '']
+    if erk:
+        kopf += [f"## Erkenntnisse (gelesen aus Fassung {erk.get('version')}, Modell {erk.get('model') or '–'})", '']
+        kopf += ['**Zusammenfassung:** ' + (erk.get('zusammenfassung') or '–'), '']
+        for titel, liste in (('Entscheidungen', erk.get('entscheidungen') or []), ('Offene Fragen', erk.get('offen') or []), ('Aufgaben', erk.get('aufgaben') or [])):
+            kopf += [f"**{titel}:**"] + [f"- {x}" for x in liste] + ['- keine' if not liste else '', '']
+    else:
+        kopf += ['## Erkenntnisse', '', 'Noch keine – dieses Protokoll ist ohne KI erstellt.', '']
+    kopf += ['## Abschrift', '']
+    kopf += [f"[{_mmss(c['start'])}–{_mmss(c['end'])}] {c['text']}" for c in cues]
+    return '\n'.join(kopf) + '\n'
+
+
 def exportieren(t, fmt):
     """Der Export einer Fassung – nie ein Mapping, nie eine Änderung am Record (ADR-009). Freigegeben: die freigegebene Fassung."""
     if fmt not in FORMATE: raise ValueError('format_unbekannt')
     cues = fassung(t)['cues']
+    if fmt == 'md': return export_md(t, cues, t.get('erkenntnisse') if t.get('erkenntnisse') and t['erkenntnisse'].get('version') == fassung(t)['version'] else None)
     return {'txt': export_txt, 'srt': export_srt, 'vtt': export_vtt}[fmt](cues) if fmt != 'json' else export_json(t, cues)
 
 

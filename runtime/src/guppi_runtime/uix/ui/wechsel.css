@@ -20,3 +20,27 @@
 .sx-foot{color:var(--muted);font-size:var(--size-xs)}
 .sx-note{color:var(--bad);font-size:var(--size-small)}
 @media print{.sx-host{display:none}}
+/* Rekorder der Leiste: der rote Punkt zeigt die laufende Aufnahme, Pause ist gelb, der Pegel zeigt den Empfang */
+.sx-chip-mark.rec{background:var(--bad);color:var(--accent-text)}
+.sx-chip-mark.pause{background:var(--warn);color:var(--accent-text)}
+.sx-rekorder-panel{width:300px;display:flex;flex-direction:column;gap:10px}
+.sx-rek-kopf{display:flex;align-items:center;gap:8px}
+.sx-rek-kopf b{flex:1}
+.sx-rek-punkt{width:12px;height:12px;border-radius:50%;background:var(--line);border:2px solid var(--muted)}
+.sx-rek-punkt.rec{background:var(--bad);border-color:var(--bad)}
+.sx-rek-punkt.pause{background:var(--warn);border-color:var(--warn)}
+.sx-rek-zeit{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.sx-rek-status{font-size:var(--size-xs);padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.sx-rek-status.rec{color:var(--bad);border-color:var(--bad)}
+.sx-rek-status.pause{color:var(--warn);border-color:var(--warn)}
+.sx-rek-titel{width:100%;box-sizing:border-box;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:15px}
+.sx-rek-titel::placeholder{color:var(--muted);opacity:1}
+.sx-rek-titel:focus{outline:2px solid var(--accent);outline-offset:1px}
+.sx-rek-pegel{display:flex;align-items:flex-end;gap:3px;height:30px;padding:4px;border-radius:8px;background:var(--line)}
+.sx-rek-pegel span{flex:1;border-radius:2px;background:var(--panel-2);opacity:.6}
+.sx-rek-pegel span.on{background:var(--ok);opacity:1}
+.sx-rek-pegel span.on:nth-child(n+9){background:var(--warn)}
+.sx-rek-pegel span.on:nth-child(n+12){background:var(--bad)}
+.sx-rekorder-panel .sx-seg-btn.stopp{color:var(--bad)}
+.sx-rek-empfzeile{display:flex;align-items:center;gap:10px}
+.sx-rek-empf{flex:1;accent-color:var(--accent)}

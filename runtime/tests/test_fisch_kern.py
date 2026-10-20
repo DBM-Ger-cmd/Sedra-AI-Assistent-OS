@@ -114,6 +114,28 @@ class ThroughTheHub(unittest.TestCase):
         self.assertEqual((out['status'], out['uebersetzung']), ('completed', 'Wir liefern Montag.'))
         self.assertIn('FISCH_UEBERSETZT', [e['event_type'] for e in self.hub.audit_view()['events']])
 
+    def test_erkenntnisse_with_a_fake_model_are_bound_to_the_version_and_protocol_works_without_it(self):
+        made = self.hub.fisch.transkript_import({'text': SRT, 'titel': 'Kundengespräch', 'sprache': 'de', 'quelle': 'gespraech.srt'})
+        tid = made['id']
+        before = self.hub.fisch.transkript({'id': tid})
+        self.assertEqual(self.hub.fisch.transkript_erkenntnisse({'id': tid})['status'], 'no_model')
+        self.assertIsNone(self.hub.fisch.transkript({'id': tid})['erkenntnisse'], 'ohne Modell bleibt der Record unverändert')
+        md_ohne = self.hub.fisch.transkript_export({'id': tid, 'format': 'md'})['inhalt']
+        self.assertIn('ohne KI erstellt', md_ohne)
+        self.assertIn('[00:01–00:03] Guten Morgen', md_ohne)
+        self.assertEqual(before['cues'], self.hub.fisch.transkript({'id': tid})['cues'])
+        class FakeServer:
+            def loaded_models(self): return [{'identifier': 'fake', 'modelKey': 'fake'}]
+        self.hub.runtime.llama_server = FakeServer()
+        self.hub.runtime.control.execute = lambda m, r: {'status': 'completed', 'model_result': {'content': 'ZUSAMMENFASSUNG: Es ging um Montag.\nENTSCHEIDUNGEN:\n- keine\nOFFENE FRAGEN:\n- Wann?\nAUFGABEN:\n- keine', 'finish_reason': 'stop'}}
+        out = self.hub.fisch.transkript_erkenntnisse({'id': tid})
+        self.assertEqual(out['status'], 'completed')
+        self.assertEqual(out['erkenntnisse']['offen'], ['Wann?'])
+        self.assertEqual(out['erkenntnisse']['version'], 1)
+        md_mit = self.hub.fisch.transkript_export({'id': tid, 'format': 'md'})['inhalt']
+        self.assertIn('Es ging um Montag.', md_mit)
+        self.assertIn('Wann?', md_mit)
+
     def test_import_pseudonymize_release_export_through_the_hub(self):
         made = self.hub.fisch.transkript_import({'text': SRT, 'titel': 'Kundengespräch', 'sprache': 'de', 'quelle': 'gespraech.srt'})
         tid = made['id']

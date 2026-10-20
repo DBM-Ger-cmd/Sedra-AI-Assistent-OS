@@ -1,4 +1,4 @@
-# Werkzeug „Transkript“ (Fisch, 19.10.2026): Transkripte importieren (TXT/SRT/VTT), durchsuchen, pseudonymisieren, prüfen,
+# Werkzeug „Transkript“ (Translator, 19.10.2026): Transkripte importieren (TXT/SRT/VTT), durchsuchen, pseudonymisieren, prüfen,
 # freigeben (Golden Record) und exportieren – nach LocalScribe und VoiceBrief. Sprache → Text macht der Kern (Rekorder); SEDRA liest Erkenntnisse.
 tool:
   id: transkript

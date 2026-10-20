@@ -9,6 +9,7 @@ from pathlib import Path
 
 from ..util import utcnow
 from . import aufnahmen as au
+from . import kern
 from . import stt
 
 
@@ -19,6 +20,7 @@ class SpracheHub:
         self.which = shutil.which          # Tests setzen eine Attrappe
         self.run = None                    # Tests setzen eine Attrappe für subprocess.run
         self.laeufe = {}
+        self.kern = kern.Kern(self.store)  # die Aufnahme im Kern: läuft weiter, wenn die Seite neu lädt
 
     # ---------------------------------------------------------------- Auskunft
     def provider(self):
@@ -32,6 +34,29 @@ class SpracheHub:
     def aufnahmen(self, payload=None):
         """GET /api/sprache/aufnahmen – die Liste (ohne Daten) und die Auskunft zum Provider."""
         return {'aufnahmen': self.store.liste(), 'stt': self.provider()}
+
+    # ---------------------------------------------------------------- Aufnahme im Kern (überlebt den Shell-Wechsel)
+    def kern_stand(self, payload=None):
+        """GET /api/sprache/kern/stand – läuft eine Aufnahme im Kern, mit Zeit, Pegel und Stücken."""
+        return self.kern.stand()
+
+    def kern_start(self, payload):
+        """POST /api/sprache/kern/start {titel, sprache} – das Mikrofon des Rechners nimmt auf; ohne Mikrofon sagt der Kern das."""
+        p = payload or {}
+        out = self.kern.start(p.get('titel'), str(p.get('sprache') or 'de'), utcnow())
+        self.hub.runtime.audit.append('SPRACHE_KERN_START', component='sprache', payload={'id': out.get('id'), 'sprache': p.get('sprache') or 'de'})
+        return out
+
+    def kern_pause(self, payload=None): return self.kern.pause()
+    def kern_weiter(self, payload=None): return self.kern.weiter()
+
+    def kern_stopp(self, payload=None):
+        """POST /api/sprache/kern/stopp – die Aufnahme wird als WAV-Record gesichert; Antwort: der Record."""
+        a = self.kern.stopp(utcnow())
+        self.hub.runtime.audit.append('SPRACHE_AUFNAHME_FERTIG', component='sprache', payload={'id': a['id'], 'dauer': a['dauer'], 'groesse': a['groesse'], 'weg': 'kern'})
+        return au.kurz(a)
+
+    def kern_verwerfen(self, payload=None): return self.kern.verwerfen()
 
     # ---------------------------------------------------------------- Aufnehmen
     def beginnen(self, payload):

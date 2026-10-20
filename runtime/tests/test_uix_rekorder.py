@@ -48,6 +48,7 @@ class InTheBrowser(unittest.TestCase):
             def execute(mission, request):
                 return {'status': 'completed', 'model_result': {'content': 'ZUSAMMENFASSUNG:\nDie Lieferung ist für Montag vereinbart.\nENTSCHEIDUNGEN:\n- Lieferung Montag\nOFFENE FRAGEN:\n- Uhrzeit\nAUFGABEN:\n- Kunden anrufen und Uhrzeit klären', 'finish_reason': 'stop'}}
             hub.runtime.llama_server = FakeServer(); hub.runtime.control.execute = execute
+            import _kern_fake; _kern_fake.installieren(hub)
             with sync_playwright() as pw:
                 b = pw.chromium.launch(args=['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required'])
                 ctx = b.new_context(viewport={'width': 1400, 'height': 900}, permissions=['microphone'])
@@ -75,7 +76,7 @@ class InTheBrowser(unittest.TestCase):
                 rec = hub.sprache.aufnahmen()['aufnahmen']
                 self.assertEqual(len(rec), 1); self.assertEqual(rec[0]['titel'], 'Kundengespräch Montag')
                 self.assertGreater(rec[0]['groesse'], 0); self.assertGreater(rec[0]['dauer'], 4)
-                self.assertTrue((Path(hub.project_root) / 'sprache' / 'aufnahmen' / (rec[0]['id'] + '.webm')).is_file())
+                self.assertTrue((Path(hub.project_root) / 'sprache' / 'aufnahmen' / (rec[0]['id'] + '.wav')).is_file())
                 # ohne Provider: kein Knopf, der so tut; die Abschrift von Hand wird ein Transkript
                 self.assertFalse(page.query_selector('.t-rk-karte button:has-text("Sprache → Text")'))
                 page.click('.t-rk-karte button:has-text("Abspielen")'); page.wait_for_selector('.t-rk-audio audio', timeout=10000)

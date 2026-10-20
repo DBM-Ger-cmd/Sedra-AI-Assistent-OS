@@ -61,7 +61,7 @@
       const text = this.text.value.trim();
       if(!text){ this.out.replaceChildren(d().el('div', 's-note', 'Erst eine Nachricht eingeben.')); return; }
       this.go.disabled = true;
-      this.out.replaceChildren(d().el('div', 's-note t-ue-wartet', 'Der Fisch denkt nach …'));
+      this.out.replaceChildren(d().el('div', 's-note t-ue-wartet', 'Der Translator denkt nach …'));
       try{
         const body = {text, von: this.vonPick.value || this.von, nach: this.nachPick.value || this.nach, ton: this.ton.value, tiefe: this.tiefe.value};
         const out = await this.ctx.api('/api/fisch/uebersetzen', {method: 'POST', body});

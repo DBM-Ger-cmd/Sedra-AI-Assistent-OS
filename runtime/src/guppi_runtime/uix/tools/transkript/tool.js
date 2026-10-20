@@ -109,7 +109,7 @@
       }else{
         verbs.append(d().button('Freigabe zurücknehmen', ()=>this.tun('/api/fisch/transkript/status', {id: t.id, status: 'entwurf'}, 'Der Record wird wieder ein Entwurf.'), ''));
       }
-      ['txt', 'srt', 'vtt', 'json'].forEach(f=>verbs.append(d().button('Export ' + f.toUpperCase(), ()=>this.exportieren(f), '')));
+      ['txt', 'srt', 'vtt', 'json', 'md'].forEach(f=>verbs.append(d().button((f === 'md' ? 'Protokoll (MD)' : 'Export ' + f.toUpperCase()), ()=>this.exportieren(f), '')));
       box.append(verbs);
       this.meldung = d().el('div', 't-tk-meldung'); box.append(this.meldung);
       box.append(this.erkenntnisse(t));

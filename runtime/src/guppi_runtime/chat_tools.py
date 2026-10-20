@@ -115,8 +115,8 @@ PLACES = {
     'project': ('Projekt und Dateien', 'Dateien des Projekts'),
     'gateway': ('KI GateWay', 'Anfrage prüfen, Entwurf, Prüfung'),
     'planung': ('Planungstisch', 'mit einem Assistenten Ziele und Aufträge festlegen'),
-    'uebersetzung': ('Übersetzer', 'eine Nachricht für eine andere Rolle (Fisch)'),
-    'transkript': ('Transkripte', 'importieren, suchen, freigeben, exportieren (Fisch)'),
+    'uebersetzung': ('Übersetzer', 'eine Nachricht für eine andere Rolle (Translator)'),
+    'transkript': ('Transkripte', 'importieren, suchen, freigeben, exportieren (Translator)'),
     'aufnahme': ('Rekorder', 'aufnehmen, abspielen, Sprache → Text (Kern)'),
 }
 # Der Planungstisch (19.10.2026): nur die Werkzeuge, mit denen ein Assistent plant – lesen, wo die Firma steht, und vorschlagen

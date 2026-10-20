@@ -47,7 +47,7 @@
       // Quellen
       const quellen = d().el('div', 't-nw-quellen');
       quellen.append(d().el('h5', 's-head', 'Quellen für diesen Brief'),
-                     d().el('small', 's-muted', 'Der Fisch hat kein Netz: er liest nur, was du hier hineinlegst – Meldungen, Mails, Notizen. Jede Meldung nennt ihre Quelle mit Namen.'));
+                     d().el('small', 's-muted', 'Der Translator hat kein Netz: er liest nur, was du hier hineinlegst – Meldungen, Mails, Notizen. Jede Meldung nennt ihre Quelle mit Namen.'));
       this.qName = d().el('input'); this.qName.placeholder = 'Name der Quelle, z. B. Pressemitteilung Firma A';
       this.qDatum = d().el('input'); this.qDatum.placeholder = 'Datum (frei)'; this.qDatum.size = 12;
       this.qText = d().el('textarea'); this.qText.rows = 4; this.qText.placeholder = 'Text der Quelle einfügen …';
@@ -107,7 +107,7 @@
     async briefErstellen(){
       if(!this.quellen.length){ this.out.replaceChildren(d().el('div', 's-note', 'Erst mindestens eine Quelle hineinlegen.')); return; }
       this.go.disabled = true;
-      this.out.replaceChildren(d().el('div', 's-note t-nw-wartet', 'Der Fisch liest die Quellen …'));
+      this.out.replaceChildren(d().el('div', 's-note t-nw-wartet', 'Der Translator liest die Quellen …'));
       try{
         const out = await this.ctx.api('/api/fisch/brief', {method: 'POST', body: {quellen: this.quellen, profil: this.profilLesen()}});
         this.out.replaceChildren(this.ergebnis(out));

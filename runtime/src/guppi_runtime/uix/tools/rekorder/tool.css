@@ -42,3 +42,15 @@
 .t-rk-abschrift{border:1px solid var(--line-soft);border-radius:var(--radius);padding:6px 10px;background:var(--panel-2)}
 .t-rk-abschrift summary{cursor:pointer;font-weight:600;font-size:var(--size-small)}
 .t-rk-audio audio{width:100%;max-width:520px}
+.t-rk-kopf{display:flex;align-items:center;gap:10px}
+.t-rk-kopf .t-rk-uhr{margin-left:auto}
+.t-rk-punkt{width:12px;height:12px;border-radius:50%;background:var(--line);border:2px solid var(--muted)}
+.t-rk-punkt.rec{background:var(--bad);border-color:var(--bad)}
+.t-rk-punkt.pause{background:var(--warn);border-color:var(--warn)}
+.t-rk-status{font-size:var(--size-xs);padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.t-rk-status.rec{color:var(--bad);border-color:var(--bad)}
+.t-rk-status.pause{color:var(--warn);border-color:var(--warn)}
+.t-rk-empfzeile{display:flex;align-items:center;gap:10px}
+.t-rk-empf{flex:1;accent-color:var(--accent)}
+.t-rk-label{color:var(--muted)}
+.t-rk-zuletzt{color:var(--muted)}

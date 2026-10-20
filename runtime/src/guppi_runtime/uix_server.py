@@ -3180,6 +3180,9 @@ def make_server(hub: UIXHub, port=0):
             # no '..', and only the file types the gateway allows.
             if self._module_file(path):
                 return
+            if path == '/uix/fenster/rekorder':     # der Rekorder in einem eigenen Fenster: die Aufnahme überlebt den Shell-Wechsel (Code, kein Daten)
+                self._send(200, (Path(__file__).parent / 'uix' / 'fenster' / 'rekorder.html').read_bytes(), 'text/html; charset=utf-8')
+                return
             frame = FRAME_PAGE.fullmatch(path)
             if frame:           # Stufe C: die Seite eines abgeschotteten Werkzeug-Rahmens; ohne Token, ohne Daten (siehe desk/gateway.frame_page)
                 page = hub.gateway.frame_page(frame.group(1))
@@ -3209,6 +3212,7 @@ def make_server(hub: UIXHub, port=0):
                     '/api/fisch/transkripte': hub.fisch.transkripte,        # read-only: die Transkripte und die Auskunft zum STT-Provider (Fisch)
                     '/api/sprache/status': hub.sprache.status,             # read-only: der STT-Provider dieses Rechners (Kern Sprache)
                     '/api/sprache/aufnahmen': hub.sprache.aufnahmen,       # read-only: die Aufnahmen (ohne Daten)
+                    '/api/sprache/kern/stand': hub.sprache.kern_stand,     # read-only: läuft eine Aufnahme im Kern (überlebt den Shell-Wechsel)
                     '/api/gateway/vorgaben': hub.gateway_vorgaben_liste,    # read-only: die gemerkten Vorgaben – das Werkzeug liest sie per GET (tool.yaml), bisher stand die Route nur unter POST
                     '/api/uix/vorgaben': hub.vorgaben_view,                 # read-only: die drei Vorlagen einer Shell aus Vorgabe (Build 17)
                     '/api/gateway/vorgaenge': hub.gateway_list,             # read-only: Vorgänge, Vorgaben, Textdateien des Projekts (Build 19)
@@ -3331,6 +3335,11 @@ def make_server(hub: UIXHub, port=0):
                     '/api/fisch/transkript/export': hub.fisch.transkript_export,
                     '/api/fisch/transkript/erkenntnisse': hub.fisch.transkript_erkenntnisse,   # SEDRA liest die Fassung: Zusammenfassung, Entscheidungen, Fragen, Aufgaben
                     '/api/sprache/aufnahme': hub.sprache.abspielen,                    # read-only: ein Record mit den Daten (Kern Sprache, 19.10.2026)
+                    '/api/sprache/kern/start': hub.sprache.kern_start,
+                    '/api/sprache/kern/pause': hub.sprache.kern_pause,
+                    '/api/sprache/kern/weiter': hub.sprache.kern_weiter,
+                    '/api/sprache/kern/stopp': hub.sprache.kern_stopp,
+                    '/api/sprache/kern/verwerfen': hub.sprache.kern_verwerfen,
                     '/api/sprache/aufnahme/beginnen': hub.sprache.beginnen,
                     '/api/sprache/aufnahme/stueck': hub.sprache.stueck,
                     '/api/sprache/aufnahme/beenden': hub.sprache.beenden,

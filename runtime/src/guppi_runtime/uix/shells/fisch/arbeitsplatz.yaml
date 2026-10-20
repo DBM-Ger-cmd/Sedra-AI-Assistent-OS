@@ -38,8 +38,8 @@ arbeitsplatz:
         id: alle
         title: Transkripte
   begriffe:
-    wolke: 'Die Eingabe der Fisch-Shell. Der Satz geht in den gewählten Modus; das Werkzeug macht daraus seine Arbeit.'
-    blase: 'Die Antwort der Fisch-Shell: das Werkzeug des Modus in einer Blase rechts vom Glas.'
+    wolke: 'Die Eingabe der Translator-Shell. Der Satz geht in den gewählten Modus; das Werkzeug macht daraus seine Arbeit.'
+    blase: 'Die Antwort der Translator-Shell: das Werkzeug des Modus in einer Blase rechts vom Glas.'
     golden record: 'Ein freigegebenes Transkript: die Fassung ist eingefroren, Export nennt sie; eine neue Fassung gibt es erst nach Zurücknahme.'
     erkenntnisse: 'Was SEDRA aus einer Fassung liest: Zusammenfassung, Entscheidungen, offene Fragen, Aufgaben – an die Fassung gebunden; aus einer Aufgabe wird ein Auftrag.'
     provider: 'Das Programm auf dem Rechner, das Sprache zu Text macht (whisperx, whisper). Fehlt es, sagt der Rekorder das und zeigt den Befehl.'

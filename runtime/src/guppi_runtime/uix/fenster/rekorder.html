@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SEDRA · Rekorder</title>
+<style>
+  :root{--bg:#0d174e;--panel:#1a2862;--line:#2c3d86;--text:#e8edff;--muted:#b4c2ec;--accent:#53ddd0;--bad:#ff6b5e;--deep:#080d33}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+  .box{padding:16px 18px;display:flex;flex-direction:column;gap:10px;height:100%;box-sizing:border-box}
+  .kopf{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+  .zeit{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+  .zeit.rot{color:var(--bad)}
+  .pegel{height:10px;border-radius:6px;background:var(--deep);overflow:hidden;border:1px solid var(--line)}
+  .pegel i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s linear}
+  .zeile{display:flex;gap:8px;flex-wrap:wrap}
+  button{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font:inherit;cursor:pointer}
+  button.p{background:var(--accent);color:var(--deep);border-color:var(--accent);font-weight:700}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .hinweis{font-size:13px;color:var(--muted)}
+  .fehler{color:var(--bad);font-size:13px}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="kopf">SEDRA · Rekorder</div>
+  <div class="zeit" id="zeit">00:00</div>
+  <div class="pegel"><i id="pegel"></i></div>
+  <div class="hinweis" id="zustand">Bereit. Die Aufnahme läuft in diesem Fenster weiter, auch wenn du die Shell wechselst.</div>
+  <div class="fehler" id="fehler"></div>
+  <div class="zeile">
+    <button class="p" id="start">Aufnahme starten</button>
+    <button id="pause" disabled>Pause</button>
+    <button id="stopp" disabled>Stopp</button>
+    <button id="verwerfen" disabled>Verwerfen</button>
+  </div>
+</div>
+<script src="/uix/ui/api.js"></script>
+<script src="/uix/ui/sprache.js"></script>
+<script>
+(function(){
+  // Die Aufnahme lebt in diesem eigenen Fenster. Der Shell-Wechsel lädt nur das Hauptfenster neu, dieses bleibt bestehen.
+  const api = window.sedraApi.forModule({kind: 'tool', id: 'rekorder'});
+  const kanal = ('BroadcastChannel' in window) ? new BroadcastChannel('sedra-rekorder') : null;
+  const $ = id => document.getElementById(id);
+  let griff = null, stand = {status: 'bereit', sekunden: 0, pegel: 0, id: ''}, titel = '', sprache = 'de', fehler = '';
+
+  function sende(typ, extra){ if(kanal) kanal.postMessage(Object.assign({typ, stand, fehler}, extra || {})); }
+  function zeigen(){
+    const s = stand, lauf = s.status === 'laeuft' || s.status === 'pause';
+    const m = Math.floor(s.sekunden || 0);
+    $('zeit').textContent = String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+    $('zeit').classList.toggle('rot', s.status === 'laeuft');
+    $('pegel').style.width = Math.round((s.pegel || 0) * 100) + '%';
+    $('zustand').textContent = ({bereit:'Bereit. Die Aufnahme läuft in diesem Fenster weiter, auch wenn du die Shell wechselst.',
+      laeuft:'Nimmt auf …', pause:'Pause', fertig:'Gespeichert im Projekt.', abgebrochen:'Verworfen.'})[s.status] || s.status;
+    $('fehler').textContent = fehler || '';
+    $('start').disabled = lauf;
+    $('pause').disabled = !lauf;
+    $('pause').textContent = s.status === 'pause' ? 'Weiter' : 'Pause';
+    $('stopp').disabled = !lauf;
+    $('verwerfen').disabled = !lauf;
+  }
+  function neuerStand(s){ stand = s; zeigen(); sende('stand'); }
+
+  async function start(t, sp){
+    if(griff) return;
+    titel = t || titel; sprache = sp || sprache; fehler = '';
+    if(!window.sedraSprache.kann().ok){ fehler = window.sedraSprache.kann().grund; zeigen(); sende('stand'); return; }
+    try{
+      griff = await window.sedraSprache.aufnehmen(api, {titel, sprache, onStand: neuerStand, onFehler: t=>{ fehler = t; zeigen(); sende('stand'); }});
+    }catch(err){ griff = null; fehler = err.message; zeigen(); sende('stand'); }
+  }
+  async function stoppen(){
+    if(!griff) return;
+    try{ await griff.stop(); }catch(err){ fehler = err.message; }
+    griff = null; zeigen(); sende('stand');
+  }
+  async function verwerfen(){
+    if(!griff) return;
+    await griff.abbrechen(); griff = null; zeigen(); sende('stand');
+  }
+
+  $('start').addEventListener('click', ()=>start(titel, sprache));
+  $('pause').addEventListener('click', ()=>{ if(!griff) return; stand.status === 'pause' ? griff.weiter() : griff.pause(); });
+  $('stopp').addEventListener('click', stoppen);
+  $('verwerfen').addEventListener('click', verwerfen);
+
+  // Befehle vom Hauptfenster (Leiste unten rechts)
+  if(kanal) kanal.onmessage = e=>{
+    const m = e.data || {};
+    if(m.typ === 'start') start(m.titel, m.sprache);
+    if(m.typ === 'pause' && griff) (stand.status === 'pause' ? griff.weiter() : griff.pause());
+    if(m.typ === 'stopp') stoppen();
+    if(m.typ === 'verwerfen') verwerfen();
+    if(m.typ === 'frage') sende('stand');
+  };
+  // Lebenszeichen: das Hauptfenster weiß, dass dieses Fenster da ist
+  setInterval(()=>sende('lebt'), 1000);
+  window.addEventListener('pagehide', ()=>{ if(kanal) kanal.postMessage({typ: 'weg'}); });
+  zeigen();
+  sende('bereit');
+})();
+</script>
+</body>
+</html>

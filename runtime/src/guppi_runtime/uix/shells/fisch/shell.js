@@ -1,4 +1,4 @@
-// Shell „Fisch“ (19.10.2026) – nach dem Translator-Fisch-Konzept v0.1: ein Goldfischglas, ein Goldfisch, die Eingabe als Wolke,
+// Shell „Translator“ (19.10.2026) – nach dem Translator-Fisch-Konzept v0.1: ein Goldfischglas, ein Goldfisch, die Eingabe als Wolke,
 // Antworten als Blasen; vier Modi: Übersetzen · News · Aufnahme · Transkript. Die Shell besitzt den Bildschirm und gibt den Werkzeugen Container;
 // sie kennt kein Werkzeug beim Namen (außer dem Gespräch, das der Vertrag nennt – es ist eine Schublade wie in Paperclip).
 // Der Satz aus der Wolke geht als `frage` in das Objekt des Modus; das Werkzeug des Modus macht daraus seine Arbeit.
@@ -10,13 +10,13 @@
 
   const MODI = [
     {id: 'uebersetzen', label: 'Übersetzen', hint: 'eine Nachricht für eine andere Rolle', object: {type: 'uebersetzung', id: 'wolke', title: 'Übersetzen'},
-     platzhalter: 'Was soll der Fisch für eine andere Rolle neu formulieren?'},
+     platzhalter: 'Was soll der Translator für eine andere Rolle neu formulieren?'},
     {id: 'news', label: 'News', hint: 'ein Brief aus deinen Quellen', object: {type: 'nachrichten', id: 'brief', title: 'Nachrichten'},
      platzhalter: 'Wofür interessierst du dich heute? (wird zu den Interessen des Briefs)'},
     {id: 'aufnahme', label: 'Aufnahme', hint: 'aufnehmen, Sprache → Text (Kern)', object: {type: 'aufnahme', id: 'rekorder', title: 'Rekorder'},
      platzhalter: 'Ein Titel für die nächste Aufnahme – Enter trägt ihn in den Rekorder ein'},
     {id: 'transkript', label: 'Transkript', hint: 'importieren, suchen, Erkenntnisse, freigeben', object: {type: 'transkript', id: 'alle', title: 'Transkripte'},
-     platzhalter: 'Wonach soll der Fisch im Transkript suchen?'}
+     platzhalter: 'Wonach soll der Translator im Transkript suchen?'}
   ];
   const KEY = 'sedra.fisch.modus';
 
@@ -53,7 +53,7 @@
     // ---- Kopf: Marke, die drei Modi, ein Hinweis
     kopf(){
       const kopf = d().el('header', 'fi-kopf');
-      kopf.append(d().el('div', 'fi-marke', 'Fisch'), d().el('small', 'fi-marke-sub', 'Bedeutung vor Stil · nichts erfunden · lokal'));
+      kopf.append(d().el('div', 'fi-marke', 'Translator'), d().el('small', 'fi-marke-sub', 'Bedeutung vor Stil · nichts erfunden · lokal'));
       this.el.modus = d().el('div', 'fi-modus'); this.el.modus.setAttribute('role', 'tablist'); this.el.modus.setAttribute('aria-label', 'Modus');
       MODI.forEach(m=>{
         const b = d().el('button', 'fi-modus-btn', m.label); b.type = 'button'; b.dataset.modus = m.id; b.title = m.hint; b.setAttribute('role', 'tab');
@@ -78,7 +78,7 @@
       this.el.glas = glas;
 
       const wolke = d().el('form', 'fi-wolke');
-      this.el.feld = d().el('textarea'); this.el.feld.rows = 3; this.el.feld.setAttribute('aria-label', 'Frage an den Fisch');
+      this.el.feld = d().el('textarea'); this.el.feld.rows = 3; this.el.feld.setAttribute('aria-label', 'Frage an den Translator');
       this.el.feld.onfocus = ()=>this.zustand('listening'); this.el.feld.onblur = ()=>{ if(this.el.fisch.dataset.zustand === 'listening') this.zustand('idle'); };
       this.el.feld.onkeydown = e=>{ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); this.senden(); } };
       const row = d().el('div', 'fi-wolke-row');
