@@ -70,26 +70,29 @@ Namensregel (Captain, 20.10.2026): Der Bauagent heißt jetzt SEDRA statt GUPPI. 
 
 ## Ist-Stand: Paperclip gegen SEDRA
 
-SEDRA hat für die meisten Paperclip-Systeme schon ein Gegenstück; die echten Lücken sind parallele Agenten, Agenten-Zuweisung mit Herzschlag, Budgets je Agent und die Cloud-Stufe. Die Tabelle beruht auf der GitHub-Doku von SEDRA (Stand 12.–15.10.2026, öffentlich bis Build 24; der lokale Stand ist neuer, etwa mit dem KI-Labor im Cockpit); der Vorarbeiter prüft jede Zeile gegen den lokalen Main Branch, bevor G1 erteilt wird.
+SEDRA hat für die meisten Paperclip-Systeme schon ein Gegenstück; die echten Lücken sind parallele Agenten, Agenten-Zuweisung mit Herzschlag, Budgets je Agent und die Gates der Cloud-Stufe. Die Tabelle wurde am 20.10.2026 vom Vorarbeiter Zeile für Zeile gegen den lokalen Stand geprüft (Branch `release-vorbereitung`, Commit `6e4b0c3`, Build 25; GitHub `main` steht auf dem Stand vom 16.10.2026) und mit G1-S0-a vom Captain freigegeben.
 
-Wichtig: Im Konzept `UIX_KOMMANDODECK_v1.md` hat der Captain schon entschieden, Paperclip „als Vorbild, nicht Einbau“ zu nutzen. Spec 0 baut darauf auf.
+Wichtig: Im Konzept `UIX_KOMMANDODECK_v1.md` hat der Captain schon entschieden, Paperclip „als Vorbild, nicht Einbau“ zu nutzen. Spec 0 baut darauf auf. Geprüfte Paperclip-Kopie: Pakete `cli`, `server`, `ui`, `shared`, `db` in Version 0.3.1 (die Wurzel-`package.json` hat keine Version), neueste Release-Notiz `v2026.916.1`, lokale Kopie vom 20.10.2026.
 
-| Paperclip-System | Gegenstück in SEDRA | Stand (vermutet) | Spec |
+| Paperclip-System | Gegenstück in SEDRA | Stand (geprüft 20.10.2026) | Spec |
 | --- | --- | --- | --- |
-| Org-Chart & Agenten | `agent_manager/`: Vorlagen, Instanzen, Crews, `hire`, `promote` | teilweise – Berichtslinien und Vorgesetzte prüfen | 1 |
-| Aufgaben mit atomarem Checkout | `core/mission.py`, `mission_lock.py`, Desk-Objekt `task` | teilweise – Zuweisung an Agent, Blocker, Kommentare fehlen vermutlich | 1 |
-| Heartbeat-Ausführung | `jobs/job_supervisor.py` (Warteschlange, Leases, Herzschlag, Stillstand) | teilweise – weckt Jobs, nicht Agenten bei Zuweisung | 1 |
-| Parallele Ausführung | `jobs/testlab.py` GPU-Lease (ein Prozess), 1 Slot je Rezept, `resource_scheduler.py` | fehlt | 2 |
-| Adapter | `models/router.py`, `llamacpp.py`, `openai_local.py`, `lmstudio.py` | lokal vorhanden; Cloud im GateWay nur simuliert | 3 |
-| Governance & Freigaben | `core/guard.py`, `permission_levels.py`, `desk/decisions.py` | vorhanden, strenger als Paperclip | – |
-| Budget & Kosten | `jobs/token_policy.py`, Werkzeug `costs` | teilweise – kein Budget je Agent oder Aufgabe mit Hard-Stop | 1, 3 |
-| Routinen & Zeitpläne | Objekttyp `routine` im Vertrag; Ketten wie `night_queue_*.py` | fehlt – Eintrag in Build 24 entfernt, weil kein Werkzeug dahinter war | 1 |
-| Activity & Events | `core/audit.py` (hash-verkettet), `desk/events.py` (SSE) | vorhanden | – |
+| Org-Chart & Agenten | `agent_manager/`: Vorlagen, Instanzen, Crews, `hire`, `promote` | teilweise – es gibt weder `reports_to` noch einen Vorgesetzten | 1 |
+| Aufgaben mit atomarem Checkout | `core/mission.py` (12 Zustände), `core/mission_lock.py` (Dateisperre des Betriebssystems), Desk-Objekt `task` | teilweise – keine Zuweisung an einen Agenten, keine Blocker, keine Kommentare | 1 |
+| Heartbeat-Ausführung | `jobs/job_supervisor.py` (Warteschlange, Claim, Lease, Herzschlag, Stillstand) | teilweise – weckt Jobs, nicht Agenten bei Zuweisung | 1 |
+| Parallele Ausführung | `jobs/testlab.py` GPU-Lease (ein Prozess) und Tabelle `reservations` mit Priorität; `llama_server_runtime.py` startet schon mit `-np 1..8`; `resource_scheduler.py` | teilweise – Grundlage da, kein Rezept setzt `parallel`, ein Slot-Scheduler fehlt | 2 |
+| Adapter | lokal: `models/router.py`, `llamacpp.py`, `openai_local.py`, `lmstudio.py`; Cloud: `models/cloud_api.py` (OpenAI-kompatibel und Anthropic, seit 16.10.2026), `cloud_settings.py`, `config/cloud_providers.yaml` (Standard aus), Inhaltsschutz `core/content_guard.py` | vorhanden – Cloud ist echt, nicht simuliert; die README („keine Cloud-Modelle“) ist veraltet | 3 |
+| Governance & Freigaben | `core/guard.py` (28 Aktionen in `architecture/…/core/guard/guard_rules.yaml`), `permission_levels.py`, `desk/decisions.py` | vorhanden, strenger als Paperclip; noch keine Aktionen für die Orchestrierung | – |
+| Budget & Kosten | `jobs/token_policy.py` (Ausgabegrenzen je Aufruf), Grenzen in `desk/boundaries.py`, Werkzeug `costs` | teilweise – kein Budget je Agent oder Aufgabe mit Hard-Stop | 1, 3 |
+| Routinen & Zeitpläne | Objekttyp `routine` im Vertrag; Ketten wie `benchmarks/day_queue_*.py` | fehlt – Eintrag in Build 24 entfernt, weil kein Werkzeug dahinter war | 1 |
+| Activity & Events | `core/audit.py` (hash-verkettet), `desk/events.py` (SSE: `task.changed`, `decision.pending`, `decision.answered`, `live.line`, `model.changed`, `system.state`) | vorhanden | – |
 | Plugins | Shell-Werkzeug-Vertrag, Gate `install_module`, E1-Integration | vorhanden (Oberfläche), Backend nur E1 | – |
 | Workspaces & Sandbox | `devenv/devvm.py`, microVM über microsandbox | vorhanden für Bauten | – |
-| Secrets | Geheimnis-Sperre (Hardening 14.10.), Schwärzung im Audit | vorhanden, je Agent prüfen | 3 |
-| Oberfläche im Paperclip-Stil | Shell D `uix/shells/paperclip/`, Start `START_SEDRA.bat paperclip` | seit Build 13 vorhanden (Navigation, Seiten, Gespräch als Schublade); laut Captain noch nicht weit (20.10.) | 4 |
+| Secrets | Secret-Speicher: Umgebungsvariable `GUPPI_SECRET_*` oder `local_config/cloud_keys.json`, verschlüsselt mit Windows-DPAPI (`cloud_settings.py`); Verweise als `secret://anbieter/id`; Schwärzung im Audit | vorhanden für Cloud-Schlüssel (G1-S0-f); ein Speicher je Agent fehlt | 3 |
+| KI-Labor | Werkzeug `labor` (CORE) mit `labor.py`, `labor_runs.py`, 8 eigenen Routen (`/api/cloud/*`, `/api/labor/*`), Instrument `gauge-cloud` | vorhanden – Speichern, Schlüssel und Tests nur mit Audit (`CLOUD_SETTINGS_SAVED`, `CLOUD_KEY_CHANGED`, `LABOR_CONNECTION_TEST`), ohne Guard-Gate; Spezialrouten statt `POST /api/actions` | 3, 4 |
+| Oberfläche im Paperclip-Stil | Shell D `uix/shells/paperclip/` v1.1.0 (4 Skripte, 494 Zeilen), Start `START_SEDRA.bat paperclip` | teilweise – Navigation: Dashboard, Posteingang, Issues, Ziele, Agenten, Kosten, Planungstisch, Rekorder, Werkstatt, Bibliothek; es fehlen Organigramm, Routinen, Slots und KI-Labor | 4 |
 | Mehrere Organisationen, Export/Import | – | bewusst weggelassen | – |
+
+Desk-Stand (K0.3): Objekttypen `task`, `intent`, `candidate`, `model`, `skill`, `decision`, `project`, `agent`, `boundary` (`routine` fehlt; `agent` ist eingetragen, liefert aber weder Liste noch Einzelansicht). Verben nur für fünf Typen – `task`: ausfuehren; `candidate`: testen, nachpruefen, uebernehmen, zuruecknehmen; `intent`: aufgabe_machen; `boundary`: bestaetigen, aendern; `model`: laden, entladen, testen. Zugang: `POST /api/objects {type, id}` und `POST /api/actions`, Anmeldung über den Kopf `X-GUPPI-Token`; das Audit `UIX_ACTION` nennt keinen Client. Typen und Verben sind fest verdrahtet (`uix_server.objects_view`, `desk/actions.table()`). Der MCP-Server `state_mcp.py` liest nur.
 
 ## Spec 0 – Kern-Architektur und Kern-API
 
@@ -99,7 +102,7 @@ Empfehlung: Variante A. SEDRA bleibt Python, das Desk ist die Kern-API für alle
 
 | Variante | Was passiert | Aufwand | Risiko | Passung zu SEDRA |
 | --- | --- | --- | --- | --- |
-| A – Python, Desk als API (gewählt) | Paperclip-Funktionen als Paket `guppi_runtime/orchestra/`, angeboten über Desk-Objekte und Verben | mittel | gering – Kern, Guard und 117 Testdateien bleiben | hoch; entspricht „Vorbild, nicht Einbau“ |
+| A – Python, Desk als API (gewählt) | Paperclip-Funktionen als Paket `guppi_runtime/orchestra/`, angeboten über Desk-Objekte und Verben | mittel | gering – Kern, Guard und 187 Testdateien bleiben | hoch; entspricht „Vorbild, nicht Einbau“ |
 | B – Paperclip daneben | Paperclip-Server (Node 24, pnpm, Postgres) läuft neben SEDRA, spricht SEDRA über einen Adapter an | mittel bis hoch | mittel – zwei Stacks, zwei Rechtesysteme, Guard muss jeden Paperclip-Aufruf decken | gering; widerspricht der früheren Entscheidung |
 | C – Neubau in TypeScript | Kern nach Paperclip-Vorbild neu | sehr hoch | hoch – abgenommene SEDRA-Module und Testbasis gehen verloren | gering |
 
@@ -111,11 +114,11 @@ Dafür kommt KERN-07 hinzu: WENN Paperclip als Orchestrator angebunden wird, DAN
 
 | ID | Anforderung (EARS) | Abnahmekriterium |
 | --- | --- | --- |
-| KERN-01 | Das System SOLL Agenten, Aufgaben, Routinen und Budgets als Desk-Objekte in der Form `{type, id, title, state, summary, actions, links}` anbieten. | `GET /api/objects/agent/<id>` und `GET /api/objects/task?filter` liefern diese Form |
-| KERN-02 | WENN ein Verb auf einem Objekt ausgeführt wird, DANN SOLL es über `POST /api/actions` und das Gate dieses Verbs laufen. | Gleiches Verb aus Shell, Gespräch und CLI erzeugt denselben Audit-Eintrag |
+| KERN-01 | Das System SOLL Agenten, Aufgaben, Routinen und Budgets als Desk-Objekte in der Form `{type, id, title, state, summary, actions, links}` anbieten. | `POST /api/objects {type: "agent", id}` und `POST /api/objects {type: "task"}` liefern diese Form (G1-S0-b: keine neue GET-Route) |
+| KERN-02 | WENN ein Verb auf einem Objekt ausgeführt wird, DANN SOLL es über `POST /api/actions` und das Gate dieses Verbs laufen. | Gleiches Verb aus Shell, Gespräch und CLI erzeugt denselben Audit-Eintrag `UIX_ACTION`; er unterscheidet sich nur im Feld `client` (`shell`, `chat`, `cli`, `mcp`; G1-S0-c) |
 | KERN-03 | Das Paket `core/` SOLL nur über einzeln freigegebene Gates geändert werden (Grundsatzfreigabe des Captains vom 20.10.2026). | Diff in `core/` nur mit Gate-ID im Logbuch; `tests.test_core_boundary_src` grün |
-| KERN-04 | WENN ein neuer Anwendungsfall dazukommt, DANN SOLL er als Objekttyp, Verben und Werkzeug ergänzt werden können, ohne `uix_server.py` zu ändern. | Ein Beispiel-Objekttyp wird nur über Registrierung eingebunden |
-| KERN-05 | Externe Clients (CLI, MCP, später ein Paperclip-Adapter) SOLLEN dieselbe API mit Token nutzen. | Ein Aufruf über MCP legt eine Aufgabe an, Audit nennt den Client |
+| KERN-04 | WENN ein neuer Anwendungsfall dazukommt, DANN SOLL er als Objekttyp, Verben und Werkzeug ergänzt werden können, ohne `uix_server.py` zu ändern. | Ein Beispiel-Objekttyp wird nur über Registrierung eingebunden. Die Registrierung selbst ändert `uix_server.py` und `desk/` einmal (G1-S0-d); danach gilt die Anforderung ohne Ausnahme |
+| KERN-05 | Externe Clients (CLI, MCP, später ein Paperclip-Adapter) SOLLEN dieselbe API mit Token (`X-GUPPI-Token`) nutzen. | Ein Aufruf über MCP legt eine Aufgabe an, `UIX_ACTION` trägt `client: "mcp"` |
 | KERN-06 | WENN eine Konfiguration des Pakets fehlt oder ungültig ist, DANN SOLL das Paket abschalten und `boot()` den Grund melden. | `guppi doctor` zeigt `orchestra_error` mit Grund |
 | KERN-07 | WENN Paperclip als Orchestrator angebunden wird, DANN SOLL es SEDRA-Agenten nur über die Kern-API wecken und nie am Guard vorbei arbeiten. | Paperclip-Herzschlag erzeugt SEDRA-Mission mit Gate und Audit; Kosten in beiden Systemen |
 
@@ -126,14 +129,15 @@ Dafür kommt KERN-07 hinzu: WENN Paperclip als Orchestrator angebunden wird, DAN
 - Ablage in SQLite unter `workspace/GUPPI_OS/runtime_data/orchestra/orchestra.db`, wie `testlab.db`; atomares Schreiben über `core/util.py`.
 - Konfiguration `runtime/config/orchestra.yaml`, Schalter `orchestra` in `local_config/switches.yaml` (Standard aus).
 - Stufe: E2 (Erweiterung) – braucht laut `self_development.py` immer den Captain.
-- Neue Guard-Aktionen (z. B. `assign_task`, `wake_agent`, `set_budget`) werden in `guard_rules.yaml` eingetragen; das ist Harness-Arbeit der KI-Sitzung und ein eigenes Gate.
+- Neue Guard-Aktionen (z. B. `assign_task`, `wake_agent`, `set_budget`) werden in `guard_rules.yaml` eingetragen (heute unter `architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT/core/guard/`, geladen von `runtime.py`); das ist Harness-Arbeit der KI-Sitzung und ein eigenes Gate.
+- Erster Bauschritt vor `orchestra/`: eine Registrierung für Objekttypen und Verben im Desk, damit neue Typen ohne Eingriff in `uix_server.py` andocken (KERN-04); dazu das Feld `client` im Audit `UIX_ACTION` (KERN-02, KERN-05).
 
 ### Aufgaben
 
-- [ ] K0.1 Lokalen Stand gegen GitHub abgleichen: `BUILD.txt`, `docs/CHANGELOG.md`, `git log`
-- [ ] K0.2 Ist-Tabelle oben Zeile für Zeile gegen den Code prüfen und korrigieren
-- [ ] K0.3 Desk-Stand prüfen: Welche Objekttypen und Verben gibt es in `desk/objects.py` und `desk/actions.py`?
-- [ ] K0.4 Variante A mit Befunden aus K0.1–K0.3 gegen den Code bestätigen → G1
+- [x] K0.1 Lokalen Stand gegen GitHub abgleichen: `BUILD.txt`, `docs/CHANGELOG.md`, `git log`
+- [x] K0.2 Ist-Tabelle oben Zeile für Zeile gegen den Code prüfen und korrigieren
+- [x] K0.3 Desk-Stand prüfen: Welche Objekttypen und Verben gibt es in `desk/objects.py` und `desk/actions.py`?
+- [x] K0.4 Variante A mit Befunden aus K0.1–K0.3 gegen den Code bestätigen → G1 (erteilt 20.10.2026, G1-S0-a bis f)
 - [ ] K0.5 Design `orchestra/` mit Datenmodell und neuen Guard-Aktionen ausarbeiten → G2
 - [ ] K0.6 Nach Freigabe: Logbuch-Eintrag, Doku (README, `ENTWICKLUNG.md`) auf Local First, Cloud Second anpassen
 
@@ -231,9 +235,9 @@ Die GPU-Lease bleibt, bekommt aber eine zweite Ebene: Ein Prozess besitzt den Mo
 
 ## Spec 3 – Local First, Cloud Second
 
-Cloud wird eine zweite Stufe hinter dem bestehenden Schutz: Jeder Cloud-Aufruf geht durch den Router, den Inhaltsschutz (Build 16) und die Einstufung des KI-GateWays (Build 19) und braucht eine Entscheidung oder eine vom Captain freigegebene Regel. Heute ist Cloud im GateWay nur simuliert, und die README sagt „keine Cloud-Modelle“; beides ändert sich erst nach Freigabe dieser Spec.
+Cloud wird eine zweite Stufe hinter dem bestehenden Schutz: Jeder Cloud-Aufruf geht durch den Router, den Inhaltsschutz (Build 16) und die Einstufung des KI-GateWays (Build 19) und braucht eine Entscheidung oder eine vom Captain freigegebene Regel. Seit 16.10.2026 gibt es einen echten Cloud-Zugang hinter Schalter und Inhaltsschutz (`models/cloud_api.py`, `cloud_settings.py`, KI-Labor); er läuft aber noch ohne Guard-Gate, ohne Budget und ohne GateWay-Einstufung. Die README sagt weiterhin „keine Cloud-Modelle“. Spec 3 baut den vorhandenen Zugang aus, statt einen neuen zu bauen (G1-S0-e); die README ändert sich erst nach Freigabe dieser Spec.
 
-Anbieter (Captain, 20.10.2026): der NVIDIA API Catalog (Schlüssel vorhanden) und Mammouth (Schlüssel geplant). Beide bieten eine OpenAI-kompatible Schnittstelle, NVIDIA unter `https://integrate.api.nvidia.com/v1`, Mammouth mit eigener Basis-URL laut Mammouth-Doku. Ein Adapter `models/cloud.py` reicht deshalb für beide, mit je einem Cloud-Rezept. Mammouth leitet an Modelle verschiedener Hersteller weiter; welche Schutzklassen dorthin dürfen, legt die GateWay-Matrix je Anbieter fest. Beide Hosts sind neue Ziele im Netz, also externe Aktionen mit eigener Guard-Regel. Das Budget der Startphase steht im nächsten Abschnitt.
+Anbieter (Captain, 20.10.2026): der NVIDIA API Catalog (Schlüssel vorhanden) und Mammouth (Schlüssel geplant). Beide bieten eine OpenAI-kompatible Schnittstelle, NVIDIA unter `https://integrate.api.nvidia.com/v1`, Mammouth mit eigener Basis-URL laut Mammouth-Doku. Der vorhandene Adapter `models/cloud_api.py` (OpenAI-kompatibel) reicht deshalb für beide, mit je einem Cloud-Rezept. Mammouth leitet an Modelle verschiedener Hersteller weiter; welche Schutzklassen dorthin dürfen, legt die GateWay-Matrix je Anbieter fest. Beide Hosts sind neue Ziele im Netz, also externe Aktionen mit eigener Guard-Regel. Das Budget der Startphase steht im nächsten Abschnitt.
 
 ### Budget der Startphase (Captain, 20.10.2026)
 
@@ -251,19 +255,19 @@ In der Startphase kostet die Cloud nichts extra: NVIDIA wird kostenlos genutzt, 
 
 ### KI-Labor ausbauen (Captain, 20.10.2026)
 
-Im Cockpit gibt es schon das Werkzeug „KI-Labor“ mit den API-Anbindungen. Es wird zur Steuerstelle der Cloud-Stufe ausgebaut und in Shell D eingebunden, statt ein neues Werkzeug zu bauen. Weil es nur im lokalen Stand existiert, erfasst der Vorarbeiter es zuerst vor Ort.
+Im Cockpit gibt es schon das Werkzeug „KI-Labor“ mit den API-Anbindungen. Es wird zur Steuerstelle der Cloud-Stufe ausgebaut und in Shell D eingebunden, statt ein neues Werkzeug zu bauen. Stand 20.10.2026: Werkzeug `labor` (CORE) mit 8 eigenen Routen (`/api/cloud/*`, `/api/labor/*`); Speichern, Schlüssel und Tests werden protokolliert, laufen aber durch kein Guard-Gate. Die Gates werden nachgerüstet (G1-S0-e).
 
 | ID | Anforderung (EARS) | Abnahmekriterium |
 | --- | --- | --- |
 | LAB-01 | Das KI-Labor SOLL als Werkzeug nach dem Shell-Werkzeug-Vertrag in jeder Shell laufen, auch in Shell D, ohne Shell-eigenen Code. | `uix_check --tool <id>` meldet `result ok` in Cockpit und Paperclip |
-| LAB-02 | WENN der Captain einen Anbieter anlegt (Name, Basis-URL, Modelle), DANN SOLL das über ein Gate laufen und der Schlüssel nur im Secret-Speicher landen. | Schlüssel steht in keiner Datei, keinem Log, keinem Audit-Eintrag |
+| LAB-02 | WENN der Captain einen Anbieter anlegt (Name, Basis-URL, Modelle), DANN SOLL das über ein Gate laufen und der Schlüssel nur im Secret-Speicher landen. | Schlüssel steht nur im Secret-Speicher (CLD-08), in keinem Log und keinem Audit-Eintrag |
 | LAB-03 | Der Captain SOLL je Anbieter einen Kurztest starten können (eine Frage, Antwortzeit, Token); der Test ist eine externe Aktion mit Gate und läuft durch das GateWay. | Testergebnis wie beim Kurztest der Werkstatt, Audit `CLOUD_CALL` |
 | LAB-04 | Das KI-Labor SOLL die Grenzen der Startphase zeigen; jede Änderung ist ein Gate. | Anfragen pro Minute und Tag, Abo-Guthaben, Freigaben je Agent sichtbar |
 | LAB-05 | Das KI-Labor SOLL den Verbrauch je Anbieter und Agent live zeigen und bei 80 % warnen. | Werte aus `spend`, Ereignis `budget.warning` |
 | LAB-06 | Das KI-Labor SOLL je Anbieter zeigen, welche Schutzklassen dorthin dürfen; geändert wird das nur im GateWay. | Anzeige nur lesend, Verweis auf das GateWay |
 | LAB-07 | Das KI-Labor SOLL den Schalter `cloud` zeigen; Umschalten ist ein Gate. | Bei aus zeigt das Labor „Cloud-Stufe aus“ |
 
-- [ ] L3.1 KI-Labor lokal erfassen: Werkzeug-ID, Manifest, Routen, Vertrauensrang und wo heute Schlüssel liegen (gegen CLD-08 prüfen)
+- [x] L3.1 KI-Labor lokal erfassen: Werkzeug-ID, Manifest, Routen, Vertrauensrang und wo heute Schlüssel liegen (gegen CLD-08 prüfen) – erledigt in K0.2, siehe Ist-Tabelle
 - [ ] L3.2 Prüfen, ob es vertragskonform ist; wenn ja, in Shell D einhängen, sonst Nacharbeit planen
 - [ ] L3.3 Design der Erweiterung nach LAB-02 bis LAB-07 → G2
 - [ ] L3.4 Bau-Spec für die reinen Teile (Budgetrechnung, Warnschwellen) mit versteckten Tests; Oberfläche mit `uix_check` → G3
@@ -279,13 +283,13 @@ Im Cockpit gibt es schon das Werkzeug „KI-Labor“ mit den API-Anbindungen. Es
 | CLD-05 | WENN ein Cloud-Budget erreicht ist – in Euro, in Anfragen pro Minute oder in Anfragen pro Tag, je Agent, je Anbieter oder gesamt –, DANN SOLL das System keine weiteren Cloud-Aufrufe zulassen; bei 80 % SOLL es warnen. | Hard-Stop greift; Lauf fällt auf lokal oder wartet |
 | CLD-06 | Die Oberfläche SOLL jede Antwort aus der Cloud sichtbar kennzeichnen. | Kennzeichen in Gespräch und Aufgabe |
 | CLD-07 | WENN die Cloud nicht erreichbar ist, DANN SOLL das System lokal weiterarbeiten oder warten; es wechselt nie still die Stufe. | Ausfall-Test ohne stillen Wechsel |
-| CLD-08 | API-Schlüssel SOLLEN nur im Secret-Speicher liegen, nie in Rezepten, Logs oder Audit. | Geheimnis-Sperre findet keinen Schlüssel in Dateien |
+| CLD-08 | API-Schlüssel SOLLEN nur im Secret-Speicher liegen, nie in Rezepten, Logs oder Audit. Secret-Speicher heißt: Umgebungsvariable `GUPPI_SECRET_*` oder `local_config/cloud_keys.json`, verschlüsselt mit Windows-DPAPI (G1-S0-f). | Geheimnis-Sperre findet keinen Schlüssel im Klartext in Dateien; Konfiguration nennt nur `secret://anbieter/id` |
 | CLD-09 | WENN Cloud-Agenten wie Claude Code oder Codex eingebunden werden, DANN SOLLEN sie als Adapter hinter derselben Prüfung laufen und nur in der DevVM arbeiten. | Adapter-Lauf zeigt Gate, Einstufung und microVM |
 | CLD-10 | Ein Schalter `cloud` in `switches.yaml` SOLL die Stufe ganz abschalten; Standard ist aus. | Bei aus: Router kennt keine Cloud-Ziele |
 
 ### Design (Vorschlag)
 
-- Adapter `models/cloud.py` für OpenAI-kompatible Anbieter, nach Vorbild von `openai_local.py`.
+- Adapter: der vorhandene `models/cloud_api.py` (OpenAI-kompatibel und Anthropic) wird ausgebaut; neu sind Router-Stufe, Regeln, Budget und Guard-Gates.
 - Rezepte bekommen ein optionales Feld `fallback: <cloud-rezept>`; der Router entscheidet die Stufe, nie das Modell selbst.
 - Ablauf eines Aufrufs: lokal möglich? → ja: lokal. Nein oder überlastet (SCH-07) → Schalter `cloud` an? → GateWay stuft ein → Klasse erlaubt? → Regel deckt den Fall? → sonst Entscheidung an den Captain → Budget prüfen → Aufruf → Audit und `spend`.
 - Cloud-Regeln liegen in `local_config/cloud_rules.yaml` (nicht im Git) und werden nur über ein Gate geändert.
@@ -452,6 +456,17 @@ Weitere Entscheidungen:
 - [x] Grenze für die Rückfallebene: entfällt. Fehlende Grundlagen werden neu gebaut, Aufwand ist kein Kriterium; Paperclip als Orchestrator nur mit erfüllter KERN-07.
 - [x] Änderungen an `core/` und am Shell-Werkzeug-Vertrag: grundsätzlich genehmigt. Jede einzelne Änderung bleibt ein eigenes Gate per ID (Regel 1 in `ENTWICKLUNG.md`); automatisch wird der Kern nie geändert.
 - [x] KI-Labor: Das vorhandene Werkzeug im Cockpit wird zur Steuerstelle der Cloud-Stufe ausgebaut und in Shell D eingebunden (Spec 3, LAB-01 bis LAB-07).
+
+G1 Spec 0 (Captain, 20.10.2026), nach Prüfung K0.1 bis K0.4:
+
+| Gate | Entscheidung |
+| --- | --- |
+| G1-S0-a | Ist-Tabelle korrigiert, Zeile KI-Labor ergänzt |
+| G1-S0-b | KERN-01 prüft über `POST /api/objects`; keine neue GET-Route |
+| G1-S0-c | Audit `UIX_ACTION` bekommt das Feld `client` |
+| G1-S0-d | Die Registrierung für KERN-04 ändert `uix_server.py` einmal |
+| G1-S0-e | Spec 3 baut den vorhandenen `cloud_api.py` aus und rüstet die Gates des KI-Labors nach |
+| G1-S0-f | Die DPAPI-verschlüsselte Datei `local_config/cloud_keys.json` gilt als Secret-Speicher im Sinne von CLD-08 |
 
 ## Vorarbeiter-Prompt
 
