@@ -402,6 +402,90 @@ KERN-07 (nur Bedingung): Ein Paperclip-Adapter ist ein weiterer externer Client 
 - [x] K0.5 Design `orchestra/` mit Datenmodell und neuen Guard-Aktionen ausarbeiten → G2 (ausgearbeitet 20.10.2026, Abschnitt „Design“ D1 bis D6; G2 erteilt 20.10.2026)
 - [ ] K0.6 Nach Freigabe: Logbuch-Eintrag, Doku (README, `ENTWICKLUNG.md`) auf Local First, Cloud Second anpassen
 
+#### Bauschritte K0.7 bis K0.25 (Stufe 3, Vorlage für G3)
+
+Stand 20.10.2026, geschnitten aus D1 bis D6 (G2 erteilt). Wer baut: **SEDRA** heißt neues Modul mit klarer Schnittstelle; Bau-Spec und versteckte Tests liegen in `runtime/benchmarks/devvm_specs/<name>.py`, die grüne Referenz (nur Prüfmittel, kein Produktionscode) in `runtime/benchmarks/devvm_refs/<name>/`. SEDRA baut lokal mit `devvm_build.py` einen Kandidaten, Richter ist der versteckte Test; nach Review Zeile für Zeile entscheidet der Captain über die Übernahme (G4, OP-10). **Harness** heißt Eingriff in vorhandene Dateien oder in Guard, Token und Vertrag; das bauen KI-Sitzungen. Ein Harness-Schritt, der ein SEDRA-Modul übernimmt, kopiert den Kandidaten unverändert in das Paket (nur relative Importe angepasst).
+
+| Schritt | Inhalt | Dateien | G2-Gate | hängt ab von | baut |
+| --- | --- | --- | --- | --- | --- |
+| K0.7 | Golden-Test vor jedem Umbau: für die neun heutigen Typen `objects_view({type})` und `object_view(type, id)` auf dem Fake-Host mit Testdaten aufzeichnen, dazu die Fehler (`unknown_object_type`, Objekt „nicht gefunden“, `agent` → `unknown_object_type`, Liste `agent` leer). Aufzeichnung mit dem alten Code, eingecheckt; dazu einmal die Liste der heute grünen Tests aus D1 festhalten | `tests/test_desk_kinds.py` (Klasse `Golden`), `tests/fixtures/desk_golden/` | G2-S0-01 | – (zuerst) | Harness |
+| K0.8 | Register `kinds.py`: `Kind`, `Registry` (`register`, `freeze`, `mark`/`reset`, `refuse`, `view`, `listing`, `request`, `offered`, `table`, `type_verb`), `SHAPE`, `CHAT_TOOLS`, `client_for`, `refuse_client_field` | Bau-Spec `k0_kinds` → `desk/kinds.py` | G2-S0-01, G2-S0-04 | – | SEDRA |
+| K0.9 | Andocken `extensions.py`: `MODULES`, `load(registry, hub, …)` mit Rücknahme einer halben Registrierung und Audit `DESK_KIND_REFUSED`, `start(hub, loaded)` | Bau-Spec `k0_extensions` → `desk/extensions.py` | G2-S0-01 | – (Schnittstelle von K0.8 nur als Vertrag) | SEDRA |
+| K0.10 | Desk an das Register: Übernahme K0.8 und K0.9 (nach G4); `desk/builtin_kinds.py` mit den neun Typen, Leser wörtlich aus `object_view`/`objects_view` verschoben (`decision` mit `own_actions=True`, `agent` als Platzhalter); `desk/gated.py` (Antrag/Anwenden nach dem Muster `boundaries_request`/`boundaries_apply`); `objects.TYPES` und `actions.VERBS`/`table()`/`offered()`/`run()` aus dem Register, dazu `run_type()`; Tests Beispieltyp `echo`, doppelter Typ, `freeze()` | `desk/kinds.py`, `desk/extensions.py`, `desk/builtin_kinds.py`, `desk/gated.py`, `desk/objects.py`, `desk/actions.py`, `tests/test_desk_kinds.py` | G2-S0-01 | K0.7, K0.8, K0.9 | Harness |
+| K0.11 | Einmalige Änderung `uix_server.py`: `object_view` → `registry.view`, `objects_view` → `registry.request`; `act` erlaubt Verben ohne `id`, wenn der Typ ein `type_verb` dieses Namens hat; beim Start `builtin_kinds.register()`, `extensions.load()`, `extensions.start()`, `freeze()`; `ast`-Prüfung: keine Typnamen in `object_view`/`objects_view`; Golden-Test unverändert grün | `uix_server.py`, `tests/test_desk_kinds.py` | G2-S0-02 | K0.10 | Harness |
+| K0.12 | `chat_tools.VERB_TYPES` aus dem Register statt fest | `chat_tools.py`, `tests/test_uix_guppi_moves.py` (nur laufen lassen) | G2-S0-03 | K0.10 | Harness |
+| K0.13 | Feld `client`: `_authorized()` liefert die Token-Klasse, `client_for` setzt den Wert; `client` im Körper → `400 client_is_set_by_server` und Audit `UIX_CLIENT_REFUSED`; `UIX_ACTION` mit `payload.client`; Client-Token für `cli` und `mcp` in `runtime_data/uix/clients/<client>.json` (atomar, DPAPI unter Windows, sonst 0600; beim Beenden gelöscht) | `uix_server.py`, `tests/test_desk_client.py` (neu) | G2-S0-04, G2-S0-05 | K0.11 | Harness |
+| K0.14 | CLI `guppi objects <typ> [<id>]`, `guppi act <typ> <id\|-> <verb> [--args JSON]` über Loopback mit `clients/cli.json`; ohne Oberfläche `uix_not_running` | `cli.py`, Test in `tests/test_desk_client.py` | G2-S0-06 | K0.13 | Harness |
+| K0.15 | MCP-Server `desk_mcp.py` mit Werkzeugen `objects` und `act`, Prüfung mit `mcp_shield`, Aufruf über `clients/mcp.json`; `state_mcp.py` bleibt lesend | `desk_mcp.py` (neu), `tests/test_desk_mcp.py` (neu) | G2-S0-07 | K0.13 | Harness |
+| K0.16 | Konfiguration `config.py`: `OrchestraConfig.from_dict`/`load`/`database_path`/`as_dict`, Fehler `orchestra_config_missing` und `orchestra_config_invalid:<feld>` | Bau-Spec `k0_orchestra_config` → `orchestra/config.py` | G2-S0-08, G2-S0-10 | – | SEDRA |
+| K0.17 | Speicher `store.py`: Schema 1 wie D3.3, `migrate`, `schema_version`, `immediate`, `open_db` (WAL, `busy_timeout`, `foreign_keys`), Fehler `orchestra_db_error:<grund>`, `orchestra_busy` | Bau-Spec `k0_orchestra_store` → `orchestra/store.py` | G2-S0-09 | – | SEDRA |
+| K0.18 | Fassade `service.py`: `Orchestra` mit übergebenen Teilen und Lesern (`agents`, `issues`, `routines`, `spent` …), `build` nach der Tabelle D3.5 mit Audit `ORCHESTRA_OFF`, `boot_entry` | Bau-Spec `k0_orchestra_service` → `orchestra/service.py` | G2-S0-08, G2-S0-11 | – (Lader und Öffner werden übergeben) | SEDRA |
+| K0.19 | Paket anlegen: `orchestra/__init__.py` (nur `__all__`), Übernahme K0.16 bis K0.18 (nach G4); `runtime/config/orchestra.yaml` wie D3.4; `local_switches.ALLOWED["orchestra"] = {"enabled"}`; Importgrenze | `orchestra/`, `runtime/config/orchestra.yaml`, `local_switches.py`, `tests/test_orchestra_boundary.py` (neu), `tests/test_orchestra_config.py` (neu), `tests/test_local_switches.py` | G2-S0-08, G2-S0-10 | K0.16, K0.17, K0.18 | Harness |
+| K0.20 | Verdrahtung `runtime.py`: `_configure_orchestra` über `_optional("orchestra", …)` mit `service.build(…, OrchestraConfig.load, store.open_db, …)`, `rt.orchestra`/`rt.orchestra_error`, `boot()["orchestra"]` aus `boot_entry`; `READY` unabhängig; `test_core_boundary_src` grün | `runtime.py`, `tests/test_orchestra_config.py` | G2-S0-11 | K0.19 | Harness |
+| K0.21 | Desk-Adapter `orchestra_kinds.py`: Objekte für `agent`, `issue`, `routine`, `budget` aus Zeilen; `register(registry, hub)` nur bei vorhandener `hub.runtime.orchestra`, `agent` ersetzt den Platzhalter; in Spec 0 ohne Verben (siehe OP-12) | Bau-Spec `k0_orchestra_kinds` → `desk/orchestra_kinds.py` | G2-S0-12 | – (Register und Fassade nur als Vertrag) | SEDRA |
+| K0.22 | Übernahme K0.21 (nach G4); Abnahme KERN-01 mit Fixture-Datenbank aus `store.open_db`: alle vier Typen über `POST /api/objects` mit genau den Schlüsseln `SHAPE`, `task` unverändert (Golden); Schalter aus → `issue` ist `unknown_object_type` | `desk/orchestra_kinds.py`, `tests/test_orchestra_desk.py` (neu), `tests/fixtures/` | G2-S0-12 | K0.11, K0.20, K0.21 | Harness |
+| K0.23 | Guard-Regeln GR-029 bis GR-038 wie D4 und Stufen in `permission_levels.yaml`; `tests/test_permission_levels.py` grün; Architekturversion von `test_desk_objects` klären (OP-11) | `architecture/…/core/guard/guard_rules.yaml`, `runtime/config/permission_levels.yaml` | G2-S0-GA-01 bis GA-10, G2-S0-14 | – (vor den Verben in Spec 1) | Harness |
+| K0.24 | Nachtrag `SHELL_WERKZEUG_VERTRAG_v1.md` §10: Registrierung, Verben ohne Objekt, neue Typen, Feld `client`, Client-Token | `docs/SHELL_WERKZEUG_VERTRAG_v1.md` | G2-S0-13 | K0.11, K0.13 | Harness |
+| K0.25 | Abnahme Spec 0: Tests aus D5 und D1 grün, `benchmarks/uix_check.py` `result ok`, `git diff --stat main -- runtime/src/guppi_runtime/core` leer, Review-Mängel und Eingriffe ins Logbuch | – | KERN-01 bis KERN-06 | alle | Harness |
+
+Reihenfolge: K0.7 kommt vor K0.10. Die sechs SEDRA-Bauten (K0.8, K0.9, K0.16, K0.17, K0.18, K0.21) hängen von keinem Harness-Schritt ab und können nach G3 nacheinander auf der GPU laufen (eine Lease, ein Bau zur Zeit); K0.7 und K0.23 laufen parallel dazu. Danach zwei Stränge: Desk K0.10 → K0.11 → K0.12, K0.13 → K0.14, K0.15, K0.24; Paket K0.19 → K0.20; beide treffen sich in K0.22, zuletzt K0.25.
+
+Bau-Specs (alle mit `benchmarks/spec_check.py <name>` geprüft: Lint ok, Referenz besteht jede Stufe, die erste Stufe scheitert auf leerer Saat):
+
+| Bau-Spec | Ziel im Paket | Stufen | Referenz | `spec_check` |
+| --- | --- | --- | --- | --- |
+| `k0_kinds` | `desk/kinds.py` | register, view, client | `devvm_refs/k0_kinds/kinds.py` | result ok |
+| `k0_extensions` | `desk/extensions.py` | load, start | `devvm_refs/k0_extensions/extensions.py` | result ok |
+| `k0_orchestra_config` | `orchestra/config.py` | top, fields, load | `devvm_refs/k0_orchestra_config/config.py` | result ok |
+| `k0_orchestra_store` | `orchestra/store.py` | tx, schema, open | `devvm_refs/k0_orchestra_store/store.py` | result ok |
+| `k0_orchestra_service` | `orchestra/service.py` | build, read | `devvm_refs/k0_orchestra_service/service.py` | result ok |
+| `k0_orchestra_kinds` | `desk/orchestra_kinds.py` | objects, register | `devvm_refs/k0_orchestra_kinds/orchestra_kinds.py` | result ok |
+
+Schnittstellen, die die Bau-Specs festlegen und der Harness einhält:
+
+- Kein SEDRA-Modul importiert Desk, Runtime oder ein anderes neues Modul. Register, Hub, Fassade, Konfig-Lader, Datenbank-Öffner und Audit werden übergeben; `audit(event, payload)` ist eine Funktion, die der Harness auf `runtime.audit.append(event, component=…, payload=payload)` abbildet.
+- `Registry.Kind` ist die Klasse `Kind`; eine Erweiterung baut ihre Typen mit `registry.Kind(…)` und braucht keinen Import.
+- `view` füllt `actions` aus den Verben des Typs, außer bei `own_actions=True` (heute nur `decision`); `listing` füllt `actions` immer. Das bildet das heutige Verhalten nach (OP-13). Der Formcheck verlangt die sieben Schlüssel, weitere sind erlaubt (`model` trägt `roles`).
+- `table()` enthält nur Typen mit mindestens einem Verb, damit `actions.run()` für Typen ohne Verben wie heute `unknown_object_type` meldet.
+- `build(switch_on, …)` schaltet nur bei `switch_on is True` ein; die Fehlertexte sind die aus D3.5.
+
+Offene Punkte (K0.7 ff.):
+
+| Nr | Lücke oder Widerspruch | Vorschlag |
+| --- | --- | --- |
+| OP-12 | G2-S0-12 nennt „Typen mit Verben wie D3.2“. Die Verben (`zuweisen_an`, `wecken`, `einstellen` …) brauchen `org`, `board` und `budget` aus Spec 1 und die Gates GA-01 bis GA-10. | In Spec 0 die vier Typen nur lesend registrieren (K0.21, K0.22); die Verben mit `desk/gated.py` baut Spec 1 auf derselben Registrierung. Captain bestätigt die Abgrenzung mit G3-S0-15. |
+| OP-13 | Heute verliert die Liste der Entscheidungen ihre Wege: `objects_view` setzt `actions` für jeden Eintrag aus `offered()`, und `decision` hat dort keine Verben; die Einzelansicht behält sie. | Verhalten im Golden-Test festhalten und im Register mit `own_actions` nachbilden; eine Korrektur ist eine eigene Verhaltensänderung mit eigenem Gate nach Spec 0. |
+| OP-14 | D3.4: `enabled` steht in `orchestra.yaml` und im Schalter. Ob eingeschaltet ist, muss vor dem Laden der Datei feststehen (Zeile „Schalter an, Datei fehlt“). | `runtime.py` nimmt `switch_on = switches.apply("orchestra", "enabled", False)`; `enabled` in der Datei bleibt die dokumentierte Vorgabe `false` und schaltet allein nicht ein. |
+| OP-15 | `desk/gated.py` gehört zu G2-S0-01, wird in Spec 0 aber von keinem Verb benutzt. | in K0.10 als Harness mit Test über ein Test-Verb bauen (wie G2 sagt); Alternative: nach Spec 1 verschieben |
+| OP-16 | Die Leser der Fassade (`agents`, `issues`, …) sind Spec-0-Hilfen; Spec 1 bekommt `org.py` und `board.py`. | Spec 1 entscheidet, ob die Leser in `org`/`board` wandern; die Schnittstelle zu `orchestra_kinds` bleibt gleich. |
+| OP-17 | Zustand „Budget“ im Desk (`Warnung`, `gestoppt`) ist nur Anzeige aus `spend`; der Stopp selbst ist ORC-09 in Spec 1. | so lassen; Spec 1 nutzt dieselben Schwellen aus `OrchestraConfig`. |
+
+#### Gate-Vorschläge für G3
+
+| Gate | Gegenstand | baut |
+| --- | --- | --- |
+| G3-S0-01 | K0.7 Golden-Test mit Aufzeichnung auf dem alten Code | Harness |
+| G3-S0-02 | K0.8 Bau-Spec `k0_kinds` und SEDRA-Bau `desk/kinds.py` | SEDRA |
+| G3-S0-03 | K0.9 Bau-Spec `k0_extensions` und SEDRA-Bau `desk/extensions.py` | SEDRA |
+| G3-S0-04 | K0.10 Desk an das Register (`builtin_kinds`, `gated`, `objects`, `actions`) | Harness |
+| G3-S0-05 | K0.11 einmalige Änderung `uix_server.py` | Harness |
+| G3-S0-06 | K0.12 `chat_tools.VERB_TYPES` aus dem Register | Harness |
+| G3-S0-07 | K0.13 Feld `client` und Client-Token | Harness |
+| G3-S0-08 | K0.14 CLI `guppi objects`, `guppi act` | Harness |
+| G3-S0-09 | K0.15 MCP-Server `desk_mcp.py` | Harness |
+| G3-S0-10 | K0.16 Bau-Spec `k0_orchestra_config` und SEDRA-Bau `orchestra/config.py` | SEDRA |
+| G3-S0-11 | K0.17 Bau-Spec `k0_orchestra_store` und SEDRA-Bau `orchestra/store.py` | SEDRA |
+| G3-S0-12 | K0.18 Bau-Spec `k0_orchestra_service` und SEDRA-Bau `orchestra/service.py` | SEDRA |
+| G3-S0-13 | K0.19 Paket `orchestra/`, `orchestra.yaml`, Schalter, Importgrenze | Harness |
+| G3-S0-14 | K0.20 Verdrahtung `runtime.py` und `boot()` | Harness |
+| G3-S0-15 | K0.21 Bau-Spec `k0_orchestra_kinds` und SEDRA-Bau `desk/orchestra_kinds.py`, Typen in Spec 0 nur lesend (OP-12) | SEDRA |
+| G3-S0-16 | K0.22 Übernahme `orchestra_kinds` und Abnahme KERN-01 | Harness |
+| G3-S0-17 | K0.23 Guard-Regeln GR-029 bis GR-038 und `permission_levels.yaml` | Harness |
+| G3-S0-18 | K0.24 Nachtrag Shell-Werkzeug-Vertrag §10 | Harness |
+| G3-S0-19 | K0.25 Abnahme Spec 0 | Harness |
+
+G3 gibt die Bauschritte frei, nicht die Übernahme: Jeder SEDRA-Kandidat kommt nach dem Review einzeln zur Übernahme (G4), jede Harness-Änderung wird gegen ihr G2-Gate geprüft.
+
 ## Spec 1 – Orchestrierung: Agenten, Aufgaben, Herzschlag
 
 Spec 1 macht aus den einzelnen Agenten des Agent Managers ein Team: Organigramm, zugewiesene Aufgaben mit atomarem Checkout, Wecken bei Arbeit, Budgets und Routinen. Ausgeführt wird jede Agentenarbeit weiterhin als Mission durch Brain und Guard.
