@@ -300,3 +300,27 @@ Fortlaufend, neueste Einträge unten. Je Eintrag: Zeit, Art (ENTSCHEIDUNG, BAU, 
 | 2026-10-20 13:49 | DOKU | Spec 4 Abgleich gegen den Code, Werkzeugliste, Skizze Shell D | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
 | 2026-10-20 13:49 | DOKU | G1 Spec 1-4 und G3 Spec 0 erteilt (wie empfohlen; Labor-Testmodus nur hinter Gate mit Testdaten) | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
 | 2026-10-20 14:38 | DOKU | Analyse Bauablauf übernommen; einheitliche Linie L1 bis L7 vom Captain freigegeben, Bau erst nach Umsetzung (Lauf auf 22 Uhr verschoben) | docs/ANALYSE_BAUABLAUF_2026-10-20.md |
+| 2026-10-20 21:26 | INTEGRATION | Nachtrag 16.10. 09:57: Build 24 API-Zugang Cloud-Modelle (Schalter, Standard aus, DPAPI), Einstellungen im Kern, Shell-Auswahl; Merge GitHub-Stand | 520fc8e 5eae6ee afcc0d9 |
+| 2026-10-20 21:26 | BAU | Nachtrag 16.10. 12:36: Build 24+ KI-Labor, Cloud-Zugang, Sandbox-Redesign, Läufe (Claude) | 6c4d462 |
+| 2026-10-20 21:26 | ENTSCHEIDUNG | Nachtrag 16.10. 12:36-12:48: Personenbezug im Cloud-Chat ersetzt statt blockiert; Modus Testrunde, produktiv blockiert | d4acf5d d98fd4f a70c7ef |
+| 2026-10-20 21:26 | AENDERUNG | Nachtrag 16.10. 13:02-13:10: Entwurfsfenster mit Vorarbeiter-Aktionen, Standardläufe, Figur Seedrache | c4ea2bc a209c9d 3e4cf12 |
+| 2026-10-20 21:26 | AENDERUNG | Nachtrag 16.10. 16:11: Wissensbasis des Arbeitsumfelds | 7bd7529 |
+| 2026-10-20 21:26 | BAU | Nachtrag 16.10. 16:31: Standardläufe, Labor, Entwurf, Import-Prüfung, Modellzustand (Claude) | fea71de |
+| 2026-10-20 21:26 | INTEGRATION | Nachtrag 16.10. 16:36: vier Branches in integration/stand-2026-10-16 zusammengeführt | 5766721 |
+| 2026-10-20 21:26 | AENDERUNG | Nachtrag 19.10. 12:12: KI-GateWay Cloud über Anbieter, Lokal+KI im Gespräch, Routing ohne Neustart | 29bbbd1 7476438 |
+| 2026-10-20 21:26 | DOKU | Nachtrag 19.10. 12:13-12:36: Architektur-Review und Gesamtreview 19.10. | REVIEW_ARCHITEKTUR_2026-10-19.md REVIEW_GESAMT_2026-10-19.md |
+| 2026-10-20 21:26 | FEHLER | Nachtrag 19.10. 12:36-12:39: Korrekturen Gesamtprüfung; Inhaltsschutz verweigert Cloudaufrufe ohne Logbuch (fail-closed) | c4f6dec f1f017f |
+| 2026-10-20 21:26 | ENTSCHEIDUNG | Nachtrag 19.10. 12:53-12:59: Schlüsselablage, Weiterleitungen, Symlinks; Befunde 3 und 4 entschieden | 588d462 afb414c |
+| 2026-10-20 21:26 | DOKU | Nachtrag 19.10. 13:10: Plan Isolation der Module und Auto-Update | PLAN_ISOLATION_UND_UPDATE_2026-10-19.md |
+| 2026-10-20 21:26 | BAU | Nachtrag 19.10. 13:17-15:13: Modul-Isolation Stufen A, B, C (Werkzeug-Rahmen im iframe) (Claude) | dbd3d96 34693ed 32ee60d 1047d72 |
+| 2026-10-20 21:26 | SPEC | Nachtrag 19.10. 13:28-13:45: Spec Gateway-Arbeitsstrecke und Umsetzung | SPEC_GATEWAY_ARBEITSSTRECKE_2026-10-19.md |
+| 2026-10-20 21:26 | FEHLER | Nachtrag 19.10. 14:08-14:25: Browser-Tests repariert, 18/18 grün | 907fea7 |
+| 2026-10-20 21:26 | BAU | Nachtrag 19.10. 14:45-14:59: Gateway-Oberfläche, gemerkte Vorgaben, Auto-Update Teil 1 und 2 (Claude) | fb6b14e b82b2fd b5cd682 dd73aed |
+| 2026-10-20 21:26 | AENDERUNG | Nachtrag 19.10. 15:35-16:59: KI GateWay im Cockpit (Menü, Ampel, Baum, Schutz eingebettet) | 65b3011 256f5b2 b11d694 |
+| 2026-10-20 21:26 | INTEGRATION | Nachtrag 20.10. 01:41: Build 25 integriert (Feinschliff, gateway-kmu, Sprache, Fisch, Planung) | cff3ffe |
+| 2026-10-20 21:26 | AENDERUNG | Nachtrag 20.10. 12:45-12:54: Namenserkennung, Translator, Rekorder-Fenster, Master-Chat, Prüfbericht KMU | 0b18d10 603ef16 63ca7cc |
+| 2026-10-20 21:26 | MESSUNG | Nachtrag 20.10. 13:06: Beweistest lokal bereinigen, dann Cloud auswerten | 6e4b0c3 |
+| 2026-10-20 21:26 | AENDERUNG | Linie L1-L3 in den Werkzeugen: spec_check --vm mit Stempel, devvm_build bricht ohne Stempel ab, Stufengröße >20 Warnung >30 Fehler, --profile standard, --experimental, 19 Skripte ins Archiv; Tests 68 grün; microVM hier nicht startbar (alter Pfad im Bild-Cache) | 7947076 bd5b853 |
+| 2026-10-20 21:26 | DOKU | Linie L4-L6: ENTWICKLUNG, BETRIEB, ARCHITEKTUR auf Stand 20.10., Übersicht Was gilt/Historie | 3508ebb 7437bb4 26ebe2c |
+| 2026-10-20 21:26 | SPEC | k0-Bau-Specs nach L3 geteilt, keine Stufe über 18 neue Prüfungen, spec_check je result ok | 894aea9..16dbd39 |
+| 2026-10-20 21:26 | ENTSCHEIDUNG | Captain: kein Paperclip-Code vor Pipeline-Abnahme; PIPE-01 bis 07, ANA-06, V1 bis V6 freigegeben, dazu ANA-10 Rest und ANA-08 jetzt; V7 später; Bau 22 Uhr gestrichen | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
