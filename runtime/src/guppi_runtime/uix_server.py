@@ -3180,9 +3180,6 @@ def make_server(hub: UIXHub, port=0):
             # no '..', and only the file types the gateway allows.
             if self._module_file(path):
                 return
-            if path == '/uix/fenster/rekorder':     # der Rekorder in einem eigenen Fenster: die Aufnahme überlebt den Shell-Wechsel (Code, kein Daten)
-                self._send(200, (Path(__file__).parent / 'uix' / 'fenster' / 'rekorder.html').read_bytes(), 'text/html; charset=utf-8')
-                return
             frame = FRAME_PAGE.fullmatch(path)
             if frame:           # Stufe C: die Seite eines abgeschotteten Werkzeug-Rahmens; ohne Token, ohne Daten (siehe desk/gateway.frame_page)
                 page = hub.gateway.frame_page(frame.group(1))
