@@ -18,7 +18,7 @@ def load(name):
     return module
 
 
-spec_check, logbook, ab_queue = load("spec_check"), load("logbook"), load("ab_queue")
+spec_check, logbook, ab_queue = load("spec_check"), load("logbook"), load("archiv/ab_queue")      # archived with line L1 (2026-10-20)
 
 
 class SpecCheckTests(unittest.TestCase):

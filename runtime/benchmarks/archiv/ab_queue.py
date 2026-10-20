@@ -15,9 +15,9 @@ import time
 from collections import Counter
 from pathlib import Path
 
-RUNTIME = Path(__file__).resolve().parents[1]
+RUNTIME = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RUNTIME / "src"))
-_spec = importlib.util.spec_from_file_location("night_queue", RUNTIME / "benchmarks" / "night_queue_2026-10-11.py")
+_spec = importlib.util.spec_from_file_location("night_queue", RUNTIME / "benchmarks" / "archiv" / "night_queue_2026-10-11.py")
 night = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(night)
 

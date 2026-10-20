@@ -23,9 +23,9 @@ from pathlib import Path
 
 import yaml
 
-RUNTIME = Path(__file__).resolve().parents[1]
+RUNTIME = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RUNTIME / "src"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from context_ladder import gpu_mib                                                   # noqa: E402
 from moe_sweep import source_text                                                    # noqa: E402

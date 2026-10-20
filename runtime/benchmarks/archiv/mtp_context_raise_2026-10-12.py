@@ -12,7 +12,7 @@ from pathlib import Path
 
 import yaml
 
-RUNTIME = Path(__file__).resolve().parents[1]
+RUNTIME = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RUNTIME / "src"))
 
 from guppi_runtime.testlab import TestLab, default_path   # noqa: E402

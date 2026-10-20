@@ -1,12 +1,17 @@
 r"""Check a devvm spec before a build costs GPU time (Claude 2026-10-13: seven wrong expectations in six specs, one stage test that needed a later stage's rule cost 30 minutes of GPU).
 
     .venv\Scripts\python.exe benchmarks/spec_check.py <spec> [--seed DIR] [--tree DIR ...] [--snapshots DIR] [--host-ok]
+    .venv\Scripts\python.exe benchmarks/spec_check.py <spec> --vm --project <project>          (before every build: writes the stamp devvm_build needs)
+    .venv\Scripts\python.exe benchmarks/spec_check.py <spec> --host-only --project <project>   (only when the microVM cannot start: a weaker stamp)
 
 The hidden tests run the way the build runs them: a copy of the tree is the workspace, each test is `python <file>` there, exit code 0 = passed.
   lint        stages and tests exist, names are unique, no assert with `or` (a weak test), a NOTES text exists
   ref         benchmarks/devvm_refs/<spec> must pass EVERY stage test (the reference is the proof that the tests are right)
   seed        --seed DIR: the first stage must FAIL on the seed, or the build would prove nothing
   tree        --tree DIR (repeatable): a candidate, a snapshot or any folder; prints which stage tests pass, with the first failing assertion
+  size        new hidden checks (assert, raises) per stage: more than 20 is a warning, more than 30 an error (Captain 2026-10-20, line L3: SEDRA passes a stage with up to ~20 new checks in the first run)
+  vm          --vm: lint, ref and the hidden tests ALSO in the python of the microVM (the one the build judges with, devvm_vm.py); with result ok the stamp
+                <project>/runtime_data/spec_stamps/<spec>.json is written (spec_stamp.py, level vm); --host-only writes a stamp of level host without the VM
   snapshots   --snapshots DIR: a build's snapshot folder (after_<stage> subfolders): each stage test runs on its own snapshot and on the one before it
                 (a test that fails on its OWN snapshot but passes on a later state needs a later stage's rule: the test is wrong, not the model)
 Code in --tree/--snapshots was written by a model and runs on THIS host; it needs --host-ok. The reference does not.
@@ -15,6 +20,7 @@ import argparse
 import ast
 import importlib.util
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -22,6 +28,11 @@ import tempfile
 from pathlib import Path
 
 BENCH = Path(__file__).resolve().parent
+if str(BENCH) not in sys.path:
+    sys.path.insert(0, str(BENCH))
+import spec_stamp  # noqa: E402
+
+SIZE_WARN, SIZE_ERROR = 20, 30
 
 
 def load_spec(name):
@@ -62,6 +73,84 @@ def lint(spec):
                 if isinstance(node, ast.Assert) and isinstance(node.test, ast.BoolOp) and isinstance(node.test.op, ast.Or):
                     warnings.append(f"stage {name} {file} line {node.lineno}: assert with `or` (check that it is meant)")
     return problems, warnings
+
+
+def count_checks(code, kind="python"):
+    """Hidden checks in one test file: every assert plus every raises( (assertRaises, pytest.raises, own raises helpers), as the analysis of 2026-10-20 counts them."""
+    raises = len(re.findall(r"raises\(", code, re.IGNORECASE))
+    if kind == "python":
+        try:
+            return sum(isinstance(node, ast.Assert) for node in ast.walk(ast.parse(code))) + raises
+        except SyntaxError:
+            pass
+    return len(re.findall(r"\bassert\b", code)) + raises
+
+
+def stage_sizes(spec):
+    """[(stage, checks of the stage, NEW checks)]: the stage tests are cumulative (a later stage runs the earlier test files again), so new = checks of the stage minus checks of the stage before."""
+    rows, before = [], 0
+    for stage in stages_of(spec):
+        total = sum(count_checks(c) for c in (stage.get("hidden") or {}).values()) + sum(count_checks(c, "node") for c in (stage.get("host_hidden") or {}).values())
+        rows.append((stage.get("name", "?"), total, max(total - before, 0)))
+        before = total
+    return rows
+
+
+def size_problems(rows):
+    """(errors, warnings) for stages with more new checks than SEDRA passes in a first run."""
+    errors = [f"stage {name}: {new} new checks (more than {SIZE_ERROR}: split the stage)" for name, _, new in rows if new > SIZE_ERROR]
+    warnings = [f"stage {name}: {new} new checks (more than {SIZE_WARN})" for name, _, new in rows if SIZE_WARN < new <= SIZE_ERROR]
+    return errors, warnings
+
+
+VM_LINT = r'''import ast, pathlib, sys
+print("python " + sys.version.split()[0])
+bad = []
+for path in sorted(pathlib.Path(".").rglob("*.py")):
+    try:
+        ast.parse(path.read_text(encoding="utf-8"), str(path))
+    except SyntaxError as exc:
+        bad.append(f"{path.as_posix()}: line {exc.lineno}: {exc.msg}")
+print("\n".join(bad) or "parse ok")
+sys.exit(1 if bad else 0)
+'''
+
+
+def vm_check(ref, spec, vm_copy, tree_cls):
+    """Lint and the hidden tests of every stage against the reference IN the microVM. Returns (python version or None, lint problems, rows like matrix).
+    host_hidden (node) stages are left out here: the build judges them on the host as well."""
+    tree = tree_cls(ref)
+    files = {"_spec_vm_lint.py": VM_LINT}
+    for stage in stages_of(spec):
+        for file, code in (stage.get("hidden") or {}).items():
+            files[f"_hidden/{stage.get('name', 'all')}/{file}"] = code
+    out = vm_copy(tree, [["python3", "_spec_vm_lint.py"]], files)
+    lines = [l.strip() for l in out["output"].splitlines() if l.strip()]
+    python = next((l.split(" ", 1)[1] for l in lines if l.startswith("python ")), None)
+    problems = [] if out["status"] == "completed" else ([l for l in lines if not l.startswith("python ")][-5:] or [f"VM run {out['status']}"])
+    rows = []
+    for stage in stages_of(spec):
+        hidden = stage.get("hidden") or {}
+        if not hidden:
+            continue
+        done = vm_copy(tree, [["python3", name] for name in hidden], hidden)
+        rows.append((stage["name"], done["status"] == "completed", [l for l in done["output"].splitlines() if l.strip()][-2:]))
+    return python, problems, rows
+
+
+def run_in_vm(project, ref, spec, vm_env=None):
+    """The microVM of devvm_build (devvm_vm.vm_env) in a throw-away folder under <project>/runtime_data/devvm_work; vm_env can be replaced in tests (a fake VM)."""
+    import devvm_vm
+    work_root = Path(project) / "runtime_data" / "devvm_work"
+    work_root.mkdir(parents=True, exist_ok=True)
+    tool_root = Path(tempfile.mkdtemp(prefix="spec_check_", dir=work_root))
+    try:
+        _, vm_copy = (vm_env or devvm_vm.vm_env)(project, tool_root, False, "M-SPECCHK", "M-SPC")
+        return vm_check(ref, spec, vm_copy, devvm_vm.FolderTree)
+    except Exception as exc:
+        return None, [f"the microVM could not run: {type(exc).__name__}: {str(exc)[:200]}"], []
+    finally:
+        shutil.rmtree(tool_root, ignore_errors=True)
 
 
 def _failure(stderr, file, code):
@@ -126,7 +215,7 @@ def show(label, rows, detail=True):
                 print(f"      {name}: " + " / ".join(t.strip() for t in tail[-2:]))
 
 
-def main():
+def main(argv=None, vm_env=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("spec")
     ap.add_argument("--ref")
@@ -134,7 +223,16 @@ def main():
     ap.add_argument("--tree", action="append", default=[])
     ap.add_argument("--snapshots")
     ap.add_argument("--host-ok", action="store_true", help="allow model-written code (--tree, --snapshots) to run on this host")
-    args = ap.parse_args()
+    ap.add_argument("--vm", action="store_true", help="also run lint, reference and hidden tests in the python of the microVM; with result ok write the stamp (needs --project)")
+    ap.add_argument("--host-only", action="store_true", help="write a stamp of level host (weaker) without the microVM, only when the VM cannot start (needs --project)")
+    ap.add_argument("--project", help="the project folder of the build (the one devvm_build gets): its runtime_data holds the VM home and the stamps")
+    args = ap.parse_args(argv)
+    if args.vm and args.host_only:
+        raise SystemExit("--vm and --host-only exclude each other")
+    if (args.vm or args.host_only) and not args.project:
+        raise SystemExit("--vm/--host-only need --project <project> (the folder devvm_build gets)")
+    if args.ref and (args.vm or args.host_only):
+        raise SystemExit("--ref and a stamp exclude each other: the stamp is bound to devvm_refs/<spec>")
     spec = load_spec(args.spec)
     stages = stages_of(spec)
     good = True
@@ -144,6 +242,12 @@ def main():
     for problem in problems + ["warning: " + w for w in warnings]:
         print("      " + problem)
     good &= not problems
+    sizes = stage_sizes(spec)
+    print("  size     " + " | ".join(f"{name} {new}" for name, _, new in sizes) + f" (new checks per stage; >{SIZE_WARN} warning, >{SIZE_ERROR} error)")
+    size_errors, size_warnings = size_problems(sizes)
+    for line in size_errors + ["warning: " + w for w in size_warnings]:
+        print("      " + line)
+    good &= not size_errors
     ref = Path(args.ref) if args.ref else BENCH / "devvm_refs" / args.spec
     if ref.is_dir():
         rows = matrix(ref, spec)
@@ -152,6 +256,17 @@ def main():
     else:
         print(f"  ref      none ({ref}): the tests are unproven")
         good = False
+    level, python = None, None
+    if args.vm and ref.is_dir():
+        python, vm_problems, vm_rows = run_in_vm(args.project, ref, spec, vm_env)
+        print("  vm lint  " + ("ok" if not vm_problems else "PROBLEMS") + f" (python {python or '?'})")
+        for line in vm_problems:
+            print("      " + line)
+        show("vm ref", vm_rows)
+        good &= not vm_problems and python is not None and all(ok for _, ok, _ in vm_rows)
+        level = "vm"
+    elif args.host_only:
+        python, level = f"host {sys.version.split()[0]}", "host"
     if args.seed:
         rows = matrix(args.seed, spec)
         show("seed", rows, detail=False)
@@ -180,6 +295,12 @@ def main():
                         print("      " + " / ".join(t.strip() for t in tail[-2:]))
             before = own
     print("  result   " + ("ok" if good else "PROBLEMS"))
+    if args.project and (args.vm or args.host_only):
+        if good and level:
+            path = spec_stamp.write(args.project, args.spec, level, python, bench=BENCH)
+            print(f"  stamp    {level} -> {path}" + ("  (WEAKER: host python only, not the microVM)" if level == "host" else ""))
+        elif spec_stamp.remove(args.project, args.spec):
+            print("  stamp    removed (result not ok)")
     return 0 if good else 1
 
 

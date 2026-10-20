@@ -14,7 +14,7 @@ from pathlib import Path
 
 import yaml
 
-RUNTIME = Path(__file__).resolve().parents[1]
+RUNTIME = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RUNTIME / "src"))
 
 from guppi_runtime.role_routing import RoleRouter, RoutingConfig   # noqa: E402
