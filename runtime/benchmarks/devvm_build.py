@@ -26,6 +26,7 @@ sys.path.insert(0, str(RUNTIME / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import devvm_agents_bench as bench                                                   # noqa: E402
+import logbook                                                                       # noqa: E402
 import spec_stamp                                                                    # noqa: E402
 from devvm_vm import sandbox_text, vm_env                                            # noqa: E402
 from guppi_runtime.devvm import DevWorkspace
@@ -296,6 +297,41 @@ def spec_stamp_gate(project, spec_name, skip, bench=None, allow_host=False):
     return spec_stamp.gate(project, spec_name, skip, bench, allow_host)
 
 
+def count_lines(folder, only=lambda rel: True):
+    """Lines of the text files below folder (a missing folder: 0); only(relative posix path) picks the files; __pycache__ is left out."""
+    folder, total = Path(folder), 0
+    if not folder.is_dir(): return 0
+    for path in sorted(p for p in folder.rglob("*") if p.is_file() and "__pycache__" not in p.parts):
+        if not only(path.relative_to(folder).as_posix()): continue
+        try: total += len(path.read_text(encoding="utf-8").splitlines())
+        except (OSError, UnicodeDecodeError): pass
+    return total
+
+
+def logbook_entry(spec_name, row, lease_seconds, bench_dir=None):
+    """V1 (Captain 2026-10-20): the text of the BAU logbook row of one build, and its ref. SEDRA = lines of the exported candidate without tests and NOTES.md; Claude = lines of
+    the spec file plus the reference folder (L4: the quota says how much Claude wrote for each line SEDRA wrote)."""
+    bench_dir = Path(bench_dir or Path(__file__).resolve().parent)
+    stages = row["stages"]
+    passed = sum(1 for s in stages if s.get("hidden_passed"))
+    sedra = count_lines(row["exported_to"], lambda rel: rel.endswith(".py") and not rel.startswith("tests/") and not Path(rel).name.startswith("test_"))
+    claude = count_lines(bench_dir / "devvm_refs" / spec_name) + (len((bench_dir / "devvm_specs" / f"{spec_name}.py").read_text(encoding="utf-8").splitlines()) if (bench_dir / "devvm_specs" / f"{spec_name}.py").is_file() else 0)
+    quota = f"{claude / sedra:.1f}" if sedra else "-"
+    reworks = sum(s.get("reworks", 0) for s in stages)
+    text = (f"Bau {spec_name}: {'bestanden' if row['hidden_passed'] else 'NICHT bestanden'}, Stufen {passed}/{len(stages)}, Dauer {row['seconds']:.0f} s, GPU-Lease {lease_seconds:.0f} s, "
+            f"{row['calls']} Modellaufrufe in {row['agent_runs']} Agentenläufen, Nacharbeiten {reworks}, Eskalationen {row['escalations']}, "
+            f"Zeilen SEDRA (Kandidat) {sedra}, Zeilen Claude (Spec + Referenz) {claude}, Quote Claude/SEDRA {quota}")
+    return text, f"devvm_candidates/{spec_name}"
+
+
+def write_logbook(spec_name, row, lease_seconds, file=None, bench_dir=None):
+    """Appends the BAU row (benchmarks/logbook.py); returns the row text. A failure here must never fail a finished build, so the caller catches it."""
+    text, ref = logbook_entry(spec_name, row, lease_seconds, bench_dir)
+    line = logbook.make_row("BAU", text, ref)
+    logbook.append(file or logbook.DEFAULT, line)
+    return line
+
+
 PROFILES = {      # Captain 2026-10-20, line L1: ONE way to build; the standard command of docs/ENTWICKLUNG.md as a profile (single flags given on the command line win)
     "standard": {"attempts": 1, "coder": "coder.local_primary", "all_models": "coder.local_primary", "context": "32768", "tidy": True, "reasoning": "off", "coder_ext": "all",
                  "server_set": ["flash_attn=on", "kv_cache_type=q8_0", "ubatch=512"]},
@@ -342,6 +378,7 @@ def build_parser():
     ap.add_argument("--no-record", action="store_true", help="do NOT save the server answers and what was sent of every agent run (runtime_data/devvm_replays); recording is on by default since 2026-10-12")
     ap.add_argument("--think-limit", type=int, default=2000, help="with e02: thinking tokens per answer before the note, then thinking is switched down")
     ap.add_argument("--skip-spec-stamp", action="store_true", help="build although spec_check has no valid stamp for this spec (L2 exception; a warning goes into the log)")
+    ap.add_argument("--no-logbook", action="store_true", help="do NOT write the BAU row of this build into docs/LOGBUCH_AGENT_MANAGER.md at the end (V1; for tests)")
     ap.add_argument("--allow-host-stamp", action="store_true", help="accept a spec stamp of level host (spec_check --host-only, host python only) instead of stopping with spec_stamp_host_only (PIPE-07)")
     ap.add_argument("--think-family", choices=["qwen", "gptoss", "other"], help="with e02: how the model switches thinking down (default: from the model key)")
     ap.add_argument("--profile", choices=sorted(PROFILES), help="standard = the standard command of docs/ENTWICKLUNG.md (--attempts 1, coder and all models coder.local_primary, --context 32768, --tidy, --reasoning off, --coder-ext all, flash_attn=on, kv_cache_type=q8_0, ubatch=512); a flag given here overrides its value")
@@ -409,6 +446,7 @@ def main():
     out_root = project / "runtime_data" / "devvm_candidates" / args.spec
     result = {"spec": args.spec, "attempts": []}
     with log, TestLab(default_path(project)).lease(os.environ.get("TESTLAB_OWNER", "devvm_build"), f"devvm build {args.spec}", ttl_s=1800, wait_s=36000, preflight=clear_leftovers, priority=int(os.environ.get("TESTLAB_PRIORITY", "0"))):
+        lease_t0 = time.monotonic()
         for attempt in range(1, args.attempts + 1):
             ws = DevWorkspace(tool_root, f"M-BUILD{attempt:03d}", policy=broker.policy()); ws.create()
             ws.write("NOTES.md", spec.NOTES)
@@ -496,6 +534,10 @@ def main():
             log.say(f"attempt {attempt}: hidden test {'PASSED' if ok else 'FAILED'} | own check accepted={own_text(own_verdict(out))} | {seconds} s, {row['agent_runs']} agent runs, {row['calls']} calls -> {target}")
             if not args.no_lesson_proposals: propose_lessons(project, args.spec, log_stamp, stage_rows, out["agent_runs"], log.say)
             if ok: break
+    lease_seconds = time.monotonic() - lease_t0
+    if not args.no_logbook and result["attempts"]:
+        try: log.say("logbook: " + write_logbook(args.spec, result["attempts"][-1], lease_seconds))
+        except Exception as exc: log.say(f"logbook row not written: {type(exc).__name__}: {str(exc)[:200]}")
     log.say(f"DONE -> {log.json_path.name}")
     shutil.rmtree(tool_root, ignore_errors=True)      # the candidates are exported already; the workspaces of this run are not needed any more
     if args.pidfile:      # only our own PID file: a later run may already have written its PID there

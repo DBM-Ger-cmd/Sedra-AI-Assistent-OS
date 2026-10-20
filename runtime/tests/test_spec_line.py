@@ -171,6 +171,44 @@ class BuildNeedsAStampTests(Base):
         self.assertIn('"--skip-spec-stamp"', text)
 
 
+class BuildLogbookTests(Base):
+    def row(self, target, passed=(True, True), seconds=90.4):
+        stages = [{"stage": f"s{i}", "hidden_passed": ok, "reworks": 1 if i == 0 else 0} for i, ok in enumerate(passed)]
+        return {"hidden_passed": all(passed), "stages": stages, "seconds": seconds, "calls": 17, "agent_runs": 5, "escalations": 1, "exported_to": str(target)}
+
+    def candidate(self):
+        target = self.project / "cand"
+        (target / "tests").mkdir(parents=True)
+        (target / "mod.py").write_text("def double(x):\n    return x * 2\n", encoding="utf-8")
+        (target / "NOTES.md").write_text("n\n" * 9, encoding="utf-8")
+        (target / "tests" / "test_mod.py").write_text("x = 1\n" * 30, encoding="utf-8")
+        return target
+
+    def test_the_row_has_result_times_calls_reworks_and_the_line_quota(self):
+        build = devvm_build()
+        text, ref = build.logbook_entry("demo", self.row(self.candidate()), 123.6, self.bench)
+        self.assertIn("Bau demo: bestanden, Stufen 2/2, Dauer 90 s, GPU-Lease 124 s, 17 Modellaufrufe in 5 Agentenläufen, Nacharbeiten 1", text)
+        self.assertIn("Zeilen SEDRA (Kandidat) 2,", text)
+        claude = len(SPEC.splitlines()) + 5
+        self.assertIn(f"Zeilen Claude (Spec + Referenz) {claude}, Quote Claude/SEDRA {claude / 2:.1f}", text)
+        self.assertEqual(ref, "devvm_candidates/demo")
+
+    def test_a_failed_stage_shows_in_the_row_and_write_logbook_appends_a_valid_bau_row(self):
+        build = devvm_build()
+        book = self.project / "LOGBUCH.md"
+        self.project.mkdir(exist_ok=True)
+        book.write_text("| Zeit | Art | Text | Ref |\n", encoding="utf-8")
+        line = build.write_logbook("demo", self.row(self.candidate(), passed=(True, False)), 5, file=book, bench_dir=self.bench)
+        self.assertRegex(line, r"^\| \d{4}-\d\d-\d\d \d\d:\d\d \| BAU \| Bau demo: NICHT bestanden, Stufen 1/2")
+        self.assertEqual(book.read_text(encoding="utf-8").splitlines()[-1], line)
+
+    def test_no_logbook_is_an_option_and_the_write_comes_after_the_lease(self):
+        self.assertTrue(devvm_build().parse_args(["proj", "--spec", "demo", "--no-logbook"]).no_logbook)
+        text = (BENCH / "devvm_build.py").read_text(encoding="utf-8")
+        self.assertLess(text.index("lease_seconds = time.monotonic() - lease_t0"), text.index("if not args.no_logbook"))
+        self.assertLess(text.index("if not args.no_logbook"), text.index('log.say(f"DONE'))
+
+
 class ProfileTests(unittest.TestCase):
     def parse(self, *argv):
         return devvm_build().parse_args(["proj", "--spec", "demo", *argv])
