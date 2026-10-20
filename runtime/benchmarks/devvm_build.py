@@ -1,6 +1,9 @@
 """GUPPI builds a module itself in a DevVM workspace (Captain 2026-10-06: build approved, integration NOT approved).
 
-    .venv\\Scripts\\python.exe benchmarks/devvm_build.py <project_dir> --spec phase5_view [--attempts 2]
+    .venv\\Scripts\\python.exe benchmarks/devvm_build.py <project_dir> --spec <name> --profile standard
+
+The ONE way to build (Captain 2026-10-20, line L1): first `benchmarks/spec_check.py <name> --vm --project <project_dir>` (it writes the stamp this script needs), then the
+build with --profile standard (single flags override the profile). Options of finished measurements need --experimental.
 
 A spec (benchmarks/devvm_specs/<name>.py) holds TASK (the text GUPPI gets), NOTES (a NOTES.md that is put in the workspace) and HIDDEN (acceptance files the agents never see).
 The default orchestrator mode (escalating: Jan alone -> Qwen3-Coder writes the check -> executed test -> strong coder only on failure) builds the module; afterwards the hidden test
@@ -301,7 +304,14 @@ def spec_stamp_gate(project, spec_name, skip, bench=None):
     return [f"WARNING: --skip-spec-stamp: building WITHOUT a valid spec stamp ({reason})"]
 
 
-def main():
+PROFILES = {      # Captain 2026-10-20, line L1: ONE way to build; the standard command of docs/ENTWICKLUNG.md as a profile (single flags given on the command line win)
+    "standard": {"attempts": 1, "coder": "coder.local_primary", "all_models": "coder.local_primary", "context": "32768", "tidy": True, "reasoning": "off", "coder_ext": "all",
+                 "server_set": ["flash_attn=on", "kv_cache_type=q8_0", "ubatch=512"]},
+}
+EXPERIMENTAL = ("plan_steps", "fresh_rework", "step_syntax_check", "parallel_check", "checker", "arbiter")      # finished measurements: only with --experimental
+
+
+def build_parser():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("project"); ap.add_argument("--spec", required=True); ap.add_argument("--attempts", type=int, default=2)
     ap.add_argument("--mode", default="solo", choices=["escalating", "pipeline", "delegating", "solo"], help="pipeline: the planner splits a larger task into steps, each with its own check and a reviewer")
@@ -341,7 +351,39 @@ def main():
     ap.add_argument("--think-limit", type=int, default=2000, help="with e02: thinking tokens per answer before the note, then thinking is switched down")
     ap.add_argument("--skip-spec-stamp", action="store_true", help="build although spec_check has no valid stamp for this spec (L2 exception; a warning goes into the log)")
     ap.add_argument("--think-family", choices=["qwen", "gptoss", "other"], help="with e02: how the model switches thinking down (default: from the model key)")
-    args = ap.parse_args()
+    ap.add_argument("--profile", choices=sorted(PROFILES), help="standard = the standard command of docs/ENTWICKLUNG.md (--attempts 1, coder and all models coder.local_primary, --context 32768, --tidy, --reasoning off, --coder-ext all, flash_attn=on, kv_cache_type=q8_0, ubatch=512); a flag given here overrides its value")
+    ap.add_argument("--experimental", action="store_true", help="allow the options of finished measurements (" + ", ".join("--" + k.replace("_", "-") for k in EXPERIMENTAL) + ")")
+    return ap
+
+
+def apply_profile(args, explicit):
+    """The values of --profile for every option NOT given on the command line (explicit = the names given); --server-set pairs are merged by key, a given key wins."""
+    profile = PROFILES.get(args.profile or "")
+    if not profile: return args
+    for key, value in profile.items():
+        if key == "server_set":
+            given = {item.partition("=")[0].strip() for item in args.server_set}
+            args.server_set = [item for item in value if item.partition("=")[0] not in given] + list(args.server_set)
+        elif key not in explicit:
+            setattr(args, key, value)
+    return args
+
+
+def parse_args(argv=None):
+    """Arguments with --profile applied and the experimental options checked (an experimental option without --experimental stops with a hint)."""
+    ap = build_parser()
+    args = ap.parse_args(argv)
+    quiet = build_parser()
+    for action in quiet._actions: action.default = argparse.SUPPRESS
+    explicit = set(vars(quiet.parse_args(argv)))
+    used = [k for k in EXPERIMENTAL if getattr(args, k)]
+    if used and not args.experimental:
+        ap.error(", ".join("--" + k.replace("_", "-") for k in used) + " is an experimental option (finished measurement): add --experimental, or use --profile standard")
+    return apply_profile(args, explicit)
+
+
+def main():
+    args = parse_args()
     apply_mode_defaults(args)
     coder_ext = coder_ext_config(args)
     project = Path(args.project)
@@ -350,7 +392,7 @@ def main():
     spec = importlib.import_module(f"devvm_specs.{args.spec}")
     all_stages = getattr(spec, "STAGES", None) or [{"name": "all", "task": spec.TASK, "hidden": spec.HIDDEN}]
     run_stages = select_stages(all_stages, args.only, args.from_stage)
-    log = RunLog(project / "runtime_data" / "measurements", f"devvm_build_{args.spec}", config={"spec": args.spec, "attempts": args.attempts})
+    log = RunLog(project / "runtime_data" / "measurements", f"devvm_build_{args.spec}", config={"spec": args.spec, "attempts": args.attempts, "profile": args.profile})
     log_stamp = time.strftime("%Y%m%d_%H%M%S")
     for line in stamp_lines: log.say(line)
     work_root = project / "runtime_data" / "devvm_work"      # not %TEMP%: a cleaner or another program there took away the git folder of a running build (2026-10-13, NotGitRepository)

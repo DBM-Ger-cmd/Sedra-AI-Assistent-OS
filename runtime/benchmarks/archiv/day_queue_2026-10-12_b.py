@@ -7,8 +7,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
-RUNTIME = Path(__file__).resolve().parents[1]
-_spec = importlib.util.spec_from_file_location("day_queue", RUNTIME / "benchmarks" / "day_queue_2026-10-12.py")
+RUNTIME = Path(__file__).resolve().parents[2]
+_spec = importlib.util.spec_from_file_location("day_queue", RUNTIME / "benchmarks" / "archiv" / "day_queue_2026-10-12.py")
 day = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(day)
 

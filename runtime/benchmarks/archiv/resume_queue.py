@@ -37,7 +37,7 @@ class Resume(night.Queue):
         args = ["--rework", str(item.get("rework", 3)), "--mode", "solo", "--self-check", "none"]
         for key, flag in (("seed", "--seed"), ("review", "--review")):
             if item.get(key):
-                args += [flag, str(HERE / item[key])]
+                args += [flag, str(HERE.parent / item[key])]
         if item.get("from_stage"):
             args += ["--from-stage", item["from_stage"]]
         return args

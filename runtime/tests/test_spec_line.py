@@ -162,6 +162,32 @@ class BuildNeedsAStampTests(Base):
         self.assertIn('"--skip-spec-stamp"', text)
 
 
+class ProfileTests(unittest.TestCase):
+    def parse(self, *argv):
+        return devvm_build().parse_args(["proj", "--spec", "demo", *argv])
+
+    def test_profile_standard_is_the_standard_command(self):
+        a = self.parse("--profile", "standard")
+        self.assertEqual((a.attempts, a.coder, a.all_models, a.context, a.tidy, a.reasoning, a.coder_ext), (1, "coder.local_primary", "coder.local_primary", "32768", True, "off", "all"))
+        self.assertEqual(a.server_set, ["flash_attn=on", "kv_cache_type=q8_0", "ubatch=512"])
+
+    def test_single_flags_override_the_profile(self):
+        a = self.parse("--profile", "standard", "--attempts", "2", "--context", "max", "--server-set", "ubatch=1024", "--reasoning", "auto")
+        self.assertEqual((a.attempts, a.context, a.reasoning, a.coder), (2, "max", "auto", "coder.local_primary"))
+        self.assertEqual(a.server_set, ["flash_attn=on", "kv_cache_type=q8_0", "ubatch=1024"])
+
+    def test_without_profile_nothing_changes(self):
+        a = self.parse()
+        self.assertEqual((a.attempts, a.tidy, a.server_set, a.coder_ext), (2, False, [], None))
+
+    def test_experimental_options_need_experimental(self):
+        for argv in (["--plan-steps"], ["--fresh-rework"], ["--step-syntax-check"], ["--parallel-check"], ["--checker", "x"], ["--arbiter", "x"]):
+            with self.subTest(argv=argv):
+                with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+                    self.parse(*argv)
+                self.assertTrue(self.parse("--experimental", *argv).experimental)
+
+
 class StageSizeTests(unittest.TestCase):
     def test_new_checks_are_counted_against_the_stage_before(self):
         spec = type("S", (), {"STAGES": [

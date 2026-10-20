@@ -25,7 +25,7 @@ _spec.loader.exec_module(night)
 
 RECIPE = "coder.local_primary"
 OWNER = "claude_night_g_2026-10-13"
-ORDER = HERE / "night_g_order.json"
+ORDER = HERE.parent / "night_g_order.json"
 STOP = datetime.datetime(2026, 10, 14, 12, 0)
 
 
@@ -59,7 +59,7 @@ class GChain(night.Queue):
         for key, flag in (("seed", "--seed"), ("from_stage", "--from-stage"), ("review", "--review")):
             if item.get(key):
                 value = item[key]
-                args += [flag, value if flag == "--from-stage" else str(HERE / value)]
+                args += [flag, value if flag == "--from-stage" else str(HERE.parent / value)]
         return args
 
     def start_time(self, hour):

@@ -18,7 +18,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-RUNTIME = Path(__file__).resolve().parents[1]
+RUNTIME = Path(__file__).resolve().parents[2]
 SEED = RUNTIME / "benchmarks" / "bench_std_seed"
 SERVER = ["flash_attn=on", "kv_cache_type=q8_0", "ubatch=512"]
 CANARY = RUNTIME.parent / "runtime_data" / "gpu_canary.json"
