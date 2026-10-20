@@ -1,6 +1,6 @@
 # Architektur von GUPPI OS
 
-Stand 12.10.2026. Beschreibt den Code in `runtime/src/guppi_runtime/`. Seit der Paketaufteilung vom 12.10. liegen die Module in Unterpaketen: `core/`, `jobs/`, `models/`, `devenv/`, `selfdev/` (dazu die älteren `agent_manager/`, `coder_ext/`, `sandbox/`, `tools/`, `modules/`, `hardware_manager/`, `capabilities/`). Die alten Namen direkt unter `guppi_runtime` sind Weichen auf dieselben Module; oben geblieben sind die Startmodule (`cli`, `uix_start`, `uix_server`, `pc_diagnose`, `devvm_mcp`), `runtime`, `local_paths`, `local_switches` und einige kleine Hilfsmodule. Die formale Architektur, also Registry, Guard-Regeln und Verträge, liegt in
+Stand 20.10.2026 (geändert 20.10.2026, Linie L6; die Abschnitte 1 bis 5 gelten weiter wie am 12.10.). Beschreibt den Code in `runtime/src/guppi_runtime/`. Seit der Paketaufteilung vom 12.10. liegen die Module in Unterpaketen: `core/`, `jobs/`, `models/`, `devenv/`, `selfdev/` (dazu die älteren `agent_manager/`, `coder_ext/`, `sandbox/`, `tools/`, `modules/`, `hardware_manager/`, `capabilities/`). Die alten Namen direkt unter `guppi_runtime` sind Weichen auf dieselben Module; oben geblieben sind die Startmodule (`cli`, `uix_start`, `uix_server`, `pc_diagnose`, `devvm_mcp`), `runtime`, `local_paths`, `local_switches` und einige kleine Hilfsmodule. Die formale Architektur, also Registry, Guard-Regeln und Verträge, liegt in
 `architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT/` und wird beim Start geladen.
 
 ## Überblick
@@ -104,13 +104,24 @@ propose, hire, suite, review, gaps, promote, crew, plan, stop, status … Jeder 
 - `hardware_manager/` – Hardware erfassen, Energieprofile (mit Gate), Dashboard.
 - `devvm_mcp.py` – MCP-Server für einen DevVM-Arbeitsordner ([MCP_SERVER_DEVVM.md](MCP_SERVER_DEVVM.md)).
 
+## 6a. Desk, Shells, KI-GateWay, Cloud (Stand 20.10.2026)
+
+Aus Code und `docs/CHANGELOG.md` (Builds 5 bis 25) belegt; Details in den dort genannten Dokumenten.
+
+- **Desk** (`desk/`): die Andockstelle zwischen Kern und Oberfläche ([SHELL_WERKZEUG_VERTRAG_v1.md](SHELL_WERKZEUG_VERTRAG_v1.md) §10). Objekte haben eine Form `{type, id, title, state, summary, actions, links}` (`desk/objects.py`); Verben laufen über `POST /api/actions` (`desk/actions.py`) und kennen ihr Gate. Verben gibt es für `task` (ausführen), `candidate` (testen, nachprüfen, übernehmen, zurücknehmen), `intent` (Aufgabe machen), `boundary` (bestätigen, ändern) und `model` (laden, entladen, testen). Dazu Entscheidungen (eine Quelle), ein Ereignisstrom (SSE), API-Allowlist je Werkzeug.
+- **Shells** (`uix/shells/`): `cockpit`, `paperclip` (Shell D), `minimal`, `gateway-kmu`, `gateway-studio`, `fisch` (Anzeigename Translator), `start` (Einstieg), `guppi-xp` (alter Desktop, Wahl im Einstieg); `_template` und `_vorgabe` sind Vorlagen. Werkzeuge liegen in `uix/tools/` (z. B. `workshop`, `labor`, `gateway`, `schutz`, `planung`, `rekorder`).
+- **KI-GateWay** (`gateway/`): Vorgang nach dem Studio Flow, Schutzklassen und Regelwerk R-01 bis R-16 (`klassen.py`), Wissensbasis, Ablage; davor der Inhaltsschutz (`core/content_guard.py`).
+- **KI-Labor und Cloud-Zugang** (`labor.py`, `cloud_settings.py`, `models/cloud_api.py`): Schalter, Standard aus; siehe [BETRIEB.md](BETRIEB.md#cloud-zugang-und-ki-labor-stand-20102026).
+- **Geplant: Paket `orchestra/`** (Organigramm, Aufgabenbrett, Herzschlag, Budget, Routinen): noch nicht gebaut, nur Spec: [SPEC_AGENTEN_ORCHESTRIERUNG_v1.md](SPEC_AGENTEN_ORCHESTRIERUNG_v1.md).
+- **Selbst-Integration** (`selfdev/`) ist Reserve; Standard der Übernahme ist `adopt_plan` mit Handkopie (geändert 20.10.2026, Linie L5).
+
 ## 7. Daten und Ordner
 
 | Ort | Inhalt | im Git? |
 |---|---|---|
 | `runtime/src/guppi_runtime/` | Quellcode | ja |
 | `runtime/config/` | Konfiguration (Paket-Vorgaben) | ja |
-| `runtime/tests/` | 117 Testdateien (unittest) | ja |
+| `runtime/tests/` | rund 190 Testdateien (unittest) | ja |
 | `runtime/benchmarks/` | Bau- und Messskripte, Specs, versteckte Tests, Referenzen, Seeds, Proben | ja |
 | `architecture/` | formale Architektur, Guard-Regeln, Registry | ja |
 | `workspace/GUPPI_OS/` | **Projektordner im Betrieb**: `local_config/` (Rezepte, Schalter), `runtime_data/` (Missionen, Audit, Jobs, Messungen, Kandidaten, Logs) | nein |

@@ -1,14 +1,29 @@
 # Entwicklung: Wie GUPPI sich selbst weiterbaut
 
-Stand 12.10.2026. Das Ziel des Projekts ist ein GUPPI, das sich selbst erweitert, immer hinter der Freigabe des Captains.
+Stand 20.10.2026 (geändert 20.10.2026, Linie L1 bis L6; vorher 12.10.2026). Das Ziel des Projekts ist ein GUPPI, das sich selbst erweitert, immer hinter der Freigabe des Captains.
 
 ## Wer macht was
 
 | Rolle | Aufgabe |
 |---|---|
-| **GUPPI** (lokale Modelle in der DevVM) | schreibt den Produktionscode neuer Module. Ziel: mindestens 50 % des neuen Codes; gezählt wird mit `agent_manager/code_meter` (Fenster „Code-Zähler“). |
+| **GUPPI** (lokale Modelle in der DevVM) | schreibt den Produktionscode neuer Module. ~~Ziel: mindestens 50 % des neuen Codes~~ (geändert 20.10.2026, Linie L4: statt „50 %“ eine gemessene Quote je Aufgabe, siehe unten). SEDRA baut neue Module mit klarer Schnittstelle (reine Logik). Gezählt wird mit `agent_manager/code_meter`. |
 | **Captain** | entscheidet über jedes Gate (per Gate-ID), über Übernahmen in den Kern, Rezepte, Modelle und Kontextgrenzen. |
 | **Claude / KI-Sitzungen** | schreiben Specs, versteckte Abnahmetests, Referenzlösungen, Reviews und den Harness, also den Code, den GUPPI nicht an sich selbst ändern darf: Guard, Bridge, Suite-Mechanik, Bauskripte. Code der Modelle wird nur bei trivialen oder blockierenden Fehlern von Hand korrigiert, und das wird als Eingriff im Logbuch eingetragen. |
+
+## Die einheitliche Linie (Captain, 20.10.2026)
+
+Grundlage: `ANALYSE_BAUABLAUF_2026-10-20.md`; Beschluss in `SPEC_AGENTEN_ORCHESTRIERUNG_v1.md` (Tabelle „Einheitliche Linie“). Neu seit 20.10.2026:
+
+| Linie | Regel |
+|---|---|
+| L1 | **Ein Bauweg:** `devvm_build.py` direkt, Standardbefehl mit `--profile standard` (ersetzt die neun Flags unten; Inhalt des Profils: siehe Werkzeug). Ketten- und Einmal-Skripte (`day_queue_*`, `night_queue_*`, `mtp_*`) liegen im Archiv `runtime/benchmarks/archiv/` (siehe Werkzeug). Buildflow (`guppi buildflow`) bleibt Reserve. Experimentelle Optionen nur mit `--experimental`. |
+| L2 | **Kein Bau ohne Stempel:** `spec_check.py <spec> --vm` prüft in der Python-Umgebung der microVM und schreibt einen Stempel; `devvm_build.py` bricht ohne gültigen Stempel für genau diese Spec-Fassung ab (Ausnahme nur per Option, siehe Werkzeug). |
+| L3 | **Stufengröße:** höchstens 20 neue Prüfungen je Stufe; Warnung über 20, Fehler über 30. |
+| L4 | **Aufgabenteilung:** SEDRA baut neue Module mit klarer Schnittstelle (reine Logik). Claude baut offiziell Integration, Oberfläche und Harness. Statt „50 %“ gilt eine **gemessene Quote je Aufgabe**: Zeilen von SEDRA gegen Zeilen von Claude, einschließlich Spec und Referenz; sie steht im Logbuch bei jedem Bau. |
+| L5 | **Übernahme:** `adopt_plan` (`devenv/adopt_plan.py`) und Handkopie sind Standard. `selfdev/` (Selbst-Integration, `guppi self-integrate`) ist Reserve. |
+| L6 | **Regel 12 (eigene Branches) geht Regel 8 vor.** Dokumente, Logbuch-Arten: siehe unten. |
+
+L7 (später): Bau-Specs ohne Ergebnis abschließen, Weichen am Paket-Stamm entfernen.
 
 Wenn GUPPI-Bauten Stunden dauern und wiederholt scheitern, kann der Captain entscheiden, dass Claude ein Modul selbst schreibt. Der Anteil wird dann ehrlich gezählt.
 
@@ -33,9 +48,9 @@ Kandidat in runtime_data/devvm_candidates/<spec>/attempt_…  ──►  Review 
 - Die versteckten Tests prüfen nur das **Verhalten**, eine Prüfung pro `assert` (keine verketteten `and`), und enden mit `print("ok")`.
 - Stufen klein schneiden: Code und Verlauf einer Stufe müssen in ein 32k-Fenster passen.
 
-**2. Referenz** (`benchmarks/devvm_refs/<name>/`): eine eigene Lösung, die **vor** dem Bau alle versteckten Tests besteht. Ohne grüne Referenz kein Bau.
+**2. Referenz** (`benchmarks/devvm_refs/<name>/`): eine eigene Lösung, die **vor** dem Bau alle versteckten Tests besteht. Ohne grüne Referenz kein Bau. (geändert 20.10.2026, Linie L2/L3: dazu `spec_check --vm` mit Stempel; höchstens 20 neue Prüfungen je Stufe.)
 
-**3. Bauen**
+**3. Bauen** (geändert 20.10.2026, Linie L1: der Standardbefehl ist `--profile standard`; die Flags darunter sind der bisherige Stand, siehe Werkzeug)
 ```
 cd runtime
 .venv\Scripts\python.exe benchmarks/devvm_build.py <projekt> --spec <name> --attempts 1 ^
@@ -61,7 +76,7 @@ Der Bau hält die GPU-Lease und exportiert jeden Versuch. Nach jeder bestandenen
 
 **4. Prüfen und übernehmen:** Claude liest **jede** Fassung Zeile für Zeile. Die versteckten Tests prüfen nur das Verhalten; Doppelungen, kopierter Code und
 übersehene Review-Punkte fallen nur beim Lesen auf. Danach entscheidet der Captain. Übernommen wird unverändert, nur relative Importe werden angepasst.
-Dazu kommen Tests in `runtime/tests/`. Fähigkeiten der Stufe E1 laufen über `guppi self-integrate-preview` / `self-integrate`, mit Rücknahme.
+Dazu kommen Tests in `runtime/tests/`. Übernahme per `adopt_plan` und Handkopie ist Standard (geändert 20.10.2026, Linie L5); `guppi self-integrate-preview` / `self-integrate` (E1, mit Rücknahme) ist Reserve.
 
 ## Rezept: eine Aufgabe an GUPPI geben (Stand 13.10.2026)
 
@@ -104,7 +119,7 @@ Ein Bau besteht aus einer Spec, einer Referenz, dem Bau durch GUPPI und der Abna
 5. **Logbuch** ([LOGBUCH_AGENT_MANAGER.md](LOGBUCH_AGENT_MANAGER.md)): Jeder Schritt wird eingetragen, die Uhrzeit kommt aus `date`, nie geschätzt.
 6. **Kein Weg wird stillschweigend geweitet:** Guard-Regeln, Token-Semantik, Audit-Kette und der Selbst-Integrationsweg (nur neue Module, nur E1) ändern sich nur nach ausdrücklicher Zustimmung.
 7. **Modelle entfernen** nur über `model-remove` (Quarantäne); endgültig löscht nur der Captain.
-8. **Commits** gehen auf `main`, mit Co-Autor-Zeile, wenn eine KI beteiligt war; Laufdaten, Modelle, Engines und Sicherungsdateien bleiben draußen (`.gitignore`).
+8. **Commits** gehen auf `main`, mit Co-Autor-Zeile, wenn eine KI beteiligt war; Laufdaten, Modelle, Engines und Sicherungsdateien bleiben draußen (`.gitignore`). (geändert 20.10.2026, Linie L6: Regel 12 geht vor – Commits gehen auf den eigenen Branch der Sitzung; auf `main` kommt nur, was der Captain zusammenführt.)
 9. Wenn Speicher fehlt, dürfen untätige Programme (Steam, Chrome …) geschlossen werden; was geschlossen wurde, wird gemeldet.
 10. **Keine lokalen Pfade in eingecheckten Dateien**, auch nicht im Logbuch: statt `E:\…` oder `C:\Users\…` die Platzhalter `<modelle>`, `<projekte>`, `<guppi>` und `C:\Users\<user>`.
     Code, der einen solchen Ordner braucht, liest ihn über `guppi_runtime.local_paths.expand("<modelle>")` (siehe [BETRIEB.md](BETRIEB.md#einrichtung)). Tests nutzen eigene Testdaten
