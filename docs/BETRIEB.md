@@ -1,6 +1,6 @@
 # Betrieb von GUPPI OS
 
-Stand 12.10.2026, Windows 11, RTX 4070 Ti (12 GB), Ryzen 7 7700X, 31 GB RAM.
+Stand 20.10.2026 (geändert 20.10.2026, Linie L1/L6; vorher 12.10.2026), Windows 11, RTX 4070 Ti (12 GB), Ryzen 7 7700X, 31 GB RAM.
 
 ## Einrichtung
 
@@ -120,8 +120,14 @@ Ergebnisse unter `workspace/GUPPI_OS/runtime_data/measurements/`:
 - `night_<datum>/`, `day_<datum>/`: Ketten mehrerer Läufe (`queue.log`, `summary.json`).
 - `benchmarks/model_compare.py` erzeugt daraus [MODELL_VERGLEICH_ERGEBNISSE.md](MODELL_VERGLEICH_ERGEBNISSE.md).
 
-Eine Kette ist ein Python-Skript in `benchmarks/` (Beispiel: `night_queue_2026-10-11.py`). Es startet jeden Schritt als eigenen Prozess, prüft nach jedem Schritt
+**Bauweg (geändert 20.10.2026, Linie L1):** Gebaut wird mit `devvm_build.py` direkt, Standardbefehl `--profile standard` (siehe [ENTWICKLUNG.md](ENTWICKLUNG.md#die-einheitliche-linie-captain-20102026)). Die Ketten-Skripte (`day_queue_*`, `night_queue_*`, `mtp_*`) sind Archiv unter `benchmarks/archiv/` (siehe Werkzeug) und nur noch Dokumentation. Buildflow (`guppi buildflow`) ist Reserve, kein Standardweg.
+
+Früher galt: Eine Kette ist ein Python-Skript in `benchmarks/` (Beispiel: `night_queue_2026-10-11.py`). Es startet jeden Schritt als eigenen Prozess, prüft nach jedem Schritt
 den Canary und schreibt eine Zusammenfassung. Ein Folge-Glied wartet nur auf das Ende der laufenden Kette (`night_queue_2026-10-11_b.py`) und stoppt sie nie.
+
+## Cloud-Zugang und KI-Labor (Stand 20.10.2026)
+
+Cloud-Modelle laufen nur über den API-Zugang (`models/cloud_api.py`, Einstellungen `cloud_settings.py`). **Standard ist aus:** `config/cloud_providers.yaml` hat `enabled: false` (Hauptschalter) und je Anbieter `enabled: false`; erst beide an, plus Modell und Schlüssel, schalten den Weg frei. Schlüssel liegen verschlüsselt (Windows-DPAPI) in `local_config/cloud_keys.json` oder als Umgebungsvariable `GUPPI_SECRET_<ANBIETER>_<ID>`. Jeder Aufruf geht durch den Inhaltsschutz und steht im Audit (`SG_MODEL_CALL`); ohne Logbuch verweigert der Inhaltsschutz den Aufruf. Das **KI-Labor** (Werkstatt, Werkzeug `labor`) testet Verbindung und Modelle auf Knopfdruck. Quellen: `docs/CHANGELOG.md` (Build 24+, 16.10.), `DOKUMENTATION_KLAUS_TORSTEN_2026-10-16.md`.
 
 ## Befehle
 
