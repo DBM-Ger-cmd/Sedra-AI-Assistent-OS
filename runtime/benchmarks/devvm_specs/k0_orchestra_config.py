@@ -59,7 +59,10 @@ assert c.warn_percent == 80
 assert c.stop_percent == 100
 assert c.max_catch_up == 3
 assert c.max_depth == 6
-full = {"orchestra": {"schema": 1, "enabled": True, "database": "orc/o.db", "heartbeat": {"tick_s": 10, "coalesce_s": 0, "max_runs_per_tick": 4},
+'''
+
+C1B = r'''
+full ={"orchestra": {"schema": 1, "enabled": True, "database": "orc/o.db", "heartbeat": {"tick_s": 10, "coalesce_s": 0, "max_runs_per_tick": 4},
         "checkout": {"stall_s": 2}, "budget": {"warn_percent": 90, "stop_percent": 150}, "routines": {"max_catch_up": 0}, "org": {"max_depth": 32}}}
 keep = copy.deepcopy(full)
 f = OrchestraConfig.from_dict(full)
@@ -80,6 +83,9 @@ assert OrchestraConfig.from_dict(cfg(budget__warn_percent=1, budget__stop_percen
 assert OrchestraConfig.from_dict(cfg(budget__warn_percent=99)).warn_percent == 99
 assert OrchestraConfig.from_dict(cfg(routines__max_catch_up=100)).max_catch_up == 100
 assert OrchestraConfig.from_dict(cfg(heartbeat__max_runs_per_tick=16)).max_runs_per_tick == 16
+'''
+
+C1C = r'''
 for data in (None, [], "x", {}, {"orchestra": None}, {"orchestra": []}, {"other": {}}):
     raises(BAD + "orchestra", OrchestraConfig.from_dict, data)
 raises(BAD + "schema", OrchestraConfig.from_dict, {"orchestra": {}})
@@ -160,25 +166,38 @@ assert d.as_dict() == expected
 assert d.tick_s == 5
 '''
 
+H1 = {"hidden_ocfg_1.py": hidden("OrchestraConfig", C1)}
+H1B = {**H1, "hidden_ocfg_1b.py": hidden("OrchestraConfig", C1B)}
+H1C = {**H1B, "hidden_ocfg_1c.py": hidden("OrchestraConfig", C1C)}
+
 STAGES = [
-    {"name": "top",
-     "task": """Create `config.py` (Python 3 standard library only) with `class OrchestraConfig` and the classmethod `OrchestraConfig.from_dict(data)`: the checked configuration of the orchestration package. Every error is ValueError("orchestra_config_invalid:<field>").
-- data must be a dict whose key "orchestra" holds a dict, else field "orchestra". In that dict only the keys schema, enabled, database, heartbeat, checkout, budget, routines, org are allowed; for unknown keys the field is the alphabetically FIRST unknown key (checked before everything else).
-- "schema" must be the int 1 (missing, 2, "1", True or 1.0 -> field "schema"). "enabled": a bool, default False (field "enabled"). "database": default "orchestra/orchestra.db" (its own rules come in the next stage; for now keep a given string).
-- The sections with their integer fields as (default, lowest, highest): heartbeat: tick_s (5, 1, 3600), coalesce_s (2, 0, 3600), max_runs_per_tick (1, 1, 16); checkout: stall_s (900, 2, 86400); budget: warn_percent (80, 1, 100), stop_percent (100, 1, 1000); routines: max_catch_up (3, 0, 100); org: max_depth (6, 1, 32). Missing sections and fields take the defaults.
+    {"name": "defaults",
+     "task": """Create `config.py` (Python 3 standard library only) with `class OrchestraConfig` and the classmethod `OrchestraConfig.from_dict(data)`: the configuration of the orchestration package. data is {"orchestra": {...}}; this stage reads the defaults.
+- "schema" (here always 1), "enabled" default False, "database" default "orchestra/orchestra.db".
+- The sections with their integer fields and defaults: heartbeat: tick_s 5, coalesce_s 2, max_runs_per_tick 1; checkout: stall_s 900; budget: warn_percent 80, stop_percent 100; routines: max_catch_up 3; org: max_depth 6. Missing sections and fields take the defaults.
 - The result has the attributes schema, enabled, database and one attribute per integer field with the same name (c.tick_s, c.stall_s, c.max_depth, ...). Never change data.""",
-     "hidden": {"hidden_ocfg_1.py": hidden("OrchestraConfig", C1)}},
+     "hidden": H1},
+    {"name": "values",
+     "task": """Extend `OrchestraConfig.from_dict` in `config.py` (keep everything else): given values replace the defaults – "enabled", "database" (a string, kept as given for now) and every integer field inside its section dict (for example {"heartbeat": {"tick_s": 10}}). The limits as (lowest, highest), checked in a later stage, are: tick_s (1, 3600), coalesce_s (0, 3600), max_runs_per_tick (1, 16), stall_s (2, 86400), warn_percent (1, 100), stop_percent (1, 1000), max_catch_up (0, 100), max_depth (1, 32); values inside these limits must be accepted. Never change data.""",
+     "hidden": H1B},
+    {"name": "top",
+     "task": """Add the first checks to `OrchestraConfig.from_dict` in `config.py` (keep everything else). Every error is ValueError("orchestra_config_invalid:<field>").
+- data must be a dict whose key "orchestra" holds a dict, else field "orchestra".
+- In that dict only the keys schema, enabled, database, heartbeat, checkout, budget, routines, org are allowed; for unknown keys the field is the alphabetically FIRST unknown key (checked before everything else).
+- "schema" must be the int 1 (missing, 2, "1", True or 1.0 -> field "schema").
+- "enabled" must be a bool (field "enabled").""",
+     "hidden": H1C},
     {"name": "fields",
      "task": """Complete the checks of `OrchestraConfig.from_dict` in `config.py` (keep everything else). Order of the checks: unknown top keys, schema, enabled, database, then the sections in the order heartbeat, checkout, budget, routines, org, then the two rules between fields.
 - A section that is present but not a dict -> field "<section>" (for example "budget"). Unknown keys in a section -> "<section>.<first unknown key alphabetically>", checked before its values.
-- Every integer field: `type(value) is int` (True, 5.0 and "5" are wrong) and lowest <= value <= highest, else "<section>.<field>" (for example "heartbeat.tick_s"); fields in the order of the list of the previous stage. ONE helper checks an integer.
+- Every integer field: `type(value) is int` (True, 5.0 and "5" are wrong) and lowest <= value <= highest, else "<section>.<field>" (for example "heartbeat.tick_s"); fields in the order of the list of the stage "defaults", limits as in the stage "values". ONE helper checks an integer.
 - After all sections: coalesce_s must be smaller than tick_s, else "heartbeat.coalesce_s"; warn_percent must be smaller than stop_percent, else "budget.warn_percent".
 - "database": a non-empty string that is not only spaces, relative and without "..": a Windows drive ("C:", "C:/x", "C:x"), a leading slash or a leading backslash (also two of them, a network path) and any ".." part are wrong (field "database"). A backslash counts as "/"; the stored value is the normalised posix form: "./orchestra" + backslash + "x.db" is stored as "orchestra/x.db".""",
-     "hidden": {"hidden_ocfg_1.py": hidden("OrchestraConfig", C1), "hidden_ocfg_2.py": hidden("OrchestraConfig", C2)}},
+     "hidden": {**H1C, "hidden_ocfg_2.py": hidden("OrchestraConfig", C2)}},
     {"name": "load",
      "task": """Add to `OrchestraConfig` in `config.py` (keep everything else):
 - classmethod `load(path, parse=None)`: path is a str or Path. When it is not an existing file -> ValueError("orchestra_config_missing"). Otherwise read it as UTF-8 text and give the text to `parse` (when parse is None: `yaml.safe_load`, imported inside `load` only in that case). When parse raises any Exception -> ValueError("orchestra_config_invalid:unreadable"). Then return from_dict(parsed data) (so `null` gives field "orchestra").
 - `database_path(runtime_data)`: Path(runtime_data) joined with the database value, always a Path.
 - `as_dict()`: a NEW nested dict {"orchestra": {"schema", "enabled", "database", and every section as a dict of all its integer fields}} that from_dict accepts and that gives the same as_dict again; changing the returned dict never changes the config.""",
-     "hidden": {"hidden_ocfg_1.py": hidden("OrchestraConfig", C1), "hidden_ocfg_2.py": hidden("OrchestraConfig", C2), "hidden_ocfg_3.py": hidden("OrchestraConfig", C3)}},
+     "hidden": {**H1C, "hidden_ocfg_2.py": hidden("OrchestraConfig", C2), "hidden_ocfg_3.py": hidden("OrchestraConfig", C3)}},
 ]
