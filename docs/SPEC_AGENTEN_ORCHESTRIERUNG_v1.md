@@ -612,7 +612,7 @@ Abnahmekriterien: CLD-01, 02, 04, 05, 08, 10 sind prüfbar, sobald `CLOUD_CALL` 
 | LAB-06 | Nicht vorhanden. Die Matrix ist global („Cloud“), nicht je Anbieter. Geändert wird sie heute nur im Code (`klassen.py`, `RECHTSGRUNDLAGE_CLOUD`). Eine Anbieter-Zeile (Obergrenze) muss neu entstehen. | fehlt |
 | LAB-07 | Der Hauptschalter ist im Labor sichtbar und umschaltbar (`laborMaster`), speichert über `/api/cloud/save` **ohne Gate** und wirkt erst nach dem Neustart (`restart_needed`). Der Satz „Cloud-Stufe aus“ steht dort nicht. | teilweise |
 
-Abnahmekriterien: LAB-02 bis LAB-07 sind prüfbar (Audit, `spend`, Anzeige). LAB-01 braucht für Shell D den Spec-4-Eintrag. LAB-03: „wie beim Kurztest der Werkstatt“ ist nicht festgelegt; einen Kurztest unter diesem Namen habe ich im Code nicht gefunden (siehe Offene Fragen).
+Abnahmekriterien: LAB-02 bis LAB-07 sind prüfbar (Audit, `spend`, Anzeige). LAB-01 braucht für Shell D den Spec-4-Eintrag. LAB-03: „Kurztest der Werkstatt“ meint das „Testen“ lokaler Modelle (Antwort des Captains); das Ergebnisformat ist damit festgelegt.
 
 #### Korrekturvorschläge (alt / neu)
 
@@ -629,7 +629,7 @@ Abnahmekriterien: LAB-02 bis LAB-07 sind prüfbar (Audit, `spend`, Anzeige). LAB
 | CLD-09 | … Adapter hinter derselben Prüfung, nur in der DevVM. | In die **Nach-Startphase** verschieben: Die Startphase hat Budget 0 und Coder nur lokal; Claude Code und Codex sind Coder-Dienste mit eigenem Abo. Eigene Spec nach G4 von Spec 3. |
 | CLD-10 | Ein Schalter `cloud` in `switches.yaml` … | Ein Hauptschalter: `cloud_providers.enabled` in `local_config/cloud_providers.yaml` (Standard aus). Er gilt für **alle** Pfade, auch Labor und Läufe, und wird bei jedem Aufruf frisch gelesen. Umschalten ist ein Gate. (Alternative: `switches.yaml` um den Abschnitt `cloud` erweitern, siehe G1-S3-09.) |
 | LAB-02 | WENN der Captain einen Anbieter anlegt … | Anbieter anlegen heißt: Eintrag in `local_config/cloud_providers.yaml` (Name, Basis-URL nur https, Modelle, Verweis `secret://…`). Gate `set_cloud_provider`; der Schlüssel läuft getrennt über `credential_access`. Startbestand: `nvidia`, `mammouth`. |
-| LAB-03 | … eine Frage, Antwortzeit, Token; externe Aktion mit Gate und durch das GateWay. | Der Kurztest sendet **genau eine** feste Testnachricht an das Standardmodell, kein `GET /models`. Er zählt gegen das Budget und schreibt `CLOUD_CALL`. Modellliste und Test aller Modelle sind eigene Aktionen; der Test aller Modelle ist in der Startphase aus. „wie beim Kurztest der Werkstatt“ entfällt. |
+| LAB-03 | … eine Frage, Antwortzeit, Token; externe Aktion mit Gate und durch das GateWay. | Der Kurztest sendet **genau eine** feste Testnachricht an das Standardmodell, kein `GET /models`. Er zählt gegen das Budget und schreibt `CLOUD_CALL`. Modellliste und Test aller Modelle sind eigene Aktionen; der Test aller Modelle ist in der Startphase aus. Das Ergebnis zeigt wie das „Testen“ der Werkstatt Antwortzeit und Token. |
 | LAB-05 | … Verbrauch live zeigen und bei 80 % warnen. | Anzeige je Anbieter und Agent; Warnung als Ereignis `budget.warning` und im Posteingang. Der Ereigniskatalog wird erweitert (eigenes Gate, kein `core/`). |
 | LAB-07 | … Schalter `cloud` zeigen; Umschalten ist ein Gate. | wie CLD-10; bei aus zeigt das Labor „Cloud-Stufe aus“ und sperrt alle Test-Knöpfe. |
 
@@ -695,14 +695,15 @@ Alles ist ein Vorschlag des Vorarbeiters. Jedes Gate entscheidet der Captain ein
 | G1-S3-10 | Grundsatztext C3.2 für README und `ENTWICKLUNG.md` (Entwurf oben) freigeben; eingearbeitet wird erst nach G1 | ja |
 | G1-S3-GA-01 bis GA-07 | die sieben Guard-Aktionen der Tabelle, jede einzeln | wie vorgeschlagen |
 
-#### Offene Fragen an den Captain (nicht blockierend für G1)
+#### Antworten des Captains auf die offenen Fragen (20.10.2026)
 
-1. Mammouth: Basis-URL, Modellnamen und Schlüsselformat stehen nicht im Repo. Gibt es eine Abfrage des Abo-Guthabens, oder zählt SEDRA nur Anfragen und Token?
-2. NVIDIA ist kostenlos (0 €): Reicht die Grenze in Anfragen als einzige Bremse?
-3. „Kurztest der Werkstatt“ (LAB-03): Gemeint ist vermutlich `connection_test`; unter diesem Namen nicht gefunden. Verweis streichen?
-4. DPAPI-Datei: Darf ein Lauf-Prozess den Schlüssel lesen (heute ja, gleicher Benutzer), oder gehen Läufe über den Server?
-5. Mit `RECHTSGRUNDLAGE_CLOUD = False` darf nur SK0 in die Cloud. Reicht das für Planer und Recherche, oder arbeiten sie nur mit SK0-Auszügen?
-6. Die Prüfung der Nutzungsbedingungen beider Anbieter (Budget-Abschnitt) ist Vorarbeiter-Aufgabe vor dem regelmäßigen Einsatz und in Stufe 1 nicht erledigt.
+1. Mammouth (URL, Modelle, Schlüsselformat, Guthaben-Abfrage): wird später eingetragen; der Schlüssel ist noch nicht beantragt. Bis dahin steht Mammouth nicht im Startbestand der Anbieter (LAB-02), und das Muster für sein Schlüsselformat (CLD-08) bleibt offen.
+2. NVIDIA: ob die Grenze in Anfragen als einzige Bremse genügt, wird erst im Betrieb geklärt (C3.5).
+3. „Kurztest der Werkstatt“ (LAB-03): gemeint ist das „Testen“ lokaler Modelle in der Werkstatt (eine kurze Frage mit Zeit und Token/s, `workshop/arbeitsplatz.yaml`). Der Verweis bleibt; der Cloud-Kurztest zeigt dasselbe Ergebnisformat (Antwortzeit, Token). Die Korrektur in der Tabelle „alt / neu“ (Streichung des Verweises) entfällt.
+4. Lauf-Prozesse dürfen den vorhandenen Schlüssel lesen, weil er für Testzwecke angelegt ist. Das gilt nur für diesen Testschlüssel; für den produktiven Schlüssel entscheidet G2 neu (CLD-08, Punkt 3).
+5. SK0-only genügt für Planer und Recherche.
+6. Nutzungsbedingungen beider Anbieter: werden geprüft, bevor die Cloud regelmäßig genutzt wird. Aufgabe des Vorarbeiters, Termin vor G4; sie ist nicht Teil von Stufe 1.
+
 
 #### Nicht geprüft
 
