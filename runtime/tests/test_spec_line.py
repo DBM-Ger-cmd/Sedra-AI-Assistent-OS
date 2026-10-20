@@ -235,6 +235,22 @@ class ProfileTests(unittest.TestCase):
                 self.assertTrue(self.parse("--experimental", *argv).experimental)
 
 
+    def test_options_of_finished_measurements_are_gone_and_the_used_ones_stay(self):
+        for argv in (["--coder-ext-record"], ["--think-limit", "5"], ["--think-family", "qwen"], ["--no-lesson-proposals"]):
+            with self.subTest(argv=argv):
+                with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+                    self.parse(*argv)
+        a = self.parse("--mode", "solo", "--self-check", "none", "--rework", "1", "--seed", "s", "--review", "r", "--from-stage", "x", "--server-set", "ubatch=1", "--keep-going", "--only", "x",
+                       "--require-s0", "--bg-jobs", "--skills", "--hidden-feedback", "--check-first", "--parallel", "2", "--reasoning-budget", "0", "--pidfile", "p", "--no-record", "--no-own-tests")
+        self.assertEqual((a.mode, a.self_check, a.rework, a.parallel), ("solo", "none", 1, 2))
+
+    def test_the_coder_extension_config_always_records_with_the_fixed_thinking_defaults(self):
+        build = devvm_build()
+        config = build.coder_ext_config(build.apply_mode_defaults(self.parse("--profile", "standard")))
+        self.assertEqual((config["record"], config["think_limit"], config["family"], config["enabled"]), (True, 2000, "qwen", "all"))
+        self.assertTrue(build.apply_mode_defaults(self.parse()).hidden_feedback)
+
+
 class StageSizeTests(unittest.TestCase):
     def test_new_checks_are_counted_against_the_stage_before(self):
         spec = type("S", (), {"STAGES": [

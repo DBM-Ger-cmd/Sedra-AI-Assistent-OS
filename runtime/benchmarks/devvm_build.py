@@ -49,6 +49,7 @@ REWORK_TASK = ("{task}\n\nThe work is in the workspace, but an acceptance test o
 
 NL = chr(10)
 DEFAULT_MODEL = "coder.local_primary"      # the standard coder of GUPPI: Qwen3.6-35B-A3B since 2026-10-09 (was Qwen3-Coder, now the recipe coder.llama_qwen3_coder, key qwen3coder)
+THINK_LIMIT = 2000      # e02: thinking tokens per answer before the note, then thinking is switched down (the options --think-limit and --think-family were removed 2026-10-20, ANA-10)
 THINK_FAMILY = {DEFAULT_MODEL: "qwen"}      # E-21: how a model switches its thinking down (E-02); keys whose name says it are found by think_family()
 
 
@@ -75,7 +76,7 @@ def coder_ext_config(args):
         except KeyError: raise SystemExit(f"--skills {args.skills}: not a configured library (core, full) and no library folder")
         SkillLibrary(skills)      # a missing or broken library stops the build here
     if not enabled and args.no_record and not args.bg_jobs and not skills: return None
-    return {"enabled": enabled, "think_limit": args.think_limit, "family": args.think_family or think_family(args.all_models or args.coder),
+    return {"enabled": enabled, "think_limit": THINK_LIMIT, "family": think_family(args.all_models or args.coder),
             "window": 32768 if args.context == "max" else int(args.context), "record": not args.no_record, "bg_jobs": args.bg_jobs, "skills": skills}
 
 
@@ -370,17 +371,13 @@ def build_parser():
     ap.add_argument("--checker", help="model key of the model that writes the acceptance check (default: qwen3coder). Evidence 2026-10-07: with the coder's own model family only 1 of 6 own checks of AM-005 was right")
     ap.add_argument("--arbiter", help="model key of the arbiter that may overrule a failing check (default: the planner/checker model); another model family makes the judgement independent")
     ap.add_argument("--coder", default=DEFAULT_MODEL, help="model key of the first developer (default: the standard coder, Qwen3.6 = recipe coder.local_primary since 2026-10-09; jan = small; qwen3coder = Qwen3-Coder)")
-    ap.add_argument("--no-lesson-proposals", action="store_true", help="do NOT propose lesson cards from the errors of the attempt (runtime_data/lesson_cards.json; a card is used only after `guppi lessons approve`)")
     ap.add_argument("--coder-ext", help="coder extensions for every agent run (E-21): all, or a list such as e01,e08 (e01 read before change, e02 thinking budget, e03 answers without a tool call, e04 record, e05 prune, e07 tool cards, e08 tolerant edit, e09 syntax note, e12 churn guard); off by default")
     ap.add_argument("--bg-jobs", action="store_true", help="give the coder the background job tools shell_start, shell_log, shell_stop (E-06/E-10): each job is one VM run in a thread (vm_process); needs the VM, so it has no effect with --self-check none")
     ap.add_argument("--skills", nargs="?", const="core", metavar="NAME|DIR", help="skill library by name (config/skill_library.yaml: core, full; bare --skills = core) or folder: the coder gets the read-only tools skill_search and skill_read; off by default")
-    ap.add_argument("--coder-ext-record", action="store_true", help="no effect any more: recording is on by default (see --no-record)")
     ap.add_argument("--no-record", action="store_true", help="do NOT save the server answers and what was sent of every agent run (runtime_data/devvm_replays); recording is on by default since 2026-10-12")
-    ap.add_argument("--think-limit", type=int, default=2000, help="with e02: thinking tokens per answer before the note, then thinking is switched down")
     ap.add_argument("--skip-spec-stamp", action="store_true", help="build although spec_check has no valid stamp for this spec (L2 exception; a warning goes into the log)")
     ap.add_argument("--no-logbook", action="store_true", help="do NOT write the BAU row of this build into docs/LOGBUCH_AGENT_MANAGER.md at the end (V1; for tests)")
     ap.add_argument("--allow-host-stamp", action="store_true", help="accept a spec stamp of level host (spec_check --host-only, host python only) instead of stopping with spec_stamp_host_only (PIPE-07)")
-    ap.add_argument("--think-family", choices=["qwen", "gptoss", "other"], help="with e02: how the model switches thinking down (default: from the model key)")
     ap.add_argument("--profile", choices=sorted(PROFILES), help="standard = the standard command of docs/ENTWICKLUNG.md (--attempts 1, coder and all models coder.local_primary, --context 32768, --tidy, --reasoning off, --coder-ext all, flash_attn=on, kv_cache_type=q8_0, ubatch=512); a flag given here overrides its value")
     ap.add_argument("--experimental", action="store_true", help="allow the options of finished measurements (" + ", ".join("--" + k.replace("_", "-") for k in EXPERIMENTAL) + ")")
     return ap
@@ -532,7 +529,7 @@ def main():
                    "server_crashes": crashes, "agent_errors": errors, "context": args.context or "recipe", "coder_ext": coder_ext}
             result["attempts"].append(row); log.save(result)
             log.say(f"attempt {attempt}: hidden test {'PASSED' if ok else 'FAILED'} | own check accepted={own_text(own_verdict(out))} | {seconds} s, {row['agent_runs']} agent runs, {row['calls']} calls -> {target}")
-            if not args.no_lesson_proposals: propose_lessons(project, args.spec, log_stamp, stage_rows, out["agent_runs"], log.say)
+            propose_lessons(project, args.spec, log_stamp, stage_rows, out["agent_runs"], log.say)
             if ok: break
     lease_seconds = time.monotonic() - lease_t0
     if not args.no_logbook and result["attempts"]:
