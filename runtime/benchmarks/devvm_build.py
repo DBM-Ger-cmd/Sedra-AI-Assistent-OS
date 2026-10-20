@@ -289,13 +289,16 @@ def s0_report(project, keys, extras, engine_build):
         out.append(s0_state(project, rid, {**bench.hunt.model_spec(key, project)["server"], **extras}, engine_build))
     return out
 
-def spec_stamp_gate(project, spec_name, skip, bench=None):
+def spec_stamp_gate(project, spec_name, skip, bench=None, allow_host=False):
     """L2 (Captain 2026-10-20): no build without a green spec_check of exactly this spec and reference (benchmarks/spec_stamp.py). Returns the lines for the log;
-    a missing or stale stamp stops the build before a model is loaded, unless --skip-spec-stamp (then a warning in the log)."""
+    a missing or stale stamp stops the build before a model is loaded, unless --skip-spec-stamp (then a warning in the log).
+    A stamp of level host (spec_check --host-only) is accepted only with --allow-host-stamp (PIPE-07, Captain 2026-10-20); otherwise spec_stamp_host_only."""
     reason, stamp = spec_stamp.check(project, spec_name, bench)
     if reason is None:
         lines = [f"spec stamp: {stamp['level']} ok ({stamp.get('python') or '?'}, {stamp.get('checked_at')})"]
         if stamp["level"] != "vm":
+            if not allow_host and not skip:
+                raise SystemExit(f"spec_stamp_host_only: the stamp of {spec_name} is level host (host python only); run `benchmarks/spec_check.py {spec_name} --vm --project <project>` or add --allow-host-stamp")
             lines.append(f"   WARNING: spec stamp level {stamp['level']}: checked on the host python only, not in the microVM (weaker; run spec_check.py {spec_name} --vm)")
         return lines
     hint = f"{reason}: run `benchmarks/spec_check.py {spec_name} --vm --project <project>` first (stamp {spec_stamp.stamp_path(project, spec_name)})"
@@ -350,6 +353,7 @@ def build_parser():
     ap.add_argument("--no-record", action="store_true", help="do NOT save the server answers and what was sent of every agent run (runtime_data/devvm_replays); recording is on by default since 2026-10-12")
     ap.add_argument("--think-limit", type=int, default=2000, help="with e02: thinking tokens per answer before the note, then thinking is switched down")
     ap.add_argument("--skip-spec-stamp", action="store_true", help="build although spec_check has no valid stamp for this spec (L2 exception; a warning goes into the log)")
+    ap.add_argument("--allow-host-stamp", action="store_true", help="accept a spec stamp of level host (spec_check --host-only, host python only) instead of stopping with spec_stamp_host_only (PIPE-07)")
     ap.add_argument("--think-family", choices=["qwen", "gptoss", "other"], help="with e02: how the model switches thinking down (default: from the model key)")
     ap.add_argument("--profile", choices=sorted(PROFILES), help="standard = the standard command of docs/ENTWICKLUNG.md (--attempts 1, coder and all models coder.local_primary, --context 32768, --tidy, --reasoning off, --coder-ext all, flash_attn=on, kv_cache_type=q8_0, ubatch=512); a flag given here overrides its value")
     ap.add_argument("--experimental", action="store_true", help="allow the options of finished measurements (" + ", ".join("--" + k.replace("_", "-") for k in EXPERIMENTAL) + ")")
@@ -387,7 +391,7 @@ def main():
     apply_mode_defaults(args)
     coder_ext = coder_ext_config(args)
     project = Path(args.project)
-    stamp_lines = spec_stamp_gate(project, args.spec, args.skip_spec_stamp)
+    stamp_lines = spec_stamp_gate(project, args.spec, args.skip_spec_stamp, allow_host=args.allow_host_stamp)
     if args.pidfile: Path(args.pidfile).write_text(str(os.getpid()), encoding="utf-8")
     spec = importlib.import_module(f"devvm_specs.{args.spec}")
     all_stages = getattr(spec, "STAGES", None) or [{"name": "all", "task": spec.TASK, "hidden": spec.HIDDEN}]

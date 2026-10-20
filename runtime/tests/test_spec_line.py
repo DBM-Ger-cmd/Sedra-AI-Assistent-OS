@@ -153,12 +153,21 @@ class BuildNeedsAStampTests(Base):
         build = devvm_build()
         self.assertIn("WARNING: --skip-spec-stamp", build.spec_stamp_gate(self.project, "demo", True, self.bench)[0])
         self.run_check("--host-only", "--project", str(self.project))
-        lines = build.spec_stamp_gate(self.project, "demo", False, self.bench)
+        lines = build.spec_stamp_gate(self.project, "demo", False, self.bench, allow_host=True)
         self.assertIn("WARNING: spec stamp level host", lines[1])
+
+    def test_a_host_stamp_stops_the_build_without_allow_host_stamp(self):
+        build = devvm_build()
+        self.run_check("--host-only", "--project", str(self.project))
+        with self.assertRaises(SystemExit) as stop:
+            build.spec_stamp_gate(self.project, "demo", False, self.bench)
+        self.assertTrue(str(stop.exception).startswith("spec_stamp_host_only"))
+        self.assertIn("spec_check.py demo --vm", str(stop.exception))
+        self.assertTrue(build.parse_args(["proj", "--spec", "demo", "--allow-host-stamp"]).allow_host_stamp)
 
     def test_the_gate_runs_before_the_pidfile_and_the_run_log(self):
         text = (BENCH / "devvm_build.py").read_text(encoding="utf-8")
-        self.assertLess(text.index("spec_stamp_gate(project, args.spec, args.skip_spec_stamp)"), text.index("if args.pidfile: Path(args.pidfile)"))
+        self.assertLess(text.index("spec_stamp_gate(project, args.spec, args.skip_spec_stamp, allow_host=args.allow_host_stamp)"), text.index("if args.pidfile: Path(args.pidfile)"))
         self.assertIn('"--skip-spec-stamp"', text)
 
 
