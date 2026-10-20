@@ -170,7 +170,7 @@ class StopTest(DevVmRuntimeTest):
 
 
 class WorkerTest(unittest.TestCase):
-    def worker_run(self, output, code, seed=False):
+    def worker_run(self, output, code, seed=False, gate=lambda *a: None):
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = os.path.join(tmp, "run")
             os.makedirs(run_dir)
@@ -186,7 +186,7 @@ class WorkerTest(unittest.TestCase):
             def runner(cmd, **kw):
                 seen.append(cmd)
                 return Result()
-            done = run_worker.run(run_dir, os.path.join(tmp, "r"), os.path.join(tmp, "p"), runner=runner, clock=iter([0, 7.5]).__next__)
+            done = run_worker.run(run_dir, os.path.join(tmp, "r"), os.path.join(tmp, "p"), runner=runner, clock=iter([0, 7.5]).__next__, gate=gate)
             with open(os.path.join(run_dir, "done.json")) as handle:
                 return done, seen[0], json.load(handle)
 
@@ -197,6 +197,45 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual(done, stored)
         self.assertIn("--context", cmd)
         self.assertNotIn("--seed", cmd)
+
+    def test_the_build_is_the_standard_profile_without_experimental_options(self):
+        _, cmd, _ = self.worker_run("attempt 1: hidden test PASSED | x\n", 0)
+        self.assertEqual(cmd[cmd.index("--profile") + 1], "standard")
+        self.assertNotIn("--experimental", cmd)
+        self.assertNotIn("--attempts", cmd)
+
+    def test_experimental_is_added_only_when_the_options_file_asks_for_an_experimental_option(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            seeds = os.path.join(tmp, "runtime_data", "agent_manager", "seeds")
+            os.makedirs(seeds)
+
+            def cmd(payload):
+                with open(os.path.join(seeds, "am_demo.options.json"), "w") as handle:
+                    handle.write(json.dumps(payload))
+                return run_worker.command("py", "rt", tmp, "am_demo")
+
+            for payload in ({"check_first": True, "tidy": True}, {"coder": "jan"}):
+                self.assertNotIn("--experimental", cmd(payload))
+            self.assertEqual(cmd({"coder": "jan"})[cmd({"coder": "jan"}).index("--all-models") + 1], "jan")
+            for payload in ({"plan_steps": True}, {"checker": "coder.llama_gptoss"}, {"arbiter": "swe"}, {"parallel_check": True}, {"fresh_rework": True}, {"step_syntax_check": True}):
+                with self.subTest(payload=payload):
+                    self.assertEqual(cmd(payload).count("--experimental"), 1)
+
+    def test_without_a_valid_spec_stamp_no_build_starts_and_the_run_fails_with_the_devvm_build_reason(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = os.path.join(tmp, "run")
+            os.makedirs(run_dir)
+            with open(os.path.join(run_dir, "request.json"), "w") as handle:
+                json.dump({"spec": "am_demo"}, handle)
+            runtime = os.path.normpath(os.path.join(os.path.dirname(run_worker.__file__), "..", "..", ".."))
+            seen = []
+            done = run_worker.run(run_dir, runtime, os.path.join(tmp, "p"), runner=lambda cmd, **kw: seen.append(cmd), clock=iter([0, 1.0]).__next__)
+        self.assertEqual(seen, [])
+        self.assertEqual(done["state"], "failed")
+        self.assertTrue(done["error"].startswith("spec_not_checked: run `benchmarks/spec_check.py am_demo --vm"), done["error"])
+
+    def test_a_probe_needs_no_spec_stamp(self):
+        self.assertIsNone(run_worker.stamp_gate("rt", "p", "probe_arbiter"))
 
     def test_a_candidate_path_with_spaces_is_kept_whole(self):
         out = "attempt 1: hidden test FAILED | own check accepted=UNJUDGED | 8576.0 s, 23 agent runs -> <projekte>\\Guppy\\runtime data\\devvm_candidates\\am006\\attempt_01\n# run ended: done\n"

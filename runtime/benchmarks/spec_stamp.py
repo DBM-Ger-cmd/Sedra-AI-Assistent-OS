@@ -64,6 +64,23 @@ def remove(project, spec):
         return False
 
 
+def gate(project, spec, skip=False, bench=None, allow_host=False):
+    """The one rule for every builder (devvm_build, agent_manager run_worker): returns the log lines, or raises SystemExit with the reason as the first word
+    (spec_not_checked, spec_changed_since_check, spec_stamp_host_only). skip = --skip-spec-stamp (a warning instead of the stop); allow_host = --allow-host-stamp."""
+    reason, stamp = check(project, spec, bench)
+    if reason is None:
+        lines = [f"spec stamp: {stamp['level']} ok ({stamp.get('python') or '?'}, {stamp.get('checked_at')})"]
+        if stamp["level"] != "vm":
+            if not allow_host and not skip:
+                raise SystemExit(f"spec_stamp_host_only: the stamp of {spec} is level host (host python only); run `benchmarks/spec_check.py {spec} --vm --project <project>` or add --allow-host-stamp")
+            lines.append(f"   WARNING: spec stamp level {stamp['level']}: checked on the host python only, not in the microVM (weaker; run spec_check.py {spec} --vm)")
+        return lines
+    hint = f"{reason}: run `benchmarks/spec_check.py {spec} --vm --project <project>` first (stamp {stamp_path(project, spec)})"
+    if not skip:
+        raise SystemExit(hint)
+    return [f"WARNING: --skip-spec-stamp: building WITHOUT a valid spec stamp ({reason})"]
+
+
 def check(project, spec, bench=None):
     """(reason, stamp): reason None = the build may start; spec_not_checked (no stamp, unreadable, result not ok) or spec_changed_since_check (a hash differs)."""
     path = stamp_path(project, spec)

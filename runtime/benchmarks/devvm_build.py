@@ -290,21 +290,10 @@ def s0_report(project, keys, extras, engine_build):
     return out
 
 def spec_stamp_gate(project, spec_name, skip, bench=None, allow_host=False):
-    """L2 (Captain 2026-10-20): no build without a green spec_check of exactly this spec and reference (benchmarks/spec_stamp.py). Returns the lines for the log;
-    a missing or stale stamp stops the build before a model is loaded, unless --skip-spec-stamp (then a warning in the log).
-    A stamp of level host (spec_check --host-only) is accepted only with --allow-host-stamp (PIPE-07, Captain 2026-10-20); otherwise spec_stamp_host_only."""
-    reason, stamp = spec_stamp.check(project, spec_name, bench)
-    if reason is None:
-        lines = [f"spec stamp: {stamp['level']} ok ({stamp.get('python') or '?'}, {stamp.get('checked_at')})"]
-        if stamp["level"] != "vm":
-            if not allow_host and not skip:
-                raise SystemExit(f"spec_stamp_host_only: the stamp of {spec_name} is level host (host python only); run `benchmarks/spec_check.py {spec_name} --vm --project <project>` or add --allow-host-stamp")
-            lines.append(f"   WARNING: spec stamp level {stamp['level']}: checked on the host python only, not in the microVM (weaker; run spec_check.py {spec_name} --vm)")
-        return lines
-    hint = f"{reason}: run `benchmarks/spec_check.py {spec_name} --vm --project <project>` first (stamp {spec_stamp.stamp_path(project, spec_name)})"
-    if not skip:
-        raise SystemExit(hint)
-    return [f"WARNING: --skip-spec-stamp: building WITHOUT a valid spec stamp ({reason})"]
+    """L2 (Captain 2026-10-20): no build without a green spec_check of exactly this spec and reference (benchmarks/spec_stamp.py, rule in spec_stamp.gate). Returns the lines
+    for the log; a missing or stale stamp stops the build before a model is loaded, unless --skip-spec-stamp (then a warning in the log). A stamp of level host
+    (spec_check --host-only) is accepted only with --allow-host-stamp (PIPE-07, Captain 2026-10-20); otherwise spec_stamp_host_only."""
+    return spec_stamp.gate(project, spec_name, skip, bench, allow_host)
 
 
 PROFILES = {      # Captain 2026-10-20, line L1: ONE way to build; the standard command of docs/ENTWICKLUNG.md as a profile (single flags given on the command line win)
