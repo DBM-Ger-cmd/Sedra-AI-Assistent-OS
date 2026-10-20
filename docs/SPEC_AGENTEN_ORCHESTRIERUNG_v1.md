@@ -122,15 +122,276 @@ Dafür kommt KERN-07 hinzu: WENN Paperclip als Orchestrator angebunden wird, DAN
 | KERN-06 | WENN eine Konfiguration des Pakets fehlt oder ungültig ist, DANN SOLL das Paket abschalten und `boot()` den Grund melden. | `guppi doctor` zeigt `orchestra_error` mit Grund |
 | KERN-07 | WENN Paperclip als Orchestrator angebunden wird, DANN SOLL es SEDRA-Agenten nur über die Kern-API wecken und nie am Guard vorbei arbeiten. | Paperclip-Herzschlag erzeugt SEDRA-Mission mit Gate und Audit; Kosten in beiden Systemen |
 
-### Design (Vorschlag)
+### Design
 
-- Schichten von unten: `core/` (nur mit Gate je Änderung) → `jobs/`, `models/` → neu `orchestra/` → `desk/` (API) → `uix_server.py` (nur HTTP) → Shell D.
-- `orchestra/` mit `org.py` (Agenten, Rollen, Vorgesetzte), `board.py` (Aufgaben, Checkout, Blocker, Kommentare), `heartbeat.py` (Wecken), `budget.py`, `routines.py`.
-- Ablage in SQLite unter `workspace/GUPPI_OS/runtime_data/orchestra/orchestra.db`, wie `testlab.db`; atomares Schreiben über `core/util.py`.
-- Konfiguration `runtime/config/orchestra.yaml`, Schalter `orchestra` in `local_config/switches.yaml` (Standard aus).
-- Stufe: E2 (Erweiterung) – braucht laut `self_development.py` immer den Captain.
-- Neue Guard-Aktionen (z. B. `assign_task`, `wake_agent`, `set_budget`) werden in `guard_rules.yaml` eingetragen (heute unter `architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT/core/guard/`, geladen von `runtime.py`); das ist Harness-Arbeit der KI-Sitzung und ein eigenes Gate.
-- Erster Bauschritt vor `orchestra/`: eine Registrierung für Objekttypen und Verben im Desk, damit neue Typen ohne Eingriff in `uix_server.py` andocken (KERN-04); dazu das Feld `client` im Audit `UIX_ACTION` (KERN-02, KERN-05).
+Stand 20.10.2026, ausgearbeitet in K0.5 gegen den Code auf Branch `spec/agenten-orchestrierung` (Commit `4dcae78`). Vorlage für G2; jede Zeile der Gate-Liste (D6) wird einzeln entschieden. Spec 0 baut nur die Andockstelle und das leere Paket mit Datenmodell, Konfiguration und Schalter; die Fachlogik von `org`, `board`, `heartbeat`, `budget` und `routines` baut Spec 1 auf dieser Grundlage.
+
+Schichten von unten, jede Schicht importiert nur nach unten:
+
+| Schicht | Inhalt | darf importieren |
+| --- | --- | --- |
+| 1 `core/` | Guard, Audit, Mission, Util | nur `core/` (`test_core_boundary_src`) |
+| 2 `jobs/`, `models/` | Supervisor, Lease, Scheduler, Router | `core/` |
+| 3 `orchestra/` (neu) | Organigramm, Aufgabenbrett, Herzschlag, Budget, Routinen | `core/`, `jobs/` (nur über übergebene Objekte, siehe D3) |
+| 4 `desk/` | Objekttypen, Verben, Entscheidungen, Ereignisse | alles darunter, `orchestra/` nur im Adapter `desk/orchestra_kinds.py` |
+| 5 `uix_server.py` | nur HTTP, Anmeldung, Herkunft (`client`) | `desk/` |
+| 6 Shell D, Werkzeuge | Oberfläche | nur `ctx.api()` und `ctx.bus` |
+
+`runtime.py` ist Kompositionswurzel: Es baut `orchestra` zusammen und meldet dessen Fehler in `boot()` (D3.5). Weil `test_core_boundary_src` `runtime.py` mit dem Kern prüft, darf nichts, was `runtime.py` aus `orchestra/` importiert, über Umwege `agent_manager`, `devenv`, `devvm*` oder `coder_ext` erreichen.
+
+#### D1 Desk-Registrierung (KERN-04, G1-S0-d)
+
+Befund: Typen und Verben stehen an vier Stellen fest im Code – `desk/objects.TYPES`, die if-elif-Ketten in `UIXHub.object_view` und `UIXHub.objects_view` (`uix_server.py`), `desk/actions.table()` und zusätzlich `chat_tools.VERB_TYPES`. Typ `agent` steht in `TYPES`, `object_view` wirft für ihn `unknown_object_type`, `objects_view` liefert `items: []`.
+
+Neuer Baustein `desk/kinds.py` (der Name `desk/registry.py` ist schon für Shells und Werkzeuge vergeben):
+
+```
+Kind(name, title, read, listing, verbs=(), type_verbs=(), source='desk')
+    read(hub, oid)          -> dict | None      ein Objekt in der einen Form, None = nicht gefunden
+    listing(hub, payload)   -> list[dict]       die Liste des Typs (payload kann filtern)
+    verbs                   -> [actions.Verb]   Verben am Objekt (unverändert: verb, label, run, needs_gate, when, confirm)
+    type_verbs              -> [actions.Verb]   Verben ohne Objekt, z. B. „anlegen“ (run(hub, None, args))
+
+register(kind)      einmal je Name; Name nach ^[a-z][a-z0-9_]{1,31}$; doppelter Name → ValueError('kind_already_registered')
+freeze()            nach dem Start der Oberfläche keine Registrierung mehr (kein Andocken über eine Anfrage)
+names(), get(name), view(hub, kind, oid), listing(hub, kind, payload), problems
+```
+
+`view` und `listing` setzen `actions` aus `actions.offered(obj)` und prüfen die Form (`type, id, title, state, summary, actions, links`); fehlt ein Schlüssel, antwortet die Route mit `object_shape_invalid` statt mit einem halben Objekt.
+
+Was sich einmal ändert:
+
+| Datei | Änderung | Gate |
+| --- | --- | --- |
+| `desk/kinds.py` | neu, wie oben | G2-S0-01 |
+| `desk/builtin_kinds.py` | neu: die heutigen Typen `task`, `candidate`, `model`, `intent`, `boundary`, `decision`, `skill`, `project`, `agent` als `Kind`; die Leser sind die heutigen Zweige aus `object_view`/`objects_view`, wörtlich verschoben, sie rufen weiter die Hub-Methoden (`missions()`, `models_view()`, `_intent_object`, `_candidate_report` …) | G2-S0-01 |
+| `desk/extensions.py` | neu: Liste der Module, die beim Start `register(kinds, hub)` aufrufen (zuerst `desk.orchestra_kinds`); ein neuer Anwendungsfall ist ein Modul plus eine Zeile hier, `uix_server.py` bleibt unberührt | G2-S0-01 |
+| `desk/objects.py` | `TYPES` wird aus dem Register gelesen (Kompatibilität für bestehende Importe); Bauer der Objekte bleiben | G2-S0-01 |
+| `desk/actions.py` | `VERBS`/`table()` lesen die Verben aus dem Register; `run()` wie heute, dazu `run_type()` für Verben ohne Objekt | G2-S0-01 |
+| `uix_server.py` | `object_view`/`objects_view` werden zwei Zeilen (`kinds.view`/`kinds.listing`); `act` nimmt `client` (D2) und erlaubt Verben ohne `id`, wenn der Typ ein `type_verb` dieses Namens hat; beim Start `builtin_kinds.register()`, `extensions.load(hub)`, `kinds.freeze()` | G2-S0-02 (deckt G1-S0-d und D2 zusammen) |
+| `chat_tools.py` | `VERB_TYPES` aus dem Register statt fest | G2-S0-03 (von G1-S0-d nicht gedeckt, siehe Offene Punkte) |
+
+Migration ohne Verhaltensänderung:
+
+1. Vor dem Umbau einen Golden-Test schreiben (`tests/test_desk_kinds.py::Golden`): Für jeden heutigen Typ werden `objects_view({type})` und `object_view(type, id)` auf dem Fake-Host mit Testdaten aus `tests/fixtures/` aufgezeichnet, ebenso die Fehler (`unknown_object_type`, `not_found`). Die Aufzeichnung entsteht mit dem alten Code und wird eingecheckt.
+2. Umbau. `agent` wird als Platzhalter registriert, der genau das heutige Verhalten nachbildet (Einzelansicht `unknown_object_type`, Liste leer). Ist `orchestra` eingeschaltet, ersetzt `desk/orchestra_kinds.py` den Platzhalter (einziger erlaubter Ersatz, `register(kind, replace_placeholder=True)`).
+3. Der Golden-Test muss unverändert grün sein, dazu die vorhandenen Tests:
+
+| Vorhandener Test | sichert |
+| --- | --- |
+| `tests/test_desk_objects.py` | Form jedes Objekts, Verben nur im passenden Zustand, nicht angebotene Verben laufen nicht, unbekannte Typen und Verben abgewiesen, `UIX_ACTION` geschrieben, Listen gleicher Form |
+| `tests/test_desk_intent_stufen.py`, `tests/test_desk_boundaries.py` | Verben `aufgabe_machen`, `bestaetigen`, `aendern` mit Gates |
+| `tests/test_uix_guppi_moves.py` | Gespräch: `list_actions`, `propose_action` lesen dieselben Verben |
+| `tests/test_uix_server.py`, `tests/test_uix_flows.py` | Routen `/api/objects`, `/api/actions` über HTTP |
+| `tests/test_uix_contract.py`, `benchmarks/uix_check.py` | Werkzeuge im Browser unverändert (`result ok` für alle Shells) |
+| `tests/test_core_boundary_src.py` | Kern unberührt |
+
+Neu in `tests/test_desk_kinds.py`: Beispieltyp `echo` (nur im Test) wird über `extensions` registriert, ist über `POST /api/objects` und `POST /api/actions` erreichbar, und `uix_server.py` enthält keinen Typnamen mehr (Prüfung per `ast`: keine Vergleiche `kind == '<typ>'` in `object_view`/`objects_view`).
+
+#### D2 Feld `client` im Audit `UIX_ACTION` (KERN-02, KERN-05, G1-S0-c)
+
+Heute gibt es genau einen Token je Serverstart (`secrets.token_urlsafe(32)` in `make_server`), er lebt nur im Speicher und erreicht die Seite über das URL-Fragment. CLI und MCP haben deshalb heute gar keinen Weg zur API (`state_mcp.py` liest Dateien direkt, `guppi doctor` ruft die Runtime im Prozess).
+
+Grundsatz: Der Server setzt `client`, nie der Aufrufer. Ein Feld `client` im Körper einer Anfrage wird mit `400 client_is_set_by_server` abgewiesen und als `UIX_CLIENT_REFUSED` protokolliert, damit ein Fälschungsversuch sichtbar wird.
+
+| Wert | Ermittlung im Server | fälschbar durch |
+| --- | --- | --- |
+| `shell` | Browser-Token (wie heute), kein oder ein anderer `X-SEDRA-Tool`-Kopf | – |
+| `chat` | Browser-Token und `X-SEDRA-Tool` ∈ {`talk`, `planung`} (die Gesprächswerkzeuge; Liste in `desk/kinds.py`), der Kopf hat die Allowlist-Prüfung (§6) bestanden | Code in derselben Seite (siehe Vertrauensgrenze) |
+| `cli` | eigener CLI-Token | wer die CLI-Tokendatei lesen kann |
+| `mcp` | eigener MCP-Token | wer die MCP-Tokendatei lesen kann |
+
+Client-Token: Beim Start erzeugt der Server je externem Client (`cli`, `mcp`) einen eigenen Zufallstoken und schreibt ihn mit Port und PID nach `workspace/GUPPI_OS/runtime_data/uix/clients/<client>.json` (atomar; der Token unter Windows mit DPAPI wie `cloud_keys.json`, sonst Datei mit Rechten 0600). Die Zuordnung Token → Client steht nur im Speicher des Servers. Beim Beenden werden die Dateien gelöscht, beim nächsten Start neu erzeugt. Anmeldung bleibt der Kopf `X-GUPPI-Token`; `_authorized()` liefert statt `True` den Client-Namen. Das ändert die Token-Semantik (Regel 6) und ist deshalb ein eigenes Gate (G2-S0-05).
+
+Vertrauensgrenze: Alle Token-Halter sind dasselbe Windows-Konto auf Loopback; `client` ist eine Herkunftsangabe für Audit und Abnahme, keine Berechtigung. Kein Verb und kein Gate hängt von `client` ab. Zwischen den Token-Klassen (Browser, CLI, MCP) ist die Angabe nicht fälschbar, ohne die Tokendatei der anderen Klasse zu lesen. Innerhalb der Browserseite (`shell` gegen `chat`) ist sie eine Selbstauskunft: Werkzeug-Code in der Seite könnte den Kopf eines anderen Werkzeugs setzen. Das ist hinnehmbar, weil Werkzeuge mit Rang `COMMUNITY` nur `GET`-Routen bekommen und `POST /api/actions` damit für sie gesperrt ist.
+
+Audit: `UIX_ACTION` bekommt `payload = {type, id, verb, client}`; sonst bleibt der Eintrag gleich. `core/audit.py` bleibt unverändert (die Nutzlast ist frei).
+
+Externe Clients:
+
+- CLI: neue Befehle `guppi objects <typ> [<id>]` und `guppi act <typ> <id|-> <verb> [--args JSON]`; sie lesen `clients/cli.json` und rufen `POST /api/objects` bzw. `POST /api/actions` über Loopback. Läuft keine Oberfläche: Fehler `uix_not_running`, kein Weg am Desk vorbei (G2-S0-06).
+- MCP: neuer Server `desk_mcp.py` mit den Werkzeugen `objects` und `act`, Prüfung der Anfragen mit `mcp_shield` wie `state_mcp.py`, Aufruf über `clients/mcp.json`. `state_mcp.py` bleibt rein lesend (G2-S0-07).
+
+#### D3 Paket `orchestra/`
+
+##### D3.1 Module
+
+| Modul | Aufgabe | importiert innerhalb des Pakets |
+| --- | --- | --- |
+| `__init__.py` | leer bis auf `__all__`; importiert nichts, damit `runtime.py` nur `config` und `store` lädt | – |
+| `config.py` | `OrchestraConfig.load(path)`: liest und prüft `orchestra.yaml`, wirft `ValueError('orchestra_config_…')` | – |
+| `store.py` | SQLite-Verbindung (WAL, `busy_timeout=30000`, `foreign_keys=ON`), Schema, Migrationen über `meta.schema_version`, Helfer `immediate()` für `BEGIN IMMEDIATE` | `config` |
+| `org.py` | Agenten, Rollen, Vorgesetzte, Zyklusprüfung, Rechte nur senken (ORC-01, 02, 08, 12) | `store` |
+| `board.py` | Aufgaben, Zuweisung, atomarer Checkout, Blocker, Kommentare, Zielkette (ORC-03, 04, 05, 13) | `store`, `org` |
+| `budget.py` | Verbrauch buchen (`spend`), Schwellen 80/100 % (ORC-09) | `store` |
+| `heartbeat.py` | fällige Weckrufe lesen, je Agent zusammenfassen, Lauf übergeben, Stillstand (ORC-06, 07, 11) | `store`, `board`, `org`, `budget` |
+| `routines.py` | Cron-Auswertung, Nachhol-Regel, `routine_runs` (ORC-10) | `store`, `board` |
+| `service.py` | Fassade `Orchestra` für Desk und Runtime: hält die Teile, nimmt Audit, Guard, `job_supervisor` und einen Vorlagen-Leser als übergebene Objekte | alle |
+
+Importregeln (neuer Test `tests/test_orchestra_boundary.py` mit `core_boundary.violations`/`chains`): `orchestra/` darf `guppi_runtime.core` und `guppi_runtime.jobs` importieren, sonst nur Standardbibliothek und `yaml`. Verboten: `desk`, `uix_server`, `uix`, `chat_tools`, `agent_manager`, `devenv`, `devvm*`, `coder_ext`, `models.cloud_api`. Vorlagen und Instanzen des Agent Managers kommen über eine übergebene Funktion (`templates(ref) -> dict`), die der Desk-Adapter aus `agent_manager` baut; nur so bleibt `runtime.py` unter `test_core_boundary_src` grün.
+
+##### D3.2 Schnittstelle zum Desk
+
+`desk/orchestra_kinds.py` (eingetragen in `desk/extensions.py`) registriert die Typen nur, wenn `hub.runtime.orchestra` existiert. Mit Schalter aus bleibt alles wie heute.
+
+| Typ | Leser | Verben am Objekt (Gate) | Verben ohne Objekt |
+| --- | --- | --- | --- |
+| `agent` (ersetzt den Platzhalter) | `org` | `zuweisen_an` (`assign_task`), `wecken` (`wake_agent`), `pausieren` (`pause_agent`), `fortsetzen` (`resume_agent`), `beenden` (`terminate_agent`), `einordnen` (`set_org`) | `einstellen` (`agent.instantiate` + `set_org`) |
+| `issue` (Aufgabe des Bretts, Vorschlag; siehe Offene Punkte) | `board` | `zuweisen` (`assign_task`), `blocker_setzen`, `kommentieren` (`create_new_artifact`), `abbrechen` | `anlegen` (`create_new_artifact`) |
+| `routine` | `routines` | `aendern`, `ausschalten` (`set_routine`) | `anlegen` (`set_routine`) |
+| `budget` (id = Agent-ID) | `budget` | `festlegen` (`set_budget`) | – |
+
+Jedes Verb mit `needs_gate` folgt dem vorhandenen Muster von `boundaries_request`/`boundaries_apply`: Antrag erzeugt eine Mission mit Gate und Bindung, die Entscheidung läuft über `desk/decisions.py`, das Ausführen prüft den Einmal-Token mit `guard.authorize`. Damit dafür kein Code in `uix_server.py` nötig ist, kommt der Ablauf als Helfer `desk/gated.py` (Antrag, Anwenden) in die Registrierung (Teil von G2-S0-01). Ergebnisse schreibt `orchestra` als Audit-Ereignisse (`ORC_AGENT_HIRED`, `ORC_TASK_ASSIGNED`, `ORC_TASK_CHECKED_OUT`, `ORC_WAKE`, `ORC_BUDGET_WARNING`, `ORC_BUDGET_STOP`, `ORC_ROUTINE_FIRED`), ohne Inhalt von Kommentaren. `desk/events.py` übersetzt sie in Spec 4 zu `agent.changed`, `budget.warning`.
+
+Der Herzschlag braucht einen Takt. `desk/extensions.py` darf je Modul ein `start(hub)` anbieten; `orchestra_kinds.start` startet einen Daemon-Thread, der `heartbeat.tick()` und `routines.tick()` im eingestellten Abstand ruft, nur bei eingeschaltetem Schalter. Wer außer der Oberfläche taktet (z. B. ohne laufende UIX), entscheidet Spec 1 (Offene Punkte).
+
+##### D3.3 Datenmodell `orchestra.db`
+
+Ablage `workspace/GUPPI_OS/runtime_data/orchestra/orchestra.db`, WAL wie `testlab.db`. Geschrieben wird nur in Transaktionen; `core/util.atomic_write_*` gilt für Dateien, nicht für SQLite (siehe Offene Punkte). Zeiten als UTC-Text (ISO 8601, wie Audit), Geld als ganze Cent. Abgestimmt mit dem Datenmodell von Spec 1; Abweichungen stehen in der letzten Spalte.
+
+| Tabelle | Spalten (Typ, Pflicht) | Schlüssel und Indizes | gegenüber Spec 1 |
+| --- | --- | --- | --- |
+| `meta` | `key TEXT`, `value TEXT NOT NULL` | PK `key`; enthält `schema_version` | neu |
+| `agents` | `id TEXT`, `instance_id TEXT NOT NULL`, `template_id TEXT NOT NULL`, `name TEXT NOT NULL`, `role TEXT NOT NULL`, `recipe_id TEXT`, `reports_to TEXT`, `status TEXT NOT NULL` CHECK (`aktiv`,`pausiert`,`beendet`), `permission_level INTEGER NOT NULL` CHECK 0–6, `budget_tokens INTEGER`, `budget_eur_cent INTEGER`, `budget_period TEXT NOT NULL DEFAULT 'gesamt'` CHECK (`gesamt`,`monat`), `created_at TEXT NOT NULL`, `updated_at TEXT NOT NULL`, `revision INTEGER NOT NULL DEFAULT 1` | PK `id`; UNIQUE `instance_id`; FK `reports_to` → `agents(id)`; Index `(reports_to)`, `(status)` | `instance_id`, `name`, `permission_level`, `budget_period`, `revision` neu; `budget_eur` als Cent |
+| `tasks` | `id TEXT`, `title TEXT NOT NULL`, `description TEXT`, `goal_ref TEXT`, `project_id TEXT`, `parent_id TEXT`, `assignee TEXT`, `state TEXT NOT NULL` CHECK (`offen`,`zugewiesen`,`in_arbeit`,`wartet`,`erledigt`,`abgebrochen`), `priority INTEGER NOT NULL DEFAULT 0`, `checkout_by TEXT`, `checkout_at TEXT`, `checkout_run TEXT`, `mission_id TEXT`, `created_by TEXT NOT NULL`, `created_at TEXT NOT NULL`, `updated_at TEXT NOT NULL`, `revision INTEGER NOT NULL DEFAULT 1` | PK `id`; FK `parent_id` → `tasks(id)`, `assignee` → `agents(id)`; Index `(assignee, state)`, `(parent_id)`, `(mission_id)`, Teilindex `(checkout_by) WHERE checkout_by IS NOT NULL` | `goal_id` heißt `goal_ref` (verweist auf ein Vorhaben `intent`); `project_id`, `priority`, `checkout_run`, `created_by`, `revision` neu |
+| `blockers` | `task_id TEXT NOT NULL`, `blocked_by_task_id TEXT NOT NULL`, `created_at TEXT NOT NULL` | PK `(task_id, blocked_by_task_id)`; CHECK `task_id <> blocked_by_task_id`; FK beide → `tasks(id)`; Index `(blocked_by_task_id)`; Zyklen prüft `board.py` | – |
+| `comments` | `id INTEGER`, `task_id TEXT NOT NULL`, `author_kind TEXT NOT NULL` CHECK (`captain`,`agent`,`system`), `author_id TEXT`, `text TEXT NOT NULL`, `ts TEXT NOT NULL` | PK `id` AUTOINCREMENT; FK `task_id`; Index `(task_id, ts)` | `author` aufgeteilt in Art und ID |
+| `wakeups` | `id INTEGER`, `agent_id TEXT NOT NULL`, `task_id TEXT`, `reason TEXT NOT NULL` CHECK (`zugewiesen`,`antwort`,`routine`,`captain`,`wiederholung`), `due_at TEXT NOT NULL`, `created_at TEXT NOT NULL`, `coalesced_into INTEGER`, `job_id TEXT`, `done_at TEXT` | PK `id`; FK `agent_id`, `coalesced_into` → `wakeups(id)`; Teilindex `(agent_id, due_at) WHERE done_at IS NULL AND coalesced_into IS NULL` | `task_id`, `job_id`, `done_at` neu |
+| `routines` | `id TEXT`, `agent_id TEXT NOT NULL`, `title TEXT NOT NULL`, `cron TEXT NOT NULL`, `timezone TEXT NOT NULL DEFAULT 'Europe/Berlin'`, `catch_up TEXT NOT NULL` CHECK (`nachholen`,`auslassen`), `enabled INTEGER NOT NULL DEFAULT 1`, `task_template TEXT NOT NULL` (JSON), `last_run TEXT`, `next_run TEXT` | PK `id`; FK `agent_id`; Teilindex `(next_run) WHERE enabled = 1` | `title`, `timezone`, `enabled`, `task_template`, `next_run` neu |
+| `routine_runs` | `routine_id TEXT NOT NULL`, `due_at TEXT NOT NULL`, `task_id TEXT`, `outcome TEXT NOT NULL` CHECK (`erzeugt`,`ausgelassen`,`nachgeholt`) | PK `(routine_id, due_at)` – derselbe Termin erzeugt nie zwei Aufgaben | neu |
+| `spend` | `id INTEGER`, `agent_id TEXT NOT NULL`, `task_id TEXT`, `mission_id TEXT`, `provider TEXT NOT NULL` CHECK (`lokal`,`cloud`), `provider_id TEXT`, `model TEXT`, `tokens_in INTEGER NOT NULL DEFAULT 0`, `tokens_out INTEGER NOT NULL DEFAULT 0`, `requests INTEGER NOT NULL DEFAULT 1`, `eur_cent INTEGER NOT NULL DEFAULT 0`, `ts TEXT NOT NULL` | PK `id` AUTOINCREMENT; Index `(agent_id, ts)`, `(provider_id, ts)`, `(task_id)` | `tokens` aufgeteilt; `provider_id`, `model`, `requests`, `mission_id` neu (Spec 3 braucht Anfragen je Minute/Tag) |
+
+Checkout wie in Spec 1: `BEGIN IMMEDIATE`, `UPDATE tasks SET checkout_by=?, checkout_at=?, checkout_run=?, revision=revision+1 WHERE id=? AND checkout_by IS NULL AND state IN ('zugewiesen','offen')` und Erfolg nur bei genau einer Zeile; vor dem Update prüft dieselbe Transaktion, dass kein offener Blocker besteht. Fremdschlüssel auf Agenten des Agent Managers (`instance_id`) liegen in einer anderen Datenbank und werden nur beim Einstellen geprüft.
+
+##### D3.4 Konfiguration und Schalter
+
+`runtime/config/orchestra.yaml` (Paket-Vorgabe, im Git):
+
+```yaml
+orchestra:
+  schema: 1
+  enabled: false                 # der Schalter in local_config/switches.yaml schaltet ein
+  database: orchestra/orchestra.db    # relativ zu runtime_data, kein absoluter Pfad, kein ..
+  heartbeat: {tick_s: 5, coalesce_s: 2, max_runs_per_tick: 1}
+  checkout: {stall_s: 900}       # ORC-11; Grenzen wie job_supervisor (2..86400)
+  budget: {warn_percent: 80, stop_percent: 100}
+  routines: {max_catch_up: 3}
+  org: {max_depth: 6}
+```
+
+Prüfung in `config.py`: unbekannte Schlüssel abgewiesen, Zahlen mit Grenzen wie `SupervisorConfig._int`, `warn_percent < stop_percent`, `coalesce_s < tick_s`, `database` relativ und ohne `..`.
+
+Schalter: `local_switches.ALLOWED` bekommt `"orchestra": {"enabled"}`; Standard aus, weil die Paket-Vorgabe `enabled: false` sagt (G2-S0-10).
+
+##### D3.5 Verhalten bei fehlender oder ungültiger Konfiguration (KERN-06)
+
+`runtime.py` bekommt `_configure_orchestra(data)` über das vorhandene Muster `_optional("orchestra", build)` (G2-S0-11):
+
+| Lage | `rt.orchestra` | `rt.orchestra_error` | Desk |
+| --- | --- | --- | --- |
+| Schalter aus (Standard) | `None` | `None` | Typen wie heute, `agent` Platzhalter |
+| Schalter an, Datei fehlt | `None` | `orchestra_config_missing` | wie Schalter aus |
+| Schalter an, Datei ungültig | `None` | `orchestra_config_invalid:<feld>` | wie Schalter aus |
+| Datenbank nicht zu öffnen oder Schema neuer als der Code | `None` | `orchestra_db_error:<grund>` | wie Schalter aus |
+| alles gültig | `Orchestra` | `None` | Typen `agent`, `issue`, `routine`, `budget` registriert |
+
+`boot()` bekommt `"orchestra": {"enabled": bool, "error": str|None, "schema_version": int|None}`. Der Zustand `READY` hängt davon nicht ab (wie bei `job_supervisor`). `guppi doctor` gibt `boot()` aus und zeigt den Eintrag damit ohne Änderung an `cli.py`. Ein Fehler wird zusätzlich einmal als `ORCHESTRA_OFF` mit Grund ins Audit geschrieben.
+
+#### D4 Neue Guard-Aktionen
+
+Neue Regeln kommen in `architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT/core/guard/guard_rules.yaml` (GR-029 ff.) und je ein Eintrag in `runtime/config/permission_levels.yaml`, weil eine dort fehlende Aktion als `missing_permission` gesperrt würde. Jede Zeile ist ein eigenes Gate (Regel 6). Hinweis: Der Guard behandelt eine unbekannte Aktion als `CAPTAIN_REQUIRED`; heute laufen so schon `install_module`, `set_project_boundaries`, `change_switch`, `agent.instantiate` ohne eigene Regel. Für die Orchestrierung wird jede Aktion ausdrücklich eingetragen, damit die Entscheidung im Regelwerk steht und nicht im Standard. Die Spalte „Stufe“ ist die Obergrenze aus `permission_levels.yaml` (0 READ_ONLY … 6 EXTERNAL_ACTION): Sie sagt, ab welcher Rechte-Stufe ein Agenten-Job die Aktion überhaupt anfragen darf. Verwaltungsaktionen des Captains stehen auf 5 (SYSTEM_CHANGE), damit ein Agent sie nie selbst anfragt; `tests/test_permission_levels.py` hält Regeln und Stufen gleich.
+
+| Gate | Aktion | Bedeutung | Vorschlag | Stufe | Begründung |
+| --- | --- | --- | --- | --- | --- |
+| G2-S0-GA-01 | `set_org` | Agent ins Organigramm aufnehmen, Vorgesetzten, Rolle oder Rezept ändern | CAPTAIN_REQUIRED | 5 | ändert, wer wem Arbeit und Rechte geben darf (ORC-01, 02, 08) |
+| G2-S0-GA-02 | `assign_task` | Aufgabe einem Agenten zuweisen oder umhängen | ALLOW | 2 | legt nur einen Datensatz an, startet nichts; der Lauf hat sein eigenes Gate (`wake_agent`); Audit `ORC_TASK_ASSIGNED` |
+| G2-S0-GA-03 | `delegate_task` | Agent legt Teilaufgabe für einen Agenten unter sich an | ALLOW | 2 | `org.py` prüft vorher Richtung und Rechte (ORC-08); eine Verletzung wird im Code abgewiesen und protokolliert, der Guard sieht nur gültige Delegationen |
+| G2-S0-GA-04 | `wake_agent` | Agentenlauf starten (Mission mit Modell) | CAPTAIN_REQUIRED | 4 | „Jeder Lauf, der Modelle startet, ist ein Gate“ (ARCHITEKTUR §5); für automatisches Wecken siehe Offene Punkte (Dauerfreigabe) |
+| G2-S0-GA-05 | `pause_agent` | Agent anhalten, laufende Aufgabe freigeben | ALLOW | 2 | macht das System nur sicherer (ORC-12) |
+| G2-S0-GA-06 | `resume_agent` | angehaltenen Agenten fortsetzen | CAPTAIN_REQUIRED | 5 | hebt eine Pause auf, auch die Pause nach Budget-Stopp |
+| G2-S0-GA-07 | `terminate_agent` | Agent beenden (Status `beendet`, endgültig) | CAPTAIN_REQUIRED | 5 | nicht rücknehmbar im Organigramm |
+| G2-S0-GA-08 | `set_budget` | Budget eines Agenten festlegen oder erhöhen (auch nach 100 %) | CAPTAIN_REQUIRED | 5 | Budget ist eine Grenze des Captains (ORC-09) |
+| G2-S0-GA-09 | `set_routine` | Routine anlegen, ändern, ausschalten | CAPTAIN_REQUIRED | 5 | erzeugt künftig Arbeit ohne weiteren Klick (ORC-10) |
+| G2-S0-GA-10 | `fire_routine` | fällige Routine legt eine Aufgabe an | ALLOW | 2 | legt nur eine Aufgabe an; der Lauf braucht `wake_agent` |
+
+Wiederverwendet statt neu:
+
+| Vorhandene Aktion | wofür | Entscheidung |
+| --- | --- | --- |
+| `create_new_artifact` (GR-002) | Aufgabe anlegen, Kommentar schreiben | ALLOW |
+| `agent.instantiate` (`agent_manager/instances.py`, ohne Regel → CAPTAIN_REQUIRED) | Agent einstellen (Instanz anlegen); danach `set_org` | unverändert |
+| `external_write`, `paid_action` | Cloud-Aufrufe eines Agenten (Spec 3) | unverändert |
+| – (kein Guard) | Checkout einer Aufgabe | interne Sperre wie `mission_lock`, keine Handlung nach außen |
+
+#### D5 Fehlerfälle und Abnahme
+
+Fehlerfälle:
+
+| Fall | Verhalten |
+| --- | --- |
+| Typ doppelt registriert | `ValueError('kind_already_registered')` beim Start; Erweiterung wird ausgelassen, Grund in `kinds.problems` und Audit `DESK_KIND_REFUSED`; die eingebauten Typen laufen weiter |
+| Erweiterung wirft beim Import oder `register` | wie oben; die Oberfläche startet trotzdem |
+| Leser liefert unvollständige Form | `object_shape_invalid` |
+| Registrierung nach `freeze()` | `ValueError('kinds_frozen')` |
+| Verb ohne `id`, aber kein `type_verb` | `id_required` (wie heute) |
+| `client` im Körper | `400 client_is_set_by_server`, Audit `UIX_CLIENT_REFUSED` |
+| Token keiner Klasse | `403` wie heute |
+| CLI/MCP ohne laufende Oberfläche | `uix_not_running` |
+| `orchestra` aus, Typ `issue` angefragt | `unknown_object_type` |
+| Datenbank gesperrt | `busy_timeout` 30 s, danach `orchestra_busy`; kein halber Schreibvorgang |
+| Checkout von zwei Agenten | genau einer gewinnt (ORC-04), der andere bekommt `task_already_checked_out` |
+
+Abnahme je Anforderung:
+
+| ID | Testdatei | Prüfung |
+| --- | --- | --- |
+| KERN-01 | `tests/test_orchestra_desk.py` (neu) | Schalter an, Fixture-Datenbank: `POST /api/objects {type:"agent", id}` und `{type:"issue"}`, `{type:"routine"}`, `{type:"budget", id}` liefern genau die Schlüssel `SHAPE`; `{type:"task"}` liefert die Missionsliste unverändert (Golden) |
+| KERN-02 | `tests/test_desk_client.py` (neu) | dasselbe Verb (`model/laden` auf Fake-Host) mit Browser-Token, Browser-Token + `X-SEDRA-Tool: talk`, CLI-Token, MCP-Token: vier `UIX_ACTION`, Nutzlasten gleich bis auf `client` = `shell`, `chat`, `cli`, `mcp`; `client` im Körper → 400; fremder Token → 403 |
+| KERN-03 | `tests/test_core_boundary_src.py`, Durchsicht | Test grün; `git diff --stat main -- runtime/src/guppi_runtime/core` leer für Spec 0, sonst je Datei eine Gate-ID im Logbuch |
+| KERN-04 | `tests/test_desk_kinds.py` (neu) | Golden-Test der neun heutigen Typen; Typ `echo` nur über `extensions` erreichbar über beide Routen; `ast`-Prüfung: keine Typnamen in `object_view`/`objects_view`; doppelter Typ abgewiesen; `freeze()` wirkt |
+| KERN-05 | `tests/test_desk_mcp.py` (neu) | MCP-Werkzeug `act` mit `{type:"intent", id, verb:"aufgabe_machen"}` legt eine Aufgabe an; letzter `UIX_ACTION` trägt `client:"mcp"`; Anfrage ohne gültigen MCP-Token scheitert |
+| KERN-06 | `tests/test_orchestra_config.py` (neu), `tests/test_local_switches.py` | Schalter aus → `orchestra` `None`, Fehler `None`; Schalter an + Datei fehlt → `boot()["orchestra"]["error"] == "orchestra_config_missing"`; ungültige Werte je Feld → `orchestra_config_invalid:<feld>`; `state` bleibt `READY`; `cli.main(['doctor'])` druckt den Eintrag; Schalter `orchestra` wird angenommen |
+| Grenze | `tests/test_orchestra_boundary.py` (neu) | `orchestra/` importiert keine verbotenen Pakete, auch nicht über Umwege |
+
+KERN-07 (nur Bedingung): Ein Paperclip-Adapter ist ein weiterer externer Client mit eigenem Token nach D2 und eigenem Wert für `client`; er ruft nur `POST /api/objects` und `POST /api/actions` (Verb `wecken` am Typ `agent`), bekommt dadurch dieselbe Mission mit Gate (`wake_agent`) und denselben Audit-Eintrag. Kosten meldet SEDRA aus `spend`; der Rückweg der Kosten zu Paperclip ist eigene Arbeit der Option „KI-Zentrale“. Ein neuer Client-Wert ist eine Änderung der Liste aus G1-S0-c und damit ein eigenes Gate.
+
+#### D6 Gate-Vorschläge für G2
+
+Änderungen an `core/`: keine. Spec 0 kommt ohne Eingriff in `guppi_runtime/core/` aus; `core/audit.py` nimmt `client` in der freien Nutzlast auf. Eine spätere Kern-Änderung ist nur vorgemerkt (Dauerfreigabe, Offene Punkte) und nicht Teil von G2.
+
+| Gate | Gegenstand | Art |
+| --- | --- | --- |
+| G2-S0-01 | Desk-Registrierung: `desk/kinds.py`, `builtin_kinds.py`, `extensions.py`, `gated.py`; `objects.TYPES` und `actions.table()` aus dem Register; Golden-Test | Design |
+| G2-S0-02 | einmalige Änderung `uix_server.py`: `object_view`/`objects_view` an das Register, `act` mit `client` und Verben ohne `id`, Start der Erweiterungen (deckt G1-S0-d) | Design |
+| G2-S0-03 | einmalige Änderung `chat_tools.py`: `VERB_TYPES` aus dem Register | Design |
+| G2-S0-04 | Feld `client` in `UIX_ACTION`, Ermittlung im Server, Abweisung im Körper, Vertrauensgrenze wie D2 | Design |
+| G2-S0-05 | Client-Token für `cli` und `mcp` mit Dateien unter `runtime_data/uix/clients/` (Token-Semantik, Regel 6) | Regel 6 |
+| G2-S0-06 | CLI-Befehle `guppi objects`, `guppi act` über die API | Design |
+| G2-S0-07 | neuer MCP-Server `desk_mcp.py` (schreibend über `/api/actions`); `state_mcp.py` bleibt lesend | Design |
+| G2-S0-08 | Paket `orchestra/`: Module, Schichtung, Importregeln, `test_orchestra_boundary.py` | Design |
+| G2-S0-09 | Datenmodell `orchestra.db` wie D3.3, inkl. Abweichungen zu Spec 1 (Spec 1 übernimmt es in O1.2) | Design |
+| G2-S0-10 | `runtime/config/orchestra.yaml` und Schalter `orchestra` in `local_switches.ALLOWED` | Konfiguration |
+| G2-S0-11 | Verdrahtung in `runtime.py` (`_configure_orchestra`, Eintrag in `boot()`); `runtime.py` steht unter `test_core_boundary_src` | Kompositionswurzel |
+| G2-S0-12 | Desk-Typen `agent`, `issue`, `routine`, `budget` mit Verben wie D3.2; `task` bleibt die Mission | Design |
+| G2-S0-13 | Nachtrag `SHELL_WERKZEUG_VERTRAG_v1.md` §10: Registrierung der Objekttypen, Verben ohne Objekt, neue Typen, Feld `client`, Client-Token | Vertrag |
+| G2-S0-14 | Einträge der neuen Aktionen in `runtime/config/permission_levels.yaml` (Stufen wie D4) | Konfiguration |
+| G2-S0-GA-01 bis GA-10 | je eine neue Guard-Regel wie D4 (GR-029 bis GR-038) | Guard, Regel 6 |
+
+#### Offene Punkte (K0.5)
+
+| Nr | Lücke oder Widerspruch | Vorschlag |
+| --- | --- | --- |
+| OP-1 | Desk-Typ `task` ist heute die Mission; KERN-01 und Spec 1 nennen die Aufgabe des Bretts ebenfalls `task`. Beides unter einem Typ hieße zwei Datenquellen und andere Verben – eine Verhaltensänderung bestehender Werkzeuge. | `task` bleibt die Mission; die Aufgabe des Bretts wird Typ `issue` (Paperclip-Begriff, Shell D nennt den Eintrag schon „Issues“) und verweist über `mission_id` auf ihre Missionen. KERN-01 im Abnahmekriterium auf `{type:"issue"}` anpassen. |
+| OP-2 | G1-S0-d erlaubt die einmalige Änderung von `uix_server.py` und `desk/`; `chat_tools.VERB_TYPES` ist eine fünfte feste Stelle außerhalb davon. | eigenes Gate G2-S0-03 |
+| OP-3 | KERN-05 setzt voraus, dass CLI und MCP den Token haben; heute gibt es nur den flüchtigen Browser-Token. | Client-Token wie D2 (G2-S0-05) |
+| OP-4 | `wake_agent` = CAPTAIN_REQUIRED widerspricht dem automatischen Wecken von ORC-06: Guard-Freigaben sind Einmal-Token mit 24 h. Eine Dauerfreigabe (wie SOC-07 für Beiträge) fehlt. | In Spec 1 eine Freigabeart „Dauerfreigabe je Agent“ entwerfen, gebunden an Agent, Rechte-Stufe, Budget und Ablaufdatum; das ist eine Änderung an `core/guard.py` und braucht ein eigenes Kern-Gate. Bis dahin weckt jeder Lauf eine Entscheidung. |
+| OP-5 | Spec 0 sagt „atomares Schreiben über `core/util.py`“ für `orchestra.db`; `util` schreibt Dateien atomar, SQLite sichert sich über Transaktionen. | Satz ersetzt durch D3.3 (Transaktionen, WAL); `util` nur für Dateien |
+| OP-6 | ORC-02 „außer dem obersten“: ein oberster Agent oder mehrere Wurzeln? | genau ein aktiver Agent ohne Vorgesetzten (der Planer), geprüft in `org.py` |
+| OP-7 | Budget-Zeitraum ist offen (gesamt oder je Monat); Spec 3 will ein Monatsbudget. | Spalte `budget_period` (`gesamt`, `monat`); Standard `gesamt` bis zur Auswertung nach vier Wochen |
+| OP-8 | Zielkette (ORC-13): Eine Tabelle für Ziele fehlt. | Ziel = Vorhaben (`intent`), Projekt = `project`; `tasks.goal_ref` und `tasks.project_id` verweisen darauf, keine eigene Ziel-Tabelle |
+| OP-9 | Herzschlag-Takt läuft nach D3.2 nur, solange die Oberfläche läuft; E2E-6 (Routine fällig, während SEDRA aus war) braucht nur die Nachhol-Regel, aber ein Betrieb ohne UIX hätte keinen Takt. | in Spec 1 entscheiden: Takt in der Oberfläche (Vorschlag) oder eigener Dienst |
+| OP-10 | Die Stufe „E2 (Erweiterung)“ aus dem früheren Vorschlag passt nicht zum Weg: `self_integration` übernimmt nur E1-Module nach `capabilities/`. `orchestra/` und die Desk-Teile sind Harness- bzw. Bau-Übernahmen nach Review (G4), keine Selbst-Integration. | in G2 so festhalten; `self_integration` wird nicht geweitet |
+| OP-11 | `tests/test_desk_objects.py` liest die Architektur `v1.17_RUNTIME_SYNC`, die Runtime lädt `v1.20_SELF_DEVELOPMENT`. Neue Guard-Regeln kämen nur in v1.20. | prüfen, ob der Test mit v1.20 laufen soll; nicht in Spec 0 ändern |
 
 ### Aufgaben
 
@@ -138,7 +399,7 @@ Dafür kommt KERN-07 hinzu: WENN Paperclip als Orchestrator angebunden wird, DAN
 - [x] K0.2 Ist-Tabelle oben Zeile für Zeile gegen den Code prüfen und korrigieren
 - [x] K0.3 Desk-Stand prüfen: Welche Objekttypen und Verben gibt es in `desk/objects.py` und `desk/actions.py`?
 - [x] K0.4 Variante A mit Befunden aus K0.1–K0.3 gegen den Code bestätigen → G1 (erteilt 20.10.2026, G1-S0-a bis f)
-- [ ] K0.5 Design `orchestra/` mit Datenmodell und neuen Guard-Aktionen ausarbeiten → G2
+- [ ] K0.5 Design `orchestra/` mit Datenmodell und neuen Guard-Aktionen ausarbeiten → G2 (ausgearbeitet 20.10.2026, Abschnitt „Design“ D1 bis D6; wartet auf G2)
 - [ ] K0.6 Nach Freigabe: Logbuch-Eintrag, Doku (README, `ENTWICKLUNG.md`) auf Local First, Cloud Second anpassen
 
 ## Spec 1 – Orchestrierung: Agenten, Aufgaben, Herzschlag
