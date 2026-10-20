@@ -697,17 +697,48 @@ Alles ist ein Vorschlag des Vorarbeiters. Jedes Gate entscheidet der Captain ein
 
 #### Antworten des Captains auf die offenen Fragen (20.10.2026)
 
-1. Mammouth (URL, Modelle, Schlüsselformat, Guthaben-Abfrage): wird später eingetragen; der Schlüssel ist noch nicht beantragt. Bis dahin steht Mammouth nicht im Startbestand der Anbieter (LAB-02), und das Muster für sein Schlüsselformat (CLD-08) bleibt offen.
+1. Mammouth (URL, Modelle, Schlüsselformat, Guthaben-Abfrage): wird später eingetragen; der Schlüssel ist noch nicht beantragt. (URL und Guthaben-Abfrage stehen inzwischen in der API-Doku, siehe unten.) Bis dahin steht Mammouth nicht im Startbestand der Anbieter (LAB-02), und das Muster für sein Schlüsselformat (CLD-08) bleibt offen.
 2. NVIDIA: ob die Grenze in Anfragen als einzige Bremse genügt, wird erst im Betrieb geklärt (C3.5).
 3. „Kurztest der Werkstatt“ (LAB-03): gemeint ist das „Testen“ lokaler Modelle in der Werkstatt (eine kurze Frage mit Zeit und Token/s, `workshop/arbeitsplatz.yaml`). Der Verweis bleibt; der Cloud-Kurztest zeigt dasselbe Ergebnisformat (Antwortzeit, Token). Die Korrektur in der Tabelle „alt / neu“ (Streichung des Verweises) entfällt.
 4. Lauf-Prozesse dürfen den vorhandenen Schlüssel lesen, weil er für Testzwecke angelegt ist. Das gilt nur für diesen Testschlüssel; für den produktiven Schlüssel entscheidet G2 neu (CLD-08, Punkt 3).
 5. SK0-only genügt für Planer und Recherche.
-6. Nutzungsbedingungen beider Anbieter: werden geprüft, bevor die Cloud regelmäßig genutzt wird. Aufgabe des Vorarbeiters, Termin vor G4; sie ist nicht Teil von Stufe 1.
+6. Nutzungsbedingungen beider Anbieter: geprüft am 20.10.2026, Ergebnis im nächsten Abschnitt. Für Mammouth fehlt noch der Primärtext.
 
+
+#### Prüfung der Nutzungsbedingungen (20.10.2026)
+
+Gelesen wurden öffentliche Seiten; es gab keinen Aufruf der Anbieter-APIs. Rechtsprüfung ist das nicht.
+
+**NVIDIA API Catalog.** Primärtext: „NVIDIA API Trial Terms of Service“ (PDF von NVIDIA, Stand Oktober 2025), gelesen. Befunde:
+
+| Punkt | Inhalt der Bedingungen | Folge für Spec 3 |
+| --- | --- | --- |
+| Zweck | Zugang „for limited trial purposes only“, ohne Einsatz des Dienstes oder der erzeugten Inhalte in Produktion (1.2); ohne Subskription nur interner Test und Evaluation (1.4) | Der Dauerbetrieb von Planer und Recherche mit der kostenlosen Stufe ist **nicht** gedeckt, sobald er „Produktion“ ist. Die Grenze „Startphase“ muss als Test und Evaluation geführt werden (G1-S3-11) |
+| Umfang | Nutzung begrenzt nach Zahl der Zugriffe oder Dauer; Credits (laut Forum 1000 beim Start, bis 5000); danach braucht es eine Subskription (1.4) | Die Grenze 500 pro Tag ist **unsere** Vorsicht, keine Zusage von NVIDIA. Das Tageslimit kann früher enden (Credits) und der Zugang ganz (Trial endet). Die Zahl „bis zu 40 pro Minute“ steht nicht in den Bedingungen (nur in Foren); CLD-05 muss mit Ablehnung durch den Anbieter (HTTP 429) rechnen |
+| Eingaben | Keine vertraulichen oder sensiblen Daten, keine Personendaten, keine Zahlungsdaten (2.6, 4.3) | deckt sich mit „nur SK0“; auch SK1 bleibt draußen |
+| Verwendung der Eingaben | NVIDIA darf Eingaben und Ergebnisse zur Verbesserung seiner Produkte „einschließlich KI-Modelle“ verwenden und protokolliert Nutzung für Sicherheit (3.3) | SK0 muss wirklich **öffentlich** sein. Ein Entwurf, der später nicht für Dritte gedacht ist, ist kein SK0. Das gehört in die GateWay-Beschreibung von SK0 (G1-S3-12) |
+| Weiteres | Vorabversionen ohne Gewähr (1.3); Schiedsklausel (14) | Verfügbarkeit nicht zugesichert; CLD-07 gilt auch für den Ausfall |
+
+**Mammouth.** Primärquelle ist nur die API-Dokumentation (`info.mammouth.ai/docs/api-quick-start`), gelesen. Die Nutzungsbedingungen, die Datenschutzseite und die Auftragsverarbeitung liegen hinter der Anmeldung oder waren nicht abrufbar; **nicht geprüft**. Was die API-Doku sagt:
+
+- Basis-URL `https://api.mammouth.ai/v1`, Anmeldung mit Bearer-Schlüssel, Endpunkte `POST /v1/chat/completions` (OpenAI-kompatibel), `POST /v1/embeddings`, `GET /key/info` (verbrauchte Credits je Schlüssel).
+- Abo-Credits für die API monatlich: Starter 2 $, Standard 4 $, Expert 10 $ (in Dollar, nicht Euro); zusätzliche Credits kaufbar; die Doku nennt „nie mehr als der angezeigte Preis“ als Obergrenze. Ratenlimits nennt sie nicht (nur 429 als Fehler).
+- Modellliste im „Model Explorer“, nicht über eine feste Liste. Das Muster für das Schlüsselformat nennt sie nicht.
+- Mammouth leitet an Modelle fremder Hersteller weiter; was diese mit Eingaben tun, steht laut Doku auf einer Seite „Privacy with model providers“, die ich nicht lesen konnte. Dritte Quellen nennen Löschung von Protokollen nach höchstens 30 Tagen und kein Training mit Eingaben; das ist **nicht bestätigt**.
+
+Folgen für die Spec: (1) Das Guthaben ist abfragbar (`GET /key/info`); damit ist die Euro-Grenze für Mammouth ohne Schätzung prüfbar (CLD-05), ist aber ein weiterer Netzzugriff (Aktion `cloud_probe`, GA-06). (2) Die Währung ist Dollar; „0 € extra“ heißt in der Regeldatei: Credits, die das Abo enthält, kein Zukauf. (3) Vor dem ersten Mammouth-Aufruf liest der Vorarbeiter Nutzungsbedingungen und „Privacy with model providers“ nach Anmeldung (G1-S3-13).
+
+Neue Gates aus der Prüfung:
+
+| Gate | Entscheidung, die der Captain trifft | Empfehlung |
+| --- | --- | --- |
+| G1-S3-11 | NVIDIA wird in der Startphase ausdrücklich als Test und Evaluation geführt (Prototyp-Zweck); ein Dauerbetrieb im Alltag braucht vorher eine Subskription oder einen anderen Anbieter. Diese Einordnung steht in der Spec und im Labor (LAB-04) | ja |
+| G1-S3-12 | SK0 bedeutet für die Cloud „öffentlich, ohne Rücksicht auf Verwendung durch den Anbieter“: Entwürfe und interne Texte gelten nicht als SK0, auch wenn kein Merkmal anschlägt (Text in `gateway/wissen.py`, Gate in Stufe 2) | ja |
+| G1-S3-13 | Mammouth erst nach Lesen von Nutzungsbedingungen und Datenschutzseite (nach Anmeldung) in den Startbestand; Freigabe als eigenes Gate | ja |
 
 #### Nicht geprüft
 
-Kein Testlauf (`pytest`, `uix_check`), keine Browserprüfung, kein Cloud-Aufruf; `local_config/` und `cloud_keys.json` nicht geöffnet. Nicht gelesen: `desk/events.py`, `desk/decisions.py`, `provider_health`, die Tests im Einzelnen, der Wortlaut der Regeln in `docs/ENTWICKLUNG.md`, Nutzungsbedingungen von NVIDIA und Mammouth, Preislisten.
+Kein Testlauf (`pytest`, `uix_check`), keine Browserprüfung, kein Cloud-Aufruf; `local_config/` und `cloud_keys.json` nicht geöffnet. Nicht gelesen: `desk/events.py`, `desk/decisions.py`, `provider_health`, die Tests im Einzelnen, der Wortlaut der Regeln in `docs/ENTWICKLUNG.md`, Preislisten; Mammouth-Nutzungsbedingungen und -Datenschutzseite (nicht abrufbar, siehe Prüfung der Nutzungsbedingungen).
 
 ## Spec 4 – Oberfläche: die Paperclip-Shell (D)
 
