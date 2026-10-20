@@ -4,7 +4,8 @@ database not openable or newer than the code -> the text of the database error; 
 `boot_entry` is the entry `boot()["orchestra"]`. The read methods give the rows that the desk adapter `desk/orchestra_kinds.py` turns into objects (K0.21). Config loader,
 database opener, audit, guard, job supervisor and template reader are PASSED IN (D3.1: no import of desk, agent_manager or devvm), so the tests use fakes and their own
 sqlite tables. The domain logic (org, board, heartbeat, budget, routines) comes in Spec 1. GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the
-reference (benchmarks/devvm_refs/k0_orchestra_service). Wiring into runtime.py is harness work (K0.20)."""
+reference (benchmarks/devvm_refs/k0_orchestra_service). Wiring into runtime.py is harness work (K0.20).
+Stages cut to at most 20 new hidden checks each (Captain, line L3, 20.10.2026)."""
 
 NOTES = '''# Notes for k0_orchestra_service
 Python 3 standard library only, and in fact nothing needs to be imported: the config loader, the database opener and the audit are functions passed in, the connection is a sqlite3 connection passed in.
@@ -68,6 +69,19 @@ assert o2.audit is audit
 assert o2.schema_version() == 7
 assert Orchestra(cfg, db(None)).schema_version() == 0
 assert Orchestra(cfg, db("2", sqlite3.Row)).schema_version() == 2
+o.close()
+try:
+    conn.execute("SELECT 1")
+except sqlite3.ProgrammingError:
+    pass
+else:
+    raise AssertionError("not closed")
+'''
+
+SETUP = r'''
+conn = db()
+cfg = Cfg()
+g, s, t = object(), object(), (lambda ref: {})
 
 
 def loader(result):
@@ -86,8 +100,9 @@ def opener(result):
             raise result
         return result
     return open_db
+'''
 
-
+C2 = SETUP + r'''
 assert build(False, loader(cfg), opener(conn), "c.yaml", "rd", audit=audit) == (None, None)
 assert build(None, loader(cfg), opener(conn), "c.yaml", "rd", audit=audit) == (None, None)
 assert build("yes", loader(cfg), opener(conn), "c.yaml", "rd", audit=audit) == (None, None)
@@ -109,8 +124,9 @@ for load, open_db, reason in cases:
     assert build(True, load, open_db, "c.yaml", "rd", audit=audit) == (None, reason)
     assert events == [("ORCHESTRA_OFF", {"reason": reason})]
 assert build(True, loader(ValueError("orchestra_config_missing")), opener(conn), "c.yaml", "rd") == (None, "orchestra_config_missing")
-log.clear()
-events.clear()
+'''
+
+C3 = SETUP + r'''
 built, error = build(True, loader(cfg), opener(conn), "cfg/orchestra.yaml", "rd", audit=audit, guard=g, templates=t)
 assert error is None
 assert isinstance(built, Orchestra)
@@ -133,27 +149,23 @@ except TypeError:
 else:
     raise AssertionError("unknown part accepted")
 assert log == []
+o2 = Orchestra(cfg, db("7"))
 assert boot_entry(None, None) == {"enabled": False, "error": None, "schema_version": None}
 assert boot_entry(None, "orchestra_config_missing") == {"enabled": False, "error": "orchestra_config_missing", "schema_version": None}
 assert boot_entry(built, None) == {"enabled": True, "error": None, "schema_version": 1}
 assert boot_entry(o2, None)["schema_version"] == 7
-o.close()
-try:
-    conn.execute("SELECT 1")
-except sqlite3.ProgrammingError:
-    pass
-else:
-    raise AssertionError("not closed")
 '''
 
-C2 = r'''
+DATA = r'''
 DDL = (
     "CREATE TABLE agents (id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL, reports_to TEXT, status TEXT NOT NULL, budget_tokens INTEGER, budget_eur_cent INTEGER)",
     "CREATE TABLE tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, assignee TEXT, state TEXT NOT NULL, priority INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)",
     "CREATE TABLE routines (id TEXT PRIMARY KEY, agent_id TEXT NOT NULL, title TEXT NOT NULL, cron TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 1)",
     "CREATE TABLE spend (id INTEGER PRIMARY KEY AUTOINCREMENT, agent_id TEXT NOT NULL, tokens_in INTEGER NOT NULL DEFAULT 0, tokens_out INTEGER NOT NULL DEFAULT 0, requests INTEGER NOT NULL DEFAULT 1, eur_cent INTEGER NOT NULL DEFAULT 0)",
 )
-for factory in (None, sqlite3.Row):
+
+
+def filled(factory):
     conn = db("1", factory)
     for statement in DDL:
         conn.execute(statement)
@@ -171,6 +183,12 @@ for factory in (None, sqlite3.Row):
     conn.executemany("INSERT INTO routines VALUES (?,?,?,?,?)", [("r2", "ua", "Woche", "0 6 * * 1", 0), ("r1", "planer", "Tag", "0 6 * * *", 1)])
     conn.executemany("INSERT INTO spend (agent_id, tokens_in, tokens_out, requests, eur_cent) VALUES (?,?,?,?,?)",
                      [("coder", 100, 50, 1, 0), ("coder", 10, 5, 2, 3), ("ua", 1, 1, 1, 0)])
+    return conn
+'''
+
+C4 = DATA + r'''
+for factory in (None, sqlite3.Row):
+    conn = filled(factory)
     o = Orchestra(object(), conn)
     agents = o.agents()
     assert [a["id"] for a in agents] == ["coder", "planer", "ua"]
@@ -179,6 +197,18 @@ for factory in (None, sqlite3.Row):
     assert o.agent("ua")["name"] == "Unterarbeiter"
     assert type(o.agent("ua")) is dict
     assert o.agent("nope") is None
+    assert [r["id"] for r in o.routines()] == ["r1", "r2"]
+    assert o.routine("r2")["enabled"] == 0
+    assert o.routine("r9") is None
+    assert o.spent("coder") == {"tokens": 165, "eur_cent": 3, "requests": 3}
+    assert o.spent("ua") == {"tokens": 2, "eur_cent": 0, "requests": 1}
+    assert o.spent("planer") == {"tokens": 0, "eur_cent": 0, "requests": 0}
+'''
+
+C5 = DATA + r'''
+for factory in (None, sqlite3.Row):
+    conn = filled(factory)
+    o = Orchestra(object(), conn)
     assert [t["id"] for t in o.issues()] == ["t2", "t1", "t0", "t3"]
     assert [t["id"] for t in o.issues(state="offen")] == ["t2", "t0", "t3"]
     assert [t["id"] for t in o.issues(assignee="coder")] == ["t1", "t3"]
@@ -187,34 +217,44 @@ for factory in (None, sqlite3.Row):
     assert o.issues(assignee="x' OR '1'='1") == []
     assert o.issue("t1") == {"id": "t1", "title": "Eins", "assignee": "coder", "state": "zugewiesen", "priority": 5, "created_at": "2026-10-20T11:00:00Z"}
     assert o.issue("t9") is None
-    assert [r["id"] for r in o.routines()] == ["r1", "r2"]
-    assert o.routine("r2")["enabled"] == 0
-    assert o.routine("r9") is None
-    assert o.spent("coder") == {"tokens": 165, "eur_cent": 3, "requests": 3}
-    assert o.spent("ua") == {"tokens": 2, "eur_cent": 0, "requests": 1}
-    assert o.spent("planer") == {"tokens": 0, "eur_cent": 0, "requests": 0}
     assert conn.execute("SELECT count(*) FROM tasks").fetchone()[0] == 4
 '''
 
+H1 = {"hidden_osvc_1.py": hidden("PARTS, Orchestra", C1)}
+H2 = {**H1, "hidden_osvc_2.py": hidden("Orchestra, build", C2)}
+H3 = {**H2, "hidden_osvc_3.py": hidden("Orchestra, build, boot_entry", C3)}
+H4 = {**H3, "hidden_osvc_4.py": hidden("Orchestra", C4)}
+H5 = {**H4, "hidden_osvc_5.py": hidden("Orchestra", C5)}
+
 STAGES = [
-    {"name": "build",
-     "task": """Create `service.py` (Python 3, nothing to import) with `class Orchestra`, `build` and `boot_entry`. Module constant `PARTS = ("guard", "supervisor", "templates")`.
-- `Orchestra(config, conn, audit=None, guard=None, supervisor=None, templates=None)`: keeps every argument as an attribute of the same name. `schema_version()`: the int of meta.value for key "schema_version" read through conn (0 when there is no such row). `close()`: closes conn.
-- `build(switch_on, load_config, open_db, config_path, runtime_data, audit=None, **parts) -> (orchestra or None, error text or None)`:
-  1. a key of parts that is not in PARTS -> TypeError (before anything else, nothing is called).
-  2. switch_on is not exactly True -> (None, None); nothing is loaded, opened or written.
-  3. config = load_config(config_path). Any exception: when it is a ValueError whose text starts with "orchestra_config_" the error is that text, otherwise "orchestra_config_invalid:unreadable".
-  4. conn = open_db(config.database_path(runtime_data)). Any exception: when it is a ValueError whose text starts with "orchestra_" the error is that text, otherwise "orchestra_db_error:open". ONE helper decides the error text for 3 and 4.
-  5. With an error: when audit is not None call audit("ORCHESTRA_OFF", {"reason": error}) once; return (None, error).
-  6. Otherwise return (Orchestra(config, conn, audit=audit, **parts), None).
-- `boot_entry(orchestra, error)`: {"enabled": orchestra is not None, "error": error, "schema_version": orchestra.schema_version() or None when orchestra is None}.""",
-     "hidden": {"hidden_osvc_1.py": hidden("PARTS, Orchestra, build, boot_entry", C1)}},
+    {"name": "facade",
+     "task": """Create `service.py` (Python 3, nothing to import) with `class Orchestra`. Module constant `PARTS = ("guard", "supervisor", "templates")`.
+- `Orchestra(config, conn, audit=None, guard=None, supervisor=None, templates=None)`: keeps every argument as an attribute of the same name.
+- `schema_version()`: the int of meta.value for key "schema_version" read through conn (0 when there is no such row); it works with and without conn.row_factory.
+- `close()`: closes conn.""",
+     "hidden": H1},
+    {"name": "errors",
+     "task": """Add `build(switch_on, load_config, open_db, config_path, runtime_data, audit=None, **parts) -> (orchestra or None, error text or None)` to `service.py` (keep everything else). This stage needs the switch and the error cases:
+1. switch_on is not exactly True -> (None, None); nothing is loaded, opened or written.
+2. config = load_config(config_path). Any exception: when it is a ValueError whose text starts with "orchestra_config_" the error is that text, otherwise "orchestra_config_invalid:unreadable".
+3. conn = open_db(config.database_path(runtime_data)). Any exception: when it is a ValueError whose text starts with "orchestra_" the error is that text, otherwise "orchestra_db_error:open". ONE helper decides the error text for 2 and 3.
+4. With an error: when audit is not None call audit("ORCHESTRA_OFF", {"reason": error}) once; return (None, error).""",
+     "hidden": H2},
+    {"name": "boot",
+     "task": """Complete `service.py` (keep everything else):
+- `build`: a key of parts that is not in PARTS -> TypeError (before anything else, nothing is called). Without an error return (Orchestra(config, conn, audit=audit, **parts), None) and write nothing to the audit.
+- `boot_entry(orchestra, error)`: {"enabled": orchestra is not None, "error": error, "schema_version": orchestra.schema_version(), or None when orchestra is None}.""",
+     "hidden": H3},
     {"name": "read",
-     "task": """Add read methods to `Orchestra` in `service.py` (keep everything else). Every row is a plain dict {column name: value} with ALL columns of its table (use cursor.description, so it works with and without conn.row_factory); always use `?` parameters, never put a value into the SQL text.
+     "task": """Add read methods to `Orchestra` in `service.py` (keep everything else). Every row is a plain dict {column name: value} with ALL columns of its table (use cursor.description, so it works with and without conn.row_factory); always use `?` parameters, never put a value into the SQL text. Nothing is ever written.
 - `agents()`: all rows of table agents ordered by id. `agent(agent_id)`: that row or None.
-- `issues(state=None, assignee=None)`: rows of table tasks; a given state and/or assignee filters with equality (None means no filter); order: priority descending, then created_at, then id. `issue(task_id)`: that row or None.
 - `routines()`: all rows of table routines ordered by id. `routine(routine_id)`: that row or None.
-- `spent(agent_id)`: from table spend for this agent {"tokens": sum of tokens_in + tokens_out, "eur_cent": sum of eur_cent, "requests": sum of requests}, all 0 when there is no row.
+- `spent(agent_id)`: from table spend for this agent {"tokens": sum of tokens_in + tokens_out, "eur_cent": sum of eur_cent, "requests": sum of requests}, all 0 when there is no row.""",
+     "hidden": H4},
+    {"name": "issues",
+     "task": """Add to `Orchestra` in `service.py` (keep everything else), with the same row helper and `?` parameters:
+- `issues(state=None, assignee=None)`: rows of table tasks; a given state and/or assignee filters with equality (None means no filter); order: priority descending, then created_at, then id.
+- `issue(task_id)`: that row or None.
 Nothing is ever written.""",
-     "hidden": {"hidden_osvc_1.py": hidden("PARTS, Orchestra, build, boot_entry", C1), "hidden_osvc_2.py": hidden("Orchestra", C2)}},
+     "hidden": H5},
 ]

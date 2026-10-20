@@ -428,18 +428,18 @@ Stand 20.10.2026, geschnitten aus D1 bis D6 (G2 erteilt). Wer baut: **SEDRA** he
 | K0.24 | Nachtrag `SHELL_WERKZEUG_VERTRAG_v1.md` §10: Registrierung, Verben ohne Objekt, neue Typen, Feld `client`, Client-Token | `docs/SHELL_WERKZEUG_VERTRAG_v1.md` | G2-S0-13 | K0.11, K0.13 | Harness |
 | K0.25 | Abnahme Spec 0: Tests aus D5 und D1 grün, `benchmarks/uix_check.py` `result ok`, `git diff --stat main -- runtime/src/guppi_runtime/core` leer, Review-Mängel und Eingriffe ins Logbuch | – | KERN-01 bis KERN-06 | alle | Harness |
 
-Reihenfolge: K0.7 kommt vor K0.10. Die sechs SEDRA-Bauten (K0.8, K0.9, K0.16, K0.17, K0.18, K0.21) hängen von keinem Harness-Schritt ab und können nach G3 nacheinander auf der GPU laufen (eine Lease, ein Bau zur Zeit); K0.7 und K0.23 laufen parallel dazu. Danach zwei Stränge: Desk K0.10 → K0.11 → K0.12, K0.13 → K0.14, K0.15, K0.24; Paket K0.19 → K0.20; beide treffen sich in K0.22, zuletzt K0.25.
+Reihenfolge: K0.7 kommt vor K0.10. Die sechs SEDRA-Bauten (K0.8, K0.9, K0.16, K0.17, K0.18, K0.21) hängen von keinem Harness-Schritt ab und können nach G3 nacheinander auf der GPU laufen (eine Lease, ein Bau zur Zeit), kleinste zuerst: `k0_extensions`, `k0_orchestra_config`, dann `k0_orchestra_service`, `k0_orchestra_kinds`, `k0_kinds`, zuletzt `k0_orchestra_store` (SQLite, Schema, Transaktionen); K0.7 und K0.23 laufen parallel dazu. Danach zwei Stränge: Desk K0.10 → K0.11 → K0.12, K0.13 → K0.14, K0.15, K0.24; Paket K0.19 → K0.20; beide treffen sich in K0.22, zuletzt K0.25.
 
-Bau-Specs (alle mit `benchmarks/spec_check.py <name>` geprüft: Lint ok, Referenz besteht jede Stufe, die erste Stufe scheitert auf leerer Saat):
+Bau-Specs (alle mit `benchmarks/spec_check.py <name>` auf dem Host geprüft: Lint ok, Referenz besteht jede Stufe, die erste Stufe scheitert auf leerer Saat). Nach Linie L3 (Captain, 20.10.2026) hat jede Stufe höchstens 20 neue versteckte Prüfungen; gezählt sind `assert` und `raises(` der neuen Testdatei der Stufe ohne die Hilfsfunktion `raises` (die Zählung der Analyse liegt je Stufe um 1 höher). Die Teilung hat keine Prüfung gestrichen, die Referenzen blieben unverändert. In der Reihenfolge des Baus:
 
-| Bau-Spec | Ziel im Paket | Stufen | Referenz | `spec_check` |
-| --- | --- | --- | --- | --- |
-| `k0_kinds` | `desk/kinds.py` | register, view, client | `devvm_refs/k0_kinds/kinds.py` | result ok |
-| `k0_extensions` | `desk/extensions.py` | load, start | `devvm_refs/k0_extensions/extensions.py` | result ok |
-| `k0_orchestra_config` | `orchestra/config.py` | top, fields, load | `devvm_refs/k0_orchestra_config/config.py` | result ok |
-| `k0_orchestra_store` | `orchestra/store.py` | tx, schema, open | `devvm_refs/k0_orchestra_store/store.py` | result ok |
-| `k0_orchestra_service` | `orchestra/service.py` | build, read | `devvm_refs/k0_orchestra_service/service.py` | result ok |
-| `k0_orchestra_kinds` | `desk/orchestra_kinds.py` | objects, register | `devvm_refs/k0_orchestra_kinds/orchestra_kinds.py` | result ok |
+| Bau-Spec | Ziel im Paket | Stufen (neue Prüfungen) | vorher | Referenz | `spec_check` |
+| --- | --- | --- | --- | --- | --- |
+| `k0_extensions` | `desk/extensions.py` | load 18, start 6 | unverändert | `devvm_refs/k0_extensions/extensions.py` | result ok |
+| `k0_orchestra_config` | `orchestra/config.py` | defaults 11, values 17, top 6, fields 11, load 16 | 3 Stufen (34/11/16) | `devvm_refs/k0_orchestra_config/config.py` | result ok |
+| `k0_orchestra_service` | `orchestra/service.py` | facade 15, errors 8, boot 16, read 12, issues 9 | 2 Stufen (39/21) | `devvm_refs/k0_orchestra_service/service.py` | result ok |
+| `k0_orchestra_kinds` | `desk/orchestra_kinds.py` | agent 11, issue 11, budget 17, register 9, readers 14, budget_kind 6 | 2 Stufen (37/29) | `devvm_refs/k0_orchestra_kinds/orchestra_kinds.py` | result ok |
+| `k0_kinds` | `desk/kinds.py` | kind 12, register 11, placeholder 15, view 17, listing 9, request 16, client 18 | 3 Stufen (38/42/18) | `devvm_refs/k0_kinds/kinds.py` | result ok |
+| `k0_orchestra_store` | `orchestra/store.py` | tx 15, tables 16, indexes 7, agents_tasks 12, rest 14, migrate 14, open 14, open_errors 7 | 3 Stufen (15/63/21) | `devvm_refs/k0_orchestra_store/store.py` | result ok |
 
 Schnittstellen, die die Bau-Specs festlegen und der Harness einhält:
 

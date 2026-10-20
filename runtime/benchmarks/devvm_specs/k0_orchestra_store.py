@@ -3,7 +3,8 @@
 wakeups, routines, routine_runs, spend, with their CHECKs, keys and indexes); `migrate` brings a database up to the version of the code, a database NEWER than the code is
 refused; `immediate` is the helper for `BEGIN IMMEDIATE` (the checkout of Spec 1 uses it); `open_db` opens with WAL, `busy_timeout` and `foreign_keys`. Every refusal is a
 ValueError whose text `runtime.py` reports as `orchestra_error` (KERN-06). The logic of org, board, heartbeat, budget and routines comes in Spec 1.
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/k0_orchestra_store)."""
+GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/k0_orchestra_store).
+Stages cut to at most 20 new hidden checks each (Captain, line L3, 20.10.2026); the schema is built in four steps (columns, indexes, constraints of agents and tasks, constraints of the rest)."""
 
 NOTES = '''# Notes for k0_orchestra_store
 Python 3 standard library only (sqlite3, contextlib, pathlib). Files are touched only through sqlite3 and the folder creation of `open_db`; no process or network access.
@@ -122,6 +123,11 @@ assert cols("wakeups") == ["id", "agent_id", "task_id", "reason", "due_at", "cre
 assert cols("routines") == ["id", "agent_id", "title", "cron", "timezone", "catch_up", "enabled", "task_template", "last_run", "next_run"]
 assert cols("routine_runs") == ["routine_id", "due_at", "task_id", "outcome"]
 assert cols("spend") == ["id", "agent_id", "task_id", "mission_id", "provider", "provider_id", "model", "tokens_in", "tokens_out", "requests", "eur_cent", "ts"]
+'''
+
+C3 = r'''
+c = mem()
+migrate(c)
 def indexes(table):
     out = set()
     for row in c.execute(f"PRAGMA index_list({table})"):
@@ -135,8 +141,24 @@ assert indexes("comments") == {(("task_id", "ts"), False)}
 assert indexes("wakeups") == {(("agent_id", "due_at"), True)}
 assert indexes("routines") == {(("next_run",), True)}
 assert indexes("spend") == {(("agent_id", "ts"), False), (("provider_id", "ts"), False), (("task_id",), False)}
+'''
+
+BASE = r'''
+c = mem()
+migrate(c)
 NOW = "2026-10-20T10:00:00Z"
 AG = "INSERT INTO agents (id, instance_id, template_id, name, role, reports_to, status, permission_level, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)"
+TK = "INSERT INTO tasks (id, title, assignee, parent_id, state, created_by, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)"
+'''
+
+FILLED = BASE + r'''
+c.execute(AG, ("ua", "i1", "tpl", "Unterarbeiter", "unterarbeiter", None, "aktiv", 3, NOW, NOW))
+c.execute(AG, ("cod", "i2", "tpl", "Coder", "coder", "ua", "aktiv", 2, NOW, NOW))
+c.execute(TK, ("t1", "Bauen", "cod", None, "zugewiesen", "captain", NOW, NOW))
+c.execute(TK, ("t2", "Prüfen", None, "t1", "offen", "captain", NOW, NOW))
+'''
+
+C4 = BASE + r'''
 c.execute(AG, ("ua", "i1", "tpl", "Unterarbeiter", "unterarbeiter", None, "aktiv", 3, NOW, NOW))
 row = c.execute("SELECT budget_period, revision FROM agents WHERE id = 'ua'").fetchone()
 assert row == ("gesamt", 1)
@@ -147,7 +169,6 @@ assert refused(c, AG, ("x", "i2", "tpl", "X", "coder", "ua", "aktiv", 7, NOW, NO
 assert refused(c, AG, ("x", "i2", "tpl", "X", "coder", "ua", "aktiv", -1, NOW, NOW))
 assert refused(c, "INSERT INTO agents (id, instance_id, template_id, name, role, status, permission_level, budget_period, created_at, updated_at) VALUES ('y','i3','t','Y','r','aktiv',0,'woche',?,?)", (NOW, NOW))
 c.execute(AG, ("cod", "i2", "tpl", "Coder", "coder", "ua", "aktiv", 2, NOW, NOW))
-TK = "INSERT INTO tasks (id, title, assignee, parent_id, state, created_by, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)"
 c.execute(TK, ("t1", "Bauen", "cod", None, "zugewiesen", "captain", NOW, NOW))
 c.execute(TK, ("t2", "Prüfen", None, "t1", "offen", "captain", NOW, NOW))
 assert c.execute("SELECT priority, revision FROM tasks WHERE id = 't1'").fetchone() == (0, 1)
@@ -155,6 +176,9 @@ assert refused(c, TK, ("t3", "X", "ghost", None, "offen", "captain", NOW, NOW))
 assert refused(c, TK, ("t3", "X", None, "nope", "offen", "captain", NOW, NOW))
 assert refused(c, TK, ("t3", "X", None, None, "fertig", "captain", NOW, NOW))
 assert refused(c, "INSERT INTO tasks (id, title, state, created_at, updated_at) VALUES ('t4','X','offen',?,?)", (NOW, NOW))
+'''
+
+C5 = FILLED + r'''
 c.execute("INSERT INTO blockers VALUES ('t1', 't2', ?)", (NOW,))
 assert refused(c, "INSERT INTO blockers VALUES ('t1', 't2', ?)", (NOW,))
 assert refused(c, "INSERT INTO blockers VALUES ('t2', 't2', ?)", (NOW,))
@@ -175,6 +199,9 @@ assert refused(c, "INSERT INTO routine_runs VALUES ('r1', '2026-10-21', NULL, 'v
 c.execute("INSERT INTO spend (agent_id, provider, ts) VALUES ('cod', 'lokal', ?)", (NOW,))
 assert c.execute("SELECT tokens_in, tokens_out, requests, eur_cent FROM spend").fetchone() == (0, 0, 1, 0)
 assert refused(c, "INSERT INTO spend (agent_id, provider, ts) VALUES ('cod', 'mond', ?)", (NOW,))
+'''
+
+C6 = FILLED + r'''
 assert migrate(c) == 1
 assert c.execute("SELECT count(*) FROM agents").fetchone()[0] == 2
 raises("orchestra_db_error:schema_newer", migrate, c, 0)
@@ -201,7 +228,7 @@ assert schema_version(e) == 0
 assert {r[0] for r in e.execute("SELECT name FROM sqlite_master")} == set()
 '''
 
-C3 = r'''
+C7 = r'''
 path = TMP / "sub" / "deeper" / "orchestra.db"
 c = open_db(path)
 assert path.is_file()
@@ -220,13 +247,18 @@ c.close()
 again = open_db(str(path))
 assert again.execute("SELECT name FROM agents").fetchone()["name"] == "U"
 assert schema_version(again) == 1
-again.execute("UPDATE meta SET value = '5' WHERE key = 'schema_version'")
-again.close()
-raises("orchestra_db_error:schema_newer", open_db, path)
 m = open_db(":memory:")
 assert schema_version(m) == 1
 assert m.execute("PRAGMA foreign_keys").fetchone()[0] == 1
 assert not (Path.cwd() / ":memory:").exists()
+'''
+
+C8 = r'''
+path = TMP / "newer.db"
+first = open_db(path)
+first.execute("UPDATE meta SET value = '5' WHERE key = 'schema_version'")
+first.close()
+raises("orchestra_db_error:schema_newer", open_db, path)
 folder = TMP / "is_a_folder.db"
 folder.mkdir()
 raises("orchestra_db_error:open", open_db, folder)
@@ -246,34 +278,72 @@ with immediate(b):
 assert a.execute("SELECT value FROM meta WHERE key = 'probe'").fetchone()[0] == "x"
 '''
 
+SCHEMA = "SCHEMA_VERSION, TABLES, MIGRATIONS, schema_version, migrate"
+H1 = {"hidden_ostore_1.py": hidden("schema_version, immediate", C1)}
+H2 = {**H1, "hidden_ostore_2.py": hidden(SCHEMA, C2)}
+H3 = {**H2, "hidden_ostore_3.py": hidden(SCHEMA, C3)}
+H4 = {**H3, "hidden_ostore_4.py": hidden(SCHEMA, C4)}
+H5 = {**H4, "hidden_ostore_5.py": hidden(SCHEMA, C5)}
+H6 = {**H5, "hidden_ostore_6.py": hidden(SCHEMA, C6)}
+H7 = {**H6, "hidden_ostore_7.py": hidden("open_db, schema_version", C7)}
+H8 = {**H7, "hidden_ostore_8.py": hidden("open_db, immediate, schema_version", C8)}
+
 STAGES = [
     {"name": "tx",
      "task": """Create `store.py` (Python 3 standard library only: sqlite3, contextlib, pathlib) with two helpers for a sqlite3 connection that was opened with isolation_level=None.
 - `schema_version(conn) -> int`: the int of the value in table `meta` (columns key, value) under key "schema_version"; 0 when the table does not exist or has no such row.
 - `immediate(conn)`: a context manager (contextlib.contextmanager) that runs "BEGIN IMMEDIATE", yields conn, runs "COMMIT" when the block ends normally and "ROLLBACK" when the block raises (any exception, which is then raised again unchanged).
   When "BEGIN IMMEDIATE" itself fails with sqlite3.OperationalError because the database is locked or busy (the message contains "locked" or "busy") raise ValueError("orchestra_busy") instead; other errors stay as they are.""",
-     "hidden": {"hidden_ostore_1.py": hidden("schema_version, immediate", C1)}},
-    {"name": "schema",
-     "task": """Add the schema and `migrate` to `store.py` (keep everything else). `SCHEMA_VERSION = 1`; `TABLES = ("meta", "agents", "tasks", "blockers", "comments", "wakeups", "routines", "routine_runs", "spend")`; `MIGRATIONS = {1: (...CREATE statements, each one string...)}`.
-Schema 1, columns in exactly this order (NN = NOT NULL):
-- meta: key TEXT PRIMARY KEY, value TEXT NN.
-- agents: id TEXT PRIMARY KEY, instance_id TEXT NN UNIQUE, template_id TEXT NN, name TEXT NN, role TEXT NN, recipe_id TEXT, reports_to TEXT REFERENCES agents(id), status TEXT NN CHECK in ('aktiv','pausiert','beendet'), permission_level INTEGER NN CHECK 0..6, budget_tokens INTEGER, budget_eur_cent INTEGER, budget_period TEXT NN DEFAULT 'gesamt' CHECK in ('gesamt','monat'), created_at TEXT NN, updated_at TEXT NN, revision INTEGER NN DEFAULT 1. Indexes on (reports_to) and (status).
-- tasks: id TEXT PRIMARY KEY, title TEXT NN, description TEXT, goal_ref TEXT, project_id TEXT, parent_id TEXT REFERENCES tasks(id), assignee TEXT REFERENCES agents(id), state TEXT NN CHECK in ('offen','zugewiesen','in_arbeit','wartet','erledigt','abgebrochen'), priority INTEGER NN DEFAULT 0, checkout_by TEXT, checkout_at TEXT, checkout_run TEXT, mission_id TEXT, created_by TEXT NN, created_at TEXT NN, updated_at TEXT NN, revision INTEGER NN DEFAULT 1. Indexes on (assignee, state), (parent_id), (mission_id) and a partial index on (checkout_by) WHERE checkout_by IS NOT NULL.
-- blockers: task_id TEXT NN REFERENCES tasks(id), blocked_by_task_id TEXT NN REFERENCES tasks(id), created_at TEXT NN; PRIMARY KEY (task_id, blocked_by_task_id); CHECK task_id <> blocked_by_task_id. Index on (blocked_by_task_id).
-- comments: id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NN REFERENCES tasks(id), author_kind TEXT NN CHECK in ('captain','agent','system'), author_id TEXT, text TEXT NN, ts TEXT NN. Index on (task_id, ts).
-- wakeups: id INTEGER PRIMARY KEY, agent_id TEXT NN REFERENCES agents(id), task_id TEXT, reason TEXT NN CHECK in ('zugewiesen','antwort','routine','captain','wiederholung'), due_at TEXT NN, created_at TEXT NN, coalesced_into INTEGER REFERENCES wakeups(id), job_id TEXT, done_at TEXT. Partial index on (agent_id, due_at) WHERE done_at IS NULL AND coalesced_into IS NULL.
-- routines: id TEXT PRIMARY KEY, agent_id TEXT NN REFERENCES agents(id), title TEXT NN, cron TEXT NN, timezone TEXT NN DEFAULT 'Europe/Berlin', catch_up TEXT NN CHECK in ('nachholen','auslassen'), enabled INTEGER NN DEFAULT 1, task_template TEXT NN, last_run TEXT, next_run TEXT. Partial index on (next_run) WHERE enabled = 1.
-- routine_runs: routine_id TEXT NN, due_at TEXT NN, task_id TEXT, outcome TEXT NN CHECK in ('erzeugt','ausgelassen','nachgeholt'); PRIMARY KEY (routine_id, due_at).
-- spend: id INTEGER PRIMARY KEY AUTOINCREMENT, agent_id TEXT NN, task_id TEXT, mission_id TEXT, provider TEXT NN CHECK in ('lokal','cloud'), provider_id TEXT, model TEXT, tokens_in INTEGER NN DEFAULT 0, tokens_out INTEGER NN DEFAULT 0, requests INTEGER NN DEFAULT 1, eur_cent INTEGER NN DEFAULT 0, ts TEXT NN. Indexes on (agent_id, ts), (provider_id, ts), (task_id).
-No other indexes. `migrate(conn, target=SCHEMA_VERSION, migrations=None) -> int` (migrations None means MIGRATIONS): current = schema_version(conn); current > target -> ValueError("orchestra_db_error:schema_newer"); then for every version from current+1 to target: missing in migrations -> ValueError("orchestra_db_error:no_migration_<version>"); else, inside ONE `immediate(conn)` block per version, run its statements and store the version as text under key "schema_version" in meta (insert or replace). A failing statement rolls this version back and its sqlite3 error is raised unchanged. Return schema_version(conn).""",
-     "hidden": {"hidden_ostore_1.py": hidden("schema_version, immediate", C1), "hidden_ostore_2.py": hidden("SCHEMA_VERSION, TABLES, MIGRATIONS, schema_version, migrate", C2)}},
+     "hidden": H1},
+    {"name": "tables",
+     "task": """Add the tables of schema 1 and `migrate` to `store.py` (keep everything else). `SCHEMA_VERSION = 1`; `TABLES = ("meta", "agents", "tasks", "blockers", "comments", "wakeups", "routines", "routine_runs", "spend")`; `MIGRATIONS = {1: (...CREATE statements, each one string...)}`.
+Columns in exactly this order (constraints and indexes follow in the next stages):
+- meta: key TEXT PRIMARY KEY, value TEXT.
+- agents: id TEXT PRIMARY KEY, instance_id, template_id, name, role, recipe_id, reports_to (TEXT), status TEXT, permission_level INTEGER, budget_tokens INTEGER, budget_eur_cent INTEGER, budget_period TEXT, created_at, updated_at (TEXT), revision INTEGER.
+- tasks: id TEXT PRIMARY KEY, title, description, goal_ref, project_id, parent_id, assignee, state (TEXT), priority INTEGER, checkout_by, checkout_at, checkout_run, mission_id, created_by, created_at, updated_at (TEXT), revision INTEGER.
+- blockers: task_id, blocked_by_task_id, created_at (TEXT). comments: id INTEGER PRIMARY KEY AUTOINCREMENT, task_id, author_kind, author_id, text, ts (TEXT).
+- wakeups: id INTEGER PRIMARY KEY, agent_id, task_id, reason, due_at, created_at (TEXT), coalesced_into INTEGER, job_id, done_at (TEXT).
+- routines: id TEXT PRIMARY KEY, agent_id, title, cron, timezone, catch_up (TEXT), enabled INTEGER, task_template, last_run, next_run (TEXT). routine_runs: routine_id, due_at, task_id, outcome (TEXT).
+- spend: id INTEGER PRIMARY KEY AUTOINCREMENT, agent_id, task_id, mission_id, provider, provider_id, model (TEXT), tokens_in, tokens_out, requests, eur_cent INTEGER, ts TEXT.
+`migrate(conn, target=SCHEMA_VERSION, migrations=None) -> int` (migrations None means MIGRATIONS): for every version from schema_version(conn)+1 to target, inside ONE `immediate(conn)` block per version, run its statements and store the version as text under key "schema_version" in meta (insert or replace). Return schema_version(conn).""",
+     "hidden": H2},
+    {"name": "indexes",
+     "task": """Add the indexes of schema 1 to MIGRATIONS[1] in `store.py` (keep everything else; names are free, no other indexes):
+- agents: (reports_to), (status). tasks: (assignee, state), (parent_id), (mission_id) and a partial index on (checkout_by) WHERE checkout_by IS NOT NULL.
+- blockers: (blocked_by_task_id). comments: (task_id, ts). wakeups: a partial index on (agent_id, due_at) WHERE done_at IS NULL AND coalesced_into IS NULL.
+- routines: a partial index on (next_run) WHERE enabled = 1. spend: (agent_id, ts), (provider_id, ts), (task_id).""",
+     "hidden": H3},
+    {"name": "agents_tasks",
+     "task": """Add the constraints of the tables agents and tasks to MIGRATIONS[1] in `store.py` (keep everything else; NN = NOT NULL):
+- agents: instance_id NN UNIQUE, template_id NN, name NN, role NN, reports_to REFERENCES agents(id), status NN CHECK in ('aktiv','pausiert','beendet'), permission_level NN CHECK 0..6, budget_period NN DEFAULT 'gesamt' CHECK in ('gesamt','monat'), created_at NN, updated_at NN, revision NN DEFAULT 1.
+- tasks: title NN, parent_id REFERENCES tasks(id), assignee REFERENCES agents(id), state NN CHECK in ('offen','zugewiesen','in_arbeit','wartet','erledigt','abgebrochen'), priority NN DEFAULT 0, created_by NN, created_at NN, updated_at NN, revision NN DEFAULT 1.
+- meta: value NN.""",
+     "hidden": H4},
+    {"name": "rest",
+     "task": """Add the constraints of the other tables to MIGRATIONS[1] in `store.py` (keep everything else; NN = NOT NULL):
+- blockers: task_id NN and blocked_by_task_id NN, both REFERENCES tasks(id), created_at NN; PRIMARY KEY (task_id, blocked_by_task_id); CHECK task_id <> blocked_by_task_id.
+- comments: task_id NN REFERENCES tasks(id), author_kind NN CHECK in ('captain','agent','system'), text NN, ts NN.
+- wakeups: agent_id NN REFERENCES agents(id), reason NN CHECK in ('zugewiesen','antwort','routine','captain','wiederholung'), due_at NN, created_at NN, coalesced_into REFERENCES wakeups(id).
+- routines: agent_id NN REFERENCES agents(id), title NN, cron NN, timezone NN DEFAULT 'Europe/Berlin', catch_up NN CHECK in ('nachholen','auslassen'), enabled NN DEFAULT 1, task_template NN.
+- routine_runs: routine_id NN, due_at NN, outcome NN CHECK in ('erzeugt','ausgelassen','nachgeholt'); PRIMARY KEY (routine_id, due_at).
+- spend: agent_id NN, provider NN CHECK in ('lokal','cloud'), tokens_in NN DEFAULT 0, tokens_out NN DEFAULT 0, requests NN DEFAULT 1, eur_cent NN DEFAULT 0, ts NN.""",
+     "hidden": H5},
+    {"name": "migrate",
+     "task": """Complete `migrate` in `store.py` (keep everything else):
+- current = schema_version(conn); current > target -> ValueError("orchestra_db_error:schema_newer"). Migrating to the version the database already has changes nothing.
+- A version between current+1 and target that is missing in migrations -> ValueError("orchestra_db_error:no_migration_<version>"); the versions before it stay applied.
+- A failing statement rolls its version back completely (also the tables created before it in the same version) and its sqlite3 error is raised unchanged.
+- Never change the migrations argument.""",
+     "hidden": H6},
     {"name": "open",
      "task": """Add `open_db(path, target=SCHEMA_VERSION, migrations=None, busy_ms=30000)` to `store.py` (keep everything else): opens the orchestration database and brings it to the code's schema.
 - path is a str or Path, or ":memory:" (then no folder and no file is made and no WAL is set). Otherwise create the parent folders first.
 - sqlite3.connect(str(path), isolation_level=None, timeout=busy_ms / 1000, check_same_thread=False); row_factory = sqlite3.Row; then "PRAGMA busy_timeout = <busy_ms>", "PRAGMA foreign_keys = ON" and (not for ":memory:") "PRAGMA journal_mode = WAL".
+- Then migrate(conn, target, migrations) and return the open connection.""",
+     "hidden": H7},
+    {"name": "open_errors",
+     "task": """Add the errors of `open_db` in `store.py` (keep everything else):
 - Any sqlite3.Error or OSError while creating the folders, connecting or setting the pragmas -> ValueError("orchestra_db_error:open").
-- Then migrate(conn, target, migrations). Its ValueError is raised unchanged (after closing the connection); a sqlite3.Error during the migration closes the connection and raises ValueError("orchestra_db_error:migration").
-- Return the open connection.""",
-     "hidden": {"hidden_ostore_1.py": hidden("schema_version, immediate", C1), "hidden_ostore_2.py": hidden("SCHEMA_VERSION, TABLES, MIGRATIONS, schema_version, migrate", C2),
-                "hidden_ostore_3.py": hidden("open_db, immediate, schema_version", C3)}},
+- A ValueError of migrate is raised unchanged (after closing the connection); a sqlite3.Error during the migration closes the connection and raises ValueError("orchestra_db_error:migration").""",
+     "hidden": H8},
 ]
