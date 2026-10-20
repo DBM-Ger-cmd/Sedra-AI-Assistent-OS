@@ -2,6 +2,8 @@
 
 Kompakte Seite (PIPE-04, geändert 20.10.2026, Linie L1–L4 und V1–V4). Ausführlich: [ENTWICKLUNG.md](ENTWICKLUNG.md). Alle Befehle laufen im Ordner `runtime` mit `.venv\Scripts\python.exe`.
 
+**Ein Bau-Ort (PIPE-09, 20.10.2026)** (geändert 20.10.2026, PIPE-09) Gebaut wird immer aus dem Arbeitsstand (Git). Projektordner ist `<guppi>/workspace/GUPPI_OS`, **nicht** `<guppi>` selbst (das legt einen leeren VM-Cache an). Das Python mit allen Paketen kommt aus `<guppi>/runtime/.venv`. Engine (`engines/llama.cpp/<engine_build>`) und `runtime/config/llama_server.yaml` sind im Arbeitsstand und in der Laufzeit-Installation gleich; `runtime/tests/test_bau_ort.py` prüft das (und dass `engine_build` freigegeben ist, derzeit b11160). Engine-Wechsel nur mit Captain-Gate.
+
 ## Die Schritte
 
 | # | Schritt | Befehl | Wer |

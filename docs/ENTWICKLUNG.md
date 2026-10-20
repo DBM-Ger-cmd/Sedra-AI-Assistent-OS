@@ -23,6 +23,8 @@ Grundlage: `ANALYSE_BAUABLAUF_2026-10-20.md`; Beschluss in `SPEC_AGENTEN_ORCHEST
 | L5 | **Übernahme:** `adopt_plan` (`devenv/adopt_plan.py`) und Handkopie sind Standard. `selfdev/` (Selbst-Integration, `guppi self-integrate`) ist Reserve. |
 | L6 | **Regel 12 (eigene Branches) geht Regel 8 vor.** Dokumente, Logbuch-Arten: siehe unten. |
 
+**Ein Bau-Ort (PIPE-09, 20.10.2026)** (geändert 20.10.2026, PIPE-09) Gebaut wird immer aus dem Arbeitsstand (Git). Projektordner ist `<guppi>/workspace/GUPPI_OS`, **nicht** `<guppi>` selbst (das legt einen leeren VM-Cache an). Das Python mit allen Paketen kommt aus `<guppi>/runtime/.venv`. Engine (`engines/llama.cpp/<engine_build>`) und `runtime/config/llama_server.yaml` sind im Arbeitsstand und in der Laufzeit-Installation gleich; `runtime/tests/test_bau_ort.py` prüft das (und dass `engine_build` freigegeben ist, derzeit b11160). Engine-Wechsel nur mit Captain-Gate.
+
 L7 (später): Bau-Specs ohne Ergebnis abschließen, Weichen am Paket-Stamm entfernen.
 
 **Regel V4 – lohnt sich ein Bau?** (geändert 20.10.2026, V4: neue Regel) Vor jeder neuen Bau-Spec wird geschätzt, ob Spec + versteckte Tests + Referenz zusammen kleiner sind als der Code selbst. Sind sie es nicht (oder nur knapp), schreibt Claude das Stück direkt als Harness und trägt es als Eingriff ins Logbuch ein; SEDRA baut nur, wo die Quote Claude/SEDRA (L4) unter 1 bleiben kann. Die BAU-Zeile liefert danach die gemessene Quote, und die Review-Vorlage (`runtime/benchmarks/REVIEW_VORLAGE.md`) hält sie fest.
