@@ -20,9 +20,9 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from ..context_manager import _SECRET
-from ..development_contracts import canonical_digest
-from ..role_routing import check_independence
+from ..jobs.context_manager import _SECRET
+from ..selfdev.development_contracts import canonical_digest
+from ..models.role_routing import check_independence
 
 REVIEW_ROLES = frozenset({"verifier", "security_reviewer"})
 REVIEW_EVIDENCE = "independent_review"

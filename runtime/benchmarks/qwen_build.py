@@ -41,7 +41,7 @@ def qwen_command(node, entry, prompt, continue_session=False, system_mode="asis"
 
 def our_system_text(self_check):
     """The system text of our solo developer (the same words, the check clause of the chosen way)."""
-    from guppi_runtime.devvm_tools import SELF_CHECK, SYSTEM
+    from guppi_runtime.devenv.devvm_tools import SELF_CHECK, SYSTEM
     text = SYSTEM["solo"]
     if self_check != "full": text = text.replace(SELF_CHECK["full"]["system"], SELF_CHECK[self_check]["system"])
     return text
@@ -137,10 +137,10 @@ def main():
 
     import devvm_agents_bench as bench
     from devvm_build import DEFAULT_MODEL, acceptance, export_snapshot, hidden_report, without_test_duty
-    from guppi_runtime.devvm import DevWorkspace
-    from guppi_runtime.devvm_agents import CONTINUE_PROMPT, SOLO_PROMPT
-    from guppi_runtime.devvm_tools import SELF_CHECK
-    from guppi_runtime.run_log import RunLog
+    from guppi_runtime.devenv.devvm import DevWorkspace
+    from guppi_runtime.devenv.devvm_agents import CONTINUE_PROMPT, SOLO_PROMPT
+    from guppi_runtime.devenv.devvm_tools import SELF_CHECK
+    from guppi_runtime.jobs.run_log import RunLog
     from guppi_runtime.sandbox.broker import SandboxBroker
     from guppi_runtime.sandbox.provider import MicrosandboxProvider
 
@@ -195,9 +195,9 @@ def main():
             server_handle = probe.make_server(records, script)
             endpoint, alias, context = f"http://127.0.0.1:{server_handle.server_address[1]}", "fake-model", int(args.context)
         else:
-            from guppi_runtime.gpu_preflight import clear_leftovers
-            from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-            from guppi_runtime.testlab import TestLab, default_path
+            from guppi_runtime.models.gpu_preflight import clear_leftovers
+            from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+            from guppi_runtime.jobs.testlab import TestLab, default_path
             config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled = True
             runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_qwen_build_rt_")))
             key = args.coder or DEFAULT_MODEL

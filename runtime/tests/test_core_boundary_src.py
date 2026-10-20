@@ -4,7 +4,7 @@ night chain of 2026-10-11 (integrated 2026-10-12). When this test fails, the mes
 import unittest
 from pathlib import Path
 
-from guppi_runtime.core_boundary import chains, violations
+from guppi_runtime.selfdev.core_boundary import chains, violations
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 P = "guppi_runtime."
@@ -46,10 +46,12 @@ class CoreBoundary(unittest.TestCase):
         outside = [pair for pair in violations(core, [P + "core"], [P[:-1]]) if not pair[1].startswith(P + "core")]
         self.assertEqual(outside, [])
 
-    def test_the_old_names_are_the_same_module_objects(self):
+    def test_the_old_top_level_names_are_gone_and_the_core_names_import(self):
         import importlib
-        for name in MOVED:
-            self.assertIs(importlib.import_module(P + name), importlib.import_module(P + "core." + name), name)
+        import importlib.util
+        for name in MOVED:      # ANA-08 (2026-10-20): the alias files at the package root were removed; only the real names remain
+            self.assertIsNone(importlib.util.find_spec(P + name), name)
+            self.assertIsNotNone(importlib.import_module(P + "core." + name), name)
 
 
 if __name__ == "__main__":

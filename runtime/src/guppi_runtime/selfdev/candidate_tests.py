@@ -1,8 +1,8 @@
 """Single explicit sandbox attempt per candidate; unknown outcomes never retry."""
 import hashlib
 import json
-from ..candidate_verification import verify_candidate
-from ..util import utcnow
+from ..selfdev.candidate_verification import verify_candidate
+from ..core.util import utcnow
 
 
 def contract(rt, mission):

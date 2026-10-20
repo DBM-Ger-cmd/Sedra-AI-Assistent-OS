@@ -1,7 +1,7 @@
 """Technical prerequisites; never an authorization or resource reservation."""
 from datetime import datetime,timezone,timedelta
-from .request_binding import digest
-from .util import utcnow
+from .core.request_binding import digest
+from .core.util import utcnow
 
 
 class AdmissionUnavailable(RuntimeError):

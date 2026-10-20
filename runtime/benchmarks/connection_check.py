@@ -5,7 +5,7 @@ r"""S0 connection check per recipe (process "from the bottom up", docs/PROZESS_G
 --set changes a server setting for this check only (the recipe file is not touched), e.g. --set flash_attn=on --set kv_cache_type=q8_0 --set ubatch=512; the stored S0 state
 then holds for exactly these settings (devvm_build compares them with its own --server-set).
 
-For each recipe the server is started exactly as the recipe says (GUPPI's own runtime, GPU canary included), then the checks of guppi_runtime.conn_check run against it
+For each recipe the server is started exactly as the recipe says (GUPPI's own runtime, GPU canary included), then the checks of guppi_runtime.devenv.conn_check run against it
 (tool call round trip, 6000-character argument unchanged, answer without garbage or repetition, 90 % window works and 110 % is refused with HTTP 400, prompt cache hit).
 Results: runtime_data/measurements/connection_check_<recipe>_<date>.json and one line per recipe. Holds the GPU lease for the whole run. Nothing is changed in any recipe.
 conn_check.py was built by GUPPI (night run 2026-10-11); this driver is Claude's.
@@ -26,11 +26,11 @@ import yaml
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.conn_check import RequestError, run_all                          # noqa: E402
-from guppi_runtime.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.s0_status import save as save_s0                                  # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                             # noqa: E402
+from guppi_runtime.devenv.conn_check import RequestError, run_all                          # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.devenv.s0_status import save as save_s0                                  # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
 
 WORDS = "amber basalt cedar delta ember falcon garnet harbor indigo juniper kestrel lumen marble nimbus onyx pebble quartz raven sierra tundra".split()
 

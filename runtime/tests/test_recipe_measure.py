@@ -1,6 +1,6 @@
 import unittest
 
-from guppi_runtime.recipe_measure import MeasureError, apply_measurements, filler_prompt, measure_recipe, suggest
+from guppi_runtime.models.recipe_measure import MeasureError, apply_measurements, filler_prompt, measure_recipe, suggest
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 

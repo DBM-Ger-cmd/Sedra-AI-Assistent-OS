@@ -30,15 +30,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import cuda_crash_hunt as hunt                                                      # noqa: E402
 import small_team as st                                                              # noqa: E402
-from guppi_runtime.devvm import DevWorkspace                                         # noqa: E402
-from guppi_runtime.devvm_tools import DevToolBox                                     # noqa: E402
-from guppi_runtime.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.model_tools import parse_calls, run_tool_loop                     # noqa: E402
-from guppi_runtime.run_log import RunLog                                             # noqa: E402
+from guppi_runtime.devenv.devvm import DevWorkspace                                         # noqa: E402
+from guppi_runtime.devenv.devvm_tools import DevToolBox                                     # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.devenv.model_tools import parse_calls, run_tool_loop                     # noqa: E402
+from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
 from guppi_runtime.sandbox.broker import SandboxBroker                               # noqa: E402
 from guppi_runtime.sandbox.provider import MicrosandboxProvider                      # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                              # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 GREET = "def greet(name):\n    return 'hi ' + name\n"
 

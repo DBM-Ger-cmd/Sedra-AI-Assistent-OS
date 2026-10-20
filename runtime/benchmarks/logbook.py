@@ -2,7 +2,7 @@ r"""Add one row to the logbook with the REAL time (rule 5 of docs/ENTWICKLUNG.md
 
     .venv\Scripts\python.exe benchmarks/logbook.py add BAU "what happened" [--ref "file or report"] [--late] [--file PATH]
 
-ART is one word in capitals (ENTSCHEIDUNG, BAU, MESSUNG, FEHLER, AENDERUNG, INTEGRATION, ...). The row is appended in the file's own line ending. A row with a local path (E:\..., C:\Users\...)
+ART is one word of the fixed list ARTS (ENTSCHEIDUNG, SPEC, BAU, INTEGRATION, MESSUNG, FEHLER, AENDERUNG, DOKU, RECHERCHE, HINWEIS); ÄNDERUNG is taken as AENDERUNG, any other word stops with the list (V2, 2026-10-20). The row is appended in the file's own line ending. A row with a local path (E:\..., C:\Users\...)
 is refused (rule 10: placeholders <modelle>, <projekte>, <guppi>). `--late` marks a row that is written after the event ("nachgetragen"). The row is printed."""
 import argparse
 import re
@@ -12,19 +12,24 @@ from pathlib import Path
 
 DEFAULT = Path(__file__).resolve().parents[2] / "docs" / "LOGBUCH_AGENT_MANAGER.md"
 LOCAL_PATH = re.compile(r"[A-Za-z]:[\\/]|/mnt/[a-z]/|/Users/")
-# The kinds in use (2026-10-14, from the logbook itself). Another word is allowed with a note; the placeholder of the usage line is refused
-# (three rows said literally "ART" on 2026-10-14).
-STANDARD_ARTS = ("BAU", "SPEC", "MESSUNG", "ENTSCHEIDUNG", "INTEGRATION", "FEHLER", "AENDERUNG", "AUDIT", "GATE", "PLAN", "START",
-                 "AUFRAEUMEN", "WERKZEUG", "DOKU", "HINWEIS", "KORREKTUR", "REZEPT", "RECHERCHE", "ANALYSE", "AUSWERTUNG")
+# The fixed list of kinds (Captain 2026-10-20, V2): another word is refused with this list. The placeholder of the usage line is refused too
+# (three rows said literally "ART" on 2026-10-14). Old rows of the logbook keep their kinds (AUDIT, GATE, PLAN ...); only new rows are checked.
+ARTS = ("ENTSCHEIDUNG", "SPEC", "BAU", "INTEGRATION", "MESSUNG", "FEHLER", "AENDERUNG", "DOKU", "RECHERCHE", "HINWEIS")
+STANDARD_ARTS = ARTS
 PLACEHOLDERS = ("ART", "TYP", "KIND", "TYPE")
+UMLAUTS = {"Ä": "AE", "Ö": "OE", "Ü": "UE"}      # ÄNDERUNG on the command line (the terminal may hand over umlauts) is AENDERUNG
 
 
 def make_row(art, text, ref="", late=False, now=None):
     art = str(art).strip()
+    for umlaut, plain in UMLAUTS.items():
+        art = art.replace(umlaut, plain)
     if not re.fullmatch(r"[A-Z][A-Z0-9_]{1,20}", art):
         raise ValueError("ART must be one word in capitals, e.g. BAU")
     if art in PLACEHOLDERS:
-        raise ValueError("ART is the placeholder of the usage line; name the kind, e.g. " + ", ".join(STANDARD_ARTS[:6]))
+        raise ValueError("ART is the placeholder of the usage line; name the kind: " + ", ".join(ARTS))
+    if art not in ARTS:
+        raise ValueError(f"unknown ART {art}; allowed: " + ", ".join(ARTS))
     text, ref = " ".join(str(text).split()).replace("|", "/"), " ".join(str(ref).split()).replace("|", "/")
     if not text:
         raise ValueError("the text is empty")
@@ -55,8 +60,6 @@ def main(argv=None):
     args = ap.parse_args(argv)
     try:
         row = make_row(args.art, args.text, args.ref, args.late)
-        if args.art not in STANDARD_ARTS:
-            print(f"note: {args.art} is not one of the usual kinds ({', '.join(STANDARD_ARTS)}); kept as written", file=sys.stderr)
     except ValueError as exc:
         print(f"refused: {exc}", file=sys.stderr)
         return 2

@@ -21,7 +21,7 @@ import subprocess
 import sys
 import tempfile
 
-from ..verification_gate import record_check
+from ..jobs.verification_gate import record_check
 
 SUITE_FILE = "suite.json"
 NAME = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}\.py")

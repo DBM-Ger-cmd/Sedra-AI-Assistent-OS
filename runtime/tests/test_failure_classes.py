@@ -2,9 +2,9 @@
 import subprocess
 import unittest
 
-from guppi_runtime.failure_classes import FAILURE_CLASSES, RETRY_RULES, REASON_CODES, classify, retry_rule
+from guppi_runtime.jobs.failure_classes import FAILURE_CLASSES, RETRY_RULES, REASON_CODES, classify, retry_rule
 from guppi_runtime.feasibility import AdmissionUnavailable
-from guppi_runtime.self_development import SelfDevelopmentManager
+from guppi_runtime.selfdev.self_development import SelfDevelopmentManager
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 

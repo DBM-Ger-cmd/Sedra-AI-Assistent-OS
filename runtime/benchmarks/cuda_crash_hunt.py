@@ -29,11 +29,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import small_team as st                                                              # noqa: E402
 from rework_bench import TASKS                                                       # noqa: E402
-from guppi_runtime import gpu_preflight                                              # noqa: E402
-from guppi_runtime.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                              # noqa: E402
+from guppi_runtime.models import gpu_preflight
+from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 VARIANTS = {
     "baseline": {},

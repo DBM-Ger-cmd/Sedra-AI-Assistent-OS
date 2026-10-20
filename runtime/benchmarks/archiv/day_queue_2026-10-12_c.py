@@ -39,7 +39,7 @@ class QuantCompare(night.Queue):
         for item in night.SERVER:
             argv += ["--set", item]
         self.run("s0_" + Q4KM, argv, 3600)
-        from guppi_runtime.s0_status import status as s0_state
+        from guppi_runtime.devenv.s0_status import status as s0_state
         import yaml
         recipe = next(r for r in yaml.safe_load((self.project / "local_config" / "role_routing.yaml").read_text(encoding="utf-8"))["role_routing"]["capabilities"] if r["id"] == Q4KM)
         server = {**recipe["profile"]["server"], **{k: (int(v) if v.isdigit() else v) for k, v in (i.split("=", 1) for i in night.SERVER)}}

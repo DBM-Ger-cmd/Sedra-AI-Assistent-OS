@@ -1,7 +1,7 @@
 import unittest,json
 from types import SimpleNamespace
 from unittest.mock import Mock,patch
-from guppi_runtime.candidate_acceptance import test_qualification
+from guppi_runtime.selfdev.candidate_acceptance import test_qualification
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 ARGV=['python3','-m','unittest','discover','-s','tests','-v']
 class QualificationTests(unittest.TestCase):
@@ -9,7 +9,7 @@ class QualificationTests(unittest.TestCase):
   sandbox=SimpleNamespace(verify=Mock(return_value={'verification':'PASS','qualification':qualification}),receipt=Mock(return_value=json.dumps({'commands':commands if commands is not None else [{'argv':ARGV,'output':output}]})))
   rt=SimpleNamespace(sandbox=sandbox)
   m={'identity':{'mission_id':'M-TEST'},'execution':{'candidate_test':{'status':'FINISHED','preparation_sha256':'sha','plan_digest':'digest','job_id':'J-TEST','report_sha256':'report'}}}
-  with patch('guppi_runtime.candidate_acceptance.contract',return_value=({'plan_digest':'digest'},'sha')):return test_qualification(rt,m)
+  with patch('guppi_runtime.selfdev.candidate_acceptance.contract',return_value=({'plan_digest':'digest'},'sha')):return test_qualification(rt,m)
  def test_nonempty_suite(self):self.assertEqual(self.run_qualification()['test_counts'],[3])
  def test_zero_tests(self):
   with self.assertRaises(ValueError):self.run_qualification('Ran 0 tests in 0.0s\nOK\n')

@@ -1,4 +1,4 @@
-"""Command line for the shared test lab (see guppi_runtime/testlab.py and docs/TESTLAB.md).
+"""Command line for the shared test lab (see guppi_runtime/jobs/testlab.py and docs/TESTLAB.md).
 
     python benchmarks/testlab_cli.py status                       who holds the GPU, what is planned, the last runs and events
     python benchmarks/testlab_cli.py hold --owner NAME --purpose TEXT [--ttl 600] [--wait 1800] -- <command ...>
@@ -25,9 +25,9 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.testlab import LeaseBusy, TestLab, default_path  # noqa: E402
+from guppi_runtime.jobs.testlab import LeaseBusy, TestLab, default_path  # noqa: E402
 
-from guppi_runtime.gpu_preflight import GpuNotClean, clear_leftovers
+from guppi_runtime.models.gpu_preflight import GpuNotClean, clear_leftovers
 
 
 def stamp(ts):

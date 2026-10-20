@@ -13,12 +13,12 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.development_contracts import development_contract
-from guppi_runtime.guard import Guard
-from guppi_runtime.job_supervisor import (JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore, supervisor_state)
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.selfdev.development_contracts import development_contract
+from guppi_runtime.core.guard import Guard
+from guppi_runtime.jobs.job_supervisor import (JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore, supervisor_state)
 from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.self_development import DevelopmentJobStore
+from guppi_runtime.selfdev.self_development import DevelopmentJobStore
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]
@@ -310,7 +310,7 @@ class QueueTests(Base):
     def test_claim_is_atomic_across_processes(self):
         self.sup.enqueue(self.job()['job_id'])
         code = ("import sys, yaml\nsys.path.insert(0, sys.argv[1])\nfrom pathlib import Path\n"
-                "from guppi_runtime.job_supervisor import *\n"
+                "from guppi_runtime.jobs.job_supervisor import *\n"
                 "raw = yaml.safe_load(Path(sys.argv[3]).read_text(encoding='utf-8'))['job_supervisor']; raw['enabled'] = True\n"
                 "sup = JobSupervisor(SupervisorJobStore(Path(sys.argv[2]) / 'jobs'), SupervisorConfig(raw))\n"
                 "try: print(sup.claim('wp' + sys.argv[4], ['reviewer'])['status'])\n"
@@ -847,7 +847,7 @@ class AuditAndBoundaryTests(Base):
         self.assertNotIn('write my diary', blob)
 
     def test_supervisor_source_names_no_provider_or_model(self):
-        source = Path(importlib.import_module('guppi_runtime.job_supervisor').__file__).read_text(encoding='utf-8').lower()
+        source = Path(importlib.import_module('guppi_runtime.jobs.job_supervisor').__file__).read_text(encoding='utf-8').lower()
         for word in ('lm-studio', 'lmstudio', 'llama', 'qwen', 'kev', 'openai', 'anthropic', 'gpt'):
             self.assertNotRegex(source, rf'\b{re.escape(word)}\b', word)
 

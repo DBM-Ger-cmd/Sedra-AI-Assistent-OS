@@ -11,13 +11,13 @@ from copy import deepcopy
 from pathlib import Path
 import yaml
 
-from ..development_contracts import development_contract, context_manifest, candidate_contract, verification_contract
+from ..selfdev.development_contracts import development_contract, context_manifest, candidate_contract, verification_contract
 from contextlib import contextmanager
-from ..failure_classes import classify as classify_failure_structured
-from ..util import atomic_write_json, load_json, utcnow, append_lock
+from ..jobs.failure_classes import classify as classify_failure_structured
+from ..core.util import atomic_write_json, load_json, utcnow, append_lock
 
 
-from ..evolution_targets import CORE_TARGETS, MODULE_TARGETS, classify_target  # re-exported: single source of truth
+from ..selfdev.evolution_targets import CORE_TARGETS, MODULE_TARGETS, classify_target  # re-exported: single source of truth
 
 
 class CapabilityAdmissionGate:

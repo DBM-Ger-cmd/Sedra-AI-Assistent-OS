@@ -93,7 +93,7 @@ def main(argv=None):
     ls.add_argument('action',choices=['list','propose','approve','reject','sweep']); ls.add_argument('--text'); ls.add_argument('--source',default='captain'); ls.add_argument('--id'); ls.add_argument('--reason')
     args=p.parse_args(argv)
     if args.cmd=='audit-repair':       # before the runtime is built: a torn log must not stop the repair itself
-        from .audit import AuditLog
+        from .core.audit import AuditLog
         out=AuditLog(Path(args.root).resolve()/'runtime_data'/'audit'/'events.jsonl').repair()
         print(json.dumps(out,indent=2,ensure_ascii=False)); return 0
     if args.cmd=='buildflow':       # task files, no runtime needed
@@ -136,29 +136,29 @@ def main(argv=None):
         m=rt.missions.load(args.mission_id)
         print(json.dumps(m['execution'].get('candidate_attempts',[]),indent=2,ensure_ascii=False));return 0
     if args.cmd=='candidate-cleanup':
-        from .candidate_lifecycle import discard
+        from .selfdev.candidate_lifecycle import discard
         with rt.missions.execution_lock(args.mission_id):
             m=rt.missions.load(args.mission_id)
             out=discard(rt.control,m,args.attempt_id,m['execution'].get('approval_token'))
         print(json.dumps(out,indent=2,ensure_ascii=False));return 0
     if args.cmd in {'candidate-test','candidate-test-verify'}:
-        from .candidate_tests import run_candidate_tests, verify_candidate_tests
+        from .selfdev.candidate_tests import run_candidate_tests, verify_candidate_tests
         out=(run_candidate_tests if args.cmd=='candidate-test' else verify_candidate_tests)(rt,args.mission_id)
         print(json.dumps(out,indent=2,ensure_ascii=False));return 0 if out.get('status')=='completed' else 2
     if args.cmd in {'candidate-accept-preview','candidate-accept','candidate-rollback-preview','candidate-rollback'}:
-        from .candidate_acceptance import command
+        from .selfdev.candidate_acceptance import command
         plan=json.loads(Path(args.plan).read_text(encoding='utf-8-sig')) if args.plan else None
         out=command(rt,args.mission_id,args.cmd.removeprefix('candidate-'),plan)
         print(json.dumps(out,indent=2,ensure_ascii=False));return 0 if out.get('status')=='completed' else 2
     if args.cmd in {'self-integrate-preview','self-integrate','self-rollback-preview','self-rollback'}:
-        from .self_integration import command as integration_command
+        from .selfdev.self_integration import command as integration_command
         plan=json.loads(Path(args.plan).read_text(encoding='utf-8-sig')) if args.plan else None
         out=integration_command(rt,args.mission_id,args.cmd.removeprefix('self-'),plan)
         print(json.dumps(out,indent=2,ensure_ascii=False));return 0 if out.get('status')=='completed' else 2
     if args.cmd=='run': print(json.dumps(rt.brain.run(args.mission_id,max_steps=args.max_steps),indent=2,ensure_ascii=False)); return 0
     if args.cmd=='list-missions': print(json.dumps(rt.missions.list(),indent=2,ensure_ascii=False)); return 0
     if args.cmd in {'model-remove-preview','model-remove','model-restore'}:
-        from .model_removal import command as removal_command
+        from .models.model_removal import command as removal_command
         if args.cmd=='model-remove-preview': out=removal_command(rt,None,'preview',targets=args.targets)
         elif args.cmd=='model-restore': out=removal_command(rt,None,'restore',removal_id=args.removal_id)
         else: out=removal_command(rt,args.mission_id,'remove',plan=json.loads(Path(args.plan).read_text(encoding='utf-8-sig')))
@@ -199,7 +199,7 @@ def main(argv=None):
                 request=json.loads(Path(args.request).read_text(encoding='utf-8-sig'))
                 out=hw.save_preview(request['profile_id'],request['profile'])
             if args.output:
-                from .util import atomic_write_json
+                from .core.util import atomic_write_json
                 atomic_write_json(Path(args.output).resolve(),out)
         else:
             op={'hardware-apply':'apply_profile','hardware-save':'save_profile','hardware-restore':'restore_defaults'}[args.cmd]

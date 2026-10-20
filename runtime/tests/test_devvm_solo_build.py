@@ -64,7 +64,7 @@ class SnapshotTests(unittest.TestCase):
     def test_a_passed_stage_leaves_a_folder_that_can_seed_the_next_stage(self):
         import tempfile
         from devvm_build import export_snapshot
-        from guppi_runtime.devvm import DevWorkspace
+        from guppi_runtime.devenv.devvm import DevWorkspace
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as proj:
             ws = DevWorkspace(Path(tmp), "M-SNAP0001", policy={"max_files": 20, "max_file_bytes": 8000, "max_input_bytes": 20000}); ws.create()
             ws.write("a.py", "x = 1\n"); ws.write("tests/t.py", "y = 2\n")

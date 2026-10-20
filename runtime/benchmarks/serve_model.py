@@ -44,10 +44,10 @@ def summarize(log_text):
 
 def serve(args):
     import devvm_agents_bench as bench
-    from guppi_runtime.gpu_preflight import clear_leftovers
-    from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.run_log import RunLog
-    from guppi_runtime.testlab import TestLab, default_path
+    from guppi_runtime.models.gpu_preflight import clear_leftovers
+    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from guppi_runtime.jobs.run_log import RunLog
+    from guppi_runtime.jobs.testlab import TestLab, default_path
 
     project = Path(args.project)
     folder = session_dir(project)

@@ -19,17 +19,18 @@ import webbrowser
 
 import yaml
 
-from . import gpu_preflight, uix_diag
-from .job_supervisor import FINAL_STATES, JobError
-from .mission import ALLOWED
-from .util import atomic_write_json, load_json, utcnow
+from . import uix_diag
+from .models import gpu_preflight
+from .jobs.job_supervisor import FINAL_STATES, JobError
+from .core.mission import ALLOWED
+from .core.util import atomic_write_json, load_json, utcnow
 from .local_switches import ALLOWED as SWITCH_ALLOWED, LocalSwitches
 from . import cloud_settings, labor_runs
 from .cloud_settings import CloudKeyStore
-from .role_routing import RoutingConfig
-from .rework_watch import ReworkWatch
-from .model_loader import LoadError
-from .testlab import TestLab, default_path
+from .models.role_routing import RoutingConfig
+from .jobs.rework_watch import ReworkWatch
+from .models.model_loader import LoadError
+from .jobs.testlab import TestLab, default_path
 from .runtime import GuppiRuntime
 
 INSTALLATION = Path(__file__).resolve().parents[3]     # das Programmverzeichnis (runtime/src/guppi_runtime/..), Ziel der Updates
@@ -2617,8 +2618,8 @@ class UIXHub:
         with self.lock: return self.projects.create(payload.get('name'))
 
     def candidate_operation(self, payload):
-        from .candidate_tests import run_candidate_tests, verify_candidate_tests
-        from .candidate_acceptance import command
+        from .selfdev.candidate_tests import run_candidate_tests, verify_candidate_tests
+        from .selfdev.candidate_acceptance import command
         op=payload['operation'];mid=payload['mission_id']
         if op=='test':return run_candidate_tests(self.runtime,mid)
         if op=='test-verify':return verify_candidate_tests(self.runtime,mid)
@@ -2626,7 +2627,7 @@ class UIXHub:
         return command(self.runtime,mid,op,payload.get('plan'))
 
     def generate_candidate(self, payload):
-        from .code_generation import generate
+        from .selfdev.code_generation import generate
         project=self.projects.get(payload['project_id'])
         with self.lock:
             m=self.runtime.brain.create_mission('Ändere Code als Kandidat: '+str(payload['intent']),inputs=None)
@@ -2798,7 +2799,7 @@ class UIXHub:
         if not isinstance(recipe_id, str) or not recipe_id: raise ValueError('recipe_id_required')
         rt = self.runtime
         if rt.role_router is None or getattr(rt, 'model_loader', None) is None or not rt.model_loader.enabled: raise ValueError('model_loader_unavailable')
-        from .role_routing import ResolutionError
+        from .models.role_routing import ResolutionError
         with self.model_lock:
             try: resolution = rt.role_router.resolve_recipe(recipe_id)
             except ResolutionError as exc:

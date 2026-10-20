@@ -1,6 +1,6 @@
 import json, tempfile, unittest
 from pathlib import Path
-from guppi_runtime.run_log import RunLog
+from guppi_runtime.jobs.run_log import RunLog
 
 class RunLogTests(unittest.TestCase):
  def setUp(self):

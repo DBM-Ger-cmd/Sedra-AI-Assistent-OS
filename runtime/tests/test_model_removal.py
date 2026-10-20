@@ -4,8 +4,8 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.model_removal import QUARANTINE, RemovalError, preview, remove, restore
-from guppi_runtime.routing_profiles import RoutingProfiles
+from guppi_runtime.models.model_removal import QUARANTINE, RemovalError, preview, remove, restore
+from guppi_runtime.models.routing_profiles import RoutingProfiles
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 OVERLAY = """role_routing:

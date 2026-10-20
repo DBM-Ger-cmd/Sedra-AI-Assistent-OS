@@ -26,7 +26,7 @@ from pathlib import Path
 
 import yaml
 
-from .. import gpu_canary
+from ..models import gpu_canary
 from ..models.runtime_control import RuntimeControlError
 
 KV_TYPES = frozenset({"f16", "bf16", "q8_0", "q4_0"})
@@ -115,7 +115,7 @@ def discover_backend(config, home=None):
     engine_source guppi: only GUPPI's own engine (engines/llama.cpp/<engine_build>), and only if its manifest and llama-server.exe
     check out. There is deliberately NO fallback to LM Studio: a missing or changed engine means "not available", visibly."""
     if config.engine_source == "guppi":
-        from ..engine_provision import DEFAULT_ROOT, engine_dir, verify_engine
+        from ..models.engine_provision import DEFAULT_ROOT, engine_dir, verify_engine
         root = Path(config.engine_root) if config.engine_root else DEFAULT_ROOT
         ok, _reason = verify_engine(root, config.engine_build)
         if not ok:
@@ -278,7 +278,7 @@ class LlamaServerRuntime:
     def _engine_facts(self):
         facts = {"engine_source": self.config.engine_source}
         if self.config.engine_source == "guppi":
-            from ..engine_provision import DEFAULT_ROOT, verify_engine
+            from ..models.engine_provision import DEFAULT_ROOT, verify_engine
             root = Path(self.config.engine_root) if self.config.engine_root else DEFAULT_ROOT
             facts["engine_build"] = self.config.engine_build
             facts["engine_check"] = verify_engine(root, self.config.engine_build)[1]
@@ -356,7 +356,7 @@ class LlamaServerRuntime:
             return
         engine = self.executable_dir
         if self.config.canary.engine_build and self.config.engine_source == "guppi":
-            from ..engine_provision import DEFAULT_ROOT, engine_dir, verify_engine
+            from ..models.engine_provision import DEFAULT_ROOT, engine_dir, verify_engine
             root = Path(self.config.engine_root) if self.config.engine_root else DEFAULT_ROOT
             if not verify_engine(root, self.config.canary.engine_build)[0]:
                 raise RuntimeControlError(f"gpu_canary_engine_missing:{self.config.canary.engine_build}")

@@ -5,8 +5,8 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from guppi_runtime.engine_provision import EngineError, MANIFEST, engine_dir, provision, verify_engine
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, discover_backend
+from guppi_runtime.models.engine_provision import EngineError, MANIFEST, engine_dir, provision, verify_engine
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, discover_backend
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 

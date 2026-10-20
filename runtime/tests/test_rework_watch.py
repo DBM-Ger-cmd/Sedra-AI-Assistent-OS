@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.rework_watch import MAX_ENTRIES, START, ReworkWatch, candidate_key, failure_signature, hint_key, same_as_earlier
+from guppi_runtime.jobs.rework_watch import MAX_ENTRIES, START, ReworkWatch, candidate_key, failure_signature, hint_key, same_as_earlier
 
 FEEDBACK_1 = """REPRO test_ports (test_uix_window.Ports.test_ports): AssertionError: 'Port out of range 0-65535' != 'uix_url_not_allowed'
 REPRO   input 'http://127.0.0.1:65535/': expected the URL back, got ValueError: Port out of range 0-65535 at uix_window.py:88: parsed.port <- uix_window.py:40: check(url)

@@ -7,12 +7,12 @@ from pathlib import Path
 import yaml
 
 from guppi_runtime.artifacts import ArtifactStore
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.context_manager import ContextConfig, ContextError, ContextManager
-from guppi_runtime.development_contracts import development_contract
-from guppi_runtime.development_evidence import DevelopmentEvidenceStore
-from guppi_runtime.job_worker import model_text_handler
-from guppi_runtime.working_set import WorkingSet, common_prefix, keywords
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.jobs.context_manager import ContextConfig, ContextError, ContextManager
+from guppi_runtime.selfdev.development_contracts import development_contract
+from guppi_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
+from guppi_runtime.jobs.job_worker import model_text_handler
+from guppi_runtime.jobs.working_set import WorkingSet, common_prefix, keywords
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]

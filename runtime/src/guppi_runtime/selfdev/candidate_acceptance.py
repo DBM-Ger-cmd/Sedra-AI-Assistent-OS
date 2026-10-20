@@ -5,9 +5,9 @@ import json
 import os
 import re
 import tempfile
-from ..candidate_tests import contract
-from ..tuning import digest
-from ..util import utcnow
+from ..selfdev.candidate_tests import contract
+from ..models.tuning import digest
+from ..core.util import utcnow
 
 
 def hash_bytes(raw):return hashlib.sha256(raw).hexdigest()
@@ -21,7 +21,7 @@ def test_qualification(rt, mission):
     if verified.get('verification')!='PASS' or verified.get('qualification')!='MICROVM_RESULT':raise ValueError('real_verified_guest_tests_required')
     report=json.loads(rt.sandbox.receipt(attempt['job_id']));counts=[]
     if not report.get('commands'):raise ValueError('nonempty_successful_test_inventory_required')
-    from ..code_generation import REPRO_HARNESS
+    from ..selfdev.code_generation import REPRO_HARNESS
     for command in report['commands']:
         if command['argv']==['python3',REPRO_HARNESS]:continue   # GUPPI's own reproduction step (prints REPRO lines, 2026-10-03); it never counts as a test, the unittest command below still must run and pass
         if command['argv']!=['python3','-m','unittest','discover','-s','tests','-v']:

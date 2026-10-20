@@ -35,8 +35,8 @@ sys.path.insert(0, str(RUNTIME / "src"))
 
 from guppi_runtime.runtime import GuppiRuntime          # noqa: E402
 from guppi_runtime.projects import ProjectRegistry      # noqa: E402
-from guppi_runtime.util import atomic_write_json, load_json  # noqa: E402
-from guppi_runtime.rework_watch import ReworkWatch, failure_signature, same_as_earlier  # noqa: E402
+from guppi_runtime.core.util import atomic_write_json, load_json  # noqa: E402
+from guppi_runtime.jobs.rework_watch import ReworkWatch, failure_signature, same_as_earlier  # noqa: E402
 
 DEMO = {"name": "demo", "capability": "demo_greeting_format", "target_type": "skill", "source": RUNTIME / "examples" / "demo-project",
         "files": ["app.py", "tests/test_app.py"], "evidence": [],
@@ -150,7 +150,7 @@ def refuse_repeated_candidate(state, watch):
 
 
 def generate_stage(rt, project, state):
-    from guppi_runtime.code_generation import generate
+    from guppi_runtime.selfdev.code_generation import generate
     if state.get("mission_id"):
         return {"status": "exists", "mission_id": state["mission_id"]}
     watch = ReworkWatch.load(state)
@@ -267,7 +267,7 @@ def generate_stage(rt, project, state):
 
 
 def test_stage(rt, project, state):
-    from guppi_runtime.candidate_tests import run_candidate_tests, verify_candidate_tests
+    from guppi_runtime.selfdev.candidate_tests import run_candidate_tests, verify_candidate_tests
     out = run_candidate_tests(rt, state["mission_id"])
     m = rt.missions.load(state["mission_id"])
     state["test"] = {"status": out.get("status"), "attempt": out.get("attempt"),

@@ -5,11 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.development_contracts import canonical_digest, development_contract, verification_contract
-from guppi_runtime.development_evidence import DevelopmentEvidenceStore
-from guppi_runtime.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore, supervisor_state
-from guppi_runtime.verification_gate import VerificationGate, document_check, record_check, record_review
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.selfdev.development_contracts import canonical_digest, development_contract, verification_contract
+from guppi_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
+from guppi_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore, supervisor_state
+from guppi_runtime.jobs.verification_gate import VerificationGate, document_check, record_check, record_review
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]

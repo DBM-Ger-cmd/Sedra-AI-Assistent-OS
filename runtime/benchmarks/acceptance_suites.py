@@ -17,8 +17,8 @@ RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from guppi_runtime.acceptance_suite import SuiteError, host_runner, leak_check, load_suite, run_suite, suite_from_stages, validate_suite, write_suite   # noqa: E402
-from guppi_runtime.acceptance_vm import vm_runner   # noqa: E402
+from guppi_runtime.selfdev.acceptance_suite import SuiteError, host_runner, leak_check, load_suite, run_suite, suite_from_stages, validate_suite, write_suite   # noqa: E402
+from guppi_runtime.selfdev.acceptance_vm import vm_runner   # noqa: E402
 
 PROJECT = RUNTIME.parent / "workspace" / "GUPPI_OS"
 SUITES = PROJECT / "acceptance" / "suites"

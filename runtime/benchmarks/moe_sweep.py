@@ -27,9 +27,9 @@ sys.path.insert(0, str(RUNTIME / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from context_ladder import RESERVE_GIB, gpu_mib                                       # noqa: E402
-from guppi_runtime.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                             # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
 
 
 def source_text(n_chars):

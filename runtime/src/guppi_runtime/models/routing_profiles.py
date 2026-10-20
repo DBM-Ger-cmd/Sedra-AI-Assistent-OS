@@ -23,7 +23,7 @@ from pathlib import Path
 
 import yaml
 
-from ..util import atomic_write_text
+from ..core.util import atomic_write_text
 
 NAME_RE = re.compile(r"[a-z][a-z0-9_-]{0,39}")
 PURPOSE_KEYS = {"prefer", "reasoning_effort", "temperature"}

@@ -13,7 +13,7 @@ import subprocess
 import time
 
 from ..hardware import detect_hardware
-from ..util import utcnow
+from ..core.util import utcnow
 
 
 def metric(value, unit, source, *, reason=None):

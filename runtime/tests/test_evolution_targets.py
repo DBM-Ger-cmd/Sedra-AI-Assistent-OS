@@ -3,10 +3,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.evolution import EvolutionManager
-from guppi_runtime.evolution_targets import CORE_TARGETS, MODULE_TARGETS, classify_target
+from guppi_runtime.selfdev.evolution import EvolutionManager
+from guppi_runtime.selfdev.evolution_targets import CORE_TARGETS, MODULE_TARGETS, classify_target
 from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime import self_development
+from guppi_runtime.selfdev import self_development
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
@@ -51,7 +51,7 @@ class TargetClassificationTests(unittest.TestCase):
         self.assertFalse(manager.propose(gap)['development']['requires_captain_gate'])
 
     def test_e1_list_does_not_overlap_protected_sets(self):
-        from guppi_runtime.evolution_targets import E1_TARGETS
+        from guppi_runtime.selfdev.evolution_targets import E1_TARGETS
         self.assertEqual(E1_TARGETS & (CORE_TARGETS | MODULE_TARGETS), set())
 
     def test_case_and_whitespace_cannot_dodge_core_protection(self):

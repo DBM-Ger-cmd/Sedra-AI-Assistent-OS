@@ -25,7 +25,7 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.run_log import RunLog                                             # noqa: E402
+from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
 
 GUEST_PARTS = {
     "tools": r'''

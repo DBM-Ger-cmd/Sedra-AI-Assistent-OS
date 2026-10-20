@@ -12,13 +12,13 @@ import env_skip
 
 import yaml
 
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.context_budget import ContextBudgetManager
-from guppi_runtime.development_contracts import development_contract
-from guppi_runtime.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.jobs.context_budget import ContextBudgetManager
+from guppi_runtime.selfdev.development_contracts import development_contract
+from guppi_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
 from guppi_runtime.models.base import ModelAdapterError
 from guppi_runtime.models.router import ModelRouter
-from guppi_runtime.role_routing import (PROVIDER_FAULTS, ProviderHealth, ResolutionError, RoleRouter, RoutingConfig, check_independence,
+from guppi_runtime.models.role_routing import (PROVIDER_FAULTS, ProviderHealth, ResolutionError, RoleRouter, RoutingConfig, check_independence,
                                         independence_key)
 from guppi_runtime.runtime import GuppiRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
@@ -794,7 +794,7 @@ class RuntimeAndBoundaryTests(unittest.TestCase):
             rt.routing_status()
 
     def test_dev_path_downgrades_a_pass_without_provable_independence(self):
-        from guppi_runtime.self_development import SelfDevelopmentManager
+        from guppi_runtime.selfdev.self_development import SelfDevelopmentManager
         with tempfile.TemporaryDirectory() as tmp:
             rt = GuppiRuntime(Path(tmp) / 'project', ARCH); sd = rt.self_development
             job_id = sd.start('independence_probe', evidence=[{'source': 't'}])['job']['job_id']
@@ -821,7 +821,7 @@ class RuntimeAndBoundaryTests(unittest.TestCase):
                                           task_context_budget=400, tool_result_budget=200, recent_history_budget=100)['context_window'], 2000)   # explicit splits are still honoured
 
     def test_routing_source_names_no_provider_or_model(self):
-        for name in ('role_routing.py', 'job_supervisor.py'):
+        for name in ('models/role_routing.py', 'jobs/job_supervisor.py'):
             source = (RUNTIME / 'src' / 'guppi_runtime' / name).read_text(encoding='utf-8').lower()
             for word in ('lm-studio', 'lmstudio', 'llama', 'qwen', 'kev', 'openai', 'anthropic', 'gpt'):
                 self.assertNotRegex(source, rf'\b{re.escape(word)}\b', f'{name}:{word}')
@@ -838,7 +838,7 @@ class ProfileRouting(Base):
                 recipe('verifier.m', ['verifier'], 'prov', 'gemma', 'wm')]
 
     def test_profile_reorders_and_may_lend_a_recipe_to_another_role(self):
-        from guppi_runtime.routing_profiles import RoutingProfiles
+        from guppi_runtime.models.routing_profiles import RoutingProfiles
         profiles = RoutingProfiles({'active': 'p', 'profiles': {'p': {'coder': {'prefer': ['verifier.m']},
                                                                       'rework': {'prefer': ['coder.g'], 'temperature': 1.0},
                                                                       'verifier': {'prefer': ['coder.g']}}}})

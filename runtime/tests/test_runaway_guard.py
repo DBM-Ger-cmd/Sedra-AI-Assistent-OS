@@ -8,12 +8,12 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from guppi_runtime.code_generation import TARGET_KEYS, unusable_answer
+from guppi_runtime.selfdev.code_generation import TARGET_KEYS, unusable_answer
 from guppi_runtime.models.base import ModelAdapterError
 from guppi_runtime.models.llamacpp import LlamaCppServerAdapter
 from guppi_runtime.models.recording import Recorder, ReplayAdapter, load_recordings
 from guppi_runtime.models.router import ModelRouter
-from guppi_runtime.runaway_guard import RunawayGuard
+from guppi_runtime.jobs.runaway_guard import RunawayGuard
 
 
 def feed_all(guard, text, step=200):

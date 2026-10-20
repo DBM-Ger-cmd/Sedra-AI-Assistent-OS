@@ -117,8 +117,8 @@ TASKS = [
 
 def main(project_dir, results_path, models):
     """Takes the shared GPU lease (waits up to 30 minutes for another chat's run) and records every call in the test lab database."""
-    from guppi_runtime.testlab import TestLab, default_path
-    from guppi_runtime.gpu_preflight import clear_leftovers
+    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from guppi_runtime.models.gpu_preflight import clear_leftovers
     lab = TestLab(default_path(project_dir))
     owner = os.environ.get("TESTLAB_OWNER", "token_quality")
     with lab.lease(owner, f"token_quality {','.join(models)}", ttl_s=600, wait_s=1800, preflight=clear_leftovers):

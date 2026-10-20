@@ -10,16 +10,16 @@ from pathlib import Path
 from unittest.mock import patch
 
 from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.mission import MissionStore
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.guard import Guard
-from guppi_runtime.message_bus import MessageBus, Message
-from guppi_runtime.evolution import EvolutionManager
+from guppi_runtime.core.mission import MissionStore
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.core.guard import Guard
+from guppi_runtime.core.message_bus import MessageBus, Message
+from guppi_runtime.selfdev.evolution import EvolutionManager
 from guppi_runtime.updater import UpdateBuilder
-from guppi_runtime.errors import InvalidTransition, CompatibilityError
+from guppi_runtime.core.errors import InvalidTransition, CompatibilityError
 from guppi_runtime.knowledge import KnowledgeStore
 from guppi_runtime.hardware import detect_hardware
-from guppi_runtime.model_profiles import ModelProfileStore
+from guppi_runtime.models.model_profiles import ModelProfileStore
 from guppi_runtime.models.lmstudio import LMStudioAdapter
 from guppi_runtime.models.base import ModelAdapterError
 from guppi_runtime.models.router import ModelRouter
@@ -634,7 +634,7 @@ class RuntimeCase(unittest.TestCase):
         self.assertEqual(fp1,fp2); self.assertEqual(len(fp1),24)
 
     def test_benchmark_active_and_known_good_promotion(self):
-        from guppi_runtime.benchmark import ModelBenchmarkRunner
+        from guppi_runtime.models.benchmark import ModelBenchmarkRunner
         class FakeAdapter:
             def health(self): return True
             def list_models(self): return ['fake-model']

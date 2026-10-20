@@ -1,7 +1,7 @@
 """Read-only bounded inspection through routed FilesystemTool calls."""
 import hashlib
 import json
-from ..execution_binder import BindingError
+from ..selfdev.execution_binder import BindingError
 
 
 class ProjectInspector:

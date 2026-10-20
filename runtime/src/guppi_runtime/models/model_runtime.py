@@ -1,11 +1,11 @@
 from __future__ import annotations
 from pathlib import Path
 import shutil, yaml
-from ..model_catalog import ModelCatalog
-from ..hardware_pass import HardwareModelPass
+from ..models.model_catalog import ModelCatalog
+from ..models.hardware_pass import HardwareModelPass
 from ..models.runtime_control import LMStudioRuntimeController, LlamaCppRuntimeController
-from ..benchmark import ModelBenchmarkRunner
-from ..tuning import TuningManager
+from ..models.benchmark import ModelBenchmarkRunner
+from ..models.tuning import TuningManager
 
 
 class ModelRuntimeManager:

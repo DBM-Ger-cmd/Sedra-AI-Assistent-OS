@@ -25,8 +25,8 @@ import json
 import sys
 from pathlib import Path
 
-from ..audit import AuditLog
-from ..guard import Guard
+from ..core.audit import AuditLog
+from ..core.guard import Guard
 from .agent_contracts import ContractError, make_id
 from .agent_registry import Registry
 from .bridge import ACTION, AgentBridge
@@ -107,8 +107,8 @@ class Manager:
         return json.loads((self.gates / f"{gate_id}.token.json").read_text(encoding="utf-8"))
 
     def suite(self, instance_id, suite_name, candidate_dir, builder, runner=None):
-        from ..acceptance_suite import load_suite, run_suite
-        from ..acceptance_vm import vm_runner
+        from ..selfdev.acceptance_suite import load_suite, run_suite
+        from ..selfdev.acceptance_vm import vm_runner
         suite = load_suite(str(self.project / "acceptance" / "suites" / suite_name))
         files = {name: (Path(candidate_dir) / name).read_text(encoding="utf-8") for name in suite.reference if (Path(candidate_dir) / name).is_file()}
         if set(files) != set(suite.reference):

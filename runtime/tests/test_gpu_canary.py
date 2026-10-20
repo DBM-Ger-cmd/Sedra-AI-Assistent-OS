@@ -7,8 +7,8 @@ from unittest import mock
 import env_skip
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  (also puts src/ on the path)
-from guppi_runtime import gpu_canary
-from guppi_runtime.llama_server_runtime import LlamaServerConfig
+from guppi_runtime.models import gpu_canary
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig
 from guppi_runtime.models.runtime_control import RuntimeControlError
 from test_llama_server_runtime import Base, FakeProc
 

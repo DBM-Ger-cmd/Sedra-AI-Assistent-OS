@@ -54,7 +54,7 @@ class Shape(unittest.TestCase):
 
     def test_every_phase_the_runtime_knows_has_a_german_word(self):
         """Sonst steht Maschinensprache im Satz des Captains ('candidate_review'), und der Satz ist der Kern von Regel 6."""
-        from guppi_runtime.mission import ALLOWED
+        from guppi_runtime.core.mission import ALLOWED
         phases = set(ALLOWED) | {p for targets in ALLOWED.values() for p in targets}
         self.assertEqual(sorted(phases - set(desk_objects.PHASE_WORD)), [])
         self.assertIn('Kandidat liegt vor', desk_objects.task_object(compact(phase='CANDIDATE_REVIEW'))['summary'])

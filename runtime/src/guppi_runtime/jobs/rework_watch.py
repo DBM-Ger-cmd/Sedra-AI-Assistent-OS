@@ -1,7 +1,7 @@
 """Rework watch: stops a rework loop that keeps failing for the same cause. It only advises; it never cancels or changes a job.
 
 Why (2026-10-03, uix_window): 24 discarded generations, the same `parsed.port` failure over many of them and repeated `model_answer_truncated`;
-every generation costs minutes of GPU. Plan: docs/LOOP_GUARD_REWORK_PLAN_2026-10-04.md. Built on guppi_runtime.loop_guard.
+every generation costs minutes of GPU. Plan: docs/LOOP_GUARD_REWORK_PLAN_2026-10-04.md. Built on guppi_runtime.jobs.loop_guard.
 
 Two guards over the same history (each stage of the E1 harness is a new process, so the history is a plain list kept in the job state):
   repeat     the rework call (only the Captain's hint can change it) keeps ending in the same failure signature -> generic_repeat
@@ -11,7 +11,7 @@ A new Captain hint changes the call, so the next generation is allowed again.
 import hashlib
 import re
 
-from ..loop_guard import LoopGuard, normalize_output
+from ..jobs.loop_guard import LoopGuard, normalize_output
 
 REPEAT_THRESHOLD = 3          # stuck before the 3rd generation that would end in the same failure as the 2 before
 PING_PONG_THRESHOLD = 4       # stuck before the 5th generation when 4 failures alternate A, B, A, B

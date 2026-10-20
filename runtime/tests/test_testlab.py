@@ -3,7 +3,7 @@ import threading
 import unittest
 from pathlib import Path
 
-from guppi_runtime.testlab import LeaseBusy, TestLab, pid_alive
+from guppi_runtime.jobs.testlab import LeaseBusy, TestLab, pid_alive
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 

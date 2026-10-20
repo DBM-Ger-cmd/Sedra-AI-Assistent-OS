@@ -7,12 +7,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.acceptance_suite import SuiteError, load_suite
+from guppi_runtime.selfdev.acceptance_suite import SuiteError, load_suite
 
 RUNTIME = Path(__file__).resolve().parents[1]
 SUITES = RUNTIME.parent / "workspace" / "GUPPI_OS" / "acceptance" / "suites"
 MODULES = ("agent_contracts", "agent_registry", "agent_import", "agent_matcher", "code_meter", "code_collector")
-MODULE_HOME = {"crew_planner": "guppi_runtime.agent_manager.crews", "comment_archive": "guppi_runtime.comment_archive"}
+MODULE_HOME = {"crew_planner": "guppi_runtime.agent_manager.crews", "comment_archive": "guppi_runtime.devenv.comment_archive"}
 
 
 def make_suite_case(suite_name):

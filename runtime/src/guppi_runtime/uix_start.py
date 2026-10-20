@@ -13,7 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import gpu_preflight
+from .models import gpu_preflight
 from .uix_server import serve
 
 
@@ -68,7 +68,7 @@ def preflight(rows, own_pids, *, replace=False, say=print, stop=gpu_preflight._s
 
 def show_lease(say=print):
     try:
-        from .testlab import TestLab, default_path
+        from .jobs.testlab import TestLab, default_path
         holder = TestLab(default_path()).holder()
     except Exception:
         return

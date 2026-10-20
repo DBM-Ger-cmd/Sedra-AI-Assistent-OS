@@ -4,7 +4,7 @@ import env_skip
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'benchmarks'))
 import cuda_crash_hunt as hunt
 import small_team as st
-from guppi_runtime.llama_server_runtime import build_command
+from guppi_runtime.models.llama_server_runtime import build_command
 
 # Genau die Dateien, die diese Tests brauchen – nicht nur die Ordner. Fehlen sie, steht der Grund im Lauf (statt rot).
 ENGINE_DA = (hunt.RUNTIME.parent / 'engines' / 'llama.cpp' / hunt.VARIANTS['engine_b11160']['engine_build']).is_dir()

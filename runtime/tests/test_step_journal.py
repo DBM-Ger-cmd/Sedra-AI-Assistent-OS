@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.candidate_lifecycle import discard
+from guppi_runtime.selfdev.candidate_lifecycle import discard
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 ARCH=sorted((Path(__file__).resolve().parents[2]/'architecture').glob('GUPPI_Architecture_v*'))[-1]

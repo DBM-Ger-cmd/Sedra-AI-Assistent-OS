@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 from guppi_runtime.runtime import GuppiRuntime
 from guppi_runtime.uix_server import UIXHub,make_server
-from guppi_runtime.candidate_acceptance import preview,command
+from guppi_runtime.selfdev.candidate_acceptance import preview,command
 from guppi_runtime.projects import ProjectRegistry
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
@@ -17,7 +17,7 @@ class WorkflowCase(unittest.TestCase):
  def test_missing_tests_and_simulation_refuse_acceptance(self):
   with self.assertRaises(ValueError):preview(self.rt,self.m)
   self.assertEqual((self.source/'app.py').read_bytes(),self.old.encode())
- def qualified(self):return patch('guppi_runtime.candidate_acceptance.test_qualification',return_value={'qualification':'TEST_CONTRACT_FIXTURE'})
+ def qualified(self):return patch('guppi_runtime.selfdev.candidate_acceptance.test_qualification',return_value={'qualification':'TEST_CONTRACT_FIXTURE'})
  def approved(self,op,plan):
   gate=command(self.rt,self.mid,op,plan)['gate'];token=self.rt.guard.approve(gate);m=self.rt.missions.load(self.mid);m['execution']['approval_token']=token;self.rt.missions.save(m)
   return command(self.rt,self.mid,op,plan)
@@ -42,12 +42,12 @@ class WorkflowCase(unittest.TestCase):
  def test_write_interruption_stays_review_required(self):
   with self.qualified():
    plan=preview(self.rt,self.m)
-   import guppi_runtime.candidate_acceptance as ca
+   import guppi_runtime.selfdev.candidate_acceptance as ca
    original=ca.os.replace
    def fail(src,dst):
     if Path(dst)==self.source/'app.py':raise OSError('fixture interrupted')
     return original(src,dst)
-   with patch('guppi_runtime.candidate_acceptance.os.replace',side_effect=fail):out=self.approved('accept',plan)
+   with patch('guppi_runtime.selfdev.candidate_acceptance.os.replace',side_effect=fail):out=self.approved('accept',plan)
    self.assertEqual(out['acceptance']['status'],'REVIEW_REQUIRED')
    with self.assertRaises(ValueError):command(self.rt,self.mid,'accept',plan)
  def test_project_records_are_real_and_persistent(self):

@@ -1,9 +1,9 @@
 import env_skip; env_skip.need_dulwich()   # whole module needs the DevVM git (dulwich); skipped with reason where it is missing
 import json, tempfile, unittest
 from pathlib import Path
-from guppi_runtime.devvm import DevWorkspace
-from guppi_runtime.devvm_agents import DevOrchestrator, ModelHost, run_agent
-from guppi_runtime.devvm_tools import DevToolBox
+from guppi_runtime.devenv.devvm import DevWorkspace
+from guppi_runtime.devenv.devvm_agents import DevOrchestrator, ModelHost, run_agent
+from guppi_runtime.devenv.devvm_tools import DevToolBox
 
 POLICY = {'max_files': 20, 'max_file_bytes': 4000, 'max_input_bytes': 20000}
 

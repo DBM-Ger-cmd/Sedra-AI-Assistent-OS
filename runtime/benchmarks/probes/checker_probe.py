@@ -45,7 +45,7 @@ def stage_is_right(valid, killed, total):
 def real_faults(suite, stage, reference, host_run, per_stage):
     """The faulty versions of the stage's files that the hidden test of the stage catches: [(file, kind, index, source)]."""
     from suite_mutants import mutate, sites
-    from guppi_runtime.acceptance_suite import run_suite
+    from guppi_runtime.selfdev.acceptance_suite import run_suite
     found = []
     for name in STAGE_FILES[stage]:
         source = reference[name]
@@ -77,14 +77,14 @@ def main():
     project = Path(args.project)
 
     import devvm_agents_bench as bench
-    from guppi_runtime.acceptance_suite import host_runner, load_suite
-    from guppi_runtime.acceptance_vm import vm_runner
-    from guppi_runtime.devvm import DevWorkspace
-    from guppi_runtime.devvm_agents import CHECKER_FIRST_NOTE, DevOrchestrator, ModelHost
-    from guppi_runtime.gpu_preflight import clear_leftovers
-    from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.run_log import RunLog
-    from guppi_runtime.testlab import TestLab, default_path
+    from guppi_runtime.selfdev.acceptance_suite import host_runner, load_suite
+    from guppi_runtime.selfdev.acceptance_vm import vm_runner
+    from guppi_runtime.devenv.devvm import DevWorkspace
+    from guppi_runtime.devenv.devvm_agents import CHECKER_FIRST_NOTE, DevOrchestrator, ModelHost
+    from guppi_runtime.models.gpu_preflight import clear_leftovers
+    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from guppi_runtime.jobs.run_log import RunLog
+    from guppi_runtime.jobs.testlab import TestLab, default_path
 
     spec = importlib.import_module("devvm_specs.bench_std")
     stages = {s["name"]: s for s in spec.STAGES}

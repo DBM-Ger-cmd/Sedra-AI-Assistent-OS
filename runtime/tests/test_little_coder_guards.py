@@ -8,9 +8,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from guppi_runtime.devvm import DevWorkspace  # noqa: E402
-from guppi_runtime.devvm_agents import AgentBudget, run_agent  # noqa: E402
-from guppi_runtime.devvm_tools import DevToolBox, WRITE_KEEP_LINES  # noqa: E402
+from guppi_runtime.devenv.devvm import DevWorkspace  # noqa: E402
+from guppi_runtime.devenv.devvm_agents import AgentBudget, run_agent  # noqa: E402
+from guppi_runtime.devenv.devvm_tools import DevToolBox, WRITE_KEEP_LINES  # noqa: E402
 
 POLICY = {"max_files": 40, "max_file_bytes": 60000, "max_input_bytes": 200000}
 
@@ -126,7 +126,7 @@ class SelfCheckTests(Base):
         self.assertIn("You cannot run code", none["messages"][0]["content"])
 
     def test_the_number_of_vm_runs_follows_the_way_of_checking(self):
-        from guppi_runtime.devvm_tools import SELF_CHECK
+        from guppi_runtime.devenv.devvm_tools import SELF_CHECK
         self.assertEqual({k: v["vm_runs"] for k, v in SELF_CHECK.items()}, {"full": 8, "light": 2, "none": 0})
         box = DevToolBox(self.ws, "solo", vm_runner=lambda c: {"status": "completed", "output": "ok"}, max_vm_runs=2, self_check="light")
         self.ws.write("check_a.py", "print(1)\n")
@@ -135,8 +135,8 @@ class SelfCheckTests(Base):
         with self.assertRaises(ValueError): DevToolBox(self.ws, "solo", self_check="sometimes")
 
     def test_the_orchestrator_prompts_name_the_way_of_checking(self):
-        from guppi_runtime.devvm_agents import SOLO_PROMPT, CONTINUE_PROMPT
-        from guppi_runtime.devvm_tools import SELF_CHECK
+        from guppi_runtime.devenv.devvm_agents import SOLO_PROMPT, CONTINUE_PROMPT
+        from guppi_runtime.devenv.devvm_tools import SELF_CHECK
         for key, words in (("full", "check_*.py script and run_python"), ("light", "ONE small check_*.py"), ("none", "re-read the task against your code")):
             self.assertIn(words, SOLO_PROMPT.format(task="t", lessons="", check=SELF_CHECK[key]["prompt"]))
         self.assertIn("read your code against the report again", CONTINUE_PROMPT.format(report="r", again=SELF_CHECK["none"]["again"]))

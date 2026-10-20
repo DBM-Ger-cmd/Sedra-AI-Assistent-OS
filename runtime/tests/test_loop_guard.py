@@ -1,6 +1,6 @@
 import unittest
 
-from guppi_runtime.loop_guard import GUARDED_TOOLS, HISTORY_SIZE, LoopGuard, normalize_output, outcome_hash, signature
+from guppi_runtime.jobs.loop_guard import GUARDED_TOOLS, HISTORY_SIZE, LoopGuard, normalize_output, outcome_hash, signature
 
 OK = {"stuck": False, "detector": None, "count": 0, "message": ""}
 

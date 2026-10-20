@@ -2,8 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime import gpu_preflight as gp
-from guppi_runtime.testlab import TestLab
+from guppi_runtime.models import gpu_preflight as gp
+from guppi_runtime.jobs.testlab import TestLab
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 OURS = {"name": "llama-server.exe", "path": r"C:\Users\x\.lmstudio\extensions\backends\llama.cpp-win-x86_64-nvidia-cuda12-avx2-2.50.0\llama-server.exe",

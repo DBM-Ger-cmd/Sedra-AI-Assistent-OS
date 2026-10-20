@@ -85,7 +85,7 @@ class ModelRouter:
         except Exception as exc:
             if recorder is not None: recorder.record(mission_id,adapter.id,model,messages,kwargs,error=exc,seconds=time.monotonic()-started)
             if health is not None:
-                from ..failure_classes import classify
+                from ..jobs.failure_classes import classify
                 health.report_failure(adapter.id,classify(exception=exc))   # only provider faults count; the rest is ignored there
             raise
         if recorder is not None: recorder.record(mission_id,adapter.id,model,messages,kwargs,result=result,seconds=time.monotonic()-started)

@@ -15,7 +15,7 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.acceptance_suite import host_runner, load_suite, run_suite  # noqa: E402
+from guppi_runtime.selfdev.acceptance_suite import host_runner, load_suite, run_suite  # noqa: E402
 
 COMPARE_SWAPS = {ast.Eq: ast.NotEq, ast.NotEq: ast.Eq, ast.Lt: ast.LtE, ast.LtE: ast.Lt, ast.Gt: ast.GtE, ast.GtE: ast.Gt, ast.In: ast.NotIn, ast.NotIn: ast.In, ast.Is: ast.IsNot, ast.IsNot: ast.Is}
 

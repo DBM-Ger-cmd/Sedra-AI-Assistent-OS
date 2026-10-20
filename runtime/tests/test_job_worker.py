@@ -5,11 +5,11 @@ import time
 import unittest
 from pathlib import Path
 
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.development_contracts import development_contract
-from guppi_runtime.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
-from guppi_runtime.job_worker import HandlerError, Worker, degenerate_reason, model_text_handler
-from guppi_runtime.model_loader import LoaderConfig, ModelLoader
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.selfdev.development_contracts import development_contract
+from guppi_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
+from guppi_runtime.jobs.job_worker import HandlerError, Worker, degenerate_reason, model_text_handler
+from guppi_runtime.models.model_loader import LoaderConfig, ModelLoader
 from test_model_loader import FakeController, KEY, inst
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 

@@ -10,7 +10,7 @@ import threading
 import time
 
 from ..models import LMStudioAdapter, LlamaCppServerAdapter
-from ..util import atomic_write_json, load_json, utcnow
+from ..core.util import atomic_write_json, load_json, utcnow
 
 
 DEFAULT_PROMPT = "Reply with a short sentence confirming that the local model is ready."

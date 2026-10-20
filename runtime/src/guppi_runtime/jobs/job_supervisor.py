@@ -19,13 +19,13 @@ import time
 
 import yaml
 
-from ..failure_classes import classify, retry_rule
-from ..rework_watch import ReworkWatch, failure_signature
-from ..development_contracts import candidate_contract
-from ..model_loader import LoadError
-from ..role_routing import REQUIREMENT_KEYS, RESOLUTION_CODES, check_independence
-from ..self_development import DevelopmentJobStore
-from ..util import load_json, utcnow
+from ..jobs.failure_classes import classify, retry_rule
+from ..jobs.rework_watch import ReworkWatch, failure_signature
+from ..selfdev.development_contracts import candidate_contract
+from ..models.model_loader import LoadError
+from ..models.role_routing import REQUIREMENT_KEYS, RESOLUTION_CODES, check_independence
+from ..selfdev.self_development import DevelopmentJobStore
+from ..core.util import load_json, utcnow
 
 WORKER_ID = re.compile(r"[A-Za-z0-9_-]{1,40}")
 OP_ID = re.compile(r"[A-Za-z0-9_.:-]{1,80}")
@@ -409,7 +409,7 @@ class JobSupervisor:
         if not isinstance(contract, dict) or not isinstance(contract.get("contract_digest"), str):
             raise JobError("invalid_contract")
         unsigned = {k: v for k, v in contract.items() if k != "contract_digest"}
-        from ..development_contracts import canonical_digest
+        from ..selfdev.development_contracts import canonical_digest
         if canonical_digest(unsigned) != contract["contract_digest"]:
             raise JobError("invalid_contract", "digest_mismatch")
         if requested_role not in self.config.roles:

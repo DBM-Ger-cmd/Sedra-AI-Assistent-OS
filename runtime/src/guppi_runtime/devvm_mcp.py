@@ -16,8 +16,8 @@ import tempfile
 import time
 from pathlib import Path
 
-from .devvm import DevWorkspace
-from .devvm_tools import READ_TOOLS, SELF_CHECK, DevToolBox
+from .devenv.devvm import DevWorkspace
+from .devenv.devvm_tools import READ_TOOLS, SELF_CHECK, DevToolBox
 
 SERVER_NAME = "guppi-devvm"
 SERVER_VERSION = "1.0.0"
@@ -133,7 +133,7 @@ def build(args):
             if path.is_file() and rel != "NOTES.md": ws.write(rel, path.read_text(encoding="utf-8"))
     vm = None
     if not args.no_vm:
-        from .acceptance_vm import vm_runner
+        from .selfdev.acceptance_vm import vm_runner
         runner = vm_runner(args.project, Path(__file__).resolve().parents[2], mission=args.mission)
         vm = lambda commands: runner({p: ws.read(p) for p in ws.tree()}, commands)
     return ws, DevvmMcpServer(ws, vm_runner=vm, max_calls=args.max_calls, max_seconds=args.max_seconds, max_vm_runs=args.max_vm_runs, self_check=args.self_check, journal=args.journal, result_file=args.result_file)

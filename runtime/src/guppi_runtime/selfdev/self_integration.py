@@ -12,9 +12,9 @@ import os
 import re
 from pathlib import Path
 
-from ..candidate_acceptance import close_after_take_over, linked_job, test_qualification
-from ..tuning import digest
-from ..util import utcnow
+from ..selfdev.candidate_acceptance import close_after_take_over, linked_job, test_qualification
+from ..models.tuning import digest
+from ..core.util import utcnow
 
 CAPABILITY_DIR = Path(__file__).resolve().parents[1] / "capabilities"
 _MODULE_NAME = re.compile(r"[a-z][a-z0-9_]{1,63}\.py")

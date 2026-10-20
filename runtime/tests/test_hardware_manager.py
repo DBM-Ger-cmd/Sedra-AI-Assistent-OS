@@ -16,7 +16,7 @@ from guppi_runtime.hardware_manager.dashboard import make_server
 from guppi_runtime.runtime import GuppiRuntime
 from guppi_runtime.tools.hardware_manager import HardwareManagerTool
 from guppi_runtime.tools.base import ToolValidationError
-from guppi_runtime.util import atomic_write_json, utcnow
+from guppi_runtime.core.util import atomic_write_json, utcnow
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]

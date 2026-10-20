@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..util import utcnow
+from ..core.util import utcnow
 from . import erkenntnisse as ek
 from . import nachrichten as nw
 from . import transkripte as tk

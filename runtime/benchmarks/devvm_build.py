@@ -26,20 +26,21 @@ sys.path.insert(0, str(RUNTIME / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import devvm_agents_bench as bench                                                   # noqa: E402
+import logbook                                                                       # noqa: E402
 import spec_stamp                                                                    # noqa: E402
 from devvm_vm import sandbox_text, vm_env                                            # noqa: E402
-from guppi_runtime.devvm import DevWorkspace
-from guppi_runtime.devvm_evidence import DRIVER, bug_report, parse as parse_evidence
-from guppi_runtime.devvm_style import snapshot as ws_snapshot                                         # noqa: E402
-from guppi_runtime.devvm_agents import DevOrchestrator, ModelHost                    # noqa: E402
-from guppi_runtime.gpu_preflight import clear_leftovers
+from guppi_runtime.devenv.devvm import DevWorkspace
+from guppi_runtime.devenv.devvm_evidence import DRIVER, bug_report, parse as parse_evidence
+from guppi_runtime.devenv.devvm_style import snapshot as ws_snapshot                                         # noqa: E402
+from guppi_runtime.devenv.devvm_agents import DevOrchestrator, ModelHost                    # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers
 from guppi_runtime.knowledge import KnowledgeStore
 from guppi_runtime.devenv.lesson_store import default_path as lesson_cards_path, lesson_for
-from guppi_runtime.layer_summary import cell as layer_cell, summary as layer_table
-from guppi_runtime.s0_status import status as s0_state                              # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                              # noqa: E402
+from guppi_runtime.devenv.layer_summary import cell as layer_cell, summary as layer_table
+from guppi_runtime.devenv.s0_status import status as s0_state                              # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 
 REWORK_TASK = ("{task}\n\nThe work is in the workspace, but an acceptance test of the Captain fails (you do not see the test, only its output):\n{output}\n\n"
@@ -48,6 +49,7 @@ REWORK_TASK = ("{task}\n\nThe work is in the workspace, but an acceptance test o
 
 NL = chr(10)
 DEFAULT_MODEL = "coder.local_primary"      # the standard coder of GUPPI: Qwen3.6-35B-A3B since 2026-10-09 (was Qwen3-Coder, now the recipe coder.llama_qwen3_coder, key qwen3coder)
+THINK_LIMIT = 2000      # e02: thinking tokens per answer before the note, then thinking is switched down (the options --think-limit and --think-family were removed 2026-10-20, ANA-10)
 THINK_FAMILY = {DEFAULT_MODEL: "qwen"}      # E-21: how a model switches its thinking down (E-02); keys whose name says it are found by think_family()
 
 
@@ -74,7 +76,7 @@ def coder_ext_config(args):
         except KeyError: raise SystemExit(f"--skills {args.skills}: not a configured library (core, full) and no library folder")
         SkillLibrary(skills)      # a missing or broken library stops the build here
     if not enabled and args.no_record and not args.bg_jobs and not skills: return None
-    return {"enabled": enabled, "think_limit": args.think_limit, "family": args.think_family or think_family(args.all_models or args.coder),
+    return {"enabled": enabled, "think_limit": THINK_LIMIT, "family": think_family(args.all_models or args.coder),
             "window": 32768 if args.context == "max" else int(args.context), "record": not args.no_record, "bg_jobs": args.bg_jobs, "skills": skills}
 
 
@@ -289,19 +291,46 @@ def s0_report(project, keys, extras, engine_build):
         out.append(s0_state(project, rid, {**bench.hunt.model_spec(key, project)["server"], **extras}, engine_build))
     return out
 
-def spec_stamp_gate(project, spec_name, skip, bench=None):
-    """L2 (Captain 2026-10-20): no build without a green spec_check of exactly this spec and reference (benchmarks/spec_stamp.py). Returns the lines for the log;
-    a missing or stale stamp stops the build before a model is loaded, unless --skip-spec-stamp (then a warning in the log)."""
-    reason, stamp = spec_stamp.check(project, spec_name, bench)
-    if reason is None:
-        lines = [f"spec stamp: {stamp['level']} ok ({stamp.get('python') or '?'}, {stamp.get('checked_at')})"]
-        if stamp["level"] != "vm":
-            lines.append(f"   WARNING: spec stamp level {stamp['level']}: checked on the host python only, not in the microVM (weaker; run spec_check.py {spec_name} --vm)")
-        return lines
-    hint = f"{reason}: run `benchmarks/spec_check.py {spec_name} --vm --project <project>` first (stamp {spec_stamp.stamp_path(project, spec_name)})"
-    if not skip:
-        raise SystemExit(hint)
-    return [f"WARNING: --skip-spec-stamp: building WITHOUT a valid spec stamp ({reason})"]
+def spec_stamp_gate(project, spec_name, skip, bench=None, allow_host=False):
+    """L2 (Captain 2026-10-20): no build without a green spec_check of exactly this spec and reference (benchmarks/spec_stamp.py, rule in spec_stamp.gate). Returns the lines
+    for the log; a missing or stale stamp stops the build before a model is loaded, unless --skip-spec-stamp (then a warning in the log). A stamp of level host
+    (spec_check --host-only) is accepted only with --allow-host-stamp (PIPE-07, Captain 2026-10-20); otherwise spec_stamp_host_only."""
+    return spec_stamp.gate(project, spec_name, skip, bench, allow_host)
+
+
+def count_lines(folder, only=lambda rel: True):
+    """Lines of the text files below folder (a missing folder: 0); only(relative posix path) picks the files; __pycache__ is left out."""
+    folder, total = Path(folder), 0
+    if not folder.is_dir(): return 0
+    for path in sorted(p for p in folder.rglob("*") if p.is_file() and "__pycache__" not in p.parts):
+        if not only(path.relative_to(folder).as_posix()): continue
+        try: total += len(path.read_text(encoding="utf-8").splitlines())
+        except (OSError, UnicodeDecodeError): pass
+    return total
+
+
+def logbook_entry(spec_name, row, lease_seconds, bench_dir=None):
+    """V1 (Captain 2026-10-20): the text of the BAU logbook row of one build, and its ref. SEDRA = lines of the exported candidate without tests and NOTES.md; Claude = lines of
+    the spec file plus the reference folder (L4: the quota says how much Claude wrote for each line SEDRA wrote)."""
+    bench_dir = Path(bench_dir or Path(__file__).resolve().parent)
+    stages = row["stages"]
+    passed = sum(1 for s in stages if s.get("hidden_passed"))
+    sedra = count_lines(row["exported_to"], lambda rel: rel.endswith(".py") and not rel.startswith("tests/") and not Path(rel).name.startswith("test_"))
+    claude = count_lines(bench_dir / "devvm_refs" / spec_name) + (len((bench_dir / "devvm_specs" / f"{spec_name}.py").read_text(encoding="utf-8").splitlines()) if (bench_dir / "devvm_specs" / f"{spec_name}.py").is_file() else 0)
+    quota = f"{claude / sedra:.1f}" if sedra else "-"
+    reworks = sum(s.get("reworks", 0) for s in stages)
+    text = (f"Bau {spec_name}: {'bestanden' if row['hidden_passed'] else 'NICHT bestanden'}, Stufen {passed}/{len(stages)}, Dauer {row['seconds']:.0f} s, GPU-Lease {lease_seconds:.0f} s, "
+            f"{row['calls']} Modellaufrufe in {row['agent_runs']} Agentenläufen, Nacharbeiten {reworks}, Eskalationen {row['escalations']}, "
+            f"Zeilen SEDRA (Kandidat) {sedra}, Zeilen Claude (Spec + Referenz) {claude}, Quote Claude/SEDRA {quota}")
+    return text, f"devvm_candidates/{spec_name}"
+
+
+def write_logbook(spec_name, row, lease_seconds, file=None, bench_dir=None):
+    """Appends the BAU row (benchmarks/logbook.py); returns the row text. A failure here must never fail a finished build, so the caller catches it."""
+    text, ref = logbook_entry(spec_name, row, lease_seconds, bench_dir)
+    line = logbook.make_row("BAU", text, ref)
+    logbook.append(file or logbook.DEFAULT, line)
+    return line
 
 
 PROFILES = {      # Captain 2026-10-20, line L1: ONE way to build; the standard command of docs/ENTWICKLUNG.md as a profile (single flags given on the command line win)
@@ -342,15 +371,13 @@ def build_parser():
     ap.add_argument("--checker", help="model key of the model that writes the acceptance check (default: qwen3coder). Evidence 2026-10-07: with the coder's own model family only 1 of 6 own checks of AM-005 was right")
     ap.add_argument("--arbiter", help="model key of the arbiter that may overrule a failing check (default: the planner/checker model); another model family makes the judgement independent")
     ap.add_argument("--coder", default=DEFAULT_MODEL, help="model key of the first developer (default: the standard coder, Qwen3.6 = recipe coder.local_primary since 2026-10-09; jan = small; qwen3coder = Qwen3-Coder)")
-    ap.add_argument("--no-lesson-proposals", action="store_true", help="do NOT propose lesson cards from the errors of the attempt (runtime_data/lesson_cards.json; a card is used only after `guppi lessons approve`)")
     ap.add_argument("--coder-ext", help="coder extensions for every agent run (E-21): all, or a list such as e01,e08 (e01 read before change, e02 thinking budget, e03 answers without a tool call, e04 record, e05 prune, e07 tool cards, e08 tolerant edit, e09 syntax note, e12 churn guard); off by default")
     ap.add_argument("--bg-jobs", action="store_true", help="give the coder the background job tools shell_start, shell_log, shell_stop (E-06/E-10): each job is one VM run in a thread (vm_process); needs the VM, so it has no effect with --self-check none")
     ap.add_argument("--skills", nargs="?", const="core", metavar="NAME|DIR", help="skill library by name (config/skill_library.yaml: core, full; bare --skills = core) or folder: the coder gets the read-only tools skill_search and skill_read; off by default")
-    ap.add_argument("--coder-ext-record", action="store_true", help="no effect any more: recording is on by default (see --no-record)")
     ap.add_argument("--no-record", action="store_true", help="do NOT save the server answers and what was sent of every agent run (runtime_data/devvm_replays); recording is on by default since 2026-10-12")
-    ap.add_argument("--think-limit", type=int, default=2000, help="with e02: thinking tokens per answer before the note, then thinking is switched down")
     ap.add_argument("--skip-spec-stamp", action="store_true", help="build although spec_check has no valid stamp for this spec (L2 exception; a warning goes into the log)")
-    ap.add_argument("--think-family", choices=["qwen", "gptoss", "other"], help="with e02: how the model switches thinking down (default: from the model key)")
+    ap.add_argument("--no-logbook", action="store_true", help="do NOT write the BAU row of this build into docs/LOGBUCH_AGENT_MANAGER.md at the end (V1; for tests)")
+    ap.add_argument("--allow-host-stamp", action="store_true", help="accept a spec stamp of level host (spec_check --host-only, host python only) instead of stopping with spec_stamp_host_only (PIPE-07)")
     ap.add_argument("--profile", choices=sorted(PROFILES), help="standard = the standard command of docs/ENTWICKLUNG.md (--attempts 1, coder and all models coder.local_primary, --context 32768, --tidy, --reasoning off, --coder-ext all, flash_attn=on, kv_cache_type=q8_0, ubatch=512); a flag given here overrides its value")
     ap.add_argument("--experimental", action="store_true", help="allow the options of finished measurements (" + ", ".join("--" + k.replace("_", "-") for k in EXPERIMENTAL) + ")")
     return ap
@@ -387,7 +414,7 @@ def main():
     apply_mode_defaults(args)
     coder_ext = coder_ext_config(args)
     project = Path(args.project)
-    stamp_lines = spec_stamp_gate(project, args.spec, args.skip_spec_stamp)
+    stamp_lines = spec_stamp_gate(project, args.spec, args.skip_spec_stamp, allow_host=args.allow_host_stamp)
     if args.pidfile: Path(args.pidfile).write_text(str(os.getpid()), encoding="utf-8")
     spec = importlib.import_module(f"devvm_specs.{args.spec}")
     all_stages = getattr(spec, "STAGES", None) or [{"name": "all", "task": spec.TASK, "hidden": spec.HIDDEN}]
@@ -416,6 +443,7 @@ def main():
     out_root = project / "runtime_data" / "devvm_candidates" / args.spec
     result = {"spec": args.spec, "attempts": []}
     with log, TestLab(default_path(project)).lease(os.environ.get("TESTLAB_OWNER", "devvm_build"), f"devvm build {args.spec}", ttl_s=1800, wait_s=36000, preflight=clear_leftovers, priority=int(os.environ.get("TESTLAB_PRIORITY", "0"))):
+        lease_t0 = time.monotonic()
         for attempt in range(1, args.attempts + 1):
             ws = DevWorkspace(tool_root, f"M-BUILD{attempt:03d}", policy=broker.policy()); ws.create()
             ws.write("NOTES.md", spec.NOTES)
@@ -501,8 +529,12 @@ def main():
                    "server_crashes": crashes, "agent_errors": errors, "context": args.context or "recipe", "coder_ext": coder_ext}
             result["attempts"].append(row); log.save(result)
             log.say(f"attempt {attempt}: hidden test {'PASSED' if ok else 'FAILED'} | own check accepted={own_text(own_verdict(out))} | {seconds} s, {row['agent_runs']} agent runs, {row['calls']} calls -> {target}")
-            if not args.no_lesson_proposals: propose_lessons(project, args.spec, log_stamp, stage_rows, out["agent_runs"], log.say)
+            propose_lessons(project, args.spec, log_stamp, stage_rows, out["agent_runs"], log.say)
             if ok: break
+    lease_seconds = time.monotonic() - lease_t0
+    if not args.no_logbook and result["attempts"]:
+        try: log.say("logbook: " + write_logbook(args.spec, result["attempts"][-1], lease_seconds))
+        except Exception as exc: log.say(f"logbook row not written: {type(exc).__name__}: {str(exc)[:200]}")
     log.say(f"DONE -> {log.json_path.name}")
     shutil.rmtree(tool_root, ignore_errors=True)      # the candidates are exported already; the workspaces of this run are not needed any more
     if args.pidfile:      # only our own PID file: a later run may already have written its PID there

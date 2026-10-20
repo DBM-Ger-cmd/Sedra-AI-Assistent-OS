@@ -10,7 +10,7 @@ Option checks: `syntax_problems` (a Python file that does not parse after a step
 import ast
 import re
 
-from ..devvm_tools import outline
+from ..devenv.devvm_tools import outline
 
 UNIT_CHARS = 450
 MAP_CHARS = 3000

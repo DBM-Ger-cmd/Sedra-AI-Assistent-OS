@@ -14,9 +14,9 @@ import uuid
 from copy import deepcopy
 from pathlib import Path
 
-from ..context_manager import ContextError, _safe_id, collect_pins
-from ..development_contracts import canonical_digest, context_manifest
-from ..util import append_lock, atomic_write_json, load_json, utcnow
+from ..jobs.context_manager import ContextError, _safe_id, collect_pins
+from ..selfdev.development_contracts import canonical_digest, context_manifest
+from ..core.util import append_lock, atomic_write_json, load_json, utcnow
 
 TRIGGERS = frozenset({"context_overflow", "context_quality_degraded", "stagnation", "repetition", "manual"})
 # Only a wish to the Control Master; the decision stays there.

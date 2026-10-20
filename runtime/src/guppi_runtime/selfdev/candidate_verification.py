@@ -4,7 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
-from ..execution_binder import BindingError
+from ..selfdev.execution_binder import BindingError
 
 
 def verify_candidate(verifier,mission):

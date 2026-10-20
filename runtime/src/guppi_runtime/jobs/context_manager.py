@@ -20,9 +20,9 @@ from pathlib import Path
 
 import yaml
 
-from ..context_budget import ContextBudgetManager
-from ..development_contracts import canonical_digest
-from ..util import append_lock, atomic_write_json, load_json, sha256_bytes, utcnow
+from ..jobs.context_budget import ContextBudgetManager
+from ..selfdev.development_contracts import canonical_digest
+from ..core.util import append_lock, atomic_write_json, load_json, sha256_bytes, utcnow
 
 SAFE_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
 STATES = ("GREEN", "YELLOW", "ORANGE", "RED")
@@ -631,7 +631,7 @@ class ContextManager:
         self.checkpoints = CheckpointWriter(root / "context_checkpoints", self.estimator, config, audit=audit,
                                             artifacts=artifacts, evidence_store=evidence_store, clock=clock)
         self._flags = {}                       # job_id -> flags from the last watermark reaction (in memory)
-        from ..context_assembly import ContextAssembly      # imported here: the module builds on this one
+        from ..jobs.context_assembly import ContextAssembly      # imported here: the module builds on this one
         self.assembly = ContextAssembly(self, root)
 
     @property

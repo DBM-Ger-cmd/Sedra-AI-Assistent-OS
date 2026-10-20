@@ -3,12 +3,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.acceptance_suite import candidate_hash, host_runner, load_suite, run_suite, write_suite
+from guppi_runtime.selfdev.acceptance_suite import candidate_hash, host_runner, load_suite, run_suite, write_suite
 from guppi_runtime.agent_manager.agent_contracts import ContractError
 from guppi_runtime.agent_manager.agent_registry import Registry
 from guppi_runtime.agent_manager.instances import InstanceService, promotion_gaps
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.guard import Guard
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.core.guard import Guard
 
 ARCHITECTURE = sorted((Path(__file__).resolve().parents[2] / "architecture").glob("GUPPI_Architecture_v*"))[-1]
 REF = "guppi.agent.demo@1.0.0"

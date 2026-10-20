@@ -84,9 +84,9 @@ def main():
         sys.exit(f"unknown variants {unknown}; known: {sorted(VARIANTS)}")
 
     import yaml
-    from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.testlab import TestLab, default_path
-    from guppi_runtime.gpu_preflight import clear_leftovers
+    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from guppi_runtime.models.gpu_preflight import clear_leftovers
 
     recipe = next(c for c in (yaml.safe_load((Path(args.project) / "local_config" / "role_routing.yaml").read_text(encoding="utf-8"))["role_routing"]["capabilities"])
                   if c.get("model") == args.model and c.get("provider") == "llama-cpp-server")

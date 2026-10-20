@@ -1,5 +1,6 @@
 """Worker of one run (started detached by DevVmRuntime): runs `benchmarks/devvm_build.py` for the requested spec and writes `done.json` when it ends.
 `python -m guppi_runtime.agent_manager.run_worker <run_dir> <runtime_dir> <project_dir>`. The run counts as succeeded only when the hidden acceptance test of the spec passed."""
+import importlib.util
 import json
 import os
 import re
@@ -95,12 +96,21 @@ def probe_command(python, runtime_dir, project_dir, spec):
     return cmd
 
 
+EXPERIMENTAL = ("plan_steps", "step_syntax_check", "fresh_rework", "parallel_check", "checker", "arbiter")      # devvm_build wants --experimental for these (finished measurements)
+
+
 def command(python, runtime_dir, project_dir, spec):
+    """The ONE way to build (PIPE-06, Captain 2026-10-20): devvm_build --profile standard; single values of the options file override the profile, and
+    --experimental is added only when the options file asks for an option of a finished measurement."""
     if spec.startswith("probe_"):
         return probe_command(python, runtime_dir, project_dir, spec)
     chosen = options(project_dir, spec)
-    cmd = [python, os.path.join(runtime_dir, "benchmarks", "devvm_build.py"), project_dir, "--spec", spec, "--attempts", "1", "--rework", str(chosen.get("rework", 2)), "--coder", chosen.get("coder", "coder.local_primary"),
+    cmd = [python, os.path.join(runtime_dir, "benchmarks", "devvm_build.py"), project_dir, "--spec", spec, "--profile", "standard", "--rework", str(chosen.get("rework", 2)), "--coder", chosen.get("coder", "coder.local_primary"),
            "--context", str(chosen.get("context", 32768))]
+    if "coder" in chosen and "all_models" not in chosen:      # the profile sets --all-models; a coder of the options file would otherwise have no effect
+        cmd += ["--all-models", chosen["coder"]]
+    if any(chosen.get(key) for key in EXPERIMENTAL):
+        cmd.append("--experimental")
     for flag in ("check_first", "parallel_check", "tidy", "hidden_feedback"):
         if chosen.get(flag):
             cmd.append("--" + flag.replace("_", "-"))
@@ -138,18 +148,32 @@ def summarize(output, exit_code):
     return {"state": "succeeded" if exit_code == 0 and passed else "failed", "exit_code": exit_code, "hidden_passed": passed, "candidate": candidate.group(1) if candidate else None}
 
 
-def run(run_dir, runtime_dir, project_dir, runner=subprocess.run, clock=time.monotonic):
+def stamp_gate(runtime_dir, project_dir, spec):
+    """The same spec stamp rule as devvm_build (benchmarks/spec_stamp.py gate), with the same messages; a probe is a measurement and needs none. Raises SystemExit(reason)."""
+    if spec.startswith("probe_"):
+        return
+    path = os.path.join(runtime_dir, "benchmarks", "spec_stamp.py")
+    loaded = importlib.util.spec_from_file_location("spec_stamp", path)
+    module = importlib.util.module_from_spec(loaded)
+    loaded.loader.exec_module(module)
+    module.gate(project_dir, spec, False, os.path.join(runtime_dir, "benchmarks"), False)
+
+
+def run(run_dir, runtime_dir, project_dir, runner=subprocess.run, clock=time.monotonic, gate=stamp_gate):
     with open(os.path.join(run_dir, "request.json"), encoding="utf-8") as handle:
         request = json.load(handle)
     started = clock()
     done = {"state": "failed", "exit_code": None, "hidden_passed": False, "candidate": None}
     try:
+        gate(runtime_dir, project_dir, request["spec"])
         result = runner(command(sys.executable, runtime_dir, project_dir, request["spec"]), cwd=runtime_dir, capture_output=True, text=True, encoding="utf-8", errors="replace")
         output = (result.stdout or "") + (result.stderr or "")
         with open(os.path.join(run_dir, "build.log"), "w", encoding="utf-8") as handle:
             handle.write(output)
         done = summarize(output, result.returncode)
         done["log_tail"] = output[-1500:]
+    except SystemExit as stop:      # no valid spec stamp: no model is loaded, the run ends as failed with the reason of devvm_build
+        done["error"] = str(stop)
     except Exception as exc:
         done["error"] = f"{type(exc).__name__}: {exc}"
     done["seconds"] = round(clock() - started, 1)

@@ -153,13 +153,60 @@ class BuildNeedsAStampTests(Base):
         build = devvm_build()
         self.assertIn("WARNING: --skip-spec-stamp", build.spec_stamp_gate(self.project, "demo", True, self.bench)[0])
         self.run_check("--host-only", "--project", str(self.project))
-        lines = build.spec_stamp_gate(self.project, "demo", False, self.bench)
+        lines = build.spec_stamp_gate(self.project, "demo", False, self.bench, allow_host=True)
         self.assertIn("WARNING: spec stamp level host", lines[1])
+
+    def test_a_host_stamp_stops_the_build_without_allow_host_stamp(self):
+        build = devvm_build()
+        self.run_check("--host-only", "--project", str(self.project))
+        with self.assertRaises(SystemExit) as stop:
+            build.spec_stamp_gate(self.project, "demo", False, self.bench)
+        self.assertTrue(str(stop.exception).startswith("spec_stamp_host_only"))
+        self.assertIn("spec_check.py demo --vm", str(stop.exception))
+        self.assertTrue(build.parse_args(["proj", "--spec", "demo", "--allow-host-stamp"]).allow_host_stamp)
 
     def test_the_gate_runs_before_the_pidfile_and_the_run_log(self):
         text = (BENCH / "devvm_build.py").read_text(encoding="utf-8")
-        self.assertLess(text.index("spec_stamp_gate(project, args.spec, args.skip_spec_stamp)"), text.index("if args.pidfile: Path(args.pidfile)"))
+        self.assertLess(text.index("spec_stamp_gate(project, args.spec, args.skip_spec_stamp, allow_host=args.allow_host_stamp)"), text.index("if args.pidfile: Path(args.pidfile)"))
         self.assertIn('"--skip-spec-stamp"', text)
+
+
+class BuildLogbookTests(Base):
+    def row(self, target, passed=(True, True), seconds=90.4):
+        stages = [{"stage": f"s{i}", "hidden_passed": ok, "reworks": 1 if i == 0 else 0} for i, ok in enumerate(passed)]
+        return {"hidden_passed": all(passed), "stages": stages, "seconds": seconds, "calls": 17, "agent_runs": 5, "escalations": 1, "exported_to": str(target)}
+
+    def candidate(self):
+        target = self.project / "cand"
+        (target / "tests").mkdir(parents=True)
+        (target / "mod.py").write_text("def double(x):\n    return x * 2\n", encoding="utf-8")
+        (target / "NOTES.md").write_text("n\n" * 9, encoding="utf-8")
+        (target / "tests" / "test_mod.py").write_text("x = 1\n" * 30, encoding="utf-8")
+        return target
+
+    def test_the_row_has_result_times_calls_reworks_and_the_line_quota(self):
+        build = devvm_build()
+        text, ref = build.logbook_entry("demo", self.row(self.candidate()), 123.6, self.bench)
+        self.assertIn("Bau demo: bestanden, Stufen 2/2, Dauer 90 s, GPU-Lease 124 s, 17 Modellaufrufe in 5 Agentenläufen, Nacharbeiten 1", text)
+        self.assertIn("Zeilen SEDRA (Kandidat) 2,", text)
+        claude = len(SPEC.splitlines()) + 5
+        self.assertIn(f"Zeilen Claude (Spec + Referenz) {claude}, Quote Claude/SEDRA {claude / 2:.1f}", text)
+        self.assertEqual(ref, "devvm_candidates/demo")
+
+    def test_a_failed_stage_shows_in_the_row_and_write_logbook_appends_a_valid_bau_row(self):
+        build = devvm_build()
+        book = self.project / "LOGBUCH.md"
+        self.project.mkdir(exist_ok=True)
+        book.write_text("| Zeit | Art | Text | Ref |\n", encoding="utf-8")
+        line = build.write_logbook("demo", self.row(self.candidate(), passed=(True, False)), 5, file=book, bench_dir=self.bench)
+        self.assertRegex(line, r"^\| \d{4}-\d\d-\d\d \d\d:\d\d \| BAU \| Bau demo: NICHT bestanden, Stufen 1/2")
+        self.assertEqual(book.read_text(encoding="utf-8").splitlines()[-1], line)
+
+    def test_no_logbook_is_an_option_and_the_write_comes_after_the_lease(self):
+        self.assertTrue(devvm_build().parse_args(["proj", "--spec", "demo", "--no-logbook"]).no_logbook)
+        text = (BENCH / "devvm_build.py").read_text(encoding="utf-8")
+        self.assertLess(text.index("lease_seconds = time.monotonic() - lease_t0"), text.index("if not args.no_logbook"))
+        self.assertLess(text.index("if not args.no_logbook"), text.index('log.say(f"DONE'))
 
 
 class ProfileTests(unittest.TestCase):
@@ -186,6 +233,22 @@ class ProfileTests(unittest.TestCase):
                 with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
                     self.parse(*argv)
                 self.assertTrue(self.parse("--experimental", *argv).experimental)
+
+
+    def test_options_of_finished_measurements_are_gone_and_the_used_ones_stay(self):
+        for argv in (["--coder-ext-record"], ["--think-limit", "5"], ["--think-family", "qwen"], ["--no-lesson-proposals"]):
+            with self.subTest(argv=argv):
+                with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+                    self.parse(*argv)
+        a = self.parse("--mode", "solo", "--self-check", "none", "--rework", "1", "--seed", "s", "--review", "r", "--from-stage", "x", "--server-set", "ubatch=1", "--keep-going", "--only", "x",
+                       "--require-s0", "--bg-jobs", "--skills", "--hidden-feedback", "--check-first", "--parallel", "2", "--reasoning-budget", "0", "--pidfile", "p", "--no-record", "--no-own-tests")
+        self.assertEqual((a.mode, a.self_check, a.rework, a.parallel), ("solo", "none", 1, 2))
+
+    def test_the_coder_extension_config_always_records_with_the_fixed_thinking_defaults(self):
+        build = devvm_build()
+        config = build.coder_ext_config(build.apply_mode_defaults(self.parse("--profile", "standard")))
+        self.assertEqual((config["record"], config["think_limit"], config["family"], config["enabled"]), (True, 2000, "qwen", "all"))
+        self.assertTrue(build.apply_mode_defaults(self.parse()).hidden_feedback)
 
 
 class StageSizeTests(unittest.TestCase):

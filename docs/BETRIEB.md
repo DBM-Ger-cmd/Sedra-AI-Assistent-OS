@@ -120,7 +120,7 @@ Ergebnisse unter `workspace/GUPPI_OS/runtime_data/measurements/`:
 - `night_<datum>/`, `day_<datum>/`: Ketten mehrerer Läufe (`queue.log`, `summary.json`).
 - `benchmarks/model_compare.py` erzeugt daraus [MODELL_VERGLEICH_ERGEBNISSE.md](MODELL_VERGLEICH_ERGEBNISSE.md).
 
-**Bauweg (geändert 20.10.2026, Linie L1):** Gebaut wird mit `devvm_build.py` direkt, Standardbefehl `--profile standard` (siehe [ENTWICKLUNG.md](ENTWICKLUNG.md#die-einheitliche-linie-captain-20102026)). Die Ketten-Skripte (`day_queue_*`, `night_queue_*`, `mtp_*`) sind Archiv unter `benchmarks/archiv/` (siehe Werkzeug) und nur noch Dokumentation. Buildflow (`guppi buildflow`) ist Reserve, kein Standardweg.
+**Bauweg (geändert 20.10.2026, Linie L1):** Gebaut wird mit `devvm_build.py` direkt, Standardbefehl `--profile standard` (siehe [ENTWICKLUNG.md](ENTWICKLUNG.md#die-einheitliche-linie-captain-20102026)). Die Ketten-Skripte (`day_queue_*`, `night_queue_*`, `mtp_*`) sind Archiv unter `benchmarks/archiv/` (Übersicht in dessen `README.md`) und nur noch Dokumentation. Davor läuft `spec_check.py <spec> --vm --project <projekt>`; ohne dessen Stempel bricht `devvm_build.py` ab (Ausnahmen `--skip-spec-stamp`, `--allow-host-stamp`; Schritte: [SO_WIRD_GEBAUT.md](SO_WIRD_GEBAUT.md)). Buildflow (`guppi buildflow`) ist Reserve, kein Standardweg.
 
 Früher galt: Eine Kette ist ein Python-Skript in `benchmarks/` (Beispiel: `night_queue_2026-10-11.py`). Es startet jeden Schritt als eigenen Prozess, prüft nach jedem Schritt
 den Canary und schreibt eine Zusammenfassung. Ein Folge-Glied wartet nur auf das Ende der laufenden Kette (`night_queue_2026-10-11_b.py`) und stoppt sie nie.

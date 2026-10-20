@@ -10,7 +10,7 @@ class PlanningContextModule(BaseModule):
 
     def build_plan(self, mission):
         if 'manual_plan' in mission:
-            from ..manual_plan import artifact_plan
+            from ..core.manual_plan import artifact_plan
             return artifact_plan(mission['manual_plan'])
         objective = mission['objective']['current']
         refs = []

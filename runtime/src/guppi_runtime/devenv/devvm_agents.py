@@ -19,17 +19,17 @@ from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
 from dataclasses import dataclass, replace
 
-from ..devvm import DevWorkspace
-from ..comment_archive import to_jsonl
-from ..devvm_style import snapshot as ws_snapshot, tidy as ws_tidy
-from ..devvm_evidence import ARBITER_RULES, DRIVER, format_evidence, parse as parse_evidence
+from ..devenv.devvm import DevWorkspace
+from ..devenv.comment_archive import to_jsonl
+from ..devenv.devvm_style import snapshot as ws_snapshot, tidy as ws_tidy
+from ..devenv.devvm_evidence import ARBITER_RULES, DRIVER, format_evidence, parse as parse_evidence
 from urllib.error import HTTPError
 
-from ..model_tools import compact_history
-from ..devvm_tools import SELF_CHECK, DevToolBox, unittest_command
-from ..model_tools import run_tool_loop
-from ..runaway_guard import RunawayGuard
-from ..solo_steps import STEP_PROMPT, extract_for, number_task, numbered, syntax_problems, workspace_map
+from ..devenv.model_tools import compact_history
+from ..devenv.devvm_tools import SELF_CHECK, DevToolBox, unittest_command
+from ..devenv.model_tools import run_tool_loop
+from ..jobs.runaway_guard import RunawayGuard
+from ..devenv.solo_steps import STEP_PROMPT, extract_for, number_task, numbered, syntax_problems, workspace_map
 
 MAX_DEPTH = 1
 

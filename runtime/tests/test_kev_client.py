@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
 
-from guppi_runtime.kev import KevProviderError, KevVerificationProvider
+from guppi_runtime.selfdev.kev import KevProviderError, KevVerificationProvider
 from guppi_runtime.runtime import GuppiRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 

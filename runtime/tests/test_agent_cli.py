@@ -92,7 +92,7 @@ class CrewFlowTest(unittest.TestCase):
     """The whole way: template -> gate -> instance -> suite in the runner -> independent review -> gap check -> gate -> VERIFIED -> matcher -> view."""
 
     def setUp(self):
-        from guppi_runtime.acceptance_suite import write_suite
+        from guppi_runtime.selfdev.acceptance_suite import write_suite
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.project = Path(self.tmp.name) / "project"
@@ -116,7 +116,7 @@ class CrewFlowTest(unittest.TestCase):
 
     @env_skip.needs_dulwich
     def test_from_template_to_a_matched_verified_instance_with_every_gate_in_the_audit(self):
-        from guppi_runtime.acceptance_suite import host_runner
+        from guppi_runtime.selfdev.acceptance_suite import host_runner
         gate = self.manager.hire(AGENT, "build small modules", "M-1")
         self.assertEqual(self.manager.registry.list("agent"), [])
         with self.assertRaises(ContractError):
@@ -148,7 +148,7 @@ class CrewFlowTest(unittest.TestCase):
 
     @env_skip.needs_dulwich
     def test_the_view_shows_the_instance_with_its_state(self):
-        from guppi_runtime.acceptance_suite import host_runner
+        from guppi_runtime.selfdev.acceptance_suite import host_runner
         from guppi_runtime.agent_manager.view import agents_view
         gate = self.manager.hire(AGENT, "build small modules", "M-1")
         iid = self.manager.create(self.approved(gate))["instance_id"]

@@ -1,4 +1,6 @@
+import contextlib
 import importlib.util
+import io
 import json
 import sys
 import tempfile
@@ -72,9 +74,24 @@ class LogbookTests(unittest.TestCase):
         self.assertIn("(nachgetragen)", logbook.make_row("BAU", "x", late=True))
         for art in logbook.PLACEHOLDERS:      # the literal placeholder of the usage line is refused (2026-10-14: three rows said ART)
             with self.assertRaises(ValueError): logbook.make_row(art, "x")
-        self.assertIn("BAU", logbook.STANDARD_ARTS); self.assertTrue(logbook.make_row("UMBAU", "x"))      # other kinds stay allowed
+        self.assertEqual(logbook.ARTS, ("ENTSCHEIDUNG", "SPEC", "BAU", "INTEGRATION", "MESSUNG", "FEHLER", "AENDERUNG", "DOKU", "RECHERCHE", "HINWEIS"))
+        for art in logbook.ARTS: self.assertIn(f"| {art} |", logbook.make_row(art, "x"))
+        self.assertIn("| AENDERUNG |", logbook.make_row("ÄNDERUNG", "x"))      # umlaut taken as AENDERUNG (V2)
+        for art in ("UMBAU", "AUDIT", "bau", "ÖL"):      # a word outside the fixed list stops, and the message names the list
+            with self.assertRaises(ValueError) as stop: logbook.make_row(art, "x")
+            if art != "bau": self.assertIn("allowed: ENTSCHEIDUNG, SPEC, BAU", str(stop.exception))
         for art, text in (("bau", "x"), ("BAU", ""), ("BAU", "see " + drive + ":" + chr(92) + "x"), ("BAU", "see " + drive + ":/Users/a"), ("B", "x")):
             with self.assertRaises(ValueError): logbook.make_row(art, text)
+
+    def test_the_command_line_stops_on_an_unknown_kind_and_names_the_list(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            book = Path(tmp, "b.md"); book.write_text("# t\n", encoding="utf-8")
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(logbook.main(["add", "UMBAU", "x", "--file", str(book)]), 2)
+                self.assertEqual(logbook.main(["add", "ÄNDERUNG", "x", "--file", str(book)]), 0)
+            self.assertIn("allowed: ENTSCHEIDUNG, SPEC, BAU, INTEGRATION, MESSUNG, FEHLER, AENDERUNG, DOKU, RECHERCHE, HINWEIS", err.getvalue())
+            self.assertEqual(len(book.read_text(encoding="utf-8").splitlines()), 2)
 
     def test_append_keeps_the_line_ending_of_the_file(self):
         with tempfile.TemporaryDirectory() as tmp:

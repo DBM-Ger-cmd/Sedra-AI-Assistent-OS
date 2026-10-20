@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from guppi_runtime import local_paths  # noqa: E402
-from guppi_runtime.gpu_canary import CanaryConfig  # noqa: E402
+from guppi_runtime.models.gpu_canary import CanaryConfig  # noqa: E402
 
 
 class LocalPathsTests(unittest.TestCase):

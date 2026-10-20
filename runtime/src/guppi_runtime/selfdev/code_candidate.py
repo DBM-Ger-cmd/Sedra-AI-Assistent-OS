@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import re
 
-from ..execution_binder import ExecutionParameterBinder, BindingError, digest
+from ..selfdev.execution_binder import ExecutionParameterBinder, BindingError, digest
 
 
 class CandidateBinder(ExecutionParameterBinder):
@@ -118,7 +118,7 @@ class CandidatePreparer:
 
     def execute(self,control,mission,binding,approval_token=None):
         stage=None;record=None
-        from ..candidate_lifecycle import preparation,persist
+        from ..selfdev.candidate_lifecycle import preparation,persist
         try:
             self.binder.revalidate_candidate(mission,binding)
             inputs=binding['inputs'];records,data=self.binder.source(mission,inputs)

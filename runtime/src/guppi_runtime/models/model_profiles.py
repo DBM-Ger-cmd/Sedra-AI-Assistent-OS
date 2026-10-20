@@ -2,7 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 from copy import deepcopy
 import yaml
-from ..util import utcnow
+from ..core.util import utcnow
 
 
 class ModelProfileStore:

@@ -17,7 +17,7 @@ import yaml
 
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
-from guppi_runtime.engine_provision import DEFAULT_ROOT, provision, verify_engine  # noqa: E402
+from guppi_runtime.models.engine_provision import DEFAULT_ROOT, provision, verify_engine  # noqa: E402
 
 URL = "https://github.com/ggml-org/llama.cpp/releases/download/{build}/{name}"
 
