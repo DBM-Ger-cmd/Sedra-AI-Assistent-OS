@@ -291,3 +291,4 @@ Fortlaufend, neueste Einträge unten. Je Eintrag: Zeit, Art (ENTSCHEIDUNG, BAU, 
 | 2026-10-20 13:07 | DOKU | Spec Agenten-Orchestrierung v1 übernommen (Specs 0-6, Entscheidungen des Captains vom 20.10.2026) | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
 | 2026-10-20 13:12 | DOKU | G1 Spec 0 erteilt (G1-S0-a bis f): Ist-Tabelle korrigiert, KERN-01/02/04/05 und CLD-08 angepasst, Spec 3 baut cloud_api.py aus | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
 | 2026-10-20 13:19 | DOKU | K0.5 Spec 0 Design ausgearbeitet (D1-D6): Desk-Registrierung, Feld client mit Client-Token, Paket orchestra/ mit Datenmodell, Guard-Aktionen G2-S0-GA-01..10, Gate-Liste G2-S0-01..14, 11 offene Punkte; wartet auf G2 | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
+| 2026-10-20 13:28 | DOKU | OP-6 entschieden: oberster Agent ist der Unterarbeiter (unter dem Captain), beaufsichtigt Planer, Coder, Reviewer, Recherche | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |

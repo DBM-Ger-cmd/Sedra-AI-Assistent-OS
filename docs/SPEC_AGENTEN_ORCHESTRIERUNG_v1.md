@@ -386,7 +386,7 @@ KERN-07 (nur Bedingung): Ein Paperclip-Adapter ist ein weiterer externer Client 
 | OP-3 | KERN-05 setzt voraus, dass CLI und MCP den Token haben; heute gibt es nur den flüchtigen Browser-Token. | Client-Token wie D2 (G2-S0-05) |
 | OP-4 | `wake_agent` = CAPTAIN_REQUIRED widerspricht dem automatischen Wecken von ORC-06: Guard-Freigaben sind Einmal-Token mit 24 h. Eine Dauerfreigabe (wie SOC-07 für Beiträge) fehlt. | In Spec 1 eine Freigabeart „Dauerfreigabe je Agent“ entwerfen, gebunden an Agent, Rechte-Stufe, Budget und Ablaufdatum; das ist eine Änderung an `core/guard.py` und braucht ein eigenes Kern-Gate. Bis dahin weckt jeder Lauf eine Entscheidung. |
 | OP-5 | Spec 0 sagt „atomares Schreiben über `core/util.py`“ für `orchestra.db`; `util` schreibt Dateien atomar, SQLite sichert sich über Transaktionen. | Satz ersetzt durch D3.3 (Transaktionen, WAL); `util` nur für Dateien |
-| OP-6 | ORC-02 „außer dem obersten“: ein oberster Agent oder mehrere Wurzeln? | genau ein aktiver Agent ohne Vorgesetzten (der Planer), geprüft in `org.py` |
+| OP-6 | ORC-02 „außer dem obersten“: ein oberster Agent oder mehrere Wurzeln? | entschieden (Captain, 20.10.2026): genau ein aktiver Agent ohne Vorgesetzten, der **Unterarbeiter**; geprüft in `org.py` |
 | OP-7 | Budget-Zeitraum ist offen (gesamt oder je Monat); Spec 3 will ein Monatsbudget. | Spalte `budget_period` (`gesamt`, `monat`); Standard `gesamt` bis zur Auswertung nach vier Wochen |
 | OP-8 | Zielkette (ORC-13): Eine Tabelle für Ziele fehlt. | Ziel = Vorhaben (`intent`), Projekt = `project`; `tasks.goal_ref` und `tasks.project_id` verweisen darauf, keine eigene Ziel-Tabelle |
 | OP-9 | Herzschlag-Takt läuft nach D3.2 nur, solange die Oberfläche läuft; E2E-6 (Routine fällig, während SEDRA aus war) braucht nur die Nachhol-Regel, aber ein Betrieb ohne UIX hätte keinen Takt. | in Spec 1 entscheiden: Takt in der Oberfläche (Vorschlag) oder eigener Dienst |
@@ -406,7 +406,7 @@ KERN-07 (nur Bedingung): Ein Paperclip-Adapter ist ein weiterer externer Client 
 
 Spec 1 macht aus den einzelnen Agenten des Agent Managers ein Team: Organigramm, zugewiesene Aufgaben mit atomarem Checkout, Wecken bei Arbeit, Budgets und Routinen. Ausgeführt wird jede Agentenarbeit weiterhin als Mission durch Brain und Guard.
 
-Erstes Team (Captain, 20.10.2026): Planer, Coder, Reviewer, Recherche. Der Planer steht oben im Organigramm und delegiert an die drei anderen. Die Rezepte kommen aus den vorhandenen Rollen `planner`, `coder` und `reviewer` in `role_routing.yaml`; für Recherche wird eine Rolle mit dem lesenden Web-Werkzeug angelegt (Hosts aus `config/web_access.yaml`). Der Reviewer gibt Hinweise, entscheidet aber keine Abnahme: Laut `ENTWICKLUNG.md` sind Modell-Reviewer unzuverlässig, Richter bleibt der versteckte Test.
+Erstes Team (Captain, 20.10.2026): Unterarbeiter, Planer, Coder, Reviewer, Recherche. Der **Unterarbeiter** steht oben im Organigramm: Er ist die Instanz direkt unter dem Inhaber (Captain) und beaufsichtigt Planer, Coder, Reviewer und Recherche (OP-6, Captain 20.10.2026; ersetzt „Planer oben“). Offen für Spec 1: ob der Planer selbst an Coder, Reviewer und Recherche delegieren darf (ORC-08 erlaubt Delegation nur nach unten) und welches Rezept der Unterarbeiter bekommt. Die Rezepte kommen aus den vorhandenen Rollen `planner`, `coder` und `reviewer` in `role_routing.yaml`; für Recherche wird eine Rolle mit dem lesenden Web-Werkzeug angelegt (Hosts aus `config/web_access.yaml`). Der Reviewer gibt Hinweise, entscheidet aber keine Abnahme: Laut `ENTWICKLUNG.md` sind Modell-Reviewer unzuverlässig, Richter bleibt der versteckte Test.
 
 ### Anforderungen
 
@@ -704,7 +704,7 @@ Alle acht Fragen sind beantwortet; neu offen sind nur die Fragen zur Social-Zent
 | Variante | A mit Shell D, Selbstbau auch bei großem Aufwand; KI-Zentrale mit Paperclip nur als Option des Captains und nur, wenn KERN-07 erfüllbar ist | Spec 0: Option und KERN-07; Spec 4: keine Grenze nach Umfang |
 | Shell D | Ordner `uix/shells/paperclip/` vorhanden, Bau am Anfang | Ist-Tabelle, Spec 4 |
 | Cloud-Anbieter | NVIDIA API Catalog (vorhanden), Mammouth (geplant) | Spec 3: ein OpenAI-kompatibler Adapter für beide |
-| Erstes Team | Planer, Coder, Reviewer, Recherche | Spec 1 |
+| Erstes Team | Unterarbeiter (oben, unter dem Captain; Nachtrag OP-6), Planer, Coder, Reviewer, Recherche | Spec 1 |
 | Reihenfolge | erst Spec 1, dann Spec 2 | Ablauf, Grafik, Prompt |
 | Wer baut | GUPPI heißt jetzt SEDRA; SEDRA baut lokal unter Anleitung von Claude | Begriffe, Arbeitsteilung, Prompt |
 | Ablage | als `docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md` ins Repo | diese Datei |
