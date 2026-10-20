@@ -324,3 +324,12 @@ Fortlaufend, neueste Einträge unten. Je Eintrag: Zeit, Art (ENTSCHEIDUNG, BAU, 
 | 2026-10-20 21:26 | DOKU | Linie L4-L6: ENTWICKLUNG, BETRIEB, ARCHITEKTUR auf Stand 20.10., Übersicht Was gilt/Historie | 3508ebb 7437bb4 26ebe2c |
 | 2026-10-20 21:26 | SPEC | k0-Bau-Specs nach L3 geteilt, keine Stufe über 18 neue Prüfungen, spec_check je result ok | 894aea9..16dbd39 |
 | 2026-10-20 21:26 | ENTSCHEIDUNG | Captain: kein Paperclip-Code vor Pipeline-Abnahme; PIPE-01 bis 07, ANA-06, V1 bis V6 freigegeben, dazu ANA-10 Rest und ANA-08 jetzt; V7 später; Bau 22 Uhr gestrichen | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
+| 2026-10-20 22:01 | AENDERUNG | PIPE-07: devvm_build nimmt einen Host-Stempel nur mit --allow-host-stamp an, sonst Abbruch spec_stamp_host_only | 4be7a3b |
+| 2026-10-20 22:01 | AENDERUNG | PIPE-06: Agent Manager (run_worker) baut über denselben Weg: --profile standard, Stempel verlangt, --experimental nur auf Wunsch der Optionsdatei | 81eb5a3 |
+| 2026-10-20 22:01 | AENDERUNG | V1: devvm_build schreibt am Ende jedes Baus selbst die BAU-Zeile (Stufen, Dauer, GPU-Lease, Aufrufe, Nacharbeiten, Quote Claude/SEDRA) | 7b253fe |
+| 2026-10-20 22:01 | AENDERUNG | V2: logbook.py nimmt nur noch zehn feste Arten (ÄNDERUNG als AENDERUNG) | b1aebff |
+| 2026-10-20 22:01 | DOKU | V3: Review-Vorlage für SEDRA-Kandidaten benchmarks/REVIEW_VORLAGE.md | 93da471 |
+| 2026-10-20 22:01 | DOKU | V4 und PIPE-04: echte Befehle statt Platzhalter in ENTWICKLUNG.md, Regel V4, neue Seite docs/SO_WIRD_GEBAUT.md | a8c7430 |
+| 2026-10-20 22:01 | AENDERUNG | ANA-10: vier ungenutzte devvm_build-Optionen entfernt, Experimente bleiben hinter --experimental | 9f2530d |
+| 2026-10-20 22:01 | AENDERUNG | ANA-08: 75 Weichen am Paket-Stamm entfernt, Importe in src, tests, benchmarks umgestellt; core unberührt; volle Suite 2655 Tests, einziger Fehler test_sprache_kern (numpy fehlt, vorbestehend) | 4deaf18 |
+| 2026-10-20 22:01 | HINWEIS | ANA-06: Entscheidungstabelle für Bau-Specs ohne Ergebnis liegt beim Vorarbeiter, nichts gelöscht oder verschoben | ANA-06 |
