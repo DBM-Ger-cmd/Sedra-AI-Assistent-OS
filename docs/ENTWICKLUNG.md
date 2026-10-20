@@ -16,14 +16,18 @@ Grundlage: `ANALYSE_BAUABLAUF_2026-10-20.md`; Beschluss in `SPEC_AGENTEN_ORCHEST
 
 | Linie | Regel |
 |---|---|
-| L1 | **Ein Bauweg:** `devvm_build.py` direkt, Standardbefehl mit `--profile standard` (ersetzt die neun Flags unten; Inhalt des Profils: siehe Werkzeug). Ketten- und Einmal-Skripte (`day_queue_*`, `night_queue_*`, `mtp_*`) liegen im Archiv `runtime/benchmarks/archiv/` (siehe Werkzeug). Buildflow (`guppi buildflow`) bleibt Reserve. Experimentelle Optionen nur mit `--experimental`. |
-| L2 | **Kein Bau ohne Stempel:** `spec_check.py <spec> --vm` prüft in der Python-Umgebung der microVM und schreibt einen Stempel; `devvm_build.py` bricht ohne gültigen Stempel für genau diese Spec-Fassung ab (Ausnahme nur per Option, siehe Werkzeug). |
+| L1 | **Ein Bauweg:** `devvm_build.py` direkt, Standardbefehl mit `--profile standard` (ersetzt die neun Flags unten). Inhalt des Profils: `--attempts 1`, `--coder` und `--all-models coder.local_primary`, `--context 32768`, `--tidy`, `--reasoning off`, `--coder-ext all`, `--server-set flash_attn=on`, `kv_cache_type=q8_0`, `ubatch=512`; ein einzeln angegebener Schalter gewinnt. Ketten- und Einmal-Skripte (`day_queue_*`, `night_queue_*`, `mtp_*`, `ab_queue`, `resume_queue`) liegen im Archiv `runtime/benchmarks/archiv/` (Übersicht dort in `README.md`), nur noch als Beleg. Buildflow (`guppi buildflow`) bleibt Reserve. Experimentelle Optionen (`--plan-steps`, `--fresh-rework`, `--step-syntax-check`, `--parallel-check`, `--checker`, `--arbiter`) nur mit `--experimental`. Auch der Agent Manager (`run_worker`) baut nur diesen Weg. |
+| L2 | **Kein Bau ohne Stempel:** `spec_check.py <spec> --vm --project <projekt>` prüft Lint, Referenz und versteckte Tests in der Python-Umgebung der microVM und schreibt den Stempel `<projekt>/runtime_data/spec_stamps/<spec>.json` (Hashes von Spec und Referenz). `devvm_build.py` bricht ohne gültigen Stempel für genau diese Spec-Fassung ab: `spec_not_checked` (kein Stempel), `spec_changed_since_check` (Spec oder Referenz seither geändert), `spec_stamp_host_only` (Stempel nur von `spec_check --host-only`, also ohne microVM; wird nur mit `--allow-host-stamp` angenommen). Die einzige Umgehung ist `--skip-spec-stamp`; sie steht als Warnung im Log. |
 | L3 | **Stufengröße:** höchstens 20 neue Prüfungen je Stufe; Warnung über 20, Fehler über 30. |
 | L4 | **Aufgabenteilung:** SEDRA baut neue Module mit klarer Schnittstelle (reine Logik). Claude baut offiziell Integration, Oberfläche und Harness. Statt „50 %“ gilt eine **gemessene Quote je Aufgabe**: Zeilen von SEDRA gegen Zeilen von Claude, einschließlich Spec und Referenz; sie steht im Logbuch bei jedem Bau. |
 | L5 | **Übernahme:** `adopt_plan` (`devenv/adopt_plan.py`) und Handkopie sind Standard. `selfdev/` (Selbst-Integration, `guppi self-integrate`) ist Reserve. |
 | L6 | **Regel 12 (eigene Branches) geht Regel 8 vor.** Dokumente, Logbuch-Arten: siehe unten. |
 
 L7 (später): Bau-Specs ohne Ergebnis abschließen, Weichen am Paket-Stamm entfernen.
+
+**Regel V4 – lohnt sich ein Bau?** (geändert 20.10.2026, V4: neue Regel) Vor jeder neuen Bau-Spec wird geschätzt, ob Spec + versteckte Tests + Referenz zusammen kleiner sind als der Code selbst. Sind sie es nicht (oder nur knapp), schreibt Claude das Stück direkt als Harness und trägt es als Eingriff ins Logbuch ein; SEDRA baut nur, wo die Quote Claude/SEDRA (L4) unter 1 bleiben kann. Die BAU-Zeile liefert danach die gemessene Quote, und die Review-Vorlage (`runtime/benchmarks/REVIEW_VORLAGE.md`) hält sie fest.
+
+Die Schritte eines Baus auf einer Seite: [SO_WIRD_GEBAUT.md](SO_WIRD_GEBAUT.md).
 
 Wenn GUPPI-Bauten Stunden dauern und wiederholt scheitern, kann der Captain entscheiden, dass Claude ein Modul selbst schreibt. Der Anteil wird dann ehrlich gezählt.
 
@@ -50,9 +54,14 @@ Kandidat in runtime_data/devvm_candidates/<spec>/attempt_…  ──►  Review 
 
 **2. Referenz** (`benchmarks/devvm_refs/<name>/`): eine eigene Lösung, die **vor** dem Bau alle versteckten Tests besteht. Ohne grüne Referenz kein Bau. (geändert 20.10.2026, Linie L2/L3: dazu `spec_check --vm` mit Stempel; höchstens 20 neue Prüfungen je Stufe.)
 
-**3. Bauen** (geändert 20.10.2026, Linie L1: der Standardbefehl ist `--profile standard`; die Flags darunter sind der bisherige Stand, siehe Werkzeug)
+**3. Bauen** (geändert 20.10.2026, Linie L1: der Standardbefehl ist `--profile standard`; die Flags darunter sind der bisherige Stand und ergeben dasselbe wie das Profil)
 ```
 cd runtime
+.venv\Scripts\python.exe benchmarks/spec_check.py <name> --vm --project <projekt>
+.venv\Scripts\python.exe benchmarks/devvm_build.py <projekt> --spec <name> --profile standard
+```
+Der Bau schreibt am Ende selbst eine Logbuch-Zeile (Art BAU, `--no-logbook` schaltet das ab). Dasselbe, ausgeschrieben (bisheriger Stand):
+```
 .venv\Scripts\python.exe benchmarks/devvm_build.py <projekt> --spec <name> --attempts 1 ^
     --coder coder.local_primary --all-models coder.local_primary --context 32768 --tidy --reasoning off --coder-ext all ^
     --server-set flash_attn=on --server-set kv_cache_type=q8_0 --server-set ubatch=512
@@ -71,6 +80,11 @@ Wichtige Optionen:
 | `--context N\|max` | Fenster; immer auf das Maximum **dieses** Rezepts begrenzt |
 | `--plan-steps`, `--fresh-rework`, `--step-syntax-check` | Schritt-Plan und Varianten (im Test, standardmäßig aus) |
 | `--require-s0` | nicht starten ohne bestandene Verbindungsprüfung für genau diese Einstellungen |
+| `--profile standard` | der Standardbefehl (Inhalt siehe Linie L1); einzeln angegebene Schalter überschreiben das Profil |
+| `--experimental` | erlaubt die Optionen abgeschlossener Messungen (`--plan-steps` usw.); ohne sie bricht das Argument ab |
+| `--skip-spec-stamp` | baut trotz fehlendem oder veraltetem Stempel (nur Ausnahme, Warnung im Log) |
+| `--allow-host-stamp` | nimmt einen Stempel der Stufe host (`spec_check --host-only`) an; sonst Abbruch `spec_stamp_host_only` |
+| `--no-logbook` | keine BAU-Zeile ins Logbuch (für Tests) |
 
 Der Bau hält die GPU-Lease und exportiert jeden Versuch. Nach jeder bestandenen Stufe legt er einen Snapshot unter `runtime_data/devvm_snapshots/` an.
 
@@ -85,7 +99,7 @@ Ein Bau besteht aus einer Spec, einer Referenz, dem Bau durch GUPPI und der Abna
 1. **Spec und Referenz schreiben.** Spec in `devvm_specs/<name>.py`, Referenz in `devvm_refs/<name>/`, Saat (wenn der Bau auf vorhandenem Code aufsetzt) in `<name>_seed/`. Dateien nur mit den Datei-Werkzeugen (Write/Edit) ändern, nie mit eingefügten Skripten: Backslashes und Zeilenumbrüche gehen dabei verloren.
    - Erwartete Zahlen und Texte kommen aus der Referenz (ausrechnen lassen), nicht aus dem Kopf.
    - Der Test einer Stufe prüft nur Regeln dieser und der früheren Stufen. Ein späterer Satz der Aufgabe ("im nächsten Schritt") ist keine Regel dieser Stufe.
-2. **Spec prüfen:** `.venv\Scripts\python.exe benchmarks/spec_check.py <name> [--seed benchmarks/<name>_seed]`. Die Zeile `result` muss `ok` sagen: Lint, die Referenz besteht jede Stufe, die erste Stufe scheitert auf der Saat. Erst dann bauen.
+2. **Spec prüfen:** `.venv\Scripts\python.exe benchmarks/spec_check.py <name> --vm --project <projekt> [--seed benchmarks/<name>_seed]` (geändert 20.10.2026, Linie L2). Die Zeile `result` muss `ok` sagen: Lint, die Referenz besteht jede Stufe (auch in der microVM), die erste Stufe scheitert auf der Saat. Dann liegt der Stempel in `runtime_data/spec_stamps/`; ohne ihn baut `devvm_build.py` nicht.
 3. **Bauen** (Standardbefehl siehe oben, Abschnitt "Ein Bau im Solo-Workflow"). Danach auf die Zeile `# run ended` warten, nicht abfragen.
 4. **Abnahme:** den Kandidaten aus `runtime_data/devvm_candidates/<name>/attempt_…/` Zeile für Zeile lesen. Scheitert eine Stufe nach allen Nacharbeiten, zuerst `spec_check.py <name> --tree <attempt> --host-ok` (oder `--snapshots <Snapshot-Ordner> --host-ok`): zeigt die fehlschlagende Zeile und ob der Test eine spätere Regel braucht.
 5. **Übernehmen:** die Datei ins Paket kopieren (die Unterpaket-Datei, nicht die Weiche), betroffene Tests laufen lassen, Mängel des Reviews ins Logbuch schreiben.
@@ -93,7 +107,7 @@ Ein Bau besteht aus einer Spec, einer Referenz, dem Bau durch GUPPI und der Abna
    `benchmarks/uix_check.py` (echter Browser, Zeile `result ok`; ein einzelnes Werkzeug mit `--tool <id>`), siehe docs/BUILD_7_DESK_2026-10-14.md.
    Ein neues Desktop-Modul hält den Vertrag `docs/SHELL_WERKZEUG_VERTRAG_v1.md`: Manifest, nur `ctx.api()` und `ctx.bus`, zeichnen nur in den eigenen
    Container, ≤ 400 Zeilen je Datei, eine README. `tests/test_uix_contract.py` erzwingt das, `tests/test_desk_*.py` die Andockstelle.
-6. **Logbuch:** `.venv\Scripts\python.exe benchmarks/logbook.py add BAU "Text" --ref "Datei"`. Die Uhrzeit setzt das Werkzeug; Pfade mit Laufwerksbuchstaben lehnt es ab.
+6. **Logbuch:** Die BAU-Zeile des Baus schreibt `devvm_build.py` selbst (geändert 20.10.2026, V1). Alles Übrige: `.venv\Scripts\python.exe benchmarks/logbook.py add <ART> "Text" --ref "Datei"`; ART aus der festen Liste ENTSCHEIDUNG, SPEC, BAU, INTEGRATION, MESSUNG, FEHLER, AENDERUNG, DOKU, RECHERCHE, HINWEIS (ÄNDERUNG wird als AENDERUNG angenommen, jede andere Art bricht ab). Die Uhrzeit setzt das Werkzeug; Pfade mit Laufwerksbuchstaben lehnt es ab.
 7. **Messen:** `ab_queue.py <projekt> --spec <name> --seed … --arm A= --arm B="…" --pairs 3 --rework 0 --keep-going --tag <name>`; Ergebnis in `runtime_data/measurements/<tag>/report.txt`, Ende an der Zeile `ab queue finished`.
 8. **Commit:** nur die eigenen Dateien, ohne lokale Pfade, mit Co-Autor-Zeile.
 
