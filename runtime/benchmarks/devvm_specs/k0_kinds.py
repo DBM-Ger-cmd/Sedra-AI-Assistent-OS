@@ -3,7 +3,8 @@ are registered once at start instead of standing in if-elif chains of `uix_serve
 {type, id, title, state, summary, actions, links} and set `actions` from the verbs of its type. `client_for` derives the audit field `client` from the token class (the server
 sets it, never the caller). Pure logic: readers, verbs and the not-found object are injected, nothing of the desk is imported. The verb objects are the existing
 `desk.actions.Verb` (attributes `verb`, methods `offered(obj)` and `describe()`); the tests use a small copy. GUPPI/SEDRA builds it; Claude only wrote this file, the hidden
-tests and the reference (benchmarks/devvm_refs/k0_kinds). The integration (builtin kinds, uix_server.py, actions.table) is harness work (K0.10, K0.11)."""
+tests and the reference (benchmarks/devvm_refs/k0_kinds). The integration (builtin kinds, uix_server.py, actions.table) is harness work (K0.10, K0.11).
+Stages cut to at most 20 new hidden checks each (Captain, line L3, 20.10.2026)."""
 
 NOTES = '''# Notes for k0_kinds
 Pure Python 3 standard library (re), no file, process or network access, nothing of the desk is imported. Readers, listings, verbs and the not-found builder are passed in by the caller.
@@ -55,12 +56,6 @@ def hidden(imports, body):
 
 
 C1 = r'''
-r = Registry()
-assert r.names() == []
-assert r.get("task") is None
-assert r.problems == []
-assert r.frozen is False
-assert Registry.Kind is Kind
 k = Kind("task", "Aufgabe", None, None, verbs=[V("a")], type_verbs=[V("neu")])
 assert k.name == "task"
 assert k.title == "Aufgabe"
@@ -74,6 +69,16 @@ assert k.verb("neu") is None
 assert k.type_verb("neu").verb == "neu"
 assert k.type_verb("a") is None
 assert Kind("x1", "X", None, None).verbs == ()
+'''
+
+C2 = r'''
+r = Registry()
+assert r.names() == []
+assert r.get("task") is None
+assert r.problems == []
+assert r.frozen is False
+assert Registry.Kind is Kind
+k = Kind("task", "Aufgabe", None, None, verbs=[V("a")], type_verbs=[V("neu")])
 r.register(k)
 r.register(Kind("model", "Modell", None, None))
 assert r.names() == ["model", "task"]
@@ -84,6 +89,11 @@ for bad in ("Task", "t", "1task", "task-x", "a" * 33, "", "tä"):
     raises("kind_name_invalid", r.register, Kind(bad, "B", None, None))
 r.register(Kind("a" * 32, "Lang", None, None))
 assert "a" * 32 in r.names()
+'''
+
+C3 = r'''
+r = Registry()
+r.register(Kind("model", "Modell", None, None))
 r.register(Kind("agent", "Agent", None, None, placeholder=True))
 raises("kind_already_registered", r.register, Kind("agent", "Agent 2", None, None))
 real = Kind("agent", "Agent echt", None, None)
@@ -119,7 +129,7 @@ p.register(Kind("agent", "B", None, None), replace_placeholder=True)
 raises("kind_already_registered", p.register, Kind("agent", "C", None, None), replace_placeholder=True)
 '''
 
-C2 = r'''
+SETUP = r'''
 data = {"t1": obj("task", "t1"), "t2": obj("task", "t2", state="fertig")}
 seen = []
 
@@ -145,6 +155,9 @@ r.register(Kind("onlynew", "Nur neu", lambda h, i: None, lambda h, p: [], type_v
 r.register(Kind("agent", "Agent", lambda h, i: (_ for _ in ()).throw(ValueError("unknown_object_type")), lambda h, p: [], placeholder=True))
 HUB = object()
 desc = lambda v: v.describe()
+'''
+
+C4 = SETUP + r'''
 assert r.offered(obj("task", "x")) == [desc(run_verb), desc(always)]
 assert r.offered(obj("task", "x", state="fertig")) == [desc(always)]
 assert r.offered(obj("nothing", "x")) == []
@@ -164,6 +177,10 @@ raises("unknown_object_type", r.view, HUB, "agent", "a1")
 plain = Registry()
 plain.register(Kind("skill", "F", lambda h, i: None, lambda h, p: []))
 raises("object_not_found", plain.view, HUB, "skill", "s1")
+assert run_verb.runs == 0
+'''
+
+C5 = SETUP + r'''
 items = r.listing(HUB, "task", {"type": "task", "state": "bereit"})
 assert [i["id"] for i in items] == ["t1", "t2"]
 assert items[0]["actions"] == [desc(run_verb), desc(always)]
@@ -175,6 +192,9 @@ assert r.listing(HUB, "decision")[0]["actions"] == []
 assert r.listing(HUB, "agent") == []
 raises("object_shape_invalid", r.listing, HUB, "broken")
 raises("unknown_object_type", r.listing, HUB, "nix")
+'''
+
+C6 = SETUP + r'''
 payload = {"type": " task ", "id": "t1"}
 keep = copy.deepcopy(payload)
 assert r.request(HUB, payload)["id"] == "t1"
@@ -195,10 +215,9 @@ assert t["onlynew"] == {}
 assert r.type_verb("task", "anlegen").verb == "anlegen"
 assert r.type_verb("task", "ausfuehren") is None
 raises("unknown_object_type", r.type_verb, "nix", "anlegen")
-assert run_verb.runs == 0
 '''
 
-C3 = r'''
+C7 = r'''
 assert CHAT_TOOLS == frozenset({"talk", "planung"})
 assert SHAPE == ("type", "id", "title", "state", "summary", "actions", "links")
 assert client_for("cli") == "cli"
@@ -222,30 +241,52 @@ assert refuse_client_field({}) is None
 assert refuse_client_field(None) is None
 '''
 
+H1 = {"hidden_kinds_1.py": hidden("Kind", C1)}
+H2 = {**H1, "hidden_kinds_2.py": hidden("Kind, Registry", C2)}
+H3 = {**H2, "hidden_kinds_3.py": hidden("Kind, Registry", C3)}
+H4 = {**H3, "hidden_kinds_4.py": hidden("Kind, Registry", C4)}
+H5 = {**H4, "hidden_kinds_5.py": hidden("Kind, Registry", C5)}
+H6 = {**H5, "hidden_kinds_6.py": hidden("Kind, Registry", C6)}
+H7 = {**H6, "hidden_kinds_7.py": hidden("CHAT_TOOLS, SHAPE, client_for, refuse_client_field", C7)}
+
 STAGES = [
+    {"name": "kind",
+     "task": """Create `kinds.py` (Python 3 standard library only) with `class Kind`, one object type of the desk.
+- `Kind(name, title, read, listing, verbs=(), type_verbs=(), source="desk", placeholder=False, own_actions=False)`: keeps every argument as an attribute of the same name; `verbs` and `type_verbs` are stored as tuples.
+- `kind.verb(name)` and `kind.type_verb(name)` return the first verb object in `verbs` or `type_verbs` whose attribute `verb` equals name, else None.""",
+     "hidden": H1},
     {"name": "register",
-     "task": """Create `kinds.py` (Python 3 standard library only) with `class Kind` and `class Registry`: the register of the desk's object types.
-- `Kind(name, title, read, listing, verbs=(), type_verbs=(), source="desk", placeholder=False, own_actions=False)`: keeps every argument as an attribute of the same name; `verbs` and `type_verbs` are stored as tuples. `kind.verb(name)` and `kind.type_verb(name)` return the first verb object in `verbs` or `type_verbs` whose attribute `verb` equals name, else None.
-- `Registry(not_found=None)`: the class attribute `Registry.Kind` is the class `Kind` (an extension gets the registry and builds kinds with `registry.Kind(...)`). Attribute `problems`: a list, starts empty. Property `frozen`: False until `freeze()` was called.
-- `register(kind, replace_placeholder=False)`: after `freeze()` -> ValueError("kinds_frozen"). The name must fully match `[a-z][a-z0-9_]{1,31}`, else ValueError("kind_name_invalid"). A name that is already registered -> ValueError("kind_already_registered") and the old kind stays; the ONLY exception: replace_placeholder=True and the registered kind has placeholder=True, then the new kind replaces it. replace_placeholder=True for a new name simply registers it.
-- `names()` the registered names sorted; `get(name)` the kind or None.
+     "task": """Add `class Registry` to `kinds.py` (keep everything else): the register of the desk's object types.
+- `Registry(not_found=None)`: the class attribute `Registry.Kind` is the class `Kind` (an extension gets the registry and builds kinds with `registry.Kind(...)`). Attribute `problems`: a list, starts empty. Property `frozen`: False (the next stage adds `freeze()`).
+- `register(kind)`: the name must fully match `[a-z][a-z0-9_]{1,31}`, else ValueError("kind_name_invalid"). A name that is already registered -> ValueError("kind_already_registered") and the old kind stays.
+- `names()` the registered names sorted; `get(name)` the kind or None.""",
+     "hidden": H2},
+    {"name": "placeholder",
+     "task": """Extend `Registry` in `kinds.py` (keep everything else):
+- `register(kind, replace_placeholder=False)`: the ONLY exception to "already registered": replace_placeholder=True and the registered kind has placeholder=True, then the new kind replaces it. replace_placeholder=True for a new name simply registers it.
+- `freeze()`: afterwards `frozen` is True and `register` raises ValueError("kinds_frozen") (checked first).
 - `mark()` returns a copy of the current registrations; `reset(mark)` goes back to exactly that state (also undoes a replaced placeholder; after `freeze()` -> ValueError("kinds_frozen")). A mark can be used more than once.
 - `refuse(source, reason)` appends {"source": source, "reason": reason} to `problems`.""",
-     "hidden": {"hidden_kinds_1.py": hidden("Kind, Registry", C1)}},
+     "hidden": H3},
     {"name": "view",
      "task": """Add to `Registry` in `kinds.py` (keep everything else). The module constant `SHAPE = ("type", "id", "title", "state", "summary", "actions", "links")`.
 - `offered(obj)`: for the kind named obj["type"] (missing type or unknown kind: []), `[v.describe() for v in kind.verbs if v.offered(obj)]` in the order of `verbs`.
-- `view(hub, name, oid)`: unknown name -> ValueError("unknown_object_type"). obj = kind.read(hub, oid); exceptions of the reader are not caught. obj None -> `not_found(name, oid)` of the constructor is returned unchanged, and without a not_found function ValueError("object_not_found"). Otherwise obj must be a dict that has every key of SHAPE (more keys are fine), else ValueError("object_shape_invalid"); then obj["actions"] = offered(obj) unless the kind has own_actions=True (then the reader's actions stay). Return obj.
-- `listing(hub, name, payload=None)`: unknown name -> ValueError("unknown_object_type"); items = list(kind.listing(hub, a copy of payload as dict, {} for None)); every item must have every key of SHAPE, else ValueError("object_shape_invalid"); for EVERY item (also with own_actions) item["actions"] = offered(item). Return the list.
+- `view(hub, name, oid)`: unknown name -> ValueError("unknown_object_type"). obj = kind.read(hub, oid); exceptions of the reader are not caught. obj None -> `not_found(name, oid)` of the constructor is returned unchanged, and without a not_found function ValueError("object_not_found").
+- Otherwise obj must be a dict that has every key of SHAPE (more keys are fine), else ValueError("object_shape_invalid"); then obj["actions"] = offered(obj) unless the kind has own_actions=True (then the reader's actions stay). Return obj.
+Never call a verb's `run`.""",
+     "hidden": H4},
+    {"name": "listing",
+     "task": """Add `listing(hub, name, payload=None)` to `Registry` in `kinds.py` (keep everything else): unknown name -> ValueError("unknown_object_type"); items = list(kind.listing(hub, a copy of payload as dict, {} for None)); every item must have every key of SHAPE, else ValueError("object_shape_invalid"); for EVERY item (also with own_actions) item["actions"] = offered(item). Return the list. Use ONE helper for the shape check of `view` and `listing`.""",
+     "hidden": H5},
+    {"name": "request",
+     "task": """Add to `Registry` in `kinds.py` (keep everything else):
 - `request(hub, payload)` (the route POST /api/objects): name = str(payload.get("type") or "").strip(); unknown -> ValueError("unknown_object_type"). If payload.get("id") is truthy: view(hub, name, str(id)); else {"type": name, "items": listing(hub, name, payload)}. Never change payload.
 - `table()`: {name: {v.verb: v for v in kind.verbs}} for every kind that has at least one verb or one type verb (a kind without any verb is NOT in the table).
-- `type_verb(name, verb)`: unknown name -> ValueError("unknown_object_type"), else kind.type_verb(verb).
-Never call a verb's `run`.""",
-     "hidden": {"hidden_kinds_1.py": hidden("Kind, Registry", C1), "hidden_kinds_2.py": hidden("Kind, Registry", C2)}},
+- `type_verb(name, verb)`: unknown name -> ValueError("unknown_object_type"), else kind.type_verb(verb).""",
+     "hidden": H6},
     {"name": "client",
      "task": """Add two functions to `kinds.py` (keep everything else) for the audit field `client` that the server sets, never the caller. Module constant `CHAT_TOOLS = frozenset({"talk", "planung"})`.
 - `client_for(token_class, tool=None, tool_ok=False)`: token_class "cli" or "mcp" -> the same string (tool is ignored). "browser" -> "chat" when tool_ok is True and tool is in CHAT_TOOLS, else "shell". Any other token_class -> ValueError("unknown_token_class").
 - `refuse_client_field(payload)`: when payload is a dict with the top-level key "client" (any value) -> ValueError("client_is_set_by_server"); otherwise return None (nested dicts, an empty dict or None are fine). Never change payload.""",
-     "hidden": {"hidden_kinds_1.py": hidden("Kind, Registry", C1), "hidden_kinds_2.py": hidden("Kind, Registry", C2),
-                "hidden_kinds_3.py": hidden("Kind, Registry, CHAT_TOOLS, SHAPE, client_for, refuse_client_field", C3)}},
+     "hidden": H7},
 ]
