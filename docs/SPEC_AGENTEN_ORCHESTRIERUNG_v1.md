@@ -582,6 +582,153 @@ Shell D ist die Arbeitsfläche für das Agenten-Team: Navigation wie bei Papercl
 | UIX-08 | Die Shell SOLL Cloud-Antworten kennzeichnen und den Budgetstand je Agent zeigen. | Kennzeichen und Balken sichtbar |
 | UIX-09 | `START_SEDRA.bat paperclip` SOLL direkt in Shell D starten. | Start ohne Zwischenschritt |
 
+### Abgleich gegen den Code (G1)
+
+Stand 20.10.2026, K4.1 und K4.2, Branch `spec4/shell-d` (Commit `3abb023`). Nur gelesen: nichts gestartet, kein Test und kein `uix_check` ausgeführt.
+
+#### Stand von Shell D (U4.1)
+
+| Punkt | Befund |
+| --- | --- |
+| Dateien | `shell.yaml` (v1.1.0, `trust: CORE`, `provides: [tree, dock, talk, notify, palette, inbox]`), `shell.js` 155, `nav.js` 86, `pages.js` 176, `topbar.js` 77 Zeilen (zusammen 494), `shell.css` 100, `README.md`, `arbeitsplatz.yaml`, `preview.png`. Alle Skripte weit unter 400 Zeilen. |
+| Aufbau | Navigation links (`NAV`, 15 Einträge), Kopfzeile mit Zurück, Verben des Werkstücks und Suchfeld (Strg+K), Seiten in der Mitte, das Gespräch (`talk`) als Schublade rechts. Drei Seitenarten: `dashboard` (Instrumente als Kacheln plus vier Karten), `collection`, `object` (Werkstück links, Nachweise als Karten rechts). Verlauf in `localStorage` (`sedra.paperclip.history`). |
+| Ereignisse | Die Shell hört `object.open`, `decision.pending`, `decision.answered`, `task.changed`, `model.changed`, `desk.error` und lädt danach `GET /api/strip` und `GET /api/decisions` neu. Eigene Zeitgeber hat die Shell nicht. |
+| Entscheidungen | `decide()` ruft `POST /api/decisions/answer` (steht in `shell.yaml` unter `api`). Der Badge am Posteingang kommt aus `GET /api/decisions`. |
+| Heutige Namen | „Issues“ zeigt Typ `task`, also die Missionen. „Agenten“ und „Organigramm“ zeigen Typ `agent` mit dem Werkzeug `crew`, einer Liste aus `GET /api/agents` ohne Vorgesetzte. |
+| Als Vorgabe baubar? | **Nein.** `shell.vorgabe.yaml` kennt nur die Zonen `leiste`, `orte`, `werkstueck`, `gespraech`, `entscheidungen`, `leer`; `orte.liste` und `start.type` sind feste Aufzählungen ohne `org`, `issue`, `routine`, `labor`. Ein Dashboard aus mehreren Sammlungen, ein Stapel von Agentenfenstern und Abschnitte in der Navigation gibt es im Rahmen `ui/frame.js` (335 Zeilen) nicht. `gateway-studio` zeigt, was die Vorgabe trägt: eine Hauptfläche mit Nachweisen. Empfehlung: Shell D bleibt klassisch (`shell.yaml` und Skripte) und teilt Dateien, wo 400 Zeilen drohen. Den Rahmen zu erweitern wäre ein eigenes Gate und lohnt nicht. |
+| Tests | `tests/test_uix_shell_paperclip.py` und das Profil `paperclip` in `benchmarks/uix_check.py` (Zonen `pc-nav`, `pc-top`, `pc-page`; Kacheln `.pc-kpi`; Verlauf als „layout“) sind vorhanden. Nicht ausgeführt. |
+
+#### Vorbild: Paperclip-UI (lokale Kopie vom 20.10.2026, `ui/src/pages` und `components`)
+
+Geprüft wurden Dateinamen, Größen und Stichproben, nicht der ganze Code (die zwölf Seiten haben zusammen über 23.000 Zeilen).
+
+| Paperclip-Ansicht | Inhalt (Stichprobe) | Übernehmen in Shell D |
+| --- | --- | --- |
+| `Dashboard` | vier Kennzahlen (Agenten aktiv, Aufgaben in Arbeit, Ausgaben im Monat, offene Freigaben), Aktivität | ja, die Kacheln gibt es; ergänzen: Slots und Ausgaben als Instrumente |
+| `Inbox`, `Approvals`, `DecisionQueuePage` | Freigaben und Entscheidungen | schon da (`decisions`); Badge auch am Agenten (UIX-07) |
+| `Issues` mit `IssuesList`, `KanbanBoard` | Liste oder Board (`viewMode: list` oder `board`), Spalten nach Status, Zuweisung, Blocker | ja: Liste und Board mit den Zuständen aus D3.3 (`offen`, `zugewiesen`, `in_arbeit`, `wartet`, `erledigt`, `abgebrochen`); Kommentare und Blocker im Detail |
+| `Goals`, `GoalDetail` | Ziele mit Issues | schon da (`intent` mit Stufen); die Zielkette Ziel → Projekt → Issue im Issue zeigen (ORC-13) |
+| `OrgChart` | Baum nach „reports to“, Karten von 200 px, Breite aus den Teilbäumen berechnet | ja, als Baum mit einer Wurzel (Unterarbeiter unter dem Captain, OP-6); Karte zeigt Rolle, Status, Budgetbalken |
+| `Agents`, `AgentDetail`, `AgentChat` | Liste, Detail mit Reitern, Live-Lauf, Gespräch mit dem Agenten | ja: Detail mit Issues und Läufen neben dem Gespräch (UIX-04); Anweisungsdateien, Adapter und Zugangsdaten nicht |
+| `Routines`, `RoutineDetail` | Liste, Auslöser („Triggers“), Läufe | ja, klein: Liste, Cron-Text, Nachhol-Regel, letzte und nächste Ausführung |
+| `Costs` | Reiter Überblick, Budgets, Anbieter, Abrechner, Finanzen | Überblick, Budgets, Anbieter; Abrechner und Finanzen nicht |
+| Firmen-Export und -Import, Zugänge, Einladungen, Auth, Workspaces, Skills, Plugins | mehrere Firmen, Pakete | nein (in der Ist-Tabelle „bewusst weggelassen“) |
+
+Ablauf, den Shell D tragen soll: Captain gibt dem Unterarbeiter eine Anweisung → Issues entstehen → Zuweisung → Entscheidung im Posteingang (`wake_agent`) → Lauf mit Live-Zeilen → Ergebnis als Kommentar → Bericht an den Captain.
+
+#### UIX-01 bis UIX-09 gegen den Code
+
+**da** = erfüllt, **teils** = Grundlage da, Lücke genannt, **fehlt** = muss gebaut werden. „Prüfbar“ sagt, ob das Abnahmekriterium heute mit vorhandenen Mitteln gemessen wird.
+
+| ID | Befund | Prüfbar? | Vorschlag |
+| --- | --- | --- | --- |
+| UIX-01 | **da.** Manifest, Dateigrenze (`test_no_file_of_the_contract…_longer_than_400_lines` prüft alle `*.js` unter `uix/`), README, Werkzeuge ohne `fetch`, `localStorage`, `EventSource`. Die Shell nutzt nur `ctx.api`, `ctx.bus`, `ctx.tools`, `ctx.makeContext`. `uix_check --shell paperclip` hat ein Profil. Lücke: Das Profil kennt keine Objekte für die neuen Werkzeuge; ein Werkzeug ohne Eintrag in `OBJECTS` wird über `handles[0]` und `alle` geöffnet, sinnvoll nur für Sammlungen. | ja | Wortlaut ergänzen (unten); Profil und `OBJECTS` im Prüfwerkzeug erweitern (G1-S4-08). |
+| UIX-02 | **teils.** `NAV` hat Dashboard, Posteingang, Issues, Ziele, Agenten, Kosten, Planungstisch, Rekorder, Werkstatt, Bibliothek, Logbuch, Module, Dateien, Modus und Grenzen, Maschinenraum. Es fehlen **Organigramm** (nur Karte im Dashboard, öffnet `agent:alle`), **Routinen** (Build 24 entfernt), **Slots** und **KI-Labor** (`labor` handelt Typ `labor`, steht weder in `NAV` noch in `ui/places.js`, ist also auch über Strg+K nicht erreichbar). „Issues“ zeigt Missionen. „Jeder Eintrag öffnet ein Objekt oder eine Liste“ misst `uix_check` nicht je Eintrag; `test_every_place_of_the_palette_opens_an_object_a_tool_handles` prüft nur `places.js`. | nein (nur Orte der Palette) | Wortlaut ändern; neuer reiner Test (node): jeder `NAV`-Eintrag hat ein Werkzeug, das seinen Typ handelt; `uix_check` öffnet jeden Eintrag. |
+| UIX-03 | **teils, Zählung unvollständig.** Vorhanden: `task` (nutzt `POST /api/objects` und `/api/actions`), `decisions`, `crew` (Typ `agent`, liest `GET /api/agents`), `costs` und `live` (Nachweise für `task`), `workshop`, `talk`, `labor`, dazu `intent`, `planung`, `meter`, `rekorder`. Das Brett braucht ein neues Werkzeug `board` für Typ `issue` (G2); `task` bleibt die Mission. Zwei Fallen: (1) Eine Sammlung mountet **alle** Werkzeuge, die den Typ handeln (`pages.js`, `collection`): `org` und `crew` auf `agent` erschienen zugleich. (2) Das Gespräch ist ein einzelnes Modul (`registerTool` legt ein Objekt je ID ab, `mount` speichert `this.el` und `this.history` darin); zweimal gemountet überschreibt es sich. Aus dem Code gelesen, im Browser nicht geprüft. | ja (Manifestliste) | Werkzeugliste unten; Wortlaut ändern. |
+| UIX-04 | **fehlt.** Es gibt genau eine Gesprächsschublade (`talk`, `kind: panel`). `POST /api/chat/reply` kennt keinen Agenten (`text`, `history`, `mission_id`, `attachments`, `vorgang`); das Gespräch folgt dem Objekt nur über `talk.context`. Mehrere Fenster mit je eigenem Verlauf gehen mit `talk` nicht. Dazu ORC-14: Die Anweisung an den Unterarbeiter muss als Issues bei den Agenten unter ihm enden. | nein | Neues Werkzeug `agentfenster` (Typ `agent`, Einzelansicht) über ein Verb am Typ `agent` (Spec 1, etwa `anweisen`); Verlauf serverseitig je Agent. Entscheidung G1-S4-03. |
+| UIX-05 | **teils.** `/api/events` (SSE) und die Ereignisse `task.changed`, `decision.pending`, `decision.answered`, `model.changed`, `live.line`, `system.state` gibt es; der Server fragt dafür alle 3 s den Hub ab (`desk/events.py`, `Poller`), im Browser steht nur ein Strom. `agent.changed`, `budget.warning`, `slot.changed` fehlen in `ui/bus.js` (`EVENTS`; unbekannte Namen werden abgewiesen) und in `events.diff`. Zeitgeber im Browser: `labor` alle 5 s (Läufe), `rekorder` 0,7 s und 3 s, `workshop` (Teststrecke), `ui/wechsel.js` 1 s. Das Kriterium „keine periodischen Abfragen im Netzwerkprotokoll“ gilt damit nicht für ganz Shell D. | nein (`uix_check` zählt Aufrufe ohne Absender, nicht Wiederholungen) | Wortlaut ändern: die neuen Seiten lesen bei Ereignissen, nicht im Takt; Ausnahmen nennen. Prüfung im Leerlauf (G1-S4-08). |
+| UIX-06 | **teils.** `POST /api/actions` und `POST /api/objects` gibt es; `task` und `talk` nutzen sie. Alle anderen nutzen Spezialrouten: `labor` sieben (`/api/cloud/*`, `/api/labor/*`), `workshop` zehn. Die Shell selbst ruft `POST /api/decisions/answer`. Das Kriterium nennt nur die neuen Werkzeuge, so bleibt es prüfbar. | ja (Manifeste lesen) | Wortlaut präzisieren (unten). |
+| UIX-07 | **teils.** Badge am Posteingang aus `GET /api/decisions` (`nav.js`, `badgeCounts`); die Wege kommen aus `decisions`. Kein Badge am Agenten; Entscheidungen tragen heute keine Agenten-ID (`describe`, `mission_id`, `gate_id`). | Posteingang ja, Agent nein | Agenten-ID in der Entscheidung ist Sache von Spec 0/1 (`binding`); die Shell liest sie. G1-S4-07. |
+| UIX-08 | **fehlt.** Kein Cloud-Kennzeichen und kein Budgetbalken in Shell D (das Gespräch wählt Cloud über `GET /api/cloud` und `POST /api/chat/cloud`). Die Quelle `spend` und der Desk-Typ `budget` kommen mit Spec 0/1/3; `budget.warning` ist für Spec 4 vorgesehen. | nein, hängt an Spec 1 und 3 | Balken in `org` und `agentfenster`; Kennzeichen „Cloud · Anbieter“ aus dem Lauf. |
+| UIX-09 | **da (aus dem Quelltext).** In `START_SEDRA.bat` wird ein erstes Argument, das nicht `--gewaehlt`, `--uebersicht` oder `--replace` ist, zur Shell-ID (`--shell paperclip`, `GEWAEHLT=1`); `uix_start.py --shell` startet „nur für diesen Start“, die Wahl in `uix.yaml` bleibt. Ordner `paperclip` stimmt. Nicht gestartet. | teils (Argumentaufbau als Text prüfbar; Start selbst mit `uix_check --shell paperclip` auf einem Testprojekt) | Wortlaut präzisieren. |
+
+Korrekturvorschlag Wortlaut (alt → neu), G1-S4-01:
+
+| ID | alt | neu |
+| --- | --- | --- |
+| UIX-01 | `tests/test_uix_contract.py` grün; `uix_check.py` meldet `result ok` | wie alt; dazu `uix_check.py --shell paperclip` mit Objekten für jedes neue Werkzeug im Profil; kein „nicht geprüft“ für `org`, `board`, `routines`, `slots`, `agentfenster`, `labor` |
+| UIX-02 | Übersicht, Eingang (Entscheidungen), Aufgaben, Ziele, Organigramm, Agenten, Routinen, Kosten, Modelle und Slots sowie KI-Labor. Jeder Eintrag öffnet ein Objekt oder eine Liste | Dashboard, Posteingang, Issues (Typ `issue`, Liste und Board), Ziele, Organigramm, Agenten, Routinen, Kosten, Modelle und Slots, KI-Labor; Assistenten, Werkzeuge und Projekt wie heute. Abnahme: Test, dass jeder Eintrag ein Werkzeug hat, und `uix_check` öffnet jeden Eintrag |
+| UIX-03 | wiederverwenden `task`, `decisions`, `crew`, `costs`, `live`, `workshop`, `talk`; neu nur `org`, `board`, `routines` und Instrument `slots` | wiederverwenden: `decisions`, `live`, `costs` (angepasst), `workshop`, `labor`, `meter`, `intent`, `planung`, `talk` (unverändert), `task` für Läufe, `crew` für die Rollenliste; neu: `org`, `board`, `routines`, `agentfenster`, Instrument `slots`. Abnahme: Manifestliste mit Begründung je Werkzeug |
+| UIX-04 | Eigenes Gesprächsfenster mit dem Agenten, seine Aufgaben und Läufe daneben; mehrere Fenster, jedes hält seinen Verlauf | wie alt; die Anweisung geht als Verb über `POST /api/actions` (ORC-14); der Verlauf liegt serverseitig je Agent. Abnahme: zwei Fenster offen, zwei Verläufe, nach dem Neuladen derselbe Inhalt |
+| UIX-05 | Änderungen über `/api/events`, nicht durch Polling; keine periodischen Abfragen im Netzwerkprotokoll | Die neuen Seiten lesen bei Ereignissen (`agent.changed`, `issue.changed`, `budget.warning`, `slot.changed`, `decision.*`), nicht im Takt. Abnahme: im Leerlauf 10 s lang keine wiederholte Abfrage desselben Pfads von `org`, `board`, `routines`, `slots`, `agentfenster`. Ausnahmen bis zu ihrer Spec: `workshop`, `rekorder`, `labor` |
+| UIX-06 | Jede Handlung über `POST /api/actions`; Allowlist der neuen Werkzeuge ohne Spezialrouten | Jede Handlung der neuen Werkzeuge über `POST /api/actions`, Lesungen über `POST /api/objects`; ihre Manifeste nennen nur diese beiden Routen (Instrument: zusätzlich `GET /api/strip`). Vorhandene Werkzeuge sind ausgenommen |
+| UIX-07 | Badge an Eingang und am betroffenen Agenten | wie alt; setzt die Agenten-ID in der Entscheidung voraus (Spec 0/1) |
+| UIX-08 | Cloud-Antworten kennzeichnen, Budgetstand je Agent zeigen | wie alt, Quelle `spend` über Desk-Typ `budget`; messbar erst nach Spec 1 und 3 |
+| UIX-09 | direkt in Shell D, ohne Zwischenschritt | wie alt; Abnahme: Test des Argumentaufbaus und `uix_check --shell paperclip` auf einem Testprojekt |
+
+#### Neue Ereignisse
+
+`ui/bus.js` weist unbekannte Ereignisse ab; jedes neue ist ein Eintrag in `EVENTS` und im Vertrag §5 (G1-S4-05). Nutzlast flach:
+
+| Ereignis | Pflichtfeld | Quelle |
+| --- | --- | --- |
+| `agent.changed` | `id` | `ORC_AGENT_*`, `ORC_WAKE` (Spec 0, D3.2) |
+| `issue.changed` | `id` | `ORC_TASK_*` (neu gegenüber Spec 0) |
+| `budget.warning` | `agent_id` | `ORC_BUDGET_WARNING`, `ORC_BUDGET_STOP`; Cloud-Grenzen aus Spec 3 |
+| `slot.changed` | – | `model_scheduler` (Spec 2, SCH-09) |
+
+Sie entstehen in `desk/events.diff` (Spec 0/1 liefert die Audit-Ereignisse).
+
+### Werkzeugliste
+
+| Werkzeug | Status | Typ | Begründung |
+| --- | --- | --- | --- |
+| `decisions`, `live`, `intent`, `planung`, `meter`, `rekorder`, `library`, `logbook`, `modules`, `project`, `boundaries`, `gauge-*` | wiederverwendet | wie heute | laufen in Shell D; keine Änderung |
+| `task` | wiederverwendet, andere Rolle | `task` | zeigt die Mission (den Lauf) hinter einem Issue; erreichbar über `mission_id` im Issue |
+| `workshop` | wiederverwendet | `model` | Modelle laden, entladen, testen; Slots kommen als eigenes Instrument |
+| `labor` | wiederverwendet, Ausbau in Spec 3 | `labor` | braucht nur einen `NAV`-Eintrag und einen Ort in `places.js`; zählt nicht als neues Werkzeug (Captain). Zeitgeber alle 5 s bleibt als Ausnahme bis Spec 3 |
+| `crew` | angepasst | `agent` | liest heute `GET /api/agents` (Agent Manager, ohne Vorgesetzte). Empfehlung: Agentenliste und Baum zeichnet `org`; `crew` bleibt die Rollenliste und wird bei `agent:alle` nicht mitgemountet (Falle 1, G1-S4-04) |
+| `costs` | angepasst | Nachweis für `task`, dazu `issue` | Budgetbalken und Cloud-Kennzeichen je Agent und Lauf (UIX-08); heute nur Münzen je Mission |
+| `talk` | unverändert | Panel | bleibt das Gespräch mit SEDRA in der Schublade; Agentengespräche sind nicht `talk` (Singleton, kein Agent in `chat/reply`) |
+| `org` | **neu** | `agent` (Sammlung) | Organigramm als Baum aus `reports_to`, Wurzel Unterarbeiter unter dem Captain; Karte mit Rolle, Status, Budgetbalken, Badge; Verben `einstellen`, `pausieren`, `fortsetzen`, `beenden`, `einordnen` (D3.2) |
+| `agentfenster` | **neu** (fehlt in UIX-03) | `agent` (Einzelansicht) | Gesprächsfenster mit einem Agenten, daneben Issues und Läufe; mehrere zugleich; Verlauf serverseitig; beim Unterarbeiter ORC-14 |
+| `board` | **neu** | `issue` | Liste und Board nach Zustand; Detail mit Zielkette, Blockern, Kommentaren und Link zur Mission; Verben `zuweisen`, `blocker_setzen`, `kommentieren`, `abbrechen`, `anlegen` |
+| `routines` | **neu** | `routine` | Liste und Detail mit Cron-Text, Nachhol-Regel, letzter und nächster Ausführung; Verben `anlegen`, `aendern`, `ausschalten` (Gate `set_routine`) |
+| `slots` | **neu**, Instrument | `kind: instrument` | belegte und freie Slots, Warteschlange (SCH-09); hört `slot.changed`; zeigt das geladene Modell |
+
+Alle neuen Werkzeuge entstehen als Kopie von `tools/_template/`, mit `trust: GUPPI_BUILT` beim Bau durch SEDRA; Allowlist nur `POST /api/objects` und `POST /api/actions` (UIX-06). Vertragsnachträge: `handles` mit `agent:alle` und `agent:*` (G1-S4-04) und die vier Ereignisse (G1-S4-05). Ohne G1-S4-04 ginge es nur mit eigenen Typen für Einzelansicht und Sammlung, was den Desk-Typ `agent` zerlegt.
+
+### Skizze der Oberfläche
+
+```
++------------------------------------------------------------------------------------------+
+| ‹ Zurück   Organigramm            [Einstellen] [Pausieren]            [ Ort suchen…  ^K ] |
++----------------+-------------------------------------------------+-----------------------+
+| SEDRA          |  Agenten 5 · Issues in Arbeit 2 · Slots 2/3 ·   |  Unterarbeiter        |
+|                |  Cloud heute 0 €                                |  ┌─ Gespräch ───────┐ |
+| Dashboard      |                                                 |  │ Captain: Bau X   │ |
+| Posteingang ②  |             [ Captain ]                         |  │ Unterarbeiter:   │ |
+| Issues         |                  |                              |  │ 3 Issues angelegt│ |
+| Ziele          |           [ Unterarbeiter ] ●                   |  └──────────────────┘ |
+| Organigramm    |    /       |        |         \                 |  Issues: UA-1 UA-2    |
+| Agenten        | [Planer] [Coder] [Reviewer] [Recherche]         |  Läufe: #12 läuft     |
+| Routinen       |   ▇▇▇░     ▇▇░░      ▇░░░       ▇▇▇▇ (Budget)   |  Budget ▇▇▇░░ 62 %    |
+| Kosten         |                                                 |  ┌ Coder (2. Fenster) ┐ |
+| Modelle/Slots  |                                                 |  └────────────────────┘ |
+| KI-Labor       |                                                 |                       |
+| Assistenten …  |                                                 |  [Mit SEDRA sprechen] |
++----------------+-------------------------------------------------+-----------------------+
+```
+
+Links die Navigation wie heute, neu sind Organigramm, Routinen, Modelle und Slots, KI-Labor. Mitte: Liste, Baum oder Board. Rechts: der Stapel der Agentenfenster; die Schublade „Mit SEDRA sprechen“ bleibt das allgemeine Gespräch. Badges (②) am Posteingang und an der Agentenkarte.
+
+### Gate-Liste G1 Spec 4
+
+Jede Zeile entscheidet der Captain einzeln. Keine Änderung an `core/`.
+
+| Gate | Gegenstand | Empfehlung |
+| --- | --- | --- |
+| G1-S4-01 | Wortlaut UIX-01 bis UIX-09 wie in der Tabelle alt/neu | freigeben |
+| G1-S4-02 | Shell D bleibt klassisch (`shell.yaml` und Skripte), nicht aus einer Vorgabe; der Rahmen `ui/frame.js` wird nicht erweitert | freigeben |
+| G1-S4-03 | Agentengespräche als neues Werkzeug `agentfenster` mit serverseitigem Verlauf und Verb am Typ `agent`; `talk` bleibt ein einziges Gespräch. Alternative: `talk` mehrfach mountbar machen (Vertrag §4, Fabrik statt Einzelobjekt) | freigeben (kleinerer Eingriff) |
+| G1-S4-04 | Vertragsnachtrag: `handles` darf `typ:alle` (Sammlung) oder `typ:*` (Einzelobjekt) tragen | freigeben |
+| G1-S4-05 | Vertragsnachtrag §5: Ereignisse `agent.changed`, `issue.changed`, `budget.warning`, `slot.changed` | freigeben |
+| G1-S4-06 | Navigation: Organigramm, Routinen, Modelle und Slots, KI-Labor; „Issues“ zeigt Typ `issue` (erst nach G2-S0-12, bis dahin `task`) | freigeben |
+| G1-S4-07 | Entscheidungen tragen die Agenten-ID (Badge am Agenten); Änderung bei Spec 0/1 (`decisions.py`, `binding`), nicht in der Shell | freigeben, Spec 1 führt es |
+| G1-S4-08 | `benchmarks/uix_check.py`: Profil `paperclip` mit Objekten für die neuen Werkzeuge, Leerlauf-Prüfung auf wiederholte Abfragen, Prüfung jedes `NAV`-Eintrags | freigeben |
+| G1-S4-09 | `ui/places.js`: Orte `labor`, `routines`, `org`, `slots` (Strg+K, auch im Cockpit sichtbar) | freigeben |
+| G1-S4-10 | `shells/paperclip/arbeitsplatz.yaml` an die neuen Seiten anpassen (SEDRA antwortet daraus) | freigeben |
+
+### Offene Fragen (Stufe 1)
+
+| Nr | Frage | Vorschlag |
+| --- | --- | --- |
+| OP-S4-1 | Zugang des Agentengesprächs: Verb am Typ `agent` oder `chat_reply` mit Parameter `agent`? Hängt an Spec 1 (ORC-14) | Verb, so bleibt jede Handlung ein Gate (UIX-06) |
+| OP-S4-2 | Kachel „Cloud heute“ braucht `spend` (Spec 3) | bleibt leer („noch keine Daten“), bis Spec 3 baut |
+| OP-S4-3 | Brett als eigene Seite oder Umschalter Liste/Board im selben Werkzeug? | ein Werkzeug mit Umschalter, wie Paperclip (`viewMode`) |
+| OP-S4-4 | `test_uix_shell_paperclip.py` und das Profil in `uix_check.py` setzen „Issues“ = `task` voraus; der Wechsel auf `issue` muss beide anpassen | im Bau, unter G1-S4-08 |
+| OP-S4-5 | `labor` und `workshop` haben Zeitgeber und Spezialrouten (UIX-05, UIX-06) | Ausnahme im Wortlaut; Umbau gehört zu Spec 3 und zur Werkstatt |
+
 ### Design (Vorschlag)
 
 - Prüfen, ob Shell D als Vorgabe (`shell.vorgabe.yaml`, Rahmen `ui/frame.js`, Build 17) gebaut werden kann; das spart Shell-Code. Sonst klassisch mit `shell.yaml` und `shell.js`.
@@ -595,8 +742,8 @@ KI-Labor (Captain, 20.10.2026): Das vorhandene Werkzeug aus dem Cockpit kommt al
 
 ### Aufgaben
 
-- [ ] U4.1 Stand von `uix/shells/paperclip/` prüfen und Paperclip-UI (Vorlage `ui/`) auf Ansichten und Abläufe durchsehen
-- [ ] U4.2 Skizze der Shell und Liste der Werkzeuge → G1/G2
+- [x] U4.1 (20.10.2026) Stand von `uix/shells/paperclip/` prüfen und Paperclip-UI (Vorlage `ui/`) auf Ansichten und Abläufe durchsehen
+- [x] U4.2 Skizze und Werkzeugliste, Anforderungsteil → G1 (Vorlage 20.10.2026, G1-S4-01 bis 10); Design danach → G2
 - [ ] U4.3 Bau-Specs `tool_org`, `tool_board`, `tool_routines`, `tool_slots` (Node-Tests für reine Teile, `uix_check` für den Browser) → G3
 - [ ] U4.4 Bau durch SEDRA, Einbau über Gate `install_module` → G4
 
