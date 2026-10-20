@@ -1,6 +1,6 @@
 tool:
   id: entwurf
-  name: "Entwurf"
+  name: "Master-Chat"
   description: "Gespräch mit einem Cloud-Modell links, Vorschau des Entwurfs rechts. Entwürfe bleiben im Entwurfsordner."
   version: 1.0.0
   kind: object

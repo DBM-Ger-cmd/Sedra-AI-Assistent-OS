@@ -51,7 +51,7 @@
     });
 
     head('Werkstatt');
-    row('Master-Chat', {type: 'talk', id: 'master', title: 'Master-Chat'}, 'das Gespräch unten');
+    row('Gespräch unten', {type: 'talk', id: 'master', title: 'Gespräch'}, 'gehört zur Shell und zum Arbeitsumfeld');
     const loaded = (models.recipes || []).find(r=>r.loaded);
     many('Modelle', {type: 'model', id: 'alle', title: 'Werkstatt'}, (models.recipes || []).length + (loaded ? ' · ' + loaded.id + ' geladen' : ' · keins geladen'), loaded ? 'ok' : '');
     row('Modell hinzufügen', {type: 'model', id: 'neu', title: 'Neues Modell'}, 'GGUF wählen, Rezept prüfen, Freigabe');
@@ -59,7 +59,7 @@
     row('KI Labor', {type: 'labor', id: 'ki', title: 'KI Labor'}, 'Anbieter, Modelle, Tests');
     row('Rekorder', {type: 'aufnahme', id: 'rekorder', title: 'Rekorder'}, 'aufnehmen, Sprache → Text');   // Kern Sprache (19.10.)
     row('Transkripte', {type: 'transkript', id: 'alle', title: 'Transkripte'}, 'suchen, prüfen, Erkenntnisse');
-    row('Entwurf', {type: 'entwurf', id: 'chat', title: 'Entwurf · großes Gespräch'}, 'Gespräch mit Befehlen und Vorschau, groß');   // stand zweimal als „Master-Chat“ im Baum (19.10.)
+    row('Master-Chat', {type: 'entwurf', id: 'chat', title: 'Master-Chat · großes Gespräch'}, 'Gespräch mit vielen Berechtigungen, Befehle und Vorschau');   // Name nach Captain-Entscheidung 20.10.2026
     row('Läufe', {type: 'labor', id: 'laeufe', title: 'KI Labor · Läufe'}, 'Protokolle der Modellläufe');
 
     head('Besatzung');

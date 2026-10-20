@@ -44,8 +44,8 @@ class MenueSeite(unittest.TestCase):
                     page.wait_for_selector('.ck-tree .tr-menuwahl', timeout=15000)
                     self.assertEqual(page.evaluate("()=>document.documentElement.dataset.menu"), 'rechts', 'die Wahl bleibt nach dem Neuladen')
                     # im Umschalter unten rechts zurück auf „Links“
-                    page.click('.sx-chip'); page.wait_for_selector('.sx-panel:not([hidden])', timeout=5000)
-                    page.click('.sx-panel .sx-seg-btn:has-text("Links")')
+                    page.click('.sx-umschalter'); page.wait_for_selector('.sx-umschalter-panel:not([hidden])', timeout=5000)
+                    page.click('.sx-umschalter-panel .sx-seg-btn:has-text("Links")')
                     page.wait_for_timeout(300)
                     self.assertEqual(page.evaluate("()=>document.documentElement.dataset.menu"), 'links', 'der Umschalter setzt dieselbe Einstellung')
                     self.assertEqual(fehler, [], 'keine Seitenfehler')
