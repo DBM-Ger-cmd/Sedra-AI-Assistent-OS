@@ -1465,6 +1465,18 @@ G1 Spec 1 bis 4 und G3 Spec 0 (Captain, 20.10.2026), nach Prüfung durch den Vor
 | G1-S4-01 bis G1-S4-10 | freigegeben wie empfohlen; Shell D klassisch, neues Werkzeug `agentfenster`, Vertragsnachträge `handles` und vier Ereignisse |
 | G3-S0-01 bis G3-S0-19 | freigegeben wie empfohlen; die vier neuen Typen in Spec 0 nur lesend, Verben folgen in Spec 1 (OP-12); OP-13 bis OP-17 wie vorgeschlagen. G3 gibt den Bau frei, nicht die Übernahme: jeder SEDRA-Kandidat kommt einzeln zu G4 |
 
+Einheitliche Linie für das Bauen (Captain, 20.10.2026; Grundlage `docs/ANALYSE_BAUABLAUF_2026-10-20.md`). Vor dem nächsten SEDRA-Bau werden L1 bis L6 umgesetzt; gebaut wird erst danach.
+
+| Linie | Entscheidung | ANA |
+| --- | --- | --- |
+| L1 | Ein Bauweg: `devvm_build.py` direkt mit Profil `--profile standard`; Ketten- und Einmal-Skripte nach `benchmarks/archiv/`; Buildflow bleibt Reserve | 01, 05, 10 (Profil) |
+| L2 | Kein Bau ohne grünen Check in der microVM: `spec_check --vm`; `devvm_build.py` bricht ohne gültigen Stempel für genau diese Spec-Fassung ab | 02 |
+| L3 | Höchstens 20 neue Prüfungen je Stufe, Warnung ab 30; die k0-Bau-Specs werden entsprechend geteilt | 04 |
+| L4 | SEDRA baut neue Module mit klarer Schnittstelle (reine Logik); Claude baut offiziell Integration, Oberfläche und Harness; statt 50-%-Ziel eine gemessene Quote je Aufgabe (SEDRA gegen Claude, inkl. Spec und Referenz) | 03 |
+| L5 | Übernahme per `adopt_plan` und Handkopie ist Standard; `selfdev/` (Selbst-Integration) ist Reserve | 09 |
+| L6 | Logbuch-Nachtrag 15. bis 20.10., feste Liste der Eintragsarten; `ENTWICKLUNG.md`, `BETRIEB.md`, `ARCHITEKTUR.md` auf Stand 20.10.; Regel 12 (eigene Branches) geht Regel 8 vor | 07 |
+| L7 | später: Bau-Specs ohne Ergebnis abschließen, Weichen am Paket-Stamm entfernen | 06, 08 |
+
 ## Vorarbeiter-Prompt
 
 Der Prompt für den Vorarbeiter liegt bewusst nicht in dieser Datei, weil er Laufwerkspfade dieses PCs enthält (Regel 10 in `ENTWICKLUNG.md`). Er wird außerhalb des Repos aufbewahrt und als erste Nachricht an die Vorarbeiter-Sitzung gegeben.

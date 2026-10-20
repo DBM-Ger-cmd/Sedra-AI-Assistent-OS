@@ -299,3 +299,4 @@ Fortlaufend, neueste Einträge unten. Je Eintrag: Zeit, Art (ENTSCHEIDUNG, BAU, 
 | 2026-10-20 13:49 | DOKU | Spec 3 Abgleich gegen den Code, Schutzklassen übernommen, Guard-Aktionen Cloud, Nutzungsbedingungen NVIDIA/Mammouth geprüft | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
 | 2026-10-20 13:49 | DOKU | Spec 4 Abgleich gegen den Code, Werkzeugliste, Skizze Shell D | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
 | 2026-10-20 13:49 | DOKU | G1 Spec 1-4 und G3 Spec 0 erteilt (wie empfohlen; Labor-Testmodus nur hinter Gate mit Testdaten) | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
+| 2026-10-20 14:38 | DOKU | Analyse Bauablauf übernommen; einheitliche Linie L1 bis L7 vom Captain freigegeben, Bau erst nach Umsetzung (Lauf auf 22 Uhr verschoben) | docs/ANALYSE_BAUABLAUF_2026-10-20.md |
