@@ -715,7 +715,11 @@ Datenmodell in `orchestra.db`:
 
 Die GPU-Lease bleibt, bekommt aber eine zweite Ebene: Ein Prozess besitzt den Modellserver (Lade-Lease), und ein Scheduler verteilt dessen parallele Slots an Agentenläufe (Slot-Lease). Heute lädt nur ein Prozess Modelle und jedes Rezept hat 1 Slot; das ändert eine Regel aus `ENTWICKLUNG.md` und braucht deshalb eine Captain-Freigabe und eine Doku-Änderung.
 
+Stand Stufe 1: 20.10.2026, Branch `spec2/modelle-scheduler`, gegen den Code von Commit `3abb023` geprüft. Vorlage für G1; jede Zeile der Gate-Liste (G1-S2-a bis G1-S2-m) wird einzeln entschieden. Es wurde nichts ausgeführt, kein Modell geladen und nichts gemessen; alle Zahlen unten stammen aus dem Code, aus `MODELLE.md` oder sind als „zu messen“ markiert.
+
 ### Anforderungen
+
+Die Tabelle bleibt unverändert; die Korrekturvorschläge stehen unter „Abgleich gegen den Code (G1)“ und werden erst mit G1 eingearbeitet.
 
 | ID | Anforderung (EARS) | Abnahmekriterium |
 | --- | --- | --- |
@@ -730,6 +734,49 @@ Die GPU-Lease bleibt, bekommt aber eine zweite Ebene: Ein Prozess besitzt den Mo
 | SCH-09 | Die Oberfläche SOLL Slots, Belegung und Warteschlange live zeigen. | Ereignis `slot.changed` auf `/api/events` |
 | SCH-10 | Bau- und Messläufe (`devvm_build.py`, Benchmarks) SOLLEN die GPU weiterhin exklusiv nehmen können. | Modus `exklusiv` blockiert neue Slot-Leases, bis der Lauf endet |
 
+### Abgleich gegen den Code (G1)
+
+Geprüft wurden `models/llama_server_runtime.py`, `models/model_loader.py`, `models/role_routing.py`, `jobs/testlab.py`, `jobs/resource_scheduler.py`, `jobs/job_supervisor.py`, `core/step_journal.py`, `desk/events.py`, `models/gpu_canary.py`, `models/gpu_preflight.py`, `uix_server.py` (Lease), die Konfigurationen `llama_server.yaml`, `resource_scheduler.yaml`, `model_loader.yaml`, `role_routing.yaml` sowie `benchmarks/context_ladder.py`, `connection_check.py`, `devvm_build.py`, `testlab_cli.py`.
+
+Befunde, die mehrere Anforderungen betreffen:
+
+- **B-1 Zwei Lease-Wege.** Die Lease `gpu` (`TestLab.try_acquire`, `BEGIN IMMEDIATE`, Herzschlag, Übernahme bei Stillstand oder totem Prozess) nehmen heute die Benchmarks (`lab.lease(...)`) und der Desk beim manuellen Laden (`uix_server.py`, hält die Lease, solange das Modell geladen ist). Der Produktpfad der Jobs (`job_supervisor` → `ModelLoader.ensure` → `LlamaServerRuntime.load_model`) nimmt sie **nicht**. Er schützt sich nur durch `server_already_running` und `port_in_use`.
+- **B-2 Ein Server, eine Instanz.** `LlamaServerRuntime` führt genau eine Instanz (`_info`, ein Port 8089); ein zweites `load_model` wird mit `server_already_running` abgelehnt. Mehrere Modelle gleichzeitig sind nicht vorgesehen (passt zum Zielbild: ein Modellserver, mehrere Slots).
+- **B-3 `parallel` kommt aus der globalen Loader-Konfiguration, nicht aus dem Rezept.** `ModelLoader` reicht `config.parallel` (`model_loader.yaml`, Standard 1, erlaubt 1 bis 8) an `load_model` durch. `build_command` setzt `-np` und lässt 1 bis 8 zu. Die Prüfung der Rezepte (`role_routing.py`, `profile.server`) kennt weder `slots` noch `parallel`: Ein Rezept mit diesen Feldern würde mit `profile.server` abgelehnt.
+- **B-4 Gesamtkontext gegen Kontext je Slot.** `-c` ist die Summe über alle Slots; `load_model` meldet den vom Server angewendeten Wert aus `/props` (`n_ctx`) als `contextLength`. Der Loader vergleicht diesen Wert mit dem vom Router gewünschten Fenster (`want`) und lädt bei Abweichung um oder lehnt ab (`loaded_with_other_context`). Mit N Slots stimmt der Vergleich nicht mehr, wenn nicht klar festgelegt ist, ob das Rezept das Fenster je Slot oder insgesamt meint. Ob Build b11160 die Summe fest auf die Slots teilt oder einen gemeinsamen KV-Puffer nutzt, ist ungemessen (Spec nennt es schon im Design).
+- **B-5 Messwerkzeuge laden fest mit 1 Slot.** `context_ladder.py` (Zeilen 124, 208) und `connection_check.py` (Zeile 73) rufen `load_model(..., parallel=1, ...)`; `--set` ändert nur Felder aus `profile.server`, nicht den Slot-Wert. Die Messung nach Messplan Schritt 1 und 3 braucht deshalb eine Erweiterung der Werkzeuge (`--parallel`), also Harness-Code, den es noch nicht gibt. `devvm_build.py` hat `--parallel` (und `agent_manager/run_worker.py` begrenzt es auf 1 bis 2); darüber ist 2 Slots im Bau schon möglich (`parallel_check`).
+- **B-6 Sicherheitshinweis zu `gpu_preflight`.** `clear_leftovers` beendet Prozesse nach der GUPPI-Startsignatur der Kommandozeile (`--no-webui`, `--spec-type`), nicht nach eigener PID. Das ist enger als ein Namensmuster, aber nicht dasselbe wie Regel 2 („nur eigene Prozesse über ihre PID“). Mit einem dauerhaft laufenden Scheduler-Server muss die Regel eindeutig sein, sonst räumt ein Benchmark den Server des Schedulers ab. Vorschlag: Der Scheduler schreibt seine PID in die Lease; `clear_leftovers` fasst nur Prozesse an, die keiner lebenden Lease gehören.
+
+Zeile für Zeile:
+
+| ID | Was existiert | Was fehlt | Abnahme prüfbar? | Befund |
+| --- | --- | --- | --- | --- |
+| SCH-01 | `build_command(parallel=1..8)` setzt `-np`; `LlamaServerConfig`/`load_model(parallel=…)` reichen es durch; `devvm_build --parallel` nutzt es | Rezept-Feld `server.slots` (wird von der Rezeptprüfung abgelehnt, B-3); Messwerkzeug für gleichzeitige Anfragen; Regel, was `-c` bei N Slots bedeutet (B-4) | nein – „parallel beantwortet“ und „Messung“ ohne Schwelle | teilweise vorhanden |
+| SCH-02 | Lade-Lease `gpu` mit genau einem Besitzer, Test `test_testlab`; Spalte `name` erlaubt weitere Leases; `reservations` mit Priorität | Tabelle `slot_leases`; Warteschlange der Wartenden: `acquire` fragt alle `poll_s` (5 s) erneut, die Reihenfolge ist ein Wettlauf, nicht FIFO; die vorhandene Tabelle `queue` meint geplante Messrunden, nicht Wartende; Besitz über `pid` taugt für Slot-Leases nicht, weil alle Läufe im selben Prozess laufen (B-1) | ja für „2 Ladeversuche: einer wartet“; „N+1: einer wartet in der Schlange“ braucht die Reihenfolge-Aussage (FIFO je Priorität) | teilweise; Produktpfad ohne Lease (B-1) |
+| SCH-03 | `resource_scheduler`: Hauptbuch plus Messung, `need_of` rechnet KV-Cache mit, `kv_cache_placement`, Ablehnung mit `need_gb` und `best_free_gb`/`available_gb` im Ergebnis, Audit `RESOURCE_DENIED` mit Grund; `vram_reserve_gb` 0,7 | Der Schalter ist aus (`enabled: false`). Eine Reservierung gehört einem `job_id`; N Läufe würden die Modellgewichte N-fach buchen und sich selbst ablehnen (`resident_vram_gb` gutschreibt nur auf der Messseite, nicht im Hauptbuch). `max_jobs` des Hardwareprofils (1 bis 4) deckelt die Parallelität zusätzlich. „Grenze 11,5 GB“ ist nirgends konfiguriert: die Grenze ist Gesamt-VRAM minus 0,7 (bei 12 GB etwa 11,3 GiB). Das Audit trägt nur den Grund, nicht die Werte | ja, wenn „gemessen“ und „benötigt“ als Felder der Ablehnung festgelegt sind | zu ändern (siehe unten); Zahl 11,5 klären |
+| SCH-04 | Priorität nur als ganze Zahl der `reservations`: eine lebende Reservierung höherer Priorität schiebt niedrigere auf (`deferred`) | Zuordnung Captain/Agent/Routine zu Zahlen; Altern (keine Prioritätserhöhung durch Wartezeit); Obergrenze der Wartezeit in keiner Konfiguration; Verdrängung eines laufenden Laufs gibt es nicht (ein Slot wird erst frei, wenn der Lauf endet) | nein – „Kein Lauf wartet länger als die Obergrenze“ ist bei Überlast nicht erfüllbar, nur „meldet“ | zu ändern |
+| SCH-05 | Rezept hat `context.recommended/maximum/tiers/measured_maximum`; `context_ladder.py` misst die sichere Grenze (Nadel-im-Heuhaufen, 85 % Füllung, VRAM-Reserve 1 GiB, Treiberereignisse) | `--parallel` am Werkzeug (B-5); Rezeptfeld `per_slots`; Auflösung `role_routing._evaluate` kennt es nicht; Ladder prüft eine Anfrage nach der anderen, nicht N gleichzeitig gefüllte Slots | ja, wenn „1 bis N“ auf die gemessenen Zahlen (1 bis 4) festgelegt wird | fehlt |
+| SCH-06 | Der Router wählt je Rolle ein Rezept; `ModelLoader` entlädt und lädt bei falschem Fenster (nur dieses Modell); `captain_cloud_approved` je Auflösung | Keine Aussage „andere Rezeptfamilie → umladen“; keine Ablage für eine „vom Captain freigegebene Regel“ (kein Guard-Eintrag, kein Konfig-Feld); kein Wartegrund-Code für den Lauf | ja: „Ohne Regel wartet der Lauf und meldet den Grund“ | fehlt |
+| SCH-07 | `desk/decisions.py` (Entscheidungen), Cloud aus (`cloud_allowed: false`), Cloud nur mit Freigabe je Auflösung | Schlangengrenze nicht definiert; Spec 3 baut die Cloud-Stufe erst; die Art der Entscheidung (`kind`) existiert nicht | ja, sobald Grenze und Entscheidungsart festliegen | abhängig von Spec 3 |
+| SCH-08 | Absturz wird erkannt (`_reap`, Audit `LLAMA_SERVER_EXITED`, `gpu_canary.invalidate`), der Canary läuft vor dem nächsten Laden (`_check_gpu`), das Journal (`step_journal.start`) verweigert den Neustart eines Schritts im Zustand RUNNING mit `UNKNOWN_EXECUTION_OUTCOME` und höchstens 3 Versuche | Neustart des Servers passiert nur beim nächsten Laden, nicht von selbst; „Müll liefern“ wird live nicht erkannt (`gpu_canary.garbage` und `degenerate_reason` laufen nur in Canary und Messungen); Slot-Leases gibt es nicht; „Läufe fortsetzen“ widerspricht dem Journal: ein Schritt im Zustand RUNNING gilt als unbekannter Ausgang, die Mission pausiert (`brain.py`), er wird nie still wiederholt | ja, wenn „fortsetzen“ als „ab dem letzten abgeschlossenen Schritt, der unterbrochene wartet auf Entscheidung oder ist lesend und darf wiederholt werden“ gefasst wird (`readonly_step`) | zu ändern |
+| SCH-09 | `desk/events.py`: `diff` ist rein und deterministisch, Ereignisse `task.changed`, `decision.pending`, `decision.answered`, `live.line`, `model.changed`, `system.state`; Poller alle 3 s | Ereignis `slot.changed`, Schnappschuss-Feld `slots`; Datenquelle (Lease-Tabelle oder `/slots` des Servers; ob Build b11160 den Endpunkt liefert, ist ungeprüft) | ja; „live“ braucht eine Latenzgrenze (Poller 3 s) | fehlt, gut anschließbar |
+| SCH-10 | Benchmarks und `devvm_build` nehmen `lab.lease(...)` mit Wartezeit bis 10 h; `resource_scheduler.reserve(exclusive=True)` kennt `exclusive_conflict`/`exclusive_held`; `reservations` mit Priorität | Modus `exklusiv` im Scheduler. Kippt die Lade-Lease dauerhaft zum Scheduler (B-1), warten Benchmarks bis zu ihrem `wait_s` und scheitern; es braucht eine Übergabe: Scheduler sperrt neue Slot-Leases, wartet auf laufende, stoppt seinen Server und gibt `gpu` frei | ja | fehlt; wichtigste Folgeänderung |
+
+Korrekturvorschläge (alt / neu):
+
+| ID | Alt | Neu (Vorschlag) |
+| --- | --- | --- |
+| SCH-01 | WENN ein Rezept `slots: N` angibt, DANN SOLL der llama-server mit N parallelen Slots starten. | WENN ein Rezept `server.slots: N` (1 bis 8) angibt, DANN SOLL der Scheduler den llama-server mit `-np N` starten; das Rezept nennt das Fenster **je Slot**, der Gesamtkontext ist `N × Fenster`. Abnahme: N gleichzeitige Anfragen laufen zeitlich überlappend (jede beginnt, bevor die erste endet); Summe der Token/s bei N=2 mindestens `<schwelle>` × Einzelwert (Schwelle aus der Messung, G1-S2-a) |
+| SCH-02 | Die Lade-Lease SOLL genau einen Besitzer haben; der Scheduler SOLL Slot-Leases an Läufe vergeben. | Die Lade-Lease (`gpu`) SOLL genau einen Besitzer haben, den Scheduler-Prozess, der den Modellserver hält. Slot-Leases SOLLEN je Lauf (nicht je Prozess) vergeben werden, mit Herzschlag, in Reihenfolge Priorität, dann Eingang. Abnahme: 2 Ladeversuche, einer wartet; N+1 Läufe, der letzte bekommt den Slot erst, wenn einer frei wird, in Eingangsreihenfolge je Priorität |
+| SCH-03 | … VRAM inklusive KV-Cache für N Slots vorab reservieren und den Start ablehnen, wenn die Grenze von 11,5 GB überschritten würde. | … Gewichte **einmal** und KV-Cache **je Slot** vorab buchen und den Start ablehnen, wenn Gesamtbedarf plus Reserve die konfigurierte VRAM-Grenze überschreitet (`<grenze>`: 11,5 GB, G1-S2-c). Abnahme: Die Ablehnung enthält `need_gb` und `measured_free_gb` im Ergebnis und im Audit `RESOURCE_DENIED` |
+| SCH-04 | … Kein Lauf wartet länger als die eingestellte Obergrenze. | Stufen Captain (3) > Agent (2) > Routine (1); je `<alter_s>` Wartezeit steigt ein wartender Lauf um eine Stufe, höchstens bis Agent. Abnahme: Ein Lauf, der länger als `<warte_max_s>` wartet, wird gemeldet (Ereignis `slot.changed`, Vorschlag nach SCH-07); Captain-Anfragen überholen immer, laufende Läufe werden nicht verdrängt |
+| SCH-05 | … `context_ladder.py` liefert Werte für 1 bis N Slots; Rezept enthält sie | … Der Messlauf mit `--parallel N` füllt alle N Slots gleichzeitig zu 85 % und liefert die sichere Grenze je Slot für N = 1 bis 4; das Rezept führt sie unter `context.per_slots` (Schlüssel N, Wert Fenster je Slot) |
+| SCH-06 | … nur nach einer vom Captain freigegebenen Regel umladen … | … Regel = Eintrag im Overlay `local_config/role_routing.yaml` (Feld `scheduler.swap`, Standard `none`), mit Gate bei Änderung. Ohne Regel wartet der Lauf mit Grund `model_swap_not_allowed` |
+| SCH-07 | … die Schlange länger als die Grenze ist … | … länger als `<schlange_max>` Läufe oder älter als `<warte_max_s>` … Vorschlag als Entscheidung `kind: cloud_offload`; Annahme gilt nur für diese Entscheidung |
+| SCH-08 | … Läufe über `step_journal` fortsetzen, ohne Schritte still zu wiederholen. | … Läufe ab dem letzten abgeschlossenen Schritt fortsetzen; ein unterbrochener Schritt wird nur wiederholt, wenn er lesend ist (`readonly_step`), sonst pausiert die Mission mit `UNKNOWN_EXECUTION_OUTCOME` und wartet auf den Captain. „Müll“ = Antwort, die `degenerate_reason` auslöst. Abnahme: Absturz-Test mit unechtem Server: je Schritt höchstens ein Versuch im Journal, kein doppeltes Audit der Wirkung |
+| SCH-09 | … Ereignis `slot.changed` auf `/api/events` | … Ereignis `slot.changed` mit `{slot, state, run_id, priority, queue_len}` innerhalb von 3 s nach der Änderung (Poller-Takt) |
+| SCH-10 | … Modus `exklusiv` blockiert neue Slot-Leases, bis der Lauf endet | … Anfrage `exklusiv` sperrt neue Slot-Leases, wartet höchstens `<drain_s>` auf laufende, stoppt den eigenen Server über die eigene PID, gibt `gpu` frei; danach startet der Scheduler den Server erst wieder, wenn der Lauf `gpu` zurückgegeben hat |
+
 ### Design (Vorschlag)
 
 - Neues Modul `jobs/model_scheduler.py`; `jobs/testlab.py` behält die Lade-Lease, eine neue Tabelle `slot_leases` in `testlab.db` hält die Slot-Leases mit Herzschlag wie bisher.
@@ -737,17 +784,99 @@ Die GPU-Lease bleibt, bekommt aber eine zweite Ebene: Ein Prozess besitzt den Mo
 - llama-server-Start mit `--parallel N`; der Gesamtkontext `-c` wird auf die Slots verteilt. Ob Build b11160 einen gemeinsamen KV-Puffer für alle Slots nutzt, wird gemessen, nicht angenommen.
 - Jeder Agentenlauf fragt `model_scheduler.acquire(recipe, priority)` und bekommt einen Slot oder einen Platz in der Schlange.
 
-### Messplan (vor G2)
+Die Ausarbeitung (Tabelle `slot_leases`, Reihenfolge, Übergabe an Benchmarks, Prüfung der Rezeptfelder) folgt in S2.3 nach G1.
 
-1. Hauptmodell Qwen3.6-35B-A3B mit 1, 2, 3 und 4 Slots: VRAM, Kontext je Slot (`context_ladder.py --probes 2`), Token/s gesamt und je Slot.
-2. Gleiche Messung für ein kleines Hilfsmodell, auch mit `n_cpu_moe` bzw. auf CPU.
-3. Verbindungsprüfung S0 (`connection_check.py`) je Einstellung.
-4. Ergebnis als Tabelle in `MODELLE.md`; Vorschlag für Standard-Slotzahl an den Captain.
+### Messplan-Entwurf S2.1 (nicht ausgeführt)
+
+Zweck: die Zahlen für SCH-01, SCH-03, SCH-05 und die Standard-Slotzahl liefern. Der Plan ändert **kein** Rezept: Einstellungen kommen nur über `--set` (nur für diese Messung); die Rezeptdatei wird erst nach dem Bericht und nach Gate geändert (Schritt 9). Platzhalter: `<guppi>` Projektordner, `<modelle>` Modellordner, `<datum>` aus `date`, `<owner>` Name der Sitzung, `<rezept>` Rezept-ID des Hauptmodells (`coder.local_primary` im Overlay, laut `MODELLE.md`), `<klein>` Rezept-ID des Hilfsmodells (etwa `coder.llama_qwen35`).
+
+Voraussetzungen (alle vor Schritt 1):
+
+1. G1-S2-k erteilt; kein anderer Lauf aktiv.
+2. Messwerkzeug-Erweiterung `--parallel N` für `context_ladder.py` und `connection_check.py` sowie ein neues Werkzeug `slot_throughput.py` (sendet N gleichzeitige Anfragen, misst Token/s je Slot und gesamt, VRAM, Treiberereignisse) sind gebaut und ohne GPU getestet (unechter Server). Das ist Harness-Code der KI-Sitzung und ein eigener Schritt (M0), nicht Teil der Messung.
+3. Engine unverändert (`engine_build` laut `llama_server.yaml`, bei den stabilen Läufen b11160); `GUPPI_ENGINE_BUILD` nur setzen, wenn der Captain es für diese Messung festlegt.
+
+Ablauf:
+
+| Schritt | Aktion | Befehl (Platzhalter) | Erwartung / Abbruch |
+| --- | --- | --- | --- |
+| 0 | Zustand lesen | `python benchmarks/testlab_cli.py --project <guppi> status` | Lease frei, keine Reservierung. Sonst **Abbruch**: warten, nichts anfassen |
+| 1 | Lauf in die Warteschlange eintragen | `python benchmarks/testlab_cli.py --project <guppi> plan --owner <owner> --kind slot-messung --what "Qwen3.6 Slots 1-4" --models <rezept>` | Eintrag mit Nummer |
+| 2 | Sicherung der Konfigurationen (nur Lesekopie, es wird nichts geändert) | `copy <guppi>\local_config\role_routing.yaml <guppi>\local_config\role_routing.yaml.bak-<datum>-slotmessung` | Datei vorhanden. Wird auch Schritt 9 später nötig, gilt Regel 3 erneut mit frischem Datum |
+| 3 | Lease halten, Reste räumen | Die Werkzeuge nehmen sie selbst: `lab.lease(owner, purpose, ttl_s=1800, preflight=clear_leftovers)`; bei langen Läufen Wartezeit setzen (`wait_s`). Kein manuelles Beenden von Prozessen; nur eigene PID | `preflight` meldet `GpuNotClean`: **Abbruch** mit Ausgabe (andere Last auf der Karte) |
+| 4 | Verbindungsprüfung S0 je Slot-Zahl | `python benchmarks/connection_check.py <guppi> <rezept> --context 32768 --parallel N` für N = 1, 2, 3, 4 | Nur zur Einordnung: S0 war am 12.10. bei allen Modellen nicht bestanden (`MODELLE.md`, Prüfung selbst verdächtig). Erst N=1 gegen die bekannte Lage vergleichen; kippt N=1 anders als am 12.10., **Abbruch** |
+| 5 | Kontextleiter je Slot-Zahl | `python benchmarks/context_ladder.py <guppi> <rezept> --probes 2 --parallel N --tag slots<N>` für N = 1, 2, 3, 4 (Stufen 8k bis 128k je Slot) | Ergebnis `runtime_data/measurements/context_ladder_<rezept>_slots<N>_<datum>.json`. Leiter stoppt an der ersten Stufe, die scheitert; freier VRAM unter 1 GiB zählt als Fehlschlag |
+| 6 | Durchsatz je Slot-Zahl | `python benchmarks/slot_throughput.py <guppi> <rezept> --parallel N --context <je_slot_aus_5> --requests N --runs 3` | Token/s gesamt und je Slot, Überlappung der Anfragen, VRAM-Spitze, `driver_events` |
+| 7 | Hilfsmodell, gleiche Schritte 4 bis 6 | wie oben mit `<klein>`, zusätzlich mit `--set n_cpu_moe=<k>` und `--set n_gpu_layers=0` als CPU-Variante | wie oben |
+| 8 | Aufräumen und Eintrag | Lease endet mit dem Block; `plan` auf `done` setzen: `python benchmarks/testlab_cli.py --project <guppi> setstatus <nr> done` | Kein Server übrig (`status`), VRAM wieder unter der Ausgangslage |
+| 9 | Erst nach Bericht und Gate: Rezept ändern | Sicherung `…bak-<datum>-per-slots`, dann `context.per_slots` und `server.slots` im Overlay eintragen, danach Ladeprüfung: Datei wird vom Lader noch angenommen (Regel 3) | nicht Teil der Messung |
+
+Abbruchkriterien (jedes einzeln, danach Lease freigeben, Server über eigene PID stoppen, Befund melden):
+
+- `preflight` findet Last Dritter auf der GPU, oder die Lease ist belegt.
+- Ein Server stürzt ab oder liefert Müll (`garbage`/`degenerate_reason`), bevor die Stufe beendet ist: Stufe als Fehlschlag, Leiter für diese Slot-Zahl beenden.
+- Neue NVIDIA-Treiberfehler (`nvlddmkm`) im Systemprotokoll während einer Stufe: Gesamtabbruch, kein weiterer Start ohne Captain.
+- Freier VRAM unter 1 GiB nach einer Antwort (Maß des Werkzeugs) oder Überschreitung der VRAM-Grenze von 11,5 GB.
+- Temperatur-/Thermalzustand HOT oder CRITICAL im Hardware-Manager.
+- Gesamtlaufzeit über `<limit_h>` (Vorschlag 3 h für das Hauptmodell, 1 h für das Hilfsmodell); die Lease-Laufzeit wird nur über den Herzschlag verlängert.
+- Mehr als 3 Fehlschläge in Folge bei gleicher Einstellung.
+
+Erwartete Tabelle für `MODELLE.md` (neuer Abschnitt „Parallele Slots“, Werte erst nach der Messung):
+
+| Modell | Slots | Fenster je Slot (sicher) | Gesamtkontext | VRAM-Spitze (GiB) | Token/s gesamt | Token/s je Slot | S0 | Hinweis |
+|---|---|---|---|---|---|---|---|---|
+| Qwen3.6-35B-A3B UD-IQ4_XS | 1 | ? | ? | ? | ? | ? | ? | Vergleichswert: 44–47 Token/s, 131k (MODELLE.md) |
+| (gleich) | 2 | ? | ? | ? | ? | ? | ? | |
+| (gleich) | 3 | ? | ? | ? | ? | ? | ? | |
+| (gleich) | 4 | ? | ? | ? | ? | ? | ? | |
+| Hilfsmodell `<klein>` | 1 bis 4 | ? | ? | ? | ? | ? | ? | auch CPU-Variante |
+
+Danach: Vorschlag der Standard-Slotzahl an den Captain (G1-S2-a bis G1-S2-c fließen ein). Ungelöst im Messplan: ob MTP-Spekulation (`spec-type draft-mtp`) mit mehreren Slots stabil und schneller bleibt, ist eine eigene Zeile in Schritt 6 (`--set mtp=true/false`).
+
+### Regel-Entwurf S2.2: GPU-Lease in `ENTWICKLUNG.md` (Entwurf, Datei nicht geändert)
+
+Heutiger Wortlaut, Regel 2: „**GPU:** Vor dem Laden von Modellen die Lease holen. Rezepte, Engine und Schalter nie ändern, solange ein Lauf die GPU nutzt. Nur eigene Prozesse über ihre PID beenden, nie per Namensmuster; andere Sitzungen teilen sich GPU und Skripte.“
+
+Vorschlag (gilt erst nach Captain-Gate G1-S2-l und nach Bau des Schedulers; bis dahin bleibt der heutige Text):
+
+> 2. **GPU:** Es gibt zwei Ebenen. Die **Lade-Lease** (`gpu`) hat genau einen Besitzer; nur er startet und stoppt Modellserver. Vor dem Laden eines Modells die Lade-Lease holen. Läuft der Modell-Scheduler, ist er der Besitzer, und Sitzungen laden nicht selbst. Die **Slot-Lease** gibt der Scheduler an einen Lauf, der den laufenden Server nutzt; sie erlaubt Anfragen, aber kein Laden, Stoppen oder Ändern. Mess- und Bauläufe (Benchmarks, `devvm_build`) fordern den Modus **exklusiv** an: Der Scheduler sperrt neue Slot-Leases, wartet auf laufende, stoppt seinen Server und übergibt die Lade-Lease. Rezepte, Engine und Schalter nie ändern, solange ein Lauf die GPU nutzt, auch nicht über eine Slot-Lease. Prozesse nur über die eigene PID beenden, nie per Namensmuster; der Scheduler beendet nur seinen eigenen Server, und Aufräumen (`gpu_preflight`) fasst keinen Server an, der zu einer lebenden Lease gehört.
+
+Dazu zwei Folgeänderungen, jede ein eigenes Gate: die Beschreibung der Lease im Kopf von `testlab.py` und im Abschnitt Betrieb (`BETRIEB.md`), und die Zeile „Slot“ in den Begriffen dieser Spec („heute ist 1 Slot Standard“ entfällt erst nach Freigabe der Standard-Slotzahl).
+
+### Paperclip: wie parallele Agenten laufen (nur Lehrreiches)
+
+Quelle: lokale Kopie `paperclip-master`, `server/src/services/heartbeat/queue.ts` und `packages/shared/src/constants.ts`.
+
+- Parallelität ist eine **Grenze je Agent**: `maxConcurrentRuns` im Herzschlag-Eintrag jedes Agenten (Standard 20, `AGENT_DEFAULT_MAX_CONCURRENT_RUNS`). `startNextQueuedRunForAgent` zählt laufende Läufe des Agenten, rechnet `maxConcurrentRuns − laufende` als freie Plätze und holt genau so viele Läufe aus der Schlange (Zeilen 1896 bis 2012). Für Adapter mit nur einer externen Sitzung ist die Grenze fest 1.
+- Es gibt **keinen** gemeinsamen Verteiler für ein Betriebsmittel wie GPU oder Modellserver. Jeder Adapter startet seinen eigenen Prozess oder ruft eine Cloud-Schnittstelle; Engpässe regelt dort der Anbieter. Zusätzliche Bremsen sind Tageslimits je Agent (`maxDailyRuns`, `maxDailyCostCents`).
+- Beanspruchen und Abbrechen laufen über Zeilensperren in Postgres; ein Gewinner wird durch den Zustand der Zeile bestimmt (ähnlich dem atomaren Checkout aus Spec 1).
+- Lehre für SEDRA: Paperclip löst „wie viele Läufe je Agent“, nicht „wie verteilen sich die Läufe auf eine knappe lokale GPU“. Die Slot-Lease ist deshalb eine eigene Schicht unter dem Herzschlag aus Spec 1 und braucht zusätzlich eine Grenze **je Agent** (`max_parallel` im Agenten, Spec 1), damit ein Agent nicht alle Slots belegt.
+
+### Gate-Liste G1-S2
+
+Jede Zeile wird einzeln entschieden. Die Empfehlung der Spec-Sitzung steht in der letzten Spalte.
+
+| Gate | Frage an den Captain | Empfehlung |
+| --- | --- | --- |
+| G1-S2-a | SCH-01: Neue Fassung mit Fenster je Slot und messbarer Schwelle für den Durchsatz (Zahl `<schwelle>` wird nach der Messung vorgeschlagen) | ja |
+| G1-S2-b | SCH-02: Lade-Lease und Slot-Leases getrennt, Slot-Leases je Lauf, Reihenfolge Priorität dann Eingang; Produktpfad der Jobs nimmt künftig eine Lease (B-1) | ja |
+| G1-S2-c | SCH-03: Welche VRAM-Grenze gilt: 11,5 GB absolut oder Gesamt-VRAM minus `vram_reserve_gb` 0,7 (rund 11,3 GiB)? Gewichte einmal, KV je Slot buchen | 11,5 GB als Obergrenze, Reserve bleibt 0,7; dann nur beide Zahlen in einem Feld festhalten |
+| G1-S2-d | SCH-04: Stufen Captain/Agent/Routine, Altern, Obergrenze meldet statt garantiert, keine Verdrängung laufender Läufe | ja |
+| G1-S2-e | SCH-05: `context_ladder` und `connection_check` bekommen `--parallel`; Rezeptfeld `context.per_slots`; neues Werkzeug `slot_throughput.py` (Harness, KI-Sitzung, ohne GPU gebaut) | ja |
+| G1-S2-f | SCH-06: Umladen nur nach Regel im Overlay (`scheduler.swap`), Standard keine; Wartegrund `model_swap_not_allowed` | ja |
+| G1-S2-g | SCH-07: Schlangengrenze und Entscheidungsart `cloud_offload`; Abhängigkeit zu Spec 3 | ja, Grenze in Spec 3 festlegen |
+| G1-S2-h | SCH-08: „Fortsetzen“ als „ab letztem abgeschlossenen Schritt; unterbrochener nur wiederholen, wenn lesend, sonst Pause“ (kein Eingriff in `core/step_journal.py`); Server-Neustart und Müll-Erkennung im Scheduler | ja |
+| G1-S2-i | SCH-09: `slot.changed` über Schnappschuss und `diff` in `desk/events.py` (Takt 3 s), Datenquelle klären in S2.3 | ja |
+| G1-S2-j | SCH-10: Übergabe-Verfahren „exklusiv“; `gpu_preflight` beendet keinen Server mit lebender Lease (B-6) | ja |
+| G1-S2-k | Messplan-Entwurf S2.1 und seine Abbruchkriterien als Rahmen für die spätere Messung freigeben (Ausführung braucht trotzdem eigene Freigabe samt GPU-Zeit) | ja |
+| G1-S2-l | Regel-Entwurf S2.2 als Grundlage für die spätere Änderung von `ENTWICKLUNG.md` freigeben (die Datei bleibt bis zum Bau unverändert) | ja |
+| G1-S2-m | Korrekturvorschläge SCH-01 bis SCH-10 (alt/neu) in die Tabelle „Anforderungen“ übernehmen | ja, nach Entscheidung a bis j |
 
 ### Aufgaben
 
+- [ ] S2.0 Messwerkzeuge erweitern (`--parallel`, `slot_throughput.py`), ohne GPU testen → G1-S2-e
 - [ ] S2.1 Messplan ausführen (unter GPU-Lease, Rezepte nur mit Sicherung) → Messbericht
-- [ ] S2.2 Regeländerung zur GPU-Lease in `ENTWICKLUNG.md` als Entwurf → Captain-Gate
+- [ ] S2.2 Regeländerung zur GPU-Lease in `ENTWICKLUNG.md` als Entwurf → Captain-Gate (Entwurf steht oben)
 - [ ] S2.3 Design `model_scheduler.py` und Tabelle `slot_leases` → G2
 - [ ] S2.4 Bau-Specs `sch_queue` (Priorität, Altern), `sch_slots` (Vergabe, Rückgabe, Absturz) → G3
 - [ ] S2.5 Integration in `llama_server_runtime.py` und `resource_scheduler.py` (Harness) → G4
