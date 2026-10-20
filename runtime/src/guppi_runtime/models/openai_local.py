@@ -4,7 +4,7 @@ import re
 from urllib.request import Request, urlopen
 from urllib.error import URLError
 from .base import BaseModelAdapter, ModelAdapterError, require_loopback_url
-from ..runaway_guard import RunawayGuard
+from ..jobs.runaway_guard import RunawayGuard
 
 
 class OpenAICompatibleLocalAdapter(BaseModelAdapter):

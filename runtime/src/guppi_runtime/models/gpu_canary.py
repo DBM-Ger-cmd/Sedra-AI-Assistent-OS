@@ -152,7 +152,7 @@ def _healthy(endpoint):
 def run_canary(canary, executable_dir, *, popen=subprocess.Popen, steps_runner=run_steps, healthy=_healthy, sleep=time.sleep,
                state_path=STATE, log_dir=None):
     """Start the canary server, run the steps, stop it, remember the result. Returns the state dict (key `passed`)."""
-    from ..llama_server_runtime import build_command          # late import: llama_server_runtime calls into this module
+    from ..models.llama_server_runtime import build_command          # late import: llama_server_runtime calls into this module
     endpoint = f"http://127.0.0.1:{canary.port}"
     state = {"boot": boot_time(), "at": time.strftime("%Y-%m-%d %H:%M:%S"), "engine_dir": str(executable_dir), "gguf": canary.gguf,
              "context": canary.context, "settings": "fa on, kv q8_0, ubatch 512, np 1"}

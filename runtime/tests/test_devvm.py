@@ -2,7 +2,7 @@ import env_skip; env_skip.need_dulwich()   # whole module needs the DevVM git (d
 import tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
-from guppi_runtime.devvm import DevWorkspace
+from guppi_runtime.devenv.devvm import DevWorkspace
 from guppi_runtime.sandbox.broker import SandboxBroker
 from guppi_runtime.tools.base import ToolPermissionError, ToolValidationError
 
@@ -82,12 +82,12 @@ class WriteRobustnessTests(DevCase):
         def flaky(src, dst):
             if fails[0]: fails[0] -= 1; raise PermissionError('[WinError 5] Zugriff verweigert')
             return real(src, dst)
-        with patch('guppi_runtime.devvm.os.replace', side_effect=flaky): self.ws.write('a.py', 'x = 1\n')
+        with patch('guppi_runtime.devenv.devvm.os.replace', side_effect=flaky): self.ws.write('a.py', 'x = 1\n')
         self.assertEqual(self.ws.read('a.py'), 'x = 1\n'); self.assertEqual(fails[0], 0)
         self.assertEqual(list(self.ws.work.glob('*.tmp-write')), [])
 
     def test_when_it_never_works_nothing_is_left_behind_and_the_error_is_raised(self):
-        with patch('guppi_runtime.devvm.os.replace', side_effect=PermissionError('gesperrt')), patch('guppi_runtime.devvm.time.sleep'):
+        with patch('guppi_runtime.devenv.devvm.os.replace', side_effect=PermissionError('gesperrt')), patch('guppi_runtime.devenv.devvm.time.sleep'):
             with self.assertRaises(PermissionError): self.ws.write('a.py', 'x')
         self.assertEqual(list(self.ws.work.rglob('*')), [])                                           # no half-written helper file: the VM would refuse the folder
         self.assertEqual(self.ws.tree(), [])

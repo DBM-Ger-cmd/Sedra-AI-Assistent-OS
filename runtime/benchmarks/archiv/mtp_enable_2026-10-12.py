@@ -17,9 +17,9 @@ import yaml
 RUNTIME = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.role_routing import RoleRouter, RoutingConfig   # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path            # noqa: E402
-from guppi_runtime.util import atomic_write_bytes                  # noqa: E402
+from guppi_runtime.models.role_routing import RoleRouter, RoutingConfig   # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path            # noqa: E402
+from guppi_runtime.core.util import atomic_write_bytes                  # noqa: E402
 
 NL = "\n"
 OLD_FLAG = "      enabled: false   # guppi-model-remove RM-20261003T185920" + NL

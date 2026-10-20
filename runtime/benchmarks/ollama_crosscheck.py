@@ -27,7 +27,7 @@ sys.path.insert(0, str(RUNTIME / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from context_ladder import RESERVE_GIB, driver_events_since, gpu_mib, haystack     # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                           # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                           # noqa: E402
 
 OLLAMA = "http://127.0.0.1:11434"
 

@@ -14,7 +14,7 @@ import threading
 import time
 import uuid
 
-from ..util import atomic_write_json, load_json, utcnow
+from ..core.util import atomic_write_json, load_json, utcnow
 from .collector import NativeCollector
 from .power import WindowsPowerAdapter, SCHEMES
 

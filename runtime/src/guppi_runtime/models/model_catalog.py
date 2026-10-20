@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 import hashlib, re
-from ..util import atomic_write_json, load_json, utcnow
+from ..core.util import atomic_write_json, load_json, utcnow
 
 
 _QUANT_RE = re.compile(r"(?i)(?:^|[._-])((?:I?Q)[0-9][A-Z0-9_\-]*)(?:[._-]|$)")

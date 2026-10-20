@@ -5,10 +5,10 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime, build_command, discover_backend
-from guppi_runtime.model_loader import LoaderConfig, LoadError, ModelLoader
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime, build_command, discover_backend
+from guppi_runtime.models.model_loader import LoaderConfig, LoadError, ModelLoader
 from guppi_runtime.models.runtime_control import RuntimeControlError
-from guppi_runtime.role_routing import RoutingConfig
+from guppi_runtime.models.role_routing import RoutingConfig
 from test_model_loader import FakeController, inst
 from test_role_routing import recipe, routing_raw
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests

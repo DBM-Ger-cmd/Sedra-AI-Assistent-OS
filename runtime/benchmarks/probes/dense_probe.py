@@ -49,9 +49,9 @@ def main():
         sys.exit(2)
     import yaml
     from context_ladder import RESERVE_GIB
-    from guppi_runtime.gpu_preflight import clear_leftovers
-    from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.testlab import TestLab, default_path
+    from guppi_runtime.models.gpu_preflight import clear_leftovers
+    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from guppi_runtime.jobs.testlab import TestLab, default_path
     from moe_sweep import RAM_FLOOR_GIB, free_ram_gib, one, source_text
     window = options.get("window") if type(options.get("window")) is int and 4096 <= options["window"] <= 65536 else 32768
     ngl_list = int_list(options.get("ngl"), 0, 99, [24, 28, 32, 36, 40, 44])

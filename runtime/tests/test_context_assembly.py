@@ -11,12 +11,12 @@ from pathlib import Path
 import yaml
 
 from guppi_runtime.artifacts import ArtifactStore
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.context_manager import ContextConfig, ContextError, ContextManager
-from guppi_runtime.development_contracts import canonical_digest, context_manifest, development_contract
-from guppi_runtime.development_evidence import DevelopmentEvidenceStore
-from guppi_runtime.job_repair import repair_job, trigger_for
-from guppi_runtime.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.jobs.context_manager import ContextConfig, ContextError, ContextManager
+from guppi_runtime.selfdev.development_contracts import canonical_digest, context_manifest, development_contract
+from guppi_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
+from guppi_runtime.jobs.job_repair import repair_job, trigger_for
+from guppi_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]
@@ -499,18 +499,18 @@ class BoundaryTests(unittest.TestCase):
     SRC = RUNTIME / 'src' / 'guppi_runtime'
 
     def test_modules_name_no_provider_or_model(self):
-        for name in ('context_assembly.py', 'job_repair.py'):
+        for name in ('jobs/context_assembly.py', 'jobs/job_repair.py'):
             source = (self.SRC / name).read_text(encoding='utf-8').lower()
             for word in ('lm-studio', 'lmstudio', 'llama', 'qwen', 'kev', 'openai', 'anthropic'):
                 self.assertNotRegex(source, rf'\b{re.escape(word)}\b', f'{name}:{word}')
 
     def test_context_assembly_does_not_touch_job_state_or_rights(self):
-        source = (self.SRC / 'context_assembly.py').read_text(encoding='utf-8')
+        source = (self.SRC / 'jobs' / 'context_assembly.py').read_text(encoding='utf-8')
         for forbidden in ('.transition(', 'JobSupervisor', 'DevelopmentJobStore', 'guard.approve', 'supply_change', 'enqueue('):
             self.assertNotIn(forbidden, source)
 
     def test_job_repair_never_queues_or_cancels_by_itself(self):
-        source = (self.SRC / 'job_repair.py').read_text(encoding='utf-8')
+        source = (self.SRC / 'jobs' / 'job_repair.py').read_text(encoding='utf-8')
         for forbidden in ('.enqueue(', '.cancel(', '.claim(', '.fail(', 'guard'):
             self.assertNotIn(forbidden, source)
 

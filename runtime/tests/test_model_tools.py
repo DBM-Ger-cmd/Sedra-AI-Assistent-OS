@@ -1,6 +1,6 @@
 import json, tempfile, unittest
 from pathlib import Path
-from guppi_runtime.model_tools import ToolBox, parse_calls, run_tool_loop
+from guppi_runtime.devenv.model_tools import ToolBox, parse_calls, run_tool_loop
 
 def tc(name, args, cid='c1'):
  return {'id': cid, 'type': 'function', 'function': {'name': name, 'arguments': json.dumps(args)}}
@@ -93,7 +93,7 @@ if __name__ == '__main__':
 class CompactDuringRunTests(unittest.TestCase):
     def test_old_tool_results_are_shortened_once_the_prompt_grows_past_the_limit(self):
         import json as _json
-        from guppi_runtime.model_tools import run_tool_loop
+        from guppi_runtime.devenv.model_tools import run_tool_loop
 
         class Box:
             final, calls, terminal = None, 0, 'submit_result'
@@ -115,7 +115,7 @@ class CompactDuringRunTests(unittest.TestCase):
 class StubWritesTests(unittest.TestCase):
     def test_old_written_code_becomes_a_note_but_the_path_stays_and_new_messages_are_untouched(self):
         import json as _json
-        from guppi_runtime.model_tools import stub_writes
+        from guppi_runtime.devenv.model_tools import stub_writes
         def call(i, name, **a): return {'role': 'assistant', 'content': '', 'tool_calls': [{'id': f'c{i}', 'type': 'function', 'function': {'name': name, 'arguments': _json.dumps(a)}}]}
         old = call(1, 'write_file', path='a.py', content='x = 1\n' * 300)
         edit = call(2, 'edit_file', path='a.py', old='y' * 400, new='z' * 5)
@@ -132,7 +132,7 @@ class StubWritesTests(unittest.TestCase):
 class CompactResetsGuardTests(unittest.TestCase):
     def test_after_the_old_results_are_shortened_the_loop_guard_forgets_the_reads(self):
         import json as _json
-        from guppi_runtime.model_tools import run_tool_loop
+        from guppi_runtime.devenv.model_tools import run_tool_loop
 
         class Guard:
             resets = 0
@@ -150,7 +150,7 @@ class CompactResetsGuardTests(unittest.TestCase):
 
 class RelaxSchemaTests(unittest.TestCase):
     def test_empty_property_maps_and_huge_limits_are_left_out_of_the_wire_copy_only(self):
-        from guppi_runtime.model_tools import relax_schema
+        from guppi_runtime.devenv.model_tools import relax_schema
         original = {"type": "function", "function": {"name": "git_status", "parameters": {"type": "object", "properties": {}, "required": [], "additionalProperties": False}}}
         wire = relax_schema(original)
         self.assertEqual(wire["function"]["parameters"], {"type": "object"})
@@ -161,7 +161,7 @@ class RelaxSchemaTests(unittest.TestCase):
         self.assertEqual(relax_schema(schema)["required"], ["s"])
 
     def test_the_tool_loop_sends_the_relaxed_schemas(self):
-        from guppi_runtime.model_tools import run_tool_loop
+        from guppi_runtime.devenv.model_tools import run_tool_loop
 
         class Box:
             final, calls, terminal, guard = None, 0, "submit_result", None

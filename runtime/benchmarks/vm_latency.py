@@ -15,7 +15,7 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.devvm import DevWorkspace                       # noqa: E402
+from guppi_runtime.devenv.devvm import DevWorkspace                       # noqa: E402
 from guppi_runtime.sandbox.broker import SandboxBroker              # noqa: E402
 from guppi_runtime.sandbox.provider import MicrosandboxProvider    # noqa: E402
 

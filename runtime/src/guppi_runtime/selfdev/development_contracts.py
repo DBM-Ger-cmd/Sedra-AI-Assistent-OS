@@ -10,7 +10,7 @@ import json
 import re
 import uuid
 from copy import deepcopy
-from ..util import utcnow
+from ..core.util import utcnow
 
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 

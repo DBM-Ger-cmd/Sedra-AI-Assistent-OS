@@ -11,7 +11,7 @@ RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "benchmarks"))
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.s0_status import fingerprint, save, status  # noqa: E402
+from guppi_runtime.devenv.s0_status import fingerprint, save, status  # noqa: E402
 
 SERVER = {"gguf": r"E:\m\Model-Q4.gguf", "kv_cache_type": "q8_0", "flash_attn": "on", "ubatch": 512, "n_cpu_moe": 28, "reasoning": "off"}
 

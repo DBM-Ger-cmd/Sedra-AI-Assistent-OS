@@ -7,7 +7,7 @@ import json
 import time
 import uuid
 
-from ..util import atomic_write_json, load_json, utcnow
+from ..core.util import atomic_write_json, load_json, utcnow
 
 
 def digest(value):

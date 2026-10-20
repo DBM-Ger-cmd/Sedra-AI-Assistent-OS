@@ -1,6 +1,6 @@
 from pathlib import Path
-from ..request_binding import file_request
-from ..util import atomic_write_text
+from ..core.request_binding import file_request
+from ..core.util import atomic_write_text
 from .base import BaseModule
 
 
@@ -23,7 +23,7 @@ class ControlMasterModule(BaseModule):
             if check['status']!='EXECUTABLE':
                 return {'status':'waiting' if check['status']=='NOT_NOW' else 'blocked','feasibility':check,'reason_code':check['reason_code'],'artifacts':[]}
         if action == "candidate_acceptance":
-            from ..candidate_acceptance import apply
+            from ..selfdev.candidate_acceptance import apply
             return apply(self,request["runtime"],mission,request.get("plan"),approval_token)
         if action == "inspect_tools":
             return {"status":"completed","tools":self.tools.list() if self.tools else {},"artifacts":[]}
@@ -69,14 +69,14 @@ class ControlMasterModule(BaseModule):
 
     def resolve_role(self,role,requirements=None,**kw):
         """The one place that turns a role into a concrete provider. Raises role_routing.ResolutionError."""
-        from ..role_routing import ResolutionError
+        from ..models.role_routing import ResolutionError
         router=getattr(self,"role_router",None)
         if router is None or not router.enabled:
             raise ResolutionError("no_capability",{"reason":"role_routing_disabled"})
         return router.resolve_role(role,requirements,**kw)
 
     def resolve_fallback(self,previous,failure_class,requirements=None,**kw):
-        from ..role_routing import ResolutionError
+        from ..models.role_routing import ResolutionError
         router=getattr(self,"role_router",None)
         if router is None or not router.enabled:
             raise ResolutionError("no_capability",{"reason":"role_routing_disabled"})

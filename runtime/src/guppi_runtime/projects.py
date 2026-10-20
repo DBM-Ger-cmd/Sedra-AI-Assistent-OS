@@ -1,6 +1,6 @@
 """Managed project registry; never mount arbitrary host directories."""
 import uuid
-from .util import load_json,atomic_write_json,utcnow
+from .core.util import load_json,atomic_write_json,utcnow
 
 class ProjectRegistry:
     def __init__(self,rt):self.rt=rt;self.path=rt.project_root/'runtime_data/projects.json'

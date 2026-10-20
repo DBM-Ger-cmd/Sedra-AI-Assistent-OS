@@ -7,7 +7,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from ..util import utcnow
+from ..core.util import utcnow
 from . import aufnahmen as au
 from . import kern
 from . import stt

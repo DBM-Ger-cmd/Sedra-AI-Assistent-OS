@@ -6,7 +6,7 @@ import unittest
 
 from guppi_runtime.agent_manager.devvm_templates import export_role_templates, role_template
 from guppi_runtime.agent_manager.service import AgentManager
-from guppi_runtime.devvm_tools import ROLE_TOOLS, SCHEMAS, SYSTEM, TERMINAL
+from guppi_runtime.devenv.devvm_tools import ROLE_TOOLS, SCHEMAS, SYSTEM, TERMINAL
 
 
 class DevvmTemplatesTest(unittest.TestCase):

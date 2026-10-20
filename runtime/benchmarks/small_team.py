@@ -4,7 +4,7 @@ r"""Do two small models work better together than alone? Jan-code-4b writes the 
 
 Extends rework_bench.py (same five tasks, same static grading: model code is never executed on this host).
 Captain 2026-10-05: "erst Jan und SWE-Review testen ... nur mit tools funktionieren richtig, daher tools anbinden". Both models are Qwen3 builds with
-a <tool_call> template, so both work through guppi_runtime.model_tools (read_file, check_syntax, submit_fix / submit_review) in the loop below.
+a <tool_call> template, so both work through guppi_runtime.devenv.model_tools (read_file, check_syntax, submit_fix / submit_review) in the loop below.
 
 Reviewer modes `test` and `test+review` (since 2026-10-05): an EXECUTED test decides, run inside GUPPI's microVM (benchmarks/judge.py, never on this host).
 `test`: the coder gets the failing checks back ("input, expected, got"). `test+review`: SWE-Review is asked only for rejected candidates and its cause is added.
@@ -42,12 +42,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rework_bench import TASKS, grade                                                 # noqa: E402  (TASKS: the five original tasks, used by other benches)
 from team_tasks import SETS                                                          # noqa: E402
 import judge as judge_mod                                                            # noqa: E402
-from guppi_runtime.gpu_preflight import clear_leftovers                              # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
 from guppi_runtime.knowledge import KnowledgeStore                                   # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.model_tools import ToolBox, run_tool_loop                         # noqa: E402
-from guppi_runtime.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                              # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.devenv.model_tools import ToolBox, run_tool_loop                         # noqa: E402
+from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 from guppi_runtime.local_paths import expand                                     # noqa: E402
 

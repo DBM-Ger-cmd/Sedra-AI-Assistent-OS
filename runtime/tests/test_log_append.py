@@ -8,9 +8,9 @@ import time
 import unittest
 from pathlib import Path
 
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.development_evidence import DevelopmentEvidenceStore
-from guppi_runtime.util import read_last_jsonl, append_lock
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
+from guppi_runtime.core.util import read_last_jsonl, append_lock
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 SRC = str(Path(__file__).resolve().parents[1] / "src")
@@ -18,7 +18,7 @@ SRC = str(Path(__file__).resolve().parents[1] / "src")
 WORKER = """
 import sys
 sys.path.insert(0, sys.argv[1])
-from guppi_runtime.audit import AuditLog
+from guppi_runtime.core.audit import AuditLog
 log = AuditLog(sys.argv[2])
 for i in range(int(sys.argv[3])):
     log.append("PROC_EVENT", component="proc"+sys.argv[4], payload={"i": i})
@@ -133,7 +133,7 @@ class AuditConcurrencyTests(unittest.TestCase):
 
             # A second *process* is the real contender; a thread is serialized by the in-process lock.
             code = ("import sys; sys.path.insert(0, sys.argv[1]);"
-                    "from guppi_runtime.util import append_lock;"
+                    "from guppi_runtime.core.util import append_lock;"
                     "from pathlib import Path\n"
                     "try:\n"
                     "    with append_lock(Path(sys.argv[2]), timeout=0.3): print('entered')\n"

@@ -70,12 +70,12 @@ def main():
     project = Path(args.project)
 
     import devvm_agents_bench as bench
-    from guppi_runtime.devvm import DevWorkspace
-    from guppi_runtime.devvm_agents import SOLO_TASK, AgentBudget, run_agent
-    from guppi_runtime.gpu_preflight import clear_leftovers
-    from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.run_log import RunLog
-    from guppi_runtime.testlab import TestLab, default_path
+    from guppi_runtime.devenv.devvm import DevWorkspace
+    from guppi_runtime.devenv.devvm_agents import SOLO_TASK, AgentBudget, run_agent
+    from guppi_runtime.models.gpu_preflight import clear_leftovers
+    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from guppi_runtime.jobs.run_log import RunLog
+    from guppi_runtime.jobs.testlab import TestLab, default_path
 
     spec = importlib.import_module("devvm_specs.am008_meter")
     stages = {stage["name"]: stage for stage in spec.STAGES}

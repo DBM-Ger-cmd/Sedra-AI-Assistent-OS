@@ -3,8 +3,8 @@ import os
 import tempfile
 import unittest
 
-from guppi_runtime.acceptance_suite import SuiteError, candidate_hash, evidence_records, host_runner, leak_check, load_suite, run_suite, validate_suite, write_suite
-from guppi_runtime.development_evidence import DevelopmentEvidenceStore
+from guppi_runtime.selfdev.acceptance_suite import SuiteError, candidate_hash, evidence_records, host_runner, leak_check, load_suite, run_suite, validate_suite, write_suite
+from guppi_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
 
 REFERENCE = {"calc.py": "def add(a, b):\n    return a + b\n"}
 CRITERIA = [

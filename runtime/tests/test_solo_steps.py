@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from guppi_runtime.solo_steps import extract_for, number_task, numbered  # noqa: E402
+from guppi_runtime.devenv.solo_steps import extract_for, number_task, numbered  # noqa: E402
 
 
 class UnitTests(unittest.TestCase):

@@ -7,10 +7,10 @@ import threading
 import unittest
 from pathlib import Path
 
-from guppi_runtime.audit import AuditLog
+from guppi_runtime.core.audit import AuditLog
 from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.self_development import DevelopmentJobStore
-from guppi_runtime.util import append_lock
+from guppi_runtime.selfdev.self_development import DevelopmentJobStore
+from guppi_runtime.core.util import append_lock
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
@@ -20,7 +20,7 @@ PROC = """
 import sys
 sys.path.insert(0, sys.argv[1])
 from pathlib import Path
-from guppi_runtime.self_development import DevelopmentJobStore
+from guppi_runtime.selfdev.self_development import DevelopmentJobStore
 store = DevelopmentJobStore(Path(sys.argv[2]))
 for _ in range(int(sys.argv[4])):
     with store.mutate(sys.argv[3]) as job:

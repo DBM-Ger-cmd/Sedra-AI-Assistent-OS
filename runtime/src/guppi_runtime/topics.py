@@ -4,7 +4,7 @@ import hashlib
 import os
 from pathlib import Path
 import re
-from .util import atomic_write_json, load_json, utcnow
+from .core.util import atomic_write_json, load_json, utcnow
 
 
 class TopicStore:

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from guppi_runtime.readiness import build_report, initialization_failure
 from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.util import atomic_write_json
+from guppi_runtime.core.util import atomic_write_json
 
 
 def main():

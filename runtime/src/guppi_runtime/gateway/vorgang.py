@@ -32,7 +32,7 @@ from ..core.b6core import pseudo as b6pseudo
 from ..core.b6core.normalize import normalize
 from ..core.b6core.privacy import scan_text
 from ..core.content_policy import ScanFailure, scan_content
-from ..util import atomic_write_json, load_json
+from ..core.util import atomic_write_json, load_json
 from . import klassen, zusatz
 
 LESBAR = ('.md', '.txt', '.docx')            # Anhänge: Text und Word (gateway/dokumente.py); PDF/DOC sind MVP 2

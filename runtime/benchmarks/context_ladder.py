@@ -38,11 +38,11 @@ import yaml
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.job_worker import degenerate_reason                              # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from guppi_runtime.jobs.job_worker import degenerate_reason                              # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
 from guppi_runtime.models.openai_local import split_harmony                         # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                             # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
 
 LADDER = (8192, 16384, 24576, 32768, 49152, 65536, 98304, 131072)
 RESERVE_GIB = 1.0

@@ -6,7 +6,7 @@ boundary while GUPPI adds code to itself. GUPPI builds it (night chain 2026-10-1
 
 NOTES = '''# Notes for core_boundary
 Pure Python 3 standard library (ast, collections), no file, process or network access, nothing is imported or executed, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code.
-Module names are dotted names such as "guppi_runtime.brain". A name belongs to a group when it equals the group or starts with the group followed by "." ("guppi_runtime.devvm_tools" is NOT inside "guppi_runtime.devvm").
+Module names are dotted names such as "guppi_runtime.core.brain". A name belongs to a group when it equals the group or starts with the group followed by "." ("guppi_runtime.devenv.devvm_tools" is NOT inside "guppi_runtime.devenv.devvm").
 '''
 
 COMMON = r'''
@@ -118,7 +118,7 @@ assert T == copy
 STAGES = [
     {"name": "imports",
      "task": """Create `core_boundary.py` (Python 3 standard library only) with `imports_of(source, module) -> list[str]`: the dotted names a Python source imports. Nothing is imported or executed.
-- source: the text of one Python file. module: its dotted module name (for example "guppi_runtime.brain").
+- source: the text of one Python file. module: its dotted module name (for example "guppi_runtime.core.brain").
 - Parse with ast.parse; on SyntaxError raise ValueError("unparsable"). Look at EVERY import statement, also the ones inside functions (walk the whole tree).
 - `import a.b, c as d` gives "a.b" and "c" (the real name, not the alias). `from x.y import z` gives "x.y".
 - Relative imports: level n removes the last n parts of `module` to get the base; when n is greater than or equal to the number of parts of `module` raise ValueError("relative_import_beyond_top"). `from .x import z` gives base + ".x"; `from . import a, b` (no module after the dots) gives base + ".a" and base + ".b".

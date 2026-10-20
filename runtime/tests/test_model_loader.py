@@ -3,10 +3,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.development_contracts import development_contract
-from guppi_runtime.job_supervisor import JobSupervisor, SupervisorConfig, SupervisorJobStore
-from guppi_runtime.model_loader import LoadError, LoaderConfig, ModelLoader, gpu_argument, parse_estimate_gib
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.selfdev.development_contracts import development_contract
+from guppi_runtime.jobs.job_supervisor import JobSupervisor, SupervisorConfig, SupervisorJobStore
+from guppi_runtime.models.model_loader import LoadError, LoaderConfig, ModelLoader, gpu_argument, parse_estimate_gib
 from guppi_runtime.models.runtime_control import LMStudioRuntimeController, RuntimeControlError
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 

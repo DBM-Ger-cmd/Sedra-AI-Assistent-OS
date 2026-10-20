@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from guppi_runtime.comment_archive import extract_comments, to_jsonl
+from guppi_runtime.devenv.comment_archive import extract_comments, to_jsonl
 
 SRC = '"""Mod."""\n# top\nclass Box:\n    def put(self, v):\n        """Put."""\n        return v  # tail\n'
 

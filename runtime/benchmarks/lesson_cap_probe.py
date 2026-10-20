@@ -21,11 +21,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import judge as judge_mod                                                            # noqa: E402
 import small_team as st                                                              # noqa: E402
 from team_tasks import SETS                                                          # noqa: E402
-from guppi_runtime.gpu_preflight import clear_leftovers                              # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
 from guppi_runtime.knowledge import KnowledgeStore                                   # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                              # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 CAPS = {"none": 0, "cap1": 1, "cap2": 2, "all": 99}
 

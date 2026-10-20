@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.routing_profiles import ProfileError, RoutingProfiles
+from guppi_runtime.models.routing_profiles import ProfileError, RoutingProfiles
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 GOOD = """# comment kept

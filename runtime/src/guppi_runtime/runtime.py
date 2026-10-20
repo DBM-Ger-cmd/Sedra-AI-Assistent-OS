@@ -3,25 +3,25 @@ from pathlib import Path
 import os
 import re
 import yaml
-from .audit import AuditLog
-from .util import load_json
-from .mission import MissionStore
-from .message_bus import MessageBus
-from .registry import Registry
+from .core.audit import AuditLog
+from .core.util import load_json
+from .core.mission import MissionStore
+from .core.message_bus import MessageBus
+from .core.registry import Registry
 from .capability_router import CapabilityRouter
 from .topics import TopicStore
-from .execution_binder import ExecutionParameterBinder
-from .project_inspection import ProjectInspector
-from .code_candidate import CandidateBinder, CandidatePreparer
-from .guard import Guard
+from .selfdev.execution_binder import ExecutionParameterBinder
+from .selfdev.project_inspection import ProjectInspector
+from .selfdev.code_candidate import CandidateBinder, CandidatePreparer
+from .core.guard import Guard
 from .artifacts import ArtifactStore
 from .observability import Observability
 from .knowledge import KnowledgeStore
 from .hardware import detect_hardware
 from .hardware_manager import HardwareManager
 from .tools.hardware_manager import HardwareManagerTool
-from .model_profiles import ModelProfileStore
-from .model_runtime import ModelRuntimeManager
+from .models.model_profiles import ModelProfileStore
+from .models.model_runtime import ModelRuntimeManager
 from .models import ModelRouter, LMStudioAdapter, LlamaCppServerAdapter
 from .models.cloud_api import build_cloud_adapters
 from . import cloud_settings
@@ -32,25 +32,25 @@ from .modules.control import ControlMasterModule
 from .modules.verification import VerificationModule
 from .modules.knowledge_module import KnowledgeModule
 from .modules.communications import CommunicationsModule
-from .brain import GuppiBrain
+from .core.brain import GuppiBrain
 from .sandbox import SandboxBroker, MicrosandboxProvider
-from .context_budget import ContextBudgetManager
-from .development_evidence import DevelopmentEvidenceStore
-from .kev import KevVerificationProvider
-from .self_development import SelfDevelopmentManager
-from .evolution import EvolutionManager
-from .job_supervisor import JobSupervisor, SupervisorConfig, SupervisorJobStore
-from .context_manager import ContextManager, ContextConfig
-from .role_routing import RoutingConfig, RoleRouter, ProviderHealth
-from .routing_profiles import RoutingProfiles
-from .permission_levels import PermissionConfig, PermissionGate
-from .resource_scheduler import ResourceConfig, ResourceScheduler
-from .model_loader import LoaderConfig, ModelLoader
-from .token_policy import TokenPolicy, TokenPolicyConfig
+from .jobs.context_budget import ContextBudgetManager
+from .selfdev.development_evidence import DevelopmentEvidenceStore
+from .selfdev.kev import KevVerificationProvider
+from .selfdev.self_development import SelfDevelopmentManager
+from .selfdev.evolution import EvolutionManager
+from .jobs.job_supervisor import JobSupervisor, SupervisorConfig, SupervisorJobStore
+from .jobs.context_manager import ContextManager, ContextConfig
+from .models.role_routing import RoutingConfig, RoleRouter, ProviderHealth
+from .models.routing_profiles import RoutingProfiles
+from .core.permission_levels import PermissionConfig, PermissionGate
+from .jobs.resource_scheduler import ResourceConfig, ResourceScheduler
+from .models.model_loader import LoaderConfig, ModelLoader
+from .jobs.token_policy import TokenPolicy, TokenPolicyConfig
 from .local_switches import LocalSwitches
-from .llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-from .verification_gate import VerificationGate
-from .working_set import WorkingSet
+from .models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+from .jobs.verification_gate import VerificationGate
+from .jobs.working_set import WorkingSet
 from .models.runtime_control import LMStudioRuntimeController
 
 def _architecture_version(path):
@@ -216,7 +216,7 @@ class GuppiRuntime:
         if self.role_router is not None and self.role_router.enabled:
             self.job_supervisor.resolver=lambda role,req,exclude,independent_of: self.control.resolve_role(role,req,exclude=exclude,independent_of=independent_of)
             self.job_supervisor.provider_report=self._report_provider
-            from .role_routing import check_independence
+            from .models.role_routing import check_independence
             self.self_development.independence_check=lambda builder,verifier: check_independence(
                 self.role_router.key_for_role(builder),self.role_router.key_for_role(verifier))
 
@@ -317,7 +317,7 @@ class GuppiRuntime:
     def worker_handler(self,build_messages,**kw):
         """A model handler for the job worker wired to this runtime: same inference path, the token policy, and the context
         manager's pessimistic estimate of the input."""
-        from .job_worker import model_text_handler
+        from .jobs.job_worker import model_text_handler
         estimate=None
         if self.context_manager is not None:
             estimate=lambda messages: self.context_manager.estimator.estimate_messages(messages)["estimate"]

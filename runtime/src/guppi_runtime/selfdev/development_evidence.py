@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import uuid
-from ..util import sha256_bytes, utcnow, read_last_jsonl, append_lock
+from ..core.util import sha256_bytes, utcnow, read_last_jsonl, append_lock
 
 
 class DevelopmentEvidenceStore:

@@ -36,14 +36,14 @@ import judge as judge_mod                                                       
 from team_tasks import SETS                                                          # noqa: E402
 from guppi_runtime.knowledge import KnowledgeStore                                   # noqa: E402
 import small_team as st                                                              # noqa: E402
-from guppi_runtime.devvm import DevWorkspace                                         # noqa: E402
-from guppi_runtime.devvm_agents import AgentBudget, DevOrchestrator, ModelHost, run_agent  # noqa: E402
-from guppi_runtime.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.run_log import RunLog                                             # noqa: E402
+from guppi_runtime.devenv.devvm import DevWorkspace                                         # noqa: E402
+from guppi_runtime.devenv.devvm_agents import AgentBudget, DevOrchestrator, ModelHost, run_agent  # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
 from guppi_runtime.sandbox.broker import SandboxBroker                               # noqa: E402
 from guppi_runtime.sandbox.provider import MicrosandboxProvider                      # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                              # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 PROMPTS = {
     "create_package": ("Create a small Python package in this empty workspace: a folder `calc` with an empty `__init__.py` and `ops.py` (functions add(a, b) and sub(a, b)), and a folder `tests` "

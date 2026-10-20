@@ -1,9 +1,9 @@
 import env_skip; env_skip.need_dulwich()   # whole module needs the DevVM git (dulwich); skipped with reason where it is missing
 import json, tempfile, unittest
 from pathlib import Path
-from guppi_runtime.devvm import DevWorkspace
-from guppi_runtime.devvm_tools import DevToolBox, broker_runner, ROLE_TOOLS
-from guppi_runtime.model_tools import run_tool_loop
+from guppi_runtime.devenv.devvm import DevWorkspace
+from guppi_runtime.devenv.devvm_tools import DevToolBox, broker_runner, ROLE_TOOLS
+from guppi_runtime.devenv.model_tools import run_tool_loop
 
 POLICY = {'max_files': 20, 'max_file_bytes': 4000, 'max_input_bytes': 20000}
 
@@ -278,7 +278,7 @@ if __name__ == '__main__':
 
 class LongFileTests(unittest.TestCase):
     def test_a_long_file_is_read_in_parts_and_has_an_outline(self):
-        from guppi_runtime.devvm_tools import READ_LINES, outline, read_part
+        from guppi_runtime.devenv.devvm_tools import READ_LINES, outline, read_part
         text = ''.join(f'x{i} = {i}\n' for i in range(400))
         first = read_part(text)
         self.assertTrue(first.startswith(f'[lines 1-{READ_LINES} of 400. Next: read_file with start={READ_LINES + 1}.]'))
@@ -292,7 +292,7 @@ class LongFileTests(unittest.TestCase):
         with self.assertRaises(Exception): outline('def broken(:\n')
 
     def test_the_solo_developer_has_read_in_parts_and_outline(self):
-        from guppi_runtime.devvm_tools import ROLE_TOOLS, SCHEMAS
+        from guppi_runtime.devenv.devvm_tools import ROLE_TOOLS, SCHEMAS
         self.assertIn('outline', ROLE_TOOLS['solo']); self.assertIn('start', SCHEMAS['read_file']['function']['parameters']['properties'])
 
 
@@ -361,7 +361,7 @@ class JobToolTests(Case):
         self.assertNotIn('woke you', b.call('list_dir', {}))            # the notes were given once, with the call that waited
 
     def test_a_line_with_shell_syntax_runs_with_sh_c_and_a_plain_command_is_split(self):
-        from guppi_runtime.devvm_tools import command_argv
+        from guppi_runtime.devenv.devvm_tools import command_argv
         self.assertEqual(command_argv('python3 -m unittest -v'), ['python3', '-m', 'unittest', '-v'])
         self.assertEqual(command_argv("python3 -c 'x y'"), ['python3', '-c', 'x y'])
         for line in ('cat a.txt | wc -l', 'echo a > t.txt', 'make && make test', 'a; b', 'echo $HOME', 'ls *.py', 'echo `date`', 'a' + chr(10) + 'b'):

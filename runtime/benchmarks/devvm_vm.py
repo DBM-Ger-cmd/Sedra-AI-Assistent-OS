@@ -41,7 +41,7 @@ class FolderTree:
 
 
 def vm_env(project, tool_root, bg_jobs=False, mission="M-BUILD", prefix="M-CHK"):
-    from guppi_runtime.devvm import DevWorkspace
+    from guppi_runtime.devenv.devvm import DevWorkspace
     from guppi_runtime.sandbox.broker import SandboxBroker
     from guppi_runtime.sandbox.provider import MicrosandboxProvider
     tool_root = Path(tool_root)

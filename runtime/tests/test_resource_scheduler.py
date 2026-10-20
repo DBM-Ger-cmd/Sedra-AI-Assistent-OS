@@ -13,11 +13,11 @@ from types import SimpleNamespace
 
 import yaml
 
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.development_contracts import development_contract
-from guppi_runtime.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
-from guppi_runtime.resource_scheduler import ResourceConfig, ResourceScheduler, need_of
-from guppi_runtime.role_routing import ProviderHealth, ResolutionError, RoleRouter, RoutingConfig
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.selfdev.development_contracts import development_contract
+from guppi_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
+from guppi_runtime.jobs.resource_scheduler import ResourceConfig, ResourceScheduler, need_of
+from guppi_runtime.models.role_routing import ProviderHealth, ResolutionError, RoleRouter, RoutingConfig
 from guppi_runtime.runtime import GuppiRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
@@ -273,7 +273,7 @@ class ReserveTests(Base):
         self.assertEqual(sum(r['vram_gb'] for r in s.reservations()), 14.0)
 
     def test_concurrent_processes_cannot_overbook_either(self):
-        code = ("import sys, json\nsys.path.insert(0, sys.argv[1])\nfrom pathlib import Path\nfrom guppi_runtime.resource_scheduler import *\n"
+        code = ("import sys, json\nsys.path.insert(0, sys.argv[1])\nfrom pathlib import Path\nfrom guppi_runtime.jobs.resource_scheduler import *\n"
                 "hw = type('H', (), {'get_state': lambda self, fresh=False: json.loads(sys.argv[3]), 'active_profile': lambda self: {'ram_reserve_gib': 2, 'max_jobs': 10}})()\n"
                 "s = ResourceScheduler(ResourceConfig({'enabled': True, 'vram_reserve_gb': 1.0}), hw, Path(sys.argv[2]))\n"
                 "print(s.reserve('SDJ-P' + sys.argv[4], 'A1', {'vram_gb': 7})['status'])\n")
@@ -298,7 +298,7 @@ class ReserveTests(Base):
         self.assertIn('error', s.view())                                                         # a status view never raises
 
     def test_source_is_read_only_towards_the_machine(self):
-        source = Path(importlib.import_module('guppi_runtime.resource_scheduler').__file__).read_text(encoding='utf-8')
+        source = Path(importlib.import_module('guppi_runtime.jobs.resource_scheduler').__file__).read_text(encoding='utf-8')
         for forbidden in ('subprocess', 'apply_profile', 'save_profile', 'constrain_runtime_profile', 'os.system', 'unload', 'kill'):
             self.assertNotIn(forbidden, source)
         for word in ('lm-studio', 'llama', 'qwen', 'kev', 'openai', 'anthropic'):
@@ -422,7 +422,7 @@ class SupervisorLifecycleTests(SupervisorBase):
                 self.assertEqual(self.held(), [], name)
 
     def test_a_parked_job_holds_no_hardware(self):
-        from guppi_runtime.permission_levels import PermissionConfig, PermissionGate
+        from guppi_runtime.core.permission_levels import PermissionConfig, PermissionGate
         rt = GuppiRuntime(self.root / 'rt', ARCH)
         self.sup.permissions = rt.permission_gate; self.sup.guard = rt.guard
         self.router.config.recipes[0]['max_level'] = 3                                           # the recipe must allow a level-3 job to start at all

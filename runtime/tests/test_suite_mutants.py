@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "benchmarks"))
 
-from guppi_runtime.acceptance_suite import write_suite  # noqa: E402
+from guppi_runtime.selfdev.acceptance_suite import write_suite  # noqa: E402
 from suite_mutants import describe, mutate, sites, survivors  # noqa: E402
 
 REFERENCE = "def less(a, b):\n    return a < b\n\n\ndef both(a, b):\n    return a and b\n"

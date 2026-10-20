@@ -57,7 +57,7 @@ class ReasoningBudgetTests(unittest.TestCase):
     @env_skip.needs_dulwich
     def test_layer_runs_give_each_run_the_result_of_its_stage(self):
         from devvm_build import layer_runs
-        from guppi_runtime.layer_summary import cell
+        from guppi_runtime.devenv.layer_summary import cell
         outs = [{"agent_runs": [{"stopped_by": "hand_in", "seconds": 10, "completion_tokens": 100}]},
                 {"agent_runs": [{"stopped_by": "hand_in", "seconds": 20, "completion_tokens": 200}, {"stopped_by": "turns", "seconds": 30, "completion_tokens": 300},
                                 {"stopped_by": "hand_in", "seconds": 40, "completion_tokens": 400}]}]

@@ -3,8 +3,8 @@ import os
 import unittest
 from pathlib import Path
 
-from guppi_runtime.acceptance_suite import candidate_hash, load_suite, run_suite
-from guppi_runtime.acceptance_vm import vm_runner
+from guppi_runtime.selfdev.acceptance_suite import candidate_hash, load_suite, run_suite
+from guppi_runtime.selfdev.acceptance_vm import vm_runner
 
 RUNTIME = Path(__file__).resolve().parents[1]
 PROJECT = RUNTIME.parent / "workspace" / "GUPPI_OS"

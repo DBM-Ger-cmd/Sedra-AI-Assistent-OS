@@ -30,7 +30,7 @@ MIN_COVERAGE = 0.6
 
 def plan_metrics(task, units, steps, fallback, split_at, seconds=0.0):
     """The rating of one plan (see the module text). `steps` are the cleaned steps of the planner."""
-    from guppi_runtime.solo_steps import extract_for
+    from guppi_runtime.devenv.solo_steps import extract_for
     count = len(units)
     claimed = set()
     for s in steps:
@@ -59,13 +59,13 @@ def main():
 
     import devvm_agents_bench as bench
     from devvm_build import without_test_duty
-    from guppi_runtime.devvm import DevWorkspace
-    from guppi_runtime.devvm_agents import DevOrchestrator, ModelHost
-    from guppi_runtime.gpu_preflight import clear_leftovers
-    from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.run_log import RunLog
-    from guppi_runtime.solo_steps import number_task
-    from guppi_runtime.testlab import TestLab, default_path
+    from guppi_runtime.devenv.devvm import DevWorkspace
+    from guppi_runtime.devenv.devvm_agents import DevOrchestrator, ModelHost
+    from guppi_runtime.models.gpu_preflight import clear_leftovers
+    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from guppi_runtime.jobs.run_log import RunLog
+    from guppi_runtime.devenv.solo_steps import number_task
+    from guppi_runtime.jobs.testlab import TestLab, default_path
 
     log = RunLog(project / "runtime_data" / "measurements", "plan_probe", config=vars(args))
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml")

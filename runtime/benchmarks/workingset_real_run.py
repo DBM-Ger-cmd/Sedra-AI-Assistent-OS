@@ -69,10 +69,10 @@ def main():
     ap.add_argument("--context", type=int, default=102400, help="context the server is started with")
     args = ap.parse_args()
 
-    from guppi_runtime.development_contracts import development_contract
+    from guppi_runtime.selfdev.development_contracts import development_contract
     from guppi_runtime.runtime import GuppiRuntime
-    from guppi_runtime.testlab import TestLab, default_path
-    from guppi_runtime.gpu_preflight import clear_leftovers
+    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from guppi_runtime.models.gpu_preflight import clear_leftovers
 
     lab = TestLab(default_path(args.project))
     owner = os.environ.get("TESTLAB_OWNER", "workingset_real_run")

@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 import hashlib, zipfile, yaml
-from .errors import CompatibilityError
+from .core.errors import CompatibilityError
 class UpdateBuilder:
     def __init__(self,current_version): self.current_version=str(current_version)
     def validate_evolution(self,path: Path):

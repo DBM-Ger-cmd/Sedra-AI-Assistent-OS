@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 from guppi_runtime.runtime import GuppiRuntime
 from guppi_runtime.projects import ProjectRegistry
-from guppi_runtime.code_generation import generate
+from guppi_runtime.selfdev.code_generation import generate
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 ARCH=Path(__file__).resolve().parents[2]/'architecture/GUPPI_Architecture_v1.17_RUNTIME_SYNC'
 class GenerationTests(unittest.TestCase):
@@ -57,7 +57,7 @@ class GenerationTests(unittest.TestCase):
    with self.assertRaises(ValueError) as ctx:generate(self.rt,self.m,self.project,['app.py','tests/test_app.py'])
   self.assertIn('model_output_not_json:truncated',str(ctx.exception))
  def test_source_limit_grows_with_the_window(self):
-  from guppi_runtime.code_generation import source_limit
+  from guppi_runtime.selfdev.code_generation import source_limit
   self.assertEqual(source_limit(None,4096),65536)
   self.assertEqual(source_limit(49152,16000),(49152-16000-2048)*3)
   self.assertEqual(source_limit(8192,4096),65536)

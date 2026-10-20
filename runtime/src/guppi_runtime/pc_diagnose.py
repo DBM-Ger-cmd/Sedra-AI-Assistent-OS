@@ -3,7 +3,7 @@ import argparse, platform
 from pathlib import Path
 from .runtime import GuppiRuntime
 from .readiness import build_report, initialization_failure
-from .util import atomic_write_json
+from .core.util import atomic_write_json
 
 def main(argv=None):
  p=argparse.ArgumentParser();p.add_argument('--root',required=True);p.add_argument('--architecture',required=True);args=p.parse_args(argv)

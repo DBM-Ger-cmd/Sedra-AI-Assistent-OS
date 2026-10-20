@@ -28,10 +28,10 @@ import yaml
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path  # noqa: E402
-from guppi_runtime.gpu_preflight import clear_leftovers
-from guppi_runtime.recipe_measure import MeasureError, apply_measurements, http_generate, measure_recipe  # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path  # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers
+from guppi_runtime.models.recipe_measure import MeasureError, apply_measurements, http_generate, measure_recipe  # noqa: E402
 
 
 def read_vram():

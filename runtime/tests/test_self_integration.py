@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from guppi_runtime import self_integration
+from guppi_runtime.selfdev import self_integration
 from guppi_runtime.runtime import GuppiRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 

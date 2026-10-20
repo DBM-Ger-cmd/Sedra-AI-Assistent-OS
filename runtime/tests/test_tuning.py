@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.tuning import digest
+from guppi_runtime.models.tuning import digest
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
@@ -121,7 +121,7 @@ class TuningCase(unittest.TestCase):
     def test_budget_prevents_next_candidate(self):
         with patch.object(self.manager.benchmark, 'benchmark_managed_llamacpp') as runner, \
              patch.object(self.manager.controller('llama-cpp-server'), 'status', return_value={'managed_running': False}), \
-             patch('guppi_runtime.tuning.time.monotonic', side_effect=[0, 31]):
+             patch('guppi_runtime.models.tuning.time.monotonic', side_effect=[0, 31]):
             result = self.tuning.run(self.plan(budget_seconds=30))
         runner.assert_not_called()
         self.assertEqual(result['status'], 'BUDGET_EXHAUSTED')

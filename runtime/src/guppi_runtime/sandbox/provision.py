@@ -5,8 +5,8 @@ from pathlib import Path
 import re
 import uuid
 from ..tools.base import ToolValidationError
-from ..tuning import digest
-from ..util import atomic_write_json, utcnow
+from ..models.tuning import digest
+from ..core.util import atomic_write_json, utcnow
 
 MAX_ARCHIVE_BYTES = 2 * 1024**3
 

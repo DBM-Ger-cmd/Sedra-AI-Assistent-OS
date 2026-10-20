@@ -22,7 +22,7 @@ from pathlib import Path
 
 import yaml
 
-from ..util import utcnow
+from ..core.util import utcnow
 from .base import BaseTool, ToolValidationError
 
 USER_AGENT = "GUPPI-external-read/0.1 (+local; read-only)"

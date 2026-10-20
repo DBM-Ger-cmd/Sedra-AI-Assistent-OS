@@ -4,7 +4,7 @@ from unittest.mock import patch
 import unittest
 import test_sandbox
 import test_code_candidate
-from guppi_runtime.candidate_tests import run_candidate_tests, verify_candidate_tests
+from guppi_runtime.selfdev.candidate_tests import run_candidate_tests, verify_candidate_tests
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 

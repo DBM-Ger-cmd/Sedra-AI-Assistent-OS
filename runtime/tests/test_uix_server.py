@@ -481,7 +481,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   self.assertNotIn('<script>',html);self.assertNotIn('<style>',html)
   for f in (UIX_DIR/'js').glob('*.js'):self.assertLess(len(f.read_text(encoding='utf-8').splitlines()),400,f.name)   # small enough for a model to edit
  def test_switching_models_frees_the_old_one_when_vram_is_short(self):
-  from guppi_runtime.role_routing import ResolutionError
+  from guppi_runtime.models.role_routing import ResolutionError
   state={'loaded':True,'calls':0,'unloaded':0}
   class FakeServer:
    def loaded_models(self):return [{'identifier':'a'}] if state['loaded'] else []
@@ -500,7 +500,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   with unittest.mock.patch.object(u.time,'sleep'):out=self.hub.load_model({'recipe_id':'x'})
   self.assertEqual(out['identifier'],'b');self.assertEqual((state['calls'],state['unloaded']),(2,1))
  def test_foreign_pressure_does_not_unload_anything(self):
-  from guppi_runtime.role_routing import ResolutionError
+  from guppi_runtime.models.role_routing import ResolutionError
   class FakeRouter:
    def resolve_recipe(self,rid):raise ResolutionError('hardware_pressure',{})
   class FakeLoader:enabled=True
@@ -571,7 +571,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   for needle in ('function renderRoutingConfig(','/api/routing-config','/api/routing-config/request','/api/routing-config/apply','n_cpu_moe'):self.assertIn(needle,js)
  # ---- rework watch (plan 2026-10-04): stalled reworks wait for the Captain's hint
  def _e1_state(self,name='demo',hint=None,failures=2):
-  from guppi_runtime.rework_watch import ReworkWatch,failure_signature
+  from guppi_runtime.jobs.rework_watch import ReworkWatch,failure_signature
   state={'job_id':'SDJ-STALLED','scenario':name}
   if hint: state['captain_hint']=hint
   w=ReworkWatch();sig=failure_signature('gen','model_answer_truncated')
@@ -609,7 +609,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   with self.assertRaises(ValueError) as ctx:self.hub.rework_hint({'job_id':'SDJ-STALLED','text':'first'})
   self.assertEqual(str(ctx.exception),'hint_not_new')
  def test_rework_view_and_hint_for_a_stalled_supervisor_job(self):
-  from guppi_runtime.rework_watch import ReworkWatch,failure_signature
+  from guppi_runtime.jobs.rework_watch import ReworkWatch,failure_signature
   w=ReworkWatch();sig=failure_signature('test','FAIL: test_a (m.C.test_a)')
   w.record(sig);w.record(sig)
   job={'job_id':'SDJ-SUP','state':'BLOCKED','supervisor_flags':{'escalated_to':'captain'},'last_error':{'reason_code':'rework_stalled'},
@@ -620,7 +620,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   self.assertEqual((item['kind'],item['job_id'],item['detector'],item['count']),('supervisor','SDJ-SUP','generic_repeat',3))
   self.hub.rework_hint({'job_id':'SDJ-SUP','text':'look at the port check'})
   sup.give_hint.assert_called_once_with('SDJ-SUP','look at the port check',resolved_by='captain-uix')
-  from guppi_runtime.job_supervisor import JobError
+  from guppi_runtime.jobs.job_supervisor import JobError
   sup.give_hint.side_effect=JobError('hint_not_new')
   with self.assertRaises(ValueError):self.hub.rework_hint({'job_id':'SDJ-SUP','text':'again'})
  def test_rework_panel_is_wired(self):

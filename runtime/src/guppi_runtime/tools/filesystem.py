@@ -5,7 +5,7 @@ import hashlib
 import os
 import shutil
 import tempfile
-from ..request_binding import file_request
+from ..core.request_binding import file_request
 from .base import BaseTool, ToolValidationError
 
 

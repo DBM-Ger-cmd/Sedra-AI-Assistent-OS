@@ -1,8 +1,8 @@
 import env_skip; env_skip.need_dulwich()   # whole module needs the DevVM git (dulwich); skipped with reason where it is missing
 import json, tempfile, unittest
 from pathlib import Path
-from guppi_runtime.devvm import DevWorkspace
-from guppi_runtime.devvm_agents import AgentBudget, DevOrchestrator, ModelHost, run_agent
+from guppi_runtime.devenv.devvm import DevWorkspace
+from guppi_runtime.devenv.devvm_agents import AgentBudget, DevOrchestrator, ModelHost, run_agent
 
 POLICY = {'max_files': 20, 'max_file_bytes': 4000, 'max_input_bytes': 20000}
 
@@ -45,7 +45,7 @@ class RunAgentTests(Case):
     def test_agents_cannot_start_agents(self):
         with self.assertRaises(ValueError) as ctx: run_agent('coder', 'x', self.ws, lambda b: answer(), 'm', depth=2)
         self.assertEqual(str(ctx.exception), 'agent_depth_limit')
-        from guppi_runtime.devvm_tools import ROLE_TOOLS, SCHEMAS
+        from guppi_runtime.devenv.devvm_tools import ROLE_TOOLS, SCHEMAS
         self.assertFalse([n for names in ROLE_TOOLS.values() for n in names if 'agent' in n or 'spawn' in n or 'delegate' in n])      # no tool that starts one
         self.assertFalse([n for n in SCHEMAS if 'agent' in n or 'spawn' in n])
 
@@ -195,7 +195,7 @@ class TeamTests(Case):
         self.assertEqual([r['verdict'] for r in out['steps'][0]['rounds']], ['FAIL(test)', 'PASS'])
 
     def test_a_broken_check_script_is_told_apart_from_unfinished_work(self):
-        from guppi_runtime.devvm_agents import check_is_broken
+        from guppi_runtime.devenv.devvm_agents import check_is_broken
         name = 'acceptance_step1.py'
         tb = lambda f, last: f'Traceback (most recent call last):\n  File "/workspace/{f}", line 3, in <module>\n    x\n{last}'
         self.assertTrue(check_is_broken(tb(name, "NameError: name 'os' is not defined"), name))
@@ -229,7 +229,7 @@ class TeamTests(Case):
         self.assertIn('Changed files since the last commit: added: a.py', review); self.assertIn('+++ b/a.py', review); self.assertIn('+x = 1', review)
 
     def test_check_problem_finds_checks_that_cannot_judge(self):
-        from guppi_runtime.devvm_agents import check_problem
+        from guppi_runtime.devenv.devvm_agents import check_problem
         self.ws.write('textutil.py', 'def slugify(t):\n    return t\n')
         self.assertIsNone(check_problem('from textutil import slugify\nassert slugify("a") == "a"\n', self.ws))
         self.assertEqual(check_problem('def f(:\n', self.ws), 'it does not parse')
@@ -265,7 +265,7 @@ class TeamTests(Case):
         self.assertEqual((out['replans'], out['dropped_checks'], out['plan']), (0, 1, ['one'])); self.assertTrue(out['accepted'])
 
     def test_the_unittest_command_follows_the_layout_and_no_tests_ran_is_not_the_developers_failure(self):
-        from guppi_runtime.devvm_tools import unittest_command
+        from guppi_runtime.devenv.devvm_tools import unittest_command
         self.assertEqual(unittest_command(self.ws), ['python3', '-m', 'unittest', 'discover', '-v'])
         self.ws.write('tests/test_ops.py', 'x = 1\n'); self.assertEqual(unittest_command(self.ws), ['python3', '-m', 'unittest', 'discover', '-s', 'tests', '-v'])
         self.script('p', [answer([tc('submit_plan', {'steps': [{'title': 'one', 'instruction': 'make test_a.py'}]})])]); self.script('c', self.coder_turn('test_a.py')); self.script('r', [self.verdict('PASS')])

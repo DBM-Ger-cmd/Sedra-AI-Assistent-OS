@@ -5,7 +5,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from ..devvm import DevWorkspace
+from ..devenv.devvm import DevWorkspace
 from ..sandbox.broker import SandboxBroker
 from ..sandbox.provider import MicrosandboxProvider
 

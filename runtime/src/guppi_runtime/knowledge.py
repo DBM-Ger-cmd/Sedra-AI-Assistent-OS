@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 import json, uuid
-from .util import utcnow
+from .core.util import utcnow
 class KnowledgeStore:
     def __init__(self,path: Path): self.path=Path(path); self.path.parent.mkdir(parents=True,exist_ok=True)
     def add(self,title,summary,*,record_type='note',mission_id=None,tags=None,source_ref=''):

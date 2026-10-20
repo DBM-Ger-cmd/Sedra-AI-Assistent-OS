@@ -29,18 +29,18 @@ import devvm_agents_bench as bench                                              
 import logbook                                                                       # noqa: E402
 import spec_stamp                                                                    # noqa: E402
 from devvm_vm import sandbox_text, vm_env                                            # noqa: E402
-from guppi_runtime.devvm import DevWorkspace
-from guppi_runtime.devvm_evidence import DRIVER, bug_report, parse as parse_evidence
-from guppi_runtime.devvm_style import snapshot as ws_snapshot                                         # noqa: E402
-from guppi_runtime.devvm_agents import DevOrchestrator, ModelHost                    # noqa: E402
-from guppi_runtime.gpu_preflight import clear_leftovers
+from guppi_runtime.devenv.devvm import DevWorkspace
+from guppi_runtime.devenv.devvm_evidence import DRIVER, bug_report, parse as parse_evidence
+from guppi_runtime.devenv.devvm_style import snapshot as ws_snapshot                                         # noqa: E402
+from guppi_runtime.devenv.devvm_agents import DevOrchestrator, ModelHost                    # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers
 from guppi_runtime.knowledge import KnowledgeStore
 from guppi_runtime.devenv.lesson_store import default_path as lesson_cards_path, lesson_for
-from guppi_runtime.layer_summary import cell as layer_cell, summary as layer_table
-from guppi_runtime.s0_status import status as s0_state                              # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                              # noqa: E402
+from guppi_runtime.devenv.layer_summary import cell as layer_cell, summary as layer_table
+from guppi_runtime.devenv.s0_status import status as s0_state                              # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 
 REWORK_TASK = ("{task}\n\nThe work is in the workspace, but an acceptance test of the Captain fails (you do not see the test, only its output):\n{output}\n\n"

@@ -10,7 +10,7 @@ import os
 
 import yaml
 
-from ..devvm_tools import ROLE_TOOLS, SCHEMAS, SYSTEM, TERMINAL
+from ..devenv.devvm_tools import ROLE_TOOLS, SCHEMAS, SYSTEM, TERMINAL
 
 EFFECTS = {"coder": "reversible_write", "reviewer": "read_only", "tester": "preview", "planner": "proposal_only", "explorer": "read_only", "solo": "reversible_write", "step_planner": "proposal_only"}
 WORKSPACE_MODE = {"coder": "mission_write", "reviewer": "read_only", "tester": "read_only", "planner": "read_only", "explorer": "read_only", "solo": "mission_write", "step_planner": "read_only"}

@@ -4,9 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.context_budget import ContextBudgetManager
-from guppi_runtime.development_evidence import DevelopmentEvidenceStore
-from guppi_runtime.kev import KevVerificationProvider
+from guppi_runtime.jobs.context_budget import ContextBudgetManager
+from guppi_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
+from guppi_runtime.selfdev.kev import KevVerificationProvider
 from guppi_runtime.runtime import GuppiRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
@@ -140,14 +140,14 @@ class SelfDevelopmentTests(unittest.TestCase):
         self.assertEqual([e['phase'] for e in sd.jobs.load(jid)['activation_log']],['started','applied','rolled_back'])
 
     def test_acceptance_preview_refuses_a_job_that_is_not_ready(self):
-        from guppi_runtime.candidate_acceptance import preview
+        from guppi_runtime.selfdev.candidate_acceptance import preview
         self._mission_job('M-AAAA6666',verdict='FAIL')
         mission={'identity':{'mission_id':'M-AAAA6666'},'execution':{}}
         with self.assertRaises(ValueError) as ctx: preview(self.rt,mission,'accept')
         self.assertIn('development_job_not_ready',str(ctx.exception))
 
     def test_two_jobs_on_one_candidate_are_ambiguous(self):
-        from guppi_runtime.candidate_acceptance import linked_job
+        from guppi_runtime.selfdev.candidate_acceptance import linked_job
         self._mission_job('M-AAAA7777'); self._mission_job('M-AAAA7777')
         with self.assertRaises(ValueError) as ctx: linked_job(self.rt,'M-AAAA7777')
         self.assertIn('ambiguous_development_jobs',str(ctx.exception))

@@ -32,12 +32,12 @@ import yaml
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.gpu_preflight import clear_leftovers                              # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
 from guppi_runtime.knowledge import KnowledgeStore                                   # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
 from guppi_runtime.models.openai_local import split_harmony                         # noqa: E402
-from guppi_runtime.routing_profiles import RoutingProfiles                          # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                             # noqa: E402
+from guppi_runtime.models.routing_profiles import RoutingProfiles                          # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
 
 
 def _try_guarded(fn, attr_or_call, exc_name, message):

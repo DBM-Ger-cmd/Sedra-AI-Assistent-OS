@@ -24,10 +24,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import judge as judge_mod                                                            # noqa: E402
 import small_team as st                                                              # noqa: E402
 from team_tasks import SETS                                                          # noqa: E402
-from guppi_runtime.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                              # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 RULE = ("Rule: when a library call raises an exception that the contract wants turned into another one, catch the exception TYPE and raise the contract's "
         "error unconditionally. Never decide by looking at the text of the library's message.")

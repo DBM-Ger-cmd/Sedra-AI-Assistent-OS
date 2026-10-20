@@ -29,11 +29,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from context_ladder import gpu_mib                                                   # noqa: E402
 from moe_sweep import source_text                                                    # noqa: E402
-from guppi_runtime.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
 from guppi_runtime.local_paths import expand                                     # noqa: E402
-from guppi_runtime.testlab import TestLab, default_path                             # noqa: E402
-from guppi_runtime.util import atomic_write_text                                     # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
+from guppi_runtime.core.util import atomic_write_text                                     # noqa: E402
 
 RECIPE = "coder.llama_qwen35"
 OLD_GGUF = expand(r"<modelle>\unsloth\Qwen3.5-9B-MTP-GGUF\Qwen3.5-9B-UD-Q4_K_XL.gguf")      # <modelle>: runtime/config/local_paths.yaml

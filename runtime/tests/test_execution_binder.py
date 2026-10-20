@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.execution_binder import BindingError
+from guppi_runtime.selfdev.execution_binder import BindingError
 from guppi_runtime.cli import main
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 

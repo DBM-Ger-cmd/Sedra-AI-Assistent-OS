@@ -1,7 +1,7 @@
 """Collect prerequisites without executing models, guest code or hardware writes."""
 from pathlib import Path
 from . import __version__
-from .util import utcnow
+from .core.util import utcnow
 
 PENDING_ACCEPTANCE = [
     'Windows startup, shutdown, standby and USB relocation',

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .util import utcnow
+from .core.util import utcnow
 class Observability:
     def __init__(self): self.checks={}
     def register(self, component_id, check): self.checks[component_id]=check

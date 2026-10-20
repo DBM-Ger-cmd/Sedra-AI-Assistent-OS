@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 import uuid
-from .util import sha256_file, atomic_write_json, load_json, utcnow, append_lock
+from .core.util import sha256_file, atomic_write_json, load_json, utcnow, append_lock
 
 class ArtifactStore:
     def __init__(self, root: Path, audit=None):

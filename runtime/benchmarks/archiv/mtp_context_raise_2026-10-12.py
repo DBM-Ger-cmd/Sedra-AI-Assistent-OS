@@ -15,8 +15,8 @@ import yaml
 RUNTIME = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.testlab import TestLab, default_path   # noqa: E402
-from guppi_runtime.util import atomic_write_text          # noqa: E402
+from guppi_runtime.jobs.testlab import TestLab, default_path   # noqa: E402
+from guppi_runtime.core.util import atomic_write_text          # noqa: E402
 
 RECIPE = "coder.llama_qwen35"
 CHANGES = [

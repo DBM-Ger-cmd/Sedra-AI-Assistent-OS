@@ -16,8 +16,8 @@ import re
 import threading
 import time
 
-from ..job_supervisor import JobError, WorkerContext
-from ..token_policy import TokenBudgetError
+from ..jobs.job_supervisor import JobError, WorkerContext
+from ..jobs.token_policy import TokenBudgetError
 
 ADVANCE_STATES = ("TESTING", "VERIFYING")
 

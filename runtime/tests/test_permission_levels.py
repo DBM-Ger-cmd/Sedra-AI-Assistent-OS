@@ -11,10 +11,10 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.development_contracts import development_contract
-from guppi_runtime.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore, supervisor_state
-from guppi_runtime.permission_levels import PermissionConfig, PermissionGate
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.selfdev.development_contracts import development_contract
+from guppi_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore, supervisor_state
+from guppi_runtime.core.permission_levels import PermissionConfig, PermissionGate
 from guppi_runtime.runtime import GuppiRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
@@ -507,12 +507,12 @@ class RuntimeAndBoundaryTests(unittest.TestCase):
         self.assertEqual(rt.permission_status(), {'available': False, 'error': 'permission_config_invalid:test'})
 
     def test_the_gate_never_grants_or_changes_anything_itself(self):
-        source = Path(importlib.import_module('guppi_runtime.permission_levels').__file__).read_text(encoding='utf-8')
+        source = Path(importlib.import_module('guppi_runtime.core.permission_levels').__file__).read_text(encoding='utf-8')
         for forbidden in ('.approve(', 'create_gate(', 'authorize(', '.transition(', 'atomic_write_json', '.write_text(', 'open('):
             self.assertNotIn(forbidden, source)
 
     def test_gate_source_names_no_provider_or_model(self):
-        for name in ('permission_levels.py',):
+        for name in ('core/permission_levels.py',):
             source = (RUNTIME / 'src' / 'guppi_runtime' / name).read_text(encoding='utf-8').lower()
             for word in ('lm-studio', 'llama', 'qwen', 'kev', 'openai', 'anthropic'):
                 self.assertNotRegex(source, rf'\b{re.escape(word)}\b', word)

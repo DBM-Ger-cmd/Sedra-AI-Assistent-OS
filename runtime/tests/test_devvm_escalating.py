@@ -1,8 +1,8 @@
 import env_skip; env_skip.need_dulwich()   # whole module needs the DevVM git (dulwich); skipped with reason where it is missing
 import json, tempfile, unittest
 from pathlib import Path
-from guppi_runtime.devvm import DevWorkspace
-from guppi_runtime.devvm_agents import DevOrchestrator, ModelHost
+from guppi_runtime.devenv.devvm import DevWorkspace
+from guppi_runtime.devenv.devvm_agents import DevOrchestrator, ModelHost
 
 POLICY = {'max_files': 20, 'max_file_bytes': 8000, 'max_input_bytes': 20000}
 GOOD_CHECK = 'from a import x\nassert x == 1'
@@ -198,11 +198,11 @@ def run_driver(files):
 
 class EvidenceTests(Case):
     def table(self, check, work):
-        from guppi_runtime.devvm_evidence import DRIVER, parse
+        from guppi_runtime.devenv.devvm_evidence import DRIVER, parse
         return parse(run_driver({'driver.py': DRIVER, 'check.py': check, **work}))
 
     def test_a_chain_of_conditions_names_the_first_false_part_with_both_values(self):
-        from guppi_runtime.devvm_evidence import bug_report
+        from guppi_runtime.devenv.devvm_evidence import bug_report
         work = {'a.py': 'x = 3\ny = [1, 2]\nz = None\n'}
         check = '\n'.join(['from a import x, y, z', 'assert x == 3 and y == [1, 2, 5] and z is None', 'assert 7 in y', 'assert z is not None', 'assert x == 4', ''])
         report = bug_report(self.table(check, work), limit=4)
@@ -213,7 +213,7 @@ class EvidenceTests(Case):
         self.assertNotIn('`x == 4`', report)
 
     def test_a_script_that_stops_in_a_loop_names_the_line_and_the_case(self):
-        from guppi_runtime.devvm_evidence import bug_report
+        from guppi_runtime.devenv.devvm_evidence import bug_report
         nl = chr(10)
         check = nl.join(['from a import f', 'assert f(1) == 1', 'for bad in (None, [], {"x": 1}):', '    try: f(bad)', '    except ValueError: pass', '    else: raise AssertionError("no error for a bad value")', ''])
         work = {'a.py': 'def f(v):' + nl + '    if v is None: raise ValueError("x")' + nl + '    return v' + nl}
@@ -222,7 +222,7 @@ class EvidenceTests(Case):
         self.assertIn('line 6', report); self.assertIn('bad=[]', report)
 
     def test_a_bug_report_names_the_first_failing_assertions_with_expected_and_actual(self):
-        from guppi_runtime.devvm_evidence import bug_report
+        from guppi_runtime.devenv.devvm_evidence import bug_report
         nl = chr(10)
         check = nl.join(['from a import x', 'assert x == 1', 'assert x == 3', 'assert x == 7', 'assert x == 8', ''])
         work = {'a.py': 'x = 3' + nl}
@@ -256,13 +256,13 @@ class EvidenceTests(Case):
         self.assertEqual((rows[1]['pass'], rows[2]['fail']), (1, 1))
 
     def test_assertions_that_never_ran_are_reported_as_not_reached_and_not_as_passing(self):
-        from guppi_runtime.devvm_evidence import format_evidence
+        from guppi_runtime.devenv.devvm_evidence import format_evidence
         data = self.table('import nothing_here\nassert True\n', {})
         text = format_evidence('', data)
         self.assertIn('NOT REACHED', text); self.assertNotIn('passes (0 of 0)', text); self.assertIn('1 were not reached.', text); self.assertIn('ModuleNotFoundError', text)
 
     def test_many_failing_assertions_are_summarised_and_passing_ones_are_ranges(self):
-        from guppi_runtime.devvm_evidence import format_evidence
+        from guppi_runtime.devenv.devvm_evidence import format_evidence
         sites = [{'n': i, 'line': i, 'src': 'assert f(%d) == 1' % i, 'pass': 1 if i in (1, 2, 3, 20) else 0, 'fail': 0 if i in (1, 2, 3, 20) else 1, 'error': 0,
                   'first': None if i in (1, 2, 3, 20) else {'got': '[%d]' % i, 'expected': '[]'}} for i in range(1, 21)]
         text = format_evidence('', {'sites': sites, 'setup_error': None})
@@ -278,12 +278,12 @@ class EvidenceTests(Case):
         self.assertIn('ModuleNotFoundError', data['setup_error']); self.assertEqual(data['sites'][0]['pass'] + data['sites'][0]['fail'], 0)
 
     def test_the_output_is_parsed_only_when_the_driver_reported(self):
-        from guppi_runtime.devvm_evidence import parse
+        from guppi_runtime.devenv.devvm_evidence import parse
         self.assertIsNone(parse('')); self.assertIsNone(parse('Traceback...')); self.assertIsNone(parse('EVIDENCE_JSON {broken')); self.assertIsNone(parse('EVIDENCE_JSON [1]'))
         self.assertEqual(parse('noise\nEVIDENCE_JSON {"sites": [], "setup_error": null}\n')['sites'], [])
 
     def test_the_evidence_text_numbers_the_assertions_and_says_how_many_fail(self):
-        from guppi_runtime.devvm_evidence import format_evidence
+        from guppi_runtime.devenv.devvm_evidence import format_evidence
         data = self.table('from a import x\nassert x == 3\nassert x == 1\n', {'a.py': 'x = 3\n'})
         text = format_evidence('', data)
         self.assertIn('pass: #1', text); self.assertIn('#2 (line 3) FAILS 1 of 1 times: expected 1 but the work gives 3', text); self.assertIn('1 of 2 assertions fail.', text)
@@ -385,7 +385,7 @@ class SoloTests(Case):
 
     def test_continuing_without_a_first_run_is_refused_and_a_long_history_is_shortened(self):
         with self.assertRaises(ValueError): self.solo().continue_solo('report')
-        from guppi_runtime.model_tools import compact_history
+        from guppi_runtime.devenv.model_tools import compact_history
         big = [{'role': 'system', 'content': 'S'}, {'role': 'user', 'content': 'task'}] + [{'role': 'tool', 'tool_call_id': 'x', 'content': 'y' * 5000} for _ in range(20)]
         small = compact_history(big)
         self.assertEqual(len(small), len(big)); self.assertLess(sum(len(m['content']) for m in small), 8 * 5000 + 20 * 600)
@@ -395,7 +395,7 @@ class SoloTests(Case):
 
 class CheckerRulesTests(unittest.TestCase):
     def test_checker_note_carries_the_rules_found_in_the_am_builds(self):
-        from guppi_runtime.devvm_agents import CHECKER_NOTE
+        from guppi_runtime.devenv.devvm_agents import CHECKER_NOTE
         for rule in ("ONE complete valid example", "contradict each other", "exactly as the task defines them"):
             self.assertIn(rule, CHECKER_NOTE)
         self.assertIn("submit_plan", CHECKER_NOTE)
@@ -407,7 +407,7 @@ if __name__ == '__main__':
 
 class CompactArgumentsTests(unittest.TestCase):
     def test_cut_tool_call_arguments_stay_valid_json(self):
-        from guppi_runtime.model_tools import compact_history
+        from guppi_runtime.devenv.model_tools import compact_history
         call = {'id': 'c1', 'type': 'function', 'function': {'name': 'write_file', 'arguments': json.dumps({'path': 'a.py', 'content': 'x = 1\n' * 500})}}
         msgs = [{'role': 'system', 'content': 'S'}, {'role': 'user', 'content': 'task'}, {'role': 'assistant', 'content': None, 'tool_calls': [call]}] + [{'role': 'user', 'content': 'u'} for _ in range(9)]
         small = compact_history(msgs)
@@ -507,7 +507,7 @@ class WindowAndRescueTests(Case):
 
 class ChainedAssertTests(unittest.TestCase):
     def test_chained_asserts_are_found_with_their_part_count(self):
-        from guppi_runtime.devvm_evidence import chained_asserts
+        from guppi_runtime.devenv.devvm_evidence import chained_asserts
         nl = chr(10)
         source = nl.join(['assert a == 1', 'assert a == 1 and b == 2', 'assert a == 1 and b == 2 and c == 3', 'assert x or y or z', 'assert p and q and r and s, "message"', ''])
         self.assertEqual(chained_asserts(source), [(3, 3), (5, 4)])

@@ -18,9 +18,9 @@ import shlex
 import time
 
 from ..coder_ext import self_repo_guard
-from ..devvm import DevWorkspace
-from ..loop_guard import LoopGuard
-from ..model_tools import SCHEMAS as BASE_SCHEMAS, _fn
+from ..devenv.devvm import DevWorkspace
+from ..jobs.loop_guard import LoopGuard
+from ..devenv.model_tools import SCHEMAS as BASE_SCHEMAS, _fn
 from ..tools.base import ToolError
 
 # Placeholders that model_tools.stub_writes / compact_history put into OLD write calls of a long conversation. A model that repeats such a call would write the

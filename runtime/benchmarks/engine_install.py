@@ -3,7 +3,7 @@ r"""Install GUPPI's own llama.cpp engine from already downloaded release zips (n
     .venv\Scripts\python.exe benchmarks/engine_install.py <download_dir> [--verify]
 
 Reads engine_build and the SHA256 pins (engine_assets) from config/llama_server.yaml, checks every zip, unpacks into a staging
-folder and renames it to <GUPPI_Runtime>/engines/llama.cpp/<build>/ with a manifest of file hashes (guppi_runtime/engine_provision.py).
+folder and renames it to <GUPPI_Runtime>/engines/llama.cpp/<build>/ with a manifest of file hashes (guppi_runtime/models/engine_provision.py).
 --verify only re-checks an installed engine (every file). Afterwards: engine_source: guppi in config/llama_server.yaml.
 """
 import argparse
@@ -15,7 +15,7 @@ import yaml
 
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
-from guppi_runtime.engine_provision import DEFAULT_ROOT, provision, verify_engine  # noqa: E402
+from guppi_runtime.models.engine_provision import DEFAULT_ROOT, provision, verify_engine  # noqa: E402
 
 
 def main():

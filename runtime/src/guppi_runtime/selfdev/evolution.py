@@ -2,7 +2,7 @@ from __future__ import annotations
 from collections import Counter
 from pathlib import Path
 import uuid, yaml
-from ..evolution_targets import classify_target
+from ..selfdev.evolution_targets import classify_target
 
 class EvolutionManager:
     THRESHOLDS = {

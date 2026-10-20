@@ -6,7 +6,7 @@ from pathlib import Path
 from guppi_runtime.agent_manager.agent_contracts import ContractError
 from guppi_runtime.agent_manager.agent_registry import Registry
 from guppi_runtime.agent_manager.bridge import ACTION, AgentBridge, FakeRuntime
-from guppi_runtime.guard import Guard
+from guppi_runtime.core.guard import Guard
 
 RULES = next(Path(__file__).resolve().parents[2].glob("architecture/*/core/guard/guard_rules.yaml"))
 AGENT = "guppi.agent.coder@1.0.0"

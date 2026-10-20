@@ -11,7 +11,7 @@ import io
 import re
 import tokenize
 
-from ..comment_archive import extract_comments
+from ..devenv.comment_archive import extract_comments
 
 
 class StyleError(ValueError):

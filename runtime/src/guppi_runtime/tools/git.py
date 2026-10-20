@@ -4,7 +4,7 @@ import os
 import re
 import shutil
 import subprocess
-from ..request_binding import file_request
+from ..core.request_binding import file_request
 from .base import BaseTool, ToolValidationError
 
 

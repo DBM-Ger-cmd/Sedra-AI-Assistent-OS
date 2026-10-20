@@ -12,7 +12,7 @@ sys.path.insert(0, str(RUNTIME / "benchmarks"))
 sys.path.insert(0, str(RUNTIME / "src"))
 
 import connection_check as cc  # noqa: E402
-from guppi_runtime.conn_check import RequestError  # noqa: E402
+from guppi_runtime.devenv.conn_check import RequestError  # noqa: E402
 
 
 class FakeRuntime:

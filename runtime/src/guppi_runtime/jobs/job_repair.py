@@ -6,8 +6,8 @@ and the context work stays with the manager.
 """
 from __future__ import annotations
 
-from ..context_manager import ContextError
-from ..job_supervisor import JobError
+from ..jobs.context_manager import ContextError
+from ..jobs.job_supervisor import JobError
 
 # Supervisor failure class / reason -> context repair trigger
 def trigger_for(job):

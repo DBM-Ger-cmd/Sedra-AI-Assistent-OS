@@ -19,7 +19,7 @@ from pathlib import Path
 
 import yaml
 
-from ..util import append_lock, atomic_write_json, load_json
+from ..core.util import append_lock, atomic_write_json, load_json
 
 BAD_THERMAL = frozenset({"HOT", "CRITICAL", "SENSOR_FAULT", "RECOVERY"})
 

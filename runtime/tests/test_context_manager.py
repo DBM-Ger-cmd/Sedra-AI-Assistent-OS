@@ -10,10 +10,10 @@ from pathlib import Path
 import yaml
 
 from guppi_runtime.artifacts import ArtifactStore
-from guppi_runtime.audit import AuditLog
-from guppi_runtime.context_budget import ContextBudgetManager
-from guppi_runtime.context_manager import (ContextConfig, ContextError, ContextManager, collect_pins, make_piece, redact_text, score_piece)
-from guppi_runtime.development_evidence import DevelopmentEvidenceStore
+from guppi_runtime.core.audit import AuditLog
+from guppi_runtime.jobs.context_budget import ContextBudgetManager
+from guppi_runtime.jobs.context_manager import (ContextConfig, ContextError, ContextManager, collect_pins, make_piece, redact_text, score_piece)
+from guppi_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
 from guppi_runtime.models.openai_local import normalize_usage
 from guppi_runtime.runtime import GuppiRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
@@ -621,7 +621,7 @@ class ControlMasterIntegrationTests(unittest.TestCase):
 class AtomicReplaceTests(unittest.TestCase):
     def test_transient_permission_error_is_retried_on_windows_only(self):
         from unittest.mock import patch
-        from guppi_runtime import util
+        from guppi_runtime.core import util
         calls = {'n': 0}
 
         def flaky(src, dst):
@@ -642,12 +642,12 @@ class AtomicReplaceTests(unittest.TestCase):
 class BoundaryTests(unittest.TestCase):
     def test_module_names_no_provider_or_model(self):
         import re
-        source = Path(importlib.import_module('guppi_runtime.context_manager').__file__).read_text(encoding='utf-8').lower()
+        source = Path(importlib.import_module('guppi_runtime.jobs.context_manager').__file__).read_text(encoding='utf-8').lower()
         for word in ('lm-studio', 'lmstudio', 'llama', 'qwen', 'kev', 'openai', 'anthropic'):
             self.assertNotRegex(source, rf'\b{re.escape(word)}\b', word)
 
     def test_module_does_not_touch_job_state(self):
-        source = Path(importlib.import_module('guppi_runtime.context_manager').__file__).read_text(encoding='utf-8')
+        source = Path(importlib.import_module('guppi_runtime.jobs.context_manager').__file__).read_text(encoding='utf-8')
         for forbidden in ('.transition(', 'JobSupervisor', 'DevelopmentJobStore', 'guard.approve'):
             self.assertNotIn(forbidden, source)
 

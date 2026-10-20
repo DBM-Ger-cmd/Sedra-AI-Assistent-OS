@@ -7,7 +7,7 @@ class VerificationModule(BaseModule):
     id='verification'
     def verify(self,mission):
         if mission['plan'].get('workflow')=='code-candidate-v1':
-            from ..candidate_verification import verify_candidate
+            from ..selfdev.candidate_verification import verify_candidate
             return verify_candidate(self,mission)
         if mission['plan'].get('workflow')=='project-inspection-v1':
             return self.verify_inspection(mission)
