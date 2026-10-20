@@ -1455,6 +1455,16 @@ G2 Spec 0 (Captain, 20.10.2026): Design D1 bis D6 freigegeben, alles wie vom Vor
 | OP-10 | `orchestra/` und Desk-Teile werden nach Review übernommen (G4), nicht über `self_integration`; diese wird nicht geweitet |
 | OP-11 | Architekturversion von `test_desk_objects` (v1.17 gegen v1.20) wird im Bau geklärt |
 
+G1 Spec 1 bis 4 und G3 Spec 0 (Captain, 20.10.2026), nach Prüfung durch den Vorarbeiter (Stichproben gegen den Code, `spec_check` je Bau-Spec `result ok`):
+
+| Gate | Entscheidung |
+| --- | --- |
+| G1-S1-01 bis G1-S1-25 | freigegeben wie empfohlen; u. a. Organigramm in `orchestra/org.py`, ORC-01 bis ORC-14 in neuer Fassung, neue ORC-15 bis ORC-19, Dauerfreigabe als Token-Art im Guard (Weg 1; Kern-Gate nur als Grundsatz, der Diff wird einzeln freigegeben), Grenzen Stufe ≤ 3, 7 Tage (höchstens 30), höchstens 50 Läufe, Kennung `foreman`, Hostliste der Recherche unverändert |
+| G1-S2-a bis G1-S2-m | freigegeben wie empfohlen; VRAM-Obergrenze 11,5 GB, Reserve 0,7 GB; Messplan nur als Rahmen, Ausführung braucht eigene Freigabe mit GPU-Zeit |
+| G1-S3-01 bis G1-S3-13, G1-S3-GA-01 bis GA-07 | freigegeben wie empfohlen, mit einer Änderung an G1-S3-04: der Labor-Wert `modus: test` (Personenbezug wird ersetzt und gesendet, Captain 16.10.2026) **bleibt, aber nur hinter einem Gate und nur mit ausdrücklich gekennzeichneten Testdaten**; jeder solche Aufruf steht im Audit. Hauptschalter bleibt in `cloud_providers.yaml`; `paid_action` in der Startphase BLOCK; NVIDIA nur Test und Evaluation; Mammouth erst nach Prüfung seiner Bedingungen |
+| G1-S4-01 bis G1-S4-10 | freigegeben wie empfohlen; Shell D klassisch, neues Werkzeug `agentfenster`, Vertragsnachträge `handles` und vier Ereignisse |
+| G3-S0-01 bis G3-S0-19 | freigegeben wie empfohlen; die vier neuen Typen in Spec 0 nur lesend, Verben folgen in Spec 1 (OP-12); OP-13 bis OP-17 wie vorgeschlagen. G3 gibt den Bau frei, nicht die Übernahme: jeder SEDRA-Kandidat kommt einzeln zu G4 |
+
 ## Vorarbeiter-Prompt
 
 Der Prompt für den Vorarbeiter liegt bewusst nicht in dieser Datei, weil er Laufwerkspfade dieses PCs enthält (Regel 10 in `ENTWICKLUNG.md`). Er wird außerhalb des Repos aufbewahrt und als erste Nachricht an die Vorarbeiter-Sitzung gegeben.

@@ -293,3 +293,9 @@ Fortlaufend, neueste Einträge unten. Je Eintrag: Zeit, Art (ENTSCHEIDUNG, BAU, 
 | 2026-10-20 13:19 | DOKU | K0.5 Spec 0 Design ausgearbeitet (D1-D6): Desk-Registrierung, Feld client mit Client-Token, Paket orchestra/ mit Datenmodell, Guard-Aktionen G2-S0-GA-01..10, Gate-Liste G2-S0-01..14, 11 offene Punkte; wartet auf G2 | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
 | 2026-10-20 13:28 | DOKU | OP-6 entschieden: oberster Agent ist der Unterarbeiter (unter dem Captain), beaufsichtigt Planer, Coder, Reviewer, Recherche | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
 | 2026-10-20 13:29 | DOKU | G2 Spec 0 erteilt (G2-S0-01 bis 14, GA-01 bis 10, OP-1 bis 11 wie empfohlen); ORC-14 Unterarbeiter delegiert | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
+| 2026-10-20 13:49 | DOKU | K0.7-K0.25 Spec 0 Aufgaben und sechs Bau-Specs (k0_kinds, k0_extensions, k0_orchestra_config, k0_orchestra_store, k0_orchestra_service, k0_orchestra_kinds), spec_check je result ok | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
+| 2026-10-20 13:49 | DOKU | Spec 1 Abgleich gegen den Code: ORC-01 bis 14 neu gefasst, ORC-15 bis 19, Dauerfreigabe-Entwurf | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
+| 2026-10-20 13:49 | DOKU | Spec 2 Abgleich gegen den Code, Messplan-Entwurf, Regel-Entwurf GPU-Lease | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
+| 2026-10-20 13:49 | DOKU | Spec 3 Abgleich gegen den Code, Schutzklassen übernommen, Guard-Aktionen Cloud, Nutzungsbedingungen NVIDIA/Mammouth geprüft | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
+| 2026-10-20 13:49 | DOKU | Spec 4 Abgleich gegen den Code, Werkzeugliste, Skizze Shell D | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
+| 2026-10-20 13:49 | DOKU | G1 Spec 1-4 und G3 Spec 0 erteilt (wie empfohlen; Labor-Testmodus nur hinter Gate mit Testdaten) | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
