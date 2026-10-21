@@ -171,6 +171,78 @@ class BuildNeedsAStampTests(Base):
         self.assertIn('"--skip-spec-stamp"', text)
 
 
+class SeedFieldTests(Base):
+    """PIPE-10 (Captain 2026-10-21): the module field SEED of a spec."""
+    def with_seed(self, files=None, seed="benchmarks/demo_seed"):
+        (self.bench / "devvm_specs" / "demo.py").write_text(f'SEED = "{seed}"\n' + SPEC, encoding="utf-8")
+        folder = self.bench / "demo_seed"
+        if files is not None:
+            folder.mkdir(exist_ok=True)
+            for name, text in files.items(): (folder / name).write_text(text, encoding="utf-8")
+        return folder
+
+    def args(self, seed=None):
+        return devvm_build().parse_args(["proj", "--spec", "demo"] + (["--seed", seed] if seed else []))
+
+    def test_spec_check_reports_the_seed_and_the_stamp_binds_its_hash(self):
+        folder = self.with_seed({"a.py": "x = 1\n", "b.py": "y = 2\n"})
+        code, text = self.run_check("--vm", "--project", str(self.project), vm_env=fake_vm())
+        self.assertEqual(code, 0, text)
+        self.assertIn("seed     benchmarks/demo_seed (2 Dateien)", text)
+        self.assertEqual(self.stamp()["seed_sha256"], spec_stamp.tree_sha256(folder)[0])
+        self.assertIsNone(spec_stamp.check(self.project, "demo", self.bench)[0])
+        (folder / "a.py").write_text("x = 3\n", encoding="utf-8")
+        self.assertEqual(spec_stamp.check(self.project, "demo", self.bench)[0], "spec_changed_since_check")
+
+    def test_spec_check_does_not_load_the_seed_into_the_vm_and_a_missing_folder_is_a_problem(self):
+        self.with_seed(None)
+        code, text = self.run_check("--vm", "--project", str(self.project), vm_env=fake_vm())
+        self.assertEqual(code, 1)
+        self.assertIn("seed_missing", text)
+        self.assertFalse(spec_stamp.stamp_path(self.project, "demo").exists())
+
+    def test_a_stamp_without_seed_sha256_is_stale(self):
+        self.run_check("--vm", "--project", str(self.project), vm_env=fake_vm())
+        stamp = self.stamp(); del stamp["seed_sha256"]
+        spec_stamp.stamp_path(self.project, "demo").write_text(json.dumps(stamp), encoding="utf-8")
+        self.assertEqual(spec_stamp.check(self.project, "demo", self.bench)[0], "spec_changed_since_check")
+
+    def test_a_spec_without_seed_has_an_empty_seed_hash(self):
+        self.run_check("--vm", "--project", str(self.project), vm_env=fake_vm())
+        self.assertEqual(self.stamp()["seed_sha256"], "")
+
+    def test_build_takes_the_seed_of_the_spec(self):
+        folder = self.with_seed({"a.py": "x = 1\n"})
+        args = self.args()
+        lines = devvm_build().spec_seed_gate(args, "demo", self.bench)
+        self.assertEqual(Path(args.seed), folder)
+        self.assertIn("from SEED of the spec", lines[0])
+
+    def test_a_given_seed_wins_with_a_log_line(self):
+        self.with_seed({"a.py": "x = 1\n"})
+        args = self.args("other_folder")
+        lines = devvm_build().spec_seed_gate(args, "demo", self.bench)
+        self.assertEqual(args.seed, "other_folder")
+        self.assertIn("--seed other_folder wins over SEED benchmarks/demo_seed", lines[0])
+
+    def test_a_missing_seed_folder_stops_the_build_with_seed_missing(self):
+        self.with_seed(None)
+        for given in (None, "other_folder"):
+            with self.subTest(given=given):
+                with self.assertRaises(SystemExit) as stop:
+                    devvm_build().spec_seed_gate(self.args(given), "demo", self.bench)
+                self.assertTrue(str(stop.exception).startswith("seed_missing"))
+
+    def test_without_seed_field_nothing_changes(self):
+        args = self.args()
+        self.assertEqual(devvm_build().spec_seed_gate(args, "demo", self.bench), [])
+        self.assertIsNone(args.seed)
+
+    def test_the_seed_gate_runs_before_the_stamp_gate(self):
+        text = (BENCH / "devvm_build.py").read_text(encoding="utf-8")
+        self.assertLess(text.index("spec_seed_gate(args, args.spec)"), text.index("spec_stamp_gate(project, args.spec, args.skip_spec_stamp"))
+
+
 class BuildLogbookTests(Base):
     def row(self, target, passed=(True, True), seconds=90.4):
         stages = [{"stage": f"s{i}", "hidden_passed": ok, "reworks": 1 if i == 0 else 0} for i, ok in enumerate(passed)]

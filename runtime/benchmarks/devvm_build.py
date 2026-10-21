@@ -291,6 +291,19 @@ def s0_report(project, keys, extras, engine_build):
         out.append(s0_state(project, rid, {**bench.hunt.model_spec(key, project)["server"], **extras}, engine_build))
     return out
 
+def spec_seed_gate(args, spec_name, bench=None):
+    """PIPE-10 (Captain 2026-10-21): a spec may carry `SEED = "benchmarks/<folder>"` (relative to runtime/). Without --seed the build takes it (args.seed is set); a --seed given wins (log line).
+    A SEED folder that does not exist stops the build with seed_missing. Returns the log lines."""
+    seed, folder = spec_stamp.seed_folder(spec_name, bench)
+    if not seed: return []
+    if not folder.is_dir():
+        raise SystemExit(f"seed_missing: SEED {seed} of spec {spec_name} is not a folder ({folder})")
+    if args.seed:
+        return [f"seed: --seed {args.seed} wins over SEED {seed} of the spec"]
+    args.seed = str(folder)
+    return [f"seed: {seed} from SEED of the spec"]
+
+
 def spec_stamp_gate(project, spec_name, skip, bench=None, allow_host=False):
     """L2 (Captain 2026-10-20): no build without a green spec_check of exactly this spec and reference (benchmarks/spec_stamp.py, rule in spec_stamp.gate). Returns the lines
     for the log; a missing or stale stamp stops the build before a model is loaded, unless --skip-spec-stamp (then a warning in the log). A stamp of level host
@@ -416,6 +429,7 @@ def main():
     apply_mode_defaults(args)
     coder_ext = coder_ext_config(args)
     project = Path(args.project)
+    seed_lines = spec_seed_gate(args, args.spec)
     stamp_lines = spec_stamp_gate(project, args.spec, args.skip_spec_stamp, allow_host=args.allow_host_stamp)
     if args.pidfile: Path(args.pidfile).write_text(str(os.getpid()), encoding="utf-8")
     spec = importlib.import_module(f"devvm_specs.{args.spec}")
@@ -423,7 +437,7 @@ def main():
     run_stages = select_stages(all_stages, args.only, args.from_stage)
     log = RunLog(project / "runtime_data" / "measurements", f"devvm_build_{args.spec}", config={"spec": args.spec, "attempts": args.attempts, "profile": args.profile})
     log_stamp = time.strftime("%Y%m%d_%H%M%S")
-    for line in stamp_lines: log.say(line)
+    for line in seed_lines + stamp_lines: log.say(line)
     work_root = project / "runtime_data" / "devvm_work"      # not %TEMP%: a cleaner or another program there took away the git folder of a running build (2026-10-13, NotGitRepository)
     work_root.mkdir(parents=True, exist_ok=True)
     clean_old_work(work_root)

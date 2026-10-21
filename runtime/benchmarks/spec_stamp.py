@@ -1,12 +1,14 @@
 """The stamp of a green spec_check (Captain 2026-10-20, line L2): spec_check writes it, devvm_build refuses to build without it.
 
     <project>/runtime_data/spec_stamps/<spec>.json
-    {"spec", "level": "vm" | "host", "result": "ok", "spec_sha256", "ref_sha256", "ref_files", "python", "checked_at", "tool"}
+    {"spec", "level": "vm" | "host", "result": "ok", "spec_sha256", "ref_sha256", "ref_files", "seed_sha256", "python", "checked_at", "tool"}
 
 level vm   = lint, reference and hidden tests ran ALSO in the python of the microVM (the python the build judges with).
 level host = only on the host python (spec_check --host-only): a weaker stamp, devvm_build accepts it with a warning.
-spec_sha256 is the hash of the spec file, ref_sha256 one hash over every file of the reference (path and content): a change of either after the check makes the stamp stale.
+spec_sha256 is the hash of the spec file, ref_sha256 one hash over every file of the reference (path and content), seed_sha256 the same over the folder of the module field SEED of the spec ("" without SEED; PIPE-10, 2026-10-21):
+a change of one of them after the check makes the stamp stale; a stamp without seed_sha256 (written before PIPE-10) is stale, too.
 Standard library only (spec_check and devvm_build both import it)."""
+import ast
 import hashlib
 import json
 import time
@@ -36,12 +38,30 @@ def tree_sha256(folder):
     return total.hexdigest(), count
 
 
+def spec_seed(spec, bench=None):
+    """The module field `SEED = "benchmarks/<folder>"` of a spec (path relative to runtime/, the parent of benchmarks/), read without running the spec; "" when there is none."""
+    tree = ast.parse((Path(bench or BENCH) / "devvm_specs" / f"{spec}.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "SEED" for t in node.targets):
+            if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                return node.value.value.strip()
+    return ""
+
+
+def seed_folder(spec, bench=None):
+    """(the SEED text, its folder as a Path) of a spec; ("", None) without SEED. The folder may not exist."""
+    seed = spec_seed(spec, bench)
+    return (seed, Path(bench or BENCH).parent / seed) if seed else ("", None)
+
+
 def fingerprint(spec, bench=None, ref=None):
-    """The hashes the stamp is bound to: the spec file and the reference folder (devvm_refs/<spec> unless another is given)."""
+    """The hashes the stamp is bound to: the spec file, the reference folder (devvm_refs/<spec> unless another is given) and the seed folder (SEED of the spec; a SEED that points to a missing folder gives "missing")."""
     bench = Path(bench or BENCH)
     ref = Path(ref) if ref else bench / "devvm_refs" / spec
     ref_hash, ref_files = tree_sha256(ref)
-    return {"spec_sha256": file_sha256(bench / "devvm_specs" / f"{spec}.py"), "ref_sha256": ref_hash, "ref_files": ref_files}
+    seed, folder = seed_folder(spec, bench)
+    seed_hash = (tree_sha256(folder)[0] or "missing") if seed else ""
+    return {"spec_sha256": file_sha256(bench / "devvm_specs" / f"{spec}.py"), "ref_sha256": ref_hash, "ref_files": ref_files, "seed_sha256": seed_hash}
 
 
 def write(project, spec, level, python, bench=None, ref=None):
@@ -94,6 +114,6 @@ def check(project, spec, bench=None):
         now = fingerprint(spec, bench)
     except OSError:
         return "spec_not_checked", stamp
-    if any(stamp.get(key) != now[key] for key in ("spec_sha256", "ref_sha256")):
+    if any(stamp.get(key) != now[key] for key in ("spec_sha256", "ref_sha256", "seed_sha256")):
         return "spec_changed_since_check", stamp
     return None, stamp

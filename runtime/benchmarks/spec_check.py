@@ -256,6 +256,13 @@ def main(argv=None, vm_env=None):
     else:
         print(f"  ref      none ({ref}): the tests are unproven")
         good = False
+    seed_name, seed_dir = spec_stamp.seed_folder(args.spec, BENCH)
+    if seed_name:      # PIPE-10: the reference is complete, the seed is not loaded again; the line shows what the build will load
+        if seed_dir.is_dir():
+            print(f"  seed     {seed_name} ({spec_stamp.tree_sha256(seed_dir)[1]} Dateien)")
+        else:
+            print(f"  seed     {seed_name}: folder missing (seed_missing)")
+            good = False
     level, python = None, None
     if args.vm and ref.is_dir():
         python, vm_problems, vm_rows = run_in_vm(args.project, ref, spec, vm_env)
