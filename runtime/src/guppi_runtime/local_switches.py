@@ -12,6 +12,7 @@ only flip the listed booleans of the listed sections; anything else is refused a
       model_loader:      {enabled: true, evict_idle_models: true}
       llama_server:      {enabled: true, mtp: true}
       token_policy:      {enabled: true}
+      orchestra:         {enabled: true}
 
 `role_routing` is switched in its own overlay (`local_config/role_routing.yaml`), which already exists for the recipes.
 """
@@ -28,6 +29,7 @@ ALLOWED = {
     "model_loader": {"enabled", "evict_idle_models"},
     "llama_server": {"enabled", "mtp"},
     "token_policy": {"enabled"},
+    "orchestra": {"enabled"},          # Spec 0 (G2-S0-10): Orchestrierung; Standard aus, runtime/config/orchestra.yaml sagt enabled: false
 }
 
 
