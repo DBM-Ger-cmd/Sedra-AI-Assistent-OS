@@ -92,4 +92,4 @@ def call(project_root, client, path, body, timeout=120):
     try:
         return res.status, json.loads(raw) if raw else None
     except ValueError:
-        return res.status, {'error': 'not_json', 'message': raw[:200]}
+        return res.status, {'error': f'http_{res.status}'}        # z. B. 403 als HTML-Seite: der Text sagt nichts, die Zahl alles
