@@ -104,9 +104,13 @@ MEASURE_PANE_MINIMAL = """(tool) => {
   const r = win.getBoundingClientRect();
   const segs = [...win.querySelectorAll('.sh-min-seg-item')];
   const at = segs.findIndex(s => s.dataset.tool === tool);
+  // Nachweis heißt: der Reiter steht hinter allen Inhalt-Reitern des Fensters. Zwei Inhalt-Werkzeuge auf demselben Objekt
+  // (model:alle: slots und workshop, Spec 4 D4.1) sind beide Werkstück, auch das zweite.
+  const all = window.sedraBoot.ctx.tools.all();
+  const inhalt = segs.filter(s => ((all.find(t => t.id === s.dataset.tool) || {}).slot || 'inhalt') !== 'nachweis').length;
   return {text: slot.innerText.trim().length, slots: win.querySelectorAll('.sh-min-tool').length,
           filled: slot.innerText.trim().length > 0 || slot.childElementCount > 0,
-          evidence: at > 0,
+          evidence: at >= inhalt,
           actions: win.querySelectorAll('.sh-min-verbs button').length,
           inside: r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1, scroll: 0};
 }"""

@@ -19,6 +19,7 @@ from guppi_runtime.uix_server import UIXHub
 ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
 GOLDEN = Path(__file__).resolve().parent / 'fixtures' / 'desk_golden'
 TYPES = ('task', 'intent', 'candidate', 'model', 'skill', 'decision', 'project', 'agent', 'boundary')
+PLACEHOLDERS = ('issue', 'routine', 'budget', 'gespraech')       # Spec 4 (G2-S1-10): Platzhalter mit quelle, ersetzt orchestra_kinds
 
 
 def data():
@@ -193,7 +194,7 @@ class Register(unittest.TestCase):
 
     def test_the_builtin_types_and_verbs_are_the_ones_of_before(self):
         from guppi_runtime.desk import actions, objects
-        self.assertEqual(objects.TYPES, TYPES)
+        self.assertEqual(objects.TYPES, TYPES + PLACEHOLDERS)
         self.assertEqual({k: list(v) for k, v in actions.VERBS.items()},
                          {'task': ['ausfuehren'], 'candidate': ['testen', 'nachpruefen', 'uebernehmen', 'zuruecknehmen'],
                           'intent': ['aufgabe_machen'], 'boundary': ['bestaetigen', 'aendern'],
@@ -250,7 +251,7 @@ class Register(unittest.TestCase):
         self.assertNotIn('neu', reg.names(), 'eine halbe Registrierung wird zurückgenommen')
         self.assertEqual(audits, [('DESK_KIND_REFUSED', {'module': 'zweimal', 'reason': 'kind_already_registered'})])
         self.assertEqual(reg.problems, [{'source': 'zweimal', 'reason': 'kind_already_registered'}])
-        self.assertEqual(reg.names(), sorted(TYPES))
+        self.assertEqual(reg.names(), sorted(TYPES + PLACEHOLDERS))
 
     def test_freeze_ends_registration(self):
         from guppi_runtime.desk import builtin_kinds
@@ -412,8 +413,11 @@ class ThroughTheServer(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unknown_object_type'):
             hub.objects_view({'type': 'echo'})
         self.assertEqual(hub.objects_view({'type': 'agent'}), {'type': 'agent', 'items': []}, 'orchestra aus: agent bleibt Platzhalter')
+        self.assertEqual(hub.objects_view({'type': 'issue'}),
+                         {'type': 'issue', 'items': [], 'quelle': {'zustand': 'aus', 'grund': 'orchestra_off', 'takt': None}},
+                         'orchestra aus: issue ist ein Platzhalter mit quelle (G2-S1-10)')
         with self.assertRaisesRegex(ValueError, 'unknown_object_type'):
-            hub.objects_view({'type': 'issue'})
+            hub.objects_view({'type': 'issue', 'id': 'UA-1'})
 
     def test_uix_server_names_no_type_in_the_object_routes(self):
         import ast

@@ -4,15 +4,16 @@ tool:
   description: "Das Münzloch: Token und Aufrufe dieser Aufgabe, mit Herkunft der Zahlen."
   version: 1.0.0
   kind: object
-  handles: [task]
+  handles: [task, issue:*]          # Spec 4 (D4.2.8): auch neben einem Issue (Budget des Bearbeiters, Token der Mission)
   order: 19
   slot: nachweis
   entry: {js: tool.js, css: tool.css}
   api:
     - POST /api/cost
+    - POST /api/objects
   events:
     emits: [object.open]
-    listens: [task.changed, live.line]
+    listens: [task.changed, live.line, issue.changed, budget.warning]
   trust: CORE
   tests: [test.spec.js]
   needs: {ui: ">=1.0 <2"}

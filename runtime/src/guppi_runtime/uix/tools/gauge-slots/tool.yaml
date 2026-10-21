@@ -1,0 +1,18 @@
+# Spec 4 (D4.2.4, G2-S4-09): die Kachel zu den Slots. Liest nur die Leiste (GET /api/strip, N6).
+tool:
+  id: gauge-slots
+  name: "Slots (Kachel)"
+  description: "Kennzahl: belegte Slots von allen und wie viele Läufe warten."
+  version: 1.0.0
+  kind: instrument
+  handles: []
+  order: 60
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/strip
+  events:
+    emits: [object.open]
+    listens: [slot.changed, model.changed, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

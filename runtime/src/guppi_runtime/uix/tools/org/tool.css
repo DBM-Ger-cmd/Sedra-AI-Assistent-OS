@@ -1,0 +1,35 @@
+/* Werkzeug „Organigramm“ – nur unter .t-org, jede Farbe ein Token. Feste Kartenbreite 200 px wie bei Paperclip; der Baum scrollt waagerecht. */
+.t-org .t-org-bar{flex-wrap:wrap}
+.t-org .t-org-tree{overflow:auto;padding:4px 0 12px}
+.t-org .t-org-canvas{position:relative;margin:0 auto}
+.t-org .t-org-canvas .t-org-card{position:absolute}
+.t-org .t-org-card{box-sizing:border-box;width:200px;height:96px;display:flex;flex-direction:column;gap:4px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer}
+.t-org .t-org-card:hover{background:var(--panel-2)}
+.t-org .t-org-card.captain{cursor:default;border-style:dashed;justify-content:center}
+.t-org .t-org-card-head{display:flex;align-items:center;gap:6px}
+.t-org .t-org-card-head b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-org .t-org-line{position:absolute;background:var(--line)}
+.t-org .t-org-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+.t-org .t-org-dot.aktiv{background:var(--ok)}
+.t-org .t-org-dot.arbeitet{background:var(--accent)}
+.t-org .t-org-dot.pausiert{background:var(--warn)}
+.t-org .t-org-dot.beendet{background:var(--line)}
+.t-org .t-org-badge{min-width:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:var(--accent-text);font-size:var(--size-xs);text-align:center}
+.t-org .t-org-more{padding:0 6px;line-height:1.2}
+.t-org .t-org-verbs{position:absolute;z-index:2;margin-top:88px;display:flex;flex-direction:column;gap:4px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.t-org .t-org-rest .t-org-verbs{position:static;margin-top:4px}
+.t-org .t-org-budget{display:flex;flex-direction:column;gap:2px}
+.t-org .t-org-bar-track{height:6px;border-radius:3px;background:var(--panel-2);border:1px solid var(--line-soft);overflow:hidden}
+.t-org .t-org-bar-fill{height:100%;background:var(--ok)}
+.t-org .t-org-budget.warnung .t-org-bar-fill{background:var(--warn)}
+.t-org .t-org-budget.gestoppt .t-org-bar-fill{background:var(--bad)}
+.t-org .t-org-budget.warnung small{color:var(--warn)}
+.t-org .t-org-budget.gestoppt small{color:var(--bad)}
+.t-org .t-org-rest{display:flex;flex-wrap:wrap;gap:var(--gap);align-items:flex-start}
+.t-org .t-org-rest .s-head{flex-basis:100%}
+.t-org .t-org-rest .t-org-card{height:auto;min-height:96px}
+.t-org .t-org-kompakt{display:flex;flex-direction:column;gap:2px}
+.t-org .t-org-line-row{cursor:pointer;padding:3px 4px;border-radius:var(--radius)}
+.t-org .t-org-line-row:hover{background:var(--panel-2)}
+.t-org .t-org-table tr{cursor:pointer}
+.t-org .t-org-form{max-width:420px}

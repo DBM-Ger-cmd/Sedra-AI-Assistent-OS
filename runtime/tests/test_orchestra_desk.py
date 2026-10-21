@@ -113,8 +113,11 @@ class SwitchOff(unittest.TestCase):
             hub = FakeHost(tmp, data())
             try:
                 self.assertIsNone(hub.runtime.orchestra)
+                aus = {'zustand': 'aus', 'grund': 'orchestra_off', 'takt': None}      # Spec 4 (G2-S1-10): Platzhalter mit quelle
+                for kind in ('issue', 'routine', 'budget', 'gespraech'):
+                    self.assertEqual(hub.objects_view({'type': kind}), {'type': kind, 'items': [], 'quelle': aus})
                 with self.assertRaisesRegex(ValueError, 'unknown_object_type'):
-                    hub.objects_view({'type': 'issue'})
+                    hub.objects_view({'type': 'issue', 'id': 'UA-1'})
                 self.assertEqual(hub.objects_view({'type': 'agent'}), {'type': 'agent', 'items': []})
                 with self.assertRaisesRegex(ValueError, 'unknown_object_type'):
                     hub.objects_view({'type': 'agent', 'id': 'A-CODER'})

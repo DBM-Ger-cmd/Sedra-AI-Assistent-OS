@@ -10,9 +10,8 @@ def register(registry, hub):
         title_map = {"agent": "Agent", "issue": "Aufgabe", "routine": "Routine", "budget": "Budget"}
         kind = registry.Kind(name, title_map[name], None, None, source="orchestra")
         kinds.append(kind)
-    registry.register(kinds[0], replace_placeholder=True)
-    for kind in kinds[1:]:
-        registry.register(kind, replace_placeholder=False)
+    for kind in kinds:                                      # alle vier ersetzen ihren Platzhalter aus builtin_kinds (Spec 4)
+        registry.register(kind, replace_placeholder=True)
     kind_map = {k.name: k for k in kinds}
     kind_map["agent"].read = agent_read
     kind_map["agent"].listing = agent_listing

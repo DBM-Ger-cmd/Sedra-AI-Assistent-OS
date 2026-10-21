@@ -1,0 +1,19 @@
+# Spec 4 (D4.2.4, G2-S4-09): die Seite der Slots über der Werkstatt. Nur Lesen über den Desk (N6), keine Verben, kein Zeitgeber.
+tool:
+  id: slots
+  name: "Slots"
+  description: "Belegte und freie Plätze des Modellservers, Läufe und Warteschlange, live."
+  version: 1.0.0
+  kind: object
+  handles: [model:alle]
+  order: 5                          # vor der Werkstatt (workshop)
+  slot: inhalt
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - POST /api/objects
+  events:
+    emits: [object.open]
+    listens: [slot.changed, model.changed, agent.changed, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

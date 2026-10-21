@@ -35,6 +35,11 @@
       const [agents, models] = await Promise.all([this.ctx.api('/api/agents').catch(e=>({error: e.message})), this.ctx.api('/api/models').catch(()=>({}))]);
       const box = d().el('div', 's-col');
       box.append(d().el('div', 's-note', 'Der Captain entscheidet, SEDRA plant und baut. Darunter stehen die Rollen – jede Rolle ist ein Rezept, kein eigener Prozess.'));
+      // Spec 4 (D4.2.6): das Team mit Vorgesetzten zeichnet das Organigramm, hier stehen Rollen und Instanzen
+      const org = d().el('div', 's-row s-small');
+      org.append(d().el('span', 's-muted', 'Das Team mit Vorgesetzten steht im Organigramm.'),
+                 d().button('Organigramm öffnen', ()=>this.ctx.shell.open({type: 'agent', id: 'alle', title: 'Organigramm', collection: true})));
+      box.append(org);
       if(agents.error){ box.append(d().el('div', 's-note bad', 'Besatzung nicht lesbar: ' + agents.error)); this.el.replaceChildren(box); return; }
 
       const instances = agents.instances || [], assignments = agents.assignments || [];

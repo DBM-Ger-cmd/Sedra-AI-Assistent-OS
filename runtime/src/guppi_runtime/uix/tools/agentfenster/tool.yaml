@@ -1,0 +1,20 @@
+# Spec 4 (D4.2.5, G2-S4-10): ein Fenster je Agent im Stapel der Shell, mehrere zugleich (N2). Nur Desk-Routen (N6), kein Zeitgeber.
+tool:
+  id: agentfenster
+  name: "Agentenfenster"
+  description: "Gespräch mit einem Agenten, daneben seine Issues, Läufe und sein Budget; mehrere Fenster zugleich."
+  version: 1.0.0
+  kind: object
+  handles: [agent:*]
+  order: 10
+  slot: inhalt
+  entry: {js: [verlauf.js, tool.js], css: tool.css}
+  api:
+    - POST /api/objects
+    - POST /api/actions
+  events:
+    emits: [object.open]
+    listens: [agent.changed, issue.changed, budget.warning, decision.pending, decision.answered, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

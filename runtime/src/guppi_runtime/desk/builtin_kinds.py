@@ -5,7 +5,11 @@ Die Leser sind die Zweige aus `UIXHub.object_view`/`objects_view`, wörtlich ver
 `not_found` zurückgab; das Register setzt dann dasselbe Objekt „nicht gefunden“ ein. Die Verben bleiben in `actions.py`.
 
 `decision` trägt seine Wege selbst (`own_actions=True`); in der Liste verliert es sie wie heute (OP-13). `agent` ist ein Platzhalter,
-der das heutige Verhalten nachbildet: Einzelansicht `unknown_object_type`, Liste leer. Nur `desk/orchestra_kinds.py` darf ihn ersetzen."""
+der das heutige Verhalten nachbildet: Einzelansicht `unknown_object_type`, Liste leer. Nur `desk/orchestra_kinds.py` darf ihn ersetzen.
+
+Spec 4 (G2-S1-10, „Platzhalter mit quelle“): ebenso Platzhalter für `issue`, `routine`, `budget` und `gespraech`. Ihre Liste ist leer
+und trägt `quelle = {zustand: 'aus', grund: 'orchestra_off', takt: None}` (Nachtrag N7), damit ein Werkzeug „ausgeschaltet“ zeigt,
+statt an `unknown_object_type` zu scheitern. Die Liste von `agent` bleibt ohne `quelle`, wie die Golden-Aufzeichnung (K0.7) sie hält."""
 from __future__ import annotations
 
 from . import actions as desk_actions
@@ -13,6 +17,8 @@ from . import objects as desk_objects
 from .kinds import Registry
 
 ORDER = ('task', 'intent', 'candidate', 'model', 'skill', 'decision', 'project', 'agent', 'boundary')   # die Reihenfolge von objects.TYPES
+PLACEHOLDERS = (('issue', 'Aufgabe'), ('routine', 'Routine'), ('budget', 'Budget'), ('gespraech', 'Gespräch'))   # ersetzt orchestra_kinds
+QUELLE_AUS = {'zustand': 'aus', 'grund': 'orchestra_off', 'takt': None}
 
 
 # ---- task
@@ -117,6 +123,27 @@ def _agent_list(hub, payload):
     return []
 
 
+# ---- issue, routine, budget, gespraech (Platzhalter, Spec 4)
+def _placeholder_read(hub, oid):
+    raise ValueError('unknown_object_type')
+
+
+def _placeholder_list(hub, payload):
+    return []
+
+
+class DeskRegistry(Registry):
+    """Das Register des Desk: wie `Registry`, nur trägt die Liste eines der neuen Platzhalter `quelle` (aus)."""
+
+    def request(self, hub, payload):
+        out = super().request(hub, payload)
+        name = str(payload.get('type') or '').strip()
+        kind = self.get(name)
+        if not payload.get('id') and kind is not None and kind.placeholder and name in dict(PLACEHOLDERS):
+            out['quelle'] = dict(QUELLE_AUS)
+        return out
+
+
 def kinds(Kind):
     """Die neun Typen in der Reihenfolge von `objects.TYPES`."""
     table = {
@@ -130,7 +157,8 @@ def kinds(Kind):
         'agent': Kind('agent', 'Agent', _agent_read, _agent_list, placeholder=True),
         'boundary': Kind('boundary', 'Modus und Grenzen', _boundary_read, _boundary_list, verbs=desk_actions._boundary_verbs()),
     }
-    return [table[name] for name in ORDER]
+    return [table[name] for name in ORDER] + [Kind(name, title, _placeholder_read, _placeholder_list, placeholder=True)
+                                              for name, title in PLACEHOLDERS]
 
 
 def register(registry):
@@ -141,7 +169,7 @@ def register(registry):
 
 def new_registry():
     """Ein Register mit den eingebauten Typen; „nicht gefunden“ ist das Objekt aus `objects.not_found` wie bisher."""
-    return register(Registry(not_found=desk_objects.not_found))
+    return register(DeskRegistry(not_found=desk_objects.not_found))
 
 
 _BUILTIN = None

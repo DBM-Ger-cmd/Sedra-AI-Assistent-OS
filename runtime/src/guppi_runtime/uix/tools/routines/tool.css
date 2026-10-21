@@ -1,0 +1,12 @@
+/* Werkzeug „Routinen“ – nur unter .t-routines, jede Farbe ein Token. */
+.t-routines .t-routines-table tr[data-routine]{cursor:pointer}
+.t-routines .t-routines-table tr[data-routine]:hover{background:var(--panel-2)}
+.t-routines .t-routines-warn{color:var(--warn)}
+.t-routines .t-routines-an.an{color:var(--ok)}
+.t-routines .t-routines-an.aus{color:var(--muted)}
+.t-routines .t-routines-title{font-size:var(--size-l)}
+.t-routines .t-routines-run{gap:var(--gap-2)}
+.t-routines .t-routines-link{cursor:pointer;color:var(--accent)}
+.t-routines .t-routines-form{max-width:520px}
+.t-routines .t-routines-form textarea{width:100%;box-sizing:border-box}
+.t-routines .t-routines-satz{color:var(--accent)}

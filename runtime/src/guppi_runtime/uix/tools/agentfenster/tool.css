@@ -1,0 +1,25 @@
+/* Werkzeug „Agentenfenster“ – nur unter .t-agentfenster, jede Farbe ein Token. Breite gibt das Fenster der Shell vor (~380 px). */
+.t-agentfenster .t-af-head{gap:4px}
+.t-agentfenster .t-af-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+.t-agentfenster .t-af-dot.aktiv{background:var(--ok)}
+.t-agentfenster .t-af-dot.arbeitet{background:var(--accent)}
+.t-agentfenster .t-af-dot.pausiert{background:var(--warn)}
+.t-agentfenster .t-af-dot.beendet{background:var(--line)}
+.t-agentfenster .t-af-badge{min-width:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:var(--accent-text);font-size:var(--size-xs);text-align:center}
+.t-agentfenster .t-af-budget{display:flex;flex-direction:column;gap:2px}
+.t-agentfenster .t-af-track{height:6px;border-radius:3px;background:var(--panel-2);border:1px solid var(--line-soft);overflow:hidden}
+.t-agentfenster .t-af-fill{height:100%;background:var(--ok)}
+.t-agentfenster .t-af-budget.warnung .t-af-fill{background:var(--warn)}
+.t-agentfenster .t-af-budget.gestoppt .t-af-fill{background:var(--bad)}
+.t-agentfenster .t-af-part{display:flex;flex-direction:column;gap:6px;padding-top:6px;border-top:1px solid var(--line-soft)}
+.t-agentfenster .t-af-day{align-self:center;font-size:var(--size-xs);color:var(--muted)}
+.t-agentfenster .t-af-msg{display:flex;flex-direction:column;gap:2px;padding:6px 8px;border-radius:var(--radius);background:var(--panel);border:1px solid var(--line-soft)}
+.t-agentfenster .t-af-msg.captain{background:var(--panel-2);margin-left:24px}
+.t-agentfenster .t-af-msg.system{border-style:dashed}
+.t-agentfenster .t-af-text{white-space:pre-wrap;word-break:break-word}
+.t-agentfenster .t-af-status{color:var(--muted)}
+.t-agentfenster .t-af-status.wartet_freigabe{color:var(--warn)}
+.t-agentfenster .t-af-status.fehler{color:var(--bad)}
+.t-agentfenster .t-af-cloud{padding:0 6px;border-radius:var(--radius);background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-line)}
+.t-agentfenster .t-af-link{cursor:pointer;color:var(--accent)}
+.t-agentfenster .t-af-input textarea{width:100%;box-sizing:border-box}
