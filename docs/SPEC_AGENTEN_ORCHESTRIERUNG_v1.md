@@ -2637,6 +2637,8 @@ Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis
 | PIPE-11 | versteckte Tests mit mehr als 5 Dateien laufen über ein Startskript (VM erlaubt höchstens 5 Befehle) |
 | Offene Punkte Harness | 1–4 bestätigt (CLI/MCP-Token nur /api/objects und /api/actions; client nur dort abgewiesen; uix_clients.py; MCP teilt Abschaltdatei und Log); 5, 7 (Anwenden der gated-Verben, Feld quelle) baut Spec 1; 6, 12 Aufräumen im nächsten Harness-Schritt; 8, 9 beim nächsten Paketbau; 11 Umstellung der 21 Testdateien auf Architektur v1.20 als eigene Aufgabe |
 | Weiter | Spec 1 Design bis G2 und Shell D S4.3 bis S4.8 parallel (21.10.2026) |
+| G2-S1-01 bis G2-S1-24 | Design Spec 1 (D1.1 bis D1.8) freigegeben wie empfohlen (21.10.2026), u. a. Migration 2, Verben mit gated.py, zweite generische Änderung an uix_server.decide (G2-S1-09), Felder für Shell D und `quelle` (G2-S1-10), Typ `gespraech`, Agentenlauf als Supervisor-Job, Takt mit Sperre, Zerlegung höchstens 8, Rollen foreman/researcher (G2-S1-21), 12 SEDRA-Bau-Specs s1_* (G2-S1-22) |
+| G2-S1-KERN-01 | Kern-Gate freigegeben (Grundsatz und Entwurf D1.4): Token-Art `standing` in core/guard.py für `wake_agent`; der konkrete Diff wird vor der Übernahme einzeln vorgelegt |
 
 ## Vorarbeiter-Prompt
 
