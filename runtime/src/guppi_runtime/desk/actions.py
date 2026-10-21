@@ -165,11 +165,12 @@ def run(hub, kind, oid, verb, args=None, lookup=None):
 def run_type(hub, kind, verb, args=None):
     """Ein Verb ohne Objekt („anlegen“, Spec 0 D1): nur wenn der Typ ein `type_verb` dieses Namens hat, sonst `id_required`
     wie bisher. `run` bekommt `None` als ID."""
+    known = _registry(hub).get(kind)
+    action = known.type_verb(verb) if known is not None else None
+    if action is None:
+        raise ValueError('id_required')
     args = args or {}
     if not isinstance(args, dict):
         raise ValueError('args_must_be_an_object')
-    action = _registry(hub).type_verb(kind, verb)
-    if action is None:
-        raise ValueError('id_required')
     result = action.run(hub, None, args)
     return {'status': 'done', 'type': kind, 'id': None, 'verb': verb, 'needs_gate': action.needs_gate, 'result': result}

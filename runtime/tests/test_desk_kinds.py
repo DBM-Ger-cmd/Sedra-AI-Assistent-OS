@@ -320,6 +320,97 @@ class Gated(unittest.TestCase):
             gated.apply(self.hub, other, done.append)
 
 
+def audit_payloads(hub, event):
+    lines = hub.runtime.audit.path.read_text(encoding='utf-8').splitlines()
+    return [e.get('payload') for e in map(json.loads, filter(str.strip, lines)) if e.get('event_type') == event]
+
+
+def post(url, path, body, headers=None):
+    import http.client
+    from urllib.parse import urlsplit
+    parts = urlsplit(url)
+    c = http.client.HTTPConnection(parts.hostname, parts.port, timeout=30)
+    try:
+        h = {'Content-Type': 'application/json', 'X-GUPPI-Token': parts.fragment, **(headers or {})}
+        c.request('POST', path, body=json.dumps(body), headers=h)
+        res = c.getresponse()
+        return res.status, json.loads(res.read().decode('utf-8') or 'null')
+    finally:
+        c.close()
+
+
+class ThroughTheServer(unittest.TestCase):
+    """K0.11: `uix_server.py` kennt keine Typnamen mehr; ein Typ aus `extensions` ist über beide Routen erreichbar."""
+
+    @classmethod
+    def setUpClass(cls):
+        import threading
+        from unittest import mock
+        from guppi_runtime.desk import extensions
+        from guppi_runtime.uix_server import make_server
+        cls.tmp = tempfile.TemporaryDirectory(prefix='desk-kinds-http-')
+        with mock.patch.object(extensions, 'MODULES', extensions.MODULES + ('desk_echo_kind',)):
+            cls.hub = UIXHub(Path(cls.tmp.name) / 'project', ARCH)
+        cls.server, cls.url = make_server(cls.hub)
+        threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.hub.close()
+        cls.tmp.cleanup()
+
+    def test_echo_through_both_routes(self):
+        import desk_echo_kind
+        del desk_echo_kind.CALLS[:]
+        status, obj = post(self.url, '/api/objects', {'type': 'echo', 'id': 'eins'})
+        self.assertEqual((status, obj['title'], [a['verb'] for a in obj['actions']]), (200, 'Erstes Echo', ['rufen']))
+        status, listing = post(self.url, '/api/objects', {'type': 'echo'})
+        self.assertEqual((status, [i['id'] for i in listing['items']]), (200, ['eins', 'zwei']))
+        status, out = post(self.url, '/api/actions', {'type': 'echo', 'id': 'zwei', 'verb': 'rufen', 'args': {'text': 'hallo'}})
+        self.assertEqual((status, out['result']), (200, {'echo': 'hallo'}))
+        status, out = post(self.url, '/api/actions', {'type': 'echo', 'verb': 'anlegen', 'args': {'text': 'neu'}})
+        self.assertEqual((status, out['id'], out['result']), (200, None, {'angelegt': 'neu'}))
+        self.assertEqual(desk_echo_kind.CALLS, [('zwei', {'text': 'hallo'}), (None, {'text': 'neu'})])
+        actions = audit_payloads(self.hub, 'UIX_ACTION')
+        self.assertEqual([(a['type'], a['id'], a['verb']) for a in actions[-2:]], [('echo', 'zwei', 'rufen'), ('echo', '', 'anlegen')])
+
+    def test_a_verb_without_id_needs_a_type_verb(self):
+        for body in ({'type': 'task', 'verb': 'ausfuehren'}, {'type': 'echo', 'verb': 'rufen'}, {'type': 'raumschiff', 'verb': 'x'}):
+            with self.subTest(body):
+                self.assertEqual(post(self.url, '/api/actions', body), (400, {'error': 'bad_request', 'message': 'id_required'}))
+
+    def test_the_registry_is_frozen_after_the_start(self):
+        self.assertTrue(self.hub.kinds.frozen)
+        self.assertEqual(self.hub.kinds.problems, [])
+        self.assertIn('echo', self.hub.kinds.names())
+        with self.assertRaisesRegex(ValueError, 'kinds_frozen'):
+            self.hub.kinds.register(self.hub.kinds.Kind('spaet', 'Zu spät', lambda h, o: None, lambda h, p: []))
+
+    def test_without_the_extension_echo_is_unknown(self):
+        hub = UIXHub(Path(self.tmp.name) / 'ohne', ARCH)
+        self.addCleanup(hub.close)
+        with self.assertRaisesRegex(ValueError, 'unknown_object_type'):
+            hub.objects_view({'type': 'echo'})
+        self.assertEqual(hub.objects_view({'type': 'agent'}), {'type': 'agent', 'items': []}, 'orchestra aus: agent bleibt Platzhalter')
+        with self.assertRaisesRegex(ValueError, 'unknown_object_type'):
+            hub.objects_view({'type': 'issue'})
+
+    def test_uix_server_names_no_type_in_the_object_routes(self):
+        import ast
+        import inspect
+        from guppi_runtime import uix_server
+        tree = ast.parse(inspect.getsource(uix_server.UIXHub))
+        names = set(TYPES) | {'echo', 'issue', 'routine', 'budget'}
+        for fn in [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name in ('object_view', 'objects_view', 'act')]:
+            with self.subTest(fn.name):
+                self.assertEqual([n for n in ast.walk(fn) if isinstance(n, ast.Compare)
+                                  and any(isinstance(c, ast.Constant) and c.value in names for c in ast.walk(n))], [])
+                consts = {n.value for n in ast.walk(fn) if isinstance(n, ast.Constant) and isinstance(n.value, str)}
+                self.assertEqual(consts & names, set(), 'kein Typname in ' + fn.name)
+
+
 if __name__ == '__main__':
     if sys.argv[1:] == ['record']:
         setUpModule()

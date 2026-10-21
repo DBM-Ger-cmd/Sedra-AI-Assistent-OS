@@ -60,6 +60,8 @@ from .chat_tools import ChatTools
 from .devenv.model_tools import run_tool_loop
 from .uix_library import LibraryDesk
 from .desk import actions as desk_actions
+from .desk import builtin_kinds as desk_builtin_kinds
+from .desk import extensions as desk_extensions
 from .desk import boundaries as desk_boundaries
 from .desk import vorgabe as desk_vorgabe
 from .desk import gateway as desk_gateway
@@ -120,6 +122,21 @@ class UIXHub:
         self.gateway = Gateway(self.project_root)
         self.events = EventStream()
         self.poller = Poller(self, self.events)
+        # Spec 0 (D1): Objekttypen und Verben stehen im Register. Die Erweiterungen docken einmal hier an, danach ist es zu –
+        # über eine Anfrage kommt kein Typ dazu. Ein neuer Anwendungsfall ist ein Modul in desk/extensions.MODULES, keine Zeile hier.
+        self.kinds = desk_builtin_kinds.new_registry()
+        self.extensions = desk_extensions.load(self.kinds, self, desk_extensions.MODULES, audit=self._desk_audit)
+        self.kinds.freeze()
+        self._extensions_started = None
+
+    def _desk_audit(self, event, payload):
+        self.runtime.audit.append(event, component='desk', payload=payload)
+
+    def start_extensions(self):
+        """Der Takt der Erweiterungen (z. B. der Herzschlag der Orchestrierung) läuft, solange die Oberfläche läuft – einmal je Hub."""
+        if self._extensions_started is None:
+            self._extensions_started = desk_extensions.start(self, self.extensions, audit=self._desk_audit)
+        return self._extensions_started
 
     def status(self):
         rt = self.runtime
@@ -1414,75 +1431,12 @@ class UIXHub:
 
     # ---- Build 8: ein Objektmodell, Verben statt Routen, Live-Zeilen
     def object_view(self, kind, oid):
-        """Ein Objekt in der einen Form (§10.1). Liest dieselben Sichten wie die alten Routen; die bleiben unverändert."""
-        if kind == 'task':
-            m = next((x for x in self.missions() if x['mission_id'] == oid), None)
-            if m is None:
-                return desk_objects.not_found(kind, oid)
-            obj = desk_objects.task_object(m)
-            if self._candidate_report(oid) is not None:          # es gibt ein Werkstück: der Weg dorthin gehört an die Aufgabe
-                obj['links'].insert(0, {'type': 'candidate', 'id': oid, 'title': 'Kandidat ansehen', 'rel': 'werkstueck'})
-        elif kind == 'candidate':
-            try:
-                mission = self.runtime.missions.load(oid)
-            except Exception:
-                return desk_objects.not_found(kind, oid)
-            obj = desk_objects.candidate_object(mission, report=self.candidate_report({'mission_id': oid}))
-        elif kind == 'model':
-            view = self.models_view()
-            recipe = next((r for r in view['recipes'] if r['id'] == oid), None)
-            if recipe is None:
-                return desk_objects.not_found(kind, oid)
-            obj = desk_objects.model_object(recipe, view.get('server'))
-        elif kind == 'intent':
-            entry = self.intents.get(oid)
-            if entry is None:
-                return desk_objects.not_found(kind, oid)
-            obj = self._intent_object(entry)
-        elif kind == 'boundary':
-            obj = desk_objects.boundary_object(self.boundaries_view({'project_id': oid} if oid not in ('projekt', 'alle') else None))
-        elif kind == 'decision':
-            d = next((x for x in self.decisions_view()['items'] if x['id'] == oid), None)
-            return desk_objects.decision_object(d) if d else desk_objects.not_found(kind, oid)
-        elif kind == 'skill':
-            s = next((x for x in (self.library.view().get('own') or []) if x.get('id') == oid), None)
-            return desk_objects.skill_object(s) if s else desk_objects.not_found(kind, oid)
-        elif kind == 'project':
-            p = next((x for x in self.projects.list() if (x.get('project_id') == oid or x.get('name') == oid)), None)
-            return desk_objects.project_object(p) if p else desk_objects.not_found(kind, oid)
-        else:
-            raise ValueError('unknown_object_type')
-        obj['actions'] = desk_actions.offered(obj)
-        return obj
+        """Ein Objekt in der einen Form (§10.1); welcher Typ was liest, steht im Register (desk/builtin_kinds.py, Erweiterungen)."""
+        return self.kinds.view(self, kind, oid)
 
     def objects_view(self, payload):
         """`POST /api/objects {type, id}` für ein Objekt, ohne `id` die Liste des Typs."""
-        kind = str(payload.get('type') or '').strip()
-        if kind not in desk_objects.TYPES:
-            raise ValueError('unknown_object_type')
-        oid = payload.get('id')
-        if oid:
-            return self.object_view(kind, str(oid))
-        if kind == 'task':
-            items = [desk_objects.task_object(m) for m in self.missions()]
-        elif kind == 'intent':
-            items = [self._intent_object(e) for e in self.intents.list()]
-        elif kind == 'boundary':
-            items = [desk_objects.boundary_object(self.boundaries_view())]
-        elif kind == 'model':
-            view = self.models_view()
-            items = [desk_objects.model_object(r, view.get('server')) for r in view['recipes']]
-        elif kind == 'decision':
-            items = [desk_objects.decision_object(d) for d in self.decisions_view()['items']]
-        elif kind == 'skill':
-            items = [desk_objects.skill_object(s) for s in (self.library.view().get('own') or [])]
-        elif kind == 'project':
-            items = [desk_objects.project_object(p) for p in self.projects.list()]
-        else:
-            items = []
-        for item in items:
-            item['actions'] = desk_actions.offered(item)
-        return {'type': kind, 'items': items}
+        return self.kinds.request(self, payload)
 
     def act(self, payload):
         """`POST /api/actions {type, id, verb, args}` (§10.2): ein Weg für dieselbe Handlung aus Gespräch, Werkzeug und Palette.
@@ -1490,9 +1444,10 @@ class UIXHub:
         kind = str(payload.get('type') or '').strip()
         oid = str(payload.get('id') or '').strip()
         verb = str(payload.get('verb') or '').strip()
-        if not oid:
-            raise ValueError('id_required')
-        out = desk_actions.run(self, kind, oid, verb, payload.get('args') or {})
+        if oid:
+            out = desk_actions.run(self, kind, oid, verb, payload.get('args') or {})
+        else:                                           # ein Verb ohne Objekt („anlegen“) nur, wenn der Typ es hat; sonst id_required
+            out = desk_actions.run_type(self, kind, verb, payload.get('args') or {})
         self.runtime.audit.append('UIX_ACTION', component='desk', payload={'type': kind, 'id': oid[:60], 'verb': verb})
         return out
 
@@ -3395,6 +3350,7 @@ def make_server(hub: UIXHub, port=0):
 
     server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
     server.daemon_threads = True
+    hub.start_extensions()
     server.desk_stop = threading.Event()          # set when the server stops: open event streams end instead of hanging
     _close = server.server_close
 
