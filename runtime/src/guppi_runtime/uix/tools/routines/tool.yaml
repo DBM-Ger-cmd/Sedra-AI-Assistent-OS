@@ -1,0 +1,20 @@
+# Spec 4 (D4.2.3, G2-S4-08): Routinen. Cron-Text nur zur Anzeige, Termine vom Server; nur Desk-Routen (N6), kein Zeitgeber (UIX-05).
+tool:
+  id: routines
+  name: "Routinen"
+  description: "Wiederkehrende Aufgaben: Zeitplan in Worten, Nachhol-Regel, letzte und nächste Ausführung."
+  version: 1.0.0
+  kind: object
+  handles: [routine:alle, routine:*]
+  order: 25
+  slot: inhalt
+  entry: {js: [cron.js, tool.js], css: tool.css}
+  api:
+    - POST /api/objects
+    - POST /api/actions
+  events:
+    emits: [object.open]
+    listens: [agent.changed, issue.changed, decision.answered, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

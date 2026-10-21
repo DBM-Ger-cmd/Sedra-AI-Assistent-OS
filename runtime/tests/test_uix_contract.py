@@ -381,7 +381,7 @@ class CockpitPure(unittest.TestCase):
     def test_every_place_of_the_palette_opens_an_object_a_tool_handles(self):
         """Spec 4 (G2-S4-21): ein Ort darf auf sein Werkzeug warten – dann zeigt die Shell den Leerzustand. Die Ausnahme verschwindet
         mit dem Werkzeug: steht es da, schlägt die zweite Prüfung an, bis die Zeile hier gestrichen ist."""
-        waiting = {'routines': 'S4.6, Werkzeug routines'}
+        waiting = {}                                   # S4.6: routines ist gebaut, kein Ort wartet mehr
         out = run_js([UIX / 'ui' / 'loader.js', UIX / 'ui' / 'places.js'], """
           const reg = box.sedraLoader.makeRegistry(%s.map(m=>({manifest: m})));
           console.log(JSON.stringify(box.sedraPlaces.PLACES.map(p=>[p.id, reg.forObject(p.object).map(m=>m.id)])));
