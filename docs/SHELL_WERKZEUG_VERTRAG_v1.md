@@ -258,3 +258,38 @@ Freigegeben mit G2-S4-03 (N1), G2-S4-04 (N2), G2-S4-05 (N3, N4) und G2-S4-21 (Or
 - **Orte (G2-S4-21).** `ui/places.js` nennt zusätzlich `org` (`agent:alle`), `routines` (`routine:alle`), `slots` (`model:alle`) und
   `labor` (`labor:labor`); der Ort `crew` zeigt auf `agent:rollen`. Die Orte gelten in jeder Shell; ohne Werkzeug zeigt die Shell
   ihren Leerzustand.
+
+## Nachtrag 21.10.2026 (Spec 0, Kern-API): §10 Registrierung, Verben ohne Objekt, neue Typen, Feld `client`, Client-Token
+
+Freigegeben mit G2-S0-13; Wortlaut aus `SPEC_AGENTEN_ORCHESTRIERUNG_v1.md`, D1 bis D3. Gebaut in K0.10 bis K0.15, K0.19 bis K0.22.
+
+- **R1 – Registrierung der Objekttypen (§10 Grundsatz 1).** Welche Typen es gibt und was sie lesen, steht in einem Register
+  (`desk/kinds.py`), nicht in `uix_server.py`. Ein Typ ist `Kind(name, title, read, listing, verbs, type_verbs)`; `read(hub, id)`
+  liefert ein Objekt in der einen Form oder `None` (dann antwortet das Desk mit dem Objekt „nicht gefunden“), `listing(hub, payload)`
+  die Liste, `payload` darf filtern. Die neun Typen von heute stehen in `desk/builtin_kinds.py`. Ein neuer Anwendungsfall ist ein
+  Modul mit `register(registry, hub)` und eine Zeile in `desk/extensions.MODULES`; das Register wird beim Start der Oberfläche
+  einmal gefüllt und dann eingefroren (`kinds_frozen`), über eine Anfrage kommt kein Typ dazu. Ein doppelter Name wird abgewiesen
+  (`kind_already_registered`), die halbe Registrierung des Moduls zurückgenommen und als `DESK_KIND_REFUSED` protokolliert; die
+  übrigen Typen laufen weiter. Fehlt einem Objekt einer der sieben Schlüssel, antwortet die Route mit `object_shape_invalid`
+  statt mit einem halben Objekt; weitere Schlüssel sind erlaubt. `GET /api/objects/…` aus Grundsatz 1 gibt es nicht; der Weg ist
+  `POST /api/objects {type, id?}` (G1-S0-b).
+- **R2 – Verben ohne Objekt (§10 Grundsatz 2).** `POST /api/actions {type, verb, args}` ohne `id` läuft nur, wenn der Typ ein Verb
+  ohne Objekt dieses Namens hat (z. B. `anlegen`); sonst wie bisher `id_required`. Das Ergebnis trägt `id: null`. Verben mit Gate
+  folgen dem Muster `desk/gated.py` (Antrag mit Gate und Bindung, Anwenden nur mit gültigem Einmal-Token).
+- **R3 – Neue Typen `agent`, `issue`, `routine`, `budget` (§10, Objektmodell).** Sie kommen aus der Orchestrierung
+  (`desk/orchestra_kinds.py`) und sind nur da, wenn der Schalter `orchestra` an ist und das Paket gültig startet; sonst ist `issue`
+  ein `unknown_object_type` und `agent` bleibt der heutige Platzhalter (Liste leer, Einzelansicht `unknown_object_type`). `issue` ist
+  die Aufgabe des Bretts, `task` bleibt die Mission (OP-1). `budget` hat die ID des Agenten. In Spec 0 bieten die vier Typen keine
+  Verben an (OP-12); die Verben baut Spec 1 mit den Guard-Regeln GR-029 bis GR-038.
+- **R4 – Feld `client` (§10 Grundsatz 2, Audit).** Der Eintrag `UIX_ACTION` trägt `payload = {type, id, verb, client}`. `client` setzt
+  der Server aus dem Token, nie der Aufrufer: `shell` (Browser-Token), `chat` (Browser-Token und `X-SEDRA-Tool` ∈ {`talk`,
+  `planung`}, der Kopf hat die Allowlist bestanden), `cli`, `mcp`. Ein Feld `client` im Körper von `/api/objects` oder
+  `/api/actions` wird mit `400 client_is_set_by_server` abgewiesen und als `UIX_CLIENT_REFUSED` protokolliert. `client` ist eine
+  Herkunftsangabe, keine Berechtigung: kein Verb und kein Gate hängt davon ab. Innerhalb der Seite (`shell` gegen `chat`) ist die
+  Angabe eine Selbstauskunft; Werkzeuge mit `trust: COMMUNITY` bekommen ohnehin nur `GET`-Routen.
+- **R5 – Client-Token (§6, Anmeldung).** Neben dem Browser-Token schreibt der Server beim Start je externem Client (`cli`, `mcp`) einen
+  eigenen Zufallstoken mit Port und PID nach `runtime_data/uix/clients/<client>.json` (atomar; unter Windows mit der DPAPI, sonst
+  Datei mit Rechten 0600) und löscht die Dateien beim Beenden. Die Anmeldung bleibt der Kopf `X-GUPPI-Token`. Ein Client-Token
+  öffnet nur `POST /api/objects` und `POST /api/actions`; jede andere Route antwortet ihm mit `403`. Die externen Clients sind
+  `guppi objects <typ> [<id>]`, `guppi act <typ> <id|-> <verb> [--args JSON]` und der MCP-Server `desk_mcp.py` (Werkzeuge `objects`,
+  `act`); ohne laufende Oberfläche melden sie `uix_not_running` – es gibt keinen Weg am Desk vorbei.
