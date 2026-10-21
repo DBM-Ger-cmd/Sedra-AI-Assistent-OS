@@ -26,11 +26,15 @@ cd runtime
 ```
 
 `--profile standard` heißt: `--attempts 1`, `--coder` und `--all-models coder.local_primary`, `--context 32768`, `--tidy`, `--reasoning off`, `--coder-ext all`,
-`--server-set flash_attn=on`, `kv_cache_type=q8_0`, `ubatch=512`. Der Stempel liegt in `<projekt>/runtime_data/spec_stamps/<name>.json`. Der Agent Manager (`run_worker`) baut denselben Weg.
+`--self-check none` (geändert 21.10.2026, PROFIL-01: Messung skill_rank3 21.10.: self_check full 1850 s, none 170 s, gleiches Ergebnis), `--server-set flash_attn=on`, `kv_cache_type=q8_0`, `ubatch=512`. Der Stempel liegt in `<projekt>/runtime_data/spec_stamps/<name>.json`. Der Agent Manager (`run_worker`) baut denselben Weg.
+
+**Profil `schnell-klein`** (geändert 21.10.2026, PROFIL-02): wie `standard`, aber `--coder` und `--all-models coder.llama_qwen35` (Qwen3.5-9B mit MTP, 282 s auf skill_rank3). **Reserve, nicht Standard**; Aufruf mit `--profile schnell-klein`.
+
+**Feld `SEED`** (geändert 21.10.2026, PIPE-10): Baut eine Spec auf einer Saat auf, trägt sie `SEED = "benchmarks/<ordner>"` (Pfad relativ zu `runtime/`). `devvm_build.py` nimmt den Ordner als `--seed`, wenn keiner angegeben ist (ein angegebenes `--seed` gewinnt, mit Zeile im Log); fehlt der Ordner: Abbruch `seed_missing`. Der Stempel bindet den Hash des Saat-Ordners (`seed_sha256`); `spec_check` meldet die Zeile `seed <ordner> (<n> Dateien)`. Stempel von vor dem 21.10.2026 sind damit ungültig (`spec_changed_since_check`): einmal neu prüfen.
 
 ## Abbruchgrenzen
 
-- **Kein Stempel:** `spec_not_checked`. Spec oder Referenz nach der Prüfung geändert: `spec_changed_since_check`. Stempel nur vom Host (`spec_check --host-only`): `spec_stamp_host_only`.
+- **Kein Stempel:** `spec_not_checked`. Spec, Referenz oder Saat nach der Prüfung geändert: `spec_changed_since_check`. Stempel nur vom Host (`spec_check --host-only`): `spec_stamp_host_only`.
   Ausnahmen, jeweils mit Warnung im Log: `--skip-spec-stamp` (jeder Stempel fehlt), `--allow-host-stamp` (Host-Stempel).
 - **Stufengröße:** über 20 neue Prüfungen je Stufe Warnung, über 30 Fehler (`spec_check`).
 - **Gescheiterte Stufe:** nach den Nacharbeiten (`--rework`, im Agent Manager 2) hält der Bau an und nennt den Fortsetzungsbefehl; `--keep-going` baut trotzdem weiter.
