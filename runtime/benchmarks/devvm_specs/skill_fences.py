@@ -3,6 +3,7 @@ treats a nested fence differently in the two. (2) Measurement skill_need with `b
 but not the rules around it ("Store ADRs in `docs/decisions/`", "default: `tasks/todo.md`", "`SPEC.md`"), and the model stopped reading. Round 2: ONE fence scanner `fences` (CommonMark-like: backtick or tilde fences, longer fences hold shorter ones,
 an info string never closes a block), `outline`, `templates` and the summary use it, and a new section "Locations" lists the text lines that name a path or a file in backticks. Seed: benchmarks/skill_fences_seed (the digest of round 1).
 GUPPI builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/skill_fences)."""
+SEED = "benchmarks/skill_fences_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 import importlib.util
 from pathlib import Path
 

@@ -4,6 +4,7 @@ stage fails on the seed, T6 no absolute path or address in the parameters, T7 ev
 What cannot be checked (no seed, no pattern) is NOT hidden: it is listed in `unchecked`, so the spec card can say "not checked against a pattern". (T5, one statement per assert, holds for catalog code by construction.) Seed: benchmarks/g2_seed
 (assert_catalog.py, catalog_proofs.py, build_request.py, all finished). GUPPI builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/spec_standards)."""
 
+SEED = "benchmarks/g2_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 NOTES = '''# Notes for spec_standards
 `assert_catalog.py`, `catalog_proofs.py` and `build_request.py` are already in the workspace and work (import them with `import assert_catalog`, `import build_request`, `from catalog_proofs import PROOFS`); do not change them. Pure Python 3 standard library (`subprocess`, `tempfile`, `shutil`, `pathlib`, `re`, `os`, `sys` are allowed), never modify the arguments and never write into the folders `tree` and `seed` (work on copies in a temporary folder), no comments and no docstrings, small private helpers instead of copied code, `import` lines at the top.
 The request format is the one of `build_request` (see build_request.validate_request). A "tree" is a folder with python files: a seed (the start of the build) or a pattern (code that satisfies the tests).

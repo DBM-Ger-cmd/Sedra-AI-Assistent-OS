@@ -8,6 +8,7 @@ Four small stages, each with an independent hidden test, no own tests and no own
 Seed files: benchmarks/bench_std_seed/ (ledger.py with the defects, util.py and main.py). Expected duration with a fast model: 10 to 20 minutes. Results with every model go to the comparison table.
 Run: benchmarks/probes/stdbench_probe.py (several models one after the other) or devvm_build.py --spec bench_std --seed benchmarks/bench_std_seed --all-models <key> --rework 1 --tidy."""
 
+SEED = "benchmarks/bench_std_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 NOTES = '''# Notes
 Pure Python 3 standard library. No comments and no docstrings. Do NOT write tests: an independent acceptance test judges your work. Change only what the task asks.
 '''

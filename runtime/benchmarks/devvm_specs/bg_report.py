@@ -5,6 +5,7 @@ config) or by re-writing the loop without the waiting. The second part of the ta
 the files; whether the job tools were used shows in the journal of the run (tool_counts: shell_start, shell_log). Run with --seed benchmarks/devvm_seeds/bg_report --bg-jobs.
 Claude wrote the seed, this file, the hidden test and the reference (benchmarks/devvm_refs/bg_report)."""
 
+SEED = "benchmarks/devvm_seeds/bg_report"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 NOTES = '''# Notes for the background report
 The workspace holds crunch.py (do not change it). Standard library only, no comments and no docstrings in new code.
 You have the tools shell_start, shell_log and shell_stop: a command started with shell_start runs in the background in the VM, you are woken when it exits or prints a line that matches wake_match,

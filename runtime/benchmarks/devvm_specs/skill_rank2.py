@@ -3,6 +3,7 @@ and still counts fully, so `browser-testing-with-devtools` ranks before `test-dr
 Round 2 changes `rank` in the existing `skill_rank.py` (seed: benchmarks/skill_rank2_seed): every word is weighted by how rare it is in the library (IDF), the synonym hits in descriptions are capped, and results far below the
 best one are cut. GUPPI builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/skill_rank2)."""
 
+SEED = "benchmarks/skill_rank2_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 NOTES = '''# Notes for skill_rank (round 2)
 `skill_rank.py` is already in the workspace and works. Keep `STOP`, `stem`, `words` and `expand` exactly as they are. Pure Python 3 standard library (`math` is allowed), never modify the arguments, no comments and no docstrings, small private helpers instead of copied code. `import` lines belong at the top of the file.
 '''

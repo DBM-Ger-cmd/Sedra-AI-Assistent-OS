@@ -4,6 +4,7 @@ a fixed order for ties, determinism, exceptions, stable order, numbers with a to
 into the code with `repr`; a name that is not an identifier is refused, so no parameter can inject code. `check_proofs` runs every kind against its proof (seed `catalog_proofs.py`, written by Claude): the generated test must pass the good
 example and fail every mutant. The hidden tests below judge the behaviour of the generated code, not its wording. Seed: benchmarks/assert_catalog_seed; reference: benchmarks/devvm_refs/assert_catalog."""
 
+SEED = "benchmarks/assert_catalog_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 NOTES = '''# Notes for assert_catalog
 Pure Python 3 standard library (`subprocess`, `tempfile`, `pathlib`, `sys`, `builtins`, `re` are allowed). `catalog_proofs.py` is already in the workspace (data: PROOFS); do not change it. Never modify the arguments, no comments and no docstrings, small private helpers instead of copied code, `import` lines at the top.
 The generated code is plain Python text. Every piece you generate ends with ONE newline.
