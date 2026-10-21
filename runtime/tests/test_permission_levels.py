@@ -69,7 +69,7 @@ class ConsistencyTests(unittest.TestCase):
         classified = set(self.cfg.actions) | set(self.cfg.never)
         self.assertEqual(set(self.rules) - classified, set(), 'a Guard action has no level')
         self.assertEqual(classified - set(self.rules), set(), 'a mapped action no longer exists in the Guard')
-        self.assertEqual(len(self.rules), 28)       # 24 + self_integration(+rollback) 2026-10-02 + external_read, model_remove 2026-10-03
+        self.assertEqual(len(self.rules), 38)       # 24 + self_integration(+rollback) 2026-10-02 + external_read, model_remove 2026-10-03 + GR-029..038 Spec 0 (2026-10-21)
 
     def test_nothing_above_level_two_is_ever_allowed_without_the_captain(self):
         for action, spec in self.cfg.actions.items():
