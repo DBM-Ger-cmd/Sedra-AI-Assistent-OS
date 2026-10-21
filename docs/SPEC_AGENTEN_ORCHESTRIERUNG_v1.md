@@ -1997,6 +1997,16 @@ Einheitliche Linie für das Bauen (Captain, 20.10.2026; Grundlage `docs/ANALYSE_
 | L6 | Logbuch-Nachtrag 15. bis 20.10., feste Liste der Eintragsarten; `ENTWICKLUNG.md`, `BETRIEB.md`, `ARCHITEKTUR.md` auf Stand 20.10.; Regel 12 (eigene Branches) geht Regel 8 vor | 07 |
 | L7 | später: Bau-Specs ohne Ergebnis abschließen, Weichen am Paket-Stamm entfernen | 06, 08 |
 
+Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis PIPE-09 (Probebau skill_rank3 über den einen Bauweg bestanden):
+
+| Gate | Entscheidung |
+| --- | --- |
+| PIPE-ABNAHME | Die Coding-Pipeline ist abgenommen; ab jetzt darf für Paperclip/Orchestrierung gebaut werden (nach G3 der jeweiligen Spec) |
+| PROFIL-01 | Profil `standard`: `--self-check none` statt `full`, Kontext 32k (Messung: 170 s statt 1850 s, gleiches Ergebnis; 64k ohne Wirkung) |
+| PROFIL-02 | Qwen3.5-9B mit MTP (`coder.llama_qwen35`) nur als Reserve-Profil `schnell-klein`, nicht Standard |
+| PIPE-10 | Saat als maschinenlesbares Feld `SEED` in der Bau-Spec; `devvm_build` nimmt sie automatisch, der Stempel bindet ihren Hash |
+| G2-S4-01 bis G2-S4-23 | Design Shell D (D4.1 bis D4.7) freigegeben wie empfohlen; Bau durch Claude nach V4, Übernahme per `adopt_plan`/Handkopie, `trust: CORE` |
+
 ## Vorarbeiter-Prompt
 
 Der Prompt für den Vorarbeiter liegt bewusst nicht in dieser Datei, weil er Laufwerkspfade dieses PCs enthält (Regel 10 in `ENTWICKLUNG.md`). Er wird außerhalb des Repos aufbewahrt und als erste Nachricht an die Vorarbeiter-Sitzung gegeben.
