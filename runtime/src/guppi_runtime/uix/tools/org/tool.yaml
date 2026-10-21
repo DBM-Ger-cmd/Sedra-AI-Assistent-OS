@@ -1,0 +1,20 @@
+# Spec 4 (D4.2.1, G2-S4-06): das Organigramm. Nur Lesen und Handeln über den Desk (N6), kein Zeitgeber (UIX-05).
+tool:
+  id: org
+  name: "Organigramm"
+  description: "Das Team als Baum: Vorgesetzte, Rolle, Status, Budget und offene Entscheidungen je Agent."
+  version: 1.0.0
+  kind: object
+  handles: [agent:alle]
+  order: 20
+  slot: inhalt
+  entry: {js: [baum.js, tool.js], css: tool.css}
+  api:
+    - POST /api/objects
+    - POST /api/actions
+  events:
+    emits: [object.open]
+    listens: [agent.changed, budget.warning, decision.pending, decision.answered, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

@@ -4,7 +4,7 @@ tool:
   description: "Rollen aus den Rezepten und die Agenten, die wirklich existieren."
   version: 1.0.0
   kind: object
-  handles: [agent]
+  handles: [agent:rollen]           # Spec 4 (D4.2.6): die Rollenliste; agent:alle zeichnet das Organigramm, agent:* das Agentenfenster
   order: 50
   entry: {js: tool.js, css: tool.css}
   api:

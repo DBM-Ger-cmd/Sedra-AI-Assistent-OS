@@ -470,8 +470,9 @@ class ShellDContract(unittest.TestCase):
             self.assertEqual(got, want, f'{entry} gegen {obj}')
 
     def test_every_manifest_of_the_package_keeps_its_meaning(self):
-        """N1: ohne Zusatz zeichnet ein Werkzeug jedes Objekt seines Typs – forObject liefert dasselbe wie das alte for(type)."""
-        manifests = real_manifests()
+        """N1: ohne Zusatz zeichnet ein Werkzeug jedes Objekt seines Typs – forObject liefert dasselbe wie das alte for(type).
+        Geprüft werden die Manifeste ohne Zusatz; die mit `typ:alle`, `typ:*`, `typ:<id>` (Shell D) prüft der Test darunter."""
+        manifests = [m for m in real_manifests() if not any(':' in str(h) for h in (m['handles'] or []))]
         objects = [{'type': t, 'id': i, 'collection': i in ('alle', 'rollen')} for t in sorted({h for m in manifests for h in (m['handles'] or [])})
                    for i in ('alle', 'X-1', 'rollen')]
         out = run_js([UIX / 'ui' / 'loader.js'], """
