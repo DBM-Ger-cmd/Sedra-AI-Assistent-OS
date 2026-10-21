@@ -1,5 +1,18 @@
 import re
 
+# Grenzen der Dauerfreigabe im Guard (core/guard.py, D1.4); `standing` darf sie nur enger wählen (G2-S1-20).
+STANDING_MAX_DAYS = 30
+STANDING_MAX_USES = 50
+STANDING_MAX_LEVEL = 3
+
+# Schema 2 (Spec 1, G2-S1-20): neue Abschnitte mit (Vorgabe, kleinster, größter Wert); `checkout` entfällt.
+SCHEMA2 = {
+    "runner": {"chain_max_chars": (4000, 500, 20000), "research_max_urls": (5, 1, 5)},
+    "standing": {"days": (7, 1, STANDING_MAX_DAYS), "uses": (50, 1, STANDING_MAX_USES), "max_days": (STANDING_MAX_DAYS, 1, STANDING_MAX_DAYS),
+                 "max_uses": (STANDING_MAX_USES, 1, STANDING_MAX_USES), "max_level": (STANDING_MAX_LEVEL, 0, STANDING_MAX_LEVEL)},
+    "decompose": {"max_subtasks": (8, 1, 20)},
+}
+
 
 def _check_int(section, field, value, lo, hi):
     name = f"orchestra_config_invalid:{section}.{field}"
@@ -10,11 +23,21 @@ def _check_int(section, field, value, lo, hi):
     return value
 
 
+def _section(raw, section, fields):
+    data = raw.get(section, {})
+    if not isinstance(data, dict):
+        raise ValueError(f"orchestra_config_invalid:{section}")
+    unknown = sorted(set(data.keys()) - set(fields))
+    if unknown:
+        raise ValueError(f"orchestra_config_invalid:{section}.{unknown[0]}")
+    return {k: _check_int(section, k, data.get(k, default), lo, hi) for k, (default, lo, hi) in fields.items()}
+
+
 class OrchestraConfig:
     def __init__(self, schema, enabled, database, heartbeat_tick_s,
                  heartbeat_coalesce_s, heartbeat_max_runs_per_tick,
                  checkout_stall_s, budget_warn_percent, budget_stop_percent,
-                 routines_max_catch_up, org_max_depth):
+                 routines_max_catch_up, org_max_depth, runner=None, standing=None, decompose=None):
         self.schema = schema
         self.enabled = enabled
         self.database = database
@@ -26,6 +49,10 @@ class OrchestraConfig:
         self.stop_percent = budget_stop_percent
         self.max_catch_up = routines_max_catch_up
         self.max_depth = org_max_depth
+        defaults = {name: {k: v[0] for k, v in fields.items()} for name, fields in SCHEMA2.items()}
+        self.runner = runner or defaults["runner"]
+        self.standing = standing or defaults["standing"]
+        self.decompose = decompose or defaults["decompose"]
 
     @classmethod
     def from_dict(cls, data):
@@ -33,13 +60,15 @@ class OrchestraConfig:
             raise ValueError("orchestra_config_invalid:orchestra")
         raw = data["orchestra"]
 
-        allowed = {"schema", "enabled", "database", "heartbeat", "checkout", "budget", "routines", "org"}
+        if "schema" not in raw or not isinstance(raw["schema"], int) or isinstance(raw["schema"], bool) or raw["schema"] not in (1, 2):
+            raise ValueError("orchestra_config_invalid:schema")
+
+        # Schema 1 (Spec 0) wird weiter gelesen: mit `checkout`, ohne die Abschnitte aus Schema 2.
+        allowed = {"schema", "enabled", "database", "heartbeat", "budget", "routines", "org"}
+        allowed |= {"checkout"} if raw["schema"] == 1 else set(SCHEMA2)
         unknown = sorted(set(raw.keys()) - allowed)
         if unknown:
             raise ValueError(f"orchestra_config_invalid:{unknown[0]}")
-
-        if "schema" not in raw or not isinstance(raw["schema"], int) or isinstance(raw["schema"], bool) or raw["schema"] != 1:
-            raise ValueError("orchestra_config_invalid:schema")
 
         if "enabled" in raw and not isinstance(raw["enabled"], bool):
             raise ValueError("orchestra_config_invalid:enabled")
@@ -75,13 +104,15 @@ class OrchestraConfig:
         heartbeat_coalesce_s = _check_int("heartbeat", "coalesce_s", hb.get("coalesce_s", 2), 0, 3600)
         heartbeat_max_runs_per_tick = _check_int("heartbeat", "max_runs_per_tick", hb.get("max_runs_per_tick", 1), 1, 16)
 
-        co = raw.get("checkout", {})
-        if not isinstance(co, dict):
-            raise ValueError("orchestra_config_invalid:checkout")
-        co_unknown = sorted(set(co.keys()) - {"stall_s"})
-        if co_unknown:
-            raise ValueError(f"orchestra_config_invalid:checkout.{co_unknown[0]}")
-        checkout_stall_s = _check_int("checkout", "stall_s", co.get("stall_s", 900), 2, 86400)
+        checkout_stall_s = None
+        if schema == 1:
+            co = raw.get("checkout", {})
+            if not isinstance(co, dict):
+                raise ValueError("orchestra_config_invalid:checkout")
+            co_unknown = sorted(set(co.keys()) - {"stall_s"})
+            if co_unknown:
+                raise ValueError(f"orchestra_config_invalid:checkout.{co_unknown[0]}")
+            checkout_stall_s = _check_int("checkout", "stall_s", co.get("stall_s", 900), 2, 86400)
 
         bu = raw.get("budget", {})
         if not isinstance(bu, dict):
@@ -113,10 +144,19 @@ class OrchestraConfig:
         if budget_warn_percent >= budget_stop_percent:
             raise ValueError("orchestra_config_invalid:budget.warn_percent")
 
+        extra = {}
+        if schema == 2:
+            extra = {name: _section(raw, name, fields) for name, fields in SCHEMA2.items()}
+            st = extra["standing"]
+            if st["days"] > st["max_days"]:
+                raise ValueError("orchestra_config_invalid:standing.days")
+            if st["uses"] > st["max_uses"]:
+                raise ValueError("orchestra_config_invalid:standing.uses")
+
         return cls(schema, enabled, database, heartbeat_tick_s,
                    heartbeat_coalesce_s, heartbeat_max_runs_per_tick,
                    checkout_stall_s, budget_warn_percent, budget_stop_percent,
-                   routines_max_catch_up, org_max_depth)
+                   routines_max_catch_up, org_max_depth, **extra)
 
     @classmethod
     def load(cls, path, parse=None):
@@ -140,7 +180,7 @@ class OrchestraConfig:
         return Path(runtime_data) / self.database
 
     def as_dict(self):
-        return {
+        out = {
             "orchestra": {
                 "schema": self.schema,
                 "enabled": self.enabled,
@@ -149,9 +189,6 @@ class OrchestraConfig:
                     "tick_s": self.tick_s,
                     "coalesce_s": self.coalesce_s,
                     "max_runs_per_tick": self.max_runs_per_tick,
-                },
-                "checkout": {
-                    "stall_s": self.stall_s,
                 },
                 "budget": {
                     "warn_percent": self.warn_percent,
@@ -165,3 +202,9 @@ class OrchestraConfig:
                 },
             }
         }
+        doc = out["orchestra"]
+        if self.schema == 1:
+            doc["checkout"] = {"stall_s": self.stall_s}
+        else:
+            doc.update({"runner": dict(self.runner), "standing": dict(self.standing), "decompose": dict(self.decompose)})
+        return out

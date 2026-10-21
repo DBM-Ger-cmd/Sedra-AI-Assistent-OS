@@ -1,11 +1,14 @@
-# Orchestrierung (Spec 0, D3.4): Paket-Vorgabe. Eingeschaltet wird nur über den Schalter in local_config/switches.yaml
-# (switches: {orchestra: {enabled: true}}); `enabled` hier ist die dokumentierte Vorgabe und schaltet allein nicht ein (OP-14).
+# Orchestrierung (Spec 0, D3.4; Schema 2: Spec 1, G2-S1-20): Paket-Vorgabe. Eingeschaltet wird nur über den Schalter in
+# local_config/switches.yaml (switches: {orchestra: {enabled: true}}); `enabled` hier ist die dokumentierte Vorgabe und schaltet
+# allein nicht ein (OP-14). Schema 1 (mit `checkout`) wird weiter gelesen; Stillstand ist jetzt `stall_after_s` des Supervisors.
 orchestra:
-  schema: 1
+  schema: 2
   enabled: false                 # der Schalter in local_config/switches.yaml schaltet ein
   database: orchestra/orchestra.db    # relativ zu runtime_data, kein absoluter Pfad, kein ..
   heartbeat: {tick_s: 5, coalesce_s: 2, max_runs_per_tick: 1}
-  checkout: {stall_s: 900}       # ORC-11; Grenzen wie job_supervisor (2..86400)
   budget: {warn_percent: 80, stop_percent: 100}
   routines: {max_catch_up: 3}
   org: {max_depth: 6}
+  runner: {chain_max_chars: 4000, research_max_urls: 5}    # Zielkette (ORC-13), Recherche höchstens 5 URLs (ORC-19)
+  standing: {days: 7, uses: 50, max_days: 30, max_uses: 50, max_level: 3}    # Vorgaben; nur enger als der Guard (30 Tage, 50 Läufe, Stufe 3)
+  decompose: {max_subtasks: 8}   # ORC-17, Startwert, nicht gemessen
