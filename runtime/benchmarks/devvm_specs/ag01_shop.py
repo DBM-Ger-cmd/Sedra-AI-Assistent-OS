@@ -4,6 +4,7 @@ the rules sit in several files (cart, catalog, discounts, tax, money, orders, re
 --seed benchmarks/devvm_seeds/ag01_shop and --mode delegating (helpers: explorer, reviewer, strong coder) or --mode solo for the comparison. Claude wrote the seed,
 this file, the hidden tests (expected numbers worked out by hand) and the reference (benchmarks/devvm_refs/ag01_shop)."""
 
+SEED = "benchmarks/devvm_seeds/ag01_shop"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 NOTES = '''# Notes for the shop
 The package `shop/` already exists and works; read shop/README.md first. All money is in integer cents; percent_of rounds half up.
 Change only what a stage asks for, keep every existing name and behaviour, standard library only, no comments and no docstrings in new code.

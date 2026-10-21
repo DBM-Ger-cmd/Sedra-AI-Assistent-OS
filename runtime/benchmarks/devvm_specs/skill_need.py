@@ -3,6 +3,7 @@ Here the task names only the KIND of document, and the exact format is a convent
 "ADR-001: ...", fixed sections) and the review labels of `code-review-and-quality` (Critical:, Nit:, Optional:, ...). Five stages (adr, review, spec, plan, commit; the last three from spec-driven-development, planning-and-task-breakdown and git-workflow-and-versioning), hidden tests check only the written files. Run it twice: without and with `--skills runtime_data/skill_library_core`
 (same prompt in both arms); the question is whether the coder finds and uses the skill and whether the files then follow the convention. Seed: benchmarks/skill_need_seed (store.py). Reference: benchmarks/devvm_refs/skill_need (the two files)."""
 
+SEED = "benchmarks/skill_need_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 NOTES = '''# Notes
 Pure Python 3 standard library. Do NOT write tests. Create only the file(s) the task asks for. Where the task says "the team's usual format", the team keeps it in its written guidance; follow that guidance, do not invent a format.
 '''

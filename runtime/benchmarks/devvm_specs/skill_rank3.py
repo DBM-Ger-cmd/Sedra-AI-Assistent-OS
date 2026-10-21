@@ -3,6 +3,7 @@ descriptions hold only the word "test", and the stemmer turns "testing" and "tes
 than a name that holds only its stem ("testing"). Round 3 adds a small bonus for such exact name words to `rank` in the existing `skill_rank.py` (seed: benchmarks/skill_rank3_seed). GUPPI builds it, Claude wrote this file,
 the hidden tests and the reference (benchmarks/devvm_refs/skill_rank3). Lesson of round 2: the tests of a stage only use rules of this stage and the stages before."""
 
+SEED = "benchmarks/skill_rank3_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 NOTES = '''# Notes for skill_rank (round 3)
 `skill_rank.py` is already in the workspace and works. Keep `STOP`, `stem`, `words`, `expand` and `idf_table` exactly as they are. Pure Python 3 standard library, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code. `import` lines belong at the top of the file.
 '''

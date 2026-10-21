@@ -291,6 +291,19 @@ def s0_report(project, keys, extras, engine_build):
         out.append(s0_state(project, rid, {**bench.hunt.model_spec(key, project)["server"], **extras}, engine_build))
     return out
 
+def spec_seed_gate(args, spec_name, bench=None):
+    """PIPE-10 (Captain 2026-10-21): a spec may carry `SEED = "benchmarks/<folder>"` (relative to runtime/). Without --seed the build takes it (args.seed is set); a --seed given wins (log line).
+    A SEED folder that does not exist stops the build with seed_missing. Returns the log lines."""
+    seed, folder = spec_stamp.seed_folder(spec_name, bench)
+    if not seed: return []
+    if not folder.is_dir():
+        raise SystemExit(f"seed_missing: SEED {seed} of spec {spec_name} is not a folder ({folder})")
+    if args.seed:
+        return [f"seed: --seed {args.seed} wins over SEED {seed} of the spec"]
+    args.seed = str(folder)
+    return [f"seed: {seed} from SEED of the spec"]
+
+
 def spec_stamp_gate(project, spec_name, skip, bench=None, allow_host=False):
     """L2 (Captain 2026-10-20): no build without a green spec_check of exactly this spec and reference (benchmarks/spec_stamp.py, rule in spec_stamp.gate). Returns the lines
     for the log; a missing or stale stamp stops the build before a model is loaded, unless --skip-spec-stamp (then a warning in the log). A stamp of level host
@@ -334,8 +347,10 @@ def write_logbook(spec_name, row, lease_seconds, file=None, bench_dir=None):
 
 
 PROFILES = {      # Captain 2026-10-20, line L1: ONE way to build; the standard command of docs/ENTWICKLUNG.md as a profile (single flags given on the command line win)
-    "standard": {"attempts": 1, "coder": "coder.local_primary", "all_models": "coder.local_primary", "context": "32768", "tidy": True, "reasoning": "off", "coder_ext": "all",
+    "standard": {"attempts": 1, "coder": "coder.local_primary", "all_models": "coder.local_primary", "context": "32768", "tidy": True, "reasoning": "off", "coder_ext": "all", "self_check": "none",      # PROFIL-01 (Captain 2026-10-21): self_check full 1850 s, none 170 s, same result (skill_rank3)
                  "server_set": ["flash_attn=on", "kv_cache_type=q8_0", "ubatch=512"]},
+    "schnell-klein": {"attempts": 1, "coder": "coder.llama_qwen35", "all_models": "coder.llama_qwen35", "context": "32768", "tidy": True, "reasoning": "off", "coder_ext": "all", "self_check": "none",      # PROFIL-02 (Captain 2026-10-21): Qwen3.5-9B with MTP, 282 s on skill_rank3; reserve, not the standard
+                      "server_set": ["flash_attn=on", "kv_cache_type=q8_0", "ubatch=512"]},
 }
 EXPERIMENTAL = ("plan_steps", "fresh_rework", "step_syntax_check", "parallel_check", "checker", "arbiter")      # finished measurements: only with --experimental
 
@@ -378,7 +393,7 @@ def build_parser():
     ap.add_argument("--skip-spec-stamp", action="store_true", help="build although spec_check has no valid stamp for this spec (L2 exception; a warning goes into the log)")
     ap.add_argument("--no-logbook", action="store_true", help="do NOT write the BAU row of this build into docs/LOGBUCH_AGENT_MANAGER.md at the end (V1; for tests)")
     ap.add_argument("--allow-host-stamp", action="store_true", help="accept a spec stamp of level host (spec_check --host-only, host python only) instead of stopping with spec_stamp_host_only (PIPE-07)")
-    ap.add_argument("--profile", choices=sorted(PROFILES), help="standard = the standard command of docs/ENTWICKLUNG.md (--attempts 1, coder and all models coder.local_primary, --context 32768, --tidy, --reasoning off, --coder-ext all, flash_attn=on, kv_cache_type=q8_0, ubatch=512); a flag given here overrides its value")
+    ap.add_argument("--profile", choices=sorted(PROFILES), help="standard = the standard command of docs/ENTWICKLUNG.md (--attempts 1, coder and all models coder.local_primary, --context 32768, --tidy, --reasoning off, --coder-ext all, --self-check none, flash_attn=on, kv_cache_type=q8_0, ubatch=512); schnell-klein = like standard, but coder and all models coder.llama_qwen35 (Qwen3.5-9B with MTP): Reserve, nicht Standard; a flag given here overrides its value")
     ap.add_argument("--experimental", action="store_true", help="allow the options of finished measurements (" + ", ".join("--" + k.replace("_", "-") for k in EXPERIMENTAL) + ")")
     return ap
 
@@ -414,6 +429,7 @@ def main():
     apply_mode_defaults(args)
     coder_ext = coder_ext_config(args)
     project = Path(args.project)
+    seed_lines = spec_seed_gate(args, args.spec)
     stamp_lines = spec_stamp_gate(project, args.spec, args.skip_spec_stamp, allow_host=args.allow_host_stamp)
     if args.pidfile: Path(args.pidfile).write_text(str(os.getpid()), encoding="utf-8")
     spec = importlib.import_module(f"devvm_specs.{args.spec}")
@@ -421,7 +437,7 @@ def main():
     run_stages = select_stages(all_stages, args.only, args.from_stage)
     log = RunLog(project / "runtime_data" / "measurements", f"devvm_build_{args.spec}", config={"spec": args.spec, "attempts": args.attempts, "profile": args.profile})
     log_stamp = time.strftime("%Y%m%d_%H%M%S")
-    for line in stamp_lines: log.say(line)
+    for line in seed_lines + stamp_lines: log.say(line)
     work_root = project / "runtime_data" / "devvm_work"      # not %TEMP%: a cleaner or another program there took away the git folder of a running build (2026-10-13, NotGitRepository)
     work_root.mkdir(parents=True, exist_ok=True)
     clean_old_work(work_root)

@@ -3,6 +3,7 @@ saves new tests). `build_request.py` takes the RESULT of a conversation as data 
 (NOTES and STAGES with the hidden tests that `assert_catalog.build_test` writes, each stage test cumulative) and the spec card the Captain reads and confirms. Pure functions; the conversation itself and the files are
 handled elsewhere. Seed: benchmarks/g1_seed (the finished test catalog: assert_catalog.py and catalog_proofs.py). GUPPI builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/build_request)."""
 
+SEED = "benchmarks/g1_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 NOTES = '''# Notes for build_request
 `assert_catalog.py` (the test catalog, import it with `import assert_catalog`) and `catalog_proofs.py` are already in the workspace and work; do not change them. Pure Python 3 standard library, no file, process or network access, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code, `import` lines at the top. Texts contain the characters ä ü – · (UTF-8 source).
 A request is a dict: {"name": ..., "title": ..., "notes": ..., "stages": [{"name": ..., "task": ..., "checks": [{"kind": "K01", "params": {...}}, ...]}, ...]}. `kind` is a kind of the catalog (assert_catalog.kinds()), `params` are the parameters of assert_catalog.generate(kind, **params).
