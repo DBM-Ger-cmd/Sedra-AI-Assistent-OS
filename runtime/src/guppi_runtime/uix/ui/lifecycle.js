@@ -51,11 +51,13 @@
     return state;
   }
 
+  // Nachtrag N2 (Spec 4, G2-S4-04): `unmount(el)` und `actions(el)` bekommen den Container, den `mount` bekam. Ein Werkzeug mit
+  // mehreren Instanzen (eine je Container, z. B. ein Fenster je Agent) findet so die richtige; eines mit einer Instanz ignoriert es.
   function unmountTool(state, onError){
     if(!state || !state.mounted) return;
     state.mounted = false;
     if(typeof state.abbau === 'function'){ try{ state.abbau(); }catch(_e){} }     // Stufe C: den Rahmen abmelden
-    try{ state.mod.unmount(); }
+    try{ state.mod.unmount(state.el); }
     catch(err){ onError && onError(state.id, err); }
     try{ state.el.replaceChildren(); }catch(_e){}
     (state.ctx && state.ctx._offs || []).forEach(off=>{ try{ off(); }catch(_e){} });
@@ -65,7 +67,7 @@
   function actionsOf(state){
     if(!state || !state.mod.actions) return [];
     let list;
-    try{ list = state.mod.actions(); }catch(_e){ return []; }
+    try{ list = state.mod.actions(state.el); }catch(_e){ return []; }
     return (Array.isArray(list) ? list : []).filter(a=>a && typeof a.label === 'string' && typeof a.run === 'function');
   }
 

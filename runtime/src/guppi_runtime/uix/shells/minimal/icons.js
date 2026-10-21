@@ -37,13 +37,15 @@
     fisch:      ['Translator',      ['M3 12c3-4 7-6 11-6l5 4-5 4c-4 0-8-2-11-6z', 'M14 6l6 6-6 6', 'M8 11h.5']],   // Übersetzer: der Fisch (19.10.)
     transkript: ['Transkript', ['M5 4h14v16H5z', 'M8 9h8', 'M8 13h8', 'M8 17h5']],
     aufnahme:   ['Rekorder',   ['M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z', 'M6 11a6 6 0 0 0 12 0', 'M12 17v4', 'M9 21h6']],   // ein Mikrofon (19.10.)
+    uhr:        ['Routine',    ['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18', 'M12 7v5l3 2']],   // Spec 4: Routinen (Zeitplan)
     plus:       ['Neu',        ['M12 5v14', 'M5 12h14']]
   };
 
   // Welches Zeichen ein Objekttyp oder ein Ort bekommt, wenn der Captain keines wählt (rein)
   const BY_TYPE = {task: 'aufgaben', intent: 'vorhaben', project: 'projekt', model: 'werkstatt', agent: 'besatzung', skill: 'bibliothek',
                    logbook: 'logbuch', decision: 'entscheidung', machine: 'maschine', hardware: 'hardware', meter: 'meter',
-                   module: 'module', boundary: 'grenzen', candidate: 'kandidat', talk: 'gespraech', gateway: 'gateway', planung: 'planung', uebersetzung: 'fisch', transkript: 'transkript', aufnahme: 'aufnahme'};
+                   module: 'module', boundary: 'grenzen', candidate: 'kandidat', talk: 'gespraech', gateway: 'gateway', planung: 'planung', uebersetzung: 'fisch', transkript: 'transkript', aufnahme: 'aufnahme',
+                   routine: 'uhr', labor: 'test'};      // Spec 4 (G2-S4-21): Orte Routinen und KI-Labor
 
   function typeIcon(type){ return BY_TYPE[type] || 'stern'; }
 

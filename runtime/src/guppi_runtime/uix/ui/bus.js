@@ -18,7 +18,13 @@
     'system.state':       ['state'],
     'desk.error':         ['message'],
     'desk.resync':        [],
-    'tools.refresh':      []
+    'tools.refresh':      [],
+    // Nachtrag N3 (Spec 4, G2-S4-05): Sender ist der Ereignisstrom (desk/events.py); Werkzeuge hören sie, senden sie nicht.
+    // N4: `decision.pending` darf zusätzlich `agent_id` tragen (leer, wenn kein Agent betroffen ist) – optional, daher oben nicht Pflicht.
+    'agent.changed':      ['id'],
+    'issue.changed':      ['id'],
+    'budget.warning':     ['agent_id'],
+    'slot.changed':       []
   };
 
   // '' when the event is fine, otherwise the reason – a sender id of null means the shell (it may send everything)

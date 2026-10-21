@@ -26,15 +26,42 @@
     document.head.append(l);
   }
 
+  // Nachtrag N1 (Spec 4, G2-S4-03): ein Eintrag in `handles` ist der Typ (alle Objekte des Typs, wie bisher) oder trägt einen Zusatz:
+  //   typ:alle  nur die Sammlung (ID `alle`)
+  //   typ:*     jedes Einzelobjekt (weder ID `alle` noch `collection: true`)
+  //   typ:<id>  genau dieses Objekt (z. B. agent:rollen)
+  // Rein, node prüft es. Ein Manifest ohne Zusatz behält seine Bedeutung.
+  function handleType(entry){
+    const s = String(entry || '');
+    const at = s.indexOf(':');
+    return at < 0 ? s : s.slice(0, at);
+  }
+
+  function handlesMatch(entry, object){
+    if(typeof entry !== 'string' || !object || !object.type) return false;
+    const at = entry.indexOf(':');
+    if((at < 0 ? entry : entry.slice(0, at)) !== object.type) return false;
+    if(at < 0) return true;
+    const want = entry.slice(at + 1);
+    const id = object.id === undefined || object.id === null ? '' : String(object.id);
+    if(want === 'alle') return id === 'alle';
+    if(want === '*') return id !== 'alle' && !object.collection;
+    return id === want;
+  }
+
   // the registry a shell gets: which tool draws which object type, which instruments sit in the strip
   function makeRegistry(entries){
     const byId = new Map(entries.map(e=>[e.manifest.id, e]));
+    const objectTools = ()=>entries.filter(e=>e.manifest.kind === 'object');
     return {
       get: id=>(byId.get(id) || {}).mod,
       manifest: id=>(byId.get(id) || {}).manifest,
       all: ()=>entries.map(e=>e.manifest),
       byKind: kind=>entries.filter(e=>e.manifest.kind === kind).map(e=>e.manifest),
-      for: type=>entries.filter(e=>e.manifest.kind === 'object' && (e.manifest.handles || []).indexOf(type) >= 0).map(e=>e.manifest),
+      // ohne Objekt: jedes Werkzeug, das den Typ in irgendeiner Form handelt
+      for: type=>objectTools().filter(e=>(e.manifest.handles || []).some(h=>handleType(h) === type)).map(e=>e.manifest),
+      // mit Objekt (N1): nur die Werkzeuge, deren Eintrag zu genau diesem Objekt passt
+      forObject: object=>objectTools().filter(e=>(e.manifest.handles || []).some(h=>handlesMatch(h, object))).map(e=>e.manifest),
       mod: id=>(byId.get(id) || {}).mod
     };
   }
@@ -140,6 +167,6 @@
     return ctx;
   }
 
-  root.sedraLoader = {boot, makeRegistry, makeContext, connectEvents, checkShellApi, SHELL_API};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {checkShellApi, SHELL_API};
+  root.sedraLoader = {boot, makeRegistry, makeContext, connectEvents, checkShellApi, SHELL_API, handlesMatch, handleType};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {checkShellApi, SHELL_API, handlesMatch, handleType, makeRegistry};
 })();
