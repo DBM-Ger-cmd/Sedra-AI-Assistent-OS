@@ -62,6 +62,7 @@ from .uix_library import LibraryDesk
 from .desk import actions as desk_actions
 from .desk import builtin_kinds as desk_builtin_kinds
 from .desk import extensions as desk_extensions
+from .desk import gated as desk_gated
 from .desk import kinds as desk_kinds
 from . import uix_clients
 from .desk import boundaries as desk_boundaries
@@ -233,6 +234,10 @@ class UIXHub:
             self.events.publish('decision.answered', {'id': did, 'kind': 'content', 'way': way})
             return {'status': 'answered', 'id': did, 'way': way, 'result': result}
         mission_id, gate_id = decision['mission_id'], decision['gate_id']
+        if decision['apply'] is None and desk_gated.applier(decision['kind'].removeprefix('request:')):    # Spec 1, D1.3.3 (G2-S1-09)
+            out = desk_gated.decide(self, mission_id) if way == 'freigeben_und_anwenden' else desk_gated.reject(self, mission_id)
+            self.events.publish('decision.answered', {'id': did, 'kind': decision['kind'], 'way': way})
+            return {'status': 'answered', 'id': did, 'way': way, 'result': out}
         if way == 'ablehnen':
             out = self.reject_gate({'mission_id': mission_id, 'gate_id': gate_id})
             if decision['kind'] == 'request:gateway':
@@ -2005,6 +2010,7 @@ class UIXHub:
                 if isinstance(gate, dict) and gate.get('gate_id'):
                     out.append({'kind': 'gateway', 'mission_id': mid, 'gate': gate, 'binding': binding})
                     break
+        out += desk_gated.pending(self, {r['mission_id'] for r in out})     # Spec 1: gated-Anträge nach einem Neustart (G2-S1-09)
         return out
 
     @staticmethod
