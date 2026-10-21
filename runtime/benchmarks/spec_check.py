@@ -31,6 +31,7 @@ BENCH = Path(__file__).resolve().parent
 if str(BENCH) not in sys.path:
     sys.path.insert(0, str(BENCH))
 import spec_stamp  # noqa: E402
+from devvm_vm import hidden_plan  # noqa: E402
 
 SIZE_WARN, SIZE_ERROR = 20, 30
 
@@ -133,7 +134,8 @@ def vm_check(ref, spec, vm_copy, tree_cls):
         hidden = stage.get("hidden") or {}
         if not hidden:
             continue
-        done = vm_copy(tree, [["python3", name] for name in hidden], hidden)
+        commands, extra = hidden_plan(hidden)
+        done = vm_copy(tree, commands, extra)
         rows.append((stage["name"], done["status"] == "completed", [l for l in done["output"].splitlines() if l.strip()][-2:]))
     return python, problems, rows
 

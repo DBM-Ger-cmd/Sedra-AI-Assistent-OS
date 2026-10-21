@@ -22,6 +22,27 @@ def sandbox_text(bg_jobs):
     return text
 
 
+VM_MAX_COMMANDS = 5      # the broker takes one to five guest commands per run (one_to_five_guest_commands_required)
+HIDDEN_RUNNER = "_hidden_runner.py"
+RUNNER_CODE = '''import subprocess, sys
+for name in NAMES:
+    done = subprocess.run([sys.executable, name], capture_output=True, text=True)
+    sys.stdout.write(done.stdout)
+    sys.stderr.write(done.stderr)
+    if done.returncode:
+        sys.exit(done.returncode)
+'''
+
+
+def hidden_plan(hidden):
+    """(commands, files) that run the hidden test files of a stage in the microVM (PIPE-11, 2026-10-21). Up to VM_MAX_COMMANDS files: one command each, as before.
+    More files (the stages are cumulative, and line L3 split them into more stages): ONE runner command that runs them in order and stops at the first failure."""
+    names = list(hidden)
+    if len(names) <= VM_MAX_COMMANDS:
+        return [["python3", name] for name in names], dict(hidden)
+    return [["python3", HIDDEN_RUNNER]], {**hidden, HIDDEN_RUNNER: f"NAMES = {names!r}\n" + RUNNER_CODE}
+
+
 class FolderTree:
     """A folder on the host that looks like a workspace to vm_copy (tree, read). __pycache__, .git and files that are not UTF-8 text are left out, like a build seed."""
     def __init__(self, folder):

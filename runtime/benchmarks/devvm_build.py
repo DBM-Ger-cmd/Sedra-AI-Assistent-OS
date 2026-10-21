@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import devvm_agents_bench as bench                                                   # noqa: E402
 import logbook                                                                       # noqa: E402
 import spec_stamp                                                                    # noqa: E402
-from devvm_vm import sandbox_text, vm_env                                            # noqa: E402
+from devvm_vm import hidden_plan, sandbox_text, vm_env                               # noqa: E402
 from guppi_runtime.devenv.devvm import DevWorkspace
 from guppi_runtime.devenv.devvm_evidence import DRIVER, bug_report, parse as parse_evidence
 from guppi_runtime.devenv.devvm_style import snapshot as ws_snapshot                                         # noqa: E402
@@ -150,7 +150,7 @@ def own_text(verdict):
 
 def acceptance(vm_copy, ws, stage):
     results = []
-    if stage.get("hidden"): results.append(vm_copy(ws, [["python3", name] for name in stage["hidden"]], stage["hidden"]))
+    if stage.get("hidden"): results.append(vm_copy(ws, *hidden_plan(stage["hidden"])))
     if stage.get("host_hidden"): results.append(host_node(ws, stage["host_hidden"]))
     bad = [r for r in results if r["status"] != "completed"]
     return {"status": "completed" if results and not bad else "failed", "output": NL.join(r["output"] for r in (bad or results))}

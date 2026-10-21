@@ -361,5 +361,32 @@ class StageSizeTests(unittest.TestCase):
         self.assertIn("split the stage", out.getvalue())
 
 
+class HiddenPlan(unittest.TestCase):
+    """PIPE-11 (2026-10-21): the broker takes at most five guest commands; a cumulative stage with more test files runs through one runner."""
+
+    def setUp(self):
+        sys.path.insert(0, str(BENCH))
+        import devvm_vm
+        self.vm = devvm_vm
+
+    def test_up_to_five_files_stay_one_command_each(self):
+        hidden = {f"t{i}.py": "assert True\n" for i in range(5)}
+        commands, files = self.vm.hidden_plan(hidden)
+        self.assertEqual(commands, [["python3", f"t{i}.py"] for i in range(5)])
+        self.assertEqual(files, hidden)
+
+    def test_more_files_run_in_order_through_one_runner_that_stops_at_the_first_failure(self):
+        hidden = {f"t{i}.py": f"print('t{i}')\n" for i in range(7)}
+        hidden["t3.py"] = "print('t3'); raise SystemExit(4)\n"
+        commands, files = self.vm.hidden_plan(hidden)
+        self.assertEqual(commands, [["python3", self.vm.HIDDEN_RUNNER]])
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, code in files.items():
+                Path(tmp, name).write_text(code, encoding="utf-8")
+            done = subprocess.run([sys.executable, self.vm.HIDDEN_RUNNER], cwd=tmp, capture_output=True, text=True)
+        self.assertEqual(done.returncode, 4)
+        self.assertEqual(done.stdout.split(), ["t0", "t1", "t2", "t3"])
+
+
 if __name__ == "__main__":
     unittest.main()
