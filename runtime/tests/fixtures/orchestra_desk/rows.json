@@ -1,0 +1,25 @@
+{
+  "_zweck": "Zeilen der Fixture-Datenbank für die Abnahme KERN-01 (Spec 0, K0.22); eingefügt in eine Datenbank aus orchestra.store.open_db.",
+  "agents": [
+    {"id": "A-UA", "instance_id": "I-1", "template_id": "unterarbeiter", "name": "Unterarbeiter", "role": "Leitung", "recipe_id": null,
+     "reports_to": null, "status": "aktiv", "permission_level": 4, "budget_tokens": 100000, "budget_eur_cent": null,
+     "created_at": "2026-10-21T08:00:00Z", "updated_at": "2026-10-21T08:00:00Z"},
+    {"id": "A-CODER", "instance_id": "I-2", "template_id": "coder", "name": "Coder", "role": "Entwicklung", "recipe_id": "coder.local_primary",
+     "reports_to": "A-UA", "status": "pausiert", "permission_level": 3, "budget_tokens": 1000, "budget_eur_cent": 500,
+     "created_at": "2026-10-21T08:01:00Z", "updated_at": "2026-10-21T08:01:00Z"}
+  ],
+  "tasks": [
+    {"id": "I-100", "title": "CSV-Export bauen", "state": "zugewiesen", "assignee": "A-CODER", "priority": 2, "goal_ref": "V-1",
+     "project_id": "P-1", "mission_id": null, "created_by": "captain", "created_at": "2026-10-21T09:00:00Z", "updated_at": "2026-10-21T09:00:00Z"},
+    {"id": "I-101", "title": "Tests schreiben", "state": "offen", "assignee": null, "priority": 1, "parent_id": "I-100",
+     "created_by": "A-UA", "created_at": "2026-10-21T09:05:00Z", "updated_at": "2026-10-21T09:05:00Z"}
+  ],
+  "routines": [
+    {"id": "R-1", "agent_id": "A-UA", "title": "Morgenbericht", "cron": "0 8 * * 1-5", "catch_up": "auslassen", "enabled": 1,
+     "task_template": "{\"title\": \"Bericht\"}"}
+  ],
+  "spend": [
+    {"agent_id": "A-CODER", "provider": "lokal", "tokens_in": 600, "tokens_out": 250, "requests": 3, "eur_cent": 0, "ts": "2026-10-21T10:00:00Z"},
+    {"agent_id": "A-CODER", "provider": "cloud", "provider_id": "anbieter-x", "tokens_in": 0, "tokens_out": 0, "requests": 1, "eur_cent": 120, "ts": "2026-10-21T10:05:00Z"}
+  ]
+}

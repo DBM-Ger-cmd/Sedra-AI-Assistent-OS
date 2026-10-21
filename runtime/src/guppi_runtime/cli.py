@@ -17,6 +17,21 @@ def mission_inputs(args):
         return value
     return {'project_path':args.project_path,'files':args.files} if args.project_path is not None or args.files is not None else None
 
+def desk_command(args):
+    """`guppi objects` / `guppi act` (Spec 0, D2, G2-S0-06): Loopback zur laufenden Oberfläche mit `runtime_data/uix/clients/cli.json`."""
+    from . import uix_clients
+    try:
+        if args.cmd=='objects':
+            body={'type':args.type,**({'id':args.id} if args.id else {})}; path='/api/objects'
+        else:
+            extra=json.loads(args.args)
+            if not isinstance(extra,dict):raise ValueError('args_must_be_an_object')
+            body={'type':args.type,'verb':args.verb,'args':extra,**({} if args.id=='-' else {'id':args.id})}; path='/api/actions'
+        status,out=uix_clients.call(Path(args.root).resolve(),'cli',path,body)
+    except ValueError as exc:
+        print(json.dumps({'status':'refused','error':str(exc)},ensure_ascii=False)); return 2
+    print(json.dumps(out,indent=2,ensure_ascii=False)); return 0 if status==200 else 2
+
 def main(argv=None):
     p=argparse.ArgumentParser(prog='guppi')
     p.add_argument('--root',default='.')
@@ -91,7 +106,11 @@ def main(argv=None):
     sub.add_parser('audit-repair',help='move a torn last line of the audit log aside so appends work again')
     ls=sub.add_parser('lessons',help='lesson cards of the coder (E-11): list, propose, approve, reject, sweep; nothing is used before you approve it')
     ls.add_argument('action',choices=['list','propose','approve','reject','sweep']); ls.add_argument('--text'); ls.add_argument('--source',default='captain'); ls.add_argument('--id'); ls.add_argument('--reason')
+    ob=sub.add_parser('objects',help='read desk objects through the running desk (POST /api/objects, Spec 0 D2)'); ob.add_argument('type'); ob.add_argument('id',nargs='?')
+    ac=sub.add_parser('act',help='run a verb through the running desk (POST /api/actions, gates as in the desk); id - = verb without object'); ac.add_argument('type'); ac.add_argument('id'); ac.add_argument('verb'); ac.add_argument('--args',default='{}')
     args=p.parse_args(argv)
+    if args.cmd in {'objects','act'}:       # only over the desk API with the CLI token – no way past the desk
+        return desk_command(args)
     if args.cmd=='audit-repair':       # before the runtime is built: a torn log must not stop the repair itself
         from .core.audit import AuditLog
         out=AuditLog(Path(args.root).resolve()/'runtime_data'/'audit'/'events.jsonl').repair()

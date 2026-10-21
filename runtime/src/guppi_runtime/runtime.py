@@ -52,6 +52,9 @@ from .models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
 from .jobs.verification_gate import VerificationGate
 from .jobs.working_set import WorkingSet
 from .models.runtime_control import LMStudioRuntimeController
+from .orchestra import service as orchestra_service
+from .orchestra.config import OrchestraConfig
+from .orchestra.store import open_db as orchestra_open_db
 
 def _architecture_version(path):
     """(1, 20) for GUPPI_Architecture_v1.20_SELF_DEVELOPMENT. Numbers, not text: v1.9 is older than v1.20."""
@@ -59,6 +62,8 @@ def _architecture_version(path):
     return (tuple(int(x) for x in match.group(1).split(".")) if match else (),Path(path).name)
 
 class GuppiRuntime:
+    ORCHESTRA_CONFIG="orchestra.yaml"      # unter config_root; die Paket-Vorgabe (Spec 0, D3.4)
+
     def __init__(self,project_root: Path, architecture_root: Path|None=None):
         self.project_root=Path(project_root).resolve(); self.project_root.mkdir(parents=True,exist_ok=True)
         if architecture_root is None:
@@ -133,6 +138,7 @@ class GuppiRuntime:
         self.self_development=SelfDevelopmentManager(self.registry,data,audit=self.audit,knowledge=self.knowledge,context_budget=self.context_budget,kev=self.kev,config_path=self.config_root/"self_development.yaml",evidence_store=self.development_evidence)
         self._configure_llama_server(data)
         self._configure_job_supervisor(data)
+        self._configure_orchestra(data)
         self._configure_context_manager(data)
         self._configure_token_policy()
         self.planner=PlanningContextModule(self.knowledge)
@@ -169,6 +175,19 @@ class GuppiRuntime:
         except ValueError as exc:
             setattr(self,error,str(exc))
         return getattr(self,name)
+
+    def _configure_orchestra(self,data):
+        """Spec 0 (D3.5): die Orchestrierung nur bei eingeschaltetem Schalter `orchestra` (OP-14: `enabled` in der Datei schaltet allein
+        nicht ein). Fehlt die Konfiguration, ist sie ungültig oder öffnet die Datenbank nicht, bleibt sie aus und sagt warum
+        (`orchestra_error`, einmal Audit ORCHESTRA_OFF). READY hängt davon nicht ab."""
+        def build():
+            orchestra,error=orchestra_service.build(self.switches.apply("orchestra","enabled",False),OrchestraConfig.load,orchestra_open_db,
+                                                    self.config_root/self.ORCHESTRA_CONFIG,data,
+                                                    audit=lambda event,payload: self.audit.append(event,component="orchestra",payload=payload),
+                                                    guard=self.guard,supervisor=self.job_supervisor)
+            if error: raise ValueError(error)
+            return orchestra
+        self._optional("orchestra",build)
 
     def _configure_job_supervisor(self,data):
         """The supervisor stays off (and says why) when its config is missing or invalid."""
@@ -423,4 +442,5 @@ class GuppiRuntime:
                             "evict_idle_models":bool(self.model_loader and self.model_loader.config.evict_idle_models),"error":self.model_loader_error},
             "token_policy":{"enabled":bool(self.token_policy and self.token_policy.enabled),"error":self.token_policy_error},
             "llama_server":{**(self.llama_server.status() if self.llama_server else {"enabled":False}),"error":self.llama_server_error},
+            "orchestra":orchestra_service.boot_entry(self.orchestra,self.orchestra_error),
         }

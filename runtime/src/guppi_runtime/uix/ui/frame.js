@@ -186,7 +186,7 @@
         if(!same){ this.history = this.history.filter(h=>!(h.type === object.type && h.id === object.id)).concat([this.current]).slice(-MAX_HISTORY); this.save(); }
         this.mounted.forEach(s=>root.sedraLifecycle.unmountTool(s, this.onProblem));
         this.mounted = []; this.body.replaceChildren(); this.title.textContent = this.current.title;
-        const tools = this.orderTools(this.ctx.tools.for(object.type), this.current);
+        const tools = this.orderTools(this.ctx.tools.forObject(this.current), this.current);   // N1: zu genau diesem Objekt
         if(!tools.length){ this.body.append(d().empty('Kein Werkzeug für „' + object.type + '“ – im Werkzeug „Module“ nachsehen.')); this.drawVerbs(); return; }
         const inhalt = d().el('div', 'fr-col fr-inhalt'), nachweis = d().el('div', 'fr-col fr-nachweis');
         nachweis.dataset.slot = 'nachweis';
@@ -284,11 +284,12 @@
           return;
         }
         if(this.karteState) return;
-        const manifest = this.ctx.tools.for('decision')[0];
+        const alle = {type: 'decision', id: 'alle', title: 'Entscheidungen', collection: true};
+        const manifest = this.ctx.tools.forObject(alle)[0];
         if(!manifest) return;
         const slot = d().el('div', 'fr-tool'); slot.dataset.tool = manifest.id; zone.replaceChildren(slot);
         this.karteState = root.sedraLifecycle.mountTool(this.ctx.tools.mod(manifest.id), slot,
-          this.ctx.makeContext(manifest, {type: 'decision', id: 'alle', title: 'Entscheidungen', collection: true}, this.shellApi), this.onProblem);
+          this.ctx.makeContext(manifest, alle, this.shellApi), this.onProblem);
       },
 
       async refreshAll(){ await Promise.all([this.refreshLeiste(), this.refreshKarte()]).catch(e=>this.onProblem('Auffrischen', e)); },

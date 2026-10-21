@@ -1,6 +1,6 @@
 # Permission levels 0-6 as a CEILING on Guard actions (docs/JOB_SUPERVISOR_CONTRACTS.md section 9).
 # This file grants nothing. The Guard still decides every action (ALLOW / CAPTAIN_REQUIRED / BLOCK); a job's level only
-# says which actions it may ask for at all. Derived from guard_rules.yaml v1.20 (all 28 rules read).
+# says which actions it may ask for at all. Derived from guard_rules.yaml v1.20 (all 38 rules read; GR-029 to GR-038 since 2026-10-21, Spec 0 D4).
 # tests/test_permission_levels.py fails if this file and the Guard rules drift apart.
 permission_levels:
   schema: 1
@@ -18,6 +18,11 @@ permission_levels:
     git_read:                 {level: 1, path_scoped: true}
     external_read:            {level: 1, path_scoped: false}   # web.py, domain list only (2026-10-03)
     create_new_artifact:      {level: 2, path_scoped: true}
+    # Orchestrierung (Spec 0, D4, G2-S0-14): legt nur Datensätze an, startet nichts; der Lauf hat sein eigenes Gate (wake_agent).
+    assign_task:              {level: 2, path_scoped: false}
+    delegate_task:            {level: 2, path_scoped: false}
+    pause_agent:              {level: 2, path_scoped: false}
+    fire_routine:             {level: 2, path_scoped: false}
     sandbox_execute:          {level: 3, path_scoped: false}
     shell_execute:            {level: 3, path_scoped: false}
     overwrite_existing:       {level: 4, path_scoped: true}
@@ -27,6 +32,7 @@ permission_levels:
     candidate_accept:         {level: 4, path_scoped: false}
     candidate_rollback:       {level: 4, path_scoped: false}
     execution_recovery:       {level: 4, path_scoped: false}
+    wake_agent:               {level: 4, path_scoped: false}   # startet einen Agentenlauf mit Modell (Spec 0, D4)
     model_runtime_control:    {level: 5, path_scoped: false}
     model_profile_promote:    {level: 5, path_scoped: false}
     model_remove:             {level: 5, path_scoped: false}   # model_removal.py, quarantine only (2026-10-03)
@@ -36,6 +42,12 @@ permission_levels:
     # GUPPI's own code (self_integration.py, 2026-10-02). Level 5: an E1 job (level 2) can never ask for it itself.
     self_integration:          {level: 5, path_scoped: false}
     self_integration_rollback: {level: 5, path_scoped: false}
+    # Verwaltung der Orchestrierung durch den Captain (Spec 0, D4). Level 5: ein Agent fragt sie nie selbst an.
+    set_org:                  {level: 5, path_scoped: false}
+    resume_agent:             {level: 5, path_scoped: false}
+    terminate_agent:          {level: 5, path_scoped: false}
+    set_budget:               {level: 5, path_scoped: false}
+    set_routine:              {level: 5, path_scoped: false}
     external_write:           {level: 6, path_scoped: false}
     deployment:               {level: 6, path_scoped: false}
     credential_access:        {level: 6, path_scoped: false}

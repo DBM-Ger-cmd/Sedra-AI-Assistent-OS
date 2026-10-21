@@ -93,6 +93,38 @@ guard_rules:
   - id: GR-028
     action: model_remove
     decision: CAPTAIN_REQUIRED
+  # 2026-10-21 Spec 0 (D4, G2-S0-GA-01 bis GA-10): die Aktionen der Orchestrierung stehen ausdrücklich im Regelwerk, nicht im Standard.
+  # Die Verben dazu baut Spec 1 (desk/gated.py); in Spec 0 ruft keine Stelle sie auf (OP-12).
+  - id: GR-029
+    action: set_org
+    decision: CAPTAIN_REQUIRED
+  - id: GR-030
+    action: assign_task
+    decision: ALLOW
+  - id: GR-031
+    action: delegate_task
+    decision: ALLOW
+  - id: GR-032
+    action: wake_agent
+    decision: CAPTAIN_REQUIRED
+  - id: GR-033
+    action: pause_agent
+    decision: ALLOW
+  - id: GR-034
+    action: resume_agent
+    decision: CAPTAIN_REQUIRED
+  - id: GR-035
+    action: terminate_agent
+    decision: CAPTAIN_REQUIRED
+  - id: GR-036
+    action: set_budget
+    decision: CAPTAIN_REQUIRED
+  - id: GR-037
+    action: set_routine
+    decision: CAPTAIN_REQUIRED
+  - id: GR-038
+    action: fire_routine
+    decision: ALLOW
   precedence:
   - BLOCK
   - CAPTAIN_REQUIRED

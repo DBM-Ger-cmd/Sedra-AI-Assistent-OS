@@ -159,9 +159,9 @@
       return g;
     }
 
-    // the tools that draw this object, in the order of the manifest
+    // the tools that draw this object, in the order of the manifest (N1: forObject – `typ:alle`, `typ:*`, `typ:<id>` zählen)
     function toolsFor(object){
-      const list = shell.ctx.tools.for(object.type);
+      const list = shell.ctx.tools.forObject(object);
       return list.length ? list : [];
     }
 

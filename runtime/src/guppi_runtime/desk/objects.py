@@ -15,7 +15,13 @@ PHASE_WORD = {'NEW': 'angenommen', 'UNDERSTAND': 'verstanden', 'PLAN': 'geplant'
               'VERIFY': 'in Prüfung', 'REVIEW': 'in Prüfung', 'CANDIDATE_REVIEW': 'Kandidat liegt vor',
               'CAPTAIN_REVIEW': 'wartet auf deine Durchsicht', 'REWORK': 'wird nachgebessert',
               'COMPLETE': 'fertig', 'FAILED': 'fehlgeschlagen', 'PAUSED': 'angehalten'}
-TYPES = ('task', 'intent', 'candidate', 'model', 'skill', 'decision', 'project', 'agent', 'boundary')
+
+
+def __getattr__(name):
+    if name == 'TYPES':                                  # Kompatibilität: die Typen stehen im Register (Spec 0, D1)
+        from .builtin_kinds import builtin
+        return tuple(builtin().mark())
+    raise AttributeError(name)
 
 
 def _link(kind, oid, title, rel):

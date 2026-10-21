@@ -162,7 +162,7 @@
       if(existing){ focus(existing); return existing; }
       // Normalerweise fragt die Shell die Registrierung, wer den Typ zeichnet. Das Gespräch ist der eine Fall, den der
       // Vertrag selbst benennt (kind: panel): dafür darf die Shell ein Werkzeug mitgeben.
-      const manifests = orderTools(opts.manifests || shell.ctx.tools.for(object.type), object);
+      const manifests = orderTools(opts.manifests || shell.ctx.tools.forObject(object), object);     // N1: zu genau diesem Objekt
       const win = {object, box: clampBox(opts.box || placeBox(open.size, screen()), screen()),
                    segments: [], state: null, closable: opts.closable !== false};
 

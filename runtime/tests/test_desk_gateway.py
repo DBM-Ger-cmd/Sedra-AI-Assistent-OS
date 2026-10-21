@@ -9,7 +9,7 @@ import yaml
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk.gateway import Gateway, check_shell, check_tool, needs_ok, route_allowed
+from guppi_runtime.desk.gateway import HANDLE, Gateway, check_shell, check_tool, needs_ok, route_allowed
 from guppi_runtime.desk.registry import Registry, UixConfigError
 
 PACKAGE = Path(__file__).resolve().parents[1] / "src" / "guppi_runtime" / "uix"
@@ -78,6 +78,23 @@ class ManifestRules(unittest.TestCase):
         _, errors = check_tool({"tool": dict(TOOL["tool"], handles=["rechnung"], trust="CORE")},
                                write_tool(self.root, "probe", {"tool": dict(TOOL["tool"], handles=["rechnung"])}), "package")
         self.assertIn("handles_unknown_type", errors, "im Paket gibt es keine Privatsprache")
+
+    def test_handles_may_carry_a_suffix_like_the_schema(self):
+        """Nachtrag N1: `typ`, `typ:alle`, `typ:*`, `typ:<id>` – dasselbe Muster wie ui/schema/tool.schema.json."""
+        man, errors = self.check({"handles": ["issue:alle", "issue:*", "agent:rollen", "routine", "budget", "gespraech"]})
+        self.assertEqual(errors, [])
+        self.assertEqual(man["handles"], ["issue:alle", "issue:*", "agent:rollen", "routine", "budget", "gespraech"])
+        self.assertEqual(man["own_types"], [])
+        for bad in (["issue:"], ["issue:**"], ["Issue:alle"], ["issue:a:b"], [":alle"]):
+            with self.subTest(bad):
+                self.assertIn("handles_unknown_type", self.check({"handles": bad})[1])
+        man, errors = self.check({"handles": ["rechnung:*", "rechnung:alle"], "trust": "CAPTAIN"})
+        self.assertEqual((errors, man["own_types"]), ([], ["rechnung"]), "der eigene Typ zählt einmal, ohne Zusatz")
+        _, errors = self.check({"handles": ["rechnung:*"], "trust": "CORE"})
+        self.assertIn("handles_unknown_type", errors)
+        schema = json.loads((PACKAGE / "ui" / "schema" / "tool.schema.json").read_text(encoding="utf-8"))
+        pattern = schema["properties"]["tool"]["properties"]["handles"]["items"]["pattern"]
+        self.assertEqual(pattern, HANDLE.pattern, "Server und Schema prüfen dieselbe Form")
 
     def test_a_route_with_a_wildcard_only_matches_below_it(self):
         routes = ["GET /api/candidate/*", "POST /api/mission/approve"]

@@ -60,6 +60,10 @@ from .chat_tools import ChatTools
 from .devenv.model_tools import run_tool_loop
 from .uix_library import LibraryDesk
 from .desk import actions as desk_actions
+from .desk import builtin_kinds as desk_builtin_kinds
+from .desk import extensions as desk_extensions
+from .desk import kinds as desk_kinds
+from . import uix_clients
 from .desk import boundaries as desk_boundaries
 from .desk import vorgabe as desk_vorgabe
 from .desk import gateway as desk_gateway
@@ -120,6 +124,21 @@ class UIXHub:
         self.gateway = Gateway(self.project_root)
         self.events = EventStream()
         self.poller = Poller(self, self.events)
+        # Spec 0 (D1): Objekttypen und Verben stehen im Register. Die Erweiterungen docken einmal hier an, danach ist es zu –
+        # über eine Anfrage kommt kein Typ dazu. Ein neuer Anwendungsfall ist ein Modul in desk/extensions.MODULES, keine Zeile hier.
+        self.kinds = desk_builtin_kinds.new_registry()
+        self.extensions = desk_extensions.load(self.kinds, self, desk_extensions.MODULES, audit=self._desk_audit)
+        self.kinds.freeze()
+        self._extensions_started = None
+
+    def _desk_audit(self, event, payload):
+        self.runtime.audit.append(event, component='desk', payload=payload)
+
+    def start_extensions(self):
+        """Der Takt der Erweiterungen (z. B. der Herzschlag der Orchestrierung) läuft, solange die Oberfläche läuft – einmal je Hub."""
+        if self._extensions_started is None:
+            self._extensions_started = desk_extensions.start(self, self.extensions, audit=self._desk_audit)
+        return self._extensions_started
 
     def status(self):
         rt = self.runtime
@@ -1414,86 +1433,25 @@ class UIXHub:
 
     # ---- Build 8: ein Objektmodell, Verben statt Routen, Live-Zeilen
     def object_view(self, kind, oid):
-        """Ein Objekt in der einen Form (§10.1). Liest dieselben Sichten wie die alten Routen; die bleiben unverändert."""
-        if kind == 'task':
-            m = next((x for x in self.missions() if x['mission_id'] == oid), None)
-            if m is None:
-                return desk_objects.not_found(kind, oid)
-            obj = desk_objects.task_object(m)
-            if self._candidate_report(oid) is not None:          # es gibt ein Werkstück: der Weg dorthin gehört an die Aufgabe
-                obj['links'].insert(0, {'type': 'candidate', 'id': oid, 'title': 'Kandidat ansehen', 'rel': 'werkstueck'})
-        elif kind == 'candidate':
-            try:
-                mission = self.runtime.missions.load(oid)
-            except Exception:
-                return desk_objects.not_found(kind, oid)
-            obj = desk_objects.candidate_object(mission, report=self.candidate_report({'mission_id': oid}))
-        elif kind == 'model':
-            view = self.models_view()
-            recipe = next((r for r in view['recipes'] if r['id'] == oid), None)
-            if recipe is None:
-                return desk_objects.not_found(kind, oid)
-            obj = desk_objects.model_object(recipe, view.get('server'))
-        elif kind == 'intent':
-            entry = self.intents.get(oid)
-            if entry is None:
-                return desk_objects.not_found(kind, oid)
-            obj = self._intent_object(entry)
-        elif kind == 'boundary':
-            obj = desk_objects.boundary_object(self.boundaries_view({'project_id': oid} if oid not in ('projekt', 'alle') else None))
-        elif kind == 'decision':
-            d = next((x for x in self.decisions_view()['items'] if x['id'] == oid), None)
-            return desk_objects.decision_object(d) if d else desk_objects.not_found(kind, oid)
-        elif kind == 'skill':
-            s = next((x for x in (self.library.view().get('own') or []) if x.get('id') == oid), None)
-            return desk_objects.skill_object(s) if s else desk_objects.not_found(kind, oid)
-        elif kind == 'project':
-            p = next((x for x in self.projects.list() if (x.get('project_id') == oid or x.get('name') == oid)), None)
-            return desk_objects.project_object(p) if p else desk_objects.not_found(kind, oid)
-        else:
-            raise ValueError('unknown_object_type')
-        obj['actions'] = desk_actions.offered(obj)
-        return obj
+        """Ein Objekt in der einen Form (§10.1); welcher Typ was liest, steht im Register (desk/builtin_kinds.py, Erweiterungen)."""
+        return self.kinds.view(self, kind, oid)
 
     def objects_view(self, payload):
         """`POST /api/objects {type, id}` für ein Objekt, ohne `id` die Liste des Typs."""
-        kind = str(payload.get('type') or '').strip()
-        if kind not in desk_objects.TYPES:
-            raise ValueError('unknown_object_type')
-        oid = payload.get('id')
-        if oid:
-            return self.object_view(kind, str(oid))
-        if kind == 'task':
-            items = [desk_objects.task_object(m) for m in self.missions()]
-        elif kind == 'intent':
-            items = [self._intent_object(e) for e in self.intents.list()]
-        elif kind == 'boundary':
-            items = [desk_objects.boundary_object(self.boundaries_view())]
-        elif kind == 'model':
-            view = self.models_view()
-            items = [desk_objects.model_object(r, view.get('server')) for r in view['recipes']]
-        elif kind == 'decision':
-            items = [desk_objects.decision_object(d) for d in self.decisions_view()['items']]
-        elif kind == 'skill':
-            items = [desk_objects.skill_object(s) for s in (self.library.view().get('own') or [])]
-        elif kind == 'project':
-            items = [desk_objects.project_object(p) for p in self.projects.list()]
-        else:
-            items = []
-        for item in items:
-            item['actions'] = desk_actions.offered(item)
-        return {'type': kind, 'items': items}
+        return self.kinds.request(self, payload)
 
-    def act(self, payload):
+    def act(self, payload, client='shell'):
         """`POST /api/actions {type, id, verb, args}` (§10.2): ein Weg für dieselbe Handlung aus Gespräch, Werkzeug und Palette.
-        Die Gates darunter bleiben, wie sie sind – `run` ruft genau die Hub-Methoden, die auch die alten Routen rufen."""
+        Die Gates darunter bleiben, wie sie sind – `run` ruft genau die Hub-Methoden, die auch die alten Routen rufen.
+        `client` setzt der Server aus dem Token (Spec 0, D2), nie der Aufrufer; es steht nur im Audit."""
         kind = str(payload.get('type') or '').strip()
         oid = str(payload.get('id') or '').strip()
         verb = str(payload.get('verb') or '').strip()
-        if not oid:
-            raise ValueError('id_required')
-        out = desk_actions.run(self, kind, oid, verb, payload.get('args') or {})
-        self.runtime.audit.append('UIX_ACTION', component='desk', payload={'type': kind, 'id': oid[:60], 'verb': verb})
+        if oid:
+            out = desk_actions.run(self, kind, oid, verb, payload.get('args') or {})
+        else:                                           # ein Verb ohne Objekt („anlegen“) nur, wenn der Typ es hat; sonst id_required
+            out = desk_actions.run_type(self, kind, verb, payload.get('args') or {})
+        self.runtime.audit.append('UIX_ACTION', component='desk', payload={'type': kind, 'id': oid[:60], 'verb': verb, 'client': client})
         return out
 
     def live_view(self, payload):
@@ -3054,6 +3012,8 @@ FRAME_PAGE = re.compile(r'/uix/frame/([a-z0-9-]{2,40})')
 
 def make_server(hub: UIXHub, port=0):
     token = secrets.token_urlsafe(32)
+    # Spec 0 (D2): je externem Client ein eigener Token; die Zuordnung Token → Client steht nur hier im Speicher.
+    client_tokens = {c: secrets.token_urlsafe(32) for c in uix_clients.CLIENTS}
     html_path = Path(__file__).parent / 'uix' / 'desk.html'
     html = html_path.read_bytes()
     retro_html = (Path(__file__).parent / 'uix' / 'retro_desktop.html').read_bytes()     # Build 6's desktop, kept in the archive under /retro
@@ -3079,7 +3039,17 @@ def make_server(hub: UIXHub, port=0):
                 # EventSource cannot send headers; for this one read-only stream the token may ride in the query. It never leaves the
                 # machine (loopback, Referrer-Policy: no-referrer) and opens nothing a GET route would not.
                 supplied = parse_qs(urlsplit(self.path).query).get('token', [''])[0]
-            return bool(supplied) and hmac.compare_digest(supplied, token)
+            if not supplied:
+                return None
+            if hmac.compare_digest(supplied, token):
+                return 'browser'
+            return next((c for c, t in client_tokens.items() if hmac.compare_digest(supplied, t)), None)
+
+        def _client(self, token_class):
+            """Die Herkunft für das Audit: `shell`, `chat`, `cli` oder `mcp`. Gerufen erst nach `_module_allowed`: ein Kopf
+            `X-SEDRA-Tool`, der bis hierher kommt, hat die Allowlist für genau diese Route bestanden."""
+            tool = self.headers.get('X-SEDRA-Tool')
+            return desk_kinds.client_for(token_class, tool, tool_ok=bool(tool))
 
         def _module_allowed(self, method, path):
             """A call that names its module (X-SEDRA-Tool / X-SEDRA-Shell) may only use the routes of that manifest (§6).
@@ -3189,7 +3159,7 @@ def make_server(hub: UIXHub, port=0):
                     return
                 self._send(200, page, 'text/html; charset=utf-8', frame_self=True)
                 return
-            if not self._authorized():
+            if self._authorized() != 'browser':          # CLI- und MCP-Token öffnen keine GET-Route (uix_clients.ROUTES)
                 self.send_error(403)
                 return
             if not self._module_allowed('GET', path):
@@ -3257,18 +3227,23 @@ def make_server(hub: UIXHub, port=0):
                 self._send(503, {'error': type(exc).__name__, 'message': str(exc)})
 
         def do_POST(self):
-            if not self._same_origin_ok() or not self._authorized():
+            token_class = self._authorized() if self._same_origin_ok() else None
+            path = urlsplit(self.path).path
+            if token_class is None or (token_class != 'browser' and path not in uix_clients.ROUTES):
                 self.send_error(403)
                 return
-            path = urlsplit(self.path).path
             if not self._module_allowed('POST', path):
                 return
             try:
                 payload = self._json_body()
+                client = self._client(token_class)
+                if path in uix_clients.ROUTES and isinstance(payload, dict) and 'client' in payload:
+                    hub.runtime.audit.append('UIX_CLIENT_REFUSED', component='desk', payload={'path': path, 'client': client})
+                    desk_kinds.refuse_client_field(payload)     # 400 client_is_set_by_server
                 routes = {
                     '/api/decisions/answer': hub.decide,
                     '/api/objects': hub.objects_view,               # read-only: ein Objekt oder die Liste eines Typs (§10.1)
-                    '/api/actions': hub.act,                        # Verben statt Routen (§10.2); die Gates darunter bleiben
+                    '/api/actions': lambda p: hub.act(p, client=client),   # Verben statt Routen (§10.2); die Gates darunter bleiben
                     '/api/live': hub.live_view,                     # read-only: die Zeilen einer Aufgabe
                     '/api/candidate/diff': hub.candidate_diff,      # read-only: alter und neuer Text der Kandidatendateien
                     '/api/candidate/report': hub.candidate_report,  # read-only: Nachweise aus candidate-report.json
@@ -3395,11 +3370,16 @@ def make_server(hub: UIXHub, port=0):
 
     server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
     server.daemon_threads = True
+    hub.start_extensions()
     server.desk_stop = threading.Event()          # set when the server stops: open event streams end instead of hanging
+    for c, t in client_tokens.items():
+        uix_clients.write(hub.project_root, c, t, server.server_port)
     _close = server.server_close
 
     def server_close():
         server.desk_stop.set()
+        for c in client_tokens:
+            uix_clients.remove(hub.project_root, c)
         _close()
     server.server_close = server_close
     return server, 'http://127.0.0.1:' + str(server.server_port) + '/#' + token

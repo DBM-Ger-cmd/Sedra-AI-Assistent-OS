@@ -125,8 +125,14 @@ PLACES = {
 # Der Planungstisch (19.10.2026): nur die Werkzeuge, mit denen ein Assistent plant – lesen, wo die Firma steht, und vorschlagen
 PLANUNG_TOOLS = ('propose_intent', 'propose_task', 'list_missions', 'list_decisions', 'arbeitsplatz_stand', 'list_actions', 'propose_action', 'open_object')
 OBJECT_TYPES = ('task', 'candidate', 'model', 'intent', 'project', 'gateway')
-VERB_TYPES = ('task', 'candidate', 'model', 'intent', 'boundary')
 MAX_UI_ACTIONS = 4        # mehr Knöpfe in einer Antwort liest niemand – und ein Modell in einer Schleife soll nicht die Seite füllen
+
+
+def __getattr__(name):
+    if name == 'VERB_TYPES':          # Spec 0 (G2-S0-03): die Typen mit Verben stehen im Register, nicht hier
+        from .desk import actions as desk_actions
+        return tuple(desk_actions.table())
+    raise AttributeError(name)
 
 
 def _limit(args, default, top):
@@ -283,14 +289,14 @@ class ChatTools:
     def _object(self, args):
         from .desk import actions as desk_actions      # lazy: the desk imports the hub module, not the other way round
         kind, oid = str(args.get("type") or ""), str(args.get("id") or "").strip()
-        if kind not in VERB_TYPES or kind not in desk_actions.VERBS or not oid: raise ValueError("unknown_object_type")
+        if kind not in desk_actions.table(desk_actions._registry(self.hub)) or not oid: raise ValueError("unknown_object_type")
         obj = self.hub.object_view(kind, oid)
         if obj.get("state") == "nicht gefunden": raise ValueError("object_not_found")
         return obj
 
     def _verbs(self, obj):
         from .desk import actions as desk_actions
-        return desk_actions.offered(obj)               # fresh from the state – the same list the window shows
+        return desk_actions.offered(obj, desk_actions._registry(self.hub))   # fresh from the state – the same list the window shows
 
     def _offer(self, action, describe):
         """A button for the Captain, never a deed. The model is told so in its own result."""

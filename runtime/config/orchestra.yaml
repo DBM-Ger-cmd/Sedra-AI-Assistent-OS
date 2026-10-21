@@ -1,0 +1,11 @@
+# Orchestrierung (Spec 0, D3.4): Paket-Vorgabe. Eingeschaltet wird nur über den Schalter in local_config/switches.yaml
+# (switches: {orchestra: {enabled: true}}); `enabled` hier ist die dokumentierte Vorgabe und schaltet allein nicht ein (OP-14).
+orchestra:
+  schema: 1
+  enabled: false                 # der Schalter in local_config/switches.yaml schaltet ein
+  database: orchestra/orchestra.db    # relativ zu runtime_data, kein absoluter Pfad, kein ..
+  heartbeat: {tick_s: 5, coalesce_s: 2, max_runs_per_tick: 1}
+  checkout: {stall_s: 900}       # ORC-11; Grenzen wie job_supervisor (2..86400)
+  budget: {warn_percent: 80, stop_percent: 100}
+  routines: {max_catch_up: 3}
+  org: {max_depth: 6}

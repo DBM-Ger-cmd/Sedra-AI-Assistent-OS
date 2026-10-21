@@ -1,0 +1,10 @@
+# Spec 0, K0.7: die Tests aus D1, grün vor dem Umbau (Stand c9facb1, 2026-10-21); Laufzeit-venv, PYTHONPATH=src;tests
+# test_uix_flows überspringt alle Fälle ohne Browser; uix_check läuft in K0.25.
+test_desk_objects.py: Ran 20 tests in 5.580s  OK 
+test_desk_intent_stufen.py: Ran 6 tests in 1.120s  OK 
+test_desk_boundaries.py: Ran 17 tests in 3.086s  OK 
+test_uix_guppi_moves.py: Ran 15 tests in 1.355s  OK 
+test_uix_server.py: Ran 71 tests in 65.448s  OK (skipped=2) 
+test_uix_flows.py: Ran 11 tests in 0.320s  OK (skipped=11) 
+test_uix_contract.py: Ran 44 tests in 6.480s  OK 
+test_core_boundary_src.py: Ran 4 tests in 0.907s  OK 
