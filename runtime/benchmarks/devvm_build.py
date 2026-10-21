@@ -334,8 +334,10 @@ def write_logbook(spec_name, row, lease_seconds, file=None, bench_dir=None):
 
 
 PROFILES = {      # Captain 2026-10-20, line L1: ONE way to build; the standard command of docs/ENTWICKLUNG.md as a profile (single flags given on the command line win)
-    "standard": {"attempts": 1, "coder": "coder.local_primary", "all_models": "coder.local_primary", "context": "32768", "tidy": True, "reasoning": "off", "coder_ext": "all",
+    "standard": {"attempts": 1, "coder": "coder.local_primary", "all_models": "coder.local_primary", "context": "32768", "tidy": True, "reasoning": "off", "coder_ext": "all", "self_check": "none",      # PROFIL-01 (Captain 2026-10-21): self_check full 1850 s, none 170 s, same result (skill_rank3)
                  "server_set": ["flash_attn=on", "kv_cache_type=q8_0", "ubatch=512"]},
+    "schnell-klein": {"attempts": 1, "coder": "coder.llama_qwen35", "all_models": "coder.llama_qwen35", "context": "32768", "tidy": True, "reasoning": "off", "coder_ext": "all", "self_check": "none",      # PROFIL-02 (Captain 2026-10-21): Qwen3.5-9B with MTP, 282 s on skill_rank3; reserve, not the standard
+                      "server_set": ["flash_attn=on", "kv_cache_type=q8_0", "ubatch=512"]},
 }
 EXPERIMENTAL = ("plan_steps", "fresh_rework", "step_syntax_check", "parallel_check", "checker", "arbiter")      # finished measurements: only with --experimental
 
@@ -378,7 +380,7 @@ def build_parser():
     ap.add_argument("--skip-spec-stamp", action="store_true", help="build although spec_check has no valid stamp for this spec (L2 exception; a warning goes into the log)")
     ap.add_argument("--no-logbook", action="store_true", help="do NOT write the BAU row of this build into docs/LOGBUCH_AGENT_MANAGER.md at the end (V1; for tests)")
     ap.add_argument("--allow-host-stamp", action="store_true", help="accept a spec stamp of level host (spec_check --host-only, host python only) instead of stopping with spec_stamp_host_only (PIPE-07)")
-    ap.add_argument("--profile", choices=sorted(PROFILES), help="standard = the standard command of docs/ENTWICKLUNG.md (--attempts 1, coder and all models coder.local_primary, --context 32768, --tidy, --reasoning off, --coder-ext all, flash_attn=on, kv_cache_type=q8_0, ubatch=512); a flag given here overrides its value")
+    ap.add_argument("--profile", choices=sorted(PROFILES), help="standard = the standard command of docs/ENTWICKLUNG.md (--attempts 1, coder and all models coder.local_primary, --context 32768, --tidy, --reasoning off, --coder-ext all, --self-check none, flash_attn=on, kv_cache_type=q8_0, ubatch=512); schnell-klein = like standard, but coder and all models coder.llama_qwen35 (Qwen3.5-9B with MTP): Reserve, nicht Standard; a flag given here overrides its value")
     ap.add_argument("--experimental", action="store_true", help="allow the options of finished measurements (" + ", ".join("--" + k.replace("_", "-") for k in EXPERIMENTAL) + ")")
     return ap
 

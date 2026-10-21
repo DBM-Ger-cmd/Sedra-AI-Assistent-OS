@@ -217,6 +217,18 @@ class ProfileTests(unittest.TestCase):
         a = self.parse("--profile", "standard")
         self.assertEqual((a.attempts, a.coder, a.all_models, a.context, a.tidy, a.reasoning, a.coder_ext), (1, "coder.local_primary", "coder.local_primary", "32768", True, "off", "all"))
         self.assertEqual(a.server_set, ["flash_attn=on", "kv_cache_type=q8_0", "ubatch=512"])
+        self.assertEqual(a.self_check, "none")
+
+    def test_profile_standard_self_check_can_be_overridden(self):
+        self.assertEqual(self.parse("--profile", "standard", "--self-check", "full").self_check, "full")
+        self.assertEqual(self.parse().self_check, "full")
+
+    def test_profile_schnell_klein_is_standard_with_the_small_model(self):
+        a = self.parse("--profile", "schnell-klein")
+        self.assertEqual((a.attempts, a.coder, a.all_models, a.context, a.tidy, a.reasoning, a.coder_ext, a.self_check),
+                         (1, "coder.llama_qwen35", "coder.llama_qwen35", "32768", True, "off", "all", "none"))
+        self.assertEqual(a.server_set, ["flash_attn=on", "kv_cache_type=q8_0", "ubatch=512"])
+        self.assertIn("Reserve, nicht Standard", " ".join(devvm_build().build_parser().format_help().split()))
 
     def test_single_flags_override_the_profile(self):
         a = self.parse("--profile", "standard", "--attempts", "2", "--context", "max", "--server-set", "ubatch=1024", "--reasoning", "auto")
