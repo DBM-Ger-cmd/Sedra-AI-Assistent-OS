@@ -2766,6 +2766,8 @@ Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis
 | G3-S1-01 bis G3-S1-23 | Bauplan Spec 1 freigegeben (21.10.2026): elf SEDRA-Bauten s1_* mit GPU, Claude direkt chain.py und budgetcalc.py (V4), Harness S1.H1 bis S1.H9; Diff an core/guard.py (S1.H2) vor der Übernahme einzeln |
 | G3-S1-24 | `tzdata` (reines Datenpaket) in die .venv der Laufzeit-Installation aufnehmen |
 | OP-S1-14, 17, 18 | spec_check --vm vor jedem Bau neu; Stufe und Delegationsrecht aus der Vorlage; Issue-Liste mit den letzten 3 Kommentaren, Kette nur in der Einzelansicht |
+| G4 KERN-01 | Diff an core/guard.py (Commit 19e818c, +87/−2, Dauerfreigabe nach D1.4) einzeln übernommen (21.10.2026); erster Kern-Eingriff des Vorhabens; test_guard_standing 17, alle Guard-Tests und test_core_boundary_src grün |
+| G4 S1.H1, C1, C2, H3, H4, H5 | Migration 2 mit Sicherung, chain.py, budgetcalc.py, orchestra.yaml Schema 2, Verben in liste.actions, agent_id, gated.py mit mehreren Gates und uix_server.decide übernommen (21.10.2026); Konfigurationsschlüssel runner/standing/decompose wie gewählt; Abgleich Dauerfreigabe mit gated.py in S1.H7 |
 
 ## Vorarbeiter-Prompt
 
