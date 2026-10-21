@@ -149,7 +149,7 @@ STAGES = [
 - provider must be 'lokal' or 'cloud', else ValueError('budget_provider_invalid') (checked first). Then inside `with immediate(conn):` read the agent row (none -> ValueError('agent_not_found')).
 - before_pct = the agent's percent before the booking, after_pct after it: budgetcalc.view(agent row, budgetcalc.totals(all spend rows of the agent, the agent's budget_period, now), warn, stop)["prozent"] (None without a limit).
 - Insert one spend row: agent_id, task_id, mission_id, provider, provider_id and model from usage, tokens_in, tokens_out, requests (default 1), eur_cent (default 0) from usage (missing numbers 0), ts = now. usage None means the model gave no usage: book tokens_in 0, tokens_out = cap_tokens and estimated = 1 (otherwise estimated 0; an empty dict is a usage with zeros).
-- crossing = budgetcalc.crossing(before_pct, after_pct, warn, stop). A refused call writes nothing.""",
+- crossing = budgetcalc.crossing(before_pct, after_pct, warn, stop). `book` records spending that already happened: it NEVER refuses because of the budget (no limit check, a booking past 100 % is written and reported as crossing 'stopp'); only an invalid provider or an unknown agent refuse, and a refused call writes nothing.""",
      "hidden": H1},
     {"name": "state",
      "task": """Add `state(conn, agent, now, warn, stop)` to `budget.py` (keep everything else): agent is an agents row as a dict; return budgetcalc.view(agent, budgetcalc.totals(the agent's spend rows as dicts, agent['budget_period'], now), warn, stop). `book` must use the same helper for its percents.""",
