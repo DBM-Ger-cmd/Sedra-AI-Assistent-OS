@@ -2006,6 +2006,8 @@ Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis
 | PROFIL-02 | Qwen3.5-9B mit MTP (`coder.llama_qwen35`) nur als Reserve-Profil `schnell-klein`, nicht Standard |
 | PIPE-10 | Saat als maschinenlesbares Feld `SEED` in der Bau-Spec; `devvm_build` nimmt sie automatisch, der Stempel bindet ihren Hash |
 | G2-S4-01 bis G2-S4-23 | Design Shell D (D4.1 bis D4.7) freigegeben wie empfohlen; Bau durch Claude nach V4, Übernahme per `adopt_plan`/Handkopie, `trust: CORE` |
+| G3-S4 (S4.1 bis S4.10) | Bauschritte Shell D wie D4.5 freigegeben (21.10.2026); Bau durch Claude-Sitzungen, Reihenfolge S4.1 → S4.2 → S4.9, dann S4.4 bis S4.8; S4.3 nach Spec 0 K0.11; Übernahme je Schritt nach Review (G4) |
+| SEDRA-Bau `k0_extensions` | erster SEDRA-Bau für Spec 0 mit GPU freigegeben (21.10.2026) |
 
 ## Vorarbeiter-Prompt
 
