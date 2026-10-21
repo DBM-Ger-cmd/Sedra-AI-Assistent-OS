@@ -1,0 +1,2529 @@
+{
+ "object:[\"agent\", \"unterarbeiter\"]": {
+  "error": "unknown_object_type"
+ },
+ "object:[\"boundary\", \"P-1\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": "Eine geänderte Grenze gilt ab sofort für dieses Projekt.",
+     "label": "Grenzen ändern",
+     "needs_gate": true,
+     "verb": "aendern"
+    }
+   ],
+   "boundaries": {
+    "geld": 0,
+    "netz": "aus"
+   },
+   "confirmed": true,
+   "id": "P-1",
+   "links": [],
+   "measured_limit": null,
+   "mode": "werkstatt",
+   "note": "Die Kostengrenze wird gemessen, nicht geraten – zwei Wochen Guppy-Meter.",
+   "reason": null,
+   "state": "bestätigt",
+   "summary": "Werkstatt: kein Geld, kein Netz.",
+   "title": "Modus und Grenzen",
+   "type": "boundary"
+  }
+ },
+ "object:[\"boundary\", \"P-2\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": "Damit gelten Modus und Grenzen für alles, was in diesem Projekt passiert.",
+     "label": "Modus und Grenzen bestätigen",
+     "needs_gate": true,
+     "verb": "bestaetigen"
+    }
+   ],
+   "boundaries": {},
+   "confirmed": false,
+   "id": "P-2",
+   "links": [],
+   "measured_limit": null,
+   "mode": "werkstatt",
+   "note": null,
+   "reason": "noch nicht bestätigt",
+   "state": "nicht bestätigt",
+   "summary": "Vorschlag: Werkstatt. – noch nicht bestätigt",
+   "title": "Modus und Grenzen",
+   "type": "boundary"
+  }
+ },
+ "object:[\"boundary\", \"P-WEG\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": "Damit gelten Modus und Grenzen für alles, was in diesem Projekt passiert.",
+     "label": "Modus und Grenzen bestätigen",
+     "needs_gate": true,
+     "verb": "bestaetigen"
+    }
+   ],
+   "boundaries": {},
+   "confirmed": false,
+   "id": "projekt",
+   "links": [],
+   "measured_limit": null,
+   "mode": null,
+   "note": "Noch kein Projekt angelegt – Grenzen gehören zu einem Projekt.",
+   "reason": null,
+   "state": "nicht bestätigt",
+   "summary": " – ",
+   "title": "Modus und Grenzen",
+   "type": "boundary"
+  }
+ },
+ "object:[\"boundary\", \"alle\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": "Eine geänderte Grenze gilt ab sofort für dieses Projekt.",
+     "label": "Grenzen ändern",
+     "needs_gate": true,
+     "verb": "aendern"
+    }
+   ],
+   "boundaries": {
+    "geld": 0,
+    "netz": "aus"
+   },
+   "confirmed": true,
+   "id": "P-1",
+   "links": [],
+   "measured_limit": null,
+   "mode": "werkstatt",
+   "note": "Die Kostengrenze wird gemessen, nicht geraten – zwei Wochen Guppy-Meter.",
+   "reason": null,
+   "state": "bestätigt",
+   "summary": "Werkstatt: kein Geld, kein Netz.",
+   "title": "Modus und Grenzen",
+   "type": "boundary"
+  }
+ },
+ "object:[\"boundary\", \"projekt\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": "Eine geänderte Grenze gilt ab sofort für dieses Projekt.",
+     "label": "Grenzen ändern",
+     "needs_gate": true,
+     "verb": "aendern"
+    }
+   ],
+   "boundaries": {
+    "geld": 0,
+    "netz": "aus"
+   },
+   "confirmed": true,
+   "id": "P-1",
+   "links": [],
+   "measured_limit": null,
+   "mode": "werkstatt",
+   "note": "Die Kostengrenze wird gemessen, nicht geraten – zwei Wochen Guppy-Meter.",
+   "reason": null,
+   "state": "bestätigt",
+   "summary": "Werkstatt: kein Geld, kein Netz.",
+   "title": "Modus und Grenzen",
+   "type": "boundary"
+  }
+ },
+ "object:[\"candidate\", \"M-APPL\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": "Die übernommenen Dateien werden auf den gesicherten Stand zurückgesetzt.",
+     "label": "Rückgängig",
+     "needs_gate": true,
+     "verb": "zuruecknehmen"
+    }
+   ],
+   "files": [
+    {
+     "bytes": 6,
+     "path": "lib/util.py"
+    }
+   ],
+   "id": "M-APPL",
+   "links": [
+    {
+     "id": "M-APPL",
+     "rel": "gehört zu",
+     "title": "Aufgabe",
+     "type": "task"
+    }
+   ],
+   "qualified": true,
+   "state": "übernommen",
+   "summary": "Übernommen: 1 Datei(en) geschrieben, Rücknahme möglich.",
+   "title": "Kandidat · util.py",
+   "type": "candidate"
+  }
+ },
+ "object:[\"candidate\", \"M-CAND\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Testen",
+     "needs_gate": false,
+     "verb": "testen"
+    },
+    {
+     "confirm": null,
+     "label": "Tests nachprüfen",
+     "needs_gate": false,
+     "verb": "nachpruefen"
+    },
+    {
+     "confirm": "Diese Dateien werden überschrieben. Die alten Fassungen werden vorher gesichert, die Rücknahme bleibt möglich.",
+     "label": "Übernehmen",
+     "needs_gate": true,
+     "verb": "uebernehmen"
+    }
+   ],
+   "files": [
+    {
+     "bytes": 6,
+     "path": "app.py"
+    }
+   ],
+   "id": "M-CAND",
+   "links": [
+    {
+     "id": "M-CAND",
+     "rel": "gehört zu",
+     "title": "Aufgabe",
+     "type": "task"
+    }
+   ],
+   "qualified": true,
+   "state": "vorgeschlagen",
+   "summary": "1 Datei(en) geändert – Diff prüfen, dann übernehmen.",
+   "title": "Kandidat · app.py",
+   "type": "candidate"
+  }
+ },
+ "object:[\"candidate\", \"M-READY\"]": {
+  "result": {
+   "actions": [],
+   "files": [],
+   "id": "M-READY",
+   "links": [
+    {
+     "id": "M-READY",
+     "rel": "gehört zu",
+     "title": "Aufgabe",
+     "type": "task"
+    }
+   ],
+   "qualified": false,
+   "state": "keiner",
+   "summary": "Diese Aufgabe hat keinen Kandidaten; sie ändert keine Dateien.",
+   "title": "Kandidat · M-READY",
+   "type": "candidate"
+  }
+ },
+ "object:[\"candidate\", \"M-WEG\"]": {
+  "result": {
+   "actions": [],
+   "id": "M-WEG",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "M-WEG",
+   "type": "candidate"
+  }
+ },
+ "object:[\"decision\", \"crossing:C-1\"]": {
+  "result": {
+   "actions": [
+    {
+     "label": "einmal",
+     "needs_gate": false,
+     "verb": "einmal"
+    },
+    {
+     "label": "aendern",
+     "needs_gate": false,
+     "verb": "aendern"
+    },
+    {
+     "label": "ablehnen",
+     "needs_gate": false,
+     "verb": "ablehnen"
+    }
+   ],
+   "id": "crossing:C-1",
+   "links": [],
+   "state": "wartet",
+   "summary": "Grenze Geld – 0,50 €",
+   "title": "Grenze Geld",
+   "type": "decision"
+  }
+ },
+ "object:[\"decision\", \"gate:HG-1\"]": {
+  "result": {
+   "actions": [
+    {
+     "label": "einmal",
+     "needs_gate": false,
+     "verb": "einmal"
+    },
+    {
+     "label": "ablehnen",
+     "needs_gate": false,
+     "verb": "ablehnen"
+    }
+   ],
+   "id": "gate:HG-1",
+   "links": [
+    {
+     "id": "M-WAIT",
+     "rel": "gehört zu",
+     "title": "Aufgabe",
+     "type": "task"
+    }
+   ],
+   "state": "wartet",
+   "summary": "Netz – pypi.org",
+   "title": "Netz",
+   "type": "decision"
+  }
+ },
+ "object:[\"decision\", \"gate:WEG\"]": {
+  "result": {
+   "actions": [],
+   "id": "gate:WEG",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "gate:WEG",
+   "type": "decision"
+  }
+ },
+ "object:[\"intent\", \"V-1\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Aufgabe daraus machen",
+     "needs_gate": false,
+     "verb": "aufgabe_machen"
+    }
+   ],
+   "created_at": "2026-10-01T07:00:00Z",
+   "id": "V-1",
+   "links": [
+    {
+     "id": "M-READY",
+     "rel": "daraus entstanden",
+     "title": "Aufgabe M-READY",
+     "type": "task"
+    },
+    {
+     "id": "M-DONE",
+     "rel": "daraus entstanden",
+     "title": "Aufgabe M-DONE",
+     "type": "task"
+    }
+   ],
+   "state": "in Arbeit",
+   "stufen": [],
+   "summary": "CSV-Export für den Monatsbericht – 1 von 2 Aufgaben sind offen.",
+   "tasks": [
+    "M-READY",
+    "M-DONE"
+   ],
+   "text": "Erst lesen, dann schreiben",
+   "title": "CSV-Export für den Monatsbericht",
+   "type": "intent",
+   "vorlage": ""
+  }
+ },
+ "object:[\"intent\", \"V-2\"]": {
+  "result": {
+   "actions": [],
+   "created_at": "2026-10-01T07:10:00Z",
+   "id": "V-2",
+   "links": [
+    {
+     "id": "M-DONE",
+     "rel": "daraus entstanden",
+     "title": "Aufgabe M-DONE",
+     "type": "task"
+    }
+   ],
+   "state": "fertig",
+   "stufen": [],
+   "summary": "Alles fertig – Alle 1 Aufgaben sind fertig.",
+   "tasks": [
+    "M-DONE"
+   ],
+   "text": "",
+   "title": "Alles fertig",
+   "type": "intent",
+   "vorlage": ""
+  }
+ },
+ "object:[\"intent\", \"V-3\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Aufgabe daraus machen",
+     "needs_gate": false,
+     "verb": "aufgabe_machen"
+    }
+   ],
+   "created_at": "2026-10-01T07:20:00Z",
+   "id": "V-3",
+   "links": [],
+   "state": "offen",
+   "stufen": [
+    {
+     "current": false,
+     "index": 0,
+     "name": "Lesen",
+     "state": "fertig",
+     "tasks": [
+      {
+       "id": "M-DONE",
+       "phase": "COMPLETE",
+       "title": "Bericht schreiben",
+       "waits": false
+      }
+     ],
+     "text": "lesen"
+    },
+    {
+     "current": true,
+     "index": 1,
+     "name": "Prüfen",
+     "state": "wartet auf dich",
+     "tasks": [
+      {
+       "id": "M-WAIT",
+       "phase": "EXECUTE",
+       "title": "Paket installieren",
+       "waits": true
+      }
+     ],
+     "text": "prüfen"
+    }
+   ],
+   "summary": "Mit Stufen – 1 von 2 Stufen fertig · jetzt: Prüfen",
+   "tasks": [],
+   "text": "zwei Stufen",
+   "title": "Mit Stufen",
+   "type": "intent",
+   "vorlage": "zwei_stufen"
+  }
+ },
+ "object:[\"intent\", \"V-4\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Aufgabe daraus machen",
+     "needs_gate": false,
+     "verb": "aufgabe_machen"
+    }
+   ],
+   "created_at": "2026-10-01T07:30:00Z",
+   "id": "V-4",
+   "links": [],
+   "state": "noch keine Aufgabe",
+   "stufen": [],
+   "summary": "Noch leer – Noch keine Aufgabe. Sag im Gespräch, was zuerst passieren soll.",
+   "tasks": [],
+   "text": "",
+   "title": "Noch leer",
+   "type": "intent",
+   "vorlage": ""
+  }
+ },
+ "object:[\"intent\", \"V-WEG\"]": {
+  "result": {
+   "actions": [],
+   "id": "V-WEG",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "V-WEG",
+   "type": "intent"
+  }
+ },
+ "object:[\"model\", \"chat.local\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Laden",
+     "needs_gate": false,
+     "verb": "laden"
+    }
+   ],
+   "id": "chat.local",
+   "links": [
+    {
+     "id": "meter",
+     "rel": "kosten",
+     "title": "Guppy-Meter",
+     "type": "meter"
+    }
+   ],
+   "roles": [
+    "chat",
+    "planner"
+   ],
+   "state": "bereit",
+   "summary": "chat.local – chat.gguf",
+   "title": "chat.local",
+   "type": "model"
+  }
+ },
+ "object:[\"model\", \"cloud.off\"]": {
+  "result": {
+   "actions": [],
+   "id": "cloud.off",
+   "links": [
+    {
+     "id": "meter",
+     "rel": "kosten",
+     "title": "Guppy-Meter",
+     "type": "meter"
+    }
+   ],
+   "roles": [],
+   "state": "nicht einsatzbereit",
+   "summary": "cloud.off – ausgeschaltet · kein Modell hinterlegt",
+   "title": "cloud.off",
+   "type": "model"
+  }
+ },
+ "object:[\"model\", \"coder.local_primary\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Entladen",
+     "needs_gate": false,
+     "verb": "entladen"
+    },
+    {
+     "confirm": null,
+     "label": "Testen",
+     "needs_gate": false,
+     "verb": "testen"
+    }
+   ],
+   "id": "coder.local_primary",
+   "links": [
+    {
+     "id": "meter",
+     "rel": "kosten",
+     "title": "Guppy-Meter",
+     "type": "meter"
+    }
+   ],
+   "roles": [
+    "coder"
+   ],
+   "state": "geladen",
+   "summary": "coder.local_primary – qwen-coder.gguf · Kontext 32768 · läuft mit Kontext 32768",
+   "title": "coder.local_primary",
+   "type": "model"
+  }
+ },
+ "object:[\"model\", \"fehlt\"]": {
+  "result": {
+   "actions": [],
+   "id": "fehlt",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "fehlt",
+   "type": "model"
+  }
+ },
+ "object:[\"project\", \"Export\"]": {
+  "result": {
+   "actions": [],
+   "id": "P-1",
+   "links": [],
+   "state": "offen",
+   "summary": "Export – workspace/export",
+   "title": "Export",
+   "type": "project"
+  }
+ },
+ "object:[\"project\", \"OhneId\"]": {
+  "result": {
+   "actions": [],
+   "id": "OhneId",
+   "links": [],
+   "state": "offen",
+   "summary": "OhneId – workspace/ohne",
+   "title": "OhneId",
+   "type": "project"
+  }
+ },
+ "object:[\"project\", \"P-1\"]": {
+  "result": {
+   "actions": [],
+   "id": "P-1",
+   "links": [],
+   "state": "offen",
+   "summary": "Export – workspace/export",
+   "title": "Export",
+   "type": "project"
+  }
+ },
+ "object:[\"project\", \"P-WEG\"]": {
+  "result": {
+   "actions": [],
+   "id": "P-WEG",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "P-WEG",
+   "type": "project"
+  }
+ },
+ "object:[\"raumschiff\", \"x\"]": {
+  "error": "unknown_object_type"
+ },
+ "object:[\"skill\", \"debug\"]": {
+  "result": {
+   "actions": [],
+   "id": "debug",
+   "links": [],
+   "state": "vorhanden",
+   "summary": "Fehler finden",
+   "title": "Debuggen",
+   "type": "skill"
+  }
+ },
+ "object:[\"skill\", \"leer\"]": {
+  "result": {
+   "actions": [],
+   "id": "leer",
+   "links": [],
+   "state": "vorhanden",
+   "summary": "Kein Beschreibungssatz hinterlegt.",
+   "title": "leer",
+   "type": "skill"
+  }
+ },
+ "object:[\"skill\", \"weg\"]": {
+  "result": {
+   "actions": [],
+   "id": "weg",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "weg",
+   "type": "skill"
+  }
+ },
+ "object:[\"task\", \"M-APPL\"]": {
+  "result": {
+   "actions": [],
+   "id": "M-APPL",
+   "links": [
+    {
+     "id": "M-APPL",
+     "rel": "werkstueck",
+     "title": "Kandidat ansehen",
+     "type": "candidate"
+    },
+    {
+     "id": "audit",
+     "rel": "verlauf",
+     "title": "Logbuch",
+     "type": "logbook"
+    }
+   ],
+   "progress": {
+    "done": 1,
+    "percent": 100,
+    "steps": 1
+   },
+   "state": "fertig",
+   "steps": [
+    {
+     "done": true,
+     "n": 1,
+     "now": false,
+     "text": "Kandidat"
+    }
+   ],
+   "summary": "Übernommene Änderung – fertig.",
+   "title": "Übernommene Änderung",
+   "type": "task"
+  }
+ },
+ "object:[\"task\", \"M-CAND\"]": {
+  "result": {
+   "actions": [],
+   "id": "M-CAND",
+   "links": [
+    {
+     "id": "M-CAND",
+     "rel": "werkstueck",
+     "title": "Kandidat ansehen",
+     "type": "candidate"
+    },
+    {
+     "id": "audit",
+     "rel": "verlauf",
+     "title": "Logbuch",
+     "type": "logbook"
+    }
+   ],
+   "progress": {
+    "done": 1,
+    "percent": 100,
+    "steps": 1
+   },
+   "state": "Kandidat liegt vor",
+   "steps": [
+    {
+     "done": true,
+     "n": 1,
+     "now": false,
+     "text": "Kandidat"
+    }
+   ],
+   "summary": "Ändere Code als Kandidat – der Kandidat liegt vor; der Diff steht daneben.",
+   "title": "Ändere Code als Kandidat",
+   "type": "task"
+  }
+ },
+ "object:[\"task\", \"M-DONE\"]": {
+  "result": {
+   "actions": [],
+   "id": "M-DONE",
+   "links": [
+    {
+     "id": "audit",
+     "rel": "verlauf",
+     "title": "Logbuch",
+     "type": "logbook"
+    }
+   ],
+   "progress": {
+    "done": 1,
+    "percent": 100,
+    "steps": 1
+   },
+   "state": "fertig",
+   "steps": [
+    {
+     "done": true,
+     "n": 1,
+     "now": false,
+     "text": "schreiben"
+    }
+   ],
+   "summary": "Bericht schreiben – fertig.",
+   "title": "Bericht schreiben",
+   "type": "task"
+  }
+ },
+ "object:[\"task\", \"M-READY\"]": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Ausführen",
+     "needs_gate": false,
+     "verb": "ausfuehren"
+    }
+   ],
+   "id": "M-READY",
+   "links": [
+    {
+     "id": "audit",
+     "rel": "verlauf",
+     "title": "Logbuch",
+     "type": "logbook"
+    }
+   ],
+   "progress": {
+    "done": 0,
+    "percent": 0,
+    "steps": 2
+   },
+   "state": "bereit",
+   "steps": [
+    {
+     "done": false,
+     "n": 1,
+     "now": true,
+     "text": "Datei lesen"
+    },
+    {
+     "done": false,
+     "n": 2,
+     "now": false,
+     "text": "Zeilen zerlegen"
+    }
+   ],
+   "summary": "CSV-Parser bauen – bereit, Schritt 1 von 2.",
+   "title": "CSV-Parser bauen",
+   "type": "task"
+  }
+ },
+ "object:[\"task\", \"M-RUN\"]": {
+  "result": {
+   "actions": [],
+   "id": "M-RUN",
+   "links": [
+    {
+     "id": "audit",
+     "rel": "verlauf",
+     "title": "Logbuch",
+     "type": "logbook"
+    }
+   ],
+   "progress": {
+    "done": 1,
+    "percent": 33,
+    "steps": 3
+   },
+   "state": "läuft",
+   "steps": [
+    {
+     "done": true,
+     "n": 1,
+     "now": false,
+     "text": "a"
+    },
+    {
+     "done": false,
+     "n": 2,
+     "now": true,
+     "text": "b"
+    },
+    {
+     "done": false,
+     "n": 3,
+     "now": false,
+     "text": "c"
+    }
+   ],
+   "summary": "Tests schreiben – läuft, Schritt 2 von 3.",
+   "title": "Tests schreiben",
+   "type": "task"
+  }
+ },
+ "object:[\"task\", \"M-WAIT\"]": {
+  "result": {
+   "actions": [],
+   "id": "M-WAIT",
+   "links": [
+    {
+     "id": "alle",
+     "rel": "wartet",
+     "title": "Entscheidungen",
+     "type": "decision"
+    },
+    {
+     "id": "audit",
+     "rel": "verlauf",
+     "title": "Logbuch",
+     "type": "logbook"
+    }
+   ],
+   "progress": {
+    "done": 0,
+    "percent": 0,
+    "steps": 1
+   },
+   "state": "wartet auf dich",
+   "steps": [
+    {
+     "done": false,
+     "n": 1,
+     "now": true,
+     "text": "pip install"
+    }
+   ],
+   "summary": "Paket installieren – wartet auf deine Freigabe.",
+   "title": "Paket installieren",
+   "type": "task"
+  }
+ },
+ "object:[\"task\", \"M-WEG\"]": {
+  "result": {
+   "actions": [],
+   "id": "M-WEG",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "M-WEG",
+   "type": "task"
+  }
+ },
+ "objects:{\"id\": \"\", \"type\": \"agent\"}": {
+  "result": {
+   "items": [],
+   "type": "agent"
+  }
+ },
+ "objects:{\"id\": \"Export\", \"type\": \"project\"}": {
+  "result": {
+   "actions": [],
+   "id": "P-1",
+   "links": [],
+   "state": "offen",
+   "summary": "Export – workspace/export",
+   "title": "Export",
+   "type": "project"
+  }
+ },
+ "objects:{\"id\": \"M-APPL\", \"type\": \"candidate\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": "Die übernommenen Dateien werden auf den gesicherten Stand zurückgesetzt.",
+     "label": "Rückgängig",
+     "needs_gate": true,
+     "verb": "zuruecknehmen"
+    }
+   ],
+   "files": [
+    {
+     "bytes": 6,
+     "path": "lib/util.py"
+    }
+   ],
+   "id": "M-APPL",
+   "links": [
+    {
+     "id": "M-APPL",
+     "rel": "gehört zu",
+     "title": "Aufgabe",
+     "type": "task"
+    }
+   ],
+   "qualified": true,
+   "state": "übernommen",
+   "summary": "Übernommen: 1 Datei(en) geschrieben, Rücknahme möglich.",
+   "title": "Kandidat · util.py",
+   "type": "candidate"
+  }
+ },
+ "objects:{\"id\": \"M-APPL\", \"type\": \"task\"}": {
+  "result": {
+   "actions": [],
+   "id": "M-APPL",
+   "links": [
+    {
+     "id": "M-APPL",
+     "rel": "werkstueck",
+     "title": "Kandidat ansehen",
+     "type": "candidate"
+    },
+    {
+     "id": "audit",
+     "rel": "verlauf",
+     "title": "Logbuch",
+     "type": "logbook"
+    }
+   ],
+   "progress": {
+    "done": 1,
+    "percent": 100,
+    "steps": 1
+   },
+   "state": "fertig",
+   "steps": [
+    {
+     "done": true,
+     "n": 1,
+     "now": false,
+     "text": "Kandidat"
+    }
+   ],
+   "summary": "Übernommene Änderung – fertig.",
+   "title": "Übernommene Änderung",
+   "type": "task"
+  }
+ },
+ "objects:{\"id\": \"M-CAND\", \"type\": \"candidate\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Testen",
+     "needs_gate": false,
+     "verb": "testen"
+    },
+    {
+     "confirm": null,
+     "label": "Tests nachprüfen",
+     "needs_gate": false,
+     "verb": "nachpruefen"
+    },
+    {
+     "confirm": "Diese Dateien werden überschrieben. Die alten Fassungen werden vorher gesichert, die Rücknahme bleibt möglich.",
+     "label": "Übernehmen",
+     "needs_gate": true,
+     "verb": "uebernehmen"
+    }
+   ],
+   "files": [
+    {
+     "bytes": 6,
+     "path": "app.py"
+    }
+   ],
+   "id": "M-CAND",
+   "links": [
+    {
+     "id": "M-CAND",
+     "rel": "gehört zu",
+     "title": "Aufgabe",
+     "type": "task"
+    }
+   ],
+   "qualified": true,
+   "state": "vorgeschlagen",
+   "summary": "1 Datei(en) geändert – Diff prüfen, dann übernehmen.",
+   "title": "Kandidat · app.py",
+   "type": "candidate"
+  }
+ },
+ "objects:{\"id\": \"M-CAND\", \"type\": \"task\"}": {
+  "result": {
+   "actions": [],
+   "id": "M-CAND",
+   "links": [
+    {
+     "id": "M-CAND",
+     "rel": "werkstueck",
+     "title": "Kandidat ansehen",
+     "type": "candidate"
+    },
+    {
+     "id": "audit",
+     "rel": "verlauf",
+     "title": "Logbuch",
+     "type": "logbook"
+    }
+   ],
+   "progress": {
+    "done": 1,
+    "percent": 100,
+    "steps": 1
+   },
+   "state": "Kandidat liegt vor",
+   "steps": [
+    {
+     "done": true,
+     "n": 1,
+     "now": false,
+     "text": "Kandidat"
+    }
+   ],
+   "summary": "Ändere Code als Kandidat – der Kandidat liegt vor; der Diff steht daneben.",
+   "title": "Ändere Code als Kandidat",
+   "type": "task"
+  }
+ },
+ "objects:{\"id\": \"M-DONE\", \"type\": \"task\"}": {
+  "result": {
+   "actions": [],
+   "id": "M-DONE",
+   "links": [
+    {
+     "id": "audit",
+     "rel": "verlauf",
+     "title": "Logbuch",
+     "type": "logbook"
+    }
+   ],
+   "progress": {
+    "done": 1,
+    "percent": 100,
+    "steps": 1
+   },
+   "state": "fertig",
+   "steps": [
+    {
+     "done": true,
+     "n": 1,
+     "now": false,
+     "text": "schreiben"
+    }
+   ],
+   "summary": "Bericht schreiben – fertig.",
+   "title": "Bericht schreiben",
+   "type": "task"
+  }
+ },
+ "objects:{\"id\": \"M-READY\", \"type\": \"candidate\"}": {
+  "result": {
+   "actions": [],
+   "files": [],
+   "id": "M-READY",
+   "links": [
+    {
+     "id": "M-READY",
+     "rel": "gehört zu",
+     "title": "Aufgabe",
+     "type": "task"
+    }
+   ],
+   "qualified": false,
+   "state": "keiner",
+   "summary": "Diese Aufgabe hat keinen Kandidaten; sie ändert keine Dateien.",
+   "title": "Kandidat · M-READY",
+   "type": "candidate"
+  }
+ },
+ "objects:{\"id\": \"M-READY\", \"type\": \"task\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Ausführen",
+     "needs_gate": false,
+     "verb": "ausfuehren"
+    }
+   ],
+   "id": "M-READY",
+   "links": [
+    {
+     "id": "audit",
+     "rel": "verlauf",
+     "title": "Logbuch",
+     "type": "logbook"
+    }
+   ],
+   "progress": {
+    "done": 0,
+    "percent": 0,
+    "steps": 2
+   },
+   "state": "bereit",
+   "steps": [
+    {
+     "done": false,
+     "n": 1,
+     "now": true,
+     "text": "Datei lesen"
+    },
+    {
+     "done": false,
+     "n": 2,
+     "now": false,
+     "text": "Zeilen zerlegen"
+    }
+   ],
+   "summary": "CSV-Parser bauen – bereit, Schritt 1 von 2.",
+   "title": "CSV-Parser bauen",
+   "type": "task"
+  }
+ },
+ "objects:{\"id\": \"M-RUN\", \"type\": \"task\"}": {
+  "result": {
+   "actions": [],
+   "id": "M-RUN",
+   "links": [
+    {
+     "id": "audit",
+     "rel": "verlauf",
+     "title": "Logbuch",
+     "type": "logbook"
+    }
+   ],
+   "progress": {
+    "done": 1,
+    "percent": 33,
+    "steps": 3
+   },
+   "state": "läuft",
+   "steps": [
+    {
+     "done": true,
+     "n": 1,
+     "now": false,
+     "text": "a"
+    },
+    {
+     "done": false,
+     "n": 2,
+     "now": true,
+     "text": "b"
+    },
+    {
+     "done": false,
+     "n": 3,
+     "now": false,
+     "text": "c"
+    }
+   ],
+   "summary": "Tests schreiben – läuft, Schritt 2 von 3.",
+   "title": "Tests schreiben",
+   "type": "task"
+  }
+ },
+ "objects:{\"id\": \"M-WAIT\", \"type\": \"task\"}": {
+  "result": {
+   "actions": [],
+   "id": "M-WAIT",
+   "links": [
+    {
+     "id": "alle",
+     "rel": "wartet",
+     "title": "Entscheidungen",
+     "type": "decision"
+    },
+    {
+     "id": "audit",
+     "rel": "verlauf",
+     "title": "Logbuch",
+     "type": "logbook"
+    }
+   ],
+   "progress": {
+    "done": 0,
+    "percent": 0,
+    "steps": 1
+   },
+   "state": "wartet auf dich",
+   "steps": [
+    {
+     "done": false,
+     "n": 1,
+     "now": true,
+     "text": "pip install"
+    }
+   ],
+   "summary": "Paket installieren – wartet auf deine Freigabe.",
+   "title": "Paket installieren",
+   "type": "task"
+  }
+ },
+ "objects:{\"id\": \"M-WEG\", \"type\": \"candidate\"}": {
+  "result": {
+   "actions": [],
+   "id": "M-WEG",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "M-WEG",
+   "type": "candidate"
+  }
+ },
+ "objects:{\"id\": \"M-WEG\", \"type\": \"task\"}": {
+  "result": {
+   "actions": [],
+   "id": "M-WEG",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "M-WEG",
+   "type": "task"
+  }
+ },
+ "objects:{\"id\": \"OhneId\", \"type\": \"project\"}": {
+  "result": {
+   "actions": [],
+   "id": "OhneId",
+   "links": [],
+   "state": "offen",
+   "summary": "OhneId – workspace/ohne",
+   "title": "OhneId",
+   "type": "project"
+  }
+ },
+ "objects:{\"id\": \"P-1\", \"type\": \"boundary\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": "Eine geänderte Grenze gilt ab sofort für dieses Projekt.",
+     "label": "Grenzen ändern",
+     "needs_gate": true,
+     "verb": "aendern"
+    }
+   ],
+   "boundaries": {
+    "geld": 0,
+    "netz": "aus"
+   },
+   "confirmed": true,
+   "id": "P-1",
+   "links": [],
+   "measured_limit": null,
+   "mode": "werkstatt",
+   "note": "Die Kostengrenze wird gemessen, nicht geraten – zwei Wochen Guppy-Meter.",
+   "reason": null,
+   "state": "bestätigt",
+   "summary": "Werkstatt: kein Geld, kein Netz.",
+   "title": "Modus und Grenzen",
+   "type": "boundary"
+  }
+ },
+ "objects:{\"id\": \"P-1\", \"type\": \"project\"}": {
+  "result": {
+   "actions": [],
+   "id": "P-1",
+   "links": [],
+   "state": "offen",
+   "summary": "Export – workspace/export",
+   "title": "Export",
+   "type": "project"
+  }
+ },
+ "objects:{\"id\": \"P-2\", \"type\": \"boundary\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": "Damit gelten Modus und Grenzen für alles, was in diesem Projekt passiert.",
+     "label": "Modus und Grenzen bestätigen",
+     "needs_gate": true,
+     "verb": "bestaetigen"
+    }
+   ],
+   "boundaries": {},
+   "confirmed": false,
+   "id": "P-2",
+   "links": [],
+   "measured_limit": null,
+   "mode": "werkstatt",
+   "note": null,
+   "reason": "noch nicht bestätigt",
+   "state": "nicht bestätigt",
+   "summary": "Vorschlag: Werkstatt. – noch nicht bestätigt",
+   "title": "Modus und Grenzen",
+   "type": "boundary"
+  }
+ },
+ "objects:{\"id\": \"P-WEG\", \"type\": \"boundary\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": "Damit gelten Modus und Grenzen für alles, was in diesem Projekt passiert.",
+     "label": "Modus und Grenzen bestätigen",
+     "needs_gate": true,
+     "verb": "bestaetigen"
+    }
+   ],
+   "boundaries": {},
+   "confirmed": false,
+   "id": "projekt",
+   "links": [],
+   "measured_limit": null,
+   "mode": null,
+   "note": "Noch kein Projekt angelegt – Grenzen gehören zu einem Projekt.",
+   "reason": null,
+   "state": "nicht bestätigt",
+   "summary": " – ",
+   "title": "Modus und Grenzen",
+   "type": "boundary"
+  }
+ },
+ "objects:{\"id\": \"P-WEG\", \"type\": \"project\"}": {
+  "result": {
+   "actions": [],
+   "id": "P-WEG",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "P-WEG",
+   "type": "project"
+  }
+ },
+ "objects:{\"id\": \"V-1\", \"type\": \"intent\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Aufgabe daraus machen",
+     "needs_gate": false,
+     "verb": "aufgabe_machen"
+    }
+   ],
+   "created_at": "2026-10-01T07:00:00Z",
+   "id": "V-1",
+   "links": [
+    {
+     "id": "M-READY",
+     "rel": "daraus entstanden",
+     "title": "Aufgabe M-READY",
+     "type": "task"
+    },
+    {
+     "id": "M-DONE",
+     "rel": "daraus entstanden",
+     "title": "Aufgabe M-DONE",
+     "type": "task"
+    }
+   ],
+   "state": "in Arbeit",
+   "stufen": [],
+   "summary": "CSV-Export für den Monatsbericht – 1 von 2 Aufgaben sind offen.",
+   "tasks": [
+    "M-READY",
+    "M-DONE"
+   ],
+   "text": "Erst lesen, dann schreiben",
+   "title": "CSV-Export für den Monatsbericht",
+   "type": "intent",
+   "vorlage": ""
+  }
+ },
+ "objects:{\"id\": \"V-2\", \"type\": \"intent\"}": {
+  "result": {
+   "actions": [],
+   "created_at": "2026-10-01T07:10:00Z",
+   "id": "V-2",
+   "links": [
+    {
+     "id": "M-DONE",
+     "rel": "daraus entstanden",
+     "title": "Aufgabe M-DONE",
+     "type": "task"
+    }
+   ],
+   "state": "fertig",
+   "stufen": [],
+   "summary": "Alles fertig – Alle 1 Aufgaben sind fertig.",
+   "tasks": [
+    "M-DONE"
+   ],
+   "text": "",
+   "title": "Alles fertig",
+   "type": "intent",
+   "vorlage": ""
+  }
+ },
+ "objects:{\"id\": \"V-3\", \"type\": \"intent\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Aufgabe daraus machen",
+     "needs_gate": false,
+     "verb": "aufgabe_machen"
+    }
+   ],
+   "created_at": "2026-10-01T07:20:00Z",
+   "id": "V-3",
+   "links": [],
+   "state": "offen",
+   "stufen": [
+    {
+     "current": false,
+     "index": 0,
+     "name": "Lesen",
+     "state": "fertig",
+     "tasks": [
+      {
+       "id": "M-DONE",
+       "phase": "COMPLETE",
+       "title": "Bericht schreiben",
+       "waits": false
+      }
+     ],
+     "text": "lesen"
+    },
+    {
+     "current": true,
+     "index": 1,
+     "name": "Prüfen",
+     "state": "wartet auf dich",
+     "tasks": [
+      {
+       "id": "M-WAIT",
+       "phase": "EXECUTE",
+       "title": "Paket installieren",
+       "waits": true
+      }
+     ],
+     "text": "prüfen"
+    }
+   ],
+   "summary": "Mit Stufen – 1 von 2 Stufen fertig · jetzt: Prüfen",
+   "tasks": [],
+   "text": "zwei Stufen",
+   "title": "Mit Stufen",
+   "type": "intent",
+   "vorlage": "zwei_stufen"
+  }
+ },
+ "objects:{\"id\": \"V-4\", \"type\": \"intent\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Aufgabe daraus machen",
+     "needs_gate": false,
+     "verb": "aufgabe_machen"
+    }
+   ],
+   "created_at": "2026-10-01T07:30:00Z",
+   "id": "V-4",
+   "links": [],
+   "state": "noch keine Aufgabe",
+   "stufen": [],
+   "summary": "Noch leer – Noch keine Aufgabe. Sag im Gespräch, was zuerst passieren soll.",
+   "tasks": [],
+   "text": "",
+   "title": "Noch leer",
+   "type": "intent",
+   "vorlage": ""
+  }
+ },
+ "objects:{\"id\": \"V-WEG\", \"type\": \"intent\"}": {
+  "result": {
+   "actions": [],
+   "id": "V-WEG",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "V-WEG",
+   "type": "intent"
+  }
+ },
+ "objects:{\"id\": \"alle\", \"type\": \"boundary\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": "Eine geänderte Grenze gilt ab sofort für dieses Projekt.",
+     "label": "Grenzen ändern",
+     "needs_gate": true,
+     "verb": "aendern"
+    }
+   ],
+   "boundaries": {
+    "geld": 0,
+    "netz": "aus"
+   },
+   "confirmed": true,
+   "id": "P-1",
+   "links": [],
+   "measured_limit": null,
+   "mode": "werkstatt",
+   "note": "Die Kostengrenze wird gemessen, nicht geraten – zwei Wochen Guppy-Meter.",
+   "reason": null,
+   "state": "bestätigt",
+   "summary": "Werkstatt: kein Geld, kein Netz.",
+   "title": "Modus und Grenzen",
+   "type": "boundary"
+  }
+ },
+ "objects:{\"id\": \"chat.local\", \"type\": \"model\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Laden",
+     "needs_gate": false,
+     "verb": "laden"
+    }
+   ],
+   "id": "chat.local",
+   "links": [
+    {
+     "id": "meter",
+     "rel": "kosten",
+     "title": "Guppy-Meter",
+     "type": "meter"
+    }
+   ],
+   "roles": [
+    "chat",
+    "planner"
+   ],
+   "state": "bereit",
+   "summary": "chat.local – chat.gguf",
+   "title": "chat.local",
+   "type": "model"
+  }
+ },
+ "objects:{\"id\": \"cloud.off\", \"type\": \"model\"}": {
+  "result": {
+   "actions": [],
+   "id": "cloud.off",
+   "links": [
+    {
+     "id": "meter",
+     "rel": "kosten",
+     "title": "Guppy-Meter",
+     "type": "meter"
+    }
+   ],
+   "roles": [],
+   "state": "nicht einsatzbereit",
+   "summary": "cloud.off – ausgeschaltet · kein Modell hinterlegt",
+   "title": "cloud.off",
+   "type": "model"
+  }
+ },
+ "objects:{\"id\": \"coder.local_primary\", \"type\": \"model\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": null,
+     "label": "Entladen",
+     "needs_gate": false,
+     "verb": "entladen"
+    },
+    {
+     "confirm": null,
+     "label": "Testen",
+     "needs_gate": false,
+     "verb": "testen"
+    }
+   ],
+   "id": "coder.local_primary",
+   "links": [
+    {
+     "id": "meter",
+     "rel": "kosten",
+     "title": "Guppy-Meter",
+     "type": "meter"
+    }
+   ],
+   "roles": [
+    "coder"
+   ],
+   "state": "geladen",
+   "summary": "coder.local_primary – qwen-coder.gguf · Kontext 32768 · läuft mit Kontext 32768",
+   "title": "coder.local_primary",
+   "type": "model"
+  }
+ },
+ "objects:{\"id\": \"crossing:C-1\", \"type\": \"decision\"}": {
+  "result": {
+   "actions": [
+    {
+     "label": "einmal",
+     "needs_gate": false,
+     "verb": "einmal"
+    },
+    {
+     "label": "aendern",
+     "needs_gate": false,
+     "verb": "aendern"
+    },
+    {
+     "label": "ablehnen",
+     "needs_gate": false,
+     "verb": "ablehnen"
+    }
+   ],
+   "id": "crossing:C-1",
+   "links": [],
+   "state": "wartet",
+   "summary": "Grenze Geld – 0,50 €",
+   "title": "Grenze Geld",
+   "type": "decision"
+  }
+ },
+ "objects:{\"id\": \"debug\", \"type\": \"skill\"}": {
+  "result": {
+   "actions": [],
+   "id": "debug",
+   "links": [],
+   "state": "vorhanden",
+   "summary": "Fehler finden",
+   "title": "Debuggen",
+   "type": "skill"
+  }
+ },
+ "objects:{\"id\": \"fehlt\", \"type\": \"model\"}": {
+  "result": {
+   "actions": [],
+   "id": "fehlt",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "fehlt",
+   "type": "model"
+  }
+ },
+ "objects:{\"id\": \"gate:HG-1\", \"type\": \"decision\"}": {
+  "result": {
+   "actions": [
+    {
+     "label": "einmal",
+     "needs_gate": false,
+     "verb": "einmal"
+    },
+    {
+     "label": "ablehnen",
+     "needs_gate": false,
+     "verb": "ablehnen"
+    }
+   ],
+   "id": "gate:HG-1",
+   "links": [
+    {
+     "id": "M-WAIT",
+     "rel": "gehört zu",
+     "title": "Aufgabe",
+     "type": "task"
+    }
+   ],
+   "state": "wartet",
+   "summary": "Netz – pypi.org",
+   "title": "Netz",
+   "type": "decision"
+  }
+ },
+ "objects:{\"id\": \"gate:WEG\", \"type\": \"decision\"}": {
+  "result": {
+   "actions": [],
+   "id": "gate:WEG",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "gate:WEG",
+   "type": "decision"
+  }
+ },
+ "objects:{\"id\": \"leer\", \"type\": \"skill\"}": {
+  "result": {
+   "actions": [],
+   "id": "leer",
+   "links": [],
+   "state": "vorhanden",
+   "summary": "Kein Beschreibungssatz hinterlegt.",
+   "title": "leer",
+   "type": "skill"
+  }
+ },
+ "objects:{\"id\": \"projekt\", \"type\": \"boundary\"}": {
+  "result": {
+   "actions": [
+    {
+     "confirm": "Eine geänderte Grenze gilt ab sofort für dieses Projekt.",
+     "label": "Grenzen ändern",
+     "needs_gate": true,
+     "verb": "aendern"
+    }
+   ],
+   "boundaries": {
+    "geld": 0,
+    "netz": "aus"
+   },
+   "confirmed": true,
+   "id": "P-1",
+   "links": [],
+   "measured_limit": null,
+   "mode": "werkstatt",
+   "note": "Die Kostengrenze wird gemessen, nicht geraten – zwei Wochen Guppy-Meter.",
+   "reason": null,
+   "state": "bestätigt",
+   "summary": "Werkstatt: kein Geld, kein Netz.",
+   "title": "Modus und Grenzen",
+   "type": "boundary"
+  }
+ },
+ "objects:{\"id\": \"unterarbeiter\", \"type\": \"agent\"}": {
+  "error": "unknown_object_type"
+ },
+ "objects:{\"id\": \"weg\", \"type\": \"skill\"}": {
+  "result": {
+   "actions": [],
+   "id": "weg",
+   "links": [],
+   "state": "nicht gefunden",
+   "summary": "Dieses Objekt gibt es nicht (mehr). Im Logbuch ist es erhalten.",
+   "title": "weg",
+   "type": "skill"
+  }
+ },
+ "objects:{\"type\": \" task \"}": {
+  "result": {
+   "items": [
+    {
+     "actions": [
+      {
+       "confirm": null,
+       "label": "Ausführen",
+       "needs_gate": false,
+       "verb": "ausfuehren"
+      }
+     ],
+     "id": "M-READY",
+     "links": [
+      {
+       "id": "audit",
+       "rel": "verlauf",
+       "title": "Logbuch",
+       "type": "logbook"
+      }
+     ],
+     "progress": {
+      "done": 0,
+      "percent": 0,
+      "steps": 2
+     },
+     "state": "bereit",
+     "steps": [
+      {
+       "done": false,
+       "n": 1,
+       "now": true,
+       "text": "Datei lesen"
+      },
+      {
+       "done": false,
+       "n": 2,
+       "now": false,
+       "text": "Zeilen zerlegen"
+      }
+     ],
+     "summary": "CSV-Parser bauen – bereit, Schritt 1 von 2.",
+     "title": "CSV-Parser bauen",
+     "type": "task"
+    },
+    {
+     "actions": [],
+     "id": "M-RUN",
+     "links": [
+      {
+       "id": "audit",
+       "rel": "verlauf",
+       "title": "Logbuch",
+       "type": "logbook"
+      }
+     ],
+     "progress": {
+      "done": 1,
+      "percent": 33,
+      "steps": 3
+     },
+     "state": "läuft",
+     "steps": [
+      {
+       "done": true,
+       "n": 1,
+       "now": false,
+       "text": "a"
+      },
+      {
+       "done": false,
+       "n": 2,
+       "now": true,
+       "text": "b"
+      },
+      {
+       "done": false,
+       "n": 3,
+       "now": false,
+       "text": "c"
+      }
+     ],
+     "summary": "Tests schreiben – läuft, Schritt 2 von 3.",
+     "title": "Tests schreiben",
+     "type": "task"
+    },
+    {
+     "actions": [],
+     "id": "M-WAIT",
+     "links": [
+      {
+       "id": "alle",
+       "rel": "wartet",
+       "title": "Entscheidungen",
+       "type": "decision"
+      },
+      {
+       "id": "audit",
+       "rel": "verlauf",
+       "title": "Logbuch",
+       "type": "logbook"
+      }
+     ],
+     "progress": {
+      "done": 0,
+      "percent": 0,
+      "steps": 1
+     },
+     "state": "wartet auf dich",
+     "steps": [
+      {
+       "done": false,
+       "n": 1,
+       "now": true,
+       "text": "pip install"
+      }
+     ],
+     "summary": "Paket installieren – wartet auf deine Freigabe.",
+     "title": "Paket installieren",
+     "type": "task"
+    },
+    {
+     "actions": [],
+     "id": "M-DONE",
+     "links": [
+      {
+       "id": "audit",
+       "rel": "verlauf",
+       "title": "Logbuch",
+       "type": "logbook"
+      }
+     ],
+     "progress": {
+      "done": 1,
+      "percent": 100,
+      "steps": 1
+     },
+     "state": "fertig",
+     "steps": [
+      {
+       "done": true,
+       "n": 1,
+       "now": false,
+       "text": "schreiben"
+      }
+     ],
+     "summary": "Bericht schreiben – fertig.",
+     "title": "Bericht schreiben",
+     "type": "task"
+    },
+    {
+     "actions": [],
+     "id": "M-CAND",
+     "links": [
+      {
+       "id": "audit",
+       "rel": "verlauf",
+       "title": "Logbuch",
+       "type": "logbook"
+      }
+     ],
+     "progress": {
+      "done": 1,
+      "percent": 100,
+      "steps": 1
+     },
+     "state": "Kandidat liegt vor",
+     "steps": [
+      {
+       "done": true,
+       "n": 1,
+       "now": false,
+       "text": "Kandidat"
+      }
+     ],
+     "summary": "Ändere Code als Kandidat – der Kandidat liegt vor; der Diff steht daneben.",
+     "title": "Ändere Code als Kandidat",
+     "type": "task"
+    },
+    {
+     "actions": [],
+     "id": "M-APPL",
+     "links": [
+      {
+       "id": "audit",
+       "rel": "verlauf",
+       "title": "Logbuch",
+       "type": "logbook"
+      }
+     ],
+     "progress": {
+      "done": 1,
+      "percent": 100,
+      "steps": 1
+     },
+     "state": "fertig",
+     "steps": [
+      {
+       "done": true,
+       "n": 1,
+       "now": false,
+       "text": "Kandidat"
+      }
+     ],
+     "summary": "Übernommene Änderung – fertig.",
+     "title": "Übernommene Änderung",
+     "type": "task"
+    }
+   ],
+   "type": "task"
+  }
+ },
+ "objects:{\"type\": \"\"}": {
+  "error": "unknown_object_type"
+ },
+ "objects:{\"type\": \"agent\"}": {
+  "result": {
+   "items": [],
+   "type": "agent"
+  }
+ },
+ "objects:{\"type\": \"boundary\"}": {
+  "result": {
+   "items": [
+    {
+     "actions": [
+      {
+       "confirm": "Eine geänderte Grenze gilt ab sofort für dieses Projekt.",
+       "label": "Grenzen ändern",
+       "needs_gate": true,
+       "verb": "aendern"
+      }
+     ],
+     "boundaries": {
+      "geld": 0,
+      "netz": "aus"
+     },
+     "confirmed": true,
+     "id": "P-1",
+     "links": [],
+     "measured_limit": null,
+     "mode": "werkstatt",
+     "note": "Die Kostengrenze wird gemessen, nicht geraten – zwei Wochen Guppy-Meter.",
+     "reason": null,
+     "state": "bestätigt",
+     "summary": "Werkstatt: kein Geld, kein Netz.",
+     "title": "Modus und Grenzen",
+     "type": "boundary"
+    }
+   ],
+   "type": "boundary"
+  }
+ },
+ "objects:{\"type\": \"candidate\"}": {
+  "result": {
+   "items": [],
+   "type": "candidate"
+  }
+ },
+ "objects:{\"type\": \"decision\"}": {
+  "result": {
+   "items": [
+    {
+     "actions": [],
+     "id": "gate:HG-1",
+     "links": [
+      {
+       "id": "M-WAIT",
+       "rel": "gehört zu",
+       "title": "Aufgabe",
+       "type": "task"
+      }
+     ],
+     "state": "wartet",
+     "summary": "Netz – pypi.org",
+     "title": "Netz",
+     "type": "decision"
+    },
+    {
+     "actions": [],
+     "id": "crossing:C-1",
+     "links": [],
+     "state": "wartet",
+     "summary": "Grenze Geld – 0,50 €",
+     "title": "Grenze Geld",
+     "type": "decision"
+    }
+   ],
+   "type": "decision"
+  }
+ },
+ "objects:{\"type\": \"intent\"}": {
+  "result": {
+   "items": [
+    {
+     "actions": [
+      {
+       "confirm": null,
+       "label": "Aufgabe daraus machen",
+       "needs_gate": false,
+       "verb": "aufgabe_machen"
+      }
+     ],
+     "created_at": "2026-10-01T07:00:00Z",
+     "id": "V-1",
+     "links": [
+      {
+       "id": "M-READY",
+       "rel": "daraus entstanden",
+       "title": "Aufgabe M-READY",
+       "type": "task"
+      },
+      {
+       "id": "M-DONE",
+       "rel": "daraus entstanden",
+       "title": "Aufgabe M-DONE",
+       "type": "task"
+      }
+     ],
+     "state": "in Arbeit",
+     "stufen": [],
+     "summary": "CSV-Export für den Monatsbericht – 1 von 2 Aufgaben sind offen.",
+     "tasks": [
+      "M-READY",
+      "M-DONE"
+     ],
+     "text": "Erst lesen, dann schreiben",
+     "title": "CSV-Export für den Monatsbericht",
+     "type": "intent",
+     "vorlage": ""
+    },
+    {
+     "actions": [],
+     "created_at": "2026-10-01T07:10:00Z",
+     "id": "V-2",
+     "links": [
+      {
+       "id": "M-DONE",
+       "rel": "daraus entstanden",
+       "title": "Aufgabe M-DONE",
+       "type": "task"
+      }
+     ],
+     "state": "fertig",
+     "stufen": [],
+     "summary": "Alles fertig – Alle 1 Aufgaben sind fertig.",
+     "tasks": [
+      "M-DONE"
+     ],
+     "text": "",
+     "title": "Alles fertig",
+     "type": "intent",
+     "vorlage": ""
+    },
+    {
+     "actions": [
+      {
+       "confirm": null,
+       "label": "Aufgabe daraus machen",
+       "needs_gate": false,
+       "verb": "aufgabe_machen"
+      }
+     ],
+     "created_at": "2026-10-01T07:20:00Z",
+     "id": "V-3",
+     "links": [],
+     "state": "offen",
+     "stufen": [
+      {
+       "current": false,
+       "index": 0,
+       "name": "Lesen",
+       "state": "fertig",
+       "tasks": [
+        {
+         "id": "M-DONE",
+         "phase": "COMPLETE",
+         "title": "Bericht schreiben",
+         "waits": false
+        }
+       ],
+       "text": "lesen"
+      },
+      {
+       "current": true,
+       "index": 1,
+       "name": "Prüfen",
+       "state": "wartet auf dich",
+       "tasks": [
+        {
+         "id": "M-WAIT",
+         "phase": "EXECUTE",
+         "title": "Paket installieren",
+         "waits": true
+        }
+       ],
+       "text": "prüfen"
+      }
+     ],
+     "summary": "Mit Stufen – 1 von 2 Stufen fertig · jetzt: Prüfen",
+     "tasks": [],
+     "text": "zwei Stufen",
+     "title": "Mit Stufen",
+     "type": "intent",
+     "vorlage": "zwei_stufen"
+    },
+    {
+     "actions": [
+      {
+       "confirm": null,
+       "label": "Aufgabe daraus machen",
+       "needs_gate": false,
+       "verb": "aufgabe_machen"
+      }
+     ],
+     "created_at": "2026-10-01T07:30:00Z",
+     "id": "V-4",
+     "links": [],
+     "state": "noch keine Aufgabe",
+     "stufen": [],
+     "summary": "Noch leer – Noch keine Aufgabe. Sag im Gespräch, was zuerst passieren soll.",
+     "tasks": [],
+     "text": "",
+     "title": "Noch leer",
+     "type": "intent",
+     "vorlage": ""
+    }
+   ],
+   "type": "intent"
+  }
+ },
+ "objects:{\"type\": \"model\"}": {
+  "result": {
+   "items": [
+    {
+     "actions": [
+      {
+       "confirm": null,
+       "label": "Entladen",
+       "needs_gate": false,
+       "verb": "entladen"
+      },
+      {
+       "confirm": null,
+       "label": "Testen",
+       "needs_gate": false,
+       "verb": "testen"
+      }
+     ],
+     "id": "coder.local_primary",
+     "links": [
+      {
+       "id": "meter",
+       "rel": "kosten",
+       "title": "Guppy-Meter",
+       "type": "meter"
+      }
+     ],
+     "roles": [
+      "coder"
+     ],
+     "state": "geladen",
+     "summary": "coder.local_primary – qwen-coder.gguf · Kontext 32768 · läuft mit Kontext 32768",
+     "title": "coder.local_primary",
+     "type": "model"
+    },
+    {
+     "actions": [
+      {
+       "confirm": null,
+       "label": "Laden",
+       "needs_gate": false,
+       "verb": "laden"
+      }
+     ],
+     "id": "chat.local",
+     "links": [
+      {
+       "id": "meter",
+       "rel": "kosten",
+       "title": "Guppy-Meter",
+       "type": "meter"
+      }
+     ],
+     "roles": [
+      "chat",
+      "planner"
+     ],
+     "state": "bereit",
+     "summary": "chat.local – chat.gguf",
+     "title": "chat.local",
+     "type": "model"
+    },
+    {
+     "actions": [],
+     "id": "cloud.off",
+     "links": [
+      {
+       "id": "meter",
+       "rel": "kosten",
+       "title": "Guppy-Meter",
+       "type": "meter"
+      }
+     ],
+     "roles": [],
+     "state": "nicht einsatzbereit",
+     "summary": "cloud.off – ausgeschaltet · kein Modell hinterlegt",
+     "title": "cloud.off",
+     "type": "model"
+    }
+   ],
+   "type": "model"
+  }
+ },
+ "objects:{\"type\": \"project\"}": {
+  "result": {
+   "items": [
+    {
+     "actions": [],
+     "id": "P-1",
+     "links": [],
+     "state": "offen",
+     "summary": "Export – workspace/export",
+     "title": "Export",
+     "type": "project"
+    },
+    {
+     "actions": [],
+     "id": "OhneId",
+     "links": [],
+     "state": "offen",
+     "summary": "OhneId – workspace/ohne",
+     "title": "OhneId",
+     "type": "project"
+    }
+   ],
+   "type": "project"
+  }
+ },
+ "objects:{\"type\": \"raumschiff\"}": {
+  "error": "unknown_object_type"
+ },
+ "objects:{\"type\": \"skill\"}": {
+  "result": {
+   "items": [
+    {
+     "actions": [],
+     "id": "debug",
+     "links": [],
+     "state": "vorhanden",
+     "summary": "Fehler finden",
+     "title": "Debuggen",
+     "type": "skill"
+    },
+    {
+     "actions": [],
+     "id": "leer",
+     "links": [],
+     "state": "vorhanden",
+     "summary": "Kein Beschreibungssatz hinterlegt.",
+     "title": "leer",
+     "type": "skill"
+    }
+   ],
+   "type": "skill"
+  }
+ },
+ "objects:{\"type\": \"task\"}": {
+  "result": {
+   "items": [
+    {
+     "actions": [
+      {
+       "confirm": null,
+       "label": "Ausführen",
+       "needs_gate": false,
+       "verb": "ausfuehren"
+      }
+     ],
+     "id": "M-READY",
+     "links": [
+      {
+       "id": "audit",
+       "rel": "verlauf",
+       "title": "Logbuch",
+       "type": "logbook"
+      }
+     ],
+     "progress": {
+      "done": 0,
+      "percent": 0,
+      "steps": 2
+     },
+     "state": "bereit",
+     "steps": [
+      {
+       "done": false,
+       "n": 1,
+       "now": true,
+       "text": "Datei lesen"
+      },
+      {
+       "done": false,
+       "n": 2,
+       "now": false,
+       "text": "Zeilen zerlegen"
+      }
+     ],
+     "summary": "CSV-Parser bauen – bereit, Schritt 1 von 2.",
+     "title": "CSV-Parser bauen",
+     "type": "task"
+    },
+    {
+     "actions": [],
+     "id": "M-RUN",
+     "links": [
+      {
+       "id": "audit",
+       "rel": "verlauf",
+       "title": "Logbuch",
+       "type": "logbook"
+      }
+     ],
+     "progress": {
+      "done": 1,
+      "percent": 33,
+      "steps": 3
+     },
+     "state": "läuft",
+     "steps": [
+      {
+       "done": true,
+       "n": 1,
+       "now": false,
+       "text": "a"
+      },
+      {
+       "done": false,
+       "n": 2,
+       "now": true,
+       "text": "b"
+      },
+      {
+       "done": false,
+       "n": 3,
+       "now": false,
+       "text": "c"
+      }
+     ],
+     "summary": "Tests schreiben – läuft, Schritt 2 von 3.",
+     "title": "Tests schreiben",
+     "type": "task"
+    },
+    {
+     "actions": [],
+     "id": "M-WAIT",
+     "links": [
+      {
+       "id": "alle",
+       "rel": "wartet",
+       "title": "Entscheidungen",
+       "type": "decision"
+      },
+      {
+       "id": "audit",
+       "rel": "verlauf",
+       "title": "Logbuch",
+       "type": "logbook"
+      }
+     ],
+     "progress": {
+      "done": 0,
+      "percent": 0,
+      "steps": 1
+     },
+     "state": "wartet auf dich",
+     "steps": [
+      {
+       "done": false,
+       "n": 1,
+       "now": true,
+       "text": "pip install"
+      }
+     ],
+     "summary": "Paket installieren – wartet auf deine Freigabe.",
+     "title": "Paket installieren",
+     "type": "task"
+    },
+    {
+     "actions": [],
+     "id": "M-DONE",
+     "links": [
+      {
+       "id": "audit",
+       "rel": "verlauf",
+       "title": "Logbuch",
+       "type": "logbook"
+      }
+     ],
+     "progress": {
+      "done": 1,
+      "percent": 100,
+      "steps": 1
+     },
+     "state": "fertig",
+     "steps": [
+      {
+       "done": true,
+       "n": 1,
+       "now": false,
+       "text": "schreiben"
+      }
+     ],
+     "summary": "Bericht schreiben – fertig.",
+     "title": "Bericht schreiben",
+     "type": "task"
+    },
+    {
+     "actions": [],
+     "id": "M-CAND",
+     "links": [
+      {
+       "id": "audit",
+       "rel": "verlauf",
+       "title": "Logbuch",
+       "type": "logbook"
+      }
+     ],
+     "progress": {
+      "done": 1,
+      "percent": 100,
+      "steps": 1
+     },
+     "state": "Kandidat liegt vor",
+     "steps": [
+      {
+       "done": true,
+       "n": 1,
+       "now": false,
+       "text": "Kandidat"
+      }
+     ],
+     "summary": "Ändere Code als Kandidat – der Kandidat liegt vor; der Diff steht daneben.",
+     "title": "Ändere Code als Kandidat",
+     "type": "task"
+    },
+    {
+     "actions": [],
+     "id": "M-APPL",
+     "links": [
+      {
+       "id": "audit",
+       "rel": "verlauf",
+       "title": "Logbuch",
+       "type": "logbook"
+      }
+     ],
+     "progress": {
+      "done": 1,
+      "percent": 100,
+      "steps": 1
+     },
+     "state": "fertig",
+     "steps": [
+      {
+       "done": true,
+       "n": 1,
+       "now": false,
+       "text": "Kandidat"
+      }
+     ],
+     "summary": "Übernommene Änderung – fertig.",
+     "title": "Übernommene Änderung",
+     "type": "task"
+    }
+   ],
+   "type": "task"
+  }
+ },
+ "objects:{}": {
+  "error": "unknown_object_type"
+ }
+}

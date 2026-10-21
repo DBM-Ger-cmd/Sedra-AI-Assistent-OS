@@ -1,0 +1,72 @@
+{
+  "_zweck": "Testdaten des Golden-Tests (Spec 0, K0.7): was der Fake-Host statt der echten Quellen liefert. Ändern heißt neu aufzeichnen – und das nur mit dem alten Code.",
+  "missions": [
+    {"identity": {"mission_id": "M-READY", "created_at": "2026-10-01T08:00:00Z", "mission_class": "chat"},
+     "captain_intent": {"original": "CSV-Parser bauen"}, "objective": {"current": "CSV-Parser bauen"},
+     "lifecycle": {"phase": "READY", "status": "active"}, "risk": {"level": "low"}, "human_gates": {"pending": []},
+     "plan": {"steps": [{"description": "Datei lesen"}, {"description": "Zeilen zerlegen"}]}, "execution": {"results": []}},
+    {"identity": {"mission_id": "M-RUN", "created_at": "2026-10-01T09:00:00Z", "mission_class": "chat"},
+     "captain_intent": {"original": "Tests schreiben"}, "objective": {"current": "Tests schreiben"},
+     "lifecycle": {"phase": "EXECUTE", "status": "active"}, "risk": {"level": "low"}, "human_gates": {"pending": []},
+     "plan": {"steps": [{"description": "a"}, {"description": "b"}, {"description": "c"}]}, "execution": {"results": [{"ok": true}]}},
+    {"identity": {"mission_id": "M-WAIT", "created_at": "2026-10-01T10:00:00Z", "mission_class": "chat"},
+     "captain_intent": {"original": "Paket installieren"}, "objective": {"current": "Paket installieren"},
+     "lifecycle": {"phase": "EXECUTE", "status": "active"}, "risk": {"level": "medium"},
+     "human_gates": {"pending": [{"gate_id": "HG-1", "request": {"exact_action": "network", "targets": ["pypi.org"], "risks": ["Netz"], "rollback_available": false}}]},
+     "plan": {"steps": [{"description": "pip install"}]}, "execution": {"results": []}},
+    {"identity": {"mission_id": "M-DONE", "created_at": "2026-10-01T11:00:00Z", "mission_class": "chat"},
+     "captain_intent": {"original": "Bericht schreiben"}, "objective": {"current": "Bericht schreiben"},
+     "lifecycle": {"phase": "COMPLETE", "status": "closed"}, "risk": {"level": "low"}, "human_gates": {"pending": []},
+     "plan": {"steps": [{"description": "schreiben"}]}, "execution": {"results": [{"ok": true}]}},
+    {"identity": {"mission_id": "M-CAND", "created_at": "2026-10-01T12:00:00Z", "mission_class": "code"},
+     "captain_intent": {"original": "Ändere Code als Kandidat"}, "objective": {"current": "Ändere Code als Kandidat"},
+     "lifecycle": {"phase": "CANDIDATE_REVIEW", "status": "active"}, "risk": {"level": "medium"}, "human_gates": {"pending": []},
+     "plan": {"steps": [{"description": "Kandidat", "binding": {"inputs": {"project_path": "demo", "changes": [{"path": "app.py", "content": "x = 2\n"}]}}}]},
+     "execution": {"results": [{"ok": true}]}},
+    {"identity": {"mission_id": "M-APPL", "created_at": "2026-10-01T13:00:00Z", "mission_class": "code"},
+     "captain_intent": {"original": "Übernommene Änderung"}, "objective": {"current": "Übernommene Änderung"},
+     "lifecycle": {"phase": "COMPLETE", "status": "closed"}, "risk": {"level": "medium"}, "human_gates": {"pending": []},
+     "plan": {"steps": [{"description": "Kandidat", "binding": {"inputs": {"changes": [{"path": "lib/util.py", "content": "y = 1\n"}]}}}]},
+     "execution": {"results": [{"ok": true}], "candidate_acceptance": {"status": "APPLIED", "completed": ["lib/util.py"]}}}
+  ],
+  "candidate_reports": {
+    "M-CAND": {"qualification": "TESTED_IN_VM", "ready_for_merge": true, "tests_executed": true, "static_checks": [{"check": "PYTHON_SYNTAX_PASS"}],
+               "candidate_files": ["app.py"], "created_at": "2026-10-01T12:30:00Z"},
+    "M-APPL": {"qualification": "TESTED_IN_VM", "ready_for_merge": true, "tests_executed": true, "created_at": "2026-10-01T13:30:00Z"}
+  },
+  "models": {
+    "server": {"recipe_id": "coder.local_primary", "context": 32768},
+    "recipes": [
+      {"id": "coder.local_primary", "model": "models/qwen-coder.gguf", "roles": ["coder"], "provider": "llama-cpp-server", "enabled": true, "loaded": true, "context_recommended": 32768},
+      {"id": "chat.local", "model": "models\\chat.gguf", "roles": ["chat", "planner"], "provider": "llama-cpp-server", "enabled": true, "loaded": false},
+      {"id": "cloud.off", "model": "", "roles": [], "provider": "cloud", "enabled": false, "loaded": false}
+    ]
+  },
+  "boundaries": {
+    "P-1": {"project_id": "P-1", "name": "Export", "confirmed": true, "mode": "werkstatt", "boundaries": {"geld": 0, "netz": "aus"},
+            "sentence": "Werkstatt: kein Geld, kein Netz.", "measured_limit": null, "note": "Die Kostengrenze wird gemessen, nicht geraten – zwei Wochen Guppy-Meter."},
+    "P-2": {"project_id": "P-2", "name": "Neu", "confirmed": false, "mode": "werkstatt", "boundaries": {}, "sentence": "Vorschlag: Werkstatt.",
+            "reason": "noch nicht bestätigt", "note": null},
+    "_kein_projekt": {"project_id": null, "confirmed": false, "note": "Noch kein Projekt angelegt – Grenzen gehören zu einem Projekt."}
+  },
+  "active_project": "P-1",
+  "decisions": [
+    {"id": "gate:HG-1", "kind": "gate", "title": "Netz", "describe": "pypi.org", "mission_id": "M-WAIT", "gate_id": "HG-1", "ways": ["einmal", "ablehnen"]},
+    {"id": "crossing:C-1", "kind": "boundary", "title": "Grenze Geld", "describe": "0,50 €", "mission_id": null, "gate_id": null, "ways": ["einmal", "aendern", "ablehnen"]}
+  ],
+  "skills": [
+    {"id": "debug", "name": "Debuggen", "description": "Fehler finden"},
+    {"id": "leer", "description": "  "}
+  ],
+  "projects": [
+    {"project_id": "P-1", "name": "Export", "workspace_path": "workspace/export"},
+    {"name": "OhneId", "path": "workspace/ohne"}
+  ],
+  "intents": [
+    {"id": "V-1", "title": "CSV-Export für den Monatsbericht", "text": "Erst lesen, dann schreiben", "tasks": ["M-READY", "M-DONE"], "created_at": "2026-10-01T07:00:00Z"},
+    {"id": "V-2", "title": "Alles fertig", "text": "", "tasks": ["M-DONE"], "created_at": "2026-10-01T07:10:00Z"},
+    {"id": "V-3", "title": "Mit Stufen", "text": "zwei Stufen", "tasks": [], "created_at": "2026-10-01T07:20:00Z", "vorlage": "zwei_stufen",
+     "stufen": [{"name": "Lesen", "text": "lesen", "tasks": ["M-DONE"]}, {"name": "Prüfen", "text": "prüfen", "tasks": ["M-WAIT"]}]},
+    {"id": "V-4", "title": "Noch leer", "text": "", "tasks": [], "created_at": "2026-10-01T07:30:00Z"}
+  ]
+}
