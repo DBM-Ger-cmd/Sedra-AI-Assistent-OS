@@ -2,16 +2,18 @@
 # desk/arbeitsplatz.py liest diese Datei ein; SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen, nichts läuft von allein.
 # Erlaubt: satz, zonen [{name, wo}], woerter {wort: {ist, objekt}}, anleitungen [{id, titel, schritte, ort, stich}], begriffe {wort: text}.
 arbeitsplatz:
-  satz: 'Eine Firma statt eines Cockpits: Navigation links, Seiten in der Mitte, das Gespräch als Schublade rechts.'
+  satz: 'Eine Firma statt eines Cockpits: Navigation links, Seiten in der Mitte, Agentenfenster rechts daneben, das Gespräch als Schublade.'
   zonen:
   - name: Navigation
-    wo: 'links: Dashboard, Posteingang, Issues, Ziele, Agenten, Kosten; Assistenten (Planungstisch); Werkzeuge; Projekt'
+    wo: 'links: Dashboard, Posteingang; Arbeit (Issues, Ziele, Routinen); Team (Organigramm, Agenten); Betrieb (Kosten, Modelle und Slots, KI-Labor); Assistenten; Werkzeuge; Projekt'
   - name: Kopfzeile
     wo: 'oben: Titel der Seite, Zurück, die Verben des Werkstücks, das Suchfeld (Strg+K)'
   - name: Dashboard
     wo: Kennzahlen, Posteingang, Organigramm, Issues auf einer Seite
+  - name: Fensterstapel
+    wo: 'rechts neben der Seite: ein Fenster je Agent (Gespräch, Issues, Läufe), höchstens vier offen; weitere werden zu Reitern darunter. Erscheint, sobald ein Agent geöffnet ist'
   - name: Schublade
-    wo: 'rechts: das Gespräch – Knopf „Mit SEDRA sprechen“ unten rechts; zählt, was ankam, solange sie zu war'
+    wo: 'rechts: das Gespräch mit SEDRA – Knopf „Mit SEDRA sprechen“ unten rechts; zählt, was ankam, solange sie zu war'
   woerter:
     posteingang:
       ist: die Entscheidungen (Freigaben und Grenzen) – Navigation links, Karte auf dem Dashboard
@@ -21,7 +23,7 @@ arbeitsplatz:
         title: Posteingang
         collection: true
     issues:
-      ist: die Aufgaben – Navigation links, Karte unten auf dem Dashboard
+      ist: die Aufgaben des Teams – Navigation „Arbeit“, Karte unten auf dem Dashboard; bis es Issues als eigenen Typ gibt, die Missionen
       objekt:
         type: task
         id: alle
@@ -41,32 +43,100 @@ arbeitsplatz:
         id: tisch
         title: Planungstisch
     agenten:
-      ist: die Besatzung (Rollen aus den Rezepten) – Navigation links, „Organigramm“ auf dem Dashboard
+      ist: die Rollen aus den Rezepten und die Agenten des Agent Managers – Navigation „Team“
       objekt:
         type: agent
-        id: alle
+        id: rollen
         title: Agenten
         collection: true
     organigramm:
-      ist: die Besatzung – Karte auf dem Dashboard
+      ist: das Team als Baum (Vorgesetzte, Rolle, Status, Budget) – Navigation „Team“ und Karte auf dem Dashboard; ein Klick auf einen Agenten öffnet sein Fenster
       objekt:
         type: agent
         id: alle
         title: Organigramm
         collection: true
     kosten:
-      ist: das Guppy-Meter – Navigation links
+      ist: das Guppy-Meter – Navigation „Betrieb“
       objekt:
         type: meter
         id: meter
         title: Kosten
     werkstatt:
-      ist: 'die Modelle: laden, entladen, testen, neues Modell, Teststrecke – Navigation „Werkzeuge“'
+      ist: 'die Modelle: laden, entladen, testen, neues Modell, Teststrecke – Navigation „Betrieb · Modelle und Slots“'
       objekt:
         type: model
         id: alle
-        title: Werkstatt
+        title: Modelle und Slots
         collection: true
+    slots:
+      ist: belegte und freie Plätze des Modellservers und die Warteschlange – Navigation „Betrieb · Modelle und Slots“, über der Werkstatt
+      objekt:
+        type: model
+        id: alle
+        title: Modelle und Slots
+        collection: true
+    ki-labor:
+      ist: 'Cloud-Anbieter, Schlüssel, Modelle und Tests – Navigation „Betrieb · KI-Labor“'
+      objekt:
+        type: labor
+        id: labor
+        title: KI-Labor
+  anleitungen:
+  - id: agentenfenster
+    titel: Mit einem Agenten sprechen (Agentenfenster)
+    schritte:
+    - Organigramm öffnen (Navigation „Team“) und auf die Karte des Agenten klicken – rechts öffnet sich sein Fenster.
+    - Im Fenster stehen das Gespräch, seine Issues und Läufe; eine Anweisung wird zur Aufgabe, der Lauf braucht eine Freigabe im Posteingang.
+    - Mehrere Fenster gehen zugleich; „▾“ verkleinert eines zum Reiter, „✕“ schließt es. Nach dem Neuladen sind die Fenster wieder da.
+    ort:
+      type: agent
+      id: alle
+      title: Organigramm
+      collection: true
+    stich: agent agentenfenster fenster gespräch gespraech anweisen anweisung unterarbeiter sprechen
+  - id: organigramm
+    titel: Das Organigramm lesen
+    schritte:
+    - Navigation „Team · Organigramm“.
+    - Oben der Captain, darunter der Unterarbeiter und sein Team; jede Karte zeigt Rolle, Status, Budget und offene Entscheidungen.
+    - Ist die Orchestrierung aus, sagt die Seite das – das Team erscheint, sobald sie läuft.
+    ort:
+      type: agent
+      id: alle
+      title: Organigramm
+      collection: true
+    stich: organigramm team hierarchie vorgesetzter budget einstellen
+  - id: routinen
+    titel: Routinen ansehen
+    schritte:
+    - Navigation „Arbeit · Routinen“.
+    - Eine Routine legt zu festen Zeiten eine Aufgabe für einen Agenten an; verpasste Läufe werden nach ihrer Regel nachgeholt oder ausgelassen.
+    - Solange das Werkzeug fehlt oder die Orchestrierung aus ist, sagt die Seite das.
+    ort: null
+    stich: routine routinen zeitplan cron wiederkehrend
+  - id: slots
+    titel: Slots und Warteschlange ansehen
+    schritte:
+    - Navigation „Betrieb · Modelle und Slots“.
+    - Oben die Plätze des Modellservers und die wartenden Läufe, darunter die Werkstatt zum Laden und Entladen.
+    - Ohne Scheduler gibt es einen Platz; die Seite sagt das.
+    ort:
+      type: model
+      id: alle
+      title: Modelle und Slots
+      collection: true
+    stich: slot slots parallel warteschlange modellserver plätze plaetze
+  - id: ki_labor
+    titel: Das KI-Labor öffnen
+    schritte:
+    - Navigation „Betrieb · KI-Labor“ (oder Strg+K „labor“).
+    - Dort Anbieter, Schlüssel, Modelle und Tests der Cloud.
+    ort:
+      type: labor
+      id: labor
+      title: KI-Labor
+    stich: labor ki-labor cloud anbieter schlüssel schluessel
   begriffe:
     schublade: 'Das Gespräch in Paperclip: Knopf unten rechts; das Werkzeug bleibt, nur der Container wird gezeigt oder verborgen.'
     posteingang: Paperclip-Wort für die Entscheidungen.
@@ -75,3 +145,7 @@ arbeitsplatz:
     planungstisch: Paperclip-Ort, an dem ein Assistent (Planer, Rechercheur, …) im Gespräch Ziele und Aufträge vorschlägt; erst „Übernehmen“ legt an, nichts wird ausgeführt.
     stufe: Ein Schritt eines Ziels mit Name und Satz; „Aufgabe daraus machen“ an der Stufe plant ein Issue und hängt es an die Stufe. Vorlagen geben Stufen vor.
     verlauf: Die zuletzt besuchten Seiten; „Zurück“ in der Kopfzeile geht sie rückwärts, beim Neuladen kommt die letzte Seite wieder.
+    agentenfenster: Ein Fenster rechts neben der Seite für genau einen Agenten – Gespräch, seine Issues und Läufe. Höchstens vier offen, weitere als Reiter.
+    organigramm: Das Team als Baum nach Vorgesetzten; die Wurzel ist der Captain, darunter der Unterarbeiter.
+    routine: Eine wiederkehrende Aufgabe für einen Agenten nach Zeitplan (Cron).
+    slot: Ein Platz des Modellservers; belegte Slots arbeiten parallel, weitere Läufe warten in der Schlange.

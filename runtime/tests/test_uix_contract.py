@@ -39,6 +39,18 @@ def run_js(files, probe):
     return json.loads(run.stdout)
 
 
+def real_manifests():
+    """Die Manifeste der Werkzeuge im Paket, so wie der Lader sie bekommt (id, kind, handles, slot, order)."""
+    import yaml
+    out = []
+    for f in sorted((UIX / 'tools').glob('*/tool.yaml')):
+        if f.parent.name.startswith('_'):
+            continue
+        t = yaml.safe_load(f.read_text(encoding='utf-8'))['tool']
+        out.append({k: t.get(k) for k in ('id', 'kind', 'handles', 'slot', 'order', 'api', 'events')})
+    return out
+
+
 class Files(unittest.TestCase):
     def test_no_file_of_the_contract_a_shell_or_a_tool_is_longer_than_400_lines(self):
         too_long = []
@@ -367,13 +379,18 @@ class CockpitPure(unittest.TestCase):
         self.assertGreaterEqual(out['leer'], 5)
 
     def test_every_place_of_the_palette_opens_an_object_a_tool_handles(self):
-        out = run_js([UIX / 'ui' / 'places.js'], "console.log(JSON.stringify(box.sedraPlaces.PLACES.map(p=>p.object.type)));")
-        import yaml
-        handled = set()
-        for manifest in sorted((UIX / 'tools').glob('*/tool.yaml')):
-            handled.update(yaml.safe_load(manifest.read_text(encoding='utf-8'))['tool'].get('handles') or [])
-        for kind in out:
-            self.assertIn(kind, handled, f'the palette opens {kind}, but no tool draws it')
+        """Spec 4 (G2-S4-21): ein Ort darf auf sein Werkzeug warten – dann zeigt die Shell den Leerzustand. Die Ausnahme verschwindet
+        mit dem Werkzeug: steht es da, schlägt die zweite Prüfung an, bis die Zeile hier gestrichen ist."""
+        waiting = {'routines': 'S4.6, Werkzeug routines'}
+        out = run_js([UIX / 'ui' / 'loader.js', UIX / 'ui' / 'places.js'], """
+          const reg = box.sedraLoader.makeRegistry(%s.map(m=>({manifest: m})));
+          console.log(JSON.stringify(box.sedraPlaces.PLACES.map(p=>[p.id, reg.forObject(p.object).map(m=>m.id)])));
+        """ % json.dumps(real_manifests()))
+        for place, tools in out:
+            if place in waiting:
+                self.assertEqual(tools, [], f'{place} hat jetzt ein Werkzeug – Ausnahme streichen ({waiting[place]})')
+            else:
+                self.assertTrue(tools, f'the palette opens {place}, but no tool draws it')
 
     def test_the_dock_opens_closes_moves_and_never_opens_the_same_object_twice(self):
         out = run_js([self.cockpit / 'dock.js'], """
@@ -429,6 +446,147 @@ class CockpitPure(unittest.TestCase):
         """)
         self.assertEqual([x[:2] for x in out], [['alle', None], ['neu', 'neu'], ['teststrecke', 'teststrecke']])
         self.assertIn('coder.x', out[2][2])
+
+
+class ShellDContract(unittest.TestCase):
+    """Spec 4, S4.1: die Vertragsnachträge N1 bis N4 im Vertragscode (D4.4)."""
+    def setUp(self):
+        if not NODE:
+            self.skipTest('node is not installed')
+
+    def test_handles_match_reads_the_type_and_the_three_forms(self):
+        cases = [
+            ('agent', {'type': 'agent', 'id': 'alle'}, True), ('agent', {'type': 'agent', 'id': 'A-1'}, True),
+            ('agent', {'type': 'issue', 'id': 'alle'}, False),
+            ('agent:alle', {'type': 'agent', 'id': 'alle', 'collection': True}, True), ('agent:alle', {'type': 'agent', 'id': 'A-1'}, False),
+            ('agent:*', {'type': 'agent', 'id': 'A-1'}, True), ('agent:*', {'type': 'agent', 'id': 'alle'}, False),
+            ('agent:*', {'type': 'agent', 'id': 'rollen', 'collection': True}, False),
+            ('agent:rollen', {'type': 'agent', 'id': 'rollen', 'collection': True}, True), ('agent:rollen', {'type': 'agent', 'id': 'alle'}, False),
+            ('agent:*', {'type': 'agent', 'id': None}, True), ('issue:*', {'type': 'agent', 'id': 'A-1'}, False),
+            ('agent', None, False), (None, {'type': 'agent', 'id': 'A-1'}, False),
+        ]
+        out = run_js([UIX / 'ui' / 'loader.js'], "console.log(JSON.stringify(%s.map(c=>box.sedraLoader.handlesMatch(c[0], c[1]))));" % json.dumps(cases))
+        for (entry, obj, want), got in zip(cases, out):
+            self.assertEqual(got, want, f'{entry} gegen {obj}')
+
+    def test_every_manifest_of_the_package_keeps_its_meaning(self):
+        """N1: ohne Zusatz zeichnet ein Werkzeug jedes Objekt seines Typs – forObject liefert dasselbe wie das alte for(type)."""
+        manifests = real_manifests()
+        objects = [{'type': t, 'id': i, 'collection': i in ('alle', 'rollen')} for t in sorted({h for m in manifests for h in (m['handles'] or [])})
+                   for i in ('alle', 'X-1', 'rollen')]
+        out = run_js([UIX / 'ui' / 'loader.js'], """
+          const reg = box.sedraLoader.makeRegistry(%s.map(m=>({manifest: m})));
+          console.log(JSON.stringify(%s.map(o=>[reg.forObject(o).map(m=>m.id), reg.for(o.type).map(m=>m.id)])));
+        """ % (json.dumps(manifests), json.dumps(objects)))
+        for obj, (by_object, by_type) in zip(objects, out):
+            old = [m['id'] for m in manifests if m['kind'] == 'object' and obj['type'] in (m['handles'] or [])]
+            self.assertEqual(by_object, old, obj)
+            self.assertEqual(by_type, old, obj)
+
+    def test_the_registry_gives_each_object_its_one_tool(self):
+        """Falle 1 aus G1: Organigramm, Rollenliste und Fenster handeln denselben Typ, zeichnen aber je ein anderes Objekt."""
+        out = run_js([UIX / 'ui' / 'loader.js'], """
+          const m = (id, handles)=>({manifest: {id, kind: 'object', handles}});
+          const reg = box.sedraLoader.makeRegistry([m('org', ['agent:alle']), m('crew', ['agent:rollen']), m('fenster', ['agent:*']), m('alt', ['task'])]);
+          const ids = o=>reg.forObject(o).map(x=>x.id);
+          console.log(JSON.stringify({alle: ids({type:'agent', id:'alle', collection:true}), rollen: ids({type:'agent', id:'rollen', collection:true}),
+                                      eins: ids({type:'agent', id:'A-7'}), typ: reg.for('agent').map(x=>x.id), task: ids({type:'task', id:'M-1'})}));
+        """)
+        self.assertEqual(out['alle'], ['org'])
+        self.assertEqual(out['rollen'], ['crew'])
+        self.assertEqual(out['eins'], ['fenster'])
+        self.assertEqual(out['typ'], ['org', 'crew', 'fenster'], 'for(type) ohne Objekt nennt jede Form')
+        self.assertEqual(out['task'], ['alt'])
+
+    def test_the_schema_allows_the_three_forms_and_every_manifest_fits(self):
+        schema = json.loads((UIX / 'ui' / 'schema' / 'tool.schema.json').read_text(encoding='utf-8'))
+        pattern = schema['properties']['tool']['properties']['handles']['items']['pattern']
+        for ok in ('agent', 'agent:alle', 'agent:*', 'agent:rollen', 'gauge-x'):
+            self.assertRegex(ok, pattern)
+        for bad in ('Agent', 'agent:', 'agent:*x', 'a:b:c', 'a', 'agent:Alle'):
+            self.assertNotRegex(bad, pattern)
+        for m in real_manifests():
+            for h in m['handles'] or []:
+                self.assertRegex(h, pattern, m['id'])
+
+    def test_the_bus_knows_the_four_team_events_and_every_manifest_names_known_ones(self):
+        out = run_js([UIX / 'ui' / 'bus.js'], """
+          const c = box.sedraBus.checkEvent;
+          console.log(JSON.stringify({names: Object.keys(box.sedraBus.EVENTS),
+            agent: c('agent.changed', {id: 'A-1'}, null), agentNoId: c('agent.changed', {}, null), issue: c('issue.changed', {id: 'I-1'}, null),
+            budget: c('budget.warning', {agent_id: 'A-1', prozent: 80, stufe: 'warnung'}, null), budgetNoAgent: c('budget.warning', {prozent: 80}, null),
+            slot: c('slot.changed', {}, null), pending: c('decision.pending', {id: 'D-1', agent_id: 'A-1'}, null),
+            pendingOld: c('decision.pending', {id: 'D-1'}, null), toolSends: c('agent.changed', {id: 'A-1'}, ['object.open'])}));
+        """)
+        for key in ('agent', 'issue', 'budget', 'slot', 'pending', 'pendingOld'):
+            self.assertEqual(out[key], '', key)
+        for key in ('agentNoId', 'budgetNoAgent', 'toolSends'):
+            self.assertNotEqual(out[key], '', key)
+        for m in real_manifests():
+            for name in ((m['events'] or {}).get('emits') or []) + ((m['events'] or {}).get('listens') or []):
+                self.assertIn(name, out['names'], f'{m["id"]} nennt ein Ereignis, das der Bus nicht kennt')
+
+    def test_unmount_and_actions_get_the_container_so_one_tool_runs_twice(self):
+        """N2: ein Werkzeug mit einer Instanz je Container (Map nach el) – zwei Fenster, jedes baut sein eigenes ab."""
+        out = run_js([UIX / 'ui' / 'lifecycle.js'], """
+          const l = box.sedraLifecycle;
+          const inst = new Map(), log = [];
+          const mod = {id: 'fenster', mount(el, ctx){ inst.set(el, ctx.object.id); },
+                       unmount(el){ log.push('ab ' + inst.get(el)); inst.delete(el); },
+                       actions(el){ return [{label: 'An ' + inst.get(el), run(){}}]; }};
+          const el = ()=>({replaceChildren(){}});
+          const a = l.mountTool(mod, el(), {object: {id: 'A-1'}, _offs: []}), b = l.mountTool(mod, el(), {object: {id: 'A-2'}, _offs: []});
+          const labels = [l.actionsOf(a)[0].label, l.actionsOf(b)[0].label];
+          l.unmountTool(b);
+          const old = {id: 'alt', mount(){}, unmount(){ log.push('alt ohne Argument'); }};
+          l.unmountTool(l.mountTool(old, el(), {_offs: []}));
+          console.log(JSON.stringify({labels, log, left: [...inst.values()]}));
+        """)
+        self.assertEqual(out['labels'], ['An A-1', 'An A-2'])
+        self.assertEqual(out['log'], ['ab A-2', 'alt ohne Argument'])
+        self.assertEqual(out['left'], ['A-1'])
+
+
+class ShellDTools(unittest.TestCase):
+    """Spec 4 (D4.4, D4.6): die Werkzeugliste mit Begründung (UIX-03), Routen (UIX-06, N6) und kein Takt (UIX-05) der neuen Werkzeuge.
+    Ein neues Werkzeug, das noch fehlt, wird nicht verlangt – sobald es da ist, gelten die Regeln ohne Änderung an diesem Test."""
+    NEW = {'org': 'Organigramm als Baum (agent:alle)', 'board': 'Issues als Liste und Board (issue)', 'routines': 'Routinen (routine)',
+           'agentfenster': 'Gespräch je Agent (agent:*)', 'slots': 'Slots über der Werkstatt (model:alle)', 'gauge-slots': 'Kachel der Slots'}
+    ADAPTED = {'crew': 'Rollenliste (agent:rollen)', 'costs': 'Budget und Cloud-Kennzeichen, auch für issue'}
+    REUSED = {'decisions': 'Posteingang', 'live': 'Zeilen eines Laufs', 'workshop': 'Modelle laden', 'labor': 'KI-Labor (Ausbau Spec 3)',
+              'meter': 'Kosten', 'intent': 'Ziele', 'planung': 'Planungstisch', 'talk': 'Gespräch mit SEDRA', 'task': 'Mission hinter einem Issue'}
+    ROUTES = {'object': ['POST /api/objects', 'POST /api/actions'], 'instrument': ['GET /api/strip']}
+
+    def test_the_tool_list_of_shell_d_names_every_tool_once_with_a_reason(self):
+        have = {m['id'] for m in real_manifests()}
+        lists = [self.NEW, self.ADAPTED, self.REUSED]
+        self.assertEqual(sum(len(x) for x in lists), len(set().union(*lists)), 'jedes Werkzeug steht genau einmal in der Liste')
+        for tool in list(self.ADAPTED) + list(self.REUSED):
+            self.assertIn(tool, have, f'{tool} soll wiederverwendet werden, fehlt aber')
+
+    def test_new_tools_call_only_objects_and_actions_and_keep_no_timer(self):
+        for m in real_manifests():
+            if m['id'] not in self.NEW:
+                continue
+            with self.subTest(m['id']):
+                allowed = self.ROUTES['instrument'] if m['kind'] == 'instrument' else self.ROUTES['object']
+                self.assertTrue(set(m['api'] or []) <= set(allowed), f"{m['id']}: nur {allowed} (N6)")
+                for js in sorted((UIX / 'tools' / m['id']).glob('*.js')):
+                    if not js.name.endswith(('.test.js', '.spec.js')):
+                        self.assertIsNone(re.search(r'\bset(Interval|Timeout)\s*\(', js.read_text(encoding='utf-8')), f'{js.name}: kein Takt (UIX-05)')
+
+    def test_no_place_of_the_navigation_is_drawn_twice_except_models_and_slots(self):
+        """Falle 1 aus G1: zwei Werkstück-Werkzeuge auf demselben Objekt zeichneten dasselbe doppelt. Erlaubt nur model:alle (slots über workshop)."""
+        nav = UIX / 'shells' / 'paperclip' / 'nav.js'
+        out = run_js([UIX / 'ui' / 'loader.js', nav], """
+          const reg = box.sedraLoader.makeRegistry(%s.map(m=>({manifest: m})));
+          const N = box.sedraPcNav;
+          console.log(JSON.stringify(N.NAV.filter(x=>x.object).map(x=>{ const t = N.target(x, reg);
+            return [t.type + ':' + t.id, reg.forObject(t).filter(m=>m.slot !== 'nachweis').map(m=>m.id)]; })));
+        """ % json.dumps(real_manifests()))
+        for place, tools in out:
+            if place != 'model:alle':
+                self.assertLessEqual(len(tools), 1, f'{place} wird von {tools} zugleich gezeichnet')
 
 
 class ToolsPure(unittest.TestCase):

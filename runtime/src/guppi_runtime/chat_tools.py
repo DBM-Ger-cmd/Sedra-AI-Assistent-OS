@@ -118,6 +118,9 @@ PLACES = {
     'uebersetzung': ('Übersetzer', 'eine Nachricht für eine andere Rolle (Translator)'),
     'transkript': ('Transkripte', 'importieren, suchen, freigeben, exportieren (Translator)'),
     'aufnahme': ('Rekorder', 'aufnehmen, abspielen, Sprache → Text (Kern)'),
+    # Spec 4 (G2-S4-21): das Agenten-Team
+    'org': ('Organigramm', 'das Team: Vorgesetzte, Rolle, Budget'), 'routines': ('Routinen', 'wiederkehrende Aufgaben nach Zeitplan'),
+    'slots': ('Modelle und Slots', 'belegte Plätze und Warteschlange'), 'labor': ('KI-Labor', 'Anbieter, Schlüssel, Modelle, Tests'),
 }
 # Der Planungstisch (19.10.2026): nur die Werkzeuge, mit denen ein Assistent plant – lesen, wo die Firma steht, und vorschlagen
 PLANUNG_TOOLS = ('propose_intent', 'propose_task', 'list_missions', 'list_decisions', 'arbeitsplatz_stand', 'list_actions', 'propose_action', 'open_object')

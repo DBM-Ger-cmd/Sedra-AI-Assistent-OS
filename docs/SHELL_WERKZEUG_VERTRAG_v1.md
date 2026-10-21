@@ -221,3 +221,40 @@ Build 9 `boundaries.py`. Danach ist `uix_server.py` nur noch die HTTP-Hülle.
   und ein Starttyp für Vorgaben. Routen `/api/gateway/*` und `/api/guard/probe`.
 - Eine Vorgabe darf `orte: {einblenden: rand}` und `leiste: {einblenden: rand}` sagen: die Zone steht nicht im Raster, liegt verborgen
   am Rand und fährt beim Anfahren (Zeiger oder Tastatur) heraus. `uix_check` misst solche Zonen nicht als Zonen.
+
+## Nachtrag 21.10.2026 (Spec 4, Shell D): N1 bis N8
+
+Freigegeben mit G2-S4-03 (N1), G2-S4-04 (N2), G2-S4-05 (N3, N4) und G2-S4-21 (Orte); Wortlaut aus `SPEC_AGENTEN_ORCHESTRIERUNG_v1.md`, D4.4.
+
+- **N1 – `handles` mit Zusatz (§3.1, §4).** Ein Eintrag in `handles` darf neben dem Typ (wie bisher: alle Objekte dieses Typs) eine
+  der Formen `typ:alle` (nur das Objekt mit der ID `alle`, die Sammlung), `typ:*` (jedes Einzelobjekt des Typs, also weder die ID
+  `alle` noch ein Objekt mit `collection: true`) oder `typ:<id>` (genau dieses Objekt, z. B. `agent:rollen`, ein festes Objekt mit
+  `collection: true` im Deskriptor) tragen. Das Schema erlaubt das Muster `^[a-z0-9-]{2,40}(:(\*|[a-z0-9-]{1,40}))?$`. Der Lader
+  bekommt `registry.forObject(object)`; `registry.for(type)` bleibt für Aufrufe ohne Objekt und nennt jedes Werkzeug, das den Typ in
+  irgendeiner Form handelt. Welche Werkzeuge ein Objekt zeichnen, entscheidet die reine Funktion `handlesMatch(eintrag, objekt)`
+  (`ui/loader.js`). Alle bestehenden Manifeste behalten ihre Bedeutung. Die Serverprüfung der Manifeste (`desk/gateway.py`) lässt
+  die Formen mit Zusatz zu, sobald das erste Werkzeug eine trägt.
+- **N2 – Mehrere Instanzen eines Werkzeugs (§4).** `unmount(el)` und `actions(el)` bekommen den Container, den `mount` bekommen hat.
+  Ein Werkzeug darf mehrere Instanzen zugleich führen (eine je Container) und muss sie dann je `el` verwalten; ein Werkzeug mit einer
+  Instanz darf das Argument ignorieren. `lifecycle.unmountTool` und `actionsOf` reichen `state.el` weiter. Der Zustand eines Werkzeugs
+  darf nicht in `this` liegen, wenn es mehrere Instanzen führt.
+- **N3 – Ereignisse (§5).** Neue Zeilen der Tabelle (Nutzlast flach, Pflichtfelder fett): `agent.changed` {**id**}; `issue.changed`
+  {**id**}; `budget.warning` {**agent_id**, prozent, stufe}; `slot.changed` {slot, state, run_id, priority, queue_len}. Sender: der
+  Ereignisstrom (`desk/events.py`). Werkzeuge dürfen sie in `events.listens` nennen, aber nicht senden. Jedes Werkzeug, das Daten
+  zeigt, hört außerdem `desk.resync` und liest dann neu.
+- **N4 – Entscheidungen mit Agent (§5, §10.3).** `decision.pending` und die Form der Entscheidung tragen das optionale Feld `agent_id`
+  (leer, wenn kein Agent betroffen ist).
+- **N5 – Darstellungshinweise im Objekt (§4).** Der Deskriptor eines Objekts darf `view` (z. B. `liste`, `board`) und `kompakt`
+  tragen. Beides sind Hinweise der Shell an das Werkzeug, keine Identität; Werkzeuge ändern die Ansicht, indem sie `object.open` mit
+  demselben Typ und derselben ID und anderem `view` senden. Der Verlaufsschlüssel einer Shell darf `view` enthalten.
+- **N6 – Routen neuer Werkzeuge (§6).** Ein Werkzeug, das nach dem Datum dieses Nachtrags entsteht, nennt in `api` nur
+  `POST /api/objects` (lesen) und `POST /api/actions` (handeln); ein Instrument zusätzlich `GET /api/strip`. Bestehende Werkzeuge
+  sind ausgenommen, bis ihre Spec sie umstellt.
+- **N7 – Ergebnisfelder des Desk (§10).** Die Listen der Typen `agent`, `issue`, `routine`, `budget` und `gespraech` tragen `quelle` =
+  {`zustand`: `aus`, `bereit` oder `fehler`, `grund`, `takt`}; Werkzeuge unterscheiden damit „ausgeschaltet“, „ausgefallen“ und
+  „leer“. Der Desk-Typ `gespraech` ist nur lesend, die ID ist die Agenten-ID, der Filter heißt `agent`.
+- **N8 – Einbau (§7.3).** Werkzeuge, die im Paket liegen (`uix/tools/`), kommen nach Review per `adopt_plan` oder Handkopie hinein
+  (Linie L5) und tragen `trust: CORE`; `install_module` gilt für Werkzeuge unter `local_config/`.
+- **Orte (G2-S4-21).** `ui/places.js` nennt zusätzlich `org` (`agent:alle`), `routines` (`routine:alle`), `slots` (`model:alle`) und
+  `labor` (`labor:labor`); der Ort `crew` zeigt auf `agent:rollen`. Die Orte gelten in jeder Shell; ohne Werkzeug zeigt die Shell
+  ihren Leerzustand.

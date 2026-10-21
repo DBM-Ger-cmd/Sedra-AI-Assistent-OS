@@ -90,10 +90,11 @@ class PureParts(unittest.TestCase):
         """ % json.dumps(str(PAPERCLIP / 'nav.js')))
         from guppi_runtime.desk.gateway import OBJECT_TYPES
         for t in out['types']:
-            self.assertIn(t, list(OBJECT_TYPES) + ['dashboard'], f'{t} ist kein Objekttyp des Vertrags')
+            # `issue` kommt als Desk-Typ mit G2-S0-12; bis dahin öffnet „Issues“ die Missionen (issuesTarget, D4.1)
+            self.assertIn(t, list(OBJECT_TYPES) + ['dashboard', 'issue'], f'{t} ist kein Objekttyp des Vertrags')
         self.assertGreaterEqual(out['on'], 0)
         self.assertEqual(out['off'], -1)
-        self.assertNotIn('routine', out['types'], 'Build 24 (B6-G-06): kein Eintrag ohne Werkzeug dahinter')
+        self.assertIn('routine', out['types'], 'Spec 4 (G2-S4-01): Routinen stehen wieder da – ohne Werkzeug mit Leerzustand (UIX-10)')
         self.assertNotIn('gateway', out['types'], 'Build 24 (Klaus 19:34): das KI GateWay bleibt in seiner eigenen Oberfläche')
 
     def test_the_badge_counts_open_decisions(self):
@@ -104,6 +105,120 @@ class PureParts(unittest.TestCase):
         """ % json.dumps(str(PAPERCLIP / 'nav.js')))
         self.assertEqual(out['summary'], {'decisions': 2}); self.assertEqual(out['items'], {'decisions': 3}); self.assertEqual(out['none'], {'decisions': 0})
         self.assertEqual(out['badges'], ['decisions'])
+
+
+def real_manifests():
+    out = []
+    for f in sorted((UIX / 'tools').glob('*/tool.yaml')):
+        if not f.parent.name.startswith('_'):
+            t = yaml.safe_load(f.read_text(encoding='utf-8'))['tool']
+            out.append({k: t.get(k) for k in ('id', 'kind', 'handles', 'slot')})
+    return out
+
+
+LOADER = UIX / 'ui' / 'loader.js'
+# Spec 4, D4.1: welches Werkzeug jeden Eintrag zeichnen soll, und was bis dahin zeichnet (None: Leerzustand der Shell)
+DESIGN = {'Posteingang': ('decisions', 'decisions'), 'Issues': ('board', 'task'), 'Ziele': ('intent', 'intent'),
+          'Routinen': ('routines', None), 'Organigramm': ('org', 'crew'), 'Agenten': ('crew', 'crew'), 'Kosten': ('meter', 'meter'),
+          'Modelle und Slots': ('slots', 'workshop'), 'KI-Labor': ('labor', 'labor')}
+
+
+class ShellD(unittest.TestCase):
+    """Spec 4, S4.2: Navigation, Seitenart `window`, Verlauf mit Ansicht, Ereignisse ohne Zeitgeber (D4.4)."""
+
+    def nav(self, extra=()):
+        return run_js([LOADER, PAPERCLIP / 'nav.js'], """
+          const n = require(%s), L = require(%s);
+          const reg = L.makeRegistry(%s.map(m=>({manifest: m})));
+          console.log(JSON.stringify({sections: n.NAV.filter(x=>x.section).map(x=>x.section),
+            rows: n.NAV.filter(x=>x.object && x.object.type !== 'dashboard').map(x=>{ const t = n.target(x, reg);
+              return {label: x.label, type: t.type + ':' + t.id, tools: reg.forObject(t).filter(m=>m.slot !== 'nachweis').map(m=>m.id)}; })}));
+        """ % (json.dumps(str(PAPERCLIP / 'nav.js')), json.dumps(str(LOADER)), json.dumps(real_manifests() + list(extra))))
+
+    def test_the_navigation_has_the_sections_of_the_design(self):
+        out = self.nav()
+        self.assertEqual(out['sections'], ['Arbeit', 'Team', 'Betrieb', 'Assistenten', 'Werkzeuge', 'Projekt'])
+        labels = [r['label'] for r in out['rows']]
+        for label in DESIGN:
+            self.assertIn(label, labels)
+        self.assertNotIn('Werkstatt (Modelle)', labels, 'derselbe Ort hat nur eine Zeile – die Werkstatt steht unter „Modelle und Slots“')
+        self.assertEqual(len({r['type'] for r in out['rows']}), len(out['rows']), 'kein Ort zweimal in der Navigation')
+
+    def test_every_entry_has_its_tool_or_the_stand_in_of_today(self):
+        """UIX-02: jeder Eintrag öffnet etwas. Fehlt das Werkzeug des Designs, zeichnet der Ersatz – oder die Shell zeigt den Leerzustand."""
+        have = {m['id'] for m in real_manifests()}
+        for row in self.nav()['rows']:
+            with self.subTest(row['label']):
+                soll, ersatz = DESIGN.get(row['label'], (None, None))
+                if soll in have:
+                    self.assertIn(soll, row['tools'])
+                elif soll:
+                    self.assertEqual(row['tools'][:1], [ersatz] if ersatz else [])
+                else:
+                    self.assertTrue(row['tools'], f"{row['label']} ({row['type']}) zeichnet kein Werkzeug")
+
+    def test_issues_open_the_missions_until_a_tool_draws_the_issue_list(self):
+        board = {'id': 'board', 'kind': 'object', 'handles': ['issue:alle', 'issue:*'], 'slot': 'inhalt'}
+        side = {'id': 'nur-nachweis', 'kind': 'object', 'handles': ['issue:alle'], 'slot': 'nachweis'}
+        rows = lambda extra: {r['label']: r for r in self.nav(extra)['rows']}
+        self.assertEqual(rows([])['Issues']['type'], 'task:alle')
+        self.assertEqual(rows([side])['Issues']['type'], 'task:alle', 'ein Nachweis allein zeichnet keine Liste')
+        self.assertEqual(rows([board])['Issues'], {'label': 'Issues', 'type': 'issue:alle', 'tools': ['board']})
+
+    def test_an_agent_is_a_window_and_the_view_is_part_of_the_history(self):
+        out = run_js([PAPERCLIP / 'pages.js', PAPERCLIP / 'nav.js'], """
+          const p = require(%s), n = require(%s);
+          const h1 = p.pushHistory(p.pushHistory([], {type:'agent', id:'alle'}), {type:'agent', id:'alle', view:'liste'});
+          const h2 = p.pushHistory(h1, {type:'agent', id:'alle', view:'liste'});
+          console.log(JSON.stringify({one: p.pageFor({type:'agent', id:'A-1'}).kind, all: p.pageFor({type:'agent', id:'alle'}).kind,
+            roles: p.pageFor({type:'agent', id:'rollen', collection:true}).kind, task: p.pageFor({type:'task', id:'M-1'}).kind,
+            views: h1.length, same: h2.length, lit: n.activeIndex(n.NAV, {type:'agent', id:'alle', view:'liste'}) === n.activeIndex(n.NAV, {type:'agent', id:'alle'}),
+            issuesLit: n.activeIndex(n.NAV, {type:'task', id:'alle'}) === n.activeIndex(n.NAV, {type:'issue', id:'alle'})}));
+        """ % (json.dumps(str(PAPERCLIP / 'pages.js')), json.dumps(str(PAPERCLIP / 'nav.js'))))
+        self.assertEqual((out['one'], out['all'], out['roles'], out['task']), ('window', 'collection', 'collection', 'object'))
+        self.assertEqual(out['views'], 2, 'Baum und Liste sind zwei Schritte im Verlauf (N5, OP-S4-9)')
+        self.assertEqual(out['same'], 2, 'dieselbe Ansicht nicht zweimal')
+        self.assertTrue(out['lit'], 'die Ansicht ändert nicht, welche Zeile leuchtet')
+        self.assertTrue(out['issuesLit'], '„Issues“ leuchtet für beide Ziele')
+
+    def test_the_shell_hears_the_team_and_keeps_no_timer(self):
+        shell = (PAPERCLIP / 'shell.js').read_text(encoding='utf-8')
+        for name in ('agent.changed', 'issue.changed', 'budget.warning', 'slot.changed', 'desk.resync'):
+            self.assertIn(f"bus.on('{name}'", shell)
+        for js in sorted(PAPERCLIP.glob('*.js')):
+            if js.name.endswith('.test.js'):
+                continue
+            self.assertIsNone(re.search(r'\bset(Interval|Timeout)\s*\(', js.read_text(encoding='utf-8')), f'{js.name}: kein Zeitgeber (UIX-05)')
+        doc = yaml.safe_load((PAPERCLIP / 'shell.yaml').read_text(encoding='utf-8'))['shell']
+        self.assertEqual(doc['version'], '1.2.0')
+        self.assertEqual(doc['entry']['js'][-2:], ['windows.js', 'shell.js'])
+        self.assertIn('windows', doc['provides'])
+        css = (PAPERCLIP / 'shell.css').read_text(encoding='utf-8')
+        self.assertIn('.pc-stack', css)
+
+    def test_the_fixture_speaks_the_desk_form_and_passes_other_types_on(self):
+        """Prüfmittel (G2-S4-17): das Team im Prüfprojekt, in der Form von §10.1 mit `quelle` (N7); alles andere geht an den Hub."""
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('uix_fixture_orchestra', UIX.parents[2] / 'benchmarks' / 'uix_fixture_orchestra.py')
+        fx = importlib.util.module_from_spec(spec); spec.loader.exec_module(fx)
+
+        class Hub:
+            def objects_view(self, payload):
+                return {'type': payload['type'], 'items': [{'id': 'R-1'}]}
+        hub = fx.install(Hub(), 'orchestra')
+        agents = hub.objects_view({'type': 'agent'})
+        self.assertEqual(agents['quelle']['zustand'], 'bereit')
+        self.assertEqual(len(agents['items']), 4)
+        self.assertEqual(sum(1 for a in agents['items'] if a['reports_to'] is None), 1, 'eine Wurzel unter dem Captain (OP-6)')
+        self.assertEqual({a['status'] for a in agents['items']}, {'aktiv', 'pausiert'})
+        talk = hub.objects_view({'type': 'gespraech', 'agent': 'A-CO'})['items']
+        self.assertEqual((len(talk), [m['route'] for m in talk].count('cloud')), (3, 1))
+        self.assertTrue(hub.objects_view({'type': 'issue', 'id': 'gibts-nicht'})['missing'])
+        self.assertEqual(hub.objects_view({'type': 'model'})['slots']['gesamt'], 3)
+        self.assertEqual(hub.objects_view({'type': 'task'}), {'type': 'task', 'items': [{'id': 'R-1'}]})
+        off = fx.install(Hub(), 'orchestra-aus').objects_view({'type': 'agent'})
+        self.assertEqual((off['items'], off['quelle']['zustand']), ([], 'aus'))
+        self.assertNotIn('slots', fx.install(Hub(), 'orchestra-fehler').objects_view({'type': 'model'}))
 
 
 class ThreeShells(unittest.TestCase):

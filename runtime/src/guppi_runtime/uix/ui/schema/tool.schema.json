@@ -17,7 +17,7 @@
         "description": {"type": "string", "maxLength": 200},
         "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
         "kind": {"enum": ["object", "instrument", "panel"], "description": "object: a container per object; instrument: a cell in the strip; panel: Gespräch, Palette"},
-        "handles": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9-]{2,40}$"}, "description": "Objekttypen des Vertrags: project intent task candidate file model skill agent decision routine boundary module logbook meter hardware machine. Ein eigenes oder fremdes Werkzeug darf eigene Typen mitbringen; ein CORE-Werkzeug nicht."},
+        "handles": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9-]{2,40}(:(\\*|[a-z0-9-]{1,40}))?$"}, "description": "Objekttypen des Vertrags: project intent task candidate file model skill agent decision routine boundary module logbook meter hardware machine. Ein eigenes oder fremdes Werkzeug darf eigene Typen mitbringen; ein CORE-Werkzeug nicht. Nachtrag N1 (Spec 4): typ:alle (nur die Sammlung), typ:* (jedes Einzelobjekt), typ:<id> (genau dieses Objekt)."},
         "order": {"type": "integer", "minimum": 0, "maximum": 1000, "description": "lower comes first; uix.yaml can override it"},
         "slot": {"enum": ["inhalt", "nachweis"], "description": "Hinweis an die Shell: Werkstück oder Nachweis. Das Cockpit stellt Nachweise rechts daneben; andere Shells dürfen ihn ignorieren."},
         "entry": {
