@@ -3,9 +3,11 @@
 // Ein Agent ist keine Seite, sondern ein Fenster rechts neben der Seite (Zone `pc-stack`): mehrere zugleich, jedes mit seinem
 // eigenen Gespräch. Höchstens MAX_OPEN Fenster sind offen; ein weiteres verkleinert das älteste zur Reiterleiste – geschlossen
 // wird nur auf Wunsch. Die Shell merkt sich nur, welche Agenten offen sind (`sedra.paperclip.windows`); den Inhalt liest das
-// Werkzeug vom Server. Wer ein Fenster zeichnet, sagt die Registrierung (`forObject`, z. B. ein Werkzeug mit `agent:*`) –
-// die Shell kennt es nicht beim Namen. Jedes Fenster ist eine eigene Instanz im eigenen Container (Nachtrag N2).
-// `openWindow`, `closeWindow`, `toggleWindow` sind rein und werden mit node geprüft.
+// Werkzeug vom Server. Wer ein Fenster zeichnet, sagt die Registrierung – die Shell kennt es nicht beim Namen. Jedes Fenster ist
+// eine eigene Instanz im eigenen Container (Nachtrag N2). Darum zählen nur Werkzeuge, die das Einzelobjekt ausdrücklich nennen
+// (`agent:*` oder `agent:<id>`): ein Eintrag ohne Zusatz stammt von vor N2, und so ein Werkzeug (z. B. die Rollenliste) hält nur
+// eine Instanz – zweimal gemountet zeichnet es in den letzten Container (Falle 2 aus G1).
+// `openWindow`, `closeWindow`, `toggleWindow`, `windowTools` sind rein und werden mit node geprüft.
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
@@ -42,6 +44,12 @@
     if(!w) return list;
     if(w.small) return openWindow(list, w, max);
     return list.map(x=>x.id === w.id ? Object.assign({}, x, {small: true}) : x);
+  }
+
+  // Welche Werkzeuge ein Fenster zeichnen (rein): Werkstück-Werkzeuge mit ausdrücklicher Form für dieses Objekt
+  function windowTools(manifests, object, match){
+    return (manifests || []).filter(m=>m.kind === 'object' && m.slot !== 'nachweis' &&
+                                       (m.handles || []).some(h=>String(h).indexOf(':') > 0 && match(h, object)));
   }
 
   // Was im Browser stand, geprüft: nur {id, title, small}, höchstens MAX_OPEN offen
@@ -81,7 +89,7 @@
       head.append(verbs, small, close);
       const body = d().el('div', 'pc-win-body');
       box.append(head, body);
-      const tools = shell.ctx.tools.forObject(object).filter(m=>m.slot !== 'nachweis');
+      const tools = windowTools(shell.ctx.tools.all(), object, root.sedraLoader.handlesMatch);
       const states = [];
       if(!tools.length) body.append(d().empty('Für einen einzelnen Agenten gibt es noch kein Werkzeug. Sobald das Agentenfenster gebaut ist, steht hier das Gespräch – ohne eine Zeile an dieser Shell.'));
       tools.forEach(m=>{
@@ -148,6 +156,6 @@
     return {open: open1, close: closeById, toggle, restore, refreshVerbs, list: ()=>list.slice(), MAX_OPEN};
   }
 
-  root.sedraPcWindows = {makeWindows, openWindow, closeWindow, toggleWindow, sanitize, MAX_OPEN, STORE};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {openWindow, closeWindow, toggleWindow, sanitize, MAX_OPEN, STORE};
+  root.sedraPcWindows = {makeWindows, openWindow, closeWindow, toggleWindow, windowTools, sanitize, MAX_OPEN, STORE};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {openWindow, closeWindow, toggleWindow, windowTools, sanitize, MAX_OPEN, STORE};
 })();
