@@ -270,7 +270,7 @@ assert [(t["title"], t["parent_id"], t["assignee"], t["origin"], t["state"], t["
 assert [t["max_level"] for t in out] == [2, 1]
 assert [t["description"] for t in out] == ["b\n\nAkzeptanz: Tests grün", "p"]
 assert [tuple(r) for r in c.execute("SELECT task_id, blocked_by_task_id FROM blockers")] == [(out[1]["id"], out[0]["id"])]
-assert (get(c, "P0")["decomposed_at"], get(c, "P0")["revision"]) == (T1, 2)
+assert (get(c, "P0")["decomposed_at"], get(c, "P0")["revision"], get(c, "P0")["updated_at"]) == (T1, 2, T1)
 raises("task_already_decomposed", delegate, c, "P0", "A", items, T2)
 task(c, "P1", "A")
 assert [t["max_level"] for t in delegate(c, "P1", "A", items[:1], T2)] == [2]
@@ -282,6 +282,8 @@ raises("delegation_not_below", delegate, c, "P2", "B", [dict(items[0], agent_id=
 raises("delegation_target_inactive", delegate, c, "P2", "A", [items[0], dict(items[0], agent_id="P")], T2)
 raises("agent_not_found", delegate, c, "P2", "A", [dict(items[0], agent_id="Z")], T2)
 raises("delegate_empty", delegate, c, "P2", "A", [], T2)
+for titel in ("", "   ", None, "x" * 201):
+    raises("task_title_invalid", delegate, c, "P2", "A", [items[0], dict(items[0], titel=titel)], T2)
 raises("task_not_found", delegate, c, "nope", "A", items, T2)
 assert (count(c), get(c, "P2")["decomposed_at"], count(c, "blockers")) == (n + 1, None, 1)
 assert delegate(c, "P2", "B", [dict(items[0], agent_id="D")], T2)[0]["assignee"] == "D"
@@ -340,6 +342,6 @@ Then `UPDATE tasks SET checkout_by = agent, checkout_run = run_id, checkout_at =
      "task": """Add `delegate(conn, parent_id, frm, items, now)` -> list of the new tasks to `board.py` (keep everything else): the subtasks of a foreman's decomposition, all or nothing in ONE `with immediate(conn):`.
 items are the results of decompose.check: {titel, beschreibung, rolle, blocker: [indexes into items], akzeptanz, agent_id}. Empty items -> 'delegate_empty' (first). Then: unknown parent -> 'task_not_found'; parent closed -> 'task_closed'; parent decomposed_at already set -> 'task_already_decomposed'; unknown frm -> 'agent_not_found'.
 Per item in order: unknown agent_id -> 'agent_not_found'; graphs.check_delegation(all agents as {id, reports_to, status}, frm, agent_id, frm's can_delegate) (delegation_not_allowed, delegation_not_below, delegation_target_inactive); create the task with the insert helper of create: title = titel, description = beschreibung plus '\\n\\nAkzeptanz: ' + akzeptanz when akzeptanz is not empty, parent_id, assignee = agent_id, origin 'delegation', max_level = graphs.inherit_level(parent max_level, the agent's permission_level), created_by = frm.
-After all items: one blockers row (new task of the item, new task of the index) per blocker index; parent decomposed_at = now (revision + 1). Return the new tasks in item order. Any error: nothing is written.""",
+After all items: one blockers row (new task of the item, new task of the index) per blocker index; parent decomposed_at = now, updated_at = now and revision + 1 (the update helper). A titel that create would refuse -> the same error as create ('task_title_invalid'). Return the new tasks in item order. Any error: nothing is written.""",
      "hidden": H8},
 ]
