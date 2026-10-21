@@ -23,6 +23,9 @@ OBJECT_TYPES = ('project', 'intent', 'task', 'candidate', 'file', 'model', 'skil
                 'uebersetzung', 'nachrichten', 'transkript',       # Fisch (19.10.2026)
                 'aufnahme',                                        # Kern Sprache (19.10.2026): der Rekorder, für jede Shell
                 'module', 'logbook', 'meter', 'hardware', 'machine', 'gateway', 'labor', 'entwurf')   # the last six are places of the system; gateway since Build 19; labor: KI Labor (Werkstatt, 16.10.2026)
+OBJECT_TYPES += ('issue', 'budget', 'gespraech')                   # Spec 0 D3.2 (issue, budget) und Nachtrag N7 (gespraech)
+# Nachtrag N1: ein Eintrag in `handles` ist der Typ, `typ:alle`, `typ:*` oder `typ:<id>` (dasselbe Muster wie ui/schema/tool.schema.json).
+HANDLE = re.compile(r'^[a-z0-9-]{2,40}(:(\*|[a-z0-9-]{1,40}))?$')
 TOOL_KINDS = ('object', 'instrument', 'panel')
 # Ein Hinweis für die Shell, kein Befehl: das Cockpit stellt „inhalt“ nach links und „nachweis“ nach rechts (COCKPIT_MODUL_v1 §1).
 # Eine Shell ohne zwei Spalten ignoriert ihn – deshalb ist er ein Wort im Manifest und keine Vorschrift im Vertrag.
@@ -136,11 +139,11 @@ def check_tool(doc, folder: Path, origin='package'):
     # kennen ihn nicht – das steht dann im Werkzeug „Module“. Gefunden mit der ersten externen Lieferung (KI GateWay, 15.10.2026).
     trust_for_types = t.get('trust')
     own_types = []
-    if not isinstance(handles, list) or not all(isinstance(h, str) and MODULE_ID.match(h) for h in handles):
+    if not isinstance(handles, list) or not all(isinstance(h, str) and HANDLE.match(h) for h in handles):
         errors.append('handles_unknown_type')
         handles = []
     else:
-        own_types = [h for h in handles if h not in OBJECT_TYPES]
+        own_types = list(dict.fromkeys(b for b in (h.partition(':')[0] for h in handles) if b not in OBJECT_TYPES))
         if own_types and (trust_for_types == 'CORE' or origin == 'package'):
             errors.append('handles_unknown_type')          # im Paket gibt es keine Privatsprache
             handles = []
