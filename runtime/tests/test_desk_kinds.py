@@ -51,16 +51,22 @@ class _Intents:
 
 
 class _Library:
-    def __init__(self, own):
-        self.own = own
+    def __init__(self, own, real=None):
+        self.own, self.real = own, real
+
+    def __getattr__(self, name):          # alles außer `view` vom echten Schreibtisch (die Routen des Servers greifen danach)
+        return getattr(self.real, name)
 
     def view(self):
         return {'own': [dict(s) for s in self.own]}
 
 
 class _Projects:
-    def __init__(self, items):
-        self.items = items
+    def __init__(self, items, real=None):
+        self.items, self.real = items, real
+
+    def __getattr__(self, name):
+        return getattr(self.real, name)
 
     def list(self):
         return [dict(p) for p in self.items]
@@ -74,8 +80,8 @@ class FakeHost(UIXHub):
         super().__init__(Path(root) / 'project', ARCH)
         self.fixture = fixture
         self.runtime.missions = _Missions(fixture['missions'])
-        self.library = _Library(fixture['skills'])
-        self.projects = _Projects(fixture['projects'])
+        self.library = _Library(fixture['skills'], self.library)
+        self.projects = _Projects(fixture['projects'], self.projects)
         self._fake_intents = _Intents(fixture['intents'])
 
     @property
@@ -334,7 +340,11 @@ def post(url, path, body, headers=None):
         h = {'Content-Type': 'application/json', 'X-GUPPI-Token': parts.fragment, **(headers or {})}
         c.request('POST', path, body=json.dumps(body), headers=h)
         res = c.getresponse()
-        return res.status, json.loads(res.read().decode('utf-8') or 'null')
+        raw = res.read().decode('utf-8')
+        try:
+            return res.status, json.loads(raw or 'null')
+        except ValueError:
+            return res.status, raw
     finally:
         c.close()
 
