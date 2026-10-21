@@ -44,8 +44,8 @@ class OrchestraBoundary(unittest.TestCase):
         found[P + "orchestra.service"] += "\nfrom ..desk import kinds\n"
         self.assertEqual(violations(found, ORCHESTRA, FORBIDDEN), [(P + "orchestra.service", P + "desk")])
         found = sources()
-        found[P + "orchestra.store"] += "\nfrom ..jobs import job_supervisor\n"
-        found[P + "jobs.job_supervisor"] += "\nfrom ..agent_manager import instances\n"
+        found[P + "orchestra.store"] += "\nfrom ..jobs.job_supervisor import JobSupervisor\n"
+        found[P + "jobs.job_supervisor"] += "\nfrom ..agent_manager.instances import InstanceStore\n"
         self.assertTrue(chains(found, ORCHESTRA, FORBIDDEN), "auch über einen Umweg")
 
 
