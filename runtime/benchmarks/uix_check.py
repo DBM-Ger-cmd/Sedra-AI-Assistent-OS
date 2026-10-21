@@ -19,6 +19,7 @@ Checks (each line of the report is one check, `ok` or `FAIL`):
   talk          a line typed into the Gespräch reaches the log and the input keeps the focus
   palette       Strg+K opens, a navigation phrase offers the place first, Escape closes
   layout        the dock remembers the open tabs across a reload
+  nav, windows, idle   Shell D only (Spec 4): every navigation entry, the stack of agent windows, no polling (uix_check_team.py)
   retro         the old desktop (/retro) still loads
   console       no console error apart from the allowed ones
 Exit code 0 when every check is ok."""
@@ -30,7 +31,9 @@ import threading
 from pathlib import Path
 
 RUNTIME = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))          # uix_check_team, uix_fixture_orchestra liegen daneben
 LAST_HUB = None
+TEAM_AGENT = 'A-UA'                                                 # der Unterarbeiter der Fixture (uix_fixture_orchestra.AGENTS)
 ALLOWED_FAILURES = ('/api/processes',)
 # Werkzeuge, deren Objekt im Prüfprojekt wirklich Verben hat: dort muss die Werkbank-Zeile welche zeigen (Cockpit-Regel 3).
 # Ein Nachweis, eine Liste oder ein Objekt ohne mögliche Handlung (die Werkstatt ohne geladenes Modell) ist richtig so.
@@ -43,7 +46,7 @@ OBJECTS = {
     'files': {'type': 'project', 'id': 'projekt', 'title': 'Projekt'},
     'workshop': {'type': 'model', 'id': 'alle', 'title': 'Werkstatt'},
     'library': {'type': 'skill', 'id': 'own', 'title': 'Bibliothek'},
-    'crew': {'type': 'agent', 'id': 'alle', 'title': 'Besatzung'},
+    'crew': {'type': 'agent', 'id': 'rollen', 'title': 'Agenten', 'collection': True},      # Spec 4: die Rollenliste (agent:rollen)
     'meter': {'type': 'meter', 'id': 'meter', 'title': 'Guppy-Meter'},
     'logbook': {'type': 'logbook', 'id': 'audit', 'title': 'Logbuch'},
     'system': {'type': 'machine', 'id': 'machine', 'title': 'Maschinenraum'},
@@ -59,6 +62,13 @@ OBJECTS = {
     'tests': {'type': 'candidate', 'id': None, 'title': 'Kandidat'},
     'live': {'type': 'task', 'id': None, 'title': 'Aufgabe'},
     'costs': {'type': 'task', 'id': None, 'title': 'Aufgabe'},
+    # Spec 4 (D4.4): die Werkzeuge des Agenten-Teams; ein Agent öffnet sich als Fenster im Stapel (id aus der Fixture)
+    'org': {'type': 'agent', 'id': 'alle', 'title': 'Organigramm', 'collection': True},
+    'board': {'type': 'issue', 'id': 'alle', 'title': 'Issues', 'collection': True},
+    'routines': {'type': 'routine', 'id': 'alle', 'title': 'Routinen', 'collection': True},
+    'slots': {'type': 'model', 'id': 'alle', 'title': 'Modelle und Slots', 'collection': True},
+    'agentfenster': {'type': 'agent', 'id': None, 'title': 'Agent'},
+    'labor': {'type': 'labor', 'id': 'labor', 'title': 'KI-Labor'},
 }
 
 MEASURE_ZONES = """(names) => {
@@ -102,7 +112,7 @@ MEASURE_PANE_MINIMAL = """(tool) => {
 }"""
 
 MEASURE_PANE_PAPERCLIP = """(tool) => {
-  const slot = document.querySelector('.pc-page .pc-tool[data-tool="' + tool + '"]');
+  const slot = document.querySelector('.pc-page .pc-tool[data-tool="' + tool + '"], .pc-stack .pc-win:not([hidden]) .pc-tool[data-tool="' + tool + '"]');
   if(!slot) return {missing:true, note:'das Werkzeug hat keinen Container auf dieser Seite'};
   const r = slot.getBoundingClientRect();
   return {text: slot.innerText.trim().length, slots: document.querySelectorAll('.pc-page .pc-tool').length,
@@ -157,7 +167,10 @@ PROFILES = {
         'gauges': '.pc-kpi',
         'pane': MEASURE_PANE_PAPERCLIP,
         'segment': None,                       # Werkstück und Nachweise stehen zugleich auf der Seite
-        'leftovers': "()=>[...document.querySelectorAll('.pc-page .pc-tool')].map(s=>s.dataset.tool)",
+        # Spec 4: ein Fenster im Stapel zählt mit – nach dem Messen eines Agentenfensters schließt `after_tool` es wieder
+        'leftovers': "()=>[...document.querySelectorAll('.pc-page .pc-tool, .pc-stack .pc-tool')].map(s=>s.dataset.tool)",
+        'after_tool': "()=>{ const w = window.sedra.shells.get('paperclip').windows; w.list().forEach(x=>w.close(x.id)); }",
+        'team': True,                          # die Prüfzeilen nav, windows, idle (uix_check_team.py)
         'count': "()=>{ try{ return JSON.parse(localStorage.getItem('sedra.paperclip.history') || '[]').length; }catch(e){ return 0; } }",
         'count_word': 'Seiten im Verlauf',
         'menu': {'box': '.pc-search-results', 'input': '.pc-search input', 'rows': "()=>[...document.querySelectorAll('.pc-search-row b')].map(b=>b.textContent)",
@@ -324,7 +337,7 @@ def wait_until_started(page, ms=15000):
         pass            # kein Abbruch: die Prüfung `load` meldet gleich selbst, dass keine Shell da ist
 
 
-def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=None, shell='cockpit'):
+def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=None, shell='cockpit', fixture=None):
     """Runs every check against a running UIX; returns the list of (name, ok, detail)."""
     profile = PROFILES.get(shell, GENERIC)
     generic = shell not in PROFILES or bool(profile.get('archive'))
@@ -415,7 +428,9 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
         for i, tid in enumerate(wanted, 1):
             before = len(calls)
             target = dict(OBJECTS[tid])
-            if target['id'] is None:
+            if target['id'] is None and target['type'] == 'agent':      # ein Agent gibt es nur mit der Fixture (Spec 4)
+                target['id'] = TEAM_AGENT if fixture == 'orchestra' else None
+            elif target['id'] is None:
                 target['id'] = found['candidate'] if target['type'] == 'candidate' else LAST_VORGANG if target['type'] == 'gateway' else found['task']
             if target['id'] is None:
                 check('tool:' + tid, None, 'nicht geprüft – im Prüfprojekt gibt es kein Objekt dieses Typs (kein Fehler des Werkzeugs)')
@@ -447,6 +462,8 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
             if nameless: problems.append('Aufruf ohne Absender: ' + nameless[0][1].split('/api/')[-1])
             check('tool:' + tid, not problems, ', '.join(problems) or f"{m['slots']} Werkzeug(e) im Reiter, {m['actions']} Handlungen"
                   + (', Nachweisspalte' if m.get('evidence') else ''))
+            if profile.get('after_tool'):
+                page.evaluate(profile['after_tool']); page.wait_for_timeout(200)
 
         # Viele Reiter dürfen die Seite nicht breiter machen als den Bildschirm: die Leiste scrollt in sich (gefunden 14.10. in Build 8).
         page_overflow = page.evaluate("(sel)=>({x: document.documentElement.scrollWidth - innerWidth,"
@@ -464,6 +481,13 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
             check('unmount', len(leftovers) <= 1, f'{len(leftovers)} Werkzeuge im sichtbaren Container: ' + ', '.join(leftovers))
         else:
             check('unmount', None, 'nicht geprüft – ' + ('die Shell öffnet keine Objekte' if not opens else 'kein Profil: welcher Container sichtbar ist, weiß nur ihr Autor'))
+
+        if profile.get('team') and not only:      # Spec 4: Navigation, Fensterstapel, Leerlauf (Shell D)
+            import uix_check_team
+            uix_check_team.run(page, check, errors, console, calls, wait_until_started)
+            check('fixture', True if fixture == 'orchestra' else None,
+                  f'Team aus der Fixture ({fixture})' if fixture == 'orchestra' else
+                  f'nur Leerzustand geprüft ({fixture or "ohne Fixture"}) – mit Daten: --fixture orchestra')
 
         if profile.get('before_talk'):            # in einer Shell mit Schublade muss das Gespräch erst auf – wie beim Captain
             page.evaluate(profile['before_talk']); page.wait_for_timeout(400)
@@ -539,6 +563,8 @@ def main(argv=None):
     ap.add_argument('--browser', default='auto', choices=['auto', 'chromium', 'msedge', 'chrome'])
     ap.add_argument('--headed', action='store_true', help='show the browser window')
     ap.add_argument('--json', action='store_true', help='print the report as JSON as well')
+    ap.add_argument('--fixture', choices=['orchestra', 'orchestra-aus', 'orchestra-fehler'],
+                    help='Shell D (Spec 4): das Agenten-Team aus benchmarks/uix_fixture_orchestra.py ins Prüfprojekt legen')
     args = ap.parse_args(argv)
     try:
         import playwright  # noqa: F401
@@ -553,11 +579,16 @@ def main(argv=None):
         v = yaml.safe_load(Path(args.vorgabe).read_text(encoding='utf-8'))
         args.shell = v['id']
         prepare = lambda hub: hub.module_scaffold({'kind': 'shell', 'id': v['id'], 'name': v.get('name'), 'vorgabe': v})
+    if args.fixture:
+        import uix_fixture_orchestra
+        first = prepare
+        prepare = lambda hub: (first(hub) if first else None, uix_fixture_orchestra.install(hub, args.fixture))
     if not url:
         url, stop = start_server(print, shell=args.shell, prepare=prepare)
         print('uix', url.split('#')[0], '· Shell', args.shell)
     try:
-        results = run_checks(url, shots=args.shots, browser=args.browser, headed=args.headed, only=args.tool, shell=args.shell)
+        results = run_checks(url, shots=args.shots, browser=args.browser, headed=args.headed, only=args.tool, shell=args.shell,
+                             fixture=args.fixture)
     finally:
         if stop: stop()
     bad = [r for r in results if r[1] is False]

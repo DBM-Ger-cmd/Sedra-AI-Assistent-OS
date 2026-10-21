@@ -547,6 +547,48 @@ class ShellDContract(unittest.TestCase):
         self.assertEqual(out['left'], ['A-1'])
 
 
+class ShellDTools(unittest.TestCase):
+    """Spec 4 (D4.4, D4.6): die Werkzeugliste mit Begründung (UIX-03), Routen (UIX-06, N6) und kein Takt (UIX-05) der neuen Werkzeuge.
+    Ein neues Werkzeug, das noch fehlt, wird nicht verlangt – sobald es da ist, gelten die Regeln ohne Änderung an diesem Test."""
+    NEW = {'org': 'Organigramm als Baum (agent:alle)', 'board': 'Issues als Liste und Board (issue)', 'routines': 'Routinen (routine)',
+           'agentfenster': 'Gespräch je Agent (agent:*)', 'slots': 'Slots über der Werkstatt (model:alle)', 'gauge-slots': 'Kachel der Slots'}
+    ADAPTED = {'crew': 'Rollenliste (agent:rollen)', 'costs': 'Budget und Cloud-Kennzeichen, auch für issue'}
+    REUSED = {'decisions': 'Posteingang', 'live': 'Zeilen eines Laufs', 'workshop': 'Modelle laden', 'labor': 'KI-Labor (Ausbau Spec 3)',
+              'meter': 'Kosten', 'intent': 'Ziele', 'planung': 'Planungstisch', 'talk': 'Gespräch mit SEDRA', 'task': 'Mission hinter einem Issue'}
+    ROUTES = {'object': ['POST /api/objects', 'POST /api/actions'], 'instrument': ['GET /api/strip']}
+
+    def test_the_tool_list_of_shell_d_names_every_tool_once_with_a_reason(self):
+        have = {m['id'] for m in real_manifests()}
+        lists = [self.NEW, self.ADAPTED, self.REUSED]
+        self.assertEqual(sum(len(x) for x in lists), len(set().union(*lists)), 'jedes Werkzeug steht genau einmal in der Liste')
+        for tool in list(self.ADAPTED) + list(self.REUSED):
+            self.assertIn(tool, have, f'{tool} soll wiederverwendet werden, fehlt aber')
+
+    def test_new_tools_call_only_objects_and_actions_and_keep_no_timer(self):
+        for m in real_manifests():
+            if m['id'] not in self.NEW:
+                continue
+            with self.subTest(m['id']):
+                allowed = self.ROUTES['instrument'] if m['kind'] == 'instrument' else self.ROUTES['object']
+                self.assertTrue(set(m['api'] or []) <= set(allowed), f"{m['id']}: nur {allowed} (N6)")
+                for js in sorted((UIX / 'tools' / m['id']).glob('*.js')):
+                    if not js.name.endswith(('.test.js', '.spec.js')):
+                        self.assertIsNone(re.search(r'\bset(Interval|Timeout)\s*\(', js.read_text(encoding='utf-8')), f'{js.name}: kein Takt (UIX-05)')
+
+    def test_no_place_of_the_navigation_is_drawn_twice_except_models_and_slots(self):
+        """Falle 1 aus G1: zwei Werkstück-Werkzeuge auf demselben Objekt zeichneten dasselbe doppelt. Erlaubt nur model:alle (slots über workshop)."""
+        nav = UIX / 'shells' / 'paperclip' / 'nav.js'
+        out = run_js([UIX / 'ui' / 'loader.js', nav], """
+          const reg = box.sedraLoader.makeRegistry(%s.map(m=>({manifest: m})));
+          const N = box.sedraPcNav;
+          console.log(JSON.stringify(N.NAV.filter(x=>x.object).map(x=>{ const t = N.target(x, reg);
+            return [t.type + ':' + t.id, reg.forObject(t).filter(m=>m.slot !== 'nachweis').map(m=>m.id)]; })));
+        """ % json.dumps(real_manifests()))
+        for place, tools in out:
+            if place != 'model:alle':
+                self.assertLessEqual(len(tools), 1, f'{place} wird von {tools} zugleich gezeichnet')
+
+
 class ToolsPure(unittest.TestCase):
     def setUp(self):
         if not NODE:
