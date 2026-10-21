@@ -1389,12 +1389,27 @@ Harness (Claude):
 | S1.H1 | Migration 2 ins Paket: `MIGRATIONS[2]`, `SCHEMA_VERSION = 2`, `TABLES` wörtlich aus der Saat; Sicherung `orchestra.db.bak-<datum>` in `open_db`, wenn `schema_version` < Ziel; Fehler `orchestra_db_error:migration` | `orchestra/store.py`, `tests/test_orchestra_store_m2.py` (Schema 1 mit Daten → 2, Sicherung, `ux_agents_root` per SQL) | G2-S1-02 | – (zuerst) |
 | S1.H2 | Dauerfreigabe im Guard nach D1.4, Testliste 1 bis 16 | `core/guard.py`, `tests/test_guard_standing.py` | G2-S1-KERN-01 | – |
 | S1.H3 | `orchestra.yaml` Schema 2 (`runner`, `standing`, `decompose`; `checkout.stall_s` entfällt, Schema 1 wird weiter gelesen) | `runtime/config/orchestra.yaml`, `orchestra/config.py`, `tests/test_orchestra_config.py` | G2-S1-20 | – |
-| S1.H4 | Haken `extra` im Register, `quelle` im Platzhalter `agent`, `agent_id` in den Entscheidungen | `desk/kinds.py`, `desk/builtin_kinds.py`, `desk/decisions.py`, `tests/test_desk_kinds.py`, `tests/test_desk_decisions.py` | G2-S1-10, G2-S1-11 | – |
+| S1.H4 | Haken `extra` im Register, Verben am Typ in `liste.actions`, `agent_id` in den Entscheidungen; `quelle` in den Platzhaltern zieht Shell D vor (`desk/builtin_kinds.py`, `replace_placeholder` in `orchestra_kinds`, Branch `spec4/bau2`) – S1.H4 baut darauf auf und plant es nicht doppelt | `desk/kinds.py`, `desk/builtin_kinds.py`, `desk/decisions.py`, `tests/test_desk_kinds.py`, `tests/test_desk_decisions.py` | G2-S1-10, G2-S1-11 | – |
 | S1.H5 | `gated.py` mit mehreren Gates, Applier-Register, `decide`, `pending`, `binding_stale`; `uix_server.decide`/`_open_requests` | `desk/gated.py`, `uix_server.py`, `tests/test_desk_gated.py` | G2-S1-08, G2-S1-09 | S1.H4 |
 | S1.H6 | Übernahme der elf SEDRA-Module (nach G4, nur Importe relativ), dazu S1.C1/S1.C2; Fassade `service.py` erweitert, `tick.py`, Takt-Thread in `orchestra_kinds.start`; zweite Regel der Importgrenze (reine Module ohne `guppi_runtime`/`sqlite3`) | `orchestra/*.py`, `desk/orchestra_kinds.py`, `tests/test_orchestra_boundary.py`, `tests/test_orchestra_tick.py` | G2-S1-01, G2-S1-15 | S1.H1, S1.H3, G4 der Module |
 | S1.H7 | Verben, Felder, Typ `gespraech`, Applier, Sätze `SAETZE` | `desk/orchestra_kinds.py`, `tests/test_orchestra_desk.py`, `tests/test_orchestra_messages.py`, `tests/test_orchestra_hire.py` | G2-S1-03 bis 07, 12, 13 | S1.H2, S1.H5, S1.H6 |
 | S1.H8 | Agentenlauf: `desk/orchestra_runner.py` (Mission, Vertrag, Handler `orchestra_run`, Router, Web), Rollen `foreman`/`researcher`, Vorlagen mit Prüfsumme | `desk/orchestra_runner.py`, `runtime/config/job_supervisor.yaml`, `role_routing.yaml`, `token_policy.yaml`, Vorlagen, `tests/test_orchestra_run.py` u. a. | G2-S1-14, 16 bis 19, 21, 24 | S1.H7 |
 | S1.H9 | Abnahme D1.7 (alle Testdateien), `uix_check` `result ok`, Logbuch | – | G2-S1-23 | alle |
+
+Vertrag mit Shell D (gebaut auf `spec4/bau2`, Werkzeuge `org`, `board`, `routines`, `agentfenster`): Die Verben heißen am Desk so, wie Shell D sie aufruft; S1.H5/S1.H7 bilden die Argumente auf die Module ab. Die Bau-Specs bleiben unverändert (ihre Felder sind die Spaltennamen; die Übersetzung liegt im Desk-Adapter).
+
+| Verb (Typ) | Argumente von Shell D | Abbildung im Desk-Adapter (S1.H7) |
+| --- | --- | --- |
+| `einstellen` (`agent`, am Typ) | `{name, vorlage, reports_to, budget_tokens}` | `org.hire`: `template_id = vorlage`; `role`, `recipe_id`, `permission_level` (`graphs.level_for` aus dem Effekt der Vorlage), `can_delegate` (1 nur für Vorlage `guppi.orchestra.foreman`) kommen aus der Vorlage; `id`/`instance_id` aus der AM-Instanz; Bindung mit beiden Gates |
+| `einordnen` (`agent`) | `{reports_to}` | `org.set_org(change={reports_to})`; Rolle, Rezept, Stufe über `einordnen` nur, wenn Shell D sie später schickt (heute nicht) |
+| `anlegen` (`issue`, am Typ) | `{titel, beschreibung, vorhaben_id, bearbeiter}` | `board.create`: `title`, `description`, `goal_ref = vorhaben_id`, `assignee = bearbeiter` (mit Bearbeiter wie `zuweisen`) |
+| `zuweisen` (`issue`) | `{bearbeiter}` | `board.assign(agent_id = bearbeiter)` |
+| `blocker_setzen` (`issue`) | `{blocker}` | `board.set_blocker(blocked_by = blocker)`; `blocker_loesen` nimmt dasselbe Argument |
+| `kommentieren` (`issue`) | `{text}` | `board.comment(author_kind captain)` |
+| `anlegen`/`aendern` (`routine`) | `{titel, agent_id, cron, zeitzone, nachholen, vorlage_titel, vorlage_beschreibung}` | `routines.create`/`update`: `title`, `agent_id`, `cron`, `timezone = zeitzone`, `catch_up = 'nachholen' if nachholen else 'auslassen'` (Wahrheitswert), `task_template = JSON {titel: vorlage_titel, beschreibung: vorlage_beschreibung}`; `make_task` liest die Vorlage |
+| `anweisen` (`agent`) | `{text, key}` | `messages.add(captain, text, key = 'captain:' + key)`, dann Issue und Weckruf wie D1.3.1 |
+
+Felder, die Shell D zusätzlich erwartet (Abweichung von D1.3.4, angepasst): Verben am Typ in `liste.actions` (Register, S1.H4); am `issue` `kommentare` als **Liste** `[{id, author_kind, author_id, text, ts}]` (statt Zahl) und `kette` (Name statt `zielkette`, aus `chain.build`, auch in der Liste nur, wenn billig – sonst nur Einzelansicht, OP-S1-18); `laeufe` an `routine` (aus `routine_runs`: `due_at`, `outcome`, `task_id`, neueste 20) und an `agent` (aus `wakeups` mit `outcome`: `due_at`, `outcome`, `task_id`, `mission_id`, neueste 20). Die Leser dafür baut der Harness in der Fassade (S1.H6, wie OP-16), nicht als Bau-Spec.
 
 Reihenfolge: S1.H1 und S1.H2 zuerst (unabhängig). Die elf SEDRA-Bauten hängen von keinem Harness-Schritt ab (die Saat ersetzt S1.H1 für den Bau) und laufen nacheinander in der Reihenfolge der Tabelle. Parallel dazu Claude: S1.C1, S1.C2, S1.H3, S1.H4 → S1.H5. Nach G4 der Module: S1.H6 → S1.H7 → S1.H8 → S1.H9.
 
@@ -1440,6 +1455,9 @@ G3 gibt die Bauschritte frei, nicht die Übernahme: Jeder SEDRA-Kandidat kommt n
 | OP-S1-14 | Stempel hashen die Dateien mit LF; `core.autocrlf = true` schreibt bei einem frischen Checkout CRLF → `spec_changed_since_check` | vor dem Bau `spec_check <n> --vm` erneut (ein Befehl), oder `.gitattributes` für `benchmarks/` (eigenes Gate) |
 | OP-S1-15 | `routines.fire_due` bricht bei einer Routine mit unbekannter Zone ganz ab | `tick.py` fängt je Stufe (`ORC_TICK_ERROR`); Isolierung je Routine im Harness S1.H6 prüfen |
 | OP-S1-16 | `s1_budgetcalc` ist keine Bau-Spec mehr; D1.6 nannte zwölf | D1.6 bei G3 auf elf SEDRA-Bauten und zwei Claude-Stücke lesen |
+| OP-S1-17 | `einstellen` von Shell D trägt nur `{name, vorlage, reports_to, budget_tokens}`; D1.3.1 bindet auch Rolle, Rezept, Stufe, `can_delegate` | aus der Vorlage ableiten (Tabelle oben); Gegenvorschlag, falls der Captain Stufe/Delegation je Agent wählen will: Shell D schickt zusätzlich `stufe`, `can_delegate` (optional, Vorgabe aus der Vorlage) |
+| OP-S1-18 | `kette` und `kommentare` (Liste) in der Liste kosten je Issue eine Abfrage | in der Liste `kommentare` als Liste der letzten 3 und `kette` weglassen; vollständig in der Einzelansicht – mit Shell D abzustimmen |
+| OP-S1-19 | `nachholen` kommt als Wahrheitswert, `catch_up` ist Text; `vorlage_titel`/`vorlage_beschreibung` gibt es in `routines` nicht als Spalten | Abbildung im Adapter wie Tabelle oben; `task_template` als JSON-Text, keine Schemaänderung |
 
 ## Spec 2 – Modell-Scheduler: parallele Agenten
 
