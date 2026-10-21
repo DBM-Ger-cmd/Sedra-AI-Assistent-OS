@@ -182,6 +182,144 @@ class Golden(unittest.TestCase):
         self.assertEqual(listed['actions'], [])
 
 
+class Register(unittest.TestCase):
+    """Das Register mit den eingebauten Typen (K0.10): dieselben Typen und Verben wie vorher, Beispieltyp `echo`, Fehlerfälle D5."""
+
+    def test_the_builtin_types_and_verbs_are_the_ones_of_before(self):
+        from guppi_runtime.desk import actions, objects
+        self.assertEqual(objects.TYPES, TYPES)
+        self.assertEqual({k: list(v) for k, v in actions.VERBS.items()},
+                         {'task': ['ausfuehren'], 'candidate': ['testen', 'nachpruefen', 'uebernehmen', 'zuruecknehmen'],
+                          'intent': ['aufgabe_machen'], 'boundary': ['bestaetigen', 'aendern'],
+                          'model': ['laden', 'entladen', 'testen']})
+
+    def test_echo_is_reached_through_extensions_only(self):
+        import desk_echo_kind
+        from guppi_runtime.desk import actions, builtin_kinds, extensions
+        reg = builtin_kinds.new_registry()
+        audits = []
+        loaded = extensions.load(reg, None, modules=('desk_echo_kind',), audit=lambda e, p: audits.append(e))
+        self.assertEqual([m.__name__ for m in loaded], ['desk_echo_kind'])
+        self.assertEqual(audits, [])
+        view = reg.request(None, {'type': 'echo', 'id': 'eins'})
+        self.assertEqual((view['title'], [a['verb'] for a in view['actions']]), ('Erstes Echo', ['rufen']))
+        self.assertEqual([i['id'] for i in reg.request(None, {'type': 'echo'})['items']], ['eins', 'zwei'])
+        self.assertEqual(reg.request(None, {'type': 'echo', 'id': 'drei'})['state'], 'nicht gefunden')
+
+        class Hub:
+            kinds = reg
+
+            def object_view(self, kind, oid):
+                return reg.view(self, kind, oid)
+        del desk_echo_kind.CALLS[:]
+        out = actions.run(Hub(), 'echo', 'zwei', 'rufen', {'text': 'hallo'})
+        self.assertEqual((out['status'], out['result']), ('done', {'echo': 'hallo'}))
+        out = actions.run_type(Hub(), 'echo', 'anlegen', {'text': 'neu'})
+        self.assertEqual((out['id'], out['result']), (None, {'angelegt': 'neu'}))
+        self.assertEqual(desk_echo_kind.CALLS, [('zwei', {'text': 'hallo'}), (None, {'text': 'neu'})])
+        with self.assertRaisesRegex(ValueError, 'id_required'):
+            actions.run_type(Hub(), 'echo', 'rufen', {})
+        with self.assertRaisesRegex(ValueError, 'id_required'):
+            actions.run_type(Hub(), 'task', 'ausfuehren', {})
+        with self.assertRaisesRegex(ValueError, 'unknown_object_type'):
+            actions.run(None, 'echo', 'eins', 'rufen', {}, lookup=lambda k, i: view)
+        self.assertNotIn('echo', builtin_kinds.builtin().names(), 'das eingebaute Register kennt den Beispieltyp nicht')
+
+    def test_a_duplicate_type_is_refused_and_the_rest_keeps_running(self):
+        from guppi_runtime.desk import builtin_kinds, extensions
+        reg = builtin_kinds.new_registry()
+        with self.assertRaisesRegex(ValueError, 'kind_already_registered'):
+            reg.register(reg.Kind('task', 'Noch eine Aufgabe', lambda h, o: None, lambda h, p: []))
+
+        class Twice:
+            __name__ = 'zweimal'
+
+            @staticmethod
+            def register(registry, hub):
+                registry.register(registry.Kind('neu', 'Neu', lambda h, o: None, lambda h, p: []))
+                registry.register(registry.Kind('model', 'Modell 2', lambda h, o: None, lambda h, p: []))
+        audits = []
+        loaded = extensions.load(reg, None, modules=('zweimal',), importer=lambda n: Twice, audit=lambda e, p: audits.append((e, p)))
+        self.assertEqual(loaded, [])
+        self.assertNotIn('neu', reg.names(), 'eine halbe Registrierung wird zurückgenommen')
+        self.assertEqual(audits, [('DESK_KIND_REFUSED', {'module': 'zweimal', 'reason': 'kind_already_registered'})])
+        self.assertEqual(reg.problems, [{'source': 'zweimal', 'reason': 'kind_already_registered'}])
+        self.assertEqual(reg.names(), sorted(TYPES))
+
+    def test_freeze_ends_registration(self):
+        from guppi_runtime.desk import builtin_kinds
+        reg = builtin_kinds.new_registry()
+        reg.freeze()
+        with self.assertRaisesRegex(ValueError, 'kinds_frozen'):
+            reg.register(reg.Kind('spaet', 'Zu spät', lambda h, o: None, lambda h, p: []))
+        with self.assertRaisesRegex(ValueError, 'kinds_frozen'):
+            builtin_kinds.builtin().register(reg.Kind('spaet', 'Zu spät', lambda h, o: None, lambda h, p: []))
+
+    def test_only_the_agent_placeholder_may_be_replaced(self):
+        from guppi_runtime.desk import builtin_kinds
+        reg = builtin_kinds.new_registry()
+        with self.assertRaisesRegex(ValueError, 'unknown_object_type'):
+            reg.view(None, 'agent', 'x')
+        self.assertEqual(reg.listing(None, 'agent'), [])
+        agent = reg.Kind('agent', 'Agent', lambda h, o: {'type': 'agent', 'id': o, 'title': o, 'state': 'aktiv', 'summary': o,
+                                                         'actions': [], 'links': []}, lambda h, p: [])
+        reg.register(agent, replace_placeholder=True)
+        self.assertEqual(reg.view(None, 'agent', 'a1')['state'], 'aktiv')
+        with self.assertRaisesRegex(ValueError, 'kind_already_registered'):
+            reg.register(reg.Kind('task', 'X', lambda h, o: None, lambda h, p: []), replace_placeholder=True)
+
+    def test_a_half_object_is_refused(self):
+        from guppi_runtime.desk import builtin_kinds
+        reg = builtin_kinds.new_registry()
+        reg.register(reg.Kind('halb', 'Halb', lambda h, o: {'type': 'halb', 'id': o}, lambda h, p: [{'type': 'halb'}]))
+        for call_ in (lambda: reg.view(None, 'halb', 'x'), lambda: reg.listing(None, 'halb')):
+            with self.assertRaisesRegex(ValueError, 'object_shape_invalid'):
+                call_()
+
+
+class Gated(unittest.TestCase):
+    """`desk/gated.py` über ein Test-Verb (OP-15): Antrag erzeugt eine Entscheidung, Anwenden nur mit gültigem Einmal-Token."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix='desk-gated-')
+        self.addCleanup(self.tmp.cleanup)
+        self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
+        self.addCleanup(self.hub.close)
+
+    def test_request_waits_for_the_captain_and_apply_runs_exactly_the_binding(self):
+        from guppi_runtime.desk import gated
+        done = []
+        req = gated.request(self.hub, 'echo_test', 'echo_test_action', 'echo:eins', {'describe': 'Echo setzen', 'text': 'hallo'})
+        mid = req['mission_id']
+        self.assertIn('request:' + mid, [d['id'] for d in self.hub.decisions_view()['items']])
+        with self.assertRaisesRegex(ValueError, 'captain_approval_required'):
+            gated.apply(self.hub, mid, done.append)
+        self.assertEqual(done, [], 'ohne Freigabe läuft nichts')
+        self.hub.approve_gate({'mission_id': mid, 'gate_id': req['gate']['gate_id']})
+        out = gated.apply(self.hub, mid, lambda b: done.append(b['text']) or 'ok')
+        self.assertEqual((out['status'], out['result'], done), ('applied', 'ok', ['hallo']))
+        self.assertIn('DESK_GATED_APPLIED', [e['event_type'] for e in self.hub.audit_view()['events']])
+        with self.assertRaisesRegex(ValueError, 'captain_approval_required'):
+            gated.apply(self.hub, mid, done.append)             # der Token ist verbraucht
+        self.assertEqual(done, ['hallo'])
+
+    def test_a_changed_binding_is_not_applied(self):
+        from guppi_runtime.desk import gated
+        req = gated.request(self.hub, 'echo_test', 'echo_test_action', 'echo:eins', {'describe': 'Echo setzen', 'text': 'hallo'})
+        mid = req['mission_id']
+        self.hub.approve_gate({'mission_id': mid, 'gate_id': req['gate']['gate_id']})
+        m = self.hub.runtime.missions.load(mid)
+        m['context'][gated.CONTEXT]['binding']['text'] = 'etwas anderes'
+        self.hub.runtime.missions.save(m)
+        done = []
+        with self.assertRaisesRegex(ValueError, 'captain_approval_invalid'):
+            gated.apply(self.hub, mid, done.append)
+        self.assertEqual(done, [])
+        other = self.hub.create_chat_mission({'intent': 'Nur reden'})['mission']['mission_id']
+        with self.assertRaisesRegex(ValueError, 'not_a_gated_request'):
+            gated.apply(self.hub, other, done.append)
+
+
 if __name__ == '__main__':
     if sys.argv[1:] == ['record']:
         setUpModule()

@@ -116,21 +116,30 @@ def _model_verbs():
     ]
 
 
-def table():
-    """{Objekttyp: {Verb: Verb}} – einmal gebaut, von `offered()` und `run()` gelesen."""
-    out = {}
-    for kind, verbs in (('task', _task_verbs()), ('candidate', _candidate_verbs()), ('model', _model_verbs()),
-                        ('intent', _intent_verbs()), ('boundary', _boundary_verbs())):
-        out[kind] = {v.verb: v for v in verbs}
-    return out
+def _registry(hub=None):
+    """Das Register des Hubs (mit den Erweiterungen) oder, ohne Hub, das der eingebauten Typen (Spec 0, D1)."""
+    from .kinds import Registry
+    reg = getattr(hub, 'kinds', None)
+    if isinstance(reg, Registry):
+        return reg
+    from .builtin_kinds import builtin
+    return builtin()
 
 
-VERBS = table()
+def table(registry=None):
+    """{Objekttyp: {Verb: Verb}} – aus dem Register gelesen (Spec 0, D1); nur Typen mit Verben."""
+    return (registry or _registry()).table()
 
 
-def offered(obj):
+def __getattr__(name):
+    if name == 'VERBS':                                  # Kompatibilität: die Verben der eingebauten Typen
+        return table()
+    raise AttributeError(name)
+
+
+def offered(obj, registry=None):
     """Die Verben, die dieses Objekt in seinem jetzigen Zustand anbietet (Cockpit-Regel 3)."""
-    return [v.describe() for v in VERBS.get(obj.get('type'), {}).values() if v.offered(obj)]
+    return (registry or _registry()).offered(obj)
 
 
 def run(hub, kind, oid, verb, args=None, lookup=None):
@@ -138,7 +147,7 @@ def run(hub, kind, oid, verb, args=None, lookup=None):
     args = args or {}
     if not isinstance(args, dict):
         raise ValueError('args_must_be_an_object')
-    known = VERBS.get(kind)
+    known = table(_registry(hub)).get(kind)
     if known is None:
         raise ValueError('unknown_object_type')
     action = known.get(verb)
@@ -151,3 +160,16 @@ def run(hub, kind, oid, verb, args=None, lookup=None):
         raise ValueError('verb_not_offered_in_this_state')
     result = action.run(hub, oid, args)
     return {'status': 'done', 'type': kind, 'id': oid, 'verb': verb, 'needs_gate': action.needs_gate, 'result': result}
+
+
+def run_type(hub, kind, verb, args=None):
+    """Ein Verb ohne Objekt („anlegen“, Spec 0 D1): nur wenn der Typ ein `type_verb` dieses Namens hat, sonst `id_required`
+    wie bisher. `run` bekommt `None` als ID."""
+    args = args or {}
+    if not isinstance(args, dict):
+        raise ValueError('args_must_be_an_object')
+    action = _registry(hub).type_verb(kind, verb)
+    if action is None:
+        raise ValueError('id_required')
+    result = action.run(hub, None, args)
+    return {'status': 'done', 'type': kind, 'id': None, 'verb': verb, 'needs_gate': action.needs_gate, 'result': result}
