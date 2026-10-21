@@ -102,6 +102,45 @@ class Client(unittest.TestCase):
         self.assertNotEqual(uix_clients.read(self.hub.project_root, 'cli')['token'], uix_clients.read(self.hub.project_root, 'mcp')['token'])
 
 
+class Cli(unittest.TestCase):
+    """K0.14: `guppi objects` und `guppi act` gehen nur über die laufende Oberfläche."""
+
+    def run_cli(self, *argv):
+        import contextlib
+        import io
+        from guppi_runtime import cli
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = cli.main(['--root', str(self.root), *argv])
+        return code, json.loads(out.getvalue())
+
+    def test_objects_and_act_through_the_desk(self):
+        with tempfile.TemporaryDirectory(prefix='desk-cli-') as tmp:
+            hub = LoadingHost(tmp, data())
+            self.root = hub.project_root
+            server, _ = make_server(hub)
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                code, obj = self.run_cli('objects', 'model', 'chat.local')
+                self.assertEqual((code, obj['state'], [a['verb'] for a in obj['actions']]), (0, 'bereit', ['laden']))
+                code, listing = self.run_cli('objects', 'task')
+                self.assertEqual((code, len(listing['items'])), (0, 6))
+                code, out = self.run_cli('act', 'model', 'chat.local', 'laden', '--args', '{}')
+                self.assertEqual((code, out['status'], out['result']['recipe_id']), (0, 'done', 'chat.local'))
+                self.assertEqual(audit_payloads(hub, 'UIX_ACTION')[-1],
+                                 {'type': 'model', 'id': 'chat.local', 'verb': 'laden', 'client': 'cli'})
+                code, out = self.run_cli('act', 'task', '-', 'ausfuehren')
+                self.assertEqual((code, out['message']), (2, 'id_required'))
+                code, out = self.run_cli('act', 'model', 'chat.local', 'laden', '--args', '[1]')
+                self.assertEqual((code, out['error']), (2, 'args_must_be_an_object'))
+            finally:
+                server.shutdown()
+                server.server_close()
+                hub.close()
+            code, out = self.run_cli('objects', 'task')
+            self.assertEqual((code, out), (2, {'status': 'refused', 'error': 'uix_not_running'}))
+
+
 class Lifecycle(unittest.TestCase):
     def test_files_go_with_the_server_and_without_them_there_is_no_way_in(self):
         with tempfile.TemporaryDirectory(prefix='desk-client-life-') as tmp:
