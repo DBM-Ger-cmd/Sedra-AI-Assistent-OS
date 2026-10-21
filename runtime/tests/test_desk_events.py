@@ -134,5 +134,88 @@ class PollerTests(unittest.TestCase):
         self.assertIsNone(p.error)
 
 
+def team(agents=None, issues=None, budgets=None):
+    return {"missions": [], "decisions": [], "model": {}, "state": "READY",
+            "orchestra": {"agents": agents or {}, "issues": issues or {}, "budgets": budgets or {}}}
+
+
+def slots(belegt=(), schlange=(), gesamt=3):
+    return {"missions": [], "decisions": [], "model": {}, "state": "READY",
+            "slots": {"gesamt": gesamt, "belegt": [{"slot": n, "run_id": r, "prioritaet": p} for n, r, p in belegt], "schlange": list(schlange)}}
+
+
+class TeamDiff(unittest.TestCase):
+    """Spec 4 (D4.3.2, N3, N4): agent.changed, issue.changed, budget.warning, slot.changed – rein und nach ID sortiert."""
+
+    def test_the_first_look_and_a_missing_key_stay_silent(self):
+        full = team({"A-1": ["aktiv", 1, 0, False]}, {"UA-1": ["offen", None, 1, 0]}, {"A-1": 80})
+        self.assertEqual(diff(None, full), [("system.state", {"state": "READY"})])
+        plain = {"missions": [], "decisions": [], "model": {}, "state": "READY"}
+        self.assertEqual(diff(plain, full), [], "Orchestrierung eben eingeschaltet: der erste Blick darauf ist die Grundlage")
+        self.assertEqual(diff(full, plain), [], "Orchestrierung aus: kein Ereignis")
+        self.assertEqual(diff(slots([(1, "L-1", "agent")]), plain), [])
+
+    def test_agents_and_issues_change_in_the_order_of_their_ids(self):
+        before = team({"A-2": ["aktiv", 1, 0, False], "A-1": ["aktiv", 1, 0, False]}, {"UA-2": ["offen", None, 1, 0]})
+        after = team({"A-2": ["pausiert", 2, 0, False], "A-1": ["aktiv", 1, 4, True], "A-3": ["aktiv", 1, 0, False]},
+                     {"UA-2": ["zugewiesen", "A-1", 2, 0], "UA-1": ["offen", None, 1, 0]})
+        self.assertEqual(diff(before, after), [("agent.changed", {"id": "A-1"}), ("agent.changed", {"id": "A-2"}),
+                                               ("agent.changed", {"id": "A-3"}), ("issue.changed", {"id": "UA-1"}),
+                                               ("issue.changed", {"id": "UA-2"})])
+        self.assertEqual(diff(after, before)[:3], [("agent.changed", {"id": "A-1"}), ("agent.changed", {"id": "A-2"}),
+                                                   ("agent.changed", {"id": "A-3"})], "ein Agent, der verschwindet, ist auch eine Änderung")
+        self.assertEqual(diff(after, after), [])
+
+    def test_a_budget_warns_only_when_its_level_rises(self):
+        a = {"A-1": ["aktiv", 1, 0, False]}
+        ok, warn = team(a, budgets={"A-1": 0}), team(a, budgets={"A-1": {"stufe": 80, "prozent": 83}})
+        stop = team(a, budgets={"A-1": {"stufe": 100, "prozent": 100}})
+        self.assertEqual(diff(ok, warn), [("budget.warning", {"agent_id": "A-1", "prozent": 83, "stufe": "warnung"})])
+        self.assertEqual(diff(warn, stop), [("budget.warning", {"agent_id": "A-1", "prozent": 100, "stufe": "gestoppt"})])
+        self.assertEqual(diff(stop, ok), [("agent.changed", {"id": "A-1"})], "Budget erhöht: nur agent.changed, kein Alarm")
+        self.assertEqual(diff(warn, team(a, budgets={"A-1": {"stufe": 80, "prozent": 91}})), [], "gleiche Stufe: still")
+        self.assertEqual(diff(team(a), team(a, budgets={"A-1": "gestoppt"})),
+                         [("budget.warning", {"agent_id": "A-1", "prozent": None, "stufe": "gestoppt"})])
+
+    def test_a_slot_event_per_changed_slot_and_one_for_the_queue(self):
+        idle, busy = slots(), slots([(1, "L-1", "captain"), (2, "L-2", "agent")], ["L-3"])
+        self.assertEqual(diff(idle, busy), [
+            ("slot.changed", {"slot": 1, "state": "belegt", "run_id": "L-1", "priority": "captain", "queue_len": 1}),
+            ("slot.changed", {"slot": 2, "state": "belegt", "run_id": "L-2", "priority": "agent", "queue_len": 1})])
+        freed = slots([(2, "L-2", "agent")], ["L-3"])
+        self.assertEqual(diff(busy, freed), [("slot.changed", {"slot": 1, "state": "frei", "run_id": "L-1", "priority": None, "queue_len": 1})])
+        self.assertEqual(diff(freed, slots([(2, "L-2", "agent")], ["L-3", "L-4"])),
+                         [("slot.changed", {"slot": None, "state": None, "run_id": None, "priority": None, "queue_len": 2})])
+        self.assertEqual(diff(freed, freed), [])
+
+    def test_a_decision_names_its_agent_and_stays_empty_without_one(self):
+        empty = {"missions": [], "decisions": [], "model": {}, "state": "READY"}
+        mit = dict(empty, decisions=[dict(decision("gate:HG-2"), agent_id="A-1")])
+        self.assertEqual(diff(empty, mit)[0][1]["agent_id"], "A-1")
+        ohne = dict(empty, decisions=[decision("gate:HG-1")])
+        self.assertIsNone(diff(empty, ohne)[0][1]["agent_id"])
+
+
+class SnapshotHook(unittest.TestCase):
+    """Spec 4 (D4.3.2): `extensions.snapshot` mischt die Felder der Erweiterungen; ohne Haken bleibt alles wie es war."""
+
+    def test_modules_add_fields_a_broken_one_costs_only_its_part(self):
+        from types import SimpleNamespace
+        from guppi_runtime.desk import extensions
+
+        def broken(hub):
+            raise RuntimeError("db belegt")
+        mods = [SimpleNamespace(__name__="ohne"), SimpleNamespace(__name__="kaputt", snapshot=broken),
+                SimpleNamespace(__name__="team", snapshot=lambda hub: {"orchestra": {"agents": {"A-1": [hub]}}}),
+                SimpleNamespace(__name__="zweiter", snapshot=lambda hub: {"orchestra": "nicht überschreiben", "slots": {"gesamt": 1}})]
+        self.assertEqual(extensions.snapshot("hub", mods), {"orchestra": {"agents": {"A-1": ["hub"]}}, "slots": {"gesamt": 1}})
+        self.assertEqual(extensions.snapshot("hub", []), {})
+
+    def test_the_orchestra_kinds_module_adds_nothing_while_the_switch_is_off(self):
+        from types import SimpleNamespace
+        from guppi_runtime.desk import extensions, orchestra_kinds
+        self.assertEqual(extensions.snapshot(SimpleNamespace(runtime=SimpleNamespace(orchestra=None)), [orchestra_kinds]), {})
+
+
 if __name__ == "__main__":
     unittest.main()

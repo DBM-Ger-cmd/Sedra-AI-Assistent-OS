@@ -79,7 +79,8 @@ def diff(before, after):
     for did, d in new_d.items():
         if did not in old_d:
             out.append(('decision.pending', {'id': did, 'kind': d['kind'], 'title': d['title'], 'describe': d.get('describe'),
-                                             'mission_id': d.get('mission_id'), 'gate_id': d.get('gate_id')}))
+                                             'mission_id': d.get('mission_id'), 'gate_id': d.get('gate_id'),
+                                             'agent_id': d.get('agent_id')}))      # N4: leer, solange kein Agent betroffen ist
     for did in old_d.keys() - new_d.keys():
         out.append(('decision.answered', {'id': did, 'kind': old_d[did]['kind']}))
     # Live-Zeilen: der Schnappschuss trägt nur die Anzahl je laufender Aufgabe; das Werkzeug holt das Neue mit `since` (desk/live.py)
@@ -87,10 +88,72 @@ def diff(before, after):
     for tid, count in new_live.items():
         if count > old_live.get(tid, 0):
             out.append(('live.line', {'task_id': tid, 'line': '', 'since': old_live.get(tid, 0), 'total': count}))
+    out.extend(_team_events(before, after))
     if (before.get('model') or None) != (after.get('model') or None):
         out.append(('model.changed', after.get('model') or {}))
     if before.get('state') != after.get('state') and after.get('state') is not None:
         out.append(('system.state', {'state': after.get('state')}))
+    return out
+
+
+# Spec 4 (D4.3.2, N3): das Team. Die Felder `orchestra` und `slots` legen die Erweiterungen bei (desk/extensions.snapshot);
+# fehlt ein Feld (Orchestrierung aus, kein Scheduler) oder fehlte es beim letzten Blick, entsteht daraus kein Ereignis.
+STUFE = {0: 0, 'ok': 0, 80: 1, 'warnung': 1, 100: 2, 'gestoppt': 2}
+STUFE_WORT = ('ok', 'warnung', 'gestoppt')
+
+
+def _changed(old, new):
+    """Die IDs, deren Eintrag neu, anders oder weg ist – nach ID sortiert, damit dieselbe Eingabe dieselbe Liste gibt."""
+    return sorted((k for k in set(old) | set(new) if old.get(k) != new.get(k)), key=str)
+
+
+def _budget(entry):
+    """Ein Eintrag aus `orchestra.budgets`: die Stufe (0, 80, 100 oder ihr Wort) allein oder {stufe, prozent}."""
+    if isinstance(entry, dict):
+        return STUFE.get(entry.get('stufe'), 0), entry.get('prozent')
+    return STUFE.get(entry, 0), None
+
+
+def _slots(snap):
+    slots = snap.get('slots') or {}
+    held = {s.get('slot'): s for s in (slots.get('belegt') or []) if isinstance(s, dict)}
+    queue = slots.get('schlange')
+    return slots.get('gesamt'), held, (list(queue) if isinstance(queue, (list, tuple)) else queue)
+
+
+def _team_events(before, after):
+    out = []
+    if isinstance(before.get('orchestra'), dict) and isinstance(after.get('orchestra'), dict):
+        old, new = before['orchestra'], after['orchestra']
+        lowered = []
+        old_b, new_b = old.get('budgets') or {}, new.get('budgets') or {}
+        warnings = []
+        for key in _changed(old_b, new_b):
+            if key not in new_b:
+                continue
+            (was, _), (now, pct) = _budget(old_b.get(key, 0)), _budget(new_b[key])
+            cloud = str(key).startswith('cloud:')
+            if now > was:
+                warnings.append(('budget.warning', {'agent_id': '' if cloud else key, 'prozent': pct, 'stufe': STUFE_WORT[now],
+                                                    **({'anbieter': str(key)[6:]} if cloud else {})}))
+            elif now < was and not cloud:
+                lowered.append(key)                              # Budget erhöht: kein Alarm, nur der Agent sieht anders aus
+        old_a, new_a = old.get('agents') or {}, new.get('agents') or {}
+        agents = sorted(set(_changed(old_a, new_a)) | set(lowered), key=str)
+        out.extend(('agent.changed', {'id': aid}) for aid in agents)
+        out.extend(('issue.changed', {'id': iid}) for iid in _changed(old.get('issues') or {}, new.get('issues') or {}))
+        out.extend(warnings)
+    if isinstance(before.get('slots'), dict) and isinstance(after.get('slots'), dict):
+        (old_total, old_held, old_queue), (new_total, new_held, new_queue) = _slots(before), _slots(after)
+        queue_len = len(new_queue) if isinstance(new_queue, list) else (new_queue or 0)
+        slot_events = []
+        for n in _changed(old_held, new_held):
+            s = new_held.get(n) or old_held.get(n) or {}
+            slot_events.append(('slot.changed', {'slot': n, 'state': 'belegt' if n in new_held else 'frei', 'run_id': s.get('run_id'),
+                                                 'priority': (new_held.get(n) or {}).get('prioritaet'), 'queue_len': queue_len}))
+        if not slot_events and (old_queue != new_queue or old_total != new_total):
+            slot_events.append(('slot.changed', {'slot': None, 'state': None, 'run_id': None, 'priority': None, 'queue_len': queue_len}))
+        out.extend(slot_events)
     return out
 
 

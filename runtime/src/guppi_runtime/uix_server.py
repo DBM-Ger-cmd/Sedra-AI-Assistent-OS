@@ -1595,10 +1595,11 @@ class UIXHub:
         return out
 
     def desk_snapshot(self):
-        """What the event stream compares (desk/events.py). Cheap: the views it reads are the ones the routes already read."""
+        """What the event stream compares (desk/events.py). Cheap: the views it reads are the ones the routes already read.
+        Die Erweiterungen legen ihre Felder bei (Spec 4, D4.3.2); einen eingebauten Schlüssel überschreiben sie nicht."""
         models = self.models_view()
         server = models.get('server') or {}
-        return {'missions': self.missions(), 'decisions': self.decisions_view()['items'],
+        return {**desk_extensions.snapshot(self, self.extensions), 'missions': self.missions(), 'decisions': self.decisions_view()['items'],
                 'model': {'running': bool(server.get('running')), 'model': server.get('model'), 'context': server.get('context')},
                 'live': self._live_signatures(),
                 'state': 'READY' if self.runtime.observability.overall() == 'HEALTHY' else 'SAFE_MODE'}

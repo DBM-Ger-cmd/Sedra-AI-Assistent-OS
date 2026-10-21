@@ -46,3 +46,21 @@ def start(hub, loaded, audit=None):
             continue
         result.append(module.__name__)
     return result
+
+
+def snapshot(hub, loaded):
+    """Spec 4 (D4.3.2): was die Erweiterungen dem Schnappschuss des Ereignisstroms beilegen (z. B. `orchestra`, `slots`).
+    Ein Modul ohne `snapshot` legt nichts bei; ein Fehler darin kostet nur seinen Teil, nicht die Ereignisse der anderen."""
+    out = {}
+    for module in loaded:
+        fn = getattr(module, "snapshot", None)
+        if not callable(fn):
+            continue
+        try:
+            part = fn(hub)
+        except Exception:
+            continue
+        if isinstance(part, dict):
+            for key, value in part.items():
+                out.setdefault(key, value)
+    return out
