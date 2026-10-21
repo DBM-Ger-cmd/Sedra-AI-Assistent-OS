@@ -60,7 +60,7 @@ class SwitchOn(unittest.TestCase):
         return out
 
     def test_the_runtime_is_on_and_the_four_types_are_registered(self):
-        self.assertEqual(self.hub.runtime.boot()['orchestra'], {'enabled': True, 'error': None, 'schema_version': 1})
+        self.assertEqual(self.hub.runtime.boot()['orchestra'], {'enabled': True, 'error': None, 'schema_version': 2})
         self.assertEqual(self.hub.kinds.problems, [])
         for name in ('agent', 'issue', 'routine', 'budget'):
             self.assertEqual(self.hub.kinds.get(name).source, 'orchestra', name)

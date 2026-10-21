@@ -48,6 +48,21 @@ class Shape(unittest.TestCase):
         s = desk.summary(desk.collect([mission(gates=[gate()])], []))
         self.assertEqual((s["count"], s["first"], s["tone"]), (1, "Parser bauen", "warn"))
 
+    def test_every_decision_carries_agent_id(self):
+        """Spec 1, D1.3.5 (G2-S4-15): aus `binding.agent_id` eines Antrags, sonst None; `agent_id` und `op` bleiben in der Bindung."""
+        req = {"kind": "orchestra", "mission_id": "M-5", "gate": gate("HG-5", "wake_agent", ("agent:A1",)),
+               "binding": {"op": "wecken", "agent_id": "A1", "describe": "Agent A1 wecken", "geheim": "nicht zeigen"}}
+        crossing = {"id": "boundary:x", "title": "Grenze", "describe": "d", "ways": ["einmal", "ablehnen"], "boundary": "kosten",
+                    "project_id": "p", "created_at": "2026-10-14T18:00:00+00:00"}
+        content = {"id": "content:1", "segments": [], "created_at": "2026-10-14T18:00:00+00:00"}
+        items = {d["id"]: d for d in desk.collect([mission("M-1", [gate()])], [req], [crossing], [content])}
+        self.assertEqual(items["request:M-5"]["agent_id"], "A1")
+        self.assertEqual(items["request:M-5"]["binding"], {"op": "wecken", "agent_id": "A1", "describe": "Agent A1 wecken"})
+        for did in ("gate:HG-1", "boundary:x", "content:1"):
+            self.assertIsNone(items[did]["agent_id"], did)
+        [plain] = desk.collect([], [{"kind": "switch", "mission_id": "M-2", "gate": gate("HG-2"), "binding": {}}])
+        self.assertIsNone(plain["agent_id"])
+
     def test_only_an_offered_way_is_accepted(self):
         [d] = desk.collect([mission(gates=[gate()])], [])
         self.assertEqual(desk.check_answer(d, "einmal"), "einmal")

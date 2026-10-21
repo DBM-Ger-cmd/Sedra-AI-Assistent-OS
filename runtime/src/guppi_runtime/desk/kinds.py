@@ -1,6 +1,6 @@
 class Kind:
     def __init__(self, name, title, read, listing, verbs=(), type_verbs=(),
-                 source="desk", placeholder=False, own_actions=False):
+                 source="desk", placeholder=False, own_actions=False, extra=None):
         self.name = name
         self.title = title
         self.read = read
@@ -10,6 +10,7 @@ class Kind:
         self.source = source
         self.placeholder = placeholder
         self.own_actions = own_actions
+        self.extra = extra              # extra(hub, payload) -> dict: Felder neben `items` in der Liste (Spec 1, D1.3.4)
 
     def verb(self, name):
         for v in self.verbs:
@@ -28,6 +29,7 @@ import re
 
 
 SHAPE = ("type", "id", "title", "state", "summary", "actions", "links")
+RESERVED = ("type", "items", "actions")     # Schlüssel der Liste, die `extra` nicht überschreibt
 
 
 class Registry:
@@ -123,7 +125,15 @@ class Registry:
             raise ValueError("unknown_object_type")
         if payload.get("id"):
             return self.view(hub, name, str(payload["id"]))
-        return {"type": name, "items": self.listing(hub, name, payload)}
+        out = {"type": name, "items": self.listing(hub, name, payload)}
+        if kind.type_verbs:                 # Verben am Typ („anlegen“) stehen in der Liste (Spec 1, S1.H4)
+            out["actions"] = [v.describe() for v in kind.type_verbs]
+        if kind.extra is not None:
+            more = kind.extra(hub, payload) or {}
+            if any(k in RESERVED for k in more):
+                raise ValueError("extra_key_reserved")
+            out.update(more)
+        return out
 
     def table(self):
         result = {}

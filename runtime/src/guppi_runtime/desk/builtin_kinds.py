@@ -9,7 +9,9 @@ der das heutige Verhalten nachbildet: Einzelansicht `unknown_object_type`, Liste
 
 Spec 4 (G2-S1-10, „Platzhalter mit quelle“): ebenso Platzhalter für `issue`, `routine`, `budget` und `gespraech`. Ihre Liste ist leer
 und trägt `quelle = {zustand: 'aus', grund: 'orchestra_off', takt: None}` (Nachtrag N7), damit ein Werkzeug „ausgeschaltet“ zeigt,
-statt an `unknown_object_type` zu scheitern. Die Liste von `agent` bleibt ohne `quelle`, wie die Golden-Aufzeichnung (K0.7) sie hält."""
+statt an `unknown_object_type` zu scheitern. Die Liste von `agent` bleibt ohne `quelle`, wie die Golden-Aufzeichnung (K0.7) sie hält.
+Spec 1 (S1.H4): `quelle` kommt über den Haken `extra` des Registers; ist die Orchestrierung mit Fehler aus, heißt sie
+`{zustand: 'fehler', grund: rt.orchestra_error, takt: None}` (D1.3.4)."""
 from __future__ import annotations
 
 from . import actions as desk_actions
@@ -132,16 +134,9 @@ def _placeholder_list(hub, payload):
     return []
 
 
-class DeskRegistry(Registry):
-    """Das Register des Desk: wie `Registry`, nur trägt die Liste eines der neuen Platzhalter `quelle` (aus)."""
-
-    def request(self, hub, payload):
-        out = super().request(hub, payload)
-        name = str(payload.get('type') or '').strip()
-        kind = self.get(name)
-        if not payload.get('id') and kind is not None and kind.placeholder and name in dict(PLACEHOLDERS):
-            out['quelle'] = dict(QUELLE_AUS)
-        return out
+def _placeholder_quelle(hub, payload):
+    error = getattr(getattr(hub, 'runtime', None), 'orchestra_error', None)
+    return {'quelle': {'zustand': 'fehler', 'grund': error, 'takt': None} if error else dict(QUELLE_AUS)}
 
 
 def kinds(Kind):
@@ -157,8 +152,8 @@ def kinds(Kind):
         'agent': Kind('agent', 'Agent', _agent_read, _agent_list, placeholder=True),
         'boundary': Kind('boundary', 'Modus und Grenzen', _boundary_read, _boundary_list, verbs=desk_actions._boundary_verbs()),
     }
-    return [table[name] for name in ORDER] + [Kind(name, title, _placeholder_read, _placeholder_list, placeholder=True)
-                                              for name, title in PLACEHOLDERS]
+    return [table[name] for name in ORDER] + [Kind(name, title, _placeholder_read, _placeholder_list, placeholder=True,
+                                                   extra=_placeholder_quelle) for name, title in PLACEHOLDERS]
 
 
 def register(registry):
@@ -169,7 +164,7 @@ def register(registry):
 
 def new_registry():
     """Ein Register mit den eingebauten Typen; „nicht gefunden“ ist das Objekt aus `objects.not_found` wie bisher."""
-    return register(DeskRegistry(not_found=desk_objects.not_found))
+    return register(Registry(not_found=desk_objects.not_found))
 
 
 _BUILTIN = None
