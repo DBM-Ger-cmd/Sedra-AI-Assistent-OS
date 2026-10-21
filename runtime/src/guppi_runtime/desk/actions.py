@@ -118,8 +118,9 @@ def _model_verbs():
 
 def _registry(hub=None):
     """Das Register des Hubs (mit den Erweiterungen) oder, ohne Hub, das der eingebauten Typen (Spec 0, D1)."""
+    from inspect import getattr_static
     from .kinds import Registry
-    reg = getattr(hub, 'kinds', None)
+    reg = getattr_static(hub, 'kinds', None)         # statisch: ein Hub-Ersatz mit __getattr__ (Tests) wird nicht gefragt
     if isinstance(reg, Registry):
         return reg
     from .builtin_kinds import builtin

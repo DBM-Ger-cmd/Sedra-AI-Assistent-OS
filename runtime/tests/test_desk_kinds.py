@@ -388,6 +388,14 @@ class ThroughTheServer(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'kinds_frozen'):
             self.hub.kinds.register(self.hub.kinds.Kind('spaet', 'Zu spät', lambda h, o: None, lambda h, p: []))
 
+    def test_the_chat_reads_the_verbs_from_the_same_register(self):
+        """K0.12: `chat_tools` kennt die Typen mit Verben nicht mehr selbst."""
+        from guppi_runtime import chat_tools
+        listed = json.loads(chat_tools.ChatTools(self.hub).call('list_actions', {'type': 'echo', 'id': 'eins'}))
+        self.assertEqual([a['verb'] for a in listed['actions']], ['rufen'])
+        self.assertEqual(sorted(chat_tools.VERB_TYPES), ['boundary', 'candidate', 'intent', 'model', 'task'])
+        self.assertNotIn('VERB_TYPES =', Path(chat_tools.__file__).read_text(encoding='utf-8'))
+
     def test_without_the_extension_echo_is_unknown(self):
         hub = UIXHub(Path(self.tmp.name) / 'ohne', ARCH)
         self.addCleanup(hub.close)
