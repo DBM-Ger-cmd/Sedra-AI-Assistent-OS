@@ -2762,6 +2762,10 @@ Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis
 | Weiter | Spec 1 Design bis G2 und Shell D S4.3 bis S4.8 parallel (21.10.2026) |
 | G2-S1-01 bis G2-S1-24 | Design Spec 1 (D1.1 bis D1.8) freigegeben wie empfohlen (21.10.2026), u. a. Migration 2, Verben mit gated.py, zweite generische Änderung an uix_server.decide (G2-S1-09), Felder für Shell D und `quelle` (G2-S1-10), Typ `gespraech`, Agentenlauf als Supervisor-Job, Takt mit Sperre, Zerlegung höchstens 8, Rollen foreman/researcher (G2-S1-21), 12 SEDRA-Bau-Specs s1_* (G2-S1-22) |
 | G2-S1-KERN-01 | Kern-Gate freigegeben (Grundsatz und Entwurf D1.4): Token-Art `standing` in core/guard.py für `wake_agent`; der konkrete Diff wird vor der Übernahme einzeln vorgelegt |
+| G4 Shell D S4.3–S4.8 | Ereignisse im Desk, Werkzeuge org, board, routines, slots, gauge-slots, agentfenster und Platzhalter mit `quelle` übernommen (21.10.2026); Minimal `MAX_RESTORE` 48; Liste `agent` ohne `quelle` (Golden-Aufzeichnung bleibt) |
+| G3-S1-01 bis G3-S1-23 | Bauplan Spec 1 freigegeben (21.10.2026): elf SEDRA-Bauten s1_* mit GPU, Claude direkt chain.py und budgetcalc.py (V4), Harness S1.H1 bis S1.H9; Diff an core/guard.py (S1.H2) vor der Übernahme einzeln |
+| G3-S1-24 | `tzdata` (reines Datenpaket) in die .venv der Laufzeit-Installation aufnehmen |
+| OP-S1-14, 17, 18 | spec_check --vm vor jedem Bau neu; Stufe und Delegationsrecht aus der Vorlage; Issue-Liste mit den letzten 3 Kommentaren, Kette nur in der Einzelansicht |
 
 ## Vorarbeiter-Prompt
 
