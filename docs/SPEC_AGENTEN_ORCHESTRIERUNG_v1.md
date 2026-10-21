@@ -2008,6 +2008,10 @@ Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis
 | G2-S4-01 bis G2-S4-23 | Design Shell D (D4.1 bis D4.7) freigegeben wie empfohlen; Bau durch Claude nach V4, Übernahme per `adopt_plan`/Handkopie, `trust: CORE` |
 | G3-S4 (S4.1 bis S4.10) | Bauschritte Shell D wie D4.5 freigegeben (21.10.2026); Bau durch Claude-Sitzungen, Reihenfolge S4.1 → S4.2 → S4.9, dann S4.4 bis S4.8; S4.3 nach Spec 0 K0.11; Übernahme je Schritt nach Review (G4) |
 | SEDRA-Bau `k0_extensions` | erster SEDRA-Bau für Spec 0 mit GPU freigegeben (21.10.2026) |
+| G4 Spec 0 | sechs SEDRA-Module übernommen (desk/extensions, desk/kinds, desk/orchestra_kinds, orchestra/config, store, service) und Harness K0.7 bis K0.25 mit F1 bis F3 zusammengeführt (21.10.2026); **Spec 0 abgenommen**: KERN-01 bis KERN-06 erfüllt, core/ unverändert, Golden-Test grün |
+| PIPE-11 | versteckte Tests mit mehr als 5 Dateien laufen über ein Startskript (VM erlaubt höchstens 5 Befehle) |
+| Offene Punkte Harness | 1–4 bestätigt (CLI/MCP-Token nur /api/objects und /api/actions; client nur dort abgewiesen; uix_clients.py; MCP teilt Abschaltdatei und Log); 5, 7 (Anwenden der gated-Verben, Feld quelle) baut Spec 1; 6, 12 Aufräumen im nächsten Harness-Schritt; 8, 9 beim nächsten Paketbau; 11 Umstellung der 21 Testdateien auf Architektur v1.20 als eigene Aufgabe |
+| Weiter | Spec 1 Design bis G2 und Shell D S4.3 bis S4.8 parallel (21.10.2026) |
 
 ## Vorarbeiter-Prompt
 
