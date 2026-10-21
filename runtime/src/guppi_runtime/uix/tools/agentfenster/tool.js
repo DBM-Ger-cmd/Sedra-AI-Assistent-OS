@@ -37,6 +37,7 @@
 
   function makeInstanz(el, ctx){
     const id = String((ctx.object || {}).id || '');
+    const wer = 'Agent ' + String((ctx.object || {}).title || id) + ': ';      // jedes Fenster sagt, wessen Fenster es ist – auch leer
     const s = {agent: null, fehler: null, nachrichten: [], mehr: false, gespraechFehler: null, issues: null, hinweis: null,
                entwurf: '', schluessel: null, offen: true, aelter: false, alleIssues: []};
     let running = null, again = false;
@@ -219,15 +220,15 @@
       if(s.fehler){
         const art = fehlerArt(s.fehler);
         if(art === 'aus'){
-          box.append(d().el('div', 's-note', 'Die Orchestrierung ist ausgeschaltet (Schalter „orchestra“). Sobald sie läuft, sprichst du hier mit dem Agenten.'),
+          box.append(d().el('div', 's-note', wer + 'Die Orchestrierung ist ausgeschaltet (Schalter „orchestra“). Sobald sie läuft, sprichst du hier mit dem Agenten.'),
                      d().button('Maschinenraum öffnen', ()=>ctx.shell.open(MASCHINENRAUM)));
-        }else box.append(d().el('div', 's-note bad', art === 'belegt' ? 'Die Datenbank ist gerade belegt.' : 'Der Agent ist nicht lesbar: ' + s.fehler),
+        }else box.append(d().el('div', 's-note bad', wer + (art === 'belegt' ? 'Die Datenbank ist gerade belegt.' : 'nicht lesbar: ' + s.fehler)),
                          d().button('Noch einmal lesen', ()=>schub()));
         return el.replaceChildren(box);
       }
       const a = s.agent;
       if(missing(a)){
-        box.append(d().empty('Diesen Agenten gibt es nicht mehr. Das Fenster schließt ✕ oben.'));
+        box.append(d().empty(wer + 'Diesen Agenten gibt es nicht mehr. Das Fenster schließt ✕ oben.'));
         return el.replaceChildren(box);
       }
       box.append(kopf(a), gespraech(a), issues(), laeufe(a));

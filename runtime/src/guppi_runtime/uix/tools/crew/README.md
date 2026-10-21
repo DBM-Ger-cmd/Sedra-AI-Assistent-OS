@@ -4,7 +4,7 @@ Wer an Bord ist: der Captain, SEDRA, die Rollen aus den Rezepten und die Agenten
 
 Demo-Zeilen und echte Zeilen werden nie vermischt.
 
-**Objekttypen:** agent
+**Objekttypen:** agent:rollen (Spec 4, D4.2.6: die Rollenliste; das Team mit Vorgesetzten zeichnet `org` auf `agent:alle`, ein Agent öffnet `agentfenster`)
 **Art:** `object` · **Vertrauen:** CORE · **Version:** 1.0.0
 
 ## Routen (Allowlist im Manifest)
