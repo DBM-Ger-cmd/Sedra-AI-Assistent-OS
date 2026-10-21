@@ -1291,23 +1291,543 @@ Jede Zeile entscheidet der Captain einzeln. Keine Änderung an `core/`.
 | OP-S4-4 | `test_uix_shell_paperclip.py` und das Profil in `uix_check.py` setzen „Issues“ = `task` voraus; der Wechsel auf `issue` muss beide anpassen | im Bau, unter G1-S4-08 |
 | OP-S4-5 | `labor` und `workshop` haben Zeitgeber und Spezialrouten (UIX-05, UIX-06) | Ausnahme im Wortlaut; Umbau gehört zu Spec 3 und zur Werkstatt |
 
-### Design (Vorschlag)
+### Design
 
-- Prüfen, ob Shell D als Vorgabe (`shell.vorgabe.yaml`, Rahmen `ui/frame.js`, Build 17) gebaut werden kann; das spart Shell-Code. Sonst klassisch mit `shell.yaml` und `shell.js`.
-- Aufbau: linke Navigation, Mitte Liste oder Board, rechts Detail beziehungsweise Agentengespräch; Slots als Instrument in der Leiste.
-- Neue Ereignisse: `agent.changed`, `slot.changed`, `budget.warning`; Eintrag in Vertrag §5 als Nachtrag.
-- Neue Werkzeuge entstehen als Kopie von `tools/_template/` mit `trust: GUPPI_BUILT`, wenn SEDRA sie baut.
+Stand 21.10.2026, ausgearbeitet in Stufe 2 gegen den Code auf Branch `spec4/shell-d` (Commit `6b9a541`). Vorlage für G2; jede Zeile der Gate-Liste (D4.7) wird einzeln entschieden. Nur gelesen und geplant: kein Code, keine Änderung an Shells, Werkzeugen, Vertrag oder Konfiguration, nichts gestartet, kein Test und kein `uix_check` ausgeführt, kein Browser. Zeilenzahlen sind Schätzungen (Zeilen heute gezählt, neue Dateien nach Vergleich mit `task`, `decisions`, `costs`), keine Messung.
 
-Keine Grenze nach Umfang (Captain, 20.10.2026): Shell D wird auch gebaut, wenn viele neue Werkzeuge oder eine Änderung am Shell-Werkzeug-Vertrag nötig sind. Vertragsänderungen sind grundsätzlich freigegeben; jede einzelne bleibt ein Gate und kommt als Nachtrag in `SHELL_WERKZEUG_VERTRAG_v1.md`. Stand laut Captain: `uix/shells/paperclip/` ist vorhanden, der Bau steht am Anfang.
+Vorgaben des Captains (20.10.2026), die hier gelten: Shell D wird auch gebaut, wenn viele neue Werkzeuge oder eine Änderung am Shell-Werkzeug-Vertrag nötig sind. Vertragsänderungen sind grundsätzlich freigegeben, jede einzelne bleibt ein Gate und kommt als Nachtrag in `SHELL_WERKZEUG_VERTRAG_v1.md`. Das KI-Labor ist das vorhandene Werkzeug `labor`, bekommt einen eigenen Navigationseintrag neben Modelle und Slots, wird in Spec 3 (LAB-01 bis LAB-07) ausgebaut und zählt nicht als neues Werkzeug.
 
-KI-Labor (Captain, 20.10.2026): Das vorhandene Werkzeug aus dem Cockpit kommt als eigener Navigationseintrag in Shell D, neben Modelle und Slots, und wird nach Spec 3 (LAB-01 bis LAB-07) ausgebaut. Es zählt nicht als neues Werkzeug.
+Leitgedanken des Designs:
+
+1. **Die Shell bleibt dünn.** Sie kennt weiter kein Werkzeug beim Namen (Ausnahme: `talk`). Neu in der Shell sind nur der Fensterstapel, die Navigation und die Seitenart „Fenster“.
+2. **Ein Werkzeug je Aufgabe, jedes Ding genau einmal.** Kein Objekt wird von zwei Werkzeugen zugleich gezeichnet (Falle 1 aus G1): Dafür gibt es die Formen `typ:alle`, `typ:*` und `typ:<id>` (D4.4, N1).
+3. **Ehrlich leer.** Solange Spec 0, 1, 2 oder 3 nicht gebaut sind, zeigt jede neue Seite einen Leerzustand mit dem Grund („Orchestrierung aus“, „noch keine Daten“), nie eine erfundene Zahl und nie einen Absturz (D4.3, Abschnitt Zwischenzustände).
+4. **Ereignisse statt Zeitgeber** in allen neuen Werkzeugen (UIX-05); Zeiten werden bei Ereignissen neu berechnet, nicht im Takt.
+
+#### D4.1 Aufbau und Navigation
+
+**Zonen.** Zu den heutigen Zonen `pc-nav`, `pc-top`, `pc-page` und der Gesprächsschublade `pc-drawer` kommt eine Zone **`pc-stack`** (der Fensterstapel, rechts neben der Seite). Sie ist nur sichtbar, solange mindestens ein Agentenfenster offen ist; die Schublade „Mit SEDRA sprechen“ bleibt eine Überlagerung und ist nicht Teil des Stapels. Unter 1100 Pixel Breite liegt der Stapel als Überlagerung über der Seite (nicht im Browser geprüft).
+
+**Seitenarten** (`pages.js`, `pageFor`):
+
+| Art | Wann | Was passiert |
+| --- | --- | --- |
+| `dashboard` | `dashboard:start` | Kacheln (Instrumente) und vier Karten, wie heute |
+| `collection` | `collection: true` oder `id: alle` | alle Werkzeuge mit `typ:alle`, volle Breite; die Ansicht (`view`) gehört zum Objekt |
+| `object` | sonst, außer Agent | Werkstück links, Nachweise rechts, wie heute |
+| `window` (neu) | `type: agent`, `id` ist eine Agenten-ID | **keine Seite**: die Shell öffnet oder fokussiert ein Agentenfenster im Stapel; die Seite darunter bleibt stehen |
+
+`agent:alle` (Organigramm) und `agent:rollen` (Rollenliste) bleiben Seiten, weil sie als Sammlung beziehungsweise als festes Objekt geöffnet werden. Der Stapel hält höchstens **4** offene Fenster (das älteste wird zur Reiterleiste verkleinert, nicht geschlossen); die Liste der offenen Agenten-IDs merkt sich die Shell im Browser (`sedra.paperclip.windows`, wie der Verlauf), der Inhalt kommt vom Server (D4.3).
+
+**Navigation** (`nav.js`, `NAV`). Jede Zeile ist ein Objekt, das mindestens ein Werkzeug zeichnet. Spalte „Werkzeuge“ sagt, wer es zeichnet (mit `typ:…`-Form aus D4.4):
+
+| Abschnitt | Eintrag | Objekt (`type:id`) | Werkzeuge (Reihenfolge) | Hinweis |
+| --- | --- | --- | --- | --- |
+| – | Dashboard | `dashboard:start` | Kacheln, vier Karten | Karten: Ziele, Posteingang, Organigramm (kompakt), Issues (kompakt, nur Liste) |
+| – | Posteingang ② | `decision:alle` | `decisions` | Badge wie heute (`GET /api/decisions`, durch die Shell) |
+| Arbeit | Issues | `issue:alle` | `board` | **bis `board` installiert ist: `task:alle` mit `task`** (G1-S4-06); die Wahl trifft die Shell aus der Registrierung (`issuesTarget`, rein) |
+| Arbeit | Ziele | `intent:alle` | `intent` | unverändert |
+| Arbeit | Routinen | `routine:alle` | `routines` | war in Build 24 entfernt („kein Eintrag ohne Werkzeug“); kommt mit dem Werkzeug zurück |
+| Team | Organigramm | `agent:alle` | `org` | Baum, Umschalter Liste |
+| Team | Agenten | `agent:rollen` (mit `collection: true`) | `crew` | Rollen aus den Rezepten und die Instanzen des Agent Managers (unverändert, nur anderes `handles`) |
+| Betrieb | Kosten | `meter:meter` | `meter` | unverändert |
+| Betrieb | Modelle und Slots | `model:alle` | `slots`, dann `workshop` | die Werkstatt war „Werkstatt (Modelle)“ im Abschnitt Werkzeuge; derselbe Ort darf nur eine Zeile haben (sonst leuchten zwei) |
+| Betrieb | KI-Labor | `labor:labor` | `labor` | nur Eintrag und Ort; Ausbau in Spec 3 |
+| Assistenten | Planungstisch, Rekorder | wie heute | `planung`, `rekorder` | unverändert |
+| Werkzeuge | Bibliothek, Logbuch, Module | wie heute | `library`, `logbook`, `modules` | unverändert |
+| Projekt | Dateien, Modus und Grenzen, Maschinenraum | wie heute | `files`, `boundaries`, `system` | unverändert |
+
+Die Einträge bleiben auch bei ausgeschalteter Orchestrierung sichtbar und zeigen dann den Leerzustand (UIX-02: „jeder Eintrag öffnet etwas“); das ist ehrlicher als Einträge, die verschwinden.
+
+**Orte der Palette** (`ui/places.js`, G1-S4-09): neue Orte `org` (Wörter: organigramm, team, hierarchie), `routines` (routine, routinen, zeitplan, cron), `slots` (slot, slots, parallel, warteschlange), `labor` (labor, ki-labor, cloud, anbieter); der Ort `crew` zeigt auf `agent:rollen` (Wörter: besatzung, rollen, agenten), `models` bleibt `model:alle`. `places.js` ist Vertragscode für alle Shells: Das Cockpit bekommt dadurch dieselben Orte, und `org` zeichnet im Cockpit-Dock (breiter Baum, waagerecht scrollbar; Nebenwirkung, siehe OP-S4-10).
+
+**Skizze** (Dashboard, ein Agentenfenster und ein zweites als Reiter):
+
+```
++--------------------------------------------------------------------------------------------------+
+| ‹ Zurück   Organigramm             [Einstellen]                       [ Ort suchen…  ^K ]        |
++----------------+---------------------------------------------------+-----------------------------+
+| SEDRA          | Agenten 5 · Slots 2/3 · Issues in Arbeit 2 ·      | ┌ Unterarbeiter ● ──── ✕ ┐  |
+|                | Cloud heute – (noch keine Daten)                  | │ Budget ▇▇▇░░ 62 %       │  |
+| Dashboard      |                                                   | │ ② offen → Posteingang   │  |
+| Posteingang ②  |             [ Captain ]                           | │ Captain: Bau X          │  |
+| Arbeit         |                  |                                | │ UA: 3 Issues angelegt   │  |
+|  Issues        |           [ Unterarbeiter ] ● ②                   | │   (wartet auf Freigabe) │  |
+|  Ziele         |    /       |        |         \                   | │ [ Anweisung …  Senden ] │  |
+|  Routinen      | [Planer] [Coder] [Reviewer] [Recherche]           | │ Issues  UA-1 UA-2       │  |
+| Team           |  ▇▇▇░░    ▇▇░░░     ▇░░░░     ▇▇▇▇▇ (Budget)      | │ Läufe   #12 läuft       │  |
+|  Organigramm   |                                                   | └─────────────────────────┘  |
+|  Agenten       |                                                   |  Coder ● ▾ (verkleinert)    |
+| Betrieb        |                                                   |                             |
+|  Kosten        |                                                   |  [Mit SEDRA sprechen]       |
+|  Modelle/Slots |                                                   |                             |
+|  KI-Labor      |                                                   |                             |
+| Assistenten …  |                                                   |                             |
++----------------+---------------------------------------------------+-----------------------------+
+```
+
+**Änderungen an der Shell** (`uix/shells/paperclip/`, alle Skripte klassisch, jede Datei unter 400 Zeilen):
+
+| Datei | heute | geplant | Änderung |
+| --- | --- | --- | --- |
+| `shell.js` | 155 | ~200 | Zone `pc-stack`; hört `agent.changed`, `issue.changed`, `budget.warning`, `slot.changed` (nur Auffrischen und Hinweis, kein Takt); `openObject` leitet Agenten-IDs an den Stapel |
+| `nav.js` | 86 | ~120 | `NAV` mit Abschnitten Arbeit, Team, Betrieb; `issuesTarget(tools)`; `activeIndex` ignoriert `view` |
+| `pages.js` | 176 | ~210 | `pageFor` mit Art `window`; `pushHistory` kennt `view` im Schlüssel (sonst wird der Wechsel Liste/Board nicht gemerkt); `CARDS` mit Organigramm über `org` |
+| `windows.js` | neu | ~150 | Fensterstapel: öffnen, fokussieren, verkleinern, schließen, höchstens 4, Liste merken; mountet `agentfenster` je Agent |
+| `topbar.js` | 77 | ~85 | Verben der Seite wie heute; bei geöffnetem Fenster keine zusätzlichen Verben in der Kopfzeile (sie stehen im Fenster) |
+| `shell.css` | 100 | ~170 | Stapel, Reiterleiste, Überlagerung bei schmaler Breite |
+| `shell.yaml` | – | `entry.js` + `windows.js`; `api` unverändert | Version 1.2.0 |
+| `arbeitsplatz.yaml`, `README.md` | – | Zonen, Wörter, Anleitungen für Organigramm, Routinen, Slots, KI-Labor, Agentenfenster | G1-S4-10; Wortlaut wird beim Bau geschrieben |
+
+#### D4.2 Werkzeuge je einzeln
+
+Für alle neuen Werkzeuge gilt:
+
+- Kopie von `tools/_template/`; `api` enthält **nur** `POST /api/objects` und `POST /api/actions` (UIX-06; Ausnahme: das Instrument zusätzlich `GET /api/strip`, siehe `gauge-slots`).
+- Kein `fetch`, `localStorage`, `EventSource`, kein Zeitgeber (`setInterval`/`setTimeout` zum Neuladen); Ansichtswahl und Fensterliste liegen bei der Shell (im Objekt `view`, im Stapel).
+- Verben kommen aus `objekt.actions` (der Server sagt, was im Zustand gilt); die Werkzeuge schreiben keine Zustandslogik, außer der reinen Anzeige.
+- Trust: `CORE` (Übernahme ins Paket nach G4, nicht `install_module`; Begründung und Alternative in D4.5, Gate G2-S4-20).
+- Verben mit Gate (`set_org`, `terminate_agent`, `resume_agent`, `set_routine`, `wake_agent` …) legen einen **Antrag** an. Die Antwort von `POST /api/actions` ist dann „Antrag liegt im Posteingang“, nicht „erledigt“; das Werkzeug zeigt genau das und ändert nichts selbst.
+- Fehler: jede abgewiesene Anfrage zeigt den deutschen Satz von `api.js` in einer roten Zeile (`s-note bad`) mit Knopf „Noch einmal lesen“; Leerzustände nennen den Grund.
+
+**Gemeinsame Leerzustände.** Jede Liste von `agent`, `issue`, `routine`, `budget`, `gespraech` trägt im Ergebnis von `POST /api/objects` ein Feld `quelle` (D4.3, G2-S4-13): `{zustand: 'aus' | 'bereit' | 'fehler', grund, takt}`. Die Werkzeuge lesen nur dieses Feld, um zu unterscheiden:
+
+| `quelle.zustand` | Anzeige |
+| --- | --- |
+| `aus` | „Die Orchestrierung ist ausgeschaltet (Schalter `orchestra`). Sobald sie läuft, steht das Team hier.“ Knopf „Maschinenraum öffnen“ |
+| `fehler` | „Die Orchestrierung ist ausgefallen: <grund>.“ (z. B. `orchestra_config_invalid:budget`), Knopf „Maschinenraum öffnen“ |
+| `bereit`, Liste leer | der Leerzustand des jeweiligen Werkzeugs (unten) |
+| Feld fehlt (alter Server) | wie `aus` |
+
+##### D4.2.1 `org` – Organigramm (neu)
+
+```yaml
+tool:
+  id: org
+  name: "Organigramm"
+  description: "Das Team als Baum: Vorgesetzte, Rolle, Status, Budget und offene Entscheidungen je Agent."
+  version: 1.0.0
+  kind: object
+  handles: [agent:alle]
+  order: 20
+  slot: inhalt
+  entry: {js: [baum.js, tool.js], css: tool.css}
+  api:
+    - POST /api/objects
+    - POST /api/actions
+  events:
+    emits: [object.open]
+    listens: [agent.changed, budget.warning, decision.pending, decision.answered, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}
+```
+
+- **Lesen:** `POST /api/objects {type:'agent'}` liefert `items`, je Agent `{id, title, state, summary, actions, links}` plus Felder `rolle`, `reports_to`, `status` (`aktiv`, `pausiert`, `beendet`), `arbeitet` (hat einen Checkout), `budget` (`{grenze_token, verbraucht_token, grenze_eur_cent, verbraucht_eur_cent, prozent, stufe, zeitraum}`; `stufe` ∈ `ok`, `warnung`, `gestoppt`; Euro-Felder `null`, solange Spec 3 fehlt), `offene_entscheidungen` (Zahl). Diese Felder muss Spec 1 im Leser `agent` liefern (G2-S4-16); sie werden mit einer Lesung geholt, damit der Baum keine Anfrage je Karte braucht.
+- **Ansichten:** *Baum* (Standard) und *Liste* (Tabelle: Name, Rolle, Vorgesetzter, Status, Budget %, Entscheidungen). Der Umschalter schickt `object.open {type:'agent', id:'alle', view:'liste'}`; die Shell merkt die Ansicht im Verlauf. Filter: aktiv, pausiert, beendet (Standard: ohne beendete; „beendete zeigen“ ist ein Schalter in der Ansicht).
+- **Baum:** Wurzel „Captain“ (Karte ohne Verben), darunter der eine Agent ohne Vorgesetzten (der Unterarbeiter, OP-6), darunter seine Untergebenen. Die Karte (feste Breite 200 px wie bei Paperclip) zeigt: Name, Rolle, Statuspunkt (aktiv, **arbeitet**, pausiert, beendet), Budgetbalken in Token (bei `stufe: warnung` gelb, `gestoppt` rot, mit Prozentzahl als Text, nicht nur Farbe), Badge mit der Zahl offener Entscheidungen. Klick auf die Karte öffnet das Agentenfenster (`object.open {type:'agent', id}`); das Menü der Karte (⋯) zeigt die Verben des Agenten aus `actions`.
+- **Verben:** am Typ (Kopfzeile der Seite): `einstellen` (Dialog: Vorlage, Name, Vorgesetzter, Budget; ein Antrag mit `agent.instantiate` und `set_org`, ORC-01); an der Karte: `pausieren` (`pause_agent`, ALLOW), `fortsetzen`, `beenden`, `einordnen` (Vorgesetzten ändern; die Auswahl nennt nur zulässige Ziele, die Prüfung bleibt beim Server) – alle nur, wenn `actions` sie anbietet.
+- **Reine Logik** (`baum.js`): `layoutTree(agenten, {kartenbreite, abstand, tiefeMax})` → `{knoten: [{id, x, y, ebene}], linien: [{von, nach}], breite, hoehe, ohneVorgesetzten: [id]}`. Die Breite eines Teilbaums ist die Summe der Breiten seiner Kinder (mindestens eine Karte); Geschwister stehen nach Name sortiert; ein Besuchtenspeicher verhindert Endlosschleifen bei Datenfehlern (Zyklus, Verweis auf unbekannten Vorgesetzten); Agenten, die nicht erreichbar sind, stehen in `ohneVorgesetzten` und werden unter dem Baum als Gruppe „Nicht eingeordnet“ gezeigt. Dazu `budgetStufe(budget)` (rein; Stufe aus Prozent, Schwellen kommen vom Server, nicht aus dem Werkzeug).
+- **Leerzustand:** keine Agenten: „Noch keine Agenten. ‚Einstellen‘ legt den Unterarbeiter an.“ Fehler: `orchestra_busy` → „Die Datenbank ist gerade belegt“ mit „Noch einmal lesen“.
+- **Dateien:** `baum.js` ~90, `tool.js` ~240, `tool.css` ~110, `README.md`, `test.spec.js` ~60, `baum.test.js` (node) ~80.
+
+##### D4.2.2 `board` – Issues, Liste und Board (neu)
+
+```yaml
+tool:
+  id: board
+  name: "Issues"
+  description: "Aufgaben des Teams als Liste oder Board nach Zustand; Detail mit Zielkette, Blockern und Kommentaren."
+  version: 1.0.0
+  kind: object
+  handles: [issue:alle, issue:*]
+  order: 15
+  slot: inhalt
+  entry: {js: [spalten.js, tool.js], css: tool.css}
+  api:
+    - POST /api/objects
+    - POST /api/actions
+  events:
+    emits: [object.open]
+    listens: [issue.changed, agent.changed, decision.answered, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}
+```
+
+- **Sammlung `issue:alle`.** Ansichten *Liste* (Standard) und *Board* (`view: 'board'`), Wahl wie beim Organigramm im Objekt. Board-Spalten in der Reihenfolge der Zustände aus D3.3: `offen`, `zugewiesen`, `in_arbeit`, `wartet`, `erledigt`, `abgebrochen`; „erledigt“ und „abgebrochen“ sind eingeklappt und zeigen nur die Zahl. Karte: Titel, Bearbeiter, Priorität, Blocker-Zeichen, Kommentarzahl. **Kein Ziehen von Karten:** Der Zustand ändert sich nur durch die Orchestrierung (Checkout, Lauf, Blocker) und durch `abbrechen`; ein Ziehen wäre ein Verb ohne Gate-Bedeutung. Filter: Bearbeiter, Text, „nur offene“. Karten erscheinen dem Zustand nach und nach Priorität absteigend, dann nach Änderungszeit.
+- **Einzelansicht `issue:<id>`.** Kopf (Titel, Zustand, Bearbeiter als Auswahl → `zuweisen`), **Zielkette** (Vorhaben › Projekt › Elternaufgaben › Issue; jedes Glied öffnet sein Objekt; ein fehlendes Glied steht als „nicht gefunden“, ORC-13), **Blocker** (Liste, Verb `blocker_setzen` mit Auswahl anderer Issues), **Unteraufgaben**, **Kommentare** als Verlauf (Autor als Art und Name, Text, Zeit; Cloud-Kennzeichen am Kommentar, wenn `route: cloud`), Eingabe `kommentieren`, Link „Lauf ansehen“ (`object.open task:<mission_id>`; dort zeigen `live` und `costs` die Zeilen und Kosten), Verb `abbrechen` mit Bestätigung. Nachweis rechts: `costs` (D4.2.8).
+- **Verben:** am Typ `anlegen` (Titel, Beschreibung, optional Vorhaben und Bearbeiter); am Objekt `zuweisen`, `blocker_setzen`, `kommentieren`, `abbrechen` – wie `actions` sie anbietet. `zuweisen` an einen ausgecheckten Issue endet mit `task_checked_out` (ORC-03) und wird als Satz gezeigt.
+- **Reine Logik** (`spalten.js`): `boardColumns(items, {filter})` → `[{state, label, count, items}]` in fester Reihenfolge, auch leere Spalten; unbekannte Zustände landen in einer Spalte „Sonstige“ (nie verschwinden lassen); `chain(issue)` → Glieder der Zielkette mit Kennzeichen „fehlt“.
+- **Leerzustand:** „Noch keine Issues. ‚Anlegen‘ erzeugt eine Aufgabe für einen Agenten; eine Anweisung an den Unterarbeiter erzeugt sie für dich.“ Ist die Orchestrierung aus: Hinweis plus Knopf „Läufe (Missionen) ansehen“ (`task:alle`).
+- **Zwischenzustand:** Solange `issue` nicht als Desk-Typ existiert (vor G2-S0-12, Spec 1), steht in der Navigation `task:alle`, und `board` ist nicht installiert.
+- **Dateien:** `spalten.js` ~70, `tool.js` ~330 (Liste, Board, Detail; falls es 380 überschreitet, `detail.js` abspalten), `tool.css` ~110, `README.md`, `test.spec.js` ~70, `spalten.test.js` ~70.
+
+##### D4.2.3 `routines` – Routinen (neu)
+
+```yaml
+tool:
+  id: routines
+  name: "Routinen"
+  description: "Wiederkehrende Aufgaben: Zeitplan in Worten, Nachhol-Regel, letzte und nächste Ausführung."
+  version: 1.0.0
+  kind: object
+  handles: [routine:alle, routine:*]
+  order: 25
+  slot: inhalt
+  entry: {js: [cron.js, tool.js], css: tool.css}
+  api:
+    - POST /api/objects
+    - POST /api/actions
+  events:
+    emits: [object.open]
+    listens: [agent.changed, issue.changed, decision.answered, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}
+```
+
+- **Sammlung:** Tabelle: Titel, Agent, Zeitplan in Worten (Zeitzone), Nachhol-Regel (`auslassen` ist der Standard, G1-S1-25), an/aus, letzte Ausführung mit Ausgang (`erzeugt`, `ausgelassen`, `nachgeholt`), nächste Ausführung. Eine Routine, deren Agent pausiert oder beendet ist, trägt den Hinweis „Agent pausiert – es entstehen keine Aufgaben“.
+- **Einzelansicht:** wie die Zeile, dazu die Aufgabenvorlage (Titel, Beschreibung) und die letzten 20 Läufe (`routine_runs`: Termin, Ausgang, Link auf das Issue).
+- **Verben:** am Typ `anlegen` (Titel, Agent, Zeitplan, Zeitzone, Nachhol-Regel, Aufgabenvorlage); am Objekt `aendern` und `ausschalten` (alle `set_routine`, CAPTAIN_REQUIRED, also ein Antrag im Posteingang). Das Wiedereinschalten braucht ein Verb, das Spec 1 noch nicht nennt: Vorschlag `einschalten` oder `aendern` mit `enabled` (G2-S4-16). Das Formular zeigt unter dem Zeitplan-Feld sofort den Satz aus `cronText` („jeden Tag um 06:30 Uhr“) und meldet einen nicht erkannten Ausdruck als „Zeitplan wird so gespeichert: …“; **maßgeblich ist der Server** (`cron_invalid` mit Satz).
+- **Reine Logik** (`cron.js`): `cronText(ausdruck, zeitzone)` → deutscher Satz oder `null`; unterstützt fünf Felder mit `*`, Zahl, Liste, Bereich, Schritt (`*/15`) und Wochentagnamen; bei `null` zeigt das Werkzeug den Ausdruck unverändert. Das Werkzeug berechnet **keine** Termine; „nächste Ausführung“ liefert der Server (`next_run`).
+- **Hinweis zum Takt:** Das Feld `quelle.takt` (`läuft`/`aus`, letzter Takt) steht als Zeile über der Tabelle: „Takt aus – Routinen laufen nur, solange die Oberfläche läuft“ (ORC-16, OP-9).
+- **Leerzustand:** „Keine Routinen. Eine Routine legt zu festen Zeiten eine Aufgabe für einen Agenten an; verpasste Läufe werden nach der gewählten Regel nachgeholt oder ausgelassen.“
+- **Dateien:** `cron.js` ~110, `tool.js` ~290, `tool.css` ~80, `README.md`, `test.spec.js` ~60, `cron.test.js` ~70.
+
+##### D4.2.4 `slots` – Modelle und Slots (neu, Seite) und `gauge-slots` (neu, Kachel)
+
+G1 nannte `slots` ein Instrument. Ein Instrument ist eine Kachel (ein Wert, ein Hinweis); die belegten Slots **und die Warteschlange** brauchen eine Liste. Darum zwei kleine Manifeste (G2-S4-09): die Kachel `gauge-slots` und die Seite `slots`.
+
+```yaml
+tool:
+  id: slots
+  name: "Slots"
+  description: "Belegte und freie Plätze des Modellservers, Läufe und Warteschlange, live."
+  version: 1.0.0
+  kind: object
+  handles: [model:alle]
+  order: 5                          # vor der Werkstatt (workshop)
+  slot: inhalt
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - POST /api/objects
+  events:
+    emits: [object.open]
+    listens: [slot.changed, model.changed, agent.changed, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}
+```
+
+```yaml
+tool:
+  id: gauge-slots
+  name: "Slots (Kachel)"
+  description: "Kennzahl: belegte Slots von allen und wie viele Läufe warten."
+  version: 1.0.0
+  kind: instrument
+  handles: []
+  order: 60
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - GET /api/strip
+  events:
+    emits: [object.open]
+    listens: [slot.changed, model.changed, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}
+```
+
+- **Seite `slots`:** Kopf mit geladenem Modell (Rezept, Kontext, Zahl der Slots); Tabelle der Slots: Nummer, Zustand (`frei`, `belegt`), Lauf (Agent, Issue, Mission als Links), Priorität (Captain, Agent, Routine), seit wann (Uhrzeit, **keine** mitlaufende Dauer, damit kein Zeitgeber nötig ist); darunter die Warteschlange in Reihenfolge mit Wartebeginn und Warnzeile, wenn ein Lauf länger als die Obergrenze wartet (SCH-04, SCH-07: Hinweis „Cloud-Vorschlag liegt im Posteingang“, wenn eine Entscheidung vorliegt). Keine Verben: Laden und Entladen bleibt in der Werkstatt darunter.
+- **Lesen:** `POST /api/objects {type:'model'}` liefert die Modelle wie heute und zusätzlich das Feld `slots` = `{gesamt, belegt: [{slot, run_id, agent_id, titel, prioritaet, seit}], schlange: [{run_id, agent_id, prioritaet, seit}], modell, warte_max_s}`. Die Quelle liefert Spec 2 (SCH-09); die Form ist hier festgelegt, damit beide passen (G2-S4-14).
+- **Kachel `gauge-slots`:** `update(reading)` liest `reading.slots` aus `GET /api/strip` (`{value: '2/3', hint: '1 wartet', tone}`); Klick öffnet `model:alle`. Sie ist ein Duplikat der Muster `gauge-gpu`/`gauge-model` (~55 Zeilen).
+- **Zwischenzustand ohne Spec 2:** `slots` fehlt im Ergebnis; die Seite zeigt „Ein Modellserver, ein Platz. Parallele Slots kommen mit dem Scheduler (Spec 2).“ und die vorhandenen Angaben (läuft, Modell, Kontext); die Kachel zeigt „–“ mit dem Hinweis „noch keine Daten“. Läuft kein Modell: „Kein Modell geladen – Slots gibt es erst nach dem Laden (Werkstatt unten).“
+- **Dateien:** `slots/tool.js` ~170, `slots/tool.css` ~60, `gauge-slots/tool.js` ~55, `gauge-slots/tool.css` ~10, je `README.md`, `test.spec.js` ~40.
+
+##### D4.2.5 `agentfenster` – das Gespräch mit einem Agenten (neu)
+
+```yaml
+tool:
+  id: agentfenster
+  name: "Agentenfenster"
+  description: "Gespräch mit einem Agenten, daneben seine Issues, Läufe und sein Budget; mehrere Fenster zugleich."
+  version: 1.0.0
+  kind: object
+  handles: [agent:*]
+  order: 10
+  slot: inhalt
+  entry: {js: [verlauf.js, tool.js], css: tool.css}
+  api:
+    - POST /api/objects
+    - POST /api/actions
+  events:
+    emits: [object.open]
+    listens: [agent.changed, issue.changed, budget.warning, decision.pending, decision.answered, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}
+```
+
+- **Mehrere Instanzen.** Das Werkzeug wird je Fenster einmal gemountet. Heute ist ein Werkzeug ein Einzelobjekt (`registerTool` legt ein Objekt je ID ab, `unmount()` bekommt keinen Container). Darum braucht es den **Vertragsnachtrag N2** (D4.4): `unmount(el)` und `actions(el)` bekommen den Container, und ein Werkzeug darf je Container eine Instanz führen (`Map` nach Container). Das ist kleiner als „`talk` mehrfach mountbar machen“ und für bestehende Werkzeuge rückwärtsverträglich (sie ignorieren das Argument).
+- **Aufbau eines Fensters** (Breite ~380 px): Kopf (Name, Rolle, Statuspunkt, Budgetbalken, Zahl offener Entscheidungen mit Knopf „Im Posteingang“ → `object.open decision:alle`, Schließen, Verkleinern); Abschnitte *Gespräch* (Hauptteil), *Issues* (die Issues des Agenten, Zustand, Link auf `issue:<id>`), *Läufe* (letzte Läufe mit Mission, Zustand, Zeit; Link auf `task:<mission_id>`, wo `live` die Zeilen zeigt).
+- **Gespräch.** Nachrichten aus `POST /api/objects {type:'gespraech', id:<agent_id>}` (letzte 50; „Ältere laden“ mit `vor: <id>`); Eingabe `anweisen` über `POST /api/actions {type:'agent', id, verb:'anweisen', args:{text, key}}` (`key` = neue Zufalls-ID je Absenden, damit ein doppelter Klick nur eine Nachricht erzeugt). Die Eingabe erscheint nur, wenn `actions` das Verb `anweisen` enthält (der Server entscheidet, mit welchem Agenten man sprechen darf; OP-S4-7). Jede Nachricht trägt einen **Status**, den das Fenster als Zeile unter ihr zeigt: `angenommen` („angekommen – Issue UA-3 angelegt“), `wartet_freigabe` („wartet auf Freigabe im Posteingang“), `laeuft` („Lauf #12 läuft“), `beantwortet`, `fehler` (mit Grund). Der Agent antwortet **nicht sofort**: sein Lauf braucht `wake_agent` (OP-4, bis zur Dauerfreigabe pro Lauf eine Entscheidung); das Fenster sagt das einmal im Kopf der leeren Unterhaltung.
+- **Cloud-Kennzeichen (UIX-08).** Trägt eine Agentennachricht `route: cloud`, steht an ihr der Hinweis „Cloud · Anbieter / Modell“ (Format aus CLD-06); lokale Antworten bleiben ungekennzeichnet. Der Budgetbalken zeigt Token (lokal) und, wenn vorhanden, Euro; ohne Spec 3 steht nur Token.
+- **Unterarbeiter.** Sein Fenster zeigt zusätzlich die Zeile „nimmt Anweisungen an und verteilt sie“ und die Teilaufgaben der letzten Anweisung (Issues mit Elternaufgabe); der Bericht (ORC-18) erscheint als Agentennachricht mit den Prüfergebnissen „grün / rot / nicht geprüft“.
+- **Zustände.** `pausiert`: Eingabe bleibt, Hinweis „pausiert – die Anweisung wartet bis zum Fortsetzen“, Knopf `fortsetzen` (Antrag). `beendet`: nur Lesen. Budget `gestoppt`: Hinweis „Budget aufgebraucht – Entscheidung im Posteingang“. Agent unbekannt (gelöschte ID im gemerkten Stapel): Fenster zeigt „Diesen Agenten gibt es nicht mehr“ und schließt sich auf Knopfdruck.
+- **Reine Logik** (`verlauf.js`): `mergeMessages(alt, neu)` (nach ID, ohne Doppel), `statusText(nachricht)` (Satz zum Status), `byDay(nachrichten)` (Tagestrenner). Alles andere im Werkzeug.
+- **Leerzustand/Fehler:** keine Nachrichten: „Noch nichts gesagt. Eine Anweisung wird zur Aufgabe.“ `gespraech` nicht lesbar: rote Zeile mit „Noch einmal lesen“; `anweisen` abgewiesen: der Satz des Servers über der Eingabe, der Text bleibt im Feld stehen.
+- **Dateien:** `tool.js` ~320, `verlauf.js` ~100, `tool.css` ~120, `README.md`, `test.spec.js` ~80, `verlauf.test.js` ~60.
+
+##### D4.2.6 `crew` – angepasst
+
+Nur das Manifest ändert sich: `handles: [agent:rollen]` statt `[agent]`; `api` bleibt (`GET /api/agents`, `GET /api/models`, vorhandene Ausnahme von UIX-06). `tool.js` bleibt unverändert; die Seite „Agenten“ zeigt weiter Rollen aus den Rezepten und die Instanzen des Agent Managers (Zulassung, Quarantäne), nicht das Organigramm. Ein kurzer Satz ergänzt: „Das Team mit Vorgesetzten steht im Organigramm.“ (+ Link `object.open agent:alle`), ~6 Zeilen in `tool.js`.
+
+##### D4.2.7 `labor` – nur Eintrag
+
+Kein Code: Navigationseintrag und Ort `labor` (`{type:'labor', id:'labor', title:'KI-Labor'}`, nicht als Sammlung). Zeitgeber alle 5 s und sieben Spezialrouten bleiben als dokumentierte Ausnahme bis Spec 3 (OP-S4-5). Nicht geprüft: ob `labor` ohne eine bestimmte Objekt-ID sauber mountet; `uix_check` öffnet es mit diesem Objekt (D4.4).
+
+##### D4.2.8 `costs` – angepasst
+
+- Manifest: `handles: [task, issue:*]`, `slot: nachweis` bleibt; `api` bekommt **`POST /api/objects`** (zusätzlich zu `POST /api/cost`), `listens` bekommt `issue.changed` und `budget.warning`.
+- Für `task` (Mission) wie heute, dazu am Lauf das Cloud-Kennzeichen (`route`, `provider`, `model` aus der Antwort von `/api/cost`, wenn Spec 3 sie liefert, CLD-06).
+- Für `issue`: der Budgetstand des Bearbeiters (`POST /api/objects {type:'budget', id:<agent_id>}`) als Balken, darunter die Token der verknüpften Mission(en) über `/api/cost`. Ohne Bearbeiter: „Noch niemand zugewiesen – kein Budget.“ Ohne Spec 1: der Nachweis wird für `issue` nicht gezeigt (kein Typ).
+- Der Satz „Eine Kostengrenze gibt es noch nicht“ entfällt, sobald `budget` existiert; bis dahin bleibt er.
+- Umfang: `tool.js` 82 → ~140, `tool.css` +15. Die Zahl der Koppelungen wächst; deshalb getrennte Funktion `issueView()` (kein Umbau der Mission-Ansicht).
+
+#### D4.3 Serverseite, die Shell D braucht
+
+Shell D ändert **nichts** an `core/`. Alles Folgende liegt im Desk und in `orchestra/` (Spec 0/1) und ist dort als Nachtrag zu den Gates G2-S0 und G1-S1 vorzumerken; die Zeile „Wer“ sagt, in wessen Bau es entsteht.
+
+##### D4.3.1 Verlauf je Agent (UIX-04)
+
+- **Wo:** Tabelle `agent_messages` in `orchestra.db` (Nachtrag zu D3.3; Spec 1 übernimmt sie in O1.2). Der Verlauf ist serverseitig, damit er das Neuladen, einen zweiten Browser und das Schließen des Fensters übersteht; die Shell merkt sich nur, welche Fenster offen sind.
+
+| Spalte | Typ und Prüfung |
+| --- | --- |
+| `id` | INTEGER, AUTOINCREMENT, Schlüssel |
+| `agent_id` | TEXT NOT NULL, Fremdschlüssel `agents(id)`; Index `(agent_id, id)` |
+| `rolle` | TEXT NOT NULL, `captain`, `agent`, `system` |
+| `text` | TEXT NOT NULL, höchstens 8000 Zeichen (wie `chat_reply`) |
+| `ts` | TEXT NOT NULL, UTC ISO 8601 |
+| `status` | TEXT NOT NULL, `angenommen`, `wartet_freigabe`, `laeuft`, `beantwortet`, `fehler` |
+| `issue_id`, `mission_id` | TEXT, wohin die Nachricht geführt hat |
+| `route` | TEXT NOT NULL DEFAULT `lokal`, `lokal` oder `cloud` (CLD-06) |
+| `provider_id`, `model` | TEXT, nur bei `route = cloud` oder zur Anzeige des Modells |
+| `idempotency_key` | TEXT, UNIQUE je Agent; derselbe Schlüssel erzeugt nie zwei Nachrichten (Doppelklick) |
+
+  Der Text steht nicht im Audit (wie Kommentare): `ORC_MESSAGE` trägt nur Agent, Nachricht-ID und Länge. Aufbewahrung: in v1 keine Löschung; die Größe wird nach vier Wochen Betrieb ausgewertet (OP-S4-12).
+- **Lesen:** neuer Desk-Typ **`gespraech`** (nur lesend, G2-S4-12). `POST /api/objects {type:'gespraech', agent:'<id>', vor:<id>, limit:50}` liefert `items` in der Form `{type:'gespraech', id:<Nachricht-ID>, title:<erste Zeile>, state:<status>, summary:<text>, actions:[], links:[], rolle, ts, issue_id, mission_id, route, provider_id, model}`, neueste zuletzt, dazu `mehr` (gibt es Ältere). Der Filter geht über die Liste (`listing(hub, payload)`, D1), weil `read(hub, oid)` keine Parameter kennt. Keine neue Route, keine neue `GET`.
+- **Schreiben:** nur das Verb **`anweisen`** am Typ `agent` über `POST /api/actions {type:'agent', id, verb:'anweisen', args:{text, key}}` (Gate `create_new_artifact`, ALLOW, G1-S1-15/ORC-14). Wirkung beim Unterarbeiter wie in ORC-14: Nachricht (`rolle: captain`, Status `angenommen`), Issue für den Unterarbeiter, Weckruf (Grund `captain`). Der Lauf selbst bleibt ein eigenes Gate (`wake_agent`), der Status wechselt dann auf `wartet_freigabe`, nach der Freigabe auf `laeuft`, am Ende schreibt `orchestra` die Antwort des Agenten als Nachricht (`rolle: agent`, `beantwortet`, mit `route`) und spiegelt sie als Kommentar ans Issue. Für andere Agenten als den Unterarbeiter ist Spec 1 gefragt, ob und mit welcher Wirkung (Kommentar an die laufende Aufgabe oder neues Issue) das Verb dort angeboten wird; Shell D zeigt die Eingabe nur, wenn das Verb in `actions` steht (OP-S4-7).
+- **Abgrenzung zu `talk`:** `POST /api/chat/reply` bleibt unverändert (Gespräch mit SEDRA, kein Agent); Agentengespräche laufen nie darüber.
+- **Wer:** Spec 1 (`orchestra/messages.py`, ~120 Zeilen, Kind `gespraech` in `orchestra_kinds`, Verb `anweisen`); Test `tests/test_orchestra_messages.py` (Spec 1, Neuaufnahme: Nachricht bleibt nach Neustart, Doppelschlüssel, Länge, Status-Folge).
+
+##### D4.3.2 Ereignisse in `desk/events.py` (UIX-05)
+
+`desk_snapshot()` bekommt Felder, `events.diff` (rein) die Ableitung. Die Erweiterung hängt als Haken an der Registrierung (`extensions.snapshot(hub)` liefert ein Dictionary, das in den Schnappschuss gemischt wird, eine Zeile in der einmaligen Änderung von `uix_server.py`, K0.11; G2-S4-14). Ist die Orchestrierung aus, fehlt der Schlüssel `orchestra`, und es entsteht kein Ereignis und keine Datenbanklesung.
+
+| Ereignis | Schnappschuss-Feld | Auslöser | Nutzlast (flach) |
+| --- | --- | --- | --- |
+| `agent.changed` | `orchestra.agents`: `{id: [status, revision, letzte_nachricht, arbeitet]}` | Eintrag neu oder anders (Einstellen, Pausieren, Einordnen, neue Nachricht, Lauf beginnt oder endet) | `{id}` |
+| `issue.changed` | `orchestra.issues`: `{id: [zustand, bearbeiter, revision, kommentare]}`, nur offene und in den letzten 24 Stunden geänderte | Eintrag neu oder anders | `{id}` |
+| `budget.warning` | `orchestra.budgets`: `{agent_id: stufe}` mit 0, 80, 100 | Stufe **steigt** (Schwellen aus `OrchestraConfig`); Senken (Budget erhöht) erzeugt nur `agent.changed` | `{agent_id, prozent, stufe}` |
+| `slot.changed` | `slots`: `{gesamt, belegt, schlange}` aus `model_scheduler` (Spec 2) | Slot belegt, frei, Schlange anders; ein Ereignis je geänderten Slot, bei reiner Schlangenänderung `slot` leer | `{slot, state, run_id, priority, queue_len}` |
+
+Regeln: der erste Schnappschuss erzeugt nichts (wie heute); Reihenfolge sortiert nach ID (deterministisch, wie die Tests es prüfen); die Latenz ist der Takt des Pollers (3 s, SCH-09); nach einem Neustart des Servers fehlt die Warnung, die Stufe steht aber im Objekt (`budget.stufe`) und wird beim Laden gezeigt. Die Cloud-Grenzen aus Spec 3 (80 Prozent von 30 Anfragen pro Minute oder 500 pro Tag) kommen als weitere Einträge in dasselbe Feld `budgets` (Schlüssel `cloud:<anbieter>`), das Ereignis trägt dann `agent_id` leer und `anbieter`; das legt Spec 3 fest (OP-S4-2). Die Kosten der Lesung: ein Aufruf mit Indizes je Takt, bei kleinen Teams vernachlässigbar (nicht gemessen).
+
+`decision.pending` bekommt das **optionale** Feld `agent_id` (D4.3.3). Die Einträge in `ui/bus.js` (`EVENTS`) und die Tabelle in §5 des Vertrags sind Sache von Spec 4 (N3); die Tests in `tests/test_desk_events.py` (D4.6).
+
+##### D4.3.3 Agenten-ID in Entscheidungen (UIX-07)
+
+- `desk/decisions.py`: jede Entscheidung bekommt das Feld `agent_id` (`None`, wenn kein Agent betroffen ist). Quelle: die Bindung des Antrags (`binding.agent_id`), die `desk/gated.py` für `wake_agent`, `pause_agent`, `resume_agent`, `terminate_agent`, `set_budget`, `set_org` setzt. Die vier Bauer (`gate_decision`, `request_decision`, `boundary_decision`, `content_decision`) behalten ihre Form und bekommen `agent_id` additiv.
+- `diff` übernimmt `agent_id` in `decision.pending`.
+- Der Leser `agent` (Spec 1) liefert `offene_entscheidungen` (Zahl) aus `decisions_view()` gefiltert nach `agent_id`; so zeigt die Karte im Organigramm ihr Badge ohne zweite Route. Im Fenster steht derselbe Wert.
+- Wer: Spec 1 (G1-S4-07 hat das bereits dort verortet); Test `tests/test_desk_decisions.py` (Neuaufnahme: Gate für `wake_agent` trägt `agent_id`, andere `None`).
+
+##### D4.3.4 Abhängigkeiten und Zwischenzustände
+
+| Shell-D-Teil | braucht | solange es fehlt | Anzeige |
+| --- | --- | --- | --- |
+| Registrierung `handles` (N1), Instanzen (N2), Ereignisnamen (N3) | nur Spec 4 | – | – |
+| `org`, `board`, `routines` (Lesen) | Spec 0: Typen `agent`, `issue`, `routine` lesend (G3-S0-15/16) und `quelle` | Platzhalter liefert leere Liste | Leerzustand „Orchestrierung aus“ |
+| alle Verben (`einstellen`, `zuweisen`, `anweisen` …) | Spec 1: `orchestra_kinds` mit `gated.py` | Verben fehlen in `actions` | keine Knöpfe, kein Eingabefeld; kein Fehler |
+| `budget`, Budgetbalken, `offene_entscheidungen` | Spec 1 (`budget.py`, `decisions.py`) | Felder fehlen | Balken entfällt, Hinweis „noch keine Daten“ |
+| Fenster-Gespräch, `gespraech` | Spec 1 (`messages.py`) | Typ unbekannt (`unknown_object_type`) | Fenster zeigt Kopf, Issues, Läufe; Gespräch: „Gespräche gibt es mit der Orchestrierung.“ |
+| `agent.changed`, `issue.changed`, `budget.warning` | Spec 0/1 (Daten), Spec 4 (Ableitung) | Schlüssel `orchestra` fehlt | keine Ereignisse; Werkzeuge lesen beim Öffnen und bei `desk.resync` |
+| Slots (Seite, Kachel, `slot.changed`) | Spec 2 (`model_scheduler`, `slots`) | Feld `slots` fehlt | „Ein Modellserver, ein Platz“ (D4.2.4), Kachel „–“ |
+| Euro-Anzeige, Cloud-Kennzeichen, Kachel „Cloud heute“, Cloud-Warnungen | Spec 3 (`spend`, `route`, Grenzen) | Euro-Felder `null`, `route` fehlt | nur Token; keine Kennzeichen (alles lokal); Kachel „–“ (OP-S4-2) |
+| Zeitplan „nächste Ausführung“, Takt | Spec 1 (`routines.py`, ORC-16) | `quelle.takt` fehlt | Zeile „Takt unbekannt“ |
+| `issue` als Desk-Typ | G2-S0-12, Spec 1 | Typ unbekannt | Navigation zeigt `task:alle` (D4.1) |
+
+Die Lieferreihenfolge spiegelt das: Spec 0 → Spec 1 → Spec 2/3; Shell D kann in jeder Zwischenlage gebaut und geprüft werden, weil jede Zeile des Leerzustands eine Abnahmezeile ist (D4.6).
+
+#### D4.4 Vertragsnachträge und Prüfwerkzeug
+
+##### Textentwurf für `SHELL_WERKZEUG_VERTRAG_v1.md`
+
+Als „Nachtrag (Spec 4, Shell D)“ nach der Freigabe der jeweiligen Gates anzuhängen; das Datum setzt der Captain mit G2:
+
+> **N1 – `handles` mit Zusatz (§3.1, §4).** Ein Eintrag in `handles` darf neben dem Typ (wie bisher: alle Objekte dieses Typs) eine der Formen `typ:alle` (nur das Objekt mit der ID `alle`, die Sammlung), `typ:*` (jedes Einzelobjekt des Typs, also weder die ID `alle` noch ein Objekt mit `collection: true`) oder `typ:<id>` (genau dieses Objekt, z. B. `agent:rollen`, ein festes Objekt mit `collection: true` im Deskriptor) tragen. Das Schema erlaubt das Muster `^[a-z0-9-]{2,40}(:(\*|[a-z0-9-]{1,40}))?$`. Der Lader bekommt `registry.forObject(object)`; `registry.for(type)` bleibt für Aufrufe ohne Objekt. Welche Werkzeuge ein Objekt zeichnen, entscheidet die reine Funktion `handlesMatch(eintrag, objekt)`. Alle bestehenden Manifeste behalten ihre Bedeutung.
+>
+> **N2 – Mehrere Instanzen eines Werkzeugs (§4).** `unmount(el)` und `actions(el)` bekommen den Container, den `mount` bekommen hat. Ein Werkzeug darf mehrere Instanzen zugleich führen (eine je Container) und muss sie dann je `el` verwalten; ein Werkzeug mit einer Instanz darf das Argument ignorieren. `lifecycle.unmountTool` und `actionsOf` reichen `state.el` weiter. Der Zustand eines Werkzeugs darf nicht in `this` liegen, wenn es mehrere Instanzen führt.
+>
+> **N3 – Ereignisse (§5).** Neue Zeilen der Tabelle (Nutzlast flach, Pflichtfelder fett): `agent.changed` {**id**}; `issue.changed` {**id**}; `budget.warning` {**agent_id**, prozent, stufe}; `slot.changed` {slot, state, run_id, priority, queue_len}. Sender: der Ereignisstrom (`desk/events.py`). Werkzeuge dürfen sie in `events.listens` nennen, aber nicht senden. Jedes Werkzeug, das Daten zeigt, hört außerdem `desk.resync` und liest dann neu.
+>
+> **N4 – Entscheidungen mit Agent (§5, §10.3).** `decision.pending` und die Form der Entscheidung tragen das optionale Feld `agent_id` (leer, wenn kein Agent betroffen ist).
+>
+> **N5 – Darstellungshinweise im Objekt (§4).** Der Deskriptor eines Objekts darf `view` (z. B. `liste`, `board`) und `kompakt` tragen. Beides sind Hinweise der Shell an das Werkzeug, keine Identität; Werkzeuge ändern die Ansicht, indem sie `object.open` mit demselben Typ und derselben ID und anderem `view` senden. Der Verlaufsschlüssel einer Shell darf `view` enthalten.
+>
+> **N6 – Routen neuer Werkzeuge (§6).** Ein Werkzeug, das nach dem Datum dieses Nachtrags entsteht, nennt in `api` nur `POST /api/objects` (lesen) und `POST /api/actions` (handeln); ein Instrument zusätzlich `GET /api/strip`. Bestehende Werkzeuge sind ausgenommen, bis ihre Spec sie umstellt.
+>
+> **N7 – Ergebnisfelder des Desk (§10).** Die Listen der Typen `agent`, `issue`, `routine`, `budget` und `gespraech` tragen `quelle` = {`zustand`: `aus`, `bereit` oder `fehler`, `grund`, `takt`}; Werkzeuge unterscheiden damit „ausgeschaltet“, „ausgefallen“ und „leer“. Der Desk-Typ `gespraech` ist nur lesend, die ID ist die Agenten-ID, der Filter heißt `agent`.
+>
+> **N8 – Einbau (§7.3).** Werkzeuge, die im Paket liegen (`uix/tools/`), kommen nach Review per `adopt_plan` oder Handkopie hinein (Linie L5) und tragen `trust: CORE`; `install_module` gilt für Werkzeuge unter `local_config/`.
+
+##### Prüfwerkzeug `benchmarks/uix_check.py` und Tests (G1-S4-08 ausgearbeitet)
+
+- **Fixture-Erweiterung** `benchmarks/uix_fixture_orchestra.py` (~120 Zeilen, nur Prüfmittel, nicht im Paket): registriert über `desk/extensions` (Spec 0) Test-Typen `agent`, `issue`, `routine`, `gespraech` mit festen Daten: vier Agenten mit Vorgesetzten, einer pausiert, einer mit 80 Prozent Budget, einer mit einer offenen Entscheidung (`agent_id`), sechs Issues in verschiedenen Zuständen mit Blocker und Zielkette, zwei Routinen, zwei Gespräche mit je drei Nachrichten (eine mit `route: cloud`) und ein Feld `slots`. `uix_check --fixture orchestra` startet damit; ohne Fixture misst es nur Leerzustände und schreibt „nur Leerzustand geprüft“.
+- **`OBJECTS`:** `org` → `agent:alle`; `board` → `issue:alle` und ein Issue; `routines` → `routine:alle`; `slots` → `model:alle`; `gauge-slots` (Instrument, wie `gauge-*`); `agentfenster` → `agent:<id>` (über den Stapel); `crew` → `agent:rollen`; `costs` zusätzlich mit einem Issue; `labor` → `labor:labor`.
+- **Profil `paperclip`:** Zone `pc-stack` (nur gemessen, wenn ein Fenster offen ist); die Pane-Messung und `leftovers` zählen auch `.pc-stack .pc-tool`; neue Prüfzeile `nav`: jeder `NAV`-Eintrag wird angeklickt, die Seite ist gefüllt, kein Konsolenfehler, das erwartete Werkzeug (Tabelle aus D4.1) hängt dort (UIX-02); neue Prüfzeile `windows`: zwei Agentenfenster öffnen, zwei verschiedene Verläufe, nach dem Neuladen beide wieder da mit gleichem Text (UIX-04); neue Prüfzeile `idle`: nach dem Öffnen jeder neuen Seite 10 Sekunden Leerlauf, danach höchstens ein Aufruf je Pfad (UIX-05; Ausnahmen `workshop`, `rekorder`, `labor`).
+- **Python-Tests** (`runtime/tests/`):
+  - `test_uix_shell_paperclip.py` (erweitern): `NAV` hat für jeden Eintrag ein passendes Werkzeug (`handlesMatch` gegen die echten Manifeste); `issuesTarget`; `pageFor` mit Art `window`; `pushHistory` mit `view`; der Stapel hält höchstens 4 Fenster; die alten Tests werden angepasst, wo sie „Issues = task“ und „Agenten = crew auf agent:alle“ voraussetzen (OP-S4-4).
+  - `test_uix_contract.py` (erweitern): Schema mit `handles`-Muster; `handlesMatch` (Tabelle von Fällen); Ereignisse der Manifeste stehen in `EVENTS`; `api` der neuen Werkzeuge nur die erlaubten Routen; kein `setInterval`/`setTimeout` in `org`, `board`, `routines`, `slots`, `agentfenster`; `unmountTool` reicht den Container weiter; die 400-Zeilen-Regel gilt für die neuen Dateien automatisch.
+  - `test_desk_events.py` (erweitern): `diff` mit `orchestra` und `slots` (vier Ereignisse, erster Schnappschuss still, Stufe steigt/sinkt, Reihenfolge, fehlender Schlüssel).
+  - `test_desk_decisions.py` (erweitern): `agent_id` in allen vier Bauern.
+  - `test_uix_shell_d_pure.py` (neu): führt die Node-Tests `baum.test.js`, `spalten.test.js`, `cron.test.js`, `verlauf.test.js` aus.
+- **Node-Tests** der reinen Teile: `baum.test.js` (Layout: Kette, Fächer, breiter Teilbaum, Zyklus, unbekannter Vorgesetzter, leer), `spalten.test.js` (sechs Spalten, leere Spalten, unbekannter Zustand, Filter, Kette mit fehlendem Glied), `cron.test.js` (je ein Satz für Tag, Wochentage, Liste, Bereich, Schritt, unlesbar → `null`), `verlauf.test.js` (Zusammenführen, Status, Tage).
+- **Zahl der Prüfungen** (Linie L3): alle Gruppen bleiben unter 20 je Datei, die größte ist `cron.test.js` mit etwa 16.
+
+#### D4.5 Wer baut was (Regeln L4 und V4)
+
+Maßstab V4: Sind Spec, versteckte Tests und Referenz zusammen kleiner als der Code? Die reinen Stücke von Shell D sind klein; die Referenz ist selbst fast so lang wie der Code, deshalb gilt V4 für alle mit **nein**. Zahlen sind Schätzungen vor dem Bau.
+
+| Stück | Code | Spec + Tests + Referenz | V4 | Empfehlung |
+| --- | --- | --- | --- | --- |
+| `baum.js` (Baum-Layout, Budgetstufe) | ~90 | ~35 + 80 + 90 | nein | Claude-Harness |
+| `spalten.js` (Board-Spalten, Zielkette) | ~70 | ~30 + 70 + 70 | nein | Claude-Harness |
+| `cron.js` (Cron-Text) | ~110 | ~40 + 70 + 110 | nein | Claude-Harness; **Pilot** möglich (unten) |
+| `verlauf.js` (Nachrichten, Status, Tage) | ~100 | ~35 + 60 + 100 | nein | Claude-Harness |
+| `handlesMatch`, `issuesTarget`, `pushHistory` (rein, in Lader und Shell) | ~40 | ~60 + 30 + 40 | nein | Claude-Harness (liegt im Vertragscode, braucht Review gegen den Vertrag) |
+| `diff`-Erweiterung `events.py` | ~60 | wie vorhanden (`test_desk_events`) | nein | Claude-Harness |
+| `tool.js`/`tool.css` der fünf Werkzeuge, `windows.js`, Shell-Änderungen, `gauge-slots` | ~1.600 | – | – | Claude-Harness (Oberfläche und Integration, L4) |
+| `uix_fixture_orchestra.py`, `uix_check`-Profil | ~220 | – | – | Claude-Harness (Prüfmittel) |
+| `agent_messages`, `messages.py`, Kind `gespraech`, `anweisen`, `agent_id` | Spec 1 | siehe Spec 1 | – | bei Spec 1 (`orchestra_kinds`/`messages`: SEDRA-Bau nach deren G3) |
+
+Folge: Die Quote Claude zu SEDRA ist in Spec 4 bei **nur Claude**. Das widerspricht nicht L4 („SEDRA baut reine Logik mit klarer Schnittstelle“), solange die Stücke so klein bleiben, dass V4 greift. Will der Captain trotzdem einen Messpunkt für die Quote, ist `cron.js` der beste Kandidat: klare Schnittstelle, Eingabe/Ausgabe-Tabelle als Spec, viele Randfälle für versteckte Tests, kein Bezug zu Desk oder Oberfläche. Das wäre **eine** Bau-Spec `ui_cron` mit zwei Stufen (je höchstens 20 Prüfungen), Kosten ein Bau für etwa 110 Zeilen und ein Review; Claude schreibt dafür rund 220 Zeilen Spec, Tests und Referenz. Empfehlung: kein Pilot, sofern die Quote nicht gerade gebraucht wird (G2-S4-19).
+
+**Bauschritte (Vorlage für G3, nach Abnahme der Coding-Pipeline):**
+
+| Schritt | Inhalt | Dateien | hängt ab von | G2-Gate | Wer |
+| --- | --- | --- | --- | --- | --- |
+| S4.1 | Vertragscode: `handlesMatch`, `registry.forObject`, Schema-Muster, `unmount(el)`/`actions(el)`, Ereignisnamen in `bus.js`; Vertragsnachtrag N1 bis N8 | `ui/loader.js`, `ui/lifecycle.js`, `ui/bus.js`, `ui/schema/tool.schema.json`, `ui/places.js` (Orte), Vertrag, Tests | – | 03, 04, 05, 21 | Claude |
+| S4.2 | Shell: Navigation, Seitenart `window`, Fensterstapel, Ereignis-Abos, `arbeitsplatz.yaml`, README | `shells/paperclip/*` | S4.1 | 01, 02, 21 | Claude |
+| S4.3 | Ereignisse im Desk: `extensions.snapshot`, `diff`, `decision.pending.agent_id` | `desk/events.py`, `desk/decisions.py` (Anteil Spec 4) | Spec 0 (K0.11) | 14, 15 | Claude |
+| S4.4 | `org` mit `baum.js` | `tools/org/*` | S4.1, Spec 0 (lesend) | 06 | Claude |
+| S4.5 | `board` mit `spalten.js`; `costs` für `issue` | `tools/board/*`, `tools/costs/*` | S4.1, Spec 0/1 | 07, 11 | Claude |
+| S4.6 | `routines` mit `cron.js` | `tools/routines/*` | S4.1, Spec 1 | 08 | Claude (oder Pilot) |
+| S4.7 | `slots`, `gauge-slots`; `crew` auf `agent:rollen` | `tools/slots/*`, `tools/gauge-slots/*`, `tools/crew/tool.yaml` | S4.1, Spec 2 (Daten) | 09, 11 | Claude |
+| S4.8 | `agentfenster` mit `verlauf.js` | `tools/agentfenster/*` | S4.1, S4.2, Spec 1 (`gespraech`, `anweisen`) | 10, 12 | Claude |
+| S4.9 | Prüfmittel: Fixture, `uix_check`-Profil, Tests | `benchmarks/*`, `tests/*` | S4.2 bis S4.8 | 17, 18 | Claude |
+| S4.10 | Abnahme Spec 4 (UIX-01 bis UIX-09, soweit messbar) und Übernahme ins Paket | – | alles | 20 | Claude, Captain (G4) |
+
+S4.1 bis S4.3 und S4.9 sind unabhängig von Spec 1 bis 3 baubar; S4.4 bis S4.8 zeigen bis dahin Leerzustände und werden mit der Fixture geprüft. Das ist Absicht: so ist der Zwischenzustand selbst Teil der Abnahme.
+
+**Einbau:** Aufgabe U4.4 in der Aufgabenliste nennt „Einbau über Gate `install_module`“. Nach Linie L5 und OP-10 ist das für Werkzeuge im Paket nicht der Weg: Übernahme per `adopt_plan` oder Handkopie nach Review (G4), `trust: CORE`. Das Gate `install_module` bleibt für `local_config/`. Der Rang `GUPPI_BUILT` hätte außerdem Folgen: Ein Werkzeug außerhalb von `CORE` bekommt die Shell-API ohne `decide` (`makeContext`); die neuen Werkzeuge brauchen `decide` nicht (Entscheidungen laufen über den Posteingang), `GUPPI_BUILT` wäre also technisch möglich. Empfehlung bleibt `CORE`, weil Claude die Werkzeuge baut und sie ins Paket kommen (G2-S4-20, OP-S4-6).
+
+#### D4.6 Fehlerfälle und Abnahme
+
+Fehlerfälle (gelten für alle neuen Werkzeuge, wo nichts anderes steht):
+
+| Fall | Verhalten | geprüft durch |
+| --- | --- | --- |
+| Orchestrierung aus, Schalter fehlt oder `quelle` fehlt | Leerzustand „ausgeschaltet“ mit Knopf zum Maschinenraum | `uix_check` ohne Fixture (alle Seiten), Node-Test der Anzeigefunktion |
+| Orchestrierung ausgefallen (`orchestra_config_invalid:…`, `orchestra_db_error:…`) | Leerzustand „ausgefallen“ mit Grund | Fixture-Variante `fehler` |
+| Typ unbekannt (`unknown_object_type`, alter Stand) | wie „aus“; `board` ist dann gar nicht in der Navigation | Test `issuesTarget`, Fixture ohne `issue` |
+| `orchestra_busy` | rote Zeile „Die Datenbank ist gerade belegt“ mit „Noch einmal lesen“; nichts wird verworfen | Fixture mit simuliertem Fehler |
+| Verb als Antrag (Gate) | Satz „Antrag liegt im Posteingang“, Anzeige ändert sich erst nach `agent.changed` oder `issue.changed` | `uix_check` mit Fixture-Verb |
+| Verb abgewiesen (`task_checked_out`, `delegation_not_allowed`, `cron_invalid`, `text_required`) | Satz des Servers über dem Formular, Eingabe bleibt stehen | Node- und `uix_check`-Fall je Code |
+| Doppelklick auf „Senden“ | eine Nachricht (`key`) | Test Spec 1 + Klicktest |
+| Ereignisstrom bricht ab | `desk.resync` (vorhanden) → alle Werkzeuge lesen neu; kein Zeitgeber | Node-Test mit `bus.emit` |
+| Ereignisflut | ein Lesen läuft, ein weiteres wird gemerkt (kein Zeitgeber, keine Warteschlange) | Node-Test: zehn Ereignisse, höchstens zwei Lesungen |
+| Agentenfenster für unbekannte ID | Fenster „gibt es nicht mehr“ mit Schließen | `uix_check` mit gemerkter falscher ID |
+| mehr als 4 Fenster | ältestes wird zur Reiterleiste | Node-Test `windows` |
+| Daten widersprüchlich (Zyklus, unbekannter Vorgesetzter, unbekannter Zustand) | Baum zeichnet, was erreichbar ist; Rest unter „Nicht eingeordnet“; Board hat die Spalte „Sonstige“ | Node-Tests `baum`, `spalten` |
+| Euro-Feld `null` | nur Token; kein „0 €“ | Fixture ohne Euro |
+| `slots` fehlt | „Ein Modellserver, ein Platz“ | Fixture ohne `slots` |
+| Token ungültig (403) | Satz aus `api.js` | vorhanden |
+
+Abnahme je Anforderung (Wortlaut der neuen Fassung aus G1-S4-01):
+
+| ID | Prüfung (Datei) | messbar |
+| --- | --- | --- |
+| UIX-01 | `tests/test_uix_contract.py` (alle neuen Manifeste gegen Schema, 400 Zeilen, README, keine verbotenen Aufrufe); `benchmarks/uix_check.py --shell paperclip --fixture orchestra` meldet `result ok` mit Objekten für `org`, `board`, `routines`, `slots`, `gauge-slots`, `agentfenster`, `crew`, `costs` (Issue), `labor`; keines „nicht geprüft“ | ja, sobald S4.9 steht; mit Fixture auch ohne Spec 1 |
+| UIX-02 | `test_uix_shell_paperclip.py` (jeder `NAV`-Eintrag hat ein Werkzeug); `uix_check`-Zeile `nav` (jeden Eintrag anklicken, Seite gefüllt, erwartetes Werkzeug) | ja |
+| UIX-03 | `test_uix_contract.py`: Manifestliste mit Begründung als Tabelle im Test (`org`, `board`, `routines`, `agentfenster`, `slots`, `gauge-slots` neu; `crew`, `costs` angepasst; `decisions`, `live`, `workshop`, `labor`, `meter`, `intent`, `planung`, `talk`, `task` unverändert); `handlesMatch`-Fälle; kein Objekt der Navigation wird von zwei Werkzeugen mit dem Slot `inhalt` gezeichnet, außer `model:alle` (`slots` und `workshop`, ausdrücklich erlaubt) | ja |
+| UIX-04 | `uix_check`-Zeile `windows` (zwei Fenster, zwei Verläufe, nach dem Neuladen gleich); `verlauf.test.js`; Spec 1: `test_orchestra_messages.py` (`anweisen` erzeugt Nachricht, Issue, Weckruf; Verlauf überlebt Neustart) | Shell-Teil ja (Fixture); Wirkung auf den Unterarbeiter erst nach Spec 1 |
+| UIX-05 | `uix_check`-Zeile `idle` (10 s ohne wiederholte Abfrage je Pfad); `test_uix_contract.py` (kein Zeitgeber im Quelltext der fünf Werkzeuge); `test_desk_events.py` (Ereignisse entstehen); Node-Tests zu `desk.resync` und Ereignisflut | ja |
+| UIX-06 | `test_uix_contract.py`: `api` der neuen Werkzeuge genau `POST /api/objects`, `POST /api/actions` (Instrument `GET /api/strip`); `uix_check` zählt fremde Routen (vorhanden) | ja |
+| UIX-07 | `test_desk_decisions.py` (`agent_id`); `uix_check` mit Fixture: Badge an der Karte und im Fenster, am Posteingang | Shell ja (Fixture); echte Agenten-ID erst nach Spec 1 |
+| UIX-08 | `uix_check` mit Fixture: Balken mit Prozentzahl, Hinweis „Cloud · Anbieter / Modell“ an der Nachricht mit `route: cloud`, kein Hinweis bei lokal | Shell ja (Fixture); echte Werte erst nach Spec 1 und 3 |
+| UIX-09 | vorhandene Tests des Argumentaufbaus (`test_uix_start.py`, `test_uix_start_standard.py`); `uix_check --shell paperclip` auf einem Testprojekt | ja (unverändert) |
+| UIX-10 (neu, G2-S4-23) | „Die Shell SOLL jede Seite ohne Daten mit Grund zeigen (ausgeschaltet, ausgefallen, leer, noch keine Daten) und keine Zahl zeigen, die nicht aus dem Desk kommt.“ Prüfung: die Zeilen „Fehlerfälle“ oben, `uix_check` ohne Fixture | ja |
+
+#### D4.7 Gate-Liste G2-S4 und offene Punkte
+
+Jede Zeile entscheidet der Captain einzeln. Keine Änderung an `core/`. „Spec“ nennt, wer den Teil baut.
+
+| Gate | Gegenstand | Spec | Empfehlung |
+| --- | --- | --- | --- |
+| G2-S4-01 | Navigation wie D4.1 (Abschnitte Arbeit, Team, Betrieb; Einträge Routinen, Organigramm, Agenten, Modelle und Slots, KI-Labor; Issues zeigt `task`, bis `board` installiert ist) | 4 | freigeben |
+| G2-S4-02 | Fensterstapel: Zone `pc-stack`, Seitenart `window`, `windows.js`, höchstens 4 Fenster, Merkliste im Browser | 4 | freigeben |
+| G2-S4-03 | Vertragsnachtrag N1 (`handles` mit `typ:alle`, `typ:*`, `typ:<id>`, Schema, `handlesMatch`, `registry.forObject`) | 4 | freigeben |
+| G2-S4-04 | Vertragsnachtrag N2 (`unmount(el)`, `actions(el)`, mehrere Instanzen; Änderung an `ui/lifecycle.js`) | 4 | freigeben |
+| G2-S4-05 | Vertragsnachtrag N3 und N4 (vier Ereignisse in `bus.js` und §5, `agent_id` an `decision.pending`, `desk.resync` für alle Datenwerkzeuge) | 4 | freigeben |
+| G2-S4-06 | Werkzeug `org` wie D4.2.1 (Baum und Liste, Karte, Verben aus `actions`) | 4 | freigeben |
+| G2-S4-07 | Werkzeug `board` wie D4.2.2 (Liste und Board, ein Werkzeug, kein Ziehen von Karten) | 4 | freigeben |
+| G2-S4-08 | Werkzeug `routines` wie D4.2.3 (Cron-Text nur Anzeige, Termine vom Server) | 4 | freigeben |
+| G2-S4-09 | `slots` als Seite plus Kachel `gauge-slots` (Abweichung von G1: „Instrument“ zerlegt in zwei kleine Manifeste) | 4 | freigeben |
+| G2-S4-10 | Werkzeug `agentfenster` wie D4.2.5 (Eingabe nur, wenn `anweisen` in `actions` steht; Status je Nachricht; keine Live-Zeilen im Fenster, nur Link zur Mission) | 4 | freigeben |
+| G2-S4-11 | `crew` auf `agent:rollen`, `costs` für `issue` und Cloud-Kennzeichen (zusätzlich `POST /api/objects`), `labor` nur Eintrag | 4 | freigeben |
+| G2-S4-12 | Verlauf serverseitig: Tabelle `agent_messages`, Desk-Typ `gespraech` (nur lesend, Filter `agent`), Verb `anweisen` mit `key` (Nachtrag zu D3.3, ORC-14) | 1 | freigeben |
+| G2-S4-13 | Feld `quelle` (`aus`/`bereit`/`fehler`, `grund`, `takt`) in den Listen von `agent`, `issue`, `routine`, `budget`, `gespraech` (Platzhalter und `orchestra_kinds`) | 0 und 1 | freigeben |
+| G2-S4-14 | Ereignisse im Desk: Haken `extensions.snapshot`, Schnappschuss-Felder, `diff` für `agent.changed`, `issue.changed`, `budget.warning`, `slot.changed`; Form von `slots` im Ergebnis des Typs `model` | 0, 2, 4 | freigeben |
+| G2-S4-15 | Agenten-ID in Entscheidungen (`decisions.py`, `gated.py`-Bindung) und `offene_entscheidungen` am Objekt `agent` | 1 | freigeben |
+| G2-S4-16 | Von Spec 1 zu liefern, damit Shell D nichts erfindet: Felder `budget` (mit `stufe`), `arbeitet`, `reports_to`, `rolle` am Objekt `agent`; Verb `einschalten` (oder `aendern` mit `enabled`) für Routinen; Antwort „Antrag liegt im Posteingang“ bei Verben mit Gate | 1 | freigeben |
+| G2-S4-17 | Prüfmittel: `uix_fixture_orchestra.py`, `uix_check`-Profil (OBJECTS, `nav`, `windows`, `idle`, `--fixture`) | 4 | freigeben |
+| G2-S4-18 | Tests und Node-Tests wie D4.4 (je Gruppe höchstens 20 Prüfungen, L3) | 4 | freigeben |
+| G2-S4-19 | Wer baut: alles Claude-Harness nach V4; kein SEDRA-Pilot (Alternative: Pilot `cron.js` als Bau-Spec `ui_cron`) | 4 | Claude-Harness, kein Pilot |
+| G2-S4-20 | Einbau: Übernahme ins Paket per `adopt_plan`/Handkopie (L5), `trust: CORE`; Aufgabe U4.4 und der Satz „Einbau über `install_module`“ in Design und Werkzeugliste werden entsprechend geändert | 4 | freigeben |
+| G2-S4-21 | `ui/places.js` (Orte `org`, `routines`, `slots`, `labor`, `crew` → `agent:rollen`), `arbeitsplatz.yaml` und README der Shell (aus G1-S4-09 und G1-S4-10, jetzt mit Wortlaut aus D4.1) | 4 | freigeben |
+| G2-S4-22 | Zeitgeber-Ausnahmen bis zu ihrer Spec: `workshop`, `rekorder`, `labor`, `ui/wechsel.js`; neue Seiten ohne Zeitgeber, relative Zeiten ohne mitlaufende Uhr | 4 | freigeben |
+| G2-S4-23 | Neue Anforderung UIX-10 (ehrliche Leerzustände, keine erfundene Zahl) | 4 | freigeben |
+
+##### Offene Punkte (Stufe 2)
+
+| Nr | Lücke oder Frage | Vorschlag |
+| --- | --- | --- |
+| OP-S4-6 | Rang der neuen Werkzeuge: `CORE` (Claude baut, Übernahme ins Paket) oder `GUPPI_BUILT` (wie die Spec früher sagte)? | `CORE`, siehe G2-S4-20 |
+| OP-S4-7 | Darf der Captain jedem Agenten eine Anweisung geben, oder nur dem Unterarbeiter? ORC-14 nennt nur den Unterarbeiter. | Entscheidet Spec 1 über `actions`; Shell D zeigt die Eingabe nur, wenn das Verb angeboten wird |
+| OP-S4-8 | Live-Zeilen eines laufenden Agentenlaufs im Fenster (Streaming)? | v1: nein; Link zur Mission, wo `live` die Zeilen zeigt |
+| OP-S4-9 | `pushHistory` kennt `view` im Schlüssel: das ändert den Test „Verlauf überspringt Wiederholungen“ | im Bau anpassen (S4.2), Verhalten bleibt für Objekte ohne `view` gleich |
+| OP-S4-10 | `places.js` und `handles` gelten auch im Cockpit: `org` zeichnet dort in einem schmalen Dock | akzeptieren; Baum scrollt waagerecht; im Browser nicht geprüft |
+| OP-S4-11 | Navigationseinträge bleiben bei ausgeschalteter Orchestrierung sichtbar (Leerzustand) | so lassen (UIX-02, UIX-10) |
+| OP-S4-12 | Größe und Aufbewahrung von `agent_messages` | nach vier Wochen Betrieb auswerten (wie `spend`) |
+| OP-S4-13 | Breite unter 1100 Pixel: Stapel als Überlagerung | beim Bau mit `uix_check --headed` ansehen; kein Mobilbetrieb im Ziel |
+| OP-S4-14 | `labor:labor` als Objekt: ob das Werkzeug ohne bestimmte Objekt-ID sauber mountet, ist ungeprüft | `uix_check` öffnet es (G2-S4-17) |
+| OP-S4-15 | Cloud-Grenzen als `budget.warning` ohne Agent (Spec 3) | Form legt Spec 3 fest; Werkzeug `labor` hört das Ereignis erst mit seinem Ausbau |
+
+##### Nicht geprüft
+
+Kein Testlauf (`pytest`, `uix_check`, Node), kein Browser, kein Start von SEDRA, keine GPU, keine Cloud. Nicht im Einzelnen gelesen: `tools/labor`, `tools/talk` über das Manifest hinaus, `ui/dom.js`, `ui/wechsel.js`, `ui/bruecke.js`, `shell.css`, die Tests von Shell D im Wortlaut, `desk/gated.py` (existiert noch nicht), Quelltext von Spec 2/3 (nur deren Kapitel). Annahmen, die der Bau zuerst prüft: dass der Lader `handles` nur an `registry.for` bindet (N1), dass `unmountTool` und `actionsOf` die einzigen Aufrufer von `unmount()` und `actions()` sind (N2), dass `labor` ohne Objekt-ID mountet, und dass `object.open` mit zusätzlichem Feld `view` vom Lader nicht abgewiesen wird (Pflichtfelder von `object.open` sind `type`, `id`, `title`; weitere Felder erlaubt). Alle Zeilenzahlen sind Schätzungen.
 
 ### Aufgaben
 
 - [x] U4.1 (20.10.2026) Stand von `uix/shells/paperclip/` prüfen und Paperclip-UI (Vorlage `ui/`) auf Ansichten und Abläufe durchsehen
 - [x] U4.2 Skizze und Werkzeugliste, Anforderungsteil → G1 (Vorlage 20.10.2026, G1-S4-01 bis 10); Design danach → G2
-- [ ] U4.3 Bau-Specs `tool_org`, `tool_board`, `tool_routines`, `tool_slots` (Node-Tests für reine Teile, `uix_check` für den Browser) → G3
-- [ ] U4.4 Bau durch SEDRA, Einbau über Gate `install_module` → G4
+- [x] U4.2b (21.10.2026) Design D4.1 bis D4.7 ausgearbeitet → G2 (G2-S4-01 bis 23)
+- [ ] U4.3 Bauschritte S4.1 bis S4.10 (D4.5) schneiden und freigeben; nach V4 baut Claude alles als Harness, keine Bau-Specs `tool_*` (Pilot `ui_cron` nur auf Wunsch, G2-S4-19) → G3
+- [ ] U4.4 Bau (Claude-Harness), Übernahme ins Paket per `adopt_plan`/Handkopie nach Review (L5, G2-S4-20), nicht über `install_module` → G4
 
 ## Spec 5 – Inbetriebnahme und Abnahme
 
