@@ -284,6 +284,57 @@ class Register(unittest.TestCase):
                 call_()
 
 
+class ListExtras(unittest.TestCase):
+    """Spec 1, S1.H4 (D1.3.4, G2-S1-10): Haken `extra` im Register, Verben am Typ in `liste.actions`, `quelle` der Platzhalter."""
+
+    def obj(self, oid):
+        return {'type': 'zaehler', 'id': oid, 'title': oid, 'state': 'da', 'summary': oid, 'actions': [], 'links': []}
+
+    def registry_with(self, extra=None, type_verbs=()):
+        from guppi_runtime.desk import builtin_kinds
+        reg = builtin_kinds.new_registry()
+        reg.register(reg.Kind('zaehler', 'Zähler', lambda h, o: self.obj(o), lambda h, p: [self.obj('z1')], type_verbs=type_verbs,
+                              extra=extra))
+        return reg
+
+    def test_extra_is_merged_into_the_list_and_sees_the_payload(self):
+        seen = []
+        reg = self.registry_with(extra=lambda h, p: seen.append(p) or {'quelle': {'zustand': 'bereit'}, 'mehr': False})
+        out = reg.request(None, {'type': 'zaehler', 'agent': 'a1'})
+        self.assertEqual(out, {'type': 'zaehler', 'items': [self.obj('z1')], 'quelle': {'zustand': 'bereit'}, 'mehr': False})
+        self.assertEqual(seen, [{'type': 'zaehler', 'agent': 'a1'}])
+        self.assertEqual(reg.request(None, {'type': 'zaehler', 'id': 'z2'})['id'], 'z2', 'die Einzelansicht bleibt ohne extra')
+        self.assertEqual(seen, [{'type': 'zaehler', 'agent': 'a1'}])
+
+    def test_extra_cannot_overwrite_type_items_or_actions(self):
+        for key in ('type', 'items', 'actions'):
+            with self.subTest(key):
+                reg = self.registry_with(extra=lambda h, p, key=key: {key: 'anders'})
+                with self.assertRaisesRegex(ValueError, '^extra_key_reserved$'):
+                    reg.request(None, {'type': 'zaehler'})
+
+    def test_type_verbs_are_listed_as_actions_of_the_list(self):
+        from guppi_runtime.desk.actions import Verb
+        anlegen = Verb('anlegen', 'Anlegen', lambda h, o, a: None, needs_gate=True)
+        out = self.registry_with(type_verbs=[anlegen]).request(None, {'type': 'zaehler'})
+        self.assertEqual(out['actions'], [{'verb': 'anlegen', 'label': 'Anlegen', 'needs_gate': True, 'confirm': None}])
+        self.assertNotIn('actions', self.registry_with().request(None, {'type': 'zaehler'}), 'ohne Verb am Typ kein Feld')
+
+    def test_placeholders_say_off_or_failed_and_agent_stays_without_quelle(self):
+        from types import SimpleNamespace
+        from guppi_runtime.desk import builtin_kinds
+        reg = builtin_kinds.new_registry()
+        off = SimpleNamespace(runtime=SimpleNamespace(orchestra=None, orchestra_error=None))
+        failed = SimpleNamespace(runtime=SimpleNamespace(orchestra=None, orchestra_error='orchestra_db_error:migration'))
+        for name in PLACEHOLDERS:
+            with self.subTest(name):
+                self.assertEqual(reg.request(off, {'type': name}),
+                                 {'type': name, 'items': [], 'quelle': {'zustand': 'aus', 'grund': 'orchestra_off', 'takt': None}})
+                self.assertEqual(reg.request(failed, {'type': name})['quelle'],
+                                 {'zustand': 'fehler', 'grund': 'orchestra_db_error:migration', 'takt': None})
+        self.assertEqual(reg.request(failed, {'type': 'agent'}), {'type': 'agent', 'items': []}, 'wie die Golden-Aufzeichnung')
+
+
 class Gated(unittest.TestCase):
     """`desk/gated.py` über ein Test-Verb (OP-15): Antrag erzeugt eine Entscheidung, Anwenden nur mit gültigem Einmal-Token."""
 

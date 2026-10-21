@@ -4,7 +4,9 @@ Today they live in three places: the pending gates of a mission, the change requ
 (`open_requests`), and from Build 9 the project boundaries. This module brings them into one shape, so a tool (and the Gespräch,
 and a later Posteingang in another shell) can show and answer all of them the same way:
 
-    {id, kind, title, describe, mission_id, gate_id, ways:[…], binding, created_at, apply}
+    {id, kind, title, describe, mission_id, gate_id, ways:[…], binding, created_at, apply, agent_id}
+
+`agent_id` (Spec 1, D1.3.5): der betroffene Agent eines Antrags der Orchestrierung (aus `binding.agent_id`), sonst None.
 
 `ways` are the three or four ways out of the Cockpit rules: `einmal` (approve once), `freigeben_und_anwenden` (approve and apply a
 change request in one go), `aendern` (change the boundary – Build 9), `ablehnen`. Answering goes through the same guard calls as
@@ -39,7 +41,8 @@ def gate_decision(mission, gate):
             'risks': [r for r in (request.get('risks') or []) if isinstance(r, str)],
             'rollback': bool(request.get('rollback_available')),
             'note': 'gilt nur einmal · Rücknahme ' + ('möglich' if request.get('rollback_available') else 'nicht möglich'),
-            'created_at': gate.get('created_at'), 'ways': ['einmal', 'ablehnen'], 'apply': None, 'binding': request.get('request_binding')}
+            'created_at': gate.get('created_at'), 'ways': ['einmal', 'ablehnen'], 'apply': None, 'binding': request.get('request_binding'),
+            'agent_id': None}
 
 
 def request_decision(req):
@@ -53,7 +56,9 @@ def request_decision(req):
             'note': REQUEST_NOTE.get(kind, ''), 'created_at': (req.get('gate') or {}).get('created_at'),
             'ways': ['freigeben_und_anwenden', 'ablehnen'], 'apply': APPLY.get(kind),
             'binding': {k: v for k, v in binding.items() if k in ('section', 'key', 'old', 'new', 'describe', 'block', 'text', 'recipe_id', 'field',
-                                                                 'vorgang_id', 'klasse', 'merkmale', 'weg', 'policy', 'binding')}}
+                                                                 'vorgang_id', 'klasse', 'merkmale', 'weg', 'policy', 'binding',
+                                                                 'agent_id', 'op')},
+            'agent_id': binding.get('agent_id')}
 
 
 def boundary_decision(crossing):
@@ -62,7 +67,8 @@ def boundary_decision(crossing):
     return {'id': crossing['id'], 'kind': 'boundary', 'title': crossing['title'], 'describe': crossing['describe'],
             'mission_id': None, 'gate_id': None, 'risks': [], 'rollback': True, 'note': crossing.get('note', ''),
             'created_at': crossing.get('created_at'), 'ways': list(crossing['ways']), 'apply': None,
-            'binding': {'boundary': crossing['boundary'], 'project_id': crossing['project_id'], 'amount': crossing.get('amount')}}
+            'binding': {'boundary': crossing['boundary'], 'project_id': crossing['project_id'], 'amount': crossing.get('amount')},
+            'agent_id': None}
 
 
 def content_decision(d):
@@ -79,7 +85,8 @@ def content_decision(d):
             'mission_id': d.get('mission_id') or None, 'gate_id': None, 'risks': list(d.get('describe') or []), 'rollback': True,
             'note': 'Inhaltsschutz · „einmal“ lässt genau diesen Aufruf durch, zehn Minuten lang · Abgelehnt geht nichts hinaus',
             'created_at': created, 'ways': list(d.get('ways') or ['einmal', 'ablehnen']), 'apply': None,
-            'binding': {'binding': d.get('binding'), 'rules': list(d.get('rules') or []), 'reasons': list(d.get('reasons') or [])}}
+            'binding': {'binding': d.get('binding'), 'rules': list(d.get('rules') or []), 'reasons': list(d.get('reasons') or [])},
+            'agent_id': None}
 
 
 def collect(missions, open_requests, crossings=(), contents=()):
