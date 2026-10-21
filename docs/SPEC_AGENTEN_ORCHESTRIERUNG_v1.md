@@ -1332,9 +1332,114 @@ Nicht geprüft in dieser Stufe: Ausführen von Tests, Oberfläche, Modell, GPU; 
 
 - [x] O1.1 Agent Manager auf Berichtslinien und Instanz-Status prüfen; Erweiterung oder neues `org.py` festlegen → Empfehlung `org.py` (G1-S1-01, 20.10.2026)
 - [ ] O1.2 Datenmodell final, Migration für bestehende Agenten → G2 (ausgearbeitet 21.10.2026: Design Stufe 2, D1.1 bis D1.8, Migration 2 in D1.2)
-- [ ] O1.3 Bau-Specs schreiben: die zwölf `s1_*` aus D1.6 (ersetzt `orc_org` … `orc_routines`) in `devvm_specs/`, je mit Referenz und `spec_check.py --vm` = ok → G3
+- [ ] O1.3 Bau-Specs schreiben: die zwölf `s1_*` aus D1.6 (ersetzt `orc_org` … `orc_routines`) in `devvm_specs/`, je mit Referenz und `spec_check.py --vm` = ok → G3 (ausgearbeitet 21.10.2026: elf Bau-Specs, `s1_budgetcalc` nach V4 an Claude; Abschnitt „Bauschritte“ unten)
 - [ ] O1.4 Neue Guard-Aktionen und Desk-Registrierung (Harness, KI-Sitzung)
 - [ ] O1.5 Bau durch SEDRA, Review, Übernahme → G4
+
+#### Bauschritte S1 (Stufe 3, Vorlage für G3)
+
+Stand 21.10.2026, Branch `spec1/aufgaben`, geschnitten aus D1.1 bis D1.8 (G2 erteilt, `c28c509`). Wer baut: **SEDRA** = neues Modul mit Bau-Spec (`runtime/benchmarks/devvm_specs/s1_*.py`, versteckte Tests) und grüner Referenz (`devvm_refs/s1_*/`, nur Prüfmittel); **Claude** = direkt geschrieben nach V4; **Harness** = Eingriff in vorhandene Dateien, Kern, Konfiguration, Desk und Lauf. Gelaufen sind nur `spec_check` (Host und microVM, ohne GPU, ohne Modell); kein `devvm_build`.
+
+**Saat** `benchmarks/s1_schema2_seed/` (PIPE-10, Feld `SEED` in sieben Bau-Specs): `store.py` = `orchestra/store.py` aus Spec 0 plus `MIGRATIONS[2]` und `SCHEMA_VERSION = 2` genau nach D1.2 (neue Spalten, `standing_approvals`, `agent_messages`, `budget_incidents`, Teilindizes); dazu die Vorgänger, die die Speichermodule importieren: `graphs.py`, `wakeplan.py`, `cron.py`, `decompose.py` (je byte-gleich mit der Referenz der Bau-Spec) und `budgetcalc.py` (Claude, V4). Jede Referenz einer Bau-Spec mit Saat enthält die ganze Saat plus das Modul. S1.H1 baut dieselben Tabellen ins Paket; ändert sich die Saat, müssen die sieben Bau-Specs mit Saat neu gestempelt werden.
+
+**V4 für `s1_budgetcalc`:** Code 49 Zeilen (geschrieben, liegt in der Saat); eine Bau-Spec mit vier Stufen bräuchte nach den Vergleichsstücken (`s1_wakeplan`: 160 Zeilen Spec und Tests für 70 Zeilen Code) rund 150 Zeilen plus 49 Zeilen Referenz, also etwa das Vierfache des Codes → **Claude baut direkt** (S1.C2). Nachrichtlich: Wörtlich verfehlt jede Bau-Spec V4, weil die Referenz allein so groß ist wie der Code (Spec-Datei/Referenz hier 1,4 bis 2,9); die elf übrigen bleiben nach G2-S1-22 bei SEDRA.
+
+SEDRA-Bauten (Reihenfolge des Baus nach D1.6, eine GPU-Lease, ein Bau zur Zeit; Zahlen = neue versteckte Prüfungen je Stufe, gezählt von `spec_check`):
+
+| Nr | Bau-Spec | Ziel im Paket | Stufen (neue Prüfungen) | Saat | Referenz (Zeilen) | `spec_check --vm` |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | `s1_graphs` | `orchestra/graphs.py` | cycle 13, root 14, depth 15, delegate 17, level 19 | – | `devvm_refs/s1_graphs/graphs.py` (97) | result ok |
+| 2 | `s1_wakeplan` | `orchestra/wakeplan.py` | key 9, coalesce 15, pick 18, decide 17 | – | `devvm_refs/s1_wakeplan/wakeplan.py` (70) | result ok |
+| 3 | `s1_decompose` | `orchestra/decompose.py` | schema 16, rules 19, assign 15, report 15 | – | `devvm_refs/s1_decompose/decompose.py` (105) | result ok |
+| 4 | `s1_cron` | `orchestra/cron.py` | parse 16, match 8, next 15, dst 7, due 15, describe 5 | – | `devvm_refs/s1_cron/cron.py` (161) | result ok |
+| 5 | `s1_runner` | `orchestra/runner.py` | intent 20, messages 15, outcome 17, external 16 | ja | `devvm_refs/s1_runner/runner.py` (140) | result ok |
+| 6 | `s1_messages` | `orchestra/messages.py` | add 16, idem 13, status 16, page 16 | ja | `devvm_refs/s1_messages/messages.py` (59) | result ok |
+| 7 | `s1_budget` | `orchestra/budget.py` | book 18, state 12, incidents 19 | ja | `devvm_refs/s1_budget/budget.py` (72) | result ok |
+| 8 | `s1_heartbeat` | `orchestra/heartbeat.py` | enqueue 19, due 15, finish 16, flight 8 | ja | `devvm_refs/s1_heartbeat/heartbeat.py` (70) | result ok |
+| 9 | `s1_org` | `orchestra/org.py` | hire 20, set_org 20, pause 15, terminate 13, read 16 | ja | `devvm_refs/s1_org/org.py` (127) | result ok |
+| 10 | `s1_board` | `orchestra/board.py` | create 20, assign 14, checkout 16, blockers 17, release 17, comment 16, chain 16, delegate 18 | ja | `devvm_refs/s1_board/board.py` (242) | result ok |
+| 11 | `s1_routines` | `orchestra/routines.py` | crud 16, change 18, fire 15, catchup 10, active 12 | ja | `devvm_refs/s1_routines/routines.py` (131) | result ok |
+
+Alle Stempel Stufe `vm` (microVM-Python 3.12.15); jede erste Stufe scheitert auf der Saat (`spec_check --seed`). Die reinen Module (1 bis 5 und `budgetcalc`) importieren weder `guppi_runtime` noch `sqlite3`.
+
+Schnittstellen, die die Bau-Specs gegenüber D1.1 festlegen oder ergänzen (der Harness hält sich daran):
+
+- Zeit überall als UTC-Text `YYYY-MM-DDTHH:MM:SSZ`; die Uhr `clock()` der Fassade muss genau diese Form liefern.
+- `graphs`: Zeilen `{id, reports_to, status}`; Prüfreihenfolge `org_self`, `org_unknown_superior`, `org_cycle`, `org_second_root`, `org_no_root`, `org_too_deep`.
+- `wakeplan`: `pick_task` bekommt nur die Aufgaben **eines** Agenten, Blocker-Zeilen tragen den Zustand der blockierenden Aufgabe; `decide_run` nimmt `budget_state` ∈ `ok`, `warnung`, `gestoppt`, `zu_wenig`.
+- `decompose.check(answer, subordinates, max_subtasks, roles=None)`: viertes Argument trennt `role_unknown` von `role_not_subordinate`; Teilaufgaben nur an aktive Untergebene ohne Delegationsrecht.
+- `cron`: Zone als Name (`UTC` immer) oder `tzinfo`-Objekt; `next_after` liefert `None`, wenn in 8 Jahren kein Termin liegt; `describe` deckt die Sätze von `cronText` für die gängigen Formen ab, sonst `None`.
+- `runner`: `RunPlan` trägt zusätzlich `mode` und `daten`, das Ergebnis `fertig`; neue Funktion `research_outcome(answer, records)` für den zweiten Recherche-Aufruf; Fehler `run_mode_unknown`, `run_invalid:*`, `report_invalid:*`, `research_invalid:*`.
+- `messages.set_status`: zusätzlich `angenommen → fehler` und `wartet_freigabe → fehler` (Ablehnen, D1.5).
+- `budget.book(…, warn=80, stop=100)`; `heartbeat.due(conn, now, coalesce_s=0)`; `heartbeat.enqueue` liefert `None` für nicht aktive Agenten (ORC-12).
+- `org.set_org` nimmt auch `budget_tokens`, `budget_eur_cent`, `budget_period` (Verb `festlegen`); `hire` prüft Pflicht- und unbekannte Felder.
+- `board.clear_blocker` liefert die Zahl der offenen Blocker danach (0 → Weckruf `unblocked`); `routines.fire_due` ruft `make_task` außerhalb der Transaktion.
+
+Claude direkt (V4):
+
+| Schritt | Inhalt | Dateien | G2-Gate | hängt ab von |
+| --- | --- | --- | --- | --- |
+| S1.C1 | `chain.build` nach D1.1 (Glieder Vorhaben → Projekt → Eltern → Aufgabe, „Glied nicht gefunden“, Kürzung von vorn, Aufgabe vollständig) | `orchestra/chain.py`, `tests/test_orchestra_chain.py` | G2-S1-22, ORC-13 | – |
+| S1.C2 | `budgetcalc` übernehmen (Text aus der Saat) und Tests schreiben | `orchestra/budgetcalc.py`, `tests/test_orchestra_budgetcalc.py` | G2-S1-19, G2-S1-22 | – |
+
+Harness (Claude):
+
+| Schritt | Inhalt | Dateien | G2-Gate | hängt ab von |
+| --- | --- | --- | --- | --- |
+| S1.H1 | Migration 2 ins Paket: `MIGRATIONS[2]`, `SCHEMA_VERSION = 2`, `TABLES` wörtlich aus der Saat; Sicherung `orchestra.db.bak-<datum>` in `open_db`, wenn `schema_version` < Ziel; Fehler `orchestra_db_error:migration` | `orchestra/store.py`, `tests/test_orchestra_store_m2.py` (Schema 1 mit Daten → 2, Sicherung, `ux_agents_root` per SQL) | G2-S1-02 | – (zuerst) |
+| S1.H2 | Dauerfreigabe im Guard nach D1.4, Testliste 1 bis 16 | `core/guard.py`, `tests/test_guard_standing.py` | G2-S1-KERN-01 | – |
+| S1.H3 | `orchestra.yaml` Schema 2 (`runner`, `standing`, `decompose`; `checkout.stall_s` entfällt, Schema 1 wird weiter gelesen) | `runtime/config/orchestra.yaml`, `orchestra/config.py`, `tests/test_orchestra_config.py` | G2-S1-20 | – |
+| S1.H4 | Haken `extra` im Register, `quelle` im Platzhalter `agent`, `agent_id` in den Entscheidungen | `desk/kinds.py`, `desk/builtin_kinds.py`, `desk/decisions.py`, `tests/test_desk_kinds.py`, `tests/test_desk_decisions.py` | G2-S1-10, G2-S1-11 | – |
+| S1.H5 | `gated.py` mit mehreren Gates, Applier-Register, `decide`, `pending`, `binding_stale`; `uix_server.decide`/`_open_requests` | `desk/gated.py`, `uix_server.py`, `tests/test_desk_gated.py` | G2-S1-08, G2-S1-09 | S1.H4 |
+| S1.H6 | Übernahme der elf SEDRA-Module (nach G4, nur Importe relativ), dazu S1.C1/S1.C2; Fassade `service.py` erweitert, `tick.py`, Takt-Thread in `orchestra_kinds.start`; zweite Regel der Importgrenze (reine Module ohne `guppi_runtime`/`sqlite3`) | `orchestra/*.py`, `desk/orchestra_kinds.py`, `tests/test_orchestra_boundary.py`, `tests/test_orchestra_tick.py` | G2-S1-01, G2-S1-15 | S1.H1, S1.H3, G4 der Module |
+| S1.H7 | Verben, Felder, Typ `gespraech`, Applier, Sätze `SAETZE` | `desk/orchestra_kinds.py`, `tests/test_orchestra_desk.py`, `tests/test_orchestra_messages.py`, `tests/test_orchestra_hire.py` | G2-S1-03 bis 07, 12, 13 | S1.H2, S1.H5, S1.H6 |
+| S1.H8 | Agentenlauf: `desk/orchestra_runner.py` (Mission, Vertrag, Handler `orchestra_run`, Router, Web), Rollen `foreman`/`researcher`, Vorlagen mit Prüfsumme | `desk/orchestra_runner.py`, `runtime/config/job_supervisor.yaml`, `role_routing.yaml`, `token_policy.yaml`, Vorlagen, `tests/test_orchestra_run.py` u. a. | G2-S1-14, 16 bis 19, 21, 24 | S1.H7 |
+| S1.H9 | Abnahme D1.7 (alle Testdateien), `uix_check` `result ok`, Logbuch | – | G2-S1-23 | alle |
+
+Reihenfolge: S1.H1 und S1.H2 zuerst (unabhängig). Die elf SEDRA-Bauten hängen von keinem Harness-Schritt ab (die Saat ersetzt S1.H1 für den Bau) und laufen nacheinander in der Reihenfolge der Tabelle. Parallel dazu Claude: S1.C1, S1.C2, S1.H3, S1.H4 → S1.H5. Nach G4 der Module: S1.H6 → S1.H7 → S1.H8 → S1.H9.
+
+#### Gate-Vorschläge G3 Spec 1
+
+| Gate | Gegenstand | baut |
+| --- | --- | --- |
+| G3-S1-01 | Bau-Spec `s1_graphs` und SEDRA-Bau `orchestra/graphs.py` | SEDRA |
+| G3-S1-02 | Bau-Spec `s1_wakeplan` und SEDRA-Bau `orchestra/wakeplan.py` | SEDRA |
+| G3-S1-03 | Bau-Spec `s1_decompose` und SEDRA-Bau `orchestra/decompose.py` | SEDRA |
+| G3-S1-04 | Bau-Spec `s1_cron` und SEDRA-Bau `orchestra/cron.py` | SEDRA |
+| G3-S1-05 | Bau-Spec `s1_runner` und SEDRA-Bau `orchestra/runner.py` | SEDRA |
+| G3-S1-06 | Bau-Spec `s1_messages` und SEDRA-Bau `orchestra/messages.py` | SEDRA |
+| G3-S1-07 | Bau-Spec `s1_budget` und SEDRA-Bau `orchestra/budget.py` | SEDRA |
+| G3-S1-08 | Bau-Spec `s1_heartbeat` und SEDRA-Bau `orchestra/heartbeat.py` | SEDRA |
+| G3-S1-09 | Bau-Spec `s1_org` und SEDRA-Bau `orchestra/org.py` | SEDRA |
+| G3-S1-10 | Bau-Spec `s1_board` und SEDRA-Bau `orchestra/board.py` | SEDRA |
+| G3-S1-11 | Bau-Spec `s1_routines` und SEDRA-Bau `orchestra/routines.py` | SEDRA |
+| G3-S1-12 | Saat `s1_schema2_seed` (Schema 2 plus Vorgänger-Referenzen) als Grundlage der sieben Bauten mit Saat | Claude |
+| G3-S1-13 | S1.C1 `chain.py` direkt (V4) | Claude |
+| G3-S1-14 | S1.C2 `budgetcalc.py` direkt (V4-Entscheidung statt Bau-Spec `s1_budgetcalc`) | Claude |
+| G3-S1-15 | S1.H1 Migration 2 und Sicherung | Harness |
+| G3-S1-16 | S1.H2 Dauerfreigabe in `core/guard.py` (Kern) | Harness |
+| G3-S1-17 | S1.H3 `orchestra.yaml` Schema 2 und `config.py` | Harness |
+| G3-S1-18 | S1.H4 `extra`, `quelle`, `agent_id` | Harness |
+| G3-S1-19 | S1.H5 `gated.py` und `uix_server.decide` | Harness |
+| G3-S1-20 | S1.H6 Übernahme, Fassade, `tick.py`, Takt | Harness |
+| G3-S1-21 | S1.H7 Desk-Verben, Felder, `gespraech` | Harness |
+| G3-S1-22 | S1.H8 Agentenlauf, Rollen, Vorlagen | Harness |
+| G3-S1-23 | S1.H9 Abnahme Spec 1 | Harness |
+| G3-S1-24 | Abhängigkeit `tzdata` in `.venv` (OP-S1-03), Voraussetzung für Routinen in `Europe/Berlin` und die Sommerzeit-Abnahme ORC-10 | Captain-Entscheidung |
+
+G3 gibt die Bauschritte frei, nicht die Übernahme: Jeder SEDRA-Kandidat kommt nach dem Review einzeln zur Übernahme (G4).
+
+#### Offene Punkte (Stufe 3)
+
+| Nr | Punkt | Vorschlag |
+| --- | --- | --- |
+| OP-S1-03 | **Geprüft 21.10.2026:** `.venv` Python 3.14.7, SQLite 3.50.4 (≥ 3.9: Teilindex mit Ausdruck `ux_agents_root` geht, in der Saat geprüft: zweite Wurzel per SQL abgewiesen). `tzdata` ist **nicht** installiert: `ZoneInfo('Europe/Berlin')` → `ZoneInfoNotFoundError`. microVM: Python 3.12.15, Zonendaten nicht geprüft (die Tests brauchen keine). | `cron.py` arbeitet ohne `tzdata` mit `UTC` und `tzinfo`-Objekten (Tests mit eigener EU-Regel); Routinen mit der Vorgabe `Europe/Berlin` melden unter Windows `cron_timezone_unknown`, bis `tzdata` (reines Datenpaket) mit G3-S1-24 aufgenommen ist; Alternative: Vorgabe `UTC` |
+| OP-S1-11 | V4 wörtlich ist für jede Bau-Spec verfehlt (Referenz ≈ Code) | Regel als Kostenabwägung lesen: Bau-Spec, wenn der Code deutlich größer als etwa 60 Zeilen ist und die Schnittstelle klar; Captain bestätigt mit G3-S1-14 |
+| OP-S1-12 | Tabellenprüfungen zählen als eine Prüfung (`s1_cron`: match 8 Prüfungen mit 20 Fällen, dst 7 mit 15, describe 5 mit 22) | L3 eingehalten; Risiko erster Lauf bei `s1_cron` in der BAU-Zeile beobachten |
+| OP-S1-13 | Saat enthält neben `store.py` die Vorgänger-Referenzen; nach G4 eines Vorgängers bleibt die Referenz in der Saat (gleiche Schnittstelle) | Saat erst mit S1.H6 ersetzen; jede Änderung der Saat → sieben Bau-Specs neu stempeln |
+| OP-S1-14 | Stempel hashen die Dateien mit LF; `core.autocrlf = true` schreibt bei einem frischen Checkout CRLF → `spec_changed_since_check` | vor dem Bau `spec_check <n> --vm` erneut (ein Befehl), oder `.gitattributes` für `benchmarks/` (eigenes Gate) |
+| OP-S1-15 | `routines.fire_due` bricht bei einer Routine mit unbekannter Zone ganz ab | `tick.py` fängt je Stufe (`ORC_TICK_ERROR`); Isolierung je Routine im Harness S1.H6 prüfen |
+| OP-S1-16 | `s1_budgetcalc` ist keine Bau-Spec mehr; D1.6 nannte zwölf | D1.6 bei G3 auf elf SEDRA-Bauten und zwei Claude-Stücke lesen |
 
 ## Spec 2 – Modell-Scheduler: parallele Agenten
 
