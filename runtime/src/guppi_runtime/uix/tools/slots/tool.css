@@ -1,0 +1,6 @@
+/* Werkzeug „Slots“ – nur unter .t-slots, jede Farbe ein Token. */
+.t-slots .t-slots-head{flex-wrap:wrap}
+.t-slots .t-slots-row.frei .t-slots-state{color:var(--muted)}
+.t-slots .t-slots-row.belegt .t-slots-state{color:var(--accent)}
+.t-slots .t-slots-link{cursor:pointer;color:var(--accent)}
+.t-slots .t-slots-queue{gap:var(--gap-2)}

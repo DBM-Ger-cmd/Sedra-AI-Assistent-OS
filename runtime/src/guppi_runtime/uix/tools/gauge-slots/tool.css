@@ -1,0 +1,2 @@
+/* Instrument „Slots“ – die Zelle gestaltet die Shell; hier nur die Ziffern. */
+.t-gauge-slots b{font-variant-numeric:tabular-nums}
