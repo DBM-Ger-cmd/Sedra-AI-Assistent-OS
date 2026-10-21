@@ -703,11 +703,636 @@ Datenmodell in `orchestra.db`:
 - Ein Agentenlauf: Aufgabe auschecken → Mission mit `captain_intent` aus Aufgabe und Zielkette → Brain → Ergebnis als Kommentar und Arbeitsprodukt → Aufgabe freigeben.
 - Rechte: Agent erbt die `permission_levels` seiner Vorlage; Delegation kann sie nur senken.
 
+### Design Stufe 2 (Vorlage für G2)
+
+Stand 21.10.2026, ausgearbeitet gegen Branch `spec1/design` (Commit `c1aace2`, Spec 0 gebaut und abgenommen). Grundlage: ORC-01 bis ORC-19 in der Fassung von G1 (G1-S1-01 bis 25), Spec 0 D1 bis D6 und die gebauten Dateien `desk/kinds.py`, `desk/gated.py`, `desk/extensions.py`, `desk/orchestra_kinds.py`, `orchestra/config.py`, `store.py`, `service.py`, `runtime._configure_orchestra`, `uix_server.decide`, `core/guard.py`; Spec 4 D4.3 (G2-S4-12, 13, 15, 16). Gelesen, nicht ausgeführt: kein Test, kein Modell, keine GPU. Der Abschnitt „Design (Vorschlag)“ darüber ist durch D1.1 bis D1.8 ersetzt; jede Zeile der Gate-Liste D1.8 wird einzeln entschieden.
+
+Befunde aus dem gebauten Code, die das Design bestimmen:
+
+| Befund | Stelle | Folge |
+| --- | --- | --- |
+| `gated.request` merkt den Antrag mit `hub._remember(kind, …)`; `decisions.request_decision` setzt `apply = APPLY.get(kind)`, das für neue Arten `None` ist; `decide` wirft dann `decision_cannot_be_applied` | `desk/gated.py`, `desk/decisions.py`, `uix_server.decide` | offener Punkt 5: Ein gated-Verb lässt sich heute beantragen, aber nicht anwenden (D1.3.3) |
+| `approve_gate` legt genau **einen** Token in `execution.approval_token` ab; ein zweites Gate derselben Mission überschreibt ihn | `uix_server.approve_gate` | ORC-01 (zwei Gates) und ORC-09 (`set_budget` + `resume_agent`) brauchen einen eigenen Weg für mehrere Gates (D1.3.3) |
+| `open_requests` lebt nur im Speicher; nach einem Neustart findet `_open_requests` nur GateWay-Anträge in den Missionen wieder | `uix_server._open_requests` | gated-Anträge verschwinden nach Neustart aus dem Posteingang, das Gate steht aber noch (D1.3.3) |
+| `Registry.request` liefert `{type, items}`; es gibt keinen Haken für Felder neben `items` | `desk/kinds.py` | offener Punkt 7: `quelle` (und `mehr` für `gespraech`) braucht einen Haken (D1.3.4) |
+| `orchestra_kinds.register` registriert nur bei vorhandener `rt.orchestra`; sonst bleibt der Platzhalter `agent` | `desk/orchestra_kinds.py`, `builtin_kinds.py` | `quelle` im Zustand `aus`/`fehler` muss der Platzhalter liefern |
+| Guard-Token: `single_use`, an Mission, Aktion, Ziel und `request_digest` gebunden; `_check` kennt keine Token-Art | `core/guard.py` | Dauerfreigabe als zweite Token-Art; `authorize` muss sie ausdrücklich abweisen (D1.4) |
+| Modellantwort trägt `usage` aus `normalize_usage` oder `None` („never a guess“) | `models/openai_local.py` | Quelle für `spend`; fehlt `usage`, bucht `budget` die Ausgabegrenze als Schätzung (D1.2, D1.5) |
+| `job_supervisor.create_job` verlangt einen signierten Vertrag (`canonical_digest` aus `selfdev`) und ist Standard aus | `jobs/job_supervisor.py` | Vertrag wird von außen gebaut und übergeben; Lauf braucht Supervisor an (D1.5, G2-S1-14) |
+| `brain.create_mission(intent, objective, class, inputs, plan_request)`; `captain_intent` unveränderlich | `core/brain.py` | Lauf = Mission als Klammer, `captain_intent` aus Vorlage und Captain-Text (D1.5) |
+
+#### D1.1 Module
+
+Zwei Sorten Module: **rein** (keine Datenbank, keine Uhr, keine Ein-/Ausgabe; Zeit kommt als Argument) und **Speicher** (SQLite über die übergebene Verbindung, jede Schreibfolge in `store.immediate`). Jede Funktion nimmt `now` (UTC-ISO-Text) als Argument; es gibt keinen Aufruf von `datetime.now` in `orchestra/` außer in `service.py` (eine Uhr `clock()`, im Test ersetzbar). Fehler sind `ValueError('<code>')` mit den Codes unten; die deutschen Sätze stehen in `desk/orchestra_kinds.py` (Tabelle `SAETZE`), nicht in `orchestra/`.
+
+Importgrenze wie D3.1, verschärft für die reinen Module:
+
+| Modul | Art | darf importieren | Anforderungen |
+| --- | --- | --- | --- |
+| `graphs.py` | rein | – | ORC-02, 05, 08 |
+| `cron.py` | rein | Standardbibliothek (`zoneinfo`) | ORC-10 |
+| `wakeplan.py` | rein | – | ORC-06, 05 |
+| `budgetcalc.py` | rein | – | ORC-09 |
+| `chain.py` | rein | – | ORC-13 |
+| `decompose.py` | rein | – | ORC-17, 18 |
+| `runner.py` | rein | `chain`, `decompose` | ORC-07, 13, 17, 18, 19 |
+| `org.py` | Speicher | `store`, `graphs` | ORC-01, 02, 08, 12 |
+| `board.py` | Speicher | `store`, `graphs` | ORC-03, 04, 05, 13 |
+| `budget.py` | Speicher | `store`, `budgetcalc` | ORC-09 |
+| `heartbeat.py` | Speicher | `store`, `wakeplan` | ORC-06, 11 |
+| `routines.py` | Speicher | `store`, `cron` | ORC-10 |
+| `messages.py` | Speicher | `store` | UIX-04 (G2-S4-12), ORC-14 |
+| `tick.py` | Ablauf | `heartbeat`, `routines` (über die Fassade) | ORC-16 |
+| `service.py` | Fassade | alle | – |
+
+`tests/test_orchestra_boundary.py` bekommt eine zweite Regel: die sieben reinen Module importieren nichts aus `guppi_runtime` und nicht `sqlite3`. Guard, Supervisor, Brain, Modell-Router, Web-Werkzeug, Vorlagen-Leser und Auflöser für Vorhaben/Projekte werden als Objekte oder Funktionen übergeben; `orchestra/` importiert weiterhin weder `desk` noch `agent_manager` noch `models` (D3.1).
+
+##### `graphs.py` (rein)
+
+```
+parents(rows)                       -> {id: reports_to}          rows: [{id, reports_to, status}]
+check_org(rows, change, max_depth)  -> None | raise              change: {id, reports_to, status}
+    org_cycle                  der neue Vorgesetzte liegt unter dem Agenten (Aufstieg über reports_to, Besuchtenspeicher)
+    org_second_root            ein zweiter aktiver oder pausierter Agent ohne Vorgesetzten
+    org_no_root                kein Agent ohne Vorgesetzten, obwohl es Agenten gibt
+    org_too_deep               Tiefe > max_depth (Wurzel = 1)
+    org_unknown_superior       Vorgesetzter fehlt oder ist beendet
+    org_self                   reports_to == id
+can_terminate(rows, id)       -> None | raise org_has_subordinates (aktive oder pausierte Untergebene)
+is_below(rows, boss, other)   -> bool                         other steht (mittelbar) unter boss
+check_delegation(rows, frm, to, can_delegate) -> None | raise
+    delegation_not_allowed     frm darf nicht delegieren (can_delegate = 0)
+    delegation_not_below       to steht nicht unter frm (oben oder zur Seite)
+    delegation_target_inactive to ist pausiert oder beendet
+level_for(effect, recipe_max) -> int                          Abbildung Vorlage → Stufe (G1: read_only/proposal_only 1, reversible_write 2, preview 3; min mit recipe_max; > 3 → level_not_allowed)
+inherit_level(parent_max, assignee_level) -> int              min(...) (ORC-08)
+has_cycle(edges)              -> bool                         edges: [(task, blocked_by)] (Blocker, ORC-05)
+```
+
+##### `cron.py` (rein, Eigenbau, G1-S1-11)
+
+```
+parse(expr)                         -> Cron | raise cron_invalid:<feld>      5 Felder: Minute, Stunde, Tag, Monat, Wochentag;
+                                                                             *, Zahl, Liste, Bereich, Schritt, Namen mon..sun/jan..dec
+next_after(cron, after_utc, tz)     -> utc_iso                               erster Termin streng nach after_utc, in Ortszeit tz gerechnet
+due_between(cron, from_utc, to_utc, tz, limit) -> [utc_iso]                  alle Termine in (from, to], höchstens limit+1 (Kappung erkennbar)
+describe(cron)                      -> str | None                            deutscher Satz wie cronText (Shell D), nur Anzeige
+```
+
+Sommerzeit: Ein Termin in der übersprungenen Stunde (Frühjahr) wird auf die erste gültige Minute danach gelegt, einmal; ein Termin in der doppelten Stunde (Herbst) läuft einmal, beim ersten Auftreten (`fold=0`). Zeitzone unbekannt: `cron_timezone_unknown`. `zoneinfo` braucht unter Windows `tzdata`; ob es in `.venv` vorhanden ist, ist nicht geprüft (OP-S1-03). Ohne `tzdata` arbeitet `cron.py` nur mit `UTC` und meldet für andere Zonen `cron_timezone_unknown`.
+
+##### `wakeplan.py` (rein)
+
+```
+key_for(source, ref)            -> str            'assign:<task>:<rev>', 'comment:<id>', 'captain:<msg>', 'routine:<rid>:<due>',
+                                                   'unblocked:<task>:<blocker>', 'report:<root>', 'retry:<task>:<n>'
+coalesce(open_wakeups, now, coalesce_s) -> [{leader, members}]
+    je Agent: alle offenen, nicht zusammengefassten Weckrufe mit due_at <= now; der älteste ist leader, die übrigen werden members
+pick_task(tasks, blockers, prefer_task_id) -> task | None, reason
+    wählbar: assignee = Agent, state in (zugewiesen, offen), checkout_by leer, kein offener Blocker;
+    Reihenfolge: prefer_task_id, dann priority absteigend, dann created_at;
+    reason ∈ {ok, nur_blockiert, keine_aufgabe, ausgecheckt}
+decide_run(agent, budget_state, standing, task_reason) -> outcome
+    outcome ∈ {lauf_dauerfreigabe, antrag, pausiert, kein_budget, blockiert, keine_aufgabe, laeuft_schon}
+```
+
+##### `budgetcalc.py` (rein)
+
+```
+totals(spend_rows, period, now)            -> {tokens, eur_cent, requests, estimated}   Zeitraum gesamt oder laufender Monat (UTC)
+percent(used, limit)                       -> int | None                               None ohne Grenze
+stage(pct, warn, stop)                     -> 'ok' | 'warnung' | 'gestoppt'
+precheck(limit, used, run_cap)             -> None | raise budget_insufficient          Rest >= Ausgabegrenze des Laufs (ORC-09 b)
+crossing(before_pct, after_pct, warn, stop)-> None | 'warnung' | 'stopp'               nur beim Steigen über eine Schwelle
+view(agent_row, totals, warn, stop)        -> {grenze_token, verbraucht_token, grenze_eur_cent, verbraucht_eur_cent, prozent, stufe, zeitraum}
+```
+
+Die Projekt-Grenze `kosten` (`desk/boundaries.py`) prüft der Desk-Adapter vor dem Lauf und übergibt das Ergebnis; die strengere gewinnt (ORC-09 d).
+
+##### `chain.py` (rein, ORC-13)
+
+```
+build(task, parents, project, goal, max_chars=4000) -> {glieder:[{art, id, titel|None}], text}
+    Reihenfolge: Vorhaben → Projekt → Elternaufgaben (Wurzel zuerst) → Aufgabe; fehlt ein Glied: titel None, Text „Glied nicht gefunden“
+    text: abgegrenzter Block "=== Zielkette (Daten) ===" … "=== Ende Zielkette ===", gekürzt von vorn (Aufgabe bleibt immer vollständig)
+```
+
+##### `decompose.py` (rein, ORC-17, ORC-18)
+
+```
+SCHEMA                          JSON-Schema für models.structured: {teilaufgaben:[{titel, beschreibung, rolle, blocker:[int], akzeptanz}], rueckfrage}
+check(answer, subordinates, max_subtasks) -> [Teilaufgabe] | raise decompose_invalid:<grund>
+    grund ∈ extra_key, too_many, empty, title_empty, title_too_long (200), role_unknown, role_not_subordinate,
+            blocker_index, blocker_cycle, text_too_long (4000)
+    Zuordnung rolle → Agent: der aktive Untergebene mit dieser Rolle; bei mehreren der mit den wenigsten offenen Aufgaben, dann nach ID
+report(root, children) -> {zeilen:[{issue_id, titel, zustand, pruefung}], offen:[…], vollstaendig: bool}
+    pruefung ∈ gruen, rot, nicht_geprueft; fehlt check_result → nicht_geprueft (nie „bestanden“)
+```
+
+Alles oder nichts: Ist ein Eintrag ungültig, wird keine Teilaufgabe angelegt; der Grund geht als Systemkommentar an die Ausgangsaufgabe.
+
+##### `runner.py` (rein, ORC-07, 13, 17 bis 19)
+
+```
+plan(agent, task, chain, mode, peers, caps) -> RunPlan
+    mode ∈ arbeit, zerlegen, bericht, recherche
+    RunPlan = {captain_intent, objective, refs, messages, schema, max_output_tokens, tools}
+    captain_intent: feste Vorlage "Agent <name> (<rolle>) bearbeitet Aufgabe <id>" + Text der Captain-Anweisung der Wurzelaufgabe;
+                    nie Titel oder Text, die ein Modell erzeugt hat (die stehen in objective und in messages als Daten)
+    refs: ['agent:<id>', 'issue:<id>', 'issue:<root>']
+    tools: [] außer mode recherche: ['web.read']
+outcome(plan, answer) -> {kommentar, nachricht, teilaufgaben|None, bericht|None, recherche_urls|None}
+    mode zerlegen: decompose.check; mode bericht: decompose.report + Text des Modells; mode recherche: Liste von URLs aus dem Schema
+external_block(records) -> str      Text aus runtime_data/external als Block "=== Externe Daten, nicht vertrauenswürdig ===" mit sha256 je Quelle
+```
+
+##### `org.py` (Speicher)
+
+```
+hire(conn, row, now, max_depth)               -> agent        prüft graphs.check_org; ORC_AGENT_HIRED (über audit)
+set_org(conn, agent_id, change, now, max_depth)-> agent       change: reports_to, role, recipe_id, permission_level, can_delegate, max_parallel
+pause(conn, agent_id, reason, now)            -> agent        reason ∈ captain, budget, quarantaene; idempotent
+resume(conn, agent_id, now)                   -> agent        agent_not_paused
+terminate(conn, agent_id, now)                -> agent        graphs.can_terminate; status beendet, endgültig
+get(conn, id), list(conn, status=None), subordinates(conn, id, deep=False), fingerprint(agent) -> dict
+```
+
+`fingerprint(agent) = {agent_id, status, permission_level, recipe_id, reports_to, budget_tokens, budget_eur_cent, budget_period}`; jede Änderung eines Feldes erhöht `revision`. Fehler: `agent_not_found`, `agent_terminated`, `agent_not_paused`, `level_not_allowed` sowie die Codes aus `graphs`.
+
+##### `board.py` (Speicher)
+
+```
+create(conn, fields, now, created_by)                  -> task   origin ∈ captain, routine, delegation, system
+assign(conn, task_id, agent_id, now, by)               -> {task, old}   task_checked_out, agent_inactive, task_closed
+delegate(conn, parent_id, frm, items, now)             -> [task] graphs.check_delegation; max_level = inherit_level; alles in einer Transaktion
+checkout(conn, task_id, agent_id, run_id, now)         -> task   task_already_checked_out, task_blocked, task_not_assignable
+release(conn, task_id, run_id, state, now, comment)    -> task   run_mismatch (fremder Lauf), state ∈ zugewiesen, offen, wartet, erledigt
+set_blocker(conn, task_id, blocked_by, now) / clear_blocker(...)  blocker_cycle, blocker_self, task_not_found
+comment(conn, task_id, author_kind, author_id, text, now) -> comment_id   text_too_long (8000)
+cancel(conn, task_id, now, by)                         -> {task, run_id|None}
+chain_rows(conn, task_id)                              -> {task, parents}      für chain.build
+children_done(conn, root_id)                           -> bool                 alle Kinder erledigt oder abgebrochen
+set_check(conn, task_id, result, ref, now)             -> task   result ∈ gruen, rot, nicht_geprueft (ORC-18)
+orphans(conn, live_run_ids)                            -> [task] Checkouts, deren Lauf nicht mehr lebt (ORC-11 b)
+```
+
+Checkout wie D3.3 (`BEGIN IMMEDIATE`, Bedingung `checkout_by IS NULL`, Blocker in derselben Transaktion), dazu `state = 'in_arbeit'`.
+
+##### `budget.py` (Speicher)
+
+```
+book(conn, agent_id, task_id, mission_id, usage, provider, now, cap_tokens) -> {before_pct, after_pct, crossing}
+    usage None → tokens_out = cap_tokens, estimated = 1 (Obergrenze statt Schätzung nach unten)
+state(conn, agent, now, warn, stop) -> budgetcalc.view(...)
+open_incident(conn, agent_id, kind, pct, now) -> incident_id    höchstens ein offener Vorfall je Agent und Art
+resolve_incident(conn, incident_id, resolution, now)
+```
+
+##### `heartbeat.py` (Speicher)
+
+```
+enqueue(conn, agent_id, reason, key, now, coalesce_s, task_id=None) -> wakeup_id | None   None: Schlüssel schon da (idempotent)
+due(conn, now) -> [{leader, members}]                       wakeplan.coalesce; markiert members coalesced_into in einer Transaktion
+finish(conn, wakeup_id, outcome, now, job_id=None, mission_id=None, request_mission_id=None)
+pending_request(conn, agent_id) -> wakeup | None            ein Weckruf, der schon auf eine Einzelfreigabe wartet (kein zweiter Antrag)
+in_flight(conn) -> [{task_id, run_id, job_id, agent_id}]
+```
+
+##### `routines.py` (Speicher)
+
+```
+create(conn, fields, now) / update(conn, rid, fields, now) / set_enabled(conn, rid, on, now)   cron_invalid:<feld>, cron_timezone_unknown
+fire_due(conn, now, max_catch_up, make_task) -> [{routine_id, due_at, outcome, task_id}]
+    je Routine: Termine aus cron.due_between(last_run, now); auslassen → nur der letzte erzeugt, die anderen 'ausgelassen';
+    nachholen → höchstens max_catch_up 'nachgeholt', der Rest 'ausgelassen'; offene Aufgabe der vorigen Auslösung → 'ausgelassen'
+    (coalesce_if_active); Agent pausiert oder beendet → 'ausgelassen'; PK (routine_id, due_at) verhindert Doppel
+```
+
+##### `messages.py` (Speicher, G2-S4-12)
+
+```
+add(conn, agent_id, rolle, text, now, key=None, status='angenommen', issue_id=None) -> {id, neu: bool}
+    key schon da → bestehende Nachricht, neu False; text leer → message_empty; > 8000 → message_too_long
+set_status(conn, msg_id, status, now, mission_id=None)  erlaubte Folge: angenommen → wartet_freigabe → laeuft → beantwortet | fehler;
+                                                         angenommen → laeuft (Dauerfreigabe); sonst message_status_invalid
+page(conn, agent_id, before_id=None, limit=50) -> {items, mehr}   neueste zuletzt; limit 1..200
+last(conn, agent_id) -> id | None
+```
+
+##### `tick.py` und Takt (ORC-16)
+
+```
+tick(orch, now) -> {weckrufe, laeufe, antraege, routinen, freigegeben, fehler}
+    1 routines.fire_due → board.create + heartbeat.enqueue(reason routine)
+    2 Lauf-Abgleich: heartbeat.in_flight gegen supervisor.job(job_id); beendet, JOB_STALLED, JOB_ABANDONED → board.release (ORC-11 a)
+    3 Quarantäne-Abgleich: instance_status(instance_id) == QUARANTINED → org.pause(reason quarantaene) (ORC-12)
+    4 heartbeat.due → je Gruppe wakeplan.pick_task / decide_run → Lauf (Dauerfreigabe) oder Antrag (gated) oder Ende ohne Mission
+    5 Berichtsprüfung: Wurzelaufgaben mit children_done und ohne Bericht → enqueue(reason antwort, key report:<root>)
+    höchstens heartbeat.max_runs_per_tick neue Läufe; jede Stufe fängt ihre Fehler, schreibt ORC_TICK_ERROR und läuft weiter
+start(orch, lock_path, interval_s) -> Thread | raise tick_busy
+```
+
+Die Takt-Sperre ist `mission_lock.exclusive(runtime_data/orchestra/tick.lock)` (Betriebssystem-Sperre, endet mit dem Prozess). Wer sie nicht bekommt, erhält `tick_busy` und taktet nicht. Nach jedem Takt schreibt die Fassade `meta.last_tick_at` und `meta.tick_owner` (PID). Beim ersten Takt nach dem Start läuft der Neustart-Abgleich `board.orphans` (ORC-11 b) einmal.
+
+##### Fassade `service.py` (Erweiterung)
+
+`Orchestra` bekommt die Teile `brain`, `model_router`, `web`, `instance_status`, `resolve` (Vorhaben/Projekt), `contract_for` (Vertrag für den Supervisor), `token_cap(role)` und `clock`; `PARTS` wird entsprechend erweitert. Neue Methoden sind dünne Weiterleitungen an die Module mit Audit; die Leser aus Spec 0 (`agents`, `issues` …) bleiben für `orchestra_kinds` gleich (OP-16: sie bleiben in der Fassade). `boot_entry` bekommt `takt: {laeuft, letzter, owner}`; `runtime.py` bleibt unverändert, weil es `boot_entry` nur durchreicht.
+
+#### D1.2 Datenmodell: Migration 2
+
+`store.MIGRATIONS[2]`, `SCHEMA_VERSION = 2`. Nur `ALTER TABLE … ADD COLUMN` und neue Tabellen, keine Umbauten bestehender Tabellen (SQLite kann CHECK-Bedingungen nicht nachträglich ändern; die vorhandenen CHECKs bleiben). Bestehende Daten: Zum Zeitpunkt der Migration gibt es keine Agenten (Schalter aus, Spec 0 nur lesend); die Vorgaben der neuen Spalten gelten für alle Zeilen. Rückweg: keiner im Code; Sicherung der Datei vor der Migration (`orchestra.db.bak-<datum>`) durch `open_db`, wenn `schema_version` < Ziel.
+
+| Tabelle | Neue Spalten oder Tabelle | Schlüssel, Indizes | Zweck |
+| --- | --- | --- | --- |
+| `agents` | `can_delegate INTEGER NOT NULL DEFAULT 0 CHECK (can_delegate IN (0,1))` | – | ORC-08, 14 (G1-S1-24) |
+| `agents` | `max_parallel INTEGER NOT NULL DEFAULT 1 CHECK (max_parallel BETWEEN 1 AND 4)` | – | Grenze je Agent, von Spec 2 verlangt (Spec 2 Paperclip-Lehre); v1 nutzt 1 |
+| `agents` | `pause_reason TEXT CHECK (pause_reason IN ('captain','budget','quarantaene'))` | – | ORC-09, 12; Anzeige und Antrag nach Budget-Stopp |
+| `agents` | – | UNIQUE-Teilindex `ux_agents_root ON agents((reports_to IS NULL)) WHERE reports_to IS NULL AND status <> 'beendet'` | zweite Sperre für „genau eine Wurzel“ neben `graphs.check_org` |
+| `tasks` | `max_level INTEGER CHECK (max_level BETWEEN 0 AND 6)` | – | vererbte Obergrenze (ORC-08, G1-S1-24); NULL = Stufe des Bearbeiters |
+| `tasks` | `origin TEXT NOT NULL DEFAULT 'captain' CHECK (origin IN ('captain','routine','delegation','system'))` | – | Herkunft; `captain_intent` nur aus Captain-Text |
+| `tasks` | `decomposed_at TEXT` | – | eine Zerlegung je Elternaufgabe (ORC-17) |
+| `tasks` | `check_result TEXT CHECK (check_result IN ('gruen','rot','nicht_geprueft'))`, `check_ref TEXT` | – | Prüfergebnis für den Bericht (ORC-18); `check_ref` = Kandidat/Build |
+| `tasks` | `reported_at TEXT` | Teilindex `(parent_id) WHERE parent_id IS NULL AND reported_at IS NULL` | ein Bericht je Wurzelaufgabe |
+| `wakeups` | `idempotency_key TEXT`, `outcome TEXT`, `mission_id TEXT`, `request_mission_id TEXT` | UNIQUE-Teilindex `(agent_id, idempotency_key) WHERE idempotency_key IS NOT NULL`; Index `(request_mission_id)` | ORC-06 (G1-S1-24); `outcome` ∈ `lauf`, `antrag`, `pausiert`, `kein_budget`, `blockiert`, `keine_aufgabe`, `laeuft_schon`, `abgelehnt` (CHECK) |
+| `spend` | `estimated INTEGER NOT NULL DEFAULT 0 CHECK (estimated IN (0,1))` | – | `usage` fehlte, gebucht wurde die Ausgabegrenze |
+| `standing_approvals` (neu) | `token_id TEXT`, `agent_id TEXT NOT NULL`, `granted_at TEXT NOT NULL`, `expires_at TEXT NOT NULL`, `max_uses INTEGER NOT NULL`, `uses INTEGER NOT NULL DEFAULT 0`, `status TEXT NOT NULL CHECK (status IN ('aktiv','verbraucht','abgelaufen','erloschen','widerrufen'))`, `end_reason TEXT`, `fingerprint_digest TEXT NOT NULL`, `updated_at TEXT NOT NULL` | PK `token_id`; FK `agent_id`; UNIQUE-Teilindex `(agent_id) WHERE status = 'aktiv'` | **Spiegel** der Guard-Token (G1-S1-24) für Anzeige und Shell D; maßgeblich ist immer der Guard. Abgleich nach jedem Guard-Aufruf und beim Start |
+| `agent_messages` (neu) | wie D4.3.1: `id INTEGER` AUTOINCREMENT, `agent_id TEXT NOT NULL`, `rolle TEXT NOT NULL CHECK (captain, agent, system)`, `text TEXT NOT NULL CHECK (length(text) <= 8000)`, `ts TEXT NOT NULL`, `status TEXT NOT NULL CHECK (angenommen, wartet_freigabe, laeuft, beantwortet, fehler)`, `issue_id TEXT`, `mission_id TEXT`, `route TEXT NOT NULL DEFAULT 'lokal' CHECK (lokal, cloud)`, `provider_id TEXT`, `model TEXT`, `idempotency_key TEXT` | PK `id`; FK `agent_id`; Index `(agent_id, id)`; UNIQUE-Teilindex `(agent_id, idempotency_key) WHERE idempotency_key IS NOT NULL` | Verlauf je Agent (G2-S4-12) |
+| `budget_incidents` (neu, G1-S1-25) | `id INTEGER` AUTOINCREMENT, `agent_id TEXT NOT NULL`, `kind TEXT NOT NULL CHECK (kind IN ('warnung','stopp'))`, `percent INTEGER NOT NULL`, `used_tokens INTEGER NOT NULL`, `limit_tokens INTEGER`, `used_eur_cent INTEGER NOT NULL DEFAULT 0`, `limit_eur_cent INTEGER`, `created_at TEXT NOT NULL`, `request_mission_id TEXT`, `resolved_at TEXT`, `resolution TEXT CHECK (resolution IN ('erhoeht','fortgesetzt','abgelehnt','zeitraum'))` | PK `id`; FK `agent_id`; UNIQUE-Teilindex `(agent_id, kind) WHERE resolved_at IS NULL` | ein Datensatz je Überschreitung; die Entscheidung des Captains hängt daran |
+| `meta` | Schlüssel `last_tick_at`, `tick_owner` | – | ORC-16; keine neue Tabelle |
+
+Nicht geändert: `wakeups.reason` (Werte reichen: Bericht = `antwort`), `comments` (Kommentar-Weckruf über `idempotency_key = comment:<id>`), `routine_runs`. Die Spalte `tasks.checkout_run` trägt die Lauf-ID (`run_id` = Job-ID des Supervisors).
+
+Teilindex mit Ausdruck (`ux_agents_root`) braucht SQLite ≥ 3.9; die Version in `.venv` ist nicht geprüft (OP-S1-03).
+
+#### D1.3 Desk: Verben, Felder, Typ `gespraech`
+
+##### D1.3.1 Verben je Typ
+
+„direkt“ heißt: `guard.evaluate` (ALLOW) und Ausführen im selben Aufruf, Antwort `{status:'erledigt', …}`. „Antrag“ heißt `gated.request`; die Antwort ist `{status:'beantragt', decision_id:'request:<mission_id>', text:'Antrag liegt im Posteingang'}` (G2-S4-16), ausgeführt wird erst bei „Freigeben und anwenden“ (D1.3.3). Die Spalte `when` ist die Bedingung, unter der das Verb in `actions` erscheint.
+
+| Typ | Verb | Guard-Aktion (Regel) | Weg | `when` | Wirkung |
+| --- | --- | --- | --- | --- | --- |
+| `agent` | `einstellen` (am Typ) | `agent.instantiate` (Standard CAPTAIN_REQUIRED) + `set_org` (GR-029) | Antrag mit **zwei Gates** | immer | AM-Instanz über den Adapter, dann `org.hire`; `binding`: Vorlage, Digest, Name, Rolle, Rezept, Vorgesetzter, Stufe, Budget, `can_delegate` |
+| `agent` | `einordnen` | `set_org` (GR-029) | Antrag | Status ≠ beendet | Vorgesetzter, Rolle, Rezept, Stufe; erlischt Dauerfreigabe (Fingerabdruck) |
+| `agent` | `pausieren` | `pause_agent` (GR-033, ALLOW) | direkt | aktiv | `org.pause(captain)`, laufender Lauf `supervisor.cancel`, Mission `PAUSED`, Aufgabe `offen` ohne Bearbeiter mit Systemkommentar, offene Weckrufe `pausiert`, `guard.revoke_standing` |
+| `agent` | `fortsetzen` | `resume_agent` (GR-034) | Antrag | pausiert | `org.resume`; nach Budget-Stopp nur zusammen mit `festlegen` (siehe `budget`) |
+| `agent` | `beenden` | `terminate_agent` (GR-035) | Antrag, `confirm` | Status ≠ beendet, keine Untergebenen | wie pausieren, dann `org.terminate`; Zuweisungen gehen auf `offen` |
+| `agent` | `wecken` | `wake_agent` (GR-032) | Antrag (Einzelfreigabe); mit gültiger Dauerfreigabe direkt Weckruf | aktiv | `heartbeat.enqueue(reason captain)`; Lauf wie D1.5 |
+| `agent` | `anweisen` | `create_new_artifact` (GR-002, ALLOW) | direkt | aktiv **und** `can_delegate = 1` | `messages.add(captain, key)`, `board.create(origin captain)` beim Unterarbeiter, `heartbeat.enqueue(reason captain, key captain:<msg>)`; doppelter `key` → dieselbe Nachricht, kein zweites Issue |
+| `agent` | `dauerfreigabe` | `wake_agent` (GR-032) mit Bindung `art: standing` | Antrag | aktiv, Stufe ≤ 3, keine aktive Dauerfreigabe | nach Freigabe `guard.grant_standing` (D1.4); `args`: `tage` (1..30, Vorgabe 7), `laeufe` (1..50, Vorgabe 50) |
+| `agent` | `widerrufen` | – (Widerruf ohne Gate, D1.4) | direkt | aktive Dauerfreigabe | `guard.revoke_standing(captain)` |
+| `issue` | `anlegen` (am Typ) | `create_new_artifact` (GR-002) | direkt | immer | `board.create(origin captain)`; mit `assignee` zusätzlich wie `zuweisen` |
+| `issue` | `zuweisen` | `assign_task` (GR-030, ALLOW) | direkt | nicht ausgecheckt, nicht erledigt/abgebrochen | `board.assign`, `ORC_TASK_ASSIGNED` (alt, neu), Weckruf `zugewiesen` (key `assign:<task>:<rev>`) |
+| `issue` | `blocker_setzen` | `assign_task` (GR-030) | direkt | nicht erledigt/abgebrochen | `board.set_blocker`; `blocker_cycle` abgewiesen |
+| `issue` | `blocker_loesen` (neu) | `assign_task` (GR-030) | direkt | hat Blocker | `board.clear_blocker`; letzter Blocker weg → Weckruf `antwort` (key `unblocked:…`) |
+| `issue` | `kommentieren` | `create_new_artifact` (GR-002) | direkt | immer | `board.comment(captain)`; hat die Aufgabe einen Bearbeiter → Weckruf `antwort` (key `comment:<id>`) |
+| `issue` | `abbrechen` | `pause_agent` (GR-033, ALLOW) | direkt, `confirm` | nicht erledigt/abgebrochen | `board.cancel`, laufender Lauf `supervisor.cancel`; macht das System nur ruhiger, daher wie `pausieren` |
+| `routine` | `anlegen` (am Typ) | `set_routine` (GR-037) | Antrag | immer | `routines.create`; `cron_invalid:<feld>` schon beim Antrag (kein Antrag mit ungültigem Ausdruck) |
+| `routine` | `aendern` | `set_routine` | Antrag | immer | `routines.update` |
+| `routine` | `ausschalten` | `set_routine` | Antrag | an | `set_enabled(0)` |
+| `routine` | `einschalten` (neu, G2-S4-16) | `set_routine` | Antrag | aus | `set_enabled(1)`; `next_run` ab jetzt, verpasste Termine zählen nicht |
+| `budget` | `festlegen` | `set_budget` (GR-036); bei `pause_reason = budget` zusätzlich `resume_agent` (GR-034) | Antrag, ein oder zwei Gates | immer | Grenze und Zeitraum; Vorfall `resolve_incident(erhoeht)`; mit zweitem Gate `org.resume` |
+| `gespraech` | – | – | – | – | nur lesend |
+
+`zuweisen_an` am Typ `agent` (D3.2) entfällt: Zuweisen gibt es nur am `issue`, damit eine Wirkung genau einen Ort hat (G2-S1-06). `anweisen` an anderen Agenten als dem Unterarbeiter wird nicht angeboten (OP-S4-7 beantwortet, G2-S1-04): Der Captain spricht andere Agenten über `kommentieren` an ihrer Aufgabe an; Shell D zeigt dort kein Eingabefeld, weil das Verb in `actions` fehlt.
+
+Ein Verb, das ein Agent im Lauf auslöst (Teilaufgaben, Kommentar, Bericht), geht nicht über `POST /api/actions`, sondern über die Fassade mit `author_kind = agent`; die Guard-Aktion ist dieselbe (`delegate_task` GR-031 für Teilaufgaben, `create_new_artifact` für Kommentare) und wird mit `mission_id` des Laufs bewertet.
+
+##### D1.3.2 Ablauf `gated.py` (Erweiterung)
+
+```
+request(hub, kind, action, target, binding, …, gates=None)
+    gates: [(action, target)] statt eines Paares; alle Gates derselben Mission, alle an dieselbe Bindung (ein digest)
+    binding bekommt agent_id (falls vorhanden) und describe; Mission context.gated_request = {kind, gates, binding}
+register_applier(kind, do)        do(hub, binding) -> result; nur vor kinds.freeze(); doppelt → applier_already_registered
+applier(kind) -> do | None
+decide(hub, mission_id)           „Freigeben und anwenden“ für einen gated-Antrag:
+    unter missions.execution_lock: jedes offene Gate → guard.approve(gate); Tokens in execution.approval_tokens[gate_id]
+    dann für jedes Gate guard.authorize(token, mission_id, action, target, binding); einer ungültig → captain_approval_invalid, nichts ausgeführt
+    dann do(binding); Mission closed; Audit DESK_GATED_APPLIED {kind, gates, target, agent_id}
+pending(hub, known_mission_ids) -> [open request]   gated-Anträge aus den Missionen (für _open_requests nach einem Neustart)
+```
+
+`apply` aus Spec 0 bleibt für Ein-Gate-Anträge erhalten und wird intern von `decide` genutzt. Ablehnen bleibt `reject_gate` je Gate; bei mehreren Gates lehnt `decide` mit Weg `ablehnen` alle ab (eine Entscheidung, ein Ausgang). Der Applier für alle Orchestra-Anträge ist `orchestra_kinds.apply(hub, binding)`, der über `binding.op` verteilt (`einstellen`, `einordnen`, `fortsetzen`, `beenden`, `wecken`, `dauerfreigabe`, `routine_*`, `budget`).
+
+Bindung nach der Freigabe prüfen: Vor dem Ausführen vergleicht der Applier den gebundenen `revision`-Stand des Agenten/der Aufgabe mit dem jetzigen; ist er anders, endet der Antrag mit `binding_stale` (Audit, Nachricht im Posteingang), ausgeführt wird nichts. So läuft nach einer Freigabe nie etwas anderes als das, was der Captain gesehen hat.
+
+##### D1.3.3 Anwenden in `uix_server.decide` (offener Punkt 5)
+
+Heute: `decide` → `approve_gate` → `APPLY[decision.apply]`; für gated-Arten ist `apply` `None`, Ergebnis `decision_cannot_be_applied`. Änderung (vier Zeilen in `decide`, eine in `_open_requests`, keine Typnamen; `ast`-Prüfung aus K0.11 bleibt grün):
+
+```
+# decide, vor approve_gate:
+kind = decision['kind'].removeprefix('request:')
+if decision['apply'] is None and desk_gated.applier(kind):
+    out = desk_gated.decide(self, mission_id) if way == 'freigeben_und_anwenden' else desk_gated.reject(self, mission_id)
+    self.events.publish('decision.answered', {...}); return {...}
+# _open_requests, am Ende:
+out += desk_gated.pending(self, known)
+```
+
+Das ist eine zweite Änderung an `uix_server.py` nach G1-S0-d (KERN-04 sagt „einmal“). Sie ist generisch – jeder künftige Typ mit gated-Verben nutzt sie ohne weitere Änderung – und deshalb ein eigenes Gate (G2-S1-09). Alternative ohne Änderung: je Art eine Route `/api/<art>/apply` in `APPLY`; verworfen, weil das für jeden Typ `uix_server.py` erneut ändern würde.
+
+##### D1.3.4 Felder für Shell D, `quelle` (offener Punkt 7)
+
+`desk/kinds.py`: `Kind` bekommt den optionalen Haken `extra(hub, payload) -> dict`; `Registry.request` mischt sein Ergebnis in die Listenantwort (`{type, items, **extra}`; Schlüssel `type`/`items` sind nicht überschreibbar → `extra_key_reserved`). Der Platzhalter `agent` in `builtin_kinds.py` bekommt `extra` mit `quelle = {zustand: 'aus' | 'fehler', grund: rt.orchestra_error, takt: None}`; `orchestra_kinds` liefert für `agent`, `issue`, `routine`, `budget`, `gespraech` `quelle = {zustand: 'bereit', grund: None, takt: {laeuft, letzter}}`, `gespraech` zusätzlich `mehr`.
+
+Felder am Objekt `agent` (Leser, eine Lesung für die ganze Liste, G2-S4-16):
+
+| Feld | Quelle |
+| --- | --- |
+| `rolle`, `reports_to`, `status`, `stufe` (`permission_level`), `can_delegate`, `pause_reason` | Zeile `agents` |
+| `arbeitet` | es gibt eine Aufgabe mit `checkout_by = id` |
+| `budget` | `budget.state` → `{grenze_token, verbraucht_token, grenze_eur_cent, verbraucht_eur_cent, prozent, stufe, zeitraum}`; Euro `null` ohne Spec 3 |
+| `offene_entscheidungen` | `decisions_view()` gefiltert nach `agent_id` (D1.3.5); einmal je Liste gelesen |
+| `dauerfreigabe` | Spiegel `standing_approvals`: `{aktiv, laeufe, max_laeufe, bis}` oder `null` |
+| `letzte_nachricht` | `messages.last` (für `agent.changed`, D4.3.2) |
+
+`issue` bekommt `max_level`, `origin`, `blocker` (IDs), `kommentare` (Zahl), `pruefung` (`check_result`), `zielkette` (nur Einzelansicht, `chain.build`). `routine` bekommt `catch_up`, `next_run`, `last_run`, `beschreibung` (`cron.describe`).
+
+##### D1.3.5 Agenten-ID in Entscheidungen (G2-S4-15)
+
+`desk/decisions.py`: alle vier Bauer setzen `agent_id` (bei `request_decision` aus `binding.agent_id`, sonst `None`); `request_decision` lässt `agent_id` und `op` in der gefilterten Bindung durch. `gated.request` setzt `binding.agent_id` für `wake_agent`, `pause_agent`, `resume_agent`, `terminate_agent`, `set_budget`, `set_org`. `events.diff` übernimmt das Feld in `decision.pending` (Spec 4).
+
+##### D1.3.6 Typ `gespraech` (G2-S4-12)
+
+Nur lesend, registriert in `orchestra_kinds`: `listing(hub, {agent, vor, limit})` → `messages.page`; ohne `agent` → `agent_required`. `read(hub, oid)` liefert eine Nachricht (Form wie D4.3.1). Keine Verben; geschrieben wird nur über `anweisen` und den Lauf. `ORC_MESSAGE` im Audit trägt Agent, Nachricht-ID, Länge, nie Text.
+
+#### D1.4 Dauerfreigabe (ORC-15): Entwurf für `core/guard.py` – Kern-Gate G2-S1-KERN-01
+
+Begründung als eigenes Gate: KERN-03 und die Grundsatzfreigabe G1-S1-17 verlangen für jede Änderung an `core/` eine einzelne Freigabe mit Gate-ID im Logbuch. Die Änderung erweitert die Token-Semantik (Regel 6): Es entsteht ein Token, das mehrfach gilt und nicht an eine Mission gebunden ist. Das ist die einzige Stelle in Spec 1, die den Kern berührt; alle anderen Teile liegen in `orchestra/` und `desk/`.
+
+Grundsätze:
+
+1. Der Guard bleibt die einzige Stelle, die zulässt. Grenzen (Stufe ≤ 3, ≤ 30 Tage, ≤ 50 Läufe) sind Konstanten im Guard, nicht in `orchestra.yaml`; `orchestra` kann sie nur enger wählen.
+2. Eine Dauerfreigabe entsteht nur aus einer verbrauchten Einmal-Freigabe für genau diese Bindung (Aktion `wake_agent`, Ziel `agent:<id>`, Bindung `art: standing` mit Fingerabdruck und Grenzen). Ohne Captain-Entscheidung gibt es keinen Weg dorthin.
+3. Bindung an den Agenten über den Fingerabdruck (`org.fingerprint`, enthält `status`); jede Änderung von Status, Stufe, Rezept, Vorgesetztem, Budget-Obergrenze oder Zeitraum macht den Digest ungleich → Ende.
+4. Die Dauerfreigabe deckt nur `wake_agent`. `authorize` (Einmal-Prüfung) weist ein Standing-Token ab; Folge-Gates im Lauf (`agent.assign`, `paid_action`, `external_write`, `install_module`) bleiben einzeln.
+5. Zählen, Ablauf, Ende und Widerruf laufen unter der vorhandenen `token_transaction` (Betriebssystem-Sperre); jedes Ereignis steht im Audit.
+
+Konstanten und Token-Form:
+
+```
+STANDING_ACTION = 'wake_agent'
+STANDING_MAX_LEVEL = 3
+STANDING_MAX_DAYS = 30
+STANDING_MAX_USES = 50
+
+token = {token_id: 'STD-xxxxxxxx', kind: 'standing', mission_id: <Antrags-Mission>, gate_id,
+         grants: {action_type: 'wake_agent', targets: ['agent:<id>'], request_digest: digest(fingerprint)},
+         limits: {single_use: False, max_uses: n, max_level: 3},
+         uses: 0, status: 'active', validity: {expires_at}, granted_at, last_used_at: None, ended_at: None, end_reason: None}
+```
+
+Pseudocode (neue Methoden; `_approve`, `evaluate`, `create_gate`, `reject` unverändert):
+
+```
+def grant_standing(self, approval_token, *, mission_id, agent_id, fingerprint, max_uses, expires_at):
+    with token_transaction():
+        binding = {'art':'standing','agent_id':agent_id,'fingerprint':fingerprint,'max_uses':max_uses,'expires_at':expires_at}
+        r = _authorize(approval_token, mission_id=mission_id, action='wake_agent', target='agent:'+agent_id, request_binding=binding)
+        if not r.authorized: audit CAPTAIN_STANDING_REFUSED{reason}; return r
+        if fingerprint.agent_id != agent_id or fingerprint.status != 'aktiv': refuse 'standing_agent_not_active'
+        if not 0 <= fingerprint.permission_level <= STANDING_MAX_LEVEL: refuse 'standing_level_too_high'
+        if not 1 <= max_uses <= STANDING_MAX_USES: refuse 'standing_uses_out_of_range'
+        if not now < expires_at <= now + STANDING_MAX_DAYS: refuse 'standing_expiry_out_of_range'
+        for t in active standing tokens with target agent:<id>: _end(t, 'ersetzt')
+        token = {... wie oben ...}; _issued_tokens[id] = token; _persist_tokens()
+        audit CAPTAIN_STANDING_GRANTED {token_id, agent_id, max_uses, expires_at, level}
+        return {'authorized': True, 'token': copy(token)}
+
+def authorize_standing(self, agent_id, *, fingerprint, budget_stage, run_ref):
+    with token_transaction():
+        t = the active standing token for 'agent:'+agent_id, else → refuse 'no_standing_approval' (kein Ende, nichts zu beenden)
+        if t.validity.expires_at <= now:                 _end(t,'abgelaufen');  refuse 'standing_expired'
+        if digest(fingerprint) != t.grants.request_digest: _end(t,'erloschen:fingerabdruck'); refuse 'standing_fingerprint_changed'
+        if budget_stage == 'gestoppt':                   _end(t,'erloschen:budget'); refuse 'standing_budget_exhausted'
+        if t.uses >= t.limits.max_uses:                  _end(t,'verbraucht'); refuse 'standing_used_up'
+        t.uses += 1; t.last_used_at = now
+        if t.uses == t.limits.max_uses: _end(t,'verbraucht')        # letzte Nutzung gilt noch, danach Ende
+        _persist_tokens()
+        audit CAPTAIN_STANDING_USED {token_id, agent_id, uses, max_uses, run_ref}
+        return {'authorized': True, 'token_id', 'uses', 'left'}
+
+def revoke_standing(self, agent_id, *, reason):        # ohne Gate: macht das System nur strenger
+    with token_transaction():
+        for t in active standing tokens of agent: _end(t, 'widerrufen:'+reason)
+        audit CAPTAIN_STANDING_REVOKED {agent_id, reason, count}
+        return count
+
+def standing_status(self, agent_id) -> copy of the newest standing token of the agent or None   # nur lesen, für den Spiegel
+
+def _end(self, t, reason):
+    t.status = {'verbraucht':'spent','abgelaufen':'expired'}.get(reason, 'ended'); t.ended_at = now; t.end_reason = reason
+    audit CAPTAIN_STANDING_ENDED {token_id, agent_id, reason}
+
+# Änderungen an vorhandenen Methoden:
+_check:         if issued.get('kind','once') != 'once': return refuse 'token_kind_mismatch'     # Standing nie über authorize/check_token
+_prune_tokens:  Standing-Token mit status != 'active' werden nach TOKEN_KEEP_S ab ended_at entfernt; aktive nie
+_approve:       setzt kind: 'once' in neue Token (alte Token ohne kind gelten als 'once')
+```
+
+`budget_stage` kommt aus `orchestra` (Grenze der Prüfung: der Guard sieht nur, was ihm übergeben wird). Die zweite Sicherung liegt im Fingerabdruck: Bei Budget-Stopp pausiert `orchestra` den Agenten (`status` ändert sich) und ruft `revoke_standing('budget')`; fehlte einer der beiden Schritte, verweigert der Guard trotzdem, weil `status` im Digest steht. Umfang geschätzt 80 bis 100 Zeilen in `core/guard.py` (nicht gemessen).
+
+Testliste `tests/test_guard_standing.py` (neu, Fake-Uhr über `monkeypatch` von `utcnow`/`datetime`, temporärer Token-Speicher):
+
+| Nr | Fall | Erwartung |
+| --- | --- | --- |
+| 1 | Grant mit gültiger Einmal-Freigabe | Token `kind standing`, Einmal-Token `used`, `CAPTAIN_STANDING_GRANTED` |
+| 2 | Grant ohne / mit fremder / verbrauchter Einmal-Freigabe | `authorized False`, kein Standing-Token |
+| 3 | Grant mit anderer Bindung als beantragt (z. B. `max_uses` erhöht) | `request_digest_mismatch` |
+| 4 | Stufe 4, `max_uses` 51, Ablauf 31 Tage, Agent pausiert | je eigener Ablehnungsgrund |
+| 5 | `authorize_standing` gültig | erlaubt, `uses` 1, `CAPTAIN_STANDING_USED` mit `run_ref` |
+| 6 | nach Ablauf (Fake-Uhr) | `standing_expired`, Status `expired`, `CAPTAIN_STANDING_ENDED` |
+| 7 | Fingerabdruck geändert: Stufe, Rezept, Vorgesetzter, Budget-Obergrenze, Status pausiert | je `standing_fingerprint_changed`, Token beendet |
+| 8 | `budget_stage gestoppt` | `standing_budget_exhausted`, beendet |
+| 9 | 50. Nutzung erlaubt, 51. verweigert | `standing_used_up`; Status nach der 50. `spent` |
+| 10 | Widerruf | `CAPTAIN_STANDING_REVOKED`, danach `no_standing_approval` |
+| 11 | Standing-Token an `authorize`/`check_token` für `wake_agent` oder eine andere Aktion | `token_kind_mismatch` |
+| 12 | zweiter Grant für denselben Agenten | erster `ended` mit `ersetzt`, genau ein aktives |
+| 13 | zwei Prozesse nutzen gleichzeitig die letzte Nutzung | genau einer erlaubt (`multiprocessing`, Token-Speicher-Datei) |
+| 14 | Neustart (neuer `Guard` auf derselben Datei) | Zählerstand und Status bleiben |
+| 15 | `_prune_tokens` | beendete Standing-Token nach 30 Tagen weg, aktive bleiben |
+| 16 | alte Token ohne `kind` | bleiben über `authorize` gültig (keine Verhaltensänderung) |
+
+Dazu bleiben grün: `tests/test_core_boundary_src.py`, alle vorhandenen Guard-Tests (`grep -l "Guard(" tests/` – Liste wird beim Bau festgehalten).
+
+#### D1.5 Agentenlauf
+
+Weg eines Weckrufs (Takt, Schritt 4):
+
+```
+heartbeat.due(now) → je Agent {leader, members}
+  Agent pausiert/beendet                    → finish(outcome pausiert)                      kein Antrag, keine Mission
+  läuft schon ein Lauf (max_parallel 1)     → bleibt offen (nächster Takt)                  outcome laeuft_schon erst beim Verwerfen
+  pick_task: nur blockiert / keine Aufgabe  → finish(outcome blockiert | keine_aufgabe)     ORC-05: kein Lauf, kein Modell
+  Budget: budgetcalc.precheck(Rest, token_cap(role)) und Grenze kosten → sonst finish(kein_budget), Vorfall, Pause (ORC-09)
+  guard.authorize_standing(agent, fingerprint, budget_stage, run_ref=wakeup_id)
+     erlaubt                                → start_run(...)                                outcome lauf
+     no_standing_approval / erloschen       → pending_request? sonst gated.request(wake_agent, agent:<id>,
+                                                binding {op:'wecken', agent_id, task_id, wakeup_id, agent_revision, task_revision})
+                                              → finish(outcome antrag, request_mission_id); Nachricht → wartet_freigabe
+Captain „Freigeben und anwenden“ → Applier op 'wecken': Revisionen gleich? → start_run; sonst binding_stale
+Captain „Ablehnen“ → Weckruf outcome abgelehnt, Nachricht fehler, Aufgabe bleibt zugewiesen
+```
+
+`start_run(agent, task, wakeup)`:
+
+1. `board.checkout(task, agent, run_id)` – `run_id` wird vorab als `run-<uuid>` vergeben und später zur Job-ID.
+2. `chain.build` mit `board.chain_rows` und dem Auflöser für Vorhaben und Projekt (ORC-13).
+3. `runner.plan(agent, task, chain, mode, peers, caps)`; `mode`: `zerlegen` (Unterarbeiter, Aufgabe ohne `decomposed_at`, `origin captain`), `bericht` (Weckruf `report:`), `recherche` (Rolle `researcher`), sonst `arbeit`.
+4. `brain.create_mission(plan.captain_intent, plan.objective, 'S1')`; `context.refs = plan.refs`, `context.orchestra = {agent_id, task_id, wakeup_id, chain}`; `tasks.mission_id` setzen; Audit `ORC_WAKE {agent_id, task_id, mission_id, run_id, freigabe: standing|einmal}` (ORC-07).
+5. Job beim Supervisor: `create_job(contract_for(plan), requested_role=agent.role, kind='orchestra_run', permission_level=min(task.max_level, agent.level))`; der Handler `orchestra_handler` (Desk-Seite, D1.6) läuft im Worker mit Herzschlag. Ist der Supervisor aus: kein Lauf, Weckruf bleibt offen, `quelle.grund = supervisor_off`, einmal `ORC_TICK_ERROR` (G2-S1-14).
+6. Handler: `model_router.chat(mission_id, plan.messages, schema=plan.schema, max_tokens=plan.max_output_tokens)` – Inhaltsschutz, Audit `TOOL_CALLED`, gezählt; danach `budget.book(usage)`.
+7. `runner.outcome(plan, answer)` → je Modus:
+   - `arbeit`: Kommentar des Agenten an die Aufgabe; Aufgabe `wartet` (Captain prüft) oder `erledigt`, wenn die Antwort `fertig: true` meldet und die Aufgabe kein Prüfergebnis braucht. Coder-Bauaufträge mit Dateiänderung: Antrag `agent.assign` (zweites Gate, ORC-07); das Prüfergebnis des versteckten Tests setzt `board.set_check` (grün/rot).
+   - `zerlegen`: `decompose.check` → `board.delegate` (Guard `delegate_task` mit der Lauf-Mission) → Weckrufe `zugewiesen` je Empfänger; `decomposed_at` setzen. Ungültig: Systemkommentar mit Grund, keine Teilaufgabe (ORC-17).
+   - `bericht`: `decompose.report` + Modelltext → Kommentar an die Wurzelaufgabe, Nachricht an den Captain im Verlauf des Unterarbeiters, Audit `ORC_ISSUE_REPORTED` (Ereignis `issue.reported`), `reported_at` (ORC-18).
+   - `recherche`: siehe unten.
+8. Nachricht (falls der Lauf aus `anweisen` stammt): `beantwortet` mit `route`; Antwort als Kommentar gespiegelt.
+9. `board.release(task, run_id, state)`; Mission `closed`; Weckruf `done_at`. Fehler im Handler: Aufgabe `zugewiesen`, Systemkommentar mit Code, Nachricht `fehler`, Weckruf `retry:<task>:<n>` höchstens einmal.
+
+Unterarbeiter-Zerlegung (ORC-17): Das Modell bekommt die Anweisung (Captain-Text), die Zielkette, die Liste der Untergebenen (Rolle, Stufe, offene Aufgaben) und das Restbudget; es antwortet nur im Schema `decompose.SCHEMA` (strukturierte Antwort über `models/structured.py`, höchstens `MAX_ROUNDS`). Das Rezept hat keine Werkzeuge (`tools: []`). `max_subtasks` Vorgabe 8 (Startwert, nicht gemessen); eine Zerlegung je Elternaufgabe (`decomposed_at`); ein Teilauftrag kann nur an Untergebene mit `can_delegate = 0` gehen, also nie wieder zerlegt werden – das schließt Schleifen ohne `loop_guard`. Der Planer hilft, wenn der Unterarbeiter ihm eine Teilaufgabe „Zerlegung vorschlagen“ gibt; sein Vorschlag kommt als Kommentar, angelegt wird nur beim Unterarbeiter (G1, unverändert).
+
+Bericht (ORC-18): Auslöser im Takt, wenn `children_done(root)` und `reported_at` leer. Die Tabelle je Teilaufgabe (Zustand, Prüfung) baut `decompose.report` aus der Datenbank, nicht das Modell; das Modell schreibt nur „Ergebnis“ und „offene Punkte“ dazu. Ein Satz des Modells wie „alle Tests bestanden“ ändert keine Zeile der Tabelle.
+
+Recherche (ORC-19): Lauf 1 im Schema `{lesen:[url], frage}` (höchstens 5 URLs); der Handler ruft für jede URL `web.execute(mission_id, 'get', {url})` – Hostliste aus `web_access.yaml`, Guard `external_read`, Ablage unter `runtime_data/external/` mit `sha256`. Lauf 2 (zweiter Modellaufruf derselben Mission) bekommt die Texte nur über `runner.external_block` als Daten. Das Ausgabeschema der Recherche hat **nur** `{zusammenfassung, quellen:[{url, sha256}]}`; ein Eintrag außerhalb des Schemas ist `decompose_invalid:extra_key`-artig abgewiesen (`research_invalid:extra_key`). Ergebnis ist ein Kommentar; der Recherche-Lauf ruft nie `board.assign`, `delegate`, `gated.request` oder ein Verb.
+
+Freigabe des Checkouts in allen Fällen: normales Ende (Schritt 9), Abbruch durch `pausieren`/`beenden`/`abbrechen`, Supervisor-Ereignis `JOB_STALLED`/`JOB_ABANDONED` (Takt Schritt 2, ORC-11 a), Neustart-Abgleich (`board.orphans` gegen lebende Jobs, ORC-11 b). Stillstand ist eine Zahl: `stall_after_s` des Supervisors (300 s); `orchestra.yaml` `checkout.stall_s` entfällt (G2-S1-20).
+
+#### D1.6 Wer baut was (L4, V4) und Reihenfolge
+
+Regel: SEDRA baut die neuen Module mit klarer Schnittstelle (die reinen und die Speichermodule, ausgenommen `chain.py` nach V4); Claude baut als Harness alles, was vorhandene Dateien, Kern, Guard, Konfiguration, Desk-Verdrahtung oder den Lauf mit Brain, Supervisor und Router betrifft. Jede Bau-Spec mit Stufen von höchstens 20 neuen Prüfungen (L3), `SEED` wo nötig (PIPE-10), `spec_check --vm` vor dem Bau (L2). Die Zahlen sind Planwerte; die genaue Zählung macht `spec_check`.
+
+| Bau-Spec | Ziel | Stufen (geplante neue Prüfungen) | geschätzt Zeilen | V4 |
+| --- | --- | --- | --- | --- |
+| `s1_graphs` | `orchestra/graphs.py` | cycle 14, root 12, depth 10, delegate 14, level 10 | 110 | SEDRA |
+| `s1_cron` | `orchestra/cron.py` | parse 18, match 14, next 16, dst 14, due 14, describe 12 | 240 | SEDRA |
+| `s1_wakeplan` | `orchestra/wakeplan.py` | key 8, coalesce 14, pick 16, decide 14 | 110 | SEDRA |
+| `s1_budgetcalc` | `orchestra/budgetcalc.py` | totals 12, stage 12, precheck 10, crossing 12 | 80 | SEDRA, falls Spec+Tests+Referenz die Zeilen nicht übersteigen; sonst Claude |
+| `s1_chain` | `orchestra/chain.py` | order 12, missing 10, bound 10 | 60 | Claude direkt (V4: Spec größer als Code) |
+| `s1_decompose` | `orchestra/decompose.py` | schema 14, rules 18, assign 12, report 16 | 160 | SEDRA |
+| `s1_runner` | `orchestra/runner.py` | intent 14, messages 14, outcome 16, external 12 | 160 | SEDRA |
+| `s1_org` | `orchestra/org.py` | hire 14, set_org 16, pause 14, terminate 12, read 10 | 180 | SEDRA (Saat: `store.py` Schema 2) |
+| `s1_board` | `orchestra/board.py` | create 12, assign 16, checkout 18, blockers 16, release 14, comment 10, chain 10, orphans 10 | 280 | SEDRA (Saat: Schema 2, `graphs.py`) |
+| `s1_budget` | `orchestra/budget.py` | book 14, state 12, incidents 14 | 110 | SEDRA |
+| `s1_heartbeat` | `orchestra/heartbeat.py` | enqueue 14, due 16, finish 10, flight 10 | 140 | SEDRA |
+| `s1_routines` | `orchestra/routines.py` | crud 14, fire 16, catchup 16, active 12 | 170 | SEDRA (Saat: `cron.py`) |
+| `s1_messages` | `orchestra/messages.py` | add 14, idem 10, status 14, page 12 | 120 | SEDRA |
+
+Harness (Claude):
+
+| Schritt | Inhalt | Gate |
+| --- | --- | --- |
+| S1.H1 | Migration 2 in `store.py` (adoptiertes SEDRA-Modul, Änderung als Harness), Sicherung vor Migration, Test `test_orchestra_store_m2.py` | G2-S1-02 |
+| S1.H2 | `core/guard.py` Dauerfreigabe, `tests/test_guard_standing.py` | G2-S1-KERN-01 |
+| S1.H3 | `orchestra.yaml` Schema 2 und `config.py` (neue Abschnitte `runner`, `standing`, `decompose`; `checkout` entfällt, Schema 1 wird weiter gelesen) | G2-S1-20 |
+| S1.H4 | `desk/kinds.py` Haken `extra`, Platzhalter mit `quelle`, `desk/decisions.py` `agent_id` | G2-S1-10, 11 |
+| S1.H5 | `desk/gated.py` (mehrere Gates, Applier, `decide`, `pending`) und `uix_server.decide`/`_open_requests` | G2-S1-08, 09 |
+| S1.H6 | Fassade `service.py` erweitern, `tick.py`, Takt-Thread in `orchestra_kinds.start` | G2-S1-15 |
+| S1.H7 | `desk/orchestra_kinds.py`: Verben, Felder, Typ `gespraech`, Applier, deutsche Sätze | G2-S1-03 bis 07, 12 |
+| S1.H8 | Lauf: `desk/orchestra_runner.py` (Mission, Vertrag, Handler `orchestra_run`, Router, Web), Rolle `foreman` in `job_supervisor.yaml`, `role_routing.yaml`, `token_policy.yaml`; Vorlagen `guppi.orchestra.foreman`/`researcher` (Datei mit Prüfsumme) | G2-S1-14, 21 |
+| S1.H9 | Abnahme D1.7, Logbuch, `uix_check` | – |
+
+Reihenfolge: zuerst S1.H1 (Schema 2 ist Saat für die Speichermodule) und S1.H2 (Kern-Gate, unabhängig). SEDRA-Bauten nacheinander auf der GPU, kleinste und unabhängige zuerst: `s1_graphs`, `s1_wakeplan`, `s1_budgetcalc`, `s1_decompose`, `s1_cron`, `s1_runner` (braucht nur die Schnittstelle von `chain`/`decompose`), dann `s1_messages`, `s1_budget`, `s1_heartbeat`, `s1_org`, `s1_board`, `s1_routines`. Parallel zu den Bauten Claude: `s1_chain`, S1.H3, S1.H4, S1.H5. Nach G4 der Module: S1.H6 → S1.H7 → S1.H8 → S1.H9. Damit stehen 12 SEDRA-Bauten (rund 60 Stufen) gegen 1 Modul plus 9 Harness-Schritte; die Quote je Aufgabe misst `devvm_build` (L4).
+
+#### D1.7 Fehlerfälle und Abnahme
+
+Fehlerfälle (zusätzlich zu D5 aus Spec 0):
+
+| Fall | Verhalten |
+| --- | --- |
+| zwei Takter | der zweite bekommt `tick_busy`, taktet nicht, `quelle.takt.laeuft` bleibt beim ersten |
+| Takt fällt aus (Thread tot) | nach `3 × tick_s` ohne `last_tick_at`: `quelle.takt = {laeuft: false, letzter}`, Hinweis in Shell D |
+| Supervisor aus | kein Lauf, Weckruf bleibt offen, `quelle.grund = supervisor_off` |
+| Freigabe veraltet (Revision anders) | `binding_stale`, nichts ausgeführt, Antrag geschlossen mit Nachricht |
+| Modell liefert kein `usage` | Buchung der Ausgabegrenze mit `estimated = 1` |
+| Modellantwort außerhalb des Schemas | nach `MAX_ROUNDS` Systemkommentar `model_schema_failed`, Aufgabe `zugewiesen`, ein Wiederholungs-Weckruf |
+| SEDRA stürzt mitten im Lauf | beim nächsten Start `board.orphans` → Aufgabe `zugewiesen`, Systemkommentar `lauf_verwaist` |
+| AM-Instanz in Quarantäne | nächster Takt pausiert den Agenten (`pause_reason quarantaene`), Dauerfreigabe erlischt |
+| Datenbank älter (Schema 1) | Migration 2 mit Sicherung; scheitert sie: `orchestra_db_error:migration`, Orchestrierung aus |
+| Routine mit ungültigem Cron im Antrag | `cron_invalid:<feld>` schon beim Antrag |
+
+Abnahme je Anforderung (alle ohne Modell und ohne Oberfläche; Fake-Uhr = `now`-Argument bzw. `clock` der Fassade; Fixture-Modell = `model_router` mit festen Antworten):
+
+| ID | Testdatei | Prüfung |
+| --- | --- | --- |
+| ORC-01 | `tests/test_orchestra_hire.py` | `POST /api/actions (agent, einstellen)` → eine Entscheidung mit zwei Gates; ohne Freigabe keine Zeile in `agents`; nach „Freigeben und anwenden“ liefert `POST /api/objects {type:agent,id}` `reports_to`, `rolle`, `stufe`, `budget` |
+| ORC-02 | `tests/test_orchestra_org.py` | je ein Fall mit Fehlercode: Zyklus, zweite Wurzel, Tiefe 7, Beenden mit Untergebenen; Teilindex `ux_agents_root` weist zweite Wurzel auch per SQL ab |
+| ORC-03 | `tests/test_orchestra_board.py` | zweite Zuweisung ersetzt, `ORC_TASK_ASSIGNED` mit alt/neu; ausgecheckt → `task_checked_out`; pausierter Agent → `agent_inactive` |
+| ORC-04 | `tests/test_orchestra_checkout_race.py` | 100 Durchläufe, 2 Prozesse, temporäre Datenbank: genau ein Sieger, der andere `task_already_checked_out`, `checkout_by` = Sieger |
+| ORC-05 | `tests/test_orchestra_board.py`, `test_orchestra_heartbeat.py` | Checkout blockiert → `task_blocked`; Weckruf nur für blockierte Aufgaben → `outcome blockiert`, keine Mission, Router nie gerufen; letzter Blocker gelöst → Weckruf `antwort`; Blocker-Zyklus abgewiesen |
+| ORC-06 | `tests/test_orchestra_heartbeat.py` | Fake-Uhr: 3 Zuweisungen in 1 s → 1 Weckruf (`coalesced_into` bei 2); gleicher Schlüssel zweimal → 1 Zeile; ohne Freigabe → 1 Entscheidung, 0 Läufe; Kommentar des Captains → Weckruf |
+| ORC-07 | `tests/test_orchestra_run.py` | Lauf mit Fixture-Modell: `tasks.mission_id` gesetzt, `ORC_WAKE` mit Agent/Aufgabe/Mission, `context.refs` enthält `agent:<id>`; `captain_intent` enthält keinen Text aus Modellausgabe (Teilaufgabe mit Modell-Titel) |
+| ORC-08 | `tests/test_orchestra_org.py` | Unterarbeiter → Coder erlaubt; Coder → Unterarbeiter, Coder → Reviewer, Planer → Coder `delegation_*`; `max_level` der Teilaufgabe ≤ Eltern |
+| ORC-09 | `tests/test_orchestra_budget.py` | Fixture-Verbräuche: 80 % → `ORC_BUDGET_WARNING` und Vorfall `warnung`; 100 % → Pause `budget`, `ORC_BUDGET_STOP`, eine Entscheidung mit `set_budget` + `resume_agent`; Rest < Ausgabegrenze → kein Lauf; `usage` fehlt → `estimated 1`; Grenze `kosten` strenger → gewinnt |
+| ORC-10 | `tests/test_orchestra_routines.py`, `test_orchestra_cron.py` | Fake-Uhr: Termin erzeugt Aufgabe; `auslassen` und `nachholen` mit `max_catch_up`; offene vorige Aufgabe → `ausgelassen`; doppelter Takt → eine Aufgabe; Sommerzeit Frühjahr/Herbst in `Europe/Berlin` |
+| ORC-11 | `tests/test_orchestra_stall.py` | Fake-Supervisor meldet `JOB_STALLED` → Checkout frei, Aufgabe `zugewiesen`; künstlich verwaister Checkout → beim ersten Takt frei |
+| ORC-12 | `tests/test_orchestra_pause.py` | Pausieren mit laufendem Lauf: `supervisor.cancel` gerufen, Mission `PAUSED`, Halter leer, Aufgabe `offen`, Systemkommentar, Dauerfreigabe widerrufen, neue Zuweisung → kein Weckruf; Beenden des Unterarbeiters mit Untergebenen abgewiesen |
+| ORC-13 | `tests/test_orchestra_chain.py` | Glieder in der Reihenfolge Vorhaben, Projekt, Eltern, Aufgabe; gelöschtes Vorhaben → „Glied nicht gefunden“; Länge ≤ `max_chars`, Aufgabe vollständig |
+| ORC-14 | `tests/test_orchestra_instruct.py` | `anweisen` am Unterarbeiter → Nachricht, Issue, Weckruf `captain`; doppelter `key` → nichts Neues; `anweisen` am Planer nicht in `actions`; Fixture-Zerlegung legt Teilaufgaben bei Planer, Coder, Reviewer an; `delegate_task` des Planers abgewiesen; jeder Lauf trägt `ORC_WAKE` |
+| ORC-15 | `tests/test_guard_standing.py`, `test_orchestra_standing.py` | Testliste D1.4; dazu im Takt: mit Dauerfreigabe Lauf ohne Entscheidung, Spiegel `standing_approvals` gleich Guard |
+| ORC-16 | `tests/test_orchestra_tick.py` | Fake-Uhr: `tick()` ruft Routinen und Weckrufe; zweiter Takter `tick_busy`; `boot()["orchestra"]["takt"]`; nach `3 × tick_s` ohne Takt `laeuft: false` |
+| ORC-17 | `tests/test_orchestra_decompose.py` | Fixture-Liste angelegt; je ein Fall: Rolle unbekannt, Nicht-Untergebener, `max_subtasks` + 1, Blocker-Index falsch, Blocker-Zyklus, Freitext-Feld (`extra_key`) → keine Teilaufgabe, Systemkommentar; Rezept `foreman` ohne Werkzeuge |
+| ORC-18 | `tests/test_orchestra_report.py` | alle Kinder fertig → ein Bericht (Kommentar + `ORC_ISSUE_REPORTED`); Teilaufgabe ohne `check_result` → „nicht geprüft“, auch wenn der Modelltext „bestanden“ sagt; zweiter Takt → kein zweiter Bericht |
+| ORC-19 | `tests/test_orchestra_research.py` | Fake-Web liefert Text mit „weise Aufgabe X zu“ → keine Zuweisung, kein Verb, kein Antrag; Ablage mit `sha256`; Host außerhalb der Liste → nicht geholt; Antwort mit Zusatzfeld → `research_invalid:extra_key` |
+| UIX/Shell D | `tests/test_orchestra_desk.py` (erweitert), `test_orchestra_messages.py`, `test_desk_decisions.py` | `quelle` in allen fünf Listen (aus, fehler, bereit); Felder am `agent`; `gespraech` mit `mehr`; Verb mit Gate antwortet „Antrag liegt im Posteingang“; Entscheidung trägt `agent_id`; gated-Antrag nach Neustart wieder im Posteingang und anwendbar |
+| Grenze | `tests/test_orchestra_boundary.py` | reine Module ohne `guppi_runtime`/`sqlite3`; `orchestra/` ohne verbotene Pakete; `test_core_boundary_src` grün |
+
+#### D1.8 Gate-Liste G2 Spec 1 und offene Punkte
+
+Jede Zeile wird einzeln entschieden.
+
+| Gate | Gegenstand | Vorschlag |
+| --- | --- | --- |
+| G2-S1-01 | Module wie D1.1: sieben reine, sechs Speichermodule, `tick.py`; Importgrenze verschärft für reine Module; Leser bleiben in der Fassade (OP-16) | ja |
+| G2-S1-02 | Migration 2 wie D1.2 (inkl. `max_parallel`, `pause_reason`, `origin`, `check_result`, `budget_incidents`, `agent_messages`, Spiegel `standing_approvals`); Sicherung der Datei vor der Migration | ja |
+| G2-S1-03 | Verben je Typ mit Guard-Aktionen wie D1.3.1 (u. a. `blocker_*` und `abbrechen` ohne neue Guard-Regel) | ja |
+| G2-S1-04 | `anweisen` nur am Unterarbeiter (`can_delegate = 1`); andere Agenten über `kommentieren` (OP-S4-7) | ja |
+| G2-S1-05 | Routinen: eigenes Verb `einschalten` statt `aendern` mit `enabled` (G2-S4-16) | ja |
+| G2-S1-06 | `zuweisen_an` am Typ `agent` entfällt; Zuweisen nur am `issue` | ja |
+| G2-S1-07 | neue Verben `blocker_loesen`, `dauerfreigabe`, `widerrufen` | ja |
+| G2-S1-08 | `desk/gated.py`: mehrere Gates in einem Antrag, Applier-Register, `decide`, `pending`, Prüfung `binding_stale` | ja |
+| G2-S1-09 | zweite, generische Änderung an `uix_server.py` (`decide`, `_open_requests`), offener Punkt 5; Nachtrag zu G1-S0-d | ja |
+| G2-S1-10 | Haken `extra` in `desk/kinds.py`, `quelle` im Platzhalter und in `orchestra_kinds` (offener Punkt 7, G2-S4-13) | ja |
+| G2-S1-11 | `agent_id` in `desk/decisions.py`, Feld `offene_entscheidungen` (G2-S4-15) | ja |
+| G2-S1-12 | Typ `gespraech` und `messages.py` (G2-S4-12) | ja |
+| G2-S1-KERN-01 | Änderung `core/guard.py`: Token-Art `standing` mit `grant_standing`, `authorize_standing`, `revoke_standing`, `standing_status`; `_check` weist Standing ab; Grenzen als Guard-Konstanten; Testliste D1.4 (Kern-Gate, KERN-03) | ja |
+| G2-S1-13 | Dauerfreigabe als eigener Antrag (Verb `dauerfreigabe`, Aktion `wake_agent`, Bindung `art: standing`), Vorgabe 7 Tage und 50 Läufe | ja |
+| G2-S1-14 | Agentenlauf: Mission als Klammer (`brain.create_mission`, nicht `brain.run`), Ausführung als `job_supervisor`-Job `orchestra_run`; ohne Supervisor kein Lauf; `captain_intent` nur aus Vorlage und Captain-Text | ja |
+| G2-S1-15 | Takt: Thread aus `orchestra_kinds.start`, Sperre `tick.lock`, `meta.last_tick_at`, Neustart-Abgleich beim ersten Takt; kein eigener Dienst in v1 (OP-9) | ja |
+| G2-S1-16 | Zerlegung: Schema, alles oder nichts, `max_subtasks` 8, eine Zerlegung je Elternaufgabe, Teilaufgaben nur an Agenten ohne Delegationsrecht | ja |
+| G2-S1-17 | Bericht: Tabelle aus der Datenbank, Modell nur Text; ein Bericht je Wurzelaufgabe | ja |
+| G2-S1-18 | Recherche: zwei Modellaufrufe in einer Mission, höchstens 5 URLs, Ausgabeschema ohne Verben | ja |
+| G2-S1-19 | Budget: Vorabprüfung gegen die Ausgabegrenze der Rolle, Buchung der Grenze bei fehlendem `usage`, Vorfall je Überschreitung, Antrag `set_budget` + `resume_agent` | ja |
+| G2-S1-20 | `orchestra.yaml` Schema 2: `runner`, `standing` (nur enger als Guard), `decompose`; `checkout.stall_s` entfällt, Stillstand = `stall_after_s` | ja |
+| G2-S1-21 | Rolle `foreman` und Rolle `researcher` mit Web-Host-Werkzeug in `job_supervisor.yaml`, `role_routing.yaml`, `token_policy.yaml`; Vorlagen `guppi.orchestra.foreman`, `guppi.orchestra.researcher` (Konfiguration, je Datei einzeln) | ja |
+| G2-S1-22 | Aufteilung SEDRA/Claude und Bau-Specs wie D1.6 (12 SEDRA, `s1_chain` Claude), Reihenfolge | ja |
+| G2-S1-23 | Abnahmeplan D1.7 | ja |
+| G2-S1-24 | Quarantäne-Abgleich im Takt über den AM-Adapter `instance_status` | ja |
+
+Offene Punkte:
+
+| Nr | Lücke oder Frage | Vorschlag |
+| --- | --- | --- |
+| OP-S1-01 | Ob `agent_manager.instances.create` einen Guard-Token aus einer Desk-Mission annimmt oder nur seine eigenen Gate-Dateien (`hire`/`create`) – nicht geprüft | beim Bau von S1.H7 klären; notfalls ruft der Applier `hire`/`create` mit dem eigenen AM-Ablauf und bindet die AM-Gate-ID in `binding` |
+| OP-S1-02 | Ob `brain.create_mission` ohne `brain.run` eine Mission sauber schließt (Zustandsautomat `closed` aus `CREATED`) – nicht geprüft | Test in S1.H8; sonst Übergänge wie `gated.apply` (`lifecycle.status = closed`) |
+| OP-S1-03 | `tzdata` und SQLite-Version in `.venv` nicht geprüft | vor `s1_cron` und S1.H1 messen; ohne `tzdata` nur `UTC` (Abhängigkeit braucht eigenes Gate) |
+| OP-S1-04 | Ob `models/structured.py` mit dem lokalen Rezept Zerlegungslisten stabil liefert – nicht gemessen | Fixture-Tests jetzt; Messung mit GPU erst mit eigener Freigabe |
+| OP-S1-05 | `job_supervisor` Standard aus; für die Orchestrierung muss er an sein | Schalter `job_supervisor` beim Einschalten von `orchestra` mitprüfen; `quelle.grund = supervisor_off` |
+| OP-S1-06 | Vertrag (`contract_digest`) für `orchestra_run`: Bauer liegt in `selfdev.development_contracts`, das `orchestra/` nicht importiert | Bauer wird als `contract_for` vom Desk-Adapter übergeben (wie `templates`) |
+| OP-S1-07 | `budget_stage` an den Guard ist eine Angabe von `orchestra` | hingenommen, weil der Fingerabdruck (`status`) die zweite Sicherung ist (D1.4) |
+| OP-S1-08 | Euro-Budget und `route: cloud` | erst mit Spec 3; Felder vorhanden, Werte `null` |
+| OP-S1-09 | Ereignisse `agent.changed`, `issue.changed`, `budget.warning` (Ableitung) | baut Spec 4 (G2-S4-14); Spec 1 liefert die Felder `revision`, `arbeitet`, `letzte_nachricht`, `budget.stufe` |
+| OP-S1-10 | Coder-Bauauftrag aus einem Lauf (`agent.assign`) und Rückweg des Prüfergebnisses in `check_result` | Ablauf in D1.5 skizziert; Anbindung an `bridge.py` im Bau prüfen (nicht gelesen) |
+
+Nicht geprüft in dieser Stufe: Ausführen von Tests, Oberfläche, Modell, GPU; `agent_manager/instances.py` und `bridge.py` im Detail; `brain.run`/Zustandsautomat für Missionen ohne Plan; `job_worker`-Handler-Registrierung über `model_text_handler` hinaus; `context_assembly` und `context.refs`; Paperclip nicht erneut gelesen.
+
 ### Aufgaben
 
 - [x] O1.1 Agent Manager auf Berichtslinien und Instanz-Status prüfen; Erweiterung oder neues `org.py` festlegen → Empfehlung `org.py` (G1-S1-01, 20.10.2026)
-- [ ] O1.2 Datenmodell final, Migration für bestehende Agenten → G2
-- [ ] O1.3 Bau-Specs schreiben: `orc_org`, `orc_board`, `orc_heartbeat`, `orc_budget`, `orc_routines` in `devvm_specs/`, je mit Referenz und `spec_check.py` = ok → G3
+- [ ] O1.2 Datenmodell final, Migration für bestehende Agenten → G2 (ausgearbeitet 21.10.2026: Design Stufe 2, D1.1 bis D1.8, Migration 2 in D1.2)
+- [ ] O1.3 Bau-Specs schreiben: die zwölf `s1_*` aus D1.6 (ersetzt `orc_org` … `orc_routines`) in `devvm_specs/`, je mit Referenz und `spec_check.py --vm` = ok → G3
 - [ ] O1.4 Neue Guard-Aktionen und Desk-Registrierung (Harness, KI-Sitzung)
 - [ ] O1.5 Bau durch SEDRA, Review, Übernahme → G4
 
