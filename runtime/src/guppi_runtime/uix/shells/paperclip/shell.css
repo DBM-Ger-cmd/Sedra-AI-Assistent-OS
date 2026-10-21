@@ -98,3 +98,31 @@
 .pc:has(.pc-drawer:not([hidden])) ~ .sx-host{ right: 438px; bottom: 18px; }   /* Schublade offen: der Umschalter weicht nach links aus */
 .pc-fab-count:empty{ display: none; }
 .pc-fab-count{ background: var(--panel); color: var(--accent); border-radius: 999px; padding: 0 7px; font-size: var(--size-small); line-height: 18px; }
+
+/* ---- Fensterstapel (Spec 4, D4.1): rechts neben der Seite, nur sichtbar mit mindestens einem Agentenfenster */
+.pc-stack[hidden]{ display: none; }
+.pc:has(.pc-stack:not([hidden])){ grid-template-columns: 210px minmax(0, 1fr) 380px; }
+.pc-stack{
+  min-height: 0; overflow-y: auto; padding: 10px 10px 120px;
+  background: var(--panel-2); border-left: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.pc-win{ background: var(--panel); border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; min-height: 0; }
+.pc-win[hidden]{ display: none; }
+.pc-win.on{ border-color: var(--accent); }
+.pc-win-head{ display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--line-soft); }
+.pc-win-head b{ flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-win-verbs{ display: flex; gap: 4px; flex-wrap: wrap; }
+.pc-win-btn{ padding: 2px 8px; }
+.pc-win-body{ padding: 10px 12px; min-height: 140px; max-height: 64vh; overflow: auto; }
+.pc-tabs{ display: flex; flex-direction: column; gap: 4px; }
+.pc-tabs[hidden]{ display: none; }
+.pc-tab{ display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border-radius: 7px;
+         background: var(--panel); border: 1px solid var(--line); cursor: default; font-size: var(--size-small); }
+.pc-tab:hover, .pc-tab:focus{ border-color: var(--accent); outline: none; }
+.pc-tab i{ font-style: normal; color: var(--muted); }
+/* schmal (unter 1100 px): der Stapel liegt über der Seite statt daneben (OP-S4-13, im Browser anzusehen) */
+@media (max-width: 1099px){
+  .pc:has(.pc-stack:not([hidden])){ grid-template-columns: 210px minmax(0, 1fr); }
+  .pc-stack{ position: fixed; right: 0; top: 48px; bottom: 0; width: 380px; z-index: 120; box-shadow: var(--shadow); }
+}

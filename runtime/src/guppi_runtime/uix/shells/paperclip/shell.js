@@ -3,6 +3,8 @@
 // Eine Firma statt eines Cockpits: Navigation links, Kopfzeile oben, Seiten in der Mitte, das Gespräch als Schublade rechts.
 // Das Dashboard zeigt vier Werkzeuge zu vier verschiedenen Sammlungen zugleich – die Prüfung, die weder Cockpit noch Minimal
 // stellen konnten. Die Shell kennt kein Werkzeug beim Namen, außer dem Gespräch, das der Vertrag selbst benennt.
+// Spec 4 (D4.1): rechts neben der Seite der Fensterstapel (Zone `pc-stack`, windows.js) – ein Fenster je Agent. Die Shell hört die
+// Ereignisse des Teams (agent.changed, issue.changed, budget.warning, slot.changed) und frischt dann nur auf; einen Takt hat sie nicht.
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
@@ -26,16 +28,19 @@
         main: d().el('div', 'pc-main-col'),
         top: d().el('header', 'pc-top'),
         page: d().el('main', 'pc-page'),
+        stack: d().el('aside', 'pc-stack'),
         drawer: d().el('aside', 'pc-drawer'),
         fab: d().el('button', 'pc-fab')
       };
       this.el.nav.setAttribute('aria-label', 'Navigation');
       this.el.drawer.setAttribute('aria-label', 'Gespräch');
       this.el.drawer.hidden = true;
+      this.el.stack.setAttribute('aria-label', 'Agentenfenster');
+      this.el.stack.hidden = true;
       this.el.main.append(this.el.top, this.el.page);
       this.el.fab.append(d().el('span', null, 'Mit SEDRA sprechen'), d().el('b', 'pc-fab-count'));
       this.el.fab.onclick = ()=>this.toggleTalk();
-      host.append(this.el.nav, this.el.main, this.el.drawer, this.el.fab);
+      host.append(this.el.nav, this.el.main, this.el.stack, this.el.drawer, this.el.fab);
 
       this.shellApi = {open: o=>this.openObject(o), notify: (text, tone)=>this.notify(text, tone),
                        decide: (id, way)=>this.decide(id, way), theme: name=>root.sedraBoot.setTheme(name),
@@ -44,9 +49,13 @@
       this.pages = root.sedraPcPages.makePages(this.el.page, this);
       this.nav = root.sedraPcNav.makeNav(this.el.nav, this);
       this.topbar = root.sedraPcTopbar.makeTopbar(this.el.top, this);
+      this.windows = root.sedraPcWindows.makeWindows(this.el.stack, this);
       this.nav.build();
       this.topbar.build();
       this.mountTalk();
+      // ein Schub Ereignisse liest einmal, und höchstens einmal nach (D4.6 „Ereignisflut“) – kein Zeitgeber
+      this.refresh = root.sedraPcNav.coalesce(()=>this.afterChangeNow());
+      this.refreshStrip = root.sedraPcNav.coalesce(()=>this.readInstruments());
 
       ctx.bus.on('object.open', o=>this.openObject(o));
       ctx.bus.on('decision.pending', ()=>this.afterChange());
@@ -54,6 +63,16 @@
       ctx.bus.on('task.changed', ()=>this.afterChange());
       ctx.bus.on('model.changed', ()=>this.refreshInstruments());
       ctx.bus.on('desk.error', e=>this.notify('Die Runtime meldet: ' + e.message, 'warn'));
+      ctx.bus.on('desk.resync', ()=>this.afterChange());
+      // Spec 4 (N3): das Team. Die Werkzeuge lesen selbst nach; die Shell frischt Badge, Kacheln und die Verben der Fenster auf.
+      ctx.bus.on('agent.changed', ()=>{ this.windows.refreshVerbs(); this.afterChange(); });
+      ctx.bus.on('issue.changed', ()=>this.afterChange());
+      ctx.bus.on('slot.changed', ()=>this.refreshInstruments());
+      ctx.bus.on('budget.warning', e=>{
+        const pct = typeof e.prozent === 'number' ? ' bei ' + e.prozent + ' %' : '';
+        this.notify('Budget: Agent ' + e.agent_id + pct + (e.stufe === 'gestoppt' ? ' – gestoppt, Entscheidung im Posteingang' : ''), 'warn');
+        this.afterChange();
+      });
 
       document.addEventListener('keydown', e=>{
         if((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')){ e.preventDefault(); this.topbar.focus(); }
@@ -61,6 +80,7 @@
       });
 
       if(!this.pages.restore()) this.pages.open(this.pages.DASHBOARD);
+      this.windows.restore();
       await Promise.all([this.refreshInstruments(), this.nav.refresh()]).catch(e=>this.onProblem('Start', e));
       root.sedraBoot.onProblem = text=>this.notify(text, 'warn');
       (root.sedraBoot.problems || []).forEach(text=>this.notify(text, 'warn'));
@@ -134,14 +154,18 @@
       return out;
     },
 
-    async afterChange(){
+    afterChange(){ return this.refresh(); },
+
+    async afterChangeNow(){
       const page = this.pages.current();
       if(page) this.topbar.setPage(page, this.pages.history());
-      await Promise.all([this.refreshInstruments(), this.nav.refresh()]).catch(e=>this.onProblem('Auffrischen', e));
+      await Promise.all([this.readInstruments(), this.nav.refresh()]).catch(e=>this.onProblem('Auffrischen', e));
     },
 
+    refreshInstruments(){ return this.refreshStrip(); },
+
     // die Kennzahlen des Dashboards sind die Instrumente – dieselbe Lesung wie in der Leiste des Cockpits
-    async refreshInstruments(){
+    async readInstruments(){
       if(!this.instruments.length) return;
       let reading;
       try{ reading = await this.api('/api/strip'); }

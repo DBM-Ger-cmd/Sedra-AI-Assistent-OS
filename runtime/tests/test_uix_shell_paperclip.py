@@ -90,10 +90,11 @@ class PureParts(unittest.TestCase):
         """ % json.dumps(str(PAPERCLIP / 'nav.js')))
         from guppi_runtime.desk.gateway import OBJECT_TYPES
         for t in out['types']:
-            self.assertIn(t, list(OBJECT_TYPES) + ['dashboard'], f'{t} ist kein Objekttyp des Vertrags')
+            # `issue` kommt als Desk-Typ mit G2-S0-12; bis dahin öffnet „Issues“ die Missionen (issuesTarget, D4.1)
+            self.assertIn(t, list(OBJECT_TYPES) + ['dashboard', 'issue'], f'{t} ist kein Objekttyp des Vertrags')
         self.assertGreaterEqual(out['on'], 0)
         self.assertEqual(out['off'], -1)
-        self.assertNotIn('routine', out['types'], 'Build 24 (B6-G-06): kein Eintrag ohne Werkzeug dahinter')
+        self.assertIn('routine', out['types'], 'Spec 4 (G2-S4-01): Routinen stehen wieder da – ohne Werkzeug mit Leerzustand (UIX-10)')
         self.assertNotIn('gateway', out['types'], 'Build 24 (Klaus 19:34): das KI GateWay bleibt in seiner eigenen Oberfläche')
 
     def test_the_badge_counts_open_decisions(self):

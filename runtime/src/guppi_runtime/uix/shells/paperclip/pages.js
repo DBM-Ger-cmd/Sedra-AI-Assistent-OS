@@ -1,9 +1,11 @@
 // Paperclip-Shell – die Seiten und ihr Verlauf (Entwurf D, Spec §5.2).
 //
-// Drei Arten von Seite:
+// Vier Arten (Spec 4, D4.1):
 //   dashboard   eine Komposition: vier Karten, in jeder ein Werkzeug zu einer anderen Sammlung
 //   collection  eine Sammlung („alle Aufgaben“): das Werkstück-Werkzeug, volle Breite
 //   object      ein einzelnes Objekt: Werkstück links, Nachweise als Karten in der Seitenleiste rechts
+//   window      ein einzelner Agent: keine Seite – die Shell öffnet sein Fenster im Stapel (windows.js), die Seite bleibt stehen
+// Wer ein Objekt zeichnet, sagt die Registrierung über das ganze Objekt (`forObject`, Nachtrag N1), nicht nur über den Typ.
 // Die Shell schreibt keine Zahl und keinen Inhalt selbst. Sie gibt Container und ruft `unmount`, wenn die Seite wechselt.
 // `pageFor`, `pushHistory` und `DASHBOARD` sind rein und werden mit node geprüft.
 
@@ -19,8 +21,9 @@
   const CARDS = [
     {object: {type: 'intent', id: 'alle', title: 'Ziele', collection: true, kompakt: true}, title: 'Ziele', hint: 'Vorhaben mit Stufen – jede Stufe wird eine Aufgabe (Issue); neue Ziele unter „Ziele“', wide: true},
     {object: {type: 'decision', id: 'alle', title: 'Posteingang', collection: true}, title: 'Posteingang', hint: 'Freigaben und Grenzen – jede Antwort hier ist ein Audit-Ereignis'},
-    {object: {type: 'agent', id: 'alle', title: 'Organigramm', collection: true}, title: 'Organigramm', hint: 'Rollen aus den Rezepten; wer gerade arbeitet'},
-    {object: {type: 'task', id: 'alle', title: 'Issues', collection: true}, title: 'Issues', hint: 'dieselbe Liste wie „Aufgaben“ im Cockpit', wide: true}
+    {object: {type: 'agent', id: 'alle', title: 'Organigramm', collection: true, kompakt: true}, title: 'Organigramm', hint: 'das Team: Vorgesetzte, Rolle, Budget'},
+    // Issues: der Desk-Typ `issue`, sobald ein Werkzeug ihn zeichnet; bis dahin die Missionen (nav.js, issuesTarget)
+    {object: {type: 'task', id: 'alle', title: 'Issues', collection: true}, issues: true, title: 'Issues', hint: 'die Aufgaben des Teams', wide: true}
   ];
   const MAX_HISTORY = 40;
 
@@ -29,12 +32,14 @@
     if(!object || !object.type) return {kind: 'dashboard', object: DASHBOARD};
     if(object.type === 'dashboard') return {kind: 'dashboard', object: DASHBOARD};
     if(object.collection || object.id === 'alle') return {kind: 'collection', object};
+    if(object.type === 'agent') return {kind: 'window', object};       // agent:alle und agent:rollen sind oben schon Sammlungen
     return {kind: 'object', object};
   }
 
-  // Der Verlauf: dieselbe Seite nicht zweimal hintereinander, nie länger als MAX_HISTORY (rein)
+  // Der Verlauf: dieselbe Seite nicht zweimal hintereinander, nie länger als MAX_HISTORY (rein).
+  // Die Ansicht gehört zum Schlüssel (N5): der Wechsel Liste/Board ist einen Schritt zurück wert.
   function pushHistory(history, object){
-    const key = o=>o.type + ':' + o.id;
+    const key = o=>o.type + ':' + o.id + (o.view ? ':' + o.view : '');
     const last = history[history.length - 1];
     if(last && key(last) === key(object)) return history;
     return history.concat([object]).slice(-MAX_HISTORY);
@@ -95,16 +100,17 @@
       grid.append(kpis);
       CARDS.forEach(c=>{
         const box = card(c.title, c.hint, c.wide);
-        const tools = shell.ctx.tools.for(c.object.type).filter(m=>m.slot !== 'nachweis');
-        if(!tools.length) box.append(d().empty('Kein Werkzeug zeichnet „' + c.object.type + '“.'));
-        else mountInto(box, tools[0], c.object);
+        const object = c.issues ? Object.assign({}, root.sedraPcNav.issuesTarget(shell.ctx.tools), {kompakt: true}) : c.object;
+        const tools = shell.ctx.tools.forObject(object).filter(m=>m.slot !== 'nachweis');
+        if(!tools.length) box.append(d().empty('Kein Werkzeug zeichnet „' + object.type + '“.'));
+        else mountInto(box, tools[0], object);
         grid.append(box);
       });
       host.append(grid);
     }
 
     function collection(object){
-      const tools = shell.ctx.tools.for(object.type).filter(m=>m.slot !== 'nachweis');
+      const tools = shell.ctx.tools.forObject(object).filter(m=>m.slot !== 'nachweis');
       const box = d().el('div', 'pc-single');
       if(!tools.length) box.append(d().empty('Für „' + (object.title || object.type) + '“ gibt es noch kein Werkzeug. Sobald eines gebaut ist, steht es hier – ohne eine Zeile an dieser Shell.'));
       else tools.forEach(m=>mountInto(box, m, object));
@@ -112,7 +118,7 @@
     }
 
     function single(object){
-      const all = shell.ctx.tools.for(object.type);
+      const all = shell.ctx.tools.forObject(object);
       const main = all.filter(m=>m.slot !== 'nachweis'), side = all.filter(m=>m.slot === 'nachweis');
       const layout = d().el('div', 'pc-object' + (side.length ? ' with-side' : ''));
       const left = d().el('div', 'pc-main');
@@ -133,6 +139,7 @@
 
     function open(object, options){
       const page = pageFor(object);
+      if(page.kind === 'window') return shell.windows.open(page.object);      // keine Seite: das Fenster im Stapel, die Seite bleibt
       clear();
       shell.instruments.length = 0;
       current = page;
@@ -155,6 +162,7 @@
 
     function restore(){
       load();
+      history = history.filter(o=>o && pageFor(o).kind !== 'window');    // ein Fenster ist keine Seite
       if(!history.length) return false;
       open(history[history.length - 1], {silent: true});
       return true;

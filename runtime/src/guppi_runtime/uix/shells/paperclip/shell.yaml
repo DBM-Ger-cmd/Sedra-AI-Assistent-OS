@@ -2,12 +2,12 @@
 shell:
   id: paperclip
   name: "Paperclip"
-  description: "Dashboard mit Posteingang, Organigramm und Issues; Navigation links, das Gespräch als Schublade (Entwurf D)."
-  version: 1.1.0
+  description: "Dashboard mit Posteingang, Organigramm und Issues; Navigation links, Agentenfenster rechts, das Gespräch als Schublade (Entwurf D)."
+  version: 1.2.0
   entry:
-    js: [pages.js, nav.js, topbar.js, shell.js]     # shell.js zuletzt: es registriert
+    js: [pages.js, nav.js, topbar.js, windows.js, shell.js]     # shell.js zuletzt: es registriert
     css: shell.css
-  provides: [tree, dock, talk, notify, palette, inbox]
+  provides: [tree, dock, windows, talk, notify, palette, inbox]   # windows: der Stapel der Agentenfenster (Spec 4)
   layout: {persist: browser}
   api:
     - GET /api/strip
