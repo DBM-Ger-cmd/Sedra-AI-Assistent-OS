@@ -15,7 +15,7 @@ class ClassList {
 class Node {
   constructor(tag){
     this.tagName = String(tag).toUpperCase(); this.children = []; this.parent = null; this.className = ''; this._text = '';
-    this.dataset = {}; this.style = {}; this.attributes = {}; this.hidden = false; this.listeners = {};
+    this.dataset = {}; this.style = {}; this.attributes = {}; this.hidden = false; this.listeners = {}; this.value = '';
     this.classList = new ClassList(this);
   }
   get textContent(){ return this._text + this.children.map(c=>c.textContent).join(''); }

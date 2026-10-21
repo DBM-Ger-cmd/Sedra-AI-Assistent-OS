@@ -1,0 +1,20 @@
+# Spec 4 (D4.2.2, G2-S4-07): Issues als Liste und Board, dazu das einzelne Issue. Nur Desk-Routen (N6), kein Zeitgeber (UIX-05).
+tool:
+  id: board
+  name: "Issues"
+  description: "Aufgaben des Teams als Liste oder Board nach Zustand; Detail mit Zielkette, Blockern und Kommentaren."
+  version: 1.0.0
+  kind: object
+  handles: [issue:alle, issue:*]
+  order: 15
+  slot: inhalt
+  entry: {js: [spalten.js, detail.js, tool.js], css: tool.css}
+  api:
+    - POST /api/objects
+    - POST /api/actions
+  events:
+    emits: [object.open]
+    listens: [issue.changed, agent.changed, decision.answered, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

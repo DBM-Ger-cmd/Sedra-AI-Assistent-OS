@@ -126,14 +126,14 @@ DESIGN = {'Posteingang': ('decisions', 'decisions'), 'Issues': ('board', 'task')
 class ShellD(unittest.TestCase):
     """Spec 4, S4.2: Navigation, Seitenart `window`, Verlauf mit Ansicht, Ereignisse ohne Zeitgeber (D4.4)."""
 
-    def nav(self, extra=()):
+    def nav(self, extra=(), drop=()):
         return run_js([LOADER, PAPERCLIP / 'nav.js'], """
           const n = require(%s), L = require(%s);
           const reg = L.makeRegistry(%s.map(m=>({manifest: m})));
           console.log(JSON.stringify({sections: n.NAV.filter(x=>x.section).map(x=>x.section),
             rows: n.NAV.filter(x=>x.object && x.object.type !== 'dashboard').map(x=>{ const t = n.target(x, reg);
               return {label: x.label, type: t.type + ':' + t.id, tools: reg.forObject(t).filter(m=>m.slot !== 'nachweis').map(m=>m.id)}; })}));
-        """ % (json.dumps(str(PAPERCLIP / 'nav.js')), json.dumps(str(LOADER)), json.dumps(real_manifests() + list(extra))))
+        """ % (json.dumps(str(PAPERCLIP / 'nav.js')), json.dumps(str(LOADER)), json.dumps([m for m in real_manifests() if m['id'] not in drop] + list(extra))))
 
     def test_the_navigation_has_the_sections_of_the_design(self):
         out = self.nav()
@@ -160,7 +160,7 @@ class ShellD(unittest.TestCase):
     def test_issues_open_the_missions_until_a_tool_draws_the_issue_list(self):
         board = {'id': 'board', 'kind': 'object', 'handles': ['issue:alle', 'issue:*'], 'slot': 'inhalt'}
         side = {'id': 'nur-nachweis', 'kind': 'object', 'handles': ['issue:alle'], 'slot': 'nachweis'}
-        rows = lambda extra: {r['label']: r for r in self.nav(extra)['rows']}
+        rows = lambda extra: {r['label']: r for r in self.nav(extra, drop=('board',))['rows']}      # ohne das echte board, sonst stünde es doppelt
         self.assertEqual(rows([])['Issues']['type'], 'task:alle')
         self.assertEqual(rows([side])['Issues']['type'], 'task:alle', 'ein Nachweis allein zeichnet keine Liste')
         self.assertEqual(rows([board])['Issues'], {'label': 'Issues', 'type': 'issue:alle', 'tools': ['board']})

@@ -1,0 +1,27 @@
+/* Werkzeug „Issues“ – nur unter .t-board, jede Farbe ein Token. Board mit sechs Spalten; erledigt und abgebrochen eingeklappt. */
+.t-board .t-board-bar{flex-wrap:wrap}
+.t-board .t-board-bar input[type="search"]{min-width:160px}
+.t-board .t-board-table tr[data-issue]{cursor:pointer}
+.t-board .t-board-table tr[data-issue]:hover{background:var(--panel-2)}
+.t-board .t-board-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--gap);align-items:start}
+.t-board .t-board-col{display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:var(--radius)}
+.t-board .t-board-col header{justify-content:space-between}
+.t-board .t-board-col.zu{opacity:.8}
+.t-board .t-board-fold{padding:0 6px}
+.t-board .t-board-card{display:flex;flex-direction:column;gap:3px;padding:7px 9px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer}
+.t-board .t-board-card:hover{border-color:var(--accent)}
+.t-board .t-board-state{font-size:var(--size-small);color:var(--muted)}
+.t-board .t-board-state.in_arbeit{color:var(--accent)}
+.t-board .t-board-state.wartet{color:var(--warn)}
+.t-board .t-board-state.erledigt{color:var(--ok)}
+.t-board .t-board-state.abgebrochen{color:var(--bad)}
+.t-board .t-board-title{font-size:var(--size-l)}
+.t-board .t-board-part{padding-top:6px;border-top:1px solid var(--line-soft)}
+.t-board .t-board-chain{flex-wrap:wrap;gap:6px}
+.t-board .t-board-link{cursor:pointer;color:var(--text)}
+.t-board .t-board-link:hover{color:var(--accent)}
+.t-board .t-board-missing{color:var(--bad)}
+.t-board .t-board-comment{display:flex;flex-direction:column;gap:2px;padding:6px 8px;background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius)}
+.t-board .t-board-cloud{padding:0 6px;border-radius:var(--radius);background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-line)}
+.t-board .t-board-form{max-width:520px}
+.t-board .t-board-form textarea{width:100%;box-sizing:border-box}
