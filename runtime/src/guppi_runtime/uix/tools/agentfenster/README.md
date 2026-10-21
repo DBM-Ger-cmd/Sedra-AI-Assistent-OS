@@ -21,6 +21,9 @@ das Fenster schließt ✕), Orchestrierung aus (`unknown_object_type`), `gesprae
 nicht lesbar (rote Zeile, „Noch einmal lesen“). Kein Zeitgeber: neu gelesen wird bei `agent.changed` dieses Agenten, `issue.changed`,
 `budget.warning`, `decision.pending`/`decision.answered`, `desk.resync` – ein Lesen läuft, ein weiteres wird gemerkt.
 
+Den Agenten liest das Fenster aus der Liste `{type:'agent'}` (mit `quelle`), nicht aus der Einzelansicht: der Platzhalter
+bei ausgeschalteter Orchestrierung beantwortet nur die Liste.
+
 ## Mehrere Instanzen (Nachtrag N2)
 Ein Zustand je Container (`instanzen`, eine `Map`); `unmount(el)` und `actions(el)` finden die richtige Instanz.
 

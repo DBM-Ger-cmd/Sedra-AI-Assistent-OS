@@ -43,9 +43,22 @@
     let running = null, again = false;
     const post = body=>ctx.api('/api/objects', {method: 'POST', body});
 
+    // Der Agent aus der Liste (rein genug): gefunden – er; nicht gefunden – je nach `quelle` aus, ausgefallen oder „gibt es nicht mehr“
+    function agentAusListe(liste){
+      const hit = ((liste || {}).items || []).find(x=>String(x.id) === id);
+      const z = ((liste || {}).quelle || {}).zustand;
+      s.quelle = (liste || {}).quelle || null;
+      if(hit){ s.agent = hit; return; }
+      s.agent = null;
+      if(z === 'bereit') s.agent = {type: 'agent', id, missing: true, actions: [], links: []};
+      else if(z === 'fehler') throw new Error('Die Orchestrierung ist ausgefallen: ' + ((s.quelle || {}).grund || 'ohne Grund') + '.');
+      else throw new Error('unknown_object_type');
+    }
+
     async function lesen(){
       if(!s.offen) return;
-      try{ s.agent = await post({type: 'agent', id}); s.fehler = null; }
+      // Aus der Liste, nicht aus der Einzelansicht: die Liste trägt `quelle` und antwortet auch, wenn die Orchestrierung aus ist
+      try{ agentAusListe(await post({type: 'agent'})); s.fehler = null; }
       catch(err){ s.agent = null; s.fehler = err.message || String(err); }
       if(s.agent && !missing(s.agent)){
         const [g, i] = await Promise.all([post({type: 'gespraech', agent: id, limit: LIMIT}).then(x=>({x}), e=>({e})),

@@ -31,7 +31,7 @@ function server(over){
   const o = over || {};
   return (path, body, n)=>{
     if(path === '/api/actions') return o.action ? o.action(body, n) : {status: 'done', needs_gate: false};
-    if(body.type === 'agent') return o.agent ? o.agent(body) : (AGENTS[body.id] || {type: 'agent', id: body.id, title: body.id, state: 'nicht gefunden', missing: true, actions: [], links: []});
+    if(body.type === 'agent') return o.agent ? o.agent(body) : {type: 'agent', items: Object.values(AGENTS), quelle: {zustand: 'bereit'}};
     if(body.type === 'issue') return {type: 'issue', items: ISSUES, quelle: {zustand: 'bereit'}};
     if(body.type === 'gespraech') return o.gespraech ? o.gespraech(body) : {type: 'gespraech', items: MESSAGES.filter(m=>m.agent_id === body.agent), mehr: false, quelle: {zustand: 'bereit'}};
     return new Error('unerwartet');
@@ -128,6 +128,12 @@ check('pausiert, Budget gestoppt, unbekannt', async()=>{
 check('Orchestrierung aus, gespraech fehlt, leer, nicht lesbar', async()=>{
   const aus = await mount('A-UA', server({agent: ()=>new Error('unknown_object_type')}));
   assert.match(aus.el.textContent, /Orchestrierung ist ausgeschaltet/);
+  const platzhalter = await mount('A-UA', server({agent: ()=>({type: 'agent', items: []})}));
+  assert.match(platzhalter.el.textContent, /Agent A-UA: Die Orchestrierung ist ausgeschaltet/);
+  assert.equal(platzhalter.ctx.calls.filter(c=>c.body.id).length, 0, 'keine Einzelansicht – die gäbe 400 beim Platzhalter');
+  const fehler = await mount('A-UA', server({agent: ()=>({type: 'agent', items: [], quelle: {zustand: 'fehler', grund: 'orchestra_db_error:locked'}})}));
+  assert.match(fehler.el.textContent, /ausgefallen: orchestra_db_error:locked/);
+  [platzhalter, fehler].forEach(x=>tool.unmount(x.el));
   const ohne = await mount('A-UA', server({gespraech: ()=>new Error('unknown_object_type')}));
   assert.match(ohne.el.textContent, /Gespräche gibt es mit der Orchestrierung\./);
   assert.match(ohne.el.textContent, /CSV planen|Keine Issues/);
