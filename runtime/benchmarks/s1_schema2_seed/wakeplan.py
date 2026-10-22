@@ -1,70 +1,125 @@
-from datetime import datetime, timedelta
-
 FORMAT = "%Y-%m-%dT%H:%M:%SZ"
-SOURCES = {"assign": 2, "comment": 1, "captain": 1, "routine": 2, "unblocked": 2, "report": 1, "retry": 2}
-DONE = ("erledigt", "abgebrochen")
-REASONS = {"ausgecheckt": "laeuft_schon", "nur_blockiert": "blockiert", "keine_aufgabe": "keine_aufgabe"}
-BUDGET = {"ok": True, "warnung": True, "gestoppt": False, "zu_wenig": False}
+
+_PARTS = {
+    'assign': 2,
+    'comment': 1,
+    'captain': 1,
+    'routine': 2,
+    'unblocked': 2,
+    'report': 1,
+    'retry': 2,
+}
 
 
-def _time(text):
-    return datetime.strptime(text, FORMAT)
+def _validate_parts(parts):
+    for p in parts:
+        if p is None or p == '':
+            raise ValueError('wake_ref_invalid')
 
 
 def key_for(source, ref):
-    if source not in SOURCES:
-        raise ValueError("wake_source_unknown")
-    parts = list(ref) if isinstance(ref, (list, tuple)) else [ref]
-    if len(parts) != SOURCES[source] or any(p is None or str(p) == "" for p in parts):
-        raise ValueError("wake_ref_invalid")
-    return ":".join([source] + [str(p) for p in parts])
+    if source not in _PARTS:
+        raise ValueError('wake_source_unknown')
+    expected = _PARTS[source]
+    if isinstance(ref, (list, tuple)):
+        parts = list(ref)
+    else:
+        parts = [ref]
+    if len(parts) != expected:
+        raise ValueError('wake_ref_invalid')
+    _validate_parts(parts)
+    return source + ':' + ':'.join(str(p) for p in parts)
 
 
-def _order(row):
-    return (row["due_at"], row["id"])
+def _parse_time(t):
+    from datetime import datetime, timedelta
+    return datetime.strptime(t, '%Y-%m-%dT%H:%M:%SZ')
 
 
 def coalesce(open_wakeups, now, coalesce_s):
-    limit = _time(now) + timedelta(seconds=coalesce_s)
+    from datetime import datetime, timedelta
+    now_dt = _parse_time(now)
+    cutoff_dt = now_dt + timedelta(seconds=coalesce_s)
+    open_rows = [r for r in open_wakeups if r['done_at'] is None and r['coalesced_into'] is None]
     by_agent = {}
-    for row in sorted(open_wakeups, key=_order):
-        if row.get("done_at") is None and row.get("coalesced_into") is None:
-            by_agent.setdefault(row["agent_id"], []).append(row)
+    for r in open_rows:
+        by_agent.setdefault(r['agent_id'], []).append(r)
     groups = []
-    for rows in by_agent.values():
-        leader = rows[0]
-        if leader["due_at"] > now:
+    for agent_id, rows in by_agent.items():
+        rows_sorted = sorted(rows, key=lambda r: (_parse_time(r['due_at']), r['id']))
+        leader = rows_sorted[0]
+        leader_due = _parse_time(leader['due_at'])
+        if leader_due > now_dt:
             continue
-        groups.append({"leader": leader, "members": [r for r in rows[1:] if _time(r["due_at"]) <= limit]})
-    return sorted(groups, key=lambda g: _order(g["leader"]))
+        members = []
+        for r in rows_sorted[1:]:
+            if _parse_time(r['due_at']) <= cutoff_dt:
+                members.append(r)
+        members.sort(key=lambda r: (_parse_time(r['due_at']), r['id']))
+        groups.append({'leader': leader, 'members': members})
+    groups.sort(key=lambda g: (_parse_time(g['leader']['due_at']), g['leader']['id']))
+    return groups
 
 
 def pick_task(tasks, blockers, prefer_task_id):
-    blocked = {b["task_id"] for b in blockers if b.get("state") not in DONE}
-    open_ = [t for t in tasks if t["state"] in ("zugewiesen", "offen")]
-    free = [t for t in open_ if not t.get("checkout_by")]
-    ready = [t for t in free if t["id"] not in blocked]
-    if ready:
-        chosen = next((t for t in ready if t["id"] == prefer_task_id), None)
-        if chosen is None:
-            chosen = sorted(ready, key=lambda t: (-t.get("priority", 0), t["created_at"], t["id"]))[0]
-        return chosen, "ok"
-    if free:
-        return None, "nur_blockiert"
-    if any(t.get("checkout_by") for t in tasks):
-        return None, "ausgecheckt"
-    return None, "keine_aufgabe"
+    blocker_map = {}
+    for b in blockers:
+        tid = b['task_id']
+        if b['state'] not in ('erledigt', 'abgebrochen'):
+            blocker_map.setdefault(tid, []).append(b)
+
+    def has_open_blocker(task):
+        return task['id'] in blocker_map
+
+    def is_pickable(task):
+        return (task['state'] in ('zugewiesen', 'offen')
+                and (task.get('checkout_by') is None or task.get('checkout_by') == '')
+                and not has_open_blocker(task))
+
+    def is_eligible(task):
+        return (task['state'] in ('zugewiesen', 'offen')
+                and (task.get('checkout_by') is None or task.get('checkout_by') == ''))
+
+    pickable = [t for t in tasks if is_pickable(t)]
+
+    prefer = None
+    if prefer_task_id is not None:
+        prefer = next((t for t in pickable if t['id'] == prefer_task_id), None)
+    if prefer is not None:
+        return (prefer, 'ok')
+
+    if pickable:
+        pickable.sort(key=lambda t: (-t.get('priority', 0), t['created_at'], t['id']))
+        return (pickable[0], 'ok')
+
+    has_eligible = any(is_eligible(t) for t in tasks)
+    if has_eligible:
+        return (None, 'nur_blockiert')
+
+    has_checkout = any(t.get('checkout_by') is not None and t.get('checkout_by') != '' for t in tasks)
+    if has_checkout:
+        return (None, 'ausgecheckt')
+
+    return (None, 'keine_aufgabe')
 
 
 def decide_run(agent, budget_state, standing, task_reason):
-    if task_reason != "ok" and task_reason not in REASONS:
-        raise ValueError("wake_reason_unknown")
-    if budget_state not in BUDGET:
-        raise ValueError("budget_state_unknown")
-    if agent.get("status") != "aktiv":
-        return "pausiert"
-    if task_reason != "ok":
-        return REASONS[task_reason]
-    if not BUDGET[budget_state]:
-        return "kein_budget"
-    return "lauf_dauerfreigabe" if standing else "antrag"
+    valid_reasons = ('ok', 'nur_blockiert', 'ausgecheckt', 'keine_aufgabe')
+    if task_reason not in valid_reasons:
+        raise ValueError('wake_reason_unknown')
+    valid_budget = ('ok', 'warnung', 'gestoppt', 'zu_wenig')
+    if budget_state not in valid_budget:
+        raise ValueError('budget_state_unknown')
+    if agent['status'] != 'aktiv':
+        return 'pausiert'
+    if task_reason == 'ausgecheckt':
+        return 'laeuft_schon'
+    if task_reason == 'nur_blockiert':
+        return 'blockiert'
+    if task_reason == 'keine_aufgabe':
+        return 'keine_aufgabe'
+    if budget_state in ('gestoppt', 'zu_wenig'):
+        return 'kein_budget'
+    if standing:
+        return 'lauf_dauerfreigabe'
+    return 'antrag'
