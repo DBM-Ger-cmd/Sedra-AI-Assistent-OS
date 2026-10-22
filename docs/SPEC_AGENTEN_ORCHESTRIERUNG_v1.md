@@ -1460,6 +1460,12 @@ G3 gibt die Bauschritte frei, nicht die Übernahme: Jeder SEDRA-Kandidat kommt n
 | OP-S1-18 | `kette` und `kommentare` (Liste) in der Liste kosten je Issue eine Abfrage | in der Liste `kommentare` als Liste der letzten 3 und `kette` weglassen; vollständig in der Einzelansicht – mit Shell D abzustimmen |
 | OP-S1-19 | `nachholen` kommt als Wahrheitswert, `catch_up` ist Text; `vorlage_titel`/`vorlage_beschreibung` gibt es in `routines` nicht als Spalten | Abbildung im Adapter wie Tabelle oben; `task_template` als JSON-Text, keine Schemaänderung |
 
+#### Befunde und Nachträge nach der Übernahme
+
+| Kennung | Datum | Befund | Fix | Test |
+| --- | --- | --- | --- | --- |
+| S1-F-RECHERCHE-TRUST | 22.10.2026 | `desk/orchestra_runner._research` hängte den Recherche-Block (`runner.external_block`) samt Anweisungssatz als eine `user`-Nachricht ohne `trust` an. `core/content_guard._with_trust` stuft `user` ohne Kennzeichen als `captain` ein (`TRUST_BY_ROLE`): fremder Webtext bekam das Vertrauen des Captains und blieb ohne Einfassung als fremde Daten. Gemeldet im Design von Spec 7 (D7.6), bestätigt mit rotem Test. | Nur `desk/orchestra_runner.py`: zwei getrennte Nachrichten wie beim Wissensblock (`wissen/lauf.kontext_nachrichten`) – Anweisungssatz `{"role": "user", "trust": "captain"}`, dann der Datenblock als letzte Nachricht `{"role": "user", "trust": "untrusted"}`. `core/` unverändert. | `test_orchestra_run.Work.test_research_block_is_marked_untrusted_and_the_instruction_stays_apart` (Block `untrusted`, Anweisung ohne fremden Text, jede angehängte Nachricht mit Kennzeichen); bestehende Recherche-Tests unverändert grün |
+
 ## Spec 2 – Modell-Scheduler: parallele Agenten
 
 Die GPU-Lease bleibt, bekommt aber eine zweite Ebene: Ein Prozess besitzt den Modellserver (Lade-Lease), und ein Scheduler verteilt dessen parallele Slots an Agentenläufe (Slot-Lease). Heute lädt nur ein Prozess Modelle und jedes Rezept hat 1 Slot; das ändert eine Regel aus `ENTWICKLUNG.md` und braucht deshalb eine Captain-Freigabe und eine Doku-Änderung.
@@ -3372,6 +3378,8 @@ Offen für den Captain:
 | 22.10.2026 | G1-S7-a bis g freigegeben, wie empfohlen; Messung S7.1 (Downloads, GPU-Zeit) freigegeben |
 | 22.10.2026, 14:33 | Die drei Risiken des Berichts S7.2 werden im Design entschärft: Goldsatz-Regel mit `erwartet_ueber` (D7.3, D7.11); Einbetten bis zum Bau von Spec 2 nur auf der CPU, GPU als Stufe S7.4b (D7.4); Ziel 85 % und Mindestgrenze 80 % mit Nachmessung (D7.11) |
 | 22.10.2026, 14:58 | **G2-S7 erteilt: a bis u, wie empfohlen.** Zwei Einschränkungen: (1) **G2-S7-n:** Regel und Feld `erwartet_ueber` freigegeben; die 13 umgeschriebenen Fragen (`goldsatz_umschrieben.json`) prüft der Captain lokal und füllt G07/G40 selbst aus – sie bleiben bis dahin Vorschlag, nicht freigegeben. (2) **G2-S7-d:** Messung S7.2-F auf der CPU; GPU nur mit eigener Freigabe. **G2-S7-t** bleibt „später (S7.4b)“. Damit ist S7.2 abgeschlossen; S7.3 (Bau-Specs) beginnt |
+| 22.10.2026, 15:28 | **Claude baut in der Cloud das gesamte Paket `wissen/`, auch `schema.py`, `zerlegen.py` und `fusion.py`** (ändert G2-S7-o und G3-S7-04: die drei Module gehen nicht an SEDRA). Die Bau-Specs `wis_store`, `wis_chunk`, `wis_fuse` mit ihren versteckten Tests bleiben die Abnahme der drei Module (`benchmarks/wissen_spec_gegenprobe.py` → `result ok`); G3-S7-01 bis -03 und -06 (spec_check --vm, Bau durch SEDRA) entfallen damit für Spec 7. Branch `spec7/bau`, Bericht `docs/BAUBERICHT_SPEC7_2026-10-22.md` |
+| 22.10.2026, 15:31 | Die Cloud liefert die vollständige Fassung von S7.4 (Harness, Werkzeug, Anschluss an den Lauf, Messskript S7.2-F, Tests); fehlende Teile und Feinschliff folgen auf dem PC. Was bewusst dem PC überlassen bleibt, steht als eigene Liste im BAUBERICHT |
 
 ### Vorbereitung S7.1
 

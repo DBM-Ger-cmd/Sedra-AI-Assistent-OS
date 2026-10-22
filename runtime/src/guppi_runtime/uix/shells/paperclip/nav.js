@@ -35,6 +35,7 @@
     {section: 'Werkzeuge'},       // die Werkstatt steht jetzt unter „Modelle und Slots“ (derselbe Ort hat nur eine Zeile)
     {label: 'Bibliothek', object: {type: 'skill', id: 'own', title: 'Bibliothek'}},
     {label: 'Logbuch', object: {type: 'logbook', id: 'audit', title: 'Logbuch'}},
+    {label: 'Wissen', object: {type: 'wissen', id: 'speicher', title: 'Wissen'}},      // Spec 7 (D7.9, G2-S7-u): der Wissensspeicher
     {label: 'Module', object: {type: 'module', id: 'alle', title: 'Module', collection: true}},
     {section: 'Projekt'},
     {label: 'Dateien', object: {type: 'project', id: 'projekt', title: 'Projekt'}},

@@ -1,0 +1,30 @@
+# Arbeitsplatz-Wissen dieses Moduls (Build 24, Ticket B6-G-06; Klaus 15.10.2026 19:36: „Arbeitsplatzwissen bleibt immer im Modul“).
+# desk/arbeitsplatz.py liest diese Datei ein; SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen, nichts läuft von allein.
+# Erlaubt: satz, zonen [{name, wo}], woerter {wort: {ist, objekt}}, anleitungen [{id, titel, schritte, ort, stich}], begriffe {wort: text}.
+arbeitsplatz:
+  anleitungen:
+  - id: wissen_quelle
+    titel: Eine Wissensquelle freigeben
+    schritte:
+    - Navigation „Werkzeuge · Wissen“, Ansicht „Quellen“, „Quelle beantragen …“.
+    - Adapter, Wurzel, Pfad, Stufe (wer lesen darf) und Personenbezug angeben; „Antrag stellen“ – der Antrag steht im Posteingang.
+    - Im Posteingang „Freigeben und anwenden“; erst dann wird die Quelle zerlegt und aufgenommen. „Erstbestückung beantragen“ stellt Doku, Logbuch und die drei Speicher in einem Antrag.
+    ort:
+      type: wissen
+      id: speicher
+      title: Wissen
+    stich: wissen quelle freigeben ordner datei aufnehmen wissensspeicher erstbestückung erstbestueckung rag
+  - id: wissen_suche
+    titel: Im Wissensspeicher suchen
+    schritte:
+    - Navigation „Werkzeuge · Wissen“, Ansicht „Suche“, Frage eingeben, „Suchen“.
+    - Jeder Treffer trägt seine Kennung [W…], Quelle, Stelle, Datum und den Rang in Wort- und Vektorliste; ohne Embedding-Modell sagt der Hinweis „Nur Volltextsuche“.
+    - Agenten fragen denselben Speicher im Lauf über wissen.suche, beschränkt auf ihre Stufe und ihr Projekt.
+    ort:
+      type: wissen
+      id: speicher
+      title: Wissen
+    stich: wissen suche suchen frage treffer zitat embedding vektor volltext
+  begriffe:
+    wissensspeicher: Der gemeinsame Speicher aus Doku, Logbuch, den drei Wissensbasen und freigegebenen Quellen; Suche hybrid (Volltext und Bedeutung), Treffer mit Kennung [W…].
+    vorschlag: Wissen, das ein Agent im Lauf vorschlägt; es wird erst nach Freigabe im Posteingang Teil des Speichers.

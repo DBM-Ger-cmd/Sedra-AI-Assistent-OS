@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 UIX = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
-FOLDERS = [UIX / 'shells' / 'paperclip'] + [UIX / 'tools' / t for t in ('org', 'board', 'routines', 'slots', 'gauge-slots', 'agentfenster', 'costs')]
+FOLDERS = [UIX / 'shells' / 'paperclip'] + [UIX / 'tools' / t for t in ('org', 'board', 'routines', 'slots', 'gauge-slots', 'agentfenster', 'costs', 'wissen')]
 SPEC_DOM = Path(__file__).resolve().parent / 'uix_spec_dom.js'
 MAX_CHECKS = 20
 

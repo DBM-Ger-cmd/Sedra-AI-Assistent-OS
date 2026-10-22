@@ -7,6 +7,12 @@ ARBEIT_SCHEMA = {
     "properties": {
         "antwort": {"type": "string"},
         "fertig": {"type": "boolean"},
+        "wissen_vorschlag": {                     # Spec 7 (D7.8, G2-S7-f): wahlweise ein Vorschlag mit Belegen aus dem Datenblock
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["titel", "text"],
+            "properties": {"titel": {"type": "string"}, "text": {"type": "string"}, "belege": {"type": "array", "items": {"type": "string"}}},
+        },
     },
 }
 
@@ -144,7 +150,7 @@ def outcome(plan, answer):
     if mode == 'arbeit':
         if not isinstance(answer, dict):
             raise ValueError('run_invalid:extra_key')
-        if set(answer) - {'antwort', 'fertig'}:
+        if set(answer) - {'antwort', 'fertig', 'wissen_vorschlag'}:
             raise ValueError('run_invalid:extra_key')
         antwort = answer.get('antwort')
         if not isinstance(antwort, str) or not antwort.strip():
@@ -158,6 +164,7 @@ def outcome(plan, answer):
             "bericht": None,
             "recherche_urls": None,
             "fertig": answer.get('fertig') is True,
+            "wissen_vorschlag": answer.get('wissen_vorschlag'),
         }
 
     elif mode == 'zerlegen':

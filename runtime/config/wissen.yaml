@@ -1,0 +1,27 @@
+# Wissensspeicher (Spec 7, D7.2 bis D7.5; G2-S7-c, -e, -q, -r): Paket-Vorgabe ohne Pfade. Eingeschaltet wird nur über den
+# Schalter in local_config/switches.yaml (switches: {wissen: {enabled: true}}); `enabled` hier ist die dokumentierte Vorgabe und
+# schaltet allein nicht ein. Engine, Modell und Prüfsumme stehen in local_config/wissen.yaml (nicht im Git):
+#   wissen: {engine: '<guppi>/engines/llama.cpp/b11160/llama-server.exe', modell: '<modelle>/bge-m3/bge-m3-q8_0.gguf',
+#            modell_sha256: '<sha256 der GGUF>', modell_name: bge-m3-q8_0}
+# Ohne diese Datei läuft der Speicher mit Volltextsuche (WIS-06), das Einbetten bleibt „nicht bereit“.
+wissen:
+  schema: 1
+  enabled: false
+  speicher: wissen/wissen.sqlite        # relativ zu local_config, kein absoluter Pfad, kein ..
+  takt: {an: true, intervall_s: 600, schritt_s: 120}     # D7.3: alle 600 s ein Abgleich und ein Einbett-Schritt von höchstens 120 s
+  einbetten:                            # D7.4: eigener llama-server --embeddings, nur CPU, nie Port 8089
+    port: 8094
+    kontext: 8192
+    stapel: 16
+    pooling: ''                         # laut Modellkarte; leer = Vorgabe des Servers
+    cpu_threads: null                   # null = max(2, Kerne // 2)
+    leerlauf_s: 900
+    anfrage_timeout_s: 5.0
+    eingabeformat: e1                   # Stelle + Zeilenumbruch + Text
+    dim: 1024                           # BGE-M3
+  suche: {tiefe: 50, k: 5, abdeckung_min: 0.5}           # D7.5: Tiefe beider Listen, Treffer je Antwort, Rückfall unter 50 % Abdeckung
+  fusion: {k: 60, w_vektor: 1.0, w_wort: 0.75, guete: true, spitzenschutz: false}   # f1, Startwerte bis S7.2-F
+  zerlegen: {ziel: 1200, grenze: 1600}                   # z2 (G2-S7-e)
+  kontext: {je_treffer: 1600, gesamt: 8000, treffer: 5}  # D7.6: Datenblock an das Modell
+  vorschlaege: {offen_je_agent: 20, titel_max: 160, text_max: 4000}     # D7.8
+  aufnahme: {datei_max_bytes: 2000000}                   # A-2: 2 MB je Datei

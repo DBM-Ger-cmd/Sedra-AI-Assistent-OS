@@ -5,7 +5,7 @@ arbeitsplatz:
   satz: 'Eine Firma statt eines Cockpits: Navigation links, Seiten in der Mitte, Agentenfenster rechts daneben, das Gespräch als Schublade.'
   zonen:
   - name: Navigation
-    wo: 'links: Dashboard, Posteingang; Arbeit (Issues, Ziele, Routinen); Team (Organigramm, Agenten); Betrieb (Kosten, Modelle und Slots, KI-Labor); Assistenten; Werkzeuge; Projekt'
+    wo: 'links: Dashboard, Posteingang; Arbeit (Issues, Ziele, Routinen); Team (Organigramm, Agenten); Betrieb (Kosten, Modelle und Slots, KI-Labor); Assistenten; Werkzeuge (Bibliothek, Logbuch, Wissen, Module); Projekt'
   - name: Kopfzeile
     wo: 'oben: Titel der Seite, Zurück, die Verben des Werkstücks, das Suchfeld (Strg+K)'
   - name: Dashboard
@@ -82,6 +82,12 @@ arbeitsplatz:
         type: labor
         id: labor
         title: KI-Labor
+    wissen:
+      ist: 'der Wissensspeicher: Quellen, Index, Suche mit Treffern, Nachmessung und Vorschläge der Agenten – Navigation „Werkzeuge · Wissen“'
+      objekt:
+        type: wissen
+        id: speicher
+        title: Wissen
   anleitungen:
   - id: agentenfenster
     titel: Mit einem Agenten sprechen (Agentenfenster)

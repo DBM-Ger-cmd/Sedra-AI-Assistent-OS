@@ -552,7 +552,8 @@ class ShellDTools(unittest.TestCase):
     """Spec 4 (D4.4, D4.6): die Werkzeugliste mit Begründung (UIX-03), Routen (UIX-06, N6) und kein Takt (UIX-05) der neuen Werkzeuge.
     Ein neues Werkzeug, das noch fehlt, wird nicht verlangt – sobald es da ist, gelten die Regeln ohne Änderung an diesem Test."""
     NEW = {'org': 'Organigramm als Baum (agent:alle)', 'board': 'Issues als Liste und Board (issue)', 'routines': 'Routinen (routine)',
-           'agentfenster': 'Gespräch je Agent (agent:*)', 'slots': 'Slots über der Werkstatt (model:alle)', 'gauge-slots': 'Kachel der Slots'}
+           'agentfenster': 'Gespräch je Agent (agent:*)', 'slots': 'Slots über der Werkstatt (model:alle)', 'gauge-slots': 'Kachel der Slots',
+           'wissen': 'Wissensspeicher (wissen:speicher, Spec 7)'}
     ADAPTED = {'crew': 'Rollenliste (agent:rollen)', 'costs': 'Budget und Cloud-Kennzeichen, auch für issue'}
     REUSED = {'decisions': 'Posteingang', 'live': 'Zeilen eines Laufs', 'workshop': 'Modelle laden', 'labor': 'KI-Labor (Ausbau Spec 3)',
               'meter': 'Kosten', 'intent': 'Ziele', 'planung': 'Planungstisch', 'talk': 'Gespräch mit SEDRA', 'task': 'Mission hinter einem Issue'}
