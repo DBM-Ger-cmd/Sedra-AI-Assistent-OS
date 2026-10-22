@@ -2741,6 +2741,54 @@ Offen für den Captain:
 - [ ] Welche eigenen Ordner sollen später Quellen werden?
 - [ ] Soll der Chat (Cockpit, Master-Chat) die neue Suche sofort nutzen oder erst nach der Abnahme?
 
+### Vorbereitung S7.1
+
+Stand 22.10.2026, nur auf Papier und mit der Standardbibliothek: kein Download, kein GPU-Lauf, kein Modell geladen. S7.1 selbst bleibt offen, bis die Messung mit Modell läuft.
+
+**1. Goldsatz.** `runtime/benchmarks/wissen_goldsatz.json`: 40 Fragen auf Deutsch, je Frage die erwarteten Quellen (Datei plus Überschrift oder Stelle) und die Art. Quellen: `docs/*.md` (mit dieser Spec und dem Logbuch), `knowledge.py`, `arbeitsumfeld_wissen.py`, `gateway/wissen.py` und `gateway/klassen.py` (das Regelbuch des Gateway-Speichers). Verteilung: 11 wortgleich, 19 umschrieben, 10 Fachbegriff anders formuliert; also 29 Fragen mit anderen Worten als die Quelle (verlangt waren 15). Die Fragen stammen aus gelesenem Text, nicht aus den Suchergebnissen.
+
+**2. Ausgangswert der heutigen Wortsuche.** `runtime/benchmarks/wissen_baseline.py` zerlegt die Quellen (Markdown nach Überschriften, Python nach Blöcken und Schlüsseln, Logbuch nach Zeilen, Abschnitte bis 2500 Zeichen), sucht mit SQLite FTS5 und BM25 (Titel doppelt gewichtet) und gibt Treffer@5 und MRR@10 aus. Gemessen am Stand `0155a83` (`--rev 0155a83`), SQLite 3.50.4 der Laufzeit, 129 Dateien, 2040 Abschnitte, Korpusstempel `d98c6e73956b`:
+
+| Lauf | Treffer@5 | Treffer@1 | MRR@10 | wortgleich (11) | umschrieben (19) | Fachbegriff (10) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `wort` (Wörter der Frage, ODER, ohne Füllwörter) – **Ausgangswert** | **57,5 %** (23 von 40) | 37,5 % | 0,459 | 90,9 % | 52,6 % | 30,0 % |
+| `stamm` (Wörter ab 6 Buchstaben als Präfix) | 52,5 % | 35,0 % | 0,430 | 81,8 % | 52,6 % | 20,0 % |
+
+Lesart: Wo die Frage die Wörter der Quelle benutzt, findet die Wortsuche fast alles; bei anderen Worten fällt sie auf rund die Hälfte, bei umschriebenen Fachbegriffen auf ein Drittel. Ein grober Stamm hilft nicht. Typische Fehlgriffe: „Videospeicher“ findet kein „VRAM“, „Kreditkartennummer samt Prüfziffer“ findet nicht „Kartendaten mit Prüfwert“, deutsche Fragen finden nicht die englisch kommentierten Lektionen in `knowledge.py`. Der Lauf ist wiederholbar: `<guppi>/runtime/.venv` mit `-I benchmarks/wissen_baseline.py --rev 0155a83 [--detail] [--json Pfad]` (der Korpusstempel ändert sich mit jeder neuen Logbuchzeile, deshalb `--rev`; der Abschnitt „Vorbereitung S7.1“ bleibt draußen).
+
+**3. Messplan S7.1 (GPU-Messung, braucht die Freigabe des Captains).**
+
+Freigaben vorab, je einzeln: (a) Download je Modell (Name, Quelle, Größe nennen); (b) GPU-Zeit, grob 1 Stunde je Modell, mit Lease.
+
+Ablauf je Modell:
+
+1. Modell nach `<modelle>` laden, Prüfsumme mit der Angabe der Modellkarte vergleichen.
+2. Lease des Testlabors holen (`benchmarks/testlab_cli.py hold … --wait`), Halter nie beenden. Rezepte, Engine (b11160) und Schalter bleiben unverändert: eigener `llama-server --embeddings` mit Pooling laut Modellkarte, eigenem freien Port (nicht 8089), vom Skript gestartet; beendet wird nur die eigene PID.
+3. Funktionsprüfung `/v1/embeddings`: Dimension, Normierung, deutscher Beispielsatz, Stapel von 16, Abschnitt mit 2500 Zeichen (Kürzung des Modells beachten).
+4. Zeit je 1000 Abschnitte (Abschnitte des Korpus von oben): GPU (`-ngl 99`) und CPU (`-ngl 0`), je 3 Läufe, erster Lauf als Aufwärmen verworfen, Median.
+5. VRAM: `nvidia-smi` vor dem Start, im Lauf (Spitze) und nach dem Beenden, nur lesend.
+6. Qualität: alle Abschnitte einbetten, Vektorsuche in reinem Python (Skalarprodukt, kein `numpy`), RRF (k = 60) mit der FTS5-Liste; Treffer@5 und MRR@10 für drei Suchen: nur Wort, nur Vektor, hybrid. Anfragepräfix laut Modellkarte.
+7. Aufräumen: eigenen Server beenden, Lease freigeben, Logbuchzeile `MESSUNG` über `benchmarks/logbook.py add`.
+
+Kennzahlen: Treffer@5, MRR@10 (gesamt und je Art), Sekunden je 1000 Abschnitte auf GPU und CPU, VRAM-Spitze und Modellgröße im Speicher, Dimension, Kürzungen (Abschnitte über der Modelllänge).
+
+Abbruchkriterien: Lease nicht innerhalb der Wartezeit (dann später, nichts erzwingen); Canary schlägt fehl; VRAM-Spitze über 11,5 GB oder `hardware_pressure`; Serverabsturz zweimal; kein brauchbares `/v1/embeddings` mit Engine b11160 (dann Engine-Wechsel nur als eigenes Gate, nicht in S7.1); mehr als 30 Minuten je Modell; ein Modell, dessen hybrides Treffer@5 nach dem ersten Lauf unter dem Ausgangswert von 57,5 % liegt, scheidet aus.
+
+Vorgeschlagene Schwelle (für WIS-05 und G1-S7-d): hybride Suche **Treffer@5 mindestens 85 %** (34 von 40), davon **mindestens 75 % bei den 29 Fragen mit anderen Worten** (Ausgangswert dort 44,8 %), und bei den wortgleichen Fragen **nicht unter 90 %** (Ausgangswert 90,9 %). Zeit: mindestens eine Einstellung mit höchstens 60 s je 1000 Abschnitte auf der GPU und höchstens 10 Minuten auf der CPU (der heutige Korpus hat rund 2000 Abschnitte, die Aufnahme läuft im Hintergrund); zusätzlicher VRAM höchstens 1,5 GB, weil Einbetten nie neben einem Bau läuft (WIS-12). Der Goldsatz hat nur 40 Fragen: ein Treffer sind 2,5 Punkte, die Schwelle ist also grob; sie gilt für die Wahl des Modells, die Abnahme S7.5 braucht einen größeren Satz.
+
+**4. Kandidaten für das Embedding-Modell (G1-S7-d).** Angaben aus den Modellkarten auf Hugging Face, Stand 22.10.2026; nichts heruntergeladen.
+
+| Modell | Parameter | Dimension | Länge | Lizenz | GGUF für `llama-server --embeddings` | Quelle |
+| --- | --- | --- | --- | --- | --- | --- |
+| BGE-M3 | 0,6 B | 1024 | 8192 Token | MIT | ja, `ggml-org/bge-m3-Q8_0-GGUF`, 635 MB | huggingface.co/BAAI/bge-m3 |
+| Qwen3-Embedding-0.6B | 0,6 B | bis 1024 (frei 32 bis 1024) | 32 k Token | Apache 2.0 | ja, offiziell `Qwen/Qwen3-Embedding-0.6B-GGUF`, Q8_0 639 MB, F16 1,2 GB; Pooling `last` | huggingface.co/Qwen/Qwen3-Embedding-0.6B |
+| EmbeddingGemma-300M | 0,3 B | 768 (kürzbar auf 512/256/128) | 2048 Token | Gemma-Lizenz (Zugang nach Zustimmung) | ja, `ggml-org/embeddinggemma-300M-qat-q4_0-GGUF`, 278 MB | huggingface.co/google/embeddinggemma-300m |
+| multilingual-e5-large-instruct | 24 Schichten, rund 0,56 B (Zahl nicht auf der Karte) | 1024 | 512 Token | MIT | kein offizielles GGUF gefunden; Umwandlung mit `convert_hf_to_gguf.py` nötig | huggingface.co/intfloat/multilingual-e5-large-instruct |
+
+Alle vier sind mehrsprachig (100 Sprachen laut Karte); Deutsch wird auf keiner Karte einzeln ausgewiesen, die Messung am Goldsatz ersetzt das. Hinweise: E5 kürzt bei 512 Token, unsere Abschnitte (bis 2500 Zeichen) wären dort teils zu lang; Qwen3 und E5 verlangen eine Anweisung vor der Frage (`Instruct: … Query: …`), BGE-M3 nicht; die Gemma-Lizenz ist keine Standardlizenz und müsste der Captain gesondert zur Kenntnis nehmen.
+
+Empfehlung: **BGE-M3 (Q8_0) zuerst**, weil MIT-Lizenz, fertiges GGUF von `ggml-org`, 8192 Token (keine Kürzung der Abschnitte) und keine Anfrageanweisung; **Qwen3-Embedding-0.6B (Q8_0) als zweites** zum Vergleich (Apache 2.0, offizielles GGUF). EmbeddingGemma nur, wenn die kleine Größe zählt; E5 entfällt (kurze Länge, kein fertiges GGUF). Zwei Downloads von zusammen rund 1,3 GB, zu beantragen, sobald der Captain die Messung freigibt.
+
 ## Entscheidungen des Captains (20.10.2026)
 
 Alle acht Fragen sind beantwortet; neu offen sind nur die Fragen zur Social-Zentrale (Spec 6).
