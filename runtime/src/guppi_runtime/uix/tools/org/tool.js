@@ -11,9 +11,23 @@
   const STATUS = {aktiv: 'aktiv', arbeitet: 'arbeitet', pausiert: 'pausiert', beendet: 'beendet'};
   // Verben, die Angaben brauchen: das Formular nennt sie, die Prüfung bleibt beim Server
   const FORMS = {
-    einstellen: [['name', 'Name'], ['vorlage', 'Vorlage (Rezept)'], ['reports_to', 'Vorgesetzter', 'agent'], ['budget_tokens', 'Budget in Token', 'number']],
+    // HALT 3 B (Captain 22.10.2026): die AM-Instanz entsteht vorher im Agent-Manager; `einstellen` ordnet sie nur ein
+    einstellen: [['name', 'Name'], ['instance_id', 'Agenten-Instanz', 'instanz'], ['reports_to', 'Vorgesetzter', 'agent'], ['budget_tokens', 'Budget in Token', 'number']],
     einordnen: [['reports_to', 'Neuer Vorgesetzter', 'agent']]
   };
+
+  // Fehlercodes des Desk als Satz (rein); ein unbekannter Code bleibt, wie der Server ihn schickt
+  const MELDUNGEN = {
+    instance_taken: 'Diese Agenten-Instanz gehört schon einem Agenten – bitte eine freie Instanz wählen.',
+    binding_stale: 'Seit dem Antrag hat sich die Instanz geändert; die Freigabe galt für den alten Stand. Bitte neu einstellen.',
+    instance_not_found: 'Diese Agenten-Instanz gibt es nicht. Instanz zuerst über den Agent-Manager anlegen.',
+    instance_not_active: 'Diese Agenten-Instanz ist nicht aktiv.'
+  };
+  function meldung(text){
+    const t = String(text || '');
+    const code = Object.keys(MELDUNGEN).find(c=>t.indexOf(c) >= 0);
+    return code ? MELDUNGEN[code] : t;
+  }
 
   // In welchem Zustand die Liste ist (rein): aus, fehler, bereit – oder ein Lesefehler. Ein alter Server ohne `quelle` heißt „aus“.
   function quelleZustand(liste, fehler){
@@ -222,6 +236,7 @@
 
     drawForm(alle){
       const {verb, agent} = this.form;
+      const werte = this.form.werte || {};
       const box = d().el('form', 's-card s-col t-org-form');
       box.append(d().el('b', null, (verb.label || verb.verb) + (agent ? ' – ' + (agent.title || agent.id) : '')));
       const fields = {};
@@ -233,21 +248,31 @@
           input = d().el('select');
           const none = d().el('option', null, 'Captain (kein Vorgesetzter)'); none.value = ''; input.append(none);
           alle.filter(a=>!agent || a.id !== agent.id).forEach(a=>{ const o = d().el('option', null, a.title || a.id); o.value = String(a.id); input.append(o); });
+        }else if(art === 'instanz' && this.freieInstanzen().length){
+          input = d().el('select');                   // bietet der Desk freie Instanzen an, wird gewählt statt getippt
+          const none = d().el('option', null, '– Instanz wählen –'); none.value = ''; input.append(none);
+          this.freieInstanzen().forEach(i=>{ const o = d().el('option', null, String(i.title || i.name || i.id) + (i.template ? ' · ' + i.template : '')); o.value = String(i.id); input.append(o); });
         }else{ input = d().el('input'); input.type = art === 'number' ? 'number' : 'text'; }
+        if(werte[key] !== undefined && werte[key] !== null) input.value = String(werte[key]);
         fields[key] = input;
         row.append(input);
+        if(art === 'instanz' && !this.freieInstanzen().length) row.append(d().el('small', 's-muted', 'Instanz zuerst über den Agent-Manager anlegen; hier ihre ID eintragen.'));
         box.append(row);
       });
       const bar = d().el('div', 's-row');
       bar.append(d().button('Absenden', async()=>{
         const args = {};
         Object.keys(fields).forEach(k=>{ const v = fields[k].value; args[k] = fields[k].type === 'number' ? (v === '' ? null : Number(v)) : v; });
+        this.form.werte = args;                       // abgewiesen: die Eingabe bleibt stehen
         await this.run(agent, verb, args);
       }, 'p'), d().button('Abbrechen', ()=>{ this.form = null; this.draw(); }));
       box.append(bar);
       box.onsubmit = e=>e.preventDefault();
       return box;
     },
+
+    // Freie AM-Instanzen, falls der Desk sie an der Liste anbietet (Feld `freie_instanzen`, noch nicht geliefert)
+    freieInstanzen(){ const f = this.liste && this.liste.freie_instanzen; return Array.isArray(f) ? f.filter(i=>i && i.id) : []; },
 
     verb(agent, verb){
       if(FORMS[verb.verb]){ this.form = {verb, agent}; this.hinweis = null; this.draw(); return Promise.resolve(); }
@@ -261,7 +286,7 @@
         const out = await this.ctx.api('/api/actions', {method: 'POST', body});
         this.form = null;
         this.hinweis = {text: (verb.label || verb.verb) + ': ' + ergebnisSatz(out)};
-      }catch(err){ this.hinweis = {text: err.message || String(err), bad: true}; }   // das Formular bleibt stehen
+      }catch(err){ this.hinweis = {text: meldung(err.message || String(err)), bad: true}; }   // das Formular bleibt stehen
       this.draw();
     },
 
@@ -273,6 +298,6 @@
   };
 
   if(root.sedra) root.sedra.registerTool(tool);
-  root.sedraOrgPure = {quelleZustand, sichtbar, ergebnisSatz, statusWort};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {quelleZustand, sichtbar, ergebnisSatz, statusWort, tool};
+  root.sedraOrgPure = {quelleZustand, sichtbar, ergebnisSatz, statusWort, meldung};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {quelleZustand, sichtbar, ergebnisSatz, statusWort, meldung, tool};
 })();
