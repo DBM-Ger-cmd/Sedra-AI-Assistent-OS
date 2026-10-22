@@ -16,6 +16,10 @@ Spec 4, D4.2.1 (Gate G2-S4-06). Zeichnet `agent:alle` (Seite und Dashboard-Karte
   `arbeitet`, `budget`, `offene_entscheidungen` liefert Spec 1 (G2-S4-16); fehlt ein Feld, fehlt nur seine Anzeige.
 - Handeln: nur Verben aus `actions` über `POST /api/actions`. `einstellen` (am Typ, aus `actions` der Liste) und `einordnen`
   bekommen ein kleines Formular; ein Verb mit Gate meldet „Antrag liegt im Posteingang“.
+- Einstellen (Entscheidung HALT 3 B, Captain 22.10.2026) ist der zweite von zwei Anträgen: die AM-Instanz entsteht vorher im
+  Agent-Manager, `einstellen` ordnet sie ein – Argumente `{name, instance_id, reports_to, budget_tokens}`. Liefert die Liste
+  `freie_instanzen`, ist `instance_id` eine Auswahl, sonst ein Eingabefeld mit Hinweis. `instance_taken`, `binding_stale`,
+  `instance_not_found`, `instance_not_active` erscheinen als deutscher Satz; die Eingabe bleibt stehen.
 - Leer und Fehler (UIX-10): `quelle.zustand` `aus` oder fehlend → „ausgeschaltet“; `fehler` → „ausgefallen: Grund“;
   `orchestra_busy` → „Datenbank belegt“ mit „Noch einmal lesen“.
 - Kein Zeitgeber: neu gelesen wird bei `agent.changed`, `budget.warning`, `decision.pending`, `decision.answered`, `desk.resync`

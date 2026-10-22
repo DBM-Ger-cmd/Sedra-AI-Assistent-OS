@@ -119,6 +119,36 @@ check('Verben am Typ nur aus der Liste des Servers', async()=>{
   assert.deepEqual(tool.actions().map(a=>a.label), ['Einstellen']);
 });
 
+check('Einstellen (HALT 3 B): instance_id statt vorlage, Hinweis auf den Agent-Manager, Fehlercodes als Satz', async()=>{
+  let code = 'instance_taken';
+  const {el, ctx} = await mount(null, p=>p === '/api/objects' ? Object.assign(liste(TEAM, BEREIT), {actions: [{verb: 'einstellen', label: 'Einstellen', needs_gate: true}]})
+                                                              : (code ? new Error(code) : {status: 'done', needs_gate: true}));
+  await tool.actions()[0].run();
+  assert.match(el.textContent, /Instanz zuerst über den Agent-Manager anlegen/);
+  const inputs = el.querySelector('form').querySelectorAll('input');
+  inputs[0].value = 'Tester'; inputs[1].value = 'AM-7'; inputs[2].value = '5000';
+  await el.querySelectorAll('button').find(b=>b.textContent === 'Absenden').click(); await K.settle();
+  assert.deepEqual(ctx.calls[1].body, {type: 'agent', verb: 'einstellen', args: {name: 'Tester', instance_id: 'AM-7', reports_to: '', budget_tokens: 5000}});
+  assert.match(el.textContent, /gehört schon einem Agenten/);
+  assert.equal(el.querySelector('form').querySelectorAll('input')[1].value, 'AM-7', 'die Eingabe bleibt stehen');
+  code = 'binding_stale';
+  await el.querySelectorAll('button').find(b=>b.textContent === 'Absenden').click(); await K.settle();
+  assert.match(el.textContent, /hat sich die Instanz geändert/);
+  code = null;
+  await el.querySelectorAll('button').find(b=>b.textContent === 'Absenden').click(); await K.settle();
+  assert.match(el.textContent, /Einstellen: Antrag liegt im Posteingang\./);
+});
+
+check('Einstellen: bietet der Desk freie Instanzen an, wird gewählt', async()=>{
+  const {el} = await mount(null, ()=>Object.assign(liste(TEAM, BEREIT), {actions: [{verb: 'einstellen', label: 'Einstellen'}],
+                                                    freie_instanzen: [{id: 'AM-7', title: 'Tester-Instanz', template: 'tester@1'}]}));
+  await tool.actions()[0].run();
+  const selects = el.querySelector('form').querySelectorAll('select');
+  assert.deepEqual(selects[0].children.map(o=>o.value), ['', 'AM-7']);
+  assert.match(selects[0].textContent, /Tester-Instanz · tester@1/);
+  assert.doesNotMatch(el.textContent, /zuerst über den Agent-Manager/);
+});
+
 check('kompakt (Dashboard): eine Zeile je Agent, eingerückt nach Ebene', async()=>{
   const {el} = await mount({type: 'agent', id: 'alle', collection: true, kompakt: true}, ORG);
   const rows = el.querySelectorAll('.t-org-line-row');
