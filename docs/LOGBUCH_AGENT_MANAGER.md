@@ -422,3 +422,4 @@ Fortlaufend, neueste Einträge unten. Je Eintrag: Zeit, Art (ENTSCHEIDUNG, BAU, 
 | 2026-10-22 11:44 | ENTSCHEIDUNG | Captain: Cloud-Coder Weg (b) als Ausweichstufe (Entscheidung je Lauf, nur Anbieter ohne Training, SEDRA-Bauten lokal) und Coden mit mehreren Modellen an verschiedenen Teilen; Nachtrag zu Spec 3 bis G1 | G1-S3-08 |
 | 2026-10-22 11:46 | ENTSCHEIDUNG | Captain: S7.1 freigegeben – Downloads BGE-M3 und Qwen3-Embedding-0.6B (GGUF Q8_0) und GPU-Zeit für die Messung (rund 1 h je Modell, mit Lease) | S7.1 |
 | 2026-10-22 11:49 | ENTSCHEIDUNG | Captain: G2-S2-01 bis 16 (Design Spec 2 Modell-Scheduler) wie empfohlen freigegeben | G2-S2 |
+| 2026-10-22 11:57 | SPEC | Spec 2 Stufe 3 (Modell-Scheduler): Aufgaben S2.x, Bauschritte, Gate-Liste G3-S2-01 bis 14; Bau-Specs s2_slotplan (5 Stufen) und s2_slot_store (7 Stufen, Saat s2_schema_seed) mit spec_check Host = ok; s2_vramplan nach V4 an Claude. Keine GPU. | docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md |
