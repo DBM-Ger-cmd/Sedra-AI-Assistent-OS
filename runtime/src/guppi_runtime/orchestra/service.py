@@ -142,6 +142,14 @@ class Orchestra:
         except Exception:
             return False
 
+    def set_task_mission(self, task_id, mission_id):
+        """Die Lauf-Mission an der Aufgabe (D1.5 Schritt 4); `board` hat dafür keinen Setter."""
+        self.conn.execute("UPDATE tasks SET mission_id = ? WHERE id = ?", (mission_id, task_id))
+
+    def mark_reported(self, task_id, now):
+        """Ein Bericht je Wurzelaufgabe (ORC-18): `reported_at` gesetzt, der Takt weckt nicht noch einmal."""
+        self.conn.execute("UPDATE tasks SET reported_at = ?, updated_at = ?, revision = revision + 1 WHERE id = ?", (now, now, task_id))
+
     def revoke_standing(self, agent_id, reason):
         if self.guard is not None:
             count = self.guard.revoke_standing(agent_id, reason=reason)

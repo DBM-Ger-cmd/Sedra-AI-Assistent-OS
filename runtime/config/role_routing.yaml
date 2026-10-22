@@ -20,7 +20,7 @@ role_routing:
   capabilities:
     - id: coder.local_primary
       version: 1
-      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
+      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher, foreman]
       provider: llama-cpp-server
       model: null                # null: whatever the runtime has loaded
       model_family: qwen3.5

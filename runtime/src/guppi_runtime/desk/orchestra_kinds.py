@@ -584,7 +584,7 @@ def _apply_hire(hub, orch, binding, now):
     if data.get("template_digest") != binding["template_digest"]:
         raise ValueError("binding_stale")
     if orch.conn.execute("SELECT 1 FROM agents WHERE instance_id = ?", (binding["instance_id"],)).fetchone():
-        raise ValueError("instance_taken")
+        raise ValueError("binding_stale")         # Punkt d aus S1.H7: inzwischen vergeben – der Antrag endet, die Mission ist zu
     row = org.hire(orch.conn, binding["row"], now, orch.config.max_depth)
     orch.audit_event("ORC_AGENT_HIRED", {"agent_id": row["id"], "instance_id": row["instance_id"], "template": row["template_id"],
                                          "stufe": row["permission_level"], "reports_to": row["reports_to"]})
@@ -851,6 +851,8 @@ def _apply_wake(orch, binding, now):
         return {"op": "wecken", "id": None, "grund": "nicht_zugelassen"}
     if orch.start_run is None:
         raise ValueError("runner_off")
+    if orch.run_blocked() == "supervisor_off":
+        raise ValueError("supervisor_off")
     run = orch.start_run(orch, agent, task, wakeup, "einmal") or {}
     heartbeat.finish(orch.conn, wakeup["id"], "lauf", now, job_id=run.get("job_id"), mission_id=run.get("mission_id"))
     return {"op": "wecken", "id": run.get("job_id")}
@@ -897,6 +899,8 @@ def register(registry, hub):
         orchestra.resolve = _resolver(hub)
     if orchestra.instance_admitted is None:
         orchestra.instance_admitted = _admitted(hub)
+    from . import orchestra_runner
+    orchestra_runner.wire(hub, orchestra)
     return list(TYPES)
 
 

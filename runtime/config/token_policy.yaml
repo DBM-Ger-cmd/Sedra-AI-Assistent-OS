@@ -18,6 +18,7 @@ token_policy:
     tester:            {reasoning_effort: none, max_output_tokens: 1024, output_cap: 4096}
     # Judging and building keep the model's own thinking and get a budget that fits it (qwen spent ~1200 tokens thinking).
     planner:           {reasoning_effort: null, max_output_tokens: 4096, output_cap: 12288}
+    foreman:           {reasoning_effort: null, max_output_tokens: 4096, output_cap: 12288}   # Spec 1: wie planner (Startwert, nicht gemessen)
     researcher:        {reasoning_effort: null, max_output_tokens: 4096, output_cap: 12288}
     coder:             {reasoning_effort: null, max_output_tokens: 6144, output_cap: 16384}
     verifier:          {reasoning_effort: null, max_output_tokens: 3072, output_cap: 8192}
