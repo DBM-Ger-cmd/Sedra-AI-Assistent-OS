@@ -2842,7 +2842,8 @@ Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis
 | PIPE-13 | Saat s1_schema2_seed: Referenz-Vorgänger nach der Übernahme durch die SEDRA-Fassungen ersetzen, Abhängige neu prüfen |
 | PIPE-14 | s1_cron: versteckte Tests für Bereichsgrenzen und describe (mehrere Monatstage, Wochentagsbereiche) schärfen, Neubau mit GPU |
 | PIPE-14 Abschluss | zwei Neubauten gescheitert (parse, dst; Modellfehler); cron bleibt endgültig die Referenz-Fassung (V4: Spec, Tests und Referenz größer als der SEDRA-Code) (22.10.2026) |
-| S1.H7 HALT 1 | Dauerfreigabe am Desk (Vorschlag A, mit Auflage): gated.py reicht nur für die Art `standing` den Einmal-Token an den Applier weiter, der ihn über guard.grant_standing genau einmal prüfen und verbrauchen lässt; fest im Code auf `standing` beschränkt, mit Test; core/ und guard.py unverändert (22.10.2026). HALT 2 (Nutzung bei gescheitertem Start) offen |
+| S1.H7 HALT 1 | Dauerfreigabe am Desk (Vorschlag A, mit Auflage): gated.py reicht nur für die Art `standing` den Einmal-Token an den Applier weiter, der ihn über guard.grant_standing genau einmal prüfen und verbrauchen lässt; fest im Code auf `standing` beschränkt, mit Test; core/ und guard.py unverändert (22.10.2026). |
+| S1.H7 HALT 2 | Scheitert der Start nach der Prüfung der Dauerfreigabe, bleibt die Nutzung verbraucht; der Weckruf endet mit Fehler im Audit (run_ref), höchstens ein Wiederholungs-Weckruf je Aufgabe, also höchstens 2 Nutzungen (22.10.2026) |
 
 ## Vorarbeiter-Prompt
 
