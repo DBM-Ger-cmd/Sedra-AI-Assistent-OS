@@ -15,6 +15,8 @@ Holds the GPU lease (with the usual leftover clean-up) for the whole run.
 
 --set KEY=VALUE changes a server setting for THIS measurement only (the recipe file is not touched), e.g. --set kv_cache_type=f16;
 --from <rung> skips the lower rungs (counted as already measured); --tag <name> goes into the result file name.
+--parallel N (Spec 2, S2.H0) starts the server with N slots and the window <rung> PER SLOT (-c = N x rung); each probe round then asks all N slots at the same time
+(one prompt per slot, ~85 % of the window each) and a rung counts as safe only if every answer is right and the N requests really overlapped. Default 1 = as before.
 """
 from __future__ import annotations
 
@@ -30,6 +32,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -191,7 +194,101 @@ def rung(runtime, alias, server, tier, probes, chars_per_token, say):
         time.sleep(2)
 
 
-def ladder(runtime, recipe, *, max_ctx, probes, say, start=0, overrides=None):
+def timed_ask(endpoint, alias, prompt, ask_fn=None):
+    """ask() plus the monotonic start and end of the request (to see whether parallel requests overlapped)."""
+    started = time.monotonic()
+    out = (ask_fn or ask)(endpoint, alias, prompt)
+    return out, started, time.monotonic()
+
+
+def overlap(spans, tolerance=0.5):
+    """True when the requests really ran at the same time: they all began before the first one ended AND they ended close together (the spread of the end times is at most
+    `tolerance` times the shortest duration). A server that queues them one after the other ends them one duration apart, although all were sent at once. One request counts as overlapping."""
+    if len(spans) < 2:
+        return True
+    first_end, last_end, last_start = min(e for _, e in spans), max(e for _, e in spans), max(s for s, _ in spans)
+    return last_start < first_end and last_end - first_end <= tolerance * (first_end - last_start)
+
+
+def judge(out, code):
+    """The result word of one answer: ok, error, empty, garbage or wrong."""
+    if "error" in out:
+        return "error"
+    if not out["content"].strip():
+        return "empty"
+    if degenerate_reason(out["content"]):
+        return "garbage"
+    return "ok" if code in out["content"] else "wrong"
+
+
+def rung_parallel(runtime, alias, server, tier, parallel, probes, chars_per_token, say, ask_fn=None, gpu_fn=None, events_fn=None, settle_s=2):
+    """One rung with `parallel` slots: the window per slot is `tier`, the server gets -c = parallel x tier. Each probe round asks all slots at once."""
+    ask_fn, gpu_fn, events_fn = ask_fn or ask, gpu_fn or gpu_mib, events_fn or driver_events_since
+    row = {"context": tier, "parallel": parallel, "probes": []}
+    t0 = datetime.now()
+    try:
+        runtime.load_model(alias, context_length=tier * parallel, gpu="max", identifier=alias, parallel=parallel, server=server)
+    except Exception as exc:
+        row.update(status="load_failed", error=str(exc)[:300])
+        return row, chars_per_token
+    try:
+        info = (runtime.loaded_models() or [{}])[0]
+        row["applied_context"] = info.get("contextLength")
+        used, total = gpu_fn()
+        row["vram_used_gib"], row["vram_free_gib"] = round(used / 1024, 2), round((total - used) / 1024, 2)
+        if row["applied_context"] not in (tier * parallel, None):
+            row["status"] = "context_mismatch"; return row, chars_per_token
+        if row["vram_free_gib"] < RESERVE_GIB:
+            row["status"] = "over_reserve"; return row, chars_per_token
+        for i, where in enumerate((0.1, 0.5, 0.9)[:probes]):
+            jobs = []
+            for k in range(parallel):
+                rng = random.Random(f"{tier}-{parallel}-{i}-{k}")
+                code = "".join(rng.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+                vault = rng.randint(100, 999)
+                jobs.append((code, f"The access code for vault {vault} is {code}.", f"\n\nQuestion: what is the access code for vault {vault}? Answer with the code only."))
+            for _ in range(3):
+                prompts = [haystack(int(tier * FILL * chars_per_token) - len(q) - 200, needle, where, random.Random(f"{tier}-{i}-{k}")) + q
+                           for k, (_, needle, q) in enumerate(jobs)]
+                with ThreadPoolExecutor(max_workers=parallel) as pool:
+                    done = list(pool.map(lambda p: timed_ask(runtime.endpoint, alias, p, ask_fn), prompts))
+                counted = [re.search(r'"n_prompt_tokens":(\d+)', o.get("error") or "") for o, _, _ in done]
+                if not any(counted):
+                    break
+                first = next(c for c in counted if c)
+                chars_per_token = max(1.0, len(prompts[0]) / int(first.group(1)) * 0.97)
+            tokens = [(o.get("usage") or {}).get("prompt_tokens") for o, _, _ in done]
+            if tokens[0]:
+                chars_per_token = max(1.5, min(6.0, len(prompts[0]) / tokens[0]))
+            spans = [(s, e) for _, s, e in done]
+            results = [judge(o, jobs[k][0]) for k, (o, _, _) in enumerate(done)]
+            alive = bool(runtime.loaded_models())
+            used, total = gpu_fn()
+            row["vram_free_min_gib"] = min(row.get("vram_free_min_gib", 99.0), round((total - used) / 1024, 2))
+            wall = max(e for _, e in spans) - min(s for s, _ in spans)
+            probe = {"where": where, "results": results, "prompt_tokens": tokens, "seconds": [o.get("seconds") for o, _, _ in done],
+                     "overlap": overlap(spans), "wall_s": round(wall, 1),
+                     "completion_tokens": sum((o.get("usage") or {}).get("completion_tokens") or 0 for o, _, _ in done), "alive": alive}
+            probe["result"] = ("server_died" if not alive else next((r for r in results if r != "ok"), None)
+                               or ("no_overlap" if not probe["overlap"] else None)
+                               or ("over_reserve_while_working" if row["vram_free_min_gib"] < RESERVE_GIB else "ok"))
+            row["probes"].append(probe)
+            say(f"      probe {i + 1} @{int(where * 100)}%: {probe['result']}  {parallel} slots, {tokens} tokens, wall {probe['wall_s']} s, overlap {probe['overlap']}")
+            if probe["result"] != "ok":
+                break
+        events = events_fn(t0)
+        row["driver_events"] = events
+        row["status"] = "probe_failed" if any(p["result"] != "ok" for p in row["probes"]) else "driver_errors" if events else "ok"
+        return row, chars_per_token
+    finally:
+        try:
+            runtime.unload_model(all_models=True)
+        except Exception:
+            pass
+        time.sleep(settle_s)
+
+
+def ladder(runtime, recipe, *, max_ctx, probes, say, start=0, overrides=None, parallel=1):
     server = {**recipe["profile"]["server"], **(overrides or {})}
     alias = str(recipe.get("model") or recipe["id"])
     rows, safe, cpt, trained = [], None, 2.4, None      # start cautious; the first probe calibrates to the model's tokenizer
@@ -202,7 +299,8 @@ def ladder(runtime, recipe, *, max_ctx, probes, say, start=0, overrides=None):
         if tier > max_ctx or (trained and tier > trained):
             break
         say(f"  ctx {tier:6d}:")
-        row, cpt = rung(runtime, alias, server, tier, probes, cpt, say)
+        row, cpt = (rung_parallel(runtime, alias, server, tier, parallel, probes, cpt, say) if parallel > 1
+                    else rung(runtime, alias, server, tier, probes, cpt, say))
         if trained is None and row.get("status") not in ("load_failed",):
             try:
                 runtime.load_model(alias, context_length=4096, gpu="max", identifier=alias, parallel=1, server=server)
@@ -217,7 +315,7 @@ def ladder(runtime, recipe, *, max_ctx, probes, say, start=0, overrides=None):
             break
         safe = tier
     return {"recipe": recipe["id"], "model": alias, "server": {k: v for k, v in server.items() if k != "gguf"}, "trained_context": trained,
-            "overrides": overrides or {}, "started_at_rung": start or None, "reserve_gib": RESERVE_GIB, "fill": FILL, "rows": rows, "safe_max_context": safe,
+            "overrides": overrides or {}, "parallel": parallel, "started_at_rung": start or None, "reserve_gib": RESERVE_GIB, "fill": FILL, "rows": rows, "safe_max_context": safe,
             "measured_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
 
@@ -228,6 +326,7 @@ def main():
     ap.add_argument("--from", dest="start", type=int, default=0, choices=(0,) + LADDER)
     ap.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--parallel", type=int, default=1, choices=range(1, 9), metavar="N", help="server slots; the rung is the window per slot")
     args = ap.parse_args()
     overrides = {}
     for item in args.overrides:
@@ -248,8 +347,8 @@ def main():
                 print(f"== {rid}: not a llama-cpp-server recipe, skipped", flush=True); continue
             print(f"== {rid} ({recipe.get('model')})", flush=True)
             result = ladder(runtime, recipe, max_ctx=args.max, probes=args.probes, say=lambda s: print(s, flush=True), start=args.start,
-                            overrides=overrides)
-            tag = f"_{args.tag}" if args.tag else ""
+                            overrides=overrides, parallel=args.parallel)
+            tag = (f"_p{args.parallel}" if args.parallel > 1 else "") + (f"_{args.tag}" if args.tag else "")
             target = out_dir / f"context_ladder_{rid}{tag}_{date.today().isoformat()}.json"
             target.write_text(json.dumps(result, indent=2), encoding="utf-8")
             print(f"  SAFE MAX: {result['safe_max_context']}  (trained {result['trained_context']})  -> {target.name}", flush=True)
