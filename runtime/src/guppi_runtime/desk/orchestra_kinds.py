@@ -24,6 +24,15 @@ def register(registry, hub):
     return list(TYPES)
 
 
+def start(hub):
+    """Der Takt der Orchestrierung (Spec 1, ORC-16, G2-S1-15): ein Thread je Prozess unter `tick.lock`, nur bei eingeschaltetem
+    Schalter `orchestra` (sonst gibt es keine Fassade). Ein zweiter Takter bekommt `tick_busy` und taktet nicht."""
+    orch = getattr(getattr(hub, "runtime", None), "orchestra", None)
+    if orch is None:
+        return None
+    return orch.start_tick()
+
+
 def _make_read(obj_fn, facade_fn):
     def read(hub, oid):
         orch = getattr(getattr(hub, "runtime", None), "orchestra", None)
