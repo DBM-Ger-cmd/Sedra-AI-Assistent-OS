@@ -3131,6 +3131,7 @@ Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis
 | G1-S7-a bis G1-S7-g | Spec 7 Wissen und RAG: Anforderungen WIS-01 bis WIS-13 und alle Punkte wie empfohlen freigegeben (22.10.2026); Messung S7.1 mit GPU-Zeit braucht eine eigene Freigabe |
 | Cloud-Coder (Richtung) | Weg (b): Cloud als Ausweichstufe für Coder-Agenten, wenn kein lokaler Coder bereitsteht; nur mit Entscheidung des Captains je Lauf und nur bei einem Anbieter ohne Training mit den Eingaben; SEDRA-Bauten bleiben lokal. Dazu: Coden mit mehreren Modellen, die an verschiedenen Teilen arbeiten. Ausarbeitung als Nachtrag zu Spec 3 bis G1; G1-S3-08 wird damit neu gefasst (22.10.2026) |
 | S7.1 Messung | Downloads BGE-M3 (ggml-org, GGUF Q8_0, rund 635 MB) und Qwen3-Embedding-0.6B (Qwen, GGUF Q8_0, rund 639 MB) sowie GPU-Zeit für die Messung (rund 1 Stunde je Modell, mit Lease) freigegeben (22.10.2026) |
+| G2-S2-01 bis G2-S2-16 | Design Spec 2 (D2.1 bis D2.13) wie empfohlen freigegeben (22.10.2026), u. a. ein Besitzer der GPU, Supervisor workers 1..8 und claim_timeout_s 240, Haken im Router (SCH-11, schließt B-1), Prioritäten 3/5/7; Slotzahl erst nach Messung S2.1 (eigene Freigabe mit GPU-Zeit) |
 
 ## Vorarbeiter-Prompt
 
