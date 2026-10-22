@@ -20,12 +20,14 @@ APPLY = {'switch': '/api/switch/apply', 'routing': '/api/routing-config/apply',
 REQUEST_TITLE = {'switch': 'Schalter umstellen', 'routing': 'Modell-Einstellung ändern',
                  'model_add': 'Neues Modell hinzufügen', 'skill': 'Eigenen Skill schreiben',
                  'boundaries': 'Modus und Grenzen festlegen', 'install': 'Modul installieren',
-                 'trust': 'Schreibrouten freigeben', 'gateway': 'GateWay-Vorgang freigeben'}
+                 'trust': 'Schreibrouten freigeben', 'gateway': 'GateWay-Vorgang freigeben', 'orchestra': 'Agenten-Team ändern', 'standing': 'Dauerfreigabe'}
 REQUEST_NOTE = {'switch': 'Schalter · gilt nach dem Neustart der Oberfläche', 'routing': 'Modell-Einstellung · gilt nach dem Neustart',
                 'model_add': 'Neues Modell · sofort nutzbar', 'skill': 'Bibliothek · die Datei wird vorher gesichert',
                 'boundaries': 'Gilt für alles, was in diesem Projekt passiert', 'install': 'Ein fremdes Modul · erst nach deiner Durchsicht',
                 'trust': 'Ein fremdes Modul darf danach schreiben – genau diese Routen, nichts sonst',
-                'gateway': 'Gilt genau für diesen Vorgang in diesem Stand – ändert sich Anfrage, Dokument oder Weg, ist die Freigabe hinfällig. Kein Versand.'}
+                'gateway': 'Gilt genau für diesen Vorgang in diesem Stand – ändert sich Anfrage, Dokument oder Weg, ist die Freigabe hinfällig. Kein Versand.',
+                'orchestra': 'Agenten-Team · gilt genau für diesen Stand – hat sich Agent, Aufgabe oder Routine geändert, wird nichts ausgeführt',
+                'standing': 'Dauerfreigabe · der Agent darf ohne weitere Frage geweckt werden, bis Ablauf, letzte Nutzung, Änderung oder Widerruf'}
 WAYS = {'einmal': 'Einmal öffnen', 'freigeben_und_anwenden': 'Freigeben und anwenden', 'aendern': 'Grenze ändern …', 'ablehnen': 'Ablehnen'}
 
 

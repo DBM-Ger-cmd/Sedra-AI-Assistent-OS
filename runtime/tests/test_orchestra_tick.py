@@ -68,8 +68,9 @@ class Base(unittest.TestCase):
 
     def make(self, **parts):
         conn = open_db(self.dir / 'orchestra.db')
+        self.admitted = {'i-A1', 'i-A2'}
         defaults = dict(guard=self.guard, supervisor=self.supervisor, clock=self.clock, start_run=self.start_run,
-                        request_run=self.request_run, token_cap=lambda role: 1000)
+                        request_run=self.request_run, token_cap=lambda role: 1000, instance_admitted=lambda iid: iid in self.admitted)
         defaults.update(parts)
         orch = service.Orchestra(OrchestraConfig.load(CONFIG), conn, audit=lambda e, p: self.events.append((e, p)),
                                  data_dir=self.dir, **defaults)
@@ -193,6 +194,43 @@ class Wakeups(Base):
         self.assertEqual(self.wakeup(wid)['outcome'], 'kein_budget')
         self.assertEqual(self.runs, [])
 
+    def test_a_failed_start_after_the_standing_check_keeps_the_use_and_retries_once(self):
+        """Entscheidung HALT 2 (Captain 22.10.2026): Nutzung verbraucht, Weckruf `lauf` ohne Job, ORC_TICK_ERROR mit run_ref,
+        höchstens ein Wiederholungs-Weckruf je Aufgabe – also höchstens zwei Nutzungen."""
+        self.guard.standing = True
+
+        def broken(orch, agent, task, wakeup, approval):
+            raise RuntimeError('start_failed')
+        self.orch.start_run = broken
+        wid = self.wake('A1', 'assign:T1:1', 'T1')
+        self.tick()
+        w = self.wakeup(wid)
+        self.assertEqual((w['outcome'], w['job_id']), ('lauf', None))
+        self.assertEqual(self.names('ORC_TICK_ERROR'), [{'stage': 'weckrufe', 'error': 'start_failed', 'agent_id': 'A1', 'run_ref': wid}])
+        retry = self.orch.conn.execute("SELECT id, reason FROM wakeups WHERE idempotency_key = 'retry:T1:1'").fetchone()
+        self.assertEqual(retry[1], 'wiederholung')
+        self.clock.now = '2026-10-22T08:00:05Z'
+        self.tick()
+        self.assertEqual(self.wakeup(retry[0])['outcome'], 'lauf')
+        self.assertEqual(self.orch.conn.execute("SELECT COUNT(*) FROM wakeups WHERE done_at IS NULL").fetchone()[0], 0, 'kein dritter Weckruf')
+        self.clock.now = '2026-10-22T08:00:10Z'
+        self.tick()
+        self.assertEqual(len(self.guard.used), 2, 'höchstens zwei Nutzungen je Aufgabe')
+
+    def test_without_admission_no_wake_and_no_standing_use(self):
+        """Entscheidung Zulassung vor erstem Lauf (Captain 22.10.2026): geprüft vor authorize_standing."""
+        self.guard.standing = True
+        self.admitted.clear()
+        wid = self.wake('A1', 'assign:T1:1', 'T1')
+        self.tick()
+        self.assertEqual(self.wakeup(wid)['outcome'], 'abgelehnt')
+        self.assertEqual((self.runs, self.requests, self.guard.used), ([], [], []))
+        self.assertEqual(self.names('ORC_WAKE_REFUSED'), [{'agent_id': 'A1', 'instance_id': 'i-A1', 'wakeup_id': wid, 'reason': 'nicht_zugelassen'}])
+        self.orch.instance_admitted = None
+        wid = self.wake('A1', 'comment:1', 'T1')
+        self.tick()
+        self.assertEqual(self.wakeup(wid)['outcome'], 'abgelehnt', 'ohne Prüfer heißt es nein')
+
     def test_at_most_max_runs_per_tick(self):
         self.guard.standing = True
         self.agent('A2', reports_to='A1')
@@ -221,6 +259,19 @@ class Routines(Base):
         self.assertEqual(keys, [f"routine:{r['id']}:2026-10-22T09:00:00Z"])
         self.assertEqual(self.tick()['routinen'], 0, 'doppelter Takt: keine zweite Aufgabe')
         self.assertEqual(self.orch.conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0], 1)
+
+
+    def test_a_routine_with_an_unknown_zone_only_stops_itself(self):
+        """OP-S1-15: die kaputte Routine meldet ORC_TICK_ERROR, die andere erzeugt ihre Aufgabe."""
+        self.agent('A1')
+        good = routines.create(self.orch.conn, {'agent_id': 'A1', 'title': 'Gut', 'cron': '0 9 * * *', 'catch_up': 'auslassen', 'timezone': 'UTC'}, T0)
+        self.orch.conn.execute("INSERT INTO routines (id, agent_id, title, cron, timezone, catch_up, enabled, last_run) "
+                               "VALUES ('R-0', 'A1', 'Kaputt', '0 9 * * *', 'Mars/Olymp', 'auslassen', 1, ?)", (T0,))
+        self.clock.now = '2026-10-22T09:00:30Z'
+        out = self.tick()
+        self.assertEqual((out['routinen'], out['fehler']), (1, ['routinen']))
+        self.assertEqual(self.orch.conn.execute("SELECT routine_id FROM routine_runs").fetchall()[0][0], good['id'])
+        self.assertEqual(self.names('ORC_TICK_ERROR'), [{'stage': 'routinen', 'error': 'cron_timezone_unknown', 'routine_id': 'R-0'}])
 
 
 class Reconcile(Base):
