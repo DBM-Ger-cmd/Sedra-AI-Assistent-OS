@@ -64,9 +64,11 @@ def hidden(imports, body):
 
 C1 = r'''
 c = store.open_db(":memory:")
-a = hire(c, h("A", role="foreman", can_delegate=1), T0, 6)
+a = hire(c, h("A", role="foreman", can_delegate=True), T0, 6)
 assert (a["id"], a["status"], a["reports_to"], a["role"], a["can_delegate"], a["max_parallel"], a["budget_period"], a["revision"]) == ("A", "aktiv", None, "foreman", 1, 1, "gesamt", 1)
 assert (a["created_at"], a["updated_at"], a["pause_reason"], a["instance_id"], a["template_id"]) == (T0, T0, None, "inst-A", "guppi.orchestra.coder")
+assert a == raw(c, "A")
+assert type(a["can_delegate"]) is int
 b = hire(c, h("B", "A", budget_tokens=1000, recipe_id="r1", max_parallel=2, budget_period="monat", budget_eur_cent=50), T1, 6)
 assert (b["reports_to"], b["budget_tokens"], b["recipe_id"], b["max_parallel"], b["budget_period"], b["budget_eur_cent"], b["can_delegate"]) == ("A", 1000, "r1", 2, "monat", 50, 0)
 assert b == raw(c, "B")
@@ -75,6 +77,13 @@ raises("org_unknown_superior", hire, c, h("C", "Z"), T1, 6)
 raises("org_too_deep", hire, c, h("C", "B"), T1, 2)
 for dup in (h("A", "B"), h("C", "A", instance_id="inst-A")):
     raises("agent_exists", hire, c, dup, T1, 6)
+assert count(c) == 2
+assert not c.in_transaction
+'''
+
+C1B = r'''
+c = store.open_db(":memory:")
+hire(c, h("A"), T0, 6)
 raises("org_field_unknown:status", hire, c, h("C", "A", status="pausiert"), T1, 6)
 raises("org_field_unknown:aaa", hire, c, h("C", "A", zzz=1, aaa=2), T1, 6)
 raises("org_field_missing:instance_id", hire, c, {"id": "C", "reports_to": "A"}, T1, 6)
@@ -84,7 +93,8 @@ for level in (7, -1, "2", 2.0, True):
 raises("org_field_invalid:can_delegate", hire, c, h("C", "A", can_delegate=2), T1, 6)
 raises("org_field_invalid:max_parallel", hire, c, h("C", "A", max_parallel=5), T1, 6)
 raises("org_field_invalid:budget_period", hire, c, h("C", "A", budget_period="jahr"), T1, 6)
-assert count(c) == 2
+raises("org_field_unknown:status", hire, c, h("C", "Z", status="aktiv", permission_level=9), T1, 6)
+assert count(c) == 1
 assert not c.in_transaction
 '''
 
@@ -92,12 +102,16 @@ C2 = r'''
 c = tree(store.open_db(":memory:"))
 r = set_org(c, "C", {"reports_to": "D", "role": "reviewer"}, T1, 6)
 assert (r["reports_to"], r["role"], r["revision"], r["updated_at"]) == ("D", "reviewer", 2, T1)
-assert set_org(c, "C", {"reports_to": "D", "role": "reviewer"}, T2, 6)["revision"] == 2
-assert raw(c, "C")["updated_at"] == T1
+assert r == raw(c, "C")
+same = set_org(c, "C", {"reports_to": "D", "role": "reviewer"}, T2, 6)
+assert (same["revision"], same["updated_at"]) == (2, T1)
+assert same == raw(c, "C")
 change = {"permission_level": 3, "can_delegate": 1, "max_parallel": 4, "budget_tokens": 500, "budget_period": "monat", "recipe_id": "r2", "budget_eur_cent": 100}
 r = set_org(c, "C", change, T2, 6)
 assert (r["revision"], r["permission_level"], r["can_delegate"], r["max_parallel"], r["budget_tokens"], r["budget_period"], r["recipe_id"], r["budget_eur_cent"]) == (3, 3, 1, 4, 500, "monat", "r2", 100)
 assert set_org(c, "C", {"budget_tokens": None}, T2, 6)["budget_tokens"] is None
+c.execute("UPDATE agents SET status = 'pausiert', pause_reason = 'budget' WHERE id = 'D'")
+assert set_org(c, "D", {"role": "tester"}, T2, 6) == raw(c, "D")
 raises("org_cycle", set_org, c, "A", {"reports_to": "C"}, T2, 6)
 raises("org_self", set_org, c, "B", {"reports_to": "B"}, T2, 6)
 raises("org_unknown_superior", set_org, c, "B", {"reports_to": "X"}, T2, 6)
@@ -105,11 +119,20 @@ raises("org_second_root", set_org, c, "B", {"reports_to": None}, T2, 6)
 raises("org_too_deep", set_org, c, "C", {"reports_to": "B"}, T2, 2)
 raises("agent_not_found", set_org, c, "Z", {"role": "x"}, T2, 6)
 raises("agent_terminated", set_org, c, "X", {"role": "x"}, T2, 6)
+assert (raw(c, "A")["revision"], raw(c, "B")["revision"], raw(c, "B")["reports_to"], raw(c, "D")["pause_reason"]) == (1, 1, "A", "budget")
+assert not c.in_transaction
+'''
+
+C2B = r'''
+c = tree(store.open_db(":memory:"))
 raises("org_field_unknown:name", set_org, c, "B", {"name": "neu", "role": "x"}, T2, 6)
 raises("org_field_unknown:status", set_org, c, "B", {"status": "aktiv"}, T2, 6)
 raises("level_not_allowed", set_org, c, "B", {"permission_level": 9}, T2, 6)
 raises("org_field_invalid:max_parallel", set_org, c, "B", {"max_parallel": 0}, T2, 6)
-assert (raw(c, "A")["revision"], raw(c, "B")["revision"], raw(c, "B")["reports_to"]) == (1, 1, "A")
+raises("org_field_invalid:can_delegate", set_org, c, "B", {"can_delegate": 2}, T2, 6)
+raises("org_field_invalid:budget_period", set_org, c, "B", {"budget_period": "woche"}, T2, 6)
+raises("org_field_unknown:id", set_org, c, "Z", {"id": "Y"}, T2, 6)
+assert raw(c, "B")["revision"] == 1
 assert not c.in_transaction
 '''
 
@@ -117,6 +140,7 @@ C3 = r'''
 c = tree(store.open_db(":memory:"))
 p = pause(c, "B", "captain", T1)
 assert (p["status"], p["pause_reason"], p["revision"], p["updated_at"]) == ("pausiert", "captain", 2, T1)
+assert p == raw(c, "B")
 again = pause(c, "B", "budget", T2)
 assert (again["pause_reason"], again["revision"], again["updated_at"]) == ("captain", 2, T1)
 r = resume(c, "B", T2)
@@ -140,6 +164,7 @@ raises("org_has_subordinates", terminate, c, "A", T1)
 raises("org_has_subordinates", terminate, c, "B", T1)
 t = terminate(c, "C", T1)
 assert (t["status"], t["revision"], t["updated_at"]) == ("beendet", 2, T1)
+assert t == raw(c, "C")
 raises("agent_terminated", terminate, c, "C", T2)
 pause(c, "B", "captain", T1)
 b = terminate(c, "B", T2)
@@ -174,8 +199,10 @@ assert fingerprint(pause(c, "D", "captain", T1))["status"] == "pausiert"
 '''
 
 H1 = {"hidden_org_1.py": hidden("hire", C1)}
-H2 = {**H1, "hidden_org_2.py": hidden("set_org", C2)}
-H3 = {**H2, "hidden_org_3.py": hidden("pause, resume", C3)}
+H1B = {**H1, "hidden_org_1b.py": hidden("hire", C1B)}
+H2 = {**H1B, "hidden_org_2.py": hidden("set_org", C2)}
+H2B = {**H2, "hidden_org_2b.py": hidden("set_org", C2B)}
+H3 = {**H2B, "hidden_org_3.py": hidden("pause, resume", C3)}
 H4 = {**H3, "hidden_org_4.py": hidden("hire, pause, terminate", C4)}
 H5 = {**H4, "hidden_org_5.py": hidden("get, list, subordinates, fingerprint, set_org, pause", C5)}
 
@@ -185,22 +212,28 @@ VALUES = """Value checks (one helper): permission_level an int 0..6 (`type(x) is
 
 STAGES = [
     {"name": "hire",
-     "task": f"""Create `org.py` (Python 3; `import graphs`, `from store import immediate`; both are in the workspace) with `hire(conn, row, now, max_depth)` -> the new agent row as a dict (all columns).
+     "task": f"""Create `org.py` (Python 3; `import graphs`, `from store import immediate`; both are in the workspace) with `hire(conn, row, now, max_depth)` -> the new agent row as a dict with ALL columns, read back from the table after the insert (so can_delegate is the stored 0/1, also when True was given).
 {TABLE}
 {GRAPHS}
-Checks in this order, each a ValueError, a refused call writes nothing:
-1. a key of row that is not one of id, instance_id, template_id, name, role, recipe_id, reports_to, permission_level, budget_tokens, budget_eur_cent, budget_period, can_delegate, max_parallel -> 'org_field_unknown:<first such key alphabetically>';
-2. id, instance_id, template_id, name, role or permission_level missing or None -> 'org_field_missing:<first missing in this order>';
-3. {VALUES} (defaults before the check: can_delegate 0, max_parallel 1, budget_period 'gesamt');
-4. inside `with immediate(conn):` an agent with the same id or the same instance_id exists -> 'agent_exists';
-5. graphs.check_org(all agents as rows {{id, reports_to, status}}, {{id, reports_to, status 'aktiv'}}, max_depth).
+row may hold id, instance_id, template_id, name, role, recipe_id, reports_to, permission_level, budget_tokens, budget_eur_cent, budget_period, can_delegate, max_parallel (defaults: can_delegate 0, max_parallel 1, budget_period 'gesamt'). The field checks follow in the next stage.
+Inside `with immediate(conn):`, each a ValueError, a refused call writes nothing: an agent with the same id or the same instance_id exists -> 'agent_exists'; then graphs.check_org(all agents as rows {{id, reports_to, status}}, {{id, reports_to, status 'aktiv'}}, max_depth).
 Insert with status 'aktiv', created_at = updated_at = now (revision and pause_reason keep their defaults).""",
      "hidden": H1},
+    {"name": "hire_fields",
+     "task": f"""Add the field checks to `hire` in `org.py` (keep everything else). They come before the transaction, in this order, each a ValueError, a refused call writes nothing:
+1. a key of row that is not one of id, instance_id, template_id, name, role, recipe_id, reports_to, permission_level, budget_tokens, budget_eur_cent, budget_period, can_delegate, max_parallel -> 'org_field_unknown:<first such key alphabetically>';
+2. id, instance_id, template_id, name, role or permission_level missing or None -> 'org_field_missing:<first missing in this order>';
+3. {VALUES} (defaults before the check: can_delegate 0, max_parallel 1, budget_period 'gesamt').
+Then the checks of the first stage (agent_exists, check_org).""",
+     "hidden": H1B},
     {"name": "set_org",
-     "task": f"""Add `set_org(conn, agent_id, change, now, max_depth)` -> the agent as a dict to `org.py` (keep everything else). change may hold reports_to, role, recipe_id, permission_level, can_delegate, max_parallel, budget_tokens, budget_eur_cent, budget_period.
-Checks in this order: any other key -> 'org_field_unknown:<first alphabetically>'; the value checks of hire for the keys present; inside `with immediate(conn):` unknown agent -> 'agent_not_found', status 'beendet' -> 'agent_terminated'.
-Only fields whose value really differs count; none -> return the agent unchanged (no revision, no updated_at). When reports_to differs: graphs.check_org(all agents, {{id, new reports_to, the agent's status}}, max_depth). Then update the fields, updated_at = now and revision + 1 (ONE helper for every agent update: also used by later stages).""",
+     "task": """Add `set_org(conn, agent_id, change, now, max_depth)` -> the agent as a dict with ALL columns as stored in the table (also when nothing changed) to `org.py` (keep everything else). change may hold reports_to, role, recipe_id, permission_level, can_delegate, max_parallel, budget_tokens, budget_eur_cent, budget_period (the field checks follow in the next stage).
+Inside `with immediate(conn):` unknown agent -> ValueError('agent_not_found'), status 'beendet' -> 'agent_terminated' (a paused agent can be changed).
+Only fields whose value really differs count; none -> return the agent unchanged (no revision, no updated_at). When reports_to differs: graphs.check_org(all agents, {id, new reports_to, the agent's status}, max_depth). Then update the fields, updated_at = now and revision + 1 (ONE helper for every agent update that returns the stored row: also used by later stages).""",
      "hidden": H2},
+    {"name": "set_org_fields",
+     "task": f"""Add the field checks to `set_org` in `org.py` (keep everything else), before the transaction and in this order: a key of change that is not one of reports_to, role, recipe_id, permission_level, can_delegate, max_parallel, budget_tokens, budget_eur_cent, budget_period -> 'org_field_unknown:<first alphabetically>'; then the value checks of hire for the keys present ({VALUES}). A refused call changes nothing.""",
+     "hidden": H2B},
     {"name": "pause",
      "task": """Add to `org.py` (keep everything else), each inside `with immediate(conn):`, returning the agent as a dict:
 - `pause(conn, agent_id, reason, now)`: reason must be 'captain', 'budget' or 'quarantaene' (else ValueError('pause_reason_invalid'), checked first); unknown agent -> 'agent_not_found'; 'beendet' -> 'agent_terminated'; already 'pausiert' -> return it unchanged (idempotent, the first reason stays); else status 'pausiert', pause_reason = reason, updated_at, revision + 1.

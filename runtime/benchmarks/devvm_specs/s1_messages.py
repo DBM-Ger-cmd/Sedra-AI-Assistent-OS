@@ -94,8 +94,9 @@ C3 = r'''
 c = db()
 m = add(c, "B", "captain", "Los", T0)["id"]
 out = set_status(c, m, "wartet_freigabe", T1, mission_id="M-1")
-assert (out["id"], out["status"], out["mission_id"], out["text"]) == (m, "wartet_freigabe", "M-1", "Los")
+assert (out["id"], out["status"], out["mission_id"], out["text"], out["ts"]) == (m, "wartet_freigabe", "M-1", "Los", T0)
 assert set_status(c, m, "laeuft", T1)["mission_id"] == "M-1"
+assert dict(c.execute("SELECT * FROM agent_messages WHERE id = ?", (m,)).fetchone()) == dict(out, status="laeuft")
 assert set_status(c, m, "beantwortet", T2, mission_id="M-2")["mission_id"] == "M-2"
 raises("message_status_invalid", set_status, c, m, "fehler", T2)
 raises("message_status_invalid", set_status, c, m, "laeuft", T2)
@@ -111,7 +112,7 @@ for bad in ("beantwortet", "angenommen", "neu", None):
     raises("message_status_invalid", set_status, c, x, bad, T1)
 assert set_status(c, x, "fehler", T1)["status"] == "fehler"
 raises("message_not_found", set_status, c, 999, "laeuft", T1)
-assert c.execute("SELECT status FROM agent_messages WHERE id = ?", (m,)).fetchone()[0] == "beantwortet"
+assert tuple(c.execute("SELECT status, ts, mission_id FROM agent_messages WHERE id = ?", (m,)).fetchone()) == ("beantwortet", T0, "M-2")
 assert not c.in_transaction
 '''
 
@@ -137,6 +138,10 @@ for limit in (0, 201, "5", True, None):
 assert last(c, "B") == ids[-1]
 assert last(c, "Z") is None
 assert last(c, "A") == ids[-1] + 1
+c.execute("BEGIN")
+assert page(c, "B", limit=2) == {"items": p["items"][1:], "mehr": True}
+assert last(c, "B") == ids[-1]
+c.execute("COMMIT")
 '''
 
 H1 = {"hidden_messages_1.py": hidden("add", C1)}
@@ -159,11 +164,12 @@ Insert the row (ts = now, the given status and issue_id, idempotency_key = key; 
     {"name": "status",
      "task": """Add `set_status(conn, msg_id, status, now, mission_id=None)` -> the message as a dict (all columns) to `messages.py` (keep everything else), inside `with immediate(conn):`.
 Unknown msg_id -> ValueError('message_not_found'). Allowed steps only (else ValueError('message_status_invalid'), also for an unknown status): angenommen -> wartet_freigabe, laeuft or fehler; wartet_freigabe -> laeuft or fehler; laeuft -> beantwortet or fehler; beantwortet and fehler are final.
-mission_id: when given it replaces the stored one, when None the stored one stays.""",
+mission_id: when given it replaces the stored one, when None the stored one stays. Only status and mission_id change: ts stays the time of the message.""",
      "hidden": H3},
     {"name": "page",
      "task": """Add to `messages.py` (keep everything else):
 - `page(conn, agent_id, before_id=None, limit=50)` -> {"items": [...], "mehr": bool}: the agent's messages with id < before_id (all when None), the NEWEST `limit` of them, returned oldest first (newest last) as dicts with all columns; mehr is True when older messages than those returned exist. limit must be an int (`type(limit) is int`) from 1 to 200, else ValueError('page_limit_invalid'). An unknown agent gives no items.
-- `last(conn, agent_id)` -> the id of the agent's newest message, or None.""",
+- `last(conn, agent_id)` -> the id of the agent's newest message, or None.
+Both only read (no `immediate`, no transaction of their own): they also work inside a transaction the caller has open.""",
      "hidden": H4},
 ]

@@ -2766,6 +2766,14 @@ Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis
 | G3-S1-01 bis G3-S1-23 | Bauplan Spec 1 freigegeben (21.10.2026): elf SEDRA-Bauten s1_* mit GPU, Claude direkt chain.py und budgetcalc.py (V4), Harness S1.H1 bis S1.H9; Diff an core/guard.py (S1.H2) vor der Übernahme einzeln |
 | G3-S1-24 | `tzdata` (reines Datenpaket) in die .venv der Laufzeit-Installation aufnehmen |
 | OP-S1-14, 17, 18 | spec_check --vm vor jedem Bau neu; Stufe und Delegationsrecht aus der Vorlage; Issue-Liste mit den letzten 3 Kommentaren, Kette nur in der Einzelansicht |
+| G4 KERN-01 | Diff an core/guard.py (Commit 19e818c, +87/−2, Dauerfreigabe nach D1.4) einzeln übernommen (21.10.2026); erster Kern-Eingriff des Vorhabens; test_guard_standing 17, alle Guard-Tests und test_core_boundary_src grün |
+| G4 S1.H1, C1, C2, H3, H4, H5 | Migration 2 mit Sicherung, chain.py, budgetcalc.py, orchestra.yaml Schema 2, Verben in liste.actions, agent_id, gated.py mit mehreren Gates und uix_server.decide übernommen (21.10.2026); Konfigurationsschlüssel runner/standing/decompose wie gewählt; Abgleich Dauerfreigabe mit gated.py in S1.H7 |
+| G4 s1_wakeplan, s1_heartbeat | SEDRA-Fassungen übernommen (21.10.2026), Importe relativ, Zusatz FORMAT in wakeplan |
+| PIPE-12 | versteckte Tests in s1_board, s1_messages, s1_routines, s1_runner, s1_org geschärft (Befunde aus dem Review), Neubau mit GPU |
+| G4 s1-Bauten Runde 2 | graphs, routines, org, budget, messages unverändert übernommen; decompose (fehlender blocker = []), runner (URL mit Leerraum abgelehnt), board (delegate liest erst in der Sperre) mit Korrektur bei der Handkopie (22.10.2026); cron vorerst als Referenz-Fassung |
+| PIPE-13 | Saat s1_schema2_seed: Referenz-Vorgänger nach der Übernahme durch die SEDRA-Fassungen ersetzen, Abhängige neu prüfen |
+| PIPE-14 | s1_cron: versteckte Tests für Bereichsgrenzen und describe (mehrere Monatstage, Wochentagsbereiche) schärfen, Neubau mit GPU |
+| PIPE-14 Abschluss | zwei Neubauten gescheitert (parse, dst; Modellfehler); cron bleibt endgültig die Referenz-Fassung (V4: Spec, Tests und Referenz größer als der SEDRA-Code) (22.10.2026) |
 
 ## Vorarbeiter-Prompt
 

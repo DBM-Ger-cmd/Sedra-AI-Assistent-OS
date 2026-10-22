@@ -157,6 +157,15 @@ close(c)
 assert [(o["routine_id"], o["due_at"]) for o in fire_due(c, at("13:00"), 3, mk)] == [("R0", at("13:00")), ("R1", at("13:00"))]
 assert runs(c, "R2") == []
 assert not c.in_transaction
+c = db()
+log = []
+mk = maker(c, log)
+create(c, r("R3"), at("08:10"))
+assert fire_due(c, at("11:30"), 0, mk) == [out("R3", "09", "ausgelassen", False), out("R3", "10", "ausgelassen", False), out("R3", "11", "erzeugt")]
+assert runs(c, "R3") == [(at("09:00"), "ausgelassen", None), (at("10:00"), "ausgelassen", None), (at("11:00"), "erzeugt", "T-R3-11")]
+close(c)
+assert fire_due(c, at("15:30"), 1, mk) == [out("R3", "12", "ausgelassen", False), out("R3", "13", "ausgelassen", False), out("R3", "14", "ausgelassen", False), out("R3", "15", "erzeugt")]
+assert (len(runs(c, "R3")), get(c, "R3")["last_run"], log) == (7, at("15:30"), [("R3", at("11:00")), ("R3", at("15:00"))])
 '''
 
 C4 = r'''
@@ -224,7 +233,7 @@ Inside `with immediate(conn):` unknown agent -> 'agent_not_found'; id missing ->
      "hidden": H2},
     {"name": "fire",
      "task": """Add `fire_due(conn, now, max_catch_up, make_task)` -> list of {"routine_id", "due_at", "outcome", "task_id"} to `routines.py` (keep everything else). For every ENABLED routine, ordered by id:
-1. In ONE `with immediate(conn):` take dates = cron.due_between(parsed cron, last_run, now, timezone, 1000); no dates -> nothing for this routine. Give each date an outcome (this stage: catch_up 'auslassen': the newest date 'erzeugt', all older ones 'ausgelassen'). Claim each date with `INSERT OR IGNORE INTO routine_runs (routine_id, due_at, outcome)`; a date already in routine_runs is dropped completely (no result, no task). Set last_run = now and next_run = the next date after now.
+1. In ONE `with immediate(conn):` take dates = cron.due_between(parsed cron, last_run, now, timezone, 1000); no dates -> nothing for this routine. Give each date an outcome (this stage: catch_up 'auslassen': the newest date 'erzeugt', ALL older ones 'ausgelassen' and claimed, whatever max_catch_up is: max_catch_up only counts for 'nachholen'). Claim each date with `INSERT OR IGNORE INTO routine_runs (routine_id, due_at, outcome)`; a date already in routine_runs is dropped completely (no result, no task). Set last_run = now and next_run = the next date after now.
 2. AFTER that transaction (make_task opens its own): for every claimed date whose outcome is not 'ausgelassen' call task_id = make_task(routine dict, due_at) and store task_id in its routine_runs row; ausgelassen dates keep task_id None.
 Results in routine order, dates ascending. A second call with the same now finds no dates (a double tick creates nothing).""",
      "hidden": H3},
