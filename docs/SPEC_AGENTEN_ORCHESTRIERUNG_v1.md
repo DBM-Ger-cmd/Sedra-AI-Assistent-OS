@@ -3504,6 +3504,7 @@ Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis
 | G4 S1.H7 | Desk-Verben, Felder, `gespraech`, Applier, Sätze übernommen (Merge spec1/harness, 22.10.2026); Punkte a–d: AM-Instanz vorerst nur über die CLI; keine Migration 3, Weckruf ohne Zulassung endet als `abgelehnt` mit Grund im Audit; `wecken` als direkter Weckruf (eine Freigabe je Lauf); offene Mission bei `instance_taken` wird in S1.H8 geschlossen |
 | G1-S3C-01 bis G1-S3C-17, GA-01, GA-02 | Nachtrag Cloud-Coder und Coder-Verbund wie empfohlen freigegeben, neue Guard-Aktionen `cloud_call` (mit Bindung) und `start_verbund` (22.10.2026) |
 | G3-S2-01 bis G3-S2-14 | Aufgaben und Bau-Specs Spec 2 wie empfohlen freigegeben (22.10.2026); VRAM-Grenze 11,5 GB einschließlich Reserve 0,7 GB (nutzbar 10,8 GB); Messung S2.1 in der Nacht 22./23.10.2026; `.gitattributes` mit LF für Bau-Specs, Referenzen und Saaten |
+| G4 S1.H8 und Shell D | S1.H8 (Agentenlauf, Rollen foreman/researcher, Vorlagen mit Abnahme-Suite) und Shell-D-Dialog „Einstellen“ mit `instance_id` übernommen (22.10.2026); Punkte 2–7: feste Prioritäten bis `model_scheduler.yaml`, Job vor Checkout, nur Supervisor-Rollen werden geroutet, Recherche über das Web-Werkzeug, Suites beim Paketbau mitkopieren, Bericht endet als `wartet`. Läufe werden erst mit dem Worker-Pool (S2.H4b) abgearbeitet |
 
 ## Vorarbeiter-Prompt
 
