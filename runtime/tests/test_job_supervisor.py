@@ -97,7 +97,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.workers, 1)
         self.assertTrue(config.roles['coder']['mutates'])
         self.assertFalse(config.roles['reviewer']['mutates'])
-        self.assertEqual(len(config.roles), 11)
+        self.assertEqual(len(config.roles), 12)     # Spec 1 S1.H8: dazu foreman
 
     def test_invalid_values_refuse_start(self):
         bad = [dict(workers=2), dict(lease_s=1000, max_lease_s=900), dict(lease_s=30, heartbeat_interval_s=20),

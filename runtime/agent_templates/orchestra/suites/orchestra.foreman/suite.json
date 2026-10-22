@@ -1,0 +1,29 @@
+{
+ "criteria": [
+  {
+   "description": "form",
+   "id": "orchestra.foreman.form",
+   "script": "krit_form.py"
+  },
+  {
+   "description": "rollen",
+   "id": "orchestra.foreman.rollen",
+   "script": "krit_rollen.py"
+  },
+  {
+   "description": "blocker",
+   "id": "orchestra.foreman.blocker",
+   "script": "krit_blocker.py"
+  }
+ ],
+ "digest": "c6ef605377183050cfc2e2e44d869f5301dedf22405216aee9dfc87a2e12d52f",
+ "files": {
+  "criteria/krit_blocker.py": "b033ef4b86ea8044156fb28272e979fa6e8a98ecd731069ad9c79c1a6410cf37",
+  "criteria/krit_form.py": "59c02f995e6e2593034b44a039e8955447eabf15fdd0acddf42e1af63fa75b49",
+  "criteria/krit_rollen.py": "73f4dd6acfbaa5bcf54080cf943d99bb1204123684d6e77740d564bf33aea030",
+  "reference/antwort.py": "f427bebd8c0c562f316b6623389e47df196597055dcb0061c420f639010c75a1"
+ },
+ "schema": 1,
+ "suite_id": "orchestra.foreman",
+ "version": "1"
+}

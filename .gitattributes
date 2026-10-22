@@ -6,3 +6,5 @@
 runtime/benchmarks/devvm_specs/** text eol=lf
 runtime/benchmarks/devvm_refs/** text eol=lf
 runtime/benchmarks/*_seed/** text eol=lf
+# Agenten-Vorlagen und ihre Abnahme-Suites: SOUL.md und die Suite-Dateien sind über SHA-256 gebunden; mit CRLF passt keine Prüfsumme (S1.H8).
+runtime/agent_templates/** text eol=lf

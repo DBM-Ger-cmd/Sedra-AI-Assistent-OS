@@ -26,6 +26,7 @@ job_supervisor:
   # attempt is unknown: a mutating role is never replayed automatically.
   roles:
     planner:           {mutates: false, capability: planning}
+    foreman:           {mutates: false, capability: planning}     # Unterarbeiter der Orchestrierung (Spec 1, G2-S1-21): zerlegt, berichtet, schreibt keine Dateien
     researcher:        {mutates: false, capability: research}
     reviewer:          {mutates: false, capability: code_review}
     verifier:          {mutates: false, capability: verification, independent_of: [coder, documentation, tool_operator, hardware_engineer]}

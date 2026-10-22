@@ -97,8 +97,9 @@ class Hire(Desk):
     def test_two_requests_for_one_instance_only_the_first_hires(self):
         first, second = self.hire('ins-co'), self.hire('ins-co', name='Zwilling')
         self.decide(first)
-        with self.assertRaisesRegex(ValueError, 'instance_taken'):
-            self.decide(second)
+        self.assertEqual(self.decide(second)['status'], 'binding_stale', 'Punkt d: die zweite Mission wird geschlossen')
+        mid = second['result']['decision_id'].split(':', 1)[1]
+        self.assertEqual(self.hub.runtime.missions.load(mid)['lifecycle']['status'], 'closed')
 
     def test_rejected_leaves_the_instance_alone(self):
         before = self.count()

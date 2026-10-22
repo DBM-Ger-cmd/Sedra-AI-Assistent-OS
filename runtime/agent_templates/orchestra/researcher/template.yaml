@@ -1,0 +1,34 @@
+# Vorlage guppi.orchestra.researcher (Spec 1, S1.H8, G2-S1-21). SOUL.md ist über sha256 gebunden; geprüft wird sie mit der Suite
+# orchestra.researcher (agent_templates/orchestra/suites), bevor agent.promote möglich ist.
+schema_version: guppi.agent-template/v1
+id: guppi.orchestra.researcher
+version: 1.0.0
+role: researcher
+soul:
+  path: SOUL.md
+  version: 1.0.0
+  sha256: 6e0b46098db333de3eb9cd063cbfe813311bc2e3ce037365d98b9b8ecae72781
+capabilities:
+- id: guppi.orchestra.researcher
+  version: 1.0.0
+  side_effect: read_only
+tools: []
+permissions:
+  tools_allowed: []
+  workspace_mode: none
+  network_mode: deny
+  external_write: false
+  privileged: false
+runtime:
+  adapter_id: guppi.orchestra.runner
+  isolation: none
+  model_role: researcher
+verification:
+  suite_id: orchestra.researcher
+  suite_version: '1'
+  required_cases:
+  - orchestra.researcher.form
+  - orchestra.researcher.quellen
+initial_qualification: DRAFT
+tags:
+- orchestra

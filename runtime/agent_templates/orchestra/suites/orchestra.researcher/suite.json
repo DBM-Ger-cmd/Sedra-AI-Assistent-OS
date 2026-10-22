@@ -1,0 +1,23 @@
+{
+ "criteria": [
+  {
+   "description": "form",
+   "id": "orchestra.researcher.form",
+   "script": "krit_form.py"
+  },
+  {
+   "description": "quellen",
+   "id": "orchestra.researcher.quellen",
+   "script": "krit_quellen.py"
+  }
+ ],
+ "digest": "7d0bb2bebb76b99d720f2aff0869cec9b52f7ec315b05821c2553f2e5bbf14e8",
+ "files": {
+  "criteria/krit_form.py": "03db26acd2dc1cecce44d3c9722ffdca35b63e1d7c143580fc115c248299bfac",
+  "criteria/krit_quellen.py": "f7a01242e5b2034a939003ebbedc0d3b4ec7304c094692f991d3f27eb1a670ff",
+  "reference/antwort.py": "79adbe5141cb4963f6b2e4a42b717fe947d9e27506ed636ac50c1627e41f95a7"
+ },
+ "schema": 1,
+ "suite_id": "orchestra.researcher",
+ "version": "1"
+}
