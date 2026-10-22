@@ -2773,6 +2773,7 @@ Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis
 | G4 s1-Bauten Runde 2 | graphs, routines, org, budget, messages unverändert übernommen; decompose (fehlender blocker = []), runner (URL mit Leerraum abgelehnt), board (delegate liest erst in der Sperre) mit Korrektur bei der Handkopie (22.10.2026); cron vorerst als Referenz-Fassung |
 | PIPE-13 | Saat s1_schema2_seed: Referenz-Vorgänger nach der Übernahme durch die SEDRA-Fassungen ersetzen, Abhängige neu prüfen |
 | PIPE-14 | s1_cron: versteckte Tests für Bereichsgrenzen und describe (mehrere Monatstage, Wochentagsbereiche) schärfen, Neubau mit GPU |
+| PIPE-14 Abschluss | zwei Neubauten gescheitert (parse, dst; Modellfehler); cron bleibt endgültig die Referenz-Fassung (V4: Spec, Tests und Referenz größer als der SEDRA-Code) (22.10.2026) |
 
 ## Vorarbeiter-Prompt
 
