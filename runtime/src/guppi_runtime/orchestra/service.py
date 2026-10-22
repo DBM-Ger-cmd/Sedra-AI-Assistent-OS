@@ -7,8 +7,8 @@ from ..jobs.job_supervisor import FINAL_STATES
 
 # Spec 1 (D1.1 Fassade, S1.H6): Brain, Router, Web, AM-Status, Auflöser, Vertrag, Ausgabegrenze und Uhr kommen von außen;
 # `start_run`/`request_run` (Lauf und Antrag, S1.H7/H8) baut der Desk und gibt sie hier hinein.
-PARTS = ("guard", "supervisor", "templates", "brain", "model_router", "web", "instance_status", "resolve", "contract_for",
-         "token_cap", "clock", "start_run", "request_run")
+PARTS = ("guard", "supervisor", "templates", "brain", "model_router", "web", "instance_status", "instance_admitted", "resolve",
+         "contract_for", "token_cap", "clock", "start_run", "request_run")
 TIME = "%Y-%m-%dT%H:%M:%SZ"
 STALE_TICKS = 3                 # D1.7: nach 3 × tick_s ohne Takt läuft er nicht mehr
 
@@ -36,7 +36,7 @@ def _query(conn, sql, params=()):
 class Orchestra:
     def __init__(self, config, conn, audit=None, guard=None, supervisor=None, templates=None, brain=None, model_router=None, web=None,
                  instance_status=None, resolve=None, contract_for=None, token_cap=None, clock=None, start_run=None, request_run=None,
-                 data_dir=None):
+                 data_dir=None, instance_admitted=None):
         self.config = config
         self.conn = conn
         self.audit = audit
@@ -47,6 +47,7 @@ class Orchestra:
         self.model_router = model_router
         self.web = web
         self.instance_status = instance_status
+        self.instance_admitted = instance_admitted     # AM-Zulassung (VERIFIED, gültig, nicht widerrufen); fehlt der Teil: nicht zugelassen
         self.resolve = resolve
         self.contract_for = contract_for
         self._token_cap = token_cap
@@ -96,6 +97,7 @@ class Orchestra:
         """Startet den Takt-Thread (einmal); ein zweiter Takter bekommt `tick_busy`."""
         from . import tick
         if self.tick_thread is None:
+            self.sync_all_standing()
             self.tick_thread = tick.start(self, self.data_dir / "tick.lock", self.config.tick_s)
         return self.tick_thread
 
@@ -131,10 +133,46 @@ class Orchestra:
             self._blocked_noted.add(reason)
             self.tick_error("weckrufe", ValueError(reason))
 
+    def admitted(self, agent):
+        """Entscheidung Zulassung vor erstem Lauf (Captain 22.10.2026): ohne AM-Zulassung kein Lauf; ohne Prüfer heißt es nein."""
+        if self.instance_admitted is None:
+            return False
+        try:
+            return bool(self.instance_admitted(agent["instance_id"]))
+        except Exception:
+            return False
+
     def revoke_standing(self, agent_id, reason):
         if self.guard is not None:
-            return self.guard.revoke_standing(agent_id, reason=reason)
+            count = self.guard.revoke_standing(agent_id, reason=reason)
+            self.sync_standing(agent_id)
+            return count
         return 0
+
+    MIRROR = {"active": "aktiv", "spent": "verbraucht", "expired": "abgelaufen"}
+
+    def sync_standing(self, agent_id):
+        """Spiegel `standing_approvals` (D1.2): nur Anzeige; maßgeblich ist der Guard. Abgleich nach jedem Guard-Aufruf und beim Start."""
+        status = getattr(self.guard, "standing_status", None)
+        token = status(agent_id) if status is not None else None
+        if token is None:
+            return None
+        state = self.MIRROR.get(token["status"])
+        if state is None:
+            state = "widerrufen" if str(token.get("end_reason") or "").startswith("widerrufen") else "erloschen"
+        now = self.clock()
+        with self.lock:
+            self.conn.execute("UPDATE standing_approvals SET status = 'erloschen', end_reason = 'ersetzt', updated_at = ? "
+                              "WHERE agent_id = ? AND status = 'aktiv' AND token_id <> ?", (now, agent_id, token["token_id"]))
+            self.conn.execute("INSERT OR REPLACE INTO standing_approvals (token_id, agent_id, granted_at, expires_at, max_uses, uses, status, "
+                              "end_reason, fingerprint_digest, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                              (token["token_id"], agent_id, token["granted_at"], token["validity"]["expires_at"], token["limits"]["max_uses"],
+                               token["uses"], state, token.get("end_reason"), token["grants"]["request_digest"], now))
+        return state
+
+    def sync_all_standing(self):
+        for row in self.agents():
+            self.sync_standing(row["id"])
 
     def schema_version(self):
         rows = _query(self.conn, "SELECT value FROM meta WHERE key = ?", ("schema_version",))

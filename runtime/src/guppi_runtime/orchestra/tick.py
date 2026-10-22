@@ -38,9 +38,10 @@ def _make_task(orch, now):
             template = json.loads(routine.get("task_template") or "{}") or {}
         except ValueError:
             template = {}
-        fields = {"title": str(template.get("titel") or routine["title"])[:200], "assignee": routine["agent_id"], "origin": "routine"}
-        if template.get("beschreibung"):
-            fields["description"] = str(template["beschreibung"])
+        title = template.get("titel") or template.get("title") or routine["title"]
+        fields = {"title": str(title)[:200], "assignee": routine["agent_id"], "origin": "routine"}
+        if template.get("beschreibung") or template.get("description"):
+            fields["description"] = str(template.get("beschreibung") or template.get("description"))
         task = board.create(orch.conn, fields, now, "routine")
         heartbeat.enqueue(orch.conn, routine["agent_id"], "routine", wakeplan.key_for("routine", (routine["id"], due_at)), now,
                           orch.config.coalesce_s, task_id=task["id"])
@@ -49,8 +50,12 @@ def _make_task(orch, now):
 
 
 def _routines(orch, now, out):
-    results = routines.fire_due(orch.conn, now, orch.config.max_catch_up, _make_task(orch, now))
+    errors = []
+    results = routines.fire_due(orch.conn, now, orch.config.max_catch_up, _make_task(orch, now), errors=errors)
     out["routinen"] = sum(1 for r in results if r["task_id"])
+    for err in errors:                                      # OP-S1-15: eine kaputte Routine hält die anderen nicht auf
+        orch.tick_error("routinen", ValueError(err["error"]), routine_id=err["routine_id"])
+        out["fehler"].append("routinen")
 
 
 # ---- 2 Lauf-Abgleich
@@ -141,6 +146,9 @@ def _wake(orch, group, now, out):
         heartbeat.finish(conn, leader["id"], "kein_budget", now)
         _stop_for_budget(orch, agent, view, now)
         return
+    if not orch.admitted(agent):                            # vor authorize_standing: keine Nutzung ohne Zulassung
+        not_admitted(orch, agent, leader, now)
+        return
     blocked = orch.run_blocked()
     if blocked:                                             # Supervisor aus oder kein Lauf verdrahtet: offen lassen, einmal melden
         orch.note_blocked(blocked)
@@ -148,8 +156,13 @@ def _wake(orch, group, now, out):
     if out["laeufe"] < orch.config.max_runs_per_tick and orch.guard is not None:
         allowed = orch.guard.authorize_standing(agent["id"], fingerprint=org.fingerprint(agent), budget_stage=stage,
                                                 run_ref=leader["id"])
+        orch.sync_standing(agent["id"])
         if allowed.get("authorized"):
-            run = orch.start_run(orch, agent, task, leader, "standing") or {}
+            try:
+                run = orch.start_run(orch, agent, task, leader, "standing") or {}
+            except Exception as exc:
+                _run_failed(orch, agent, task, leader, now, exc)
+                return
             heartbeat.finish(conn, leader["id"], "lauf", now, job_id=run.get("job_id"), mission_id=run.get("mission_id"))
             out["laeufe"] += 1
             return
@@ -162,6 +175,24 @@ def _wake(orch, group, now, out):
     request_mission_id = orch.request_run(orch, agent, task, leader)
     heartbeat.finish(conn, leader["id"], "antrag", now, request_mission_id=request_mission_id)
     out["antraege"] += 1
+
+
+def not_admitted(orch, agent, wakeup, now):
+    """Entscheidung Zulassung vor erstem Lauf (Captain 22.10.2026): die AM-Instanz ist nicht VERIFIED mit gültiger Zulassung. Der
+    Weckruf endet (`abgelehnt` – `wakeups.outcome` kennt keinen eigenen Wert), der Grund `nicht_zugelassen` steht im Audit."""
+    heartbeat.finish(orch.conn, wakeup["id"], "abgelehnt", now)
+    orch.audit_event("ORC_WAKE_REFUSED", {"agent_id": agent["id"], "instance_id": agent["instance_id"], "wakeup_id": wakeup["id"],
+                                          "reason": "nicht_zugelassen"})
+
+
+def _run_failed(orch, agent, task, leader, now, exc):
+    """Entscheidung HALT 2 (Captain 22.10.2026): scheitert der Start nach `authorize_standing`, bleibt die Nutzung verbraucht. Der
+    Weckruf endet (`lauf` ohne Job), `ORC_TICK_ERROR` trägt `run_ref` wie `CAPTAIN_STANDING_USED`, und es gibt höchstens einen
+    Wiederholungs-Weckruf je Aufgabe (`retry:<task>:1`) – also höchstens zwei Nutzungen je Aufgabe."""
+    heartbeat.finish(orch.conn, leader["id"], "lauf", now)
+    orch.tick_error("weckrufe", exc, agent_id=agent["id"], run_ref=leader["id"])
+    heartbeat.enqueue(orch.conn, agent["id"], "wiederholung", wakeplan.key_for("retry", (task["id"], 1)), now, orch.config.coalesce_s,
+                      task_id=task["id"])
 
 
 def _wakeups(orch, now, out):

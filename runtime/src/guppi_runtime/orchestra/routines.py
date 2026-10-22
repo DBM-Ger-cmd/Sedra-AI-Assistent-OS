@@ -186,7 +186,7 @@ def set_enabled(conn, rid, on, now):
         return _row_to_dict(row)
 
 
-def fire_due(conn, now, max_catch_up, make_task):
+def fire_due(conn, now, max_catch_up, make_task, errors=None):
     rows = conn.execute(
         "SELECT * FROM routines WHERE enabled = 1 ORDER BY id"
     ).fetchall()
@@ -195,12 +195,20 @@ def fire_due(conn, now, max_catch_up, make_task):
 
     for row in rows:
         routine = _row_to_dict(row)
-        cron_parsed = cron.parse(routine["cron"])
         last_run = routine["last_run"]
         tz = routine["timezone"]
         catch_up = routine["catch_up"]
 
-        dates = cron.due_between(cron_parsed, last_run, now, tz, 1000)
+        try:            # Nacharbeit OP-S1-15: mit `errors` bricht eine Routine mit ungültigem Ausdruck oder Zone nur sich selbst ab
+            cron_parsed = cron.parse(routine["cron"])
+            dates = cron.due_between(cron_parsed, last_run, now, tz, 1000)
+            if dates:
+                cron.next_after(cron_parsed, now, tz)
+        except ValueError as exc:
+            if errors is None:
+                raise
+            errors.append({"routine_id": routine["id"], "error": str(exc)})
+            continue
         if not dates:
             continue
 

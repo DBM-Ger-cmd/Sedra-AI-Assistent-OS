@@ -15,12 +15,19 @@ ohne Code in `uix_server.py`:
     reject(hub, mission_id)         „Ablehnen“: alle Gates des Antrags abgelehnt, eine Entscheidung, ein Ausgang
     pending(hub, known)             gated-Anträge aus den Missionen, damit sie nach einem Neustart wieder im Posteingang stehen
 
-`uix_server.decide` ruft `decide`/`reject` für jede Art mit Applier, ohne Typnamen (G2-S1-09)."""
+`uix_server.decide` ruft `decide`/`reject` für jede Art mit Applier, ohne Typnamen (G2-S1-09).
+
+Dauerfreigabe (G4-Entscheidung HALT 1 A mit Auflage, Captain 22.10.2026): nur für die fest eingetragene Art `standing`
+(`SPENDS_TOKEN`) prüft `decide` den Token nicht selbst, sondern gibt ihn unverbraucht an den Applier, der ihn genau einmal an
+`guard.grant_standing` gibt. Für jede andere Art prüft `decide` wie bisher; `register_applier` kann daran nichts ändern. Mit
+`exact=True` ist die Bindung am Gate genau die übergebene (ohne `describe`/`agent_id`), weil der Guard sie selbst nachbaut."""
 from __future__ import annotations
 
 CONTEXT = 'gated_request'
 AGENT_ACTIONS = ('wake_agent', 'pause_agent', 'resume_agent', 'terminate_agent', 'set_budget', 'set_org')   # D1.3.5: binding.agent_id
 STALE = 'binding_stale'
+REFUSED = 'guard_refused:'                   # ein Applier meldet so die Ablehnung durch den Guard; der Antrag endet mit diesem Grund
+SPENDS_TOKEN = frozenset({'standing'})        # fest im Code, keine Option (Auflage HALT 1)
 
 _APPLIERS = {}
 
@@ -48,16 +55,19 @@ def _gates(action, target, gates):
     return pairs
 
 
-def request(hub, kind, action, target, binding, risks=(), rollback_available=True, level='S1', gates=None):
+def request(hub, kind, action, target, binding, risks=(), rollback_available=True, level='S1', gates=None, exact=False, describe=None):
     """Ein Antrag: Mission mit einem Gate je (Aktion, Ziel); die Bindung ist, was nach der Freigabe genau so ausgeführt wird."""
     if not isinstance(binding, dict):
         raise ValueError('binding_must_be_an_object')
     pairs = _gates(action, target, gates)
-    describe = str(binding.get('describe') or f'{pairs[0][0]} → {pairs[0][1]}')
-    binding = dict(binding, describe=describe)
-    agent = next((t[len('agent:'):] for a, t in pairs if a in AGENT_ACTIONS and t.startswith('agent:')), None)
-    if agent and 'agent_id' not in binding:
-        binding['agent_id'] = agent
+    describe = str(describe or binding.get('describe') or f'{pairs[0][0]} → {pairs[0][1]}')
+    if exact:
+        binding = dict(binding)
+    else:
+        binding = dict(binding, describe=describe)
+        agent = next((t[len('agent:'):] for a, t in pairs if a in AGENT_ACTIONS and t.startswith('agent:')), None)
+        if agent and 'agent_id' not in binding:
+            binding['agent_id'] = agent
     rt = hub.runtime
     with hub.lock:
         m = rt.brain.create_mission(describe[:160], None, level)
@@ -66,9 +76,10 @@ def request(hub, kind, action, target, binding, risks=(), rollback_available=Tru
                                      request_binding=binding) for a, t in pairs]
         m['human_gates']['pending'].extend(made)
         m['context'][CONTEXT] = {'kind': kind, 'action': pairs[0][0], 'target': pairs[0][1], 'gates': [list(p) for p in pairs],
-                                 'binding': binding}
+                                 'binding': binding, 'describe': describe}
         rt.missions.save(m)
-    return hub._remember(kind, {'mission_id': mid, 'gate': made[0], 'gates': made, 'binding': binding})
+    shown = binding if not exact else dict(binding, describe=describe)      # nur für die Anzeige; das Gate bindet `binding`
+    return hub._remember(kind, {'mission_id': mid, 'gate': made[0], 'gates': made, 'binding': shown})
 
 
 def apply(hub, mission_id, do, audit_event='DESK_GATED_APPLIED'):
@@ -135,7 +146,7 @@ def decide(hub, mission_id):
             m['human_gates']['resolved'].append(gate)
         m['human_gates']['pending'] = []
         rt.missions.save(m)
-        for gate in pending:
+        for gate in pending if req['kind'] not in SPENDS_TOKEN else ():
             request_ = gate['request']
             target = (request_.get('targets') or [''])[0]
             if not rt.guard.authorize(tokens[gate['gate_id']], mission_id=mission_id, action=request_['exact_action'], target=target,
@@ -143,16 +154,23 @@ def decide(hub, mission_id):
                 raise ValueError('captain_approval_invalid')
         payload = _payload(req)
         try:
-            result = do(hub, req['binding'])
+            if req['kind'] in SPENDS_TOKEN:
+                result = do(hub, req['binding'], {g['gate_id']: tokens[g['gate_id']] for g in pending})
+            else:
+                result = do(hub, req['binding'])
         except ValueError as exc:
-            if str(exc) != STALE:
+            code = str(exc)
+            if code != STALE and not code.startswith(REFUSED):
                 raise
             m['execution'].pop('approval_tokens', None)
-            m['result'] = {'kind': req['kind'], 'error': STALE}
+            m['result'] = {'kind': req['kind'], 'error': code}
             m['lifecycle']['status'] = 'closed'
             rt.missions.save(m)
-            rt.audit.append('DESK_GATED_STALE', component='desk', mission_id=mission_id, payload=payload)
-            return {'status': STALE, 'result': None}
+            if code == STALE:
+                rt.audit.append('DESK_GATED_STALE', component='desk', mission_id=mission_id, payload=payload)
+                return {'status': STALE, 'result': None}
+            rt.audit.append('DESK_GATED_REFUSED', component='desk', mission_id=mission_id, payload=dict(payload, reason=code[len(REFUSED):]))
+            return {'status': 'guard_refused', 'reason': code[len(REFUSED):], 'result': None}
         m['execution'].pop('approval_tokens', None)
         m['result'] = {'kind': req['kind'], 'result': result}
         m['lifecycle']['status'] = 'closed'
