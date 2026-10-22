@@ -8,7 +8,7 @@ tool:
                                     # Quellen und Vorschläge sind Ansichten dieses Werkzeugs (view: quellen | vorschlaege)
   order: 60
   slot: inhalt
-  entry: {js: tool.js, css: tool.css}
+  entry: {js: [zitate.js, tool.js], css: tool.css}
   api:
     - POST /api/objects
     - POST /api/actions
