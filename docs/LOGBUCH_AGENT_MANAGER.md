@@ -418,3 +418,4 @@ Fortlaufend, neueste Einträge unten. Je Eintrag: Zeit, Art (ENTSCHEIDUNG, BAU, 
 | 2026-10-22 11:34 | ENTSCHEIDUNG | Captain: G1-S7-a bis g wie empfohlen freigegeben (Spec 7 Wissen und RAG); GPU-Zeit für S7.1 braucht eigene Freigabe | G1-S7 |
 | 2026-10-22 11:39 | ENTSCHEIDUNG | Captain: S1.H7 HALT 3 = Weg B (einstellen als zwei Anträge: AM-Instanz über eigenen Ablauf, dann einstellen mit instance_id als set_org); keine neue Freigabeart, gated.py unverändert. Zulassung vor dem ersten Lauf offen | S1.H7 |
 | 2026-10-22 11:40 | ENTSCHEIDUNG | Captain: Orchestra-Agent braucht vor dem ersten Lauf die AM-Zulassung (promote); ohne Zulassung endet der Weckruf mit nicht_zugelassen, ohne Nutzung der Dauerfreigabe | S1.H7 |
+| 2026-10-22 11:44 | ENTSCHEIDUNG | Captain: Cloud-Coder Weg (b) als Ausweichstufe (Entscheidung je Lauf, nur Anbieter ohne Training, SEDRA-Bauten lokal) und Coden mit mehreren Modellen an verschiedenen Teilen; Nachtrag zu Spec 3 bis G1 | G1-S3-08 |
