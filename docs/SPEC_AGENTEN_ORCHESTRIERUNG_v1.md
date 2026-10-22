@@ -38,6 +38,7 @@ Ziel: SEDRA führt mehrere KI-Agenten gleichzeitig wie ein kleines Team – nach
 4. Local First, Cloud Second: lokal ist Standard, Cloud nur über Router, Inhaltsschutz und GateWay, sichtbar und budgetiert.
 5. Die Paperclip-Shell (D) ist die Arbeitsfläche dafür und hält den Shell-Werkzeug-Vertrag ein.
 6. Eine Social- und Nachrichten-Zentrale verwaltet LinkedIn- und Facebook-Konten, plant und postet Beiträge und ist erweiterbar für Instagram, WhatsApp und den E-Mail-Eingang, immer mit Freigabe des Captains (Spec 6).
+7. Ein gemeinsamer Wissensspeicher mit Bedeutungssuche beantwortet Fragen von Captain und Agenten mit Quellenangaben, lokal und mit Freigabe für jede Quelle (Spec 7, Entwurf bis G1).
 
 ### Grundsätze (aus SEDRA, ergänzt)
 
@@ -2672,6 +2673,73 @@ Offen für den Captain:
 - [ ] Dürfen Entwürfe mit Cloud-Modellen entstehen, oder nur lokal?
 - [ ] Welcher Kanal kommt nach LinkedIn und Facebook zuerst: Instagram, WhatsApp oder E-Mail-Eingang?
 - [ ] Welches Postfach für den E-Mail-Eingang (Gmail, Microsoft 365 oder ein anderer Anbieter)?
+
+## Spec 7 – Wissen und RAG
+
+SEDRA bekommt einen gemeinsamen Wissensspeicher mit Bedeutungssuche (Captain, 22.10.2026). Captain und Agenten fragen denselben Speicher und bekommen Antworten mit Quellenangaben. Alles läuft lokal; die Cloud kommt erst über Spec 3 dazu. Stand: Entwurf der Anforderungen bis G1, noch kein Design.
+
+![Spec 7: Quellen werden lokal aufgenommen, eingebettet und gespeichert; Fragen von Captain und Agenten laufen über eine hybride Suche und werden mit Quellenangaben beantwortet](SPEC_AGENTEN_ORCHESTRIERUNG_v1_wissen.svg)
+
+Die Aufnahme läuft im Hintergrund und nur, wenn die GPU frei ist. Die Abfrage verbindet Volltext und Bedeutung und gibt Treffer nur als markierte Daten an das Modell weiter.
+
+### Ist-Stand (Abgleich gegen den Code, 22.10.2026)
+
+| Was | Wo | Stand |
+| --- | --- | --- |
+| Notizen und Coding-Lektionen | `knowledge.py` (JSON-Zeilen) | Suche über Teiltext; Lektionen hängen sich über Auslösewörter an den Codegen |
+| Wissensbasis des Arbeitsumfelds | `arbeitsumfeld_wissen.py` (SQLite) | bei jedem Aufbau neu von der Platte gefüllt; Suche zählt gemeinsame Wörter, Titel dreifach |
+| Wissensbasis des KI-GateWays | `gateway/wissen.py` (SQLite) | Regelbuch, Zustände, Fehler, Begriffe, eigene Fragen; Suche über Wörter, Stichworte und IDs |
+| Volltext | SQLite der Laufzeit (3.50.4) | FTS5 ist vorhanden, wird aber nirgends genutzt |
+| Vektoren | – | keine Embeddings, kein Vektorindex; `numpy` ist nicht in der `.venv` |
+| Embeddings | `llama-server` (b11160) | llama.cpp bietet `/v1/embeddings`; mit unserer Engine noch nicht geprüft. In Spec 3 nur als Cloud-Endpunkt bei Mammouth genannt |
+| Daten-Markierung | `orchestra/runner.py` (`external_block`), `core/content_guard.py` | vorhanden; der Modus `researcher` liest nur freigegebene URLs, keinen Speicher |
+
+Die drei Speicher sind getrennt, finden nur gleiche Wörter und sind nicht an die Agenten aus Spec 1 angeschlossen.
+
+### Anforderungen
+
+| ID | Anforderung (EARS) | Abnahmekriterium |
+| --- | --- | --- |
+| WIS-01 | Das System SOLL einen gemeinsamen Wissensspeicher haben; die drei bestehenden Speicher werden als Quellen angebunden und arbeiten unverändert weiter. | Eine Frage findet Treffer aus allen drei Speichern; ihre bisherigen Tests bleiben grün |
+| WIS-02 | WENN der Captain eine Quelle (Ordner oder Datei) freigibt, DANN SOLL das System sie in Abschnitte zerlegen und jeden Abschnitt mit Quelle, Stelle, Hash und Datum ablegen; ohne Freigabe wird nichts aufgenommen. | Nicht freigegebener Ordner bleibt leer im Speicher; Freigeben ist ein Gate |
+| WIS-03 | WENN sich eine Quelle ändert oder verschwindet, DANN SOLL das System nur die geänderten Abschnitte neu einbetten und verschwundene entfernen. | Zweiter Lauf ohne Änderung bettet 0 Abschnitte ein |
+| WIS-04 | Embeddings SOLLEN lokal entstehen; jeder Vektor trägt die ID des Modells, und ein Modellwechsel baut den Index neu. | Kein Netzaufruf beim Einbetten; Wechsel der Modell-ID erzwingt Neuaufbau |
+| WIS-05 | WENN eine Frage gestellt wird, DANN SOLL das System Volltext (FTS5) und Bedeutung (Vektor) suchen und die Listen zusammenführen (Reciprocal Rank Fusion). | Goldsatz: Treffer@5 über der Schwelle aus S7.1 und besser als die heutige Wortsuche |
+| WIS-06 | WENN kein Embedding-Modell bereitsteht, DANN SOLL die Suche nur mit Volltext weiterarbeiten und das in der Antwort sagen. | Abgeschaltetes Modell: Suche liefert Volltext-Treffer und den Hinweis |
+| WIS-07 | Jeder Treffer SOLL Quelle, Stelle und Datum tragen; Antworten nennen ihre Quellen als `[id]`, und ohne Treffer sagt das Modell, dass es nichts gefunden hat. | Jede Antwort im Goldsatz zitiert nur IDs aus dem Kontextblock |
+| WIS-08 | Gefundener Text SOLL wie externe Daten behandelt werden: im markierten Datenblock, durch den Inhaltsschutz, nie als Anweisung an das Modell. | Ein Abschnitt mit eingeschleuster Anweisung ändert das Verhalten des Laufs nicht |
+| WIS-09 | Agenten SOLLEN im Lauf über ein Verb `wissen.suche` lesen dürfen, beschränkt auf die Quellen, die ihre Rechte-Stufe und ihr Projekt sehen dürfen. | Agent der Stufe 1 bekommt keine Treffer aus einer Quelle der Stufe 3 |
+| WIS-10 | WENN ein Agent neues Wissen ablegen will, DANN SOLL das ein Vorschlag mit Herkunft sein, der erst nach Freigabe des Captains in den Speicher geht. | Vorschlag erscheint im Eingang; ohne Freigabe kein Eintrag |
+| WIS-11 | Quellen mit Personenbezug SOLLEN gekennzeichnet sein, lokal bleiben (R-01) und nie an Cloud-Embeddings oder Cloud-Modelle gehen. | Gekennzeichnete Quelle löst keinen Cloud-Aufruf aus, auch nicht nach Spec 3 |
+| WIS-12 | Das Einbetten SOLL die GPU nur mit Lease nutzen oder auf der CPU laufen; es pausiert, solange ein Bau oder Lauf die GPU hält, und ändert keine Rezepte. | Während eines Baus wartet die Aufnahme; Audit zeigt Lease und Dauer |
+| WIS-13 | Der Captain SOLL im Werkzeug `wissen` (Shell D, über den Vertrag auch im Cockpit) Quellen, Stand des Index, Suche mit Treffern und offene Vorschläge sehen. | `uix_check` mit `result ok`; Werkzeug hält den Shell-Werkzeug-Vertrag ein |
+
+### Aufgaben
+
+- [ ] S7.1 Messung ohne Bau: Embedding-Modell mit `llama-server` prüfen (`/v1/embeddings`, Deutsch, GPU und CPU, Zeit je 1000 Abschnitte), Goldsatz aus 40 Fragen mit erwarteten Quellen, Schwelle für Treffer@5 vorschlagen. GPU-Zeit braucht eine eigene Freigabe
+- [ ] S7.2 Design `wissen/` (Speicher, Aufnahme, Suche, Adapter der drei Speicher, Verb `wissen.suche`, Vorschläge, Werkzeug `wissen`) → G2
+- [ ] S7.3 Bau-Specs für SEDRA, kleine reine Module: `wis_chunk` (Zerlegen, Hash), `wis_fuse` (RRF, Rechte-Filter), `wis_store` (Schema, Änderungen nachführen), `wis_vec` (Vektorsuche ohne `numpy`) → G3
+- [ ] S7.4 Harness: Embedding-Anschluss mit Lease, Adapter, Desk-Verben, Anschluss an den Lauf aus Spec 1, Werkzeug `wissen` → G4
+- [ ] S7.5 Abnahme: Goldsatz, Durchlauf „Agent fragt den Speicher und zitiert“, `uix_check`
+
+### Gate-Liste G1-S7
+
+Jede Zeile wird einzeln entschieden. Die Empfehlung des Vorarbeiters steht in der letzten Spalte.
+
+| Gate | Frage an den Captain | Empfehlung |
+| --- | --- | --- |
+| G1-S7-a | WIS-01 bis WIS-13 als Anforderungen freigeben | ja |
+| G1-S7-b | Welche Quellen zuerst? | SEDRA-Doku, Specs, Logbuch und die drei bestehenden Speicher; eigene Dokumente danach, je Ordner mit Freigabe |
+| G1-S7-c | Welche Dateiarten? | zuerst Markdown und Text; PDF und Code später als eigene Stufe |
+| G1-S7-d | Embedding-Modell: Auswahl nach Messung S7.1, Bedingung Deutsch und lokal | ein mehrsprachiges Modell (z. B. aus der Familie bge-m3 oder multilingual-e5), Entscheidung nach der Messung |
+| G1-S7-e | Vektorsuche: reines Python in SQLite oder neue Abhängigkeit (`numpy`, `sqlite-vec`)? | reines Python, solange der Speicher unter rund 50 000 Abschnitten bleibt; neue Abhängigkeit nur mit eigenem Gate |
+| G1-S7-f | Dürfen Agenten Wissen nur vorschlagen (WIS-10) oder in eigenen Bereichen direkt schreiben? | nur vorschlagen |
+| G1-S7-g | Reihenfolge: Spec 7 nach Spec 1 (Anschluss an den Lauf) und vor oder nach Spec 2? | nach Spec 1; S7.1 und Design parallel zu Spec 2; Bau, wenn die GPU frei ist |
+
+Offen für den Captain:
+
+- [ ] Welche eigenen Ordner sollen später Quellen werden?
+- [ ] Soll der Chat (Cockpit, Master-Chat) die neue Suche sofort nutzen oder erst nach der Abnahme?
 
 ## Entscheidungen des Captains (20.10.2026)
 
