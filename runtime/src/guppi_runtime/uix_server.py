@@ -2999,6 +2999,9 @@ class UIXHub:
             if w is not None:
                 try: w.close()
                 except Exception: pass
+        if getattr(self.runtime, 'wissen', None) is not None:    # Spec 7: Takt und eigener Embedding-Server enden mit der Oberfläche
+            try: self.runtime.wissen.schliessen()
+            except Exception: pass
 
     def dev_environment(self):
         rt = self.runtime

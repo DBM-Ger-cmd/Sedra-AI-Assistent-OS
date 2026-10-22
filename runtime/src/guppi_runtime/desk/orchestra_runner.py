@@ -12,10 +12,15 @@ Recherche bekommt fremde Texte nur als abgegrenzten Block und ruft nie ein Verb.
 
 Den Worker selbst baut Spec 2 (S2.H4b, Worker-Pool); `make_worker` ist die Stelle, an der er den Handler einhängt.
 
+Spec 7 (D7.6, D7.8, G2-S7-f): `start_run` legt `level` und `project_id` in `scope` ab; der Handler holt für `arbeit` und
+`bericht` vor dem ersten `_ask` den Wissensblock (`wissen.lauf`), prüft danach die Zitate und reicht `wissen_vorschlag` weiter.
+Ohne Schalter `wissen` oder ohne Treffer läuft alles wie bisher.
+
 Missionen (OP-S1-02): eine Mission ohne `brain.run` läuft regulär NEW → UNDERSTAND → READY → EXECUTE beim Start und
 EXECUTE → VERIFY → COMPLETE am Ende, EXECUTE → FAILED bei einem Fehler; jeder Schritt steht als MISSION_STATE_CHANGED im Audit."""
 from ..jobs.job_worker import HandlerError
 from ..orchestra import board, budget, heartbeat, messages, org, runner, wakeplan
+from ..wissen import lauf as wissen_lauf
 
 KIND = "orchestra_run"
 PRIORITY = {"captain": 7, "agent": 5, "routine": 3}          # Spec 2 D2.4; `model_scheduler.yaml priorities` darf sie ersetzen
@@ -127,7 +132,8 @@ def start_run(orch, agent, task, wakeup, approval, priorities=None):
     mission["context"]["orchestra"] = {"agent_id": agent["id"], "task_id": task["id"], "wakeup_id": wakeup["id"], "mode": mode, "plan": plan}
     _missions(orch).save(mission)
     mission = _walk(orch, mission, START)
-    scope = {"mission_id": mid, "agent_id": agent["id"], "task_id": task["id"], "wakeup_id": wakeup["id"], "mode": mode}
+    scope = {"mission_id": mid, "agent_id": agent["id"], "task_id": task["id"], "wakeup_id": wakeup["id"], "mode": mode,
+             "level": level, "project_id": task.get("project_id")}                               # Spec 7 (D7.6): der Leser des Laufs
     job = orch.supervisor.create_job(contract_for(plan, level, scope), requested_role=role, kind=KIND, priority=priority, permission_level=level)
     job_id = job["job_id"]
     now = orch.clock()
@@ -255,6 +261,21 @@ def _apply_outcome(hub, orch, scope, job_id, plan, out, now):
         _reply(orch, scope, out["nachricht"] or out["kommentar"], now)
 
 
+def _wissensblock(hub, orch, scope, attempt, plan, task):
+    """Spec 7 (D7.6): für `arbeit` und `bericht` der Wissensblock aus dem Speicher mit dem Leser des Laufs und der Route des
+    Anbieters; (extra, ergebnis, speicher) – ohne Speicher oder Treffer ([], None|ergebnis, speicher|None)."""
+    wissen = getattr(hub.runtime, "wissen", None)
+    if wissen is None or plan["mode"] not in ("arbeit", "bericht"):
+        return [], None, None
+    try:
+        extra, ergebnis = wissen_lauf.kontext_nachrichten(wissen, wissen_lauf.frage_aus_aufgabe(task), leser=wissen_lauf.leser_aus_scope(scope),
+                                                          route=wissen_lauf.route_von(orch.model_router, attempt.get("provider_ref")), mission_id=scope["mission_id"])
+    except Exception as exc:                                  # der Speicher darf den Lauf nicht scheitern lassen
+        wissen.audit("WIS_KONTEXT", {"mission_id": scope["mission_id"], "ids": [], "zeichen": 0, "modus": "fehler", "grund": (str(exc) or type(exc).__name__)[:120]})
+        return [], None, None
+    return extra, ergebnis, wissen
+
+
 def handler(hub):
     """Der Handler für Jobs `orchestra_run`; Spec 2 hängt ihn in seinen Worker-Pool (S2.H4b)."""
     def run(job, attempt, ctx):
@@ -266,8 +287,13 @@ def handler(hub):
         plan = _missions(orch).load(scope["mission_id"])["context"]["orchestra"]["plan"]
         cap = plan["max_output_tokens"]
         try:
-            first = _ask(hub, orch, scope, attempt, plan["messages"], plan["schema"], cap)
+            extra, wissen_ergebnis, wissen = _wissensblock(hub, orch, scope, attempt, plan, task)
+            first = _ask(hub, orch, scope, attempt, wissen_lauf.nachrichten_mit(plan["messages"], extra), plan["schema"], cap)
             out = runner.outcome(plan, first.get("parsed"))
+            if wissen is not None:
+                out = wissen_lauf.nachbereite_ausgang(out, wissen_ergebnis, mission_id=scope["mission_id"], audit=wissen.audit)
+                wissen_lauf.vorschlag_aus_antwort(wissen, first.get("parsed"), scope=dict(scope, run_id=job["job_id"]),
+                                                  block_ids=wissen_lauf.block_ids(wissen_ergebnis), leser=wissen_lauf.leser_aus_scope(scope))
             if plan["mode"] == "recherche":
                 out = _research(hub, orch, scope, attempt, plan, out, cap)
             ctx.heartbeat()

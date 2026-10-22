@@ -24,6 +24,7 @@ OBJECT_TYPES = ('project', 'intent', 'task', 'candidate', 'file', 'model', 'skil
                 'aufnahme',                                        # Kern Sprache (19.10.2026): der Rekorder, für jede Shell
                 'module', 'logbook', 'meter', 'hardware', 'machine', 'gateway', 'labor', 'entwurf')   # the last six are places of the system; gateway since Build 19; labor: KI Labor (Werkstatt, 16.10.2026)
 OBJECT_TYPES += ('issue', 'budget', 'gespraech')                   # Spec 0 D3.2 (issue, budget) und Nachtrag N7 (gespraech)
+OBJECT_TYPES += ('wissen',)                                        # Spec 7 D7.9: der Wissensspeicher (Werkzeug wissen, Objekt wissen:speicher)
 # Nachtrag N1: ein Eintrag in `handles` ist der Typ, `typ:alle`, `typ:*` oder `typ:<id>` (dasselbe Muster wie ui/schema/tool.schema.json).
 HANDLE = re.compile(r'^[a-z0-9-]{2,40}(:(\*|[a-z0-9-]{1,40}))?$')
 TOOL_KINDS = ('object', 'instrument', 'panel')

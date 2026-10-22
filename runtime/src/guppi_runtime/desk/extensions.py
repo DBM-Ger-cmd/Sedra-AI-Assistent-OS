@@ -1,6 +1,6 @@
 import importlib
 
-MODULES = ("guppi_runtime.desk.orchestra_kinds",)
+MODULES = ("guppi_runtime.desk.orchestra_kinds", "guppi_runtime.wissen.desk_wissen")     # Spec 7 (G2-S7-u)
 
 
 def _reason(exc):

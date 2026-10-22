@@ -48,9 +48,17 @@ class Grenze(unittest.TestCase):
         for path in sorted(WISSEN.glob("*.py")):
             if path.stem in REIN or path.stem == "__init__":
                 continue
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):                       # `from ..desk import gated` zählt als Import von desk.gated
+                if isinstance(node, ast.ImportFrom) and node.level:
+                    basis = absolut(node.module or "", node.level, f"guppi_runtime.wissen.{path.stem}")
+                    for a in node.names:
+                        ziel = basis + "." + a.name
+                        if ziel.startswith("guppi_runtime.") and not ziel.startswith("guppi_runtime.wissen"):
+                            self.assertTrue(ziel in HARNESS_ERLAUBT or ziel.rsplit(".", 1)[0] in HARNESS_ERLAUBT, f"{path.stem} importiert {ziel}")
             for imp, level in imports(path):
                 ziel = absolut(imp, level, f"guppi_runtime.wissen.{path.stem}")
-                if ziel.startswith("guppi_runtime.") and not ziel.startswith("guppi_runtime.wissen"):
+                if ziel.startswith("guppi_runtime.") and not ziel.startswith("guppi_runtime.wissen") and ziel not in ("guppi_runtime.desk", "guppi_runtime.core", "guppi_runtime.orchestra", "guppi_runtime.jobs"):
                     self.assertIn(ziel, HARNESS_ERLAUBT, f"{path.stem} importiert {ziel}")
                 self.assertFalse(ziel.startswith(("numpy", "sqlite_vec")), ziel)
 

@@ -139,6 +139,7 @@ class GuppiRuntime:
         self._configure_llama_server(data)
         self._configure_job_supervisor(data)
         self._configure_orchestra(data)
+        self._configure_wissen(data)
         self._configure_context_manager(data)
         self._configure_token_policy()
         self.planner=PlanningContextModule(self.knowledge)
@@ -188,6 +189,29 @@ class GuppiRuntime:
             if error: raise ValueError(error)
             return orchestra
         self._optional("orchestra",build)
+
+    def _configure_wissen(self,data):
+        """Spec 7 (D7.1, G2-S7-q): der Wissensspeicher nur bei eingeschaltetem Schalter `wissen`. Fehlt die Konfiguration, ist sie
+        ungültig oder öffnet die Datei nicht, bleibt er aus und sagt warum (`wissen_error`, einmal Audit WISSEN_OFF). READY hängt
+        davon nicht ab. Das Einbetten läuft nur auf der CPU; die Lage der GPU liest er aus dem Testlabor (D7.4)."""
+        def build():
+            if self.switches.apply("wissen","enabled",False) is not True: return None
+            from .wissen import konfig as wissen_konfig
+            from .wissen.speicher import WissenSpeicher
+            from .wissen.embed import TestLabZugang
+            from .jobs.testlab import TestLab, default_path
+            cfg=wissen_konfig.load(self.config_root/"wissen.yaml",self.project_root/"local_config"/"wissen.yaml")
+            return WissenSpeicher.oeffnen(cfg,projekt_root=self.project_root,repo_root=self.config_root.parents[1],
+                                          audit=lambda event,payload: self.audit.append(event,component="wissen",payload=payload),
+                                          gpu=TestLabZugang(TestLab(default_path(self.project_root))))
+        self._optional("wissen",build)
+        if self.wissen_error: self.audit.append("WISSEN_OFF",component="runtime",payload={"reason":self.wissen_error})
+
+    def wissen_status(self):
+        if self.wissen is None: return {"enabled":False,"error":self.wissen_error}
+        try: stand=self.wissen.stand()
+        except Exception as exc: return {"enabled":True,"error":str(exc) or type(exc).__name__}
+        return {"enabled":True,"error":None,"modus":stand["modus"],"abschnitte":stand["abschnitte"],"abdeckung":stand["abdeckung"],"quellen":stand["quellen"]}
 
     def _configure_job_supervisor(self,data):
         """The supervisor stays off (and says why) when its config is missing or invalid."""
@@ -443,4 +467,5 @@ class GuppiRuntime:
             "token_policy":{"enabled":bool(self.token_policy and self.token_policy.enabled),"error":self.token_policy_error},
             "llama_server":{**(self.llama_server.status() if self.llama_server else {"enabled":False}),"error":self.llama_server_error},
             "orchestra":orchestra_service.boot_entry(self.orchestra,self.orchestra_error),
+            "wissen":self.wissen_status(),
         }
