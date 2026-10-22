@@ -417,3 +417,4 @@ Fortlaufend, neueste Einträge unten. Je Eintrag: Zeit, Art (ENTSCHEIDUNG, BAU, 
 | 2026-10-22 11:28 | ENTSCHEIDUNG | Captain: S1.H7 HALT 2 wie vorgeschlagen (Nutzung bleibt bei gescheitertem Start verbraucht, Weckruf endet mit Fehler im Audit, höchstens ein Wiederholungs-Weckruf je Aufgabe) | S1.H7 |
 | 2026-10-22 11:34 | ENTSCHEIDUNG | Captain: G1-S7-a bis g wie empfohlen freigegeben (Spec 7 Wissen und RAG); GPU-Zeit für S7.1 braucht eigene Freigabe | G1-S7 |
 | 2026-10-22 11:39 | ENTSCHEIDUNG | Captain: S1.H7 HALT 3 = Weg B (einstellen als zwei Anträge: AM-Instanz über eigenen Ablauf, dann einstellen mit instance_id als set_org); keine neue Freigabeart, gated.py unverändert. Zulassung vor dem ersten Lauf offen | S1.H7 |
+| 2026-10-22 11:40 | ENTSCHEIDUNG | Captain: Orchestra-Agent braucht vor dem ersten Lauf die AM-Zulassung (promote); ohne Zulassung endet der Weckruf mit nicht_zugelassen, ohne Nutzung der Dauerfreigabe | S1.H7 |
