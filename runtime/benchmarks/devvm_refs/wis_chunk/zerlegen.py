@@ -1,0 +1,208 @@
+import hashlib
+import re
+import unicodedata
+
+ZERLEGER_VERSION = "z2"
+ZIEL_ZEICHEN = 1200
+MAX_ZEICHEN = 1600
+MIN_ZEICHEN = 80
+EINLEITUNG_MAX = 200
+KOPF_MAX = 160
+_LISTE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
+_TRENNER = re.compile(r"^\s*\|?\s*:?-{2,}")
+_KOPF = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
+_STRICHE = re.compile(r"([=\-])\1{2,}")
+
+
+def _art(zeile):
+    if _LISTE.match(zeile):
+        return "liste"
+    if zeile.lstrip().startswith("|"):
+        return "tabelle"
+    return "absatz"
+
+
+def _grenzen(ziel, grenze):
+    if type(ziel) is not int or type(grenze) is not int or ziel < 1 or grenze < ziel:
+        raise ValueError("wis_zerlegen_grenzen")
+
+
+def bloecke(zeilen):
+    if not isinstance(zeilen, (list, tuple)) or any(not isinstance(z, str) for z in zeilen):
+        raise ValueError("wis_zerlegen_eingabe")
+    out, offen = [], None
+    for z in zeilen:
+        if offen is not None and offen["art"] == "code":
+            offen["zeilen"].append(z)
+            if z.lstrip().startswith("```"):
+                offen = None
+            continue
+        if z.lstrip().startswith("```"):
+            offen = {"art": "code", "zeilen": [z], "einleitung": ""}
+            out.append(offen)
+            continue
+        if not z.strip():
+            offen = None
+            continue
+        art = _art(z)
+        if offen is not None and offen["art"] == "liste" and art == "absatz" and z.startswith("  "):
+            offen["zeilen"].append(z)
+            continue
+        if offen is None or offen["art"] != art:
+            vorher = out[-1]["zeilen"][-1].strip()[:EINLEITUNG_MAX] if out and out[-1]["art"] == "absatz" else ""
+            offen = {"art": art, "zeilen": [], "einleitung": vorher if art in ("liste", "tabelle") else ""}
+            out.append(offen)
+        offen["zeilen"].append(z)
+    return out
+
+
+def _schneide(text, ziel):
+    teile = []
+    while len(text) > ziel:
+        schnitt = text.rfind(" ", 1, ziel + 1)
+        if schnitt < 1:
+            schnitt = ziel
+        teile.append(text[:schnitt].rstrip())
+        text = text[schnitt:].lstrip()
+    if text:
+        teile.append(text)
+    return teile
+
+
+def _packe(stuecke, ziel, vorspann=()):
+    gruppen, aktuell = [], []
+    for s in stuecke:
+        probe = list(vorspann) + aktuell + [s]
+        if aktuell and len("\n".join(probe)) > ziel:
+            gruppen.append("\n".join(list(vorspann) + aktuell))
+            aktuell = []
+        aktuell.append(s)
+    if aktuell:
+        gruppen.append("\n".join(list(vorspann) + aktuell))
+    return gruppen
+
+
+def _elemente(zeilen, ziel, grenze):
+    out = []
+    for z in zeilen:
+        out += _schneide(z, ziel) if len(z) > grenze else [z]
+    return out
+
+
+def _listenpunkte(zeilen):
+    punkte = []
+    for z in zeilen:
+        if _LISTE.match(z) or not punkte:
+            punkte.append(z)
+        else:
+            punkte[-1] += "\n" + z
+    return punkte
+
+
+def teile_block(block, *, ziel=ZIEL_ZEICHEN, grenze=MAX_ZEICHEN):
+    _grenzen(ziel, grenze)
+    zeilen, art = list(block["zeilen"]), block["art"]
+    text = "\n".join(zeilen)
+    if len(text) <= grenze:
+        return [text] if text.strip() else []
+    vorspann = [block.get("einleitung")] if block.get("einleitung") else []
+    if art == "liste":
+        return _packe(_elemente(_listenpunkte(zeilen), ziel, grenze), ziel, vorspann)
+    if art == "tabelle":
+        kopf = 2 if len(zeilen) > 1 and _TRENNER.match(zeilen[1]) else 1
+        return _packe(_elemente(zeilen[kopf:], ziel, grenze), ziel, vorspann + zeilen[:kopf]) if len(zeilen) > kopf else _packe(_elemente(zeilen, ziel, grenze), ziel)
+    return _packe(_elemente(zeilen, ziel, grenze), ziel)
+
+
+def _stuecke(bloecke_, ziel, grenze):
+    teile = [teile_block(b, ziel=ziel, grenze=grenze) for b in bloecke_]
+    for i, b in enumerate(bloecke_[:-1]):
+        folgt = bloecke_[i + 1]
+        if b["art"] == "absatz" and folgt["einleitung"] and len(teile[i + 1]) > 1:
+            teile[i] = teile_block(dict(b, zeilen=b["zeilen"][:-1]), ziel=ziel, grenze=grenze)
+    return [s for t in teile for s in t]
+
+
+def _abschnitt(stelle, zeilen, ziel, grenze):
+    stuecke = _stuecke(bloecke(zeilen), ziel, grenze)
+    texte = []
+    for s in stuecke:
+        if texte and len(texte[-1]) + 2 + len(s) <= ziel:
+            texte[-1] += "\n\n" + s
+        else:
+            texte.append(s)
+    out = []
+    for t in texte:
+        t = t.strip()
+        if len(t) < 3:
+            continue
+        if len(t) < MIN_ZEICHEN and out and len(out[-1]) + 2 + len(t) <= grenze:
+            out[-1] += "\n\n" + t
+        else:
+            out.append(t)
+    return [{"stelle": stelle, "teil": i, "text": t} for i, t in enumerate(out, 1)]
+
+
+def zerlege_markdown(text, kopf, *, ziel=ZIEL_ZEICHEN, grenze=MAX_ZEICHEN):
+    _grenzen(ziel, grenze)
+    out, stack, zeilen, zaun = [], {}, [], False
+
+    def schliessen():
+        out.extend(_abschnitt(" > ".join(stack[k] for k in sorted(stack)) or kopf, zeilen, ziel, grenze))
+
+    for z in str(text).splitlines():
+        if z.lstrip().startswith("```"):
+            zaun = not zaun
+        m = None if zaun else _KOPF.match(z)
+        if m:
+            schliessen()
+            zeilen = []
+            stufe = len(m.group(1))
+            for k in [k for k in stack if k >= stufe]:
+                del stack[k]
+            stack[stufe] = m.group(2)
+        else:
+            zeilen.append(z)
+    schliessen()
+    return out
+
+
+def zerlege_text(text, kopf, *, ziel=ZIEL_ZEICHEN, grenze=MAX_ZEICHEN):
+    _grenzen(ziel, grenze)
+    return _abschnitt(kopf, str(text).splitlines(), ziel, grenze)
+
+
+def zerlege_eintrag(stelle, text, *, ziel=ZIEL_ZEICHEN, grenze=MAX_ZEICHEN):
+    return zerlege_text(text, stelle, ziel=ziel, grenze=grenze)
+
+
+def zerlege_logbuch(text, kopf):
+    zeilen = str(text).splitlines()
+    kopfzeile = next((z for z in zeilen if z.startswith("# ")), None)
+    titel = kopfzeile[2:].strip() if kopfzeile is not None else kopf
+    out, rest = [], []
+    for z in zeilen:
+        if z is kopfzeile:
+            continue
+        if z.startswith("| 20"):
+            zellen = [c.strip() for c in z.strip().strip("|").split("|")]
+            zeit, art, eintrag = (zellen + ["", "", ""])[:3]
+            out.append({"stelle": f"{titel} > Zeile {zeit} {art} {eintrag[:60]}", "teil": 1, "text": z})
+        else:
+            rest.append(z)
+    return _abschnitt(titel, rest, ZIEL_ZEICHEN, MAX_ZEICHEN) + out
+
+
+def saeubere_stelle(stelle):
+    zeichen = [" " if unicodedata.category(c) in ("Cc", "Cf", "Zl", "Zp") else c for c in str(stelle)]
+    eine = " ".join("".join(zeichen).split())
+    eine = _STRICHE.sub(lambda m: m.group(1) * 2, eine)
+    return eine[:KOPF_MAX].rstrip() or "?"
+
+
+def abschnitt_hash(stelle, text, version=ZERLEGER_VERSION):
+    return hashlib.sha256(f"{version}|{stelle}|{text}".encode("utf-8")).hexdigest()
+
+
+def eingabetext(stelle, text):
+    return f"{stelle}\n{text}"
