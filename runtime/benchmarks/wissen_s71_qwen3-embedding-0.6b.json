@@ -1,0 +1,875 @@
+{
+ "modell": "qwen3-embedding-0.6b",
+ "gguf": "Qwen3-Embedding-0.6B-Q8_0.gguf",
+ "abschnitte": 2040,
+ "korpus_stempel_stand": "0155a83",
+ "vram_vorher_mib": 2340,
+ "gpu": {
+  "zeiten_s": [
+   155.24561858177185,
+   155.08351635932922,
+   155.1927580833435
+  ],
+  "stat": {
+   "gekuerzt": 0,
+   "token": 699390
+  },
+  "vram": {
+   "nach_start": 8939,
+   "spitze": 9192
+  },
+  "startzeit_s": 1.5653326511383057,
+  "median_s": 155.1927580833435,
+  "s_je_1000": 74.61190292468437,
+  "vram_vorher_mib": 2340,
+  "vram_zusatz_spitze_mib": 6852,
+  "vram_nachher_mib": 2109
+ },
+ "cpu": {
+  "zeiten_s": [
+   71.50530576705933
+  ],
+  "stat": {
+   "gekuerzt": 0,
+   "token": 69871
+  },
+  "vram": {
+   "nach_start": 7213,
+   "spitze": 7252
+  },
+  "startzeit_s": 1.5108420848846436,
+  "stichprobe": 204,
+  "s_je_1000": 350.5162047404869,
+  "kosinus_gpu_cpu_min": 0.9994310411869632
+ },
+ "qualitaet": {
+  "wort": {
+   "gesamt": {
+    "fragen": 40,
+    "treffer_at_5": 0.575,
+    "treffer_at_1": 0.375,
+    "mrr_at_10": 0.4585714285714285
+   },
+   "je_art": {
+    "fachbegriff": {
+     "fragen": 10,
+     "treffer_at_5": 0.3,
+     "treffer_at_1": 0.3,
+     "mrr_at_10": 0.3142857142857143
+    },
+    "umschrieben": {
+     "fragen": 19,
+     "treffer_at_5": 0.5263157894736842,
+     "treffer_at_1": 0.3684210526315789,
+     "mrr_at_10": 0.443859649122807
+    },
+    "wortgleich": {
+     "fragen": 11,
+     "treffer_at_5": 0.9090909090909091,
+     "treffer_at_1": 0.45454545454545453,
+     "mrr_at_10": 0.6151515151515151
+    }
+   },
+   "andere_worte": {
+    "fragen": 29,
+    "treffer_at_5": 0.4482758620689655,
+    "treffer_at_1": 0.3448275862068966,
+    "mrr_at_10": 0.3991789819376026
+   },
+   "fragen": [
+    {
+     "id": "G01",
+     "art": "wortgleich",
+     "rang": 3,
+     "frage": "Auf welchem Port läuft der eigene llama-server und in welcher Datei steht das?"
+    },
+    {
+     "id": "G02",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Was ist zu tun, wenn das Modell nur Zeichensalat liefert und der Selbsttest der Grafikkarte durchfällt?"
+    },
+    {
+     "id": "G03",
+     "art": "fachbegriff",
+     "rang": null,
+     "frage": "Wie viel Videospeicher darf ein Modell höchstens belegen, damit noch Platz für den Kontext bleibt?"
+    },
+    {
+     "id": "G04",
+     "art": "umschrieben",
+     "rang": 2,
+     "frage": "Was geschieht mit einer GPU-Sperre, wenn der Prozess, der sie hält, abgestürzt ist?"
+    },
+    {
+     "id": "G05",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Wie oft wird ein Schritt bei Zeitüberschreitung wiederholt und wie lange darf er höchstens dauern?"
+    },
+    {
+     "id": "G06",
+     "art": "umschrieben",
+     "rang": null,
+     "frage": "Wie viele Arbeitsschritte darf ein Lauf ausführen, bis er gestoppt wird?"
+    },
+    {
+     "id": "G07",
+     "art": "fachbegriff",
+     "rang": null,
+     "frage": "Was passiert, wenn man eine Coding-Lektion ohne Stichwörter zum Auslösen anlegt?"
+    },
+    {
+     "id": "G08",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Warum ist der neueste Engine-Build nicht zum Standard geworden?"
+    },
+    {
+     "id": "G09",
+     "art": "umschrieben",
+     "rang": 29,
+     "frage": "Wie schnell erzeugt der Standard-Coder Text auf dieser Grafikkarte?"
+    },
+    {
+     "id": "G10",
+     "art": "fachbegriff",
+     "rang": null,
+     "frage": "Welche Nachteile hat es, wenn die gekachelte Aufmerksamkeitsberechnung abgeschaltet ist?"
+    },
+    {
+     "id": "G11",
+     "art": "fachbegriff",
+     "rang": 1,
+     "frage": "Wie viele Korrekturrunden bekommt der Entwickler nach einem durchgefallenen Abnahmetest?"
+    },
+    {
+     "id": "G12",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Ab wie vielen Zeichen Aufgabentext muss der Planer in mindestens zwei Schritte teilen?"
+    },
+    {
+     "id": "G13",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Darf man Rezepte ändern, solange ein Lauf die GPU benutzt?"
+    },
+    {
+     "id": "G14",
+     "art": "umschrieben",
+     "rang": null,
+     "frage": "Wie nenne ich in der Doku einen Ordner meines Rechners, ohne den echten Pfad zu verraten?"
+    },
+    {
+     "id": "G15",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Auf welchen Zweig gehören die Commits einer parallelen Sitzung?"
+    },
+    {
+     "id": "G16",
+     "art": "fachbegriff",
+     "rang": null,
+     "frage": "Welche Oberflächen gibt es und in welchem Ordner liegen ihre Werkzeuge?"
+    },
+    {
+     "id": "G17",
+     "art": "wortgleich",
+     "rang": 3,
+     "frage": "Welche Quellen sollen im Wissensspeicher zuerst aufgenommen werden?"
+    },
+    {
+     "id": "G18",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Dürfen Agenten selbst neues Wissen in den gemeinsamen Speicher schreiben?"
+    },
+    {
+     "id": "G19",
+     "art": "fachbegriff",
+     "rang": 7,
+     "frage": "Wie werden die Ergebnislisten aus Wortsuche und Bedeutungssuche zu einer Rangfolge vereint?"
+    },
+    {
+     "id": "G20",
+     "art": "umschrieben",
+     "rang": 10,
+     "frage": "Was geschieht mit Quellen, in denen persönliche Angaben stehen?"
+    },
+    {
+     "id": "G21",
+     "art": "umschrieben",
+     "rang": 39,
+     "frage": "Wie viel Geld darf in der Anfangsphase zusätzlich für Cloud-Modelle ausgegeben werden?"
+    },
+    {
+     "id": "G22",
+     "art": "wortgleich",
+     "rang": 10,
+     "frage": "Welche Cloud-Anbieter hat der Captain gewählt?"
+    },
+    {
+     "id": "G23",
+     "art": "umschrieben",
+     "rang": null,
+     "frage": "Wer steht im ersten Agententeam ganz oben, direkt unter dem Captain?"
+    },
+    {
+     "id": "G24",
+     "art": "fachbegriff",
+     "rang": null,
+     "frage": "Ist die Volltextsuche der Datenbank schon im Einsatz, und welche Version läuft?"
+    },
+    {
+     "id": "G25",
+     "art": "umschrieben",
+     "rang": 20,
+     "frage": "Wie wird verhindert, dass ein gefundenes Dokument dem Modell Befehle erteilt?"
+    },
+    {
+     "id": "G26",
+     "art": "wortgleich",
+     "rang": 2,
+     "frage": "Wie viele Anfragen hat der Absturztest mit dem Build b11530 sauber durchgehalten?"
+    },
+    {
+     "id": "G27",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Wann hat der Captain beschlossen, Qwen3.6 zum Standard-Coder zu machen?"
+    },
+    {
+     "id": "G28",
+     "art": "wortgleich",
+     "rang": 4,
+     "frage": "Welcher Registry-Wert müsste für den Compute Sanitizer gesetzt werden?"
+    },
+    {
+     "id": "G29",
+     "art": "umschrieben",
+     "rang": 50,
+     "frage": "Welcher Fehler im Lader hätte jeden Bau ohne Schalter am Start gehindert?"
+    },
+    {
+     "id": "G30",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Was bedeutet der Fehlercode weg_offener_als_wunsch?"
+    },
+    {
+     "id": "G31",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Was tue ich, wenn nach einem Neustart die Zuordnung der Platzhalter fehlt?"
+    },
+    {
+     "id": "G32",
+     "art": "fachbegriff",
+     "rang": 1,
+     "frage": "Sind Daten, bei denen Namen durch Platzhalter ersetzt wurden, noch personenbezogen?"
+    },
+    {
+     "id": "G33",
+     "art": "wortgleich",
+     "rang": 4,
+     "frage": "Wie viele Rechecks gibt es und was prüft der dritte?"
+    },
+    {
+     "id": "G34",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Wann verschwinden Entwürfe automatisch?"
+    },
+    {
+     "id": "G35",
+     "art": "fachbegriff",
+     "rang": 1,
+     "frage": "Welche Schutzstufen gibt es und wie heißt die höchste?"
+    },
+    {
+     "id": "G36",
+     "art": "fachbegriff",
+     "rang": null,
+     "frage": "Darf ein Text mit Kreditkartennummer samt Prüfziffer zu einem Cloud-Modell gehen?"
+    },
+    {
+     "id": "G37",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Wofür ist der Ordner redesign/vorarbeiter da?"
+    },
+    {
+     "id": "G38",
+     "art": "umschrieben",
+     "rang": 3,
+     "frage": "Wie oft darf derselbe Lauf gestartet werden?"
+    },
+    {
+     "id": "G39",
+     "art": "umschrieben",
+     "rang": 2,
+     "frage": "Welche Angaben kommen nicht in die Wissensbasis des Arbeitsumfelds?"
+    },
+    {
+     "id": "G40",
+     "art": "umschrieben",
+     "rang": null,
+     "frage": "Wie ordnet das System einer Coding-Aufgabe die passenden Lektionen zu?"
+    }
+   ]
+  },
+  "vektor": {
+   "gesamt": {
+    "fragen": 40,
+    "treffer_at_5": 0.575,
+    "treffer_at_1": 0.325,
+    "mrr_at_10": 0.43923611111111105
+   },
+   "je_art": {
+    "fachbegriff": {
+     "fragen": 10,
+     "treffer_at_5": 0.3,
+     "treffer_at_1": 0.2,
+     "mrr_at_10": 0.25833333333333336
+    },
+    "umschrieben": {
+     "fragen": 19,
+     "treffer_at_5": 0.5789473684210527,
+     "treffer_at_1": 0.3684210526315789,
+     "mrr_at_10": 0.47733918128654973
+    },
+    "wortgleich": {
+     "fragen": 11,
+     "treffer_at_5": 0.8181818181818182,
+     "treffer_at_1": 0.36363636363636365,
+     "mrr_at_10": 0.537878787878788
+    }
+   },
+   "andere_worte": {
+    "fragen": 29,
+    "treffer_at_5": 0.4827586206896552,
+    "treffer_at_1": 0.3103448275862069,
+    "mrr_at_10": 0.4018199233716475
+   },
+   "fragen": [
+    {
+     "id": "G01",
+     "art": "wortgleich",
+     "rang": 2,
+     "frage": "Auf welchem Port läuft der eigene llama-server und in welcher Datei steht das?"
+    },
+    {
+     "id": "G02",
+     "art": "umschrieben",
+     "rang": 2,
+     "frage": "Was ist zu tun, wenn das Modell nur Zeichensalat liefert und der Selbsttest der Grafikkarte durchfällt?"
+    },
+    {
+     "id": "G03",
+     "art": "fachbegriff",
+     "rang": 48,
+     "frage": "Wie viel Videospeicher darf ein Modell höchstens belegen, damit noch Platz für den Kontext bleibt?"
+    },
+    {
+     "id": "G04",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Was geschieht mit einer GPU-Sperre, wenn der Prozess, der sie hält, abgestürzt ist?"
+    },
+    {
+     "id": "G05",
+     "art": "wortgleich",
+     "rang": 2,
+     "frage": "Wie oft wird ein Schritt bei Zeitüberschreitung wiederholt und wie lange darf er höchstens dauern?"
+    },
+    {
+     "id": "G06",
+     "art": "umschrieben",
+     "rang": 8,
+     "frage": "Wie viele Arbeitsschritte darf ein Lauf ausführen, bis er gestoppt wird?"
+    },
+    {
+     "id": "G07",
+     "art": "fachbegriff",
+     "rang": null,
+     "frage": "Was passiert, wenn man eine Coding-Lektion ohne Stichwörter zum Auslösen anlegt?"
+    },
+    {
+     "id": "G08",
+     "art": "umschrieben",
+     "rang": 2,
+     "frage": "Warum ist der neueste Engine-Build nicht zum Standard geworden?"
+    },
+    {
+     "id": "G09",
+     "art": "umschrieben",
+     "rang": 19,
+     "frage": "Wie schnell erzeugt der Standard-Coder Text auf dieser Grafikkarte?"
+    },
+    {
+     "id": "G10",
+     "art": "fachbegriff",
+     "rang": 4,
+     "frage": "Welche Nachteile hat es, wenn die gekachelte Aufmerksamkeitsberechnung abgeschaltet ist?"
+    },
+    {
+     "id": "G11",
+     "art": "fachbegriff",
+     "rang": 9,
+     "frage": "Wie viele Korrekturrunden bekommt der Entwickler nach einem durchgefallenen Abnahmetest?"
+    },
+    {
+     "id": "G12",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Ab wie vielen Zeichen Aufgabentext muss der Planer in mindestens zwei Schritte teilen?"
+    },
+    {
+     "id": "G13",
+     "art": "wortgleich",
+     "rang": 3,
+     "frage": "Darf man Rezepte ändern, solange ein Lauf die GPU benutzt?"
+    },
+    {
+     "id": "G14",
+     "art": "umschrieben",
+     "rang": null,
+     "frage": "Wie nenne ich in der Doku einen Ordner meines Rechners, ohne den echten Pfad zu verraten?"
+    },
+    {
+     "id": "G15",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Auf welchen Zweig gehören die Commits einer parallelen Sitzung?"
+    },
+    {
+     "id": "G16",
+     "art": "fachbegriff",
+     "rang": null,
+     "frage": "Welche Oberflächen gibt es und in welchem Ordner liegen ihre Werkzeuge?"
+    },
+    {
+     "id": "G17",
+     "art": "wortgleich",
+     "rang": 4,
+     "frage": "Welche Quellen sollen im Wissensspeicher zuerst aufgenommen werden?"
+    },
+    {
+     "id": "G18",
+     "art": "umschrieben",
+     "rang": 3,
+     "frage": "Dürfen Agenten selbst neues Wissen in den gemeinsamen Speicher schreiben?"
+    },
+    {
+     "id": "G19",
+     "art": "fachbegriff",
+     "rang": null,
+     "frage": "Wie werden die Ergebnislisten aus Wortsuche und Bedeutungssuche zu einer Rangfolge vereint?"
+    },
+    {
+     "id": "G20",
+     "art": "umschrieben",
+     "rang": 31,
+     "frage": "Was geschieht mit Quellen, in denen persönliche Angaben stehen?"
+    },
+    {
+     "id": "G21",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Wie viel Geld darf in der Anfangsphase zusätzlich für Cloud-Modelle ausgegeben werden?"
+    },
+    {
+     "id": "G22",
+     "art": "wortgleich",
+     "rang": 19,
+     "frage": "Welche Cloud-Anbieter hat der Captain gewählt?"
+    },
+    {
+     "id": "G23",
+     "art": "umschrieben",
+     "rang": 25,
+     "frage": "Wer steht im ersten Agententeam ganz oben, direkt unter dem Captain?"
+    },
+    {
+     "id": "G24",
+     "art": "fachbegriff",
+     "rang": 9,
+     "frage": "Ist die Volltextsuche der Datenbank schon im Einsatz, und welche Version läuft?"
+    },
+    {
+     "id": "G25",
+     "art": "umschrieben",
+     "rang": 2,
+     "frage": "Wie wird verhindert, dass ein gefundenes Dokument dem Modell Befehle erteilt?"
+    },
+    {
+     "id": "G26",
+     "art": "wortgleich",
+     "rang": null,
+     "frage": "Wie viele Anfragen hat der Absturztest mit dem Build b11530 sauber durchgehalten?"
+    },
+    {
+     "id": "G27",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Wann hat der Captain beschlossen, Qwen3.6 zum Standard-Coder zu machen?"
+    },
+    {
+     "id": "G28",
+     "art": "wortgleich",
+     "rang": 3,
+     "frage": "Welcher Registry-Wert müsste für den Compute Sanitizer gesetzt werden?"
+    },
+    {
+     "id": "G29",
+     "art": "umschrieben",
+     "rang": 41,
+     "frage": "Welcher Fehler im Lader hätte jeden Bau ohne Schalter am Start gehindert?"
+    },
+    {
+     "id": "G30",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Was bedeutet der Fehlercode weg_offener_als_wunsch?"
+    },
+    {
+     "id": "G31",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Was tue ich, wenn nach einem Neustart die Zuordnung der Platzhalter fehlt?"
+    },
+    {
+     "id": "G32",
+     "art": "fachbegriff",
+     "rang": 1,
+     "frage": "Sind Daten, bei denen Namen durch Platzhalter ersetzt wurden, noch personenbezogen?"
+    },
+    {
+     "id": "G33",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Wie viele Rechecks gibt es und was prüft der dritte?"
+    },
+    {
+     "id": "G34",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Wann verschwinden Entwürfe automatisch?"
+    },
+    {
+     "id": "G35",
+     "art": "fachbegriff",
+     "rang": 1,
+     "frage": "Welche Schutzstufen gibt es und wie heißt die höchste?"
+    },
+    {
+     "id": "G36",
+     "art": "fachbegriff",
+     "rang": 9,
+     "frage": "Darf ein Text mit Kreditkartennummer samt Prüfziffer zu einem Cloud-Modell gehen?"
+    },
+    {
+     "id": "G37",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Wofür ist der Ordner redesign/vorarbeiter da?"
+    },
+    {
+     "id": "G38",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Wie oft darf derselbe Lauf gestartet werden?"
+    },
+    {
+     "id": "G39",
+     "art": "umschrieben",
+     "rang": 9,
+     "frage": "Welche Angaben kommen nicht in die Wissensbasis des Arbeitsumfelds?"
+    },
+    {
+     "id": "G40",
+     "art": "umschrieben",
+     "rang": 29,
+     "frage": "Wie ordnet das System einer Coding-Aufgabe die passenden Lektionen zu?"
+    }
+   ]
+  },
+  "hybrid": {
+   "gesamt": {
+    "fragen": 40,
+    "treffer_at_5": 0.675,
+    "treffer_at_1": 0.45,
+    "mrr_at_10": 0.538125
+   },
+   "je_art": {
+    "fachbegriff": {
+     "fragen": 10,
+     "treffer_at_5": 0.3,
+     "treffer_at_1": 0.2,
+     "mrr_at_10": 0.2625
+    },
+    "umschrieben": {
+     "fragen": 19,
+     "treffer_at_5": 0.7368421052631579,
+     "treffer_at_1": 0.47368421052631576,
+     "mrr_at_10": 0.5692982456140351
+    },
+    "wortgleich": {
+     "fragen": 11,
+     "treffer_at_5": 0.9090909090909091,
+     "treffer_at_1": 0.6363636363636364,
+     "mrr_at_10": 0.7348484848484849
+    }
+   },
+   "andere_worte": {
+    "fragen": 29,
+    "treffer_at_5": 0.5862068965517241,
+    "treffer_at_1": 0.3793103448275862,
+    "mrr_at_10": 0.4635057471264368
+   },
+   "fragen": [
+    {
+     "id": "G01",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Auf welchem Port läuft der eigene llama-server und in welcher Datei steht das?"
+    },
+    {
+     "id": "G02",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Was ist zu tun, wenn das Modell nur Zeichensalat liefert und der Selbsttest der Grafikkarte durchfällt?"
+    },
+    {
+     "id": "G03",
+     "art": "fachbegriff",
+     "rang": 93,
+     "frage": "Wie viel Videospeicher darf ein Modell höchstens belegen, damit noch Platz für den Kontext bleibt?"
+    },
+    {
+     "id": "G04",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Was geschieht mit einer GPU-Sperre, wenn der Prozess, der sie hält, abgestürzt ist?"
+    },
+    {
+     "id": "G05",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Wie oft wird ein Schritt bei Zeitüberschreitung wiederholt und wie lange darf er höchstens dauern?"
+    },
+    {
+     "id": "G06",
+     "art": "umschrieben",
+     "rang": 17,
+     "frage": "Wie viele Arbeitsschritte darf ein Lauf ausführen, bis er gestoppt wird?"
+    },
+    {
+     "id": "G07",
+     "art": "fachbegriff",
+     "rang": null,
+     "frage": "Was passiert, wenn man eine Coding-Lektion ohne Stichwörter zum Auslösen anlegt?"
+    },
+    {
+     "id": "G08",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Warum ist der neueste Engine-Build nicht zum Standard geworden?"
+    },
+    {
+     "id": "G09",
+     "art": "umschrieben",
+     "rang": 5,
+     "frage": "Wie schnell erzeugt der Standard-Coder Text auf dieser Grafikkarte?"
+    },
+    {
+     "id": "G10",
+     "art": "fachbegriff",
+     "rang": 8,
+     "frage": "Welche Nachteile hat es, wenn die gekachelte Aufmerksamkeitsberechnung abgeschaltet ist?"
+    },
+    {
+     "id": "G11",
+     "art": "fachbegriff",
+     "rang": 2,
+     "frage": "Wie viele Korrekturrunden bekommt der Entwickler nach einem durchgefallenen Abnahmetest?"
+    },
+    {
+     "id": "G12",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Ab wie vielen Zeichen Aufgabentext muss der Planer in mindestens zwei Schritte teilen?"
+    },
+    {
+     "id": "G13",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Darf man Rezepte ändern, solange ein Lauf die GPU benutzt?"
+    },
+    {
+     "id": "G14",
+     "art": "umschrieben",
+     "rang": null,
+     "frage": "Wie nenne ich in der Doku einen Ordner meines Rechners, ohne den echten Pfad zu verraten?"
+    },
+    {
+     "id": "G15",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Auf welchen Zweig gehören die Commits einer parallelen Sitzung?"
+    },
+    {
+     "id": "G16",
+     "art": "fachbegriff",
+     "rang": null,
+     "frage": "Welche Oberflächen gibt es und in welchem Ordner liegen ihre Werkzeuge?"
+    },
+    {
+     "id": "G17",
+     "art": "wortgleich",
+     "rang": 3,
+     "frage": "Welche Quellen sollen im Wissensspeicher zuerst aufgenommen werden?"
+    },
+    {
+     "id": "G18",
+     "art": "umschrieben",
+     "rang": 2,
+     "frage": "Dürfen Agenten selbst neues Wissen in den gemeinsamen Speicher schreiben?"
+    },
+    {
+     "id": "G19",
+     "art": "fachbegriff",
+     "rang": 13,
+     "frage": "Wie werden die Ergebnislisten aus Wortsuche und Bedeutungssuche zu einer Rangfolge vereint?"
+    },
+    {
+     "id": "G20",
+     "art": "umschrieben",
+     "rang": 6,
+     "frage": "Was geschieht mit Quellen, in denen persönliche Angaben stehen?"
+    },
+    {
+     "id": "G21",
+     "art": "umschrieben",
+     "rang": 5,
+     "frage": "Wie viel Geld darf in der Anfangsphase zusätzlich für Cloud-Modelle ausgegeben werden?"
+    },
+    {
+     "id": "G22",
+     "art": "wortgleich",
+     "rang": 4,
+     "frage": "Welche Cloud-Anbieter hat der Captain gewählt?"
+    },
+    {
+     "id": "G23",
+     "art": "umschrieben",
+     "rang": 49,
+     "frage": "Wer steht im ersten Agententeam ganz oben, direkt unter dem Captain?"
+    },
+    {
+     "id": "G24",
+     "art": "fachbegriff",
+     "rang": 18,
+     "frage": "Ist die Volltextsuche der Datenbank schon im Einsatz, und welche Version läuft?"
+    },
+    {
+     "id": "G25",
+     "art": "umschrieben",
+     "rang": 2,
+     "frage": "Wie wird verhindert, dass ein gefundenes Dokument dem Modell Befehle erteilt?"
+    },
+    {
+     "id": "G26",
+     "art": "wortgleich",
+     "rang": 6,
+     "frage": "Wie viele Anfragen hat der Absturztest mit dem Build b11530 sauber durchgehalten?"
+    },
+    {
+     "id": "G27",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Wann hat der Captain beschlossen, Qwen3.6 zum Standard-Coder zu machen?"
+    },
+    {
+     "id": "G28",
+     "art": "wortgleich",
+     "rang": 3,
+     "frage": "Welcher Registry-Wert müsste für den Compute Sanitizer gesetzt werden?"
+    },
+    {
+     "id": "G29",
+     "art": "umschrieben",
+     "rang": 4,
+     "frage": "Welcher Fehler im Lader hätte jeden Bau ohne Schalter am Start gehindert?"
+    },
+    {
+     "id": "G30",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Was bedeutet der Fehlercode weg_offener_als_wunsch?"
+    },
+    {
+     "id": "G31",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Was tue ich, wenn nach einem Neustart die Zuordnung der Platzhalter fehlt?"
+    },
+    {
+     "id": "G32",
+     "art": "fachbegriff",
+     "rang": 1,
+     "frage": "Sind Daten, bei denen Namen durch Platzhalter ersetzt wurden, noch personenbezogen?"
+    },
+    {
+     "id": "G33",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Wie viele Rechecks gibt es und was prüft der dritte?"
+    },
+    {
+     "id": "G34",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Wann verschwinden Entwürfe automatisch?"
+    },
+    {
+     "id": "G35",
+     "art": "fachbegriff",
+     "rang": 1,
+     "frage": "Welche Schutzstufen gibt es und wie heißt die höchste?"
+    },
+    {
+     "id": "G36",
+     "art": "fachbegriff",
+     "rang": 20,
+     "frage": "Darf ein Text mit Kreditkartennummer samt Prüfziffer zu einem Cloud-Modell gehen?"
+    },
+    {
+     "id": "G37",
+     "art": "wortgleich",
+     "rang": 1,
+     "frage": "Wofür ist der Ordner redesign/vorarbeiter da?"
+    },
+    {
+     "id": "G38",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Wie oft darf derselbe Lauf gestartet werden?"
+    },
+    {
+     "id": "G39",
+     "art": "umschrieben",
+     "rang": 1,
+     "frage": "Welche Angaben kommen nicht in die Wissensbasis des Arbeitsumfelds?"
+    },
+    {
+     "id": "G40",
+     "art": "umschrieben",
+     "rang": 58,
+     "frage": "Wie ordnet das System einer Coding-Aufgabe die passenden Lektionen zu?"
+    }
+   ]
+  }
+ }
+}

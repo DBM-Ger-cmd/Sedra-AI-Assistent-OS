@@ -3071,6 +3071,43 @@ Alle vier sind mehrsprachig (100 Sprachen laut Karte); Deutsch wird auf keiner K
 
 Empfehlung: **BGE-M3 (Q8_0) zuerst**, weil MIT-Lizenz, fertiges GGUF von `ggml-org`, 8192 Token (keine Kürzung der Abschnitte) und keine Anfrageanweisung; **Qwen3-Embedding-0.6B (Q8_0) als zweites** zum Vergleich (Apache 2.0, offizielles GGUF). EmbeddingGemma nur, wenn die kleine Größe zählt; E5 entfällt (kurze Länge, kein fertiges GGUF). Zwei Downloads von zusammen rund 1,3 GB, zu beantragen, sobald der Captain die Messung freigibt.
 
+#### Ergebnis S7.1
+
+Gemessen am 22.10.2026 nach der Freigabe des Captains (Downloads, GPU-Zeit), Engine b11160 (`llama-server --embeddings`, eigener Port, eigene PID), unter der TestLab-Lease mit Vorprüfung, Korpus Stand `0155a83` (2040 Abschnitte, Goldsatz 40 Fragen). Beide Dateien (BGE-M3 `bge-m3-q8_0.gguf` von `ggml-org`, `Qwen3-Embedding-0.6B-Q8_0.gguf` vom Qwen-Repo) stimmten mit der SHA-256 der Hugging-Face-Seite überein. Skript: `runtime/benchmarks/wissen_embed_messung.py` (reines Python, ohne `numpy`), Rohwerte: `runtime/benchmarks/wissen_s71_*.json`. Abschnitte wurden als „Pfad + Text“ eingebettet, Anfragen mit Anweisung nur bei Qwen3 (`Instruct: … Query: …`, Pooling `last`); Kontext, Stapel und Ubatch 8192, Stapel 16 Abschnitte. Rezepte, Engine und `llama_server.yaml` blieben unberührt, kein fremder Prozess wurde beendet.
+
+| Kennzahl | Wortsuche (Ausgangswert) | BGE-M3, nur Vektor | **BGE-M3, hybrid (RRF k = 60)** | Qwen3-0.6B, nur Vektor | Qwen3-0.6B, hybrid |
+| --- | --- | --- | --- | --- | --- |
+| Treffer@5 gesamt | 57,5 % | 75,0 % | **77,5 %** (31 von 40) | 57,5 % | 67,5 % |
+| Treffer@1 | 37,5 % | 52,5 % | 47,5 % | 32,5 % | 45,0 % |
+| MRR@10 | 0,459 | 0,613 | 0,603 | 0,439 | 0,538 |
+| 29 Fragen mit anderen Worten | 44,8 % | 69,0 % | 69,0 % | 48,3 % | 58,6 % |
+| wortgleich (11) | 90,9 % | 90,9 % | 100 % | 81,8 % | 90,9 % |
+| umschrieben (19) / Fachbegriff (10) | 52,6 % / 30,0 % | 73,7 % / 60,0 % | 73,7 % / 60,0 % | 57,9 % / 30,0 % | 73,7 % / 30,0 % |
+
+| Kennzahl | BGE-M3 (Q8_0) | Qwen3-Embedding-0.6B (Q8_0) |
+| --- | --- | --- |
+| Dimension | 1024 | 1024 |
+| GPU, Sekunden je 1000 Abschnitte (Median von 3 Läufen über 2080 Texte; Aufwärmlauf verworfen) | **15,0** | 74,6 (Kontext 4096: 74,3) |
+| CPU, Sekunden je 1000 Abschnitte (Stichprobe jeder 10. Abschnitt, 204 Stück, hochgerechnet) | **140,9** | 350,5 (Kontext 4096: 359,0) |
+| VRAM-Zuwachs, Spitze, gegen den Wert vor dem Laden | **1035 MiB** | 6852 MiB (Kontext 4096: 4630 MiB) |
+| Start des Servers | 3,6 s | 1,6 s |
+| Übereinstimmung der Vektoren GPU/CPU (kleinster Kosinus) | 0,9998 | 0,9994 |
+| gekürzte Abschnitte | 0 | 0 |
+
+Der VRAM-Wert ist ein Zuwachs gegen den Stand vor dem Start (2,1 bis 3,1 GiB, belegt von Desktop-Programmen; der Wert schwankt zwischen den Läufen). Beide Modelle liefen ohne Absturz; `/v1/embeddings` funktioniert mit Engine b11160, ein Engine-Wechsel ist nicht nötig. Die Lease ist frei, kein `llama-server` läuft mehr.
+
+Gegen die Schwelle: Zeit und Speicher erfüllt **BGE-M3** (15 s und 141 s je 1000 Abschnitte, +1,0 GiB), **Qwen3 nicht** (75 s, +4,5 bis 6,7 GiB über der Grenze von 1,5 GiB; Treffer@5 nur 67,5 %). Die Qualitätsschwelle (hybrid mindestens 85 %, davon 75 % bei anderen Worten, wortgleich nicht unter 90 %) **erreicht kein Modell**: BGE-M3 liegt bei 77,5 % gesamt, 69,0 % bei anderen Worten, 100 % wortgleich; es fehlen 3 Fragen. Gegenüber der Wortsuche sind das +20 Punkte gesamt und +24 Punkte bei anderen Worten.
+
+Auffälligkeiten:
+
+- Die Vektorsuche findet G06 („Arbeitsschritte“) und G40 („Lektionen“) auf Rang 1, die RRF schiebt sie auf Rang 8 und 6, weil die Wortliste dort nur Rauschen liefert. Eine gewichtete Fusion (Vektor mehr Gewicht) oder eine Wortsuche mit Mindestgüte ist ein naheliegender Hebel für S7.2; hier nicht abgestimmt, um den Goldsatz nicht zu überanpassen.
+- Zwei Fragen findet keine der drei Suchen: G14 (Platzhalter für Pfade, steht in einer langen Regelliste) und G23 (Unterarbeiter, steht in einer Tabellenzeile des großen Spec-Abschnitts). Das deutet auf zu große Abschnitte (bis 2500 Zeichen, Tabellen) und ist eine Frage an das Zerlegen in S7.3 (`wis_chunk`), nicht an das Modell.
+- Qwen3 wurde mit der englischen Anweisung der Modellkarte gemessen und liegt deutlich unter BGE-M3; der Tokenisierer hängt das Endzeichen selbst an (geprüft), ein Aufbaufehler liegt nicht vor. Eine deutsche Anweisung wurde nicht versucht.
+- Das Embedding von 2040 Abschnitten dauert mit BGE-M3 auf der GPU rund 30 s, auf der CPU rund 5 Minuten; der heutige Korpus passt also in jeden Hintergrundlauf (WIS-12).
+
+Empfehlung: **BGE-M3 (Q8_0)** als Embedding-Modell für S7.2 vorsehen (G1-S7-d). Die Qualitätsschwelle ist knapp verfehlt; der Captain entscheidet, ob (a) die Schwelle für die Modellwahl auf rund 75 % gesenkt wird, (b) S7.2 die Fusion und das Zerlegen verbessert und die Schwelle erst in S7.5 mit einem größeren Satz gilt, oder (c) ein weiteres Modell (EmbeddingGemma, Download einzeln) gemessen wird. Qwen3 scheidet aus.
+
+
 ## Entscheidungen des Captains (20.10.2026)
 
 Alle acht Fragen sind beantwortet; neu offen sind nur die Fragen zur Social-Zentrale (Spec 6).
