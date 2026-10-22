@@ -203,7 +203,7 @@ class KnowledgeAdapter(_Basis):
             tags = [str(t) for t in (r.get("scope") or {}).get("tags") or []]
             if tags:
                 text += "\nAuslöser: " + ", ".join(tags)
-            datum = str((r.get("provenance") or {}).get("created_at") or "")[:19] or "1970-01-01T00:00:00Z"
+            datum = str((r.get("provenance") or {}).get("created_at") or "")[:20] or "1970-01-01T00:00:00Z"
             for s in zerlegen.zerlege_eintrag(f"{art} {r.get('title') or r['id']}", text, ziel=self.ziel, grenze=self.grenze):
                 yield f"knowledge:{r['id']}", datum, s
 
@@ -214,6 +214,12 @@ class _SqliteAdapter(_Basis):
     def _datei(self, quelle):
         pfad = str(quelle.get("pfad") or "").split("#", 1)[0]
         return self.wurzel(quelle) / Path(*PurePosixPath(pfad).parts)
+
+    def _datum(self, quelle):
+        try:
+            return _iso(self._datei(quelle).stat().st_mtime)
+        except OSError:
+            raise ValueError("wis_speicher_nicht_lesbar") from None
 
     def _lesend(self, path):
         if not path.is_file():
@@ -251,7 +257,7 @@ class ArbeitsumfeldAdapter(_SqliteAdapter):
         return "wissen"
 
     def stuecke(self, quelle, melde=None):
-        datum = _iso(self._datei(quelle).stat().st_mtime)
+        datum = self._datum(quelle)
         for r in self._zeilen(quelle, "SELECT id, art, titel, text, quelle FROM wissen ORDER BY id"):
             text = str(r.get("text") or "")
             if r.get("quelle"):
@@ -272,7 +278,7 @@ class GatewayAdapter(_SqliteAdapter):
         return "eigene" if self._teil(quelle) == "eigene" else "wissen"
 
     def stuecke(self, quelle, melde=None):
-        datum = _iso(self._datei(quelle).stat().st_mtime)
+        datum = self._datum(quelle)
         if self._teil(quelle) == "eigene":
             for r in self._zeilen(quelle, "SELECT id, frage, antwort, erstellt FROM eigene ORDER BY id"):
                 text = "Frage: " + str(r.get("frage") or "") + "\nAntwort: " + str(r.get("antwort") or "")

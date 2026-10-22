@@ -126,6 +126,10 @@ class WissenSpeicher:
         angewendet = schema.migriere(self.db, jetzt=self.uhr())
         if angewendet:
             self.audit("WIS_SCHEMA_MIGRIERT", {"von": int(vorher or 0), "nach": angewendet[-1]})
+        meta = schema.lies_meta(self.db)
+        if meta.get("zerleger_version") not in (None, zerlegen.ZERLEGER_VERSION):      # neue Zerleger-Version: alles neu zerlegen (D7.3)
+            with schema._immediate(self.db):
+                self.db.execute("UPDATE quellen SET quell_hash = NULL")
         schema.setze_meta(self.db, {"zerleger_version": zerlegen.ZERLEGER_VERSION, "fusion_version": fusion.FUSION_VERSION})
         self.dienst = dienst or embed.EmbeddingDienst(embed.einstellung_aus(konfig), gpu=gpu or embed.OhneGpuZugang(), audit=self.audit,
                                                       pid_datei=self.pfad.parent / "embed.pid", starter=starter,
@@ -275,7 +279,7 @@ class WissenSpeicher:
                         while (datei, s["stelle"], teil) in gesehen:
                             teil += 1
                         gesehen[(datei, s["stelle"], teil)] = True
-                        neue.append({"datei": datei, "stelle": s["stelle"], "teil": teil, "text": s["text"], "hash": zerlegen.abschnitt_hash(s["stelle"], s["text"]),
+                        neue.append({"datei": datei, "stelle": s["stelle"], "teil": teil, "text": s["text"], "hash": zerlegen.abschnitt_hash(s["stelle"], s["text"], zerlegen.ZERLEGER_VERSION),
                                      "datum": datum or "1970-01-01T00:00:00Z", "befunde": weich})
                 except ValueError as exc:
                     self._ueberspringe(q, str(exc), summe)
