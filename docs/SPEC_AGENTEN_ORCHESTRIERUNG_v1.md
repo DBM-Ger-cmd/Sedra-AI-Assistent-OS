@@ -4228,6 +4228,9 @@ Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis
 | G1-S3C-01 bis G1-S3C-17, GA-01, GA-02 | Nachtrag Cloud-Coder und Coder-Verbund wie empfohlen freigegeben, neue Guard-Aktionen `cloud_call` (mit Bindung) und `start_verbund` (22.10.2026) |
 | G3-S2-01 bis G3-S2-14 | Aufgaben und Bau-Specs Spec 2 wie empfohlen freigegeben (22.10.2026); VRAM-Grenze 11,5 GB einschließlich Reserve 0,7 GB (nutzbar 10,8 GB); Messung S2.1 in der Nacht 22./23.10.2026; `.gitattributes` mit LF für Bau-Specs, Referenzen und Saaten |
 | G4 S1.H8 und Shell D | S1.H8 (Agentenlauf, Rollen foreman/researcher, Vorlagen mit Abnahme-Suite) und Shell-D-Dialog „Einstellen“ mit `instance_id` übernommen (22.10.2026); Punkte 2–7: feste Prioritäten bis `model_scheduler.yaml`, Job vor Checkout, nur Supervisor-Rollen werden geroutet, Recherche über das Web-Werkzeug, Suites beim Paketbau mitkopieren, Bericht endet als `wartet`. Läufe werden erst mit dem Worker-Pool (S2.H4b) abgearbeitet |
+| G2-S7 (Bestätigung) | Der Captain bestätigt am 22.10.2026 die mit dem zweiten Account getroffene Entscheidung G2-S7 a–u (14:58) samt Risiko-Entschärfung (14:33); G2-S7-a/b entschieden: Embedding-Modell BGE-M3, Ziel 85 %, Mindestgrenze 80 % |
+| G3-S7-01 bis G3-S7-09 | Bau-Specs `wis_store`, `wis_chunk`, `wis_fuse` (alle `spec_check --vm` ok), V4 wie Spec 2, Bau store → chunk → fuse mit GPU, Messskript S7.2-F auf der CPU, Testdateien je WIS, versiegelter Abnahmesatz mit 120 Fragen (Durchsicht des Captains als Stichprobe) freigegeben (22.10.2026) |
+| G4 s2_slotplan, s2_slot_store | `slotplan` übernommen (jobs/slotplan.py, mit Konstanten FORMAT, MODES, STATES); `slot_store` erst nach Nacharbeit durch SEDRA (Review: 506 Zeilen, `note` doppelt, Zeitvergleich in SQL, toter Code) (22.10.2026) |
 
 ## Vorarbeiter-Prompt
 
