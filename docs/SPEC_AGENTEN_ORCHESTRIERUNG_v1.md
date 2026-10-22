@@ -1460,6 +1460,12 @@ G3 gibt die Bauschritte frei, nicht die Übernahme: Jeder SEDRA-Kandidat kommt n
 | OP-S1-18 | `kette` und `kommentare` (Liste) in der Liste kosten je Issue eine Abfrage | in der Liste `kommentare` als Liste der letzten 3 und `kette` weglassen; vollständig in der Einzelansicht – mit Shell D abzustimmen |
 | OP-S1-19 | `nachholen` kommt als Wahrheitswert, `catch_up` ist Text; `vorlage_titel`/`vorlage_beschreibung` gibt es in `routines` nicht als Spalten | Abbildung im Adapter wie Tabelle oben; `task_template` als JSON-Text, keine Schemaänderung |
 
+#### Befunde und Nachträge nach der Übernahme
+
+| Kennung | Datum | Befund | Fix | Test |
+| --- | --- | --- | --- | --- |
+| S1-F-RECHERCHE-TRUST | 22.10.2026 | `desk/orchestra_runner._research` hängte den Recherche-Block (`runner.external_block`) samt Anweisungssatz als eine `user`-Nachricht ohne `trust` an. `core/content_guard._with_trust` stuft `user` ohne Kennzeichen als `captain` ein (`TRUST_BY_ROLE`): fremder Webtext bekam das Vertrauen des Captains und blieb ohne Einfassung als fremde Daten. Gemeldet im Design von Spec 7 (D7.6), bestätigt mit rotem Test. | Nur `desk/orchestra_runner.py`: zwei getrennte Nachrichten wie beim Wissensblock (`wissen/lauf.kontext_nachrichten`) – Anweisungssatz `{"role": "user", "trust": "captain"}`, dann der Datenblock als letzte Nachricht `{"role": "user", "trust": "untrusted"}`. `core/` unverändert. | `test_orchestra_run.Work.test_research_block_is_marked_untrusted_and_the_instruction_stays_apart` (Block `untrusted`, Anweisung ohne fremden Text, jede angehängte Nachricht mit Kennzeichen); bestehende Recherche-Tests unverändert grün |
+
 ## Spec 2 – Modell-Scheduler: parallele Agenten
 
 Die GPU-Lease bleibt, bekommt aber eine zweite Ebene: Ein Prozess besitzt den Modellserver (Lade-Lease), und ein Scheduler verteilt dessen parallele Slots an Agentenläufe (Slot-Lease). Heute lädt nur ein Prozess Modelle und jedes Rezept hat 1 Slot; das ändert eine Regel aus `ENTWICKLUNG.md` und braucht deshalb eine Captain-Freigabe und eine Doku-Änderung.

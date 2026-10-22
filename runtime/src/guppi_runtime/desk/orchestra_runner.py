@@ -228,8 +228,13 @@ def _research(hub, orch, scope, attempt, plan, first, cap):
             records.append({"url": url, "sha256": got["sha256"], "text": got.get("content") or ""})
     if not records:
         raise ValueError("research_invalid:keine_quelle")
-    follow = plan["messages"] + [{"role": "user", "content": runner.external_block(records)
-                                  + "\n\nAntworte jetzt mit {zusammenfassung, quellen:[{url, sha256}]} – nur Quellen von oben."}]
+    # S1-F-RECHERCHE-TRUST: der Webtext ist fremde Daten (`trust: untrusted`, wie der Wissensblock in `wissen.lauf`), getrennt
+    # vom Anweisungssatz des Captains; ohne Kennzeichen stufte der Inhaltsschutz den Block nach der Rolle `user` als `captain` ein.
+    follow = plan["messages"] + [
+        {"role": "user", "trust": "captain",
+         "content": "Es folgt der Block der gelesenen Quellen als fremde Daten. Antworte danach mit "
+                    "{zusammenfassung, quellen:[{url, sha256}]} – nur Quellen aus dem Block."},
+        {"role": "user", "trust": "untrusted", "content": runner.external_block(records)}]
     second = _ask(hub, orch, scope, attempt, follow, RESEARCH_SCHEMA, cap)
     return runner.research_outcome(second.get("parsed"), records)
 
