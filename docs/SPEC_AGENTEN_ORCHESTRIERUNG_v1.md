@@ -2157,6 +2157,190 @@ Neue Gates aus der Prüfung:
 
 Kein Testlauf (`pytest`, `uix_check`), keine Browserprüfung, kein Cloud-Aufruf; `local_config/` und `cloud_keys.json` nicht geöffnet. Nicht gelesen: `desk/events.py`, `desk/decisions.py`, `provider_health`, die Tests im Einzelnen, der Wortlaut der Regeln in `docs/ENTWICKLUNG.md`, Preislisten; Mammouth-Nutzungsbedingungen und -Datenschutzseite (nicht abrufbar, siehe Prüfung der Nutzungsbedingungen).
 
+### Nachtrag Cloud-Coder und Coder-Verbund (Entwurf bis G1)
+
+Stand 22.10.2026, Branch `spec3/cloud-gateway` nach dem Merge von `spec/agenten-orchestrierung` (Spec 1 bis `tick.py` und Dauerfreigabe; Design Spec 2 gelesen auf `spec2/modelle-scheduler`, Commit `585142b`). Grundlage ist die Entscheidung des Captains vom 22.10.2026 (Zeile „Cloud-Coder (Richtung)“): Weg (b), Cloud als **Ausweichstufe** für die Coder-Agenten aus Spec 1, nur mit Entscheidung des Captains je Lauf, nur bei einem Anbieter ohne Training mit den Eingaben, SEDRA-Bauten bleiben lokal. Dazu der Wunsch „Coden mit mehreren Modellen an verschiedenen Teilen“ (Coder-Verbund). Nur gelesen und geschrieben: kein Cloud-Aufruf, keine GPU, kein Schlüssel. Die Webrecherche (Abschnitt N4) las öffentliche Seiten der Anbieter, keine API.
+
+#### N1 Abgleich gegen den Code
+
+| Baustein | Befund | Folge |
+| --- | --- | --- |
+| Agentenlauf (`orchestra/runner.py`, Spec 1 D1.5) | Vier Modi: `arbeit`, `zerlegen`, `bericht`, `recherche`; das Modell antwortet nur im Schema (`ARBEIT_SCHEMA`: `antwort`, `fertig`), ohne Werkzeuge. Ein Coder-Bauauftrag mit Dateiänderung ist laut D1.5 ein **zweites Gate** `agent.assign` (Agent Manager, DevVM-Bau). Das Prüfergebnis des versteckten Tests setzt `board.set_check` (grün/rot). | Der Cloud-Coder braucht ein eigenes Antwortschema (Patch) im Modus `arbeit`; der Weg über `agent.assign` bleibt lokal. |
+| Zerlegung (`orchestra/decompose.py`) | Schema je Teilaufgabe: `titel`, `beschreibung`, `rolle`, `blocker`, `akzeptanz`; höchstens 8 Teile (`max_subtasks`); mehrere Agenten gleicher Rolle: der mit den wenigsten offenen Aufgaben; eine Zerlegung je Elternaufgabe (`decomposed_at`); Teile gehen nur an Untergebene ohne Delegationsrecht. Blocker-Zyklen werden abgewiesen. | Es fehlen **Dateibesitz**, **Schnittstelle** und **Nachzerlegung** (Nacharbeit nach rotem Gesamttest). Das ist eine Änderung an Spec 1, siehe N6. |
+| Brett (`orchestra/board.py`) | Atomarer Checkout (`checkout`), Blocker (`set_blocker`, `clear_blocker`), Prüfergebnis (`set_check`), Bericht (`children_done`), `delegate`. | Reihenfolge und Abhängigkeiten des Verbunds sind vorhanden; Dateibesitz nicht. |
+| Routing (`models/role_routing.py`, `config/role_routing.yaml`) | Rezepte mit `location: local \| cloud`; `policy.cloud_allowed` (Standard `false`); Cloud-Rezept nur mit `captain_cloud_approved` **je Auflösung**; `data_class` ab `confidential` verbietet Cloud; `network`-Anforderung; `independent_of` verlangt ein anderes Modell für den Reviewer. Es gibt kein Feld „trainiert mit Eingaben“. | Die Mechanik „Cloud nur mit Freigabe je Lauf“ ist da (Vorarbeit von Phase 2); neu ist das Anbieter-Merkmal ohne Training und ein Cloud-Coder-Rezept. |
+| Cloud-Adapter (`models/cloud_api.py`) | Lehnt `tools`, `response_format` und `stream_guard` laut ab (`UNSUPPORTED_OPTIONS`); schreibt nichts, führt nichts aus. | „Keine Werkzeuge in der Cloud“ ist im Adapter schon erzwungen. Strukturierte Antwort (Patch) läuft über Prompt und lokale Prüfung (`models/structured.py`), nicht über `response_format`. |
+| Scheduler (Design Spec 2, D2.4, D2.10) | Wartegründe aus `slotplan.decide_reason`; `needs_cloud_offer` bei `queue_max` (6) oder `wait_max_s` (600 s); Entscheidung `kind: cloud_offload`; Annahme setzt nur den Vermerk `cloud_offload_approved` am Job, **ohne Wirkung** bis Spec 3 (G2-S2-10). Ein Server, ein Rezept (`scheduler.swap` Standard `none`). | Spec 3 gibt der Annahme eine Wirkung; Gründe „GPU exklusiv“, „Server gesperrt“, „kein Coder-Modell“ sind in Spec 2 als Wartegründe nicht alle als Auslöser des Angebots vorgesehen (nur Schlange und Wartezeit). |
+| Bauweg (`ENTWICKLUNG.md` L1, L2; `devvm_build.py`) | Ein Bauweg mit Profil `standard`, Bau-Spec mit versteckten Tests und Stempel; `--all-models coder.local_primary`. | SEDRA-Bauten sind lokal festgelegt; der Nachtrag muss das mit einem Test festhalten (CLC-11). |
+| Inhaltsschutz und GateWay | wie im Abgleich G1 Spec 3 oben: Scanner auf dem Cloudweg, `klassen.einstufen` nur im GateWay-Vorgang, kein Anbieter in der Matrix. | Die Einstufung des Cloud-Pakets muss auf beiden Ebenen laufen (CLC-04). |
+| Budget | `orchestra/budgetcalc.py`, `spend` je Agent (Spec 1); Cloud-Zähler (`spend` mit Anbieter) laut CLD-05 noch nicht gebaut. | Kosten des Cloud-Coders hängen am Zähler aus Spec 3. |
+
+#### N2 Cloud als Ausweichstufe für Coder-Agenten (Anforderungen)
+
+Geltungsbereich: Aufgaben des Bretts im **Projektordner** des Captains (Modus `arbeit`, Rolle `coder`). Nicht dazu gehören SEDRA-Bauten (`devvm_build`, Bau-Specs `s*_*`), der Quelltext von SEDRA selbst und alles unter `core/`.
+
+| ID | Anforderung (EARS) | Abnahmekriterium |
+| --- | --- | --- |
+| CLC-01 | WENN ein Coder-Lauf wartet und der Scheduler einen der Gründe meldet – GPU exklusiv für ein anderes Vorhaben, Server gesperrt, kein Coder-Modell geladen, Schlange über `queue_max` oder Wartezeit über `wait_max_s` –, DANN SOLL das System dem Captain die Ausweichstufe **vorschlagen**, höchstens einmal je Lauf und `offer_every_s`. | Fake-Scheduler: je Grund genau ein Vorschlag; ein Lauf der Rolle `reviewer` oder `planner` und jeder `devvm_build` erzeugt keinen |
+| CLC-02 | Ohne ausdrückliche Annahme SOLL der Lauf lokal bleiben; es gibt keine Automatik, keine Regel und keine Dauerfreigabe, die einen Coder-Lauf in die Cloud schickt. | Ohne Annahme 0 Zeilen `CLOUD_CALL`; eine Regel in `cloud_rules.yaml` deckt Rolle `coder` nicht (CLD-03: Ausnahme) |
+| CLC-03 | WENN der Captain den Vorschlag annimmt, DANN SOLL das System ein **Cloud-Paket** bilden: Aufgabentext, Akzeptanz und ausdrücklich gewählte Auszüge aus Dateien des Projektordners. Nie enthalten: Schlüsseldateien, `local_config/`, `runtime_data/`, Audit, Dateien außerhalb des Projektordners, Quelltext von SEDRA, Kommentare mit Fremdtext (`untrusted_external`). | Test: ein Paket mit einer ausgeschlossenen Datei, einem Pfad aus dem Quellbaum von SEDRA oder einem Fremdtext-Block wird abgelehnt; Größengrenze greift |
+| CLC-04 | Das Paket SOLL vor jedem Angebot eingestuft werden: Scanner des Inhaltsschutzes **und** `klassen.einstufen`, begrenzt durch die Obergrenze des Anbieters. Treffer für Geheimnisse, Personenbezug (R-01), gekennzeichnete Quellen oder jedes Merkmal über SK0 verhindern das Angebot; der Grund steht sichtbar am Lauf, der Lauf bleibt lokal. | Testfälle: Schlüsselformat, Personenbezug, Hard Block, `untrusted`, SK2; Entscheidung entsteht nicht, Lauf wartet lokal |
+| CLC-05 | WENN ein Paket zulässig ist, DANN SOLL eine Entscheidung im Eingang entstehen mit Anbieter, Modell, geschätzten Kosten (Token und Credits oder Euro), Einstufung, Dateiliste mit Größe, Hash des Pakets und der Alternative „lokal warten“ (geschätzte Wartezeit). Ändert sich das Paket, verfällt die Entscheidung. | Entscheidung zeigt alle sieben Angaben; Änderung einer Datei danach ergibt `binding_stale`; „lokal warten“ lässt den Lauf unverändert |
+| CLC-06 | Die Cloud SOLL nur einen **Änderungsvorschlag** liefern (Schema `patch`, `erlaeuterung`, `offene_punkte`); sie bekommt keine Werkzeuge und kein Schreibrecht, und die Antwort gilt als Daten. | Adapter lehnt `tools` ab (vorhanden); Antwort außerhalb des Schemas oder mit Anweisung an das System löst kein Verb und kein Gate aus |
+| CLC-07 | Der Patch SOLL **lokal** geprüft und ausgeführt werden: nur Pfade im Besitz der Aufgabe, nicht Tests, Specs und Konfiguration, keine Binärdateien, Größengrenze; Anwenden in der Sandbox oder DevVM, dieselben Tests wie bei einem lokalen Lauf (`board.set_check`), Review durch einen anderen Agenten mit anderem Modell (`independent_of`). Ins Projekt kommt nichts ohne die Übernahme des Captains. | Patch mit Pfad außerhalb des Besitzes oder auf eine Testdatei wird abgelehnt; roter Test setzt `check_result = rot`; Reviewer und Autor haben nie dasselbe Modell |
+| CLC-08 | Jeder Cloud-Lauf SOLL gegen die Grenzen der Cloud-Stufe zählen (Minute, Tag, Guthaben, je Agent) und beim Hard-Stop (CLD-05) lokal bleiben. | `spend`-Zeile mit Agent und Anbieter; bei erreichtem Limit kein Aufruf |
+| CLC-09 | Je Entscheidung SOLL es genau **eine** Cloud-Runde geben. Fällt die Cloud aus oder ist der Patch ungültig oder rot, wartet oder endet der Lauf lokal; eine weitere Runde braucht eine neue Entscheidung. | Fehlertest: kein zweiter Aufruf ohne neue Entscheidung; kein stiller Wechsel (CLD-07) |
+| CLC-10 | Das Ergebnis SOLL als „von Cloud-Modell X“ gekennzeichnet sein (CLD-06) und der Aufruf als `CLOUD_CALL` im Audit stehen: Anbieter, Modell, Token, Kosten, Einstufung, `task_id`, `run_id`, `decision_id`, Hash von Paket und Patch, ohne Text. | Kennzeichen am Kommentar und am Prüfbericht; Audit-Zeile ohne Text |
+| CLC-11 | Bau-Specs, `devvm_build`, Agent-Manager-Läufe (`agent.assign`) und Dateien im Quellbaum von SEDRA SOLLEN nie ein Cloud-Rezept auflösen. | Test: `devvm_build` und `bridge.submit` lehnen ein Cloud-Rezept ab (`cloud_not_allowed_for_build`) |
+| CLC-12 | Ein Cloud-Rezept für Coder SOLL nur wählbar sein, wenn sein Anbieter als „ohne Training mit API-Eingaben“ geführt ist, mit Datum der Prüfung der Bedingungen; ohne Eintrag oder bei einem Bedingungsstand, der älter als 90 Tage ist, ist es nicht wählbar. | Rezept ohne Feld oder mit altem Datum: `provider_terms_unverified` |
+
+Ablauf:
+
+```
+Scheduler: Coder-Lauf wartet, Grund ∈ {gpu exklusiv, gesperrt, kein Modell, Schlange, Wartezeit}
+  → Vorschlag cloud_offload (Anzeige, ohne Inhalt)                         Spec 2, CLC-01
+Captain: „Cloud-Angebot vorbereiten“
+  → Paket bilden (lokal, kein Netz) → Scanner + klassen.einstufen + Anbieter-Obergrenze     CLC-03, 04
+      unzulässig → Lauf bleibt lokal, Grund sichtbar
+      zulässig   → Entscheidung cloud_call (GA-05) mit Hash, Einstufung, Kosten, Dateiliste, „lokal warten“   CLC-05
+Captain: „Einmal senden“ → resolve_role('coder', captain_cloud_approved=True) → ContentGuard → Cloud (eine Runde)   CLC-09
+  → Antwort = Patch (Daten) → Pfad- und Größenprüfung → Sandbox/DevVM → Tests → Review (anderes Modell)   CLC-06, 07
+  → Kommentar „von Cloud-Modell X“, spend, CLOUD_CALL → Aufgabe `wartet` (Übernahme durch den Captain)
+```
+
+Zwei Schritte, weil der Scheduler zum Zeitpunkt des Vorschlags noch kein Paket kennt: Der Captain soll vor jeder Freigabe sehen, **was** hinausgeht (der Hash allein sagt ihm das nicht).
+
+#### N3 Einordnung von CLD-09 (Claude Code und Codex)
+
+Claude Code und Codex sind Agenten mit Schreibrecht und Werkzeugen; CLC-06 verbietet beides in der Cloud. Sie bleiben deshalb in der Nach-Startphase (G1-S3-03) als eigener Weg „Agent im Käfig“ (DevVM), nicht Teil dieses Nachtrags. Der Cloud-Coder hier ist ein **API-Modell** über `cloud_api.py`, das einen Patch liefert. Nicht geprüft: Datenregeln der Verbraucher-Pläne von Claude Code und Codex (andere Bedingungen als die API).
+
+#### N4 Anbieter ohne Training mit API-Eingaben (Recherche 22.10.2026)
+
+Gelesen wurden die öffentlichen Seiten der Anbieter, keine API aufgerufen. Das ist keine Rechtsprüfung. „Primär“ heißt: Text des Anbieters gelesen; „Zweitquelle“ heißt: Aussage Dritter, nicht bestätigt.
+
+| Anbieter | Training mit API-Eingaben | Aufbewahrung, Ort | Quelle | Einordnung |
+| --- | --- | --- | --- | --- |
+| NVIDIA API Catalog (Trial) | **darf** Eingaben und Ergebnisse zur Verbesserung seiner Produkte „einschließlich KI-Modelle“ nutzen (3.3); nur Test und Evaluation (1.4) | Protokolle für Sicherheit | Primär: [Trial Terms](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf) | **ungeeignet** für Coder |
+| Mammouth | eigene Aussage: kein Training; Modellhersteller laut Mammouth ohne Speicherung | Protokolle höchstens 30 Tage (eigene Aussage) | Zweitquelle: [Spiegel der Datenschutzseite](https://tostracker.app/document/mammouthai-privacy); Primär nur die [API-Doku](https://info.mammouth.ai/docs/api-quick-start/) (ohne Datenregeln) | **offen**: Primärtext nach Anmeldung lesen (G1-S3-13); hängt zusätzlich vom Modellhersteller ab |
+| Anthropic API | „Anthropic may not train models on Customer Content from Services“ (Abschnitt B) | Löschung nach 30 Tagen laut Behördenseite von Anthropic (Zweitquelle); DPA nicht gelesen | Primär: [Commercial Terms](https://www.anthropic.com/legal/commercial-terms) | **geeignet** (vertraglich), kostet Geld |
+| OpenAI API | „data sent to the OpenAI API is not used to train or improve OpenAI models“ (außer Opt-in) | Missbrauchsprotokolle bis 30 Tage; Zero Data Retention nur mit Zulassung; EU-Speicherort auf Antrag | Primär: [Your data](https://developers.openai.com/api/docs/guides/your-data) | **geeignet**, kostet Geld |
+| Google Gemini API | bezahlt: kein Training; **unbezahlt: Training und menschliche Durchsicht** | Protokolle begrenzt, Frist nicht genannt; weltweit | Primär: [Gemini API Terms](https://ai.google.dev/gemini-api/terms) | nur mit aktiver Abrechnung geeignet; der kostenlose Zugang nicht |
+| Mistral (La Plateforme) | „will not use Customer Data or Outputs to train“ (4.2), **Ausnahmen**: Opt-in, Rückmeldungen, Order Form, Labs- und Preview-Modelle (4.3) | Frist in den Bedingungen nicht genannt (Zweitquellen: 30 Tage, EU-Hosting); DPA vorhanden, nicht gelesen | Primär: [Commercial Terms](https://legal.mistral.ai/terms/commercial-terms-of-service) | geeignet ohne Preview-Modelle, kostet Geld |
+| Fireworks AI | die gelesene Seite sagt nichts zum Training; offene Modelle werden nicht gespeichert (Standard) | Responses-API 30 Tage bei `store=true` | Primär (Teil): [Data handling](https://docs.fireworks.ai/guides/security_compliance/data_handling) | **offen**, Training nicht belegt |
+| Groq, Together AI | Zweitquellen: kein Training, Aufbewahrung je nach Vertrag | unklar | Zweitquelle: [Groq](https://meetily.ai/llm-privacy/groq) | **ungeprüft** |
+| DeepSeek (eigene API) | Zweitquelle: Verarbeitung in China, Training standardmäßig mit Opt-out | unklar | Zweitquelle: [DeepSeek](https://meetily.ai/llm-privacy/deepseek) | **ungeeignet** |
+
+Befunde:
+
+1. Vertraglich belegt „ohne Training“ sind Anthropic, OpenAI, Gemini (nur bezahlt) und Mistral (mit Ausnahmen). Alle vier kosten Geld, und die Startphase hat 0 € extra, `paid_action` steht auf BLOCK (G1-S3). **Der Cloud-Coder kann in der Startphase also nur über Mammouth laufen** (Abo-Guthaben, 0 € zusätzlich), und das erst nach Lesen der Bedingungen. Sonst braucht es ein Budget (G1-S3C-05).
+2. Die Datenregeln von Mammouth schwanken mit dem Modellhersteller: Welches Modell Mammouth aufruft, bestimmt, was mit den Eingaben passiert. Der Adapter sollte deshalb nur Modelle aus einer freigegebenen Liste zulassen (Anbieter-Tabelle, Obergrenze).
+3. Die Anbieter-Tabelle der Cloud-Regeln bekommt zwei Stufen: **öffentlich** (NVIDIA Trial: nur wirklich öffentlicher Inhalt, G1-S3-12) und **intern ohne Training** (geprüfter Vertrag). Eigener Quelltext des Projekts darf nur zur zweiten Stufe. Das macht die Matrix nicht weiter: Der Weg bleibt SK0 mit `CLOUD_ALLOWED`; die Stufe des Anbieters verfeinert, was „SK0“ beim Anbieter heißt.
+4. Bedingungen ändern sich: das Datum der Prüfung steht am Rezept und läuft nach 90 Tagen ab (CLC-12).
+
+#### N5 Coder-Verbund: Coden mit mehreren Modellen an verschiedenen Teilen
+
+Idee: Der Unterarbeiter zerlegt einen Auftrag in Teile mit klaren Dateigrenzen; mehrere Coder-Agenten bauen sie gleichzeitig; danach werden die Ergebnisse zusammengeführt und gemeinsam getestet und geprüft.
+
+**Zwei Stufen.** Der Verbund hat heute zwei sehr verschiedene Gegenstände:
+
+- **Stufe A, SEDRA-Module:** Ein Teil ist eine Bau-Spec mit eigenen versteckten Tests, eigener Referenz und eigenen Dateien (wie die elf Bauten `s1_*`, die disjunkte Module wie `graphs.py` oder `routines.py` liefern). Sie läuft über den einen Bauweg, mit Stempel (L2), nur lokal (CLC-11). Der Verbund ist hier die gleichzeitige Ausführung mehrerer Bau-Specs auf mehreren Slots (Spec 2) plus gemeinsamer Test; die Übernahme ist `adopt_plan` oder Handkopie (L5).
+- **Stufe B, freie Aufgaben des Bretts:** Ein Teil ist eine Aufgabe mit Besitz-Dateien und einem Test, den der Planer **vor** dem Bau schreibt. Hier ist auch ein Cloud-Teil möglich (je Teil eine Entscheidung nach CLC-05). Stufe B braucht eine Antwort auf die Frage, **woher der Test eines Teils kommt**; ohne sie fehlt der Richter (Grundsatz „Richter ist der versteckte Test, nicht das Modell“). Empfehlung: Stufe B erst nach Stufe A und nach einer Messung (V4).
+
+| ID | Anforderung (EARS) | Abnahmekriterium |
+| --- | --- | --- |
+| VRB-01 | WENN der Unterarbeiter einen Auftrag für den Verbund zerlegt, DANN SOLL jeder Teil seine **Besitz-Dateien** (Liste oder Muster), seine lesbaren Dateien und seinen Test nennen; die Besitzmengen verschiedener Teile sind **disjunkt**. | `decompose.check` lehnt Überschneidung ab (`besitz_overlap`); ein Teil ohne Besitz oder ohne Test ist ungültig |
+| VRB-02 | **Schnittstellen zuerst:** Der Verbund SOLL mit einem Schnittstellen-Teil (Typen, Signaturen, Testgerüste) beginnen, den alle anderen Teile als Blocker haben; seine Dateien sind für die übrigen Teile nur lesbar. | Blocker aller Teile auf Teil 0 (`board.set_blocker`); Patch eines Teils auf eine Schnittstellen-Datei ist rot |
+| VRB-03 | Jeder Teil SOLL in einer eigenen Kopie der Basis arbeiten (Basis-Hash fest); ein Patch darf nur Besitz-Dateien ändern. | Verstoß: Teil rot mit Grund `besitz_verletzt`, kein Merge |
+| VRB-04 | Die Zuordnung Teil → Modell SOLL der Router nach Rolle und Rezept treffen, nie das Modell selbst; der Reviewer des Gesamtergebnisses SOLL ein anderes Modell als die Coder haben. | Zuordnung im Audit je Teil; `independent_of` greift |
+| VRB-05 | Die Zahl gleichzeitiger Teile SOLL durch die freien Slots (Spec 2) und `max_parallel` begrenzt sein; ohne Slot wartet ein Teil (oder wird nach CLC-01 vorgeschlagen). | 4 Teile bei 2 Slots: höchstens 2 laufen |
+| VRB-06 | Nach allen Teilen SOLL ein rein deterministischer Schritt die Patches in fester Reihenfolge auf die Basis anwenden und Konflikte melden (Basis geändert, Besitz verletzt, Anwendung scheitert). | Reiner Test mit Fixture-Patches: gleiche Eingabe, gleiche Ausgabe; Konflikt wird benannt |
+| VRB-07 | Danach SOLL ein gemeinsamer Testlauf in der microVM laufen (Tests aller Teile plus Integrationstest). Ist er rot, SOLL das System den Fehler den Teilen zuordnen, dem Unterarbeiter berichten (ORC-18) und höchstens **zwei** Nacharbeitsrunden zulassen; danach entscheidet der Captain. | Roter Gesamttest: Bericht mit Teile-Tabelle (grün/rot/nicht geprüft); nach der dritten roten Runde Entscheidung |
+| VRB-08 | Das Gesamtergebnis SOLL erst nach grünem Test vom Reviewer geprüft werden; die Übernahme bleibt beim Captain. | Review vor Test nicht möglich; `uebernehmen` nur nach Review |
+| VRB-09 | Der Unterarbeiter SOLL das Budget des Verbunds vorab schätzen (Teile × Token-Grenze der Rolle, Cloud-Anteile in Anfragen und Guthaben); überschreitet es das Restbudget, entscheidet der Captain. | `budgetcalc.precheck` je Teil und Summe; Überschreitung ergibt Entscheidung statt Lauf |
+| VRB-10 | Der Start eines Verbunds SOLL eine Freigabe des **Plans** brauchen (Teile, Besitz, Basis-Hash, Modell- und Budgetzuordnung); die Weckrufe der Coder-Agenten bleiben je Lauf `wake_agent` (einzeln oder Dauerfreigabe). | Freigabe bindet den Plan-Hash; Änderung am Plan ergibt `binding_stale`; ohne `wake_agent` kein Lauf |
+| VRB-11 | Der Bericht an den Captain SOLL je Teil Modell, Zustand, Prüfergebnis, Kosten und – bei Cloud – Kennzeichen nennen. | Bericht enthält die Spalten; fehlendes Prüfergebnis heißt „nicht geprüft“ |
+| VRB-12 | Der Verbund SOLL keinen **zweiten Bauweg** schaffen: Bau läuft über `devvm_build` (Stufe A) oder über den Patch-Weg aus N2 (Stufe B), geprüft in derselben microVM und mit denselben Testregeln. | Kein neuer Aufrufer von `create_job` oder `agent.assign` außer dem vorhandenen Weg |
+
+Zu klären, mit Empfehlung:
+
+| Frage | Empfehlung |
+| --- | --- |
+| Zuschnitt der Teile | Teil = Dateigruppe mit eigener öffentlicher Schnittstelle; Schnittstellen-Teil zuerst; höchstens 4 Teile je Verbund in der Startphase (Slots), `max_subtasks` 8 bleibt Obergrenze |
+| Besitz von Dateien | Besitz je Teil disjunkt, vom Unterarbeiter vorgeschlagen und im Plan freigegeben; gemeinsame Dateien (Konfiguration, `__init__`) gehören dem Schnittstellen- oder Integrationsteil |
+| Reihenfolge und Abhängigkeiten | Blocker auf dem Brett (vorhanden); ein Teil darf auf ein anderes erst bauen, wenn dessen Schnittstelle in Teil 0 steht |
+| Konflikt | Besitz-Konflikte werden vorher ausgeschlossen (VRB-01, 03); verbleibende semantische Konflikte zeigt der Gesamttest; kein automatisches Auflösen durch ein Modell |
+| Roter Gesamttest | Fehler den Teilen zuordnen (Datei im Stacktrace → Besitzer), Nacharbeit nur für die betroffenen Teile, höchstens zwei Runden, danach Captain |
+| Zuordnung Modelle | Rolle `coder` → Rezept über `role_routing`; mehrere lokale Modelle **gleichzeitig** gibt es auf einer 12-GB-GPU nicht (ein Server, ein Rezept, Spec 2 D2.10, `swap` Standard `none`). Gleichzeitig laufen also **mehrere Slots desselben Modells**; verschiedene Modelle entstehen nur seriell (Umladen, langsam) oder durch einen Cloud-Teil. Das ist für den Captain die wichtigste Erwartungsfrage (offene Frage 1) |
+| Budget je Teil | Token-Grenze je Rolle aus Spec 1; Cloud-Teile gegen die Grenzen der Cloud-Stufe; Verbund-Summe in der Plan-Freigabe |
+| Abgrenzung „ein Bauweg“ | Der Verbund ist ein Plan über mehrere Bauten, kein neuer Bauweg (VRB-12) |
+
+Schnittstellen:
+
+| Zu | Was der Verbund braucht | Änderung |
+| --- | --- | --- |
+| Spec 1 | `decompose.SCHEMA` bekommt `besitz`, `liest`, `test`; `check` prüft Disjunktheit und Schnittstellen-Teil; zweite Zerlegung (Nacharbeit) trotz `decomposed_at`; Rolle „Integration“ als Teilaufgabe, die von allen Teilen blockiert ist; Bericht um Spalten Modell, Kosten, Kennzeichen | Nachtrag Spec 1 (Gate G1-S3C-14); keine Änderung an `core/` |
+| Spec 2 | Slots als Parallelität, Wartegrund „kein Slot“ als Auslöser nach CLC-01, Annahme von `cloud_offload` mit Wirkung | G2-S2-10 neu (N6) |
+| Spec 3 | Cloud-Rezept, Anbieter-Stufen, `cloud_call`-Bindung, Zähler | CLC-01 bis CLC-12 |
+| Spec 4 | Entscheidung `cloud_call` und Plan-Freigabe im Eingang, Verbund-Ansicht (Teile, Besitz, Zustand) im Werkzeug `board` | Hinweis an Spec 4 (kein Bau in diesem Nachtrag) |
+
+#### N6 Änderungen an bestehenden Festlegungen (alt / neu)
+
+| Stelle | alt | neu (Vorschlag) |
+| --- | --- | --- |
+| G1-S3-08 | „… Mammouth nur Abo-Guthaben, **Coder nur lokal** …“ | „Coder nur lokal, **außer** als Ausweichstufe nach CLC-01 bis CLC-12: nur Aufgaben des Bretts im Projektordner, nur mit Entscheidung des Captains je Lauf, nur bei einem Anbieter ohne Training mit den Eingaben; SEDRA-Bauten und `devvm_build` bleiben immer lokal.“ |
+| Budgetzeile „Je Agent“ (Spec 3) | „Coder: nur lokal – Ein Coder-Lauf erzeugt nie einen Cloud-Aufruf“ | „Coder: lokal; Cloud nur als Ausweichstufe mit Entscheidung je Lauf (CLC-02). Ein Coder-Lauf erzeugt ohne diese Entscheidung nie einen Cloud-Aufruf.“ |
+| CLD-03 | „… außer eine freigegebene Regel deckt Agent, Schutzklasse, Anbieter und Budget.“ | „… Ausnahme: Für die Rolle `coder` deckt **keine** Regel; sie braucht immer die Entscheidung je Lauf (CLC-02).“ |
+| G1-S3-12 | „SK0 heißt für die Cloud öffentlich …“ | „… **beim Anbieter der Stufe ‚öffentlich‘**; beim Anbieter der Stufe ‚intern ohne Training‘ darf SK0 auch eigenen Projekt-Quelltext einschließen (Entscheidung je Lauf).“ |
+| G2-S2-10 / SCH-07 (Spec 2) | „Cloud-Vorschlag nur Anzeige und Ablehnen; Annahme wirkt erst mit Spec 3“ | „Annahme öffnet bei Rolle `coder` den Schritt ‚Paket vorbereiten‘ (CLC-03 bis 05); für andere Rollen gilt die Regel der Cloud-Stufe. Als Auslöser kommen die Wartegründe aus CLC-01 hinzu.“ |
+| Spec 1, `decompose.py` (ORC-17) | Teile ohne Besitz; eine Zerlegung je Elternaufgabe | Felder `besitz`, `liest`, `test`; Nachzerlegung für Nacharbeit, höchstens zwei Runden (VRB-01, 07) |
+| `role_routing.yaml` | `policy.cloud_allowed: false`; kein Feld zum Training | Feld je Cloud-Rezept `provider_terms: {trains_on_inputs: false, checked_on: <Datum>}`; `cloud_allowed` bleibt `false`, bis G1-S3C-09 freigegeben ist |
+
+#### N7 Guard-Aktionen
+
+| Gate | Aktion | Bedeutung | Vorschlag | Stufe | Begründung |
+| --- | --- | --- | --- | --- | --- |
+| G1-S3C-GA-01 | `cloud_call` (GA-05, vorhanden im Vorschlag) | einzelner Cloud-Aufruf eines Coder-Laufs mit Bindung an Hash des Pakets, Einstufung, Anbieter, Modell, Kostenschätzung | CAPTAIN_REQUIRED; für Rolle `coder` **keine** Regel-Ausnahme | 6 | CLC-02, CLC-05 |
+| G1-S3C-GA-02 | `start_verbund` (neu) | Plan eines Coder-Verbunds freigeben (Teile, Besitz, Basis-Hash, Modelle, Budget) | CAPTAIN_REQUIRED | 5 | VRB-10; Weckrufe bleiben `wake_agent` |
+
+Nicht neu nötig: `credential_access` (Schlüssel), `set_cloud_rules`, `set_budget` (Budget des Verbunds), `delegate_task` und `assign_task` (Zerlegung), `create_new_artifact` (Kommentare). Die Dauerfreigabe `standing` gilt nur für `wake_agent` und ersetzt `cloud_call` und `start_verbund` nie.
+
+#### N8 Gate-Liste G1-S3C
+
+Alles ist ein Vorschlag des Vorarbeiters; der Captain entscheidet jedes Gate einzeln.
+
+| Gate | Entscheidung, die der Captain trifft | Empfehlung |
+| --- | --- | --- |
+| G1-S3C-01 | Geltungsbereich: Cloud-Coder nur für Aufgaben des Bretts im Projektordner; SEDRA-Bauten, `devvm_build`, Agent-Manager-Läufe und der Quelltext von SEDRA bleiben immer lokal (CLC-11) | ja |
+| G1-S3C-02 | Zwei Schritte: Vorschlag ohne Inhalt, dann Paketfreigabe je Lauf mit Hash, Einstufung, Kosten, Dateiliste und „lokal warten“ (CLC-01 bis 05); keine Regel und keine Dauerfreigabe für Rolle `coder` | ja |
+| G1-S3C-03 | Die Cloud liefert nur einen Patch im festen Schema, ohne Werkzeuge und Schreibrecht; Anwenden, Test und Review lokal; Tests, Specs und Konfiguration sind tabu (CLC-06, 07) | ja |
+| G1-S3C-04 | Anbieter-Stufen „öffentlich“ und „intern ohne Training“ in der Anbieter-Tabelle; Cloud-Coder nur zur zweiten Stufe; Verfeinerung von G1-S3-12 (N4, N6) | ja |
+| G1-S3C-05 | Erster Anbieter für den Cloud-Coder: Mammouth, wenn nach der Anmeldung die Bedingungen und „Privacy with model providers“ ohne Training bestätigen und die Modelle auf eine freigegebene Liste begrenzt sind. Ohne Bestätigung braucht der Cloud-Coder ein Budget (`paid_action` öffnen) und einen bezahlten Anbieter (Anthropic, OpenAI, Mistral ohne Preview-Modelle, Gemini mit Abrechnung) | Mammouth zuerst, sonst bezahlter Anbieter erst nach dem Monatsbudget (vier Wochen Auswertung) |
+| G1-S3C-06 | G1-S3-08 und die Budgetzeile „Je Agent“ in der Fassung N6; CLD-03 mit der Ausnahme für `coder` | ja |
+| G1-S3C-07 | Eine Cloud-Runde je Entscheidung; Ausfall, ungültiger oder roter Patch lassen den Lauf lokal; weitere Runde nur mit neuer Entscheidung (CLC-09) | ja |
+| G1-S3C-08 | Kennzeichen „von Cloud-Modell X“ und Audit `CLOUD_CALL` mit `task_id`, `run_id`, `decision_id`, Paket- und Patch-Hash (CLC-10); Review durch ein anderes Modell | ja |
+| G1-S3C-09 | Rezept `coder.cloud_<anbieter>` und Feld `provider_terms` in `role_routing` (Änderung `models/role_routing.py` und Overlay, `cloud_allowed` wird erst danach `true`); Bedingungsstand höchstens 90 Tage alt (CLC-12) | ja |
+| G1-S3C-10 | Verbund Stufe A (Bau-Specs auf mehreren Slots, nur lokal) wird zuerst gebaut; Stufe B (freie Aufgaben, Cloud-Teil) erst nach einer Messung und einer Antwort auf die Frage, woher der Test eines Teils kommt | ja |
+| G1-S3C-11 | Besitz und Schnittstellen zuerst: disjunkter Dateibesitz, Schnittstellen-Teil als Blocker aller Teile, Verstöße rot (VRB-01 bis 03) | ja |
+| G1-S3C-12 | Zusammenführung als reines Modul (SEDRA-Bau, L4, Bau-Spec mit versteckten Tests), gemeinsamer Test in der microVM, höchstens zwei Nacharbeitsrunden, danach Captain (VRB-06, 07) | ja |
+| G1-S3C-13 | Parallelität nur durch Slots desselben Modells; verschiedene lokale Modelle gleichzeitig sind auf 12 GB nicht vorgesehen; Modellvielfalt über Cloud-Teil oder seriell | ja, sofern der Captain das so erwartet (offene Frage 1) |
+| G1-S3C-14 | Nachtrag Spec 1: Felder `besitz`, `liest`, `test`, Nachzerlegung, Integrationsteil, erweiterter Bericht (Änderung `orchestra/decompose.py` und Bericht; kein Eingriff in `core/`) | ja, als eigenes Gate in Spec 1 |
+| G1-S3C-15 | Änderung G2-S2-10 in Spec 2 (Annahme von `cloud_offload` mit Wirkung für Coder, zusätzliche Auslöser) | ja |
+| G1-S3C-16 | Budget des Verbunds: Vorabschätzung durch den Unterarbeiter, Summe in der Plan-Freigabe, Cloud-Teile gegen die Grenzen der Cloud-Stufe (VRB-09) | ja |
+| G1-S3C-17 | CLD-09 (Claude Code, Codex) bleibt in der Nach-Startphase als eigener Weg „Agent im Käfig“ (N3) | ja |
+| G1-S3C-GA-01, GA-02 | die zwei Guard-Aktionen `cloud_call` (mit Bindung, ohne Regel-Ausnahme für `coder`) und `start_verbund` | wie vorgeschlagen |
+
+#### N9 Offene Fragen an den Captain (nicht blockierend für G1)
+
+1. Erwartung „mehrere Modelle“: Genügen mehrere **Slots desselben** lokalen Modells (gleichzeitig), mit anderen Modellen nur seriell oder als Cloud-Teil? Auf einer 12-GB-GPU laufen nicht zwei verschiedene Modelle zugleich.
+2. Wer schreibt in Stufe B den Test eines Teils: der Planer-Agent, ein Mensch oder Claude als Vorarbeiter (wie bei Bau-Specs)? Ohne Test fehlt der Richter.
+3. Darf der Cloud-Coder in der Startphase nur über Mammouth laufen (0 € extra), oder soll bereits jetzt ein kleines Monatsbudget für einen bezahlten Anbieter geplant werden?
+4. Soll die Plan-Freigabe eines Verbunds die Einzelfreigaben der Läufe (`wake_agent`) ersetzen dürfen? Das würde einen Eingriff in `core/guard.py` brauchen und ist hier **nicht** vorgeschlagen.
+5. Welche Dateien des Projektordners dürfen nie in ein Cloud-Paket (Vorschlag: Liste in `cloud_rules.yaml`, Standard: alles außer ausdrücklich gewählten Auszügen)?
+
+#### N10 Nicht geprüft
+
+Kein Test, kein Lauf, kein Cloud-Aufruf. Nicht gelesen: der vollständige Code von `board.py` und `service.py`, `desk/orchestra_runner.py` (noch nicht gebaut), die Daten- und Auftragsverarbeitungsverträge (DPA) von Anthropic, OpenAI, Google und Mistral, die Mammouth-Bedingungen und -Datenschutzseite, die Bedingungen von Groq, Together AI und DeepSeek (nur Zweitquellen), Preislisten, Datenregeln der Verbraucher-Pläne von Claude Code und Codex. Alle Zahlen (4 Teile, 2 Nacharbeitsrunden, 90 Tage) sind Startwerte ohne Messung.
+
 ## Spec 4 – Oberfläche: die Paperclip-Shell (D)
 
 Shell D ist die Arbeitsfläche für das Agenten-Team: Navigation wie bei Paperclip, jeder Agent als eigenes Gesprächsfenster, Aufgaben, Entscheidungen und Slots live. Sie hält den Shell-Werkzeug-Vertrag v1 ein und nutzt vorhandene Werkzeuge, bevor neue entstehen.
