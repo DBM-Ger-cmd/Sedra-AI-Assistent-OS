@@ -91,7 +91,9 @@ for expr in ("", "* * * *", "* * * * * *", None, 5):
 cases = [("60 * * * *", "minute"), ("*/0 * * * *", "minute"), ("5-1 * * * *", "minute"), ("x * * * *", "minute"), ("1,,2 * * * *", "minute"), ("-1 * * * *", "minute"),
          ("* 24 * * *", "hour"), ("* * 0 * *", "day"), ("* * 32 * *", "day"), ("* * * 13 *", "month"), ("* * * foo *", "month"), ("* * * mon *", "month"),
          ("* * * * 8", "weekday"), ("* * * * mon-sun", "weekday"), ("* * * * jan", "weekday"), ("* * * * */x", "weekday"), ("* * * * ²", "weekday"),
-         ("60 24 * * *", "minute"), ("* * * dec-feb *", "month")]
+         ("60 24 * * *", "minute"), ("* * * dec-feb *", "month"),
+         ("0 0-99 * * *", "hour"), ("50-60 * * * *", "minute"), ("* * 0-5 * *", "day"), ("* * * 1-13 *", "month"), ("* * * * 0-8", "weekday"),
+         ("70/5 * * * *", "minute"), ("* 25/2 * * *", "hour"), ("* * 32/1 * *", "day")]
 for expr, field in cases:
     raises("cron_invalid:" + field, parse, expr)
 '''
@@ -181,7 +183,9 @@ table = [("30 6 * * *", "jeden Tag um 06:30 Uhr"), ("0 9 * * 1-5", "montags bis 
          ("0,30 6,18 * * *", "jeden Tag um 06:00, 06:30, 18:00 und 18:30 Uhr"), ("0 6 1,15 * *", "am 1. und 15. des Monats um 06:00 Uhr"),
          ("0 6 1 jan,jul *", "am 1. des Monats im Januar und Juli um 06:00 Uhr"), ("0 6 1 * 1", "am 1. des Monats oder montags um 06:00 Uhr"),
          ("*/15 * * * 1", "montags alle 15 Minuten"), ("0 6 * 3 *", "jeden Tag im März um 06:00 Uhr"), ("0 * * 12 *", "jeden Tag im Dezember stündlich zur vollen Stunde"),
-         ("0 9 * * 6-7", "samstags und sonntags um 09:00 Uhr")]
+         ("0 9 * * 6-7", "samstags und sonntags um 09:00 Uhr"), ("0 6 1,10,15 * *", "am 1., 10. und 15. des Monats um 06:00 Uhr"),
+         ("0 9 * * 5-7", "freitags bis sonntags um 09:00 Uhr"), ("0 9 * * 0-5", "montags, dienstags, mittwochs, donnerstags, freitags und sonntags um 09:00 Uhr"),
+         ("0 9 * * 5,6,0,1", "montags, freitags, samstags und sonntags um 09:00 Uhr")]
 for expr, want in table:
     assert describe(parse(expr)) == want, expr
 for expr in ("* * * * *", "0 */2 * * *", "*/15 9-17 * * 1-5", "* 6 * * *", "0 0,1,2,3,4,5,6,7,8 * * *"):
@@ -204,7 +208,7 @@ STAGES = [
      "task": """Create `cron.py` (Python 3 standard library only) with `parse(expr)` -> dict, a checked cron expression. expr is a string of exactly 5 fields separated by whitespace (leading and trailing spaces allowed): minute 0-59, hour 0-23, day 1-31, month 1-12, weekday 0-7 (0 and 7 are Sunday).
 - A field is a comma list of parts; a part is '*', a number, a range 'a-b' (a <= b), each of them optionally with a step '/s' (s a positive integer). 'n/s' means from n to the field's maximum in steps of s ('10/20' minute = 10, 30, 50). Month names jan..dec and weekday names sun..sat are allowed (any case) wherever a number is; numbers are ASCII digits only.
 - Result: {"minute": [...], "hour": [...], "day": [...], "month": [...], "weekday": [...]} each a sorted list of the matching values without doubles (weekday 7 becomes 0), plus "day_any" (the day field is exactly '*'), "weekday_any" (the weekday field is exactly '*'), "every" (s when the minute field is exactly '*/s', else None) and "text" (the five fields joined with one space).
-- Errors: not a string or not exactly 5 fields -> ValueError('cron_invalid:fields'); otherwise the first bad field from the left -> ValueError('cron_invalid:<name>') with name minute, hour, day, month or weekday (unknown name, value out of range, empty part, step 0 or not a number, range with a > b).""",
+- Errors: not a string or not exactly 5 fields -> ValueError('cron_invalid:fields'); otherwise the first bad field from the left -> ValueError('cron_invalid:<name>') with name minute, hour, day, month or weekday (unknown name, value out of range – this includes both ends of a range 'a-b' and the start n of 'n/s' –, empty part, step 0 or not a number, range with a > b).""",
      "hidden": H1},
     {"name": "match",
      "task": """Add `next_after(cron, after_utc, tz)` to `cron.py` (keep everything else). cron is the dict of parse; after_utc a UTC text '2026-10-21T08:00:00Z' (format '%Y-%m-%dT%H:%M:%SZ'); in this stage tz is always 'UTC'.
@@ -229,7 +233,7 @@ The tests give the zone as a tzinfo object with the EU rule (PEP 495 fold), so n
     {"name": "describe",
      "task": """Add `describe(cron)` -> German sentence or None to `cron.py` (keep everything else), display only, the same sentences as Shell D's cronText for these forms (anything else: None):
 - time part: "every" set and all 24 hours -> 'alle <s> Minuten'; else all 60 minutes -> None; else all 24 hours: minutes [0] -> 'stündlich zur vollen Stunde', one minute -> 'stündlich zur Minute 15', more -> 'stündlich zu den Minuten 00 und 30'; else every hour x minute combination as 'HH:MM' (hour order, then minute order): at most 8 -> 'um 06:00, 06:30, 18:00 und 18:30 Uhr', more -> None. The first two kinds ('alle ...', 'stündlich ...') are a "pulse".
-- day part: day field restricted (not day_any) -> 'am 1. und 15. des Monats'; weekday restricted -> the days in the order Monday..Sunday with the names sonntags, montags, dienstags, mittwochs, donnerstags, freitags, samstags: three or more days in an unbroken row -> 'montags bis freitags', else listed ('samstags und sonntags'); both restricted -> joined with ' oder '; none restricted -> 'jeden Tag'. Months, when not all 12: ' im ' + the month names (Januar, Februar, März, April, Mai, Juni, Juli, August, September, Oktober, November, Dezember) listed.
+- day part: day field restricted (not day_any) -> 'am 1. und 15. des Monats'; weekday restricted -> the days in the order Monday..Sunday with the names sonntags, montags, dienstags, mittwochs, donnerstags, freitags, samstags: three or more days in an unbroken row of that order (Sunday is the last day, the row never wraps to Monday) -> 'montags bis freitags', else listed ('samstags und sonntags'); both restricted -> joined with ' oder '; none restricted -> 'jeden Tag'. Months, when not all 12: ' im ' + the month names (Januar, Februar, März, April, Mai, Juni, Juli, August, September, Oktober, November, Dezember) listed.
 - Lists: one item as it is, more as 'a, b und c'. Sentence: 'jeden Tag' with a pulse and all months -> only the time part; else day part + month part + ' ' + time part (e.g. 'am 1. des Monats im Januar und Juli um 06:00 Uhr', 'montags alle 15 Minuten').""",
      "hidden": H6},
 ]
