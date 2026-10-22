@@ -2,6 +2,9 @@ r"""S0 connection check per recipe (process "from the bottom up", docs/PROZESS_G
 
     .venv\Scripts\python.exe benchmarks/connection_check.py <project_dir> <recipe_id> [<recipe_id> ...] [--context 32768] [--set KEY=VALUE ...]
 
+--parallel N (Spec 2, S2.H0) starts the server with N slots and --context PER SLOT (-c = N x context); the checks then run against the one slot window. The S0 state
+(s0_status) is NOT written for N > 1: it holds for the default settings only.
+
 --set changes a server setting for this check only (the recipe file is not touched), e.g. --set flash_attn=on --set kv_cache_type=q8_0 --set ubatch=512; the stored S0 state
 then holds for exactly these settings (devvm_build compares them with its own --server-set).
 
@@ -66,16 +69,16 @@ def prompt_maker(endpoint):
     return make
 
 
-def check(runtime, recipe, context, server=None):
+def check(runtime, recipe, context, server=None, parallel=1):
     alias = str(recipe.get("model") or recipe["id"])
     started = datetime.now(timezone.utc).isoformat(timespec="seconds")
     try:
-        runtime.load_model(alias, context_length=context, gpu="max", identifier=alias, parallel=1, server=server or recipe["profile"]["server"])
+        runtime.load_model(alias, context_length=context * parallel, gpu="max", identifier=alias, parallel=parallel, server=server or recipe["profile"]["server"])
     except Exception as exc:
         return {"recipe": recipe["id"], "ok": False, "load_error": str(exc)[:300], "checks": [], "context": context, "measured_at": started}
     try:
         out = run_all(poster(runtime.endpoint, alias), alias, context, prompt_maker(runtime.endpoint))
-        return {"recipe": recipe["id"], "model": alias, "context": context, "measured_at": started, **out}
+        return {"recipe": recipe["id"], "model": alias, "context": context, "parallel": parallel, "measured_at": started, **out}
     finally:
         runtime.unload_model(all_models=True)
 
@@ -83,6 +86,7 @@ def check(runtime, recipe, context, server=None):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("project"); ap.add_argument("recipes", nargs="+"); ap.add_argument("--context", type=int, default=32768)
+    ap.add_argument("--parallel", type=int, default=1, choices=range(1, 9), metavar="N", help="server slots; --context is the window per slot")
     ap.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE")
     args = ap.parse_args()
     from devvm_build import server_settings
@@ -99,10 +103,11 @@ def main():
             if not recipe or recipe.get("provider") != "llama-cpp-server":
                 print(f"{rid:28s} not a llama-cpp-server recipe, skipped", flush=True); continue
             server = {**recipe["profile"]["server"], **overrides}
-            result = check(runtime, recipe, args.context, server)
+            result = check(runtime, recipe, args.context, server, args.parallel)
             result["overrides"] = overrides
-            (out_dir / f"connection_check_{rid}_{date.today().isoformat()}.json").write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
-            save_s0(project, rid, result, server, config.engine_build)      # the S0 state that devvm_build reads (s0_status)
+            (out_dir / f"connection_check_{rid}{'_p%d' % args.parallel if args.parallel > 1 else ''}_{date.today().isoformat()}.json").write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+            if args.parallel == 1:
+                save_s0(project, rid, result, server, config.engine_build)      # the S0 state that devvm_build reads (s0_status)
             details = " ".join(f"{c['check']}={c['detail']}" for c in result["checks"]) or result.get("load_error", "")
             print(f"{rid:28s} {'OK  ' if result['ok'] else 'FAIL'} {details}", flush=True)
 
