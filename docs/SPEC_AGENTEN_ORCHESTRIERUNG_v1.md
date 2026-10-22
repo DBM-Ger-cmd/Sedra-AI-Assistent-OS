@@ -1905,12 +1905,111 @@ Nicht geprüft in dieser Stufe: Ausführen von Tests, Oberfläche, Modell, GPU; 
 
 ### Aufgaben
 
-- [ ] S2.0 Messwerkzeuge erweitern (`--parallel`, `slot_throughput.py`), ohne GPU testen (S2.H0) → G2-S2-02
-- [ ] S2.1 Messplan ausführen (unter GPU-Lease, Rezepte nur mit Sicherung) → Messbericht; Ausführung braucht eigene Freigabe mit GPU-Zeit
-- [ ] S2.2 Regeländerung zur GPU-Lease in `ENTWICKLUNG.md` als Entwurf (steht oben) → Captain-Gate, Änderung erst nach Bau
-- [x] S2.3 Design `model_scheduler.py` und Tabelle `slot_leases` → G2 (ausgearbeitet 22.10.2026, D2.1 bis D2.13)
-- [ ] S2.4 Bau-Specs `s2_slotplan`, `s2_vramplan`, `s2_slot_store` in `devvm_specs/` → G3
-- [ ] S2.5 Harness S2.H1 bis S2.H7 (Supervisor, Loader, Router, Oberfläche, Konfiguration) → G4
+- [x] S2.0 Messwerkzeuge erweitern (`--parallel`, `slot_throughput.py`), ohne GPU testen → als S2.H0 unten eingeplant
+- [ ] S2.1 Messplan ausführen (unter GPU-Lease, Rezepte nur mit Sicherung) → Messbericht; eigene Freigabe mit GPU-Zeit (G3-S2-06)
+- [ ] S2.2 Regeländerung zur GPU-Lease in `ENTWICKLUNG.md` (Entwurf steht oben) → Captain-Gate, Änderung erst nach Bau und Abnahme (G3-S2-14)
+- [x] S2.3 Design `model_scheduler.py` und Tabelle `slot_leases` → G2 (erteilt 22.10.2026, G2-S2-01 bis 16)
+- [x] S2.4 Bau-Specs `s2_slotplan`, `s2_slot_store` in `devvm_specs/` mit Referenz und `spec_check` = ok (22.10.2026, siehe „Bauschritte S2“); `s2_vramplan` entfällt nach V4 → G3
+- [ ] S2.5 Bau durch SEDRA (zwei Module), Harness S2.H1 bis S2.H7, Review, Übernahme → G4
+
+#### Bauschritte S2 (Stufe 3, Vorlage für G3)
+
+Stand 22.10.2026, Branch `spec2/modelle-scheduler` (nach Merge von `spec/agenten-orchestrierung`), geschnitten aus D2.1 bis D2.13 (G2-S2-01 bis 16 erteilt). Wer baut: **SEDRA** = neues Modul mit Bau-Spec (`runtime/benchmarks/devvm_specs/s2_*.py`, versteckte kumulative Tests) und grüner Referenz (`devvm_refs/s2_*/`, nur Prüfmittel); **Claude** = direkt geschrieben nach V4; **Harness** = Eingriff in vorhandene Dateien, Konfiguration, Desk, Supervisor, Router und Lauf. Gelaufen ist nur `spec_check <n>` auf dem Host (ohne `--vm`, ohne GPU, ohne Modell); kein `devvm_build`. Vor dem Bau schreibt Claude je Bau-Spec den Stempel mit `spec_check <n> --vm --project <projekt>` (Schritt 2 aus `SO_WIRD_GEBAUT.md`) und prüft die Zeilenenden (OP-S2-11).
+
+**Saat** `benchmarks/s2_schema_seed/` (PIPE-10, Feld `SEED` in `s2_slot_store`): `slot_db.py` = die vier Tabellen (`slot_server`, `slot_leases`, `handover_requests`, `slot_events`) als `SCHEMA`, `immediate()` und `open_db()`; dazu `slotplan.py` (byte-gleich mit der Referenz von `s2_slotplan`). Die Referenz von `s2_slot_store` enthält die ganze Saat plus `slot_store.py`. S2.H1 baut dieselben Tabellen wörtlich in `testlab.SCHEMA` (ein Test vergleicht beide Texte); ändert sich die Saat, muss `s2_slot_store` neu gestempelt werden.
+
+**V4 für `s2_vramplan`:** Der Code wäre rund 45 Zeilen (drei Funktionen). Eine Bau-Spec mit drei Stufen bräuchte nach den Vergleichsstücken (`s2_slotplan`: Spec 184 Zeilen und Referenz 100 für 100 Zeilen Code) rund 130 Zeilen Spec und Tests plus 45 Zeilen Referenz, also etwa das Vierfache des Codes → **Claude baut direkt** (S2.C1), wie `budgetcalc` in Spec 1. Wörtlich verfehlt auch `s2_slotplan` V4 (Spec 1,8-fach, Referenz so groß wie der Code), `s2_slot_store` ebenso (1,7-fach); beide bleiben nach der Auslegung von OP-S1-11 bei SEDRA, weil der Code deutlich über 60 Zeilen liegt und die Schnittstelle klar ist (G3-S2-01, 03).
+
+SEDRA-Bauten (eine GPU-Lease, ein Bau zur Zeit, nach der Messung; Zahlen = neue versteckte Prüfungen je Stufe, gezählt von `spec_check`):
+
+| Nr | Bau-Spec | Ziel im Paket | Stufen (neue Prüfungen) | Saat | Referenz (Zeilen) | `spec_check` (Host) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | `s2_slotplan` | `jobs/slotplan.py` | priority 20, order 13, admit 17, reason 20, offer 17 | – | `devvm_refs/s2_slotplan/slotplan.py` (100) | result ok |
+| 2 | `s2_slot_store` | `jobs/slot_store.py` | request 19, server 18, note 14, take 16, release 19, handover 19, view 15 | ja | `devvm_refs/s2_slot_store/slot_store.py` (185) | result ok; erste Stufe scheitert auf der Saat |
+
+Beide Stufenfolgen halten L3 (höchstens 20 neue Prüfungen). Die reine Bau-Spec `s2_slotplan` importiert weder `guppi_runtime` noch `sqlite3` (Prüfung `test_model_scheduler_boundary.py` nach der Übernahme).
+
+Schnittstellen, die die Bau-Specs gegenüber D2.2/D2.3 festlegen oder ändern (der Harness hält sich daran):
+
+- Zeit überall als UTC-Text `YYYY-MM-DDTHH:MM:SSZ`, auch in den neuen Tabellen von `testlab.db` (die alten Tabellen behalten `REAL`); die Fassade `model_scheduler.py` wandelt die Uhr des Testlabors in diesen Text.
+- `slotplan.decide_reason(server, wanted_recipe, mode, active, cfg)`: **ohne** `waiting_len` (der Wert wäre ungenutzt). Gründe: `gesperrt`, `exklusiv:<eigner>`, `drain`, `server_startet`, `model_swap_not_allowed`, `kein_slot`, sonst `None`. `server` trägt `state`, `slots`, `recipe`, `owner`.
+- `slotplan.admit`: `server.state` `aus` lässt genau einen Starter zu, solange nichts aktiv ist; `bereit` bis `slots − aktiv`; alle anderen Zustände und jeder Modus außer `normal` nichts.
+- `cfg`-Schlüssel der reinen Funktionen: `age_after_s`, `age_cap`, `swap` (`none`, `idle` oder `{fallback: <rezept>}`), `queue_max`, `wait_max_s`. Altern gilt nur unterhalb von `age_cap`; ein Eintrag ab `age_cap` bleibt unverändert.
+- `slot_server` hat die zusätzliche Spalte `owner` (Eigner des Modus `exklusiv`, von `decide_reason` gelesen). Ereignisse: `kind` ist freier Text (`take`, `release`, `reap`, `handover`, `server_<zustand>`); `request` schreibt kein Ereignis.
+- `slot_store`: neben `request`, `take`, `release`, `beat`, `reap`, `view` gehören `set_server` (Zustandswechsel, erhöht `gen` bei `startet`, setzt aktive Leases beim Wechsel nach `aus`/`gesperrt` auf `unterbrochen`), `note` (Zähler für `restarts` und `garbage` im Zeitfenster, SCH-08), `events` und die drei `handover_*` dazu. `reap(conn, live_run_ids, now)`: `live_run_ids` sind **alle** Läufe, die noch fragen können (wartende und laufende); die Uhr gibt nie einen Platz frei. `take(conn, run_id, now, cfg, recipe=None)` verlangt vorheriges `request`.
+- `vramplan` (S2.C1, ohne Bau-Spec): `server_need(weights_gb, kv_gb_per_slot, slots, compute_gb=0.0, ram_gb=0.0) -> {vram_gb, ram_gb}` (Gewichte einmal, KV je Slot); `fits(need_gb, limit_gb, reserve_gb, measured_free_gb) -> None | {need_gb, measured_free_gb, limit_gb, reason}` mit `reason` `limit` (Bedarf > `limit_gb`, die Reserve zieht dort das Hauptbuch des `resource_scheduler` ab) oder `frei` (Bedarf > `measured_free_gb − reserve_gb`); `max_slots(weights_gb, kv_gb_per_slot, compute_gb, limit_gb, cap=8) -> int` (größtes N mit `weights + compute + kv·N ≤ limit`, 0 wenn schon 1 nicht passt). Das ändert D2.2 (dort `reserve_gb` auch bei `max_slots`, `limit − reserve` als Grenze): Der Captain hat „Obergrenze 11,5 GB, Reserve 0,7 GB“ freigegeben; die Reserve wirkt auf der Messseite und im Hauptbuch, nicht doppelt auf der Grenze (OP-S2-10).
+
+Claude direkt (V4):
+
+| Schritt | Inhalt | Dateien | G2-Gate | hängt ab von |
+| --- | --- | --- | --- | --- |
+| S2.C1 | `vramplan.py` mit den drei Funktionen oben und Tests (Grenzfälle `limit`/`frei`, Gewichte einmal, `max_slots` 0 und Deckel 8, negative Werte `value_invalid`) | `jobs/vramplan.py`, `tests/test_vramplan.py` | G2-S2-02, 08 | – |
+
+Harness (Claude):
+
+| Schritt | Inhalt | Dateien | G2-Gate | hängt ab von |
+| --- | --- | --- | --- | --- |
+| S2.H0 | `--parallel N` in `context_ladder.py` und `connection_check.py` (füllt alle N Slots gleichzeitig zu 85 %), neues `slot_throughput.py`; Tests mit unechtem Server, keine GPU | `benchmarks/context_ladder.py`, `connection_check.py`, `slot_throughput.py`, `tests/test_context_ladder_parallel.py` | G2-S2-14 | – (zuerst) |
+| S2.M | Messung S2.1 nach Messplan (Hauptmodell Slots 1 bis 4, Hilfsmodell, S0 je Einstellung), Messbericht, Vorschlag Standard-Slotzahl und `per_slots` | `runtime_data/measurements/…`, Bericht, `MODELLE.md` (Tabelle) | G1-S2-k, G3-S2-06 | S2.H0, freie GPU, eigene Freigabe |
+| S2.H1 | `testlab.py`: Schema 2 (die vier Tabellen wörtlich aus der Saat, `PRAGMA user_version` 2), `register_waiter` in `acquire`; Sicherung `testlab.db.bak-<datum>-schema2`; Test, dass `SCHEMA` und Saat gleich sind | `jobs/testlab.py`, `tests/test_testlab.py` | G2-S2-03 | – |
+| S2.H2 | `role_routing.py` (`slots`, `per_slots`, `slots_not_measured`), `model_loader.py` (`slots` aus dem Rezept, Fenster als Summe), `llama_server_runtime.py` (Auswertung von `parallel`), `llama_server.yaml` unverändert | `models/role_routing.py`, `model_loader.py`, `llama_server_runtime.py`, `tests/test_role_routing.py`, `test_model_loader.py`, `test_llama_server_runtime.py`, `test_model_scheduler_server.py` | G2-S2-05 | – |
+| S2.H3 | Übernahme der zwei SEDRA-Module (nach G4, nur Importe relativ) plus S2.C1; Fassade `model_scheduler.py` (Besitz von Server und Lade-Lease, `ensure_server`, `take_for_job`, `slot`, `release`, `reap`, `exclusive`, `view`, `poll`), `config/model_scheduler.yaml` und Overlay-Leser, Audit mit Werten in `resource_scheduler.py`, Meldung `model_scheduler_error` | `jobs/model_scheduler.py`, `slotplan.py`, `slot_store.py`, `vramplan.py`, `runtime/config/model_scheduler.yaml`, `jobs/resource_scheduler.py`, `tests/test_model_scheduler_*.py`, `test_resource_scheduler.py` | G2-S2-01, 02, 08, 16 | S2.H1, S2.H2, G4 der Module, S2.C1 |
+| S2.H4a | `job_supervisor.py`: `workers` 1..8, `claim` nimmt den Platz (`take`) und sortiert mit Altern, `confirm_start` mit `ensure_server` statt Reservierung je Job, `_release` und `reap` mit dem Scheduler, `ctx.heartbeat` ruft `beat`; `job_supervisor.yaml` `claim_timeout_s` 240 | `jobs/job_supervisor.py`, `jobs/job_worker.py`, `runtime/config/job_supervisor.yaml`, `tests/test_job_supervisor.py` | G2-S2-04, 12 | S2.H3 |
+| S2.H4b | Worker-Pool mit `workers` Threads und `priority` aus der Herkunft der Aufgabe in `start_run` (eine Zeile) | `desk/orchestra_runner.py`, `tests/test_orchestra_run.py` | G2-S2-04, 12 | S2.H4a, **S1.H8** (die Datei wird dort erst gebaut) |
+| S2.H5 | Haken `slot_guard` im Router; Werkstatt (`model laden/entladen`) über den Scheduler, `gpu_token` und `_start_lease_beat` entfallen; `desk_snapshot` mit `slots` und `slot.changed`; `gpu_preflight` schont lebende Leases; Strip-Wert `slots` | `models/router.py`, `uix_server.py`, `desk/events.py`, `models/gpu_preflight.py`, `tests/test_desk_events.py`, `test_model_scheduler_lease.py`, `test_model_scheduler_handover.py` | G2-S2-05, 07, 13 | S2.H3 |
+| S2.H6 | Entscheidungsart `cloud_offload` (nur Anzeige, Ablehnen), Zustand `gesperrt` als Entscheidung | `desk/decisions.py`, `jobs/model_scheduler.py`, `tests/test_model_scheduler_offer.py`, `test_model_scheduler_crash.py` | G2-S2-10, 11 | S2.H3 (Wirkung der Annahme: Spec 3) |
+| S2.H7 | Abnahme D2.12 (alle Testdateien), `uix_check` `result ok`, Logbuch; danach Regeländerung S2.2 | – | G2-S2-15 | alle |
+
+Testdateien je Anforderung (Abnahme D2.12; wer sie schreibt: die Bau-Specs prüfen die Module einzeln, der Harness schreibt die Integrationstests):
+
+| ID | Testdatei | Aufgabe |
+| --- | --- | --- |
+| SCH-01 | `test_model_scheduler_server.py`, `test_role_routing.py`, `test_context_ladder_parallel.py` | S2.H0, S2.H2 |
+| SCH-02 | `test_slot_store.py`, `test_slotplan.py` (Referenzen der Bau-Specs als Grundlage, dazu Zwei-Prozess-Test mit 100 Durchläufen) | S2.H3 |
+| SCH-03 | `test_vramplan.py`, `test_resource_scheduler.py` | S2.C1, S2.H3 |
+| SCH-04 | `test_slotplan.py`, `test_job_supervisor.py` (Altern in `claim`) | S2.H3, S2.H4a |
+| SCH-05 | `test_role_routing.py`, `test_context_ladder_parallel.py` | S2.H0, S2.H2 |
+| SCH-06 | `test_slotplan.py`, `test_model_scheduler_swap.py` | S2.H3 |
+| SCH-07 | `test_model_scheduler_offer.py` | S2.H6 |
+| SCH-08 | `test_model_scheduler_crash.py` | S2.H6 |
+| SCH-09 | `test_desk_events.py` | S2.H5 |
+| SCH-10 | `test_model_scheduler_handover.py` | S2.H5 |
+| SCH-11 | `test_model_scheduler_lease.py` | S2.H5 |
+| Grenze | `test_model_scheduler_boundary.py` (reine Module ohne `guppi_runtime`/`sqlite3`, `core/` unberührt, `test_core_boundary_src` grün) | S2.H3 |
+
+Reihenfolge: S2.H0 zuerst (ohne GPU gebaut); dann die Messung S2.M mit eigener Freigabe samt GPU-Zeit (sie liefert `per_slots` und die Standard-Slotzahl, die SEDRA-Bauten brauchen die GPU danach). Parallel zur Messung und zu den Bauten Claude: S2.C1, S2.H1, S2.H2. SEDRA-Bauten nacheinander: `s2_slotplan`, dann `s2_slot_store`. Nach G4 der Module: S2.H3 → S2.H4a → S2.H5 → S2.H6; S2.H4b erst, wenn S1.H8 (`desk/orchestra_runner.py`) gebaut ist; danach S2.H7. Spec 2 ändert `tick.py` nicht und läuft auch ohne Spec 1 Schritt H8 bis S2.H6 (Fassade, Supervisor, Router, Oberfläche), nur der Worker-Pool und die Priorität aus der Herkunft der Aufgabe warten auf S1.H8.
+
+#### Gate-Vorschläge G3 Spec 2
+
+| Gate | Gegenstand | baut | Vorschlag |
+| --- | --- | --- | --- |
+| G3-S2-01 | Bau-Spec `s2_slotplan` und SEDRA-Bau `jobs/slotplan.py` | SEDRA | ja |
+| G3-S2-02 | Saat `s2_schema_seed` (vier Tabellen als `slot_db.py` plus `slotplan.py`) | Claude | ja |
+| G3-S2-03 | Bau-Spec `s2_slot_store` und SEDRA-Bau `jobs/slot_store.py` | SEDRA | ja |
+| G3-S2-04 | S2.C1 `vramplan.py` direkt (V4-Entscheidung statt Bau-Spec `s2_vramplan`) mit der Auslegung „Reserve nicht doppelt“ | Claude | ja |
+| G3-S2-05 | S2.H0 Messwerkzeuge `--parallel` und `slot_throughput.py` (ohne GPU gebaut und getestet) | Harness | ja |
+| G3-S2-06 | **Messung S2.1** mit GPU-Zeit: Hauptmodell Slots 1 bis 4, Hilfsmodell, S0 je Einstellung; Dauer bis etwa 3 + 1 Stunden, Zeitfenster und Engine (b11160) vom Captain; Rezepte unverändert, `--set` nur für den Lauf | Harness (Messung) | ja, sobald S2.H0 steht; Zeitfenster nennt der Captain |
+| G3-S2-07 | S2.H1 `testlab.py` Schema 2 und `register_waiter`, Sicherung der Datenbank | Harness | ja |
+| G3-S2-08 | S2.H2 Rezeptfelder `slots`/`per_slots`, Loader-Summe, Auswertung `parallel` | Harness | ja |
+| G3-S2-09 | S2.H3 Fassade, `model_scheduler.yaml`, Audit mit Werten im `resource_scheduler`, Übernahme der Module | Harness | ja |
+| G3-S2-10 | S2.H4a `job_supervisor.py` und `job_supervisor.yaml`: `workers` 1..8, `claim` mit Platz und Altern, `confirm_start`, `claim_timeout_s` 240 | Harness | ja |
+| G3-S2-11 | S2.H4b Worker-Pool und Priorität in `desk/orchestra_runner.py` (nach S1.H8) | Harness | ja |
+| G3-S2-12 | S2.H5 Router-Haken, Werkstatt über den Scheduler, `slots` im Schnappschuss, `slot.changed`, `gpu_preflight` | Harness | ja |
+| G3-S2-13 | S2.H6 `cloud_offload` (nur Anzeige) und Zustand `gesperrt` als Entscheidung | Harness | ja |
+| G3-S2-14 | S2.H7 Abnahme Spec 2 und danach die Änderung von Regel 2 in `ENTWICKLUNG.md` (S2.2) als eigenes Gate | Harness | ja; die Regeländerung erst nach bestandener Abnahme |
+
+G3 gibt die Bauschritte frei, nicht die Übernahme: Jeder SEDRA-Kandidat kommt nach dem Review einzeln zur Übernahme (G4). Die Messung (G3-S2-06) braucht zusätzlich die Freigabe des Zeitfensters, weil sie die GPU belegt und nichts anderes dann laufen darf.
+
+#### Offene Punkte (Stufe 3)
+
+| Nr | Punkt | Vorschlag |
+| --- | --- | --- |
+| OP-S2-10 | `vramplan.fits` wendet die Grenze 11,5 GB **ohne** Reserve an, die Reserve 0,7 GB wirkt auf der Messseite und im Hauptbuch (`resource_scheduler`: Gesamt-VRAM minus Reserve minus Zugesagtes) | so umsetzen; die strengere Regel bleibt wirksam (kleinster Wert aus Grenze, Hauptbuch, Messung); falls der Captain „11,5 inklusive Reserve“ meint, ändert sich nur eine Zeile in `fits` und im Test |
+| OP-S2-11 | Stempel hashen Dateien mit LF; `core.autocrlf = true` kann bei einem frischen Checkout CRLF schreiben und `spec_changed_since_check` auslösen (wie OP-S1-14) | vor dem Bau `spec_check <n> --vm --project <projekt>` erneut; Dauerlösung `.gitattributes` für `benchmarks/` ist ein eigenes Gate |
+| OP-S2-12 | Nur der Host-Lauf von `spec_check` ist gelaufen (Auftrag: kein `--vm`); der Stempel Stufe `vm` und die Prüfung in Python 3.12 der microVM fehlen noch | Claude holt `--vm` direkt vor dem Bau nach; `slot_store` nutzt nur `sqlite3`, `json`, `datetime` (in 3.12 vorhanden) |
+| OP-S2-13 | Neue Tabellen von `testlab.db` verwenden UTC-Text, die alten `REAL`; die Fassade wandelt | akzeptiert; Alternative `REAL` kostet Umbau der reinen Funktionen (Zeittext) und der Saat |
+| OP-S2-14 | `ttl_s` der Leases (Vorgabe 120 s) wird in dieser Stufe nur gespeichert, nicht ausgewertet (`reap` folgt dem Lauf, nicht der Uhr) | Auswertung `stale` in `view` beim Bau von S2.H3 ergänzen, falls der Captain eine Anzeige „Herzschlag fehlt“ will |
+| OP-S2-15 | `s2_slot_store` prüft keine Zwei-Prozess-Wettläufe (ein Prozess in der Bau-Umgebung) | Wettlauftest (100 Durchläufe, 2 Prozesse) im Harness S2.H3, wie `test_orchestra_checkout_race.py` in Spec 1 |
 
 ## Spec 3 – Local First, Cloud Second
 
