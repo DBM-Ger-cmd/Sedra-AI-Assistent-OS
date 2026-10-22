@@ -1,0 +1,1814 @@
+{
+  "name": "wissen_goldsatz_v2",
+  "version": 2,
+  "beschreibung": "Abnahmesatz Spec 7 (S7.5, D7.11, G2-S7-n): 120 Fragen, davon 110 mit Antwort im Speicher und 10 Negativfragen. Eine Frage gilt als getroffen, wenn ein Abschnitt aus den Top 5 zu einer der erwarteten Quellen passt: gleicher Adapter, 'datei' ist Präfix der Datei-Kennung des Abschnitts, und der Text 'abschnitt' kommt im Abschnittspfad vor (Groß-/Kleinschreibung egal). Der Abschnittspfad ist bei Markdown 'Überschrift > Überschrift > ...', beim Logbuch 'Zeile <Zeit> <Art> ...', bei knowledge 'Lektion <Titel>' bzw. 'Notiz <Titel>', bei arbeitsumfeld und gateway der Titel der Zeile. Jede Erwartung zeigt auf Adapter-Inhalt (erwartet_ueber = adapter); Python-Quelltext ist keine Erwartung. Negativfragen (art = negativ) haben keine Quelle: getroffen heißt hier, dass der Speicher offen sagt, dass nichts gefunden wurde. Geschrieben von einer anderen Sitzung aus gelesenem Text, vor dem Einfrieren der Fusion; nie zum Abstimmen benutzt.",
+  "stand_commit": "b945a8d",
+  "arten": {
+    "wortgleich": "Die Frage benutzt die Wörter der Quelle.",
+    "umschrieben": "Die Frage meint dasselbe mit anderen Worten und ohne die kennzeichnenden Wörter der Stelle.",
+    "fachbegriff": "Die Frage umschreibt einen Fachbegriff oder eine Kennung der Quelle, ohne die kennzeichnenden Wörter der Stelle.",
+    "negativ": "Die Antwort steht nirgends in den Quellen; die Frage klingt plausibel."
+  },
+  "gruppen": {
+    "doku": "Adapter markdown: docs/*.md und Specs, Stelle = Überschriftenpfad.",
+    "logbuch": "Adapter logbuch: docs/LOGBUCH_AGENT_MANAGER.md, Stelle = Zeile <Zeit> <Art>.",
+    "knowledge": "Adapter knowledge: Lektionen/Notizen des KnowledgeStore; Platzhalter <KN-ID>/<Titel>, siehe hinweis je Frage.",
+    "arbeitsumfeld": "Adapter arbeitsumfeld: Zeilen der Tabelle wissen aus arbeitsumfeld_wissen.py (Ordner, Vorarbeiter-Aktionen, Sperre, Läufe, Regel- und Auftragsabschnitte).",
+    "gateway": "Adapter gateway: Regeln R-01…R-16, Merkmale, Zustände, Fehler, Begriffe, Leitfaden-Schritte aus gateway/klassen.py und gateway/wissen.py."
+  },
+  "verteilung": {
+    "gesamt": 120,
+    "beantwortbar": 110,
+    "je_art": {
+      "fachbegriff": 30,
+      "negativ": 10,
+      "umschrieben": 50,
+      "wortgleich": 30
+    },
+    "je_gruppe": {
+      "arbeitsumfeld": 20,
+      "doku": 39,
+      "gateway": 26,
+      "knowledge": 11,
+      "logbuch": 24
+    },
+    "je_gruppe_beantwortbar": {
+      "arbeitsumfeld": 18,
+      "doku": 36,
+      "gateway": 24,
+      "knowledge": 10,
+      "logbuch": 22
+    },
+    "liste_oder_tabelle": 40
+  },
+  "fragen": [
+    {
+      "id": "A001",
+      "frage": "Welcher llama.cpp-Build unter engines/llama.cpp ist Standard, und mit welcher Umgebungsvariable wählt man für einen einzelnen Lauf einen anderen?",
+      "art": "wortgleich",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/BETRIEB.md",
+          "abschnitt": "Einrichtung"
+        }
+      ]
+    },
+    {
+      "id": "A002",
+      "frage": "In welcher Datei stehen die echten Ordner dieses Rechners, die in eingecheckten Dateien nur als Platzhalter wie <modelle> erscheinen, und liegt sie im Git?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/BETRIEB.md",
+          "abschnitt": "Einrichtung"
+        }
+      ]
+    },
+    {
+      "id": "A003",
+      "frage": "Welcher Selbsttest der Grafikkarte läuft nach jedem Neustart von Windows vor dem ersten Laden eines Modells, und was hilft meist, wenn er fehlschlägt?",
+      "art": "fachbegriff",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/BETRIEB.md",
+          "abschnitt": "GPU: Lease, Canary, Reserve"
+        }
+      ]
+    },
+    {
+      "id": "A004",
+      "frage": "Was ist die Ursache, wenn jedes Laden mit hardware_pressure scheitert, und was ist die Abhilfe?",
+      "art": "wortgleich",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/BETRIEB.md",
+          "abschnitt": "Störungen"
+        }
+      ]
+    },
+    {
+      "id": "A005",
+      "frage": "Mit welchen Kommandozeilenaufrufen entfernt man ein Modell in die Quarantäne und holt es wieder zurück?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/BETRIEB.md",
+          "abschnitt": "Befehle"
+        },
+        {
+          "adapter": "markdown",
+          "datei": "docs/BETRIEB.md",
+          "abschnitt": "Modelle und Rezepte"
+        }
+      ]
+    },
+    {
+      "id": "A006",
+      "frage": "In welcher Datei des Paketordners steht die Zuordnung von Aktionen zu den Stufen 0 bis 6?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/BETRIEB.md",
+          "abschnitt": "Konfiguration"
+        }
+      ]
+    },
+    {
+      "id": "A007",
+      "frage": "Wie sind die Schlüssel der externen Modellanbieter auf dem Rechner abgelegt, und wie heißt die Umgebungsvariable, die stattdessen gelesen wird?",
+      "art": "fachbegriff",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/BETRIEB.md",
+          "abschnitt": "Cloud-Zugang und KI-Labor (Stand 20.10.2026)"
+        }
+      ]
+    },
+    {
+      "id": "A008",
+      "frage": "Welche Standardeinstellung gilt seit dem 11./12.10. für Flash Attention, KV, ubatch, Slot und Engine?",
+      "art": "wortgleich",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/BETRIEB.md",
+          "abschnitt": "Modelle und Rezepte"
+        }
+      ]
+    },
+    {
+      "id": "A009",
+      "frage": "Was muss man beim allerersten Doppelklick auf die Startdatei auf einem Apple-Rechner eventuell tun?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/BETRIEB.md",
+          "abschnitt": "Starten und Beenden > macOS und Linux"
+        }
+      ]
+    },
+    {
+      "id": "A010",
+      "frage": "Welche drei Abbruchgründe nennt das Bauskript, wenn der Prüfstempel fehlt, veraltet ist oder nur ohne microVM erzeugt wurde?",
+      "art": "fachbegriff",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/ENTWICKLUNG.md",
+          "abschnitt": "Die einheitliche Linie (Captain, 20.10.2026)"
+        },
+        {
+          "adapter": "markdown",
+          "datei": "docs/SO_WIRD_GEBAUT.md",
+          "abschnitt": "Abbruchgrenzen"
+        }
+      ]
+    },
+    {
+      "id": "A011",
+      "frage": "Welche Platzhalter gelten statt lokaler Pfade in eingecheckten Dateien, auch im Logbuch?",
+      "art": "wortgleich",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/ENTWICKLUNG.md",
+          "abschnitt": "Regeln für alle Sitzungen (Mensch und KI)"
+        }
+      ]
+    },
+    {
+      "id": "A012",
+      "frage": "Wie viele Lektionen aus der Wissensbasis sollen einer Aufgabe höchstens beigelegt werden, und warum?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/ENTWICKLUNG.md",
+          "abschnitt": "Erkenntnisse aus den Bauten"
+        }
+      ]
+    },
+    {
+      "id": "A013",
+      "frage": "Welche Partei schreibt die versteckten Abnahmetests, die Referenzlösungen und den Harness, und wer entscheidet über jedes Gate?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/ENTWICKLUNG.md",
+          "abschnitt": "Wer macht was"
+        }
+      ]
+    },
+    {
+      "id": "A014",
+      "frage": "Mit welcher Option wird ein gestoppter Durchlauf ab einer bestimmten Stufe auf dem Stand der zuletzt bestandenen fortgesetzt?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/ENTWICKLUNG.md",
+          "abschnitt": "Ein Bau im Solo-Workflow (Standard seit 2026-10-10)"
+        }
+      ]
+    },
+    {
+      "id": "A015",
+      "frage": "Über wie vielen neuen Prüfungen je Stufe gibt spec_check eine Warnung, und ab wie vielen einen Fehler?",
+      "art": "wortgleich",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/SO_WIRD_GEBAUT.md",
+          "abschnitt": "Abbruchgrenzen"
+        },
+        {
+          "adapter": "markdown",
+          "datei": "docs/ENTWICKLUNG.md",
+          "abschnitt": "Die einheitliche Linie (Captain, 20.10.2026)"
+        }
+      ]
+    },
+    {
+      "id": "A016",
+      "frage": "Wie heißt das Reserveprofil mit Qwen3.5-9B und MTP, und wie wird es aufgerufen?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/SO_WIRD_GEBAUT.md",
+          "abschnitt": "Der Standardbefehl"
+        }
+      ]
+    },
+    {
+      "id": "A017",
+      "frage": "Wer entscheidet in der Abfolge eines Baus über die Übernahme des Kandidaten, und welches Gate ist das?",
+      "art": "fachbegriff",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/SO_WIRD_GEBAUT.md",
+          "abschnitt": "Die Schritte"
+        }
+      ]
+    },
+    {
+      "id": "A018",
+      "frage": "Welches Modell ist Standard-Coder / Hauptagent, und wie heißt sein Rezept?",
+      "art": "wortgleich",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/MODELLE.md",
+          "abschnitt": "Einsatz"
+        }
+      ]
+    },
+    {
+      "id": "A019",
+      "frage": "Mit welchem Kommando holt man die am 12.10. in die Quarantäne verschobenen Modelle zurück?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/MODELLE.md",
+          "abschnitt": "Entfernt am 12.10.2026"
+        }
+      ]
+    },
+    {
+      "id": "A020",
+      "frage": "Warum galt für Qwen3.5 früher nur ein Fenster von 16k, und wurde das mit den heutigen Einstellungen neu gemessen?",
+      "art": "fachbegriff",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/MODELLE.md",
+          "abschnitt": "Bekannte Grenzen"
+        }
+      ]
+    },
+    {
+      "id": "A021",
+      "frage": "Welche Phasen durchläuft der Zustandsautomat in mission.py?",
+      "art": "wortgleich",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/ARCHITEKTUR.md",
+          "abschnitt": "1. Kern"
+        }
+      ]
+    },
+    {
+      "id": "A022",
+      "frage": "Wie lange ist eine Freigabe des Wächters gültig, und woran ist das Einmal-Token gebunden?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/ARCHITEKTUR.md",
+          "abschnitt": "1. Kern"
+        }
+      ]
+    },
+    {
+      "id": "A023",
+      "frage": "Welches Modul legt entfernte GGUF-Dateien unter _guppi_entfernt ab und schaltet ihre Rezepte aus?",
+      "art": "fachbegriff",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/ARCHITEKTUR.md",
+          "abschnitt": "3. Modelle"
+        }
+      ]
+    },
+    {
+      "id": "A024",
+      "frage": "Welche Oberflächen gibt es im Paket, und welche zwei Ordner darunter sind nur Vorlagen?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/ARCHITEKTUR.md",
+          "abschnitt": "6a. Desk, Shells, KI-GateWay, Cloud (Stand 20.10.2026)"
+        }
+      ]
+    },
+    {
+      "id": "A025",
+      "frage": "Welche Ordner sind nicht im Git?",
+      "art": "wortgleich",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/ARCHITEKTUR.md",
+          "abschnitt": "7. Daten und Ordner"
+        }
+      ]
+    },
+    {
+      "id": "A026",
+      "frage": "Welche Wege und welcher Policy-Status gelten bei der Stufe SK1?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/SPEC_GATEWAY_VORGANG_v1.md",
+          "abschnitt": "3. Die Matrix (deterministisch, Fail-Safe)"
+        }
+      ]
+    },
+    {
+      "id": "A027",
+      "frage": "Welche Dateianhänge außer Markdown und Text sind erst für die zweite Ausbaustufe vorgesehen?",
+      "art": "fachbegriff",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/SPEC_GATEWAY_VORGANG_v1.md",
+          "abschnitt": "5. Was bewusst nicht kommt (MVP 1)"
+        }
+      ]
+    },
+    {
+      "id": "A028",
+      "frage": "Auf welchen Wert ist entwuerfe_loeschen_am in vorgaben.yaml gesetzt?",
+      "art": "wortgleich",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/SPEC_GATEWAY_VORGANG_v1.md",
+          "abschnitt": "1. Was die Akte entscheidet – und was SEDRA daraus macht"
+        }
+      ]
+    },
+    {
+      "id": "A029",
+      "frage": "Wie heißt die neue Policyversion, die beide Linien gemeinsam benutzen?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/REGELWERK_DATENKATEGORIEN_CLOUDSPERRE_v0.1_2026-10-15_PROPOSED.md",
+          "abschnitt": "2. Was sich gegenüber"
+        }
+      ]
+    },
+    {
+      "id": "A030",
+      "frage": "Welche vier Nummern des Regelwerks erlauben die Verarbeitung automatisch ohne Durchsicht?",
+      "art": "fachbegriff",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/REGELWERK_DATENKATEGORIEN_CLOUDSPERRE_v0.1_2026-10-15_PROPOSED.md",
+          "abschnitt": "1. Die Regeltabelle"
+        }
+      ]
+    },
+    {
+      "id": "A031",
+      "frage": "Wie viele Anfragen pro Minute und pro Tag sind beim kostenlosen NVIDIA-Zugang systemweit erlaubt?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md",
+          "abschnitt": "Spec 3 – Local First, Cloud Second > Budget der Startphase (Captain, 20.10.2026)"
+        }
+      ]
+    },
+    {
+      "id": "A032",
+      "frage": "In welcher Rangfolge werden wartende Läufe von Captain, Agent und Routine bedient, und welche Zahlen tragen die Stufen?",
+      "art": "fachbegriff",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md",
+          "abschnitt": "Spec 2 – Modell-Scheduler: parallele Agenten > Anforderungen"
+        }
+      ]
+    },
+    {
+      "id": "A033",
+      "frage": "Wie lange gilt das Zugangstoken bei LinkedIn, und wer bekommt ein Refresh-Token?",
+      "art": "wortgleich",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md",
+          "abschnitt": "Spec 6 – Social- und Nachrichten-Zentrale > Was die Plattformen erlauben"
+        }
+      ]
+    },
+    {
+      "id": "A034",
+      "frage": "Bei wie viel Prozent des Verbrauchs soll die Steuerstelle der externen Modelle warnen, und welches Ereignis sendet sie?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md",
+          "abschnitt": "Spec 3 – Local First, Cloud Second > KI-Labor ausbauen (Captain, 20.10.2026)"
+        }
+      ]
+    },
+    {
+      "id": "A035",
+      "frage": "Welches Kriterium verlangt, dass ein Ordner ohne Manifest mit dem Namen der fehlenden Datei abgewiesen wird?",
+      "art": "fachbegriff",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/AUFTRAG_EINHEITLICHER_IMPORT_2026-10-16.md",
+          "abschnitt": "5. Akzeptanzkriterien"
+        }
+      ]
+    },
+    {
+      "id": "A036",
+      "frage": "Wie oft wird ein Schritt nach Zeitlimit, 429 oder 5xx erneut versucht, und welche Pause liegt dazwischen?",
+      "art": "umschrieben",
+      "gruppe": "doku",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/REGELWERK_STANDARDLAEUFE.md",
+          "abschnitt": "4. Abbruch- und Wiederholregeln"
+        }
+      ]
+    },
+    {
+      "id": "A037",
+      "frage": "Warum startet Qwen3-Coder mit 32k und ubatch 2048 nicht?",
+      "art": "wortgleich",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-07 07:55 FEHLER"
+        }
+      ]
+    },
+    {
+      "id": "A038",
+      "frage": "Was wurde am 7.10. aus dem vorbereiteten Hochladen des Projekts auf die öffentliche Code-Plattform?",
+      "art": "umschrieben",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-07 16:34 ENTSCHEIDUNG"
+        }
+      ]
+    },
+    {
+      "id": "A039",
+      "frage": "Welche Prozesse wurden beim Anhalten des Stilprüfungslaufs am006_style beendet, und warum in der Reihenfolge von oben nach unten?",
+      "art": "fachbegriff",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-07 17:12 ENTSCHEIDUNG"
+        }
+      ]
+    },
+    {
+      "id": "A040",
+      "frage": "Wie groß ist die Datei Qwen3.6-35B-A3B-UD-Q4_K_M.gguf in Byte, und von welcher Quelle stammt sie?",
+      "art": "wortgleich",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-10 17:02 DOWNLOAD"
+        }
+      ]
+    },
+    {
+      "id": "A041",
+      "frage": "Welcher Wert für die Expertenschichten im Arbeitsspeicher war beim Durchlauf der Q4_K_M-Variante die letzte Stufe innerhalb der 1-GiB-Reserve?",
+      "art": "umschrieben",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-10 20:17 MESSUNG"
+        }
+      ]
+    },
+    {
+      "id": "A042",
+      "frage": "Auf welchen älteren llama.cpp-Build wurde am 12.10. zurückgewechselt, und wie heißt die Sicherung der Serverdatei?",
+      "art": "fachbegriff",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-12 07:48 KONFIG"
+        }
+      ]
+    },
+    {
+      "id": "A043",
+      "frage": "Warum galten Stufen mit host_hidden in spec_check.py als bestanden, ohne dass ein Test lief?",
+      "art": "wortgleich",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-13 22:34 FEHLER"
+        }
+      ]
+    },
+    {
+      "id": "A044",
+      "frage": "Weshalb lief die mmap-Testkette einer anderen Sitzung am Morgen des 14.10. an, und was geschah mit ihr?",
+      "art": "umschrieben",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-14 08:55 ENTSCHEIDUNG"
+        }
+      ]
+    },
+    {
+      "id": "A045",
+      "frage": "Welche Frist und welche Bezeichnung legte Klaus am 15.10. fest, als das Regelwerk Datenkategorien und Cloudsperre v0.1 verbindlich wurde?",
+      "art": "wortgleich",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-15 14:35 ENTSCHEIDUNG"
+        }
+      ]
+    },
+    {
+      "id": "A046",
+      "frage": "Warum startete die kleine virtuelle Maschine nach dem Umzug des Projektordners nicht mehr, und wie viele Pfade wurden umgestellt?",
+      "art": "umschrieben",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-20 23:17 FEHLER"
+        }
+      ]
+    },
+    {
+      "id": "A047",
+      "frage": "Welcher Fehler machte die drei Vergleichsläufe R1 bis R3 für skill_rank3 ungültig?",
+      "art": "fachbegriff",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-21 00:55 FEHLER"
+        }
+      ]
+    },
+    {
+      "id": "A048",
+      "frage": "Warum bleibt orchestra/cron.py endgültig die Referenz-Fassung?",
+      "art": "wortgleich",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-22 10:41 ENTSCHEIDUNG"
+        }
+      ]
+    },
+    {
+      "id": "A049",
+      "frage": "Auf welchen Wert wurde die Schwelle der Grafikspeicher-Vorprüfung am 22.10. angehoben, und aus welchem Grund?",
+      "art": "umschrieben",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-22 11:55 AENDERUNG"
+        }
+      ]
+    },
+    {
+      "id": "A050",
+      "frage": "Welche Obergrenze der virtuellen Maschine für Gastbefehle je Testlauf brachte die kumulativen Stufen zum Scheitern, und wie wurde das gelöst?",
+      "art": "fachbegriff",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-21 08:08 FEHLER"
+        }
+      ]
+    },
+    {
+      "id": "A051",
+      "frage": "Wie viele Modellaufrufe und Agentenläufe hatte der bestandene Bau skill_rank3 mit Dauer 1850 s, und wie hoch war die Quote Claude/SEDRA?",
+      "art": "wortgleich",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-21 00:44 BAU"
+        }
+      ]
+    },
+    {
+      "id": "A052",
+      "frage": "Wo liegt die Übersicht über Bauaufträge ohne Ergebnis, und wurde dabei etwas entfernt oder verschoben?",
+      "art": "umschrieben",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-20 22:01 HINWEIS"
+        }
+      ]
+    },
+    {
+      "id": "A053",
+      "frage": "Welche Modelldatei stand am 12.10. fälschlich auf der Löschliste, weil ihr Vorhersagekopf noch gebraucht wird?",
+      "art": "umschrieben",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-12 10:04 KORREKTUR"
+        }
+      ]
+    },
+    {
+      "id": "A054",
+      "frage": "Weshalb lehnte der Schiedsrichter die Eigenprüfung bei AM-004 permissions ab, obwohl der versteckte Test bestand?",
+      "art": "fachbegriff",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-07 15:15 MESSUNG"
+        }
+      ]
+    },
+    {
+      "id": "A055",
+      "frage": "Welche Trefferquote erreichte Qwen3.6-35B-A3B im fremden Werkzeug little-coder auf dem Polyglot-Test, und mit welcher Temperatur?",
+      "art": "umschrieben",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-10 14:18 RECHERCHE"
+        }
+      ]
+    },
+    {
+      "id": "A056",
+      "frage": "Welche Downloads und welche GPU-Zeit gab der Captain für S7.1 frei?",
+      "art": "wortgleich",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-22 11:46 ENTSCHEIDUNG"
+        }
+      ]
+    },
+    {
+      "id": "A057",
+      "frage": "Welchen Treffer@5-Wert erreichte BGE-M3 hybrid gegenüber der reinen Wortsuche in der ersten Einbettungsmessung?",
+      "art": "umschrieben",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-22 12:52 MESSUNG"
+        }
+      ]
+    },
+    {
+      "id": "A058",
+      "frage": "Was passierte mit dem laufenden Bau, als der Rechner am 7.10. um 14:08 abstürzte, und wohin wurde der Arbeitsstand gerettet?",
+      "art": "umschrieben",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "logbuch",
+          "datei": "docs/LOGBUCH_AGENT_MANAGER.md",
+          "abschnitt": "Zeile 2026-10-07 14:12 FEHLER"
+        }
+      ]
+    },
+    {
+      "id": "A059",
+      "frage": "Warum darf eine Datei nicht token, secret oder password heißen, und welcher neutrale Name wie usage_meter.py ist stattdessen richtig?",
+      "art": "wortgleich",
+      "gruppe": "knowledge",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "knowledge",
+          "datei": "knowledge:<KN-ID Lektion reserved_name>",
+          "abschnitt": "Lektion <Titel der Lektion reserved_name>"
+        }
+      ],
+      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+    },
+    {
+      "id": "A060",
+      "frage": "Welche Lektion erklärt, dass der abgeschirmte Ausführungsbereich bestimmte Dateinamen als Zugangsdaten verweigert?",
+      "art": "umschrieben",
+      "gruppe": "knowledge",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "knowledge",
+          "datei": "knowledge:<KN-ID Lektion reserved_name>",
+          "abschnitt": "Lektion <Titel der Lektion reserved_name>"
+        }
+      ],
+      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+    },
+    {
+      "id": "A061",
+      "frage": "Welche Regel für die Benennung von Dateien folgt aus der Ablehnung potential_credential_file?",
+      "art": "fachbegriff",
+      "gruppe": "knowledge",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "knowledge",
+          "datei": "knowledge:<KN-ID Lektion reserved_name>",
+          "abschnitt": "Lektion <Titel der Lektion reserved_name>"
+        }
+      ],
+      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+    },
+    {
+      "id": "A062",
+      "frage": "Warum darf ein write call aus der gekürzten History nicht wiederholt werden, und mit welchem Werkzeug liest man die Datei stattdessen?",
+      "art": "wortgleich",
+      "gruppe": "knowledge",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "knowledge",
+          "datei": "knowledge:<KN-ID Lektion placeholder_write>",
+          "abschnitt": "Lektion <Titel der Lektion placeholder_write>"
+        }
+      ],
+      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+    },
+    {
+      "id": "A063",
+      "frage": "Was ist zu tun, wenn im Verlauf ein früherer Schreibvorgang nur noch als Stellvertretertext steht?",
+      "art": "umschrieben",
+      "gruppe": "knowledge",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "knowledge",
+          "datei": "knowledge:<KN-ID Lektion placeholder_write>",
+          "abschnitt": "Lektion <Titel der Lektion placeholder_write>"
+        }
+      ],
+      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+    },
+    {
+      "id": "A064",
+      "frage": "Welche Lektion gehört zum Marker „[written: N characters“ in alten Werkzeugaufrufen?",
+      "art": "fachbegriff",
+      "gruppe": "knowledge",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "knowledge",
+          "datei": "knowledge:<KN-ID Lektion placeholder_write>",
+          "abschnitt": "Lektion <Titel der Lektion placeholder_write>"
+        }
+      ],
+      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+    },
+    {
+      "id": "A065",
+      "frage": "Welche Prüfung soll direkt nach jedem Speichern einer Datei laufen, bevor man weitermacht?",
+      "art": "umschrieben",
+      "gruppe": "knowledge",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "knowledge",
+          "datei": "knowledge:<KN-ID Lektion syntax_error>",
+          "abschnitt": "Lektion <Titel der Lektion syntax_error>"
+        }
+      ],
+      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+    },
+    {
+      "id": "A066",
+      "frage": "Welche Lektion gehört zum Fehlerbild SyntaxError beim Laden eines Moduls?",
+      "art": "fachbegriff",
+      "gruppe": "knowledge",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "knowledge",
+          "datei": "knowledge:<KN-ID Lektion syntax_error>",
+          "abschnitt": "Lektion <Titel der Lektion syntax_error>"
+        }
+      ],
+      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+    },
+    {
+      "id": "A067",
+      "frage": "Was bedeutet die Lektion, dass ein module not available in the sandbox ist, und welche Module sind erlaubt?",
+      "art": "wortgleich",
+      "gruppe": "knowledge",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "knowledge",
+          "datei": "knowledge:<KN-ID Lektion missing_module>",
+          "abschnitt": "Lektion <Titel der Lektion missing_module>"
+        }
+      ],
+      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+    },
+    {
+      "id": "A068",
+      "frage": "Auf welche Bibliotheken darf sich Code im abgeschirmten Bereich beschränken, wenn ein Paket dort fehlt?",
+      "art": "umschrieben",
+      "gruppe": "knowledge",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "knowledge",
+          "datei": "knowledge:<KN-ID Lektion missing_module>",
+          "abschnitt": "Lektion <Titel der Lektion missing_module>"
+        }
+      ],
+      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+    },
+    {
+      "id": "A069",
+      "frage": "Welche Vorarbeiter-Aktion rendert eine .scad-Datei aus der Werkbank mit OpenSCAD zu STL, und welches Zeitlimit gilt?",
+      "art": "wortgleich",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:V-rendern",
+          "abschnitt": "Vorarbeiter-Aktion rendern"
+        }
+      ]
+    },
+    {
+      "id": "A070",
+      "frage": "Welche Aktion des Vorarbeiters legt eine neue Laufdefinition nur an, ohne sie zu starten?",
+      "art": "umschrieben",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:V-lauf_anlegen",
+          "abschnitt": "Vorarbeiter-Aktion lauf_anlegen"
+        }
+      ]
+    },
+    {
+      "id": "A071",
+      "frage": "Wie lange muss zwischen zwei Starts derselben Gattung von Durchläufen mindestens liegen, und woran hängt diese Blockade?",
+      "art": "fachbegriff",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:V-sperre",
+          "abschnitt": "Sperre je Lauf-Art"
+        }
+      ]
+    },
+    {
+      "id": "A072",
+      "frage": "Welches Modell und welchen Schreibbereich hat der Lauf drache als Präzedenzfall?",
+      "art": "wortgleich",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:L-drache",
+          "abschnitt": "Lauf drache (Präzedenzfall)"
+        }
+      ]
+    },
+    {
+      "id": "A073",
+      "frage": "Wie viele Modelle arbeiten nacheinander im Durchlauf, der Bedarf, Auswahl, Varianten, Prüfung und Vorlage erzeugt, und wohin schreibt er?",
+      "art": "umschrieben",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:L-pipeline",
+          "abschnitt": "Lauf pipeline (Präzedenzfall)"
+        }
+      ]
+    },
+    {
+      "id": "A074",
+      "frage": "Welcher Standardauftrag erzeugt eine Oberfläche allein aus einer Spezifikation, ohne Zugriff auf bestehende Shells, und mit wie vielen Modellen?",
+      "art": "fachbegriff",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:L-spec",
+          "abschnitt": "Lauf spec (Präzedenzfall)"
+        }
+      ]
+    },
+    {
+      "id": "A075",
+      "frage": "Was enthält der Ordner local_config, und welcher Teil davon wird nie gelesen?",
+      "art": "wortgleich",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:O-local_config",
+          "abschnitt": "Ordner local_config"
+        }
+      ],
+      "hinweis": "Ordner-Einträge entstehen nur, wenn der Ordner im Arbeitsbereich (workspace/GUPPI_OS) vorhanden ist; der Zwecktext stammt aus der festen Liste von arbeitsumfeld_wissen.py."
+    },
+    {
+      "id": "A076",
+      "frage": "In welchem Verzeichnis liegen die Dateien, die verhindern, dass dieselbe Art Durchlauf innerhalb von sechs Stunden zweimal startet?",
+      "art": "umschrieben",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:O-redesign/vorarbeiter",
+          "abschnitt": "Ordner redesign/vorarbeiter"
+        }
+      ],
+      "hinweis": "Ordner-Einträge entstehen nur, wenn der Ordner im Arbeitsbereich (workspace/GUPPI_OS) vorhanden ist; der Zwecktext stammt aus der festen Liste von arbeitsumfeld_wissen.py."
+    },
+    {
+      "id": "A077",
+      "frage": "Wo liegt die Tabelle, die Platzhalter fremder Textauszüge ihren Originalen zuordnet, und verlässt sie den Rechner?",
+      "art": "umschrieben",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:O-redesign/omni_mapping",
+          "abschnitt": "Ordner redesign/omni_mapping"
+        }
+      ],
+      "hinweis": "Ordner-Einträge entstehen nur, wenn der Ordner im Arbeitsbereich (workspace/GUPPI_OS) vorhanden ist; der Zwecktext stammt aus der festen Liste von arbeitsumfeld_wissen.py."
+    },
+    {
+      "id": "A078",
+      "frage": "Welche Aktion wertet die Ergebnisse von drache_lab und paperclip_lab nach Abschnitt 5 aus?",
+      "art": "fachbegriff",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:V-pruefen",
+          "abschnitt": "Vorarbeiter-Aktion pruefen"
+        }
+      ]
+    },
+    {
+      "id": "A079",
+      "frage": "Welche Aktion liefert nur lesend die Übersicht aller Durchläufe mit Art, Name, Modell, Aufrufen und Schreibvorgängen?",
+      "art": "umschrieben",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:V-lauf_status",
+          "abschnitt": "Vorarbeiter-Aktion lauf_status"
+        }
+      ]
+    },
+    {
+      "id": "A080",
+      "frage": "Wie hoch ist das Token-Limit je Schritt und das Schrittlimit je Lauf nach den Abbruch- und Wiederholregeln?",
+      "art": "wortgleich",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:R-04",
+          "abschnitt": "4. Abbruch- und Wiederholregeln"
+        }
+      ]
+    },
+    {
+      "id": "A081",
+      "frage": "Was passiert, wenn ein Modell viermal in Folge ein ungültiges Werkzeug aufruft?",
+      "art": "umschrieben",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:R-04",
+          "abschnitt": "4. Abbruch- und Wiederholregeln"
+        }
+      ]
+    },
+    {
+      "id": "A082",
+      "frage": "Welche sieben Angaben muss ein Durchlauf vor dem Start festgelegt haben?",
+      "art": "fachbegriff",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:R-02",
+          "abschnitt": "2. Pflichtangaben je Lauf"
+        }
+      ]
+    },
+    {
+      "id": "A083",
+      "frage": "Wie heißt die Datei, die jeder Durchlauf neben seinem Schreibbereich mit Start, Ende und jedem Schreibvorgang führt?",
+      "art": "umschrieben",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:R-07",
+          "abschnitt": "7. Protokoll und Nachvollziehbarkeit"
+        }
+      ]
+    },
+    {
+      "id": "A084",
+      "frage": "Welche drei Ergebnisse hält der Vorarbeiter nach den Prüfregeln mit Grund fest?",
+      "art": "wortgleich",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:R-05",
+          "abschnitt": "5. Prüfregeln für die Ergebnisse"
+        }
+      ]
+    },
+    {
+      "id": "A085",
+      "frage": "Werden die bestehenden Codes wie decision_cannot_be_applied beim einheitlichen Import umbenannt oder übersetzt?",
+      "art": "umschrieben",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:A-04",
+          "abschnitt": "4. Fehlermeldungen"
+        }
+      ]
+    },
+    {
+      "id": "A086",
+      "frage": "Warum gehört der Import von Oberflächen aus dem Redesign-Bereich nicht zum einheitlichen Importweg?",
+      "art": "umschrieben",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:A-07",
+          "abschnitt": "7. Nicht Teil dieses Auftrags"
+        }
+      ]
+    },
+    {
+      "id": "A087",
+      "frage": "Was sagt Regel R-10 zu Kalkulationsdaten, und was darf der Entwurf nicht nennen?",
+      "art": "wortgleich",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:R-10",
+          "abschnitt": "R-10 – Geschäftsgeheimnis, Kalkulation"
+        }
+      ]
+    },
+    {
+      "id": "A088",
+      "frage": "Welche Regel betrifft behördliche Nummern wie die steuerliche Identifikation oder das Personaldokument, und darf so etwas den Rechner verlassen?",
+      "art": "umschrieben",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:R-04",
+          "abschnitt": "R-04 – Amtliche Kennungen (Steuer-ID, Ausweis, Sozialversicherung)"
+        }
+      ]
+    },
+    {
+      "id": "A089",
+      "frage": "Welche Regel greift bei einer Prüfung, die nicht zu Ende lief oder deren Datei nicht lesbar war, und gilt Ungeklärtes als erlaubt?",
+      "art": "fachbegriff",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:R-16",
+          "abschnitt": "R-16 – Scan unvollständig, Datei unlesbar, Regelkonflikt"
+        }
+      ]
+    },
+    {
+      "id": "A090",
+      "frage": "Welchen Hinweis zur Herkunft und zur menschlichen Durchsicht muss jedes Ergebnis nach Art. 50 des AI Act tragen?",
+      "art": "umschrieben",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:R-14",
+          "abschnitt": "R-14 – KI-Kennzeichnung des Entwurfs"
+        }
+      ]
+    },
+    {
+      "id": "A091",
+      "frage": "Welche Regel gilt, wenn der Nutzer selbst Befehle an das Modell in seinen Eingabetext schreibt, und was ist dann zu tun?",
+      "art": "fachbegriff",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:R-09",
+          "abschnitt": "R-09 – Anweisungen an die KI in der eigenen Anfrage"
+        }
+      ]
+    },
+    {
+      "id": "A092",
+      "frage": "Was bedeutet der Fehler mapping_fehlt, und was ist zu tun?",
+      "art": "wortgleich",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:F-mapping_fehlt",
+          "abschnitt": "Fehler mapping_fehlt"
+        }
+      ]
+    },
+    {
+      "id": "A093",
+      "frage": "Welche Dateiformate nimmt das GateWay als Anhang an, und was ist mit PDF?",
+      "art": "umschrieben",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:F-dokument_nur_md_txt",
+          "abschnitt": "Fehler dokument_nur_md_txt"
+        }
+      ]
+    },
+    {
+      "id": "A094",
+      "frage": "Welcher Fehlercode erscheint, wenn der gewählte Pfad freizügiger ist als die vorher getroffene Vorgabe des Nutzers, und auf welche Entscheidung K-03 geht das zurück?",
+      "art": "fachbegriff",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:F-weg_offener_als_wunsch",
+          "abschnitt": "Fehler weg_offener_als_wunsch"
+        }
+      ]
+    },
+    {
+      "id": "A095",
+      "frage": "Ab welcher Zeichenzahl wird eine Eingabe abgelehnt, und was ist die Abhilfe?",
+      "art": "umschrieben",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:F-anfrage_zu_lang",
+          "abschnitt": "Fehler anfrage_zu_lang"
+        }
+      ]
+    },
+    {
+      "id": "A096",
+      "frage": "Welcher Code meldet, dass nach dem Ersetzen durch Platzhalter noch Originalwerte stehen blieben, und warum stoppt das System dann?",
+      "art": "fachbegriff",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:F-B6_PSEUDO_RECHECK_FAILED",
+          "abschnitt": "Fehler B6_PSEUDO_RECHECK_FAILED"
+        }
+      ]
+    },
+    {
+      "id": "A097",
+      "frage": "Was ist zu tun, wenn eine erteilte Freigabe nicht mehr zum aktuellen Stand gehört, weil Anfrage, Dokument oder Person geändert wurden?",
+      "art": "umschrieben",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:F-bindung_passt_nicht",
+          "abschnitt": "Fehler bindung_passt_nicht"
+        }
+      ]
+    },
+    {
+      "id": "A098",
+      "frage": "Was prüfen die drei Rechecks jeweils?",
+      "art": "wortgleich",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:B-recheck",
+          "abschnitt": "Recheck"
+        }
+      ]
+    },
+    {
+      "id": "A099",
+      "frage": "Welche vier Stufen der Vertraulichkeit gibt es, und wie ergibt sich die Stufe aus den Treffern?",
+      "art": "umschrieben",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:B-schutzklasse",
+          "abschnitt": "Schutzklasse"
+        }
+      ]
+    },
+    {
+      "id": "A100",
+      "frage": "Über welche Felder wird der Hash gebildet, der eine Freigabe an den Vorgang kettet?",
+      "art": "fachbegriff",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:B-bindung",
+          "abschnitt": "Bindung"
+        }
+      ]
+    },
+    {
+      "id": "A101",
+      "frage": "Wann werden abgelaufene Entwürfe entfernt, und welcher Audit-Eintrag entsteht dabei?",
+      "art": "umschrieben",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:B-löschdatum",
+          "abschnitt": "Löschdatum"
+        }
+      ]
+    },
+    {
+      "id": "A102",
+      "frage": "Welche Funde führen dazu, dass auch das lokale Modell nicht aufgerufen wird und keine Übersteuerung möglich ist?",
+      "art": "fachbegriff",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:B-hard block",
+          "abschnitt": "Hard block"
+        }
+      ]
+    },
+    {
+      "id": "A103",
+      "frage": "Warum bleiben Daten mit Platzhaltern wie <PERSON_001> trotzdem personenbezogen, und welche Regel folgt daraus?",
+      "art": "umschrieben",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:B-pseudonymisierung",
+          "abschnitt": "Pseudonymisierung"
+        }
+      ]
+    },
+    {
+      "id": "A104",
+      "frage": "Was steht im Leitfaden unter Schritt 7 Ablegen zum Versand und zur Übernahme des geprüften Entwurfs?",
+      "art": "wortgleich",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:L-7",
+          "abschnitt": "Schritt 7 (Ablage): Ablegen"
+        }
+      ]
+    },
+    {
+      "id": "A105",
+      "frage": "Was darf man am Vorgang nicht tun, nachdem „freigeben und anwenden“ gewählt wurde, und was bedeutet dann ein FEHLER-Ergebnis?",
+      "art": "umschrieben",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:L-5",
+          "abschnitt": "Schritt 5 (03→04): Auf die Auswertung warten"
+        }
+      ]
+    },
+    {
+      "id": "A106",
+      "frage": "Welcher Schritt des Leitfadens legt fest, dass nur synthetische oder freigegebene Daten verwendet werden und das Dokument als .md oder .txt im Projektordner liegt?",
+      "art": "fachbegriff",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:L-1",
+          "abschnitt": "Schritt 1 (00): Vorbereiten"
+        }
+      ]
+    },
+    {
+      "id": "A107",
+      "frage": "Was muss der Nutzer tun, wenn ein Vorgang wegen eines nicht übersteuerbaren Funds angehalten wurde, und gibt es einen Weg daran vorbei?",
+      "art": "umschrieben",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:Z-GESPERRT",
+          "abschnitt": "Zustand GESPERRT"
+        }
+      ]
+    },
+    {
+      "id": "A108",
+      "frage": "In welchem Zustand steht ein Vorgang, nachdem die Freigabe erteilt wurde, aber die Antwort in den Entscheidungen noch aussteht?",
+      "art": "fachbegriff",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:Z-WARTET",
+          "abschnitt": "Zustand WARTET"
+        }
+      ]
+    },
+    {
+      "id": "A109",
+      "frage": "Welche Klasse und welche Regel gehören zum Merkmal P04 Amtliche Kennungen?",
+      "art": "wortgleich",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": true,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:P04",
+          "abschnitt": "P04 – Amtliche Kennungen (Steuer-ID, Ausweis, Sozialversicherung)"
+        }
+      ]
+    },
+    {
+      "id": "A110",
+      "frage": "Welche Stationen durchläuft eine Anfrage von der Wahl lokal oder Cloud bis zur menschlichen Prüfung des Ergebnisses?",
+      "art": "umschrieben",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:A-ABLAUF",
+          "abschnitt": "Der Weg eines Vorgangs"
+        }
+      ]
+    },
+    {
+      "id": "A111",
+      "frage": "Wie viele Gigabyte freien Festplattenplatz verlangt die Ersteinrichtung von SEDRA mindestens?",
+      "art": "negativ",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": []
+    },
+    {
+      "id": "A112",
+      "frage": "An welchem Tag wurde die Engine b11500 für den Betrieb freigegeben?",
+      "art": "negativ",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": []
+    },
+    {
+      "id": "A113",
+      "frage": "Was legt Regel R-21 zu biometrischen Daten in Bildanhängen fest?",
+      "art": "negativ",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": []
+    },
+    {
+      "id": "A114",
+      "frage": "Welches Zeitlimit hat die Vorarbeiter-Aktion archivieren?",
+      "art": "negativ",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": []
+    },
+    {
+      "id": "A115",
+      "frage": "Welche Lektion verbietet rekursive Funktionen in der Sandbox?",
+      "art": "negativ",
+      "gruppe": "knowledge",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": []
+    },
+    {
+      "id": "A116",
+      "frage": "Über welchen Port erreicht man den Prometheus-Exporter von SEDRA?",
+      "art": "negativ",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": []
+    },
+    {
+      "id": "A117",
+      "frage": "Welcher Fehlercode erscheint, wenn ein PDF-Anhang mehr als 50 Seiten hat?",
+      "art": "negativ",
+      "gruppe": "gateway",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": []
+    },
+    {
+      "id": "A118",
+      "frage": "Wie viele Token pro Sekunde erreichte Llama-4-Scout im Standardtest?",
+      "art": "negativ",
+      "gruppe": "logbuch",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": []
+    },
+    {
+      "id": "A119",
+      "frage": "Welche Zwei-Faktor-Anmeldung schützt die Oberfläche von SEDRA?",
+      "art": "negativ",
+      "gruppe": "doku",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": []
+    },
+    {
+      "id": "A120",
+      "frage": "Welchen Zweck hat der Ordner redesign/archiv_2025?",
+      "art": "negativ",
+      "gruppe": "arbeitsumfeld",
+      "liste_oder_tabelle": false,
+      "erwartet_ueber": "adapter",
+      "quellen": []
+    }
+  ]
+}
