@@ -11,7 +11,7 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
 
-  const MIN_W = 320, MIN_H = 200, BAR_H = 28, SHELF_H = 86, MAX_RESTORE = 24;
+  const MIN_W = 320, MIN_H = 200, BAR_H = 28, SHELF_H = 86, MAX_RESTORE = 48;
 
   // Wo ein neues Fenster aufgeht: versetzt zum vorigen, aber nie aus dem Bild (rein)
   function placeBox(index, screen){

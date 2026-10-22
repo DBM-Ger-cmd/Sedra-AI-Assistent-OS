@@ -1,9 +1,12 @@
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
-TABLES = ("meta", "agents", "tasks", "blockers", "comments", "wakeups", "routines", "routine_runs", "spend")
+TABLES = ("meta", "agents", "tasks", "blockers", "comments", "wakeups", "routines", "routine_runs", "spend",
+          "standing_approvals", "agent_messages", "budget_incidents")
 
 MIGRATIONS = {
     1: (
@@ -29,6 +32,33 @@ MIGRATIONS = {
         "CREATE INDEX idx_spend_agent_id_ts ON spend (agent_id, ts)",
         "CREATE INDEX idx_spend_provider_id_ts ON spend (provider_id, ts)",
         "CREATE INDEX idx_spend_task_id ON spend (task_id)",
+    ),
+    2: (
+        "ALTER TABLE agents ADD COLUMN can_delegate INTEGER NOT NULL DEFAULT 0 CHECK (can_delegate IN (0,1))",
+        "ALTER TABLE agents ADD COLUMN max_parallel INTEGER NOT NULL DEFAULT 1 CHECK (max_parallel BETWEEN 1 AND 4)",
+        "ALTER TABLE agents ADD COLUMN pause_reason TEXT CHECK (pause_reason IN ('captain','budget','quarantaene'))",
+        "CREATE UNIQUE INDEX ux_agents_root ON agents ((reports_to IS NULL)) WHERE reports_to IS NULL AND status <> 'beendet'",
+        "ALTER TABLE tasks ADD COLUMN max_level INTEGER CHECK (max_level BETWEEN 0 AND 6)",
+        "ALTER TABLE tasks ADD COLUMN origin TEXT NOT NULL DEFAULT 'captain' CHECK (origin IN ('captain','routine','delegation','system'))",
+        "ALTER TABLE tasks ADD COLUMN decomposed_at TEXT",
+        "ALTER TABLE tasks ADD COLUMN check_result TEXT CHECK (check_result IN ('gruen','rot','nicht_geprueft'))",
+        "ALTER TABLE tasks ADD COLUMN check_ref TEXT",
+        "ALTER TABLE tasks ADD COLUMN reported_at TEXT",
+        "CREATE INDEX idx_tasks_unreported_roots ON tasks (parent_id) WHERE parent_id IS NULL AND reported_at IS NULL",
+        "ALTER TABLE wakeups ADD COLUMN idempotency_key TEXT",
+        "ALTER TABLE wakeups ADD COLUMN outcome TEXT CHECK (outcome IN ('lauf','antrag','pausiert','kein_budget','blockiert','keine_aufgabe','laeuft_schon','abgelehnt'))",
+        "ALTER TABLE wakeups ADD COLUMN mission_id TEXT",
+        "ALTER TABLE wakeups ADD COLUMN request_mission_id TEXT",
+        "CREATE UNIQUE INDEX ux_wakeups_agent_id_key ON wakeups (agent_id, idempotency_key) WHERE idempotency_key IS NOT NULL",
+        "CREATE INDEX idx_wakeups_request_mission_id ON wakeups (request_mission_id)",
+        "ALTER TABLE spend ADD COLUMN estimated INTEGER NOT NULL DEFAULT 0 CHECK (estimated IN (0,1))",
+        "CREATE TABLE standing_approvals (token_id TEXT PRIMARY KEY, agent_id TEXT NOT NULL REFERENCES agents(id), granted_at TEXT NOT NULL, expires_at TEXT NOT NULL, max_uses INTEGER NOT NULL, uses INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL CHECK (status IN ('aktiv','verbraucht','abgelaufen','erloschen','widerrufen')), end_reason TEXT, fingerprint_digest TEXT NOT NULL, updated_at TEXT NOT NULL)",
+        "CREATE UNIQUE INDEX ux_standing_approvals_active ON standing_approvals (agent_id) WHERE status = 'aktiv'",
+        "CREATE TABLE agent_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, agent_id TEXT NOT NULL REFERENCES agents(id), rolle TEXT NOT NULL CHECK (rolle IN ('captain','agent','system')), text TEXT NOT NULL CHECK (length(text) <= 8000), ts TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('angenommen','wartet_freigabe','laeuft','beantwortet','fehler')), issue_id TEXT, mission_id TEXT, route TEXT NOT NULL DEFAULT 'lokal' CHECK (route IN ('lokal','cloud')), provider_id TEXT, model TEXT, idempotency_key TEXT)",
+        "CREATE INDEX idx_agent_messages_agent_id_id ON agent_messages (agent_id, id)",
+        "CREATE UNIQUE INDEX ux_agent_messages_agent_id_key ON agent_messages (agent_id, idempotency_key) WHERE idempotency_key IS NOT NULL",
+        "CREATE TABLE budget_incidents (id INTEGER PRIMARY KEY AUTOINCREMENT, agent_id TEXT NOT NULL REFERENCES agents(id), kind TEXT NOT NULL CHECK (kind IN ('warnung','stopp')), percent INTEGER NOT NULL, used_tokens INTEGER NOT NULL, limit_tokens INTEGER, used_eur_cent INTEGER NOT NULL DEFAULT 0, limit_eur_cent INTEGER, created_at TEXT NOT NULL, request_mission_id TEXT, resolved_at TEXT, resolution TEXT CHECK (resolution IN ('erhoeht','fortgesetzt','abgelehnt','zeitraum')))",
+        "CREATE UNIQUE INDEX ux_budget_incidents_open ON budget_incidents (agent_id, kind) WHERE resolved_at IS NULL",
     ),
 }
 
@@ -82,8 +112,21 @@ def migrate(conn, target=SCHEMA_VERSION, migrations=None):
     return schema_version(conn)
 
 
-def open_db(path, target=SCHEMA_VERSION, migrations=None, busy_ms=30000):
-    from pathlib import Path
+def backup(conn, path, stamp):
+    base = Path(str(path) + ".bak-" + stamp)
+    dest, n = base, 1
+    while dest.exists():
+        n += 1
+        dest = Path(f"{base}-{n}")
+    copy = sqlite3.connect(str(dest))
+    try:
+        conn.backup(copy)
+    finally:
+        copy.close()
+    return dest
+
+
+def open_db(path, target=SCHEMA_VERSION, migrations=None, busy_ms=30000, stamp=None):
     conn = None
     try:
         if str(path) == ":memory:":
@@ -114,11 +157,14 @@ def open_db(path, target=SCHEMA_VERSION, migrations=None, busy_ms=30000):
             conn.close()
         raise ValueError("orchestra_db_error:open")
     try:
+        current = schema_version(conn)
+        if str(path) != ":memory:" and 0 < current < target:
+            backup(conn, path, stamp or datetime.now(timezone.utc).strftime("%Y%m%d"))
         migrate(conn, target, migrations)
     except ValueError:
         conn.close()
         raise
-    except sqlite3.Error:
+    except (sqlite3.Error, OSError):
         conn.close()
         raise ValueError("orchestra_db_error:migration")
     return conn

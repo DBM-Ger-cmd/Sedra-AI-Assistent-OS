@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 984 556" role="img" aria-label="Spec 7: Quellen werden lokal aufgenommen, eingebettet und gespeichert; Fragen von Captain und Agenten laufen über eine hybride Suche und werden mit Quellenangaben beantwortet" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13">
+  <rect width="984" height="556" fill="#ffffff"/>
+  <defs>
+    <marker id="wis-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#8a8f98"/>
+    </marker>
+  </defs>
+  <text x="24" y="34" font-size="15" font-weight="600" fill="#1f2328">Spec 7 Wissen und RAG: ein lokaler Speicher, Antworten mit Quellen</text>
+  <text x="24" y="54" font-size="11.5" fill="#57606a">Entwurf bis G1 (22.10.2026). Alles läuft lokal; Captain und Agenten fragen denselben Speicher.</text>
+
+  <text x="24" y="88" font-size="12" font-weight="600" fill="#57606a">1  Aufnahme: läuft im Hintergrund, wenn die GPU frei ist</text>
+  <text x="24" y="258" font-size="12" font-weight="600" fill="#57606a">2  Abfrage</text>
+
+  <g fill="none" stroke="#8a8f98" stroke-width="1.25">
+    <path d="M224 150H262" marker-end="url(#wis-arrow)"/>
+    <path d="M464 150H502" marker-end="url(#wis-arrow)"/>
+    <path d="M704 150H742" marker-end="url(#wis-arrow)"/>
+    <path d="M844 200V235H604V268" marker-end="url(#wis-arrow)"/>
+    <path d="M744 320H706" marker-end="url(#wis-arrow)"/>
+    <path d="M504 320H466" marker-end="url(#wis-arrow)"/>
+    <path d="M264 320H226" marker-end="url(#wis-arrow)"/>
+    <path d="M124 370V450H262" marker-end="url(#wis-arrow)"/>
+    <path d="M704 450H962V150H946" marker-end="url(#wis-arrow)"/>
+  </g>
+  <text x="724" y="229" text-anchor="middle" font-size="11" fill="#57606a">passende Abschnitte</text>
+
+  <g fill="none" stroke="#8a8f98" stroke-width="1.25">
+    <rect x="24" y="100" width="200" height="100" rx="8"/>
+    <rect x="264" y="100" width="200" height="100" rx="8"/>
+    <rect x="504" y="100" width="200" height="100" rx="8"/>
+    <rect x="744" y="270" width="200" height="100" rx="8"/>
+    <rect x="504" y="270" width="200" height="100" rx="8"/>
+    <rect x="264" y="270" width="200" height="100" rx="8"/>
+    <rect x="24" y="270" width="200" height="100" rx="8"/>
+    <rect x="264" y="420" width="440" height="60" rx="8" stroke-dasharray="5 4"/>
+  </g>
+  <rect x="744" y="100" width="200" height="100" rx="8" fill="#2f6fde" fill-opacity="0.12" stroke="#2f6fde" stroke-width="2"/>
+
+  <text x="40" y="124" font-weight="600" fill="#1f2328">Quellen</text>
+  <text x="40" y="144" font-size="11.5" fill="#57606a">SEDRA-Doku, Specs, Logbuch</text>
+  <text x="40" y="162" font-size="11.5" fill="#57606a">eigene Dokumente (Freigabe)</text>
+  <text x="40" y="180" font-size="11.5" fill="#57606a">Arbeitsumfeld, GateWay, Lektionen</text>
+
+  <text x="280" y="124" font-weight="600" fill="#1f2328">Aufnahme</text>
+  <text x="280" y="144" font-size="11.5" fill="#57606a">in Abschnitte zerlegen</text>
+  <text x="280" y="162" font-size="11.5" fill="#57606a">Hash: nur Geändertes neu</text>
+  <text x="280" y="180" font-size="11.5" fill="#57606a">Inhaltsschutz, Herkunft</text>
+
+  <text x="520" y="124" font-weight="600" fill="#1f2328">Einbetten</text>
+  <text x="520" y="144" font-size="11.5" fill="#57606a">lokales Embedding-Modell</text>
+  <text x="520" y="162" font-size="11.5" fill="#57606a">mit GPU-Lease oder auf CPU</text>
+  <text x="520" y="180" font-size="11.5" fill="#57606a">Modell-ID an jedem Vektor</text>
+
+  <text x="760" y="124" font-weight="600" fill="#1f2328">Wissensspeicher</text>
+  <text x="760" y="144" font-size="11.5" fill="#1f2328">SQLite: Abschnitte,</text>
+  <text x="760" y="162" font-size="11.5" fill="#1f2328">Volltext (FTS5), Vektoren</text>
+  <text x="760" y="180" font-size="11.5" fill="#1f2328">Quelle, Datum, Sichtbarkeit</text>
+
+  <text x="760" y="294" font-weight="600" fill="#1f2328">Frage</text>
+  <text x="760" y="314" font-size="11.5" fill="#57606a">Captain in Cockpit oder Chat,</text>
+  <text x="760" y="332" font-size="11.5" fill="#57606a">Werkzeug wissen (Shell D)</text>
+  <text x="760" y="350" font-size="11.5" fill="#57606a">oder ein Agent im Lauf</text>
+
+  <text x="520" y="294" font-weight="600" fill="#1f2328">Hybride Suche</text>
+  <text x="520" y="314" font-size="11.5" fill="#57606a">Volltext und Bedeutung,</text>
+  <text x="520" y="332" font-size="11.5" fill="#57606a">zusammengeführt (RRF)</text>
+  <text x="520" y="350" font-size="11.5" fill="#57606a">Rechte-Filter je Agent</text>
+
+  <text x="280" y="294" font-weight="600" fill="#1f2328">Kontextblock</text>
+  <text x="280" y="314" font-size="11.5" fill="#57606a">Treffer mit Quellen-ID</text>
+  <text x="280" y="332" font-size="11.5" fill="#57606a">als Daten markiert,</text>
+  <text x="280" y="350" font-size="11.5" fill="#57606a">nie als Anweisung</text>
+
+  <text x="40" y="294" font-weight="600" fill="#1f2328">Antwort</text>
+  <text x="40" y="314" font-size="11.5" fill="#57606a">lokales Modell antwortet</text>
+  <text x="40" y="332" font-size="11.5" fill="#57606a">mit Quellenangaben [id]</text>
+  <text x="40" y="350" font-size="11.5" fill="#57606a">ohne Treffer: sagt es offen</text>
+
+  <text x="280" y="444" font-weight="600" fill="#1f2328">Lernschleife</text>
+  <text x="280" y="464" font-size="11.5" fill="#57606a">Agent schlägt einen Eintrag vor → Freigabe des Captains → Speicher</text>
+
+  <text x="24" y="516" font-size="11.5" fill="#57606a">Cloud-Embeddings erst nach Freigabe von Spec 3 und nie für Quellen mit Personenbezug (R-01).</text>
+  <text x="24" y="536" font-size="11.5" fill="#57606a">Ohne Embedding-Modell arbeitet die Suche nur mit Volltext weiter; gefundener Text gilt immer als Daten.</text>
+</svg>
