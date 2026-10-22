@@ -163,7 +163,7 @@ Aufwand: **klein** (unter einem Tag, lokal), **mittel** (einige Tage, mehrere Da
 - *Aufwand:* mittel.
 
 **M4 – Konfigurierte Modellpfade: zwei Quellen, Pfad aus Textersetzung** – *berichtet, hier nicht nachgestellt*
-- `config/llama_server.yaml` setzt `canary.gguf` als `<modelle>\unsloth\Qwen3.5-9B-MTP-GGUF\...` und ersetzt `<modelle>` aus `config/local_paths.yaml` (nicht in git). Eine Schwester-Notiz (`side-session-notes/local_28669cc8-…/ladefehler_canary_2026-10-16.md`) beschreibt einen Fall, in dem `modelle` schon auf `…\lokale-modelle\unsloth` zeigte und der Pfad sich zu `unsloth\unsloth` verdoppelte. In diesem Arbeitsbaum ist `local_paths.yaml` auf `E:\HermesAgentOrdner\lokale-modelle` gesetzt; dort stimmt der Pfad. Ich habe den Fall nicht nachgestellt.
+- `config/llama_server.yaml` setzt `canary.gguf` als `<modelle>\unsloth\Qwen3.5-9B-MTP-GGUF\...` und ersetzt `<modelle>` aus `config/local_paths.yaml` (nicht in git). Eine Schwester-Notiz (`side-session-notes/local_28669cc8-…/ladefehler_canary_2026-10-16.md`) beschreibt einen Fall, in dem `modelle` schon auf `…\lokale-modelle\unsloth` zeigte und der Pfad sich zu `unsloth\unsloth` verdoppelte. In diesem Arbeitsbaum ist `local_paths.yaml` auf den lokalen Modellordner (`<modelle>`) gesetzt; dort stimmt der Pfad. Ich habe den Fall nicht nachgestellt.
 - *Warum:* Die Pfadbildung per Textersetzung ist fragil, und die Pfadprüfung (Pfad vorhanden?) kommt erst beim Start. Der Fehler taucht dann im Ladevorgang auf, nicht bei der Konfiguration.
 - *Verbesserung:* Modellordner nur an einer Stelle angeben und den Canary-Pfad relativ zu dieser Stelle schreiben, oder den Pfad beim Speichern der Konfiguration prüfen (existiert die Datei?).
 - *Aufwand:* klein.
