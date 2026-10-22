@@ -8,3 +8,11 @@
 .t-wissen .t-wissen-treffer [role=button]{cursor:pointer}
 .t-wissen .t-wissen-k{width:4em}
 .t-wissen .t-wissen-form input,.t-wissen .t-wissen-form select{max-width:32em}
+.t-wissen .t-wissen-markiert td{background:var(--add-bg);border-left:3px solid var(--accent)}
+.t-wissen .t-wissen-markierung td,.t-wissen .t-wissen-stufe td{background:var(--panel-2);border-left:3px solid var(--accent)}
+.t-wissen .t-wissen-stufe-form{align-items:center;flex-wrap:wrap}
+.t-wissen .t-wissen-stufe-feld{width:4em}
+.t-wissen .t-wissen-stufe-fehler[hidden]{display:none}
+.t-wissen .t-wissen-zitat{color:var(--accent);cursor:pointer;text-decoration:underline dotted}
+.t-wissen .t-wissen-zitat:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.t-wissen .t-wissen-aktiv{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
