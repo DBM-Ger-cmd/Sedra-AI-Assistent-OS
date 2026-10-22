@@ -2,3 +2,7 @@
 # Nur diese Endungen sind hier festgelegt; alle übrigen Dateien bleiben, wie der Checkout sie hält.
 *.sh text eol=lf
 *.command text eol=lf
+# Bau-Specs, Referenzen und Saaten: die Stempel von spec_check hashen den Inhalt mit LF; ein Checkout mit CRLF würde jeden Stempel ungültig machen (G3-S2, OP-S2-11).
+runtime/benchmarks/devvm_specs/** text eol=lf
+runtime/benchmarks/devvm_refs/** text eol=lf
+runtime/benchmarks/*_seed/** text eol=lf
