@@ -90,7 +90,7 @@ def _stop(pid, run=subprocess.run):
         run(["kill", "-TERM", str(int(pid))], capture_output=True, text=True, timeout=30)
 
 
-def clear_leftovers(owner="", *, port=8089, baseline_max_gb=2.5, settle_s=20, say=print, run=subprocess.run, sleep=time.sleep, monotonic=time.monotonic):
+def clear_leftovers(owner="", *, port=8089, baseline_max_gb=3.0, settle_s=20, say=print, run=subprocess.run, sleep=time.sleep, monotonic=time.monotonic):
     """Stops what earlier runs left behind and refuses the run when the card is still busy. Returns the VRAM in GiB that is in use afterwards."""
     stopped = []
     pid = listener_pid(port, run)

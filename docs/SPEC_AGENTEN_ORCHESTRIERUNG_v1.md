@@ -1468,20 +1468,21 @@ Stand Stufe 1: 20.10.2026, Branch `spec2/modelle-scheduler`, gegen den Code von 
 
 ### Anforderungen
 
-Die Tabelle bleibt unverändert; die Korrekturvorschläge stehen unter „Abgleich gegen den Code (G1)“ und werden erst mit G1 eingearbeitet.
+Fassung nach G1-S2-a bis m (Captain, 20.10.2026): Die Korrekturvorschläge sind übernommen; die alten Texte stehen unter „Korrekturvorschläge (alt / neu)“. SCH-11 ist neu im Design (G2-S2-15).
 
 | ID | Anforderung (EARS) | Abnahmekriterium |
 | --- | --- | --- |
-| SCH-01 | WENN ein Rezept `slots: N` angibt, DANN SOLL der llama-server mit N parallelen Slots starten. | N gleichzeitige Anfragen werden parallel beantwortet; Messung des Gesamtdurchsatzes |
-| SCH-02 | Die Lade-Lease SOLL genau einen Besitzer haben; der Scheduler SOLL Slot-Leases an Läufe vergeben. | 2 Ladeversuche: einer wartet. N+1 Läufe: einer wartet in der Schlange |
-| SCH-03 | WENN ein Server mit N Slots starten soll, DANN SOLL `resource_scheduler` VRAM inklusive KV-Cache für N Slots vorab reservieren und den Start ablehnen, wenn die Grenze von 11,5 GB überschritten würde. | Ablehnung nennt gemessenen und benötigten Wert |
-| SCH-04 | Der Scheduler SOLL Captain-Anfragen vor Agentenläufen und diese vor Routinen bedienen; wartende Läufe steigen mit der Wartezeit in der Priorität. | Kein Lauf wartet länger als die eingestellte Obergrenze |
-| SCH-05 | Die Kontextgrenze je Slot SOLL gemessen und im Rezept je Slot-Zahl geführt werden. | `context_ladder.py` liefert Werte für 1 bis N Slots; Rezept enthält sie |
-| SCH-06 | WENN ein Lauf ein anderes Rezept braucht als das geladene, DANN SOLL der Scheduler nur nach einer vom Captain freigegebenen Regel umladen oder auf ein freigegebenes kleines Modell ausweichen. | Ohne Regel: Lauf wartet und meldet den Grund |
-| SCH-07 | WENN alle Slots belegt sind und die Schlange länger als die Grenze ist, DANN SOLL der Scheduler die Cloud-Stufe vorschlagen (Spec 3), aber nie selbst umschalten. | Vorschlag erscheint als Entscheidung im Desk |
-| SCH-08 | WENN der Server abstürzt oder Müll liefert, DANN SOLL das System den Canary laufen lassen, neu starten, offene Slot-Leases zurück in die Schlange geben und Läufe über `step_journal` fortsetzen, ohne Schritte still zu wiederholen. | Absturz-Test: kein Schritt doppelt ausgeführt |
-| SCH-09 | Die Oberfläche SOLL Slots, Belegung und Warteschlange live zeigen. | Ereignis `slot.changed` auf `/api/events` |
-| SCH-10 | Bau- und Messläufe (`devvm_build.py`, Benchmarks) SOLLEN die GPU weiterhin exklusiv nehmen können. | Modus `exklusiv` blockiert neue Slot-Leases, bis der Lauf endet |
+| SCH-01 | WENN ein Rezept `server.slots: N` (1 bis 8) angibt, DANN SOLL der Scheduler den llama-server mit `-np N` starten; das Rezept nennt das Fenster **je Slot**, der Gesamtkontext ist `N × Fenster`. | N gleichzeitige Anfragen laufen zeitlich überlappend (jede beginnt, bevor die erste endet); Summe der Token/s bei N=2 mindestens `<schwelle>` × Einzelwert (Schwelle aus der Messung) |
+| SCH-02 | Die Lade-Lease (`gpu`) SOLL genau einen Besitzer haben, den Scheduler-Prozess, der den Modellserver hält. Slot-Leases SOLLEN je Lauf (nicht je Prozess) vergeben werden, mit Herzschlag, in Reihenfolge Priorität, dann Eingang. | 2 Ladeversuche: einer wartet. N+1 Läufe: der letzte bekommt den Slot erst, wenn einer frei wird, in Eingangsreihenfolge je Priorität |
+| SCH-03 | WENN ein Server mit N Slots starten soll, DANN SOLL der Scheduler Gewichte **einmal** und KV-Cache **je Slot** vorab buchen und den Start ablehnen, wenn Gesamtbedarf plus Reserve die VRAM-Grenze von 11,5 GB (Reserve 0,7 GB) überschreitet. | Die Ablehnung enthält `need_gb` und `measured_free_gb` im Ergebnis und im Audit `RESOURCE_DENIED` |
+| SCH-04 | Der Scheduler SOLL nach Stufen Captain (7) > Agent (5) > Routine (3) bedienen; je `age_after_s` Wartezeit steigt ein wartender Lauf um eine Stufe (Routine bis Agent). | Ein Lauf, der länger als `wait_max_s` wartet, wird gemeldet (Ereignis `slot.changed` mit Warnung, Vorschlag nach SCH-07); Captain-Anfragen überholen immer, laufende Läufe werden nicht verdrängt |
+| SCH-05 | Die Kontextgrenze je Slot SOLL gemessen und im Rezept je Slot-Zahl geführt werden. | Der Messlauf mit `--parallel N` füllt alle N Slots gleichzeitig zu 85 % und liefert die sichere Grenze je Slot für N = 1 bis 4; das Rezept führt sie unter `context.per_slots` |
+| SCH-06 | WENN ein Lauf ein anderes Rezept braucht als das geladene, DANN SOLL der Scheduler nur nach einer vom Captain freigegebenen Regel umladen oder auf ein freigegebenes kleines Modell ausweichen; die Regel steht im Overlay (`scheduler.swap`, Standard `none`). | Ohne Regel wartet der Lauf mit Grund `model_swap_not_allowed` |
+| SCH-07 | WENN mehr als `queue_max` Läufe warten oder der älteste länger als `wait_max_s` wartet, DANN SOLL der Scheduler die Cloud-Stufe vorschlagen (Spec 3), aber nie selbst umschalten. | Vorschlag erscheint als Entscheidung `cloud_offload` im Desk; die Annahme gilt nur für diese Entscheidung |
+| SCH-08 | WENN der Server abstürzt oder Müll liefert, DANN SOLL das System den Canary laufen lassen, neu starten, offene Slot-Leases zurück in die Schlange geben und Läufe ab dem letzten abgeschlossenen Schritt fortsetzen; ein unterbrochener Schritt wird nur wiederholt, wenn er lesend ist, sonst pausiert er und wartet auf den Captain. | Absturz-Test mit unechtem Server: je Schritt höchstens ein Versuch ohne Ausgang, kein doppeltes Audit der Wirkung |
+| SCH-09 | Die Oberfläche SOLL Slots, Belegung und Warteschlange live zeigen. | Ereignis `slot.changed` mit `{slot, state, run_id, priority, queue_len}` innerhalb von 3 s nach der Änderung |
+| SCH-10 | Bau- und Messläufe (`devvm_build.py`, Benchmarks) SOLLEN die GPU weiterhin exklusiv nehmen können. | Eine Anfrage `exklusiv` sperrt neue Slot-Leases, wartet höchstens `drain_max_s` auf laufende, stoppt den eigenen Server über die eigene PID und gibt `gpu` frei |
+| SCH-11 (neu, Vorschlag G2-S2-15) | Jeder Start und jeder Aufruf eines lokalen Modells SOLL über Lade-Lease bzw. Slot-Lease laufen, auch aus der Oberfläche. | Werkstatt, Job und Direktaufruf starten nur über den Scheduler; `uix_server` hält kein eigenes `gpu_token` |
 
 ### Abgleich gegen den Code (G1)
 
@@ -1528,12 +1529,7 @@ Korrekturvorschläge (alt / neu):
 
 ### Design (Vorschlag)
 
-- Neues Modul `jobs/model_scheduler.py`; `jobs/testlab.py` behält die Lade-Lease, eine neue Tabelle `slot_leases` in `testlab.db` hält die Slot-Leases mit Herzschlag wie bisher.
-- Rezept-Erweiterung in `role_routing.yaml`: `server.slots: N` und `context.per_slots: {1: …, 2: …, 4: …}` aus Messungen.
-- llama-server-Start mit `--parallel N`; der Gesamtkontext `-c` wird auf die Slots verteilt. Ob Build b11160 einen gemeinsamen KV-Puffer für alle Slots nutzt, wird gemessen, nicht angenommen.
-- Jeder Agentenlauf fragt `model_scheduler.acquire(recipe, priority)` und bekommt einen Slot oder einen Platz in der Schlange.
-
-Die Ausarbeitung (Tabelle `slot_leases`, Reihenfolge, Übergabe an Benchmarks, Prüfung der Rezeptfelder) folgt in S2.3 nach G1.
+Durch „Design Stufe 2 (Vorlage für G2)“ weiter unten ersetzt (D2.1 bis D2.13).
 
 ### Messplan-Entwurf S2.1 (nicht ausgeführt)
 
@@ -1621,14 +1617,399 @@ Jede Zeile wird einzeln entschieden. Die Empfehlung der Spec-Sitzung steht in de
 | G1-S2-l | Regel-Entwurf S2.2 als Grundlage für die spätere Änderung von `ENTWICKLUNG.md` freigeben (die Datei bleibt bis zum Bau unverändert) | ja |
 | G1-S2-m | Korrekturvorschläge SCH-01 bis SCH-10 (alt/neu) in die Tabelle „Anforderungen“ übernehmen | ja, nach Entscheidung a bis j |
 
+### Design Stufe 2 (Vorlage für G2)
+
+Stand 22.10.2026, ausgearbeitet gegen Branch `spec2/modelle-scheduler` nach dem Merge von `spec/agenten-orchestrierung` (Commit `bd11a8d`: Spec 1 mit `orchestra/` bis `tick.py` und Dauerfreigabe gebaut, Pipeline abgenommen). Grundlage: SCH-01 bis SCH-10 in der Fassung von G1-S2-a bis m (Captain: VRAM-Obergrenze 11,5 GB, Reserve 0,7 GB), `jobs/job_supervisor.py`, `jobs/job_worker.py`, `jobs/testlab.py`, `jobs/resource_scheduler.py`, `models/model_loader.py`, `models/llama_server_runtime.py`, `models/router.py`, `orchestra/tick.py` und `service.py`, `desk/events.py`, `uix_server.py` (Lease, Schnappschuss), Spec 1 D1.5/D1.6 und Spec 4 D4.2.4/D4.3. Gelesen, nicht ausgeführt: kein Test, kein Modell, keine GPU. Der Abschnitt „Design (Vorschlag)“ weiter oben ist durch D2.1 bis D2.13 ersetzt; jede Zeile der Gate-Liste D2.13 wird einzeln entschieden.
+
+Befunde aus dem Stand vom 22.10.2026, die das Design bestimmen:
+
+| Befund | Stelle | Folge |
+| --- | --- | --- |
+| `workers` ist fest auf genau 1 begrenzt (`_int(raw, "workers", 1, 1, 1)`); `claim` weist mit `worker_busy` ab, sobald ein Job einen Worker hat | `job_supervisor.py` Zeilen 72, 535 | Parallele Läufe brauchen eine Änderung am Supervisor (D2.4). Das ist keine Änderung an `core/` |
+| Jobs werden nach `(-priority, enqueued_at, job_id)` gewählt; `priority` 0 bis 9, ab 8 gilt ein Job als kritisch | `claim`, `create_job`, `critical.min_priority` | Die Prioritätsstufen des Schedulers müssen unter 8 bleiben: Routine 3, Agent 5, Captain 7 |
+| `confirm_start` macht nacheinander `loader.clear_stale`, `scheduler.reserve(job_id, …)` und `loader.ensure`; die Reservierung gehört einem `job_id` | `job_supervisor.py` 560 bis 600 | N Läufe würden die Gewichte N-fach buchen (G1-Befund SCH-03); der Server braucht eine eigene Reservierung (D2.5) |
+| `_release(job_id)` und `_reconcile_resources` laufen überall, wo ein Versuch endet bzw. beim Aufräumen (`reap`) | `job_supervisor.py` 290 bis 310 | Die Slot-Lease hängt sich an dieselben zwei Stellen (D2.4) |
+| Ein Versuch, dessen Start abgelehnt wird (`resolution_error`), zählt als Fehlversuch mit Wiederholungsgrenze 3 | `_start_attempt` | Warten auf einen Slot darf nie als Fehlversuch zählen; deshalb entscheidet schon `claim` (D2.4) |
+| `claim_timeout_s` ist 30 s, `startup_timeout_s` des Servers bis 180 s; `_start_attempt` prüft den Claim nach dem Laden | `job_supervisor.yaml`, `llama_server.yaml` | Ein Lauf, der den Server starten muss, kann am Claim scheitern; Grenze anheben oder nur ein Starter (D2.5) |
+| `tick._wake` ruft `orch.start_run(orch, agent, task, leader, "standing")`; `start_run` und `request_run` sind Teile der Fassade (S1.H7/H8, noch nicht gebaut); `run_alive(job_id)` fragt den Supervisor; `max_runs_per_tick` begrenzt neue Läufe | `orchestra/tick.py`, `service.py` | Schnittstelle zu Spec 1 ist der Supervisor-Job, nicht der Takt (D2.4) |
+| Der Handler `model_text_handler` erkennt Müll mit `degenerate_reason`; `HandlerError(code)` und `ctx.mutate()` entscheiden, ob ein Versuch wiederholt werden darf (`mutates` je Rolle) | `jobs/job_worker.py`, `job_supervisor.yaml` | SCH-08 braucht keinen neuen Wiederholungsmechanismus, nur die Anbindung (D2.8) |
+| Der Desk lädt Modelle über `uix_server` mit `LEASE_OWNER 'guppi-uix'` und `gpu_token`, solange das Modell geladen ist; der Job-Pfad nimmt keine Lease | `uix_server.py` 2615 bis 2790 | B-1 wird geschlossen, indem beide Wege durch denselben Besitzer gehen (D2.1, D2.6) |
+| `desk_snapshot()` und `events.diff` sind rein; die Erweiterungen legen Felder bei (`desk_extensions.snapshot`) | `uix_server.py` 1602, `desk/events.py` | `slot.changed` ohne neue Ereignismechanik (D2.9) |
+| Lokale Modellaufrufe laufen über `models/router.py` `chat(mission_id, …)` | `models/router.py` 42 | Haken für Direktaufrufe (D2.6); ob jeder lokale Aufruf diesen Weg nimmt, ist nicht lückenlos geprüft (OP-S2-02) |
+
+#### D2.1 Architektur: ein Besitzer, zwei Ebenen
+
+```
+Prozess SEDRA (uix_server / Desk)
+ └─ ModelScheduler (jobs/model_scheduler.py)                    der eine Besitzer
+      ├─ Lade-Lease  `gpu`        hält er, solange der Modellserver läuft (Herzschlag wie heute in uix_server)
+      ├─ Modellserver (LlamaServerRuntime)   ein Port, ein Modell, N Slots (-np N)
+      └─ Slot-Leases (Tabelle slot_leases)   je Lauf eine; Zustände wartend → aktiv → fertig | unterbrochen
+ Anfragende
+      ├─ Supervisor-Job (Agentenlauf, Spec 1)   claim nimmt die Slot-Lease, confirm_start prüft den Server, release gibt sie zurück
+      ├─ Direktaufruf (Chat, Gateway, Desk)     `with scheduler.slot(owner, priority)` um den Modellaufruf (models/router.py)
+      └─ Benchmark / devvm_build (anderer Prozess)   wollen die Lade-Lease → Übergabe (D2.7)
+```
+
+- **Besitz.** Genau ein Prozess besitzt Modellserver und Lade-Lease: der Prozess, in dem der Scheduler läuft. Der Scheduler startet und stoppt den Server nur über das eigene `LlamaServerRuntime` (eigene PID, nie nach Namen). Die Lade-Lease wird beim ersten Start des Servers geholt (`try_acquire`, Eigner `sedra-scheduler`, Zweck „Modellserver <rezept>“) und beim Stoppen freigegeben; der Herzschlag-Thread aus `uix_server._start_lease_beat` zieht in den Scheduler um.
+- **Zweite Ebene.** Slot-Leases erlauben Anfragen an den laufenden Server; sie erlauben kein Laden, Stoppen oder Ändern von Rezept, Engine und Schaltern (Regel-Entwurf S2.2).
+- **B-1 geschlossen.** Der Job-Pfad (`job_supervisor`), die Werkstatt in der Oberfläche (Modell laden/entladen) und Direktaufrufe gehen alle durch `ModelScheduler`; keiner lädt mehr ohne Lade-Lease. Ein zweiter SEDRA-Prozess bekommt die Lade-Lease nicht und meldet wie heute `gpu_lease_busy:<eigner>:<zweck>`.
+- **Schalter.** `config/model_scheduler.yaml` mit `enabled: false` (Standard). Aus heißt: Verhalten wie heute (`workers` 1, kein Scheduler-Haken, `uix_server` hält die Lease selbst). Ein: Lease-Pflicht für alle drei Wege. Ein mit Rezept `slots: 1` verhält sich wie heute, nur mit Lease; mehr Parallelität entsteht allein durch `server.slots` im Rezept und `workers` (D2.4).
+- **Keine Änderung an `core/` und am Guard.** Der Scheduler kennt weder Missionen noch Gates; er verteilt Plätze. Was ein Lauf darf, entscheidet weiter der Guard (Spec 1, Dauerfreigabe). Eine Regel zu Slots oder Umladen steht in `local_config`, nicht im Guard (D2.10, G2-S2-09).
+
+#### D2.2 Module
+
+Importgrenze wie Spec 1 D1.1: reine Module ohne `guppi_runtime`-Importe, ohne `sqlite3`, ohne Uhr (`now` als Argument); Speichermodule über die übergebene Verbindung, jede Schreibfolge in `BEGIN IMMEDIATE`; Fehler als `ValueError('<code>')`.
+
+| Modul | Art | Inhalt | Anforderungen |
+| --- | --- | --- | --- |
+| `jobs/slotplan.py` | rein | `effective_priority`, `order`, `admit`, `decide_reason` (Wartegrund), `needs_cloud_offer` | SCH-02, 04, 06, 07 |
+| `jobs/vramplan.py` | rein | `server_need(weights_gb, kv_gb_per_slot, slots, reserve_gb)`, `fits(need, limit_gb, measured_free_gb)`, `max_slots(...)` | SCH-03, 05 |
+| `jobs/slot_store.py` | Speicher | Tabellen `slot_leases`, `slot_server`, `handover_requests`, `slot_events`; `request`, `take`, `release`, `beat`, `reap`, `view` | SCH-02, 08, 09, 10 |
+| `jobs/model_scheduler.py` | Fassade | `ModelScheduler`: Besitz von Server und Lade-Lease, `ensure_server`, `take_for_job`, `slot` (Direktaufruf), `release`, `reap`, `exclusive`, `view`, `poll` | alle |
+| `jobs/testlab.py` | vorhanden | zwei kleine Änderungen: `slot_leases`-Schema in `SCHEMA`, `register_waiter` in `acquire` (D2.7) | SCH-02, 10 |
+
+Funktionen der reinen Module (Signaturen sind verbindlich, damit die Bau-Specs sie als Schnittstelle nehmen können):
+
+```
+slotplan.effective_priority(row, now, cfg) -> int      row: {priority, enqueued}; cfg: {age_after_s, age_cap}
+    Stufe = priority + (now - enqueued) // age_after_s, höchstens age_cap (Agent = 5); nie über Captain (7) hinaus;
+    eine Captain-Zeile (7) wird nicht verändert; Routine (3) kann bis 5 steigen, Agent (5) bleibt 5
+slotplan.order(rows, now, cfg) -> [row]                 nach (−effective_priority, enqueued, run_id)
+slotplan.admit(server, active, waiting, mode, now, cfg) -> [run_id]
+    server: {state, slots, recipe}; Zustände siehe D2.3; mode: normal | drain | exklusiv
+    normal und server.state bereit: bis zu slots − len(active) Läufe aus order(waiting)
+    server.state aus: genau ein Starter (der erste in order), sonst keiner
+    server.state startet | gesperrt | drain | exklusiv: keiner
+slotplan.decide_reason(server, wanted_recipe, mode, active, waiting_len, cfg)
+    -> None | 'kein_slot' | 'server_startet' | 'model_swap_not_allowed' | 'exklusiv:<eigner>' | 'drain' | 'gesperrt'
+slotplan.needs_cloud_offer(waiting, now, cfg) -> None | {run_id, grund: 'schlange'|'wartezeit'}
+    schlange: len(waiting) > cfg.queue_max; wartezeit: ältester Wartender älter als cfg.wait_max_s
+vramplan.server_need(weights_gb, kv_gb_per_slot, slots, compute_gb) -> {vram_gb, ram_gb}    Gewichte einmal, KV je Slot
+vramplan.fits(need_gb, limit_gb, reserve_gb, measured_free_gb) -> None | {need_gb, measured_free_gb, limit_gb, reason}
+    reason 'limit' (need > limit − reserve) oder 'frei' (need > measured_free − reserve); beide Werte stehen im Ergebnis
+vramplan.max_slots(weights_gb, kv_gb_per_slot, compute_gb, limit_gb, reserve_gb, cap=8) -> int
+```
+
+Gesamtkontext: Das Rezept nennt `context.recommended` **je Slot** (SCH-01 neu). `-c` ist `slots × context_je_slot`; `contextLength` aus `/props` ist die Summe und wird gegen diese Summe verglichen (D2.5).
+
+#### D2.3 Datenmodell in `testlab.db` (Schema 2)
+
+`TestLab.SCHEMA` bekommt vier Tabellen; die alten Tabellen bleiben unverändert (`CREATE TABLE IF NOT EXISTS`, `PRAGMA user_version` 2). Vor dem ersten Start mit Schema 2 liegt eine Sicherung `testlab.db.bak-<datum>-schema2` (Regel 3). Namen mit `slot_` vermeiden eine Verwechslung mit der alten Tabelle `queue` (geplante Messrunden).
+
+| Tabelle | Spalten |
+| --- | --- |
+| `slot_server` | `name` (Schlüssel, immer `main`), `gen` (Zähler, +1 bei jedem Start), `recipe`, `slots`, `context_per_slot`, `state` (`aus`, `startet`, `bereit`, `drain`, `exklusiv`, `gesperrt`), `pid`, `since`, `restarts` (JSON mit Zeitstempeln), `garbage` (JSON), `reason` |
+| `slot_leases` | `run_id` (Schlüssel: Job-ID oder `direkt-<uuid>`), `kind` (`job`, `direkt`), `owner`, `agent_id`, `task_id`, `priority` (Basis 3, 5 oder 7), `enqueued`, `state` (`wartend`, `aktiv`, `fertig`, `unterbrochen`, `verfallen`), `slot` (logische Nummer 1 bis N, nur für die Anzeige), `server_gen`, `started`, `heartbeat`, `ttl_s`, `reason` |
+| `handover_requests` | `owner` (Schlüssel), `purpose`, `priority`, `pid`, `since`, `heartbeat`, `ttl_s` |
+| `slot_events` | `id`, `ts`, `kind` (`take`, `release`, `reap`, `server_start`, `server_exit`, `restart`, `drain`, `handover`, `garbage`, `offer`), `run_id`, `detail` |
+
+Regeln: Eine `slot_leases`-Zeile ist **aktiv**, solange ihr Lauf lebt: Herzschlag jünger als `ttl_s` (Vorgabe 120 s wie `lease_s` des Supervisors) und `server_gen` gleich der des Servers. Der Zustand folgt dem Lauf, nicht der Uhr: `reap(live_run_ids)` setzt jede aktive Zeile eines Laufs, der nicht mehr läuft, auf `verfallen` (wie `resource_scheduler.reconcile`); die Uhr allein gibt nie einen Platz frei, solange der Supervisor den Job als laufend führt. Die logische Slot-Nummer vergibt der Scheduler (kleinste freie); der llama-server wählt seinen Slot selbst, weil höchstens N Anfragen gleichzeitig kommen (OP-S2-04: Anfrage mit `id_slot` nur, wenn die Messung einen Vorteil für den Prompt-Cache zeigt).
+
+Zustände von `slot_server`: `aus` → `startet` (ein Starter, Canary läuft) → `bereit`; `bereit` → `drain` (Umladen oder Neustart angefordert) → `aus`; `bereit` → `exklusiv` (Übergabe an einen anderen Prozess) → `aus`; Absturz oder Müll → `aus` oder `gesperrt` (nach `restart.max` Neustarts in `restart.window_s`).
+
+#### D2.4 Ablauf eines Agentenlaufs und Schnittstelle zu Spec 1
+
+```
+orchestra.tick._wake  → orch.start_run(...)                      Spec 1, S1.H8 (desk/orchestra_runner.py): Mission, Vertrag, create_job
+      create_job(..., priority = stufe(task.origin), kind='orchestra_run')       Captain 7 · Agent 5 · Routine 3
+Supervisor (workers = W)
+   Worker i: claim(worker_id, roles)
+       slots.compatible(job)?  nein → Job bleibt QUEUED, Wartegrund in slot_events/view (SCH-06)
+       slots.take(job)  (BEGIN IMMEDIATE)  → Slot-Lease 'aktiv' oder kein Platz → Job bleibt QUEUED
+   confirm_start(job_id)
+       resolve (Rezept)                            unverändert
+       slots.ensure_server(resolution, run_id)     Server läuft mit diesem Rezept → weiter
+                                                   aus + Starter                → vramplan prüfen, reservieren, Canary, starten
+                                                   Rezept anders, Regel fehlt   → Fehler model_swap_not_allowed (kann nach claim nicht mehr vorkommen; Schutz)
+       (scheduler.reserve und loader.ensure entfallen für Läufe, die einen Slot halten – der Server hat die eigene Reservierung)
+   Handler (Modellaufrufe über router.chat)        ctx.heartbeat() → slots.beat(run_id)
+   Ende (complete / fail / cancel / reap)          _release(job_id) → slots.release(job_id, outcome)
+   reap()                                          slots.reap(live_job_ids) neben _reconcile_resources
+```
+
+- **Wer zählt Plätze?** Der Scheduler allein. `workers` (Supervisor) ist die Obergrenze der gleichzeitigen Jobs, Vorgabe 1; sie steigt auf höchstens `slots` des laufenden Servers, aber nie über 8 (Änderung der Prüfung in `job_supervisor.py` von 1..1 auf 1..8, Gate G2-S2-03). `claim` nimmt einen Job nur, wenn `slots.take` einen Platz liefert; so steht ein wartender Lauf als `QUEUED` in der Schlange des Supervisors und zählt nie als Fehlversuch.
+- **Reihenfolge.** `claim` sortiert nach `slotplan.effective_priority` statt nach der rohen `priority` (Altern, SCH-04); bei Gleichstand nach `enqueued_at`, dann `job_id`. Wartende Direktaufrufe (Zeilen `kind direkt`, `wartend`) stehen in derselben Rangfolge: `take` verweigert einen Job, solange ein Direktwartender höherer oder gleicher Stufe älter ist. Laufende Läufe werden nie verdrängt.
+- **Priorität aus Spec 1.** `start_run` setzt `priority` des Jobs aus der Herkunft der Aufgabe: `origin captain` oder Weckruf `captain`/`antwort` auf eine Frage des Captains → 7; `origin agent` → 5; `origin routine` → 3. Die Zuordnung liegt in `model_scheduler.yaml` (`priorities`), nicht im Takt. `tick.py` bleibt unverändert; Spec 1 gibt `priority` an `create_job` weiter (eine Zeile in `desk/orchestra_runner.py`, S1.H8).
+- **Grenzen ergänzen sich.** `max_parallel` je Agent (Spec 1, Vorgabe 1) hält einen Agenten von allen Slots fern; `max_runs_per_tick` bremst das Anlegen; die Slots bremsen das Starten. Ein Lauf, der anliegt, hält seine Aufgabe ausgecheckt (`board.checkout` in `start_run`), solange er in der Schlange steht; `run_alive` meldet einen `QUEUED`-Job als lebend, der Takt gibt ihn also nicht frei. Die Oberfläche zeigt „wartet auf Slot“ aus `view()` (D2.9).
+- **Wartezeit-Obergrenze (SCH-04).** Überschreitet der älteste Wartende `wait_max_s` (Vorgabe 600 s) oder ist die Schlange länger als `queue_max` (Vorgabe 6), erzeugt der Scheduler **einen** Hinweis (Ereignis `slot.changed` mit `warnung`, Eintrag `offer`, D2.10). Er bricht nichts ab und bevorzugt keinen Lauf über die Rangfolge hinaus.
+- **Claim-Frist.** Ein Starter, der den Server erst startet, kann die 30 s von `claim_timeout_s` überschreiten. Vorschlag: `claim_timeout_s` auf 240 anheben (nur Konfiguration des Supervisors, G2-S2-04); alle anderen Claims warten, solange `slot_server.state = startet` (`take` liefert nichts).
+
+#### D2.5 Server, Rezept und Speicher
+
+- **Rezeptfelder.** `profile.server.slots` (ganze Zahl 1 bis 8, Vorgabe 1) und `profile.context.per_slots` (`{N: Fenster je Slot}`, aus Messung). Die Prüfung in `models/role_routing.py` (`profile.server`-Liste, Zeile 142) kennt `slots` künftig; `per_slots` darf nur Schlüssel `1..slots` und Werte aus `profile.context.tiers` bzw. nicht über `maximum` haben. Fehlt `per_slots` für ein gewähltes N, gilt `recommended` (Fenster je Slot) nur, wenn eine Messung für dieses N existiert, sonst Start verweigert mit `slots_not_measured` (kein Raten, Grundsatz „gemessen, nicht angenommen“).
+- **Start mit N Slots.** `ModelScheduler.ensure_server` ruft `LlamaServerRuntime.load_model(..., parallel=slots, context_length=slots × Fenster)`. `ModelLoader` bekommt `slots` aus dem Rezept statt `config.parallel` (das bleibt Vorgabe, wenn das Rezept nichts sagt) und vergleicht `contextLength` mit `slots × want` (B-4). Der Loader prüft weiterhin, dass genau dieses Fenster angewendet wurde.
+- **Speicher vorab (SCH-03).** Vor dem Start: `vramplan.server_need` aus `model_size_gb`/gemessenem VRAM des Rezepts (`measured_vram_gb`, `measured_context`) plus KV-Satz je 1000 Token mal Fenster mal N; Gewichte einmal. Dann `resource_scheduler.reserve("server:<rezept>", gen, estimate)` als **eine** Reservierung des Servers; sie bleibt, bis der Server endet (`release_job("server:<rezept>")`). Ablehnung mit `need_gb` und `measured_free_gb`, `limit_gb` im Ergebnis **und** im Audit `RESOURCE_DENIED` (kleine Änderung in `ResourceScheduler._audit`/`reserve`, Harness). Die Grenze ist 11,5 GB (`model_scheduler.vram_limit_gb`) und die Reserve 0,7 GB (`resource_scheduler.vram_reserve_gb` bleibt): wirksam ist das Strengere aus Hauptbuch, Messung und Grenze. Läufe, die einen Slot halten, buchen keinen eigenen VRAM mehr (`estimated_resources` wird für sie nicht reserviert); ihr RAM-Bedarf (Prompt-Cache im Hauptspeicher, `cache_ram`) steht in der Reservierung des Servers.
+- **Hardwareprofil.** `max_jobs` des Profils (1 bis 4) begrenzt Reservierungen, nicht Slots; da der Server nur eine Reservierung hält, begrenzt es Slots nicht. Wer die Parallelität dennoch deckeln will (Profil `quiet`/`ai-sustained`), setzt `model_scheduler.slots_cap_by_profile` (Vorgabe: Profil `quiet` und `ai-sustained` → 1; `balanced` → 2; `auto` → Rezept). Das hält die Dauerlast-Profile des Captains ein (G2-S2-06).
+- **Canary.** Vor jedem Start gilt `_check_gpu` wie heute; der Scheduler ruft nach einem eigenen Neustart `gpu_canary.invalidate("scheduler restart")`.
+
+#### D2.6 Direktaufrufe und Werkstatt (B-1)
+
+- **Aufrufer ohne Job.** Chat und Desk fragen heute das Modell über `models/router.py` (`chat`). Der Router bekommt einen Haken `slot_guard` (None = aus): Für einen lokalen llama-Aufruf ohne Slot-Lease der Mission nimmt er `scheduler.slot(owner=<aufrufer>, priority=7 für den Captain-Chat, 5 sonst, wait_s=<grenze>)` als Kontextblock. Hält die Mission (Agentenlauf) schon eine Lease (`run_id` = Job-ID im Kontext), tut er nichts. Die Rückgabe bei Wartezeit über `wait_s` ist ein klarer Fehler `slot_wait_timeout` mit dem Wartegrund, nie ein stilles Weiterwarten.
+- **Werkstatt (Modell laden/entladen).** `uix_server`: `model laden` ruft `scheduler.ensure_server(recipe, owner='werkstatt')` statt eigener Lease-Logik; `entladen` ruft `scheduler.stop_server(owner)` (Drain: ohne aktive Leases sofort, sonst Hinweis „Läufe aktiv“, Captain entscheidet mit `erzwingen`, das nur die Leases als `unterbrochen` markiert und den Server über die eigene PID stoppt). `gpu_token` und `_start_lease_beat` entfallen (Harness, `uix_server.py`, Gate G2-S2-05).
+- **Zugriff aus anderen Prozessen** (MCP, Skripte, Benchmarks) nur über die Lease-Übergabe (D2.7); `state_mcp.py` liest weiter nur und zeigt Besitzer und Slots (`view()`).
+
+#### D2.7 Exklusiv und Übergabe an Benchmarks (SCH-10)
+
+Heute nehmen Benchmarks und `devvm_build` `lab.lease(...)` und warten bis zu 10 Stunden. Hält der Scheduler die Lade-Lease dauerhaft, würden sie warten, bis ihr `wait_s` abläuft. Lösung ohne Änderung der Aufrufer:
+
+1. `TestLab.acquire` trägt sich beim ersten Fehlversuch in `handover_requests` ein (Eigner, Zweck, Priorität, PID, Herzschlag) und löscht den Eintrag, sobald die Lease erteilt oder der Versuch aufgegeben ist. Das sind wenige Zeilen in `testlab.py`; die Signatur von `acquire`/`lease` bleibt.
+2. `ModelScheduler.poll` (alle `poll_s` = 2 s, im Takt des Desk-Poller-Threads; kein eigener Dienst) sieht eine lebende Anfrage und wechselt `slot_server.state` auf `drain` (neue Slot-Leases werden nicht mehr vergeben, `reason exklusiv:<eigner>`), wartet auf die aktiven Läufe (höchstens `drain_max_s`, Vorgabe 1800 s), stoppt den Server über die eigene PID, gibt die Lade-Lease frei und setzt `exklusiv`.
+3. Der Benchmark bekommt die Lease im nächsten `try_acquire`-Takt (5 s), räumt mit `clear_leftovers` auf (findet keinen Server mit lebender Lease mehr, B-6) und läuft. Mit seinem Ende löscht er die Anfrage; der Scheduler wechselt auf `aus` und startet den Server erst wieder, wenn ein Lauf oder eine Werkstatt-Aktion ihn braucht (kein Wiederaufbau auf Verdacht).
+4. Zeitgrenze: Läuft die Drain-Frist ab, bleibt die Anfrage stehen; der Benchmark wartet weiter bis zu seinem `wait_s`, es wird kein Lauf getötet. Der Captain sieht die Anfrage und die Wartenden in der Seite `slots` (D2.9) und kann in der Werkstatt `erzwingen`.
+5. Die Reservierungen mit Priorität (`reserve(priority=1)`, Nachtkette) gelten unverändert: Eine lebende Reservierung höherer Priorität schiebt auch den Scheduler auf (`try_acquire` mit seiner Stufe 0): die Nachtkette hat Vorrang vor dem Wiederstart des Servers.
+
+`gpu_preflight.clear_leftovers` bekommt eine Prüfung: Ein llama-Server, dessen PID in `slot_server.pid` einer lebenden Lease steht, ist kein Überbleibsel (B-6, G2-S2-07).
+
+#### D2.8 Absturz, Müll, Neustart (SCH-08)
+
+- **Erkennen.** Absturz: `LlamaServerRuntime._reap` (Exitcode, Audit `LLAMA_SERVER_EXITED`, `gpu_canary.invalidate`). Der Scheduler fragt `status()` im `poll` und beim nächsten `ensure_server`. Müll: `degenerate_reason` im Handler (`model_text_handler`) meldet über `slots.report(run_id, 'garbage')`; ab `garbage.count` (2) Meldungen in `garbage.window_s` (300 s) gilt der Server als verdächtig. Hängt eine Anfrage, greift die Lease: ohne Herzschlag verfällt die Zeile (`reap`).
+- **Folgen.** `slot_server.state := aus` (oder `gesperrt`), `gen += 1`, alle aktiven Zeilen mit alter `gen` → `unterbrochen`. Der Supervisor sieht beim laufenden Handler eine Ausnahme (Verbindung) und entscheidet wie bei jedem Versuch: `HandlerError('provider_unavailable')` bzw. unbekanntes Ergebnis, bei Rollen mit `mutates: false` (Planer, Recherche, Reviewer, Unterarbeiter) Wiederholung mit der vorhandenen Grenze (3 Versuche, Backoff), bei `mutates: true` (Coder) **keine** stille Wiederholung: der Versuch bleibt unbekannt, die Aufgabe geht an den Bearbeiter zurück und der Captain entscheidet. Das ist dieselbe Garantie wie `step_journal` (`UNKNOWN_EXECUTION_OUTCOME`) und braucht keinen Eingriff in `core/`; Agentenläufe nutzen den Versuchsprotokoll-Weg des Supervisors, weil ihre Mission nur Klammer ist (Spec 1 D1.5, Schritt 4).
+- **Neustart.** Der Scheduler startet den Server nicht von selbst neu, sondern beim nächsten `take` (lazy): Canary, dann Start mit demselben Rezept. Höchstens `restart.max` (3) Neustarts in `restart.window_s` (600 s); darüber `gesperrt`, Audit `SLOT_SERVER_GESPERRT` und eine Entscheidung „Modellserver gesperrt, bitte prüfen“ an den Captain (Art `slot_server`, nur Ansicht und Ablehnen/Bestätigen = Entsperren). Müll-Verdacht führt zu einem kontrollierten Neustart (eigener Stopp über die eigene PID, Canary neu).
+- **Abnahme.** Fake-Server (`popen`, `get_json` ersetzt wie in `test_llama_server_runtime`): Absturz mitten im Lauf → alte Zeile `unterbrochen`, neue `gen`; Job einer Nicht-mutierenden Rolle läuft ein zweites Mal, Job einer mutierenden Rolle nicht; im Versuchsprotokoll je Schritt höchstens ein Versuch ohne Ausgang.
+
+#### D2.9 Ereignisse und Oberfläche (SCH-09)
+
+- **Quelle.** `ModelScheduler.view()` liefert die Form, die Spec 4 D4.2.4 festlegt: `{gesamt, belegt: [{slot, run_id, agent_id, titel, prioritaet, seit}], schlange: [{run_id, agent_id, prioritaet, seit, grund}], modell, warte_max_s}`, dazu `server: {state, gen, recipe, slots}`, `exklusiv: {eigner, zweck, seit} | null`, `warnung: null | {art, seit}`. Die Datenquelle ist die Tabelle `slot_leases`, nicht `/slots` des Servers (OP-S2-03: Existenz im Build b11160 ungeprüft; gemessen wird sie im Messplan Schritt 6 zusätzlich).
+- **Ereignis.** Ein Eintrag `slots` im `desk_snapshot()` (Erweiterungshaken, Spec 4 D4.3.2); `events.diff` liefert `slot.changed` mit `{slot, state, run_id, priority, queue_len}` je geändertem Slot, bei reiner Schlangenänderung mit `slot` leer. Latenz: der Takt des Poller (3 s), das ist die „live“-Grenze der Anforderung SCH-09.
+- **Lesen.** `POST /api/objects {type:'model'}` ergänzt `slots` (Spec 4 D4.3); ohne Scheduler fehlt das Feld und Shell D zeigt den Zwischenzustand aus D4.2.4. `GET /api/strip` bekommt `slots` für `gauge-slots` (`value '2/3'`, `hint '1 wartet'`).
+- **Keine neuen Verben.** Die Seite `slots` hat keine Aktionen; `entladen`/`erzwingen` bleiben Verben des Typs `model` (vorhanden bzw. in D2.6 ergänzt, Gate G2-S2-05).
+
+#### D2.10 Umladen und Cloud-Vorschlag (SCH-06, SCH-07)
+
+- **Umladen (SCH-06).** `slotplan.decide_reason` vergleicht das gewünschte Rezept mit `slot_server.recipe`. Passt es, läuft der Job. Passt es nicht: Regel `scheduler.swap` aus `local_config/model_scheduler.yaml` (Vorgabe `none`): `none` → Job bleibt `QUEUED`, Grund `model_swap_not_allowed`; `idle` → Umladen nur, wenn keine Lease aktiv ist und der Job die höchste Rangfolge hat; `fallback: <rezept>` → der Job darf auf ein freigegebenes kleines Rezept ausweichen, das schon läuft oder startbar ist. Die Regel ist Konfiguration (Änderung nur mit Sicherung `*.bak-<datum>-swap`, nicht während eines Laufs, Regel 2/3); eine Guard-Aktion gibt es dafür nicht (G2-S2-09).
+- **Cloud-Vorschlag (SCH-07).** `needs_cloud_offer` liefert höchstens einen Vorschlag je Wartendem und je `offer_every_s` (Vorgabe 900 s). Der Scheduler legt über `desk/decisions.request_decision(kind='cloud_offload', …)` eine Entscheidung an (Titel: „Lauf <titel> wartet seit <min> Minuten auf einen Slot. Cloud-Stufe nutzen?“, Optionen: ablehnen / nur diesen Lauf in die Cloud). Er schaltet nie um. Die **Annahme** hat in Spec 2 keine Wirkung außer einem Vermerk am Job (`cloud_offload_approved`); wie der Router ihn nutzt, regelt Spec 3 (`captain_cloud_approved` je Auflösung, Gate dort). Bis Spec 3 gebaut ist, ist die Entscheidung eine Anzeige mit Ablehnen (G2-S2-10).
+
+#### D2.11 Konfiguration
+
+`config/model_scheduler.yaml` (neu, Standard aus; fehlt sie oder ist sie ungültig, schaltet der Scheduler ab und `boot()` meldet `model_scheduler_error` mit Grund, wie KERN-06):
+
+```
+model_scheduler:
+  schema: 1
+  enabled: false
+  vram_limit_gb: 11.5
+  priorities: {captain: 7, agent: 5, routine: 3}      # alle unter critical.min_priority 8
+  age_after_s: 120            # je volle 120 s Wartezeit eine Stufe höher (Startwert, nicht gemessen)
+  age_cap: 5                  # Altern endet bei Agent; Captain-Stufe wird nie durch Altern erreicht
+  wait_max_s: 600
+  queue_max: 6
+  offer_every_s: 900
+  drain_max_s: 1800
+  slot_ttl_s: 120
+  poll_s: 2
+  restart: {max: 3, window_s: 600}
+  garbage: {count: 2, window_s: 300}
+  swap: none                  # none | idle | {fallback: <rezept>}
+  slots_cap_by_profile: {quiet: 1, ai-sustained: 1, balanced: 2}
+```
+
+Alle Zahlen sind Startwerte ohne Messung dahinter; der Messplan S2.1 liefert die Standard-Slotzahl (SCH-01) und `slot_ttl_s`/`age_after_s` bleiben Betriebsgrößen. Der Machine-Overlay `local_config/model_scheduler.yaml` darf nur `enabled`, `swap`, `queue_max`, `wait_max_s`, `slots_cap_by_profile` ändern (gleiche Technik wie `role_routing`-Overlay). Änderungen an Rezept, Engine oder Schaltern gelten nur im Stillstand der Slots (Regel 2).
+
+#### D2.12 Fehlerfälle und Abnahme
+
+| Fall | Verhalten |
+| --- | --- |
+| zweiter SEDRA-Prozess will laden | `gpu_lease_busy:<eigner>:<zweck>`, kein Server, nichts angefasst |
+| N+1 Läufe auf N Slots | der letzte bleibt `QUEUED` mit Grund `kein_slot`, zählt nicht als Fehlversuch, bekommt den Platz in Rangfolge |
+| Server startet, weitere Claims | `take` liefert nichts, bis `bereit` oder `aus` (Grund `server_startet`) |
+| Start zu groß für 11,5 GB | `vramplan.fits` liefert `{need_gb, measured_free_gb, limit_gb, reason}`; Start abgelehnt, Audit mit denselben Werten, Lauf wartet nicht endlos: Grund `speicher`, Job fehlerhaft mit Code `vram_insufficient` nach der vorhandenen Fehlerklasse |
+| Rezept ohne `per_slots` für N | `slots_not_measured`, Server startet nicht |
+| anderes Rezept gefordert, `swap none` | Job wartet, Grund `model_swap_not_allowed` |
+| Direktaufruf wartet über `wait_s` | `slot_wait_timeout` mit Grund, kein stilles Warten |
+| Lauf endet ohne Rückgabe (Absturz des Workers) | `reap(live_ids)` setzt die Lease auf `verfallen`, Platz frei beim nächsten `take` |
+| Benchmark verlangt Lease | `drain` → Server aus → Übergabe; Frist `drain_max_s`, danach bleibt die Anfrage stehen |
+| Server stürzt ab / liefert Müll | D2.8 |
+| Nachtkette mit höherer Reservierung | `try_acquire` des Schedulers wird aufgeschoben (`deferred`), Server startet erst danach |
+| `model_scheduler.yaml` fehlt oder ungültig | Scheduler aus, Verhalten wie heute, `model_scheduler_error` im `boot()` |
+| `testlab.db` älter (Schema 1) | Migration nach Sicherung; scheitert sie: Scheduler aus, Meldung |
+
+Abnahme je Anforderung (ohne Modell und GPU; Fake-Uhr als `now`; Fake-Server wie `test_llama_server_runtime`):
+
+| ID | Testdatei | Prüfung |
+| --- | --- | --- |
+| SCH-01 | `tests/test_model_scheduler_server.py`, `test_role_routing.py` | `server.slots` wird geprüft (0, 9, Text abgelehnt); `build_command` bekommt `-np N` und `-c N × Fenster`; Loader vergleicht die Summe; `slots_not_measured` ohne `per_slots` |
+| SCH-02 | `tests/test_slot_store.py`, `test_slotplan.py` | Zwei Prozesse laden: einer `gpu_lease_busy`; N+1 Anforderungen: genau N aktiv, die letzte `wartend`, FIFO je Stufe; 100 Durchläufe mit 2 Prozessen nie mehr als N aktiv |
+| SCH-03 | `tests/test_vramplan.py`, `test_resource_scheduler.py` | Gewichte einmal, KV je Slot; über 11,5 GB abgelehnt mit `need_gb`/`measured_free_gb` im Ergebnis und im Audit; N Läufe im Slot buchen keinen eigenen VRAM |
+| SCH-04 | `tests/test_slotplan.py` | Stufenfolge Captain > Agent > Routine; Altern hebt Routine bis 5, nie darüber; gleiche Stufe nach Eingang; Überschreitung von `wait_max_s` erzeugt genau einen Hinweis; kein Lauf wird verdrängt |
+| SCH-05 | `tests/test_role_routing.py`, `test_context_ladder_parallel.py` | `per_slots` gültig/ungültig; Messwerkzeug `--parallel N` baut `-np N` (Fake-Server); Ergebnisdatei trägt N |
+| SCH-06 | `tests/test_slotplan.py`, `test_model_scheduler_swap.py` | Ohne Regel wartet der Job mit `model_swap_not_allowed`; `idle` lädt nur ohne aktive Lease; `fallback` weicht aus |
+| SCH-07 | `tests/test_model_scheduler_offer.py` | Schlange > `queue_max` oder Wartezeit > `wait_max_s` → eine Entscheidung `cloud_offload`; nie ein Umschalten; Ablehnen schließt sie |
+| SCH-08 | `tests/test_model_scheduler_crash.py` | Fake-Server stirbt: alte Leases `unterbrochen`, `gen` +1, Canary ungültig; Job mit `mutates false` läuft erneut, mit `mutates true` nicht; 4. Neustart in 10 Minuten → `gesperrt` und Entscheidung; Müll zweimal → kontrollierter Neustart |
+| SCH-09 | `tests/test_desk_events.py` (erweitert) | `diff` liefert `slot.changed` mit `{slot, state, run_id, priority, queue_len}`; Schlangenänderung ohne `slot`; `view()` hat genau die Form aus Spec 4 D4.2.4 |
+| SCH-10 | `tests/test_model_scheduler_handover.py` | Benchmark-Anfrage → `drain` → Server aus → Lease frei → Anfrage gelöscht → Server bleibt aus; Frist läuft ab → Anfrage steht, kein Lauf getötet; Nachtketten-Reservierung hat Vorrang |
+| SCH-11 | `tests/test_model_scheduler_lease.py` | Werkstatt, Job und Direktaufruf laden nur über den Scheduler; ohne Lease kein Start; `uix_server` hält kein eigenes `gpu_token` mehr |
+| Grenze | `tests/test_model_scheduler_boundary.py` | `slotplan.py` und `vramplan.py` ohne `guppi_runtime`/`sqlite3`; `core/` unberührt; `test_core_boundary_src` grün |
+
+#### D2.13 Wer baut was (L4, V4), Reihenfolge, Gate-Liste G2-S2
+
+Regel V4: SEDRA baut neue Module mit klarer Schnittstelle, wenn Spec + Tests + Referenz kleiner sind als der Code; Claude (Harness) baut alles, was vorhandene Dateien, Supervisor, Router, Oberfläche, Konfiguration oder Messwerkzeuge berührt. Stufen von höchstens 20 neuen Prüfungen (L3). Die Zahlen sind Planwerte.
+
+| Bau-Spec | Ziel | Stufen (geplante neue Prüfungen) | geschätzt Zeilen | V4 |
+| --- | --- | --- | --- | --- |
+| `s2_slotplan` | `jobs/slotplan.py` | priority 14, order 12, admit 18, reason 14, offer 10 | 170 | SEDRA |
+| `s2_vramplan` | `jobs/vramplan.py` | need 10, fits 14, max_slots 10 | 70 | SEDRA, wenn Spec+Tests+Referenz die Zeilen nicht übersteigen; sonst Claude |
+| `s2_slot_store` | `jobs/slot_store.py` | request 12, take 18, release 12, reap 14, handover 12, view 10 | 260 | SEDRA (Saat: `testlab.py` Schema 2) |
+
+Harness (Claude):
+
+| Schritt | Inhalt | Gate |
+| --- | --- | --- |
+| S2.H0 (= S2.0) | `context_ladder.py`, `connection_check.py` mit `--parallel`, neues `slot_throughput.py`, ohne GPU getestet; **danach** Messung S2.1 mit eigener Freigabe | G2-S2-02 |
+| S2.H1 | `testlab.py`: Schema 2, `register_waiter`; Sicherung `testlab.db.bak-<datum>-schema2`; Tests | G2-S2-03 |
+| S2.H2 | `models/role_routing.py` (`slots`, `per_slots`), `model_loader.py` (`slots`, Summe), `llama_server_runtime.py` (Auswertung `parallel`) | G2-S2-05 |
+| S2.H3 | `jobs/model_scheduler.py` (Fassade), `config/model_scheduler.yaml`, `resource_scheduler.py` (Audit mit Werten) | G2-S2-01, 08 |
+| S2.H4 | `job_supervisor.py`: `workers` 1..8, `claim` mit `take`/Altern, `confirm_start` mit `ensure_server`, `_release`/`reap` mit Scheduler, `claim_timeout_s`; Worker-Pool in `desk/orchestra_runner.py` | G2-S2-04 |
+| S2.H5 | `models/router.py` Haken `slot_guard`; `uix_server.py` (Werkstatt, Lease, `desk_snapshot` `slots`); `desk/events.py` `slot.changed`; `gpu_preflight` | G2-S2-05, 07 |
+| S2.H6 | `desk/decisions.py` Art `cloud_offload` (nur Anzeige), Zustand „gesperrt“ | G2-S2-10 |
+| S2.H7 | Abnahme D2.12, Logbuch, `uix_check`; danach Regeländerung in `ENTWICKLUNG.md` (S2.2) | G2-S2-11 |
+
+Reihenfolge: S2.H0 (ohne GPU gebaut) → Messung S2.1 mit eigener Freigabe samt GPU-Zeit → Standard-Slotzahl und `per_slots` an den Captain; parallel dazu `s2_slotplan`, `s2_vramplan` (GPU-Bauten nacheinander, nach der Messung, weil die GPU belegt ist) und S2.H1. Dann `s2_slot_store`, S2.H2, S2.H3, S2.H4, S2.H5, S2.H6, S2.H7. Jeder SEDRA-Kandidat kommt einzeln zu G4. Vor Spec 1 S1.H8 ist nichts davon lauffähig; Spec 2 setzt auf `start_run`/`create_job` aus S1.H8 auf, ändert aber `tick.py` nicht.
+
+Gate-Liste G2 Spec 2 (jede Zeile einzeln; Empfehlung der Spec-Sitzung):
+
+| Gate | Gegenstand | Vorschlag |
+| --- | --- | --- |
+| G2-S2-01 | Architektur D2.1: ein Besitzer (`ModelScheduler`), Lade-Lease und Slot-Leases, alle drei Wege (Job, Werkstatt, Direktaufruf) gehen durch ihn; Schalter `model_scheduler.enabled` Standard aus | ja |
+| G2-S2-02 | Module und Funktionen D2.2 (`slotplan`, `vramplan` rein; `slot_store`, `model_scheduler`), Importgrenze | ja |
+| G2-S2-03 | Datenmodell D2.3 (Schema 2 von `testlab.db`, vier Tabellen) und `register_waiter` in `testlab.py`; Sicherung vor Migration | ja |
+| G2-S2-04 | Supervisor: `workers` 1..8 statt 1..1; `claim` nimmt den Platz und sortiert mit Altern; `confirm_start` mit `ensure_server` statt Reservierung je Job; `claim_timeout_s` 240 (Änderung an `job_supervisor.py` und `job_supervisor.yaml`, kein Kern) | ja |
+| G2-S2-05 | Rezept und Loader: `server.slots`, `context.per_slots`, Summenvergleich beim Fenster; Werkstatt und `uix_server` ohne eigenes `gpu_token`; Haken `slot_guard` im Router (SCH-11 neu) | ja |
+| G2-S2-06 | Hardwareprofil begrenzt Slots (`slots_cap_by_profile`: `quiet`/`ai-sustained` 1, `balanced` 2) | ja |
+| G2-S2-07 | Übergabe-Verfahren D2.7 (`exklusiv`, `drain_max_s` 1800, keine Verdrängung, `erzwingen` nur durch den Captain) und `gpu_preflight` schont lebende Leases | ja |
+| G2-S2-08 | Speicher: Gewichte einmal plus KV je Slot als **eine** Reservierung des Servers; Grenze 11,5 GB, Reserve 0,7 GB; Audit `RESOURCE_DENIED` mit Werten | ja |
+| G2-S2-09 | Umladen nur nach Regel in `local_config/model_scheduler.yaml` (`swap`); **keine** neue Guard-Aktion und kein Eingriff in `core/` | ja |
+| G2-S2-10 | Cloud-Vorschlag als Entscheidung `cloud_offload` (nur Anzeige und Ablehnen); Annahme wirkt erst mit Spec 3 | ja |
+| G2-S2-11 | Absturz-Verhalten D2.8 über Versuchsprotokoll des Supervisors und `mutates` (kein Eingriff in `step_journal`); höchstens 3 Neustarts in 10 Minuten, danach `gesperrt` mit Entscheidung | ja |
+| G2-S2-12 | Prioritäten als Zahlen im Supervisor: Routine 3, Agent 5, Captain 7 (unter 8); `start_run` gibt `priority` aus der Herkunft der Aufgabe weiter | ja |
+| G2-S2-13 | Ereignis `slot.changed` über `desk_snapshot` (Takt 3 s) und Form `slots` aus Spec 4 | ja |
+| G2-S2-14 | Aufteilung SEDRA/Claude und Reihenfolge D2.13 (drei SEDRA-Bauten, Harness S2.H0 bis H7) | ja |
+| G2-S2-15 | Abnahmeplan D2.12 und neue Anforderung SCH-11 („Lease-Pflicht für jeden lokalen Modellstart und -aufruf“) | ja |
+| G2-S2-16 | Konfiguration `model_scheduler.yaml` mit den Startwerten D2.11 (alle ungemessen, im Messbericht zu bestätigen) | ja |
+
+Offene Punkte:
+
+| Nr | Lücke oder Frage | Vorschlag |
+| --- | --- | --- |
+| OP-S2-01 | Ob Build b11160 `-c` fest auf die Slots teilt oder einen gemeinsamen KV-Puffer nutzt (ungemessen) | Messplan Schritt 5; bis dahin gilt „Fenster je Slot, `-c` = Summe“ und die Messung bestätigt oder ändert `per_slots` |
+| OP-S2-02 | Ob jeder lokale Modellaufruf durch `models/router.py` geht (Chat, Gateway, Kontextverwaltung, Skripte) | beim Bau von S2.H5 mit `grep` auf `openai_local`/`llamacpp` prüfen; Aufrufer außerhalb des Routers bekommen den Haken oder werden verboten |
+| OP-S2-03 | Ob der Server `/slots` liefert; wird nur zur Gegenprobe gebraucht | Messplan Schritt 6 |
+| OP-S2-04 | `id_slot` je Anfrage für den Prompt-Cache (Vorteil bei mehreren Agenten mit langem gleichem Anfang?) | nach der Messung entscheiden |
+| OP-S2-05 | Kostet das Hinzuziehen von `resolve` im `claim` (Rezeptwahl je Kandidat) zu viel? `compatible(job)` braucht das Rezept der Rolle | beim Bau messen; sonst Rolle→Rezept-Tabelle im Scheduler zwischenspeichern |
+| OP-S2-06 | Eine Rolle wie `foreman` aus Spec 1 muss in `job_supervisor.yaml` `mutates` richtig tragen (Unterarbeiter ändert nur Aufgaben über Guard, kein Dateischreiben) | in S1.H8 festlegen; Spec 2 liest nur das Merkmal |
+| OP-S2-07 | MTP-Spekulation (`spec-type draft-mtp`) mit mehreren Slots: stabil und schneller? | Messplan Schritt 6, Zeile `--set mtp` |
+| OP-S2-08 | Das Hilfsmodell neben dem Hauptmodell in der Karte (zwei Server)? | nicht Teil dieser Spec; ein Server, ein Modell (B-2); Ausweichen nur über `swap fallback` |
+| OP-S2-09 | Laufzeit eines Starters über `claim_timeout_s` hinaus | G2-S2-04 hebt die Grenze; der Bau prüft, dass `_start_attempt` das Ladeende nicht als abgelaufenen Claim wertet |
+
+Nicht geprüft in dieser Stufe: Ausführen von Tests, Oberfläche, Modell, GPU; `models/router.py` und `model_loader.py` nur an den genannten Stellen gelesen; `desk/orchestra_runner.py` existiert noch nicht (S1.H8), die Schnittstelle ist aus `tick.py`, `service.py` und Spec 1 D1.5 abgeleitet; `agent_manager/run_worker.py` (Obergrenze 2 Slots für Bauten über `--parallel`) und die Anbindung von `devvm_build` an den Scheduler nicht im Detail; Verhalten von `llama-server` Build b11160 bei `-np N` ungemessen.
+
 ### Aufgaben
 
-- [ ] S2.0 Messwerkzeuge erweitern (`--parallel`, `slot_throughput.py`), ohne GPU testen → G1-S2-e
-- [ ] S2.1 Messplan ausführen (unter GPU-Lease, Rezepte nur mit Sicherung) → Messbericht
-- [ ] S2.2 Regeländerung zur GPU-Lease in `ENTWICKLUNG.md` als Entwurf → Captain-Gate (Entwurf steht oben)
-- [ ] S2.3 Design `model_scheduler.py` und Tabelle `slot_leases` → G2
-- [ ] S2.4 Bau-Specs `sch_queue` (Priorität, Altern), `sch_slots` (Vergabe, Rückgabe, Absturz) → G3
-- [ ] S2.5 Integration in `llama_server_runtime.py` und `resource_scheduler.py` (Harness) → G4
+- [x] S2.0 Messwerkzeuge erweitern (`--parallel`, `slot_throughput.py`), ohne GPU testen → als S2.H0 unten eingeplant
+- [ ] S2.1 Messplan ausführen (unter GPU-Lease, Rezepte nur mit Sicherung) → Messbericht; eigene Freigabe mit GPU-Zeit (G3-S2-06)
+- [ ] S2.2 Regeländerung zur GPU-Lease in `ENTWICKLUNG.md` (Entwurf steht oben) → Captain-Gate, Änderung erst nach Bau und Abnahme (G3-S2-14)
+- [x] S2.3 Design `model_scheduler.py` und Tabelle `slot_leases` → G2 (erteilt 22.10.2026, G2-S2-01 bis 16)
+- [x] S2.4 Bau-Specs `s2_slotplan`, `s2_slot_store` in `devvm_specs/` mit Referenz und `spec_check` = ok (22.10.2026, siehe „Bauschritte S2“); `s2_vramplan` entfällt nach V4 → G3
+- [ ] S2.5 Bau durch SEDRA (zwei Module), Harness S2.H1 bis S2.H7, Review, Übernahme → G4
+
+#### Bauschritte S2 (Stufe 3, Vorlage für G3)
+
+Stand 22.10.2026, Branch `spec2/modelle-scheduler` (nach Merge von `spec/agenten-orchestrierung`), geschnitten aus D2.1 bis D2.13 (G2-S2-01 bis 16 erteilt). Wer baut: **SEDRA** = neues Modul mit Bau-Spec (`runtime/benchmarks/devvm_specs/s2_*.py`, versteckte kumulative Tests) und grüner Referenz (`devvm_refs/s2_*/`, nur Prüfmittel); **Claude** = direkt geschrieben nach V4; **Harness** = Eingriff in vorhandene Dateien, Konfiguration, Desk, Supervisor, Router und Lauf. Gelaufen ist nur `spec_check <n>` auf dem Host (ohne `--vm`, ohne GPU, ohne Modell); kein `devvm_build`. Vor dem Bau schreibt Claude je Bau-Spec den Stempel mit `spec_check <n> --vm --project <projekt>` (Schritt 2 aus `SO_WIRD_GEBAUT.md`) und prüft die Zeilenenden (OP-S2-11).
+
+**Saat** `benchmarks/s2_schema_seed/` (PIPE-10, Feld `SEED` in `s2_slot_store`): `slot_db.py` = die vier Tabellen (`slot_server`, `slot_leases`, `handover_requests`, `slot_events`) als `SCHEMA`, `immediate()` und `open_db()`; dazu `slotplan.py` (byte-gleich mit der Referenz von `s2_slotplan`). Die Referenz von `s2_slot_store` enthält die ganze Saat plus `slot_store.py`. S2.H1 baut dieselben Tabellen wörtlich in `testlab.SCHEMA` (ein Test vergleicht beide Texte); ändert sich die Saat, muss `s2_slot_store` neu gestempelt werden.
+
+**V4 für `s2_vramplan`:** Der Code wäre rund 45 Zeilen (drei Funktionen). Eine Bau-Spec mit drei Stufen bräuchte nach den Vergleichsstücken (`s2_slotplan`: Spec 184 Zeilen und Referenz 100 für 100 Zeilen Code) rund 130 Zeilen Spec und Tests plus 45 Zeilen Referenz, also etwa das Vierfache des Codes → **Claude baut direkt** (S2.C1), wie `budgetcalc` in Spec 1. Wörtlich verfehlt auch `s2_slotplan` V4 (Spec 1,8-fach, Referenz so groß wie der Code), `s2_slot_store` ebenso (1,7-fach); beide bleiben nach der Auslegung von OP-S1-11 bei SEDRA, weil der Code deutlich über 60 Zeilen liegt und die Schnittstelle klar ist (G3-S2-01, 03).
+
+SEDRA-Bauten (eine GPU-Lease, ein Bau zur Zeit, nach der Messung; Zahlen = neue versteckte Prüfungen je Stufe, gezählt von `spec_check`):
+
+| Nr | Bau-Spec | Ziel im Paket | Stufen (neue Prüfungen) | Saat | Referenz (Zeilen) | `spec_check` (Host) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | `s2_slotplan` | `jobs/slotplan.py` | priority 20, order 13, admit 17, reason 20, offer 17 | – | `devvm_refs/s2_slotplan/slotplan.py` (100) | result ok |
+| 2 | `s2_slot_store` | `jobs/slot_store.py` | request 19, server 18, note 14, take 16, release 19, handover 19, view 15 | ja | `devvm_refs/s2_slot_store/slot_store.py` (185) | result ok; erste Stufe scheitert auf der Saat |
+
+Beide Stufenfolgen halten L3 (höchstens 20 neue Prüfungen). Die reine Bau-Spec `s2_slotplan` importiert weder `guppi_runtime` noch `sqlite3` (Prüfung `test_model_scheduler_boundary.py` nach der Übernahme).
+
+Schnittstellen, die die Bau-Specs gegenüber D2.2/D2.3 festlegen oder ändern (der Harness hält sich daran):
+
+- Zeit überall als UTC-Text `YYYY-MM-DDTHH:MM:SSZ`, auch in den neuen Tabellen von `testlab.db` (die alten Tabellen behalten `REAL`); die Fassade `model_scheduler.py` wandelt die Uhr des Testlabors in diesen Text.
+- `slotplan.decide_reason(server, wanted_recipe, mode, active, cfg)`: **ohne** `waiting_len` (der Wert wäre ungenutzt). Gründe: `gesperrt`, `exklusiv:<eigner>`, `drain`, `server_startet`, `model_swap_not_allowed`, `kein_slot`, sonst `None`. `server` trägt `state`, `slots`, `recipe`, `owner`.
+- `slotplan.admit`: `server.state` `aus` lässt genau einen Starter zu, solange nichts aktiv ist; `bereit` bis `slots − aktiv`; alle anderen Zustände und jeder Modus außer `normal` nichts.
+- `cfg`-Schlüssel der reinen Funktionen: `age_after_s`, `age_cap`, `swap` (`none`, `idle` oder `{fallback: <rezept>}`), `queue_max`, `wait_max_s`. Altern gilt nur unterhalb von `age_cap`; ein Eintrag ab `age_cap` bleibt unverändert.
+- `slot_server` hat die zusätzliche Spalte `owner` (Eigner des Modus `exklusiv`, von `decide_reason` gelesen). Ereignisse: `kind` ist freier Text (`take`, `release`, `reap`, `handover`, `server_<zustand>`); `request` schreibt kein Ereignis.
+- `slot_store`: neben `request`, `take`, `release`, `beat`, `reap`, `view` gehören `set_server` (Zustandswechsel, erhöht `gen` bei `startet`, setzt aktive Leases beim Wechsel nach `aus`/`gesperrt` auf `unterbrochen`), `note` (Zähler für `restarts` und `garbage` im Zeitfenster, SCH-08), `events` und die drei `handover_*` dazu. `reap(conn, live_run_ids, now)`: `live_run_ids` sind **alle** Läufe, die noch fragen können (wartende und laufende); die Uhr gibt nie einen Platz frei. `take(conn, run_id, now, cfg, recipe=None)` verlangt vorheriges `request`.
+- `vramplan` (S2.C1, ohne Bau-Spec): `server_need(weights_gb, kv_gb_per_slot, slots, compute_gb=0.0, ram_gb=0.0) -> {vram_gb, ram_gb}` (Gewichte einmal, KV je Slot); `fits(need_gb, limit_gb, reserve_gb, measured_free_gb) -> None | {need_gb, measured_free_gb, limit_gb, reason}` mit `reason` `limit` (Bedarf > `limit_gb`, die Reserve zieht dort das Hauptbuch des `resource_scheduler` ab) oder `frei` (Bedarf > `measured_free_gb − reserve_gb`); `max_slots(weights_gb, kv_gb_per_slot, compute_gb, limit_gb, cap=8) -> int` (größtes N mit `weights + compute + kv·N ≤ limit`, 0 wenn schon 1 nicht passt). Das ändert D2.2 (dort `reserve_gb` auch bei `max_slots`, `limit − reserve` als Grenze): Der Captain hat „Obergrenze 11,5 GB, Reserve 0,7 GB“ freigegeben; die Reserve wirkt auf der Messseite und im Hauptbuch, nicht doppelt auf der Grenze (OP-S2-10).
+
+Claude direkt (V4):
+
+| Schritt | Inhalt | Dateien | G2-Gate | hängt ab von |
+| --- | --- | --- | --- | --- |
+| S2.C1 | `vramplan.py` mit den drei Funktionen oben und Tests (Grenzfälle `limit`/`frei`, Gewichte einmal, `max_slots` 0 und Deckel 8, negative Werte `value_invalid`) | `jobs/vramplan.py`, `tests/test_vramplan.py` | G2-S2-02, 08 | – |
+
+Harness (Claude):
+
+| Schritt | Inhalt | Dateien | G2-Gate | hängt ab von |
+| --- | --- | --- | --- | --- |
+| S2.H0 | `--parallel N` in `context_ladder.py` und `connection_check.py` (füllt alle N Slots gleichzeitig zu 85 %), neues `slot_throughput.py`; Tests mit unechtem Server, keine GPU | `benchmarks/context_ladder.py`, `connection_check.py`, `slot_throughput.py`, `tests/test_context_ladder_parallel.py` | G2-S2-14 | – (zuerst) |
+| S2.M | Messung S2.1 nach Messplan (Hauptmodell Slots 1 bis 4, Hilfsmodell, S0 je Einstellung), Messbericht, Vorschlag Standard-Slotzahl und `per_slots` | `runtime_data/measurements/…`, Bericht, `MODELLE.md` (Tabelle) | G1-S2-k, G3-S2-06 | S2.H0, freie GPU, eigene Freigabe |
+| S2.H1 | `testlab.py`: Schema 2 (die vier Tabellen wörtlich aus der Saat, `PRAGMA user_version` 2), `register_waiter` in `acquire`; Sicherung `testlab.db.bak-<datum>-schema2`; Test, dass `SCHEMA` und Saat gleich sind | `jobs/testlab.py`, `tests/test_testlab.py` | G2-S2-03 | – |
+| S2.H2 | `role_routing.py` (`slots`, `per_slots`, `slots_not_measured`), `model_loader.py` (`slots` aus dem Rezept, Fenster als Summe), `llama_server_runtime.py` (Auswertung von `parallel`), `llama_server.yaml` unverändert | `models/role_routing.py`, `model_loader.py`, `llama_server_runtime.py`, `tests/test_role_routing.py`, `test_model_loader.py`, `test_llama_server_runtime.py`, `test_model_scheduler_server.py` | G2-S2-05 | – |
+| S2.H3 | Übernahme der zwei SEDRA-Module (nach G4, nur Importe relativ) plus S2.C1; Fassade `model_scheduler.py` (Besitz von Server und Lade-Lease, `ensure_server`, `take_for_job`, `slot`, `release`, `reap`, `exclusive`, `view`, `poll`), `config/model_scheduler.yaml` und Overlay-Leser, Audit mit Werten in `resource_scheduler.py`, Meldung `model_scheduler_error` | `jobs/model_scheduler.py`, `slotplan.py`, `slot_store.py`, `vramplan.py`, `runtime/config/model_scheduler.yaml`, `jobs/resource_scheduler.py`, `tests/test_model_scheduler_*.py`, `test_resource_scheduler.py` | G2-S2-01, 02, 08, 16 | S2.H1, S2.H2, G4 der Module, S2.C1 |
+| S2.H4a | `job_supervisor.py`: `workers` 1..8, `claim` nimmt den Platz (`take`) und sortiert mit Altern, `confirm_start` mit `ensure_server` statt Reservierung je Job, `_release` und `reap` mit dem Scheduler, `ctx.heartbeat` ruft `beat`; `job_supervisor.yaml` `claim_timeout_s` 240 | `jobs/job_supervisor.py`, `jobs/job_worker.py`, `runtime/config/job_supervisor.yaml`, `tests/test_job_supervisor.py` | G2-S2-04, 12 | S2.H3 |
+| S2.H4b | Worker-Pool mit `workers` Threads und `priority` aus der Herkunft der Aufgabe in `start_run` (eine Zeile) | `desk/orchestra_runner.py`, `tests/test_orchestra_run.py` | G2-S2-04, 12 | S2.H4a, **S1.H8** (die Datei wird dort erst gebaut) |
+| S2.H5 | Haken `slot_guard` im Router; Werkstatt (`model laden/entladen`) über den Scheduler, `gpu_token` und `_start_lease_beat` entfallen; `desk_snapshot` mit `slots` und `slot.changed`; `gpu_preflight` schont lebende Leases; Strip-Wert `slots` | `models/router.py`, `uix_server.py`, `desk/events.py`, `models/gpu_preflight.py`, `tests/test_desk_events.py`, `test_model_scheduler_lease.py`, `test_model_scheduler_handover.py` | G2-S2-05, 07, 13 | S2.H3 |
+| S2.H6 | Entscheidungsart `cloud_offload` (nur Anzeige, Ablehnen), Zustand `gesperrt` als Entscheidung | `desk/decisions.py`, `jobs/model_scheduler.py`, `tests/test_model_scheduler_offer.py`, `test_model_scheduler_crash.py` | G2-S2-10, 11 | S2.H3 (Wirkung der Annahme: Spec 3) |
+| S2.H7 | Abnahme D2.12 (alle Testdateien), `uix_check` `result ok`, Logbuch; danach Regeländerung S2.2 | – | G2-S2-15 | alle |
+
+Testdateien je Anforderung (Abnahme D2.12; wer sie schreibt: die Bau-Specs prüfen die Module einzeln, der Harness schreibt die Integrationstests):
+
+| ID | Testdatei | Aufgabe |
+| --- | --- | --- |
+| SCH-01 | `test_model_scheduler_server.py`, `test_role_routing.py`, `test_context_ladder_parallel.py` | S2.H0, S2.H2 |
+| SCH-02 | `test_slot_store.py`, `test_slotplan.py` (Referenzen der Bau-Specs als Grundlage, dazu Zwei-Prozess-Test mit 100 Durchläufen) | S2.H3 |
+| SCH-03 | `test_vramplan.py`, `test_resource_scheduler.py` | S2.C1, S2.H3 |
+| SCH-04 | `test_slotplan.py`, `test_job_supervisor.py` (Altern in `claim`) | S2.H3, S2.H4a |
+| SCH-05 | `test_role_routing.py`, `test_context_ladder_parallel.py` | S2.H0, S2.H2 |
+| SCH-06 | `test_slotplan.py`, `test_model_scheduler_swap.py` | S2.H3 |
+| SCH-07 | `test_model_scheduler_offer.py` | S2.H6 |
+| SCH-08 | `test_model_scheduler_crash.py` | S2.H6 |
+| SCH-09 | `test_desk_events.py` | S2.H5 |
+| SCH-10 | `test_model_scheduler_handover.py` | S2.H5 |
+| SCH-11 | `test_model_scheduler_lease.py` | S2.H5 |
+| Grenze | `test_model_scheduler_boundary.py` (reine Module ohne `guppi_runtime`/`sqlite3`, `core/` unberührt, `test_core_boundary_src` grün) | S2.H3 |
+
+Reihenfolge: S2.H0 zuerst (ohne GPU gebaut); dann die Messung S2.M mit eigener Freigabe samt GPU-Zeit (sie liefert `per_slots` und die Standard-Slotzahl, die SEDRA-Bauten brauchen die GPU danach). Parallel zur Messung und zu den Bauten Claude: S2.C1, S2.H1, S2.H2. SEDRA-Bauten nacheinander: `s2_slotplan`, dann `s2_slot_store`. Nach G4 der Module: S2.H3 → S2.H4a → S2.H5 → S2.H6; S2.H4b erst, wenn S1.H8 (`desk/orchestra_runner.py`) gebaut ist; danach S2.H7. Spec 2 ändert `tick.py` nicht und läuft auch ohne Spec 1 Schritt H8 bis S2.H6 (Fassade, Supervisor, Router, Oberfläche), nur der Worker-Pool und die Priorität aus der Herkunft der Aufgabe warten auf S1.H8.
+
+#### Gate-Vorschläge G3 Spec 2
+
+| Gate | Gegenstand | baut | Vorschlag |
+| --- | --- | --- | --- |
+| G3-S2-01 | Bau-Spec `s2_slotplan` und SEDRA-Bau `jobs/slotplan.py` | SEDRA | ja |
+| G3-S2-02 | Saat `s2_schema_seed` (vier Tabellen als `slot_db.py` plus `slotplan.py`) | Claude | ja |
+| G3-S2-03 | Bau-Spec `s2_slot_store` und SEDRA-Bau `jobs/slot_store.py` | SEDRA | ja |
+| G3-S2-04 | S2.C1 `vramplan.py` direkt (V4-Entscheidung statt Bau-Spec `s2_vramplan`) mit der Auslegung „Reserve nicht doppelt“ | Claude | ja |
+| G3-S2-05 | S2.H0 Messwerkzeuge `--parallel` und `slot_throughput.py` (ohne GPU gebaut und getestet) | Harness | ja |
+| G3-S2-06 | **Messung S2.1** mit GPU-Zeit: Hauptmodell Slots 1 bis 4, Hilfsmodell, S0 je Einstellung; Dauer bis etwa 3 + 1 Stunden, Zeitfenster und Engine (b11160) vom Captain; Rezepte unverändert, `--set` nur für den Lauf | Harness (Messung) | ja, sobald S2.H0 steht; Zeitfenster nennt der Captain |
+| G3-S2-07 | S2.H1 `testlab.py` Schema 2 und `register_waiter`, Sicherung der Datenbank | Harness | ja |
+| G3-S2-08 | S2.H2 Rezeptfelder `slots`/`per_slots`, Loader-Summe, Auswertung `parallel` | Harness | ja |
+| G3-S2-09 | S2.H3 Fassade, `model_scheduler.yaml`, Audit mit Werten im `resource_scheduler`, Übernahme der Module | Harness | ja |
+| G3-S2-10 | S2.H4a `job_supervisor.py` und `job_supervisor.yaml`: `workers` 1..8, `claim` mit Platz und Altern, `confirm_start`, `claim_timeout_s` 240 | Harness | ja |
+| G3-S2-11 | S2.H4b Worker-Pool und Priorität in `desk/orchestra_runner.py` (nach S1.H8) | Harness | ja |
+| G3-S2-12 | S2.H5 Router-Haken, Werkstatt über den Scheduler, `slots` im Schnappschuss, `slot.changed`, `gpu_preflight` | Harness | ja |
+| G3-S2-13 | S2.H6 `cloud_offload` (nur Anzeige) und Zustand `gesperrt` als Entscheidung | Harness | ja |
+| G3-S2-14 | S2.H7 Abnahme Spec 2 und danach die Änderung von Regel 2 in `ENTWICKLUNG.md` (S2.2) als eigenes Gate | Harness | ja; die Regeländerung erst nach bestandener Abnahme |
+
+G3 gibt die Bauschritte frei, nicht die Übernahme: Jeder SEDRA-Kandidat kommt nach dem Review einzeln zur Übernahme (G4). Die Messung (G3-S2-06) braucht zusätzlich die Freigabe des Zeitfensters, weil sie die GPU belegt und nichts anderes dann laufen darf.
+
+#### Offene Punkte (Stufe 3)
+
+| Nr | Punkt | Vorschlag |
+| --- | --- | --- |
+| OP-S2-10 | `vramplan.fits` wendet die Grenze 11,5 GB **ohne** Reserve an, die Reserve 0,7 GB wirkt auf der Messseite und im Hauptbuch (`resource_scheduler`: Gesamt-VRAM minus Reserve minus Zugesagtes) | so umsetzen; die strengere Regel bleibt wirksam (kleinster Wert aus Grenze, Hauptbuch, Messung); falls der Captain „11,5 inklusive Reserve“ meint, ändert sich nur eine Zeile in `fits` und im Test |
+| OP-S2-11 | Stempel hashen Dateien mit LF; `core.autocrlf = true` kann bei einem frischen Checkout CRLF schreiben und `spec_changed_since_check` auslösen (wie OP-S1-14) | vor dem Bau `spec_check <n> --vm --project <projekt>` erneut; Dauerlösung `.gitattributes` für `benchmarks/` ist ein eigenes Gate |
+| OP-S2-12 | Nur der Host-Lauf von `spec_check` ist gelaufen (Auftrag: kein `--vm`); der Stempel Stufe `vm` und die Prüfung in Python 3.12 der microVM fehlen noch | Claude holt `--vm` direkt vor dem Bau nach; `slot_store` nutzt nur `sqlite3`, `json`, `datetime` (in 3.12 vorhanden) |
+| OP-S2-13 | Neue Tabellen von `testlab.db` verwenden UTC-Text, die alten `REAL`; die Fassade wandelt | akzeptiert; Alternative `REAL` kostet Umbau der reinen Funktionen (Zeittext) und der Saat |
+| OP-S2-14 | `ttl_s` der Leases (Vorgabe 120 s) wird in dieser Stufe nur gespeichert, nicht ausgewertet (`reap` folgt dem Lauf, nicht der Uhr) | Auswertung `stale` in `view` beim Bau von S2.H3 ergänzen, falls der Captain eine Anzeige „Herzschlag fehlt“ will |
+| OP-S2-15 | `s2_slot_store` prüft keine Zwei-Prozess-Wettläufe (ein Prozess in der Bau-Umgebung) | Wettlauftest (100 Durchläufe, 2 Prozesse) im Harness S2.H3, wie `test_orchestra_checkout_race.py` in Spec 1 |
 
 ## Spec 3 – Local First, Cloud Second
 
@@ -1874,6 +2255,190 @@ Neue Gates aus der Prüfung:
 #### Nicht geprüft
 
 Kein Testlauf (`pytest`, `uix_check`), keine Browserprüfung, kein Cloud-Aufruf; `local_config/` und `cloud_keys.json` nicht geöffnet. Nicht gelesen: `desk/events.py`, `desk/decisions.py`, `provider_health`, die Tests im Einzelnen, der Wortlaut der Regeln in `docs/ENTWICKLUNG.md`, Preislisten; Mammouth-Nutzungsbedingungen und -Datenschutzseite (nicht abrufbar, siehe Prüfung der Nutzungsbedingungen).
+
+### Nachtrag Cloud-Coder und Coder-Verbund (Entwurf bis G1)
+
+Stand 22.10.2026, Branch `spec3/cloud-gateway` nach dem Merge von `spec/agenten-orchestrierung` (Spec 1 bis `tick.py` und Dauerfreigabe; Design Spec 2 gelesen auf `spec2/modelle-scheduler`, Commit `585142b`). Grundlage ist die Entscheidung des Captains vom 22.10.2026 (Zeile „Cloud-Coder (Richtung)“): Weg (b), Cloud als **Ausweichstufe** für die Coder-Agenten aus Spec 1, nur mit Entscheidung des Captains je Lauf, nur bei einem Anbieter ohne Training mit den Eingaben, SEDRA-Bauten bleiben lokal. Dazu der Wunsch „Coden mit mehreren Modellen an verschiedenen Teilen“ (Coder-Verbund). Nur gelesen und geschrieben: kein Cloud-Aufruf, keine GPU, kein Schlüssel. Die Webrecherche (Abschnitt N4) las öffentliche Seiten der Anbieter, keine API.
+
+#### N1 Abgleich gegen den Code
+
+| Baustein | Befund | Folge |
+| --- | --- | --- |
+| Agentenlauf (`orchestra/runner.py`, Spec 1 D1.5) | Vier Modi: `arbeit`, `zerlegen`, `bericht`, `recherche`; das Modell antwortet nur im Schema (`ARBEIT_SCHEMA`: `antwort`, `fertig`), ohne Werkzeuge. Ein Coder-Bauauftrag mit Dateiänderung ist laut D1.5 ein **zweites Gate** `agent.assign` (Agent Manager, DevVM-Bau). Das Prüfergebnis des versteckten Tests setzt `board.set_check` (grün/rot). | Der Cloud-Coder braucht ein eigenes Antwortschema (Patch) im Modus `arbeit`; der Weg über `agent.assign` bleibt lokal. |
+| Zerlegung (`orchestra/decompose.py`) | Schema je Teilaufgabe: `titel`, `beschreibung`, `rolle`, `blocker`, `akzeptanz`; höchstens 8 Teile (`max_subtasks`); mehrere Agenten gleicher Rolle: der mit den wenigsten offenen Aufgaben; eine Zerlegung je Elternaufgabe (`decomposed_at`); Teile gehen nur an Untergebene ohne Delegationsrecht. Blocker-Zyklen werden abgewiesen. | Es fehlen **Dateibesitz**, **Schnittstelle** und **Nachzerlegung** (Nacharbeit nach rotem Gesamttest). Das ist eine Änderung an Spec 1, siehe N6. |
+| Brett (`orchestra/board.py`) | Atomarer Checkout (`checkout`), Blocker (`set_blocker`, `clear_blocker`), Prüfergebnis (`set_check`), Bericht (`children_done`), `delegate`. | Reihenfolge und Abhängigkeiten des Verbunds sind vorhanden; Dateibesitz nicht. |
+| Routing (`models/role_routing.py`, `config/role_routing.yaml`) | Rezepte mit `location: local \| cloud`; `policy.cloud_allowed` (Standard `false`); Cloud-Rezept nur mit `captain_cloud_approved` **je Auflösung**; `data_class` ab `confidential` verbietet Cloud; `network`-Anforderung; `independent_of` verlangt ein anderes Modell für den Reviewer. Es gibt kein Feld „trainiert mit Eingaben“. | Die Mechanik „Cloud nur mit Freigabe je Lauf“ ist da (Vorarbeit von Phase 2); neu ist das Anbieter-Merkmal ohne Training und ein Cloud-Coder-Rezept. |
+| Cloud-Adapter (`models/cloud_api.py`) | Lehnt `tools`, `response_format` und `stream_guard` laut ab (`UNSUPPORTED_OPTIONS`); schreibt nichts, führt nichts aus. | „Keine Werkzeuge in der Cloud“ ist im Adapter schon erzwungen. Strukturierte Antwort (Patch) läuft über Prompt und lokale Prüfung (`models/structured.py`), nicht über `response_format`. |
+| Scheduler (Design Spec 2, D2.4, D2.10) | Wartegründe aus `slotplan.decide_reason`; `needs_cloud_offer` bei `queue_max` (6) oder `wait_max_s` (600 s); Entscheidung `kind: cloud_offload`; Annahme setzt nur den Vermerk `cloud_offload_approved` am Job, **ohne Wirkung** bis Spec 3 (G2-S2-10). Ein Server, ein Rezept (`scheduler.swap` Standard `none`). | Spec 3 gibt der Annahme eine Wirkung; Gründe „GPU exklusiv“, „Server gesperrt“, „kein Coder-Modell“ sind in Spec 2 als Wartegründe nicht alle als Auslöser des Angebots vorgesehen (nur Schlange und Wartezeit). |
+| Bauweg (`ENTWICKLUNG.md` L1, L2; `devvm_build.py`) | Ein Bauweg mit Profil `standard`, Bau-Spec mit versteckten Tests und Stempel; `--all-models coder.local_primary`. | SEDRA-Bauten sind lokal festgelegt; der Nachtrag muss das mit einem Test festhalten (CLC-11). |
+| Inhaltsschutz und GateWay | wie im Abgleich G1 Spec 3 oben: Scanner auf dem Cloudweg, `klassen.einstufen` nur im GateWay-Vorgang, kein Anbieter in der Matrix. | Die Einstufung des Cloud-Pakets muss auf beiden Ebenen laufen (CLC-04). |
+| Budget | `orchestra/budgetcalc.py`, `spend` je Agent (Spec 1); Cloud-Zähler (`spend` mit Anbieter) laut CLD-05 noch nicht gebaut. | Kosten des Cloud-Coders hängen am Zähler aus Spec 3. |
+
+#### N2 Cloud als Ausweichstufe für Coder-Agenten (Anforderungen)
+
+Geltungsbereich: Aufgaben des Bretts im **Projektordner** des Captains (Modus `arbeit`, Rolle `coder`). Nicht dazu gehören SEDRA-Bauten (`devvm_build`, Bau-Specs `s*_*`), der Quelltext von SEDRA selbst und alles unter `core/`.
+
+| ID | Anforderung (EARS) | Abnahmekriterium |
+| --- | --- | --- |
+| CLC-01 | WENN ein Coder-Lauf wartet und der Scheduler einen der Gründe meldet – GPU exklusiv für ein anderes Vorhaben, Server gesperrt, kein Coder-Modell geladen, Schlange über `queue_max` oder Wartezeit über `wait_max_s` –, DANN SOLL das System dem Captain die Ausweichstufe **vorschlagen**, höchstens einmal je Lauf und `offer_every_s`. | Fake-Scheduler: je Grund genau ein Vorschlag; ein Lauf der Rolle `reviewer` oder `planner` und jeder `devvm_build` erzeugt keinen |
+| CLC-02 | Ohne ausdrückliche Annahme SOLL der Lauf lokal bleiben; es gibt keine Automatik, keine Regel und keine Dauerfreigabe, die einen Coder-Lauf in die Cloud schickt. | Ohne Annahme 0 Zeilen `CLOUD_CALL`; eine Regel in `cloud_rules.yaml` deckt Rolle `coder` nicht (CLD-03: Ausnahme) |
+| CLC-03 | WENN der Captain den Vorschlag annimmt, DANN SOLL das System ein **Cloud-Paket** bilden: Aufgabentext, Akzeptanz und ausdrücklich gewählte Auszüge aus Dateien des Projektordners. Nie enthalten: Schlüsseldateien, `local_config/`, `runtime_data/`, Audit, Dateien außerhalb des Projektordners, Quelltext von SEDRA, Kommentare mit Fremdtext (`untrusted_external`). | Test: ein Paket mit einer ausgeschlossenen Datei, einem Pfad aus dem Quellbaum von SEDRA oder einem Fremdtext-Block wird abgelehnt; Größengrenze greift |
+| CLC-04 | Das Paket SOLL vor jedem Angebot eingestuft werden: Scanner des Inhaltsschutzes **und** `klassen.einstufen`, begrenzt durch die Obergrenze des Anbieters. Treffer für Geheimnisse, Personenbezug (R-01), gekennzeichnete Quellen oder jedes Merkmal über SK0 verhindern das Angebot; der Grund steht sichtbar am Lauf, der Lauf bleibt lokal. | Testfälle: Schlüsselformat, Personenbezug, Hard Block, `untrusted`, SK2; Entscheidung entsteht nicht, Lauf wartet lokal |
+| CLC-05 | WENN ein Paket zulässig ist, DANN SOLL eine Entscheidung im Eingang entstehen mit Anbieter, Modell, geschätzten Kosten (Token und Credits oder Euro), Einstufung, Dateiliste mit Größe, Hash des Pakets und der Alternative „lokal warten“ (geschätzte Wartezeit). Ändert sich das Paket, verfällt die Entscheidung. | Entscheidung zeigt alle sieben Angaben; Änderung einer Datei danach ergibt `binding_stale`; „lokal warten“ lässt den Lauf unverändert |
+| CLC-06 | Die Cloud SOLL nur einen **Änderungsvorschlag** liefern (Schema `patch`, `erlaeuterung`, `offene_punkte`); sie bekommt keine Werkzeuge und kein Schreibrecht, und die Antwort gilt als Daten. | Adapter lehnt `tools` ab (vorhanden); Antwort außerhalb des Schemas oder mit Anweisung an das System löst kein Verb und kein Gate aus |
+| CLC-07 | Der Patch SOLL **lokal** geprüft und ausgeführt werden: nur Pfade im Besitz der Aufgabe, nicht Tests, Specs und Konfiguration, keine Binärdateien, Größengrenze; Anwenden in der Sandbox oder DevVM, dieselben Tests wie bei einem lokalen Lauf (`board.set_check`), Review durch einen anderen Agenten mit anderem Modell (`independent_of`). Ins Projekt kommt nichts ohne die Übernahme des Captains. | Patch mit Pfad außerhalb des Besitzes oder auf eine Testdatei wird abgelehnt; roter Test setzt `check_result = rot`; Reviewer und Autor haben nie dasselbe Modell |
+| CLC-08 | Jeder Cloud-Lauf SOLL gegen die Grenzen der Cloud-Stufe zählen (Minute, Tag, Guthaben, je Agent) und beim Hard-Stop (CLD-05) lokal bleiben. | `spend`-Zeile mit Agent und Anbieter; bei erreichtem Limit kein Aufruf |
+| CLC-09 | Je Entscheidung SOLL es genau **eine** Cloud-Runde geben. Fällt die Cloud aus oder ist der Patch ungültig oder rot, wartet oder endet der Lauf lokal; eine weitere Runde braucht eine neue Entscheidung. | Fehlertest: kein zweiter Aufruf ohne neue Entscheidung; kein stiller Wechsel (CLD-07) |
+| CLC-10 | Das Ergebnis SOLL als „von Cloud-Modell X“ gekennzeichnet sein (CLD-06) und der Aufruf als `CLOUD_CALL` im Audit stehen: Anbieter, Modell, Token, Kosten, Einstufung, `task_id`, `run_id`, `decision_id`, Hash von Paket und Patch, ohne Text. | Kennzeichen am Kommentar und am Prüfbericht; Audit-Zeile ohne Text |
+| CLC-11 | Bau-Specs, `devvm_build`, Agent-Manager-Läufe (`agent.assign`) und Dateien im Quellbaum von SEDRA SOLLEN nie ein Cloud-Rezept auflösen. | Test: `devvm_build` und `bridge.submit` lehnen ein Cloud-Rezept ab (`cloud_not_allowed_for_build`) |
+| CLC-12 | Ein Cloud-Rezept für Coder SOLL nur wählbar sein, wenn sein Anbieter als „ohne Training mit API-Eingaben“ geführt ist, mit Datum der Prüfung der Bedingungen; ohne Eintrag oder bei einem Bedingungsstand, der älter als 90 Tage ist, ist es nicht wählbar. | Rezept ohne Feld oder mit altem Datum: `provider_terms_unverified` |
+
+Ablauf:
+
+```
+Scheduler: Coder-Lauf wartet, Grund ∈ {gpu exklusiv, gesperrt, kein Modell, Schlange, Wartezeit}
+  → Vorschlag cloud_offload (Anzeige, ohne Inhalt)                         Spec 2, CLC-01
+Captain: „Cloud-Angebot vorbereiten“
+  → Paket bilden (lokal, kein Netz) → Scanner + klassen.einstufen + Anbieter-Obergrenze     CLC-03, 04
+      unzulässig → Lauf bleibt lokal, Grund sichtbar
+      zulässig   → Entscheidung cloud_call (GA-05) mit Hash, Einstufung, Kosten, Dateiliste, „lokal warten“   CLC-05
+Captain: „Einmal senden“ → resolve_role('coder', captain_cloud_approved=True) → ContentGuard → Cloud (eine Runde)   CLC-09
+  → Antwort = Patch (Daten) → Pfad- und Größenprüfung → Sandbox/DevVM → Tests → Review (anderes Modell)   CLC-06, 07
+  → Kommentar „von Cloud-Modell X“, spend, CLOUD_CALL → Aufgabe `wartet` (Übernahme durch den Captain)
+```
+
+Zwei Schritte, weil der Scheduler zum Zeitpunkt des Vorschlags noch kein Paket kennt: Der Captain soll vor jeder Freigabe sehen, **was** hinausgeht (der Hash allein sagt ihm das nicht).
+
+#### N3 Einordnung von CLD-09 (Claude Code und Codex)
+
+Claude Code und Codex sind Agenten mit Schreibrecht und Werkzeugen; CLC-06 verbietet beides in der Cloud. Sie bleiben deshalb in der Nach-Startphase (G1-S3-03) als eigener Weg „Agent im Käfig“ (DevVM), nicht Teil dieses Nachtrags. Der Cloud-Coder hier ist ein **API-Modell** über `cloud_api.py`, das einen Patch liefert. Nicht geprüft: Datenregeln der Verbraucher-Pläne von Claude Code und Codex (andere Bedingungen als die API).
+
+#### N4 Anbieter ohne Training mit API-Eingaben (Recherche 22.10.2026)
+
+Gelesen wurden die öffentlichen Seiten der Anbieter, keine API aufgerufen. Das ist keine Rechtsprüfung. „Primär“ heißt: Text des Anbieters gelesen; „Zweitquelle“ heißt: Aussage Dritter, nicht bestätigt.
+
+| Anbieter | Training mit API-Eingaben | Aufbewahrung, Ort | Quelle | Einordnung |
+| --- | --- | --- | --- | --- |
+| NVIDIA API Catalog (Trial) | **darf** Eingaben und Ergebnisse zur Verbesserung seiner Produkte „einschließlich KI-Modelle“ nutzen (3.3); nur Test und Evaluation (1.4) | Protokolle für Sicherheit | Primär: [Trial Terms](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf) | **ungeeignet** für Coder |
+| Mammouth | eigene Aussage: kein Training; Modellhersteller laut Mammouth ohne Speicherung | Protokolle höchstens 30 Tage (eigene Aussage) | Zweitquelle: [Spiegel der Datenschutzseite](https://tostracker.app/document/mammouthai-privacy); Primär nur die [API-Doku](https://info.mammouth.ai/docs/api-quick-start/) (ohne Datenregeln) | **offen**: Primärtext nach Anmeldung lesen (G1-S3-13); hängt zusätzlich vom Modellhersteller ab |
+| Anthropic API | „Anthropic may not train models on Customer Content from Services“ (Abschnitt B) | Löschung nach 30 Tagen laut Behördenseite von Anthropic (Zweitquelle); DPA nicht gelesen | Primär: [Commercial Terms](https://www.anthropic.com/legal/commercial-terms) | **geeignet** (vertraglich), kostet Geld |
+| OpenAI API | „data sent to the OpenAI API is not used to train or improve OpenAI models“ (außer Opt-in) | Missbrauchsprotokolle bis 30 Tage; Zero Data Retention nur mit Zulassung; EU-Speicherort auf Antrag | Primär: [Your data](https://developers.openai.com/api/docs/guides/your-data) | **geeignet**, kostet Geld |
+| Google Gemini API | bezahlt: kein Training; **unbezahlt: Training und menschliche Durchsicht** | Protokolle begrenzt, Frist nicht genannt; weltweit | Primär: [Gemini API Terms](https://ai.google.dev/gemini-api/terms) | nur mit aktiver Abrechnung geeignet; der kostenlose Zugang nicht |
+| Mistral (La Plateforme) | „will not use Customer Data or Outputs to train“ (4.2), **Ausnahmen**: Opt-in, Rückmeldungen, Order Form, Labs- und Preview-Modelle (4.3) | Frist in den Bedingungen nicht genannt (Zweitquellen: 30 Tage, EU-Hosting); DPA vorhanden, nicht gelesen | Primär: [Commercial Terms](https://legal.mistral.ai/terms/commercial-terms-of-service) | geeignet ohne Preview-Modelle, kostet Geld |
+| Fireworks AI | die gelesene Seite sagt nichts zum Training; offene Modelle werden nicht gespeichert (Standard) | Responses-API 30 Tage bei `store=true` | Primär (Teil): [Data handling](https://docs.fireworks.ai/guides/security_compliance/data_handling) | **offen**, Training nicht belegt |
+| Groq, Together AI | Zweitquellen: kein Training, Aufbewahrung je nach Vertrag | unklar | Zweitquelle: [Groq](https://meetily.ai/llm-privacy/groq) | **ungeprüft** |
+| DeepSeek (eigene API) | Zweitquelle: Verarbeitung in China, Training standardmäßig mit Opt-out | unklar | Zweitquelle: [DeepSeek](https://meetily.ai/llm-privacy/deepseek) | **ungeeignet** |
+
+Befunde:
+
+1. Vertraglich belegt „ohne Training“ sind Anthropic, OpenAI, Gemini (nur bezahlt) und Mistral (mit Ausnahmen). Alle vier kosten Geld, und die Startphase hat 0 € extra, `paid_action` steht auf BLOCK (G1-S3). **Der Cloud-Coder kann in der Startphase also nur über Mammouth laufen** (Abo-Guthaben, 0 € zusätzlich), und das erst nach Lesen der Bedingungen. Sonst braucht es ein Budget (G1-S3C-05).
+2. Die Datenregeln von Mammouth schwanken mit dem Modellhersteller: Welches Modell Mammouth aufruft, bestimmt, was mit den Eingaben passiert. Der Adapter sollte deshalb nur Modelle aus einer freigegebenen Liste zulassen (Anbieter-Tabelle, Obergrenze).
+3. Die Anbieter-Tabelle der Cloud-Regeln bekommt zwei Stufen: **öffentlich** (NVIDIA Trial: nur wirklich öffentlicher Inhalt, G1-S3-12) und **intern ohne Training** (geprüfter Vertrag). Eigener Quelltext des Projekts darf nur zur zweiten Stufe. Das macht die Matrix nicht weiter: Der Weg bleibt SK0 mit `CLOUD_ALLOWED`; die Stufe des Anbieters verfeinert, was „SK0“ beim Anbieter heißt.
+4. Bedingungen ändern sich: das Datum der Prüfung steht am Rezept und läuft nach 90 Tagen ab (CLC-12).
+
+#### N5 Coder-Verbund: Coden mit mehreren Modellen an verschiedenen Teilen
+
+Idee: Der Unterarbeiter zerlegt einen Auftrag in Teile mit klaren Dateigrenzen; mehrere Coder-Agenten bauen sie gleichzeitig; danach werden die Ergebnisse zusammengeführt und gemeinsam getestet und geprüft.
+
+**Zwei Stufen.** Der Verbund hat heute zwei sehr verschiedene Gegenstände:
+
+- **Stufe A, SEDRA-Module:** Ein Teil ist eine Bau-Spec mit eigenen versteckten Tests, eigener Referenz und eigenen Dateien (wie die elf Bauten `s1_*`, die disjunkte Module wie `graphs.py` oder `routines.py` liefern). Sie läuft über den einen Bauweg, mit Stempel (L2), nur lokal (CLC-11). Der Verbund ist hier die gleichzeitige Ausführung mehrerer Bau-Specs auf mehreren Slots (Spec 2) plus gemeinsamer Test; die Übernahme ist `adopt_plan` oder Handkopie (L5).
+- **Stufe B, freie Aufgaben des Bretts:** Ein Teil ist eine Aufgabe mit Besitz-Dateien und einem Test, den der Planer **vor** dem Bau schreibt. Hier ist auch ein Cloud-Teil möglich (je Teil eine Entscheidung nach CLC-05). Stufe B braucht eine Antwort auf die Frage, **woher der Test eines Teils kommt**; ohne sie fehlt der Richter (Grundsatz „Richter ist der versteckte Test, nicht das Modell“). Empfehlung: Stufe B erst nach Stufe A und nach einer Messung (V4).
+
+| ID | Anforderung (EARS) | Abnahmekriterium |
+| --- | --- | --- |
+| VRB-01 | WENN der Unterarbeiter einen Auftrag für den Verbund zerlegt, DANN SOLL jeder Teil seine **Besitz-Dateien** (Liste oder Muster), seine lesbaren Dateien und seinen Test nennen; die Besitzmengen verschiedener Teile sind **disjunkt**. | `decompose.check` lehnt Überschneidung ab (`besitz_overlap`); ein Teil ohne Besitz oder ohne Test ist ungültig |
+| VRB-02 | **Schnittstellen zuerst:** Der Verbund SOLL mit einem Schnittstellen-Teil (Typen, Signaturen, Testgerüste) beginnen, den alle anderen Teile als Blocker haben; seine Dateien sind für die übrigen Teile nur lesbar. | Blocker aller Teile auf Teil 0 (`board.set_blocker`); Patch eines Teils auf eine Schnittstellen-Datei ist rot |
+| VRB-03 | Jeder Teil SOLL in einer eigenen Kopie der Basis arbeiten (Basis-Hash fest); ein Patch darf nur Besitz-Dateien ändern. | Verstoß: Teil rot mit Grund `besitz_verletzt`, kein Merge |
+| VRB-04 | Die Zuordnung Teil → Modell SOLL der Router nach Rolle und Rezept treffen, nie das Modell selbst; der Reviewer des Gesamtergebnisses SOLL ein anderes Modell als die Coder haben. | Zuordnung im Audit je Teil; `independent_of` greift |
+| VRB-05 | Die Zahl gleichzeitiger Teile SOLL durch die freien Slots (Spec 2) und `max_parallel` begrenzt sein; ohne Slot wartet ein Teil (oder wird nach CLC-01 vorgeschlagen). | 4 Teile bei 2 Slots: höchstens 2 laufen |
+| VRB-06 | Nach allen Teilen SOLL ein rein deterministischer Schritt die Patches in fester Reihenfolge auf die Basis anwenden und Konflikte melden (Basis geändert, Besitz verletzt, Anwendung scheitert). | Reiner Test mit Fixture-Patches: gleiche Eingabe, gleiche Ausgabe; Konflikt wird benannt |
+| VRB-07 | Danach SOLL ein gemeinsamer Testlauf in der microVM laufen (Tests aller Teile plus Integrationstest). Ist er rot, SOLL das System den Fehler den Teilen zuordnen, dem Unterarbeiter berichten (ORC-18) und höchstens **zwei** Nacharbeitsrunden zulassen; danach entscheidet der Captain. | Roter Gesamttest: Bericht mit Teile-Tabelle (grün/rot/nicht geprüft); nach der dritten roten Runde Entscheidung |
+| VRB-08 | Das Gesamtergebnis SOLL erst nach grünem Test vom Reviewer geprüft werden; die Übernahme bleibt beim Captain. | Review vor Test nicht möglich; `uebernehmen` nur nach Review |
+| VRB-09 | Der Unterarbeiter SOLL das Budget des Verbunds vorab schätzen (Teile × Token-Grenze der Rolle, Cloud-Anteile in Anfragen und Guthaben); überschreitet es das Restbudget, entscheidet der Captain. | `budgetcalc.precheck` je Teil und Summe; Überschreitung ergibt Entscheidung statt Lauf |
+| VRB-10 | Der Start eines Verbunds SOLL eine Freigabe des **Plans** brauchen (Teile, Besitz, Basis-Hash, Modell- und Budgetzuordnung); die Weckrufe der Coder-Agenten bleiben je Lauf `wake_agent` (einzeln oder Dauerfreigabe). | Freigabe bindet den Plan-Hash; Änderung am Plan ergibt `binding_stale`; ohne `wake_agent` kein Lauf |
+| VRB-11 | Der Bericht an den Captain SOLL je Teil Modell, Zustand, Prüfergebnis, Kosten und – bei Cloud – Kennzeichen nennen. | Bericht enthält die Spalten; fehlendes Prüfergebnis heißt „nicht geprüft“ |
+| VRB-12 | Der Verbund SOLL keinen **zweiten Bauweg** schaffen: Bau läuft über `devvm_build` (Stufe A) oder über den Patch-Weg aus N2 (Stufe B), geprüft in derselben microVM und mit denselben Testregeln. | Kein neuer Aufrufer von `create_job` oder `agent.assign` außer dem vorhandenen Weg |
+
+Zu klären, mit Empfehlung:
+
+| Frage | Empfehlung |
+| --- | --- |
+| Zuschnitt der Teile | Teil = Dateigruppe mit eigener öffentlicher Schnittstelle; Schnittstellen-Teil zuerst; höchstens 4 Teile je Verbund in der Startphase (Slots), `max_subtasks` 8 bleibt Obergrenze |
+| Besitz von Dateien | Besitz je Teil disjunkt, vom Unterarbeiter vorgeschlagen und im Plan freigegeben; gemeinsame Dateien (Konfiguration, `__init__`) gehören dem Schnittstellen- oder Integrationsteil |
+| Reihenfolge und Abhängigkeiten | Blocker auf dem Brett (vorhanden); ein Teil darf auf ein anderes erst bauen, wenn dessen Schnittstelle in Teil 0 steht |
+| Konflikt | Besitz-Konflikte werden vorher ausgeschlossen (VRB-01, 03); verbleibende semantische Konflikte zeigt der Gesamttest; kein automatisches Auflösen durch ein Modell |
+| Roter Gesamttest | Fehler den Teilen zuordnen (Datei im Stacktrace → Besitzer), Nacharbeit nur für die betroffenen Teile, höchstens zwei Runden, danach Captain |
+| Zuordnung Modelle | Rolle `coder` → Rezept über `role_routing`; mehrere lokale Modelle **gleichzeitig** gibt es auf einer 12-GB-GPU nicht (ein Server, ein Rezept, Spec 2 D2.10, `swap` Standard `none`). Gleichzeitig laufen also **mehrere Slots desselben Modells**; verschiedene Modelle entstehen nur seriell (Umladen, langsam) oder durch einen Cloud-Teil. Das ist für den Captain die wichtigste Erwartungsfrage (offene Frage 1) |
+| Budget je Teil | Token-Grenze je Rolle aus Spec 1; Cloud-Teile gegen die Grenzen der Cloud-Stufe; Verbund-Summe in der Plan-Freigabe |
+| Abgrenzung „ein Bauweg“ | Der Verbund ist ein Plan über mehrere Bauten, kein neuer Bauweg (VRB-12) |
+
+Schnittstellen:
+
+| Zu | Was der Verbund braucht | Änderung |
+| --- | --- | --- |
+| Spec 1 | `decompose.SCHEMA` bekommt `besitz`, `liest`, `test`; `check` prüft Disjunktheit und Schnittstellen-Teil; zweite Zerlegung (Nacharbeit) trotz `decomposed_at`; Rolle „Integration“ als Teilaufgabe, die von allen Teilen blockiert ist; Bericht um Spalten Modell, Kosten, Kennzeichen | Nachtrag Spec 1 (Gate G1-S3C-14); keine Änderung an `core/` |
+| Spec 2 | Slots als Parallelität, Wartegrund „kein Slot“ als Auslöser nach CLC-01, Annahme von `cloud_offload` mit Wirkung | G2-S2-10 neu (N6) |
+| Spec 3 | Cloud-Rezept, Anbieter-Stufen, `cloud_call`-Bindung, Zähler | CLC-01 bis CLC-12 |
+| Spec 4 | Entscheidung `cloud_call` und Plan-Freigabe im Eingang, Verbund-Ansicht (Teile, Besitz, Zustand) im Werkzeug `board` | Hinweis an Spec 4 (kein Bau in diesem Nachtrag) |
+
+#### N6 Änderungen an bestehenden Festlegungen (alt / neu)
+
+| Stelle | alt | neu (Vorschlag) |
+| --- | --- | --- |
+| G1-S3-08 | „… Mammouth nur Abo-Guthaben, **Coder nur lokal** …“ | „Coder nur lokal, **außer** als Ausweichstufe nach CLC-01 bis CLC-12: nur Aufgaben des Bretts im Projektordner, nur mit Entscheidung des Captains je Lauf, nur bei einem Anbieter ohne Training mit den Eingaben; SEDRA-Bauten und `devvm_build` bleiben immer lokal.“ |
+| Budgetzeile „Je Agent“ (Spec 3) | „Coder: nur lokal – Ein Coder-Lauf erzeugt nie einen Cloud-Aufruf“ | „Coder: lokal; Cloud nur als Ausweichstufe mit Entscheidung je Lauf (CLC-02). Ein Coder-Lauf erzeugt ohne diese Entscheidung nie einen Cloud-Aufruf.“ |
+| CLD-03 | „… außer eine freigegebene Regel deckt Agent, Schutzklasse, Anbieter und Budget.“ | „… Ausnahme: Für die Rolle `coder` deckt **keine** Regel; sie braucht immer die Entscheidung je Lauf (CLC-02).“ |
+| G1-S3-12 | „SK0 heißt für die Cloud öffentlich …“ | „… **beim Anbieter der Stufe ‚öffentlich‘**; beim Anbieter der Stufe ‚intern ohne Training‘ darf SK0 auch eigenen Projekt-Quelltext einschließen (Entscheidung je Lauf).“ |
+| G2-S2-10 / SCH-07 (Spec 2) | „Cloud-Vorschlag nur Anzeige und Ablehnen; Annahme wirkt erst mit Spec 3“ | „Annahme öffnet bei Rolle `coder` den Schritt ‚Paket vorbereiten‘ (CLC-03 bis 05); für andere Rollen gilt die Regel der Cloud-Stufe. Als Auslöser kommen die Wartegründe aus CLC-01 hinzu.“ |
+| Spec 1, `decompose.py` (ORC-17) | Teile ohne Besitz; eine Zerlegung je Elternaufgabe | Felder `besitz`, `liest`, `test`; Nachzerlegung für Nacharbeit, höchstens zwei Runden (VRB-01, 07) |
+| `role_routing.yaml` | `policy.cloud_allowed: false`; kein Feld zum Training | Feld je Cloud-Rezept `provider_terms: {trains_on_inputs: false, checked_on: <Datum>}`; `cloud_allowed` bleibt `false`, bis G1-S3C-09 freigegeben ist |
+
+#### N7 Guard-Aktionen
+
+| Gate | Aktion | Bedeutung | Vorschlag | Stufe | Begründung |
+| --- | --- | --- | --- | --- | --- |
+| G1-S3C-GA-01 | `cloud_call` (GA-05, vorhanden im Vorschlag) | einzelner Cloud-Aufruf eines Coder-Laufs mit Bindung an Hash des Pakets, Einstufung, Anbieter, Modell, Kostenschätzung | CAPTAIN_REQUIRED; für Rolle `coder` **keine** Regel-Ausnahme | 6 | CLC-02, CLC-05 |
+| G1-S3C-GA-02 | `start_verbund` (neu) | Plan eines Coder-Verbunds freigeben (Teile, Besitz, Basis-Hash, Modelle, Budget) | CAPTAIN_REQUIRED | 5 | VRB-10; Weckrufe bleiben `wake_agent` |
+
+Nicht neu nötig: `credential_access` (Schlüssel), `set_cloud_rules`, `set_budget` (Budget des Verbunds), `delegate_task` und `assign_task` (Zerlegung), `create_new_artifact` (Kommentare). Die Dauerfreigabe `standing` gilt nur für `wake_agent` und ersetzt `cloud_call` und `start_verbund` nie.
+
+#### N8 Gate-Liste G1-S3C
+
+Alles ist ein Vorschlag des Vorarbeiters; der Captain entscheidet jedes Gate einzeln.
+
+| Gate | Entscheidung, die der Captain trifft | Empfehlung |
+| --- | --- | --- |
+| G1-S3C-01 | Geltungsbereich: Cloud-Coder nur für Aufgaben des Bretts im Projektordner; SEDRA-Bauten, `devvm_build`, Agent-Manager-Läufe und der Quelltext von SEDRA bleiben immer lokal (CLC-11) | ja |
+| G1-S3C-02 | Zwei Schritte: Vorschlag ohne Inhalt, dann Paketfreigabe je Lauf mit Hash, Einstufung, Kosten, Dateiliste und „lokal warten“ (CLC-01 bis 05); keine Regel und keine Dauerfreigabe für Rolle `coder` | ja |
+| G1-S3C-03 | Die Cloud liefert nur einen Patch im festen Schema, ohne Werkzeuge und Schreibrecht; Anwenden, Test und Review lokal; Tests, Specs und Konfiguration sind tabu (CLC-06, 07) | ja |
+| G1-S3C-04 | Anbieter-Stufen „öffentlich“ und „intern ohne Training“ in der Anbieter-Tabelle; Cloud-Coder nur zur zweiten Stufe; Verfeinerung von G1-S3-12 (N4, N6) | ja |
+| G1-S3C-05 | Erster Anbieter für den Cloud-Coder: Mammouth, wenn nach der Anmeldung die Bedingungen und „Privacy with model providers“ ohne Training bestätigen und die Modelle auf eine freigegebene Liste begrenzt sind. Ohne Bestätigung braucht der Cloud-Coder ein Budget (`paid_action` öffnen) und einen bezahlten Anbieter (Anthropic, OpenAI, Mistral ohne Preview-Modelle, Gemini mit Abrechnung) | Mammouth zuerst, sonst bezahlter Anbieter erst nach dem Monatsbudget (vier Wochen Auswertung) |
+| G1-S3C-06 | G1-S3-08 und die Budgetzeile „Je Agent“ in der Fassung N6; CLD-03 mit der Ausnahme für `coder` | ja |
+| G1-S3C-07 | Eine Cloud-Runde je Entscheidung; Ausfall, ungültiger oder roter Patch lassen den Lauf lokal; weitere Runde nur mit neuer Entscheidung (CLC-09) | ja |
+| G1-S3C-08 | Kennzeichen „von Cloud-Modell X“ und Audit `CLOUD_CALL` mit `task_id`, `run_id`, `decision_id`, Paket- und Patch-Hash (CLC-10); Review durch ein anderes Modell | ja |
+| G1-S3C-09 | Rezept `coder.cloud_<anbieter>` und Feld `provider_terms` in `role_routing` (Änderung `models/role_routing.py` und Overlay, `cloud_allowed` wird erst danach `true`); Bedingungsstand höchstens 90 Tage alt (CLC-12) | ja |
+| G1-S3C-10 | Verbund Stufe A (Bau-Specs auf mehreren Slots, nur lokal) wird zuerst gebaut; Stufe B (freie Aufgaben, Cloud-Teil) erst nach einer Messung und einer Antwort auf die Frage, woher der Test eines Teils kommt | ja |
+| G1-S3C-11 | Besitz und Schnittstellen zuerst: disjunkter Dateibesitz, Schnittstellen-Teil als Blocker aller Teile, Verstöße rot (VRB-01 bis 03) | ja |
+| G1-S3C-12 | Zusammenführung als reines Modul (SEDRA-Bau, L4, Bau-Spec mit versteckten Tests), gemeinsamer Test in der microVM, höchstens zwei Nacharbeitsrunden, danach Captain (VRB-06, 07) | ja |
+| G1-S3C-13 | Parallelität nur durch Slots desselben Modells; verschiedene lokale Modelle gleichzeitig sind auf 12 GB nicht vorgesehen; Modellvielfalt über Cloud-Teil oder seriell | ja, sofern der Captain das so erwartet (offene Frage 1) |
+| G1-S3C-14 | Nachtrag Spec 1: Felder `besitz`, `liest`, `test`, Nachzerlegung, Integrationsteil, erweiterter Bericht (Änderung `orchestra/decompose.py` und Bericht; kein Eingriff in `core/`) | ja, als eigenes Gate in Spec 1 |
+| G1-S3C-15 | Änderung G2-S2-10 in Spec 2 (Annahme von `cloud_offload` mit Wirkung für Coder, zusätzliche Auslöser) | ja |
+| G1-S3C-16 | Budget des Verbunds: Vorabschätzung durch den Unterarbeiter, Summe in der Plan-Freigabe, Cloud-Teile gegen die Grenzen der Cloud-Stufe (VRB-09) | ja |
+| G1-S3C-17 | CLD-09 (Claude Code, Codex) bleibt in der Nach-Startphase als eigener Weg „Agent im Käfig“ (N3) | ja |
+| G1-S3C-GA-01, GA-02 | die zwei Guard-Aktionen `cloud_call` (mit Bindung, ohne Regel-Ausnahme für `coder`) und `start_verbund` | wie vorgeschlagen |
+
+#### N9 Offene Fragen an den Captain (nicht blockierend für G1)
+
+1. Erwartung „mehrere Modelle“: Genügen mehrere **Slots desselben** lokalen Modells (gleichzeitig), mit anderen Modellen nur seriell oder als Cloud-Teil? Auf einer 12-GB-GPU laufen nicht zwei verschiedene Modelle zugleich.
+2. Wer schreibt in Stufe B den Test eines Teils: der Planer-Agent, ein Mensch oder Claude als Vorarbeiter (wie bei Bau-Specs)? Ohne Test fehlt der Richter.
+3. Darf der Cloud-Coder in der Startphase nur über Mammouth laufen (0 € extra), oder soll bereits jetzt ein kleines Monatsbudget für einen bezahlten Anbieter geplant werden?
+4. Soll die Plan-Freigabe eines Verbunds die Einzelfreigaben der Läufe (`wake_agent`) ersetzen dürfen? Das würde einen Eingriff in `core/guard.py` brauchen und ist hier **nicht** vorgeschlagen.
+5. Welche Dateien des Projektordners dürfen nie in ein Cloud-Paket (Vorschlag: Liste in `cloud_rules.yaml`, Standard: alles außer ausdrücklich gewählten Auszügen)?
+
+#### N10 Nicht geprüft
+
+Kein Test, kein Lauf, kein Cloud-Aufruf. Nicht gelesen: der vollständige Code von `board.py` und `service.py`, `desk/orchestra_runner.py` (noch nicht gebaut), die Daten- und Auftragsverarbeitungsverträge (DPA) von Anthropic, OpenAI, Google und Mistral, die Mammouth-Bedingungen und -Datenschutzseite, die Bedingungen von Groq, Together AI und DeepSeek (nur Zweitquellen), Preislisten, Datenregeln der Verbraucher-Pläne von Claude Code und Codex. Alle Zahlen (4 Teile, 2 Nacharbeitsrunden, 90 Tage) sind Startwerte ohne Messung.
 
 ## Spec 4 – Oberfläche: die Paperclip-Shell (D)
 
@@ -2842,6 +3407,18 @@ Pipeline-Abnahme und Folgeentscheidungen (Captain, 21.10.2026), nach PIPE-01 bis
 | PIPE-13 | Saat s1_schema2_seed: Referenz-Vorgänger nach der Übernahme durch die SEDRA-Fassungen ersetzen, Abhängige neu prüfen |
 | PIPE-14 | s1_cron: versteckte Tests für Bereichsgrenzen und describe (mehrere Monatstage, Wochentagsbereiche) schärfen, Neubau mit GPU |
 | PIPE-14 Abschluss | zwei Neubauten gescheitert (parse, dst; Modellfehler); cron bleibt endgültig die Referenz-Fassung (V4: Spec, Tests und Referenz größer als der SEDRA-Code) (22.10.2026) |
+| S1.H7 HALT 1 | Dauerfreigabe am Desk (Vorschlag A, mit Auflage): gated.py reicht nur für die Art `standing` den Einmal-Token an den Applier weiter, der ihn über guard.grant_standing genau einmal prüfen und verbrauchen lässt; fest im Code auf `standing` beschränkt, mit Test; core/ und guard.py unverändert (22.10.2026). |
+| S1.H7 HALT 2 | Scheitert der Start nach der Prüfung der Dauerfreigabe, bleibt die Nutzung verbraucht; der Weckruf endet mit Fehler im Audit (run_ref), höchstens ein Wiederholungs-Weckruf je Aufgabe, also höchstens 2 Nutzungen (22.10.2026) |
+| S1.H7 HALT 3 | `einstellen` als zwei Anträge nacheinander (Weg B): erst AM-Instanz über den bestehenden AM-Ablauf, dann `einstellen` mit `instance_id` als Antrag `set_org`; keine neue Freigabeart, gated.py unverändert; ändert D1.3.1 und den Shell-D-Dialog (`vorlage` → `instance_id`) (22.10.2026). |
+| S1.H7 Zulassung | Ein Orchestra-Agent läuft erst, wenn seine AM-Instanz über `agent.promote` zugelassen ist (VERIFIED, gültige Zulassung); sonst endet der Weckruf mit `nicht_zugelassen`, ohne Nutzung der Dauerfreigabe; Abnahme-Suite der Vorlagen in S1.H8 (22.10.2026) |
+| G1-S7-a bis G1-S7-g | Spec 7 Wissen und RAG: Anforderungen WIS-01 bis WIS-13 und alle Punkte wie empfohlen freigegeben (22.10.2026); Messung S7.1 mit GPU-Zeit braucht eine eigene Freigabe |
+| Cloud-Coder (Richtung) | Weg (b): Cloud als Ausweichstufe für Coder-Agenten, wenn kein lokaler Coder bereitsteht; nur mit Entscheidung des Captains je Lauf und nur bei einem Anbieter ohne Training mit den Eingaben; SEDRA-Bauten bleiben lokal. Dazu: Coden mit mehreren Modellen, die an verschiedenen Teilen arbeiten. Ausarbeitung als Nachtrag zu Spec 3 bis G1; G1-S3-08 wird damit neu gefasst (22.10.2026) |
+| S7.1 Messung | Downloads BGE-M3 (ggml-org, GGUF Q8_0, rund 635 MB) und Qwen3-Embedding-0.6B (Qwen, GGUF Q8_0, rund 639 MB) sowie GPU-Zeit für die Messung (rund 1 Stunde je Modell, mit Lease) freigegeben (22.10.2026) |
+| G2-S2-01 bis G2-S2-16 | Design Spec 2 (D2.1 bis D2.13) wie empfohlen freigegeben (22.10.2026), u. a. ein Besitzer der GPU, Supervisor workers 1..8 und claim_timeout_s 240, Haken im Router (SCH-11, schließt B-1), Prioritäten 3/5/7; Slotzahl erst nach Messung S2.1 (eigene Freigabe mit GPU-Zeit) |
+| Nachtrag Spec 3, Fragen 1–5 | (1) mehrere Slots desselben Modells genügen als „mehrere Modelle“; verschiedene Modelle nur über einen Cloud-Teil. (2) Den Test eines Teils schreibt immer ein anderes Modell als das bauende. (3) Cloud-Coder in der Startphase nur über Mammouth (nach Prüfung seiner Bedingungen). (4) Die Freigabe des Verbund-Plans ersetzt die Einzelfreigaben nicht. (5) Nie in ein Cloud-Paket: Schlüssel und Secrets, `local_config/`, `runtime_data/`, `.env`, Audit und Logbuch, personenbezogene Daten, versteckte Tests und Referenzen der Bau-Specs (22.10.2026) |
+| G4 S1.H7 | Desk-Verben, Felder, `gespraech`, Applier, Sätze übernommen (Merge spec1/harness, 22.10.2026); Punkte a–d: AM-Instanz vorerst nur über die CLI; keine Migration 3, Weckruf ohne Zulassung endet als `abgelehnt` mit Grund im Audit; `wecken` als direkter Weckruf (eine Freigabe je Lauf); offene Mission bei `instance_taken` wird in S1.H8 geschlossen |
+| G1-S3C-01 bis G1-S3C-17, GA-01, GA-02 | Nachtrag Cloud-Coder und Coder-Verbund wie empfohlen freigegeben, neue Guard-Aktionen `cloud_call` (mit Bindung) und `start_verbund` (22.10.2026) |
+| G3-S2-01 bis G3-S2-14 | Aufgaben und Bau-Specs Spec 2 wie empfohlen freigegeben (22.10.2026); VRAM-Grenze 11,5 GB einschließlich Reserve 0,7 GB (nutzbar 10,8 GB); Messung S2.1 in der Nacht 22./23.10.2026; `.gitattributes` mit LF für Bau-Specs, Referenzen und Saaten |
 
 ## Vorarbeiter-Prompt
 
