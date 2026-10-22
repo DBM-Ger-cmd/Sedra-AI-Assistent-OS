@@ -60,12 +60,18 @@ class Basis(unittest.TestCase):
 class SchalterAus(Basis):
     wissen_an = False
 
-    def test_ohne_schalter_gibt_es_die_typen_nicht(self):
+    def test_ohne_schalter_nur_platzhalter_die_aus_sagen(self):
         self.assertIsNone(self.sp)
         self.assertEqual(self.hub.runtime.boot()['wissen'], {'enabled': False, 'error': None})
-        self.assertIsNone(self.hub.kinds.get('wissen'))
-        with self.assertRaisesRegex(ValueError, 'unknown_object_type'):
-            self.objects(type='wissen')
+        self.assertTrue(self.hub.kinds.get('wissen').placeholder)
+        obj = self.objects(type='wissen', id='speicher')
+        self.assertEqual((obj['state'], obj['stand'], obj['actions']), ('aus', None, []))
+        self.assertIn('ausgeschaltet', obj['summary'])
+        liste = self.objects(type='wissen')
+        self.assertEqual((len(liste['items']), liste['quelle']['zustand'], liste.get('actions')), (1, 'aus', None))
+        self.assertEqual(self.objects(type='wissen_quelle')['items'], [])
+        with self.assertRaisesRegex(ValueError, 'id_required'):
+            self.act('wissen', None, 'suche', frage='x')
         self.assertEqual(self.hub.kinds.problems, [])
 
 
@@ -81,7 +87,7 @@ class KaputteKonfiguration(unittest.TestCase):
         self.assertIsNone(hub.runtime.wissen)
         self.assertEqual(hub.runtime.wissen_error, 'wissen_config_invalid:engine')
         self.assertEqual(hub.runtime.boot()['wissen'], {'enabled': False, 'error': 'wissen_config_invalid:engine'})
-        self.assertIsNone(hub.kinds.get('wissen'))
+        self.assertEqual(hub.objects_view({'type': 'wissen', 'id': 'speicher'})['grund'], 'wissen_config_invalid:engine')
         events = [json.loads(l)['event_type'] for l in hub.runtime.audit.path.read_text(encoding='utf-8').splitlines() if l.strip()]
         self.assertIn('WISSEN_OFF', events)
 

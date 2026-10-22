@@ -5,7 +5,8 @@ an der Quelle `abschalten` und `stufe_heraufsetzen` (nur enger, ohne Gate), am V
 Server: der Captain als `Leser('captain', 6, None)`; Argumente mit `leser`, `stufe` oder `projekt` in `suche` werden abgewiesen.
 
 Die Applier `wissen_quelle` (`_quelle_freigeben`) und `wissen_vorschlag` (`_vorschlag_aufnehmen`, `on_reject` `_vorschlag_abgelehnt`)
-laufen erst nach „Freigeben und anwenden“. Ohne Schalter `wissen` gibt es keinen der Typen (`unknown_object_type`)."""
+laufen erst nach „Freigeben und anwenden“. Ohne Schalter `wissen` stehen die drei Typen als Platzhalter (Objekt `speicher` im Zustand
+`aus`, Listen leer, Verben `unknown_object_type`), damit die Seite sagt, warum sie leer ist (UIX-02), statt 400 zu antworten."""
 from __future__ import annotations
 
 from ..desk import gated  # noqa: F401 (Antrag mit Gate, D7.8)
@@ -71,16 +72,21 @@ def vorschlag_object(v):
                 mission_id=v.get("mission_id"), erstellt=v["erstellt"], entschieden=v.get("entschieden"))
 
 
+def aus_object(hub):
+    grund = getattr(getattr(hub, "runtime", None), "wissen_error", None)
+    return _obj("wissen", SPEICHER, "Wissen", "aus", satz("wissen_aus") + (" " + str(grund) if grund else ""), stand=None, grund=grund)
+
+
 def wissen_read(hub, oid):
-    sp = speicher_von(hub)
-    if sp is None or oid != SPEICHER:
+    if oid != SPEICHER:
         return None
-    return speicher_object(sp)
+    sp = speicher_von(hub)
+    return speicher_object(sp) if sp is not None else aus_object(hub)
 
 
 def wissen_listing(hub, payload):
     sp = speicher_von(hub)
-    return [speicher_object(sp)] if sp is not None else []
+    return [speicher_object(sp) if sp is not None else aus_object(hub)]
 
 
 def quelle_read(hub, oid):
@@ -248,9 +254,10 @@ def _antrag_von(hub, kind, binding):
         return "gated", "gated"
     for m in reversed(missionen):
         req = (m.get("context") or {}).get(gated.CONTEXT) or {}
-        if req.get("kind") == kind and req.get("binding") == binding:
-            gates = (m.get("human_gates") or {}).get("resolved") or (m.get("human_gates") or {}).get("pending") or []
-            return m["identity"]["mission_id"], (gates[0].get("gate_id") if gates else "gated")
+        if req.get("kind") != kind or req.get("binding") != binding or (m.get("lifecycle") or {}).get("status") == "closed":
+            continue                                           # ein früherer, abgelehnter Antrag mit gleicher Bindung zählt nicht
+        gates = (m.get("human_gates") or {}).get("resolved") or (m.get("human_gates") or {}).get("pending") or []
+        return m["identity"]["mission_id"], (gates[0].get("gate_id") if gates else "gated")
     return "gated", "gated"
 
 
@@ -298,8 +305,10 @@ def vorschlag_beantragen(hub, vorschlag):
 # ---- Register, Start, Schnappschuss
 def register(registry, hub):
     sp = speicher_von(hub)
-    if sp is None:
-        return []
+    if sp is None:                                             # Platzhalter: die Seite sagt „aus“, kein 400
+        for name, read, listing in (("wissen", wissen_read, wissen_listing), (KIND_QUELLE, quelle_read, quelle_listing), (KIND_VORSCHLAG, vorschlag_read, vorschlag_listing)):
+            registry.register(registry.Kind(name, TITLES[name], read, listing, source="wissen", placeholder=True, extra=_extra))
+        return list(TYPES)
     kinds = [
         registry.Kind("wissen", TITLES["wissen"], wissen_read, wissen_listing, source="wissen", extra=_extra, type_verbs=[
             Verb("suche", "Suchen", _suche), Verb("nachfuehren", "Nachführen", _nachfuehren),

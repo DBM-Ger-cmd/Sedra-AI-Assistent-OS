@@ -69,6 +69,7 @@ OBJECTS = {
     'slots': {'type': 'model', 'id': 'alle', 'title': 'Modelle und Slots', 'collection': True},
     'agentfenster': {'type': 'agent', 'id': None, 'title': 'Agent'},
     'labor': {'type': 'labor', 'id': 'labor', 'title': 'KI-Labor'},
+    'wissen': {'type': 'wissen', 'id': 'speicher', 'title': 'Wissen'},                   # Spec 7 (D7.9): der Wissensspeicher
 }
 
 MEASURE_ZONES = """(names) => {

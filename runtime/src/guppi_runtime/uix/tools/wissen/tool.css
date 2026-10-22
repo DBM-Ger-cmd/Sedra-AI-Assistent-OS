@@ -1,0 +1,10 @@
+/* Werkzeug „Wissen“ – nur im eigenen Container. */
+.t-wissen .t-wissen-tabs{flex-wrap:wrap;gap:var(--gap)}
+.t-wissen .t-wissen-stand.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
+.t-wissen .t-wissen-stand.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.t-wissen .t-wissen-table td{vertical-align:top}
+.t-wissen .t-wissen-aus td{color:var(--muted);text-decoration:line-through}
+.t-wissen .t-wissen-text{white-space:pre-wrap;font:inherit;margin:0;max-height:16em;overflow:auto;border-left:2px solid var(--line);padding-left:var(--gap-2)}
+.t-wissen .t-wissen-treffer [role=button]{cursor:pointer}
+.t-wissen .t-wissen-k{width:4em}
+.t-wissen .t-wissen-form input,.t-wissen .t-wissen-form select{max-width:32em}
