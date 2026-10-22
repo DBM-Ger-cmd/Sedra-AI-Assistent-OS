@@ -1,0 +1,333 @@
+"""Der Takt der Orchestrierung (Spec 1, ORC-16, D1.1 `tick.py`, D1.5, D1.7, S1.H6).
+
+Fake-Uhr über die Uhr der Fassade, Fake-Supervisor, Fake-Guard und Fake-Lauf/Antrag (die echten baut der Desk in S1.H7/H8).
+`tick()` ruft Routinen und Weckrufe; ohne Dauerfreigabe entsteht ein Antrag statt eines Laufs; Supervisor aus heißt: kein Lauf,
+Weckruf offen, einmal `ORC_TICK_ERROR`; ein zweiter Takter bekommt `tick_busy`; `boot()["orchestra"]["takt"]`; nach 3 × tick_s
+ohne Takt `laeuft: false`."""
+import json
+import os
+import tempfile
+import time
+import unittest
+from pathlib import Path
+
+from host_isolation import setUpModule, tearDownModule  # noqa: F401
+
+from guppi_runtime.orchestra import board, heartbeat, routines, service, tick
+from guppi_runtime.orchestra.config import OrchestraConfig
+from guppi_runtime.orchestra.store import open_db
+
+RUNTIME = Path(__file__).resolve().parents[1]
+CONFIG = RUNTIME / 'config' / 'orchestra.yaml'
+T0 = '2026-10-22T08:00:00Z'
+
+
+class Clock:
+    def __init__(self, now=T0):
+        self.now = now
+
+    def __call__(self):
+        return self.now
+
+
+class FakeGuard:
+    def __init__(self, standing=False):
+        self.standing, self.used, self.revoked = standing, [], []
+
+    def authorize_standing(self, agent_id, *, fingerprint, budget_stage, run_ref):
+        self.used.append((agent_id, budget_stage, run_ref))
+        return {'authorized': True, 'uses': 1} if self.standing else {'authorized': False, 'reason': 'no_standing_approval'}
+
+    def revoke_standing(self, agent_id, *, reason):
+        self.revoked.append((agent_id, reason))
+        return 1
+
+
+class FakeStore:
+    def __init__(self):
+        self.jobs = {}
+
+    def load(self, job_id):
+        return self.jobs[job_id]
+
+
+class FakeSupervisor:
+    def __init__(self, enabled=True):
+        self.enabled, self.store = enabled, FakeStore()
+
+
+class Base(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory(prefix='orchestra-tick-')
+        self.addCleanup(tmp.cleanup)
+        self.dir = Path(tmp.name) / 'orchestra'
+        self.clock = Clock()
+        self.events, self.runs, self.requests = [], [], []
+        self.guard, self.supervisor = FakeGuard(), FakeSupervisor()
+        self.orch = self.make()
+
+    def make(self, **parts):
+        conn = open_db(self.dir / 'orchestra.db')
+        defaults = dict(guard=self.guard, supervisor=self.supervisor, clock=self.clock, start_run=self.start_run,
+                        request_run=self.request_run, token_cap=lambda role: 1000)
+        defaults.update(parts)
+        orch = service.Orchestra(OrchestraConfig.load(CONFIG), conn, audit=lambda e, p: self.events.append((e, p)),
+                                 data_dir=self.dir, **defaults)
+        self.addCleanup(orch.close)
+        return orch
+
+    def start_run(self, orch, agent, task, wakeup, approval):
+        self.runs.append((agent['id'], task['id'], wakeup['id'], approval))
+        return {'job_id': 'J-' + task['id'], 'mission_id': 'M-' + task['id']}
+
+    def request_run(self, orch, agent, task, wakeup):
+        self.requests.append((agent['id'], task['id'], wakeup['id']))
+        return 'MR-' + str(len(self.requests))
+
+    def agent(self, aid, status='aktiv', budget_tokens=None, reports_to=None):
+        self.orch.conn.execute("INSERT INTO agents (id, instance_id, template_id, name, role, reports_to, status, permission_level, budget_tokens,"
+                               " created_at, updated_at) VALUES (?, ?, 't', ?, 'coder', ?, ?, 2, ?, ?, ?)",
+                               (aid, 'i-' + aid, aid, reports_to, status, budget_tokens, T0, T0))
+
+    def task(self, tid, assignee=None, **fields):
+        return board.create(self.orch.conn, dict(id=tid, title='Aufgabe ' + tid, assignee=assignee, **fields), T0, 'captain')
+
+    def wake(self, aid, key, task_id=None):
+        return heartbeat.enqueue(self.orch.conn, aid, 'zugewiesen', key, self.clock.now, 0, task_id=task_id)
+
+    def wakeup(self, wid):
+        return dict(self.orch.conn.execute('SELECT * FROM wakeups WHERE id = ?', (wid,)).fetchone())
+
+    def tick(self):
+        return tick.tick(self.orch, self.clock.now)
+
+    def names(self, event):
+        return [p for e, p in self.events if e == event]
+
+
+class Wakeups(Base):
+    def setUp(self):
+        super().setUp()
+        self.agent('A1')
+        self.task('T1', assignee='A1')
+
+    def test_with_standing_approval_a_run_starts_without_a_decision(self):
+        self.guard.standing = True
+        wid = self.wake('A1', 'assign:T1:1', 'T1')
+        out = self.tick()
+        self.assertEqual((out['weckrufe'], out['laeufe'], out['antraege'], out['fehler']), (1, 1, 0, []))
+        self.assertEqual(self.runs, [('A1', 'T1', wid, 'standing')])
+        self.assertEqual(self.requests, [])
+        w = self.wakeup(wid)
+        self.assertEqual((w['outcome'], w['job_id'], w['mission_id']), ('lauf', 'J-T1', 'M-T1'))
+        self.assertEqual(self.guard.used, [('A1', 'ok', wid)])
+
+    def test_without_standing_approval_a_request_and_no_second_one(self):
+        wid = self.wake('A1', 'assign:T1:1', 'T1')
+        out = self.tick()
+        self.assertEqual((out['laeufe'], out['antraege']), (0, 1))
+        self.assertEqual((self.runs, self.requests), ([], [('A1', 'T1', wid)]))
+        self.assertEqual((self.wakeup(wid)['outcome'], self.wakeup(wid)['request_mission_id']), ('antrag', 'MR-1'))
+        wid2 = self.wake('A1', 'comment:7', 'T1')
+        self.tick()
+        self.assertEqual(len(self.requests), 1, 'ein Antrag wartet schon: kein zweiter')
+        self.assertEqual((self.wakeup(wid2)['outcome'], self.wakeup(wid2)['request_mission_id']), ('antrag', 'MR-1'))
+
+    def test_supervisor_off_leaves_the_wakeup_open_and_says_so_once(self):
+        self.supervisor.enabled = False
+        self.guard.standing = True
+        wid = self.wake('A1', 'assign:T1:1', 'T1')
+        self.tick()
+        self.tick()
+        self.assertIsNone(self.wakeup(wid)['done_at'])
+        self.assertEqual((self.runs, self.requests, self.guard.used), ([], [], []), 'keine Nutzung der Dauerfreigabe ohne Lauf')
+        self.assertEqual(self.names('ORC_TICK_ERROR'), [{'stage': 'weckrufe', 'error': 'supervisor_off'}])
+
+    def test_no_runner_wired_is_the_same(self):
+        orch = self.orch
+        orch.start_run = None
+        wid = self.wake('A1', 'assign:T1:1', 'T1')
+        self.tick()
+        self.assertIsNone(self.wakeup(wid)['done_at'])
+        self.assertEqual(self.names('ORC_TICK_ERROR'), [{'stage': 'weckrufe', 'error': 'runner_off'}])
+
+    def test_only_blocked_tasks_end_without_run_or_request(self):
+        self.task('T0')
+        board.set_blocker(self.orch.conn, 'T1', 'T0', T0)
+        wid = self.wake('A1', 'assign:T1:1', 'T1')
+        self.tick()
+        self.assertEqual(self.wakeup(wid)['outcome'], 'blockiert')
+        self.assertEqual((self.runs, self.requests), ([], []))
+
+    def test_a_paused_agent_ends_as_paused(self):
+        wid = self.wake('A1', 'assign:T1:1', 'T1')
+        self.orch.conn.execute("UPDATE agents SET status = 'pausiert', pause_reason = 'captain'")
+        self.tick()
+        self.assertEqual(self.wakeup(wid)['outcome'], 'pausiert')
+
+    def test_a_running_agent_keeps_its_wakeup_for_the_next_tick(self):
+        self.task('T2', assignee='A1')
+        board.checkout(self.orch.conn, 'T2', 'A1', 'J-T2', T0)
+        self.supervisor.store.jobs['J-T2'] = {'state': 'BUILDING', 'attempt_log': [{'outcome': 'RUNNING'}]}
+        wid = self.wake('A1', 'assign:T1:1', 'T1')
+        self.tick()
+        self.assertIsNone(self.wakeup(wid)['done_at'])
+
+    def test_a_stopped_budget_pauses_the_agent(self):
+        self.orch.conn.execute("UPDATE agents SET budget_tokens = 100")
+        self.orch.conn.execute("INSERT INTO spend (agent_id, provider, tokens_out, ts) VALUES ('A1', 'lokal', 100, ?)", (T0,))
+        wid = self.wake('A1', 'assign:T1:1', 'T1')
+        self.tick()
+        self.assertEqual(self.wakeup(wid)['outcome'], 'kein_budget')
+        agent = dict(self.orch.conn.execute("SELECT status, pause_reason FROM agents WHERE id = 'A1'").fetchone())
+        self.assertEqual(agent, {'status': 'pausiert', 'pause_reason': 'budget'})
+        self.assertEqual(self.orch.conn.execute("SELECT kind FROM budget_incidents").fetchone()[0], 'stopp')
+        self.assertEqual(self.guard.revoked, [('A1', 'budget')])
+        self.assertEqual(self.names('ORC_BUDGET_STOP'), [{'agent_id': 'A1', 'prozent': 100}])
+
+    def test_rest_below_the_run_cap_is_no_budget(self):
+        self.orch.conn.execute("UPDATE agents SET budget_tokens = 1500")
+        self.orch.conn.execute("INSERT INTO spend (agent_id, provider, tokens_out, ts) VALUES ('A1', 'lokal', 600, ?)", (T0,))
+        wid = self.wake('A1', 'assign:T1:1', 'T1')
+        self.tick()
+        self.assertEqual(self.wakeup(wid)['outcome'], 'kein_budget')
+        self.assertEqual(self.runs, [])
+
+    def test_at_most_max_runs_per_tick(self):
+        self.guard.standing = True
+        self.agent('A2', reports_to='A1')
+        self.task('T9', assignee='A2')
+        w1, w2 = self.wake('A1', 'assign:T1:1', 'T1'), self.wake('A2', 'assign:T9:1', 'T9')
+        out = self.tick()
+        self.assertEqual(out['laeufe'], 1)
+        self.assertEqual(len(self.runs), 1)
+        self.assertEqual(sorted([self.wakeup(w1)['done_at'] is None, self.wakeup(w2)['done_at'] is None]), [False, True])
+        self.tick()
+        self.assertEqual(len(self.runs), 2, 'der zweite läuft im nächsten Takt')
+
+
+class Routines(Base):
+    def test_a_due_routine_creates_a_task_and_a_wakeup_once(self):
+        self.agent('A1')
+        r = routines.create(self.orch.conn, {'agent_id': 'A1', 'title': 'Täglich', 'cron': '0 9 * * *', 'catch_up': 'auslassen', 'timezone': 'UTC',
+                                             'task_template': json.dumps({'titel': 'Bericht schreiben', 'beschreibung': 'kurz'})}, T0)
+        self.assertEqual(self.tick()['routinen'], 0)
+        self.clock.now = '2026-10-22T09:00:30Z'
+        out = self.tick()
+        self.assertEqual(out['routinen'], 1)
+        task = dict(self.orch.conn.execute("SELECT * FROM tasks").fetchone())
+        self.assertEqual((task['title'], task['description'], task['origin'], task['assignee']), ('Bericht schreiben', 'kurz', 'routine', 'A1'))
+        keys = [r_[0] for r_ in self.orch.conn.execute("SELECT idempotency_key FROM wakeups")]
+        self.assertEqual(keys, [f"routine:{r['id']}:2026-10-22T09:00:00Z"])
+        self.assertEqual(self.tick()['routinen'], 0, 'doppelter Takt: keine zweite Aufgabe')
+        self.assertEqual(self.orch.conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0], 1)
+
+
+class Reconcile(Base):
+    def setUp(self):
+        super().setUp()
+        self.agent('A1')
+        self.task('T1', assignee='A1')
+
+    def running(self, run_id='J-T1'):
+        board.checkout(self.orch.conn, 'T1', 'A1', run_id, T0)
+        self.n = getattr(self, 'n', 0) + 1
+        wid = self.wake('A1', f'assign:T1:{self.n}', 'T1')
+        heartbeat.finish(self.orch.conn, wid, 'lauf', T0, job_id=run_id)
+
+    def task_row(self):
+        return dict(self.orch.conn.execute("SELECT state, checkout_by, checkout_run FROM tasks WHERE id = 'T1'").fetchone())
+
+    def last_comment(self):
+        return self.orch.conn.execute("SELECT author_kind, text FROM comments ORDER BY id DESC").fetchone()[:]
+
+    def test_a_stalled_or_ended_job_frees_the_checkout(self):
+        for job in ({'state': 'CANCELLED', 'attempt_log': []}, {'state': 'BUILDING', 'attempt_log': [{'outcome': 'UNKNOWN'}]}):
+            with self.subTest(job):
+                self.running()
+                self.supervisor.store.jobs['J-T1'] = job
+                out = self.tick()
+                self.assertEqual(out['freigegeben'], 1)
+                self.assertEqual(self.task_row(), {'state': 'zugewiesen', 'checkout_by': None, 'checkout_run': None})
+                self.assertEqual(self.last_comment(), ('system', 'lauf_beendet'))
+
+    def test_a_living_job_keeps_its_checkout(self):
+        self.running()
+        self.supervisor.store.jobs['J-T1'] = {'state': 'BUILDING', 'attempt_log': [{'outcome': 'RUNNING'}]}
+        self.assertEqual(self.tick()['freigegeben'], 0)
+        self.assertEqual(self.task_row()['checkout_run'], 'J-T1')
+
+    def test_the_first_tick_frees_orphans(self):
+        board.checkout(self.orch.conn, 'T1', 'A1', 'run-ohne-job', T0)
+        tick.run_once(self.orch, first=True)
+        self.assertEqual(self.task_row(), {'state': 'zugewiesen', 'checkout_by': None, 'checkout_run': None})
+        self.assertEqual(self.last_comment(), ('system', 'lauf_verwaist'))
+        self.assertEqual(self.names('ORC_RUN_RELEASED'), [{'task_id': 'T1', 'run_id': 'run-ohne-job', 'agent_id': 'A1', 'reason': 'lauf_verwaist'}])
+
+
+class Quarantine(Base):
+    def test_a_quarantined_instance_pauses_its_agent(self):
+        self.agent('A1')
+        self.agent('A2', reports_to='A1')
+        self.orch.instance_status = lambda iid: 'QUARANTINED' if iid == 'i-A2' else 'ACTIVE'
+        self.tick()
+        rows = dict(self.orch.conn.execute("SELECT id, pause_reason FROM agents").fetchall())
+        self.assertEqual(rows, {'A1': None, 'A2': 'quarantaene'})
+        self.assertEqual(self.guard.revoked, [('A2', 'quarantaene')])
+
+    def test_an_error_in_one_stage_does_not_stop_the_others(self):
+        self.agent('A1')
+        self.task('T1', assignee='A1')
+        self.orch.instance_status = lambda iid: 1 / 0
+        wid = self.wake('A1', 'assign:T1:1', 'T1')
+        out = self.tick()
+        self.assertEqual(out['fehler'], ['quarantaene'])
+        self.assertEqual(self.wakeup(wid)['outcome'], 'antrag', 'die Weckrufe liefen trotzdem')
+        self.assertEqual(self.names('ORC_TICK_ERROR'), [{'stage': 'quarantaene', 'error': 'division by zero'}])
+
+
+class Reports(Base):
+    def test_a_root_with_finished_children_wakes_its_owner_once(self):
+        self.agent('A1')
+        self.task('ROOT', assignee='A1')
+        self.task('C1', parent_id='ROOT')
+        self.tick()
+        self.assertEqual(self.orch.conn.execute("SELECT COUNT(*) FROM wakeups WHERE idempotency_key = 'report:ROOT'").fetchone()[0], 0)
+        self.orch.conn.execute("UPDATE tasks SET state = 'erledigt' WHERE id = 'C1'")
+        self.orch.config.coalesce_s = 1                     # der Weckruf ist erst im nächsten Takt fällig
+        self.tick()
+        self.tick()
+        rows = self.orch.conn.execute("SELECT reason, task_id FROM wakeups WHERE idempotency_key = 'report:ROOT'").fetchall()
+        self.assertEqual([r[:] for r in rows], [('antwort', 'ROOT')])
+
+
+class Takt(Base):
+    def test_the_tick_is_written_and_goes_stale_after_three_intervals(self):
+        self.assertEqual(self.orch.takt(), {'laeuft': False, 'letzter': None, 'owner': None})
+        self.tick()
+        self.assertEqual(self.orch.takt(), {'laeuft': True, 'letzter': T0, 'owner': str(os.getpid())})
+        self.assertEqual(service.boot_entry(self.orch, None)['takt']['letzter'], T0)
+        self.clock.now = '2026-10-22T08:00:15Z'               # 3 × tick_s (5 s)
+        self.assertTrue(self.orch.takt()['laeuft'])
+        self.clock.now = '2026-10-22T08:00:16Z'
+        self.assertFalse(self.orch.takt()['laeuft'])
+        self.assertNotIn('takt', service.boot_entry(None, None), 'aus bleibt der Eintrag wie in Spec 0')
+
+    def test_the_thread_ticks_and_a_second_ticker_is_busy(self):
+        thread = self.orch.start_tick()
+        self.assertIs(self.orch.start_tick(), thread, 'einmal je Fassade')
+        deadline = time.monotonic() + 10
+        while self.orch.takt()['letzter'] is None and time.monotonic() < deadline:
+            time.sleep(0.05)
+        self.assertEqual(self.orch.takt()['letzter'], T0)
+        other = self.make()
+        with self.assertRaisesRegex(ValueError, '^tick_busy$'):
+            other.start_tick()
+        self.orch.stop_tick()
+        self.assertFalse(thread.is_alive())
+        self.assertIsNotNone(other.start_tick(), 'nach dem Ende des ersten darf ein anderer takten')
+        other.stop_tick()
+
+
+if __name__ == '__main__':
+    unittest.main()

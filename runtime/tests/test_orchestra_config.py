@@ -157,7 +157,8 @@ class Runtime(unittest.TestCase):
     def test_switch_on_with_a_valid_config_opens_the_database(self):
         rt = self.runtime(ON)
         self.assertIsNone(rt.orchestra_error)
-        self.assertEqual(rt.boot()['orchestra'], {'enabled': True, 'error': None, 'schema_version': 2})
+        self.assertEqual(rt.boot()['orchestra'], {'enabled': True, 'error': None, 'schema_version': 2,
+                                               'takt': {'laeuft': False, 'letzter': None, 'owner': None}})
         self.assertTrue((rt.project_root / 'runtime_data' / 'orchestra' / 'orchestra.db').is_file())
         self.assertIs(rt.orchestra.guard, rt.guard)
 
