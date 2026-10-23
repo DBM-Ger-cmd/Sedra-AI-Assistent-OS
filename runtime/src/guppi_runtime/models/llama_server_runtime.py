@@ -271,7 +271,7 @@ class LlamaServerRuntime:
     def status(self):
         self._reap()
         return {"provider": self.id, "available": self.available(), "endpoint": self.endpoint, "executable_dir": str(self.executable_dir) if self.executable_dir else None,
-                "running": bool(self._info), "model": (self._info or {}).get("modelKey"), "context": (self._info or {}).get("contextLength"),
+                "running": bool(self._info), "model": (self._info or {}).get("modelKey"), "context": (self._info or {}).get("contextLength"), "slots": (self._info or {}).get("slots"),
                 "kv_cache_type": (self._info or {}).get("kv_cache_type"), "spec_type": (self._info or {}).get("spec_type"),
                 "pid": getattr(self._proc, "pid", None), "last_exit": self.last_exit, **self._engine_facts()}
 
@@ -342,9 +342,15 @@ class LlamaServerRuntime:
                 self._kill()
                 raise RuntimeControlError(f"server_start_timeout:{self.config.startup_timeout_s}s:{self._log_tail(log_path)}")
             self._sleep(0.5)
-        # The window the server really applies (total over its slots), not the one that was asked for.
+        # The window the server really applies PER SLOT (`-c` is split over the slots and /props reports one slot's window, b11160);
+        # a build that reports the sum is divided back. Not the one that was asked for.
+        slots = parallel or 1
         applied = ((self._props().get("default_generation_settings") or {}).get("n_ctx"))
-        self._info = {"modelKey": model_key, "identifier": alias, "contextLength": applied if type(applied) is int else context_length,
+        if type(applied) is int:
+            per_slot = applied // slots if slots > 1 and context_length is not None and applied == context_length else applied
+        else:
+            per_slot = context_length // slots if context_length is not None else None
+        self._info = {"modelKey": model_key, "identifier": alias, "contextLength": per_slot, "slots": slots,
                       "pid": self._proc.pid, "kv_cache_type": server.get("kv_cache_type", "f16"), "spec_type": "draft-mtp" if use_mtp else "none"}
         self._write_state()
         self._audit("LLAMA_SERVER_STARTED", model=model_key, context=self._info["contextLength"], pid=self._proc.pid, seconds=round(self._mono() - started, 1))

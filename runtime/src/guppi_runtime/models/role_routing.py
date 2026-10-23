@@ -139,7 +139,7 @@ class RoutingConfig:
         server = profile.get("server")
         if server is not None:
             # How a GUPPI-managed local server is started for this recipe (see its runtime module). Structured, never free-form.
-            if (not isinstance(server, dict) or set(server) - {"gguf", "kv_cache_type", "mmproj", "reasoning", "reasoning_budget", "mtp", "cache_ram", "ctx_checkpoints", "n_cpu_moe", "n_gpu_layers", "reasoning_format", "jinja", "ubatch", "mmap", "flash_attn"}
+            if (not isinstance(server, dict) or set(server) - {"gguf", "kv_cache_type", "mmproj", "reasoning", "reasoning_budget", "mtp", "cache_ram", "ctx_checkpoints", "n_cpu_moe", "n_gpu_layers", "reasoning_format", "jinja", "ubatch", "mmap", "flash_attn", "slots"}
                     or server.get("reasoning_format", "auto") not in {"none", "deepseek", "deepseek-legacy", "auto"}
                     or not isinstance(server.get("jinja", True), bool)
                     or not isinstance(server.get("gguf"), str) or not server["gguf"]
@@ -150,12 +150,23 @@ class RoutingConfig:
                     or (server.get("ctx_checkpoints") is not None and (type(server["ctx_checkpoints"]) is not int or not 0 <= server["ctx_checkpoints"] <= 64))
                     or (server.get("n_gpu_layers") is not None and (type(server["n_gpu_layers"]) is not int or not 0 <= server["n_gpu_layers"] <= 999))
                     or (server.get("n_cpu_moe") is not None and (type(server["n_cpu_moe"]) is not int or not 0 <= server["n_cpu_moe"] <= 999))
+                    or (server.get("slots") is not None and (type(server["slots"]) is not int or not 1 <= server["slots"] <= 8))
                     or not isinstance(server.get("mmap", True), bool)
                     or server.get("flash_attn", "on") not in {"on", "off", "auto"}
                     or (server.get("ubatch") is not None and (type(server["ubatch"]) is not int or not 64 <= server["ubatch"] <= 8192))
                     or (server.get("cache_ram") is not None and (type(server["cache_ram"]) is not int or not -1 <= server["cache_ram"] <= 262144))
                     or (server.get("mmproj") is not None and not isinstance(server["mmproj"], str))):
                 raise fail("profile.server")
+        per_slots = (profile.get("context") or {}).get("per_slots") if isinstance(profile.get("context"), dict) else None
+        if per_slots is not None:
+            # Window PER SLOT as measured for N slots ({N: window}); only the numbers 1..slots, never above the maximum, on a tier if tiers exist.
+            slots_max = (server or {}).get("slots") or 1
+            maximum = (profile.get("context") or {}).get("maximum")
+            if (not isinstance(per_slots, dict) or not per_slots
+                    or any(type(n) is not int or not 1 <= n <= slots_max or type(w) is not int or w <= 0 for n, w in per_slots.items())
+                    or (type(maximum) is int and any(w > maximum for w in per_slots.values()))
+                    or (tiers and any(w not in tiers for w in per_slots.values()))):
+                raise fail("profile.context.per_slots")
         measured_context = item.get("measured_context")
         if measured_context is not None and (type(measured_context) is not int or measured_context <= 0):
             raise fail("measured_context")
@@ -433,6 +444,14 @@ class RoleRouter:
             # Schutzkappe des Hardware-Checks (32768) als Wunsch stehen, obwohl 64k gemessen und freigegeben ist.
             declared = int(((recipe["profile"].get("context") or {}).get("recommended")) or 0)
             if declared: working_context = min(declared, context)
+        slots = int(((recipe["profile"].get("server") or {}).get("slots")) or 1)
+        if slots > 1:
+            # N slots share one server: the window each slot gets is the one MEASURED for N (no guessing); without it the start is refused.
+            per_slot = ((recipe["profile"].get("context") or {}).get("per_slots") or {}).get(slots)
+            if per_slot is None:
+                return None, no("static", "slots_not_measured")
+            context = min(context, per_slot) if context is not None else per_slot
+            working_context = min(working_context, per_slot) if working_context else per_slot
         if req["context_min_tokens"] and (context is None or context < req["context_min_tokens"]):
             return None, no("static", "context_capacity")
         tiers = (recipe["profile"].get("context") or {}).get("tiers")
@@ -457,7 +476,8 @@ class RoleRouter:
             if state in {"COOLDOWN", "UNAVAILABLE"}:
                 return None, no("unavailable", f"provider_{state.lower()}")
         rate = recipe["kv_cache_gb_per_1k_tokens"]
-        kv_context = loaded_context or working_context
+        kv_context = (loaded_context or working_context)
+        kv_context = kv_context * slots if kv_context else kv_context       # every slot holds its own window in the KV cache
         kv = round(rate * (kv_context or 0) / 1000, 3) if rate is not None and kv_context else None
         measured_context = recipe["measured_context"]
         if recipe["measured_vram_gb"] is not None and rate is not None and measured_context and kv_context:
@@ -483,12 +503,12 @@ class RoleRouter:
             reason = self.load_check(recipe, estimated, req)
             if reason:
                 return None, no("pressure", str(reason)[:200])
-        return {"recipe": recipe, "context": loaded_context or context, "estimated": estimated, "key": key}, None
+        return {"recipe": recipe, "context": loaded_context or context, "estimated": estimated, "key": key, "slots": slots}, None
 
     # -- resolution
     def _resolution(self, role, recipe, best, req, considered, purpose, alternatives=None):
         return {"role": role, "provider_ref": recipe["provider"], "capability_id": recipe["id"], "capability_version": recipe["version"],
-                "model": recipe["model"], "context_window": best["context"], "estimated_resources": best["estimated"],
+                "model": recipe["model"], "context_window": best["context"], "slots": best.get("slots", 1), "estimated_resources": best["estimated"],
                 "independence_key": best["key"], "health_state": self.health.state(recipe["provider"]) if self.health else "HEALTHY",
                 "permission_level_allowed": recipe["max_level"], "trust_level": recipe["trust_level"], "location": recipe["location"],
                 "requirements": req, "reason": "best_available" if alternatives is None else "named_by_captain", "considered": considered,

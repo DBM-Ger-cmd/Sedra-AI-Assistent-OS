@@ -124,7 +124,7 @@ class ModelLoader:
         for item in (ctl or self.controller).loaded_models() or []:
             ident = item.get("identifier") or item.get("modelKey")
             if item.get("modelKey") == key or ident == key or (isinstance(ident, str) and re.fullmatch(re.escape(key) + r":\d+", ident)):
-                out.append({"identifier": ident, "context": item.get("contextLength")})
+                out.append({"identifier": ident, "context": item.get("contextLength"), "slots": item.get("slots")})
         return out
 
     def _validate(self, resolution):
@@ -140,9 +140,15 @@ class ModelLoader:
             raise LoadError("provider_unavailable", f"cannot_list_loaded_models:{type(exc).__name__}") from exc
 
     @staticmethod
-    def _reusable(instances, key, want):
-        """Reuse only when exactly one instance exists, it has the wanted window and it is the one requests for `<key>` reach."""
-        return len(instances) == 1 and instances[0]["context"] == want and instances[0]["identifier"] == key
+    def _reusable(instances, key, want, slots=1):
+        """Reuse only when exactly one instance exists, it has the wanted window (PER SLOT) and slot count and it is the one requests
+        for `<key>` reach. A runtime that does not report its slots (LM Studio) counts as one."""
+        return (len(instances) == 1 and instances[0]["context"] == want and instances[0]["identifier"] == key
+                and (instances[0].get("slots") or 1) == slots)
+
+    def _slots(self, resolution):
+        """Slots of the server: the recipe's `server.slots`, else the loader's own default (`parallel`)."""
+        return int(((resolution.get("load_profile") or {}).get("server") or {}).get("slots") or self.config.parallel or 1)
 
     def evict_idle(self, in_use):
         """Unload every loaded model that no running attempt uses, so a model that does not fit next to it can start.
@@ -186,7 +192,7 @@ class ModelLoader:
             return 0.0
         try:
             key, want = self._validate(resolution)
-            if not self._reusable(self._instances(key, self._ctl(resolution)), key, want):
+            if not self._reusable(self._instances(key, self._ctl(resolution)), key, want, self._slots(resolution)):
                 return 0.0
         except (LoadError, RuntimeControlError, ValueError, OSError):
             return 0.0
@@ -201,7 +207,7 @@ class ModelLoader:
         key, want = self._validate(resolution)
         ctl = self._ctl(resolution)
         instances = self._list(key, ctl)
-        if not instances or self._reusable(instances, key, want):
+        if not instances or self._reusable(instances, key, want, self._slots(resolution)):
             return []
         if self.config.on_context_mismatch == "refuse":
             raise LoadError("provider_unavailable", f"loaded_with_other_context:{instances[0]['context']}")
@@ -223,9 +229,10 @@ class ModelLoader:
         profile = resolution.get("load_profile") or {}
         ctl = self._ctl(resolution)
         instances = self._list(key, ctl)
-        exact = [i for i in instances if i["context"] == want]
-        wrong = [i for i in instances if i["context"] != want]
-        if self._reusable(instances, key, want):
+        slots = self._slots(resolution)
+        exact = [i for i in instances if i["context"] == want and (i.get("slots") or 1) == slots]
+        wrong = [i for i in instances if i not in exact]
+        if self._reusable(instances, key, want, slots):
             self._audit("MODEL_LOAD_REUSED", model=key, context_length=want)
             return {"identifier": key, "context_length": want, "action": "reused", "estimate_gib": None}
         if wrong and self.config.on_context_mismatch == "refuse":
@@ -244,8 +251,9 @@ class ModelLoader:
                 raise LoadError("provider_unavailable", f"unload_failed:{type(exc).__name__}") from exc
         extra = {"server": profile["server"]} if profile.get("server") else {}       # a managed server needs to know the model file etc.
         try:
-            ctl.load_model(key, context_length=want, gpu=gpu_argument(profile.get("gpu_layers")), identifier=key, yes=True,
-                           parallel=self.config.parallel, mtp=self.config.mtp, **extra)
+            # `-c` is the SUM over the slots; the window the Router asked for (`want`) is the window of ONE slot (build b11160, measurement S2.1).
+            ctl.load_model(key, context_length=want * slots, gpu=gpu_argument(profile.get("gpu_layers")), identifier=key, yes=True,
+                           parallel=slots, mtp=self.config.mtp, **extra)
         except (RuntimeControlError, ValueError, OSError) as exc:
             # The reason is the point: a bare "ValueError" hid whether the GGUF, the canary or a setting was at fault (16.10.2026).
             detail = str(exc)[:160] if isinstance(exc, RuntimeControlError) else f"{type(exc).__name__}:{str(exc)[:160]}"
