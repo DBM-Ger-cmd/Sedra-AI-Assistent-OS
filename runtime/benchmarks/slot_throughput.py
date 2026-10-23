@@ -146,7 +146,7 @@ def throughput(runtime, recipe, parallel, context, runs, tokens, server=None, sa
         used, total = gpu_fn()
         out.update(applied_context=info.get("contextLength"), vram_load_gib=round(used / 1024, 2), vram_free_load_gib=round((total - used) / 1024, 2),
                    slots_endpoint=slots_endpoint(runtime.endpoint, get))
-        if info.get("contextLength") not in (context * parallel, None):
+        if info.get("contextLength") not in (context, context * parallel, None):      # /props reports the window per slot on b11160 (measured 2026-10-23)
             return {**out, "status": "context_mismatch"}
         ask_fn(runtime.endpoint, alias, prompt_for(0, 0), 16)                       # warm-up: the first request pays for lazy buffers
         records = []

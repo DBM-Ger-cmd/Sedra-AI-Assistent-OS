@@ -210,6 +210,11 @@ def overlap(spans, tolerance=0.5):
     return last_start < first_end and last_end - first_end <= tolerance * (first_end - last_start)
 
 
+def started_together(spans):
+    """True when every request began before the first one ended (all were in the server at the same time)."""
+    return len(spans) < 2 or max(s for s, _ in spans) < min(e for _, e in spans)
+
+
 def judge(out, code):
     """The result word of one answer: ok, error, empty, garbage or wrong."""
     if "error" in out:
@@ -236,8 +241,10 @@ def rung_parallel(runtime, alias, server, tier, parallel, probes, chars_per_toke
         row["applied_context"] = info.get("contextLength")
         used, total = gpu_fn()
         row["vram_used_gib"], row["vram_free_gib"] = round(used / 1024, 2), round((total - used) / 1024, 2)
-        if row["applied_context"] not in (tier * parallel, None):
+        # Measured 2026-10-23 (b11160): with -np N the server splits -c and /props reports the window PER SLOT; the sum is accepted too (other builds).
+        if row["applied_context"] not in (tier, tier * parallel, None):
             row["status"] = "context_mismatch"; return row, chars_per_token
+        row["context_reported"] = "per_slot" if row["applied_context"] == tier else "total"
         if row["vram_free_gib"] < RESERVE_GIB:
             row["status"] = "over_reserve"; return row, chars_per_token
         for i, where in enumerate((0.1, 0.5, 0.9)[:probes]):
@@ -267,7 +274,7 @@ def rung_parallel(runtime, alias, server, tier, parallel, probes, chars_per_toke
             row["vram_free_min_gib"] = min(row.get("vram_free_min_gib", 99.0), round((total - used) / 1024, 2))
             wall = max(e for _, e in spans) - min(s for s, _ in spans)
             probe = {"where": where, "results": results, "prompt_tokens": tokens, "seconds": [o.get("seconds") for o, _, _ in done],
-                     "overlap": overlap(spans), "wall_s": round(wall, 1),
+                     "overlap": started_together(spans), "ends_close": overlap(spans), "wall_s": round(wall, 1),
                      "completion_tokens": sum((o.get("usage") or {}).get("completion_tokens") or 0 for o, _, _ in done), "alive": alive}
             probe["result"] = ("server_died" if not alive else next((r for r in results if r != "ok"), None)
                                or ("no_overlap" if not probe["overlap"] else None)

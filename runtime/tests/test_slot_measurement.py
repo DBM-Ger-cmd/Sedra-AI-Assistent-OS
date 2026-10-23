@@ -88,18 +88,30 @@ class LadderParallel(unittest.TestCase):
         self.assertEqual(row["status"], "probe_failed")
         self.assertEqual(row["probes"][0]["result"], "wrong")
 
-    def test_requests_that_did_not_overlap_do_not_count(self):
+    def test_requests_that_the_server_queued_are_still_a_correct_rung_but_not_close(self):
         lock = __import__("threading").Lock()
 
         def ask(endpoint, alias, prompt, *a, **k):
-            with lock:                                   # serialises the slots: the server did not run them at the same time
+            with lock:                                   # the server works the slots one after the other: all are in, the ends are one duration apart
                 return good_ask(0.05)(endpoint, alias, prompt)
         row, _ = self.run_rung(2, ask)
+        self.assertEqual(row["status"], "ok")
+        self.assertTrue(row["probes"][0]["overlap"])
+        self.assertFalse(row["probes"][0]["ends_close"])
+
+    def test_requests_that_never_were_in_the_server_together_do_not_count(self):
+        spans = iter([(0.0, 1.0), (2.0, 3.0)] * 4)
+
+        def fake_timed(endpoint, alias, prompt, ask_fn=None):
+            s, e = next(spans)
+            return ask_fn(endpoint, alias, prompt), s, e
+        with mock.patch.object(ladder_tool, "timed_ask", fake_timed):
+            row, _ = self.run_rung(2, good_ask(0.0))
         self.assertEqual(row["probes"][0]["result"], "no_overlap")
         self.assertEqual(row["status"], "probe_failed")
 
     def test_context_mismatch_load_failure_driver_events_dead_server(self):
-        row, _ = self.run_rung(2, good_ask(), runtime=FakeRuntime(applied=8192))
+        row, _ = self.run_rung(2, good_ask(), runtime=FakeRuntime(applied=4096))
         self.assertEqual(row["status"], "context_mismatch")
         row, _ = self.run_rung(2, good_ask(), runtime=FakeRuntime(fail_load=True))
         self.assertEqual(row["status"], "load_failed")
@@ -109,6 +121,12 @@ class LadderParallel(unittest.TestCase):
         runtime.loaded_models = lambda: [{"contextLength": 16384}] if not runtime.loads or len(runtime.loads) < 2 else []
         row, _ = self.run_rung(2, good_ask(), runtime=runtime)
         self.assertEqual(row["status"], "ok")
+
+    def test_server_that_reports_the_window_per_slot_is_accepted(self):
+        row, _ = self.run_rung(2, good_ask(), runtime=FakeRuntime(applied=8192))
+        self.assertEqual((row["status"], row["context_reported"]), ("ok", "per_slot"))
+        row, _ = self.run_rung(2, good_ask())
+        self.assertEqual(row["context_reported"], "total")
 
     def test_ladder_dispatches_by_parallel_and_keeps_the_single_slot_path(self):
         recipe = {"id": "r", "model": "m", "profile": {"server": {"gguf": "x"}}}

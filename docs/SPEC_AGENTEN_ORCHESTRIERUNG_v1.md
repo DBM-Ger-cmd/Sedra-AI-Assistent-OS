@@ -1906,7 +1906,7 @@ Nicht geprüft in dieser Stufe: Ausführen von Tests, Oberfläche, Modell, GPU; 
 ### Aufgaben
 
 - [x] S2.0 Messwerkzeuge erweitern (`--parallel`, `slot_throughput.py`), ohne GPU testen → als S2.H0 unten eingeplant
-- [ ] S2.1 Messplan ausführen (unter GPU-Lease, Rezepte nur mit Sicherung) → Messbericht; eigene Freigabe mit GPU-Zeit (G3-S2-06)
+- [x] S2.1 (23.10.2026, Ergebnis: `MESSBERICHT_SLOTS_2026-10-23.md`; Nachmessung der früh abgebrochenen Stufen offen) Messplan ausführen (unter GPU-Lease, Rezepte nur mit Sicherung) → Messbericht; eigene Freigabe mit GPU-Zeit (G3-S2-06)
 - [ ] S2.2 Regeländerung zur GPU-Lease in `ENTWICKLUNG.md` (Entwurf steht oben) → Captain-Gate, Änderung erst nach Bau und Abnahme (G3-S2-14)
 - [x] S2.3 Design `model_scheduler.py` und Tabelle `slot_leases` → G2 (erteilt 22.10.2026, G2-S2-01 bis 16)
 - [x] S2.4 Bau-Specs `s2_slotplan`, `s2_slot_store` in `devvm_specs/` mit Referenz und `spec_check` = ok (22.10.2026, siehe „Bauschritte S2“); `s2_vramplan` entfällt nach V4 → G3
@@ -2010,6 +2010,23 @@ G3 gibt die Bauschritte frei, nicht die Übernahme: Jeder SEDRA-Kandidat kommt n
 | OP-S2-13 | Neue Tabellen von `testlab.db` verwenden UTC-Text, die alten `REAL`; die Fassade wandelt | akzeptiert; Alternative `REAL` kostet Umbau der reinen Funktionen (Zeittext) und der Saat |
 | OP-S2-14 | `ttl_s` der Leases (Vorgabe 120 s) wird in dieser Stufe nur gespeichert, nicht ausgewertet (`reap` folgt dem Lauf, nicht der Uhr) | Auswertung `stale` in `view` beim Bau von S2.H3 ergänzen, falls der Captain eine Anzeige „Herzschlag fehlt“ will |
 | OP-S2-15 | `s2_slot_store` prüft keine Zwei-Prozess-Wettläufe (ein Prozess in der Bau-Umgebung) | Wettlauftest (100 Durchläufe, 2 Prozesse) im Harness S2.H3, wie `test_orchestra_checkout_race.py` in Spec 1 |
+
+#### Ergebnis der Messung S2.1 (23.10.2026) und Korrekturen am Design
+
+Bericht: [MESSBERICHT_SLOTS_2026-10-23.md](MESSBERICHT_SLOTS_2026-10-23.md), Tabelle in [MODELLE.md](MODELLE.md). Zwei Läufe in der Nacht, kein Abbruch, keine Treiberereignisse, höchster VRAM-Wert 11,21 GiB.
+
+- **Standard-Slotzahl (Empfehlung an den Captain, G1-S2-a):** Hauptmodell 2 Slots mit 32768 Fenster je Slot (belegt bis 49152; Durchsatz +17 %, je Slot 25,7 Token/s), Hilfsmodell 2 Slots (Durchsatz +68 %, Fenster bis 24576 belegt), MTP des Hilfsmodells ab 4 Slots aus. 3 und 4 Slots erst nach der Nachmessung.
+- **D2.5 und Befund B-4 ändern sich:** Build b11160 teilt `-c` auf die Slots, `/props` meldet das Fenster **je Slot**. Der Loader (S2.H2) vergleicht `contextLength` mit dem Fenster je Slot, nicht mit `Slots × Fenster`; `-c` bleibt `Slots × Fenster`. `context_ladder`/`slot_throughput` akzeptieren beide Meldungen.
+- **OP-S2-01, OP-S2-03, OP-S2-07 sind beantwortet** (Teilung von `-c`; `/slots` vorhanden und zeigt N Einträge; MTP mit mehreren Slots stabil).
+- **Lauf-Schwelle:** Ein 64k-Prompt braucht beim Hauptmodell rund 9 Minuten Vorladen je Slot; `wait_max_s` (600 s) und `slot_ttl_s` (120 s, Herzschlag trägt) sind für lange Prompts zu prüfen (OP-S2-16).
+- **Werkzeug:** Der Enden-Abstand gleichzeitiger Anfragen ist keine Fehlerbedingung der Kontextleiter mehr (der Server lädt die Prompts nacheinander vor); `no_overlap` bleibt nur, wenn Anfragen nie gleichzeitig im Server waren. Die Leitern für 2 bis 4 Slots sind deshalb Untergrenzen (OP-S2-17).
+- **S0 bestand überall** (die Notiz in `MODELLE.md` zu S0 vom 12.10. gilt für diese Einstellungen nicht mehr).
+
+| Nr | Punkt | Vorschlag |
+| --- | --- | --- |
+| OP-S2-16 | Zeitgrenzen der Slot-Leases bei langen Prompts (bis rund 9 min Vorladen je Slot beim Hauptmodell) | beim Bau von S2.H3 gegen `slot_ttl_s`, Herzschlag des Workers (20 s) und `wait_max_s` prüfen; Vorgaben nur nach Messung ändern |
+| OP-S2-17 | Nachmessung der früh abgebrochenen Stufen (Hauptmodell 2 Slots ab 65536, 3 Slots ab 24576, 4 Slots ab 16384; Hilfsmodell 2 Slots ab 32768, 3 Slots ab 16384, 4 Slots ab 8192) | eigene Freigabe mit GPU-Zeit (rund 2 Stunden); danach `per_slots` im Rezept eintragen |
+
 
 ## Spec 3 – Local First, Cloud Second
 

@@ -255,6 +255,7 @@ def main(argv=None):
     ap.add_argument("--recipe", default="coder.local_primary"); ap.add_argument("--small", default="coder.llama_qwen35"); ap.add_argument("--no-small", action="store_true")
     ap.add_argument("--slots", default="1,2,3,4"); ap.add_argument("--limit-h", type=float, default=3.0); ap.add_argument("--small-limit-h", type=float, default=1.0)
     ap.add_argument("--max-temp", type=int, default=85); ap.add_argument("--wait", type=float, default=0)
+    ap.add_argument("--guppi", default=None, help="the installed runtime folder (<guppi>): its engines/ folder and runtime/config/local_paths.yaml are used when this script runs from a worktree that has neither")
     ap.add_argument("--go", action="store_true", help="really run (without it: print the plan and the checks only)")
     ap.add_argument("--logbook", default=None, help="logbook file (default: docs/LOGBUCH_AGENT_MANAGER.md)")
     args = ap.parse_args(argv)
@@ -289,11 +290,17 @@ def main(argv=None):
     owner = os.environ.get("TESTLAB_OWNER", "slot_measurement")
     qid = lab.plan(owner, "slot-messung", "Slots 1-4 Hauptmodell und Hilfsmodell (Spec 2, S2.1)", [m for m in (main_id, small_id) if m])
     say = lambda s: print(s, flush=True)             # noqa: E731
-    hash_paths = [project / "local_config", RUNTIME / "config"]
+    guppi = Path(args.guppi) if args.guppi else None
+    hash_paths = [project / "local_config", RUNTIME / "config"] + ([guppi / "runtime" / "config"] if guppi else [])
     run = Run(project, recipes, real_tools(), say, args.max_temp, {"main": args.limit_h, "small": args.small_limit_h}, hash_paths)
 
     def factory():
+        if guppi:                                    # read-only use of the installation: engines and the folders of this PC; no file of it is changed
+            from guppi_runtime import local_paths
+            local_paths.FILE = guppi / "runtime" / "config" / "local_paths.yaml"
         config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled, config.mtp = True, True
+        if guppi:
+            config.engine_root = str(guppi / "engines")
         return LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_slotmeasure_")))
     run.runtime_factory = factory
     import logbook as logbook_tool
