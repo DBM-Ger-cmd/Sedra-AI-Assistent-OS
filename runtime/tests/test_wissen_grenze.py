@@ -10,7 +10,7 @@ from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "guppi_runtime"
 WISSEN = SRC / "wissen"
-REIN = {"schema": set(), "zerlegen": set(), "vektor": set(), "fusion": set(), "ausgabe": {"zerlegen"}}
+REIN = {"schema": set(), "zerlegen": set(), "vektor": set(), "fusion": set(), "ausgabe": {"zerlegen"}, "glossar": set()}   # glossar: S7.6 A2
 STDLIB = {"array", "hashlib", "heapq", "json", "math", "operator", "re", "sqlite3", "unicodedata", "dataclasses", "typing", "contextlib", "sys"}
 HARNESS_ERLAUBT = {"guppi_runtime.core.audit", "guppi_runtime.core.content_policy", "guppi_runtime.core.mission_lock", "guppi_runtime.jobs.testlab",
                    "guppi_runtime.desk.gated", "guppi_runtime.desk.actions", "guppi_runtime.orchestra.runner", "guppi_runtime.local_paths"}

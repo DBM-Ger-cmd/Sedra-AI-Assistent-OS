@@ -19,7 +19,7 @@ from pathlib import Path
 
 from ..core.content_policy import KEY_FORMATS, ScanFailure, scan_content
 from . import adapter as adapter_mod
-from . import ausgabe, embed, fusion, schema, vektor, zerlegen
+from . import ausgabe, embed, fusion, glossar, schema, vektor, zerlegen
 
 TIME = "%Y-%m-%dT%H:%M:%SZ"
 HART = ("PAN_CVV_V1",)                                                    # A-1: dieselben Klassen wie ContentGuard._finish
@@ -382,8 +382,12 @@ class WissenSpeicher:
     def _offene(self, mid, n):
         """Offene Vektoren ohne die Abschnitte, die der Server in diesem Prozess schon allein abgelehnt hat (F2)."""
         with self.lock:
-            rows = schema.offene_vektoren(self.db, mid, n + len(self._vektor_fehler))
-        return [r for r in rows if (r[0], r[2]) not in self._vektor_fehler][:n]
+            rows = [r for r in schema.offene_vektoren(self.db, mid, n + len(self._vektor_fehler)) if (r[0], r[2]) not in self._vektor_fehler][:n]
+            if getattr(self.dienst.e, "eingabeformat", "e1") == "e2" and rows:            # S7.6 A1: Dokument > Stelle, Tabellen als „Spalte: Wert“
+                marks = ",".join("?" * len(rows))
+                quelle = {r["nr"]: r for r in self.db.execute("SELECT nr, datei, stelle, text FROM abschnitte WHERE nr IN (" + marks + ")", [r[0] for r in rows])}
+                rows = [(nr, zerlegen.eingabetext_e2(quelle[nr]["datei"], quelle[nr]["stelle"], quelle[nr]["text"]), h) for nr, _, h in rows]
+        return rows
 
     def _schreibe(self, mid, zeilen):
         with self.lock:
@@ -483,13 +487,14 @@ class WissenSpeicher:
         woerter = fusion.woerter(frage)
         if not woerter:
             raise ValueError("wis_anfrage_leer")
+        alt = self.alternativen(woerter)
         agent = leser["art"] == "agent"
         befund_sql = " AND a.befunde = '[]'" if agent else ""
         with self.lock:
             tiefe = self.konfig.tiefe
             wort = [r[0] for r in self.db.execute(
                 "SELECT a.nr FROM abschnitte_fts f JOIN abschnitte a ON a.nr = f.rowid JOIN quellen q ON q.id = a.quelle WHERE abschnitte_fts MATCH ? AND " + where + befund_sql
-                + " ORDER BY bm25(abschnitte_fts, 2.0, 1.0), a.nr LIMIT ?", (fusion.fts_anfrage(woerter), *params, tiefe))]
+                + " ORDER BY bm25(abschnitte_fts, 2.0, 1.0), a.nr LIMIT ?", (fusion.fts_anfrage(glossar.anfrage_woerter(woerter, alt)), *params, tiefe))]
             mid, grund, anfrage = self.dienst.modell_id(), None, None
             meta = schema.lies_meta(self.db)
             bereit, bereit_grund = self.dienst.bereit()
@@ -514,7 +519,7 @@ class WissenSpeicher:
             if grund is None:
                 erlaubt = {r[0] for r in self.db.execute("SELECT a.nr FROM abschnitte a JOIN quellen q ON q.id = a.quelle WHERE " + where + befund_sql, params)}
                 vek = [nr for nr, _ in vektor.top_k(anfrage, self._vektoren_laden(mid), tiefe, erlaubt=lambda nr: nr in erlaubt)]
-                g = self._guete(woerter, wort, n_alle)
+                g = self._guete(woerter, wort, n_alle, alt)
                 treffer = fusion.fusioniere(wort, vek, g, self.konfig.gewichte, k_aus=k)
                 modus = "hybrid"
             else:
@@ -539,16 +544,24 @@ class WissenSpeicher:
                                  "modus": modus, "k": k, "ids": ids, "frage_sha256": _sha(frage), "ms": ms, "mission_id": mission_id})
         if protokoll and leser["art"] == "captain":
             self._protokolliere(frage, ids, modus)
-        return {"modus": modus, "hinweis": hinweis, "treffer": out, "modell_id": mid if modus == "hybrid" else None, "abdeckung": round(abdeckung, 4), "ms": ms, "woerter": woerter}
+        return {"modus": modus, "hinweis": hinweis, "treffer": out, "modell_id": mid if modus == "hybrid" else None, "abdeckung": round(abdeckung, 4), "ms": ms, "woerter": woerter,
+                "glossar": alt}
 
-    def _guete(self, woerter, wort, n_alle):
-        """g(d) je Abschnitt der Wortliste: welche Wörter ein Abschnitt enthält, entscheidet FTS5 selbst (D7.5)."""
+    def alternativen(self, woerter, an=None):
+        """Die Glossar-Alternativen je Fragewort (S7.6 A2); leer, solange `suche.glossar` aus ist."""
+        an = self.konfig.glossar_an if an is None else an
+        return glossar.alternativen(woerter, self.konfig.glossar) if an and self.konfig.glossar else {}
+
+    def _guete(self, woerter, wort, n_alle, alt=None):
+        """g(d) je Abschnitt der Wortliste: welche Wörter ein Abschnitt enthält, entscheidet FTS5 selbst (D7.5). Mit Glossar gilt ein
+        Fragewort als enthalten, wenn das Wort oder eine seiner Alternativen im Abschnitt steht (S7.6 A2)."""
         if not wort:
             return {}
+        alt = alt or {}
         idf_je_wort, drin = {}, {nr: set() for nr in wort}
         marks = ",".join("?" * len(wort))
         for w in woerter:
-            q = fusion.fts_anfrage([w])
+            q = fusion.fts_anfrage([w] + list(alt.get(w, [])))
             n_w = self.db.execute("SELECT count(*) FROM abschnitte_fts WHERE abschnitte_fts MATCH ?", (q,)).fetchone()[0]
             idf_je_wort[w] = fusion.idf(n_alle, min(n_w, n_alle))
             for (nr,) in self.db.execute("SELECT rowid FROM abschnitte_fts WHERE abschnitte_fts MATCH ? AND rowid IN (" + marks + ")", (q, *wort)):

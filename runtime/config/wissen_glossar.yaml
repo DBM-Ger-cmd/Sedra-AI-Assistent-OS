@@ -1,0 +1,28 @@
+# Glossar der Wortsuche (Spec 7, S7.6 A2, Gate G2-S7.6-b): Gruppen gleichbedeutender Begriffe. Ein Fragewort aus einer Gruppe bringt
+# die anderen Begriffe als ODER-Alternativen in die Volltextsuche mit (höchstens 4 je Wort). Wirksam nur mit `suche.glossar: true`
+# in wissen.yaml. Eigene Ergänzungen dieses Rechners gehören nach local_config/wissen_glossar.yaml (gleiches Format, wird angehängt).
+#
+# Herkunft (Regel gegen Überanpassung): Die Gruppen stammen aus der Fachsprache der Doku (BETRIEB, TESTLAB, Regelwerk, Gateway-
+# Regelbuch) und aus den Fehlgriffen des ENTWICKLUNGSsatzes S7.1 (wissen_goldsatz.json: G03, G16, G36, G40). Der versiegelte
+# Abnahmesatz wissen_goldsatz_v2.json wurde dafür NICHT gelesen und darf nie Quelle eines Eintrags sein (D7.11).
+wissen_glossar:
+  schema: 1
+  gruppen:
+    - [vram, videospeicher, grafikspeicher, gpu-speicher]                  # G03
+    - [gpu, grafikkarte]
+    - [lease, gpu-sperre, sperre der gpu]                                  # TESTLAB „Die Regel“
+    - [kartendaten, kreditkartennummer, kartennummer, pan]                 # G36, Gateway R-06/R-07
+    - [prüfwert, prüfziffer, cvv, kartenprüfnummer]                        # G36
+    - [shell, oberfläche, benutzeroberfläche]                              # G16
+    - [werkzeug, tool]
+    - [lektion, lesson, coding-lektion, coding_lesson]                     # G40 (englische Lektionen)
+    - [stichwort, auslöser, tag, trigger]                                  # Auslösewörter der Lektionen
+    - [personenbezug, personenbezogen, persönliche angaben, personendaten]
+    - [pseudonymisierung, platzhalter]
+    - [volltextsuche, volltext, fts5, wortsuche]
+    - [bedeutungssuche, vektorsuche, embedding, einbetten]
+    - [lauf, run]
+    - [bau, build]
+    - [absturz, crash]
+    - [zweig, branch]
+    - [gegenprüfung, recheck]

@@ -17,11 +17,11 @@ wissen:
     cpu_threads: null                   # null = max(2, Kerne // 2)
     leerlauf_s: 900
     anfrage_timeout_s: 5.0
-    eingabeformat: e1                   # Stelle + Zeilenumbruch + Text
+    eingabeformat: e1                   # e1: Stelle + Text; e2: Dokument > Stelle + Text, Tabellen als „Spalte: Wert“ (S7.6 A1, Wechsel = Neuaufbau)
     dim: 1024                           # BGE-M3
-  suche: {tiefe: 50, k: 5, abdeckung_min: 0.5}           # D7.5: Tiefe beider Listen, Treffer je Antwort, Rückfall unter 50 % Abdeckung
+  suche: {tiefe: 50, k: 5, abdeckung_min: 0.5, glossar: false}   # D7.5; glossar: S7.6 A2 (wissen_glossar.yaml), an erst nach S7.2-F
   fusion: {k: 60, w_vektor: 1.0, w_wort: 0.75, guete: true, spitzenschutz: false}   # f1, Startwerte bis S7.2-F
   zerlegen: {ziel: 1200, grenze: 1600}                   # z2 (G2-S7-e)
-  kontext: {je_treffer: 1600, gesamt: 8000, treffer: 5}  # D7.6: Datenblock an das Modell
+  kontext: {je_treffer: 1600, gesamt: 8000, treffer: 5, datamarking: false}  # D7.6; datamarking: S7.6 A4, an erst nach dem Einschleus-Test
   vorschlaege: {offen_je_agent: 20, titel_max: 160, text_max: 4000}     # D7.8
   aufnahme: {datei_max_bytes: 2000000}                   # A-2: 2 MB je Datei

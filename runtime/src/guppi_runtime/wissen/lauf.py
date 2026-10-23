@@ -51,10 +51,12 @@ def kontext_nachrichten(speicher, frage, *, leser, route, mission_id):
     ergebnis = dict(ergebnis, treffer=treffer)
     if not treffer:
         return [], ergebnis
-    records = ausgabe.datensaetze(treffer, je_treffer=k.je_treffer, gesamt=k.gesamt, hoechstens=k.kontext_treffer)
+    marken = bool(getattr(k, "datamarking", False))
+    records = ausgabe.datensaetze(treffer, je_treffer=k.je_treffer, gesamt=k.gesamt, hoechstens=k.kontext_treffer, datamarking=marken)
     block = external_block(records, max_chars=k.je_treffer)
     speicher.audit("WIS_KONTEXT", {"mission_id": mission_id, "ids": [t["id"] for t in treffer][:len(records)], "zeichen": len(block), "modus": ergebnis["modus"]})
-    return [{"role": "system", "content": ausgabe.SYSTEM_WISSEN, "trust": "system"}, {"role": "user", "content": block, "trust": "untrusted"}], ergebnis
+    system = ausgabe.SYSTEM_WISSEN_MARKIERT if marken else ausgabe.SYSTEM_WISSEN
+    return [{"role": "system", "content": system, "trust": "system"}, {"role": "user", "content": block, "trust": "untrusted"}], ergebnis
 
 
 def block_ids(ergebnis):

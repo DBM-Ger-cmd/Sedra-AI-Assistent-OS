@@ -3311,6 +3311,7 @@ Die drei Speicher sind getrennt, finden nur gleiche Wörter und sind nicht an di
 - [ ] S7.4 Harness: `vektor.py`, `ausgabe.py` (Claude direkt), `adapter.py`, `einbetten.py` (nur CPU), `speicher.py`, `desk_wissen.py`, `lauf.py` (Anschluss Spec 1), Werkzeug `wissen`; erste Prüfung A-5 → G4
 - [ ] S7.5 Abnahme: Abnahmesatz (120 Fragen, andere Sitzung), Durchlauf „Agent fragt den Speicher und zitiert“, Einschleus-Test, `uix_check` (D7.11)
 - [ ] S7.4b GPU-Einbetten über den Scheduler, erst nach Spec 2 S2.5 (eigenes Design, G2-S7-t „später“)
+- [ ] S7.6 Retrieval-Qualität (Vorschlag 23.10.2026, `docs/SPEC7_S7.6_RETRIEVAL_QUALITAET.md`): Stufe A gebaut auf `feat/spec7-s7.6-stufe-a`, alles mit Vorgabe aus; Gate-Liste G2-S7.6 offen
 
 #### Bauschritte S7 (Stufe 3, Vorlage für G3)
 
