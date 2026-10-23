@@ -234,6 +234,61 @@ class ResolveTests(Base):
         self.assertEqual(self.codes(self.router(raw), 'coder')[1]['considered'][0]['reason'], 'recipe_disabled')
 
 
+class SlotTests(Base):
+    """Spec 2 (S2.H2): `server.slots` und `context.per_slots`; das Fenster je Slot kommt aus der Messung, ohne Messung kein Start."""
+    GPU = SimpleNamespace(hardware_class='nvidia_10_12', cpu_threads=16, gpu_vendor='NVIDIA', ram_gb=32, vram_gb=12)
+
+    def slotted(self, slots=2, per_slots=None, **kw):
+        context = {'recommended': 8192, 'maximum': 65536, 'tiers': [8192, 16384, 32768, 65536]}
+        if per_slots is not None: context['per_slots'] = per_slots
+        server = {'gguf': 'x.gguf'}
+        if slots is not None: server['slots'] = slots
+        base = dict(profile={'context': context, 'gpu_layers': 99, 'kv_cache': {'placement': 'gpu'}, 'server': server}, model_size_gb=6.0,
+                    measured_vram_gb=8.0, measured_context=8192, kv_cache_gb_per_1k_tokens=0.025)
+        base.update(kw)
+        return self.router(routing_raw([recipe('c.s', ['coder'], 'ps', 'fs', 'ws', model='m-s', **base)]), snapshot=self.GPU)
+
+    def test_the_window_per_slot_is_the_measured_one_and_the_resolution_carries_the_slot_count(self):
+        resolution = self.slotted(2, {1: 32768, 2: 16384}).resolve_role('coder')
+        self.assertEqual((resolution['context_window'], resolution['slots'], resolution['load_profile']['server']['slots']), (8192, 2, 2))
+        wide = self.slotted(2, {2: 16384}).resolve_role('coder', {'context_min_tokens': 12000})
+        self.assertEqual(wide['context_window'], 16384)
+        self.assertEqual(self.codes(self.slotted(2, {2: 16384}), 'coder', {'context_min_tokens': 20000})[1]['considered'][0]['reason'], 'context_capacity',
+                         'a slot never gets more than was measured for N slots')
+
+    def test_without_a_measurement_for_n_the_start_is_refused(self):
+        for per_slots in (None, {1: 32768}):
+            router = self.slotted(2, per_slots) if per_slots else self.slotted(2)
+            self.assertEqual(self.codes(router, 'coder')[1]['considered'][0]['reason'], 'slots_not_measured', str(per_slots))
+
+    def test_one_slot_needs_no_per_slots_and_is_the_default(self):
+        for slots in (None, 1):
+            resolution = self.slotted(slots).resolve_role('coder')
+            self.assertEqual((resolution['slots'], resolution['context_window']), (1, 8192))
+
+    def test_every_slot_holds_its_own_window_in_the_kv_cache(self):
+        two = self.slotted(2, {2: 16384}).resolve_role('coder')['estimated_resources']
+        one = self.slotted(1).resolve_role('coder')['estimated_resources']
+        self.assertEqual((one['kv_cache_gb'], two['kv_cache_gb']), (0.0, round(0.025 * (2 * 8192 - 8192) / 1000, 3)))
+
+    def test_bad_slots_and_bad_per_slots_are_refused(self):
+        def refused(slots, per_slots):
+            context = {'recommended': 8192, 'maximum': 65536, 'tiers': [8192, 16384, 32768, 65536], 'per_slots': per_slots}
+            with self.assertRaises(ValueError, msg=str((slots, per_slots))):
+                RoutingConfig(routing_raw([recipe('c.b', ['coder'], 'pb', 'fb', 'wb', profile={'context': context, 'server': {'gguf': 'x.gguf', 'slots': slots}})]))
+        for slots in (0, 9, True, '2', 2.0):
+            with self.assertRaises(ValueError, msg=str(slots)):
+                RoutingConfig(routing_raw([recipe('c.b', ['coder'], 'pb', 'fb', 'wb', profile={'context': {'recommended': 8192, 'maximum': 32768}, 'server': {'gguf': 'x.gguf', 'slots': slots}})]))
+        refused(2, {3: 8192})                  # more than the recipe's slots
+        refused(2, {0: 8192})
+        refused(2, {2: 12345})                 # not on a tier
+        refused(2, {2: 131072})                # above the maximum
+        refused(2, {2: 0})
+        refused(2, {})
+        refused(2, 'x')
+        refused(2, {'2': 8192})                # keys are numbers
+
+
 class ContextTierTests(Base):
     GPU = SimpleNamespace(hardware_class='nvidia_10_12', cpu_threads=16, gpu_vendor='NVIDIA', ram_gb=32, vram_gb=12)
 

@@ -203,7 +203,7 @@ class LifecycleTest(Base):
         rt = self.runtime()
         out = rt.load_model('qwen', context_length=8192, gpu='max', identifier='qwen', parallel=1, server=self.server(mtp=True))
         self.assertIn('--spec-type', out['command'])
-        self.assertEqual(rt.loaded_models(), [{'modelKey': 'qwen', 'identifier': 'qwen', 'contextLength': 8192, 'pid': 4242, 'kv_cache_type': 'q8_0', 'spec_type': 'draft-mtp'}])
+        self.assertEqual(rt.loaded_models(), [{'modelKey': 'qwen', 'identifier': 'qwen', 'contextLength': 8192, 'slots': 1, 'pid': 4242, 'kv_cache_type': 'q8_0', 'spec_type': 'draft-mtp'}])
         proc, kw = self.env.procs[-1]
         self.assertFalse(kw['shell']); self.assertEqual(Path(kw['cwd']), self.backend)
         self.assertTrue(str(self.backend) in kw['env']['PATH'] and 'vendor' in kw['env']['PATH'])           # CUDA libraries are found without touching the system
@@ -215,6 +215,25 @@ class LifecycleTest(Base):
         rt = self.runtime(Env(n_ctx=4096))
         rt.load_model('m', context_length=8192, server=self.server())
         self.assertEqual(rt.loaded_models()[0]['contextLength'], 4096)           # ModelLoader then sees the mismatch and refuses the start
+
+    def test_with_several_slots_the_window_is_per_slot_and_the_command_carries_the_sum(self):
+        # Messung S2.1, Build b11160: `-c` ist die Summe, /props meldet das Fenster EINES Slots.
+        rt = self.runtime(Env(n_ctx=8192))
+        out = rt.load_model('m', context_length=16384, parallel=2, server=self.server())
+        argv = out['command']
+        self.assertEqual((argv[argv.index('-c') + 1], argv[argv.index('-np') + 1]), ('16384', '2'))
+        self.assertEqual((rt.loaded_models()[0]['contextLength'], rt.loaded_models()[0]['slots'], rt.status()['slots']), (8192, 2, 2))
+
+    def test_a_build_that_reports_the_sum_is_divided_back_to_the_window_of_one_slot(self):
+        rt = self.runtime(Env(n_ctx=16384))
+        rt.load_model('m', context_length=16384, parallel=2, server=self.server())
+        self.assertEqual(rt.loaded_models()[0]['contextLength'], 8192)
+
+    def test_a_server_that_does_not_report_a_window_falls_back_to_the_request_per_slot(self):
+        env = Env(); env.get_json = lambda url, timeout=3, _g=env.get_json: (200, {}) if url.endswith('/props') else _g(url, timeout)
+        rt = self.runtime(env)
+        rt.load_model('m', context_length=16384, parallel=2, server=self.server())
+        self.assertEqual(rt.loaded_models()[0]['contextLength'], 8192)
 
     def test_a_dense_model_can_ask_for_a_number_of_gpu_layers(self):
         def layers(**server):
@@ -312,6 +331,28 @@ class LoaderIntegrationTest(Base):
         with self.assertRaises(LoadError) as ctx:
             loader.ensure({'model': 'm', 'provider_ref': 'llama-cpp-server', 'context_window': 8192, 'load_profile': {'server': self.server()}})
         self.assertIn('context_not_applied:4096', str(ctx.exception)); self.assertEqual(rt.loaded_models(), [])
+
+    def test_slots_come_from_the_recipe_the_window_is_per_slot_and_the_sum_goes_to_the_server(self):
+        env = Env(n_ctx=8192); rt = LlamaServerRuntime(self.config(), self.root / 's', popen=env.popen, get_json=env.get_json, sleep=lambda s: None, monotonic=self.clock(), home=self.root)
+        loader = ModelLoader(LoaderConfig({'enabled': True}), FakeController(), controllers={'llama-cpp-server': rt})
+        two = {'model': 'm', 'provider_ref': 'llama-cpp-server', 'context_window': 8192, 'load_profile': {'server': self.server(slots=2)}}
+        out = loader.ensure(two)
+        argv = env.procs[-1][0].argv
+        self.assertEqual((out['action'], out['context_length']), ('loaded', 8192))
+        self.assertEqual((argv[argv.index('-c') + 1], argv[argv.index('-np') + 1]), ('16384', '2'))
+        self.assertEqual(loader.ensure(two)['action'], 'reused')                              # same window per slot AND same slot count
+        self.assertTrue(loader.resident_vram_gb({**two, 'estimated_resources': {'vram_gb': 7.0}}) == 7.0)
+        one = {**two, 'load_profile': {'server': self.server()}}
+        self.assertEqual(loader.resident_vram_gb({**one, 'estimated_resources': {'vram_gb': 7.0}}), 0.0, 'another slot count is not the resident model')
+        self.assertEqual(loader.ensure(one)['action'], 'reloaded')                            # the server with 2 slots is replaced, not reused
+        self.assertEqual(rt.loaded_models()[0]['slots'], 1)
+
+    def test_the_loaders_own_parallel_stays_the_default_when_the_recipe_says_nothing(self):
+        env = Env(n_ctx=4096); rt = LlamaServerRuntime(self.config(), self.root / 's', popen=env.popen, get_json=env.get_json, sleep=lambda s: None, monotonic=self.clock(), home=self.root)
+        loader = ModelLoader(LoaderConfig({'enabled': True, 'parallel': 2}), FakeController(), controllers={'llama-cpp-server': rt})
+        out = loader.ensure({'model': 'm', 'provider_ref': 'llama-cpp-server', 'context_window': 4096, 'load_profile': {'server': self.server()}})
+        argv = env.procs[-1][0].argv
+        self.assertEqual((out['action'], argv[argv.index('-c') + 1], argv[argv.index('-np') + 1]), ('loaded', '8192', '2'))
 
     def test_a_failed_start_is_a_provider_failure_with_the_reason(self):
         env = Env(); env.exit_after = 0; env.never_healthy = True
