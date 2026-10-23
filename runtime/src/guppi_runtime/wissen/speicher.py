@@ -330,6 +330,9 @@ class WissenSpeicher(VorschlagTeil, NachmessungTeil):
             if start_fehler:                                               # der Start vor der Sperre ist gescheitert: kein zweiter Versuch unter der Sperre
                 out = {"geraet": "cpu", "eingebettet": 0, "dauer_s": 0.0, "ende": "fehler", "grund": start_fehler}
                 self.audit("WIS_EINBETTEN", {"geraet": "cpu", "eingebettet": 0, "dauer_s": 0.0, "ende": "fehler", "grund": start_fehler})
+            elif self.dienst.gpu.lage().zustand != "bau" and not self.dienst.antwortet():
+                # Lage oder Server haben sich seit dem Start vor der Sperre geändert (Leerlauf-Stopp, Absturz): hier nie starten, der nächste Schritt holt es nach
+                out = {"geraet": "cpu", "eingebettet": 0, "dauer_s": 0.0, "ende": "schritt", "grund": "server_nicht_gestartet"}
             else:
                 out = self.dienst.lauf(lambda n: schema.offene_vektoren(self.db, mid, n), lambda zeilen: schema.schreibe_vektoren(self.db, mid, self.konfig.dim, zeilen))
             with schema._immediate(self.db):

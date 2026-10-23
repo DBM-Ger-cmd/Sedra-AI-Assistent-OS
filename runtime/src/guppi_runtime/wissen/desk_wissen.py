@@ -265,6 +265,23 @@ def _antrag_von(hub, kind, binding):
     raise ValueError("wis_antrag_unbekannt")
 
 
+def _verweigert(do):
+    """Ein Applier, der nichts anwenden kann (Antrag nicht auffindbar, Datei nicht schreibbar), endet für `gated.decide` mit der
+    Ablehnung `guard_refused:<code>`: der Antrag wird geschlossen und ohne Token zurückgelassen, statt als Zombie offen zu bleiben."""
+    def anwenden(hub, binding):
+        try:
+            return do(hub, binding)
+        except OSError:
+            raise ValueError(gated.REFUSED + "wis_speicher_nicht_lesbar") from None
+        except ValueError as exc:
+            if str(exc) == "wis_antrag_unbekannt":
+                raise ValueError(gated.REFUSED + "wis_antrag_unbekannt") from None
+            raise
+    anwenden.__name__ = getattr(do, "__name__", "anwenden")
+    anwenden.__doc__ = getattr(do, "__doc__", None)
+    return anwenden
+
+
 def _quelle_freigeben(hub, binding):
     """Applier `wissen_quelle`: eine Quelle oder (Erstbestückung) mehrere; danach ein Abgleich der neuen Quellen."""
     sp = _need(hub)
@@ -295,6 +312,11 @@ def _vorschlag_abgelehnt(hub, binding):
         return sp.vorschlag_ablehnen(str(binding.get("vorschlag_id") or ""))
     except ValueError:
         return None
+
+
+# einmal gebunden: `gated.register_applier` erkennt dieselbe Funktion wieder (ein zweiter Hub im selben Prozess)
+_APPLIER_QUELLE = _verweigert(_quelle_freigeben)
+_APPLIER_VORSCHLAG = _verweigert(_vorschlag_aufnehmen)
 
 
 def vorschlag_beantragen(hub, vorschlag):
@@ -329,8 +351,8 @@ def register(registry, hub):
     ]
     for kind in kinds:
         registry.register(kind)
-    gated.register_applier(KIND_QUELLE, _quelle_freigeben, registry=registry)
-    gated.register_applier(KIND_VORSCHLAG, _vorschlag_aufnehmen, on_reject=_vorschlag_abgelehnt, registry=registry)
+    gated.register_applier(KIND_QUELLE, _APPLIER_QUELLE, registry=registry)
+    gated.register_applier(KIND_VORSCHLAG, _APPLIER_VORSCHLAG, on_reject=_vorschlag_abgelehnt, registry=registry)
     sp.beantrage = lambda vorschlag: vorschlag_beantragen(hub, vorschlag)
     return list(TYPES)
 

@@ -34,12 +34,17 @@ def schreibe_atomar(pfad, text):
     """Ganze Datei in eine Nachbardatei schreiben und mit `os.replace` an die Stelle setzen: ein Abbruch lässt die alte oder die neue Datei, nie eine halbe."""
     pfad = Path(pfad)
     pfad.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        modus = os.stat(pfad).st_mode & 0o777                          # `mkstemp` legt mit 0600 an: die Rechte der alten Datei bleiben
+    except OSError:
+        modus = 0o644
     fd, tmp = tempfile.mkstemp(dir=str(pfad.parent), prefix=pfad.name + ".", suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
             f.write(text)
             f.flush()
             os.fsync(f.fileno())
+        os.chmod(tmp, modus)
         os.replace(tmp, pfad)
     except BaseException:
         try:

@@ -14,6 +14,7 @@ import json
 import os
 import signal
 import subprocess
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -110,6 +111,7 @@ class EmbeddingDienst:
         self.merke_lesen = merke_lesen or (lambda: None)
         self.merke_schreiben = merke_schreiben or (lambda wert: None)
         self._proc = None
+        self._start_sperre = threading.RLock()              # Start und Stopp nacheinander (Takt und Desk rufen ohne die Speicher-Sperre)
         self._fehlstarts = []
         self._letzte_anfrage = None
         self._pausiert = False
@@ -213,6 +215,14 @@ class EmbeddingDienst:
         self.pid_datei.write_text(json.dumps({"pid": pid, "port": self.e.port, "alias": ALIAS, "start": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}), encoding="utf-8")
 
     def starte(self):
+        with self._start_sperre:
+            return self._starte()
+
+    def antwortet(self):
+        """Läuft ein Server, der antwortet: der eigene Prozess oder ein eigener aus einem früheren Lauf (Alias passt)? Startet nichts."""
+        return self.laeuft() or (self.gesund(1.0) and self._alias_passt(1.0))
+
+    def _starte(self):
         """Server starten und prüfen: Prüfsumme, Port frei (sonst `wis_port_belegt`), `/health`, Prüfsatz mit `dim`.
         Zwei Fehlstarts → nicht bereit (`wis_server_start`). Rückgabe True, wenn er läuft."""
         if self.laeuft():
@@ -258,6 +268,10 @@ class EmbeddingDienst:
             return None
 
     def stoppe(self):
+        with self._start_sperre:
+            return self._stoppe()
+
+    def _stoppe(self):
         """Nur die eigene PID: der eigene Prozess, oder die PID der Datei, wenn auf dem eigenen Port ein Server mit dem Alias
         antwortet; sonst wird nichts angefasst."""
         pid = None

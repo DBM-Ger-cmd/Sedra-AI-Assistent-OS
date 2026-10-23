@@ -1,16 +1,21 @@
 """Die Auflagen des Reviews zu Spec 7 (Cloud-Bau, vor dem Einschalten von `wissen`): (1) `vorschlaege.jsonl` und Nachmessung atomar,
 (2) Abgleich löst je Datei gegen die Wurzel auf (Verknüpfung/Junction), (3) `oeffnen` fängt auch `OSError`, (4) der Server startet nie
 unter `self.lock`, (5) die Teilung von `speicher.py`, (6) `_antrag_von` ohne stillen Rückfall auf „gated“, dazu ein Abschnitt über der Grenze."""
+import json
 import os
+import stat
+import sys
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.wissen import adapter, desk_wissen, zerlegen
+from guppi_runtime.desk import gated
+from guppi_runtime.wissen import adapter, desk_wissen, hilfen, zerlegen
 from guppi_runtime.wissen import speicher as S
 from test_wissen_desk import Basis as DeskBasis
 from wissen_fixture import FakeEmbedServer, alle_freigeben, freigeben, konfig_fuer, oeffnen, repo_anlegen, speicher_anlegen
@@ -259,6 +264,113 @@ class AntragOhneStillenRueckfall(DeskBasis):
         q = self.sp.quellen()[0]
         self.assertTrue(q["freigabe_gate"] and q["freigabe_gate"] != "gated", q)
         self.assertTrue(q["freigabe_mission"] and q["freigabe_mission"] != "gated", q)
+
+
+class NachReview(Basis):
+    """Befunde des unabhängigen Reviews zu 19f7d2d."""
+    def setUp(self):
+        super().setUp()
+        alle_freigeben(self.sp)
+        self.sp.abgleich()
+
+    def test_start_und_stopp_des_dienstes_laufen_nacheinander(self):
+        """Befund 2: Takt und Desk rufen den Dienst ohne die Speicher-Sperre; zwei Threads dürfen keinen zweiten Prozess starten."""
+        self.sp.einbetten_schritt()
+        self.sp.dienst.stoppe()
+        self.srv.server.kaputt = True
+        echt = self.sp.dienst.starter
+        drin, gleichzeitig, start = [0], [0], threading.Barrier(2)
+
+        def starter(cmd, **kw):
+            drin[0] += 1
+            gleichzeitig[0] = max(gleichzeitig[0], drin[0])
+            time.sleep(0.3)                                                  # ein langsamer Start: ohne Sperre käme der zweite Thread dazu
+            self.srv.server.kaputt = False
+            try:
+                return echt(cmd, **kw)
+            finally:
+                drin[0] -= 1
+        self.sp.dienst.starter = starter
+
+        def lauf():
+            start.wait(5)
+            self.sp.dienst.starte()
+        ts = [threading.Thread(target=lauf) for _ in range(2)]
+        [t.start() for t in ts]
+        [t.join(30) for t in ts]
+        self.assertEqual(len(self.sp.test_starter.gestartet), 2, "nur der Start aus der Vorbereitung und genau einer jetzt")
+        self.assertEqual(gleichzeitig[0], 1)
+
+    def test_einbetten_startet_nie_unter_der_sperre_auch_wenn_der_server_zwischendurch_endet(self):
+        """Befund 3: stirbt der Server nach dem Start vor der Sperre, bricht der Schritt ab, statt unter der Sperre neu zu starten."""
+        self.sp.einbetten_schritt()
+        self.sp.dienst.stoppe()
+        self.srv.server.kaputt = True
+        n = len(self.sp.test_starter.gestartet)
+        self.sp.dienst._vorstart_ergebnis = None
+        out = self.sp._einbetten(None)                                          # kein Start vor der Sperre, der Server antwortet nicht
+        self.assertEqual((out["ende"], out["grund"], out["eingebettet"]), ("schritt", "server_nicht_gestartet", 0))
+        self.assertEqual(len(self.sp.test_starter.gestartet), n, "es wurde nichts gestartet")
+
+    def test_nachmessung_verliert_unter_gleichzeitigen_suchen_keinen_satz(self):
+        """Befund 4: Lesen, Anhängen und Ersetzen laufen unter der Sperre."""
+        fragen = [f"Lease Testlabor Frage {i}" for i in range(24)]
+        ts = [threading.Thread(target=lambda f=f: self.sp.suche(f, leser=S.CAPTAIN)) for f in fragen]
+        [t.start() for t in ts]
+        [t.join(60) for t in ts]
+        self.assertEqual(len(self.sp.nachmessung()), len(fragen))
+
+    def test_atomares_schreiben_behaelt_die_rechte_der_alten_datei(self):
+        """Befund 6."""
+        if os.name == "nt":
+            self.skipTest("POSIX-Rechte")
+        ziel = Path(self.tmp.name) / "daten.jsonl"
+        ziel.write_text("alt\n", encoding="utf-8")
+        os.chmod(ziel, 0o640)
+        hilfen.schreibe_atomar(ziel, "neu\n")
+        self.assertEqual((ziel.read_text(encoding="utf-8"), stat.S_IMODE(ziel.stat().st_mode)), ("neu\n", 0o640))
+        neu = Path(self.tmp.name) / "frisch.jsonl"
+        hilfen.schreibe_atomar(neu, "x\n")
+        self.assertEqual(stat.S_IMODE(neu.stat().st_mode), 0o644)
+
+
+class AntragSchliesstSichBeiNichtAnwendbar(DeskBasis):
+    """Befunde 1 und 5: ein Applier, der nichts anwenden kann, lässt den Antrag nicht als Zombie zurück."""
+    def mission(self, mission_id):
+        return self.hub.runtime.missions.load(mission_id)
+
+    def test_unbekannter_antrag_wird_ueber_decide_abgelehnt_und_geschlossen(self):
+        out = self.beantrage()
+        mission_id = out["decision_id"].split(":", 1)[1]
+        missionen = self.hub.runtime.missions
+        echt = missionen.list
+
+        def nur_im_applier_kaputt(*a, **kw):
+            frame = sys._getframe(1)
+            while frame is not None:
+                if frame.f_code.co_name == "_antrag_von":
+                    raise RuntimeError("kaputt")
+                frame = frame.f_back
+            return echt(*a, **kw)
+        with mock.patch.object(missionen, "list", side_effect=nur_im_applier_kaputt):
+            res = self.decide(out)
+        self.assertEqual((res["status"], res["reason"]), ("guard_refused", "wis_antrag_unbekannt"))
+        m = self.mission(mission_id)
+        self.assertEqual(m["lifecycle"]["status"], "closed")
+        self.assertNotIn("approval_tokens", m["execution"])
+        self.assertEqual(self.sp.quellen(), [], "nichts angewendet")
+
+    def test_schreibfehler_beim_aufnehmen_schliesst_den_antrag_ohne_halbe_folgen(self):
+        self.decide(self.beantrage())
+        block = {r[0] for r in self.sp.db.execute("SELECT id FROM abschnitte")}
+        v = self.sp.vorschlagen(titel="Lease zuerst", text="Vor jedem Laden die Lease holen.", belege=[], agent_id="A-3", lauf_id="J-1", aufgabe_id="I-1",
+                                block_ids=block, leser=S.leser("agent", 1, None, "A-3"))
+        with mock.patch("guppi_runtime.wissen.vorschlaege.schreibe_atomar", side_effect=PermissionError("von einem anderen Programm geöffnet")):
+            res = self.hub.decide({"id": "request:" + v["mission_id"], "way": "freigeben_und_anwenden"})["result"]
+        self.assertEqual((res["status"], res["reason"]), ("guard_refused", "wis_speicher_nicht_lesbar"))
+        self.assertEqual(self.mission(v["mission_id"])["lifecycle"]["status"], "closed")
+        self.assertEqual(self.sp.vorschlag(v["id"])["status"], "offen")
+        self.assertFalse((self.project / "local_config" / "wissen" / "vorschlaege.jsonl").exists())
 
 
 if __name__ == "__main__":

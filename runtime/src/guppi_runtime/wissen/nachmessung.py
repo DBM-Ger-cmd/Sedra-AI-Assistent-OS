@@ -16,11 +16,12 @@ class NachmessungTeil:
 
     def _protokolliere(self, frage, ids, modus):
         try:
-            p = self._nachmessung_datei()
-            bisher = p.read_text(encoding="utf-8") if p.is_file() else ""
-            if bisher and not bisher.endswith("\n"):
-                bisher += "\n"
-            schreibe_atomar(p, bisher + json.dumps({"zeit": self.uhr(), "frage_sha256": _sha(frage), "ids": ids, "modus": modus}) + "\n")
+            with self.lock:                                                # lesen, anhängen, ersetzen als Ganzes: zwei Suchen verlieren keinen Satz
+                p = self._nachmessung_datei()
+                bisher = p.read_text(encoding="utf-8") if p.is_file() else ""
+                if bisher and not bisher.endswith("\n"):
+                    bisher += "\n"
+                schreibe_atomar(p, bisher + json.dumps({"zeit": self.uhr(), "frage_sha256": _sha(frage), "ids": ids, "modus": modus}) + "\n")
         except OSError:
             pass
 
@@ -38,6 +39,10 @@ class NachmessungTeil:
         return out
 
     def nachmessung_bewerten(self, frage_sha256, urteil):
+        with self.lock:
+            return self._bewerten(frage_sha256, urteil)
+
+    def _bewerten(self, frage_sha256, urteil):
         if urteil not in URTEILE:
             raise ValueError("wis_nachmessung_urteil")
         saetze = self.nachmessung()
@@ -48,6 +53,10 @@ class NachmessungTeil:
         return {"frage_sha256": frage_sha256, "urteil": urteil}
 
     def nachmessung_abschliessen(self):
+        with self.lock:
+            return self._abschliessen()
+
+    def _abschliessen(self):
         """Die bewerteten Fragen zählen, Ergebnis als Datei neben dem Speicher, Audit `WIS_NACHMESSUNG`; das Protokoll beginnt neu."""
         saetze = self.nachmessung()
         bewertet = [s for s in saetze if s.get("urteil") in URTEILE]
