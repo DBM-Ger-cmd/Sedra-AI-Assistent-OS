@@ -10,10 +10,12 @@ Modell-ID: `<name>@<sha256 der GGUF, 12 Zeichen>#<pooling>#<dim>#e<eingabeformat
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 import os
 import signal
 import subprocess
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -26,6 +28,7 @@ ALIAS = "wissen-embed"
 HOST = "127.0.0.1"
 START_WARTEN_S = 90.0
 FEHLSTART_SPERRE_S = 600.0
+NETZFEHLER = (OSError, http.client.HTTPException)        # auch IncompleteRead, RemoteDisconnected (Prüfung F11)
 
 
 @dataclass(frozen=True)
@@ -114,6 +117,7 @@ class EmbeddingDienst:
         self._letzte_anfrage = None
         self._pausiert = False
         self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        self._start_lock = threading.Lock()                      # nie zwei Starts zugleich (Takt, Hintergrundstart)
 
     # ---- Kennung und Bereitschaft
     def modell_id(self):
@@ -177,9 +181,11 @@ class EmbeddingDienst:
             return []
         try:
             out = self._post("/v1/embeddings", {"input": list(texte), "model": ALIAS}, timeout or max(30.0, 3.0 * len(texte)))
-        except (TimeoutError, urllib.error.URLError, OSError) as exc:
+        except (TimeoutError, urllib.error.URLError, *NETZFEHLER) as exc:
             if isinstance(exc, TimeoutError) or isinstance(getattr(exc, "reason", None), TimeoutError) or "timed out" in str(exc):
                 raise ValueError("wis_server_zeit") from None
+            raise ValueError("wis_server_antwort") from None
+        except ValueError:                                        # kaputtes JSON
             raise ValueError("wis_server_antwort") from None
         daten = out.get("data") if isinstance(out, dict) else None
         if not isinstance(daten, list) or len(daten) != len(texte):
@@ -208,13 +214,26 @@ class EmbeddingDienst:
     def laeuft(self):
         return self._lebt() and self.gesund()
 
+    def antwortet(self):
+        """Läuft ein eigener Server (dieser Prozess oder einer aus der PID-Datei mit dem Alias)? Startet nichts."""
+        if self._proc is not None:
+            return self._lebt()
+        return self.gesund(0.5) and self._alias_passt(0.5)
+
     def _schreibe_pid(self, pid):
         self.pid_datei.parent.mkdir(parents=True, exist_ok=True)
         self.pid_datei.write_text(json.dumps({"pid": pid, "port": self.e.port, "alias": ALIAS, "start": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}), encoding="utf-8")
 
     def starte(self):
         """Server starten und prüfen: Prüfsumme, Port frei (sonst `wis_port_belegt`), `/health`, Prüfsatz mit `dim`.
-        Zwei Fehlstarts → nicht bereit (`wis_server_start`). Rückgabe True, wenn er läuft."""
+        Zwei Fehlstarts → nicht bereit (`wis_server_start`). Rückgabe True, wenn er läuft. Nie zwei Starts zugleich."""
+        with self._start_lock:
+            try:
+                return self._starte()
+            except NETZFEHLER as exc:                             # Prüfsumme oder PID-Datei nicht lesbar/schreibbar (F11)
+                raise ValueError("wis_server_start:" + (str(exc) or type(exc).__name__)[:60]) from None
+
+    def _starte(self):
         if self.laeuft():
             return True
         ok, grund = self.bereit()
@@ -294,9 +313,11 @@ class EmbeddingDienst:
         return False
 
     # ---- Einbetten und Anfrage
-    def lauf(self, offene, schreibe):
+    def lauf(self, offene, schreibe, *, markiere=None):
         """Ein Einbett-Schritt: Lage `bau` → Pause (einmal Audit `WIS_EINBETTEN_PAUSE`); sonst Stapel zu `stapel` Abschnitten, vor
-        jedem Stapel die Lage neu, höchstens `schritt_s`. Rückgabe {geraet, eingebettet, dauer_s, ende, grund}."""
+        jedem Stapel die Lage neu, höchstens `schritt_s`. Scheitert ein Stapel, wird er einzeln nachgebettet; ein Abschnitt, der
+        allein scheitert, geht an `markiere(nr, hash, grund)` und blockiert die folgenden nicht mehr (Prüfung F2). Antwortet der
+        Server gar nicht mehr, endet der Schritt mit `fehler`. Rückgabe {geraet, eingebettet, dauer_s, ende, grund, uebersprungen}."""
         t0 = self.uhr()
         lage = self.gpu.lage()
         if lage.zustand == "bau":
@@ -305,16 +326,28 @@ class EmbeddingDienst:
             self._pausiert = True
             return {"geraet": "cpu", "eingebettet": 0, "dauer_s": 0.0, "ende": "pause", "grund": lage.grund}
         self._pausiert = False
-        eingebettet, ende, grund = 0, "fertig", ""
+        eingebettet, ende, grund, uebersprungen = 0, "fertig", "", 0
         try:
             self.starte()
             while True:
                 stapel = offene(self.e.stapel)
                 if not stapel:
                     break
-                vektoren = self.einbette([t for _, t, _ in stapel])
-                zeilen = [(nr, h, vektor.packe(v)) for (nr, _, h), v in zip(stapel, vektoren)]
-                eingebettet += schreibe(zeilen)
+                try:
+                    zeilen = [(nr, h, vektor.packe(v)) for (nr, _, h), v in zip(stapel, self.einbette([t for _, t, _ in stapel]))]
+                except ValueError:
+                    if markiere is None or not self.gesund(2.0):
+                        raise
+                    zeilen = []
+                    for nr, t, h in stapel:
+                        try:
+                            zeilen.append((nr, h, vektor.packe(self.einbette([t])[0])))
+                        except ValueError as exc:
+                            if not self.gesund(2.0):
+                                raise
+                            markiere(nr, h, str(exc))
+                            uebersprungen += 1
+                eingebettet += schreibe(zeilen) if zeilen else 0
                 self._letzte_anfrage = self.uhr()
                 if self.uhr() - t0 >= self.e.schritt_s:
                     ende = "schritt"
@@ -323,23 +356,28 @@ class EmbeddingDienst:
                 if lage.zustand == "bau":
                     ende, grund = "pause", lage.grund
                     break
-        except ValueError as exc:
-            ende, grund = "fehler", str(exc)
+        except (ValueError, *NETZFEHLER) as exc:
+            ende, grund = "fehler", (str(exc) or type(exc).__name__)
         dauer = round(self.uhr() - t0, 3)
-        self.audit("WIS_EINBETTEN", {"geraet": "cpu", "eingebettet": eingebettet, "dauer_s": dauer, "ende": ende, "grund": grund or None})
+        self.audit("WIS_EINBETTEN", {"geraet": "cpu", "eingebettet": eingebettet, "dauer_s": dauer, "ende": ende, "grund": grund or None,
+                                     "uebersprungen": uebersprungen})
         if ende == "pause" and not self._pausiert:
             self.audit("WIS_EINBETTEN_PAUSE", {"grund": grund})
             self._pausiert = True
-        return {"geraet": "cpu", "eingebettet": eingebettet, "dauer_s": dauer, "ende": ende, "grund": grund}
+        return {"geraet": "cpu", "eingebettet": eingebettet, "dauer_s": dauer, "ende": ende, "grund": grund, "uebersprungen": uebersprungen}
 
-    def anfrage_vektor(self, frage):
-        """Die Frage einbetten (auch in der Lage `bau`, G2-S7-i); Zeitgrenze `anfrage_timeout_s`, sonst None → Volltext-Rückfall."""
+    def anfrage_vektor(self, frage, *, starten=True):
+        """Die Frage einbetten (auch in der Lage `bau`, G2-S7-i); Zeitgrenze `anfrage_timeout_s`, sonst None → Volltext-Rückfall.
+        Mit `starten=False` (die Suche) wird kein Server gestartet: läuft keiner, kommt sofort None (Prüfung F3)."""
         try:
-            self.starte()
+            if starten:
+                self.starte()
+            elif not self.antwortet():
+                return None
             v = self.einbette([frage], timeout=self.e.anfrage_timeout_s)[0]
             self._letzte_anfrage = self.uhr()
             return vektor.lese(vektor.packe(v), self.e.dim)
-        except ValueError:
+        except (ValueError, *NETZFEHLER):
             return None
 
 

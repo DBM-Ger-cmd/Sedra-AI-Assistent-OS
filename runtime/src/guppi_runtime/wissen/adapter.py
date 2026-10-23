@@ -73,6 +73,22 @@ class _Basis:
             raise ValueError("wis_pfad_ausserhalb")
         return str(PurePosixPath(*rein.parts))
 
+    @staticmethod
+    def _bleibt_drin(path, wurzel):
+        """Liegt `path` nach Auflösen aller Symlinks und Junctions noch unter der Wurzel? Die Freigabe prüft den Pfad nur einmal;
+        ein später angelegter Link darf nicht aus der Wurzel hinausführen (G4-Auflage 2, Prüfung F7)."""
+        try:
+            ziel = Path(path).resolve()
+        except (OSError, RuntimeError):
+            return False
+        wurzel = Path(wurzel).resolve()
+        return ziel == wurzel or wurzel in ziel.parents
+
+    @staticmethod
+    def _ist_link(path):
+        path = Path(path)
+        return path.is_symlink() or bool(getattr(path, "is_junction", lambda: False)())
+
     def _lies_text(self, path):
         """UTF-8 streng, höchstens `datei_max_bytes`; sonst `wis_datei_zu_gross` / `wis_text_kein_utf8` / `wis_speicher_nicht_lesbar`."""
         try:
@@ -103,6 +119,8 @@ class DateiAdapter(_Basis):
     def _dateien(self, quelle):
         wurzel = self.wurzel(quelle)
         start = wurzel / Path(*PurePosixPath(quelle["pfad"]).parts)
+        if not self._bleibt_drin(start, wurzel):
+            raise ValueError("wis_pfad_ausserhalb")
         if start.is_file():
             if "*" + start.suffix.lower() not in DATEIARTEN:
                 raise ValueError("wis_dateiart_nicht_erlaubt")
@@ -112,7 +130,9 @@ class DateiAdapter(_Basis):
         muster = [m.strip() for m in str(quelle.get("muster") or "*.md").split(",")]
         out = []
         for p in sorted(start.rglob("*")):
-            if not p.is_file() or p.is_symlink() or any(part in AUSGELASSEN or part.startswith(".") for part in p.relative_to(start).parts[:-1]):
+            if not p.is_file() or self._ist_link(p) or any(part in AUSGELASSEN or part.startswith(".") for part in p.relative_to(start).parts[:-1]):
+                continue
+            if not self._bleibt_drin(p, wurzel):                     # Ordner-Junction oder Link auf dem Weg nach draußen
                 continue
             if any(p.match(m) for m in muster):
                 out.append(p)
@@ -174,7 +194,10 @@ class KnowledgeAdapter(_Basis):
     name = "knowledge"
 
     def _pfad(self, quelle):
-        return self.wurzel(quelle) / Path(*PurePosixPath(quelle.get("pfad") or KNOWLEDGE).parts)
+        p = self.wurzel(quelle) / Path(*PurePosixPath(quelle.get("pfad") or KNOWLEDGE).parts)
+        if not self._bleibt_drin(p, self.wurzel(quelle)):
+            raise ValueError("wis_pfad_ausserhalb")
+        return p
 
     def quell_hash(self, quelle):
         return _datei_hash(self._pfad(quelle))
@@ -213,7 +236,10 @@ class _SqliteAdapter(_Basis):
 
     def _datei(self, quelle):
         pfad = str(quelle.get("pfad") or "").split("#", 1)[0]
-        return self.wurzel(quelle) / Path(*PurePosixPath(pfad).parts)
+        p = self.wurzel(quelle) / Path(*PurePosixPath(pfad).parts)
+        if not self._bleibt_drin(p, self.wurzel(quelle)):
+            raise ValueError("wis_pfad_ausserhalb")
+        return p
 
     def _datum(self, quelle):
         try:

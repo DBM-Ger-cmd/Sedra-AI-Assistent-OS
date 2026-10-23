@@ -210,7 +210,9 @@ def zerlege_logbuch(text, kopf):
         if z.startswith("| 20"):
             zellen = [c.strip() for c in z.strip().strip("|").split("|")]
             zeit, art, eintrag = (zellen + ["", "", ""])[:3]
-            out.append({"stelle": f"{titel} > Zeile {zeit} {art} {eintrag[:60]}", "teil": 1, "text": z})
+            stelle = f"{titel} > Zeile {zeit} {art} {eintrag[:60]}"
+            teile = _schneide(z, ZIEL_ZEICHEN) if len(z) > MAX_ZEICHEN else [z]      # auch eine lange Zeile bleibt unter der Grenze (F10)
+            out.extend({"stelle": stelle, "teil": i, "text": t} for i, t in enumerate(teile, 1))
         else:
             rest.append(z)
     return _abschnitt(titel, rest, ZIEL_ZEICHEN, MAX_ZEICHEN) + out

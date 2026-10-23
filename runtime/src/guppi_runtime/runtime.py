@@ -201,9 +201,13 @@ class GuppiRuntime:
             from .wissen.embed import TestLabZugang
             from .jobs.testlab import TestLab, default_path
             cfg=wissen_konfig.load(self.config_root/"wissen.yaml",self.project_root/"local_config"/"wissen.yaml")
+            try:                                                  # ein Fehler beim Öffnen schaltet nur `wissen` aus, nie den Start
+                lab=TestLab(default_path(self.project_root))
+            except Exception as exc:
+                raise ValueError("wis_testlab_nicht_lesbar:"+(str(exc) or type(exc).__name__)[:80]) from None
             return WissenSpeicher.oeffnen(cfg,projekt_root=self.project_root,repo_root=self.config_root.parents[1],
                                           audit=lambda event,payload: self.audit.append(event,component="wissen",payload=payload),
-                                          gpu=TestLabZugang(TestLab(default_path(self.project_root))))
+                                          gpu=TestLabZugang(lab))
         self._optional("wissen",build)
         if self.wissen_error: self.audit.append("WISSEN_OFF",component="runtime",payload={"reason":self.wissen_error})
 
