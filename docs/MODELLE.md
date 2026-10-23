@@ -26,3 +26,21 @@ DeepSeek-Coder-V2-Lite und Hermes-4-14B (zusammen 71,4 GB). Zurückholen: `guppi
 - Die Verbindungsprüfung S0 vom 12.10. ist bei allen Modellen nicht bestanden, mit ähnlichen Fehlern. Das deutet auf die Prüfung selbst, sie wird untersucht.
 - MoE-Modelle legen Experten-Schichten in den Arbeitsspeicher (`n_cpu_moe`); das Tempo hängt stark davon ab.
 - Ältere Kontextgrenzen, etwa 16k bei Qwen3.5 wegen CUDA-Abstürzen, stammen von Engine b11371 ohne Flash Attention. Mit den heutigen Einstellungen sind sie neu gemessen.
+
+## Parallele Slots (Messung 23.10.2026)
+
+Engine b11160, FA an, KV q8_0, Rezepte unverändert; Einzelheiten und Einschränkungen: [MESSBERICHT_SLOTS_2026-10-23.md](MESSBERICHT_SLOTS_2026-10-23.md). „Mindestens“ heißt: Die Leiter wurde vom Werkzeug früher abgebrochen als nötig (alle Antworten waren richtig), nachgemessen wird noch.
+
+| Modell | Slots | Fenster je Slot (sicher) | Gesamtkontext | VRAM-Spitze (GiB) | Token/s gesamt | Token/s je Slot | S0 | Hinweis |
+|---|---|---|---|---|---|---|---|---|
+| Qwen3.6-35B-A3B | 1 | 131072 | 131072 | 8,76 | 31,6 | 42,3 | ok | Vergleichswert 44–47 Token/s (Server) aus dem Modellvergleich |
+| Qwen3.6-35B-A3B | 2 | mindestens 49152 | mindestens 98304 | 8,26 | 36,9 | 25,7 | ok | Empfehlung Standard: 2 Slots, Fenster 32768 |
+| Qwen3.6-35B-A3B | 3 | mindestens 16384 | mindestens 49152 | 8,05 | 44,9 | 19,1 | ok | Fenster 32768 noch nicht belegt |
+| Qwen3.6-35B-A3B | 4 | mindestens 8192 | mindestens 32768 | 7,93 | 49,9 | 15,4 | ok | Fenster 32768 noch nicht belegt |
+| Qwen3.5-9B Q6_K MTP | 1 | 98304 | 98304 | 8,77 | 70,0 | 76,2 | ok | ohne MTP 56,5 |
+| Qwen3.5-9B Q6_K MTP | 2 | mindestens 24576 | mindestens 49152 | 8,97 | 117,7 | 65,7 | ok | ohne MTP 100,2; Empfehlung Standard: 2 Slots |
+| Qwen3.5-9B Q6_K MTP | 3 | mindestens 8192 | mindestens 24576 | 8,58 | 147,9 | 56,9 | ok | ohne MTP 135,5 |
+| Qwen3.5-9B Q6_K MTP | 4 | nicht bestimmt | – | 11,21 | 155,7 | 47,6 | ok | über der nutzbaren Grenze 10,8 GB; ohne MTP 162,6 Token/s bei 9,98 GiB: MTP ab 4 Slots aus |
+| Qwen3.5-9B (CPU) | 1 / 2 | 32768 / 8192 | – | 1,3 / 1,5 | 7,6 / 9,7 | 10,2 / 6,6 | – | `n_gpu_layers=0`, nicht für Agenten |
+
+Die VRAM-Spitze ist der belegte Speicher der ganzen Karte (enthält rund 2,2 GiB Desktop). Der Server teilt `-c` auf die Slots auf; `/props` meldet das Fenster je Slot.
