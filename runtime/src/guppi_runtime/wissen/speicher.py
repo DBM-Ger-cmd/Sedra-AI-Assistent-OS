@@ -7,7 +7,6 @@ noch Desk. Fehler sind `ValueError('<code>')`; `SAETZE` übersetzt sie für Desk
 Takt und Desk teilen die Verbindung: jede öffentliche Methode nimmt `self.lock`."""
 from __future__ import annotations
 
-import hashlib
 import json
 import sqlite3
 import threading
@@ -15,15 +14,14 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..core.content_policy import KEY_FORMATS, ScanFailure, scan_content
 from . import adapter as adapter_mod
 from . import ausgabe, embed, fusion, schema, vektor, zerlegen
+from .hilfen import HART, _sha, befunde_von  # noqa: F401  (HART, befunde_von: bisheriger Ort)
+from .nachmessung import NACHMESSUNG, URTEILE, NachmessungTeil  # noqa: F401
+from .vorschlaege import VorschlagTeil
 
 TIME = "%Y-%m-%dT%H:%M:%SZ"
-HART = ("PAN_CVV_V1",)                                                    # A-1: dieselben Klassen wie ContentGuard._finish
 MAX_FRAGE = 500
-NACHMESSUNG = "nachmessung.jsonl"
-URTEILE = ("getroffen", "nicht_getroffen", "ohne_antwort")
 
 SAETZE = {
     "wis_schema_neuer": "Die Wissensdatei ist neuer als dieser Code; sie wird nicht angefasst.",
@@ -67,6 +65,7 @@ SAETZE = {
     "wis_vorschlaege_zu_viele": "Dieser Agent hat schon 20 offene Vorschläge.",
     "wis_vorschlag_unbekannt": "Diesen Vorschlag gibt es nicht.",
     "wis_nachmessung_urteil": "Das Urteil muss getroffen, nicht_getroffen oder ohne_antwort sein.",
+    "wis_antrag_unbekannt": "Der Antrag zu dieser Freigabe ist nicht mehr auffindbar; es wurde nichts angewendet.",
     "binding_stale": "Seit dem Antrag hat sich etwas geändert; die Freigabe galt für den alten Stand, ausgeführt wurde nichts.",
     "wissen_aus": "Der Wissensspeicher ist ausgeschaltet (Schalter „wissen“).",
 }
@@ -89,26 +88,7 @@ def utc_now():
     return datetime.now(timezone.utc).strftime(TIME)
 
 
-def _sha(text):
-    return hashlib.sha256(str(text).encode("utf-8")).hexdigest()
-
-
-def befunde_von(text):
-    """(hart, weich): Regel-IDs des Inhaltsschutzes je Abschnitt; harte Funde sperren die Aufnahme (D7.3), ein Scannerfehler auch."""
-    try:
-        hits = scan_content(text)
-    except ScanFailure as exc:
-        return [str(exc)], []
-    hart, weich = [], []
-    for h in hits:
-        r = h.rule_id.split(":", 1)[0]
-        ziel = hart if (r in HART or r in KEY_FORMATS or r.startswith("INVISIBLE_BLOCK")) else weich
-        if r not in ziel:
-            ziel.append(r)
-    return hart, weich
-
-
-class WissenSpeicher:
+class WissenSpeicher(VorschlagTeil, NachmessungTeil):
     """Die eine Instanz je Runtime; `oeffnen` baut sie aus der Konfiguration und fängt Datenbankfehler als `ValueError`."""
 
     def __init__(self, konfig, *, projekt_root, repo_root, audit, uhr=None, gpu=None, starter=None, dienst=None):
@@ -145,7 +125,7 @@ class WissenSpeicher:
     def oeffnen(cls, konfig, **kw):
         try:
             return cls(konfig, **kw)
-        except sqlite3.Error as exc:
+        except (sqlite3.Error, OSError) as exc:                      # auch: Ordner nicht anlegbar, Datei gesperrt
             raise ValueError("wis_speicher_nicht_lesbar:" + (str(exc) or type(exc).__name__)[:80]) from None
 
     def schliessen(self):
@@ -322,8 +302,23 @@ class WissenSpeicher:
         self._vektoren_stempel = None
         return geloescht
 
+    def _vorstart(self):
+        """Den Server starten, bevor die Sperre genommen wird: ein Start dauert bis `start_warten_s`, und Suche und Desk teilen die
+        Sperre (Auflage 4). Rückgabe: der Fehlercode eines gescheiterten Starts oder None (auch wenn nichts zu starten ist)."""
+        ok, _ = self.dienst.bereit()
+        if not ok or self.dienst.gpu.lage().zustand == "bau":
+            return None
+        try:
+            self.dienst.starte()
+        except ValueError as exc:
+            return str(exc)
+        return None
+
     def einbetten_schritt(self):
         """Ein Schritt des Dienstes (`EmbeddingDienst.lauf`) über die offenen Vektoren; Pause und Ende stehen in `laeufe`."""
+        return self._einbetten(self._vorstart())
+
+    def _einbetten(self, start_fehler):
         with self.lock:
             ok, grund = self.dienst.bereit()
             if not ok:
@@ -332,7 +327,11 @@ class WissenSpeicher:
             self._modell_pruefen()
             mid = self.dienst.modell_id()
             start = self.uhr()
-            out = self.dienst.lauf(lambda n: schema.offene_vektoren(self.db, mid, n), lambda zeilen: schema.schreibe_vektoren(self.db, mid, self.konfig.dim, zeilen))
+            if start_fehler:                                               # der Start vor der Sperre ist gescheitert: kein zweiter Versuch unter der Sperre
+                out = {"geraet": "cpu", "eingebettet": 0, "dauer_s": 0.0, "ende": "fehler", "grund": start_fehler}
+                self.audit("WIS_EINBETTEN", {"geraet": "cpu", "eingebettet": 0, "dauer_s": 0.0, "ende": "fehler", "grund": start_fehler})
+            else:
+                out = self.dienst.lauf(lambda n: schema.offene_vektoren(self.db, mid, n), lambda zeilen: schema.schreibe_vektoren(self.db, mid, self.konfig.dim, zeilen))
             with schema._immediate(self.db):
                 status = "pausiert" if out["ende"] == "pause" else "abgebrochen" if out["ende"] == "fehler" else "fertig"
                 self.db.execute("INSERT INTO laeufe (art, start, ende, geraet, lease, eingebettet, pause_grund, status) VALUES ('einbetten', ?, ?, 'cpu', 0, ?, ?, ?)",
@@ -345,9 +344,10 @@ class WissenSpeicher:
 
     def nachfuehren(self):
         """Abgleich und ein Einbett-Schritt (Typ-Verb `wissen.nachfuehren` und Takt, G2-S7-j)."""
+        start_fehler = self._vorstart()
         with self.lock:
             a = self.abgleich()
-            e = self.einbetten_schritt()
+            e = self._einbetten(start_fehler)
             self.dienst.leerlauf_pruefen()
             return {"abgleich": a, "einbetten": e}
 
@@ -393,24 +393,27 @@ class WissenSpeicher:
         agent = leser["art"] == "agent"
         befund_sql = " AND a.befunde = '[]'" if agent else ""
         with self.lock:
+            noetig = self._vektor_noetig()
+        anfrage = self.dienst.anfrage_vektor(frage) if noetig else None    # kann den Server starten: nie unter der Sperre (Auflage 4)
+        with self.lock:
             tiefe = self.konfig.tiefe
             wort = [r[0] for r in self.db.execute(
                 "SELECT a.nr FROM abschnitte_fts f JOIN abschnitte a ON a.nr = f.rowid JOIN quellen q ON q.id = a.quelle WHERE abschnitte_fts MATCH ? AND " + where + befund_sql
                 + " ORDER BY bm25(abschnitte_fts, 2.0, 1.0), a.nr LIMIT ?", (fusion.fts_anfrage(woerter), *params, tiefe))]
-            mid, grund, anfrage = self.dienst.modell_id(), None, None
+            mid, grund = self.dienst.modell_id(), None
             meta = schema.lies_meta(self.db)
             bereit, bereit_grund = self.dienst.bereit()
             abdeckung, n_alle, _ = self._abdeckung(mid)
-            if not bereit:
+            if noetig and anfrage is None:                                 # der Versuch selbst ist gescheitert (er kann die Fehlstart-Sperre auslösen)
+                grund = "anfrage_vektor"
+            elif not bereit:
                 grund = bereit_grund
             elif meta.get("modell_id") != mid:
                 grund = "modell_wechsel"
             elif abdeckung < self.konfig.abdeckung_min:
                 grund = "abdeckung"
-            else:
-                anfrage = self.dienst.anfrage_vektor(frage)
-                if anfrage is None:
-                    grund = "anfrage_vektor"
+            elif anfrage is None:                                          # Zustand hat sich seit der Vorprüfung geändert: Volltext
+                grund = "anfrage_vektor"
             self._rueckfall_melden(grund)
             if grund is None:
                 erlaubt = {r[0] for r in self.db.execute("SELECT a.nr FROM abschnitte a JOIN quellen q ON q.id = a.quelle WHERE " + where + befund_sql, params)}
@@ -442,6 +445,13 @@ class WissenSpeicher:
             self._protokolliere(frage, ids, modus)
         return {"modus": modus, "hinweis": hinweis, "treffer": out, "modell_id": mid if modus == "hybrid" else None, "abdeckung": round(abdeckung, 4), "ms": ms, "woerter": woerter}
 
+    def _vektor_noetig(self):
+        """Braucht die Suche einen Anfrage-Vektor? Nur wenn der Dienst bereit ist, das Modell passt und genug Vektoren da sind."""
+        mid = self.dienst.modell_id()
+        if not self.dienst.bereit()[0] or schema.lies_meta(self.db).get("modell_id") != mid:
+            return False
+        return self._abdeckung(mid)[0] >= self.konfig.abdeckung_min
+
     def _guete(self, woerter, wort, n_alle):
         """g(d) je Abschnitt der Wortliste: welche Wörter ein Abschnitt enthält, entscheidet FTS5 selbst (D7.5)."""
         if not wort:
@@ -472,175 +482,3 @@ class WissenSpeicher:
                     "letzter_lauf": dict(lauf) if lauf else None, "pause_grund": (dict(lauf).get("pause_grund") if lauf and lauf["status"] == "pausiert" else None),
                     "quellen": len(self.quellen()), "vorschlaege_offen": offen, "zerleger": meta.get("zerleger_version"), "fusion": meta.get("fusion_version"),
                     "geraet": "cpu", "lage": self.dienst.gpu.lage().zustand}
-
-    # ---- Vorschläge (D7.8, WIS-10)
-    def vorschlagen(self, *, titel, text, belege, agent_id, lauf_id, aufgabe_id, block_ids, leser):
-        """Ein Vorschlag eines Agenten: Form, harter Fund, Belege nur aus dem Block, höchstens 20 offene je Agent; Personenbezug erbt
-        er von seinen Belegen. Mit `beantrage` (Desk) entsteht sofort der Antrag."""
-        titel, text = str(titel or "").strip(), str(text or "").strip()
-        if not titel or not text:
-            raise ValueError("wis_vorschlag_leer")
-        if len(titel) > self.konfig.titel_max or len(text) > self.konfig.text_max:
-            raise ValueError("wis_vorschlag_zu_lang")
-        hart, _ = befunde_von(titel + "\n" + text)
-        if hart:
-            raise ValueError("wis_vorschlag_gesperrt")
-        belege = [str(b) for b in (belege or [])]
-        if any(b not in block_ids for b in belege):
-            raise ValueError("wis_beleg_fremd")
-        with self.lock:
-            offen = self.db.execute("SELECT count(*) FROM vorschlaege WHERE agent_id = ? AND status = 'offen'", (agent_id,)).fetchone()[0]
-            if offen >= self.konfig.offene_je_agent:
-                raise ValueError("wis_vorschlaege_zu_viele")
-            personenbezug = 0
-            if belege:
-                marks = ",".join("?" * len(belege))
-                personenbezug = int(bool(self.db.execute("SELECT 1 FROM abschnitte a JOIN quellen q ON q.id = a.quelle WHERE a.id IN (" + marks + ") AND q.personenbezug = 1", belege).fetchone()))
-            jetzt = self.uhr()
-            h = _sha(titel + "\n" + text)
-            vid = "WV-" + _sha(f"{agent_id}|{lauf_id}|{h}|{jetzt}|{offen}")[:8]
-            with schema._immediate(self.db):
-                self.db.execute("INSERT INTO vorschlaege (id, titel, text, hash, agent_id, lauf_id, aufgabe_id, belege, vorschlag_stufe, vorschlag_projekt, personenbezug, status, erstellt) "
-                                "VALUES (?,?,?,?,?,?,?,?,?,?,?,'offen',?)", (vid, titel, text, h, agent_id, lauf_id, aufgabe_id, json.dumps(belege), leser["stufe"], leser.get("projekt"), personenbezug, jetzt))
-            self.audit("WIS_VORSCHLAG_NEU", {"id": vid, "agent_id": agent_id, "lauf_id": lauf_id, "belege": belege, "personenbezug": personenbezug})
-            out = {"id": vid, "hash": h, "stufe": leser["stufe"], "projekt": leser.get("projekt"), "personenbezug": personenbezug, "titel": titel, "mission_id": None}
-            if self.beantrage is not None:
-                try:
-                    out["mission_id"] = self.beantrage(out)
-                    with schema._immediate(self.db):
-                        self.db.execute("UPDATE vorschlaege SET mission_id = ? WHERE id = ?", (out["mission_id"], vid))
-                except Exception as exc:
-                    self.audit("WIS_VORSCHLAG_VERWORFEN", {"id": vid, "grund": "antrag:" + (str(exc) or type(exc).__name__)[:80]})
-            return out
-
-    def vorschlag(self, vid):
-        row = self.db.execute("SELECT * FROM vorschlaege WHERE id = ?", (vid,)).fetchone()
-        if row is None:
-            return None
-        d = dict(row)
-        d["belege"] = json.loads(d.get("belege") or "[]")
-        return d
-
-    def vorschlaege(self, status="offen"):
-        sql = "SELECT * FROM vorschlaege" + (" WHERE status = ?" if status else "") + " ORDER BY erstellt DESC, id"
-        out = []
-        for r in self.db.execute(sql, (status,) if status else ()):
-            d = dict(r)
-            d["belege"] = json.loads(d.get("belege") or "[]")
-            out.append(d)
-        return out
-
-    def _vorschlag_quelle(self, stufe, projekt, personenbezug, gate_id, mission_id):
-        """Die Quelle `Q-VS-<stufe>-<projekt>-<p>` (Art `vorschlaege`, Adapter `vorschlag`), beim ersten Mal angelegt."""
-        qid = f"Q-VS-{stufe}-{projekt or 'alle'}-{personenbezug}"
-        if not self.db.execute("SELECT 1 FROM quellen WHERE id = ?", (qid,)).fetchone():
-            with schema._immediate(self.db):
-                self.db.execute("INSERT INTO quellen (id, art, adapter, wurzel, pfad, muster, freigabe_gate, freigabe_mission, stufe, projekt, personenbezug, aktiv, erstellt) "
-                                "VALUES (?, 'vorschlaege', 'vorschlag', 'projekt', ?, '', ?, ?, ?, ?, ?, 1, ?)",
-                                (qid, adapter_mod.VORSCHLAEGE + "#" + qid, str(gate_id), str(mission_id), stufe, projekt, personenbezug, self.uhr()))
-        return qid
-
-    def vorschlag_aufnehmen(self, bindung, *, gate_id, mission_id):
-        """Der Applier des Antrags `wissen_vorschlag_aufnehmen`: noch offen und Hash gleich (sonst `binding_stale`), Zeile an
-        `vorschlaege.jsonl`, Quelle der Partition, Abgleich; Status `freigegeben` (WIS-10)."""
-        with self.lock:
-            v = self.vorschlag(str(bindung.get("vorschlag_id") or ""))
-            if v is None:
-                raise ValueError("wis_vorschlag_unbekannt")
-            if v["status"] != "offen" or v["hash"] != bindung.get("hash"):
-                raise ValueError("binding_stale")
-            stufe, projekt, p = int(bindung.get("stufe", v["vorschlag_stufe"])), bindung.get("projekt", v["vorschlag_projekt"]), int(bool(bindung.get("personenbezug", v["personenbezug"])))
-            jetzt = self.uhr()
-            datei = self.projekt_root / Path(*adapter_mod.VORSCHLAEGE.split("/"))
-            datei.parent.mkdir(parents=True, exist_ok=True)
-            zeile = {"id": v["id"], "titel": v["titel"], "text": v["text"], "hash": v["hash"], "stufe": stufe, "projekt": projekt, "personenbezug": p,
-                     "agent_id": v["agent_id"], "lauf_id": v["lauf_id"], "aufgabe_id": v["aufgabe_id"], "belege": v["belege"], "freigegeben": jetzt, "gate": str(gate_id)}
-            with datei.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(zeile, ensure_ascii=False) + "\n")
-            qid = self._vorschlag_quelle(stufe, projekt, p, gate_id, mission_id)
-            with schema._immediate(self.db):
-                self.db.execute("UPDATE vorschlaege SET status = 'freigegeben', entschieden = ?, vorschlag_stufe = ?, vorschlag_projekt = ?, personenbezug = ? WHERE id = ?",
-                                (jetzt, stufe, projekt, p, v["id"]))
-            self.abgleich(qid)
-            self.audit("WIS_VORSCHLAG_AUFGENOMMEN", {"id": v["id"], "quelle": qid, "stufe": stufe, "projekt": projekt, "personenbezug": p})
-            return {"id": v["id"], "quelle": qid}
-
-    def vorschlag_ablehnen(self, vid):
-        with self.lock:
-            v = self.vorschlag(vid)
-            if v is None:
-                raise ValueError("wis_vorschlag_unbekannt")
-            if v["status"] == "offen":
-                with schema._immediate(self.db):
-                    self.db.execute("UPDATE vorschlaege SET status = 'abgelehnt', entschieden = ? WHERE id = ?", (self.uhr(), vid))
-                self.audit("WIS_VORSCHLAG_ABGELEHNT", {"id": vid})
-            return {"id": vid, "status": "abgelehnt" if v["status"] in ("offen", "abgelehnt") else v["status"]}
-
-    def vorschlag_zuruecknehmen(self, vid):
-        """Rücknahme eines aufgenommenen Vorschlags (enger, ohne Gate): Abschnitte weg, Zeile aus `vorschlaege.jsonl`, Status `veraltet`."""
-        with self.lock:
-            v = self.vorschlag(vid)
-            if v is None:
-                raise ValueError("wis_vorschlag_unbekannt")
-            datei = self.projekt_root / Path(*adapter_mod.VORSCHLAEGE.split("/"))
-            if datei.is_file():
-                zeilen = [z for z in datei.read_text(encoding="utf-8").splitlines() if z.strip() and json.loads(z).get("id") != vid]
-                datei.write_text("".join(z + "\n" for z in zeilen), encoding="utf-8")
-            with schema._immediate(self.db):
-                self.db.execute("DELETE FROM abschnitte WHERE datei = ?", ("vorschlag:" + vid,))
-                self.db.execute("UPDATE vorschlaege SET status = 'veraltet', entschieden = ? WHERE id = ?", (self.uhr(), vid))
-            self._vektoren_stempel = None
-            self.audit("WIS_VORSCHLAG_ZURUECKGENOMMEN", {"id": vid})
-            return {"id": vid, "status": "veraltet"}
-
-    # ---- Nachmessung (D7.11): je Suche des Captains ein Protokollsatz ohne Fragetext
-    def _nachmessung_datei(self):
-        return self.pfad.parent / NACHMESSUNG
-
-    def _protokolliere(self, frage, ids, modus):
-        try:
-            with self._nachmessung_datei().open("a", encoding="utf-8") as f:
-                f.write(json.dumps({"zeit": self.uhr(), "frage_sha256": _sha(frage), "ids": ids, "modus": modus}) + "\n")
-        except OSError:
-            pass
-
-    def nachmessung(self):
-        p = self._nachmessung_datei()
-        if not p.is_file():
-            return []
-        out = []
-        for z in p.read_text(encoding="utf-8").splitlines():
-            if z.strip():
-                try:
-                    out.append(json.loads(z))
-                except ValueError:
-                    continue
-        return out
-
-    def nachmessung_bewerten(self, frage_sha256, urteil):
-        if urteil not in URTEILE:
-            raise ValueError("wis_nachmessung_urteil")
-        saetze = self.nachmessung()
-        for s in saetze:
-            if s.get("frage_sha256") == frage_sha256:
-                s["urteil"] = urteil
-        self._nachmessung_datei().write_text("".join(json.dumps(s) + "\n" for s in saetze), encoding="utf-8")
-        return {"frage_sha256": frage_sha256, "urteil": urteil}
-
-    def nachmessung_abschliessen(self):
-        """Die bewerteten Fragen zählen, Ergebnis als Datei neben dem Speicher, Audit `WIS_NACHMESSUNG`; das Protokoll beginnt neu."""
-        saetze = self.nachmessung()
-        bewertet = [s for s in saetze if s.get("urteil") in URTEILE]
-        getroffen = sum(1 for s in bewertet if s["urteil"] == "getroffen")
-        beantwortbar = [s for s in bewertet if s["urteil"] != "ohne_antwort"]
-        anteil = round(getroffen / len(beantwortbar), 4) if beantwortbar else None
-        zeiten = [s.get("zeit") for s in saetze if s.get("zeit")]
-        ergebnis = {"fragen": len(bewertet), "getroffen": getroffen, "anteil": anteil, "zeitraum": [min(zeiten), max(zeiten)] if zeiten else None, "saetze": bewertet}
-        datum = self.uhr()[:10]
-        ziel = self.pfad.parent / f"nachmessung_{datum}.json"
-        ziel.write_text(json.dumps(ergebnis, ensure_ascii=False, indent=1), encoding="utf-8")
-        p = self._nachmessung_datei()
-        if p.is_file():
-            p.unlink()
-        self.audit("WIS_NACHMESSUNG", {"fragen": len(bewertet), "getroffen": getroffen, "anteil": anteil, "zeitraum": ergebnis["zeitraum"]})
-        return dict(ergebnis, datei=ziel.name)

@@ -46,6 +46,15 @@ def _datei_hash(path):
     return f"{st.st_size}:{st.st_mtime_ns}"
 
 
+def _unter(pfad, wurzel_echt):
+    """Liegt die aufgelöste Datei (Verknüpfungen und Junctions aufgelöst) unter der aufgelösten Wurzel? Nicht lesbar zählt als außerhalb."""
+    try:
+        echt = Path(pfad).resolve()
+    except (OSError, RuntimeError):
+        return False
+    return echt == wurzel_echt or wurzel_echt in echt.parents
+
+
 class _Basis:
     name = ""
 
@@ -106,15 +115,20 @@ class DateiAdapter(_Basis):
         if start.is_file():
             if "*" + start.suffix.lower() not in DATEIARTEN:
                 raise ValueError("wis_dateiart_nicht_erlaubt")
+            if not _unter(start, wurzel.resolve()):
+                raise ValueError("wis_pfad_ausserhalb")
             return [start]
         if not start.is_dir():
             raise ValueError("wis_speicher_nicht_lesbar")
         muster = [m.strip() for m in str(quelle.get("muster") or "*.md").split(",")]
         out = []
+        wurzel_echt = wurzel.resolve()
         for p in sorted(start.rglob("*")):
             if not p.is_file() or p.is_symlink() or any(part in AUSGELASSEN or part.startswith(".") for part in p.relative_to(start).parts[:-1]):
                 continue
             if any(p.match(m) for m in muster):
+                if not _unter(p, wurzel_echt):                  # Verknüpfung/Junction in einem Ordner führt aus der Wurzel hinaus
+                    continue
                 out.append(p)
         return out
 
