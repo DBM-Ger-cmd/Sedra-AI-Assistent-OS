@@ -1,0 +1,310 @@
+{
+  "name": "wissen_goldsatz_umschrieben",
+  "version": "vorschlag-1",
+  "status": "VORSCHLAG – nicht freigegeben. Der Captain gibt frei (G2-S7-n). Erst danach werden die Zeilen in wissen_goldsatz.json (Version 2) übernommen.",
+  "stand": "22.10.2026, Vorarbeiter Spec 7, nach Entscheidung des Captains 14:33",
+  "beschreibung": "Die 13 Fragen des Entwicklungssatzes, deren Erwartung auf Python-Quelltext der drei Speicher zeigte, umgeschrieben auf den Inhalt, den der jeweilige Adapter (D7.3) liefert. Neues Feld je Frage: erwartet_ueber = 'adapter' (Treffer gilt, wenn ein Abschnitt aus der Adapter-Quelle passt: gleicher Adapter, Präfix von 'datei', Text 'abschnitt' kommt im Abschnittspfad vor) oder 'datei' (bisherige Regel: gleiche Datei, Text 'abschnitt' im Pfad). Jede umgeschriebene Frage trägt beide Erwartungen: 'quellen' nach dem Adapter-Weg, 'quellen_datei' nach dem alten Datei-Weg, damit beide Wege getrennt messbar bleiben (wissen_fusion_messung.py misst je Weg). Die 27 übrigen Fragen bekommen erwartet_ueber = 'datei' und bleiben unverändert.",
+  "stellen_je_adapter": {
+    "gateway": "datei 'gateway:<id>' (R-07, F-mapping_fehlt, B-recheck, L-7, Z-NEU); abschnitt = Titel der Zeile: 'R-07 – Kartendaten mit Prüfwert, Zugangsdaten, Schlüssel', 'Fehler mapping_fehlt', 'Recheck', 'Schritt 7 (Ablage): Ablegen'",
+    "arbeitsumfeld": "datei 'arbeitsumfeld:<id>' (O-redesign/vorarbeiter, V-lauf_starten, V-sperre, O-local_config); abschnitt = Titel der Zeile: 'Ordner redesign/vorarbeiter', 'Vorarbeiter-Aktion lauf_starten', 'Sperre je Lauf-Art'",
+    "knowledge": "datei 'knowledge:<KN-id>'; abschnitt = 'Lektion <titel>' bzw. 'Notiz <titel>'"
+  },
+  "hinweis": "G07 und G40 fragten nach dem Verhalten des Codes (add_lesson, lessons_for). Der Adapter liefert nur die Lektionen selbst; die beiden Fragen sind deshalb auf vorhandene Lektionen des lokalen Speichers umgeschrieben (G07 auf KN-85E0AAF4, G40 auf KN-9309C5D3; Entscheidung des Captains 24.10.2026, Weg a: keine Lektionen anlegen). Titel und KN-ID stehen im Satz. Die Frage ist deutsch, der Lektionstext englisch: Art bleibt 'umschrieben'/'fachbegriff'.",
+  "fragen": [
+    {
+      "id": "G07",
+      "frage": "Warum nimmt meine Prüfung mit `$` am Ende auch einen Text mit Zeilenumbruch an?",
+      "art": "fachbegriff",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "knowledge",
+          "datei": "knowledge:KN-85E0AAF4",
+          "abschnitt": "Lektion Whole-string regex validation in Python"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "runtime/src/guppi_runtime/knowledge.py",
+          "abschnitt": "KnowledgeStore.add_lesson"
+        }
+      ],
+      "alt": "Was passiert, wenn man eine Coding-Lektion ohne Stichwörter zum Auslösen anlegt?"
+    },
+    {
+      "id": "G25",
+      "frage": "Wie wird verhindert, dass ein gefundenes Dokument dem Modell Befehle erteilt?",
+      "art": "umschrieben",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "markdown",
+          "datei": "docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md",
+          "abschnitt": "Spec 7 – Wissen und RAG > Anforderungen"
+        },
+        {
+          "adapter": "gateway",
+          "datei": "gateway:R-08",
+          "abschnitt": "R-08"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md",
+          "abschnitt": "Spec 7 – Wissen und RAG > Anforderungen"
+        },
+        {
+          "datei": "runtime/src/guppi_runtime/gateway/klassen.py",
+          "abschnitt": "REGELN / R-08"
+        }
+      ]
+    },
+    {
+      "id": "G30",
+      "frage": "Was bedeutet der Fehlercode weg_offener_als_wunsch?",
+      "art": "wortgleich",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:F-weg_offener_als_wunsch",
+          "abschnitt": "Fehler weg_offener_als_wunsch"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "abschnitt": "FEHLER / weg_offener_als_wunsch"
+        }
+      ]
+    },
+    {
+      "id": "G31",
+      "frage": "Was tue ich, wenn nach einem Neustart die Zuordnung der Platzhalter fehlt?",
+      "art": "umschrieben",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:F-mapping_fehlt",
+          "abschnitt": "Fehler mapping_fehlt"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "abschnitt": "FEHLER / mapping_fehlt"
+        }
+      ]
+    },
+    {
+      "id": "G32",
+      "frage": "Sind Daten, bei denen Namen durch Platzhalter ersetzt wurden, noch personenbezogen?",
+      "art": "fachbegriff",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:B-pseudonymisierung",
+          "abschnitt": "Pseudonymisierung"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "abschnitt": "BEGRIFFE / pseudonymisierung"
+        }
+      ]
+    },
+    {
+      "id": "G33",
+      "frage": "Wie viele Rechecks gibt es und was prüft der dritte?",
+      "art": "wortgleich",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:B-recheck",
+          "abschnitt": "Recheck"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "abschnitt": "BEGRIFFE / recheck"
+        }
+      ]
+    },
+    {
+      "id": "G34",
+      "frage": "Wann verschwinden Entwürfe automatisch?",
+      "art": "umschrieben",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:B-löschdatum",
+          "abschnitt": "Löschdatum"
+        },
+        {
+          "adapter": "gateway",
+          "datei": "gateway:L-7",
+          "abschnitt": "Schritt 7"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "abschnitt": "BEGRIFFE / löschdatum"
+        },
+        {
+          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "abschnitt": "LEITFADEN / Schritt 7"
+        }
+      ]
+    },
+    {
+      "id": "G35",
+      "frage": "Welche Schutzstufen gibt es und wie heißt die höchste?",
+      "art": "fachbegriff",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:B-schutzklasse",
+          "abschnitt": "Schutzklasse"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "abschnitt": "BEGRIFFE / schutzklasse"
+        }
+      ]
+    },
+    {
+      "id": "G36",
+      "frage": "Darf ein Text mit Kreditkartennummer samt Prüfziffer zu einem Cloud-Modell gehen?",
+      "art": "fachbegriff",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "gateway",
+          "datei": "gateway:R-07",
+          "abschnitt": "R-07"
+        },
+        {
+          "adapter": "gateway",
+          "datei": "gateway:B-hard block",
+          "abschnitt": "Hard block"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "runtime/src/guppi_runtime/gateway/klassen.py",
+          "abschnitt": "REGELN / R-07"
+        },
+        {
+          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "abschnitt": "BEGRIFFE / hard block"
+        }
+      ]
+    },
+    {
+      "id": "G37",
+      "frage": "Wofür ist der Ordner redesign/vorarbeiter da?",
+      "art": "wortgleich",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:O-redesign/vorarbeiter",
+          "abschnitt": "Ordner redesign/vorarbeiter"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "runtime/src/guppi_runtime/arbeitsumfeld_wissen.py",
+          "abschnitt": "ORDNER_ZWECK / redesign/vorarbeiter"
+        }
+      ]
+    },
+    {
+      "id": "G38",
+      "frage": "Wie oft darf derselbe Lauf gestartet werden?",
+      "art": "umschrieben",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:V-lauf_starten",
+          "abschnitt": "Vorarbeiter-Aktion lauf_starten"
+        },
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:V-sperre",
+          "abschnitt": "Sperre je Lauf-Art"
+        },
+        {
+          "adapter": "markdown",
+          "datei": "docs/REGELWERK_STANDARDLAEUFE.md",
+          "abschnitt": "3. Ablauf"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "runtime/src/guppi_runtime/arbeitsumfeld_wissen.py",
+          "abschnitt": "AKTION_ZWECK / lauf_starten"
+        },
+        {
+          "datei": "docs/REGELWERK_STANDARDLAEUFE.md",
+          "abschnitt": "3. Ablauf"
+        }
+      ]
+    },
+    {
+      "id": "G39",
+      "frage": "Welcher Ordner enthält die Schlüssel, und was wird dort nie gelesen?",
+      "art": "umschrieben",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "arbeitsumfeld",
+          "datei": "arbeitsumfeld:O-local_config",
+          "abschnitt": "Ordner local_config"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "runtime/src/guppi_runtime/arbeitsumfeld_wissen.py",
+          "abschnitt": "Modul-Beschreibung"
+        }
+      ],
+      "alt": "Welche Angaben kommen nicht in die Wissensbasis des Arbeitsumfelds?"
+    },
+    {
+      "id": "G40",
+      "frage": "Wo müssen meine eigenen Testfälle liegen, damit sie gefunden werden?",
+      "art": "umschrieben",
+      "erwartet_ueber": "adapter",
+      "quellen": [
+        {
+          "adapter": "knowledge",
+          "datei": "knowledge:KN-9309C5D3",
+          "abschnitt": "Lektion Own tests must be discoverable"
+        }
+      ],
+      "quellen_datei": [
+        {
+          "datei": "runtime/src/guppi_runtime/knowledge.py",
+          "abschnitt": "KnowledgeStore.add_lesson"
+        },
+        {
+          "datei": "runtime/src/guppi_runtime/knowledge.py",
+          "abschnitt": "KnowledgeStore.lessons_for"
+        }
+      ],
+      "alt": "Wie ordnet das System einer Coding-Aufgabe die passenden Lektionen zu?"
+    }
+  ]
+}

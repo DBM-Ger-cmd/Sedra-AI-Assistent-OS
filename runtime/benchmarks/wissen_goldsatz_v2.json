@@ -12,7 +12,7 @@
   "gruppen": {
     "doku": "Adapter markdown: docs/*.md und Specs, Stelle = Überschriftenpfad.",
     "logbuch": "Adapter logbuch: docs/LOGBUCH_AGENT_MANAGER.md, Stelle = Zeile <Zeit> <Art>.",
-    "knowledge": "Adapter knowledge: Lektionen/Notizen des KnowledgeStore; Platzhalter <KN-ID>/<Titel>, siehe hinweis je Frage.",
+    "knowledge": "Adapter knowledge: Lektionen/Notizen des lokalen KnowledgeStore; Stelle = 'Lektion <Titel>' bzw. 'Notiz <Titel>', datei = 'knowledge:<KN-ID>'. Die zehn beantwortbaren Fragen zielen auf die acht vorhandenen coding_lessons (KN-85E0AAF4, KN-82CAC22F, KN-E338EC2C, KN-786685E0, KN-60536EEE, KN-53AC38CC, KN-2CD118AF, KN-9309C5D3).",
     "arbeitsumfeld": "Adapter arbeitsumfeld: Zeilen der Tabelle wissen aus arbeitsumfeld_wissen.py (Ordner, Vorarbeiter-Aktionen, Sperre, Läufe, Regel- und Auftragsabschnitte).",
     "gateway": "Adapter gateway: Regeln R-01…R-16, Merkmale, Zustände, Fehler, Begriffe, Leitfaden-Schritte aus gateway/klassen.py und gateway/wissen.py."
   },
@@ -929,7 +929,7 @@
     },
     {
       "id": "A059",
-      "frage": "Warum darf eine Datei nicht token, secret oder password heißen, und welcher neutrale Name wie usage_meter.py ist stattdessen richtig?",
+      "frage": "Warum akzeptiert re.match(r'^...$', s) auch einen Text mit einem Zeilenumbruch am Ende, und was nimmt man stattdessen, um den ganzen Text zu prüfen: re.fullmatch oder \\Z?",
       "art": "wortgleich",
       "gruppe": "knowledge",
       "liste_oder_tabelle": false,
@@ -937,15 +937,14 @@
       "quellen": [
         {
           "adapter": "knowledge",
-          "datei": "knowledge:<KN-ID Lektion reserved_name>",
-          "abschnitt": "Lektion <Titel der Lektion reserved_name>"
+          "datei": "knowledge:KN-85E0AAF4",
+          "abschnitt": "Lektion Whole-string regex validation in Python"
         }
-      ],
-      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+      ]
     },
     {
       "id": "A060",
-      "frage": "Welche Lektion erklärt, dass der abgeschirmte Ausführungsbereich bestimmte Dateinamen als Zugangsdaten verweigert?",
+      "frage": "Warum löst das Auslesen der Portnummer einer zerlegten Adresse von selbst einen Fehler aus, wenn die Angabe keine Zahl oder zu groß ist?",
       "art": "umschrieben",
       "gruppe": "knowledge",
       "liste_oder_tabelle": false,
@@ -953,15 +952,14 @@
       "quellen": [
         {
           "adapter": "knowledge",
-          "datei": "knowledge:<KN-ID Lektion reserved_name>",
-          "abschnitt": "Lektion <Titel der Lektion reserved_name>"
+          "datei": "knowledge:KN-82CAC22F",
+          "abschnitt": "Lektion urllib.parse: the port attribute raises by itself"
         }
-      ],
-      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+      ]
     },
     {
       "id": "A061",
-      "frage": "Welche Regel für die Benennung von Dateien folgt aus der Ablehnung potential_credential_file?",
+      "frage": "Was ist zu tun, wenn in einer Funktion, deren Vertrag nur uix_url_not_allowed als Fehler nennt, int() oder urlparse() eine eigene Meldung auslöst?",
       "art": "fachbegriff",
       "gruppe": "knowledge",
       "liste_oder_tabelle": false,
@@ -969,15 +967,14 @@
       "quellen": [
         {
           "adapter": "knowledge",
-          "datei": "knowledge:<KN-ID Lektion reserved_name>",
-          "abschnitt": "Lektion <Titel der Lektion reserved_name>"
+          "datei": "knowledge:KN-E338EC2C",
+          "abschnitt": "Lektion Validators: translate every library error into the documented one"
         }
-      ],
-      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+      ]
     },
     {
       "id": "A062",
-      "frage": "Warum darf ein write call aus der gekürzten History nicht wiederholt werden, und mit welchem Werkzeug liest man die Datei stattdessen?",
+      "frage": "Warum akzeptiert r\"http://127.0.0.1:\" als regulärer Ausdruck auch http://127x0y0z1:, und wie schreibt man die Punkte richtig, mit \\. oder mit re.escape?",
       "art": "wortgleich",
       "gruppe": "knowledge",
       "liste_oder_tabelle": false,
@@ -985,15 +982,14 @@
       "quellen": [
         {
           "adapter": "knowledge",
-          "datei": "knowledge:<KN-ID Lektion placeholder_write>",
-          "abschnitt": "Lektion <Titel der Lektion placeholder_write>"
+          "datei": "knowledge:KN-786685E0",
+          "abschnitt": "Lektion Regex: escape the dots of a literal host or version"
         }
-      ],
-      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+      ]
     },
     {
       "id": "A063",
-      "frage": "Was ist zu tun, wenn im Verlauf ein früherer Schreibvorgang nur noch als Stellvertretertext steht?",
+      "frage": "Warum nimmt eine Prüfung mit \\d auch arabisch-indische Zahlzeichen an, und wie beschränkt man sie auf 0 bis 9?",
       "art": "umschrieben",
       "gruppe": "knowledge",
       "liste_oder_tabelle": false,
@@ -1001,15 +997,14 @@
       "quellen": [
         {
           "adapter": "knowledge",
-          "datei": "knowledge:<KN-ID Lektion placeholder_write>",
-          "abschnitt": "Lektion <Titel der Lektion placeholder_write>"
+          "datei": "knowledge:KN-60536EEE",
+          "abschnitt": "Lektion Regex: \\d matches non-ASCII digits"
         }
-      ],
-      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+      ]
     },
     {
       "id": "A064",
-      "frage": "Welche Lektion gehört zum Marker „[written: N characters“ in alten Werkzeugaufrufen?",
+      "frage": "Welche Schutzregel steckt hinter der Zeile `if not isinstance(item, dict): continue` am Anfang einer Schleife über Audit-Ereignisse?",
       "art": "fachbegriff",
       "gruppe": "knowledge",
       "liste_oder_tabelle": false,
@@ -1017,15 +1012,14 @@
       "quellen": [
         {
           "adapter": "knowledge",
-          "datei": "knowledge:<KN-ID Lektion placeholder_write>",
-          "abschnitt": "Lektion <Titel der Lektion placeholder_write>"
+          "datei": "knowledge:KN-53AC38CC",
+          "abschnitt": "Lektion Lists of records from outside contain junk"
         }
-      ],
-      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+      ]
     },
     {
       "id": "A065",
-      "frage": "Welche Prüfung soll direkt nach jedem Speichern einer Datei laufen, bevor man weitermacht?",
+      "frage": "Wie verhindert man, dass ein Fenster, das sich über einen Zeitgeber aktualisiert, bei jedem Takt seinen Inhalt löscht oder seinen Taktgeber abräumt?",
       "art": "umschrieben",
       "gruppe": "knowledge",
       "liste_oder_tabelle": false,
@@ -1033,15 +1027,14 @@
       "quellen": [
         {
           "adapter": "knowledge",
-          "datei": "knowledge:<KN-ID Lektion syntax_error>",
-          "abschnitt": "Lektion <Titel der Lektion syntax_error>"
+          "datei": "knowledge:KN-2CD118AF",
+          "abschnitt": "Lektion A polling window must not wipe or stop itself"
         }
-      ],
-      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+      ]
     },
     {
       "id": "A066",
-      "frage": "Welche Lektion gehört zum Fehlerbild SyntaxError beim Laden eines Moduls?",
+      "frage": "Auf welche Zahl soll man vor der Abgabe über run_tests achten, damit sicher ist, dass die eigenen Prüfungen überhaupt gelaufen sind?",
       "art": "fachbegriff",
       "gruppe": "knowledge",
       "liste_oder_tabelle": false,
@@ -1049,15 +1042,14 @@
       "quellen": [
         {
           "adapter": "knowledge",
-          "datei": "knowledge:<KN-ID Lektion syntax_error>",
-          "abschnitt": "Lektion <Titel der Lektion syntax_error>"
+          "datei": "knowledge:KN-9309C5D3",
+          "abschnitt": "Lektion Own tests must be discoverable"
         }
-      ],
-      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+      ]
     },
     {
       "id": "A067",
-      "frage": "Was bedeutet die Lektion, dass ein module not available in the sandbox ist, und welche Module sind erlaubt?",
+      "frage": "Wie fängt man den ValueError von urlparse(url).port ab, damit ein Validator mit try und raise ... from None seine eigene Meldung auslöst?",
       "art": "wortgleich",
       "gruppe": "knowledge",
       "liste_oder_tabelle": false,
@@ -1065,15 +1057,14 @@
       "quellen": [
         {
           "adapter": "knowledge",
-          "datei": "knowledge:<KN-ID Lektion missing_module>",
-          "abschnitt": "Lektion <Titel der Lektion missing_module>"
+          "datei": "knowledge:KN-82CAC22F",
+          "abschnitt": "Lektion urllib.parse: the port attribute raises by itself"
         }
-      ],
-      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+      ]
     },
     {
       "id": "A068",
-      "frage": "Auf welche Bibliotheken darf sich Code im abgeschirmten Bereich beschränken, wenn ein Paket dort fehlt?",
+      "frage": "Warum scheitern Prüfungen, die den Text der Fehlermeldung vergleichen, wenn nach außen die Meldung einer verwendeten Bibliothek statt der vereinbarten dringt?",
       "art": "umschrieben",
       "gruppe": "knowledge",
       "liste_oder_tabelle": false,
@@ -1081,11 +1072,10 @@
       "quellen": [
         {
           "adapter": "knowledge",
-          "datei": "knowledge:<KN-ID Lektion missing_module>",
-          "abschnitt": "Lektion <Titel der Lektion missing_module>"
+          "datei": "knowledge:KN-E338EC2C",
+          "abschnitt": "Lektion Validators: translate every library error into the documented one"
         }
-      ],
-      "hinweis": "Im Repo gibt es keinen lokalen knowledge-Speicher; die Lektionstexte stammen aus den Sandbox-Lektionen (devenv/lesson_proposer.py, englisch). KN-ID und Titel sind Platzhalter <...> und werden vor der Messung aus dem lokalen Speicher eingetragen; fehlt die Lektion, legt der Captain sie an oder wählt eine vorhandene."
+      ]
     },
     {
       "id": "A069",
