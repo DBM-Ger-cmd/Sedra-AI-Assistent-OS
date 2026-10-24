@@ -117,7 +117,7 @@ class EmbeddingDienst:
         self._letzte_anfrage = None
         self._pausiert = False
         self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        self._start_lock = threading.Lock()                      # nie zwei Starts zugleich (Takt, Hintergrundstart)
+        self._start_lock = threading.RLock()                     # Start und Stopp nacheinander, nie zwei Starts zugleich (Takt, Desk, Hintergrundstart)
 
     # ---- Kennung und Bereitschaft
     def modell_id(self):
@@ -278,7 +278,11 @@ class EmbeddingDienst:
 
     def stoppe(self):
         """Nur die eigene PID: der eigene Prozess, oder die PID der Datei, wenn auf dem eigenen Port ein Server mit dem Alias
-        antwortet; sonst wird nichts angefasst."""
+        antwortet; sonst wird nichts angefasst. Unter `_start_lock`: ein Stopp fällt nie in einen laufenden Start."""
+        with self._start_lock:
+            return self._stoppe()
+
+    def _stoppe(self):
         pid = None
         if self._proc is not None:
             pid = self._proc.pid
