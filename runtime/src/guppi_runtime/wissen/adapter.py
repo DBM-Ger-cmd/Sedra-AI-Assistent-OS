@@ -46,6 +46,15 @@ def _datei_hash(path):
     return f"{st.st_size}:{st.st_mtime_ns}"
 
 
+def _unter(pfad, wurzel_echt):
+    """Liegt die aufgelöste Datei (Verknüpfungen und Junctions aufgelöst) unter der aufgelösten Wurzel? Nicht lesbar zählt als außerhalb."""
+    try:
+        echt = Path(pfad).resolve()
+    except (OSError, RuntimeError):
+        return False
+    return echt == wurzel_echt or wurzel_echt in echt.parents
+
+
 class _Basis:
     name = ""
 
@@ -77,12 +86,7 @@ class _Basis:
     def _bleibt_drin(path, wurzel):
         """Liegt `path` nach Auflösen aller Symlinks und Junctions noch unter der Wurzel? Die Freigabe prüft den Pfad nur einmal;
         ein später angelegter Link darf nicht aus der Wurzel hinausführen (G4-Auflage 2, Prüfung F7)."""
-        try:
-            ziel = Path(path).resolve()
-        except (OSError, RuntimeError):
-            return False
-        wurzel = Path(wurzel).resolve()
-        return ziel == wurzel or wurzel in ziel.parents
+        return _unter(path, Path(wurzel).resolve())
 
     @staticmethod
     def _ist_link(path):
@@ -129,10 +133,11 @@ class DateiAdapter(_Basis):
             raise ValueError("wis_speicher_nicht_lesbar")
         muster = [m.strip() for m in str(quelle.get("muster") or "*.md").split(",")]
         out = []
+        wurzel_echt = wurzel.resolve()
         for p in sorted(start.rglob("*")):
             if not p.is_file() or self._ist_link(p) or any(part in AUSGELASSEN or part.startswith(".") for part in p.relative_to(start).parts[:-1]):
                 continue
-            if not self._bleibt_drin(p, wurzel):                     # Ordner-Junction oder Link auf dem Weg nach draußen
+            if not _unter(p, wurzel_echt):                           # Ordner-Junction oder Link auf dem Weg nach draußen (Auflage 2, F7)
                 continue
             if any(p.match(m) for m in muster):
                 out.append(p)
