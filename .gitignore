@@ -22,4 +22,5 @@ runtime/runtime_data/
 .env
 .env.*
 /runtime_data/
+/local_config/
 runtime/config/local_paths.yaml

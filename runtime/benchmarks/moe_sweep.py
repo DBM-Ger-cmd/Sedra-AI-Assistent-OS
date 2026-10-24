@@ -58,7 +58,10 @@ def free_ram_gib():
 
 
 def one(runtime, alias, server, window, prompt):
+    ram_before = free_ram_gib()
+    t_load = time.monotonic()
     runtime.load_model(alias, context_length=window, gpu="max", identifier=alias, parallel=1, server=server)
+    load_s = round(time.monotonic() - t_load, 1)
     try:
         body = json.dumps({"model": alias, "max_tokens": 256, "temperature": 0.1,
                            "messages": [{"role": "user", "content": prompt + "\n\nIn three sentences: what do these modules do?"}]}).encode()
@@ -70,7 +73,7 @@ def one(runtime, alias, server, window, prompt):
         t = data.get("timings") or {}
         return {"prompt_tokens": (data.get("usage") or {}).get("prompt_tokens"), "prompt_tps": round(t.get("prompt_per_second") or 0, 1),
                 "gen_tps": round(t.get("predicted_per_second") or 0, 1), "seconds": round(time.monotonic() - t0, 1),
-                "free_gib": round((total - used) / 1024, 2)}
+                "free_gib": round((total - used) / 1024, 2), "load_s": load_s, "free_ram_gib": round(free_ram_gib(), 2), "ram_before_gib": round(ram_before, 2)}
     finally:
         try:
             runtime.unload_model(all_models=True)

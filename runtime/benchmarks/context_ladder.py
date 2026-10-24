@@ -3,7 +3,7 @@
     .venv\\Scripts\\python.exe benchmarks/context_ladder.py <project_dir> <recipe_id> [<recipe_id> ...] [--max 131072] [--probes 3]
 
 For each recipe (a llama-cpp-server recipe in local_config/role_routing.yaml, started exactly as the recipe says) the window climbs a
-ladder (8k, 16k, 24k, 32k, 48k, 64k, 96k, 128k; never above the model's trained context or --max). A rung counts as SAFE only if all hold:
+ladder (8k, 16k, 24k, 32k, 48k, 64k, 96k, 128k, and with --max 192k, 256k; never above the model's trained context or --max). A rung counts as SAFE only if all hold:
   - the server starts with exactly that window,
   - at least 1 GiB of GPU memory stays free after loading (the same reserve the resource scheduler keeps),
   - <probes> different prompts that fill ~85 % of the window each get a correct answer: a random code hidden at 10 / 50 / 90 % of the
@@ -47,7 +47,7 @@ from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaSe
 from guppi_runtime.models.openai_local import split_harmony                         # noqa: E402
 from guppi_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
 
-LADDER = (8192, 16384, 24576, 32768, 49152, 65536, 98304, 131072)
+LADDER = (8192, 16384, 24576, 32768, 49152, 65536, 98304, 131072, 196608, 262144)      # above 131072 only with --max (2026-10-13, mmap test: how much fits next to DDR5 and 12 GB VRAM)
 RESERVE_GIB = 1.0
 FILL = 0.85
 WORDS = ("amber", "basalt", "cedar", "delta", "ember", "falcon", "garnet", "harbor", "indigo", "juniper", "kestrel", "lumen", "marble",
