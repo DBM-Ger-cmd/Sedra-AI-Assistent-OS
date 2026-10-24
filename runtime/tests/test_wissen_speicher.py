@@ -33,7 +33,7 @@ class Aufnahme(Basis):
     def test_alle_drei_speicher_und_die_doku_liefern_treffer(self):
         alle_freigeben(self.sp)
         a = self.sp.abgleich()
-        self.assertEqual((a["quellen"], a["neu"], a["entfernt"], a["gesperrt"]), (6, 13, 0, 0))
+        self.assertEqual((a["quellen"], a["neu"], a["entfernt"], a["gesperrt"]), (6, 12, 0, 0))  # 12: das Logbuch steht nur noch über seine eigene Quelle im Index, nicht zusätzlich im Ordner docs (Prüfung F4)
         adapter = {q["adapter"]: q["abschnitte"] for q in self.sp.quellen()}
         self.assertEqual({k: v > 0 for k, v in adapter.items()}, {"markdown": True, "logbuch": True, "knowledge": True, "arbeitsumfeld": True, "gateway": True})
         self.sp.einbetten_schritt()
@@ -48,7 +48,7 @@ class Aufnahme(Basis):
         alle_freigeben(self.sp)
         self.sp.abgleich()
         erster = self.sp.einbetten_schritt()
-        self.assertEqual(erster["eingebettet"], 13)
+        self.assertEqual(erster["eingebettet"], 12)
         self.assertEqual(self.sp.abgleich()["uebersprungen"], 6, "Quell-Hash gleich: nichts wird zerlegt")
         self.assertEqual(self.sp.einbetten_schritt()["eingebettet"], 0, "WIS-03")
         repo = Path(self.tmp.name) / "repo"
@@ -60,7 +60,7 @@ class Aufnahme(Basis):
         e = self.sp.einbetten_schritt()
         self.assertEqual(e["eingebettet"], 1, "nur der geänderte Abschnitt")
         self.assertEqual(self.sp.db.execute("SELECT count(*) FROM abschnitte WHERE datei = 'docs/GEHEIM.md'").fetchone()[0], 0)
-        self.assertEqual(self.sp.db.execute("SELECT count(*) FROM vektoren").fetchone()[0], 12, "Vektoren der gelöschten Abschnitte fallen mit")
+        self.assertEqual(self.sp.db.execute("SELECT count(*) FROM vektoren").fetchone()[0], 11, "Vektoren der gelöschten Abschnitte fallen mit")
         ids = {r[0] for r in self.sp.db.execute("SELECT id FROM abschnitte WHERE datei = 'docs/GPU.md'")}
         self.assertEqual(len(ids), 2, "die ID bleibt bei geändertem Text stabil")
 

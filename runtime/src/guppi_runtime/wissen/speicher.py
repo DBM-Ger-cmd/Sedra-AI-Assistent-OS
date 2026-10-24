@@ -4,11 +4,13 @@ der Volltext-Rückfall, Vorschläge der Agenten und die Nachmessung (D7.11). Nur
 nie Text aus Quellen oder Fragen); die reinen Module (`schema`, `zerlegen`, `fusion`, `vektor`, `ausgabe`) kennen weder Audit
 noch Desk. Fehler sind `ValueError('<code>')`; `SAETZE` übersetzt sie für Desk und Werkzeug.
 
-Takt und Desk teilen die Verbindung: jede öffentliche Methode nimmt `self.lock`."""
+Takt und Desk teilen die Verbindung: jeder Zugriff auf `self.db` läuft unter `self.lock`. Die Sperre wird nie über einen Aufruf
+des Embedding-Servers gehalten (Start bis 90 s, Stapel, Anfrage-Vektor): sonst warteten Suchen auf den Einbett-Schritt (Prüfung F3)."""
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sqlite3
 import threading
 import time
@@ -17,7 +19,7 @@ from pathlib import Path
 
 from ..core.content_policy import KEY_FORMATS, ScanFailure, scan_content
 from . import adapter as adapter_mod
-from . import ausgabe, embed, fusion, schema, vektor, zerlegen
+from . import ausgabe, embed, fusion, glossar, schema, vektor, zerlegen
 
 TIME = "%Y-%m-%dT%H:%M:%SZ"
 HART = ("PAN_CVV_V1",)                                                    # A-1: dieselben Klassen wie ContentGuard._finish
@@ -69,6 +71,8 @@ SAETZE = {
     "wis_nachmessung_urteil": "Das Urteil muss getroffen, nicht_getroffen oder ohne_antwort sein.",
     "binding_stale": "Seit dem Antrag hat sich etwas geändert; die Freigabe galt für den alten Stand, ausgeführt wurde nichts.",
     "wissen_aus": "Der Wissensspeicher ist ausgeschaltet (Schalter „wissen“).",
+    "wis_antrag_unbekannt": "Zu dieser Freigabe gibt es keinen offenen Antrag mit Gate; angelegt wurde nichts.",
+    "wis_testlab_nicht_lesbar": "Das Testlabor ist nicht lesbar; der Wissensspeicher bleibt aus.",
 }
 
 
@@ -91,6 +95,36 @@ def utc_now():
 
 def _sha(text):
     return hashlib.sha256(str(text).encode("utf-8")).hexdigest()
+
+
+def _schreibe_atomar(pfad, text):
+    """Datei über eine Temp-Datei daneben und `os.replace` schreiben: ein Abbruch lässt die alte oder die neue Fassung, nie eine
+    halbe (G4-Auflage 1, Prüfung F6)."""
+    pfad = Path(pfad)
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    tmp = pfad.with_name(pfad.name + ".tmp")
+    with tmp.open("w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, pfad)
+
+
+def _jsonl(pfad):
+    """Die Zeilen einer JSON-Zeilen-Datei als dicts; kaputte Zeilen werden übersprungen, nicht zum Fehler."""
+    pfad = Path(pfad)
+    if not pfad.is_file():
+        return []
+    out = []
+    for z in pfad.read_text(encoding="utf-8").splitlines():
+        if z.strip():
+            try:
+                d = json.loads(z)
+            except ValueError:
+                continue
+            if isinstance(d, dict):
+                out.append(d)
+    return out
 
 
 def befunde_von(text):
@@ -140,12 +174,15 @@ class WissenSpeicher:
         self._vektoren_stempel = None
         self._rueckfall = None
         self._letzter_schritt = None
+        self._einbett_lock = threading.Lock()                         # ein Einbett-Schritt zur Zeit (Takt und Verb)
+        self._vektor_fehler = set()                                   # (nr, hash), die der Server allein ablehnt (Prüfung F2)
+        self._start_thread = None
 
     @classmethod
     def oeffnen(cls, konfig, **kw):
         try:
             return cls(konfig, **kw)
-        except sqlite3.Error as exc:
+        except (sqlite3.Error, OSError) as exc:                      # auch Ordner nicht anlegbar, Rechte, Laufwerk weg (G4-Auflage 3)
             raise ValueError("wis_speicher_nicht_lesbar:" + (str(exc) or type(exc).__name__)[:80]) from None
 
     def schliessen(self):
@@ -236,11 +273,16 @@ class WissenSpeicher:
             return self.quelle(quelle_id)
 
     def quelle(self, quelle_id):
+        with self.lock:
+            return self._quelle(quelle_id)
+
+    def _quelle(self, quelle_id):
         row = self.db.execute("SELECT q.*, (SELECT count(*) FROM abschnitte a WHERE a.quelle = q.id) AS abschnitte FROM quellen q WHERE q.id = ?", (quelle_id,)).fetchone()
         return dict(row) if row else None
 
     def quellen(self):
-        return [dict(r) for r in self.db.execute("SELECT q.*, (SELECT count(*) FROM abschnitte a WHERE a.quelle = q.id) AS abschnitte FROM quellen q ORDER BY q.erstellt, q.id")]
+        with self.lock:
+            return [dict(r) for r in self.db.execute("SELECT q.*, (SELECT count(*) FROM abschnitte a WHERE a.quelle = q.id) AS abschnitte FROM quellen q ORDER BY q.erstellt, q.id")]
 
     # ---- Aufnahme (D7.3, WIS-03)
     def abgleich(self, quelle_id=None):
@@ -252,14 +294,18 @@ class WissenSpeicher:
             quellen = [q for q in self.quellen() if q["aktiv"] and (quelle_id is None or q["id"] == quelle_id)]
             if quelle_id is not None and not quellen:
                 raise ValueError("wis_quelle_unbekannt")
+            alle_aktiv = [q for q in self.quellen() if q["aktiv"]]
             for q in quellen:
                 summe["quellen"] += 1
+                ausschluss = self._ausschluss(q, alle_aktiv)
                 try:
                     ad = self._adapter(q["adapter"])
                     qh = ad.quell_hash(q)
                 except ValueError as exc:
                     self._ueberspringe(q, str(exc), summe)
                     continue
+                if ausschluss:                                    # ändert sich der Ausschluss, wird neu zerlegt
+                    qh += ":aus:" + _sha("|".join(sorted(ausschluss)))[:12]
                 if q["stand"] and qh == q["quell_hash"]:
                     summe["uebersprungen"] += 1
                     continue
@@ -270,6 +316,8 @@ class WissenSpeicher:
                     self.audit("WIS_DATEI_UEBERSPRUNGEN", {"quelle": q["id"], "datei": datei, "grund": grund})
                 try:
                     for datei, datum, s in ad.stuecke(q, melde):
+                        if datei in ausschluss:
+                            continue
                         hart, weich = befunde_von(s["text"])
                         if hart:
                             gesperrt += 1
@@ -303,6 +351,15 @@ class WissenSpeicher:
         summe["dauer_s"] = round(time.monotonic() - t0, 3)
         return summe
 
+    @staticmethod
+    def _ausschluss(q, alle_aktiv):
+        """Dateien, die eine andere aktive Datei-Quelle derselben Wurzel schon abdeckt (z. B. das Logbuch im Ordner `docs`):
+        eine Ordner-Quelle nimmt sie nicht noch einmal auf, sonst stünde derselbe Text zweimal im Index (Prüfung F4)."""
+        if q["art"] != "ordner" or q["adapter"] not in ("markdown", "text"):
+            return set()
+        return {a["pfad"] for a in alle_aktiv if a["id"] != q["id"] and a["art"] == "datei" and a["wurzel"] == q["wurzel"]
+                and a["adapter"] in ("markdown", "text", "logbuch")}
+
     def _ueberspringe(self, q, grund, summe):
         summe["uebersprungen"] += 1
         self.audit("WIS_DATEI_UEBERSPRUNGEN", {"quelle": q["id"], "datei": q["pfad"], "grund": grund})
@@ -322,34 +379,74 @@ class WissenSpeicher:
         self._vektoren_stempel = None
         return geloescht
 
-    def einbetten_schritt(self):
-        """Ein Schritt des Dienstes (`EmbeddingDienst.lauf`) über die offenen Vektoren; Pause und Ende stehen in `laeufe`."""
+    def _offene(self, mid, n):
+        """Offene Vektoren ohne die Abschnitte, die der Server in diesem Prozess schon allein abgelehnt hat (F2)."""
         with self.lock:
-            ok, grund = self.dienst.bereit()
-            if not ok:
-                self._letzter_schritt = {"geraet": "cpu", "eingebettet": 0, "dauer_s": 0.0, "ende": "fehler", "grund": grund}
-                return self._letzter_schritt
-            self._modell_pruefen()
-            mid = self.dienst.modell_id()
-            start = self.uhr()
-            out = self.dienst.lauf(lambda n: schema.offene_vektoren(self.db, mid, n), lambda zeilen: schema.schreibe_vektoren(self.db, mid, self.konfig.dim, zeilen))
-            with schema._immediate(self.db):
-                status = "pausiert" if out["ende"] == "pause" else "abgebrochen" if out["ende"] == "fehler" else "fertig"
-                self.db.execute("INSERT INTO laeufe (art, start, ende, geraet, lease, eingebettet, pause_grund, status) VALUES ('einbetten', ?, ?, 'cpu', 0, ?, ?, ?)",
-                                (start, self.uhr(), out["eingebettet"], out.get("grund") or None, status))
-                if out["ende"] == "fertig" and not schema.offene_vektoren(self.db, mid, 1):
-                    self.db.execute("UPDATE laeufe SET status = 'fertig', ende = ? WHERE art = 'neuaufbau' AND status = 'laeuft'", (self.uhr(),))
-            self._vektoren_stempel = None
-            self._letzter_schritt = out
+            rows = [r for r in schema.offene_vektoren(self.db, mid, n + len(self._vektor_fehler)) if (r[0], r[2]) not in self._vektor_fehler][:n]
+            if getattr(self.dienst.e, "eingabeformat", "e1") == "e2" and rows:            # S7.6 A1: Dokument > Stelle, Tabellen als „Spalte: Wert“
+                marks = ",".join("?" * len(rows))
+                quelle = {r["nr"]: r for r in self.db.execute("SELECT nr, datei, stelle, text FROM abschnitte WHERE nr IN (" + marks + ")", [r[0] for r in rows])}
+                rows = [(nr, zerlegen.eingabetext_e2(quelle[nr]["datei"], quelle[nr]["stelle"], quelle[nr]["text"]), h) for nr, _, h in rows]
+        return rows
+
+    def _schreibe(self, mid, zeilen):
+        with self.lock:
+            return schema.schreibe_vektoren(self.db, mid, self.konfig.dim, zeilen)
+
+    def _markiere(self, nr, hash_, grund):
+        self._vektor_fehler.add((nr, hash_))
+        self.audit("WIS_ABSCHNITT_NICHT_EINBETTBAR", {"abschnitt": nr, "hash": hash_, "grund": str(grund)[:80]})
+
+    def einbetten_schritt(self):
+        """Ein Schritt des Dienstes (`EmbeddingDienst.lauf`) über die offenen Vektoren; Pause und Ende stehen in `laeufe`.
+        Die Sperre gilt nur für die Datenbank (lesen, schreiben), nicht für Start und Stapel (F3); ein zweiter gleichzeitiger
+        Schritt endet sofort mit `beschaeftigt`."""
+        if not self._einbett_lock.acquire(blocking=False):
+            return {"geraet": "cpu", "eingebettet": 0, "dauer_s": 0.0, "ende": "beschaeftigt", "grund": "anderer_schritt", "uebersprungen": 0}
+        try:
+            with self.lock:
+                ok, grund = self.dienst.bereit()
+                if not ok:
+                    self._letzter_schritt = {"geraet": "cpu", "eingebettet": 0, "dauer_s": 0.0, "ende": "fehler", "grund": grund, "uebersprungen": 0}
+                    return self._letzter_schritt
+                self._modell_pruefen()
+                mid = self.dienst.modell_id()
+                start = self.uhr()
+            out = self.dienst.lauf(lambda n: self._offene(mid, n), lambda zeilen: self._schreibe(mid, zeilen), markiere=self._markiere)
+            with self.lock:
+                with schema._immediate(self.db):
+                    status = "pausiert" if out["ende"] == "pause" else "abgebrochen" if out["ende"] == "fehler" else "fertig"
+                    self.db.execute("INSERT INTO laeufe (art, start, ende, geraet, lease, eingebettet, pause_grund, status) VALUES ('einbetten', ?, ?, 'cpu', 0, ?, ?, ?)",
+                                    (start, self.uhr(), out["eingebettet"], out.get("grund") or None, status))
+                if out["ende"] == "fertig" and not self._offene(mid, 1):
+                    with schema._immediate(self.db):
+                        self.db.execute("UPDATE laeufe SET status = 'fertig', ende = ? WHERE art = 'neuaufbau' AND status = 'laeuft'", (self.uhr(),))
+                self._vektoren_stempel = None
+                self._letzter_schritt = out
             return out
+        finally:
+            self._einbett_lock.release()
 
     def nachfuehren(self):
-        """Abgleich und ein Einbett-Schritt (Typ-Verb `wissen.nachfuehren` und Takt, G2-S7-j)."""
+        """Abgleich und ein Einbett-Schritt (Typ-Verb `wissen.nachfuehren` und Takt, G2-S7-j); keine Sperre über beides (F3)."""
+        a = self.abgleich()
+        e = self.einbetten_schritt()
         with self.lock:
-            a = self.abgleich()
-            e = self.einbetten_schritt()
             self.dienst.leerlauf_pruefen()
-            return {"abgleich": a, "einbetten": e}
+        return {"abgleich": a, "einbetten": e}
+
+    def _start_anstossen(self):
+        """Den Embedding-Server im Hintergrund starten, damit die nächste Suche hybrid ist; die jetzige wartet nicht (F3)."""
+        if self._start_thread is not None and self._start_thread.is_alive():
+            return
+
+        def run():
+            try:
+                self.dienst.starte()
+            except Exception:                                      # Fehlstarts zählt der Dienst selbst (`bereit`)
+                pass
+        self._start_thread = threading.Thread(target=run, name="wissen-embed-start", daemon=True)
+        self._start_thread.start()
 
     # ---- Suche (D7.5, D7.7; WIS-05, -06, -09, -11)
     def _abdeckung(self, mid):
@@ -390,32 +487,39 @@ class WissenSpeicher:
         woerter = fusion.woerter(frage)
         if not woerter:
             raise ValueError("wis_anfrage_leer")
+        alt = self.alternativen(woerter)
         agent = leser["art"] == "agent"
         befund_sql = " AND a.befunde = '[]'" if agent else ""
         with self.lock:
             tiefe = self.konfig.tiefe
             wort = [r[0] for r in self.db.execute(
                 "SELECT a.nr FROM abschnitte_fts f JOIN abschnitte a ON a.nr = f.rowid JOIN quellen q ON q.id = a.quelle WHERE abschnitte_fts MATCH ? AND " + where + befund_sql
-                + " ORDER BY bm25(abschnitte_fts, 2.0, 1.0), a.nr LIMIT ?", (fusion.fts_anfrage(woerter), *params, tiefe))]
+                + " ORDER BY bm25(abschnitte_fts, 2.0, 1.0), a.nr LIMIT ?", (fusion.fts_anfrage(glossar.anfrage_woerter(woerter, alt)), *params, tiefe))]
             mid, grund, anfrage = self.dienst.modell_id(), None, None
             meta = schema.lies_meta(self.db)
             bereit, bereit_grund = self.dienst.bereit()
             abdeckung, n_alle, _ = self._abdeckung(mid)
-            if not bereit:
-                grund = bereit_grund
-            elif meta.get("modell_id") != mid:
-                grund = "modell_wechsel"
-            elif abdeckung < self.konfig.abdeckung_min:
-                grund = "abdeckung"
-            else:
-                anfrage = self.dienst.anfrage_vektor(frage)
-                if anfrage is None:
-                    grund = "anfrage_vektor"
+        if not bereit:
+            grund = bereit_grund
+        elif meta.get("modell_id") != mid:
+            grund = "modell_wechsel"
+        elif abdeckung < self.konfig.abdeckung_min:
+            grund = "abdeckung"
+        elif self._start_thread is not None and self._start_thread.is_alive():
+            grund = "server_startet"
+        else:                                                      # ohne Sperre und ohne Start: höchstens `anfrage_timeout_s` (F3)
+            anfrage = self.dienst.anfrage_vektor(frage, starten=False)
+            if anfrage is None:
+                grund = "anfrage_vektor"
+                if not self.dienst.antwortet():
+                    grund = "server_startet"
+                    self._start_anstossen()
+        with self.lock:
             self._rueckfall_melden(grund)
             if grund is None:
                 erlaubt = {r[0] for r in self.db.execute("SELECT a.nr FROM abschnitte a JOIN quellen q ON q.id = a.quelle WHERE " + where + befund_sql, params)}
                 vek = [nr for nr, _ in vektor.top_k(anfrage, self._vektoren_laden(mid), tiefe, erlaubt=lambda nr: nr in erlaubt)]
-                g = self._guete(woerter, wort, n_alle)
+                g = self._guete(woerter, wort, n_alle, alt)
                 treffer = fusion.fusioniere(wort, vek, g, self.konfig.gewichte, k_aus=k)
                 modus = "hybrid"
             else:
@@ -440,16 +544,24 @@ class WissenSpeicher:
                                  "modus": modus, "k": k, "ids": ids, "frage_sha256": _sha(frage), "ms": ms, "mission_id": mission_id})
         if protokoll and leser["art"] == "captain":
             self._protokolliere(frage, ids, modus)
-        return {"modus": modus, "hinweis": hinweis, "treffer": out, "modell_id": mid if modus == "hybrid" else None, "abdeckung": round(abdeckung, 4), "ms": ms, "woerter": woerter}
+        return {"modus": modus, "hinweis": hinweis, "treffer": out, "modell_id": mid if modus == "hybrid" else None, "abdeckung": round(abdeckung, 4), "ms": ms, "woerter": woerter,
+                "glossar": alt}
 
-    def _guete(self, woerter, wort, n_alle):
-        """g(d) je Abschnitt der Wortliste: welche Wörter ein Abschnitt enthält, entscheidet FTS5 selbst (D7.5)."""
+    def alternativen(self, woerter, an=None):
+        """Die Glossar-Alternativen je Fragewort (S7.6 A2); leer, solange `suche.glossar` aus ist."""
+        an = self.konfig.glossar_an if an is None else an
+        return glossar.alternativen(woerter, self.konfig.glossar) if an and self.konfig.glossar else {}
+
+    def _guete(self, woerter, wort, n_alle, alt=None):
+        """g(d) je Abschnitt der Wortliste: welche Wörter ein Abschnitt enthält, entscheidet FTS5 selbst (D7.5). Mit Glossar gilt ein
+        Fragewort als enthalten, wenn das Wort oder eine seiner Alternativen im Abschnitt steht (S7.6 A2)."""
         if not wort:
             return {}
+        alt = alt or {}
         idf_je_wort, drin = {}, {nr: set() for nr in wort}
         marks = ",".join("?" * len(wort))
         for w in woerter:
-            q = fusion.fts_anfrage([w])
+            q = fusion.fts_anfrage([w] + list(alt.get(w, [])))
             n_w = self.db.execute("SELECT count(*) FROM abschnitte_fts WHERE abschnitte_fts MATCH ?", (q,)).fetchone()[0]
             idf_je_wort[w] = fusion.idf(n_alle, min(n_w, n_alle))
             for (nr,) in self.db.execute("SELECT rowid FROM abschnitte_fts WHERE abschnitte_fts MATCH ? AND rowid IN (" + marks + ")", (q, *wort)):
@@ -476,7 +588,8 @@ class WissenSpeicher:
     # ---- Vorschläge (D7.8, WIS-10)
     def vorschlagen(self, *, titel, text, belege, agent_id, lauf_id, aufgabe_id, block_ids, leser):
         """Ein Vorschlag eines Agenten: Form, harter Fund, Belege nur aus dem Block, höchstens 20 offene je Agent; Personenbezug erbt
-        er von seinen Belegen. Mit `beantrage` (Desk) entsteht sofort der Antrag."""
+        er von allen Treffern seines Blocks, nicht nur von den genannten Belegen – sonst trüge ein Vorschlag ohne Belege Text aus
+        einer Quelle mit Personenbezug ungekennzeichnet weiter (WIS-11, Prüfung F5). Mit `beantrage` (Desk) entsteht sofort der Antrag."""
         titel, text = str(titel or "").strip(), str(text or "").strip()
         if not titel or not text:
             raise ValueError("wis_vorschlag_leer")
@@ -493,9 +606,10 @@ class WissenSpeicher:
             if offen >= self.konfig.offene_je_agent:
                 raise ValueError("wis_vorschlaege_zu_viele")
             personenbezug = 0
-            if belege:
-                marks = ",".join("?" * len(belege))
-                personenbezug = int(bool(self.db.execute("SELECT 1 FROM abschnitte a JOIN quellen q ON q.id = a.quelle WHERE a.id IN (" + marks + ") AND q.personenbezug = 1", belege).fetchone()))
+            herkunft = sorted(set(belege) | {str(b) for b in (block_ids or ())})
+            if herkunft:
+                marks = ",".join("?" * len(herkunft))
+                personenbezug = int(bool(self.db.execute("SELECT 1 FROM abschnitte a JOIN quellen q ON q.id = a.quelle WHERE a.id IN (" + marks + ") AND q.personenbezug = 1", herkunft).fetchone()))
             jetzt = self.uhr()
             h = _sha(titel + "\n" + text)
             vid = "WV-" + _sha(f"{agent_id}|{lauf_id}|{h}|{jetzt}|{offen}")[:8]
@@ -514,7 +628,8 @@ class WissenSpeicher:
             return out
 
     def vorschlag(self, vid):
-        row = self.db.execute("SELECT * FROM vorschlaege WHERE id = ?", (vid,)).fetchone()
+        with self.lock:
+            row = self.db.execute("SELECT * FROM vorschlaege WHERE id = ?", (vid,)).fetchone()
         if row is None:
             return None
         d = dict(row)
@@ -524,7 +639,9 @@ class WissenSpeicher:
     def vorschlaege(self, status="offen"):
         sql = "SELECT * FROM vorschlaege" + (" WHERE status = ?" if status else "") + " ORDER BY erstellt DESC, id"
         out = []
-        for r in self.db.execute(sql, (status,) if status else ()):
+        with self.lock:
+            rows = self.db.execute(sql, (status,) if status else ()).fetchall()
+        for r in rows:
             d = dict(r)
             d["belege"] = json.loads(d.get("belege") or "[]")
             out.append(d)
@@ -555,12 +672,12 @@ class WissenSpeicher:
             datei.parent.mkdir(parents=True, exist_ok=True)
             zeile = {"id": v["id"], "titel": v["titel"], "text": v["text"], "hash": v["hash"], "stufe": stufe, "projekt": projekt, "personenbezug": p,
                      "agent_id": v["agent_id"], "lauf_id": v["lauf_id"], "aufgabe_id": v["aufgabe_id"], "belege": v["belege"], "freigegeben": jetzt, "gate": str(gate_id)}
-            with datei.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(zeile, ensure_ascii=False) + "\n")
             qid = self._vorschlag_quelle(stufe, projekt, p, gate_id, mission_id)
-            with schema._immediate(self.db):
+            alt = [z for z in _jsonl(datei) if z.get("id") != v["id"]]
+            with schema._immediate(self.db):                          # Status und Datei zusammen: scheitert die Datei, rollt der Status zurück (F6)
                 self.db.execute("UPDATE vorschlaege SET status = 'freigegeben', entschieden = ?, vorschlag_stufe = ?, vorschlag_projekt = ?, personenbezug = ? WHERE id = ?",
                                 (jetzt, stufe, projekt, p, v["id"]))
+                _schreibe_atomar(datei, "".join(json.dumps(z, ensure_ascii=False) + "\n" for z in alt + [zeile]))
             self.abgleich(qid)
             self.audit("WIS_VORSCHLAG_AUFGENOMMEN", {"id": v["id"], "quelle": qid, "stufe": stufe, "projekt": projekt, "personenbezug": p})
             return {"id": v["id"], "quelle": qid}
@@ -584,8 +701,7 @@ class WissenSpeicher:
                 raise ValueError("wis_vorschlag_unbekannt")
             datei = self.projekt_root / Path(*adapter_mod.VORSCHLAEGE.split("/"))
             if datei.is_file():
-                zeilen = [z for z in datei.read_text(encoding="utf-8").splitlines() if z.strip() and json.loads(z).get("id") != vid]
-                datei.write_text("".join(z + "\n" for z in zeilen), encoding="utf-8")
+                _schreibe_atomar(datei, "".join(json.dumps(z, ensure_ascii=False) + "\n" for z in _jsonl(datei) if z.get("id") != vid))
             with schema._immediate(self.db):
                 self.db.execute("DELETE FROM abschnitte WHERE datei = ?", ("vorschlag:" + vid,))
                 self.db.execute("UPDATE vorschlaege SET status = 'veraltet', entschieden = ? WHERE id = ?", (self.uhr(), vid))
@@ -605,31 +721,27 @@ class WissenSpeicher:
             pass
 
     def nachmessung(self):
-        p = self._nachmessung_datei()
-        if not p.is_file():
-            return []
-        out = []
-        for z in p.read_text(encoding="utf-8").splitlines():
-            if z.strip():
-                try:
-                    out.append(json.loads(z))
-                except ValueError:
-                    continue
-        return out
+        with self.lock:
+            return _jsonl(self._nachmessung_datei())
 
     def nachmessung_bewerten(self, frage_sha256, urteil):
         if urteil not in URTEILE:
             raise ValueError("wis_nachmessung_urteil")
-        saetze = self.nachmessung()
-        for s in saetze:
-            if s.get("frage_sha256") == frage_sha256:
-                s["urteil"] = urteil
-        self._nachmessung_datei().write_text("".join(json.dumps(s) + "\n" for s in saetze), encoding="utf-8")
+        with self.lock:                                          # unter derselben Sperre wie `_protokolliere`: kein Satz geht verloren (F6)
+            saetze = _jsonl(self._nachmessung_datei())
+            for s in saetze:
+                if s.get("frage_sha256") == frage_sha256:
+                    s["urteil"] = urteil
+            _schreibe_atomar(self._nachmessung_datei(), "".join(json.dumps(s) + "\n" for s in saetze))
         return {"frage_sha256": frage_sha256, "urteil": urteil}
 
     def nachmessung_abschliessen(self):
         """Die bewerteten Fragen zählen, Ergebnis als Datei neben dem Speicher, Audit `WIS_NACHMESSUNG`; das Protokoll beginnt neu."""
-        saetze = self.nachmessung()
+        with self.lock:
+            return self._nachmessung_abschliessen()
+
+    def _nachmessung_abschliessen(self):
+        saetze = _jsonl(self._nachmessung_datei())
         bewertet = [s for s in saetze if s.get("urteil") in URTEILE]
         getroffen = sum(1 for s in bewertet if s["urteil"] == "getroffen")
         beantwortbar = [s for s in bewertet if s["urteil"] != "ohne_antwort"]
@@ -638,7 +750,7 @@ class WissenSpeicher:
         ergebnis = {"fragen": len(bewertet), "getroffen": getroffen, "anteil": anteil, "zeitraum": [min(zeiten), max(zeiten)] if zeiten else None, "saetze": bewertet}
         datum = self.uhr()[:10]
         ziel = self.pfad.parent / f"nachmessung_{datum}.json"
-        ziel.write_text(json.dumps(ergebnis, ensure_ascii=False, indent=1), encoding="utf-8")
+        _schreibe_atomar(ziel, json.dumps(ergebnis, ensure_ascii=False, indent=1))
         p = self._nachmessung_datei()
         if p.is_file():
             p.unlink()

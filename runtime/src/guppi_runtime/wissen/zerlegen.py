@@ -210,7 +210,9 @@ def zerlege_logbuch(text, kopf):
         if z.startswith("| 20"):
             zellen = [c.strip() for c in z.strip().strip("|").split("|")]
             zeit, art, eintrag = (zellen + ["", "", ""])[:3]
-            out.append({"stelle": f"{titel} > Zeile {zeit} {art} {eintrag[:60]}", "teil": 1, "text": z})
+            stelle = f"{titel} > Zeile {zeit} {art} {eintrag[:60]}"
+            teile = _schneide(z, ZIEL_ZEICHEN) if len(z) > MAX_ZEICHEN else [z]      # auch eine lange Zeile bleibt unter der Grenze (F10)
+            out.extend({"stelle": stelle, "teil": i, "text": t} for i, t in enumerate(teile, 1))
         else:
             rest.append(z)
     return _abschnitt(titel, rest, ZIEL_ZEICHEN, MAX_ZEICHEN) + out
@@ -233,3 +235,50 @@ def abschnitt_hash(stelle, text, version=ZERLEGER_VERSION):
 def eingabetext(stelle, text):
     """Eingabeformat e1 fürs Einbetten: Stelle, Zeilenumbruch, Text."""
     return f"{stelle}\n{text}"
+
+
+SPEICHER_NAMEN = {"knowledge": "Wissensnotiz", "arbeitsumfeld": "Arbeitsumfeld", "gateway": "KI-GateWay", "vorschlag": "Freigegebener Vorschlag"}
+
+
+def dokumentname(datei):
+    """Ein lesbarer Name der Herkunft: bei Dateien der Name ohne Endung (Unterstriche als Leerzeichen), bei Einträgen eines Speichers
+    (`knowledge:KN-1`, `gateway:R-07`) der Name des Speichers."""
+    datei = str(datei or "")
+    vorn = datei.split(":", 1)[0]
+    if ":" in datei and vorn in SPEICHER_NAMEN:
+        return SPEICHER_NAMEN[vorn]
+    name = datei.rsplit("/", 1)[-1]
+    name = name.rsplit(".", 1)[0] if "." in name else name
+    return " ".join(name.replace("_", " ").split()) or "?"
+
+
+def _zellen(zeile):
+    return [c.strip() for c in zeile.strip().strip("|").split("|")]
+
+
+def tabellen_als_zeilen(text):
+    """Markdown-Tabellen eines Abschnitts als „Spalte: Wert; Spalte: Wert“ je Zeile (S7.6 A1): so trägt jede Zeile im Vektor ihre
+    Spaltennamen. Text ohne Tabelle (Kopfzeile + Trennzeile) bleibt, wie er ist; leere Zellen entfallen."""
+    zeilen = str(text).split("\n")
+    out, kopf, i = [], None, 0
+    while i < len(zeilen):
+        z = zeilen[i]
+        if z.lstrip().startswith("|") and i + 1 < len(zeilen) and _TRENNER.match(zeilen[i + 1]) and zeilen[i + 1].lstrip().startswith("|"):
+            kopf = _zellen(z)
+            i += 2
+            continue
+        if kopf is not None and z.lstrip().startswith("|"):
+            werte = _zellen(z)
+            paare = [f"{k}: {v}" if k else v for k, v in zip(kopf + [""] * max(0, len(werte) - len(kopf)), werte) if v]
+            out.append("; ".join(paare))
+        else:
+            kopf = None if not z.lstrip().startswith("|") else kopf
+            out.append(z)
+        i += 1
+    return "\n".join(out)
+
+
+def eingabetext_e2(datei, stelle, text):
+    """Eingabeformat e2 fürs Einbetten (S7.6 A1, Muster „Contextual Retrieval“ ohne Modell): Dokument > Stelle, Zeilenumbruch,
+    Text mit Tabellenzeilen als „Spalte: Wert“. Nur der Vektor sieht diese Form; Volltext und Datenblock behalten den Originaltext."""
+    return f"{dokumentname(datei)} > {stelle}\n{tabellen_als_zeilen(text)}"

@@ -12,8 +12,11 @@ from pathlib import Path
 import yaml
 
 from ..local_paths import expand
+from . import glossar as glossar_mod
 
 SCHEMA = 1
+EINGABEFORMATE = ("e1", "e2")                            # e1: Stelle + Text; e2: Dokument > Stelle + Text, Tabellen als „Spalte: Wert“ (S7.6 A1)
+GLOSSAR = "wissen_glossar.yaml"
 ALIAS = "wissen-embed"
 VERBOTENE_PORTS = (8089,)                                    # der Modellserver für Chat und Agenten (D7.4)
 
@@ -32,6 +35,9 @@ class Konfig:
     leerlauf_s: float = 900.0
     anfrage_timeout_s: float = 5.0
     eingabeformat: str = "e1"
+    glossar_an: bool = False                                 # S7.6 A2: erst nach der Messung S7.2-F einschalten
+    glossar: list = field(default_factory=list)              # Gruppen aus config/ und local_config/ (wissen_glossar.yaml)
+    datamarking: bool = False                                # S7.6 A4: erst nach dem Einschleus-Test mit dem lokalen Modell
     dim: int = 1024
     tiefe: int = 50
     k: int = 5
@@ -106,11 +112,16 @@ def load(config_path, local_path=None):
     k.leerlauf_s = _zahl(e, "leerlauf_s", float, k.leerlauf_s, mindestens=1)
     k.anfrage_timeout_s = _zahl(e, "anfrage_timeout_s", float, k.anfrage_timeout_s, mindestens=0.1)
     k.eingabeformat = str(e.get("eingabeformat") or "e1")
+    if k.eingabeformat not in EINGABEFORMATE:
+        raise ValueError("wissen_config_invalid:eingabeformat")
     k.dim = _zahl(e, "dim", int, k.dim, mindestens=1)
     s = w.get("suche") or {}
     k.tiefe = _zahl(s, "tiefe", int, k.tiefe, mindestens=1)
     k.k = _zahl(s, "k", int, k.k, mindestens=1)
     k.abdeckung_min = _zahl(s, "abdeckung_min", float, k.abdeckung_min, mindestens=0)
+    if not isinstance(s.get("glossar", False), bool):
+        raise ValueError("wissen_config_invalid:glossar")
+    k.glossar_an = s.get("glossar", False)
     f = w.get("fusion") or {}
     if not isinstance(f, dict):
         raise ValueError("wissen_config_invalid:fusion")
@@ -124,6 +135,9 @@ def load(config_path, local_path=None):
     k.je_treffer = _zahl(kx, "je_treffer", int, k.je_treffer, mindestens=1)
     k.gesamt = _zahl(kx, "gesamt", int, k.gesamt, mindestens=1)
     k.kontext_treffer = _zahl(kx, "treffer", int, k.kontext_treffer, mindestens=1)
+    if not isinstance(kx.get("datamarking", False), bool):
+        raise ValueError("wissen_config_invalid:datamarking")
+    k.datamarking = kx.get("datamarking", False)
     v = w.get("vorschlaege") or {}
     k.offene_je_agent = _zahl(v, "offen_je_agent", int, k.offene_je_agent, mindestens=1)
     k.titel_max = _zahl(v, "titel_max", int, k.titel_max, mindestens=1)
@@ -146,4 +160,22 @@ def load(config_path, local_path=None):
             k.cpu_threads = _zahl(lw, "cpu_threads", int, None, mindestens=1)
         if "pooling" in lw:
             k.pooling = str(lw.get("pooling") or "")
+    k.glossar = lade_glossar(Path(config_path).parent / GLOSSAR, Path(local_path).parent / GLOSSAR if local_path is not None else None)
     return k
+
+
+def lade_glossar(paket, lokal=None):
+    """Die Gruppen des Glossars: Paket-Datei (fehlt sie, leer) plus lokale Ergänzungen; kaputt → `wissen_config_invalid:glossar`."""
+    gruppen = []
+    for pfad in (paket, lokal):
+        if pfad is None or not Path(pfad).is_file():
+            continue
+        try:
+            data = yaml.safe_load(Path(pfad).read_text(encoding="utf-8")) or {}
+            block = data.get("wissen_glossar") if isinstance(data, dict) else None
+            if not isinstance(block, dict) or block.get("schema") != 1:
+                raise ValueError("schema")
+            gruppen += glossar_mod.pruefe(block.get("gruppen") or [])
+        except Exception:
+            raise ValueError("wissen_config_invalid:glossar") from None
+    return gruppen

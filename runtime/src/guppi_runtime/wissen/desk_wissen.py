@@ -247,18 +247,18 @@ def _zuruecknehmen(hub, oid, args):
 # ---- Applier (desk/gated.py)
 def _antrag_von(hub, kind, binding):
     """(mission_id, gate_id) des Antrags, dessen Bindung gerade angewendet wird: der Applier bekommt nur die Bindung, die Quelle
-    trägt aber Gate und Mission ihrer Freigabe (D7.2)."""
-    try:
-        missionen = hub.runtime.missions.list()
-    except Exception:
-        return "gated", "gated"
+    trägt aber Gate und Mission ihrer Freigabe (D7.2). Ohne passenden Antrag `wis_antrag_unbekannt`: dann entsteht nichts."""
+    missionen = hub.runtime.missions.list()                       # ein Lesefehler bricht den Applier ab, statt ohne Freigabe-ID anzulegen
     for m in reversed(missionen):
         req = (m.get("context") or {}).get(gated.CONTEXT) or {}
         if req.get("kind") != kind or req.get("binding") != binding or (m.get("lifecycle") or {}).get("status") == "closed":
             continue                                           # ein früherer, abgelehnter Antrag mit gleicher Bindung zählt nicht
         gates = (m.get("human_gates") or {}).get("resolved") or (m.get("human_gates") or {}).get("pending") or []
-        return m["identity"]["mission_id"], (gates[0].get("gate_id") if gates else "gated")
-    return "gated", "gated"
+        gate_id = gates[0].get("gate_id") if gates else None
+        if not gate_id:
+            raise ValueError("wis_antrag_unbekannt")
+        return m["identity"]["mission_id"], gate_id
+    raise ValueError("wis_antrag_unbekannt")                          # nie still mit „gated“ als Freigabe (G4-Auflage 6, Prüfung F8)
 
 
 def _quelle_freigeben(hub, binding):

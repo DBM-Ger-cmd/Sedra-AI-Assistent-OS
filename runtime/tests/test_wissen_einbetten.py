@@ -58,7 +58,7 @@ class Server(Basis):
         with mock.patch("socket.create_connection", merke):
             out = self.sp.einbetten_schritt()
         self.assertEqual(out["ende"], "fertig")
-        self.assertEqual(out["eingebettet"], 13)
+        self.assertEqual(out["eingebettet"], 12)
         self.assertEqual(set(adressen), {"127.0.0.1"}, "WIS-04: kein Netz")
         self.assertTrue(adressen)
         pid = json.loads(self.sp.dienst.pid_datei.read_text(encoding="utf-8"))
@@ -75,7 +75,7 @@ class Server(Basis):
         self.assertTrue(proc.beendet)
         self.assertFalse(self.sp.dienst.pid_datei.exists())
         self.assertEqual(self.audit.nur("WIS_EMBED_SERVER")[-1]["aktion"], "stop")
-        self.assertEqual(len(self.srv.anfragen), 2, "Prüfsatz und ein Stapel von 13")
+        self.assertEqual(len(self.srv.anfragen), 2, "Prüfsatz und ein Stapel von 12")
 
     def test_ein_fremder_server_auf_dem_port_wird_nicht_angefasst(self):
         fremd = FakeEmbedServer(alias="anderer")
@@ -116,14 +116,14 @@ class Modell(Basis):
         self.assertEqual(mid, "fake-embed@" + self.sp.konfig.modell_sha256[:12] + "#modell#8#e1")
         self.sp.einbetten_schritt()
         self.assertEqual(schema.lies_meta(self.sp.db)["modell_id"], mid)
-        self.assertEqual(self.sp.db.execute("SELECT count(*) FROM vektoren WHERE modell_id = ?", (mid,)).fetchone()[0], 13)
+        self.assertEqual(self.sp.db.execute("SELECT count(*) FROM vektoren WHERE modell_id = ?", (mid,)).fetchone()[0], 12)
         self.sp.dienst.e = self.sp.dienst.e.__class__(**{**self.sp.dienst.e.__dict__, "pooling": "cls"})
         neu = self.sp.dienst.modell_id()
         self.assertNotEqual(neu, mid)
         self.assertEqual(self.sp.suche("VRAM", leser=S.CAPTAIN)["modus"], "volltext", "bis zum Neuaufbau nur Volltext")
         out = self.sp.einbetten_schritt()
-        self.assertEqual(self.audit.nur("WIS_MODELL_WECHSEL"), [{"alt": mid, "neu": neu, "geloescht": 13}])
-        self.assertEqual(out["eingebettet"], 13)
+        self.assertEqual(self.audit.nur("WIS_MODELL_WECHSEL"), [{"alt": mid, "neu": neu, "geloescht": 12}])
+        self.assertEqual(out["eingebettet"], 12)
         self.assertEqual(self.sp.db.execute("SELECT count(*) FROM vektoren WHERE modell_id = ?", (mid,)).fetchone()[0], 0, "alle Vektoren der alten ID weg")
         self.assertEqual(self.sp.db.execute("SELECT status FROM laeufe WHERE art = 'neuaufbau'").fetchone()[0], "fertig")
         self.assertEqual(self.sp.stand()["neuaufbau"], False)
@@ -134,8 +134,8 @@ class Modell(Basis):
             with schema._immediate(self.sp.db):
                 self.sp.db.execute("UPDATE quellen SET quell_hash = NULL")
             a = self.sp.abgleich()
-        self.assertEqual(a["geaendert"], 13)
-        self.assertEqual(self.sp.einbetten_schritt()["eingebettet"], 13)
+        self.assertEqual(a["geaendert"], 12)
+        self.assertEqual(self.sp.einbetten_schritt()["eingebettet"], 12)
 
 
 class Pause(Basis):
@@ -149,9 +149,9 @@ class Pause(Basis):
         self.assertEqual(self.sp.stand()["pause_grund"], "lease:devvm-build")
         self.lab.halter = {"owner": "guppi-uix", "stale": False}
         out = self.sp.einbetten_schritt()
-        self.assertEqual((out["ende"], out["geraet"], out["eingebettet"]), ("fertig", "cpu", 13), "der Modellserver für Chat und Agenten hält nicht an")
+        self.assertEqual((out["ende"], out["geraet"], out["eingebettet"]), ("fertig", "cpu", 12), "der Modellserver für Chat und Agenten hält nicht an")
         e = self.audit.nur("WIS_EINBETTEN")[-1]
-        self.assertEqual((e["geraet"], e["eingebettet"], e["ende"]), ("cpu", 13, "fertig"))
+        self.assertEqual((e["geraet"], e["eingebettet"], e["ende"]), ("cpu", 12, "fertig"))
         self.assertGreaterEqual(e["dauer_s"], 0.0)
         self.assertEqual(self.sp.db.execute("SELECT status, lease FROM laeufe WHERE art = 'einbetten' ORDER BY id").fetchall()[0][:], ("pausiert", 0))
 
