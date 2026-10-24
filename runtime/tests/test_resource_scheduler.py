@@ -289,6 +289,23 @@ class ReserveTests(Base):
         self.assertEqual([t for t in self.types() if t.startswith('RESOURCE')], ['RESOURCE_RESERVED', 'RESOURCE_DENIED', 'RESOURCE_RELEASED'])   # the second release is silent
         self.assertTrue(self.audit.verify_chain())
 
+    def test_a_refusal_is_audited_with_its_numbers(self):
+        # Spec 2 (SCH-03, G2-S2-08): RESOURCE_DENIED carries need and free memory, not only the reason
+        s = self.scheduler()
+        self.hw.state = sample(gpus=((16.0, 9.0),))
+        out = s.reserve('SDJ-B', 'A1', {'vram_gb': 12})
+        self.assertEqual(out['detail'], {'need_gb': 12.0, 'best_free_gb': 8.0, 'measured_free_gb': 9.0})
+        s.audit_denied('server:main', 'vram_insufficient', need_gb=11.0, measured_free_gb=None, limit_gb=11.5)
+        denied = [json.loads(x) for x in (self.root / 'audit.jsonl').read_text(encoding='utf-8').splitlines() if '"RESOURCE_DENIED"' in x]
+        self.assertEqual([{k: d['payload'].get(k) for k in ('job_id', 'reason', 'need_gb', 'best_free_gb', 'measured_free_gb', 'limit_gb')} for d in denied],
+                         [{'job_id': 'SDJ-B', 'reason': 'vram_insufficient', 'need_gb': 12.0, 'best_free_gb': 8.0, 'measured_free_gb': 9.0, 'limit_gb': None},
+                          {'job_id': 'server:main', 'reason': 'vram_insufficient', 'need_gb': 11.0, 'best_free_gb': None, 'measured_free_gb': None, 'limit_gb': 11.5}])
+        self.assertEqual(s.measured_free_vram_gb(), 9.0)
+        self.hw.fail = True
+        self.assertIsNone(s.measured_free_vram_gb())
+        off = ResourceScheduler(ResourceConfig(dict(raw_config(), enabled=False)), self.hw, self.root / 'x.json')
+        self.assertIsNone(off.measured_free_vram_gb())
+
     def test_view_reports_ledger_and_headroom(self):
         s = self.scheduler(); s.reserve('SDJ-A', 'A1', {'ram_gb': 10, 'vram_gb': 5})
         view = s.view()

@@ -235,5 +235,127 @@ class ReservationTests(LabCase):
                 self.assertIsNone(self.a.try_acquire("chain-low", "x", priority=1))
                 self.assertTrue(self.b.try_acquire("chain-high", "y", priority=2))
 
+
+class SchemaTwoTests(LabCase):
+    """S2.H1 (D2.3, D2.7): the slot tables in testlab.db, the backup before the migration and the waiting taker in `handover_requests`."""
+
+    def _tables(self, lab):
+        with lab._db() as db:
+            return {r["name"] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}, db.execute("PRAGMA user_version").fetchone()[0]
+
+    def test_a_new_file_has_schema_2_with_the_four_slot_tables_and_no_backup(self):
+        tables, version = self._tables(self.a)
+        self.assertEqual(version, 2)
+        self.assertTrue({"slot_server", "slot_leases", "handover_requests", "slot_events", "lease", "reservations"} <= tables)
+        self.assertEqual((self.a.schema, self.a.schema_error, self.a.backup), (2, None, None))
+        self.assertEqual(list(self.path.parent.glob("*.bak-*")), [])
+
+    def test_the_slot_tables_are_the_seed_word_for_word(self):
+        import ast
+        seed = Path(__file__).resolve().parents[1] / "benchmarks" / "s2_schema_seed" / "slot_db.py"
+        tree = ast.parse(seed.read_text(encoding="utf-8"))
+        text = next(n.value.value for n in tree.body if isinstance(n, ast.Assign) and n.targets[0].id == "SCHEMA")
+        from guppi_runtime.jobs import slot_db, testlab
+        self.assertEqual(testlab.SLOT_SCHEMA, text)
+        self.assertIs(slot_db.SCHEMA, testlab.SLOT_SCHEMA)
+
+    def _schema_one_file(self):
+        import sqlite3
+        from guppi_runtime.jobs.testlab import SCHEMA
+        path = Path(self.tmp.name) / "old" / "testlab.db"
+        path.parent.mkdir()
+        db = sqlite3.connect(path)
+        db.executescript(SCHEMA)
+        db.execute("INSERT INTO events (ts, kind, owner, detail) VALUES (1, 'acquired', 'old', 'x')")
+        db.commit()
+        db.close()
+        return path
+
+    def test_a_file_with_data_is_backed_up_before_the_migration_and_keeps_its_rows(self):
+        import sqlite3
+        path = self._schema_one_file()
+        self.clock.t = 1792800000.0                      # 2026-10-24 UTC
+        lab = TestLab(path, clock=self.clock, alive=lambda p: True, pid=111)
+        self.assertEqual((lab.schema, lab.schema_error), (2, None))
+        self.assertEqual(lab.backup.name, "testlab.db.bak-20261024-schema2")
+        old = sqlite3.connect(lab.backup)
+        self.assertEqual(old.execute("PRAGMA user_version").fetchone()[0], 0)
+        self.assertEqual(old.execute("SELECT owner FROM events").fetchall(), [("old",)])
+        old.close()
+        self.assertEqual(lab.events()[-1]["owner"], "old")
+        again = TestLab(path, clock=self.clock, alive=lambda p: True, pid=111)
+        self.assertIsNone(again.backup)                  # migrated once, backed up once
+        self.assertEqual(len(list(path.parent.glob("*.bak-*"))), 1)
+
+    def test_a_failed_backup_leaves_schema_1_and_the_lease_works_as_before(self):
+        from unittest import mock
+        path = self._schema_one_file()
+        with mock.patch("guppi_runtime.jobs.testlab._backup_path", return_value=path.parent):     # a directory: sqlite cannot open it
+            lab = TestLab(path, clock=self.clock, alive=lambda p: True, pid=111)
+        self.assertEqual(lab.schema, 1)
+        self.assertTrue(lab.schema_error.startswith("testlab_schema2_failed:"))
+        self.assertNotIn("slot_leases", self._tables(lab)[0])
+        self.assertTrue(lab.try_acquire("chat-1", "x"))
+        self.assertFalse(lab.register_waiter("bench", "y"))
+        from guppi_runtime.jobs import slot_db
+        with mock.patch("guppi_runtime.jobs.testlab._backup_path", return_value=path.parent):
+            with self.assertRaises(ValueError):
+                slot_db.open_db(path)
+
+    def _waiters(self):
+        with self.a._db() as db:
+            return [dict(r) for r in db.execute("SELECT * FROM handover_requests")]
+
+    def test_a_waiting_taker_stands_in_handover_requests_until_it_gets_the_lease(self):
+        token = self.a.try_acquire("sedra-scheduler", "model server")
+        seen = []
+
+        def nap(seconds):
+            seen.append([(w["owner"], w["purpose"], w["priority"], w["pid"]) for w in self._waiters()])
+            self.clock.t += seconds
+            if len(seen) == 2:
+                self.a.release(token)
+        self.assertTrue(self.b.acquire("bench-ladder", "context ladder", wait_s=60, poll_s=5, sleep=nap, priority=1))
+        self.assertEqual(seen, [[("bench-ladder", "context ladder", 1, 222)]] * 2)
+        self.assertEqual(self._waiters(), [])
+        with self.a._db() as db:
+            kinds = [r["kind"] for r in db.execute("SELECT kind FROM slot_events")]
+        self.assertEqual(kinds, ["handover"])            # one event for the request, not one per poll
+
+    def test_a_given_up_wait_removes_the_entry_and_an_immediate_refusal_never_writes_one(self):
+        self.assertTrue(self.a.try_acquire("sedra-scheduler", "model server"))
+        with self.assertRaises(LeaseBusy):
+            self.b.acquire("bench", "x", wait_s=0)
+        with self.a._db() as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM slot_events").fetchone()[0], 0)
+
+        def nap(seconds):
+            self.assertEqual(len(self._waiters()), 1)
+            self.clock.t += seconds
+        with self.assertRaises(LeaseBusy):
+            self.b.acquire("bench", "x", wait_s=10, poll_s=5, sleep=nap)
+        self.assertEqual(self._waiters(), [])
+
+    def test_the_heartbeat_of_the_entry_is_utc_text_and_refreshed_per_poll(self):
+        self.clock.t = 1792800000.0
+        self.assertTrue(self.a.register_waiter("bench", "x", ttl_s=60))
+        self.clock.t += 7
+        self.assertFalse(self.a.register_waiter("bench", "x", ttl_s=60))
+        row = self._waiters()[0]
+        self.assertEqual((row["since"], row["heartbeat"], row["ttl_s"]), ("2026-10-24T00:00:00Z", "2026-10-24T00:00:07Z", 60))
+        self.assertTrue(self.a.clear_waiter("bench"))
+        self.assertFalse(self.a.clear_waiter("bench"))
+
+    def test_the_slot_store_works_on_the_test_lab_file(self):
+        from guppi_runtime.jobs import slot_db, slot_store
+        conn = slot_db.open_db(self.path)
+        self.addCleanup(conn.close)
+        cfg = {"age_after_s": 120, "age_cap": 5, "swap": "none", "queue_max": 6, "wait_max_s": 600}
+        now = "2026-10-24T00:00:00Z"
+        slot_store.request(conn, "SDJ-1", "job", "worker-1", 5, now)
+        self.assertTrue(slot_store.take(conn, "SDJ-1", now, cfg)["granted"])      # server `aus`: the first one is the starter
+        self.assertEqual(slot_store.view(conn, now, cfg)["belegt"][0]["run_id"], "SDJ-1")
+
+
 if __name__ == "__main__":
     unittest.main()

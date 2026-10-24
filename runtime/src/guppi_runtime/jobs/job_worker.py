@@ -98,8 +98,9 @@ class Worker:
         try:
             claimed = sup.claim(self.worker_id, self.roles)
         except JobError as exc:
-            if exc.code in {"no_job", "worker_busy"}:
-                return {"status": "idle" if exc.code == "no_job" else "busy"}
+            if exc.code in {"no_job", "worker_busy", "no_slot"}:
+                # no_slot: jobs are queued but every slot is taken (or the server is starting); the job loses nothing by waiting
+                return {"status": {"no_job": "idle", "worker_busy": "busy", "no_slot": "waiting"}[exc.code]}
             raise
         job_id = claimed["job"]["job_id"]
         started = sup.confirm_start(job_id, self.worker_id)
@@ -157,7 +158,7 @@ class Worker:
         while not self.stopped.is_set() and (max_iterations is None or len(seen) < max_iterations):
             out = self.run_once()
             seen.append(out["status"])
-            if out["status"] in {"idle", "busy"}:
+            if out["status"] in {"idle", "busy", "waiting"}:
                 self._sleep(self.idle_sleep_s)
         return seen
 

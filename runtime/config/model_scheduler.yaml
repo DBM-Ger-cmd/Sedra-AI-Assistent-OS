@@ -1,0 +1,25 @@
+# Model scheduler (Spec 2, D2.11): ONE owner of the model server and the GPU lease, slots of the running server handed out per run.
+# Numbers are starting values without measurement behind them unless the comment says otherwise. Missing or invalid file: the scheduler
+# stays off, behaviour is as today, and boot() says why (`model_scheduler.error`).
+# The machine overlay local_config/model_scheduler.yaml may change ONLY: enabled, swap, queue_max, wait_max_s, slots_cap_by_profile.
+model_scheduler:
+  schema: 1
+  enabled: false                 # Feature flag. Default OFF: workers 1, no slot leases, uix_server keeps its own lease (as today).
+  vram_limit_gb: 11.5            # Captain 2026-10-22: the limit INCLUDES the reserve (resource_scheduler.vram_reserve_gb 0.7), so 10.8 GB usable
+  priorities: {captain: 7, agent: 5, routine: 3}      # all below job_supervisor critical.min_priority 8 (G2-S2-12)
+  age_after_s: 120               # every full 120 s of waiting lifts a run one step
+  age_cap: 5                     # ageing stops at Agent; the Captain's step is never reached by ageing
+  wait_max_s: 600                # the oldest waiting run beyond this gives one hint (slot.changed warning, cloud offer); see OP-S2-16 for long prompts
+  queue_max: 6
+  offer_every_s: 900
+  drain_max_s: 1800              # handover to a benchmark: wait at most this long for active runs; nothing is killed after it
+  slot_ttl_s: 120                # stored with every slot lease; a lease ends with its run, never by the clock (OP-S2-14)
+  poll_s: 2
+  restart: {max: 3, window_s: 600}
+  garbage: {count: 2, window_s: 300}
+  swap: none                     # none | idle | {fallback: <recipe id>}
+  slots_cap_by_profile: {quiet: 1, ai-sustained: 1, balanced: 2}     # hardware profile -> at most this many slot leases; other profiles: the recipe
+  # Captain 2026-10-23 (measurement S2.1, docs/MESSBERICHT_SLOTS_2026-10-23.md): 2 slots as the standard for both models (main model 32768
+  # per slot). The recipe carries the number that takes effect (server.slots and context.per_slots in the role_routing overlay); these two
+  # values are the reference the scheduler reports in its view; it does not enforce them.
+  standard_slots: {hauptmodell: 2, hilfsmodell: 2}

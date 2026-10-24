@@ -100,7 +100,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(len(config.roles), 12)     # Spec 1 S1.H8: dazu foreman
 
     def test_invalid_values_refuse_start(self):
-        bad = [dict(workers=2), dict(lease_s=1000, max_lease_s=900), dict(lease_s=30, heartbeat_interval_s=20),
+        bad = [dict(workers=0), dict(workers=9), dict(workers='2'), dict(lease_s=1000, max_lease_s=900), dict(lease_s=30, heartbeat_interval_s=20),
                dict(retry={'limit': 11}), dict(retry={'limit': -1}), dict(roles={}), dict(roles={'x': {'mutates': 'yes', 'capability': 'c'}}),
                dict(claim_timeout_s=0), dict(enabled='yes'), dict(dependency_satisfied_states=['NOPE'])]
         for overrides in bad:
@@ -1019,6 +1019,161 @@ class StalledReworkTests(Base):
         out = self.sup.reject_verification(job_id, findings=['still wrong'])
         self.assertEqual(out['status'], 'BLOCKED')
         self.assertEqual(self.load(job_id)['last_error']['reason_code'], 'rework_stalled')
+
+
+
+class SlotTests(Base):
+    """Spec 2, S2.H4a (G2-S2-04, 12): with the model scheduler on, a job is claimed only with a slot, waits in line without losing an
+    attempt, ages, and the server holds the one reservation. Fake loader and runtime; no model, no GPU."""
+    config_overrides = {'workers': 3}
+
+    def setUp(self):
+        super().setUp()
+        from guppi_runtime.jobs.testlab import TestLab
+        from model_scheduler_fakes import make_scheduler, resolution
+        self.make_resolution = resolution
+        self.big = False
+        self.recipes = {}
+        self.slots, self.lab, self.loader, self.runtime, _, _ = make_scheduler(self.root / 'lab')
+        self.lab.clock = lambda: self.clock.wall.timestamp()
+        self.addCleanup(self.slots._release_gpu)
+        self.TestLab = TestLab
+        self.reserved = []
+        test = self
+
+        class Ledger:
+            enabled = True
+            def reserve(self, *args, **kw): test.reserved.append(args); return {'status': 'GRANTED', 'reservation': None}
+            def release_job(self, job_id): return 0
+            def reconcile(self, live): return []
+            def refresh(self): return True
+        self.sup = self.make_supervisor(resolver=self.resolve, scheduler=Ledger())
+        self.sup.slots = self.slots
+
+    def resolve(self, role, req, exclude, independent_of):
+        return self.make_resolution(recipe=self.recipes.get(role, 'main.local'), vram_gb=10.5 if self.big else 8.0)
+
+    def lease(self, job_id):
+        with self.lab._db() as db:
+            row = db.execute('SELECT * FROM slot_leases WHERE run_id=?', (job_id,)).fetchone()
+        return dict(row) if row else None
+
+    def queued(self, role='reviewer', priority=5):
+        job = self.job(role, priority=priority)
+        self.sup.enqueue(job['job_id'])
+        self.clock.advance(1)                         # distinct arrival times: the line is by arrival, not by the random job id
+        return job['job_id']
+
+    def test_the_shipped_file_allows_up_to_8_workers_and_gives_the_starter_240_s(self):
+        shipped = SupervisorConfig.load(CONFIG)
+        self.assertEqual((shipped.workers, shipped.claim_timeout_s), (1, 240))
+        self.assertEqual(SupervisorConfig(raw_config(workers=8)).workers, 8)
+
+    def test_a_job_is_claimed_only_with_a_slot_and_the_last_one_waits_without_losing_an_attempt(self):
+        a, b, c = self.queued(), self.queued(), self.queued()
+        self.assertEqual(self.sup.claim('w1', ['reviewer'])['job']['job_id'], a)
+        self.assertEqual(self.sup.confirm_start(a, 'w1')['status'], 'running')
+        self.assertEqual(self.sup.claim('w2', ['reviewer'])['job']['job_id'], b)
+        self.assertEqual(self.sup.confirm_start(b, 'w2')['status'], 'running')
+        with self.assertRaises(JobError) as ctx:
+            self.sup.claim('w3', ['reviewer'])
+        self.assertEqual((ctx.exception.code, ctx.exception.detail), ('no_slot', 'kein_slot'))
+        stored = self.load(c)
+        self.assertEqual((stored['state'], stored['attempts'], stored['worker'], self.lease(c)['state']), ('QUEUED', 0, None, 'wartend'))
+        self.assertEqual(self.loader.loaded, [('main.local', 2, 32768)])                 # one server, started once by the first job
+        self.assertEqual(self.reserved, [])                                               # jobs with a slot reserve nothing themselves
+        self.assertIsNone(self.load(a)['attempt_log'][0]['reservation_id'])
+        self.sup.cancel(a, requested_by='t', reason='r')
+        self.sup.acknowledge_cancel(a, 'w1')
+        self.assertEqual(self.lease(a)['state'], 'fertig')
+        self.assertEqual(self.sup.claim('w3', ['reviewer'])['job']['job_id'], c)
+
+    def test_a_waiting_routine_job_ages_up_to_agent_and_then_comes_first_by_arrival(self):
+        self.slots.take_for_job('BUSY-1', 7)
+        routine = self.queued(priority=3)
+        self.clock.advance(1)
+        agent = self.queued(priority=5)
+        self.clock.advance(60)
+        with self.assertRaises(JobError):
+            self.sup.claim('w1', ['reviewer'])                                            # BUSY-1 is the starter; nobody else while the server is off
+        self.slots.release('BUSY-1')
+        self.assertEqual(self.sup.claim('w1', ['reviewer'])['job']['job_id'], agent)      # after 61 s Routine is still 3
+        self.sup._unclaim(agent, 'w1', 'test')
+        self.clock.advance(180)
+        self.assertEqual(self.sup.claim('w1', ['reviewer'])['job']['job_id'], routine)    # 241 s: 3 + 2 = 5 = Agent, and it came first
+
+    def test_without_the_scheduler_the_raw_priority_decides_as_before(self):
+        self.sup.slots = None
+        routine = self.queued(priority=3)
+        self.clock.advance(1)
+        agent = self.queued(priority=5)
+        self.clock.advance(10_000)
+        self.assertEqual(self.sup.claim('w1', ['reviewer'])['job']['job_id'], agent)
+        self.assertIsNone(self.lease(agent))
+        self.assertIsNone(self.lease(routine))
+
+    def test_a_busy_gpu_puts_the_job_back_in_line_instead_of_failing_it(self):
+        other = self.TestLab(self.lab.path, clock=self.lab.clock, alive=lambda p: True, pid=222)
+        token = other.try_acquire('bench', 'ladder')
+        job = self.queued()
+        self.sup.claim('w1', ['reviewer'])
+        out = self.sup.confirm_start(job, 'w1')
+        self.assertEqual((out['status'], out['reason']), ('waiting', 'gpu_lease_busy:bench:ladder'))
+        stored = self.load(job)
+        self.assertEqual((stored['state'], stored['attempts'], stored['worker'], self.lease(job)['state']), ('QUEUED', 0, None, 'wartend'))
+        self.assertIn('JOB_SLOT_WAITING', self.event_types())
+        other.release(token)
+        self.sup.claim('w1', ['reviewer'])
+        self.assertEqual(self.sup.confirm_start(job, 'w1')['status'], 'running')
+
+    def test_another_recipe_without_a_rule_waits_and_the_next_claim_already_knows(self):
+        a = self.queued()
+        self.sup.claim('w1', ['reviewer'])
+        self.sup.confirm_start(a, 'w1')
+        self.recipes['planner'] = 'helper.local'
+        p = self.queued('planner')
+        self.sup.claim('w2', ['planner'])
+        self.assertEqual(self.sup.confirm_start(p, 'w2')['status'], 'waiting')
+        with self.assertRaises(JobError) as ctx:
+            self.sup.claim('w2', ['planner'])
+        self.assertEqual(ctx.exception.detail, 'model_swap_not_allowed')
+        self.assertEqual(self.load(p)['attempts'], 0)
+
+    def test_a_start_too_big_for_the_card_fails_the_attempt_with_a_known_reason(self):
+        self.big = True
+        job = self.queued()
+        self.sup.claim('w1', ['reviewer'])
+        out = self.sup.confirm_start(job, 'w1')
+        self.assertEqual((out['status'], out['code']), ('resolution_failed', 'hardware_pressure'))
+        self.assertEqual(self.load(job)['attempt_log'][0]['reason_code'], 'hardware_pressure')
+        self.assertEqual(self.lease(job)['state'], 'fertig')                              # the starter's slot is free again
+
+    def test_heartbeat_keeps_the_slot_lease_alive_and_reap_follows_the_jobs(self):
+        a = self.queued()
+        self.sup.claim('w1', ['reviewer'])
+        self.sup.confirm_start(a, 'w1')
+        self.clock.advance(30)
+        self.sup.heartbeat(a, 'w1')
+        self.assertEqual(self.lease(a)['heartbeat'], '2026-10-01T12:00:31Z')     # queued at 12:00:00, then +1 s
+        b = self.queued()
+        self.sup.claim('w2', ['reviewer'])
+        self.clock.advance(self.sup.config.claim_timeout_s + 1)
+        self.sup.heartbeat(a, 'w1')
+        self.sup.reap()
+        self.assertEqual((self.load(b)['worker'], self.lease(b)['state']), (None, 'wartend'))     # an expired claim gives its slot back
+        self.sup.cancel(b, requested_by='t', reason='r')
+        self.sup.reap()
+        self.assertEqual((self.lease(a)['state'], self.lease(b)['state']), ('aktiv', 'verfallen'))
+
+    def test_the_worker_waits_quietly_when_no_slot_is_free(self):
+        from guppi_runtime.jobs.job_worker import Worker
+        for _ in range(3):
+            self.queued()
+        for worker in ('w1', 'w2'):
+            claimed = self.sup.claim(worker, ['reviewer'])
+            self.sup.confirm_start(claimed['job']['job_id'], worker)
+        self.assertEqual(Worker(self.sup, 'w3', ['reviewer'], lambda job, attempt, ctx: {}).run_once(), {'status': 'waiting'})
+        self.assertEqual(self.sup.run_next('w3', ['reviewer'], lambda job, ctx: None), {'status': 'idle'})
 
 
 if __name__ == '__main__':

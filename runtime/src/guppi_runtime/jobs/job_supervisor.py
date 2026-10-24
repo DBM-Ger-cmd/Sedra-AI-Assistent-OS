@@ -20,6 +20,7 @@ import time
 import yaml
 
 from ..jobs.failure_classes import classify, retry_rule
+from ..jobs.slotplan import effective_priority
 from ..jobs.rework_watch import ReworkWatch, failure_signature
 from ..selfdev.development_contracts import candidate_contract
 from ..models.model_loader import LoadError
@@ -41,6 +42,17 @@ class _ResourceDenied:
     def __init__(self, grant):
         self.reason = grant.get("reason")
         self.grant = grant
+
+
+class _SlotRefused:
+    """A model scheduler refusal (`SchedulerError`), shaped like a resolution error: `code` is a known reason, `reason` the scheduler's."""
+    def __init__(self, error):
+        self.code = error.code
+        self.reason = error.reason
+
+
+# Scheduler reasons that mean "not now" (D2.4, D2.12): the job goes back to the queue, no attempt is used up.
+SLOT_WAIT_REASONS = ("server_startet", "model_swap_not_allowed", "drain", "exklusiv:", "gesperrt", "gpu_lease_busy:", "gpu_lease_deferred:")
 
 
 class _LoadFailed:
@@ -69,7 +81,7 @@ class SupervisorConfig:
         self.enabled = raw.get("enabled", False)
         if not isinstance(self.enabled, bool):
             raise ValueError("job_supervisor_config_invalid:enabled")
-        self.workers = self._int(raw, "workers", 1, 1, 1)  # Phase 2: exactly one
+        self.workers = self._int(raw, "workers", 1, 1, 8)  # Spec 2 (G2-S2-04): up to 8; more than 1 only with the model scheduler on
         self.claim_timeout_s = self._int(raw, "claim_timeout_s", 30, 1, 3600)
         self.lease_s = self._int(raw, "lease_s", 120, 2, 86400)
         self.max_lease_s = self._int(raw, "max_lease_s", 900, 2, 86400)
@@ -248,6 +260,8 @@ class JobSupervisor:
         self.permissions = permissions            # PermissionGate (permission_levels.py); None means no action can be checked, so none is allowed
         self.scheduler = scheduler                # ResourceScheduler (resource_scheduler.py); None or disabled means nothing is reserved
         self.loader = None                        # ModelLoader (model_loader.py); None or disabled means the provider keeps its own context default
+        self.slots = None                         # ModelScheduler (model_scheduler.py); None or disabled means one worker and a reservation per job
+        self._slot_recipes = {}                   # role -> recipe of its last resolution, so claim can see a recipe swap early (OP-S2-05)
 
     # ---- helpers
     @property
@@ -287,8 +301,21 @@ class JobSupervisor:
         spec = self.config.roles.get(role)
         return True if spec is None else spec["mutates"]   # unknown role: assume it can change things
 
+    def _slots_on(self):
+        return self.slots is not None and self.slots.enabled
+
+    def _worker_limit(self):
+        """`workers` jobs at a time. The runtime sets it to 1 while the model scheduler is off (D2.1: off is today's behaviour)."""
+        return self.config.workers
+
     def _release(self, job_id):
-        """Give the job's promised RAM/VRAM back. Called wherever an attempt ends; a failure here never touches the job."""
+        """Give the job's promised RAM/VRAM and its slot back. Called wherever an attempt ends; a failure here never touches the job."""
+        if self._slots_on():
+            try:
+                self.slots.release(job_id, "fertig")
+            except Exception as exc:
+                if self.audit:
+                    self.audit.append("JOB_SLOT_RELEASE_FAILED", component="job-supervisor", payload={"job_id": job_id, "error": type(exc).__name__})
         if self.scheduler is None:
             return
         try:
@@ -296,6 +323,43 @@ class JobSupervisor:
         except Exception as exc:
             if self.audit:
                 self.audit.append("JOB_RESOURCE_RELEASE_FAILED", component="job-supervisor", payload={"job_id": job_id, "error": type(exc).__name__})
+
+    def _slot_requeue(self, job):
+        """A claim that ended before its attempt started: the job's slot goes back to the queue (it keeps its place in line)."""
+        if not self._slots_on():
+            return
+        try:
+            self.slots.wait_for_job(job["job_id"], job["queue"]["priority"], agent_id=job.get("agent_id"), task_id=job.get("task_id"), enqueued=self._utc_text(job))
+        except Exception as exc:
+            if self.audit:
+                self.audit.append("JOB_SLOT_RELEASE_FAILED", component="job-supervisor", payload={"job_id": job["job_id"], "error": type(exc).__name__})
+
+    def _reap_slots(self, jobs):
+        """Slot leases of jobs that can no longer ask (finished, cancelled, gone) end; waiting and running jobs keep theirs."""
+        if not self._slots_on():
+            return
+        live = {j["job_id"] for j in jobs if j.get("worker") or (j.get("state") == "QUEUED" and not j.get("cancel"))}
+        try:
+            self.slots.reap(live)
+        except Exception as exc:
+            if self.audit:
+                self.audit.append("JOB_SLOT_REAP_FAILED", component="job-supervisor", payload={"error": type(exc).__name__})
+
+    @staticmethod
+    def _utc_text(job_or_moment):
+        """A job's arrival in the queue (or a moment) as the UTC text of the slot tables; None when unknown."""
+        moment = job_or_moment
+        if isinstance(moment, dict):
+            moment = moment["queue"].get("enqueued_at")
+            moment = datetime.fromisoformat(moment) if moment else None
+        return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if moment else None
+
+    def _claim_key(self, job, now):
+        """Priority, then arrival, then id. With the model scheduler on, a waiting job ages one step every `age_after_s` (SCH-04)."""
+        priority = job["queue"]["priority"]
+        if self._slots_on() and job["queue"].get("enqueued_at"):
+            priority = effective_priority({"priority": priority, "enqueued": self._utc_text(job)}, self._utc_text(now), self.slots.config.plan())
+        return (-priority, job["queue"]["enqueued_at"] or "", job["job_id"])
 
     def _reconcile_resources(self, jobs):
         """Drop reservations of jobs that no longer have a running worker (the ledger follows state, not the clock)."""
@@ -532,7 +596,7 @@ class JobSupervisor:
         with self.store._lock():
             jobs, _ = self.store.scan()
             busy = [j for j in jobs if j.get("worker")]
-            if len(busy) >= self.config.workers:
+            if len(busy) >= self._worker_limit():
                 raise JobError("worker_busy")
             states = {j["job_id"]: j["state"] for j in jobs}
             ready = []
@@ -549,13 +613,43 @@ class JobSupervisor:
                 ready.append(job)
             if not ready:
                 raise JobError("no_job")
-            ready.sort(key=lambda j: (-j["queue"]["priority"], j["queue"]["enqueued_at"] or "", j["job_id"]))
+            ready.sort(key=lambda j: self._claim_key(j, now))
             chosen = ready[0]
+            if self._slots_on():
+                chosen = self._take_slot(ready)       # a job is claimed only with a slot; the others stay QUEUED and lose nothing
             with self.store.mutate(chosen["job_id"]) as job:
                 job["worker"] = {"worker_id": worker_id, "claimed_at": self._iso(now), "lease_until": None,
                                  "grace_until": None, "state": "claimed"}
                 self._audit("JOB_CLAIMED", job, worker_id=worker_id)
         return {"status": "claimed", "job": job}
+
+    def _take_slot(self, ready):
+        """The first job in line that gets a slot (D2.4). Every ready job stands in the slot queue first, so direct calls and jobs share one
+        order. None gets one: `no_slot` with the scheduler's reason (`kein_slot`, `server_startet`, ...)."""
+        reasons = []
+        for job in ready:
+            self.slots.wait_for_job(job["job_id"], job["queue"]["priority"], agent_id=job.get("agent_id"), task_id=job.get("task_id"), enqueued=self._utc_text(job))
+        for job in ready:
+            grant = self.slots.take_for_job(job["job_id"], job["queue"]["priority"], recipe=self._slot_recipes.get(job.get("requested_role")),
+                                            agent_id=job.get("agent_id"), task_id=job.get("task_id"), enqueued=self._utc_text(job))
+            if grant["granted"]:
+                return job
+            reasons.append(grant["reason"])
+        raise JobError("no_slot", reasons[0] if reasons else None)
+
+    def _unclaim(self, job_id, worker_id, reason):
+        """The scheduler said "not now" after the claim (the server is starting, another recipe runs, a handover): the job goes back
+        to the queue without an attempt, and its slot back to waiting."""
+        ours = False
+        with self.store.mutate(job_id) as job:
+            worker = job.get("worker")
+            if worker and worker["worker_id"] == worker_id and worker["state"] == "claimed":
+                job["worker"] = None
+                ours = True
+                self._audit("JOB_SLOT_WAITING", job, worker_id=worker_id, reason_code=str(reason)[:100])
+        if ours:                                  # a claim that is no longer ours must not take another worker's slot away
+            self._slot_requeue(job)
+        return {"status": "waiting", "reason": reason, "job": job}
 
     def confirm_start(self, job_id, worker_id, *, attempt_id=None):
         self._require_enabled()
@@ -566,6 +660,8 @@ class JobSupervisor:
         planned_attempt = attempt_id or snapshot.get("pending_attempt_id") or f"ATT-{uuid.uuid4().hex[:12].upper()}"
         if self.resolver is not None:     # outside the store lock: the Control Master may take a moment
             resolution, resolution_error = self._resolve(snapshot)
+            if self._slots_on():
+                return self._confirm_with_slot(job_id, worker_id, now, planned_attempt, snapshot, resolution, resolution_error)
             if (resolution_error is not None and resolution_error.code == "hardware_pressure" and self.loader is not None and self.loader.enabled
                     and self.loader.evict_idle(self._models_in_use())):
                 # Idle models held the room. They are gone now: look at the card again and resolve once more.
@@ -602,6 +698,25 @@ class JobSupervisor:
             return self._start_attempt(job_id, worker_id, now, planned_attempt, resolution, resolution_error, reservation)
         except Exception:
             self._release(job_id)             # the start failed (claim lost or expired): give the promised room back
+            raise
+
+    def _confirm_with_slot(self, job_id, worker_id, now, planned_attempt, snapshot, resolution, resolution_error):
+        """The start of a job that holds a slot (D2.4): the server has the one reservation, so the job reserves nothing and loads
+        nothing itself; `ensure_server` reuses the running server or starts it (this job is then the starter)."""
+        from .model_scheduler import SchedulerError
+        if resolution is not None and resolution_error is None:
+            self._slot_recipes[snapshot.get("requested_role")] = resolution.get("capability_id")
+            try:
+                out = self.slots.ensure_server(resolution, run_id=job_id)
+                resolution = dict(resolution, load=out["load"])
+            except SchedulerError as exc:
+                if str(exc.reason).startswith(SLOT_WAIT_REASONS):
+                    return self._unclaim(job_id, worker_id, exc.reason)
+                resolution_error = _SlotRefused(exc)
+        try:
+            return self._start_attempt(job_id, worker_id, now, planned_attempt, resolution, resolution_error, None)
+        except Exception:
+            self._release(job_id)
             raise
 
     def _start_attempt(self, job_id, worker_id, now, planned_attempt, resolution, resolution_error, reservation):
@@ -658,6 +773,12 @@ class JobSupervisor:
             worker["lease_until"] = self._iso(now + timedelta(seconds=extend))
             worker["grace_until"] = None
             cancel_requested = job.get("cancel") is not None
+        if self._slots_on():
+            try:
+                self.slots.beat(job_id)            # the slot lease lives as long as the run beats (D2.4)
+            except Exception as exc:
+                if self.audit:
+                    self.audit.append("JOB_SLOT_BEAT_FAILED", component="job-supervisor", payload={"job_id": job_id, "error": type(exc).__name__})
         return {"status": "ok", "cancel_requested": cancel_requested, "heartbeat_seq": job["heartbeat_seq"]}
 
     def report_progress(self, job_id, worker_id, marker):
@@ -1136,11 +1257,15 @@ class JobSupervisor:
             job_id = snapshot["job_id"]
             if worker["state"] == "claimed":
                 if self._parse(worker["claimed_at"]) + timedelta(seconds=self.config.claim_timeout_s) < now:
+                    expired = False
                     with self.store.mutate(job_id) as job:
                         if job.get("worker") and job["worker"]["state"] == "claimed":
                             job["worker"] = None
+                            expired = True
                             self._audit("JOB_CLAIM_EXPIRED", job)
                             events.append({"event": "JOB_CLAIM_EXPIRED", "job_id": job_id})
+                    if expired:
+                        self._slot_requeue(job)
                 continue
             obs = self._obs.get(job_id)
             if obs is None:
@@ -1155,8 +1280,11 @@ class JobSupervisor:
                 events += self._handle_expired(job_id, obs, now)
             elif snapshot["heartbeat_seq"] > 0 and mono - obs["pg_t"] >= self.config.stall_after_s and not snapshot["supervisor_flags"].get("stalled"):
                 events += self._handle_stall(job_id)
-        if self.scheduler is not None:
-            self._reconcile_resources(self.store.scan()[0])     # after the reaping above, so abandoned jobs free their room too
+        if self.scheduler is not None or self._slots_on():
+            after = self.store.scan()[0]
+            if self.scheduler is not None:
+                self._reconcile_resources(after)     # after the reaping above, so abandoned jobs free their room too
+            self._reap_slots(after)
         return events
 
     def _handle_expired(self, job_id, obs, now):
@@ -1261,6 +1389,7 @@ class JobSupervisor:
                 if worker["state"] == "claimed":
                     job["worker"] = None
                     report["claims_released"].append(job_id)
+                    self._slot_requeue(job)
                     continue
                 if job.get("cancel") is not None:
                     self._finish_cancel(job)
@@ -1268,7 +1397,9 @@ class JobSupervisor:
                     continue
                 self._abandon(job, reason="process_restart")
                 (report["dead"] if job["state"] == "DEAD" else report["abandoned"]).append(job_id)
-        self._reconcile_resources(self.store.scan()[0])         # whatever the crashed process had promised is gone with it
+        after = self.store.scan()[0]
+        self._reconcile_resources(after)         # whatever the crashed process had promised is gone with it
+        self._reap_slots(after)
         if self.audit:
             self.audit.append("JOB_RECOVERY_FINISHED", component="job-supervisor", payload={k: len(v) for k, v in report.items()})
         return report
@@ -1335,7 +1466,7 @@ class JobSupervisor:
         for job in jobs:
             name = supervisor_state(job)
             counts[name] = counts.get(name, 0) + 1
-        return {"schema": 1, "enabled": self.config.enabled, "workers": self.config.workers, "counts": counts,
+        return {"schema": 1, "enabled": self.config.enabled, "workers": self._worker_limit(), "counts": counts,
                 "corrupt_records": len(damaged),
                 "jobs": [{"job_id": j["job_id"], "state": j["state"], "supervisor_state": supervisor_state(j), "role": j.get("requested_role"),
                           "priority": (j.get("queue") or {}).get("priority"), "attempts": j.get("attempts"), "kind": j.get("kind")}
@@ -1347,11 +1478,13 @@ class JobSupervisor:
         try:
             claimed = self.claim(worker_id, roles)
         except JobError as exc:
-            if exc.code == "no_job":
+            if exc.code in {"no_job", "no_slot"}:
                 return {"status": "idle"}
             raise
         job_id = claimed["job"]["job_id"]
         started = self.confirm_start(job_id, worker_id)
+        if started["status"] == "waiting":
+            return {"status": "waiting", "reason": started["reason"]}
         ctx = WorkerContext(self, job_id, worker_id)
         try:
             result = handler(started["job"], ctx)
