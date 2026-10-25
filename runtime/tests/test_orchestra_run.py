@@ -5,6 +5,7 @@ Supervisor ist echt (eigener Speicher im Temp-Ordner, eingeschaltet nur hier).
 Dazu die Vorlagen `guppi.orchestra.foreman`/`researcher`: Import über den AM-Weg ohne Befund, Abnahme-Suite gültig (Referenz
 besteht), die Fälle der Vorlage sind die Kriterien der Suite – damit ist `agent.promote` möglich."""
 import json
+import time
 import unittest
 from pathlib import Path
 
@@ -87,7 +88,7 @@ class Start(Run):
         task = self.captain_task()
         run = self.start('A-UA', task)
         job = self.sup.store.load(run['job_id'])
-        self.assertEqual((job['kind'], job['requested_role'], job['state'], job['queue']['priority']), ('orchestra_run', 'foreman', 'READY', 7))
+        self.assertEqual((job['kind'], job['requested_role'], job['state'], job['queue']['priority']), ('orchestra_run', 'foreman', 'QUEUED', 7))
         self.assertEqual(job['contract']['scope']['orchestra']['mode'], 'zerlegen')
         row = self.row('tasks', 'id', task['id'])
         self.assertEqual((row['checkout_run'], row['checkout_by'], row['state'], row['mission_id']), (run['job_id'], 'A-UA', 'in_arbeit', run['mission_id']))
@@ -241,6 +242,35 @@ class Work(Run):
         worker = orchestra_runner.make_worker(self.hub)
         self.assertIs(worker.supervisor, self.sup)
         self.assertIn('foreman', worker.roles)
+
+
+class Pool(Run):
+    """S2.H4b: der Pool hat so viele Worker, wie der Supervisor zulässt, und arbeitet einen wartenden Lauf ab."""
+
+    def test_size_follows_the_supervisor_limit(self):
+        self.sup.config.workers = 4
+        self.assertEqual(self.sup._worker_limit(), 1)                  # Scheduler aus: genau ein Worker
+        pool = orchestra_runner.WorkerPool(self.hub, 3)
+        self.assertEqual([w.worker_id for w in pool.workers], ['orchestra-1', 'orchestra-2', 'orchestra-3'])
+
+    def test_start_pool_needs_an_enabled_supervisor(self):
+        self.sup.config.enabled = False
+        self.assertIsNone(orchestra_runner.start_pool(self.hub, self.orch))
+
+    def test_the_pool_runs_a_waiting_job_and_stops(self):
+        task = board.create(self.db, {'title': 'Doku', 'assignee': 'A-3', 'origin': 'delegation'}, self.orch.clock(), 'A-UA')
+        run = self.start('A-3', task)
+        self.router.answers.append({'antwort': 'Doku steht.', 'fertig': True})
+        pool = orchestra_runner.start_pool(self.hub, self.orch, idle_sleep_s=0.05)
+        try:
+            for _ in range(100):
+                if self.row('tasks', 'id', task['id'])['state'] != 'in_arbeit':
+                    break
+                time.sleep(0.05)
+        finally:
+            pool.stop()
+        self.assertEqual(self.row('tasks', 'id', task['id'])['state'], 'erledigt')
+        self.assertEqual(pool.threads, [])
 
 
 class Templates(unittest.TestCase):

@@ -102,6 +102,9 @@ class Orchestra:
         return self.tick_thread
 
     def stop_tick(self, wait_s=5):
+        pool, self.worker_pool = getattr(self, "worker_pool", None), None
+        if pool is not None:
+            pool.stop(wait_s)
         thread, self.tick_thread = self.tick_thread, None
         if thread is not None:
             thread.stop.set()

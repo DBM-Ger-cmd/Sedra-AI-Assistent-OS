@@ -18,6 +18,8 @@ Ohne Schalter `wissen` oder ohne Treffer läuft alles wie bisher.
 
 Missionen (OP-S1-02): eine Mission ohne `brain.run` läuft regulär NEW → UNDERSTAND → READY → EXECUTE beim Start und
 EXECUTE → VERIFY → COMPLETE am Ende, EXECUTE → FAILED bei einem Fehler; jeder Schritt steht als MISSION_STATE_CHANGED im Audit."""
+import threading
+
 from ..jobs.job_worker import HandlerError
 from ..orchestra import board, budget, heartbeat, messages, org, runner, wakeplan
 from ..wissen import lauf as wissen_lauf
@@ -152,6 +154,7 @@ def start_run(orch, agent, task, wakeup, approval, priorities=None):
             pass
         _walk(orch, _missions(orch).load(mid), ("FAILED",))
         raise
+    orch.supervisor.enqueue(job_id)                                  # erst nach dem Checkout: der Worker-Pool (S2.H4b) holt nur QUEUED
     orch.audit_event("ORC_WAKE", {"agent_id": agent["id"], "task_id": task["id"], "mission_id": mid, "run_id": job_id, "freigabe": approval,
                                   "mode": mode, "priority": priority})
     return {"job_id": job_id, "mission_id": mid}
@@ -318,6 +321,52 @@ def make_worker(hub, worker_id="orchestra-1", roles=("foreman", "researcher", "c
     """Ein Worker für Jobs `orchestra_run` (nicht gestartet). Den Pool und seinen Start baut Spec 2 (S2.H4b)."""
     from ..jobs.job_worker import Worker
     return Worker(hub.runtime.orchestra.supervisor, worker_id, list(roles), handler(hub))
+
+
+class WorkerPool:
+    """Der Worker-Pool (Spec 2, S2.H4b, G2-S2-04): so viele Threads, wie der Supervisor Läufe zulässt (`workers`, genau 1 solange der
+    Modell-Scheduler aus ist), jeder mit eigenem Worker. Die Wiederherstellung nach dem Start läuft einmal, nicht je Thread."""
+    def __init__(self, hub, size, idle_sleep_s=1.0):
+        self.workers = [make_worker(hub, f"orchestra-{n}") for n in range(1, size + 1)]
+        for worker in self.workers:
+            worker.idle_sleep_s = idle_sleep_s
+        self.threads = []
+
+    def start(self):
+        if self.threads:
+            return self
+        self.workers[0].supervisor.startup_recovery()
+        for worker in self.workers:
+            thread = threading.Thread(target=self._loop, args=(worker,), name=worker.worker_id, daemon=True)
+            self.threads.append(thread)
+            thread.start()
+        return self
+
+    @staticmethod
+    def _loop(worker):
+        while not worker.stopped.is_set():
+            try:
+                out = worker.run_once()
+            except Exception:                                    # ein Durchlauf darf den Worker nicht beenden; kurz warten, weiter
+                out = {"status": "idle"}
+            if out["status"] in {"idle", "busy", "waiting"}:
+                worker._sleep(worker.idle_sleep_s)
+
+    def stop(self, wait_s=5):
+        for worker in self.workers:
+            worker.stop()
+        for thread in self.threads:
+            thread.join(timeout=wait_s)
+        self.threads = []
+
+
+def start_pool(hub, orch=None, idle_sleep_s=1.0):
+    """Startet den Pool, wenn es einen eingeschalteten Supervisor gibt; sonst None. Größe: `supervisor._worker_limit()`."""
+    orch = orch or hub.runtime.orchestra
+    sup = getattr(orch, "supervisor", None)
+    if sup is None or not sup.enabled:
+        return None
+    return WorkerPool(hub, sup._worker_limit(), idle_sleep_s).start()
 
 
 def wire(hub, orch):

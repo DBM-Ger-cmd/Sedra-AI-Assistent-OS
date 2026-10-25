@@ -929,7 +929,11 @@ def start(hub):
         return None
     if orch.start_run is not None and orch.request_run is None:
         orch.request_run = lambda o, agent, task, wakeup: request_run(o, agent, task, wakeup, hub=hub)
-    return orch.start_tick()
+    tick = orch.start_tick()                                # wer den Takt hält, arbeitet auch die Läufe ab (S2.H4b)
+    if orch.start_run is not None and getattr(orch, "worker_pool", None) is None:
+        from . import orchestra_runner
+        orch.worker_pool = orchestra_runner.start_pool(hub, orch)
+    return tick
 
 
 # ---- Bausteine aus Spec 0
