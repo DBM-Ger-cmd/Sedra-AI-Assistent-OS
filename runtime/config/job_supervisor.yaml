@@ -1,8 +1,8 @@
 job_supervisor:
   schema: 1
   enabled: false              # Feature flag. Default OFF: GUPPI behaves exactly like v1.20.
-  workers: 1                  # Phase 2: exactly one worker, no parallelism.
-  claim_timeout_s: 30
+  workers: 1                  # 1 to 8 (Spec 2, G2-S2-04); more than 1 only with the model scheduler on (model_scheduler.yaml), else 1 is used
+  claim_timeout_s: 240        # Spec 2 (G2-S2-04, was 30): the starter of the model server holds its claim while the server loads
   lease_s: 120
   max_lease_s: 900
   heartbeat_interval_s: 20

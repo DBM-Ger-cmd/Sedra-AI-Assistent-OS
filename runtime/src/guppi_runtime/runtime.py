@@ -40,6 +40,7 @@ from .selfdev.kev import KevVerificationProvider
 from .selfdev.self_development import SelfDevelopmentManager
 from .selfdev.evolution import EvolutionManager
 from .jobs.job_supervisor import JobSupervisor, SupervisorConfig, SupervisorJobStore
+from .jobs.model_scheduler import ModelScheduler, ModelSchedulerConfig
 from .jobs.context_manager import ContextManager, ContextConfig
 from .models.role_routing import RoutingConfig, RoleRouter, ProviderHealth
 from .models.routing_profiles import RoutingProfiles
@@ -138,6 +139,7 @@ class GuppiRuntime:
         self.self_development=SelfDevelopmentManager(self.registry,data,audit=self.audit,knowledge=self.knowledge,context_budget=self.context_budget,kev=self.kev,config_path=self.config_root/"self_development.yaml",evidence_store=self.development_evidence)
         self._configure_llama_server(data)
         self._configure_job_supervisor(data)
+        self._configure_model_scheduler(data)
         self._configure_orchestra(data)
         self._configure_wissen(data)
         self._configure_context_manager(data)
@@ -266,6 +268,29 @@ class GuppiRuntime:
             from .models.role_routing import check_independence
             self.self_development.independence_check=lambda builder,verifier: check_independence(
                 self.role_router.key_for_role(builder),self.role_router.key_for_role(verifier))
+
+    def _configure_model_scheduler(self,data):
+        """Spec 2 (D2.1, D2.11): the one owner of model server and GPU lease, only when config/model_scheduler.yaml (with the machine
+        overlay local_config/model_scheduler.yaml) says `enabled: true`. Off, missing or invalid: no scheduler, one worker, behaviour as
+        before; a missing or invalid file or a test lab that is not at schema 2 is reported as `model_scheduler.error` in boot()."""
+        self.model_scheduler=None; self.model_scheduler_error=None
+        try:
+            config=ModelSchedulerConfig.load(self.config_root/"model_scheduler.yaml",self.project_root/"local_config"/"model_scheduler.yaml")
+            if config.enabled:
+                from .jobs.testlab import TestLab, default_path
+                hardware=self.hardware_manager
+                self.model_scheduler=ModelScheduler(config,TestLab(default_path(self.project_root)),loader=self.model_loader,runtime=self.llama_server,
+                                                    resources=self.resource_scheduler,audit=self.audit,profile=lambda: hardware.state_record().get("profile_id"))
+        except (ValueError,OSError) as exc:
+            self.model_scheduler_error=str(exc) or type(exc).__name__
+            self.audit.append("MODEL_SCHEDULER_OFF",component="runtime",payload={"reason":self.model_scheduler_error})
+        if self.job_supervisor is not None:
+            if self.model_scheduler is not None: self.job_supervisor.slots=self.model_scheduler
+            else: self.job_supervisor.config.workers=1        # no scheduler, no parallel jobs (G2-S2-04)
+
+    def model_scheduler_status(self):
+        if self.model_scheduler is None: return {"enabled":False,"error":self.model_scheduler_error}
+        return self.model_scheduler.view()
 
     def reload_role_routing(self):
         """Das Routing-Overlay ohne Neustart neu lesen: eine im Menü freigegebene Änderung (z. B. der Kontext eines Modells) wirkt beim
@@ -461,6 +486,7 @@ class GuppiRuntime:
             "portable_model_runtime":portable,
             "self_development":self.self_development.view(),
             "job_supervisor":self.job_supervisor_status(),
+            "model_scheduler":self.model_scheduler_status(),
             "context_manager":self.context_status(),
             "role_routing":self.routing_status(),
             "permissions":self.permission_status(),

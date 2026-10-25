@@ -289,6 +289,23 @@ class ReserveTests(Base):
         self.assertEqual([t for t in self.types() if t.startswith('RESOURCE')], ['RESOURCE_RESERVED', 'RESOURCE_DENIED', 'RESOURCE_RELEASED'])   # the second release is silent
         self.assertTrue(self.audit.verify_chain())
 
+    def test_a_refusal_is_audited_with_its_numbers(self):
+        # Spec 2 (SCH-03, G2-S2-08): RESOURCE_DENIED carries need and free memory, not only the reason
+        s = self.scheduler()
+        self.hw.state = sample(gpus=((16.0, 9.0),))
+        out = s.reserve('SDJ-B', 'A1', {'vram_gb': 12})
+        self.assertEqual(out['detail'], {'need_gb': 12.0, 'best_free_gb': 8.0, 'measured_free_gb': 9.0})
+        s.audit_denied('server:main', 'vram_insufficient', need_gb=11.0, measured_free_gb=None, limit_gb=11.5)
+        denied = [json.loads(x) for x in (self.root / 'audit.jsonl').read_text(encoding='utf-8').splitlines() if '"RESOURCE_DENIED"' in x]
+        self.assertEqual([{k: d['payload'].get(k) for k in ('job_id', 'reason', 'need_gb', 'best_free_gb', 'measured_free_gb', 'limit_gb')} for d in denied],
+                         [{'job_id': 'SDJ-B', 'reason': 'vram_insufficient', 'need_gb': 12.0, 'best_free_gb': 8.0, 'measured_free_gb': 9.0, 'limit_gb': None},
+                          {'job_id': 'server:main', 'reason': 'vram_insufficient', 'need_gb': 11.0, 'best_free_gb': None, 'measured_free_gb': None, 'limit_gb': 11.5}])
+        self.assertEqual(s.measured_free_vram_gb(), 9.0)
+        self.hw.fail = True
+        self.assertIsNone(s.measured_free_vram_gb())
+        off = ResourceScheduler(ResourceConfig(dict(raw_config(), enabled=False)), self.hw, self.root / 'x.json')
+        self.assertIsNone(off.measured_free_vram_gb())
+
     def test_view_reports_ledger_and_headroom(self):
         s = self.scheduler(); s.reserve('SDJ-A', 'A1', {'ram_gb': 10, 'vram_gb': 5})
         view = s.view()
@@ -486,7 +503,7 @@ class SupervisorLifecycleTests(SupervisorBase):
 
     def test_exclusive_jobs_wait_for_a_free_machine(self):
         first, _ = self.start()
-        self.sup.config.__dict__['workers'] = 2                                                   # let a second worker try; the ledger is what refuses
+        self.sup._worker_limit = lambda: 2                                                        # let a second worker try (only the model scheduler allows that since Spec 2); the ledger is what refuses
         second = self.create(requirements={'exclusive': True}); self.sup.claim('w2', ['coder'])
         out = self.sup.confirm_start(second, 'w2')
         self.assertEqual((out['status'], out['code']), ('resolution_failed', 'hardware_pressure'))
@@ -512,7 +529,7 @@ class SupervisorLifecycleTests(SupervisorBase):
         self.hw.profile['max_jobs'] = 4
         first, _ = self.start()                                                                  # 8 GB of a 16 GB card (1 GB reserve): room for one more 8 GB job? 15 - 8 = 7 < 8
         self.hw.state = sample(gpus=((16.0, 8.0),))
-        self.sup.config.__dict__['workers'] = 2
+        self.sup._worker_limit = lambda: 2                                                        # a second worker, as with the model scheduler on
         second = self.create(); self.sup.claim('w2', ['coder'])
         self.assertEqual(self.sup.confirm_start(second, 'w2')['status'], 'resolution_failed')
         self.advance(1)                                                                          # so the failed job queues up behind the waiting one (no tie on the enqueue time)

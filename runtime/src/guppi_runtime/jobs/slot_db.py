@@ -1,19 +1,9 @@
-import sqlite3
+"""Thin switch for the slot store (Spec 2, S2.H1). The four slot tables were seeded here for the SEDRA build of `slot_store.py`
+(`benchmarks/s2_schema_seed/slot_db.py`); in the package they live in `testlab.db` schema 2 (`testlab.SLOT_SCHEMA`, same text). This module only
+keeps the two names the store imports, so `slot_store.py` stays as it was built."""
 from contextlib import contextmanager
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS slot_server (name TEXT PRIMARY KEY CHECK (name = 'main'), gen INTEGER NOT NULL DEFAULT 0, recipe TEXT, slots INTEGER,
-    context_per_slot INTEGER, state TEXT NOT NULL CHECK (state IN ('aus', 'startet', 'bereit', 'drain', 'exklusiv', 'gesperrt')), pid INTEGER,
-    since TEXT NOT NULL, restarts TEXT NOT NULL DEFAULT '[]', garbage TEXT NOT NULL DEFAULT '[]', reason TEXT, owner TEXT);
-CREATE TABLE IF NOT EXISTS slot_leases (run_id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK (kind IN ('job', 'direkt')), owner TEXT NOT NULL, agent_id TEXT,
-    task_id TEXT, priority INTEGER NOT NULL CHECK (priority BETWEEN 0 AND 9), enqueued TEXT NOT NULL,
-    state TEXT NOT NULL CHECK (state IN ('wartend', 'aktiv', 'fertig', 'unterbrochen', 'verfallen')), slot INTEGER, server_gen INTEGER, started TEXT,
-    heartbeat TEXT, ttl_s INTEGER NOT NULL DEFAULT 120, reason TEXT);
-CREATE INDEX IF NOT EXISTS slot_leases_state ON slot_leases(state);
-CREATE TABLE IF NOT EXISTS handover_requests (owner TEXT PRIMARY KEY, purpose TEXT NOT NULL, priority INTEGER NOT NULL, pid INTEGER, since TEXT NOT NULL,
-    heartbeat TEXT NOT NULL, ttl_s INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS slot_events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, kind TEXT NOT NULL, run_id TEXT, detail TEXT NOT NULL DEFAULT '');
-"""
+from .testlab import SLOT_SCHEMA as SCHEMA, TestLab
 
 
 @contextmanager
@@ -28,8 +18,10 @@ def immediate(conn):
 
 
 def open_db(path, busy_ms=30000):
-    conn = sqlite3.connect(str(path), isolation_level=None, timeout=busy_ms / 1000, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
+    """A connection to the test lab file at `path`, migrated to schema 2 (with backup). Refuses when the migration failed."""
+    lab = TestLab(path)
+    if lab.schema_error:
+        raise ValueError(lab.schema_error)
+    conn = lab.connect()
     conn.execute(f"PRAGMA busy_timeout = {busy_ms}")
-    conn.executescript(SCHEMA)
     return conn

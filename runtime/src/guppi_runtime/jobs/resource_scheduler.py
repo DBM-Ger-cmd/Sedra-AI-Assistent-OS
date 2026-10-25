@@ -162,7 +162,8 @@ class ResourceScheduler:
                 if best is None:
                     top = max(min(g["total"] - cfg.vram_reserve_gb - self._committed(reservations, "vram_gb", g["device_id"]), g["available"] - cfg.vram_reserve_gb)
                               for g in host["gpus"])
-                    return "vram_insufficient", {"need_gb": need["vram_gb"], "best_free_gb": round(top, 3)}
+                    measured = max(g["available"] for g in host["gpus"])
+                    return "vram_insufficient", {"need_gb": need["vram_gb"], "best_free_gb": round(top, 3), "measured_free_gb": round(measured, 3)}
                 device = best[1]["device_id"]
         return None, {"device": device, "need": need}
 
@@ -208,7 +209,7 @@ class ResourceScheduler:
             outcome, detail = self._decide(estimate, exclusive=exclusive, reservations=reservations, host=host, resident_vram_gb=resident_vram_gb)
             headroom = self._headroom(host, reservations, self.config)
             if outcome is not None:
-                self._audit("RESOURCE_DENIED", job_id, reason=outcome)
+                self._audit("RESOURCE_DENIED", job_id, reason=outcome, **self._values(detail))     # the numbers, not only the reason (SCH-03)
                 alternatives = ["queue"] + (["smaller_model_or_cpu_offload"] if outcome.startswith(("vram", "ram", "no_gpu")) else [])
                 return {"status": "DENIED", "reservation": None, "reason": outcome, "detail": detail, "headroom": headroom, "alternatives": alternatives}
             need = detail["need"]
@@ -219,6 +220,24 @@ class ResourceScheduler:
         self._audit("RESOURCE_RESERVED", job_id, ram_gb=record["ram_gb"], vram_gb=record["vram_gb"], device_id=record["device_id"],
                     estimate_complete=record["estimate_complete"], exclusive=record["exclusive"])
         return {"status": "GRANTED", "reservation": record, "reason": "fits", "headroom": headroom, "alternatives": []}
+
+    @staticmethod
+    def _values(detail):
+        return {k: v for k, v in (detail or {}).items() if k.endswith("_gb") or k in ("limit", "reserved")}
+
+    def audit_denied(self, job_id, reason, **values):
+        """A refusal decided outside the ledger (the model scheduler's VRAM limit, SCH-03), audited like one of ours with its numbers."""
+        self._audit("RESOURCE_DENIED", job_id, reason=reason, **values)
+
+    def measured_free_vram_gb(self):
+        """The most free VRAM one GPU reports right now (fresh reading), or None when disabled or unknown. Reserves nothing."""
+        if not self.config.enabled:
+            return None
+        try:
+            gpus = self._host(fresh=True)["gpus"]
+        except Exception:
+            return None
+        return round(max(g["available"] for g in gpus), 3) if gpus else None
 
     def release_job(self, job_id):
         """Give a job's room back. Safe to call any number of times."""

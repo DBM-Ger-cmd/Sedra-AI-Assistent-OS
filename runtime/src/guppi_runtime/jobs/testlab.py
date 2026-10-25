@@ -13,6 +13,9 @@ What is in the file
   reservations  a chain that must come first (Captain 2026-10-13: "als erstes in die Nacht-Warteschlange"): while a live reservation of priority P exists, every taker with a
             LOWER priority (the default is 0) is deferred, also in the gaps between two builds of the chain. It dies with its process or when its heartbeat is stale; without a
             reservation nothing changes (the race of the polling takers stays as it was).
+  slot_*    Schema 2 (Spec 2, D2.3): the model scheduler's tables `slot_server`, `slot_leases`, `handover_requests`, `slot_events`, word for word
+            from the seed `benchmarks/s2_schema_seed/slot_db.py`. Times there are UTC text (`YYYY-MM-DDTHH:MM:SSZ`), the old tables keep REAL.
+            `acquire` registers a taker that has to wait in `handover_requests` (`register_waiter`), so the scheduler can hand the GPU over (D2.7).
 
 It never starts or stops a model itself and has no say over files outside the database. SQLite in WAL mode, `BEGIN IMMEDIATE` for the
 lease, so two processes cannot both win it.
@@ -45,6 +48,9 @@ CREATE INDEX IF NOT EXISTS results_run ON results(run_id);
 CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, kind TEXT NOT NULL, owner TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS reservations (owner TEXT PRIMARY KEY, purpose TEXT NOT NULL, priority INTEGER NOT NULL, pid INTEGER NOT NULL, since REAL NOT NULL, heartbeat REAL NOT NULL, ttl_s REAL NOT NULL);
 """
+from . import testlab_slots
+from .testlab_slots import SCHEMA_VERSION, SLOT_SCHEMA, TIME_FORMAT, utc_text  # noqa: F401  (re-exported: slot_db and the scheduler import them from here)
+
 QUEUE_STATUS = ("planned", "running", "done", "cancelled")
 RUN_STATUS = ("running", "done", "failed", "aborted")
 
@@ -90,10 +96,24 @@ class TestLab:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.clock, self.alive, self.pid = clock, alive, pid if pid is not None else os.getpid()
+        self.schema, self.schema_error, self.backup = 1, None, None
         with self._db() as db:
             db.executescript(SCHEMA)
             if not any(c["name"] == "pid" for c in db.execute("PRAGMA table_info(runs)")):
                 db.execute("ALTER TABLE runs ADD COLUMN pid INTEGER")       # databases from before the liveness check
+            self._migrate(db)
+
+    def _migrate(self, db):
+        """Schema 2 (see testlab_slots.migrate): a failure leaves schema 1 and says why in `schema_error`."""
+        self.schema, self.schema_error, self.backup = testlab_slots.migrate(db, self.path, self.clock())
+
+    def connect(self):
+        """A connection for the slot store (`slot_store.py`): same file, WAL, busy timeout, rows by name. The caller closes it."""
+        db = sqlite3.connect(self.path, timeout=30, isolation_level=None, check_same_thread=False)
+        db.row_factory = sqlite3.Row
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("PRAGMA busy_timeout=30000")
+        return db
 
     @contextmanager
     def _db(self):
@@ -157,14 +177,39 @@ class TestLab:
                 raise
 
     def acquire(self, owner, purpose, *, ttl_s=300, wait_s=0, poll_s=5, sleep=time.sleep, name="gpu", priority=0):
+        """Wait up to `wait_s` for the lease. A taker that has to wait stands in `handover_requests` meanwhile (D2.7): the model scheduler
+        sees it, drains its slots and gives the GPU back. The entry is gone once the lease is granted or the wait is given up."""
         deadline = self.clock() + wait_s
-        while True:
-            token = self.try_acquire(owner, purpose, ttl_s=ttl_s, name=name, priority=priority)
-            if token:
-                return token
-            if self.clock() >= deadline:
-                raise LeaseBusy(self.holder(name))
-            sleep(poll_s)
+        waiting = False
+        try:
+            while True:
+                token = self.try_acquire(owner, purpose, ttl_s=ttl_s, name=name, priority=priority)
+                if token:
+                    return token
+                if self.clock() >= deadline:
+                    raise LeaseBusy(self.holder(name))
+                if name == "gpu":
+                    self.register_waiter(owner, purpose, priority=priority, ttl_s=max(60, int(poll_s * 3)))
+                    waiting = True
+                sleep(poll_s)
+        finally:
+            if waiting:
+                self.clear_waiter(owner)
+
+    def register_waiter(self, owner, purpose, *, priority=0, ttl_s=60):
+        """Enter (or refresh) a taker that waits for the GPU in `handover_requests`; True when it is new. Without schema 2 nothing happens."""
+        if self.schema < SCHEMA_VERSION:
+            return False
+        with self._db() as db:
+            return testlab_slots.write_waiter(db, self._text(owner, 80), self._text(purpose, 200), min(9, max(0, int(priority))), self.pid,
+                                              utc_text(self.clock()), int(ttl_s))
+
+    def clear_waiter(self, owner):
+        """Remove a waiting taker's entry (lease granted or wait given up)."""
+        if self.schema < SCHEMA_VERSION:
+            return False
+        with self._db() as db:
+            return testlab_slots.clear_waiter(db, self._text(owner, 80))
 
     def _live_reservation(self, row):
         return self.clock() - row["heartbeat"] <= row["ttl_s"] and self.alive(row["pid"])
