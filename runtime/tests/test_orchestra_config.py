@@ -196,6 +196,27 @@ class Runtime(unittest.TestCase):
         rt = GuppiRuntime(db.parents[2], ARCH)
         self.assertEqual((rt.orchestra, rt.orchestra_error), (None, 'orchestra_db_error:schema_newer'))
 
+    def test_a_failing_migration_switches_the_orchestra_off(self):
+        """D1.7: Datenbank älter (Schema 1), Migration 2 scheitert: `orchestra_db_error:migration`, Orchestrierung aus, die Laufzeit startet."""
+        from unittest import mock
+        from guppi_runtime.orchestra import store
+        from guppi_runtime.runtime import GuppiRuntime
+        tmp = tempfile.TemporaryDirectory(prefix='orchestra-mig-')
+        self.addCleanup(tmp.cleanup)
+        project = Path(tmp.name) / 'project'
+        db = project / 'runtime_data' / 'orchestra' / 'orchestra.db'
+        store.open_db(db, target=1).close()
+        (project / 'local_config').mkdir()
+        (project / 'local_config' / 'switches.yaml').write_text(ON, encoding='utf-8')
+        with mock.patch.dict(store.MIGRATIONS, {2: store.MIGRATIONS[2] + ('CREATE TABLE agents (x)',)}):
+            rt = GuppiRuntime(project, ARCH)
+        self.assertEqual((rt.orchestra, rt.orchestra_error), (None, 'orchestra_db_error:migration'))
+        self.assertEqual(rt.boot()['orchestra'], {'enabled': False, 'error': 'orchestra_db_error:migration', 'schema_version': None})
+        self.assertEqual(rt.boot()['state'], 'READY')
+        conn = store.open_db(db, target=1)
+        self.addCleanup(conn.close)
+        self.assertEqual(store.schema_version(conn), 1, 'die Datei bleibt Schema 1')
+
     def test_doctor_prints_the_entry(self):
         import contextlib
         import io

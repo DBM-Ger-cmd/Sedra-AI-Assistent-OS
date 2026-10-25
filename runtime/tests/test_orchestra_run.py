@@ -121,6 +121,32 @@ class Start(Run):
         self.assertEqual(len(failed), 1)
 
 
+class Pause(Run):
+    """ORC-12 mit echtem Supervisor, echter Mission und echtem Lauf: Pausieren bricht den Lauf ab."""
+
+    def test_pausing_cancels_the_run_pauses_the_mission_and_frees_the_task(self):
+        task = self.captain_task()
+        run = self.start('A-UA', task)
+        self.act('agent', 'A-UA', 'pausieren')
+        job = self.sup.store.load(run['job_id'])
+        self.assertTrue(job['state'] in ('CANCELLED', 'CANCELING') or job.get('cancel'), job['state'])
+        self.assertFalse(self.orch.run_alive(run['job_id']), 'ein abgebrochener Lauf lebt nicht mehr')
+        self.assertEqual(self.missions.load(run['mission_id'])['lifecycle']['phase'], 'PAUSED')
+        row = self.row('tasks', 'id', task['id'])
+        self.assertEqual((row['state'], row['checkout_run'], row['checkout_by']), ('offen', None, None))
+        self.assertEqual(self.db.execute("SELECT text FROM comments WHERE task_id = ? AND author_kind = 'system'", (task['id'],)).fetchone()[0],
+                         'pausiert_vom_captain')
+        self.assertEqual(self.row('agents', 'id', 'A-UA')['status'], 'pausiert')
+
+    def test_a_paused_agent_gets_no_wakeup_from_a_new_assignment(self):
+        self.act('agent', 'A-UA', 'pausieren')
+        other = board.create(self.db, {'title': 'Neu', 'assignee': None, 'origin': 'captain'}, self.orch.clock(), 'captain')
+        before = len(self.wakeups('A-UA'))
+        with self.assertRaisesRegex(ValueError, 'agent_inactive'):
+            self.act('issue', other['id'], 'zuweisen', bearbeiter='A-UA')
+        self.assertEqual(len(self.wakeups('A-UA')), before)
+
+
 class Decompose(Run):
     def answer(self, *items):
         return {'teilaufgaben': [dict({'beschreibung': '', 'blocker': [], 'akzeptanz': ''}, **i) for i in items], 'rueckfrage': None}
@@ -142,6 +168,25 @@ class Decompose(Run):
         spend = self.row('spend', 'agent_id', 'A-UA')
         self.assertEqual((spend['tokens_in'], spend['tokens_out'], spend['estimated'], spend['mission_id']), (100, 50, 0, run['mission_id']))
         self.assertEqual(self.router.calls[0]['schema']['required'], ['teilaufgaben', 'rueckfrage'])
+
+    def test_the_foreman_reaches_planner_coder_and_reviewer_and_every_run_carries_orc_wake(self):
+        """ORC-14: die Zerlegung legt Teilaufgaben bei Planer, Coder und Reviewer an; jeder Lauf (auch der der Kinder) trägt `ORC_WAKE`."""
+        now = self.orch.clock()
+        for aid, role, level in (('A-PL', 'planner', 1), ('A-CO', 'coder', 2)):
+            self.db.execute("INSERT INTO agents (id, instance_id, template_id, name, role, reports_to, status, permission_level, created_at, updated_at)"
+                            " VALUES (?, ?, 't', ?, ?, 'A-UA', 'aktiv', ?, ?, ?)", (aid, 'I-' + aid, aid, role, level, now, now))
+        task = self.captain_task()
+        run = self.start('A-UA', task)
+        self.router.answers.append(self.answer({'titel': 'Plan', 'rolle': 'planner'}, {'titel': 'Bauen', 'rolle': 'coder'},
+                                               {'titel': 'Prüfen', 'rolle': 'reviewer'}))
+        self.run_job(run)
+        children = [dict(r) for r in self.db.execute('SELECT * FROM tasks WHERE parent_id = ? ORDER BY created_at, id', (task['id'],))]
+        self.assertEqual(sorted(c['assignee'] for c in children), ['A-3', 'A-CO', 'A-PL'])
+        for child in children:                                                       # die Zerlegung hat den Weckruf der Kinder schon angelegt
+            wake = dict(self.db.execute('SELECT * FROM wakeups WHERE task_id = ? AND reason = ?', (child['id'], 'zugewiesen')).fetchone())
+            orchestra_runner.start_run(self.orch, self.row('agents', 'id', child['assignee']), self.row('tasks', 'id', child['id']), wake, 'einmal')
+        woken = self.audit('ORC_WAKE')
+        self.assertEqual(sorted(w['agent_id'] for w in woken), ['A-3', 'A-CO', 'A-PL', 'A-UA'], 'jeder Lauf trägt ORC_WAKE')
 
     def test_an_invalid_answer_creates_nothing_and_retries_once(self):
         task = self.captain_task()
@@ -335,6 +380,8 @@ class Templates(unittest.TestCase):
                 review = {'verdict': 'PASS', 'reviewer': 'modell-b', 'builder': 'modell-a'}
                 self.assertEqual(promotion_gaps(declared, run, review, True), [], 'mit Lauf, Review und Entscheidung ist promote möglich')
                 self.assertEqual(template['permissions']['network_mode'], 'deny')
+                if name == 'foreman':
+                    self.assertEqual((template['tools'], template['permissions']['tools_allowed']), ([], []), 'ORC-17: Rezept foreman ohne Werkzeuge')
 
 
 if __name__ == '__main__':

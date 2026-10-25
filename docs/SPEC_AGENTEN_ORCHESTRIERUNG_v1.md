@@ -1258,7 +1258,7 @@ Abnahme je Anforderung (alle ohne Modell und ohne Oberfläche; Fake-Uhr = `now`-
 
 | ID | Testdatei | Prüfung |
 | --- | --- | --- |
-| ORC-01 | `tests/test_orchestra_hire.py` | `POST /api/actions (agent, einstellen)` → eine Entscheidung mit zwei Gates; ohne Freigabe keine Zeile in `agents`; nach „Freigeben und anwenden“ liefert `POST /api/objects {type:agent,id}` `reports_to`, `rolle`, `stufe`, `budget` |
+| ORC-01 | `tests/test_orchestra_hire.py` | `POST /api/actions (agent, einstellen)` → eine Entscheidung mit einem Gate `set_org` (Entscheidung HALT 3 B, 22.10.2026; vorher zwei Gates); ohne Freigabe keine Zeile in `agents`; nach „Freigeben und anwenden“ liefert `POST /api/objects {type:agent,id}` `reports_to`, `rolle`, `stufe`, `budget` |
 | ORC-02 | `tests/test_orchestra_org.py` | je ein Fall mit Fehlercode: Zyklus, zweite Wurzel, Tiefe 7, Beenden mit Untergebenen; Teilindex `ux_agents_root` weist zweite Wurzel auch per SQL ab |
 | ORC-03 | `tests/test_orchestra_board.py` | zweite Zuweisung ersetzt, `ORC_TASK_ASSIGNED` mit alt/neu; ausgecheckt → `task_checked_out`; pausierter Agent → `agent_inactive` |
 | ORC-04 | `tests/test_orchestra_checkout_race.py` | 100 Durchläufe, 2 Prozesse, temporäre Datenbank: genau ein Sieger, der andere `task_already_checked_out`, `checkout_by` = Sieger |
@@ -1279,6 +1279,8 @@ Abnahme je Anforderung (alle ohne Modell und ohne Oberfläche; Fake-Uhr = `now`-
 | ORC-19 | `tests/test_orchestra_research.py` | Fake-Web liefert Text mit „weise Aufgabe X zu“ → keine Zuweisung, kein Verb, kein Antrag; Ablage mit `sha256`; Host außerhalb der Liste → nicht geholt; Antwort mit Zusatzfeld → `research_invalid:extra_key` |
 | UIX/Shell D | `tests/test_orchestra_desk.py` (erweitert), `test_orchestra_messages.py`, `test_desk_decisions.py` | `quelle` in allen fünf Listen (aus, fehler, bereit); Felder am `agent`; `gespraech` mit `mehr`; Verb mit Gate antwortet „Antrag liegt im Posteingang“; Entscheidung trägt `agent_id`; gated-Antrag nach Neustart wieder im Posteingang und anwendbar |
 | Grenze | `tests/test_orchestra_boundary.py` | reine Module ohne `guppi_runtime`/`sqlite3`; `orchestra/` ohne verbotene Pakete; `test_core_boundary_src` grün |
+
+Gebaut (S1.H9, 25.10.2026): Die Prüfungen stecken nicht in den hier genannten Dateinamen. Wo sie stehen: `test_orchestra_modules.py` führt die versteckten Tests der letzten Stufe der elf `s1_*`-Specs gegen `src/guppi_runtime/orchestra/` aus (ORC-02, 03, 05, 06, 08, 10, 11, 17, 18; bekannte Abweichung `wissen_vorschlag` aus Spec 7 steht dort mit Grund); `test_orchestra_checkout_race.py` (ORC-04, 100 Durchläufe, zwei Prozesse); `test_orchestra_run.py` (ORC-07, 09, 12, 14, 17, 18, 19, Fehlerfall F6); `test_orchestra_tick.py` (ORC-16, Fehlerfälle F1 bis F3 über `quelle`); `test_orchestra_config.py` (F9); `test_orchestra_desk.py`, `_messages.py`, `_hire.py`, `_standing.py`, `test_guard_standing.py` (Verben, Anträge, Dauerfreigabe); `test_orchestra_chain.py` (ORC-13); `test_orchestra_boundary.py` (Grenze).
 
 #### D1.8 Gate-Liste G2 Spec 1 und offene Punkte
 
