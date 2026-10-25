@@ -380,5 +380,37 @@ class Takt(Base):
         other.stop_tick()
 
 
+class Quelle(Base):
+    """D1.7, Fehlerfälle zwei Takter, Takt fällt aus, Supervisor aus: was Shell D über `quelle` sieht."""
+    def quelle(self, orch=None):
+        from types import SimpleNamespace
+        from guppi_runtime.desk import orchestra_kinds
+        return orchestra_kinds.quelle(SimpleNamespace(runtime=SimpleNamespace(orchestra=orch or self.orch)))
+
+    def test_the_second_ticker_does_not_move_the_takt_of_the_first(self):
+        self.orch.start_tick()
+        deadline = time.monotonic() + 10
+        while self.orch.takt()['letzter'] is None and time.monotonic() < deadline:
+            time.sleep(0.05)
+        other = self.make()
+        with self.assertRaisesRegex(ValueError, '^tick_busy$'):
+            other.start_tick()
+        self.assertEqual(self.quelle()['takt'], {'laeuft': True, 'letzter': T0})
+        self.assertEqual(self.quelle(other)['takt'], {'laeuft': True, 'letzter': T0}, 'dieselbe Datenbank, derselbe Takt des ersten')
+        self.orch.stop_tick()
+
+    def test_without_a_tick_for_three_intervals_the_takt_says_not_running(self):
+        self.tick()
+        self.assertEqual(self.quelle()['takt'], {'laeuft': True, 'letzter': T0})
+        self.clock.now = '2026-10-22T08:00:16Z'                   # mehr als 3 × tick_s (5 s)
+        self.assertEqual(self.quelle()['takt'], {'laeuft': False, 'letzter': T0})
+
+    def test_with_the_supervisor_off_quelle_names_the_reason(self):
+        self.assertIsNone(self.quelle()['grund'])
+        self.supervisor.enabled = False
+        out = self.quelle()
+        self.assertEqual((out['zustand'], out['grund']), ('bereit', 'supervisor_off'))
+
+
 if __name__ == '__main__':
     unittest.main()

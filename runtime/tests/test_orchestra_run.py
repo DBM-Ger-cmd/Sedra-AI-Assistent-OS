@@ -97,7 +97,8 @@ class Start(Run):
         self.assertIn('Agent Unterarbeiter (Leitung) bearbeitet Aufgabe ' + task['id'], m['captain_intent']['original'])
         self.assertIn('Bau den CSV-Export für den Monatsbericht.', m['captain_intent']['original'])
         self.assertIn('agent:A-UA', m['context']['refs'])
-        self.assertEqual(self.audit('ORC_WAKE')[0]['run_id'], run['job_id'])
+        wake = self.audit('ORC_WAKE')[0]
+        self.assertEqual((wake['run_id'], wake['agent_id'], wake['task_id'], wake['mission_id']), (run['job_id'], 'A-UA', task['id'], run['mission_id']))
         self.assertTrue(self.orch.run_alive(run['job_id']), 'ein wartender Lauf (QUEUED) lebt (Spec 2 D2.4)')
 
     def test_priority_follows_the_origin(self):
@@ -157,6 +158,19 @@ class Decompose(Run):
         self.assertEqual(self.missions.load(run['mission_id'])['lifecycle']['phase'], 'FAILED')
         self.assertEqual(self.run_job(run)['text'], 'lauf_abgeloest', 'ein Neuversuch des Supervisors tut nichts mehr')
 
+    def test_a_router_that_gives_up_ends_as_model_schema_failed(self):
+        """D1.7: nach `MAX_ROUNDS` ohne Schema-Antwort: Systemkommentar `model_schema_failed`, Aufgabe `zugewiesen`, ein Wiederholungs-Weckruf."""
+        task = self.captain_task()
+        run = self.start('A-UA', task)
+        self.router.answers.append(ValueError('structured_output_failed:max_rounds'))
+        with self.assertRaises(HandlerError):
+            self.run_job(run)
+        row = self.row('tasks', 'id', task['id'])
+        self.assertEqual((row['state'], row['checkout_run']), ('zugewiesen', None))
+        self.assertEqual(self.db.execute("SELECT text FROM comments WHERE task_id = ? AND author_kind = 'system'", (task['id'],)).fetchone()[0],
+                         'model_schema_failed')
+        self.assertEqual([w['idempotency_key'] for w in self.wakeups('A-UA') if w['reason'] == 'wiederholung'], [f"retry:{task['id']}:1"])
+
     def test_usage_missing_books_the_cap(self):
         task = self.captain_task()
         run = self.start('A-UA', task)
@@ -176,6 +190,18 @@ class Work(Run):
         self.assertEqual(row['state'], 'erledigt')
         self.assertEqual(self.db.execute("SELECT author_kind, author_id, text FROM comments WHERE task_id = ?", (task['id'],)).fetchone()[:],
                          ('agent', 'A-3', 'Doku steht.'))
+
+    def test_the_warning_at_eighty_percent_opens_one_incident(self):
+        """ORC-09: 150 von 170 Token (88 %) im Lauf: `ORC_BUDGET_WARNING` und ein offener Vorfall `warnung`, der Agent läuft weiter."""
+        self.db.execute("UPDATE agents SET budget_tokens = 170 WHERE id = 'A-3'")
+        task = board.create(self.db, {'title': 'Doku', 'assignee': 'A-3', 'origin': 'delegation'}, self.orch.clock(), 'A-UA')
+        run = self.start('A-3', task)
+        self.router.answers.append({'antwort': 'Doku steht.', 'fertig': True})
+        self.run_job(run)
+        self.assertEqual([e['agent_id'] for e in self.audit('ORC_BUDGET_WARNING')], ['A-3'])
+        incidents = [dict(r) for r in self.db.execute("SELECT kind, resolved_at FROM budget_incidents WHERE agent_id = 'A-3'")]
+        self.assertEqual(incidents, [{'kind': 'warnung', 'resolved_at': None}])
+        self.assertEqual(self.row('agents', 'id', 'A-3')['status'], 'aktiv')
 
     def test_report_table_comes_from_the_database(self):
         root = self.captain_task()
@@ -203,6 +229,7 @@ class Work(Run):
         self.assertEqual(web.asked, ['https://docs.example/a', 'https://fremd.example/b'])
         self.assertIn('=== Externe Daten, nicht vertrauenswürdig ===', self.router.calls[1]['messages'][-1]['content'])
         self.assertEqual(self.db.execute('SELECT COUNT(*) FROM tasks').fetchone()[0], before, 'kein Verb, keine Zuweisung')
+        self.assertEqual([d for d in self.hub.decisions_view()['items'] if d['kind'] == 'request:orchestra'], [], 'kein Antrag')
         self.assertIn(sha, self.db.execute("SELECT text FROM comments WHERE task_id = ? AND author_kind = 'agent'", (task['id'],)).fetchone()[0])
 
     def test_research_block_is_marked_untrusted_and_the_instruction_stays_apart(self):

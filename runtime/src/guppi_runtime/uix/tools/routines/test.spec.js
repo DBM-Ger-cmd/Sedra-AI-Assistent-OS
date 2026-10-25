@@ -50,6 +50,8 @@ check('Takt: läuft, aus, unbekannt', async()=>{
   assert.match(el.querySelector('.t-routines-takt').textContent, /^Takt läuft/);
   assert.match(taktSatz({takt: {zustand: 'aus'}}).text, /Routinen laufen nur, solange die Oberfläche läuft/);
   assert.match(taktSatz({}).text, /Takt unbekannt/);
+  assert.match(taktSatz({takt: {laeuft: false, letzter: null}}).text, /Takt aus/);       // so antwortet der Server (D1.7)
+  assert.match(taktSatz({takt: {laeuft: true, letzter: null}}).text, /^Takt läuft/);
 });
 
 check('ein unbekannter Ausdruck steht unverändert da', async()=>{

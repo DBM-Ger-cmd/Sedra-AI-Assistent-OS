@@ -31,8 +31,9 @@
   // Die Zeile über der Tabelle (rein): läuft der Takt, aus, oder weiß es der Server nicht (Spec 1, ORC-16)
   function taktSatz(quelle){
     const t = (quelle || {}).takt;
-    if(!t || !t.zustand) return {text: 'Takt unbekannt – ob Routinen gerade ausgelöst werden, sagt der Server noch nicht.', tone: ''};
-    if(t.zustand === 'aus') return {text: 'Takt aus – Routinen laufen nur, solange die Oberfläche läuft.', tone: 'warn'};
+    // der Server liefert {laeuft, letzter} (orchestra_kinds.quelle, D1.7); `zustand` bleibt als ältere Form gültig
+    if(!t || (!t.zustand && typeof t.laeuft !== 'boolean')) return {text: 'Takt unbekannt – ob Routinen gerade ausgelöst werden, sagt der Server noch nicht.', tone: ''};
+    if(t.zustand === 'aus' || t.laeuft === false) return {text: 'Takt aus – Routinen laufen nur, solange die Oberfläche läuft.', tone: 'warn'};
     return {text: 'Takt läuft' + (t.letzter ? ' · letzter Takt ' + d().fmtTime(t.letzter) : '') + '.', tone: 'ok'};
   }
 
