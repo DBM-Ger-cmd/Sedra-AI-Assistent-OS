@@ -6,14 +6,12 @@ die Module werden in einen temporären Ordner kopiert (nur die relativen Importe
 brauchen), jede versteckte Datei läuft als `python <datei>` mit diesem Ordner als Arbeitsordner, Exit-Code 0 = bestanden.
 
 Neue Module bekommen ihren Eintrag in SPECS (Schritt 'Abnahme beim Übernehmen', Vorschlag Bauweg 2026-10-25)."""
-import importlib.util
-import os
 import re
-import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+import bau_abnahme
 
 RUNTIME = Path(__file__).resolve().parents[1]
 ORCHESTRA = RUNTIME / 'src' / 'guppi_runtime' / 'orchestra'
@@ -30,46 +28,19 @@ KNOWN = (
 )
 
 
-def plain_imports(text):
-    text = re.sub(r'^from \. import ', 'import ', text, flags=re.M)
-    return re.sub(r'^from \.(\w+) import ', r'from \1 import ', text, flags=re.M)
-
-
-def last_stage(spec):
-    path = RUNTIME / 'benchmarks' / 'devvm_specs' / f'{spec}.py'
-    loader = importlib.util.spec_from_file_location(f'spec_{spec}', path)
-    module = importlib.util.module_from_spec(loader)
-    loader.loader.exec_module(module)
-    return module.STAGES[-1]['hidden']
-
-
 class Modules(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory(prefix='orchestra-modules-')
         cls.tree = Path(cls.tmp.name)
-        for name in PURE:
-            source = (ORCHESTRA / f'{name}.py').read_text(encoding='utf-8')
-            (cls.tree / f'{name}.py').write_text(plain_imports(source), encoding='utf-8')
+        bau_abnahme.plain_tree(ORCHESTRA, PURE, cls.tree)
 
     @classmethod
     def tearDownClass(cls):
         cls.tmp.cleanup()
 
     def run_hidden(self, spec):
-        results = {}
-        for name, code in last_stage(spec).items():
-            with tempfile.TemporaryDirectory(prefix='hidden-') as work:
-                for module in PURE:
-                    (Path(work) / f'{module}.py').write_text((self.tree / f'{module}.py').read_text(encoding='utf-8'), encoding='utf-8')
-                for file, pattern, replacement, _reason in KNOWN:
-                    if file == name:
-                        code = re.sub(pattern, replacement, code)
-                (Path(work) / name).write_text(code, encoding='utf-8')
-                env = {**os.environ, 'PYTHONPATH': work}
-                done = subprocess.run([sys.executable, name], cwd=work, env=env, capture_output=True, text=True, timeout=300)
-                results[name] = (done.returncode, (done.stderr or done.stdout)[-600:])
-        return results
+        return bau_abnahme.run_hidden(spec, self.tree, PURE, KNOWN)
 
     def test_the_hidden_acceptance_of_each_build_spec_passes_against_src(self):
         for spec in SPECS:
