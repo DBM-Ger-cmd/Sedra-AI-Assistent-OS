@@ -295,7 +295,7 @@ def rung_parallel(runtime, alias, server, tier, parallel, probes, chars_per_toke
         time.sleep(settle_s)
 
 
-def ladder(runtime, recipe, *, max_ctx, probes, say, start=0, overrides=None, parallel=1):
+def ladder(runtime, recipe, *, max_ctx, probes, say, start=0, overrides=None, parallel=1, on_row=None):
     server = {**recipe["profile"]["server"], **(overrides or {})}
     alias = str(recipe.get("model") or recipe["id"])
     rows, safe, cpt, trained = [], None, 2.4, None      # start cautious; the first probe calibrates to the model's tokenizer
@@ -317,6 +317,8 @@ def ladder(runtime, recipe, *, max_ctx, probes, say, start=0, overrides=None, pa
             finally:
                 runtime.unload_model(all_models=True)
         rows.append(row)
+        if on_row is not None:
+            on_row(recipe["id"], parallel, row)         # the caller can keep every finished rung (a crash or a shutdown must not lose an hour of work)
         say(f"    -> {row['status']}  (free {row.get('vram_free_gib')} GiB at load, {row.get('vram_free_min_gib')} working, driver events {row.get('driver_events')})")
         if row["status"] != "ok":
             break

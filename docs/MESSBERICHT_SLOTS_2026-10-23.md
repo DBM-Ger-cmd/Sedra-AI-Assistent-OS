@@ -53,3 +53,20 @@ S0 (Verbindungsprüfung) bestand bei jeder Einstellung. `/slots` antwortet und z
 ## Offen: Nachmessung
 
 Die Stufen, die nur wegen des Enden-Abstands abgebrochen wurden, sollten mit dem korrigierten Werkzeug nachgemessen werden (`slot_measurement.py … --slots 2,3,4` läuft noch einmal alles; gezielter wäre `context_ladder.py … --parallel N --from <Stufe>` je Fall). Betroffen: Hauptmodell 2 Slots ab 65536, 3 Slots ab 24576, 4 Slots ab 16384; Hilfsmodell 2 Slots ab 32768, 3 Slots ab 16384, 4 Slots ab 8192.
+
+## Nachmessung vom 24.10.2026 (unvollständig)
+
+Gestartet 14:12 (`--only ladder`, Slots 2 bis 4, Hauptmodell bis 65536, Hilfsmodell bis 49152 je Slot, Korrektur von Fenster je Slot und Enden-Abstand aktiv). **Beendet um 15:34:28 durch ein Herunterfahren von Windows** (Kernel-Power 109, Kernel-General 13; der letzte Serverlog-Eintrag 15:34:17; keine Treiberereignisse, kein Fehler der GPU). Der Rechner war bis zum nächsten Morgen aus. Die Ergebnisdatei wurde deshalb nicht geschrieben; die folgenden Werte stammen aus der Konsolenausgabe des Laufs (Log liegt beim Vorarbeiter-Auftrag, nicht im Repo). Alle Antworten waren richtig, jeweils 2 Proben (10 % und 50 %), Treiberereignisse 0.
+
+| Modell | Slots | Fenster je Slot | Ergebnis | freier VRAM unter Last (GiB) |
+|---|---|---|---|---|
+| Hauptmodell | 2 | 49152 | ok | 2,40 |
+| Hauptmodell | 2 | 65536 | ok (Probenlänge rund 55 700 Token, 533 s) | 1,94 |
+| Hauptmodell | 3 | 16384 | ok | 2,98 |
+| Hauptmodell | 3 | 24576 | ok | 2,64 |
+| Hauptmodell | 3 | 32768 | ok | 2,36 |
+| Hauptmodell | 3 | 49152 | erste Probe ok (597 s), zweite nicht mehr gelaufen | – |
+
+Damit ist für das Hauptmodell **bei 2 Slots 65536 je Slot** und **bei 3 Slots mindestens 32768 je Slot** belegt (Untergrenze statt 49152 und 16384 aus dem ersten Bericht). Nicht gemessen: Hauptmodell 4 Slots und das ganze Hilfsmodell (2, 3, 4 Slots) in dieser Nachmessung. Die Werte der ersten Messung (Hilfsmodell 2 Slots mindestens 24576, 3 Slots mindestens 8192, 4 Slots offen) bleiben gültig, aber sind Untergrenzen.
+
+Folge für das Werkzeug: Jede fertige Stufe der Kontextleiter wird jetzt sofort in `slot_messung_<datum>.rows.jsonl` im Messordner geschrieben, ein Abbruch verliert höchstens die laufende Stufe.
