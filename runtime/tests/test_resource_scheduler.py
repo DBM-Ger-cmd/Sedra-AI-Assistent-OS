@@ -503,7 +503,7 @@ class SupervisorLifecycleTests(SupervisorBase):
 
     def test_exclusive_jobs_wait_for_a_free_machine(self):
         first, _ = self.start()
-        self.sup.config.__dict__['workers'] = 2                                                   # let a second worker try; the ledger is what refuses
+        self.sup._worker_limit = lambda: 2                                                        # let a second worker try (only the model scheduler allows that since Spec 2); the ledger is what refuses
         second = self.create(requirements={'exclusive': True}); self.sup.claim('w2', ['coder'])
         out = self.sup.confirm_start(second, 'w2')
         self.assertEqual((out['status'], out['code']), ('resolution_failed', 'hardware_pressure'))
@@ -529,7 +529,7 @@ class SupervisorLifecycleTests(SupervisorBase):
         self.hw.profile['max_jobs'] = 4
         first, _ = self.start()                                                                  # 8 GB of a 16 GB card (1 GB reserve): room for one more 8 GB job? 15 - 8 = 7 < 8
         self.hw.state = sample(gpus=((16.0, 8.0),))
-        self.sup.config.__dict__['workers'] = 2
+        self.sup._worker_limit = lambda: 2                                                        # a second worker, as with the model scheduler on
         second = self.create(); self.sup.claim('w2', ['coder'])
         self.assertEqual(self.sup.confirm_start(second, 'w2')['status'], 'resolution_failed')
         self.advance(1)                                                                          # so the failed job queues up behind the waiting one (no tie on the enqueue time)

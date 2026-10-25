@@ -305,8 +305,8 @@ class JobSupervisor:
         return self.slots is not None and self.slots.enabled
 
     def _worker_limit(self):
-        """`workers` jobs at a time. The runtime sets it to 1 while the model scheduler is off (D2.1: off is today's behaviour)."""
-        return self.config.workers
+        """`workers` jobs at a time, but exactly one while the model scheduler is off (D2.1: off is today's behaviour)."""
+        return self.config.workers if self._slots_on() else 1
 
     def _release(self, job_id):
         """Give the job's promised RAM/VRAM and its slot back. Called wherever an attempt ends; a failure here never touches the job."""
@@ -617,10 +617,14 @@ class JobSupervisor:
             chosen = ready[0]
             if self._slots_on():
                 chosen = self._take_slot(ready)       # a job is claimed only with a slot; the others stay QUEUED and lose nothing
-            with self.store.mutate(chosen["job_id"]) as job:
-                job["worker"] = {"worker_id": worker_id, "claimed_at": self._iso(now), "lease_until": None,
-                                 "grace_until": None, "state": "claimed"}
-                self._audit("JOB_CLAIMED", job, worker_id=worker_id)
+            try:
+                with self.store.mutate(chosen["job_id"]) as job:
+                    job["worker"] = {"worker_id": worker_id, "claimed_at": self._iso(now), "lease_until": None,
+                                     "grace_until": None, "state": "claimed"}
+                    self._audit("JOB_CLAIMED", job, worker_id=worker_id)
+            except Exception:
+                self._slot_requeue(chosen)            # the claim was not recorded: its slot goes back to the queue, or it is never free
+                raise
         return {"status": "claimed", "job": job}
 
     def _take_slot(self, ready):

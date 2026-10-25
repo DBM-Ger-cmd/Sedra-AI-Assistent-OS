@@ -1176,5 +1176,55 @@ class SlotTests(Base):
         self.assertEqual(self.sup.run_next('w3', ['reviewer'], lambda job, ctx: None), {'status': 'idle'})
 
 
+class SlotReviewTests(SlotTests):
+    """Review 25.10.2026 (Auflagen 4 and 6, missing tests): one worker without the scheduler, a claim that cannot be recorded gives its
+    slot back, several worker threads never hold more jobs than slots."""
+
+    def test_without_the_scheduler_only_one_worker_runs_whatever_workers_says(self):
+        self.sup.slots = None
+        self.queued(), self.queued()
+        self.sup.claim('w1', ['reviewer'])
+        with self.assertRaises(JobError) as ctx:
+            self.sup.claim('w2', ['reviewer'])
+        self.assertEqual((ctx.exception.code, self.sup.config.workers, self.sup.view()['workers']), ('worker_busy', 3, 1))
+
+    def test_a_claim_that_cannot_be_recorded_gives_its_slot_back(self):
+        from unittest import mock
+        job = self.queued()
+
+        def broken(job_id):
+            raise OSError('disk full')
+        with mock.patch.object(self.sup.store, 'mutate', side_effect=broken):
+            with self.assertRaises(OSError):
+                self.sup.claim('w1', ['reviewer'])
+        self.assertEqual((self.lease(job)['state'], self.load(job)['worker']), ('wartend', None))
+        self.assertEqual(self.sup.claim('w1', ['reviewer'])['job']['job_id'], job)
+
+    def test_several_worker_threads_never_claim_more_jobs_than_slots(self):
+        self.sup.config.workers = 4
+        jobs = [self.queued() for _ in range(6)]
+        first = self.sup.claim('w0', ['reviewer'])['job']['job_id']
+        self.sup.confirm_start(first, 'w0')                                           # the server runs with 2 slots, one is taken
+        outcomes, barrier = {}, threading.Barrier(4)
+
+        def work(worker):
+            barrier.wait()
+            try:
+                outcomes[worker] = self.sup.claim(worker, ['reviewer'])['job']['job_id']
+            except JobError as exc:
+                outcomes[worker] = exc.code
+        threads = [threading.Thread(target=work, args=(f'w{n}',)) for n in range(1, 5)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=60)
+        claimed = [v for v in outcomes.values() if v in jobs]
+        self.assertEqual(len(outcomes), 4)
+        self.assertEqual(len(claimed), 1, outcomes)                                    # 2 slots: the starter plus exactly one more
+        self.assertTrue(all(v in ('no_slot', 'worker_busy') for v in outcomes.values() if v not in jobs), outcomes)
+        with self.lab._db() as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM slot_leases WHERE state='aktiv'").fetchone()[0], 2)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -5,7 +5,8 @@ starts a model. Slot leases (`slot_leases`, schema 2 of testlab.db) let a run se
 stopping or changing a recipe. Who waits, who gets a slot and why not is decided by the pure `slotplan` inside `slot_store.take`.
 
 It knows neither missions nor gates (the Guard decides what a run may do), never starts or stops a process by name (only through its
-own loader and runtime), and never switches to the cloud. Off unless config/model_scheduler.yaml sets `enabled: true`; off means
+own loader and runtime), and never switches to the cloud. Off unless config/model_scheduler.yaml sets `enabled: true` (the loader refuses
+that until S2.H5, see model_scheduler_config.ENABLE_LOCK); off means
 behaviour as today (the supervisor reserves per job, uix_server holds its own lease).
 """
 from __future__ import annotations
@@ -14,18 +15,14 @@ import threading
 import time
 import uuid
 from contextlib import contextmanager
-from copy import deepcopy
-from pathlib import Path
-
-import yaml
 
 from . import slot_store, vramplan
+from .model_scheduler_config import ModelSchedulerConfig  # noqa: F401  (re-exported: callers import it from here)
+from .model_scheduler_handover import HandoverMixin
 from .slotplan import decide_reason
 from .testlab import SCHEMA_VERSION, utc_text
 
 OWNER = "sedra-scheduler"
-OVERLAY_KEYS = frozenset({"enabled", "swap", "queue_max", "wait_max_s", "slots_cap_by_profile"})
-STANDARD_SLOT_KEYS = ("hauptmodell", "hilfsmodell")
 DEFAULT_VRAM_RESERVE_GB = 0.7          # resource_scheduler.vram_reserve_gb; used only when no resource scheduler is attached
 
 
@@ -38,103 +35,11 @@ class SchedulerError(Exception):
         self.code, self.reason, self.detail = code, reason, detail
 
 
-# --------------------------------------------------------------------------- configuration
-
-class ModelSchedulerConfig:
-    """Validated settings (D2.11). Invalid values refuse start; nothing is clamped."""
-
-    def __init__(self, raw):
-        if not isinstance(raw, dict):
-            raise ValueError("model_scheduler_config_invalid")
-        self.raw = deepcopy(raw)
-        self.enabled = raw.get("enabled", False)
-        if not isinstance(self.enabled, bool):
-            raise ValueError("model_scheduler_config_invalid:enabled")
-        limit = raw.get("vram_limit_gb", 11.5)
-        if isinstance(limit, bool) or not isinstance(limit, (int, float)) or not 1 <= limit <= 1024:
-            raise ValueError("model_scheduler_config_invalid:vram_limit_gb")
-        self.vram_limit_gb = float(limit)
-        prio = raw.get("priorities", {"captain": 7, "agent": 5, "routine": 3})
-        if not isinstance(prio, dict) or set(prio) != {"captain", "agent", "routine"} \
-                or any(type(v) is not int or not 0 <= v <= 7 for v in prio.values()) or not prio["captain"] > prio["agent"] > prio["routine"]:
-            raise ValueError("model_scheduler_config_invalid:priorities")      # below critical.min_priority 8, Captain > Agent > Routine
-        self.priorities = dict(prio)
-        self.age_after_s = self._int(raw, "age_after_s", 120, 1, 86400)
-        self.age_cap = self._int(raw, "age_cap", 5, 0, 9)
-        if self.age_cap >= self.priorities["captain"]:
-            raise ValueError("model_scheduler_config_invalid:age_cap")         # ageing never reaches the Captain's step
-        self.wait_max_s = self._int(raw, "wait_max_s", 600, 0, 86400)
-        self.queue_max = self._int(raw, "queue_max", 6, 0, 1000)
-        self.offer_every_s = self._int(raw, "offer_every_s", 900, 1, 86400)
-        self.drain_max_s = self._int(raw, "drain_max_s", 1800, 0, 86400)
-        self.slot_ttl_s = self._int(raw, "slot_ttl_s", 120, 1, 86400)
-        self.poll_s = self._int(raw, "poll_s", 2, 1, 3600)
-        restart = raw.get("restart", {})
-        garbage = raw.get("garbage", {})
-        if not isinstance(restart, dict) or not isinstance(garbage, dict):
-            raise ValueError("model_scheduler_config_invalid:restart")
-        self.restart_max = self._int(restart, "max", 3, 0, 100, "restart.max")
-        self.restart_window_s = self._int(restart, "window_s", 600, 1, 86400, "restart.window_s")
-        self.garbage_count = self._int(garbage, "count", 2, 1, 100, "garbage.count")
-        self.garbage_window_s = self._int(garbage, "window_s", 300, 1, 86400, "garbage.window_s")
-        swap = raw.get("swap", "none")
-        if not (swap in ("none", "idle") or (isinstance(swap, dict) and set(swap) == {"fallback"} and isinstance(swap["fallback"], str) and swap["fallback"])):
-            raise ValueError("model_scheduler_config_invalid:swap")
-        self.swap = deepcopy(swap)
-        caps = raw.get("slots_cap_by_profile", {})
-        if not isinstance(caps, dict) or any(not isinstance(k, str) or type(v) is not int or not 1 <= v <= 8 for k, v in caps.items()):
-            raise ValueError("model_scheduler_config_invalid:slots_cap_by_profile")
-        self.slots_cap_by_profile = dict(caps)
-        standard = raw.get("standard_slots", {})
-        if not isinstance(standard, dict) or set(standard) - set(STANDARD_SLOT_KEYS) or any(type(v) is not int or not 1 <= v <= 8 for v in standard.values()):
-            raise ValueError("model_scheduler_config_invalid:standard_slots")
-        self.standard_slots = dict(standard)
-
-    @staticmethod
-    def _int(section, key, default, low, high, name=None):
-        value = section.get(key, default)
-        if type(value) is not int or not low <= value <= high:
-            raise ValueError(f"model_scheduler_config_invalid:{name or key}")
-        return value
-
-    def plan(self):
-        """The settings of the pure functions (slotplan, slot_store)."""
-        return {"age_after_s": self.age_after_s, "age_cap": self.age_cap, "swap": deepcopy(self.swap),
-                "queue_max": self.queue_max, "wait_max_s": self.wait_max_s}
-
-    def priority(self, origin):
-        """Captain 7, Agent 5, Routine 3 (G2-S2-12)."""
-        if origin not in self.priorities:
-            raise ValueError("origin_invalid")
-        return self.priorities[origin]
-
-    @classmethod
-    def load(cls, path, overlay=None):
-        """The repo file plus the machine overlay, which may change only `OVERLAY_KEYS` (D2.11)."""
-        path = Path(path)
-        if not path.exists():
-            raise ValueError("model_scheduler_config_missing")
-        try:
-            raw = (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("model_scheduler") or {}
-        except yaml.YAMLError:
-            raise ValueError("model_scheduler_config_invalid:yaml") from None
-        if overlay is not None and Path(overlay).exists():
-            try:
-                extra = (yaml.safe_load(Path(overlay).read_text(encoding="utf-8")) or {}).get("model_scheduler") or {}
-            except yaml.YAMLError:
-                raise ValueError("model_scheduler_config_invalid:overlay") from None
-            if not isinstance(extra, dict):
-                raise ValueError("model_scheduler_config_invalid:overlay")
-            for key in extra:
-                if key not in OVERLAY_KEYS:
-                    raise ValueError(f"model_scheduler_config_invalid:overlay:{key}")
-            raw = {**raw, **extra}
-        return cls(raw)
 
 
 # --------------------------------------------------------------------------- the scheduler
 
-class ModelScheduler:
+class ModelScheduler(HandoverMixin):
     def __init__(self, config, lab, *, loader=None, runtime=None, resources=None, audit=None, profile=None, owner=OWNER,
                  lease_ttl_s=600, beat_every_s=30):
         """`lab` TestLab (schema 2), `loader` ModelLoader (starts the server with the recipe's slots), `runtime` LlamaServerRuntime (status,
@@ -395,9 +300,20 @@ class ModelScheduler:
         def beat():
             while not stop.wait(self.beat_every_s):
                 if not self.lab.heartbeat(token):          # taken over: we do not own the GPU any more
-                    self._token = None
+                    self._lease_lost(token)
                     return
         threading.Thread(target=beat, name="model-scheduler-lease", daemon=True).start()
+
+    def _lease_lost(self, token):
+        """Somebody took the load lease over (we were silent too long). The server may still run, but it is no longer ours to hand out:
+        it is marked `gesperrt` (no new slots, active leases end `unterbrochen`), and the Captain decides; nothing is stopped by name."""
+        if self._token != token:
+            return
+        self._token = None
+        with self._conn() as conn:
+            server = slot_store.set_server(conn, self._now(), "gesperrt", reason="gpu_lease_lost")
+        holder = self.lab.holder() or {}
+        self._audit("SLOT_GPU_LEASE_LOST", recipe=server["recipe"], gen=server["gen"], holder=holder.get("owner"), interrupted=server["interrupted"])
 
     def _release_gpu(self):
         if self._beat_stop is not None:
@@ -444,71 +360,6 @@ class ModelScheduler:
         if state == "gesperrt":
             self._audit("SLOT_SERVER_GESPERRT", restarts=count, window_s=self.config.restart_window_s)
         return state
-
-    def stop_server(self, *, owner="werkstatt", force=False):
-        """Unload (workshop). With active runs nothing happens unless `force` (the Captain's `erzwingen`): their leases end `unterbrochen`."""
-        self._require()
-        with self._lock:
-            with self._conn() as conn:
-                server, active = self._server(conn), self._active(conn)
-            if active and not force:
-                return {"status": "leases_active", "active": sorted(r["run_id"] for r in active)}
-            if server["state"] == "aus" and self._token is None:
-                return {"status": "already_off", "interrupted": []}
-            out = self._shutdown("aus", reason=f"stop:{owner}" + (":erzwungen" if force else ""))
-            return {"status": "stopped", "interrupted": out["interrupted"]}
-
-    # ---- handover to other processes (D2.7, SCH-10)
-    def exclusive(self, owner, purpose, *, priority=0, pid=None, ttl_s=60):
-        """Ask for the GPU from this process (same entry a waiting `TestLab.acquire` writes), then take one poll step."""
-        self._require()
-        with self._conn() as conn:
-            slot_store.handover_request(conn, owner, purpose, priority, pid, self._now(), ttl_s=ttl_s)
-        return self.poll()
-
-    def poll(self):
-        """One step, called every `poll_s` from the desk's poller: notice a crashed server, and hand the GPU over to a waiting process
-        (drain: no new slots, wait for the active runs at most `drain_max_s`, stop the own server, free the lease). Kills nothing."""
-        self._require()
-        with self._lock:
-            now = self._now()
-            with self._conn() as conn:
-                server, active, pending = self._server(conn), self._active(conn), slot_store.handover_pending(conn, now)
-            state = server["state"]
-            if state == "bereit" and not self._alive():
-                return {"state": self._server_gone(), "action": "server_exited"}
-            if not pending:
-                if state == "exklusiv" or (state == "drain" and (server["reason"] or "").startswith("exklusiv:")):
-                    with self._conn() as conn:
-                        back = "bereit" if state == "drain" else "aus"         # the waiting process gave up or is done
-                        slot_store.set_server(conn, now, back, owner=None, reason=None)
-                    self._drain_since, self._drain_overdue = None, False
-                    return {"state": back, "action": "handover_ended"}
-                return {"state": state, "action": None}
-            first = pending[0]
-            if state == "bereit":
-                with self._conn() as conn:
-                    slot_store.set_server(conn, now, "drain", owner=first["owner"], reason=f"exklusiv:{first['owner']}")
-                self._drain_since, self._drain_overdue = self.lab.clock(), False
-                self._audit("SLOT_DRAIN", owner=first["owner"], purpose=first["purpose"], active=len(active))
-                state = "drain"
-            if state == "drain":
-                if active:
-                    since = self._drain_since if self._drain_since is not None else self.lab.clock()
-                    self._drain_since = since
-                    if self.lab.clock() - since > self.config.drain_max_s and not self._drain_overdue:
-                        self._drain_overdue = True                      # the request stays, nobody is killed; the Captain may force it
-                        self._audit("SLOT_DRAIN_OVERDUE", owner=first["owner"], active=sorted(r["run_id"] for r in active))
-                    return {"state": "drain", "action": "draining", "active": len(active)}
-                self._shutdown("exklusiv", owner=first["owner"], reason=f"exklusiv:{first['owner']}")
-                self._drain_since, self._drain_overdue = None, False
-                return {"state": "exklusiv", "action": "handed_over", "owner": first["owner"]}
-            if state == "aus":
-                self._release_gpu()
-                with self._conn() as conn:
-                    slot_store.set_server(conn, now, "exklusiv", owner=first["owner"], reason=f"exklusiv:{first['owner']}")
-                return {"state": "exklusiv", "action": "handed_over", "owner": first["owner"]}
-            return {"state": state, "action": None}
 
     # ---- views
     def view(self):

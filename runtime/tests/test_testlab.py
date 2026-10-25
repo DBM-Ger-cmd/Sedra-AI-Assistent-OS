@@ -290,7 +290,7 @@ class SchemaTwoTests(LabCase):
     def test_a_failed_backup_leaves_schema_1_and_the_lease_works_as_before(self):
         from unittest import mock
         path = self._schema_one_file()
-        with mock.patch("guppi_runtime.jobs.testlab._backup_path", return_value=path.parent):     # a directory: sqlite cannot open it
+        with mock.patch("guppi_runtime.jobs.testlab_slots.backup_path", return_value=path.parent):     # a directory: sqlite cannot open it
             lab = TestLab(path, clock=self.clock, alive=lambda p: True, pid=111)
         self.assertEqual(lab.schema, 1)
         self.assertTrue(lab.schema_error.startswith("testlab_schema2_failed:"))
@@ -298,7 +298,7 @@ class SchemaTwoTests(LabCase):
         self.assertTrue(lab.try_acquire("chat-1", "x"))
         self.assertFalse(lab.register_waiter("bench", "y"))
         from guppi_runtime.jobs import slot_db
-        with mock.patch("guppi_runtime.jobs.testlab._backup_path", return_value=path.parent):
+        with mock.patch("guppi_runtime.jobs.testlab_slots.backup_path", return_value=path.parent):
             with self.assertRaises(ValueError):
                 slot_db.open_db(path)
 
@@ -355,6 +355,36 @@ class SchemaTwoTests(LabCase):
         slot_store.request(conn, "SDJ-1", "job", "worker-1", 5, now)
         self.assertTrue(slot_store.take(conn, "SDJ-1", now, cfg)["granted"])      # server `aus`: the first one is the starter
         self.assertEqual(slot_store.view(conn, now, cfg)["belegt"][0]["run_id"], "SDJ-1")
+
+
+MIGRATE = r"""
+import sys
+sys.path.insert(0, sys.argv[1])
+from guppi_runtime.jobs.testlab import TestLab
+lab = TestLab(sys.argv[2])
+print(lab.schema, lab.schema_error)
+"""
+
+
+class MigrationRaceTests(SchemaTwoTests):
+    def test_two_processes_migrating_the_same_file_both_end_at_schema_2(self):
+        import sqlite3
+        import subprocess
+        import sys
+        path = self._schema_one_file()
+        db = sqlite3.connect(path)
+        db.execute("PRAGMA journal_mode=WAL")      # every testlab.db TestLab ever wrote is in WAL mode (the mode is stored in the file)
+        db.close()
+        src = str(Path(__file__).resolve().parents[1] / "src")
+        procs = [subprocess.Popen([sys.executable, "-c", MIGRATE, src, str(path)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for _ in range(2)]
+        for p in procs:
+            out, err = p.communicate(timeout=120)
+            self.assertEqual((p.returncode, out.strip()), (0, "2 None"), err)
+        db = sqlite3.connect(path)
+        self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 2)
+        self.assertEqual(db.execute("SELECT owner FROM events").fetchall(), [("old",)])
+        db.close()
+        self.assertIn(len(list(path.parent.glob("*.bak-*"))), (1, 2))         # OP-S2-20: a second backup is possible, never a lost row
 
 
 if __name__ == "__main__":

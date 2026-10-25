@@ -32,7 +32,6 @@ import threading
 import time
 import uuid
 from contextlib import contextmanager
-from datetime import datetime, timezone
 from pathlib import Path
 
 SCHEMA = """
@@ -49,21 +48,9 @@ CREATE INDEX IF NOT EXISTS results_run ON results(run_id);
 CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, kind TEXT NOT NULL, owner TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS reservations (owner TEXT PRIMARY KEY, purpose TEXT NOT NULL, priority INTEGER NOT NULL, pid INTEGER NOT NULL, since REAL NOT NULL, heartbeat REAL NOT NULL, ttl_s REAL NOT NULL);
 """
-SLOT_SCHEMA = """
-CREATE TABLE IF NOT EXISTS slot_server (name TEXT PRIMARY KEY CHECK (name = 'main'), gen INTEGER NOT NULL DEFAULT 0, recipe TEXT, slots INTEGER,
-    context_per_slot INTEGER, state TEXT NOT NULL CHECK (state IN ('aus', 'startet', 'bereit', 'drain', 'exklusiv', 'gesperrt')), pid INTEGER,
-    since TEXT NOT NULL, restarts TEXT NOT NULL DEFAULT '[]', garbage TEXT NOT NULL DEFAULT '[]', reason TEXT, owner TEXT);
-CREATE TABLE IF NOT EXISTS slot_leases (run_id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK (kind IN ('job', 'direkt')), owner TEXT NOT NULL, agent_id TEXT,
-    task_id TEXT, priority INTEGER NOT NULL CHECK (priority BETWEEN 0 AND 9), enqueued TEXT NOT NULL,
-    state TEXT NOT NULL CHECK (state IN ('wartend', 'aktiv', 'fertig', 'unterbrochen', 'verfallen')), slot INTEGER, server_gen INTEGER, started TEXT,
-    heartbeat TEXT, ttl_s INTEGER NOT NULL DEFAULT 120, reason TEXT);
-CREATE INDEX IF NOT EXISTS slot_leases_state ON slot_leases(state);
-CREATE TABLE IF NOT EXISTS handover_requests (owner TEXT PRIMARY KEY, purpose TEXT NOT NULL, priority INTEGER NOT NULL, pid INTEGER, since TEXT NOT NULL,
-    heartbeat TEXT NOT NULL, ttl_s INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS slot_events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, kind TEXT NOT NULL, run_id TEXT, detail TEXT NOT NULL DEFAULT '');
-"""
-SCHEMA_VERSION = 2
-TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"      # the slot tables' time text (slotplan.FORMAT)
+from . import testlab_slots
+from .testlab_slots import SCHEMA_VERSION, SLOT_SCHEMA, TIME_FORMAT, utc_text  # noqa: F401  (re-exported: slot_db and the scheduler import them from here)
+
 QUEUE_STATUS = ("planned", "running", "done", "cancelled")
 RUN_STATUS = ("running", "done", "failed", "aborted")
 
@@ -76,20 +63,6 @@ class LeaseBusy(Exception):
 
 def default_path(project):
     return Path(project) / "runtime_data" / "testlab" / "testlab.db"
-
-
-def utc_text(ts):
-    """Epoch seconds as the UTC text of the slot tables."""
-    return datetime.fromtimestamp(ts, timezone.utc).strftime(TIME_FORMAT)
-
-
-def _backup_path(path, stamp):
-    target = path.with_name(f"{path.name}.bak-{stamp}-schema2")
-    n = 1
-    while target.exists():
-        n += 1
-        target = path.with_name(f"{path.name}.bak-{stamp}-schema2-{n}")
-    return target
 
 
 def pid_alive(pid):
@@ -131,29 +104,8 @@ class TestLab:
             self._migrate(db)
 
     def _migrate(self, db):
-        """Schema 2: the slot tables. A file that already holds data gets a backup first (`testlab.db.bak-<date>-schema2`, rule 3). When the
-        backup or the migration fails the file stays at schema 1 and `schema_error` says why: the lease works as before, only the model
-        scheduler stays off (D2.12)."""
-        version = db.execute("PRAGMA user_version").fetchone()[0]
-        if version >= SCHEMA_VERSION:
-            self.schema = version
-            return
-        used = any(db.execute(f"SELECT 1 FROM {t} LIMIT 1").fetchone() for t in ("lease", "queue", "runs", "results", "events", "reservations"))
-        try:
-            if used:
-                target = _backup_path(self.path, datetime.fromtimestamp(self.clock(), timezone.utc).strftime("%Y%m%d"))
-                copy = sqlite3.connect(target)
-                try:
-                    db.backup(copy)
-                finally:
-                    copy.close()
-                self.backup = target
-            db.executescript("BEGIN IMMEDIATE;" + SLOT_SCHEMA + f"PRAGMA user_version = {SCHEMA_VERSION};COMMIT;")
-            self.schema = SCHEMA_VERSION
-        except (sqlite3.Error, OSError) as exc:
-            if db.in_transaction:
-                db.execute("ROLLBACK")
-            self.schema_error = f"testlab_schema2_failed:{type(exc).__name__}"
+        """Schema 2 (see testlab_slots.migrate): a failure leaves schema 1 and says why in `schema_error`."""
+        self.schema, self.schema_error, self.backup = testlab_slots.migrate(db, self.path, self.clock())
 
     def connect(self):
         """A connection for the slot store (`slot_store.py`): same file, WAL, busy timeout, rows by name. The caller closes it."""
@@ -248,32 +200,16 @@ class TestLab:
         """Enter (or refresh) a taker that waits for the GPU in `handover_requests`; True when it is new. Without schema 2 nothing happens."""
         if self.schema < SCHEMA_VERSION:
             return False
-        now = utc_text(self.clock())
-        owner, purpose = self._text(owner, 80), self._text(purpose, 200)
-        priority = min(9, max(0, int(priority)))
         with self._db() as db:
-            db.execute("BEGIN IMMEDIATE")
-            try:
-                new = db.execute("SELECT 1 FROM handover_requests WHERE owner=?", (owner,)).fetchone() is None
-                if new:
-                    db.execute("INSERT INTO handover_requests (owner, purpose, priority, pid, since, heartbeat, ttl_s) VALUES (?,?,?,?,?,?,?)",
-                               (owner, purpose, priority, self.pid, now, now, int(ttl_s)))
-                    db.execute("INSERT INTO slot_events (ts, kind, run_id, detail) VALUES (?, 'handover', NULL, ?)", (now, owner))
-                else:
-                    db.execute("UPDATE handover_requests SET purpose=?, priority=?, pid=?, heartbeat=?, ttl_s=? WHERE owner=?",
-                               (purpose, priority, self.pid, now, int(ttl_s), owner))
-                db.execute("COMMIT")
-            except BaseException:
-                db.execute("ROLLBACK")
-                raise
-        return new
+            return testlab_slots.write_waiter(db, self._text(owner, 80), self._text(purpose, 200), min(9, max(0, int(priority))), self.pid,
+                                              utc_text(self.clock()), int(ttl_s))
 
     def clear_waiter(self, owner):
         """Remove a waiting taker's entry (lease granted or wait given up)."""
         if self.schema < SCHEMA_VERSION:
             return False
         with self._db() as db:
-            return db.execute("DELETE FROM handover_requests WHERE owner=?", (self._text(owner, 80),)).rowcount == 1
+            return testlab_slots.clear_waiter(db, self._text(owner, 80))
 
     def _live_reservation(self, row):
         return self.clock() - row["heartbeat"] <= row["ttl_s"] and self.alive(row["pid"])

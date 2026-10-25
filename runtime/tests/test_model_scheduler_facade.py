@@ -64,9 +64,9 @@ class ConfigTests(unittest.TestCase):
     def test_the_overlay_may_change_only_five_keys(self):
         with tempfile.TemporaryDirectory() as tmp:
             overlay = Path(tmp) / "model_scheduler.yaml"
-            overlay.write_text("model_scheduler:\n  enabled: true\n  swap: idle\n  queue_max: 2\n", encoding="utf-8")
+            overlay.write_text("model_scheduler:\n  swap: idle\n  queue_max: 2\n", encoding="utf-8")
             cfg = ModelSchedulerConfig.load(CONFIG, overlay)
-            self.assertEqual((cfg.enabled, cfg.swap, cfg.queue_max, cfg.vram_limit_gb), (True, "idle", 2, 11.5))
+            self.assertEqual((cfg.enabled, cfg.swap, cfg.queue_max, cfg.vram_limit_gb), (False, "idle", 2, 11.5))
             overlay.write_text("model_scheduler:\n  vram_limit_gb: 20\n", encoding="utf-8")
             with self.assertRaises(ValueError) as ctx:
                 ModelSchedulerConfig.load(CONFIG, overlay)
@@ -210,6 +210,20 @@ class ServerTests(Base):
         self.assertEqual(self.server()["state"], "gesperrt")
         self.assertEqual(len(self.audit.of("SLOT_SERVER_GESPERRT")), 1)
         self.assertEqual(self.sched.take_for_job("SDJ-9", 5)["reason"], "gesperrt")
+
+    def test_a_lease_taken_over_by_another_process_locks_the_server_and_is_audited(self):
+        self.start()
+        token = self.sched._token
+        other = TestLab(self.lab.path, clock=self.clock, alive=lambda p: p == 222, pid=222)     # sees our process as gone
+        self.assertTrue(other.try_acquire("bench", "ladder"))
+        self.assertFalse(self.lab.heartbeat(token))
+        self.sched._lease_lost(token)                                               # what the heartbeat thread does on a refused beat
+        server = self.server()
+        self.assertEqual((server["state"], server["reason"], self.sched._token), ("gesperrt", "gpu_lease_lost", None))
+        self.assertEqual(self.lease("SDJ-1")["state"], "unterbrochen")
+        self.assertEqual(self.audit.of("SLOT_GPU_LEASE_LOST")[0]["holder"], "bench")
+        self.assertEqual(self.sched.take_for_job("SDJ-2", 5)["reason"], "gesperrt")
+        self.assertEqual(other.holder()["owner"], "bench")                         # the other process keeps what it took
 
     def test_reap_ends_the_leases_of_runs_that_cannot_ask_any_more(self):
         self.start()
@@ -362,10 +376,22 @@ class RuntimeWiringTests(unittest.TestCase):
         self.assertIsNone(rt.model_scheduler)
         self.assertEqual(rt.model_scheduler_status(), {"enabled": False, "error": "model_scheduler_config_invalid:overlay:poll_s"})
 
-    def test_on_it_is_attached_to_the_supervisor(self):
-        rt, _ = self.runtime("model_scheduler:\n  enabled: true\n")
-        self.assertIsNotNone(rt.model_scheduler)
+    def test_switching_it_on_is_refused_until_s2h5(self):
+        rt, project = self.runtime("model_scheduler:\n  enabled: true\n")
+        self.assertIsNone(rt.model_scheduler)
+        self.assertEqual(rt.model_scheduler_status(), {"enabled": False, "error": "model_scheduler_locked_until_s2h5"})
+        self.assertEqual((rt.job_supervisor.config.workers, rt.job_supervisor.slots), (1, None))
+        self.assertFalse((project / "runtime_data" / "testlab" / "testlab.db").exists())
+
+    def test_built_directly_it_is_attached_to_the_supervisor(self):
+        from guppi_runtime.jobs.testlab import default_path
+        rt, project = self.runtime()
+        from unittest import mock
+        on = ModelSchedulerConfig(raw_config())
+        with mock.patch("guppi_runtime.runtime.ModelSchedulerConfig.load", return_value=on):
+            rt._configure_model_scheduler(project / "runtime_data")
         self.assertIs(rt.job_supervisor.slots, rt.model_scheduler)
+        self.assertTrue(default_path(project).exists())
         status = rt.model_scheduler_status()
         self.assertEqual((status["enabled"], status["gesamt"], status["server"]["state"]), (True, 0, "aus"))
 

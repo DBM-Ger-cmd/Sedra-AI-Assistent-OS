@@ -25,9 +25,14 @@ class BoundaryTests(unittest.TestCase):
                 self.assertFalse({m for m in found if m.startswith(".") or "guppi_runtime" in m or m.startswith("sqlite3")}, found)
 
     def test_the_scheduler_modules_do_not_import_core(self):
-        for name in ("model_scheduler.py", "slot_store.py", "slot_db.py", "testlab.py"):
+        for name in ("model_scheduler.py", "model_scheduler_config.py", "model_scheduler_handover.py", "slot_store.py", "slot_db.py", "testlab.py", "testlab_slots.py"):
             with self.subTest(module=name):
                 self.assertFalse({m for m in imports(name) if "core" in m.split(".")}, name)
+
+    def test_the_modules_stay_below_400_lines(self):
+        for name in ("model_scheduler.py", "model_scheduler_config.py", "model_scheduler_handover.py", "testlab.py", "testlab_slots.py"):
+            with self.subTest(module=name):
+                self.assertLessEqual(len((JOBS / name).read_text(encoding="utf-8").splitlines()), 400)
 
 
 if __name__ == "__main__":
