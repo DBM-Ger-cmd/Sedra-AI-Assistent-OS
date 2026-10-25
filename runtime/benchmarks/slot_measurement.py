@@ -63,21 +63,25 @@ def estimate_minutes(step):
         return 4
     if step["tool"] == "throughput":
         return 3 + (2 if step.get("cpu") else 0)
-    lo, hi = LADDER_RANGE[n]
+    lo, hi = step.get("range") or LADDER_RANGE[n]
     tiers = [t for t in (8192, 16384, 24576, 32768, 49152, 65536, 98304, 131072) if lo <= t <= hi]
     return round(sum(1 + 2 * (n * 0.85 * t / PROMPT_TPS) / 60 for t in tiers))
 
 
-def build_plan(main, small, slots, with_small=True):
+def build_plan(main, small, slots, with_small=True, only=None, ranges=None):
+    """only='ladder': just the context ladders; ranges: {'main': {2: [from, max], ...}, 'small': {...}} replaces LADDER_RANGE per model and slot count."""
     steps = []
     for model, label in ((main, "main"), (small, "small")):
         if model is None or (label == "small" and not with_small):
             continue
         for n in slots:
-            steps += [{"model": model, "label": label, "parallel": n, "tool": "s0"},
-                      {"model": model, "label": label, "parallel": n, "tool": "ladder"},
-                      {"model": model, "label": label, "parallel": n, "tool": "throughput"}]
-        if label == "small":
+            ladder = {"model": model, "label": label, "parallel": n, "tool": "ladder"}
+            given = ((ranges or {}).get(label) or {}).get(n)
+            if given:
+                ladder["range"] = (int(given[0]), int(given[1]))
+            steps += [ladder] if only == "ladder" else [{"model": model, "label": label, "parallel": n, "tool": "s0"}, ladder,
+                                                        {"model": model, "label": label, "parallel": n, "tool": "throughput"}]
+        if label == "small" and only != "ladder":
             steps += [{"model": model, "label": label, "parallel": n, "tool": "throughput", "cpu": True} for n in CPU_SLOTS if n in slots]
     for step in steps:
         step["minutes"] = estimate_minutes(step)
@@ -106,7 +110,7 @@ class Run:
 
     def __init__(self, project, recipes, tools, say, max_temp, limits, hash_paths, clock=time.monotonic, runtime_factory=None):
         self.project, self.recipes, self.tools, self.say, self.max_temp = project, recipes, tools, say, max_temp
-        self.runtime_factory, self.runtime = runtime_factory, None
+        self.runtime_factory, self.runtime, self.on_row = runtime_factory, None, None
         self.limits, self.hash_paths, self.clock = limits, hash_paths, clock
         self.results, self.skipped, self.fails, self.started = [], [], 0, {}
         self.hashes = file_hashes(hash_paths)
@@ -161,8 +165,8 @@ def run_step(run, step, say):
     if step["tool"] == "s0":
         return tools["check"](run.runtime, recipe, WINDOW, server, step["parallel"])
     if step["tool"] == "ladder":
-        lo, hi = LADDER_RANGE[step["parallel"]]
-        return tools["ladder"](run.runtime, recipe, max_ctx=hi, probes=2, say=say, start=lo if lo > 8192 else 0, overrides=None, parallel=step["parallel"])
+        lo, hi = step.get("range") or LADDER_RANGE[step["parallel"]]
+        return tools["ladder"](run.runtime, recipe, max_ctx=hi, probes=2, say=say, start=lo if lo > 8192 else 0, overrides=None, parallel=step["parallel"], on_row=run.on_row)
     ladder = next((r for r in reversed(run.results) if r["step"]["model"] == step["model"] and r["step"]["parallel"] == step["parallel"]
                    and r["step"]["tool"] == "ladder"), None)
     safe = ladder["result"].get("safe_max_context") if ladder else None
@@ -256,6 +260,8 @@ def main(argv=None):
     ap.add_argument("--slots", default="1,2,3,4"); ap.add_argument("--limit-h", type=float, default=3.0); ap.add_argument("--small-limit-h", type=float, default=1.0)
     ap.add_argument("--max-temp", type=int, default=85); ap.add_argument("--wait", type=float, default=0)
     ap.add_argument("--guppi", default=None, help="the installed runtime folder (<guppi>): its engines/ folder and runtime/config/local_paths.yaml are used when this script runs from a worktree that has neither")
+    ap.add_argument("--only", choices=("ladder",), default=None, help="run only the context ladders (no S0, no throughput)")
+    ap.add_argument("--ladder", default=None, help='JSON {"main": {"2": [from, max], ...}, "small": {...}}: window per slot to start at and to stop at')
     ap.add_argument("--go", action="store_true", help="really run (without it: print the plan and the checks only)")
     ap.add_argument("--logbook", default=None, help="logbook file (default: docs/LOGBUCH_AGENT_MANAGER.md)")
     args = ap.parse_args(argv)
@@ -269,7 +275,8 @@ def main(argv=None):
                 if rid and (rid not in recipes or recipes[rid].get("provider") != "llama-cpp-server")]
     problems += [f"model file of {rid} is missing" for rid in (main_id, small_id)
                  if rid and rid in recipes and not Path(str(recipes[rid]["profile"]["server"].get("gguf", ""))).is_file()]
-    plan = build_plan(main_id, small_id, slots, with_small=not args.no_small)
+    ranges = {lab: {int(n): rng for n, rng in per.items()} for lab, per in json.loads(args.ladder).items()} if args.ladder else None
+    plan = build_plan(main_id, small_id, slots, with_small=not args.no_small, only=args.only, ranges=ranges)
     total = sum(s["minutes"] for s in plan)
     print(f"Plan: {len(plan)} steps, about {total} min ({total / 60:.1f} h; estimate from an assumed prompt speed of {PROMPT_TPS} tok/s, not measured); limits {args.limit_h} h main, {args.small_limit_h} h helper")
     for s in plan:
@@ -303,6 +310,13 @@ def main(argv=None):
             config.engine_root = str(guppi / "engines")
         return LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_slotmeasure_")))
     run.runtime_factory = factory
+    rows_file = project / "runtime_data" / "measurements" / f"slot_messung_{date.today().isoformat()}.rows.jsonl"
+    rows_file.parent.mkdir(parents=True, exist_ok=True)
+
+    def keep_row(recipe_id, parallel, row):
+        with rows_file.open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"recipe": recipe_id, "parallel": parallel, "row": row}, ensure_ascii=False, default=str) + "\n")
+    run.on_row = keep_row
     import logbook as logbook_tool
 
     def log(text):

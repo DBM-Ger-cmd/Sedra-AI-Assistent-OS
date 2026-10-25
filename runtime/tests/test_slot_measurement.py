@@ -140,6 +140,13 @@ class LadderParallel(unittest.TestCase):
             ladder_tool.ladder(FakeRuntime(), recipe, max_ctx=8192, probes=1, say=lambda s: None)
             self.assertTrue(single.called and not par.called)
 
+    def test_every_finished_rung_is_handed_to_the_caller(self):
+        recipe = {"id": "r", "model": "m", "profile": {"server": {"gguf": "x"}}}
+        seen = []
+        with mock.patch.object(ladder_tool, "rung_parallel", return_value=({"status": "ok", "context": 8192}, 2.4)), mock.patch.object(ladder_tool, "trained_context", return_value=16384):
+            ladder_tool.ladder(FakeRuntime(), recipe, max_ctx=16384, probes=1, say=lambda s: None, parallel=2, on_row=lambda rid, n, row: seen.append((rid, n, row["context"])))
+        self.assertEqual(seen, [("r", 2, 8192), ("r", 2, 8192)])
+
     def test_overlap_and_judge_helpers(self):
         self.assertTrue(ladder_tool.overlap([(0, 5), (1, 6)]))
         self.assertFalse(ladder_tool.overlap([(0, 1), (2, 3)]))
@@ -257,6 +264,19 @@ class Measurement(unittest.TestCase):
         self.assertTrue(all(s["minutes"] > 0 for s in plan))
         self.assertEqual(len(sm.build_plan("main", None, [1, 2, 3, 4])), 12)
         self.assertEqual(len(sm.build_plan("main", "small", [1, 2], with_small=False)), 6)
+
+    def test_ladder_only_plan_with_own_ranges(self):
+        plan = sm.build_plan("main", "small", [2, 3], only="ladder", ranges={"main": {2: [49152, 65536]}, "small": {3: [8192, 49152]}})
+        self.assertEqual([(s["label"], s["parallel"], s["tool"]) for s in plan], [("main", 2, "ladder"), ("main", 3, "ladder"), ("small", 2, "ladder"), ("small", 3, "ladder")])
+        self.assertEqual([s.get("range") for s in plan], [(49152, 65536), None, None, (8192, 49152)])
+        tools = FakeTools()
+        seen = []
+        original = tools.ladder
+        tools.ladder = lambda runtime, recipe, **kw: (seen.append((recipe["id"], kw["parallel"], kw["start"], kw["max_ctx"])), original(runtime, recipe, **kw))[1]
+        self.run_plan(plan, tools)
+        self.assertEqual(seen[0], ("main", 2, 49152, 65536))
+        self.assertEqual(seen[3], ("small", 3, 0, 49152))
+        self.assertEqual([c[0] for c in tools.calls], ["ladder"] * 4)
 
     def test_full_run_writes_results_table_logbook_and_releases_the_lease(self):
         tools = FakeTools()
