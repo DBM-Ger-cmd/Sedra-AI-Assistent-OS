@@ -75,8 +75,7 @@ class EinbettTeil:
         """Abgleich und ein Einbett-Schritt (Typ-Verb `wissen.nachfuehren` und Takt, G2-S7-j); keine Sperre über beides (F3)."""
         a = self.abgleich()
         e = self.einbetten_schritt()
-        with self.lock:
-            self.dienst.leerlauf_pruefen()
+        self.dienst.leerlauf_pruefen()                                # ohne `self.lock`: ein Stopp wartet nie unter der Sperre auf einen Start (Auflage 4)
         return {"abgleich": a, "einbetten": e}
 
     def _start_anstossen(self):

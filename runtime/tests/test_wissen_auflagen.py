@@ -1,6 +1,7 @@
 """Die Auflagen des Reviews zu Spec 7 (Cloud-Bau, vor dem Einschalten von `wissen`): (1) `vorschlaege.jsonl` und Nachmessung atomar,
 (2) Abgleich löst je Datei gegen die Wurzel auf (Verknüpfung/Junction), (3) `oeffnen` fängt auch `OSError`, (4) der Server startet nie
 unter `self.lock`, (5) die Teilung von `speicher.py`, (6) `_antrag_von` ohne stillen Rückfall auf „gated“, dazu ein Abschnitt über der Grenze."""
+import dataclasses
 import json
 import os
 import stat
@@ -247,6 +248,47 @@ class SpeicherGeteilt(unittest.TestCase):
                 if callable(wert) and not name.startswith("__"):
                     self.assertNotIn(name, gesehen, f"{name} in {klasse.__name__} und {gesehen.get(name)}")
                     gesehen[name] = klasse.__name__
+
+
+class LeerlaufWaehrendDesStarts(Basis):
+    """Review B1: Server im Leerlauf beendet, die Suche stößt den Hintergrundstart an, der Takt läuft währenddessen. Der Takt darf
+    weder unter `self.lock` auf den Start warten (sonst hängen Suche und Desk bis `start_warten_s`) noch den frischen Server beenden."""
+    def setUp(self):
+        super().setUp()
+        alle_freigeben(self.sp)
+        self.sp.abgleich()
+        self.sp.einbetten_schritt()
+        self.sp.dienst.stoppe()
+
+    def test_takt_wartet_nicht_unter_der_sperre_und_beendet_den_frischen_server_nicht(self):
+        echt = self.sp.dienst.starter
+        self.srv.server.kaputt = True
+
+        def starter(cmd, **kw):                                            # ein langsamer Start: der Prozess lebt, antwortet aber erst nach 3 s
+            proc = echt(cmd, **kw)
+            threading.Timer(3.0, setattr, (self.srv.server, "kaputt", False)).start()
+            return proc
+        self.sp.dienst.starter = starter
+        self.sp.dienst.e = dataclasses.replace(self.sp.dienst.e, start_warten_s=10.0)
+        self.sp.dienst._letzte_anfrage = self.sp.dienst.uhr() - 10 ** 6       # die letzte Anfrage liegt weit über `leerlauf_s` zurück
+        self.assertEqual(self.sp.suche("Grenze für den Grafikspeicher", leser=S.CAPTAIN)["modus"], "volltext")
+        frist = time.monotonic() + 5
+        while self.sp.dienst._proc is None and time.monotonic() < frist:  # der Start hält `_start_lock` und wartet auf `/health`
+            time.sleep(0.05)
+        self.assertIsNotNone(self.sp.dienst._proc)
+        t0 = time.monotonic()
+        self.assertFalse(self.sp.dienst.leerlauf_pruefen(), "während des Starts wird nichts beendet")
+        self.assertLess(time.monotonic() - t0, 1.0, "der Leerlauf-Stopp wartet nicht auf den Start")
+        takt = threading.Thread(target=self.sp.nachfuehren)
+        takt.start()
+        time.sleep(0.3)
+        self.assertTrue(self.sp.lock.acquire(timeout=1.5), "Suche und Desk kommen an die Sperre, solange der Takt auf den Start wartet")
+        self.sp.lock.release()
+        self.sp._start_thread.join(30)
+        takt.join(30)
+        self.assertFalse(takt.is_alive())
+        self.assertTrue(self.sp.dienst.laeuft(), "der frisch gestartete Server läuft weiter")
+        self.assertEqual(self.sp.suche("Grenze für den Grafikspeicher", leser=S.CAPTAIN)["modus"], "hybrid")
 
 
 class AbschnittUeberDerGrenze(Basis):
