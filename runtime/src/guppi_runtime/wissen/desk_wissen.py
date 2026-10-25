@@ -247,8 +247,12 @@ def _zuruecknehmen(hub, oid, args):
 # ---- Applier (desk/gated.py)
 def _antrag_von(hub, kind, binding):
     """(mission_id, gate_id) des Antrags, dessen Bindung gerade angewendet wird: der Applier bekommt nur die Bindung, die Quelle
-    trägt aber Gate und Mission ihrer Freigabe (D7.2). Ohne passenden Antrag `wis_antrag_unbekannt`: dann entsteht nichts."""
-    missionen = hub.runtime.missions.list()                       # ein Lesefehler bricht den Applier ab, statt ohne Freigabe-ID anzulegen
+    trägt aber Gate und Mission ihrer Freigabe (D7.2). Ist der Antrag nicht zu finden, wird nichts angewendet (`wis_antrag_unbekannt`):
+    eine Quelle ohne Gate und Mission wäre ein Wissen ohne Herkunft."""
+    try:
+        missionen = hub.runtime.missions.list()
+    except Exception:
+        raise ValueError("wis_antrag_unbekannt") from None           # ein Lesefehler bricht den Applier ab, statt ohne Freigabe-ID anzulegen
     for m in reversed(missionen):
         req = (m.get("context") or {}).get(gated.CONTEXT) or {}
         if req.get("kind") != kind or req.get("binding") != binding or (m.get("lifecycle") or {}).get("status") == "closed":
@@ -259,6 +263,23 @@ def _antrag_von(hub, kind, binding):
             raise ValueError("wis_antrag_unbekannt")
         return m["identity"]["mission_id"], gate_id
     raise ValueError("wis_antrag_unbekannt")                          # nie still mit „gated“ als Freigabe (G4-Auflage 6, Prüfung F8)
+
+
+def _verweigert(do):
+    """Ein Applier, der nichts anwenden kann (Antrag nicht auffindbar, Datei nicht schreibbar), endet für `gated.decide` mit der
+    Ablehnung `guard_refused:<code>`: der Antrag wird geschlossen und ohne Token zurückgelassen, statt als Zombie offen zu bleiben."""
+    def anwenden(hub, binding):
+        try:
+            return do(hub, binding)
+        except OSError:
+            raise ValueError(gated.REFUSED + "wis_speicher_nicht_lesbar") from None
+        except ValueError as exc:
+            if str(exc) == "wis_antrag_unbekannt":
+                raise ValueError(gated.REFUSED + "wis_antrag_unbekannt") from None
+            raise
+    anwenden.__name__ = getattr(do, "__name__", "anwenden")
+    anwenden.__doc__ = getattr(do, "__doc__", None)
+    return anwenden
 
 
 def _quelle_freigeben(hub, binding):
@@ -293,6 +314,11 @@ def _vorschlag_abgelehnt(hub, binding):
         return None
 
 
+# einmal gebunden: `gated.register_applier` erkennt dieselbe Funktion wieder (ein zweiter Hub im selben Prozess)
+_APPLIER_QUELLE = _verweigert(_quelle_freigeben)
+_APPLIER_VORSCHLAG = _verweigert(_vorschlag_aufnehmen)
+
+
 def vorschlag_beantragen(hub, vorschlag):
     """Vorschlag → Antrag (D7.8 Schritt 2); gibt die Missions-ID zurück. Wird als `speicher.beantrage` eingehängt."""
     binding = {"vorschlag_id": vorschlag["id"], "hash": vorschlag["hash"], "stufe": vorschlag["stufe"], "projekt": vorschlag.get("projekt"),
@@ -325,8 +351,8 @@ def register(registry, hub):
     ]
     for kind in kinds:
         registry.register(kind)
-    gated.register_applier(KIND_QUELLE, _quelle_freigeben, registry=registry)
-    gated.register_applier(KIND_VORSCHLAG, _vorschlag_aufnehmen, on_reject=_vorschlag_abgelehnt, registry=registry)
+    gated.register_applier(KIND_QUELLE, _APPLIER_QUELLE, registry=registry)
+    gated.register_applier(KIND_VORSCHLAG, _APPLIER_VORSCHLAG, on_reject=_vorschlag_abgelehnt, registry=registry)
     sp.beantrage = lambda vorschlag: vorschlag_beantragen(hub, vorschlag)
     return list(TYPES)
 

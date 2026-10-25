@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import vektor
+from .hilfen import schreibe_atomar
 
 ALIAS = "wissen-embed"
 HOST = "127.0.0.1"
@@ -117,7 +118,8 @@ class EmbeddingDienst:
         self._letzte_anfrage = None
         self._pausiert = False
         self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        self._start_lock = threading.Lock()                      # nie zwei Starts zugleich (Takt, Hintergrundstart)
+        self._start_lock = threading.RLock()                     # Start und Stopp nacheinander, nie zwei Starts zugleich (Takt, Desk, Hintergrundstart)
+        self._startet = False                                    # ein Start läuft gerade (der Leerlauf-Stopp wartet nicht auf ihn)
 
     # ---- Kennung und Bereitschaft
     def modell_id(self):
@@ -221,17 +223,19 @@ class EmbeddingDienst:
         return self.gesund(0.5) and self._alias_passt(0.5)
 
     def _schreibe_pid(self, pid):
-        self.pid_datei.parent.mkdir(parents=True, exist_ok=True)
-        self.pid_datei.write_text(json.dumps({"pid": pid, "port": self.e.port, "alias": ALIAS, "start": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}), encoding="utf-8")
+        schreibe_atomar(self.pid_datei, json.dumps({"pid": pid, "port": self.e.port, "alias": ALIAS, "start": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}))
 
     def starte(self):
         """Server starten und prüfen: Prüfsumme, Port frei (sonst `wis_port_belegt`), `/health`, Prüfsatz mit `dim`.
         Zwei Fehlstarts → nicht bereit (`wis_server_start`). Rückgabe True, wenn er läuft. Nie zwei Starts zugleich."""
         with self._start_lock:
+            self._startet = True
             try:
                 return self._starte()
             except NETZFEHLER as exc:                             # Prüfsumme oder PID-Datei nicht lesbar/schreibbar (F11)
                 raise ValueError("wis_server_start:" + (str(exc) or type(exc).__name__)[:60]) from None
+            finally:
+                self._startet = False
 
     def _starte(self):
         if self.laeuft():
@@ -250,6 +254,7 @@ class EmbeddingDienst:
         except OSError:
             self._fehlstarts.append(self.uhr())
             raise ValueError("wis_server_start") from None
+        self._letzte_anfrage = self.uhr()                         # der frische Server zählt nicht als Leerlauf, auch nicht während des Starts
         self._schreibe_pid(self._proc.pid)
         frist = time.monotonic() + self.e.start_warten_s
         while time.monotonic() < frist and self._lebt():
@@ -278,7 +283,11 @@ class EmbeddingDienst:
 
     def stoppe(self):
         """Nur die eigene PID: der eigene Prozess, oder die PID der Datei, wenn auf dem eigenen Port ein Server mit dem Alias
-        antwortet; sonst wird nichts angefasst."""
+        antwortet; sonst wird nichts angefasst. Unter `_start_lock`: ein Stopp fällt nie in einen laufenden Start."""
+        with self._start_lock:
+            return self._stoppe()
+
+    def _stoppe(self):
         pid = None
         if self._proc is not None:
             pid = self._proc.pid
@@ -306,11 +315,15 @@ class EmbeddingDienst:
         return pid
 
     def leerlauf_pruefen(self):
-        """Nach `leerlauf_s` ohne Anfrage den Server beenden (vom Takt gerufen)."""
-        if self._lebt() and self._letzte_anfrage is not None and self.uhr() - self._letzte_anfrage > self.e.leerlauf_s:
-            self.stoppe()
-            return True
-        return False
+        """Nach `leerlauf_s` ohne Anfrage den Server beenden (vom Takt gerufen). Läuft gerade ein Start, wartet der Takt nicht auf ihn
+        und beendet den frischen Server auch nicht: der nächste Takt prüft wieder."""
+        if self._startet:
+            return False
+        with self._start_lock:                                    # fällt doch ein Start dazwischen: danach zählt `_letzte_anfrage` des frischen Servers
+            if self._lebt() and self._letzte_anfrage is not None and self.uhr() - self._letzte_anfrage > self.e.leerlauf_s:
+                self._stoppe()
+                return True
+            return False
 
     # ---- Einbetten und Anfrage
     def lauf(self, offene, schreibe, *, markiere=None):
