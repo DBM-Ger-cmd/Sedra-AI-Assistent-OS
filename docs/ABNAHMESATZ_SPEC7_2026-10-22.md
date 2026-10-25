@@ -29,7 +29,7 @@ Quellen der Doku-Gruppe: `BETRIEB.md`, `ENTWICKLUNG.md`, `SO_WIRD_GEBAUT.md`, `M
 
 ## Platzhalter und Hinweise
 
-- **knowledge (10 Fragen):** Im Repo gibt es keinen lokalen `KnowledgeStore` mit Lektionen; die einzigen echten Lektionstexte sind die vier Sandbox-Lektionen aus `devenv/lesson_proposer.py` (reserved_name, placeholder_write, syntax_error, missing_module; englisch). Die Erwartungen tragen Platzhalter `knowledge:<KN-ID Lektion …>` / `Lektion <Titel der Lektion …>` und je Frage ein Feld `hinweis`. Vor der Messung trägt der Captain KN-ID und Titel aus dem lokalen Speicher ein (oder legt die vier Lektionen an); die Fragen bleiben unverändert.
+- **knowledge (10 Fragen):** Die ursprünglichen Fragen A059–A068 verwiesen auf vier Sandbox-Lektionen (reserved_name, placeholder_write, syntax_error, missing_module), die im lokalen Speicher nie angelegt wurden. Entscheidung des Captains am 24.10.2026 (Weg a): die zehn Fragen sind auf die acht vorhandenen `coding_lesson` umgeschrieben (keine Lektionen angelegt, keine Daten erfunden); `art`, Gruppe und Verteilung blieben. Erwartung je Frage: `knowledge:<KN-ID>` und `Lektion <Titel>` aus dem lokalen Speicher. Zuordnung: A059 → KN-85E0AAF4 (Whole-string regex validation in Python), A060 und A067 → KN-82CAC22F (urllib.parse: the port attribute raises by itself), A061 und A068 → KN-E338EC2C (Validators: translate every library error into the documented one), A062 → KN-786685E0 (Regex: escape the dots of a literal host or version), A063 → KN-60536EEE (Regex: \d matches non-ASCII digits), A064 → KN-53AC38CC (Lists of records from outside contain junk), A065 → KN-2CD118AF (A polling window must not wipe or stop itself), A066 → KN-9309C5D3 (Own tests must be discoverable). Die Fragen sind deutsch, die Lektionstexte englisch; bei „umschrieben“ und „fachbegriff“ steht kein Wort des Lektionstitels in der Frage.
 - **arbeitsumfeld:** Der Adapter liest die Tabelle `wissen`, die `arbeitsumfeld_wissen.py` füllt – nicht die `arbeitsplatz.yaml` der Shells und Werkzeuge (die liest `desk/arbeitsplatz.py`). Die Fragen zielen deshalb auf diese Zeilen: Vorarbeiter-Aktionen (`V-…`, aus `vorarbeiter.py`), Sperre (`V-sperre`), Präzedenzfall-Läufe (`L-…`, Abschnitt 8 des Regelwerks), Regel-Abschnitte (`R-01…R-10`, `## `-Überschriften von `REGELWERK_STANDARDLAEUFE.md` in Reihenfolge), Auftrags-Abschnitte (`A-01…A-07`) und drei Ordner (`O-local_config`, `O-redesign/vorarbeiter`, `O-redesign/omni_mapping`). Ordner-Zeilen entstehen nur, wenn der Ordner im Arbeitsbereich vorhanden ist (Feld `hinweis`).
 - **gateway:** Kennungen nach den Zeilen von `gateway/wissen.py`: `R-xx` (Regel), `P04` (Merkmal), `F-<code>` (Fehler), `B-<begriff>` (Begriff, Titel mit großem Anfangsbuchstaben), `Z-<ZUSTAND>`, `L-<nr>` (Leitfaden-Schritt), `A-ABLAUF`.
 - **logbuch:** Jede Stelle `Zeile <Datum> <Uhrzeit> <Art>` trifft genau eine Zeile des Logbuchs (geprüft); Zeilen mit „(ca.)“ wurden nicht gewählt.
@@ -49,13 +49,13 @@ Geprüft: Zählungen, IDs A001–A120, keine doppelte Frage, jede `datei` existi
 ## SHA-256 (Versiegelung)
 
 ```
-d1b6a5927aa9cade62f5f8c7f9fd05ad7df73aea0f16eaa3e86091a4dcc65992  runtime/benchmarks/wissen_goldsatz_v2.json
+bae43a026214ad15f0837cad8c7896bd68fdee80e5c93ada50f6e03eaecc9c56  runtime/benchmarks/wissen_goldsatz_v2.json
 ```
 
-Ändert sich die Datei (etwa beim Eintragen der KN-IDs), wird die Summe neu berechnet und im Logbuch nachgetragen; die Fragen selbst bleiben.
+Frühere Summe vor dem Umschreiben der Knowledge-Fragen (Platzhalter-Stand): `d1b6a5927aa9cade62f5f8c7f9fd05ad7df73aea0f16eaa3e86091a4dcc65992`. Ändert sich die Datei erneut, wird die Summe neu berechnet und im Logbuch nachgetragen.
 
 ## Vorschlag Logbuch-Zeile (Art SPEC)
 
 ```
-.venv\Scripts\python.exe benchmarks/logbook.py add SPEC "Spec 7 Abnahmesatz (S7.5, D7.11, G2-S7-n) von anderer Sitzung geschrieben, vor dem Einfrieren der Fusion: 120 Fragen (30 wortgleich, 50 umschrieben, 30 fachbegriff, 10 negativ; doku 36, logbuch 22, knowledge 10, arbeitsumfeld 18, gateway 24; 40 Liste/Tabelle), alle Erwartungen auf Adapter-Inhalt; Prüfskript result ok; knowledge-KN-IDs als Platzhalter. SHA-256 d1b6a5927aa9cade62f5f8c7f9fd05ad7df73aea0f16eaa3e86091a4dcc65992" --ref "runtime/benchmarks/wissen_goldsatz_v2.json, docs/ABNAHMESATZ_SPEC7_2026-10-22.md"
+.venv\Scripts\python.exe benchmarks/logbook.py add SPEC "Spec 7 Abnahmesatz (S7.5, D7.11, G2-S7-n) von anderer Sitzung geschrieben, vor dem Einfrieren der Fusion: 120 Fragen (30 wortgleich, 50 umschrieben, 30 fachbegriff, 10 negativ; doku 36, logbuch 22, knowledge 10, arbeitsumfeld 18, gateway 24; 40 Liste/Tabelle), alle Erwartungen auf Adapter-Inhalt; Prüfskript result ok; knowledge-KN-IDs aus dem lokalen Speicher. SHA-256 d1b6a5927aa9cade62f5f8c7f9fd05ad7df73aea0f16eaa3e86091a4dcc65992" --ref "runtime/benchmarks/wissen_goldsatz_v2.json, docs/ABNAHMESATZ_SPEC7_2026-10-22.md"
 ```
