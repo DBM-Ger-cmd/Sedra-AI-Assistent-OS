@@ -86,13 +86,15 @@ class SchedulerServerTests(unittest.TestCase):
     def run_clear(self, **kw):
         return gp.clear_leftovers(say=lambda *_: None, sleep=lambda s: None, **kw)
 
-    def serve(self, state="bereit", pid=20):
+    def serve(self, state="bereit", pid=20, hold=True):
         from guppi_runtime.jobs import slot_store
         conn = self.lab.connect()
         try:
             slot_store.set_server(conn, "2026-10-24T00:00:00Z", state, recipe="main.local", slots=2, pid=pid)
         finally:
             conn.close()
+        if state != "aus" and hold:
+            self.assertTrue(self.lab.try_acquire("sedra-scheduler", "Modellserver main.local"))     # the load lease the scheduler holds
 
     def test_a_server_of_the_scheduler_is_spared_and_the_orphan_is_stopped(self):
         fake = Fake(self.monkey, servers={20: OURS, 21: OURS}); self.serve()
@@ -107,13 +109,17 @@ class SchedulerServerTests(unittest.TestCase):
         with self.assertRaisesRegex(gp.GpuNotClean, "scheduler"): self.run_clear(lab=self.lab)
         self.assertEqual(fake.stopped, [])
 
+    def test_without_a_fresh_load_lease_the_pid_is_a_leftover(self):
+        fake = Fake(self.monkey, servers={20: OURS}); self.serve(hold=False)          # the row says bereit, but nobody holds `gpu` (scheduler process died)
+        self.run_clear(lab=self.lab); self.assertEqual(fake.stopped, [20])
+
     def test_explicit_protected_pids_and_a_lab_without_slot_tables(self):
         fake = Fake(self.monkey, servers={30: OURS}); self.run_clear(protected=[30]); self.assertEqual(fake.stopped, [])
         old = TestLab(Path(self.tmp.name) / "old.db", alive=lambda p: True); old.schema = 1
         self.assertEqual(gp.scheduler_server_pids(old), set())
 
     def test_the_lease_hands_itself_to_the_hook(self):
-        fake = Fake(self.monkey, servers={20: OURS, 21: OURS}); self.serve()
+        fake = Fake(self.monkey, servers={20: OURS, 21: OURS}); self.serve(hold=False)
         with self.lab.lease("bench", "x", preflight=gp.clear_leftovers):
             pass
         self.assertEqual(fake.stopped, [21])

@@ -32,42 +32,49 @@ class HandoverMixin:
         """One step, called every `poll_s` from the desk's poller: notice a crashed server, and hand the GPU over to a waiting process
         (drain: no new slots, wait for the active runs at most `drain_max_s`, stop the own server, free the lease). Kills nothing."""
         self._require()
-        with self._lock:
-            now = self._now()
-            with self._conn() as conn:
-                server, active, pending = self._server(conn), self._active(conn), slot_store.handover_pending(conn, now)
-            state = server["state"]
-            if state == "bereit" and not self._alive():
-                return {"state": self._server_gone(), "action": "server_exited"}
-            if not pending:
-                if state == "exklusiv" or (state == "drain" and (server["reason"] or "").startswith("exklusiv:")):
-                    with self._conn() as conn:
-                        back = "bereit" if state == "drain" else "aus"         # the waiting process gave up or is done
-                        slot_store.set_server(conn, now, back, owner=None, reason=None)
-                    self._drain_since, self._drain_overdue = None, False
-                    return {"state": back, "action": "handover_ended"}
-                return {"state": state, "action": None}
-            first = pending[0]
-            if state == "bereit":
+        if not self._lock.acquire(blocking=False):
+            return {"state": None, "action": "busy"}      # a model is being loaded: the desk's poller must not stand still meanwhile
+        try:
+            return self._poll()
+        finally:
+            self._lock.release()
+
+    def _poll(self):
+        now = self._now()
+        with self._conn() as conn:
+            server, active, pending = self._server(conn), self._active(conn), slot_store.handover_pending(conn, now)
+        state = server["state"]
+        if state == "bereit" and not self._alive():
+            return {"state": self._server_gone(), "action": "server_exited"}
+        if not pending:
+            if state == "exklusiv" or (state == "drain" and (server["reason"] or "").startswith("exklusiv:")):
                 with self._conn() as conn:
-                    slot_store.set_server(conn, now, "drain", owner=first["owner"], reason=f"exklusiv:{first['owner']}")
-                self._drain_since, self._drain_overdue = self.lab.clock(), False
-                self._audit("SLOT_DRAIN", owner=first["owner"], purpose=first["purpose"], active=len(active))
-                state = "drain"
-            if state == "drain":
-                if active:
-                    since = self._drain_since if self._drain_since is not None else self.lab.clock()
-                    self._drain_since = since
-                    if self.lab.clock() - since > self.config.drain_max_s and not self._drain_overdue:
-                        self._drain_overdue = True                      # the request stays, nobody is killed; the Captain may force it
-                        self._audit("SLOT_DRAIN_OVERDUE", owner=first["owner"], active=sorted(r["run_id"] for r in active))
-                    return {"state": "drain", "action": "draining", "active": len(active)}
-                self._shutdown("exklusiv", owner=first["owner"], reason=f"exklusiv:{first['owner']}")
+                    back = "bereit" if state == "drain" else "aus"         # the waiting process gave up or is done
+                    slot_store.set_server(conn, now, back, owner=None, reason=None)
                 self._drain_since, self._drain_overdue = None, False
-                return {"state": "exklusiv", "action": "handed_over", "owner": first["owner"]}
-            if state == "aus":
-                self._release_gpu()
-                with self._conn() as conn:
-                    slot_store.set_server(conn, now, "exklusiv", owner=first["owner"], reason=f"exklusiv:{first['owner']}")
-                return {"state": "exklusiv", "action": "handed_over", "owner": first["owner"]}
+                return {"state": back, "action": "handover_ended"}
             return {"state": state, "action": None}
+        first = pending[0]
+        if state == "bereit":
+            with self._conn() as conn:
+                slot_store.set_server(conn, now, "drain", owner=first["owner"], reason=f"exklusiv:{first['owner']}")
+            self._drain_since, self._drain_overdue = self.lab.clock(), False
+            self._audit("SLOT_DRAIN", owner=first["owner"], purpose=first["purpose"], active=len(active))
+            state = "drain"
+        if state == "drain":
+            if active:
+                since = self._drain_since if self._drain_since is not None else self.lab.clock()
+                self._drain_since = since
+                if self.lab.clock() - since > self.config.drain_max_s and not self._drain_overdue:
+                    self._drain_overdue = True                      # the request stays, nobody is killed; the Captain may force it
+                    self._audit("SLOT_DRAIN_OVERDUE", owner=first["owner"], active=sorted(r["run_id"] for r in active))
+                return {"state": "drain", "action": "draining", "active": len(active)}
+            self._shutdown("exklusiv", owner=first["owner"], reason=f"exklusiv:{first['owner']}")
+            self._drain_since, self._drain_overdue = None, False
+            return {"state": "exklusiv", "action": "handed_over", "owner": first["owner"]}
+        if state == "aus":
+            self._release_gpu()
+            with self._conn() as conn:
+                slot_store.set_server(conn, now, "exklusiv", owner=first["owner"], reason=f"exklusiv:{first['owner']}")
+            return {"state": "exklusiv", "action": "handed_over", "owner": first["owner"]}
+        return {"state": state, "action": None}

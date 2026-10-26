@@ -94,11 +94,14 @@ def _stop(pid, run=subprocess.run):
 
 
 def scheduler_server_pids(lab):
-    """The pids of the llama-server that the model scheduler runs now (`slot_server.pid` while its state is startet/bereit/drain). Empty when
+    """The pids of the llama-server that the model scheduler runs now (`slot_server.pid` while its state is startet/bereit/drain AND the load lease `gpu` is held and fresh). Empty when
     the lab has no schema 2 or nothing runs. Reads only."""
     if lab is None or getattr(lab, "schema", 1) < 2:
         return set()
     try:
+        holder = lab.holder()
+        if not holder or holder.get("stale"):
+            return set()                                   # nobody holds the load lease (any more): the server is no live lease's, a leftover
         conn = lab.connect()
         try:
             row = conn.execute("SELECT pid, state FROM slot_server WHERE name = 'main'").fetchone()

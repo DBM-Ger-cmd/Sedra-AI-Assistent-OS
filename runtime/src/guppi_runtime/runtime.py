@@ -288,7 +288,7 @@ class GuppiRuntime:
         if self.job_supervisor is not None:
             if self.model_scheduler is not None:
                 self.job_supervisor.slots=self.model_scheduler
-                self.model_router.slot_guard=SlotGuard(self.model_scheduler,wait_s=self.model_scheduler.config.wait_max_s)    # D2.6: Direktaufrufe über einen Slot
+                self.model_router.slot_guard=SlotGuard(self.model_scheduler,wait_s=min(30,self.model_scheduler.config.wait_max_s))    # D2.6: Direktaufrufe über einen Slot
             else: self.job_supervisor.config.workers=1        # no scheduler, no parallel jobs (G2-S2-04)
 
     def model_scheduler_status(self):
