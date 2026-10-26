@@ -383,6 +383,21 @@ class RuntimeWiringTests(unittest.TestCase):
         self.assertEqual((rt.job_supervisor.config.workers, rt.job_supervisor.slots), (1, None))
         self.assertFalse((project / "runtime_data" / "testlab" / "testlab.db").exists())
 
+    def test_a_missing_or_broken_yaml_keeps_it_off_says_why_in_boot_and_audits_it(self):
+        rt, project = self.runtime()
+        for text, reason in ((None, "model_scheduler_config_missing"), ("model_scheduler: [unclosed", "model_scheduler_config_invalid:yaml")):
+            config = Path(tempfile.mkdtemp(prefix="sedra-", dir=str(project.parent)))
+            if text is not None:
+                (config / "model_scheduler.yaml").write_text(text, encoding="utf-8")
+            rt.config_root = config
+            rt._configure_model_scheduler(project / "runtime_data")
+            with self.subTest(reason=reason):
+                self.assertIsNone(rt.model_scheduler)
+                self.assertEqual((rt.job_supervisor.config.workers, rt.job_supervisor.slots), (1, None))
+                self.assertEqual(rt.boot()["model_scheduler"], {"enabled": False, "error": reason})
+        offs = [e for e in rt.audit.path.read_text(encoding="utf-8").splitlines() if "MODEL_SCHEDULER_OFF" in e]
+        self.assertEqual(len(offs), 2)
+
     def test_built_directly_it_is_attached_to_the_supervisor(self):
         from guppi_runtime.jobs.testlab import default_path
         rt, project = self.runtime()
