@@ -98,6 +98,14 @@ def finish(conn, wakeup_id, outcome, now, job_id=None, mission_id=None, request_
             params + [wakeup_id],
         )
 
+        # Ein Lauf bedient eine Aufgabe. Zusammengelegte Weckrufe zu einer anderen Aufgabe enden nicht mit dem Lauf des Anführers (die
+        # Aufgabe bliebe sonst liegen): sie werden wieder frei und warten offen, bis der Agent wieder Platz hat.
+        if outcome in ("lauf", "antrag") and row["task_id"] is not None:
+            conn.execute(
+                "UPDATE wakeups SET coalesced_into = NULL WHERE coalesced_into = ? AND done_at IS NULL "
+                "AND task_id IS NOT NULL AND task_id != ?",
+                (wakeup_id, row["task_id"]),
+            )
         conn.execute(
             "UPDATE wakeups SET outcome = ?, done_at = ? WHERE coalesced_into = ?",
             (outcome, now, wakeup_id),

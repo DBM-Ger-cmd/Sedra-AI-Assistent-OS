@@ -174,6 +174,30 @@ class Wakeups(Base):
         self.tick()
         self.assertIsNone(self.wakeup(wid)['done_at'])
 
+    def test_two_tasks_of_one_agent_both_run_one_after_the_other(self):
+        """Betriebsstunde 26.10.2026: zwei Aufgaben für einen Agenten legen zwei Weckrufe an, der zweite wird zusammengelegt. Der Lauf
+        bedient nur eine Aufgabe; der zusammengelegte Weckruf darf nicht mit ihm enden, sonst bleibt die zweite Aufgabe liegen."""
+        self.guard.standing = True
+        self.task('T2', assignee='A1')
+
+        def start(orch, agent, task, wakeup, approval):
+            board.checkout(orch.conn, task['id'], agent['id'], 'J-' + task['id'], T0)
+            self.runs.append((agent['id'], task['id']))
+            return {'job_id': 'J-' + task['id'], 'mission_id': 'M-' + task['id']}
+        self.orch.start_run = start
+        w1, w2 = self.wake('A1', 'assign:T1:1', 'T1'), self.wake('A1', 'assign:T2:1', 'T2')
+        self.tick()
+        self.assertEqual(self.runs, [('A1', 'T1')])
+        self.assertEqual(self.wakeup(w1)['outcome'], 'lauf')
+        self.assertIsNone(self.wakeup(w2)['done_at'], 'der Weckruf der zweiten Aufgabe bleibt offen')
+        self.supervisor.store.jobs['J-T1'] = {'state': 'BUILDING', 'attempt_log': [{'outcome': 'RUNNING'}]}
+        self.tick()
+        self.assertEqual(self.runs, [('A1', 'T1')], 'solange der erste Lauf läuft, wartet der zweite')
+        board.release(self.orch.conn, 'T1', 'J-T1', 'erledigt', T0, 'fertig')
+        self.tick()
+        self.assertEqual(self.runs, [('A1', 'T1'), ('A1', 'T2')])
+        self.assertEqual(self.wakeup(w2)['outcome'], 'lauf')
+
     def test_a_stopped_budget_pauses_the_agent(self):
         self.orch.conn.execute("UPDATE agents SET budget_tokens = 100")
         self.orch.conn.execute("INSERT INTO spend (agent_id, provider, tokens_out, ts) VALUES ('A1', 'lokal', 100, ?)", (T0,))
