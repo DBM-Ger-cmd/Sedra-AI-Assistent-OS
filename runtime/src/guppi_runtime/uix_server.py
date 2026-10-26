@@ -2874,8 +2874,9 @@ class UIXHub:
         from .models.role_routing import ResolutionError
         rt = self.runtime
         with self.model_lock:
-            running = sched.view().get('modell')
-            if running and running != recipe_id:
+            view = sched.view()
+            running = view.get('modell')
+            if running and running != recipe_id and (view.get('server') or {}).get('state') == 'bereit':      # in drain/exklusiv/gesperrt `ensure_server` says no
                 # A switch: the Captain asked for another model, so the running one goes first (not while runs are active).
                 stopped = sched.stop_server(owner='werkstatt')
                 if stopped['status'] == 'leases_active': raise ValueError('leases_active:' + ','.join(stopped['active']))
@@ -2896,6 +2897,7 @@ class UIXHub:
             with self.model_lock:
                 out = sched.stop_server(owner='werkstatt', force=payload.get('erzwingen') is True)
             if out['status'] == 'leases_active': raise ValueError('leases_active:' + ','.join(out['active']))
+            if out['status'] == 'gesperrt': raise ValueError('server_gesperrt')
             return {'status': 'unloaded', 'detail': out['status'], 'interrupted': out['interrupted']}
         server = getattr(self.runtime, 'llama_server', None)
         with self.model_lock:
@@ -3088,6 +3090,10 @@ class UIXHub:
     def close(self):
         """Window closed: a model this UIX loaded is not left on the GPU, and the lease goes back."""
         self.poller.stop()
+        sched = self._scheduler()
+        if sched is not None:                                # the scheduler's server does not outlive the window while no run needs it
+            try: sched.stop_server(owner='werkstatt-close')
+            except Exception: pass
         if self.gpu_token is not None:                       # only the path without the scheduler holds its own lease
             try: self.unload_model({})
             except Exception: self._release_gpu()

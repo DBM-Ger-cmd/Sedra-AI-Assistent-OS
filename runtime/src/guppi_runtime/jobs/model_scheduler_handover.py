@@ -15,8 +15,17 @@ class HandoverMixin:
                 server, active = self._server(conn), self._active(conn)
             if active and not force:
                 return {"status": "leases_active", "active": sorted(r["run_id"] for r in active)}
-            if server["state"] == "aus" and self._token is None:
+            if server["state"] == "gesperrt":
+                return {"status": "gesperrt", "interrupted": []}            # only the Captain's answer to the question unlocks it (D2.8)
+            if server["state"] in ("aus", "exklusiv") and self._token is None:
                 return {"status": "already_off", "interrupted": []}
+            if server["state"] == "drain" and (server["reason"] or "").startswith("exklusiv:"):
+                # the Captain forces the handover (D2.7, point 4): the server goes, the request of the waiting process stays
+                self._shutdown("exklusiv", owner=server["owner"], reason=server["reason"])
+                ended = sorted(r["run_id"] for r in active)
+                with self._conn() as conn:                                 # `exklusiv` does not end leases by itself: forcing does
+                    conn.execute("UPDATE slot_leases SET state = 'unterbrochen', reason = 'erzwungen' WHERE state = 'aktiv'")
+                return {"status": "stopped", "interrupted": ended}
             out = self._shutdown("aus", reason=f"stop:{owner}" + (":erzwungen" if force else ""))
             return {"status": "stopped", "interrupted": out["interrupted"]}
 
