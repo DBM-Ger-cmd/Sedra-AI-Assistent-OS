@@ -57,8 +57,8 @@ class Rein(unittest.TestCase):
         self.assertEqual(u['von'], 'paperclip')
 
 
-class ImBrowser(unittest.TestCase):
-    """A3, A5, A6, A16 im echten Browser (Chromium aus playwright), auf dem Prüfprojekt von uix_check."""
+class Basis(unittest.TestCase):
+    """Ein Server mit dem Prüfprojekt von uix_check und ein Chromium für alle Tests einer Klasse."""
 
     @classmethod
     def setUpClass(cls):
@@ -108,6 +108,9 @@ class ImBrowser(unittest.TestCase):
     def sichtbar(self, page):
         return page.evaluate("""()=>[...document.querySelectorAll('.dk-group')].map(g=>{
             const b = g.querySelector('.dk-body > .dk-pane-box:not([hidden])'); return b ? b.innerText.slice(0, 200) : ''; })""")
+
+class ImBrowser(Basis):
+    """A3, A5, A6, A16 im echten Browser (Chromium aus playwright)."""
 
     def test_reiterwechsel_haengt_die_andere_gruppe_nicht_neu_ein(self):
         """A3/A6: geteilt, rechts das Logbuch; links zwischen Grenzen und Modulen wechseln → rechts keine Einhängung."""
@@ -172,6 +175,30 @@ class ImBrowser(unittest.TestCase):
         self.assertEqual(page.evaluate('window.__zu'), ['logbook:audit'])
         stand = page.evaluate("()=>window.sedraBoot.ctx.api('/api/arbeitsstand')")
         self.assertNotIn('logbook:audit', [o['type'] + ':' + o['id'] for o in stand['offen']])
+
+
+class UeberDenWechsel(Basis):
+    """A16: Cockpit → paperclip → Cockpit über den Umschalter-Weg (POST /api/uix/shell, Neuladen) – nichts geht verloren."""
+
+    def wechseln(self, page, shell):
+        page.evaluate("""async(s)=>{ await fetch('/api/uix/shell', {method: 'POST', body: JSON.stringify({shell: s}), headers: {'Content-Type': 'application/json',
+                         'X-GUPPI-Token': decodeURIComponent(location.hash.slice(1))}}); await window.sedraWechsel.vorDemWechsel(); }""", shell)
+        page.reload(); self.uix.wait_until_started(page); page.wait_for_timeout(1800)
+        self.assertEqual(page.evaluate("()=>window.sedraBoot.ctx.manifest.shell.id"), shell)
+
+    def test_cockpit_paperclip_cockpit(self):
+        page = self.seite()
+        self.oeffnen(page, {'type': 'logbook', 'id': 'audit', 'title': 'Logbuch'})
+        self.wechseln(page, 'paperclip')
+        self.assertIn('Logbuch', page.evaluate("()=>document.querySelector('.pc-top').innerText"))     # was vorn lag, ist die Seite
+        page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'boundary', id:'projekt', title:'Modus und Grenzen'})")
+        page.wait_for_timeout(900)
+        self.wechseln(page, 'cockpit')
+        tabs = page.evaluate("()=>[...document.querySelectorAll('.dk-tab span')].map(s=>s.textContent)")
+        self.assertIn('Logbuch', tabs); self.assertIn('Modus und Grenzen', tabs)                        # beide Objekte sind da
+        self.assertEqual(page.evaluate("()=>(document.querySelector('.dk-tab.on span')||{}).textContent"), 'Modus und Grenzen')
+        self.assertIn('mitgenommen', page.evaluate("()=>document.querySelector('.ck-talk').innerText"))
+        self.assertEqual(self.fehler, [])
 
 
 if __name__ == '__main__':

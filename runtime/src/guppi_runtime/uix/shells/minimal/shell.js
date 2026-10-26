@@ -30,7 +30,11 @@
 
       this.shellApi = {open: o=>this.openObject(o), notify: (text, tone)=>this.notify(text, tone),
                        decide: (id, way)=>this.decide(id, way), theme: name=>root.sedraBoot.setTheme(name),
-                       reload: ()=>location.reload()};      // nach einem Shell-Wechsel: die Seite neu laden gehört der Shell, nicht dem Werkzeug
+                       // nach einem Shell-Wechsel: neu laden gehört der Shell; vorher Arbeitsstand und Ablage hinaus (Vertrag 1.1 §10.4)
+                       reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
+      this.melder = root.sedraStand.makeMelder(this.api);
+      // §9.5: ein Lauf sendet viele Ereignisse – Verben, Ablage, Leiste und Karte frischen höchstens einmal je 500 ms auf
+      this.buendel = root.sedraLifecycle.buendeln(()=>this.afterChangeNow(), 500);
 
       this.windows = root.sedraMinWindows.makeWindows(this.el.desk, this);
       this.menubar = root.sedraMinMenubar.makeMenubar(this.el.bar, this);
@@ -53,7 +57,17 @@
         else if(e.key === 'Escape' && root.sedraMinShelfEdit.isOpen()) root.sedraMinShelfEdit.close();
       });
 
-      if(!this.windows.restore()) this.openObject({type: 'task', id: 'alle', title: 'Aufgaben', collection: true});
+      // §10.4: die eigenen Fenster, dazu was eine andere Shell offen hatte (höchstens 6 Fenster), das vordere nach vorn
+      const stand = await this.melder.holen();
+      const hatte = this.windows.restore();
+      const mit = root.sedraStand.uebernahme(stand, this.windows.list(), o=>o.type !== 'talk' && this.ctx.tools.forObject(o).length > 0);
+      const neu = mit.neu.slice(0, Math.max(0, 6 - this.windows.list().filter(o=>o.type !== 'talk').length));
+      neu.forEach(o=>this.windows.open(o));
+      const vorn = mit.vorn && this.windows.windows.get(mit.vorn);
+      if(vorn) this.windows.focus(vorn);
+      if(!hatte && !neu.length) this.openObject({type: 'task', id: 'alle', title: 'Aufgaben', collection: true});
+      if(mit.von && mit.von !== 'minimal' && neu.length)
+        this.notify('Aus der Oberfläche „' + mit.von + '“ mitgenommen: ' + neu.length + (neu.length === 1 ? ' Fenster.' : ' Fenster.'), 'note');
       this.shelf.mark();
       await Promise.all([this.menubar.refresh(), this.note.refresh()]).catch(e=>this.onProblem('Start', e));
       root.sedraBoot.onProblem = text=>this.notify(text, 'warn');
@@ -101,11 +115,13 @@
     async decide(id, way){
       const out = await this.api('/api/decisions/answer', {method: 'POST', body: {id, way}});
       this.ctx.bus.emit('decision.answered', {id, kind: 'answered'});
-      await this.afterChange();
+      await this.afterChangeNow();                // die eigene Antwort zählt sofort, nicht erst nach dem Bündel
       return out;
     },
 
-    async afterChange(){
+    afterChange(){ this.buendel(); return Promise.resolve(); },
+
+    async afterChangeNow(){
       this.windows.refreshVerbs();
       this.shelf.mark();
       await Promise.all([this.menubar.refresh(), this.note.refresh()]).catch(e=>this.onProblem('Auffrischen', e));
@@ -115,6 +131,21 @@
     onWindowFocus(object){
       this.shelf.mark();
       if(object) this.ctx.bus.emit('talk.context', {object: {type: object.type, id: object.id, title: object.title || ''}});
+      this.melden();
+    },
+
+    // §10.2: offen sind die Fenster (ohne das Gespräch), vorn das oberste
+    melden(){
+      if(!this.melder || !this.windows) return;
+      const front = this.windows.front();
+      this.melder.offen(this.windows.list().filter(o=>o.type !== 'talk'),
+                        front && front.type !== 'talk' ? root.sedraStand.schluessel(front) : null);
+    },
+
+    onWindowClosed(object){
+      root.sedraLifecycle.memoVergessen(object);
+      try{ this.ctx.bus.emit('object.close', {type: object.type, id: object.id}); }catch(_e){}
+      if(this.melder){ this.melder.geschlossen(object); this.melden(); }
     }
   });
 })();

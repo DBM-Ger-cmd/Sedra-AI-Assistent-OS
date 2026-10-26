@@ -75,23 +75,37 @@
       }
 
       ctx.bus.on('object.open', o=>this.open(o));
-      this.open({type: 'gateway', id: 'alle', title: 'KI Gateway', collection: true});
+      // Vertrag 1.1 (§10.4): was vorn lag, kommt als Werkstück, wenn diese Shell es zeichnen kann; sonst das Gateway.
+      // Der Arbeitsstand behält alles andere – zurück im Cockpit ist es wieder da.
+      this.melder = root.sedraStand.makeMelder(ctx.api);
+      const stand = await this.melder.holen();
+      const vorn = ((stand && stand.offen) || []).find(o=>root.sedraStand.schluessel(o) === (stand && stand.vorn));
+      this.open(vorn && this.werkzeuge(vorn).length ? vorn : {type: 'gateway', id: 'alle', title: 'KI Gateway', collection: true});
     },
+
+    werkzeuge(object){ return this.ctx.tools.forObject(object).filter(m=>m.slot !== 'nachweis'); },
 
     // Was ein Werkzeug von der Shell bekommt: einen Weg zum Öffnen, einen zum Melden, einen zum Entscheiden.
     shellApi(){
       return {open: o=>this.open(o), notify: text=>console.info('[shell]', text),
               decide: (id, way)=>this.ctx.api('/api/decisions/answer', {method: 'POST', body: {id, way}}),
-              reload: ()=>location.reload()};
+              reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
     },
 
     open(object){
       if(!object) return;
-      this.werkstueck.replaceChildren();
+      const S = root.sedraStand, key = S.schluessel(object);
+      // dasselbe Objekt in derselben Ansicht: nichts neu einhängen (Vertrag 1.1) – nur eine verlangte Ansicht zeichnet neu
+      const gleich = this.current && S.schluessel(this.current) === key && (this.current.ansicht || '') === (object.ansicht || '') && (this.current.view || '') === (object.view || '');
+      if(gleich && object.ansicht === undefined && object.view === undefined) return;
       // Nachweise (slot nachweis) bleiben weg: diese Shell zeigt das Werkstück
-      const tools = this.ctx.tools.for(object.type).filter(m=>m.slot !== 'nachweis');
-      if(!tools.length){ this.werkstueck.append(d().empty('Kein Werkzeug für „' + object.type + '“.')); return; }
+      const tools = this.werkzeuge(object);
       (this.mounted || []).forEach(s=>root.sedraLifecycle.unmountTool(s, this.ctx.onProblem));
+      this.mounted = [];
+      this.werkstueck.replaceChildren();
+      this.current = object;
+      if(this.melder) this.melder.offen([object], key);       // der Arbeitsstand behält die übrigen Objekte
+      if(!tools.length){ this.werkstueck.append(d().empty('Kein Werkzeug für „' + object.type + '“.')); return; }
       this.mounted = tools.map(manifest=>{
         const slot = d().el('div', 'sh-gateway-kmu-tool');
         slot.dataset.tool = manifest.id;             // Vertragsmarke: so findet die Abnahme den Container jedes Werkzeugs

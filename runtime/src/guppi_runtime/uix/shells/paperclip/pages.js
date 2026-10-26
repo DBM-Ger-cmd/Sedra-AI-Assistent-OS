@@ -148,8 +148,9 @@
       else single(page.object);
       if(!(options && options.silent)){ history = pushHistory(history, page.object); save(); }
       shell.onPage(page, history);
-      // die Verbenzeile erst, wenn gezeichnet ist (Fund aus Build 8)
-      Promise.all(mounted.map(s=>s.ready)).then(()=>shell.onPage(page, history)).catch(()=>{});
+      // die Verbenzeile erst, wenn gezeichnet ist (Fund aus Build 8) – und nur, wenn die Seite dann noch vorn ist: eine langsame
+      // Seite (Kosten) setzte sonst die Markierung der Navigation zurück, nachdem schon die nächste offen war (26.10.2026)
+      Promise.all(mounted.map(s=>s.ready)).then(()=>{ if(current === page) shell.onPage(page, history); }).catch(()=>{});
       return page;
     }
 

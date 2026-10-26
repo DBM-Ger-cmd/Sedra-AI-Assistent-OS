@@ -56,7 +56,7 @@
         const host = document.getElementById('sedra-root');
         host.classList.add('fr'); host.replaceChildren();
         this.shellApi = {open: o=>this.open(o), notify: (t, tone)=>this.notify(t, tone), decide: (i, w)=>this.decide(i, w),
-                         theme: n=>root.sedraBoot && root.sedraBoot.setTheme(n), reload: ()=>location.reload()};
+                         theme: n=>root.sedraBoot && root.sedraBoot.setTheme(n), reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
         this.el = {};
         this.grid(host);
         if(L.hasZone('leiste')) this.buildLeiste();
@@ -67,10 +67,15 @@
         if(L.suche === 'strg-k') this.buildPalette();
 
         ctx.bus.on('object.open', o=>this.open(o));
-        ctx.bus.on('decision.pending', ()=>this.refreshAll());
-        ctx.bus.on('decision.answered', ()=>this.refreshAll());
-        ctx.bus.on('task.changed', ()=>{ this.refreshLeiste(); this.drawVerbs(); });
-        ctx.bus.on('model.changed', ()=>this.refreshLeiste());
+        // Vertrag 1.1 (§9.5): Ereignisse bündeln – höchstens ein Auffrischen je 500 ms
+        const B = root.sedraLifecycle.buendeln;
+        this.buendelAlle = B(()=>this.refreshAll(), 500);
+        this.buendelLauf = B(()=>{ this.refreshLeiste(); this.drawVerbs(); }, 500);
+        ctx.bus.on('decision.pending', ()=>this.buendelAlle());
+        ctx.bus.on('decision.answered', ()=>this.buendelAlle());
+        ctx.bus.on('task.changed', ()=>this.buendelLauf());
+        ctx.bus.on('model.changed', ()=>this.buendelLauf());
+        this.melder = root.sedraStand.makeMelder(ctx.api);
         ctx.bus.on('desk.error', e=>this.notify('Die Runtime meldet: ' + e.message, 'warn'));
         document.addEventListener('keydown', e=>{
           if(this.palette && (e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')){ e.preventDefault(); this.palette.toggle(); }
@@ -82,7 +87,12 @@
           try{ saved = JSON.parse(localStorage.getItem(key) || 'null'); }catch(_e){}
         }
         if(saved && Array.isArray(saved.history)) this.history = saved.history.slice(-MAX_HISTORY);
-        this.open((saved && saved.current) || L.start);
+        // §10.4: lag in einer anderen Shell etwas vorn, das dieser Rahmen zeichnen kann, wird es das Werkstück
+        const stand = await this.melder.holen();
+        const vorn = ((stand && stand.offen) || []).find(o=>root.sedraStand.schluessel(o) === (stand && stand.vorn));
+        const fremd = vorn && stand.shell && stand.shell !== id && this.ctx.tools.forObject(vorn).length ? vorn : null;
+        this.open(fremd || (saved && saved.current) || L.start);
+        if(fremd) this.notify('Aus der Oberfläche „' + stand.shell + '“ mitgenommen: ' + (fremd.title || fremd.type) + '.', 'note');
         await this.refreshAll();
         host.scrollLeft = 0; host.scrollTop = 0;           // ein Fokus darf den Rahmen nicht verschieben
         root.sedraBoot.onProblem = text=>this.notify(text, 'warn');
@@ -182,7 +192,12 @@
       open(object){
         if(!object || !object.type || !object.id) return;
         const same = this.current && this.current.type === object.type && this.current.id === object.id;
+        // Vertrag 1.1: dasselbe Objekt ohne verlangte Ansicht hängt nichts neu ein (der Zustand bleibt); eine verlangte Ansicht ist Navigation
+        if(same && object.ansicht === undefined && object.view === undefined && this.mounted.length) return;
         this.current = {type: object.type, id: object.id, title: object.title || object.id, collection: !!object.collection};
+        if(object.view !== undefined) this.current.view = String(object.view);
+        if(object.ansicht !== undefined) this.current.ansicht = String(object.ansicht);
+        if(this.melder) this.melder.offen([this.current].concat(this.history.slice().reverse()), root.sedraStand.schluessel(this.current));
         if(!same){ this.history = this.history.filter(h=>!(h.type === object.type && h.id === object.id)).concat([this.current]).slice(-MAX_HISTORY); this.save(); }
         this.mounted.forEach(s=>root.sedraLifecycle.unmountTool(s, this.onProblem));
         this.mounted = []; this.body.replaceChildren(); this.title.textContent = this.current.title;
