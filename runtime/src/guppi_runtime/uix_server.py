@@ -125,6 +125,10 @@ class UIXHub:
         self.gateway = Gateway(self.project_root)
         self.events = EventStream()
         self.poller = Poller(self, self.events)
+        # Gedächtnis der Oberfläche (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §9.2, §10): Arbeitsstand, Ablage der Werkzeuge, Gesprächsverlauf.
+        # Nur im Speicher dieses Prozesses – übersteht Neuladen und Shell-Wechsel, nicht den Neustart der Runtime.
+        from .desk.arbeitsstand import Gedaechtnis
+        self.gedaechtnis = Gedaechtnis()
         # Spec 0 (D1): Objekttypen und Verben stehen im Register. Die Erweiterungen docken einmal hier an, danach ist es zu –
         # über eine Anfrage kommt kein Typ dazu. Ein neuer Anwendungsfall ist ein Modul in desk/extensions.MODULES, keine Zeile hier.
         self.kinds = desk_builtin_kinds.new_registry()
@@ -2518,6 +2522,67 @@ class UIXHub:
         return {'status': 'completed', 'local': draft, 'cloud': cloud.get('reply'), 'model': model, 'provider': provider,
                 'local_model': local.get('model')}
 
+    # ---- Gedächtnis der Oberfläche (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §9.2, §10) ------------------------------------------------
+    # Nichts davon kommt ins Audit außer Zahlen; Inhalte bleiben im Speicher dieses Prozesses.
+
+    def arbeitsstand_view(self):
+        """GET /api/arbeitsstand – die offenen Objekte und welches vorn liegt; eine neue Shell übernimmt sie (§10.4)."""
+        return self.gedaechtnis.arbeitsstand()
+
+    def arbeitsstand_melden(self, payload, shell=None):
+        """POST /api/arbeitsstand {offen, vorn, geschlossen} – eine Shell meldet, was sie offen hat (§10.2)."""
+        p = payload if isinstance(payload, dict) else {}
+        return self.gedaechtnis.melden(p.get('offen') or [], p.get('vorn'), p.get('geschlossen') or [], shell)
+
+    def gedaechtnis_leeren(self, payload=None):
+        """POST /api/arbeitsstand/leeren – „Gedächtnis leeren“ im Umschalter: Arbeitsstand, Ablage und Gesprächsverlauf (§10.5)."""
+        zahlen = self.gedaechtnis.leeren()
+        self.runtime.audit.append('GEDAECHTNIS_GELEERT', component='uix', payload=zahlen)
+        return dict(zahlen, status='geleert')
+
+    def ablage_lesen(self, werkzeug, payload):
+        """POST /api/ablage/lesen {objekt} – nur die Einträge des rufenden Werkzeugs (Kopf X-SEDRA-Tool, §10.3)."""
+        if not werkzeug: raise ValueError('ablage_nur_fuer_werkzeuge')
+        return self.gedaechtnis.ablage_lesen(werkzeug, str((payload or {}).get('objekt') or ''))
+
+    def ablage_schreiben(self, werkzeug, payload):
+        """POST /api/ablage/schreiben {objekt, werte} – ersetzt die Werte des rufenden Werkzeugs an diesem Objekt (§10.3)."""
+        if not werkzeug: raise ValueError('ablage_nur_fuer_werkzeuge')
+        p = payload or {}
+        return self.gedaechtnis.ablage_schreiben(werkzeug, str(p.get('objekt') or ''), p.get('werte'))
+
+    def chat_verlauf(self):
+        """GET /api/chat/verlauf – was der Captain im Gespräch gefragt und gesehen hat (§9.2)."""
+        return self.gedaechtnis.verlauf()
+
+    def chat_verlauf_leeren(self, payload=None):
+        n = self.gedaechtnis.verlauf_leeren()
+        self.runtime.audit.append('CHAT_VERLAUF_GELEERT', component='uix', payload={'eintraege': n})
+        return {'status': 'geleert', 'eintraege': n}
+
+    def _verlauf(self, art, payload, out):
+        """Hält fest, was über eine Route des Gesprächs ging – nur über die Route, damit interne Aufrufe (Planungstisch, Kombi)
+        nichts doppelt schreiben. Bei der Cloud steht die Antwort nach dem Inhaltsschutz da: das, was der Captain gesehen hat."""
+        try:
+            p = payload if isinstance(payload, dict) else {}
+            text = str(p.get('text') or '').strip()
+            o = out if isinstance(out, dict) else {}
+            if not text:
+                return out
+            if art == 'reply' and o.get('status') == 'completed':
+                self.gedaechtnis.verlauf_merken('user', text)
+                self.gedaechtnis.verlauf_merken('assistant', o.get('reply') or '', o.get('model'))
+            elif art == 'cloud' and o.get('status') == 'completed':
+                self.gedaechtnis.verlauf_merken('user', text)
+                self.gedaechtnis.verlauf_merken('assistant', o.get('reply') or '', o.get('model'))
+            elif art == 'kombi' and o.get('local'):
+                self.gedaechtnis.verlauf_merken('user', text)
+                self.gedaechtnis.verlauf_merken('assistant', o.get('cloud') or o.get('local') or '', o.get('model') or o.get('local_model'),
+                                                 entwurf=o.get('local') if o.get('cloud') else '', hinweis=o.get('reason') or '')
+        except ValueError:
+            pass                      # der Verlauf darf eine Antwort nie verhindern
+        return out
+
     def vorarbeiter(self, payload):
         """Vorarbeiter-Aktion aus dem Entwurfsfenster: feste Liste, für Cloud- und lokale Modelle gleich."""
         from . import vorarbeiter
@@ -3285,6 +3350,8 @@ def make_server(hub: UIXHub, port=0):
                     '/uix/manifest': hub.gateway.manifest,                  # read-only: active shell and usable tools
                     '/api/decisions': hub.decisions_view,                   # read-only: one list for gates and change requests
                     '/api/strip': hub.strip_view,                           # read-only: the instruments of the Cockpit strip
+                    '/api/arbeitsstand': hub.arbeitsstand_view,             # read-only: offene Objekte für die nächste Shell (§10)
+                    '/api/chat/verlauf': hub.chat_verlauf,                  # read-only: der Gesprächsverlauf (§9.2), nur im Speicher
                     '/api/boundaries': lambda: hub.boundaries_view(),        # read-only: Modus und Grenzen dieses Projekts
                     '/api/guard/status': hub.guard_status,                  # read-only: der Inhaltsschutz (Build 16) – nie Text
                     '/api/intent/vorlagen': hub.intent_vorlagen,            # read-only: Vorlagen für Vorhaben mit Stufen (19.10.2026)
@@ -3407,7 +3474,12 @@ def make_server(hub: UIXHub, port=0):
                     '/api/chat': hub.create_chat_mission,
                     '/api/project/files': hub.project_files,        # read-only
                     '/api/project/file': hub.project_file,          # read-only
-                    '/api/chat/reply': hub.chat_reply,
+                    '/api/chat/reply': lambda p: hub._verlauf('reply', p, hub.chat_reply(p)),     # §9.2: hält den Verlauf fest
+                    '/api/chat/verlauf/leeren': hub.chat_verlauf_leeren,
+                    '/api/arbeitsstand': lambda p: hub.arbeitsstand_melden(p, self.headers.get('X-SEDRA-Shell')),
+                    '/api/arbeitsstand/leeren': hub.gedaechtnis_leeren,     # „Gedächtnis leeren“ im Umschalter (§10.5)
+                    '/api/ablage/lesen': lambda p: hub.ablage_lesen(self.headers.get('X-SEDRA-Tool'), p),          # §10.3
+                    '/api/ablage/schreiben': lambda p: hub.ablage_schreiben(self.headers.get('X-SEDRA-Tool'), p),
                     '/api/planung/reply': hub.planung_reply,
                     # Fisch (19.10.2026): Übersetzung und Brief rufen das Modell (Mission, Audit, Inhaltsschutz); Transkripte schreiben nur ins Projekt
                     '/api/fisch/uebersetzen': hub.fisch.uebersetzen,
@@ -3447,8 +3519,8 @@ def make_server(hub: UIXHub, port=0):
                     '/api/entwurf/save': hub.entwurf_save,         # Entwurf speichern (nur im Entwurfsordner)
                     '/api/entwurf/read': hub.entwurf_read,
                     '/api/entwurf/list': hub.entwurf_list,
-                    '/api/chat/kombi': hub.chat_kombi,              # Lokal + KI: erst das lokale Modell, dann die Cloud prüft (ein Fenster)
-                    '/api/chat/cloud': hub.chat_cloud,              # Gespräch mit einem Cloud-Modell (Wahl neben Senden); Inhaltsschutz
+                    '/api/chat/kombi': lambda p: hub._verlauf('kombi', p, hub.chat_kombi(p)),              # Lokal + KI: erst das lokale Modell, dann die Cloud prüft (ein Fenster)
+                    '/api/chat/cloud': lambda p: hub._verlauf('cloud', p, hub.chat_cloud(p)),              # Gespräch mit einem Cloud-Modell (Wahl neben Senden); Inhaltsschutz
                     '/api/cloud/key': hub.cloud_key,
                     '/api/cloud/module-model': hub.cloud_module_model,   # welches Modell ein Modul nutzt (KI Labor)                        # Schlüssel verschlüsselt ablegen oder löschen; nie zurückgeben
                     '/api/routing-config/request': hub.routing_request,

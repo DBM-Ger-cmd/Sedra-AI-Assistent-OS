@@ -24,7 +24,9 @@
     'agent.changed':      ['id'],
     'issue.changed':      ['id'],
     'budget.warning':     ['agent_id'],
-    'slot.changed':       []
+    'slot.changed':       [],
+    // Vertrag 1.1 (SPEC_SHELL_WISSEN_v1 §4.1): ein Treffer im Wissen wurde gewählt; Nachweis-Werkzeuge (Fundstelle) hören darauf
+    'wissen.auswahl':     ['id']
   };
 
   // '' when the event is fine, otherwise the reason – a sender id of null means the shell (it may send everything)

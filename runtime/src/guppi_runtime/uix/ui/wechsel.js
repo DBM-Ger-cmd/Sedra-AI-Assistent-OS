@@ -33,6 +33,23 @@
   // Der Kern-Zugang wird beim Laden gemerkt; der Loader entfernt die globale Kopie danach (Stufe A)
   const CORE_API = root.sedraApi ? root.sedraApi.api : null;
 
+  // Vertrag 1.1 (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §10.4): vor dem Neuladen meldet die Shell ihren Arbeitsstand ein letztes Mal und die
+  // Werkzeuge schreiben ihre Ablage. Eine Shell hängt sich mit `sedraWechsel.beimWechsel(fn)` ein; fn darf ein Promise geben.
+  // Höchstens 1,5 s warten: ein hängender Server darf den Wechsel nicht aufhalten.
+  const VOR_DEM_WECHSEL = [];
+  function beimWechsel(fn){ if(typeof fn === 'function') VOR_DEM_WECHSEL.push(fn); }
+  function vorDemWechsel(){
+    const alle = VOR_DEM_WECHSEL.map(fn=>{ try{ return Promise.resolve(fn()).catch(()=>{}); }catch(_e){ return Promise.resolve(); } });
+    return Promise.race([Promise.all(alle), new Promise(ok=>setTimeout(ok, 1500))]);
+  }
+  // für shellApi.reload der Shells (nach einem Wechsel im Werkzeug Module): erst melden und schreiben, dann neu laden
+  function neuLaden(){ return vorDemWechsel().then(()=>location.reload()); }
+  async function wechseln(body){
+    await CORE_API('/api/uix/shell', {method: 'POST', body});
+    await vorDemWechsel();
+    location.reload();
+  }
+
   function mount(manifest){
     if(typeof document === 'undefined' || !manifest || !manifest.shell || manifest.shell.id === 'start') return null;
     if(document.querySelector('.sx-chip')) return null;
@@ -73,13 +90,37 @@
       try{ shells = (await api('/api/uix/modules')).shells || []; }
       catch(err){ list.append(el('div', 'sx-note', 'Oberflächen nicht lesbar: ' + err.message)); }
       entries(shells, manifest.shell.id).forEach(e=>{
-        if(e.kind === 'overview') list.append(row(e.label, e.hint, async()=>{ await api('/api/uix/shell', {method: 'POST', body: {shell: 'start', nur_jetzt: true}}); location.reload(); }));
-        else list.append(row(e.label, e.hint, async()=>{ await api('/api/uix/shell', {method: 'POST', body: {shell: e.id}}); location.reload(); }));
+        if(e.kind === 'overview') list.append(row(e.label, e.hint, ()=>wechseln({shell: 'start', nur_jetzt: true})));
+        else list.append(row(e.label, e.hint, ()=>wechseln({shell: e.id})));
       });
+      list.append(leerenKnopf());
       look.replaceChildren(
         segment('Darstellung', [['klar', 'Klar'], ['nacht', 'Nacht']], document.documentElement.dataset.theme || 'nacht', v=>root.sedraBoot.setTheme(v)),
         segment('Schrift', [['normal', 'Normal'], ['gross', 'Groß']], document.documentElement.dataset.scale || 'normal', v=>setScale(v)),
         segment('Menü', [['links', 'Links'], ['rechts', 'Rechts']], menuSeite(), v=>setMenuSeite(v)));
+    }
+    // „Gedächtnis leeren“ (§10.5): offene Objekte, Ablage der Werkzeuge, Gesprächsverlauf, Sitzung im Browser. Erst der zweite Klick
+    // leert – kein confirm(), keine Seite dazwischen. Danach eine Zeile im Umschalter; das Audit bekommt nur Zahlen.
+    function leerenKnopf(){
+      const b = el('button', 'sx-item sx-leeren'); b.type = 'button'; b.setAttribute('role', 'menuitem');
+      const titel = el('b', null, 'Gedächtnis leeren'), hint = el('small', null, 'offene Objekte, Ablage der Werkzeuge, Gesprächsverlauf');
+      b.append(titel, hint);
+      let scharf = null;
+      b.addEventListener('click', async e=>{
+        e.stopPropagation();
+        if(!scharf){
+          titel.textContent = 'Wirklich leeren? Noch einmal klicken';
+          scharf = setTimeout(()=>{ scharf = null; titel.textContent = 'Gedächtnis leeren'; }, 5000);
+          return;
+        }
+        clearTimeout(scharf); scharf = null;
+        try{
+          await api('/api/arbeitsstand/leeren', {method: 'POST', body: {}});
+          if(root.sedraLifecycle && root.sedraLifecycle.gedaechtnisLeeren) root.sedraLifecycle.gedaechtnisLeeren();
+          titel.textContent = 'Gedächtnis geleert'; hint.textContent = 'beim nächsten Wechsel beginnt die Oberfläche leer';
+        }catch(err){ titel.textContent = 'Nicht geleert'; hint.textContent = err.message; }
+      });
+      return b;
     }
     function open(){ panel.hidden = false; chip.setAttribute('aria-expanded', 'true'); fill().then(()=>{ const first = panel.querySelector('.sx-item'); if(first) first.focus(); }); }
     function close(){ panel.hidden = true; chip.setAttribute('aria-expanded', 'false'); }
@@ -213,6 +254,6 @@
     return {chip, panel};
   }
 
-  root.sedraWechsel = {mount, entries, setScale, restoreScale, scales: SCALES, menuWahl, menuSeite, setMenuSeite, MENU_SEITEN};
+  root.sedraWechsel = {mount, entries, setScale, restoreScale, scales: SCALES, menuWahl, menuSeite, setMenuSeite, MENU_SEITEN, beimWechsel, vorDemWechsel, neuLaden};
   if(typeof module !== 'undefined' && module.exports) module.exports = {entries, scales: SCALES};
 })();

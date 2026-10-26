@@ -121,6 +121,15 @@ PLACES = {
     # Spec 4 (G2-S4-21): das Agenten-Team
     'org': ('Organigramm', 'das Team: Vorgesetzte, Rolle, Budget'), 'routines': ('Routinen', 'wiederkehrende Aufgaben nach Zeitplan'),
     'slots': ('Modelle und Slots', 'belegte Plätze und Warteschlange'), 'labor': ('KI-Labor', 'Anbieter, Schlüssel, Modelle, Tests'),
+    # Spec 7 / SPEC_DOCK_OHNE_NEUAUFBAU_v1 §9.7: der Wissensspeicher und seine Ansichten
+    'wissen': ('Wissen', 'suchen, Quellen, Vorschläge – der Wissensspeicher'),
+    'wissen-suche': ('Wissen · Suche', 'eine Frage an den Wissensspeicher'),
+    'wissen-quellen': ('Wissen · Quellen', 'was SEDRA lesen darf, und wer'),
+    'wissen-vorschlaege': ('Wissen · Vorschläge', 'Wissen, das Agenten vorschlagen'),
+    'wissen-eigenes': ('Wissen · Eigenes', 'eigene Notizen für den Speicher'),
+    'wissen-messung': ('Wissen · Messung', 'Index und Nachmessung: wie gut findet der Speicher'),
+    'wissen-index': ('Wissen · Index', 'Stand des Index, Nachführen'),
+    'wissen-nachmessung': ('Wissen · Nachmessung', 'deine Fragen bewerten'),
 }
 # Der Planungstisch (19.10.2026): nur die Werkzeuge, mit denen ein Assistent plant – lesen, wo die Firma steht, und vorschlagen
 PLANUNG_TOOLS = ('propose_intent', 'propose_task', 'list_missions', 'list_decisions', 'arbeitsplatz_stand', 'list_actions', 'propose_action', 'open_object')

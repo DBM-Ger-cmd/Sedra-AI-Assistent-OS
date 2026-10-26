@@ -34,6 +34,13 @@ SLOTS_TOOL = ('inhalt', 'nachweis')
 # Ein Hinweis für die Shell, kein Befehl: das Cockpit stellt „inhalt“ nach links und „nachweis“ nach rechts (COCKPIT_MODUL_v1 §1).
 # Eine Shell, die keine zwei Spalten hat, ignoriert ihn – deshalb ist er ein Wort im Manifest und keine Vorschrift im Vertrag.
 SLOTS_TOOL = ('inhalt', 'nachweis')
+# Vertrag 1.1 (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §3): wie viele Instanzen ein Werkzeug verträgt und welches Gedächtnis es nutzen darf.
+INSTANZEN = ('eine', 'viele')
+GEDAECHTNIS = ('sitzung', 'ablage')
+# Routen, die der Vertrag selbst mitbringt – kein Manifest muss sie nennen: jede Shell meldet und übernimmt den Arbeitsstand (§10.2),
+# jedes Werkzeug mit `gedaechtnis: ablage` liest und schreibt nur seine eigene Ablage (§10.3; der Server trennt nach X-SEDRA-Tool).
+SHELL_VERTRAG_ROUTES = ('GET /api/arbeitsstand', 'POST /api/arbeitsstand')
+ABLAGE_ROUTES = ('POST /api/ablage/lesen', 'POST /api/ablage/schreiben')
 TRUST = ('CORE', 'CAPTAIN', 'GUPPI_BUILT', 'COMMUNITY')
 SLOTS = ('strip', 'tree', 'dock', 'talk', 'palette', 'windows', 'menubar', 'notify', 'inbox', 'chooser')
 OPENS_OBJECTS = ('dock', 'windows')     # a shell that provides neither shows no tool to an object – the acceptance knows
@@ -46,7 +53,7 @@ ROUTE = re.compile(r'^(GET|POST) (/(api|uix)(/[A-Za-z0-9_.-]+)*(/\*)?)$')
 VERSION = re.compile(r'^\d+\.\d+\.\d+$')
 NEED = re.compile(r'^(>=|<=|>|<|==)?(\d+)(?:\.(\d+))?$')
 
-TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot'}
+TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot', 'instanzen', 'gedaechtnis'}
 SHELL_KEYS = {'id', 'name', 'version', 'entry', 'provides', 'layout', 'trust', 'needs', 'api', 'description', 'vorgabe'}
 # Eine Shell aus einer Vorgabe (SPEC_SHELL_AUS_VORGABE_v1): kein Code im Ordner, nur `shell.vorgabe.yaml`; den Bildschirm baut der
 # Rahmen `ui/frame.js`. Was er darf, steht hier – nicht in der Datei des Autors –, denn der Rahmen ist Vertragscode.
@@ -166,11 +173,19 @@ def check_tool(doc, folder: Path, origin='package'):
     slot = t.get('slot', 'inhalt')
     if slot not in SLOTS_TOOL:
         errors.append('slot_invalid')
+    instanzen = t.get('instanzen', 'eine')
+    if instanzen not in INSTANZEN:
+        errors.append('instanzen_invalid')
+    gedaechtnis = t.get('gedaechtnis') or []
+    if isinstance(gedaechtnis, str):
+        gedaechtnis = [gedaechtnis]
+    if not isinstance(gedaechtnis, list) or not all(g in GEDAECHTNIS for g in gedaechtnis):
+        errors.append('gedaechtnis_invalid'); gedaechtnis = []
     if errors:
         return None, errors
     return {'id': t['id'], 'name': t['name'], 'version': t['version'], 'kind': kind, 'handles': handles, 'trust': t['trust'],
             'origin': origin, 'order': order, 'slot': slot, 'description': str(t.get('description') or ''),
-            'own_types': own_types,
+            'own_types': own_types, 'instanzen': instanzen, 'gedaechtnis': list(dict.fromkeys(gedaechtnis)),
             'events': {'emits': list(events.get('emits') or []), 'listens': list(events.get('listens') or [])},
             'js': js, 'css': css, 'api': routes, 'tests': tests}, []
 
@@ -364,4 +379,9 @@ class Gateway:
         loaded = self._load('tools' if kind == 'tool' else 'shells')[0]
         if module not in loaded:
             return False
-        return route_allowed(loaded[module][1]['api'], method, path)
+        man = loaded[module][1]
+        if kind == 'shell' and route_allowed(SHELL_VERTRAG_ROUTES, method, path):
+            return True
+        if kind == 'tool' and 'ablage' in (man.get('gedaechtnis') or []) and route_allowed(ABLAGE_ROUTES, method, path):
+            return True
+        return route_allowed(man['api'], method, path)

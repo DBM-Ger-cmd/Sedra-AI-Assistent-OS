@@ -49,7 +49,9 @@
       this.el = el; this.ctx = ctx;
       el.classList.add('t-wissen');
       const o = ctx.object || {};
-      this.ansicht = o.view || 'quellen';
+      // Die Ortskunde kennt schon die Ansichten aus SPEC_WERKZEUG_WISSEN_v2 (messung, eigenes); bis zum Umbau führen sie hierher
+      const bekannt = ANSICHTEN.map(a=>a[0]), um = {messung: 'index', eigenes: 'quellen'};
+      this.ansicht = bekannt.indexOf(o.view) >= 0 ? o.view : (um[o.view] || 'quellen');
       this.markiert = o.quelle ? {quelle: String(o.quelle)} : null;
       this.speicher = null; this.fehler = null; this.hinweis = null; this.ergebnis = null; this.frage = ''; this.form = false; this.stufeForm = null; this.aktiv = null;
       ['decision.answered', 'desk.resync'].forEach(n=>ctx.bus.on(n, ()=>this.refresh()));
@@ -183,6 +185,8 @@
         this.stufeForm = null;
         await this.refresh();
       };
+      // Ein Feld im Formular: Enter sendet es nach HTML auch ohne Absende-Knopf ab – genau einmal, und seit Vertrag 1.1 ohne „Abbrechen“
+      // auszulösen (vorher war „Abbrechen“ als erster Knopf zugleich der Absende-Knopf). Der Klick auf „Bestätigen“ ruft ok() selbst.
       form.onsubmit = e=>{ e.preventDefault(); return ok(); };
       form.onkeydown = e=>{ if(e.key === 'Escape'){ e.preventDefault(); ab(); } };
       form.append(label, d().button('Abbrechen', ab), d().button(herauf ? 'Bestätigen' : 'Antrag stellen', ok, 'p'), fehler);
@@ -208,7 +212,7 @@
         const out = await this.verb('quelle_beantragen', args);
         this.sage(out); if(out && out.status === 'beantragt') this.form = false;
         await this.refresh();
-      }, 'p'));
+      }, 'p', {absenden: true}));
       return box;
     },
 
@@ -244,7 +248,7 @@
         this.ergebnis = await this.verb('suche', {frage: input.value, k: Number(k.value) || 5});
         if(this.ergebnis && this.ergebnis.status === 'fehler') this.sage(this.ergebnis);
         await this.draw();
-      }, 'p'));
+      }, 'p', {absenden: true}));
       box.append(form);
       const r = this.ergebnis;
       if(!r || r.status === 'fehler'){ if(!r) box.append(d().el('small', 's-muted', 'Noch keine Suche. Treffer tragen ihre Kennung [W…]; die Kopfzeile führt zur Quelle.')); return box; }

@@ -19,6 +19,8 @@
         "kind": {"enum": ["object", "instrument", "panel"], "description": "object: a container per object; instrument: a cell in the strip; panel: Gespräch, Palette"},
         "handles": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9-]{2,40}(:(\\*|[a-z0-9-]{1,40}))?$"}, "description": "Objekttypen des Vertrags: project intent task candidate file model skill agent decision routine boundary module logbook meter hardware machine. Ein eigenes oder fremdes Werkzeug darf eigene Typen mitbringen; ein CORE-Werkzeug nicht. Nachtrag N1 (Spec 4): typ:alle (nur die Sammlung), typ:* (jedes Einzelobjekt), typ:<id> (genau dieses Objekt)."},
         "order": {"type": "integer", "minimum": 0, "maximum": 1000, "description": "lower comes first; uix.yaml can override it"},
+        "instanzen": {"enum": ["eine", "viele"], "description": "Vertrag 1.1: viele = das Werkzeug lebt in mehreren Containern zugleich (Nachtrag N2: unmount(el), actions(el)); nur dann darf eine Shell es versteckt eingehängt lassen. Standard eine."},
+        "gedaechtnis": {"oneOf": [{"enum": ["sitzung", "ablage"]}, {"type": "array", "uniqueItems": true, "items": {"enum": ["sitzung", "ablage"]}}], "description": "Vertrag 1.1: sitzung = ctx.sitzung in sessionStorage (nur Zustand der Ansicht, nie Inhalt); ablage = ctx.ablage im Speicher der Runtime (auch Inhalt, übersteht Shell-Wechsel). Ohne Angabe nur ctx.memo."},
         "slot": {"enum": ["inhalt", "nachweis"], "description": "Hinweis an die Shell: Werkstück oder Nachweis. Das Cockpit stellt Nachweise rechts daneben; andere Shells dürfen ihn ignorieren."},
         "entry": {
           "type": "object",

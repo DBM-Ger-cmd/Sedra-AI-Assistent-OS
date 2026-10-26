@@ -265,7 +265,7 @@
         Object.keys(fields).forEach(k=>{ const v = fields[k].value; args[k] = fields[k].type === 'number' ? (v === '' ? null : Number(v)) : v; });
         this.form.werte = args;                       // abgewiesen: die Eingabe bleibt stehen
         await this.run(agent, verb, args);
-      }, 'p'), d().button('Abbrechen', ()=>{ this.form = null; this.draw(); }));
+      }, 'p', {absenden: true}), d().button('Abbrechen', ()=>{ this.form = null; this.draw(); }));
       box.append(bar);
       box.onsubmit = e=>e.preventDefault();
       return box;
