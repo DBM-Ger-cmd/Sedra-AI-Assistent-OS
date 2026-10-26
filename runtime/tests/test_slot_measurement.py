@@ -212,6 +212,57 @@ def make_recipes():
     return {rid: {"id": rid, "model": rid, "provider": "llama-cpp-server", "profile": {"server": dict(server) if rid == "main" else {"gguf": "x"}}} for rid in ("main", "small")}
 
 
+class MainFiles(unittest.TestCase):
+    """SCH-05: `--parallel N` is accepted from 1 to 8 only, and the JSON file of a ladder / throughput run carries N in its name and its content."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix="sedra-")
+        self.addCleanup(self.tmp.cleanup)
+        self.project = Path(self.tmp.name)
+        (self.project / "local_config").mkdir()
+        (self.project / "local_config" / "role_routing.yaml").write_text(
+            "role_routing:\n  capabilities:\n    - {id: r, model: m, provider: llama-cpp-server, profile: {server: {gguf: x}}}\n", encoding="utf-8")
+        self.out = self.project / "runtime_data" / "measurements"
+
+    def run_main(self, module, argv):
+        with mock.patch.object(sys, "argv", ["tool"] + argv), mock.patch.object(module, "LlamaServerRuntime", lambda *a, **k: FakeRuntime()),                 mock.patch.object(module, "clear_leftovers", lambda *a, **k: None), contextlib.redirect_stdout(open(self.project / "out.txt", "w")),                 contextlib.redirect_stderr(open(self.project / "err.txt", "w")):
+            module.main()
+
+    def test_parallel_outside_1_to_8_is_refused_by_both_tools(self):
+        for module, argv in ((ladder_tool, [str(self.project), "r"]), (st, [str(self.project), "r"])):
+            for bad in ("0", "9", "x"):
+                with self.subTest(tool=module.__name__, parallel=bad), self.assertRaises(SystemExit) as ctx:
+                    self.run_main(module, argv + ["--parallel", bad])
+                self.assertEqual(ctx.exception.code, 2)
+        self.assertFalse(self.out.exists())                                    # nothing was started
+
+    def test_ladder_file_carries_n(self):
+        with mock.patch.object(ladder_tool, "rung_parallel", return_value=({"status": "ok", "context": 8192}, 2.4)),                 mock.patch.object(ladder_tool, "trained_context", return_value=8192):
+            self.run_main(ladder_tool, [str(self.project), "r", "--max", "8192", "--probes", "1", "--parallel", "3"])
+        (file,) = self.out.glob("context_ladder_r_p3_*.json")
+        self.assertEqual(json.loads(file.read_text(encoding="utf-8"))["parallel"], 3)
+
+    def test_ladder_without_parallel_keeps_the_old_name(self):
+        with mock.patch.object(ladder_tool, "rung", return_value=({"status": "ok", "context": 8192}, 2.4)), mock.patch.object(ladder_tool, "trained_context", return_value=8192):
+            self.run_main(ladder_tool, [str(self.project), "r", "--max", "8192", "--probes", "1"])
+        (file,) = self.out.glob("context_ladder_r_*.json")
+        self.assertNotIn("_p", file.name)
+        self.assertEqual(json.loads(file.read_text(encoding="utf-8"))["parallel"], 1)
+
+    def test_throughput_file_carries_n(self):
+        real = st.throughput
+
+        def fake(runtime, recipe, parallel, context, runs, tokens, server=None, say=print, **kw):
+            return real(runtime, recipe, parallel, context, runs, tokens, server, say=say, ask_fn=lambda *a: {"completion_tokens": a[3], "predicted_per_second": 40.0, "seconds": 0.01},
+                        gpu_fn=lambda: (9000, 12000), events_fn=lambda t0: 0, get=lambda url: [{}] * parallel, settle_s=0)
+        from types import SimpleNamespace
+        with mock.patch.object(st, "throughput", fake), mock.patch.dict(sys.modules, {"devvm_build": SimpleNamespace(server_settings=lambda items: {})}):    # devvm_build pulls in the VM tools
+            self.run_main(st, [str(self.project), "r", "--parallel", "2", "--context", "4096", "--runs", "1", "--tokens", "8"])
+        (file,) = self.out.glob("slot_throughput_r_p2_*.json")
+        out = json.loads(file.read_text(encoding="utf-8"))
+        self.assertEqual((out["parallel"], out["context_per_slot"], out["status"]), (2, 4096, "ok"))
+
+
 class FakeTools:
     def __init__(self, temp=60, used=4000, events=0, fail_tool=None, safe=32768):
         self.calls, self.temp, self.used, self.events, self.fail_tool, self.safe = [], temp, used, events, fail_tool, safe
