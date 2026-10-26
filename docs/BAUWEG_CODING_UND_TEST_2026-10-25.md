@@ -58,6 +58,8 @@ Review:      Subagent (Opus) liest den Diff gegen die Spec-Zeile, meldet Abweich
 Nicht tun:   keine GPU-Läufe, keine Schalter, kein Push ohne Auftrag, keine eigene Sedra-Kopie (Abschnitt 6)
 ```
 
+Bauort seit dem Umzug (26.10.2026): Projektordner für `devvm_build`, `spec_check --vm --project` und `vm_latency` ist immer `<a1>\workspace\GUPPI_OS` (`E:\Sedra Umgebung\A1 Sedra Main Branch Entwicklungs umgebung\workspace\GUPPI_OS`), Python ist `<a1>\runtime\.venv\Scripts\python.exe`, die eine Startdatei ist `<a1>\START_SEDRA.bat`. Nie der Ordner der alten Installation (`GUPPI_Runtime_v1.20`): ein falscher Projektordner legt einen neuen, leeren VM-Cache an.
+
 Arbeitsverzeichnis: A1 oder der Worktree, den die App für die Sitzung anlegt; keine eigenen Auscheckungen (Abschnitt 6). Das Repo (`architecture/…/hardware_manager/…`) scheitert in sehr tiefen Pfaden an der Windows-Pfadlänge; für einen unvermeidbaren Auszug eines alten Stands gilt der eine Ordner `C:\sb` aus Abschnitt 6.
 
 ## 6. Regel: keine eigene Sedra-Kopie je Sitzung (26.10.2026)
