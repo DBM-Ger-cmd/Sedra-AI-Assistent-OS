@@ -1836,12 +1836,12 @@ Abnahme je Anforderung (ohne Modell und GPU; Fake-Uhr als `now`; Fake-Server wie
 
 | ID | Testdatei | Prüfung |
 | --- | --- | --- |
-| SCH-01 | `tests/test_model_scheduler_server.py`, `test_role_routing.py` | `server.slots` wird geprüft (0, 9, Text abgelehnt); `build_command` bekommt `-np N` und `-c N × Fenster`; Loader vergleicht die Summe; `slots_not_measured` ohne `per_slots` |
-| SCH-02 | `tests/test_slot_store.py`, `test_slotplan.py` | Zwei Prozesse laden: einer `gpu_lease_busy`; N+1 Anforderungen: genau N aktiv, die letzte `wartend`, FIFO je Stufe; 100 Durchläufe mit 2 Prozessen nie mehr als N aktiv |
+| SCH-01 | `tests/test_role_routing.py`, `test_llama_server_runtime.py`, `test_model_loader.py`, `test_model_scheduler_facade.py` | `server.slots` wird geprüft (0, 9, Text abgelehnt); `build_command` bekommt `-np N` und `-c N × Fenster`; Loader vergleicht das Fenster je Slot; `slots_not_measured` ohne `per_slots` |
+| SCH-02 | `tests/test_slot_store.py`, `test_jobs_modules.py` (versteckte Tests `s2_slotplan`, `s2_slot_store` gegen `src`), `test_job_supervisor.py` (SlotTests), `test_model_scheduler_facade.py` | Zwei Prozesse laden: einer `gpu_lease_busy`; N+1 Anforderungen: genau N aktiv, die letzte `wartend`, FIFO je Stufe; 100 Durchläufe mit 2 Prozessen nie mehr als N aktiv |
 | SCH-03 | `tests/test_vramplan.py`, `test_resource_scheduler.py` | Gewichte einmal, KV je Slot; über 11,5 GB abgelehnt mit `need_gb`/`measured_free_gb` im Ergebnis und im Audit; N Läufe im Slot buchen keinen eigenen VRAM |
-| SCH-04 | `tests/test_slotplan.py` | Stufenfolge Captain > Agent > Routine; Altern hebt Routine bis 5, nie darüber; gleiche Stufe nach Eingang; Überschreitung von `wait_max_s` erzeugt genau einen Hinweis; kein Lauf wird verdrängt |
-| SCH-05 | `tests/test_role_routing.py`, `test_context_ladder_parallel.py` | `per_slots` gültig/ungültig; Messwerkzeug `--parallel N` baut `-np N` (Fake-Server); Ergebnisdatei trägt N |
-| SCH-06 | `tests/test_slotplan.py`, `test_model_scheduler_swap.py` | Ohne Regel wartet der Job mit `model_swap_not_allowed`; `idle` lädt nur ohne aktive Lease; `fallback` weicht aus |
+| SCH-04 | `tests/test_jobs_modules.py` (versteckte Tests `s2_slotplan`), `test_job_supervisor.py` (SlotTests) | Stufenfolge Captain > Agent > Routine; Altern hebt Routine bis 5, nie darüber; gleiche Stufe nach Eingang; Überschreitung von `wait_max_s` erzeugt genau einen Hinweis; kein Lauf wird verdrängt |
+| SCH-05 | `tests/test_role_routing.py`, `test_slot_measurement.py` | `per_slots` gültig/ungültig; Messwerkzeug `--parallel N` baut `-np N` (Fake-Server); Ergebnisdatei trägt N |
+| SCH-06 | `tests/test_jobs_modules.py` (versteckte Tests `s2_slotplan`), `test_model_scheduler_swap.py` | Ohne Regel wartet der Job mit `model_swap_not_allowed`; `idle` lädt nur ohne aktive Lease; `fallback` weicht aus |
 | SCH-07 | `tests/test_model_scheduler_offer.py` | Schlange > `queue_max` oder Wartezeit > `wait_max_s` → eine Entscheidung `cloud_offload`; nie ein Umschalten; Ablehnen schließt sie |
 | SCH-08 | `tests/test_model_scheduler_crash.py` | Fake-Server stirbt: alte Leases `unterbrochen`, `gen` +1, Canary ungültig; Job mit `mutates false` läuft erneut, mit `mutates true` nicht; 4. Neustart in 10 Minuten → `gesperrt` und Entscheidung; Müll zweimal → kontrollierter Neustart |
 | SCH-09 | `tests/test_desk_events.py` (erweitert) | `diff` liefert `slot.changed` mit `{slot, state, run_id, priority, queue_len}`; Schlangenänderung ohne `slot`; `view()` hat genau die Form aus Spec 4 D4.2.4 |
@@ -1870,7 +1870,7 @@ Harness (Claude):
 | S2.H4 | `job_supervisor.py`: `workers` 1..8, `claim` mit `take`/Altern, `confirm_start` mit `ensure_server`, `_release`/`reap` mit Scheduler, `claim_timeout_s`; Worker-Pool in `desk/orchestra_runner.py` | G2-S2-04 |
 | S2.H5 | `models/router.py` Haken `slot_guard`; `uix_server.py` (Werkstatt, Lease, `desk_snapshot` `slots`); `desk/events.py` `slot.changed`; `gpu_preflight` | G2-S2-05, 07 |
 | S2.H6 | `desk/decisions.py` Art `cloud_offload` (nur Anzeige), Zustand „gesperrt“ | G2-S2-10 |
-| S2.H7 | Abnahme D2.12, Logbuch, `uix_check`; danach Regeländerung in `ENTWICKLUNG.md` (S2.2) | G2-S2-11 |
+| S2.H7 | Abnahme D2.12, Logbuch, `uix_check`; danach Regeländerung in `ENTWICKLUNG.md` (S2.2) | G2-S2-15 |
 
 Reihenfolge: S2.H0 (ohne GPU gebaut) → Messung S2.1 mit eigener Freigabe samt GPU-Zeit → Standard-Slotzahl und `per_slots` an den Captain; parallel dazu `s2_slotplan`, `s2_vramplan` (GPU-Bauten nacheinander, nach der Messung, weil die GPU belegt ist) und S2.H1. Dann `s2_slot_store`, S2.H2, S2.H3, S2.H4, S2.H5, S2.H6, S2.H7. Jeder SEDRA-Kandidat kommt einzeln zu G4. Vor Spec 1 S1.H8 ist nichts davon lauffähig; Spec 2 setzt auf `start_run`/`create_job` aus S1.H8 auf, ändert aber `tick.py` nicht.
 
@@ -1972,12 +1972,12 @@ Testdateien je Anforderung (Abnahme D2.12; wer sie schreibt: die Bau-Specs prüf
 
 | ID | Testdatei | Aufgabe |
 | --- | --- | --- |
-| SCH-01 | `test_model_scheduler_server.py`, `test_role_routing.py`, `test_context_ladder_parallel.py` | S2.H0, S2.H2 |
-| SCH-02 | `test_slot_store.py`, `test_slotplan.py` (Referenzen der Bau-Specs als Grundlage, dazu Zwei-Prozess-Test mit 100 Durchläufen) | S2.H3 |
+| SCH-01 | `test_role_routing.py`, `test_llama_server_runtime.py`, `test_model_loader.py`, `test_model_scheduler_facade.py`, `test_slot_measurement.py` | S2.H0, S2.H2 |
+| SCH-02 | `test_slot_store.py`, `test_jobs_modules.py`, `test_model_scheduler_facade.py` (Referenzen der Bau-Specs als Grundlage, dazu Zwei-Prozess-Test mit 100 Durchläufen) | S2.H3 |
 | SCH-03 | `test_vramplan.py`, `test_resource_scheduler.py` | S2.C1, S2.H3 |
-| SCH-04 | `test_slotplan.py`, `test_job_supervisor.py` (Altern in `claim`) | S2.H3, S2.H4a |
-| SCH-05 | `test_role_routing.py`, `test_context_ladder_parallel.py` | S2.H0, S2.H2 |
-| SCH-06 | `test_slotplan.py`, `test_model_scheduler_swap.py` | S2.H3 |
+| SCH-04 | `test_jobs_modules.py` (versteckte Tests `s2_slotplan`), `test_job_supervisor.py` (Altern in `claim`) | S2.H3, S2.H4a |
+| SCH-05 | `test_role_routing.py`, `test_slot_measurement.py` | S2.H0, S2.H2 |
+| SCH-06 | `test_jobs_modules.py` (versteckte Tests `s2_slotplan`), `test_model_scheduler_swap.py` | S2.H3 |
 | SCH-07 | `test_model_scheduler_offer.py` | S2.H6 |
 | SCH-08 | `test_model_scheduler_crash.py` | S2.H6 |
 | SCH-09 | `test_desk_events.py` | S2.H5 |
