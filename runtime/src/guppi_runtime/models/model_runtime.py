@@ -139,7 +139,14 @@ class ModelRuntimeManager:
                     command = ctl.build_start_command(Path(rec["path"]), pass_result["effective_profile"], port=args.get("port", 8080))
                     return {"command": command, "profile_pass": pass_result, "model": rec}
                 log_path = self.data_root / "models" / "logs" / f"{model_id}.log"
-                result = ctl.start_server(Path(rec["path"]), pass_result["effective_profile"], port=args.get("port", 8080), log_path=log_path)
+                self.benchmark.release_managed_gpu()                       # the lease of an earlier kept server, if that one is gone
+                release = self.benchmark._take_gpu(f"runtime start {model_id}", ctl)     # Spec 2 D2.7, SCH-11: no lease, no server
+                try:
+                    result = ctl.start_server(Path(rec["path"]), pass_result["effective_profile"], port=args.get("port", 8080), log_path=log_path)
+                except BaseException:
+                    release()
+                    raise
+                self.benchmark.hold_gpu(release)                           # the server keeps running: the lease stays until `stop_server` or the server ends
                 return {**result, "profile_pass": pass_result, "model": rec}
             if action == "stop_server":
                 try:

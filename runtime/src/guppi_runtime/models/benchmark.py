@@ -309,6 +309,12 @@ class ModelBenchmarkRunner:
         lab = self._test_lab()
         wait_s = float(self.policy.get("gpu_wait_s", 600))
         token = lab.acquire("benchmark-managed", purpose, ttl_s=300, wait_s=wait_s, poll_s=5)
+        try:
+            from . import gpu_preflight
+            gpu_preflight.clear_leftovers("benchmark-managed", lab=lab)       # D2.7 step 3: what earlier runs left on the card; spares a scheduler server
+        except BaseException:
+            lab.release(token)                                                 # a card that is not clean: no server, no lease
+            raise
         stop = threading.Event()
         state = {"kept": False}
 
@@ -338,6 +344,12 @@ class ModelBenchmarkRunner:
                 self.audit.append(event, component="model-benchmark", payload=payload)
             except Exception:
                 pass
+
+    def hold_gpu(self, release):
+        """A server started with the lease `release` (from `_take_gpu`) keeps running after the call: the lease stays until `release_managed_gpu`."""
+        self.release_managed_gpu()
+        release.state["kept"] = True
+        self._held = release
 
     def release_managed_gpu(self):
         """The lease of a managed server that was left running (`keep_running`) goes back when that server is stopped."""
@@ -370,8 +382,7 @@ class ModelBenchmarkRunner:
             except Exception:
                 kept = False
             if kept:
-                release.state["kept"] = True
-                self._held = release
+                self.hold_gpu(release)
             else:
                 release()
 

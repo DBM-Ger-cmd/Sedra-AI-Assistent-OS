@@ -215,6 +215,58 @@ class TuningCase(unittest.TestCase):
             self.manager.runtime_action('llama-cpp-server', 'stop_server', {})
         self.assertIsNone(lab.holder())
 
+    def test_the_managed_benchmark_cleans_up_after_it_has_the_lease_and_a_dirty_card_gives_it_back(self):
+        from guppi_runtime.models import gpu_preflight
+        ctl, seen, self._state, started, stopped = self.managed()
+        calls = []
+        with patch.object(gpu_preflight, 'clear_leftovers', side_effect=lambda owner, **kw: calls.append((owner, kw['lab'] is self.manager.benchmark._test_lab()))):
+            self.run_managed(ctl, started, stopped)
+        self.assertEqual(calls, [('benchmark-managed', True)])
+        with patch.object(gpu_preflight, 'clear_leftovers', side_effect=gpu_preflight.GpuNotClean('GPU holds 8 GiB')), self.assertRaises(gpu_preflight.GpuNotClean):
+            self.run_managed(ctl, started, stopped)
+        self.assertIsNone(self.manager.benchmark._test_lab().holder())     # no server, no lease
+
+    def start_action(self, ctl, **kw):
+        with patch.object(self.manager, 'profile_for', return_value={'status': 'PASS', 'effective_profile': {}}), \
+             patch.object(ctl, 'start_server', **kw) as start:
+            try:
+                return self.manager.runtime_action('llama-cpp-server', 'start_server', {'model_id': self.rec['id']}), start
+            except BaseException as exc:
+                return exc, start
+
+    def test_the_start_server_action_takes_the_lease_keeps_it_and_stop_server_gives_it_back(self):
+        ctl = self.manager.controller('llama-cpp-server')
+        lab = self.manager.benchmark._test_lab()
+        out, start = self.start_action(ctl, return_value={'pid': None, 'endpoint': 'http://127.0.0.1:8080'})
+        self.assertEqual(out['endpoint'], 'http://127.0.0.1:8080')
+        self.assertEqual(lab.holder()['owner'], 'benchmark-managed')
+        with patch.object(ctl, 'stop_server', return_value={'stopped': True}):
+            self.manager.runtime_action('llama-cpp-server', 'stop_server', {})
+        self.assertIsNone(lab.holder())
+
+    def test_the_start_server_action_without_the_lease_starts_nothing_and_a_failed_start_gives_it_back(self):
+        ctl = self.manager.controller('llama-cpp-server')
+        lab = self.manager.benchmark._test_lab()
+        token = lab.try_acquire('model-scheduler', 'Modellserver')
+        self.assertTrue(token)
+        self.manager.benchmark.policy['gpu_wait_s'] = 0
+        from guppi_runtime.jobs.testlab import LeaseBusy
+        out, start = self.start_action(ctl, return_value={'pid': None, 'endpoint': 'x'})
+        self.assertIsInstance(out, LeaseBusy)
+        start.assert_not_called()
+        lab.release(token)
+        out, start = self.start_action(ctl, side_effect=RuntimeError('no port'))
+        self.assertIsInstance(out, RuntimeError)
+        self.assertIsNone(lab.holder())
+
+    def test_every_start_of_a_llama_server_in_src_sits_next_to_a_lease(self):
+        import re
+        src = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime'
+        callers = {f.relative_to(src).as_posix() for f in src.rglob('*.py') if re.search(r'\.start_server\(', f.read_text(encoding='utf-8', errors='replace'))}
+        self.assertEqual(callers, {'models/benchmark.py', 'models/model_runtime.py'})
+        for name in callers:
+            self.assertIn('_take_gpu(', (src / name).read_text(encoding='utf-8'), name)
+
     def test_a_failed_managed_start_gives_the_lease_back(self):
         ctl, seen, self._state, started, stopped = self.managed()
         bench = self.manager.benchmark
