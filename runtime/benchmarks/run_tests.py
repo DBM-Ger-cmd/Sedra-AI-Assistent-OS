@@ -95,10 +95,19 @@ sys.exit(0 if result.wasSuccessful() else 1)
 """
 
 
+def python_exe():
+    """Die `.venv` der Runtime, wenn es sie gibt (mit dulwich, microsandbox u. a.: dann laufen auch die DevVM-Tests), sonst der laufende Python."""
+    for rel in ('.venv/Scripts/python.exe', '.venv/bin/python'):
+        candidate = RUNTIME / rel
+        if candidate.is_file():
+            return str(candidate)
+    return sys.executable
+
+
 def run_group(modules, timeout):
     env = {**os.environ, 'PYTHONPATH': os.pathsep.join([str(RUNTIME / 'src'), str(TESTS)])}
     started = time.monotonic()
-    done = subprocess.run([sys.executable, '-c', LOADER, *modules], cwd=RUNTIME, env=env, capture_output=True, text=True,
+    done = subprocess.run([python_exe(), '-c', LOADER, *modules], cwd=RUNTIME, env=env, capture_output=True, text=True,
                           encoding='utf-8', errors='replace', timeout=timeout)
     text = (done.stderr or '') + (done.stdout or '')
     failed = set(re.findall(r'^(?:FAIL|ERROR): .*?\(([\w.]+)\)', text, flags=re.M))
