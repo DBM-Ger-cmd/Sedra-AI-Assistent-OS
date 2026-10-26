@@ -58,7 +58,7 @@ Review:      Subagent (Opus) liest den Diff gegen die Spec-Zeile, meldet Abweich
 Nicht tun:   keine GPU-Läufe, keine Schalter, kein Push ohne Auftrag, keine eigene Sedra-Kopie (Abschnitt 6)
 ```
 
-Arbeitsverzeichnis: Worktrees und Auscheckungen unter einem kurzen Pfad anlegen (z. B. `C:\sb\<name>`), weil das Repo (`architecture/…/hardware_manager/…`) in tiefen Pfaden an der Windows-Pfadlänge scheitert.
+Arbeitsverzeichnis: A1 oder der Worktree, den die App für die Sitzung anlegt; keine eigenen Auscheckungen (Abschnitt 6). Das Repo (`architecture/…/hardware_manager/…`) scheitert in sehr tiefen Pfaden an der Windows-Pfadlänge; für einen unvermeidbaren Auszug eines alten Stands gilt der eine Ordner `C:\sb` aus Abschnitt 6.
 
 ## 6. Regel: keine eigene Sedra-Kopie je Sitzung (26.10.2026)
 
