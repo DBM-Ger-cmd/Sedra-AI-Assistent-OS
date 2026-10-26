@@ -67,6 +67,13 @@ class CrashTests(Base):
         self.assertEqual(self.sched.answer(ask["id"], "ablehnen"), {"kind": "slot_server", "unlocked": False})   # declined: still locked, question closed
         self.assertEqual((self.sched.decisions(), self.server()["state"]), ([], "gesperrt"))
 
+    def test_four_crashes_spread_over_more_than_ten_minutes_do_not_lock(self):
+        for n in range(6):
+            self.start(f"SDJ-{n}")
+            self.assertEqual(self.crash()["state"], "aus")
+            self.clock.t += 601                                                       # each crash leaves the window of the one before
+        self.assertEqual((self.server()["state"], self.sched.decisions(), self.audit.of("SLOT_SERVER_GESPERRT")), ("aus", [], []))
+
     def test_confirming_unlocks_and_the_crash_count_starts_over(self):
         for n in range(4):
             self.start(f"SDJ-{n}")
@@ -132,13 +139,51 @@ class CrashJobTests(CrashJobs):
         out = self.sup.fail(job_id, "w", reason_code="provider_unavailable", outcome_known=False)
         return job_id, out
 
-    def test_a_job_of_a_reading_role_runs_again_a_job_of_a_writing_role_does_not(self):
-        reader, out = self.crashed_job("reviewer")
-        self.assertEqual(self.load(reader)["state"], "QUEUED", out)                     # retried within the usual limit
-        writer, out = self.crashed_job("coder")
-        self.assertNotEqual(self.load(writer)["state"], "QUEUED", out)                  # unknown outcome: back to a person, no silent repeat
-        self.assertEqual(self.load(writer)["attempt_log"][-1]["outcome"], "UNKNOWN")
-        self.assertEqual(sum(1 for a in self.load(writer)["attempt_log"] if a["outcome"] == "UNKNOWN"), 1)
+    def worker(self, role, crash):
+        from guppi_runtime.jobs.job_worker import Worker, model_text_handler
+        calls = []
+
+        def infer(job_id, request):
+            calls.append(job_id)
+            if crash and len(calls) == 1:                          # the server dies under the request, the poller notices
+                self.runtime.running = False
+                self.slots.poll()
+                self.runtime.running = True
+                return {"status": "failed", "error": "ConnectionResetError: [WinError 10054]"}
+            return {"status": "completed", "model_result": {"content": "fertig", "usage": {}}}
+        inner = model_text_handler(infer, lambda job: [{"role": "user", "content": "x"}], on_degenerate=lambda attempt, reason: None)
+
+        def handler(job, attempt, ctx):
+            if self.sup.role_mutates(job):
+                ctx.mark_mutated()                                 # the writing role has changed something before the request: the outcome is unknown
+            return inner(job, attempt, ctx)
+        return Worker(self.sup, "w-" + role, [role], handler, heartbeat_every=3600), calls
+
+    def attempts(self, job_id):
+        return [a["outcome"] for a in self.load(job_id)["attempt_log"]]
+
+    def test_a_crash_under_the_real_worker_a_reading_job_runs_again_a_writing_job_does_not(self):
+        reader = self.queued("reviewer")
+        worker, calls = self.worker("reviewer", crash=True)
+        out = worker.run_once()
+        self.assertEqual(out["status"], "failed")
+        self.assertEqual(self.lease(reader)["state"], "unterbrochen")                  # the poller marked it when the server died
+        self.assertEqual(self.load(reader)["state"], "QUEUED")                          # retried within the usual limit
+        self.clock.advance(60)                                                          # past the backoff
+        again = worker.run_once()
+        self.assertEqual(again["status"], "handled", again)                             # a new server (generation 2), the job ran again
+        self.assertEqual(self.attempts(reader)[0], "FAILED")
+        self.assertEqual(self.loader.loaded[-1][0], "main.local")
+        self.assertEqual(len(self.loader.loaded), 2)
+
+        writer = self.queued("coder")
+        worker, calls = self.worker("coder", crash=True)
+        self.assertEqual(worker.run_once()["status"], "failed")
+        self.clock.advance(3600)
+        self.assertEqual(worker.run_once()["status"], "idle")                           # no silent repeat: back to a person
+        self.assertNotEqual(self.load(writer)["state"], "QUEUED")
+        self.assertEqual(len(calls), 1)
+        self.assertLessEqual(sum(1 for a in self.attempts(writer) if a == "UNKNOWN"), 1)   # at most one attempt without an outcome
 
 
 del CrashJobs     # not collected on its own
