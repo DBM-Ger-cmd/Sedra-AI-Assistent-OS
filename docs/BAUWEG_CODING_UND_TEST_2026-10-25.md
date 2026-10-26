@@ -55,7 +55,18 @@ Fertig, wenn: <Prüfungen in Worten>
 Basis:       run_tests.py <Bereich>   (rot nur, was nicht in known_red.txt steht)
 Danach:      run_tests.py --changed, dann der Bereich; ein Commit je Schritt (Nachricht nennt Schritt-ID)
 Review:      Subagent (Opus) liest den Diff gegen die Spec-Zeile, meldet Abweichungen; Ergebnis ins Logbuch
-Nicht tun:   keine GPU-Läufe, keine Schalter, kein Push ohne Auftrag
+Nicht tun:   keine GPU-Läufe, keine Schalter, kein Push ohne Auftrag, keine eigene Sedra-Kopie (Abschnitt 6)
 ```
 
 Arbeitsverzeichnis: Worktrees und Auscheckungen unter einem kurzen Pfad anlegen (z. B. `C:\sb\<name>`), weil das Repo (`architecture/…/hardware_manager/…`) in tiefen Pfaden an der Windows-Pfadlänge scheitert.
+
+## 6. Regel: keine eigene Sedra-Kopie je Sitzung (26.10.2026)
+
+Es gibt genau diese Arbeitsorte: den Entwicklungsstand A1 (`E:\Sedra Umgebung\A1 Sedra Main Branch Entwicklungs umgebung`), die Installation (`GUPPI_Runtime_v1.20`, nur der Captain und Betrieb) und die Worktrees, die die App für eine Sitzung selbst anlegt. Darüber hinaus gilt:
+
+- Keine Kopie des Repos oder der Installation anlegen (kein `git archive`/`robocopy`/Zip-Auspacken in einen neuen Ordner, kein zweiter Auszug „zum Vergleichen“). Vergleiche gegen einen alten Stand laufen über `git show <stand>:<datei>` oder `git diff`; braucht ein Test wirklich einen alten Baum, dann in genau einem Ordner `C:\sb` (kurzer Pfad), der nach der Prüfung wieder geleert wird, und der Fund steht im Bericht der Sitzung.
+- Keinen zweiten Sedra-Server, keine zweite Oberfläche und keinen zweiten Modellserver dauerhaft starten. Prüfläufe (`uix_check`, Tests) starten ihren Server auf einem temporären Projekt und beenden ihn; was danach noch läuft, beendet die Sitzung selbst.
+- Temporäre Ordner nur über `tempfile` mit den Präfixen aus `benchmarks/hygiene.py` (`TEMP_PREFIXES`), damit sie sich aufräumen lassen.
+- Worktrees: höchstens einer je laufender Sitzung; ist der Branch vollständig im Hauptbranch, wird die Sitzung archiviert und der Worktree aufgeräumt.
+
+Prüfen: `python benchmarks/hygiene.py` (nur Anzeige): unbekannte Kopien unter `E:\Sedra Umgebung`, aufräumbare Worktrees, Sedra-Reste im Temp-Ordner, laufende Sedra-/llama-Prozesse. `--apply-temp` löscht nur Temp-Ordner mit Sedra-Präfix, älter als 24 Stunden. Vor jedem Sitzungsabschluss und beim Archivieren einmal laufen lassen.
