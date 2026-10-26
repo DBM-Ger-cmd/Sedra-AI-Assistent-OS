@@ -127,6 +127,8 @@ class ModelBenchmarkRunner:
         self.audit = audit
         self.store = BenchmarkStore(self.data_root / "models" / "benchmarks.json")
         self.policy = self._load_policy(policy_path)
+        self._lab = None
+        self._held = None                      # the GPU lease of a managed server that keeps running (keep_running)
 
     @staticmethod
     def _load_policy(path):
@@ -295,6 +297,37 @@ class ModelBenchmarkRunner:
             sampler.stop()
         return self._record(provider, model_info, profile_pass, samples, errors, None, sampler.peak_mb, False)
 
+    def _test_lab(self):
+        if self._lab is None:
+            from ..jobs.testlab import TestLab
+            self._lab = TestLab(self.data_root / "testlab" / "testlab.db")
+        return self._lab
+
+    def _take_gpu(self, purpose):
+        """The GPU lease for a server this runner starts (Spec 2, D2.7, SCH-11): it waits like every benchmark (and stands in `handover_requests`, so a
+        running model scheduler hands the GPU over), and a heartbeat keeps it while the server runs. Returns the release function."""
+        lab = self._test_lab()
+        wait_s = float(self.policy.get("gpu_wait_s", 600))
+        token = lab.acquire("benchmark-managed", purpose, ttl_s=300, wait_s=wait_s, poll_s=5)
+        stop = threading.Event()
+
+        def beat():
+            while not stop.wait(30):
+                if not lab.heartbeat(token):
+                    return
+        threading.Thread(target=beat, name="benchmark-managed-lease", daemon=True).start()
+
+        def release():
+            stop.set()
+            lab.release(token)
+        return release
+
+    def release_managed_gpu(self):
+        """The lease of a managed server that was left running (`keep_running`) goes back when that server is stopped."""
+        held, self._held = self._held, None
+        if held is not None:
+            held()
+
     def benchmark_managed_llamacpp(self, *, model_id, profile_id=None, prompt=DEFAULT_PROMPT, repeats=3, warmups=1, max_tokens=128, port=18080, keep_running=False, profile_override=None):
         provider = "llama-cpp-server"
         ctl = self.manager.controller(provider)
@@ -310,6 +343,19 @@ class ModelBenchmarkRunner:
             profile_pass = self.manager.hardware_pass.evaluate(profile_override, model_size_gb=rec.get("size_gb"))
             if profile_pass["status"] != "PASS":
                 raise RuntimeError("hardware_model_pass_requires_review")
+        release = self._take_gpu(f"benchmark managed {model_id}")           # no lease, no server
+        kept = False
+        try:
+            return self._managed_run(ctl, provider, rec, profile_pass, model_id, prompt, repeats, warmups, max_tokens, port, keep_running)
+        finally:
+            kept = bool(keep_running) and ctl.status().get("managed_running")
+            if kept:
+                self.release_managed_gpu()
+                self._held = release
+            else:
+                release()
+
+    def _managed_run(self, ctl, provider, rec, profile_pass, model_id, prompt, repeats, warmups, max_tokens, port, keep_running):
         started_at = time.perf_counter()
         hw=getattr(self.manager,"hardware_manager",None)
         if hw: hw.preflight()

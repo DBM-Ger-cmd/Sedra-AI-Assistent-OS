@@ -149,5 +149,60 @@ class TuningCase(unittest.TestCase):
                                                                   profile_override=self.plan()['candidates'][0]['profile'])
         stop.assert_called_once()
 
+    # ---- Spec 2 (D2.7, SCH-11, OP-S2-02): a server the benchmark starts holds the GPU lease
+    def managed(self, **kw):
+        ctl = self.manager.controller('llama-cpp-server')
+        seen = {}
+
+        def start(*a, **k):
+            holder = self.manager.benchmark._test_lab().holder()
+            seen['holder'] = holder and holder['owner']
+            return {'pid': None, 'endpoint': 'http://127.0.0.1:18080'}
+        state = {'running': False}
+
+        def started(*a, **k):
+            state['running'] = True
+            return start()
+        stopped = patch.object(ctl, 'stop_server', side_effect=lambda *a, **k: state.update(running=False) or {'stopped': True})
+        return ctl, seen, state, started, stopped
+
+    def run_managed(self, ctl, started, stopped, **kw):
+        bench = self.manager.benchmark
+        with patch.object(ctl, 'status', side_effect=lambda: {'managed_running': self._state['running']}),              patch.object(ctl, 'start_server', side_effect=started), stopped, patch.object(bench, '_adapter'),              patch.object(bench, '_wait_ready', return_value=0.1), patch.object(bench, '_run_samples', return_value=([], [])),              patch.object(bench, '_record', return_value={'benchmark_id': 'BM-x'}):
+            return bench.benchmark_managed_llamacpp(model_id=self.rec['id'], profile_id='safe-cpu-default',
+                                                    profile_override=self.plan()['candidates'][0]['profile'], **kw)
+
+    def test_managed_benchmark_holds_the_gpu_lease_while_the_server_runs_and_gives_it_back(self):
+        ctl, seen, self._state, started, stopped = self.managed()
+        self.run_managed(ctl, started, stopped)
+        self.assertEqual(seen['holder'], 'benchmark-managed')
+        self.assertIsNone(self.manager.benchmark._test_lab().holder())
+
+    def test_managed_benchmark_without_the_lease_does_not_start_a_server(self):
+        ctl, seen, self._state, started, stopped = self.managed()
+        lab = self.manager.benchmark._test_lab()
+        self.assertTrue(lab.try_acquire('model-scheduler', 'Modellserver'))
+        self.manager.benchmark.policy['gpu_wait_s'] = 0
+        from guppi_runtime.jobs.testlab import LeaseBusy
+        with patch.object(ctl, 'start_server') as start, self.assertRaises(LeaseBusy):
+            self.run_managed(ctl, started, stopped)
+        start.assert_not_called()
+
+    def test_a_kept_server_keeps_the_lease_until_it_is_stopped(self):
+        ctl, seen, self._state, started, stopped = self.managed()
+        self.run_managed(ctl, started, stopped, keep_running=True)
+        lab = self.manager.benchmark._test_lab()
+        self.assertEqual(lab.holder()['owner'], 'benchmark-managed')
+        self.manager.benchmark.release_managed_gpu()
+        self.assertIsNone(lab.holder())
+        self.manager.benchmark.release_managed_gpu()               # twice is harmless
+
+    def test_a_failed_managed_start_gives_the_lease_back(self):
+        ctl, seen, self._state, started, stopped = self.managed()
+        bench = self.manager.benchmark
+        with patch.object(ctl, 'status', return_value={'managed_running': False}), patch.object(ctl, 'start_server', side_effect=RuntimeError('no')),              patch.object(ctl, 'stop_server'), self.assertRaises(RuntimeError):
+            bench.benchmark_managed_llamacpp(model_id=self.rec['id'], profile_id='safe-cpu-default', profile_override=self.plan()['candidates'][0]['profile'])
+        self.assertIsNone(bench._test_lab().holder())
+
 
 if __name__ == '__main__': unittest.main()

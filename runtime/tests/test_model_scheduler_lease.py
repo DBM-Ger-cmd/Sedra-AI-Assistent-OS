@@ -193,7 +193,7 @@ class WorkshopTests(Base):
 
 class StructureTests(unittest.TestCase):
     """SCH-11, OP-S2-02: who talks to a local llama server over HTTP. Every file that does is listed with the reason it may; a new one fails here
-    until someone decides (router hook, scheduler lease, or a reason). `models/benchmark.py` is a KNOWN EXCEPTION the Captain has yet to decide."""
+    until someone decides (router hook, scheduler lease, or a reason)."""
     SRC = Path(__file__).resolve().parents[1] / "src" / "guppi_runtime"
     PATTERN = __import__("re").compile(r"chat/completions|_request\(.POST|adapter\.chat\(|LlamaCppServerAdapter\(|OpenAICompatibleLocalAdapter\(")
     ALLOWED = {
@@ -207,12 +207,23 @@ class StructureTests(unittest.TestCase):
         "devenv/model_tools.py": "tool loop of the build environment, under the benchmark's GPU lease",
         "uix_server.py": "Standardtest of the workshop: a model the Captain loaded by hand, one test at a time",
         "labor.py": "cloud adapters (provider test)", "redesign_agent.py": "cloud adapter",
-        "models/benchmark.py": "KNOWN EXCEPTION (OP-S2-02): benchmark_managed_llamacpp starts its own llama-server on port 18080 without a lease; the Captain decides (hook or ban)",
+        "models/benchmark.py": "benchmark_managed_llamacpp takes the GPU lease before it starts a server (OP-S2-02, decided 26.10.2026; see the test below)",
     }
 
     def test_only_listed_files_talk_to_a_local_model_server_directly(self):
         found = {p.relative_to(self.SRC).as_posix() for p in self.SRC.rglob("*.py") if self.PATTERN.search(p.read_text(encoding="utf-8", errors="replace"))}
         self.assertEqual(sorted(found - set(self.ALLOWED)), [], "a new direct caller: route it through the router (slot hook) or the scheduler, or list it with a reason")
+
+    def test_the_benchmark_takes_the_lease_before_it_starts_a_server(self):
+        import ast
+        tree = ast.parse((self.SRC / "models" / "benchmark.py").read_text(encoding="utf-8"))
+        fn = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "benchmark_managed_llamacpp")
+        run = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "_managed_run")
+        calls = [c.func.attr for c in ast.walk(fn) if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute)]
+        self.assertIn("_take_gpu", calls)
+        self.assertNotIn("start_server", calls)                                       # it starts only inside _managed_run, called after the lease
+        self.assertLess(calls.index("_take_gpu"), calls.index("_managed_run"))
+        self.assertIn("start_server", [c.func.attr for c in ast.walk(run) if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute)])
 
     def test_the_list_has_no_dead_entries(self):
         gone = [f for f in self.ALLOWED if not (self.SRC / f).is_file()]
