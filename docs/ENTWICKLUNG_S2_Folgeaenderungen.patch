@@ -1,0 +1,44 @@
+diff --git a/docs/BETRIEB.md b/docs/BETRIEB.md
+--- a/docs/BETRIEB.md
++++ b/docs/BETRIEB.md
+@@ -92,8 +92,11 @@
+ 
+ ## GPU: Lease, Canary, Reserve
+ 
+-- **Nur ein Prozess lädt Modelle.** Jedes Skript, das Modelle startet, nimmt die GPU-Lease von `testlab.py`, mit Wartezeit statt Abbruch. Wer die Lease gerade hält:
+-  `TestLab(default_path(projekt)).holder()`. Läufe anderer Sitzungen **nie** beenden. Prozesse werden nur über ihre eigene PID gestoppt, nie per Namensmuster.
++- **Zwei Ebenen, nur ein Besitzer lädt Modelle.** Die **Lade-Lease** (`gpu`, `testlab.py`) hat genau einen Besitzer; nur er startet und stoppt Modellserver. Jedes Skript, das Modelle
++  startet, nimmt sie mit Wartezeit statt Abbruch. Wer sie gerade hält: `TestLab(default_path(projekt)).holder()`. Ist der Modell-Scheduler an (`local_config/model_scheduler.yaml`,
++  `enabled: true`), ist er der Besitzer, und Sitzungen und Werkstatt laden über ihn. Die **Slot-Lease** gibt er an einen Lauf, der den laufenden Server nutzt: Anfragen ja, Laden, Stoppen
++  oder Ändern nein. Benchmarks und Bauläufe fordern die Lease **exklusiv** an: Der Scheduler sperrt neue Slot-Leases, wartet auf laufende (`drain_max_s`), stoppt seinen Server und übergibt.
++  Läufe anderer Sitzungen **nie** beenden. Prozesse werden nur über ihre eigene PID gestoppt, nie per Namensmuster; Aufräumen (`gpu_preflight`) fasst keinen Server unter lebender Lease an.
+ - **Rezepte, Engine oder Schalter nie ändern, solange ein Lauf die GPU benutzt.** Lieber ein kleines Skript schreiben, das auf die Lease wartet, kurz ändert
+   und sie wieder freigibt.
+ - **Canary:** Nach jedem Windows-Start und nach jedem Server-Absturz läuft zuerst der GPU-Selbsttest (`runtime_data/gpu_canary.json`). Schlägt er fehl, ist
+diff --git a/docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md b/docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md
+--- a/docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md
++++ b/docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md
+@@ -62,7 +62,7 @@
+ | Agent | Instanz einer Vorlage aus dem Agent Manager, mit Rolle, Rezept und Vorgesetztem |
+ | Aufgabe (`task`) | Arbeitseinheit; bei SEDRA heute eine Mission mit Zustandsautomat |
+ | Herzschlag | Wecken eines Agenten, wenn Arbeit für ihn ansteht (Paperclip: Heartbeat; SEDRA: `job_supervisor`) |
+-| Slot | Ein paralleler Platz auf dem laufenden llama-server; heute ist 1 Slot Standard |
++| Slot | Ein paralleler Platz auf dem laufenden llama-server; Standard sind 2 Slots (Captain 23.10.2026, G1-S2-a; Hauptmodell 2 × 32768, Hilfsmodell 2 Slots), 3 und 4 sind gemessen und im Rezept hinterlegt |
+ | Rezept | Eintrag in `role_routing.yaml`: Modell, Rollen, Servereinstellungen, Kontextgrenzen |
+ | Gate | Freigabepunkt des Guard (ALLOW, BLOCK, CAPTAIN_REQUIRED) |
+ | Shell D | Die Paperclip-Shell unter `uix/shells/paperclip/`, laut Vertrag §9 nach Cockpit (C) und Minimal (E) geplant |
+diff --git a/runtime/src/guppi_runtime/jobs/testlab.py b/runtime/src/guppi_runtime/jobs/testlab.py
+--- a/runtime/src/guppi_runtime/jobs/testlab.py
++++ b/runtime/src/guppi_runtime/jobs/testlab.py
+@@ -4,7 +4,10 @@
+ other's measurements or crash each other. Nobody should have to guess whether the GPU is free.
+ 
+ What is in the file
+-  lease     ONE row, "gpu". Whoever holds it may start models. It carries owner, purpose, pid, and a heartbeat. A lease whose heartbeat is
++  lease     ONE row, "gpu" (the load lease). Whoever holds it may start and stop models; with the model scheduler on, the scheduler is that owner and
++            hands out slot leases (table `slot_leases`) to runs that only use the running server: requests yes, load/stop/change no. A benchmark asks
++            for the lease exclusively (`handover_requests`): the scheduler stops new slot leases, drains, stops its server and hands the lease over.
++            It carries owner, purpose, pid, and a heartbeat. A lease whose heartbeat is
+             older than its ttl, or whose process no longer exists, is stale and is taken over (and says so in `events`).
+   queue     planned test rounds, so another chat can see what is coming and what is already done: nobody repeats a round.
+   runs      one row per measurement run, with its settings.
