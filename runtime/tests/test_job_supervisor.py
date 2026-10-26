@@ -94,7 +94,7 @@ class ConfigTests(unittest.TestCase):
     def test_shipped_config_is_valid_and_off_by_default(self):
         config = SupervisorConfig.load(CONFIG)
         self.assertFalse(config.enabled)
-        self.assertEqual(config.workers, 1)
+        self.assertEqual(config.workers, 3)           # Captain 27.10.2026: dauerhaft 3; wirksam nur mit Modell-Scheduler (sonst genau 1)
         self.assertTrue(config.roles['coder']['mutates'])
         self.assertFalse(config.roles['reviewer']['mutates'])
         self.assertEqual(len(config.roles), 12)     # Spec 1 S1.H8: dazu foreman
@@ -1066,7 +1066,7 @@ class SlotTests(Base):
 
     def test_the_shipped_file_allows_up_to_8_workers_and_gives_the_starter_240_s(self):
         shipped = SupervisorConfig.load(CONFIG)
-        self.assertEqual((shipped.workers, shipped.claim_timeout_s), (1, 240))
+        self.assertEqual((shipped.workers, shipped.claim_timeout_s), (3, 240))     # Captain 27.10.2026: workers dauerhaft 3
         self.assertEqual(SupervisorConfig(raw_config(workers=8)).workers, 8)
 
     def test_a_job_is_claimed_only_with_a_slot_and_the_last_one_waits_without_losing_an_attempt(self):

@@ -1,7 +1,7 @@
 job_supervisor:
   schema: 1
   enabled: false              # Feature flag. Default OFF: GUPPI behaves exactly like v1.20.
-  workers: 1                  # 1 to 8 (Spec 2, G2-S2-04); more than 1 only with the model scheduler on (model_scheduler.yaml), else 1 is used
+  workers: 3                  # 1 to 8 (Spec 2, G2-S2-04); more than 1 only with the model scheduler on (model_scheduler.yaml), else 1 is used. Captain 2026-10-27: 3 (2 slots per server, the third run waits)
   claim_timeout_s: 240        # Spec 2 (G2-S2-04, was 30): the starter of the model server holds its claim while the server loads
   lease_s: 120
   max_lease_s: 900

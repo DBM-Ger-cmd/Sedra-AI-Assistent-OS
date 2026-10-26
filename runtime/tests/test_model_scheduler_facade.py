@@ -367,7 +367,7 @@ class RuntimeWiringTests(unittest.TestCase):
         rt, project = self.runtime()
         self.assertIsNone(rt.model_scheduler)
         self.assertEqual(rt.model_scheduler_status(), {"enabled": False, "error": None})
-        self.assertEqual(rt.job_supervisor.config.workers, 1)
+        self.assertEqual((rt.job_supervisor.config.workers, rt.job_supervisor._worker_limit()), (1, 1))     # Datei: 3 (Captain 27.10.2026); ohne Scheduler setzt die Runtime es auf 1
         self.assertIsNone(rt.job_supervisor.slots)
         self.assertFalse((project / "runtime_data" / "testlab" / "testlab.db").exists())     # off touches no test lab
 
