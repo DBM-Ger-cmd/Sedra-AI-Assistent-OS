@@ -125,7 +125,7 @@ class WorkshopTests(Base):
                                   llama_server=None, project_root=Path(self.tmp.name))
         hub = object.__new__(UIXHub)
         hub.runtime, hub.lab, hub.model_lock = self.rt, self.lab, threading.Lock()
-        hub.gpu_token, hub._beat_stop = None, None
+        # no gpu_token and no _beat_stop on purpose: with the scheduler on, the workshop must not even read them
         hub._start_lease_beat = lambda: self.fail("the workshop must not start a lease beat of its own")
         self.hub = hub
 
@@ -134,7 +134,7 @@ class WorkshopTests(Base):
         self.assertEqual((out["recipe_id"], out["action"]), ("main.local", "loaded"))
         self.assertEqual(self.loader.loaded, [("main.local", 2, 32768)])
         self.assertEqual(self.lab.holder()["owner"], self.sched.owner)               # the scheduler holds `gpu`, not 'guppi-uix'
-        self.assertIsNone(self.hub.gpu_token)
+        self.assertNotIn("gpu_token", vars(self.hub))
         self.assertTrue(self.hub._lease_is_mine(self.lab.holder()))
         self.assertEqual(self.audit.of("SLOT_SERVER_STARTED")[0]["asked_by"], "werkstatt")
         self.assertEqual(self.hub.load_model({"recipe_id": "main.local"})["action"], "reused")
@@ -162,6 +162,7 @@ class WorkshopTests(Base):
         self.hub.load_model({"recipe_id": "main.local"})
         self.assertEqual(self.hub.unload_model({})["status"], "unloaded")
         self.assertIsNone(self.lab.holder())
+        self.assertNotIn("gpu_token", vars(self.hub))
 
     def test_another_recipe_replaces_the_running_one_only_without_active_runs(self):
         from guppi_runtime import uix_server
@@ -188,6 +189,40 @@ class WorkshopTests(Base):
         source = inspect.getsource(runtime.GuppiRuntime._configure_model_scheduler).replace(" ", "")
         self.assertIn("self.model_router.slot_guard=SlotGuard(", source)
         self.assertIn("job_supervisor.slots=self.model_scheduler", source)
+
+
+class StructureTests(unittest.TestCase):
+    """SCH-11, OP-S2-02: who talks to a local llama server over HTTP. Every file that does is listed with the reason it may; a new one fails here
+    until someone decides (router hook, scheduler lease, or a reason). `models/benchmark.py` is a KNOWN EXCEPTION the Captain has yet to decide."""
+    SRC = Path(__file__).resolve().parents[1] / "src" / "guppi_runtime"
+    PATTERN = __import__("re").compile(r"chat/completions|_request\(.POST|adapter\.chat\(|LlamaCppServerAdapter\(|OpenAICompatibleLocalAdapter\(")
+    ALLOWED = {
+        "models/router.py": "the router: the one door for chat, gateway, orchestra, vorgabe and the CLI (the slot hook sits here)",
+        "models/slot_guard.py": "names the adapter ids only",
+        "models/openai_local.py": "the adapter itself", "models/llamacpp.py": "the adapter itself", "models/cloud_api.py": "cloud, not a local server",
+        "runtime.py": "builds the adapters and registers them with the router",
+        "models/gpu_canary.py": "runs with the loader, under the load lease of whoever starts the server (scheduler or benchmark)",
+        "models/recipe_measure.py": "measurement under the benchmark's GPU lease (testlab)",
+        "devenv/conn_check.py": "connection check of the build environment, under the benchmark's GPU lease",
+        "devenv/model_tools.py": "tool loop of the build environment, under the benchmark's GPU lease",
+        "uix_server.py": "Standardtest of the workshop: a model the Captain loaded by hand, one test at a time",
+        "labor.py": "cloud adapters (provider test)", "redesign_agent.py": "cloud adapter",
+        "models/benchmark.py": "KNOWN EXCEPTION (OP-S2-02): benchmark_managed_llamacpp starts its own llama-server on port 18080 without a lease; the Captain decides (hook or ban)",
+    }
+
+    def test_only_listed_files_talk_to_a_local_model_server_directly(self):
+        found = {p.relative_to(self.SRC).as_posix() for p in self.SRC.rglob("*.py") if self.PATTERN.search(p.read_text(encoding="utf-8", errors="replace"))}
+        self.assertEqual(sorted(found - set(self.ALLOWED)), [], "a new direct caller: route it through the router (slot hook) or the scheduler, or list it with a reason")
+
+    def test_the_list_has_no_dead_entries(self):
+        gone = [f for f in self.ALLOWED if not (self.SRC / f).is_file()]
+        self.assertEqual(gone, [])
+
+    def test_the_router_callers_go_through_chat_not_the_adapters(self):
+        for name in ("desk/orchestra_runner.py", "desk/vorgabe.py", "modules/control.py", "cli.py"):
+            text = (self.SRC / name).read_text(encoding="utf-8")
+            self.assertRegex(text, r"router\.chat\(", name)
+            self.assertNotRegex(text, r"adapters\[|adapter\.chat\(", name)
 
 
 if __name__ == "__main__":
