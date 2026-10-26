@@ -4,7 +4,10 @@ Problem: every test run starts a model on the one GPU (and on one fixed llama-se
 other's measurements or crash each other. Nobody should have to guess whether the GPU is free.
 
 What is in the file
-  lease     ONE row, "gpu". Whoever holds it may start models. It carries owner, purpose, pid, and a heartbeat. A lease whose heartbeat is
+  lease     ONE row, "gpu" (the load lease). Whoever holds it may start and stop models; with the model scheduler on, the scheduler is that owner and
+            hands out slot leases (table `slot_leases`) to runs that only use the running server: requests yes, load/stop/change no. A benchmark asks
+            for the lease exclusively (`handover_requests`): the scheduler stops new slot leases, drains, stops its server and hands the lease over.
+            It carries owner, purpose, pid, and a heartbeat. A lease whose heartbeat is
             older than its ttl, or whose process no longer exists, is stale and is taken over (and says so in `events`).
   queue     planned test rounds, so another chat can see what is coming and what is already done: nobody repeats a round.
   runs      one row per measurement run, with its settings.

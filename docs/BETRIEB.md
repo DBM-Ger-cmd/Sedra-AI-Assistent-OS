@@ -92,8 +92,11 @@ ausgeschaltet. Endgültig löscht der Captain die Quarantäne von Hand. Welche M
 
 ## GPU: Lease, Canary, Reserve
 
-- **Nur ein Prozess lädt Modelle.** Jedes Skript, das Modelle startet, nimmt die GPU-Lease von `testlab.py`, mit Wartezeit statt Abbruch. Wer die Lease gerade hält:
-  `TestLab(default_path(projekt)).holder()`. Läufe anderer Sitzungen **nie** beenden. Prozesse werden nur über ihre eigene PID gestoppt, nie per Namensmuster.
+- **Zwei Ebenen, nur ein Besitzer lädt Modelle.** Die **Lade-Lease** (`gpu`, `testlab.py`) hat genau einen Besitzer; nur er startet und stoppt Modellserver. Jedes Skript, das Modelle
+  startet, nimmt sie mit Wartezeit statt Abbruch. Wer sie gerade hält: `TestLab(default_path(projekt)).holder()`. Ist der Modell-Scheduler an (`local_config/model_scheduler.yaml`,
+  `enabled: true`), ist er der Besitzer, und Sitzungen und Werkstatt laden über ihn. Die **Slot-Lease** gibt er an einen Lauf, der den laufenden Server nutzt: Anfragen ja, Laden, Stoppen
+  oder Ändern nein. Benchmarks und Bauläufe fordern die Lease **exklusiv** an: Der Scheduler sperrt neue Slot-Leases, wartet auf laufende (`drain_max_s`), stoppt seinen Server und übergibt.
+  Läufe anderer Sitzungen **nie** beenden. Prozesse werden nur über ihre eigene PID gestoppt, nie per Namensmuster; Aufräumen (`gpu_preflight`) fasst keinen Server unter lebender Lease an.
 - **Rezepte, Engine oder Schalter nie ändern, solange ein Lauf die GPU benutzt.** Lieber ein kleines Skript schreiben, das auf die Lease wartet, kurz ändert
   und sie wieder freigibt.
 - **Canary:** Nach jedem Windows-Start und nach jedem Server-Absturz läuft zuerst der GPU-Selbsttest (`runtime_data/gpu_canary.json`). Schlägt er fehl, ist

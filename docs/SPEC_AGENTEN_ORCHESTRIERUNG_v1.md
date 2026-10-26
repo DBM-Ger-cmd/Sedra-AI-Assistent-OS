@@ -62,7 +62,7 @@ Ziel: SEDRA führt mehrere KI-Agenten gleichzeitig wie ein kleines Team – nach
 | Agent | Instanz einer Vorlage aus dem Agent Manager, mit Rolle, Rezept und Vorgesetztem |
 | Aufgabe (`task`) | Arbeitseinheit; bei SEDRA heute eine Mission mit Zustandsautomat |
 | Herzschlag | Wecken eines Agenten, wenn Arbeit für ihn ansteht (Paperclip: Heartbeat; SEDRA: `job_supervisor`) |
-| Slot | Ein paralleler Platz auf dem laufenden llama-server; heute ist 1 Slot Standard |
+| Slot | Ein paralleler Platz auf dem laufenden llama-server; Standard sind 2 Slots (Captain 23.10.2026, G1-S2-a; Hauptmodell 2 × 32768, Hilfsmodell 2 Slots), 3 und 4 sind gemessen und im Rezept hinterlegt |
 | Rezept | Eintrag in `role_routing.yaml`: Modell, Rollen, Servereinstellungen, Kontextgrenzen |
 | Gate | Freigabepunkt des Guard (ALLOW, BLOCK, CAPTAIN_REQUIRED) |
 | Shell D | Die Paperclip-Shell unter `uix/shells/paperclip/`, laut Vertrag §9 nach Cockpit (C) und Minimal (E) geplant |
