@@ -48,7 +48,7 @@ class SwapTests(unittest.TestCase):
         self.assertTrue(self.sched.take_for_job("SDJ-2", 5, recipe="big.local")["granted"])
         with self.assertRaises(SchedulerError) as ctx:
             self.sched.ensure_server(resolution(recipe="big.local"), run_id="SDJ-2")
-        self.assertEqual(ctx.exception.reason, "model_swap_fallback_unsupported")       # moving the attempt to the fallback model is open (S2.H5)
+        self.assertEqual(ctx.exception.reason, "model_swap_fallback_unsupported")       # switching the attempt to the fallback model is not built: only allowed (Captain 26.10.2026, Spec 3)
         self.assertEqual(len(self.loader.loaded), 1)
 
 

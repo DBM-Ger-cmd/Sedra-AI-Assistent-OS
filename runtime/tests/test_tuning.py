@@ -184,9 +184,10 @@ class TuningCase(unittest.TestCase):
         self.assertTrue(lab.try_acquire('model-scheduler', 'Modellserver'))
         self.manager.benchmark.policy['gpu_wait_s'] = 0
         from guppi_runtime.jobs.testlab import LeaseBusy
-        with patch.object(ctl, 'start_server') as start, self.assertRaises(LeaseBusy):
+        with self.assertRaises(LeaseBusy):
             self.run_managed(ctl, started, stopped)
-        start.assert_not_called()
+        self.assertNotIn('holder', seen)                           # start_server never ran
+        self.assertFalse(self._state['running'])
 
     def test_a_kept_server_keeps_the_lease_until_it_is_stopped(self):
         ctl, seen, self._state, started, stopped = self.managed()
@@ -196,6 +197,23 @@ class TuningCase(unittest.TestCase):
         self.manager.benchmark.release_managed_gpu()
         self.assertIsNone(lab.holder())
         self.manager.benchmark.release_managed_gpu()               # twice is harmless
+
+    def test_the_next_run_does_not_wait_for_the_lease_of_a_server_that_is_gone(self):
+        ctl, seen, self._state, started, stopped = self.managed()
+        self.run_managed(ctl, started, stopped, keep_running=True)
+        self._state['running'] = False                             # the kept server died on its own
+        self.manager.benchmark.policy['gpu_wait_s'] = 0
+        self.run_managed(ctl, started, stopped)                    # would raise LeaseBusy on its own lease
+        self.assertIsNone(self.manager.benchmark._test_lab().holder())
+
+    def test_stopping_the_server_through_the_runtime_action_gives_the_lease_back(self):
+        ctl, seen, self._state, started, stopped = self.managed()
+        self.run_managed(ctl, started, stopped, keep_running=True)
+        lab = self.manager.benchmark._test_lab()
+        self.assertEqual(lab.holder()['owner'], 'benchmark-managed')
+        with stopped:
+            self.manager.runtime_action('llama-cpp-server', 'stop_server', {})
+        self.assertIsNone(lab.holder())
 
     def test_a_failed_managed_start_gives_the_lease_back(self):
         ctl, seen, self._state, started, stopped = self.managed()

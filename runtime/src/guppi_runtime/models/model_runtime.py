@@ -142,8 +142,9 @@ class ModelRuntimeManager:
                 result = ctl.start_server(Path(rec["path"]), pass_result["effective_profile"], port=args.get("port", 8080), log_path=log_path)
                 return {**result, "profile_pass": pass_result, "model": rec}
             if action == "stop_server":
-                out = ctl.stop_server()
-                self.benchmark.release_managed_gpu()       # a server the benchmark kept running held the GPU lease until now
-                return out
+                try:
+                    return ctl.stop_server()
+                finally:
+                    self.benchmark.release_managed_gpu()   # a server the benchmark kept running held the GPU lease until now
             raise ValueError("unsupported_llamacpp_action")
         raise ValueError("unsupported_provider")

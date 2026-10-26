@@ -303,24 +303,41 @@ class ModelBenchmarkRunner:
             self._lab = TestLab(self.data_root / "testlab" / "testlab.db")
         return self._lab
 
-    def _take_gpu(self, purpose):
+    def _take_gpu(self, purpose, ctl=None):
         """The GPU lease for a server this runner starts (Spec 2, D2.7, SCH-11): it waits like every benchmark (and stands in `handover_requests`, so a
         running model scheduler hands the GPU over), and a heartbeat keeps it while the server runs. Returns the release function."""
         lab = self._test_lab()
         wait_s = float(self.policy.get("gpu_wait_s", 600))
         token = lab.acquire("benchmark-managed", purpose, ttl_s=300, wait_s=wait_s, poll_s=5)
         stop = threading.Event()
+        state = {"kept": False}
 
         def beat():
             while not stop.wait(30):
-                if not lab.heartbeat(token):
-                    return
+                try:
+                    if not lab.heartbeat(token):
+                        self._audit("BENCHMARK_LEASE_LOST", {"purpose": purpose})
+                        return
+                    if state["kept"] and ctl is not None and not ctl.status().get("managed_running"):
+                        self._audit("BENCHMARK_LEASE_SERVER_GONE", {"purpose": purpose})       # the kept server ended on its own: the GPU goes back
+                        self.release_managed_gpu()
+                        return
+                except Exception as exc:
+                    self._audit("BENCHMARK_LEASE_BEAT_FAILED", {"error": type(exc).__name__})
         threading.Thread(target=beat, name="benchmark-managed-lease", daemon=True).start()
 
         def release():
             stop.set()
             lab.release(token)
+        release.state = state
         return release
+
+    def _audit(self, event, payload):
+        if self.audit:
+            try:
+                self.audit.append(event, component="model-benchmark", payload=payload)
+            except Exception:
+                pass
 
     def release_managed_gpu(self):
         """The lease of a managed server that was left running (`keep_running`) goes back when that server is stopped."""
@@ -343,14 +360,17 @@ class ModelBenchmarkRunner:
             profile_pass = self.manager.hardware_pass.evaluate(profile_override, model_size_gb=rec.get("size_gb"))
             if profile_pass["status"] != "PASS":
                 raise RuntimeError("hardware_model_pass_requires_review")
-        release = self._take_gpu(f"benchmark managed {model_id}")           # no lease, no server
-        kept = False
+        self.release_managed_gpu()                                           # a lease kept for a server that is gone must not block this run
+        release = self._take_gpu(f"benchmark managed {model_id}", ctl)       # no lease, no server
         try:
             return self._managed_run(ctl, provider, rec, profile_pass, model_id, prompt, repeats, warmups, max_tokens, port, keep_running)
         finally:
-            kept = bool(keep_running) and ctl.status().get("managed_running")
+            try:
+                kept = bool(keep_running) and bool(ctl.status().get("managed_running"))
+            except Exception:
+                kept = False
             if kept:
-                self.release_managed_gpu()
+                release.state["kept"] = True
                 self._held = release
             else:
                 release()
