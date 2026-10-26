@@ -288,6 +288,8 @@ class GuppiRuntime:
         if self.job_supervisor is not None:
             if self.model_scheduler is not None:
                 self.job_supervisor.slots=self.model_scheduler
+                from .models import gpu_canary
+                self.model_scheduler.canary_invalidate=gpu_canary.invalidate      # D2.5/D2.8: after a restart of its own the next load runs the canary
                 self.model_router.slot_guard=SlotGuard(self.model_scheduler,wait_s=min(30,self.model_scheduler.config.wait_max_s))    # D2.6: Direktaufrufe über einen Slot
             else: self.job_supervisor.config.workers=1        # no scheduler, no parallel jobs (G2-S2-04)
 
@@ -404,6 +406,10 @@ class GuppiRuntime:
         """A llama-server that emits garbage stays broken; stop it so the next attempt starts a fresh process. LM Studio is
         left alone: it may hold a model the Captain loaded by hand."""
         self.audit.append("MODEL_OUTPUT_DEGENERATE",component="job-worker",payload={"provider":attempt.get("provider_ref"),"model":attempt.get("model"),"reason":reason})
+        sched=self.model_scheduler
+        if sched is not None and sched.enabled:
+            sched.report(attempt.get("job_id"),"garbage")          # D2.8: the scheduler counts, and restarts the server it owns from the second report
+            return
         if attempt.get("provider_ref")=="llama-cpp-server" and self.llama_server is not None:
             self.llama_server.unload_model(all_models=True)
 

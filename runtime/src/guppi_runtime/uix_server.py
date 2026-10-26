@@ -174,8 +174,27 @@ class UIXHub:
     # ---- the desk (Build 7): one list of decisions, one snapshot the event stream watches, the strip's instruments
     def decisions_view(self):
         """Every open decision in one shape: mission gates and the change requests of chat, Werkstatt and Bibliothek."""
-        items = desk_decisions.collect(self.missions(), self._open_requests(), self._open_crossings(), self._content_decisions())
+        items = desk_decisions.collect(self.missions(), self._open_requests(), self._open_crossings(), self._content_decisions(), self._scheduler_decisions())
         return {'items': items, 'summary': desk_decisions.summary(items)}
+
+    def _scheduler_decisions(self):
+        """Spec 2 (D2.8, D2.10): the model scheduler's questions (cloud offer, locked server); none while it is off."""
+        sched = self._scheduler()
+        try: return sched.decisions() if sched is not None else []
+        except Exception: return []
+
+    def _answer_scheduler(self, decision, way):
+        """The Captain's answer to a scheduler question. Accepting a cloud offer only marks the job `cloud_offload_approved`: what that
+        does is Spec 3."""
+        out = self._scheduler().answer(decision['id'], way)
+        if out.get('approved'):
+            sup = getattr(self.runtime, 'job_supervisor', None)
+            if sup is not None:
+                try:
+                    with sup.store.mutate(out['run_id']) as job: job['cloud_offload_approved'] = True
+                except Exception: self.runtime.audit.append('SLOT_CLOUD_MARK_FAILED', component='uix', payload={'run_id': out['run_id']})
+            self.runtime.audit.append('CLOUD_OFFLOAD_APPROVED', component='uix', payload={'run_id': out['run_id']})
+        return out
 
     # ---- Build 16: der Inhaltsschutz (core/content_guard.py) – seine Entscheidungen, sein Modus, sein Zustand
     @property
@@ -229,6 +248,10 @@ class UIXHub:
             out = self._answer_crossing(crossing, way)
             self.events.publish('decision.answered', {'id': did, 'kind': 'boundary', 'way': way})
             return out
+        if decision['kind'] in ('cloud_offload', 'slot_server'):
+            result = self._answer_scheduler(decision, way)
+            self.events.publish('decision.answered', {'id': did, 'kind': decision['kind'], 'way': way})
+            return {'status': 'answered', 'id': did, 'way': way, 'result': result}
         if decision['kind'] == 'content':
             result = self.content_guard.answer(did, way)
             self.events.publish('decision.answered', {'id': did, 'kind': 'content', 'way': way})

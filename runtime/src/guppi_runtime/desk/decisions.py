@@ -31,7 +31,8 @@ REQUEST_NOTE = {'switch': 'Schalter · gilt nach dem Neustart der Oberfläche', 
                 'standing': 'Dauerfreigabe · der Agent darf ohne weitere Frage geweckt werden, bis Ablauf, letzte Nutzung, Änderung oder Widerruf',
                 'wissen_quelle': 'Wissensspeicher · der Inhalt wird für Agenten ab dieser Stufe lesbar; ohne Freigabe wird nichts aufgenommen',
                 'wissen_vorschlag': 'Wissensspeicher · Text eines Agenten wird Wissen für diese Stufe; ändert sich der Vorschlag, wird nichts ausgeführt'}
-WAYS = {'einmal': 'Einmal öffnen', 'freigeben_und_anwenden': 'Freigeben und anwenden', 'aendern': 'Grenze ändern …', 'ablehnen': 'Ablehnen'}
+WAYS = {'einmal': 'Einmal öffnen', 'freigeben_und_anwenden': 'Freigeben und anwenden', 'aendern': 'Grenze ändern …', 'ablehnen': 'Ablehnen',
+        'cloud_diesen_lauf': 'Nur diesen Lauf in die Cloud', 'bestaetigen': 'Entsperren'}      # Spec 2 (D2.8, D2.10)
 
 
 def gate_decision(mission, gate):
@@ -94,7 +95,20 @@ def content_decision(d):
             'agent_id': None}
 
 
-def collect(missions, open_requests, crossings=(), contents=()):
+SCHEDULER_NOTE = {'cloud_offload': 'Modell-Scheduler · nur ein Vorschlag, umgeschaltet wird nichts; die Annahme vermerkt es nur am Lauf (Cloud-Stufe: Spec 3)',
+                  'slot_server': 'Modell-Scheduler · der Server startet erst wieder, wenn du entsperrst und ein Lauf ihn braucht'}
+
+
+def scheduler_decision(d):
+    """A question of the model scheduler (Spec 2): a cloud offer for a run that waits too long, or the locked model server. The scheduler
+    hands over plain records; the answer goes back to `ModelScheduler.answer`."""
+    return {'id': d['id'], 'kind': d['kind'], 'title': d['title'], 'describe': d.get('describe') or '', 'mission_id': None, 'gate_id': None,
+            'risks': [], 'rollback': True, 'note': SCHEDULER_NOTE.get(d['kind'], ''), 'created_at': d.get('created_at'),
+            'ways': list(d['ways']), 'apply': None, 'binding': {k: d[k] for k in ('run_id', 'grund', 'reason') if d.get(k)},
+            'agent_id': d.get('agent_id')}
+
+
+def collect(missions, open_requests, crossings=(), contents=(), scheduled=()):
     """Every open decision, newest last. `missions` are the compact or full mission records, `open_requests` what the hub
     remembers, `crossings` the boundary crossings that wait (Build 9), `contents` the model calls the content guard holds (Build 16).
 
@@ -114,6 +128,8 @@ def collect(missions, open_requests, crossings=(), contents=()):
         out.append(boundary_decision(crossing))
     for d in contents:
         out.append(content_decision(d))
+    for d in scheduled:
+        out.append(scheduler_decision(d))
     out.sort(key=lambda d: (d.get('created_at') or '', d['id']))
     return out
 

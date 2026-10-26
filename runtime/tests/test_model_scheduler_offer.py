@@ -92,5 +92,52 @@ class OfferTests(Base):
         self.assertEqual(off.decisions(), [])
 
 
+class DeskTests(Base):
+    """The Captain's list: the scheduler's questions in the shape of `desk/decisions.py`, and the mark on the job after an acceptance."""
+
+    def setUp(self):
+        super().setUp()
+        import threading
+        from contextlib import contextmanager
+        from types import SimpleNamespace
+        from guppi_runtime.uix_server import UIXHub
+        self.jobs, self.audit_log = {}, []
+
+        @contextmanager
+        def mutate(job_id):
+            yield self.jobs.setdefault(job_id, {})
+        self.rt = SimpleNamespace(model_scheduler=self.sched, job_supervisor=SimpleNamespace(store=SimpleNamespace(mutate=mutate)),
+                                  audit=SimpleNamespace(append=lambda event, **kw: self.audit_log.append(event)))
+        self.hub = object.__new__(UIXHub)
+        self.hub.runtime = self.rt
+        for n in (2, 3, 4):
+            self.wait(f"SDJ-{n}")
+        self.sched.poll()
+
+    def test_the_offer_is_a_decision_with_two_ways_and_nothing_else(self):
+        from guppi_runtime.desk import decisions
+        (item,) = decisions.collect([], [], scheduled=self.hub._scheduler_decisions())
+        self.assertEqual((item["id"], item["kind"], item["ways"], item["mission_id"], item["apply"]), ("cloud_offload:SDJ-2", "cloud_offload", ["ablehnen", "cloud_diesen_lauf"], None, None))
+        self.assertEqual(item["binding"], {"run_id": "SDJ-2", "grund": "schlange"})
+        self.assertEqual(decisions.check_answer(item, "ablehnen"), "ablehnen")
+        with self.assertRaises(ValueError):
+            decisions.check_answer(item, "einmal")
+
+    def test_accepting_marks_only_the_job(self):
+        item = self.hub._scheduler_decisions()[0]
+        self.assertEqual(self.hub._answer_scheduler(item, "cloud_diesen_lauf")["approved"], True)
+        self.assertEqual(self.jobs, {"SDJ-2": {"cloud_offload_approved": True}})
+        self.assertEqual(self.audit_log, ["CLOUD_OFFLOAD_APPROVED"])
+        self.assertEqual(self.hub._scheduler_decisions(), [])
+
+    def test_rejecting_marks_nothing(self):
+        self.hub._answer_scheduler(self.hub._scheduler_decisions()[0], "ablehnen")
+        self.assertEqual((self.jobs, self.audit_log, self.hub._scheduler_decisions()), ({}, [], []))
+
+    def test_off_the_hub_asks_nothing(self):
+        self.rt.model_scheduler = None
+        self.assertEqual(self.hub._scheduler_decisions(), [])
+
+
 if __name__ == "__main__":
     unittest.main()

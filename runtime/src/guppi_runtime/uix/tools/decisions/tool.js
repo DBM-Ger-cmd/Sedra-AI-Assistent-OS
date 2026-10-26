@@ -6,7 +6,7 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
 
-  const WAY_LABEL = {einmal: 'Einmal freigeben', freigeben_und_anwenden: 'Freigeben und anwenden', aendern: 'Grenze ändern …', ablehnen: 'Ablehnen'};
+  const WAY_LABEL = {einmal: 'Einmal freigeben', freigeben_und_anwenden: 'Freigeben und anwenden', aendern: 'Grenze ändern …', ablehnen: 'Ablehnen', cloud_diesen_lauf: 'Nur diesen Lauf in die Cloud', bestaetigen: 'Entsperren'};
 
   const tool = {
     id: 'decisions',
