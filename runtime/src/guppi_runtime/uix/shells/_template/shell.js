@@ -28,6 +28,7 @@
       }
 
       ctx.bus.on('object.open', o=>this.open(o));
+      ctx.bus.on('object.actions', ()=>this.drawVerbs());
       // Vertrag 1.1 (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §10): den Arbeitsstand melden und beim Start übernehmen, was vorn lag
       this.melder = root.sedraStand.makeMelder(ctx.api);
       const stand = await this.melder.holen();

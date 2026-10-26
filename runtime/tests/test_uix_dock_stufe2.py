@@ -57,6 +57,20 @@ class Rein(unittest.TestCase):
         self.assertEqual(u['von'], 'paperclip')
 
 
+@unittest.skipUnless(NODE, 'node fehlt')
+class Verlauf(unittest.TestCase):
+    def test_zeilen_und_history(self):
+        out = run_js([UIX / 'tools' / 'talk' / 'verlauf.js'], """
+          const V = box.sedraTalkVerlauf;
+          const e = [{rolle:'user', text:'a'}, {rolle:'assistant', text:'b', modell:'m'}, {rolle:'system', text:'x'}, null];
+          const viele = Array.from({length: 12}, (_, i)=>({rolle: i % 2 ? 'assistant' : 'user', text: 't' + i}));
+          console.log(JSON.stringify({zeilen: V.verlaufZeilen(e), h: V.alsHistory(viele).map(x=>x.content), rollen: V.alsHistory(e).map(x=>x.role)}));
+        """)
+        self.assertEqual([(z['wer'], z['text'], z['ton']) for z in out['zeilen']], [('Du', 'a', 'me'), ('SEDRA', 'b', '')])
+        self.assertEqual(out['h'], ['t4', 't5', 't6', 't7', 't8', 't9', 't10', 't11'])     # die letzten 8
+        self.assertEqual(out['rollen'], ['user', 'assistant'])
+
+
 class Basis(unittest.TestCase):
     """Ein Server mit dem Prüfprojekt von uix_check und ein Chromium für alle Tests einer Klasse."""
 
@@ -198,6 +212,21 @@ class UeberDenWechsel(Basis):
         self.assertIn('Logbuch', tabs); self.assertIn('Modus und Grenzen', tabs)                        # beide Objekte sind da
         self.assertEqual(page.evaluate("()=>(document.querySelector('.dk-tab.on span')||{}).textContent"), 'Modus und Grenzen')
         self.assertIn('mitgenommen', page.evaluate("()=>document.querySelector('.ck-talk').innerText"))
+        self.assertEqual(self.fehler, [])
+
+    def test_gespraech_kommt_nach_dem_neuladen_wieder(self):
+        """A10: der Verlauf liegt auf dem Server; nach dem Neuladen steht er im Gespräch, „Leeren“ leert ihn dort; im Browser kein Text."""
+        page = self.seite()
+        hub = self.uix.LAST_HUB
+        hub._verlauf('reply', {'text': 'Wo steht der Index?'}, {'status': 'completed', 'reply': 'In der Messung, Abschnitt Index.', 'model': 'probe'})
+        page.reload(); self.uix.wait_until_started(page); page.wait_for_timeout(1500)
+        log = page.evaluate("()=>document.querySelector('.t-talk-log').innerText")
+        self.assertIn('Bisher im Gespräch', log); self.assertIn('Wo steht der Index?', log); self.assertIn('Abschnitt Index', log)
+        gespeichert = page.evaluate("()=>JSON.stringify(Object.assign({}, localStorage)) + JSON.stringify(Object.assign({}, sessionStorage))")
+        self.assertNotIn('Wo steht der Index', gespeichert)
+        page.locator('.t-talk-in button', has_text='Leeren').click(); page.wait_for_timeout(700)
+        self.assertEqual(hub.gedaechtnis.verlauf()['eintraege'], [])
+        self.assertNotIn('Wo steht der Index', page.evaluate("()=>document.querySelector('.t-talk-log').innerText"))
         self.assertEqual(self.fehler, [])
 
 

@@ -26,7 +26,9 @@
     'budget.warning':     ['agent_id'],
     'slot.changed':       [],
     // Vertrag 1.1 (SPEC_SHELL_WISSEN_v1 §4.1): ein Treffer im Wissen wurde gewählt; Nachweis-Werkzeuge (Fundstelle) hören darauf
-    'wissen.auswahl':     ['id']
+    'wissen.auswahl':     ['id'],
+    // Vertrag 1.1: ein Werkzeug sagt, dass sich seine Handlungen geändert haben (z. B. eine andere Ansicht) – die Shell zeichnet die Werkbank-Zeile neu
+    'object.actions':     ['type', 'id']
   };
 
   // '' when the event is fine, otherwise the reason – a sender id of null means the shell (it may send everything)

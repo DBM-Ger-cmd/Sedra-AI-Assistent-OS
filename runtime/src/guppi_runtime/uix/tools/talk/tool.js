@@ -1,6 +1,5 @@
-// Werkzeug „Gespräch“ (kind: panel) – the one input of the Cockpit (COCKPIT_MODUL_v1 rule 1).
-// It talks to the loaded model (/api/chat/reply), follows the object in front (talk.context), understands a navigation phrase
-// without asking the model, and takes „einmal ja“ as an answer to the decision that waits (rule 2: same audit, one place).
+// Werkzeug „Gespräch“ (kind: panel) – the one input (COCKPIT_MODUL_v1 rule 1): talks to the model, follows talk.context, routes places, takes „einmal ja“ (rule 2).
+// Vertrag 1.1: der Verlauf kommt vom Server (verlauf.js) und übersteht Neuladen und Shell-Wechsel; „Leeren“ leert ihn dort.
 // Build 19: SEDRA moves in the module environment. The model proposes (`ui_actions`); this tool draws a button for each, and only the
 // Captain's click opens the window or runs the verb (`POST /api/actions`). His own sentence asking to open something is the approval.
 
@@ -108,8 +107,8 @@
         this.ampelZeigen();
       });
       this.gruen = d().button('Grüne zuerst', ()=>this.gruenZeigen());
-      const send = d().button('Senden', ()=>this.submit(), 'p');
-      bar.append(this.input, this.picker, this.ampel, this.gruen, send);
+      const send = d().button('Senden', ()=>this.submit(), 'p'), leer = d().button('Leeren', ()=>root.sedraTalkVerlauf.leeren(this)); leer.title = 'Gespräch leeren (auch auf dem Server)';
+      bar.append(this.input, this.picker, this.ampel, this.gruen, send, leer);
       el.replaceChildren(this.grip(el), this.log, bar);
       this.loadCloud();
 
@@ -122,6 +121,7 @@
       });
       ctx.bus.on('decision.answered', ()=>{ this.pending = null; });
       this.say('Bereit. Schreib einen Auftrag, eine Frage, oder nenn einen Ort („Entscheidungen“, „Modelle“).', 'note');
+      if(root.sedraTalkVerlauf) root.sedraTalkVerlauf.laden(this);
       setTimeout(()=>this.input.focus(), 50);
     },
 

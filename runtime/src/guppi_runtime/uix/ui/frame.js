@@ -75,6 +75,7 @@
         ctx.bus.on('decision.answered', ()=>this.buendelAlle());
         ctx.bus.on('task.changed', ()=>this.buendelLauf());
         ctx.bus.on('model.changed', ()=>this.buendelLauf());
+        ctx.bus.on('object.actions', ()=>this.drawVerbs());
         this.melder = root.sedraStand.makeMelder(ctx.api);
         ctx.bus.on('desk.error', e=>this.notify('Die Runtime meldet: ' + e.message, 'warn'));
         document.addEventListener('keydown', e=>{

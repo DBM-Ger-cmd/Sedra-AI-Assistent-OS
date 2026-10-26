@@ -254,9 +254,10 @@ def frame_profile(vorgabe):
     return p
 
 
-def start_server(say, shell=None, prepare=None):
+def start_server(say, shell=None, prepare=None, switches=None):
     """A UIXHub on a temporary project with one project folder and one mission; returns (url, stop).
-    `prepare(hub)` darf das Prüfprojekt vorher umbauen – etwa ein fremdes Modul einbauen, bevor der Browser es sieht."""
+    `prepare(hub)` darf das Prüfprojekt vorher umbauen – etwa ein fremdes Modul einbauen, bevor der Browser es sieht.
+    `switches` ({name: bool}) steht vor dem Start in local_config/switches.yaml – der Hub liest die Schalter beim Start."""
     sys.path.insert(0, str(RUNTIME / 'src')); sys.path.insert(0, str(RUNTIME / 'tests'))
     try:
         import host_isolation
@@ -266,6 +267,10 @@ def start_server(say, shell=None, prepare=None):
     from guppi_runtime.uix_server import UIXHub, make_server
     arch = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
     tmp = tempfile.TemporaryDirectory(prefix='guppi-uix-check-')
+    if switches:
+        config = Path(tmp.name) / 'project' / 'local_config'
+        config.mkdir(parents=True, exist_ok=True)
+        (config / 'switches.yaml').write_text('switches:\n' + ''.join(f'  {k}: {{enabled: {"true" if v else "false"}}}\n' for k, v in switches.items()), encoding='utf-8')
     hub = UIXHub(Path(tmp.name) / 'project', arch)
     if shell:                                   # genau diese Shell prüfen (uix.yaml, wie auf dem PC)
         config = Path(tmp.name) / 'project' / 'local_config'

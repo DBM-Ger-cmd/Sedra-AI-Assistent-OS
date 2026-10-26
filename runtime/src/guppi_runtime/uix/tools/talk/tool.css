@@ -21,3 +21,4 @@
 .t-talk-ampel.rot{background:var(--bad)}
 .t-talk-ampel.grau{background:var(--muted)}
 .t-talk-ampel.aus{display:none}
+.t-talk-line.t-talk-alt{opacity:.72}   /* der Verlauf vom Server: was vor dem Neuladen gesagt wurde */

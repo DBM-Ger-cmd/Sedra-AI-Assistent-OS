@@ -64,6 +64,7 @@
       ctx.bus.on('decision.answered', ()=>this.afterChange());
       ctx.bus.on('task.changed', ()=>this.afterChange());
       ctx.bus.on('model.changed', ()=>this.refreshInstruments());
+      ctx.bus.on('object.actions', ()=>{ const p = this.pages.current(); if(p) this.topbar.setPage(p, this.pages.history()); this.windows.refreshVerbs(); });
       ctx.bus.on('desk.error', e=>this.notify('Die Runtime meldet: ' + e.message, 'warn'));
       ctx.bus.on('desk.resync', ()=>this.afterChange());
       // Spec 4 (N3): das Team. Die Werkzeuge lesen selbst nach; die Shell frischt Badge, Kacheln und die Verben der Fenster auf.

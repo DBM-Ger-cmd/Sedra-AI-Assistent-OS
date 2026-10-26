@@ -6,8 +6,8 @@ arbeitsplatz:
   - id: wissen_quelle
     titel: Eine Wissensquelle freigeben
     schritte:
-    - Navigation „Werkzeuge · Wissen“, Ansicht „Quellen“, „Quelle beantragen …“.
-    - Adapter, Wurzel, Pfad, Stufe (wer lesen darf) und Personenbezug angeben; „Antrag stellen“ – der Antrag steht im Posteingang.
+    - Navigation „Bibliothek · Wissen“, Reiter „Quellen“, „Quelle beantragen …“ (auch in der Werkbank-Zeile).
+    - Geführt in vier Schritten – was soll SEDRA lernen (Vorlage), wo genau (die Vorprüfung zählt Dateien und Abschnitte), wer darf es lesen, Zusammenfassung; „Antrag stellen“ – der Antrag steht im Posteingang.
     - Im Posteingang „Freigeben und anwenden“; erst dann wird die Quelle zerlegt und aufgenommen. „Erstbestückung beantragen“ stellt Doku, Logbuch und die drei Speicher in einem Antrag.
     ort:
       type: wissen
@@ -17,8 +17,8 @@ arbeitsplatz:
   - id: wissen_suche
     titel: Im Wissensspeicher suchen
     schritte:
-    - Navigation „Werkzeuge · Wissen“, Ansicht „Suche“, Frage eingeben, „Suchen“.
-    - Jeder Treffer trägt seine Kennung [W…], Quelle, Stelle, Datum und den Rang in Wort- und Vektorliste; ohne Embedding-Modell sagt der Hinweis „Nur Volltextsuche“.
+    - Navigation „Bibliothek · Wissen“ – die Suche ist die Startansicht; Frage eingeben, Enter.
+    - Jeder Treffer ist eine Karte mit Stelle, Quelle, Stand und Relevanzbalken; „Fundstelle“ klappt auf, „Ins Gespräch“ setzt die Kennung [W…] ins Gespräch, Ränge stehen unter „Details“. Ohne Embedding-Modell sagt der Hinweis „Nur Volltextsuche“.
     - Agenten fragen denselben Speicher im Lauf über wissen.suche, beschränkt auf ihre Stufe und ihr Projekt.
     ort:
       type: wissen

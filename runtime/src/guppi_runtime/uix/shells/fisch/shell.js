@@ -39,6 +39,7 @@
       this.melder = root.sedraStand.makeMelder(this.api);        // Vertrag 1.1 §10.2: was in der Blase liegt, kennt die nächste Shell
       this.mountTalk();
       ctx.bus.on('object.open', o=>this.openObject(o));
+      ctx.bus.on('object.actions', ()=>{ const b = this.el.blasen && this.el.blasen.querySelector('.fi-blase'); if(b) this.drawVerbs(b); });
       ctx.bus.on('decision.pending', ()=>this.notify('Eine Entscheidung wartet – im Gespräch „Entscheidungen“ sagen.', 'warn'));
       document.addEventListener('keydown', e=>{
         if((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')){ e.preventDefault(); this.el.feld.focus(); }

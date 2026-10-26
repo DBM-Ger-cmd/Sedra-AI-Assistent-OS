@@ -53,6 +53,7 @@
       ctx.bus.on('decision.answered', ()=>this.auffrischen());
       ctx.bus.on('task.changed', ()=>this.auffrischen());
       ctx.bus.on('model.changed', ()=>this.leisteAuffrischen());
+      ctx.bus.on('object.actions', ()=>this.dock.refreshVerbs());          // Vertrag 1.1: die Handlungen eines Werkzeugs haben sich geändert
       ctx.bus.on('desk.error', e=>this.notify('Die Runtime meldet: ' + e.message, 'warn'));
 
       document.addEventListener('keydown', e=>{

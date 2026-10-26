@@ -171,6 +171,60 @@ def _quelle_beantragen(hub, oid, args):
     return {"status": "beantragt", "decision_id": "request:" + req["mission_id"], "text": ANTRAG}
 
 
+def _dateien_von(sp, q):
+    """Die Dateien einer (geprüften) Quelle, oder None, wenn der Adapter keine Dateien liest (die drei Speicher, GateWay)."""
+    ad = sp._adapter(q["adapter"])
+    if not hasattr(ad, "_dateien"):
+        return None
+    return ad._dateien(dict(q, pfad=q["pfad"].partition("#")[0]))
+
+
+def _quelle_pruefen(hub, oid, args):
+    """Vorprüfung im geführten Antrag (SPEC_WERKZEUG_WISSEN_v2 §3.4): nur lesen, kein Gate, kein Audit. Gibt es den Pfad, wie viele
+    Dateien und ungefähr wie viele Abschnitte, überschneidet er sich mit einer aktiven Quelle, gibt es genau diese Quelle schon?"""
+    import math
+    sp = _need(hub)
+    try:
+        q = _bindung(sp, args)
+        dateien = _dateien_von(sp, q)
+    except ValueError as exc:
+        return _fehler(exc)
+    schon = sp.quelle(sp.quelle_id(q["wurzel"], q["pfad"], q["adapter"]))
+    out = {"status": "erledigt", "quelle": {k: q[k] for k in ("adapter", "wurzel", "pfad", "muster", "stufe", "projekt", "personenbezug")},
+           "schon_da": bool(schon and schon.get("aktiv")), "ueberschneidung": []}
+    if dateien is None:
+        out.update(dateien=None, abschnitte_etwa=None, satz="Ein Speicher von SEDRA – wie viele Abschnitte es sind, zeigt der erste Abgleich nach der Freigabe.")
+        return out
+    from . import zerlegen
+    groesse = 0
+    for d in dateien:
+        try:
+            groesse += d.stat().st_size
+        except OSError:
+            pass
+    etwa = sum(1 for _ in dateien) and max(len(dateien), math.ceil(groesse / zerlegen.ZIEL_ZEICHEN))
+    neu = {d.resolve() for d in dateien}
+    for andere in sp.quellen():
+        if not andere.get("aktiv") or andere["id"] == (schon or {}).get("id"):
+            continue
+        try:
+            ihre = _dateien_von(sp, andere)
+        except ValueError:
+            continue
+        gemeinsam = len(neu & {d.resolve() for d in (ihre or [])})
+        if gemeinsam:
+            out["ueberschneidung"].append({"quelle": andere["id"], "titel": f"{andere['wurzel']}/{andere['pfad']}", "dateien": gemeinsam})
+    satz_ = f"{len(dateien)} {'Datei' if len(dateien) == 1 else 'Dateien'}, etwa {etwa} Abschnitte."
+    if not dateien:
+        satz_ = "Keine passende Datei gefunden – Pfad oder Dateiarten prüfen."
+    for u in out["ueberschneidung"]:
+        satz_ += f" Überschneidet sich mit „{u['titel']}“ ({u['dateien']} {'Datei' if u['dateien'] == 1 else 'Dateien'})."
+    if out["schon_da"]:
+        satz_ += " Genau diese Quelle ist schon freigegeben."
+    out.update(dateien=len(dateien), abschnitte_etwa=etwa, satz=satz_)
+    return out
+
+
 def _erstbestueckung(hub, oid, args):
     """Die Erstbestückung (G1-S7-b, G2-S7-l, -m): ein Antrag mit einem Gate je Quelle; `decide` gibt alle frei."""
     sp = _need(hub)
@@ -339,6 +393,7 @@ def register(registry, hub):
         registry.Kind("wissen", TITLES["wissen"], wissen_read, wissen_listing, source="wissen", extra=_extra, type_verbs=[
             Verb("suche", "Suchen", _suche), Verb("nachfuehren", "Nachführen", _nachfuehren),
             Verb("quelle_beantragen", "Quelle beantragen", _quelle_beantragen, needs_gate=True),
+            Verb("quelle_pruefen", "Quelle prüfen", _quelle_pruefen),          # SPEC_WERKZEUG_WISSEN_v2 §3.4: Vorprüfung, nur lesen
             Verb("erstbestueckung", "Erstbestückung beantragen", _erstbestueckung, needs_gate=True),
             Verb("nachmessung", "Nachmessung lesen", _nachmessung), Verb("nachmessung_bewerten", "Nachmessung bewerten", _nachmessung_bewerten),
             Verb("nachmessung_abschliessen", "Nachmessung abschließen", _nachmessung_abschliessen)]),

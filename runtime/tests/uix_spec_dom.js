@@ -30,6 +30,7 @@ class Node {
   replaceChildren(...nodes){ this.children.forEach(c=>{ c.parent = null; }); this.children = []; this._text = ''; this.append(...nodes); }
   remove(){ if(this.parent){ this.parent.children = this.parent.children.filter(c=>c !== this); this.parent = null; } }
   after(n){ if(!this.parent) return; const p = this.parent, i = p.children.indexOf(this); p.children.splice(i + 1, 0, p._take(n)); }
+  replaceWith(n){ if(!this.parent) return; const p = this.parent, i = p.children.indexOf(this); this.parent = null; p.children.splice(i, 1, p._take(n)); }
   setAttribute(k, v){ this.attributes[k] = String(v); }
   getAttribute(k){ return k in this.attributes ? this.attributes[k] : null; }
   removeAttribute(k){ delete this.attributes[k]; }

@@ -75,6 +75,7 @@
       }
 
       ctx.bus.on('object.open', o=>this.open(o));
+      ctx.bus.on('object.actions', ()=>this.drawVerbs());
       // Vertrag 1.1 (§10.4): was vorn lag, kommt als Werkstück, wenn diese Shell es zeichnen kann; sonst das Gateway.
       // Der Arbeitsstand behält alles andere – zurück im Cockpit ist es wieder da.
       this.melder = root.sedraStand.makeMelder(ctx.api);
