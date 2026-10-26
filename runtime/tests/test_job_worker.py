@@ -163,6 +163,13 @@ class LoopTest(Base):
 
 
 class ModelHandlerTest(Base):
+    def setUp(self):
+        super().setUp()
+        # `run_handler` legt je Aufruf einen neuen Job an. Ein fehlgeschlagener Versuch wartet sonst nur ~2 s (Backoff) und wird unter Last (parallele Läufe der
+        # Suite) wieder abholbar: `claim` nähme dann den älteren Job statt des neuen und dessen Versuchsprotokoll bliebe leer (IndexError, 26.10.2026 gefunden).
+        self.sup.config.backoff_base_s = 3600
+        self.sup.config.backoff_max_s = 3600
+
     def run_handler(self, reply, **kw):
         job_id = self.job(); calls = []
         def infer(jid, request): calls.append(request); return reply
