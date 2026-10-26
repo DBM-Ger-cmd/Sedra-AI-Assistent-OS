@@ -40,7 +40,12 @@ def check_schema(schema, path='$'):
         if key not in SUPPORTED:
             raise SchemaError(f'{path}: unbekannter Schlüssel „{key}“')
     t = schema.get('type')
-    if t not in TYPES:
+    if isinstance(t, list):
+        # Nullable (27.10.2026): ["string", "null"] – genau ein Typ plus null; llama.cpp übersetzt das in eine Grammatik. Der Rest wird für den Haupttyp geprüft.
+        if len(t) != 2 or 'null' not in t or t[0] == t[1] or any(not isinstance(x, str) or x not in TYPES for x in t):
+            raise SchemaError(f'{path}: eine Typliste ist nur „einer von {sorted(x for x in TYPES if x != "null")} plus null“ erlaubt')
+        return check_schema(dict(schema, type=next(x for x in t if x != 'null')), path) and schema
+    if not isinstance(t, str) or t not in TYPES:
         raise SchemaError(f'{path}: „type“ muss genau einer von {sorted(TYPES)} sein')
     if t == 'object':
         props = schema.get('properties')
@@ -82,6 +87,10 @@ def validate(value, schema, path='$'):
     """Prüft einen Wert gegen das (schon geprüfte) Schema. Gibt Sätze zurück – leer heißt gültig."""
     errors = []
     t = schema['type']
+    if isinstance(t, list):                      # nullable: null ist erlaubt, sonst gilt der Haupttyp
+        if value is None:
+            return []
+        return validate(value, dict(schema, type=next(x for x in t if x != 'null')), path)
     if t == 'integer' and (type(value) is not int):
         return [f'{path}: muss eine ganze Zahl sein']
     if t == 'number' and (isinstance(value, bool) or not isinstance(value, (int, float))):

@@ -60,6 +60,24 @@ class DasSchema(unittest.TestCase):
         self.assertEqual(structured.validate({'id': 'a1', 'name': 'x', 'raster': [], 'hoehe': True}, VORGABE)[:2],
                          ['$.raster: mindestens 1 Einträge', '$.hoehe: muss eine ganze Zahl sein'])
 
+    def test_a_nullable_type_list_is_accepted_and_checked(self):
+        # 27.10.2026 (Betriebsstunde): das Schema des Unterarbeiters hat rueckfrage: ["string", "null"]; vorher TypeError "unhashable type: 'list'"
+        schema = {'type': 'object', 'additionalProperties': False, 'required': ['a', 'b'],
+                  'properties': {'a': {'type': 'string'}, 'b': {'type': ['string', 'null'], 'maxLength': 5}}}
+        structured.check_schema(schema)
+        self.assertEqual(structured.validate({'a': 'x', 'b': None}, schema), [])
+        self.assertEqual(structured.validate({'a': 'x', 'b': 'kurz'}, schema), [])
+        self.assertTrue(structured.validate({'a': 'x', 'b': 7}, schema))
+        self.assertTrue(structured.validate({'a': 'x', 'b': 'viel zu lang'}, schema))
+        for bad in (['string'], ['string', 'integer'], ['string', 'string'], ['null', 'null'], ['string', 'null', 'integer'], ['gibtsnicht', 'null'], [['string'], 'null']):
+            with self.assertRaises(structured.SchemaError, msg=str(bad)):
+                structured.check_schema({'type': 'object', 'additionalProperties': False, 'properties': {'x': {'type': bad}}})
+
+    def test_the_foreman_schema_passes_the_checker(self):
+        from guppi_runtime.orchestra import decompose
+        structured.check_schema(decompose.SCHEMA)
+        self.assertEqual(structured.validate({'teilaufgaben': [{'titel': 'a', 'beschreibung': 'b', 'rolle': 'coder', 'blocker': [], 'akzeptanz': 'c'}], 'rueckfrage': None}, decompose.SCHEMA), [])
+
     def test_parse_strips_a_fence_and_names_bad_json(self):
         self.assertEqual(structured.parse('```json\n{"a": 1}\n```'), ({'a': 1}, None))
         self.assertEqual(structured.parse('{"a": 1}')[0], {'a': 1})
