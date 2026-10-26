@@ -150,7 +150,12 @@ class LoopTest(Base):
         def handler(job, attempt, ctx): order.append(job['job_id']); self.sup.fail(job['job_id'], 'w1', reason_code='NO_HANDLER'); return None
         worker = self.worker(handler)
         t = threading.Thread(target=lambda: setattr(self, 'seen', worker.run_forever()))
-        t.start(); time.sleep(0.5); worker.stop(); t.join(timeout=5)
+        t.start()
+        deadline = time.monotonic() + 10      # nicht fest 0,5 s: unter Last der parallelen Suite war das zu knapp (27.10.2026 zweimal gesehen)
+        while set(order) != {a, b} and time.monotonic() < deadline:
+            time.sleep(0.05)
+        time.sleep(0.3)                       # danach noch ein Leerlauf-Durchgang, damit 'idle' in der Rueckgabe steht
+        worker.stop(); t.join(timeout=5)
         self.assertFalse(t.is_alive()); self.assertEqual(set(order), {a, b}); self.assertIn('idle', self.seen)
 
     def test_max_iterations_and_reaper_cadence(self):
