@@ -376,12 +376,23 @@ class RuntimeWiringTests(unittest.TestCase):
         self.assertIsNone(rt.model_scheduler)
         self.assertEqual(rt.model_scheduler_status(), {"enabled": False, "error": "model_scheduler_config_invalid:overlay:poll_s"})
 
-    def test_switching_it_on_is_refused_until_s2h5(self):
-        rt, project = self.runtime("model_scheduler:\n  enabled: true\n")
+    def test_switching_it_on_in_the_overlay_builds_the_scheduler_through_the_loader(self):
+        from guppi_runtime.jobs.testlab import default_path
+        rt, project = self.runtime("model_scheduler:\n  enabled: true\n  wait_max_s: 300\n")
+        self.addCleanup(rt.model_scheduler._release_gpu)
+        self.assertTrue(rt.model_scheduler.enabled)
+        self.assertEqual(rt.model_scheduler.config.wait_max_s, 300)
+        self.assertIs(rt.job_supervisor.slots, rt.model_scheduler)
+        self.assertIs(rt.model_router.slot_guard.scheduler, rt.model_scheduler)
+        self.assertIsNotNone(rt.job_supervisor.config.workers)
+        self.assertTrue(default_path(project).exists())
+        status = rt.boot()["model_scheduler"]
+        self.assertEqual((status["enabled"], status["error"], status["server"]["state"]), (True, None, "aus"))
+
+    def test_the_shipped_default_and_the_loader_keep_it_off_without_an_overlay(self):
+        rt, project = self.runtime()
         self.assertIsNone(rt.model_scheduler)
-        self.assertEqual(rt.model_scheduler_status(), {"enabled": False, "error": "model_scheduler_locked_until_s2h5"})
-        self.assertEqual((rt.job_supervisor.config.workers, rt.job_supervisor.slots), (1, None))
-        self.assertFalse((project / "runtime_data" / "testlab" / "testlab.db").exists())
+        self.assertEqual(rt.model_scheduler_status(), {"enabled": False, "error": None})
 
     def test_a_missing_or_broken_yaml_keeps_it_off_says_why_in_boot_and_audits_it(self):
         rt, project = self.runtime()

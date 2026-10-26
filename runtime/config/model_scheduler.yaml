@@ -5,8 +5,7 @@
 model_scheduler:
   schema: 1
   enabled: false                 # Feature flag. Default OFF: workers 1, no slot leases, uix_server keeps its own lease (as today).
-                                 # LOCKED until S2.H5: the loader refuses `enabled: true` (model_scheduler_locked_until_s2h5), because nothing
-                                 # calls poll() yet (waiting benchmarks would never be served) and uix_server still holds its own GPU lease.
+                                 # Switched on in the machine overlay local_config/model_scheduler.yaml (checklist in Spec 2, OP-S2-18, unlocked by the Captain).
   vram_limit_gb: 11.5            # Captain 2026-10-22: the limit INCLUDES the reserve (resource_scheduler.vram_reserve_gb 0.7), so 10.8 GB usable
   priorities: {captain: 7, agent: 5, routine: 3}      # all below job_supervisor critical.min_priority 8 (G2-S2-12)
   age_after_s: 120               # every full 120 s of waiting lifts a run one step

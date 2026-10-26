@@ -8,9 +8,6 @@ import yaml
 
 OVERLAY_KEYS = frozenset({"enabled", "swap", "queue_max", "wait_max_s", "slots_cap_by_profile"})
 STANDARD_SLOT_KEYS = ("hauptmodell", "hilfsmodell")
-# Until S2.H5 nothing calls `poll()` (waiting benchmarks would never be served) and uix_server still holds its own GPU lease (the
-# scheduler would only see gpu_lease_busy). The loader therefore refuses `enabled: true`; tests build the config directly.
-ENABLE_LOCK = "model_scheduler_locked_until_s2h5"
 
 
 class ModelSchedulerConfig:
@@ -102,7 +99,4 @@ class ModelSchedulerConfig:
                 if key not in OVERLAY_KEYS:
                     raise ValueError(f"model_scheduler_config_invalid:overlay:{key}")
             raw = {**raw, **extra}
-        config = cls(raw)
-        if config.enabled:
-            raise ValueError(ENABLE_LOCK)
-        return config
+        return cls(raw)

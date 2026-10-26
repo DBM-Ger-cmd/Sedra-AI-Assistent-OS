@@ -5,9 +5,8 @@ starts a model. Slot leases (`slot_leases`, schema 2 of testlab.db) let a run se
 stopping or changing a recipe. Who waits, who gets a slot and why not is decided by the pure `slotplan` inside `slot_store.take`.
 
 It knows neither missions nor gates (the Guard decides what a run may do), never starts or stops a process by name (only through its
-own loader and runtime), and never switches to the cloud. Off unless config/model_scheduler.yaml sets `enabled: true` (the loader refuses
-that until S2.H5, see model_scheduler_config.ENABLE_LOCK); off means
-behaviour as today (the supervisor reserves per job, uix_server holds its own lease).
+own loader and runtime), and never switches to the cloud. Off unless config/model_scheduler.yaml or the machine overlay sets `enabled: true`
+(unlocked by the Captain, OP-S2-18); off means behaviour as today (the supervisor reserves per job, uix_server holds its own lease).
 """
 from __future__ import annotations
 

@@ -1,15 +1,13 @@
-"""Spec 2, OP-S2-18: rehearsal of the unlock. `ENABLE_LOCK` stays (only the Captain removes it); here the loader's answer is replaced by an enabled
-config, and the whole chain a real `enabled: true` start would build is checked: runtime wiring, desk hub, poller, snapshot, strip, close. No model, no GPU."""
+"""Spec 2, OP-S2-18 (unlocked by the Captain 26.10.2026): the whole chain a real `enabled: true` start builds - the overlay through the loader, runtime
+wiring, desk hub, poller, snapshot, strip, close. Only the server itself is faked. No model, no GPU."""
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-from guppi_runtime.jobs.model_scheduler import ModelSchedulerConfig
-from guppi_runtime.jobs.model_scheduler_config import ENABLE_LOCK
 from guppi_runtime.uix_server import UIXHub
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
-from model_scheduler_fakes import FakeAudit, FakeLoader, FakeRuntime, raw_config, resolution
+from model_scheduler_fakes import FakeAudit, FakeLoader, FakeRuntime, resolution
 
 ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
 
@@ -18,9 +16,10 @@ class Rehearsal(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='sedra-')
         self.addCleanup(self.tmp.cleanup)
-        on = ModelSchedulerConfig(raw_config())
-        with mock.patch('guppi_runtime.runtime.ModelSchedulerConfig.load', return_value=on):
-            self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
+        project = Path(self.tmp.name) / 'project'
+        (project / 'local_config').mkdir(parents=True)
+        (project / 'local_config' / 'model_scheduler.yaml').write_text('model_scheduler:\n  enabled: true\n', encoding='utf-8')
+        self.hub = UIXHub(project, ARCH)
         self.addCleanup(self.hub.close)
         self.rt = self.hub.runtime
         self.sched = self.rt.model_scheduler
@@ -28,13 +27,11 @@ class Rehearsal(unittest.TestCase):
         self.sched.audit = FakeAudit()
         self.addCleanup(self.sched._release_gpu)
 
-    def test_the_lock_is_still_there_for_the_real_loader(self):
-        from guppi_runtime.jobs.model_scheduler_config import ModelSchedulerConfig as Config
-        cfg = Path(__file__).resolve().parents[1] / 'config' / 'model_scheduler.yaml'
-        overlay = Path(self.tmp.name) / 'overlay.yaml'
-        overlay.write_text('model_scheduler:\n  enabled: true\n', encoding='utf-8')
-        with self.assertRaisesRegex(ValueError, ENABLE_LOCK):
-            Config.load(cfg, overlay)
+    def test_the_loader_takes_the_overlay_and_there_is_no_lock_left(self):
+        from guppi_runtime.jobs import model_scheduler_config as cfg
+        self.assertFalse(hasattr(cfg, 'ENABLE_LOCK'))
+        self.assertTrue(cfg.ModelSchedulerConfig.load(Path(__file__).resolve().parents[1] / 'config' / 'model_scheduler.yaml',
+                                                     Path(self.tmp.name) / 'project' / 'local_config' / 'model_scheduler.yaml').enabled)
 
     def test_everything_a_real_start_builds_is_wired(self):
         rt = self.rt
