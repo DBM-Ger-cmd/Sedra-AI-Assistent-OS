@@ -1,4 +1,4 @@
-r"""Archiv der alten Installation als Zip (Umzug nach A1, U2-12): `E:\Sedra Umgebung\Entwickler_Archiv\GUPPI_Runtime_v1.20.Archiv.zip` mit Manifest, verifiziert. Löscht NICHTS.
+r"""Archiv der alten Installation als Zip (Umzug nach A1, U2-12): `E:\Sedra Umgebung\Archiv\Entwickler_Archiv\GUPPI_Runtime_v1.20.Archiv.zip` mit Manifest, verifiziert. Löscht NICHTS.
 
     python benchmarks/archiv_zip.py                      Trockenlauf: zählt, prüft Platz und Ruhe, startet nichts
     python benchmarks/archiv_zip.py --go                 Zip und Manifest erzeugen, gegen das Manifest und den Ordner verifizieren (Captain-Gate)
@@ -26,7 +26,7 @@ from pathlib import Path
 
 RUNTIME = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = r"E:\Sedra Umgebung\GUPPI_Runtime_v1.20"
-DEFAULT_DIR = r"E:\Sedra Umgebung\Entwickler_Archiv"
+DEFAULT_DIR = r"E:\Sedra Umgebung\Archiv\Entwickler_Archiv"
 DEFAULT_NAME = "GUPPI_Runtime_v1.20.Archiv"
 CHUNK = 1 << 20
 

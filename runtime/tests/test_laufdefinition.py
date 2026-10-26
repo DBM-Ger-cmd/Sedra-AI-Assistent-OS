@@ -90,7 +90,7 @@ class RendernTest(unittest.TestCase):
 
     def test_rendert_eine_scad_datei_mit_openscad(self):
         import os
-        if not Path(vorarbeiter.OPENSCAD_STANDARD).is_file() and not os.environ.get("GUPPI_OPENSCAD"):
+        if not vorarbeiter.openscad_exe().is_file():
             self.skipTest("OpenSCAD nicht installiert")
         (self.root / "redesign" / "workbench" / "wuerfel.scad").write_text("cube(10);\n", encoding="utf-8")
         out = vorarbeiter.aktion(self.root, "rendern", {"ordner": "workbench", "datei": "wuerfel.scad"})

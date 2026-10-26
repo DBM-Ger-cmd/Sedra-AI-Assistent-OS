@@ -15,8 +15,9 @@ import tempfile
 import time
 from pathlib import Path
 
-ALLOWED = ('GUPPI_Runtime_v1.20', 'A1 Sedra Main Branch Entwicklungs umgebung', 'SEDRA_Build_024', 'Sedra_Engine_v1', 'Qwen3.5-9B-MTP-GGUF',
-           '_Entwickler_Zip_', '_Aufraeumen_', 'Back Up', 'Alt', 'Entwickler_Archiv', 'Patches', 'Assets', 'paperclip-master', 'OpenSCAD')
+# Zielbild (Captain, 26.10.2026): unter E:\Sedra Umgebung gibt es nur A1 (die Hauptentwicklungsumgebung) und Archiv; die Engine liegt in A1 (engines/), die Modelle außerhalb unter E:\HermesAgentOrdner.
+# Der Hub-Ordner zählt als erlaubt, solange das Git-Verzeichnis von A1 darin liegt (bis U2-13, `benchmarks/repo_unabhaengig.py`).
+ALLOWED = ('A1 Sedra Main Branch Entwicklungs umgebung', 'Archiv')
 TEMP_PREFIXES = ('gw-wissen', 'guppi_judge_src', 'guppi_devvm_build_rt', 'guppi-uix-check', 'guppi-uix-window', 'guppi_slotmeasure',
                  'orchestra-', 'hidden-', 'jobs-modules-', 'arbeitsplatz')
 MARKERS = ('.git', 'runtime', 'GUPPI_OS')
@@ -27,13 +28,26 @@ def size_mb(path):
     return sum(f.stat().st_size for f in Path(path).rglob('*') if f.is_file()) / 1048576
 
 
-def copies(root):
+def hub_of(repo):
+    """Der Ordner, in dem das Git-Verzeichnis von A1 liegt, solange A1 ein verknüpfter Worktree ist (sonst None)."""
+    dotgit = Path(repo) / ".git"
+    if not dotgit.is_file():
+        return None
+    target = dotgit.read_text(encoding="utf-8", errors="ignore").replace("gitdir:", "").strip()
+    parts = Path(target).parts
+    return Path(*parts[:3]) if len(parts) >= 3 else None
+
+
+def copies(root, repo=None):
+    """Ordner unter `root`, die nicht zum Zielbild gehören (außer dem Hub, an dem A1 noch hängt)."""
+    hub = hub_of(repo) if repo else None
     out = []
     for folder in sorted(Path(root).iterdir()):
         if not folder.is_dir() or any(folder.name.startswith(a) for a in ALLOWED):
             continue
-        if any((folder / m).exists() for m in MARKERS):
-            out.append((folder, size_mb(folder)))
+        if hub and folder.resolve() == hub.resolve():
+            continue
+        out.append((folder, size_mb(folder)))
     return out
 
 
@@ -78,8 +92,11 @@ def main(argv=None):
     ap.add_argument('--apply-temp', action='store_true')
     args = ap.parse_args(argv)
     findings = 0
-    found = copies(args.root) if Path(args.root).is_dir() else []
-    print(f'Kopien unter {args.root} (nicht in ALLOWED): {len(found)}')
+    found = copies(args.root, args.repo) if Path(args.root).is_dir() else []
+    hub = hub_of(args.repo)
+    if hub:
+        print(f'Hinweis: A1 ist noch ein verknüpfter Worktree; sein Git-Verzeichnis liegt in {hub} (nicht löschen, bis `benchmarks/repo_unabhaengig.py --go` gelaufen ist)')
+    print(f'Ordner unter {args.root}, die nicht zum Zielbild (A1 und Archiv) gehören: {len(found)}')
     for folder, mb in found:
         print(f'  {folder.name}  {mb:,.0f} MB')
     findings += len(found)

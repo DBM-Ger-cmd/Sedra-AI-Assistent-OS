@@ -21,9 +21,22 @@ LAUFE = {
 }
 PRUEFBAR = {"drache_lab", "paperclip_lab"}
 RENDERN_ORDNER = {"workbench"}
-OPENSCAD_STANDARD = r"E:\Sedra Umgebung\OpenSCAD-2021.01-x86-64\openscad-2021.01\openscad.exe"
+# Zielbild (Captain, 26.10.2026): außer Archiv und Engine hängt nichts an Ordnern neben A1; OpenSCAD liegt bei den Werkzeugen der Engine: <A1>/engines/tools/openscad-2021.01/openscad.exe.
+OPENSCAD_STANDARD = str(Path(__file__).resolve().parents[3] / "engines" / "tools" / "openscad-2021.01" / "openscad.exe")
+OPENSCAD_ALT = r"E:\Sedra Umgebung\OpenSCAD-2021.01-x86-64\openscad-2021.01\openscad.exe"          # alter Ort, nur als Rückfall, solange der Ordner noch da ist
 RENDER_TIMEOUT_S = 180
 SPERRE_S = 6 * 3600           # ein Lauf je Art, nicht doppelt starten
+
+
+def openscad_exe():
+    """Die Umgebungsvariable GUPPI_OPENSCAD, sonst der Standardort bei der Engine, sonst der alte Ort; fehlt alles, der Standardort (der Aufrufer meldet `openscad_fehlt`)."""
+    env = os.environ.get("GUPPI_OPENSCAD")
+    if env:
+        return Path(env)
+    for candidate in (OPENSCAD_STANDARD, OPENSCAD_ALT):
+        if Path(candidate).is_file():
+            return Path(candidate)
+    return Path(OPENSCAD_STANDARD)
 
 
 def _lock(project_root, art):
@@ -63,7 +76,7 @@ def aktion(project_root, name, args, audit=None):
         quelle = Path(project_root) / "redesign" / ordner / datei
         if not quelle.is_file(): raise ValueError("datei_fehlt")
         ziel = quelle.with_suffix(".stl")
-        exe = Path(os.environ.get("GUPPI_OPENSCAD", OPENSCAD_STANDARD))
+        exe = openscad_exe()
         if not exe.is_file(): raise ValueError("openscad_fehlt")
         try:
             lauf = subprocess.run([str(exe), "-o", str(ziel), str(quelle)], capture_output=True, text=True,
