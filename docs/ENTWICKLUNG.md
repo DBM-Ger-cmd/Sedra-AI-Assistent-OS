@@ -129,8 +129,12 @@ Ein Bau besteht aus einer Spec, einer Referenz, dem Bau durch GUPPI und der Abna
 ## Regeln für alle Sitzungen (Mensch und KI)
 
 1. **Gates entscheidet der Captain**, einzeln und per ID. Eine Freigabe in einem Zusammenhang gilt nicht für den nächsten.
-2. **GPU:** Vor dem Laden von Modellen die Lease holen. Rezepte, Engine und Schalter nie ändern, solange ein Lauf die GPU nutzt. Nur eigene Prozesse über ihre PID beenden,
-   nie per Namensmuster; andere Sitzungen teilen sich GPU und Skripte.
+2. **GPU:** Es gibt zwei Ebenen. Die **Lade-Lease** (`gpu`) hat genau einen Besitzer; nur er startet und stoppt Modellserver. Vor dem Laden eines Modells die Lade-Lease holen.
+   Läuft der Modell-Scheduler, ist er der Besitzer, und Sitzungen laden nicht selbst. Die **Slot-Lease** gibt der Scheduler an einen Lauf, der den laufenden Server nutzt; sie erlaubt
+   Anfragen, aber kein Laden, Stoppen oder Ändern. Mess- und Bauläufe (Benchmarks, `devvm_build`) fordern den Modus **exklusiv** an: Der Scheduler sperrt neue Slot-Leases, wartet auf
+   laufende, stoppt seinen Server und übergibt die Lade-Lease. Rezepte, Engine und Schalter nie ändern, solange ein Lauf die GPU nutzt, auch nicht über eine Slot-Lease. Prozesse nur
+   über die eigene PID beenden, nie per Namensmuster; der Scheduler beendet nur seinen eigenen Server, und Aufräumen (`gpu_preflight`) fasst keinen Server an, der zu einer lebenden
+   Lease gehört; andere Sitzungen teilen sich GPU und Skripte. (geändert 2026-10-26, Spec 2 S2.2, Gate G3-S2-14)
 3. **Vor jeder Konfigurationsänderung eine Sicherung** (`*.bak-<datum>-<grund>`). Danach prüfen, ob GUPPIs Lader die Datei noch annimmt.
 4. **Nur betroffene Tests** laufen lassen; neue Tests in die passende Testdatei.
 5. **Logbuch** ([LOGBUCH_AGENT_MANAGER.md](LOGBUCH_AGENT_MANAGER.md)): Jeder Schritt wird eingetragen, die Uhrzeit kommt aus `date`, nie geschätzt.

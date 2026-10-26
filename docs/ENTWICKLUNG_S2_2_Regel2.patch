@@ -13,7 +13,7 @@ index ed482c6..fcc888f 100644
 +   Anfragen, aber kein Laden, Stoppen oder Ändern. Mess- und Bauläufe (Benchmarks, `devvm_build`) fordern den Modus **exklusiv** an: Der Scheduler sperrt neue Slot-Leases, wartet auf
 +   laufende, stoppt seinen Server und übergibt die Lade-Lease. Rezepte, Engine und Schalter nie ändern, solange ein Lauf die GPU nutzt, auch nicht über eine Slot-Lease. Prozesse nur
 +   über die eigene PID beenden, nie per Namensmuster; der Scheduler beendet nur seinen eigenen Server, und Aufräumen (`gpu_preflight`) fasst keinen Server an, der zu einer lebenden
-+   Lease gehört; andere Sitzungen teilen sich GPU und Skripte. (geändert <DATUM>, Spec 2 S2.2, Gate G3-S2-14)
++   Lease gehört; andere Sitzungen teilen sich GPU und Skripte. (geändert 2026-10-26, Spec 2 S2.2, Gate G3-S2-14)
  3. **Vor jeder Konfigurationsänderung eine Sicherung** (`*.bak-<datum>-<grund>`). Danach prüfen, ob GUPPIs Lader die Datei noch annimmt.
  4. **Nur betroffene Tests** laufen lassen; neue Tests in die passende Testdatei.
  5. **Logbuch** ([LOGBUCH_AGENT_MANAGER.md](LOGBUCH_AGENT_MANAGER.md)): Jeder Schritt wird eingetragen, die Uhrzeit kommt aus `date`, nie geschätzt.
