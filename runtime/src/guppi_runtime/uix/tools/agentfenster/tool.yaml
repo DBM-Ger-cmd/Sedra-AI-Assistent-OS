@@ -5,6 +5,7 @@ tool:
   description: "Gespräch mit einem Agenten, daneben seine Issues, Läufe und sein Budget; mehrere Fenster zugleich."
   version: 1.0.0
   kind: object
+  instanzen: viele                 # Vertrag 1.1: eine Instanz je Container (N2) – darf versteckt eingehängt bleiben
   handles: [agent:*]
   order: 10
   slot: inhalt

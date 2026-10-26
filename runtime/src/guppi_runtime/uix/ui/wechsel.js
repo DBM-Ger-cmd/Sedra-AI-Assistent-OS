@@ -39,7 +39,7 @@
   const VOR_DEM_WECHSEL = [];
   function beimWechsel(fn){ if(typeof fn === 'function') VOR_DEM_WECHSEL.push(fn); }
   function vorDemWechsel(){
-    const alle = VOR_DEM_WECHSEL.map(fn=>{ try{ return Promise.resolve(fn()).catch(()=>{}); }catch(_e){ return Promise.resolve(); } });
+    const alle = VOR_DEM_WECHSEL.concat([()=>root.sedraLifecycle && root.sedraLifecycle.ablagenSchreiben && root.sedraLifecycle.ablagenSchreiben()]).map(fn=>{ try{ return Promise.resolve(fn()).catch(()=>{}); }catch(_e){ return Promise.resolve(); } });
     return Promise.race([Promise.all(alle), new Promise(ok=>setTimeout(ok, 1500))]);
   }
   // für shellApi.reload der Shells (nach einem Wechsel im Werkzeug Module): erst melden und schreiben, dann neu laden

@@ -16,6 +16,14 @@ der Baum rollt zur markierten Zeile; Reiter mit Akzentkante, Schließkreuz beim 
 die Reiterreihe; Instrumente geben nach, statt dass die Leiste überhängt; Nachweisspalte bleibt beim Rollen stehen; Palette und Menü
 mit Hervorhebung; Schrift nur in Token-Stufen, Mischungen per `color-mix`, kein Hex.
 
+Stufe 2 (26.10.2026, SPEC_DOCK_OHNE_NEUAUFBAU_v1 §4): **kein Neuaufbau mehr.** `dock.abgleichen()` führt nur die Gruppe nach, deren
+vorderer Reiter sich geändert hat; jede Gruppe und jeder Reiter behält seine Fläche (`.dk-pane-box`). Werkzeuge mit `instanzen: viele`
+bleiben versteckt eingehängt (höchstens 8), Einzelstücke holen ihren Zustand aus dem Gedächtnis (Vertrag 1.1). Ein Einzelstück zeichnet
+nie in zwei Gruppen zugleich – die zweite zeigt „Hierher holen“. Eine ausdrücklich verlangte Ansicht (`ansicht`, `view`) zeichnet den
+Reiter neu (Navigation). Das gespeicherte Layout wird geprüft (`sanitizeLayout`). Die Shell meldet ihren Arbeitsstand (`ui/stand.js`)
+und übernimmt beim Start, was eine andere Shell offen hatte; Baum, Leiste und Werkbank-Zeile frischen gebündelt auf (500 ms).
+„＋ Neu“ steht nur einmal (Gruppe rechts oben).
+
 ## Dateien
 - `dock.js` – das eigene kleine Dock (Reiter, Teilen, Ziehen, Layout als JSON). Gehört in die Shell, nicht in den Kern (§3a).
 - `tree.js` – Navigation; eine Zeile sendet `object.open`, mehr tut sie nicht.

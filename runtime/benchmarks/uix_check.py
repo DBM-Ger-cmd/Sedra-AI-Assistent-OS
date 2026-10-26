@@ -87,9 +87,11 @@ MEASURE_PANE = """(tool) => {
   const body = document.querySelector('.dk-group .dk-body');
   const verbs = document.querySelector('.dk-group .dk-verbs');
   if(!body) return {missing:true};
-  const own = body.querySelector('.dk-tool[data-tool="' + tool + '"]');
+  // Stufe 2: je Reiter eine Fläche; gemessen wird die sichtbare (versteckt eingehängte Reiter zählen nicht)
+  const pane = body.querySelector(':scope > .dk-pane-box:not([hidden])') || body;
+  const own = pane.querySelector('.dk-tool[data-tool="' + tool + '"]');
   if(!own) return {missing:true, note:'das Werkzeug hat keinen Container in diesem Reiter'};
-  const slots = [...body.querySelectorAll('.dk-tool')];
+  const slots = [...pane.querySelectorAll('.dk-tool')];
   const r = body.getBoundingClientRect();
   return {text: own.innerText.trim().length, slots: slots.length,
           filled: own.innerText.trim().length > 0 || own.childElementCount > 0,
@@ -161,7 +163,7 @@ PROFILES = {
         'pane': MEASURE_PANE,
         'segment': None,                       # im Cockpit stehen Werkstück und Nachweise zugleich im Reiter
         'eingebettet': ('schutz',),            # Build 19: der Schutz läuft im Menü des GateWay, hat hier keinen eigenen Reiter (nicht geprüft)
-        'leftovers': "()=>[...document.querySelectorAll('.dk-body .dk-tool')].map(s=>s.dataset.tool)",
+        'leftovers': "()=>[...document.querySelectorAll('.dk-body > .dk-pane-box:not([hidden]) .dk-tool, .dk-body > .dk-tool')].map(s=>s.dataset.tool)",
         'count': "()=>document.querySelectorAll('.dk-tab').length",
         'count_word': 'Reiter',
         'menu': {'box': '.pal', 'input': '.pal-box input', 'rows': "()=>[...document.querySelectorAll('.pal-row b')].map(b=>b.textContent)",

@@ -37,16 +37,22 @@
       this.palette = root.sedraPalette.makePalette(this);
       this.shellApi = {open: o=>this.openObject(o), notify: (text, tone)=>this.notify(text, tone),
                        decide: (id, way)=>this.decide(id, way), theme: name=>root.sedraBoot.setTheme(name),
-                       reload: ()=>location.reload()};      // nach einem Shell-Wechsel: die Seite neu laden gehört der Shell, nicht dem Werkzeug
+                       // nach einem Shell-Wechsel: neu laden gehört der Shell; vorher Arbeitsstand und Ablage hinaus (Vertrag 1.1 §10.4)
+                       reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
+      // Vertrag 1.1 (§9.5): Baum, Leiste und Werkbank-Zeile frischen höchstens einmal je 500 ms auf – ein Lauf sendet viele Ereignisse
+      const B = root.sedraLifecycle.buendeln;
+      this.auffrischen = B(()=>{ this.strip.refresh(); this.dock.refreshVerbs(); this.tree.refresh().catch(e=>this.onProblem('Baum', e)); }, 500);
+      this.leisteAuffrischen = B(()=>this.strip.refresh(), 500);
+      this.melder = root.sedraStand.makeMelder(this.api);
 
       // the Gespräch is a tool like every other one (rule 11); it gets the bottom zone as its container
       this.mountTalk();
 
       ctx.bus.on('object.open', o=>this.openObject(o));
-      ctx.bus.on('decision.pending', ()=>{ this.strip.refresh(); this.tree.refresh().catch(e=>this.onProblem('Baum', e)); });
-      ctx.bus.on('decision.answered', ()=>{ this.strip.refresh(); this.tree.refresh().catch(e=>this.onProblem('Baum', e)); });
-      ctx.bus.on('task.changed', ()=>{ this.strip.refresh(); this.dock.refreshVerbs(); this.tree.refresh().catch(e=>this.onProblem('Baum', e)); });
-      ctx.bus.on('model.changed', ()=>this.strip.refresh());
+      ctx.bus.on('decision.pending', ()=>this.auffrischen());
+      ctx.bus.on('decision.answered', ()=>this.auffrischen());
+      ctx.bus.on('task.changed', ()=>this.auffrischen());
+      ctx.bus.on('model.changed', ()=>this.leisteAuffrischen());
       ctx.bus.on('desk.error', e=>this.notify('Die Runtime meldet: ' + e.message, 'warn'));
 
       document.addEventListener('keydown', e=>{
@@ -54,9 +60,15 @@
         else if(e.key === 'Escape' && this.palette.isOpen()) this.palette.close();
       });
 
-      // what the Captain sees first: his last layout, or the decisions if something waits, otherwise the tasks
-      if(!this.dock.restore()) this.dock.open({type: 'task', id: 'alle', title: 'Aufgaben', collection: true});
-      this.dock.render();
+      // what the Captain sees first: his last layout plus what he had open in another shell (§10.4), otherwise the tasks
+      const stand = await this.melder.holen();
+      const hatte = this.dock.restore();
+      const mit = root.sedraStand.uebernahme(stand, this.dock.offeneObjekte(), o=>this.dock.kann(o));
+      this.dock.uebernehmen(mit.neu, mit.vorn);
+      if(!hatte && !mit.neu.length) this.dock.open({type: 'task', id: 'alle', title: 'Aufgaben', collection: true});
+      else this.dock.abgleichen(mit.vorn || undefined);
+      if(mit.von && mit.von !== 'cockpit' && mit.neu.length)
+        this.notify('Aus der Oberfläche „' + mit.von + '“ mitgenommen: ' + mit.neu.length + (mit.neu.length === 1 ? ' offenes Objekt.' : ' offene Objekte.'), 'note');
       await Promise.all([this.strip.refresh(), this.tree.refresh()]).catch(e=>this.onProblem('Start', e));
       root.sedraBoot.onProblem = text=>this.notify(text, 'warn');
       (root.sedraBoot.problems || []).forEach(text=>this.notify(text, 'warn'));
@@ -133,9 +145,13 @@
     },
 
     // the dock tells the shell which object is in front: the Gespräch follows it (rule: talk.context)
-    onDockChanged(object){
+    onDockChanged(object, offen, zuletzt){
       this.tree.mark(object);
       if(object) this.ctx.bus.emit('talk.context', {object: {type: object.type, id: object.id, title: object.title || ''}});
-    }
+      if(this.melder && offen) this.melder.offen(offen, object ? object.type + ':' + object.id : null, zuletzt);   // §10.2
+    },
+
+    // ein Reiter wurde geschlossen: der Arbeitsstand vergisst ihn samt seiner Ablage, in jeder Shell (§9.3)
+    onDockClosed(object){ if(this.melder) this.melder.geschlossen(object); }
   });
 })();

@@ -60,7 +60,7 @@
     state.mounted = false;
     const c = state.ctx || {};
     if(c.memo) try{ c.memo.set(SCROLL, scrollStand(state.el)); }catch(_e){}         // Vertrag 1.1 §3.3
-    if(c.ablage && c.ablage.flush) try{ c.ablage.flush(); }catch(_e){}           // was noch nicht geschrieben ist, geht jetzt zum Server
+    if(c.ablage && c.ablage.flush) try{ c.ablage.flush(); ablagen.delete(c.ablage); }catch(_e){}   // was noch offen ist, geht jetzt zum Server
     if(typeof state.abbau === 'function'){ try{ state.abbau(); }catch(_e){} }     // Stufe C: den Rahmen abmelden
     try{ state.mod.unmount(state.el); }
     catch(err){ onError && onError(state.id, err); }
@@ -140,6 +140,8 @@
   }
 
   // ctx.ablage: get() lädt einmal vom Server, set() schreibt gebündelt (höchstens einmal je Sekunde), flush() sofort.
+  const ablagen = new Set();                     // jede lebende Ablage: vor einem Shell-Wechsel schreibt sie, was offen ist
+  function ablagenSchreiben(){ return Promise.all(Array.from(ablagen).map(a=>a.flush())); }
   const ABLAGE_ATTRAPPE = Object.freeze({get: async(_n, vorgabe)=>vorgabe, set(){}, clear(){}, flush(){}, aktiv: false});
 
   function ablageFuer(toolId, object, erlaubt, api, uhr){
@@ -159,7 +161,7 @@
       offen = null;
       return api('/api/ablage/schreiben', {method: 'POST', body: {objekt, werte: werte || {}}}).catch(()=>{});
     };
-    return {
+    const ablage = {
       aktiv: true,
       async get(name, vorgabe){ const v = await holen(); return Object.prototype.hasOwnProperty.call(v, name) ? v[name] : vorgabe; },
       async zeit(){ await holen(); return zeit; },
@@ -170,6 +172,8 @@
       clear(){ werte = {}; if(offen !== null){ t.clearTimeout(offen); } return schreiben(); },
       flush(){ if(offen !== null){ t.clearTimeout(offen); return schreiben(); } return Promise.resolve(); }
     };
+    ablagen.add(ablage);
+    return ablage;
   }
 
   // Beim Schließen eines Objekts (§9.3): Memo und Sitzung aller Werkzeuge an diesem Objekt vergessen
@@ -250,6 +254,6 @@
   root.sedra = {registerTool, registerShell, tools, shells};
   root.sedraLifecycle = {checkModule, mountTool, unmountTool, actionsOf, tools, shells,
                          objektSchluessel, memoFuer, sitzungFuer, ablageFuer, memoVergessen, gedaechtnisLeeren, gedaechtnisVon,
-                         istMehrfach, bereitHalten, zeigen, buendeln, scrollStand, VERSION: '1.1'};
+                         istMehrfach, bereitHalten, zeigen, buendeln, scrollStand, ablagenSchreiben, VERSION: '1.1'};
   if(typeof module !== 'undefined' && module.exports) module.exports = root.sedraLifecycle;
 })();
