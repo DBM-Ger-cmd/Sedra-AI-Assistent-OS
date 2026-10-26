@@ -7,6 +7,18 @@ from . import slot_store
 
 
 class HandoverMixin:
+    def reservation_for(self, recipe_id):
+        """The resource-ledger id of the running server when it is up with this recipe, else None. A job that shares that server needs no
+        second room: its role resolution must not count the server's own reservation against it."""
+        if not self.config.enabled or self._reserved is None:
+            return None
+        try:
+            with self._conn() as conn:
+                server = self._server(conn)
+        except Exception:
+            return None
+        return self._reserved if server["state"] == "bereit" and server["recipe"] == recipe_id else None
+
     def stop_server(self, *, owner="werkstatt", force=False):
         """Unload (workshop). With active runs nothing happens unless `force` (the Captain's `erzwingen`): their leases end `unterbrochen`."""
         self._require()

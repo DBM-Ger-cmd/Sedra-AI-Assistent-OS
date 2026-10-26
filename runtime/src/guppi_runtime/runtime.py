@@ -220,6 +220,15 @@ class GuppiRuntime:
         except Exception as exc: return {"enabled":True,"error":str(exc) or type(exc).__name__}
         return {"enabled":True,"error":None,"modus":stand["modus"],"abschnitte":stand["abschnitte"],"abdeckung":stand["abdeckung"],"quellen":stand["quellen"]}
 
+    def _resource_load_check(self,recipe,estimated,req):
+        """Advisory room check of the role resolution. The running model-scheduler server of the very same recipe is no rival: its
+        ledger entry is left out (a second job takes a slot of it, not a second copy), its VRAM is credited as resident."""
+        loaded=getattr(self,"model_loader",None) is not None and self.model_loader.enabled and self.model_loader.loaded(recipe["model"])
+        sched=getattr(self,"model_scheduler",None)
+        own=sched.reservation_for(recipe["id"]) if sched is not None else None
+        return self.resource_scheduler.explain(estimated,exclusive=req["exclusive"],resident_vram_gb=(estimated.get("vram_gb") or 0.0) if loaded else 0.0,
+                                               ignore=(own,) if own else ())
+
     def _configure_job_supervisor(self,data):
         """The supervisor stays off (and says why) when its config is missing or invalid."""
         self.job_supervisor=None; self.job_supervisor_error=None
@@ -240,9 +249,7 @@ class GuppiRuntime:
         if self.resource_scheduler is not None and self.resource_scheduler.enabled and self.role_router is not None:
             # Advisory only. A model that is already loaded holds its own room (reused as it is, or unloaded and reloaded by the
             # model loader); the binding reservation checks again afterwards.
-            self.role_router.load_check=lambda recipe,estimated,req: self.resource_scheduler.explain(
-                estimated,exclusive=req["exclusive"],
-                resident_vram_gb=(estimated.get("vram_gb") or 0.0) if getattr(self,"model_loader",None) is not None and self.model_loader.enabled and self.model_loader.loaded(recipe["model"]) else 0.0)
+            self.role_router.load_check=self._resource_load_check
         # No gate (missing or invalid config) means the supervisor can check no action, so it allows none.
         self._optional("permission_gate",lambda: PermissionGate(PermissionConfig.load(self.config_root/"permission_levels.yaml"),self.guard,audit=self.audit),
                        error="permission_error")

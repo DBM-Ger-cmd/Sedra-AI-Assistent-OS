@@ -177,12 +177,13 @@ class ResourceScheduler:
         return {"ram_free_gb": ram, "gpus": gpus}
 
     # ---- advisory
-    def explain(self, estimate, *, exclusive=False, resident_vram_gb=0.0):
-        """Would this fit right now? A reason string or None. Reserves nothing; reading may be a few seconds old."""
+    def explain(self, estimate, *, exclusive=False, resident_vram_gb=0.0, ignore=()):
+        """Would this fit right now? A reason string or None. Reserves nothing; reading may be a few seconds old.
+        `ignore`: job ids whose reservation is not a rival of this request (the model scheduler's running server, whose room the request shares)."""
         if not self.config.enabled:
             return None
         try:
-            reason, _ = self._decide(estimate, exclusive=exclusive, reservations=self._read(), host=self._host(fresh=False), resident_vram_gb=resident_vram_gb)
+            reason, _ = self._decide(estimate, exclusive=exclusive, reservations=[r for r in self._read() if r["job_id"] not in set(ignore or ())], host=self._host(fresh=False), resident_vram_gb=resident_vram_gb)
         except LedgerUnreadable as exc:
             return str(exc)
         except Exception as exc:               # an advisory check must never break role resolution, and must not say "fits" blindly
