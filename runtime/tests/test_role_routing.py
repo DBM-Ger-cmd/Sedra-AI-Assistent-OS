@@ -261,6 +261,15 @@ class SlotTests(Base):
             router = self.slotted(2, per_slots) if per_slots else self.slotted(2)
             self.assertEqual(self.codes(router, 'coder')[1]['considered'][0]['reason'], 'slots_not_measured', str(per_slots))
 
+    def test_per_slots_may_hold_more_slot_counts_than_the_recipe_uses(self):
+        # 26.10.2026: Standard 2 Slots bleibt, die Messung für 3 und 4 Slots wird mitgeführt; gestartet wird nur mit dem Wert der gewählten Slotzahl.
+        per_slots = {2: 32768, 3: 16384, 4: 8192}
+        self.assertEqual(self.slotted(2, per_slots).resolve_role('coder', {'context_min_tokens': 30000})['context_window'], 32768)
+        self.assertEqual(self.slotted(4, per_slots).resolve_role('coder')['slots'], 4)
+        self.assertEqual(self.codes(self.slotted(4, per_slots), 'coder', {'context_min_tokens': 12000})[1]['considered'][0]['reason'], 'context_capacity',
+                         'with 4 slots a slot gets only the 4-slot window')
+        self.assertEqual(self.codes(self.slotted(3, {2: 32768, 4: 8192}), 'coder')[1]['considered'][0]['reason'], 'slots_not_measured')
+
     def test_one_slot_needs_no_per_slots_and_is_the_default(self):
         for slots in (None, 1):
             resolution = self.slotted(slots).resolve_role('coder')
@@ -279,7 +288,7 @@ class SlotTests(Base):
         for slots in (0, 9, True, '2', 2.0):
             with self.assertRaises(ValueError, msg=str(slots)):
                 RoutingConfig(routing_raw([recipe('c.b', ['coder'], 'pb', 'fb', 'wb', profile={'context': {'recommended': 8192, 'maximum': 32768}, 'server': {'gguf': 'x.gguf', 'slots': slots}})]))
-        refused(2, {3: 8192})                  # more than the recipe's slots
+        refused(2, {9: 8192})                  # more than the 8 slots the schema knows
         refused(2, {0: 8192})
         refused(2, {2: 12345})                 # not on a tier
         refused(2, {2: 131072})                # above the maximum

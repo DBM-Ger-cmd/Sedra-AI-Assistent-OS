@@ -159,11 +159,11 @@ class RoutingConfig:
                 raise fail("profile.server")
         per_slots = (profile.get("context") or {}).get("per_slots") if isinstance(profile.get("context"), dict) else None
         if per_slots is not None:
-            # Window PER SLOT as measured for N slots ({N: window}); only the numbers 1..slots, never above the maximum, on a tier if tiers exist.
-            slots_max = (server or {}).get("slots") or 1
+            # Window PER SLOT as measured for N slots ({N: window}); the numbers 1..8 (also above the recipe's own slot count: the measurement for 3 or 4 slots
+            # is kept while the default stays at 2, 26.10.2026), never above the maximum, on a tier if tiers exist.
             maximum = (profile.get("context") or {}).get("maximum")
             if (not isinstance(per_slots, dict) or not per_slots
-                    or any(type(n) is not int or not 1 <= n <= slots_max or type(w) is not int or w <= 0 for n, w in per_slots.items())
+                    or any(type(n) is not int or not 1 <= n <= 8 or type(w) is not int or w <= 0 for n, w in per_slots.items())
                     or (type(maximum) is int and any(w > maximum for w in per_slots.values()))
                     or (tiers and any(w not in tiers for w in per_slots.values()))):
                 raise fail("profile.context.per_slots")
