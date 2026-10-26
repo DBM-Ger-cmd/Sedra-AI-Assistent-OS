@@ -363,6 +363,7 @@ class RoleRouter:
         self.config, self.snapshot, self.health, self.audit = config, snapshot, health, audit
         self.profiles = profiles            # routing_profiles.RoutingProfiles: the Captain's switchable model combination, or None
         self.load_check = load_check        # callable(recipe, estimated_resources, requirements) -> None | reason string
+        self.recheck = None                 # callable(provider_ref) -> bool: may a provider marked UNAVAILABLE be tried again? (the way back)
         self._clock = clock or (lambda: datetime.now(timezone.utc))
 
     @property
@@ -473,6 +474,12 @@ class RoleRouter:
                 return None, no("static", "not_independent")
         if self.health is not None:
             state = self.health.state(recipe["provider"])
+            if state == "UNAVAILABLE" and self.recheck is not None:
+                try:
+                    if self.recheck(recipe["provider"]):
+                        state = self.health.probe(recipe["provider"], True)       # UNAVAILABLE -> DEGRADED: one trial
+                except Exception:
+                    pass
             if state in {"COOLDOWN", "UNAVAILABLE"}:
                 return None, no("unavailable", f"provider_{state.lower()}")
         rate = recipe["kv_cache_gb_per_1k_tokens"]

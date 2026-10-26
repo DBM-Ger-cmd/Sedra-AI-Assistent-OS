@@ -55,10 +55,13 @@ def _check_entry(entry, n):
             raise ValueError("decompose_invalid:blocker_index")
         if x < 0 or x >= n:
             raise ValueError("decompose_invalid:blocker_index")
+    rolle = entry.get("rolle", "")
+    if not isinstance(rolle, str):              # a list or dict from the model is no role (and not hashable for the lookup below)
+        raise ValueError("decompose_invalid:role_unknown")
     return {
         "titel": titel.strip(),
         "beschreibung": beschreibung,
-        "rolle": entry.get("rolle", ""),
+        "rolle": rolle,
         "blocker": list(blocker),
         "akzeptanz": akzeptanz
     }

@@ -442,6 +442,20 @@ class FallbackTests(Base):
         self.assertEqual(router.resolve_role('coder', exclude=['f1:w1'])['provider_ref'], 'p2')
         self.assertEqual(self.codes(router, 'coder', exclude=['p1', 'p2'])[0], 'provider_unavailable')
 
+    def test_an_unavailable_provider_has_a_way_back_through_the_recheck(self):
+        router = self.two()
+        self.health.report_failure('p1', 'model_unavailable')
+        self.assertEqual(router.resolve_role('coder')['provider_ref'], 'p2')
+        router.recheck = lambda ref: False
+        self.assertEqual(router.resolve_role('coder')['provider_ref'], 'p2')
+        self.assertEqual(self.health.state('p1'), 'UNAVAILABLE')
+        self.health.report_failure('p2', 'model_unavailable')
+        self.assertEqual(self.codes(router, 'coder')[0], 'provider_unavailable')                 # without a recheck nothing lifts it (as before)
+        router.recheck = lambda ref: True
+        self.assertEqual(router.resolve_role('coder')['health_state'], 'DEGRADED')               # one trial, a success makes it healthy
+        self.health.report_success('p1')
+        self.assertEqual(self.health.state('p1'), 'HEALTHY')
+
     def test_a_cooling_provider_is_not_chosen(self):
         router = self.two()
         self.health.report_failure('p1', 'rate_limit', retry_after_s=60)

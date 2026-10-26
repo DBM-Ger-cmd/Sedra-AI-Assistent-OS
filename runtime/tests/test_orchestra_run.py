@@ -203,6 +203,28 @@ class Decompose(Run):
         self.assertEqual(self.missions.load(run['mission_id'])['lifecycle']['phase'], 'FAILED')
         self.assertEqual(self.run_job(run)['text'], 'lauf_abgeloest', 'ein Neuversuch des Supervisors tut nichts mehr')
 
+    def test_a_role_that_is_a_list_is_an_invalid_answer_and_not_a_crash(self):
+        """Betriebsstunde 26.10.: `rolle` als Liste ließ `in set` mit "unhashable type: 'list'" scheitern (und galt als Providerausfall)."""
+        task = self.captain_task()
+        run = self.start('A-UA', task)
+        self.router.answers.append(self.answer({'titel': 'Plan', 'rolle': ['planner'], 'blocker': []}, {'titel': 'Bauen', 'rolle': 'reviewer', 'blocker': [0]}))
+        with self.assertRaises(HandlerError) as ctx:
+            self.run_job(run)
+        self.assertEqual((ctx.exception.code, str(ctx.exception)), ('validation_failure', 'decompose_invalid:role_unknown'))
+
+    def test_an_error_in_our_own_code_is_no_provider_fault(self):
+        """Ein TypeError im eigenen Code darf nicht als `provider_unavailable` (und damit als Ausfall des Anbieters) enden."""
+        from unittest import mock
+        task = self.captain_task()
+        run = self.start('A-UA', task)
+        self.router.answers.append(self.answer({'titel': 'Plan', 'rolle': 'reviewer'}))
+        with mock.patch.object(orchestra_runner.runner, 'outcome', side_effect=TypeError("unhashable type: 'list'")), self.assertRaises(HandlerError) as ctx:
+            self.run_job(run)
+        self.assertEqual(ctx.exception.code, 'unknown_failure')
+        from guppi_runtime.models.role_routing import PROVIDER_FAULTS
+        from guppi_runtime.jobs.failure_classes import classify
+        self.assertNotIn(classify(ctx.exception.code), PROVIDER_FAULTS)
+
     def test_a_router_that_gives_up_ends_as_model_schema_failed(self):
         """D1.7: nach `MAX_ROUNDS` ohne Schema-Antwort: Systemkommentar `model_schema_failed`, Aufgabe `zugewiesen`, ein Wiederholungs-Weckruf."""
         task = self.captain_task()

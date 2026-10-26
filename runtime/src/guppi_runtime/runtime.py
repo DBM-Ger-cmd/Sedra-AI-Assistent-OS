@@ -328,6 +328,7 @@ class GuppiRuntime:
         self._optional("routing_profiles",lambda: RoutingProfiles.load(self.project_root/"local_config"/"routing_profiles.yaml",
                                                                        known_ids={r["id"] for r in config.recipes}))
         self.role_router=RoleRouter(config,snapshot=self.hardware,health=self.provider_health,audit=self.audit,profiles=self.routing_profiles)
+        self.role_router.recheck=self._recheck_provider
         if config.enabled: self.model_router.provider_health=self.provider_health
 
     def resource_status(self):
@@ -344,6 +345,15 @@ class GuppiRuntime:
         if self.role_router is None: return {"enabled":False,"error":self.role_routing_error}
         return {**self.role_router.view(),"profiles":self.routing_profiles.view() if self.routing_profiles else None,
                 "profiles_error":getattr(self,"routing_profiles_error",None)}
+
+    def _recheck_provider(self,provider_ref):
+        """The way back from UNAVAILABLE (nothing else lifts it). A provider that answers its health check may be tried once. A managed
+        llama-server is off between runs by design (the model scheduler starts it on demand), so only its availability counts there."""
+        adapter=self.model_router.adapters.get(provider_ref) if getattr(self,"model_router",None) is not None else None
+        if adapter is None: return False
+        sched=getattr(self,"model_scheduler",None)
+        if sched is not None and sched.enabled and provider_ref=="llama-cpp-server": return True
+        return bool(adapter.health())
 
     def _report_provider(self,provider_ref,outcome,failure_class=None):
         if self.provider_health is None: return

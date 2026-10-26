@@ -285,6 +285,9 @@ def _wissensblock(hub, orch, scope, attempt, plan, task):
     return extra, ergebnis, wissen
 
 
+INTERNAL_ERRORS = (TypeError, KeyError, AttributeError, IndexError, NameError, AssertionError, ZeroDivisionError)
+
+
 def handler(hub):
     """Der Handler für Jobs `orchestra_run`; Spec 2 hängt ihn in seinen Worker-Pool (S2.H4b)."""
     def run(job, attempt, ctx):
@@ -312,7 +315,9 @@ def handler(hub):
             if code.startswith("structured_output_failed"):
                 code = "model_schema_failed"
             _fail(orch, scope, job["job_id"], code[:200], orch.clock())
-            raise HandlerError("validation_failure" if isinstance(exc, ValueError) else "provider_unavailable", code) from exc
+            # An error in GUPPI's own code is not a provider fault: it must not count against the provider's health.
+            kind = "validation_failure" if isinstance(exc, ValueError) else "unknown_failure" if isinstance(exc, INTERNAL_ERRORS) else "provider_unavailable"
+            raise HandlerError(kind, code) from exc
         _walk(orch, _missions(orch).load(scope["mission_id"]), DONE)
         return {"text": out["kommentar"], "advance": ["TESTING", "VERIFYING"]}
     return run
