@@ -16,6 +16,10 @@ def has_dulwich():
     return importlib.util.find_spec("dulwich") is not None
 
 
+def has_numpy():
+    return importlib.util.find_spec("numpy") is not None
+
+
 def host_ram_gb():
     try:
         if sys.platform == "win32":
@@ -38,6 +42,10 @@ def pc_files_present():
 # ---- module level: the whole file cannot run here
 def need_dulwich():
     if not has_dulwich(): raise unittest.SkipTest("dulwich fehlt (requirements.txt; auf dem GUPPI-PC im .venv) – DevVM-Tests übersprungen")
+
+
+def need_numpy():
+    if not has_numpy(): raise unittest.SkipTest("numpy fehlt (nur der Test baut damit Audiodaten; die .venv der Runtime hat es nicht) – Sprache-Kern-Test übersprungen")
 
 
 def need_windows():

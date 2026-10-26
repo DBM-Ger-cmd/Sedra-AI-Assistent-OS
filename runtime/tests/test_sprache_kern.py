@@ -10,6 +10,9 @@ from host_isolation import setUpModule, tearDownModule  # noqa: F401
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import env_skip  # noqa: E402
+
+env_skip.need_numpy()          # ganzes Modul: ohne numpy nicht lauffähig (nur der Test braucht es)
 import numpy as np  # noqa: E402
 
 from guppi_runtime.sprache import aufnahmen as au  # noqa: E402

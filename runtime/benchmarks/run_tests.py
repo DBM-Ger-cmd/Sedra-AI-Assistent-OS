@@ -95,8 +95,16 @@ sys.exit(0 if result.wasSuccessful() else 1)
 """
 
 
-def python_exe():
-    """Die `.venv` der Runtime, wenn es sie gibt (mit dulwich, microsandbox u. a.: dann laufen auch die DevVM-Tests), sonst der laufende Python."""
+def python_exe(browser=False):
+    """Die `.venv` der Runtime, wenn es sie gibt (mit dulwich, microsandbox u. a.: dann laufen auch die DevVM-Tests), sonst der laufende Python.
+    Die Browser-Bahn (SLOW_FILES) braucht `playwright`; hat die `.venv` es nicht, läuft sie unter dem laufenden Python."""
+    if browser:
+        for rel in ('.venv/Scripts/python.exe', '.venv/bin/python'):
+            candidate = RUNTIME / rel
+            if candidate.is_file():
+                has = subprocess.run([str(candidate), '-c', 'import playwright'], capture_output=True).returncode == 0
+                return str(candidate) if has else sys.executable
+        return sys.executable
     for rel in ('.venv/Scripts/python.exe', '.venv/bin/python'):
         candidate = RUNTIME / rel
         if candidate.is_file():
@@ -107,7 +115,7 @@ def python_exe():
 def run_group(modules, timeout):
     env = {**os.environ, 'PYTHONPATH': os.pathsep.join([str(RUNTIME / 'src'), str(TESTS)])}
     started = time.monotonic()
-    done = subprocess.run([python_exe(), '-c', LOADER, *modules], cwd=RUNTIME, env=env, capture_output=True, text=True,
+    done = subprocess.run([python_exe(any(m in SLOW_FILES for m in modules)), '-c', LOADER, *modules], cwd=RUNTIME, env=env, capture_output=True, text=True,
                           encoding='utf-8', errors='replace', timeout=timeout)
     text = (done.stderr or '') + (done.stdout or '')
     failed = set(re.findall(r'^(?:FAIL|ERROR): .*?\(([\w.]+)\)', text, flags=re.M))
