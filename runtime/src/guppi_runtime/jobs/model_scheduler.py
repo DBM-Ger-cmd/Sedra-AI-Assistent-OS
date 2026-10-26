@@ -18,6 +18,7 @@ from contextlib import contextmanager
 
 from . import slot_store, vramplan
 from .model_scheduler_config import ModelSchedulerConfig  # noqa: F401  (re-exported: callers import it from here)
+from .model_scheduler_decisions import DecisionMixin
 from .model_scheduler_handover import HandoverMixin
 from .slotplan import decide_reason
 from .testlab import SCHEMA_VERSION, utc_text
@@ -39,7 +40,7 @@ class SchedulerError(Exception):
 
 # --------------------------------------------------------------------------- the scheduler
 
-class ModelScheduler(HandoverMixin):
+class ModelScheduler(HandoverMixin, DecisionMixin):
     def __init__(self, config, lab, *, loader=None, runtime=None, resources=None, audit=None, profile=None, owner=OWNER,
                  lease_ttl_s=600, beat_every_s=30):
         """`lab` TestLab (schema 2), `loader` ModelLoader (starts the server with the recipe's slots), `runtime` LlamaServerRuntime (status,
@@ -57,6 +58,7 @@ class ModelScheduler(HandoverMixin):
         self._direct = set()               # direct calls of this process that may still ask (reap keeps them)
         self._drain_since = None
         self._drain_overdue = False
+        self._init_decisions()
 
     @property
     def enabled(self):
@@ -350,13 +352,14 @@ class ModelScheduler(HandoverMixin):
         self._audit("SLOT_SERVER_STOPPED", recipe=recipe, state=state, reason=reason, interrupted=server["interrupted"])
         return server
 
-    def _server_gone(self):
-        """The server ended on its own (crash). Count the restart; past `restart.max` in the window the server is locked (D2.8). It is
-        started again lazily by the next run, never here."""
+    def _server_gone(self, reason="server_exited"):
+        """The server ended (crash) or is stopped as suspect (`reason` garbage). Count the restart; past `restart.max` in the window the server
+        is locked (D2.8) and the Captain is asked (`decisions`). It is started again lazily by the next run, never here. The canary runs again."""
         with self._conn() as conn:
             count = slot_store.note(conn, "restarts", self._now(), self.config.restart_window_s)
         state = "gesperrt" if count > self.config.restart_max else "aus"
-        server = self._shutdown(state, reason="server_exited")
+        server = self._shutdown(state, reason=reason)
+        self._invalidate_canary(f"scheduler: {reason}")
         self._audit("SLOT_SERVER_EXITED", restarts=count, state=state, interrupted=server["interrupted"])
         if state == "gesperrt":
             self._audit("SLOT_SERVER_GESPERRT", restarts=count, window_s=self.config.restart_window_s)

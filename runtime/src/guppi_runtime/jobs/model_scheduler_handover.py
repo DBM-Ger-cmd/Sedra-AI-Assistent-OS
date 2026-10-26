@@ -35,7 +35,12 @@ class HandoverMixin:
         if not self._lock.acquire(blocking=False):
             return {"state": None, "action": "busy"}      # a model is being loaded: the desk's poller must not stand still meanwhile
         try:
-            return self._poll()
+            out = self._poll()
+            try:
+                self.offer_step()                   # D2.10: a run that waits too long gets one cloud offer (never a switch)
+            except Exception as exc:
+                self._audit("SLOT_OFFER_FAILED", error=type(exc).__name__)
+            return out
         finally:
             self._lock.release()
 
