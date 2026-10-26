@@ -39,13 +39,14 @@ class ModelRouter:
             if self._allowed(adapter.id) and adapter.health(): return adapter
         raise ModelAdapterError("no_healthy_local_model_provider")
 
-    def chat(self, mission_id, messages, provider=None, model=None, schema=None, **kwargs):
+    def chat(self, mission_id, messages, provider=None, model=None, schema=None, run_id=None, slot_owner=None, **kwargs):
         """Ein Modellaufruf. Mit `schema=` (JSON-Schema, flache Teilmenge – models/structured.py) kommt die Antwort geprüft zurück:
         der Server erzwingt die Form, der Prompt nennt sie, die Antwort wird hier geprüft und bei Fehlern mit dem Fehlersatz noch
         einmal erbeten (höchstens MAX_ROUNDS). Das Ergebnis trägt dann `parsed` und `rounds`. Jede Runde ist ein voller Aufruf –
-        durch den Inhaltsschutz, mit Audit, gezählt."""
+        durch den Inhaltsschutz, mit Audit, gezählt.
+        `run_id` (Job-ID eines Agentenlaufs) und `slot_owner` (z. B. "captain-chat") gehen nur an den Slot-Haken (`slot_guard`, Spec 2 D2.6), nie an den Anbieter."""
         if schema is None:
-            return self._once(mission_id,messages,provider,model,**kwargs)
+            return self._once(mission_id,messages,provider,model,run_id=run_id,slot_owner=slot_owner,**kwargs)
         structured.check_schema(schema)
         msgs=list(messages)
         at=next((i for i,m in enumerate(msgs) if not (isinstance(m,dict) and m.get("role")=="system")),len(msgs))
@@ -54,7 +55,7 @@ class ModelRouter:
         kwargs.setdefault("temperature",0)
         errors=[]
         for round_ in range(1,structured.MAX_ROUNDS+1):
-            result=self._once(mission_id,msgs,provider,model,**kwargs)
+            result=self._once(mission_id,msgs,provider,model,run_id=run_id,slot_owner=slot_owner,**kwargs)
             value,problem=structured.parse(result.get("content"))
             errors=[problem] if problem else structured.validate(value,schema)
             if not errors:
@@ -67,7 +68,7 @@ class ModelRouter:
                        {"role":"user","content":structured.retry_message(errors)}]
         raise ModelAdapterError("structured_output_failed:"+"; ".join(errors[:4]))
 
-    def _once(self, mission_id, messages, provider=None, model=None, **kwargs):
+    def _once(self, mission_id, messages, provider=None, model=None, run_id=None, slot_owner=None, **kwargs):
         adapter=self.choose(provider)
         hw=getattr(self,"hardware_manager",None)
         health=getattr(self,"provider_health",None)
@@ -75,7 +76,8 @@ class ModelRouter:
         guard=getattr(self,"content_guard",None)     # Inhaltsschutz (core/content_guard.py): die Runtime setzt ihn immer; nur nackte Tests lassen ihn weg
         started=time.monotonic()
         try:
-            with hw.job() if hw else nullcontext():
+            slots=getattr(self,"slot_guard",None)    # Spec 2 D2.6: ein lokaler Aufruf ohne Slot-Lease der Mission nimmt einen Slot; None = aus
+            with slots.around(adapter,mission_id,run_id,slot_owner) if slots is not None else nullcontext(), hw.job() if hw else nullcontext():
                 if guard is None:
                     result=adapter.chat(messages,model=model,**kwargs)
                 else:

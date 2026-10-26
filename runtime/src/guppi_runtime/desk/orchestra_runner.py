@@ -187,7 +187,8 @@ def _book(orch, scope, result, cap):
 
 def _ask(hub, orch, scope, attempt, messages_, schema, cap):
     result = orch.model_router.chat(scope["mission_id"], messages_, provider=attempt.get("provider_ref"),
-                                           model=attempt.get("model_identifier") or attempt.get("model"), schema=schema, max_tokens=cap)
+                                           model=attempt.get("model_identifier") or attempt.get("model"), schema=schema, max_tokens=cap,
+                                           run_id=scope.get("run_id"))
     _book(orch, scope, result, cap)
     return result
 
@@ -288,7 +289,7 @@ def handler(hub):
     """Der Handler für Jobs `orchestra_run`; Spec 2 hängt ihn in seinen Worker-Pool (S2.H4b)."""
     def run(job, attempt, ctx):
         orch = hub.runtime.orchestra
-        scope = job["contract"]["scope"]["orchestra"]
+        scope = dict(job["contract"]["scope"]["orchestra"], run_id=job["job_id"])      # run_id: der Router-Haken sieht, dass der Lauf schon einen Slot hält
         task = orch.issue(scope["task_id"])
         if task is None or task.get("checkout_run") != job["job_id"]:
             return {"text": "lauf_abgeloest", "advance": ["TESTING", "VERIFYING"]}     # schon freigegeben (Pause, Abbruch, Abgleich)

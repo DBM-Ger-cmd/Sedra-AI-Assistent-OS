@@ -41,6 +41,7 @@ from .selfdev.self_development import SelfDevelopmentManager
 from .selfdev.evolution import EvolutionManager
 from .jobs.job_supervisor import JobSupervisor, SupervisorConfig, SupervisorJobStore
 from .jobs.model_scheduler import ModelScheduler, ModelSchedulerConfig
+from .models.slot_guard import SlotGuard
 from .jobs.context_manager import ContextManager, ContextConfig
 from .models.role_routing import RoutingConfig, RoleRouter, ProviderHealth
 from .models.routing_profiles import RoutingProfiles
@@ -285,7 +286,9 @@ class GuppiRuntime:
             self.model_scheduler_error=str(exc) or type(exc).__name__
             self.audit.append("MODEL_SCHEDULER_OFF",component="runtime",payload={"reason":self.model_scheduler_error})
         if self.job_supervisor is not None:
-            if self.model_scheduler is not None: self.job_supervisor.slots=self.model_scheduler
+            if self.model_scheduler is not None:
+                self.job_supervisor.slots=self.model_scheduler
+                self.model_router.slot_guard=SlotGuard(self.model_scheduler,wait_s=self.model_scheduler.config.wait_max_s)    # D2.6: Direktaufrufe über einen Slot
             else: self.job_supervisor.config.workers=1        # no scheduler, no parallel jobs (G2-S2-04)
 
     def model_scheduler_status(self):

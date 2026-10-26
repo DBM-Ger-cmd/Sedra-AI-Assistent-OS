@@ -25,7 +25,7 @@ class FakeRouter:
     def __init__(self):
         self.answers, self.calls = [], []
 
-    def chat(self, mission_id, messages, provider=None, model=None, schema=None, max_tokens=None):
+    def chat(self, mission_id, messages, provider=None, model=None, schema=None, max_tokens=None, run_id=None):
         self.calls.append({'mission_id': mission_id, 'messages': messages, 'schema': schema, 'max_tokens': max_tokens})
         answer = self.answers.pop(0)
         if isinstance(answer, Exception):
