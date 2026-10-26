@@ -1119,7 +1119,7 @@ class UIXHub:
             model = None
             def complete_local(messages):
                 nonlocal model
-                out = rt.model_router.chat(mission_id, messages)
+                out = rt.model_router.chat(mission_id, messages, slot_owner='captain-chat')
                 model = out.get('model') or out.get('provider')
                 return out.get('content') or ''
             cloud = self.gateway_cloud()
@@ -1604,10 +1604,41 @@ class UIXHub:
         Die Erweiterungen legen ihre Felder bei (Spec 4, D4.3.2); einen eingebauten Schlüssel überschreiben sie nicht."""
         models = self.models_view()
         server = models.get('server') or {}
-        return {**desk_extensions.snapshot(self, self.extensions), 'missions': self.missions(), 'decisions': self.decisions_view()['items'],
+        slots = self.slots_view()
+        return {**desk_extensions.snapshot(self, self.extensions), **({'slots': slots} if slots is not None else {}), 'missions': self.missions(), 'decisions': self.decisions_view()['items'],
                 'model': {'running': bool(server.get('running')), 'model': server.get('model'), 'context': server.get('context')},
                 'live': self._live_signatures(),
                 'state': 'READY' if self.runtime.observability.overall() == 'HEALTHY' else 'SAFE_MODE'}
+
+    def slots_view(self):
+        """Slots, occupancy and queue for the desk (Spec 2, D2.9; shape: Spec 4 D4.2.4): `ModelScheduler.view()` plus the task titles, or None
+        when the scheduler is off (the field is then missing and Shell D shows its interim state). Never raises."""
+        sched = self._scheduler()
+        if sched is None: return None
+        view = sched.view()
+        if view.get('error'): return None
+        orch = getattr(self.runtime, 'orchestra', None)
+        def titel(task_id):
+            try: return (orch.issue(task_id) or {}).get('title') if orch is not None and task_id else None
+            except Exception: return None
+        view['belegt'] = [dict(b, titel=titel(b.get('task_id'))) for b in view.get('belegt') or []]
+        return view
+
+    def scheduler_poll(self):
+        """One scheduler step per tick of the desk poller (D2.7: no service of its own): a crashed server, a waiting benchmark. Never raises."""
+        sched = self._scheduler()
+        if sched is None: return
+        try: sched.poll()
+        except Exception as exc: self.runtime.audit.append('SLOT_POLL_FAILED', component='uix', payload={'error': type(exc).__name__})
+
+    def _slots_gauge(self):
+        view = self.slots_view()
+        if view is None: return None
+        total, held, queue = view.get('gesamt') or 0, len(view.get('belegt') or []), len(view.get('schlange') or [])
+        server = (view.get('server') or {}).get('state')
+        hint = f"{queue} wartet" if queue else ('Modellserver ' + str(server) if server not in (None, 'bereit') else 'frei')
+        tone = 'warn' if view.get('warnung') or server in ('gesperrt', 'drain', 'exklusiv') else ('ok' if total else 'off')
+        return {'value': f'{held}/{total}', 'hint': hint, 'tone': tone}
 
     def _mode_gauge(self):
         """Das Instrument „Modus“ (Regel 7): der Modus dieses Projekts und die vier Grenzen in Worten – oder der Hinweis,
@@ -1647,7 +1678,8 @@ class UIXHub:
                           'hint': f"{len(running)} {'läuft' if len(running) == 1 else 'laufen'} · {len(waiting)} {'wartet' if len(waiting) == 1 else 'warten'} auf dich",
                           'tone': 'warn' if waiting else 'off'},
                 'cloud': self._cloud_gauge(),
-                'mode': self._mode_gauge()}
+                'mode': self._mode_gauge(),
+                **({'slots': gauge} if (gauge := self._slots_gauge()) is not None else {})}
 
     def _cloud_gauge(self):
         """Die Online-KI in der Leiste: bereit (Schlüssel gesetzt), Schlüssel fehlt, oder kein Anbieter eingeschaltet."""
@@ -2630,7 +2662,7 @@ class UIXHub:
         profiles = rt.routing_profiles.view() if rt.routing_profiles else None
         return {'recipes': recipes, 'zuletzt': self._last_recipe(),
                 'server': managed,
-                'lease': ({'owner': holder['owner'], 'purpose': holder['purpose'], 'stale': holder['stale'], 'mine': self.gpu_token is not None and holder['owner'] == self.LEASE_OWNER}
+                'lease': ({'owner': holder['owner'], 'purpose': holder['purpose'], 'stale': holder['stale'], 'mine': self._lease_is_mine(holder)}
                           if holder else None),
                 'profiles': ({'active': profiles['active'], 'items': {n: {'description': p.get('description', ''), **{k: (v.get('prefer') or []) for k, v in p.items() if isinstance(v, dict)}}
                                                                        for n, p in profiles['profiles'].items()}} if profiles else None),
@@ -2727,6 +2759,16 @@ class UIXHub:
                     return
         threading.Thread(target=beat, daemon=True).start()
 
+    def _scheduler(self):
+        """The model scheduler when it is on (Spec 2, D2.6): then the workshop goes through it and holds no lease of its own. None: as before (D2.1)."""
+        sched = getattr(self.runtime, 'model_scheduler', None)
+        return sched if sched is not None and sched.enabled else None
+
+    def _lease_is_mine(self, holder):
+        sched = self._scheduler()
+        if sched is not None: return holder['owner'] == sched.owner
+        return self.gpu_token is not None and holder['owner'] == self.LEASE_OWNER
+
     def _release_gpu(self):
         if self._beat_stop is not None:
             self._beat_stop.set(); self._beat_stop = None
@@ -2765,6 +2807,8 @@ class UIXHub:
         rt = self.runtime
         if rt.role_router is None or getattr(rt, 'model_loader', None) is None or not rt.model_loader.enabled: raise ValueError('model_loader_unavailable')
         from .models.role_routing import ResolutionError
+        sched = self._scheduler()
+        if sched is not None: return self._load_via_scheduler(sched, recipe_id)
         with self.model_lock:
             try: resolution = rt.role_router.resolve_recipe(recipe_id)
             except ResolutionError as exc:
@@ -2799,7 +2843,35 @@ class UIXHub:
             self._remember_recipe(recipe_id)
         return dict(out, recipe_id=recipe_id)
 
+    def _load_via_scheduler(self, sched, recipe_id):
+        """Werkstatt `model laden` with the scheduler on (D2.6): `ensure_server`, no lease and no beat of this process (SCH-11)."""
+        from .jobs.model_scheduler import SchedulerError
+        from .models.role_routing import ResolutionError
+        rt = self.runtime
+        with self.model_lock:
+            running = sched.view().get('modell')
+            if running and running != recipe_id:
+                # A switch: the Captain asked for another model, so the running one goes first (not while runs are active).
+                stopped = sched.stop_server(owner='werkstatt')
+                if stopped['status'] == 'leases_active': raise ValueError('leases_active:' + ','.join(stopped['active']))
+                time.sleep(2)
+            try: resolution = rt.role_router.resolve_recipe(recipe_id)
+            except ResolutionError as exc: raise ValueError(f'recipe_not_usable:{exc}')
+            try: out = sched.ensure_server(resolution, owner='werkstatt')
+            except SchedulerError as exc:
+                self._log_load_failure(recipe_id, resolution, exc)
+                raise ValueError(exc.reason)
+            self._remember_recipe(recipe_id)
+        return dict(out['load'], recipe_id=recipe_id)
+
     def unload_model(self, payload):
+        sched = self._scheduler()
+        if sched is not None:
+            # `erzwingen` (the Captain's button) marks the active leases `unterbrochen` and stops the server; without it, active runs only give a hint.
+            with self.model_lock:
+                out = sched.stop_server(owner='werkstatt', force=payload.get('erzwingen') is True)
+            if out['status'] == 'leases_active': raise ValueError('leases_active:' + ','.join(out['active']))
+            return {'status': 'unloaded', 'detail': out['status'], 'interrupted': out['interrupted']}
         server = getattr(self.runtime, 'llama_server', None)
         with self.model_lock:
             out = server.unload_model(all_models=True) if server is not None else {'output': 'no managed server'}
@@ -2991,7 +3063,7 @@ class UIXHub:
     def close(self):
         """Window closed: a model this UIX loaded is not left on the GPU, and the lease goes back."""
         self.poller.stop()
-        if self.gpu_token is not None:
+        if self.gpu_token is not None:                       # only the path without the scheduler holds its own lease
             try: self.unload_model({})
             except Exception: self._release_gpu()
         for key in ('_gw_wissen', '_arbeitsplatz'):          # die Wissensdateien sauber schließen (Build 24)

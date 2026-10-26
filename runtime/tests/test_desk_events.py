@@ -217,5 +217,98 @@ class SnapshotHook(unittest.TestCase):
         self.assertEqual(extensions.snapshot(SimpleNamespace(runtime=SimpleNamespace(orchestra=None)), [orchestra_kinds]), {})
 
 
+class SchedulerSlots(unittest.TestCase):
+    """Spec 2, S2.H5 (SCH-09, G2-S2-13): `slots` in the snapshot comes from `ModelScheduler.view()`, `diff` turns it into `slot.changed`, the poller
+    takes the scheduler's step, `POST /api/objects {type:'model'}` and `GET /api/strip` carry it. Off: nothing of it exists."""
+
+    def setUp(self):
+        import tempfile
+        from types import SimpleNamespace
+        from guppi_runtime.uix_server import UIXHub
+        from model_scheduler_fakes import make_scheduler, resolution
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.sched, self.lab, self.loader, self.runtime, self.audit, self.clock = make_scheduler(self.tmp.name)
+        self.addCleanup(self.sched._release_gpu)
+        self.resolution = resolution
+        self.rt = SimpleNamespace(model_scheduler=self.sched, orchestra=None, audit=self.audit)
+        self.hub = object.__new__(UIXHub)
+        self.hub.runtime = self.rt
+
+    def start(self, job="SDJ-1"):
+        self.assertTrue(self.sched.take_for_job(job, 5, agent_id="A-1", task_id="T-1")["granted"])
+        self.sched.ensure_server(self.resolution(), run_id=job)
+
+    def test_view_has_the_shape_of_spec_4_and_the_titles_come_from_the_board(self):
+        from types import SimpleNamespace
+        self.rt.orchestra = SimpleNamespace(issue=lambda tid: {"title": "Parser bauen"} if tid == "T-1" else None)
+        self.start()
+        self.sched.take_for_job("SDJ-2", 7, agent_id="A-2", task_id="T-2")
+        self.sched.take_for_job("SDJ-3", 5, agent_id="A-3", task_id="T-3")
+        slots = self.hub.slots_view()
+        self.assertEqual({"gesamt", "belegt", "schlange", "modell", "warte_max_s"} - set(slots), set())
+        self.assertEqual((slots["gesamt"], slots["modell"], slots["warte_max_s"]), (2, "main.local", 600))
+        self.assertEqual(sorted(slots["belegt"][0]), ["agent_id", "prioritaet", "run_id", "seit", "slot", "task_id", "titel"])
+        self.assertEqual(slots["belegt"][0]["titel"], "Parser bauen")
+        self.assertEqual(sorted(slots["schlange"][0]), ["agent_id", "grund", "prioritaet", "run_id", "seit"])
+
+    def test_a_slot_taken_and_given_back_are_two_slot_events_within_one_look_each(self):
+        self.start()
+        before = {"slots": self.hub.slots_view()}
+        self.sched.take_for_job("SDJ-2", 5)
+        mid = {"slots": self.hub.slots_view()}
+        self.assertEqual(diff(before, mid), [("slot.changed", {"slot": 2, "state": "belegt", "run_id": "SDJ-2", "priority": 5, "queue_len": 0})])
+        self.sched.release("SDJ-2")
+        self.assertEqual(diff(mid, {"slots": self.hub.slots_view()}), [("slot.changed", {"slot": 2, "state": "frei", "run_id": "SDJ-2", "priority": None, "queue_len": 0})])
+        self.sched.take_for_job("SDJ-3", 5)
+        full = {"slots": self.hub.slots_view()}
+        self.sched.take_for_job("SDJ-4", 5)                                                # only the queue grows
+        self.assertEqual(diff(full, {"slots": self.hub.slots_view()}), [("slot.changed", {"slot": None, "state": None, "run_id": None, "priority": None, "queue_len": 1})])
+        self.assertEqual(diff(full, dict(full)), [])
+
+    def test_off_there_is_no_slots_field_anywhere(self):
+        from guppi_runtime.desk import builtin_kinds
+        off, *_ = make_off(self.tmp.name)
+        for scheduler in (None, off):
+            self.rt.model_scheduler = scheduler
+            self.assertIsNone(self.hub.slots_view())
+            self.assertIsNone(self.hub._slots_gauge())
+            self.assertEqual(builtin_kinds._model_extra(self.hub, {}), {})
+            self.hub.scheduler_poll()                                                       # nothing, no error
+
+    def test_the_model_list_carries_slots(self):
+        from guppi_runtime.desk import builtin_kinds
+        self.start()
+        extra = builtin_kinds._model_extra(self.hub, {})
+        self.assertEqual(sorted(extra["slots"]), ["belegt", "gesamt", "modell", "schlange", "warte_max_s"])
+        self.assertEqual(extra["slots"]["belegt"][0]["run_id"], "SDJ-1")
+
+    def test_the_strip_gauge_is_held_over_total_with_the_waiting_as_hint(self):
+        self.assertEqual(self.hub._slots_gauge(), {"value": "0/0", "hint": "Modellserver aus", "tone": "off"})
+        self.start()
+        self.assertEqual(self.hub._slots_gauge(), {"value": "1/2", "hint": "frei", "tone": "ok"})
+        self.sched.take_for_job("SDJ-2", 5); self.sched.take_for_job("SDJ-3", 5)
+        self.assertEqual(self.hub._slots_gauge(), {"value": "2/2", "hint": "1 wartet", "tone": "ok"})
+
+    def test_the_poller_takes_the_schedulers_step_before_every_look(self):
+        self.start()
+        self.hub.scheduler_poll = lambda: order.append("poll")
+        order = []
+        poller = Poller(self.hub, EventStream(), snapshot=lambda: order.append("look") or {"state": "READY"})
+        poller.tick(); poller.tick()
+        self.assertEqual(order, ["poll", "look", "poll", "look"])
+
+    def test_a_crashed_server_is_noticed_in_the_pollers_beat(self):
+        self.start()
+        self.runtime.running = False
+        self.hub.scheduler_poll()
+        self.assertEqual(self.sched.view()["server"]["state"], "aus")
+        self.assertEqual(self.sched.view()["belegt"], [])
+
+
+def make_off(root):
+    from model_scheduler_fakes import make_scheduler
+    return make_scheduler(root + "-off", enabled=False)
+
+
 if __name__ == "__main__":
     unittest.main()

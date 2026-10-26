@@ -174,9 +174,10 @@ class ModelScheduler(HandoverMixin):
             self._direct.discard(run_id)
 
     # ---- the server
-    def ensure_server(self, resolution, *, run_id=None):
+    def ensure_server(self, resolution, *, run_id=None, owner=None):
         """Make the server run with this resolution's recipe. Reuse when it already does; start it when it is off (the caller holds the
-        starter's slot); refuse with the scheduler's reason otherwise. Returns {action, gen, slots, load}."""
+        starter's slot); refuse with the scheduler's reason otherwise. Returns {action, gen, slots, load}. `owner` (e.g. `werkstatt`) only
+        names the caller in the audit: the server and the load lease stay the scheduler's."""
         self._require()
         recipe = resolution.get("capability_id")
         with self._lock:
@@ -201,7 +202,7 @@ class ModelScheduler(HandoverMixin):
             elif server["state"] != "aus":
                 mode = server["state"] if server["state"] in ("drain", "exklusiv") else "normal"
                 raise SchedulerError(decide_reason(server, recipe, mode, others, self.config.plan()) or server["state"])
-            return self._start(resolution, run_id)
+            return self._start(resolution, run_id, owner)
 
     def _alive(self):
         if self.runtime is None:
@@ -225,7 +226,7 @@ class ModelScheduler(HandoverMixin):
             denial["measured_free_gb"] = None
         return need, denial
 
-    def _start(self, resolution, run_id):
+    def _start(self, resolution, run_id, owner=None):
         recipe, window = resolution.get("capability_id"), resolution.get("context_window")
         slots = int(resolution.get("slots") or 1)
         cap = self._cap()
@@ -271,7 +272,7 @@ class ModelScheduler(HandoverMixin):
                 server = slot_store.set_server(conn, self._now(), "bereit", pid=pid)
             self._resolution = dict(resolution)
             self._audit("SLOT_SERVER_STARTED", recipe=recipe, gen=server["gen"], slots=slots, admitted=admitted,
-                        context_per_slot=window, vram_gb=need["vram_gb"], pid=pid)
+                        context_per_slot=window, vram_gb=need["vram_gb"], pid=pid, asked_by=owner)
             return {"action": "started", "gen": server["gen"], "slots": admitted, "load": load}
         except BaseException as exc:
             self._audit("SLOT_SERVER_START_FAILED", recipe=recipe, reason=str(getattr(exc, "reason", None) or exc)[:200])

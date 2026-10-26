@@ -111,7 +111,7 @@ def _boundary_verbs():
 def _model_verbs():
     return [
         Verb('laden', 'Laden', lambda hub, oid, args: hub.load_model({'recipe_id': oid}), when=lambda o: o['state'] == 'bereit'),
-        Verb('entladen', 'Entladen', lambda hub, oid, args: hub.unload_model({}), when=lambda o: o['state'] == 'geladen'),
+        Verb('entladen', 'Entladen', lambda hub, oid, args: hub.unload_model({'erzwingen': args.get('erzwingen') is True}), when=lambda o: o['state'] == 'geladen'),   # `erzwingen` (Spec 2 D2.6): nur der Captain, über args
         Verb('testen', 'Testen', lambda hub, oid, args: hub.model_test({'recipe_id': oid}), when=lambda o: o['state'] == 'geladen'),
     ]
 

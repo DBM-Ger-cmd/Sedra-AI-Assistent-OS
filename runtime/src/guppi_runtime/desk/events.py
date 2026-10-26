@@ -171,6 +171,9 @@ class Poller:
     def tick(self):
         """One look; returns the events published (tests call this directly, without a thread)."""
         try:
+            step = getattr(self.hub, 'scheduler_poll', None)       # Spec 2 D2.7: the scheduler's step runs in the poller's beat
+            if callable(step):
+                step()
             now = self._snapshot()
             self.error = None
         except Exception as exc:                 # a broken view must not kill the stream; the shell is told once

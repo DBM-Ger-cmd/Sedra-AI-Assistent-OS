@@ -65,6 +65,12 @@ def _model_list(hub, payload):
     return [desk_objects.model_object(r, view.get('server')) for r in view['recipes']]
 
 
+def _model_extra(hub, payload):
+    """Spec 2 D2.9: die Liste der Modelle trägt zusätzlich `slots` (Spec 4 D4.2.4), solange der Scheduler an ist."""
+    slots = hub.slots_view() if hasattr(hub, 'slots_view') else None
+    return {'slots': {k: slots.get(k) for k in ('gesamt', 'belegt', 'schlange', 'modell', 'warte_max_s')}} if slots is not None else {}
+
+
 # ---- intent
 def _intent_read(hub, oid):
     entry = hub.intents.get(oid)
@@ -145,7 +151,7 @@ def kinds(Kind):
         'task': Kind('task', 'Aufgabe', _task_read, _task_list, verbs=desk_actions._task_verbs()),
         'intent': Kind('intent', 'Vorhaben', _intent_read, _intent_list, verbs=desk_actions._intent_verbs()),
         'candidate': Kind('candidate', 'Kandidat', _candidate_read, _candidate_list, verbs=desk_actions._candidate_verbs()),
-        'model': Kind('model', 'Modell', _model_read, _model_list, verbs=desk_actions._model_verbs()),
+        'model': Kind('model', 'Modell', _model_read, _model_list, verbs=desk_actions._model_verbs(), extra=_model_extra),
         'skill': Kind('skill', 'Skill', _skill_read, _skill_list),
         'decision': Kind('decision', 'Entscheidung', _decision_read, _decision_list, own_actions=True),
         'project': Kind('project', 'Projekt', _project_read, _project_list),
