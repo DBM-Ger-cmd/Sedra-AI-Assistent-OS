@@ -85,7 +85,14 @@ def main(argv=None):
     ap.add_argument("--rezept", default="coder.llama_qwen35", help="Rezept fuer alle Agentenrollen im Wegwerf-Projekt (braucht server.slots und per_slots)")
     ap.add_argument("--timeout", type=int, default=900)
     ap.add_argument("--live-project", default=str(RUNTIME.parent / "workspace" / "GUPPI_OS"))
+    ap.add_argument("--aufraeumen", metavar="ORDNER", help="loescht ein Wegwerf-Projekt dieses Skripts (Name sedra-agentenprobe-*) nach der Auswertung")
     args = ap.parse_args(argv)
+    if args.aufraeumen:
+        target = Path(args.aufraeumen).resolve()
+        if not target.name.startswith("sedra-agentenprobe-") or target.parent != Path(tempfile.gettempdir()).resolve():
+            print("Verweigert: nur Ordner sedra-agentenprobe-* im Temp-Ordner."); return 2
+        shutil.rmtree(target, ignore_errors=True)
+        print("Entfernt:", target); return 0
     if not 2 <= args.agents <= 6:
         print("--agents 2 bis 6"); return 2
     workers = args.workers or args.agents
@@ -165,8 +172,9 @@ def main(argv=None):
                     print("Entladen:", type(exc).__name__, exc)
                 hub.close()
         finally:
-            shutil.rmtree(project.parent, ignore_errors=True)
-            print("Wegwerf-Projekt entfernt.")
+            # Audit, Jobs und Datenbank bleiben stehen, bis der Captain ausgewertet hat; geloescht wird nur mit --aufraeumen <Ordner>.
+            print(f"Wegwerf-Projekt BLEIBT zur Auswertung: {project.parent}  (Audit: {project / 'runtime_data' / 'audit' / 'events.jsonl'})")
+            print(f"Nach der Auswertung entfernen: python benchmarks/agentenlauf_probe.py --aufraeumen \"{project.parent}\"")
 
 
 if __name__ == "__main__":
