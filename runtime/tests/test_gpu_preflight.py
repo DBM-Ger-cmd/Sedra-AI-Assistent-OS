@@ -73,6 +73,52 @@ class PreflightTests(unittest.TestCase):
         self.assertFalse(gp.is_guppi_server({**own, "path": r"C:\tools\llama-server.exe"}))
 
 
+class SchedulerServerTests(unittest.TestCase):
+    """B-6 (Spec 2, D2.7): a llama-server whose pid stands in slot_server.pid is the scheduler's, not a leftover."""
+    def setUp(self):
+        self.patches = []
+        self.addCleanup(lambda: [setattr(m, n, v) for m, n, v in self.patches])
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.lab = TestLab(Path(self.tmp.name) / "lab" / "testlab.db", alive=lambda p: True)
+
+    monkey = PreflightTests.monkey
+
+    def run_clear(self, **kw):
+        return gp.clear_leftovers(say=lambda *_: None, sleep=lambda s: None, **kw)
+
+    def serve(self, state="bereit", pid=20):
+        from guppi_runtime.jobs import slot_store
+        conn = self.lab.connect()
+        try:
+            slot_store.set_server(conn, "2026-10-24T00:00:00Z", state, recipe="main.local", slots=2, pid=pid)
+        finally:
+            conn.close()
+
+    def test_a_server_of_the_scheduler_is_spared_and_the_orphan_is_stopped(self):
+        fake = Fake(self.monkey, servers={20: OURS, 21: OURS}); self.serve()
+        self.run_clear(lab=self.lab); self.assertEqual(fake.stopped, [21])
+
+    def test_after_the_server_is_off_the_same_pid_is_a_leftover_again(self):
+        fake = Fake(self.monkey, servers={20: OURS}); self.serve("aus")
+        self.run_clear(lab=self.lab); self.assertEqual(fake.stopped, [20])
+
+    def test_the_scheduler_server_on_the_port_refuses_the_run_and_is_not_stopped(self):
+        fake = Fake(self.monkey, listener=20, procs={20: OURS}, servers={20: OURS}); self.serve("drain")
+        with self.assertRaisesRegex(gp.GpuNotClean, "scheduler"): self.run_clear(lab=self.lab)
+        self.assertEqual(fake.stopped, [])
+
+    def test_explicit_protected_pids_and_a_lab_without_slot_tables(self):
+        fake = Fake(self.monkey, servers={30: OURS}); self.run_clear(protected=[30]); self.assertEqual(fake.stopped, [])
+        old = TestLab(Path(self.tmp.name) / "old.db", alive=lambda p: True); old.schema = 1
+        self.assertEqual(gp.scheduler_server_pids(old), set())
+
+    def test_the_lease_hands_itself_to_the_hook(self):
+        fake = Fake(self.monkey, servers={20: OURS, 21: OURS}); self.serve()
+        with self.lab.lease("bench", "x", preflight=gp.clear_leftovers):
+            pass
+        self.assertEqual(fake.stopped, [21])
+
+
 class LeaseHookTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)

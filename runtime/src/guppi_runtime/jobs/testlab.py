@@ -273,7 +273,7 @@ class TestLab:
         token = self.acquire(owner, purpose, ttl_s=ttl_s, wait_s=wait_s, poll_s=poll_s, name=name, sleep=sleep, priority=priority)
         if preflight is not None:
             try:
-                preflight(owner)
+                preflight(owner, lab=self) if getattr(preflight, "wants_lab", False) else preflight(owner)
             except BaseException as exc:
                 with self._db() as db:
                     self._event(db, "preflight_failed", owner, str(exc)[:300])

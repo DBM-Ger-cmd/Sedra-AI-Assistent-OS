@@ -11,6 +11,9 @@ What it does, in this order, only while the caller holds the GPU lease (so nobod
   3. the used VRAM is read. If it does not fall below `baseline_max_gb` within `settle_s`, the run is refused and the processes that use the
      GPU are listed (a game, LM Studio with a model loaded, a forgotten run). Nothing outside GUPPI's own llama-server is ever stopped.
 
+A llama-server that the model scheduler owns is never a leftover (Spec 2, D2.7, B-6): its pid stands in `slot_server.pid` of the test lab while the
+server is starting, ready or draining. Such a pid is spared; if it sits on the port, the run is refused with the owner named.
+
 Use as a hook: `lab.lease(owner, purpose, preflight=clear_leftovers)`, or from the shell: `python benchmarks/testlab_cli.py clean`.
 """
 from __future__ import annotations
@@ -90,15 +93,38 @@ def _stop(pid, run=subprocess.run):
         run(["kill", "-TERM", str(int(pid))], capture_output=True, text=True, timeout=30)
 
 
-def clear_leftovers(owner="", *, port=8089, baseline_max_gb=3.0, settle_s=20, say=print, run=subprocess.run, sleep=time.sleep, monotonic=time.monotonic):
-    """Stops what earlier runs left behind and refuses the run when the card is still busy. Returns the VRAM in GiB that is in use afterwards."""
+def scheduler_server_pids(lab):
+    """The pids of the llama-server that the model scheduler runs now (`slot_server.pid` while its state is startet/bereit/drain). Empty when
+    the lab has no schema 2 or nothing runs. Reads only."""
+    if lab is None or getattr(lab, "schema", 1) < 2:
+        return set()
+    try:
+        conn = lab.connect()
+        try:
+            row = conn.execute("SELECT pid, state FROM slot_server WHERE name = 'main'").fetchone()
+        finally:
+            conn.close()
+    except Exception:
+        return set()
+    if row is None or row["pid"] is None or row["state"] not in ("startet", "bereit", "drain"):
+        return set()
+    return {int(row["pid"])}
+
+
+def clear_leftovers(owner="", *, port=8089, baseline_max_gb=3.0, settle_s=20, say=print, run=subprocess.run, sleep=time.sleep, monotonic=time.monotonic,
+                    lab=None, protected=()):
+    """Stops what earlier runs left behind and refuses the run when the card is still busy. Returns the VRAM in GiB that is in use afterwards.
+    `protected`: pids that are never stopped; with `lab` (given by `TestLab.lease`) the scheduler's server pid is added (B-6)."""
     stopped = []
+    spared = {int(p) for p in protected} | scheduler_server_pids(lab)
     pid = listener_pid(port, run)
+    if pid in spared:
+        raise GpuNotClean(f"port {port} is used by the model scheduler's llama-server (pid {pid}); it holds a live slot lease and is not stopped")
     if pid:
         info = process_info(pid, run)
         if not is_guppi_server(info):
             raise GpuNotClean(f"port {port} is used by {(info or {}).get('name', 'pid ' + str(pid))} (pid {pid}), which is not a GUPPI llama-server; not touching it")
-    targets = dict(guppi_llama_servers(run))
+    targets = {t: i for t, i in guppi_llama_servers(run).items() if t not in spared}
     if pid and pid not in targets:
         targets[pid] = process_info(pid, run)
     for target, info in targets.items():
@@ -115,6 +141,9 @@ def clear_leftovers(owner="", *, port=8089, baseline_max_gb=3.0, settle_s=20, sa
         if monotonic() >= deadline:
             raise GpuNotClean(f"GPU holds {used} GiB (limit {baseline_max_gb}) and it is not a GUPPI llama-server; in use by: {'; '.join(gpu_users(run)) or 'unknown'}")
         sleep(1)
+
+
+clear_leftovers.wants_lab = True        # TestLab.lease then passes itself as `lab`
 
 
 def _alias(info):
