@@ -87,6 +87,15 @@ class OfferTests(Base):
         with self.assertRaises(ValueError):
             self.sched.answer("cloud_offload:SDJ-9", "ablehnen")
 
+    def test_a_waiting_direct_call_is_never_offered_the_cloud(self):
+        self.sched.take_for_job("SDJ-2", 5)
+        with self.sched._conn() as conn:
+            from guppi_runtime.jobs import slot_store
+            slot_store.request(conn, "direkt-x", "direkt", "chat", 7, "2026-10-23T00:00:00Z", ttl_s=120)      # older than every job
+        self.clock.t += 700
+        self.sched.poll()
+        self.assertEqual([d["run_id"] for d in self.sched.decisions()], ["SDJ-2"])
+
     def test_off_there_are_no_decisions(self):
         off, *_ = make_scheduler(self.tmp.name + "-off", enabled=False)
         self.assertEqual(off.decisions(), [])

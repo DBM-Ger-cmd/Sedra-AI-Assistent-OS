@@ -81,6 +81,17 @@ class CrashTests(Base):
         with self.assertRaises(ValueError):
             self.sched.answer(ask["id"], "bestaetigen")                               # answered once
 
+    def test_unlocking_after_a_lost_lease_frees_what_the_old_server_left_behind(self):
+        self.start()
+        self.lab.release(self.sched._token)                                           # somebody takes the lease over ...
+        self.assertTrue(self.lab.try_acquire("intruder", "x"))
+        self.sched._lease_lost(self.sched._token)
+        (ask,) = self.sched.decisions()
+        self.assertEqual(ask["reason"], "gpu_lease_lost")
+        self.sched.answer(ask["id"], "bestaetigen")
+        self.assertIsNone(self.sched._resolution)
+        self.assertIsNone(self.sched._reserved)
+
     def test_garbage_twice_in_five_minutes_restarts_the_server_in_a_controlled_way(self):
         self.start()
         self.assertEqual(self.sched.report("SDJ-1", "garbage"), {"count": 1, "restart": False})

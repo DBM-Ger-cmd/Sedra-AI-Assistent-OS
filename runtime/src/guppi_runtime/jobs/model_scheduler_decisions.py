@@ -26,7 +26,7 @@ class DecisionMixin:
         for that run within `offer_every_s`. Offers of runs that no longer wait vanish. Never switches anything."""
         now_text, clock = self._now(), self.lab.clock()
         with self._conn() as conn:
-            waiting = [dict(r) for r in conn.execute("SELECT * FROM slot_leases WHERE state = 'wartend'")]
+            waiting = [dict(r) for r in conn.execute("SELECT * FROM slot_leases WHERE state = 'wartend' AND kind = 'job'")]
         ids = {r["run_id"] for r in waiting}
         for did in [d for d, o in self._offers.items() if o["run_id"] not in ids]:
             self._offers.pop(did)
@@ -91,6 +91,8 @@ class DecisionMixin:
             if way == "ablehnen":
                 self._dismissed.add(decision_id)
                 return {"kind": "slot_server", "unlocked": False}
+            self._free_reservation()                       # a server locked by a lost lease left its reservation and resolution behind
+            self._resolution = None
             with self._conn() as conn:
                 conn.execute("UPDATE slot_server SET restarts = '[]', garbage = '[]' WHERE name = 'main'")
                 slot_store.set_server(conn, self._now(), "aus", owner=None, reason="entsperrt")

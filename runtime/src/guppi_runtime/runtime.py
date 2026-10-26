@@ -408,7 +408,8 @@ class GuppiRuntime:
         self.audit.append("MODEL_OUTPUT_DEGENERATE",component="job-worker",payload={"provider":attempt.get("provider_ref"),"model":attempt.get("model"),"reason":reason})
         sched=self.model_scheduler
         if sched is not None and sched.enabled:
-            sched.report(attempt.get("job_id"),"garbage")          # D2.8: the scheduler counts, and restarts the server it owns from the second report
+            if attempt.get("provider_ref")=="llama-cpp-server":     # LM Studio's garbage is not the scheduler's server
+                sched.report(attempt.get("job_id"),"garbage")     # D2.8: the scheduler counts, and restarts the server it owns from the second report
             return
         if attempt.get("provider_ref")=="llama-cpp-server" and self.llama_server is not None:
             self.llama_server.unload_model(all_models=True)

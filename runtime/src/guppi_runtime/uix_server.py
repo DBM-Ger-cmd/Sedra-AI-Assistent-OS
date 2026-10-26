@@ -186,7 +186,9 @@ class UIXHub:
     def _answer_scheduler(self, decision, way):
         """The Captain's answer to a scheduler question. Accepting a cloud offer only marks the job `cloud_offload_approved`: what that
         does is Spec 3."""
-        out = self._scheduler().answer(decision['id'], way)
+        sched = self._scheduler()
+        if sched is None: raise ValueError('unknown_decision')
+        out = sched.answer(decision['id'], way)
         if out.get('approved'):
             sup = getattr(self.runtime, 'job_supervisor', None)
             if sup is not None:
