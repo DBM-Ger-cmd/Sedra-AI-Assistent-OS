@@ -163,6 +163,26 @@ def free_gb(path):
     return shutil.disk_usage(str(p)).free / 2 ** 30
 
 
+def lease_problems(source):
+    """GPU-Lease der Installation, REIN LESEND (SQLite `immutable=1`: schreibt nie, legt keine Datei an). `TestLab(...)` darf hier nicht benutzt werden:
+    es migriert die Datenbank beim Öffnen auf Schema 2 und legt eine Sicherung an (so geschehen am 26.10.2026 und zurückgestellt)."""
+    import sqlite3
+    db = Path(source) / "workspace" / "GUPPI_OS" / "runtime_data" / "testlab" / "testlab.db"
+    if not db.is_file():
+        return []
+    try:
+        conn = sqlite3.connect("file:" + db.as_posix() + "?mode=ro&immutable=1", uri=True)
+        try:
+            row = conn.execute("SELECT owner, purpose, heartbeat, ttl_s FROM lease WHERE name = 'gpu'").fetchone()
+        finally:
+            conn.close()
+    except Exception as exc:
+        return [f"GPU-Lease nicht prüfbar: {str(exc)[:80]}"]
+    if row and (time.time() - float(row[2])) <= float(row[3]):
+        return [f"GPU-Lease belegt von {row[0]} ({row[1]})"]
+    return []
+
+
 def checks(source, target_dir, needed_gb):
     """Probleme, die den Lauf verbieten."""
     problems = []
@@ -172,14 +192,7 @@ def checks(source, target_dir, needed_gb):
         out = subprocess.run(["powershell", "-NoProfile", "-Command", cmd], capture_output=True, text=True).stdout.split()
         names = ["Prozesse aus dem Ordner", "Port 8089 belegt", "llama-server läuft"]
         problems += [f"{n}: {c}" for n, c in zip(names, out) if c != "0"]
-    try:
-        sys.path.insert(0, str(RUNTIME / "src"))
-        from guppi_runtime.jobs.testlab import TestLab, default_path
-        holder = TestLab(default_path(Path(source) / "workspace" / "GUPPI_OS")).holder()
-        if holder and not holder.get("stale"):
-            problems.append(f"GPU-Lease belegt von {holder.get('owner')}")
-    except Exception as exc:
-        problems.append(f"GPU-Lease nicht prüfbar: {str(exc)[:80]}")
+    problems += lease_problems(source)
     free = free_gb(target_dir)
     if free < needed_gb * 1.2:
         problems.append(f"zu wenig Platz auf dem Ziel: {free:.1f} GB frei, gebraucht etwa {needed_gb * 1.2:.1f} GB")

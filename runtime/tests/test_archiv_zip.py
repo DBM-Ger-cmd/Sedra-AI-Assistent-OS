@@ -24,6 +24,39 @@ def tree(root):
     return files
 
 
+class Lease(unittest.TestCase):
+    """Die Lease-Prüfung liest nur: die Datenbank der Installation bleibt Byte für Byte gleich und es entsteht keine Datei (kein Schema-2-Umbau, keine Sicherung)."""
+
+    def make(self, root, heartbeat_age=None, ttl=300):
+        import sqlite3
+        d = Path(root) / "workspace" / "GUPPI_OS" / "runtime_data" / "testlab"
+        d.mkdir(parents=True)
+        db = d / "testlab.db"
+        conn = sqlite3.connect(db)
+        conn.execute("CREATE TABLE lease (name TEXT PRIMARY KEY, owner TEXT, purpose TEXT, heartbeat REAL, ttl_s REAL, pid INTEGER)")
+        if heartbeat_age is not None:
+            import time
+            conn.execute("INSERT INTO lease VALUES ('gpu', 'wer', 'wozu', ?, ?, 1)", (time.time() - heartbeat_age, ttl))
+        conn.commit()
+        conn.close()
+        return db
+
+    def test_free_busy_and_stale_without_touching_the_file(self):
+        with tempfile.TemporaryDirectory(prefix="archiv-lease-") as tmp:
+            cases = {"frei": (None, []), "belegt": (10, ["belegt"]), "verwaist": (10_000, [])}
+            for name, (age, expect) in cases.items():
+                root = Path(tmp) / name
+                db = self.make(root, age)
+                before = (db.read_bytes(), sorted(p.name for p in db.parent.iterdir()))
+                got = az.lease_problems(root)
+                self.assertEqual(bool(got), bool(expect), name)
+                self.assertEqual((db.read_bytes(), sorted(p.name for p in db.parent.iterdir())), before, name + ": nichts verändert")
+
+    def test_no_database_means_no_problem(self):
+        with tempfile.TemporaryDirectory(prefix="archiv-lease-") as tmp:
+            self.assertEqual(az.lease_problems(tmp), [])
+
+
 class Archiv(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="archiv-zip-")
