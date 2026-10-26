@@ -30,7 +30,7 @@ COPY = ("role_routing.yaml", "routing_profiles.yaml", "switches.yaml", "model_sc
 NOW = lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
-def build_project(live: Path, agents: int) -> Path:
+def build_project(live: Path, agents: int, recipe: str) -> Path:
     import yaml
     project = Path(tempfile.mkdtemp(prefix="sedra-agentenprobe-")) / "project"
     (project / "local_config").mkdir(parents=True)
@@ -44,6 +44,10 @@ def build_project(live: Path, agents: int) -> Path:
     raw.setdefault("switches", {}).setdefault("orchestra", {})["enabled"] = True
     raw["switches"].setdefault("job_supervisor", {})["enabled"] = True
     switches_path.write_text(yaml.safe_dump(raw), encoding="utf-8")
+    # eigenes Profil NUR im Wegwerf-Projekt: die Rolle der Agenten geht auf das gewaehlte Rezept (sonst waehlt die Ressourcenpruefung ein beliebiges mit 1 Slot)
+    routes = {role: {"prefer": [recipe]} for role in ("coder", "planner", "reviewer", "tester", "rework", "foreman", "researcher")}
+    (project / "local_config" / "routing_profiles.yaml").write_text(
+        yaml.safe_dump({"active": "probe", "profiles": {"probe": dict(routes, description="Agentenlauf-Probe")}}, allow_unicode=True), encoding="utf-8")
     overlay = project / "local_config" / "model_scheduler.yaml"
     if not overlay.exists():
         overlay.write_text("model_scheduler:\n  enabled: true\n", encoding="utf-8")
@@ -78,6 +82,7 @@ def main(argv=None):
     ap.add_argument("--go", action="store_true")
     ap.add_argument("--agents", type=int, default=3)
     ap.add_argument("--workers", type=int, default=None)
+    ap.add_argument("--rezept", default="coder.llama_qwen35", help="Rezept fuer alle Agentenrollen im Wegwerf-Projekt (braucht server.slots und per_slots)")
     ap.add_argument("--timeout", type=int, default=900)
     ap.add_argument("--live-project", default=str(RUNTIME.parent / "workspace" / "GUPPI_OS"))
     args = ap.parse_args(argv)
@@ -88,7 +93,7 @@ def main(argv=None):
     print(f"Live-Lab frei: {live_lab_free(live)}")
     if not live_lab_free(live):
         print("Abbruch: das Live-Lab haelt die GPU-Lease (ein Lauf oder die Oberflaeche). Erst freigeben."); return 3
-    project = build_project(live, args.agents)
+    project = build_project(live, args.agents, args.rezept)
     print(f"Wegwerf-Projekt: {project}")
     from guppi_runtime.uix_server import UIXHub
     from guppi_runtime.desk import orchestra_runner
@@ -108,7 +113,7 @@ def main(argv=None):
             board.create(orch.conn, dict(title=f"Probe {n}: Kurzantwort", description=f"Beantworte in zwei Saetzen: Was ist ein Fahrradgetriebe? (Probe {n})",
                                          assignee=f"A-P{n}", origin="captain"), NOW(), "captain")
         tasks = [dict(r) for r in orch.conn.execute("SELECT * FROM tasks ORDER BY id")]
-        print(f"{len(tasks)} Aufgaben angelegt; Das Rezept waehlt die Rollen-Aufloesung (role_routing, aktives Profil) - ob Haupt- oder Hilfsmodell, zeigt die Ausgabe mit --go.")
+        print(f"{len(tasks)} Aufgaben angelegt; Rezept fuer alle Agentenrollen: {args.rezept}.")
         if not args.go:
             print("Trockenlauf beendet: es wurde kein Modell geladen und kein Lauf gestartet. Mit --go ausfuehren (GPU-Zeitfenster, RAM >= 13 GB frei)."); return 0
         pool = orchestra_runner.start_pool(hub, orch, idle_sleep_s=0.5)
@@ -133,6 +138,18 @@ def main(argv=None):
             if all(s not in ("zugewiesen", "in_arbeit", "offen") for s in states):
                 break
             time.sleep(2)
+        try:
+            lines = hub.runtime.audit.path.read_text(encoding="utf-8").splitlines()
+            for line in lines:
+                ev = json.loads(line)
+                if ev["event_type"].startswith(("SLOT_", "JOB_SLOT", "RESOURCE_DENIED", "ORCHESTRA_RUN", "JOB_FAILED", "JOB_ATTEMPT")):
+                    print(ev["timestamp"][11:19], ev["event_type"], json.dumps(ev.get("payload"), ensure_ascii=False)[:260])
+        except Exception as exc:
+            print("Audit nicht lesbar:", type(exc).__name__)
+        for job in sup.store.list() if hasattr(sup.store, "list") else []:
+            print("Job", job.get("job_id"), job.get("state"), [a.get("failure_class") for a in job.get("attempt_log", [])])
+            for attempt in job.get("attempt_log", [])[:1]:
+                print("   Versuch:", json.dumps(attempt, ensure_ascii=False, default=str)[:1500])
         states = {r["id"]: r["state"] for r in orch.conn.execute("SELECT id, state FROM tasks")}
         print(f"Hoechste gleichzeitige Belegung: {maxheld} Slot(s); Aufgaben: {states}")
         print("Ergebnis:", "2 Slots gleichzeitig belegt" if maxheld >= 2 else "nie mehr als 1 Slot belegt (siehe Ausgabe oben)")
@@ -143,7 +160,7 @@ def main(argv=None):
                 pool.stop()
             if hub is not None:
                 try:
-                    hub.unload_model({})
+                    hub.unload_model({"erzwingen": True})
                 except Exception as exc:
                     print("Entladen:", type(exc).__name__, exc)
                 hub.close()
