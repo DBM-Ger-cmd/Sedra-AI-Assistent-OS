@@ -255,11 +255,14 @@ Ausführung nach Abschnitt 5a (N-3 Umzug, N-4 Prüfung, N-5 GPU-Lease). Neues St
 ### U2-12 Archivierung der Installation als Zip – Gate ja (Captain)
 **Regel des Captains (26.10.2026):** Es gibt **eine** Startdatei: `<a1>\START_SEDRA.bat`. In der Installation wird nichts umbenannt, ergänzt oder als zweite Startdatei belassen. Das Archiv liegt **nicht** in der Sedra-Umgebung (A1 und Programmordner), sondern als `E:\Sedra Umgebung\Entwickler_Archiv\GUPPI_Runtime_v1.20.Archiv.zip`; danach gibt es den Ordner `GUPPI_Runtime_v1.20` nicht mehr.
 **Zeitpunkt:** nach U2-11 (Umschalten) und dem Kurzstart eines Modells aus A1 (U2-9 Punkt 5, GPU-Gate), spätestens nach der vom Captain gewählten Bewährungszeit (Frage F9; die Installation ist bis dahin als Rückweg unverändert).
-**Ablauf (Befehle als Text, nicht ausgeführt):**
-1. Kein Prozess aus der Installation, kein `llama-server`, GPU-Lease frei (`benchmarks\hygiene.py`).
-2. Manifest und Zip des ganzen Ordners `GUPPI_Runtime_v1.20` (mit `.git`, `local_config` samt den 35 Sicherungen, `audit`, `testlab.db`, `approval_tokens.json`, `sandboxes\backend_home\run`, `jobs`, `image-imports`, den Bundles, `engines\_staging`, `b11530`) nach `E:\Sedra Umgebung\Entwickler_Archiv\GUPPI_Runtime_v1.20.Archiv.zip`, dazu die Datei `GUPPI_Runtime_v1.20.Archiv.manifest.csv` (SHA-256 je Datei) daneben.
-3. Verifikation: jede Datei im Zip gegen das Manifest und gegen den Ordner, 0 Fehler; Anzahl und Größe in das Logbuch.
-4. **Löschen des Ordners macht der Captain selbst** (nach der Verifikation; Papierkorb-Limit von E: beachten). Danach: `benchmarks\hygiene.py` ohne Fund, Logbucheintrag.
+**Vorbereitet (26.10.2026), nicht ausgeführt:** Werkzeug `benchmarks\archiv_zip.py` (mit Test `tests\test_archiv_zip.py`, 6 Tests). Trockenlauf gegen die Installation: 24 967 Dateien, 4,86 GB, keine Probleme (kein Prozess, Port 8089 und Lease frei, genug Platz auf E:, Ziel noch nicht vorhanden).
+**Ablauf bei Freigabe des Captains:**
+1. `cd <a1>\runtime` und `python benchmarks\archiv_zip.py` (Trockenlauf, Ergebnis 0 erwartet).
+2. `python benchmarks\archiv_zip.py --go` erzeugt `E:\Sedra Umgebung\Entwickler_Archiv\GUPPI_Runtime_v1.20.Archiv.zip`, `…Archiv.manifest.csv` (`path,size,sha256`) und `…Archiv.ergebnis.json` in einem Durchgang (Zip zuerst als `.part`), verifiziert jede Datei im Zip gegen das Manifest (keine fehlt, keine zu viel, `testzip`), benennt dann um und prüft den Ordner gegen das Manifest. Vorhandene Zieldateien werden nie überschrieben, nichts wird gelöscht.
+3. `python benchmarks\archiv_zip.py --verify` prüft das Archiv jederzeit erneut (auch wenn der Ordner später weg ist: dann nur Zip gegen Manifest).
+4. Erwartung: `zip_vs_manifest_problems` 0 und `source_vs_manifest_problems` 0 in `…Archiv.ergebnis.json`; Anzahl und Größe ins Logbuch.
+5. **Löschen des Ordners macht der Captain selbst** (nach der Verifikation; Papierkorb-Limit von E: beachten). Danach: `benchmarks\hygiene.py` ohne Fund, Logbucheintrag.
+Vollständig: der ganze Ordner `GUPPI_Runtime_v1.20` wird archiviert (mit `.git`, `local_config` samt Sicherungen, `audit`, `testlab.db`, `approval_tokens.json`, `sandboxes\backend_home\run`, `jobs`, `image-imports`, den Bundles, `engines` einschließlich `_staging` und `b11530`). Die Engines `b11160` und `b11371` stehen auch in A1 und in `Sedra_Engine_v1`; wer das Zip verkleinern will, kann sie mit `--exclude engines/llama.cpp/b11160` und `--exclude engines/llama.cpp/b11371` auslassen (rund 1,8 GB; nur nach Prüfung, dass die A1-Kopien vollständig sind).
 **Rückweg:** Zip entpacken nach `E:\Sedra Umgebung\GUPPI_Runtime_v1.20`; die Installation lässt sich daraus wiederherstellen (die VMDK-Pfade der Installation stimmen dann wieder, weil der Ort derselbe ist).
 
 ## 5a. Die geplante Aufgabe `GUPPI Nachtkette 2026-10-13` zieht nach A1 um (Ergänzung des Captains)
