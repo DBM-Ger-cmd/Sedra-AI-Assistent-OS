@@ -4,6 +4,9 @@
     python benchmarks/scheduler_probelauf.py beobachten   zeigt alle 3 s nur Aenderungen: SLOT_*- und RESOURCE_DENIED-Ereignisse im Audit, Lease des Labs,
                                                           Schlange der Uebergabe, llama-server mit -np, VRAM und RAM (Strg+C beendet, Zusammenfassung)
     python benchmarks/scheduler_probelauf.py schritte     druckt die Schritte 3 bis 7 mit dem erwarteten Ergebnis zum Abhaken
+    python benchmarks/scheduler_probelauf.py stunde       die erste Betriebsstunde (--minuten 60): misst alle 10 s (VRAM, Temperatur, freier RAM, llama-server, Lease, Aufgaben),
+                                                          zaehlt SLOT_*/JOB_*-Ereignisse des Audits, schreibt jede Messung sofort in
+                                                          runtime_data/measurements/beobachtung_<datum>.jsonl und druckt am Ende den Bericht mit Bestanden/Nicht bestanden
 
 Optionen: --project <Ordner> (Standard workspace/GUPPI_OS im Paket), --sekunden N (Takt, Standard 3).
 Es startet kein Modell, stoppt keinen Prozess und schreibt keine Datei ausser der Ausgabe.
@@ -138,6 +141,110 @@ def audit_path(project):
     return project / "runtime_data" / "audit" / "events.jsonl"
 
 
+def task_counts(project):
+    import sqlite3
+    path = project / "runtime_data" / "orchestra" / "orchestra.db"
+    if not path.exists():
+        return {}
+    con = sqlite3.connect(f"file:{path.as_posix()}?immutable=1", uri=True)
+    try:
+        return dict(con.execute("SELECT state, COUNT(*) FROM tasks GROUP BY state").fetchall())
+    except sqlite3.Error:
+        return {}
+    finally:
+        con.close()
+
+
+def cmd_stunde(project, minuten, takt=10.0):
+    """Die erste Betriebsstunde mit echten Aufgaben (Spec 2 OP-S2-18): nur messen und zaehlen, nichts aendern."""
+    path = audit_path(project)
+    pos = path.stat().st_size if path.exists() else 0
+    out_dir = project / "runtime_data" / "measurements"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"beobachtung_{time.strftime('%Y-%m-%d_%H%M')}.jsonl"
+    start = time.time()
+    tasks_start = task_counts(project)
+    counts, failed_classes = {}, {}
+    vram_max = temp_max = 0
+    ram_min = None
+    max_servers = max_np = 0
+    server_seen_s = 0.0
+    samples = 0
+    print(f"Beobachte {minuten} min, Takt {takt:.0f} s, schreibe {out_path}. Strg+C beendet frueher mit Bericht.")
+    try:
+        with out_path.open("a", encoding="utf-8") as sink:
+            while time.time() - start < minuten * 60:
+                servers_now = servers()
+                g, ram = vram(), free_ram_gb()
+                lab = lab_state(project)
+                if path.exists() and path.stat().st_size > pos:
+                    with path.open("rb") as f:
+                        f.seek(pos)
+                        chunk = f.read()
+                        pos = f.tell()
+                    for raw in chunk.splitlines():
+                        try:
+                            ev = json.loads(raw)
+                        except ValueError:
+                            continue
+                        typ = ev.get("event_type", "")
+                        if typ.startswith(("SLOT_", "JOB_", "RESOURCE_", "ORCHESTRA")):
+                            counts[typ] = counts.get(typ, 0) + 1
+                            payload = ev.get("payload") or {}
+                            if typ == "JOB_FAILED":
+                                cls = payload.get("failure_class", "?")
+                                failed_classes[cls] = failed_classes.get(cls, 0) + 1
+                            if typ.startswith("SLOT_") and typ not in ("SLOT_SERVER_STARTED", "SLOT_SERVER_STOPPED"):
+                                print(f"{time.strftime('%H:%M:%S')} AUDIT {typ} {json.dumps(payload, ensure_ascii=False)[:160]}", flush=True)
+                if g:
+                    vram_max, temp_max = max(vram_max, g["used_mib"]), max(temp_max, g["temp_c"])
+                ram_min = ram if ram_min is None else (min(ram_min, ram) if ram is not None else ram_min)
+                max_servers = max(max_servers, len(servers_now))
+                for srv in servers_now:
+                    try:
+                        max_np = max(max_np, int(srv["np"]))
+                    except ValueError:
+                        pass
+                server_seen_s += takt if servers_now else 0
+                samples += 1
+                row = {"t": time.strftime("%H:%M:%S"), "vram_mib": g and g["used_mib"], "temp_c": g and g["temp_c"], "ram_free_gb": ram,
+                       "servers": [s["pid"] for s in servers_now], "np": [s["np"] for s in servers_now], "lease": lab["lease"] and lab["lease"]["owner"],
+                       "handover": lab["handover"], "tasks": task_counts(project)}
+                sink.write(json.dumps(row, ensure_ascii=False) + chr(10))
+                sink.flush()
+                time.sleep(takt)
+    except KeyboardInterrupt:
+        pass
+    minutes = (time.time() - start) / 60
+    tasks_end = task_counts(project)
+    verdict = []
+
+    def check(ok, text):
+        verdict.append((ok, text))
+
+    check(counts.get("SLOT_POLL_FAILED", 0) == 0, f"kein SLOT_POLL_FAILED ({counts.get('SLOT_POLL_FAILED', 0)})")
+    check(counts.get("SLOT_SERVER_GESPERRT", 0) == 0, f"Server nie gesperrt ({counts.get('SLOT_SERVER_GESPERRT', 0)})")
+    check(counts.get("SLOT_SERVER_GARBAGE", 0) == 0, f"keine Ausgabe-Muellmeldung ({counts.get('SLOT_SERVER_GARBAGE', 0)})")
+    check(counts.get("SLOT_GPU_LEASE_LOST", 0) == 0, f"keine verlorene Lease ({counts.get('SLOT_GPU_LEASE_LOST', 0)})")
+    check(counts.get("SLOT_SERVER_EXITED", 0) == 0, f"kein unerwarteter Serverabsturz ({counts.get('SLOT_SERVER_EXITED', 0)})")
+    check(max_servers <= 1, f"nie mehr als ein llama-server gleichzeitig ({max_servers})")
+    check(vram_max <= 11776, f"VRAM-Spitze unter 11,5 GiB ({vram_max} MiB)")
+    check(temp_max < 85, f"Temperatur unter 85 Grad ({temp_max})")
+    check(ram_min is None or ram_min >= 2.0, f"freier RAM nie unter 2 GB ({ram_min})")
+    check(counts.get("RESOURCE_DENIED", 0) == 0, f"keine abgelehnte Reservierung ({counts.get('RESOURCE_DENIED', 0)})")
+    check(not failed_classes, f"keine fehlgeschlagenen Jobs ({failed_classes or 'keine'})")
+    check(counts.get("JOB_CREATED", 0) > 0, f"es gab Aufgaben der Agenten ({counts.get('JOB_CREATED', 0)} Jobs)")
+    print(f"--- Bericht der Beobachtung ({minutes:.0f} min, {samples} Messungen) ---")
+    print(f"Server sichtbar: {server_seen_s / 60:.0f} min, groesstes -np: {max_np}, Aufgaben vorher {tasks_start} nachher {tasks_end}")
+    print("Ereignisse:", {k: v for k, v in sorted(counts.items()) if k.startswith(("SLOT_", "RESOURCE_", "JOB_FAILED", "JOB_CREATED", "JOB_PARKED"))})
+    for ok, text in verdict:
+        print(("  bestanden   " if ok else "  NICHT BESTANDEN ") + text)
+    bad = [t for ok, t in verdict if not ok]
+    print("Ergebnis:", "bestanden" if not bad else f"{len(bad)} Punkt(e) zu pruefen")
+    print("Messreihe:", out_path)
+    return 1 if bad else 0
+
+
 def cmd_beobachten(project, takt):
     path = audit_path(project)
     pos = path.stat().st_size if path.exists() else 0
@@ -186,9 +293,10 @@ def cmd_beobachten(project, takt):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("modus", choices=("vor", "beobachten", "schritte"))
+    ap.add_argument("modus", choices=("vor", "beobachten", "schritte", "stunde"))
     ap.add_argument("--project", default=None)
     ap.add_argument("--sekunden", type=float, default=3.0)
+    ap.add_argument("--minuten", type=float, default=60.0)
     args = ap.parse_args(argv)
     try:
         sys.stdout.reconfigure(line_buffering=True)
@@ -200,6 +308,8 @@ def main(argv=None):
         return 0
     if args.modus == "vor":
         return cmd_vor(project)
+    if args.modus == "stunde":
+        return cmd_stunde(project, args.minuten)
     return cmd_beobachten(project, args.sekunden)
 
 
