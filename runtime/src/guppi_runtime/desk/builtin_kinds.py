@@ -35,7 +35,7 @@ def _task_read(hub, oid):
 
 
 def _task_list(hub, payload):
-    return [desk_objects.task_object(m) for m in hub.missions()]
+    return [desk_objects.task_object(m) for m in hub.missions() if not m.get('antrag')]    # Stufe 6 (S6-E3): Anträge sind keine Aufgaben
 
 
 # ---- candidate

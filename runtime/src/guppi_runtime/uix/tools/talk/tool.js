@@ -106,10 +106,12 @@
         else if(e.mode === 'cloud'){ const c = [...this.picker.options].find(o=>o.value.startsWith('cloud:')); if(c) this.picker.value = c.value; }
         this.ampelZeigen();
       });
-      this.gruen = d().button('Grüne zuerst', ()=>this.gruenZeigen());
-      const send = d().button('Senden', ()=>this.submit(), 'p'), leer = d().button('Leeren', ()=>root.sedraTalkVerlauf.leeren(this)); leer.title = 'Gespräch leeren (auch auf dem Server)';
-      bar.append(this.input, this.picker, this.ampel, this.gruen, send, leer);
-      el.replaceChildren(this.grip(el), this.log, bar);
+      // Stufe 6 (S6-E2): kein Knopf „Grüne zuerst“ mehr – die Auswahl sortiert selbst; „Leeren“ fragt im Knopf nach (B1)
+      const send = d().button('Senden', ()=>this.submit(), 'p');
+      bar.append(this.input, this.picker, this.ampel, send, d().el('span', 't-talk-trenn'), root.sedraTalkVerlauf.leerKnopf(this));
+      // hat die Shell einen eigenen Griff für die Höhe (Cockpit, rahmen.js), zeichnet das Gespräch keinen zweiten
+      const ohne = !!(ctx.shell && ctx.shell.gespraechGriff); el.classList.toggle('t-talk-ohne-griff', ohne);
+      el.replaceChildren(...(ohne ? [] : [this.grip(el)]), this.log, bar);
       this.loadCloud();
 
       ctx.bus.on('talk.context', e=>{ this.object = e.object || null; });
@@ -125,7 +127,7 @@
       setTimeout(()=>this.input.focus(), 50);
     },
 
-    unmount(){ this.el.replaceChildren(); this.el.classList.remove('t-talk'); },
+    unmount(){ this.el.replaceChildren(); this.el.classList.remove('t-talk', 't-talk-ohne-griff'); },
 
     // Eingabe absenden: mit gewähltem Cloud-Modell in die Cloud, sonst wie bisher zu SEDRA
     submit(){
@@ -189,19 +191,17 @@
           }
           this.picker.value = value;
         }
+        this.gepruefteZuerst();
         this.ampelZeigen();
       }catch(_err){ /* ohne Cloud gibt es nur SEDRA lokal */ }
     },
 
-    // Schalter „Grüne zuerst“: oben in der Auswahl eine Gruppe mit allen grünen Modellen (gleiche Werte, also gleiche Wahl)
-    gruenZeigen(){
-      this.gruenZuerst = !this.gruenZuerst;
-      this.gruen.textContent = this.gruenZuerst ? 'Grüne: an' : 'Grüne zuerst';
+    // S6-E2: oben in der Auswahl immer die Gruppe „Geprüft schnell ✓“ (grüne Ampel; gleiche Werte, also gleiche Wahl), darunter die übrigen
+    gepruefteZuerst(){
       this.picker.querySelectorAll('optgroup[data-kandidaten]').forEach(g=>g.remove());
-      if(!this.gruenZuerst) return;
       const gruen = [...this.picker.options].filter(o=>o.dataset.ampel === 'gruen');
-      if(!gruen.length){ this.say('Noch kein grünes Modell: erst eins benutzen oder im KI Labor testen.', 'note'); return; }
-      const group = d().el('optgroup'); group.label = 'Grüne Kandidaten'; group.dataset.kandidaten = '1';
+      if(!gruen.length) return;
+      const group = d().el('optgroup'); group.label = 'Geprüft schnell ✓'; group.dataset.kandidaten = '1';
       gruen.forEach(o=>{ const c = d().el('option', null, o.textContent); c.value = o.value; c.dataset.ampel = 'gruen'; group.append(c); });
       this.picker.insertBefore(group, this.picker.children[1] || null);
     },

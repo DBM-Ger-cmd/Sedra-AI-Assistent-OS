@@ -72,7 +72,7 @@
       knopf.setAttribute('aria-label', knopf.title); knopf.setAttribute('aria-expanded', aus ? 'false' : 'true');
     };
     knopf.onclick = ()=>baumUmschalten();
-    host.append(knopf);
+    (shell.el.baumKopf || host).append(knopf);
     function baumUmschalten(){
       const aus = shell.tree.ausblenden();
       zeigeBaum(aus);

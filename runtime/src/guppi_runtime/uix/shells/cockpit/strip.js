@@ -8,6 +8,7 @@
 
   function makeStrip(host, shell){
     const cells = [];
+    let leiste = null;
 
     function build(){
       host.replaceChildren();
@@ -25,7 +26,12 @@
       const hilfe = d().el('button', 'ck-hilfe', '?'); hilfe.type = 'button';
       hilfe.title = 'Tastenkürzel (?)'; hilfe.setAttribute('aria-label', 'Tastenkürzel anzeigen');
       hilfe.onclick = ()=>{ if(shell.rahmen) shell.rahmen.kuerzel(); };
-      host.append(hilfe);
+      // Stufe 6 (S6-E1): Rekorder und Umschalter stehen rechts in der Leiste, nicht schwebend über dem Werkstück
+      const platz = d().el('div', 'ck-sx-platz');
+      host.append(platz, hilfe);
+      if(root.sedraWechsel && root.sedraWechsel.inLeiste) root.sedraWechsel.inLeiste(platz);
+      // Stufe 6 (§2.1): passt nicht alles hinein, wandern ruhige Zellen in „+n ▾“ – nichts wird mehr abgeschnitten
+      leiste = root.sedraLeiste ? root.sedraLeiste.makeLeiste(host, ()=>cells.map(c=>({el: c.cell, id: c.manifest.id, order: c.manifest.order})), 'ck-gauge') : null;
     }
 
     async function refresh(){
@@ -41,6 +47,7 @@
         try{ c.mod.update(reading, null); }
         catch(err){ shell.onProblem('Instrument ' + c.manifest.id, err); }
       });
+      if(leiste) leiste.ordnen();                    // die Werte sind neu, die Breiten auch
     }
 
     return {build, refresh, cells};

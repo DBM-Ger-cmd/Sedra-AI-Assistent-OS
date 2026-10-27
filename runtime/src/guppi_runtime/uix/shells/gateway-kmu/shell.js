@@ -64,8 +64,11 @@
       this.body.addEventListener('scroll', ()=>{
         const y = this.body.scrollTop, kompakt = kopf.classList.contains('sh-gateway-kmu-kompakt');
         if(!kompakt && y > 72) kopf.classList.add('sh-gateway-kmu-kompakt');
-        else if(kompakt && y < 12) kopf.classList.remove('sh-gateway-kmu-kompakt');
+        else if(kompakt && y < 12 && !this.kompaktPflicht()) kopf.classList.remove('sh-gateway-kmu-kompakt');
       }, {passive: true});
+      // Stufe 6 (§2.6, D2): bei niedrigem Fenster oder offenem Vorgang bleibt der Kopf kompakt – der Arbeitsbereich hat Vorrang
+      this.kopf = kopf;
+      root.addEventListener('resize', ()=>this.kopfAnpassen());
 
       const talk = ctx.tools.all().find(t=>t.id === 'talk');
       const gespraech = d().el('footer', 'sh-gateway-kmu-talk');
@@ -93,6 +96,10 @@
               reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
     },
 
+    // der große Kopf ist die Visitenkarte beim Start; bei einem Fenster unter 820 px Höhe oder einem offenen Vorgang ist er kompakt
+    kompaktPflicht(){ return root.innerHeight < 820 || !!(this.current && this.current.type === 'gateway' && this.current.id && this.current.id !== 'alle'); },
+    kopfAnpassen(){ if(this.kopf && this.kompaktPflicht()) this.kopf.classList.add('sh-gateway-kmu-kompakt'); else if(this.kopf && this.body && this.body.scrollTop < 12) this.kopf.classList.remove('sh-gateway-kmu-kompakt'); },
+
     open(object){
       if(!object) return;
       const S = root.sedraStand, key = S.schluessel(object);
@@ -104,7 +111,7 @@
       (this.mounted || []).forEach(s=>root.sedraLifecycle.unmountTool(s, this.ctx.onProblem));
       this.mounted = [];
       this.werkstueck.replaceChildren();
-      this.current = object;
+      this.current = object; this.kopfAnpassen();
       if(this.melder) this.melder.offen([object], key);       // der Arbeitsstand behält die übrigen Objekte
       if(!tools.length){ this.werkstueck.append(d().empty('Kein Werkzeug für „' + object.type + '“.')); return; }
       this.mounted = tools.map(manifest=>{

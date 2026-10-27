@@ -2,6 +2,16 @@
 
 Jeder Build hat eine fortlaufende Nummer in `BUILD.txt` und einen Eintrag hier; das Paket entsteht mit `runtime/benchmarks/make_build.py` (Prüfsummen, Zip, Patch gegen den Vorgänger). Ältere Versionsnotizen (v1.2–v1.20): `docs/historie/`.
 
+## UIX Stufe 6 – 2026-10-27 (Rahmen, Gespräch, Stimmigkeit, kleine Bildschirme; Spec SPEC_UIX_STUFE6_RAHMEN_v1, S6-E1 bis E5; nicht abgenommen)
+- **Leiste ordnet sich** (`ui/leiste.js`, Cockpit, Rahmen, Minimal): passt nicht alles hinein, wandern ruhige Zellen (höchstes `order` zuerst) in „+n ▾“; ein Klick zeigt dieselben, lebendigen Zellen darunter; warn/bad bleibt immer sichtbar; unter 1200 px ohne dritte Zeile. Kein Wert wird mehr abgeschnitten.
+- **Prüfwerkzeuge nur im Prüfbetrieb** (S6-E4): Manifestfeld `zweck: pruefung`, Schalter `entwicklung` in `local_config/switches.yaml`; `rahmen-probe` erscheint ohne Schalter nicht mehr (Manifest `pruefung` nennt es).
+- **Nichts schwebt mehr über dem Inhalt** (S6-E1): Rekorder und Umschalter stehen in Leiste bzw. Kopfleiste (Cockpit, Rahmen, Minimal, paperclip; `sedraWechsel.inLeiste`); ohne Leiste klein (nur das Zeichen, die Aufnahmezeit bleibt sichtbar).
+- **Gespräch:** „Leeren“ fragt im Knopf nach („Wirklich leeren?“, 4 s, Esc bricht ab) und steht abgesetzt von „Senden“; kein Knopf „Grüne zuerst“ mehr – die Auswahl zeigt oben immer „Geprüft schnell ✓“ (S6-E2). Im Cockpit ein Griff für die Höhe (nicht zwei).
+- **Eine Zahl „offen“** (S6-E3): `/api/missions` trägt `offen` und `antrag` je Mission (das Objekt `task` bleibt unverändert); Freigabe-Anträge sind keine Aufgaben (nur Posteingang). Baum, Werkzeug Aufgaben, Leiste und Arbeitsplatz zählen gleich.
+- **Cockpit-Baum:** eigene Kopfzeile mit dem Knopf zum Ausblenden (überdeckt nichts mehr), „Projekt“ mit dem Namen als Notiz.
+- **Kleine Bildschirme** (S6-E5): Nachweis-Spalte höchstens 34 %, unter 1100 px Werkstückbreite als Reiter (ein Treffer schaltet auf die Fundstelle), leer eingeklappt (34 px, Griff); Rahmen ohne Nachweise ohne leere Spalte; KI Gateway für KMU mit kompaktem Kopf unter 820 px Höhe oder mit offenem Vorgang.
+- Tests: +`test_uix_stufe6` (8, davon 4 im Browser über alle Shells), Spec Gespräch (3).
+
 ## UIX Stufe 5 – 2026-10-27 (Cockpit-Baum und Wissensbasis; Specs SPEC_COCKPIT_BAUM_v1, SPEC_SHELL_WISSEN_v1; nicht abgenommen)
 - **Cockpit-Baum** (`shells/cockpit/tree.js`): Wissen in der Bibliothek mit Zustand, „Wissens-Shell öffnen“; „Gespräch unten“ entfällt (T1), Untergruppe Sprache (T2); jede Gruppe klappt, gemerkt in `sedra.cockpit.baum` (nur Namen), zugeklappt „⚠ n wartet“; Vorgabe offen: GateWay, Vorhaben, Aufgaben (T4); „… n weitere“ statt stillem Abschneiden; „Aufgabe ohne Titel“ statt Missions-ID; Tastatur als Baum (roving tabindex, Fokus bleibt nach dem Neuzeichnen).
 - **Palette** (`palette.js`): Baumzeilen, „Zuletzt“ (5, nur im Speicher der Seite), „Im Wissen suchen: …“ (mit „?“ vorn zuerst; die Frage geht nur ins Memo des Werkzeugs), Ort „Wissensbasis (Oberfläche)“.

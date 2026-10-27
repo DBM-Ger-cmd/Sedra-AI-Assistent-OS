@@ -57,7 +57,9 @@
         host.classList.add('fr'); host.replaceChildren();
         this.shellApi = {open: o=>this.open(o), notify: (t, tone)=>this.notify(t, tone), decide: (i, w)=>this.decide(i, w),
                          theme: n=>root.sedraBoot && root.sedraBoot.setTheme(n), reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload(),
-                         wissen: L.gespraech.wissen};             // SPEC_SHELL_WISSEN_v1 §4.6: das Gespräch fragt zuerst den Wissensspeicher
+                         wissen: L.gespraech.wissen,
+                         // Stufe 6 (S6-E5): ein Nachweis sagt, ob er gerade nichts zeigt – sind alle leer, klappt die Spalte ein
+                         nachweisLeer: (id, leer)=>{ if(!this.nachweisLeer) return; leer ? this.nachweisLeer.add(id) : this.nachweisLeer.delete(id); this.spalten(); }};             // SPEC_SHELL_WISSEN_v1 §4.6: das Gespräch fragt zuerst den Wissensspeicher
         this.el = {};
         this.grid(host);
         if(L.hasZone('leiste')) this.buildLeiste();
@@ -77,6 +79,7 @@
         ctx.bus.on('task.changed', ()=>this.buendelLauf());
         ctx.bus.on('model.changed', ()=>this.buendelLauf());
         ctx.bus.on('object.actions', ()=>this.drawVerbs());
+        ctx.bus.on('wissen.auswahl', e=>{ if(e && !e.zweck && this.body && this.body.classList.contains('fr-schmal')) this.zeige('nachweis'); });
         this.melder = root.sedraStand.makeMelder(ctx.api);
         ctx.bus.on('desk.error', e=>this.notify('Die Runtime meldet: ' + e.message, 'warn'));
         document.addEventListener('keydown', e=>{
@@ -140,7 +143,7 @@
         this.ctx.tools.byKind('instrument').forEach(manifest=>{
           const cell = d().el('div', 'fr-gauge'); cell.dataset.tool = manifest.id; zone.append(cell);
           const state = root.sedraLifecycle.mountTool(this.ctx.tools.mod(manifest.id), cell, this.ctx.makeContext(manifest, null, this.shellApi), this.onProblem);
-          this.gauges.push({manifest, state, mod: this.ctx.tools.mod(manifest.id)});
+          this.gauges.push({manifest, state, mod: this.ctx.tools.mod(manifest.id), cell});
         });
         const right = d().el('div', 'fr-leiste-right');
         if(L.suche === 'feld'){
@@ -151,6 +154,10 @@
         if(L.gespraech.art === 'schublade') right.append(d().button('Gespräch', ()=>this.toggleDrawer(), 'fr-drawer-btn'));
         right.append(d().el('small', 'fr-hint', L.suche === 'strg-k' ? 'Strg+K · Enter sendet · Esc schließt' : 'Enter im Gespräch sendet'));
         zone.append(right);
+        this.el.leisteRechts = right;                  // Stufe 6 (§2.3): hier stehen Rekorder und Umschalter
+        if(!L.rand('leiste') && root.sedraWechsel && root.sedraWechsel.inLeiste) root.sedraWechsel.inLeiste(right);
+        // Stufe 6 (§2.1): ruhige Zellen wandern in „+n ▾“, statt abgeschnitten zu werden
+        this.leiste = root.sedraLeiste ? root.sedraLeiste.makeLeiste(zone, ()=>this.gauges.map(g=>({el: g.cell, id: g.manifest.id, order: g.manifest.order})), 'fr-gauge') : null;
       },
 
       async refreshLeiste(){
@@ -158,6 +165,7 @@
         let reading = null, err = null;
         try{ reading = await this.api('/api/strip'); }catch(e){ err = e.message; }
         this.gauges.forEach(g=>{ if(g.mod.update) try{ g.mod.update(reading, err); }catch(e){ this.onProblem('Instrument ' + g.manifest.id, e); } });
+        if(this.leiste) this.leiste.ordnen();
       },
 
       // ---- orte: die Ortskunde als Liste; der aktuelle Ort ist markiert
@@ -187,9 +195,22 @@
         this.verbs = d().el('div', 'fr-verbs'); this.verbs.dataset.verbs = '';
         this.head.append(this.title, this.verbs);
         this.body = d().el('div', 'fr-body fr-mode-' + L.nachweise);
-        if(L.nachweise === 'seitenleiste') this.body.style.gridTemplateColumns = 'minmax(0,1fr) ' + L.nachweisBreite + 'px';
         zone.append(this.head, this.body);
+        // Stufe 6 (S6-E5): unter 1100 px Werkstückbreite werden die Nachweise ein Reiter neben dem Werkstück
+        if(L.nachweise === 'seitenleiste' && typeof ResizeObserver !== 'undefined'){
+          new ResizeObserver(()=>{ const s = this.body.clientWidth < 1100; if(s !== this.body.classList.contains('fr-schmal')){ this.body.classList.toggle('fr-schmal', s); this.spalten(); } }).observe(this.body);
+        }
       },
+
+      // die Spalten der Seitenleiste: breit, eingeklappt (alle Nachweise leer) oder schmal (Reiter)
+      spalten(){
+        const b = this.body;
+        if(L.nachweise !== 'seitenleiste' || !this.nachweisZahl){ if(L.nachweise === 'seitenleiste') b.style.gridTemplateColumns = 'minmax(0,1fr)'; return; }
+        const leer = this.nachweisLeer.size >= this.nachweisZahl && !b.classList.contains('fr-nachweis-auf');
+        b.classList.toggle('fr-nachweis-eingeklappt', leer);
+        b.style.gridTemplateColumns = b.classList.contains('fr-schmal') ? 'minmax(0,1fr)' : leer ? 'minmax(0,1fr) 34px' : 'minmax(0,1fr) clamp(280px, 34%, ' + L.nachweisBreite + 'px)';
+      },
+      zeige(was){ this.body.dataset.zeige = was; (this.seg || []).forEach(b=>b.setAttribute('aria-pressed', b.dataset.zeige === was ? 'true' : 'false')); },
 
       open(object){
         if(!object || !object.type || !object.id) return;
@@ -206,7 +227,7 @@
         this.mounted.forEach(s=>root.sedraLifecycle.unmountTool(s, this.onProblem));
         this.mounted = []; this.body.replaceChildren(); this.title.textContent = this.current.title;
         const tools = this.orderTools(this.ctx.tools.forObject(this.current), this.current);   // N1: zu genau diesem Objekt
-        if(!tools.length){ this.body.append(d().empty('Kein Werkzeug für „' + object.type + '“ – im Werkzeug „Module“ nachsehen.')); this.drawVerbs(); return; }
+        if(!tools.length){ this.nachweisZahl = 0; this.spalten(); this.body.append(d().empty('Kein Werkzeug für „' + object.type + '“ – im Werkzeug „Module“ nachsehen.')); this.drawVerbs(); return; }
         const inhalt = d().el('div', 'fr-col fr-inhalt'), nachweis = d().el('div', 'fr-col fr-nachweis');
         nachweis.dataset.slot = 'nachweis';
         const evidence = tools.filter(t=>t.slot === 'nachweis'), content = tools.filter(t=>t.slot !== 'nachweis');
@@ -235,9 +256,20 @@
           evidence.forEach(m=>{ const col = d().el('div', 'fr-col fr-nachweis'); col.dataset.slot = 'nachweis'; mountIn(m, col); this.body.append(col); });
           this.body.style.gridTemplateColumns = 'repeat(' + (1 + evidence.length) + ', minmax(0,1fr))';
         }else{                                            // seitenleiste: Werkstück links, die Nachweise rechts untereinander
+          this.nachweisLeer = new Set(); this.nachweisZahl = evidence.length;     // vor dem Einhängen: ein Nachweis meldet sich beim ersten Zeichnen
           evidence.forEach(m=>mountIn(m, nachweis));
-          this.body.append(inhalt, nachweis);
+          // Stufe 6 (S6-E5): Reiter für schmale Fenster; ein Griff, wenn alle Nachweise leer sind (eingeklappt)
+          const namen = evidence.map(m=>m.name).join(' · ');
+          const seg = d().el('div', 'fr-seg fr-seg-schmal'); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Werkstück oder Nachweis');
+          this.seg = [['inhalt', this.current.title], ['nachweis', namen]].map(([w, t])=>{ const b = d().button(t, ()=>this.zeige(w), 'fr-seg-item'); b.dataset.zeige = w; seg.append(b); return b; });
+          const griff = d().button(namen + ' ›', ()=>{ this.body.classList.add('fr-nachweis-auf'); this.spalten(); }, 'fr-nachweis-griff');
+          griff.title = namen + ' aufklappen'; nachweis.prepend(griff);
+          this.body.classList.remove('fr-nachweis-auf');
+          this.body.append(seg, inhalt, nachweis);
+          this.zeige('inhalt');
         }
+        if(L.nachweise === 'seitenleiste' && (!evidence.length || this.current.collection)){ this.nachweisZahl = 0; }
+        this.spalten();
         Promise.all(this.mounted.map(s=>s.ready)).then(()=>this.drawVerbs()).catch(()=>this.drawVerbs());
         this.markOrt(this.current);
         this.ctx.bus.emit('talk.context', {object: {type: this.current.type, id: this.current.id, title: this.current.title}});

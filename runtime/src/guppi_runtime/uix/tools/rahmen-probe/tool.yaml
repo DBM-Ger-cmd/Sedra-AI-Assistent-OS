@@ -4,6 +4,7 @@ tool:
   description: "Prüft den abgeschotteten Rahmen (Stufe C): was ein Werkzeug außerhalb der Seite darf und was nicht."
   version: 1.0.0
   kind: instrument
+  zweck: pruefung              # SPEC_UIX_STUFE6 §2.2: nur mit dem Schalter „entwicklung“ (local_config/switches.yaml)
   handles: []
   order: 990
   entry: {js: tool.js, css: tool.css}

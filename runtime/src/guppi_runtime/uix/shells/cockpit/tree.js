@@ -47,7 +47,7 @@
     gateway('Selbst ausprobieren', 'ausprobieren', 'Text prüfen, Übung, Frage');
     gateway('Verlauf', 'verlauf', 'Vorgänge und Schutz heute');
 
-    head('Projekt ' + (project.name || '–'), '', 'Projekt');
+    head('Projekt', project.name || '–', 'Projekt');                    // Stufe 6: der Name als Notiz, nicht doppelt im Kopf
     row('Dateien', {type: 'project', id: project.id || project.name || 'projekt', title: 'Projekt ' + (project.name || '')}, project.path || '');
 
     // Vorhaben und Aufgaben sind zweierlei (Regel 8): das Vorhaben ist der Satz, die Aufgabe ist die Arbeit daraus.
@@ -58,7 +58,8 @@
                                                   v.state === 'wartet auf dich' ? 'warn' : ''));
     if(intents.length > MAX_VORHABEN) mehr(intents.length - MAX_VORHABEN, {type: 'intent', id: 'alle', title: 'Vorhaben'});
 
-    const open = missions.filter(m => (m.status || '') === 'active');
+    // Stufe 6 (S6-E3): „offen“ sagt der Server; ohne das Feld (älterer Server) wie bisher nach dem Status
+    const open = missions.filter(m => m.offen !== undefined ? m.offen : (m.status || '') === 'active');
     head('Aufgaben', open.length ? open.length + ' offen' : '');
     if(!open.length) rows.push({kind: 'note', title: 'Nichts offen. Im Gespräch sagen, was gebaut werden soll.', gruppe});
     open.slice(0, MAX_AUFGABEN).forEach(m=>{

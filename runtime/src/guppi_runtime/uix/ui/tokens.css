@@ -204,3 +204,15 @@ html[data-theme="nacht"], :root:not([data-theme="klar"]){
   --fisch-text:#e6eef5;
   --fisch-muted:#9db3c4;
 }
+
+/* Stufe 6 (SPEC_UIX_STUFE6 §2.1, ui/leiste.js): die Leiste ordnet sich – ruhige Zellen wandern in „+n ▾“, nichts wird abgeschnitten */
+.lst-messen{flex:0 0 auto !important}
+.lst-weg{display:none !important}
+.lst-messen i{display:none !important}
+.lst-mehr{flex:0 0 auto;min-width:64px;display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);align-items:center;justify-content:center;font:inherit;font-weight:600;color:var(--text);cursor:pointer}
+.lst-mehr[hidden]{display:none !important}
+.lst-panel{position:fixed;z-index:9100;display:flex;flex-direction:column;gap:6px;min-width:240px;max-width:320px;padding:8px;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-2);box-shadow:var(--shadow)}
+.lst-panel[hidden]{display:none}
+.lst-panel > *{max-width:none !important;width:100%;box-sizing:border-box}
+.lst-panel i{display:block !important}

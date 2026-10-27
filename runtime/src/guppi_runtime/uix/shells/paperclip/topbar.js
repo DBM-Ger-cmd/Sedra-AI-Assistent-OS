@@ -30,7 +30,10 @@
         else if(e.key === 'Escape'){ close(); input.blur(); }
       };
       input.onfocus = ()=>draw();
-      host.append(back, title, verbs, spacer, search);        // der Weg zum Gespräch ist der Knopf rechts unten – einer reicht
+      // Stufe 6 (S6-E1): Rekorder und Umschalter rechts in der Kopfleiste, nicht schwebend über der Seite
+      const platz = d().el('div', 'pc-sx-platz');
+      host.append(back, title, verbs, spacer, search, platz);        // der Weg zum Gespräch ist der Knopf rechts unten – einer reicht
+      if(root.sedraWechsel && root.sedraWechsel.inLeiste) root.sedraWechsel.inLeiste(platz);
       document.addEventListener('mousedown', e=>{ if(!search.contains(e.target)) close(); });
     }
 

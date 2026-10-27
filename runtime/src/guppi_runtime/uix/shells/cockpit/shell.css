@@ -80,8 +80,8 @@
 /* ---- Baum: Gruppen als Kopfzeile, Zeilen mit Titel und Zustand darunter; die aktive Zeile trägt einen Akzentstreifen */
 .ck-tree{
   min-width:0;
-  overflow:auto;
-  padding:8px 8px 14px;
+  display:flex;flex-direction:column;
+  overflow:hidden;
   background:var(--panel-2);
   border-right:1px solid var(--line);
   font-size:var(--size-small);
@@ -293,20 +293,28 @@
 .ck-tree [role=treeitem]:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .ck-griff{position:absolute;left:0;right:0;bottom:calc(var(--talk-h) - 3px);height:6px;cursor:ns-resize;z-index:5}
 .ck-griff:hover,.ck-griff:focus-visible{background:color-mix(in srgb,var(--accent) 35%,transparent);outline:none}
-.ck-baum-knopf{position:absolute;z-index:6;top:calc(var(--strip-h) + 6px);left:calc(var(--tree-w) - 22px);width:18px;height:22px;padding:0;
+.ck-baum-knopf{width:22px;height:20px;padding:0;margin-left:auto;
   border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--muted);cursor:pointer;font-size:var(--size-small);line-height:1}
 .ck-baum-knopf:hover{color:var(--text)}
 .ck.ck-ohne-baum .ck-middle{grid-template-columns:24px minmax(0,1fr)}
 .ck.ck-ohne-baum .ck-middle.has-detail{grid-template-columns:24px minmax(0,1fr) 320px}
 .ck.ck-ohne-baum .ck-tree{overflow:hidden;padding:0}
-.ck.ck-ohne-baum .ck-tree > *{display:none}
-.ck.ck-ohne-baum .ck-baum-knopf{left:3px}
-:root[data-menu="rechts"] .ck-baum-knopf{left:auto;right:calc(var(--tree-w) - 22px)}
+.ck.ck-ohne-baum .ck-tree-liste{display:none}
+.ck.ck-ohne-baum .ck-tree-kopf{padding:4px 1px}
+:root[data-menu="rechts"] .ck-baum-knopf{margin-left:0;margin-right:auto}
 :root[data-menu="rechts"] .ck.ck-ohne-baum .ck-middle{grid-template-columns:minmax(0,1fr) 24px}
 :root[data-menu="rechts"] .ck.ck-ohne-baum .ck-middle.has-detail{grid-template-columns:minmax(0,1fr) 24px 320px}
-:root[data-menu="rechts"] .ck.ck-ohne-baum .ck-baum-knopf{right:3px}
 .ck-kuerzel .pal-box{gap:var(--gap-2)}
 .ck-kuerzel td:first-child{white-space:nowrap;font-weight:600;padding-right:var(--gap-3)}
 .ck-hilfe{margin-left:auto;align-self:center;flex:0 0 auto;min-width:0;width:28px;height:28px;padding:0;border:1px dashed var(--line);border-radius:50%;
   background:transparent;color:var(--muted);cursor:pointer;font-weight:600}
 .ck-hilfe:hover,.ck-hilfe:focus-visible{color:var(--text);border-style:solid}
+
+/* Stufe 6: Kopfzeile des Baums (Knopf zum Ausblenden) rollt nicht mit; die Liste darunter rollt */
+.ck-tree-kopf{flex:0 0 auto;display:flex;align-items:center;padding:6px 8px 0}
+.ck-tree-liste{flex:1 1 auto;min-height:0;overflow:auto;padding:2px 8px 14px}
+/* Stufe 6 (§2.1): unter 1200 px fällt die dritte Zeile einer Zelle weg (sie steht im title); die Leiste rollt nicht mehr */
+@media (max-width:1200px){ .ck-strip .ck-gauge i{display:none} }
+.ck-strip .ck-gauge{flex:0 0 auto}
+.ck-sx-platz{flex:0 0 auto;display:flex;align-items:center;margin-left:auto}
+.ck-sx-platz + .ck-hilfe{margin-left:6px}

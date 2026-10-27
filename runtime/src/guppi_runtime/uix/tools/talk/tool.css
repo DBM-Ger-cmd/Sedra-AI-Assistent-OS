@@ -22,3 +22,7 @@
 .t-talk-ampel.grau{background:var(--muted)}
 .t-talk-ampel.aus{display:none}
 .t-talk-line.t-talk-alt{opacity:.72}   /* der Verlauf vom Server: was vor dem Neuladen gesagt wurde */
+/* Stufe 6: ohne eigenen Griff (die Shell hat einen), „Leeren“ abgesetzt und mit Rückfrage im Knopf */
+.t-talk.t-talk-ohne-griff{grid-template-rows:1fr auto}
+.t-talk-trenn{flex:0 0 1px;align-self:stretch;margin:2px 4px;background:var(--line)}
+.t-talk-leeren.scharf{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad);font-weight:600}

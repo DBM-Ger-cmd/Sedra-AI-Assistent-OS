@@ -44,3 +44,14 @@
 .sx-rekorder-panel .sx-seg-btn.stopp{color:var(--bad)}
 .sx-rek-empfzeile{display:flex;align-items:center;gap:10px}
 .sx-rek-empf{flex:1;accent-color:var(--accent)}
+/* Stufe 6 (S6-E1): in der Leiste – nebeneinander, die Panels öffnen darunter; ohne Leiste schwebend, aber klein (nur das Zeichen) */
+.sx-host.sx-in-leiste{position:static;flex-direction:row;align-items:center;gap:6px;flex:0 0 auto;z-index:auto}
+.sx-host.sx-in-leiste .sx-chip{box-shadow:none;padding:3px 10px 3px 3px;background:var(--panel-2)}
+.sx-host.sx-in-leiste .sx-chip-mark{width:22px;height:22px}
+.sx-host.sx-in-leiste .sx-chip-text{max-width:110px}
+.sx-host.sx-in-leiste .sx-panel{position:fixed;top:calc(var(--strip-h) + 6px);right:14px;z-index:9100}
+.sx-host.sx-klein .sx-chip{padding:4px}
+.sx-host.sx-klein .sx-chip-text{display:none}
+.sx-host.sx-klein .sx-chip:hover .sx-chip-text,.sx-host.sx-klein .sx-chip:focus-visible .sx-chip-text{display:inline}
+@media (max-width:1200px){ .sx-host.sx-in-leiste .sx-chip-text{display:none} .sx-host.sx-in-leiste .sx-chip{padding:3px} }
+.sx-host .sx-chip.laeuft .sx-chip-text{display:inline !important}

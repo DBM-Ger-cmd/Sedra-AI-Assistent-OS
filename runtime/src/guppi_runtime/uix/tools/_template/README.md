@@ -35,3 +35,9 @@ da sein soll, legt das Werkzeug in eines der drei Gedächtnisse – je Werkzeug 
 Eine Spec in `benchmarks/devvm_specs/tool_<id>.py` beschreibt Zielobjekt, Handlungen, Routen und Ereignisse; die reinen Teile
 werden als Node-Tests geprüft, der Browser-Teil über `uix_check`. Ein so gebautes Werkzeug trägt `trust: GUPPI_BUILT` und geht
 durch denselben Install-Gate wie ein fremdes Modul.
+
+## Stufe 6 (SPEC_UIX_STUFE6_RAHMEN_v1)
+- `zweck: pruefung` im Manifest: ein Prüfwerkzeug lädt nur mit dem Schalter `entwicklung` (`local_config/switches.yaml`). Standard `betrieb`.
+- Ein Nachweis (`slot: nachweis`) darf `ctx.shell.nachweisLeer(<id>, true|false)` rufen, wenn er nichts zeigt; sind alle Nachweise leer,
+  klappt eine Rahmen-Shell die Spalte ein. Die Funktion kann fehlen (andere Shells) – vorher prüfen.
+- Ein Instrument wird nicht abgeschnitten: die Leiste verschiebt ruhige Zellen in „+n ▾“ (`ui/leiste.js`). Ton `warn`/`bad` bleibt sichtbar.

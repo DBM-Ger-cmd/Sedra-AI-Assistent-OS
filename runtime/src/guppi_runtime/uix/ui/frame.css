@@ -79,3 +79,19 @@
    höchsten Zelle (ein eingebetteter Rahmen, 150 px) – die Werkbank verlor ein Fünftel der Höhe. Wie im Cockpit: genau --strip-h. */
 .fr-zone-leiste{height:var(--strip-h);box-sizing:border-box}
 .fr-zone-leiste > *{max-height:100%;overflow:hidden}
+@media (max-width:1200px){ .fr-zone-leiste .fr-gauge i{display:none} .fr-zone-leiste .fr-hint{display:none} }
+.fr-zone-leiste .fr-gauge{flex:0 0 auto;min-width:0;max-width:260px;overflow:hidden}
+/* Stufe 6 (S6-E5): Nachweis-Spalte – höchstens 34 % (frame.js setzt die Spalten), schmal als Reiter, leer eingeklappt */
+.fr-seg-schmal{display:none}
+.fr-body.fr-schmal{grid-template-rows:auto minmax(0,1fr)}
+.fr-body.fr-schmal .fr-seg-schmal{display:flex;gap:4px;padding:6px 10px;border-bottom:1px solid var(--line)}
+.fr-body.fr-schmal[data-zeige="inhalt"] > .fr-nachweis{display:none}
+.fr-body.fr-schmal[data-zeige="nachweis"] > .fr-inhalt{display:none}
+.fr-body.fr-schmal .fr-nachweis{border-left:0}
+.fr-seg-item[aria-pressed="true"]{border-color:var(--accent);color:var(--heading);font-weight:600}
+.fr-nachweis-griff{display:none}
+.fr-body.fr-nachweis-eingeklappt:not(.fr-schmal) > .fr-nachweis > .fr-tool{display:none}
+.fr-body.fr-nachweis-eingeklappt:not(.fr-schmal) .fr-nachweis-griff{display:block;writing-mode:vertical-rl;width:100%;height:auto;min-height:120px;
+  margin:8px 0;padding:8px 0;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:var(--size-small)}
+.fr-body.fr-nachweis-eingeklappt .fr-nachweis-griff:hover{color:var(--text)}
+.fr-zone-leiste .fr-gauge{padding:2px 10px;line-height:1.25;justify-content:center}

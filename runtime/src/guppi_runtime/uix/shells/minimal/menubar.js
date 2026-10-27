@@ -23,6 +23,7 @@
 
   function makeMenubar(host, shell){
     const cells = [];
+    let leiste = null;
     let openMenu = null;
 
     function closeMenu(){
@@ -176,8 +177,12 @@
         host.append(cell);
         const mod = shell.ctx.tools.mod(manifest.id);
         const state = root.sedraLifecycle.mountTool(mod, cell, shell.ctx.makeContext(manifest, null, shell.shellApi), shell.onProblem);
-        cells.push({manifest, mod, state});
+        cells.push({manifest, mod, state, cell});
       });
+      // Stufe 6: Rekorder und Umschalter rechts in der Menüleiste; ruhige Instrumente wandern in „+n ▾“ (ui/leiste.js)
+      const platz = d().el('div', 'sh-min-sx-platz'); host.append(platz);
+      if(root.sedraWechsel && root.sedraWechsel.inLeiste) root.sedraWechsel.inLeiste(platz);
+      leiste = root.sedraLeiste ? root.sedraLeiste.makeLeiste(host, ()=>cells.map(c=>({el: c.cell, id: c.manifest.id, order: c.manifest.order})), 'sh-min-gauge') : null;
     }
 
     async function refresh(){
@@ -193,6 +198,7 @@
         try{ c.mod.update(reading, null); }
         catch(err){ shell.onProblem('Instrument ' + c.manifest.id, err); }
       });
+      if(leiste) leiste.ordnen();
     }
 
     return {build, refresh, cells, openPlaces, closeMenu, popup, goOverview, isOpen: ()=>!!openMenu};

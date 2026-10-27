@@ -165,3 +165,8 @@
 .sh-min-edit-icon:hover, .sh-min-edit-icon:focus{ border-color: var(--accent); outline: none; }
 .sh-min-edit-icon.on{ background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 .sh-min-edit-said{ color: var(--warn); min-height: 1em; }
+/* Stufe 6 (S6-E1): Rekorder und Umschalter in der Menüleiste; die Instrumente ordnen sich (ui/leiste.js) */
+.sh-min-sx-platz{flex:0 0 auto;display:flex;align-items:center;margin-left:6px}
+.sh-min-sx-platz .sx-chip{padding:1px 8px 1px 1px}
+.sh-min-sx-platz .sx-chip-mark{width:18px;height:18px;font-size:11px}
+.sh-min-bar-top .lst-mehr{flex-direction:row;align-items:center;gap:6px;min-width:0;padding:0 8px;height:100%;border-radius:0;border-width:0 0 0 1px;background:transparent}

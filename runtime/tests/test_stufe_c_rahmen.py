@@ -23,7 +23,7 @@ class Rahmen(unittest.TestCase):
     def test_der_rahmen_darf_nur_was_das_manifest_nennt(self):
         sync_playwright = browser_or_skip()
         from uix_check import start_server, wait_until_started
-        url, stop = start_server(lambda *a: None, shell='cockpit')
+        url, stop = start_server(lambda *a: None, shell='cockpit', switches={'entwicklung': True})   # Stufe 6: Prüfwerkzeuge nur mit Schalter
         try:
             with sync_playwright() as pw:
                 browser = pw.chromium.launch()

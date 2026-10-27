@@ -76,6 +76,25 @@
     tool.say('Gespräch geleert.', 'note');
   }
 
+  // „Leeren“ mit Rückfrage im Knopf (SPEC_UIX_STUFE6 §2.4, B1): der erste Klick fragt „Wirklich leeren?“, der zweite binnen 4 s leert;
+  // Esc, Fokus weg oder Warten bricht ab. Kein confirm(). `zeit` ist für die Prüfung austauschbar.
+  function leerKnopf(tool, zeit){
+    const uhr = zeit || {setTimeout: (f, ms)=>setTimeout(f, ms), clearTimeout: id=>clearTimeout(id)};
+    const b = root.sedraDom.button('Leeren', null, 't-talk-leeren');
+    b.title = 'Gespräch leeren – auch auf dem Server; fragt einmal nach';
+    let scharf = null;
+    const ab = ()=>{ if(scharf !== null) uhr.clearTimeout(scharf); scharf = null; b.textContent = 'Leeren'; b.classList.remove('scharf'); };
+    b.onclick = async e=>{
+      if(e && e.stopPropagation) e.stopPropagation();
+      if(scharf === null){ b.textContent = 'Wirklich leeren?'; b.classList.add('scharf'); scharf = uhr.setTimeout(ab, 4000); return; }
+      ab();
+      try{ await leeren(tool); }catch(err){ tool.say('Leeren fehlgeschlagen: ' + (err && err.message || err), 'warn'); }
+    };
+    b.onkeydown = e=>{ if(e.key === 'Escape') ab(); };
+    b.onblur = ab;
+    return b;
+  }
+
   // „Ins Gespräch“ aus dem Wissen (SPEC_WERKZEUG_WISSEN_v2 §3.2): die Kennung und die Stelle stehen danach im Eingabefeld
   function fundstelleAnhaengen(tool, e){
     if(!e || e.zweck !== 'gespraech' || !tool.input) return;
@@ -84,6 +103,6 @@
     try{ tool.input.focus(); }catch(_e){}
   }
 
-  root.sedraTalkVerlauf = {fundstelleAnhaengen, verlaufZeilen, alsHistory, fuerCloud, antwortKoerper, antwortMerken, laden, leeren, MAX_HISTORY};
+  root.sedraTalkVerlauf = {leerKnopf, fundstelleAnhaengen, verlaufZeilen, alsHistory, fuerCloud, antwortKoerper, antwortMerken, laden, leeren, MAX_HISTORY};
   if(typeof module !== 'undefined' && module.exports) module.exports = {verlaufZeilen, alsHistory, fuerCloud, antwortKoerper, MAX_HISTORY};
 })();

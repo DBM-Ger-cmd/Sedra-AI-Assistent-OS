@@ -37,6 +37,7 @@ SLOTS_TOOL = ('inhalt', 'nachweis')
 # Vertrag 1.1 (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §3): wie viele Instanzen ein Werkzeug verträgt und welches Gedächtnis es nutzen darf.
 INSTANZEN = ('eine', 'viele')
 GEDAECHTNIS = ('sitzung', 'ablage')
+ZWECK = ('betrieb', 'pruefung')          # SPEC_UIX_STUFE6 §2.2: ein Prüfwerkzeug lädt nur mit dem Schalter `entwicklung`
 # Routen, die der Vertrag selbst mitbringt – kein Manifest muss sie nennen: jede Shell meldet und übernimmt den Arbeitsstand (§10.2),
 # jedes Werkzeug mit `gedaechtnis: ablage` liest und schreibt nur seine eigene Ablage (§10.3; der Server trennt nach X-SEDRA-Tool).
 SHELL_VERTRAG_ROUTES = ('GET /api/arbeitsstand', 'POST /api/arbeitsstand')
@@ -53,7 +54,7 @@ ROUTE = re.compile(r'^(GET|POST) (/(api|uix)(/[A-Za-z0-9_.-]+)*(/\*)?)$')
 VERSION = re.compile(r'^\d+\.\d+\.\d+$')
 NEED = re.compile(r'^(>=|<=|>|<|==)?(\d+)(?:\.(\d+))?$')
 
-TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot', 'instanzen', 'gedaechtnis'}
+TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot', 'instanzen', 'gedaechtnis', 'zweck'}
 SHELL_KEYS = {'id', 'name', 'version', 'entry', 'provides', 'layout', 'trust', 'needs', 'api', 'description', 'vorgabe'}
 # Eine Shell aus einer Vorgabe (SPEC_SHELL_AUS_VORGABE_v1): kein Code im Ordner, nur `shell.vorgabe.yaml`; den Bildschirm baut der
 # Rahmen `ui/frame.js`. Was er darf, steht hier – nicht in der Datei des Autors –, denn der Rahmen ist Vertragscode.
@@ -181,11 +182,14 @@ def check_tool(doc, folder: Path, origin='package'):
         gedaechtnis = [gedaechtnis]
     if not isinstance(gedaechtnis, list) or not all(g in GEDAECHTNIS for g in gedaechtnis):
         errors.append('gedaechtnis_invalid'); gedaechtnis = []
+    zweck = t.get('zweck', 'betrieb')
+    if zweck not in ZWECK:
+        errors.append('zweck_invalid')
     if errors:
         return None, errors
     return {'id': t['id'], 'name': t['name'], 'version': t['version'], 'kind': kind, 'handles': handles, 'trust': t['trust'],
             'origin': origin, 'order': order, 'slot': slot, 'description': str(t.get('description') or ''),
-            'own_types': own_types, 'instanzen': instanzen, 'gedaechtnis': list(dict.fromkeys(gedaechtnis)),
+            'own_types': own_types, 'instanzen': instanzen, 'gedaechtnis': list(dict.fromkeys(gedaechtnis)), 'zweck': zweck,
             'events': {'emits': list(events.get('emits') or []), 'listens': list(events.get('listens') or [])},
             'js': js, 'css': css, 'api': routes, 'tests': tests}, []
 
@@ -309,7 +313,9 @@ class Gateway:
         if active is None:
             rejected.append({'kind': 'shell', 'id': cfg['shell'], 'origin': 'config', 'reasons': ['active_shell_not_available']})
         disabled = set(cfg['disabled'])
-        ids = [t for t in tools if t not in disabled]
+        # Stufe 6 (S6-E4): Prüfwerkzeuge nur mit dem Schalter `entwicklung` (Hub setzt `entwicklung`); sonst stehen sie unter `pruefung`
+        pruefung = {t for t in tools if tools[t][1].get('zweck') == 'pruefung'} if not getattr(self, 'entwicklung', False) else set()
+        ids = [t for t in tools if t not in disabled and t not in pruefung]
         ids.sort(key=lambda t: (tools[t][1]['order'], t))
         ids = self.registry.ordered(ids) if cfg['order'] else ids
 
@@ -328,6 +334,7 @@ class Gateway:
                 'shells': sorted(shells),
                 'tools': [public('tools', tools[t][1]) for t in ids],
                 'disabled': sorted(disabled & set(tools)),
+                'pruefung': sorted(pruefung),
                 'rejected': rejected,
                 'config': {'shell': cfg['shell'], 'from_file': cfg['from_file']}}
 

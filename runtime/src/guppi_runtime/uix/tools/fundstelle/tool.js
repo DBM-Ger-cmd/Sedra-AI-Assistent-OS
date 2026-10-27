@@ -69,6 +69,8 @@
 
     draw(){
       if(!this.el) return;
+      // Stufe 6 (S6-E5): ohne Abschnitt sagt die Fundstelle der Shell „leer“ – die Spalte klappt ein, solange alle Nachweise leer sind
+      if(this.ctx.shell && this.ctx.shell.nachweisLeer) this.ctx.shell.nachweisLeer('fundstelle', !this.a && !this.laedt && !this.fehler);
       const box = d().el('div', 's-col');
       box.append(d().el('b', null, 'Fundstelle'));
       if(this.laedt){ box.append(d().el('div', 's-note', 'Lese [' + this.laedt + '] …')); return this.el.replaceChildren(box); }

@@ -135,9 +135,26 @@
 
     const rek = mountRekorder();
     const host = el('div', 'sx-host'); host.append(rek.panel, rek.chip, panel, chip);
-    document.body.append(host);
+    platzieren(host);
     return {chip, panel, open, close, fill};
   }
+
+  // Stufe 6 (SPEC_UIX_STUFE6 §2.3, S6-E1): Rekorder und Umschalter schweben nicht mehr über dem Inhalt. Eine Shell mit Leiste oder
+  // Kopfleiste nennt mit `inLeiste(el)` den Platz; die Panels öffnen dann darunter. Ohne Platz bleiben sie schwebend, aber klein.
+  let leistenPlatz = null, sxHost = null;
+  function platzieren(host){
+    sxHost = host || sxHost;
+    if(!sxHost) return;
+    if(leistenPlatz && leistenPlatz.isConnected){
+      sxHost.classList.add('sx-in-leiste'); sxHost.classList.remove('sx-klein');
+      if(sxHost.parentElement !== leistenPlatz) leistenPlatz.append(sxHost);
+    }else{
+      sxHost.classList.remove('sx-in-leiste'); sxHost.classList.add('sx-klein');
+      if(sxHost.parentElement !== document.body) document.body.append(sxHost);
+    }
+    try{ root.dispatchEvent(new Event('sedra:leiste')); }catch(_e){}      // die Leiste misst neu (ui/leiste.js)
+  }
+  function inLeiste(el){ leistenPlatz = el || null; platzieren(); }
 
   // Die Seite des Menüs: links (Standard) oder rechts. Die Wahl steht am Baum und im Umschalter; sie gilt pro Browser
   // (localStorage, nur eine Bequemlichkeit – ein Fehler dort ändert nichts am Ablauf).
@@ -235,7 +252,7 @@
     const zeigen = ()=>{
       const s = stand, rec = s.status === 'laeuft', pause = s.status === 'pause', lauft = rec || pause;
       const m = Math.floor(s.sekunden || 0), zeit = String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
-      chipText.textContent = lauft ? zeit : 'Rekorder';
+      chipText.textContent = lauft ? zeit : 'Rekorder'; chip.classList.toggle('laeuft', !!lauft);   // die Zeit bleibt sichtbar, auch klein
       punkt.classList.toggle('rec', rec); punkt.classList.toggle('pause', pause);
       kopfPunkt.classList.toggle('rec', rec); kopfPunkt.classList.toggle('pause', pause);
       kopfZeit.textContent = zeit;
@@ -257,6 +274,6 @@
   // „Wissens-Shell öffnen“ (SPEC_COCKPIT_BAUM_v1 §3.1): eine Shell wechselt in eine andere; Arbeitsstand und Ablage gehen mit
   function zurShell(id){ return wechseln({shell: String(id || '')}); }
 
-  root.sedraWechsel = {zurShell, mount, entries, setScale, restoreScale, scales: SCALES, menuWahl, menuSeite, setMenuSeite, MENU_SEITEN, beimWechsel, vorDemWechsel, neuLaden};
+  root.sedraWechsel = {zurShell, inLeiste, mount, entries, setScale, restoreScale, scales: SCALES, menuWahl, menuSeite, setMenuSeite, MENU_SEITEN, beimWechsel, vorDemWechsel, neuLaden};
   if(typeof module !== 'undefined' && module.exports) module.exports = {entries, scales: SCALES};
 })();

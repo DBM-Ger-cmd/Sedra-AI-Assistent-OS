@@ -34,14 +34,18 @@
 
       // ---- the pieces of the shell
       this.dock = root.sedraDock.makeDock(this.el.bench, this);
-      this.tree = root.sedraTree.makeTree(this.el.tree, this);
+      // Stufe 6 (§2.5): der Baum hat oben eine eigene Zeile (der Knopf zum Ausblenden), darunter rollt die Liste
+      this.el.baumKopf = d().el('div', 'ck-tree-kopf'); this.el.baumListe = d().el('div', 'ck-tree-liste');
+      this.el.tree.append(this.el.baumKopf, this.el.baumListe);
+      this.tree = root.sedraTree.makeTree(this.el.baumListe, this);
       this.strip = root.sedraStrip.makeStrip(this.el.strip, this);
       this.palette = root.sedraPalette.makePalette(this);
       root.sedraCockpitRahmen.einrichten(this);     // §3.6–3.8: Gespräch aufziehbar, Baum ausblendbar, Kürzel
       this.shellApi = {open: o=>this.openObject(o), notify: (text, tone)=>this.notify(text, tone),
                        decide: (id, way)=>this.decide(id, way), theme: name=>root.sedraBoot.setTheme(name),
                        // nach einem Shell-Wechsel: neu laden gehört der Shell; vorher Arbeitsstand und Ablage hinaus (Vertrag 1.1 §10.4)
-                       reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
+                       reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload(),
+                       gespraechGriff: true};                     // rahmen.js hat den Griff für die Höhe des Gesprächs (Stufe 6)
       // Vertrag 1.1 (§9.5): Baum, Leiste und Werkbank-Zeile frischen höchstens einmal je 500 ms auf – ein Lauf sendet viele Ereignisse
       const B = root.sedraLifecycle.buendeln;
       this.auffrischen = B(()=>{ this.strip.refresh(); this.dock.refreshVerbs(); this.tree.refresh().catch(e=>this.onProblem('Baum', e)); }, 500);

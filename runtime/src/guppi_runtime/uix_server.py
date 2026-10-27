@@ -80,7 +80,13 @@ from .desk.gateway import Gateway
 
 def _compact_mission(m):
     route = ((m.get('routing') or {}).get('route') or {})
+    # SPEC_UIX_STUFE6 §2.5 (S6-E3): eine Definition von „offen“ für Baum, Aufgaben, Leiste und Arbeitsplatz. Ein Freigabe-Antrag
+    # (desk/gated.py) ist keine Aufgabe – er steht im Posteingang und ist nach der Entscheidung weg.
+    antrag = bool((m.get('context') or {}).get('gated_request'))
+    status, phase = m.get('lifecycle', {}).get('status'), m.get('lifecycle', {}).get('phase')
     return {
+        'antrag': antrag,
+        'offen': status == 'active' and (phase or '') not in ('COMPLETE', 'FAILED') and not antrag,
         'mission_id': m.get('identity', {}).get('mission_id'),
         'created_at': m.get('identity', {}).get('created_at'),
         'mission_class': m.get('identity', {}).get('mission_class'),
@@ -123,6 +129,7 @@ class UIXHub:
         self.library = LibraryDesk(self)                     # Bibliothek window: own capabilities, imported libraries, the Captain's own skills
         # The desk (Build 7): manifests and allowlist for the desktop modules, one decision list, one event stream instead of a poll per window.
         self.gateway = Gateway(self.project_root)
+        self.gateway.entwicklung = self.runtime.switches.apply('entwicklung', 'enabled', False) is True    # Stufe 6 (S6-E4)
         self.events = EventStream()
         self.poller = Poller(self, self.events)
         # Gedächtnis der Oberfläche (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §9.2, §10): Arbeitsstand, Ablage der Werkzeuge, Gesprächsverlauf.
@@ -734,8 +741,8 @@ class UIXHub:
         loaded = next((r['id'] for r in (models.get('recipes') or []) if r.get('loaded')), None)
         return {'shell': self.aktive_shell(), 'entscheidungen': len(decisions),
                 'gateway_gesamt': len(vorgaenge), 'gateway_wartend': sum(1 for v in vorgaenge if v.get('zustand') in ('GEPRUEFT', 'WARTET', 'ENTWURF')),
-                'aufgaben_offen': sum(1 for m in missions if m.get('status') == 'active'),
-                'aufgaben_wartend': sum(1 for m in missions if m.get('status') == 'active' and (m.get('pending_gates') or 0) > 0),
+                'aufgaben_offen': sum(1 for m in missions if m.get('offen')),
+                'aufgaben_wartend': sum(1 for m in missions if m.get('offen') and (m.get('pending_gates') or 0) > 0),
                 'grenzen_bestaetigt': bool(boundaries.get('confirmed')) if boundaries.get('project_id') else None,
                 'modell_geladen': loaded, 'projekte': len(safe(self.projects.list, []))}
 
@@ -1690,8 +1697,8 @@ class UIXHub:
         models = self.models_view()
         hw = self.runtime.hardware.to_dict()
         lease = models.get('lease')
-        running = [m for m in snap['missions'] if m.get('status') == 'active' and (m.get('phase') or '') not in ('COMPLETE', 'FAILED')]
-        waiting = [m for m in snap['missions'] if (m.get('pending_gates') or 0)]
+        running = [m for m in snap['missions'] if m.get('offen', m.get('status') == 'active' and (m.get('phase') or '') not in ('COMPLETE', 'FAILED'))]
+        waiting = [m for m in running if (m.get('pending_gates') or 0)]          # Stufe 6: Anträge warten im Posteingang, nicht hier
         loaded = next((r for r in models['recipes'] if r.get('loaded')), None)
         return {'state': {'value': snap['state'],
                           'hint': f"{len(self.runtime.registry.skills)} Fähigkeiten · Audit " + ('intakt' if self.audit_view()['chain_ok'] else 'prüfen'),
