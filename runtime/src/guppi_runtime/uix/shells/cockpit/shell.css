@@ -316,5 +316,3 @@
 /* Stufe 6 (§2.1): unter 1200 px fällt die dritte Zeile einer Zelle weg (sie steht im title); die Leiste rollt nicht mehr */
 @media (max-width:1200px){ .ck-strip .ck-gauge i{display:none} }
 .ck-strip .ck-gauge{flex:0 0 auto}
-.ck-sx-platz{flex:0 0 auto;display:flex;align-items:center;margin-left:auto}
-.ck-sx-platz + .ck-hilfe{margin-left:6px}

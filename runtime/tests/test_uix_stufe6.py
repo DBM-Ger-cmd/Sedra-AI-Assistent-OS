@@ -1,4 +1,4 @@
-"""SPEC_UIX_STUFE6_RAHMEN_v1 (R1 bis R8): Leiste ordnet sich, Prüfwerkzeuge nur mit Schalter, nichts schwebt über dem Inhalt,
+"""SPEC_UIX_STUFE6_RAHMEN_v1 (R1 bis R8): Leiste ordnet sich, Prüfwerkzeuge nur mit Schalter, Mini-Hub als schwebendes Fenster,
 „Leeren“ mit Rückfrage, eine Zahl „offen“, Nachweis-Spalte schmal als Reiter und leer eingeklappt, KMU-Kopf kompakt."""
 import subprocess
 import sys
@@ -30,6 +30,14 @@ class Rein(unittest.TestCase):
         self.assertEqual(out[1]['mehr'], ['gpu', 'tasks', 'slots'], 'die höchsten order zuerst hinaus, bis es passt')
         self.assertIn('decisions', out[2]['sichtbar'], 'warn bleibt immer sichtbar')
         self.assertEqual(out[3], {'sichtbar': [], 'mehr': []})
+
+    def test_mini_hub_lage_rein(self):
+        out = run_js([UIX / 'ui' / 'wechsel.js'], """
+          const L = box.sedraWechsel.hubLage;
+          console.log(JSON.stringify([L('{"x":5000,"y":-3,"klein":true}', 1400, 860, 220, 120), L('kaputt', 1400, 860), L('{"klein":true}', 1400, 860), L('[1,2]', 1400, 860)]));
+        """)
+        self.assertEqual(out[0], {'x': 1176, 'y': 4, 'klein': True}, 'ins Fenster begrenzt')
+        self.assertIsNone(out[1]); self.assertEqual(out[2], {'x': None, 'y': None, 'klein': True}); self.assertIsNone(out[3])
 
     def test_r4_r5_gespraech(self):
         talk = UIX / 'tools' / 'talk'
@@ -109,26 +117,43 @@ class ImBrowser(unittest.TestCase):
         page.goto(url); self.uix.wait_until_started(page); page.wait_for_timeout(2200)
         return page, fehler
 
-    UEBERLAPP = """(sel)=>{
-      const flaechen = [...document.querySelectorAll(sel)].filter(e=>e.offsetParent !== null).map(e=>e.getBoundingClientRect());
-      const schwebend = [...document.querySelectorAll('.sx-host .sx-chip')].filter(e=>e.offsetParent !== null && !e.closest('.sx-in-leiste')).map(e=>e.getBoundingClientRect());
-      const schnitt = (a, b)=>Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
-      return {schwebend: schwebend.length, im_weg: schwebend.reduce((s, c)=>s + flaechen.reduce((t, f)=>t + schnitt(c, f), 0), 0)};
-    }"""
-
-    def test_r1_r3_leiste_und_knoepfe(self):
-        for shell, flaeche in (('cockpit', '.dk-body, .ck-talk input'), ('wissensbasis', '.fr-body, .t-talk-in input'), ('paperclip', '.pc-page'), ('minimal', '.sh-min-win')):
+    def test_r1_leiste_und_mini_hub_in_jeder_shell(self):
+        """R1 und der Mini-Hub (Captain 27.10.2026, 11:02 – ersetzt S6-E1): Rekorder und Umschalter schweben als eigenes Fenster."""
+        for shell in ('cockpit', 'wissensbasis', 'paperclip', 'minimal', 'gateway-kmu'):
             for breite in (1400, 1024):
                 with self.subTest(shell=shell, breite=breite):
                     page, fehler = self.seite(shell, breite)
-                    lage = page.evaluate(self.UEBERLAPP, flaeche)
-                    self.assertEqual(lage['schwebend'], 0, 'Rekorder und Umschalter stehen in der Leiste')
+                    page.wait_for_selector('.sx-hub .sx-hub-shell', timeout=5000)
+                    hub = page.evaluate("""()=>{const h=document.querySelector('.sx-hub'), r=h.getBoundingClientRect();
+                        return {fix: getComputedStyle(h).position, shells: h.querySelectorAll('.sx-hub-shell').length, an: (h.querySelector('.sx-hub-shell.on')||{}).textContent,
+                                rek: !!h.querySelector('.sx-hub-leiste .sx-chip:not(.sx-umschalter)'), drin: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight}}""")
+                    self.assertEqual(hub['fix'], 'fixed'); self.assertGreaterEqual(hub['shells'], 2); self.assertTrue(hub['an']); self.assertTrue(hub['rek']); self.assertTrue(hub['drin'])
                     self.assertEqual(page.evaluate("()=>document.documentElement.scrollWidth - innerWidth"), 0)
                     if shell == 'cockpit':
                         leiste = page.evaluate("()=>{const h=document.querySelector('.ck-strip'); return [h.scrollWidth - h.clientWidth, [...h.querySelectorAll('.ck-gauge b')].filter(b=>b.offsetParent && b.scrollWidth > b.clientWidth + 1).length]}")
                         self.assertEqual(leiste, [0, 0], 'kein Wert abgeschnitten, kein Überhang')
                         self.assertEqual(page.locator('[data-tool="rahmen-probe"]').count(), 0, 'R2: ohne Schalter kein Prüfwerkzeug')
                     self.assertEqual(fehler, [])
+
+    def test_mini_hub_ziehen_klappen_merken_wechseln(self):
+        page, fehler = self.seite('cockpit', 1400, 860)
+        page.wait_for_selector('.sx-hub .sx-hub-shell', timeout=5000)
+        kopf = page.locator('.sx-hub-kopf').bounding_box()
+        page.mouse.move(kopf['x'] + 60, kopf['y'] + 8); page.mouse.down(); page.mouse.move(300, 120, steps=5); page.mouse.up()
+        oben = page.evaluate("()=>Math.round(document.querySelector('.sx-hub').getBoundingClientRect().top)")
+        self.assertLess(oben, 200, 'gezogen')
+        page.locator('.sx-hub-zu').click()
+        self.assertTrue(page.locator('.sx-hub-klein').is_visible()); self.assertFalse(page.locator('.sx-hub-fenster').is_visible())
+        page.reload(); self.uix.wait_until_started(page); page.wait_for_timeout(1500)
+        self.assertTrue(page.locator('.sx-hub-klein').is_visible(), 'zusammengeklappt bleibt es nach dem Neuladen')
+        self.assertLess(page.evaluate("()=>Math.round(document.querySelector('.sx-hub').getBoundingClientRect().top)"), 200, 'die Lage bleibt')
+        page.locator('.sx-hub-klein').click()
+        page.locator('.sx-hub-kopf').dblclick()
+        self.assertGreater(page.evaluate("()=>document.querySelector('.sx-hub').getBoundingClientRect().top"), 400, 'Doppelklick: zurück nach unten rechts')
+        page.locator('.sx-hub-shell', has_text='Paperclip').click(); page.wait_for_timeout(2500)
+        self.uix.wait_until_started(page)
+        self.assertEqual(page.evaluate("()=>window.sedraBoot.ctx.manifest.shell.id"), 'paperclip', 'ein Klick wechselt die Oberfläche')
+        self.assertEqual(fehler, [])
 
     def test_r1_mehr_zeigt_die_uebrigen(self):
         page, fehler = self.seite('cockpit', 1024)

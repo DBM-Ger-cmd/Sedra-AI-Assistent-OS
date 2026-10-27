@@ -154,8 +154,6 @@
         if(L.gespraech.art === 'schublade') right.append(d().button('Gespräch', ()=>this.toggleDrawer(), 'fr-drawer-btn'));
         right.append(d().el('small', 'fr-hint', L.suche === 'strg-k' ? 'Strg+K · Enter sendet · Esc schließt' : 'Enter im Gespräch sendet'));
         zone.append(right);
-        this.el.leisteRechts = right;                  // Stufe 6 (§2.3): hier stehen Rekorder und Umschalter
-        if(!L.rand('leiste') && root.sedraWechsel && root.sedraWechsel.inLeiste) root.sedraWechsel.inLeiste(right);
         // Stufe 6 (§2.1): ruhige Zellen wandern in „+n ▾“, statt abgeschnitten zu werden
         this.leiste = root.sedraLeiste ? root.sedraLeiste.makeLeiste(zone, ()=>this.gauges.map(g=>({el: g.cell, id: g.manifest.id, order: g.manifest.order})), 'fr-gauge') : null;
       },

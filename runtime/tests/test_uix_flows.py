@@ -246,7 +246,7 @@ class Flows(unittest.TestCase):
     def test_the_switcher_also_sits_in_a_shell_from_vorgabe(self):
         def flow(page, wait):
             self.assertTrue(page.query_selector('.sx-umschalter'))
-            self.assertIn('GateWay Studio', page.evaluate("()=>document.querySelector('.sx-umschalter .sx-chip-text').textContent"))
+            self.assertIn('GateWay Studio', page.evaluate("()=>document.querySelector('.sx-hub-kopf small').textContent"))   # Mini-Hub (27.10.)
             page.click('.sx-umschalter'); page.wait_for_timeout(600)
             self.assertTrue(any('Cockpit' in l for l in page.evaluate("()=>[...document.querySelectorAll('.sx-item b')].map(b=>b.textContent)")))
         self.run_in('gateway-studio', flow)

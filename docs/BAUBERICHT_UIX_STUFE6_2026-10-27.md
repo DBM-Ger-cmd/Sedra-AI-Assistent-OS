@@ -9,7 +9,7 @@ Zeilen im Logbuch, beide behalten). Spec: `SPEC_UIX_STUFE6_RAHMEN_v1` (Entscheid
 |---|---|---|
 | A1 Leiste | ruhige Zellen wandern in „+n ▾“ (höchstes `order` zuerst), Klick zeigt sie lebendig darunter; warn/bad und Zellen mit abgeschottetem Rahmen bleiben; unter 1200 px ohne dritte Zeile; kein Wert mehr abgeschnitten | `ui/leiste.js` (neu), Cockpit `strip.js`, Rahmen `ui/frame.js`, Minimal `menubar.js` |
 | A2 Prüfwerkzeuge | Manifestfeld `zweck: pruefung`, Schalter `entwicklung`; `rahmen-probe` nur damit (Manifest `pruefung` nennt es) | `desk/gateway.py`, `local_switches.py`, `uix_server.py`, Schema |
-| A3 Knöpfe | Rekorder und Umschalter in Leiste/Kopfleiste (Cockpit, Rahmen, Minimal, paperclip, `sedraWechsel.inLeiste`); ohne Leiste klein | `ui/wechsel.js`, `wechsel.css` |
+| A3 Mini-Hub | (Captain 27.10., 11:02, ersetzt S6-E1) Rekorder und Umschalter als eigenes schwebendes Fenster: Oberflächen als Knöpfe, Rekorder, „⋯“; ziehbar, zusammenklappbar, Lage gemerkt; Panels nie größer als der freie Platz | `ui/wechsel.js`, `wechsel.css` |
 | A4 | Zellen der Rahmen-Leiste passen in die Höhe | `ui/frame.css` |
 | B1 Leeren | Rückfrage im Knopf (4 s, Esc), abgesetzt von Senden | `tools/talk/verlauf.js` |
 | B2 Grüne | Knopf weg; Auswahl immer mit „Geprüft schnell ✓“ oben | `tools/talk/tool.js` |
@@ -27,4 +27,3 @@ Bewusst so: das Objekt `task` bleibt, wie es aufgezeichnet ist (Golden-Test `tes
 ## Offen
 - „Datei öffnen“ in der Fundstelle, Projekt je Notiz, „Aus dem GateWay“ unter Eigenes, Maschinenraum „Gedächtnis der Oberfläche“ (aus Stufe 5).
 - Cockpit-Nachweisspalte (Dock) noch ohne „leer eingeklappt“ – der Rahmen hat es; das Dock steht bei 399 Zeilen und braucht dafür eine Teilung.
-- gateway-kmu, fisch, start: keine Kopfleiste – dort bleibt der kleine schwebende Knopf.

@@ -1,4 +1,4 @@
-// UI contract 1.0 – der Umschalter (Ticket B6-G-04, Klaus 15.10.2026): in **jeder** Shell derselbe kleine Knopf unten rechts.
+// UI contract 1.0 – der Umschalter (Ticket B6-G-04, Klaus 15.10.2026), seit 27.10.2026 im Mini-Hub: ein schwebendes Fenster in **jeder** Shell.
 // Er öffnet ein Menü mit der Übersicht der Oberflächen, dem Wechsel in eine andere, der Darstellung (Klar/Nacht) und der
 // Schriftgröße (Normal/Groß). Er gehört zur Seite, nicht zur Shell: der Loader hängt ihn nach dem Start der Shell an, eine Shell
 // kann ihn nicht abschalten, und er spricht über sedraApi.api (die Seite selbst, Token-geprüft) – nur zwei Routen:
@@ -61,6 +61,7 @@
     chip.append(el('span', 'sx-chip-mark', 'S'), el('span', 'sx-chip-text', manifest.shell.name || manifest.shell.id));
 
     const panel = el('div', 'sx-panel sx-umschalter-panel'); panel.setAttribute('role', 'menu'); panel.hidden = true;
+    chip.panelRef = panel;
     const head = el('div', 'sx-head'); head.append(el('b', null, 'SEDRA'), el('small', null, 'Oberfläche: ' + (manifest.shell.name || manifest.shell.id)));
     const list = el('div', 'sx-list');
     const look = el('div', 'sx-look');
@@ -134,27 +135,87 @@
     document.addEventListener('click', e=>{ if(!panel.hidden && !panel.contains(e.target) && e.target !== chip && !chip.contains(e.target)) close(); });
 
     const rek = mountRekorder();
-    const host = el('div', 'sx-host'); host.append(rek.panel, rek.chip, panel, chip);
-    platzieren(host);
-    return {chip, panel, open, close, fill};
+    const hub = miniHub(el, manifest, chip, rek, api);
+    return {chip, panel, open, close, fill, hub};
   }
 
-  // Stufe 6 (SPEC_UIX_STUFE6 §2.3, S6-E1): Rekorder und Umschalter schweben nicht mehr über dem Inhalt. Eine Shell mit Leiste oder
-  // Kopfleiste nennt mit `inLeiste(el)` den Platz; die Panels öffnen dann darunter. Ohne Platz bleiben sie schwebend, aber klein.
-  let leistenPlatz = null, sxHost = null;
-  function platzieren(host){
-    sxHost = host || sxHost;
-    if(!sxHost) return;
-    if(leistenPlatz && leistenPlatz.isConnected){
-      sxHost.classList.add('sx-in-leiste'); sxHost.classList.remove('sx-klein');
-      if(sxHost.parentElement !== leistenPlatz) leistenPlatz.append(sxHost);
-    }else{
-      sxHost.classList.remove('sx-in-leiste'); sxHost.classList.add('sx-klein');
-      if(sxHost.parentElement !== document.body) document.body.append(sxHost);
-    }
-    try{ root.dispatchEvent(new Event('sedra:leiste')); }catch(_e){}      // die Leiste misst neu (ui/leiste.js)
+  // Mini-Hub (Captain 27.10.2026, 11:02 – ersetzt S6-E1): Rekorder und Umschalter sind ein eigenes, schwebendes Fenster in jeder
+  // Shell. Es zeigt die Oberflächen als Knöpfe (ein Klick wechselt), den Rekorder und „⋯“ für Übersicht, Darstellung und Gedächtnis.
+  // Der Captain zieht es an der Titelzeile, wohin er will, und klappt es zu einem runden „S“ zusammen; Lage und Zustand merkt sich
+  // der Browser (`sedra.hub`, nur Anzeige-Komfort). Die Panels öffnen zur freien Seite hin.
+  const HUB_KEY = 'sedra.hub';
+  // rein: die gemerkte Lage auf das Fenster begrenzt; kaputt oder fremd → null (dann unten rechts)
+  function hubLage(roh, breite, hoehe, w, h){
+    let v = null;
+    try{ v = JSON.parse(roh); }catch(_e){ return null; }
+    if(!v || typeof v !== 'object' || Array.isArray(v)) return null;
+    if(typeof v.x !== 'number' || typeof v.y !== 'number' || !isFinite(v.x) || !isFinite(v.y)) return {x: null, y: null, klein: v.klein === true};
+    return {x: Math.max(4, Math.min(v.x, breite - (w || 60) - 4)), y: Math.max(4, Math.min(v.y, hoehe - (h || 40) - 4)), klein: v.klein === true};
   }
-  function inLeiste(el){ leistenPlatz = el || null; platzieren(); }
+  function miniHub(el, manifest, chip, rek, api){
+    const host = el('div', 'sx-host sx-hub');
+    host.setAttribute('role', 'region'); host.setAttribute('aria-label', 'SEDRA Mini-Hub – Oberflächen und Rekorder');
+    const fenster = el('div', 'sx-hub-fenster');
+    const kopf = el('div', 'sx-hub-kopf'); kopf.title = 'Ziehen verschiebt das Fenster · Doppelklick: zurück nach unten rechts';
+    const zu = el('button', 'sx-hub-zu', '–'); zu.type = 'button'; zu.title = 'Zusammenklappen'; zu.setAttribute('aria-label', 'Mini-Hub zusammenklappen');
+    kopf.append(el('span', 'sx-hub-griff', '⠿'), el('b', null, 'SEDRA'), el('small', null, manifest.shell.name || manifest.shell.id), zu);
+    const shells = el('div', 'sx-hub-shells'); shells.setAttribute('role', 'group'); shells.setAttribute('aria-label', 'Oberfläche wechseln');
+    const leiste = el('div', 'sx-hub-leiste');
+    chip.querySelector('.sx-chip-text').textContent = '⋯';
+    chip.title = 'Übersicht, Darstellung, Schrift, Gedächtnis (Alt+S)';
+    leiste.append(rek.chip, chip);
+    fenster.append(kopf, shells, leiste);
+    const klein = el('button', 'sx-hub-klein'); klein.type = 'button'; klein.title = 'SEDRA Mini-Hub öffnen'; klein.setAttribute('aria-label', 'SEDRA Mini-Hub öffnen');
+    klein.append(el('span', 'sx-chip-mark', 'S'), el('span', 'sx-hub-rec'));
+    host.append(rek.panel, chip.panelRef || document.querySelector('.sx-umschalter-panel') || el('span'), fenster, klein);
+    document.body.append(host);
+
+    // die Oberflächen als Knöpfe: die aktuelle markiert, die Übersicht (start) steht im Menü „⋯“
+    api('/api/uix/modules').then(m=>{
+      (m.shells || []).filter(s=>s.id !== 'start').forEach(s=>{
+        const b = el('button', 'sx-hub-shell' + (s.id === manifest.shell.id ? ' on' : ''), s.name || s.id); b.type = 'button';
+        b.title = s.id === manifest.shell.id ? 'Du bist hier' : 'Wechseln zu ' + (s.name || s.id) + (s.description ? ' – ' + s.description : '');
+        if(s.id === manifest.shell.id) b.setAttribute('aria-current', 'true');
+        else b.addEventListener('click', ()=>wechseln({shell: s.id}).catch(err=>{ if(root.sedraBoot && root.sedraBoot.note) root.sedraBoot.note('Mini-Hub', err); }));
+        shells.append(b);
+      });
+    }).catch(()=>{ shells.append(el('small', 'sx-note', 'Oberflächen nicht lesbar')); });
+
+    // Lage, Zustand, Ziehen
+    let lage = null;
+    try{ lage = hubLage(localStorage.getItem(HUB_KEY), root.innerWidth, root.innerHeight, 220, 120); }catch(_e){}
+    const merken = ()=>{ try{ localStorage.setItem(HUB_KEY, JSON.stringify({x: lage ? lage.x : null, y: lage ? lage.y : null, klein: host.classList.contains('klein')})); }catch(_e){} };
+    function setzen(){
+      if(lage && lage.x !== null){ host.style.left = lage.x + 'px'; host.style.top = lage.y + 'px'; host.style.right = 'auto'; host.style.bottom = 'auto'; }
+      else{ host.style.left = host.style.top = ''; host.style.right = ''; host.style.bottom = ''; }
+      const r = (host.classList.contains('klein') ? klein : fenster).getBoundingClientRect();
+      const oben = r.top > root.innerHeight / 2;
+      host.classList.toggle('sx-oben-frei', oben);                              // Panels öffnen zur freien Seite hin
+      host.classList.toggle('sx-links-frei', r.left > root.innerWidth / 2);
+      // ein Panel ist nie höher als der Platz auf seiner Seite – sonst läge sein Anfang außerhalb des Fensters
+      host.style.setProperty('--sx-platz', Math.max(160, Math.round(oben ? r.top - 16 : root.innerHeight - r.bottom - 16)) + 'px');
+    }
+    function klappen(k){ host.classList.toggle('klein', !!k); merken(); setzen(); }
+    if(lage && lage.klein) host.classList.add('klein');
+    setzen();
+    zu.addEventListener('click', ()=>klappen(true));
+    klein.addEventListener('click', ()=>klappen(false));
+    kopf.addEventListener('dblclick', ()=>{ lage = null; merken(); setzen(); });
+    kopf.addEventListener('pointerdown', e=>{
+      if(e.target === zu) return;
+      e.preventDefault();
+      const r = host.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+      const zieh = ev=>{ lage = {x: Math.max(4, Math.min(ev.clientX - dx, root.innerWidth - r.width - 4)), y: Math.max(4, Math.min(ev.clientY - dy, root.innerHeight - r.height - 4))}; setzen(); };
+      const los = ()=>{ document.removeEventListener('pointermove', zieh); document.removeEventListener('pointerup', los); merken(); };
+      document.addEventListener('pointermove', zieh); document.addEventListener('pointerup', los);
+    });
+    root.addEventListener('resize', ()=>{ if(lage && lage.x !== null){ const r = host.getBoundingClientRect(); lage = {x: Math.max(4, Math.min(lage.x, root.innerWidth - r.width - 4)), y: Math.max(4, Math.min(lage.y, root.innerHeight - r.height - 4))}; } setzen(); });
+    [rek.panel, chip.panelRef].forEach(pn=>{ if(pn && typeof MutationObserver !== 'undefined') new MutationObserver(()=>{ if(!pn.hidden) setzen(); }).observe(pn, {attributes: true, attributeFilter: ['hidden']}); });
+    // Aufnahme läuft: auch zusammengeklappt sichtbar (roter Punkt am „S“)
+    const rekMark = rek.chip.querySelector('.sx-chip-mark');
+    if(rekMark && typeof MutationObserver !== 'undefined') new MutationObserver(()=>host.classList.toggle('nimmt-auf', rekMark.classList.contains('rec'))).observe(rekMark, {attributes: true, attributeFilter: ['class']});
+    return {host, klappen, setzen};
+  }
 
   // Die Seite des Menüs: links (Standard) oder rechts. Die Wahl steht am Baum und im Umschalter; sie gilt pro Browser
   // (localStorage, nur eine Bequemlichkeit – ein Fehler dort ändert nichts am Ablauf).
@@ -274,6 +335,6 @@
   // „Wissens-Shell öffnen“ (SPEC_COCKPIT_BAUM_v1 §3.1): eine Shell wechselt in eine andere; Arbeitsstand und Ablage gehen mit
   function zurShell(id){ return wechseln({shell: String(id || '')}); }
 
-  root.sedraWechsel = {zurShell, inLeiste, mount, entries, setScale, restoreScale, scales: SCALES, menuWahl, menuSeite, setMenuSeite, MENU_SEITEN, beimWechsel, vorDemWechsel, neuLaden};
+  root.sedraWechsel = {zurShell, hubLage, mount, entries, setScale, restoreScale, scales: SCALES, menuWahl, menuSeite, setMenuSeite, MENU_SEITEN, beimWechsel, vorDemWechsel, neuLaden};
   if(typeof module !== 'undefined' && module.exports) module.exports = {entries, scales: SCALES};
 })();

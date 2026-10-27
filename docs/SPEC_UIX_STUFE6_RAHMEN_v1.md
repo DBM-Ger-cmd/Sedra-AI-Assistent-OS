@@ -38,6 +38,14 @@ Befund aus einer Durchsicht aller Shells bei 1400×860 und 1024×700 (Chromium, 
 - Shells **ohne Leiste** (gateway-kmu, fisch, start, Minimal mit eigener Menüleiste): Minimal und gateway-kmu haben eine eigene Kopf-/Menüleiste – dort gehen die Knöpfe hinein (`sedraWechsel.inLeiste(host)`). Wo es keine gibt, bleibt der schwebende Knopf, aber **eingeklappt** zu einem runden „S“ (40 px) und mit `inset`, das den Gesprächsbereich freihält.
 - Das Rekorder-Feld zeigt beim Aufnehmen weiter Zeit und roten Punkt – in der Leiste als Zelle mit Ton `bad`.
 
+### 2.3a Mini-Hub (Captain 27.10.2026, 11:02 – ersetzt §2.3)
+- Rekorder und Umschalter sind **ein eigenes, schwebendes Fenster** in jeder Shell (außer der Übersicht): Titelzeile „SEDRA · <Shell>“,
+  darunter jede Oberfläche als Knopf (die aktuelle markiert, ein Klick wechselt), unten Rekorder und „⋯“ (Übersicht, Darstellung, Schrift,
+  Menüseite, Gedächtnis leeren; Alt+S wie bisher).
+- **Ziehen** an der Titelzeile, Doppelklick setzt nach unten rechts zurück; **„–“** klappt zu einem runden „S“ (eine laufende Aufnahme
+  zeigt einen roten Punkt). Lage und Zustand merkt sich der Browser (`sedra.hub`), begrenzt aufs Fenster.
+- Panels öffnen zur freien Seite und sind nie höher als der Platz dort.
+
 ### 2.4 Gespräch (B1, B2) – siehe Entscheidung S6-E2
 - **„Leeren“ mit Rückfrage im Feld:** erster Klick → der Knopf heißt „Wirklich leeren?“ (rot) für 4 s, zweiter Klick leert; Esc oder Warten bricht ab. Kein `confirm()`. Wie „Gedächtnis leeren“ im Umschalter.
 - „Leeren“ rückt nach rechts hinter ein Trennzeichen, weg von „Senden“.
@@ -56,7 +64,7 @@ Befund aus einer Durchsicht aller Shells bei 1400×860 und 1024×700 (Chromium, 
 
 | Nr | Frage | Entscheidung |
 |---|---|---|
-| S6-E1 | Wohin mit Rekorder und Shell-Umschalter? | In die Leiste bzw. Kopfleiste der Shell; schwebend nur noch, wo es keine gibt, und dann eingeklappt (§2.3). |
+| S6-E1 | Wohin mit Rekorder und Shell-Umschalter? **Geändert 27.10.2026, 11:02:** „wieder als eigenes Fenster schwebend in den Shells – dient als Mini-Hub, auch zum Wechseln der Shells“ (§2.3a) | In die Leiste bzw. Kopfleiste der Shell; schwebend nur noch, wo es keine gibt, und dann eingeklappt (§2.3). |
 | S6-E2 | „Grüne zuerst“ | Knopf weg, Auswahl immer sortiert mit Gruppe „Geprüft schnell ✓“ (§2.4). |
 | S6-E3 | Sind Freigabe-Anträge Aufgaben? | Nein – nur im Posteingang (§2.5). |
 | S6-E4 | Prüfwerkzeuge (Rahmen-Probe) | Nur mit Schalter `entwicklung` (§2.2). |

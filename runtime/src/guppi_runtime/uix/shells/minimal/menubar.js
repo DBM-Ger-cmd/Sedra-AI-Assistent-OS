@@ -179,9 +179,7 @@
         const state = root.sedraLifecycle.mountTool(mod, cell, shell.ctx.makeContext(manifest, null, shell.shellApi), shell.onProblem);
         cells.push({manifest, mod, state, cell});
       });
-      // Stufe 6: Rekorder und Umschalter rechts in der Menüleiste; ruhige Instrumente wandern in „+n ▾“ (ui/leiste.js)
-      const platz = d().el('div', 'sh-min-sx-platz'); host.append(platz);
-      if(root.sedraWechsel && root.sedraWechsel.inLeiste) root.sedraWechsel.inLeiste(platz);
+      // Stufe 6: ruhige Instrumente wandern in „Weitere +n“ (ui/leiste.js)
       leiste = root.sedraLeiste ? root.sedraLeiste.makeLeiste(host, ()=>cells.map(c=>({el: c.cell, id: c.manifest.id, order: c.manifest.order})), 'sh-min-gauge') : null;
     }
 

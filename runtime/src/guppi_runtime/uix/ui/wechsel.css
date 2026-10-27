@@ -44,14 +44,30 @@
 .sx-rekorder-panel .sx-seg-btn.stopp{color:var(--bad)}
 .sx-rek-empfzeile{display:flex;align-items:center;gap:10px}
 .sx-rek-empf{flex:1;accent-color:var(--accent)}
-/* Stufe 6 (S6-E1): in der Leiste – nebeneinander, die Panels öffnen darunter; ohne Leiste schwebend, aber klein (nur das Zeichen) */
-.sx-host.sx-in-leiste{position:static;flex-direction:row;align-items:center;gap:6px;flex:0 0 auto;z-index:auto}
-.sx-host.sx-in-leiste .sx-chip{box-shadow:none;padding:3px 10px 3px 3px;background:var(--panel-2)}
-.sx-host.sx-in-leiste .sx-chip-mark{width:22px;height:22px}
-.sx-host.sx-in-leiste .sx-chip-text{max-width:110px}
-.sx-host.sx-in-leiste .sx-panel{position:fixed;top:calc(var(--strip-h) + 6px);right:14px;z-index:9100}
-.sx-host.sx-klein .sx-chip{padding:4px}
-.sx-host.sx-klein .sx-chip-text{display:none}
-.sx-host.sx-klein .sx-chip:hover .sx-chip-text,.sx-host.sx-klein .sx-chip:focus-visible .sx-chip-text{display:inline}
-@media (max-width:1200px){ .sx-host.sx-in-leiste .sx-chip-text{display:none} .sx-host.sx-in-leiste .sx-chip{padding:3px} }
-.sx-host .sx-chip.laeuft .sx-chip-text{display:inline !important}
+/* Mini-Hub (Captain 27.10.2026, 11:02): ein eigenes, schwebendes Fenster – Oberflächen wechseln, Rekorder, „⋯“; ziehbar, zusammenklappbar */
+.sx-hub-fenster{display:flex;flex-direction:column;gap:6px;width:228px;padding:6px 8px 8px;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius-2);box-shadow:var(--shadow)}
+.sx-hub-kopf{display:flex;align-items:center;gap:6px;cursor:grab;user-select:none;touch-action:none;padding:0 0 4px;border-bottom:1px solid var(--line-soft)}
+.sx-hub-kopf:active{cursor:grabbing}
+.sx-hub-kopf b{font-size:var(--size-small)}
+.sx-hub-kopf small{flex:1;min-width:0;color:var(--muted);font-size:var(--size-xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sx-hub-griff{color:var(--muted);font-size:var(--size-small);line-height:1}
+.sx-hub-zu{width:22px;height:22px;padding:0;border:1px solid transparent;border-radius:var(--radius);background:transparent;color:var(--muted);cursor:pointer}
+.sx-hub-zu:hover,.sx-hub-zu:focus-visible{border-color:var(--line);color:var(--text)}
+.sx-hub-shells{display:flex;flex-wrap:wrap;gap:4px}
+.sx-hub-shell{padding:3px 8px;border:1px solid var(--line);border-radius:999px;background:var(--panel-2);color:var(--text);cursor:pointer;font-size:var(--size-xs)}
+.sx-hub-shell:hover,.sx-hub-shell:focus-visible{border-color:var(--accent)}
+.sx-hub-shell.on{background:var(--accent);border-color:var(--accent);color:var(--accent-text);cursor:default;font-weight:600}
+.sx-hub-leiste{display:flex;gap:6px;justify-content:space-between}
+.sx-hub-leiste .sx-chip{box-shadow:none;background:var(--panel-2)}
+.sx-hub-leiste .sx-umschalter{padding:6px 10px}
+.sx-hub-leiste .sx-umschalter .sx-chip-mark{display:none}
+.sx-hub-klein{display:none;position:relative;padding:4px;border:1px solid var(--line);border-radius:50%;background:var(--panel);box-shadow:var(--shadow);cursor:pointer}
+.sx-hub-rec{display:none;position:absolute;right:0;top:0;width:10px;height:10px;border-radius:50%;background:var(--bad);border:2px solid var(--panel)}
+.sx-hub.klein .sx-hub-fenster{display:none}
+.sx-hub.klein .sx-hub-klein{display:block}
+.sx-hub.nimmt-auf .sx-hub-rec{display:block}
+/* Panels öffnen zur freien Seite: unten, wenn oben kein Platz ist; rechts bündig oder links */
+.sx-hub:not(.sx-oben-frei){flex-direction:column-reverse}
+.sx-hub:not(.sx-links-frei){align-items:flex-start}
+.sx-hub .sx-panel{max-height:var(--sx-platz, calc(100vh - 110px))}

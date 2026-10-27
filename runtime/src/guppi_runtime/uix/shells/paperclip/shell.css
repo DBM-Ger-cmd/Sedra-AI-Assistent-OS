@@ -126,5 +126,3 @@
   .pc:has(.pc-stack:not([hidden])){ grid-template-columns: 210px minmax(0, 1fr); }
   .pc-stack{ position: fixed; right: 0; top: 48px; bottom: 0; width: 380px; z-index: 120; box-shadow: var(--shadow); }
 }
-/* Stufe 6 (S6-E1): Rekorder und Umschalter in der Kopfleiste */
-.pc-sx-platz{flex:0 0 auto;display:flex;align-items:center;margin-left:10px}
