@@ -345,8 +345,10 @@ def main(argv=None):
     ap.add_argument("--kurz", action="store_true", help="Kurzlauf (3 Quellen, 2 Objekte) zum Beobachten tagsueber; setzt --stunden auf hoechstens 0,6")
     ap.add_argument("--dauerlauf", action="store_true", help="nach der ersten Runde die Objekte wiederholen (Namen mit _r2, _r3 ...), bis die Frist ablaeuft: Stabilitaetstest der GPU")
     ap.add_argument("--probe", action="store_true", help="nur eine Quelle und ein Objekt (Funktionstest vor dem Nachtlauf)")
+    ap.add_argument("--rezept", default=RECIPE, help="Rezept-ID des Modells fuer die Objekte (Vorgabe: coder.llama_qwen35); fuer Modellvergleiche, z. B. mit Nemotron")
     args = ap.parse_args(argv)
-    global QUELLEN, OBJEKTE
+    global QUELLEN, OBJEKTE, RECIPE
+    RECIPE = args.rezept
     if args.probe:
         QUELLEN, OBJEKTE = QUELLEN[:1], OBJEKTE[:1]
     if args.kurz:
@@ -359,13 +361,14 @@ def main(argv=None):
     if not args.go:
         print(f"Trockenlauf: {len(QUELLEN)} Quellen, {len(OBJEKTE)} Objekte, Frist {args.stunden} h; nichts gestartet.")
         return 0
-    out = PROJECT / "runtime_data" / f"nachtlauf_3d_{time.strftime('%Y-%m-%d_%H%M')}"
+    tag = "" if args.rezept == "coder.llama_qwen35" else "_" + re.sub(r"[^A-Za-z0-9]+", "-", args.rezept)
+    out = PROJECT / "runtime_data" / f"nachtlauf_3d_{time.strftime('%Y-%m-%d_%H%M')}{tag}"
     run = Run(out, args.stunden)
     ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)       # ES_CONTINUOUS | ES_SYSTEM_REQUIRED: kein Ruhezustand, solange dieses Skript laeuft
     results, wissen_teile = [], []
     fehlschlaege = 0
     try:
-        run.log("start", stunden=args.stunden, ausgabe=str(out))
+        run.log("start", stunden=args.stunden, ausgabe=str(out), rezept=RECIPE)
         run.start_cockpit()
         threading.Thread(target=run.sampler, daemon=True).start()
         for title, url in QUELLEN:
