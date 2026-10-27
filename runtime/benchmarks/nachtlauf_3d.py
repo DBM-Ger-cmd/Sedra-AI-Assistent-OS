@@ -68,6 +68,9 @@ SYSTEM = ("Du schreibst OpenSCAD-Code (Version 2021.01, keine Bibliotheken ausse
           "Beispiel: " + chr(10).join(["```openscad", "$fn = 48;", "kante = 20;", "difference() {", "    cube(kante, center = true);", "    sphere(r = 6.5);", "}", "```"]))
 
 
+MAX_ABBRUECHE = 3       # Modellabbrueche je Objekt, danach weiter zum naechsten Objekt
+
+
 def now():
     return time.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -266,18 +269,23 @@ class Run:
         target = self.out / "objekte"
         messages = [{"role": "system", "content": SYSTEM},
                     {"role": "user", "content": f"Aus der Recherche (Auszug):\n{wissen[:3500]}\n\nAufgabe: {spec}\nSchreibe den OpenSCAD-Code."}]
-        for attempt in range(1, 5):
+        attempt, abbrueche = 0, 0           # nur eine Antwort des Modells zaehlt als Versuch; ein Modellabbruch (Treiber-Reset) nicht
+        while attempt < 4:
             if self.stopped():
-                return {"name": name, "ok": False, "versuche": attempt - 1, "grund": "gestoppt"}
+                return {"name": name, "ok": False, "versuche": attempt, "grund": "gestoppt"}
             self.wait_pause()
             if not self.ensure_model():
-                return {"name": name, "ok": False, "versuche": attempt - 1, "grund": "kein_modell"}
+                return {"name": name, "ok": False, "versuche": attempt, "grund": "kein_modell"}
             try:
                 text = self.ask_model(messages)
             except Exception as exc:
-                self.log("modellaufruf_fehler", objekt=name, fehler=type(exc).__name__)
+                abbrueche += 1
+                self.log("modellaufruf_fehler", objekt=name, fehler=type(exc).__name__, abbrueche=abbrueche)
+                if abbrueche >= MAX_ABBRUECHE:
+                    return {"name": name, "ok": False, "versuche": attempt, "grund": "modell_abbruch"}
                 time.sleep(20)
                 continue
+            attempt += 1
             m = re.search(r"```(?:openscad|scad)?\s*(.*?)```", text, re.S)
             code = (m.group(1) if m else text).strip()
             scad, stl = target / f"{name}.scad", target / f"{name}.stl"
@@ -292,7 +300,7 @@ class Run:
                 return {"name": name, "ok": True, "versuche": attempt, "stl_bytes": stl.stat().st_size, "dreiecke": tris}
             self.log("objekt_fehler", objekt=name, versuch=attempt, rc=rc, fehler=err[-200:])
             messages += [{"role": "assistant", "content": text}, {"role": "user", "content": f"OpenSCAD meldet einen Fehler:\n{err}\nKorrigiere den Code (Geometrie nie in Variablen speichern, kein center bei sphere) und antworte wieder nur mit dem Code-Block."}]
-        return {"name": name, "ok": False, "versuche": 4, "grund": "render_fehler"}
+        return {"name": name, "ok": False, "versuche": attempt, "grund": "render_fehler"}
 
 
 def preflight():
