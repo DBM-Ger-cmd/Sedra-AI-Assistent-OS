@@ -84,6 +84,8 @@ class Run:
         self.metrics = []
         self.stop_metrics = threading.Event()
         self.approved = 0
+        self.guard_hits = 0
+        self.abort = None
         self.model_calls = 0
 
     def log(self, kind, **kw):
@@ -93,7 +95,7 @@ class Run:
         print(row["t"], kind, json.dumps(kw, ensure_ascii=False)[:200], flush=True)
 
     def stopped(self):
-        return time.time() > self.deadline or (self.out / "STOP.txt").exists()
+        return time.time() > self.deadline or (self.out / "STOP.txt").exists() or self.abort is not None
 
     # ---- Cockpit
     def start_cockpit(self):
@@ -147,6 +149,11 @@ class Run:
                 row = {"t": now(), "vram_mib": int(g[0]), "temp_c": int(g[1]), "ram_free_gb": float(ram)}
             except (ValueError, IndexError):
                 continue
+            top = subprocess.run(["powershell", "-NoProfile", "-Command",
+                                  "Get-Process | Sort-Object PrivateMemorySize64 -Descending | Select-Object -First 6 | ForEach-Object { $_.ProcessName + ':' + $_.Id + ':' + [math]::Round($_.PrivateMemorySize64/1GB,2) }"],
+                                 capture_output=True, text=True).stdout.split()
+            row["top_prozesse"] = top
+            row["cockpit_pid"] = self.cockpit.pid if self.cockpit is not None else None
             self.metrics.append(row)
             with (self.out / "messung.jsonl").open("a", encoding="utf-8") as f:
                 f.write(json.dumps(row) + chr(10))
@@ -159,6 +166,10 @@ class Run:
                     pass
                 self.pause_until = time.time() + 300
                 low = 0
+                self.guard_hits += 1
+                if self.guard_hits >= 2:
+                    self.abort = "ram_schutz_zweimal"
+                    self.log("abbruch_ram", grund="der RAM-Schutz musste zweimal entladen; Lauf wird beendet statt zu warten")
             if row["temp_c"] >= 84 and time.time() > self.pause_until:
                 self.log("temperatur_pause", temp_c=row["temp_c"])
                 self.pause_until = time.time() + 300
@@ -279,8 +290,8 @@ def preflight():
             con.close()
     gb = subprocess.run(["powershell", "-NoProfile", "-Command", "[math]::Round((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory/1MB,1)"], capture_output=True, text=True).stdout.strip().replace(",", ".")
     try:
-        if float(gb) < 6.0:
-            problems.append(f"freier RAM nur {gb} GB (mindestens 6)")
+        if float(gb) < 10.0:
+            problems.append(f"freier RAM nur {gb} GB (mindestens 10)")
     except ValueError:
         problems.append("RAM nicht lesbar")
     if subprocess.run(["powershell", "-NoProfile", "-Command", "(Get-Process llama-server -ErrorAction SilentlyContinue | Measure-Object).Count"], capture_output=True, text=True).stdout.strip() != "0":
@@ -292,11 +303,15 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--go", action="store_true")
     ap.add_argument("--stunden", type=float, default=6.0)
+    ap.add_argument("--kurz", action="store_true", help="Kurzlauf (3 Quellen, 2 Objekte) zum Beobachten tagsueber; setzt --stunden auf hoechstens 0,6")
     ap.add_argument("--probe", action="store_true", help="nur eine Quelle und ein Objekt (Funktionstest vor dem Nachtlauf)")
     args = ap.parse_args(argv)
     global QUELLEN, OBJEKTE
     if args.probe:
         QUELLEN, OBJEKTE = QUELLEN[:1], OBJEKTE[:1]
+    if args.kurz:
+        QUELLEN, OBJEKTE = QUELLEN[:3], OBJEKTE[:2]
+        args.stunden = min(args.stunden, 0.6)
     problems, gb = preflight()
     print("Vorpruefung:", "ok" if not problems else problems, "| freier RAM", gb, "GB")
     if problems:
@@ -317,6 +332,9 @@ def main(argv=None):
                 break
             run.wait_pause()
             text = run.research(title, url)
+            if not text and not run.stopped():
+                run.log("recherche_zweiter_versuch", title=title)       # das Hilfsmodell nennt die Adresse manchmal falsch (research_invalid:urls)
+                text = run.research(title, url)
             if text:
                 wissen_teile.append(f"[{title}] {text}")
         run.log("recherche_fertig", quellen_ok=len(wissen_teile), von=len(QUELLEN))
@@ -338,6 +356,7 @@ def main(argv=None):
                  f"- Freigegebene Laeufe (einzeln durch das Skript): {run.approved}",
                  f"- Modellaufrufe fuer Objekte: {run.model_calls}", f"- Objekte erstellt: {len(ok)} von {len(OBJEKTE)}",
                  f"- VRAM-Spitze {max([m['vram_mib'] for m in run.metrics] or [0])} MiB, Temperatur hoechstens {max([m['temp_c'] for m in run.metrics] or [0])} Grad, freier RAM mindestens {min(ram)} GB", "",
+                 f"- Abbruch durch Schutz: {run.abort or 'nein'}; RAM-Schutz hat {run.guard_hits} Mal entladen", "",
                  "Hinweis: Die Agenten haben keine Dateiwerkzeuge; den OpenSCAD-Code hat das lokale Modell aus den Rechercheergebnissen geschrieben.", "",
                  "| Objekt | OK | Versuche | STL (Bytes) | Dreiecke | Grund |", "| --- | --- | --- | --- | --- | --- |"]
         for r in results:
