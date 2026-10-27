@@ -62,10 +62,18 @@ OBJEKTE = [
     ("schachturm", "Ein Schach-Turm: Sockel Zylinder 30 mm Durchmesser, 8 mm hoch, Schaft 22 mm Durchmesser, 30 mm hoch, oben ein Kranz mit sechs Zinnen."),
 ]
 SYSTEM = ("Du schreibst OpenSCAD-Code (Version 2021.01, keine Bibliotheken ausser den eingebauten Funktionen). Antworte NUR mit dem Code in einem Block ```openscad ... ``` "
-          "und mit Kommentaren in Deutsch im Code. Der Code muss ohne Fehler zu einem einzigen soliden Koerper rendern (difference/union/rotate_extrude/linear_extrude/cube/cylinder/sphere/translate/rotate). "
+          "und mit kurzen Kommentaren in Deutsch (eine Zeile je Abschnitt). Der Code muss ohne Fehler zu einem einzigen soliden Koerper rendern (difference/union/rotate_extrude/linear_extrude/cube/cylinder/sphere/translate/rotate). "
           "Masse in Millimetern. Setze $fn = 48 fuer runde Formen. WICHTIG: In OpenSCAD speichert man Geometrie NICHT in Variablen (kein `x = cube(...)`, kein `x;` als Anweisung); "
           "Zahlen duerfen Variablen sein, Koerper schreibt man direkt hin oder packt sie in `module name() { ... }` und ruft `name();` auf. Es gibt kein `center=true` bei sphere. "
           "Beispiel: " + chr(10).join(["```openscad", "$fn = 48;", "kante = 20;", "difference() {", "    cube(kante, center = true);", "    sphere(r = 6.5);", "}", "```"]))
+
+
+def extract_code(text):
+    """Der Code aus der Antwort: der Block zwischen den Zaeunen; fehlt der schliessende Zaun (Antwort abgeschnitten), alles nach dem oeffnenden.
+
+    Vorher blieb dann die Zeile ```openscad in der Datei und OpenSCAD meldete `Can't parse file ... line 1` (Nachtlauf 27.10.2026: 12 von 51 Objekten)."""
+    m = re.search(r"```[A-Za-z]*[ \t]*\n(.*?)(?:```|\Z)", text, re.S)
+    return (m.group(1) if m else text).strip()
 
 
 MAX_ABBRUECHE = 3       # Modellabbrueche je Objekt, danach weiter zum naechsten Objekt
@@ -83,6 +91,7 @@ class Run:
         (out / "objekte").mkdir(parents=True, exist_ok=True)
         self.log_f = (out / "log.jsonl").open("a", encoding="utf-8")
         self.cockpit = None
+        self.last_truncated = False
         self.base = None
         self.token = None
         self.pause_until = 0.0
@@ -241,12 +250,14 @@ class Run:
         return None
 
     # ---- Phase 2: Objekte
-    def ask_model(self, messages, max_tokens=1800):
+    def ask_model(self, messages, max_tokens=4000):
         self.model_calls += 1
         body = {"model": "x", "messages": messages, "temperature": 0.3, "max_tokens": max_tokens}
         req = urllib.request.Request("http://127.0.0.1:8089/v1/chat/completions", data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=900) as r:
-            return json.loads(r.read())["choices"][0]["message"]["content"]
+            choice = json.loads(r.read())["choices"][0]
+        self.last_truncated = choice.get("finish_reason") == "length"
+        return choice["message"]["content"]
 
     def ensure_model(self):
         for _ in range(3):
@@ -286,8 +297,9 @@ class Run:
                 time.sleep(20)
                 continue
             attempt += 1
-            m = re.search(r"```(?:openscad|scad)?\s*(.*?)```", text, re.S)
-            code = (m.group(1) if m else text).strip()
+            code = extract_code(text)
+            if self.last_truncated:
+                self.log("antwort_abgeschnitten", objekt=name, zeichen=len(text))
             scad, stl = target / f"{name}.scad", target / f"{name}.stl"
             scad.write_text(code + chr(10), encoding="utf-8")
             try:
