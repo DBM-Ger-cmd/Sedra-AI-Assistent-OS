@@ -331,6 +331,7 @@ def main(argv=None):
     ap.add_argument("--go", action="store_true")
     ap.add_argument("--stunden", type=float, default=6.0)
     ap.add_argument("--kurz", action="store_true", help="Kurzlauf (3 Quellen, 2 Objekte) zum Beobachten tagsueber; setzt --stunden auf hoechstens 0,6")
+    ap.add_argument("--dauerlauf", action="store_true", help="nach der ersten Runde die Objekte wiederholen (Namen mit _r2, _r3 ...), bis die Frist ablaeuft: Stabilitaetstest der GPU")
     ap.add_argument("--probe", action="store_true", help="nur eine Quelle und ein Objekt (Funktionstest vor dem Nachtlauf)")
     args = ap.parse_args(argv)
     global QUELLEN, OBJEKTE
@@ -373,10 +374,20 @@ def main(argv=None):
                     break
         run.log("recherche_fertig", quellen_ok=len(wissen_teile), von=len(QUELLEN))
         wissen = chr(10).join(wissen_teile) or "(keine Recherche-Ergebnisse; nur Grundwissen des Modells)"
-        for name, spec in OBJEKTE:
-            if run.stopped():
+        runde = 1
+        while not run.stopped():
+            for name, spec in OBJEKTE:
+                if run.stopped():
+                    break
+                results.append(run.make_object(name if runde == 1 else f"{name}_r{runde}", spec, wissen))
+            if not args.dauerlauf:
                 break
-            results.append(run.make_object(name, spec, wissen))
+            ok_runde = len([r for r in results[-len(OBJEKTE):] if r.get("ok")])
+            run.log("runde_fertig", runde=runde, objekte_ok=len([r for r in results if r.get("ok")]), von=len(results), ok_in_runde=ok_runde)
+            if ok_runde == 0:           # eine ganze Runde ohne Ergebnis: nicht bis zur Frist weiter im Leerlauf drehen
+                run.log("dauerlauf_abbruch", grund="Runde ohne ein Objekt")
+                break
+            runde += 1
     except Exception as exc:
         run.log("abbruch", fehler=f"{type(exc).__name__}: {exc}"[:300])
     finally:
@@ -388,7 +399,7 @@ def main(argv=None):
         lines = ["# Nachtlauf 3D (SEDRA)", "", f"Start/Ende: {out.name}, Frist {args.stunden} h", "",
                  f"- Recherche-Aufgaben beim Agenten: {len(QUELLEN)}, mit Ergebnis: {len(wissen_teile)} (Berichte in berichte/)",
                  f"- Freigegebene Laeufe (einzeln durch das Skript): {run.approved}",
-                 f"- Modellaufrufe fuer Objekte: {run.model_calls}", f"- Objekte erstellt: {len(ok)} von {len(OBJEKTE)}",
+                 f"- Modellaufrufe fuer Objekte: {run.model_calls}", f"- Objekte erstellt: {len(ok)} von {len(results)}",
                  f"- VRAM-Spitze {max([m['vram_mib'] for m in run.metrics] or [0])} MiB, Temperatur hoechstens {max([m['temp_c'] for m in run.metrics] or [0])} Grad, freier RAM mindestens {min(ram)} GB", "",
                  f"- Abbruch durch Schutz: {run.abort or 'nein'}; RAM-Schutz hat {run.guard_hits} Mal entladen", "",
                  "Hinweis: Die Agenten haben keine Dateiwerkzeuge; den OpenSCAD-Code hat das lokale Modell aus den Rechercheergebnissen geschrieben.", "",
