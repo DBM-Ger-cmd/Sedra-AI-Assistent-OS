@@ -2,18 +2,19 @@ tool:
   id: wissen
   name: "Wissen"
   description: "Quellen, Stand des Index, Suche mit Treffern, Nachmessung und offene Vorschläge des Wissensspeichers (Spec 7)."
-  version: 1.0.0
+  version: 2.0.0
   kind: object
   handles: [wissen]                 # D7.9 nennt auch wissen_quelle und wissen_vorschlag; das Muster der handles erlaubt keinen Unterstrich,
                                     # Quellen und Vorschläge sind Ansichten dieses Werkzeugs (view: quellen | vorschlaege)
   order: 60
   slot: inhalt
-  entry: {js: [zitate.js, tool.js], css: tool.css}
+  gedaechtnis: [sitzung, ablage]   # Vertrag 1.1: Ansicht in der Sitzung, Frage und Treffer in der Ablage (SPEC_WERKZEUG_WISSEN_v2 §3.8)
+  entry: {js: [zitate.js, suche.js, quellen.js, antrag.js, messung.js, eigenes.js, tool.js], css: tool.css}
   api:
     - POST /api/objects
     - POST /api/actions
   events:
-    emits: [object.open]
+    emits: [object.open, wissen.auswahl, object.actions]   # wissen.auswahl: Fundstelle / Ins Gespräch; object.actions: Ansicht gewechselt
     listens: [decision.answered, desk.resync]
   trust: CORE
   tests: [test.spec.js]

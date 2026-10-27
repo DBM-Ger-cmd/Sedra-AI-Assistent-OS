@@ -84,6 +84,12 @@
                  bus: null, tokens: getComputedStyle(document.documentElement), shell, manifest, _offs: []};
     const own = bus.forModule((manifest.events || {}).emits || []);
     ctx.bus = {emit: own.emit, on: (name, fn)=>{ const off = own.on(name, fn); ctx._offs.push(off); return off; }};
+    // Vertrag 1.1 (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §3, §10.3): drei Gedächtnisse je Werkzeug und Objekt. Sitzung und Ablage nur, wenn
+    // das Manifest sie nennt – sonst eine Attrappe, die nichts behält. Das Werkzeug fragt nie, wo es läuft.
+    const L = root.sedraLifecycle, g = L.gedaechtnisVon(manifest);
+    ctx.memo = L.memoFuer(manifest.id, object);
+    ctx.sitzung = L.sitzungFuer(manifest.id, object, g.indexOf('sitzung') >= 0, undefined, say);
+    ctx.ablage = L.ablageFuer(manifest.id, object, g.indexOf('ablage') >= 0, ctx.api);
     return ctx;
   }
 

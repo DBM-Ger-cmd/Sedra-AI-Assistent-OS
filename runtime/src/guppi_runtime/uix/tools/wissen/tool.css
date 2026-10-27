@@ -1,18 +1,80 @@
-/* Werkzeug „Wissen“ – nur im eigenen Container. */
+/* Werkzeug „Wissen“ v2 – nur im eigenen Container (SPEC_WERKZEUG_WISSEN_v2). Nur Token aus ui/tokens.css. */
 .t-wissen .t-wissen-tabs{flex-wrap:wrap;gap:var(--gap)}
+.t-wissen .t-wissen-tab[aria-selected=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.t-wissen .t-wissen-kopf{align-items:center;flex-wrap:wrap;justify-content:space-between}
 .t-wissen .t-wissen-stand.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
 .t-wissen .t-wissen-stand.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
-.t-wissen .t-wissen-table td{vertical-align:top}
-.t-wissen .t-wissen-aus td{color:var(--muted);text-decoration:line-through}
+.t-wissen .t-wissen-laedt{color:var(--muted)}
+
+/* Suche: Karten statt Tabelle */
+.t-wissen .t-wissen-suchform{align-items:center;flex-wrap:wrap}
+.t-wissen .t-wissen-suchform input{flex:1 1 16em;min-width:10em}
+.t-wissen .t-wissen-k{width:auto;flex:0 0 auto;align-items:center;gap:4px}
+.t-wissen .t-wissen-k select{width:4.5em}
+.t-wissen .t-wissen-ergebnis{color:var(--muted)}
+.t-wissen .t-wissen-liste{gap:var(--gap)}
+.t-wissen .t-wissen-treffer{gap:calc(var(--gap) / 2)}
+.t-wissen .t-wissen-treffer:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.t-wissen .t-wissen-stelle{font-weight:600}
+.t-wissen .t-wissen-meta{color:var(--muted);font-size:var(--size-small);flex-wrap:wrap}
+.t-wissen .t-wissen-kurz{margin:0}
 .t-wissen .t-wissen-text{white-space:pre-wrap;font:inherit;margin:0;max-height:16em;overflow:auto;border-left:2px solid var(--line);padding-left:var(--gap-2)}
-.t-wissen .t-wissen-treffer [role=button]{cursor:pointer}
-.t-wissen .t-wissen-k{width:4em}
-.t-wissen .t-wissen-form input,.t-wissen .t-wissen-form select{max-width:32em}
-.t-wissen .t-wissen-markiert td{background:var(--add-bg);border-left:3px solid var(--accent)}
-.t-wissen .t-wissen-markierung td,.t-wissen .t-wissen-stufe td{background:var(--panel-2);border-left:3px solid var(--accent)}
+.t-wissen .t-wissen-mark{background:var(--add-bg);color:inherit;border-radius:2px;padding:0 1px}
+.t-wissen .t-wissen-knoepfe{flex-wrap:wrap;gap:var(--gap)}
+.t-wissen .t-wissen-details{color:var(--muted);font-size:var(--size-small)}
+.t-wissen .t-wissen-balken{display:inline-block;width:5em;height:.4em;background:var(--line-soft);border-radius:var(--radius);overflow:hidden;vertical-align:middle}
+.t-wissen .t-wissen-balken.gross{display:block;width:100%;height:.6em}
+.t-wissen .t-wissen-balken > i{display:block;height:100%;background:var(--accent)}
+
+/* Quellen: Liste mit Marken und Menü */
+.t-wissen .t-wissen-filter{gap:var(--gap)}
+.t-wissen .t-wissen-quellen{gap:var(--gap)}
+.t-wissen .t-wissen-quelle-kopf{align-items:flex-start;gap:var(--gap-2)}
+.t-wissen .t-wissen-quelle-name{flex:1 1 auto;min-width:0}
+.t-wissen .t-wissen-quelle-zahl{white-space:nowrap}
+.t-wissen .t-wissen-marke{font-size:var(--size-xs);border:1px solid var(--line);border-radius:var(--radius);padding:0 .4em;color:var(--muted)}
+.t-wissen .t-wissen-marke.eng{border-color:var(--accent);color:var(--text)}
+.t-wissen .t-wissen-marke.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.t-wissen .t-wissen-aus{opacity:.65}
+.t-wissen .t-wissen-aus b{text-decoration:line-through}
+.t-wissen .t-wissen-menu-liste{flex-wrap:wrap;gap:var(--gap)}
+.t-wissen .t-wissen-markiert{border-color:var(--accent);border-left:3px solid var(--accent)}
+.t-wissen .t-wissen-markierung{background:var(--panel-2);border-left:3px solid var(--accent);padding:var(--gap)}
 .t-wissen .t-wissen-stufe-form{align-items:center;flex-wrap:wrap}
-.t-wissen .t-wissen-stufe-feld{width:4em}
+.t-wissen .t-wissen-stufe-feld{max-width:28em}
 .t-wissen .t-wissen-stufe-fehler[hidden]{display:none}
+.t-wissen .t-wissen-form input,.t-wissen .t-wissen-form select{max-width:32em}
+
+/* Antrag: geführt in vier Schritten */
+.t-wissen .t-wissen-antrag{border-left:3px solid var(--accent)}
+.t-wissen .t-wissen-vorlagen{display:grid;grid-template-columns:repeat(auto-fill,minmax(13em,1fr));gap:var(--gap)}
+.t-wissen .t-wissen-vorlage{text-align:left;white-space:normal}
+.t-wissen .t-wissen-teil{flex-wrap:wrap;gap:var(--gap)}
+.t-wissen .t-wissen-zusammen td{vertical-align:top}
+
+/* Vorschläge und Messung */
+.t-wissen .t-wissen-vorschlag{gap:calc(var(--gap) / 2)}
+.t-wissen .t-wissen-frage-zeile{align-items:center;flex-wrap:wrap;gap:var(--gap)}
+.t-wissen .t-wissen-urteil{flex-wrap:wrap;gap:4px}
+.t-wissen .t-wissen-ids{flex:1 1 10em}
+
 .t-wissen .t-wissen-zitat{color:var(--accent);cursor:pointer;text-decoration:underline dotted}
 .t-wissen .t-wissen-zitat:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .t-wissen .t-wissen-aktiv{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+
+/* Filter der Suche und eigene Notizen (SPEC_SHELL_WISSEN_v1 §4.4, §4.5) */
+.t-wissen .t-wissen-filterzeile{flex-wrap:wrap;gap:var(--gap-2);align-items:center;padding:var(--gap);background:var(--panel-2);border-radius:var(--radius)}
+.t-wissen .t-wissen-filterzeile input[type=text]{width:9em}
+.t-wissen .t-wissen-filter-satz{color:var(--muted)}
+.t-wissen .t-wissen-notiz-form{gap:var(--gap)}
+.t-wissen .t-wissen-notiz-form input,.t-wissen .t-wissen-notiz-text{width:100%;max-width:none;box-sizing:border-box}
+.t-wissen .t-wissen-notiz-text{font:inherit;resize:vertical;min-height:6em}
+.t-wissen .t-wissen-notizen{gap:var(--gap)}
+
+/* Felder und Reiter im dunklen wie im hellen Thema lesbar (Befund Bildschirmfoto 27.10.: weiße Felder mit heller Schrift) */
+.t-wissen input:not([type=checkbox]),.t-wissen select,.t-wissen textarea{font:inherit;font-size:var(--size-small);padding:6px 9px;border:1px solid var(--line);
+  border-radius:var(--radius);background:var(--panel);color:var(--text);min-width:0}
+.t-wissen select{padding-right:4px}
+.t-wissen .t-wissen-tab{font-size:var(--size-small)}
+.t-wissen .t-wissen-tab.on{border-color:var(--accent);color:var(--heading);font-weight:600;box-shadow:inset 0 -2px 0 var(--accent)}
+.t-wissen .t-wissen-tab.warn:not(.on){color:var(--warn)}

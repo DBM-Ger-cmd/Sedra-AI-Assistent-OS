@@ -80,7 +80,13 @@ from .desk.gateway import Gateway
 
 def _compact_mission(m):
     route = ((m.get('routing') or {}).get('route') or {})
+    # SPEC_UIX_STUFE6 §2.5 (S6-E3): eine Definition von „offen“ für Baum, Aufgaben, Leiste und Arbeitsplatz. Ein Freigabe-Antrag
+    # (desk/gated.py) ist keine Aufgabe – er steht im Posteingang und ist nach der Entscheidung weg.
+    antrag = bool((m.get('context') or {}).get('gated_request'))
+    status, phase = m.get('lifecycle', {}).get('status'), m.get('lifecycle', {}).get('phase')
     return {
+        'antrag': antrag,
+        'offen': status == 'active' and (phase or '') not in ('COMPLETE', 'FAILED') and not antrag,
         'mission_id': m.get('identity', {}).get('mission_id'),
         'created_at': m.get('identity', {}).get('created_at'),
         'mission_class': m.get('identity', {}).get('mission_class'),
@@ -123,8 +129,13 @@ class UIXHub:
         self.library = LibraryDesk(self)                     # Bibliothek window: own capabilities, imported libraries, the Captain's own skills
         # The desk (Build 7): manifests and allowlist for the desktop modules, one decision list, one event stream instead of a poll per window.
         self.gateway = Gateway(self.project_root)
+        self.gateway.entwicklung = self.runtime.switches.apply('entwicklung', 'enabled', False) is True    # Stufe 6 (S6-E4)
         self.events = EventStream()
         self.poller = Poller(self, self.events)
+        # Gedächtnis der Oberfläche (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §9.2, §10): Arbeitsstand, Ablage der Werkzeuge, Gesprächsverlauf.
+        # Nur im Speicher dieses Prozesses – übersteht Neuladen und Shell-Wechsel, nicht den Neustart der Runtime.
+        from .desk.arbeitsstand import Gedaechtnis
+        self.gedaechtnis = Gedaechtnis()
         # Spec 0 (D1): Objekttypen und Verben stehen im Register. Die Erweiterungen docken einmal hier an, danach ist es zu –
         # über eine Anfrage kommt kein Typ dazu. Ein neuer Anwendungsfall ist ein Modul in desk/extensions.MODULES, keine Zeile hier.
         self.kinds = desk_builtin_kinds.new_registry()
@@ -730,8 +741,8 @@ class UIXHub:
         loaded = next((r['id'] for r in (models.get('recipes') or []) if r.get('loaded')), None)
         return {'shell': self.aktive_shell(), 'entscheidungen': len(decisions),
                 'gateway_gesamt': len(vorgaenge), 'gateway_wartend': sum(1 for v in vorgaenge if v.get('zustand') in ('GEPRUEFT', 'WARTET', 'ENTWURF')),
-                'aufgaben_offen': sum(1 for m in missions if m.get('status') == 'active'),
-                'aufgaben_wartend': sum(1 for m in missions if m.get('status') == 'active' and (m.get('pending_gates') or 0) > 0),
+                'aufgaben_offen': sum(1 for m in missions if m.get('offen')),
+                'aufgaben_wartend': sum(1 for m in missions if m.get('offen') and (m.get('pending_gates') or 0) > 0),
                 'grenzen_bestaetigt': bool(boundaries.get('confirmed')) if boundaries.get('project_id') else None,
                 'modell_geladen': loaded, 'projekte': len(safe(self.projects.list, []))}
 
@@ -1686,8 +1697,8 @@ class UIXHub:
         models = self.models_view()
         hw = self.runtime.hardware.to_dict()
         lease = models.get('lease')
-        running = [m for m in snap['missions'] if m.get('status') == 'active' and (m.get('phase') or '') not in ('COMPLETE', 'FAILED')]
-        waiting = [m for m in snap['missions'] if (m.get('pending_gates') or 0)]
+        running = [m for m in snap['missions'] if m.get('offen', m.get('status') == 'active' and (m.get('phase') or '') not in ('COMPLETE', 'FAILED'))]
+        waiting = [m for m in running if (m.get('pending_gates') or 0)]          # Stufe 6: Anträge warten im Posteingang, nicht hier
         loaded = next((r for r in models['recipes'] if r.get('loaded')), None)
         return {'state': {'value': snap['state'],
                           'hint': f"{len(self.runtime.registry.skills)} Fähigkeiten · Audit " + ('intakt' if self.audit_view()['chain_ok'] else 'prüfen'),
@@ -1704,7 +1715,16 @@ class UIXHub:
                           'tone': 'warn' if waiting else 'off'},
                 'cloud': self._cloud_gauge(),
                 'mode': self._mode_gauge(),
-                **({'slots': gauge} if (gauge := self._slots_gauge()) is not None else {})}
+                **({'slots': gauge} if (gauge := self._slots_gauge()) is not None else {}),
+                **({'wissen': zelle} if (zelle := self._wissen_gauge()) is not None else {})}
+
+    def _wissen_gauge(self):
+        """SPEC_SHELL_WISSEN_v1 §4.3: Modus, Abdeckung und offene Vorschläge; ohne Schalter `wissen` keine Zelle (das Instrument sagt „aus“)."""
+        from .wissen import desk_basis
+        try:
+            return desk_basis.strip_zelle(getattr(self.runtime, 'wissen', None))
+        except Exception:
+            return None
 
     def _cloud_gauge(self):
         """Die Online-KI in der Leiste: bereit (Schlüssel gesetzt), Schlüssel fehlt, oder kein Anbieter eingeschaltet."""
@@ -1894,6 +1914,14 @@ class UIXHub:
         rt = self.runtime
         server = getattr(rt, 'llama_server', None)
         loaded = server.loaded_models() if server is not None else []
+        # SPEC_SHELL_WISSEN_v1 §4.6 (W-E4): „Frag das Wissen“ – nur, wenn die Shell es einschaltet (gespraech.wissen); nur lokal, Stufe 6
+        wissen = None
+        if payload.get('wissen') is True and getattr(rt, 'wissen', None) is not None:
+            from .wissen import desk_basis
+            wissen_extra, wissen = desk_basis.kontext(rt.wissen, text, mission_id or None)
+            if not loaded:
+                return {'status': 'completed', 'reply': desk_basis.ohne_modell(wissen), 'model': 'wissen', 'truncated': False, 'mission_id': mission_id,
+                        'tools_used': [], 'proposals': [], 'ui_actions': [], 'wissen': desk_basis.nachweis(wissen)}
         if not loaded:
             # Befund M1 (Architekturreview): ein ungültiger Wert in der Konfiguration schaltet den Server still ab – der Grund gehört in den Chat
             grund = getattr(rt, 'llama_server_error', None)
@@ -1919,6 +1947,9 @@ class UIXHub:
                 # Build 24: das Modell weiß, in welcher Oberfläche es arbeitet (Zonen, eigene Wörter, Wege) – aus dem Code, nicht geraten
                 system = self.CHAT_SYSTEM + ' ' + self.arbeitsplatz.beschreibung(shell) + self.CHAT_TOOL_NOTE
             messages = [{'role': 'system', 'content': system}, *turns, {'role': 'user', 'content': attached + text}]
+            if wissen is not None and wissen_extra:
+                from .wissen import lauf as wissen_lauf
+                messages = wissen_lauf.nachrichten_mit(messages, wissen_extra)
 
             # A question about the system (model, context, profile, switches) must be looked up: the first turn then forces a tool call.
             # Without this a small model answers from memory (2026-10-14: a right-looking context value that no tool had read).
@@ -1946,8 +1977,14 @@ class UIXHub:
         content = res.get('content')
         if not isinstance(content, str) or not content.strip():
             return {'status': 'failed', 'message': 'model_answer_truncated' if res.get('finish') == 'length' else 'model_answer_empty'}
-        return {'status': 'completed', 'reply': content.strip(), 'model': model, 'truncated': res.get('finish') == 'length', 'mission_id': mission_id,
-                'tools_used': box.calls, 'proposals': box.proposals, 'ui_actions': box.ui_actions}
+        out = {'status': 'completed', 'reply': content.strip(), 'model': model, 'truncated': res.get('finish') == 'length', 'mission_id': mission_id,
+               'tools_used': box.calls, 'proposals': box.proposals, 'ui_actions': box.ui_actions}
+        if wissen is not None:                                   # Zitatprüfung wie bei den Agenten (D7.6, WIS-07)
+            from .wissen import desk_basis, lauf as wissen_lauf
+            if wissen.get('treffer'):
+                out['reply'] = wissen_lauf.nachbereite(out['reply'], wissen, mission_id=mission_id, audit=rt.wissen.audit)
+            out['wissen'] = desk_basis.nachweis(wissen)
+        return out
 
     def run_mission(self, payload):
         mission_id = str(payload.get('mission_id') or '').strip()
@@ -2517,6 +2554,69 @@ class UIXHub:
         self.runtime.audit.append('KOMBI_CHAT', component='uix', payload={'provider': provider, 'model': model, 'status': cloud.get('status')})
         return {'status': 'completed', 'local': draft, 'cloud': cloud.get('reply'), 'model': model, 'provider': provider,
                 'local_model': local.get('model')}
+
+    # ---- Gedächtnis der Oberfläche (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §9.2, §10) ------------------------------------------------
+    # Nichts davon kommt ins Audit außer Zahlen; Inhalte bleiben im Speicher dieses Prozesses.
+
+    def arbeitsstand_view(self):
+        """GET /api/arbeitsstand – die offenen Objekte und welches vorn liegt; eine neue Shell übernimmt sie (§10.4)."""
+        return self.gedaechtnis.arbeitsstand()
+
+    def arbeitsstand_melden(self, payload, shell=None):
+        """POST /api/arbeitsstand {offen, vorn, geschlossen} – eine Shell meldet, was sie offen hat (§10.2)."""
+        p = payload if isinstance(payload, dict) else {}
+        return self.gedaechtnis.melden(p.get('offen') or [], p.get('vorn'), p.get('geschlossen') or [], shell)
+
+    def gedaechtnis_leeren(self, payload=None):
+        """POST /api/arbeitsstand/leeren – „Gedächtnis leeren“ im Umschalter: Arbeitsstand, Ablage und Gesprächsverlauf (§10.5)."""
+        zahlen = self.gedaechtnis.leeren()
+        self.runtime.audit.append('GEDAECHTNIS_GELEERT', component='uix', payload=zahlen)
+        return dict(zahlen, status='geleert')
+
+    def ablage_lesen(self, werkzeug, payload):
+        """POST /api/ablage/lesen {objekt} – nur die Einträge des rufenden Werkzeugs (Kopf X-SEDRA-Tool, §10.3)."""
+        if not werkzeug: raise ValueError('ablage_nur_fuer_werkzeuge')
+        return self.gedaechtnis.ablage_lesen(werkzeug, str((payload or {}).get('objekt') or ''))
+
+    def ablage_schreiben(self, werkzeug, payload):
+        """POST /api/ablage/schreiben {objekt, werte} – ersetzt die Werte des rufenden Werkzeugs an diesem Objekt (§10.3)."""
+        if not werkzeug: raise ValueError('ablage_nur_fuer_werkzeuge')
+        p = payload or {}
+        return self.gedaechtnis.ablage_schreiben(werkzeug, str(p.get('objekt') or ''), p.get('werte'))
+
+    def chat_verlauf(self):
+        """GET /api/chat/verlauf – was der Captain im Gespräch gefragt und gesehen hat (§9.2)."""
+        return self.gedaechtnis.verlauf()
+
+    def chat_verlauf_leeren(self, payload=None):
+        n = self.gedaechtnis.verlauf_leeren()
+        self.runtime.audit.append('CHAT_VERLAUF_GELEERT', component='uix', payload={'eintraege': n})
+        return {'status': 'geleert', 'eintraege': n}
+
+    def _verlauf(self, art, payload, out):
+        """Hält fest, was über eine Route des Gesprächs ging – nur über die Route, damit interne Aufrufe (Planungstisch, Kombi)
+        nichts doppelt schreiben. Bei der Cloud steht die Antwort nach dem Inhaltsschutz da: das, was der Captain gesehen hat."""
+        try:
+            p = payload if isinstance(payload, dict) else {}
+            text = str(p.get('text') or '').strip()
+            o = out if isinstance(out, dict) else {}
+            if not text:
+                return out
+            if art == 'reply' and o.get('status') == 'completed':
+                # eine Antwort mit Personenbezug aus dem Wissen bleibt lokal: nach dem Neuladen geht sie in keinen Cloud-Weg (§4.6)
+                lokal = 'ja' if (o.get('wissen') or {}).get('personenbezug') else ''
+                self.gedaechtnis.verlauf_merken('user', text, nur_lokal=lokal)
+                self.gedaechtnis.verlauf_merken('assistant', o.get('reply') or '', o.get('model'), nur_lokal=lokal)
+            elif art == 'cloud' and o.get('status') == 'completed':
+                self.gedaechtnis.verlauf_merken('user', text)
+                self.gedaechtnis.verlauf_merken('assistant', o.get('reply') or '', o.get('model'))
+            elif art == 'kombi' and o.get('local'):
+                self.gedaechtnis.verlauf_merken('user', text)
+                self.gedaechtnis.verlauf_merken('assistant', o.get('cloud') or o.get('local') or '', o.get('model') or o.get('local_model'),
+                                                 entwurf=o.get('local') if o.get('cloud') else '', hinweis=o.get('reason') or '')
+        except ValueError:
+            pass                      # der Verlauf darf eine Antwort nie verhindern
+        return out
 
     def vorarbeiter(self, payload):
         """Vorarbeiter-Aktion aus dem Entwurfsfenster: feste Liste, für Cloud- und lokale Modelle gleich."""
@@ -3285,6 +3385,8 @@ def make_server(hub: UIXHub, port=0):
                     '/uix/manifest': hub.gateway.manifest,                  # read-only: active shell and usable tools
                     '/api/decisions': hub.decisions_view,                   # read-only: one list for gates and change requests
                     '/api/strip': hub.strip_view,                           # read-only: the instruments of the Cockpit strip
+                    '/api/arbeitsstand': hub.arbeitsstand_view,             # read-only: offene Objekte für die nächste Shell (§10)
+                    '/api/chat/verlauf': hub.chat_verlauf,                  # read-only: der Gesprächsverlauf (§9.2), nur im Speicher
                     '/api/boundaries': lambda: hub.boundaries_view(),        # read-only: Modus und Grenzen dieses Projekts
                     '/api/guard/status': hub.guard_status,                  # read-only: der Inhaltsschutz (Build 16) – nie Text
                     '/api/intent/vorlagen': hub.intent_vorlagen,            # read-only: Vorlagen für Vorhaben mit Stufen (19.10.2026)
@@ -3407,7 +3509,12 @@ def make_server(hub: UIXHub, port=0):
                     '/api/chat': hub.create_chat_mission,
                     '/api/project/files': hub.project_files,        # read-only
                     '/api/project/file': hub.project_file,          # read-only
-                    '/api/chat/reply': hub.chat_reply,
+                    '/api/chat/reply': lambda p: hub._verlauf('reply', p, hub.chat_reply(p)),     # §9.2: hält den Verlauf fest
+                    '/api/chat/verlauf/leeren': hub.chat_verlauf_leeren,
+                    '/api/arbeitsstand': lambda p: hub.arbeitsstand_melden(p, self.headers.get('X-SEDRA-Shell')),
+                    '/api/arbeitsstand/leeren': hub.gedaechtnis_leeren,     # „Gedächtnis leeren“ im Umschalter (§10.5)
+                    '/api/ablage/lesen': lambda p: hub.ablage_lesen(self.headers.get('X-SEDRA-Tool'), p),          # §10.3
+                    '/api/ablage/schreiben': lambda p: hub.ablage_schreiben(self.headers.get('X-SEDRA-Tool'), p),
                     '/api/planung/reply': hub.planung_reply,
                     # Fisch (19.10.2026): Übersetzung und Brief rufen das Modell (Mission, Audit, Inhaltsschutz); Transkripte schreiben nur ins Projekt
                     '/api/fisch/uebersetzen': hub.fisch.uebersetzen,
@@ -3447,8 +3554,8 @@ def make_server(hub: UIXHub, port=0):
                     '/api/entwurf/save': hub.entwurf_save,         # Entwurf speichern (nur im Entwurfsordner)
                     '/api/entwurf/read': hub.entwurf_read,
                     '/api/entwurf/list': hub.entwurf_list,
-                    '/api/chat/kombi': hub.chat_kombi,              # Lokal + KI: erst das lokale Modell, dann die Cloud prüft (ein Fenster)
-                    '/api/chat/cloud': hub.chat_cloud,              # Gespräch mit einem Cloud-Modell (Wahl neben Senden); Inhaltsschutz
+                    '/api/chat/kombi': lambda p: hub._verlauf('kombi', p, hub.chat_kombi(p)),              # Lokal + KI: erst das lokale Modell, dann die Cloud prüft (ein Fenster)
+                    '/api/chat/cloud': lambda p: hub._verlauf('cloud', p, hub.chat_cloud(p)),              # Gespräch mit einem Cloud-Modell (Wahl neben Senden); Inhaltsschutz
                     '/api/cloud/key': hub.cloud_key,
                     '/api/cloud/module-model': hub.cloud_module_model,   # welches Modell ein Modul nutzt (KI Labor)                        # Schlüssel verschlüsselt ablegen oder löschen; nie zurückgeben
                     '/api/routing-config/request': hub.routing_request,

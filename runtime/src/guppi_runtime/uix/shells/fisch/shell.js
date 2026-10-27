@@ -35,9 +35,11 @@
       this.el = {};
       host.append(this.kopf(), this.raum(), this.schublade(), this.fab());
       this.shellApi = {open: o=>this.openObject(o), notify: (t, tone)=>this.notify(t, tone),
-                       decide: (id, way)=>this.api('/api/decisions/answer', {method: 'POST', body: {id, way}}), reload: ()=>location.reload()};
+                       decide: (id, way)=>this.api('/api/decisions/answer', {method: 'POST', body: {id, way}}), reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
+      this.melder = root.sedraStand.makeMelder(this.api);        // Vertrag 1.1 §10.2: was in der Blase liegt, kennt die nächste Shell
       this.mountTalk();
       ctx.bus.on('object.open', o=>this.openObject(o));
+      ctx.bus.on('object.actions', ()=>{ const b = this.el.blasen && this.el.blasen.querySelector('.fi-blase'); if(b) this.drawVerbs(b); });
       ctx.bus.on('decision.pending', ()=>this.notify('Eine Entscheidung wartet – im Gespräch „Entscheidungen“ sagen.', 'warn'));
       document.addEventListener('keydown', e=>{
         if((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')){ e.preventDefault(); this.el.feld.focus(); }
@@ -157,6 +159,7 @@
       blase.append(koerper);
       this.el.blasen.append(blase);
       this.ctx.bus.emit('talk.context', {object: {type: object.type, id: object.id, title: object.title || ''}});
+      if(this.melder && object.id !== undefined) this.melder.offen([object], root.sedraStand.schluessel(object));
       Promise.all(this.mounted.map(s=>s.ready)).then(()=>this.drawVerbs(blase)).catch(()=>{});
     },
 

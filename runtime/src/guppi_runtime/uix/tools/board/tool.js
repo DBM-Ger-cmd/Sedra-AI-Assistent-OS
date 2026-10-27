@@ -218,7 +218,7 @@
         Object.keys(fields).forEach(k=>{ args[k] = fields[k].value; });
         form.werte = args;                              // abgewiesen: die Eingabe bleibt stehen
         await this.run(issue, verb, args);
-      }, 'p'));
+      }, 'p', {absenden: true}));
       if(verb.verb !== 'kommentieren') bar.append(d().button('Abbrechen', ()=>{ this.form = null; this.draw(); }));
       box.append(bar);
       box.onsubmit = e=>e.preventDefault();

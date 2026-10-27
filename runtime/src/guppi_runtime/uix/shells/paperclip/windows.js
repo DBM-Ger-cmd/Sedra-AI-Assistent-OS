@@ -143,12 +143,17 @@
     function open1(object){
       list = openWindow(list, object, MAX_OPEN);
       save(); render(String(object.id));
+      if(shell.melden) shell.melden();
       const view = views.get(String(object.id));
       if(view && view.box.scrollIntoView) view.box.scrollIntoView({block: 'nearest'});
       return {kind: 'window', object};
     }
     function toggle(id){ list = toggleWindow(list, id, MAX_OPEN); save(); render(id); }
-    function closeById(id){ list = closeWindow(list, id); save(); render(); }
+    function closeById(id){
+      const w = list.find(x=>x.id === String(id));
+      list = closeWindow(list, id); save(); render();
+      if(w && shell.onWindowClosed) shell.onWindowClosed(objectOf(w));
+    }
 
     function restore(){ load(); render(); return list.length; }
     function refreshVerbs(){ views.forEach(drawVerbs); }

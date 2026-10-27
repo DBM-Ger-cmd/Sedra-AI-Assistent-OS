@@ -23,6 +23,7 @@
 
   function makeMenubar(host, shell){
     const cells = [];
+    let leiste = null;
     let openMenu = null;
 
     function closeMenu(){
@@ -176,8 +177,10 @@
         host.append(cell);
         const mod = shell.ctx.tools.mod(manifest.id);
         const state = root.sedraLifecycle.mountTool(mod, cell, shell.ctx.makeContext(manifest, null, shell.shellApi), shell.onProblem);
-        cells.push({manifest, mod, state});
+        cells.push({manifest, mod, state, cell});
       });
+      // Stufe 6: ruhige Instrumente wandern in „Weitere +n“ (ui/leiste.js)
+      leiste = root.sedraLeiste ? root.sedraLeiste.makeLeiste(host, ()=>cells.map(c=>({el: c.cell, id: c.manifest.id, order: c.manifest.order})), 'sh-min-gauge') : null;
     }
 
     async function refresh(){
@@ -193,6 +196,7 @@
         try{ c.mod.update(reading, null); }
         catch(err){ shell.onProblem('Instrument ' + c.manifest.id, err); }
       });
+      if(leiste) leiste.ordnen();
     }
 
     return {build, refresh, cells, openPlaces, closeMenu, popup, goOverview, isOpen: ()=>!!openMenu};

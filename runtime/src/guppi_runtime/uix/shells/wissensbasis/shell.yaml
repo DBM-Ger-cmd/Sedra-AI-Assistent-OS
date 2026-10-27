@@ -1,0 +1,11 @@
+# Wissensbasis – die zentrale Wissensbasis als eigene Oberfläche (Captain 26.10.2026, 19:43; W-E1 bis W-E5, SPEC_SHELL_WISSEN_v1).
+# Eine Shell aus Vorgabe ohne Code: den Bildschirm baut der Rahmen ui/frame.js aus shell.vorgabe.yaml.
+shell:
+  id: wissensbasis
+  name: "Wissensbasis"
+  description: "Alles Wissen von SEDRA an einem Ort: suchen mit der Fundstelle daneben, Quellen und Vorschläge entscheiden, eigene Notizen, Messung. Das Gespräch antwortet aus dem Wissen."
+  version: 1.0.0
+  vorgabe: shell.vorgabe.yaml
+  layout: {persist: browser}
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

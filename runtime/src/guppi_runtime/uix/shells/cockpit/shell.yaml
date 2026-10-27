@@ -2,9 +2,9 @@ shell:
   id: cockpit
   name: Cockpit
   description: Ein Werkstück vorn, Nachweise daneben, Gespräch unten (COCKPIT_MODUL_v1).
-  version: 1.1.0
+  version: 1.2.0
   entry:
-    js: [dock.js, tree.js, strip.js, palette.js, shell.js]     # shell.js last: it is the one that registers
+    js: [dock.js, tree.js, strip.js, palette.js, rahmen.js, shell.js]     # shell.js last: it is the one that registers
     css: shell.css
   provides: [strip, tree, dock, talk, palette]
   layout: {persist: browser}

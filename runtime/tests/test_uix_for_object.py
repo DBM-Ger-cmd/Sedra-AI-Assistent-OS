@@ -23,7 +23,7 @@ class ForObject(unittest.TestCase):
         palette = (UIX / 'shells' / 'cockpit' / 'palette.js').read_text(encoding='utf-8')
         own = PLACE_ID.findall(palette[palette.index('PLACES.concat(['):palette.index(']);')])
         self.assertIn('labor', contract)
-        self.assertEqual(own, ['master', 'runs'])
+        self.assertEqual(own, ['master', 'wissensbasis', 'runs'])     # wissensbasis: die Oberfläche (SPEC_SHELL_WISSEN_v1 §5)
         ids = contract + own
         self.assertEqual(sorted({i for i in ids if ids.count(i) > 1}), [])
 

@@ -13,13 +13,15 @@ from ..desk import gated  # noqa: F401 (Antrag mit Gate, D7.8)
 from ..desk.actions import Verb
 from . import adapter as adapter_mod
 from . import aufnahme
+from . import desk_basis
 from . import speicher as speicher_mod
 from .speicher import CAPTAIN, satz
 
 KIND_QUELLE = "wissen_quelle"
 KIND_VORSCHLAG = "wissen_vorschlag"
-TYPES = ("wissen", KIND_QUELLE, KIND_VORSCHLAG)
-TITLES = {"wissen": "Wissen", KIND_QUELLE: "Wissensquelle", KIND_VORSCHLAG: "Wissensvorschlag"}
+KIND_ABSCHNITT = desk_basis.KIND_ABSCHNITT
+TYPES = ("wissen", KIND_QUELLE, KIND_VORSCHLAG, KIND_ABSCHNITT)
+TITLES = {"wissen": "Wissen", KIND_QUELLE: "Wissensquelle", KIND_VORSCHLAG: "Wissensvorschlag", KIND_ABSCHNITT: "Wissensabschnitt"}
 SPEICHER = "speicher"
 ANTRAG = "Antrag liegt im Posteingang"
 
@@ -114,6 +116,33 @@ def vorschlag_listing(hub, payload):
     return [vorschlag_object(v) for v in sp.vorschlaege(status)]
 
 
+def abschnitt_read(hub, oid):
+    """SPEC_SHELL_WISSEN_v1 §4.2: ein Abschnitt mit Nachbarn; der Captain liest mit Stufe 6, derselbe Filter wie die Suche."""
+    sp = _need(hub)
+    try:
+        return desk_basis.abschnitt_object(desk_basis.abschnitt(sp, oid))
+    except ValueError:
+        raise ValueError("object_not_found") from None
+
+
+def abschnitt_listing(hub, payload):
+    _need(hub)
+    return []                                                   # Abschnitte findet die Suche; eine Liste aller wäre der ganze Speicher
+
+
+def _notiz(do):
+    def verb(hub, oid, args):
+        sp = _need(hub)
+        try:
+            return do(hub, sp, args or {})
+        except ValueError as exc:
+            return desk_basis.fehler(exc)
+        except OSError:
+            return desk_basis.fehler("wis_speicher_nicht_lesbar")
+    verb.__name__ = do.__name__
+    return verb
+
+
 def _extra(hub, payload):
     sp = speicher_von(hub)
     return {"quelle": {"zustand": "bereit" if sp is not None else "aus", "grund": getattr(getattr(hub, "runtime", None), "wissen_error", None),
@@ -128,9 +157,10 @@ def _suche(hub, oid, args):
     frage = str(args.get("frage") or "")
     k = args.get("k", sp.konfig.k)
     try:
-        return {"status": "erledigt", **sp.suche(frage, leser=CAPTAIN, k=k if type(k) is int else sp.konfig.k, route="local")}
+        f = desk_basis.filter_pruefen(args.get("filter"))
+        return {"status": "erledigt", **sp.suche(frage, leser=CAPTAIN, k=k if type(k) is int else sp.konfig.k, route="local", filter=f), "filter": f}
     except ValueError as exc:
-        return _fehler(exc)
+        return desk_basis.fehler(exc)
 
 
 def _nachfuehren(hub, oid, args):
@@ -169,6 +199,60 @@ def _quelle_beantragen(hub, oid, args):
         return _fehler(exc)
     req = gated.request(hub, KIND_QUELLE, "wissen_quelle_freigeben", _ziel(q), q, risks=[f"Inhalt wird Wissen für Stufe ≥ {q['stufe']}"], rollback_available=True)
     return {"status": "beantragt", "decision_id": "request:" + req["mission_id"], "text": ANTRAG}
+
+
+def _dateien_von(sp, q):
+    """Die Dateien einer (geprüften) Quelle, oder None, wenn der Adapter keine Dateien liest (die drei Speicher, GateWay)."""
+    ad = sp._adapter(q["adapter"])
+    if not hasattr(ad, "_dateien"):
+        return None
+    return ad._dateien(dict(q, pfad=q["pfad"].partition("#")[0]))
+
+
+def _quelle_pruefen(hub, oid, args):
+    """Vorprüfung im geführten Antrag (SPEC_WERKZEUG_WISSEN_v2 §3.4): nur lesen, kein Gate, kein Audit. Gibt es den Pfad, wie viele
+    Dateien und ungefähr wie viele Abschnitte, überschneidet er sich mit einer aktiven Quelle, gibt es genau diese Quelle schon?"""
+    import math
+    sp = _need(hub)
+    try:
+        q = _bindung(sp, args)
+        dateien = _dateien_von(sp, q)
+    except ValueError as exc:
+        return _fehler(exc)
+    schon = sp.quelle(sp.quelle_id(q["wurzel"], q["pfad"], q["adapter"]))
+    out = {"status": "erledigt", "quelle": {k: q[k] for k in ("adapter", "wurzel", "pfad", "muster", "stufe", "projekt", "personenbezug")},
+           "schon_da": bool(schon and schon.get("aktiv")), "ueberschneidung": []}
+    if dateien is None:
+        out.update(dateien=None, abschnitte_etwa=None, satz="Ein Speicher von SEDRA – wie viele Abschnitte es sind, zeigt der erste Abgleich nach der Freigabe.")
+        return out
+    from . import zerlegen
+    groesse = 0
+    for d in dateien:
+        try:
+            groesse += d.stat().st_size
+        except OSError:
+            pass
+    etwa = sum(1 for _ in dateien) and max(len(dateien), math.ceil(groesse / zerlegen.ZIEL_ZEICHEN))
+    neu = {d.resolve() for d in dateien}
+    for andere in sp.quellen():
+        if not andere.get("aktiv") or andere["id"] == (schon or {}).get("id"):
+            continue
+        try:
+            ihre = _dateien_von(sp, andere)
+        except ValueError:
+            continue
+        gemeinsam = len(neu & {d.resolve() for d in (ihre or [])})
+        if gemeinsam:
+            out["ueberschneidung"].append({"quelle": andere["id"], "titel": f"{andere['wurzel']}/{andere['pfad']}", "dateien": gemeinsam})
+    satz_ = f"{len(dateien)} {'Datei' if len(dateien) == 1 else 'Dateien'}, etwa {etwa} Abschnitte."
+    if not dateien:
+        satz_ = "Keine passende Datei gefunden – Pfad oder Dateiarten prüfen."
+    for u in out["ueberschneidung"]:
+        satz_ += f" Überschneidet sich mit „{u['titel']}“ ({u['dateien']} {'Datei' if u['dateien'] == 1 else 'Dateien'})."
+    if out["schon_da"]:
+        satz_ += " Genau diese Quelle ist schon freigegeben."
+    out.update(dateien=len(dateien), abschnitte_etwa=etwa, satz=satz_)
+    return out
 
 
 def _erstbestueckung(hub, oid, args):
@@ -332,16 +416,22 @@ def vorschlag_beantragen(hub, vorschlag):
 def register(registry, hub):
     sp = speicher_von(hub)
     if sp is None:                                             # Platzhalter: die Seite sagt „aus“, kein 400
-        for name, read, listing in (("wissen", wissen_read, wissen_listing), (KIND_QUELLE, quelle_read, quelle_listing), (KIND_VORSCHLAG, vorschlag_read, vorschlag_listing)):
+        for name, read, listing in (("wissen", wissen_read, wissen_listing), (KIND_QUELLE, quelle_read, quelle_listing), (KIND_VORSCHLAG, vorschlag_read, vorschlag_listing),
+                                    (KIND_ABSCHNITT, abschnitt_read, abschnitt_listing)):
             registry.register(registry.Kind(name, TITLES[name], read, listing, source="wissen", placeholder=True, extra=_extra))
         return list(TYPES)
     kinds = [
         registry.Kind("wissen", TITLES["wissen"], wissen_read, wissen_listing, source="wissen", extra=_extra, type_verbs=[
             Verb("suche", "Suchen", _suche), Verb("nachfuehren", "Nachführen", _nachfuehren),
             Verb("quelle_beantragen", "Quelle beantragen", _quelle_beantragen, needs_gate=True),
+            Verb("quelle_pruefen", "Quelle prüfen", _quelle_pruefen),          # SPEC_WERKZEUG_WISSEN_v2 §3.4: Vorprüfung, nur lesen
             Verb("erstbestueckung", "Erstbestückung beantragen", _erstbestueckung, needs_gate=True),
             Verb("nachmessung", "Nachmessung lesen", _nachmessung), Verb("nachmessung_bewerten", "Nachmessung bewerten", _nachmessung_bewerten),
-            Verb("nachmessung_abschliessen", "Nachmessung abschließen", _nachmessung_abschliessen)]),
+            Verb("nachmessung_abschliessen", "Nachmessung abschließen", _nachmessung_abschliessen),
+            # SPEC_SHELL_WISSEN_v1 §4.4 (W-E3): das eigene Wissen des Captains – einmal freigegeben, danach ohne Gate
+            Verb("notizen", "Notizen lesen", _notiz(desk_basis.notizen)), Verb("notiz_anlegen", "Notiz anlegen", _notiz(desk_basis.notiz_anlegen)),
+            Verb("notiz_aendern", "Notiz ändern", _notiz(desk_basis.notiz_aendern)), Verb("notiz_loeschen", "Notiz löschen", _notiz(desk_basis.notiz_loeschen))]),
+        registry.Kind(KIND_ABSCHNITT, TITLES[KIND_ABSCHNITT], abschnitt_read, abschnitt_listing, source="wissen", extra=_extra),
         registry.Kind(KIND_QUELLE, TITLES[KIND_QUELLE], quelle_read, quelle_listing, source="wissen", extra=_extra, verbs=[
             Verb("abschalten", "Abschalten", _abschalten, when=lambda o: o.get("aktiv")),
             Verb("stufe_heraufsetzen", "Stufe heraufsetzen", _stufe_herauf, when=lambda o: o.get("aktiv") and o.get("stufe", 6) < 6),

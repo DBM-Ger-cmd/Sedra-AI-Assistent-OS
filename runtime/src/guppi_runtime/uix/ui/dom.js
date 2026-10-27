@@ -22,8 +22,12 @@
     return node;
   }
 
-  function button(label, fn, cls){
+  // Vertrag 1.1 (SPEC_WERKZEUG_WISSEN_v2 §3.9): ein Knopf sendet kein Formular ab, außer er sagt es ({absenden: true}).
+  // Vorher war jeder Knopf in einem <form> ein Absende-Knopf: Enter löste den ersten aus – im Stufen-Formular „Abbrechen“ und danach
+  // trotzdem das Absenden (im Browser nachgestellt 26.10.2026).
+  function button(label, fn, cls, opts){
     const b = el('button', 's-btn' + (cls ? ' ' + cls : ''), label);
+    b.type = opts && opts.absenden ? 'submit' : 'button';
     b.onclick = async e=>{
       e.stopPropagation(); b.disabled = true;
       try{ await fn(e); }

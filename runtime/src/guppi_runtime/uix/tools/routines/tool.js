@@ -214,7 +214,7 @@
         Object.keys(fields).forEach(k=>{ args[k] = fields[k].value; });
         form.werte = args;
         await this.run(form.routine, form.verb, args);
-      }, 'p'), d().button('Abbrechen', ()=>{ this.form = null; this.draw(); }));
+      }, 'p', {absenden: true}), d().button('Abbrechen', ()=>{ this.form = null; this.draw(); }));
       box.append(bar);
       box.onsubmit = e=>e.preventDefault();
       return box;

@@ -11,7 +11,7 @@
     tool.line('Du', text, 'me');
     const row = tool.line('SEDRA', 'Lokal entwirft, dann prüft die Cloud …', 'note');
     try{
-      const out = await tool.ctx.api('/api/chat/kombi', {method: 'POST', body: {provider: pid, model, text, history: tool.history.slice(-8), vorgang: tool.vorgang || ''}});
+      const out = await tool.ctx.api('/api/chat/kombi', {method: 'POST', body: {provider: pid, model, text, history: root.sedraTalkVerlauf.fuerCloud(tool.history).slice(-8), vorgang: tool.vorgang || ''}});
       row.remove();
       if(out.status === 'completed'){
         tool.line('SEDRA lokal', out.local || '(leer)', '');

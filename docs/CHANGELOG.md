@@ -2,6 +2,51 @@
 
 Jeder Build hat eine fortlaufende Nummer in `BUILD.txt` und einen Eintrag hier; das Paket entsteht mit `runtime/benchmarks/make_build.py` (Prüfsummen, Zip, Patch gegen den Vorgänger). Ältere Versionsnotizen (v1.2–v1.20): `docs/historie/`.
 
+## UIX Stufe 6 – 2026-10-27 (Rahmen, Gespräch, Stimmigkeit, kleine Bildschirme; Spec SPEC_UIX_STUFE6_RAHMEN_v1, S6-E1 bis E5; nicht abgenommen)
+- **Leiste ordnet sich** (`ui/leiste.js`, Cockpit, Rahmen, Minimal): passt nicht alles hinein, wandern ruhige Zellen (höchstes `order` zuerst) in „+n ▾“; ein Klick zeigt dieselben, lebendigen Zellen darunter; warn/bad bleibt immer sichtbar; unter 1200 px ohne dritte Zeile. Kein Wert wird mehr abgeschnitten.
+- **Prüfwerkzeuge nur im Prüfbetrieb** (S6-E4): Manifestfeld `zweck: pruefung`, Schalter `entwicklung` in `local_config/switches.yaml`; `rahmen-probe` erscheint ohne Schalter nicht mehr (Manifest `pruefung` nennt es).
+- **Mini-Hub** (Captain 27.10., 11:02, ersetzt S6-E1): Rekorder und Umschalter sind ein eigenes schwebendes Fenster in jeder Shell – Oberflächen als Knöpfe (ein Klick wechselt), Rekorder, „⋯“; ziehbar, zusammenklappbar zu „S“, Lage und Zustand gemerkt (`sedra.hub`).
+- **Gespräch:** „Leeren“ fragt im Knopf nach („Wirklich leeren?“, 4 s, Esc bricht ab) und steht abgesetzt von „Senden“; kein Knopf „Grüne zuerst“ mehr – die Auswahl zeigt oben immer „Geprüft schnell ✓“ (S6-E2). Im Cockpit ein Griff für die Höhe (nicht zwei).
+- **Eine Zahl „offen“** (S6-E3): `/api/missions` trägt `offen` und `antrag` je Mission (das Objekt `task` bleibt unverändert); Freigabe-Anträge sind keine Aufgaben (nur Posteingang). Baum, Werkzeug Aufgaben, Leiste und Arbeitsplatz zählen gleich.
+- **Cockpit-Baum:** eigene Kopfzeile mit dem Knopf zum Ausblenden (überdeckt nichts mehr), „Projekt“ mit dem Namen als Notiz.
+- **Kleine Bildschirme** (S6-E5): Nachweis-Spalte höchstens 34 %, unter 1100 px Werkstückbreite als Reiter (ein Treffer schaltet auf die Fundstelle), leer eingeklappt (34 px, Griff); Rahmen ohne Nachweise ohne leere Spalte; KI Gateway für KMU mit kompaktem Kopf unter 820 px Höhe oder mit offenem Vorgang.
+- Tests: +`test_uix_stufe6` (8, davon 4 im Browser über alle Shells), Spec Gespräch (3).
+
+## UIX Stufe 5 – 2026-10-27 (Cockpit-Baum und Wissensbasis; Specs SPEC_COCKPIT_BAUM_v1, SPEC_SHELL_WISSEN_v1; nicht abgenommen)
+- **Cockpit-Baum** (`shells/cockpit/tree.js`): Wissen in der Bibliothek mit Zustand, „Wissens-Shell öffnen“; „Gespräch unten“ entfällt (T1), Untergruppe Sprache (T2); jede Gruppe klappt, gemerkt in `sedra.cockpit.baum` (nur Namen), zugeklappt „⚠ n wartet“; Vorgabe offen: GateWay, Vorhaben, Aufgaben (T4); „… n weitere“ statt stillem Abschneiden; „Aufgabe ohne Titel“ statt Missions-ID; Tastatur als Baum (roving tabindex, Fokus bleibt nach dem Neuzeichnen).
+- **Palette** (`palette.js`): Baumzeilen, „Zuletzt“ (5, nur im Speicher der Seite), „Im Wissen suchen: …“ (mit „?“ vorn zuerst; die Frage geht nur ins Memo des Werkzeugs), Ort „Wissensbasis (Oberfläche)“.
+- **Rahmen** (`rahmen.js`, Logbucheintrag zu COCKPIT_MODUL_v1 §1): Gespräch aufziehbar (2 Zeilen bis 50 %), Baum mit Strg+B aus/ein, „?“ statt Hinweiszelle öffnet die Kürzel; „＋ Neu“ mit ↑/↓/Esc und „Quelle für Wissen“.
+- **Neue Shell „Wissensbasis“** (`shells/wissensbasis/`, Vorgabe ohne Code): Orte des Wissens, Start Wissen › Suche, Fundstelle daneben, Gespräch „Frag das Wissen“.
+- **Vertrag:** Vorgabe-Orte aus `ui/places.js` abgeleitet (`desk/vorgabe.place_ids`), `start.view`, `start.type: wissen`, `gespraech.wissen`; Rahmen gibt `quelle` weiter und kennt das Objekt `shell` (Wechsel, `sedraWechsel.zurShell`).
+- **Werkzeug `fundstelle`** (Nachweis neben dem Wissen) mit Objekttyp `wissen_abschnitt` (Nachbarn, Rechtefilter wie die Suche); **Instrument `gauge-wissen`** mit `/api/strip` → `wissen`.
+- **Wissen:** Filter der Suche (Art, Quelle, Projekt, Zeitraum – vor dem Ranking, `suche.filter_sql`), Ansicht „Eigenes“ mit Notizen des Captains (`local_config/wissen/notizen/`, einmal freigegeben, danach ohne Gate, Audit `WIS_NOTIZ` ohne Inhalt), Auftrag aus der Shell über das Memo.
+- **Gespräch:** `chat_reply {wissen: true}` – Suche, mit Modell Antwort aus dem Wissensblock mit Zitatprüfung (D7.6), ohne Modell die Fundstellen; Kennungen [W…] sind Verweise; Antworten mit Personenbezug bleiben lokal (`nurLokal`, Verlauf `nur_lokal`) und gehen in keinen Cloud-Weg.
+- Tests: +`test_wissen_basis` (8), +`test_uix_cockpit_baum` (8, davon 3 im Browser), Wissensbasis im Browser, Specs `fundstelle` (6), `gauge-wissen` (2), Wissen (20). `uix_check` cockpit 40/41, wissensbasis 40/42 (Altfunde `tool:meter` und `breite` der Rahmen-Shells, beide schon auf `main`).
+
+## UIX Stufe 4 – 2026-10-26 (Werkzeug Wissen v2, Gespräch mit Verlauf; Spec SPEC_WERKZEUG_WISSEN_v2; nicht abgenommen)
+- **Wissen:** Suche als Start (WZ1), Treffer als Karten (Stelle, Quelle, Stand, Relevanzbalken, markierte Suchwörter, „mehr“, „Details“), Fundstelle und „Ins Gespräch“ über `wissen.auswahl`; Quellen als Liste mit Marken in Klartext und Menü „⋯“; geführter Antrag in vier Schritten mit Vorprüfung `quelle_pruefen` (nur lesen: Dateien, etwa Abschnitte, Überschneidung, schon da) (WZ4); Messung = Index + Nachmessung mit drei Knöpfen je Frage (WZ2); Handlungen der Ansicht in der Werkbank-Zeile (WZ3).
+- **Vertrag:** Ereignis `object.actions` – jede Shell zeichnet die Werkbank-Zeile neu.
+- **Gespräch:** Verlauf vom Server nach Neuladen oder Shell-Wechsel, „Leeren“, Kennung und Stelle aus dem Wissen ins Eingabefeld.
+- Tests: Spec Wissen (20), `test_wissen_quelle_pruefen` (4), Browser im Cockpit (2).
+
+## UIX Stufe 3 – 2026-10-26 (alle Shells am Arbeitsstand; Spec SPEC_DOCK_OHNE_NEUAUFBAU_v1 §10; nicht abgenommen)
+- gateway-kmu, paperclip, minimal, Rahmen (`ui/frame.js`), fisch, start, `_template`: melden ihre offenen Objekte gebündelt, übernehmen beim Start, was eine andere Shell offen hatte, und laden über `sedraWechsel.neuLaden` neu (vorher Arbeitsstand und Ablage hinaus). Dasselbe Objekt ohne verlangte Ansicht hängt nichts neu ein.
+- paperclip: Rennen zwischen zwei Seiten behoben (die Navigation markierte die langsamere).
+
+## UIX Stufe 2 – 2026-10-26 (Cockpit-Dock ohne Neuaufbau; Spec SPEC_DOCK_OHNE_NEUAUFBAU_v1 §4; nicht abgenommen)
+- `dock.abgleichen()` statt `dock.render()`: nur die geänderte Gruppe wird nachgeführt, jeder Reiter behält seine Fläche (`.dk-pane-box`); `instanzen: viele` bleibt versteckt eingehängt (höchstens 8), Einzelstücke zeichnen nie in zwei Gruppen („Hierher holen“); gespeichertes Layout wird geprüft; Arbeitsstand-Meldung (`ui/stand.js`).
+- Befund D2-3 behoben: im geteilten Cockpit war die linke Gruppe tot.
+
+## UIX Stufe 1 – 2026-10-26 (Vertrag 1.1: Gedächtnis, Arbeitsstand, Knöpfe, Ortskunde; Specs SPEC_DOCK_OHNE_NEUAUFBAU_v1, SPEC_WERKZEUG_WISSEN_v2 §3.9; nicht abgenommen)
+- **Drei Gedächtnisse je Werkzeug und Objekt** (`ui/lifecycle.js`, `ui/loader.js`): `ctx.memo` (Seite, übersteht Abbau/Einhängen), `ctx.sitzung` (`sessionStorage`, nur mit `gedaechtnis: sitzung`, nur Zustand der Ansicht, 4 KB/64 KB), `ctx.ablage` (Speicher der Runtime, nur mit `gedaechtnis: ablage`, auch Inhalt, übersteht Shell-Wechsel). Scrollposition automatisch. Helfer `memoVergessen`, `bereitHalten`/`zeigen` (Haken `hidden`/`shown`), `buendeln`, `istMehrfach`.
+- **Manifest:** `instanzen: eine|viele`, `gedaechtnis: sitzung|ablage` (`desk/gateway.py`, `ui/schema/tool.schema.json`). Vertragsrouten ohne Eintrag im Manifest: jede Shell `GET/POST /api/arbeitsstand`, jedes Werkzeug mit Ablage `POST /api/ablage/lesen|schreiben` (der Server trennt nach `X-SEDRA-Tool`).
+- **Server** (`desk/arbeitsstand.py`, Routen in `uix_server.py`): Arbeitsstand (offene Objekte, vorn; ein nicht gezeichnetes Objekt bleibt stehen), Ablage (256 KB je Eintrag, 8 MB gesamt, Vergessen beim Schließen und nach 12 h), Gesprächsverlauf (50 Einträge; geschrieben nur über die Routen des Gesprächs, bei der Cloud nach dem Inhaltsschutz). Alles nur im Prozess, nie auf der Platte, Audit nur Zahlen (`GEDAECHTNIS_GELEERT`, `CHAT_VERLAUF_GELEERT`).
+- **Umschalter:** „Gedächtnis leeren“ (zweiter Klick leert); vor dem Neuladen meldet die Shell ihren Arbeitsstand (`sedraWechsel.beimWechsel`, `neuLaden`).
+- **Knöpfe senden kein Formular mehr ab** (`ui/dom.js`, Befund V6, im Browser nachgestellt): vorher löste Enter den ersten Knopf eines Formulars aus – im Stufen-Formular des Wissens „Abbrechen“ und danach trotzdem das Absenden. Absende-Knöpfe ausdrücklich in board, org, routines, wissen.
+- **Ortskunde:** Ort „Wissen“ und seine Ansichten in jeder Shell (`ui/places.js`, `chat_tools.PLACES`, Zeichen in minimal); „gate“ nur noch Entscheidungen, „sandbox“ nur noch Modus und Grenzen. Ereignis `wissen.auswahl`.
+- Befund aus der Messung vor dem Umbau: im geteilten Cockpit mit je einer Aufgabe in beiden Gruppen zeichnet das Aufgaben-Werkzeug in die rechte Gruppe, die linke ist tot (Behebung Stufe 2, D2-3).
+- Tests: +`test_uix_gedaechtnis` (14), `test_uix_vertrag11` (9, davon 1 im Browser). `uix_check` cockpit 39/40, paperclip 42/44, gateway-kmu 34/35, minimal 39/41, gateway-studio 39/41 – je gleich wie vor dem Umbau (Altfunde `tool:meter`/`costs` leer, Breite, paperclip-nav); `--tool wissen` 12/12.
+
 ## Build 25 – 2026-10-19 (Feinschliff: SEDRA statt GUPPI, KMU-Shell, Cockpit, Paperclip mit Stufen und Planungstisch, Shell „Fisch“, Kern „Sprache“ mit Rekorder; Details: docs/BUILD_20_FEINSCHLIFF_2026-10-19.md, nicht abgenommen)
 - **Offene Punkte 2 und 3:** tote Routen `/api/guard/group|demo` aus `schutz` und `gateway` entfernt (Test: jede Route eines Manifests existiert im Server); Shell-Skripte mit LF, `.gitattributes` nur für `*.sh`/`*.command`; `/api/gateway/vorgaben` auch als GET.
 - **SEDRA statt GUPPI** in allen sichtbaren Texten der Oberfläche (155 Stellen, 51 Dateien; Token-Header und Dateinamen bleiben).

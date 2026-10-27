@@ -23,9 +23,20 @@ mir ein Fenster für Maschinenraum öffnen“ erkennt schon die Ortskunde (`ui/p
 
 Alles andere beantwortet der Server mit `403 tool_route_not_allowed` und schreibt `UIX_TOOL_DENIED` ins Audit.
 
+## Stufe 4 bis 6
+- **Verlauf vom Server** (`verlauf.js`): nach Neuladen oder Shell-Wechsel steht das Gespräch wieder da; im Browser liegt nichts.
+- **„Leeren“** fragt im Knopf nach: erster Klick „Wirklich leeren?“ (4 s), zweiter Klick leert – auch auf dem Server; Esc bricht ab.
+- **Modellauswahl:** oben immer die Gruppe „Geprüft schnell ✓“ (grüne Ampel), darunter die übrigen; kein Knopf „Grüne zuerst“ mehr.
+- **Aus dem Wissen:** „Ins Gespräch“ setzt Kennung und Stelle ins Feld; schaltet die Shell `gespraech.wissen` ein, antwortet das Gespräch
+  aus dem Wissen, Kennungen [W…] sind Verweise. Eine Antwort mit Personenbezug bleibt lokal (`nurLokal`) und geht in keinen Cloud-Weg.
+- **Höhe:** hat die Shell einen eigenen Griff (`shell.gespraechGriff`, Cockpit), zeichnet das Gespräch keinen zweiten.
+
 ## Ereignisse
-- sendet: object.open
-- hört: talk.context, decision.pending, decision.answered, live.line
+- sendet: object.open, talk.mode, wissen.auswahl
+- hört: talk.context, decision.pending, decision.answered, live.line, object.open, wissen.auswahl
+
+## Spec
+`node -r ../../../../../tests/uix_spec_dom.js test.spec.js` (Leeren, Cloud-Weg, Körper der Antwort).
 
 ## Abnahme
 `python benchmarks/uix_check.py --tool talk` – mountet das Werkzeug in einen leeren Container, prüft Inhalt, Handlungen,

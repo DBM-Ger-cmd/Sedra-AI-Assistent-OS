@@ -28,20 +28,26 @@
       }
 
       ctx.bus.on('object.open', o=>this.open(o));
-      this.open({type: 'task', id: 'alle', title: 'Aufgaben', collection: true});
+      ctx.bus.on('object.actions', ()=>this.drawVerbs());
+      // Vertrag 1.1 (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §10): den Arbeitsstand melden und beim Start übernehmen, was vorn lag
+      this.melder = root.sedraStand.makeMelder(ctx.api);
+      const stand = await this.melder.holen();
+      const vorn = ((stand && stand.offen) || []).find(o=>root.sedraStand.schluessel(o) === (stand && stand.vorn));
+      this.open(vorn && ctx.tools.forObject(vorn).length ? vorn : {type: 'task', id: 'alle', title: 'Aufgaben', collection: true});
     },
 
     // Was ein Werkzeug von der Shell bekommt: einen Weg zum Öffnen, einen zum Melden, einen zum Entscheiden.
     shellApi(){
       return {open: o=>this.open(o), notify: text=>console.info('[shell]', text),
               decide: (id, way)=>this.ctx.api('/api/decisions/answer', {method: 'POST', body: {id, way}}),
-              reload: ()=>location.reload()};
+              reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
     },
 
     open(object){
       if(!object) return;
       this.body.replaceChildren();
-      const tools = this.ctx.tools.for(object.type);
+      const tools = this.ctx.tools.forObject(object);             // N1: zu genau diesem Objekt
+      if(this.melder) this.melder.offen([object], root.sedraStand.schluessel(object));
       if(!tools.length){ this.body.append(d().empty('Kein Werkzeug für „' + object.type + '“.')); return; }
       (this.mounted || []).forEach(s=>root.sedraLifecycle.unmountTool(s, this.ctx.onProblem));
       this.mounted = tools.map(manifest=>{

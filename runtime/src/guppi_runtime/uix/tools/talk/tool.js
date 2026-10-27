@@ -1,6 +1,5 @@
-// Werkzeug „Gespräch“ (kind: panel) – the one input of the Cockpit (COCKPIT_MODUL_v1 rule 1).
-// It talks to the loaded model (/api/chat/reply), follows the object in front (talk.context), understands a navigation phrase
-// without asking the model, and takes „einmal ja“ as an answer to the decision that waits (rule 2: same audit, one place).
+// Werkzeug „Gespräch“ (kind: panel) – the one input (COCKPIT_MODUL_v1 rule 1): talks to the model, follows talk.context, routes places, takes „einmal ja“ (rule 2).
+// Vertrag 1.1: der Verlauf kommt vom Server (verlauf.js) und übersteht Neuladen und Shell-Wechsel; „Leeren“ leert ihn dort.
 // Build 19: SEDRA moves in the module environment. The model proposes (`ui_actions`); this tool draws a button for each, and only the
 // Captain's click opens the window or runs the verb (`POST /api/actions`). His own sentence asking to open something is the approval.
 
@@ -107,10 +106,12 @@
         else if(e.mode === 'cloud'){ const c = [...this.picker.options].find(o=>o.value.startsWith('cloud:')); if(c) this.picker.value = c.value; }
         this.ampelZeigen();
       });
-      this.gruen = d().button('Grüne zuerst', ()=>this.gruenZeigen());
+      // Stufe 6 (S6-E2): kein Knopf „Grüne zuerst“ mehr – die Auswahl sortiert selbst; „Leeren“ fragt im Knopf nach (B1)
       const send = d().button('Senden', ()=>this.submit(), 'p');
-      bar.append(this.input, this.picker, this.ampel, this.gruen, send);
-      el.replaceChildren(this.grip(el), this.log, bar);
+      bar.append(this.input, this.picker, this.ampel, send, d().el('span', 't-talk-trenn'), root.sedraTalkVerlauf.leerKnopf(this));
+      // hat die Shell einen eigenen Griff für die Höhe (Cockpit, rahmen.js), zeichnet das Gespräch keinen zweiten
+      const ohne = !!(ctx.shell && ctx.shell.gespraechGriff); el.classList.toggle('t-talk-ohne-griff', ohne);
+      el.replaceChildren(...(ohne ? [] : [this.grip(el)]), this.log, bar);
       this.loadCloud();
 
       ctx.bus.on('talk.context', e=>{ this.object = e.object || null; });
@@ -122,10 +123,11 @@
       });
       ctx.bus.on('decision.answered', ()=>{ this.pending = null; });
       this.say('Bereit. Schreib einen Auftrag, eine Frage, oder nenn einen Ort („Entscheidungen“, „Modelle“).', 'note');
+      if(root.sedraTalkVerlauf) root.sedraTalkVerlauf.laden(this);
       setTimeout(()=>this.input.focus(), 50);
     },
 
-    unmount(){ this.el.replaceChildren(); this.el.classList.remove('t-talk'); },
+    unmount(){ this.el.replaceChildren(); this.el.classList.remove('t-talk', 't-talk-ohne-griff'); },
 
     // Eingabe absenden: mit gewähltem Cloud-Modell in die Cloud, sonst wie bisher zu SEDRA
     submit(){
@@ -189,19 +191,17 @@
           }
           this.picker.value = value;
         }
+        this.gepruefteZuerst();
         this.ampelZeigen();
       }catch(_err){ /* ohne Cloud gibt es nur SEDRA lokal */ }
     },
 
-    // Schalter „Grüne zuerst“: oben in der Auswahl eine Gruppe mit allen grünen Modellen (gleiche Werte, also gleiche Wahl)
-    gruenZeigen(){
-      this.gruenZuerst = !this.gruenZuerst;
-      this.gruen.textContent = this.gruenZuerst ? 'Grüne: an' : 'Grüne zuerst';
+    // S6-E2: oben in der Auswahl immer die Gruppe „Geprüft schnell ✓“ (grüne Ampel; gleiche Werte, also gleiche Wahl), darunter die übrigen
+    gepruefteZuerst(){
       this.picker.querySelectorAll('optgroup[data-kandidaten]').forEach(g=>g.remove());
-      if(!this.gruenZuerst) return;
       const gruen = [...this.picker.options].filter(o=>o.dataset.ampel === 'gruen');
-      if(!gruen.length){ this.say('Noch kein grünes Modell: erst eins benutzen oder im KI Labor testen.', 'note'); return; }
-      const group = d().el('optgroup'); group.label = 'Grüne Kandidaten'; group.dataset.kandidaten = '1';
+      if(!gruen.length) return;
+      const group = d().el('optgroup'); group.label = 'Geprüft schnell ✓'; group.dataset.kandidaten = '1';
       gruen.forEach(o=>{ const c = d().el('option', null, o.textContent); c.value = o.value; c.dataset.ampel = 'gruen'; group.append(c); });
       this.picker.insertBefore(group, this.picker.children[1] || null);
     },
@@ -225,7 +225,7 @@
       const who = 'Cloud · ' + pid + ' / ' + model;
       const row = this.line(who, 'Denkt nach …', 'note');
       try{
-        const out = await this.ctx.api('/api/chat/cloud', {method: 'POST', body: {provider: pid, model, text, history: this.history.slice(0, -1)}});
+        const out = await this.ctx.api('/api/chat/cloud', {method: 'POST', body: {provider: pid, model, text, history: root.sedraTalkVerlauf.fuerCloud(this.history.slice(0, -1))}});
         row.remove();
         if(out.status === 'completed'){
           this.line(who, out.reply || '(leere Antwort)', '');
@@ -297,13 +297,13 @@
       const row = this.line('SEDRA', 'Denkt nach …', 'note');
       this.history.push({role: 'user', content: text});
       try{
-        const out = await this.ctx.api('/api/chat/reply', {method: 'POST', body: {mission_id: this.mission || '', text, history: this.history.slice(0, -1), attachments: [], vorgang: this.vorgang || ''}});
+        const out = await this.ctx.api('/api/chat/reply', {method: 'POST', body: root.sedraTalkVerlauf.antwortKoerper(this, text)});
         row.remove();
         if(out.status === 'completed'){
           this.mission = out.mission_id || this.mission;
           this.line('SEDRA', out.reply, '');
           if(out.quelle) this.line('SEDRA', 'Quelle: ' + out.quelle + ' – ohne Modell beantwortet.', 'note');
-          this.history.push({role: 'assistant', content: out.reply});
+          root.sedraTalkVerlauf.antwortMerken(this, out);                   // „Frag das Wissen“: mit Personenbezug nur lokal
           this.offer(out.ui_actions, text);
         }else if(out.status === 'no_model'){
           this.history.pop();

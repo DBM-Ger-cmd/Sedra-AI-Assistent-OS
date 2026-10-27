@@ -44,7 +44,9 @@
 
       this.shellApi = {open: o=>this.openObject(o), notify: (text, tone)=>this.notify(text, tone),
                        decide: (id, way)=>this.decide(id, way), theme: name=>root.sedraBoot.setTheme(name),
-                       reload: ()=>location.reload()};      // nach einem Shell-Wechsel: die Seite neu laden gehört der Shell, nicht dem Werkzeug
+                       // nach einem Shell-Wechsel: neu laden gehört der Shell; vorher Arbeitsstand und Ablage hinaus (Vertrag 1.1 §10.4)
+                       reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
+      this.melder = root.sedraStand.makeMelder(this.api);
 
       this.pages = root.sedraPcPages.makePages(this.el.page, this);
       this.nav = root.sedraPcNav.makeNav(this.el.nav, this);
@@ -62,6 +64,7 @@
       ctx.bus.on('decision.answered', ()=>this.afterChange());
       ctx.bus.on('task.changed', ()=>this.afterChange());
       ctx.bus.on('model.changed', ()=>this.refreshInstruments());
+      ctx.bus.on('object.actions', ()=>{ const p = this.pages.current(); if(p) this.topbar.setPage(p, this.pages.history()); this.windows.refreshVerbs(); });
       ctx.bus.on('desk.error', e=>this.notify('Die Runtime meldet: ' + e.message, 'warn'));
       ctx.bus.on('desk.resync', ()=>this.afterChange());
       // Spec 4 (N3): das Team. Die Werkzeuge lesen selbst nach; die Shell frischt Badge, Kacheln und die Verben der Fenster auf.
@@ -79,8 +82,13 @@
         else if(e.key === 'Escape' && !this.el.drawer.hidden && !this.topbar.isOpen()) this.toggleTalk(false);
       });
 
-      if(!this.pages.restore()) this.pages.open(this.pages.DASHBOARD);
+      // §10.4: was in einer anderen Shell vorn lag, wird hier die Seite (ein Agent: sein Fenster); sonst der eigene Verlauf
+      const stand = await this.melder.holen();
+      const vorn = ((stand && stand.offen) || []).find(o=>root.sedraStand.schluessel(o) === (stand && stand.vorn));
+      const fremd = vorn && stand.shell && stand.shell !== 'paperclip' && this.ctx.tools.forObject(vorn).length;
+      if(!this.pages.restore() && !fremd) this.pages.open(this.pages.DASHBOARD);
       this.windows.restore();
+      if(fremd){ this.openObject(vorn); this.notify('Aus der Oberfläche „' + stand.shell + '“ mitgenommen: ' + (vorn.title || vorn.type) + '.', 'note'); }
       await Promise.all([this.refreshInstruments(), this.nav.refresh()]).catch(e=>this.onProblem('Start', e));
       root.sedraBoot.onProblem = text=>this.notify(text, 'warn');
       (root.sedraBoot.problems || []).forEach(text=>this.notify(text, 'warn'));
@@ -145,6 +153,23 @@
     onPage(page, history){
       this.topbar.setPage(page, history);
       this.nav.mark(page.object);
+      this.melden();
+    },
+
+    // §10.2: offen sind die Seiten im Verlauf (das Dashboard ist kein Objekt) und die Agentenfenster; vorn die aktuelle Seite
+    melden(){
+      if(!this.melder || !this.pages) return;
+      const S = root.sedraStand, seiten = this.pages.history().filter(o=>o.type !== 'dashboard').reverse();
+      const fenster = this.windows ? this.windows.list().map(w=>({type: 'agent', id: w.id, title: w.title})) : [];
+      const cur = this.pages.current();
+      this.melder.offen(seiten.concat(fenster), cur && cur.object.type !== 'dashboard' ? S.schluessel(cur.object) : null);
+    },
+
+    // ein Agentenfenster wurde geschlossen (§9.3): Gedächtnis vergessen, den Werkzeugen und dem Arbeitsstand sagen
+    onWindowClosed(object){
+      root.sedraLifecycle.memoVergessen(object);
+      try{ this.ctx.bus.emit('object.close', {type: object.type, id: object.id}); }catch(_e){}
+      if(this.melder){ this.melder.geschlossen(object); this.melden(); }
     },
 
     async decide(id, way){

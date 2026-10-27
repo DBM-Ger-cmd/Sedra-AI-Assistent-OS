@@ -24,9 +24,9 @@
       "properties": {
         "einblenden": {"type": "string", "enum": ["fest", "rand"], "description": "fest: immer sichtbar; rand: verborgen, erscheint beim Anfahren des linken Rands (Standard fest)"},
         "breite": {"type": "integer", "minimum": 140, "maximum": 400, "description": "Breite der Spalte in Pixeln (Standard 220)"},
-        "liste": {"type": "array", "minItems": 1, "maxItems": 14,
+        "liste": {"type": "array", "minItems": 1, "maxItems": 20,
                   "items": {"type": "string", "enum": ["tasks", "intents", "boundary", "decisions", "models", "library", "crew", "meter", "logbook", "hardware", "machine", "modules", "project", "gateway"]},
-                  "description": "welche Orte der Ortskunde gezeigt werden, in dieser Reihenfolge (Standard: alle)"}
+                  "description": "welche Orte der Ortskunde gezeigt werden, in dieser Reihenfolge (Standard: alle). Die erlaubten Namen leitet desk/vorgabe.py beim Prüfen aus ui/places.js ab – ein Ort, eine Wahrheit; die Aufzählung hier ist nur die Grundmenge für das Modell."}
       }
     },
     "werkstueck": {
@@ -40,7 +40,8 @@
       "type": "object", "additionalProperties": false,
       "properties": {
         "art": {"type": "string", "enum": ["zone", "schublade"], "description": "feste Zone im Raster oder Schublade mit Knopf (Standard zone; eine Schublade braucht keine Zeile im Raster)"},
-        "hoehe": {"type": "integer", "minimum": 64, "maximum": 400, "description": "Höhe der Zone in Pixeln (Standard 112)"}
+        "hoehe": {"type": "integer", "minimum": 64, "maximum": 400, "description": "Höhe der Zone in Pixeln (Standard 112)"},
+        "wissen": {"type": "boolean", "description": "das Gespräch antwortet zuerst aus dem Wissensspeicher, mit Fundstellen [W…] (SPEC_SHELL_WISSEN_v1 §4.6; Standard aus)"}
       }
     },
     "entscheidungen": {"type": "string", "enum": ["karte", "werkzeug"], "description": "karte: eine Karte erscheint, sobald eine wartet (in der Raster-Zone oder rechts schwebend); werkzeug: nur als Werkstück (Standard karte)"},
@@ -48,9 +49,10 @@
     "start": {
       "type": "object", "additionalProperties": false, "required": ["type", "id"],
       "properties": {
-        "type": {"type": "string", "enum": ["task", "intent", "boundary", "decision", "model", "skill", "agent", "meter", "logbook", "hardware", "machine", "module", "project", "gateway"]},
+        "type": {"type": "string", "enum": ["task", "intent", "boundary", "decision", "model", "skill", "agent", "meter", "logbook", "hardware", "machine", "module", "project", "gateway", "wissen"]},
         "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,40}$"},
-        "title": {"type": "string", "maxLength": 60}
+        "title": {"type": "string", "maxLength": 60},
+        "view": {"type": "string", "pattern": "^[a-z]{2,20}$", "description": "die Ansicht, die das Werkzeug beim Start zeigt (z. B. suche beim Wissen)"}
       },
       "description": "was beim Start offen ist, wenn nichts gemerkt wurde (Standard: Aufgaben)"
     }

@@ -13,7 +13,7 @@ arbeitsplatz:
   - name: Gespräch
     wo: 'unten: das eine Eingabefeld – Auftrag, Frage oder ein Ort'
   - name: ＋ Neu
-    wo: 'oben rechts: Vorhaben, Projekt, Datei, Modell hinzufügen'
+    wo: 'oben rechts: Vorhaben, Projekt, Datei, Modell hinzufügen, Quelle für Wissen'
   woerter:
     entscheidungen:
       ist: das Instrument „Entscheidungen“ oben – ein Klick öffnet die Liste
@@ -42,6 +42,12 @@ arbeitsplatz:
         type: project
         id: projekt
         title: Projekt
+    wissen:
+      ist: 'Baum links unter „Bibliothek“ · Strg+K „wissen“ · „?“ vor einer Frage in der Palette sucht im Wissen'
+      objekt:
+        type: wissen
+        id: speicher
+        title: Wissen
     logbuch:
       ist: Baum links unter „System“
       objekt:

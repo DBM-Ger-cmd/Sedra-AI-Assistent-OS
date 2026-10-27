@@ -1,0 +1,19 @@
+tool:
+  id: fundstelle
+  name: "Fundstelle"
+  description: "Der Nachweis neben dem Wissen: der gewählte Abschnitt im Zusammenhang, mit dem davor und danach, Stand, Stufe und Personenbezug."
+  version: 1.0.0
+  kind: object
+  handles: [wissen]
+  slot: nachweis
+  order: 61
+  gedaechtnis: [sitzung]          # Vertrag 1.1: nur die Kennung des gezeigten Abschnitts, nie sein Text
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - POST /api/objects
+  events:
+    emits: [object.open, wissen.auswahl]      # wissen.auswahl mit zweck gespraech: „Ins Gespräch übernehmen“
+    listens: [wissen.auswahl]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

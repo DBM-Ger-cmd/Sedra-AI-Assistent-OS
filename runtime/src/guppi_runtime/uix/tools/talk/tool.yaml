@@ -6,7 +6,7 @@ tool:
   kind: panel
   handles: []
   order: 10
-  entry: {js: [kombi.js, tool.js], css: tool.css}
+  entry: {js: [kombi.js, verlauf.js, tool.js], css: tool.css}
   api:
     - POST /api/chat/reply
     - POST /api/chat/kombi
@@ -18,9 +18,11 @@ tool:
     - GET /api/cloud             # Wahl neben Senden: welche Cloud-Modelle bereit sind (nur lesen)
     - POST /api/cloud/models     # ... und ihre Modellliste beim Anbieter (nur lesen)
     - POST /api/chat/cloud       # Gespräch mit einem gewählten Cloud-Modell, durch den Inhaltsschutz
+    - GET /api/chat/verlauf      # Vertrag 1.1 (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §9.2): der Verlauf liegt auf dem Server und übersteht Neuladen und Shell-Wechsel
+    - POST /api/chat/verlauf/leeren   # „Gespräch leeren“ – Audit ohne Inhalt
   events:
-    emits: [object.open, talk.mode]
-    listens: [talk.context, decision.pending, decision.answered, live.line, object.open]   # B6-G-03: der offene GateWay-Vorgang
+    emits: [object.open, talk.mode, wissen.auswahl]   # wissen.auswahl: eine Kennung [W…] in der Antwort zeigt die Fundstelle
+    listens: [talk.context, decision.pending, decision.answered, live.line, object.open, wissen.auswahl]   # B6-G-03: der offene GateWay-Vorgang
   trust: CORE
   tests: [test.spec.js]
   needs: {ui: ">=1.0 <2"}

@@ -84,6 +84,7 @@
       win.el.remove();
       open.delete(key(win.object));
       save();
+      if(shell.onWindowClosed) shell.onWindowClosed(win.object);          // Vertrag 1.1 §9.3
       shell.onWindowFocus(([...open.values()].pop() || {}).object || null);
     }
 

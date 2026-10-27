@@ -39,7 +39,7 @@ class Modules(unittest.TestCase):
         view = self.hub.modules_view()
         self.assertEqual(view['shell'], 'start', 'der Einstieg, solange nichts gewählt ist')
         self.assertTrue(view['shell_available'])
-        self.assertEqual(sorted(s['id'] for s in view['shells']), ['cockpit', 'fisch', 'gateway-kmu', 'gateway-studio', 'guppi-xp', 'minimal', 'paperclip', 'start'])   # gateway-kmu (Build 19), fisch (19.10.)
+        self.assertEqual(sorted(s['id'] for s in view['shells']), ['cockpit', 'fisch', 'gateway-kmu', 'gateway-studio', 'guppi-xp', 'minimal', 'paperclip', 'start', 'wissensbasis'])   # gateway-kmu (Build 19), fisch (19.10.), wissensbasis (27.10.)
         self.assertTrue(next(s for s in view['shells'] if s['id'] == 'start')['enabled'])
         self.assertIn('modules', [t['id'] for t in view['tools']])
         self.assertEqual(view['rejected'], [])

@@ -87,7 +87,7 @@ class InTheBrowser(unittest.TestCase):
                 errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
                 page.goto(url); wait_until_started(page); page.wait_for_timeout(1200)
                 names = page.evaluate("()=>[...document.querySelectorAll('.st-card h2')].map(h=>h.textContent)")
-                self.assertEqual(sorted(names), ['Cockpit', 'KI GateWay Studio', 'KI Gateway für KMU', 'Minimal', 'Paperclip', 'SEDRA XP', 'Translator'], 'die Auswahl selbst steht nicht zur Wahl; der alte Desktop schon')
+                self.assertEqual(sorted(names), ['Cockpit', 'KI GateWay Studio', 'KI Gateway für KMU', 'Minimal', 'Paperclip', 'SEDRA XP', 'Translator', 'Wissensbasis'], 'die Auswahl selbst steht nicht zur Wahl; der alte Desktop schon')
                 page.fill('.st-make-row input[aria-label="Name der neuen Oberfläche"]', 'meine-bruecke')
                 page.click('.st-make-row button:has-text("Anlegen")'); page.wait_for_timeout(1200)
                 names = page.evaluate("()=>[...document.querySelectorAll('.st-card h2')].map(h=>h.textContent)")

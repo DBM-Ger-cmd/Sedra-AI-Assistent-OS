@@ -59,8 +59,10 @@
 
     list(items){
       const box = d().el('div', 's-col');
-      const open = items.filter(o=>o.state !== 'fertig' && o.state !== 'fehlgeschlagen');
-      const done = items.filter(o=>o.state === 'fertig' || o.state === 'fehlgeschlagen').slice(-5).reverse();
+      // Stufe 6 (S6-E3): Anträge liefert der Server nicht mehr als Aufgaben; offen ist, was nicht fertig oder fehlgeschlagen ist
+      const istOffen = o=>o.state !== 'fertig' && o.state !== 'fehlgeschlagen';
+      const open = items.filter(istOffen);
+      const done = items.filter(o=>!istOffen(o)).slice(-5).reverse();
       box.append(d().el('h5', 's-head', 'Aufgaben · ' + open.length + ' offen'));
       if(!open.length) box.append(d().empty('Nichts offen. Schreib unten, was gebaut werden soll – SEDRA macht Aufgaben daraus.'));
       open.forEach(o=>box.append(this.row(o)));

@@ -70,6 +70,7 @@ OBJECTS = {
     'agentfenster': {'type': 'agent', 'id': None, 'title': 'Agent'},
     'labor': {'type': 'labor', 'id': 'labor', 'title': 'KI-Labor'},
     'wissen': {'type': 'wissen', 'id': 'speicher', 'title': 'Wissen'},                   # Spec 7 (D7.9): der Wissensspeicher
+    'fundstelle': {'type': 'wissen', 'id': 'speicher', 'title': 'Wissen'},               # SPEC_SHELL_WISSEN_v1 §4.2: Nachweis neben dem Wissen
 }
 
 MEASURE_ZONES = """(names) => {
@@ -87,9 +88,11 @@ MEASURE_PANE = """(tool) => {
   const body = document.querySelector('.dk-group .dk-body');
   const verbs = document.querySelector('.dk-group .dk-verbs');
   if(!body) return {missing:true};
-  const own = body.querySelector('.dk-tool[data-tool="' + tool + '"]');
+  // Stufe 2: je Reiter eine Fläche; gemessen wird die sichtbare (versteckt eingehängte Reiter zählen nicht)
+  const pane = body.querySelector(':scope > .dk-pane-box:not([hidden])') || body;
+  const own = pane.querySelector('.dk-tool[data-tool="' + tool + '"]');
   if(!own) return {missing:true, note:'das Werkzeug hat keinen Container in diesem Reiter'};
-  const slots = [...body.querySelectorAll('.dk-tool')];
+  const slots = [...pane.querySelectorAll('.dk-tool')];
   const r = body.getBoundingClientRect();
   return {text: own.innerText.trim().length, slots: slots.length,
           filled: own.innerText.trim().length > 0 || own.childElementCount > 0,
@@ -161,7 +164,7 @@ PROFILES = {
         'pane': MEASURE_PANE,
         'segment': None,                       # im Cockpit stehen Werkstück und Nachweise zugleich im Reiter
         'eingebettet': ('schutz',),            # Build 19: der Schutz läuft im Menü des GateWay, hat hier keinen eigenen Reiter (nicht geprüft)
-        'leftovers': "()=>[...document.querySelectorAll('.dk-body .dk-tool')].map(s=>s.dataset.tool)",
+        'leftovers': "()=>[...document.querySelectorAll('.dk-body > .dk-pane-box:not([hidden]) .dk-tool, .dk-body > .dk-tool')].map(s=>s.dataset.tool)",
         'count': "()=>document.querySelectorAll('.dk-tab').length",
         'count_word': 'Reiter',
         'menu': {'box': '.pal', 'input': '.pal-box input', 'rows': "()=>[...document.querySelectorAll('.pal-row b')].map(b=>b.textContent)",
@@ -252,9 +255,10 @@ def frame_profile(vorgabe):
     return p
 
 
-def start_server(say, shell=None, prepare=None):
+def start_server(say, shell=None, prepare=None, switches=None):
     """A UIXHub on a temporary project with one project folder and one mission; returns (url, stop).
-    `prepare(hub)` darf das Prüfprojekt vorher umbauen – etwa ein fremdes Modul einbauen, bevor der Browser es sieht."""
+    `prepare(hub)` darf das Prüfprojekt vorher umbauen – etwa ein fremdes Modul einbauen, bevor der Browser es sieht.
+    `switches` ({name: bool}) steht vor dem Start in local_config/switches.yaml – der Hub liest die Schalter beim Start."""
     sys.path.insert(0, str(RUNTIME / 'src')); sys.path.insert(0, str(RUNTIME / 'tests'))
     try:
         import host_isolation
@@ -264,6 +268,10 @@ def start_server(say, shell=None, prepare=None):
     from guppi_runtime.uix_server import UIXHub, make_server
     arch = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
     tmp = tempfile.TemporaryDirectory(prefix='guppi-uix-check-')
+    if switches:
+        config = Path(tmp.name) / 'project' / 'local_config'
+        config.mkdir(parents=True, exist_ok=True)
+        (config / 'switches.yaml').write_text('switches:\n' + ''.join(f'  {k}: {{enabled: {"true" if v else "false"}}}\n' for k, v in switches.items()), encoding='utf-8')
     hub = UIXHub(Path(tmp.name) / 'project', arch)
     if shell:                                   # genau diese Shell prüfen (uix.yaml, wie auf dem PC)
         config = Path(tmp.name) / 'project' / 'local_config'
