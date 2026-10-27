@@ -332,6 +332,32 @@ class Work(Run):
         self.assertEqual(self.db.execute("SELECT text FROM comments WHERE task_id = ? AND author_kind = 'system'", (task['id'],)).fetchone()[0],
                          'research_invalid:extra_key')
 
+    def test_research_falls_back_to_the_address_in_the_task_text(self):
+        """Betriebsmessung 27.10.2026: das Hilfsmodell liefert `lesen` leer oder verstümmelt (research_invalid:urls). Nennt der Aufgabentext
+        die Adresse, gilt sie; das Web-Werkzeug prüft weiter die Hostliste."""
+        self.db.execute("UPDATE agents SET role = 'researcher' WHERE id = 'A-3'")
+        self.orch.web = web = FakeWeb({'https://docs.example/a': 'Inhalt.'})
+        task = board.create(self.db, {'title': 'Frage', 'description': 'Lies https://docs.example/a, bitte. Danach fasse zusammen.',
+                                      'assignee': 'A-3', 'origin': 'delegation'}, self.orch.clock(), 'A-UA')
+        run = self.start('A-3', task)
+        self.router.answers.append({'lesen': [], 'frage': 'Was steht da?'})
+        sha = ('%064x' % abs(hash('Inhalt.')))[:64]
+        self.router.answers.append({'zusammenfassung': 'Etwas.', 'quellen': [{'url': 'https://docs.example/a', 'sha256': sha}]})
+        self.run_job(run)
+        self.assertEqual(web.asked, ['https://docs.example/a'])
+
+    def test_research_without_any_address_still_fails(self):
+        self.db.execute("UPDATE agents SET role = 'researcher' WHERE id = 'A-3'")
+        self.orch.web = FakeWeb({})
+        task = board.create(self.db, {'title': 'Frage', 'description': 'Ohne Adresse.', 'assignee': 'A-3', 'origin': 'delegation'},
+                            self.orch.clock(), 'A-UA')
+        run = self.start('A-3', task)
+        self.router.answers.append({'lesen': ['kaputt'], 'frage': 'f'})
+        with self.assertRaises(HandlerError):
+            self.run_job(run)
+        self.assertEqual(self.db.execute("SELECT text FROM comments WHERE task_id = ? AND author_kind = 'system'", (task['id'],)).fetchone()[0],
+                         'research_invalid:urls')
+
     def test_make_worker_hands_the_handler_to_a_worker(self):
         worker = orchestra_runner.make_worker(self.hub)
         self.assertIs(worker.supervisor, self.sup)

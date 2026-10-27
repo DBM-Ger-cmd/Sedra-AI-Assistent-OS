@@ -45,37 +45,11 @@ Rueckweg: workspace/GUPPI_OS/local_config/model_scheduler.yaml loeschen (oder en
 """
 
 
-def sh(cmd):
-    try:
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=20).stdout
-    except Exception:
-        return ""
-
-
-def vram():
-    out = sh(["nvidia-smi", "--query-gpu=memory.used,memory.total,temperature.gpu", "--format=csv,noheader,nounits"]).strip().splitlines()
-    if not out:
-        return None
-    used, total, temp = [x.strip() for x in out[0].split(",")]
-    return {"used_mib": int(used), "total_mib": int(total), "temp_c": int(temp)}
+from messlauf_basis import free_ram_gb as _free_ram, servers, sh, vram  # noqa: E402  (gemeinsame Messbausteine, Skriptordner steht in sys.path)
 
 
 def free_ram_gb():
-    out = sh(["powershell", "-NoProfile", "-Command", "(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory"]).strip()
-    return round(int(out) / 1048576, 1) if out.isdigit() else None
-
-
-def servers():
-    out = sh(["powershell", "-NoProfile", "-Command",
-              "Get-CimInstance Win32_Process -Filter \"Name like 'llama-server%'\" | ForEach-Object { \"$($_.ProcessId)|$($_.CommandLine)\" }"])
-    found = []
-    for line in out.splitlines():
-        pid, _, cmd = line.partition("|")
-        if pid.strip().isdigit():
-            parts = cmd.split()
-            np_ = next((parts[i + 1] for i, p in enumerate(parts[:-1]) if p in ("-np", "--parallel")), "?")
-            found.append({"pid": int(pid), "np": np_})
-    return found
+    return _free_ram(1)
 
 
 def project_dir(arg):

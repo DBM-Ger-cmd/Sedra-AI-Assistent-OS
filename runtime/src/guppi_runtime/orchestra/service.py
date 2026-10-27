@@ -124,6 +124,16 @@ class Orchestra:
         attempts = job.get("attempt_log") or []
         return not attempts or attempts[-1].get("outcome") == "RUNNING"
 
+    def run_end_reason(self, job_id):
+        """Warum ein beendeter Job endete (Fehlerklasse des letzten Versuchs, z. B. `hardware_pressure`), sonst None. Steht im Kommentar der
+        freigegebenen Aufgabe, damit niemand im Audit suchen muss."""
+        try:
+            attempts = (self.supervisor.store.load(job_id).get("attempt_log") or [])
+            last = attempts[-1] if attempts else {}
+            return str(last.get("failure_class") or last.get("reason_code") or "") or None
+        except Exception:
+            return None
+
     def run_blocked(self):
         if self.supervisor is None or not getattr(self.supervisor, "enabled", False):
             return "supervisor_off"

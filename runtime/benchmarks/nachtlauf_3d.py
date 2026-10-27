@@ -28,6 +28,8 @@ import time
 import urllib.request
 from pathlib import Path
 
+import messlauf_basis as basis                # gemeinsame Messbausteine (Skriptordner steht in sys.path)
+
 HERE = Path(__file__).resolve().parent
 RUNTIME = HERE.parent
 ROOT = RUNTIME.parent
@@ -142,17 +144,11 @@ class Run:
     def sampler(self):
         low = 0
         while not self.stop_metrics.wait(30):
-            g = subprocess.run(["nvidia-smi", "--query-gpu=memory.used,temperature.gpu", "--format=csv,noheader,nounits"], capture_output=True, text=True).stdout.strip().split(",")
-            ram = subprocess.run(["powershell", "-NoProfile", "-Command", "[math]::Round((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory/1MB,2)"],
-                                 capture_output=True, text=True).stdout.strip().replace(",", ".")
-            try:
-                row = {"t": now(), "vram_mib": int(g[0]), "temp_c": int(g[1]), "ram_free_gb": float(ram)}
-            except (ValueError, IndexError):
+            gpu, ram = basis.vram(), basis.free_ram_gb()
+            if gpu is None or ram is None:
                 continue
-            top = subprocess.run(["powershell", "-NoProfile", "-Command",
-                                  "Get-Process | Sort-Object PrivateMemorySize64 -Descending | Select-Object -First 6 | ForEach-Object { $_.ProcessName + ':' + $_.Id + ':' + [math]::Round($_.PrivateMemorySize64/1GB,2) }"],
-                                 capture_output=True, text=True).stdout.split()
-            row["top_prozesse"] = top
+            row = {"t": now(), "vram_mib": gpu["used_mib"], "temp_c": gpu["temp_c"], "ram_free_gb": ram}
+            row["top_prozesse"] = basis.top_prozesse(6)
             row["cockpit_pid"] = self.cockpit.pid if self.cockpit is not None else None
             self.metrics.append(row)
             with (self.out / "messung.jsonl").open("a", encoding="utf-8") as f:
@@ -179,11 +175,30 @@ class Run:
             time.sleep(5)
 
     # ---- Phase 1: Recherche ueber den Agenten
+    def run_failed(self, task):
+        """Fehlercode des gescheiterten Agentenlaufs zu dieser Aufgabe (aus dem Audit), sonst None."""
+        path = PROJECT / "runtime_data" / "audit" / "events.jsonl"
+        try:
+            with open(path, "rb") as f:
+                f.seek(0, 2)
+                f.seek(max(0, f.tell() - 400_000))
+                lines = f.read().decode("utf-8", "replace").splitlines()
+        except OSError:
+            return None
+        for line in reversed(lines):
+            if task in line and '"ORC_RUN_FAILED"' in line:
+                try:
+                    return json.loads(line)["payload"].get("code") or "unbekannt"
+                except ValueError:
+                    return "unbekannt"
+        return None
+
     def research(self, title, url):
         r = self.call("/api/actions", {"type": "issue", "verb": "anlegen", "args": {
             "titel": f"3D-Recherche: {title}",
             "beschreibung": (f"Lies {url} und fasse in hoechstens fuenf Saetzen zusammen, welche Formen, Befehle oder Techniken fuer 3D-Objekte dort gezeigt werden "
-                             "und wie man sie benutzt. Nenne in lesen genau diese Adresse."),
+                             "und wie man sie benutzt. Trage im Feld lesen als einziges Element genau diese Adresse ein, vollstaendig mit https://, "
+                             f"also lesen = [\"{url}\"]."),
             "bearbeiter": RES_AGENT}})
         task = (r.get("result") or {}).get("issue")
         if not task:
@@ -213,6 +228,10 @@ class Run:
                 return comment[0]
             if err and "research_invalid" in err[0] and approved_ids:
                 self.log("recherche_abgelehnt", task=task, grund=err[0][:80])
+                return None
+            code = self.run_failed(task)
+            if code:                                   # der Lauf ist gescheitert: nicht weiter warten (Fehler im Audit: ORC_RUN_FAILED)
+                self.log("recherche_abgelehnt", task=task, grund=code)
                 return None
             time.sleep(5)
         self.log("recherche_zeit", task=task)
@@ -294,7 +313,7 @@ def preflight():
             problems.append(f"freier RAM nur {gb} GB (mindestens 10)")
     except ValueError:
         problems.append("RAM nicht lesbar")
-    if subprocess.run(["powershell", "-NoProfile", "-Command", "(Get-Process llama-server -ErrorAction SilentlyContinue | Measure-Object).Count"], capture_output=True, text=True).stdout.strip() != "0":
+    if basis.servers():
         problems.append("ein llama-server laeuft schon")
     return problems, gb
 
@@ -323,6 +342,7 @@ def main(argv=None):
     run = Run(out, args.stunden)
     ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)       # ES_CONTINUOUS | ES_SYSTEM_REQUIRED: kein Ruhezustand, solange dieses Skript laeuft
     results, wissen_teile = [], []
+    fehlschlaege = 0
     try:
         run.log("start", stunden=args.stunden, ausgabe=str(out))
         run.start_cockpit()
@@ -337,6 +357,12 @@ def main(argv=None):
                 text = run.research(title, url)
             if text:
                 wissen_teile.append(f"[{title}] {text}")
+                fehlschlaege = 0
+            else:
+                fehlschlaege += 1
+                if fehlschlaege >= 3:           # drei Quellen hintereinander ohne Ergebnis: die Recherche selbst ist kaputt, nicht die Quelle
+                    run.log("recherche_abbruch", grund="3 Quellen in Folge ohne Ergebnis")
+                    break
         run.log("recherche_fertig", quellen_ok=len(wissen_teile), von=len(QUELLEN))
         wissen = chr(10).join(wissen_teile) or "(keine Recherche-Ergebnisse; nur Grundwissen des Modells)"
         for name, spec in OBJEKTE:

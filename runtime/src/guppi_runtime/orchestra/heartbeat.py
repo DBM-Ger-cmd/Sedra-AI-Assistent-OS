@@ -111,6 +111,19 @@ def finish(conn, wakeup_id, outcome, now, job_id=None, mission_id=None, request_
             (outcome, now, wakeup_id),
         )
 
+        # Der Antrag ist entschieden. Andere Weckrufe, die sich an ihn gehängt haben (`pending_request`), hängen sonst für immer an einem
+        # Antrag, den es nicht mehr gibt: zur selben Aufgabe enden sie mit ihm, zu anderen Aufgaben werden sie wieder offen und stellen
+        # im nächsten Takt einen eigenen Antrag (Betriebsmessung 27.10.2026: neue Aufgaben blieben 90 Minuten ohne Antrag liegen).
+        shared = row.get("request_mission_id")
+        if shared is not None and row["outcome"] == "antrag" and outcome in ("lauf", "abgelehnt"):
+            for sid, stask in conn.execute(
+                "SELECT id, task_id FROM wakeups WHERE request_mission_id = ? AND id != ? AND outcome = 'antrag'", (shared, wakeup_id)
+            ).fetchall():
+                if stask is not None and stask == row["task_id"]:
+                    conn.execute("UPDATE wakeups SET outcome = ?, done_at = ? WHERE id = ?", (outcome, now, sid))
+                else:
+                    conn.execute("UPDATE wakeups SET outcome = NULL, done_at = NULL, request_mission_id = NULL WHERE id = ?", (sid,))
+
         updated = conn.execute(
             "SELECT * FROM wakeups WHERE id = ?", (wakeup_id,)
         ).fetchone()
@@ -118,9 +131,12 @@ def finish(conn, wakeup_id, outcome, now, job_id=None, mission_id=None, request_
 
 
 def pending_request(conn, agent_id):
+    # Nur ein Antrag, der noch offen ist: war er schon entschieden (ein Weckruf mit demselben Antrag endete mit `lauf` oder `abgelehnt`),
+    # wäre er eine Sackgasse, und kein neuer Antrag käme zustande.
     row = conn.execute(
-        "SELECT * FROM wakeups WHERE agent_id = ? AND outcome = 'antrag' AND coalesced_into IS NULL "
-        "ORDER BY id DESC LIMIT 1",
+        "SELECT * FROM wakeups w WHERE w.agent_id = ? AND w.outcome = 'antrag' AND w.coalesced_into IS NULL "
+        "AND NOT EXISTS (SELECT 1 FROM wakeups x WHERE x.request_mission_id = w.request_mission_id AND x.outcome IN ('lauf', 'abgelehnt')) "
+        "ORDER BY w.id DESC LIMIT 1",
         (agent_id,),
     ).fetchone()
     if row is None:

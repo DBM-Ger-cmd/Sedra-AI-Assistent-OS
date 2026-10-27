@@ -134,6 +134,39 @@ class Wakeups(Base):
         self.assertEqual(len(self.requests), 1, 'ein Antrag wartet schon: kein zweiter')
         self.assertEqual((self.wakeup(wid2)['outcome'], self.wakeup(wid2)['request_mission_id']), ('antrag', 'MR-1'))
 
+    def test_a_decided_request_does_not_strand_the_wakeups_that_hung_on_it(self):
+        """Betriebsmessung 27.10.2026: ein zweiter Weckruf (andere Aufgabe) hängt sich an den wartenden Antrag. Wird der Antrag entschieden,
+        endet nur sein eigener Weckruf; der andere blieb für immer `antrag` an einem toten Antrag, und neue Aufgaben bekamen nie einen."""
+        self.task('T2', assignee='A1')
+        w1 = self.wake('A1', 'assign:T1:1', 'T1')
+        self.tick()
+        w2 = self.wake('A1', 'assign:T2:1', 'T2')
+        self.tick()
+        self.assertEqual(self.wakeup(w2)['request_mission_id'], 'MR-1')
+        heartbeat.finish(self.orch.conn, w1, 'lauf', self.clock.now, job_id='J-T1')                      # der Captain gibt den Antrag frei
+        w2row = self.wakeup(w2)
+        self.assertEqual((w2row['outcome'], w2row['done_at'], w2row['request_mission_id']), (None, None, None), 'wieder offen')
+        self.tick()
+        self.assertEqual(self.requests[-1], ('A1', 'T2', w2), 'die zweite Aufgabe bekommt ihren eigenen Antrag')
+        self.assertEqual(self.wakeup(w2)['request_mission_id'], 'MR-2')
+
+    def test_a_wakeup_for_the_same_task_ends_with_its_decided_request(self):
+        w1 = self.wake('A1', 'assign:T1:1', 'T1')
+        self.tick()
+        w2 = self.wake('A1', 'comment:7', 'T1')
+        self.tick()
+        heartbeat.finish(self.orch.conn, w1, 'abgelehnt', self.clock.now)
+        self.assertEqual(self.wakeup(w2)['outcome'], 'abgelehnt')
+
+    def test_an_already_decided_request_is_not_waited_for(self):
+        w1 = self.wake('A1', 'assign:T1:1', 'T1')
+        self.tick()
+        w2 = self.wake('A1', 'comment:7', 'T1')
+        self.tick()
+        self.orch.conn.execute("UPDATE wakeups SET outcome = 'lauf' WHERE id = ?", (w1,))           # Bestand aus der Zeit vor der Korrektur
+        self.assertIsNone(heartbeat.pending_request(self.orch.conn, 'A1'))
+        self.assertEqual(self.wakeup(w2)['outcome'], 'antrag')
+
     def test_supervisor_off_leaves_the_wakeup_open_and_says_so_once(self):
         self.supervisor.enabled = False
         self.guard.standing = True
@@ -325,6 +358,13 @@ class Reconcile(Base):
                 self.assertEqual(out['freigegeben'], 1)
                 self.assertEqual(self.task_row(), {'state': 'zugewiesen', 'checkout_by': None, 'checkout_run': None})
                 self.assertEqual(self.last_comment(), ('system', 'lauf_beendet'))
+
+    def test_the_comment_names_why_the_job_ended(self):
+        """Ein Job, der vor dem Handler scheitert (z. B. zu wenig RAM für das Modell), ließ nur `lauf_beendet` zurück; der Grund stand nur im Audit."""
+        self.running()
+        self.supervisor.store.jobs['J-T1'] = {'state': 'FAILED', 'attempt_log': [{'outcome': 'FAILED', 'failure_class': 'hardware_pressure'}]}
+        self.tick()
+        self.assertEqual(self.last_comment(), ('system', 'lauf_beendet: hardware_pressure'))
 
     def test_a_living_job_keeps_its_checkout(self):
         self.running()

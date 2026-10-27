@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nvidia-smi *)",
+      "mcp__ccd_session_mgmt__list_events",
+      "mcp__Claude_Browser__find"
+    ]
+  }
+}

@@ -63,7 +63,8 @@ def _runs(orch, now, out):
     for row in heartbeat.in_flight(orch.conn):
         if orch.run_alive(row.get("job_id") or row["run_id"]) is not False:
             continue
-        board.release(orch.conn, row["task_id"], row["run_id"], "zugewiesen", now, STALLED)
+        why = orch.run_end_reason(row.get("job_id") or row["run_id"])
+        board.release(orch.conn, row["task_id"], row["run_id"], "zugewiesen", now, STALLED + (f": {why}" if why else ""))
         orch.audit_event("ORC_RUN_RELEASED", {"task_id": row["task_id"], "run_id": row["run_id"], "agent_id": row["agent_id"],
                                               "reason": STALLED})
         out["freigegeben"] += 1
