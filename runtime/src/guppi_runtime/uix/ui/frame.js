@@ -33,7 +33,7 @@
       rand: z=>(z === 'orte' && ((v.orte || {}).einblenden === 'rand')) || (z === 'leiste' && ((v.leiste || {}).einblenden === 'rand')),
       nachweise: (v.werkstueck || {}).nachweise || 'seitenleiste',
       nachweisBreite: (v.werkstueck || {}).nachweis_breite || 360,
-      gespraech: {art: (v.gespraech || {}).art || 'zone', hoehe: (v.gespraech || {}).hoehe || 112},
+      gespraech: {art: (v.gespraech || {}).art || 'zone', hoehe: (v.gespraech || {}).hoehe || 112, wissen: (v.gespraech || {}).wissen === true},
       entscheidungen: v.entscheidungen || 'karte',
       suche: v.suche || 'strg-k',
       start: v.start || {type: 'task', id: 'alle', title: 'Aufgaben', collection: true},
@@ -56,7 +56,8 @@
         const host = document.getElementById('sedra-root');
         host.classList.add('fr'); host.replaceChildren();
         this.shellApi = {open: o=>this.open(o), notify: (t, tone)=>this.notify(t, tone), decide: (i, w)=>this.decide(i, w),
-                         theme: n=>root.sedraBoot && root.sedraBoot.setTheme(n), reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
+                         theme: n=>root.sedraBoot && root.sedraBoot.setTheme(n), reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload(),
+                         wissen: L.gespraech.wissen};             // SPEC_SHELL_WISSEN_v1 §4.6: das Gespräch fragt zuerst den Wissensspeicher
         this.el = {};
         this.grid(host);
         if(L.hasZone('leiste')) this.buildLeiste();
@@ -192,12 +193,14 @@
 
       open(object){
         if(!object || !object.type || !object.id) return;
+        if(object.type === 'shell') return root.sedraWechsel && root.sedraWechsel.zurShell ? root.sedraWechsel.zurShell(object.id) : null;
         const same = this.current && this.current.type === object.type && this.current.id === object.id;
         // Vertrag 1.1: dasselbe Objekt ohne verlangte Ansicht hängt nichts neu ein (der Zustand bleibt); eine verlangte Ansicht ist Navigation
         if(same && object.ansicht === undefined && object.view === undefined && this.mounted.length) return;
         this.current = {type: object.type, id: object.id, title: object.title || object.id, collection: !!object.collection};
         if(object.view !== undefined) this.current.view = String(object.view);
         if(object.ansicht !== undefined) this.current.ansicht = String(object.ansicht);
+        if(object.quelle !== undefined) this.current.quelle = String(object.quelle);
         if(this.melder) this.melder.offen([this.current].concat(this.history.slice().reverse()), root.sedraStand.schluessel(this.current));
         if(!same){ this.history = this.history.filter(h=>!(h.type === object.type && h.id === object.id)).concat([this.current]).slice(-MAX_HISTORY); this.save(); }
         this.mounted.forEach(s=>root.sedraLifecycle.unmountTool(s, this.onProblem));

@@ -9,7 +9,7 @@ tool:
   order: 60
   slot: inhalt
   gedaechtnis: [sitzung, ablage]   # Vertrag 1.1: Ansicht in der Sitzung, Frage und Treffer in der Ablage (SPEC_WERKZEUG_WISSEN_v2 §3.8)
-  entry: {js: [zitate.js, suche.js, quellen.js, antrag.js, messung.js, tool.js], css: tool.css}
+  entry: {js: [zitate.js, suche.js, quellen.js, antrag.js, messung.js, eigenes.js, tool.js], css: tool.css}
   api:
     - POST /api/objects
     - POST /api/actions

@@ -124,7 +124,8 @@ class Flows(unittest.TestCase):
 
     def test_cockpit_switches_the_shell_from_the_modules_tool(self):
         def flow(page, wait):
-            page.click('.ck-tree [role=button]:has-text("Module")'); page.wait_for_timeout(900)
+            # SPEC_COCKPIT_BAUM_v1 T4: System ist beim ersten Start zu – erst die Gruppe aufklappen, dann die Zeile
+            page.click('.ck-tree [data-key="g:System"]'); page.click('.ck-tree [role=treeitem]:has-text("Module")'); page.wait_for_timeout(900)
             # die Zeile „Minimal“, nicht der erste Knopf: seit Build 18 steht GUPPI XP (der alte Desktop) davor
             page.click('.t-modules-row:has(b:text-is("Minimal")) button:has-text("Diese Shell nehmen")'); page.wait_for_timeout(900)
             self.assertTrue(page.query_selector('.t-modules-reload button'), 'der Hinweis bringt den Knopf mit')
@@ -283,12 +284,13 @@ class Build24(unittest.TestCase):
             page.click('.t-files .s-note.ok button:has-text("Modus und Grenzen")'); page.wait_for_timeout(900)
             self.assertTrue(page.query_selector('.dk-tab.on:has-text("Modus und Grenzen")'), 'der Knopf führt zu den Grenzen')
             # Baum → Modell hinzufügen: der Abschnitt ist offen; ein falscher Pfad gibt einen klaren Satz, kein Rezept
-            page.click('.ck-tree [role=button]:has-text("Modell hinzufügen")'); page.wait_for_timeout(900)
+            page.click('.ck-tree [data-key="g:Werkstatt"]')         # T4: die Werkstatt ist beim ersten Start zu
+            page.click('.ck-tree [role=treeitem]:has-text("Modell hinzufügen")'); page.wait_for_timeout(900)
             self.assertTrue(page.evaluate("()=>document.querySelector('.t-shop-section[data-section=neu]').open"))
             page.fill('.t-shop-input', '/tmp/gibt-es-nicht.gguf'); page.keyboard.press('Enter'); page.wait_for_timeout(900)
             self.assertIn('GGUF', page.text_content('.t-shop-section[data-section=neu] .s-note.bad'))
             # Baum → Teststrecke: offen, Start gesperrt mit Grund (kein Modell)
-            page.click('.ck-tree [role=button]:has-text("Teststrecke")'); page.wait_for_timeout(900)
+            page.click('.ck-tree [role=treeitem]:has-text("Teststrecke")'); page.wait_for_timeout(900)
             self.assertTrue(page.evaluate("()=>document.querySelector('.t-shop-section[data-section=teststrecke]').open"))
             self.assertTrue(page.evaluate("()=>document.querySelector('.t-shop-section[data-section=teststrecke] button.p').disabled"))
             self.assertIn('Kein Modell geladen', page.text_content('.t-shop-section[data-section=teststrecke]'))

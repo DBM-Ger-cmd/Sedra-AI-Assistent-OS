@@ -1,0 +1,29 @@
+# Arbeitsplatz-Wissen dieses Moduls (Build 24, Ticket B6-G-06; Klaus 15.10.2026 19:36: „Arbeitsplatzwissen bleibt immer im Modul“).
+# desk/arbeitsplatz.py liest diese Datei ein; SEDRA antwortet daraus im Gespräch – ohne Modell, mit Knöpfen, nichts läuft von allein.
+arbeitsplatz:
+  satz: 'Die zentrale Wissensbasis: links die Orte des Wissens, in der Mitte die Suche, rechts die Fundstelle; das Gespräch antwortet aus dem Wissen mit Kennungen [W…].'
+  zonen:
+  - name: Leiste
+    wo: 'oben: Wissen (Modus, Abdeckung, Vorschläge), Zustand, Modell, Entscheidungen'
+  - name: Orte
+    wo: 'links: Suche, Quellen, Vorschläge, Eigenes Wissen, Bibliothek, Logbuch, Messung, Entscheidungen'
+  - name: Werkstück
+    wo: 'Mitte: das Werkzeug Wissen in der gewählten Ansicht'
+  - name: Nachweise
+    wo: 'rechts: die Fundstelle des gewählten Treffers, mit dem Abschnitt davor und danach'
+  - name: Gespräch
+    wo: 'unten: „Frag das Wissen“ – die Antwort nennt ihre Fundstellen [W…]'
+  anleitungen:
+  - id: wissensbasis_notiz
+    titel: Eigenes Wissen eintragen
+    schritte:
+    - Links „Wissen · Eigenes“, Titel und Text schreiben, wählen, ob Personenbezug drin ist, „Speichern“.
+    - Beim ersten Mal wartet „Notizen des Captains“ einmal auf deine Freigabe im Posteingang; danach ist jede Notiz sofort per Volltext findbar.
+    ort:
+      type: wissen
+      id: speicher
+      title: Wissen
+      view: eigenes
+    stich: notiz notizen eigenes wissen eintragen merken aufschreiben
+  begriffe:
+    fundstelle: Der gewählte Treffer im Zusammenhang – rechts neben der Suche, mit Stand, Stufe und Personenbezug.

@@ -225,7 +225,7 @@
       const who = 'Cloud · ' + pid + ' / ' + model;
       const row = this.line(who, 'Denkt nach …', 'note');
       try{
-        const out = await this.ctx.api('/api/chat/cloud', {method: 'POST', body: {provider: pid, model, text, history: this.history.slice(0, -1)}});
+        const out = await this.ctx.api('/api/chat/cloud', {method: 'POST', body: {provider: pid, model, text, history: root.sedraTalkVerlauf.fuerCloud(this.history.slice(0, -1))}});
         row.remove();
         if(out.status === 'completed'){
           this.line(who, out.reply || '(leere Antwort)', '');
@@ -297,13 +297,13 @@
       const row = this.line('SEDRA', 'Denkt nach …', 'note');
       this.history.push({role: 'user', content: text});
       try{
-        const out = await this.ctx.api('/api/chat/reply', {method: 'POST', body: {mission_id: this.mission || '', text, history: this.history.slice(0, -1), attachments: [], vorgang: this.vorgang || ''}});
+        const out = await this.ctx.api('/api/chat/reply', {method: 'POST', body: root.sedraTalkVerlauf.antwortKoerper(this, text)});
         row.remove();
         if(out.status === 'completed'){
           this.mission = out.mission_id || this.mission;
           this.line('SEDRA', out.reply, '');
           if(out.quelle) this.line('SEDRA', 'Quelle: ' + out.quelle + ' – ohne Modell beantwortet.', 'note');
-          this.history.push({role: 'assistant', content: out.reply});
+          root.sedraTalkVerlauf.antwortMerken(this, out);                   // „Frag das Wissen“: mit Personenbezug nur lokal
           this.offer(out.ui_actions, text);
         }else if(out.status === 'no_model'){
           this.history.pop();

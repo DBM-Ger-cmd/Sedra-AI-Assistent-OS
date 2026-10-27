@@ -2,11 +2,11 @@
 
 Der Wissensspeicher (Spec 7, SPEC_WERKZEUG_WISSEN_v2): Suche, Quellen, Vorschläge und Messung (Index und Nachmessung).
 
-**Objekttypen:** wissen (das eine Objekt `speicher`; die Ansichten wählt `view: suche | quellen | vorschlaege | messung`,
-dazu die alten Namen `index` und `nachmessung` – sie öffnen den jeweiligen Abschnitt der Messung – und `eigenes` → Quellen)
+**Objekttypen:** wissen (das eine Objekt `speicher`; die Ansichten wählt `view: suche | quellen | vorschlaege | eigenes | messung`,
+dazu die alten Namen `index` und `nachmessung` – sie öffnen den jeweiligen Abschnitt der Messung)
 **Art:** `object` · **Platz:** inhalt · **Vertrauen:** CORE · **Version:** 2.0.0 · **Gedächtnis:** sitzung, ablage
 
-Vier Ansichten als Reiter (Pfeiltasten wechseln); die Zahlen am Reiter kommen aus dem einen Objekt `wissen:speicher`:
+Fünf Ansichten als Reiter (Pfeiltasten wechseln); die Zahlen am Reiter kommen aus dem einen Objekt `wissen:speicher`:
 
 - **Suche** (Start, WZ1) – ein Feld, Enter sucht. Treffer als Karten: die Stelle als Titel (Klick → Quelle), Quelle · Datei · Stand darunter, ein
   Balken für die Relevanz im Verhältnis zum besten Treffer, Suchwörter markiert. „Fundstelle“ klappt auf und sendet `wissen.auswahl`, „Ins Gespräch“
@@ -17,6 +17,12 @@ Vier Ansichten als Reiter (Pfeiltasten wechseln); die Zahlen am Reiter kommen au
   (Abbrechen/Esc, Enter bestätigt, kein `prompt()`). Filter alle · aktiv · aus. Ein Treffer markiert hier seine Quelle.
   **Quelle beantragen …** ist geführt (WZ4, `antrag.js`): 1 Was soll SEDRA lernen? (Vorlagen, Freigegebenes ist nicht doppelt wählbar)
   → 2 Wo genau? (Vorprüfung `quelle_pruefen`: Dateien, etwa Abschnitte, Überschneidung) → 3 Wer darf es lesen? → 4 Zusammenfassung → Antrag im Posteingang.
+- **Filter der Suche** (SPEC_SHELL_WISSEN_v1 §4.5): „Filter“ neben dem Feld – Art, Quelle, Projekt, Zeitraum; gefiltert wird auf dem Server
+  vor dem Ranking (Top-k läuft nicht leer). Ein Auftrag aus der Shell (Palette „Im Wissen suchen“, Menü „Quelle für Wissen“) liegt einmal
+  im Memo des Werkzeugs und wird beim Einhängen ausgeführt – nie im Objekt, nie im Browser-Speicher.
+- **Eigenes** (§4.4, `eigenes.js`) – Notizen des Captains: Titel, Text, Personenbezug; „Speichern“ (Strg+Enter), Ändern, Löschen in zwei
+  Schritten. Beim ersten Mal wird „Notizen des Captains“ einmal beantragt; danach ohne Gate, die Notiz ist sofort per Volltext findbar.
+  Der Entwurf liegt in der Ablage.
 - **Vorschläge** – Filter offen · entschieden · alle; Herkunft und Belege; „Im Posteingang entscheiden“ öffnet den einen Posteingang.
 - **Messung** (WZ2) – Index als Karte (Modus, Abdeckung, letzter Lauf, Pause-Grund; Rest unter „Details“) und Nachmessung mit drei Knöpfen je
   Frage (eine Bewertung zeichnet nur ihre Zeile) und Fortschritt.
@@ -28,11 +34,12 @@ ausgeschaltet ist. Fehler aus `ctx.api()` werden Sätze auf Deutsch (`zitate.js`
 **Gedächtnis (Vertrag 1.1):** in der Sitzung (sessionStorage) nur der Zustand der Ansicht (Reiter, Zahl der Treffer, Filter, aufgeklappt, die
 Kennung der markierten Quelle) – nie Frage, Treffer oder Eingaben. Die liegen in der Ablage des Servers (RAM, nie auf der Platte).
 
-Dateien: `zitate.js` (reine Teile), `suche.js`, `quellen.js`, `antrag.js`, `messung.js`, `tool.js` (Zustand, Reiter, Vorschläge, Werkbank).
+Dateien: `zitate.js` (reine Teile), `suche.js`, `quellen.js`, `antrag.js`, `messung.js`, `eigenes.js`, `tool.js` (Zustand, Reiter, Vorschläge, Werkbank).
 
 ## Routen (Allowlist im Manifest)
 - `POST /api/objects` (Typen `wissen`, `wissen_quelle`, `wissen_vorschlag`)
-- `POST /api/actions` (Typ-Verben `suche`, `nachfuehren`, `quelle_pruefen`, `quelle_beantragen`, `erstbestueckung`, `nachmessung*`; an der Quelle
+- `POST /api/actions` (Typ-Verben `suche` (mit `filter`), `nachfuehren`, `quelle_pruefen`, `quelle_beantragen`, `erstbestueckung`, `nachmessung*`,
+  `notizen`, `notiz_anlegen`, `notiz_aendern`, `notiz_loeschen`; an der Quelle
   `abschalten`, `stufe_heraufsetzen`, `neu_beantragen`; am Vorschlag `zuruecknehmen`)
 - implizit aus `gedaechtnis: ablage`: `POST /api/ablage/lesen`, `POST /api/ablage/schreiben`
 

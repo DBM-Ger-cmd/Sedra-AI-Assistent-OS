@@ -21,10 +21,11 @@
         const state = root.sedraLifecycle.mountTool(mod, cell, ctx, shell.onProblem);
         cells.push({manifest, mod, state, cell});
       });
-      // the last cell belongs to the shell: what the keyboard does here (the sketch's right-hand hint)
-      const hint = d().el('div', 'ck-gauge ck-hint');
-      hint.append(d().el('small', null, 'Strg+K: Ort oder Auftrag · Alt+S: Oberfläche · Enter sendet'));
-      host.append(hint);
+      // the last cell belongs to the shell: „?“ opens the shortcuts (SPEC_COCKPIT_BAUM_v1 §3.8) instead of a fixed line of text
+      const hilfe = d().el('button', 'ck-hilfe', '?'); hilfe.type = 'button';
+      hilfe.title = 'Tastenkürzel (?)'; hilfe.setAttribute('aria-label', 'Tastenkürzel anzeigen');
+      hilfe.onclick = ()=>{ if(shell.rahmen) shell.rahmen.kuerzel(); };
+      host.append(hilfe);
     }
 
     async function refresh(){

@@ -21,7 +21,7 @@ tool:
     - GET /api/chat/verlauf      # Vertrag 1.1 (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §9.2): der Verlauf liegt auf dem Server und übersteht Neuladen und Shell-Wechsel
     - POST /api/chat/verlauf/leeren   # „Gespräch leeren“ – Audit ohne Inhalt
   events:
-    emits: [object.open, talk.mode]
+    emits: [object.open, talk.mode, wissen.auswahl]   # wissen.auswahl: eine Kennung [W…] in der Antwort zeigt die Fundstelle
     listens: [talk.context, decision.pending, decision.answered, live.line, object.open, wissen.auswahl]   # B6-G-03: der offene GateWay-Vorgang
   trust: CORE
   tests: [test.spec.js]

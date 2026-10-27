@@ -72,5 +72,58 @@ class WissenImCockpit(Basis):
 
 
 
+class Wissensbasis(WissenImCockpit):
+    """SPEC_SHELL_WISSEN_v1 W1, W3, W7, W8: die Shell aus Vorgabe – Orte, Start in der Suche, Fundstelle daneben, Gespräch aus dem Wissen."""
+    SHELL = 'wissensbasis'
+
+    @classmethod
+    def setUpClass(cls):
+        import sys
+        from test_uix_dock_stufe2 import BENCH
+        sys.path.insert(0, str(BENCH))
+        import uix_check
+        orig = uix_check.start_server
+        uix_check.start_server = lambda say, shell=None, prepare=None: orig(say, shell='wissensbasis', prepare=mit_quelle, switches={'wissen': True})
+        try:
+            Basis.setUpClass.__func__(cls)
+        finally:
+            uix_check.start_server = orig
+
+    def seite(self):
+        page = self.browser.new_page(viewport={'width': 1400, 'height': 900})
+        self.fehler = []
+        page.on('pageerror', lambda e: self.fehler.append(str(e)))
+        page.goto(self.url); self.uix.wait_until_started(page); page.wait_for_timeout(1500)
+        self.addCleanup(page.close)
+        return page
+
+    def test_suche_fundstelle_und_gespraech(self):
+        page = self.seite()
+        self.assertEqual(page.evaluate("()=>window.sedraBoot.ctx.manifest.shell.id"), 'wissensbasis')
+        orte = page.evaluate("()=>document.querySelector('.fr-orte, [aria-label=Orte]').innerText")
+        for ort in ('Wissen · Suche', 'Wissen · Quellen', 'Wissen · Eigenes', 'Logbuch'):
+            self.assertIn(ort, orte)
+        page.wait_for_selector('.t-wissen input.t-wissen-frage', timeout=5000)
+        self.assertEqual(page.evaluate("()=>document.querySelector('.t-wissen-tab.on').dataset.ansicht"), 'suche')
+        self.assertIn('Wähle einen Treffer', page.evaluate("()=>(document.querySelector('.t-fundstelle')||{}).innerText||''"))
+        page.fill('.t-wissen input.t-wissen-frage', 'Lease')
+        page.press('.t-wissen input.t-wissen-frage', 'Enter'); page.wait_for_timeout(1200)
+        page.locator('.t-wissen-treffer').first.locator('button', has_text='Fundstelle').click(); page.wait_for_timeout(900)
+        self.assertIn('Vor dem Laden die Lease', page.evaluate("()=>document.querySelector('.t-fundstelle').innerText"))
+        self.assertGreater(page.locator('.t-fundstelle mark').count(), 0)
+        feld = page.locator('.t-talk-in input, .t-talk-in textarea').first
+        feld.fill('Wann hole ich die Lease?'); feld.press('Enter'); page.wait_for_timeout(1500)
+        log = page.evaluate("()=>document.querySelector('.t-talk-log').innerText")
+        self.assertIn('Das habe ich im Wissen gefunden', log)
+        self.assertGreater(page.locator('.t-talk-log .t-wissen-zitat').count(), 0, 'die Kennung ist ein Verweis')
+        self.assertEqual(self.fehler, [])
+
+    def test_frage_bleibt_ueber_das_neuladen_aber_nicht_im_browser(self):
+        self.skipTest('im Cockpit geprüft (WissenImCockpit)')
+
+    def test_suche_ist_start_und_der_reiter_aendert_die_werkbank(self):
+        self.skipTest('im Cockpit geprüft (WissenImCockpit)')
+
+
 if __name__ == '__main__':
     unittest.main()

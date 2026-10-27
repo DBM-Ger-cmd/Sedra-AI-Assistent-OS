@@ -16,7 +16,36 @@
   // die History, die das Gespräch dem Modell mitschickt (rein): die letzten Einträge, Rolle und Inhalt
   function alsHistory(eintraege){
     return (eintraege || []).filter(e=>e && (e.rolle === 'user' || e.rolle === 'assistant') && typeof e.text === 'string')
-      .slice(-MAX_HISTORY).map(e=>({role: e.rolle, content: e.text.slice(0, 4000)}));
+      .slice(-MAX_HISTORY).map(e=>Object.assign({role: e.rolle, content: e.text.slice(0, 4000)}, e.nur_lokal ? {nurLokal: true} : {}));
+  }
+
+  // SPEC_SHELL_WISSEN_v1 §4.6 (rein): was in einen Cloud-Weg darf – nie eine Antwort mit Personenbezug aus dem Wissen, und nur Rolle und Inhalt
+  function fuerCloud(history){
+    return (history || []).filter(h=>h && !h.nurLokal).map(h=>({role: h.role, content: h.content}));
+  }
+  // der Körper für /api/chat/reply; `wissen` schaltet die Shell ein (Vorgabe gespraech.wissen), sonst ist es aus
+  function antwortKoerper(tool, text){
+    const body = {mission_id: tool.mission || '', text, history: (tool.history || []).slice(0, -1).map(h=>({role: h.role, content: h.content})), attachments: [], vorgang: tool.vorgang || ''};
+    if(tool.ctx && tool.ctx.shell && tool.ctx.shell.wissen) body.wissen = true;
+    return body;
+  }
+  // die Antwort in die History; mit Personenbezug aus dem Wissen nur lokal, und der Captain liest es einmal
+  function antwortMerken(tool, out){
+    const w = out && out.wissen;
+    tool.history.push(Object.assign({role: 'assistant', content: out.reply}, w && w.personenbezug ? {nurLokal: true} : {}));
+    if(w && w.ids && w.ids.length) zitateVerlinken(tool);
+    if(w && w.personenbezug) tool.say('In den Fundstellen steckt Personenbezug: diese Antwort geht in keinen Cloud-Weg.', 'note');
+  }
+  // die Kennungen [W…] der letzten Antwort werden Verweise: ein Klick zeigt die Fundstelle (Wissen öffnen, wissen.auswahl senden)
+  function zitateVerlinken(tool){
+    const Z = root.sedraWissenZitate, zeilen = tool.log ? tool.log.querySelectorAll('.t-talk-line') : [];
+    const zeile = zeilen[zeilen.length - 1], span = zeile && zeile.querySelector('span');
+    if(!Z || !Z.zitatKnoten || !span) return;
+    const text = span.textContent; span.textContent = '';
+    Z.zitatKnoten(span, text, id=>{
+      tool.ctx.shell.open({type: 'wissen', id: 'speicher', title: 'Wissen'});
+      tool.ctx.bus.emit('wissen.auswahl', {id});
+    });
   }
 
   // beim Einhängen: den Verlauf holen, zeigen und als History übernehmen. Ohne Verbindung bleibt das Gespräch leer, wie bisher.
@@ -55,6 +84,6 @@
     try{ tool.input.focus(); }catch(_e){}
   }
 
-  root.sedraTalkVerlauf = {fundstelleAnhaengen, verlaufZeilen, alsHistory, laden, leeren, MAX_HISTORY};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {verlaufZeilen, alsHistory, MAX_HISTORY};
+  root.sedraTalkVerlauf = {fundstelleAnhaengen, verlaufZeilen, alsHistory, fuerCloud, antwortKoerper, antwortMerken, laden, leeren, MAX_HISTORY};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {verlaufZeilen, alsHistory, fuerCloud, antwortKoerper, MAX_HISTORY};
 })();

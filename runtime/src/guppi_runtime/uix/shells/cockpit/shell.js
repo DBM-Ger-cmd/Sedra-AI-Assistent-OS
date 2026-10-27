@@ -29,12 +29,15 @@
       const middle = d().el('div', 'ck-middle');
       middle.append(this.el.tree, this.el.bench);
       host.append(this.el.strip, middle, this.el.talk);
+      this.host = host;
+      this.zuletzt = [];                             // die letzten offenen Objekte, nur im Speicher der Seite (Palette „Zuletzt“)
 
       // ---- the pieces of the shell
       this.dock = root.sedraDock.makeDock(this.el.bench, this);
       this.tree = root.sedraTree.makeTree(this.el.tree, this);
       this.strip = root.sedraStrip.makeStrip(this.el.strip, this);
       this.palette = root.sedraPalette.makePalette(this);
+      root.sedraCockpitRahmen.einrichten(this);     // §3.6–3.8: Gespräch aufziehbar, Baum ausblendbar, Kürzel
       this.shellApi = {open: o=>this.openObject(o), notify: (text, tone)=>this.notify(text, tone),
                        decide: (id, way)=>this.decide(id, way), theme: name=>root.sedraBoot.setTheme(name),
                        // nach einem Shell-Wechsel: neu laden gehört der Shell; vorher Arbeitsstand und Ablage hinaus (Vertrag 1.1 §10.4)
@@ -58,7 +61,9 @@
 
       document.addEventListener('keydown', e=>{
         if((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')){ e.preventDefault(); this.palette.toggle(); }
+        else if((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'b' || e.key === 'B')){ e.preventDefault(); this.rahmen.baumUmschalten(); }
         else if(e.key === 'Escape' && this.palette.isOpen()) this.palette.close();
+        else if(e.key === '?' && !e.ctrlKey && !e.metaKey && !root.sedraCockpitRahmen.tippt(e.target)){ e.preventDefault(); this.rahmen.kuerzel(); }
       });
 
       // what the Captain sees first: his last layout plus what he had open in another shell (§10.4), otherwise the tasks
@@ -108,9 +113,26 @@
       if(!object || !object.type || !object.id) return;
       // der Master-Chat ist das Gespräch unten: kein Reiter, nur der Cursor in das Eingabefeld
       if(object.type === 'talk'){ const field = this.el.talk.querySelector('textarea, input'); if(field) field.focus(); return; }
+      // „Wissens-Shell öffnen“ (Baum-Spec §3.1): in eine andere Oberfläche wechseln; der Arbeitsstand geht mit (Vertrag 1.1 §10)
+      if(object.type === 'shell') return root.sedraWechsel && root.sedraWechsel.zurShell ? root.sedraWechsel.zurShell(object.id) : null;
+      this.merkeZuletzt(object);
       this.dock.open(object);
       this.tree.mark(object);
       this.ctx.bus.emit('talk.context', {object: {type: object.type, id: object.id, title: object.title || ''}});
+    },
+
+    // die Palette „Zuletzt“: höchstens fünf, das Neueste vorn, nur im Speicher der Seite
+    merkeZuletzt(object){
+      if(!object || object.type === 'talk' || object.type === 'shell') return;
+      const key = object.type + ':' + object.id + ':' + (object.view || object.ansicht || '');
+      this.zuletzt = [object].concat(this.zuletzt.filter(o=>o.type + ':' + o.id + ':' + (o.view || o.ansicht || '') !== key)).slice(0, 5);
+    },
+
+    // „Im Wissen suchen: …“ (Baum-Spec §3.4): die Frage geht ins Memo des Werkzeugs (RAM), nicht ins Objekt und nicht in den Browser-Speicher
+    imWissenSuchen(frage){
+      const object = {type: 'wissen', id: 'speicher', title: 'Wissen', view: 'suche'};
+      if(frage && root.sedraLifecycle.memoFuer) root.sedraLifecycle.memoFuer('wissen', object).set('auftrag', {frage: String(frage).slice(0, 500)});
+      this.openObject(object);
     },
 
     // the one place decisions are answered, wherever the Captain said yes (rule 2)
@@ -124,23 +146,36 @@
     // ＋ Neu (rule 8): Vorhaben · Projekt · Datei öffnen · Modell hinzufügen – jeder Eintrag öffnet ein Werkzeug,
     // das genau das kann (Build 24: Projekt anlegen und Modell hinzufügen sind Abschnitte ihrer Werkzeuge, keine Hinweise mehr)
     openNew(anchor){
-      const menu = d().el('div', 'ck-menu');
+      const menu = d().el('div', 'ck-menu'); menu.setAttribute('role', 'menu');
+      let away = null;
+      const zu = ()=>{ menu.remove(); if(away) document.removeEventListener('mousedown', away); if(anchor && anchor.focus) anchor.focus(); };
       const add = (label, hint, fn)=>{
-        const item = d().el('div', 'ck-menu-item');
+        const item = d().el('div', 'ck-menu-item'); item.setAttribute('role', 'menuitem'); item.tabIndex = -1;
         item.append(d().el('b', null, label), d().el('small', null, hint));
-        d().clickable(item, ()=>{ menu.remove(); fn(); });
+        d().clickable(item, ()=>{ zu(); fn(); });
         menu.append(item);
+      };
+      // §3.7: ↑/↓ wählen, Enter öffnet, Esc schließt – der Fokus geht danach zurück auf „＋ Neu“
+      menu.onkeydown = e=>{
+        const alle = [...menu.querySelectorAll('.ck-menu-item')], i = alle.indexOf(document.activeElement);
+        if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); const n = alle[(i + (e.key === 'ArrowDown' ? 1 : alle.length - 1)) % alle.length]; if(n) n.focus(); }
+        else if(e.key === 'Escape'){ e.preventDefault(); zu(); }
       };
       add('Vorhaben', 'den Satz aufschreiben, um den es geht – SEDRA macht Aufgaben daraus', ()=>this.openObject({type: 'intent', id: 'alle', title: 'Vorhaben', collection: true}));
       add('Projekt', 'einen Ordner unter projects/ als Projekt anlegen', ()=>this.openObject({type: 'project', id: 'neu', title: 'Neues Projekt'}));
       add('Datei öffnen', 'eine Datei des Projekts als eigener Reiter', ()=>this.openObject({type: 'project', id: 'dateien', title: 'Dateien'}));
       add('Modell hinzufügen', 'GGUF wählen, Rezept prüfen, Freigabe – dann laden', ()=>this.openObject({type: 'model', id: 'neu', title: 'Neues Modell'}));
+      add('Quelle für Wissen', 'was SEDRA lernen soll – geführt in vier Schritten, Antrag im Posteingang', ()=>{
+        if(root.sedraLifecycle.memoFuer) root.sedraLifecycle.memoFuer('wissen', {type: 'wissen', id: 'speicher'}).set('auftrag', {antrag: true});
+        this.openObject({type: 'wissen', id: 'speicher', title: 'Wissen', view: 'quellen'});
+      });
       const box = anchor.getBoundingClientRect();
       menu.style.top = (box.bottom + 4) + 'px';
       menu.style.left = Math.max(8, box.right - 280) + 'px';
       document.body.append(menu);
+      const erstes = menu.querySelector('.ck-menu-item'); if(erstes) erstes.focus();
       setTimeout(()=>{
-        const away = e=>{ if(!menu.contains(e.target)){ menu.remove(); document.removeEventListener('mousedown', away); } };
+        away = e=>{ if(!menu.contains(e.target)){ menu.remove(); document.removeEventListener('mousedown', away); } };
         document.addEventListener('mousedown', away);
       }, 0);
     },
@@ -148,6 +183,7 @@
     // the dock tells the shell which object is in front: the Gespräch follows it (rule: talk.context)
     onDockChanged(object, offen, zuletzt){
       this.tree.mark(object);
+      if(object) this.merkeZuletzt(object);
       if(object) this.ctx.bus.emit('talk.context', {object: {type: object.type, id: object.id, title: object.title || ''}});
       if(this.melder && offen) this.melder.offen(offen, object ? object.type + ':' + object.id : null, zuletzt);   // §10.2
     },

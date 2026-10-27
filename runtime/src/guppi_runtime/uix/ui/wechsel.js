@@ -254,6 +254,9 @@
     return {chip, panel};
   }
 
-  root.sedraWechsel = {mount, entries, setScale, restoreScale, scales: SCALES, menuWahl, menuSeite, setMenuSeite, MENU_SEITEN, beimWechsel, vorDemWechsel, neuLaden};
+  // „Wissens-Shell öffnen“ (SPEC_COCKPIT_BAUM_v1 §3.1): eine Shell wechselt in eine andere; Arbeitsstand und Ablage gehen mit
+  function zurShell(id){ return wechseln({shell: String(id || '')}); }
+
+  root.sedraWechsel = {zurShell, mount, entries, setScale, restoreScale, scales: SCALES, menuWahl, menuSeite, setMenuSeite, MENU_SEITEN, beimWechsel, vorDemWechsel, neuLaden};
   if(typeof module !== 'undefined' && module.exports) module.exports = {entries, scales: SCALES};
 })();

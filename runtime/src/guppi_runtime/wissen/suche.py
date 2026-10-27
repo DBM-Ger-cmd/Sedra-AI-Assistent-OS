@@ -12,6 +12,30 @@ from .hilfen import _sha
 MAX_FRAGE = 500
 
 
+def filter_sql(f):
+    """(Text, Parameter) für den WHERE-Teil auf `a` und `q`; leer ohne Filter (geprüft von `desk_basis.filter_pruefen`).
+    Projekt: die Quellen dieses Projekts und die für alle; `bis` schließt den ganzen Tag ein."""
+    if not f:
+        return "", ()
+    teile, params = [], []
+    if f.get("quellen"):
+        teile.append("q.id IN (" + ",".join("?" * len(f["quellen"])) + ")")
+        params += list(f["quellen"])
+    if f.get("arten"):
+        teile.append("q.adapter IN (" + ",".join("?" * len(f["arten"])) + ")")
+        params += list(f["arten"])
+    if f.get("projekt"):
+        teile.append("(q.projekt IS NULL OR q.projekt = ?)")
+        params.append(f["projekt"])
+    if f.get("seit"):
+        teile.append("a.datum >= ?")
+        params.append(f["seit"])
+    if f.get("bis"):
+        teile.append("a.datum < ?")
+        params.append(f["bis"] + "T99")
+    return " AND " + " AND ".join(teile), tuple(params)
+
+
 class SucheTeil:
     def _abdeckung(self, mid):
         n = self.db.execute("SELECT count(*) FROM abschnitte").fetchone()[0]
@@ -36,7 +60,7 @@ class SucheTeil:
             if grund is not None:
                 self.audit("WIS_RUECKFALL_VOLLTEXT", {"grund": grund})
 
-    def suche(self, frage, *, leser, k=5, route="local", mission_id=None, protokoll=True):
+    def suche(self, frage, *, leser, k=5, route="local", mission_id=None, protokoll=True, filter=None):
         """Rechtefilter → Wortliste (FTS5, BM25) und Vektorliste (Skalarprodukt im Arbeitsspeicher) → Güte → gewichtete Fusion.
         Ohne bereiten Dienst, Anfrage-Vektor oder genug Abdeckung: Modus `volltext` mit Hinweis (WIS-06)."""
         t0 = time.monotonic()
@@ -48,6 +72,8 @@ class SucheTeil:
         if type(k) is not int or not 1 <= k <= 20:
             raise ValueError("wis_k_ungueltig")
         where, params = fusion.sql_filter(leser, route)
+        extra, extra_params = filter_sql(filter)                        # SPEC_SHELL_WISSEN_v1 §4.5: vor dem Ranking, wie der Rechtefilter
+        where, params = where + extra, tuple(params) + tuple(extra_params)
         woerter = fusion.woerter(frage)
         if not woerter:
             raise ValueError("wis_anfrage_leer")

@@ -70,6 +70,7 @@ OBJECTS = {
     'agentfenster': {'type': 'agent', 'id': None, 'title': 'Agent'},
     'labor': {'type': 'labor', 'id': 'labor', 'title': 'KI-Labor'},
     'wissen': {'type': 'wissen', 'id': 'speicher', 'title': 'Wissen'},                   # Spec 7 (D7.9): der Wissensspeicher
+    'fundstelle': {'type': 'wissen', 'id': 'speicher', 'title': 'Wissen'},               # SPEC_SHELL_WISSEN_v1 §4.2: Nachweis neben dem Wissen
 }
 
 MEASURE_ZONES = """(names) => {

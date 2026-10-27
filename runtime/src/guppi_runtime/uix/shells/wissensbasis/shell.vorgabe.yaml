@@ -1,0 +1,10 @@
+id: wissensbasis
+name: "Wissensbasis"
+raster: [leiste, "orte|werkstueck", gespraech]
+leiste: {einblenden: fest}
+orte: {breite: 220, liste: [wissen-suche, wissen-quellen, wissen-vorschlaege, wissen-eigenes, library, logbook, wissen-messung, decisions]}
+werkstueck: {nachweise: seitenleiste, nachweis_breite: 400}
+gespraech: {art: zone, hoehe: 112, wissen: true}
+entscheidungen: karte
+suche: strg-k
+start: {type: wissen, id: speicher, title: Wissen, view: suche}

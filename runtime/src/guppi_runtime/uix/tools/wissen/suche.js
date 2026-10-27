@@ -24,11 +24,31 @@
     return node;
   }
 
+  // der Filter, wie das Verb ihn nimmt (rein): leere Teile fallen weg, ganz leer → null (SPEC_SHELL_WISSEN_v1 §4.5)
+  function filterArgs(f){
+    if(!f) return null;
+    const out = {};
+    if(f.art) out.arten = [f.art];
+    if(f.quelle) out.quellen = [f.quelle];
+    if(f.projekt && String(f.projekt).trim()) out.projekt = String(f.projekt).trim();
+    if(f.seit) out.seit = f.seit;
+    if(f.bis) out.bis = f.bis;
+    return Object.keys(out).length ? out : null;
+  }
+  // der Filter als kurzer Satz (rein): „Doku · Projekt P1 · seit 2026-10-01“
+  function filterSatz(f, quellen){
+    const a = filterArgs(f);
+    if(!a) return '';
+    const q = a.quellen ? ((quellen || []).find(x=>String(x.id) === a.quellen[0]) || {}).title || a.quellen[0] : '';
+    return [a.arten ? Z().artText(a.arten[0]) : '', q, a.projekt ? 'Projekt ' + a.projekt : '', a.seit ? 'seit ' + a.seit : '', a.bis ? 'bis ' + a.bis : ''].filter(Boolean).join(' · ');
+  }
+
   async function suchen(t, frage, k){
     const s = t.s;
     s.frage = frage; s.k = k; s.aktiv = null; s.aufgeklappt = []; s.details = []; t.hinweis = null;
     t.laedt = true; t.draw();
-    const r = await t.verb('suche', {frage, k});
+    const fa = filterArgs(s.filter);
+    const r = await t.verb('suche', Object.assign({frage, k}, fa ? {filter: fa} : {}));
     t.laedt = false;
     if(r && r.status === 'fehler'){ t.sage(r); s.ergebnis = null; }
     else{ s.ergebnis = r; s.ergebnisZeit = Date.now(); t.frisch = true; }
@@ -60,7 +80,7 @@
     const row = d().el('div', 's-row t-wissen-knoepfe');
     // Fundstelle: das Nachweis-Werkzeug daneben hört darauf (wissen.auswahl); hier klappt der Treffer ganz auf
     const fund = ()=>{
-      if(!offen) t.ctx.bus.emit('wissen.auswahl', {id: tr.id, quelle: String(tr.quelle || '')});
+      if(!offen) t.ctx.bus.emit('wissen.auswahl', {id: tr.id, quelle: String(tr.quelle || ''), woerter: ((t.s.ergebnis || {}).woerter || []).slice(0, 12)});
       s.aufgeklappt = umschalten(s.aufgeklappt, tr.id); s.aktiv = tr.id; t.draw();
     };
     row.append(d().button('Fundstelle', fund), d().button('Quelle', ()=>t.zeigeQuelle(tr)),
@@ -78,7 +98,30 @@
     return card;
   }
 
+  // die Filterzeile: Art, Quelle, Projekt, Zeitraum – gefiltert wird auf dem Server vor dem Ranking
+  function filterZeile(t){
+    const s = t.s, f = s.filter || (s.filter = {art: '', quelle: '', projekt: '', seit: '', bis: ''});
+    const row = d().el('div', 's-row t-wissen-filterzeile'); row.setAttribute('role', 'group'); row.setAttribute('aria-label', 'Filter der Suche');
+    const wahl = (label, paare, key)=>{
+      const sel = d().el('select'); sel.setAttribute('aria-label', label);
+      paare.forEach(([v, l])=>{ const o = d().el('option', null, l); o.value = v; sel.append(o); });
+      sel.value = f[key] || ''; sel.onchange = ()=>{ f[key] = sel.value; t.merken(); };
+      const lab = d().el('label', 's-row s-small'); lab.append(d().el('span', 's-muted', label), sel); row.append(lab);
+    };
+    wahl('Art', [['', 'alle']].concat(Object.keys(Z().ART).map(a=>[a, Z().ART[a]])), 'art');
+    wahl('Quelle', [['', 'alle']].concat((t.d.quellen || []).filter(q=>q.aktiv).map(q=>[String(q.id), q.title])), 'quelle');
+    const feld = (label, key, typ)=>{
+      const i = d().el('input'); i.type = typ; i.value = f[key] || ''; i.setAttribute('aria-label', label);
+      i.oninput = ()=>{ f[key] = i.value; t.merken(); };
+      const lab = d().el('label', 's-row s-small'); lab.append(d().el('span', 's-muted', label), i); row.append(lab);
+    };
+    feld('Projekt', 'projekt', 'text'); feld('seit', 'seit', 'date'); feld('bis', 'bis', 'date');
+    row.append(d().button('Filter leeren', ()=>{ s.filter = null; t.merken(); return t.draw(); }));
+    return row;
+  }
+
   const ansicht = {
+    suchen,
     zeichnen(t){
       const s = t.s, box = d().el('div', 's-col');
       const form = d().el('form', 's-row t-wissen-suchform'); form.onsubmit = e=>e.preventDefault();
@@ -88,8 +131,16 @@
       const kLabel = d().el('label', 's-row s-small t-wissen-k'); kLabel.append(d().el('span', 's-muted', 'Treffer:'));
       const k = d().el('select'); [5, 10, 20].forEach(n=>{ const o = d().el('option', null, String(n)); o.value = String(n); k.append(o); }); k.value = String(s.k || 5);
       k.setAttribute('aria-label', 'Zahl der Treffer'); kLabel.append(k);
-      form.append(input, kLabel, d().button('Suchen', ()=>suchen(t, input.value, Number(k.value) || 5), 'p', {absenden: true}));
+      const fKnopf = d().button(s.filterOffen ? 'Filter zu' : 'Filter' + (filterArgs(s.filter) ? ' ●' : ''), async()=>{
+        s.filterOffen = !s.filterOffen;
+        if(s.filterOffen && !t.d.quellen) try{ t.d.quellen = (await t.post({type: 'wissen_quelle'})).items || []; }catch(_e){ t.d.quellen = []; }
+        t.draw();
+      });
+      fKnopf.setAttribute('aria-expanded', s.filterOffen ? 'true' : 'false');
+      form.append(input, kLabel, fKnopf, d().button('Suchen', ()=>suchen(t, input.value, Number(k.value) || 5), 'p', {absenden: true}));
       box.append(form);
+      if(s.filterOffen) box.append(filterZeile(t));
+      else if(filterArgs(s.filter)) box.append(d().el('small', 's-muted t-wissen-filter-satz', 'Filter: ' + filterSatz(s.filter, t.d.quellen)));
       if(t.laedt){ box.append(d().el('div', 's-note t-wissen-laedt', 'Suche läuft …')); return box; }
       const r = s.ergebnis;
       if(!r){ box.append(d().el('small', 's-muted', 'Noch keine Suche. Jeder Treffer trägt seine Kennung [W…]; die Stelle führt zur Quelle.')); return box; }
@@ -115,5 +166,5 @@
   };
 
   root.sedraWissenAnsichten = Object.assign(root.sedraWissenAnsichten || {}, {suche: ansicht});
-  if(typeof module !== 'undefined' && module.exports) module.exports = {textKnoten, suchen};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {textKnoten, suchen, filterArgs, filterSatz};
 })();

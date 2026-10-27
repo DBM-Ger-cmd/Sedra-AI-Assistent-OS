@@ -1,0 +1,10 @@
+/* Werkzeug „Fundstelle“ – nur im eigenen Container. */
+.t-fundstelle .t-fundstelle-stelle{font-weight:600}
+.t-fundstelle .t-fundstelle-text{white-space:pre-wrap;font:inherit;margin:0;max-height:22em;overflow:auto;border-left:3px solid var(--accent);padding-left:var(--gap-2)}
+.t-fundstelle .t-fundstelle-text.klein{max-height:6em;color:var(--muted);border-left-color:var(--line);font-size:var(--size-small)}
+.t-fundstelle .t-fundstelle-nachbar{gap:2px}
+.t-fundstelle .t-fundstelle-mark{background:var(--add-bg);color:inherit;border-radius:2px;padding:0 1px}
+.t-fundstelle .t-fundstelle-marke{font-size:var(--size-xs);border:1px solid var(--line);border-radius:var(--radius);padding:0 .4em;color:var(--muted)}
+.t-fundstelle .t-fundstelle-marke.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.t-fundstelle .t-fundstelle-marke.bad{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad)}
+.t-fundstelle .t-fundstelle-knoepfe{flex-wrap:wrap;gap:var(--gap)}

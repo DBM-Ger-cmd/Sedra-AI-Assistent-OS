@@ -1708,7 +1708,16 @@ class UIXHub:
                           'tone': 'warn' if waiting else 'off'},
                 'cloud': self._cloud_gauge(),
                 'mode': self._mode_gauge(),
-                **({'slots': gauge} if (gauge := self._slots_gauge()) is not None else {})}
+                **({'slots': gauge} if (gauge := self._slots_gauge()) is not None else {}),
+                **({'wissen': zelle} if (zelle := self._wissen_gauge()) is not None else {})}
+
+    def _wissen_gauge(self):
+        """SPEC_SHELL_WISSEN_v1 §4.3: Modus, Abdeckung und offene Vorschläge; ohne Schalter `wissen` keine Zelle (das Instrument sagt „aus“)."""
+        from .wissen import desk_basis
+        try:
+            return desk_basis.strip_zelle(getattr(self.runtime, 'wissen', None))
+        except Exception:
+            return None
 
     def _cloud_gauge(self):
         """Die Online-KI in der Leiste: bereit (Schlüssel gesetzt), Schlüssel fehlt, oder kein Anbieter eingeschaltet."""
@@ -1898,6 +1907,14 @@ class UIXHub:
         rt = self.runtime
         server = getattr(rt, 'llama_server', None)
         loaded = server.loaded_models() if server is not None else []
+        # SPEC_SHELL_WISSEN_v1 §4.6 (W-E4): „Frag das Wissen“ – nur, wenn die Shell es einschaltet (gespraech.wissen); nur lokal, Stufe 6
+        wissen = None
+        if payload.get('wissen') is True and getattr(rt, 'wissen', None) is not None:
+            from .wissen import desk_basis
+            wissen_extra, wissen = desk_basis.kontext(rt.wissen, text, mission_id or None)
+            if not loaded:
+                return {'status': 'completed', 'reply': desk_basis.ohne_modell(wissen), 'model': 'wissen', 'truncated': False, 'mission_id': mission_id,
+                        'tools_used': [], 'proposals': [], 'ui_actions': [], 'wissen': desk_basis.nachweis(wissen)}
         if not loaded:
             # Befund M1 (Architekturreview): ein ungültiger Wert in der Konfiguration schaltet den Server still ab – der Grund gehört in den Chat
             grund = getattr(rt, 'llama_server_error', None)
@@ -1923,6 +1940,9 @@ class UIXHub:
                 # Build 24: das Modell weiß, in welcher Oberfläche es arbeitet (Zonen, eigene Wörter, Wege) – aus dem Code, nicht geraten
                 system = self.CHAT_SYSTEM + ' ' + self.arbeitsplatz.beschreibung(shell) + self.CHAT_TOOL_NOTE
             messages = [{'role': 'system', 'content': system}, *turns, {'role': 'user', 'content': attached + text}]
+            if wissen is not None and wissen_extra:
+                from .wissen import lauf as wissen_lauf
+                messages = wissen_lauf.nachrichten_mit(messages, wissen_extra)
 
             # A question about the system (model, context, profile, switches) must be looked up: the first turn then forces a tool call.
             # Without this a small model answers from memory (2026-10-14: a right-looking context value that no tool had read).
@@ -1950,8 +1970,14 @@ class UIXHub:
         content = res.get('content')
         if not isinstance(content, str) or not content.strip():
             return {'status': 'failed', 'message': 'model_answer_truncated' if res.get('finish') == 'length' else 'model_answer_empty'}
-        return {'status': 'completed', 'reply': content.strip(), 'model': model, 'truncated': res.get('finish') == 'length', 'mission_id': mission_id,
-                'tools_used': box.calls, 'proposals': box.proposals, 'ui_actions': box.ui_actions}
+        out = {'status': 'completed', 'reply': content.strip(), 'model': model, 'truncated': res.get('finish') == 'length', 'mission_id': mission_id,
+               'tools_used': box.calls, 'proposals': box.proposals, 'ui_actions': box.ui_actions}
+        if wissen is not None:                                   # Zitatprüfung wie bei den Agenten (D7.6, WIS-07)
+            from .wissen import desk_basis, lauf as wissen_lauf
+            if wissen.get('treffer'):
+                out['reply'] = wissen_lauf.nachbereite(out['reply'], wissen, mission_id=mission_id, audit=rt.wissen.audit)
+            out['wissen'] = desk_basis.nachweis(wissen)
+        return out
 
     def run_mission(self, payload):
         mission_id = str(payload.get('mission_id') or '').strip()
@@ -2570,8 +2596,10 @@ class UIXHub:
             if not text:
                 return out
             if art == 'reply' and o.get('status') == 'completed':
-                self.gedaechtnis.verlauf_merken('user', text)
-                self.gedaechtnis.verlauf_merken('assistant', o.get('reply') or '', o.get('model'))
+                # eine Antwort mit Personenbezug aus dem Wissen bleibt lokal: nach dem Neuladen geht sie in keinen Cloud-Weg (§4.6)
+                lokal = 'ja' if (o.get('wissen') or {}).get('personenbezug') else ''
+                self.gedaechtnis.verlauf_merken('user', text, nur_lokal=lokal)
+                self.gedaechtnis.verlauf_merken('assistant', o.get('reply') or '', o.get('model'), nur_lokal=lokal)
             elif art == 'cloud' and o.get('status') == 'completed':
                 self.gedaechtnis.verlauf_merken('user', text)
                 self.gedaechtnis.verlauf_merken('assistant', o.get('reply') or '', o.get('model'))

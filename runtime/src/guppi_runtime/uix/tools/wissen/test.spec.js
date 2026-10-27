@@ -7,7 +7,7 @@ globalThis.sedra = {registerTool(){}};
 globalThis.prompt = ()=>{ throw new Error('prompt() ist verboten'); };
 require('../../ui/dom.js');
 const {zitatTeile, fehlerSatz, stufePruefen, artText, stufeText, hervorheben, relevanz} = require('./zitate.js');
-require('./suche.js'); require('./quellen.js');
+const {filterArgs, filterSatz} = require('./suche.js'); require('./quellen.js'); require('./eigenes.js');
 const {VORLAGEN, schonDa, argsVon} = require('./antrag.js');
 const {fortschritt} = require('./messung.js');
 const {tool, zustandText, trefferZeile, ergebnisSatz, markierungText, ansichtFuer} = require('./tool.js');
@@ -84,7 +84,7 @@ check('Fundstelle und „Ins Gespräch“ senden wissen.auswahl – das Gespräc
   const auswahl = gehoert(ctx, 'wissen.auswahl');
   await suche(el, 'Lease');
   await klick(el, 'Fundstelle');
-  assert.deepEqual(auswahl[0], {id: 'W0123456789', quelle: 'Q-1'});
+  assert.deepEqual(auswahl[0], {id: 'W0123456789', quelle: 'Q-1', woerter: ['lease']});
   assert.ok(el.querySelector('[data-id="W0123456789"]').classList.contains('t-wissen-aktiv'));
   await klick(el, 'Ins Gespräch');
   assert.deepEqual(auswahl[1], {id: 'W0123456789', quelle: 'Q-1', zweck: 'gespraech', stelle: 'Titel > Lease'});
@@ -283,16 +283,38 @@ check('Ansicht wechseln meldet object.actions; die Werkbank-Zeile hat die Handlu
   assert.deepEqual(tool.actions().map(a=>a.label), ['Quelle beantragen …', 'Erstbestückung beantragen']);
   await klick(el, 'Messung');
   assert.deepEqual(tool.actions().map(a=>a.label), ['Nachführen', 'Nachmessung abschließen']);
-});
-
-check('decision.answered liest neu; unmount räumt auf', async()=>{
-  const {el, ctx} = await mount({type: 'wissen', id: 'speicher'}, answer());
+  // decision.answered liest neu; unmount räumt auf
   const n = ctx.calls.length;
   ctx.bus.emit('decision.answered', {id: 'request:M-1'}); await K.settle();
   assert.ok(ctx.calls.length > n);
   tool.unmount(el);
   assert.equal(el.childElementCount, 0);
   assert.ok(!el.classList.contains('t-wissen'));
+});
+
+check('Eigenes (§4.4): Notiz speichern, Hinweis auf die eine Freigabe, Löschen in zwei Schritten; Auftrag aus dem Memo sucht mit Filter', async()=>{
+  const notizen = {status: 'erledigt', freigegeben: false, antrag: null, notizen: [{datei: 'allgemein/2026-10-27-ofen.md', titel: 'Ofen', text: 'zwanzig Minuten', personenbezug: false, stand: '2026-10-27T08:00:00Z'}]};
+  const mit = (path, body)=>path === '/api/actions' && body.verb === 'notizen' ? {status: 'done', result: notizen}
+    : path === '/api/actions' && body.verb === 'notiz_anlegen' ? {status: 'done', result: {status: 'beantragt', text: 'Notiz gespeichert. Freigabe einmal im Posteingang.'}} : answer()(path, body);
+  const {el, ctx} = await mount({type: 'wissen', id: 'speicher', view: 'eigenes'}, mit);
+  assert.match(el.textContent, /Beim ersten Speichern wird „Notizen des Captains“ einmal als Quelle beantragt/);
+  assert.match(el.textContent, /Ofen/);
+  el.querySelector('input.t-wissen-fokus').value = 'Kunde'; el.querySelector('textarea.t-wissen-notiz-text').value = 'ruft vormittags an';
+  await klick(el, 'Speichern');
+  assert.deepEqual(verben(ctx).find(b=>b.verb === 'notiz_anlegen').args, {titel: 'Kunde', text: 'ruft vormittags an', personenbezug: true});
+  assert.match(el.textContent, /Freigabe einmal im Posteingang/);
+  await klick(el, 'Löschen'); assert.match(el.textContent, /Wirklich löschen\?/);
+  assert.ok(!verben(ctx).some(b=>b.verb === 'notiz_loeschen'), 'erst nach „Ja, löschen“');
+  await klick(el, 'Ja, löschen');
+  assert.deepEqual(verben(ctx).find(b=>b.verb === 'notiz_loeschen').args, {datei: 'allgemein/2026-10-27-ofen.md'});
+  const memo = new Map([['auftrag', {frage: 'Ofen Vorlauf'}]]);
+  tool.unmount(el);
+  const s = await mount({type: 'wissen', id: 'speicher', view: 'suche'}, answer(), {memo: {get: (n, v)=>memo.has(n) ? memo.get(n) : v, set: (n, v)=>memo.set(n, v), clear(){}}});
+  assert.equal(verben(s.ctx)[0].args.frage, 'Ofen Vorlauf', 'der Auftrag sucht sofort');
+  assert.equal(memo.get('auftrag'), null, 'einmal');
+  tool.s.filter = {art: 'logbuch', quelle: '', projekt: 'P1', seit: '2026-10-01', bis: ''};
+  await suche(s.el, 'x');
+  assert.deepEqual(verben(s.ctx)[1].args, {frage: 'x', k: 5, filter: {arten: ['logbuch'], projekt: 'P1', seit: '2026-10-01'}});
 });
 
 check('reine Sätze', ()=>{
@@ -306,7 +328,7 @@ check('reine Sätze', ()=>{
   assert.equal(fehlerSatz(''), 'Unbekannter Fehler.');
   assert.deepEqual(stufePruefen('3', 1), {ok: true, stufe: 3}); assert.equal(stufePruefen('1', 1).ok, false); assert.equal(stufePruefen('7').ok, false);
   assert.equal(markierungText({id: 'W1', datei: 'a.md', stelle: 'T', datum: '2026-10-20T10:00:00Z'}), 'Treffer [W1] · a.md > T · Stand 2026-10-20');
-  assert.equal(ansichtFuer('index', 'quellen'), 'messung'); assert.equal(ansichtFuer('eigenes'), 'quellen');
+  assert.equal(ansichtFuer('index', 'quellen'), 'messung'); assert.equal(ansichtFuer('eigenes'), 'eigenes');
   assert.equal(ansichtFuer(undefined, 'vorschlaege'), 'vorschlaege'); assert.equal(ansichtFuer('quatsch', 'auch'), 'suche');
   assert.equal(artText('markdown'), 'Doku'); assert.match(stufeText(0), /^Stufe 0 – /);
   assert.deepEqual(hervorheben('Die Lease holen', ['lease']).filter(t=>t.mark).map(t=>t.text), ['Lease']);
@@ -316,6 +338,8 @@ check('reine Sätze', ()=>{
   assert.deepEqual(argsVon({adapter: 'text', wurzel: 'repo', pfad: 'a', muster: '*.txt', stufe: '2', projekt: '', personenbezug: 1}),
                    {adapter: 'text', wurzel: 'repo', pfad: 'a', muster: '*.txt', stufe: 2, projekt: null, personenbezug: true});
   assert.equal(fortschritt([{urteil: 'getroffen'}, {}]), '1 von 2 Fragen bewertet');
+  assert.equal(filterArgs({art: '', quelle: '', projekt: ' ', seit: '', bis: ''}), null);
+  assert.equal(filterSatz({art: 'markdown', quelle: 'Q-1', projekt: '', seit: '2026-10-01', bis: ''}, [QUELLE]), 'Doku · repo/docs · seit 2026-10-01');
 });
 
 (async()=>{

@@ -9,7 +9,8 @@
 /* Suche: Karten statt Tabelle */
 .t-wissen .t-wissen-suchform{align-items:center;flex-wrap:wrap}
 .t-wissen .t-wissen-suchform input{flex:1 1 16em;min-width:10em}
-.t-wissen .t-wissen-k{width:4em}
+.t-wissen .t-wissen-k{width:auto;flex:0 0 auto;align-items:center;gap:4px}
+.t-wissen .t-wissen-k select{width:4.5em}
 .t-wissen .t-wissen-ergebnis{color:var(--muted)}
 .t-wissen .t-wissen-liste{gap:var(--gap)}
 .t-wissen .t-wissen-treffer{gap:calc(var(--gap) / 2)}
@@ -60,3 +61,20 @@
 .t-wissen .t-wissen-zitat{color:var(--accent);cursor:pointer;text-decoration:underline dotted}
 .t-wissen .t-wissen-zitat:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .t-wissen .t-wissen-aktiv{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+
+/* Filter der Suche und eigene Notizen (SPEC_SHELL_WISSEN_v1 §4.4, §4.5) */
+.t-wissen .t-wissen-filterzeile{flex-wrap:wrap;gap:var(--gap-2);align-items:center;padding:var(--gap);background:var(--panel-2);border-radius:var(--radius)}
+.t-wissen .t-wissen-filterzeile input[type=text]{width:9em}
+.t-wissen .t-wissen-filter-satz{color:var(--muted)}
+.t-wissen .t-wissen-notiz-form{gap:var(--gap)}
+.t-wissen .t-wissen-notiz-form input,.t-wissen .t-wissen-notiz-text{width:100%;max-width:none;box-sizing:border-box}
+.t-wissen .t-wissen-notiz-text{font:inherit;resize:vertical;min-height:6em}
+.t-wissen .t-wissen-notizen{gap:var(--gap)}
+
+/* Felder und Reiter im dunklen wie im hellen Thema lesbar (Befund Bildschirmfoto 27.10.: weiße Felder mit heller Schrift) */
+.t-wissen input:not([type=checkbox]),.t-wissen select,.t-wissen textarea{font:inherit;font-size:var(--size-small);padding:6px 9px;border:1px solid var(--line);
+  border-radius:var(--radius);background:var(--panel);color:var(--text);min-width:0}
+.t-wissen select{padding-right:4px}
+.t-wissen .t-wissen-tab{font-size:var(--size-small)}
+.t-wissen .t-wissen-tab.on{border-color:var(--accent);color:var(--heading);font-weight:600;box-shadow:inset 0 -2px 0 var(--accent)}
+.t-wissen .t-wissen-tab.warn:not(.on){color:var(--warn)}

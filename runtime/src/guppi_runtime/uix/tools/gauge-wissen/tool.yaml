@@ -1,0 +1,17 @@
+tool:
+  id: gauge-wissen
+  name: "Wissen (Instrument)"
+  description: "Der Wissensspeicher in der Leiste: Modus, Abdeckung und wie viele Vorschläge warten; Klick öffnet Wissen."
+  version: 1.0.0
+  kind: instrument
+  handles: []
+  order: 16
+  entry: {js: tool.js}
+  api:
+    - GET /api/strip
+  events:
+    emits: [object.open]
+    listens: [decision.answered, desk.resync]
+  trust: CORE
+  tests: [test.spec.js]
+  needs: {ui: ">=1.0 <2"}

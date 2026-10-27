@@ -20,11 +20,13 @@ NACHWEIS_WORD = {'seitenleiste': 'mit den Nachweisen daneben', 'umschalter': 'mi
 PLACE_WORD = {'tasks': 'Aufgaben', 'intents': 'Vorhaben', 'boundary': 'Modus und Grenzen', 'decisions': 'Entscheidungen', 'models': 'Werkstatt',
               'library': 'Bibliothek', 'crew': 'Besatzung', 'meter': 'Guppy-Meter', 'logbook': 'Logbuch', 'hardware': 'Hardware',
               'machine': 'Maschinenraum', 'modules': 'Module', 'project': 'Projekt und Dateien', 'gateway': 'KI GateWay'}
+PLACES_JS = Path(__file__).resolve().parent.parent / 'uix' / 'ui' / 'places.js'
 START_WORD = {'task': 'Aufgaben', 'intent': 'Vorhaben', 'boundary': 'Modus und Grenzen', 'decision': 'Entscheidungen', 'model': 'Werkstatt',
               'skill': 'Bibliothek', 'agent': 'Besatzung', 'meter': 'Guppy-Meter', 'logbook': 'Logbuch', 'hardware': 'Hardware',
-              'machine': 'Maschinenraum', 'module': 'Module', 'project': 'Projekt', 'gateway': 'KI GateWay'}
+              'machine': 'Maschinenraum', 'module': 'Module', 'project': 'Projekt', 'gateway': 'KI GateWay', 'wissen': 'Wissen'}
 START_ID = {'task': 'alle', 'intent': 'alle', 'boundary': 'projekt', 'decision': 'alle', 'model': 'alle', 'skill': 'own', 'agent': 'alle',
-            'meter': 'meter', 'logbook': 'audit', 'hardware': 'hardware', 'machine': 'machine', 'module': 'alle', 'project': 'projekt', 'gateway': 'alle'}
+            'meter': 'meter', 'logbook': 'audit', 'hardware': 'hardware', 'machine': 'machine', 'module': 'alle', 'project': 'projekt', 'gateway': 'alle',
+            'wissen': 'speicher'}
 
 TEMPLATES = [
     {'id': 'reiter', 'name': 'Reiter', 'hint': 'wie das Cockpit: Instrumente oben, Orte links, Werkstück mit Nachweisen daneben, Gespräch unten',
@@ -40,8 +42,24 @@ TEMPLATES = [
 ]
 
 
+def place_ids():
+    """Die Namen der Orte aus der Ortskunde `ui/places.js` (SPEC_SHELL_WISSEN_v1 §4.1: ein Ort, eine Wahrheit). Gelesen wird nur die
+    Kennung jeder Zeile `{id: '…', label: …}`; fehlt die Datei, bleibt die Aufzählung des Schemas."""
+    import re
+    try:
+        text = PLACES_JS.read_text(encoding='utf-8')
+    except OSError:
+        return []
+    return list(dict.fromkeys(re.findall(r"\{id:\s*'([a-z0-9-]{2,40})',\s*label:", text)))
+
+
 def schema():
-    return json.loads((Path(__file__).resolve().parent.parent / 'uix' / 'ui' / 'schema' / 'vorgabe.schema.json').read_text(encoding='utf-8'))
+    doc = json.loads((Path(__file__).resolve().parent.parent / 'uix' / 'ui' / 'schema' / 'vorgabe.schema.json').read_text(encoding='utf-8'))
+    ids = place_ids()
+    if ids:
+        items = doc['properties']['orte']['properties']['liste']['items']
+        items['enum'] = list(dict.fromkeys(items['enum'] + ids))
+    return doc
 
 
 def sentence(v):
@@ -65,6 +83,8 @@ def sentence(v):
     if (v.get('gespraech') or {}).get('art') == 'schublade':
         parts.append('Das Gespräch ist eine Schublade mit Knopf.')
     parts.append('Entscheidungen ' + ('erscheinen als Karte, sobald eine wartet.' if v.get('entscheidungen', 'karte') == 'karte' else 'nur als Werkstück.'))
+    if (v.get('gespraech') or {}).get('wissen'):
+        parts.append('Das Gespräch antwortet aus dem Wissen, mit Fundstellen.')
     parts.append({'strg-k': 'Palette mit Strg+K.', 'feld': 'Ein Suchfeld in der Leiste.', 'keine': 'Keine Suche – das Gespräch ist der Weg.'}[v.get('suche', 'strg-k')])
     st = v.get('start') or {'type': 'task'}
     parts.append('Beim Start: ' + (st.get('title') or START_WORD.get(st.get('type'), st.get('type'))) + '.')

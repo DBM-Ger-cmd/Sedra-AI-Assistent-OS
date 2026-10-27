@@ -9,12 +9,12 @@
   const d = ()=>root.sedraDom;
   const Z = ()=>root.sedraWissenZitate;
   const A = ()=>root.sedraWissenAnsichten || {};
-  const ANSICHTEN = [['suche', 'Suche'], ['quellen', 'Quellen'], ['vorschlaege', 'Vorschläge'], ['messung', 'Messung']];
-  // WZ2: index und nachmessung sind Abschnitte der Messung; eigenes kommt mit den Notizen (Wissensbasis §4.4) – bis dahin die Quellen
-  const UM = {index: 'messung', nachmessung: 'messung', eigenes: 'quellen'};
+  const ANSICHTEN = [['suche', 'Suche'], ['quellen', 'Quellen'], ['vorschlaege', 'Vorschläge'], ['eigenes', 'Eigenes'], ['messung', 'Messung']];
+  // WZ2: index und nachmessung sind Abschnitte der Messung; eigenes sind die Notizen des Captains (Wissensbasis §4.4, eigenes.js)
+  const UM = {index: 'messung', nachmessung: 'messung'};
   // was wohin gehört (Vertrag 1.1): Zustand der Ansicht in die Sitzung, Inhalt (Frage, Treffer, Eingaben) in die Ablage
-  const SITZUNG = ['ansicht', 'k', 'abschnitt', 'aufgeklappt', 'filterQuellen', 'filterVorschlaege', 'markiertQuelle'];
-  const ABLAGE = ['frage', 'ergebnis', 'ergebnisZeit', 'antrag', 'markiert'];
+  const SITZUNG = ['ansicht', 'k', 'abschnitt', 'aufgeklappt', 'filterQuellen', 'filterVorschlaege', 'markiertQuelle', 'filterOffen'];
+  const ABLAGE = ['frage', 'ergebnis', 'ergebnisZeit', 'antrag', 'markiert', 'entwurf', 'filter'];   // filter: Projekt ist Inhalt
   const LEER = Object.freeze({get: (_n, v)=>v, set(){}, clear(){}});
   const LEER_ABLAGE = Object.freeze({get: async(_n, v)=>v, set(){}, clear(){}, flush(){}});
 
@@ -63,11 +63,12 @@
       el.classList.add('t-wissen');
       const o = ctx.object || {};
       this.memo = ctx.memo || LEER; this.sitzung = ctx.sitzung || LEER; this.ablage = ctx.ablage || LEER_ABLAGE;
-      this.d = {speicher: null, quellen: null, vorschlaege: null, nachmessung: null};
+      this.d = {speicher: null, quellen: null, vorschlaege: null, nachmessung: null, notizen: null};
       this.fehler = null; this.hinweis = null; this.laedt = false; this.frisch = false;   // frisch: Treffer dieser Sitzung (sonst „Treffer von HH:MM“)
       // der Zustand: aus dem Memo (dieselbe Seite), sonst Sitzung und Ablage (nach Neuladen oder Shell-Wechsel)
       const s = {ansicht: 'suche', abschnitt: null, k: 5, aufgeklappt: [], filterQuellen: 'alle', filterVorschlaege: 'offen', markiertQuelle: null,
-                 frage: '', ergebnis: null, ergebnisZeit: null, antrag: null, markiert: null, aktiv: null, menu: null, stufeForm: null};
+                 frage: '', ergebnis: null, ergebnisZeit: null, antrag: null, markiert: null, aktiv: null, menu: null, stufeForm: null,
+                 entwurf: null, loeschen: null, filter: null, filterOffen: false};
       const vorher = this.memo.get('zustand', null);
       if(vorher) Object.assign(s, vorher);
       else{
@@ -78,9 +79,13 @@
       if(o.view === 'index' || o.view === 'nachmessung') s.abschnitt = o.view;
       if(o.quelle){ s.markiert = {quelle: String(o.quelle)}; s.ansicht = o.view ? s.ansicht : 'quellen'; }
       else if(s.markiert && s.markiertQuelle !== s.markiert.quelle) s.markiert = s.markiertQuelle ? {quelle: s.markiertQuelle} : null;
+      // ein Auftrag aus der Shell (Palette „Im Wissen suchen“, Menü „Quelle für Wissen“) liegt einmal im Memo, nie im Objekt
+      const auftrag = this.memo.get('auftrag', null);
+      if(auftrag){ this.memo.set('auftrag', null); if(auftrag.frage){ s.ansicht = 'suche'; s.frage = auftrag.frage; } if(auftrag.antrag){ s.ansicht = 'quellen'; s.antrag = {schritt: 1}; } }
       this.s = s;
       ['decision.answered', 'desk.resync'].forEach(n=>ctx.bus.on(n, ()=>this.refresh(true)));
-      return this.refresh(false);
+      await this.refresh(false);
+      if(auftrag && auftrag.frage && A().suche && A().suche.suchen) await A().suche.suchen(this, auftrag.frage, s.k || 5);
     },
 
     unmount(){ this.merken(); this.el.classList.remove('t-wissen'); this.el.replaceChildren(); this.d = null; },
@@ -109,7 +114,7 @@
       if(!this.el || !this.d) return;
       try{ this.d.speicher = await this.post({type: 'wissen', id: 'speicher'}); this.fehler = null; }
       catch(err){ this.fehler = Z().fehlerSatz(err); this.d.speicher = null; }
-      if(alles) Object.assign(this.d, {quellen: null, vorschlaege: null, nachmessung: null});
+      if(alles) Object.assign(this.d, {quellen: null, vorschlaege: null, nachmessung: null, notizen: null});
       return this.laden();
     },
     // nur, was die Ansicht braucht und noch nicht im Vorrat ist (V7: Aufklappen und Formulare lesen nichts)
@@ -160,7 +165,7 @@
         let text = label;
         if(id === 'quellen' && stand.quellen) text += ' (' + stand.quellen + ')';
         if(id === 'vorschlaege' && stand.vorschlaege_offen) text += ' ⚠ ' + stand.vorschlaege_offen;
-        const b = d().el('button', 't-wissen-tab' + (this.s.ansicht === id ? ' on' : '') + (id === 'vorschlaege' && stand.vorschlaege_offen ? ' warn' : ''), text);
+        const b = d().el('button', 's-btn t-wissen-tab' + (this.s.ansicht === id ? ' on' : '') + (id === 'vorschlaege' && stand.vorschlaege_offen ? ' warn' : ''), text);
         b.type = 'button'; b.dataset.ansicht = id; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', this.s.ansicht === id ? 'true' : 'false');
         b.tabIndex = this.s.ansicht === id ? 0 : -1;
         b.onclick = ()=>this.wechseln(id);
