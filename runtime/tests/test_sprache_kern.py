@@ -93,5 +93,28 @@ class KernAufnahme(unittest.TestCase):
         self.assertEqual([x for x in self.store.liste() if x['titel'] == 'Ohne Gerät'], [])
 
 
+class KernQuelle(KernAufnahme):
+    """Mikrofon oder PC-Ton: dieselbe Aufnahme, anderer Eingang."""
+    def test_pc_ton_opens_the_loopback_and_unknown_source_is_refused(self):
+        offen = []
+        self.kern.oeffnen_pc = lambda cb, rate: offen.append(rate) or FakeStrom(cb)
+        self.assertEqual(self.kern.start('Ton', 'de', '2026-10-28T10:00:00', 'pc_ton')['quelle'], 'pc_ton')
+        self.assertEqual(offen, [kn.RATE])
+        self.kern.verwerfen()
+        self.assertEqual(self.kern.start('Mic', 'de', '2026-10-28T10:00:00')['quelle'], 'mikrofon')
+        self.kern.verwerfen()
+        with self.assertRaisesRegex(ValueError, 'quelle_unbekannt'):
+            self.kern.start('x', 'de', '2026-10-28T10:00:00', 'radio')
+
+    def test_the_pc_sound_block_becomes_16khz_mono(self):
+        got = []
+        strom = kn._PcTonStrom.__new__(kn._PcTonStrom)
+        strom.kanaele, strom.quelle_rate, strom.rate, strom.pos, strom._weiter = 2, 48000, 16000, 0.0, 0
+        strom.callback = lambda daten, n, z, s: got.append((len(daten), n))
+        links_rechts = np.tile(np.array([1000, 3000], dtype=np.int16), 4800)      # 4800 Frames = 0,1 s bei 48 kHz
+        strom._block(links_rechts.tobytes(), 4800, None, None)
+        self.assertEqual(got, [(1600 * 2, 1600)])
+
+
 if __name__ == '__main__':
     unittest.main()

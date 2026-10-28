@@ -76,7 +76,11 @@ function pill(text, tone){ return d().el('span', 't-rk-pill ' + (tone || 'muted'
       this.titel = d().el('input'); this.titel.placeholder = 'Titel, z. B. Teamrunde 19.10.'; this.titel.setAttribute('aria-label', 'Titel');
       this.sprache = d().el('select'); this.sprache.setAttribute('aria-label', 'Sprache');
       SPRACHEN.forEach(([v, l])=>{ const o = d().el('option', null, l); o.value = v; this.sprache.append(o); });
-      zeile.append(this.titel, this.sprache);
+      this.quelle = d().el('select'); this.quelle.setAttribute('aria-label', 'Quelle');
+      [['mikrofon', 'Mikrofon'], ['pc_ton', 'PC-Ton']].forEach(([v, l])=>{ const o = d().el('option', null, l); o.value = v; this.quelle.append(o); });
+      try{ const q = localStorage.getItem('sedra.rekorder.quelle'); if(q === 'pc_ton' || q === 'mikrofon') this.quelle.value = q; }catch(e){}
+      this.quelle.addEventListener('change', ()=>{ try{ localStorage.setItem('sedra.rekorder.quelle', this.quelle.value); }catch(e){} });
+      zeile.append(this.titel, this.sprache, this.quelle);
       // Knopf und Pegel; der Regler hebt die Anzeige an (nur Anzeige, die Aufnahme bleibt gleich)
       const mitte = d().el('div', 't-rk-mitte');
       this.knopf = d().el('button', 't-rk-knopf', 'Aufnehmen'); this.knopf.type = 'button'; this.knopf.setAttribute('aria-label', 'Aufnahme starten');
@@ -128,7 +132,7 @@ function pill(text, tone){ return d().el('span', 't-rk-pill ' + (tone || 'muted'
 
     async start(){
       this.knopf.disabled = true;
-      try{ this.kernStand(await this.ctx.api('/api/sprache/kern/start', {method: 'POST', body: {titel: this.titel.value.trim(), sprache: this.sprache.value}})); this.titel.value = ''; }
+      try{ this.kernStand(await this.ctx.api('/api/sprache/kern/start', {method: 'POST', body: {titel: this.titel.value.trim(), sprache: this.sprache.value, quelle: this.quelle.value}})); this.titel.value = ''; }
       catch(err){ this.meldung.textContent = 'Keine Aufnahme: ' + err.message; }
       this.knopf.disabled = false;
     },
