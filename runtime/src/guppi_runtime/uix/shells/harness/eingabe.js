@@ -19,8 +19,13 @@
     const plus = d().el('button', 'hs-rund', '+'); plus.type = 'button';
     plus.title = 'Dateien aus dem Projekt anhängen – kommt mit Stufe 2 (Werkzeuge)'; plus.setAttribute('aria-label', 'Datei anhängen');
     plus.onclick = ()=>S.hinweis('Dateien anhängen kommt mit Stufe 2 (Werkzeuge mit Freigabe).');
-    const schild = d().el('span', 'hs-schild', '⛨ Captain · nur lesen');
-    schild.title = 'Wer in dieser Sitzung freigibt: der Captain. Stufe 1: das Modell hat nur lesende Zustandswerkzeuge, keine Aufgaben-Freigabe.';
+    const schild = d().el('span', 'hs-schild', '⛨ Captain gibt frei');
+    schild.title = 'Wer in dieser Sitzung freigibt: der Captain (Karte im Verlauf oder Posteingang). Aufgaben-Freigabe kommt mit Stufe 3.';
+    S.api('/api/harness/katalog').then(k=>{                    // HS-17/HS-26: das Schild sagt, wer freigibt und nach welchem Katalog
+      if(k.fehler){ schild.textContent = '⛨ Katalog ungültig'; schild.classList.add('warn'); schild.title = 'Freigabe-Katalog: ' + k.fehler + ' – nur lesende Werkzeuge.'; return; }
+      schild.textContent = '⛨ Captain gibt frei · Katalog ' + k.regeln.length + ' Regeln' + (k.quelle === 'vorlage' ? ' (Vorlage)' : '');
+      schild.title = 'Freigabe-Katalog: ' + k.regeln.map(r=>r.id + ' = ' + r.stufe).join(', ') + '. Ohne Regel entscheidet der Captain; feste Vorbehalte gehen immer an ihn.';
+    }).catch(()=>{});
     const modell = d().el('span', 'hs-modell', '…');
     const mikro = d().el('button', 'hs-rund', '🎙'); mikro.type = 'button';
     mikro.title = 'Rekorder (Aufnahme) öffnen'; mikro.setAttribute('aria-label', 'Rekorder öffnen');

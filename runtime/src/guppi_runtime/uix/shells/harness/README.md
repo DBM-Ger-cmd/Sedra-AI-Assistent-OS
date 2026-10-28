@@ -21,7 +21,14 @@ Oberflächen-Menü, das Mikrofon seinen Rekorder.
 `/api/harness/projekte`, `/api/harness/sitzungen[/<id>[/nachricht]]`, `/api/harness/antworten/<id>/strom|stopp` (harness/api.py),
 dazu `/api/strip`, `/api/models`, `/api/events`. Der Strom einer Antwort wird mit `fetch` gelesen (Kopf `X-SEDRA-Shell`).
 
-## Stufe 1 – was noch nicht da ist
+## Stufe 2 – Hände und Grenzen
 
-Werkzeuge mit Wirkung, Freigabe-Katalog und Karten (Stufe 2); Dateien anhängen (`+`, `@`) ab Stufe 2; Vorlagen und Vorarbeiter (Stufe 3);
-Start-Menü mit Apps und Statusbereich statt Leiste (Stufe 4); Einstellungen (Stufe 5).
+Werkzeuge `datei_lesen`, `dateien_auflisten`, `suchen`, `datei_schreiben`, `datei_aendern`, `befehl` (harness/werkzeuge.py, befehl.py).
+Jeder Aufruf: Vorbehalt → Freigabe-Katalog → Guard (harness/freigabe.py). `frei` läuft sofort; `verboten` bekommt das Modell als Grund;
+`captain` erzeugt eine **Karte** im Verlauf (Diff oder Befehlszeile, Erlauben · Diff zeigen · Ablehnen) – dieselbe Karte steht im
+Posteingang. Die Werkzeugzeile zeigt Stufe und Regel; das Schild im Eingabefeld zeigt den Katalog. „Diff zeigen“ öffnet den Diff als Reiter.
+
+## Noch nicht da
+
+Vorlagen und Vorarbeiter, Aufgaben-Freigabe, Läufe in der Taskleiste (Stufe 3); Dateien anhängen (`+`, `@`); Start-Menü mit Apps und
+Statusbereich statt Leiste (Stufe 4); Einstellungen und Katalog-Editor (Stufe 5).

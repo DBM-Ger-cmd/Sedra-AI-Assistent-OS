@@ -17,6 +17,7 @@
   }
 
   function titel(S, id){
+    if(String(id).startsWith('diff:')) return 'Diff ' + id.slice(5);
     if(!ID.test(id)) return 'Neue Sitzung';
     const s = S.sitzung(id);
     return (s && s.titel) || 'Ohne Titel';
@@ -68,7 +69,7 @@
 
   function neu(S){
     const r = stand(S);
-    const leer = r.liste.find(id=>!ID.test(id));          // ein offener Entwurf genügt
+    const leer = r.liste.find(id=>!ID.test(id) && !String(id).startsWith('diff:'));          // ein offener Entwurf genügt
     aktivieren(S, leer || ('neu-' + (++zaehler)));
     root.sedraHarness.eingabe.fokus(S);
   }
