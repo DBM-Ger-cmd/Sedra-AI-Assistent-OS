@@ -52,6 +52,17 @@ class Shape(unittest.TestCase):
         self.assertEqual(desk_objects.task_object(compact(phase='COMPLETE'))['state'], 'fertig')
         self.assertIn('Logbuch', desk_objects.task_object(compact(phase='FAILED'))['summary'])
 
+    def test_a_task_with_only_a_plan_is_not_called_done(self):
+        # 28.10.2026: „Erstelle mir ein Master-Chat-Fenster“ – kein Werkzeug, nur result.txt als Plan, und die Shell sagte „fertig“
+        plan_only = desk_objects.task_object(compact(phase='COMPLETE', qualification='ARTIFACT_ONLY'))
+        self.assertEqual(plan_only['state'], 'nur Plan')
+        self.assertIn('nicht ausgeführt', plan_only['summary'])
+        self.assertNotIn('fertig', plan_only['summary'])
+        self.assertEqual(desk_objects.task_object(compact(phase='COMPLETE', qualification='VERIFIED_INVENTORY'))['state'], 'fertig')
+        from guppi_runtime.desk import intents
+        missions = {'M-1': compact(phase='COMPLETE', status='closed', qualification='ARTIFACT_ONLY')}
+        self.assertEqual(intents.state_of({'tasks': ['M-1']}, missions)[0], 'nur Plan')
+
     def test_every_phase_the_runtime_knows_has_a_german_word(self):
         """Sonst steht Maschinensprache im Satz des Captains ('candidate_review'), und der Satz ist der Kern von Regel 6."""
         from guppi_runtime.core.mission import ALLOWED
@@ -145,7 +156,8 @@ class ThroughTheHub(unittest.TestCase):
         self.assertIn('ausfuehren', [a['verb'] for a in obj['actions']])
         out = self.hub.act({'type': 'task', 'id': self.mission, 'verb': 'ausfuehren'})
         self.assertEqual(out['status'], 'done')
-        self.assertEqual(self.hub.object_view('task', self.mission)['state'], 'fertig')
+        # ohne passendes Werkzeug schreibt die Runtime nur ein Plan-Artefakt (ARTIFACT_ONLY) – das heißt „nur Plan“, nicht „fertig“
+        self.assertEqual(self.hub.object_view('task', self.mission)['state'], 'nur Plan')
         self.assertIn('UIX_ACTION', [e['event_type'] for e in self.hub.audit_view()['events']])
 
     def test_the_same_verb_is_refused_once_the_state_moved_on(self):

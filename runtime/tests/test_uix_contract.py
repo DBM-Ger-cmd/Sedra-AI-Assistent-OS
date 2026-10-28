@@ -603,6 +603,7 @@ class ToolsPure(unittest.TestCase):
             waiting: t.taskSentence({intent:'CSV-Parser', phase:'EXECUTE', pending_gates:1, steps:['a','b'], steps_done:1}),
             running: t.taskSentence({intent:'CSV-Parser', phase:'EXECUTE', steps:['a','b','c'], steps_done:2}),
             done: t.taskSentence({intent:'CSV-Parser', phase:'COMPLETE'}),
+            planOnly: t.taskSentence({intent:'CSV-Parser', phase:'COMPLETE', qualification:'ARTIFACT_ONLY'}),
             failed: t.taskSentence({intent:'CSV-Parser', phase:'FAILED'}),
             gone: t.taskSentence(null),
             progress: t.progress({steps:['a','b','c','d'], steps_done:1})
@@ -611,6 +612,7 @@ class ToolsPure(unittest.TestCase):
         self.assertEqual(out['waiting'], 'CSV-Parser – wartet auf deine Freigabe.')
         self.assertEqual(out['running'], 'CSV-Parser – läuft, Schritt 3 von 3.')
         self.assertEqual(out['done'], 'CSV-Parser – fertig.')
+        self.assertIn('nicht ausgeführt', out['planOnly'])
         self.assertIn('Logbuch', out['failed'])
         self.assertEqual(out['progress'], {'steps': 4, 'done': 1, 'percent': 25})
 

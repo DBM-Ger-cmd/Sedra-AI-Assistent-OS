@@ -102,6 +102,8 @@ def _compact_mission(m):
                   for g in m.get('human_gates', {}).get('pending', []) if isinstance(g, dict)],
         'steps': [str(st.get('description') or st.get('action') or st.get('id') or '') for st in ((m.get('plan') or {}).get('steps') or []) if isinstance(st, dict)][:12],
         'steps_done': len(((m.get('execution') or {}).get('results') or [])),
+        # ARTIFACT_ONLY heißt: nur ein Plan-Artefakt, nichts ausgeführt – die Oberfläche darf das nicht „fertig“ nennen
+        'qualification': (m.get('result') or {}).get('qualification'),
         'skills': [x.get('id') for x in route.get('skills', [])],
         'tools': [x.get('id') for x in route.get('tools', [])],
         'topic_gaps': route.get('topic_gaps', []),

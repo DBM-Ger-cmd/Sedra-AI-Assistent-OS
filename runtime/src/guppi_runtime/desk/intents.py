@@ -12,6 +12,8 @@ from pathlib import Path
 
 import yaml
 
+from .objects import ONLY_PLAN_WORD, only_plan
+
 ID = re.compile(r'^V-[0-9A-F]{8}$')
 MAX_TITLE = 120
 MAX_TEXT = 4000
@@ -64,6 +66,8 @@ def _tasks_state(tasks):
         return 'wartet auf dich'
     if any(t.get('status') == 'active' and (t.get('phase') or '') not in ('COMPLETE', 'FAILED') for t in tasks):
         return 'in Arbeit'
+    if any(only_plan(t.get('phase'), t.get('qualification')) for t in tasks):
+        return ONLY_PLAN_WORD
     if all(t.get('phase') == 'COMPLETE' for t in tasks):
         return 'fertig'
     return 'offen'
@@ -95,10 +99,13 @@ def state_of(entry, missions_by_id):
     waiting = [t for t in tasks if (t.get('pending_gates') or 0)]
     open_tasks = [t for t in tasks if t.get('status') == 'active']
     done = [t for t in tasks if t.get('phase') == 'COMPLETE']
+    plan_only = [t for t in done if only_plan(t.get('phase'), t.get('qualification'))]
     if waiting:
         return 'wartet auf dich', f'{len(waiting)} von {len(tasks)} Aufgaben warten auf deine Freigabe.'
     if open_tasks:
         return 'in Arbeit', f'{len(open_tasks)} von {len(tasks)} Aufgaben sind offen.'
+    if plan_only:
+        return ONLY_PLAN_WORD, f'{len(plan_only)} von {len(tasks)} Aufgaben wurden nicht ausgeführt – es gibt nur einen Plan, kein Werkzeug dafür.'
     if len(done) == len(tasks):
         return 'fertig', f'Alle {len(tasks)} Aufgaben sind fertig.'
     return 'offen', f'{len(tasks)} Aufgaben, keine davon läuft gerade.'

@@ -8,6 +8,8 @@ Neue schicken muss. Es erfindet nichts: steht eine Zeile hier, dann steht ihr In
 `lines()` ist rein (Mission und Audit rein, Zeilen raus) und wird ohne Browser geprüft."""
 from __future__ import annotations
 
+from .objects import ONLY_PLAN_SENTENCE, only_plan
+
 KIND_WORD = {'out': '', 'step': '›', 'ok': '✓', 'bad': '✗', 'gate': '⟂', 'note': '·'}
 MAX_LINES = 300
 
@@ -112,7 +114,9 @@ def lines(mission, audit_events=(), limit=MAX_LINES):
     # Der Schlusssatz gehört ans Ende, auch wenn die Mission ihn nicht datiert: er bekommt die späteste Zeit, die vorkam.
     last = max([x['at'] for x in out if x['at']] or [''])
     phase = (mission.get('lifecycle') or {}).get('phase')
-    if phase == 'COMPLETE':
+    if only_plan(phase, (mission.get('result') or {}).get('qualification')):
+        say('bad', 'Aufgabe ' + ONLY_PLAN_SENTENCE, last)
+    elif phase == 'COMPLETE':
         say('ok', 'Aufgabe fertig.', last)
     elif phase == 'FAILED':
         say('bad', 'Aufgabe fehlgeschlagen.', last)

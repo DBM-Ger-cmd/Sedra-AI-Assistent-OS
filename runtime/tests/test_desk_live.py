@@ -74,6 +74,15 @@ class Lines(unittest.TestCase):
         self.assertEqual(rows[-1]['line'], 'Aufgabe fehlgeschlagen.')
         self.assertIn('3 Versuche für diesen Schritt', [r['line'] for r in rows])
 
+    def test_a_plan_artifact_alone_is_not_reported_as_done(self):
+        only_plan = mission(lifecycle={'phase': 'COMPLETE'}, result={'kind': 'planning_artifact', 'qualification': 'ARTIFACT_ONLY', 'accepted': False})
+        rows = live.lines(only_plan)
+        self.assertEqual(rows[-1]['kind'], 'bad')
+        self.assertIn('nicht ausgeführt', rows[-1]['line'])
+        self.assertNotIn('Aufgabe fertig.', [r['line'] for r in rows])
+        done = mission(lifecycle={'phase': 'COMPLETE'}, result={'qualification': 'VERIFIED_INVENTORY'})
+        self.assertEqual(live.lines(done)[-1]['line'], 'Aufgabe fertig.')
+
     def test_the_take_over_and_its_rollback_are_told(self):
         applied = mission(execution={'candidate_acceptance': {'status': 'APPLIED', 'completed': ['app.py'],
                                                               'finished_at': '2026-10-14T18:00:09+00:00',

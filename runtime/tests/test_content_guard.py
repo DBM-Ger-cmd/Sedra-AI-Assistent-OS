@@ -194,6 +194,23 @@ class S2_Router(unittest.TestCase):
         self.assertEqual(out['tool_calls'][0]['arguments']['cmd'], 'ls')
         self.assertIn('Ich prüfe das.', out['content'])
 
+    def test_tool_calls_in_the_message_as_the_local_adapter_returns_them(self):
+        # 28.10.2026: openai_local liefert die Aufrufe in message.tool_calls. Eine reine Werkzeugantwort war für den Guard leer
+        # (SG_OUTPUT_EMPTY im Chat, sobald „Aufgabe“ im Satz den ersten Zug zum Werkzeug zwang); mit Text liefen sie ungeprüft durch.
+        def local(calls, content=''):
+            return {'content': content, 'message': {'role': 'assistant', 'content': content, 'tool_calls': calls}}
+        call = lambda cmd: [{'id': 'c1', 'type': 'function', 'function': {'name': 'shell', 'arguments': json.dumps({'cmd': cmd})}}]
+        router = ModelRouter(); router.content_guard = guard()
+        router.register(FakeAdapter(local(call('ls'))))
+        out = router.chat('M', [user('mach')], model='m')
+        self.assertEqual(out['message']['tool_calls'][0]['function']['name'], 'shell')
+        self.assertEqual(out['tool_calls'], out['message']['tool_calls'])
+        router = ModelRouter(); router.content_guard = guard()
+        router.register(FakeAdapter(local(call('echo ' + TOKEN), content='Ich führe das aus.')))
+        with self.assertRaises(ContentGuardStop) as ctx:
+            router.chat('M', [user('mach')], model='m')
+        self.assertEqual(ctx.exception.result.status, 'WITHHELD')
+
     def test_a_cloud_call_without_a_log_never_reaches_the_model(self):
         # Befund G1 (Gesamtprüfung): ohne Logbuch darf die Cloud nichts erhalten – der Aufruf endet, bevor das Modell gefragt wird
         calls = []

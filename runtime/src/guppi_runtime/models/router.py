@@ -109,7 +109,10 @@ class ModelRouter:
             box["result"]=res
             content=res.get("content") if isinstance(res,dict) else None
             text=content if isinstance(content,str) else ""
-            calls=res.get("tool_calls") if isinstance(res,dict) else None
+            # Die lokalen Adapter (openai_local) liefern die Aufrufe in message.tool_calls, nicht oben im Ergebnis. 28.10.2026: nur oben
+            # gelesen – eine reine Werkzeugantwort war für den Guard leer (SG_OUTPUT_EMPTY), mit Text liefen die Aufrufe ungeprüft durch.
+            message=res.get("message") if isinstance(res,dict) else None
+            calls=(res.get("tool_calls") if isinstance(res,dict) else None) or (message.get("tool_calls") if isinstance(message,dict) else None)
             if calls:
                 box["calls"]=True
                 return text+sep+json.dumps(calls,ensure_ascii=False,sort_keys=True)
@@ -131,5 +134,9 @@ class ModelRouter:
             result["content"]=head
         else:
             result["content"]=verdict.text
+        if isinstance(result.get("message"),dict):          # wer message liest (Chat), bekommt dasselbe Geprüfte wie content/tool_calls
+            result["message"]=dict(result["message"],content=result["content"])
+            if box.get("calls"):
+                result["message"]["tool_calls"]=result["tool_calls"]
         result["guard"]={"binding":verdict.binding,"observed":list(verdict.observed),"flags":list(verdict.output_flags)}
         return result

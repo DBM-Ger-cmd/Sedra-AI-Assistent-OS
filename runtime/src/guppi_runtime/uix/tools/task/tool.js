@@ -15,6 +15,8 @@
     const what = String(m.intent || m.objective || 'Aufgabe').replace(/\s+/g, ' ').trim();
     const state = PHASE[m.phase] || String(m.phase || '').toLowerCase();
     if((m.pending_gates || 0) > 0) return what + ' – wartet auf deine Freigabe.';
+    // ARTIFACT_ONLY: nur ein Plan-Artefakt, nichts ausgeführt (desk/objects.py ONLY_PLAN)
+    if(m.phase === 'COMPLETE' && m.qualification === 'ARTIFACT_ONLY') return what + ' – nicht ausgeführt – es gibt nur einen Plan, für diesen Auftrag hat Sedra noch kein Werkzeug.';
     if(m.phase === 'COMPLETE') return what + ' – fertig.';
     if(m.phase === 'FAILED') return what + ' – fehlgeschlagen; die Ursache steht im Logbuch.';
     const steps = (m.steps || []).length;

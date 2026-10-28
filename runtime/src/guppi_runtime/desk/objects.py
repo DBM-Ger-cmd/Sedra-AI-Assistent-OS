@@ -16,6 +16,16 @@ PHASE_WORD = {'NEW': 'angenommen', 'UNDERSTAND': 'verstanden', 'PLAN': 'geplant'
               'CAPTAIN_REVIEW': 'wartet auf deine Durchsicht', 'REWORK': 'wird nachgebessert',
               'COMPLETE': 'fertig', 'FAILED': 'fehlgeschlagen', 'PAUSED': 'angehalten'}
 
+# Eine Mission kann COMPLETE sein, obwohl nichts ausgeführt wurde: fand der Router kein Werkzeug, schreibt sie nur ein Plan-Artefakt
+# (result.qualification ARTIFACT_ONLY) und die Prüfung sieht nur nach, ob es da ist. Das ist für den Captain nicht „fertig“.
+ONLY_PLAN = 'ARTIFACT_ONLY'
+ONLY_PLAN_WORD = 'nur Plan'
+ONLY_PLAN_SENTENCE = 'nicht ausgeführt – es gibt nur einen Plan, für diesen Auftrag hat Sedra noch kein Werkzeug.'
+
+
+def only_plan(phase, qualification):
+    return phase == 'COMPLETE' and qualification == ONLY_PLAN
+
 
 def __getattr__(name):
     if name == 'TYPES':                                  # Kompatibilität: die Typen stehen im Register (Spec 0, D1)
@@ -34,10 +44,13 @@ def task_object(m, verbs=()):
     done = min(m.get('steps_done') or 0, len(steps))
     waiting = (m.get('pending_gates') or 0) > 0
     phase = m.get('phase') or ''
-    state = 'wartet auf dich' if waiting else PHASE_WORD.get(phase, phase.lower() or 'unbekannt')
+    plan_only = only_plan(phase, m.get('qualification'))
+    state = 'wartet auf dich' if waiting else ONLY_PLAN_WORD if plan_only else PHASE_WORD.get(phase, phase.lower() or 'unbekannt')
     what = str(m.get('intent') or m.get('objective') or m.get('mission_id') or 'Aufgabe').strip()
     if waiting:
         summary = what + ' – wartet auf deine Freigabe.'
+    elif plan_only:
+        summary = what + ' – ' + ONLY_PLAN_SENTENCE
     elif phase == 'COMPLETE':
         summary = what + ' – fertig.'
     elif phase == 'FAILED':
