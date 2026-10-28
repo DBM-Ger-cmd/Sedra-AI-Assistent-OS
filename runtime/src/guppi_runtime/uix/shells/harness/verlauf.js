@@ -139,7 +139,7 @@
           else if(e.typ === 'modell'){
             if(!block){ block = this.neu(d().el('div', 'hs-antwort')); this.eintraege++; }
             if(e.denken_zeichen) block.prepend(denkZeile('Dachte nach · ' + e.denken_zeichen.toLocaleString('de-DE') + ' Zeichen (nicht gespeichert)'));
-            if(e.zurueckgehalten) block.append(d().el('div', 'hs-zurueck', 'Vom Inhaltsschutz zurückgehalten: ' + e.zurueckgehalten));
+            if(e.zurueckgehalten) block.append(d().el('div', 'hs-zurueck', e.zurueckgehalten));
             else if(e.text) block.append(md().render(e.text));
             ende(block, e);
             block = null;
@@ -276,7 +276,7 @@
         }
         else if(name === 'text.zurueckgehalten'){
           if(z.seg) z.seg.remove();
-          block.append(d().el('div', 'hs-zurueck', 'Vom Inhaltsschutz zurückgehalten: ' + (x.grund || '')));
+          block.append(d().el('div', 'hs-zurueck', (x.grund || 'Vom Inhaltsschutz zurückgehalten.')));
           z.seg = null; z.roh = '';
         }
         else if(name === 'werkzeug.start'){

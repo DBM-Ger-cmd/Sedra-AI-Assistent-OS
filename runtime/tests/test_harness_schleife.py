@@ -156,11 +156,18 @@ class SchleifeTests(unittest.TestCase):
     def test_zurueckhalten(self):
         a = Attrappe([Zug('geheim 4111', status='failed', error='ContentGuardStop:WITHHELD:SG_OUTPUT_CARD')])
         out = self.lauf(a)
-        self.assertEqual(out['zurueckgehalten'], 'WITHHELD:SG_OUTPUT_CARD')
-        self.assertIn(('text.zurueckgehalten', {'grund': 'WITHHELD:SG_OUTPUT_CARD'}), self.ereignisse())
+        self.assertTrue(out['zurueckgehalten'].startswith('Antwort vom Inhaltsschutz zurückgehalten: '))
+        self.assertIn('Kartennummer', out['zurueckgehalten'], 'Klartext statt Code')
+        self.assertIn(('text.zurueckgehalten', {'grund': out['zurueckgehalten']}), self.ereignisse())
         modell = self.sitzungen.laden(self.sid)['eintraege'][-1]
         self.assertEqual(modell['text'], '', 'gespeichert wird nur der Grund')
         self.assertNotIn('4111', json.dumps(self.sitzungen.laden(self.sid), ensure_ascii=False))
+
+    def test_rueckfrage_des_schutzes_sagt_was_zu_tun_ist(self):
+        out = self.lauf(Attrappe([Zug('x', status='failed', error='ContentGuardStop:NEEDS_DECISION:SG_RULE_UNKNOWN,SG_DECISION_REQUIRED')]))
+        self.assertIn('Posteingang', out['zurueckgehalten'])
+        self.assertIn('Unbekannt ist nicht frei', out['zurueckgehalten'])
+        self.assertNotIn('SG_', out['zurueckgehalten'])
 
     def test_geprueft_ersetzt_den_text_wenn_der_schutz_ihn_aendert(self):
         out = self.lauf(Attrappe([Zug('Platzhalter P1', geprueft='Herr Müller')]))

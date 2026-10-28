@@ -125,6 +125,8 @@ class ContentGuard:
         out_msgs, mapping = self._prepare(msgs, outcome, wrap)
         if out_msgs is None:
             raise ContentGuardStop(self._stop('BLOCKED', info, ('SG_PSEUDO_FAILED',), event='SG_BLOCKED', verdict=verdict))
+        if route == 'local':
+            out_msgs = self._keep_tool_structure(out_msgs, messages)
         info['pseudonymized'] = bool(mapping)
         info['wrapped'] = wrap
         if not self._log('SG_MODEL_CALL', info):
@@ -133,7 +135,8 @@ class ContentGuard:
             reply = complete(out_msgs)
         except Exception as exc:              # kein Ausweichen auf ein anderes Modell, keine Wiederholung hier
             info['error'] = type(exc).__name__
-            self._stop('ERROR', info, ('SG_MODEL_ERROR',), verdict=verdict)
+            # eigenes Ereignis (28.10.2026): als SG_STOPPED standen 204 Anbieterfehler wie Stopps des Schutzes im Logbuch
+            self._stop('ERROR', info, ('SG_MODEL_ERROR',), event='SG_MODEL_ERROR', verdict=verdict)
             raise
         return self._finish(reply, mapping, info, verdict, sharp, watched, t0, route)
 
@@ -203,6 +206,24 @@ class ContentGuard:
             self.pending[did] = d
             return d
 
+    TOOL_FIELDS = ('tool_calls', 'tool_call_id', 'name')
+
+    @classmethod
+    def _keep_tool_structure(cls, out_msgs, messages):
+        """Lokal: die Werkzeug-Struktur des Verlaufs bleibt erhalten (28.10.2026). `_prepare` baut jede Nachricht aus Rolle und Inhalt neu;
+        dabei fielen `tool_calls` am Aufruf und `tool_call_id` am Ergebnis weg – das Modell sah Ergebnisse ohne eigenen Aufruf und rief
+        dasselbe Werkzeug wieder (Harness-Abnahme Nemotron: dreimal get_model_status, dann „nicht abgerufen“; alter Befund B4/4).
+        Geprüft wird weiter nur der Inhalt; die Argumente der Aufrufe stammen aus einer Antwort des Modells, die der Schutz schon geprüft hat.
+        Für die Cloud bleibt es beim Neubau ohne Struktur – dort geht nichts hinaus, das nicht als Inhalt geprüft ist."""
+        if not isinstance(messages, (list, tuple)) or len(messages) != len(out_msgs):
+            return out_msgs
+        out = []
+        for o, m in zip(out_msgs, messages):
+            if isinstance(m, dict) and any(k in m for k in cls.TOOL_FIELDS):
+                o = dict(o, **{k: m[k] for k in cls.TOOL_FIELDS if k in m})
+            out.append(o)
+        return out
+
     def _prepare(self, msgs, outcome, wrap):
         contents = [m['content'] for m in msgs]
         mapping = {}
@@ -227,8 +248,15 @@ class ContentGuard:
         return out, mapping
 
     def _finish(self, reply, mapping, info, verdict, sharp, observed, t0, route):
-        if not isinstance(reply, str) or not reply.strip():
+        if not isinstance(reply, str):
             raise ContentGuardStop(self._stop('WITHHELD', info, ('SG_OUTPUT_EMPTY',), verdict=verdict))
+        if not reply.strip():
+            # Leer ist kein Inhalt, den der Schutz zurückhalten müsste (28.10.2026): bisher hieß jede leere Antwort „zurückgehalten“, und der
+            # Captain sah den Inhaltsschutz, wo nur das Modell nichts geliefert hatte. Der Aufrufer meldet „leer“ selbst.
+            info = dict(info, output_empty=True, ms=int((time.monotonic() - t0) * 1000))
+            if not self._log('SG_OUTPUT_OK', info):
+                raise ContentGuardStop(self._stop('ERROR', info, ('SG_AUDIT_FAILED',), verdict=verdict))
+            return GuardResult('OK', '', sharp, verdict.rule_ids, verdict.notes, verdict.binding, observed=tuple(observed), route=verdict.route)
         hard, flags = [], []
         try:
             hits = scan_content(reply)
@@ -311,6 +339,7 @@ class ContentGuard:
         observed = [GROUPS.get(group_of(c), ('?',))[0] for c in data.get('observed') or []]
         if event == 'SG_BLOCKED': return {'head': 'Gesperrt', 'tone': 'bad', 'text': ' '.join(reasons)}
         if event == 'SG_DECISION_PENDING': return {'head': 'Wartet auf dich', 'tone': 'warn', 'text': ' '.join(reasons)}
+        if event == 'SG_OUTPUT_OK' and data.get('output_empty'): return {'head': 'Leer', 'tone': 'warn', 'text': 'Das Modell hat nichts geliefert – kein Eingriff des Schutzes.'}
         if event == 'SG_OUTPUT_OK' and observed: return {'head': 'Beobachtet', 'tone': 'warn', 'text': 'Durchgelassen, hätte angehalten: ' + ', '.join(sorted(set(observed)))}
         if event == 'SG_OUTPUT_OK': return {'head': 'Frei', 'tone': 'ok', 'text': 'Geprüft und durchgelassen' + (' · Cloud, mit Platzhaltern' if data.get('pseudonymized') else '') + '.'}
         if event == 'SG_STOPPED' and data.get('status') == 'WITHHELD': return {'head': 'Zurückgehalten', 'tone': 'bad', 'text': 'Antwort zurückgehalten: ' + ' '.join(reasons)}

@@ -110,10 +110,40 @@ class S1_Kern(unittest.TestCase):
         self.assertTrue(seen[-1][1]['content'].endswith(cg.END))
         self.assertNotIn('trust', seen[-1][1])
 
+    def test_locally_the_tool_structure_of_the_history_is_kept(self):
+        # 28.10.2026 (Harness-Abnahme): ohne tool_calls/tool_call_id sah das Modell Ergebnisse ohne eigenen Aufruf und rief dasselbe Werkzeug wieder
+        call = [{'id': 'c1', 'type': 'function', 'function': {'name': 'zustand', 'arguments': '{}'}}]
+        verlauf = [user('Wie steht es?'), {'role': 'assistant', 'content': '', 'tool_calls': call},
+                   {'role': 'tool', 'tool_call_id': 'c1', 'name': 'zustand', 'content': 'gpu frei'}]
+        seen = []
+        r = guard().call(verlauf, model='m', complete=lambda m: seen.append(m) or 'Die GPU ist frei.')
+        self.assertEqual(r.status, 'OK')
+        self.assertEqual(seen[0][1]['tool_calls'], call)
+        self.assertEqual((seen[0][2]['tool_call_id'], seen[0][2]['name']), ('c1', 'zustand'))
+        self.assertTrue(seen[0][2]['content'].startswith(cg.BEGIN), 'das Ergebnis bleibt als Daten markiert')
+        self.assertNotIn('trust', seen[0][2])
+        seen.clear()
+        guard(cloud_enabled=True).call(verlauf, model='m', route='cloud', complete=lambda m: seen.append(m) or 'ok')
+        self.assertNotIn('tool_calls', seen[0][1], 'Cloud: nur geprüfter Inhalt geht hinaus')
+
+    def test_an_empty_answer_is_not_withheld_by_the_guard(self):
+        # 28.10.2026: jede leere Antwort hieß „zurückgehalten“ – der Captain sah den Schutz, wo nur das Modell nichts geliefert hatte
+        a = Audit()
+        g = guard(audit=a)
+        r = g.call([user('hi')], model='m', complete=lambda m: '  ')
+        self.assertEqual((r.status, r.text), ('OK', ''))
+        ok = [x for x in a.rows if x['event_type'] == 'SG_OUTPUT_OK']
+        self.assertTrue(ok and ok[-1]['payload']['output_empty'])
+        self.assertEqual(g.status()['events'][0]['head'], 'Leer')
+        with self.assertRaises(ContentGuardStop):            # keine Zeichenkette ist weiter ein Fehler der Form
+            g.call([user('hi')], model='m', complete=lambda m: None)
+
     def test_the_model_error_is_not_swallowed_and_nothing_else_is_tried(self):
         def boom(m): raise ConnectionError('weg')
+        a = Audit()
         with self.assertRaises(ConnectionError):
-            guard().call([user('hi')], model='m', complete=boom)
+            guard(audit=a).call([user('hi')], model='m', complete=boom)
+        self.assertEqual(a.rows[-1]['event_type'], 'SG_MODEL_ERROR', 'ein Anbieterfehler ist kein Stopp des Schutzes')
 
     def test_a_missing_logbook_stops_the_call(self):
         class Broken:

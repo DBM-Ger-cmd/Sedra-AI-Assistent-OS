@@ -64,7 +64,16 @@ def guard_grund(fehler):
     """Der Grund, wenn der Inhaltsschutz die Antwort zurückgehalten oder den Aufruf gestoppt hat (control liefert 'ContentGuardStop:STATUS:CODES')."""
     if not isinstance(fehler, str) or not fehler.startswith('ContentGuardStop:'):
         return None
-    return fehler.split(':', 1)[1] or 'zurückgehalten'
+    status, _, codes = fehler.split(':', 1)[1].partition(':')
+    from ..core.content_policy import reason_text
+    saetze = ' '.join(reason_text(c) for c in codes.split(',') if c and c != 'SG_DECISION_REQUIRED') or 'ohne Grundangabe'
+    if status == 'NEEDS_DECISION':
+        return f'Der Inhaltsschutz fragt nach: {saetze} Entscheide im Posteingang (Cockpit) und sende die Nachricht dann noch einmal.'
+    if status == 'BLOCKED':
+        return f'Vom Inhaltsschutz gesperrt: {saetze}'
+    if status == 'WITHHELD':
+        return f'Antwort vom Inhaltsschutz zurückgehalten: {saetze}'
+    return f'Inhaltsschutz ({status}): {saetze}'
 
 
 def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-cpp-server', sitzungen=None, sitzung_id=None,
