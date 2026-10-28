@@ -2,6 +2,13 @@
 
 Stand 20.10.2026 (geändert 20.10.2026, Linie L1 bis L6; vorher 12.10.2026). Das Ziel des Projekts ist ein GUPPI, das sich selbst erweitert, immer hinter der Freigabe des Captains.
 
+## Regel: Spec vor Umsetzung (Captain, 28.10.2026)
+
+Jede neue Änderung wird zuerst als Spec mit Gate beschrieben, bevor sie gebaut wird: G1 Anforderungen, G2 Design, G3 Bau-Aufgaben.
+Ausnahme sind nur kleine Korrekturen, die der Captain ausdrücklich freigibt. Jede Spec klärt im Abschnitt „Freigabe“, wer was darf,
+welches Gate gilt, welcher Schreibbereich und welche Befehle erlaubt sind. Wünsche des Captains werden in SEDRA eingegeben und
+über den Vorarbeiter zu einer Spec (`SPEC_WUNSCH_ANBINDUNG_v1.md`).
+
 ## Wer macht was
 
 | Rolle | Aufgabe |
