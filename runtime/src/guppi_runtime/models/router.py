@@ -70,6 +70,9 @@ class ModelRouter:
 
     def _once(self, mission_id, messages, provider=None, model=None, run_id=None, slot_owner=None, **kwargs):
         adapter=self.choose(provider)
+        if kwargs.get("on_delta") is not None and getattr(adapter,"route","local")=="cloud":
+            # Harness-Shell (G2 §3.2): nur der lokale Adapter streamt; ein Cloud-Adapter bekommt den Rückruf nie (er liefert das Ganze).
+            kwargs={k:v for k,v in kwargs.items() if k!="on_delta"}
         hw=getattr(self,"hardware_manager",None)
         health=getattr(self,"provider_health",None)
         recorder=getattr(self,"recorder",None)       # model_call recording (models/recording.py), only set when GUPPI_RECORD_REPLIES is on

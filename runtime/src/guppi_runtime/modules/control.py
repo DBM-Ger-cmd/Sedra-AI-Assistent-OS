@@ -18,6 +18,10 @@ class ControlMasterModule(BaseModule):
         mid=mission["identity"]["mission_id"]
         action=request.get("action","create_text_artifact")
         if self.audit: self.audit.append("EXECUTION_REQUESTED",component=self.id,mission_id=mid,payload={"action":action})
+        on_delta=None
+        if action == "model_inference" and callable(request.get("stream")):
+            # Harness-Shell (G2 §3.2): der Rückruf für Teilstücke ist kein Teil der Anfrage (Prüfsumme, Audit) – er wird nur durchgereicht.
+            on_delta=request["stream"]; request={k:v for k,v in request.items() if k!="stream"}
         if action == "model_inference" or 'execution_requirements' in request:
             check=self.check_execution(mission,request)
             if check['status']!='EXECUTABLE':
@@ -28,7 +32,7 @@ class ControlMasterModule(BaseModule):
         if action == "inspect_tools":
             return {"status":"completed","tools":self.tools.list() if self.tools else {},"artifacts":[]}
         if action == "model_inference":
-            return self._model_inference(mid,request)
+            return self._model_inference(mid,request,on_delta=on_delta)
         if action == "tool_call":
             return self._tool_call(mid,request,approval_token,mission=mission)
         if action == "tool_sequence":
@@ -47,11 +51,13 @@ class ControlMasterModule(BaseModule):
             return {'status':'failed','error':'unsupported_control_action','artifacts':[]}
         return self._create_text_artifact(mission,request,approval_token)
 
-    def _model_inference(self,mid,request):
+    def _model_inference(self,mid,request,on_delta=None):
         if not self.model_router:
             return {"status":"failed","error":"model_router_unavailable","artifacts":[]}
         try:
-            result=self.model_router.chat(mid,request.get("messages") or [],provider=request.get("provider"),model=request.get("model"),temperature=request.get("temperature"),max_tokens=request.get("max_tokens"),top_p=request.get("top_p"),reasoning_effort=request.get("reasoning_effort"),thinking_budget_tokens=request.get("thinking_budget_tokens"),stream_guard=request.get("stream_guard"),tools=request.get("tools"),tool_choice=request.get("tool_choice"))
+            extra={"on_delta":on_delta} if on_delta is not None else {}          # ohne Rückruf ruft der Router genau wie bisher
+            if request.get("slot_owner"): extra["slot_owner"]=request["slot_owner"]
+            result=self.model_router.chat(mid,request.get("messages") or [],provider=request.get("provider"),model=request.get("model"),temperature=request.get("temperature"),max_tokens=request.get("max_tokens"),top_p=request.get("top_p"),reasoning_effort=request.get("reasoning_effort"),thinking_budget_tokens=request.get("thinking_budget_tokens"),stream_guard=request.get("stream_guard"),tools=request.get("tools"),tool_choice=request.get("tool_choice"),**extra)
             out={"status":"completed","model_result":result,"artifacts":[]}
             self._record_context_usage(mid,request,result)
         except Exception as exc:

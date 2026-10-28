@@ -64,8 +64,11 @@ class OpenAICompatibleLocalAdapter(BaseModelAdapter):
             # fields known to work are ever sent.
             if type(budget) is not int or not 1<=budget<=65536: raise ModelAdapterError("invalid_thinking_budget_tokens")
             payload["thinking_budget_tokens"]=budget
-        if kwargs.get("stream_guard"):
-            return self._chat_streamed(payload,model,kwargs["stream_guard"])
+        on_delta=kwargs.get("on_delta")
+        if on_delta is not None and not callable(on_delta): raise ModelAdapterError("invalid_on_delta")
+        if kwargs.get("stream_guard") or on_delta is not None:
+            # Harness-Shell (SPEC_HARNESS_SHELL_v1_G2 §3.2): mit `on_delta` wird immer gestreamt, auch ohne Runaway-Wächter.
+            return self._chat_streamed(payload,model,kwargs.get("stream_guard"),on_delta=on_delta,with_message=bool(tools))
         data=self._request("POST","/v1/chat/completions",payload)
         choices=data.get("choices") or []
         if not choices: raise ModelAdapterError("no_completion_choice")
@@ -84,17 +87,25 @@ class OpenAICompatibleLocalAdapter(BaseModelAdapter):
                 "empty_answer":not content.strip(),"message":message if tools else None}
 
 
-    def _chat_streamed(self,payload,model,option):
+    def _chat_streamed(self,payload,model,option,on_delta=None,with_message=False):
         """Opt-in (`stream_guard`: True or a dict of RunawayGuard settings): the answer is streamed and watched; a runaway (the model only repeats
         itself, runaway_guard.py) closes the connection, which stops the server's generation, and comes back as finish_reason "runaway" with
-        the text so far. Plan docs/LOOP_GUARD_STARNET_EXTENSIONS_PLAN_2026-10-04.md, item E."""
-        try: settings=option if isinstance(option,dict) else {}; guards={"answer":RunawayGuard(**settings),"thinking":RunawayGuard(**settings)}
-        except TypeError as exc: raise ModelAdapterError("invalid_stream_guard") from exc
+        the text so far. Plan docs/LOOP_GUARD_STARNET_EXTENSIONS_PLAN_2026-10-04.md, item E.
+
+        `on_delta(kanal, stueck)` (Harness-Shell, SPEC_HARNESS_SHELL_v1_G2 §3.2, K4) bekommt jedes Teilstück: `antwort` und `denken` als Text,
+        `werkzeug` als {index, id, name, arguments} (Teilstück eines Aufrufs). Die Teilstücke von `delta.tool_calls` werden nach `index`
+        zusammengesetzt und kommen am Ende als `message.tool_calls` zurück – dieselbe Form wie ohne Streamen. Wirft `on_delta`, wird die
+        Verbindung geschlossen (der Server hört auf zu rechnen) und das Ergebnis hat finish_reason "abgebrochen"."""
+        guards=None
+        if option:
+            try: settings=option if isinstance(option,dict) else {}; guards={"answer":RunawayGuard(**settings),"thinking":RunawayGuard(**settings)}
+            except TypeError as exc: raise ModelAdapterError("invalid_stream_guard") from exc
         payload=dict(payload,stream=True,stream_options={"include_usage":True})
         req=Request(self.base_url+"/v1/chat/completions",data=json.dumps(payload).encode("utf-8"),method="POST",
                     headers={"Content-Type":"application/json","Accept":"text/event-stream"})
         parts={"answer":[],"thinking":[]}
-        finish=usage=runaway=None
+        calls={}                                     # index -> {"id","type","function":{"name","arguments"}}
+        finish=usage=runaway=stopped=None
         chunks=0
         try:
             with urlopen(req,timeout=self.timeout) as resp:
@@ -112,10 +123,24 @@ class OpenAICompatibleLocalAdapter(BaseModelAdapter):
                         for channel,piece in (("answer",delta.get("content") or ""),("thinking",delta.get("reasoning_content") or delta.get("reasoning") or "")):
                             if not piece: continue
                             parts[channel].append(piece)
-                            verdict=guards[channel].feed(piece)
-                            if verdict and runaway is None: runaway=dict(verdict,channel=channel)
+                            if guards is not None:
+                                verdict=guards[channel].feed(piece)
+                                if verdict and runaway is None: runaway=dict(verdict,channel=channel)
+                            if on_delta is not None and stopped is None:
+                                stopped=_deliver(on_delta,"antwort" if channel=="answer" else "denken",piece)
+                        for part in delta.get("tool_calls") or []:
+                            if not isinstance(part,dict): continue
+                            index=part.get("index") if type(part.get("index")) is int else len(calls)
+                            call=calls.setdefault(index,{"id":None,"type":"function","function":{"name":"","arguments":""}})
+                            if part.get("id"): call["id"]=part["id"]
+                            if part.get("type"): call["type"]=part["type"]
+                            fn=part.get("function") or {}
+                            if fn.get("name"): call["function"]["name"]+=fn["name"]
+                            if fn.get("arguments"): call["function"]["arguments"]+=fn["arguments"]
+                            if on_delta is not None and stopped is None:
+                                stopped=_deliver(on_delta,"werkzeug",{"index":index,"id":part.get("id"),"name":fn.get("name") or "","arguments":fn.get("arguments") or ""})
                         if choice.get("finish_reason"): finish=choice["finish_reason"]
-                    if runaway is not None: break          # leaving the with-block closes the connection and the server stops generating
+                    if runaway is not None or stopped is not None: break    # leaving the with-block closes the connection and the server stops generating
         except (URLError,TimeoutError,OSError) as exc:
             raise ModelAdapterError(f"local_model_api_error:{exc}") from exc
         content="".join(parts["answer"]); reasoning="".join(parts["thinking"])
@@ -124,9 +149,26 @@ class OpenAICompatibleLocalAdapter(BaseModelAdapter):
             content,thinking=harmony
             reasoning=(reasoning+"\n"+thinking) if reasoning else thinking
         if runaway is not None: finish="runaway"
+        if stopped is not None: finish="abgebrochen"
+        message=None
+        if with_message:
+            message={"role":"assistant","content":content}
+            tool_calls=[calls[i] for i in sorted(calls)]
+            for n,call in enumerate(tool_calls):
+                if not call["id"]: call["id"]=f"call_{n}"
+            if tool_calls: message["tool_calls"]=tool_calls
         return {"provider":self.id,"model":model,"content":content,"raw":{"streamed":True,"chunks":chunks},"usage":normalize_usage(usage),
                 "finish_reason":finish,"truncated":finish in ("length","runaway"),"reasoning_chars":len(reasoning),"empty_answer":not content.strip(),
-                "runaway":runaway}
+                "runaway":runaway,"message":message,"stopped":stopped}
+
+
+def _deliver(on_delta,channel,piece):
+    """None, solange der Empfänger annimmt; sonst der Grund, warum er abgebrochen hat (seine Ausnahme)."""
+    try:
+        on_delta(channel,piece)
+        return None
+    except Exception as exc:
+        return f"{type(exc).__name__}:{exc}"[:200]
 
 
 _HARMONY_MESSAGE=re.compile(r"<\|channel\|>\s*(\w+)[^<]*?(?:<\|constrain\|>[^<]*)?<\|message\|>(.*?)(?=<\|end\|>|<\|return\|>|<\|call\|>|<\|start\|>|\Z)",re.S)
