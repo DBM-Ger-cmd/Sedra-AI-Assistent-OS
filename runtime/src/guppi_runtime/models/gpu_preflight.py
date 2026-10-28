@@ -37,7 +37,10 @@ def _powershell(script, run=subprocess.run):
     A `run` passed in by a test is always used (the tests fake PowerShell on every platform)."""
     if run is subprocess.run and sys.platform != "win32":
         return ""
-    out = run(["powershell", "-NoProfile", "-Command", script], capture_output=True, text=True, timeout=30)
+    # PowerShell antwortet in UTF-8 und Python liest es so: mit der Windows-Standardtabelle (cp1252) brach das Lesen an einem Sonderzeichen
+    # in einer Befehlszeile ab (Byte 0x81), die Prozessliste war leer und ein altes Cockpit blieb unerkannt (28.10.2026).
+    out = run(["powershell", "-NoProfile", "-Command", "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " + script],
+              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
     return (out.stdout or "").strip()
 
 

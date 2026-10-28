@@ -78,8 +78,6 @@ function pill(text, tone){ return d().el('span', 't-rk-pill ' + (tone || 'muted'
       SPRACHEN.forEach(([v, l])=>{ const o = d().el('option', null, l); o.value = v; this.sprache.append(o); });
       this.quelle = d().el('select'); this.quelle.setAttribute('aria-label', 'Quelle');
       [['mikrofon', 'Mikrofon'], ['pc_ton', 'PC-Ton']].forEach(([v, l])=>{ const o = d().el('option', null, l); o.value = v; this.quelle.append(o); });
-      try{ const q = localStorage.getItem('sedra.rekorder.quelle'); if(q === 'pc_ton' || q === 'mikrofon') this.quelle.value = q; }catch(e){}
-      this.quelle.addEventListener('change', ()=>{ try{ localStorage.setItem('sedra.rekorder.quelle', this.quelle.value); }catch(e){} });
       zeile.append(this.titel, this.sprache, this.quelle);
       // Knopf und Pegel; der Regler hebt die Anzeige an (nur Anzeige, die Aufnahme bleibt gleich)
       const mitte = d().el('div', 't-rk-mitte');
