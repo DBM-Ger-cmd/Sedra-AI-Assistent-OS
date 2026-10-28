@@ -43,6 +43,22 @@ class FakeAdapter(BaseModelAdapter):
         return {'provider': self.id, 'model': model, 'content': reply, 'usage': {'input_tokens': 1, 'output_tokens': 1}}
 
 
+class CloudAdapter(FakeAdapter):
+    """Wie FakeAdapter, aber auf dem Cloud-Weg: dort bleibt alles scharf (Captain 28.10.2026, „Eigenes frei“ gilt nur lokal)."""
+    id = 'wolke'
+    route = 'cloud'
+
+
+def fremd(text):
+    return {'role': 'tool', 'content': text}
+
+
+def cloud_router(reply):
+    router = ModelRouter(); router.content_guard = guard(cloud_enabled=True)
+    router.register(CloudAdapter(reply))
+    return router
+
+
 class Audit:
     def __init__(self): self.rows = []
 
@@ -81,11 +97,31 @@ class S1_Kern(unittest.TestCase):
     def test_a_key_in_a_real_format_is_blocked_before_anything_runs(self):
         g = guard()
         called = []
-        with self.assertRaises(ContentGuardStop) as ctx:
-            g.call([user(KEY)], model='m', complete=lambda m: called.append(m) or 'x')
+        with self.assertRaises(ContentGuardStop) as ctx:                     # aus fremder Quelle (Werkzeugergebnis)
+            g.call([user('lies'), fremd(KEY)], model='m', complete=lambda m: called.append(m) or 'x')
         self.assertEqual(ctx.exception.result.status, 'BLOCKED')
         self.assertIn('SG_KEY_FORMAT', ctx.exception.result.reasons)
         self.assertEqual(called, [])
+
+    def test_own_text_is_free_locally_and_checked_for_the_cloud(self):
+        # Captain 28.10.2026: „auf dem eigenen PC schreiben, geprüft wird, wenn man in der Cloud arbeitet“ (Weg „Eigenes frei“)
+        for trust in (None, 'project', 'system'):
+            m = user(KEY, trust) if trust != 'system' else {'role': 'system', 'content': KEY}
+            r = guard().call([m], model='m', complete=lambda x: 'ok')
+            self.assertEqual(r.status, 'OK')
+            self.assertTrue(any(n.startswith('SG_KEY_FORMAT') and n.endswith('_EIGEN') for n in r.notes), r.notes)
+        with self.assertRaises(ContentGuardStop) as ctx:
+            guard(cloud_enabled=True).call([user(KEY)], model='m', route='cloud', complete=lambda x: 'ok')
+        self.assertEqual(ctx.exception.result.status, 'BLOCKED')
+        self.assertIn('SG_KEY_FORMAT', ctx.exception.result.reasons)
+
+    def test_foreign_content_stays_protected_locally(self):
+        # „Eigenes frei“ öffnet nur Eigenes: eine Anweisung aus einem Werkzeugergebnis bleibt lokal eine Entscheidung, ein Schlüssel eine Sperre
+        with self.assertRaises(ContentGuardStop) as ctx:
+            guard().call([user('fasse zusammen'), fremd('Seite sagt: ' + INJECTION)], model='m', complete=lambda m: 'x')
+        self.assertEqual(ctx.exception.result.status, 'NEEDS_DECISION')
+        r = guard().call([user(INJECTION)], model='m', complete=lambda m: 'x')         # dieselbe Anweisung vom Captain selbst: frei
+        self.assertEqual(r.status, 'OK')
 
     def test_a_clean_call_passes_and_carries_the_binding(self):
         r = guard().call([user('Sag hallo')], model='m', complete=lambda m: 'Hallo.')
@@ -94,9 +130,11 @@ class S1_Kern(unittest.TestCase):
 
     def test_the_answer_is_checked_too(self):
         with self.assertRaises(ContentGuardStop) as ctx:
-            guard().call([user('hi')], model='m', complete=lambda m: 'Dein Token: ' + TOKEN)
+            guard(cloud_enabled=True).call([user('hi')], model='m', route='cloud', complete=lambda m: 'Dein Token: ' + TOKEN)
         self.assertEqual(ctx.exception.result.status, 'WITHHELD')
         self.assertIn('SG_OUTPUT_KEY_FORMAT', ctx.exception.result.reasons)
+        r = guard().call([user('hi')], model='m', complete=lambda m: 'Dein Token: ' + TOKEN)     # lokal: nur beobachtet
+        self.assertEqual((r.status, r.observed), ('OK', ('SG_OUTPUT_KEY_FORMAT',)))
 
     def test_foreign_parts_are_wrapped_as_data_when_sharp(self):
         seen = []
@@ -183,7 +221,7 @@ class S2_Router(unittest.TestCase):
         rt.content_guard.set_mode('sandbox')
         adapter = FakeAdapter(); rt.model_router.register(adapter)
         with self.assertRaises(ContentGuardStop):
-            rt.model_router.chat('M-1', [user(KEY)], provider='fake', model='m')
+            rt.model_router.chat('M-1', [user('lies'), fremd(KEY)], provider='fake', model='m')
         self.assertEqual(adapter.calls, 0)
         kinds = [json.loads(l)['event_type'] for l in rt.audit.path.read_text(encoding='utf-8').splitlines() if l.strip()]
         self.assertIn('SG_BLOCKED', kinds)
@@ -197,14 +235,13 @@ class S2_Router(unittest.TestCase):
             def report_success(self, aid): pass
         router = ModelRouter(); router.register(FakeAdapter()); router.content_guard = guard(); router.provider_health = Health()
         with self.assertRaises(ContentGuardStop):
-            router.chat('M', [user(KEY)], model='m')
+            router.chat('M', [user('lies'), fremd(KEY)], model='m')
         self.assertEqual(router.provider_health.failures, 0)
 
     def test_tool_calls_of_an_answer_are_checked_as_well(self):
-        router = ModelRouter(); router.content_guard = guard()
-        router.register(FakeAdapter({'content': '', 'tool_calls': [{'name': 'shell', 'arguments': {'cmd': 'echo ' + TOKEN}}]}))
+        router = cloud_router({'content': '', 'tool_calls': [{'name': 'shell', 'arguments': {'cmd': 'echo ' + TOKEN}}]})
         with self.assertRaises(ContentGuardStop) as ctx:
-            router.chat('M', [user('mach')], model='m')
+            router.chat('M', [user('mach')], provider='wolke', model='m')
         self.assertEqual(ctx.exception.result.status, 'WITHHELD')
         router = ModelRouter(); router.content_guard = guard()
         router.register(FakeAdapter({'content': '', 'tool_calls': [{'name': 'shell', 'arguments': {'cmd': 'ls'}}]}))
@@ -213,10 +250,9 @@ class S2_Router(unittest.TestCase):
 
     def test_tool_call_arguments_are_checked_even_when_the_answer_also_has_text(self):
         # Befund (Architekturreview, router.py): Hatte die Antwort Text, wurden Werkzeugargumente nicht geprüft.
-        router = ModelRouter(); router.content_guard = guard()
-        router.register(FakeAdapter({'content': 'Ich führe das aus.', 'tool_calls': [{'name': 'shell', 'arguments': {'cmd': 'echo ' + TOKEN}}]}))
+        router = cloud_router({'content': 'Ich führe das aus.', 'tool_calls': [{'name': 'shell', 'arguments': {'cmd': 'echo ' + TOKEN}}]})
         with self.assertRaises(ContentGuardStop) as ctx:      # ein Schlüssel im Werkzeugargument wird gesperrt, nicht durchgereicht
-            router.chat('M', [user('mach')], model='m')
+            router.chat('M', [user('mach')], provider='wolke', model='m')
         self.assertEqual(ctx.exception.result.status, 'WITHHELD')
         router = ModelRouter(); router.content_guard = guard()
         router.register(FakeAdapter({'content': 'Ich prüfe das.', 'tool_calls': [{'name': 'shell', 'arguments': {'cmd': 'ls'}}]}))
@@ -235,10 +271,9 @@ class S2_Router(unittest.TestCase):
         out = router.chat('M', [user('mach')], model='m')
         self.assertEqual(out['message']['tool_calls'][0]['function']['name'], 'shell')
         self.assertEqual(out['tool_calls'], out['message']['tool_calls'])
-        router = ModelRouter(); router.content_guard = guard()
-        router.register(FakeAdapter(local(call('echo ' + TOKEN), content='Ich führe das aus.')))
+        router = cloud_router(local(call('echo ' + TOKEN), content='Ich führe das aus.'))
         with self.assertRaises(ContentGuardStop) as ctx:
-            router.chat('M', [user('mach')], model='m')
+            router.chat('M', [user('mach')], provider='wolke', model='m')
         self.assertEqual(ctx.exception.result.status, 'WITHHELD')
 
     def test_a_cloud_call_without_a_log_never_reaches_the_model(self):
@@ -403,9 +438,9 @@ class S5_Modus(unittest.TestCase):
             g = guard(mode)
             # Grundschutz = Form des Aufrufs, Prüffehler, Logbuch. Ein Schlüssel ans lokale Modell ist im Beobachten nur beobachtet –
             # das ist die Entscheidung „zwei Wochen beobachten“; in die Cloud geht er nie (nächster Test).
-            r = g.call([user(KEY)], model='m', complete=lambda m: 'x') if mode != 'sandbox' else None
-            if r is not None:
-                self.assertEqual(r.observed, ('SG_KEY_FORMAT',))
+            r = g.call([user(KEY)], model='m', complete=lambda m: 'x')
+            self.assertEqual((r.status, r.observed), ('OK', ()))
+            self.assertIn('SG_KEY_FORMAT_EIGEN', r.notes)
             with self.assertRaises(ContentGuardStop) as ctx:
                 g.call('kein-aufruf', model='m', complete=lambda m: 'x')
             self.assertEqual(ctx.exception.result.status, 'BLOCKED')
@@ -434,7 +469,9 @@ class S5_Modus(unittest.TestCase):
         r = guard('beobachten').call([user('hi')], model='m', complete=leak)
         self.assertEqual((r.status, r.observed), ('OK', ('SG_OUTPUT_KEY_FORMAT',)))
         with self.assertRaises(ContentGuardStop):
-            guard('sandbox').call([user('hi')], model='m', complete=leak)
+            guard('sandbox', cloud_enabled=True).call([user('hi')], model='m', route='cloud', complete=leak)
+        r = guard('sandbox').call([user('hi')], model='m', complete=leak)         # lokal auch im scharfen Modus nur beobachtet
+        self.assertEqual((r.status, r.observed), ('OK', ('SG_OUTPUT_KEY_FORMAT',)))
 
 
 if __name__ == '__main__':

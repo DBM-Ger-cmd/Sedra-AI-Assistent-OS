@@ -271,7 +271,8 @@ class ContentGuard:
         hard, flags = tuple(dict.fromkeys(hard)), tuple(dict.fromkeys(flags))
         info = dict(info, output_sha256=sha256(reply.encode('utf-8')).hexdigest(), output_rules=sorted({h.rule_id.split(':')[0] for h in hits}),
                     output_hard=list(hard), output_flags=list(flags), ms=int((time.monotonic() - t0) * 1000))
-        if hard and self.enforced('antworten', route):
+        # Lokal werden Antworten nur beobachtet (Captain 28.10.2026, „Eigenes frei“); was in die Cloud geht oder von dort kommt, bleibt scharf
+        if hard and route == 'cloud' and self.enforced('antworten', route):
             raise ContentGuardStop(self._stop('WITHHELD', info, hard, verdict=verdict))
         observed = tuple(observed) + hard
         text = reply

@@ -182,8 +182,22 @@ def _rule(rule_id):
     return rule_id.split(':', 1)[0]
 
 
+OWN_TRUST = ('system', 'captain', 'project')      # was der Captain selbst schreibt, die Systemvorgabe, das eigene Projekt
+
+
 def judge(rule_id, trust, route):
-    """Eine Regel in einem Teil -> (Stufe, Grundcode). Unbekannte Regeln sind nie frei."""
+    """Eine Regel in einem Teil -> (Stufe, Grundcode). Unbekannte Regeln sind nie frei.
+
+    Captain 28.10.2026 („auf dem eigenen PC schreiben, geprüft wird, wenn man in der Cloud arbeitet“, Weg „Eigenes frei“): lokal wird
+    Eigenes nur notiert (`…_EIGEN`), nie gesperrt oder zur Entscheidung gestellt. Fremdes (`untrusted`: Werkzeugergebnisse, Web, fremde
+    Dateien) bleibt lokal geschützt; die Cloud bleibt voll geprüft."""
+    level, code = _judge(rule_id, trust, route)
+    if route != 'cloud' and trust in OWN_TRUST and level != NOTE:
+        return NOTE, code + '_EIGEN'
+    return level, code
+
+
+def _judge(rule_id, trust, route):
     r = _rule(rule_id)
     cloud = route == 'cloud'
     if r == 'PAN_CVV_V1':
