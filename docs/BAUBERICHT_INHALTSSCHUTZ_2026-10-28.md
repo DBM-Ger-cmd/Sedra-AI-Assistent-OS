@@ -45,7 +45,7 @@ Umsetzung: `content_policy.judge` (eigener Text lokal → `NOTE`), `content_guar
 ## Offen
 
 - `chat_reply` im Cockpit zeigt Schutz-Gründe weiter als Code (Cockpit in Stufe 1 unverändert).
-- Spec `SPEC_EIN_SICHERER_WEG_v1` S5 („der Modus steuert die Schärfe“) gilt lokal jetzt nur noch für Fremdes – die Spec braucht einen Nachtrag.
+- Spec-Nachtrag zu `SPEC_EIN_SICHERER_WEG_v1` (§6 „Eigenes frei“) erledigt in `dcbf3fc`.
 
 ## Nachprüfung mit Nemotron (28.10.2026, Captain-Ja)
 
