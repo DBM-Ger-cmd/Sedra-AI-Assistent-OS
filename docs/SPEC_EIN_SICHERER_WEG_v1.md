@@ -26,7 +26,7 @@ Kandidat geht ungeprüft ans Modell. Lokal ist das verschmerzbar; sobald irgende
 | **S2** | **`ModelRouter.chat` ruft ihn bei jedem Aufruf.** Vorher: Scan und Policy; nachher: Antwortprüfung. Es gibt keinen Aufruf am Guard vorbei – ein Test setzt einen Adapter ein und zählt. | `models/router.py` | Das ist *die eine Stelle*; alles andere wäre ein zweiter Weg. |
 | **S3** | **Entscheidungen des Inhaltsschutzes sind SEDRA-Entscheidungen.** `REVIEW` wird ein Gate mit Inhaltsbindung (Hash des Aufrufs), beantwortet wie jede andere; der eigene `ApprovalStore` entfällt. | `desk/decisions.py` | Regel 2: ein Ort. |
 | **S4** | **Sein Logbuch ist die Audit-Kette.** Die Ereignisse (`SG_*`) gehen in `audit.append`, mit denselben Feldern, ohne Text. | `core/audit.py` | Eine Kette, ein Nachweis. |
-| **S5** | **Der Modus steuert die Schärfe.** Sandbox = alle Gruppen scharf; Beobachten = beobachten, nur `ALWAYS` scharf; Vertraut = beobachten. Was den Rechner verlässt, ist **immer** scharf – das ist keine Einstellung. | `desk/boundaries.py` | Der Captain stellt schon heute an genau einer Stelle ein, wie misstrauisch SEDRA ist. Ein zweiter Schalter wäre ein zweiter Ort. |
+| **S5** | **Der Modus steuert die Schärfe** (lokal seit 28.10.2026 nur für fremden Inhalt, §6). Sandbox = alle Gruppen scharf; Beobachten = beobachten, nur `ALWAYS` scharf; Vertraut = beobachten. Was den Rechner verlässt, ist **immer** scharf – das ist keine Einstellung. | `desk/boundaries.py` | Der Captain stellt schon heute an genau einer Stelle ein, wie misstrauisch SEDRA ist. Ein zweiter Schalter wäre ein zweiter Ort. |
 | **S6** | **Ein Cloud-Adapter ist ein Adapter, der die Netzgrenze kreuzt.** `require_loopback_url` bleibt für lokale; ein Cloud-Adapter darf nur registriert werden, wenn er die Grenze `netz` deklariert – jeder Aufruf kreuzt sie (Regel 7: einmal · ändern · ablehnen) **und** geht durch S2. Bis Anbieter, Vertrag und Schlüssel stehen, gibt es nur den simulierten. | `models/`, `desk/boundaries.py` | Damit kreuzt zum ersten Mal ein Verb der Oberfläche die Netzgrenze – und zwar das wichtigste. |
 | **S7** | **Die Kostengrenze zählt die Hilfsaufrufe.** Bis 20.000 je Vorgang gehen über `ModelRouter.chat`; damit sieht sie das Guppy-Meter, und die Kostengrenze fragt, wenn ein Vorgang teurer wird als das Doppelte der bisher teuersten Aufgabe. | `desk/boundaries.py` | Nichts läuft an der Kostengrenze vorbei. |
 
@@ -65,3 +65,25 @@ machen“: nicht ein Modul mehr, sondern ein Schutz an der einen Stelle.
 
 Vor Build 16 lese ich `policy.py` und `scan.py` ganz, nicht nur die Schnittstelle – ein Inhaltsschutz, den man übernimmt, ohne
 jede Regel zu kennen, ist keiner.
+
+## 6. Nachtrag 28.10.2026 – „Eigenes frei“ (Entscheidung des Captains)
+
+Auftrag des Captains 28.10.2026: „auf dem eigenen PC schreiben, und der Inhalt wird geprüft, wenn man in der Cloud arbeitet“; gewählt der Weg
+**„Eigenes frei“**. Gebaut in `core/content_policy.judge` und `core/content_guard._finish` (`27b8a75`, `BAUBERICHT_INHALTSSCHUTZ_2026-10-28.md`).
+**S5 gilt damit lokal nur noch für fremden Inhalt.**
+
+| Inhalt (Herkunft) | Lokal | Cloud |
+|---|---|---|
+| eigen: `captain`, `system`, `project` | frei – ein Fund wird nur als Notiz `…_EIGEN` ins Logbuch geschrieben, nie gesperrt, nie zur Entscheidung gestellt; unabhängig vom Modus | voll geprüft wie bisher (Sperre, Pseudonymisierung, `SG_PERSONAL_CLOUD` …) |
+| fremd: `untrusted` (Werkzeugergebnisse, Webseiten, fremde Dateien, Befehlsausgaben) | wie S5: im Modus Sandbox scharf (Anweisungen → Entscheidung, Schlüssel → Sperre, als Daten markiert), sonst beobachtet | voll geprüft |
+| Antworten des Modells | nur beobachtet (`observed`), nie zurückgehalten | scharf (zurückgehalten bei Schlüssel, Karte, Steuerzeichen) |
+| Grundschutz (Form, Prüffehler, Logbuch) | immer | immer |
+
+Begründung: Die Sperren trafen lokal den Captain selbst (sein eingefügter Schlüssel, Steuerzeichen aus kopiertem Text), nicht einen Angreifer;
+der Angriffsweg auf einen Entwicklungsagenten ist fremder Inhalt – der bleibt geschützt. Was den Rechner verlässt, bleibt „immer scharf“.
+
+Mit dem Nachtrag behoben (keine Regeländerung, Fehler): Werkzeugstruktur (`tool_calls`, `tool_call_id`) bleibt lokal im Verlauf erhalten;
+eine leere Antwort ist kein „Zurückhalten“; Anbieterfehler stehen als `SG_MODEL_ERROR` im Logbuch, nicht als Stopp des Schutzes.
+
+Prüfbar durch: `test_own_text_is_free_locally_and_checked_for_the_cloud`, `test_foreign_content_stays_protected_locally`,
+`test_the_answer_check_follows_the_mode`, `test_locally_the_tool_structure_of_the_history_is_kept`, `test_an_empty_answer_is_not_withheld_by_the_guard`.
