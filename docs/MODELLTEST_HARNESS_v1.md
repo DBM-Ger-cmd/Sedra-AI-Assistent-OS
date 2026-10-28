@@ -46,3 +46,14 @@ Immer nur ein Modell geladen. Vor jedem Wechsel stoppt der Captain den Modellser
 4. Entscheidung nach der Regel oben, Logbuch-Eintrag MESSUNG, Commit, dann Bericht an den Captain.
 
 Abnahme-Hinweis: Bis Stufe 2 steht, kann nur C1 und C4 gelaufen sein. Ein Teilergebnis wird als solches gekennzeichnet.
+
+## Hinweis aus einem Fremd-Papier (28.10.2026, nicht geprüft)
+
+Ein eingefügter Praxistest vergleicht Nemotron Bolt E4B mit Gemma 4 E4B auf einer RTX 5090 (6 Aufgaben, je 3 Durchläufe). Bewertung:
+
+- Ergebnis 12/18 gegen 11/18: zu klein für eine Aussage.
+- Der Zeitvorteil von Bolt (113 s gegen 662 s) kommt aus abgeschaltetem Reasoning. Mit Reasoning brauchte Bolt rund 120.000 Tokens, ohne mehr Erfolge.
+- Anderes Gerät (RTX 5090, 32 GB) und anderer Gegner als in unserem Test. Die VRAM-Werte gelten für uns nicht.
+- Die Quelle ist nicht geprüft. Der Text selbst sagt, dass seit dem 27.10. keine neuen belastbaren Messungen bestätigt werden konnten.
+
+Festgehalten als Hinweis: Bolt E4B ist ohne Reasoning schnell. Entscheiden soll allein der eigene Lauf mit den Aufgaben C1 bis C4. Der Reasoning-Schalter ist für beide Modelle festzulegen und im Ergebnis zu nennen.
