@@ -56,10 +56,14 @@
       root.addEventListener('resize', ()=>this.breite());
 
       ctx.bus.on('harness.sitzung', ()=>this.sitzungenLaden());
-      ctx.bus.on('harness.antwort', e=>{ this.sitzungenLaden(); H.taskleiste.zeichnen(this); if(e && e.zustand === 'fertig') H.verlauf.fertigGemeldet(this, e.sitzung_id, e.antwort_id); });
+      ctx.bus.on('harness.antwort', e=>{
+        this.sitzungenLaden(); H.taskleiste.zeichnen(this);
+        if(e && e.zustand === 'fertig') H.verlauf.fertigGemeldet(this, e.sitzung_id, e.antwort_id);
+        if(e && e.zustand === 'laeuft') H.verlauf.laeuftGemeldet(this, e.sitzung_id, e.antwort_id);
+      });
       ctx.bus.on('model.changed', ()=>{ this.modellLaden(); H.taskleiste.status(this); });
       ctx.bus.on('decision.pending', ()=>H.taskleiste.status(this));
-      ctx.bus.on('decision.answered', ()=>H.taskleiste.status(this));
+      ctx.bus.on('decision.answered', e=>{ H.taskleiste.status(this); if(e && String(e.id || '').startsWith('harness:')) this.sitzungenLaden(); });
       ctx.bus.on('desk.error', e=>this.hinweis('Die Runtime meldet: ' + e.message, 'warn'));
       root.sedraBoot.onProblem = text=>this.hinweis(text, 'warn');
 

@@ -1,0 +1,52 @@
+# Vorlage des Freigabe-Katalogs der Harness-Shell (SPEC_HARNESS_SHELL_v1 HS-25, G3 Stufe 2, D-E1).
+# Gilt, solange es local_config/freigabe_katalog.yaml nicht gibt. Die eigene Datei legt nur der Captain an (D-F2); geändert wird sie nur von ihm.
+#
+#   werkzeug     datei_lesen, dateien_auflisten, suchen, datei_schreiben, datei_aendern, befehl – oder * für alle
+#   muster       Dateien: Glob relativ zur Projektwurzel (** über Ordner, * in einem Teil); befehl: Anfang der Zeile, * am Ende = „beginnt mit“
+#   stufe        frei · vorarbeiter (in Stufe 2 wie captain) · captain · verboten
+#   begruendung  ein Satz – steht an der Karte, im Audit und als Antwort an das Modell bei „verboten“
+# Die genaueste Regel gewinnt (längstes Muster ohne Platzhalter), bei Gleichstand die strengere. Ohne Regel: captain.
+# Feste Vorbehalte (harness/vorbehalte.py) schlagen jede Regel hier.
+freigabe_katalog:
+  version: 1
+  regeln:
+    - id: lesen-alles
+      werkzeug: [datei_lesen, dateien_auflisten, suchen]
+      muster: ['**']
+      stufe: frei
+      begruendung: Lesen im Projekt ändert nichts.
+    - id: lesen-geheim
+      werkzeug: [datei_lesen, dateien_auflisten, suchen]
+      muster: ['**/.env', '**/local_config/**', '**/*.key', '**/*.pem']
+      stufe: verboten
+      begruendung: Zugangsdaten und Einstellungen des Captains liest das Modell nicht.
+    - id: schreiben-runtime
+      werkzeug: [datei_schreiben, datei_aendern]
+      muster: ['runtime/**']
+      stufe: captain
+      begruendung: Code – der Captain sieht den Diff.
+    - id: schreiben-docs
+      werkzeug: [datei_schreiben, datei_aendern]
+      muster: ['docs/**', 'redesign/**']
+      stufe: captain
+      begruendung: Dokumente und Logbuch – der Captain sieht den Diff.
+    - id: befehl-git-lesen
+      werkzeug: befehl
+      muster: ['git status*', 'git log*', 'git diff*', 'git show*']
+      stufe: frei
+      begruendung: liest nur.
+    - id: befehl-gpu
+      werkzeug: befehl
+      muster: ['nvidia-smi*']
+      stufe: frei
+      begruendung: liest nur.
+    - id: befehl-tests
+      werkzeug: befehl
+      muster: ['python benchmarks/run_tests.py *', 'python benchmarks/spec_check.py *']
+      stufe: frei
+      begruendung: Tests ändern nichts.
+    - id: befehl-python
+      werkzeug: befehl
+      muster: ['python *']
+      stufe: captain
+      begruendung: beliebiger Code – der Captain sieht die Zeile.

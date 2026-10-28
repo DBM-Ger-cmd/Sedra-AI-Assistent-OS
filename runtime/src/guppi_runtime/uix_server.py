@@ -191,7 +191,8 @@ class UIXHub:
     # ---- the desk (Build 7): one list of decisions, one snapshot the event stream watches, the strip's instruments
     def decisions_view(self):
         """Every open decision in one shape: mission gates and the change requests of chat, Werkstatt and Bibliothek."""
-        items = desk_decisions.collect(self.missions(), self._open_requests(), self._open_crossings(), self._content_decisions(), self._scheduler_decisions())
+        items = desk_decisions.collect(self.missions(), self._open_requests(), self._open_crossings(), self._content_decisions(), self._scheduler_decisions(),
+                                       self.harness.entscheidungen())            # Harness-Shell Stufe 2: Freigabe-Karten (HS-22)
         return {'items': items, 'summary': desk_decisions.summary(items)}
 
     def _scheduler_decisions(self):
@@ -270,6 +271,9 @@ class UIXHub:
         if decision['kind'] in ('cloud_offload', 'slot_server'):
             result = self._answer_scheduler(decision, way)
             self.events.publish('decision.answered', {'id': did, 'kind': decision['kind'], 'way': way})
+            return {'status': 'answered', 'id': did, 'way': way, 'result': result}
+        if decision['kind'] == 'harness_freigabe':          # Harness-Shell Stufe 2 (HS-22): dieselbe Tür wie die Karte im Verlauf
+            result = self.harness.beantworten(did.removeprefix('harness:'), way, payload.get('note'), ueber='posteingang')
             return {'status': 'answered', 'id': did, 'way': way, 'result': result}
         if decision['kind'] == 'content':
             result = self.content_guard.answer(did, way)

@@ -10,8 +10,9 @@
   const ID = /^S-[0-9A-F]{8}$/;
   const AUSGABE_KURZ = 4000;               // HS-11: gekürzt ab 4000 Zeichen, mit „ganz anzeigen“
   const ENDE = {erledigt: ['Erledigt', 'ok'], nur_plan: ['Nur Plan – nichts ausgeführt', 'warn'], abgebrochen: ['Abgebrochen', 'warn'],
-                fehler: ['Fehler', 'bad']};
-  const STATUS = {ok: 'ok', fehler: 'Fehler', wiederholt: 'wiederholt', laeuft: 'läuft'};
+                fehler: ['Fehler', 'bad'], wartet: ['Wartet auf Freigabe', 'warn']};
+  const STATUS = {ok: 'ok', fehler: 'Fehler', wiederholt: 'wiederholt', laeuft: 'läuft', wartet: 'wartet auf Freigabe', verboten: 'verboten',
+                  abgelehnt: 'abgelehnt', abgebrochen: 'abgebrochen'};
 
   function token(){ return decodeURIComponent((location.hash || '').replace(/^#/, '')); }
 
@@ -62,12 +63,16 @@
     return row;
   }
 
-  function werkzeugEnde(row, status, dauer, ergebnis, stufe){
+  function werkzeugEnde(row, status, dauer, ergebnis, stufe, regel){
     row.classList.remove('laeuft');
-    row.classList.add(status === 'ok' ? 'ok' : (status === 'wiederholt' ? 'warn' : 'bad'));
+    row.classList.add(status === 'ok' ? 'ok' : (status === 'wiederholt' || status === 'wartet' || status === 'abgelehnt' ? 'warn' : 'bad'));
     row.querySelector('.hs-wz-status').textContent = STATUS[status] || status;
     if(typeof dauer === 'number') row.querySelector('.hs-wz-dauer').textContent = dauer < 1 ? Math.round(dauer * 1000) + ' ms' : dauer.toFixed(1) + ' s';
-    if(stufe) row.title = 'Stufe: ' + stufe;
+    if(stufe){                                           // HS-29: Stufe und Regel stehen am Werkzeugaufruf
+      const marke = d().el('span', 'hs-wz-stufe ' + stufe, stufe + (regel ? ' · ' + regel : ''));
+      marke.title = 'Einstufung: Stufe ' + stufe + (regel ? ', Regel ' + regel : ', keine Regel');
+      row.querySelector('summary').insertBefore(marke, row.querySelector('.hs-wz-dauer'));
+    }
     const body = row.querySelector('.hs-wz-body');
     const text = String(ergebnis || '');
     const pre = d().el('pre', 'hs-pre', text.length > AUSGABE_KURZ ? text.slice(0, AUSGABE_KURZ) + ' …' : text);
@@ -86,8 +91,13 @@
     return row;
   }
 
+
+  const karteKarte = (...x)=>root.sedraHarness.karte.karteKarte(...x);        // karte.js: die Freigabe-Karte (HS-22)
+  const diffAnsicht = (...x)=>root.sedraHarness.karte.diffAnsicht(...x);
+
   // ---- eine Ansicht je Reiter
   function ansicht(S, id){
+    if(String(id).startsWith('diff:')) return diffAnsicht(S, id);
     const box = d().el('div', 'hs-verlauf');
     const liste = d().el('div', 'hs-liste');
     box.append(liste);
@@ -117,6 +127,7 @@
         n.append(d().el('div', 'hs-captain-text', text));
         this.neu(n);
         this.nachUnten();
+        return n;
       },
       notiz(text, ton){ this.eintraege++; this.neu(d().el('div', 'hs-notiz s-note ' + (ton || 'note'), text)); },
 
@@ -128,13 +139,19 @@
         liste.replaceChildren();
         this.eintraege = 0;
         let block = null;
+        const entschieden = {};
+        (s.eintraege || []).forEach(e=>{ if(e.typ === 'karte' && e.entscheidung) entschieden[e.karte_id] = e; });
         for(const e of s.eintraege || []){
           if(e.typ === 'captain'){ this.captain(e.text || ''); block = null; }
           else if(e.typ === 'werkzeug' && e.antwort_id !== s.laeuft){
             if(!block){ block = this.neu(d().el('div', 'hs-antwort')); this.eintraege++; }
             const row = werkzeugZeile(e.name, kurz(e.args), e.args);
-            werkzeugEnde(row, e.status, e.dauer_s, e.ergebnis, e.stufe);
+            werkzeugEnde(row, e.status, e.dauer_s, e.ergebnis, e.stufe, e.regel);
             block.append(row);
+          }
+          else if(e.typ === 'karte' && e.zustand === 'offen'){
+            if(!block){ block = this.neu(d().el('div', 'hs-antwort')); this.eintraege++; }
+            block.append(karteKarte(S, this, e, entschieden[e.karte_id] || null));
           }
           else if(e.typ === 'modell'){
             if(!block){ block = this.neu(d().el('div', 'hs-antwort')); this.eintraege++; }
@@ -160,6 +177,7 @@
           if(!S.modell){ this.notiz('Kein Modell geladen – Modell wählen (Werkstatt im Cockpit).', 'warn'); return false; }
         }
         this.wartet = true;
+        let blase = null;
         try{
           if(!ID.test(this.id)){
             const kopf = await S.api('/api/harness/sitzungen', {method: 'POST', body: {projekt}});
@@ -167,18 +185,22 @@
             this.id = kopf.id;
             root.sedraHarness.reiter.umbenennen(S, alt, kopf.id);
           }
+          // erst die Nachricht zeichnen, dann senden: die Antwort kann über den Ereignisstrom schneller da sein als die HTTP-Antwort
+          blase = this.captain(text);
           const out = await S.api('/api/harness/sitzungen/' + this.id + '/nachricht', {method: 'POST', body: {text}});
           if(out.status === 'kein_modell'){
+            blase.remove(); this.eintraege--; blase = null;
             this.notiz(out.grund || 'Kein Modell geladen – Modell wählen.', 'warn');
             S.modellLaden();
             return false;
           }
-          this.captain(text);
           this.strom(out.antwort_id, 0);
           S.sitzungenLaden();
           return true;
         }catch(err){
-          this.notiz('Nicht gesendet: ' + err.message, 'bad');
+          if(blase){ blase.remove(); this.eintraege--; }
+          this.notiz(/karte_offen/.test(err.message) ? 'Erst die offene Freigabe-Karte entscheiden – dann geht es weiter.' : 'Nicht gesendet: ' + err.message,
+                     /karte_offen/.test(err.message) ? 'warn' : 'bad');
           return false;
         }finally{
           this.wartet = false;
@@ -194,6 +216,7 @@
 
       // ---- der Strom einer Antwort
       async strom(aid, ab){
+        if(this.gestreamt && this.gestreamt.has(aid)) return;     // dieselbe Antwort nur einmal: Bus-Ereignis und HTTP-Antwort kommen beide
         this.antwortId = aid;
         (this.gestreamt = this.gestreamt || new Set()).add(aid);
         this._seit = performance.now();          // die Taskleiste zeigt, wie lange die Antwort läuft
@@ -286,8 +309,9 @@
         }
         else if(name === 'werkzeug.ende'){
           const row = z.werkzeuge[x.aufruf_id];
-          if(row) werkzeugEnde(row, x.status, x.dauer_s, x.ergebnis !== undefined ? x.ergebnis : x.kurz, x.stufe);
+          if(row) werkzeugEnde(row, x.status, x.dauer_s, x.ergebnis !== undefined ? x.ergebnis : x.kurz, x.stufe, x.regel);
         }
+        else if(name === 'karte'){ block.append(karteKarte(S, this, x, null)); z.seg = null; }
         else if(name === 'kontext'){ block.dataset.kontext = x.belegt + '/' + x.fenster; }
         else if(name === 'fehler'){ block.append(d().el('div', 'hs-zurueck bad', 'Fehler: ' + (x.grund || ''))); }
         else if(name === 'ende'){
@@ -317,5 +341,11 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.verlauf = {ansicht, fertigGemeldet, drache};
+  // Eine Antwort läuft, die diese Ansicht nicht selbst gestartet hat (z. B. Freigabe im Posteingang): den Strom anhängen
+  function laeuftGemeldet(S, sid, aid){
+    const a = S.ansichten.get(sid);
+    if(a && a.strom && !a.laeuft() && aid && !(a.gestreamt && a.gestreamt.has(aid))) a.strom(aid, 0);
+  }
+
+  root.sedraHarness.verlauf = {ansicht, fertigGemeldet, laeuftGemeldet, drache};
 })();

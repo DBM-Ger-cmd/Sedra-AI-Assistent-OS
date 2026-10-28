@@ -233,3 +233,24 @@
   .hs-zelle[data-zelle="gpu"],.hs-zelle[data-zelle="state"]{display:none}
   .hs-schild{display:none}
 }
+
+/* ---- Stufe 2: Freigabe-Karte (HS-22), Diff, Stufe am Werkzeugaufruf (HS-29) */
+.hs-karte{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--warn-line);border-left:3px solid var(--warn);border-radius:var(--radius);background:var(--panel);min-width:0}
+.hs-karte.entschieden{border-color:var(--line);border-left-color:var(--line)}
+.hs-karte-kopf{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
+.hs-karte-icon{color:var(--warn)}
+.hs-karte-ziel{font-family:var(--mono);font-size:var(--size-small);overflow-wrap:anywhere}
+.hs-karte-fuss{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hs-karte-notiz{flex:1 1 160px;min-width:0;font:inherit;font-size:var(--size-small);color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:4px 8px}
+.hs-karte .hs-knopf{padding:5px 12px}
+.hs-diff{max-height:360px}
+.hs-diff span{display:block;white-space:pre-wrap}
+.hs-diff-neu{background:var(--add-bg)}
+.hs-diff-alt{background:var(--del-bg)}
+.hs-diff-ort{color:var(--muted)}
+.hs-diff-titel{margin:0 0 4px;font-size:var(--size-l)}
+.hs-wz-stufe{flex:0 0 auto;font-size:var(--size-xs);padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.hs-wz-stufe.frei{border-color:var(--ok-line)}
+.hs-wz-stufe.captain,.hs-wz-stufe.vorarbeiter{border-color:var(--warn-line)}
+.hs-wz-stufe.verboten{border-color:var(--bad-line);color:var(--bad)}
+.hs-schild.warn{color:var(--warn);border-color:var(--warn-line)}
