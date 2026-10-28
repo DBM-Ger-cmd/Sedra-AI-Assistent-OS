@@ -1,7 +1,7 @@
 r"""Browser check of the UIX: the Cockpit runs in a real (headless) Chromium, every tool is opened in the dock, and what the Captain
 would see is measured. This is the acceptance of SHELL_WERKZEUG_VERTRAG_v1 §8 – a UIX candidate passes only if `result ok` is printed.
 
-    .venv\Scripts\python.exe benchmarks/uix_check.py [--shell cockpit|minimal] [--tool <id>] [--url URL] [--shots DIR] [--browser …] [--headed]
+    .venv\Scripts\python.exe benchmarks/uix_check.py [--shell cockpit|minimal|harness] [--groesse 1024x700,1400x860] [--tool <id>] [--url URL] [--shots DIR] [--browser …] [--headed]
 
 Without --url the script starts its own uix_server on a temporary project (no GPU, no model; the host programs are isolated the way the
 tests do it), so it can run on any PC. Needs the Python package `playwright` (pip install playwright) and a browser: the bundled Chromium
@@ -227,6 +227,24 @@ PROFILES = {
 }
 
 
+# Harness-Shell (SPEC_HARNESS_SHELL_v1 Stufe 1): fünf Zonen, Status rechts in der Taskleiste, kein Werkzeug-Container. Das Gespräch ist
+# die Shell selbst: ohne Modell im Prüfprojekt muss eine Nachricht „Kein Modell geladen“ ergeben (HS-53), nicht still scheitern.
+PROFILES['harness'] = {
+    'zones': ('hs-seite', 'hs-reiter', 'hs-flaeche', 'hs-eingabe', 'hs-taskleiste'),
+    'gauges': '.hs-zelle',
+    'pane': MEASURE_PANE_GENERIC,
+    'segment': None,
+    'leftovers': None,
+    'count': "()=>{ try{ return (JSON.parse(localStorage.getItem('sedra.harness.reiter') || '{}').liste || []).length; }catch(e){ return 0; } }",
+    'count_word': 'Reiter',
+    'layout_min': 1,                          # eine Sitzung als Reiter muss das Neuladen überstehen
+    'before_layout': "async ()=>{ const S = window.sedra.shells.get('harness'); const k = await S.api('/api/harness/sitzungen', {method: 'POST', body: {projekt: 'sedra-entwicklung', titel: 'Prüfsitzung'}}); await S.sitzungenLaden(); window.sedraHarness.reiter.oeffnen(S, k.id); }",
+    'menu': None,
+    'talk': {'input': '.hs-feld', 'answer': "()=>[...document.querySelectorAll('.hs-notiz, .hs-captain')].map(n=>n.innerText).join(' | ')",
+             'expect': 'Kein Modell geladen'},
+}
+
+
 def frame_profile(vorgabe):
     """Eine Shell aus Vorgabe (ui/frame.js) bringt ihr Profil mit: die Zonen stehen im Raster, die Flächen heißen fr-…, und was
     der Rahmen merkt, steht in localStorage. Deshalb wird sie ganz geprüft – nichts „nicht geprüft“."""
@@ -350,7 +368,7 @@ def wait_until_started(page, ms=15000):
         pass            # kein Abbruch: die Prüfung `load` meldet gleich selbst, dass keine Shell da ist
 
 
-def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=None, shell='cockpit', fixture=None):
+def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=None, shell='cockpit', fixture=None, viewport=(1400, 860)):
     """Runs every check against a running UIX; returns the list of (name, ok, detail)."""
     profile = PROFILES.get(shell, GENERIC)
     generic = shell not in PROFILES or bool(profile.get('archive'))
@@ -364,7 +382,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
 
     with sync_playwright() as pw:
         b = launch(pw, browser, headed)
-        page = b.new_page(viewport={'width': 1400, 'height': 860})
+        page = b.new_page(viewport={'width': viewport[0], 'height': viewport[1]})
         page.on('pageerror', lambda e: errors.append(str(e)))
         page.on('console', lambda m: console.append(m.text) if m.type == 'error' and not any(a in (m.location or {}).get('url', '') for a in ALLOWED_FAILURES) else None)
         page.on('response', lambda r: failed.append((r.status, r.url)) if r.status >= 400 else None)
@@ -483,7 +501,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
                                       " strip: Math.round(([...document.querySelectorAll(sel)].pop() || {getBoundingClientRect:()=>({right:0})}).getBoundingClientRect().right)})",
                                       profile['gauges'])
         page_count = page.evaluate(profile['count']) if profile['count'] else None
-        check('breite', page_overflow['x'] <= 0 and page_overflow['strip'] <= 1400,
+        check('breite', page_overflow['x'] <= 0 and page_overflow['strip'] <= viewport[0],
               (f"{page_count} {profile['count_word']}, " if page_count is not None else '') + f"Überhang {page_overflow['x']} px")
 
         # the dock empties a container again (§4): opening another object must not leave the old one behind
@@ -504,11 +522,19 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
 
         if profile.get('before_talk'):            # in einer Shell mit Schublade muss das Gespräch erst auf – wie beim Captain
             page.evaluate(profile['before_talk']); page.wait_for_timeout(400)
-        page.fill('.t-talk-in input', 'logbuch')
-        page.press('.t-talk-in input', 'Enter')
-        page.wait_for_timeout(1000)
-        talk = page.evaluate("()=>({lines: document.querySelectorAll('.t-talk-line').length, text: document.querySelector('.t-talk-log').innerText.slice(-80), focus: document.activeElement === document.querySelector('.t-talk-in input')})")
-        check('talk', talk['lines'] >= 2 and 'Logbuch' in talk['text'], talk['text'].replace('\n', ' ')[-60:])
+        if profile.get('talk'):                  # eine Shell, deren Gespräch sie selbst ist (Harness): ihr Feld, ihre Antwort
+            t = profile['talk']
+            page.fill(t['input'], 'Hallo SEDRA')
+            page.press(t['input'], 'Enter')
+            page.wait_for_timeout(1500)
+            text = page.evaluate(t['answer'])
+            check('talk', t['expect'] in text, text.replace('\n', ' ')[-90:])
+        else:
+            page.fill('.t-talk-in input', 'logbuch')
+            page.press('.t-talk-in input', 'Enter')
+            page.wait_for_timeout(1000)
+            talk = page.evaluate("()=>({lines: document.querySelectorAll('.t-talk-line').length, text: document.querySelector('.t-talk-log').innerText.slice(-80), focus: document.activeElement === document.querySelector('.t-talk-in input')})")
+            check('talk', talk['lines'] >= 2 and 'Logbuch' in talk['text'], talk['text'].replace('\n', ' ')[-60:])
 
         menu = profile['menu']
         if menu:
@@ -527,13 +553,16 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
         else:
             check('palette', None, 'nicht geprüft – kein Profil')
 
-        if opens and profile['count']:
-            page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'meter', id:'meter', title:'Guppy-Meter'})")
-            page.wait_for_timeout(600)
+        if (opens or profile.get('layout_min')) and profile['count']:
+            if opens:
+                page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'meter', id:'meter', title:'Guppy-Meter'})")
+                page.wait_for_timeout(600)
+            if profile.get('before_layout'):
+                page.evaluate(profile['before_layout']); page.wait_for_timeout(600)
             tabs_before = page.evaluate(profile['count'])
             page.reload(); wait_until_started(page); page.wait_for_timeout(1500)
             tabs_after = page.evaluate(profile['count'])
-            check('layout', tabs_after >= tabs_before and tabs_after > 1,
+            check('layout', tabs_after >= tabs_before and tabs_after >= profile.get('layout_min', 2),
                   f"{tabs_before} {profile['count_word']} vorher, {tabs_after} nach dem Neuladen")
         else:
             check('layout', None, 'nicht geprüft – was ein Neuladen überstehen muss, weiß nur der Autor der Shell')
@@ -575,6 +604,7 @@ def main(argv=None):
     ap.add_argument('--shots', help='folder for screenshots of every step')
     ap.add_argument('--browser', default='auto', choices=['auto', 'chromium', 'msedge', 'chrome'])
     ap.add_argument('--headed', action='store_true', help='show the browser window')
+    ap.add_argument('--groesse', default='1400x860', help='Fenstergröße(n) BxH, mehrere mit Komma (z. B. 1024x700,1400x860): jede wird ganz geprüft')
     ap.add_argument('--json', action='store_true', help='print the report as JSON as well')
     ap.add_argument('--fixture', choices=['orchestra', 'orchestra-aus', 'orchestra-fehler'],
                     help='Shell D (Spec 4): das Agenten-Team aus benchmarks/uix_fixture_orchestra.py ins Prüfprojekt legen')
@@ -600,8 +630,16 @@ def main(argv=None):
         url, stop = start_server(print, shell=args.shell, prepare=prepare)
         print('uix', url.split('#')[0], '· Shell', args.shell)
     try:
-        results = run_checks(url, shots=args.shots, browser=args.browser, headed=args.headed, only=args.tool, shell=args.shell,
-                             fixture=args.fixture)
+        results = []
+        for groesse in [g.strip() for g in args.groesse.split(',') if g.strip()]:
+            w, _, h = groesse.lower().partition('x')
+            print(f'--- Fenster {int(w)}x{int(h)}')
+            shots = None
+            if args.shots:
+                shots = Path(args.shots) / f'{int(w)}x{int(h)}'; shots.mkdir(parents=True, exist_ok=True)
+            results += [(f'{n}@{int(w)}x{int(h)}', ok, dt) for n, ok, dt in
+                        run_checks(url, shots=shots, browser=args.browser, headed=args.headed, only=args.tool, shell=args.shell,
+                                   fixture=args.fixture, viewport=(int(w), int(h)))]
     finally:
         if stop: stop()
     bad = [r for r in results if r[1] is False]

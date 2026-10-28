@@ -41,6 +41,7 @@
       const t = d().el('span', 'hs-ende ' + art[1], art[0] + (daten.ende === 'fehler' && daten.grund ? ': ' + daten.grund : ''));
       fuss.append(t);
     }
+    if(daten.abgeschnitten) fuss.append(d().el('span', 'hs-ende warn', 'An der Token-Grenze abgeschnitten'));
     const teile = [];
     if(daten.zuege) teile.push(daten.zuege + (daten.zuege === 1 ? ' Zug' : ' Züge'));
     const tk = daten.token || {};

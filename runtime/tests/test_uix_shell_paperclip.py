@@ -254,6 +254,9 @@ class ThreeShells(unittest.TestCase):
             opens = any(p in doc['provides'] for p in ('dock', 'windows'))
             if opens:
                 self.assertIn(shell, mod.PROFILES, f'{shell} öffnet Objekte – dafür braucht die Abnahme ein Profil')
+            elif shell in mod.PROFILES:
+                # Eine Shell mit eigenem Gesprächsfeld (Harness, Captain 28.10.2026, Frage 2) braucht ein Profil für ihre talk-Prüfung
+                self.assertIn('talk', mod.PROFILES[shell], f'{shell} öffnet keine Objekte – ein Profil nur mit eigenem Gesprächsfeld')
             else:
                 self.assertNotIn(shell, mod.PROFILES, f'{shell} öffnet keine Objekte – das allgemeine Profil genügt')
 

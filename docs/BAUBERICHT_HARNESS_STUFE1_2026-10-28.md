@@ -6,16 +6,15 @@ Kein Push, `main` und `spec/agenten-orchestrierung` unberührt. Übernahme entsc
 
 ## Ergebnis
 
-**Committet sind T1–T8** (Frage 1 vom Captain am 28.10.2026 mit (a) entschieden: Shell-Vertrag erweitert). Nur die Änderung an
-`benchmarks/uix_check.py` (Frage 2) liegt weiter in der Arbeitskopie, bis der Captain entscheidet.
+**Committet sind T1–T8.** Der Captain hat am 28.10.2026 beide Konflikte entschieden: Frage 1 mit (a) (Shell-Vertrag erweitert),
+Frage 2 „Profil übernehmen“ (uix_check mit Profil `harness` und `--groesse`).
 
 | Prüfung | Ergebnis |
 |---|---|
 | Gruppen `scheduler desk orchestra uix` nach T1 | 1073 Tests, 0 rot |
-| Gruppen `scheduler desk orchestra uix harness`, Commit-Stand (`ad9f428`) | **1143 Tests, 0 rot**, 6 übersprungen (75 Dateien, Browser-Bahn ausgelassen) |
-| dasselbe mit der Arbeitskopie von `uix_check.py` (Frage 2) | 1 rot: `test_uix_shell_paperclip…test_the_acceptance_knows_every_shell_in_the_package` (die Regel verbietet ein Profil für eine Shell ohne dock/windows) |
-| neue Gruppe `harness` | 7 Testdateien, 69 Tests, 0 rot |
-| `uix_check --shell harness --groesse 1024x700,1400x860` (mit der Arbeitskopie von `uix_check.py`) | 18 von 18 ok (je 9 Prüfungen), 0 Konsolenfehler, Überhang 0 px; 6 „nicht geprüft“ (Werkzeug-Container, Palette – gibt es in dieser Shell nicht) |
+| Gruppen `scheduler desk orchestra uix harness`, Endstand | **1146 Tests, 0 rot**, 6 übersprungen (75 Dateien, Browser-Bahn ausgelassen) |
+| neue Gruppe `harness` | 7 Testdateien, 72 Tests, 0 rot |
+| `uix_check --shell harness --groesse 1024x700,1400x860` | 18 von 18 ok (je 9 Prüfungen), 0 Konsolenfehler, Überhang 0 px; 6 „nicht geprüft“ (Werkzeug-Container, Palette – gibt es in dieser Shell nicht) |
 | Browser-Durchlauf mit Modell-Attrappe (beide Größen) | Streamen grau → geprüft, Werkzeugzeile aufklappbar, Markdown mit Tabelle und Code-Kopieren, Stopp-Knopf und Esc → „Abgebrochen“, nach Neuladen alles wieder da, hell und dunkel, 0 Konsolenfehler |
 | Abnahme mit echtem Modell (T8) | **offen – wartet auf Ja des Captains** (Skript vorbereitet, trocken gegen Attrappe in beiden Guard-Modi grün) |
 | Cockpit | unverändert (`uix/shells/cockpit/` ohne Änderung); `chat_reply` unverändert |
@@ -41,7 +40,7 @@ Umfang: rund 2080 Zeilen neuer Code (Paket harness 800, Shell 1270) plus rund 12
 | Frage | Konflikt Spec ↔ Code | Stand |
 |---|---|---|
 | 1 | G2 §6 verlangt `provides: [seite, reiter, flaeche, eingabe, taskleiste]`, `desk/gateway.SLOTS` kannte nur die alten Namen; das Manifest braucht `PATCH`/`DELETE` (G2 §4), `gateway.ROUTE` kannte nur GET/POST. | **Entschieden (a), committet:** `SLOTS` um die fünf Zonen, `ROUTE` um PATCH/DELETE erweitert; `ui/bus.js` kennt `harness.sitzung`/`harness.antwort`. `test_desk_gateway` angepasst (abgelehnt wird jetzt `PUT`; neuer Test: PATCH/DELETE gültig, fremde Module behalten nur GET), `test_desk_modules` (Liste der Shells), `test_uix_contract` (nimmt Präfix-Wege des Servers an). |
-| 2 | `uix_check` hat keine Fenstergröße und prüft „talk“ über das Werkzeug `talk`; die Regel „Shell ohne dock/windows bekommt kein eigenes Profil“ (`test_uix_shell_paperclip`). | **OFFEN, nur Arbeitskopie:** Profil `harness`, Option `--groesse BxH[,BxH]`, „talk“ = Nachricht ohne Modell ergibt „Kein Modell geladen“ (HS-53). Ohne diese Änderung prüft `uix_check` die Shell nur allgemein, und „talk“ schlägt fehl (kein `.t-talk-in`). |
+| 2 | `uix_check` hat keine Fenstergröße und prüft „talk“ über das Werkzeug `talk`; die Regel „Shell ohne dock/windows bekommt kein eigenes Profil“ (`test_uix_shell_paperclip`). | **Entschieden „Profil übernehmen“, committet:** Regel in `test_uix_shell_paperclip`: eine Shell ohne dock/windows darf ein Profil haben, wenn es eine eigene talk-Prüfung trägt. Profil `harness`, Option `--groesse BxH[,BxH]`, „talk“ = Nachricht ohne Modell ergibt „Kein Modell geladen“ (HS-53). Ohne diese Änderung prüft `uix_check` die Shell nur allgemein, und „talk“ schlägt fehl (kein `.t-talk-in`). |
 
 ## Abweichungen und Entscheidungen beim Bau (bitte prüfen)
 
@@ -56,6 +55,23 @@ Umfang: rund 2080 Zeilen neuer Code (Paket harness 800, Shell 1270) plus rund 12
 9. **Mission je Sitzung:** angelegt beim Anlegen der Sitzung, ohne `hub.lock` (K3). Eine neue Sitzung wird in der Oberfläche erst mit der ersten Nachricht angelegt und ohne geladenes Modell gar nicht.
 10. **`uix_check`:** siehe „Entschieden und offen“ (Frage 2).
 11. **Branch:** G3 nennt `harness/stufe-1`; gebaut wurde auf dem Worktree-Branch `claude/stufe-1-64f713` (gleicher Ausgangspunkt).
+
+## Alte Fehler der vorigen Shells (Hinweis des Captains)
+
+| Alter Fehler | Wo er auftrat | In der Harness-Shell |
+|---|---|---|
+| Plan ohne Ausführung gilt als Erfolg (B4/1) | Chat-Kette | `ende: nur_plan`; `erledigt` nur mit Werkzeug mit Wirkung (Test) |
+| Dasselbe Werkzeug achtmal (B4/4) | Chat-Kette | 2× Hinweis, 3× Zug ohne Werkzeuge (Tests) |
+| Stichwörter erzwingen `required` (B4/5) | `chat_reply` | `tool_choice` nur `auto`, letzter Zug ohne Werkzeuge (Test „öffne Aufgabe“) |
+| Leere Antwort still / „model_answer_empty“ | Chat 28.10. | ein Zug ohne Werkzeuge; bleibt sie leer → `ende: fehler` mit Grund (Tests) |
+| Abgeschnittene Antwort unbemerkt | nachtlauf_3d, Chat | `abgeschnitten` im Strom, in der Sitzung und als Hinweis im Verlauf (Test) |
+| `hub.lock` blockiert alle Wege während einer Antwort (K3) | `chat_reply` | Schleife ohne `hub.lock`, `/api/status` antwortet sofort (Test) |
+| Werkzeugaufrufe am Inhaltsschutz vorbei | Router bis 28.10. | Schleife nutzt `message.tool_calls` aus dem geprüften Ergebnis |
+| Knopf im Formular sendet ab | Werkzeug Wissen 26.10. | nur `type=button` / `sedraDom.button` |
+| Viele Reiter machen die Seite breiter (Build 8) | Cockpit | 16 Reiter bei 1024 px: Überhang 0 px, Reiter und Taskleiste rollen in sich |
+| 404 in der Konsole durch gemerkte, verschwundene IDs | – | gemerkte Reiter werden gegen die Sitzungsliste geprüft |
+| Fester Wartewert statt „bereit“ | uix_check 15.10. | Abnahme wartet auf `sedraBoot.ctx` (vorhanden) |
+| Polling je Fenster | vor Build 7 | Status nur bei Ereignissen, höchstens alle 2 s; nur die Uhr tickt lokal |
 
 ## Offen (nicht in Stufe 1 oder nicht geprüft)
 

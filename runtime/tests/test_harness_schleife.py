@@ -18,10 +18,11 @@ def call(name, args, cid='c1'):
 class Zug:
     """Ein Zug der Attrappe: Teilstücke (Kanal, Text) und das Ergebnis, das control.execute liefert."""
 
-    def __init__(self, text='', denken='', calls=None, status='completed', error=None, geprueft=None, usage=None):
+    def __init__(self, text='', denken='', calls=None, status='completed', error=None, geprueft=None, usage=None, finish='stop'):
         self.text, self.denken, self.calls, self.status, self.error = text, denken, calls or [], status, error
         self.geprueft = text if geprueft is None else geprueft
         self.usage = usage or {'input_tokens': 100, 'output_tokens': 10}
+        self.finish = finish
 
 
 class Attrappe:
@@ -44,7 +45,7 @@ class Attrappe:
         if z.status != 'completed':
             return {'status': z.status, 'error': z.error}
         message = {'role': 'assistant', 'content': z.geprueft, **({'tool_calls': z.calls} if z.calls else {})} if request.get('tools') else None
-        return {'status': 'completed', 'model_result': {'content': z.geprueft, 'message': message, 'usage': z.usage, 'finish_reason': 'stop'}}
+        return {'status': 'completed', 'model_result': {'content': z.geprueft, 'message': message, 'usage': z.usage, 'finish_reason': z.finish}}
 
 
 class Box:
@@ -195,6 +196,26 @@ class SchleifeTests(unittest.TestCase):
         a = Attrappe([Zug('', calls=[call('zustand', {'n': i})], usage={'input_tokens': 800, 'output_tokens': 1}) for i in range(6)] + [Zug('ok')])
         self.lauf(a, fenster=1000)
         self.assertIn(('kontext', {'belegt': 800, 'fenster': 1000}), self.ereignisse())
+
+    def test_leere_antwort_bekommt_einen_zug_ohne_werkzeuge(self):
+        a = Attrappe([Zug(''), Zug('Jetzt mit Text.')])
+        out = self.lauf(a)
+        self.assertEqual(out['text'], 'Jetzt mit Text.')
+        self.assertNotIn('tools', a.requests[1])
+        self.assertEqual(a.requests[1]['messages'][-1]['content'], schleife.FINAL_ANSWER_NOTE)
+
+    def test_immer_leer_ist_nie_still(self):
+        out = self.lauf(Attrappe([Zug('', denken='x', finish='length'), Zug('', finish='length')]))
+        self.assertEqual(out['ende'], 'fehler')
+        self.assertIn('Token-Grenze beim Denken', out['grund'])
+        self.assertEqual(self.ereignisse()[-1][1]['ende'], 'fehler')
+        self.assertEqual(self.sitzungen.laden(self.sid)['eintraege'][-1]['ende'], 'fehler')
+
+    def test_abgeschnitten_wird_gesagt(self):
+        out = self.lauf(Attrappe([Zug('Ein halber', finish='length')]))
+        self.assertTrue(out['abgeschnitten'])
+        self.assertTrue(self.ereignisse()[-1][1]['abgeschnitten'])
+        self.assertTrue(self.sitzungen.laden(self.sid)['eintraege'][-1]['abgeschnitten'])
 
     def test_systemprompt_nennt_projekt_und_werkzeuge(self):
         text = schleife.system_prompt('Sedra Entwicklung', ['get_model_status', 'list_models'])
