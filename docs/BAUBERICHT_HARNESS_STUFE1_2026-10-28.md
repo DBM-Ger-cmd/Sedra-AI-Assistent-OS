@@ -16,7 +16,7 @@ Frage 2 „Profil übernehmen“ (uix_check mit Profil `harness` und `--groesse`
 | neue Gruppe `harness` | 7 Testdateien, 72 Tests, 0 rot |
 | `uix_check --shell harness --groesse 1024x700,1400x860` | 18 von 18 ok (je 9 Prüfungen), 0 Konsolenfehler, Überhang 0 px; 6 „nicht geprüft“ (Werkzeug-Container, Palette – gibt es in dieser Shell nicht) |
 | Browser-Durchlauf mit Modell-Attrappe (beide Größen) | Streamen grau → geprüft, Werkzeugzeile aufklappbar, Markdown mit Tabelle und Code-Kopieren, Stopp-Knopf und Esc → „Abgebrochen“, nach Neuladen alles wieder da, hell und dunkel, 0 Konsolenfehler |
-| Abnahme mit echtem Modell (T8) | **offen – wartet auf Ja des Captains** (Skript vorbereitet, trocken gegen Attrappe in beiden Guard-Modi grün) |
+| Abnahme mit echtem Modell (T8, 28.10.2026 nach Ja des Captains) | **bestanden** (Einzelheiten unten): Werkzeugzeile ja, Stopp → `abgebrochen`, Sitzung nach Neustart vollständig; HS-52 nur im scharfen Modus gemessen (erstes geprüftes Wort −0,008 s Verzug) |
 | Cockpit | unverändert (`uix/shells/cockpit/` ohne Änderung); `chat_reply` unverändert |
 | Auswahl in `START_SEDRA` | `harness|Harness` erscheint in `uix_start --liste` |
 
@@ -75,12 +75,31 @@ Umfang: rund 2080 Zeilen neuer Code (Paket harness 800, Shell 1270) plus rund 12
 
 ## Offen (nicht in Stufe 1 oder nicht geprüft)
 
-- **T8 mit echtem Modell:** erste Antwort mit Werkzeugzeile, Stopp, Neustart des Cockpit-Servers und Sitzung noch da, HS-52. Ablauf:
-  1. Rezept `harness.nemotron_e4b` (Nemotron 3.5 Bolt E4B Q4_K_M, Kontext 8192 unvermessen, in `local_config/role_routing.yaml`) laden und `START_SEDRA harness` – nur nach Ja des Captains; Frage 1 ist entschieden.
-  2. `python benchmarks/harness_abnahme.py --url "<URL mit #token>"` (Teil 1).
-  3. Cockpit-Server neu starten, dann `… --sitzung S-…` (Teil 2).
 - Nicht im Browser geprüft: Strg+B von Hand, mittlere Maustaste, Umbenennen/Löschen in der Seitenleiste (Code und API-Tests vorhanden), Mikrofon → Rekorder.
 - Bekannte Grenze: Nach einem Stopp ohne bereits gestreamten Text (scharfer Modus) bleibt die Antwort leer; mit Live-Text wird der Teil bis zum Stopp geprüft und gespeichert.
+
+## Abnahme mit echtem Modell (T8)
+
+Captain-Ja 28.10.2026 („T8 mit echtem Modell“). Server mit dem Code dieses Branches auf `workspace/GUPPI_OS`, Shell `harness`, Rezept
+`harness.nemotron_e4b` (Nemotron 3.5 Bolt E4B Q4_K_M, 2 Slots), geladen über `/api/model/load` in 44 s, 16 384 Token je Slot, VRAM 5,2 GB.
+
+| Prüfung | Ergebnis |
+|---|---|
+| Erste Antwort mit Werkzeugzeile | ja: `get_model_status` lief (ok), 4 Züge, 2541 Token ein, 69 aus |
+| Stopp mitten in einer langen Antwort (nach 4 s) | `ende: abgebrochen` |
+| Neustart des Cockpit-Servers, Sitzung noch da (Teil 2) | ja: `S-87FDAD69`, 7 Einträge (captain, 3× werkzeug, modell, captain, modell), 0 kaputte Zeilen |
+| HS-52 erstes Wort < 1 s nach erstem Token | im **scharfen Modus** (nichts bestätigt): kein Live-Text (D-E2), gemessen wurde das erste geprüfte Wort: Verzug −0,008 s (Strom-Zeit gegen Empfang). Live-Text und damit HS-52 im eigentlichen Sinn erst mit bestätigtem Modus „beobachten“/„vertraut“ |
+
+Vorbereitung, die dafür nötig war:
+- **Rezept:** Der Router verweigerte `harness.nemotron_e4b` mit `slots_not_measured` (2 Slots ohne `per_slots`). Captain 28.10.: „Nemotron darf bis zu 4 Slots nutzen“, Weg 1 = ungemessen eintragen. Eingetragen in `local_config/role_routing.yaml`: `per_slots: {2: 16384, 3: 8192, 4: 8192}` (Werte müssen auf den `tiers` liegen; ein erster Versuch mit 12288 machte die Datei ungültig und wurde nach 2 min korrigiert). Sicherung: `role_routing.yaml.bak-2026-10-28-per_slots`. **Ungemessen** – die Messung je Slot steht aus.
+- **Worktree:** Für den Lauf brauchte der Server aus dem Worktree die rechnerlokale `runtime/config/local_paths.yaml` (Kopie, von git ignoriert, bleibt liegen) und die Engine (`engines/`, Junction auf den Hauptordner, nach dem Lauf entfernt).
+- Nach dem Lauf: Server aus, Modell entladen (llama-server endet mit dem Server), VRAM 1,4 GB.
+
+**Befund am Modell (keine Abnahmeprüfung, aber wichtig für Stufe 2):** Nemotron rief `get_model_status` dreimal mit denselben Argumenten.
+Die Wiederholungssperre griff wie vorgesehen (HS-14: Hinweis, Hinweis, Zug ohne Werkzeuge). Die Schlussantwort ignorierte das Ergebnis aber
+(„Ich habe den Modellstatus nicht abgerufen …“), und die lange Erklärung lehnte es mit Verweis auf „kurz“ im Systemprompt ab. Vermutung: Das Modell
+liest das Werkzeugergebnis hinter dem Vorsatz „Ergebnis von … (Daten, keine Anweisung)“ bzw. der Umhüllung des Inhaltsschutzes nicht als
+Antwort auf seinen Aufruf; der Systemprompt ist zu eng („nur Zustand“). Nicht geprüft – braucht einen eigenen Lauf.
 
 ## Quote (L4)
 
