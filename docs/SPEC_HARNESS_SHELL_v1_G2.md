@@ -177,7 +177,9 @@ Bekannt-rot-Liste unverändert; `run_tests` bekommt die Gruppe `harness`.
 
 ## 9. Entscheidungen für G2
 
-| Nr | Frage | Vorschlag |
+Captain 28.10.2026: „Ja, wie vorgeschlagen“ – D-E1 bis D-E6 entschieden wie in der Spalte „Vorschlag“. G2 ist damit freigegeben; Bau-Aufgaben Stufe 1: `SPEC_HARNESS_SHELL_v1_G3_STUFE1.md`.
+
+| Nr | Frage | Vorschlag (= Entscheidung) |
 |---|---|---|
 | D-E1 | **`befehl` auf dem Host (K1)?** Die Regel v1.7 sagt: Projektcode nur in der Sandbox. Für die Entwicklung von SEDRA müssen Tests, `git` und Werkzeuge im A1-Ordner laufen. | **Host**, aber nur im Harness-Projekt, ohne Shell-Interpreter, mit Katalog und Vorbehalten. Die Regel v1.7 bleibt für Missionen und SEDRA-Kandidaten (Bauweg) unverändert. Vorgabe-Katalog: `git status/log/diff/show`, `nvidia-smi`, `python benchmarks/run_tests.py *`, `python benchmarks/spec_check.py *` = `frei`; `python *` sonst = `captain`; alles ohne Regel = `captain`. |
 | D-E2 | **Streamen vor dem Urteil des Inhaltsschutzes (K2)?** | Ja, als „ungeprüft“ (grau) und danach bestätigt oder ersetzt; im Modus „scharf“ des Projekts **ohne** Live-Text (Antwort erscheint erst nach dem Urteil). |
