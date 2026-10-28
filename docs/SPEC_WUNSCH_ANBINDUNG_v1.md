@@ -40,7 +40,18 @@ Jeder Schritt schreibt ins Logbuch. Jeder Wunsch hat eine ID (`W-<8 Hex>`) und e
 - Keine Änderung am Freigabe-Katalog durch den Vorarbeiter oder einen Agenten (HS-28).
 - Der Wunsch ersetzt nicht die Spec. Die Spec ist das, was freigegeben wird.
 
-## 4. Offene Fragen an den Captain
+## 4. Entscheidungen des Captains (28.10.2026)
+
+| Nr | Frage | Entscheidung |
+|---|---|---|
+| WQ-1 | Modell für die Spec (W2) | Qwen3.6-35B-A3B |
+| WQ-2 | Prüfer im Review (W5) | Gemma-4-12B (anderes Modell als der Coder) |
+| WQ-3 | Stufen je Durchgang | höchstens 5, danach neue Karte |
+| WQ-4 | Parallelität | ein Wunsch je Sitzung, Slots des einen Modells |
+
+Die Fragen unten sind beantwortet und bleiben zur Nachvollziehbarkeit stehen.
+
+## 4a. Offene Fragen (beantwortet, siehe oben)
 
 | Nr | Frage | Vorschlag |
 |---|---|---|
