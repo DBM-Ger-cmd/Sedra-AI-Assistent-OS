@@ -292,6 +292,17 @@ class Requests(Desk):
         self.assertEqual(self.decide(out), {'status': 'binding_stale', 'result': None})
         self.assertEqual(self.row('agents', 'id', 'A-3')['reports_to'], 'A-UA')
 
+    def test_a_stale_wake_request_closes_its_wakeup(self):
+        from guppi_runtime.desk import orchestra_kinds
+        from guppi_runtime.orchestra import heartbeat
+        heartbeat.enqueue(self.db, 'A-UA', 'captain', None, NOW, 0)
+        wakeup_id = self.db.execute("SELECT id FROM wakeups WHERE agent_id = 'A-UA'").fetchone()[0]
+        self.db.execute("UPDATE wakeups SET outcome = 'antrag' WHERE id = ?", (wakeup_id,))
+        binding = {'op': 'wecken', 'agent_id': 'A-UA', 'agent_revision': -1, 'task_id': 'I-101', 'task_revision': 0, 'wakeup_id': wakeup_id}
+        with self.assertRaisesRegex(ValueError, 'binding_stale'):
+            orchestra_kinds.apply(self.hub, binding)
+        self.assertEqual(self.db.execute("SELECT outcome FROM wakeups WHERE id = ?", (wakeup_id,)).fetchone()[0], 'abgelehnt')
+
     def test_reject_changes_nothing(self):
         out = self.act('agent', 'A-3', 'einordnen', reports_to='A-CODER')
         self.assertEqual(self.decide(out, 'ablehnen')['status'], 'rejected')

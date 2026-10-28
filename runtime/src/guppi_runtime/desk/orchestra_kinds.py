@@ -831,7 +831,15 @@ def apply(hub, binding):
             else:
                 row = routines.set_enabled(orch.conn, binding["routine_id"], op == "routine_einschalten", now)
         elif op == "wecken":
-            return _apply_wake(orch, binding, now)
+            try:
+                return _apply_wake(orch, binding, now)
+            except ValueError as exc:
+                if str(exc) == "binding_stale":      # der Antrag endet ohne Wirkung; sein Weckruf soll nicht für immer auf `antrag` stehen
+                    try:
+                        heartbeat.finish(orch.conn, binding["wakeup_id"], "abgelehnt", now)
+                    except ValueError:
+                        pass                        # der Weckruf ist schon anders beendet: der Grund `binding_stale` bleibt
+                raise
         else:
             raise ValueError("decision_cannot_be_applied")
     orch.audit_event("ORC_APPLIED", {"op": op, "agent_id": binding.get("agent_id"), "routine_id": binding.get("routine_id")})
