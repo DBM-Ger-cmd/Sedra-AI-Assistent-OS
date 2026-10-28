@@ -189,6 +189,8 @@ def relax_schema(node):
     return out
 
 
+FINAL_ANSWER_NOTE = "Du hast jetzt genug Informationen. Antworte dem Captain jetzt in Text, ohne weitere Werkzeuge."
+
 def run_tool_loop(post, alias, messages, box, sampling, *, max_turns=8, max_tokens=4000, cut_retries=2, compact_at=0, stub_at=0, ext=None):
     """Runs the conversation until the terminal tool was called, the model answers without a tool call, or `max_turns` is used up.
     Returns {final, content, turns, tool_calls, finish, seconds, error?}. `post(body)` returns the parsed completion JSON.
@@ -242,4 +244,15 @@ def run_tool_loop(post, alias, messages, box, sampling, *, max_turns=8, max_toke
         if box.final is not None: break
         if turn == max_turns - 2:      # a small model keeps reading files: say once that it is time to answer
             messages.append({"role": "user", "content": f"You have enough information. Call {box.terminal} now with your best answer."})
+    # Am Limit ohne Text (das Modell rief immer wieder dasselbe Werkzeug): eine letzte Antwort ohne Werkzeuge, sonst bleibt der Captain
+    # ohne Text. 28.10.2026: der Chat zeigte dabei „model_answer_empty“.
+    if not str(content).strip() and box.final is None and finish != "error":
+        messages.append({"role": "user", "content": FINAL_ANSWER_NOTE})
+        try:
+            data = post({"model": alias, "messages": messages, "tools": [], "tool_choice": "none", "max_tokens": max_tokens, "temperature": sampling.get("temperature", 0.1)})
+            choice = data["choices"][0]
+            content = (choice.get("message") or {}).get("content") or content
+            finish = choice.get("finish_reason") or finish
+        except Exception:
+            pass                                    # die Antwort bleibt leer; der Aufrufer meldet das
     return {"final": box.final, "content": content, "turns": turn, "tool_calls": box.calls, "finish": finish, "cuts": cuts, "seconds": round(time.monotonic() - t0, 1), "messages": messages, "ext_corrections": corrections, "ext_prunes": prunes}

@@ -23,6 +23,7 @@ from . import uix_diag
 from .models import gpu_preflight
 from .jobs.job_supervisor import FINAL_STATES, JobError
 from .core.mission import ALLOWED
+from .core.errors import InvalidTransition
 from .core.util import atomic_write_json, load_json, utcnow
 from .local_switches import ALLOWED as SWITCH_ALLOWED, LocalSwitches
 from . import cloud_settings, labor_runs
@@ -1997,6 +1998,32 @@ class UIXHub:
         with self.lock:
             m = self.runtime.brain.run(mission_id, max_steps=max_steps)
         return {'mission': _compact_mission(m), 'full_phase': m.get('lifecycle', {}), 'pending_gates': m.get('human_gates', {}).get('pending', [])}
+
+    def mission_lifecycle(self, mission_id, aktion):
+        """Schließen, Beenden und Archivieren einer Aufgabe (Verben in desk/actions.py). Ohne Gate: es wird nichts ausgeführt,
+        nur der Stand gesetzt. Beenden folgt der Phasentabelle (FAILED nur, wo sie es erlaubt); jede Änderung steht im Audit."""
+        with self.lock:
+            m = self.runtime.missions.load(mission_id)
+            status, phase = m['lifecycle']['status'], m['lifecycle']['phase']
+            if aktion == 'schliessen':
+                if status != 'active' or phase in ('EXECUTE', 'VERIFY', 'REWORK'): raise ValueError('nicht_schliessbar_jetzt')
+                m['lifecycle']['status'] = 'closed'
+            elif aktion == 'beenden':
+                if status != 'active': raise ValueError('nicht_beendbar_jetzt')
+                try: self.runtime.missions.transition(m, 'FAILED')
+                except InvalidTransition as exc: raise ValueError('phase_erlaubt_kein_beenden') from exc
+                m['result'] = {'kind': m.get('result', {}).get('kind'), 'qualification': 'BEENDET', 'accepted': False, 'tests_executed': False}
+                self.runtime.missions.save(m)
+            elif aktion == 'archivieren':
+                if status != 'closed': raise ValueError('nicht_archivierbar_jetzt')
+                m['lifecycle']['status'] = 'archived'
+                m['lifecycle']['archived_at'] = utcnow()
+            else:
+                raise ValueError('unknown_lifecycle_action')
+            if aktion != 'beenden': self.runtime.missions.save(m)
+            self.runtime.audit.append('MISSION_LIFECYCLE', component='desk', mission_id=mission_id,
+                                      payload={'aktion': aktion, 'von': status, 'nach': m['lifecycle']['status'], 'phase': m['lifecycle']['phase']})
+        return {'status': 'done', 'mission_id': mission_id, 'lifecycle': m['lifecycle']}
 
     def approve_gate(self, payload):
         mission_id = str(payload.get('mission_id') or '').strip()

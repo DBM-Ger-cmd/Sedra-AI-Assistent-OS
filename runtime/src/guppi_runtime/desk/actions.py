@@ -29,10 +29,25 @@ class Verb:
         return {'verb': self.verb, 'label': self.label, 'needs_gate': self.needs_gate, 'confirm': self.confirm}
 
 
+LAUFEND = ('EXECUTE', 'VERIFY', 'REWORK')      # hier läuft noch etwas: schließen würde mitten hinein gehen
+
+
 def _task_verbs():
     return [
         Verb('ausfuehren', 'Ausführen', lambda hub, oid, args: hub.run_mission({'mission_id': oid, **({'max_steps': args['max_steps']} if 'max_steps' in args else {})}),
              when=lambda o: o['state'] in ('bereit', 'geplant', 'angehalten')),
+        # Schließen: die Aufgabe ist abgeschlossen, nichts wird ausgeführt. Sie bleibt im Logbuch und verschwindet aus der offenen Liste.
+        Verb('schliessen', 'Schließen', lambda hub, oid, args: hub.mission_lifecycle(oid, 'schliessen'),
+             when=lambda o: o.get('status') == 'active' and o.get('phase') not in LAUFEND,
+             confirm='Die Aufgabe wird geschlossen. Sie läuft nicht mehr weiter.'),
+        # Beenden: eine laufende oder angehaltene Aufgabe wird als fehlgeschlagen beendet – nur dort, wo die Phase das erlaubt
+        Verb('beenden', 'Beenden', lambda hub, oid, args: hub.mission_lifecycle(oid, 'beenden'),
+             when=lambda o: o.get('status') == 'active' and o.get('phase') in ('UNDERSTAND', 'PLAN', 'EXECUTE', 'VERIFY', 'REWORK', 'PAUSED', 'CANDIDATE_REVIEW', 'CAPTAIN_REVIEW'),
+             confirm='Die Aufgabe wird beendet und gilt als fehlgeschlagen.'),
+        # Archivieren: nur eine geschlossene oder beendete Aufgabe wandert ins Archiv und verschwindet aus der Aufgabenliste
+        Verb('archivieren', 'Archivieren', lambda hub, oid, args: hub.mission_lifecycle(oid, 'archivieren'),
+             when=lambda o: o.get('status') == 'closed',
+             confirm='Die Aufgabe wandert ins Archiv und verschwindet aus der Aufgabenliste. Das Logbuch bleibt.'),
     ]
     # Bewusst kein „Neu lesen“: Nachlesen ist keine Handlung am Objekt, und der Ereignisstrom meldet jede Änderung von selbst
     # (Cockpit-Regel 3: die Zeile trägt die Verben des Objekts, nichts sonst).

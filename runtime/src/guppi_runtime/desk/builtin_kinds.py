@@ -35,7 +35,8 @@ def _task_read(hub, oid):
 
 
 def _task_list(hub, payload):
-    return [desk_objects.task_object(m) for m in hub.missions() if not m.get('antrag')]    # Stufe 6 (S6-E3): Anträge sind keine Aufgaben
+    # Stufe 6 (S6-E3): Anträge sind keine Aufgaben. Archivierte bleiben im Logbuch, nicht in dieser Liste.
+    return [desk_objects.task_object(m) for m in hub.missions() if not m.get('antrag') and m.get('status') != 'archived']
 
 
 # ---- candidate

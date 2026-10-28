@@ -94,8 +94,9 @@ class Verbs(unittest.TestCase):
     def test_a_verb_is_offered_only_in_the_state_it_fits(self):
         ready = desk_objects.task_object(compact(phase='READY'))
         running = desk_objects.task_object(compact(phase='EXECUTE'))
-        self.assertEqual([v['verb'] for v in desk_actions.offered(ready)], ['ausfuehren'])
-        self.assertEqual(desk_actions.offered(running), [])
+        # 28.10.2026: Schließen ist bereit angeboten, Beenden nur dort, wo die Phase FAILED erlaubt; laufend nichts Schließendes
+        self.assertEqual([v['verb'] for v in desk_actions.offered(ready)], ['ausfuehren', 'schliessen'])
+        self.assertEqual([v['verb'] for v in desk_actions.offered(running)], ['beenden'])
 
     def test_taking_over_is_not_offered_before_the_tests_ran(self):
         plan = {'steps': [{'binding': {'inputs': {'changes': [{'path': 'app.py', 'content': 'x\n'}]}}}]}
@@ -159,6 +160,26 @@ class ThroughTheHub(unittest.TestCase):
         # ohne passendes Werkzeug schreibt die Runtime nur ein Plan-Artefakt (ARTIFACT_ONLY) – das heißt „nur Plan“, nicht „fertig“
         self.assertEqual(self.hub.object_view('task', self.mission)['state'], 'nur Plan')
         self.assertIn('UIX_ACTION', [e['event_type'] for e in self.hub.audit_view()['events']])
+
+    def test_a_task_is_closed_then_archived_and_leaves_the_list(self):
+        # 28.10.2026: Schließen und Archivieren; das Archiv bleibt im Logbuch, nicht in der Aufgabenliste
+        from guppi_runtime.desk import builtin_kinds
+        self.assertIn('schliessen', [a['verb'] for a in self.hub.object_view('task', self.mission)['actions']])
+        self.hub.act({'type': 'task', 'id': self.mission, 'verb': 'schliessen'})
+        self.assertEqual(self.hub.runtime.missions.load(self.mission)['lifecycle']['status'], 'closed')
+        self.assertIn('archivieren', [a['verb'] for a in self.hub.object_view('task', self.mission)['actions']])
+        self.assertNotIn('schliessen', [a['verb'] for a in self.hub.object_view('task', self.mission)['actions']])
+        self.hub.act({'type': 'task', 'id': self.mission, 'verb': 'archivieren'})
+        self.assertEqual(self.hub.runtime.missions.load(self.mission)['lifecycle']['status'], 'archived')
+        self.assertNotIn(self.mission, [t['id'] for t in builtin_kinds._task_list(self.hub, None)])
+        self.assertIn('MISSION_LIFECYCLE', [e['event_type'] for e in self.hub.audit_view()['events']])
+
+    def test_ending_is_refused_where_the_phase_does_not_allow_failure(self):
+        # Eine Aufgabe in READY kann nicht „beendet“ werden: das Verb wird gar nicht angeboten, und der Hub lehnt es ab
+        self.assertNotIn('beenden', [a['verb'] for a in self.hub.object_view('task', self.mission)['actions']])
+        with self.assertRaises(ValueError):
+            self.hub.act({'type': 'task', 'id': self.mission, 'verb': 'beenden'})
+        self.assertEqual(self.hub.runtime.missions.load(self.mission)['lifecycle']['status'], 'active')
 
     def test_the_same_verb_is_refused_once_the_state_moved_on(self):
         self.hub.act({'type': 'task', 'id': self.mission, 'verb': 'ausfuehren'})

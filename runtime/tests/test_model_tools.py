@@ -81,6 +81,18 @@ class ModelToolsTests(unittest.TestCase):
   box = ToolBox(self.root, terminal='submit_review')
   out = run_tool_loop(lambda body: answer({'content': 'x'}, 'length'), 'm', [{'role': 'user', 'content': 'go'}], box, {}, max_turns=8)
   self.assertEqual((out['cuts'], out['finish']), (2, 'length'))
+ def test_at_the_limit_without_text_the_answer_comes_without_tools(self):
+  # 28.10.2026: gemma rief achtmal dasselbe Werkzeug und schrieb nie Text – die letzte Antwort kommt jetzt ohne Werkzeuge
+  seen = []
+  def post(body):
+   seen.append(body)
+   if body['tools']: return answer({'content': '', 'tool_calls': [tc('read_file', {'path': 'mod.py'})]})
+   return answer({'content': 'Antwort ohne Werkzeug'}, 'stop')
+  box = ToolBox(self.root)
+  out = run_tool_loop(post, 'm', [{'role': 'user', 'content': 'frage'}], box, {}, max_turns=3)
+  self.assertEqual(out['content'], 'Antwort ohne Werkzeug')
+  self.assertEqual(seen[-1]['tools'], [])
+  self.assertEqual(out['turns'], 3)
  def test_loop_has_a_turn_limit(self):
   box = ToolBox(self.root)
   out = run_tool_loop(lambda b: answer({'content': '', 'tool_calls': [tc('read_file', {'path': 'mod.py'})]}), 'm', [], box, {}, max_turns=3)

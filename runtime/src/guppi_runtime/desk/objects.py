@@ -67,7 +67,7 @@ def task_object(m, verbs=()):
     return {'type': 'task', 'id': m.get('mission_id'), 'title': what[:60], 'state': state, 'summary': summary,
             'steps': [{'n': i + 1, 'text': s, 'done': i < done, 'now': i == done} for i, s in enumerate(steps)],
             'progress': {'steps': len(steps), 'done': done, 'percent': round(100 * done / len(steps)) if steps else 0},
-            'actions': list(verbs), 'links': links}
+            'actions': list(verbs), 'links': links, 'status': m.get('status'), 'phase': phase}
 
 
 def candidate_object(mission, verbs=(), report=None):

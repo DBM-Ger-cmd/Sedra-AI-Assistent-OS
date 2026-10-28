@@ -196,7 +196,7 @@ class Register(unittest.TestCase):
         from guppi_runtime.desk import actions, objects
         self.assertEqual(objects.TYPES, TYPES + PLACEHOLDERS)
         self.assertEqual({k: list(v) for k, v in actions.VERBS.items()},
-                         {'task': ['ausfuehren'], 'candidate': ['testen', 'nachpruefen', 'uebernehmen', 'zuruecknehmen'],
+                         {'task': ['ausfuehren', 'schliessen', 'beenden', 'archivieren'], 'candidate': ['testen', 'nachpruefen', 'uebernehmen', 'zuruecknehmen'],
                           'intent': ['aufgabe_machen'], 'boundary': ['bestaetigen', 'aendern'],
                           'model': ['laden', 'entladen', 'testen']})
 
