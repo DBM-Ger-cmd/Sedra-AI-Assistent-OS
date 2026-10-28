@@ -40,9 +40,25 @@ Umsetzung: `content_policy.judge` (eigener Text lokal → `NOTE`), `content_guar
 ## Prüfung
 
 - `run_tests all`: 3193 Tests, 0 rot (Browser-Bahn ausgelassen); die 16 DevVM-Dateien (ohne `dulwich` im System-Python übersprungen) mit dem `.venv`: 239 Tests, 0 rot.
-- Nicht geprüft: Lauf mit echtem Modell, ob Nemotron mit erhaltener Werkzeugstruktur die Ergebnisse jetzt nutzt (eigenes Ja nötig).
+- Lauf mit echtem Modell: siehe §„Nachprüfung mit Nemotron“.
 
 ## Offen
 
 - `chat_reply` im Cockpit zeigt Schutz-Gründe weiter als Code (Cockpit in Stufe 1 unverändert).
 - Spec `SPEC_EIN_SICHERER_WEG_v1` S5 („der Modus steuert die Schärfe“) gilt lokal jetzt nur noch für Fremdes – die Spec braucht einen Nachtrag.
+
+## Nachprüfung mit Nemotron (28.10.2026, Captain-Ja)
+
+GPU vorher (14:28): RTX 4070 Ti, Treiber 617.42, VRAM 1,3/12,3 GB, 41 °C, 21 W. Treiberereignisse der letzten 24 h: `nvlddmkm` 13/153 und
+LiveKernelEvent 1001 nur 14:23:54–14:24:17 – das ist der erste Ladeversuch, der mit `gpu_canary_failed` endete (Debug-Modus noch aus).
+Captain: NVIDIA-Debug-Modus an. Zweiter Versuch: GPU-Kanarienvogel bestanden, `harness.nemotron_e4b` geladen in 41 s (16 384 je Slot),
+VRAM 5,1 GB, 46–47 °C; **keine** neuen Treiberereignisse seit 14:28 (nach Laden und nach den Fragen geprüft).
+
+| Frage | vorher (Abnahme T8, 13:5x) | jetzt |
+|---|---|---|
+| Welches Modell, welcher Kontext? | `get_model_status` 3× (Sperre griff), Antwort „Ich habe den Modellstatus nicht abgerufen …“ | `get_model_status` 1×, 2 Züge: „`nvidia/nemotron-3.5-bolt-e4b` … Kontext von 16384“ – richtig |
+| Welche Schalter sind an? | – | `get_switches` 1×, 2 Züge: `job_supervisor`, `context_manager`, `resource_scheduler` – aus dem Werkzeugergebnis |
+
+Damit ist die Ursache bestätigt: Der Inhaltsschutz hatte die Werkzeugstruktur entfernt. Danach Modell entladen, Server aus, GPU-Sperre frei,
+VRAM 1,3 GB. Sitzung `S-3AC9EDE0`. Hinweis: Der Server mit eigenem App-Fenster endete einmal ohne Fehler, als das Fenster zuging; für Läufe ohne
+Fenster `--open` verwenden.
