@@ -51,7 +51,7 @@ Nicht Ziel: das Backend umbauen, das Cockpit löschen, eine Kopie von Bionic. Ü
 | HS-14 | **Wiederholung erkennen (B4/4):** Ruft das Modell dasselbe Werkzeug mit denselben Argumenten zum zweiten Mal hintereinander, bekommt es statt des Ergebnisses einen Hinweis; beim dritten Mal endet die Schleife mit einer Antwort ohne Werkzeuge. | Einheitstest der Schleife |
 | HS-15 | **Kein Zwang durch Stichwörter (B4/5):** In der Harness-Shell wird `tool_choice=required` nicht über Stichwörter gesetzt. | Einheitstest |
 | HS-16 | **Ehrliches Ende (B4/1):** Eine Sitzung meldet „erledigt“ nur, wenn eine Handlung ausgeführt und geprüft wurde; ein reiner Plan heißt „nur Plan“. | Test |
-| HS-17 | **Eingabefeld:** mehrzeilig (Enter sendet, Umschalt+Enter Zeilenumbruch); „+“ für Dateien aus dem Projekt; **Schild** zeigt und wechselt den Freigabe-Modus (HS-31); **Modellwahl** (Rezept, Slots, Kontextgröße; geprüfte schnelle Modelle oben wie S6-E2); **Mikrofon** = vorhandener Rekorder; `/` öffnet Befehle, `@` Dateien. | Test |
+| HS-17 | **Eingabefeld:** mehrzeilig (Enter sendet, Umschalt+Enter Zeilenumbruch); „+“ für Dateien aus dem Projekt; **Schild** zeigt, wer in dieser Sitzung freigibt und welche Aufgaben-Freigabe gilt (HS-26); **Modellwahl** (Rezept, Slots, Kontextgröße; geprüfte schnelle Modelle oben wie S6-E2); **Mikrofon** = vorhandener Rekorder; `/` öffnet Befehle, `@` Dateien. | Test |
 | HS-18 | **Sitzungen bleiben:** Jede Sitzung wird gespeichert (Verlauf, Werkzeugaufrufe, Modell, Projekt, Vorlage) unter `runtime_data/harness/sitzungen/`, eine Datei je Sitzung (JSONL). Nach Neustart ist alles wieder da. Löschen einer Sitzung nur mit Rückfrage im Feld (wie S6-E2 „Leeren“). | Test |
 | HS-19 | **Vorlagen:** Eine Sitzung kann aus einer Vorlage starten (Systemprompt, erlaubte Werkzeuge, Modell). Erste Vorlage: **Vorarbeiter** (Inhalt aus `START_PROMPT_VORARBEITER_BIONIC.md`, ohne die Bionic-Hinweise). Vorlagen liegen als Dateien im Projekt. | Test |
 
@@ -59,11 +59,21 @@ Nicht Ziel: das Backend umbauen, das Cockpit löschen, eine Kopie von Bionic. Ü
 
 | ID | Anforderung | Prüfbar durch |
 |---|---|---|
-| HS-20 | **Neue Werkzeuge mit Wirkung** für den Agenten, alle über `control.execute` und den Guard: `datei_lesen` (abschnittsweise), `suchen` (Text im Projekt), `dateien_auflisten`, `befehl` (nur aus einer festen Liste, HS-E2), `datei_schreiben` / `datei_aendern` (nur im Schreibbereich), `lauf_starten` / `lauf_stoppen` (vorhandene Läufe, z. B. `nachtlauf_3d`, `run_tests`). Die bisherigen `chat_tools` bleiben zusätzlich nutzbar. | Einheitstests je Werkzeug |
-| HS-21 | **Lesen ist frei, Wirkung braucht Freigabe:** `datei_lesen`, `suchen`, `dateien_auflisten` und Befehle der Klasse „lesen“ laufen ohne Rückfrage. Alles andere erzeugt eine **Freigabe-Karte im Verlauf** und wartet. | Test |
+| HS-20 | **Neue Werkzeuge mit Wirkung** für den Agenten, alle über `control.execute` und den Guard: `datei_lesen` (abschnittsweise), `suchen` (Text im Projekt), `dateien_auflisten`, `befehl` (jeder Befehl, eingestuft durch den Freigabe-Katalog HS-25; HS-E2), `datei_schreiben` / `datei_aendern` (nur im Schreibbereich), `lauf_starten` / `lauf_stoppen` (vorhandene Läufe, z. B. `nachtlauf_3d`, `run_tests`). Die bisherigen `chat_tools` bleiben zusätzlich nutzbar. | Einheitstests je Werkzeug |
+| HS-21 | **Jeder Aufruf wird eingestuft:** Vor der Ausführung bestimmt der Freigabe-Katalog (HS-25) die Stufe des Aufrufs. `frei` läuft sofort, `verboten` wird abgelehnt (das Modell erfährt den Grund), alles dazwischen erzeugt eine **Freigabe-Karte im Verlauf** und wartet auf den Berechtigten. Ohne passende Regel gilt die Stufe `captain`. | Test |
 | HS-22 | **Freigabe-Karte:** Werkzeug, Ziel (Datei/Befehl), bei Schreiben ein Diff, bei Befehlen die genaue Zeile; Knöpfe „Erlauben“, „Diff zeigen“, „Ablehnen“. Die Entscheidung erzeugt dasselbe Audit wie der Posteingang (Regel 2 des Cockpits); dieselbe Freigabe steht auch im Posteingang. | Test, Audit-Zeile |
 | HS-23 | **Grenzen:** Schreiben nie außerhalb des Projekt-Schreibbereichs, nie in `local_config/`, nie Harness-Code (Guard, Bridge, Suite, Bauskripte), nie Löschen. Das prüft der Guard, nicht die Oberfläche. | Guard-Tests |
 | HS-24 | Werkzeugergebnisse sind **Daten**: Text aus Dateien, Logs oder Webseiten wird dem Modell als Ergebnis gegeben, nie als Anweisung des Captains. | Prompt-Test |
+
+### 3.3a Freigabe-Katalog und Berechtigungen (HS-E2, HS-E3)
+
+| ID | Anforderung | Prüfbar durch |
+|---|---|---|
+| HS-25 | **Freigabe-Katalog:** eine Liste von Regeln, je Regel *Werkzeug*, *Muster* (Befehl als Präfix oder Glob, z. B. `git status*`, `python benchmarks/run_tests.py *`; Pfad als Glob, z. B. `docs/**`), *Stufe* und *Begründung*. Stufen: `frei` · `vorarbeiter` · `captain` · `verboten`. Die genaueste Regel gewinnt; bei Gleichstand die strengere. Ablage `local_config/freigabe_katalog.yaml` (nicht in git), Vorlage im Repo. | Einheitstests der Einstufung |
+| HS-26 | **Wer freigibt:** *Captain-Freigabe* – der Captain entscheidet auf der Karte oder im Posteingang. *Vorarbeiter-Freigabe* – die Vorarbeiter-Sitzung (HS-19) entscheidet Aufrufe der Stufe `vorarbeiter` anderer Sitzungen und Agenten, mit Begründung; Stufe `captain` kann sie nie entscheiden, nur dem Captain vorlegen. | Test |
+| HS-27 | **Freigabe nach Aufgabe:** Der Captain gibt eine Aufgabe frei mit einer Liste erlaubter Aufrufe (Werkzeug + Muster, z. B. „`datei_schreiben` in `runtime/src/guppi_runtime/harness/**`, `befehl` `python benchmarks/run_tests.py *`“) und einem Ende (Aufgabe erledigt, Frist oder Zahl der Aufrufe). Innerhalb davon läuft der Agent ohne weitere Karte; alles außerhalb geht normal in die Einstufung. Gilt nur für lokale Werkzeuge; Cloud bleibt bei Spec 3 („Plan-Freigabe ersetzt Einzelfreigaben nicht“). | Test |
+| HS-28 | **Fest beim Captain, durch keinen Katalog und keine Aufgaben-Freigabe änderbar:** Änderungen am Freigabe-Katalog selbst, an `local_config/`, an Guard/Bridge/Suite/Bauskripten; Löschen; Downloads aus dem Internet; `git push` und alles, was `main` bewegt; Engine-Wechsel; Modelle laden/entladen außerhalb einer freigegebenen Aufgabe. Stufe `verboten` bleibt verboten, bis der Captain den Katalog ändert. | Guard-Tests |
+| HS-29 | **Nachvollziehbar:** Jede Einstufung und jede Entscheidung (wer, welche Regel oder Aufgaben-Freigabe, Begründung) steht im Audit und am Werkzeugaufruf im Verlauf. Der Captain kann eine Aufgaben-Freigabe und jede Vorarbeiter-Entscheidung zurücknehmen; laufende Aufrufe enden dann am nächsten Schritt. | Test, Audit |
 
 ### 3.4 Taskleiste
 
@@ -99,20 +109,35 @@ Nicht Ziel: das Backend umbauen, das Cockpit löschen, eine Kopie von Bionic. Ü
 - Cloud-Modelle: dieselbe Oberfläche, aber nur über die Regeln aus Spec 3 (Entscheidung je Lauf) – hier nicht neu geregelt.
 - Mehrere Agenten gleichzeitig in einer Sitzung: nicht v1.
 
-## 5. Fragen an den Captain (Entscheidungen für G1)
+## 5. Entscheidungen des Captains (28.10.2026)
 
-| Nr | Frage | Vorschlag |
-|---|---|---|
-| HS-E1 | Neue Shell neben dem Cockpit oder Cockpit ersetzen? | **Neben** dem Cockpit; Standard bei `START_SEDRA` wird `harness` erst nach Abnahme. |
-| HS-E2 | Werkzeug `befehl`: feste Liste oder jeder Befehl mit Einzelfreigabe? | **Feste Liste** (z. B. `git status/log/diff`, `run_tests`, `nvidia-smi`, `spec_check`, Trockenläufe); Liste in `local_config/harness_befehle.yaml`, Änderung nur durch den Captain. Alles außerhalb der Liste ist nicht möglich. |
-| HS-E3 | Freigabe für Schreiben: jedes Mal oder „für diese Sitzung erlauben“? | Drei Modi am Schild: **fragt** (Standard, jedes Mal), **Sitzung** (Schreiben im Schreibbereich für diese Sitzung frei, Läufe weiter einzeln), **nur lesen**. |
-| HS-E4 | Vorarbeiter als erste Vorlage? | **Ja**, als Vorlage im Projekt; er bekommt Lesen frei, Logbuch-Schreiben mit Freigabe, keine Läufe ohne Ja. |
-| HS-E5 | Wer baut was (Linie L4)? | Claude: Shell, Integration, Endpunkte, Guard-Anbindung. SEDRA (Bau-Specs): reine Module – Sitzungsspeicher (JSONL lesen/schreiben/kürzen), Wiederholungserkennung (HS-14), Prüfer der Befehlsliste (HS-E2), Diff-Kurzfassung für die Freigabe-Karte. |
-| HS-E6 | Reihenfolge der Stufen? | 1 Gespräch mit Streamen, Sitzungen, Taskleiste (nur Sitzungen) · 2 Werkzeuge Lesen + Freigabe-Karte + Schreiben · 3 Start-Menü und Statusbereich · 4 Einstellungen · 5 Läufe in der Taskleiste, Vorlage Vorarbeiter. Jede Stufe einzeln abgenommen. |
+| Nr | Frage | Entscheidung (Wortlaut) | Auslegung in dieser Spec |
+|---|---|---|---|
+| HS-E1 | Neue Shell oder Cockpit ersetzen? | „Neue Shell neben dem Cockpit“ | `harness` neben `cockpit`; Standard bei `START_SEDRA` erst nach Abnahme (HS-51). |
+| HS-E2 | Befehle: feste Liste oder Einzelfreigabe? | „Befehle nach Freigabe, umfangreiche Freigaben und Befehls-Berechtigungen“ | Keine feste Liste: jeder Befehl ist möglich und wird über den Freigabe-Katalog eingestuft (HS-21, HS-25); weite Berechtigungen über Muster und Aufgaben-Freigaben (HS-27). |
+| HS-E3 | Freigabe-Modi? | „Captain-Freigabe und Vorarbeiter-Freigabe, Freigabe nach Aufgabe und Freigabe-Katalog“ | Vier Bausteine: Katalog stuft ein (HS-25), Captain oder Vorarbeiter entscheiden je nach Stufe (HS-26), Aufgaben-Freigabe deckt eine Liste von Aufrufen (HS-27); feste Captain-Vorbehalte (HS-28). Ersetzt die Modi „fragt/Sitzung/nur lesen“ des Entwurfs. |
+| HS-E4 | Vorarbeiter erste Vorlage? | „ja“ | Vorlage Vorarbeiter (HS-19) mit dem Recht der Vorarbeiter-Freigabe (HS-26). |
+| HS-E5 | Wer baut was? | „SEDRA baut über Agenten am Ende, das ist Plan“ | Ziel: SEDRA-Agenten (Orchestra: Vorarbeiter, Coder, Prüfer) bauen die Harness-Shell selbst, über die Harness-Shell. Weil sie dafür erst Werkzeuge und Freigaben brauchen, baut Claude die **Grundstufen 1 und 2** (Henne und Ei); ab Stufe 3 bauen SEDRA-Agenten mit Aufgaben-Freigaben unter dem Vorarbeiter, Claude schreibt nur noch Specs, versteckte Tests, Reviews und Harness-Code (L4). Die Quote steht je Stufe im Logbuch. |
+| HS-E6 | Reihenfolge? | „in der besten Empfehlung“ | Siehe §6: Reihenfolge so, dass SEDRA so früh wie möglich selbst bauen kann. |
 
-## 6. Nächste Gates
+Hinweis zu HS-E3: Bisher galt „Läufe nur nach ausdrücklichem Ja des Captains“. Das bleibt die Vorgabe im Katalog (Läufe in Stufe `captain`); der Captain kann es künftig per Aufgaben-Freigabe für eine Aufgabe öffnen.
 
-- **G1** (diese Datei): Captain entscheidet HS-E1 bis HS-E6 und gibt die Anforderungen frei oder ändert sie.
+## 6. Stufen (Empfehlung zu HS-E6)
+
+| Stufe | Inhalt | Anforderungen | Baut |
+|---|---|---|---|
+| 1 | Gespräch mit Streamen, Stopp, Denken, Sitzungen speichern, Seitenleiste, Reiter, Taskleiste nur mit Sitzungen; Fehler der Kette (Wiederholung, Stichwort-Zwang, ehrliches Ende) | HS-01–05, HS-10–18, HS-30–31 (Teil), HS-50–53 | Claude |
+| 2 | Werkzeuge Lesen und Schreiben, `befehl`, Freigabe-Katalog, Freigabe-Karte, Captain-Freigabe, feste Vorbehalte, Audit | HS-20–29 (ohne Vorarbeiter-Freigabe), HS-28 | Claude; Einstufung der Regeln (reines Modul) als erster SEDRA-Bau |
+| 3 | Vorlage Vorarbeiter, Vorarbeiter-Freigabe, Freigabe nach Aufgabe, Läufe in der Taskleiste und Benachrichtigung | HS-19, HS-26 (Rest), HS-27, HS-31–33 | SEDRA-Agenten unter Aufgaben-Freigabe; Claude Review |
+| 4 | Start-Menü, andere Oberflächen, Statusbereich statt Leiste | HS-32, HS-40, HS-41, HS-43 | SEDRA-Agenten |
+| 5 | Einstellungen, darin der Katalog-Editor (Änderungen nur durch den Captain) | HS-42 | SEDRA-Agenten |
+
+Begründung: Stufe 1 macht das Gespräch brauchbar, Stufe 2 gibt ihm Hände und Grenzen; erst damit kann der Vorarbeiter (Stufe 3) andere
+Agenten führen. Ab Stufe 3 wird die Shell mit sich selbst weitergebaut – genau das ist der Plan aus HS-E5. Jede Stufe wird einzeln abgenommen.
+
+## 7. Nächste Gates
+
+- **G1** (diese Datei): Entscheidungen HS-E1 bis HS-E6 eingetragen (28.10.2026); Captain bestätigt die Auslegung in §5 oder ändert sie.
 - **G2** Design: Endpunkte (Sitzung, SSE-Strom, Werkzeuge), Datenformat der Sitzung, Ereignisse, Aufteilung in Dateien der Shell.
 - **G3** Bau-Aufgaben je Stufe, mit versteckten Tests für die SEDRA-Module (höchstens 20 Prüfungen je Stufe, L3).
 - **G4** Übernahme je Stufe nach Review.
