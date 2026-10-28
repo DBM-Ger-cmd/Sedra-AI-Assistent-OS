@@ -14,7 +14,7 @@ Abnahme mit echtem Modell erst nach Ja; nichts in `spec/agenten-orchestrierung` 
 | Gruppe `harness` | 12 Testdateien, 106 Tests, 0 rot (Stufe 2 neu: 5 Dateien, 32 Tests) |
 | `uix_check --shell harness --groesse 1024x700,1400x860` | 18 von 18 ok, 0 Konsolenfehler, Überhang 0 px |
 | Browser-Durchlauf mit Modell-Attrappe, beide Größen | Lesen frei (`frei · lesen-alles`) → `datei_aendern docs/log.md` → Karte mit Diff, „Freigaben 1“ in der Taskleiste → „Diff zeigen“ öffnet Reiter → „Erlauben“ → Datei geschrieben → Ende **Erledigt**; nach Neuladen gleich; 0 Konsolenfehler |
-| SEDRA-Bau von `einstufen` (U2) | **vorbereitet, nicht gestartet** (lädt ein Modell → Ja des Captains) |
+| SEDRA-Bau von `einstufen` (U2, Captain-Ja) | **bestanden**: 19 von 19 versteckten Prüfungen in der microVM, 315 s, 23 Modellaufrufe, 0 Nacharbeiten; Kandidat gleich der Referenz in 698 Vergleichen (siehe unten) |
 | Abnahme mit echtem Modell (U10) | **nicht gestartet** (Ja des Captains) |
 | `local_config/` | nichts angelegt oder geändert |
 
@@ -53,6 +53,17 @@ Umfang: rund 800 Zeilen neues Python im Paket `harness/`, rund 230 Zeilen Oberfl
 - **Katalog des Captains:** `local_config/freigabe_katalog.yaml` (Kopie der Vorlage) legt der Captain an (D-F2); bis dahin gilt die Vorlage.
 - Nicht im Browser geprüft: „Ablehnen“ auf der Karte (über HTTP und Posteingang geprüft), Antwort im Cockpit-Posteingang selbst (dieselbe Route `/api/decisions/answer` ist geprüft).
 
+## Erster SEDRA-Bau: `einstufen` (28.10.2026, Captain-Ja)
+
+- Stempel: `spec_check.py harness_katalog --vm --project workspace/GUPPI_OS` → lint ok, Referenz ok (Python 3.12.15 der microVM).
+- Bau: `devvm_build.py workspace/GUPPI_OS --spec harness_katalog --profile standard` (Qwen3.6-35B-A3B, 32 768 Token, 1 Slot), 15:19:55–15:25:11:
+  1 Versuch, Solo-Entwickler, 23 Modellaufrufe, 298 s Agent, **versteckter Test bestanden**, Nacharbeiten 0, Eskalationen 0.
+  Kandidat: `workspace/GUPPI_OS/runtime_data/devvm_candidates/harness_katalog/attempt_01_20261028_152511/katalog_einstufen.py` (92 Zeilen).
+- GPU vorher 1,5 GB / 40 °C, nachher 1,5 GB / 43 °C; keine Treiberereignisse (`nvlddmkm`, LiveKernelEvent) seit 15:19:50; Modell danach entladen.
+- Vergleich SEDRA gegen Referenz (Vorgabe-Katalog, eigene Kataloge mit Gleichstand und `*`, 20 Pfade, 14 Befehlszeilen, 242 Muster/Ziel-Paare für
+  `passt`): **698 Vergleiche, 0 Abweichungen**. Unterschiede nur im Stil (Sortierung der Kandidaten statt Maximum; ungenutzte Namen).
+- Übernahme in `harness/katalog.py` (Kandidat ersetzt `einstufen` und Hilfen): **Entscheidung des Captains** – noch nicht gemacht.
+
 ## Quote (L4)
 
-Stufe 2: alles Claude (100 %); der vorgesehene SEDRA-Anteil (`einstufen`) ist vorbereitet und wartet auf das Ja für den Bau.
+Stufe 2: Claude bis auf `einstufen`; SEDRA hat `einstufen` gebaut (92 Zeilen Kandidat gegen 129 Zeilen Spec und Referenz von Claude, Quote Claude/SEDRA 1,4 laut devvm_build). Der Kandidat ist noch nicht übernommen.
