@@ -1,5 +1,6 @@
 """U2 der Harness-Shell Stufe 2: `katalog.einstufen` erfüllt dieselben Prüfungen wie die Bau-Spec des ersten SEDRA-Baus
-(benchmarks/devvm_specs/harness_katalog.py, versteckt für die bauenden Agenten, hier Regressionstest der Referenz im Paket)."""
+(benchmarks/devvm_specs/harness_katalog.py, versteckt für die bauenden Agenten). Seit 28.10.2026 steht im Paket der Bau von SEDRA;
+dieser Test hält ihn fest – ändert jemand `einstufen`, müssen dieselben Prüfungen weiter gelten."""
 import importlib.util
 import sys
 import unittest

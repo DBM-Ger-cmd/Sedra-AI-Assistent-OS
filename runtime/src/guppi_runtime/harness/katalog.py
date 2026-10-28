@@ -15,8 +15,7 @@ import yaml
 
 DATEI = 'freigabe_katalog.yaml'
 VORLAGE = Path(__file__).resolve().parents[3] / 'config' / 'freigabe_katalog.beispiel.yaml'
-STUFEN = ('frei', 'vorarbeiter', 'captain', 'verboten')
-STRENGE = {s: i for i, s in enumerate(STUFEN)}          # verboten > captain > vorarbeiter > frei
+STUFEN = ('frei', 'vorarbeiter', 'captain', 'verboten')          # von mild nach streng; `einstufen` nimmt bei Gleichstand die strengere
 DATEI_WERKZEUGE = ('datei_lesen', 'dateien_auflisten', 'suchen', 'datei_schreiben', 'datei_aendern')
 WERKZEUGE = DATEI_WERKZEUGE + ('befehl',)
 ID = re.compile(r'[a-z0-9][a-z0-9-]{0,47}')
@@ -26,66 +25,97 @@ class KatalogFehler(ValueError):
     """Der Katalog ist ungültig; der Text nennt den Grund."""
 
 
-# ---------------------------------------------------------------- U2: einstufen (rein)
+# ---------------------------------------------------------------- U2: einstufen (rein) – gebaut von SEDRA
+# Erster SEDRA-Bau (HS-E5, D-E6), Captain 28.10.2026 übernommen: devvm_build --spec harness_katalog --profile standard, Kandidat
+# runtime_data/devvm_candidates/harness_katalog/attempt_01_20261028_152511, versteckt 19/19, gegen die Referenz von Claude
+# (benchmarks/devvm_refs/harness_katalog) 698 Vergleiche ohne Abweichung. Unverändert übernommen bis auf diesen Kopf.
+
 def befehl_normal(zeile):
-    """Eine Befehlszeile zum Vergleichen: Leerraum zusammengefasst, außen gekürzt, Groß/Klein egal (Windows)."""
-    return ' '.join(str(zeile or '').split()).casefold()
+    s = "" if zeile is None else str(zeile)
+    return re.sub(r'\s+', ' ', s).strip().casefold()
 
 
 def pfad_normal(pfad):
-    """Ein Pfad relativ zur Projektwurzel zum Vergleichen: `/` als Trenner, ohne `./`, Groß/Klein egal (Windows). `..` bleibt sichtbar –
-    der Aufrufer hat vorher aufgelöst; ein Pfad mit `..` passt auf kein Muster ohne `..`, es gilt dann `captain`."""
-    teile = [t for t in str(pfad or '').replace('\\', '/').split('/') if t not in ('', '.')]
-    return '/'.join(teile).casefold()
+    s = "" if pfad is None else str(pfad)
+    parts = s.replace('\\', '/').split('/')
+    result = [p for p in parts if p and p != '.']
+    return '/'.join(result).casefold()
 
 
-def _glob_regex(muster):
-    out, i = [], 0
-    while i < len(muster):
-        if muster.startswith('**/', i):
-            out.append('(?:.*/)?'); i += 3
-        elif muster.startswith('**', i):
-            out.append('.*'); i += 2
-        elif muster[i] == '*':
-            out.append('[^/]*'); i += 1
-        elif muster[i] == '?':
-            out.append('[^/]'); i += 1
+def _glob_match(pattern, target):
+    regex = []
+    i = 0
+    n = len(pattern)
+    while i < n:
+        c = pattern[i]
+        if c == '*':
+            if i + 1 < n and pattern[i + 1] == '*':
+                if i + 2 < n and pattern[i + 2] == '/':
+                    regex.append('(?:.*/)?')
+                    i += 3
+                else:
+                    regex.append('.*')
+                    i += 2
+            else:
+                regex.append('[^/]*')
+                i += 1
+        elif c == '?':
+            regex.append('[^/]')
+            i += 1
         else:
-            out.append(re.escape(muster[i])); i += 1
-    return re.compile(''.join(out) + r'\Z', re.S)
+            regex.append(re.escape(c))
+            i += 1
+    return re.fullmatch(''.join(regex), target) is not None
 
 
 def passt(muster, werkzeug, ziel):
-    """Passt ein Muster auf ein Ziel? Dateien: Glob relativ zur Wurzel (`**` über Ordner, `*` in einem Teil). `befehl`: endet das Muster mit
-    `*`, ist es der Anfang der normalisierten Zeile, sonst die ganze Zeile."""
-    if werkzeug == 'befehl':
-        m, z = befehl_normal(muster), befehl_normal(ziel)
-        return z.startswith(m[:-1].rstrip()) if m.endswith('*') else z == m
-    return bool(_glob_regex(pfad_normal(muster)).match(pfad_normal(ziel)))
+    if werkzeug == "befehl":
+        norm_muster = befehl_normal(muster)
+        norm_ziel = befehl_normal(ziel)
+        if norm_muster.endswith('*'):
+            prefix = norm_muster[:-1].rstrip()
+            return norm_ziel.startswith(prefix)
+        else:
+            return norm_muster == norm_ziel
+    else:
+        norm_muster = pfad_normal(muster)
+        norm_ziel = pfad_normal(ziel)
+        return _glob_match(norm_muster, norm_ziel)
 
 
 def genauigkeit(muster):
-    """Wie genau ein Muster ist: die Zahl seiner Zeichen ohne Platzhalter."""
-    return len(str(muster).replace('*', '').replace('?', ''))
+    return sum(1 for c in str(muster) if c not in ('*', '?'))
 
 
 def einstufen(regeln, werkzeug, ziel):
-    """{stufe, regel, begruendung} für einen Aufruf. `regeln` ist die Liste aus `laden`/`pruefen` (je Regel `werkzeug` und `muster` als
-    Listen). Ohne passende Regel: `captain` (HS-21). `vorarbeiter` bleibt stehen – wer entscheidet, regelt die Freigabe."""
-    beste = None
-    for r in regeln:
-        if werkzeug not in r['werkzeug'] and '*' not in r['werkzeug']:
-            continue
-        for m in r['muster']:
-            if not passt(m, werkzeug, ziel):
-                continue
-            schluessel = (genauigkeit(m), STRENGE[r['stufe']])
-            if beste is None or schluessel > beste[0]:
-                beste = (schluessel, r)
-    if beste is None:
-        return {'stufe': 'captain', 'regel': None, 'begruendung': 'Keine Regel passt – ohne Regel entscheidet der Captain (HS-21).'}
-    r = beste[1]
-    return {'stufe': r['stufe'], 'regel': r['id'], 'begruendung': r['begruendung']}
+    candidates = []
+    for idx, regel in enumerate(regeln):
+        w_list = regel["werkzeug"]
+        if werkzeug in w_list or "*" in w_list:
+            for muster in regel["muster"]:
+                if passt(muster, werkzeug, ziel):
+                    candidates.append((idx, regel, muster))
+
+    if not candidates:
+        return {
+            "stufe": "captain",
+            "regel": None,
+            "begruendung": "Keine Regel passt – ohne Regel entscheidet der Captain (HS-21)."
+        }
+
+    def sort_key(item):
+        idx, regel, muster = item
+        stufe_idx = STUFEN.index(regel["stufe"])
+        g = genauigkeit(muster)
+        return (-g, -stufe_idx, idx)
+
+    candidates.sort(key=sort_key)
+    winner_idx, winner_regel, winner_muster = candidates[0]
+    return {
+        "stufe": winner_regel["stufe"],
+        "regel": winner_regel["id"],
+        "begruendung": winner_regel["begruendung"]
+    }
 
 
 # ---------------------------------------------------------------- U1: laden und prüfen

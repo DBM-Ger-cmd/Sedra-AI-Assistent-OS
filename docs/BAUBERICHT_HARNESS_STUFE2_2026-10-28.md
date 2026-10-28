@@ -62,8 +62,8 @@ Umfang: rund 800 Zeilen neues Python im Paket `harness/`, rund 230 Zeilen Oberfl
 - GPU vorher 1,5 GB / 40 °C, nachher 1,5 GB / 43 °C; keine Treiberereignisse (`nvlddmkm`, LiveKernelEvent) seit 15:19:50; Modell danach entladen.
 - Vergleich SEDRA gegen Referenz (Vorgabe-Katalog, eigene Kataloge mit Gleichstand und `*`, 20 Pfade, 14 Befehlszeilen, 242 Muster/Ziel-Paare für
   `passt`): **698 Vergleiche, 0 Abweichungen**. Unterschiede nur im Stil (Sortierung der Kandidaten statt Maximum; ungenutzte Namen).
-- Übernahme in `harness/katalog.py` (Kandidat ersetzt `einstufen` und Hilfen): **Entscheidung des Captains** – noch nicht gemacht.
+- **Übernommen** (Captain 28.10.2026, „Ja, übernehmen“): `einstufen`, `passt`, `genauigkeit`, `befehl_normal`, `pfad_normal` in `harness/katalog.py` sind jetzt der Bau von SEDRA, unverändert bis auf einen Kopfkommentar; `STRENGE` entfiel. Danach: Paket gegen die Referenz von Claude 698 Vergleiche ohne Abweichung, Gruppe `harness` 106 Tests grün.
 
 ## Quote (L4)
 
-Stufe 2: Claude bis auf `einstufen`; SEDRA hat `einstufen` gebaut (92 Zeilen Kandidat gegen 129 Zeilen Spec und Referenz von Claude, Quote Claude/SEDRA 1,4 laut devvm_build). Der Kandidat ist noch nicht übernommen.
+Stufe 2: Claude bis auf `einstufen`; SEDRA hat `einstufen` gebaut (92 Zeilen Kandidat gegen 129 Zeilen Spec und Referenz von Claude, Quote Claude/SEDRA 1,4 laut devvm_build). Der Kandidat ist ins Paket übernommen.
