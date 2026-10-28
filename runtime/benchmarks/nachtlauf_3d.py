@@ -29,6 +29,7 @@ import urllib.request
 from pathlib import Path
 
 import messlauf_basis as basis                # gemeinsame Messbausteine (Skriptordner steht in sys.path)
+import objekt_aufgaben_schwer as schwer       # --schwer: wechselnde, mehrteilige Aufgaben mit Pruefung der fertigen STL
 
 HERE = Path(__file__).resolve().parent
 RUNTIME = HERE.parent
@@ -276,10 +277,11 @@ class Run:
         p = subprocess.run([str(OPENSCAD), "-o", str(stl), str(scad)], capture_output=True, text=True, timeout=300)
         return p.returncode, (p.stderr or "")[-1200:]
 
-    def make_object(self, name, spec, wissen):
+    def make_object(self, name, spec, wissen, pruefer=None):
         target = self.out / "objekte"
         messages = [{"role": "system", "content": SYSTEM},
                     {"role": "user", "content": f"Aus der Recherche (Auszug):\n{wissen[:3500]}\n\nAufgabe: {spec}\nSchreibe den OpenSCAD-Code."}]
+        letzte_art = "render_fehler"
         attempt, abbrueche = 0, 0           # nur eine Antwort des Modells zaehlt als Versuch; ein Modellabbruch (Treiber-Reset) nicht
         while attempt < 4:
             if self.stopped():
@@ -308,11 +310,18 @@ class Run:
                 rc, err = 124, "Zeitueberschreitung beim Rendern"
             if rc == 0 and stl.exists() and stl.stat().st_size > 200:
                 tris = stl.read_text(encoding="utf-8", errors="ignore").count("facet normal")
-                self.log("objekt_ok", objekt=name, versuch=attempt, stl_bytes=stl.stat().st_size, dreiecke=tris)
-                return {"name": name, "ok": True, "versuche": attempt, "stl_bytes": stl.stat().st_size, "dreiecke": tris}
+                befund = pruefer(stl) if pruefer else None
+                if not befund:
+                    self.log("objekt_ok", objekt=name, versuch=attempt, stl_bytes=stl.stat().st_size, dreiecke=tris)
+                    return {"name": name, "ok": True, "versuche": attempt, "stl_bytes": stl.stat().st_size, "dreiecke": tris}
+                letzte_art = "pruefung_fehler"
+                self.log("objekt_fehler", objekt=name, versuch=attempt, rc=0, art="pruefung", fehler=befund[:300])
+                messages += [{"role": "assistant", "content": text}, {"role": "user", "content": f"Der Code rendert, aber die Pruefung der fertigen Form meldet: {befund}\nKorrigiere den Code und antworte wieder nur mit dem Code-Block."}]
+                continue
+            letzte_art = "render_fehler"
             self.log("objekt_fehler", objekt=name, versuch=attempt, rc=rc, fehler=err[-200:])
             messages += [{"role": "assistant", "content": text}, {"role": "user", "content": f"OpenSCAD meldet einen Fehler:\n{err}\nKorrigiere den Code (Geometrie nie in Variablen speichern, kein center bei sphere) und antworte wieder nur mit dem Code-Block."}]
-        return {"name": name, "ok": False, "versuche": attempt, "grund": "render_fehler"}
+        return {"name": name, "ok": False, "versuche": attempt, "grund": letzte_art}
 
 
 def preflight():
@@ -339,29 +348,32 @@ def preflight():
 
 
 def main(argv=None):
+    global QUELLEN, OBJEKTE, RECIPE
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--go", action="store_true")
     ap.add_argument("--stunden", type=float, default=6.0)
     ap.add_argument("--kurz", action="store_true", help="Kurzlauf (3 Quellen, 2 Objekte) zum Beobachten tagsueber; setzt --stunden auf hoechstens 0,6")
     ap.add_argument("--dauerlauf", action="store_true", help="nach der ersten Runde die Objekte wiederholen (Namen mit _r2, _r3 ...), bis die Frist ablaeuft: Stabilitaetstest der GPU")
     ap.add_argument("--probe", action="store_true", help="nur eine Quelle und ein Objekt (Funktionstest vor dem Nachtlauf)")
+    ap.add_argument("--schwer", action="store_true", help="schwerere Aufgaben: je Runde andere Masse, mehrteilige Bauteile, Pruefung der fertigen STL (Abmessungen, Volumen, ein Koerper); keine Recherche. Mit --dauerlauf bis zur Frist, sonst eine Runde")
     ap.add_argument("--rezept", default=RECIPE, help="Rezept-ID des Modells fuer die Objekte (Vorgabe: coder.llama_qwen35); fuer Modellvergleiche, z. B. mit Nemotron")
     args = ap.parse_args(argv)
-    global QUELLEN, OBJEKTE, RECIPE
     RECIPE = args.rezept
     if args.probe:
         QUELLEN, OBJEKTE = QUELLEN[:1], OBJEKTE[:1]
     if args.kurz:
         QUELLEN, OBJEKTE = QUELLEN[:3], OBJEKTE[:2]
         args.stunden = min(args.stunden, 0.6)
+    if args.schwer:
+        QUELLEN = []            # der Modelltest braucht kein Recherchewissen; gleiche Aufgaben fuer jedes Modell
     problems, gb = preflight()
     print("Vorpruefung:", "ok" if not problems else problems, "| freier RAM", gb, "GB")
     if problems:
         return 3
     if not args.go:
-        print(f"Trockenlauf: {len(QUELLEN)} Quellen, {len(OBJEKTE)} Objekte, Frist {args.stunden} h; nichts gestartet.")
+        print(f"Trockenlauf: {len(QUELLEN)} Quellen, {len(schwer.aufgaben(1)) if args.schwer else len(OBJEKTE)} Objekte, Frist {args.stunden} h; nichts gestartet.")
         return 0
-    tag = "" if args.rezept == "coder.llama_qwen35" else "_" + re.sub(r"[^A-Za-z0-9]+", "-", args.rezept)
+    tag = ("" if args.rezept == "coder.llama_qwen35" else "_" + re.sub(r"[^A-Za-z0-9]+", "-", args.rezept)) + ("_schwer" if args.schwer else "")
     out = PROJECT / "runtime_data" / f"nachtlauf_3d_{time.strftime('%Y-%m-%d_%H%M')}{tag}"
     run = Run(out, args.stunden)
     ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)       # ES_CONTINUOUS | ES_SYSTEM_REQUIRED: kein Ruhezustand, solange dieses Skript laeuft
@@ -391,13 +403,17 @@ def main(argv=None):
         wissen = chr(10).join(wissen_teile) or "(keine Recherche-Ergebnisse; nur Grundwissen des Modells)"
         runde = 1
         while not run.stopped():
-            for name, spec in OBJEKTE:
+            if args.schwer:
+                stapel = schwer.aufgaben(runde, 3 if args.kurz else None)
+            else:
+                stapel = [(name if runde == 1 else f"{name}_r{runde}", spec, None) for name, spec in OBJEKTE]
+            for name, spec, pruefer in stapel:
                 if run.stopped():
                     break
-                results.append(run.make_object(name if runde == 1 else f"{name}_r{runde}", spec, wissen))
+                results.append(run.make_object(name, spec, wissen, pruefer))
             if not args.dauerlauf:
                 break
-            ok_runde = len([r for r in results[-len(OBJEKTE):] if r.get("ok")])
+            ok_runde = len([r for r in results[-len(stapel):] if r.get("ok")])
             run.log("runde_fertig", runde=runde, objekte_ok=len([r for r in results if r.get("ok")]), von=len(results), ok_in_runde=ok_runde)
             if ok_runde == 0:           # eine ganze Runde ohne Ergebnis: nicht bis zur Frist weiter im Leerlauf drehen
                 run.log("dauerlauf_abbruch", grund="Runde ohne ein Objekt")
