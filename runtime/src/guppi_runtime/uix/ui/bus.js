@@ -28,7 +28,10 @@
     // Vertrag 1.1 (SPEC_SHELL_WISSEN_v1 §4.1): ein Treffer im Wissen wurde gewählt; Nachweis-Werkzeuge (Fundstelle) hören darauf
     'wissen.auswahl':     ['id'],
     // Vertrag 1.1: ein Werkzeug sagt, dass sich seine Handlungen geändert haben (z. B. eine andere Ansicht) – die Shell zeichnet die Werkbank-Zeile neu
-    'object.actions':     ['type', 'id']
+    'object.actions':     ['type', 'id'],
+    // Harness-Shell (SPEC_HARNESS_SHELL_v1 G2 §5): Sender ist der Ereignisstrom; der Text einer Antwort läuft über ihren eigenen Strom
+    'harness.sitzung':    ['id'],
+    'harness.antwort':    ['sitzung_id']
   };
 
   // '' when the event is fine, otherwise the reason – a sender id of null means the shell (it may send everything)

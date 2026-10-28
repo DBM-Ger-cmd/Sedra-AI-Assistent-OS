@@ -43,14 +43,15 @@ ZWECK = ('betrieb', 'pruefung')          # SPEC_UIX_STUFE6 §2.2: ein Prüfwerkz
 SHELL_VERTRAG_ROUTES = ('GET /api/arbeitsstand', 'POST /api/arbeitsstand')
 ABLAGE_ROUTES = ('POST /api/ablage/lesen', 'POST /api/ablage/schreiben')
 TRUST = ('CORE', 'CAPTAIN', 'GUPPI_BUILT', 'COMMUNITY')
-SLOTS = ('strip', 'tree', 'dock', 'talk', 'palette', 'windows', 'menubar', 'notify', 'inbox', 'chooser')
+SLOTS = ('strip', 'tree', 'dock', 'talk', 'palette', 'windows', 'menubar', 'notify', 'inbox', 'chooser',
+         'seite', 'reiter', 'flaeche', 'eingabe', 'taskleiste')      # die fünf Zonen der Harness-Shell (SPEC_HARNESS_SHELL_v1 G2 §6, HS-01)
 OPENS_OBJECTS = ('dock', 'windows')     # a shell that provides neither shows no tool to an object – the acceptance knows
 FILE_NAME = re.compile(r'^[a-z0-9_-]{1,60}\.(js|css)$')
 SERVE_NAME = re.compile(r'^[a-z0-9_-](?:[a-z0-9_.-]{0,58}[a-z0-9_-])?\.(js|css|json|svg|png|html)$')   # dots inside a name are fine (tool.schema.json); '..' is not a name
 SERVE_TYPES = {'js': 'text/javascript; charset=utf-8', 'css': 'text/css; charset=utf-8', 'json': 'application/json; charset=utf-8',
                'svg': 'image/svg+xml', 'png': 'image/png', 'html': 'text/html; charset=utf-8'}
 EVENT_NAME = re.compile(r'^[a-z]+(\.[a-z]+){1,2}$')
-ROUTE = re.compile(r'^(GET|POST) (/(api|uix)(/[A-Za-z0-9_.-]+)*(/\*)?)$')
+ROUTE = re.compile(r'^(GET|POST|PATCH|DELETE) (/(api|uix)(/[A-Za-z0-9_.-]+)*(/\*)?)$')     # PATCH/DELETE beantwortet der Server nur unter /api/harness/
 VERSION = re.compile(r'^\d+\.\d+\.\d+$')
 NEED = re.compile(r'^(>=|<=|>|<|==)?(\d+)(?:\.(\d+))?$')
 

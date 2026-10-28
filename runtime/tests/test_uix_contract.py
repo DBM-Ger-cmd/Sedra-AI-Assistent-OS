@@ -105,10 +105,12 @@ class Files(unittest.TestCase):
         server = (UIX.parent / 'uix_server.py').read_text(encoding='utf-8')
         routes = set(re.findall(r"'(/api/[A-Za-z0-9_/.-]+)'\s*:", server)) | set(re.findall(r"path\s*==\s*'(/api/[A-Za-z0-9_/.-]+)'", server))
         self.assertIn('/api/guard/status', routes, 'die Routen des Servers werden gelesen')
+        # Wege, die der Server als Ganzes an ein Paket gibt (Harness-Shell: path.startswith('/api/harness/') → harness/api.py)
+        prefixes = set(re.findall(r"path\.startswith\('(/api/[A-Za-z0-9_/.-]+/)'\)", server))
         bad = []
         for f in sorted(p for p in UIX.rglob('*.js') if not p.parent.name.startswith('_')):
             for route in sorted(set(re.findall(r"'(/api/[A-Za-z0-9_/.-]+)'", f.read_text(encoding='utf-8')))):
-                if route not in routes:
+                if route not in routes and not any(route.startswith(x) for x in prefixes):
                     bad.append(f'{f.relative_to(UIX)}: {route}')
         self.assertEqual(bad, [], 'eine Route, die der Server nicht kennt, ist ein toter Knopf')
 

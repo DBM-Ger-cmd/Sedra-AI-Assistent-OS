@@ -1,0 +1,24 @@
+# Die Harness-Shell (SPEC_HARNESS_SHELL_v1, G2 §6): das Gespräch steht in der Mitte, Antworten streamen, Werkzeugaufrufe sind sichtbar.
+# Fünf Zonen (HS-01): Seitenleiste, Reiterleiste, Arbeitsfläche, Eingabefeld, Taskleiste. Stufe 1: Gespräch, Sitzungen, Taskleiste mit Sitzungen.
+shell:
+  id: harness
+  name: Harness
+  description: Gespräch in der Mitte mit Sitzungen, Streamen und sichtbaren Werkzeugen; unten die Taskleiste (Stufe 1).
+  version: 1.0.0
+  entry:
+    js: [markdown.js, seite.js, reiter.js, verlauf.js, eingabe.js, taskleiste.js, shell.js]     # shell.js zuletzt: es registriert
+    css: shell.css
+  provides: [seite, reiter, flaeche, eingabe, taskleiste]
+  layout: {persist: browser}
+  api:
+    - GET /api/harness/*
+    - POST /api/harness/*
+    - PATCH /api/harness/*
+    - DELETE /api/harness/*
+    - GET /api/strip
+    - GET /api/decisions
+    - POST /api/decisions/answer
+    - GET /api/models
+    - GET /api/events
+  trust: CORE
+  needs: {ui: ">=1.0 <2"}

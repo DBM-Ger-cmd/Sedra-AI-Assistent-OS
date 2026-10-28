@@ -1,0 +1,154 @@
+// Die Harness-Shell (SPEC_HARNESS_SHELL_v1, G2 §6) – Stufe 1: das Gespräch in der Mitte.
+//
+// Fünf Zonen (HS-01): Seitenleiste (seite.js), Reiterleiste (reiter.js), Arbeitsfläche mit dem Verlauf (verlauf.js), Eingabefeld
+// (eingabe.js) und Taskleiste (taskleiste.js). Keine Instrumentenleiste, kein Baum; der schwebende Mini-Hub der Seite (ui/wechsel.js)
+// ist hier ausgeblendet (shell.css) – „Start“ in der Taskleiste und das Mikrofon im Eingabefeld führen zu seinen Menüs.
+// Diese Datei hält den Zustand und verbindet die Teile; sie registriert die Shell und ist deshalb die letzte im Manifest.
+// Daten kommen nur über die Wege unter /api/harness/ (harness/api.py) und /api/strip, /api/models; nichts wird gepollt außer der Uhr.
+
+(function(){
+  const root = typeof window !== 'undefined' ? window : globalThis;
+  const H = root.sedraHarness;
+  const d = ()=>root.sedraDom;
+  const SCHMAL = 1100;                       // HS-05: darunter klappt die Seitenleiste von selbst zu
+
+  root.sedra.registerShell({
+    id: 'harness',
+
+    async start(ctx){
+      this.ctx = ctx;
+      this.api = ctx.api;
+      this.projekte = [];
+      this.projektFehler = null;
+      this.sitzungen = [];
+      this.ansichten = new Map();            // Reiter-ID → Ansicht (verlauf.js)
+      this.modell = null;                    // das geladene Modell oder null (HS-53)
+      const host = document.getElementById('sedra-root');
+      host.setAttribute('aria-label', 'SEDRA Harness');
+      host.classList.add('hs');
+      document.body.classList.add('hs-body');
+      host.replaceChildren();
+      const el = this.el = {
+        seite: d().el('nav', 'hs-seite'),
+        haupt: d().el('div', 'hs-haupt'),
+        reiter: d().el('div', 'hs-reiter'),
+        flaeche: d().el('main', 'hs-flaeche'),
+        eingabe: d().el('div', 'hs-eingabe'),
+        taskleiste: d().el('footer', 'hs-taskleiste')
+      };
+      el.seite.setAttribute('aria-label', 'Sitzungen');
+      el.reiter.setAttribute('role', 'tablist');
+      el.flaeche.setAttribute('aria-live', 'polite');
+      el.haupt.append(el.reiter, el.flaeche, el.eingabe);
+      host.append(el.seite, el.haupt, el.taskleiste);
+
+      // Die Shell-API für Werkzeuge (Vertrag §4): diese Shell hängt in Stufe 1 keine Werkzeuge ein, gibt sie aber vollständig.
+      this.shellApi = {open: ()=>this.hinweis('Objekte öffnen kommt in der Harness-Shell mit dem Start-Menü (Stufe 4).'),
+                       notify: (text, tone)=>this.hinweis(text, tone), decide: ()=>this.hinweis('Freigaben stehen in Stufe 1 im Cockpit.'),
+                       theme: name=>root.sedraBoot.setTheme(name), reload: ()=>location.reload()};
+
+      H.seite.mount(this);
+      H.reiter.mount(this);
+      H.eingabe.mount(this);
+      H.taskleiste.mount(this);
+      this.tasten();
+      this.breite();
+      root.addEventListener('resize', ()=>this.breite());
+
+      ctx.bus.on('harness.sitzung', ()=>this.sitzungenLaden());
+      ctx.bus.on('harness.antwort', e=>{ this.sitzungenLaden(); H.taskleiste.zeichnen(this); if(e && e.zustand === 'fertig') H.verlauf.fertigGemeldet(this, e.sitzung_id); });
+      ctx.bus.on('model.changed', ()=>{ this.modellLaden(); H.taskleiste.status(this); });
+      ctx.bus.on('decision.pending', ()=>H.taskleiste.status(this));
+      ctx.bus.on('decision.answered', ()=>H.taskleiste.status(this));
+      ctx.bus.on('desk.error', e=>this.hinweis('Die Runtime meldet: ' + e.message, 'warn'));
+      root.sedraBoot.onProblem = text=>this.hinweis(text, 'warn');
+
+      await Promise.all([this.projekteLaden(), this.sitzungenLaden(), this.modellLaden()]).catch(err=>ctx.onProblem('Harness', err));
+      H.reiter.wiederherstellen(this);
+      H.taskleiste.status(this);
+    },
+
+    // ---- Daten
+    async projekteLaden(){
+      try{
+        const out = await this.api('/api/harness/projekte');
+        this.projekte = out.projekte || [];
+        this.projektFehler = out.fehler || null;
+      }catch(err){ this.projektFehler = err.message; }
+      H.seite.zeichnen(this);
+      H.eingabe.projektwahl(this);
+    },
+
+    async sitzungenLaden(){
+      if(this._laden) return this._laden;
+      this._laden = (async ()=>{
+        try{ this.sitzungen = (await this.api('/api/harness/sitzungen')).sitzungen || []; }
+        catch(err){ this.hinweis('Sitzungen nicht lesbar: ' + err.message, 'warn'); }
+        H.seite.zeichnen(this);
+        H.reiter.titel(this);
+      })();
+      try{ await this._laden; } finally { this._laden = null; }
+    },
+
+    async modellLaden(){
+      try{
+        const v = await this.api('/api/models');
+        const server = v.server || {};
+        this.modell = server.running ? {name: server.model, kontext: server.context} : null;
+      }catch(_err){ this.modell = null; }
+      H.eingabe.modellZeigen(this);
+    },
+
+    sitzung(id){ return this.sitzungen.find(s=>s.id === id) || null; },
+    projekt(id){ return this.projekte.find(p=>p.id === id) || null; },
+
+    // ---- Ansicht
+    aktive(){ return this.ansichten.get(H.reiter.aktiv(this)) || null; },
+
+    zeigen(id){
+      let a = this.ansichten.get(id);
+      if(!a){ a = H.verlauf.ansicht(this, id); this.ansichten.set(id, a); }
+      this.el.flaeche.replaceChildren(a.box);
+      document.getElementById('sedra-root').classList.toggle('hs-leer', a.leer());
+      H.eingabe.fuer(this, a);
+      a.nachUnten();
+    },
+
+    verwerfen(id){
+      const a = this.ansichten.get(id);
+      if(a) a.abbauen();
+      this.ansichten.delete(id);
+    },
+
+    leerGeaendert(a){
+      if(a === this.aktive()) document.getElementById('sedra-root').classList.toggle('hs-leer', a.leer());
+    },
+
+    hinweis(text, ton){
+      const box = d().el('div', 'hs-hinweis ' + (ton || 'note'), String(text || ''));
+      box.setAttribute('role', 'status');
+      document.body.append(box);
+      setTimeout(()=>box.remove(), 6000);
+    },
+
+    // ---- Seitenleiste ein/aus (Strg+B), schmal klappt zu (HS-05)
+    seiteUmschalten(an){
+      const host = document.getElementById('sedra-root');
+      const zu = an === undefined ? !host.classList.contains('hs-seite-zu') : !an;
+      host.classList.toggle('hs-seite-zu', zu);
+      this.seiteVonHand = true;
+    },
+
+    breite(){
+      if(this.seiteVonHand) return;
+      document.getElementById('sedra-root').classList.toggle('hs-seite-zu', root.innerWidth < SCHMAL);
+    },
+
+    tasten(){
+      document.addEventListener('keydown', e=>{
+        if((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'b' || e.key === 'B')){ e.preventDefault(); this.seiteUmschalten(); }
+        else if(e.key === 'Escape'){ const a = this.aktive(); if(a && a.laeuft()){ e.preventDefault(); a.stoppen(); } }
+      });
+    }
+  });
+})();

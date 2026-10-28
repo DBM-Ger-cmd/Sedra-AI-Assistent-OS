@@ -51,7 +51,7 @@ class ManifestRules(unittest.TestCase):
             "kind_invalid": {"kind": "window"},
             "handles_unknown_type": {"handles": ["Space Ship!"]},      # kein Typname; ein eigener Typ (`spaceship`) ist seit 15.10. erlaubt
             "object_tool_needs_handles": {"handles": []},
-            "api_route_invalid": {"api": ["DELETE /api/missions"]},
+            "api_route_invalid": {"api": ["PUT /api/missions"]},         # PATCH/DELETE gibt es seit der Harness-Shell (Captain 28.10.2026, Frage 1 a)
             "events_emits_invalid": {"events": {"emits": ["Object.Open"]}},
             "trust_invalid": {"trust": "SOMETIMES"},
             "needs_ui_not_met": {"needs": {"ui": ">=2.0"}},
@@ -63,6 +63,14 @@ class ManifestRules(unittest.TestCase):
                 _, errors = self.check(change)
                 self.assertTrue(any(e == expected or e.startswith(expected + ":") for e in errors),
                                 f"{change} should be refused with {expected}, got {errors}")
+
+    def test_patch_and_delete_are_valid_routes_but_a_foreign_module_keeps_only_get(self):
+        """Harness-Shell (SPEC_HARNESS_SHELL_v1 G2 §4): Titel ändern und Löschen einer Sitzung sind PATCH/DELETE. Fremde Module lesen nur."""
+        man, errors = self.check({"api": ["GET /api/missions", "PATCH /api/harness/*", "DELETE /api/harness/*"]})
+        self.assertEqual(errors, [])
+        self.assertEqual(man["api"], ["GET /api/missions", "PATCH /api/harness/*", "DELETE /api/harness/*"])
+        for bad in ("PUT /api/x", "OPTIONS /api/x", "patch /api/x"):
+            self.assertIn("api_route_invalid", self.check({"api": [bad]})[1], bad)
 
     def test_an_own_tool_may_bring_its_own_object_type_but_a_core_tool_may_not(self):
         """Gefunden mit der ersten externen Lieferung (KI GateWay): `handles: [gateway]` wurde am Manifest abgewiesen.

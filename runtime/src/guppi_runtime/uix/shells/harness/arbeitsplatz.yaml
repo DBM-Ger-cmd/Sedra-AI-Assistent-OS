@@ -1,0 +1,17 @@
+# Arbeitsplatz-Wissen der Harness-Shell (desk/arbeitsplatz.py liest es; Format wie die anderen Shells).
+arbeitsplatz:
+  satz: Das Gespräch in der Mitte, links die Sitzungen, oben Reiter, unten die Taskleiste.
+  zonen:
+  - name: Seitenleiste
+    wo: 'links: Neue Sitzung, Projekte mit ihren Sitzungen, Chats, Einstellungen; Strg+B blendet sie ein und aus'
+  - name: Reiter
+    wo: 'oben: jede offene Sitzung ein Reiter; + öffnet eine neue, die mittlere Maustaste schließt'
+  - name: Gespräch
+    wo: 'Mitte: Antworten streamen, Denken eingeklappt, Werkzeugzeilen aufklappbar'
+  - name: Eingabefeld
+    wo: 'unter dem Gespräch: Enter sendet, Umschalt+Enter neue Zeile, Stopp oder Esc bricht ab'
+  - name: Taskleiste
+    wo: 'unten: Start (Oberflächen), laufende Sitzungen, rechts Freigaben, Modell, GPU, Zustand und Uhr'
+  begriffe:
+    sitzung: 'In der Harness-Shell: ein gespeichertes Gespräch, eine Datei je Sitzung unter runtime_data/harness/sitzungen.'
+    ungeprüft: 'Grauer Text in der Harness-Shell: der Inhaltsschutz hat ihn noch nicht geprüft.'

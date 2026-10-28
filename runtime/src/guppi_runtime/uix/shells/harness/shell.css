@@ -1,0 +1,235 @@
+/* Harness-Shell (SPEC_HARNESS_SHELL_v1 G2 §6) – fünf Zonen: Seitenleiste links, Reiter oben, Gespräch in der Mitte, Eingabefeld darunter,
+   Taskleiste unten über die volle Breite. Jede Farbe und jedes Maß ist ein Token aus ui/tokens.css (hell und dunkel folgen von selbst);
+   Mischungen nur per color-mix aus Tokens, Schrift nur in Token-Stufen. Keine Bilder, keine fremden Schriften. */
+
+.hs{
+  --hs-seite-w:260px;
+  --hs-leiste-h:40px;
+  --hs-reiter-h:38px;
+  --hs-hover:var(--veil-light-1);
+  --hs-on:color-mix(in srgb,var(--accent) 14%,transparent);
+  --hs-on-line:color-mix(in srgb,var(--accent) 45%,transparent);
+  --hs-text-w:820px;
+  display:grid;
+  grid-template-columns:var(--hs-seite-w) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr) var(--hs-leiste-h);
+  grid-template-areas:"seite haupt" "leiste leiste";
+  height:100%;
+  min-width:0;
+  overflow:hidden;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  font-size:var(--size);
+}
+.hs *{scrollbar-width:thin;scrollbar-color:var(--line) transparent;box-sizing:border-box}
+.hs [hidden]{display:none !important}
+.hs.hs-seite-zu{grid-template-columns:0 minmax(0,1fr)}
+.hs.hs-seite-zu .hs-seite{visibility:hidden;padding:0;border:0}
+
+/* der schwebende Mini-Hub der Seite (ui/wechsel.js) ist hier aus (HS-01); seine Menüs öffnen Start und Mikrofon */
+.hs-body .sx-hub-fenster,.hs-body .sx-hub-klein{display:none !important}
+.hs-body .sx-umschalter-panel,.hs-body .sx-rekorder-panel{left:12px !important;right:auto !important;bottom:calc(var(--hs-leiste-h,40px) + 8px) !important;top:auto !important}
+
+/* ---- Seitenleiste */
+.hs-seite{
+  grid-area:seite;
+  display:flex;flex-direction:column;gap:var(--gap);
+  min-width:0;min-height:0;
+  padding:12px 10px;
+  background:var(--panel);
+  border-right:1px solid var(--line);
+  overflow:hidden;
+}
+.hs-neu{width:100%;justify-content:center}
+.hs-seite-liste{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.hs-ueber{font-size:var(--size-xs);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--muted);margin:10px 4px 2px}
+.hs-gruppe-kopf{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:var(--radius);cursor:pointer;font-size:var(--size-small)}
+.hs-gruppe-kopf:hover{background:var(--hs-hover)}
+.hs-pfeil{color:var(--muted);width:12px}
+.hs-sz-liste{display:flex;flex-direction:column;gap:1px;padding-left:6px}
+.hs-sz{display:flex;align-items:center;gap:2px;border-radius:var(--radius);min-width:0}
+.hs-sz:hover{background:var(--hs-hover)}
+.hs-sz.on{background:var(--hs-on);box-shadow:inset 2px 0 0 var(--accent)}
+.hs-sz-haupt{flex:1 1 auto;min-width:0;display:flex;align-items:baseline;gap:6px;padding:5px 6px;cursor:pointer}
+.hs-sz-titel{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--size-small)}
+.hs-sz-zeit{flex:0 0 auto;color:var(--muted);font-size:var(--size-xs)}
+.hs-sz.laeuft .hs-sz-zeit{color:var(--accent)}
+.hs-sz-knopf{flex:0 0 auto;border:0;background:transparent;color:var(--muted);cursor:pointer;padding:2px 5px;border-radius:var(--radius);font-size:var(--size-small);visibility:hidden}
+.hs-sz:hover .hs-sz-knopf,.hs-sz:focus-within .hs-sz-knopf{visibility:visible}
+.hs-sz-knopf:hover{color:var(--text);background:var(--panel-2)}
+.hs-sz-feld{width:100%;padding:4px 6px;font:inherit;font-size:var(--size-small);color:var(--text);background:var(--bg);border:1px solid var(--hs-on-line);border-radius:var(--radius)}
+.hs-sz-frage{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px;font-size:var(--size-small);background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--radius)}
+.hs-sz-frage span{flex:1 1 100%}
+.hs-leise{color:var(--muted);font-size:var(--size-xs)}
+.hs-einstellungen{width:100%;justify-content:flex-start}
+
+/* ---- Hauptteil: Reiter, Gespräch, Eingabe */
+.hs-haupt{grid-area:haupt;display:grid;grid-template-rows:var(--hs-reiter-h) minmax(0,1fr) auto;min-width:0;min-height:0}
+.hs-reiter{
+  display:flex;align-items:flex-end;gap:2px;
+  padding:0 8px;
+  min-width:0;
+  background:var(--panel);
+  border-bottom:1px solid var(--line);
+  overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:none;
+}
+.hs-reiter::-webkit-scrollbar{display:none}
+.hs-tab{
+  flex:0 1 200px;min-width:90px;max-width:220px;
+  display:flex;align-items:center;gap:4px;
+  height:calc(var(--hs-reiter-h) - 6px);
+  padding:0 6px 0 12px;
+  border:1px solid transparent;border-bottom:0;
+  border-radius:var(--radius) var(--radius) 0 0;
+  color:var(--muted);cursor:pointer;
+  font-size:var(--size-small);
+}
+.hs-tab:hover{background:var(--hs-hover);color:var(--text)}
+.hs-tab.on{background:var(--bg);border-color:var(--line);color:var(--text);margin-bottom:-1px;height:calc(var(--hs-reiter-h) - 5px)}
+.hs-tab.laeuft .hs-tab-name::before{content:"● ";color:var(--accent)}
+.hs-tab-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs-tab-zu{flex:0 0 auto;border:0;background:transparent;color:var(--muted);cursor:pointer;border-radius:var(--radius);padding:1px 5px}
+.hs-tab-zu:hover{background:var(--panel-2);color:var(--text)}
+.hs-tab-plus{flex:0 0 auto;align-self:center;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:var(--size-l);padding:0 10px;border-radius:var(--radius)}
+.hs-tab-plus:hover{background:var(--hs-hover);color:var(--text)}
+
+.hs-flaeche{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.hs-verlauf{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px 20px 8px}
+.hs-liste{max-width:var(--hs-text-w);margin:0 auto;display:flex;flex-direction:column;gap:14px;min-width:0}
+
+/* leere Sitzung (HS-04): Seedrache mittig, das Eingabefeld groß darunter, darunter die Projektwahl */
+.hs-start{display:flex;flex-direction:column;align-items:center;gap:6px;margin:auto auto 0;text-align:center;color:var(--muted)}
+.hs-drache{width:clamp(56px,14vh,120px);height:clamp(56px,14vh,120px)}
+.hs-drache-koerper{fill:var(--hs-on);stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round}
+.hs-drache-flosse{fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round}
+.hs-drache-auge{fill:var(--text)}
+.hs-drache-punkt{fill:var(--accent);opacity:.7}
+.hs-start-titel{margin:0;font-size:var(--size-xl);letter-spacing:var(--tracking-label);color:var(--text)}
+.hs-start-text{margin:0;font-size:var(--size-small);max-width:420px}
+.hs.hs-leer .hs-haupt{grid-template-rows:var(--hs-reiter-h) minmax(0,1fr) minmax(0,1.1fr)}
+.hs.hs-leer .hs-verlauf{display:flex;flex-direction:column;justify-content:flex-end}
+.hs.hs-leer .hs-liste{width:100%}
+.hs.hs-leer .hs-eingabe{align-self:start}
+.hs.hs-leer .hs-feld{min-height:96px}
+
+/* Nachrichten */
+.hs-captain{align-self:flex-end;max-width:85%}
+.hs-captain-text{white-space:pre-wrap;overflow-wrap:anywhere;padding:8px 12px;border-radius:var(--radius-2);background:var(--panel-2);border:1px solid var(--line-soft)}
+.hs-antwort{display:flex;flex-direction:column;gap:8px;min-width:0}
+.hs-text{overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.55}
+.hs-ungeprueft{color:var(--muted)}
+.hs-antwort.laeuft > :last-child.hs-ungeprueft::after{content:"▍";color:var(--accent);animation:hs-blink 1s steps(2) infinite}
+@keyframes hs-blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.hs-antwort.laeuft > :last-child.hs-ungeprueft::after{animation:none}}
+.hs-zurueck{padding:6px 10px;border-radius:var(--radius);background:var(--warn-bg);border:1px solid var(--warn-line);font-size:var(--size-small)}
+.hs-zurueck.bad{background:var(--bad-bg);border-color:var(--bad-line)}
+.hs-notiz{align-self:stretch}
+.hs-fuss{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.hs-ende{font-size:var(--size-xs);padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+.hs-ende.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+.hs-ende.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.hs-ende.bad{background:var(--bad-bg);border-color:var(--bad-line)}
+
+/* Denken und Werkzeugzeilen: eingeklappt, aufklappbar */
+.hs-denken,.hs-wz{border:1px solid var(--line-soft);border-radius:var(--radius);background:var(--panel);min-width:0}
+.hs-denken > summary,.hs-wz > summary{cursor:pointer;padding:5px 10px;font-size:var(--size-small);color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;min-width:0}
+.hs-denken > summary::-webkit-details-marker,.hs-wz > summary::-webkit-details-marker{display:none}
+.hs-denken > summary::before,.hs-wz > summary::before{content:"▸";color:var(--muted)}
+.hs-denken[open] > summary::before,.hs-wz[open] > summary::before{content:"▾"}
+.hs-wz-icon{color:var(--accent)}
+.hs-wz-name{color:var(--text);font-weight:600}
+.hs-wz-kurz{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:var(--size-xs)}
+.hs-wz-dauer{font-size:var(--size-xs)}
+.hs-wz-status{font-size:var(--size-xs);padding:1px 6px;border-radius:999px;border:1px solid var(--line)}
+.hs-wz.ok .hs-wz-status{background:var(--ok-bg);border-color:var(--ok-line)}
+.hs-wz.warn .hs-wz-status{background:var(--warn-bg);border-color:var(--warn-line)}
+.hs-wz.bad .hs-wz-status{background:var(--bad-bg);border-color:var(--bad-line)}
+.hs-wz.laeuft .hs-wz-status{color:var(--accent);border-color:var(--hs-on-line)}
+.hs-wz-body{display:flex;flex-direction:column;gap:4px;padding:4px 10px 10px}
+.hs-pre{margin:0;padding:8px;max-height:320px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--mono);font-size:var(--size-xs);background:var(--bg);border:1px solid var(--line-soft);border-radius:var(--radius)}
+.hs-denken-text{color:var(--muted);margin:0 10px 10px}
+
+/* Markdown (ohne rohes HTML) */
+.hs-md{line-height:1.55;overflow-wrap:anywhere;min-width:0}
+.hs-md > :first-child{margin-top:0}
+.hs-md > :last-child{margin-bottom:0}
+.hs-md p,.hs-md ul,.hs-md ol,.hs-md blockquote{margin:0 0 8px}
+.hs-md h3,.hs-md h4,.hs-md h5,.hs-md h6,.hs-md h7,.hs-md h8{margin:12px 0 6px;font-size:var(--size-l);font-family:var(--heading)}
+.hs-md h4,.hs-md h5,.hs-md h6{font-size:var(--size)}
+.hs-md ul,.hs-md ol{padding-left:22px}
+.hs-md code{font-family:var(--mono);font-size:var(--size-small);padding:1px 4px;border-radius:4px;background:var(--panel-2)}
+.hs-md blockquote{padding-left:10px;border-left:3px solid var(--line);color:var(--muted)}
+.hs-md hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+.hs-md-tab{overflow-x:auto;margin:0 0 8px}
+.hs-md table{border-collapse:collapse;font-size:var(--size-small)}
+.hs-md th,.hs-md td{border:1px solid var(--line);padding:4px 8px;text-align:left;vertical-align:top}
+.hs-md th{background:var(--panel-2)}
+.hs-md-code{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:0 0 8px;background:var(--bg)}
+.hs-md-code-kopf{display:flex;align-items:center;justify-content:space-between;padding:3px 8px;background:var(--panel-2);font-size:var(--size-xs);color:var(--muted)}
+.hs-md-code pre{margin:0;padding:10px;overflow-x:auto}
+.hs-md-code code{background:transparent;padding:0;white-space:pre}
+.hs-knopf{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:var(--radius);cursor:pointer;font:inherit}
+.hs-knopf:hover{background:var(--panel-2)}
+.hs-klein{font-size:var(--size-xs);padding:1px 8px}
+
+/* ---- Eingabefeld (HS-17) */
+.hs-eingabe{position:relative;width:100%;max-width:calc(var(--hs-text-w) + 40px);margin:0 auto;padding:6px 20px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.hs-eingabe-zeile{display:flex;flex-direction:column;gap:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-2);background:var(--panel);box-shadow:var(--shadow)}
+.hs-eingabe-zeile:focus-within{border-color:var(--hs-on-line)}
+.hs-feld{width:100%;min-height:24px;max-height:40vh;resize:none;border:0;outline:0;background:transparent;color:var(--text);font:inherit;line-height:1.5;padding:2px 2px}
+.hs-feld:focus,.hs-feld:focus-visible{outline:none;box-shadow:none;border:0}
+.hs-feld::placeholder{color:var(--muted)}
+.hs-eingabe-leiste{display:flex;align-items:center;gap:6px;min-width:0}
+.hs-luecke{flex:1 1 auto}
+.hs-rund{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--panel-2);color:var(--text);cursor:pointer;font-size:var(--size-small)}
+.hs-rund:hover{border-color:var(--hs-on-line)}
+.hs-schild,.hs-modell{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--size-xs);color:var(--muted);padding:3px 8px;border:1px solid var(--line-soft);border-radius:999px}
+.hs-modell.aus{color:var(--warn);border-color:var(--warn-line)}
+.hs-senden{flex:0 0 auto;border:0;border-radius:var(--radius);padding:6px 14px;background:var(--accent);color:var(--accent-text);cursor:pointer;font:inherit;font-weight:600}
+.hs-senden.stopp{background:var(--bad);color:var(--accent-text)}
+.hs-kein-modell{padding:6px 10px;border-radius:var(--radius);background:var(--warn-bg);border:1px solid var(--warn-line);font-size:var(--size-small)}
+.hs-projektzeile{display:flex;align-items:center;gap:8px;justify-content:center}
+.hs-projektwahl{font:inherit;font-size:var(--size-small);color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:3px 6px;max-width:100%}
+.hs-vorschlag{position:absolute;left:20px;right:20px;bottom:100%;display:flex;flex-direction:column;gap:2px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);z-index:5}
+.hs-vorschlag-zeile{display:flex;gap:10px;align-items:baseline;padding:4px 8px;border-radius:var(--radius);cursor:pointer;font-size:var(--size-small)}
+.hs-vorschlag-zeile:hover{background:var(--hs-hover)}
+
+/* ---- Taskleiste (HS-30 bis HS-32, Stufe 1) */
+.hs-taskleiste{
+  grid-area:leiste;
+  display:flex;align-items:center;gap:8px;
+  padding:0 8px;
+  min-width:0;
+  background:var(--panel);
+  border-top:1px solid var(--line);
+  overflow:hidden;
+}
+.hs-start-knopf{flex:0 0 auto;height:30px;padding:0 14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel-2);color:var(--text);cursor:pointer;font:inherit;font-weight:600}
+.hs-start-knopf:hover{border-color:var(--hs-on-line)}
+.hs-apps{flex:1 1 auto;min-width:0;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.hs-apps::-webkit-scrollbar{display:none}
+.hs-app{flex:0 1 180px;min-width:70px;display:flex;align-items:center;gap:6px;height:30px;padding:0 8px;border:1px solid transparent;border-radius:var(--radius);background:transparent;color:var(--text);cursor:pointer;font:inherit;font-size:var(--size-small)}
+.hs-app:hover{background:var(--hs-hover)}
+.hs-app.on{background:var(--hs-on);box-shadow:inset 0 -2px 0 var(--accent)}
+.hs-app.laeuft .hs-app-icon{color:var(--accent)}
+.hs-app-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.hs-status{flex:0 1 auto;min-width:0;display:flex;gap:4px;overflow:hidden}
+.hs-zelle{flex:0 1 auto;min-width:0;display:flex;align-items:baseline;gap:4px;padding:2px 8px;border-radius:var(--radius);font-size:var(--size-xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hs-zelle small{color:var(--muted)}
+.hs-zelle b{overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.hs-zelle.warn{background:var(--warn-bg)}
+.hs-zelle.bad{background:var(--bad-bg)}
+.hs-uhr{flex:0 0 auto;font-size:var(--size-small);color:var(--muted);padding:0 4px;font-variant-numeric:tabular-nums}
+
+/* Hinweis (notify) */
+.hs-hinweis{position:fixed;right:16px;bottom:52px;max-width:380px;padding:8px 12px;border-radius:var(--radius);background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);font-size:var(--size-small);z-index:50}
+.hs-hinweis.warn{border-color:var(--warn-line);background:var(--warn-bg)}
+.hs-hinweis.bad{border-color:var(--bad-line);background:var(--bad-bg)}
+
+/* schmal (HS-05): unter 1100 px ist die Seitenleiste zu (shell.js); unter 1200 px nur Freigaben und Modell rechts */
+@media (max-width:1200px){
+  .hs-zelle[data-zelle="gpu"],.hs-zelle[data-zelle="state"]{display:none}
+  .hs-schild{display:none}
+}
