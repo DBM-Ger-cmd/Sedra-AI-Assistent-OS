@@ -139,11 +139,29 @@ class HarnessApi:
         titel = titel_aus(payload.get('titel') or '')
         # Eine Mission je Sitzung (wie chat_reply): alle Züge hängen daran (Audit, Nutzung). Ohne hub.lock (K3).
         mission = self.hub.runtime.brain.create_mission('Harness-Sitzung ' + (titel or projekt['name']), None, 'S1')
+        self._mission_stand(mission, 'closed', 'schliessen')
         kopf = self.sitzungen.anlegen(projekt['id'], titel, modell=(str(payload['modell'])[:200] if payload.get('modell') else None),
                                       mission_id=mission['identity']['mission_id'])
         self._audit('HARNESS_SITZUNG_ANGELEGT', {'sitzung_id': kopf['id'], 'projekt': projekt['id'], 'mission_id': kopf['mission_id']})
         self._melden('harness.sitzung', {'id': kopf['id'], 'was': 'angelegt', 'projekt': projekt['id'], 'titel': kopf['titel']})
         return kopf
+
+    def _mission_stand(self, mission, status, aktion):
+        """Die Mission einer Sitzung trägt nur Audit und Nutzung, sie ist keine Aufgabe: angelegt gleich `closed`, beim Löschen der Sitzung
+        `archived`. Sonst zählte das Cockpit jede Sitzung dauerhaft als offene Aufgabe (so hängen die Chat-Sitzungen von chat_reply).
+        Modellaufrufe über control.execute prüfen den Stand nicht. Ohne hub.lock (K3); dasselbe Audit wie desk-Verb schliessen/archivieren."""
+        try:
+            m = mission if isinstance(mission, dict) else self.hub.runtime.missions.load(mission)
+            von = m['lifecycle']['status']
+            m['lifecycle']['status'] = status
+            if status == 'archived':
+                from ..core.util import utcnow
+                m['lifecycle']['archived_at'] = utcnow()
+            self.hub.runtime.missions.save(m)
+            self.hub.runtime.audit.append('MISSION_LIFECYCLE', component='harness', mission_id=m['identity']['mission_id'],
+                                          payload={'aktion': aktion, 'von': von, 'nach': status, 'phase': m['lifecycle']['phase'], 'grund': 'harness_sitzung'})
+        except Exception as exc:                     # nie den Ablauf brechen; der Grund steht im Audit
+            self._audit('HARNESS_MISSION_STAND_FEHLT', {'fehler': f'{type(exc).__name__}: {exc}'[:200]})
 
     def aendern(self, sid, payload):
         self._sitzung(sid)
@@ -156,10 +174,12 @@ class HarnessApi:
         return dict(s, id=sid)
 
     def loeschen(self, sid):
-        self._sitzung(sid)
+        s = self._sitzung(sid)
         if self.stroeme.laufend_in(sid):
             raise ValueError('antwort_laeuft')
         ziel = self.sitzungen.loeschen(sid)
+        if s['kopf'].get('mission_id'):
+            self._mission_stand(s['kopf']['mission_id'], 'archived', 'archivieren')
         self._audit('HARNESS_SITZUNG_VERSCHOBEN', {'sitzung_id': sid, 'nach': 'geloescht/' + ziel.name})
         self._melden('harness.sitzung', {'id': sid, 'was': 'verschoben'})
         return {'id': sid, 'verschoben': 'geloescht/' + ziel.name}

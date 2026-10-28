@@ -56,7 +56,7 @@
       root.addEventListener('resize', ()=>this.breite());
 
       ctx.bus.on('harness.sitzung', ()=>this.sitzungenLaden());
-      ctx.bus.on('harness.antwort', e=>{ this.sitzungenLaden(); H.taskleiste.zeichnen(this); if(e && e.zustand === 'fertig') H.verlauf.fertigGemeldet(this, e.sitzung_id); });
+      ctx.bus.on('harness.antwort', e=>{ this.sitzungenLaden(); H.taskleiste.zeichnen(this); if(e && e.zustand === 'fertig') H.verlauf.fertigGemeldet(this, e.sitzung_id, e.antwort_id); });
       ctx.bus.on('model.changed', ()=>{ this.modellLaden(); H.taskleiste.status(this); });
       ctx.bus.on('decision.pending', ()=>H.taskleiste.status(this));
       ctx.bus.on('decision.answered', ()=>H.taskleiste.status(this));

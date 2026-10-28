@@ -12,8 +12,8 @@ Frage 2 „Profil übernehmen“ (uix_check mit Profil `harness` und `--groesse`
 | Prüfung | Ergebnis |
 |---|---|
 | Gruppen `scheduler desk orchestra uix` nach T1 | 1073 Tests, 0 rot |
-| Gruppen `scheduler desk orchestra uix harness`, Endstand | **1146 Tests, 0 rot**, 6 übersprungen (75 Dateien, Browser-Bahn ausgelassen) |
-| neue Gruppe `harness` | 7 Testdateien, 72 Tests, 0 rot |
+| Gruppen `scheduler desk orchestra uix harness`, Endstand nach der Durchsicht | **1147 Tests, 0 rot**, 6 übersprungen (75 Dateien, Browser-Bahn ausgelassen) |
+| neue Gruppe `harness` | 7 Testdateien, 73 Tests, 0 rot |
 | `uix_check --shell harness --groesse 1024x700,1400x860` | 18 von 18 ok (je 9 Prüfungen), 0 Konsolenfehler, Überhang 0 px; 6 „nicht geprüft“ (Werkzeug-Container, Palette – gibt es in dieser Shell nicht) |
 | Browser-Durchlauf mit Modell-Attrappe (beide Größen) | Streamen grau → geprüft, Werkzeugzeile aufklappbar, Markdown mit Tabelle und Code-Kopieren, Stopp-Knopf und Esc → „Abgebrochen“, nach Neuladen alles wieder da, hell und dunkel, 0 Konsolenfehler |
 | Abnahme mit echtem Modell (T8, 28.10.2026 nach Ja des Captains) | **bestanden** (Einzelheiten unten): Werkzeugzeile ja, Stopp → `abgebrochen`, Sitzung nach Neustart vollständig; HS-52 nur im scharfen Modus gemessen (erstes geprüftes Wort −0,008 s Verzug) |
@@ -72,6 +72,24 @@ Umfang: rund 2080 Zeilen neuer Code (Paket harness 800, Shell 1270) plus rund 12
 | 404 in der Konsole durch gemerkte, verschwundene IDs | – | gemerkte Reiter werden gegen die Sitzungsliste geprüft |
 | Fester Wartewert statt „bereit“ | uix_check 15.10. | Abnahme wartet auf `sedraBoot.ctx` (vorhanden) |
 | Polling je Fenster | vor Build 7 | Status nur bei Ereignissen, höchstens alle 2 s; nur die Uhr tickt lokal |
+
+## Durchsicht vor der Übernahme (Captain: „keine alten Fehler und Baustellen übernehmen“)
+
+Behoben vor der Übernahme:
+
+| Befund | Art | Behebung |
+|---|---|---|
+| Jede Sitzung legte eine Mission an, die das Cockpit dauerhaft als **offene Aufgabe** zählt (so hängen 18 Chat-Sitzungen von `chat_reply` im Projekt) | alter Fehler, mitgenommen | Sitzungs-Mission wird gleich `closed` angelegt (Audit `MISSION_LIFECYCLE`, Grund `harness_sitzung`), beim Löschen der Sitzung `archived`; Modellaufrufe laufen weiter (Test) |
+| `uix_check` wartete in der Harness-Prüfung feste 1,5 s auf Status und Antwort – unter Last einmal FAIL | alter Fehler („fester Wartewert“, 15.10.) | wartet jetzt auf den Zustand (`bereit`, Text der Antwort); 3 von 3 grün bei parallelem Volllauf |
+| Ansicht lud nach der eigenen Antwort komplett neu (aufgeklappte Zeilen klappten zu) | Baustelle | die Ansicht merkt sich ihre gestreamten Antworten |
+| tote CSS-Regel `h7`/`h8`, tote Bedingung in der Taskleiste | Rest | entfernt |
+
+Bewusst **nicht** im Branch und nicht angefasst (Entscheidung des Captains):
+- 18 hängende Missionen „Chat-Sitzung mit dem lokalen Modell“ und 1 „Harness-Sitzung Abnahme“ (vor dieser Korrektur angelegt) im Projekt – schließen über das Verb „schliessen“ im Cockpit oder gesammelt auf Ja.
+- `chat_reply` legt weiter offene Missionen an (Cockpit unverändert, Vorgabe dieser Stufe).
+- `per_slots` von `harness.nemotron_e4b` sind **ungemessen** (`local_config`, nicht in git).
+- Befund Nemotron ignoriert Werkzeugergebnisse (siehe T8) – vor Stufe 2 klären.
+- Merge in `spec/agenten-orchestrierung`: Konflikt nur im Logbuch (beide Seiten haben unten angehängt); dort zwei neue Commits zum Modelltest Nemotron gegen Qwen3.6.
 
 ## Offen (nicht in Stufe 1 oder nicht geprüft)
 

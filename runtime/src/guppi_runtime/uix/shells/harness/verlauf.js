@@ -195,6 +195,7 @@
       // ---- der Strom einer Antwort
       async strom(aid, ab){
         this.antwortId = aid;
+        (this.gestreamt = this.gestreamt || new Set()).add(aid);
         this._seit = performance.now();          // die Taskleiste zeigt, wie lange die Antwort läuft
         this.eintraege++;
         const block = this.block = this.neu(d().el('div', 'hs-antwort laeuft'));
@@ -309,9 +310,10 @@
   }
 
   // Ein anderer Weg hat eine Antwort beendet (z. B. ein zweites Fenster): die Ansicht ohne eigenen Strom liest neu
-  function fertigGemeldet(S, sid){
+  // Die Antwort, die diese Ansicht selbst gestreamt hat, steht schon da – nicht neu laden (sonst klappen geöffnete Zeilen wieder zu)
+  function fertigGemeldet(S, sid, aid){
     const a = S.ansichten.get(sid);
-    if(a && !a.laeuft()) a.laden();
+    if(a && !a.laeuft() && !(aid && a.gestreamt && a.gestreamt.has(aid))) a.laden();
   }
 
   root.sedraHarness = root.sedraHarness || {};

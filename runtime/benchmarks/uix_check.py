@@ -237,7 +237,8 @@ PROFILES['harness'] = {
     'leftovers': None,
     'count': "()=>{ try{ return (JSON.parse(localStorage.getItem('sedra.harness.reiter') || '{}').liste || []).length; }catch(e){ return 0; } }",
     'count_word': 'Reiter',
-    'layout_min': 1,                          # eine Sitzung als Reiter muss das Neuladen überstehen
+    'bereit': "()=>document.querySelectorAll('.hs-zelle').length > 0 && !!document.querySelector('.hs-tab')",
+    'layout_min': 1,                         # eine Sitzung als Reiter muss das Neuladen überstehen
     'before_layout': "async ()=>{ const S = window.sedra.shells.get('harness'); const k = await S.api('/api/harness/sitzungen', {method: 'POST', body: {projekt: 'sedra-entwicklung', titel: 'Prüfsitzung'}}); await S.sitzungenLaden(); window.sedraHarness.reiter.oeffnen(S, k.id); }",
     'menu': None,
     'talk': {'input': '.hs-feld', 'answer': "()=>[...document.querySelectorAll('.hs-notiz, .hs-captain')].map(n=>n.innerText).join(' | ')",
@@ -411,6 +412,9 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
             if shots: page.screenshot(path=str(Path(shots) / '00_guppi_xp.png'))
             b.close(); return results
         page.wait_for_timeout(1500)
+        if profile.get('bereit'):                 # auf den Zustand warten, nicht auf eine feste Zeit (unter Last reichen 1,5 s nicht)
+            try: page.wait_for_function(profile['bereit'], timeout=15000)
+            except Exception: pass                # die Prüfungen unten melden dann selbst, was fehlt
         if shots: page.screenshot(path=str(Path(shots) / '00_cockpit.png'))
 
         manifest = page.evaluate("()=>window.sedraBoot && window.sedraBoot.ctx ? {shell: window.sedraBoot.ctx.manifest.shell.id, tools: window.sedraBoot.ctx.tools.all().map(t=>t.id), slots: Object.fromEntries(window.sedraBoot.ctx.tools.all().map(t=>[t.id, t.slot || 'inhalt'])), rejected: window.sedraBoot.ctx.manifest.rejected, problems: window.sedraBoot.problems, vorgabe: window.sedraBoot.ctx.manifest.shell.vorgabe || null} : null")
@@ -526,7 +530,8 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
             t = profile['talk']
             page.fill(t['input'], 'Hallo SEDRA')
             page.press(t['input'], 'Enter')
-            page.wait_for_timeout(1500)
+            try: page.wait_for_function('(e)=>(' + t['answer'] + ')().includes(e)', arg=t['expect'], timeout=15000)
+            except Exception: pass                # der Text unten zeigt, was stattdessen da steht
             text = page.evaluate(t['answer'])
             check('talk', t['expect'] in text, text.replace('\n', ' ')[-90:])
         else:

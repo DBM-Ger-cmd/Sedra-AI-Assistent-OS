@@ -226,6 +226,22 @@ class HarnessApiTests(unittest.TestCase):
         ordner = self.hub.project_root / 'runtime_data' / 'harness' / 'sitzungen' / 'geloescht'
         self.assertTrue((ordner / (kopf['id'] + '.jsonl')).is_file(), 'nichts wird wirklich gelöscht')
 
+    def test_sitzungs_mission_ist_keine_offene_aufgabe(self):
+        """Altfehler der Chat-Sitzungen: jede hing als offene Aufgabe im Cockpit. Die Harness-Mission ist nur Träger für Audit und Nutzung."""
+        kopf = self.neue_sitzung()
+        mid = kopf['mission_id']
+        code, missions = anfrage(self.url, 'GET', '/api/missions')
+        eintrag = next(m for m in missions if m['mission_id'] == mid)
+        self.assertFalse(eintrag['offen'])
+        _code, out = anfrage(self.url, 'POST', f"/api/harness/sitzungen/{kopf['id']}/nachricht", {'text': 'Hallo'})
+        strom(self.url, out['antwort_id'])
+        self.assertTrue(self.modell.requests, 'die geschlossene Mission trägt die Modellaufrufe weiter')
+        for _ in range(50):
+            if not self.hub.harness.threads: break
+            time.sleep(0.05)
+        anfrage(self.url, 'DELETE', f"/api/harness/sitzungen/{kopf['id']}")
+        self.assertEqual(self.hub.runtime.missions.load(mid)['lifecycle']['status'], 'archived')
+
     def test_ohne_token_kein_zugang(self):
         parts = urlsplit(self.url)
         for method in ('GET', 'PATCH', 'DELETE'):

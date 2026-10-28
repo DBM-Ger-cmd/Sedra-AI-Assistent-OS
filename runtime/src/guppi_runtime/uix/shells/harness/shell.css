@@ -156,7 +156,7 @@
 .hs-md > :first-child{margin-top:0}
 .hs-md > :last-child{margin-bottom:0}
 .hs-md p,.hs-md ul,.hs-md ol,.hs-md blockquote{margin:0 0 8px}
-.hs-md h3,.hs-md h4,.hs-md h5,.hs-md h6,.hs-md h7,.hs-md h8{margin:12px 0 6px;font-size:var(--size-l);font-family:var(--heading)}
+.hs-md h3,.hs-md h4,.hs-md h5,.hs-md h6{margin:12px 0 6px;font-size:var(--size-l);font-family:var(--heading)}
 .hs-md h4,.hs-md h5,.hs-md h6{font-size:var(--size)}
 .hs-md ul,.hs-md ol{padding-left:22px}
 .hs-md code{font-family:var(--mono);font-size:var(--size-small);padding:1px 4px;border-radius:4px;background:var(--panel-2)}
