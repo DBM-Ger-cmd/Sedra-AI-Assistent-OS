@@ -138,6 +138,7 @@ Agenten führen. Ab Stufe 3 wird die Shell mit sich selbst weitergebaut – gena
 ## 7. Nächste Gates
 
 - **G1** (diese Datei): Entscheidungen HS-E1 bis HS-E6 eingetragen (28.10.2026); Captain bestätigt die Auslegung in §5 oder ändert sie.
-- **G2** Design: Endpunkte (Sitzung, SSE-Strom, Werkzeuge), Datenformat der Sitzung, Ereignisse, Aufteilung in Dateien der Shell.
+- G1 bestätigt (Captain 28.10.2026: „Passt, G2 schreiben“).
+- **G2** Design für Stufe 1 und 2: `SPEC_HARNESS_SHELL_v1_G2.md` (Entscheidungen D-E1 bis D-E6 offen). Inhalt: Endpunkte (Sitzung, SSE-Strom, Werkzeuge), Datenformat der Sitzung, Ereignisse, Aufteilung in Dateien der Shell.
 - **G3** Bau-Aufgaben je Stufe, mit versteckten Tests für die SEDRA-Module (höchstens 20 Prüfungen je Stufe, L3).
 - **G4** Übernahme je Stufe nach Review.
