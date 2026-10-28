@@ -145,6 +145,9 @@ class UIXHub:
         self.extensions = desk_extensions.load(self.kinds, self, desk_extensions.MODULES, audit=self._desk_audit)
         self.kinds.freeze()
         self._extensions_started = None
+        # Harness-Shell (SPEC_HARNESS_SHELL_v1 Stufe 1): Sitzungen, Antwort-Strom, Schleife – eigene Sperren, nie self.lock (K3)
+        from .harness.api import HarnessApi
+        self.harness = HarnessApi(self)
 
     def _desk_audit(self, event, payload):
         self.runtime.audit.append(event, component='desk', payload=payload)
@@ -3339,6 +3342,62 @@ def make_server(hub: UIXHub, port=0):
             except (BrokenPipeError, ConnectionResetError, OSError, ValueError):
                 pass                                    # the Captain closed the window or the tab slept: nothing to report
 
+        def _harness(self, method, path, payload=None):
+            """/api/harness/… (harness/api.py): die Wege der Harness-Shell; der Strom einer Antwort als SSE wie _events."""
+            try:
+                out = hub.harness.handle(method, path, urlsplit(self.path).query, payload)
+            except ValueError as exc:
+                self._send(400, {'error': 'bad_request', 'message': FRIENDLY_400.get(str(exc), str(exc)), 'code': str(exc)})
+                return
+            except LookupError as exc:
+                self._send(404, {'error': 'not_found', 'message': str(exc)})
+                return
+            except Exception as exc:
+                self._send(503, {'error': type(exc).__name__, 'message': str(exc)})
+                return
+            if out[0] != 'sse':
+                self._send(out[0], out[1])
+                return
+            try:
+                last = int(self.headers.get('Last-Event-ID') or out[2] or 0)
+            except ValueError:
+                last = out[2]
+            self.send_response(200)
+            for name, value in (('Content-Type', 'text/event-stream; charset=utf-8'), ('Cache-Control', 'no-store'), ('X-Accel-Buffering', 'no'),
+                                ('Connection', 'close'), ('X-Content-Type-Options', 'nosniff'), ('Referrer-Policy', 'no-referrer')):
+                self.send_header(name, value)
+            self.end_headers()
+            self.connection.settimeout(None)
+            from .harness.strom import schreiben
+            try:
+                schreiben(self.wfile, out[1], last, stop=getattr(self.server, 'desk_stop', None))
+            except (BrokenPipeError, ConnectionResetError, OSError, ValueError):
+                pass
+
+        def _harness_write(self, method):
+            """PATCH und DELETE gibt es nur für /api/harness/sitzungen/<id> – dieselben Prüfungen wie POST (Herkunft, Token, Allowlist)."""
+            path = urlsplit(self.path).path
+            if not self._same_origin_ok() or self._authorized() != 'browser':
+                self.send_error(403)
+                return
+            if not path.startswith('/api/harness/'):
+                self.send_error(404)
+                return
+            if not self._module_allowed(method, path):
+                return
+            try:
+                payload = self._json_body() if method == 'PATCH' else {}
+            except ValueError as exc:
+                self._send(400, {'error': 'bad_request', 'message': str(exc)})
+                return
+            self._harness(method, path, payload)
+
+        def do_PATCH(self):
+            self._harness_write('PATCH')
+
+        def do_DELETE(self):
+            self._harness_write('DELETE')
+
         def _send(self, code, body, kind='application/json; charset=utf-8', frame_self=False):
             if isinstance(body, (dict, list)):
                 body = json.dumps(body, ensure_ascii=False, allow_nan=False).encode('utf-8')
@@ -3408,6 +3467,9 @@ def make_server(hub: UIXHub, port=0):
                 return
             if path == '/api/events':
                 self._events()
+                return
+            if path.startswith('/api/harness/'):          # projekte, sitzungen[/<id>], antworten/<id>/strom (harness/api.py)
+                self._harness('GET', path)
                 return
             try:
                 routes = {
@@ -3480,6 +3542,9 @@ def make_server(hub: UIXHub, port=0):
                 return
             try:
                 payload = self._json_body()
+                if path.startswith('/api/harness/'):      # sitzungen, sitzungen/<id>/nachricht, antworten/<id>/stopp (harness/api.py)
+                    self._harness('POST', path, payload)
+                    return
                 client = self._client(token_class)
                 if path in uix_clients.ROUTES and isinstance(payload, dict) and 'client' in payload:
                     hub.runtime.audit.append('UIX_CLIENT_REFUSED', component='desk', payload={'path': path, 'client': client})
