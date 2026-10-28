@@ -3584,7 +3584,7 @@ def make_server(hub: UIXHub, port=0):
                     return
                 self._send(200, fn(payload))
             except ValueError as exc:
-                self._send(400, {'error': 'bad_request', 'message': str(exc)})
+                self._send(400, {'error': 'bad_request', 'message': FRIENDLY_400.get(str(exc), str(exc)), **({'code': str(exc)} if str(exc) in FRIENDLY_400 else {})})
             except Exception as exc:
                 self._send(503, {'error': type(exc).__name__, 'message': str(exc)})
 
@@ -3640,6 +3640,12 @@ def choose_start_shell(hub, shell):
     return shell
 
 
+FRIENDLY_400 = {      # code -> sentence for the Captain; `code` keeps the code
+    'unknown_decision': 'Diese Frage ist nicht mehr offen: sie wurde schon beantwortet oder hat sich erledigt. Die Liste zeigt den aktuellen Stand.',
+    'way_not_offered': 'Diese Antwort bietet die Frage nicht an. Die Liste zeigt, was möglich ist.',
+}
+
+
 def serve(project_root: Path, architecture_root: Path, port=0, open_browser=False, window=False, shell=None):
     hub = UIXHub(project_root, architecture_root)
     try:
@@ -3647,6 +3653,7 @@ def serve(project_root: Path, architecture_root: Path, port=0, open_browser=Fals
     except ValueError as exc:
         print(str(exc), flush=True); hub.close(); return 4
     server, url = make_server(hub, port)
+    hub.poller.start()      # the scheduler's step must not wait for a browser: it runs in the poller's beat
     print('SEDRA Desktop (UIX):', url, flush=True)
     if chosen:
         print(f'Oberfläche für diesen Start: {chosen} (die Wahl in uix.yaml bleibt unverändert).', flush=True)
