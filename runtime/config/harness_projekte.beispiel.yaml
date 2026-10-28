@@ -1,0 +1,14 @@
+# Vorlage für local_config/harness_projekte.yaml (SPEC_HARNESS_SHELL_v1 G2 §3.1, D-E3). Nicht in git; ändert nur der Captain.
+# Fehlt die Datei, gilt genau das Projekt unten mit der Wurzel dieses Repos. Ist sie ungültig, nennt die Harness-Shell den Grund.
+#
+#   id              kleine Buchstaben, Ziffern, Bindestrich
+#   wurzel          vollständiger Pfad eines vorhandenen Ordners
+#   schreibbereich  Muster relativ zur Wurzel (ohne „..“); alles andere in der Wurzel nur lesen. Wirkt ab Stufe 2 (Werkzeuge mit Wirkung).
+projekte:
+  - id: sedra-entwicklung
+    name: Sedra Entwicklung
+    wurzel: 'C:\Pfad\zum\Repo'              # der Ordner, in dem runtime/ und docs/ liegen (keine echten Pfade in git)
+    schreibbereich:
+      - runtime/**
+      - docs/**
+      - redesign/**
