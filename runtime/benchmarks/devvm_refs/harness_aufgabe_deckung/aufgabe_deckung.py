@@ -38,7 +38,7 @@ def zustand(aufgabe, jetzt):
     maximum = ende.get('max_aufrufe')
     if maximum is not None:
         n = aufgabe.get('aufrufe')
-        if not isinstance(maximum, int) or isinstance(maximum, bool) or not isinstance(n, int) or n >= maximum:
+        if not isinstance(maximum, int) or isinstance(maximum, bool) or not isinstance(n, int) or isinstance(n, bool) or n >= maximum:
             return 'erschoepft'
     return 'aktiv'
 
@@ -48,7 +48,7 @@ def deckt(aufgaben, sitzung_id, werkzeug, ziel, jetzt, passt):
     treffer = []
     for a in aufgaben if isinstance(aufgaben, (list, tuple)) else ():
         try:
-            if not isinstance(a, dict) or zustand(a, jetzt) != 'aktiv' or sitzung_id not in (a.get('sitzungen') or []):
+            if not isinstance(a, dict) or zustand(a, jetzt) != 'aktiv' or not isinstance(a.get('sitzungen'), list) or sitzung_id not in a['sitzungen']:
                 continue
             eintrag = next((e for e in a.get('erlaubt') or []
                             if isinstance(e, dict) and e.get('werkzeug') == werkzeug and isinstance(e.get('muster'), str)

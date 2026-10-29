@@ -24,7 +24,7 @@ Spec: `SPEC_HARNESS_SHELL_v1_G2_STUFE3.md` (G2) und `SPEC_HARNESS_SHELL_v1_G3_ST
 | Nr | Fertig | Belege (Tests) |
 |---|---|---|
 | N1 Vorlagen | `harness/vorlagen.py`, Vorlagen `vorarbeiter`, `bauagent`, `pruefer`, Sitzung mit Vorlage (Whitelist, Systemprompt, Hash im Kopf, `max_zuege`, `frist_min`, `bremse_pro_stunde`), `GET /vorlagen` | `test_harness_vorlagen` (10) |
-| N2 Aufgaben-Deckung (SEDRA) | **offen** – als Referenz von Claude liegt `harness/aufgabe_deckung.py` (`deckt`, `zustand`) im Paket; Bau-Spec, versteckte Prüfungen, Stempel und `devvm_build` folgen auf Ansage (P-7/P-11) | – |
+| N2 Aufgaben-Deckung (SEDRA) | **gebaut und übernommen (Nachtrag 29.10.2026, 13:5x):** SEDRA baute `deckt` und `zustand` mit Qwen3.6-35B-A3B (544 s, versteckt 15/15, 106 Zeilen, Quote 1,3); Captain: „Mit Korrektur übernehmen“ – drei Korrekturen von Claude (Eingriff), Prüfungen auf 18 geschärft, Referenz in zwei Punkten angepasst; Paket = SEDRA-Bau + Korrekturen | `test_harness_aufgabe_deckung_vergleich` (3), `test_harness_bau_pruefungen` |
 | N3 Aufgaben-Freigabe | `harness/aufgabe.py` (Pflichtgrenzen, weite Muster, S9, Zähler, Ablauf, Rücknahme), Einstufung mit Aufgabe in `freigabe.Kiste`, weicher Vorbehalt, neue harte Pfade (S8), `katalog.WERKZEUGE` erweitert (`einstufen` unberührt) | `test_harness_aufgabe` (19), `test_uix_harness_aufgabe` (5) |
 | N4 Vorarbeiter-Freigabe | `harness/vorarbeiter.py`, Karten mit `an`/`art`/`vorschau_hash`, Werkzeuge `freigaben_offen`, `freigabe_entscheiden`, `aufgabe_vorschlagen`, `aufgabe_beenden`, Frist 15 min, Bremse 30/h, Rücknahme einer Entscheidung, Posteingang `harness_aufgabe`, Katalog-Vorlage um 4 Regeln (D-G6) | `test_harness_vorarbeiter` (7), `test_uix_harness_vorarbeiter` (12) |
 | N5 Herkunft | `harness/herkunft.py` (Register der Harness-Prozesse, Gegenstelle → PID über `GetExtendedTcpTable`, Vorfahrenkette mit Startzeit), 403 `herkunft_abgelehnt` für Karten, Aufgaben, Ernennung, Läufe-Stopp, Posteingang | `test_harness_herkunft` (12, darunter echte Kind- und Enkelprozesse) |
@@ -74,5 +74,4 @@ Dazu in N11: Die Ereignisse `harness.lauf`, `harness.aufgabe`, `harness.vorarbei
 
 ## Quote (L4)
 
-Bisher **0 Zeilen von SEDRA**: N2 und N8 sind die einzigen SEDRA-Bauten der Stufe (zusammen rund 160 Zeilen laut G3); alles andere ist Harness-Code, Integration und Oberfläche (Claude, ENTWICKLUNG.md L4).
-Gezählt wird nach Bau und Übernahme von N2/N8.
+N2: **106 Zeilen von SEDRA** (Kandidat) gegen 139 Zeilen Spec und Referenz von Claude (Quote 1,3) plus rund 8 Zeilen Korrektur und Kopf von Claude im Paket. N8 steht aus. Alles andere ist Harness-Code, Integration und Oberfläche (Claude, ENTWICKLUNG.md L4); die Gesamtquote der Stufe bleibt deshalb weit über 1.

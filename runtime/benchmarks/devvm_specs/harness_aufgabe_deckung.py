@@ -20,13 +20,13 @@ Functions:
 1. `zustand(aufgabe, jetzt) -> str`: the status of the task at `jetzt`. If `status` is not "aktiv" it is returned unchanged (a missing or non-string
    status, or a task that is not a dict, counts as "zurueckgenommen"). For an "aktiv" task: if `ende["bis"]` is set and `jetzt` is not before it
    (equal counts as over), or it cannot be read as a timezone-aware time (naive times and garbage count as over), the result is "abgelaufen"; else if
-   `ende["max_aufrufe"]` is set and `aufrufe` is not below it (a `max_aufrufe` that is not a plain int, or `aufrufe` that is not an int, counts as
-   used up), the result is "erschoepft"; otherwise "aktiv". Time is checked before the counter.
+   `ende["max_aufrufe"]` is set (not None) and `aufrufe` is not below it (a `max_aufrufe` that is not a plain int, or `aufrufe` that is not a plain int,
+   counts as used up; a bool is not a plain int), the result is "erschoepft"; otherwise "aktiv". Time is checked before the counter.
 2. `deckt(aufgaben, sitzung_id, werkzeug, ziel, jetzt, passt)`: `aufgaben` is a list (anything else covers nothing). A task is a candidate only if
-   `zustand` is "aktiv" and `sitzung_id` is in its `sitzungen`. It covers the call if one of its `erlaubt` entries has the same `werkzeug` and
+   `zustand` is "aktiv" and its `sitzungen` is a list (anything else never matches) that contains `sitzung_id`. It covers the call if one of its `erlaubt` entries has the same `werkzeug` and
    `passt(muster, werkzeug, ziel)` is true; `passt` is given to you, call it with exactly these three arguments and never write your own pattern
    matching. An entry that is broken, or a `passt` that raises, counts as "does not match" for that entry. Several candidates cover the call: the one
-   whose `ende["bis"]` is earliest wins; tasks without a readable `bis` come last; on a tie the smaller `id` (compared as text) wins.
+   whose `ende["bis"]` is earliest wins; tasks without a readable `bis` come last; on a tie the smaller `id` (compared as text; a task without `id` must not raise) wins.
    Result: {"aufgabe_id": <id of the winner>, "eintrag": <the matching entry>} or None.
 '''
 
@@ -39,6 +39,8 @@ def passt(m, w, z): return m == "**" or m == z or (m.endswith("**") and z.starts
 def a(i="T-00000001", sitzungen=("S-1",), erlaubt=(("datei_schreiben", "docs/**"),), status="aktiv", aufrufe=0, bis=None, maximum=None):
     return {"id": i, "sitzungen": list(sitzungen), "erlaubt": [{"werkzeug": w, "muster": m} for w, m in erlaubt], "status": status, "aufrufe": aufrufe,
             "ende": {"bis": bis if bis is None or isinstance(bis, str) else iso(**bis), "max_aufrufe": maximum}}
+def m(aufrufe=0, **ende):
+    x = a(aufrufe=aufrufe); x["ende"].update(ende); return x
 def d(aufgaben, w="datei_schreiben", z="docs/a.md", s="S-1", passt=passt): return deckt(aufgaben, s, w, z, J, passt)
 '''
 
@@ -66,6 +68,10 @@ assert repr(x) == vorher
 assert zustand(a(bis="2026-10-29T13:00:00"), J) == "abgelaufen" and d([a(bis="2026-10-29T13:00:00")]) is None and d([a(bis="kaputt")]) is None
 kaputt = [None, "x", 5, [], {}, {"status": "aktiv"}, {"status": "aktiv", "ende": "kaputt"}, {"status": "aktiv", "sitzungen": ["S-1"], "erlaubt": ["x", 5, None, {"werkzeug": "datei_schreiben"}]}]
 assert all(d([k]) is None for k in kaputt) and zustand(None, J) == "zurueckgenommen" and zustand({"status": 5}, J) == "zurueckgenommen"
+assert zustand(m(bis=5), J) == "abgelaufen" and zustand(m(bis=True), J) == "abgelaufen" and d([m(bis=[])]) is None
+assert all(zustand(m(max_aufrufe=v), J) == "erschoepft" for v in ("x", True, 2.5)) and zustand(m(max_aufrufe=3, aufrufe=True), J) == "erschoepft"
+falsch = a(); falsch["sitzungen"] = "S-1"; ohne_id = a(); del ohne_id["id"]
+assert d([falsch]) is None and d([ohne_id]) is not None
 def bricht(m, w, z): raise ValueError("x")
 assert d([a()], passt=bricht) is None and d([a("T-00000001", erlaubt=(("datei_schreiben", "boese"), ("datei_schreiben", "docs/**")))])["eintrag"]["muster"] == "docs/**"
 '''

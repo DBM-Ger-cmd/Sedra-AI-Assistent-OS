@@ -140,13 +140,22 @@ def pruefen_neu(doc, *, jetzt_z=None, vorschlag=False, verbotene_sitzungen=()):
             'wunsch_id': wunsch if isinstance(wunsch, str) else None}, warnungen
 
 
+def _bis_zeit(wert):
+    """Das Ende als Zeitpunkt mit Zeitzone – oder None (kein Ende, nicht lesbar). Nur für die Anzeige; über die Geltung entscheidet `aufgabe_deckung.zustand`."""
+    try:
+        z = datetime.fromisoformat(wert) if isinstance(wert, str) else wert
+    except ValueError:
+        return None
+    return z if isinstance(z, datetime) and z.tzinfo is not None else None
+
+
 def oeffentlich(a, jetzt_z=None):
     """Die Aufgabe für Oberfläche und Schild: mit Rest an Aufrufen und Minuten."""
     jetzt_z = jetzt_z or jetzt()
     out = dict(a)
     mx = (a.get('ende') or {}).get('max_aufrufe')
     out['rest_aufrufe'] = None if mx is None else max(0, mx - int(a.get('aufrufe') or 0))
-    bis = aufgabe_deckung._zeit((a.get('ende') or {}).get('bis'))
+    bis = _bis_zeit((a.get('ende') or {}).get('bis'))
     out['rest_min'] = None if bis is None else max(0, int((bis - jetzt_z).total_seconds() // 60))
     return out
 

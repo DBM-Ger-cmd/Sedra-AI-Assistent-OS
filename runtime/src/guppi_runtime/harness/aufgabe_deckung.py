@@ -1,64 +1,114 @@
-"""Deckung einer Aufgaben-Freigabe (SPEC_HARNESS_SHELL_v1 HS-27, G2 Stufe 3 §4.2, G3 Stufe 3 N2/N3).
+# Harness-Shell Stufe 3, N2: die Deckung einer Aufgaben-Freigabe (SPEC_HARNESS_SHELL_v1 HS-27, G2 Stufe 3 §4.2).
+# Gebaut von SEDRA (devvm_build --spec harness_aufgabe_deckung --profile standard, Qwen3.6-35B-A3B, 29.10.2026, versteckt 15/15, Kandidat
+# runtime_data/devvm_candidates/harness_aufgabe_deckung/attempt_01_20261029_132428). Übernommen mit drei Korrekturen von Claude (Captain 29.10.2026,
+# Eingriff im Logbuch): (1) ein `bis`, das kein lesbarer Zeitpunkt mit Zeitzone ist, gilt als abgelaufen; (2) ein `max_aufrufe`, das keine ganze Zahl
+# ist, gilt als erschöpft; (3) eine Aufgabe ohne `id` wirft nicht, IDs werden als Text verglichen. Sonst unverändert; die Referenz von Claude steht
+# in benchmarks/devvm_refs/harness_aufgabe_deckung, test_harness_aufgabe_deckung_vergleich hält beide gleich.
+from datetime import datetime, timezone
 
-Rein: kein Dateizugriff, keine Uhr (`jetzt` wird mitgegeben), keine Ausnahme bei Müll. **Referenz von Claude** – N2 ist ein SEDRA-Bau dieser beiden
-Funktionen (`deckt`, `zustand`); baut SEDRA sie nach und der Captain übernimmt, ersetzt der Bau diese Datei. Die Mustererkennung ist die des Katalogs:
-`passt(muster, werkzeug, ziel)` wird mitgegeben (`katalog.passt`), hier gibt es kein zweites Verfahren."""
-from __future__ import annotations
 
-from datetime import datetime
+def _is_aktiv(aufgabe):
+    if not isinstance(aufgabe, dict):
+        return False
+    s = aufgabe.get("status")
+    return s == "aktiv"
 
 
-def _zeit(wert):
-    """Ein Zeitpunkt mit Zeitzone – oder None (kein Zeitpunkt, naiver Zeitpunkt, Müll)."""
-    try:
-        z = datetime.fromisoformat(wert) if isinstance(wert, str) else wert
-    except ValueError:
+def _parse_bis(ende):
+    bis = None
+    if isinstance(ende, dict):
+        bis = ende.get("bis")
+    if bis is None:
         return None
-    return z if isinstance(z, datetime) and z.tzinfo is not None else None
+    try:
+        dt = datetime.fromisoformat(bis) if isinstance(bis, str) else bis
+        if not isinstance(dt, datetime) or dt.tzinfo is None:
+            return False
+        return dt
+    except (ValueError, TypeError):
+        return False
 
 
-def _ende(a):
-    e = a.get('ende') if isinstance(a, dict) else None
-    return e if isinstance(e, dict) else {}
+def _max_used(aufgabe):
+    ende = aufgabe.get("ende")
+    if not isinstance(ende, dict):
+        return None
+    m = ende.get("max_aufrufe")
+    if m is None:
+        return None
+    if not isinstance(m, int) or isinstance(m, bool):
+        return False
+    return m
 
+
+def _aufrufe_ok(aufgabe):
+    a = aufgabe.get("aufrufe")
+    if not isinstance(a, int) or isinstance(a, bool):
+        return False
+    return True
 
 def zustand(aufgabe, jetzt):
-    """Der Status der Aufgabe zum Zeitpunkt `jetzt`: `aktiv`, `abgelaufen`, `erschoepft` – oder der Status, der schon feststeht (`erledigt`,
-    `zurueckgenommen` …). Ändert das Eingabeobjekt nicht."""
     if not isinstance(aufgabe, dict):
-        return 'zurueckgenommen'
-    status = aufgabe.get('status')
-    if status != 'aktiv':
-        return status if isinstance(status, str) else 'zurueckgenommen'
-    ende = _ende(aufgabe)
-    if ende.get('bis') is not None:
-        bis, jetzt_z = _zeit(ende['bis']), _zeit(jetzt)
-        if bis is None or jetzt_z is None or jetzt_z >= bis:
-            return 'abgelaufen'
-    maximum = ende.get('max_aufrufe')
-    if maximum is not None:
-        n = aufgabe.get('aufrufe')
-        if not isinstance(maximum, int) or isinstance(maximum, bool) or not isinstance(n, int) or n >= maximum:
-            return 'erschoepft'
-    return 'aktiv'
-
+        return "zurueckgenommen"
+    s = aufgabe.get("status")
+    if s != "aktiv":
+        if isinstance(s, str):
+            return s
+        return "zurueckgenommen"
+    ende = aufgabe.get("ende")
+    if not isinstance(ende, dict):
+        return "aktiv"
+    bis_dt = _parse_bis(ende)
+    if bis_dt is False:
+        return "abgelaufen"
+    if bis_dt is not None:
+        try:
+            if jetzt >= bis_dt:
+                return "abgelaufen"
+        except (TypeError, ValueError):
+            return "abgelaufen"
+    mx = _max_used(aufgabe)
+    if mx is not None:
+        if mx is False or not _aufrufe_ok(aufgabe):
+            return "erschoepft"
+        if aufgabe["aufrufe"] >= mx:
+            return "erschoepft"
+    return "aktiv"
 
 def deckt(aufgaben, sitzung_id, werkzeug, ziel, jetzt, passt):
-    """{aufgabe_id, eintrag} der Aufgabe, die diesen Aufruf deckt – oder None. Mehrere Treffer: frühestes Ende (ohne Ende zuletzt), dann kleinste ID."""
-    treffer = []
-    for a in aufgaben if isinstance(aufgaben, (list, tuple)) else ():
-        try:
-            if not isinstance(a, dict) or zustand(a, jetzt) != 'aktiv' or sitzung_id not in (a.get('sitzungen') or []):
-                continue
-            eintrag = next((e for e in a.get('erlaubt') or []
-                            if isinstance(e, dict) and e.get('werkzeug') == werkzeug and isinstance(e.get('muster'), str)
-                            and passt(e['muster'], werkzeug, ziel)), None)
-        except Exception:
-            continue
-        if eintrag is not None:
-            bis = _zeit(_ende(a).get('bis'))
-            treffer.append((bis is None, bis.timestamp() if bis else 0.0, str(a.get('id')), a, eintrag))
-    if not treffer:
+    if not isinstance(aufgaben, list):
         return None
-    treffer.sort(key=lambda t: t[:3])
-    return {'aufgabe_id': treffer[0][3].get('id'), 'eintrag': treffer[0][4]}
+    candidates = []
+    for a in aufgaben:
+        if zustand(a, jetzt) != "aktiv":
+            continue
+        sitz = a.get("sitzungen")
+        if not isinstance(sitz, list) or sitzung_id not in sitz:
+            continue
+        erlaubt = a.get("erlaubt")
+        if not isinstance(erlaubt, list):
+            continue
+        for entry in erlaubt:
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("werkzeug") != werkzeug:
+                continue
+            muster = entry.get("muster")
+            try:
+                if not passt(muster, werkzeug, ziel):
+                    continue
+            except Exception:
+                continue
+            bis_dt = _parse_bis(a.get("ende"))
+            candidates.append((str(a.get("id")), bis_dt, entry))
+            break
+    if not candidates:
+        return None
+    def sort_key(c):
+        bid, bis_dt, _ = c
+        if bis_dt is not None and bis_dt is not False:
+            return (0, bis_dt, bid)
+        return (1, datetime.max.replace(tzinfo=timezone.utc), bid)
+    candidates.sort(key=sort_key)
+    winner = candidates[0]
+    return {"aufgabe_id": winner[0], "eintrag": winner[2]}

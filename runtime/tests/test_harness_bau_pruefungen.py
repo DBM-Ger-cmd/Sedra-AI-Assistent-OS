@@ -38,7 +38,8 @@ class BauPruefungenTests(unittest.TestCase):
         pruefungen_laufen('harness_lauf_fortschritt', 'lauf_fortschritt', 'guppi_runtime.harness.lauf_fortschritt')
 
     def test_die_referenzen_sind_die_paketdateien(self):
-        for spec, datei, paket in (('harness_aufgabe_deckung', 'aufgabe_deckung.py', 'aufgabe_deckung.py'), ('harness_lauf_fortschritt', 'lauf_fortschritt.py', 'lauf_fortschritt.py')):
+        # N2 ist seit der Übernahme der Bau von SEDRA (mit Korrekturen); ihn hält test_harness_aufgabe_deckung_vergleich gegen die Referenz fest
+        for spec, datei, paket in (('harness_lauf_fortschritt', 'lauf_fortschritt.py', 'lauf_fortschritt.py'),):
             ref = (BENCH / 'devvm_refs' / spec / datei).read_text(encoding='utf-8')
             pkg = (Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'harness' / paket).read_text(encoding='utf-8')
             self.assertEqual(ref.replace('\r\n', '\n'), pkg.replace('\r\n', '\n'), spec)
