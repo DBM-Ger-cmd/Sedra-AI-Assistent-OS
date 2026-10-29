@@ -46,6 +46,21 @@ class LesenTests(Basis):
         self.assertEqual(len(zeilen), 401, 'höchstens 400 Zeilen (D-E5)')
         self.assertTrue(zeilen[1].endswith('| Zeile 10'))
 
+    def test_zeichengrenze_je_aufruf_und_weiterlesen(self):
+        """Abnahme Nemotron C2: 200 Zeilen = 126 KB sprengten das Fenster. Jetzt höchstens LESEN_ZEICHEN_MAX je Aufruf, und
+        „weiter mit ab_zeile=N“ führt lückenlos weiter."""
+        from guppi_runtime.harness.werkzeuge import LESEN_ZEICHEN_MAX
+        (self.root / 'docs' / 'lang.md').write_text('\n'.join('x' * 500 + f' {i}' for i in range(1, 301)) + '\n', encoding='utf-8')
+        erster = self.w.ausfuehren('datei_lesen', {'pfad': 'docs/lang.md', 'zeilen': 400})
+        self.assertLessEqual(len(erster['ergebnis']), LESEN_ZEICHEN_MAX + 200)
+        self.assertIn('weiter mit ab_zeile=', erster['ergebnis'])
+        import re
+        ab = int(re.search(r'weiter mit ab_zeile=(\d+)', erster['ergebnis']).group(1))
+        zweiter = self.w.ausfuehren('datei_lesen', {'pfad': 'docs/lang.md', 'ab_zeile': ab, 'zeilen': 400})
+        self.assertTrue(zweiter['ergebnis'].splitlines()[1].lstrip().startswith(f'{ab}|'), 'lückenlos ab der nächsten Zeile')
+        einzeln = self.w.ausfuehren('datei_lesen', {'pfad': 'docs/a.md', 'zeilen': 5})
+        self.assertIn('Zeilen 1–5 von 1000', einzeln['ergebnis'])
+
     def test_pfad_ausserhalb_wird_abgelehnt(self):
         for pfad in ('../x', 'C:/Windows/win.ini', 'docs/../../x'):
             with self.assertRaises(WerkzeugFehler):

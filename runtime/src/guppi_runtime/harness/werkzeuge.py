@@ -25,6 +25,7 @@ from . import projekte as harness_projekte
 from .katalog import einstufen
 
 LESEN_MAX = 400
+LESEN_ZEICHEN_MAX = 8000          # je Lese-Aufruf, Zeilennummern eingerechnet (≈ 2–3k Token; das Fenster ist 16 384)
 LISTE_MAX = 300
 TREFFER_MAX = 200
 VORSCHAU_MAX = 300
@@ -173,10 +174,24 @@ class Werkzeuge:
         zeilen = out['content'].splitlines()
         ab = max(1, int(args.get('ab_zeile') or 1))
         n = max(1, min(LESEN_MAX, int(args.get('zeilen') or 200)))
-        stueck = zeilen[ab - 1:ab - 1 + n]
-        kopf = f"{plan['ziel']} · Zeilen {ab}–{ab + len(stueck) - 1} von {len(zeilen)}" + (' · weiter mit ab_zeile=' + str(ab + len(stueck)) if ab - 1 + len(stueck) < len(zeilen) else '')
-        breite = len(str(ab + len(stueck)))
-        return {'status': 'ok', 'ergebnis': kopf + '\n' + '\n'.join(f'{i:>{breite}}| {z}' for i, z in enumerate(stueck, ab)), 'wirkung': False}
+        # Zeichen- und Tokengrenze (28.10.2026, Abnahme Nemotron C2): 200 Zeilen einer Logbuchdatei waren 126 KB und sprengten das
+        # Fenster (47 734 Token gegen 16 384). Je Aufruf höchstens LESEN_ZEICHEN_MAX Zeichen; die nächste Stelle nennt `ab_zeile`.
+        stueck, zeichen, i = [], 0, ab - 1
+        breite = len(str(min(len(zeilen), ab - 1 + n)))
+        while i < min(len(zeilen), ab - 1 + n):
+            zeile = zeilen[i]
+            kopfzeile = len(f'{i + 1:>{breite}}| ')
+            if zeichen + kopfzeile + len(zeile) > LESEN_ZEICHEN_MAX:
+                if stueck:
+                    break
+                zeile = zeile[:LESEN_ZEICHEN_MAX - kopfzeile] + ' […Zeile gekürzt]'
+            stueck.append(zeile)
+            zeichen += kopfzeile + len(zeile) + 1
+            i += 1
+        ende = ab - 1 + len(stueck)
+        weiter = f' · weiter mit ab_zeile={ende + 1}' if ende < len(zeilen) else ''
+        kopf = f"{plan['ziel']} · Zeilen {ab}–{ende} von {len(zeilen)}{weiter}"
+        return {'status': 'ok', 'ergebnis': kopf + '\n' + '\n'.join(f'{k:>{breite}}| {z}' for k, z in enumerate(stueck, ab)), 'wirkung': False}
 
     def _auflisten(self, args, plan):
         out = self.fs.list_dir(self.mission_id, {'path': plan['ziel'], 'limit': 5000, 'bounded': True})

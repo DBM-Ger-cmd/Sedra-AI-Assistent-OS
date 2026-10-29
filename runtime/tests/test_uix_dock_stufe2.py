@@ -142,16 +142,27 @@ class ImBrowser(Basis):
         self.assertLessEqual(len(m), 2, m)                                       # ≤ 1 je Wechsel
         self.assertEqual(self.fehler, [])
 
+    def warte_hinweis(self, page, gruppe):
+        """Wartet, bis hinter der Gruppe `gruppe` (0 links, 1 rechts) der Hinweis „nur ein Objekt zugleich“ steht und in der anderen nicht.
+        Statt fester Wartezeiten: der Zustand selbst entscheidet, unter Last wie auf einem schnellen Rechner."""
+        page.wait_for_function("""(i)=>{ const t = [...document.querySelectorAll('.dk-group')].map(g=>{
+            const b = g.querySelector('.dk-body > .dk-pane-box:not([hidden])'); return b ? b.innerText.slice(0, 200) : ''; });
+            return t.length >= 2 && t[i].includes('nur ein Objekt zugleich') && !t[1 - i].includes('nur ein Objekt zugleich'); }""",
+                               arg=gruppe, timeout=15000)
+
     def test_ein_einzelstueck_zeichnet_nie_in_zwei_gruppen(self):
         """A5/D2-3: zwei Aufgaben nebeneinander → eine zeigt die Aufgabe, die andere den Hinweis; „Hierher holen“ tauscht."""
         page = self.seite()
         a, b = self.aufgaben(page)[:2]
         self.oeffnen(page, {'type': 'task', 'id': a, 'title': 'Erste'})
-        page.locator('.dk-split-btn').first.click(); page.wait_for_timeout(400)
+        page.locator('.dk-split-btn').first.click()
+        page.wait_for_function("()=>document.querySelectorAll('.dk-group').length >= 2", timeout=15000)
         self.oeffnen(page, {'type': 'task', 'id': b, 'title': 'Zweite'}, 'g2')
+        self.warte_hinweis(page, 0)
         links, rechts = self.sichtbar(page)
         self.assertIn('nur ein Objekt zugleich', links); self.assertNotIn('nur ein Objekt zugleich', rechts)
-        page.locator('.dk-group').first.locator('.dk-hinweis button').click(); page.wait_for_timeout(900)
+        page.locator('.dk-group').first.locator('.dk-hinweis button').click()
+        self.warte_hinweis(page, 1)
         links, rechts = self.sichtbar(page)
         self.assertNotIn('nur ein Objekt zugleich', links); self.assertIn('nur ein Objekt zugleich', rechts)
         self.assertEqual(page.evaluate("()=>document.querySelectorAll('.dk-pane-box:not([hidden]) .dk-tool[data-tool=\"task\"]').length"), 1)
