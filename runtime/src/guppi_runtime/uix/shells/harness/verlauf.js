@@ -12,7 +12,8 @@
   const ENDE = {erledigt: ['Erledigt', 'ok'], nur_plan: ['Nur Plan – nichts ausgeführt', 'warn'], abgebrochen: ['Abgebrochen', 'warn'],
                 fehler: ['Fehler', 'bad'], wartet: ['Wartet auf Freigabe', 'warn']};
   const STATUS = {ok: 'ok', fehler: 'Fehler', wiederholt: 'wiederholt', laeuft: 'läuft', wartet: 'wartet auf Freigabe', verboten: 'verboten',
-                  abgelehnt: 'abgelehnt', abgebrochen: 'abgebrochen'};
+                  abgelehnt: 'abgelehnt', abgebrochen: 'abgebrochen',
+                  hinweis: 'Hinweis – nicht geschrieben'};            // Nachtrag 434b108 (B-8): Fehlerfarbe, weil nichts geschah
 
   function token(){ return decodeURIComponent((location.hash || '').replace(/^#/, '')); }
 

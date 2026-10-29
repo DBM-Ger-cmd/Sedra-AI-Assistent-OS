@@ -57,3 +57,57 @@ Läufe (`nachtlauf_3d`, Modell laden) bleiben bis Stufe 3 außerhalb der Werkzeu
 | D-F3 | **`befehl` und der Inhaltsschutz:** Befehlsausgabe ist fremder Inhalt. | Ja, als `tool` (fremd) markiert – damit greift „Fremdes geschützt“ (Anweisungen in Ausgaben → Rückfrage). |
 | D-F4 | **Modell für die Abnahme:** Nemotron E4B (nach Schutz-Korrektur ungeprüft) oder Qwen3.6-35B-A3B. | Erst kurzer Nemotron-Lauf (Werkzeugergebnisse genutzt?), dann Modelltest C1–C4 entscheidet laut `MODELLTEST_HARNESS_v1.md`. |
 | D-F5 | Branch | Eigener Worktree, Branch `harness/stufe-2` ab `spec/agenten-orchestrierung` (`27b8a75`); Übernahme nach Review (G4). |
+
+---
+
+## Nachtrag 29.10.2026 – Warnung beim Überschreiben einer bestehenden Datei
+
+Auftrag des Captains (29.10.2026, über die Vorarbeiter-Sitzung): Beim Überschreiben einer **bestehenden** Datei mit `datei_schreiben` gibt
+es vorher eine Warnung und einen Hinweis. Anlass: Im Abnahmelauf (`BAUBERICHT_ABNAHME_NEMOTRON_WDH_2026-10-28.md`, C2) hätte eine Karte
+das Logbuch von 569 auf 5 Zeilen gekürzt; die Karte zeigte den Diff, aber nichts warnte beim massiven Löschen.
+
+Dieser Nachtrag wird **vor** dem Bau dem Captain vorgelegt. Es wird nichts gebaut, bis er die Punkte unten freigibt oder streicht
+(ENTWICKLUNG.md: Berechtigungen vorher einholen).
+
+### 1. Anforderung
+
+| ID | Anforderung |
+|---|---|
+| W-1 | `datei_schreiben` auf eine **bestehende** Datei, deren neuer Inhalt viele Zeilen der alten entfernt, erzeugt **keine** Karte, sondern ein Werkzeugergebnis an das Modell: Warnung mit Zahlen und der Hinweis, für bestehende Dateien `datei_aendern` zu nehmen. Das Modell kann so vor dem Captain korrigieren. |
+| W-2 | Dieselbe Prüfung auf der Karte: Ist der Schwellenwert trotzdem erreicht (Captain will die Datei wirklich ersetzen), zeigt die Karte oben einen deutlichen Kasten: „Ersetzt die ganze Datei: N Zeilen gelöscht, M neu“ und den Knopf „Erlauben“ mit dem Zusatz „(ersetzt die Datei)“. |
+| W-3 | `datei_aendern` ist von W-1/W-2 nicht betroffen (ersetzt genau eine Stelle). Neue Dateien ebenfalls nicht. |
+| W-4 | Die Prüfung läuft im Werkzeug (`harness/werkzeuge.py`), nicht im Guard und nicht im Inhaltsschutz (`core/**` ist Captain-Vorbehalt). |
+
+### 2. Vorgeschlagene Schwellen (zur Freigabe)
+
+Eine bestehende Datei gilt als **ersetzt**, wenn der neue Inhalt
+**mehr als 50 Zeilen** der alten entfernt **oder mehr als 30 %** ihrer Zeilen (je der größere Wert ab dem Schwellenwert, Zeilen
+gezählt über `difflib`, nicht über Zeichen). Kleinere Änderungen laufen wie bisher durch die Karte, ohne Warnung.
+
+### 3. Tests (vorab benannt)
+
+- `datei_schreiben` auf 569-zeilige Datei mit 5 Zeilen → Werkzeugergebnis mit Warnung, **keine** Karte, nichts geschrieben.
+- Knapp darunter (50 Zeilen entfernt, 30 % nicht erreicht) → Karte, ohne Warnungskasten.
+- Schwelle erreicht und Captain erlaubt → Karte mit Kasten, nach Erlauben geschrieben.
+- `datei_aendern` mit gleich großer Löschung → nie betroffen.
+- Neue Datei → nie betroffen.
+- Karte: Feld `warnung` ist bei Schwelle gesetzt und leer sonst; Oberflächen-Test (Kasten sichtbar), kein Modelllauf.
+
+### 4. Berechtigungen für den Bau (Frage an den Captain, vorab)
+
+| Nr | Berechtigung | Begründung |
+|---|---|---|
+| B-1 | Schreiben: `runtime/src/guppi_runtime/harness/werkzeuge.py`, `harness/freigabe.py` (Karte: Feld `warnung`), `harness/api.py` (nur Karten-Antwort) | Umsetzung W-1, W-2 |
+| B-2 | Schreiben: `runtime/src/guppi_runtime/uix/shells/harness/karte.js`, `shell.css` (Kasten) | Anzeige W-2 |
+| B-3 | Schreiben: `runtime/tests/test_harness_werkzeuge.py`, `test_uix_harness_freigabe.py`, `test_harness_schleife.py` (nur neue Fälle) | Tests oben |
+| B-4 | Schreiben: `docs/BAUBERICHT_*` (neuer Bericht), `docs/LOGBUCH_AGENT_MANAGER.md` (eine Zeile je Schritt) | Berichtspflicht |
+| B-5 | Ausführen: `python benchmarks/run_tests.py …` (Gruppen, ohne Modell) und `uix_check --shell harness` (ohne Modell) | Abnahme ohne Modell |
+| B-6 | Ausführen: Browser-Attrappe (kein Modell) für den Kasten | Oberflächenprüfung |
+| **nicht** | Modell laden, Server mit echtem Modell starten, Qwen-Vergleichslauf, Schreiben in `core/**`, `local_config/`, `architecture/**/guard/**`, Push | nicht Teil dieses Auftrags |
+
+### 5. Fragen vorab an den Captain
+
+1. Schwellen: 50 Zeilen **oder** 30 %, bzw. welche? (Vorschlag oben.)
+2. Soll der Captain bei erreichter Schwelle die Datei **trotzdem** ersetzen können (Karte mit Kasten, W-2), oder soll `datei_schreiben` auf bestehende Dateien ganz gesperrt sein (nur `datei_aendern`)? Vorschlag: beides, der Kasten gewinnt über die Karte.
+3. Darf die Vorarbeiter-Sitzung den Kasten-Text ändern, oder bleibt er so wie in W-2 beschrieben?
+4. **Qwen3.6-35B-A3B-Vergleichslauf (C1–C4):** Dieser Lauf ist **nicht freigegeben**. Frage vorab: Soll er nach dieser Stufe gestartet werden dürfen? Falls ja, mit welchem Stand (bisheriger Stand `16a424b`, oder nach dieser Warnung)? Der Lauf lädt ein Modell und braucht eine eigene Freigabe zum Zeitpunkt.

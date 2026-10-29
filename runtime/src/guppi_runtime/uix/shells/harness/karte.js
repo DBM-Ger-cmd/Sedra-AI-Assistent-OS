@@ -24,6 +24,13 @@
     const kopf = d().el('div', 'hs-karte-kopf');
     kopf.append(d().el('span', 'hs-karte-icon', '⛨'), d().el('b', null, 'Freigabe: ' + (k.werkzeug || '')), d().el('code', 'hs-karte-ziel', k.ziel || ''));
     const meta = d().el('div', 'hs-karte-meta hs-leise', 'Stufe ' + (k.stufe || '?') + ' · Regel ' + (k.regel || 'keine') + (k.begruendung ? ' · ' + k.begruendung : ''));
+    // Warnkasten (Nachtrag 434b108, W-2): die Ersetzung der ganzen Datei ist nicht zu übersehen – oben, vor dem Diff, in Warnfarbe.
+    if(k.warnung){
+      const kasten = d().el('div', 'hs-karte-warnung', '⚠ ' + (k.warnung.text || 'Ersetzt die ganze Datei.'));
+      kasten.setAttribute('role', 'alert');
+      box.append(kasten);
+      box.classList.add('warnung');
+    }
     box.append(kopf, meta, diffZeilen(k.vorschau || ''));
     const fuss = d().el('div', 'hs-karte-fuss');
     box.append(fuss);
@@ -47,7 +54,7 @@
         S.hinweis('Freigabe nicht gesendet: ' + err.message, 'bad');
       }
     };
-    const erlauben = d().el('button', 'hs-senden', 'Erlauben'); erlauben.type = 'button'; erlauben.onclick = ()=>antworten('erlauben');
+    const erlauben = d().el('button', 'hs-senden', k.warnung ? 'Erlauben (ersetzt die Datei)' : 'Erlauben'); erlauben.type = 'button'; erlauben.onclick = ()=>antworten('erlauben');
     const diff = d().el('button', 'hs-knopf', 'Diff zeigen'); diff.type = 'button'; diff.onclick = ()=>root.sedraHarness.reiter.oeffnen(S, 'diff:' + k.karte_id);
     const ablehnen = d().el('button', 'hs-knopf', 'Ablehnen'); ablehnen.type = 'button'; ablehnen.onclick = ()=>antworten('ablehnen');
     fuss.append(erlauben, diff, ablehnen, notiz);
