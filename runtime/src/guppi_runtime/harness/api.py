@@ -2,7 +2,7 @@
 
     GET    projekte                           Harness-Projekte
     GET    sitzungen[?projekt=]               Liste (neueste zuerst) und welche gerade antworten
-    POST   sitzungen                          {projekt, titel?, modell?} → Kopf; `vorlage` bleibt in Stufe 1 null
+    POST   sitzungen                          {projekt, titel?, modell?, vorlage?} → Kopf
     GET    sitzungen/<id>                     Verlauf
     PATCH  sitzungen/<id>                     {titel?, modell?}
     DELETE sitzungen/<id>                     nach geloescht/ verschieben (kein echtes Löschen)
@@ -14,6 +14,7 @@
     GET    katalog                            Regeln des Freigabe-Katalogs, nur lesen (Datei des Captains oder Vorlage)
     POST   einstufen                          {werkzeug, ziel} → Stufe, Regel, Begründung (Vorbehalt vor Katalog)
     GET    werkzeuge                          die Werkzeuge mit Kurzbeschreibung
+    GET    vorlagen                           die Vorlagen (Stufe 3, HS-19); `vorlage` beim Anlegen einer Sitzung
 
 Die Schleife läuft in einem eigenen Thread und nimmt nie `hub.lock` (K3). Auf dem gemeinsamen Ereignisstrom erscheinen nur
 `harness.sitzung` (angelegt, geändert, verschoben) und `harness.antwort` (läuft, fertig) – der Text läuft über den eigenen Strom."""
@@ -27,6 +28,7 @@ from . import freigabe
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
 from . import schleife
+from . import vorlagen as harness_vorlagen
 from .werkzeuge import SCHEMAS as WERKZEUG_SCHEMAS, Werkzeuge
 from .sitzung import SitzungFehler, Sitzungen, titel_aus
 from .strom import Stroeme, ZuVieleAntworten
@@ -38,7 +40,7 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})|(katalog|einstufen|werkzeuge))')
+                 r'|karten/(K-[0-9A-F]{8})|(katalog|einstufen|werkzeuge|vorlagen))')
 FORTSETZEN_REST = 'nicht ausgeführt: dieser Aufruf kam nach einem, der auf Freigabe wartete – ruf ihn bei Bedarf noch einmal auf.'
 
 
@@ -114,6 +116,8 @@ class HarnessApi:
             return 200, self.katalog()
         if fest == 'einstufen' and method == 'POST':
             return 200, self.einstufen(payload)
+        if fest == 'vorlagen' and method == 'GET':
+            return 200, {'vorlagen': harness_vorlagen.liste(self.hub.project_root)}
         if fest == 'werkzeuge' and method == 'GET':
             return 200, {'werkzeuge': [{'name': n, 'beschreibung': sch['function']['description']} for n, sch in WERKZEUG_SCHEMAS.items()]
                          + [{'name': n, 'beschreibung': 'liest den Zustand von SEDRA (frei)'} for n in LESEN]}
@@ -156,16 +160,19 @@ class HarnessApi:
         raise NichtGefunden('methode_unbekannt')
 
     def anlegen(self, payload):
+        vorlage = None
         if payload.get('vorlage') is not None:
-            raise ValueError('vorlage_ab_stufe_3')
+            vorlage = harness_vorlagen.laden(self.hub.project_root, payload.get('vorlage'))     # VorlageFehler ist ein ValueError → 400
         projekt = self._projekt(str(payload.get('projekt') or harness_projekte.STANDARD['id']))
         titel = titel_aus(payload.get('titel') or '')
         # Eine Mission je Sitzung (wie chat_reply): alle Züge hängen daran (Audit, Nutzung). Ohne hub.lock (K3).
         mission = self.hub.runtime.brain.create_mission('Harness-Sitzung ' + (titel or projekt['name']), None, 'S1')
         self._mission_stand(mission, 'closed', 'schliessen')
         kopf = self.sitzungen.anlegen(projekt['id'], titel, modell=(str(payload['modell'])[:200] if payload.get('modell') else None),
-                                      mission_id=mission['identity']['mission_id'])
-        self._audit('HARNESS_SITZUNG_ANGELEGT', {'sitzung_id': kopf['id'], 'projekt': projekt['id'], 'mission_id': kopf['mission_id']})
+                                      mission_id=mission['identity']['mission_id'], vorlage=vorlage['id'] if vorlage else None,
+                                      vorlage_hash=vorlage['hash'] if vorlage else None)
+        self._audit('HARNESS_SITZUNG_ANGELEGT', {'sitzung_id': kopf['id'], 'projekt': projekt['id'], 'mission_id': kopf['mission_id'],
+                                                 'vorlage': kopf.get('vorlage'), 'vorlage_hash': kopf.get('vorlage_hash')})
         self._melden('harness.sitzung', {'id': kopf['id'], 'was': 'angelegt', 'projekt': projekt['id'], 'titel': kopf['titel']})
         return kopf
 
@@ -232,9 +239,15 @@ class HarnessApi:
             self.sitzungen.titel_aendern(sid, text)
             self._melden('harness.sitzung', {'id': sid, 'was': 'geaendert', 'titel': titel_aus(text)})
         box, projekt = self._kiste(s)
-        messages = [{'role': 'system', 'content': schleife.system_prompt(projekt['name'] if projekt else None, box.names)},
+        vorlage = self._vorlage(s)
+        messages = [{'role': 'system', 'content': schleife.system_prompt(projekt['name'] if projekt else None, box.names, vorlage['system'] if vorlage else None)},
                     *verlauf, {'role': 'user', 'content': text}]
         return self._starten(sid, s, antwort, box, messages, info, modell)
+
+    def _vorlage(self, s):
+        """Die Vorlage der Sitzung (oder None). Ist sie inzwischen ungültig oder weg, scheitert die Nachricht mit Grund – nie ein stiller Rückfall."""
+        vid = s['kopf'].get('vorlage')
+        return harness_vorlagen.laden(self.hub.project_root, vid) if vid else None
 
     def _antwort_anlegen(self, sid):
         if self.stroeme.laufend_in(sid):
@@ -254,6 +267,11 @@ class HarnessApi:
         projekt = self._projekt(projekt_id)
         return Werkzeuge(projekt, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, mission_id=mission_id, regeln=regeln)
 
+    def _begrenzen(self, s, box):
+        """HS-19: eine Sitzung mit Vorlage bekommt nur die Werkzeuge der Vorlage."""
+        vorlage = self._vorlage(s)
+        return harness_vorlagen.Begrenzt(box, vorlage['werkzeuge']) if vorlage else box
+
     def _kiste(self, s):
         """Die Werkzeugkiste einer Antwort: Harness-Werkzeuge mit Freigabe (Stufe 2) und die lesenden Zustandswerkzeuge. Ist der Katalog
         kaputt, gibt es nur die lesenden Zustandswerkzeuge – nie Werkzeuge mit Wirkung ohne gültigen Katalog."""
@@ -264,10 +282,10 @@ class HarnessApi:
         if projekt is None or regeln is None:
             if fehler:
                 self._audit('HARNESS_KATALOG_FEHLT', {'fehler': fehler[:200]})
-            return chat, projekt
+            return self._begrenzen(s, chat), projekt
         w = Werkzeuge(projekt, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, mission_id=s['kopf'].get('mission_id'), regeln=regeln)
-        return freigabe.Kiste(w, regeln=regeln, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, karten=self.karten,
-                              sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id']), projekt
+        return self._begrenzen(s, freigabe.Kiste(w, regeln=regeln, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, karten=self.karten,
+                              sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'])), projekt
 
     def _starten(self, sid, s, antwort, box, messages, info, modell, bisher=()):
         guard = getattr(self.hub.runtime.model_router, 'content_guard', None)
@@ -275,12 +293,14 @@ class HarnessApi:
         live = guard is None or not MODE_SHARP.get(guard.mode, True)          # D-E2: im scharfen Modus kein Live-Text
         fenster = info.get('contextLength') if isinstance(info.get('contextLength'), int) else None
         mission_id = s['kopf'].get('mission_id')
+        vorlage = self._vorlage(s)
+        zuege = vorlage['max_zuege'] if vorlage else schleife.MAX_ZUEGE
 
         def lauf():
             try:
                 mission = self.hub.runtime.missions.load(mission_id)
                 schleife.laufen(self.execute, mission, box, messages, antwort, modell=modell, provider=PROVIDER, sitzungen=self.sitzungen,
-                                sitzung_id=sid, fenster=fenster, live_text=live, wirkung=getattr(box, 'wirkung', ()), bisher=bisher)
+                                sitzung_id=sid, fenster=fenster, live_text=live, wirkung=getattr(box, 'wirkung', ()), bisher=bisher, max_zuege=zuege)
             except Exception as exc:                  # nie still: der Strom endet mit Grund, die Sitzung bekommt eine Zeile
                 grund = f'{type(exc).__name__}: {exc}'[:300]
                 antwort.senden('fehler', {'grund': grund})

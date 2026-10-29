@@ -1,0 +1,11 @@
+harness_vorlage:
+  version: 1
+  id: vorarbeiter
+  name: Vorarbeiter
+  beschreibung: Leitet und prüft die Entwicklung; entscheidet Karten der Stufe „vorarbeiter“ anderer Sitzungen (ab Stufe 3 Vorarbeiter-Freigabe).
+  system: vorarbeiter.md
+  werkzeuge: [datei_lesen, dateien_auflisten, suchen, datei_schreiben, datei_aendern, befehl,
+              lauf_starten, lauf_stoppen, lauf_status, freigaben_offen, freigabe_entscheiden, aufgabe_vorschlagen, aufgabe_beenden]
+  rechte: {vorarbeiter_freigabe: true, aufgaben_vorschlagen: true}
+  modell: coder.llama_qwen35
+  max_zuege: 24

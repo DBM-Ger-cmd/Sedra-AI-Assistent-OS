@@ -57,12 +57,12 @@ class Sitzungen:
             os.fsync(datei.fileno())
 
     # ---- öffentlich
-    def anlegen(self, projekt, titel='', modell=None, mission_id=None, vorlage=None):
+    def anlegen(self, projekt, titel='', modell=None, mission_id=None, vorlage=None, vorlage_hash=None):
         self.ordner.mkdir(parents=True, exist_ok=True)
         for _ in range(20):
             sid = 'S-' + secrets.token_hex(4).upper()
             pfad = self._pfad(sid)
-            kopf = {'typ': 'kopf', 'version': 1, 'id': sid, 'titel': titel_aus(titel), 'projekt': str(projekt), 'vorlage': vorlage,
+            kopf = {'typ': 'kopf', 'version': 1, 'id': sid, 'titel': titel_aus(titel), 'projekt': str(projekt), 'vorlage': vorlage, 'vorlage_hash': vorlage_hash,
                     'modell': modell, 'mission_id': mission_id, 'angelegt': jetzt()}
             try:
                 self._schreiben(pfad, kopf, modus='x')        # 'x': eine schon vergebene ID wird nie überschrieben

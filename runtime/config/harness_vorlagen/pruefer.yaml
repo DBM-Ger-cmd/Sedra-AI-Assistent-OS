@@ -1,0 +1,10 @@
+harness_vorlage:
+  version: 1
+  id: pruefer
+  name: Prüfer
+  beschreibung: Prüft Diff und Tests gegen die Spec; liest nur und lässt Tests laufen. Anderes Modell als der Coder (WQ-2).
+  system: pruefer.md
+  werkzeuge: [datei_lesen, dateien_auflisten, suchen, befehl]
+  rechte: {}
+  modell: verifier.llama_gemma
+  max_zuege: 16
