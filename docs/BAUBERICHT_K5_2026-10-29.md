@@ -45,3 +45,25 @@ Nach Freigabe von 1 oder 2 wird `test_k5` und `test_k8` unter Last erneut mit ac
 
 - Längere Wartezeit im Test: würde nur verdecken, dass die Shell nicht startet.
 - Veränderung am Baum oder am Fokus-Code: der Fokus-Test ist allein grün, die Baumlogik ist nicht die Ursache.
+
+## Umsetzung (Freigabe: „Ja, Server-Fix“)
+
+- `src/guppi_runtime/uix_server.py` (`make_server`): der Server ist jetzt eine Unterklasse von `ThreadingHTTPServer` mit
+  `request_queue_size = 64` (vorher 5). Eine Zeile Änderung plus Kommentar; sonst nichts.
+- Cockpit-Code und Tests unverändert (die Diagnose-Zeilen im Test sind wieder entfernt).
+
+## Ergebnis unter Last
+
+- Acht parallele Prozesse von `test_uix_cockpit_baum`: vor dem Fix 2 von 16 Läufen mit Fehlschlag (`test_k5`, `test_k8`),
+  nach dem Fix 1 von 56 Läufen (`test_k5`, ohne Diagnose, weil die Diagnose danach entfernt war), sonst grün.
+  Die Ursache ist also stark gesenkt, aber nicht bewiesen null.
+- Gruppen `scheduler desk orchestra uix harness` (1235 Tests): `test_k5` grün. Rot bleiben:
+  - `test_uix_flows.Build24.test_paperclip_…` (bekannt rot).
+  - `test_uix_flows.Build24.test_cockpit_new_project_new_model_and_test_track_are_real`: allein grün, im Gesamtlauf rot, Grund
+    noch nicht gesehen (die Ausgabe von `run_tests` ist bei dieser Größe abgeschnitten).
+  - `test_uix_shell_start` (2 Tests): alte Shell-Liste, siehe oben. Eigener Punkt, nicht gelöst.
+
+## Offen
+
+- Den Gesamtlauf mit vollständiger Ausgabe wiederholen (`PYTHONIOENCODING=utf-8`), um `test_cockpit_new_project…` zu erklären.
+- `test_uix_shell_start` auf die aktuelle Shell-Liste anpassen (eigene Freigabe, Test-Scope).
