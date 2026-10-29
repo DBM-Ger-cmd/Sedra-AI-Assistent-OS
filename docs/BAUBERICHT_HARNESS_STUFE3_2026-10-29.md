@@ -97,3 +97,28 @@ Befunde des Pilots:
 4. **Qwen3.6 als Vorarbeiter-Modell** ließ sich nicht laden (`hardware_pressure`: das Rezept verlangt 18 GB freien RAM, frei waren 14 GB); der Bau selbst lief mit 32k Kontext trotzdem.
 5. **Das Review mit Gemma** braucht Spec und Code in der Nachricht, weil der Kandidat außerhalb des Projektordners liegt und die Prüfer-Sitzung ihn nicht lesen kann.
 6. Aufräumen steht aus: im Worktree liegen noch die Verbindungen `engines` und `workspace` sowie die Kopie von `runtime/config/local_paths.yaml` (alles gitignoriert), bis die Abnahme mit Modell (P-14) durch ist.
+
+## Nachtrag Cloud-Sitzung (29.10.2026, Branch `harness/stufe-3-cloud`)
+
+Fortsetzung in der Cloud (Linux-Container, **keine Modelle, kein `local_paths.yaml`, kein `engines/`, kein `.venv`**). Ausgangspunkt `f93cd35` (`harness/stufe-3`).
+
+**Befund zu N11 Rest:** Nach Teil 1 fehlt nichts. `taskleiste.js` (Laufknöpfe mit Fortschritt oder Zeit, Endsymbol, einmaliges Blinken, Markierung bis Klick, `sedra.harness.gesehen` nur mit IDs, Zelle „Freigaben n · beim Vorarbeiter m“, klickbar), `lauf.js`, `reiter.js` (Reiterart `lauf`) und `bus.js` sind vorhanden und durch den Browser-Durchlauf C belegt. Es wurde kein Code für N11 geändert.
+
+**P-16:** `uix/ui/bus.js` (4 Zeilen plus Test in `test_uix_harness_shell.py`) steht bereits auf `harness/stufe-3` (Commit vom 12:06, Eintrag „Captain-Ja P-16“ im Logbuch und im Bericht oben). Die Cloud-Sitzung hat `bus.js` **nicht angefasst**. Die Übergabe nannte P-16 als nicht freigegeben: Der Widerspruch ist dem Captain gemeldet; bestätigt er das frühere Ja nicht, müssen die 4 Zeilen vor dem Merge raus.
+
+**Änderung:** nur der Kommentar zur Gruppe `harness` in `benchmarks/run_tests.py` („Stufen 1 bis 3“). Das Muster `test_harness_*`, `test_uix_harness_*` nimmt alle 27 Dateien der Stufe auf, auch die neuen.
+
+| Prüfung (Cloud, Linux) | Ergebnis |
+|---|---|
+| Gruppe `harness` | 27 Dateien, 233 Tests, 0 rot, 5 übersprungen (4 in `test_harness_herkunft.EchtTests`: Auflösung der Gegenstelle ist nur für Windows gebaut; 1 Browser-Durchlauf ohne `SEDRA_BROWSER=1`) |
+| `scheduler desk orchestra uix` | 76 Dateien, 1109 Tests, 0 rot, 12 übersprungen; Browser-Bahn (5 Dateien) ausgelassen |
+| Browser-Durchlauf mit Modell-Attrappe (`SEDRA_BROWSER=1 test_uix_harness_browser`, Playwright 1.63.0, Chromium aus `/opt/pw-browsers`) | grün, 1 Test, 65 s |
+| `uix_check --shell harness` | 9 von 9 Prüfungen ok, 3 nicht geprüft (keine Objekte, kein Profil), Konsole ok; nur ein Lauf in der Cloud-Größe, die Größen 1024×700 und 1400×860 des Berichts oben wurden nicht einzeln wiederholt |
+
+**Nicht gelaufen / nicht geprüft:**
+- Die Herkunftsprüfung (N5) unter Linux: die 4 `EchtTests` sind Windows-only und übersprungen; die Auflösung der Gegenstelle ist hier nie gelaufen.
+- `spec_check`, `devvm_build`, `harness_abnahme` mit echten Prozessen und Pfaden (`../workspace/GUPPI_OS`), weil `engines/`, `local_paths.yaml`, Gewichte fehlen.
+- Alle Modellläufe: Abnahme mit Qwen3.6 (P-14), Review mit Gemma (P-13), weitere SEDRA-Bauten (P-11, P-12). Die Übernahme (G4) bleibt damit nicht entscheidbar.
+- Die Abweichung zur Zahl oben (223 Tests): jetzt 233 – der Unterschied kommt aus dem Zählen unter Linux und der Bahn mit Browser-Datei; die Ursache wurde nicht einzeln aufgeschlüsselt.
+- Der unerklärte Einzelfehler aus Abweichung 10 und der Cockpit-Test `test_uix_stufe6` traten in diesem Lauf nicht auf; das beweist nichts über ihre Ursache.
+- Das Aufräumen im Worktree des Captains (Abweichung/Befund 6) liegt lokal und wurde in der Cloud nicht berührt.
