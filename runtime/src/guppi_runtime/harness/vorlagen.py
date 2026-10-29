@@ -62,12 +62,18 @@ def pruefen(doc, system_text, bekannt=None):
     zuege = v.get('max_zuege', 24)
     if not isinstance(zuege, int) or isinstance(zuege, bool) or not 4 <= zuege <= 40:
         raise VorlageFehler(f'{vid}_max_zuege_ungueltig: 4 bis 40')
+    frist = v.get('frist_min', 15)
+    if not isinstance(frist, int) or isinstance(frist, bool) or not 5 <= frist <= 60:
+        raise VorlageFehler(f'{vid}_frist_min_ungueltig: 5 bis 60')
+    bremse = v.get('bremse_pro_stunde', 30)
+    if not isinstance(bremse, int) or isinstance(bremse, bool) or not 1 <= bremse <= 100:
+        raise VorlageFehler(f'{vid}_bremse_pro_stunde_ungueltig: 1 bis 100')
     modell = v.get('modell')
     if modell is not None and not isinstance(modell, str):
         raise VorlageFehler(f'{vid}_modell_ungueltig')
     return {'id': vid, 'name': v['name'].strip(), 'beschreibung': str(v.get('beschreibung') or '').strip(), 'system': system_text.strip(),
             'werkzeuge': list(dict.fromkeys(werkzeuge)), 'rechte': {k: bool(rechte.get(k, False)) for k in RECHTE},
-            'modell': modell, 'max_zuege': zuege}
+            'modell': modell, 'max_zuege': zuege, 'frist_min': frist, 'bremse_pro_stunde': bremse}
 
 
 def _lesen(yaml_pfad: Path):

@@ -272,7 +272,7 @@ class UIXHub:
             result = self._answer_scheduler(decision, way)
             self.events.publish('decision.answered', {'id': did, 'kind': decision['kind'], 'way': way})
             return {'status': 'answered', 'id': did, 'way': way, 'result': result}
-        if decision['kind'] == 'harness_freigabe':          # Harness-Shell Stufe 2 (HS-22): dieselbe Tür wie die Karte im Verlauf
+        if decision['kind'] in ('harness_freigabe', 'harness_aufgabe'):          # Harness-Shell Stufe 2/3 (HS-22): dieselbe Tür wie die Karte im Verlauf
             result = self.harness.beantworten(did.removeprefix('harness:'), way, payload.get('note'), ueber='posteingang')
             return {'status': 'answered', 'id': did, 'way': way, 'result': result}
         if decision['kind'] == 'content':

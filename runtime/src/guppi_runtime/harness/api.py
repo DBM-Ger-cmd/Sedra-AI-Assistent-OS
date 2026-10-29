@@ -29,6 +29,7 @@ from . import freigabe
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
 from . import schleife
+from . import vorarbeiter as harness_vorarbeiter
 from . import vorlagen as harness_vorlagen
 from .werkzeuge import SCHEMAS as WERKZEUG_SCHEMAS, Werkzeuge
 from .sitzung import SitzungFehler, Sitzungen, titel_aus
@@ -41,7 +42,7 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})|(katalog|einstufen|werkzeuge|vorlagen)|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter)|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?)')
 FORTSETZEN_REST = 'nicht ausgeführt: dieser Aufruf kam nach einem, der auf Freigabe wartete – ruf ihn bei Bedarf noch einmal auf.'
 
 
@@ -58,6 +59,7 @@ class HarnessApi:
         self.execute = lambda mission, request: hub.runtime.control.execute(mission, request)     # in Tests ersetzbar
         self.threads = {}
         self.karten = freigabe.Karten(hub.project_root / 'runtime_data' / 'harness' / 'karten')
+        self.vorarbeiter = harness_vorarbeiter.Vorarbeiter(hub.project_root / 'runtime_data' / 'harness' / 'vorarbeiter.json')
         self.aufgaben = harness_aufgabe.Aufgaben(hub.project_root / 'runtime_data' / 'harness' / 'aufgaben', audit=self._audit_roh, melden=self._melden)
 
     # ---- Hilfen
@@ -109,20 +111,25 @@ class HarnessApi:
         m = WEG.fullmatch(path)
         if not m:
             raise NichtGefunden('weg_unbekannt')
-        projekte, sitzungen, sid, nachricht, aid, aktion, kid, fest, aufgaben, tid, tak = m.groups()
+        projekte, sitzungen, sid, nachricht, aid, aktion, kid, kak, fest, aufgaben, tid, tak = m.groups()
         payload = payload or {}
         q = parse_qs(query or '')
         if kid:
-            if method == 'GET':
+            if method == 'GET' and not kak:
                 return 200, self.karte(kid)
+            if method == 'POST' and kak:
+                return 200, self.karte_zuruecknehmen(kid, payload.get('grund'))
             if method == 'POST':
-                return 200, self.beantworten(kid, str(payload.get('weg') or ''), payload.get('notiz'), ueber='karte')
+                # `von` aus der Nutzlast wird ignoriert (S1): über HTTP antwortet immer der Captain
+                return 200, self.beantworten(kid, str(payload.get('weg') or ''), payload.get('notiz'), ueber='karte', aenderungen=payload.get('aenderungen'))
         if aufgaben:
             return self.aufgaben_weg(method, tid, tak, payload)
         if fest == 'katalog' and method == 'GET':
             return 200, self.katalog()
         if fest == 'einstufen' and method == 'POST':
             return 200, self.einstufen(payload)
+        if fest == 'vorarbeiter':
+            return self.vorarbeiter_weg(method, q, payload)
         if fest == 'vorlagen' and method == 'GET':
             return 200, {'vorlagen': harness_vorlagen.liste(self.hub.project_root)}
         if fest == 'werkzeuge' and method == 'GET':
@@ -235,7 +242,7 @@ class HarnessApi:
         modell = info.get('identifier') or info.get('modelKey')
         if s['modell'] and any(s['modell'] in (x.get('identifier'), x.get('modelKey')) for x in loaded):
             modell = s['modell']
-        if any(k.get('sitzung_id') == sid for k in self.karten.alle('offen')):
+        if any(k.get('sitzung_id') == sid and k.get('art', 'werkzeug') == 'werkzeug' for k in self.karten.alle('offen')):
             raise ValueError('karte_offen')
         verlauf = [{'role': 'user' if e['typ'] == 'captain' else 'assistant', 'content': e.get('text') or ''}
                    for e in s['eintraege'] if e.get('typ') in ('captain', 'modell') and (e.get('text') or '').strip()][-VERLAUF_MAX:]
@@ -274,6 +281,13 @@ class HarnessApi:
         projekt = self._projekt(projekt_id)
         return Werkzeuge(projekt, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, mission_id=mission_id, regeln=regeln)
 
+    def _vorarbeiter_werkzeuge(self, s):
+        """Die Werkzeuge des Vorarbeiters – nur für Sitzungen, deren Vorlage das Recht hat; der Server prüft sie bei jedem Aufruf noch einmal (S1)."""
+        vorlage = self._vorlage(s)
+        if not vorlage or not any(vorlage['rechte'].values()):
+            return None
+        return harness_vorarbeiter.Werkzeuge(self, vorlage['rechte'], frist_min=vorlage['frist_min'], bremse=vorlage['bremse_pro_stunde'])
+
     def _begrenzen(self, s, box):
         """HS-19: eine Sitzung mit Vorlage bekommt nur die Werkzeuge der Vorlage."""
         vorlage = self._vorlage(s)
@@ -292,7 +306,8 @@ class HarnessApi:
             return self._begrenzen(s, chat), projekt
         w = Werkzeuge(projekt, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, mission_id=s['kopf'].get('mission_id'), regeln=regeln)
         return self._begrenzen(s, freigabe.Kiste(w, regeln=regeln, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, karten=self.karten,
-                              sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'], aufgaben=self.aufgaben)), projekt
+                              sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'], aufgaben=self.aufgaben,
+                              vorarbeiter=self.vorarbeiter, extra=self._vorarbeiter_werkzeuge(s))), projekt
 
     def _starten(self, sid, s, antwort, box, messages, info, modell, bisher=()):
         guard = getattr(self.hub.runtime.model_router, 'content_guard', None)
@@ -360,8 +375,77 @@ class HarnessApi:
         a, warnungen = self.aufgaben.anlegen(payload, von='captain')          # `von` setzt der Server, nie die Nutzlast
         return dict(harness_aufgabe.oeffentlich(a), warnungen=warnungen)
 
+    # ---- Stufe 3: Vorarbeiter (N4)
+    def vorarbeiter_weg(self, method, q, payload):
+        if method == 'GET':
+            return 200, {'vorarbeiter': self.vorarbeiter.alle()}
+        if method == 'POST':
+            return 200, self.ernennen(payload)
+        if method == 'DELETE':
+            projekt = (q.get('projekt') or [payload.get('projekt')])[0]
+            alt = self.vorarbeiter.entziehen(str(projekt or ''))
+            self._audit('HARNESS_VORARBEITER_ENTZOGEN', {'projekt': projekt, 'alt': alt})
+            self._melden('harness.vorarbeiter', {'projekt': projekt, 'sitzung_id': None})
+            return 200, {'projekt': projekt, 'entzogen': alt is not None}
+        raise NichtGefunden('methode_unbekannt')
+
+    def ernennen(self, payload):
+        """Nur der Captain (HTTP) ernennt; die Sitzung muss eine Vorlage mit dem Recht `vorarbeiter_freigabe` haben."""
+        projekt, sid = str(payload.get('projekt') or ''), str(payload.get('sitzung_id') or '')
+        self._projekt(projekt)
+        s = self._sitzung(sid)
+        if s['kopf'].get('projekt') != projekt:
+            raise ValueError('sitzung_gehoert_zu_anderem_projekt')
+        vorlage = self._vorlage(s)
+        if not vorlage or not vorlage['rechte'].get('vorarbeiter_freigabe'):
+            raise ValueError('kein_vorarbeiter_recht: die Vorlage der Sitzung hat das Recht nicht')
+        v = self.vorarbeiter.ernennen(projekt, sid, von='captain')
+        self._audit('HARNESS_VORARBEITER_ERNANNT', {'projekt': projekt, 'sitzung_id': sid, 'vorlage_hash': s['kopf'].get('vorlage_hash')})
+        self._melden('harness.vorarbeiter', {'projekt': projekt, 'sitzung_id': sid})
+        return dict(v, projekt=projekt)
+
+    def aufgabe_vorschlagen(self, sitzung_id, doc):
+        """Der Vorarbeiter schlägt eine Aufgabe vor: streng geprüft (S4, S9), dann eine Karte `art: aufgabe` an den Captain. Angelegt wird sie erst auf seine Antwort."""
+        projekt = self.vorarbeiter.projekt_von(sitzung_id)
+        try:
+            harness_aufgabe.pruefen_neu(doc, vorschlag=True, verbotene_sitzungen=(sitzung_id,))
+        except harness_aufgabe.AufgabeFehler as exc:
+            raise ValueError(str(exc)) from exc
+        s = self._sitzung(sitzung_id)
+        vorschau = '\n'.join([f"Titel: {doc['titel']}", f"Sitzungen: {', '.join(doc['sitzungen'])}", 'Erlaubt:'] + [f"  - {e['werkzeug']}: {e['muster']}" for e in doc['erlaubt']]
+                              + [f"Modelle: {', '.join(doc.get('modelle') or []) or '–'}", f"Ende: {doc['ende']}"])
+        karte = self.karten.anlegen({'sitzung_id': sitzung_id, 'vorschlag_von': sitzung_id, 'antwort_id': None, 'werkzeug': 'aufgabe_vorschlagen', 'args': doc,
+                                     'ziel': doc['titel'], 'an': 'captain', 'art': 'aufgabe', 'stufe': 'captain', 'regel': 'aufgabe', 'vorbehalt': False,
+                                     'begruendung': 'Vorschlag einer Aufgaben-Freigabe – nur der Captain gibt sie frei (S4)', 'vorschau': vorschau, 'vorschau_hash': None,
+                                     'gate': None, 'mission_id': s['kopf'].get('mission_id'), 'projekt': projekt, 'warnung': None})
+        self._audit('HARNESS_AUFGABE_VORGESCHLAGEN', {'karte_id': karte['karte_id'], 'von': f'vorarbeiter:{sitzung_id}', 'titel': doc['titel']})
+        self._melden('decision.pending', {'id': 'harness:' + karte['karte_id'], 'kind': 'harness_aufgabe', 'title': 'Harness: Aufgabe vorgeschlagen', 'mission_id': s['kopf'].get('mission_id')})
+        return karte
+
+    def karte_zuruecknehmen(self, kid, grund=None):
+        """Der Captain nimmt eine Entscheidung des Vorarbeiters zurück (HS-29): Marker, Audit, Hinweis in beiden Sitzungen. Geschriebenes bleibt (git diff)."""
+        try:
+            karte = self.karten.laden(kid)
+        except KeyError as exc:
+            raise NichtGefunden('karte_unbekannt') from exc
+        if karte.get('status') != 'beantwortet' or not str(karte.get('von') or '').startswith('vorarbeiter:') or karte.get('zurueckgenommen'):
+            raise ValueError('keine_vorarbeiter_entscheidung')
+        vorarbeiter_sid = str(karte['von']).split(':', 1)[1]
+        karte['zurueckgenommen'] = {'zeit': freigabe.jetzt(), 'grund': str(grund or '')[:300] or 'vom Captain zurückgenommen'}
+        self.karten.speichern(karte)
+        self._audit('HARNESS_KARTE_ZURUECKGENOMMEN', {'karte_id': kid, 'von': karte['von'], 'grund': karte['zurueckgenommen']['grund']})
+        for sid in dict.fromkeys([karte['sitzung_id'], vorarbeiter_sid]):
+            try:
+                self.sitzungen.anhaengen(sid, {'typ': 'karte', 'karte_id': kid, 'entscheidung': 'zurueckgenommen', 'von': 'captain', 'ueber': 'karte',
+                                               'notiz': karte['zurueckgenommen']['grund'], 'zustand': 'zurueckgenommen'})
+            except SitzungFehler:
+                pass
+        self._melden('harness.sitzung', {'id': karte['sitzung_id'], 'was': 'geaendert'})
+        return freigabe.oeffentlich(karte)
+
     # ---- Stufe 2: Karten, Katalog, Einstufung
     def karte(self, kid):
+        self.karten.frist_pruefen(self._frist_min())
         try:
             return freigabe.oeffentlich(self.karten.laden(kid))
         except KeyError as exc:
@@ -384,10 +468,22 @@ class HarnessApi:
         return freigabe.einstufung(regeln, werkzeug, args, {'ziel': ziel, 'vorhanden': bool(payload.get('vorhanden'))})
 
     def entscheidungen(self):
-        """Die offenen Karten für den Posteingang (desk/decisions, Quelle `harness`)."""
+        """Die offenen Karten für den Posteingang (desk/decisions, Quelle `harness`) – auch die beim Vorarbeiter; der Captain sieht alles."""
+        self.karten.frist_pruefen(self._frist_min())
         return [freigabe.oeffentlich(k) for k in self.karten.alle('offen')]
 
-    def beantworten(self, kid, weg, notiz=None, ueber='karte'):
+    def _frist_min(self):
+        for pid, v in self.vorarbeiter.alle().items():
+            try:
+                return self._vorlage(self._sitzung(v['sitzung_id']))['frist_min']
+            except Exception:
+                pass
+        return harness_vorarbeiter.FRIST_MIN
+
+    def audit_ereignis(self, event, payload):
+        self._audit(event, payload)
+
+    def beantworten(self, kid, weg, notiz=None, ueber='karte', von='captain', aenderungen=None):
         """Die eine Tür für Karte und Posteingang (HS-22): Freigabe entscheiden, Ergebnis in die Sitzung, die Antwort fortsetzen."""
         try:
             karte = self.karten.laden(kid)
@@ -395,17 +491,17 @@ class HarnessApi:
             raise NichtGefunden('karte_unbekannt') from exc
         sid = karte['sitzung_id']
         s = self._sitzung(sid)
-        if self.stroeme.laufend_in(sid):
+        if karte.get('art', 'werkzeug') == 'werkzeug' and self.stroeme.laufend_in(sid):
             raise ValueError('antwort_laeuft')
         regeln, _fehler = self._regeln()
-        r = freigabe.beantworten(self.karten, kid, weg, notiz=notiz, von='captain', ueber=ueber, guard=self.hub.runtime.guard,
-                                 audit=self.hub.runtime.audit,
+        r = freigabe.beantworten(self.karten, kid, weg, notiz=notiz, von=von, ueber=ueber, guard=self.hub.runtime.guard,
+                                 audit=self.hub.runtime.audit, aufgaben=self.aufgaben, aenderungen=aenderungen,
                                  werkzeuge_fuer=lambda k: self._werkzeuge(k['projekt'], k['mission_id'], regeln or []))
         karte = r['karte']
         satz = {'typ': 'werkzeug', 'antwort_id': karte.get('antwort_id'), 'name': karte['werkzeug'], 'args': karte['args'], 'stufe': karte['stufe'],
                 'regel': karte['regel'], 'status': r['status'], 'dauer_s': None, 'ergebnis': str(r['ergebnis'])[:schleife.ERGEBNIS_MAX],
                 'wirkung': bool(r['wirkung']), 'karte_id': kid}
-        self.sitzungen.anhaengen(sid, {'typ': 'karte', 'karte_id': kid, 'entscheidung': weg, 'von': 'captain', 'ueber': ueber,
+        self.sitzungen.anhaengen(sid, {'typ': 'karte', 'karte_id': kid, 'entscheidung': weg, 'von': von, 'ueber': ueber,
                                        'notiz': notiz, 'zustand': 'beantwortet'})
         self.sitzungen.anhaengen(sid, satz)
         self._melden('decision.answered', {'id': 'harness:' + kid, 'kind': 'harness_freigabe', 'way': weg})

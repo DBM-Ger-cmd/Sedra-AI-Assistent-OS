@@ -213,7 +213,8 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
                                                  'stufe': stufe, 'regel': regel, 'ergebnis': ergebnis})
                 antwort.senden('karte', {'karte_id': karte['karte_id'], 'werkzeug': name, 'ziel': karte.get('ziel'), 'stufe': stufe,
                                          'regel': regel, 'begruendung': karte.get('begruendung'), 'vorschau': karte.get('vorschau'),
-                                         'vorschau_kurz': kurz(karte.get('vorschau') or '', 300)})
+                                         'vorschau_kurz': kurz(karte.get('vorschau') or '', 300), 'an': karte.get('an'), 'art': karte.get('art'),
+                                         'vorschau_hash': karte.get('vorschau_hash')})
                 if hasattr(box, 'festhalten'):
                     box.festhalten(karte['karte_id'], {'messages': list(messages), 'cid': cid, 'name': name, 'args': args,
                                                        'rest': [[c, n, a] for c, n, a in calls[n_call + 1:]], 'zug': zug,
