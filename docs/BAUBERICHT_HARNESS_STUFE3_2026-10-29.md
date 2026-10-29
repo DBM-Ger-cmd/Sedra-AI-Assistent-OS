@@ -104,7 +104,7 @@ Fortsetzung in der Cloud (Linux-Container, **keine Modelle, kein `local_paths.ya
 
 **Befund zu N11 Rest:** Nach Teil 1 fehlt nichts. `taskleiste.js` (Laufknöpfe mit Fortschritt oder Zeit, Endsymbol, einmaliges Blinken, Markierung bis Klick, `sedra.harness.gesehen` nur mit IDs, Zelle „Freigaben n · beim Vorarbeiter m“, klickbar), `lauf.js`, `reiter.js` (Reiterart `lauf`) und `bus.js` sind vorhanden und durch den Browser-Durchlauf C belegt. Es wurde kein Code für N11 geändert.
 
-**P-16:** `uix/ui/bus.js` (4 Zeilen plus Test in `test_uix_harness_shell.py`) steht bereits auf `harness/stufe-3` (Commit vom 12:06, Eintrag „Captain-Ja P-16“ im Logbuch und im Bericht oben). Die Cloud-Sitzung hat `bus.js` **nicht angefasst**. Die Übergabe nannte P-16 als nicht freigegeben: Der Widerspruch ist dem Captain gemeldet; bestätigt er das frühere Ja nicht, müssen die 4 Zeilen vor dem Merge raus.
+**P-16:** `uix/ui/bus.js` (4 Zeilen plus Test in `test_uix_harness_shell.py`) steht bereits auf `harness/stufe-3` (Commit vom 12:06, Eintrag „Captain-Ja P-16“ im Logbuch und im Bericht oben). Die Cloud-Sitzung hat `bus.js` **nicht angefasst**. Die Übergabe nannte P-16 als nicht freigegeben; **der Captain hat das frühere Ja in der Cloud-Sitzung bestätigt (29.10.2026)**. P-16 ist damit erledigt.
 
 **Änderung:** nur der Kommentar zur Gruppe `harness` in `benchmarks/run_tests.py` („Stufen 1 bis 3“). Das Muster `test_harness_*`, `test_uix_harness_*` nimmt alle 27 Dateien der Stufe auf, auch die neuen.
 
