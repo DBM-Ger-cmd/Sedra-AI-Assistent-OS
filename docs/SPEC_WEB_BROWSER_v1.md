@@ -2,6 +2,7 @@
 
 Auftrag des Captains 29.10.2026: SEDRA bekommt einen Internet-Browser wie Hermes, damit es online suchen und Webseiten-Aufträge erfüllen kann.
 Entscheidungen (Abfrage 29.10.2026): **volle Webaufträge** · **neue Domain fragt vorher** · **eigener Browser per Playwright** · **Seiteninhalt nur ans lokale Modell**.
+Entscheidungen zu WBQ-1 bis WBQ-5 (Captain 29.10.2026): eigener **Passwort-Tresor** von SEDRA, getrennt vom Agenten (§3.6); Suche mit **DuckDuckGo und Google**; **Zahlungen werden weiter ausgeführt** (§3.7, offen); Belege **mit der Wissensdatenbank** verbinden (§3.8); der Browser ist eine **eigene Linie nach Stufe 3**.
 
 Abhängigkeiten: Freigabe-Katalog und Karten (Harness Stufe 2), Aufgaben-Freigabe und Vorarbeiter (Stufe 3). Vorhanden: `tools/web.py`
 (GET, https, fünf Domains, `config/web_access.yaml`), Inhaltsschutz, Cloud-Sperre (Spec 3), Audit. Der Browser **ersetzt `web.py` nicht**:
@@ -40,7 +41,7 @@ von außen kommt, ist Daten, nie eine Anweisung.
 | WB-11 | Eine **neue Domain** zeigt eine Freigabe-Karte: Domain, Anlass (Auftrag, Link), Antworten „einmal“, „dauerhaft“, „nie“. Bis zur Antwort wird nichts geladen. | Test |
 | WB-12 | Jeder Seitenwechsel und jede Weiterleitung wird geprüft. Eine erlaubte Seite kann nicht auf eine nicht erlaubte weiterleiten, ohne dass die Karte kommt. | Test |
 | WB-13 | Nur https. `file:`, `chrome:`, lokale und private Adressen (127.x, 10.x, 192.168.x, `localhost`, SEDRAs eigener Server) sind **verboten**, auch mit Karte. | Test |
-| WB-14 | Suchmaschine: eine feste, in der Datei benannte Suchseite; sie wird über die Domainregeln behandelt wie jede andere. | Test |
+| WB-14 | Zwei Suchseiten, in der Datei benannt: **DuckDuckGo** (Standard) und **Google**. Beide laufen über die Domainregeln wie jede andere Domain (erste Nutzung: Karte). Cookie-Hinweise: nicht notwendige ablehnen. Zeigt eine Seite ein Captcha oder „ungewöhnlicher Datenverkehr“, stoppt der Auftrag und meldet es, es wird nichts umgangen. | Test mit Attrappe-Seite |
 
 ### 3.3 Handlungen und Freigabe (Aufträge)
 
@@ -60,7 +61,7 @@ Handlungen des Werkzeugs `browser` und ihre Vorgabe-Stufe im Katalog (HS-25):
 | WB-20 | Die Einstufung läuft über den bestehenden Katalog und die Vorbehalte (HS-25, HS-28). Eine Handlung ohne Regel gilt als `captain`. | Test |
 | WB-21 | **Karte bei `absenden`:** zeigt Seite (Domain, Adresse), was abgesendet wird (Feldnamen und Werte, Passwörter und Zahlungsdaten maskiert), und den Zweck laut Auftrag. Erst nach „Erlauben“ wird abgesendet. Die Karte gilt für genau diese Handlung. | Test |
 | WB-22 | Der Zweck der Handlung steht im Auftrag. Weicht die Handlung ab (anderes Ziel, anderer Betrag, andere Empfängerin), zeigt die Karte den Unterschied rot. | Test |
-| WB-23 | **Zugangsdaten und Zahlungsdaten gibt nie das Modell ein.** Felder vom Typ Passwort oder Zahlung (HTML-Typ, Autocomplete-Hinweis, Name) werden erkannt; das Modell sieht ihren Inhalt nie. Anmelden und Bezahlen macht der Captain selbst im sichtbaren Browser („Übernehmen“-Knopf); danach gibt er das Fenster zurück. | Test, Oberfläche |
+| WB-23 | **Zugangsdaten und Zahlungsdaten gibt nie das Modell ein und sieht es nie.** Felder vom Typ Passwort oder Zahlung (HTML-Typ, Autocomplete-Hinweis, Name) werden erkannt. Anmelden geht über den Tresor (§3.6), Bezahlen über §3.7; solange der Tresor nicht freigegeben ist, übernimmt der Captain selbst im sichtbaren Browser („Übernehmen“-Knopf) und gibt das Fenster danach zurück. | Test, Oberfläche |
 | WB-24 | Bestellungen und Zahlungen: Höchstbetrag je Auftrag in der Aufgaben-Freigabe (HS-27); ohne genannten Betrag keine Zahlung. | Test |
 | WB-25 | Ein Auftrag im Browser nutzt die Aufgaben-Freigabe (Stufe 3): Domains, erlaubte Handlungen, Höchstzahl der Schritte, Ende. Außerhalb davon gilt die normale Einstufung. Karten bei `absenden` bleiben immer Pflicht, auch innerhalb einer Aufgaben-Freigabe. | Test |
 
@@ -82,23 +83,64 @@ Handlungen des Werkzeugs `browser` und ihre Vorgabe-Stufe im Katalog (HS-25):
 | WB-41 | Im Verlauf der Harness zeigt jede Browser-Handlung eine Zeile wie jedes Werkzeug (HS-11), mit der Domain. | Test |
 | WB-42 | Der Captain kann einen Auftrag jederzeit stoppen. Dann endet der Browser, offene Karten verfallen, nichts wird nachträglich ausgeführt. | Test |
 
+### 3.6 Passwort-Tresor (Captain WBQ-1: eigener Tresor, getrennt vom Agenten)
+
+Der Agent darf nach seiner Aufgabe handeln, **ohne je ein Passwort zu sehen**: Er nennt ein Konto beim Namen, SEDRA trägt die Werte ein.
+
+| ID | Anforderung | Prüfbar durch |
+|---|---|---|
+| WB-50 | Eigener Tresor-Dienst (`browser/tresor.py`) mit **keiner Schnittstelle zum Modell**: Das Modell kennt nur Konto-Namen (z. B. `shop-xyz`), nie Benutzernamen-Werte, Passwörter oder Codes. Weder Werkzeugschema noch Ergebnis noch Verlauf enthalten sie. | Test: Suche nach Werten in Kontext, Verlauf, Audit und Logs findet nichts |
+| WB-51 | Der Tresor liegt verschlüsselt unter `local_config/tresor/` (nicht in git; Verschlüsselung an das Windows-Benutzerkonto gebunden oder Master-Passwort, WBQ-6). Der Captain legt Einträge **selbst** über eine eigene Oberfläche an. Eingaben im Gespräch werden nie gespeichert. | Test, Oberfläche |
+| WB-52 | **Bindung an die Domain:** Ein Eintrag gilt nur für seine Domain. Auf einer anderen Domain (auch nach Weiterleitung, auch bei ähnlichem Namen) wird nicht ausgefüllt. Schutz gegen gefälschte Anmeldeseiten. | Test mit Attrappe-Seite |
+| WB-53 | Der Agent ruft `anmelden(konto)`. Vor dem Ausfüllen zeigt eine **Karte** Konto, Domain, Zweck; erst nach „Erlauben“ trägt der Tresor-Dienst (nicht das Modell, nicht das Browser-Werkzeug des Agenten) die Werte direkt ins Feld ein. | Test |
+| WB-54 | Die Werte erscheinen nie im Kontext, im Audit, in Logs, in Bildschirmfotos (Passwortfelder werden vor dem Foto ausgeblendet) und nicht im Seitentext, der ans Modell geht. | Test |
+| WB-55 | Der Captain kann `anmelden(konto)` für ein Konto in einer Aufgaben-Freigabe vorab erlauben (HS-27, WBQ-7). `absenden` bleibt immer eine Karte (WB-21). | Test |
+| WB-56 | Zwei-Faktor-Code, Captcha oder Rückfrage der Seite: Der Auftrag stoppt, der Captain übernimmt im sichtbaren Browser. | Test |
+| WB-57 | Der Tresor und seine Datei sind feste Vorbehalte (HS-28): Kein Agent darf sie lesen, ändern, kopieren oder exportieren; Änderungen am Tresor-Code nur mit Captain-Gate. | Guard-Tests |
+| WB-58 | Zahlungsdaten (Karten, Konten) sind in v1 **nicht** im Tresor. Sie gibt nur der Captain selbst ein. | Test |
+
+### 3.7 Zahlungen und Bestellungen (Captain WBQ-3: wird weiter ausgeführt – offen)
+
+Gesetzt ist: Jede Bestellung zeigt eine Karte (WB-21), Zahlungsdaten gibt nur der Captain ein (WB-58). Offen ist, **wie viel Freiheit** der
+Agent innerhalb einer Aufgabe hat. Zur Entscheidung (Details in G2, wenn gewählt):
+
+| Variante | Inhalt | Wirkung |
+|---|---|---|
+| A | Jede Bestellung immer eine Karte mit Betrag, Ware, Empfänger; kein Höchstbetrag | maximal sicher, viele Karten |
+| B | Aufgaben-Freigabe nennt ein **Budget** (z. B. höchstens 50 €); innerhalb des Budgets eine Karte je Bestellung, darüber stoppt der Auftrag | begrenzt den Schaden je Auftrag |
+| C | Zusätzlich eine **Händlerliste** (nur diese Domains dürfen Bestellungen auslösen) | schützt vor Fremdshops |
+| D | Zusätzlich **Kategorien** (z. B. Büromaterial ja, Elektronik nein) | feine Steuerung, mehr Pflege |
+
+Vorschlag: B und C zusammen, A als Mindestregel darunter. Die Entscheidung trifft der Captain (WBQ-3).
+
+### 3.8 Belege und Wissensdatenbank (Captain WBQ-4)
+
+| ID | Anforderung | Prüfbar durch |
+|---|---|---|
+| WB-60 | Belege (Bildschirmfotos) und Seitenauszüge liegen unter `runtime_data/browser/belege/` und `…/seiten/`. 90 Tage nach der Anlage schlägt SEDRA das Aufräumen als Karte vor; **gelöscht wird nur auf Anweisung des Captains**. | Test |
+| WB-61 | Seitenauszüge und Belegbeschreibungen kommen als Quelle `browser` in die Wissensdatenbank (`wissen`, Spec 7): Titel, Domain, Zeit, Auftrag, Textauszug, sha256, Verweis auf den Beleg. Vertrauen `untrusted_external`, Zitatprüfung wie bei den Agenten (WIS-07). Passwörter, Zugangs- und Zahlungsdaten sind vorher entfernt (WB-54). | Test: Index enthält keine maskierten Werte |
+| WB-62 | Die Suche in der Wissensdatenbank findet Seiten und Belege; ein Zitat führt zur Seite und zum Beleg. Wird ein Beleg nach der Anweisung gelöscht, bleibt der Wissenseintrag mit dem Vermerk „Beleg entfernt“. | Test |
+| WB-63 | Abhängigkeit: Der Schalter `wissen` steht aus (Erstbestückung und Abnahme S7.5 offen). Bis dahin legt der Browser Auszüge nur ab und indexiert nicht. | Test |
+
 ## 4. Abgrenzung
 
-- Kein Zugriff auf deine Anmeldungen, Cookies oder Passwortspeicher; kein Auto-Ausfüllen aus dem Browser des Captains.
+- Kein Zugriff auf Anmeldungen, Cookies oder Passwortspeicher des Browsers des Captains. Erlaubt ist nur der **eigene Tresor von SEDRA** (§3.6), den der Agent nie lesen kann.
 - Keine Captcha-Umgehung. Fordert eine Seite ein Captcha oder eine Bot-Prüfung, stoppt der Auftrag und meldet es.
 - Keine Cloud-Modelle im Browserweg in v1.
 - Kein dauerhafter Hintergrundbrowser, keine Zeitpläne („jeden Morgen“) in v1.
 - Handlungen in fremden Konten, die du nicht ausdrücklich im Auftrag nennst, sind nicht Teil eines Auftrags.
 
-## 5. Fragen an den Captain
+## 5. Entscheidungen des Captains (29.10.2026)
 
-| Nr | Frage | Vorschlag |
+| Nr | Frage | Entscheidung |
 |---|---|---|
-| WBQ-1 | Anmelden und Bezahlen: dein „Übernehmen“ im sichtbaren Browser (WB-23), oder soll SEDRA mit einem Passwortmanager arbeiten? | Übernehmen; keine Zugangsdaten bei SEDRA. Passwortmanager erst in einer späteren Spec. |
-| WBQ-2 | Standard-Suchseite? | DuckDuckGo (ohne Konto, ohne Verlauf); Domain wird als erste neue Domain per Karte freigegeben. |
-| WBQ-3 | Höchstbetrag für Bestellungen ohne zweite Karte? | Keiner: jede Bestellung zeigt immer die Karte mit Betrag. |
-| WBQ-4 | Ablage der Belege (Bildschirmfotos) und wie lange? | `runtime_data/browser/belege/`, 90 Tage, danach auf deine Anweisung aufräumen (SEDRA löscht nicht selbst). |
-| WBQ-5 | Reihenfolge: Browser als **Stufe 6** der Harness-Shell oder eigene Linie nach Stufe 3? | Eigene Linie nach Stufe 3, weil sie Aufgaben-Freigabe und Vorarbeiter braucht. |
+| WBQ-1 | Anmelden und Bezahlen | SEDRA hat einen **eigenen Passwort-Tresor**, getrennt vom Agenten; der Agent hat keinen Zugriff auf Passwörter, SEDRA trägt sie nach der Aufgabe ein (§3.6). Zahlungsdaten: v1 nur durch den Captain (WB-58). |
+| WBQ-2 | Suchseite | DuckDuckGo **und** Google (WB-14). |
+| WBQ-3 | Höchstbetrag für Bestellungen | **offen, wird weiter ausgeführt** (§3.7: Varianten A bis D, Vorschlag B und C). |
+| WBQ-4 | Belege | 90 Tage, aufräumen nur auf Anweisung, **Verbindung zur Wissensdatenbank** (§3.8). |
+| WBQ-5 | Reihenfolge | Eigene Linie nach Stufe 3. |
+
+Noch zu entscheiden: **WBQ-3** (Variante), dazu zwei Fragen aus dem Tresor: **WBQ-6** Verschlüsselung an das Windows-Konto gebunden (kein Passwort nötig, gilt nur auf diesem PC) oder mit Master-Passwort (Vorschlag: Windows-Konto, weil der Tresor sonst bei jedem Start ein Passwort braucht); **WBQ-7** darf ein Konto in einer Aufgaben-Freigabe vorab für `anmelden` erlaubt werden (WB-55; Vorschlag: ja, `absenden` bleibt immer Karte).
 
 ## 6. Berechtigungen vorab (ENTWICKLUNG.md: Berechtigungen vorher einholen)
 
@@ -112,10 +154,12 @@ Für den **Bau** (später, nach G2/G3), hier schon benannt:
 | WP-4 | Ausführen: Tests gegen eine **lokale Attrappe-Seite** (127.0.0.1) ohne Internet | Bau ohne Außenwirkung |
 | WP-5 | Erster Lauf im echten Netz: nur auf Ansage, nur lesend, nur erlaubte Domains | Abnahme |
 | WP-6 | Modellläufe zur Abnahme | nur auf Ansage |
+| WP-7 | Neuer Ordner `local_config/tresor/` (der Tresor, verschlüsselt, nicht in git) und der Code `browser/tresor.py`; der Captain legt die Einträge selbst an | Tresor (§3.6) |
+| WP-8 | Anbindung an die Wissensdatenbank (Quelle `browser`), erst nach Abnahme S7.5 des Schalters `wissen` | §3.8 |
 | **nicht** | Anmelden, Bestellen, Absenden im echten Netz; Cloud-Modelle; Push; `local_config/` ändern (die Domainliste legt der Captain an oder gibt ihre Anlage ausdrücklich frei) | außerhalb dieses Auftrags |
 
 ## 7. Nächste Gates
 
-- **G1** (diese Datei): Captain beantwortet WBQ-1 bis WBQ-5 und gibt die Anforderungen frei.
+- **G1** (diese Datei): Captain hat WBQ-1, 2, 4 und 5 entschieden; offen sind WBQ-3, WBQ-6 und WBQ-7. Danach gibt er die Anforderungen frei.
 - **G2** Design: Aufbau des Pakets `browser/`, Endpunkte, Zusammenspiel mit Katalog, Aufgaben-Freigabe und Inhaltsschutz, Attrappe-Seiten für die Tests.
 - **G3** Bau-Aufgaben, nach Stufe 3. SEDRA-Agenten bauen reine Module (Domainprüfung, Erkennung von Anweisungs-Text, Maskierung); Claude baut Integration und Harness-Code.
