@@ -141,3 +141,18 @@ Mit Qwen3.6-35B-A3B (`coder.local_primary`, 65536 Kontext, nach Ja des Captains 
 **Rezept (`local_config`, nicht in Git):** `coder.local_primary`: `min_ram_gb` 18 auf 12, `n_cpu_moe` 28 auf 30, `measured_vram_gb` 10,4 auf 9,8 (Schätzung; gemessen im Betrieb 9,3 GB). Grund: nur 16 GB RAM und 10,85 GB VRAM frei. Sicherung `*.bak-2026-10-29-minram`. Auftrag des Captains: Rezepte sollen beim RAM dynamischer werden (Folge-Spec, nicht gebaut).
 
 **Berichtigung:** S3-F (Pilot N8, P-12) und das Review mit Gemma (P-13) sind am 29.10.2026 früher gelaufen (Abschnitt „Pilot N8“ oben); die Aussage „nicht gelaufen“ in diesem Nachtrag und im Logbuch war falsch. Was am Pilot bleibt: Vorarbeiter war Qwen3.5-9B, weil Qwen3.6 damals nicht ladbar war (Befund 4; mit dem angepassten Rezept jetzt ladbar). **Offen:** S3-C mit Modell nur einzeln bestanden; Übernahme G4 entscheidet der Captain.
+
+## Nachtrag Pilot-Wiederholung mit Qwen3.6 als Vorarbeiter (29.10.2026, 15:05 bis 15:35, nach Ja des Captains)
+
+Neue Vorarbeiter-Sitzung `S-F87E652E` (Modell Qwen3.6-35B-A3B, `coder.local_primary`, 65536 Kontext, mit dem angepassten Rezept geladen), Aufgabe `T-2DC042D9` (wie `T-E0A4F78E`: Schreiben `docs/spec_entwuerfe/**`, `spec_check`, `devvm_build`, Modell `coder.local_primary`, 60 Aufrufe, 180 Minuten). Der Wunsch kam vom Captain als Nachricht.
+
+| Schritt | Ergebnis |
+|---|---|
+| `spec_check` (`L-28EB4045`) | vom Vorarbeiter ohne Karte gestartet (Werkzeugzeile `aufgabe:T-2DC042D9`), ok, Stempel geschrieben |
+| `devvm_build` (`L-1EA206F8`) | vom Vorarbeiter ohne Karte gestartet, Taskleiste „Modell belegt“, ok nach 1658 s |
+| Messung | versteckte Prüfungen bestanden (Versuch 1), 18 Modellaufrufe in 3 Agentenläufen, 2 Nacharbeiten, 0 Eskalationen, 1 Modellwechsel, Kontext 32768 |
+| Kandidat | `runtime_data/devvm_candidates/harness_lauf_fortschritt/attempt_01_20261029_153441/lauf_fortschritt.py`, 89 Zeilen (erster Pilot: 108); Quote Claude/SEDRA etwa 1,1 bei unveränderten 94 Zeilen Spec plus Referenz |
+
+**Vergleich mit dem ersten Pilot:** gleicher Ausgang (bestanden, ohne Eskalation), aber mehr Zeit (1658 s gegen 732 s) und mehr Nacharbeit (2 gegen 1). Der Vorarbeiter war diesmal dasselbe Modell wie der Bauer; die Kette Wunsch, `spec_check`, `devvm_build` lief ohne Eingriff und ohne Karte, der Vorarbeiter erfand diesmal keine Lauf-ID.
+
+**Nicht geprüft:** Vergleich des neuen Kandidaten mit der Referenz (nur der übernommene erste Kandidat ist im Vergleichstest) und ein Review mit Gemma; der neue Kandidat ist **nicht übernommen** (das Modul `lauf_fortschritt.py` im Code bleibt der erste Bau). Nach dem Bau war kein Modell mehr geladen (GPU 1,2 GB).
