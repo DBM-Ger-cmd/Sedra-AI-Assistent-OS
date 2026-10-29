@@ -27,12 +27,13 @@ from urllib.parse import parse_qs
 from . import aufgabe as harness_aufgabe
 from . import freigabe
 from . import herkunft as harness_herkunft
+from . import lauf as harness_lauf
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
 from . import schleife
 from . import vorarbeiter as harness_vorarbeiter
 from . import vorlagen as harness_vorlagen
-from .werkzeuge import SCHEMAS as WERKZEUG_SCHEMAS, Werkzeuge
+from .werkzeuge import LAUF as LAUF_WERKZEUGE, SCHEMAS as WERKZEUG_SCHEMAS, Werkzeuge
 from .sitzung import SitzungFehler, Sitzungen, titel_aus
 from .strom import Stroeme, ZuVieleAntworten
 
@@ -43,9 +44,9 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter)|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter)|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
-GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter)')
+GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp)')
 FORTSETZEN_REST = 'nicht ausgeführt: dieser Aufruf kam nach einem, der auf Freigabe wartete – ruf ihn bei Bedarf noch einmal auf.'
 
 
@@ -63,6 +64,8 @@ class HarnessApi:
         self.threads = {}
         self.karten = freigabe.Karten(hub.project_root / 'runtime_data' / 'harness' / 'karten')
         self.herkunft = harness_herkunft.Herkunft(audit=lambda event, payload: self._audit(event, payload))
+        self._lauf_typen = None
+        self.laeufe = harness_lauf.Laeufe(hub.project_root / 'runtime_data' / 'harness' / 'laeufe', typen=self.lauf_typen, audit=self._audit_roh, melden=self._melden)
         self.vorarbeiter = harness_vorarbeiter.Vorarbeiter(hub.project_root / 'runtime_data' / 'harness' / 'vorarbeiter.json')
         self.aufgaben = harness_aufgabe.Aufgaben(hub.project_root / 'runtime_data' / 'harness' / 'aufgaben', audit=self._audit_roh, melden=self._melden)
 
@@ -123,7 +126,7 @@ class HarnessApi:
         m = WEG.fullmatch(path)
         if not m:
             raise NichtGefunden('weg_unbekannt')
-        projekte, sitzungen, sid, nachricht, aid, aktion, kid, kak, fest, aufgaben, tid, tak = m.groups()
+        projekte, sitzungen, sid, nachricht, aid, aktion, kid, kak, fest, aufgaben, tid, tak, laeufe, lid, lak = m.groups()
         payload = payload or {}
         q = parse_qs(query or '')
         if kid:
@@ -136,6 +139,8 @@ class HarnessApi:
                 return 200, self.beantworten(kid, str(payload.get('weg') or ''), payload.get('notiz'), ueber='karte', aenderungen=payload.get('aenderungen'))
         if aufgaben:
             return self.aufgaben_weg(method, tid, tak, payload)
+        if laeufe:
+            return self.laeufe_weg(method, lid, lak)
         if fest == 'katalog' and method == 'GET':
             return 200, self.katalog()
         if fest == 'einstufen' and method == 'POST':
@@ -247,6 +252,9 @@ class HarnessApi:
         if payload.get('anhaenge'):
             raise ValueError('anhaenge_ab_stufe_2')
         s = self._sitzung(sid)
+        belegt = self.laeufe.belegt()
+        if belegt:
+            return {'status': 'kein_modell', 'grund': f"Modell belegt durch Lauf {belegt['id']} ({belegt['name']}) – es ist wieder da, wenn der Lauf endet."}
         loaded, grund = self.geladen()
         if not loaded:
             return {'status': 'kein_modell', 'grund': 'Kein Modell geladen – Modell wählen.' + (' Grund: ' + str(grund) if grund else '')}
@@ -291,7 +299,8 @@ class HarnessApi:
 
     def _werkzeuge(self, projekt_id, mission_id, regeln):
         projekt = self._projekt(projekt_id)
-        return Werkzeuge(projekt, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, mission_id=mission_id, regeln=regeln)
+        return Werkzeuge(projekt, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, mission_id=mission_id, regeln=regeln, laeufe=self.laeufe,
+                         lauf_typen=self.lauf_typen, modelle=self._modell_op, andere_antworten=self._andere_antworten)
 
     def _vorarbeiter_werkzeuge(self, s):
         """Die Werkzeuge des Vorarbeiters – nur für Sitzungen, deren Vorlage das Recht hat; der Server prüft sie bei jedem Aufruf noch einmal (S1)."""
@@ -301,9 +310,11 @@ class HarnessApi:
         return harness_vorarbeiter.Werkzeuge(self, vorlage['rechte'], frist_min=vorlage['frist_min'], bremse=vorlage['bremse_pro_stunde'])
 
     def _begrenzen(self, s, box):
-        """HS-19: eine Sitzung mit Vorlage bekommt nur die Werkzeuge der Vorlage."""
+        """HS-19: eine Sitzung mit Vorlage bekommt nur die Werkzeuge der Vorlage; ohne Vorlage gibt es Läufe und Modelle nicht (N7)."""
         vorlage = self._vorlage(s)
-        return harness_vorlagen.Begrenzt(box, vorlage['werkzeuge']) if vorlage else box
+        if vorlage:
+            return harness_vorlagen.Begrenzt(box, vorlage['werkzeuge'])
+        return harness_vorlagen.Begrenzt(box, [n for n in box.names if n not in LAUF_WERKZEUGE])
 
     def _kiste(self, s):
         """Die Werkzeugkiste einer Antwort: Harness-Werkzeuge mit Freigabe (Stufe 2) und die lesenden Zustandswerkzeuge. Ist der Katalog
@@ -316,7 +327,7 @@ class HarnessApi:
             if fehler:
                 self._audit('HARNESS_KATALOG_FEHLT', {'fehler': fehler[:200]})
             return self._begrenzen(s, chat), projekt
-        w = Werkzeuge(projekt, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, mission_id=s['kopf'].get('mission_id'), regeln=regeln)
+        w = self._werkzeuge(projekt['id'], s['kopf'].get('mission_id'), regeln)
         return self._begrenzen(s, freigabe.Kiste(w, regeln=regeln, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, karten=self.karten,
                               sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'], aufgaben=self.aufgaben,
                               vorarbeiter=self.vorarbeiter, extra=self._vorarbeiter_werkzeuge(s))), projekt
@@ -372,7 +383,13 @@ class HarnessApi:
                 if method == 'GET' and not tak:
                     return 200, harness_aufgabe.oeffentlich(self.aufgaben.laden(tid))
                 if method == 'POST' and tak == 'zuruecknehmen':
-                    return 200, harness_aufgabe.oeffentlich(self.aufgaben.zuruecknehmen(tid, payload.get('grund')))
+                    a = self.aufgaben.zuruecknehmen(tid, payload.get('grund'))
+                    gestoppt = []
+                    if payload.get('laeufe_stoppen', True):                # D-G3: Läufe der Aufgabe werden mit gestoppt, außer der Captain schaltet es ab
+                        for l in self.laeufe.laufende():
+                            if l.get('aufgabe_id') == tid:
+                                gestoppt.append(self.laeufe.stoppen(l['id'], grund=f'Aufgabe {tid} zurückgenommen', status_wunsch='abgebrochen')['id'])
+                    return 200, dict(harness_aufgabe.oeffentlich(a), gestoppte_laeufe=gestoppt)
             except KeyError as exc:
                 raise NichtGefunden('aufgabe_unbekannt') from exc
         raise NichtGefunden('methode_unbekannt')
@@ -386,6 +403,39 @@ class HarnessApi:
                 raise ValueError('sitzung_unbekannt: ' + str(sid)) from None
         a, warnungen = self.aufgaben.anlegen(payload, von='captain')          # `von` setzt der Server, nie die Nutzlast
         return dict(harness_aufgabe.oeffentlich(a), warnungen=warnungen)
+
+    # ---- Stufe 3: Läufe (N7)
+    def lauf_typen(self):
+        """Die Lauf-Typen aus runtime/config/harness_laeufe.yaml (einmal gelesen); ungültig → LaufFehler mit Grund, nie ein stiller Rückfall."""
+        if self._lauf_typen is None:
+            self._lauf_typen = harness_lauf.laden()['laeufe']
+        return self._lauf_typen
+
+    def _modell_op(self, op, rezept):
+        if op == 'laden':
+            return self.hub.load_model({'recipe_id': rezept})
+        return self.hub.unload_model({})
+
+    def _andere_antworten(self, eigene):
+        return sum(1 for a in self.stroeme.laufende() if a.id != eigene)
+
+    @staticmethod
+    def _lauf_oeffentlich(l):
+        return {k: v for k, v in l.items() if k not in ('ordner_abs', 'fortschritt_regel', 'start_zeit_pid')}
+
+    def laeufe_weg(self, method, lid, lak):
+        if not lid and method == 'GET':
+            return 200, {'laeufe': [self._lauf_oeffentlich(l) for l in self.laeufe.alle()], 'belegt': (self.laeufe.belegt() or {}).get('id')}
+        try:
+            if lid and not lak and method == 'GET':
+                return 200, dict(self._lauf_oeffentlich(self.laeufe.laden(lid)), log=self.laeufe.tail(lid, harness_lauf.LOG_TAIL))
+            if lid and lak == 'stopp' and method == 'POST':
+                return 200, self._lauf_oeffentlich(self.laeufe.stoppen(lid, grund='gestoppt vom Captain'))
+        except KeyError as exc:
+            raise NichtGefunden('lauf_unbekannt') from exc
+        except harness_lauf.LaufFehler as exc:
+            raise ValueError(str(exc)) from exc
+        raise NichtGefunden('methode_unbekannt')
 
     # ---- Stufe 3: Vorarbeiter (N4)
     def vorarbeiter_weg(self, method, q, payload):

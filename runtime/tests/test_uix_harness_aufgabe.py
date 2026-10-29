@@ -136,9 +136,9 @@ class AufgabeTests(unittest.TestCase):
         sid = self.sitzung()
         self.aufgabe([sid], [{'werkzeug': 'datei_aendern', 'muster': ERSTER}])
         box = self.box(sid)
-        box.lokal = False
+        box._box.lokal = False                       # die Kiste hinter der Begrenzung
         self.assertEqual(box.aufruf(*self.aendern())['status'], 'wartet')
-        box.lokal = True
+        box._box.lokal = True
         self.assertEqual(box.aufruf(*self.aendern())['stufe'], 'aufgabe')
 
     def test_wege_und_fehler(self):

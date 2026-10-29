@@ -23,7 +23,7 @@ from pathlib import Path
 
 from . import vorbehalte
 from .katalog import einstufen
-from .werkzeuge import AKTION_LESEN, LESEN, NAMEN as HARNESS_WERKZEUGE, WerkzeugFehler
+from .werkzeuge import AKTION_LESEN, LAUF, LESEN, NAMEN as HARNESS_WERKZEUGE, WerkzeugFehler
 from .befehl import BefehlFehler
 
 KARTE_ID = re.compile(r'K-[0-9A-F]{8}')
@@ -146,7 +146,7 @@ class Kiste:
         self.vorarbeiter, self.extra = vorarbeiter, extra        # Stufe 3: Ernennung (Karten `an: vorarbeiter`) und die Werkzeuge des Vorarbeiters
         self.aufgaben, self.lokal = aufgaben, lokal        # Stufe 3: Aufgaben-Freigabe gilt nur für lokale Modelle (HS-27)
         self.names = tuple(HARNESS_WERKZEUGE) + (tuple(chat.names) if chat is not None else ()) + (tuple(extra.names) if extra is not None else ())
-        self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl')
+        self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen')
         self._gewarnt = set()            # Nachtrag 434b108: welche Ersetzungen dem Modell schon einen Hinweis bekamen
 
     def schemas(self):
@@ -171,6 +171,8 @@ class Kiste:
             plan = self.w.vorbereiten(name, args)
         except (WerkzeugFehler, BefehlFehler) as exc:
             return {'status': 'fehler', 'ergebnis': f'error: {exc}', 'stufe': None, 'regel': None, 'wirkung': False}
+        if name == 'lauf_status':                              # lesen: keine Karte, kein Katalog (der Inhalt der Ausgabe ist fremder Text, das Werkzeug kennzeichnet ihn)
+            return dict(self.w.ausfuehren(name, args, plan=plan), stufe='frei', regel='lauf-lesen')
         e = einstufung(self.regeln, name, args, plan)
         self._audit('HARNESS_EINGESTUFT', {'werkzeug': name, 'ziel': plan['ziel'][:300], 'stufe': e['stufe'], 'regel': e['regel'], 'vorbehalt': e['vorbehalt']})
         if e['wirkt_als'] == 'verboten':
@@ -192,10 +194,11 @@ class Kiste:
             warnkarte = True                                  # Kasten und Entscheidung bleiben beim Captain – keine Aufgabe deckt sie
         via_aufgabe = None
         if e['wirkt_als'] != 'frei' and self.aufgaben is not None and self.lokal and not e['vorbehalt'] and not warnkarte:
-            weich = vorbehalte.pruefen_weich(name, plan['ziel'], args)
+            weich = vorbehalte.pruefen_weich(name, plan['ziel'], args) or plan.get('weich')
             treffer = self.aufgaben.deckt(self.sitzung_id, name, plan['ziel'], weich=weich)
             if treffer and self.aufgaben.zaehlen(treffer['aufgabe_id']):
                 via_aufgabe = treffer['aufgabe_id']
+        self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id, 'aufgabe_id': via_aufgabe}
         gate = self.guard.create_gate(self.w.mission_id, plan['gate']['aktion'], plan['gate']['ziel'], request_binding=plan['gate']['bindung'],
                                       risks=[e['begruendung']], rollback_available=name in ('datei_schreiben', 'datei_aendern'))
         if e['wirkt_als'] == 'frei' or via_aufgabe:
@@ -271,6 +274,7 @@ def beantworten(karten, karte_id, weg, *, notiz=None, von='captain', ueber='kart
         elif weg == 'erlauben':
             token = guard.approve(gate)
             w = werkzeuge_fuer(karte)
+            w.kontext = {'sitzung_id': karte.get('sitzung_id'), 'antwort_id': karte.get('antwort_id'), 'karte_id': karte_id, 'aufgabe_id': None}
             try:
                 plan = w.vorbereiten(karte['werkzeug'], karte['args'])
             except (WerkzeugFehler, BefehlFehler) as exc:
