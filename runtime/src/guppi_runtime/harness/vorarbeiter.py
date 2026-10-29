@@ -152,7 +152,7 @@ class Werkzeuge:
             return self._antwort('fehler', f'error: {exc.args[0] if exc.args else exc}')
 
     def offen(self, sitzung_id, projekt):
-        self.api.karten.frist_pruefen(self.frist_min)
+        self.api.frist_pruefen(self.frist_min)
         karten = [k for k in self.api.karten.alle('offen') if k.get('an') == 'vorarbeiter' and k.get('projekt') == projekt and k.get('sitzung_id') != sitzung_id]
         if not karten:
             return self._antwort('ok', 'Keine offenen Karten an dich.')
@@ -162,7 +162,7 @@ class Werkzeuge:
 
     def entscheiden(self, sitzung_id, projekt, args):
         karten = self.api.karten
-        karten.frist_pruefen(self.frist_min)
+        self.api.frist_pruefen(self.frist_min)
         weg = str(args.get('weg') or '')
         if weg not in WEGE:
             return self._antwort('fehler', 'error: weg_unbekannt – erlauben, ablehnen oder vorlegen')

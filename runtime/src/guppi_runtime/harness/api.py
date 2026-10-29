@@ -10,14 +10,24 @@
     GET    antworten/<id>/strom               SSE der Antwort; Wiederaufnahme mit Last-Event-ID oder ?last=
     POST   antworten/<id>/stopp               Abbruch
     GET    karten/<id>                        Freigabe-Karte mit Vorschau (Stufe 2)
-    POST   karten/<id>                        {weg: erlauben|ablehnen, notiz?} → Ergebnis und die Fortsetzung der Antwort ({antwort_id})
+    POST   karten/<id>                        {weg: erlauben|ablehnen, notiz?, aenderungen?} → Ergebnis und die Fortsetzung der Antwort ({antwort_id}); `von` in der Nutzlast zählt nicht
+                                              (aenderungen: nur für Aufgabenkarten {auswahl, bis, max_aufrufe})
     GET    katalog                            Regeln des Freigabe-Katalogs, nur lesen (Datei des Captains oder Vorlage)
     POST   einstufen                          {werkzeug, ziel} → Stufe, Regel, Begründung (Vorbehalt vor Katalog)
     GET    werkzeuge                          die Werkzeuge mit Kurzbeschreibung
+    GET    aufgaben                           Stufe 3: Aufgaben-Freigaben mit Rest und Zustand (HS-27)
+    POST   aufgaben                           {titel, projekt, sitzungen, erlaubt, modelle?, ende} → Aufgabe + warnungen (nur der Captain; Herkunftsprüfung S7)
+    GET    aufgaben/<id>                      eine Aufgabe
+    POST   aufgaben/<id>/zuruecknehmen        {grund?, laeufe_stoppen?=true} → Aufgabe + gestoppte_laeufe (HS-29)
+    GET    vorarbeiter                        {projekt: {sitzung_id, ernannt, von}}
+    POST   vorarbeiter                        {projekt, sitzung_id} ernennt (Vorlage mit Recht vorarbeiter_freigabe nötig); DELETE vorarbeiter?projekt= entzieht
+    POST   karten/<id>/zuruecknehmen          {grund?} nimmt eine Entscheidung des Vorarbeiters zurück
+    GET    laeufe, laeufe/<id>                Läufe der Harness (Register) mit Log-Ende; POST laeufe/<id>/stopp
     GET    vorlagen                           die Vorlagen (Stufe 3, HS-19); `vorlage` beim Anlegen einer Sitzung
 
 Die Schleife läuft in einem eigenen Thread und nimmt nie `hub.lock` (K3). Auf dem gemeinsamen Ereignisstrom erscheinen nur
-`harness.sitzung` (angelegt, geändert, verschoben) und `harness.antwort` (läuft, fertig) – der Text läuft über den eigenen Strom."""
+`harness.sitzung` (angelegt, geändert, verschoben), `harness.antwort` (läuft, fertig), und ab Stufe 3 `harness.aufgabe`, `harness.vorarbeiter`, `harness.lauf`
+sowie `decision.pending/answered` (Kind `harness_freigabe` oder `harness_aufgabe`) – der Text läuft über den eigenen Strom."""
 from __future__ import annotations
 
 import re
@@ -507,7 +517,7 @@ class HarnessApi:
 
     # ---- Stufe 2: Karten, Katalog, Einstufung
     def karte(self, kid):
-        self.karten.frist_pruefen(self._frist_min())
+        self.frist_pruefen()
         try:
             return freigabe.oeffentlich(self.karten.laden(kid))
         except KeyError as exc:
@@ -529,9 +539,17 @@ class HarnessApi:
         args = {'inhalt': payload['inhalt']} if 'inhalt' in payload else {}
         return freigabe.einstufung(regeln, werkzeug, args, {'ziel': ziel, 'vorhanden': bool(payload.get('vorhanden'))})
 
+    def frist_pruefen(self, frist_min=None):
+        """Karten `an: vorarbeiter`, die zu lange offen sind, fallen an den Captain – mit Audit (HARNESS_KARTE_FRIST) und Ereignis."""
+        geaendert = self.karten.frist_pruefen(frist_min if frist_min is not None else self._frist_min())
+        for k in geaendert:
+            self._audit('HARNESS_KARTE_FRIST', {'karte_id': k['karte_id'], 'sitzung_id': k.get('sitzung_id'), 'werkzeug': k.get('werkzeug')})
+            self._melden('harness.karte', {'karte_id': k['karte_id'], 'an': k['an'], 'was': 'frist_abgelaufen'})
+        return geaendert
+
     def entscheidungen(self):
         """Die offenen Karten für den Posteingang (desk/decisions, Quelle `harness`) – auch die beim Vorarbeiter; der Captain sieht alles."""
-        self.karten.frist_pruefen(self._frist_min())
+        self.frist_pruefen()
         return [freigabe.oeffentlich(k) for k in self.karten.alle('offen')]
 
     def _frist_min(self):
@@ -566,7 +584,7 @@ class HarnessApi:
         self.sitzungen.anhaengen(sid, {'typ': 'karte', 'karte_id': kid, 'entscheidung': weg, 'von': von, 'ueber': ueber,
                                        'notiz': notiz, 'zustand': 'beantwortet'})
         self.sitzungen.anhaengen(sid, satz)
-        self._melden('decision.answered', {'id': 'harness:' + kid, 'kind': 'harness_freigabe', 'way': weg})
+        self._melden('decision.answered', {'id': 'harness:' + kid, 'kind': 'harness_aufgabe' if karte.get('art') == 'aufgabe' else 'harness_freigabe', 'way': weg})
         out = {'status': 'beantwortet', 'karte_id': kid, 'weg': weg, 'ergebnis_status': r['status'], 'ergebnis': str(r['ergebnis'])[:2000]}
         zustand = karte.get('zustand')
         loaded, _grund = self.geladen()
