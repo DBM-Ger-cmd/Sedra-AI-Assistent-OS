@@ -3686,7 +3686,10 @@ def make_server(hub: UIXHub, port=0):
             except Exception as exc:
                 self._send(503, {'error': type(exc).__name__, 'message': str(exc)})
 
-    server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    class Server(ThreadingHTTPServer):
+        request_queue_size = 64    # Standard 5: eine Seite lädt viele Skripte zugleich; bei mehreren Browsern lehnte Windows Verbindungen ab (29.10.2026)
+
+    server = Server(('127.0.0.1', port), Handler)
     server.daemon_threads = True
     hub.start_extensions()
     server.desk_stop = threading.Event()          # set when the server stops: open event streams end instead of hanging
