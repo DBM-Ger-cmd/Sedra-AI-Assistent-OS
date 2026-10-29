@@ -9,6 +9,8 @@ Ausnahme sind nur kleine Korrekturen, die der Captain ausdrücklich freigibt. Je
 welches Gate gilt, welcher Schreibbereich und welche Befehle erlaubt sind. Wünsche des Captains werden in SEDRA eingegeben und
 über den Vorarbeiter zu einer Spec (`SPEC_WUNSCH_ANBINDUNG_v1.md`).
 
+Berechtigungen werden vorher eingeholt (Captain, 29.10.2026): Bevor eine Aufgabe startet, benennt ihre Spec alle Berechtigungen, die sie braucht – Modelle laden, Läufe starten, Schreibbereich, Befehle, Vergleichsläufe mit einem zweiten Modell – und der Captain gibt sie einmal im Voraus frei oder streicht sie. Mitten in der Arbeit wird nichts nachgefragt, was die Spec schon hätte klären können; was nicht freigegeben ist, läuft nicht.
+
 ## Wer macht was
 
 | Rolle | Aufgabe |
