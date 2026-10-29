@@ -140,4 +140,4 @@ Mit Qwen3.6-35B-A3B (`coder.local_primary`, 65536 Kontext, nach Ja des Captains 
 
 **Rezept (`local_config`, nicht in Git):** `coder.local_primary`: `min_ram_gb` 18 auf 12, `n_cpu_moe` 28 auf 30, `measured_vram_gb` 10,4 auf 9,8 (Schätzung; gemessen im Betrieb 9,3 GB). Grund: nur 16 GB RAM und 10,85 GB VRAM frei. Sicherung `*.bak-2026-10-29-minram`. Auftrag des Captains: Rezepte sollen beim RAM dynamischer werden (Folge-Spec, nicht gebaut).
 
-**Offen:** S3-F (Pilot N8, P-12) und Review mit Gemma (P-13) nicht gelaufen; S3-C mit Modell nur einzeln bestanden; Übernahme G4 entscheidet der Captain.
+**Berichtigung:** S3-F (Pilot N8, P-12) und das Review mit Gemma (P-13) sind am 29.10.2026 früher gelaufen (Abschnitt „Pilot N8“ oben); die Aussage „nicht gelaufen“ in diesem Nachtrag und im Logbuch war falsch. Was am Pilot bleibt: Vorarbeiter war Qwen3.5-9B, weil Qwen3.6 damals nicht ladbar war (Befund 4; mit dem angepassten Rezept jetzt ladbar). **Offen:** S3-C mit Modell nur einzeln bestanden; Übernahme G4 entscheidet der Captain.
