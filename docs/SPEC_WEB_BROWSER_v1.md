@@ -136,11 +136,13 @@ Vorschlag: B und C zusammen, A als Mindestregel darunter. Die Entscheidung triff
 |---|---|---|
 | WBQ-1 | Anmelden und Bezahlen | SEDRA hat einen **eigenen Passwort-Tresor**, getrennt vom Agenten; der Agent hat keinen Zugriff auf Passwörter, SEDRA trägt sie nach der Aufgabe ein (§3.6). Zahlungsdaten: v1 nur durch den Captain (WB-58). |
 | WBQ-2 | Suchseite | DuckDuckGo **und** Google (WB-14). |
-| WBQ-3 | Höchstbetrag für Bestellungen | **offen, wird weiter ausgeführt** (§3.7: Varianten A bis D, Vorschlag B und C). |
+| WBQ-3 | Höchstbetrag für Bestellungen | **Variante B + C** (Budget und Händlerliste je Aufgaben-Freigabe), **A als Mindestregel**: jede Bestellung eine Karte, darüber stoppt der Auftrag (§3.7). D entfällt in v1. |
+| WBQ-6 | Verschlüsselung des Tresors | **An das Windows-Benutzerkonto gebunden** (kein Master-Passwort; gilt nur auf diesem PC). |
+| WBQ-7 | `anmelden` vorab in der Aufgaben-Freigabe | **Ja**, Konto namentlich in der Freigabe; `absenden` bleibt immer eine Karte (WB-55, WB-21). |
 | WBQ-4 | Belege | 90 Tage, aufräumen nur auf Anweisung, **Verbindung zur Wissensdatenbank** (§3.8). |
 | WBQ-5 | Reihenfolge | Eigene Linie nach Stufe 3. |
 
-Noch zu entscheiden: **WBQ-3** (Variante), dazu zwei Fragen aus dem Tresor: **WBQ-6** Verschlüsselung an das Windows-Konto gebunden (kein Passwort nötig, gilt nur auf diesem PC) oder mit Master-Passwort (Vorschlag: Windows-Konto, weil der Tresor sonst bei jedem Start ein Passwort braucht); **WBQ-7** darf ein Konto in einer Aufgaben-Freigabe vorab für `anmelden` erlaubt werden (WB-55; Vorschlag: ja, `absenden` bleibt immer Karte).
+Alle Fragen WBQ-1 bis WBQ-7 sind entschieden (Captain 29.10.2026, WBQ-3/6/7 nach Vorschlag).
 
 ## 6. Berechtigungen vorab (ENTWICKLUNG.md: Berechtigungen vorher einholen)
 
@@ -160,6 +162,6 @@ Für den **Bau** (später, nach G2/G3), hier schon benannt:
 
 ## 7. Nächste Gates
 
-- **G1** (diese Datei): Captain hat WBQ-1, 2, 4 und 5 entschieden; offen sind WBQ-3, WBQ-6 und WBQ-7. Danach gibt er die Anforderungen frei.
+- **G1** (diese Datei): **freigegeben vom Captain am 29.10.2026** (WBQ-1 bis WBQ-7 entschieden).
 - **G2** Design: Aufbau des Pakets `browser/`, Endpunkte, Zusammenspiel mit Katalog, Aufgaben-Freigabe und Inhaltsschutz, Attrappe-Seiten für die Tests.
 - **G3** Bau-Aufgaben, nach Stufe 3. SEDRA-Agenten bauen reine Module (Domainprüfung, Erkennung von Anweisungs-Text, Maskierung); Claude baut Integration und Harness-Code.
