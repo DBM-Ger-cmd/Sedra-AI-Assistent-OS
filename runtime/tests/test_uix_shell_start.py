@@ -54,7 +54,7 @@ class DirectStart(unittest.TestCase):
                 self.assertIsNone(choose_start_shell(hub, None))
                 with self.assertRaises(ValueError) as ctx:
                     choose_start_shell(hub, 'gibt-es-nicht')
-                self.assertIn('Vorhanden: cockpit, fisch, gateway-kmu, gateway-studio, guppi-xp, minimal, paperclip, start', str(ctx.exception))
+                self.assertIn('Vorhanden: cockpit, fisch, gateway-kmu, gateway-studio, guppi-xp, harness, minimal, paperclip, start, wissensbasis', str(ctx.exception))
                 self.assertEqual(hub.gateway.manifest()['shell']['id'], 'minimal', 'ein Fehler ändert nichts')
             finally:
                 hub.close()
@@ -87,7 +87,7 @@ class InTheBrowser(unittest.TestCase):
                 errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
                 page.goto(url); wait_until_started(page); page.wait_for_timeout(1200)
                 names = page.evaluate("()=>[...document.querySelectorAll('.st-card h2')].map(h=>h.textContent)")
-                self.assertEqual(sorted(names), ['Cockpit', 'KI GateWay Studio', 'KI Gateway für KMU', 'Minimal', 'Paperclip', 'SEDRA XP', 'Translator', 'Wissensbasis'], 'die Auswahl selbst steht nicht zur Wahl; der alte Desktop schon')
+                self.assertEqual(sorted(names), ['Cockpit', 'Harness', 'KI GateWay Studio', 'KI Gateway für KMU', 'Minimal', 'Paperclip', 'SEDRA XP', 'Translator', 'Wissensbasis'], 'die Auswahl selbst steht nicht zur Wahl; der alte Desktop schon')
                 page.fill('.st-make-row input[aria-label="Name der neuen Oberfläche"]', 'meine-bruecke')
                 page.click('.st-make-row button:has-text("Anlegen")'); page.wait_for_timeout(1200)
                 names = page.evaluate("()=>[...document.querySelectorAll('.st-card h2')].map(h=>h.textContent)")
