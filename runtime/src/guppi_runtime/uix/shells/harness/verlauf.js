@@ -99,6 +99,7 @@
   // ---- eine Ansicht je Reiter
   function ansicht(S, id){
     if(String(id).startsWith('diff:')) return diffAnsicht(S, id);
+    if(String(id).startsWith('aufgaben:')) return root.sedraHarness.aufgabe.ansicht(S, id);          // aufgabe.js (Stufe 3)
     const box = d().el('div', 'hs-verlauf');
     const liste = d().el('div', 'hs-liste');
     box.append(liste);
@@ -171,7 +172,7 @@
       zeigeLeerWennNoetig(){ if(this.leer()) this.zeigeLeer(); else S.leerGeaendert(this); },
 
       // ---- senden: ein Entwurf wird mit der ersten Nachricht zur Sitzung
-      async senden(text, projekt){
+      async senden(text, projekt, vorlage){
         if(this.antwortId) return false;
         if(!ID.test(this.id) && !S.modell){          // HS-53: ohne Modell keine leere Sitzungsdatei anlegen (der Server prüft trotzdem)
           await S.modellLaden();
@@ -181,7 +182,7 @@
         let blase = null;
         try{
           if(!ID.test(this.id)){
-            const kopf = await S.api('/api/harness/sitzungen', {method: 'POST', body: {projekt}});
+            const kopf = await S.api('/api/harness/sitzungen', {method: 'POST', body: {projekt, vorlage: vorlage || undefined}});
             const alt = this.id;
             this.id = kopf.id;
             root.sedraHarness.reiter.umbenennen(S, alt, kopf.id);

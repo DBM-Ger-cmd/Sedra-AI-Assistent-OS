@@ -27,8 +27,9 @@
   function zeile(S, s){
     const row = d().el('div', 'hs-sz' + (S.aktive() && S.aktive().id === s.id ? ' on' : '') + (s.laeuft ? ' laeuft' : ''));
     row.dataset.sitzung = s.id;
-    const titel = d().el('span', 'hs-sz-titel', s.titel || 'Ohne Titel');
-    titel.title = (s.titel || 'Ohne Titel') + (s.nachrichten ? ' · ' + s.nachrichten + ' Nachrichten' : '');
+    const istVorarbeiter = !!(S.vorarbeiter && S.vorarbeiter[s.projekt] && S.vorarbeiter[s.projekt].sitzung_id === s.id);
+    const titel = d().el('span', 'hs-sz-titel', (istVorarbeiter ? '⚑ ' : '') + (s.titel || 'Ohne Titel'));
+    titel.title = (s.titel || 'Ohne Titel') + (s.nachrichten ? ' · ' + s.nachrichten + ' Nachrichten' : '') + (s.vorlage ? ' · Vorlage ' + s.vorlage : '') + (istVorarbeiter ? ' · Vorarbeiter dieses Projekts' : '');
     const zeitEl = d().el('small', 'hs-sz-zeit', s.laeuft ? 'läuft' : zeit(s.zuletzt));
     const umbenennen = d().el('button', 'hs-sz-knopf', '✎'); umbenennen.type = 'button';
     umbenennen.title = 'Umbenennen'; umbenennen.setAttribute('aria-label', 'Sitzung umbenennen');
@@ -36,7 +37,21 @@
     weg.title = 'Löschen (nach geloescht/ verschieben)'; weg.setAttribute('aria-label', 'Sitzung löschen');
     const haupt = d().clickable(d().el('div', 'hs-sz-haupt'), ()=>root.sedraHarness.reiter.oeffnen(S, s.id));
     haupt.append(titel, zeitEl);
-    row.append(haupt, umbenennen, weg);
+    row.append(haupt);
+    if(s.vorlage === 'vorarbeiter'){                    // nur der Captain ernennt (Stufe 3, HS-26)
+      const ern = d().el('button', 'hs-sz-knopf' + (istVorarbeiter ? ' an' : ''), istVorarbeiter ? '⚑' : '⚐'); ern.type = 'button';
+      ern.title = istVorarbeiter ? 'Vorarbeiter entziehen' : 'Zum Vorarbeiter dieses Projekts ernennen'; ern.setAttribute('aria-label', ern.title);
+      ern.onclick = async e=>{
+        e.stopPropagation();
+        try{
+          if(istVorarbeiter) await S.api('/api/harness/vorarbeiter?projekt=' + encodeURIComponent(s.projekt), {method: 'DELETE'});
+          else await S.api('/api/harness/vorarbeiter', {method: 'POST', body: {projekt: s.projekt, sitzung_id: s.id}});
+          await S.freigabenLaden();
+        }catch(err){ S.hinweis('Vorarbeiter: ' + err.message, 'bad'); }
+      };
+      row.append(ern);
+    }
+    row.append(umbenennen, weg);
     umbenennen.onclick = e=>{ e.stopPropagation(); umbenennenIm(S, row, s); };
     weg.onclick = e=>{ e.stopPropagation(); loeschenIm(S, row, s); };
     return row;
@@ -107,11 +122,13 @@
     if(!chats.length) chatBox.append(d().el('small', 'hs-leise', 'Keine Sitzung ohne Projekt'));
     chats.forEach(s=>chatBox.append(zeile(S, s)));
     liste.append(d().el('div', 'hs-ueber', 'Chats'), chatBox);
+    const aufgaben = d().el('button', 's-btn hs-einstellungen', '⛨ Aufgaben'); aufgaben.type = 'button';
+    aufgaben.title = 'Aufgaben-Freigaben und Vorschläge des Vorarbeiters'; aufgaben.onclick = ()=>root.sedraHarness.reiter.oeffnen(S, 'aufgaben:');
     const einst = d().el('button', 's-btn hs-einstellungen', 'Einstellungen');
     einst.type = 'button';
     einst.title = 'Die Einstellungsseite kommt in Stufe 5; bis dahin Darstellung und Schrift über Start.';
     einst.onclick = ()=>S.hinweis('Einstellungen kommen in Stufe 5. Darstellung, Schrift und Oberfläche: Start unten links.');
-    el.replaceChildren(neu, liste, einst);
+    el.replaceChildren(neu, liste, aufgaben, einst);
   }
 
   root.sedraHarness = root.sedraHarness || {};

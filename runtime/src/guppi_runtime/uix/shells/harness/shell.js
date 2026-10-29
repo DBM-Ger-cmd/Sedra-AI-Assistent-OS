@@ -23,6 +23,9 @@
       this.sitzungen = [];
       this.ansichten = new Map();            // Reiter-ID → Ansicht (verlauf.js)
       this.modell = null;                    // das geladene Modell oder null (HS-53)
+      this.vorlagen = [];                    // Stufe 3: Vorlagen, Vorarbeiter je Projekt, Aufgaben-Freigaben
+      this.vorarbeiter = {};
+      this.aufgaben = [];
       const host = document.getElementById('sedra-root');
       host.setAttribute('aria-label', 'SEDRA Harness');
       host.classList.add('hs');
@@ -62,12 +65,18 @@
         if(e && e.zustand === 'laeuft') H.verlauf.laeuftGemeldet(this, e.sitzung_id, e.antwort_id);
       });
       ctx.bus.on('model.changed', ()=>{ this.modellLaden(); H.taskleiste.status(this); });
-      ctx.bus.on('decision.pending', ()=>H.taskleiste.status(this));
-      ctx.bus.on('decision.answered', e=>{ H.taskleiste.status(this); if(e && String(e.id || '').startsWith('harness:')) this.sitzungenLaden(); });
+      ctx.bus.on('decision.pending', ()=>{ H.taskleiste.status(this); this.freigabenLaden(); });
+      ctx.bus.on('decision.answered', e=>{
+        H.taskleiste.status(this); this.freigabenLaden();
+        if(e && String(e.id || '').startsWith('harness:')){ this.sitzungenLaden(); H.karte.aktualisieren(this, String(e.id).slice(8)); }
+      });
+      ctx.bus.on('harness.aufgabe', ()=>this.freigabenLaden());
+      ctx.bus.on('harness.vorarbeiter', ()=>this.freigabenLaden());
+      ctx.bus.on('harness.karte', e=>{ if(e && e.karte_id) H.karte.aktualisieren(this, e.karte_id); });
       ctx.bus.on('desk.error', e=>this.hinweis('Die Runtime meldet: ' + e.message, 'warn'));
       root.sedraBoot.onProblem = text=>this.hinweis(text, 'warn');
 
-      await Promise.all([this.projekteLaden(), this.sitzungenLaden(), this.modellLaden()]).catch(err=>ctx.onProblem('Harness', err));
+      await Promise.all([this.projekteLaden(), this.sitzungenLaden(), this.modellLaden(), this.vorlagenLaden(), this.freigabenLaden()]).catch(err=>ctx.onProblem('Harness', err));
       H.reiter.wiederherstellen(this);
       H.taskleiste.status(this);
     },
@@ -92,6 +101,21 @@
         H.reiter.titel(this);
       })();
       try{ await this._laden; } finally { this._laden = null; }
+    },
+
+    async vorlagenLaden(){
+      try{ this.vorlagen = (await this.api('/api/harness/vorlagen')).vorlagen || []; }catch(_err){ this.vorlagen = []; }
+      H.eingabe.vorlagenwahl(this);
+    },
+
+    // Vorarbeiter je Projekt und aktive Aufgaben: für das Schild, die Seitenleiste und den Reiter „Aufgaben“
+    async freigabenLaden(){
+      try{
+        const [v, a] = await Promise.all([this.api('/api/harness/vorarbeiter'), this.api('/api/harness/aufgaben')]);
+        this.vorarbeiter = v.vorarbeiter || {};
+        this.aufgaben = a.aufgaben || [];
+      }catch(_err){ /* ohne Antwort bleibt der letzte Stand */ }
+      H.seite.zeichnen(this); H.eingabe.schildZeigen(this); H.taskleiste.zeichnen(this);
     },
 
     async modellLaden(){

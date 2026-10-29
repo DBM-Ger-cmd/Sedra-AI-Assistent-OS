@@ -43,8 +43,9 @@
       const knopf = d().el('button', 'hs-app' + (id === aktiv ? ' on' : '') + (laeuft ? ' laeuft' : ''));
       knopf.type = 'button';
       knopf.dataset.reiter = id;
-      const name = String(id).startsWith('diff:') ? 'Diff ' + id.slice(5) : ((s && s.titel) || (/^S-/.test(id) ? 'Ohne Titel' : 'Neue Sitzung'));
-      knopf.append(d().el('span', 'hs-app-icon', laeuft ? '●' : '💬'), d().el('span', 'hs-app-name', name));
+      const name = String(id).startsWith('diff:') ? 'Diff ' + id.slice(5) : (String(id).startsWith('aufgaben:') ? 'Aufgaben' : ((s && s.titel) || (/^S-/.test(id) ? 'Ohne Titel' : 'Neue Sitzung')));
+      const vorarbeiter = S.vorarbeiter && Object.values(S.vorarbeiter).some(v=>v.sitzung_id === id);
+      knopf.append(d().el('span', 'hs-app-icon', laeuft ? '●' : (String(id).startsWith('aufgaben:') ? '⛨' : (vorarbeiter ? '⚑' : '💬'))), d().el('span', 'hs-app-name', name));
       if(laeuft && a && a.block) knopf.append(d().el('small', 'hs-leise', dauer(performance.now() - (a._seit || (a._seit = performance.now())))));
       else if(a) a._seit = null;
       knopf.title = name + (laeuft ? ' – Antwort läuft' : '');

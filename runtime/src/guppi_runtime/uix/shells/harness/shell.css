@@ -258,3 +258,20 @@
 /* ---- Warnkasten auf der Karte (Nachtrag 434b108, W-2): ersetzt die ganze Datei */
 .hs-karte-warnung{padding:8px 10px;border-radius:var(--radius);background:var(--bad-bg);border:1px solid var(--bad-line);color:var(--text);font-weight:600;font-size:var(--size-small)}
 .hs-karte.warnung{border-left-color:var(--bad)}
+
+/* Stufe 3 (N10): Empfänger der Karte, Aufgaben-Reiter, Schild nach Aufgabe und Vorarbeiter – nur Token */
+.hs-karte-an{padding:6px 10px;border-radius:var(--radius);background:var(--panel-2);border:1px solid var(--line);color:var(--text);font-size:var(--size-small)}
+.hs-karte.beim-vorarbeiter{border-left-color:var(--accent)}
+.hs-wz-stufe.aufgabe{border-color:var(--ok-line);color:var(--text)}
+.hs-schild.aufgabe{color:var(--text);border-color:var(--ok-line)}
+.hs-schild.vorarbeiter{border-color:var(--accent)}
+.hs-sz-knopf.an{visibility:visible;color:var(--accent)}
+.hs-aufgaben .hs-liste{gap:10px}
+.hs-auf-karte,.hs-auf-aktiv,.hs-auf-form{border-left-color:var(--accent)}
+.hs-auf-liste{margin:0;padding-left:18px;font-family:var(--mono);font-size:var(--size-small);overflow-wrap:anywhere}
+.hs-auf-zeile{display:flex;align-items:center;gap:8px;font-size:var(--size-small);min-width:0}
+.hs-auf-zeile span{overflow-wrap:anywhere;min-width:0}
+.hs-auf-grenzen{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hs-auf-feld{width:96px;font:inherit;font-size:var(--size-small);color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:4px 8px}
+.hs-auf-text{width:100%;box-sizing:border-box;font-family:var(--mono);font-size:var(--size-small);color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:6px 8px;resize:vertical}
+.hs-auf-sitzungen{display:flex;flex-direction:column;gap:4px;max-height:140px;overflow:auto}
