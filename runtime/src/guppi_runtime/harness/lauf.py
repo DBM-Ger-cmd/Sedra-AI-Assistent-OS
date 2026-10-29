@@ -191,6 +191,18 @@ LOG_TAIL = 40
 FORTSCHRITT_ABSTAND_S = 2.0     # Ereignisse `fortschritt` höchstens so oft
 
 
+GEHEIM = re.compile(r'(KEY|TOKEN|SECRET|PASSW|CREDENTIAL|AUTH)', re.I)
+
+
+def lauf_umgebung():
+    """Die Umgebung eines Laufs: die des Servers ohne alles, was nach Zugangsdaten aussieht. Läufe sind Typen aus `harness_laeufe.yaml` (Claude, harter Vorbehalt)
+    und brauchen mehr als `befehl` (nvidia-smi und die microVM brauchen ProgramFiles, LOCALAPPDATA …); gefunden im Pilot N8, 29.10.2026: mit der knappen
+    Umgebung von `befehl` scheiterten spec_check und devvm_build."""
+    env = {k: v for k, v in os.environ.items() if not GEHEIM.search(k)}
+    env.update(PYTHONIOENCODING='utf-8', PYTHONDONTWRITEBYTECODE='1')
+    return env
+
+
 def jetzt_text():
     return datetime.now().astimezone().isoformat(timespec='seconds')
 
@@ -313,8 +325,7 @@ class Laeufe:
             kw = {'creationflags': subprocess.CREATE_NEW_PROCESS_GROUP | getattr(subprocess, 'DETACHED_PROCESS', 0x8) | getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)}
         else:
             kw = {'start_new_session': True}
-        from .befehl import umgebung
-        proc = subprocess.Popen([sys.executable, str(HUELLE), str(d)], cwd=str(d), env=umgebung(), stdin=subprocess.DEVNULL,
+        proc = subprocess.Popen([sys.executable, str(HUELLE), str(d)], cwd=str(d), env=lauf_umgebung(), stdin=subprocess.DEVNULL,
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, **kw)
         start = herkunft.startzeit(proc.pid)
         herkunft.REGISTER.registrieren(proc.pid, start)

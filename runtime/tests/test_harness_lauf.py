@@ -164,6 +164,22 @@ class LaufTests(LaufBasis):
                 self.store.laden(lid)
 
 
+class UmgebungTests(unittest.TestCase):
+    def test_lauf_umgebung_behaelt_system_und_streicht_geheimes(self):
+        schluessel = {'PROGRAMFILES': 'x', 'LOCALAPPDATA': 'y', 'OPENAI_API_KEY': 'geheim', 'GITHUB_TOKEN': 'geheim', 'MEIN_PASSWORT': 'geheim', 'PATH': 'p'}
+        alt = {k: os.environ.get(k) for k in schluessel}
+        os.environ.update(schluessel)
+        try:
+            env = lauf.lauf_umgebung()
+        finally:
+            for k, v in alt.items():
+                if v is None: os.environ.pop(k, None)
+                else: os.environ[k] = v
+        self.assertEqual((env['PROGRAMFILES'], env['LOCALAPPDATA'], env['PATH']), ('x', 'y', 'p'))
+        self.assertFalse({'OPENAI_API_KEY', 'GITHUB_TOKEN', 'MEIN_PASSWORT'} & set(env))
+        self.assertEqual(env['PYTHONIOENCODING'], 'utf-8')
+
+
 class FortschrittTests(unittest.TestCase):
     def test_die_drei_regeln_und_muell(self):
         z = ['Start', '3/12', 'Rauschen', '6 / 12']
