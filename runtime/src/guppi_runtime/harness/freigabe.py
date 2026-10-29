@@ -12,6 +12,7 @@ Karten liegen je Karte als JSON unter `<projekt>/runtime_data/harness/karten/` �
 damit die Antwort auf die Karte die Schleife fortsetzen kann, auch nach einem Neustart des Servers. Kein Thread wartet auf eine Karte."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -103,7 +104,7 @@ def oeffentlich(karte):
     """Was die Oberfläche und der Posteingang von einer Karte sehen (ohne den Verlauf der Schleife und ohne das Gate-Objekt)."""
     return {k: karte.get(k) for k in ('karte_id', 'sitzung_id', 'antwort_id', 'werkzeug', 'args', 'ziel', 'stufe', 'regel', 'begruendung', 'vorbehalt',
                                       'vorschau', 'status', 'entscheidung', 'von', 'ueber', 'notiz', 'angelegt', 'beantwortet', 'ergebnis_kurz',
-                                      'mission_id', 'projekt', 'neue_antwort_id')} | {'gate_id': (karte.get('gate') or {}).get('gate_id')}
+                                      'mission_id', 'projekt', 'neue_antwort_id', 'warnung')} | {'gate_id': (karte.get('gate') or {}).get('gate_id')}
 
 
 class Kiste:
@@ -115,6 +116,7 @@ class Kiste:
         self.sitzung_id, self.chat, self.projekt_id = sitzung_id, chat, projekt_id
         self.names = tuple(HARNESS_WERKZEUGE) + (tuple(chat.names) if chat is not None else ())
         self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl')
+        self._gewarnt = set()            # Nachtrag 434b108: welche Ersetzungen dem Modell schon einen Hinweis bekamen
 
     def schemas(self):
         return self.w.schemas() + (self.chat.schemas() if self.chat is not None else [])
@@ -140,6 +142,19 @@ class Kiste:
         self._audit('HARNESS_EINGESTUFT', {'werkzeug': name, 'ziel': plan['ziel'][:300], 'stufe': e['stufe'], 'regel': e['regel'], 'vorbehalt': e['vorbehalt']})
         if e['wirkt_als'] == 'verboten':
             return {'status': 'verboten', 'ergebnis': f"verboten: {e['begruendung']}", 'stufe': 'verboten', 'regel': e['regel'], 'wirkung': False}
+        warnung = plan.get('warnung') if name == 'datei_schreiben' else None
+        if warnung:
+            # W-1: beim ersten Mal nur ein Hinweis ans Modell, nichts wird vorgelegt und nichts geschrieben.
+            # W-2: besteht es auf derselben Ersetzung, geht es als Karte mit Warnkasten an den Captain (auch wenn der Katalog frei sagt).
+            schluessel = (plan['ziel'], hashlib.sha256(plan['fsargs']['content'].encode('utf-8')).hexdigest())
+            if schluessel not in self._gewarnt:
+                self._gewarnt.add(schluessel)
+                self._audit('HARNESS_WARNUNG_HINWEIS', {'ziel': plan['ziel'][:300], 'entfernt': warnung['entfernt'], 'alt': warnung['alt']})
+                return {'status': 'hinweis', 'ergebnis': (
+                            f"Nicht geschrieben – Hinweis: {warnung['text']} Bestehende Dateien ändert man mit datei_aendern (eine Stelle ersetzen). "
+                            "Willst du die ganze Datei trotzdem ersetzen, ruf datei_schreiben mit demselben Inhalt noch einmal auf; dann entscheidet der Captain auf der Karte."),
+                        'stufe': e['stufe'], 'regel': e['regel'], 'wirkung': False}
+            e = dict(e, wirkt_als='captain')
         gate = self.guard.create_gate(self.w.mission_id, plan['gate']['aktion'], plan['gate']['ziel'], request_binding=plan['gate']['bindung'],
                                       risks=[e['begruendung']], rollback_available=name in ('datei_schreiben', 'datei_aendern'))
         if e['wirkt_als'] == 'frei':
@@ -149,7 +164,8 @@ class Kiste:
             return dict(out, stufe=e['stufe'], regel=e['regel'])
         karte = self.karten.anlegen({'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id, 'werkzeug': name, 'args': args, 'ziel': plan['ziel'],
                                      'stufe': e['stufe'], 'regel': e['regel'], 'begruendung': e['begruendung'], 'vorbehalt': e['vorbehalt'],
-                                     'vorschau': plan['vorschau'], 'gate': gate, 'mission_id': self.w.mission_id, 'projekt': self.projekt_id})
+                                     'vorschau': plan['vorschau'], 'gate': gate, 'mission_id': self.w.mission_id, 'projekt': self.projekt_id,
+                                     'warnung': warnung})
         self._audit('HARNESS_KARTE', {'karte_id': karte['karte_id'], 'werkzeug': name, 'ziel': plan['ziel'][:300], 'stufe': e['stufe'],
                                       'regel': e['regel'], 'gate_id': gate['gate_id']})
         return {'status': 'wartet', 'ergebnis': f"wartet auf Freigabe ({karte['karte_id']})", 'stufe': e['stufe'], 'regel': e['regel'],

@@ -120,7 +120,9 @@ class Werkzeuge:
         fsargs = self._fsargs(name, args, p, alt_text)
         neu_text = fsargs['content']
         aktion = 'overwrite_existing' if p.exists() else 'create_new_artifact'
-        return {'ziel': rel, 'vorhanden': p.exists(), 'vorschau': diff(alt_text, neu_text, rel), 'kurz': rel, 'fsargs': fsargs,
+        # Warnung (Nachtrag 434b108, Captain 29.10.2026): datei_schreiben auf eine BESTEHENDE Datei, die viele Zeilen verliert.
+        warnung = ersetzung_warnung(alt_text, neu_text) if (name == 'datei_schreiben' and p.is_file()) else None
+        return {'ziel': rel, 'vorhanden': p.exists(), 'vorschau': diff(alt_text, neu_text, rel), 'kurz': rel, 'fsargs': fsargs, 'warnung': warnung,
                 'gate': {'aktion': aktion, 'ziel': str(p), 'bindung': file_request('write_text', fsargs, p)}}
 
     def _fsargs(self, name, args, p, alt_text):
@@ -260,6 +262,24 @@ class Werkzeuge:
             if p.is_symlink() or not p.is_file():
                 continue
             yield p
+
+
+WARN_ZEILEN = 50          # Nachtrag 434b108: mehr als 50 Zeilen der alten Datei entfernt …
+WARN_ANTEIL = 0.30        # … oder mehr als 30 % ihrer Zeilen
+
+
+def ersetzung_warnung(alt, neu):
+    """None oder {entfernt, neu, alt, text}: eine bestehende Datei, die der neue Inhalt weitgehend ersetzt. Zählt über difflib (Zeilen,
+    nicht Zeichen), damit ein umgebrochener Absatz nicht als Löschung zählt."""
+    a, b = alt.splitlines(), neu.splitlines()
+    if not a:
+        return None
+    gleich = sum(m.size for m in difflib.SequenceMatcher(None, a, b, autojunk=False).get_matching_blocks())
+    entfernt, hinzu = len(a) - gleich, len(b) - gleich
+    if entfernt > WARN_ZEILEN or entfernt / len(a) > WARN_ANTEIL:
+        return {'entfernt': entfernt, 'neu': hinzu, 'alt': len(a),
+                'text': f'Ersetzt die ganze Datei: {entfernt} von {len(a)} Zeilen gelöscht, {hinzu} neu.'}
+    return None
 
 
 def diff(alt, neu, rel):

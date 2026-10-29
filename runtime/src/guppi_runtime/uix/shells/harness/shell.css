@@ -254,3 +254,7 @@
 .hs-wz-stufe.captain,.hs-wz-stufe.vorarbeiter{border-color:var(--warn-line)}
 .hs-wz-stufe.verboten{border-color:var(--bad-line);color:var(--bad)}
 .hs-schild.warn{color:var(--warn);border-color:var(--warn-line)}
+
+/* ---- Warnkasten auf der Karte (Nachtrag 434b108, W-2): ersetzt die ganze Datei */
+.hs-karte-warnung{padding:8px 10px;border-radius:var(--radius);background:var(--bad-bg);border:1px solid var(--bad-line);color:var(--text);font-weight:600;font-size:var(--size-small)}
+.hs-karte.warnung{border-left-color:var(--bad)}
