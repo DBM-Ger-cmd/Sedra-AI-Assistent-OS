@@ -46,6 +46,8 @@ class HarnessShellTests(unittest.TestCase):
         bus = (UI / 'bus.js').read_text(encoding='utf-8')
         self.assertIn("'harness.sitzung'", bus)
         self.assertIn("'harness.antwort'", bus)
+        for name in ('harness.aufgabe', 'harness.vorarbeiter', 'harness.lauf', 'harness.karte'):       # Stufe 3 (P-16)
+            self.assertIn("'" + name + "'", bus, name)
 
     def test_reiter_merken_nur_ids(self):
         reiter = (ORDNER / 'reiter.js').read_text(encoding='utf-8')

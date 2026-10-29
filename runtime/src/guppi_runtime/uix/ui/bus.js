@@ -31,7 +31,12 @@
     'object.actions':     ['type', 'id'],
     // Harness-Shell (SPEC_HARNESS_SHELL_v1 G2 §5): Sender ist der Ereignisstrom; der Text einer Antwort läuft über ihren eigenen Strom
     'harness.sitzung':    ['id'],
-    'harness.antwort':    ['sitzung_id']
+    'harness.antwort':    ['sitzung_id'],
+    // Stufe 3: Aufgaben-Freigabe, Vorarbeiter, Läufe, Karten (Frist) – gesendet vom Ereignisstrom (harness/api.py)
+    'harness.aufgabe':    ['id'],
+    'harness.vorarbeiter': ['projekt'],
+    'harness.lauf':       ['id'],
+    'harness.karte':      ['karte_id']
   };
 
   // '' when the event is fine, otherwise the reason – a sender id of null means the shell (it may send everything)
