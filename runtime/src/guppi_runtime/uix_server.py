@@ -3346,8 +3346,19 @@ def make_server(hub: UIXHub, port=0):
             except (BrokenPipeError, ConnectionResetError, OSError, ValueError):
                 pass                                    # the Captain closed the window or the tab slept: nothing to report
 
+        def _herkunft_ok(self):
+            """S7 (harness/herkunft.py): Freigaben beantwortet nicht, wer aus einem Harness-Prozess (befehl, Lauf) anfragt – auch nicht mit gültigem Token."""
+            h = hub.harness.herkunft_pruefen(self.client_address, self.server.server_port)
+            if not h['ok']:
+                self._send(403, {'error': 'herkunft_abgelehnt', 'code': 'herkunft_abgelehnt',
+                                 'message': 'Diese Antwort darf nur vom Captain kommen, nicht aus einem Prozess der Harness (befehl, Lauf).'})
+                return False
+            return True
+
         def _harness(self, method, path, payload=None):
             """/api/harness/… (harness/api.py): die Wege der Harness-Shell; der Strom einer Antwort als SSE wie _events."""
+            if hub.harness.herkunft_verlangt(method, path) and not self._herkunft_ok():
+                return
             try:
                 out = hub.harness.handle(method, path, urlsplit(self.path).query, payload)
             except ValueError as exc:
@@ -3548,6 +3559,8 @@ def make_server(hub: UIXHub, port=0):
                 payload = self._json_body()
                 if path.startswith('/api/harness/'):      # sitzungen, sitzungen/<id>/nachricht, antworten/<id>/stopp (harness/api.py)
                     self._harness('POST', path, payload)
+                    return
+                if path == '/api/decisions/answer' and not self._herkunft_ok():       # auch der Posteingang beantwortet Harness-Karten (S7)
                     return
                 client = self._client(token_class)
                 if path in uix_clients.ROUTES and isinstance(payload, dict) and 'client' in payload:

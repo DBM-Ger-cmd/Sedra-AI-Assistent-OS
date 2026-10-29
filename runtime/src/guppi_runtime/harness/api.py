@@ -26,6 +26,7 @@ from urllib.parse import parse_qs
 
 from . import aufgabe as harness_aufgabe
 from . import freigabe
+from . import herkunft as harness_herkunft
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
 from . import schleife
@@ -43,6 +44,8 @@ LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
                  r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter)|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?)')
+# Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
+GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter)')
 FORTSETZEN_REST = 'nicht ausgeführt: dieser Aufruf kam nach einem, der auf Freigabe wartete – ruf ihn bei Bedarf noch einmal auf.'
 
 
@@ -59,6 +62,7 @@ class HarnessApi:
         self.execute = lambda mission, request: hub.runtime.control.execute(mission, request)     # in Tests ersetzbar
         self.threads = {}
         self.karten = freigabe.Karten(hub.project_root / 'runtime_data' / 'harness' / 'karten')
+        self.herkunft = harness_herkunft.Herkunft(audit=lambda event, payload: self._audit(event, payload))
         self.vorarbeiter = harness_vorarbeiter.Vorarbeiter(hub.project_root / 'runtime_data' / 'harness' / 'vorarbeiter.json')
         self.aufgaben = harness_aufgabe.Aufgaben(hub.project_root / 'runtime_data' / 'harness' / 'aufgaben', audit=self._audit_roh, melden=self._melden)
 
@@ -104,6 +108,14 @@ class HarnessApi:
             if str(exc) == 'sitzung_unbekannt':
                 raise NichtGefunden('sitzung_unbekannt') from exc
             raise
+
+    # ---- Herkunft (S7)
+    def herkunft_verlangt(self, method, path):
+        return method in ('POST', 'DELETE') and bool(GESCHUETZT.fullmatch(path))
+
+    def herkunft_pruefen(self, client_adresse, server_port):
+        """{ok, grund?} – False, wenn die Anfrage aus einem Harness-Prozess (befehl, Lauf) oder dessen Kindern kommt."""
+        return self.herkunft.pruefen(client_adresse, server_port)
 
     # ---- Wege
     def handle(self, method, path, query='', payload=None):
