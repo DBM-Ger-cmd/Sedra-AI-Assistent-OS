@@ -13,7 +13,7 @@ def fortschritt_aus(zeilen, regel):
     if not isinstance(regel, dict):
         return None
     art = regel.get("art")
-    gefiltert = [z.strip() for z in (zeilen if isinstance(zeilen, (list, tuple)) else []) if isinstance(z, str) and z.strip()]
+    gefiltert = [z.strip() for z in (zeilen if isinstance(zeilen, list) else []) if isinstance(z, str) and z.strip()]
     if art == "text":
         return {"prozent": None, "text": _kurz(gefiltert[-1]) if gefiltert else ""}
     if art not in ("zeilen", "prozent"):
@@ -22,16 +22,18 @@ def fortschritt_aus(zeilen, regel):
         muster = re.compile(regel.get("regex"))
     except (TypeError, re.error):
         return None
+    if muster.groups != (2 if art == "zeilen" else 1):
+        return None
     for zeile in reversed(gefiltert):
         treffer = muster.search(zeile)
         if not treffer:
             continue
         try:
             if art == "zeilen":
-                gesamt = float(treffer.group(2))
+                gesamt = int(treffer.group(2))
                 if gesamt <= 0:
                     continue
-                prozent = float(treffer.group(1)) / gesamt * 100
+                prozent = int(treffer.group(1)) / gesamt * 100
             else:
                 prozent = float(treffer.group(1))
             return {"prozent": max(0, min(100, int(prozent))), "text": _kurz(zeile)}

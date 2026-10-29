@@ -30,7 +30,7 @@ Spec: `SPEC_HARNESS_SHELL_v1_G2_STUFE3.md` (G2) und `SPEC_HARNESS_SHELL_v1_G3_ST
 | N5 Herkunft | `harness/herkunft.py` (Register der Harness-Prozesse, Gegenstelle → PID über `GetExtendedTcpTable`, Vorfahrenkette mit Startzeit), 403 `herkunft_abgelehnt` für Karten, Aufgaben, Ernennung, Läufe-Stopp, Posteingang | `test_harness_herkunft` (12, darunter echte Kind- und Enkelprozesse) |
 | N6 Lauf-Typen | `config/harness_laeufe.yaml` (5 Typen), `harness/lauf.py` Teil 1 (`argv_bauen`) | `test_harness_lauf_typen` (15) |
 | N7 Läufe | `harness/lauf.py` Teil 2, `lauf_huelle.py` (losgelöst, `stopp.txt`, Zeitlimit, `ende.json`), Werkzeuge `lauf_starten/stoppen/status`, `modell_laden/entladen`, „Modell belegt“, Rücknahme stoppt Läufe | `test_harness_lauf` (11), `test_uix_harness_lauf` (9) |
-| N8 Lauf-Fortschritt (SEDRA-Pilot) | **offen**; bis dahin ein kleiner Ersatz `fortschritt_aus` in `lauf.py`, der das SEDRA-Modul automatisch bevorzugt, sobald es existiert | `FortschrittTests` |
+| N8 Lauf-Fortschritt (SEDRA-Pilot) | **gebaut und übernommen (Nachtrag 29.10.2026):** erster Bau eines SEDRA-Agenten unter einem Vorarbeiter über die Harness (siehe „Pilot N8“); versteckt 12/12, 732 s, Kandidat 108 Zeilen, Quote 0,9; Captain: „Ohne toten Code“ – eine Zeile Eingriff (ungenutzte Funktion entfernt) | `test_harness_lauf_fortschritt_vergleich` (3), `FortschrittTests` |
 | N9 Wege, Ereignisse, Audit | alle neuen Wege, `decision.answered` mit Kind `harness_aufgabe`, `HARNESS_KARTE_FRIST`, Tabellentest | `test_uix_harness_wege` (4) |
 | N10 Oberfläche Freigaben | `aufgabe.js`, `karte.js`, Schild, Seitenleiste (⚑, Ernennen), Vorlagenwahl; Shell 1.2.0 | `uix_check`, Browser-Durchlauf A/B |
 | N11 Läufe und Benachrichtigung | `lauf.js`, Taskleiste mit Laufknöpfen, einmaliges Blinken, Markierung bis zum Klick (IDs in `sedra.harness.gesehen`), „Freigaben n · beim Vorarbeiter m“, `bus.js` (P-16); Shell 1.3.0 | Browser-Durchlauf C |
@@ -75,3 +75,25 @@ Dazu in N11: Die Ereignisse `harness.lauf`, `harness.aufgabe`, `harness.vorarbei
 ## Quote (L4)
 
 N2: **106 Zeilen von SEDRA** (Kandidat) gegen 139 Zeilen Spec und Referenz von Claude (Quote 1,3) plus rund 8 Zeilen Korrektur und Kopf von Claude im Paket. N8 steht aus. Alles andere ist Harness-Code, Integration und Oberfläche (Claude, ENTWICKLUNG.md L4); die Gesamtquote der Stufe bleibt deshalb weit über 1.
+
+## Pilot N8 (29.10.2026, Nachtrag): SEDRA baut unter einem Vorarbeiter, über die Harness
+
+Ablauf (Captain: „Pilot starten“, „Du gibst frei“): Oberfläche aus dem Worktree (Shell `harness`), Qwen3.5-9B als Modell der Vorarbeiter-Sitzung `S-3BC82859` (Vorlage `vorarbeiter`, vom Captain-Auftrag ernannt),
+Aufgaben-Freigabe `T-E0A4F78E` (Titel „Pilot N8“, `datei_schreiben docs/spec_entwuerfe/**`, `lauf_starten spec_check`, `lauf_starten devvm_build`, Modell `coder.local_primary`, 60 Aufrufe, 180 Minuten),
+Vorarbeiter startete beide Läufe **ohne Karte** (Werkzeugzeile `aufgabe:T-E0A4F78E`), die Taskleiste zeigte „SEDRA-Bau … Modell belegt“.
+
+| Messwert | Ergebnis |
+|---|---|
+| Bau `L-B965468F` | bestanden, versteckt 12/12, 732 s, 16 Modellaufrufe in 2 Agentenläufen, 1 Nacharbeit, 0 Eskalationen |
+| Umfang | Kandidat 108 Zeilen; Spec plus Referenz von Claude 94 Zeilen; Quote Claude/SEDRA **0,9** |
+| Vergleich mit der Referenz | 4000 saubere Zufallsfälle ohne Abweichung; bei kaputten Eingaben 150 Abweichungen, alle wegen strengerer Gruppenzahl der Regex (spec-gemäß) |
+| Review Gemma-4-12B (Vorlage `pruefer`) | erster Versuch leer (Token-Grenze beim Denken), zweiter: „übernehmen“, 5 Punkte; **oberflächlich** – die ungenutzte Funktion fiel nicht auf |
+| Hardware | vor dem Bau GPU 1,4 GB; danach 1,2 GB, 44 °C, kein Modell geladen, keine Treiberereignisse seit 13:39 |
+
+Befunde des Pilots:
+1. **Umgebung der Läufe:** Mit der knappen Umgebung von `befehl` scheiterten `spec_check` (VM) und `devvm_build` (`nvidia-smi`); der Fehlversuch von `spec_check` löschte dabei den Stempel (Stempel neu geschrieben). Behoben: `lauf_umgebung()` (Umgebung des Servers ohne Namen mit KEY, TOKEN, SECRET, PASSW, CREDENTIAL, AUTH), mit Test (`5858fd7`).
+2. **Erfundene Lauf-ID:** Das 9B-Modell nannte einmal eine Lauf-ID, ohne das Werkzeug aufzurufen; die Harness zählte das nicht als „erledigt“ (HS-16). Erst auf eine klare Aufforderung rief es `lauf_starten` auf.
+3. **G3-Fehler S3-F:** Die Aufgabe kann der Vorarbeiter nicht vorschlagen, wenn seine eigene Sitzung darin steht (S4); nur der Captain legt sie direkt an. Im Pilot hat Claude das Formular auf Anweisung des Captains abgeschickt.
+4. **Qwen3.6 als Vorarbeiter-Modell** ließ sich nicht laden (`hardware_pressure`: das Rezept verlangt 18 GB freien RAM, frei waren 14 GB); der Bau selbst lief mit 32k Kontext trotzdem.
+5. **Das Review mit Gemma** braucht Spec und Code in der Nachricht, weil der Kandidat außerhalb des Projektordners liegt und die Prüfer-Sitzung ihn nicht lesen kann.
+6. Aufräumen steht aus: im Worktree liegen noch die Verbindungen `engines` und `workspace` sowie die Kopie von `runtime/config/local_paths.yaml` (alles gitignoriert), bis die Abnahme mit Modell (P-14) durch ist.

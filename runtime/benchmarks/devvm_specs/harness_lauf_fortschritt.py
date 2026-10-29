@@ -15,15 +15,15 @@ Never raise on bad input.
 TASK = '''Write `lauf_fortschritt.py`: read the progress of a running job from the last lines of its output.
 
 Function `fortschritt_aus(zeilen, regel)`:
-- `zeilen` is a list of output lines (anything else, and entries that are not strings, count as no lines; blank lines are ignored; every line is stripped).
+- `zeilen` is a list of output lines (anything that is not a list, and entries that are not strings, count as no lines; blank lines are ignored; every line is stripped).
 - `regel` is a dict {"art": "zeilen" | "prozent" | "text", "regex": str}; anything else gives None.
 - art "text": the last non-blank line, at most 80 characters (a longer line is cut to its first 79 characters plus "…"). Result {"prozent": None, "text": line};
   with no lines {"prozent": None, "text": ""}.
-- art "zeilen": `regex` has two groups, done and total. Search the lines from the LAST to the first with `re.search`; the first line that matches and
+- art "zeilen": `regex` has exactly two groups, done and total (whole numbers). Search the lines from the LAST to the first with `re.search`; the first line that matches and
   whose total is above 0 decides: prozent = int(done / total * 100) clamped into 0..100, text = that line (cut like above). A line whose groups are not
   numbers, or whose total is 0 or below, counts as not matching. No decisive line gives None.
-- art "prozent": `regex` has one group, a number (may have decimals). Same search; prozent = int(number) clamped into 0..100; text as above.
-- An invalid `regex` (not a string or not a valid pattern) gives None. The result of "zeilen" and "prozent" always has exactly the keys "prozent" and "text".
+- art "prozent": `regex` has exactly one group, a number (may have decimals). Same search; prozent = int(number) clamped into 0..100; text as above.
+- An invalid `regex` (not a string or not a valid pattern) or one with the wrong number of groups gives None. The result of "zeilen" and "prozent" always has exactly the keys "prozent" and "text".
 '''
 
 HEAD = '''
