@@ -111,9 +111,10 @@ class Kiste:
     """Die Werkzeugkiste einer Antwort: Harness-Werkzeuge (mit Freigabe) und die lesenden Zustandswerkzeuge (chat_tools, frei).
     Die Schleife ruft `aufruf`; bei `wartet` hält sie mit `festhalten` ihren Zustand an der Karte fest."""
 
-    def __init__(self, werkzeuge, *, regeln, guard, audit, karten, sitzung_id, chat=None, projekt_id=None):
+    def __init__(self, werkzeuge, *, regeln, guard, audit, karten, sitzung_id, chat=None, projekt_id=None, aufgaben=None, lokal=True):
         self.w, self.regeln, self.guard, self.audit, self.karten = werkzeuge, regeln, guard, audit, karten
         self.sitzung_id, self.chat, self.projekt_id = sitzung_id, chat, projekt_id
+        self.aufgaben, self.lokal = aufgaben, lokal        # Stufe 3: Aufgaben-Freigabe gilt nur für lokale Modelle (HS-27)
         self.names = tuple(HARNESS_WERKZEUGE) + (tuple(chat.names) if chat is not None else ())
         self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl')
         self._gewarnt = set()            # Nachtrag 434b108: welche Ersetzungen dem Modell schon einen Hinweis bekamen
@@ -143,6 +144,7 @@ class Kiste:
         if e['wirkt_als'] == 'verboten':
             return {'status': 'verboten', 'ergebnis': f"verboten: {e['begruendung']}", 'stufe': 'verboten', 'regel': e['regel'], 'wirkung': False}
         warnung = plan.get('warnung') if name == 'datei_schreiben' else None
+        warnkarte = False
         if warnung:
             # W-1: beim ersten Mal nur ein Hinweis ans Modell, nichts wird vorgelegt und nichts geschrieben.
             # W-2: besteht es auf derselben Ersetzung, geht es als Karte mit Warnkasten an den Captain (auch wenn der Katalog frei sagt).
@@ -155,13 +157,21 @@ class Kiste:
                             "Willst du die ganze Datei trotzdem ersetzen, ruf datei_schreiben mit demselben Inhalt noch einmal auf; dann entscheidet der Captain auf der Karte."),
                         'stufe': e['stufe'], 'regel': e['regel'], 'wirkung': False}
             e = dict(e, wirkt_als='captain')
+            warnkarte = True                                  # Kasten und Entscheidung bleiben beim Captain – keine Aufgabe deckt sie
+        via_aufgabe = None
+        if e['wirkt_als'] != 'frei' and self.aufgaben is not None and self.lokal and not e['vorbehalt'] and not warnkarte:
+            weich = vorbehalte.pruefen_weich(name, plan['ziel'], args)
+            treffer = self.aufgaben.deckt(self.sitzung_id, name, plan['ziel'], weich=weich)
+            if treffer and self.aufgaben.zaehlen(treffer['aufgabe_id']):
+                via_aufgabe = treffer['aufgabe_id']
         gate = self.guard.create_gate(self.w.mission_id, plan['gate']['aktion'], plan['gate']['ziel'], request_binding=plan['gate']['bindung'],
                                       risks=[e['begruendung']], rollback_available=name in ('datei_schreiben', 'datei_aendern'))
-        if e['wirkt_als'] == 'frei':
+        if e['wirkt_als'] == 'frei' or via_aufgabe:
             token = self.guard.approve(gate)
-            self._audit('HARNESS_APPROVED_BY', {'approved_by': f"katalog:{e['regel']}", 'werkzeug': name, 'gate_id': gate['gate_id']})
+            von = f'aufgabe:{via_aufgabe}' if via_aufgabe else f"katalog:{e['regel']}"
+            self._audit('HARNESS_APPROVED_BY', {'approved_by': von, 'werkzeug': name, 'gate_id': gate['gate_id']})
             out = ausfuehren(self.w, self.guard, name, args, plan, token, abbruch)
-            return dict(out, stufe=e['stufe'], regel=e['regel'])
+            return dict(out, stufe='aufgabe' if via_aufgabe else e['stufe'], regel=von if via_aufgabe else e['regel'])
         karte = self.karten.anlegen({'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id, 'werkzeug': name, 'args': args, 'ziel': plan['ziel'],
                                      'stufe': e['stufe'], 'regel': e['regel'], 'begruendung': e['begruendung'], 'vorbehalt': e['vorbehalt'],
                                      'vorschau': plan['vorschau'], 'gate': gate, 'mission_id': self.w.mission_id, 'projekt': self.projekt_id,

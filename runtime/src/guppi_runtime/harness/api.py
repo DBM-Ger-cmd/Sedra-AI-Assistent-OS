@@ -24,6 +24,7 @@ import re
 import threading
 from urllib.parse import parse_qs
 
+from . import aufgabe as harness_aufgabe
 from . import freigabe
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
@@ -40,7 +41,7 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})|(katalog|einstufen|werkzeuge|vorlagen))')
+                 r'|karten/(K-[0-9A-F]{8})|(katalog|einstufen|werkzeuge|vorlagen)|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?)')
 FORTSETZEN_REST = 'nicht ausgeführt: dieser Aufruf kam nach einem, der auf Freigabe wartete – ruf ihn bei Bedarf noch einmal auf.'
 
 
@@ -57,12 +58,16 @@ class HarnessApi:
         self.execute = lambda mission, request: hub.runtime.control.execute(mission, request)     # in Tests ersetzbar
         self.threads = {}
         self.karten = freigabe.Karten(hub.project_root / 'runtime_data' / 'harness' / 'karten')
+        self.aufgaben = harness_aufgabe.Aufgaben(hub.project_root / 'runtime_data' / 'harness' / 'aufgaben', audit=self._audit_roh, melden=self._melden)
 
     # ---- Hilfen
     def _melden(self, name, daten):
         events = getattr(self.hub, 'events', None)
         if events is not None:
             events.publish(name, daten)
+
+    def _audit_roh(self, event, payload, **_kw):
+        self._audit(event, payload)
 
     def _audit(self, event, payload):
         try:
@@ -104,7 +109,7 @@ class HarnessApi:
         m = WEG.fullmatch(path)
         if not m:
             raise NichtGefunden('weg_unbekannt')
-        projekte, sitzungen, sid, nachricht, aid, aktion, kid, fest = m.groups()
+        projekte, sitzungen, sid, nachricht, aid, aktion, kid, fest, aufgaben, tid, tak = m.groups()
         payload = payload or {}
         q = parse_qs(query or '')
         if kid:
@@ -112,6 +117,8 @@ class HarnessApi:
                 return 200, self.karte(kid)
             if method == 'POST':
                 return 200, self.beantworten(kid, str(payload.get('weg') or ''), payload.get('notiz'), ueber='karte')
+        if aufgaben:
+            return self.aufgaben_weg(method, tid, tak, payload)
         if fest == 'katalog' and method == 'GET':
             return 200, self.katalog()
         if fest == 'einstufen' and method == 'POST':
@@ -285,7 +292,7 @@ class HarnessApi:
             return self._begrenzen(s, chat), projekt
         w = Werkzeuge(projekt, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, mission_id=s['kopf'].get('mission_id'), regeln=regeln)
         return self._begrenzen(s, freigabe.Kiste(w, regeln=regeln, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, karten=self.karten,
-                              sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'])), projekt
+                              sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'], aufgaben=self.aufgaben)), projekt
 
     def _starten(self, sid, s, antwort, box, messages, info, modell, bisher=()):
         guard = getattr(self.hub.runtime.model_router, 'content_guard', None)
@@ -325,6 +332,33 @@ class HarnessApi:
         self._melden('harness.antwort', {'sitzung_id': sid, 'antwort_id': antwort.id, 'zustand': 'laeuft'})
         t.start()
         return {'status': 'laeuft', 'antwort_id': antwort.id, 'modell': modell, 'live': live}
+
+    # ---- Stufe 3: Aufgaben-Freigabe (N3). Anlegen und Zurücknehmen nur durch den Captain; die Herkunftsprüfung der HTTP-Wege kommt mit N5.
+    def aufgaben_weg(self, method, tid, tak, payload):
+        if not tid:
+            if method == 'GET':
+                return 200, {'aufgaben': [harness_aufgabe.oeffentlich(a) for a in self.aufgaben.alle()]}
+            if method == 'POST':
+                return 200, self.aufgabe_anlegen(payload)
+        else:
+            try:
+                if method == 'GET' and not tak:
+                    return 200, harness_aufgabe.oeffentlich(self.aufgaben.laden(tid))
+                if method == 'POST' and tak == 'zuruecknehmen':
+                    return 200, harness_aufgabe.oeffentlich(self.aufgaben.zuruecknehmen(tid, payload.get('grund')))
+            except KeyError as exc:
+                raise NichtGefunden('aufgabe_unbekannt') from exc
+        raise NichtGefunden('methode_unbekannt')
+
+    def aufgabe_anlegen(self, payload):
+        self._projekt(str(payload.get('projekt') or ''))
+        for sid in payload.get('sitzungen') or []:
+            try:
+                self._sitzung(sid)
+            except (NichtGefunden, KeyError, SitzungFehler):
+                raise ValueError('sitzung_unbekannt: ' + str(sid)) from None
+        a, warnungen = self.aufgaben.anlegen(payload, von='captain')          # `von` setzt der Server, nie die Nutzlast
+        return dict(harness_aufgabe.oeffentlich(a), warnungen=warnungen)
 
     # ---- Stufe 2: Karten, Katalog, Einstufung
     def karte(self, kid):
