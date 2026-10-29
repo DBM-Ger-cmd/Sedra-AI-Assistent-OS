@@ -32,3 +32,11 @@ Posteingang. Die Werkzeugzeile zeigt Stufe und Regel; das Schild im Eingabefeld 
 
 Vorlagen und Vorarbeiter, Aufgaben-Freigabe, Läufe in der Taskleiste (Stufe 3); Dateien anhängen (`+`, `@`); Start-Menü mit Apps und
 Statusbereich statt Leiste (Stufe 4); Einstellungen und Katalog-Editor (Stufe 5).
+
+## Stufe 3 (Version 1.2.0): Vorarbeiter und Aufgaben-Freigabe
+
+- **Karte:** zeigt, wer entscheidet („Beim Vorarbeiter“, „vorgelegt“, „Frist abgelaufen“) und nach einer Entscheidung des Vorarbeiters seine Begründung; der Captain kann übersteuern. Die Karte zieht sich nach, wenn anderswo entschieden wird (`decision.answered`, `harness.karte`).
+- **Aufgaben** (`aufgabe.js`, Reiter über „⛨ Aufgaben“ in der Seitenleiste): Vorschläge des Vorarbeiters (Einträge abhaken, Frist und Zähler setzen), aktive Aufgaben mit Rest und „Zurücknehmen“ (Läufe mit stoppen), Formular „Aufgabe freigeben“.
+- **Schild** im Eingabefeld: Captain, Vorarbeiter oder „Du bist Vorarbeiter“, dazu die geltende Aufgabe mit Rest.
+- **Seitenleiste:** ⚑ markiert den Vorarbeiter; an Sitzungen mit der Vorlage `vorarbeiter` ernennt oder entzieht der Captain. Neue Sitzungen können eine Vorlage wählen.
+- Browser-Durchlauf mit Modell-Attrappe: `SEDRA_BROWSER=1 python -m unittest test_uix_harness_browser` (kein Modell).

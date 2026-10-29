@@ -29,7 +29,7 @@ AREAS = {
     'scheduler': ('test_model_scheduler*', 'test_slot*', 'test_vramplan*', 'test_testlab', 'test_job_*', 'test_role_routing', 'test_model_loader'),
     'wissen': ('test_wissen_*',),
     'uix': ('test_uix_*',),
-    'harness': ('test_harness_*', 'test_uix_harness_*'),          # SPEC_HARNESS_SHELL_v1 Stufe 1
+    'harness': ('test_harness_*', 'test_uix_harness_*'),          # SPEC_HARNESS_SHELL_v1 Stufen 1 bis 3 (Glob nimmt neue Dateien auf)
 }
 SLOW_FILES = ('test_uix_browser', 'test_uix_flows', 'test_uix_shell_start', 'test_uix_kommandodeck', 'test_uix_rekorder')   # starten einen Browser
 

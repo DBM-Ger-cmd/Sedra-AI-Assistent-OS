@@ -30,7 +30,12 @@ class EinstufenTests(unittest.TestCase):
         e = lambda w, z: katalog.einstufen(regeln, w, z)['stufe']
         self.assertEqual(e('datei_lesen', 'runtime/src/x.py'), 'frei')
         self.assertEqual(e('datei_lesen', 'workspace/GUPPI_OS/local_config/switches.yaml'), 'verboten')
-        self.assertEqual(e('datei_aendern', 'docs/LOGBUCH_AGENT_MANAGER.md'), 'captain')
+        self.assertEqual(e('datei_aendern', 'docs/LOGBUCH_AGENT_MANAGER.md'), 'vorarbeiter')       # Stufe 3, D-G6
+        self.assertEqual(e('datei_aendern', 'docs/ENTWICKLUNG.md'), 'captain')
+        self.assertEqual(e('datei_schreiben', 'docs/spec_entwuerfe/x.md'), 'frei')
+        self.assertEqual(e('lauf_starten', 'run_tests'), 'vorarbeiter')
+        self.assertEqual(e('lauf_starten', 'devvm_build'), 'captain')
+        self.assertEqual(e('lauf_stoppen', 'L-12345678'), 'vorarbeiter')
         self.assertEqual(e('befehl', 'git status'), 'frei')
         self.assertEqual(e('befehl', 'python benchmarks/run_tests.py harness'), 'frei')
         self.assertEqual(e('befehl', 'python -c "print(1)"'), 'captain')

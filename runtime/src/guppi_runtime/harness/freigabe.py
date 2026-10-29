@@ -23,7 +23,7 @@ from pathlib import Path
 
 from . import vorbehalte
 from .katalog import einstufen
-from .werkzeuge import AKTION_LESEN, LESEN, NAMEN as HARNESS_WERKZEUGE, WerkzeugFehler
+from .werkzeuge import AKTION_LESEN, LAUF, LESEN, NAMEN as HARNESS_WERKZEUGE, WerkzeugFehler
 from .befehl import BefehlFehler
 
 KARTE_ID = re.compile(r'K-[0-9A-F]{8}')
@@ -90,6 +90,34 @@ class Karten:
                 out.append(k)
         return sorted(out, key=lambda k: k.get('angelegt') or '')
 
+    def vorlegen(self, kid, von, notiz):
+        """Der Vorarbeiter legt eine Karte dem Captain vor: sie bleibt offen, `an` wird `captain` (HS-26)."""
+        with self._sperre:
+            k = self.laden(kid)
+            if k.get('status') != 'offen':
+                raise ValueError('karte_schon_beantwortet')
+            k['an'] = 'captain'
+            k['vorgelegt'] = {'von': von, 'notiz': notiz, 'zeit': jetzt()}
+            return self.speichern(k)
+
+    def frist_pruefen(self, frist_min=15, jetzt_z=None):
+        """Karten `an: vorarbeiter`, die länger als `frist_min` Minuten offen sind, fallen an den Captain (G2 Stufe 3 §5.3, D-G2). Gibt die geänderten zurück."""
+        jetzt_z = jetzt_z or datetime.now().astimezone()
+        geaendert = []
+        with self._sperre:
+            for k in self.alle('offen'):
+                if k.get('an') != 'vorarbeiter':
+                    continue
+                try:
+                    alt = (jetzt_z - datetime.fromisoformat(k['angelegt'])).total_seconds() / 60
+                except (KeyError, ValueError, TypeError):
+                    continue
+                if alt >= frist_min:
+                    k['an'] = 'captain'
+                    k['frist_abgelaufen'] = jetzt_z.isoformat(timespec='seconds')
+                    geaendert.append(self.speichern(k))
+        return geaendert
+
     def uebernehmen(self, kid):
         """Setzt eine offene Karte auf `in_arbeit` – genau eine Antwort gewinnt; die zweite bekommt ValueError('karte_schon_beantwortet')."""
         with self._sperre:
@@ -104,22 +132,25 @@ def oeffentlich(karte):
     """Was die Oberfläche und der Posteingang von einer Karte sehen (ohne den Verlauf der Schleife und ohne das Gate-Objekt)."""
     return {k: karte.get(k) for k in ('karte_id', 'sitzung_id', 'antwort_id', 'werkzeug', 'args', 'ziel', 'stufe', 'regel', 'begruendung', 'vorbehalt',
                                       'vorschau', 'status', 'entscheidung', 'von', 'ueber', 'notiz', 'angelegt', 'beantwortet', 'ergebnis_kurz',
-                                      'mission_id', 'projekt', 'neue_antwort_id', 'warnung')} | {'gate_id': (karte.get('gate') or {}).get('gate_id')}
+                                      'mission_id', 'projekt', 'neue_antwort_id', 'warnung', 'an', 'art', 'vorschau_hash', 'vorgelegt', 'frist_abgelaufen', 'zurueckgenommen',
+                                      'aufgabe_id')} | {'gate_id': (karte.get('gate') or {}).get('gate_id')}
 
 
 class Kiste:
     """Die Werkzeugkiste einer Antwort: Harness-Werkzeuge (mit Freigabe) und die lesenden Zustandswerkzeuge (chat_tools, frei).
     Die Schleife ruft `aufruf`; bei `wartet` hält sie mit `festhalten` ihren Zustand an der Karte fest."""
 
-    def __init__(self, werkzeuge, *, regeln, guard, audit, karten, sitzung_id, chat=None, projekt_id=None):
+    def __init__(self, werkzeuge, *, regeln, guard, audit, karten, sitzung_id, chat=None, projekt_id=None, aufgaben=None, lokal=True, vorarbeiter=None, extra=None):
         self.w, self.regeln, self.guard, self.audit, self.karten = werkzeuge, regeln, guard, audit, karten
         self.sitzung_id, self.chat, self.projekt_id = sitzung_id, chat, projekt_id
-        self.names = tuple(HARNESS_WERKZEUGE) + (tuple(chat.names) if chat is not None else ())
-        self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl')
+        self.vorarbeiter, self.extra = vorarbeiter, extra        # Stufe 3: Ernennung (Karten `an: vorarbeiter`) und die Werkzeuge des Vorarbeiters
+        self.aufgaben, self.lokal = aufgaben, lokal        # Stufe 3: Aufgaben-Freigabe gilt nur für lokale Modelle (HS-27)
+        self.names = tuple(HARNESS_WERKZEUGE) + (tuple(chat.names) if chat is not None else ()) + (tuple(extra.names) if extra is not None else ())
+        self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen')
         self._gewarnt = set()            # Nachtrag 434b108: welche Ersetzungen dem Modell schon einen Hinweis bekamen
 
     def schemas(self):
-        return self.w.schemas() + (self.chat.schemas() if self.chat is not None else [])
+        return self.w.schemas() + (self.chat.schemas() if self.chat is not None else []) + (self.extra.schemas() if self.extra is not None else [])
 
     def _audit(self, event, payload):
         if self.audit is not None:
@@ -128,6 +159,8 @@ class Kiste:
 
     def aufruf(self, name, args, *, antwort_id=None, abbruch=None):
         """{status: ok|fehler|verboten|wartet|abgebrochen, ergebnis, stufe, regel, wirkung, karte?}."""
+        if self.extra is not None and name in self.extra.names:
+            return self.extra.call(name, args, self.sitzung_id)       # Vorarbeiter-Werkzeuge: die Sitzung kommt vom Server, nie aus den Argumenten
         if name not in HARNESS_WERKZEUGE:
             if self.chat is not None and name in self.chat.names:
                 text = self.chat.call(name, args)
@@ -138,11 +171,14 @@ class Kiste:
             plan = self.w.vorbereiten(name, args)
         except (WerkzeugFehler, BefehlFehler) as exc:
             return {'status': 'fehler', 'ergebnis': f'error: {exc}', 'stufe': None, 'regel': None, 'wirkung': False}
+        if name == 'lauf_status':                              # lesen: keine Karte, kein Katalog (der Inhalt der Ausgabe ist fremder Text, das Werkzeug kennzeichnet ihn)
+            return dict(self.w.ausfuehren(name, args, plan=plan), stufe='frei', regel='lauf-lesen')
         e = einstufung(self.regeln, name, args, plan)
         self._audit('HARNESS_EINGESTUFT', {'werkzeug': name, 'ziel': plan['ziel'][:300], 'stufe': e['stufe'], 'regel': e['regel'], 'vorbehalt': e['vorbehalt']})
         if e['wirkt_als'] == 'verboten':
             return {'status': 'verboten', 'ergebnis': f"verboten: {e['begruendung']}", 'stufe': 'verboten', 'regel': e['regel'], 'wirkung': False}
         warnung = plan.get('warnung') if name == 'datei_schreiben' else None
+        warnkarte = False
         if warnung:
             # W-1: beim ersten Mal nur ein Hinweis ans Modell, nichts wird vorgelegt und nichts geschrieben.
             # W-2: besteht es auf derselben Ersetzung, geht es als Karte mit Warnkasten an den Captain (auch wenn der Katalog frei sagt).
@@ -155,18 +191,34 @@ class Kiste:
                             "Willst du die ganze Datei trotzdem ersetzen, ruf datei_schreiben mit demselben Inhalt noch einmal auf; dann entscheidet der Captain auf der Karte."),
                         'stufe': e['stufe'], 'regel': e['regel'], 'wirkung': False}
             e = dict(e, wirkt_als='captain')
+            warnkarte = True                                  # Kasten und Entscheidung bleiben beim Captain – keine Aufgabe deckt sie
+        via_aufgabe = None
+        if e['wirkt_als'] != 'frei' and self.aufgaben is not None and self.lokal and not e['vorbehalt'] and not warnkarte:
+            weich = vorbehalte.pruefen_weich(name, plan['ziel'], args) or plan.get('weich')
+            treffer = self.aufgaben.deckt(self.sitzung_id, name, plan['ziel'], weich=weich)
+            if treffer and self.aufgaben.zaehlen(treffer['aufgabe_id']):
+                via_aufgabe = treffer['aufgabe_id']
+        self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id, 'aufgabe_id': via_aufgabe}
         gate = self.guard.create_gate(self.w.mission_id, plan['gate']['aktion'], plan['gate']['ziel'], request_binding=plan['gate']['bindung'],
                                       risks=[e['begruendung']], rollback_available=name in ('datei_schreiben', 'datei_aendern'))
-        if e['wirkt_als'] == 'frei':
+        if e['wirkt_als'] == 'frei' or via_aufgabe:
             token = self.guard.approve(gate)
-            self._audit('HARNESS_APPROVED_BY', {'approved_by': f"katalog:{e['regel']}", 'werkzeug': name, 'gate_id': gate['gate_id']})
+            von = f'aufgabe:{via_aufgabe}' if via_aufgabe else f"katalog:{e['regel']}"
+            self._audit('HARNESS_APPROVED_BY', {'approved_by': von, 'werkzeug': name, 'gate_id': gate['gate_id']})
             out = ausfuehren(self.w, self.guard, name, args, plan, token, abbruch)
-            return dict(out, stufe=e['stufe'], regel=e['regel'])
+            return dict(out, stufe='aufgabe' if via_aufgabe else e['stufe'], regel=von if via_aufgabe else e['regel'])
+        an = 'captain'
+        if e['stufe'] == 'vorarbeiter' and not e['vorbehalt'] and not warnkarte and self.vorarbeiter is not None:
+            zustaendig = self.vorarbeiter.zustaendig(self.projekt_id)
+            if zustaendig and zustaendig != self.sitzung_id:      # S2: in der eigenen Sitzung des Vorarbeiters wirkt `vorarbeiter` wie `captain`
+                an = 'vorarbeiter'
+        vorschau_hash = hashlib.sha256(json.dumps([plan['ziel'], args, plan['vorschau']], ensure_ascii=False, sort_keys=True, default=str).encode('utf-8')).hexdigest()
         karte = self.karten.anlegen({'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id, 'werkzeug': name, 'args': args, 'ziel': plan['ziel'],
+                                     'an': an, 'art': 'werkzeug', 'vorschau_hash': vorschau_hash,
                                      'stufe': e['stufe'], 'regel': e['regel'], 'begruendung': e['begruendung'], 'vorbehalt': e['vorbehalt'],
                                      'vorschau': plan['vorschau'], 'gate': gate, 'mission_id': self.w.mission_id, 'projekt': self.projekt_id,
                                      'warnung': warnung})
-        self._audit('HARNESS_KARTE', {'karte_id': karte['karte_id'], 'werkzeug': name, 'ziel': plan['ziel'][:300], 'stufe': e['stufe'],
+        self._audit('HARNESS_KARTE', {'karte_id': karte['karte_id'], 'werkzeug': name, 'ziel': plan['ziel'][:300], 'stufe': e['stufe'], 'an': an,
                                       'regel': e['regel'], 'gate_id': gate['gate_id']})
         return {'status': 'wartet', 'ergebnis': f"wartet auf Freigabe ({karte['karte_id']})", 'stufe': e['stufe'], 'regel': e['regel'],
                 'wirkung': False, 'karte': oeffentlich(karte)}
@@ -189,17 +241,40 @@ def ausfuehren(werkzeuge, guard, name, args, plan, token, abbruch=None):
     return werkzeuge.ausfuehren(name, args, token=token, abbruch=abbruch, plan=plan)
 
 
-def beantworten(karten, karte_id, weg, *, notiz=None, von='captain', ueber='karte', guard, audit=None, werkzeuge_fuer):
+def _aufgabenkarte(karte, weg, notiz, aufgaben, aenderungen):
+    """Antwort auf einen Vorschlag des Vorarbeiters (Kartenart `aufgabe`): nur der Captain gibt frei; er darf die Liste kürzen und Frist/Zähler setzen.
+    Die Aufgabe entsteht mit `von=captain`, der Vorschlag bleibt streng geprüft."""
+    if weg != 'erlauben':
+        return {'status': 'abgelehnt', 'ergebnis': 'abgelehnt: ' + (str(notiz).strip() if notiz and str(notiz).strip() else 'vom Captain, ohne Begründung'), 'wirkung': False}
+    doc = json.loads(json.dumps(karte['args']))
+    a = aenderungen or {}
+    if a.get('auswahl') is not None:
+        idx = a['auswahl']
+        if not isinstance(idx, list) or not idx or not all(isinstance(i, int) and 0 <= i < len(doc['erlaubt']) for i in idx):
+            raise ValueError('auswahl_ungueltig')
+        doc['erlaubt'] = [doc['erlaubt'][i] for i in sorted(set(idx))]
+    for feld in ('bis', 'max_aufrufe'):
+        if a.get(feld) is not None:
+            doc['ende'][feld] = a[feld]
+    neu, warnungen = aufgaben.anlegen(doc, von='captain', vorschlag_von=karte.get('vorschlag_von'), verbotene_sitzungen=(karte.get('sitzung_id'),))
+    karte['aufgabe_id'] = neu['id']
+    return {'status': 'ok', 'ergebnis': f"Aufgabe {neu['id']} angelegt", 'wirkung': False}
+
+
+def beantworten(karten, karte_id, weg, *, notiz=None, von='captain', ueber='karte', guard, audit=None, werkzeuge_fuer, aufgaben=None, aenderungen=None):
     """Die eine Tür für Karte und Posteingang (HS-22): `erlauben` → Guard.approve → Werkzeug mit Token; `ablehnen` → Guard.reject.
     `werkzeuge_fuer(karte)` liefert die Werkzeuge des Projekts der Karte. Rückgabe {karte, ergebnis, status, wirkung}."""
     if weg not in WEGE:
         raise ValueError('weg_unbekannt')
     karte = karten.uebernehmen(karte_id)
-    gate = karte['gate']
+    gate = karte.get('gate') or {}
     try:
-        if weg == 'erlauben':
+        if karte.get('art') == 'aufgabe':
+            out = _aufgabenkarte(karte, weg, notiz, aufgaben, aenderungen)
+        elif weg == 'erlauben':
             token = guard.approve(gate)
             w = werkzeuge_fuer(karte)
+            w.kontext = {'sitzung_id': karte.get('sitzung_id'), 'antwort_id': karte.get('antwort_id'), 'karte_id': karte_id, 'aufgabe_id': None}
             try:
                 plan = w.vorbereiten(karte['werkzeug'], karte['args'])
             except (WerkzeugFehler, BefehlFehler) as exc:
@@ -220,9 +295,11 @@ def beantworten(karten, karte_id, weg, *, notiz=None, von='captain', ueber='kart
     karten.speichern(karte)
     if audit is not None:
         try:
-            audit.append('HARNESS_FREIGABE', component='harness', mission_id=karte.get('mission_id'),
-                         payload={'karte_id': karte_id, 'weg': weg, 'von': von, 'ueber': ueber, 'werkzeug': karte['werkzeug'],
-                                  'regel': karte.get('regel'), 'gate_id': gate.get('gate_id'), 'status': out['status']})
+            payload = {'karte_id': karte_id, 'weg': weg, 'von': von, 'ueber': ueber, 'werkzeug': karte['werkzeug'],
+                       'regel': karte.get('regel'), 'gate_id': gate.get('gate_id'), 'status': out['status']}
+            if str(von).startswith('vorarbeiter:'):
+                payload['begruendung'] = notiz                  # HS-29: die Begründung des Vorarbeiters steht im Audit
+            audit.append('HARNESS_FREIGABE', component='harness', mission_id=karte.get('mission_id'), payload=payload)
         except Exception:
             pass
     return {'karte': karte, 'ergebnis': out['ergebnis'], 'status': out['status'], 'wirkung': out.get('wirkung', False)}

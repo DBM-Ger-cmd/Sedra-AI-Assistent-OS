@@ -50,3 +50,24 @@ freigabe_katalog:
       muster: ['python *']
       stufe: captain
       begruendung: beliebiger Code – der Captain sieht die Zeile.
+    # Stufe 3 (G2 Stufe 3 D-G6): Verantwortung teilen. `vorarbeiter` entscheidet die ernannte Vorarbeiter-Sitzung (ohne sie wirkt es wie `captain`).
+    - id: schreiben-spec-entwuerfe
+      werkzeug: [datei_schreiben, datei_aendern]
+      muster: ['docs/spec_entwuerfe/**']
+      stufe: frei
+      begruendung: Entwürfe sind nicht verbindlich – das Gate vor dem Bau entscheidet der Captain.
+    - id: schreiben-logbuch
+      werkzeug: [datei_schreiben, datei_aendern]
+      muster: ['docs/LOGBUCH_AGENT_MANAGER.md']
+      stufe: vorarbeiter
+      begruendung: Logbuchzeilen prüft der Vorarbeiter.
+    - id: lauf-tests
+      werkzeug: lauf_starten
+      muster: ['run_tests', 'spec_check']
+      stufe: vorarbeiter
+      begruendung: Tests und Stempel ändern nichts.
+    - id: lauf-stopp
+      werkzeug: lauf_stoppen
+      muster: ['*']
+      stufe: vorarbeiter
+      begruendung: Anhalten eines Laufs ist ungefährlich.

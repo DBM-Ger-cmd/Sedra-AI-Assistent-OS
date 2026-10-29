@@ -24,6 +24,8 @@
     S.api('/api/harness/katalog').then(k=>{                    // HS-17/HS-26: das Schild sagt, wer freigibt und nach welchem Katalog
       if(k.fehler){ schild.textContent = '⛨ Katalog ungültig'; schild.classList.add('warn'); schild.title = 'Freigabe-Katalog: ' + k.fehler + ' – nur lesende Werkzeuge.'; return; }
       schild.textContent = '⛨ Captain gibt frei · Katalog ' + k.regeln.length + ' Regeln' + (k.quelle === 'vorlage' ? ' (Vorlage)' : '');
+      S._eingabe.schildBasis = schild.textContent; S._eingabe.katalog = k;
+      schildZeigen(S);
       schild.title = 'Freigabe-Katalog: ' + k.regeln.map(r=>r.id + ' = ' + r.stufe).join(', ') + '. Ohne Regel entscheidet der Captain; feste Vorbehalte gehen immer an ihn.';
     }).catch(()=>{});
     const modell = d().el('span', 'hs-modell', '…');
@@ -38,13 +40,15 @@
     const projekt = d().el('select', 'hs-projektwahl'); projekt.setAttribute('aria-label', 'Projekt der neuen Sitzung');
     const projektZeile = d().el('label', 'hs-projektzeile');
     projektZeile.append(d().el('span', 'hs-leise', 'Projekt'), projekt);
+    const vorlage = d().el('select', 'hs-projektwahl'); vorlage.setAttribute('aria-label', 'Vorlage der neuen Sitzung');
+    projektZeile.append(d().el('span', 'hs-leise', 'Vorlage'), vorlage);
     const kein = d().el('div', 'hs-kein-modell'); kein.hidden = true;
     const zeile = d().el('div', 'hs-eingabe-zeile');
     const werkzeuge = d().el('div', 'hs-eingabe-leiste');
     werkzeuge.append(plus, schild, modell, d().el('span', 'hs-luecke'), mikro, senden);
     zeile.append(feld, werkzeuge);
     box.append(kein, vorschlag, zeile, projektZeile);
-    S._eingabe = {feld, senden, modell, projekt, projektZeile, kein, vorschlag};
+    S._eingabe = {feld, senden, modell, projekt, vorlage, projektZeile, kein, vorschlag, schild, schildBasis: schild.textContent};
 
     const groesse = ()=>{ feld.style.height = 'auto'; feld.style.height = Math.min(feld.scrollHeight, Math.round(root.innerHeight * 0.4)) + 'px'; };
     feld.addEventListener('input', ()=>{ groesse(); hilfe(S); });
@@ -94,7 +98,7 @@
       catch(err){ S.hinweis('Befehl fehlgeschlagen: ' + err.message, 'bad'); return; }
     }
     e.feld.value = ''; hilfe(S); S._groesse();
-    const ok = await a.senden(text, e.projekt.value || undefined);
+    const ok = await a.senden(text, e.projekt.value || undefined, e.vorlage.value || undefined);
     if(!ok && !e.feld.value) e.feld.value = text;        // nichts verloren, wenn es nicht ging
     S._groesse();
     zustand(S);
@@ -111,7 +115,39 @@
     e.projektZeile.hidden = !(a && !/^S-/.test(a.id));
   }
 
-  function fuer(S, a){ zustand(S); fokus(S); }
+  function fuer(S, a){
+    S.el.eingabe.classList.toggle('hs-aus', !!a && /^(aufgaben|lauf|diff):/.test(String(a.id)));      // in Aufgaben-, Lauf- und Diff-Reitern gibt es nichts zu schreiben
+    zustand(S); fokus(S); schildZeigen(S);
+  }
+
+  // HS-17/HS-26/HS-27: das Schild sagt, wer in dieser Sitzung freigibt – der Captain, der Vorarbeiter für Stufe „vorarbeiter“ – und welche Aufgabe gilt.
+  function schildZeigen(S){
+    const e = S._eingabe; if(!e) return;
+    const a = S.aktive();
+    const sid = a && /^S-/.test(a.id) ? a.id : null;
+    const s = sid && S.sitzung(sid);
+    const vorarbeiter = S.vorarbeiter && s ? S.vorarbeiter[s.projekt] : null;
+    let text = e.schildBasis, hinweis = e.schild.title;
+    if(vorarbeiter && vorarbeiter.sitzung_id === sid){ text = '⚑ Du bist Vorarbeiter · Stufe captain bleibt beim Captain'; }
+    else if(vorarbeiter){ text = text.replace('Captain gibt frei', 'Vorarbeiter gibt frei (Stufe vorarbeiter)'); }
+    const aufgabe = (S.aufgaben || []).find(x=>x.status === 'aktiv' && sid && x.sitzungen.indexOf(sid) >= 0);
+    if(aufgabe){
+      const rest = [aufgabe.rest_aufrufe !== null && aufgabe.rest_aufrufe !== undefined ? 'Rest ' + aufgabe.rest_aufrufe : null, aufgabe.rest_min !== null && aufgabe.rest_min !== undefined ? root.sedraHarness.aufgabe.minuten(aufgabe) : null].filter(Boolean).join(', ');
+      text += ' · Aufgabe ' + aufgabe.id + (rest ? ' (' + rest + ')' : '');
+      hinweis = 'Aufgabe „' + aufgabe.titel + '“ gilt für diese Sitzung: ' + aufgabe.erlaubt.map(x=>x.werkzeug + ' ' + x.muster).join('; ');
+    }
+    if(!e.katalog || !e.katalog.fehler){ e.schild.textContent = text; if(aufgabe || vorarbeiter) e.schild.title = hinweis; }
+    e.schild.classList.toggle('aufgabe', !!aufgabe);
+    e.schild.classList.toggle('vorarbeiter', !!vorarbeiter);
+  }
+
+  function vorlagenwahl(S){
+    const e = S._eingabe; if(!e) return;
+    const vorher = e.vorlage.value;
+    const keine = document.createElement('option'); keine.value = ''; keine.textContent = 'ohne Vorlage';
+    e.vorlage.replaceChildren(keine, ...(S.vorlagen || []).filter(v=>!v.fehler).map(v=>{ const o = document.createElement('option'); o.value = v.id; o.textContent = v.name; o.title = v.beschreibung || ''; return o; }));
+    if(vorher) e.vorlage.value = vorher;
+  }
 
   function fokus(S){ const e = S._eingabe; if(e) setTimeout(()=>e.feld.focus(), 0); }
 
@@ -135,5 +171,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.eingabe = {mount, zustand, fuer, fokus, modellZeigen, projektwahl, BEFEHLE};
+  root.sedraHarness.eingabe = {mount, zustand, fuer, fokus, modellZeigen, projektwahl, schildZeigen, vorlagenwahl, BEFEHLE};
 })();

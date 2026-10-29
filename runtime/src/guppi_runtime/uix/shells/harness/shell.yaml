@@ -3,10 +3,10 @@
 shell:
   id: harness
   name: Harness
-  description: Gespräch in der Mitte mit Sitzungen, Streamen und sichtbaren Werkzeugen; Werkzeuge mit Freigabe-Karte; unten die Taskleiste (Stufe 2).
-  version: 1.1.0
+  description: Gespräch in der Mitte mit Sitzungen, Streamen und sichtbaren Werkzeugen; Werkzeuge mit Freigabe-Karte; Vorarbeiter, Aufgaben-Freigabe und Läufe (Stufe 3); unten die Taskleiste mit Läufen und Benachrichtigung.
+  version: 1.3.0
   entry:
-    js: [markdown.js, seite.js, reiter.js, karte.js, verlauf.js, eingabe.js, taskleiste.js, shell.js]     # shell.js zuletzt: es registriert
+    js: [markdown.js, seite.js, reiter.js, karte.js, aufgabe.js, lauf.js, verlauf.js, eingabe.js, taskleiste.js, shell.js]     # shell.js zuletzt: es registriert
     css: shell.css
   provides: [seite, reiter, flaeche, eingabe, taskleiste]
   layout: {persist: browser}

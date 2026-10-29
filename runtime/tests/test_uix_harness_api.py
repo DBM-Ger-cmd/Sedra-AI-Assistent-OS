@@ -254,8 +254,8 @@ class HarnessApiTests(unittest.TestCase):
         self.assertEqual(anfrage(self.url, 'GET', '/api/harness/antworten/A-00000000/strom')[0], 404)
         self.assertEqual(anfrage(self.url, 'GET', '/api/harness/sitzungen/S-00000000')[0], 404)
         self.assertEqual(anfrage(self.url, 'GET', '/api/harness/irgendwas')[0], 404)
-        code, body = anfrage(self.url, 'POST', '/api/harness/sitzungen', {'projekt': 'sedra-entwicklung', 'vorlage': 'vorarbeiter'})
-        self.assertEqual((code, body['code']), (400, 'vorlage_ab_stufe_3'))
+        code, body = anfrage(self.url, 'POST', '/api/harness/sitzungen', {'projekt': 'sedra-entwicklung', 'vorlage': 'gibt-es-nicht'})
+        self.assertEqual((code, body['code']), (400, 'vorlage_unbekannt'))
 
     def test_ereignisse_auf_dem_gemeinsamen_strom(self):
         vorher = self.hub.events.last_id

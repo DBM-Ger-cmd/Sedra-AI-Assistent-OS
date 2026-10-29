@@ -1,0 +1,10 @@
+harness_vorlage:
+  version: 1
+  id: bauagent
+  name: Bauagent
+  beschreibung: Schreibt Code und Tests im Schreibbereich des Projekts; seine Karten der Stufe „vorarbeiter“ gehen an den Vorarbeiter.
+  system: bauagent.md
+  werkzeuge: [datei_lesen, dateien_auflisten, suchen, datei_schreiben, datei_aendern, befehl]
+  rechte: {}
+  modell: coder.llama_qwen35
+  max_zuege: 24

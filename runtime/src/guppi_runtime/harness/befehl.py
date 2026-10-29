@@ -20,6 +20,8 @@ import threading
 import time
 from pathlib import Path
 
+from . import herkunft
+
 AKTION = 'harness_befehl'
 ZEITLIMIT_MAX = 600
 AUSGABE_MAX = 20_000
@@ -128,6 +130,7 @@ def ausfuehren(wurzel, zeile, ordner='.', zeitlimit_s=120, *, guard, mission_id,
     kw = {'creationflags': subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == 'nt' else {'start_new_session': True}
     t0 = clock()
     proc = subprocess.Popen(argv, cwd=str(cwd), env=umgebung(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, **kw)
+    herkunft.REGISTER.registrieren(proc.pid)          # Stufe 3, S7: Anfragen aus diesem Prozess (und seinen Kindern) dürfen keine Freigabe beantworten
     stuecke = []
     leser = threading.Thread(target=lambda: stuecke.append(proc.stdout.read()), daemon=True)
     leser.start()
@@ -139,6 +142,7 @@ def ausfuehren(wurzel, zeile, ordner='.', zeitlimit_s=120, *, guard, mission_id,
             status = 'zeitlimit'; _beenden(proc); break
         time.sleep(0.05)
     proc.wait(timeout=30)
+    herkunft.REGISTER.austragen(proc.pid)
     leser.join(timeout=10)
     roh = b''.join(stuecke).decode('utf-8', errors='replace')
     ausgabe, gekuerzt = kuerzen(roh)

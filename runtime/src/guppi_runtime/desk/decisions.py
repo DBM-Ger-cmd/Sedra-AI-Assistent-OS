@@ -112,10 +112,13 @@ def harness_decision(k):
     """Eine Freigabe-Karte der Harness-Shell (SPEC_HARNESS_SHELL_v1 HS-22, G2 §3.6): dieselbe Freigabe wie auf der Karte im Verlauf –
     die Antwort hier und dort läuft über dieselbe Tür (harness/freigabe.beantworten), mit demselben Audit."""
     vorschau = str(k.get('vorschau') or '')
-    return {'id': 'harness:' + k['karte_id'], 'kind': 'harness_freigabe', 'title': f"Harness · {k.get('werkzeug')}: {str(k.get('ziel') or '')[:100]}",
+    aufgabe = k.get('art') == 'aufgabe'
+    beim = ' (beim Vorarbeiter)' if k.get('an') == 'vorarbeiter' else ''
+    return {'id': 'harness:' + k['karte_id'], 'kind': 'harness_aufgabe' if aufgabe else 'harness_freigabe',
+            'title': (f"Harness · Aufgabe vorgeschlagen: {str(k.get('ziel') or '')[:100]}" if aufgabe else f"Harness · {k.get('werkzeug')}: {str(k.get('ziel') or '')[:100]}") + beim,
             'describe': str(k.get('begruendung') or ''), 'mission_id': k.get('mission_id'), 'gate_id': k.get('gate_id'),
             'risks': [str(k.get('begruendung') or '')], 'rollback': k.get('werkzeug') in ('datei_schreiben', 'datei_aendern'),
-            'note': f"Stufe {k.get('stufe')} · Regel {k.get('regel') or 'keine'} · Sitzung {k.get('sitzung_id')}",
+            'note': f"Stufe {k.get('stufe')} · Regel {k.get('regel') or 'keine'} · Sitzung {k.get('sitzung_id')}" + (' · beim Vorarbeiter' if k.get('an') == 'vorarbeiter' else ''),
             'created_at': k.get('angelegt'), 'ways': ['erlauben', 'ablehnen'], 'apply': None,
             'binding': {'karte_id': k['karte_id'], 'werkzeug': k.get('werkzeug'), 'ziel': k.get('ziel'), 'vorschau': vorschau[:4000]},
             'agent_id': None}

@@ -31,16 +31,32 @@
       box.append(kasten);
       box.classList.add('warnung');
     }
-    box.append(kopf, meta, diffZeilen(k.vorschau || ''));
+    // Stufe 3: wer entscheidet diese Karte? (HS-26) – beim Vorarbeiter, vorgelegt, Frist abgelaufen
+    const an = d().el('div', 'hs-karte-an'); an.hidden = true;
+    const anZeigen = x=>{
+      const text = x.an === 'vorarbeiter' ? 'Beim Vorarbeiter – er entscheidet diese Karte mit Begründung. Du kannst sie übersteuern.'
+                 : (x.vorgelegt ? 'Vom Vorarbeiter vorgelegt' + (x.vorgelegt.notiz ? ': ' + x.vorgelegt.notiz : '.')
+                 : (x.frist_abgelaufen ? 'Der Vorarbeiter hat nicht rechtzeitig entschieden – jetzt beim Captain.' : ''));
+      an.textContent = text; an.hidden = !text; box.classList.toggle('beim-vorarbeiter', x.an === 'vorarbeiter');
+    };
+    anZeigen(k);
+    box.append(kopf, meta, an, diffZeilen(k.vorschau || ''));
     const fuss = d().el('div', 'hs-karte-fuss');
     box.append(fuss);
     const zeigeEntscheidung = e=>{
       const erlaubt = e.entscheidung === 'erlauben';
-      fuss.replaceChildren(d().el('span', 'hs-ende ' + (erlaubt ? 'ok' : 'warn'), (erlaubt ? 'Erlaubt' : 'Abgelehnt') + (e.ueber === 'posteingang' ? ' (Posteingang)' : '')),
-                           ...(e.notiz ? [d().el('small', 'hs-leise', e.notiz)] : []));
-      box.classList.add('entschieden');
+      const vorarbeiter = String(e.von || '').startsWith('vorarbeiter:');
+      fuss.replaceChildren(d().el('span', 'hs-ende ' + (erlaubt ? 'ok' : 'warn'), (erlaubt ? 'Erlaubt' : 'Abgelehnt') + (vorarbeiter ? ' (Vorarbeiter)' : (e.ueber === 'posteingang' ? ' (Posteingang)' : ''))),
+                           ...(e.notiz ? [d().el('small', 'hs-leise', (vorarbeiter ? 'Begründung: ' : '') + e.notiz)] : []),
+                           ...(e.zurueckgenommen ? [d().el('small', 'hs-karte-an', 'Vom Captain zurückgenommen: ' + (e.zurueckgenommen.grund || ''))] : []));
+      box.classList.add('entschieden'); an.hidden = true;            // entschieden: kein „beim Vorarbeiter“ mehr
     };
+    (S._karten || (S._karten = new Map())).set(k.karte_id, {aktualisieren: x=>{
+      if(x.status !== 'beantwortet') anZeigen(x);
+      if(x.status === 'beantwortet') zeigeEntscheidung({entscheidung: x.entscheidung, notiz: x.notiz, ueber: x.ueber, von: x.von, zurueckgenommen: x.zurueckgenommen});
+    }});
     if(entscheidung){ zeigeEntscheidung(entscheidung); return box; }
+    setTimeout(()=>aktualisieren(S, k.karte_id), 0);              // eine Karte aus dem Verlauf: Empfänger und Stand vom Server holen
     const notiz = d().el('input', 'hs-karte-notiz'); notiz.placeholder = 'Begründung (optional)'; notiz.setAttribute('aria-label', 'Begründung');
     const antworten = async weg=>{
       fuss.querySelectorAll('button').forEach(b=>{ b.disabled = true; });
@@ -76,5 +92,12 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.karte = {diffZeilen, karteKarte, diffAnsicht};
+  // Eine Karte wurde anderswo entschieden (Vorarbeiter, Posteingang) oder hat den Empfänger gewechselt: die Anzeige nachziehen.
+  async function aktualisieren(S, kartenId){
+    const eintrag = S._karten && S._karten.get(kartenId);
+    if(!eintrag) return;
+    try{ eintrag.aktualisieren(await S.api('/api/harness/karten/' + kartenId)); }catch(_err){}
+  }
+
+  root.sedraHarness.karte = {diffZeilen, karteKarte, diffAnsicht, aktualisieren};
 })();

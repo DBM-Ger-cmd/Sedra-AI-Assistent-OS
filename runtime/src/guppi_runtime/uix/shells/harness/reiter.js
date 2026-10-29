@@ -18,6 +18,8 @@
 
   function titel(S, id){
     if(String(id).startsWith('diff:')) return 'Diff ' + id.slice(5);
+    if(String(id).startsWith('aufgaben:')) return 'Aufgaben';
+    if(String(id).startsWith('lauf:')){ const l = (S.laeufe || []).find(x=>x.id === id.slice(5)); return 'Lauf ' + (l ? l.name : id.slice(5)); }
     if(!ID.test(id)) return 'Neue Sitzung';
     const s = S.sitzung(id);
     return (s && s.titel) || 'Ohne Titel';
@@ -69,7 +71,7 @@
 
   function neu(S){
     const r = stand(S);
-    const leer = r.liste.find(id=>!ID.test(id) && !String(id).startsWith('diff:'));          // ein offener Entwurf genügt
+    const leer = r.liste.find(id=>!ID.test(id) && !/^(diff|aufgaben|lauf):/.test(String(id)));          // ein offener Entwurf genügt
     aktivieren(S, leer || ('neu-' + (++zaehler)));
     root.sedraHarness.eingabe.fokus(S);
   }
@@ -114,6 +116,6 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.reiter = {mount: S=>zeichnen(S), zeichnen, titel: S=>zeichnen(S), aktivieren, oeffnen, neu, schliessen, umbenennen,
+  root.sedraHarness.reiter = {mount: S=>zeichnen(S), zeichnen, titel: S=>zeichnen(S), name: titel, aktivieren, oeffnen, neu, schliessen, umbenennen,
                               wiederherstellen, aktiv: S=>stand(S).aktiv, liste: S=>stand(S).liste.slice(), KEY};
 })();

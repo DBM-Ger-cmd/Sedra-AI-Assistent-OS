@@ -17,7 +17,7 @@ DATEI = 'freigabe_katalog.yaml'
 VORLAGE = Path(__file__).resolve().parents[3] / 'config' / 'freigabe_katalog.beispiel.yaml'
 STUFEN = ('frei', 'vorarbeiter', 'captain', 'verboten')          # von mild nach streng; `einstufen` nimmt bei Gleichstand die strengere
 DATEI_WERKZEUGE = ('datei_lesen', 'dateien_auflisten', 'suchen', 'datei_schreiben', 'datei_aendern')
-WERKZEUGE = DATEI_WERKZEUGE + ('befehl',)
+WERKZEUGE = DATEI_WERKZEUGE + ('befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen')      # Stufe 3: Läufe und Modelle (Ziel = Lauf-ID bzw. Rezept-ID)
 ID = re.compile(r'[a-z0-9][a-z0-9-]{0,47}')
 
 
