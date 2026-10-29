@@ -91,6 +91,7 @@ class ImBrowser(Basis):
 
     def test_k5_tastatur_im_baum_und_fokus_nach_dem_neuzeichnen(self):
         page = self.seite()
+        page.wait_for_selector('.ck-tree [role=treeitem][tabindex="0"]', timeout=20000)   # Warten auf den Zustand, nicht auf eine Zeit
         page.locator('.ck-tree [role=treeitem][tabindex="0"]').first.focus()
         start = page.evaluate("()=>document.activeElement.dataset.key")
         page.keyboard.press('ArrowDown'); page.keyboard.press('ArrowDown')
@@ -105,10 +106,13 @@ class ImBrowser(Basis):
         page.keyboard.press('ArrowRight')
         self.assertEqual(page.evaluate("()=>document.activeElement.getAttribute('aria-expanded')"), 'true')
         self.assertEqual(page.evaluate("()=>document.querySelectorAll('.ck-tree [role=treeitem][tabindex=\"0\"]').length"), 1, 'roving tabindex')
-        page.locator('.ck-tree [data-key="g:Bibliothek"]').click(); page.wait_for_timeout(200)
-        page.locator('.ck-tree [data-key="wissen:speicher"]').click(); page.wait_for_timeout(900)
+        page.locator('.ck-tree [data-key="g:Bibliothek"]').click()
+        page.locator('.ck-tree [data-key="wissen:speicher"]').click()
+        page.wait_for_function("()=>(document.querySelector('.dk-tab.on span')||{}).textContent === 'Wissen'", timeout=15000)
         self.assertEqual(page.evaluate("()=>(document.querySelector('.dk-tab.on span')||{}).textContent"), 'Wissen')
-        page.reload(); self.uix.wait_until_started(page); page.wait_for_timeout(1200)
+        page.reload(); self.uix.wait_until_started(page)
+        page.wait_for_selector('.ck-tree [data-key="g:Bibliothek"]', timeout=20000)
+        page.wait_for_function("()=>document.querySelector('.ck-tree [data-key=\"g:Bibliothek\"]').getAttribute('aria-expanded') === 'true'", timeout=15000)
         self.assertEqual(page.evaluate("()=>document.querySelector('.ck-tree [data-key=\"g:Bibliothek\"]').getAttribute('aria-expanded')"), 'true', 'K4')
         self.assertEqual(self.fehler, [])
 
@@ -140,11 +144,13 @@ class ImBrowser(Basis):
     def test_k8_neu_menue_mit_tastatur_und_quelle_fuer_wissen(self):
         page = self.seite()
         knopf = page.locator('button', has_text='＋ Neu').first
-        knopf.click(); page.wait_for_timeout(200)
+        knopf.click()
+        page.wait_for_function("()=>document.activeElement && document.activeElement.classList.contains('ck-menu-item')", timeout=15000)
         self.assertEqual(page.evaluate("()=>document.activeElement.classList.contains('ck-menu-item')"), True)
         page.keyboard.press('ArrowUp')
         self.assertIn('Quelle für Wissen', page.evaluate("()=>document.activeElement.innerText"))
         page.keyboard.press('Escape')
+        page.wait_for_function("()=>document.querySelectorAll('.ck-menu').length === 0", timeout=15000)
         self.assertEqual(page.locator('.ck-menu').count(), 0)
         self.assertEqual(page.evaluate("()=>document.activeElement.textContent"), knopf.inner_text())
         self.assertEqual(self.fehler, [])

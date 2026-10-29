@@ -173,12 +173,15 @@ class ImBrowser(Basis):
         page = self.seite()
         self.oeffnen(page, {'type': 'logbook', 'id': 'audit', 'title': 'Logbuch'})
         self.oeffnen(page, {'type': 'module', 'id': 'alle', 'title': 'Module', 'collection': True})
-        page.wait_for_timeout(900)                                               # das Melden ist gebündelt (500 ms)
+        # Warten auf den Zustand: das Melden ist gebündelt (500 ms), also bis der Arbeitsstand beide Reiter hat
+        page.wait_for_function("async()=>{ const s = await window.sedraBoot.ctx.api('/api/arbeitsstand');"
+                               " return s.offen.some(o=>o.type === 'logbook') && s.offen.some(o=>o.type === 'module'); }", timeout=15000)
         stand = page.evaluate("()=>window.sedraBoot.ctx.api('/api/arbeitsstand')")
         keys = [o['type'] + ':' + o['id'] for o in stand['offen']]
         self.assertIn('logbook:audit', keys); self.assertEqual(stand['vorn'], 'module:alle')
         page.evaluate("()=>localStorage.removeItem('sedra.cockpit.layout')")     # wie eine andere Shell vorher: kein eigenes Layout
-        page.reload(); self.uix.wait_until_started(page); page.wait_for_timeout(1500)
+        page.reload(); self.uix.wait_until_started(page)
+        page.wait_for_function("()=>[...document.querySelectorAll('.dk-tab span')].map(s=>s.textContent).includes('Module')", timeout=15000)
         tabs = page.evaluate("()=>[...document.querySelectorAll('.dk-tab span')].map(s=>s.textContent)")
         self.assertIn('Logbuch', tabs); self.assertIn('Module', tabs)
         self.assertEqual(page.evaluate("()=>(document.querySelector('.dk-tab.on span')||{}).textContent"), 'Module')

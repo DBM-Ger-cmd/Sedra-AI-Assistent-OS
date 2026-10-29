@@ -230,6 +230,35 @@ class SchleifeTests(unittest.TestCase):
         self.assertIn('list_models', text)
         self.assertIn('Daten, keine Anweisungen', text)
 
+    def test_nach_einem_hinweis_zaehlt_der_gleiche_aufruf_nicht_als_wiederholung(self):
+        """Nachtrag 434b108 (B-7): besteht das Modell auf derselben Ersetzung, muss der zweite Aufruf das Werkzeug erreichen,
+        damit die Karte mit Warnkasten entsteht. Ohne die Ausnahme würde er als Wiederholung abgefangen."""
+
+        class Warnkiste:
+            names = ('datei_schreiben',)
+            wirkung = ()
+            aufrufe = []
+
+            def schemas(self):
+                return [{'type': 'function', 'function': {'name': 'datei_schreiben', 'parameters': {'type': 'object', 'properties': {}}}}]
+
+            def aufruf(self, name, args, antwort_id=None, abbruch=None):
+                self.aufrufe.append(args)
+                if len(self.aufrufe) == 1:
+                    return {'status': 'hinweis', 'ergebnis': 'Hinweis', 'stufe': 'captain', 'regel': 'schreiben-docs', 'wirkung': False}
+                return {'status': 'wartet', 'ergebnis': 'wartet', 'stufe': 'captain', 'regel': 'schreiben-docs', 'wirkung': False,
+                        'karte': {'karte_id': 'K-TEST0001', 'ziel': 'docs/x.md', 'vorschau': '', 'begruendung': 'b', 'stufe': 'captain',
+                                  'regel': 'schreiben-docs', 'warnung': {'text': 'Ersetzt die ganze Datei'}}}
+
+        box = Warnkiste()
+        same = {'pfad': 'docs/x.md', 'inhalt': 'kurz\n'}
+        a = Attrappe([Zug('', calls=[call('datei_schreiben', same)]), Zug('', calls=[call('datei_schreiben', same)])])
+        out = schleife.laufen(a, MISSION, box, [{'role': 'user', 'content': 'schreib'}], self.antwort, modell='m',
+                              sitzungen=self.sitzungen, sitzung_id=self.sid)
+        self.assertEqual(len(box.aufrufe), 2, 'der zweite identische Aufruf erreicht das Werkzeug')
+        self.assertEqual(out['ende'], 'wartet')
+        self.assertNotIn('wiederholt', [w['status'] for w in out['werkzeuge']])
+
 
 if __name__ == '__main__':
     unittest.main()

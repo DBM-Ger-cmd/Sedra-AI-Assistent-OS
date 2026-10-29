@@ -221,6 +221,7 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
                 warte_karte = karte['karte_id']
                 ende = 'wartet'
                 break
+            if status == 'hinweis': letzter = None          # Warnung (Nachtrag 434b108, B-7): der Aufruf nach einem Hinweis gilt nicht als Wiederholung
             satz = {'typ': 'werkzeug', 'antwort_id': antwort.id, 'name': name, 'args': args, 'stufe': stufe, 'regel': regel,
                     'status': status, 'dauer_s': dauer, 'ergebnis': ergebnis[:ERGEBNIS_MAX], 'wirkung': wirkt or (name in wirkung and status == 'ok')}
             werkzeuge.append(satz)
