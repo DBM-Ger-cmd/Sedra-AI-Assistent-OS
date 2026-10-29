@@ -114,3 +114,9 @@ Bei jedem Modelllauf gilt weiter: Lade-Lease holen, Rezepte und Engine nicht än
 | D-H8 | **Worktree:** eigener Worktree `harness/stufe-3`; war ein zweiter Worktree wieder gesperrt (Stufe 2), arbeitet die Bau-Sitzung im bestehenden Worktree auf dem neuen Branch weiter. | **So.** |
 
 Nach deinen Antworten tragen wir die Entscheidungen in beide Specs ein; erst dann beginnt der Bau (N1).
+
+## Entscheidungen des Captains (29.10.2026 08:52)
+
+Captain: „Ja, so“ – D-H1 bis D-H8 gelten wie vorgeschlagen (SEDRA baut nur N2 und N8; zwei Abnahmen 3a/3b; Pilot Teil von 3b; Prüfungen im `HIDDEN`; N2 sofort nach Review übernehmen; nur Qwen; Worktree-Regel wie D-H8).
+Berechtigungen: P-1 bis P-10 und P-15 **ja**, P-11 bis P-14 **auf Ansage** (Start erst auf ausdrückliches Wort des Captains in der Bau-Sitzung).
+G3 Stufe 3 ist damit freigegeben; der Bau beginnt mit N1.

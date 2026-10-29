@@ -313,3 +313,8 @@ Jede Zeile: Captain gibt **ja**, **nein** oder **auf Ansage** (= erlaubt, Start 
 | D-G8 | **Vorlagen:** Mitgeliefert `vorarbeiter`, `bauagent`, `pruefer`; `spec-schreiber` erst im Wunsch-G2. Ablage Repo + `local_config/` mit Vorrang. | **Ja.** |
 
 G2 gilt als freigegeben, wenn der Captain D-G1 bis D-G8 entschieden und §9 beantwortet hat; dann folgt das Gate G3 (Bau-Aufgaben).
+
+## 11. Entscheidungen des Captains (29.10.2026 08:52)
+
+Captain: „Ja, so“ – D-G1 bis D-G8 gelten wie vorgeschlagen (fett in §10), ebenso die Berechtigungen §9: P-1 bis P-10 und P-15 **ja**, P-11 bis P-14 **auf Ansage**.
+G2 Stufe 3 ist damit freigegeben. Nächstes Gate: G3 (`SPEC_HARNESS_SHELL_v1_G3_STUFE3.md`).
