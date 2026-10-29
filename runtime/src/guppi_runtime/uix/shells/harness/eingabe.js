@@ -115,7 +115,10 @@
     e.projektZeile.hidden = !(a && !/^S-/.test(a.id));
   }
 
-  function fuer(S, a){ zustand(S); fokus(S); schildZeigen(S); }
+  function fuer(S, a){
+    S.el.eingabe.classList.toggle('hs-aus', !!a && /^(aufgaben|lauf|diff):/.test(String(a.id)));      // in Aufgaben-, Lauf- und Diff-Reitern gibt es nichts zu schreiben
+    zustand(S); fokus(S); schildZeigen(S);
+  }
 
   // HS-17/HS-26/HS-27: das Schild sagt, wer in dieser Sitzung freigibt – der Captain, der Vorarbeiter für Stufe „vorarbeiter“ – und welche Aufgabe gilt.
   function schildZeigen(S){

@@ -49,13 +49,14 @@
       fuss.replaceChildren(d().el('span', 'hs-ende ' + (erlaubt ? 'ok' : 'warn'), (erlaubt ? 'Erlaubt' : 'Abgelehnt') + (vorarbeiter ? ' (Vorarbeiter)' : (e.ueber === 'posteingang' ? ' (Posteingang)' : ''))),
                            ...(e.notiz ? [d().el('small', 'hs-leise', (vorarbeiter ? 'Begründung: ' : '') + e.notiz)] : []),
                            ...(e.zurueckgenommen ? [d().el('small', 'hs-karte-an', 'Vom Captain zurückgenommen: ' + (e.zurueckgenommen.grund || ''))] : []));
-      box.classList.add('entschieden');
+      box.classList.add('entschieden'); an.hidden = true;            // entschieden: kein „beim Vorarbeiter“ mehr
     };
     (S._karten || (S._karten = new Map())).set(k.karte_id, {aktualisieren: x=>{
-      anZeigen(x);
+      if(x.status !== 'beantwortet') anZeigen(x);
       if(x.status === 'beantwortet') zeigeEntscheidung({entscheidung: x.entscheidung, notiz: x.notiz, ueber: x.ueber, von: x.von, zurueckgenommen: x.zurueckgenommen});
     }});
     if(entscheidung){ zeigeEntscheidung(entscheidung); return box; }
+    setTimeout(()=>aktualisieren(S, k.karte_id), 0);              // eine Karte aus dem Verlauf: Empfänger und Stand vom Server holen
     const notiz = d().el('input', 'hs-karte-notiz'); notiz.placeholder = 'Begründung (optional)'; notiz.setAttribute('aria-label', 'Begründung');
     const antworten = async weg=>{
       fuss.querySelectorAll('button').forEach(b=>{ b.disabled = true; });

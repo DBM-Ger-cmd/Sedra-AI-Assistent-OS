@@ -2,7 +2,8 @@
 
 Läuft nur mit `SEDRA_BROWSER=1` (und playwright + Browser): ein echter Browser verlangsamt die Gruppe `harness` und ist unter Last empfindlich, deshalb
 nicht im Standardlauf. Szenarien: (A) Karte an den Vorarbeiter → er entscheidet → die Karte im Verlauf zeigt es; (B) Aufgabe anlegen → Aufruf ohne Karte
-(Schild, Werkzeugzeile „aufgabe“) → Rücknahme → der nächste Aufruf braucht wieder eine Karte."""
+(Schild, Werkzeugzeile „aufgabe“) → Rücknahme → der nächste Aufruf braucht wieder eine Karte; (C) Lauf in der Taskleiste mit Fortschritt → Ende:
+Knopf blinkt einmal und bleibt markiert, auch nach dem Neuladen, bis er angeklickt wird → Reiter „Lauf“ mit der Ausgabe."""
 import os
 import sys
 import tempfile
@@ -15,6 +16,9 @@ from host_isolation import setUpModule, tearDownModule  # noqa: F401
 from guppi_runtime.uix_server import UIXHub, make_server
 from test_uix_harness_api import ARCH, MODELL
 from test_uix_harness_freigabe import Skript
+from test_harness_lauf import SKRIPT
+from test_uix_harness_lauf import typen
+from guppi_runtime.harness import lauf
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'benchmarks'))
 
@@ -39,6 +43,8 @@ class BrowserDurchlauf(unittest.TestCase):
         cls.tmp = tempfile.TemporaryDirectory(prefix='harness-browser-')
         cls.wurzel = Path(cls.tmp.name) / 'arbeit'
         (cls.wurzel / 'docs').mkdir(parents=True)
+        (cls.wurzel / 'runtime').mkdir()
+        (cls.wurzel / 'runtime' / 'probe.py').write_text(SKRIPT, encoding='utf-8')
         projekt = Path(cls.tmp.name) / 'project'
         (projekt / 'local_config').mkdir(parents=True)
         (projekt / 'local_config' / 'freigabe_katalog.yaml').write_text(KATALOG, encoding='utf-8')
@@ -139,6 +145,33 @@ class BrowserDurchlauf(unittest.TestCase):
         page.wait_for_selector('.hs-karte[data-karte]:not(.entschieden)', timeout=20000)
         self.assertEqual(len(api.karten.alle()), karten_vorher + 1, 'nach der Rücknahme gibt es wieder eine Karte')
         self.assertEqual(self.text(), 'B', 'nach der Rücknahme wartet der Aufruf auf eine Karte')
+        # Freigaben in der Statusleiste: die neue Karte hat die Zelle markiert (HS-33)
+        page.wait_for_selector('.hs-zelle[data-zelle="decisions"].neu', timeout=8000)
+
+        # ---- C: Lauf mit Fortschritt, Ende, Benachrichtigung
+        api._lauf_typen = typen()
+        typ = api._lauf_typen['probe']
+        def neuer_lauf():
+            return api.laeufe.starten(typ, lauf.argv_bauen(typ, {'n': '15'}, self.wurzel), parameter={'n': '15'}, sitzung_id=v)
+        l1 = neuer_lauf()
+        page.wait_for_selector(f'.hs-app.lauf.laeuft[data-lauf="{l1["id"]}"]', timeout=15000)
+        page.wait_for_function(r"()=>/Probe \d+ %/.test(document.querySelector('.hs-app.lauf').innerText)", timeout=15000)
+        page.wait_for_function("()=>document.querySelector('.hs-app.lauf.neu.blinkt')", timeout=30000)      # endet: blinkt einmal und ist markiert
+        self.assertIn('✓', page.inner_text('.hs-app.lauf'))
+        page.wait_for_timeout(2500)
+        self.assertEqual(page.locator('.hs-app.lauf.neu').count(), 1, 'markiert, bis er angeklickt wird')
+        self.assertEqual(page.locator('.hs-app.lauf.blinkt').count(), 0, 'das Blinken war einmalig')
+        page.click('.hs-app.lauf.neu')
+        page.wait_for_selector('.hs-lauf-log', timeout=10000)
+        self.assertIn('15/15', page.inner_text('.hs-lauf-log'))
+        self.assertEqual(page.locator('.hs-app.lauf.neu').count(), 0, 'angeklickt: Markierung weg')
+        l2 = neuer_lauf()                                                # unangesehen bleibt nach dem Neuladen markiert
+        for _ in range(100):
+            if api.laeufe.laden(l2['id'])['status'] != 'laeuft': break
+            page.wait_for_timeout(200)
+        page.reload()
+        uix_check.wait_until_started(page)
+        page.wait_for_selector(f'.hs-app.lauf.neu[data-lauf="{l2["id"]}"]', timeout=15000)
         self.assertEqual(fehler, [], 'keine Konsolenfehler')
         # nichts ragt waagerecht heraus (HS-05)
         self.assertLessEqual(page.evaluate('()=>document.documentElement.scrollWidth - document.documentElement.clientWidth'), 0)

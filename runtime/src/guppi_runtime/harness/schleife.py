@@ -222,7 +222,8 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
                 if sitzungen is not None and sitzung_id:
                     sitzungen.anhaengen(sitzung_id, {'typ': 'karte', 'karte_id': karte['karte_id'], 'antwort_id': antwort.id, 'werkzeug': name,
                                                      'args': args, 'ziel': karte.get('ziel'), 'stufe': stufe, 'regel': regel,
-                                                     'begruendung': karte.get('begruendung'), 'vorschau': karte.get('vorschau'), 'zustand': 'offen'})
+                                                     'begruendung': karte.get('begruendung'), 'vorschau': karte.get('vorschau'), 'zustand': 'offen',
+                                                     'an': karte.get('an'), 'art': karte.get('art'), 'vorschau_hash': karte.get('vorschau_hash'), 'warnung': karte.get('warnung')})
                 warte_karte = karte['karte_id']
                 ende = 'wartet'
                 break
