@@ -122,3 +122,22 @@ Fortsetzung in der Cloud (Linux-Container, **keine Modelle, kein `local_paths.ya
 - Die Abweichung zur Zahl oben (223 Tests): jetzt 233 – der Unterschied kommt aus dem Zählen unter Linux und der Bahn mit Browser-Datei; die Ursache wurde nicht einzeln aufgeschlüsselt.
 - Der unerklärte Einzelfehler aus Abweichung 10 und der Cockpit-Test `test_uix_stufe6` traten in diesem Lauf nicht auf; das beweist nichts über ihre Ursache.
 - Das Aufräumen im Worktree des Captains (Abweichung/Befund 6) liegt lokal und wurde in der Cloud nicht berührt.
+
+## Nachtrag Abnahme mit Qwen3.6 (29.10.2026, lokal, Windows)
+
+Lokaler Lauf auf `516a299` (Worktree, A1-`engines`, `local_config` des Captains). Ohne Modell: Gruppen `scheduler desk orchestra uix harness` **1287 Tests, 14 übersprungen, 0 rot** (126 s); damit sind auch die Windows-Tests der Herkunftsprüfung (N5) gelaufen.
+
+Mit Qwen3.6-35B-A3B (`coder.local_primary`, 65536 Kontext, nach Ja des Captains P-14), `harness_abnahme.py --stufe3`:
+
+| Szenario | Ergebnis |
+|---|---|
+| S3-A | bestanden: der Vorarbeiter erlaubt die Karte nach Regel `abnahme-s3` mit Begründung (Lauf 2 und 3; im ersten Lauf legte er sie mit Begründung dem Captain vor) |
+| S3-B | bestanden: Karte der Stufe `captain` bleibt offen |
+| S3-C | im Skriptlauf durchgefallen: nach der Rücknahme sagte Qwen „Datei angelegt“, ohne `datei_schreiben` aufzurufen (Modellfehler, keine Karte). Einzeln nachgeprüft mit ausdrücklicher Anweisung: nach Rücknahme entsteht wieder eine Karte an den Vorarbeiter (bestanden) |
+| S3-D | bestanden: Lauf `run_tests` (Gruppe `harness`) endet ok, 233 Tests, 0 rot, 13 s |
+
+**Änderungen:** `harness_abnahme.py`: Vorlegen mit Begründung zählt in S3-A als Entscheidung; `sagen` wartet zuerst, bis die Sitzung nach dem Ablehnen einer Karte frei ist. Dateien der Abnahme unter `docs/abnahme_stufe3/` (nicht gelöscht).
+
+**Rezept (`local_config`, nicht in Git):** `coder.local_primary`: `min_ram_gb` 18 auf 12, `n_cpu_moe` 28 auf 30, `measured_vram_gb` 10,4 auf 9,8 (Schätzung; gemessen im Betrieb 9,3 GB). Grund: nur 16 GB RAM und 10,85 GB VRAM frei. Sicherung `*.bak-2026-10-29-minram`. Auftrag des Captains: Rezepte sollen beim RAM dynamischer werden (Folge-Spec, nicht gebaut).
+
+**Offen:** S3-F (Pilot N8, P-12) und Review mit Gemma (P-13) nicht gelaufen; S3-C mit Modell nur einzeln bestanden; Übernahme G4 entscheidet der Captain.

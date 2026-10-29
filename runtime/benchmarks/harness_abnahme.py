@@ -135,6 +135,7 @@ def abwarten(url, sid, grenze_s=240):
 
 
 def sagen(url, sid, text):
+    abwarten(url, sid)                       # nach dem Ablehnen einer Karte setzt die Sitzung ihre Antwort noch fort
     code, out = anfrage(url, 'POST', f'/api/harness/sitzungen/{sid}/nachricht', {'text': text})
     if code != 200 or out.get('status') == 'kein_modell': raise RuntimeError(f'Nachricht nicht angenommen: {code} {out}')
     strom(url, out['antwort_id'])
@@ -185,8 +186,10 @@ def teil3(url, projekt):
     if k:
         sagen(url, v, 'Prüfe die offenen Freigaben mit freigaben_offen und entscheide sie nach den Regeln, mit einer Begründung.')
         karte = anfrage(url, 'GET', '/api/harness/karten/' + k[0]['karte_id'])[1]
-        pruefe('S3-A vom Vorarbeiter entschieden', karte.get('status') == 'beantwortet' and str(karte.get('von', '')).startswith('vorarbeiter:'),
-               status=karte.get('status'), entscheidung=karte.get('entscheidung'), von=karte.get('von'), begruendung=karte.get('notiz'))
+        # Entschieden heißt: vom Vorarbeiter erlaubt oder abgelehnt, oder mit Begründung dem Captain vorgelegt (weg vorlegen: die Karte liegt dann beim Captain).
+        entschieden = (karte.get('status') == 'beantwortet' and str(karte.get('von', '')).startswith('vorarbeiter:')) or karte.get('an') == 'captain'
+        pruefe('S3-A vom Vorarbeiter entschieden', entschieden, status=karte.get('status'), an=karte.get('an'), entscheidung=karte.get('entscheidung'),
+               von=karte.get('von'), begruendung=karte.get('notiz'))
         if karte.get('status') == 'offen': ablehnen(k, 'Abnahme: der Vorarbeiter hat nicht entschieden')
 
     # S3-B: eine Karte der Stufe captain (kein Katalog-Treffer) bleibt beim Captain – der Vorarbeiter kann sie nicht entscheiden.
