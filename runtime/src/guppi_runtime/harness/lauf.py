@@ -196,33 +196,9 @@ def jetzt_text():
 
 
 def fortschritt_aus(zeilen, regel):
-    """{prozent, text} oder None. Nutzt das Modul `lauf_fortschritt` (N8, SEDRA-Pilot), sobald es übernommen ist; bis dahin der kleine Ersatz: Regel `text`,
-    `zeilen` (n/m) und `prozent`. Wirft nie."""
-    try:
-        try:
-            from .lauf_fortschritt import fortschritt_aus as echt
-            return echt(zeilen, regel)
-        except ImportError:
-            pass
-        if not regel:
-            return None
-        gefiltert = [z for z in zeilen if isinstance(z, str) and z.strip()]
-        art = regel.get('art')
-        if art == 'text':
-            return {'prozent': None, 'text': gefiltert[-1].strip()[:79] + '…' if gefiltert and len(gefiltert[-1].strip()) > 80 else (gefiltert[-1].strip() if gefiltert else '')}
-        for z in reversed(gefiltert):
-            m = re.search(regel['regex'], z)
-            if not m:
-                continue
-            if art == 'zeilen':
-                n, gesamt = float(m.group(1)), float(m.group(2))
-                if gesamt <= 0:
-                    return None
-                return {'prozent': max(0, min(100, int(n / gesamt * 100))), 'text': z.strip()[:80]}
-            return {'prozent': max(0, min(100, int(float(m.group(1))))), 'text': z.strip()[:80]}
-    except Exception:
-        return None
-    return None
+    """{prozent, text} oder None – siehe `lauf_fortschritt` (Referenz von Claude, ersetzt durch den SEDRA-Bau N8, sobald übernommen). Wirft nie."""
+    from .lauf_fortschritt import fortschritt_aus as echt
+    return echt(zeilen, regel)
 
 
 def _pid_lebt(pid, start):
