@@ -21,4 +21,4 @@
 .hs-teilung.hs-fl-klein.hs-fl-zeige-vorschau .hs-fl-vorschau{display:flex}
 .hs-teilung.hs-fl-klein.hs-fl-zeige-vorschau .hs-fl-gespraech{display:none}
 .hs-teilung.hs-fl-klein .hs-fl-gespraech{order:2!important}
-
+.hs-kein-modell{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.hs-modell-steuer{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.hs-modell-stand.bad{color:var(--bad,#e5534b)}button.hs-modell{cursor:pointer;background:transparent;color:inherit}

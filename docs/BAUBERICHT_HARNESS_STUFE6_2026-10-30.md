@@ -37,3 +37,9 @@ Spec: `SPEC_HARNESS_SHELL_v1_STUFE6_G1.md`, `…_G2.md`, `SPEC_HARNESS_SHELL_v1_
 ## Offen
 
 N8 (Abnahmeskript mit Browser, Bilder) nach Installation von Playwright; Abnahme am PC durch den Captain; Merge nach `main` erst auf sein Ja.
+
+## Nachtrag: Handlung statt Verweis (HS-80, HS-81; Captain 15:30)
+
+`modell.js` (neu, 78 Zeilen): Steuerung mit Rezeptwahl, Laden/Wechseln, Entladen und Zustand; Wege `GET /api/models`, `POST /api/model/load`, `POST /api/model/unload` (in `shell.yaml` aufgenommen, Shell 1.7.0). `eingabe.js`: der Hinweis „Kein Modell geladen“ enthält die Steuerung statt des Verweises; das Feld „Modell“ ist ein Knopf (Wechseln, Entladen). `verlauf.js`: die Meldungen „Kein Modell geladen“ öffnen die Steuerung. Rauchtest gegen ein Minimal-DOM (Rezepte lesen, Laden, Umschalten auf „Wechseln“) ok; Suite 1353 Tests, 0 rot. Nicht geprüft: das Laden eines echten Modells über diese Steuerung und das Aussehen im Browser.
+
+**Weitere Verweise statt Handlung (noch nicht geändert):** das „+“ im Eingabefeld und der Hinweis zu „@“ sagen „Dateien anhängen kommt mit Stufe 2“ (veraltet; Anhängen gibt es nicht).

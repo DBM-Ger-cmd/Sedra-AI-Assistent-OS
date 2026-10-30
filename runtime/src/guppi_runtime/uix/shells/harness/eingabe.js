@@ -28,7 +28,8 @@
       schildZeigen(S);
       schild.title = 'Freigabe-Katalog: ' + k.regeln.map(r=>r.id + ' = ' + r.stufe).join(', ') + '. Ohne Regel entscheidet der Captain; feste Vorbehalte gehen immer an ihn.';
     }).catch(()=>{});
-    const modell = d().el('span', 'hs-modell', '…');
+    const modell = d().el('button', 'hs-modell', '…'); modell.type = 'button';
+    modell.onclick = ()=>modellMenue(S);
     const mikro = d().el('button', 'hs-rund', '🎙'); mikro.type = 'button';
     mikro.title = 'Rekorder (Aufnahme) öffnen'; mikro.setAttribute('aria-label', 'Rekorder öffnen');
     mikro.onclick = ()=>{
@@ -157,11 +158,25 @@
     const e = S._eingabe; if(!e) return;
     const m = S.modell;
     e.modell.textContent = m ? m.name : 'kein Modell';
-    e.modell.title = m ? ('Geladen: ' + m.name + (m.kontext ? ' · Kontext ' + Number(m.kontext).toLocaleString('de-DE') : '') + ' – laden und wechseln in der Werkstatt (Start → Modelle)')
-                       : 'Kein Modell geladen';
+    e.modell.title = m ? ('Geladen: ' + m.name + (m.kontext ? ' · Kontext ' + Number(m.kontext).toLocaleString('de-DE') : '') + ' – Klick: Modell wechseln oder entladen')
+                       : 'Kein Modell geladen – Klick: Modell laden';
     e.modell.classList.toggle('aus', !m);
-    e.kein.hidden = !!m;
-    e.kein.textContent = 'Kein Modell geladen – Modell wählen (Start → Modelle → Werkstatt, oder Klick auf die Zelle „Modell“).';
+    e.kein.hidden = !!m && !e.menueOffen;
+    // Stufe 6: statt eines Verweises die Handlung selbst – Rezept wählen und laden, wechseln oder entladen
+    const text = m ? 'Geladen: ' + m.name + '.' : 'Kein Modell geladen.';
+    if(!e.kein.firstChild || e.kein.dataset.zustand !== (m ? 'an' : 'aus')){
+      e.kein.dataset.zustand = m ? 'an' : 'aus';
+      e.kein.replaceChildren(d().el('span', 'hs-modell-text', text), root.sedraHarness.modell.steuerung(S, ()=>{ e.menueOffen = false; modellZeigen(S); }));
+    } else {
+      e.kein.firstChild.textContent = text;
+      if(e.kein.lastChild.auffrischen) e.kein.lastChild.auffrischen();
+    }
+  }
+
+  function modellMenue(S, an){
+    const e = S._eingabe; if(!e) return;
+    e.menueOffen = an === undefined ? !e.menueOffen : an;
+    modellZeigen(S);
   }
 
   function projektwahl(S){
@@ -173,5 +188,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.eingabe = {mount, zustand, fuer, fokus, modellZeigen, projektwahl, schildZeigen, vorlagenwahl, BEFEHLE};
+  root.sedraHarness.eingabe = {mount, zustand, fuer, fokus, modellZeigen, modellMenue, projektwahl, schildZeigen, vorlagenwahl, BEFEHLE};
 })();

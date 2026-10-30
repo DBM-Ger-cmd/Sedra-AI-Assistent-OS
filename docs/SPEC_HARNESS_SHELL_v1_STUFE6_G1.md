@@ -44,6 +44,15 @@ Gemeint ist **keine** Teilung der ganzen Arbeitsfläche, sondern ein Sitzungsrei
 | HS-74 | Breite: Mindestbreite je Fläche 420 px, Trennbalken ziehbar (Voreinstellung 50/50). Unter 1100 px Gesamtbreite zeigt der Reiter nur eine Fläche mit einem Umschalter Gespräch/Vorschau (HS-05 gilt unverändert). Bei 1024×700 kein waagerechtes Rollen. | uix_check bei 1024×700 und 1400×860 |
 | HS-75 | Eine leere Sitzung (Figur SEDRA, HS-04) hat keine Vorschau, bis es ein Objekt gibt; die Vorschau blendet sich dann mit einem Satz ein („Hier erscheint, woran ich arbeite“). Pro Reiter eine Vorschau, nie dieselbe Sitzung in zwei Reitern gedoppelt. | Test |
 
+### 2.4 Handlung statt Verweis (Nachtrag des Captains 30.10.2026 15:30)
+
+Anlass: Im Eingabebereich stand „Kein Modell geladen – Modell wählen (Start → Modelle → Werkstatt …)“. Regel: **Wo gehandelt werden kann, steht kein Verweis, sondern die Handlung selbst**, wie in der Taskleiste.
+
+| ID | Anforderung | Prüfbar durch |
+|---|---|---|
+| HS-80 | Fehlt das Modell, zeigt der Eingabebereich statt des Verweises eine Steuerung: Rezept wählen (Vorgabe: zuletzt geladenes), „Laden“, Zustand („lädt … kann Minuten dauern“); Fehler des Servers (z. B. zu wenig Speicher) erscheinen als Satz an derselben Stelle. | Test der Shell |
+| HS-81 | Das Feld „Modell“ im Eingabebereich ist ein Knopf: Klick öffnet dieselbe Steuerung mit „Wechseln“ und „Entladen“. Dieselben Wege wie die Werkstatt (`/api/model/load`, `/api/model/unload`); Gates und Prüfungen bleiben beim Server. Meldungen im Verlauf („Kein Modell geladen“) öffnen die Steuerung, statt auf Menüs zu verweisen. | Test der Shell |
+
 ## 3. Abgrenzung
 
 - Keine neue Rolle, kein neues Recht: Zweck und Klartext sind **Anzeige**; über Deckung und Freigabe entscheiden weiter nur `erlaubt`, Katalog und Vorbehalte. Der Zweck deckt nichts (HS-27 unverändert).

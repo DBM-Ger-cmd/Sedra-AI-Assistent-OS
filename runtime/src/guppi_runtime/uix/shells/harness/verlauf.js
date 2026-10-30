@@ -190,7 +190,7 @@
         if(this.ladung) await this.ladung;
         if(!ID.test(this.id) && !S.modell){          // HS-53: ohne Modell keine leere Sitzungsdatei anlegen (der Server prüft trotzdem)
           await S.modellLaden();
-          if(!S.modell){ this.notiz('Kein Modell geladen – Modell wählen (Start → Modelle → Werkstatt).', 'warn'); return false; }
+          if(!S.modell){ this.notiz('Kein Modell geladen – wähle unten ein Modell und klicke „Laden“.', 'warn'); root.sedraHarness.eingabe.modellMenue(S, true); return false; }
         }
         this.wartet = true;
         let blase = null;
@@ -206,7 +206,7 @@
           const out = await S.api('/api/harness/sitzungen/' + this.id + '/nachricht', {method: 'POST', body: {text}});
           if(out.status === 'kein_modell'){
             blase.remove(); this.eintraege--; blase = null;
-            this.notiz(out.grund || 'Kein Modell geladen – Modell wählen.', 'warn');
+            this.notiz(out.grund || 'Kein Modell geladen – wähle unten ein Modell und klicke „Laden“.', 'warn'); root.sedraHarness.eingabe.modellMenue(S, true);
             S.modellLaden();
             return false;
           }
