@@ -155,6 +155,7 @@
   // ---- Auslöser (aus den vorhandenen Ereignissen der Sitzung; kein Polling)
   function beruehrt(S, a, name, args, status){
     if(!a || !DATEIEN.includes(name) || !args || typeof args.pfad !== 'string' || !args.pfad) return;
+    if(status === 'wartet' || status === 'verboten') return;                      // die Karte (Ereignis `karte`) zeigt, was wartet; verboten wird nichts gezeigt
     if(name !== 'datei_lesen' && (status === 'abgelehnt' || status === 'fehler')) return;
     setzen(fuer(S, a), {typ: 'datei', ref: args.pfad, grund: name === 'datei_lesen' ? 'eben gelesen' : 'eben geändert'});
   }

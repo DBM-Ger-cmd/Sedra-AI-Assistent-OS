@@ -35,7 +35,7 @@
         const vorher = wahl.value;
         wahl.replaceChildren(...rezepte.map(r=>{
           const o = document.createElement('option'); o.value = r.id;
-          o.textContent = r.model + (r.size_gb ? ' · ' + r.size_gb + ' GB' : '') + (r.loaded ? ' (geladen)' : '');
+          o.textContent = (r.model || r.id) + (r.size_gb ? ' · ' + r.size_gb + ' GB' : '') + (r.loaded ? ' (geladen)' : '');
           o.title = (r.roles || []).join(', ');
           return o;
         }));

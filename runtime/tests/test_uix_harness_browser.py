@@ -124,6 +124,7 @@ class BrowserDurchlauf(unittest.TestCase):
         # ---- B: Aufgabe anlegen, Aufruf ohne Karte, Rücknahme, wieder eine Karte
         page.click('text=⛨ Aufgaben')
         page.wait_for_selector('.hs-auf-form', timeout=10000)
+        page.fill('.hs-auf-form input[aria-label="Zweck"]', 'Die Notiz bis zu dreimal ohne Karte pflegen')
         page.fill('.hs-auf-form input[aria-label="Titel"]', 'Notiz pflegen')
         page.check(f'.hs-auf-form input[value="{b}"]')
         page.fill('.hs-auf-form textarea', f'datei_aendern {NOTIZ}')

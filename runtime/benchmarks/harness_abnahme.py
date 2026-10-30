@@ -363,8 +363,12 @@ def main(argv=None):
     ap.add_argument('--projekt', default='sedra-entwicklung', help='Harness-Projekt für Teil 3')
     ap.add_argument('--stufe4', action='store_true', help='Teil 4: Szenarien S4-A bis S4-D der Stufe 4 (ohne Modell, Browser)')
     ap.add_argument('--stufe5', action='store_true', help='Teil 5: Szenarien S5-A bis S5-D der Stufe 5 (ohne Modell, Browser; harness_abnahme_stufe5.py)')
+    ap.add_argument('--stufe6', action='store_true', help='Teil 6: Szenarien S6-A bis S6-E der Stufe 6 (ohne Modell, Browser; harness_abnahme_stufe6.py)')
     ap.add_argument('--shots', help='Teil 4/5: Ordner für Bildschirmfotos')
     a = ap.parse_args(argv)
+    if a.stufe6:
+        sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
+        return __import__('harness_abnahme_stufe6').teil6(a.shots)
     if a.stufe5:
         sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
         return __import__('harness_abnahme_stufe5').teil5(a.shots)

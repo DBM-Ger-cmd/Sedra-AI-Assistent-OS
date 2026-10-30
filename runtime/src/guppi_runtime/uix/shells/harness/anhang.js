@@ -70,13 +70,17 @@
     let warte = null;
     suche.oninput = ()=>{ clearTimeout(warte); warte = setTimeout(laden, 200); };
     box.onkeydown = ev=>{ if(ev.key === 'Escape'){ ev.stopPropagation(); schliessen(S); } };
+    e.escAus = ev=>{ if(ev.key === 'Escape'){ schliessen(S); } };          // auch aus dem Eingabefeld, wohin der Fokus nach dem Einfügen zurückgeht
+    e.feld.addEventListener('keydown', e.escAus);
     laden();
     setTimeout(()=>suche.focus(), 0);
   }
 
   function schliessen(S){
     const e = S._eingabe; if(!e || !e.auswahl) return;
-    e.auswahl.remove(); e.auswahl = null; e.feld.focus();
+    e.auswahl.remove(); e.auswahl = null;
+    if(e.escAus){ e.feld.removeEventListener('keydown', e.escAus); e.escAus = null; }
+    e.feld.focus();
   }
 
   // ---- „@“ im Text: Vorschläge unter dem Feld (HS-84)

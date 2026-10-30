@@ -31,7 +31,7 @@ def _norm(pfad):
 def im_verlauf(eintraege, pfad):
     """Kommt `pfad` als Ziel eines Datei-Werkzeugs im Verlauf der Sitzung vor?"""
     for e in eintraege or []:
-        if e.get('typ') == 'werkzeug' and e.get('name') in WERKZEUGE:
+        if e.get('typ') in ('werkzeug', 'karte') and (e.get('name') or e.get('werkzeug')) in WERKZEUGE:          # auch eine Karte, die auf Freigabe wartet
             args = e.get('args') if isinstance(e.get('args'), dict) else {}
             try:
                 if _norm(str(args.get('pfad') or '')) == pfad:

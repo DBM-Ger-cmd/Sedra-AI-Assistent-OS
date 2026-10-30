@@ -28,4 +28,4 @@
 .hs-anhang-zeile{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px;cursor:pointer}
 .hs-anhang-zeile:hover,.hs-anhang-zeile:focus-visible{background:var(--hs-on,rgba(128,128,128,.15))}
 .hs-anhang-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
+.hs-projekte-kopf .hs-sz-knopf{visibility:visible}

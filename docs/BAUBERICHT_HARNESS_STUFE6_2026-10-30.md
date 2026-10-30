@@ -45,3 +45,18 @@ N8 (Abnahmeskript mit Browser, Bilder) nach Installation von Playwright; Abnahme
 ## Nachtrag: Dateien anhängen (HS-82 bis HS-85; Captain 15:55)
 
 `harness/dateien.py` (neu) und `GET /api/harness/dateien?projekt=&ordner=&q=` (`api.py`): nur Namen, nur was `datei_lesen` zulässt, im Projektordner, ohne Verknüpfungen, `.git`/Umgebungen/`runtime_data`/`engines` übersprungen, höchstens 40 Treffer, Suche bis 8000 besuchte Dateien. `anhang.js` (neu, 108 Zeilen): Auswahl hinter „+“ (Suche, Ordneransicht mit Pfadleiste, mehrfach wählen), „@wort“ schlägt bis zu 8 Dateien vor, eingefügt wird `@pfad`; `eingabe.js` ruft beides, die veralteten Hinweise „kommt mit Stufe 2/3“ sind ersetzt. `schleife.py`: der Systemprompt erklärt `@pfad` (Datei mit `datei_lesen` lesen). Shell 1.8.0. Tests: `test_harness_dateien.py` (7, davon 1 mit Verknüpfung übersprungen unter Windows ohne Recht) und ein Wegtest in `test_uix_harness_vorschau.py`; Rauchtest von `anhang.js` gegen ein Minimal-DOM (Einfügen, Token ersetzen, Vorschläge, Auswahl auf/zu) ok. **Nicht geprüft:** Aussehen und Bedienung im Browser; ob Qwen `@pfad` zuverlässig mit `datei_lesen` liest (Modelllauf).
+
+## Nachtrag: Browser-Abnahme (N8, 30.10.2026 abends; Playwright 1.64.1 mit Chromium nach Ja des Captains in die `.venv` installiert)
+
+| Prüfung | Ergebnis |
+|---|---|
+| `uix_check.py --shell harness` | 41 von 41, 3 nicht geprüft; Konsole ohne Fehler |
+| `harness_abnahme.py --stufe4` | S4-A bis S4-D ok |
+| `harness_abnahme.py --stufe5` | S5-A bis S5-D ok (Antrag, Ablehnen, Freigeben mit Sicherung, Schalter, Grenzen) |
+| `harness_abnahme.py --stufe6` (neu, `harness_abnahme_stufe6.py`; Bilder `docs/shots/harness_stufe6/`) | S6-A Aufgaben mit Zweck, ohne Zweck abgelehnt · S6-B Projekte erklärt, Hilfe, Esc · S6-C Vorschau (folgt der Datei, Tauschen, Zuklappen, Festhalten, unter 1100 px eine Fläche, 1024×700 ohne waagerechtes Rollen) · S6-D Modell-Steuerung statt Verweis · S6-E Anhängen (Auswahl, Einfügen, @-Vorschläge) · Konsole ohne Fehler: **ok** |
+| `test_uix_harness_browser` (Durchlauf in beiden Größen, `SEDRA_BROWSER=1`) | ok |
+| Suite `scheduler desk orchestra uix harness` | 1386 Tests, 0 rot |
+
+**Befunde der Browser-Abnahme, behoben:** (1) das „?“ der Projekte war unsichtbar (`visibility:hidden` der Sitzungsknöpfe) – jetzt sichtbar; (2) die Vorschau fragte für eine Datei einer wartenden Karte den Lese-Weg, der sie nicht im Verlauf fand (400 in der Konsole) – wartende Karten gelten jetzt als im Verlauf, der Strom ruft bei „wartet“ nichts ab; (3) im Modell-Hinweis stand „null“, wenn ein Rezept keinen Modellnamen hat – es zeigt die Rezept-ID; (4) Esc schloss die Dateiauswahl nicht, wenn der Fokus im Eingabefeld lag; (5) der Browser-Test `test_uix_harness_browser` legte eine Aufgabe ohne Zweck an und wurde abgelehnt (jetzt mit Zweck).
+
+**Weiter ungeprüft:** das Laden eines echten Modells über die Steuerung im Hinweis; ob Qwen `@pfad` zuverlässig mit `datei_lesen` liest; GPU-Zelle mit Temperatur (RTX, LibreHardwareMonitor).

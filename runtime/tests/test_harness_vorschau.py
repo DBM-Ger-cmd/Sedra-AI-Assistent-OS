@@ -35,6 +35,12 @@ class VorschauTests(unittest.TestCase):
             with self.assertRaisesRegex(vorschau.VorschauFehler, 'pfad_nicht_im_verlauf'):
                 self.lesen('docs/a.md', eintraege)
 
+    def test_datei_einer_wartenden_karte_gilt_als_im_verlauf(self):
+        karte = [{'typ': 'karte', 'werkzeug': 'datei_aendern', 'args': {'pfad': 'docs/a.md', 'alt': 'a', 'neu': 'b'}}]
+        self.assertEqual(self.lesen('docs/a.md', karte)['status'], 'ok')
+        with self.assertRaises(vorschau.VorschauFehler):
+            self.lesen('docs/a.md', [{'typ': 'karte', 'werkzeug': 'befehl', 'args': {'pfad': 'docs/a.md'}}])
+
     def test_ungueltige_pfade(self):
         for p in ('', '  ', '../x', 'docs/../../x', '/etc/passwd', 'C:/x', 'a\0b', None):
             with self.assertRaises(vorschau.VorschauFehler, msg=repr(p)):
