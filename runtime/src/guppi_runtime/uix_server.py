@@ -3098,7 +3098,7 @@ class UIXHub:
 
     def _speicher_jetzt(self):
         sched = getattr(self.runtime, 'resource_scheduler', None)
-        try: return sched.stand(fresh=True) if sched is not None and sched.enabled else None
+        try: return sched.stand(fresh=True, nur_messung=True) if sched is not None and sched.enabled else None
         except Exception: return None
 
     def _messwert_merken(self, recipe_id, out, vorher, nachher):
@@ -3170,11 +3170,13 @@ class UIXHub:
                 time.sleep(2)
             try: resolution = rt.role_router.resolve_recipe(recipe_id)
             except ResolutionError as exc: raise ValueError(f'recipe_not_usable:{exc}')
+            vorher = self._speicher_jetzt()
             try: out = sched.ensure_server(resolution, owner='werkstatt')
             except SchedulerError as exc:
                 self._log_load_failure(recipe_id, resolution, exc)
                 raise ValueError(exc.reason)
             self._remember_recipe(recipe_id)
+            self._messwert_merken(recipe_id, out['load'], vorher, self._speicher_jetzt())      # Live-Fund 30.10.: im Weg mit Scheduler wurde nichts gemerkt
         return dict(out['load'], recipe_id=recipe_id)
 
     def unload_model(self, payload):

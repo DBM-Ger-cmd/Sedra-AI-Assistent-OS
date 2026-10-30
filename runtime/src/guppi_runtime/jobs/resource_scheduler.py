@@ -176,12 +176,14 @@ class ResourceScheduler:
             ram = round(min(host["ram_total"] - host["ram_reserve"] - sum(r.get("ram_gb", 0) for r in reservations), host["ram_available"] - host["ram_reserve"]), 3)
         return {"ram_free_gb": ram, "gpus": gpus}
 
-    def stand(self, fresh=False):
+    def stand(self, fresh=False, ignore=(), nur_messung=False):
         """Der freie Speicher jetzt, für die Auswahl der Aufteilung (models/aufteilung.py): {frei_vram_gb, frei_ram_gb, reserve_vram_gb, reserve_ram_gb} – oder None, wenn die Messung fehlt.
-        Frei heißt: nicht vergeben (Ledger) und nicht belegt (Messung), das kleinere von beiden; die Reserven kommen aus der Konfiguration."""
+        Frei heißt: nicht vergeben (Ledger) und nicht belegt (Messung), das kleinere von beiden; die Reserven kommen aus der Konfiguration.
+        `ignore`: Job-Kennungen, deren Reservierung kein Rivale ist (die Reservierung des Starts, der gerade neu wählt, sonst zählt er sich selbst ab).
+        `nur_messung`: nur die Messung, ohne Ledger (für den Unterschied vor und nach einem Laden, den die Reservierung sonst verfälscht)."""
         try:
             host = self._host(fresh=fresh)
-            reservations = self._read()
+            reservations = [] if nur_messung else [r for r in self._read() if r["job_id"] not in set(ignore or ())]
         except Exception:
             return None
         if host["ram_total"] is None or host["ram_available"] is None or not host["gpus"]:

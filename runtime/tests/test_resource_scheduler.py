@@ -103,6 +103,10 @@ class ReserveTests(Base):
         s.reserve('J-1', 'A-1', {'ram_gb': 5.0, 'vram_gb': 4.0, 'complete': True})
         stand = s.stand()
         self.assertEqual((stand['frei_vram_gb'], stand['frei_ram_gb']), (8.0, 14.3 if 31.0 - 5.0 > 14.3 else 26.0))
+        eigen = s.stand(ignore=('J-1',))
+        self.assertEqual((eigen['frei_vram_gb'], eigen['frei_ram_gb']), (10.65, 14.3), 'die Reservierung des Starts, der gerade wählt, zählt nicht gegen ihn')
+        self.assertEqual(s.stand(ignore=('J-2',))['frei_vram_gb'], 8.0, 'eine fremde Kennung ändert nichts')
+        self.assertEqual(s.stand(nur_messung=True)['frei_vram_gb'], 10.65, 'nur die Messung: das Ledger zählt nicht')
         hw.fail = True
         self.assertIsNone(s.stand(), 'ohne Messung gibt es keinen Stand')
         self.assertIsNone(self.scheduler(FakeHardware(ram_valid=False)).stand())

@@ -101,7 +101,7 @@ class ModelLoader:
         self.controller = controller
         self.controllers = dict(controllers or {})
         self.audit = audit
-        self.speicher_stand = None      # callable() -> {frei_vram_gb, frei_ram_gb, reserve_vram_gb, reserve_ram_gb} | None (dynamische Rezepte)
+        self.speicher_stand = None      # callable(ignore=()) -> {frei_vram_gb, frei_ram_gb, reserve_vram_gb, reserve_ram_gb} | None (dynamische Rezepte)
         self.messwerte = None           # callable(recipe_id) -> {(lagen, kontext): {vram_gb, ram_gb}}
 
     def _ctl(self, resolution):
@@ -296,7 +296,7 @@ class ModelLoader:
         plan = resolution.get("dynamisch_plan")
         if not plan:
             return None
-        stand = self.speicher_stand() if self.speicher_stand is not None else None
+        stand = self.speicher_stand(ignore=(f"server:{resolution.get('capability_id')}",)) if self.speicher_stand is not None else None       # ohne die Reservierung dieses Starts selbst
         if not stand:
             return (resolution.get("estimated_resources") or {}).get("auswahl")
         gemessen = self.messwerte(resolution.get("capability_id")) if self.messwerte is not None else None

@@ -103,7 +103,7 @@ class LoaderTests(unittest.TestCase):
     def lader(self, stand, ctl=None, gemessen=None):
         ctl = ctl or FakeController()
         l = ModelLoader(LoaderConfig({'enabled': True, 'check_estimate': False}), ctl)
-        l.speicher_stand = (lambda: dict(stand)) if stand is not None else None
+        l.speicher_stand = (lambda **_: dict(stand)) if stand is not None else None
         l.messwerte = (lambda rid: gemessen) if gemessen is not None else None
         return l, ctl
 
@@ -117,6 +117,14 @@ class LoaderTests(unittest.TestCase):
         self.assertEqual((out['auswahl']['lagen'], out['auswahl']['kontext']), (30, 32768), 'frischer Stand schlägt die Wahl des Routings (28)')
         self.assertEqual(gesehen['server']['n_cpu_moe'], 30)
         self.assertEqual(gesehen['context_length'], 32768)
+
+    def test_lader_rechnet_die_eigene_reservierung_des_starts_nicht_ab(self):
+        """Live-Fund 30.10.: der Modell-Scheduler reserviert vor dem Start; der Lader darf sich diese Reservierung nicht selbst abziehen."""
+        gefragt = []
+        l, ctl = self.lader(STAND)
+        l.speicher_stand = lambda **kw: gefragt.append(kw) or dict(STAND)
+        l.ensure(self.aufloesung())
+        self.assertEqual(gefragt, [{'ignore': ('server:coder.moe',)}])
 
     def test_lader_verkleinert_den_kontext_wenn_der_speicher_nur_dafuer_reicht(self):
         l, ctl = self.lader(dict(STAND, frei_vram_gb=6.0, frei_ram_gb=19.0))        # budget 5,3: 40 Lagen bei 32 768 (6,1) zu viel, bei 16 384 gutgeschrieben 5,4? → noch zu viel
