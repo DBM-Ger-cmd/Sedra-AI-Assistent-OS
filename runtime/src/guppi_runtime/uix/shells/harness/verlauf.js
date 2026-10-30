@@ -101,6 +101,8 @@
     if(String(id).startsWith('diff:')) return diffAnsicht(S, id);
     if(String(id).startsWith('aufgaben:')) return root.sedraHarness.aufgabe.ansicht(S, id);          // aufgabe.js (Stufe 3)
     if(String(id).startsWith('lauf:')) return root.sedraHarness.lauf.ansicht(S, id);                 // lauf.js (Stufe 3)
+    if(String(id).startsWith('app:')) return root.sedraHarness.app.ansicht(S, id);                   // app.js (Stufe 4): ein Werkzeug des Vertrags
+    if(String(id).startsWith('einstellungen:')) return root.sedraHarness.einstellungen.ansicht(S, id);   // einstellungen.js (Stufe 5, HS-42)
     const box = d().el('div', 'hs-verlauf');
     const liste = d().el('div', 'hs-liste');
     box.append(liste);
@@ -178,7 +180,7 @@
         if(this.ladung) await this.ladung;
         if(!ID.test(this.id) && !S.modell){          // HS-53: ohne Modell keine leere Sitzungsdatei anlegen (der Server prüft trotzdem)
           await S.modellLaden();
-          if(!S.modell){ this.notiz('Kein Modell geladen – Modell wählen (Werkstatt im Cockpit).', 'warn'); return false; }
+          if(!S.modell){ this.notiz('Kein Modell geladen – Modell wählen (Start → Modelle → Werkstatt).', 'warn'); return false; }
         }
         this.wartet = true;
         let blase = null;

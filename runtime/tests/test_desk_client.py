@@ -163,3 +163,49 @@ class Lifecycle(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ClientsView(unittest.TestCase):
+    """Harness Stufe 5 (G3 N3): GET /api/uix/clients zeigt vorhanden/Port/PID je Client – nie den Token."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory(prefix='desk-clients-view-')
+        cls.hub = LoadingHost(cls.tmp.name, data())
+        cls.server, cls.url = make_server(cls.hub)
+        threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown(); cls.server.server_close(); cls.hub.close(); cls.tmp.cleanup()
+
+    def get(self, path):
+        import http.client
+        from urllib.parse import urlsplit
+        parts = urlsplit(self.url)
+        c = http.client.HTTPConnection(parts.hostname, parts.port, timeout=10)
+        try:
+            c.request('GET', path, headers={'X-GUPPI-Token': parts.fragment})
+            r = c.getresponse()
+            return r.status, r.read().decode('utf-8')
+        finally:
+            c.close()
+
+    def test_vorhanden_ohne_token_und_fehlend(self):
+        status, text = self.get('/api/uix/clients')
+        self.assertEqual(status, 200, text)
+        out = json.loads(text)
+        for client in uix_clients.CLIENTS:
+            info = out['clients'][client]
+            self.assertTrue(info['vorhanden'], client)
+            self.assertEqual((info['port'], info['pid']), (self.server.server_port, info['pid']))
+            self.assertNotIn('token', info)
+            self.assertNotIn(uix_clients.read(self.hub.project_root, client)['token'], text, 'der Token erscheint nie in der Antwort')
+        uix_clients.remove(self.hub.project_root, 'mcp')
+        try:
+            out = json.loads(self.get('/api/uix/clients')[1])
+            self.assertEqual(out['clients']['mcp']['vorhanden'], False)
+            self.assertIsNone(out['clients']['mcp']['port'])
+            self.assertTrue(out['clients']['cli']['vorhanden'])
+        finally:
+            uix_clients.write(self.hub.project_root, 'mcp', 'neu-' + 'x' * 20, self.server.server_port)

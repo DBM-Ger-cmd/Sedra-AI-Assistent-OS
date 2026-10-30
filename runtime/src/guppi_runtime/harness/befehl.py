@@ -33,6 +33,32 @@ class BefehlFehler(ValueError):
     pass
 
 
+class Ruecknahme:
+    """Stufe 3 G2 §4.4, offener Punkt aus dem Baubericht Stufe 3 (Befund 7): wird eine Aufgabe zurückgenommen, endet auch ein `befehl`,
+    der unter ihr läuft – nicht erst der nächste Aufruf. Je Aufgabe ein Ereignis; `ausfuehren` sieht es neben dem Abbruch der Antwort."""
+    def __init__(self):
+        self._events, self._lock = {}, threading.Lock()
+
+    def ereignis(self, aufgabe_id):
+        if not aufgabe_id:
+            return None
+        with self._lock:
+            return self._events.setdefault(str(aufgabe_id), threading.Event())
+
+    def ausloesen(self, aufgabe_id):
+        e = self.ereignis(aufgabe_id)
+        if e is not None:
+            e.set()
+        return e
+
+    def vergessen(self, aufgabe_id):
+        with self._lock:
+            self._events.pop(str(aufgabe_id or ''), None)
+
+
+RUECKNAHME = Ruecknahme()
+
+
 def _ausserhalb_anfuehrung(zeile):
     """Die Zeile ohne den Text in Anführungszeichen: `python -c "a; b"` ist ein Argument, kein zweiter Befehl (es gibt keine Shell)."""
     out, zeichen = [], None
@@ -107,9 +133,10 @@ def _beenden(proc):
         except OSError: proc.kill()
 
 
-def ausfuehren(wurzel, zeile, ordner='.', zeitlimit_s=120, *, guard, mission_id, token, abbruch=None, clock=time.monotonic):
+def ausfuehren(wurzel, zeile, ordner='.', zeitlimit_s=120, *, guard, mission_id, token, abbruch=None, aufgabe_id=None, clock=time.monotonic):
     """Führt den Befehl aus, wenn das Token genau dazu passt. Rückgabe {status, exitcode, ausgabe, gekuerzt, dauer_s};
-    status ∈ ok, fehler (exitcode ≠ 0), zeitlimit, abgebrochen, nicht_erlaubt."""
+    status ∈ ok, fehler (exitcode ≠ 0), zeitlimit, abgebrochen, zurueckgenommen, nicht_erlaubt. `aufgabe_id`: läuft der Befehl unter einer
+    Aufgaben-Freigabe, endet er mit deren Rücknahme (RUECKNAHME)."""
     argv = zerlegen(zeile)
     cwd = ordner_in(wurzel, ordner)
     rel = cwd.relative_to(Path(wurzel).resolve()).as_posix() or '.'
@@ -135,9 +162,12 @@ def ausfuehren(wurzel, zeile, ordner='.', zeitlimit_s=120, *, guard, mission_id,
     leser = threading.Thread(target=lambda: stuecke.append(proc.stdout.read()), daemon=True)
     leser.start()
     status = None
+    ruecknahme = RUECKNAHME.ereignis(aufgabe_id)
     while proc.poll() is None:
         if abbruch is not None and abbruch.is_set():
             status = 'abgebrochen'; _beenden(proc); break
+        if ruecknahme is not None and ruecknahme.is_set():
+            status = 'zurueckgenommen'; _beenden(proc); break
         if clock() - t0 > zeitlimit:
             status = 'zeitlimit'; _beenden(proc); break
         time.sleep(0.05)

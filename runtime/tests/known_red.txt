@@ -1,2 +1,2 @@
-# Bekannt rote Tests (Stand 2026-10-25); `#` beginnt einen Grund. Nur mit Absicht erneuern (run_tests.py --update-known).
-test_uix_flows.Build24.test_paperclip_new_project_and_the_workplace_answers  # Routinen steht in der Paperclip-Navigation; schon vor S1.H9 rot (fa65917)
+# Bekannt rote Tests (Stand 2026-10-30); `#` beginnt einen Grund. Nur mit Absicht erneuern (run_tests.py --update-known).
+# 2026-10-30: test_uix_flows.Build24.test_paperclip_new_project_and_the_workplace_answers gruen – die Erwartung war veraltet (Spec 4 G2-S4-01: Routinen steht in der Paperclip-Navigation); Test angepasst.

@@ -309,7 +309,9 @@ class Build24(unittest.TestCase):
     def test_paperclip_new_project_and_the_workplace_answers(self):
         def flow(page, _wait):
             nav = page.text_content('.pc-nav')
-            self.assertNotIn('Routinen', nav); self.assertNotIn('KI GateWay', nav)
+            # Spec 4 (G2-S4-01): „Routinen“ steht in der Navigation, auch wenn die Orchestrierung aus ist (die Seite sagt dann, warum sie leer ist);
+            # die Regel aus Build 24 („kein Eintrag ohne Werkzeug“) gilt dafür nicht mehr – das Werkzeug `routines` gibt es seit Spec 4. KI GateWay bleibt draußen.
+            self.assertIn('Routinen', nav); self.assertNotIn('KI GateWay', nav)
             page.click('.pc-nav-row:has-text("Dateien")'); page.wait_for_timeout(800)
             page.click('.pc-verbs button:has-text("Neues Projekt")'); page.wait_for_timeout(300)
             page.fill('.t-files-input', 'Paperclip-Projekt'); page.click('.t-files-new button:has-text("Anlegen")'); page.wait_for_timeout(1200)

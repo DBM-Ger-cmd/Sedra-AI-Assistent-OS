@@ -165,3 +165,90 @@ def laden(projekt_root: Path, vorlage: Path = VORLAGE):
     except (OSError, yaml.YAMLError, UnicodeDecodeError) as exc:
         raise KatalogFehler(f'datei_unlesbar: {pfad.name}: {type(exc).__name__}') from exc
     return {'regeln': pruefen(doc), 'quelle': 'local_config' if pfad == eigen else 'vorlage', 'datei': str(pfad)}
+
+
+# ---------------------------------------------------------------- Stufe 5: schreiben – nur über einen Antrag mit Gate (G2 Stufe 5 §4, D-U2)
+# Der Editor der Einstellungen schreibt die Datei des Captains nie direkt: er legt einen Antrag an (gated.request), und erst
+# „Freigeben und anwenden“ ruft `schreiben`/`entfernen`. Die Prüfung ist dieselbe wie beim Laden (`pruefen`), die Sicherung bleibt.
+import hashlib as _hashlib
+import json as _json
+import time as _time
+
+WEITE_MUSTER = re.compile(r'^(\*\*|\*|\*\*/\*|\.|/|\*\*/\*\*)$')          # trifft alles – im Antrag ein Risiko, nie ein Fehler
+STUFE_RANG = {s: i for i, s in enumerate(STUFEN)}                           # frei < vorarbeiter < captain < verboten
+
+
+def pruefe_entwurf(regeln):
+    """Die Regeln eines Entwurfs (Liste von Einträgen) – dieselbe Prüfung wie beim Laden einer Datei. KatalogFehler mit Grund."""
+    return pruefen({'freigabe_katalog': {'regeln': list(regeln or [])}})
+
+
+def hash_von(regeln):
+    """Stabiler Hash über die geprüften Regeln – die Bindung des Antrags (Stand und Entwurf)."""
+    text = _json.dumps(regeln, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+    return _hashlib.sha256(text.encode('utf-8')).hexdigest()
+
+
+def befunde(entwurf, stand, vorlage_regeln):
+    """Was der Captain vor der Freigabe sehen soll (rein): weite Muster, Lockerungen gegen die Vorlage, Diff-Zahlen. Keine Fehler –
+    die kommen aus `pruefe_entwurf`."""
+    alt = {r['id']: r for r in stand}
+    neu = {r['id']: r for r in entwurf}
+    vorlage = {r['id']: r for r in vorlage_regeln}
+    out = []
+    for r in entwurf:
+        v = vorlage.get(r['id'])
+        for m in r['muster'] if r != v else ():                           # die Vorlage selbst ist geprüft; nur Eigenes wird gemeldet
+            if WEITE_MUSTER.match(m.strip()):
+                out.append(f"weites Muster: Regel „{r['id']}“ trifft mit „{m}“ alles ({', '.join(r['werkzeug'])})")
+        if v and STUFE_RANG[r['stufe']] < STUFE_RANG[v['stufe']]:
+            out.append(f"Lockerung: Regel „{r['id']}“ der Vorlage von {v['stufe']} auf {r['stufe']}")
+    for rid, v in vorlage.items():
+        if v['stufe'] == 'verboten' and rid not in neu:
+            out.append(f"Vorlage-Regel „{rid}“ (verboten) fehlt im Entwurf")
+    zahlen = {'neu': sorted(set(neu) - set(alt)), 'entfernt': sorted(set(alt) - set(neu)),
+              'geaendert': sorted(i for i in set(alt) & set(neu) if alt[i] != neu[i])}
+    return out, zahlen
+
+
+def _datei(projekt_root):
+    return Path(projekt_root) / 'local_config' / DATEI
+
+
+def sichern(projekt_root):
+    """Kopie der Datei des Captains mit Zeitstempel; None, wenn es keine gibt."""
+    pfad = _datei(projekt_root)
+    if not pfad.is_file():
+        return None
+    ziel = pfad.with_name(pfad.name + '.bak-' + _time.strftime('%Y%m%d-%H%M%S'))
+    n = 0
+    while ziel.exists():
+        n += 1
+        ziel = pfad.with_name(pfad.name + '.bak-' + _time.strftime('%Y%m%d-%H%M%S') + f'-{n}')
+    ziel.write_bytes(pfad.read_bytes())
+    return ziel
+
+
+def schreiben(projekt_root, regeln):
+    """Die geprüften Regeln als Datei des Captains (atomar, mit Kopfkommentar und Sicherung). Rückgabe {datei, sicherung, hash}.
+    Nur der Applier eines freigegebenen Antrags ruft das (G2 Stufe 5 §4.4)."""
+    from ..core.util import atomic_write_text
+    regeln = pruefe_entwurf(regeln)
+    pfad = _datei(projekt_root)
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    sicherung = sichern(projekt_root)
+    kopf = ('# Freigabe-Katalog des Captains (SPEC_HARNESS_SHELL_v1 HS-25). Geschrieben über den Katalog-Editor der Harness-Shell\n'
+            '# (Stufe 5) nach Freigabe im Posteingang; Sicherungen liegen daneben (*.bak-<zeit>). Von Hand bearbeiten ist weiter erlaubt.\n')
+    text = kopf + yaml.safe_dump({'freigabe_katalog': {'regeln': regeln}}, allow_unicode=True, sort_keys=False, width=120)
+    atomic_write_text(pfad, text)
+    return {'datei': str(pfad), 'sicherung': str(sicherung) if sicherung else None, 'hash': hash_von(regeln), 'regeln': len(regeln)}
+
+
+def entfernen(projekt_root):
+    """Die Datei des Captains mit Sicherung entfernen – danach gilt wieder die Vorlage. Rückgabe {entfernt, sicherung}."""
+    pfad = _datei(projekt_root)
+    if not pfad.is_file():
+        return {'entfernt': False, 'sicherung': None}
+    sicherung = sichern(projekt_root)
+    pfad.unlink()
+    return {'entfernt': True, 'sicherung': str(sicherung)}

@@ -3,7 +3,8 @@
 Eine Vorlage ist eine YAML-Datei (Daten) mit einer Markdown-Datei daneben (Systemprompt): `runtime/config/harness_vorlagen/<id>.yaml`.
 Eine gleichnamige Datei in `local_config/harness_vorlagen/` des Projekts (Captain) hat Vorrang. Eine ungültige Vorlage ist ein Fehler
 mit Grund, nie ein stiller Rückfall. `werkzeuge` ist eine Whitelist; die Rechte prüft der Server bei jedem Aufruf, nicht die Vorlage allein.
-Diese Datei liest nur; sie schreibt nichts (auch nicht in `local_config/`)."""
+Diese Datei liest; geschrieben wird nur über `grenzen_schreiben` (Stufe 5, D-U4) – und das ruft allein der Applier eines freigegebenen
+Antrags (`harness/antraege.py`), nie ein Weg der API direkt."""
 from __future__ import annotations
 
 import hashlib
@@ -155,3 +156,37 @@ class Begrenzt:
         if attr == 'call':
             return lambda name, args: inner(name, args) if name in self._erlaubt else f'error: Werkzeug {name} ist in dieser Vorlage nicht erlaubt'
         return inner
+
+
+# ---------------------------------------------------------------- Stufe 5: Grenzen (D-U4) – Kopie der Vorlage mit anderem max_zuege
+def grenzen_schreiben(projekt_root, vorlage_id, max_zuege, repo_dir=VORLAGEN_DIR):
+    """Kopie der Vorlage (`.yaml` + `.md`) nach `local_config/harness_vorlagen/`, nur `max_zuege` geändert; eine vorhandene Kopie wird
+    vorher gesichert (`.bak-<zeit>`). Rückgabe {datei, sicherung, max_zuege, quelle_vorher}. Nur der Applier ruft das."""
+    import time
+    from ..core.util import atomic_write_text
+    if not isinstance(max_zuege, int) or isinstance(max_zuege, bool) or not 4 <= max_zuege <= 40:
+        raise VorlageFehler('max_zuege_ungueltig: 4 bis 40')
+    v = laden(projekt_root, vorlage_id, repo_dir)                       # unbekannt/ungültig → VorlageFehler
+    quelle = next(o / (vorlage_id + '.yaml') for o in _ordner(projekt_root, repo_dir) if (o / (vorlage_id + '.yaml')).is_file())
+    doc = yaml.safe_load(quelle.read_text(encoding='utf-8'))
+    doc['harness_vorlage']['max_zuege'] = max_zuege
+    pruefen(doc, v['system'])
+    ziel_dir = Path(projekt_root) / 'local_config' / 'harness_vorlagen'
+    ziel_dir.mkdir(parents=True, exist_ok=True)
+    ziel = ziel_dir / (vorlage_id + '.yaml')
+    sicherung = None
+    if ziel.is_file():
+        sicherung = ziel.with_name(ziel.name + '.bak-' + time.strftime('%Y%m%d-%H%M%S'))
+        n = 0
+        while sicherung.exists():
+            n += 1
+            sicherung = ziel.with_name(ziel.name + f'.bak-{time.strftime("%Y%m%d-%H%M%S")}-{n}')
+        sicherung.write_bytes(ziel.read_bytes())
+    md_quelle = quelle.with_name(doc['harness_vorlage']['system'])
+    md_ziel = ziel_dir / md_quelle.name
+    if md_quelle.resolve() != md_ziel.resolve():
+        atomic_write_text(md_ziel, md_quelle.read_text(encoding='utf-8'))
+    kopf = (f'# Kopie der Vorlage „{vorlage_id}“ mit geänderter Grenze (max_zuege) – geschrieben über die Einstellungen der Harness-Shell\n'
+            '# (Stufe 5, D-U4) nach Freigabe im Posteingang. Löschen dieser Datei stellt die Vorlage des Repos wieder her.\n')
+    atomic_write_text(ziel, kopf + yaml.safe_dump(doc, allow_unicode=True, sort_keys=False, width=120))
+    return {'datei': str(ziel), 'sicherung': str(sicherung) if sicherung else None, 'max_zuege': max_zuege, 'quelle_vorher': v['quelle']}

@@ -143,6 +143,8 @@ class UIXHub:
         # über eine Anfrage kommt kein Typ dazu. Ein neuer Anwendungsfall ist ein Modul in desk/extensions.MODULES, keine Zeile hier.
         self.kinds = desk_builtin_kinds.new_registry()
         self.extensions = desk_extensions.load(self.kinds, self, desk_extensions.MODULES, audit=self._desk_audit)
+        from .harness import antraege as harness_antraege               # Stufe 5: Katalog und Grenzen nur über einen Antrag mit Gate
+        harness_antraege.registrieren(self.kinds)
         self.kinds.freeze()
         self._extensions_started = None
         # Harness-Shell (SPEC_HARNESS_SHELL_v1 Stufe 1): Sitzungen, Antwort-Strom, Schleife – eigene Sperren, nie self.lock (K3)
@@ -492,6 +494,8 @@ class UIXHub:
                     'routes': man.get('api') or [], 'folder': str(folder), 'enabled': enabled,
                     'required': man['id'] in self.REQUIRED_TOOLS,
                     'own_types': man.get('own_types') or [],
+                    'gruppe': man.get('gruppe'), 'zweck': man.get('zweck'),        # Stufe 4: das Start-Menü der Harness ordnet danach ein
+                    'umschalter': man.get('umschalter'),
                     'preview': (Path(folder) / 'preview.png').is_file()}      # die Start-Shell fragt nicht ins Leere
         disabled = set(config['disabled'])
         return {'shell': manifest['config']['shell'],
@@ -540,6 +544,11 @@ class UIXHub:
         self.events.publish('tools.refresh', {})
         return {'status': 'set', 'shell': wanted, 'before': before,
                 'note': 'Beim nächsten Öffnen der Seite ist die neue Shell da – der Loader lädt genau eine beim Start.'}
+
+    def clients_view(self):
+        """GET /api/uix/clients – die externen Clients (cli, mcp): vorhanden, Port, PID, Zeit; der Token bleibt in der Datei (G3 Stufe 5 N3)."""
+        from . import uix_clients
+        return {'clients': uix_clients.status(self.project_root), 'ordner': str(uix_clients.clients_dir(self.project_root))}
 
     def shelf_view(self):
         """GET /api/uix/shelf – die eigenen Ablagen je Shell (Build 19). Leer heißt: die Shell zeigt ihre Vorgabe."""
@@ -1716,8 +1725,7 @@ class UIXHub:
                 'model': {'value': (loaded or {}).get('id') or snap['model'].get('model') or 'keins geladen',
                           'hint': ('Kontext ' + str(snap['model'].get('context')) if snap['model'].get('context') else 'Werkstatt öffnet die Modelle'),
                           'tone': 'ok' if snap['model'].get('running') else 'off'},
-                'gpu': {'value': (f"{hw.get('vram_gb')} GB" if hw.get('vram_gb') else '–'), 'hint': (hw.get('gpu_name') or 'keine GPU erkannt')
-                        + (' · Sperre ' + ('belegt: ' + str(lease.get('purpose'))[:40] if lease else 'frei')), 'tone': 'warn' if lease and not lease.get('mine') else 'off'},
+                'gpu': self._gpu_zelle(hw, lease),
                 'decisions': {'value': len(snap['decisions']), 'hint': (snap['decisions'][0]['title'][:48] if snap['decisions'] else 'nichts wartet'),
                               'tone': 'warn' if snap['decisions'] else 'ok'},
                 'tasks': {'value': len(running),
@@ -1726,7 +1734,126 @@ class UIXHub:
                 'cloud': self._cloud_gauge(),
                 'mode': self._mode_gauge(),
                 **({'slots': gauge} if (gauge := self._slots_gauge()) is not None else {}),
-                **({'wissen': zelle} if (zelle := self._wissen_gauge()) is not None else {})}
+                **({'wissen': zelle} if (zelle := self._wissen_gauge() ) is not None else {}),
+                # Harness Stufe 4 (HS-32, G3 N2): RAM, Modellserver und Scheduler-Zustand – nur, wenn es die Quelle gibt
+                **({'ram': zelle} if (zelle := self._ram_zelle()) is not None else {}),
+                **({'server': zelle} if (zelle := self._server_zelle(models.get('server'))) is not None else {}),
+                **({'scheduler': zelle} if (zelle := self._scheduler_zelle()) is not None else {})}
+
+    # ---- Harness Stufe 4: Zellen des Statusbereichs aus der Probe des Hardware-Managers (SPEC_HARNESS_SHELL_v1 G2 Stufe 4 §5, K6).
+    # Keine eigene Messung: `hardware_manager.get_state()` ist die Probe, die der Hardware-Manager ohnehin nimmt (nvidia-smi, Board-
+    # Sensoren über LibreHardwareMonitor, RAM), zwischengespeichert; die Leiste fragt sie höchstens alle 10 s neu.
+    HARDWARE_PROBE_S = 10
+    LHM_SATZ = 'Board-Sensoren: LibreHardwareMonitor nicht gestartet – als Dienst starten, dann erscheinen sie hier.'
+
+    def _hardware_probe(self):
+        hm = getattr(self.runtime, 'hardware_manager', None)
+        if hm is None:
+            return None
+        now = time.monotonic()
+        cached = getattr(self, '_hw_probe', None)
+        if cached is not None and now - cached[0] < self.HARDWARE_PROBE_S:
+            return cached[1]
+        try:
+            probe = hm.get_state()
+        except Exception:
+            probe = None
+        self._hw_probe = (now, probe)
+        return probe
+
+    @staticmethod
+    def _wert(metric):
+        v = (metric or {}).get('value') if isinstance(metric, dict) else None
+        return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+    @classmethod
+    def gpu_temperatur(cls, probe):
+        """(°C, Quelle) nach K6: (1) Board-Sensor über LibreHardwareMonitor, dessen Name „GPU“ trägt, (2) nvidia-smi, (3) keine.
+        Rein – die Tests rufen es mit Attrappen."""
+        if not isinstance(probe, dict):
+            return None, 'keine'
+        for sensor in probe.get('sensors') or []:
+            if isinstance(sensor, dict) and sensor.get('type') == 'Temperature' and 'gpu' in str(sensor.get('name') or '').lower():
+                wert = cls._wert(sensor.get('reading'))
+                if wert is not None:
+                    return wert, 'LHM'
+        for gpu in probe.get('gpus') or []:
+            wert = cls._wert((gpu or {}).get('temperature_core'))
+            if wert is not None:
+                return wert, 'nvidia-smi'
+        return None, 'keine'
+
+    def _gpu_zelle(self, hw, lease):
+        probe = self._hardware_probe()
+        temperatur, quelle = self.gpu_temperatur(probe)
+        gpus = (probe or {}).get('gpus') or []
+        belegt = self._wert((gpus[0] or {}).get('vram_used')) if gpus else None
+        gesamt = self._wert((gpus[0] or {}).get('vram_total')) if gpus else None
+        thermisch = (probe or {}).get('thermal_state')
+        if gesamt is None and hw.get('vram_gb'):
+            gesamt = hw.get('vram_gb')
+        teile = []
+        if temperatur is not None:
+            teile.append(f'{round(temperatur)} °C')
+        if belegt is not None and gesamt:
+            teile.append(f'{belegt:.1f}/{gesamt:.0f} GB')
+        elif gesamt:
+            teile.append(f'{gesamt} GB')
+        value = ' · '.join(teile) if teile else '–'
+        hinweis = [hw.get('gpu_name') or 'keine GPU erkannt']
+        if temperatur is not None:
+            hinweis.append('Temperatur: ' + quelle)
+        if probe is not None and str((probe.get('provider_status') or {}).get('sensors') or '').startswith('LibreHardwareMonitor'):
+            hinweis.append(self.LHM_SATZ)          # auch wenn nvidia-smi die Temperatur liefert: die Board-Sensoren fehlen, und so bekommt man sie (D-S3)
+        hinweis.append('Sperre ' + ('belegt: ' + str(lease.get('purpose'))[:40] if lease else 'frei'))
+        if thermisch:
+            hinweis.append('Zustand ' + str(thermisch))
+        tone = 'off'
+        if lease and not lease.get('mine'):
+            tone = 'warn'
+        if thermisch in ('WARM',):
+            tone = 'warn'
+        elif thermisch in ('HOT', 'CRITICAL', 'SENSOR_FAULT'):
+            tone = 'bad'
+        elif tone == 'off' and (temperatur is not None or belegt is not None):
+            tone = 'ok'
+        return {'value': value, 'hint': ' · '.join(hinweis), 'tone': tone,
+                **({'temperatur': temperatur, 'quelle': quelle} if temperatur is not None else {}),
+                **({'vram_belegt': belegt} if belegt is not None else {}), **({'thermisch': thermisch} if thermisch else {})}
+
+    def _ram_zelle(self):
+        probe = self._hardware_probe()
+        mem = (probe or {}).get('memory') or {}
+        frei, gesamt = self._wert(mem.get('available')), self._wert(mem.get('total'))
+        if frei is None or not gesamt:
+            return None
+        return {'value': f'{frei:.1f}/{gesamt:.0f} GB', 'hint': 'Arbeitsspeicher frei/gesamt', 'tone': 'warn' if frei < 2 else 'ok'}
+
+    @staticmethod
+    def _server_zelle(server):
+        if not isinstance(server, dict):
+            return None
+        running = bool(server.get('running'))
+        port = ''
+        try:
+            port = ' · Port ' + str(urlsplit(str(server.get('endpoint') or '')).port or '')
+        except ValueError:
+            port = ''
+        build = server.get('engine_build')
+        check = server.get('engine_check')
+        hint = ('Engine ' + str(build) if build else 'Engine') + port + (' · ' + str(check) if check and check != 'ok' else '')
+        return {'value': 'bereit' if running else 'aus', 'hint': hint.strip(' ·'), 'tone': 'ok' if running else 'off'}
+
+    def _scheduler_zelle(self):
+        view = self.slots_view()
+        if view is None or not view.get('enabled'):
+            return {'value': 'aus', 'hint': 'Scheduler nicht eingeschaltet', 'tone': 'off'}
+        if view.get('error'):
+            return {'value': 'Fehler', 'hint': str(view['error']), 'tone': 'bad'}
+        belegt, queue = len(view.get('belegt') or []), len(view.get('schlange') or [])
+        if belegt or queue:
+            return {'value': f'{belegt} in Arbeit', 'hint': f'{queue} wartet' if queue else 'Slots belegt', 'tone': 'warn' if queue else 'ok'}
+        return {'value': 'bereit', 'hint': 'keine Slots belegt', 'tone': 'ok'}
 
     def _wissen_gauge(self):
         """SPEC_SHELL_WISSEN_v1 §4.3: Modus, Abdeckung und offene Vorschläge; ohne Schalter `wissen` keine Zelle (das Instrument sagt „aus“)."""
@@ -3538,6 +3665,7 @@ def make_server(hub: UIXHub, port=0):
                     '/api/resources': hub.runtime.resource_status,          # read-only
                     '/api/uix/modules': hub.modules_view,                   # read-only: Shell, Werkzeuge, Abgelehnte, Vorlagen
                     '/api/uix/shelf': hub.shelf_view,                       # read-only: die eigenen Ablagen je Shell (Build 19)
+                    '/api/uix/clients': hub.clients_view,                   # read-only: CLI/MCP-Client vorhanden, Port, PID – nie der Token (Harness Stufe 5)
                 }
                 fn = routes.get(path)
                 if fn is None:

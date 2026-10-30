@@ -4,11 +4,20 @@
 // kann ihn nicht abschalten, und er spricht über sedraApi.api (die Seite selbst, Token-geprüft) – nur zwei Routen:
 // GET /api/uix/modules und POST /api/uix/shell. Nichts läuft ohne Klick; der Wechsel lädt die Seite neu, wie im Werkzeug Module.
 // Tastatur: Alt+S öffnet und schließt das Menü, Esc schließt. Die Wahl von Darstellung und Schrift bleibt im Browser (Anzeige-Komfort).
+// Vertrag Nachtrag N3 (SPEC_HARNESS_SHELL_v1 G2 Stufe 4, D-S1): eine Shell mit `umschalter: menue` im Manifest bekommt keinen Chip und
+// keinen Mini-Hub – sie hat ein eigenes Start-Menü. Alt+S ruft dann den Haken, den die Shell mit `sedraWechsel.menueHaken(fn)` setzt;
+// der Wechsel selbst (`wechseln`, `uebersicht`), Darstellung, Schrift und „Gedächtnis leeren“ bleiben derselbe Code (eine Stelle, ein Audit).
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const SCALES = ['normal', 'gross'];
   const SCALE_KEY = 'sedra.scale';
+
+  // rein: chip (Vorgabe) oder menue – aus dem Shell-Manifest (node prüft das ohne Browser)
+  function modus(manifest){
+    const m = manifest && manifest.shell && manifest.shell.umschalter;
+    return m === 'menue' ? 'menue' : 'chip';
+  }
 
   // rein: die Einträge des Menüs aus der Modulliste (node prüft das ohne Browser)
   function entries(shells, current){
@@ -50,8 +59,26 @@
     location.reload();
   }
 
+  // „Gedächtnis leeren“ als Funktion für ein Shell-Menü (§10.5): die Shell fragt selbst zweimal; hier nur der Weg
+  async function leeren(){
+    await CORE_API('/api/arbeitsstand/leeren', {method: 'POST', body: {}});
+    if(root.sedraLifecycle && root.sedraLifecycle.gedaechtnisLeeren) root.sedraLifecycle.gedaechtnisLeeren();
+  }
+  // Übersicht der Oberflächen (Shell `start`, nur für diesen Start)
+  function uebersicht(){ return wechseln({shell: 'start', nur_jetzt: true}); }
+
+  let MENUE_HAKEN = null;
+  function menueHaken(fn){ MENUE_HAKEN = typeof fn === 'function' ? fn : null; }
+
   function mount(manifest){
     if(typeof document === 'undefined' || !manifest || !manifest.shell || manifest.shell.id === 'start') return null;
+    if(modus(manifest) === 'menue'){
+      // kein Chip, kein Hub: Alt+S gehört dem Menü der Shell. Der Rekorder ist dort eine App (Werkzeug `rekorder`), keine Leiste (HS-43).
+      document.addEventListener('keydown', e=>{
+        if(e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 's' || e.key === 'S')){ e.preventDefault(); if(MENUE_HAKEN) MENUE_HAKEN(); }
+      });
+      return {menue: true};
+    }
     if(document.querySelector('.sx-chip')) return null;
     const api = CORE_API;
     const el = (tag, cls, text)=>{ const n = document.createElement(tag); if(cls) n.className = cls; if(text != null) n.textContent = text; return n; };
@@ -335,6 +362,7 @@
   // „Wissens-Shell öffnen“ (SPEC_COCKPIT_BAUM_v1 §3.1): eine Shell wechselt in eine andere; Arbeitsstand und Ablage gehen mit
   function zurShell(id){ return wechseln({shell: String(id || '')}); }
 
-  root.sedraWechsel = {zurShell, hubLage, mount, entries, setScale, restoreScale, scales: SCALES, menuWahl, menuSeite, setMenuSeite, MENU_SEITEN, beimWechsel, vorDemWechsel, neuLaden};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {entries, scales: SCALES};
+  root.sedraWechsel = {zurShell, hubLage, mount, entries, modus, setScale, restoreScale, scales: SCALES, menuWahl, menuSeite, setMenuSeite, MENU_SEITEN, beimWechsel, vorDemWechsel, neuLaden,
+                       wechseln, uebersicht, leeren, menueHaken};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {entries, modus, scales: SCALES};
 })();

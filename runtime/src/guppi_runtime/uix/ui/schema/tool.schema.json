@@ -4,51 +4,204 @@
   "title": "tool.yaml – a SEDRA desktop tool (UI contract 1.0)",
   "description": "The readable form of the rules desk/gateway.py enforces. The server decides; this file is for editors and for people.",
   "type": "object",
-  "required": ["tool"],
+  "required": [
+    "tool"
+  ],
   "additionalProperties": false,
   "properties": {
     "tool": {
       "type": "object",
-      "required": ["id", "name", "version", "kind", "entry", "trust", "needs"],
+      "required": [
+        "id",
+        "name",
+        "version",
+        "kind",
+        "entry",
+        "trust",
+        "needs"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": {"type": "string", "pattern": "^[a-z0-9-]{2,40}$", "description": "unique, and the name of the folder"},
-        "name": {"type": "string", "minLength": 1, "maxLength": 60},
-        "description": {"type": "string", "maxLength": 200},
-        "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
-        "kind": {"enum": ["object", "instrument", "panel"], "description": "object: a container per object; instrument: a cell in the strip; panel: Gespräch, Palette"},
-        "handles": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9-]{2,40}(:(\\*|[a-z0-9-]{1,40}))?$"}, "description": "Objekttypen des Vertrags: project intent task candidate file model skill agent decision routine boundary module logbook meter hardware machine. Ein eigenes oder fremdes Werkzeug darf eigene Typen mitbringen; ein CORE-Werkzeug nicht. Nachtrag N1 (Spec 4): typ:alle (nur die Sammlung), typ:* (jedes Einzelobjekt), typ:<id> (genau dieses Objekt)."},
-        "order": {"type": "integer", "minimum": 0, "maximum": 1000, "description": "lower comes first; uix.yaml can override it"},
-        "instanzen": {"enum": ["eine", "viele"], "description": "Vertrag 1.1: viele = das Werkzeug lebt in mehreren Containern zugleich (Nachtrag N2: unmount(el), actions(el)); nur dann darf eine Shell es versteckt eingehängt lassen. Standard eine."},
-        "zweck": {"enum": ["betrieb", "pruefung"], "description": "Stufe 6 (S6-E4): pruefung = ein Prüfwerkzeug; es lädt nur mit dem Schalter entwicklung in local_config/switches.yaml. Standard betrieb."},
-        "gedaechtnis": {"oneOf": [{"enum": ["sitzung", "ablage"]}, {"type": "array", "uniqueItems": true, "items": {"enum": ["sitzung", "ablage"]}}], "description": "Vertrag 1.1: sitzung = ctx.sitzung in sessionStorage (nur Zustand der Ansicht, nie Inhalt); ablage = ctx.ablage im Speicher der Runtime (auch Inhalt, übersteht Shell-Wechsel). Ohne Angabe nur ctx.memo."},
-        "slot": {"enum": ["inhalt", "nachweis"], "description": "Hinweis an die Shell: Werkstück oder Nachweis. Das Cockpit stellt Nachweise rechts daneben; andere Shells dürfen ihn ignorieren."},
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]{2,40}$",
+          "description": "unique, and the name of the folder"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "kind": {
+          "enum": [
+            "object",
+            "instrument",
+            "panel"
+          ],
+          "description": "object: a container per object; instrument: a cell in the strip; panel: Gespräch, Palette"
+        },
+        "handles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]{2,40}(:(\\*|[a-z0-9-]{1,40}))?$"
+          },
+          "description": "Objekttypen des Vertrags: project intent task candidate file model skill agent decision routine boundary module logbook meter hardware machine. Ein eigenes oder fremdes Werkzeug darf eigene Typen mitbringen; ein CORE-Werkzeug nicht. Nachtrag N1 (Spec 4): typ:alle (nur die Sammlung), typ:* (jedes Einzelobjekt), typ:<id> (genau dieses Objekt)."
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "lower comes first; uix.yaml can override it"
+        },
+        "instanzen": {
+          "enum": [
+            "eine",
+            "viele"
+          ],
+          "description": "Vertrag 1.1: viele = das Werkzeug lebt in mehreren Containern zugleich (Nachtrag N2: unmount(el), actions(el)); nur dann darf eine Shell es versteckt eingehängt lassen. Standard eine."
+        },
+        "zweck": {
+          "enum": [
+            "betrieb",
+            "pruefung"
+          ],
+          "description": "Stufe 6 (S6-E4): pruefung = ein Prüfwerkzeug; es lädt nur mit dem Schalter entwicklung in local_config/switches.yaml. Standard betrieb."
+        },
+        "gedaechtnis": {
+          "oneOf": [
+            {
+              "enum": [
+                "sitzung",
+                "ablage"
+              ]
+            },
+            {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "sitzung",
+                  "ablage"
+                ]
+              }
+            }
+          ],
+          "description": "Vertrag 1.1: sitzung = ctx.sitzung in sessionStorage (nur Zustand der Ansicht, nie Inhalt); ablage = ctx.ablage im Speicher der Runtime (auch Inhalt, übersteht Shell-Wechsel). Ohne Angabe nur ctx.memo."
+        },
+        "slot": {
+          "enum": [
+            "inhalt",
+            "nachweis"
+          ],
+          "description": "Hinweis an die Shell: Werkstück oder Nachweis. Das Cockpit stellt Nachweise rechts daneben; andere Shells dürfen ihn ignorieren."
+        },
         "entry": {
           "type": "object",
-          "required": ["js"],
+          "required": [
+            "js"
+          ],
           "additionalProperties": false,
           "properties": {
-            "js": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
-            "css": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]}
+            "js": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "css": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
           }
         },
-        "api": {"type": "array", "items": {"type": "string", "pattern": "^(GET|POST) /(api|uix)(/[A-Za-z0-9_.-]+)*(/\\*)?$"},
-                "description": "allowlist; the server answers 403 tool_route_not_allowed for everything else. '*' only at the end."},
+        "api": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(GET|POST) /(api|uix)(/[A-Za-z0-9_.-]+)*(/\\*)?$"
+          },
+          "description": "allowlist; the server answers 403 tool_route_not_allowed for everything else. '*' only at the end."
+        },
         "events": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "emits": {"type": "array", "items": {"type": "string"}},
-            "listens": {"type": "array", "items": {"type": "string"}}
+            "emits": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "listens": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         },
-        "trust": {"enum": ["CORE", "CAPTAIN", "GUPPI_BUILT", "COMMUNITY"]},
-        "tests": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_.-]+\\.js$"}},
+        "trust": {
+          "enum": [
+            "CORE",
+            "CAPTAIN",
+            "GUPPI_BUILT",
+            "COMMUNITY"
+          ]
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_.-]+\\.js$"
+          }
+        },
         "needs": {
           "type": "object",
-          "required": ["ui"],
+          "required": [
+            "ui"
+          ],
           "additionalProperties": false,
-          "properties": {"ui": {"type": "string", "description": "range against the contract version, e.g. '>=1.0 <2'"}}
+          "properties": {
+            "ui": {
+              "type": "string",
+              "description": "range against the contract version, e.g. '>=1.0 <2'"
+            }
+          }
+        },
+        "gruppe": {
+          "enum": [
+            "arbeit",
+            "modelle",
+            "wissen",
+            "system",
+            "pruefung"
+          ],
+          "description": "Vertrag Nachtrag N2 (Harness Stufe 4): die Gruppe im Start-Menü der Harness-Shell. Ohne das Feld ordnet die Shell nach ihrer Datei start_gruppen.yaml ein."
         }
       }
     }

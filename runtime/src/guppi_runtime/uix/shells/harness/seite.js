@@ -126,8 +126,8 @@
     aufgaben.title = 'Aufgaben-Freigaben und Vorschläge des Vorarbeiters'; aufgaben.onclick = ()=>root.sedraHarness.reiter.oeffnen(S, 'aufgaben:');
     const einst = d().el('button', 's-btn hs-einstellungen', 'Einstellungen');
     einst.type = 'button';
-    einst.title = 'Die Einstellungsseite kommt in Stufe 5; bis dahin Darstellung und Schrift über Start.';
-    einst.onclick = ()=>S.hinweis('Einstellungen kommen in Stufe 5. Darstellung, Schrift und Oberfläche: Start unten links.');
+    einst.title = 'Einstellungen (HS-42): Allgemein, Agent, Sprache, Integrationen, Lokale Modelle, System'; einst.dataset.marke = 'hs-einstellungen';
+    einst.onclick = ()=>root.sedraHarness.einstellungen.oeffnen(S);           // Stufe 5
     el.replaceChildren(neu, liste, aufgaben, einst);
   }
 

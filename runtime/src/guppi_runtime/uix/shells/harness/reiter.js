@@ -20,6 +20,8 @@
     if(String(id).startsWith('diff:')) return 'Diff ' + id.slice(5);
     if(String(id).startsWith('aufgaben:')) return 'Aufgaben';
     if(String(id).startsWith('lauf:')){ const l = (S.laeufe || []).find(x=>x.id === id.slice(5)); return 'Lauf ' + (l ? l.name : id.slice(5)); }
+    if(String(id).startsWith('app:')) return root.sedraHarness.app.titel(S, id);                   // Stufe 4
+    if(String(id).startsWith('einstellungen:')) return 'Einstellungen';                            // Stufe 5
     if(!ID.test(id)) return 'Neue Sitzung';
     const s = S.sitzung(id);
     return (s && s.titel) || 'Ohne Titel';
@@ -65,13 +67,14 @@
     zeichnen(S);
     root.sedraHarness.seite.zeichnen(S);
     root.sedraHarness.taskleiste.zeichnen(S);
+    if(root.sedraHarness.app) root.sedraHarness.app.melden(S);       // Stufe 4: wer vorn liegt, steht im Arbeitsstand
   }
 
   function oeffnen(S, id){ aktivieren(S, id); }
 
   function neu(S){
     const r = stand(S);
-    const leer = r.liste.find(id=>!ID.test(id) && !/^(diff|aufgaben|lauf):/.test(String(id)));          // ein offener Entwurf genügt
+    const leer = r.liste.find(id=>!ID.test(id) && !/^(diff|aufgaben|lauf|app|einstellungen):/.test(String(id)));          // ein offener Entwurf genügt
     aktivieren(S, leer || ('neu-' + (++zaehler)));
     root.sedraHarness.eingabe.fokus(S);
   }
@@ -82,6 +85,7 @@
     if(at < 0) return;
     r.liste.splice(at, 1);
     S.verwerfen(id);
+    if(String(id).startsWith('app:')) root.sedraHarness.app.geschlossen(S, id);        // Stufe 4: Stand melden, Eintrag vergessen
     if(r.aktiv === id){
       r.aktiv = r.liste[Math.min(at, r.liste.length - 1)] || null;
       if(!r.aktiv){ neu(S); return; }

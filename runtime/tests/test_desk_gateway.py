@@ -43,6 +43,22 @@ class ManifestRules(unittest.TestCase):
         man, errors = self.check({})
         self.assertEqual(errors, [])
         self.assertEqual((man["id"], man["kind"], man["handles"], man["api"]), ("probe", "object", ["task"], ["GET /api/missions"]))
+        self.assertIsNone(man["gruppe"], "ohne Feld ordnet die Shell ein")
+        man, errors = self.check({"gruppe": "modelle"})
+        self.assertEqual((errors, man["gruppe"]), ([], "modelle"))
+
+    def test_shell_umschalter_chip_or_menue(self):
+        # Nachtrag N3 (Harness Stufe 4): eine Shell darf den Alt+S-Chip durch ihr eigenes Menü ersetzen; sonst gilt der Chip
+        folder = self.root / "shells" / "probe"
+        folder.mkdir(parents=True)
+        (folder / "shell.js").write_text("//\n", encoding="utf-8")
+        base = {"id": "probe", "name": "P", "version": "1.0.0", "entry": {"js": "shell.js"}, "provides": ["dock"], "trust": "CAPTAIN", "needs": {"ui": ">=1.0 <2"}}
+        man, errors = check_shell({"shell": dict(base)}, folder, "local")
+        self.assertEqual((errors, man["umschalter"]), ([], "chip"))
+        man, errors = check_shell({"shell": dict(base, umschalter="menue")}, folder, "local")
+        self.assertEqual((errors, man["umschalter"]), ([], "menue"))
+        _, errors = check_shell({"shell": dict(base, umschalter="keiner")}, folder, "local")
+        self.assertIn("umschalter_invalid", errors)
 
     def test_every_rule_of_the_contract_is_enforced(self):
         cases = {
@@ -57,6 +73,7 @@ class ManifestRules(unittest.TestCase):
             "needs_ui_not_met": {"needs": {"ui": ">=2.0"}},
             "entry_js_required": {"entry": {"css": "tool.css"}},
             "unknown_field": {"hands": ["task"]},
+            "gruppe_invalid": {"gruppe": "spiele"},                       # Nachtrag N2 (Harness Stufe 4): nur die fünf Gruppen des Start-Menüs
         }
         for expected, change in cases.items():
             with self.subTest(expected):

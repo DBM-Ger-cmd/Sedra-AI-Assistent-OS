@@ -293,3 +293,15 @@ Freigegeben mit G2-S0-13; Wortlaut aus `SPEC_AGENTEN_ORCHESTRIERUNG_v1.md`, D1 b
   öffnet nur `POST /api/objects` und `POST /api/actions`; jede andere Route antwortet ihm mit `403`. Die externen Clients sind
   `guppi objects <typ> [<id>]`, `guppi act <typ> <id|-> <verb> [--args JSON]` und der MCP-Server `desk_mcp.py` (Werkzeuge `objects`,
   `act`); ohne laufende Oberfläche melden sie `uix_not_running` – es gibt keinen Weg am Desk vorbei.
+
+## Nachtrag 29.10.2026 (Harness Stufe 4): Gruppe im Start-Menü, Umschalter als Menü
+
+- **N2 – Feld `gruppe` in `tool.yaml` (optional).** `arbeit | modelle | wissen | system | pruefung`: in welche Gruppe des Start-Menüs der
+  Harness-Shell ein Werkzeug gehört (SPEC_HARNESS_SHELL_v1 G2 Stufe 4 §3.2). Ein anderer Wert ist `gruppe_invalid`. Ohne das Feld ordnet
+  die Shell nach ihrer Datei `start_gruppen.yaml` (Ort-ID, dann Objekttyp) ein, sonst `arbeit`. `GET /api/uix/modules` gibt `gruppe` und
+  `zweck` je Werkzeug mit aus. Cockpit, Minimal und Paperclip werten das Feld nicht aus.
+- **N3 – Feld `umschalter` in `shell.yaml` (optional).** `chip` (Vorgabe) = der Alt+S-Chip mit Mini-Hub der Seite wie bisher; `menue` = die
+  Shell zeichnet ihr eigenes Start-Menü, die Seite hängt keinen Chip und keinen Hub an, und Alt+S ruft den Haken, den die Shell mit
+  `sedraWechsel.menueHaken(fn)` setzt. Der Wechsel selbst bleibt Vertragscode: `sedraWechsel.wechseln({shell: id})`,
+  `sedraWechsel.uebersicht()`, `sedraWechsel.leeren()`, `sedraWechsel.setScale(name)` und `sedraBoot.setTheme(name)` sind die einzigen
+  Wege – eine Shell mit Menü baut keinen zweiten. Ein anderer Wert ist `umschalter_invalid`. Nur die Harness-Shell nutzt `menue`.

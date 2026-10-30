@@ -38,6 +38,10 @@ SLOTS_TOOL = ('inhalt', 'nachweis')
 INSTANZEN = ('eine', 'viele')
 GEDAECHTNIS = ('sitzung', 'ablage')
 ZWECK = ('betrieb', 'pruefung')          # SPEC_UIX_STUFE6 §2.2: ein Prüfwerkzeug lädt nur mit dem Schalter `entwicklung`
+# Vertrag Nachtrag N2 (SPEC_HARNESS_SHELL_v1 G2 Stufe 4 §3.2): ein Werkzeug darf sagen, in welche Gruppe des Start-Menüs es gehört;
+# ohne das Feld ordnet die Shell es nach ihrer Datei ein. Nachtrag N3: eine Shell darf den Alt+S-Chip durch ihr eigenes Menü ersetzen.
+GRUPPEN = ('arbeit', 'modelle', 'wissen', 'system', 'pruefung')
+UMSCHALTER = ('chip', 'menue')
 # Routen, die der Vertrag selbst mitbringt – kein Manifest muss sie nennen: jede Shell meldet und übernimmt den Arbeitsstand (§10.2),
 # jedes Werkzeug mit `gedaechtnis: ablage` liest und schreibt nur seine eigene Ablage (§10.3; der Server trennt nach X-SEDRA-Tool).
 SHELL_VERTRAG_ROUTES = ('GET /api/arbeitsstand', 'POST /api/arbeitsstand')
@@ -55,8 +59,8 @@ ROUTE = re.compile(r'^(GET|POST|PATCH|DELETE) (/(api|uix)(/[A-Za-z0-9_.-]+)*(/\*
 VERSION = re.compile(r'^\d+\.\d+\.\d+$')
 NEED = re.compile(r'^(>=|<=|>|<|==)?(\d+)(?:\.(\d+))?$')
 
-TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot', 'instanzen', 'gedaechtnis', 'zweck'}
-SHELL_KEYS = {'id', 'name', 'version', 'entry', 'provides', 'layout', 'trust', 'needs', 'api', 'description', 'vorgabe'}
+TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot', 'instanzen', 'gedaechtnis', 'zweck', 'gruppe'}
+SHELL_KEYS = {'id', 'name', 'version', 'entry', 'provides', 'layout', 'trust', 'needs', 'api', 'description', 'vorgabe', 'umschalter'}
 # Eine Shell aus einer Vorgabe (SPEC_SHELL_AUS_VORGABE_v1): kein Code im Ordner, nur `shell.vorgabe.yaml`; den Bildschirm baut der
 # Rahmen `ui/frame.js`. Was er darf, steht hier – nicht in der Datei des Autors –, denn der Rahmen ist Vertragscode.
 VORGABE_FILE = 'shell.vorgabe.yaml'
@@ -186,11 +190,14 @@ def check_tool(doc, folder: Path, origin='package'):
     zweck = t.get('zweck', 'betrieb')
     if zweck not in ZWECK:
         errors.append('zweck_invalid')
+    gruppe = t.get('gruppe')
+    if gruppe is not None and gruppe not in GRUPPEN:
+        errors.append('gruppe_invalid')
     if errors:
         return None, errors
     return {'id': t['id'], 'name': t['name'], 'version': t['version'], 'kind': kind, 'handles': handles, 'trust': t['trust'],
             'origin': origin, 'order': order, 'slot': slot, 'description': str(t.get('description') or ''),
-            'own_types': own_types, 'instanzen': instanzen, 'gedaechtnis': list(dict.fromkeys(gedaechtnis)), 'zweck': zweck,
+            'own_types': own_types, 'instanzen': instanzen, 'gedaechtnis': list(dict.fromkeys(gedaechtnis)), 'zweck': zweck, 'gruppe': gruppe,
             'events': {'emits': list(events.get('emits') or []), 'listens': list(events.get('listens') or [])},
             'js': js, 'css': css, 'api': routes, 'tests': tests}, []
 
@@ -209,10 +216,14 @@ def check_shell(doc, folder: Path, origin='package'):
     layout = s.get('layout') or {'persist': 'browser'}
     if not isinstance(layout, dict) or layout.get('persist') not in ('browser', 'none'):
         errors.append('layout_invalid')
+    umschalter = s.get('umschalter', 'chip')
+    if umschalter not in UMSCHALTER:
+        errors.append('umschalter_invalid')
     if errors:
         return None, errors
     return {'id': s['id'], 'name': s['name'], 'version': s['version'], 'provides': provides, 'layout': layout, 'trust': s['trust'],
-            'origin': origin, 'description': str(s.get('description') or ''), 'js': js, 'css': css, 'api': routes}, []
+            'origin': origin, 'description': str(s.get('description') or ''), 'js': js, 'css': css, 'api': routes,
+            'umschalter': umschalter}, []
 
 
 def read_vorgabe(folder: Path):

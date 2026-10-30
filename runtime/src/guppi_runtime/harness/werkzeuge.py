@@ -265,9 +265,10 @@ class Werkzeuge:
                 return self._lauf_ausfuehren(name, args, plan, token)
             if name == 'befehl':
                 r = befehl_mod.ausfuehren(self.wurzel, args.get('befehl'), args.get('ordner') or '.', args.get('zeitlimit_s') or 120,
-                                          guard=self.guard, mission_id=self.mission_id, token=token, abbruch=abbruch)
-                kopf = f"Exitcode {r['exitcode']} · {r['dauer_s']} s" + (' · gekürzt' if r['gekuerzt'] else '') + {'zeitlimit': ' · ZEITLIMIT', 'abgebrochen': ' · ABGEBROCHEN', 'nicht_erlaubt': ''}.get(r['status'], '')
-                status = {'ok': 'ok', 'abgebrochen': 'abgebrochen'}.get(r['status'], 'fehler')
+                                          guard=self.guard, mission_id=self.mission_id, token=token, abbruch=abbruch,
+                                          aufgabe_id=(self.kontext or {}).get('aufgabe_id'))      # Rücknahme der Aufgabe beendet den Befehl (G2 §4.4)
+                kopf = f"Exitcode {r['exitcode']} · {r['dauer_s']} s" + (' · gekürzt' if r['gekuerzt'] else '') + {'zeitlimit': ' · ZEITLIMIT', 'abgebrochen': ' · ABGEBROCHEN', 'zurueckgenommen': ' · AUFGABE ZURÜCKGENOMMEN', 'nicht_erlaubt': ''}.get(r['status'], '')
+                status = {'ok': 'ok', 'abgebrochen': 'abgebrochen', 'zurueckgenommen': 'abgebrochen'}.get(r['status'], 'fehler')
                 return {'status': status, 'ergebnis': kopf + '\n' + r['ausgabe'], 'wirkung': r['status'] in ('ok', 'fehler', 'zeitlimit')}
         except (ToolValidationError, ToolPermissionError, befehl_mod.BefehlFehler, lauf_mod.LaufFehler, WerkzeugFehler, OSError, UnicodeDecodeError) as exc:
             return {'status': 'fehler', 'ergebnis': f'error: {exc}', 'wirkung': False}

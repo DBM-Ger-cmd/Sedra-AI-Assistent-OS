@@ -92,6 +92,13 @@ class DieWissensbasis(unittest.TestCase):
         self.assertEqual(out['quelle'], 'arbeitsplatz-wissen ' + ap.VERSION)
         self.assertTrue(all(a['kind'] == 'open' for a in out['ui_actions']))
 
+    def test_wo_ist_das_start_menue_der_harness(self):
+        # Harness Stufe 4 (G3 N7): die Shell trägt ihr Wissen über Start-Menü, Apps und Hardware-Zelle selbst
+        out = self.w.antwort('Wo finde ich das Start-Menü?', 'harness')
+        self.assertIn('Start', out['reply']); self.assertIn('Alt+S', out['reply'])
+        out = self.w.antwort('Wo finde ich die Hardware?', 'harness')
+        self.assertIn('Hardware', out['reply']); self.assertIn('Temperatur', out['reply'])
+
     def test_wie_fuege_ich_ein_modell_hinzu_bringt_die_anleitung_und_den_knopf(self):
         out = self.w.antwort('Wie füge ich ein neues Modell hinzu?', 'cockpit')
         self.assertEqual(out['art'], 'anleitung')

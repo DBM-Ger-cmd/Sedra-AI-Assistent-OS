@@ -13,6 +13,9 @@
     POST   karten/<id>                        {weg: erlauben|ablehnen, notiz?, aenderungen?} → Ergebnis und die Fortsetzung der Antwort ({antwort_id}); `von` in der Nutzlast zählt nicht
                                               (aenderungen: nur für Aufgabenkarten {auswahl, bis, max_aufrufe})
     GET    katalog                            Regeln des Freigabe-Katalogs, nur lesen (Datei des Captains oder Vorlage)
+    POST   katalog/antrag                     Stufe 5: {regeln} → Antrag mit Gate (HARNESS_KATALOG_WRITE); geschrieben wird erst nach Freigabe (Herkunft S7)
+    POST   katalog/entfernen                  Stufe 5: Antrag, die Datei des Captains zu entfernen → Vorlage gilt (HARNESS_KATALOG_REMOVE)
+    POST   vorlagen/grenzen                   Stufe 5: {vorlage, max_zuege} → Antrag auf eine Kopie der Vorlage in local_config (HARNESS_VORLAGE_WRITE)
     POST   einstufen                          {werkzeug, ziel} → Stufe, Regel, Begründung (Vorbehalt vor Katalog)
     GET    werkzeuge                          die Werkzeuge mit Kurzbeschreibung
     GET    aufgaben                           Stufe 3: Aufgaben-Freigaben mit Rest und Zustand (HS-27)
@@ -34,7 +37,11 @@ import re
 import threading
 from urllib.parse import parse_qs
 
+import yaml
+
+from . import antraege as harness_antraege
 from . import aufgabe as harness_aufgabe
+from . import befehl as befehl_mod
 from . import freigabe
 from . import herkunft as harness_herkunft
 from . import lauf as harness_lauf
@@ -54,9 +61,10 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter)|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter)(?:/(antrag|entfernen|grenzen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
-GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp)')
+GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
+                        r'|katalog/(?:antrag|entfernen)|vorlagen/grenzen)')
 FORTSETZEN_REST = 'nicht ausgeführt: dieser Aufruf kam nach einem, der auf Freigabe wartete – ruf ihn bei Bedarf noch einmal auf.'
 
 
@@ -136,7 +144,7 @@ class HarnessApi:
         m = WEG.fullmatch(path)
         if not m:
             raise NichtGefunden('weg_unbekannt')
-        projekte, sitzungen, sid, nachricht, aid, aktion, kid, kak, fest, aufgaben, tid, tak, laeufe, lid, lak = m.groups()
+        projekte, sitzungen, sid, nachricht, aid, aktion, kid, kak, fest, unter, aufgaben, tid, tak, laeufe, lid, lak = m.groups()
         payload = payload or {}
         q = parse_qs(query or '')
         if kid:
@@ -151,13 +159,19 @@ class HarnessApi:
             return self.aufgaben_weg(method, tid, tak, payload)
         if laeufe:
             return self.laeufe_weg(method, lid, lak)
-        if fest == 'katalog' and method == 'GET':
+        if fest == 'katalog' and method == 'GET' and not unter:
             return 200, self.katalog()
+        if fest == 'katalog' and method == 'POST' and unter == 'antrag':
+            return 200, harness_antraege.katalog_antrag(self.hub, payload.get('regeln'))
+        if fest == 'katalog' and method == 'POST' and unter == 'entfernen':
+            return 200, harness_antraege.katalog_entfernen_antrag(self.hub)
+        if fest == 'vorlagen' and method == 'POST' and unter == 'grenzen':
+            return 200, harness_antraege.grenzen_antrag(self.hub, payload.get('vorlage'), payload.get('max_zuege'))
         if fest == 'einstufen' and method == 'POST':
             return 200, self.einstufen(payload)
         if fest == 'vorarbeiter':
             return self.vorarbeiter_weg(method, q, payload)
-        if fest == 'vorlagen' and method == 'GET':
+        if fest == 'vorlagen' and method == 'GET' and not unter:
             return 200, {'vorlagen': harness_vorlagen.liste(self.hub.project_root)}
         if fest == 'werkzeuge' and method == 'GET':
             return 200, {'werkzeuge': [{'name': n, 'beschreibung': sch['function']['description']} for n, sch in WERKZEUG_SCHEMAS.items()]
@@ -394,6 +408,7 @@ class HarnessApi:
                     return 200, harness_aufgabe.oeffentlich(self.aufgaben.laden(tid))
                 if method == 'POST' and tak == 'zuruecknehmen':
                     a = self.aufgaben.zuruecknehmen(tid, payload.get('grund'))
+                    befehl_mod.RUECKNAHME.ausloesen(tid)                    # ein laufender `befehl` unter dieser Aufgabe endet jetzt (Befund 7, Stufe 3)
                     gestoppt = []
                     if payload.get('laeufe_stoppen', True):                # D-G3: Läufe der Aufgabe werden mit gestoppt, außer der Captain schaltet es ab
                         for l in self.laeufe.laufende():
@@ -524,10 +539,15 @@ class HarnessApi:
             raise NichtGefunden('karte_unbekannt') from exc
 
     def katalog(self):
+        # Stufe 5: dazu die Regeln der Vorlage, damit der Editor Lockerungen und gesperrte (verbotene) Regeln erkennt (D-U3)
         try:
-            return dict(harness_katalog.laden(self.hub.project_root), fehler=None)
+            vorlage = harness_katalog.pruefen(yaml.safe_load(harness_katalog.VORLAGE.read_text(encoding='utf-8')))
+        except (OSError, yaml.YAMLError, harness_katalog.KatalogFehler):
+            vorlage = []
+        try:
+            return dict(harness_katalog.laden(self.hub.project_root), fehler=None, vorlage=vorlage)
         except harness_katalog.KatalogFehler as exc:
-            return {'regeln': [], 'quelle': None, 'datei': None, 'fehler': str(exc)}
+            return {'regeln': [], 'quelle': None, 'datei': None, 'fehler': str(exc), 'vorlage': vorlage}
 
     def einstufen(self, payload):
         werkzeug, ziel = str(payload.get('werkzeug') or ''), str(payload.get('ziel') or '')

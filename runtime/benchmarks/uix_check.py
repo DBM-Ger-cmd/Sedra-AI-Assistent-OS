@@ -233,16 +233,36 @@ PROFILES['harness'] = {
     'zones': ('hs-seite', 'hs-reiter', 'hs-flaeche', 'hs-eingabe', 'hs-taskleiste'),
     'gauges': '.hs-zelle',
     'pane': MEASURE_PANE_GENERIC,
-    'segment': None,
-    'leftovers': None,
+    # Stufe 4: Objekte öffnen als App-Reiter (object.open → app.js); Nachweise stehen rechts und sind zugeklappt – der Knopf klappt sie auf
+    'opens': True,
+    'segment': "(tool)=>{ const k = document.querySelector('.hs-flaeche .hs-app-nachweis-knopf'); if(k && k.getAttribute('aria-expanded') !== 'true') k.click(); return !!k; }",
+    'leftovers': "()=>[...document.querySelectorAll('.hs-flaeche .hs-app-box [data-tool]')].map(s=>s.dataset.tool)",
+    'after_tool': "()=>{ const S = window.sedra.shells.get('harness'); const R = window.sedraHarness.reiter; R.liste(S).filter(id=>String(id).startsWith('app:')).forEach(id=>R.schliessen(S, id)); }",
+    'menu': {'box': '.hs-start-menue', 'input': '.hs-start-suche', 'rows': "()=>[...document.querySelectorAll('.hs-start-app .hs-start-name')].map(b=>b.textContent)",
+             'closed': "()=>!!document.querySelector('.hs-start-menue').hidden", 'open_key': 'Alt+s'},
     'count': "()=>{ try{ return (JSON.parse(localStorage.getItem('sedra.harness.reiter') || '{}').liste || []).length; }catch(e){ return 0; } }",
     'count_word': 'Reiter',
     'bereit': "()=>document.querySelectorAll('.hs-zelle').length > 0 && !!document.querySelector('.hs-tab')",
     'layout_min': 1,                         # eine Sitzung als Reiter muss das Neuladen überstehen
     'before_layout': "async ()=>{ const S = window.sedra.shells.get('harness'); const k = await S.api('/api/harness/sitzungen', {method: 'POST', body: {projekt: 'sedra-entwicklung', titel: 'Prüfsitzung'}}); await S.sitzungenLaden(); window.sedraHarness.reiter.oeffnen(S, k.id); }",
-    'menu': None,
-    'talk': {'input': '.hs-feld', 'answer': "()=>[...document.querySelectorAll('.hs-notiz, .hs-captain')].map(n=>n.innerText).join(' | ')",
+    'talk': {'before': "()=>{ const S = window.sedra.shells.get('harness'); window.sedraHarness.reiter.neu(S); }", 'input': '.hs-feld', 'answer': "()=>[...document.querySelectorAll('.hs-notiz, .hs-captain')].map(n=>n.innerText).join(' | ')",
              'expect': 'Kein Modell geladen'},
+    # Stufe 5 (G3 N5/N8): die Einstellungen – jeder der 21 Punkte öffnet ohne Konsolenfehler, die Marken stehen, der Katalog-Editor zeigt Zeilen
+    'extra': [('einstellungen', """async ()=>{
+        const S = window.sedra.shells.get('harness'); const E = window.sedraHarness.einstellungen; const warte = ms=>new Promise(r=>setTimeout(r, ms));
+        E.oeffnen(S); await warte(400);
+        const a = S.ansichten.get('einstellungen:'); if(!a) return {ok: false, detail: 'kein Reiter einstellungen:'};
+        const punkte = []; E.GRUPPEN.forEach(g=>Object.keys(g.punkte).forEach(p=>punkte.push(g.id + '/' + p)));
+        const leer = [];
+        for(const p of punkte){ a.zeigen(p); await warte(350); const f = document.querySelector('.hs-einst-flaeche'); if(!f || f.textContent.trim().length < 20) leer.push(p); }
+        const marken = ['.hs-einst', '.hs-einst-nav', '.hs-einst-flaeche', '[data-marke="hs-einstellungen"]'].filter(m=>!document.querySelector(m));
+        a.zeigen('agent/freigabe'); await warte(700);
+        const zeilen = document.querySelectorAll('[data-marke="hs-katalog"] .hs-katalog-zeile:not(.hs-katalog-titel)').length;
+        const gewaehlt = (document.querySelector('.hs-einst-punkt.on') || {}).dataset || {};
+        window.sedraHarness.reiter.schliessen(S, 'einstellungen:');
+        const ok = !leer.length && !marken.length && zeilen > 0 && gewaehlt.punkt === 'agent/freigabe';
+        return {ok, detail: punkte.length + ' Punkte' + (leer.length ? '; leer: ' + leer.join(', ') : '') + (marken.length ? '; Marken fehlen: ' + marken.join(', ') : '') + '; Katalog ' + zeilen + ' Regeln'};
+    }""")],
 }
 
 
@@ -435,7 +455,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
         else:
             check('zones', None, 'nicht geprüft – kein Profil für diese Shell; die Zonen kennt nur ihr Autor')
         provides = page.evaluate("()=>window.sedraBoot.ctx.manifest.shell.provides || []")
-        opens = any(p in provides for p in ('dock', 'windows'))
+        opens = any(p in provides for p in ('dock', 'windows')) or bool(profile.get('opens'))     # Harness Stufe 4: Apps als Reiter (Profil sagt es)
 
         if profile.get('before_tools'):
             page.evaluate(profile['before_tools']); page.wait_for_timeout(800)
@@ -528,6 +548,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
             page.evaluate(profile['before_talk']); page.wait_for_timeout(400)
         if profile.get('talk'):                  # eine Shell, deren Gespräch sie selbst ist (Harness): ihr Feld, ihre Antwort
             t = profile['talk']
+            if t.get('before'): page.evaluate(t['before']); page.wait_for_timeout(500)      # Harness: ein Sitzungs-Reiter nach vorn (App-Reiter haben kein Eingabefeld)
             page.fill(t['input'], 'Hallo SEDRA')
             page.press(t['input'], 'Enter')
             try: page.wait_for_function('(e)=>(' + t['answer'] + ')().includes(e)', arg=t['expect'], timeout=15000)
@@ -543,7 +564,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
 
         menu = profile['menu']
         if menu:
-            page.keyboard.press('Control+k'); page.wait_for_timeout(400)
+            page.keyboard.press(menu.get('open_key', 'Control+k')); page.wait_for_timeout(400)      # Harness: Alt+S öffnet das Start-Menü (Vertrag N3)
             page.fill(menu['input'], 'werkstatt'); page.wait_for_timeout(400)
             rows = page.evaluate(menu['rows'])
             page.keyboard.press('Escape'); page.wait_for_timeout(300)
@@ -557,6 +578,13 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
             check('palette', None, 'nicht geprüft – ' + profile['no_search'])
         else:
             check('palette', None, 'nicht geprüft – kein Profil')
+
+        for name, js in profile.get('extra', ()):     # Prüfungen, die nur diese Shell hat (Harness Stufe 5: Einstellungen)
+            vorher = len(errors) + len(console)
+            try: out = page.evaluate(js) or {}
+            except Exception as exc: out = {'ok': False, 'detail': str(exc)[:160]}
+            neu = len(errors) + len(console) - vorher
+            check(name, bool(out.get('ok')) and not neu, str(out.get('detail', '')) + (f'; {neu} Konsolenfehler: ' + ' | '.join((errors + console)[-neu:])[:200] if neu else ''))
 
         if (opens or profile.get('layout_min')) and profile['count']:
             if opens:

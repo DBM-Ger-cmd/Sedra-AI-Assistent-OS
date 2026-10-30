@@ -74,6 +74,20 @@ def read(project_root, client):
         raise ValueError('uix_not_running') from None
 
 
+def status(project_root):
+    """Harness Stufe 5 (G3 N3): je Client vorhanden, Port, PID und Zeit der Datei – nie der Token. Für `GET /api/uix/clients`."""
+    out = {}
+    for client in CLIENTS:
+        path = path_for(project_root, client)
+        try:
+            doc = json.loads(path.read_text(encoding='utf-8'))
+            out[client] = {'vorhanden': True, 'port': int(doc.get('port') or 0), 'pid': int(doc.get('pid') or 0),
+                           'schutz': str(doc.get('protection') or ''), 'zeit': int(path.stat().st_mtime), 'datei': path.name}
+        except Exception:
+            out[client] = {'vorhanden': False, 'port': None, 'pid': None, 'schutz': None, 'zeit': None, 'datei': path.name}
+    return out
+
+
 def call(project_root, client, path, body, timeout=120):
     """`POST path` an die laufende Oberfläche mit dem Token dieses Clients. Rückgabe (status, antwort)."""
     if path not in ROUTES:

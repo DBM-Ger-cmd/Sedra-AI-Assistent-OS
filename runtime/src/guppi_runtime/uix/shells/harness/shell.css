@@ -28,8 +28,7 @@
 .hs.hs-seite-zu .hs-seite{visibility:hidden;padding:0;border:0}
 
 /* der schwebende Mini-Hub der Seite (ui/wechsel.js) ist hier aus (HS-01); seine Menüs öffnen Start und Mikrofon */
-.hs-body .sx-hub-fenster,.hs-body .sx-hub-klein{display:none !important}
-.hs-body .sx-umschalter-panel,.hs-body .sx-rekorder-panel{left:12px !important;right:auto !important;bottom:calc(var(--hs-leiste-h,40px) + 8px) !important;top:auto !important}
+/* Stufe 4: kein Mini-Hub mehr (umschalter: menue) – die Regeln von Stufe 1 bis 3 dazu entfallen */
 
 /* ---- Seitenleiste */
 .hs-seite{
@@ -297,3 +296,91 @@
 .hs-auf-form .hs-karte-notiz,.hs-auf-karte .hs-karte-notiz{flex:0 0 auto;width:100%;box-sizing:border-box}
 .hs-auf-form .hs-projektwahl{width:100%}
 .hs-auf-form .hs-senden{align-self:flex-start}
+
+/* ---- Stufe 4: Start-Menü (HS-40/41) – nur Token, kein Hex */
+.hs-start-knopf[aria-expanded="true"]{background:var(--hs-on);box-shadow:inset 0 -2px 0 var(--accent)}
+.hs-start-menue{position:absolute;left:8px;bottom:calc(var(--hs-leiste-h) + 6px);width:min(640px,calc(100vw - 16px));max-height:min(70vh,640px);
+  display:flex;flex-direction:column;gap:var(--gap);padding:10px;background:var(--panel);color:var(--text);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow,0 8px 24px color-mix(in srgb,var(--text) 18%,transparent));z-index:40}
+.hs-start-suche{width:100%;padding:8px 10px;font:inherit;font-size:var(--size);color:var(--text);background:var(--bg);border:1px solid var(--hs-on-line);border-radius:var(--radius)}
+.hs-start-suche:focus{outline:2px solid var(--accent);outline-offset:1px}
+.hs-start-inhalt{flex:1 1 auto;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:4px}
+.hs-start-gruppe .hs-ueber{margin:6px 4px 2px}
+.hs-start-raster{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px}
+.hs-start-app{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:6px 8px;border:1px solid transparent;border-radius:var(--radius);
+  background:transparent;color:var(--text);font:inherit;font-size:var(--size-small);text-align:left;cursor:pointer;min-width:0}
+.hs-start-app:hover,.hs-start-app.wahl{background:var(--hs-hover);border-color:var(--hs-on-line)}
+.hs-start-app .hs-start-symbol{color:var(--accent);font-size:var(--size)}
+.hs-start-app .hs-start-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hs-start-app .hs-leise{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hs-start-fuss{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px}
+.hs-start-oberflaechen{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.hs-start-oberflaechen .hs-ueber{margin:0 4px 0 0}
+.hs-start-shell{display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg);color:var(--text);font:inherit;font-size:var(--size-small);cursor:pointer}
+.hs-start-shell:hover{background:var(--hs-hover);border-color:var(--hs-on-line)}
+.hs-start-bild{width:28px;height:18px;object-fit:cover;border-radius:2px;border:1px solid var(--line)}
+.hs-start-look{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.hs-start-seg{display:inline-flex;align-items:center;gap:4px}
+.hs-start-seg-btn,.hs-start-leeren{padding:3px 8px;border:1px solid var(--line);border-radius:var(--radius);background:transparent;color:var(--text);font:inherit;font-size:var(--size-xs);cursor:pointer}
+.hs-start-seg-btn.on{background:var(--hs-on);border-color:var(--hs-on-line)}
+.hs-start-leeren{margin-left:auto;color:var(--muted)}
+
+/* ---- Stufe 4: App-Reiter – ein Werkzeug des Vertrags in der Fläche, Nachweise rechts zum Aufklappen (D-S5) */
+.hs-app-box{display:flex;flex-direction:column;min-height:0;height:100%}
+.hs-app-kopf{display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:1px solid var(--line);font-size:var(--size-small)}
+.hs-app-objekt{color:var(--muted);font-size:var(--size-xs)}
+.hs-app-nachweis-knopf{margin-left:auto;padding:3px 8px;border:1px solid var(--line);border-radius:var(--radius);background:transparent;color:var(--text);font:inherit;font-size:var(--size-xs);cursor:pointer}
+.hs-app-nachweis-knopf[aria-expanded="true"]{background:var(--hs-on);border-color:var(--hs-on-line)}
+.hs-app-koerper{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden}
+.hs-app-box.nachweis-auf .hs-app-koerper{grid-template-columns:minmax(0,1fr) minmax(240px,34%)}
+.hs-app-inhalt,.hs-app-nachweis{min-height:0;overflow:auto;padding:8px 10px}
+.hs-app-nachweis{display:none;border-left:1px solid var(--line);background:var(--panel)}
+.hs-app-box.nachweis-auf .hs-app-nachweis{display:block}
+.hs-app-werkzeug{min-height:40px}
+.hs-app-werkzeug + .hs-app-werkzeug{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.hs-app-satz{padding:10px;color:var(--muted);font-size:var(--size-small)}
+.hs-app-satz.warn{color:var(--text);background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--radius)}
+.hs-app.app .hs-app-icon{color:var(--accent)}
+.hs-zelle[role="button"]{cursor:pointer}
+.hs-zelle[role="button"]:hover{background:var(--hs-hover)}
+.hs-zelle.bad{color:var(--bad,var(--warn));font-weight:600}
+.hs-app-verben{display:flex;flex-wrap:wrap;gap:6px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--panel)}
+.hs-app-verb{padding:3px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg);color:var(--text);font:inherit;font-size:var(--size-small);cursor:pointer}
+.hs-app-verb:hover{background:var(--hs-hover);border-color:var(--hs-on-line)}
+/* ---- Stufe 5: Einstellungen (HS-42) – Navigation links, Fläche rechts; Werkzeuge mit demselben Rahmen wie der App-Reiter */
+.hs-einst{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0;height:100%}
+.hs-einst-nav{overflow:auto;border-right:1px solid var(--line);padding:6px 4px}
+.hs-einst-punkt{display:block;width:100%;text-align:left;padding:5px 10px;border:0;border-radius:var(--radius);background:transparent;color:var(--text);font:inherit;font-size:var(--size-small);cursor:pointer}
+.hs-einst-punkt:hover{background:var(--hs-hover)}
+.hs-einst-punkt.on{background:var(--hs-on);box-shadow:inset 2px 0 0 var(--accent)}
+.hs-einst-flaeche{display:flex;flex-direction:column;min-height:0;overflow:auto}
+.hs-einst-kopf{display:flex;align-items:baseline;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.hs-einst-werkzeug{flex:1 1 auto;min-height:0}
+.hs-einst-werkzeug.nur-nachweis .hs-app-koerper{grid-template-columns:minmax(0,1fr)}
+.hs-einst-werkzeug.nur-nachweis .hs-app-inhalt{display:none}
+.hs-einst-eigen{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.hs-einst-zeile{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line-soft);border-radius:var(--radius);font-size:var(--size-small)}
+.hs-einst-label{flex:1 1 220px;color:var(--muted)}
+.hs-einst-wert{font-weight:600}
+.hs-einst-zahl{width:72px;padding:3px 6px;font:inherit;font-size:var(--size-small);color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius)}
+.hs-einst-karte{padding:6px 8px;border:1px solid var(--line-soft);border-radius:var(--radius)}
+.hs-einst-karte>summary{cursor:pointer;font-size:var(--size-small)}
+.hs-einst-antrag{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--radius);color:var(--text)}
+@media (max-width:900px){.hs-einst{grid-template-columns:1fr}.hs-einst-nav{border-right:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:2px}.hs-einst-nav .hs-ueber{width:100%}.hs-einst-punkt{width:auto}}
+/* Katalog-Editor (G2 §4): Tabelle aus Zeilen; rot = Lockerung oder weites Muster, fehler = Antrag nicht möglich, gesperrt = Vorlage verboten */
+.hs-katalog-kopf{padding:4px 0}
+.hs-katalog{display:flex;flex-direction:column;gap:4px;font-size:var(--size-xs)}
+.hs-katalog-zeile{display:grid;grid-template-columns:minmax(90px,1fr) minmax(110px,1.3fr) minmax(140px,1.6fr) 100px minmax(140px,1.6fr) 70px 24px;gap:4px;align-items:start;padding:3px 4px;border:1px solid var(--line-soft);border-radius:var(--radius)}
+.hs-katalog-titel{color:var(--muted);text-transform:uppercase;letter-spacing:var(--tracking-label);border:0}
+.hs-katalog-zeile.rot{border-color:var(--warn-line);background:var(--warn-bg)}
+.hs-katalog-zeile.fehler{border-color:var(--bad-line);background:var(--bad-bg)}
+.hs-katalog-zeile.gesperrt{opacity:.75}
+.hs-katalog-feld{width:100%;padding:3px 5px;font:inherit;font-size:var(--size-xs);color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);resize:vertical}
+.hs-katalog-zeile .hs-sz-knopf{visibility:visible}
+.hs-katalog-herkunft{color:var(--muted);padding-top:4px}
+.hs-katalog-befunde{display:flex;flex-direction:column;gap:3px;font-size:var(--size-small)}
+.hs-katalog-befund{padding:3px 8px;border-radius:var(--radius);border:1px solid var(--line-soft)}
+.hs-katalog-befund.rot{background:var(--warn-bg);border-color:var(--warn-line)}
+.hs-katalog-befund.bad{background:var(--bad-bg);border-color:var(--bad-line)}
+.hs-katalog-leiste{display:flex;flex-wrap:wrap;gap:6px}
+.hs-katalog-vorschau>summary{cursor:pointer;font-size:var(--size-small);color:var(--muted)}

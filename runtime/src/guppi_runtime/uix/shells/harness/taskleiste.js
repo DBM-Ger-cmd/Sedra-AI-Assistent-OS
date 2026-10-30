@@ -1,5 +1,6 @@
-// Harness-Shell – die Taskleiste (HS-30 bis HS-33): links „Start“, in der Mitte die offenen Sitzungen und die Läufe der Harness – laufende mit Fortschritt
-// oder Zeit –, rechts der Status aus /api/strip (Freigaben „n · beim Vorarbeiter m“, Modell, GPU, Zustand) und die Uhr.
+// Harness-Shell – die Taskleiste (HS-30 bis HS-33): links „Start“ (öffnet das Start-Menü, Stufe 4), in der Mitte die offenen Sitzungen, Apps und die Läufe
+// der Harness – laufende mit Fortschritt oder Zeit –, rechts der Statusbereich aus /api/strip (HS-32: Freigaben „n · beim Vorarbeiter m“, Modell, GPU mit
+// Temperatur, RAM, Modellserver, Scheduler, Zustand) und die Uhr. Zellen ohne Wert werden ausgeblendet, nicht leer gezeigt; ein Klick öffnet die App dazu (G2 §5).
 // Benachrichtigung (HS-33): Endet ein Lauf oder wartet eine Freigabe, blinkt der Knopf einmal und bleibt markiert, bis er angeklickt wird.
 // Gemerkt wird nur, was schon gesehen wurde (IDs in localStorage `sedra.harness.gesehen`), nie Inhalt. Kein Polling: der Status frischt bei Ereignissen auf,
 // höchstens alle 2 s (HS-52); nur die Uhr tickt.
@@ -10,17 +11,17 @@
   const ABSTAND_MS = 2000;
   const GESEHEN_KEY = 'sedra.harness.gesehen';
   const GESEHEN_MAX = 300;
-  const ZELLEN = [['decisions', 'Freigaben'], ['model', 'Modell'], ['gpu', 'GPU'], ['state', 'Zustand']];
+  // Zelle → Beschriftung und die App, die ein Klick öffnet (Ort-ID aus ui/places.js)
+  const ZELLEN = [['decisions', 'Freigaben', null], ['model', 'Modell', 'models'], ['gpu', 'GPU', 'hardware'], ['ram', 'RAM', 'hardware'],
+                  ['server', 'Modellserver', 'models'], ['scheduler', 'Scheduler', 'slots'], ['state', 'Zustand', 'machine']];
   const ENDE_ICON = {ok: '✓', fehler: '✗', gestoppt: '■', abgebrochen: '■', verloren: '?', zeitlimit: '⏱'};
 
   function mount(S){
     const bar = S.el.taskleiste;
     const start = d().el('button', 'hs-start-knopf', 'Start'); start.type = 'button';
-    start.title = 'Oberflächen, Darstellung und Schrift (Start-Menü mit Apps kommt in Stufe 4)';
-    start.onclick = ()=>{
-      const chip = document.querySelector('.sx-umschalter');
-      if(chip) chip.click(); else S.hinweis('Die Liste der Oberflächen ist auf dieser Seite nicht da.', 'warn');
-    };
+    start.title = 'Start-Menü: Apps, Oberflächen, Darstellung und Schrift (Alt+S)';
+    start.setAttribute('aria-haspopup', 'dialog'); start.setAttribute('aria-expanded', 'false');
+    start.onclick = e=>{ e.stopPropagation(); root.sedraHarness.startmenue.umschalten(S); };
     const mitte = d().el('div', 'hs-apps');
     const status = d().el('div', 'hs-status');
     const uhr = d().el('span', 'hs-uhr');
@@ -68,6 +69,8 @@
 
   // ---- blinken: einmal, danach nur noch die Markierung
   function blinken(S, key){
+    const E = root.sedraHarness.einstellungen;
+    if(E && E.meldung().blinken === false) return;                       // Stufe 5 (K9): in den Einstellungen abschaltbar
     (S._blinken || (S._blinken = new Set())).add(key);
     zeichnen(S);
     setTimeout(()=>{ S._blinken.delete(key); zeichnen(S); }, 1600);
@@ -111,9 +114,11 @@
       const knopf = d().el('button', 'hs-app' + (id === aktiv ? ' on' : '') + (laeuft ? ' laeuft' : '') + (neu ? ' neu' : '') + (pruefe(S, 'sitzung:' + id) ? ' blinkt' : ''));
       knopf.type = 'button';
       knopf.dataset.reiter = id;
-      const name = String(id).startsWith('diff:') ? 'Diff ' + id.slice(5) : (String(id).startsWith('aufgaben:') ? 'Aufgaben' : ((s && s.titel) || (/^S-/.test(id) ? 'Ohne Titel' : 'Neue Sitzung')));
+      const app = String(id).startsWith('app:') ? (S._apps && S._apps.get(id)) || {} : null;
+      const name = app ? reiter.name(S, id) : (String(id).startsWith('diff:') ? 'Diff ' + id.slice(5) : (String(id).startsWith('aufgaben:') ? 'Aufgaben' : ((s && s.titel) || (/^S-/.test(id) ? 'Ohne Titel' : 'Neue Sitzung'))));
       const vorarbeiter = S.vorarbeiter && Object.values(S.vorarbeiter).some(v=>v.sitzung_id === id);
-      knopf.append(d().el('span', 'hs-app-icon', laeuft ? '●' : (String(id).startsWith('aufgaben:') ? '⛨' : (vorarbeiter ? '⚑' : '💬'))), d().el('span', 'hs-app-name', name));
+      if(app) knopf.classList.add('app');
+      knopf.append(d().el('span', 'hs-app-icon', app ? (app.symbol || '▤') : (laeuft ? '●' : (String(id).startsWith('aufgaben:') ? '⛨' : (vorarbeiter ? '⚑' : '💬')))), d().el('span', 'hs-app-name', name));
       if(laeuft && a && a.block) knopf.append(d().el('small', 'hs-leise', dauer(performance.now() - (a._seit || (a._seit = performance.now())))));
       else if(a) a._seit = null;
       if(neu) knopf.append(d().el('small', 'hs-leise', 'wartet auf Freigabe'));
@@ -144,13 +149,24 @@
     }
     l.zuletzt = jetzt;
     S.api('/api/strip').then(v=>{
-      l.status.replaceChildren(...ZELLEN.filter(([k])=>v[k]).map(([k, label])=>{
+      // HS-32: eine Zelle ohne Wert (– und Ton off) wird ausgeblendet – kleine Bildschirme, Stick an fremdem PC
+      const da = ZELLEN.filter(([k])=>v[k] && !(String(v[k].value ?? '–') === '–' && (v[k].tone || 'off') === 'off'));
+      l.status.replaceChildren(...da.map(([k, label, ort])=>{
         const g = v[k];
         const zelle = d().el('span', 'hs-zelle ' + (g.tone || 'off'));
         zelle.dataset.zelle = k;
         zelle.title = label + ': ' + (g.hint || '');
         let wert = String(g.value === undefined || g.value === null ? '–' : g.value);
         if(k === 'decisions') wert = freigabenZelle(S, zelle, g, wert);
+        else if(ort){
+          zelle.tabIndex = 0; zelle.setAttribute('role', 'button'); zelle.title += ' – Klick öffnet die App';
+          const oeffnen = ()=>{
+            if(k === 'state'){ root.sedraHarness.einstellungen.oeffnen(S, 'system'); return; }          // Stufe 5 (D-U6): Zustand → Einstellungen (System)
+            const o = root.sedraPlaces.PLACES.find(p=>p.id === ort); if(o) root.sedraHarness.app.oeffnen(S, o);
+          };
+          zelle.onclick = oeffnen;
+          zelle.onkeydown = e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); oeffnen(); } };
+        }
         zelle.append(d().el('small', null, label), d().el('b', null, wert));
         return zelle;
       }));
@@ -176,7 +192,8 @@
       const sitzung = alle.map(x=>(String(x.note || '').match(/Sitzung (S-[0-9A-F]{8})/) || [])[1]).find(Boolean);
       if(aufgabe) root.sedraHarness.reiter.oeffnen(S, 'aufgaben:');
       else if(sitzung) root.sedraHarness.reiter.oeffnen(S, sitzung);
-      else S.hinweis(alle.length ? 'Diese Freigaben stehen im Posteingang des Cockpits (Start unten links).' : 'Nichts wartet.');
+      else if(alle.length) root.sedraHarness.app.oeffnen(S, {object: {type: 'decision', id: 'alle', title: 'Entscheidungen', collection: true}, label: 'Entscheidungen'});   // Stufe 4: der Posteingang als App
+      else S.hinweis('Nichts wartet.');
       zeichnen(S); status(S);
     };
     zelle.onclick = oeffnen;

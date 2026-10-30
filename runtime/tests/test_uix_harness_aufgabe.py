@@ -107,6 +107,8 @@ class AufgabeTests(unittest.TestCase):
         (self.wurzel / ERSTER).write_text('# Logbuch\n| a | b |\n', encoding='utf-8')
         code, z = anfrage(self.url, 'POST', f"/api/harness/aufgaben/{b['id']}/zuruecknehmen", {'grund': 'Test'})
         self.assertEqual((code, z['status']), (200, 'zurueckgenommen'))
+        from guppi_runtime.harness import befehl as befehl_mod
+        self.assertTrue(befehl_mod.RUECKNAHME.ereignis(b['id']).is_set(), 'die Rücknahme beendet auch einen laufenden befehl unter dieser Aufgabe (Befund 7)')
         self.assertEqual(self.box(sid).aufruf(*self.aendern())['status'], 'wartet')
         self.assertIn('HARNESS_AUFGABE_ZURUECKGENOMMEN', [e for e in self._ereignisse()])
 

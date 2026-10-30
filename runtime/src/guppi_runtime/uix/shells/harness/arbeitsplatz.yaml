@@ -11,7 +11,24 @@ arbeitsplatz:
   - name: Eingabefeld
     wo: 'unter dem Gespräch: Enter sendet, Umschalt+Enter neue Zeile, Stopp oder Esc bricht ab'
   - name: Taskleiste
-    wo: 'unten: Start (Oberflächen), laufende Sitzungen, rechts Freigaben, Modell, GPU, Zustand und Uhr'
+    wo: 'unten: Start (das Start-Menü), offene Sitzungen, Apps und Läufe, rechts der Statusbereich – Freigaben, Modell, GPU mit Temperatur, RAM, Modellserver, Scheduler, Zustand – und die Uhr; ein Klick auf eine Zelle öffnet die App dazu'
+  - name: Start-Menü
+    wo: 'unten links der Knopf Start, Alt+S oder /start: oben die Suche, dann Zuletzt benutzt und die Gruppen Arbeit · Modelle · Wissen · System (· Prüfung); unten die anderen Oberflächen, Darstellung und Schrift'
+  - name: App
+    wo: 'eine App aus dem Start-Menü öffnet als Reiter: das Werkzeug in der Fläche, Nachweise rechts über den Knopf Nachweise; höchstens 8 Apps zugleich'
+  - name: Einstellungen
+    wo: 'ein Reiter: Knopf Einstellungen unten in der Seitenleiste, Start → System → Einstellungen, /einstellungen oder Klick auf die Zelle Zustand; links sechs Gruppen (Allgemein, Agent, Sprache, Integrationen, Lokale Modelle, System), rechts die Fläche'
   begriffe:
+    app: 'In der Harness-Shell: ein Ort mit seinem Werkzeug als Reiter – Aufgaben, Werkstatt, Wissen, Logbuch, Hardware … aus dem Start-Menü (Start, Alt+S, /start).'
+    start-menü: 'Der Knopf Start unten links: Apps suchen und öffnen, zuletzt benutzte oben, Oberfläche wechseln, Darstellung und Schrift. Alt+S öffnet es auch.'
+    hardware: 'Start → Modelle → Hardware, oder Klick auf die GPU- oder RAM-Zelle in der Taskleiste. Die GPU-Zelle zeigt Temperatur (Board-Sensor über LibreHardwareMonitor, sonst nvidia-smi), VRAM belegt/gesamt und den thermischen Zustand.'
+    werkstatt: 'Start → Modelle → Werkstatt: Modelle laden, Rezepte, Teststrecke – oder Klick auf die Zelle Modell in der Taskleiste.'
+    nachweise: 'Im App-Reiter rechts: die Nachweis-Werkzeuge zum Werkstück, zugeklappt bis zum Klick auf „Nachweise“.'
+    oberfläche wechseln: 'Start → Oberflächen: Cockpit, Minimal, Paperclip … – offene Apps gehen mit (Arbeitsstand).'
+    einstellungen: 'Reiter Einstellungen (Seitenleiste unten, Start → System, /einstellungen, Zelle Zustand): Allgemein (Darstellung, Benachrichtigungen), Agent (Vorlagen, Freigabe-Modus mit Katalog-Editor, Grenzen der Schleife), Sprache, Integrationen (MCP, KI GateWay, Cloud), Lokale Modelle (Bibliothek, Werkstatt, Slots, Laufzeit), System (Schutz, Schalter, Modus und Grenzen, Module, Audit). Alles, was auf den Rechner schreibt, ist ein Antrag mit Gate im Posteingang.'
+    katalog-editor: 'Einstellungen → Agent → Freigabe-Modus: die Regeln des Freigabe-Katalogs bearbeiten (ID, Werkzeug, Muster, Stufe, Begründung). Vorlage-Regeln mit verboten sind gesperrt; Lockerungen und weite Muster stehen rot. „Antrag stellen“ legt einen Antrag mit Gate an – geschrieben wird erst nach „Freigeben und anwenden“ im Posteingang, mit Sicherung (.bak-<zeit>). „Zurück zur Vorlage“ entfernt die Datei des Captains, ebenfalls mit Gate.'
+    schalter: 'Einstellungen → System → Schalter: die Schalter aus local_switches lesen; „Einschalten/Ausschalten beantragen“ legt den Antrag an (Gate), wirkt erst nach Neustart der Oberfläche.'
+    grenzen der schleife: 'Einstellungen → Agent → Grenzen der Schleife: max_zuege je Vorlage (4–40) als Antrag mit Gate; nach der Freigabe liegt eine Kopie der Vorlage in local_config/harness_vorlagen. max_tokens und temperature sind nur Anzeige.'
+    benachrichtigung: 'Einstellungen → Allgemein → Benachrichtigungen: Browser-Hinweis „SEDRA: eine Freigabe wartet“, wenn das Fenster nicht vorn ist (Erlaubnis nur nach Klick, nie der Karteninhalt), und das Blinken in der Taskleiste an/aus.'
     sitzung: 'In der Harness-Shell: ein gespeichertes Gespräch, eine Datei je Sitzung unter runtime_data/harness/sitzungen.'
     ungeprüft: 'Grauer Text in der Harness-Shell: der Inhaltsschutz hat ihn noch nicht geprüft.'

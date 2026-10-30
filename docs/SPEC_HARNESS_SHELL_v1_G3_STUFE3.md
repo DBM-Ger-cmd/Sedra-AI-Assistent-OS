@@ -120,3 +120,7 @@ Nach deinen Antworten tragen wir die Entscheidungen in beide Specs ein; erst dan
 Captain: „Ja, so“ – D-H1 bis D-H8 gelten wie vorgeschlagen (SEDRA baut nur N2 und N8; zwei Abnahmen 3a/3b; Pilot Teil von 3b; Prüfungen im `HIDDEN`; N2 sofort nach Review übernehmen; nur Qwen; Worktree-Regel wie D-H8).
 Berechtigungen: P-1 bis P-10 und P-15 **ja**, P-11 bis P-14 **auf Ansage** (Start erst auf ausdrückliches Wort des Captains in der Bau-Sitzung).
 G3 Stufe 3 ist damit freigegeben; der Bau beginnt mit N1.
+
+## G4 – Übernahme (29.10.2026 15:53)
+
+Captain: **übernommen.** Grundlage: Abnahme mit Qwen3.6 (S3-A, S3-B, S3-D bestanden; S3-C im Skriptlauf durch einen Modellfehler, einzeln bestanden), Pilot N8 zweimal gelaufen, N2 und N8 von SEDRA gebaut und übernommen, 1287 Tests ohne Modell 0 rot. Stufe 3 ist damit abgeschlossen; offen bleiben nur `test_uix_stufe6` unter Last und der Vergleich des zweiten N8-Kandidaten (kein Teil der Abnahme). Stufe 4 und 5 baut Claude allein (D-H1 damit beantwortet); Design Stufe 4: `SPEC_HARNESS_SHELL_v1_G2_STUFE4.md`.

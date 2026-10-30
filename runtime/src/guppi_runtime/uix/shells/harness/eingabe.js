@@ -6,7 +6,7 @@
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
-  const BEFEHLE = [['/neu', 'neue Sitzung'], ['/stopp', 'laufende Antwort abbrechen'], ['/titel Name', 'Sitzung umbenennen'], ['/seite', 'Seitenleiste ein/aus']];
+  const BEFEHLE = [['/neu', 'neue Sitzung'], ['/stopp', 'laufende Antwort abbrechen'], ['/titel Name', 'Sitzung umbenennen'], ['/seite', 'Seitenleiste ein/aus'], ['/start', 'Start-Menü (Apps, Oberflächen)'], ['/einstellungen', 'Einstellungen (HS-42)']];
 
   function mount(S){
     const box = S.el.eingabe;
@@ -80,6 +80,8 @@
     if(b === '/neu'){ root.sedraHarness.reiter.neu(S); return true; }
     if(b === '/stopp'){ if(a) a.stoppen(); return true; }
     if(b === '/seite'){ S.seiteUmschalten(); return true; }
+    if(b === '/start'){ root.sedraHarness.startmenue.oeffnen(S); return true; }        // Stufe 4 (HS-40)
+    if(b === '/einstellungen'){ root.sedraHarness.einstellungen.oeffnen(S, rest[0]); return true; }   // Stufe 5 (HS-42): /einstellungen [gruppe/punkt]
     if(b === '/titel'){
       if(!a || !/^S-/.test(a.id)){ S.hinweis('Erst eine Nachricht senden – dann gibt es die Sitzung.'); return true; }
       await S.api('/api/harness/sitzungen/' + a.id, {method: 'PATCH', body: {titel: rest.join(' ')}});
@@ -116,7 +118,7 @@
   }
 
   function fuer(S, a){
-    S.el.eingabe.classList.toggle('hs-aus', !!a && /^(aufgaben|lauf|diff):/.test(String(a.id)));      // in Aufgaben-, Lauf- und Diff-Reitern gibt es nichts zu schreiben
+    S.el.eingabe.classList.toggle('hs-aus', !!a && /^(aufgaben|lauf|diff|app|einstellungen):/.test(String(a.id)));      // in Aufgaben-, Lauf-, Diff-, App- und Einstellungs-Reitern gibt es nichts zu schreiben
     zustand(S); fokus(S); schildZeigen(S);
   }
 
@@ -155,11 +157,11 @@
     const e = S._eingabe; if(!e) return;
     const m = S.modell;
     e.modell.textContent = m ? m.name : 'kein Modell';
-    e.modell.title = m ? ('Geladen: ' + m.name + (m.kontext ? ' · Kontext ' + Number(m.kontext).toLocaleString('de-DE') : '') + ' – laden und wechseln in der Werkstatt (Cockpit)')
+    e.modell.title = m ? ('Geladen: ' + m.name + (m.kontext ? ' · Kontext ' + Number(m.kontext).toLocaleString('de-DE') : '') + ' – laden und wechseln in der Werkstatt (Start → Modelle)')
                        : 'Kein Modell geladen';
     e.modell.classList.toggle('aus', !m);
     e.kein.hidden = !!m;
-    e.kein.textContent = 'Kein Modell geladen – Modell wählen (Werkstatt im Cockpit; Wechsel über Start unten links).';
+    e.kein.textContent = 'Kein Modell geladen – Modell wählen (Start → Modelle → Werkstatt, oder Klick auf die Zelle „Modell“).';
   }
 
   function projektwahl(S){

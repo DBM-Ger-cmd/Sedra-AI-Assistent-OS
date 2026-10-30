@@ -129,8 +129,8 @@ Hinweis zu HS-E3: Bisher galt „Läufe nur nach ausdrücklichem Ja des Captains
 | 1 | Gespräch mit Streamen, Stopp, Denken, Sitzungen speichern, Seitenleiste, Reiter, Taskleiste nur mit Sitzungen; Fehler der Kette (Wiederholung, Stichwort-Zwang, ehrliches Ende) | HS-01–05, HS-10–18, HS-30–31 (Teil), HS-50–53 | Claude |
 | 2 | Werkzeuge Lesen und Schreiben, `befehl`, Freigabe-Katalog, Freigabe-Karte, Captain-Freigabe, feste Vorbehalte, Audit | HS-20–29 (ohne Vorarbeiter-Freigabe), HS-28 | Claude; Einstufung der Regeln (reines Modul) als erster SEDRA-Bau |
 | 3 | Vorlage Vorarbeiter, Vorarbeiter-Freigabe, Freigabe nach Aufgabe, Läufe in der Taskleiste und Benachrichtigung | HS-19, HS-26 (Rest), HS-27, HS-31–33 | SEDRA-Agenten unter Aufgaben-Freigabe; Claude Review |
-| 4 | Start-Menü, andere Oberflächen, Statusbereich statt Leiste | HS-32, HS-40, HS-41, HS-43 | SEDRA-Agenten |
-| 5 | Einstellungen, darin der Katalog-Editor (Änderungen nur durch den Captain) | HS-42 | SEDRA-Agenten |
+| 4 | Start-Menü, andere Oberflächen, Statusbereich statt Leiste | HS-32, HS-40, HS-41, HS-43 | Claude allein (Captain 29.10.2026 15:53; D-H1 Stufe 3) – gebaut, `…_G2_STUFE4.md`, `…_G3_STUFE4.md` |
+| 5 | Einstellungen, darin der Katalog-Editor (Änderungen nur durch den Captain) | HS-42 | Claude allein (Captain 30.10.2026 07:53) – gebaut, `…_G2_STUFE5.md`, `…_G3_STUFE5.md`; Katalog, Grenzen und Schalter nur als Antrag mit Gate |
 
 Begründung: Stufe 1 macht das Gespräch brauchbar, Stufe 2 gibt ihm Hände und Grenzen; erst damit kann der Vorarbeiter (Stufe 3) andere
 Agenten führen. Ab Stufe 3 wird die Shell mit sich selbst weitergebaut – genau das ist der Plan aus HS-E5. Jede Stufe wird einzeln abgenommen.

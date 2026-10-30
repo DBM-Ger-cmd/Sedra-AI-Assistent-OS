@@ -165,6 +165,27 @@ class BefehlTests(Basis):
         self.assertEqual(out['status'], 'abgebrochen')
         self.assertLess(time.monotonic() - t0, 15)
 
+    def test_ruecknahme_der_aufgabe_beendet_den_befehl(self):
+        # Stufe 3 G2 §4.4, Befund 7 des Bauberichts: ein `befehl` unter einer Aufgaben-Freigabe endet mit ihrer Rücknahme
+        from guppi_runtime.harness import befehl as befehl_mod
+        self.w.kontext = {'sitzung_id': 'S-00000001', 'antwort_id': None, 'aufgabe_id': 'T-TESTRUECK'}
+        befehl_mod.RUECKNAHME.vergessen('T-TESTRUECK')
+        threading.Timer(0.5, lambda: befehl_mod.RUECKNAHME.ausloesen('T-TESTRUECK')).start()
+        args = {'befehl': 'python -c "import time; time.sleep(30)"'}
+        plan = self.w.vorbereiten('befehl', args)
+        t0 = time.monotonic()
+        out = self.w.ausfuehren('befehl', args, token=self.token(plan), plan=plan)
+        self.assertEqual(out['status'], 'abgebrochen')
+        self.assertIn('AUFGABE ZURÜCKGENOMMEN', out['ergebnis'])
+        self.assertLess(time.monotonic() - t0, 15)
+        befehl_mod.RUECKNAHME.vergessen('T-TESTRUECK')
+        self.w.kontext = {}
+
+    def test_ohne_aufgabe_kein_ruecknahme_ereignis(self):
+        from guppi_runtime.harness import befehl as befehl_mod
+        self.assertIsNone(befehl_mod.RUECKNAHME.ereignis(None))
+        self.assertIsNone(befehl_mod.RUECKNAHME.ausloesen(''))
+
     def test_ausgabe_gekuerzt(self):
         out = self.lauf('python -c "print(\'x\' * 50000)"')
         self.assertIn('gekürzt', out['ergebnis'])

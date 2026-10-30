@@ -21,7 +21,8 @@ REQUEST_TITLE = {'switch': 'Schalter umstellen', 'routing': 'Modell-Einstellung 
                  'model_add': 'Neues Modell hinzufügen', 'skill': 'Eigenen Skill schreiben',
                  'boundaries': 'Modus und Grenzen festlegen', 'install': 'Modul installieren',
                  'trust': 'Schreibrouten freigeben', 'gateway': 'GateWay-Vorgang freigeben', 'orchestra': 'Agenten-Team ändern', 'standing': 'Dauerfreigabe',
-                 'wissen_quelle': 'Wissensquelle freigeben', 'wissen_vorschlag': 'Wissen aufnehmen'}          # Spec 7 (D7.3, D7.8)
+                 'wissen_quelle': 'Wissensquelle freigeben', 'wissen_vorschlag': 'Wissen aufnehmen',          # Spec 7 (D7.3, D7.8)
+                 'harness_katalog': 'Freigabe-Katalog schreiben', 'harness_vorlage': 'Grenze einer Vorlage ändern'}   # Harness Stufe 5 (D-U2, D-U4)
 REQUEST_NOTE = {'switch': 'Schalter · gilt nach dem Neustart der Oberfläche', 'routing': 'Modell-Einstellung · gilt nach dem Neustart',
                 'model_add': 'Neues Modell · sofort nutzbar', 'skill': 'Bibliothek · die Datei wird vorher gesichert',
                 'boundaries': 'Gilt für alles, was in diesem Projekt passiert', 'install': 'Ein fremdes Modul · erst nach deiner Durchsicht',
@@ -30,7 +31,9 @@ REQUEST_NOTE = {'switch': 'Schalter · gilt nach dem Neustart der Oberfläche', 
                 'orchestra': 'Agenten-Team · gilt genau für diesen Stand – hat sich Agent, Aufgabe oder Routine geändert, wird nichts ausgeführt',
                 'standing': 'Dauerfreigabe · der Agent darf ohne weitere Frage geweckt werden, bis Ablauf, letzte Nutzung, Änderung oder Widerruf',
                 'wissen_quelle': 'Wissensspeicher · der Inhalt wird für Agenten ab dieser Stufe lesbar; ohne Freigabe wird nichts aufgenommen',
-                'wissen_vorschlag': 'Wissensspeicher · Text eines Agenten wird Wissen für diese Stufe; ändert sich der Vorschlag, wird nichts ausgeführt'}
+                'wissen_vorschlag': 'Wissensspeicher · Text eines Agenten wird Wissen für diese Stufe; ändert sich der Vorschlag, wird nichts ausgeführt',
+                'harness_katalog': 'Harness · die Datei des Captains wird vorher gesichert; hat sich der Katalog seit dem Antrag geändert, wird nichts geschrieben',
+                'harness_vorlage': 'Harness · Kopie der Vorlage in local_config mit neuer Grenze; die Datei im Repo bleibt'}
 WAYS = {'einmal': 'Einmal öffnen', 'freigeben_und_anwenden': 'Freigeben und anwenden', 'aendern': 'Grenze ändern …', 'ablehnen': 'Ablehnen',
         'cloud_diesen_lauf': 'Nur diesen Lauf in die Cloud', 'bestaetigen': 'Entsperren'}      # Spec 2 (D2.8, D2.10)
 
@@ -58,12 +61,14 @@ def request_decision(req):
     return {'id': 'request:' + str(req.get('mission_id')), 'kind': 'request:' + str(kind),
             'title': binding.get('describe') or REQUEST_TITLE.get(kind, 'Änderung'),
             'describe': REQUEST_NOTE.get(kind, str(kind)), 'mission_id': req.get('mission_id'),
-            'gate_id': (req.get('gate') or {}).get('gate_id'), 'risks': [], 'rollback': True,
+            'gate_id': (req.get('gate') or {}).get('gate_id'),
+            # die Risiken, die der Antrag an sein Gate gebunden hat (Harness Stufe 5: Befunde des Katalog-Entwurfs) – bisher immer leer
+            'risks': [r for r in (((req.get('gate') or {}).get('request') or {}).get('risks') or []) if isinstance(r, str)], 'rollback': True,
             'note': REQUEST_NOTE.get(kind, ''), 'created_at': (req.get('gate') or {}).get('created_at'),
             'ways': ['freigeben_und_anwenden', 'ablehnen'], 'apply': APPLY.get(kind),
             'binding': {k: v for k, v in binding.items() if k in ('section', 'key', 'old', 'new', 'describe', 'block', 'text', 'recipe_id', 'field',
                                                                  'vorgang_id', 'klasse', 'merkmale', 'weg', 'policy', 'binding',
-                                                                 'agent_id', 'op')},
+                                                                 'agent_id', 'op', 'vorlage', 'max_zuege', 'vorher', 'entwurf_hash', 'stand_hash')},
             'agent_id': binding.get('agent_id')}
 
 
