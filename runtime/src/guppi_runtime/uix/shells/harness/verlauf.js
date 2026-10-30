@@ -58,6 +58,10 @@
     const status = d().el('span', 'hs-wz-status', 'läuft');
     sum.append(d().el('span', 'hs-wz-icon', '⚙'), d().el('b', 'hs-wz-name', name || '?'), d().el('span', 'hs-wz-kurz', kurz || ''),
                d().el('span', 'hs-wz-dauer', ''), status);
+    if(args && typeof args.pfad === 'string' && args.pfad && /^datei_/.test(name || '')){          // Stufe 6 (HS-72): die Datei in der Vorschau öffnen und festhalten
+      const pf = d().el('button', 'hs-knopf hs-klein hs-wz-pfad', '▸ Vorschau'); pf.type = 'button'; pf.dataset.pfad = args.pfad; pf.title = 'In der Vorschau öffnen und festhalten';
+      sum.append(pf);
+    }
     const body = d().el('div', 'hs-wz-body');
     body.append(d().el('small', 'hs-leise', 'Eingabe'), d().el('pre', 'hs-pre', args === undefined ? '' : JSON.stringify(args, null, 2)));
     row.append(sum, body);
@@ -106,6 +110,10 @@
     const box = d().el('div', 'hs-verlauf');
     const liste = d().el('div', 'hs-liste');
     box.append(liste);
+    box.addEventListener('click', e=>{
+      const pf = e.target.closest && e.target.closest('.hs-wz-pfad');
+      if(pf){ e.preventDefault(); e.stopPropagation(); root.sedraHarness.vorschau.oeffnen(S, a, pf.dataset.pfad); }
+    });
     const a = {
       id, box, S, eintraege: 0, antwortId: null, abbruch: null, block: null, wartet: false,
       leer(){ return this.eintraege === 0 && !this.antwortId && !this.wartet; },
@@ -143,7 +151,7 @@
         catch(err){ this.zeigeLeer(); this.notiz('Sitzung nicht lesbar: ' + err.message, 'bad'); return; }
         liste.replaceChildren();
         this.eintraege = 0;
-        let block = null;
+        let block = null, letzte = null;
         const entschieden = {};
         (s.eintraege || []).forEach(e=>{ if(e.typ === 'karte' && e.entscheidung) entschieden[e.karte_id] = e; });
         for(const e of s.eintraege || []){
@@ -153,6 +161,7 @@
             const row = werkzeugZeile(e.name, kurz(e.args), e.args);
             werkzeugEnde(row, e.status, e.dauer_s, e.ergebnis, e.stufe, e.regel);
             block.append(row);
+            letzte = e;
           }
           else if(e.typ === 'karte' && e.zustand === 'offen'){
             if(!block){ block = this.neu(d().el('div', 'hs-antwort')); this.eintraege++; }
@@ -167,6 +176,7 @@
             block = null;
           }
         }
+        if(letzte) root.sedraHarness.vorschau.beruehrt(S, this, letzte.name, letzte.args, letzte.status);          // Stufe 6: ein geöffneter Reiter zeigt die zuletzt berührte Datei
         if(s.kaputt) this.notiz(s.kaputt + ' Zeile(n) der Sitzungsdatei waren nicht lesbar und fehlen hier.', 'warn');
         if(s.laeuft) this.strom(s.laeuft, 0);
         else this.zeigeLeerWennNoetig();
@@ -310,14 +320,16 @@
         }
         else if(name === 'werkzeug.start'){
           const row = werkzeugZeile(x.name, x.kurz, x.args);
-          z.werkzeuge[x.aufruf_id] = row; z.seg = null;
+          z.werkzeuge[x.aufruf_id] = row; z.seg = null; (z.args || (z.args = {}))[x.aufruf_id] = {name: x.name, args: x.args};
           block.append(row);
         }
         else if(name === 'werkzeug.ende'){
           const row = z.werkzeuge[x.aufruf_id];
           if(row) werkzeugEnde(row, x.status, x.dauer_s, x.ergebnis !== undefined ? x.ergebnis : x.kurz, x.stufe, x.regel);
+          const w = (z.args || {})[x.aufruf_id];
+          if(w) root.sedraHarness.vorschau.beruehrt(S, this, w.name, w.args, x.status);          // Stufe 6: die Vorschau folgt der Datei
         }
-        else if(name === 'karte'){ block.append(karteKarte(S, this, x, null)); z.seg = null; }
+        else if(name === 'karte'){ block.append(karteKarte(S, this, x, null)); z.seg = null; root.sedraHarness.vorschau.karte(S, this, x); }
         else if(name === 'kontext'){ block.dataset.kontext = x.belegt + '/' + x.fenster; }
         else if(name === 'fehler'){ block.append(d().el('div', 'hs-zurueck bad', 'Fehler: ' + (x.grund || ''))); }
         else if(name === 'ende'){

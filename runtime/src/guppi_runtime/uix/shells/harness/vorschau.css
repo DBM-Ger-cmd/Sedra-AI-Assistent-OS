@@ -1,0 +1,24 @@
+/* Harness-Shell Stufe 6: Gespräch mit Vorschau in einem Reiter (vorschau.js) */
+.hs-teilung{flex:1 1 auto;min-height:0;min-width:0;display:grid;grid-template-rows:minmax(0,1fr);overflow:hidden}
+.hs-teilung.hs-fl-ohne{display:flex;flex-direction:column}
+.hs-teilung.hs-fl-ohne .hs-fl-leiste,.hs-teilung.hs-fl-ohne .hs-fl-balken,.hs-teilung.hs-fl-ohne .hs-fl-vorschau{display:none}
+.hs-fl-gespraech{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0}
+.hs-fl-gespraech>.hs-verlauf{flex:1 1 auto}
+.hs-fl-vorschau{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--panel,transparent);border:1px solid var(--line)}
+.hs-fl-kopf{display:flex;align-items:center;gap:4px;padding:4px 8px;border-bottom:1px solid var(--line)}
+.hs-fl-titel{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--size-small)}
+.hs-fl-inhalt{flex:1 1 auto;min-height:0;overflow:auto;padding:8px 12px}
+.hs-fl-balken{width:6px;cursor:col-resize;background:var(--line)}
+.hs-fl-balken:hover,.hs-fl-balken:focus-visible{background:var(--accent)}
+.hs-fl-knopf{padding:2px 8px;border:1px solid var(--line);border-radius:4px;background:transparent;color:inherit;cursor:pointer}
+.hs-fl-knopf.on{border-color:var(--accent);color:var(--accent)}
+.hs-fl-auf{position:absolute;top:6px;right:10px;z-index:2}
+.hs-fl-leiste{display:none}
+.hs-teilung.hs-fl-klein{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto minmax(0,1fr)}
+.hs-teilung.hs-fl-klein .hs-fl-leiste{display:flex;gap:4px;padding:4px 8px}
+.hs-teilung.hs-fl-klein .hs-fl-balken{display:none}
+.hs-teilung.hs-fl-klein .hs-fl-vorschau{display:none;order:2!important}
+.hs-teilung.hs-fl-klein.hs-fl-zeige-vorschau .hs-fl-vorschau{display:flex}
+.hs-teilung.hs-fl-klein.hs-fl-zeige-vorschau .hs-fl-gespraech{display:none}
+.hs-teilung.hs-fl-klein .hs-fl-gespraech{order:2!important}
+

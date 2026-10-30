@@ -62,7 +62,7 @@
       H.startmenue.mount(this);
       this.tasten();
       this.breite();
-      root.addEventListener('resize', ()=>this.breite());
+      root.addEventListener('resize', ()=>{ this.breite(); this.teilungAnpassen(); });
 
       ctx.bus.on('harness.sitzung', ()=>this.sitzungenLaden());
       ctx.bus.on('harness.antwort', e=>{
@@ -77,7 +77,7 @@
         if(e && String(e.id || '').startsWith('harness:')){ this.sitzungenLaden(); H.karte.aktualisieren(this, String(e.id).slice(8)); }
       });
       ctx.bus.on('harness.aufgabe', ()=>this.freigabenLaden());
-      ctx.bus.on('harness.lauf', e=>H.lauf.melden(this, e));
+      ctx.bus.on('harness.lauf', e=>{ H.lauf.melden(this, e); H.vorschau.lauf(this, e); });
       ctx.bus.on('harness.vorarbeiter', ()=>this.freigabenLaden());
       ctx.bus.on('harness.karte', e=>{ if(e && e.karte_id) H.karte.aktualisieren(this, e.karte_id); });
       ctx.bus.on('desk.error', e=>this.hinweis('Die Runtime meldet: ' + e.message, 'warn'));
@@ -161,7 +161,7 @@
     zeigen(id){
       let a = this.ansichten.get(id);
       if(!a){ a = H.verlauf.ansicht(this, id); this.ansichten.set(id, a); }
-      this.el.flaeche.replaceChildren(a.box);
+      this.el.flaeche.replaceChildren(/^(S-[0-9A-F]{8}|neu-\d+)$/.test(String(id)) ? H.vorschau.fuer(this, a).el : a.box);          // Stufe 6: Gespräch mit Vorschau in einem Reiter
       document.getElementById('sedra-root').classList.toggle('hs-leer', a.leer());
       H.eingabe.fuer(this, a);
       a.nachUnten();
@@ -197,9 +197,12 @@
       document.getElementById('sedra-root').classList.toggle('hs-seite-zu', root.innerWidth < SCHMAL);
     },
 
+    teilungAnpassen(){ const a = this.aktive(); if(a && a._teilung) a._teilung.pruefeBreite(); },
+
     tasten(){
       document.addEventListener('keydown', e=>{
         if((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'b' || e.key === 'B')){ e.preventDefault(); this.seiteUmschalten(); }
+        else if((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && (e.key === 'x' || e.key === 'X')){ e.preventDefault(); H.vorschau.tauschen(this); }
         else if(e.key === 'Escape'){ const a = this.aktive(); if(a && a.laeuft()){ e.preventDefault(); a.stoppen(); } }
       });
     }

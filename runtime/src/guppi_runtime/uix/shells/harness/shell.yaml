@@ -1,15 +1,16 @@
 # Die Harness-Shell (SPEC_HARNESS_SHELL_v1, G2 §6): das Gespräch steht in der Mitte, Antworten streamen, Werkzeugaufrufe sind sichtbar.
 # Fünf Zonen (HS-01): Seitenleiste, Reiterleiste, Arbeitsfläche, Eingabefeld, Taskleiste. Stufe 1: Gespräch, Sitzungen; Stufe 2: Werkzeuge mit Freigabe-Karte;
 # Stufe 3: Vorarbeiter, Aufgaben, Läufe; Stufe 4: Start-Menü mit Apps (Werkzeuge des Vertrags als Reiter), Oberflächen, Statusbereich – `umschalter: menue` (Vertrag N3).
+# Stufe 6: Zweck der Aufgaben, Projekte erklärt, Vorschau neben dem Gespräch (vorschau.js).
 # Stufe 5: Einstellungen (HS-42) als Reiter – sechs Gruppen, Werkzeuge eingehängt, Katalog-Editor und Grenzen nur über Antrag mit Gate.
 shell:
   id: harness
   name: Harness
   description: Gespräch in der Mitte mit Sitzungen, Streamen und sichtbaren Werkzeugen; Werkzeuge mit Freigabe-Karte; Vorarbeiter, Aufgaben-Freigabe und Läufe; Start-Menü mit Apps, Oberflächen und Statusbereich (Stufe 4); Einstellungen mit Katalog-Editor (Stufe 5).
-  version: 1.5.0
+  version: 1.6.0
   entry:
-    js: [markdown.js, seite.js, reiter.js, karte.js, aufgabe.js, lauf.js, verlauf.js, eingabe.js, startliste.js, app.js, startmenue.js, katalog_editor_pruefung.js, katalog_editor.js, einstellungen.js, taskleiste.js, shell.js]     # shell.js zuletzt: es registriert
-    css: shell.css
+    js: [markdown.js, seite.js, reiter.js, karte.js, aufgabe.js, lauf.js, verlauf.js, eingabe.js, startliste.js, app.js, startmenue.js, katalog_editor_pruefung.js, katalog_editor.js, einstellungen.js, vorschau.js, taskleiste.js, shell.js]     # shell.js zuletzt: es registriert
+    css: [shell.css, vorschau.css]
   provides: [seite, reiter, flaeche, eingabe, taskleiste]
   layout: {persist: browser}
   umschalter: menue           # Stufe 4 (D-S1): kein Alt+S-Chip, kein Mini-Hub – das Start-Menü der Shell; Alt+S ruft es
