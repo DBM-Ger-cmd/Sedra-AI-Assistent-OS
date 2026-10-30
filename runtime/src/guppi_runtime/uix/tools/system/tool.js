@@ -51,10 +51,14 @@
       const zeilen = [d().el('div', 's-note ok', 'Geprüft: ' + p.anzahl + ' Dateien stimmen mit dem Manifest überein.'),
         d().el('small', 's-muted', 'Geändert: ' + p.geaendert.length + ' · entfällt: ' + p.entfallen.length + ' · ' + p.wirkt + '.')];
       if(p.geaendert.length) zeilen.push(this.updateListe('Dateien', p.geaendert));
-      const ok = d().button('Übernehmen', async()=>{
+      // Härtung E1 (30.10.): die Vorschau hat einen Antrag mit Gate angelegt; „Freigeben und anwenden“ läuft über die Entscheidung
+      // (Einmal-Token, Bindung an Tag, Manifest und Rechte) – derselbe Weg wie im Posteingang
+      zeilen.push(d().el('small', 's-muted', 'Antrag ' + (p.mission_id || '?') + ' liegt im Posteingang (Freigaben) – hier oder dort freigeben.'));
+      const ok = d().button('Freigeben und übernehmen', async()=>{
         try{
-          const r = await this.ctx.api('/api/update/uebernehmen', {method: 'POST', body: {tag, rechte_schluessel: p.rechte_schluessel}});
-          box.replaceChildren(d().el('div', 's-note ok', 'Übernommen. Wirkung nach dem Neustart von SEDRA. Sicherung: ' + r.sicherung));
+          const out = await this.ctx.shell.decide('request:' + p.mission_id, 'freigeben_und_anwenden');
+          const r = (out && out.result) || {};
+          box.replaceChildren(d().el('div', 's-note ok', 'Übernommen. Wirkung nach dem Neustart von SEDRA. Sicherung: ' + (r.sicherung || '–')));
         }catch(err){ box.replaceChildren(d().el('div', 's-note bad', 'Übernahme abgebrochen: ' + err.message)); }
       }, 'p');
       if(p.rechte.length){

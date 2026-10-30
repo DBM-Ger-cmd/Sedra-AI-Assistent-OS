@@ -74,6 +74,7 @@ class ManifestRules(unittest.TestCase):
             "entry_js_required": {"entry": {"css": "tool.css"}},
             "unknown_field": {"hands": ["task"]},
             "gruppe_invalid": {"gruppe": "spiele"},                       # Nachtrag N2 (Harness Stufe 4): nur die fünf Gruppen des Start-Menüs
+            "events_emits_reserved": {"events": {"emits": ["desk.resync", "harness.lauf"]}},   # Härtung 30.10. (N3): Ereignisse des Stroms sendet kein Werkzeug
         }
         for expected, change in cases.items():
             with self.subTest(expected):

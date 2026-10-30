@@ -233,8 +233,41 @@ def save(project_root: Path, payload: dict) -> dict:
     path.parent.mkdir(parents=True, exist_ok=True)
     header = ("# Captain-Einstellungen für Cloud-Modelle (über das Fenster Einstellungen geschrieben).\n"
               "# Schlüssel stehen NICHT hier, sondern in cloud_keys.json (verschlüsselt) oder in den Umgebungsvariablen.\n")
-    path.write_text(header + yaml.safe_dump({"cloud_providers": out}, allow_unicode=True, sort_keys=False), encoding="utf-8")
-    return {"path": str(path), "enabled": out["enabled"]}
+    # Härtung E2 (30.10.): Sicherung mit Zeitstempel, dann Temp + replace – nie eine halbe Datei, nie ohne Rückweg
+    sicherung = None
+    if path.is_file():
+        import time
+        sicherung = path.with_name(path.name + ".bak-" + time.strftime("%Y%m%d-%H%M%S"))
+        if not sicherung.exists(): sicherung.write_bytes(path.read_bytes())
+    from .core.util import atomic_write_text
+    atomic_write_text(path, header + yaml.safe_dump({"cloud_providers": out}, allow_unicode=True, sort_keys=False))
+    return {"path": str(path), "enabled": out["enabled"], "sicherung": sicherung.name if sicherung else None}
+
+
+def base_url_aenderungen(project_root: Path, payload: dict) -> list:
+    """Härtung E2: welche Anbieter-Adressen der Captain ändern will – [{provider, alt, neu}]. Diese Änderung geht nur über ein Gate
+    (der API-Schlüssel ginge danach an den neuen Host); alles andere speichert `save` sofort."""
+    cfg = load_config(project_root)
+    known = cfg.get("providers") or {}
+    wanted = payload.get("providers") if isinstance(payload, dict) else None
+    out = []
+    for pid, change in (wanted or {}).items():
+        if not isinstance(change, dict) or "base_url" not in change or pid not in known: continue
+        url = change["base_url"]
+        parsed = urlparse(url if isinstance(url, str) else "")
+        if parsed.scheme != "https" or not parsed.hostname or len(url) > 200: raise ValueError(f"base_url_must_be_https:{pid}")
+        neu = url.rstrip("/")
+        alt = (known[pid] or {}).get("base_url")
+        if neu != alt: out.append({"provider": pid, "alt": alt, "neu": neu})
+    return out
+
+
+def ohne_base_url(payload: dict) -> dict:
+    """Die Nutzlast ohne `base_url`-Felder (die gehen über das Gate)."""
+    out = dict(payload)
+    out["providers"] = {pid: {k: v for k, v in (ch or {}).items() if k != "base_url"} if isinstance(ch, dict) else ch
+                        for pid, ch in (payload.get("providers") or {}).items()}
+    return out
 
 
 def signature(project_root: Path, store: CloudKeyStore, environ=None) -> str:

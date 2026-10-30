@@ -12,6 +12,7 @@ no `eval`, no own `fetch`, no foreign `import()`) and the trust levels are for."
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import re
 
 import yaml
@@ -170,6 +171,10 @@ def check_tool(doc, folder: Path, origin='package'):
         names = events.get(side) or []
         if not isinstance(names, list) or not all(isinstance(n, str) and EVENT_NAME.match(n) for n in names):
             errors.append(f'events_{side}_invalid')
+    # Härtung 30.10. (Nachtrag N3): Ereignisse des Stroms sendet kein Werkzeug – ein Manifest, das sie in `emits` nennt, wird abgewiesen
+    reserviert = [n for n in (events.get('emits') or []) if isinstance(n, str) and (n in EVENTS_NUR_STROM or n.startswith('harness.'))]
+    if reserviert:
+        errors.append('events_emits_reserved:' + ','.join(reserviert))
     tests = t.get('tests') or []
     if not isinstance(tests, list) or not all(isinstance(x, str) and re.match(r'^[a-z0-9_.-]+\.js$', x) for x in tests):
         errors.append('tests_invalid')
@@ -270,6 +275,10 @@ def _check_frame_shell(s, folder, origin, errors):
             'frame': True, 'vorgabe': vorgabe}, []
 
 
+EVENTS_NUR_STROM = frozenset({'task.changed', 'model.changed', 'system.state', 'desk.error', 'desk.resync', 'tools.refresh',
+                              'agent.changed', 'issue.changed', 'budget.warning', 'slot.changed'})     # wie ui/bus.js NUR_STROM
+
+
 def route_allowed(routes, method, path):
     """Exact 'METHOD /path' or a prefix entry ending in '/*'. Paths with '..' or '//' never match."""
     if '..' in path or '//' in path:
@@ -342,6 +351,9 @@ class Gateway:
                 pub['api'] = list(man.get('api') or [])
             return pub
         return {'ui': '%d.%d' % UI_VERSION,
+                # Härtung E4 (30.10.): der Prüfzugang der Seite (`window.sedraBoot.ctx`, die lebenden Registrierungen `sedra.tools/.shells`)
+                # existiert nur, wenn der Schalter `entwicklung` an ist oder eine Prüfung ihn verlangt (SEDRA_PRUEFZUGANG=1 im Prozess der Prüfung)
+                'pruefzugang': bool(getattr(self, 'entwicklung', False)) or os.environ.get('SEDRA_PRUEFZUGANG') == '1',
                 'shell': public('shells', shells[active][1]) if active else None,
                 'shells': sorted(shells),
                 'tools': [public('tools', tools[t][1]) for t in ids],
@@ -361,11 +373,11 @@ class Gateway:
         links = ''.join(f'<link rel="stylesheet" href="{_html.escape(h)}">' for h in t['css'])
         scripts = ''.join(f'<script src="{_html.escape(h)}"></script>' for h in ['/uix/ui/dom.js', '/uix/ui/rahmen.js'] + t['js'])
         info = _json.dumps({'id': t['id'], 'name': t['name'], 'api': t.get('api', []), 'events': t.get('events', {})}, ensure_ascii=False)
-        info = info.replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
+        # Härtung E3 (30.10.): kein Inline-Script – das Manifest steht als Attribut am Container, rahmen.js startet beim Laden (CSP script-src 'self')
         return ('<!doctype html><html lang="de"><head><meta charset="utf-8">'
                 '<meta name="viewport" content="width=device-width, initial-scale=1">'
                 f'<title>{_html.escape(t["name"])}</title>{links}</head>'
-                '<body><div id="werk"></div>' + scripts + f'<script>sedraRahmen.start({info});</script></body></html>')
+                f'<body><div id="werk" data-manifest="{_html.escape(info, quote=True)}"></div>' + scripts + '</body></html>')
 
     def file(self, area, module, name):
         """The path of a file a URL may serve, or None. area: 'ui', 'shells' or 'tools'."""

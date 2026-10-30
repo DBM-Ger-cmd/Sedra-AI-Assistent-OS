@@ -192,14 +192,17 @@
     },
 
     async fassung(version){
-      this.offen = await this.ctx.api('/api/fisch/transkript', {method: 'POST', body: {id: this.offen.id, version}});
+      try{ this.offen = await this.ctx.api('/api/fisch/transkript', {method: 'POST', body: {id: this.offen.id, version}}); }
+      catch(err){ this.suchStand.textContent = 'Fassung nicht lesbar: ' + err.message; return; }      // Härtung 30.10. (HU-T15)
       this.treffer = null; this.drawDetail();
     },
 
     async suchen(){
       const q = this.suchfeld.value.trim();
       if(!q){ this.treffer = null; this.suchStand.textContent = ''; this.drawCues(); return; }
-      const r = await this.ctx.api('/api/fisch/transkript/suche', {method: 'POST', body: {id: this.offen.id, frage: q}});
+      let r;
+      try{ r = await this.ctx.api('/api/fisch/transkript/suche', {method: 'POST', body: {id: this.offen.id, frage: q}}); }
+      catch(err){ this.suchStand.textContent = 'Suche fehlgeschlagen: ' + err.message; return; }     // Härtung 30.10. (HU-T15)
       this.treffer = r.treffer || [];
       this.suchStand.textContent = this.treffer.length + (this.treffer.length === 1 ? ' Treffer' : ' Treffer') + ' für „' + q + '“';
       this.drawCues();

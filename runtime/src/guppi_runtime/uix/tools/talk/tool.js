@@ -124,10 +124,10 @@
       ctx.bus.on('decision.answered', ()=>{ this.pending = null; });
       this.say('Bereit. Schreib einen Auftrag, eine Frage, oder nenn einen Ort („Entscheidungen“, „Modelle“).', 'note');
       if(root.sedraTalkVerlauf) root.sedraTalkVerlauf.laden(this);
-      setTimeout(()=>this.input.focus(), 50);
+      this.fokusTimer = setTimeout(()=>this.input.focus(), 50);
     },
 
-    unmount(){ this.el.replaceChildren(); this.el.classList.remove('t-talk', 't-talk-ohne-griff'); },
+    unmount(){ clearTimeout(this.fokusTimer); if(this.griffWeg) this.griffWeg(); this.el.replaceChildren(); this.el.classList.remove('t-talk', 't-talk-ohne-griff'); },   // HU-T16
 
     // Eingabe absenden: mit gewähltem Cloud-Modell in die Cloud, sonst wie bisher zu SEDRA
     submit(){
@@ -153,8 +153,8 @@
           const h = Math.max(96, Math.min(root.innerHeight * 0.75, startH + (startY - ev.clientY)));
           shell.style.setProperty('--talk-h', Math.round(h) + 'px');
         };
-        const up = ()=>{ root.removeEventListener('pointermove', move); root.removeEventListener('pointerup', up); };
-        root.addEventListener('pointermove', move); root.addEventListener('pointerup', up);
+        const up = ()=>{ root.removeEventListener('pointermove', move); root.removeEventListener('pointerup', up); this.griffWeg = null; };
+        root.addEventListener('pointermove', move); root.addEventListener('pointerup', up); this.griffWeg = up;   // HU-T16
       };
       return g;
     },
@@ -244,7 +244,7 @@
     line(who, text, tone){
       const row = d().el('p', 't-talk-line' + (tone ? ' ' + tone : ''));
       row.append(d().el('b', null, who), d().el('span', null, ' ' + text));
-      this.log.append(row);
+      this.log.append(row); while(this.log.childElementCount > 600) this.log.firstChild.remove();     // HU-T6: das Protokoll wächst nicht ohne Ende
       this.log.scrollTop = this.log.scrollHeight;
       return row;
     },

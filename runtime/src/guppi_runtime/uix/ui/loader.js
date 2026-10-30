@@ -76,12 +76,12 @@
     return !missing.length;
   }
 
-  function makeContext(manifest, object, bus, shell, say){
+  function makeContext(manifest, object, bus, shell, say, registry){
     checkShellApi(shell, manifest, say);
     // Freigaben erteilt nur der Kern (Entscheidung 2026-10-19): ein Werkzeug außerhalb des Pakets bekommt die Shell ohne decide
     const shellFuer = manifest.trust === 'CORE' ? shell : Object.freeze(Object.assign({}, shell, {decide: ()=>{ throw new Error('Freigaben erteilt nur der Kern, nicht ein Modul.'); }}));
     const ctx = {object: object || null, api: kern.forModule({kind: 'tool', id: manifest.id}),
-                 bus: null, tokens: getComputedStyle(document.documentElement), shell, manifest, _offs: []};
+                 bus: null, tokens: getComputedStyle(document.documentElement), shell: shellFuer, manifest, _offs: []};     // Härtung 30.10. (HU-L16): die Sperre gilt wirklich
     const own = bus.forModule((manifest.events || {}).emits || []);
     ctx.bus = {emit: own.emit, on: (name, fn)=>{ const off = own.on(name, fn); ctx._offs.push(off); return off; }};
     // Vertrag 1.1 (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §3, §10.3): drei Gedächtnisse je Werkzeug und Objekt. Sitzung und Ablage nur, wenn
@@ -90,6 +90,17 @@
     ctx.memo = L.memoFuer(manifest.id, object);
     ctx.sitzung = L.sitzungFuer(manifest.id, object, g.indexOf('sitzung') >= 0, undefined, say);
     ctx.ablage = L.ablageFuer(manifest.id, object, g.indexOf('ablage') >= 0, ctx.api);
+    // Vertrag Nachtrag N9 (Härtung E4, 30.10.): ein Werkzeug bettet ein anderes nur über die Laufzeit ein – mit dessen eigener
+    // Kennung (API-Allowlist, emits) und eigenem Gedächtnis; abgebaut mit dem Einbettenden. Kein `root.sedra.tools.get` mehr.
+    ctx._eingebettet = [];
+    ctx.einbetten = (id, el, objekt)=>{
+      if(!registry) throw new Error('einbetten_ohne_laufzeit');
+      const man = registry.all().find(t=>t.id === id);
+      if(!man || man.kind === 'instrument' || man.trust !== 'CORE') throw new Error('einbetten_unbekannt:' + id);   // nur Paket-Werkzeuge; Nicht-CORE laufen im Rahmen
+      const st = L.mountTool(registry.mod(id), el, makeContext(man, objekt === undefined ? object : objekt, bus, shell, say, registry), say);
+      ctx._eingebettet.push(st);
+      return {state: st, abbauen(){ const i = ctx._eingebettet.indexOf(st); if(i >= 0) ctx._eingebettet.splice(i, 1); L.unmountTool(st, say); }};
+    };
     return ctx;
   }
 
@@ -110,19 +121,22 @@
         if(onState) onState('getrennt');
         source.close();
         tries += 1;
-        setTimeout(open, Math.min(30000, 1000 * Math.pow(2, Math.min(tries, 5))));      // the server may be restarting: back off, keep trying
+        if(!geschlossen) timer = setTimeout(open, Math.min(30000, 1000 * Math.pow(2, Math.min(tries, 5))));      // the server may be restarting: back off, keep trying
       };
     }
+    let timer = null, geschlossen = false;                 // Härtung 30.10. (HU-L13): closeEvents räumt auch den geplanten Neuaufbau
     open();
-    return ()=>{ if(source) source.close(); };
+    return ()=>{ geschlossen = true; if(timer) clearTimeout(timer); if(source) source.close(); };
   }
 
   async function boot(onProblem){
     const say = onProblem || ((where, err)=>console.warn('[uix]', where, err));
     const bus = root.sedraBus.makeBus((name, why)=>say('Bus', new Error(name + ': ' + why)));
     const manifest = await kern.api('/uix/manifest');
-    if(!manifest.shell) throw new Error('Keine Shell verfügbar: ' + ((manifest.rejected || []).map(r=>r.id + ' (' + r.reasons.join(', ') + ')').join('; ') || 'uix.yaml prüfen'));
-    (manifest.rejected || []).forEach(r=>say('Modul abgelehnt', new Error(r.kind + ' ' + r.id + ': ' + r.reasons.join(', '))));
+    if(!manifest || typeof manifest !== 'object') throw new Error('Das Manifest der Oberfläche ist nicht lesbar – uix.yaml prüfen.');
+    if(!manifest.shell) throw new Error('Keine Shell verfügbar: ' + ((manifest.rejected || []).map(r=>r.id + ' (' + (r.reasons || []).join(', ') + ')').join('; ') || 'uix.yaml prüfen'));
+    if(!Array.isArray(manifest.tools)) throw new Error('Das Manifest nennt keine Werkzeuge – uix.yaml prüfen.');     // Härtung 30.10. (HU-L14): ein deutscher Satz statt TypeError
+    (manifest.rejected || []).forEach(r=>say('Modul abgelehnt', new Error(r.kind + ' ' + r.id + ': ' + (r.reasons || []).join(', '))));
 
     // Stufe C: die Brücke zum Rahmen. Werkzeuge außerhalb des Pakets (nicht CORE) laufen in einem abgeschotteten iframe;
     // ihr Code kommt nie in diese Seite. Der Stellvertreter hier hält nur das Manifest und hängt den Rahmen ein.
@@ -149,8 +163,8 @@
     for(const t of manifest.tools){
       if(t.trust !== 'CORE'){ entries.push({manifest: t, mod: frameMod(t)}); continue; }
       try{
-        t.css.forEach(addStyle);
-        for(const js of t.js) await addScript(js);
+        (t.css || []).forEach(addStyle);
+        for(const js of (t.js || [])) await addScript(js);
         const mod = root.sedra.tools.get(t.id);
         if(!mod) throw new Error('registerTool wurde nicht aufgerufen');
         entries.push({manifest: t, mod});
@@ -165,7 +179,7 @@
 
     const registry = makeRegistry(entries);
     const ctx = {api: kern.forModule({kind: 'shell', id: manifest.shell.id}), bus, tools: registry, manifest,
-                 makeContext: (m, object, shell)=>makeContext(m, object, bus, shell, say), onProblem: say};
+                 makeContext: (m, object, shell)=>makeContext(m, object, bus, shell, say, registry), onProblem: say};
     await shellMod.start(ctx);
     // B6-G-04: der Umschalter gehört zur Seite – in jeder Shell derselbe Weg zur Übersicht, in eine andere Oberfläche, zu Darstellung und Schrift
     if(root.sedraWechsel) try{ root.sedraWechsel.mount(manifest); }catch(err){ say('Umschalter', err); }

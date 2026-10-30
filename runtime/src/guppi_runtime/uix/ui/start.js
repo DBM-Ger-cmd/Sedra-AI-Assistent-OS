@@ -53,6 +53,13 @@
   window.addEventListener('unhandledrejection', e=>{ e.preventDefault(); note('Fehler in der Oberfläche', e.reason); });
 
   window.sedraLoader.boot(note)
-    .then(ctx=>{ window.sedraBoot.ctx = ctx; })
+    .then(ctx=>{
+      window.sedraBoot.manifest = ctx.manifest;
+      // Härtung E4 (30.10.): der volle Kontext (Seiten-API, Bus, makeContext) ist ein Prüfzugang – nur mit Schalter `entwicklung`
+      // oder in einer Prüfung (Server: pruefzugang). Sonst verschwinden auch die lebenden Registrierungen: kein Werkzeug greift
+      // über `sedra.tools.get` auf ein anderes zu (Vertrag §2), die Einbettung geht über `ctx.einbetten` (N9).
+      if(ctx.manifest && ctx.manifest.pruefzugang){ window.sedraBoot.ctx = ctx; }
+      else if(window.sedra){ delete window.sedra.tools; delete window.sedra.shells; Object.freeze(window.sedra); }
+    })
     .catch(err=>fatal('SEDRA konnte die Oberfläche nicht laden.', (err && err.message ? err.message : String(err))));
 })();

@@ -47,7 +47,12 @@
       // `ready` ist erfüllt, sobald das Werkzeug zum ersten Mal gezeichnet hat. Die Shell braucht das: vorher weiß ein Werkzeug
       // noch nicht, welche Handlungen sein Objekt anbietet – eine Werkbank-Zeile, die zu früh fragt, bleibt leer.
       if(out && typeof out.then === 'function') state.ready = out.catch(err=>{ onError && onError(mod.id, err); });
-    }catch(err){ onError && onError(mod.id, err); }
+    }catch(err){
+      onError && onError(mod.id, err);
+      // Härtung 30.10. (HU-L10): ein Werkzeug, das beim Einhängen wirft, hat vielleicht schon Bus-Abos – die sterben mit ihm, nicht erst mit der Seite
+      (ctx && ctx._offs || []).splice(0).forEach(off=>{ try{ off(); }catch(_e){} });
+      try{ el.replaceChildren(); }catch(_e){}
+    }
     // Vertrag 1.1 §3.3: die Scrollposition kommt zurück, sobald das Werkzeug gezeichnet hat – ohne dass es etwas dafür tun muss
     if(ctx && ctx.memo) state.ready = state.ready.then(()=>scrollZurueck(el, ctx.memo.get(SCROLL)));
     return state;
@@ -62,6 +67,7 @@
     if(c.memo) try{ c.memo.set(SCROLL, scrollStand(state.el)); }catch(_e){}         // Vertrag 1.1 §3.3
     if(c.ablage && c.ablage.flush) try{ c.ablage.flush(); ablagen.delete(c.ablage); }catch(_e){}   // was noch offen ist, geht jetzt zum Server
     if(typeof state.abbau === 'function'){ try{ state.abbau(); }catch(_e){} }     // Stufe C: den Rahmen abmelden
+    (c._eingebettet || []).splice(0).forEach(st=>unmountTool(st, onError));       // N9: eingebettete Werkzeuge gehen mit dem Einbettenden
     try{ state.mod.unmount(state.el); }
     catch(err){ onError && onError(state.id, err); }
     try{ state.el.replaceChildren(); }catch(_e){}
@@ -73,7 +79,11 @@
     if(!state || !state.mod.actions) return [];
     let list;
     try{ list = state.mod.actions(state.el); }catch(_e){ return []; }
-    return (Array.isArray(list) ? list : []).filter(a=>a && typeof a.label === 'string' && typeof a.run === 'function');
+    // Härtung 30.10. (HU-T8): eine Handlung, die scheitert, sagt es dem Captain über die Shell (notify) – vorher verschluckten
+    // Werkbank-Zeilen ohne eigene Fehleranzeige (Harness, Rahmen) die Ablehnung; `run` bleibt für die Shell ein Promise ohne Fehler
+    const melden = (label, err)=>{ try{ const sh = state.ctx && state.ctx.shell; if(sh && sh.notify) sh.notify('„' + label + '“ fehlgeschlagen: ' + (err && err.message || err), 'warn'); }catch(_e){} };
+    return (Array.isArray(list) ? list : []).filter(a=>a && typeof a.label === 'string' && typeof a.run === 'function')
+      .map(a=>Object.assign({}, a, {run: ()=>{ let p; try{ p = Promise.resolve(a.run()); }catch(err){ p = Promise.reject(err); } return p.catch(err=>{ melden(a.label, err); }); }}));
   }
 
   // ==== Vertrag 1.1: drei Gedächtnisse (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §3) =============================================
@@ -149,17 +159,18 @@
     const objekt = objektSchluessel(object, toolId);
     if(objekt.indexOf('panel:') === 0) return ABLAGE_ATTRAPPE;      // ohne Objekt keine Ablage: der Server kennt nur Objekte
     const t = uhr || {setTimeout: (f, ms)=>setTimeout(f, ms), clearTimeout: id=>clearTimeout(id)};
-    let werte = null, laden = null, offen = null, zeit = null;
+    let werte = null, laden = null, offen = null, zeit = null, geladen = false;
     const holen = ()=>{
-      if(werte) return Promise.resolve(werte);
+      if(geladen) return Promise.resolve(werte);
       if(!laden) laden = api('/api/ablage/lesen', {method: 'POST', body: {objekt}})
-        .then(r=>{ werte = Object.assign({}, (r && r.werte) || {}, werte || {}); zeit = r && r.zeit; return werte; },
-              ()=>{ werte = werte || {}; return werte; });            // keine Verbindung: leer weiter, nie ein Fehler im Werkzeug
+        .then(r=>{ werte = Object.assign({}, (r && r.werte) || {}, werte || {}); zeit = r && r.zeit; geladen = true; return werte; },
+              ()=>{ werte = werte || {}; geladen = true; return werte; });            // keine Verbindung: leer weiter, nie ein Fehler im Werkzeug
       return laden;
     };
     const schreiben = ()=>{
       offen = null;
-      return api('/api/ablage/schreiben', {method: 'POST', body: {objekt, werte: werte || {}}}).catch(()=>{});
+      // Härtung 30.10. (HU-L4): der Server ersetzt die Werte – also erst die vorhandenen holen, dann die eigenen darüberlegen
+      return holen().then(()=>api('/api/ablage/schreiben', {method: 'POST', body: {objekt, werte: werte || {}}})).catch(()=>{});
     };
     const ablage = {
       aktiv: true,
@@ -169,7 +180,7 @@
         werte = werte || {}; werte[name] = wert;
         if(offen === null) offen = t.setTimeout(schreiben, 1000);
       },
-      clear(){ werte = {}; if(offen !== null){ t.clearTimeout(offen); } return schreiben(); },
+      clear(){ werte = {}; geladen = true; if(offen !== null){ t.clearTimeout(offen); } return schreiben(); },
       flush(){ if(offen !== null){ t.clearTimeout(offen); return schreiben(); } return Promise.resolve(); }
     };
     ablagen.add(ablage);

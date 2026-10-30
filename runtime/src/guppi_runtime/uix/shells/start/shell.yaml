@@ -9,7 +9,7 @@ shell:
   layout: {persist: none}
   api:
     - GET /api/uix/modules
-    - POST /api/uix/shell
+    - POST /api/uix/standard   # Härtung 30.10. (HU-S1): der Knopf „Zum Standard machen“ war ohne diesen Eintrag tot (403)
     - POST /api/uix/scaffold
     - GET /api/uix/vorgaben
     - POST /api/uix/vorgabe

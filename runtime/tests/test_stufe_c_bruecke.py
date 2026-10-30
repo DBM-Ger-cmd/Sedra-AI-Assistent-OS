@@ -67,8 +67,11 @@ const warte = ()=>new Promise(r=>setTimeout(r, 20));
   ev(fenster, {id: 'h', op: 'eval', code: 'x'});
   ev(fenster, {op: 'api', path: '/api/status'});
   ev(fenster, {id: 'i', op: 'shell', name: 'open', args: 'kein-array'});
+  ev(fenster, {id: 'j', op: 'shell', name: 'open', args: [{type: 'shell', id: 'cockpit'}]});      // Härtung HU-1: kein Shell-Wechsel über die Brücke
+  ev(fenster, {id: 'k', op: 'shell', name: 'open', args: [{type: 'Task;x', id: 't'}]});
   await warte();
-  out.ungueltig = ['g','h','i'].map(id=>(rahmenPost.find(m=>m.id===id)||{}).fehler || 'keine');
+  out.ungueltig = ['g','h','i','j','k'].map(id=>(rahmenPost.find(m=>m.id===id)||{}).fehler || 'keine');
+  out.shell_open_typen = shellAufrufe.filter(x=>x[0]==='open').map(x=>x[1].type);
   out.id_ohne_kennung = rahmenPost.some(m=>m.antwort && m.id==='' && m.fehler);
   // 10 Abmelden löst die Abos
   let geloest = 0;
@@ -119,8 +122,13 @@ class BruecketTest(unittest.TestCase):
     def test_serverfehler_kommt_als_antwort(self):
         self.assertEqual(self.out['fehler'], ['serverfehler'])
 
+    def test_shell_wechsel_ueber_die_bruecke_ist_nicht_moeglich(self):
+        self.assertEqual(self.out['ungueltig'][3], 'open_objekt_ungueltig', 'HU-1: open({type: shell}) erreicht die Shell nicht')
+        self.assertEqual(self.out['ungueltig'][4], 'open_objekt_ungueltig', 'ein Typ außerhalb des Musters ebenso')
+        self.assertEqual(self.out['shell_open_typen'], ['task'])
+
     def test_ungueltige_nachrichten_werden_mit_grund_beantwortet(self):
-        self.assertEqual(self.out['ungueltig'], ['pfad_ungueltig', 'op_unbekannt:eval', 'args_keine_liste'])
+        self.assertEqual(self.out['ungueltig'][:3], ['pfad_ungueltig', 'op_unbekannt:eval', 'args_keine_liste'])
 
     def test_nachricht_ohne_kennung_wird_abgelehnt(self):
         self.assertTrue(self.out['id_ohne_kennung'])
@@ -130,8 +138,8 @@ class BruecketTest(unittest.TestCase):
         self.assertEqual(self.out['geloest'], 2)
 
     def test_regeln_bei_route_und_methode(self):
-        script = 'const b=require(%s);console.log(JSON.stringify([b.routeErlaubt(["GET /api/a"],"GET","/api/a"),b.routeErlaubt(["GET /api/a"],"POST","/api/a"),b.routeErlaubt(["GET /api/a"],"GET","/api/ab")]));' % json.dumps(str(BRUECKE))
-        self.assertEqual(run_node(script), [True, False, False])
+        script = 'const b=require(%s);console.log(JSON.stringify([b.routeErlaubt(["GET /api/a"],"GET","/api/a"),b.routeErlaubt(["GET /api/a"],"POST","/api/a"),b.routeErlaubt(["GET /api/a"],"GET","/api/ab"),b.routeErlaubt(["GET /api/a/*"],"GET","/api/a/b"),b.routeErlaubt(["GET /api/a/*"],"GET","/api/a/"),b.routeErlaubt(["GET /api/a/*"],"GET","/api/a/../x")]));' % json.dumps(str(BRUECKE))
+        self.assertEqual(run_node(script), [True, False, False, True, False, False])
 
 
 if __name__ == '__main__':

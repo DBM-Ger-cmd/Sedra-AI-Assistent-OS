@@ -11,7 +11,7 @@ tool:
     - GET /api/agents
     - GET /api/models
   events:
-    emits: [object.open]
+    emits: []
     listens: [task.changed]
   trust: CORE
   tests: [test.spec.js]

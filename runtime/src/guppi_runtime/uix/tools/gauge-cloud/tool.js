@@ -24,7 +24,7 @@
       this.update(null, null);
     },
 
-    unmount(){ this.el.replaceChildren(); this.el.classList.remove('ok', 'warn', 'bad'); this.el.removeAttribute('role'); },
+    unmount(){ this.el.replaceChildren(); this.el.classList.remove('ok', 'warn', 'bad'); this.el.removeAttribute('role'); this.el.removeAttribute('tabindex'); this.el.onclick = this.el.onkeydown = null; this.el.title = ''; },   // HU-T18: der Container der Shell bleibt sauber
 
     // what the strip hands over: the whole reading, or (reading=null, problem) when the runtime did not answer
     update(reading, problem){

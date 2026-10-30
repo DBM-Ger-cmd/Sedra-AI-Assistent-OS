@@ -89,10 +89,15 @@
 
     werkzeuge(object){ return this.ctx.tools.forObject(object).filter(m=>m.slot !== 'nachweis'); },
 
+    notify(text, tone){                                  // Härtung 30.10. (HU-S12): ins Gespräch, wenn es da ist – sonst wenigstens die Konsole
+      const mod = this.ctx.tools.mod('talk');
+      if(mod && typeof mod.say === 'function') mod.say(String(text), tone); else console.warn('[shell]', text);
+    },
+
     // Was ein Werkzeug von der Shell bekommt: einen Weg zum Öffnen, einen zum Melden, einen zum Entscheiden.
     shellApi(){
-      return {open: o=>this.open(o), notify: text=>console.info('[shell]', text),
-              decide: (id, way)=>this.ctx.api('/api/decisions/answer', {method: 'POST', body: {id, way}}),
+      return {open: o=>this.open(o), notify: (text, tone)=>this.notify(text, tone),                       // Härtung 30.10. (HU-S12): Hinweise erreichen den Captain
+              decide: (id, way)=>root.sedraStand.entscheiden(this.ctx.api, this.ctx.bus, id, way),      // HU-S7
               reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
     },
 

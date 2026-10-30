@@ -40,9 +40,9 @@
   // ---- gesehen: was der Captain schon angeklickt hat (nur IDs)
   function gesehenMenge(S){
     if(S._gesehen) return S._gesehen;
-    let roh = null;
-    try{ roh = localStorage.getItem(GESEHEN_KEY); }catch(_e){}
-    S._gesehen = new Set(roh ? (JSON.parse(roh) || []) : []);
+    let roh = null, liste = [];
+    try{ roh = localStorage.getItem(GESEHEN_KEY); liste = roh ? (JSON.parse(roh) || []) : []; }catch(_e){ liste = []; }     // Härtung 30.10. (HU-S9): ein kaputter Eintrag bricht die Leiste nicht
+    S._gesehen = new Set(Array.isArray(liste) ? liste.filter(x=>typeof x === 'string') : []);
     S._gesehenNeu = roh === null;               // erster Start: was schon da ist, gilt als gesehen
     return S._gesehen;
   }

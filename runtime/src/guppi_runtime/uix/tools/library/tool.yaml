@@ -9,12 +9,8 @@ tool:
   entry: {js: tool.js, css: tool.css}
   api:
     - GET /api/library
-    - POST /api/library/search
-    - POST /api/library/read
-    - POST /api/library/text
-    - POST /api/library/custom/request
   events:
-    emits: [object.open]
+    emits: []
     listens: [decision.answered]
   trust: CORE
   tests: [test.spec.js]

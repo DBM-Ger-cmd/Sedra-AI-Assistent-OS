@@ -7,10 +7,9 @@ tool:
   handles: []
   order: 16
   entry: {js: tool.js}
-  api:
-    - GET /api/strip
+  api: []                    # Härtung 30.10.: ein Instrument ruft keine Route – die Leiste der Shell liest /api/strip
   events:
-    emits: [object.open]
+    emits: []
     listens: [decision.answered, desk.resync]
   trust: CORE
   tests: [test.spec.js]

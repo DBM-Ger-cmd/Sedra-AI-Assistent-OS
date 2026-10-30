@@ -38,7 +38,7 @@
     mount(el, ctx){
       this.el = el; this.ctx = ctx; this.msg = '';
       el.classList.add('t-labor');
-      this.timer = setInterval(()=>{ if(this.tab === 'laeufe') this.loadRuns(); }, 5000);   // die Läufe laufen weiter: alle 5 Sekunden neu lesen
+      this.timer = setInterval(()=>{ if(this.tab === 'laeufe' && document.visibilityState !== 'hidden') this.loadRuns(); }, 5000);   // die Läufe laufen weiter: alle 5 s neu lesen – nur im Reiter „Läufe“ und im sichtbaren Fenster (Härtung 30.10., HU-T4)
       return this.refresh();
     },
 
@@ -94,13 +94,13 @@
       if(open) card.style.gridColumn = '1 / -1';
       const tone = r.status === 'finished' ? 'ok' : (r.status === 'läuft' ? '' : 'warn');
       card.append(d().el('div', 'labor-pub', r.kind + ' · ' + r.name), d().el('div', 'labor-name', r.model || '(kein Modell)'));
-      card.append(d().el('span', 'labor-badge ' + tone, RUN_STATUS[r.status] || r.status), d().el('span', 'labor-badge', r.calls + ' Aufrufe'), d().el('span', 'labor-badge', r.writes.length + ' Dateien'));
+      card.append(d().el('span', 'labor-badge ' + tone, RUN_STATUS[r.status] || r.status), d().el('span', 'labor-badge', r.calls + ' Aufrufe'), d().el('span', 'labor-badge', (r.writes || []).length + ' Dateien'));
       if(r.blocked) card.append(d().el('span', 'labor-badge warn', r.blocked + ' gesperrt'));
       card.append(d().el('div', 's-small s-muted', 'zuletzt: ' + r.last), d().button(open ? 'Details zuklappen' : 'Details', ()=>{ this.openRuns = {...(this.openRuns || {}), [key]: !open}; this.draw(); }));
       if(open){
-        card.append(d().el('div', 's-small', 'Erlaubt: ' + (r.allow.join(', ') || '–')));
+        card.append(d().el('div', 's-small', 'Erlaubt: ' + ((r.allow || []).join(', ') || '–')));
         if(r.detail) card.append(d().el('div', 's-small warn', 'Grund: ' + r.detail));
-        if(r.writes.length){ const list = d().el('ul', 'labor-steps'); r.writes.forEach(w=>list.append(d().el('li', null, w))); card.append(list); }
+        if((r.writes || []).length){ const list = d().el('ul', 'labor-steps'); r.writes.forEach(w=>list.append(d().el('li', null, w))); card.append(list); }
         else card.append(d().el('div', 's-small s-muted', 'Noch keine geschriebene Datei.'));
       }
       return card;
@@ -124,7 +124,7 @@
       box.append(d().el('div', 's-note', 'Was den Rechner verlässt, prüft der Inhaltsschutz bei jedem Aufruf. Personenbezug wird vor dem Versand pseudonymisiert und anonymisiert.'));
       if(data.restart_needed) box.append(d().el('div', 's-note warn', 'Gespeichert, aber noch nicht wirksam: Neustart der Oberfläche nötig.'));
       const master = d().el('label', 's-field');
-      const masterBox = d().el('input'); masterBox.type = 'checkbox'; masterBox.id = 'laborMaster'; masterBox.checked = !!data.enabled;
+      const masterBox = d().el('input'); masterBox.type = 'checkbox'; masterBox.className = 'labor-master-feld'; masterBox.checked = !!data.enabled;     // HU-T17: keine globale ID – zwei Instanzen träfen sich
       master.append(masterBox, ' Cloud-Modelle insgesamt einschalten');
       box.append(master);
       // Speichern direkt oben, damit man es nach dem Ändern nicht suchen muss (gilt für alle Anbieter darunter)
@@ -133,7 +133,7 @@
         const card = d().el('div', 'labor-card s-provider');
         card.dataset.provider = p.id;
         card.append(d().el('div', 's-head', p.id + ' · ' + (p.kind === 'anthropic' ? 'Anthropic Messages API' : 'OpenAI-kompatibel')));
-        let status = p.status === 'bereit' ? 'bereit' : p.status === 'nicht bereit' ? 'nicht bereit – ' + p.reasons.join(', ') : 'aus';
+        let status = p.status === 'bereit' ? 'bereit' : p.status === 'nicht bereit' ? 'nicht bereit – ' + (p.reasons || []).join(', ') : 'aus';
         if(p.status === 'bereit') status += p.live ? ' · läuft jetzt' : ' · läuft nach dem nächsten Start';
         card.append(d().el('span', 'labor-badge ' + (p.status === 'bereit' ? 'ok' : p.status === 'nicht bereit' ? 'warn' : ''), 'Status: ' + status));
         const on = d().el('label', 's-field'); const onBox = d().el('input'); onBox.type = 'checkbox'; onBox.className = 'cp-enabled'; onBox.checked = !!p.enabled;
@@ -206,7 +206,8 @@
       pick.value = pid;
       pick.onchange = ()=>{ this.modelsProvider = pick.value; this.page = 1; this.draw(); };
       const search = d().el('input'); search.type = 'search'; search.placeholder = 'Modell suchen …'; search.value = this.query;
-      search.oninput = ()=>{ this.query = search.value; this.page = 1; this.draw(); };
+      search.oninput = ()=>{ this.query = search.value; this.page = 1; this.suchfokus = search.selectionStart; this.draw(); };   // Härtung 30.10. (HU-T9): draw() baut neu – der Fokus kommt zurück
+      if(this.suchfokus !== undefined && this.suchfokus !== null){ const at = this.suchfokus; this.suchfokus = null; setTimeout(()=>{ try{ search.focus(); search.setSelectionRange(at, at); }catch(_e){} }, 0); }
       const sort = d().el('select');
       [['name', 'Name A–Z'], ['anbieter', 'Anbieter']].forEach(([v, t])=>{ const o = d().el('option', null, t); o.value = v; sort.append(o); });
       sort.value = this.sortBy;
@@ -297,7 +298,7 @@
 
     stepsView(res){
       const list = d().el('ol', 'labor-steps');
-      res.steps.forEach(s=>{
+      (res.steps || []).forEach(s=>{
         const li = d().el('li', s.ok ? 'ok' : 'warn', (s.ok ? '✓ ' : '✗ ') + s.step + ' – ' + (s.detail || '') + (s.ms ? ' (' + s.ms + ' ms)' : ''));
         list.append(li);
       });
@@ -341,14 +342,15 @@
           base_url: card.querySelector('.cp-url').value.trim()
         };
       });
-      const master = this.el.querySelector('#laborMaster');
+      const master = this.el.querySelector('.labor-master-feld');
       return {enabled: master ? master.checked : !!(this.data || {}).enabled, providers};
     },
 
     async save(){
       try{
-        await this.ctx.api('/api/cloud/save', {method: 'POST', body: JSON.stringify(this.collect())});
-        this.msg = 'Gespeichert. Die Tests lesen das sofort; der laufende Server braucht für Anrufe den Neustart.';
+        const out = await this.ctx.api('/api/cloud/save', {method: 'POST', body: JSON.stringify(this.collect())});
+        this.msg = 'Gespeichert. Die Tests lesen das sofort; der laufende Server braucht für Anrufe den Neustart.'
+                 + ((out && out.antraege && out.antraege.length) ? ' Eine geänderte Anbieter-Adresse ist ein Antrag im Posteingang (' + out.antraege.join(', ') + ') – erst nach deiner Freigabe gilt sie.' : '');   // Härtung E2
       }catch(err){ this.msg = 'Nicht gespeichert: ' + err.message; }
       await this.refresh();
     },

@@ -225,7 +225,7 @@ class TheShelf(unittest.TestCase):
 
     def test_minimal_declares_the_routes_it_now_uses(self):
         doc = yaml.safe_load((MINIMAL / 'shell.yaml').read_text(encoding='utf-8'))['shell']
-        for route in ('GET /api/uix/modules', 'POST /api/uix/shell', 'GET /api/uix/shelf', 'POST /api/uix/shelf'):
+        for route in ('GET /api/uix/modules', 'GET /api/uix/shelf', 'POST /api/uix/shelf'):      # Wechsel über sedraWechsel (Härtung 30.10., HU-S4) – kein eigener POST /api/uix/shell mehr
             self.assertIn(route, doc['api'])
         self.assertEqual(doc['entry']['js'][0], 'icons.js', 'die Zeichen zuerst: Menüleiste und Ablage brauchen sie')
 

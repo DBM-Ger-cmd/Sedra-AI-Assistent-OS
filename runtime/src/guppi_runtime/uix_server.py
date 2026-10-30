@@ -24,7 +24,7 @@ from .models import gpu_preflight
 from .jobs.job_supervisor import FINAL_STATES, JobError
 from .core.mission import ALLOWED
 from .core.errors import InvalidTransition
-from .core.util import atomic_write_json, load_json, utcnow
+from .core.util import atomic_write_bytes, atomic_write_json, load_json, utcnow
 from .local_switches import ALLOWED as SWITCH_ALLOWED, LocalSwitches
 from . import cloud_settings, labor_runs
 from .cloud_settings import CloudKeyStore
@@ -299,7 +299,8 @@ class UIXHub:
                 apply = {'/api/switch/apply': self.switch_apply, '/api/routing-config/apply': self.routing_apply,
                          '/api/model/add/apply': self.model_add_apply, '/api/library/custom/apply': self.library.custom_apply,
                          '/api/boundaries/apply': self.boundaries_apply, '/api/uix/install/apply': self.install_apply,
-                         '/api/uix/trust/apply': self.trust_apply, '/api/gateway/apply': self.gateway_apply}.get(decision['apply'])
+                         '/api/uix/trust/apply': self.trust_apply, '/api/gateway/apply': self.gateway_apply,
+                         '/api/update/uebernehmen': self.update_uebernehmen, '/api/cloud/base-url/apply': self.cloud_base_url_apply}.get(decision['apply'])
                 if apply is None:
                     raise ValueError('decision_cannot_be_applied')
                 out = apply({'mission_id': mission_id})
@@ -808,23 +809,52 @@ class UIXHub:
         manifest = stand / MANIFEST
         if not manifest.is_file():
             raise ValueError('update_manifest_fehlt')
-        p = plan(stand, INSTALLATION, manifest.read_text(encoding='utf-8'))
+        manifest_text = manifest.read_text(encoding='utf-8')
+        p = plan(stand, INSTALLATION, manifest_text)
         self.runtime.audit.append('UPDATE_VORSCHAU', component='update', payload={'tag': tag, 'geaendert': len(p['dateien_geaendert']), 'rechte': len(p['rechte'])})
+        # Härtung E1 (30.10.): die Übernahme ist ein Gate mit Einmal-Token – gebunden an Tag, Manifest-Hash und die gezeigte Rechteliste.
+        # Vorher reichten zwei POSTs mit dem Browser-Token (der Rechte-Schlüssel stand in der Vorschau-Antwort) für einen Programmtausch.
+        binding = {'tag': tag, 'file_sha256': hashlib.sha256(manifest_text.encode('utf-8')).hexdigest(), 'rechte_schluessel': p['rechte_schluessel'],
+                   'rechte': list(p['rechte']), 'geaendert': len(p['dateien_geaendert']), 'entfallen': len(p['dateien_entfallen']),
+                   'describe': f'Update {tag} übernehmen: {len(p["dateien_geaendert"])} Dateien geändert, {len(p["dateien_entfallen"])} entfallen'}
+        req = self._gate_request(binding['describe'], self.UPDATE_ACTION, 'update:' + tag, binding,
+                                 risks=['Programmdateien werden ersetzt (Sicherung liegt daneben; Rückweg /api/update/zurueck)', 'wirkt nach dem Neustart von SEDRA']
+                                       + [f'Rechte: {r}' for r in p['rechte'][:8]], context_key='update_request')
+        self._remember('update', req)
         return {'tag': tag, 'anzahl': p['anzahl'], 'geaendert': p['dateien_geaendert'], 'entfallen': p['dateien_entfallen'],
-                'rechte': p['rechte'], 'rechte_schluessel': p['rechte_schluessel'], 'wirkt': 'nach dem Neustart von SEDRA'}
+                'rechte': p['rechte'], 'rechte_schluessel': p['rechte_schluessel'], 'wirkt': 'nach dem Neustart von SEDRA',
+                'mission_id': req['mission_id'], 'gate_id': req['gate']['gate_id']}
+
+    UPDATE_ACTION = 'update_apply'
 
     def update_uebernehmen(self, payload=None):
-        """POST /api/update/uebernehmen – übernimmt den vorbereiteten Stand. `rechte_schluessel` muss die Rechteliste aus der Vorschau bestätigen."""
+        """POST /api/update/uebernehmen {mission_id} – übernimmt den vorbereiteten Stand nach „Freigeben und anwenden“ (Härtung E1):
+        Einmal-Token, Bindung an Tag und Manifest-Hash; die Rechteliste ist die aus der Vorschau (`rechte_schluessel` in der Bindung)."""
         from .update_anwenden import MANIFEST, anwenden
-        from .update_holen import TAG
-        tag = str((payload or {}).get('tag') or '')
-        if not TAG.match(tag):
-            raise ValueError('tag_ungueltig')
-        stand = INSTALLATION / 'local_config' / 'update' / 'staging' / tag
-        if not (stand / MANIFEST).is_file():
-            raise ValueError('update_nicht_vorbereitet')
-        r = anwenden(stand, INSTALLATION, (stand / MANIFEST).read_text(encoding='utf-8'), str((payload or {}).get('rechte_schluessel') or ''), tag)
-        self.runtime.audit.append('UPDATE_UEBERNOMMEN', component='update', payload={'tag': tag, 'geaendert': r['geaendert'], 'entfallen': r['entfallen']})
+        mission_id = str((payload or {}).get('mission_id') or '').strip()
+        if not mission_id:
+            raise ValueError('mission_id_required')
+        rt = self.runtime
+        with rt.missions.execution_lock(mission_id):
+            m = rt.missions.load(mission_id)
+            binding = (m.get('context') or {}).get('update_request')
+            if not binding:
+                raise ValueError('not_an_update_request')
+            tag = binding['tag']
+            stand = INSTALLATION / 'local_config' / 'update' / 'staging' / tag
+            if not (stand / MANIFEST).is_file():
+                raise ValueError('update_nicht_vorbereitet')
+            manifest_text = (stand / MANIFEST).read_text(encoding='utf-8')
+            binding = self._spend_approval(m, mission_id, 'update_request', self.UPDATE_ACTION, lambda b: 'update:' + b['tag'],
+                                           hashlib.sha256(manifest_text.encode('utf-8')).hexdigest())
+            bestaetigt = str((payload or {}).get('rechte_schluessel') or binding['rechte_schluessel'])
+            r = anwenden(stand, INSTALLATION, manifest_text, bestaetigt, tag)
+            m['execution'].pop('approval_token', None)
+            m['result'] = {'kind': 'update', 'tag': tag, 'geaendert': r['geaendert'], 'entfallen': r['entfallen'], 'sicherung': r['sicherung']}
+            m['lifecycle']['status'] = 'closed'
+            rt.missions.save(m)
+        self.runtime.audit.append('UPDATE_UEBERNOMMEN', component='update', mission_id=mission_id, payload={'tag': tag, 'geaendert': r['geaendert'], 'entfallen': r['entfallen']})
+        self.events.publish('decision.answered', {'id': 'request:' + mission_id, 'kind': 'request:update', 'way': 'freigeben_und_anwenden'})
         return r
 
     def update_zurueck(self, payload=None):
@@ -1313,7 +1343,8 @@ class UIXHub:
             raise ValueError('module_not_installed')
         if folder.is_symlink():                      # eine Verknüpfung wird gelöst, nicht ihr Ziel ausgeräumt
             raise ValueError('module_folder_is_a_symlink')
-        if kind == 'shells' and mid == self.gateway.registry.config()['shell']:
+        gewaehlt = str(self.gateway.registry._raw().get('shell') or '')    # Härtung 30.10.: auch die in uix.yaml gewählte Shell, nicht nur der Start-Override
+        if kind == 'shells' and mid in (self.gateway.registry.config()['shell'], gewaehlt):
             raise ValueError('shell_is_active')      # erst eine andere nehmen – sonst steht die Seite beim nächsten Laden leer
         shutil.rmtree(folder)
         self.runtime.audit.append('UIX_MODULE_REMOVED', component='desk', payload={'kind': kind, 'id': mid})
@@ -1953,8 +1984,8 @@ class UIXHub:
     ATTACH_FILE_BYTES = 12_000
     ATTACH_MAX = 5
     # Files that hold secrets are never read into a model prompt, whatever the Captain types (hardening 2026-10-14; the list follows .gitignore).
-    SECRET_NAMES = re.compile(r'^(\.env(\..*)?|tokens\.json|.*\.token|id_(rsa|ed25519|ecdsa)(\.pub)?|.*\.(pem|key|pfx|p12|kdbx))$', re.I)
-    SECRET_DIRS = frozenset({'.ssh', '.gnupg', '.aws', '.azure', '.kube', '.docker'})
+    SECRET_NAMES = re.compile(r'^(\.env(\..*)?|tokens\.json|cloud_keys\.json|(cli|mcp)\.json|.*\.token|id_(rsa|ed25519|ecdsa)(\.pub)?|.*\.(pem|key|pfx|p12|kdbx))$', re.I)
+    SECRET_DIRS = frozenset({'.ssh', '.gnupg', '.aws', '.azure', '.kube', '.docker', 'clients'})     # Härtung 30.10.: Client-Token (runtime_data/uix/clients) und Cloud-Schlüssel
 
     def _refuse_secret(self, path):
         parts = {p.lower() for p in path.parts}
@@ -2306,13 +2337,12 @@ class UIXHub:
             old_text = path.read_text(encoding='utf-8') if path.exists() else ''
             backup = None
             if path.exists():
-                backup = path.with_name(path.name + '.bak-' + utcnow()[:10] + '-uix')
-                shutil.copy2(path, backup)
+                backup = self._sicherung(path)
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(self._edit_switch_text(old_text, binding['section'], binding['key'], binding['new']), encoding='utf-8')
+            self._write_raw(path, self._edit_switch_text(old_text, binding['section'], binding['key'], binding['new']))
             try: LocalSwitches.load(path)
             except ValueError as exc:                      # never leave a file the runtime would refuse
-                path.write_text(old_text, encoding='utf-8'); raise ValueError(str(exc))
+                self._write_raw(path, old_text); raise ValueError(str(exc))
             m['execution'].pop('approval_token', None)
             m['result'] = {'kind': 'switch_change', 'section': binding['section'], 'key': binding['key'], 'old': binding['old'], 'new': binding['new'],
                            'backup': backup.name if backup else None, 'effective': 'next_start'}
@@ -2335,7 +2365,14 @@ class UIXHub:
 
     @staticmethod
     def _write_raw(path, text):
-        with open(path, 'w', encoding='utf-8', newline='') as f: f.write(text)
+        atomic_write_bytes(Path(path), text.encode('utf-8'))   # Härtung 30.10.: Temp + replace – nie eine halbe Datei; Zeilenenden bleiben, wie sie sind
+
+    @staticmethod
+    def _sicherung(path):
+        """Kopie mit Zeitstempel bis zur Sekunde (Härtung 30.10.: zwei Änderungen am selben Tag überschrieben sich die Sicherung)."""
+        ziel = path.with_name(path.name + '.bak-' + utcnow()[:19].replace(':', '').replace('T', '-') + '-uix')
+        shutil.copy2(path, ziel)
+        return ziel
 
     def _routing_recipes(self):
         path = self._routing_path()
@@ -2429,8 +2466,7 @@ class UIXHub:
                                            lambda b: f"routing:{b['recipe_id']}.{b['field']}", self._file_digest(self._routing_path()))
             path = self._routing_path()
             old_text = self._read_raw(path)
-            backup = path.with_name(path.name + '.bak-' + utcnow()[:10] + '-uix')
-            shutil.copy2(path, backup)
+            backup = self._sicherung(path)
             self._write_raw(path, self._edit_routing_text(old_text, binding['recipe_id'], binding['field'], binding['new'], utcnow()[:10]))
             try: RoutingConfig.load(rt.config_root / 'role_routing.yaml', path)
             except Exception as exc:            # never leave an overlay the runtime would refuse
@@ -2566,7 +2602,7 @@ class UIXHub:
             old_text = self._read_raw(path) if path.exists() else ''
             backup = None
             if path.exists():
-                backup = path.with_name(path.name + '.bak-' + utcnow()[:10] + '-uix'); shutil.copy2(path, backup)
+                backup = self._sicherung(path)
             path.parent.mkdir(parents=True, exist_ok=True)
             recipe = yaml.safe_load('x:\n' + binding['block'])['x'][0]        # the approved block, parsed back: what is written is what was shown
             new_text = model_add.insert_recipe(old_text, recipe)
@@ -2626,11 +2662,43 @@ class UIXHub:
         view['key_store_available'] = CloudKeyStore.available()
         return view
 
+    CLOUD_URL_ACTION = 'cloud_base_url_change'
+
     def cloud_save(self, payload):
-        res = cloud_settings.save(self.runtime.project_root, payload)
+        """Einstellungen schreiben (Captain-Klick, Audit, atomar). Härtung E2 (30.10.): eine geänderte Anbieter-Adresse (`base_url`) wird
+        nicht geschrieben, sondern als Antrag mit Gate vorgelegt – der Schlüssel ginge sonst an einen Host, den niemand freigegeben hat."""
+        aenderungen = cloud_settings.base_url_aenderungen(self.runtime.project_root, payload)
+        res = cloud_settings.save(self.runtime.project_root, cloud_settings.ohne_base_url(payload) if aenderungen else payload)
         self.runtime.audit.append('CLOUD_SETTINGS_SAVED', component='desk',
-                                  payload={'enabled': res['enabled'], 'providers': sorted((payload.get('providers') or {}).keys())})
-        return {'saved': True, 'restart_needed': True}
+                                  payload={'enabled': res['enabled'], 'providers': sorted((payload.get('providers') or {}).keys()), 'sicherung': res.get('sicherung')})
+        antraege = []
+        for a in aenderungen:
+            binding = {'provider': a['provider'], 'old': a['alt'], 'new': a['neu'], 'file_sha256': self._file_digest(cloud_settings.settings_path(self.runtime.project_root)),
+                       'describe': f"Cloud-Adresse von {a['provider']} ändern: {a['alt'] or '–'} → {a['neu']}"}
+            req = self._gate_request(binding['describe'], self.CLOUD_URL_ACTION, 'cloud:' + a['provider'], binding,
+                                     risks=['der API-Schlüssel dieses Anbieters geht danach an diesen Host', 'wirkt nach dem Neustart'], context_key='cloud_url_request')
+            antraege.append(self._remember('cloud_url', req)['mission_id'])
+        return {'saved': True, 'restart_needed': True, 'antraege': antraege, 'sicherung': res.get('sicherung')}
+
+    def cloud_base_url_apply(self, payload):
+        """POST /api/cloud/base-url/apply {mission_id} – nach der Freigabe genau diese eine Adresse schreiben (Einmal-Token, Datei-Hash)."""
+        mission_id = str(payload.get('mission_id') or '').strip()
+        if not mission_id:
+            raise ValueError('mission_id_required')
+        rt = self.runtime
+        with rt.missions.execution_lock(mission_id):
+            m = rt.missions.load(mission_id)
+            pfad = cloud_settings.settings_path(rt.project_root)
+            binding = self._spend_approval(m, mission_id, 'cloud_url_request', self.CLOUD_URL_ACTION, lambda b: 'cloud:' + b['provider'], self._file_digest(pfad))
+            cfg = cloud_settings.load_config(rt.project_root)
+            res = cloud_settings.save(rt.project_root, {'enabled': bool(cfg.get('enabled')), 'providers': {binding['provider']: {'base_url': binding['new']}}})
+            m['execution'].pop('approval_token', None)
+            m['result'] = {'kind': 'cloud_url', 'provider': binding['provider'], 'old': binding['old'], 'new': binding['new'], 'sicherung': res.get('sicherung')}
+            m['lifecycle']['status'] = 'closed'
+            rt.missions.save(m)
+            rt.audit.append('CLOUD_BASE_URL_CHANGED', component='desk', mission_id=mission_id, payload={'provider': binding['provider'], 'old': binding['old'], 'new': binding['new']})
+        self.events.publish('decision.answered', {'id': 'request:' + mission_id, 'kind': 'request:cloud_url', 'way': 'freigeben_und_anwenden'})
+        return {'status': 'applied', 'restart_needed': True, **m['result']}
 
     def cloud_models(self, payload):
         """Die Modelle eines Anbieters beim Anbieter abfragen (nur lesen; kein Prompt geht hinaus). Auf Klick, nie automatisch."""
@@ -3443,9 +3511,10 @@ def make_server(hub: UIXHub, port=0):
                 supplied = parse_qs(urlsplit(self.path).query).get('token', [''])[0]
             if not supplied:
                 return None
-            if hmac.compare_digest(supplied, token):
+            geliefert = supplied.encode('utf-8', 'surrogateescape')          # Härtung 30.10.: Nicht-ASCII im Kopf darf keinen TypeError werfen
+            if hmac.compare_digest(geliefert, token.encode('utf-8')):
                 return 'browser'
-            return next((c for c, t in client_tokens.items() if hmac.compare_digest(supplied, t)), None)
+            return next((c for c, t in client_tokens.items() if hmac.compare_digest(geliefert, t.encode('utf-8'))), None)
 
         def _client(self, token_class):
             """Die Herkunft für das Audit: `shell`, `chat`, `cli` oder `mcp`. Gerufen erst nach `_module_allowed`: ein Kopf
@@ -3566,7 +3635,7 @@ def make_server(hub: UIXHub, port=0):
         def do_DELETE(self):
             self._harness_write('DELETE')
 
-        def _send(self, code, body, kind='application/json; charset=utf-8', frame_self=False):
+        def _send(self, code, body, kind='application/json; charset=utf-8', frame_self=False, inline_script=False):
             if isinstance(body, (dict, list)):
                 body = json.dumps(body, ensure_ascii=False, allow_nan=False).encode('utf-8')
             elif isinstance(body, str):
@@ -3577,12 +3646,18 @@ def make_server(hub: UIXHub, port=0):
             self.send_header('Cache-Control', 'no-store')
             self.send_header('X-Content-Type-Options', 'nosniff')
             self.send_header('Referrer-Policy', 'no-referrer')
-            self.send_header('Content-Security-Policy', "default-src 'self' blob: data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; frame-ancestors '" + ("self" if frame_self else "none") + "'; base-uri 'none'")
-            self.end_headers()
-            self.wfile.write(body)
+            # Härtung E3 (30.10.): kein Inline-Script mehr (Vertrag §6) – nur der archivierte Desktop (/retro) hat noch onclick-Attribute
+            self.send_header('Content-Security-Policy', "default-src 'self' blob: data:; script-src 'self'" + (" 'unsafe-inline'" if inline_script else "")
+                             + "; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; frame-ancestors '" + ("self" if frame_self else "none") + "'; base-uri 'none'")
+            try:
+                self.end_headers()
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError, OSError):       # Härtung 30.10.: der Browser hat zugemacht (Neuladen) – kein Traceback, kein zweites _send
+                self._abgebrochen = True
 
         def _json_body(self):
-            length = int(self.headers.get('Content-Length', '0'))
+            try: length = int(self.headers.get('Content-Length', '0'))
+            except ValueError: raise ValueError('bad_content_length') from None
             if not 0 <= length <= 1024 * 1024 or self.headers.get('Transfer-Encoding'):
                 raise ValueError('request_too_large')
             self.connection.settimeout(10)
@@ -3602,7 +3677,7 @@ def make_server(hub: UIXHub, port=0):
                 self._send(200, html, 'text/html; charset=utf-8')
                 return
             if path == '/retro':          # Build 6's desktop, kept so the Captain can compare; not the way in any more
-                self._send(200, retro_html, 'text/html; charset=utf-8')
+                self._send(200, retro_html, 'text/html; charset=utf-8', inline_script=True)       # Archiv (Build 6): Inline-Handler, bewusst nicht umgebaut
                 return
             static = STATIC_FILE.fullmatch(path)
             if static:           # the page's own styles and scripts (uix/css, uix/js): code only, no data, read at request time
@@ -3622,7 +3697,9 @@ def make_server(hub: UIXHub, port=0):
                 return
             frame = FRAME_PAGE.fullmatch(path)
             if frame:           # Stufe C: die Seite eines abgeschotteten Werkzeug-Rahmens; ohne Token, ohne Daten (siehe desk/gateway.frame_page)
-                page = hub.gateway.frame_page(frame.group(1))
+                try: page = hub.gateway.frame_page(frame.group(1))
+                except Exception as exc:                 # Härtung 30.10.: kaputte uix.yaml → 503 mit Satz, kein toter Thread
+                    self._send(503, {'error': type(exc).__name__, 'message': str(exc)}); return
                 if page is None:
                     self.send_error(404)
                     return
@@ -3699,7 +3776,7 @@ def make_server(hub: UIXHub, port=0):
                     return
                 self._send(200, fn())
             except Exception as exc:
-                self._send(503, {'error': type(exc).__name__, 'message': str(exc)})
+                if not getattr(self, '_abgebrochen', False): self._send(503, {'error': type(exc).__name__, 'message': str(exc)})
 
         def do_POST(self):
             token_class = self._authorized() if self._same_origin_ok() else None
@@ -3714,7 +3791,7 @@ def make_server(hub: UIXHub, port=0):
                 if path.startswith('/api/harness/'):      # sitzungen, sitzungen/<id>/nachricht, antworten/<id>/stopp (harness/api.py)
                     self._harness('POST', path, payload)
                     return
-                if path == '/api/decisions/answer' and not self._herkunft_ok():       # auch der Posteingang beantwortet Harness-Karten (S7)
+                if HERKUNFT_WEGE.fullmatch(path) and not self._herkunft_ok():       # S7: jede Entscheidung über ein Gate – Posteingang, Missionen, jedes apply, Verben (Härtung 30.10.)
                     return
                 client = self._client(token_class)
                 if path in uix_clients.ROUTES and isinstance(payload, dict) and 'client' in payload:
@@ -3811,7 +3888,8 @@ def make_server(hub: UIXHub, port=0):
                     '/api/mission/reject': hub.reject_gate,
                     '/api/switch/request': hub.switch_request,
                     '/api/switch/apply': hub.switch_apply,
-                    '/api/cloud/save': hub.cloud_save,                      # Einstellungen schreiben (Captain-Klick, wirkt nach Neustart)
+                    '/api/cloud/save': hub.cloud_save,                      # Einstellungen schreiben (Captain-Klick, wirkt nach Neustart); base_url nur als Antrag (E2)
+                    '/api/cloud/base-url/apply': hub.cloud_base_url_apply,  # nach der Freigabe (Härtung E2)
                     '/api/cloud/models': hub.cloud_models,          # Modellliste beim Anbieter abfragen (auf Klick, nur lesen)
                     '/api/labor/connection': hub.labor_connection,  # KI Labor: Verbindungstest in Schritten (auf Klick)
                     '/api/labor/models-test': hub.labor_model_test, # KI Labor: alle Modelle einmal testen (auf Klick)
@@ -3849,12 +3927,20 @@ def make_server(hub: UIXHub, port=0):
                     return
                 self._send(200, fn(payload))
             except ValueError as exc:
-                self._send(400, {'error': 'bad_request', 'message': FRIENDLY_400.get(str(exc), str(exc)), **({'code': str(exc)} if str(exc) in FRIENDLY_400 else {})})
+                self._send(400, {'error': 'bad_request', 'message': FRIENDLY_400.get(str(exc), str(exc)), 'code': str(exc)})     # Härtung 30.10.: `code` immer
             except Exception as exc:
-                self._send(503, {'error': type(exc).__name__, 'message': str(exc)})
+                if not getattr(self, '_abgebrochen', False): self._send(503, {'error': type(exc).__name__, 'message': str(exc)})
 
     class Server(ThreadingHTTPServer):
         request_queue_size = 64    # Standard 5: eine Seite lädt viele Skripte zugleich; bei mehreren Browsern lehnte Windows Verbindungen ab (29.10.2026)
+
+        def handle_error(self, request, client_address):
+            # Härtung 30.10.: eine vom Browser abgebrochene Verbindung ist kein Fehler des Servers – kein Traceback auf stderr
+            import socket
+            exc = sys.exc_info()[1]
+            if isinstance(exc, (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, socket.timeout, TimeoutError)):
+                return
+            super().handle_error(request, client_address)
 
     server = Server(('127.0.0.1', port), Handler)
     server.daemon_threads = True
@@ -3911,7 +3997,16 @@ def choose_start_shell(hub, shell):
 FRIENDLY_400 = {      # code -> sentence for the Captain; `code` keeps the code
     'unknown_decision': 'Diese Frage ist nicht mehr offen: sie wurde schon beantwortet oder hat sich erledigt. Die Liste zeigt den aktuellen Stand.',
     'way_not_offered': 'Diese Antwort bietet die Frage nicht an. Die Liste zeigt, was möglich ist.',
+    'request_too_large': 'Die Anfrage ist zu groß (höchstens 1 MiB).',
+    'bad_content_length': 'Die Länge der Anfrage ist nicht lesbar.',
+    'captain_approval_required': 'Dafür fehlt die Freigabe des Captains – erst im Posteingang entscheiden.',
+    'captain_approval_invalid': 'Die Freigabe passt nicht mehr zu dieser Änderung (Einmal-Token verbraucht oder Inhalt geändert) – bitte neu beantragen.',
+    'unknown_shell': 'Diese Oberfläche gibt es nicht im Paket.',
+    'module_changed_since_the_request': 'Das Modul hat sich seit dem Antrag geändert – bitte neu beantragen.',
+    'binding_stale': 'Der Stand hat sich seit dem Antrag geändert – nichts wurde angewendet; bitte neu beantragen.',
 }
+# S7 (Harness Stufe 3, Härtung 30.10.): aus einem Harness-Prozess (befehl, Lauf) darf keine Entscheidung über ein Gate kommen – auf keinem Weg
+HERKUNFT_WEGE = re.compile(r'/api/(?:decisions/answer|mission/(?:approve|reject)|actions|update/uebernehmen|[a-z0-9_/-]+/apply)')
 
 
 def serve(project_root: Path, architecture_root: Path, port=0, open_browser=False, window=False, shell=None):

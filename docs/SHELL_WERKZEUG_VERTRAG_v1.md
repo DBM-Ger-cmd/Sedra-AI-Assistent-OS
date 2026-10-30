@@ -305,3 +305,24 @@ Freigegeben mit G2-S0-13; Wortlaut aus `SPEC_AGENTEN_ORCHESTRIERUNG_v1.md`, D1 b
   `sedraWechsel.menueHaken(fn)` setzt. Der Wechsel selbst bleibt Vertragscode: `sedraWechsel.wechseln({shell: id})`,
   `sedraWechsel.uebersicht()`, `sedraWechsel.leeren()`, `sedraWechsel.setScale(name)` und `sedraBoot.setTheme(name)` sind die einzigen
   Wege – eine Shell mit Menü baut keinen zweiten. Ein anderer Wert ist `umschalter_invalid`. Nur die Harness-Shell nutzt `menue`.
+
+## Nachtrag 30.10.2026 (Härtungsrunde UIX, E3/E4): kein Inline-Script, Einbetten über die Laufzeit, Prüfzugang
+
+- **N9 Einbetten (`ctx.einbetten`).** Ein Werkzeug, das ein anderes Paket-Werkzeug in seiner Fläche zeigen will (GateWay → Schutz),
+  ruft `const e = ctx.einbetten('<id>', container, objekt)` – die Laufzeit hängt es mit **dessen** Kennung ein (eigene API-Allowlist,
+  eigene `emits`, eigenes Gedächtnis), `e.abbauen()` baut es ab, und mit dem Einbettenden geht es ohnehin mit (`unmountTool`).
+  Nur `trust: CORE` und keine Instrumente; Nicht-CORE laufen im Rahmen. `root.sedra.tools.get(...)` aus einem Werkzeug ist damit
+  verboten (§2) und wird geprüft (`test_uix_hardening_2026_10_30.VertragParagraf2`).
+- **Reservierte Ereignisse (N3 scharf).** `task.changed`, `model.changed`, `system.state`, `desk.*`, `tools.refresh`, `agent.changed`,
+  `issue.changed`, `budget.warning`, `slot.changed`, `harness.*` sendet nur der Strom; der Bus lehnt sie von einem Werkzeug ab, das
+  Gateway weist ein Manifest mit solchen `emits` ab (`events_emits_reserved`).
+- **Prüfzugang.** `window.sedraBoot.ctx` (Seiten-API, Bus, `makeContext`) und die lebenden Registrierungen `sedra.tools`/`sedra.shells`
+  gibt es nur mit Schalter `entwicklung` oder in einer Prüfung (`SEDRA_PRUEFZUGANG=1` im Prozess von `uix_check`/Tests). Im Betrieb
+  fehlen sie; `window.sedraBoot.manifest` bleibt. Kein Werkzeug und keine Shell greift auf `sedraBoot.ctx`, `sedraApi`,
+  `sedra.tools`/`sedra.shells` zu; `sedraWechsel` ruft nur die Shell (N3).
+- **CSP ohne Inline-Script (§6 scharf).** `script-src 'self'`: die Rahmenseite trägt das Manifest als `data-manifest` am Container
+  (`rahmen.js` startet beim Laden), die Hardware-Seite lädt `uix/js/hardware_dashboard.js`. Nur das Archiv `/retro` (Build 6) behält
+  `'unsafe-inline'`. `style-src` bleibt vorerst mit `'unsafe-inline'` (Shells setzen `style=`-Attribute aus Code).
+- **Routen und Allowlist (§6 geprüft).** Jede Route, die eine Shell oder ein Werkzeug ruft, steht in seiner `api`-Liste, und die Liste
+  nennt nichts, was der Code nicht ruft (`RoutenImManifest`; Helfer aus `ui/` zählen für den Rufer: `sedraStand.entscheiden`,
+  `sedraVorgabe.block`). `sedraStand.entscheiden(api, bus, id, way)` ist der eine Weg einer Shell, eine Entscheidung zu beantworten.

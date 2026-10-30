@@ -25,7 +25,7 @@
       this.update(undefined, null);
     },
 
-    unmount(){ this.el.replaceChildren(); this.el.classList.remove('ok', 'warn', 'bad'); this.el.removeAttribute('role'); },
+    unmount(){ this.el.replaceChildren(); this.el.classList.remove('ok', 'warn', 'bad'); this.el.removeAttribute('role'); this.el.removeAttribute('tabindex'); this.el.onclick = this.el.onkeydown = null; this.el.title = ''; },   // HU-T18: der Container der Shell bleibt sauber
 
     update(reading, problem){
       const a = anzeige(reading === undefined ? undefined : ((reading || {}).wissen || null), problem);

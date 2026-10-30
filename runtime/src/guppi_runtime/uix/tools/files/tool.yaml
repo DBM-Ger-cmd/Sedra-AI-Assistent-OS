@@ -13,7 +13,7 @@ tool:
     - POST /api/project/file
     - POST /api/project/create    # Build 24 (B6-G-06): ein Ordner unter projects/ über das Dateisystem-Werkzeug der Runtime, mit Audit
   events:
-    emits: [object.open]
+    emits: []
     listens: [task.changed]
   trust: CORE
   tests: [test.spec.js]

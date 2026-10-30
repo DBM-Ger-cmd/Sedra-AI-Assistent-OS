@@ -12,7 +12,7 @@ tool:
   api:
     - POST /api/objects
   events:
-    emits: [object.open]
+    emits: []
     listens: [slot.changed, model.changed, agent.changed, desk.resync]
   trust: CORE
   tests: [test.spec.js]

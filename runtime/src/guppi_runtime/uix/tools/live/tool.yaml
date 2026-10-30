@@ -11,7 +11,7 @@ tool:
   api:
     - POST /api/live
   events:
-    emits: [object.open]
+    emits: []
     listens: [live.line, task.changed]
   trust: CORE
   tests: [test.spec.js]

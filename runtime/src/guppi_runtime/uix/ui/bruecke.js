@@ -25,12 +25,15 @@
     return '';
   }
 
-  // Die Routen im Manifest stehen als „GET /api/x“. Methode und Pfad müssen genau passen.
+  // Die Routen im Manifest stehen als „GET /api/x“ oder „GET /api/x/*“ (Präfix, Vertrag §6) – wie `desk/gateway.route_allowed`.
   function routeErlaubt(api, method, path){
     const m = String(method || 'GET').toUpperCase();
+    if(path.includes('..') || path.includes('//')) return false;
     return (api || []).some(e=>{
       const teile = String(e).trim().split(/\s+/);
-      return teile.length >= 2 && teile[0].toUpperCase() === m && teile[1] === path;
+      if(teile.length < 2 || teile[0].toUpperCase() !== m) return false;
+      const p = teile[1];
+      return p.endsWith('/*') ? (path.startsWith(p.slice(0, -1)) && path.length > p.length - 1) : p === path;
     });
   }
 
@@ -69,6 +72,12 @@
         const sh = e.shell || shell;
         if(!sh || typeof sh[msg.name] !== 'function') throw new Error('shell_fehlt:' + msg.name);
         const args = Array.isArray(msg.args) ? msg.args.slice(0, 2) : [];
+        // Härtung HU-1: ein abgeschottetes Werkzeug öffnet Objekte, keine Oberflächen – `open({type:'shell'})` wäre ein Shell-Wechsel mit Neuladen
+        if(msg.name === 'open'){
+          const o = args[0];
+          if(!o || typeof o !== 'object' || typeof o.type !== 'string' || o.type === 'shell' || !/^[a-z][a-z0-9_-]{0,30}$/.test(o.type)
+             || (typeof o.id !== 'string' && typeof o.id !== 'number')) throw new Error('open_objekt_ungueltig');
+        }
         const daten = await sh[msg.name](...args);
         antworte(e, msg.id, {ok: true, daten: daten === undefined ? null : daten});
       }catch(err){ antworte(e, msg.id, {ok: false, fehler: String(err && err.message || err)}); }

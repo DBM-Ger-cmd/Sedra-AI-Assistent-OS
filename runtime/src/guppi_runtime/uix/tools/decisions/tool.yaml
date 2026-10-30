@@ -10,7 +10,7 @@ tool:
   api:
     - GET /api/decisions
   events:
-    emits: [object.open]
+    emits: []
     listens: [decision.pending, decision.answered]
   trust: CORE
   tests: [test.spec.js]

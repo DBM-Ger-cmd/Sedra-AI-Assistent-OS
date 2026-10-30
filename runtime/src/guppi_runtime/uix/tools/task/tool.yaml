@@ -11,7 +11,7 @@ tool:
     - POST /api/objects
     - POST /api/actions
   events:
-    emits: [object.open]
+    emits: []
     listens: [task.changed, decision.answered]
   trust: CORE
   tests: [test.spec.js]

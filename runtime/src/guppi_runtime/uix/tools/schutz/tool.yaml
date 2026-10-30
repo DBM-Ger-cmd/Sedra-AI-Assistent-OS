@@ -5,12 +5,12 @@ tool:
   version: 1.0.0
   handles: [gateway]
   kind: object
+  instanzen: viele                 # Härtung 30.10. (HU-T1): Nachweis neben dem GateWay und eingebettet in dessen Menü zugleich
   slot: nachweis
   entry: {js: tool.js, css: tool.css}
   api:
     - GET /api/guard/status
     - POST /api/guard/probe
-    - GET /api/decisions
   events: {emits: [decision.answered], listens: [decision.pending, decision.answered]}
   trust: CORE
   needs: {ui: ">=1.0 <2"}

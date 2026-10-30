@@ -35,7 +35,7 @@
       this.el = {};
       host.append(this.kopf(), this.raum(), this.schublade(), this.fab());
       this.shellApi = {open: o=>this.openObject(o), notify: (t, tone)=>this.notify(t, tone),
-                       decide: (id, way)=>this.api('/api/decisions/answer', {method: 'POST', body: {id, way}}), reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
+                       decide: (id, way)=>root.sedraStand.entscheiden(this.api, ctx.bus, id, way), reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
       this.melder = root.sedraStand.makeMelder(this.api);        // Vertrag 1.1 §10.2: was in der Blase liegt, kennt die nächste Shell
       this.mountTalk();
       ctx.bus.on('object.open', o=>this.openObject(o));
@@ -142,7 +142,7 @@
       if(m && this.modus && m.id !== this.modus.id){ this.modus = m; this.el.modus.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.modus === m.id)); this.el.feld.placeholder = m.platzhalter; try{ localStorage.setItem(KEY, m.id); }catch(_e){} }
       this.mounted.forEach(s=>root.sedraLifecycle.unmountTool(s, this.onProblem)); this.mounted = [];
       this.el.blasen.replaceChildren();
-      const tools = this.ctx.tools.for(object.type);
+      const tools = this.ctx.tools.forObject(object);              // Härtung 30.10. (HU-S3, Nachtrag N1): typ:alle / typ:<id>
       const blase = d().el('div', 'fi-blase'); blase.dataset.verbs = '';
       blase.append(d().el('div', 'fi-blase-titel', object.title || object.type));
       if(!tools.length){ blase.append(d().empty('Für „' + object.type + '“ gibt es kein Werkzeug.')); this.el.blasen.append(blase); return; }

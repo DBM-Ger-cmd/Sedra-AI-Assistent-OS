@@ -255,8 +255,9 @@ class ThreeShells(unittest.TestCase):
             if opens:
                 self.assertIn(shell, mod.PROFILES, f'{shell} öffnet Objekte – dafür braucht die Abnahme ein Profil')
             elif shell in mod.PROFILES:
-                # Eine Shell mit eigenem Gesprächsfeld (Harness, Captain 28.10.2026, Frage 2) braucht ein Profil für ihre talk-Prüfung
-                self.assertIn('talk', mod.PROFILES[shell], f'{shell} öffnet keine Objekte – ein Profil nur mit eigenem Gesprächsfeld')
+                # Eine Shell mit eigenem Gesprächsfeld (Harness, Captain 28.10.2026, Frage 2) braucht ein Profil für ihre talk-Prüfung;
+                # ein Archiv-Profil (guppi-xp → /retro, Härtung 30.10.: provides ohne windows) prüft nur den archivierten Desktop
+                self.assertTrue('talk' in mod.PROFILES[shell] or mod.PROFILES[shell].get('archive'), f'{shell} öffnet keine Objekte – ein Profil nur mit eigenem Gesprächsfeld oder Archiv')
             else:
                 self.assertNotIn(shell, mod.PROFILES, f'{shell} öffnet keine Objekte – das allgemeine Profil genügt')
 

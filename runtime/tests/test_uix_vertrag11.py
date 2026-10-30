@@ -86,6 +86,22 @@ class Gedaechtnis(unittest.TestCase):
         self.assertIn('"frage":"neuer"', writes[0]); self.assertIn('"k":10', writes[1])
         self.assertEqual(out['ohne'], 'leer'); self.assertFalse(out['panel'])
 
+    def test_ablage_set_vor_get_ueberschreibt_nichts(self):
+        """Härtung 30.10. (HU-L4): set() vor dem ersten get() – der Server ersetzt die Werte, also werden die vorhandenen erst geholt und bleiben."""
+        out = run_js(LIFE, SCHEIN + """
+          (async()=>{
+            const l = box.sedraLifecycle, u = uhr(), rufe = [];
+            const api = async(path, opt)=>{ rufe.push([path, opt.body]); return path.endsWith('lesen') ? {werte: {alt: 'bleibt', frage: 'x'}, zeit: 5} : {}; };
+            const a = l.ablageFuer('wissen', {type: 'wissen', id: 'speicher'}, true, api, u);
+            a.set('frage', 'neu');
+            u.lauf(); await new Promise(r=>setTimeout(r, 0)); await new Promise(r=>setTimeout(r, 0));
+            const geschrieben = rufe.filter(r=>r[0].endsWith('schreiben')).map(r=>r[1].werte);
+            console.log(JSON.stringify({geschrieben, alt: await a.get('alt', 'weg')}));
+          })();
+        """)
+        self.assertEqual(out['geschrieben'], [{'alt': 'bleibt', 'frage': 'neu'}])
+        self.assertEqual(out['alt'], 'bleibt')
+
     def test_schliessen_vergisst_memo_und_sitzung(self):
         """A11: memoVergessen(objekt) löscht Memo und Sitzung aller Werkzeuge an diesem Objekt, andere bleiben."""
         out = run_js(LIFE, SCHEIN + """

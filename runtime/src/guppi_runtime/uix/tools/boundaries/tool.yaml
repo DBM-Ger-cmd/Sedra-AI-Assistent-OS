@@ -11,9 +11,8 @@ tool:
   api:
     - GET /api/boundaries
     - POST /api/boundaries/request
-    - POST /api/actions
   events:
-    emits: [object.open]
+    emits: []
     listens: [decision.answered]
   trust: CORE
   tests: [test.spec.js]

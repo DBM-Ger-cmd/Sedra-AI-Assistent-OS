@@ -10,7 +10,7 @@ tool:
   api:
     - GET /api/meter
   events:
-    emits: [object.open]
+    emits: []
     listens: [task.changed]
   trust: CORE
   tests: [test.spec.js]

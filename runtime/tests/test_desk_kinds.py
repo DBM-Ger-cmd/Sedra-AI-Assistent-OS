@@ -441,7 +441,7 @@ class ThroughTheServer(unittest.TestCase):
     def test_a_verb_without_id_needs_a_type_verb(self):
         for body in ({'type': 'task', 'verb': 'ausfuehren'}, {'type': 'echo', 'verb': 'rufen'}, {'type': 'raumschiff', 'verb': 'x'}):
             with self.subTest(body):
-                self.assertEqual(post(self.url, '/api/actions', body), (400, {'error': 'bad_request', 'message': 'id_required'}))
+                self.assertEqual(post(self.url, '/api/actions', body), (400, {'error': 'bad_request', 'message': 'id_required', 'code': 'id_required'}))   # Härtung 30.10. (HU-B12): code in jeder 400)
 
     def test_the_registry_is_frozen_after_the_start(self):
         self.assertTrue(self.hub.kinds.frozen)

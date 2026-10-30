@@ -39,9 +39,12 @@
     opts = opts || {};
     const k = kann();
     if(!k.ok) throw new Error(k.grund);
-    const stream = await root.navigator.mediaDevices.getUserMedia({audio: true});
-    const rec = new root.MediaRecorder(stream, {mimeType: k.mime});
+    // Härtung 30.10. (HU-L9): erst der Kern, dann das Mikrofon – lehnt die Route ab, bleibt kein Mikrofon offen
     const record = await api('/api/sprache/aufnahme/beginnen', {method: 'POST', body: {titel: opts.titel || '', mime: k.mime, sprache: opts.sprache || 'de'}});
+    const stream = await root.navigator.mediaDevices.getUserMedia({audio: true});
+    let rec;
+    try{ rec = new root.MediaRecorder(stream, {mimeType: k.mime}); }
+    catch(err){ stream.getTracks().forEach(t=>t.stop()); throw err; }
     const stand = {id: record.id, status: 'laeuft', sekunden: 0, pegel: 0, groesse: 0, stuecke: 0, offen: 0};
     let start = Date.now(), pausiert = 0, pauseSeit = 0, kette = Promise.resolve(), fehler = null, timer = null;
     let audio = null, analyser = null, puffer = null;

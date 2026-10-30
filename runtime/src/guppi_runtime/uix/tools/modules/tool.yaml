@@ -19,7 +19,7 @@ tool:
     - POST /api/uix/trust
     - POST /api/uix/remove
   events:
-    emits: [object.open]
+    emits: []
     listens: [tools.refresh, decision.answered]
   trust: CORE
   needs: {ui: ">=1.0 <2"}

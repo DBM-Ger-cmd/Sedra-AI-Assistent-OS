@@ -17,7 +17,7 @@ tool:
     - POST /api/chat/reply
     - POST /api/vorarbeiter/aktion
   events:
-    emits: [object.open]
+    emits: []
     listens: []
   trust: CORE
   needs: {ui: ">=1.0 <2"}

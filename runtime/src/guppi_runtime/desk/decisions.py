@@ -16,13 +16,14 @@ from __future__ import annotations
 APPLY = {'switch': '/api/switch/apply', 'routing': '/api/routing-config/apply',
          'model_add': '/api/model/add/apply', 'skill': '/api/library/custom/apply',
          'boundaries': '/api/boundaries/apply', 'install': '/api/uix/install/apply',
-         'trust': '/api/uix/trust/apply', 'gateway': '/api/gateway/apply'}
+         'trust': '/api/uix/trust/apply', 'gateway': '/api/gateway/apply', 'update': '/api/update/uebernehmen', 'cloud_url': '/api/cloud/base-url/apply'}   # Härtung E1/E2 (30.10.)
 REQUEST_TITLE = {'switch': 'Schalter umstellen', 'routing': 'Modell-Einstellung ändern',
                  'model_add': 'Neues Modell hinzufügen', 'skill': 'Eigenen Skill schreiben',
                  'boundaries': 'Modus und Grenzen festlegen', 'install': 'Modul installieren',
                  'trust': 'Schreibrouten freigeben', 'gateway': 'GateWay-Vorgang freigeben', 'orchestra': 'Agenten-Team ändern', 'standing': 'Dauerfreigabe',
                  'wissen_quelle': 'Wissensquelle freigeben', 'wissen_vorschlag': 'Wissen aufnehmen',          # Spec 7 (D7.3, D7.8)
-                 'harness_katalog': 'Freigabe-Katalog schreiben', 'harness_vorlage': 'Grenze einer Vorlage ändern'}   # Harness Stufe 5 (D-U2, D-U4)
+                 'harness_katalog': 'Freigabe-Katalog schreiben', 'harness_vorlage': 'Grenze einer Vorlage ändern',   # Harness Stufe 5 (D-U2, D-U4)
+                 'update': 'Update übernehmen', 'cloud_url': 'Cloud-Adresse ändern'}
 REQUEST_NOTE = {'switch': 'Schalter · gilt nach dem Neustart der Oberfläche', 'routing': 'Modell-Einstellung · gilt nach dem Neustart',
                 'model_add': 'Neues Modell · sofort nutzbar', 'skill': 'Bibliothek · die Datei wird vorher gesichert',
                 'boundaries': 'Gilt für alles, was in diesem Projekt passiert', 'install': 'Ein fremdes Modul · erst nach deiner Durchsicht',
@@ -33,7 +34,9 @@ REQUEST_NOTE = {'switch': 'Schalter · gilt nach dem Neustart der Oberfläche', 
                 'wissen_quelle': 'Wissensspeicher · der Inhalt wird für Agenten ab dieser Stufe lesbar; ohne Freigabe wird nichts aufgenommen',
                 'wissen_vorschlag': 'Wissensspeicher · Text eines Agenten wird Wissen für diese Stufe; ändert sich der Vorschlag, wird nichts ausgeführt',
                 'harness_katalog': 'Harness · die Datei des Captains wird vorher gesichert; hat sich der Katalog seit dem Antrag geändert, wird nichts geschrieben',
-                'harness_vorlage': 'Harness · Kopie der Vorlage in local_config mit neuer Grenze; die Datei im Repo bleibt'}
+                'harness_vorlage': 'Harness · Kopie der Vorlage in local_config mit neuer Grenze; die Datei im Repo bleibt',
+                'update': 'Programmdateien werden ersetzt · Sicherung liegt daneben, Rückweg über „Zurück zur Sicherung“ · wirkt nach dem Neustart',
+                'cloud_url': 'Der API-Schlüssel dieses Anbieters geht danach an die neue Adresse · wirkt nach dem Neustart'}
 WAYS = {'einmal': 'Einmal öffnen', 'freigeben_und_anwenden': 'Freigeben und anwenden', 'aendern': 'Grenze ändern …', 'ablehnen': 'Ablehnen',
         'cloud_diesen_lauf': 'Nur diesen Lauf in die Cloud', 'bestaetigen': 'Entsperren'}      # Spec 2 (D2.8, D2.10)
 
@@ -68,7 +71,8 @@ def request_decision(req):
             'ways': ['freigeben_und_anwenden', 'ablehnen'], 'apply': APPLY.get(kind),
             'binding': {k: v for k, v in binding.items() if k in ('section', 'key', 'old', 'new', 'describe', 'block', 'text', 'recipe_id', 'field',
                                                                  'vorgang_id', 'klasse', 'merkmale', 'weg', 'policy', 'binding',
-                                                                 'agent_id', 'op', 'vorlage', 'max_zuege', 'vorher', 'entwurf_hash', 'stand_hash')},
+                                                                 'agent_id', 'op', 'vorlage', 'max_zuege', 'vorher', 'entwurf_hash', 'stand_hash',
+                                                                 'tag', 'rechte', 'geaendert', 'entfallen', 'provider')},
             'agent_id': binding.get('agent_id')}
 
 

@@ -12,10 +12,12 @@
   const hoerer = new Map();
   let nr = 0;
 
+  const FRIST_MS = 15000;                         // Härtung 30.10. (HU-L15): ohne Antwort des Kerns hängt das Werkzeug nicht still
   function senden(op, extra){
     return new Promise((ok, bad)=>{
       const id = 'r' + (++nr);
-      offen.set(id, {ok, bad});
+      const t = setTimeout(()=>{ if(offen.delete(id)) bad(new Error('Keine Antwort vom Kern (' + op + ')')); }, FRIST_MS);
+      offen.set(id, {ok: v=>{ clearTimeout(t); ok(v); }, bad: e=>{ clearTimeout(t); bad(e); }});
       window.parent.postMessage(Object.assign({id, op}, extra), '*');
     });
   }
@@ -62,13 +64,23 @@
     };
   }
 
+  // Härtung E3 (30.10.): die Seite trägt das Manifest als Attribut; nach dem Laden aller Skripte (das Werkzeug registriert sich beim Laden) startet der Rahmen selbst
+  window.addEventListener('DOMContentLoaded', ()=>{
+    const el = document.getElementById('werk');
+    if(!el || !el.dataset.manifest) return;
+    let manifest = null;
+    try{ manifest = JSON.parse(el.dataset.manifest); }catch(_e){ el.textContent = 'Das Manifest des Rahmens ist nicht lesbar.'; return; }
+    root.sedraRahmen.start(manifest);
+  });
+
   root.sedraRahmen = {
     start(manifest){
       const mod = registriert[registriert.length - 1];
       const el = document.getElementById('werk');
       if(!mod || !el){ document.body.textContent = 'Werkzeug nicht geladen: ' + (manifest && manifest.id); return; }
-      try{ mod.mount(el, kontext(manifest)); }
-      catch(err){ el.textContent = 'Fehler im Werkzeug: ' + (err && err.message || err); }
+      const zeigen = err=>{ el.textContent = 'Fehler im Werkzeug: ' + (err && err.message || err); };
+      try{ Promise.resolve(mod.mount(el, kontext(manifest))).catch(zeigen); }
+      catch(err){ zeigen(err); }
     }
   };
 })();

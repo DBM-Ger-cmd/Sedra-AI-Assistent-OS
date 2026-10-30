@@ -23,13 +23,16 @@ function pill(text, tone){ return d().el('span', 't-rk-pill ' + (tone || 'muted'
       this.el = el; this.ctx = ctx; this.alle = []; this.stt = null; this.offen = null; this.laeuft = false;
       el.classList.add('t-rekorder');
       this.build();
-      this.kernHolen(); this.kernPoll = setInterval(()=>this.kernHolen(), 700);
+      // Härtung 30.10. (HU-T3): schnell (700 ms) nur, solange der Kern aufnimmt – sonst alle 4 s; der Kern meldet den Stand, das Pult fragt
+      this.kernPoll = setInterval(()=>{ this.takt = (this.takt || 0) + 1; if(this.laeuft || this.takt % 6 === 0) this.kernHolen(); }, 700);
+      this.kernHolen();
       return this.laden();
     },
 
     // Die Aufnahme läuft im Kern: ein Shell-Wechsel (unmount) stoppt sie nicht
     unmount(){
       clearInterval(this.poll); clearInterval(this.kernPoll);
+      if(this.audioUrl){ try{ URL.revokeObjectURL(this.audioUrl); }catch(_e){} this.audioUrl = null; }
       this.el.classList.remove('t-rekorder'); this.el.replaceChildren();
     },
 
@@ -46,7 +49,7 @@ function pill(text, tone){ return d().el('span', 't-rk-pill ' + (tone || 'muted'
         const r = await this.ctx.api('/api/sprache/aufnahmen');
         this.alle = r.aufnahmen || []; this.stt = r.stt || null;
         const letzte = this.alle[0];
-        this.zuletzt.textContent = letzte ? 'Zuletzt: „' + letzte.titel + '“ · ' + zeit(letzte.dauer) + ' · ' + (letzte.stt.status === 'fertig' ? 'Transkript da' : 'noch kein Text') : 'Noch keine Aufnahme.';
+        this.zuletzt.textContent = letzte ? 'Zuletzt: „' + letzte.titel + '“ · ' + zeit(letzte.dauer) + ' · ' + (((letzte.stt || {}).status) === 'fertig' ? 'Transkript da' : 'noch kein Text') : 'Noch keine Aufnahme.';
         this.drawStand(); this.drawListe();
         const laeuft = this.alle.some(a=>a.stt && a.stt.status === 'laeuft');
         clearInterval(this.poll); this.poll = laeuft ? setInterval(()=>this.laden(), 3000) : null;
@@ -170,7 +173,7 @@ function pill(text, tone){ return d().el('span', 't-rk-pill ' + (tone || 'muted'
       const k = d().el('article', 't-rk-karte' + (this.offen === a.id ? ' on' : ''));
       const kopf = d().el('div', 't-rk-karte-kopf');
       kopf.append(d().el('b', null, a.titel), d().el('small', 's-muted', zeit(a.dauer) + ' · ' + d().fmtBytes(a.groesse) + ' · ' + a.sprache + ' · ' + String(a.created_at || '').slice(0, 16).replace('T', ' ')),
-                  pill(STT[a.stt.status][0], STT[a.stt.status][1]));
+                  pill((STT[(a.stt || {}).status] || STT.offen || ['?', ''])[0], (STT[(a.stt || {}).status] || STT.offen || ['?', ''])[1]));
       d().clickable(kopf, ()=>{ this.offen = this.offen === a.id ? null : a.id; this.drawListe(); });
       k.append(kopf);
       if(this.offen !== a.id) return k;
@@ -201,7 +204,9 @@ function pill(text, tone){ return d().el('span', 't-rk-pill ' + (tone || 'muted'
         const box = karte.querySelector('.t-rk-audio'); box.replaceChildren();
         if(r.zu_gross || !r.daten){ box.append(d().el('div', 's-note', 'Zu groß zum Abspielen hier – die Datei liegt im Projekt: ' + r.pfad)); return; }
         const bytes = Uint8Array.from(atob(r.daten), c=>c.charCodeAt(0));
-        const audio = d().el('audio'); audio.controls = true; audio.src = URL.createObjectURL(new Blob([bytes], {type: r.mime}));
+        if(this.audioUrl){ try{ URL.revokeObjectURL(this.audioUrl); }catch(_e){} }      // Härtung 30.10. (HU-T14): der vorige Blob wird freigegeben
+        this.audioUrl = URL.createObjectURL(new Blob([bytes], {type: r.mime}));
+        const audio = d().el('audio'); audio.controls = true; audio.src = this.audioUrl;
         box.append(audio); audio.play().catch(()=>{});
       }catch(err){ this.meldung.textContent = 'Abspielen ging nicht: ' + err.message; }
     },

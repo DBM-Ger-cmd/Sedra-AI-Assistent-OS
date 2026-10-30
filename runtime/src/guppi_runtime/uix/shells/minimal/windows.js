@@ -48,7 +48,7 @@
     // Das gemerkte Layout wird **beim Bauen** gelesen, nicht erst beim Wiederherstellen: das Gesprächsfenster geht vorher auf,
     // und sein `save()` hätte den Stand sonst überschrieben, bevor ihn jemand liest (gefunden in der Abnahme von Shell E).
     const stored = (()=>{
-      try{ const raw = JSON.parse(localStorage.getItem('sedra.minimal.windows') || '[]'); return Array.isArray(raw) ? raw : []; }
+      try{ return sanitizeWindows(JSON.parse(localStorage.getItem('sedra.minimal.windows') || '[]')); }
       catch(_e){ return []; }
     })();
 
@@ -85,7 +85,7 @@
       open.delete(key(win.object));
       save();
       if(shell.onWindowClosed) shell.onWindowClosed(win.object);          // Vertrag 1.1 §9.3
-      shell.onWindowFocus(([...open.values()].pop() || {}).object || null);
+      shell.onWindowFocus(front());                                        // Härtung 30.10. (HU-S15): das oberste Fenster, nicht das zuletzt eingefügte
     }
 
     function unmountActive(win){
@@ -207,6 +207,29 @@
     return {open: openObject, close, closeAll, list, front, restore, save, refreshVerbs, focus, windows: open};
   }
 
-  root.sedraMinWindows = {makeWindows, placeBox, clampBox, orderTools, MIN_W, MIN_H, BAR_H, SHELF_H};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {placeBox, clampBox, orderTools, MIN_W, MIN_H, BAR_H, SHELF_H};
+  // Härtung 30.10. (HU-S5, wie cockpit/dock.sanitizeLayout §9.6): aus dem Browser-Speicher kommen nur saubere Einträge – bekannte Felder,
+  // Typ nach Muster, Box nur aus endlichen Zahlen, kein Doppel, höchstens MAX_RESTORE. Rein, mit node geprüft.
+  function sanitizeWindows(raw){
+    if(!Array.isArray(raw)) return [];
+    const OBJ = ['type', 'id', 'title', 'collection', 'ansicht', 'view'];
+    const text = v=>typeof v === 'string' || typeof v === 'number';
+    const seen = new Set(), out = [];
+    for(const e of raw){
+      const o = e && e.object;
+      if(!o || typeof o !== 'object' || typeof o.type !== 'string' || !/^[a-z][a-z0-9_-]{0,30}$/.test(o.type) || !text(o.id)) continue;
+      const k = o.type + ':' + o.id;
+      if(seen.has(k)) continue;
+      seen.add(k);
+      const object = {};
+      OBJ.forEach(f=>{ if(o[f] !== undefined && (f === 'collection' ? typeof o[f] === 'boolean' : text(o[f]))) object[f] = o[f]; });
+      const b = e.box;
+      const box = b && typeof b === 'object' && ['x', 'y', 'w', 'h'].every(f=>Number.isFinite(b[f])) ? {x: b.x, y: b.y, w: b.w, h: b.h} : null;
+      out.push(box ? {object, box} : {object});
+      if(out.length >= MAX_RESTORE) break;
+    }
+    return out;
+  }
+
+  root.sedraMinWindows = {makeWindows, placeBox, clampBox, orderTools, sanitizeWindows, MIN_W, MIN_H, BAR_H, SHELF_H};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {placeBox, clampBox, orderTools, sanitizeWindows, MIN_W, MIN_H, BAR_H, SHELF_H};
 })();

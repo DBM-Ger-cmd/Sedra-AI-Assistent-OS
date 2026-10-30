@@ -25,7 +25,7 @@
   }
   // der Körper für /api/chat/reply; `wissen` schaltet die Shell ein (Vorgabe gespraech.wissen), sonst ist es aus
   function antwortKoerper(tool, text){
-    const body = {mission_id: tool.mission || '', text, history: (tool.history || []).slice(0, -1).map(h=>({role: h.role, content: h.content})), attachments: [], vorgang: tool.vorgang || ''};
+    const body = {mission_id: tool.mission || '', text, history: (tool.history || []).slice(0, -1).slice(-MAX_HISTORY).map(h=>({role: h.role, content: h.content})), attachments: [], vorgang: tool.vorgang || ''};   // Härtung 30.10. (HU-T6): nie den ganzen Verlauf mitschicken
     if(tool.ctx && tool.ctx.shell && tool.ctx.shell.wissen) body.wissen = true;
     return body;
   }

@@ -477,7 +477,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   html=(UIX_DIR/'retro_desktop.html').read_text(encoding='utf-8')
   scripts=re.findall(r'<script src="/uix/js/([a-z_]+)\.js"></script>',html)
   self.assertEqual(scripts[-1],'main');self.assertEqual(scripts[0],'core')
-  self.assertEqual(sorted(scripts),sorted(f.stem for f in (UIX_DIR/'js').glob('*.js')))      # every file is loaded, none is missing
+  self.assertEqual(sorted(scripts),sorted(f.stem for f in (UIX_DIR/'js').glob('*.js') if f.stem!='hardware_dashboard'))      # every file is loaded, none is missing (hardware_dashboard.js gehört zur Seite /hardware, Härtung E3)
   self.assertNotIn('<script>',html);self.assertNotIn('<style>',html)
   for f in (UIX_DIR/'js').glob('*.js'):self.assertLess(len(f.read_text(encoding='utf-8').splitlines()),400,f.name)   # small enough for a model to edit
  def test_switching_models_frees_the_old_one_when_vram_is_short(self):

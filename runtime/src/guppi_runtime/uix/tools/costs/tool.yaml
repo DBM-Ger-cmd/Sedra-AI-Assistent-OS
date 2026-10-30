@@ -12,7 +12,7 @@ tool:
     - POST /api/cost
     - POST /api/objects
   events:
-    emits: [object.open]
+    emits: []
     listens: [task.changed, live.line, issue.changed, budget.warning]
   trust: CORE
   tests: [test.spec.js]

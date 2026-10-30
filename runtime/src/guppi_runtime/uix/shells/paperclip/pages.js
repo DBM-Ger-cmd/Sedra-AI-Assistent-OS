@@ -38,6 +38,15 @@
 
   // Der Verlauf: dieselbe Seite nicht zweimal hintereinander, nie länger als MAX_HISTORY (rein).
   // Die Ansicht gehört zum Schlüssel (N5): der Wechsel Liste/Board ist einen Schritt zurück wert.
+  // Härtung 30.10. (HU-S6): nur saubere Seiten aus dem Browser-Speicher (bekannte Felder, Typ nach Muster, ID Text oder Zahl)
+  function sanitizeHistory(raw){
+    if(!Array.isArray(raw)) return [];
+    const text = v=>typeof v === 'string' || typeof v === 'number';
+    return raw.filter(o=>o && typeof o === 'object' && typeof o.type === 'string' && /^[a-z][a-z0-9_-]{0,30}$/.test(o.type) && text(o.id))
+      .map(o=>{ const n = {type: o.type, id: o.id}; ['title', 'ansicht', 'view'].forEach(f=>{ if(text(o[f])) n[f] = o[f]; }); if(typeof o.collection === 'boolean') n.collection = o.collection; return n; })
+      .slice(-MAX_HISTORY);
+  }
+
   function pushHistory(history, object){
     const key = o=>o.type + ':' + o.id + (o.view ? ':' + o.view : '');
     const last = history[history.length - 1];
@@ -51,7 +60,7 @@
     let current = null;
 
     function load(){
-      try{ const raw = JSON.parse(localStorage.getItem('sedra.paperclip.history') || '[]'); history = Array.isArray(raw) ? raw : []; }
+      try{ history = sanitizeHistory(JSON.parse(localStorage.getItem('sedra.paperclip.history') || '[]')); }      // Härtung 30.10. (HU-S6)
       catch(_e){ history = []; }
     }
     function save(){
@@ -181,5 +190,5 @@
   }
 
   root.sedraPcPages = {makePages, pageFor, pushHistory, DASHBOARD, CARDS, MAX_HISTORY};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {pageFor, pushHistory, DASHBOARD, CARDS, MAX_HISTORY};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {sanitizeHistory, pageFor, pushHistory, DASHBOARD, CARDS, MAX_HISTORY};
 })();

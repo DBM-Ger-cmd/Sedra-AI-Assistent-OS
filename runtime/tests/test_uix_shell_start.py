@@ -21,7 +21,7 @@ class Manifest(unittest.TestCase):
         doc = yaml.safe_load((UIX / 'shells' / 'start' / 'shell.yaml').read_text(encoding='utf-8'))['shell']
         self.assertIn('chooser', doc['provides'])
         self.assertFalse(any(p in doc['provides'] for p in ('dock', 'windows')), 'der Einstieg zeigt die Auswahl, keine Objekte')
-        for route in ('GET /api/uix/modules', 'POST /api/uix/shell', 'POST /api/uix/scaffold', 'POST /api/uix/install'):
+        for route in ('GET /api/uix/modules', 'POST /api/uix/standard', 'POST /api/uix/scaffold', 'POST /api/uix/install'):   # Wechsel über sedraWechsel (Härtung 30.10., HU-S4), Standard-Knopf braucht seine Route (HU-S1)
             self.assertIn(route, doc['api'])
 
     def test_without_a_choice_the_entry_loads_and_a_choice_sticks(self):

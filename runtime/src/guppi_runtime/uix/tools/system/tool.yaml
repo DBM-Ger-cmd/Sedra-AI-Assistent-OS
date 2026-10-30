@@ -11,10 +11,9 @@ tool:
     - GET /api/status
     - POST /api/update/suche      # Update-Suche auf Klick (nur lesen)
     - POST /api/update/vorschau   # lädt den Tag in den Staging-Ordner, schreibt nichts ins Programm
-    - POST /api/update/uebernehmen # nur mit Rechte-Bestätigung aus der Vorschau
     - POST /api/update/zurueck    # stellt die letzte Sicherung wieder her
   events:
-    emits: [object.open]
+    emits: []
     listens: [system.state, model.changed]
   trust: CORE
   tests: [test.spec.js]

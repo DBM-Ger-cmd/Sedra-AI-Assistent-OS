@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 globalThis.sedra = {registerTool(){}};
 globalThis.prompt = ()=>{ throw new Error('prompt() ist verboten'); };
 require('../../ui/dom.js');
-const {zitatTeile, fehlerSatz, stufePruefen, artText, stufeText, hervorheben, relevanz} = require('./zitate.js');
+const {zitatTeile, fehlerSatz, stufePruefen, artText, stufeText, hervorheben, relevanz} = require('../../ui/zitate.js');     // seit Härtung E4 in ui/
 const {filterArgs, filterSatz} = require('./suche.js'); require('./quellen.js'); require('./eigenes.js');
 const {VORLAGEN, schonDa, argsVon} = require('./antrag.js');
 const {fortschritt} = require('./messung.js');

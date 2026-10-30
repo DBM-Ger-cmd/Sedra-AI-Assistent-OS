@@ -146,21 +146,30 @@ def decide(hub, mission_id):
             m['human_gates']['resolved'].append(gate)
         m['human_gates']['pending'] = []
         rt.missions.save(m)
+        payload = _payload(req)
+        def scheitern(code):
+            # Härtung 30.10.: ein Antrag, dessen Anwenden scheitert, bleibt nicht offen mit unverbrauchten Tokens liegen – er wird geschlossen und steht im Audit
+            m['execution'].pop('approval_tokens', None)
+            m['result'] = {'kind': req['kind'], 'error': code}
+            m['lifecycle']['status'] = 'closed'
+            rt.missions.save(m)
+            rt.audit.append('DESK_GATED_FAILED', component='desk', mission_id=mission_id, payload=dict(payload, reason=code[:200]))
         for gate in pending if req['kind'] not in SPENDS_TOKEN else ():
             request_ = gate['request']
             target = (request_.get('targets') or [''])[0]
             if not rt.guard.authorize(tokens[gate['gate_id']], mission_id=mission_id, action=request_['exact_action'], target=target,
                                       request_binding=req['binding'])['authorized']:
+                scheitern('captain_approval_invalid')
                 raise ValueError('captain_approval_invalid')
-        payload = _payload(req)
         try:
             if req['kind'] in SPENDS_TOKEN:
                 result = do(hub, req['binding'], {g['gate_id']: tokens[g['gate_id']] for g in pending})
             else:
                 result = do(hub, req['binding'])
-        except ValueError as exc:
+        except Exception as exc:
             code = str(exc)
-            if code != STALE and not code.startswith(REFUSED):
+            if not isinstance(exc, ValueError) or (code != STALE and not code.startswith(REFUSED)):
+                scheitern(f'{type(exc).__name__}: {code}')
                 raise
             m['execution'].pop('approval_tokens', None)
             m['result'] = {'kind': req['kind'], 'error': code}

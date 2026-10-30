@@ -6,7 +6,10 @@ that are switched off. Nothing here reads a module's code; the gateway checks th
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import re
+import tempfile
+import threading
 
 import yaml
 
@@ -84,12 +87,21 @@ class Registry:
         raw = yaml.safe_load(path.read_text(encoding='utf-8')) or {}
         return raw.get('uix', raw) if isinstance(raw, dict) else {}
 
+    _SCHREIBSPERRE = threading.Lock()        # Härtung 30.10.: zwei Tabs schreiben uix.yaml nacheinander, nicht übereinander
+
     def _write(self, doc) -> dict:
         path = self.config_path
         path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix('.yaml.tmp')
-        tmp.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=True), encoding='utf-8')
-        tmp.replace(path)
+        with self._SCHREIBSPERRE:
+            fd, tmp = tempfile.mkstemp(prefix=path.name + '.', suffix='.tmp', dir=path.parent)
+            try:
+                with os.fdopen(fd, 'w', encoding='utf-8') as fh:
+                    fh.write(yaml.safe_dump(doc, allow_unicode=True, sort_keys=True))
+                os.replace(tmp, path)
+            except BaseException:
+                try: os.unlink(tmp)
+                except OSError: pass
+                raise
         return self.config()
 
     # ---- Build 19: die eigene Ablage einer Shell (Captain 15.10.: „unten selber Aufgaben und Icons anlegen“)

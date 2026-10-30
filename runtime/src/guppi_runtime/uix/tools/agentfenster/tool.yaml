@@ -14,7 +14,7 @@ tool:
     - POST /api/objects
     - POST /api/actions
   events:
-    emits: [object.open]
+    emits: []
     listens: [agent.changed, issue.changed, budget.warning, decision.pending, decision.answered, desk.resync]
   trust: CORE
   tests: [test.spec.js]

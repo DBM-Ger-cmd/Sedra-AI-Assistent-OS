@@ -39,7 +39,8 @@
 
   let panel = null, state = null, redraw = null;
 
-  function close(){ if(panel){ panel.remove(); panel = null; state = null; redraw = null; } }
+  let away = null;                        // Härtung 30.10. (HU-S10): der Hörer geht mit dem Feld
+  function close(){ if(panel){ panel.remove(); panel = null; state = null; redraw = null; } if(away){ document.removeEventListener('mousedown', away); away = null; } }
 
   function open(host, shell, opts){
     close();
@@ -118,7 +119,8 @@
     };
     redraw();
     setTimeout(()=>{
-      const away = ev=>{ if(panel && !panel.contains(ev.target) && !host.contains(ev.target)){ close(); document.removeEventListener('mousedown', away); } };
+      if(!panel) return;
+      away = ev=>{ if(panel && !panel.contains(ev.target) && !host.contains(ev.target)) close(); };
       document.addEventListener('mousedown', away);
     }, 0);
   }

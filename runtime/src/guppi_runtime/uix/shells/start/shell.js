@@ -42,7 +42,7 @@
 
       this.buildHead();
       this.mountTalk();
-      ctx.bus.on('tools.refresh', ()=>this.refresh());
+      ctx.bus.on('tools.refresh', ()=>this.refresh().catch(e=>this.onProblem && this.onProblem('Oberflächen', e)));   // Härtung 30.10. (HU-S11)
       ctx.bus.on('decision.pending', ()=>this.decisions());
       ctx.bus.on('decision.answered', ()=>this.decisions());
       ctx.bus.on('desk.error', e=>this.notify('Die Runtime meldet: ' + e.message, 'warn'));
@@ -64,10 +64,10 @@
       catch(err){ this.el.main.replaceChildren(d().el('div', 's-note bad', 'Oberflächen nicht lesbar: ' + err.message)); return; }
       this.view = view;
       const grid = d().el('div', 'st-grid');
-      view.shells.filter(s=>s.id !== 'start').forEach(s=>grid.append(this.card(s)));   // die Auswahl selbst steht nicht zur Wahl
+      (view.shells || []).filter(s=>s.id !== 'start').forEach(s=>grid.append(this.card(s)));   // die Auswahl selbst steht nicht zur Wahl
       const col = d().el('div', 'st-col');
       col.append(grid, this.make());
-      if(view.rejected.length){
+      if((view.rejected || []).length){
         const note = d().el('div', 's-note warn');
         note.append(d().el('b', null, view.rejected.length + ' Modul(e) nicht geladen – '), d().el('span', null, 'Grund und Datei stehen im Werkzeug „Module“ der gewählten Oberfläche.'));
         col.append(note);
@@ -89,10 +89,7 @@
                   d().el('small', 's-muted', TRUST[s.trust] || s.trust));
       const row = d().el('div', 's-row');
       if(s.enabled) row.append(d().el('span', 's-note ok', 'läuft gerade'));
-      else row.append(d().button('Diese Oberfläche nehmen', async()=>{
-        await this.api('/api/uix/shell', {method: 'POST', body: {shell: s.id}});
-        this.shellApi.reload();
-      }, 'p'));
+      else row.append(d().button('Diese Oberfläche nehmen', ()=>root.sedraWechsel.wechseln({shell: s.id}), 'p'));     // Härtung 30.10. (HU-S4, Vertrag N3): ein Weg des Wechsels
       row.append(d().button(s.default ? 'Ist der Standard' : 'Zum Standard machen', async()=>{
         const out = await this.api('/api/uix/standard', {method: 'POST', body: {shell: s.id}});
         this.notify(out.note, 'note');
@@ -131,10 +128,7 @@
       box.append(own);
       if(root.sedraVorgabe){            // Build 17: aus einer Vorgabe – Satz an SEDRA oder Vorlage, Skizze, anlegen und gleich nehmen
         const vg = d().el('div', 'st-make-row');
-        vg.append(root.sedraVorgabe.block(this.api, (t, tone)=>this.notify(t, tone), async out=>{
-          await this.api('/api/uix/shell', {method: 'POST', body: {shell: out.id}});
-          this.shellApi.reload();                       // wie „Diese Oberfläche nehmen“: die gewählte Shell startet
-        }));
+        vg.append(root.sedraVorgabe.block(this.api, (t, tone)=>this.notify(t, tone), out=>root.sedraWechsel.wechseln({shell: out.id})));   // wie „Diese Oberfläche nehmen“ (HU-S4)
         box.append(vg);
       }
       box.append(foreign);

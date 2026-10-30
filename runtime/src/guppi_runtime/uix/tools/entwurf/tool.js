@@ -3,6 +3,7 @@
 // Rahmen (sandbox ohne Zugriff auf die Oberfläche). Gespeichert wird im Entwurfsordner, nie im Live-Code.
 
 (function(){
+  const MAX_HISTORY = 8;                   // so viel geht ans Modell (Härtung 30.10., HU-T6)
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
   const GUIDE = ('Du hilfst beim Entwerfen von Webseiten und Figuren für SEDRA (reines HTML, CSS und JavaScript, Three.js über ' +
@@ -79,6 +80,7 @@
       const row = d().el('p', 'et-line' + (tone ? ' ' + tone : ''));
       row.append(d().el('b', null, who), d().el('span', null, ' ' + text));
       this.log.append(row);
+      while(this.log.childElementCount > 600) this.log.firstChild.remove();     // Härtung 30.10. (HU-T6)
       this.log.scrollTop = this.log.scrollHeight;
       return row;
     },
@@ -148,10 +150,10 @@
       const row = this.line(who, 'denkt nach …', 'note');
       try{
         let out;
-        if(local) out = await this.ctx.api('/api/chat/reply', {method: 'POST', body: {mission_id: '', text, history: this.history.slice(0, -1), attachments: [], vorgang: ''}});
+        if(local) out = await this.ctx.api('/api/chat/reply', {method: 'POST', body: {mission_id: '', text, history: this.history.slice(0, -1).slice(-MAX_HISTORY), attachments: [], vorgang: ''}});   // HU-T6
         else{
           const [pid, model] = this.picker.value.slice('cloud:'.length).split('|');
-          out = await this.ctx.api('/api/chat/cloud', {method: 'POST', body: {provider: pid, model, text, history: this.history.slice(0, -1)}});
+          out = await this.ctx.api('/api/chat/cloud', {method: 'POST', body: {provider: pid, model, text, history: this.history.slice(0, -1).slice(-MAX_HISTORY)}});
         }
         row.remove();
         const ok = local ? out.status === 'completed' : out.status === 'completed';
@@ -163,14 +165,23 @@
         this.line(who, prose, '');
         if(match) this.offerPreview(match[1]);
         const act = ACTION.exec(reply);
-        if(act) await this.runAction(act[1]);
+        if(act) this.offerAction(act[1]);                 // Härtung HU-2: nie ohne Klick des Captains ausführen (wie talk.offer)
       }catch(err){ this.history.pop(); row.remove(); this.say('Fehler: ' + err.message, 'warn'); }
     },
 
-    // Vorarbeiter-Aktion aus der Antwort: feste Liste, Ergebnis im Gespräch
-    async runAction(json){
+    // Vorarbeiter-Aktion aus der Antwort: ein Knopf im Gespräch – erst der Klick des Captains führt aus (Vertrag: Vorschläge sind Knöpfe)
+    offerAction(json){
       let req;
       try{ req = JSON.parse(json); }catch(_err){ return this.say('Aktion nicht lesbar.', 'warn'); }
+      if(!req || typeof req.aktion !== 'string') return this.say('Aktion ohne Namen.', 'warn');
+      const wrap = d().el('div', 'et-offer');
+      wrap.append(d().el('small', 'hs-leise', 'Vorgeschlagene Aktion: ' + req.aktion + ' ' + JSON.stringify(req.args || {}).slice(0, 200)));
+      wrap.append(d().button('Aktion ausführen: ' + req.aktion, async ()=>{ wrap.remove(); await this.runAction(req); }, 'p'));
+      this.log.append(wrap);
+      this.log.scrollTop = this.log.scrollHeight;
+    },
+
+    async runAction(req){
       try{
         const out = await this.ctx.api('/api/vorarbeiter/aktion', {method: 'POST', body: {aktion: req.aktion, args: req.args || {}}});
         this.say('Aktion ' + req.aktion + ': ' + JSON.stringify(out).slice(0, 600), 'note');

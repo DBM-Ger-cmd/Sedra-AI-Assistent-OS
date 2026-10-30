@@ -12,8 +12,9 @@ tool:
   entry: {js: tool.js, css: tool.css}
   api:                              # die Allowlist: alles andere beantwortet der Server mit 403
     - POST /api/objects
+    - POST /api/actions             # die Handlungen aus actions() rufen Verben (Härtung 30.10.: fehlte – die Vorlage hätte 403 bekommen)
   events:
-    emits: [object.open]            # nur was hier steht, darf das Werkzeug senden
+    emits: []            # nur was hier steht, darf das Werkzeug senden
     listens: [task.changed]
   trust: CAPTAIN                    # CORE nur im Paket; von SEDRA gebaut: GUPPI_BUILT; fremd: COMMUNITY
   tests: [test.spec.js]

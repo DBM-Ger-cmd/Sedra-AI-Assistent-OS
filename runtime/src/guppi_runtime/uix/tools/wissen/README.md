@@ -34,7 +34,7 @@ ausgeschaltet ist. Fehler aus `ctx.api()` werden Sätze auf Deutsch (`zitate.js`
 **Gedächtnis (Vertrag 1.1):** in der Sitzung (sessionStorage) nur der Zustand der Ansicht (Reiter, Zahl der Treffer, Filter, aufgeklappt, die
 Kennung der markierten Quelle) – nie Frage, Treffer oder Eingaben. Die liegen in der Ablage des Servers (RAM, nie auf der Platte).
 
-Dateien: `zitate.js` (reine Teile), `suche.js`, `quellen.js`, `antrag.js`, `messung.js`, `eigenes.js`, `tool.js` (Zustand, Reiter, Vorschläge, Werkbank).
+Dateien: `ui/zitate.js` (reine Teile, Vertragscode – auch Gespräch und Fundstelle nutzen es), `suche.js`, `quellen.js`, `antrag.js`, `messung.js`, `eigenes.js`, `tool.js` (Zustand, Reiter, Vorschläge, Werkbank).
 
 ## Routen (Allowlist im Manifest)
 - `POST /api/objects` (Typen `wissen`, `wissen_quelle`, `wissen_vorschlag`)

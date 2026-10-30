@@ -14,7 +14,7 @@ tool:
     - POST /api/intent/create
     - GET /api/intent/vorlagen     # Vorlagen für Vorhaben mit Stufen (19.10.2026)
   events:
-    emits: [object.open]
+    emits: []
     listens: [task.changed, tools.refresh]
   trust: CORE
   tests: [test.spec.js]

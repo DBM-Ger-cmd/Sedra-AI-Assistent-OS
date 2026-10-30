@@ -17,7 +17,7 @@ tool:
     - POST /api/labor/connection
     - POST /api/labor/models-test
   events:
-    emits: [object.open]
+    emits: []
     listens: []
   trust: CORE
   needs: {ui: ">=1.0 <2"}

@@ -26,8 +26,10 @@
     let leiste = null;
     let openMenu = null;
 
+    let away = null;                      // Härtung 30.10. (HU-S8): der „Klick daneben“-Hörer geht mit dem Menü – auch wenn ein Eintrag es schließt
     function closeMenu(){
       if(openMenu){ openMenu.remove(); openMenu = null; }
+      if(away){ document.removeEventListener('mousedown', away); away = null; }
     }
 
     function dropdown(anchor, build){
@@ -40,7 +42,8 @@
       document.body.append(box);
       openMenu = box;
       setTimeout(()=>{
-        const away = e=>{ if(!box.contains(e.target)){ closeMenu(); document.removeEventListener('mousedown', away); } };
+        if(openMenu !== box) return;
+        away = e=>{ if(!box.contains(e.target)) closeMenu(); };
         document.addEventListener('mousedown', away);
       }, 0);
       return box;
@@ -56,10 +59,7 @@
     }
 
     // SEDRA: die Oberflächen – zurück zur Übersicht, oder gleich in eine andere
-    async function goOverview(){
-      await shell.api('/api/uix/shell', {method: 'POST', body: {shell: 'start', nur_jetzt: true}});
-      shell.shellApi.reload();
-    }
+    function goOverview(){ return root.sedraWechsel.uebersicht(); }        // Härtung 30.10. (HU-S4, Vertrag N3): ein Weg des Wechsels
 
     async function sedraMenu(box){
       item(box, 'Übersicht der Oberflächen', 'alle Oberflächen – die Wahl bleibt, bis du eine andere nimmst', ()=>goOverview());
@@ -67,10 +67,7 @@
       try{ view = await shell.api('/api/uix/modules'); }
       catch(err){ item(box, 'Oberflächen nicht lesbar', err.message, ()=>{}); return; }
       (view.shells || []).filter(s=>s.id !== 'start' && s.id !== 'minimal').forEach(s=>{
-        item(box, 'Wechseln zu ' + s.name, s.description || '', async()=>{
-          await shell.api('/api/uix/shell', {method: 'POST', body: {shell: s.id}});
-          shell.shellApi.reload();
-        });
+        item(box, 'Wechseln zu ' + s.name, s.description || '', ()=>root.sedraWechsel.wechseln({shell: s.id}));
       });
     }
 

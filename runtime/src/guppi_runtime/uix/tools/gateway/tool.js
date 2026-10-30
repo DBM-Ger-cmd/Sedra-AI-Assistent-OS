@@ -4,6 +4,7 @@
 // Kein eigenes fetch, kein Speicher, nur ctx.api; Stil nur unter .t-gateway, Farben nur Token.
 
 (function(){
+  const UPLOAD_MAX = 700 * 1024;          // Härtung 30.10. (HU-T10): der Server nimmt 1 MiB je Anfrage; Base64 wächst um ein Drittel
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
   const PH = /<(PERSON|COMPANY|EMAIL|PHONE|CUSTOMER_ID|ADDRESS|ROLE|TERM)_(\d{3})>/g;
@@ -95,7 +96,7 @@
       form.append(titel, wunsch, d().button('Neuer Vorgang', async()=>{ await this.neu(titel.value, wunsch.value); titel.value = ''; }, 'p'));
       box.append(form);
       const rows = d().el('div', 't-gateway-rows');
-      if(!list.vorgaenge.length) rows.append(d().empty('Noch kein Vorgang. Leg einen an – die Anfrage bleibt auf diesem Rechner.'));
+      if(!(list.vorgaenge || []).length) rows.append(d().empty('Noch kein Vorgang. Leg einen an – die Anfrage bleibt auf diesem Rechner.'));
       list.vorgaenge.forEach(v=>{
         const row = d().el('div', 't-gateway-row');
         row.append(d().el('b', null, v.titel), d().el('span', 't-gateway-pill ' + this.tone(v), v.zustand_wort || v.zustand),
@@ -212,10 +213,13 @@
       sel.disabled = locked; this.sel = sel;
       // Datei manuell einfügen: sie kommt in den Eingang des GateWay (ohne Projekt) und ist danach im Auswahlfeld
       const up = d().el('input'); up.type = 'file'; up.accept = '.md,.txt,.docx'; up.disabled = locked; up.setAttribute('aria-label', 'Datei hochladen');
+      const upNote = d().el('small', 's-note bad'); upNote.hidden = true;
       up.onchange = ()=>{ const f = up.files && up.files[0]; if(!f) return; const r = new FileReader();
+        if(f.size > UPLOAD_MAX){ upNote.hidden = false; upNote.textContent = 'Zu groß: ' + d().fmtBytes(f.size) + ' – höchstens ' + d().fmtBytes(UPLOAD_MAX) + '.'; up.value = ''; return; }   // Härtung 30.10. (HU-T10)
+        upNote.hidden = true;
         r.onload = async()=>{ try{ await this.ctx.api('/api/gateway/upload', {method: 'POST', body: {name: f.name, data: String(r.result).split(',')[1]}}); await this.refresh(); }
-          catch(err){ alert('Hochladen fehlgeschlagen: ' + err.message); } }; r.readAsDataURL(f); };
-      attach.append(sel, up, d().el('small', 's-muted', 'Nur .md, .txt und .docx · Datei hochladen oder aus dem Projekt'));
+          catch(err){ upNote.hidden = false; upNote.textContent = 'Hochladen fehlgeschlagen: ' + err.message; } }; r.readAsDataURL(f); };
+      attach.append(sel, up, upNote, d().el('small', 's-muted', 'Nur .md, .txt und .docx · Datei hochladen oder aus dem Projekt'));
       left.append(attach);
       // G-05 (Ticket B6-G-01): Zweck und verantwortliche Person – beide gehen in die Bindung der Freigabe.
       const bind = d().el('div', 't-gateway-attach t-gateway-bind');
@@ -278,13 +282,13 @@
       const facts = d().el('div', 't-gateway-facts');
       const fact = (k, val)=>{ const f = d().el('div'); f.append(d().el('small', 's-muted', k), d().el('b', null, val)); facts.append(f); };
       fact('Schutzklasse', e.klasse + ' · ' + e.klasse_wort);
-      fact('Merkmale', e.merkmale.length ? e.merkmale.map(m=>m.id).join(', ') : 'keine erkannt');
+      fact('Merkmale', (e.merkmale || []).length ? e.merkmale.map(m=>m.id).join(', ') : 'keine erkannt');
       fact('Erlaubte Wege', e.wege_wort.length ? e.wege_wort.join(' / ') : 'keiner');
       fact('Review (R1)', e.review === 'PENDING' ? 'deine Prüfung ist die Freigabe' : 'nicht nötig');
       fact('Zweck', v.zweck_wort || v.zweck || '–');
       fact('Verantwortlich', v.verantwortlich || '–');
       sec.append(facts);
-      e.gruende.forEach(g=>sec.append(d().el('div', 's-note ' + tone, g)));
+      (e.gruende || []).forEach(g=>sec.append(d().el('div', 's-note ' + tone, g)));
       const det = d().el('details'); det.append(d().el('summary', null, 'Mehr Infos – Merkmale und Zuordnung'));
       const tbl = d().el('table', 't-gateway-table');
       const tr = d().el('tr'); ['Merkmal', 'Bedeutung', 'gefunden in', 'Regel'].forEach(t=>tr.append(d().el('th', null, t))); tbl.append(tr);

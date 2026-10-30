@@ -10,7 +10,7 @@ tool:
   api:
     - GET /api/audit
   events:
-    emits: [object.open]
+    emits: []
     listens: [task.changed, decision.answered]
   trust: CORE
   tests: [test.spec.js]

@@ -6,7 +6,7 @@ shell:
   description: "Der alte Desktop aus Build 6 – Fenster, Karten, Kommandozeile. Unverändert, zum Vergleichen; die Werkzeuge des Vertrags gibt es dort nicht."
   version: 1.0.0
   entry: {js: shell.js}
-  provides: [windows]
+  provides: [chooser]          # Härtung 30.10. (HU-S14): die Shell leitet nur auf /retro um – sie öffnet keine Objekte (nicht windows)
   layout: {persist: browser}
   api: []
   trust: CORE

@@ -19,18 +19,13 @@ tool:
     - POST /api/gateway/vorgabe/loeschen   # eine gemerkte Vorgabe löschen
     - POST /api/gateway/vorschau   # Vorschau einer hochgeladenen Datei (nur Lesen)
     - POST /api/gateway/ausgabe   # Speichern unter in den Ausgang, mit Vermerk
-    - POST /api/gateway/arbeitskopie   # Arbeitskopie eines Originals (Ablage, Spezifikation Abschnitt 6)
-    - POST /api/gateway/speichern-unter   # bearbeitete Fassung in den Ausgang, mit Vermerk
     - POST /api/gateway/freigabe
     - POST /api/gateway/pruefung
     - POST /api/gateway/verwerfen
     - POST /api/gateway/frage      # B6-G-03: „Frag SEDRA“ – Wissensbasis, kein Modell
     - POST /api/gateway/wissen     # B6-G-03: eigener Eintrag des Nutzers (nur Audit, kein Gate)
-    - GET /api/decisions
-    - GET /api/guard/status      # Überblick und Regeln: der eingebettete Schutz liest den Zustand des GateWay
-    - POST /api/guard/probe      # Selbst ausprobieren: einen Text prüfen, ohne die KI zu rufen
   events:
-    emits: [object.open, decision.answered]
+    emits: [decision.answered]
     listens: [decision.answered, tools.refresh]
   trust: CORE
   needs: {ui: ">=1.0 <2"}

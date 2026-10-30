@@ -39,17 +39,19 @@
     // Was ein Werkzeug von der Shell bekommt: einen Weg zum Öffnen, einen zum Melden, einen zum Entscheiden.
     shellApi(){
       return {open: o=>this.open(o), notify: text=>console.info('[shell]', text),
-              decide: (id, way)=>this.ctx.api('/api/decisions/answer', {method: 'POST', body: {id, way}}),
+              decide: (id, way)=>root.sedraStand.entscheiden(this.ctx.api, this.ctx.bus, id, way),     // Härtung 30.10. (HU-S7): mit decision.answered
               reload: ()=>root.sedraWechsel && root.sedraWechsel.neuLaden ? root.sedraWechsel.neuLaden() : location.reload()};
     },
 
     open(object){
       if(!object) return;
+      // Härtung 30.10. (HU-S2): erst die alten Werkzeuge aushängen, dann leeren – auch wenn danach keines kommt (sonst leben Abos weiter)
+      (this.mounted || []).forEach(s=>root.sedraLifecycle.unmountTool(s, this.ctx.onProblem));
+      this.mounted = [];
       this.body.replaceChildren();
       const tools = this.ctx.tools.forObject(object);             // N1: zu genau diesem Objekt
       if(this.melder) this.melder.offen([object], root.sedraStand.schluessel(object));
       if(!tools.length){ this.body.append(d().empty('Kein Werkzeug für „' + object.type + '“.')); return; }
-      (this.mounted || []).forEach(s=>root.sedraLifecycle.unmountTool(s, this.ctx.onProblem));
       this.mounted = tools.map(manifest=>{
         const slot = d().el('div', 'sh-beispiel-tool');
         slot.dataset.tool = manifest.id;            // Vertragsmarke: so findet die Abnahme den Container jedes Werkzeugs

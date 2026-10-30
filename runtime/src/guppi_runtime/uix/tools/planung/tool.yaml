@@ -16,9 +16,8 @@ tool:
     - POST /api/chat               # „Übernehmen“ eines Auftrags: eine Aufgabe, geplant, nicht ausgeführt
     - POST /api/actions            # ein vorgeschlagenes Verb – derselbe Weg wie jeder Knopf, Gates darunter
     - GET /api/models              # die Rollen aus den Rezepten (wie die Besatzung)
-    - POST /api/objects            # der Stand: Ziele und Aufgaben, die heute festgelegt wurden
   events:
-    emits: [object.open]
+    emits: []
     listens: [task.changed, tools.refresh]
   trust: CORE
   tests: []

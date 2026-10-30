@@ -3,6 +3,7 @@
 // welcher Nummer er ist, das Werkzeug holt genau den Rest. Kein Polling, kein Nachladen von allem.
 
 (function(){
+  const MAX_ZEILEN = 600;
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
 
@@ -24,8 +25,9 @@
       again.style.marginLeft = 'auto';
       bar.append(this.head, again);
       el.replaceChildren(bar, this.console);
-      ctx.bus.on('live.line', e=>{ if(e.task_id === this.mission) this.pull(); });
-      ctx.bus.on('task.changed', e=>{ if(e.id === this.mission) this.pull(); });
+      const L = root.sedraLifecycle, pull = L && L.buendeln ? L.buendeln(()=>this.pull(), 300) : ()=>this.pull();        // HU-T5: viele Zeilen in Folge – ein Aufruf (ohne Laufzeit sofort)
+      ctx.bus.on('live.line', e=>{ if(e.task_id === this.mission) pull(); });
+      ctx.bus.on('task.changed', e=>{ if(e.id === this.mission) pull(); });
       return this.pull();
     },
 
@@ -48,6 +50,7 @@
       row.append(d().el('span', 't-live-text', line.line));
       if(line.at) row.title = d().fmtTime(line.at);
       this.console.append(row);
+      while(this.console.childElementCount > MAX_ZEILEN) this.console.firstChild.remove();     // Härtung 30.10. (HU-T6): das Protokoll wächst nicht ohne Ende
       this.console.scrollTop = this.console.scrollHeight;
     },
 

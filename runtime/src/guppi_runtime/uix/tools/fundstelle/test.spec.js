@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 globalThis.sedra = {registerTool(){}};
 require('../../ui/dom.js');
-require('../wissen/zitate.js');
+require('../../ui/zitate.js');     // seit Härtung E4 in ui/
 const {kopfText, teile, tool} = require('./tool.js');
 const K = globalThis.specKit;
 

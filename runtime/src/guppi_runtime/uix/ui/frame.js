@@ -91,7 +91,10 @@
         if(shellManifest.layout && shellManifest.layout.persist === 'browser'){
           try{ saved = JSON.parse(localStorage.getItem(key) || 'null'); }catch(_e){}
         }
-        if(saved && Array.isArray(saved.history)) this.history = saved.history.slice(-MAX_HISTORY);
+        // Härtung 30.10. (HU-L5): nur saubere Einträge aus dem Browser-Speicher – ein kaputter Eintrag darf den Start nicht brechen
+        const sauber = o=>o && typeof o === 'object' && typeof o.type === 'string' && /^[a-z][a-z0-9_-]{0,30}$/.test(o.type) && (typeof o.id === 'string' || typeof o.id === 'number');
+        if(saved && Array.isArray(saved.history)) this.history = saved.history.filter(sauber).map(o=>({type: o.type, id: o.id, title: typeof o.title === 'string' ? o.title : String(o.id), collection: !!o.collection})).slice(-MAX_HISTORY);
+        if(saved && !sauber(saved.current)){ saved.current = null; try{ localStorage.removeItem(key); }catch(_e){} }
         // §10.4: lag in einer anderen Shell etwas vorn, das dieser Rahmen zeichnen kann, wird es das Werkstück
         const stand = await this.melder.holen();
         const vorn = ((stand && stand.offen) || []).find(o=>root.sedraStand.schluessel(o) === (stand && stand.vorn));
@@ -221,7 +224,11 @@
         if(object.ansicht !== undefined) this.current.ansicht = String(object.ansicht);
         if(object.quelle !== undefined) this.current.quelle = String(object.quelle);
         if(this.melder) this.melder.offen([this.current].concat(this.history.slice().reverse()), root.sedraStand.schluessel(this.current));
-        if(!same){ this.history = this.history.filter(h=>!(h.type === object.type && h.id === object.id)).concat([this.current]).slice(-MAX_HISTORY); this.save(); }
+        if(!same){
+          const alt = this.history.filter(h=>!(h.type === object.type && h.id === object.id)).concat([this.current]);
+          alt.slice(0, Math.max(0, alt.length - MAX_HISTORY)).forEach(o=>{ try{ root.sedraLifecycle.memoVergessen(o); }catch(_e){} });   // Härtung 30.10. (HU-L17): verdrängte Objekte nehmen ihr Memo mit
+          this.history = alt.slice(-MAX_HISTORY); this.save();
+        }
         this.mounted.forEach(s=>root.sedraLifecycle.unmountTool(s, this.onProblem));
         this.mounted = []; this.body.replaceChildren(); this.title.textContent = this.current.title;
         const tools = this.orderTools(this.ctx.tools.forObject(this.current), this.current);   // N1: zu genau diesem Objekt
@@ -323,6 +330,13 @@
       async refreshKarte(){
         const zone = this.el.entscheidungen;
         if(!zone || L.entscheidungen !== 'karte') return;
+        if(this.karteLaeuft){ this.karteNochmal = true; return; }       // Härtung 30.10. (HU-L6): nie zwei Karten zugleich einhängen
+        this.karteLaeuft = true;
+        try{ await this._refreshKarte(zone); }
+        finally{ this.karteLaeuft = false; if(this.karteNochmal){ this.karteNochmal = false; this.refreshKarte(); } }
+      },
+
+      async _refreshKarte(zone){
         let open = null;
         try{ open = await this.api('/api/decisions'); }catch(_e){ return; }
         const count = (open && open.items || []).length;

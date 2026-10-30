@@ -32,6 +32,8 @@ FLAGS = (
     ('import()', re.compile(r'\bimport\s*\(')),
     ('localStorage', re.compile(r'\blocalStorage\b')),
     ('document.write', re.compile(r'\bdocument\.write\b')),
+    ('<script in SVG/HTML', re.compile(r'<\s*script\b', re.I)),                          # Härtung 30.10.: auch ein SVG kann Script tragen
+    ('on…= in Markup', re.compile(r'<[^>]*\son[a-z]+\s*=', re.I)),
     ('innerHTML', re.compile(r'\binnerHTML\b')),
     ('fremde Adresse', re.compile(r'https?://(?!127\.0\.0\.1|localhost)')),
     # Stufe B der Modul-Isolation (Plan 2026-10-19): der Kern-Zugang, die Adresse mit dem Token, Cookies und das Elternfenster
@@ -138,7 +140,7 @@ def read_module(folder: Path, kind='tools'):
         if len(files) >= MAX_FILES or total > MAX_BYTES:
             raise ValueError('module_too_large')
         files.append({'path': rel, 'bytes': size, 'sha256': sha256(path)})
-        if path.suffix.lower() in ('.js', '.html'):
+        if path.suffix.lower() in ('.js', '.html', '.svg'):
             findings.extend(scan_text(path.read_text(encoding='utf-8', errors='replace'), rel))
     return {'files': files, 'findings': findings, 'bytes': total}
 

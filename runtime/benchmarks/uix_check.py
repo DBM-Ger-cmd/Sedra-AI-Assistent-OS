@@ -25,6 +25,7 @@ Checks (each line of the report is one check, `ok` or `FAIL`):
 Exit code 0 when every check is ok."""
 import argparse
 import json
+import os
 import sys
 import tempfile
 import threading
@@ -299,6 +300,7 @@ def start_server(say, shell=None, prepare=None, switches=None):
     `prepare(hub)` darf das Prüfprojekt vorher umbauen – etwa ein fremdes Modul einbauen, bevor der Browser es sieht.
     `switches` ({name: bool}) steht vor dem Start in local_config/switches.yaml – der Hub liest die Schalter beim Start."""
     sys.path.insert(0, str(RUNTIME / 'src')); sys.path.insert(0, str(RUNTIME / 'tests'))
+    os.environ['SEDRA_PRUEFZUGANG'] = '1'        # Härtung E4: die Prüfung braucht window.sedraBoot.ctx und sedra.shells – nur hier, nie im Betrieb
     try:
         import host_isolation
         host_isolation.setUpModule()

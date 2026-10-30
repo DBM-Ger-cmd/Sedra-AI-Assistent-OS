@@ -44,10 +44,29 @@
     ['Testcode', 'project', 'client = Client(api_key="sk-Demo7Xq2Lm9Rt4Vb8Nc1Kp6")']
   ];
 
-  root.sedra.registerTool({
+  // Härtung 30.10. (HU-T1, Nachtrag N2): eine Instanz je Container. Das Werkzeug läuft zugleich als Nachweis neben dem GateWay und
+  // eingebettet in dessen Menü (gateway/nav.js) – vorher teilten sich beide `this`, und das zweite mount überschrieb das erste.
+  var INSTANZEN = new Map();
+  var PROTO = {
     id: 'schutz',
 
     mount: function (host, ctx) {
+      var inst = Object.create(PROTO);
+      INSTANZEN.set(host, inst);
+      return inst._mount(host, ctx);
+    },
+    unmount: function (host) {
+      var inst = INSTANZEN.get(host);
+      if (!inst) return;
+      INSTANZEN.delete(host);
+      inst._unmount();
+    },
+    actions: function (host) {
+      var inst = INSTANZEN.get(host);
+      return inst ? inst._actions() : [];
+    },
+
+    _mount: function (host, ctx) {
       this.host = host; this.ctx = ctx; this.state = null;
       // Eingebettet (im Menü des GateWay links): die Ansicht gibt das Menü vor, die eigenen Reiter entfallen
       var ansicht = ctx.object && ctx.object.ansicht;
@@ -64,9 +83,9 @@
       return this.refresh();
     },
 
-    unmount: function () { (this.offs || []).forEach(function (off) { if (typeof off === 'function') off(); }); this.host.replaceChildren(); },
+    _unmount: function () { (this.offs || []).forEach(function (off) { if (typeof off === 'function') off(); }); this.host.replaceChildren(); },
 
-    actions: function () {
+    _actions: function () {
       var self = this;
       return [{ label: 'Neu laden', run: function () { return self.refresh(); } }];
     },
@@ -86,7 +105,7 @@
         el('div', { cls: 't-schutz-state' }, pill(m[0] + ' · ' + st.sharp + ' von ' + st.of + ' Regeln scharf', m[1]),
           el('span', { cls: 't-schutz-hint', text: m[2] })));
       this.tabs.replaceChildren.apply(this.tabs, TABS.map(function (t) {
-        var n = t[0] === 'ueberblick' ? st.pending.length : 0;
+        var n = t[0] === 'ueberblick' ? (st.pending || []).length : 0;
         return el('button', { type: 'button', role: 'tab', cls: 't-schutz-tab' + (self.tab === t[0] ? ' on' : ''), 'aria-selected': String(self.tab === t[0]),
           onclick: function () { self.tab = t[0]; self.render(); } }, t[1], n ? el('span', { cls: 't-schutz-count', text: String(n) }) : null);
       }));
@@ -109,11 +128,11 @@
           'Lokal lasse ich alles durch, das nur beobachtet wird. ' + (c.observed ? plural(c.observed, 'Anfrage hätte', 'Anfragen hätte') + ' ich scharf angehalten. ' : 'Bisher hätte ich nichts angehalten. ') +
           'Scharf wird alles im Modus Sandbox (Modus und Grenzen). Was in die Cloud geht, prüfe ich immer.'));
       }
-      var sec = section('Wartet auf dich', st.pending.length ? 'Jede Freigabe gilt genau einmal, für genau diese Anfrage, zehn Minuten.' : 'Nichts. Alles, was angehalten wird und deine Entscheidung braucht, erscheint hier.');
-      st.pending.forEach(function (p) { sec.appendChild(this.decisionCard(p)); }, this);
+      var sec = section('Wartet auf dich', (st.pending || []).length ? 'Jede Freigabe gilt genau einmal, für genau diese Anfrage, zehn Minuten.' : 'Nichts. Alles, was angehalten wird und deine Entscheidung braucht, erscheint hier.');
+      (st.pending || []).forEach(function (p) { sec.appendChild(this.decisionCard(p)); }, this);
       out.appendChild(sec);
       var last = section('Zuletzt');
-      last.appendChild(this.eventList(st.events.slice(0, 5)));
+      last.appendChild(this.eventList((st.events || []).slice(0, 5)));
       out.appendChild(last);
       return out;
     },
@@ -134,9 +153,11 @@
 
     answer: function (id, way) {
       var self = this;
-      return this.ctx.shell.decide(id, way).then(function (r) {
+      return Promise.resolve(this.ctx.shell.decide(id, way)).then(function (r) {
         self.ctx.bus.emit('decision.answered', { id: id, kind: 'model_guard' });
         return self.refresh();
+      }, function (err) {              // Härtung 30.10. (HU-T7): eine abgelehnte Antwort steht als Satz da, nicht nirgends
+        self.body.prepend(el('p', { cls: 't-schutz-error', text: 'Nicht beantwortet: ' + (err && err.message || err) }));
       });
     },
 
@@ -222,5 +243,6 @@
       sec.appendChild(this.eventList(this.state.events));
       return sec;
     }
-  });
+  };
+  root.sedra.registerTool(PROTO);
 })(window);

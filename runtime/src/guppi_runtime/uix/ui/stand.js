@@ -68,6 +68,14 @@
     return melder;
   }
 
-  root.sedraStand = {schluessel, sauber, ordnen, uebernahme, makeMelder, MAX};
+  // Härtung 30.10. (HU-S7): der eine Weg einer Shell, eine Entscheidung zu beantworten – antworten und `decision.answered` senden,
+  // damit Werkzeuge und Instrumente nachziehen (vorher hatten drei Shells ein decide ohne Ereignis)
+  async function entscheiden(api, bus, id, way){
+    const out = await api('/api/decisions/answer', {method: 'POST', body: {id, way}});
+    try{ bus && bus.emit('decision.answered', {id: String(id), kind: 'answered'}); }catch(_e){}
+    return out;
+  }
+
+  root.sedraStand = {schluessel, sauber, ordnen, uebernahme, makeMelder, MAX, entscheiden};
   if(typeof module !== 'undefined' && module.exports) module.exports = root.sedraStand;
 })();

@@ -1,3 +1,5 @@
+// Vertragscode (ui/): Zitate [W…], Fehlersätze und Stufenprüfung des Wissens – vorher tools/wissen/zitate.js; seit Härtung E4 (30.10.)
+// liegt es in ui/, weil Gespräch (talk) und Fundstelle es ebenso brauchen (Vertrag §2: keine Querimporte zwischen Werkzeugen).
 // Werkzeug „Wissen“ – die reinen Teile neben tool.js (Spec 7, D7.6/D7.9): Zitat-IDs `[W…]` im Text finden, Fehlercodes des
 // Servers als deutsche Sätze, die Stufe eines Formulars prüfen. Daten rein, Daten raus; nur `zitatKnoten` baut DOM aus `ui/dom.js`.
 // Kein Zeitgeber, keine Verbindung nach außen. Wird vor tool.js geladen (tool.yaml, entry.js).

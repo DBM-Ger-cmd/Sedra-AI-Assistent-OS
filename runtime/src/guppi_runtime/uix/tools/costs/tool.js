@@ -53,8 +53,9 @@
       this.issue = ctx.object && ctx.object.type === 'issue' ? ctx.object.id : null;
       this.mission = this.issue ? null : ctx.object && ctx.object.id;
       this.agent = null;
-      ctx.bus.on('task.changed', e=>{ if(e.id === this.mission) this.refresh(); });
-      ctx.bus.on('live.line', e=>{ if(e.task_id === this.mission) this.refresh(); });
+      const L = root.sedraLifecycle, refresh = L && L.buendeln ? L.buendeln(()=>this.refresh(), 500) : ()=>this.refresh();   // HU-T5: nicht je Zeile neu lesen (ohne Laufzeit, z. B. node-Spec: sofort)
+      ctx.bus.on('task.changed', e=>{ if(e.id === this.mission) refresh(); });
+      ctx.bus.on('live.line', e=>{ if(e.task_id === this.mission) refresh(); });
       ctx.bus.on('issue.changed', e=>{ if(this.issue && e.id === this.issue) this.refresh(); });
       ctx.bus.on('budget.warning', e=>{ if(this.issue && e.agent_id === this.agent) this.refresh(); });
       return this.refresh();

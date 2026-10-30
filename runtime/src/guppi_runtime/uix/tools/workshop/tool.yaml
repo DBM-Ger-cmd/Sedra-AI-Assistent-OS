@@ -20,7 +20,7 @@ tool:
     - POST /api/standard-test/start
     - POST /api/routing-config/request   # die Empfehlung der Teststrecke als Änderungsantrag (Gate), nie direkt
   events:
-    emits: [object.open, decision.pending]
+    emits: [decision.pending]
     listens: [model.changed, decision.answered]
   trust: CORE
   tests: [test.spec.js]

@@ -52,7 +52,11 @@
 
       // Die Shell-API für Werkzeuge (Vertrag §4): diese Shell hängt in Stufe 1 keine Werkzeuge ein, gibt sie aber vollständig.
       this.shellApi = {open: objekt=>{ const id = H.app.oeffnen(this, {object: objekt, label: objekt && objekt.title}); if(!id) this.hinweis('Das lässt sich nicht öffnen: kein Objekt.', 'warn'); },
-                       notify: (text, tone)=>this.hinweis(text, tone), decide: ()=>H.app.oeffnen(this, {object: {type: 'decision', id: 'alle', title: 'Entscheidungen', collection: true}, label: 'Entscheidungen'}),   // Stufe 4: der Posteingang ist eine App
+                       notify: (text, tone)=>this.hinweis(text, tone),
+                       // Härtung 30.10. (HU-S16): decide(id, way) beantwortet die Entscheidung (Vertrag §4) – vorher öffnete es nur den Posteingang und ließ die Antwort fallen;
+                       // ohne Kennung öffnet es weiter den Posteingang als App (Stufe 4)
+                       decide: (id, way)=>id && way ? root.sedraStand.entscheiden(this.api, ctx.bus, id, way).then(out=>{ this.freigabenLaden(); return out; })
+                                                    : H.app.oeffnen(this, {object: {type: 'decision', id: 'alle', title: 'Entscheidungen', collection: true}, label: 'Entscheidungen'}),
                        theme: name=>root.sedraBoot.setTheme(name), reload: ()=>location.reload()};
 
       H.seite.mount(this);

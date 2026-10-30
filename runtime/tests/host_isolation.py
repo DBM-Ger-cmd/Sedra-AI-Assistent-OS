@@ -34,6 +34,8 @@ _active = []
 
 
 def setUpModule():
+    import os
+    os.environ['SEDRA_PRUEFZUGANG'] = '1'        # Härtung E4: Browser-Prüfungen brauchen den Prüfzugang der Seite (window.sedraBoot.ctx)
     for p in _patches():
         p.start(); _active.append(p)
 

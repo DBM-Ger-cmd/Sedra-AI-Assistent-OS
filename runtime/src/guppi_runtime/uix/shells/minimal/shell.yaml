@@ -14,7 +14,6 @@ shell:
     - GET /api/decisions
     - POST /api/decisions/answer
     - GET /api/uix/modules          # Build 19: Menü „SEDRA“ – die anderen Oberflächen
-    - POST /api/uix/shell           # Build 19: zur Übersicht (nur dieser Lauf) oder in eine andere Oberfläche
     - GET /api/uix/shelf            # Build 19: die eigene Ablage
     - POST /api/uix/shelf
   trust: CORE

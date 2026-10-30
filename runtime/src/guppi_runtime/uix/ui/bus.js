@@ -38,6 +38,11 @@
     'harness.lauf':       ['id'],
     'harness.karte':      ['karte_id']
   };
+  // Härtung 30.10. (HU-L11, Nachtrag N3): diese Ereignisse sendet nur der Ereignisstrom/die Seite – ein Werkzeug darf sie nicht
+  // in `events.emits` eintragen und nicht senden, auch wenn das Manifest es nennt (desk/gateway.py weist das Manifest ab).
+  const NUR_STROM = ['task.changed', 'model.changed', 'system.state', 'desk.error', 'desk.resync', 'tools.refresh',
+                     'agent.changed', 'issue.changed', 'budget.warning', 'slot.changed'];
+  const nurStrom = name=>NUR_STROM.indexOf(name) >= 0 || name.indexOf('harness.') === 0;
 
   // '' when the event is fine, otherwise the reason – a sender id of null means the shell (it may send everything)
   function checkEvent(name, payload, allowed){
@@ -51,6 +56,7 @@
     }
     for(const key of EVENTS[name]) if(flat[key] === undefined) return 'Ereignis ' + name + ' braucht das Feld ' + key;
     if(allowed && allowed.indexOf(name) < 0) return 'dieses Werkzeug darf ' + name + ' nicht senden (events.emits in tool.yaml)';
+    if(allowed && nurStrom(name)) return name + ' sendet nur der Ereignisstrom, kein Werkzeug (Vertrag N3)';
     return '';
   }
 
@@ -79,6 +85,6 @@
   }
 
   const root = typeof window !== 'undefined' ? window : globalThis;                          // the pure part also runs in node
-  root.sedraBus = {EVENTS, checkEvent, makeBus};
+  root.sedraBus = {EVENTS, NUR_STROM, nurStrom, checkEvent, makeBus};
   if(typeof module !== 'undefined' && module.exports) module.exports = root.sedraBus;
 })();

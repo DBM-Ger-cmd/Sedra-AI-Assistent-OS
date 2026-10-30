@@ -12,7 +12,7 @@ tool:
   api:
     - POST /api/objects
   events:
-    emits: [object.open, wissen.auswahl]      # wissen.auswahl mit zweck gespraech: „Ins Gespräch übernehmen“
+    emits: [wissen.auswahl]      # wissen.auswahl mit zweck gespraech: „Ins Gespräch übernehmen“
     listens: [wissen.auswahl]
   trust: CORE
   tests: [test.spec.js]

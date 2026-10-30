@@ -19,19 +19,18 @@
   // Diese Ansichten zeigt das Werkzeug „schutz“
   const SCHUTZ = ['uebersicht', 'regeln', 'ausprobieren', 'verlauf'];
 
-  // Das Werkzeug „schutz“ in den Bereich einbetten; ein früherer Aufbau wird vorher abgebaut.
+  // Das Werkzeug „schutz“ in den Bereich einbetten – über die Laufzeit (Vertrag N9, Härtung E4): eigene Kennung, eigenes Gedächtnis,
+  // abgebaut mit dem GateWay. Kein Zugriff auf `root.sedra.tools` mehr.
   function schutzEinbetten(tool, host, ansicht){
-    const schutz = root.sedra && root.sedra.tools && root.sedra.tools.get('schutz');
-    if(!schutz){ host.append(d().empty('Das Werkzeug „Schutz“ fehlt – diese Ansicht kann nichts zeigen.')); return; }
-    if(tool.schutzAktiv && tool.schutzAktiv.host) tool.schutzAktiv.unmount();
-    const ctx = Object.assign({}, tool.ctx, {object: {type: 'gateway', id: 'alle', ansicht, eingebettet: true}});
-    tool.schutzAktiv = schutz;
-    schutz.mount(host, ctx);
+    aufraeumen(tool);
+    if(!tool.ctx.einbetten){ host.append(d().empty('Das Werkzeug „Schutz“ fehlt – diese Ansicht kann nichts zeigen.')); return; }
+    try{ tool.schutzAktiv = tool.ctx.einbetten('schutz', host, {type: 'gateway', id: 'alle', ansicht, eingebettet: true}); }
+    catch(err){ host.append(d().empty('Das Werkzeug „Schutz“ fehlt – diese Ansicht kann nichts zeigen (' + (err && err.message || err) + ').')); }
   }
 
-  // Beim Verlassen des Werkzeugs: den eingebetteten Schutz abbauen, damit keine Ereignisse mehr hängen bleiben.
+  // Beim Verlassen des Werkzeugs oder vor dem Neuaufbau: den eingebetteten Schutz abbauen, damit keine Ereignisse mehr hängen bleiben.
   function aufraeumen(tool){
-    if(tool.schutzAktiv && tool.schutzAktiv.host) tool.schutzAktiv.unmount();
+    if(tool.schutzAktiv) tool.schutzAktiv.abbauen();
     tool.schutzAktiv = null;
   }
 

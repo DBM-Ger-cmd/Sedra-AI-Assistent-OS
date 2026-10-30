@@ -8,8 +8,6 @@ shell:
   provides: [dock, talk]            # welche Slots sie anbietet (strip, tree, dock, talk, palette, windows, menubar, notify, inbox)
   layout: {persist: browser}
   api:
-    - GET /api/strip
-    - GET /api/decisions
     - POST /api/decisions/answer
   trust: CAPTAIN
   needs: {ui: ">=1.0 <2"}
