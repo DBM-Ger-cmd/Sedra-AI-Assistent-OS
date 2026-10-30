@@ -102,7 +102,7 @@ class LaufServerTests(unittest.TestCase):
         self.fail('Lauf endete nicht')
 
     def aufgabe(self, sitzungen, erlaubt, modelle=None, **ende):
-        body = {'titel': 'Test', 'projekt': 'pruef', 'sitzungen': sitzungen, 'erlaubt': erlaubt, 'ende': ende or {'max_aufrufe': 5}}
+        body = {'titel': 'Test', 'zweck': 'Probe', 'projekt': 'pruef', 'sitzungen': sitzungen, 'erlaubt': erlaubt, 'ende': ende or {'max_aufrufe': 5}}
         if modelle:
             body['modelle'] = modelle
         code, a = anfrage(self.url, 'POST', '/api/harness/aufgaben', body)

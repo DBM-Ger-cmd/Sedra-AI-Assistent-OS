@@ -216,7 +216,7 @@ def teil3(url, projekt):
     ablehnen(nach, 'Abnahme S3-B')
 
     # S3-C: Aufgabe ohne Karte, Rücknahme, wieder Karte
-    code, auf = anfrage(url, 'POST', '/api/harness/aufgaben', {'titel': 'Abnahme S3-C', 'projekt': projekt, 'sitzungen': [b], 'ende': {'max_aufrufe': 3},
+    code, auf = anfrage(url, 'POST', '/api/harness/aufgaben', {'titel': 'Abnahme S3-C', 'zweck': 'Abnahme: Schreiben ohne Karte, dann Rücknahme', 'projekt': projekt, 'sitzungen': [b], 'ende': {'max_aufrufe': 3},
                                                               'erlaubt': [{'werkzeug': 'datei_schreiben', 'muster': 'docs/abnahme_stufe3/**'}]})
     pruefe('S3-C Aufgabe angelegt', code == 200, antwort=auf.get('id') if code == 200 else auf)
     if code == 200:

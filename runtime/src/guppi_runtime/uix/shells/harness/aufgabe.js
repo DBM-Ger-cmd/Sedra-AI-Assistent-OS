@@ -19,6 +19,19 @@
     return ul;
   }
 
+  // Stufe 6 (HS-61): erst der Zweck, dann in Klartext, was erlaubt ist; die technischen Muster stehen darunter, eingeklappt.
+  function zweckZeilen(a){
+    const z = d().el('div', 'hs-auf-zweck');
+    z.append(d().el('div', 'hs-auf-satz', a.zweck_anzeige || a.zweck || ''), d().el('div', 'hs-leise hs-auf-darf', a.klartext || ''));
+    return z;
+  }
+
+  function technisch(liste){
+    const det = d().el('details', 'hs-auf-technik');
+    det.append(d().el('summary', 'hs-leise', 'Technische Muster (' + (liste || []).length + ')'), eintraege(liste));
+    return det;
+  }
+
   function sitzungsName(S, id){
     const s = S.sitzung && S.sitzung(id);
     return (s && s.titel ? s.titel + ' ' : '') + '(' + id + ')';
@@ -31,6 +44,7 @@
     box.dataset.karte = k.karte_id;
     box.append(d().el('div', 'hs-karte-kopf', ''));
     box.firstChild.append(d().el('span', 'hs-karte-icon', '⛨'), d().el('b', null, 'Vorschlag: ' + (doc.titel || k.ziel || '')), d().el('small', 'hs-leise', 'vom Vorarbeiter · Karte ' + k.karte_id));
+    box.append(d().el('div', 'hs-auf-satz', doc.zweck || '(ohne Zweck)'));
     box.append(d().el('div', 'hs-leise', 'Sitzungen: ' + (doc.sitzungen || []).map(id=>sitzungsName(S, id)).join(', ')));
     const haken = (doc.erlaubt || []).map((e, i)=>{
       const zeile = d().el('label', 'hs-auf-zeile');
@@ -81,8 +95,8 @@
     const kopf = d().el('div', 'hs-karte-kopf');
     kopf.append(d().el('b', null, a.titel), d().el('code', 'hs-karte-ziel', a.id));
     const rest = [a.rest_aufrufe !== null && a.rest_aufrufe !== undefined ? 'Rest ' + a.rest_aufrufe + ' Aufrufe' : null, a.rest_min !== null && a.rest_min !== undefined ? 'noch ' + minuten(a) : null].filter(Boolean).join(' · ');
-    box.append(kopf, d().el('div', 'hs-leise', (a.status === 'aktiv' ? rest : a.status + (a.grund ? ' – ' + a.grund : '')) + ' · ' + a.aufrufe + ' Aufrufe bisher' + (a.vorschlag_von ? ' · Vorschlag des Vorarbeiters' : '')),
-               d().el('div', 'hs-leise', 'Sitzungen: ' + a.sitzungen.map(id=>sitzungsName(S, id)).join(', ')), eintraege(a.erlaubt));
+    box.append(kopf, zweckZeilen(a), d().el('div', 'hs-leise', (a.status === 'aktiv' ? rest : a.status + (a.grund ? ' – ' + a.grund : '')) + ' · ' + a.aufrufe + ' Aufrufe bisher' + (a.vorschlag_von ? ' · Vorschlag des Vorarbeiters' : '')),
+               d().el('div', 'hs-leise', 'Sitzungen: ' + a.sitzungen.map(id=>sitzungsName(S, id)).join(', ')), technisch(a.erlaubt));
     if((a.modelle || []).length) box.append(d().el('div', 'hs-leise', 'Modelle: ' + a.modelle.join(', ')));
     (a.warnungen || []).forEach(w=>box.append(d().el('div', 'hs-karte-warnung', '⚠ ' + w)));
     if(a.status !== 'aktiv') return box;
@@ -108,6 +122,9 @@
     f.setAttribute('aria-label', 'Aufgabe freigeben');
     f.onsubmit = e=>e.preventDefault();
     const titel = d().el('input', 'hs-karte-notiz'); titel.placeholder = 'Titel der Aufgabe'; titel.setAttribute('aria-label', 'Titel');
+    const zweck = d().el('input', 'hs-karte-notiz'); zweck.maxLength = 160; zweck.setAttribute('aria-label', 'Zweck');
+    zweck.placeholder = 'Zweck in einem Satz, z. B. Testläufe der Gruppe harness starten und das Ergebnis lesen';
+    const zaehler = d().el('small', 'hs-leise', '0/160'); zweck.oninput = ()=>{ zaehler.textContent = zweck.value.length + '/160'; };
     const projekt = d().el('select', 'hs-projektwahl'); projekt.setAttribute('aria-label', 'Projekt');
     (S.projekte || []).forEach(p=>{ const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; projekt.append(o); });
     const sitzungen = d().el('div', 'hs-auf-sitzungen');
@@ -135,7 +152,7 @@
       const ende = {}; if(max.value) ende.max_aufrufe = Number(max.value); if(frist.value) ende.bis = new Date(Date.now() + Number(frist.value) * 60000).toISOString();
       ok.disabled = true;
       try{
-        const out = await S.api('/api/harness/aufgaben', {method: 'POST', body: {titel: titel.value.trim(), projekt: projekt.value,
+        const out = await S.api('/api/harness/aufgaben', {method: 'POST', body: {titel: titel.value.trim(), zweck: zweck.value.trim(), projekt: projekt.value,
           sitzungen: [...sitzungen.querySelectorAll('input:checked')].map(c=>c.value), erlaubt: liste,
           modelle: modelle.value.split(',').map(m=>m.trim()).filter(Boolean), ende}});
         S.hinweis('Aufgabe ' + out.id + ' freigegeben.' + ((out.warnungen || []).length ? ' Achtung: ' + out.warnungen.length + ' Warnung(en).' : ''), (out.warnungen || []).length ? 'warn' : 'note');
@@ -145,8 +162,8 @@
         meldung.replaceChildren(d().el('div', 'hs-karte-warnung', 'Nicht freigegeben: ' + err.message));
       }
     };
-    f.append(d().el('b', null, 'Aufgabe freigeben'), d().el('small', 'hs-leise', 'Innerhalb davon läuft der Agent ohne Karte. Verboten, feste Vorbehalte und Warnkarten bleiben beim Captain.'),
-             titel, projekt, sitzungen, erlaubt, modelle, grenzen, meldung, ok);
+    f.append(d().el('b', null, 'Aufgabe freigeben'), d().el('small', 'hs-leise', 'Freigabe heißt: Innerhalb dieser Liste arbeitet der Agent ohne Karte. Verboten, feste Vorbehalte und Warnkarten bleiben beim Captain.'),
+             zweck, zaehler, titel, projekt, sitzungen, erlaubt, modelle, grenzen, meldung, ok);
     return f;
   }
 
@@ -177,5 +194,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.aufgabe = {ansicht, vorschlagKarte, aufgabenZeile, formular, minuten};
+  root.sedraHarness.aufgabe = {ansicht, vorschlagKarte, aufgabenZeile, formular, minuten, zweckZeilen};
 })();

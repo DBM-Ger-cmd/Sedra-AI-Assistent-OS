@@ -49,7 +49,7 @@ class AufgabeTests(unittest.TestCase):
 
     def aufgabe(self, sitzungen, erlaubt, **ende):
         code, a = anfrage(self.url, 'POST', '/api/harness/aufgaben',
-                          {'titel': 'Test', 'projekt': 'pruef', 'sitzungen': sitzungen, 'erlaubt': erlaubt, 'ende': ende or {'max_aufrufe': 5}})
+                          {'titel': 'Test', 'zweck': 'Probe', 'projekt': 'pruef', 'sitzungen': sitzungen, 'erlaubt': erlaubt, 'ende': ende or {'max_aufrufe': 5}})
         self.assertEqual(code, 200, a)
         return a
 
@@ -145,13 +145,13 @@ class AufgabeTests(unittest.TestCase):
 
     def test_wege_und_fehler(self):
         sid = self.sitzung()
-        code, body = anfrage(self.url, 'POST', '/api/harness/aufgaben', {'titel': 'x', 'projekt': 'pruef', 'sitzungen': [sid],
+        code, body = anfrage(self.url, 'POST', '/api/harness/aufgaben', {'titel': 'x', 'zweck': 'Probe', 'projekt': 'pruef', 'sitzungen': [sid],
                                                                           'erlaubt': [{'werkzeug': 'datei_aendern', 'muster': ERSTER}], 'ende': {}})
         self.assertEqual((code, body['code'].split(':')[0]), (400, 'ende_fehlt'))
-        code, body = anfrage(self.url, 'POST', '/api/harness/aufgaben', {'titel': 'x', 'projekt': 'pruef', 'sitzungen': ['S-00000000'],
+        code, body = anfrage(self.url, 'POST', '/api/harness/aufgaben', {'titel': 'x', 'zweck': 'Probe', 'projekt': 'pruef', 'sitzungen': ['S-00000000'],
                                                                           'erlaubt': [{'werkzeug': 'datei_aendern', 'muster': ERSTER}], 'ende': {'max_aufrufe': 1}})
         self.assertEqual((code, body['code'].split(':')[0]), (400, 'sitzung_unbekannt'))
-        code, body = anfrage(self.url, 'POST', '/api/harness/aufgaben', {'titel': 'x', 'projekt': 'gibt-es-nicht', 'sitzungen': [sid],
+        code, body = anfrage(self.url, 'POST', '/api/harness/aufgaben', {'titel': 'x', 'zweck': 'Probe', 'projekt': 'gibt-es-nicht', 'sitzungen': [sid],
                                                                           'erlaubt': [{'werkzeug': 'datei_aendern', 'muster': ERSTER}], 'ende': {'max_aufrufe': 1}})
         self.assertEqual(code, 400)
         self.assertEqual(anfrage(self.url, 'GET', '/api/harness/aufgaben/T-00000000')[0], 404)

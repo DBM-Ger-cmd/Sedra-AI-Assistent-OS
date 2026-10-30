@@ -31,6 +31,8 @@ SCHREIBEN = ('datei_schreiben', 'datei_aendern')
 INTERPRETER = re.compile(r'(python[0-9.]*|py|pythonw|powershell|pwsh|cmd|node|bash|sh|wscript|cscript|perl|ruby|php|deno|bun|wsl|env)')
 STATUS = ('aktiv', 'erledigt', 'abgelaufen', 'erschoepft', 'zurueckgenommen')
 TITEL_MAX = 120
+ZWECK_MAX = 160
+KLARTEXT_TEILE = 4
 
 
 class AufgabeFehler(ValueError):
@@ -77,6 +79,11 @@ def pruefen_neu(doc, *, jetzt_z=None, vorschlag=False, verbotene_sitzungen=()):
     titel = doc.get('titel')
     if not isinstance(titel, str) or not titel.strip():
         raise AufgabeFehler('titel_fehlt')
+    zweck = doc.get('zweck')
+    if not isinstance(zweck, str) or not zweck.strip():
+        raise AufgabeFehler('zweck_fehlt: ein Satz, was die Aufgabe bewirkt (Stufe 6, HS-60)')
+    if len(zweck.strip()) > ZWECK_MAX:
+        raise AufgabeFehler(f'zweck_zu_lang: höchstens {ZWECK_MAX} Zeichen')
     projekt = doc.get('projekt')
     if not isinstance(projekt, str) or not projekt.strip():
         raise AufgabeFehler('projekt_fehlt')
@@ -135,7 +142,7 @@ def pruefen_neu(doc, *, jetzt_z=None, vorschlag=False, verbotene_sitzungen=()):
             raise AufgabeFehler(f'max_aufrufe_ungueltig: 1 bis {AUFRUFE_MAX}')
         out_ende['max_aufrufe'] = mx
     wunsch = doc.get('wunsch_id')
-    return {'titel': titel.strip()[:TITEL_MAX], 'projekt': projekt.strip(), 'sitzungen': list(dict.fromkeys(sitzungen)), 'erlaubt': eintraege,
+    return {'titel': titel.strip()[:TITEL_MAX], 'zweck': zweck.strip(), 'projekt': projekt.strip(), 'sitzungen': list(dict.fromkeys(sitzungen)), 'erlaubt': eintraege,
             'modelle': list(dict.fromkeys(m.strip() for m in modelle)), 'ende': out_ende,
             'wunsch_id': wunsch if isinstance(wunsch, str) else None}, warnungen
 
@@ -149,10 +156,50 @@ def _bis_zeit(wert):
     return z if isinstance(z, datetime) and z.tzinfo is not None else None
 
 
-def oeffentlich(a, jetzt_z=None):
+def _muster_text(muster):
+    m = str(muster or '').strip()
+    return '' if m in ('', '**', '*') else m
+
+
+def klartext(erlaubt, lauf_namen=None):
+    """Ein Satz „Darf: …“ aus der Liste `erlaubt` – fest aus einer Tabelle, ohne Modell (Stufe 6, HS-61). Nur Anzeige: gedeckt wird allein durch `erlaubt`."""
+    lauf_namen = lauf_namen or {}
+    teile, gesehen = [], set()
+    for e in erlaubt or []:
+        w, m = e.get('werkzeug'), _muster_text(e.get('muster'))
+        if w in LESEN:
+            text = 'Dateien lesen' + (f' ({m})' if m else '')
+        elif w == 'datei_schreiben':
+            text = 'Dateien neu schreiben in ' + (m or 'dem Projekt')
+        elif w == 'datei_aendern':
+            text = 'Dateien ändern in ' + (m or 'dem Projekt')
+        elif w == 'befehl':
+            text = 'Befehl ausführen: ' + (m or 'beliebig')
+        elif w == 'lauf_starten':
+            text = 'Lauf ' + (lauf_namen.get(m) or m or 'beliebig') + ' starten'
+        elif w == 'lauf_stoppen':
+            text = 'Läufe stoppen'
+        elif w == 'modell_laden':
+            text = 'Modell laden' + (f': {m}' if m else '')
+        elif w == 'modell_entladen':
+            text = 'Modell entladen'
+        else:
+            text = f'{w}' + (f' ({m})' if m else '')
+        if text not in gesehen:
+            gesehen.add(text)
+            teile.append(text)
+    if not teile:
+        return 'Darf: nichts'
+    rest = len(teile) - KLARTEXT_TEILE
+    return 'Darf: ' + ' · '.join(teile[:KLARTEXT_TEILE]) + (f' · und {rest} weitere' if rest > 0 else '')
+
+
+def oeffentlich(a, jetzt_z=None, lauf_namen=None):
     """Die Aufgabe für Oberfläche und Schild: mit Rest an Aufrufen und Minuten."""
     jetzt_z = jetzt_z or jetzt()
     out = dict(a)
+    out['klartext'] = klartext(a.get('erlaubt'), lauf_namen)
+    out['zweck_anzeige'] = a.get('zweck') or out['klartext']        # alte Aufgaben ohne Zweck zeigen den Klartext (HS-62)
     mx = (a.get('ende') or {}).get('max_aufrufe')
     out['rest_aufrufe'] = None if mx is None else max(0, mx - int(a.get('aufrufe') or 0))
     bis = _bis_zeit((a.get('ende') or {}).get('bis'))

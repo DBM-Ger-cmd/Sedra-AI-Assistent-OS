@@ -19,7 +19,7 @@
     POST   einstufen                          {werkzeug, ziel} → Stufe, Regel, Begründung (Vorbehalt vor Katalog)
     GET    werkzeuge                          die Werkzeuge mit Kurzbeschreibung
     GET    aufgaben                           Stufe 3: Aufgaben-Freigaben mit Rest und Zustand (HS-27)
-    POST   aufgaben                           {titel, projekt, sitzungen, erlaubt, modelle?, ende} → Aufgabe + warnungen (nur der Captain; Herkunftsprüfung S7)
+    POST   aufgaben                           {titel, zweck, projekt, sitzungen, erlaubt, modelle?, ende} → Aufgabe + warnungen (nur der Captain; Herkunftsprüfung S7)
     GET    aufgaben/<id>                      eine Aufgabe
     POST   aufgaben/<id>/zuruecknehmen        {grund?, laeufe_stoppen?=true} → Aufgabe + gestoppte_laeufe (HS-29)
     GET    vorarbeiter                        {projekt: {sitzung_id, ernannt, von}}
@@ -399,13 +399,13 @@ class HarnessApi:
     def aufgaben_weg(self, method, tid, tak, payload):
         if not tid:
             if method == 'GET':
-                return 200, {'aufgaben': [harness_aufgabe.oeffentlich(a) for a in self.aufgaben.alle()]}
+                return 200, {'aufgaben': [harness_aufgabe.oeffentlich(a, lauf_namen=self._lauf_namen()) for a in self.aufgaben.alle()]}
             if method == 'POST':
                 return 200, self.aufgabe_anlegen(payload)
         else:
             try:
                 if method == 'GET' and not tak:
-                    return 200, harness_aufgabe.oeffentlich(self.aufgaben.laden(tid))
+                    return 200, harness_aufgabe.oeffentlich(self.aufgaben.laden(tid), lauf_namen=self._lauf_namen())
                 if method == 'POST' and tak == 'zuruecknehmen':
                     a = self.aufgaben.zuruecknehmen(tid, payload.get('grund'))
                     befehl_mod.RUECKNAHME.ausloesen(tid)                    # ein laufender `befehl` unter dieser Aufgabe endet jetzt (Befund 7, Stufe 3)
@@ -414,10 +414,17 @@ class HarnessApi:
                         for l in self.laeufe.laufende():
                             if l.get('aufgabe_id') == tid:
                                 gestoppt.append(self.laeufe.stoppen(l['id'], grund=f'Aufgabe {tid} zurückgenommen', status_wunsch='abgebrochen')['id'])
-                    return 200, dict(harness_aufgabe.oeffentlich(a), gestoppte_laeufe=gestoppt)
+                    return 200, dict(harness_aufgabe.oeffentlich(a, lauf_namen=self._lauf_namen()), gestoppte_laeufe=gestoppt)
             except KeyError as exc:
                 raise NichtGefunden('aufgabe_unbekannt') from exc
         raise NichtGefunden('methode_unbekannt')
+
+    def _lauf_namen(self):
+        """{Lauf-ID: Name} für den Klartext einer Aufgabe; leer, wenn die Lauf-Typen nicht geladen sind."""
+        try:
+            return {k: v.get('name') for k, v in (getattr(self.laeufe, 'typen', None) or {}).items()}
+        except Exception:
+            return {}
 
     def aufgabe_anlegen(self, payload):
         self._projekt(str(payload.get('projekt') or ''))
@@ -427,7 +434,7 @@ class HarnessApi:
             except (NichtGefunden, KeyError, SitzungFehler):
                 raise ValueError('sitzung_unbekannt: ' + str(sid)) from None
         a, warnungen = self.aufgaben.anlegen(payload, von='captain')          # `von` setzt der Server, nie die Nutzlast
-        return dict(harness_aufgabe.oeffentlich(a), warnungen=warnungen)
+        return dict(harness_aufgabe.oeffentlich(a, lauf_namen=self._lauf_namen()), warnungen=warnungen)
 
     # ---- Stufe 3: Läufe (N7)
     def lauf_typen(self):
@@ -499,7 +506,7 @@ class HarnessApi:
         except harness_aufgabe.AufgabeFehler as exc:
             raise ValueError(str(exc)) from exc
         s = self._sitzung(sitzung_id)
-        vorschau = '\n'.join([f"Titel: {doc['titel']}", f"Sitzungen: {', '.join(doc['sitzungen'])}", 'Erlaubt:'] + [f"  - {e['werkzeug']}: {e['muster']}" for e in doc['erlaubt']]
+        vorschau = '\n'.join([f"Titel: {doc['titel']}", f"Zweck: {doc['zweck']}", harness_aufgabe.klartext(doc['erlaubt'], self._lauf_namen()), f"Sitzungen: {', '.join(doc['sitzungen'])}", 'Erlaubt:'] + [f"  - {e['werkzeug']}: {e['muster']}" for e in doc['erlaubt']]
                               + [f"Modelle: {', '.join(doc.get('modelle') or []) or '–'}", f"Ende: {doc['ende']}"])
         karte = self.karten.anlegen({'sitzung_id': sitzung_id, 'vorschlag_von': sitzung_id, 'antwort_id': None, 'werkzeug': 'aufgabe_vorschlagen', 'args': doc,
                                      'ziel': doc['titel'], 'an': 'captain', 'art': 'aufgabe', 'stufe': 'captain', 'regel': 'aufgabe', 'vorbehalt': False,

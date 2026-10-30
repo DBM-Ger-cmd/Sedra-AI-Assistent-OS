@@ -384,3 +384,4 @@
 .hs-katalog-befund.bad{background:var(--bad-bg);border-color:var(--bad-line)}
 .hs-katalog-leiste{display:flex;flex-wrap:wrap;gap:6px}
 .hs-katalog-vorschau>summary{cursor:pointer;font-size:var(--size-small);color:var(--muted)}
+.hs-auf-satz{font-weight:600;font-size:var(--size-body);margin:2px 0}.hs-auf-darf{margin-bottom:4px}.hs-auf-technik{margin:4px 0}.hs-auf-technik summary{cursor:pointer}

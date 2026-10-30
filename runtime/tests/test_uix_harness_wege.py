@@ -85,7 +85,7 @@ class WegeTests(unittest.TestCase):
         code, v = anfrage(self.url, 'POST', '/api/harness/vorarbeiter', {'projekt': 'pruef', 'sitzung_id': self.v})
         self.assertEqual(code, 200, v)
         box = self.api._kiste(self.api._sitzung(self.v))[0]
-        r = box.aufruf('aufgabe_vorschlagen', {'titel': 'Probe', 'projekt': 'pruef', 'sitzungen': [self.b], 'erlaubt': [{'werkzeug': 'lauf_starten', 'muster': 'frei_probe'}],
+        r = box.aufruf('aufgabe_vorschlagen', {'titel': 'Probe', 'zweck': 'Probe', 'projekt': 'pruef', 'sitzungen': [self.b], 'erlaubt': [{'werkzeug': 'lauf_starten', 'muster': 'frei_probe'}],
                                                'ende': {'max_aufrufe': 2}})
         self.assertEqual(r['status'], 'ok', r)
         _c, entsch = anfrage(self.url, 'GET', '/api/decisions')

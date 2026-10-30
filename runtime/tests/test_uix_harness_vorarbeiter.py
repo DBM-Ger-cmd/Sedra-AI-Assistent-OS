@@ -212,7 +212,7 @@ class VorarbeiterTests(unittest.TestCase):
 
     # ---- Aufgabenvorschlag
     def vorschlag(self, **kw):
-        doc = {'titel': 'Notiz pflegen', 'projekt': 'pruef', 'sitzungen': [self.b], 'erlaubt': [{'werkzeug': 'datei_aendern', 'muster': NOTIZ}],
+        doc = {'titel': 'Notiz pflegen', 'zweck': 'Notiz pflegen', 'projekt': 'pruef', 'sitzungen': [self.b], 'erlaubt': [{'werkzeug': 'datei_aendern', 'muster': NOTIZ}],
                'ende': {'max_aufrufe': 3}}
         doc.update(kw)
         return self.box(self.v).aufruf('aufgabe_vorschlagen', doc)

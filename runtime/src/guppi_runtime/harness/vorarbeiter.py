@@ -106,10 +106,10 @@ SCHEMAS = {
         {'karte_id': _S, 'weg': {'type': 'string', 'enum': list(WEGE)}, 'begruendung': _S, 'vorschau_hash': _S}, ['karte_id', 'weg', 'begruendung', 'vorschau_hash']),
     'aufgabe_vorschlagen': _fn(
         'aufgabe_vorschlagen',
-        'Schlägt dem Captain eine Aufgaben-Freigabe vor (er entscheidet auf einer Karte). Felder: titel, projekt, sitzungen (IDs S-…), erlaubt (Liste von {werkzeug, muster}), '
+        'Schlägt dem Captain eine Aufgaben-Freigabe vor (er entscheidet auf einer Karte). Felder: titel, zweck (ein Satz, höchstens 160 Zeichen: was die Aufgabe bewirkt), projekt, sitzungen (IDs S-…), erlaubt (Liste von {werkzeug, muster}), '
         'modelle (optional), ende ({bis (ISO mit Zeitzone, höchstens 24 h) und/oder max_aufrufe (höchstens 500)}). Keine weiten Muster.',
-        {'titel': _S, 'projekt': _S, 'sitzungen': {'type': 'array', 'items': _S}, 'erlaubt': {'type': 'array', 'items': {'type': 'object'}},
-         'modelle': {'type': 'array', 'items': _S}, 'ende': {'type': 'object'}}, ['titel', 'projekt', 'sitzungen', 'erlaubt', 'ende']),
+        {'titel': _S, 'zweck': _S, 'projekt': _S, 'sitzungen': {'type': 'array', 'items': _S}, 'erlaubt': {'type': 'array', 'items': {'type': 'object'}},
+         'modelle': {'type': 'array', 'items': _S}, 'ende': {'type': 'object'}}, ['titel', 'zweck', 'projekt', 'sitzungen', 'erlaubt', 'ende']),
     'aufgabe_beenden': _fn('aufgabe_beenden', 'Schließt eine aktive Aufgaben-Freigabe als erledigt (nur wenn sie „bei erledigt“ erlaubt). Verlängern oder erweitern kannst du nicht.',
                            {'id': _S, 'grund': _S}, ['id']),
 }
@@ -196,7 +196,7 @@ class Werkzeuge:
         return self._antwort('ok', f"Karte {karte['karte_id']}: {weg} entschieden. Ergebnis: {r.get('ergebnis_status')} – {str(r.get('ergebnis') or '')[:300]}")
 
     def vorschlagen(self, sitzung_id, projekt, args):
-        doc = {k: args.get(k) for k in ('titel', 'projekt', 'sitzungen', 'erlaubt', 'modelle', 'ende') if k in args}
+        doc = {k: args.get(k) for k in ('titel', 'zweck', 'projekt', 'sitzungen', 'erlaubt', 'modelle', 'ende') if k in args}
         if doc.get('projekt') != projekt:
             return self._antwort('fehler', 'error: projekt_passt_nicht – eine Aufgabe schlägst du nur für dein eigenes Projekt vor')
         karte = self.api.aufgabe_vorschlagen(sitzung_id, doc)

@@ -19,7 +19,7 @@ def roh(**kw):
 
 
 def eingabe(**kw):
-    d = {'titel': 'Test', 'projekt': 'p', 'sitzungen': [S1], 'erlaubt': [{'werkzeug': 'datei_aendern', 'muster': 'docs/log.md'}],
+    d = {'titel': 'Test', 'zweck': 'Probe', 'projekt': 'p', 'sitzungen': [S1], 'erlaubt': [{'werkzeug': 'datei_aendern', 'muster': 'docs/log.md'}],
          'ende': {'max_aufrufe': 5}}
     d.update(kw)
     return d
@@ -142,6 +142,39 @@ class PruefenTests(unittest.TestCase):
         e = eingabe(erlaubt=[{'werkzeug': 'datei_schreiben', 'muster': 'docs/skript.bat'}, {'werkzeug': 'befehl', 'muster': 'python3.12 -u *'}])
         with self.assertRaisesRegex(aufgabe.AufgabeFehler, 'S9'):
             aufgabe.pruefen_neu(e, jetzt_z=JETZT, vorschlag=True)
+
+    def test_zweck_pflicht_und_grenze(self):
+        d = eingabe(); d.pop('zweck')
+        with self.assertRaisesRegex(aufgabe.AufgabeFehler, 'zweck_fehlt'):
+            aufgabe.pruefen_neu(d, jetzt_z=JETZT)
+        with self.assertRaisesRegex(aufgabe.AufgabeFehler, 'zweck_fehlt'):
+            aufgabe.pruefen_neu(eingabe(zweck='   '), jetzt_z=JETZT, vorschlag=True)
+        with self.assertRaisesRegex(aufgabe.AufgabeFehler, 'zweck_zu_lang'):
+            aufgabe.pruefen_neu(eingabe(zweck='x' * 161), jetzt_z=JETZT)
+        a, _ = aufgabe.pruefen_neu(eingabe(zweck='  Notiz pflegen  '), jetzt_z=JETZT)
+        self.assertEqual(a['zweck'], 'Notiz pflegen')
+
+    def test_klartext_je_werkzeug_und_kuerzung(self):
+        k = aufgabe.klartext([{'werkzeug': 'datei_lesen', 'muster': '**'}, {'werkzeug': 'datei_schreiben', 'muster': 'docs/**'},
+                              {'werkzeug': 'datei_aendern', 'muster': 'docs/a.md'}, {'werkzeug': 'befehl', 'muster': 'git status'},
+                              {'werkzeug': 'lauf_starten', 'muster': 'run_tests'}, {'werkzeug': 'modell_laden', 'muster': 'coder.x'}],
+                             {'run_tests': 'Tests'})
+        self.assertTrue(k.startswith('Darf: Dateien lesen · Dateien neu schreiben in docs/** · Dateien ändern in docs/a.md · Befehl ausführen: git status'))
+        self.assertTrue(k.endswith('und 2 weitere'), k)
+        self.assertEqual(aufgabe.klartext([{'werkzeug': 'lauf_starten', 'muster': 'run_tests'}], {'run_tests': 'Tests'}), 'Darf: Lauf Tests starten')
+        self.assertEqual(aufgabe.klartext([]), 'Darf: nichts')
+
+    def test_oeffentlich_alte_aufgabe_ohne_zweck_zeigt_den_klartext(self):
+        alt = roh()                                                      # ohne `zweck`, wie vor Stufe 6
+        out = aufgabe.oeffentlich(alt, JETZT)
+        self.assertEqual(out['zweck_anzeige'], out['klartext'])
+        self.assertNotIn('zweck', alt)
+        neu = aufgabe.oeffentlich(roh(zweck='Notiz pflegen'), JETZT)
+        self.assertEqual(neu['zweck_anzeige'], 'Notiz pflegen')
+
+    def test_zweck_deckt_nichts(self):
+        a = roh(zweck='Alles erledigen')
+        self.assertIsNone(aufgabe_deckung.deckt([a], S1, 'befehl', 'rm -rf x', JETZT, katalog.passt))
 
     def test_vorschlag_ohne_vorarbeiter_als_nutzer(self):
         with self.assertRaisesRegex(aufgabe.AufgabeFehler, 'selbstfreigabe'):
