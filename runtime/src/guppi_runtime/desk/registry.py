@@ -10,12 +10,23 @@ import os
 import re
 import tempfile
 import threading
+import time
 
 import yaml
 
 UIX_DIR = Path(__file__).resolve().parents[1] / 'uix'
 DEFAULT_SHELL = 'start'      # der Einstieg, solange der Captain keine Oberfläche gewählt hat
 MODULE_ID = re.compile(r'^[a-z0-9-]{2,40}$')
+
+
+def _lesen(path) -> str:
+    """Windows: eine Datei, die gerade ersetzt wird, lässt sich für einen Moment nicht öffnen (PermissionError); kurz warten und neu versuchen."""
+    for versuch in range(20):
+        try:
+            return path.read_text(encoding='utf-8')
+        except PermissionError:
+            if versuch == 19: raise
+            time.sleep(0.02)
 
 
 class UixConfigError(ValueError):
@@ -39,7 +50,7 @@ class Registry:
         raw = {}
         if path.is_file():
             try:
-                raw = yaml.safe_load(path.read_text(encoding='utf-8')) or {}
+                raw = yaml.safe_load(_lesen(path)) or {}
             except yaml.YAMLError as exc:
                 raise UixConfigError(f'uix_yaml_unreadable:{exc}') from exc
         if not isinstance(raw, dict):
@@ -84,7 +95,7 @@ class Registry:
         path = self.config_path
         if not path.is_file():
             return {}
-        raw = yaml.safe_load(path.read_text(encoding='utf-8')) or {}
+        raw = yaml.safe_load(_lesen(path)) or {}
         return raw.get('uix', raw) if isinstance(raw, dict) else {}
 
     _SCHREIBSPERRE = threading.Lock()        # Härtung 30.10.: zwei Tabs schreiben uix.yaml nacheinander, nicht übereinander
@@ -97,7 +108,12 @@ class Registry:
             try:
                 with os.fdopen(fd, 'w', encoding='utf-8') as fh:
                     fh.write(yaml.safe_dump(doc, allow_unicode=True, sort_keys=True))
-                os.replace(tmp, path)
+                for versuch in range(20):          # Windows: ersetzt werden darf nicht, was ein Leser gerade offen hat (PermissionError); kurz warten und neu versuchen
+                    try:
+                        os.replace(tmp, path); break
+                    except PermissionError:
+                        if versuch == 19: raise
+                        time.sleep(0.02)
             except BaseException:
                 try: os.unlink(tmp)
                 except OSError: pass
