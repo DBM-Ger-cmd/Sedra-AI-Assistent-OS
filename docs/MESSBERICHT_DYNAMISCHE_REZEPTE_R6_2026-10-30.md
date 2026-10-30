@@ -38,7 +38,7 @@ Zwei Fehler dabei gefunden und behoben (Commit 8bdecd9):
 
 Aus `MESSBERICHT_SLOTS_2026-10-23.md` (freier VRAM bei mehr Gesamtkontext): rund 0,011 bis 0,014, im Mittel **0,0125 GiB je 1000 Token** (Summe über alle Slots). Sie steht **nicht** im Rezept: Mit der zu hohen Tabelle zusammen würde sie den Bedarf noch weiter aufblähen.
 
-## 5. Vorschlag für das Rezept (noch nicht eingetragen)
+## 5. Rezept (am 30.10. mit Freigabe des Captains eingetragen, mit `min: 28`, `max: 36` und ohne den Punkt 24)
 
 ```yaml
 dynamisch:
@@ -61,6 +61,6 @@ Mit der Tabelle wählt die Auswahl bei freiem Speicher **24 Lagen** (die kleinst
 
 ## 6. Offen
 
-- Der Rezeptblock bleibt, wie er ist, bis der Captain den Vorschlag aus Abschnitt 5 freigibt.
+- Eingetragen ist die Tabelle aus Abschnitt 5 mit `n_cpu_moe: {min: 28, max: 36}` (Sicherung `role_routing.yaml.bak-2026-10-30-tabelle512`). Die Auswahl mit den echten Zahlen: 11,4 GB VRAM und 15,3 GB RAM frei → 28 Lagen, 65 536 Kontext; 8,0 GB VRAM frei → 29 Lagen; 12,5 GB RAM frei → Ablehnung mit Zahlen („Es fehlen 0,63 GB RAM“).
 - Nicht gemessen: das Laden bei knappem Speicher mit echtem Modell (ohne fremde Last auf der GPU nicht herstellbar; die Auswahl ist mit den echten Zahlen in `test_dynamische_rezepte` geprüft) und 40 Lagen im RAM.
 - Der Messspeicher `model_messwerte.json` füllt sich erst nach einem Neustart des Cockpits mit dem Fix; danach ersetzen Messwerte die Rechnung.
