@@ -61,5 +61,5 @@ Ein Rezept nennt **Spannen und Messwerte**, nicht eine feste Aufteilung; beim La
 
 ## 7. Nächste Gates
 
-- **G1** (diese Datei): Captain beantwortet DQ-1 bis DQ-5 und gibt die Anforderungen frei.
+- **G1** (diese Datei): **freigegeben vom Captain am 30.10.2026**, DQ-1 bis DQ-5 wie vorgeschlagen. G2: `SPEC_DYNAMISCHE_REZEPTE_v1_G2.md`.
 - **G2** Design (Formel, Spanne im Rezept-Schema, Aufbau von `aufteilung.py`, Messspeicher), **G3** Bau-Aufgaben, **G4** Abnahme mit Modell am PC.
