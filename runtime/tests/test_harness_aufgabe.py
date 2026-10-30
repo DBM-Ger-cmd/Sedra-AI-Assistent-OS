@@ -134,6 +134,15 @@ class PruefenTests(unittest.TestCase):
         ok = eingabe(erlaubt=[{'werkzeug': 'datei_schreiben', 'muster': 'docs/skript.py'}, {'werkzeug': 'befehl', 'muster': 'python benchmarks/run_tests.py *'}])
         self.assertEqual(aufgabe.pruefen_neu(ok, jetzt_z=JETZT, vorschlag=True)[1], [])
 
+    def test_s9_erkennt_windows_schalter_und_weitere_interpreter(self):
+        for offen in ('cmd /c *', 'python3 *', 'python3.12 -u *', 'perl *', 'powershell -Command *', 'env *'):
+            self.assertTrue(aufgabe._interpreter_offen(offen), offen)
+        for fest in ('python benchmarks/run_tests.py *', 'cmd /c dir', 'git status'):
+            self.assertFalse(aufgabe._interpreter_offen(fest), fest)
+        e = eingabe(erlaubt=[{'werkzeug': 'datei_schreiben', 'muster': 'docs/skript.bat'}, {'werkzeug': 'befehl', 'muster': 'python3.12 -u *'}])
+        with self.assertRaisesRegex(aufgabe.AufgabeFehler, 'S9'):
+            aufgabe.pruefen_neu(e, jetzt_z=JETZT, vorschlag=True)
+
     def test_vorschlag_ohne_vorarbeiter_als_nutzer(self):
         with self.assertRaisesRegex(aufgabe.AufgabeFehler, 'selbstfreigabe'):
             aufgabe.pruefen_neu(eingabe(sitzungen=[S1, S2]), jetzt_z=JETZT, vorschlag=True, verbotene_sitzungen=(S2,))

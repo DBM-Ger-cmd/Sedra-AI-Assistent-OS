@@ -28,7 +28,7 @@ WEIT_DATEI = 5                      # weniger Zeichen ohne Platzhalter = „weit
 WEIT_BEFEHL = 10                    # dasselbe für Befehle
 LESEN = ('datei_lesen', 'dateien_auflisten', 'suchen')
 SCHREIBEN = ('datei_schreiben', 'datei_aendern')
-INTERPRETER = ('python', 'py', 'pythonw', 'powershell', 'pwsh', 'cmd', 'node', 'bash', 'sh', 'wscript', 'cscript')
+INTERPRETER = re.compile(r'(python[0-9.]*|py|pythonw|powershell|pwsh|cmd|node|bash|sh|wscript|cscript|perl|ruby|php|deno|bun|wsl|env)')
 STATUS = ('aktiv', 'erledigt', 'abgelaufen', 'erschoepft', 'zurueckgenommen')
 TITEL_MAX = 120
 
@@ -63,9 +63,9 @@ def ist_weit(werkzeug, muster):
 def _interpreter_offen(muster):
     """Ein Befehlsmuster, das einen Interpreter beliebige Dateien ausführen lässt (`python *`, `powershell -File *` …)."""
     teile = muster.strip().casefold().split()
-    if not teile or teile[0].removesuffix('.exe') not in INTERPRETER:
+    if not teile or not INTERPRETER.fullmatch(teile[0].removesuffix('.exe')):
         return False
-    rest = [t for t in teile[1:] if not t.startswith('-') and t != '*']
+    rest = [t for t in teile[1:] if not (t.startswith('-') or (t.startswith('/') and len(t) <= 3)) and t != '*']      # Schalter wie -File und /c
     return not rest or muster.strip().casefold().startswith(teile[0] + ' *')
 
 

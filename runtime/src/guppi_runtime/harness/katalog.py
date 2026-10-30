@@ -215,8 +215,8 @@ def _datei(projekt_root):
     return Path(projekt_root) / 'local_config' / DATEI
 
 
-def sichern(projekt_root):
-    """Kopie der Datei des Captains mit Zeitstempel; None, wenn es keine gibt."""
+def sichern(projekt_root, verschieben=False):
+    """Kopie der Datei des Captains mit Zeitstempel (`verschieben`: die Datei selbst wird zur Sicherung, nichts wird gelöscht); None, wenn es keine gibt."""
     pfad = _datei(projekt_root)
     if not pfad.is_file():
         return None
@@ -225,7 +225,10 @@ def sichern(projekt_root):
     while ziel.exists():
         n += 1
         ziel = pfad.with_name(pfad.name + '.bak-' + _time.strftime('%Y%m%d-%H%M%S') + f'-{n}')
-    ziel.write_bytes(pfad.read_bytes())
+    if verschieben:
+        pfad.replace(ziel)
+    else:
+        ziel.write_bytes(pfad.read_bytes())
     return ziel
 
 
@@ -249,6 +252,5 @@ def entfernen(projekt_root):
     pfad = _datei(projekt_root)
     if not pfad.is_file():
         return {'entfernt': False, 'sicherung': None}
-    sicherung = sichern(projekt_root)
-    pfad.unlink()
+    sicherung = sichern(projekt_root, verschieben=True)         # die Datei wird zur Sicherung umbenannt, nicht gelöscht
     return {'entfernt': True, 'sicherung': str(sicherung)}
