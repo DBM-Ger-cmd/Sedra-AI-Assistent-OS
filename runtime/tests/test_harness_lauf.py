@@ -36,7 +36,7 @@ def typen():
 class LaufBasis(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='lauf-')
-        self.addCleanup(self.tmp.cleanup)
+        self.addCleanup(self.ordner_loeschen)
         self.wurzel = Path(self.tmp.name) / 'projekt'
         (self.wurzel / 'runtime').mkdir(parents=True)
         (self.wurzel / 'runtime' / 'probe.py').write_text(SKRIPT, encoding='utf-8')
@@ -45,6 +45,16 @@ class LaufBasis(unittest.TestCase):
         self.store = lauf.Laeufe(Path(self.tmp.name) / 'laeufe', typen=self.typen, audit=lambda e, p: self.audit.append((e, p)),
                                  melden=lambda n, d: self.ereignisse.append((n, d)))
         self.addCleanup(self.aufraeumen)
+
+    def ordner_loeschen(self):
+        # Windows gibt die Ausgabedatei eines gerade beendeten Prozessbaums erst nach einem Moment frei; kurz wiederholen statt den Test zu verlieren.
+        for versuch in range(40):
+            try:
+                self.tmp.cleanup()
+                return
+            except PermissionError:
+                time.sleep(0.25)
+        self.tmp.cleanup()
 
     def aufraeumen(self):
         for l in self.store.laufende():
@@ -109,6 +119,10 @@ class LaufTests(LaufBasis):
 
     def test_abbruch_durch_aufgabe_hat_einen_eigenen_status(self):
         l = self.start('baum')
+        kind = self.wurzel / 'runtime' / 'kind.pid'
+        for _ in range(100):                                          # erst stoppen, wenn das Kind da ist: ein später entstehendes entkäme dem Beenden des Baums und hielte die Ausgabedatei 120 s offen
+            if kind.exists() and kind.read_text().strip(): break
+            time.sleep(0.1)
         self.assertEqual(self.store.stoppen(l['id'], grund='Aufgabe zurückgenommen', status_wunsch='abgebrochen')['status'], 'abgebrochen')
 
     def test_token_einer_cockpit_adresse_steht_nicht_im_audit_und_nicht_in_den_parametern(self):

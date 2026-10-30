@@ -198,7 +198,7 @@ TOKEN_IN_URL = re.compile(r'(#)[A-Za-z0-9_-]{16,}')           # die Adresse des 
 def maskiert(wert):
     """Text, Liste oder Wörterbuch ohne das Token einer Cockpit-Adresse – für Audit und Anzeige. Der Prozess selbst bekommt den echten Wert (Hülle)."""
     if isinstance(wert, str):
-        return TOKEN_IN_URL.sub(r'***', wert)
+        return TOKEN_IN_URL.sub('#***', wert)
     if isinstance(wert, list):
         return [maskiert(x) for x in wert]
     if isinstance(wert, dict):
