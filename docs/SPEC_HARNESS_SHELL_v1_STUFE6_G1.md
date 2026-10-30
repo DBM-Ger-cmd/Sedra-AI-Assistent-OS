@@ -75,5 +75,5 @@ Für den späteren Bau (nach G2/G3), hier schon benannt:
 
 ## 6. Nächste Gates
 
-- **G1** (diese Datei): Captain beantwortet HQ-1 bis HQ-5 und gibt die Anforderungen frei.
+- **G1** (diese Datei): **freigegeben vom Captain am 30.10.2026**, HQ-1 bis HQ-5 wie vorgeschlagen.
 - **G2** Design (Datenfeld `zweck`, Aufbau der zwei Hälften im Reiter, Folgen des Objekts, Ereignisse), **G3** Bau-Aufgaben (Claude allein, wie Stufe 4 und 5), **G4** Abnahme am PC durch den Captain.
