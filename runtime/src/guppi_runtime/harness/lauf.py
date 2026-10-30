@@ -192,6 +192,18 @@ FORTSCHRITT_ABSTAND_S = 2.0     # Ereignisse `fortschritt` höchstens so oft
 
 
 GEHEIM = re.compile(r'(KEY|TOKEN|SECRET|PASSW|CREDENTIAL|AUTH)', re.I)
+TOKEN_IN_URL = re.compile(r'(#)[A-Za-z0-9_-]{16,}')           # die Adresse des Cockpits trägt ihr Token nach dem „#“
+
+
+def maskiert(wert):
+    """Text, Liste oder Wörterbuch ohne das Token einer Cockpit-Adresse – für Audit und Anzeige. Der Prozess selbst bekommt den echten Wert (Hülle)."""
+    if isinstance(wert, str):
+        return TOKEN_IN_URL.sub(r'***', wert)
+    if isinstance(wert, list):
+        return [maskiert(x) for x in wert]
+    if isinstance(wert, dict):
+        return {k: maskiert(v) for k, v in wert.items()}
+    return wert
 
 
 def lauf_umgebung():
@@ -299,7 +311,7 @@ class Laeufe:
             argv = list(argv_info['argv'])
             if argv[0].lower() in ('python', 'python.exe', 'py', 'pythonw'):
                 argv[0] = sys.executable
-            lauf = {'id': lid, 'lauf': typ['id'], 'name': typ['name'], 'parameter': parameter or {}, 'argv': argv, 'ordner_abs': str(argv_info['ordner']),
+            lauf = {'id': lid, 'lauf': typ['id'], 'name': typ['name'], 'parameter': maskiert(parameter or {}), 'argv': argv, 'ordner_abs': str(argv_info['ordner']),
                     'zeitlimit_min': typ['zeitlimit_min'], 'gpu': typ['gpu'], 'modell_weg': typ['modell_weg'], 'sitzung_id': sitzung_id,
                     'antwort_id': antwort_id, 'aufgabe_id': aufgabe_id, 'karte_id': karte_id, 'projekt': self.projekt_id, 'pid': None, 'start_zeit_pid': None,
                     'gestartet': jetzt_text(), 'ende': None, 'exit': None, 'status': 'laeuft', 'grund': None, 'fortschritt': None,
@@ -313,7 +325,7 @@ class Laeufe:
                 self._sagen('HARNESS_LAUF_ENDE', lauf)
                 raise LaufFehler('start_fehlgeschlagen') from exc
             self._schreiben(d, lauf)
-        self._sagen('HARNESS_LAUF_START', lauf, {'argv': lauf['argv'][1:], 'pid': lauf['pid'], 'karte_id': karte_id})
+        self._sagen('HARNESS_LAUF_START', lauf, {'argv': maskiert(lauf['argv'][1:]), 'pid': lauf['pid'], 'karte_id': karte_id})
         self._melden(lauf, 'gestartet')
         self._beobachten()
         return lauf

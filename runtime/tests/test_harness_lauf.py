@@ -50,6 +50,10 @@ class LaufBasis(unittest.TestCase):
         for l in self.store.laufende():
             try: self.store.stoppen(l['id'], warten_s=15)
             except Exception: pass
+        # Ein gestoppter Lauf gilt schon als beendet, sein Prozessbaum hält die Ausgabedatei aber noch kurz offen; unter Windows scheitert sonst das Löschen des Ordners.
+        ende = time.monotonic() + 15
+        while time.monotonic() < ende and any(lauf._pid_lebt(l.get('pid'), l.get('start_zeit_pid')) for l in self.store.alle()):
+            time.sleep(0.1)
 
     def start(self, lid='probe', parameter=None, store=None, **kw):
         typ = self.typen[lid]
@@ -106,6 +110,14 @@ class LaufTests(LaufBasis):
     def test_abbruch_durch_aufgabe_hat_einen_eigenen_status(self):
         l = self.start('baum')
         self.assertEqual(self.store.stoppen(l['id'], grund='Aufgabe zurückgenommen', status_wunsch='abgebrochen')['status'], 'abgebrochen')
+
+    def test_token_einer_cockpit_adresse_steht_nicht_im_audit_und_nicht_in_den_parametern(self):
+        url = 'http://127.0.0.1:5555/#abcdefghijklmnopqrstuvwxyz012345'
+        self.assertEqual(lauf.maskiert(url), 'http://127.0.0.1:5555/#***')
+        self.assertEqual(lauf.maskiert(['a', url, {'u': url}]), ['a', 'http://127.0.0.1:5555/#***', {'u': 'http://127.0.0.1:5555/#***'}])
+        self.assertEqual(lauf.maskiert('kein#kurz'), 'kein#kurz')
+        l = self.start(parameter={'n': '1'})
+        self.assertNotIn('#abcdef', json.dumps(self.audit) + json.dumps(l['parameter']))
 
     def test_zeitlimit(self):
         typ = copy.deepcopy(self.typen['baum'])
