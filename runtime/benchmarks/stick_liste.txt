@@ -1,0 +1,34 @@
+# Minimalpaket fuer den USB-Stick (K:\SEDRA). Gelesen von stick_paket.py. Entscheidungen: docs/ENTSCHEIDUNGEN_USB_STICK.md
+# repo    = aus diesem Repository (Ordner mit / am Ende)
+# bestand = aus dem Hauptcheckout, nicht in git (Engine, portables Python)
+# modul   = Python-Modul samt allen statischen Importen (guppi_runtime.*)
+# quelle <pfad> -> <ziel>  = umbenannt kopieren
+
+repo START_SEDRA.bat
+repo LICENSE
+repo architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT/
+repo runtime/config/
+repo runtime/Ersteinrichtung.ps1
+repo runtime/Erststart_Konfig.ps1
+repo runtime/Test-PortableRuntime.ps1
+repo runtime/benchmarks/engine_download.py
+repo runtime/src/guppi_runtime/core/
+repo runtime/src/guppi_runtime/harness/
+repo runtime/src/guppi_runtime/fisch/
+repo runtime/src/guppi_runtime/sprache/
+repo runtime/src/guppi_runtime/uix/shells/cockpit/
+repo runtime/src/guppi_runtime/uix/shells/harness/
+repo runtime/src/guppi_runtime/uix/shells/paperclip/
+repo runtime/src/guppi_runtime/uix/shells/fisch/
+repo runtime/src/guppi_runtime/uix/ui/
+repo runtime/src/guppi_runtime/uix/js/
+repo runtime/src/guppi_runtime/uix/css/
+repo runtime/src/guppi_runtime/uix/tools/uebersetzer/
+repo runtime/src/guppi_runtime/uix/tools/nachrichten/
+repo runtime/src/guppi_runtime/uix/tools/transkript/
+repo runtime/src/guppi_runtime/uix/tools/rekorder/
+modul guppi_runtime.uix_start
+modul guppi_runtime.uix_server
+modul guppi_runtime.models.engine_provision
+bestand engines/llama.cpp/b11160/
+bestand runtime/portable/python.aus/current/ -> runtime/portable/python/current/
