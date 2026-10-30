@@ -39,8 +39,12 @@ Function `waehlen(dyn, kontexte, frei_vram_gb, frei_ram_gb, reserve_vram_gb, res
 - `gemessen` (dict or None): a key (lagen, kontext) with a value {"vram_gb": x, "ram_gb": y} replaces the calculation for exactly that combination (quelle "gemessen").
 - Nothing fits: for every tried combination the shortfall is fehlt_vram = max(0, vram - budget_vram) and fehlt_ram = max(0, ram - budget_ram); the best one is the one with the
   smallest max(fehlt_vram, fehlt_ram); on a tie the first tried one. Return {"ok": False, "fehlt": {"vram_gb": x, "ram_gb": y}, "beste": {"kontext": int, "lagen": int,
-  "vram_gb": float, "ram_gb": float}, "vorschlag": str} with the best's rounded numbers; `vorschlag` is a German sentence that contains the best combination's
+  "vram_gb": float, "ram_gb": float}, "vorschlag": str}. `fehlt` is the SHORTFALL of the best combination (round(fehlt_vram, 3), round(fehlt_ram, 3); 0 for a resource that fits),
+  NOT its need; `beste` holds the best combination's rounded need. `vorschlag` is a German sentence that names the shortfall in GB and contains the best combination's
   lagen and kontext as numbers.
+- Input errors raise ValueError (never KeyError or TypeError): frei_vram_gb, frei_ram_gb, reserve_vram_gb, reserve_ram_gb, kv_rate_gb_je_1k (None counts as 0.0), groesse_gb must be
+  numbers (not bool, not NaN or infinite); every entry of `kontexte` and `slots` must be an int above 0 (not bool); every value of `gemessen` must be a dict with numeric
+  "vram_gb" and "ram_gb". These checks come before the search, also when `kontexte` is empty.
 - An empty or non-list `kontexte`: {"ok": False, "fehlt": None, "beste": None, "vorschlag": "Kein Kontext zur Auswahl."}. An invalid `dyn` raises ValueError.
 '''
 
@@ -81,6 +85,9 @@ d = waehlen(DYN, [32768], 10.65, 14.3, 0.7, 1.5, K, G, gemessen={(28, 32768): {"
 assert d["lagen"] == 28 and d["quelle"] == "gemessen" and d["vram_gb"] == 9.0
 e = waehlen(DYN, [32768, 16384], 5.0, 8.0, 0.7, 1.5, K, G)
 assert e["ok"] is False and e["fehlt"]["vram_gb"] > 0 and 24 <= e["beste"]["lagen"] <= 40 and str(e["beste"]["lagen"]) in e["vorschlag"] and str(e["beste"]["kontext"]) in e["vorschlag"]
+f = waehlen(DYN, [32768], 5.0, 8.0, 0.7, 1.5, K, G)
+assert nahe(f["fehlt"]["vram_gb"], max(0, f["beste"]["vram_gb"] - 4.3)) and nahe(f["fehlt"]["ram_gb"], max(0, f["beste"]["ram_gb"] - 6.5)) and f["fehlt"]["vram_gb"] < f["beste"]["vram_gb"]
+assert all(werft(waehlen, DYN, *a) for a in (([32768], None, 14.3, 0.7, 1.5, K, G), (["x"], 10.65, 14.3, 0.7, 1.5, K, G), ([32768], 10.65, 14.3, 0.7, 1.5, K, "x"), ([32768], 10.65, 14.3, 0.7, 1.5, K, G, 0), ([32768], 10.65, 14.3, 0.7, 1.5, K, G, 1, {(30, 32768): {"vram_gb": "x", "ram_gb": 1}}), ([], True, 14.3, 0.7, 1.5, K, G), ([32768], float("nan"), 14.3, 0.7, 1.5, K, G)))
 assert waehlen(DYN, [], 10, 10, 0, 0, K, G) == {"ok": False, "fehlt": None, "beste": None, "vorschlag": "Kein Kontext zur Auswahl."} and waehlen(DYN, "x", 10, 10, 0, 0, K, G)["ok"] is False
 '''
 
