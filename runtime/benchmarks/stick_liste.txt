@@ -23,6 +23,10 @@ repo runtime/src/guppi_runtime/uix/shells/fisch/
 repo runtime/src/guppi_runtime/uix/ui/
 repo runtime/src/guppi_runtime/uix/js/
 repo runtime/src/guppi_runtime/uix/css/
+# Dateien, die der Server per Pfad liest (nicht ueber Importe): desk.html, retro_desktop.html, Hardware-Manager-Ansicht
+repo runtime/src/guppi_runtime/uix/desk.html
+repo runtime/src/guppi_runtime/uix/retro_desktop.html
+repo runtime/src/guppi_runtime/hardware_manager/dashboard.html
 repo runtime/src/guppi_runtime/uix/tools/uebersetzer/
 repo runtime/src/guppi_runtime/uix/tools/nachrichten/
 repo runtime/src/guppi_runtime/uix/tools/transkript/
