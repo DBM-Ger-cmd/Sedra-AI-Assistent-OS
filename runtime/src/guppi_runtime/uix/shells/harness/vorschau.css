@@ -22,3 +22,10 @@
 .hs-teilung.hs-fl-klein.hs-fl-zeige-vorschau .hs-fl-gespraech{display:none}
 .hs-teilung.hs-fl-klein .hs-fl-gespraech{order:2!important}
 .hs-kein-modell{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.hs-modell-steuer{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.hs-modell-stand.bad{color:var(--bad,#e5534b)}button.hs-modell{cursor:pointer;background:transparent;color:inherit}
+.hs-anhang{display:flex;flex-direction:column;gap:4px;margin:0 0 6px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--panel,transparent);max-height:300px}
+.hs-anhang-kopf{display:flex;gap:6px}.hs-anhang-kopf input{flex:1 1 auto}
+.hs-anhang-liste{overflow:auto;display:flex;flex-direction:column}
+.hs-anhang-zeile{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px;cursor:pointer}
+.hs-anhang-zeile:hover,.hs-anhang-zeile:focus-visible{background:var(--hs-on,rgba(128,128,128,.15))}
+.hs-anhang-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+

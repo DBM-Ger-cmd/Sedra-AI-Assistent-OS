@@ -53,6 +53,17 @@ Anlass: Im Eingabebereich stand „Kein Modell geladen – Modell wählen (Start
 | HS-80 | Fehlt das Modell, zeigt der Eingabebereich statt des Verweises eine Steuerung: Rezept wählen (Vorgabe: zuletzt geladenes), „Laden“, Zustand („lädt … kann Minuten dauern“); Fehler des Servers (z. B. zu wenig Speicher) erscheinen als Satz an derselben Stelle. | Test der Shell |
 | HS-81 | Das Feld „Modell“ im Eingabebereich ist ein Knopf: Klick öffnet dieselbe Steuerung mit „Wechseln“ und „Entladen“. Dieselben Wege wie die Werkstatt (`/api/model/load`, `/api/model/unload`); Gates und Prüfungen bleiben beim Server. Meldungen im Verlauf („Kein Modell geladen“) öffnen die Steuerung, statt auf Menüs zu verweisen. | Test der Shell |
 
+### 2.5 Dateien anhängen (Captain 30.10.2026 15:55: „anhängen bauen“)
+
+„+“ und „@“ im Eingabefeld versprachen „kommt mit Stufe 2“. Jetzt tun sie, was sie sagen.
+
+| ID | Anforderung | Prüfbar durch |
+|---|---|---|
+| HS-82 | „+“ öffnet eine Auswahl der Projektdateien: Suchfeld, Ordneransicht mit Pfadleiste, Klick auf einen Ordner geht hinein, Klick auf eine Datei fügt `@pfad` an der Schreibmarke ein; mehrere Dateien nacheinander, „Fertig“ oder Esc schließt. | Test der Shell |
+| HS-83 | Der Weg `GET /api/harness/dateien?projekt=&ordner=&q=` nennt **nur Namen** (kein Inhalt) und nur, was die Einstufung von `datei_lesen` zulässt (Katalog `verboten` und feste Vorbehalte erscheinen nicht); er bleibt im Projektordner, folgt keinen Verknüpfungen und überspringt `.git`, Umgebungen, `runtime_data`, `engines`; höchstens 40 Treffer je Suche. | Test: gesperrte Dateien fehlen, `..` wird abgelehnt |
+| HS-84 | Tippt der Captain `@wort`, erscheinen unter dem Feld bis zu 8 passende Dateien; ein Klick ersetzt das Wort durch `@pfad`. | Test der Shell |
+| HS-85 | Der Systemprompt sagt dem Modell, dass `@pfad` eine angehängte Datei ist, die es mit `datei_lesen` lesen soll; gelesen wird mit der üblichen Einstufung (Karten wie sonst). Es wird **nichts** vorab ins Gespräch kopiert. | Test des Prompts |
+
 ## 3. Abgrenzung
 
 - Keine neue Rolle, kein neues Recht: Zweck und Klartext sind **Anzeige**; über Deckung und Freigabe entscheiden weiter nur `erlaubt`, Katalog und Vorbehalte. Der Zweck deckt nichts (HS-27 unverändert).

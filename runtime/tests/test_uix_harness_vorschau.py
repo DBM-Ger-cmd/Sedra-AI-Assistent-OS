@@ -69,6 +69,17 @@ class VorschauWegTests(unittest.TestCase):
         self.assertEqual(out['status'], 'gesperrt')
         self.assertNotIn('GEHEIM', str(out))
 
+    def test_dateien_weg(self):
+        code, out = anfrage(self.url, 'GET', '/api/harness/dateien?projekt=pruef')
+        self.assertEqual(code, 200, out)
+        pfade = [e['pfad'] for e in out['eintraege']]
+        self.assertIn('docs', pfade)
+        self.assertNotIn('.env', pfade, 'gesperrte Dateien erscheinen nicht')
+        code, out = anfrage(self.url, 'GET', '/api/harness/dateien?projekt=pruef&q=log')
+        self.assertEqual([e['pfad'] for e in out['eintraege']], ['docs/log.md'])
+        self.assertEqual(anfrage(self.url, 'GET', '/api/harness/dateien?projekt=pruef&ordner=' + quote('../x'))[0], 400)
+        self.assertEqual(anfrage(self.url, 'GET', '/api/harness/dateien?projekt=gibt-es-nicht')[0], 400)
+
     def test_unbekannte_sitzung(self):
         self.assertEqual(self.holen('S-00000000', 'docs/log.md')[0], 404)
 

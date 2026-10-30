@@ -17,10 +17,10 @@
     feld.maxLength = 8000;
     const vorschlag = d().el('div', 'hs-vorschlag'); vorschlag.hidden = true;
     const plus = d().el('button', 'hs-rund', '+'); plus.type = 'button';
-    plus.title = 'Dateien aus dem Projekt anhängen – kommt mit Stufe 2 (Werkzeuge)'; plus.setAttribute('aria-label', 'Datei anhängen');
-    plus.onclick = ()=>S.hinweis('Dateien anhängen kommt mit Stufe 2 (Werkzeuge mit Freigabe).');
+    plus.title = 'Datei des Projekts anhängen (oder @ tippen)'; plus.setAttribute('aria-label', 'Datei anhängen');
+    plus.onclick = ()=>root.sedraHarness.anhang.oeffnen(S);                          // Stufe 6 (HS-82)
     const schild = d().el('span', 'hs-schild', '⛨ Captain gibt frei');
-    schild.title = 'Wer in dieser Sitzung freigibt: der Captain (Karte im Verlauf oder Posteingang). Aufgaben-Freigabe kommt mit Stufe 3.';
+    schild.title = 'Wer in dieser Sitzung freigibt: der Captain (Karte im Verlauf oder Posteingang). Aufgaben-Freigaben stehen im Reiter „Aufgaben“.';
     S.api('/api/harness/katalog').then(k=>{                    // HS-17/HS-26: das Schild sagt, wer freigibt und nach welchem Katalog
       if(k.fehler){ schild.textContent = '⛨ Katalog ungültig'; schild.classList.add('warn'); schild.title = 'Freigabe-Katalog: ' + k.fehler + ' – nur lesende Werkzeuge.'; return; }
       schild.textContent = '⛨ Captain gibt frei · Katalog ' + k.regeln.length + ' Regeln' + (k.quelle === 'vorlage' ? ' (Vorlage)' : '');
@@ -49,7 +49,7 @@
     werkzeuge.append(plus, schild, modell, d().el('span', 'hs-luecke'), mikro, senden);
     zeile.append(feld, werkzeuge);
     box.append(kein, vorschlag, zeile, projektZeile);
-    S._eingabe = {feld, senden, modell, projekt, vorlage, projektZeile, kein, vorschlag, schild, schildBasis: schild.textContent};
+    S._eingabe = {box, feld, senden, modell, projekt, vorlage, projektZeile, kein, vorschlag, schild, schildBasis: schild.textContent};
 
     const groesse = ()=>{ feld.style.height = 'auto'; feld.style.height = Math.min(feld.scrollHeight, Math.round(root.innerHeight * 0.4)) + 'px'; };
     feld.addEventListener('input', ()=>{ groesse(); hilfe(S); });
@@ -70,7 +70,7 @@
         e.vorschlag.append(r);
       });
     }else if(/(^|\s)@\S*$/.test(t)){
-      e.vorschlag.append(d().el('div', 'hs-vorschlag-zeile', 'Dateien mit @ anhängen kommt mit Stufe 2 (Werkzeuge mit Freigabe).'));
+      root.sedraHarness.anhang.vorschlaege(S, t.match(/(^|\s)@(\S*)$/)[2] || '');          // Stufe 6 (HS-84): Dateien des Projekts vorschlagen
     }
     e.vorschlag.hidden = !e.vorschlag.childNodes.length;
   }

@@ -7,9 +7,9 @@ shell:
   id: harness
   name: Harness
   description: Gespräch in der Mitte mit Sitzungen, Streamen und sichtbaren Werkzeugen; Werkzeuge mit Freigabe-Karte; Vorarbeiter, Aufgaben-Freigabe und Läufe; Start-Menü mit Apps, Oberflächen und Statusbereich (Stufe 4); Einstellungen mit Katalog-Editor (Stufe 5).
-  version: 1.7.0
+  version: 1.8.0
   entry:
-    js: [markdown.js, seite.js, reiter.js, karte.js, aufgabe.js, lauf.js, verlauf.js, eingabe.js, startliste.js, app.js, startmenue.js, katalog_editor_pruefung.js, katalog_editor.js, einstellungen.js, vorschau.js, modell.js, taskleiste.js, shell.js]     # shell.js zuletzt: es registriert
+    js: [markdown.js, seite.js, reiter.js, karte.js, aufgabe.js, lauf.js, verlauf.js, eingabe.js, startliste.js, app.js, startmenue.js, katalog_editor_pruefung.js, katalog_editor.js, einstellungen.js, vorschau.js, modell.js, anhang.js, taskleiste.js, shell.js]     # shell.js zuletzt: es registriert
     css: [shell.css, vorschau.css]
   provides: [seite, reiter, flaeche, eingabe, taskleiste]
   layout: {persist: browser}
