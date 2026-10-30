@@ -70,6 +70,9 @@ def teil6(shots=None):
               knopf: !!(k && [...k.querySelectorAll('button')].some(x=>x.textContent === 'Laden')), pfeil: !!(k && k.textContent.includes('→'))}; }""")
             foto(page, '03_modell')
             pruefe('S6-D Modell laden im Hinweis', m['sichtbar'] and m['wahl'] and m['knopf'] and not m['pfeil'], **m)
+            satz = page.evaluate("""()=>({auswahl: %s.modell.auswahlText({lagen: 30, kontext: 32768, vram_gb: 9.8, ram_gb: 10.93, tokens_s: 43.35, quelle: 'gerechnet'}),
+              ablehnung: %s.modell.fehlertext(new Error('recipe_not_usable:hardware_pressure:Es fehlen 0.60 GB VRAM und 0.00 GB RAM bei 40 Lagen im RAM und 8192 Kontext.'))})""" % (H, H))
+            pruefe('S6-D Auswahl und Ablehnung mit Zahlen', 'mit 30 Lagen im RAM' in satz['auswahl'] and '9,8 GB VRAM' in satz['auswahl'] and satz['ablehnung'].startswith('Es fehlen 0.60 GB VRAM'), **satz)
 
             # S6-E: Dateien anhängen
             page.evaluate("()=>%s.anhang.oeffnen(%s)" % (H, S)); page.wait_for_timeout(800)

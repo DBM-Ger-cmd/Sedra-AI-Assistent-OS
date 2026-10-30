@@ -3089,6 +3089,28 @@ class UIXHub:
         except Exception:
             pass                                                    # das Protokoll darf das Laden nicht zusätzlich brechen
 
+    @staticmethod
+    def _ablehnung(exc):
+        """Der Grund einer abgelehnten Auflösung als Anhang „:Satz“ – bei dynamischen Rezepten mit den Zahlen (SPEC_DYNAMISCHE_REZEPTE_v1 DR-04)."""
+        gruende = (getattr(exc, 'detail', None) or {}).get('considered') or []
+        grund = gruende[0].get('reason') if gruende and isinstance(gruende[0], dict) else None
+        return f':{grund}' if grund else ''
+
+    def _speicher_jetzt(self):
+        sched = getattr(self.runtime, 'resource_scheduler', None)
+        try: return sched.stand(fresh=True) if sched is not None and sched.enabled else None
+        except Exception: return None
+
+    def _messwert_merken(self, recipe_id, out, vorher, nachher):
+        """DR-07: was die gewählte Einstellung wirklich an VRAM und RAM gekostet hat (Unterschied des freien Speichers vor und nach dem Laden), nur unter runtime_data."""
+        wahl, messwerte = (out or {}).get('auswahl'), getattr(self.runtime, 'messwerte', None)
+        if not wahl or messwerte is None or not vorher or not nachher or (out or {}).get('action') not in ('loaded', 'reloaded'): return
+        try:
+            if messwerte.merken(recipe_id, wahl['lagen'], wahl['kontext'], vorher['frei_vram_gb'] - nachher['frei_vram_gb'], vorher['frei_ram_gb'] - nachher['frei_ram_gb']):
+                self.runtime.audit.append('MODEL_LOAD_MEASURED', component='uix', payload={'recipe_id': recipe_id, 'lagen': wahl['lagen'], 'kontext': wahl['kontext'],
+                                          'vram_gb': round(vorher['frei_vram_gb'] - nachher['frei_vram_gb'], 3), 'ram_gb': round(vorher['frei_ram_gb'] - nachher['frei_ram_gb'], 3)})
+        except Exception: pass
+
     def load_model(self, payload):
         recipe_id = payload.get('recipe_id') or self._last_recipe()          # ohne Auswahl: das zuletzt geladene Modell
         if not isinstance(recipe_id, str) or not recipe_id: raise ValueError('recipe_id_required')
@@ -3106,8 +3128,8 @@ class UIXHub:
                 if 'hardware_pressure' in str(exc) and self.gpu_token is not None and server is not None and server.loaded_models():
                     server.unload_model(all_models=True); time.sleep(2)
                     try: resolution = rt.role_router.resolve_recipe(recipe_id)
-                    except ResolutionError as again: raise ValueError(f'recipe_not_usable:{again}')
-                else: raise ValueError(f'recipe_not_usable:{exc}')
+                    except ResolutionError as again: raise ValueError(f'recipe_not_usable:{again}{self._ablehnung(again)}')
+                else: raise ValueError(f'recipe_not_usable:{exc}{self._ablehnung(exc)}')
             took_lease = self.gpu_token is None
             if took_lease:
                 token = self.lab.try_acquire(self.LEASE_OWNER, f'Modell {recipe_id} (UIX)', ttl_s=600)
@@ -3119,7 +3141,9 @@ class UIXHub:
                 server = getattr(rt, 'llama_server', None)
                 if server is not None and server.loaded_models() and resolution['provider_ref'] == 'llama-cpp-server':
                     server.unload_model(all_models=True)          # one model on the GPU at a time
+                vorher = self._speicher_jetzt()
                 out = rt.model_loader.ensure(resolution)
+                self._messwert_merken(recipe_id, out, vorher, self._speicher_jetzt())
             except LoadError as exc:
                 self._log_load_failure(recipe_id, resolution, exc)
                 self._release_gpu() if not (getattr(rt, 'llama_server', None) and rt.llama_server.loaded_models()) else None

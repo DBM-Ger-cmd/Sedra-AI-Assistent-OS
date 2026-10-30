@@ -11,8 +11,18 @@
     gpu_lease_busy: 'Die Grafikkarte ist gerade belegt (Lauf oder anderer Dienst).',
     model_loader_unavailable: 'Das Laden von Modellen ist in dieser Installation ausgeschaltet.'
   };
+  // Die Auswahl der Aufteilung als ein Satz (DR-06): „lädt mit 30 Lagen im RAM, 32 768 Kontext, ≈ 9,8 GB VRAM, 10,9 GB RAM“.
+  function auswahlText(a){
+    if(!a || typeof a.lagen !== 'number') return '';
+    const zahl = (x, n)=>Number(x).toLocaleString('de-DE', {maximumFractionDigits: n});
+    return 'mit ' + a.lagen + ' Lagen im RAM, ' + zahl(a.kontext, 0) + ' Kontext, ≈ ' + zahl(a.vram_gb, 1) + ' GB VRAM, ' + zahl(a.ram_gb, 1) + ' GB RAM'
+      + (a.tokens_s ? ', ≈ ' + zahl(a.tokens_s, 0) + ' Token/s' : '') + (a.quelle === 'gemessen' ? ' (gemessene Werte)' : '');
+  }
+
   function fehlertext(err){
     const m = String((err && err.message) || err || '');
+    const nenner = m.match(/recipe_not_usable:[a-z_]+:(.+)$/);                  // der Server nennt bei dynamischen Rezepten die Zahlen: genau diesen Satz zeigen
+    if(nenner && /GB/.test(nenner[1])) return nenner[1];
     const treffer = Object.keys(GRUND).find(k=>m.includes(k));
     return treffer ? GRUND[treffer] + ' (' + m + ')' : m;
   }
@@ -53,6 +63,8 @@
       try{
         const out = await S.api(pfad, {method: 'POST', body});
         stand.textContent = '';
+        const satz = auswahlText(out && out.auswahl);
+        if(satz) S.hinweis('Modell geladen ' + satz + '.');
         await S.modellLaden();
         if(nachher) nachher(out);
       }catch(err){ stand.textContent = fehlertext(err); stand.classList.add('bad'); }
@@ -65,5 +77,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.modell = {steuerung, fehlertext};
+  root.sedraHarness.modell = {steuerung, fehlertext, auswahlText};
 })();

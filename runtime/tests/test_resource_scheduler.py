@@ -95,6 +95,19 @@ class ConfigAndNeedTests(unittest.TestCase):
 
 
 class ReserveTests(Base):
+    def test_stand_gibt_den_freien_speicher_fuer_die_aufteilung(self):
+        """Dynamische Rezepte: frei = das kleinere von Ledger und Messung; die Reserven stehen dabei, nicht abgezogen; ohne Messung None."""
+        hw = FakeHardware(ram_total=31.0, ram_available=14.3, gpus=((12.0, 10.65),))
+        s = self.scheduler(hw)
+        self.assertEqual(s.stand(), {'frei_vram_gb': 10.65, 'frei_ram_gb': 14.3, 'reserve_vram_gb': 1.0, 'reserve_ram_gb': s.config.ram_reserve_gb if s.config.ram_reserve_gb is not None else 2.0})
+        s.reserve('J-1', 'A-1', {'ram_gb': 5.0, 'vram_gb': 4.0, 'complete': True})
+        stand = s.stand()
+        self.assertEqual((stand['frei_vram_gb'], stand['frei_ram_gb']), (8.0, 14.3 if 31.0 - 5.0 > 14.3 else 26.0))
+        hw.fail = True
+        self.assertIsNone(s.stand(), 'ohne Messung gibt es keinen Stand')
+        self.assertIsNone(self.scheduler(FakeHardware(ram_valid=False)).stand())
+        self.assertIsNone(self.scheduler(FakeHardware(gpus=())).stand(), 'ohne Grafikkarte kein Stand')
+
     def test_disabled_scheduler_promises_nothing_and_writes_nothing(self):
         s = ResourceScheduler(ResourceConfig(dict(raw_config(), enabled=False)), self.hw, self.root / 'ledger.json', audit=self.audit)
         out = s.reserve('SDJ-1', 'A1', {'vram_gb': 99})

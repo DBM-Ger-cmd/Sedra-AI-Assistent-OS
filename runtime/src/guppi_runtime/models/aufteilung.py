@@ -49,6 +49,10 @@ def _linie(punkte, lagen, index):
     return w0[index - 1] + (w1[index - 1] - w0[index - 1]) * (lagen - x0) / (x1 - x0)
 
 
+def pruefen(dyn):
+    _punkte(dyn)
+
+
 def bedarf(dyn, lagen, kontext, kv_rate_gb_je_1k, groesse_gb, slots=1):
     punkte, bei, fix, aufschlag, boden, von, bis = _punkte(dyn)
     lagen = _ganz(lagen, "lagen")

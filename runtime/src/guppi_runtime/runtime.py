@@ -47,6 +47,7 @@ from .models.role_routing import RoutingConfig, RoleRouter, ProviderHealth
 from .models.routing_profiles import RoutingProfiles
 from .core.permission_levels import PermissionConfig, PermissionGate
 from .jobs.resource_scheduler import ResourceConfig, ResourceScheduler
+from .models.messwerte import Messwerte
 from .models.model_loader import LoaderConfig, ModelLoader
 from .jobs.token_policy import TokenPolicy, TokenPolicyConfig
 from .local_switches import LocalSwitches
@@ -246,10 +247,13 @@ class GuppiRuntime:
             resource_config.enabled=self.switches.apply("resource_scheduler","enabled",resource_config.enabled)
             return ResourceScheduler(resource_config,self.hardware_manager,data/"resource_reservations.json",audit=self.audit)
         self._optional("resource_scheduler",resources,error="resource_error")
+        self.messwerte=Messwerte(data/"model_messwerte.json")      # Stufe Dynamische Rezepte: gemessene Speicherwerte je Rezept und Einstellung
         if self.resource_scheduler is not None and self.resource_scheduler.enabled and self.role_router is not None:
             # Advisory only. A model that is already loaded holds its own room (reused as it is, or unloaded and reloaded by the
             # model loader); the binding reservation checks again afterwards.
             self.role_router.load_check=self._resource_load_check
+            self.role_router.speicher_stand=self.resource_scheduler.stand      # dynamische Rezepte: der freie Speicher jetzt
+            self.role_router.messwerte=self.messwerte.fuer
         # No gate (missing or invalid config) means the supervisor can check no action, so it allows none.
         self._optional("permission_gate",lambda: PermissionGate(PermissionConfig.load(self.config_root/"permission_levels.yaml"),self.guard,audit=self.audit),
                        error="permission_error")
@@ -268,6 +272,9 @@ class GuppiRuntime:
             else:
                 self.model_loader=ModelLoader(loader_config,controller,audit=self.audit,controllers={"llama-cpp-server":managed} if managed else None)
                 self.job_supervisor.loader=self.model_loader
+                if self.resource_scheduler is not None and self.resource_scheduler.enabled:
+                    self.model_loader.speicher_stand=self.resource_scheduler.stand
+                self.model_loader.messwerte=self.messwerte.fuer
         except (ValueError,OSError) as exc:
             self.model_loader_error=str(exc)
         if self.role_router is not None and self.role_router.enabled:

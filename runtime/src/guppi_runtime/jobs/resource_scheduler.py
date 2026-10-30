@@ -176,6 +176,20 @@ class ResourceScheduler:
             ram = round(min(host["ram_total"] - host["ram_reserve"] - sum(r.get("ram_gb", 0) for r in reservations), host["ram_available"] - host["ram_reserve"]), 3)
         return {"ram_free_gb": ram, "gpus": gpus}
 
+    def stand(self, fresh=False):
+        """Der freie Speicher jetzt, für die Auswahl der Aufteilung (models/aufteilung.py): {frei_vram_gb, frei_ram_gb, reserve_vram_gb, reserve_ram_gb} – oder None, wenn die Messung fehlt.
+        Frei heißt: nicht vergeben (Ledger) und nicht belegt (Messung), das kleinere von beiden; die Reserven kommen aus der Konfiguration."""
+        try:
+            host = self._host(fresh=fresh)
+            reservations = self._read()
+        except Exception:
+            return None
+        if host["ram_total"] is None or host["ram_available"] is None or not host["gpus"]:
+            return None
+        frei_ram = min(host["ram_total"] - self._committed(reservations, "ram_gb"), host["ram_available"])
+        frei_vram = max(min(g["total"] - self._committed(reservations, "vram_gb", g["device_id"]), g["available"]) for g in host["gpus"])
+        return {"frei_vram_gb": round(frei_vram, 3), "frei_ram_gb": round(frei_ram, 3), "reserve_vram_gb": self.config.vram_reserve_gb, "reserve_ram_gb": host["ram_reserve"]}
+
     # ---- advisory
     def explain(self, estimate, *, exclusive=False, resident_vram_gb=0.0, ignore=()):
         """Would this fit right now? A reason string or None. Reserves nothing; reading may be a few seconds old.

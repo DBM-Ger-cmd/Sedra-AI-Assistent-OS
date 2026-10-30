@@ -21,6 +21,37 @@ Weg: Vorarbeiter-Sitzung `S-2C1BABE6` (Qwen3.6-35B-A3B, `coder.local_primary`), 
 
 **Was der Versuch lehrt:** (1) SEDRA trifft die Rechenlogik zuverlässig (Zahlen identisch), scheitert aber an Randverhalten (Eingabeprüfung, Fehlertyp) und liefert viel Wiederholung; (2) schwache versteckte Prüfungen lassen einen falsch gebauten Kandidaten bestehen – Prüfungen müssen die Rückgabewerte prüfen, nicht nur ihre Form; (3) der Vorarbeiter (Qwen3.6) erfand zweimal eine Lauf-ID, ohne das Werkzeug aufzurufen (HS-16 zählt das richtig nicht als erledigt) und tippte `modell_aufteilung` statt `modelle_aufteilung`; erst die ausdrückliche Aufforderung „Ruf das Werkzeug wirklich auf“ führte zum Aufruf; (4) nach `devvm_build` ist das Gespräch ohne Modell (exklusive GPU), es muss neu geladen werden.
 
+## R3 bis R5 (Claude, 30.10.2026 abends): gebaut
+
+| Nr | Ergebnis |
+|---|---|
+| R3 | `models/role_routing.py`: Rezeptblock `profile.dynamisch` wird beim Laden geprüft (`aufteilung.pruefen`, sonst Rezept ungültig mit Grund `profile.dynamisch`). `_evaluate` wählt für ein dynamisches Rezept mit dem freien Speicher von jetzt (`speicher_stand`) die kleinste Lagenzahl im RAM, die passt; reicht der Speicher nicht, erst ein kleinerer Kontext (nie über dem gewünschten und nie unter dem verlangten Mindestkontext), sonst `hardware_pressure` mit einem Satz mit Zahlen; die gewählten Zahlen ersetzen die festen Schätzwerte in `estimated_resources` (`auswahl`), die Auflösung trägt `dynamisch_plan`. `jobs/resource_scheduler.py`: neue Methode `stand()` (frei = das kleinere von Ledger und Messung, Reserven getrennt). `models/model_loader.py`: `ensure` wählt unmittelbar vor dem Start **noch einmal** mit frischen Zahlen, überschreibt `n_cpu_moe` und den Kontext des Starts, lehnt mit Zahlen ab, wenn jetzt nichts passt (nichts wird gestartet), fehlt die Messung gilt die Wahl des Routings; die Antwort enthält `auswahl` nur bei dynamischen Rezepten; Audit `MODEL_LOAD_CHOICE`. `runtime.py` verdrahtet beides, nur wenn der Ressourcen-Scheduler an ist. Ohne Block oder ohne Speicherstand bleibt alles wie vorher. |
+| R4 | `models/messwerte.py`: nach dem Laden merkt `uix_server` den gemessenen Unterschied des freien VRAM und RAM je Rezept, Lagen und Kontext in `runtime_data/model_messwerte.json` (atomar, höchstens 200 Einträge, unsinnige Werte nicht, kaputte Datei zählt als leer, nie ins Rezept); Audit `MODEL_LOAD_MEASURED`; die Auswahl bevorzugt Messwerte (`quelle: gemessen`). |
+| R5 | `POST /api/model/load` meldet `auswahl` (Lagen, Kontext, VRAM, RAM, Token/s, Quelle, Grund); eine Ablehnung trägt den Grund mit den Zahlen (`recipe_not_usable:hardware_pressure:Es fehlen …`). `modell.js`: nach dem Laden ein Hinweis „Modell geladen mit 30 Lagen im RAM, 32.768 Kontext, ≈ 9,8 GB VRAM, 10,9 GB RAM, ≈ 43 Token/s“; bei Ablehnung steht der Satz mit den Zahlen im Modell-Hinweis. |
+
+**Tests:** `test_dynamische_rezepte.py` (14: Rezeptblock, Auswahl beim Auflösen mit den Zahlen vom 29.10. → 30 Lagen, mehr Lagen vor kleinerem Kontext, RAM zu knapp für viele Lagen, Ablehnung mit Zahlen, Messwerte bevorzugt, ohne Block wie vorher, Lader wählt neu und startet mit den Lagen, ohne Messung gilt das Routing, kein dynamisches Rezept gleiche Antwort, Messspeicher, Ablehnungstext und Merken des Messwerts im Server), `test_resource_scheduler` (+1 `stand`), Browser-Abnahme `--stufe6` (+ S6-D Auswahl und Ablehnung). Gruppen `scheduler desk orchestra uix harness wissen`: **1520 Tests, 0 rot**; `test_role_routing`, `test_model_loader`, `test_llama_server_runtime`, `test_resource_scheduler` einzeln grün.
+
+## Rezept des Captains (D-R2)
+
+Wirksam wird alles erst mit dem Block in `local_config/role_routing.yaml` (nicht in Git; ändert nur der Captain oder Claude mit ausdrücklicher Freigabe), für `coder.local_primary` unter `profile`:
+
+```yaml
+dynamisch:
+  n_cpu_moe: {min: 24, max: 40}
+  tabelle:
+    bei_kontext: 32768
+    punkte:
+      - {lagen: 28, vram_gb: 10.5, tokens_s: 45.0}
+      - {lagen: 32, vram_gb: 9.1,  tokens_s: 41.7}
+      - {lagen: 36, vram_gb: 7.6,  tokens_s: 38.5}
+      - {lagen: 40, vram_gb: 6.1,  tokens_s: 35.5}
+  vram_fix_gb: 1.5
+  ram_aufschlag_gb: 1.5
+  ram_untergrenze_gb: 8
+```
+
+Die Messpunkte stammen aus `moe_sweep` vom 9.10. (32k, ubatch 1024); `vram_fix_gb` und `ram_aufschlag_gb` sind Anfangswerte. Das Rezept braucht außerdem `kv_cache_gb_per_1k_tokens` und `model_size_gb` (17,73 stehen schon). Die von Hand geänderten Werte vom 29.10. (`min_ram_gb` 12, `n_cpu_moe` 30, `measured_vram_gb` 9,8) können danach zurück (`min_ram_gb` 18, `n_cpu_moe` 28).
+
 ## Offen
 
-R3 (Rezeptblock im Routing, Lader wählt vor dem Start), R4 (Messspeicher), R5 (Antwort, Audit, Oberfläche), R6 (Abnahme, danach mit Modell auf Ansage). Die Zahlen für das Rezept (`profile.dynamisch`) trägt der Captain in `local_config` ein oder gibt ihre Anlage ausdrücklich frei (D-R2).
+R6: Abnahme **mit Modell** (Qwen3.6 bei verschiedenem freien Speicher laden, gemessener VRAM/RAM gegen die Rechnung, Tempo je Lagenzahl), nur auf Ansage des Captains; das Rezept des Captains mit dem Block (oben); die Messtabelle gegen eine frische `moe_sweep`-Messung prüfen (die Werte vom 9.10. gelten für ubatch 1024, das Rezept läuft mit ubatch 512).

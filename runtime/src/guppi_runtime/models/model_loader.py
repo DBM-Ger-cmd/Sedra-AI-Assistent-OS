@@ -12,10 +12,12 @@ It is off by default and only called by the supervisor after a reservation was g
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from pathlib import Path
 
 import yaml
 
+from ..models import aufteilung
 from ..models.runtime_control import RuntimeControlError
 
 GPU_ALL = {"max", "all", "99", "100"}
@@ -99,6 +101,8 @@ class ModelLoader:
         self.controller = controller
         self.controllers = dict(controllers or {})
         self.audit = audit
+        self.speicher_stand = None      # callable() -> {frei_vram_gb, frei_ram_gb, reserve_vram_gb, reserve_ram_gb} | None (dynamische Rezepte)
+        self.messwerte = None           # callable(recipe_id) -> {(lagen, kontext): {vram_gb, ram_gb}}
 
     def _ctl(self, resolution):
         return self.controllers.get((resolution or {}).get("provider_ref"), self.controller)
@@ -227,6 +231,12 @@ class ModelLoader:
             raise LoadError("provider_unavailable", "model_loader_disabled")
         key, want = self._validate(resolution)
         profile = resolution.get("load_profile") or {}
+        wahl = self._aufteilen(resolution)
+        if wahl is not None:                        # dynamisches Rezept: Lagen im RAM und Kontext nach dem Speicher von jetzt (vor dem Start noch einmal gewählt)
+            want = wahl["kontext"]
+            profile = deepcopy(profile)
+            profile.setdefault("server", {})["n_cpu_moe"] = wahl["lagen"]
+            resolution["auswahl"] = wahl
         ctl = self._ctl(resolution)
         instances = self._list(key, ctl)
         slots = self._slots(resolution)
@@ -234,7 +244,7 @@ class ModelLoader:
         wrong = [i for i in instances if i not in exact]
         if self._reusable(instances, key, want, slots):
             self._audit("MODEL_LOAD_REUSED", model=key, context_length=want)
-            return {"identifier": key, "context_length": want, "action": "reused", "estimate_gib": None}
+            return self._mit_wahl({"identifier": key, "context_length": want, "action": "reused", "estimate_gib": None}, wahl)
         if wrong and self.config.on_context_mismatch == "refuse":
             raise LoadError("provider_unavailable", f"loaded_with_other_context:{wrong[0]['context']}")
         estimate = None
@@ -269,7 +279,32 @@ class ModelLoader:
             raise LoadError("provider_unavailable", f"context_not_applied:{after[0]['context'] if after else None}")
         action = "reloaded" if wrong else "loaded"
         self._audit("MODEL_LOADED", model=key, context_length=want, action=action, estimate_gib=estimate)
-        return {"identifier": key, "context_length": want, "action": action, "estimate_gib": estimate}
+        if wahl is not None:
+            self._audit("MODEL_LOAD_CHOICE", model=key, recipe_id=resolution.get("capability_id"), lagen=wahl["lagen"], context_length=wahl["kontext"],
+                        vram_gb=wahl["vram_gb"], ram_gb=wahl["ram_gb"], tokens_s=wahl.get("tokens_s"), quelle=wahl.get("quelle"), grund=wahl.get("grund"))
+        return self._mit_wahl({"identifier": key, "context_length": want, "action": action, "estimate_gib": estimate}, wahl)
+
+    @staticmethod
+    def _mit_wahl(out, wahl):
+        if wahl is not None:
+            out["auswahl"] = wahl           # nur bei dynamischen Rezepten; die Antwort sonst bleibt, wie sie war
+        return out
+
+    def _aufteilen(self, resolution):
+        """Die Auswahl der Aufteilung für ein dynamisches Rezept (None: kein dynamisches Rezept). Mit dem Speicher von JETZT neu gerechnet; fehlt die Messung, gilt die
+        Wahl des Routings; passt nichts, wird nicht gestartet (hardware_pressure mit den Zahlen)."""
+        plan = resolution.get("dynamisch_plan")
+        if not plan:
+            return None
+        stand = self.speicher_stand() if self.speicher_stand is not None else None
+        if not stand:
+            return (resolution.get("estimated_resources") or {}).get("auswahl")
+        gemessen = self.messwerte(resolution.get("capability_id")) if self.messwerte is not None else None
+        wahl = aufteilung.waehlen(plan["dyn"], plan["kontexte"], stand["frei_vram_gb"], stand["frei_ram_gb"], stand["reserve_vram_gb"], stand["reserve_ram_gb"],
+                                  plan["kv_rate"], plan["groesse_gb"], plan["slots"], gemessen)
+        if not wahl["ok"]:
+            raise LoadError("hardware_pressure", wahl["vorschlag"])
+        return wahl
 
     def _estimate(self, key, want, profile, ctl=None):
         try:

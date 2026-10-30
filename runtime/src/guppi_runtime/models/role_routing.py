@@ -18,6 +18,7 @@ from pathlib import Path
 
 import yaml
 
+from ..models import aufteilung
 from ..models.hardware_pass import HardwareModelPass
 from ..core.util import append_lock, atomic_write_json, load_json, utcnow
 
@@ -170,6 +171,11 @@ class RoutingConfig:
         measured_context = item.get("measured_context")
         if measured_context is not None and (type(measured_context) is not int or measured_context <= 0):
             raise fail("measured_context")
+        if profile.get("dynamisch") is not None:
+            try:
+                aufteilung.pruefen(profile["dynamisch"])
+            except ValueError:
+                raise fail("profile.dynamisch") from None
         return {"id": cid, "version": item.get("version", 1), "enabled": enabled, "roles": list(roles), "provider": item["provider"],
                 "model": item.get("model"), "model_family": item["model_family"], "weights_id": item.get("weights_id"), "location": location,
                 "min_ram_gb": self._number(requirements, "min_ram_gb", 0), "min_vram_gb": self._number(requirements, "min_vram_gb", 0),
@@ -363,6 +369,8 @@ class RoleRouter:
         self.config, self.snapshot, self.health, self.audit = config, snapshot, health, audit
         self.profiles = profiles            # routing_profiles.RoutingProfiles: the Captain's switchable model combination, or None
         self.load_check = load_check        # callable(recipe, estimated_resources, requirements) -> None | reason string
+        self.speicher_stand = None          # callable() -> {frei_vram_gb, frei_ram_gb, reserve_vram_gb, reserve_ram_gb} | None: der freie Speicher jetzt (dynamische Rezepte)
+        self.messwerte = None               # callable(recipe_id) -> {(lagen, kontext): {vram_gb, ram_gb}}: früher gemessene Werte (dynamische Rezepte)
         self.recheck = None                 # callable(provider_ref) -> bool: may a provider marked UNAVAILABLE be tried again? (the way back)
         self._clock = clock or (lambda: datetime.now(timezone.utc))
 
@@ -506,11 +514,29 @@ class RoleRouter:
             ram_gb, vram_gb = (round(size * 1.2, 2) if size else recipe["min_ram_gb"]), recipe["min_vram_gb"]
         estimated = {"ram_gb": ram_gb, "vram_gb": vram_gb, "kv_cache_gb": kv, "kv_cache_placement": placement,
                      "complete": recipe["model_size_gb"] is not None and kv is not None}      # False = the numbers are declared minimums, not an estimate
+        plan = None
+        dyn = recipe["profile"].get("dynamisch")
+        if dyn and self.speicher_stand is not None and recipe["model_size_gb"]:
+            # Dynamische Rezepte (SPEC_DYNAMISCHE_REZEPTE_v1): statt einer festen Aufteilung die kleinste Lagenzahl im RAM, die jetzt in den freien Speicher passt;
+            # reicht der Speicher nicht, erst ein kleinerer Kontext (nie unter dem verlangten Mindestkontext), sonst eine Ablehnung mit Zahlen.
+            stand = self.speicher_stand()
+            wunsch = loaded_context or context or working_context
+            if stand and wunsch:
+                untergrenze = req["context_min_tokens"] or (tiers[0] if tiers else wunsch)
+                kontexte = sorted({t for t in (tiers or []) if untergrenze <= t <= wunsch}, reverse=True) or [wunsch]
+                gemessen = self.messwerte(recipe["id"]) if self.messwerte is not None else None
+                wahl = aufteilung.waehlen(dyn, kontexte, stand["frei_vram_gb"], stand["frei_ram_gb"], stand["reserve_vram_gb"], stand["reserve_ram_gb"],
+                                          rate, recipe["model_size_gb"], slots, gemessen)
+                if not wahl["ok"]:
+                    return None, no("pressure", wahl["vorschlag"])
+                loaded_context = wahl["kontext"]
+                estimated = dict(estimated, ram_gb=wahl["ram_gb"], vram_gb=wahl["vram_gb"], complete=True, auswahl=wahl)
+                plan = {"dyn": dyn, "kontexte": kontexte, "kv_rate": rate, "groesse_gb": recipe["model_size_gb"], "slots": slots}
         if self.load_check is not None:
             reason = self.load_check(recipe, estimated, req)
             if reason:
                 return None, no("pressure", str(reason)[:200])
-        return {"recipe": recipe, "context": loaded_context or context, "estimated": estimated, "key": key, "slots": slots}, None
+        return {"recipe": recipe, "context": loaded_context or context, "estimated": estimated, "key": key, "slots": slots, "plan": plan}, None
 
     # -- resolution
     def _resolution(self, role, recipe, best, req, considered, purpose, alternatives=None):
@@ -521,7 +547,7 @@ class RoleRouter:
                 "requirements": req, "reason": "best_available" if alternatives is None else "named_by_captain", "considered": considered,
                 "load_profile": {"gpu_layers": recipe["profile"].get("gpu_layers"),
                                  **({"server": recipe["profile"]["server"]} if recipe["profile"].get("server") else {})},
-                "alternatives": alternatives if alternatives is not None else [],
+                "alternatives": alternatives if alternatives is not None else [], "dynamisch_plan": best.get("plan"),
                 "profile": getattr(self.profiles, "active", None), "purpose": purpose or role,
                 "sampling": {k: v for k, v in (self.profiles.purpose(purpose or role) if self.profiles is not None else {}).items() if k != "prefer"}}
 
