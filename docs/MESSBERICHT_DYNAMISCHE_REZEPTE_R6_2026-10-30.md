@@ -64,3 +64,11 @@ Mit der Tabelle wählt die Auswahl bei freiem Speicher **24 Lagen** (die kleinst
 - Eingetragen ist die Tabelle aus Abschnitt 5 mit `n_cpu_moe: {min: 28, max: 36}` (Sicherung `role_routing.yaml.bak-2026-10-30-tabelle512`). Die Auswahl mit den echten Zahlen: 11,4 GB VRAM und 15,3 GB RAM frei → 28 Lagen, 65 536 Kontext; 8,0 GB VRAM frei → 29 Lagen; 12,5 GB RAM frei → Ablehnung mit Zahlen („Es fehlen 0,63 GB RAM“).
 - Nicht gemessen: das Laden bei knappem Speicher mit echtem Modell (ohne fremde Last auf der GPU nicht herstellbar; die Auswahl ist mit den echten Zahlen in `test_dynamische_rezepte` geprüft) und 40 Lagen im RAM.
 - Der Messspeicher `model_messwerte.json` füllt sich erst nach einem Neustart des Cockpits mit dem Fix; danach ersetzen Messwerte die Rechnung.
+
+## 7. Nachtrag (30.10. abends): Kette Ende zu Ende
+
+- **Messspeicher gefüllt:** Nach dem Fix schreibt das Cockpit `model_messwerte.json`: 28 Lagen, 65 536 Kontext (2 Slots) = 8,413 GB VRAM, 11,025 GB RAM.
+- **KV-Rate 0,0125 GiB je 1000 Token** steht jetzt im Rezept (Sicherung `role_routing.yaml.bak-2026-10-30-kvrate`). Die Rechnung ergibt für 28 Lagen bei 2 × 65 536 damit 8,83 GB VRAM gegen gemessen 8,41 (5 % darüber); ohne Rate lag sie mit 7,6 GB um 0,8 GB darunter.
+- **Neustart des Cockpits und Laden:** Die Auswahl liefert `lagen 28, kontext 65536, vram_gb 8.413, ram_gb 11.025, quelle gemessen`; der Messwert ersetzt die Rechnung. Mit der Rate und dem Messwert gerechnet: bei 9,0 GB VRAM frei 30 Lagen, bei 8,0 GB frei 33 Lagen, bei nur 12,0 GB RAM frei Ablehnung mit Zahlen (`Es fehlen 0,53 GB RAM`).
+- **40 Lagen:** Ein zweiter Versuch bei 15,5 GB freiem RAM scheitert wie zuvor mit `CUDA error: out of memory` beim Laden. Hochgerechnet brauchen 40 Lagen rund 16,4 GB RAM; die Erklärung über den Hauptspeicher ist wahrscheinlich, aber nicht bewiesen. `max: 36` bleibt.
+- **LibreHardwareMonitor** ist auf diesem PC nicht installiert (kein Prozess, kein Dienst, keine Datei gefunden). Die GPU-Zelle zeigt deshalb nur nvidia-smi-Werte; die Board-Sensoren gibt es nach der Installation durch den Captain.
