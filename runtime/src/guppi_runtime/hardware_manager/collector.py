@@ -8,9 +8,11 @@ import math
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import subprocess
 import time
+import urllib.request
 
 from ..hardware import detect_hardware
 from ..core.util import utcnow
@@ -37,6 +39,34 @@ def powershell(script, timeout=8):
     if result.returncode:
         raise RuntimeError('windows_query_failed')
     return json.loads(result.stdout.lstrip('\ufeff').strip())
+
+
+LHM_WEB_URL = 'http://127.0.0.1:8085/data.json'     # Remote Web Server von LibreHardwareMonitor (ab 0.9.6 ohne WMI); fest, nur diese Schleife
+LHM_WEB_MAX = 5 * 1024 * 1024
+LHM_UNITS = {'Temperature': '°C', 'Fan': 'RPM', 'Power': 'W', 'Clock': 'MHz'}
+_LHM_NUMBER = re.compile(r'-?\d+(?:[.,]\d+)?')
+
+
+def lhm_web_sensors(tree):
+    """Die Blätter von data.json (Temperatur, Lüfter, Leistung, Takt) in dieselbe Form wie die WMI-Zeilen. Werte stehen dort als Text mit Komma (\"35,0 °C\")."""
+    rows = []
+    def walk(node, depth=0):
+        if not isinstance(node, dict) or depth > 12:
+            return
+        children = node.get('Children')
+        if isinstance(children, list) and children:
+            for child in children:
+                walk(child, depth + 1)
+            return
+        kind = node.get('Type')
+        if kind not in LHM_UNITS:
+            return
+        found = _LHM_NUMBER.search(str(node.get('Value') or ''))
+        value = float(found.group().replace(',', '.')) if found else None
+        rows.append({'sensor_id': str(node.get('SensorId') or ''), 'name': str(node.get('Text') or ''), 'type': kind,
+                     'reading': metric(value, LHM_UNITS[kind], 'LHM.web')})
+    walk(tree)
+    return rows
 
 
 class NativeCollector:
@@ -164,8 +194,19 @@ class NativeCollector:
             return out, None if out else 'no_gpu_rows'
         except Exception: return [], 'GPU_query_failed'
 
+    def _sensors_web(self):
+        with urllib.request.urlopen(LHM_WEB_URL, timeout=2) as response:      # fest verdrahtete Loopback-Adresse, keine Eingabe von aussen
+            raw = response.read(LHM_WEB_MAX + 1)
+        if len(raw) > LHM_WEB_MAX:
+            raise ValueError('lhm_web_too_large')
+        return lhm_web_sensors(json.loads(raw.decode('utf-8-sig', 'replace')))
+
     def _sensors(self):
         if os.name == 'nt':
+            try:
+                rows = self._sensors_web()                 # zuerst der Webserver: schnell und ohne PowerShell; LibreHardwareMonitor ab 0.9.6 hat kein WMI mehr
+                if rows: return rows, None
+            except Exception: pass
             try:
                 rows = powershell("@(Get-CimInstance -Namespace root/LibreHardwareMonitor -ClassName Sensor "
                                   "-ErrorAction Stop | Where-Object {$_.SensorType -in @('Temperature','Fan','Power','Clock')} "

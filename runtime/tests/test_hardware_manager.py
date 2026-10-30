@@ -255,6 +255,53 @@ class HardwareCase(unittest.TestCase):
         self.assertEqual(gpus[1]['temperature_core']['state'],'unavailable')
         self.assertEqual(gpus[1]['utilization']['value'],0)
 
+    LHM_BAUM = {'Text': 'Sensor', 'Children': [{'Text': 'PC', 'Children': [
+        {'Text': 'NVIDIA GeForce RTX 4070 Ti', 'Children': [
+            {'Text': 'Temperatures', 'Children': [{'Text': 'GPU Core', 'Type': 'Temperature', 'SensorId': '/gpu-nvidia/0/temperature/0', 'Value': '35,0 °C'}]},
+            {'Text': 'Powers', 'Children': [{'Text': 'GPU Package', 'Type': 'Power', 'SensorId': '/gpu-nvidia/0/power/0', 'Value': '16,0 W'}]},
+            {'Text': 'Fans', 'Children': [{'Text': 'GPU Fan 1', 'Type': 'Fan', 'SensorId': '/gpu-nvidia/0/fan/1', 'Value': '0 RPM'}]},
+            {'Text': 'Load', 'Children': [{'Text': 'GPU Core', 'Type': 'Load', 'SensorId': '/gpu-nvidia/0/load/0', 'Value': '22,0 %'}]}]},
+        {'Text': 'Board', 'Children': [{'Text': 'Clocks', 'Children': [
+            {'Text': 'CPU Core #1', 'Type': 'Clock', 'SensorId': '/cpu/0/clock/1', 'Value': '4500,5 MHz'},
+            {'Text': 'Kaputt', 'Type': 'Temperature', 'SensorId': '/x', 'Value': 'n/a'}]}]}]}]}
+
+    def test_lhm_web_sensors_liest_die_blaetter_mit_komma_und_ohne_last(self):
+        from guppi_runtime.hardware_manager.collector import lhm_web_sensors
+        rows = lhm_web_sensors(self.LHM_BAUM)
+        self.assertEqual([(r['name'], r['type'], r['reading']['value'], r['reading']['unit']) for r in rows],
+                         [('GPU Core', 'Temperature', 35.0, '°C'), ('GPU Package', 'Power', 16.0, 'W'), ('GPU Fan 1', 'Fan', 0.0, 'RPM'),
+                          ('CPU Core #1', 'Clock', 4500.5, 'MHz'), ('Kaputt', 'Temperature', None, '°C')])
+        self.assertTrue(all(r['reading']['source'] == 'LHM.web' for r in rows))
+        self.assertEqual(rows[0]['sensor_id'], '/gpu-nvidia/0/temperature/0')
+        self.assertEqual(rows[4]['reading']['state'], 'unavailable', 'ein unlesbarer Wert bleibt unavailable, nichts wird erfunden')
+        for kaputt in (None, [], 'x', {'Children': 'x'}, {'Children': [1, None]}):
+            self.assertEqual(lhm_web_sensors(kaputt), [])
+
+    def test_sensors_fragt_zuerst_den_webserver_und_faellt_auf_wmi_zurueck(self):
+        import io as _io
+        collector = NativeCollector(self.root)
+        class Antwort(_io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+        roh = json.dumps(self.LHM_BAUM).encode('utf-8')
+        base = 'guppi_runtime.hardware_manager.collector.'
+        with patch(base + 'os.name', 'nt'), patch(base + 'urllib.request.urlopen', return_value=Antwort(b'\xef\xbb\xbf' + roh)) as web, \
+             patch(base + 'powershell') as ps:
+            rows, reason = collector._sensors()
+        self.assertIsNone(reason); self.assertEqual(len(rows), 5)
+        ps.assert_not_called()
+        self.assertEqual(web.call_args[0][0], 'http://127.0.0.1:8085/data.json')
+        self.assertEqual(web.call_args[1]['timeout'], 2)
+        wmi = [{'Identifier': '/gpu/0/temperature/0', 'Name': 'GPU Core', 'SensorType': 'Temperature', 'Value': 41.0}]
+        with patch(base + 'os.name', 'nt'), patch(base + 'urllib.request.urlopen', side_effect=OSError('refused')), patch(base + 'powershell', return_value=wmi):
+            rows, reason = collector._sensors()
+        self.assertIsNone(reason); self.assertEqual(rows[0]['reading']['source'], 'LHM.WMI')
+        with patch(base + 'os.name', 'nt'), patch(base + 'urllib.request.urlopen', side_effect=OSError('refused')), \
+             patch(base + 'powershell', side_effect=RuntimeError('windows_query_failed')):
+            self.assertEqual(collector._sensors(), ([], 'LibreHardwareMonitor_WMI_not_running_or_not_available'))
+        with patch(base + 'os.name', 'nt'), patch(base + 'urllib.request.urlopen', return_value=Antwort(b'{"Children":[]}')), patch(base + 'powershell', return_value=[]):
+            self.assertEqual(collector._sensors(), ([], None), 'ein leerer Baum ist kein Treffer: weiter zu WMI')
+
     def test_native_sample_timestamps_do_not_hide_chart_values(self):
         collector=NativeCollector(self.root)
         with patch.object(collector,'_gpu',return_value=([],None)), patch.object(collector,'_sensors',return_value=([],None)):

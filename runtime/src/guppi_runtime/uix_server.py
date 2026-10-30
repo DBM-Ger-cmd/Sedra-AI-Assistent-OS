@@ -1744,7 +1744,7 @@ class UIXHub:
     # Keine eigene Messung: `hardware_manager.get_state()` ist die Probe, die der Hardware-Manager ohnehin nimmt (nvidia-smi, Board-
     # Sensoren über LibreHardwareMonitor, RAM), zwischengespeichert; die Leiste fragt sie höchstens alle 10 s neu.
     HARDWARE_PROBE_S = 10
-    LHM_SATZ = 'Board-Sensoren: LibreHardwareMonitor nicht gestartet – als Dienst starten, dann erscheinen sie hier.'
+    LHM_SATZ = 'Board-Sensoren: LibreHardwareMonitor nicht gestartet oder ohne Webserver – mit Administratorrechten starten und unter Options „Remote Web Server“ einschalten (Port 8085), dann erscheinen sie hier.'
 
     def _hardware_probe(self):
         hm = getattr(self.runtime, 'hardware_manager', None)

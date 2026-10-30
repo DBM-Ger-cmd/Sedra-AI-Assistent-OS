@@ -88,7 +88,8 @@ class Zellen(unittest.TestCase):
         gpu = strip['gpu']
         self.assertNotIn('temperatur', gpu)
         self.assertIn('LibreHardwareMonitor nicht gestartet', gpu['hint'])
-        self.assertIn('als Dienst starten', gpu['hint'])
+        self.assertIn('Remote Web Server', gpu['hint'])
+        self.assertIn('8085', gpu['hint'])
 
     def test_lhm_satz_steht_auch_neben_nvidia_smi(self):
         gpu = self.mit(probe(smi=61.0, sensors_reason='LibreHardwareMonitor_WMI_not_running_or_not_available'))['gpu']
