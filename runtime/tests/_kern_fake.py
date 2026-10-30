@@ -1,8 +1,9 @@
 """Ein Mikrofon für die Tests: der Kern bekommt einen Strom, der ohne Gerät Stücke liefert (16 kHz, mono, int16)."""
+import struct
 import threading
 import time
 
-import numpy as np
+STUECK = struct.pack('<800h', *([500] * 800))       # 800 Werte int16 (little endian), 50 ms bei 16 kHz; ohne numpy, das im Projekt sonst nirgends gebraucht wird
 
 
 class FakeStrom:
@@ -15,7 +16,7 @@ class FakeStrom:
 
         def lauf():
             while self.laeuft:
-                self.cb(np.full(800, 500, dtype=np.int16).tobytes(), 800, None, None)
+                self.cb(STUECK, 800, None, None)
                 time.sleep(0.05)
         threading.Thread(target=lauf, daemon=True).start()
 
