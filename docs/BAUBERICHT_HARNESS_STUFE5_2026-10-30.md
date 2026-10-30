@@ -68,3 +68,16 @@ Zeilen je Shell-Datei (Vertrag ≤ 400): `shell.css` 386, `verlauf.js` 357, `ein
 ## 6. Quote (L4)
 
 Stufe 5 ganz von Claude (Captain 07:53): kein SEDRA-Bau. Zeilen Claude ≈ 1 150 Code (JS, Python, CSS) plus Tests, Abnahme und Doku; Zeilen SEDRA 0.
+
+## Nachtrag Abnahme durch SEDRA (30.10.2026, am PC, nach Ja des Captains)
+
+Cockpit aus `main` (`0509a94`), Qwen3.6-35B-A3B geladen (`coder.local_primary`), Vorarbeiter-Sitzung `S-7C674D6B`, Aufgabe `T-12F035D3` (nur `lauf_starten run_tests`, 10 Aufrufe, 2 Stunden). Der Vorarbeiter startete beide Läufe ohne Karte und fasste die Ergebnisse zusammen.
+
+| Lauf | Gruppen | Ergebnis |
+|---|---|---|
+| `L-517E05ED` | `harness` | 270 Tests, 1 übersprungen, 0 rot, 20 s |
+| `L-9916EACE` | `scheduler desk orchestra uix` | 1146 Tests, 14 übersprungen, 0 rot, 102 s |
+
+Der Vorarbeiter nannte „1416 Tests“ (Summe der beiden Läufe; die Gruppen überlappen, der Gesamtlauf der Gruppen zusammen zählt 1338, 0 rot).
+
+**Nicht abgenommen:** `harness_abnahme.py --stufe4` und `--stufe5` (Paket `playwright` fehlt in der `.venv`), Benachrichtigung, GPU-Zelle mit Temperatur und Quelle (RTX, LibreHardwareMonitor), Cockpit-Wechsel, `test_k5` unter Windows. Diese Prüfungen macht der Captain im Browser (Checkliste im Vorschlag G4 oben).
