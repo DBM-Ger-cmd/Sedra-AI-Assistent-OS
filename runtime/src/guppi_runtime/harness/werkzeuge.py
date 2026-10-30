@@ -133,7 +133,12 @@ class Werkzeuge:
             raise WerkzeugFehler(f'ausserhalb_schreibbereich: {rel} – schreiben nur in {", ".join(self.projekt["schreibbereich"])}')
         if p.exists() and not p.is_file():
             raise WerkzeugFehler('ziel_ist_ordner')
-        alt_text = p.read_text(encoding='utf-8') if p.is_file() else ''
+        if p.is_file() and p.stat().st_size > DATEI_MAX:
+            raise WerkzeugFehler(f'datei_zu_gross: {rel} ist größer als {DATEI_MAX // 1000} KB; für diese Datei gibt es keine Vorschau und keine Änderung')
+        try:
+            alt_text = p.read_text(encoding='utf-8') if p.is_file() else ''
+        except (UnicodeDecodeError, OSError) as exc:                     # kein UTF-8-Text (Binärdatei, andere Kodierung): ein Fehler für das Modell, kein Absturz der Antwort
+            raise WerkzeugFehler(f'datei_nicht_lesbar: {rel} ist keine UTF-8-Textdatei ({type(exc).__name__})') from exc
         fsargs = self._fsargs(name, args, p, alt_text)
         neu_text = fsargs['content']
         aktion = 'overwrite_existing' if p.exists() else 'create_new_artifact'
@@ -155,7 +160,7 @@ class Werkzeuge:
         if name == 'lauf_starten':
             typ = self._typ(args.get('lauf'))
             info = lauf_mod.argv_bauen(typ, args.get('parameter'), self.wurzel)
-            vorschau = [f"Lauf {typ['name']} ({typ['id']})", 'Befehl: ' + ' '.join(info['argv'][:1] + info['argv'][1:]), f"Ordner: {typ['ordner']}", f"GPU: {typ['gpu']}"]
+            vorschau = [f"Lauf {typ['name']} ({typ['id']})", 'Befehl: ' + lauf_mod.maskiert(' '.join(info['argv'][:1] + info['argv'][1:])), f"Ordner: {typ['ordner']}", f"GPU: {typ['gpu']}"]
             if typ['modell_weg']:
                 vorschau.append('ACHTUNG: nimmt dem Gespräch das Modell, bis der Lauf endet')
             if typ['braucht_modell']:

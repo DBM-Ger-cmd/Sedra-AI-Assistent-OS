@@ -215,6 +215,7 @@ class Aufgaben:
         self.ordner = Path(ordner)
         self.audit, self.melden = audit, melden
         self._sperre = threading.RLock()
+        self._gelesen = {}                          # Dateiname → ((Änderungszeit, Größe), Inhalt): `alle` liest nur geänderte Dateien neu
 
     # ---- Hilfen
     def _pfad(self, tid):
@@ -282,7 +283,15 @@ class Aufgaben:
         with self._sperre:
             for p in sorted(self.ordner.glob('T-*.json')):
                 try:
-                    a = self._aktuell(json.loads(p.read_text(encoding='utf-8')), jetzt_z)
+                    st = p.stat()
+                    stand = (st.st_mtime_ns, st.st_size)
+                    gemerkt = self._gelesen.get(p.name)
+                    if gemerkt and gemerkt[0] == stand:
+                        roh = dict(gemerkt[1])
+                    else:
+                        roh = json.loads(p.read_text(encoding='utf-8'))
+                        self._gelesen[p.name] = (stand, roh)
+                    a = self._aktuell(roh, jetzt_z)                  # Ablauf und Erschöpfung gelten weiter nach der Uhr; ein Statuswechsel schreibt die Datei neu
                 except (OSError, ValueError, KeyError):
                     continue
                 if status is None or a.get('status') == status:

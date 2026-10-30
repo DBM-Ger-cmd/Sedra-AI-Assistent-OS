@@ -176,6 +176,25 @@ class PruefenTests(unittest.TestCase):
         a = roh(zweck='Alles erledigen')
         self.assertIsNone(aufgabe_deckung.deckt([a], S1, 'befehl', 'rm -rf x', JETZT, katalog.passt))
 
+    def test_alle_liest_nur_geaenderte_dateien_neu_und_haelt_ablauf_und_zaehler_aktuell(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = aufgabe.Aufgaben(Path(tmp))
+            e = eingabe(ende={'bis': (JETZT + timedelta(minutes=5)).isoformat(), 'max_aufrufe': 2})
+            a, _ = store.anlegen(e, jetzt_z=JETZT)
+            gelesen = []
+            echt = Path.read_text
+            Path.read_text = lambda self, *x, **k: (gelesen.append(self.name), echt(self, *x, **k))[1]
+            try:
+                self.assertEqual([x['id'] for x in store.alle('aktiv', JETZT)], [a['id']])
+                self.assertEqual([x['id'] for x in store.alle('aktiv', JETZT)], [a['id']])
+                self.assertEqual(len(gelesen), 1, 'die zweite Abfrage nimmt den gemerkten Inhalt')
+                self.assertTrue(store.zaehlen(a['id'], JETZT))
+                self.assertEqual(store.alle(None, JETZT)[0]['aufrufe'], 1, 'der geänderte Zähler wird neu gelesen')
+                self.assertEqual(store.alle('aktiv', JETZT + timedelta(minutes=6)), [], 'der Ablauf gilt auch bei gemerktem Inhalt')
+                self.assertEqual(store.laden(a['id'], JETZT + timedelta(minutes=6))['status'], 'abgelaufen')
+            finally:
+                Path.read_text = echt
+
     def test_vorschlag_ohne_vorarbeiter_als_nutzer(self):
         with self.assertRaisesRegex(aufgabe.AufgabeFehler, 'selbstfreigabe'):
             aufgabe.pruefen_neu(eingabe(sitzungen=[S1, S2]), jetzt_z=JETZT, vorschlag=True, verbotene_sitzungen=(S2,))

@@ -109,6 +109,18 @@ class SchreibenTests(Basis):
         (self.root / 'docs' / 'b.txt').write_text('inzwischen geändert', encoding='utf-8')
         self.assertEqual(self.w.ausfuehren('datei_schreiben', args, token=t)['status'], 'fehler')
 
+    def test_datei_die_kein_utf8_text_ist_wird_als_fehler_gemeldet_nicht_als_absturz(self):
+        (self.root / 'docs' / 'alt.txt').write_bytes('Grüße'.encode('latin-1'))
+        (self.root / 'docs' / 'bin.dat').write_bytes(bytes([0, 1, 255, 254]))
+        for name, args in (('datei_aendern', {'pfad': 'docs/alt.txt', 'alt': 'a', 'neu': 'b'}), ('datei_schreiben', {'pfad': 'docs/bin.dat', 'inhalt': 'x'})):
+            with self.assertRaisesRegex(WerkzeugFehler, 'datei_nicht_lesbar'):
+                self.w.vorbereiten(name, args)
+
+    def test_zu_grosse_datei_wird_nicht_in_den_speicher_gelesen(self):
+        (self.root / 'docs' / 'gross.txt').write_bytes(b'a' * 1_000_001)
+        with self.assertRaisesRegex(WerkzeugFehler, 'datei_zu_gross'):
+            self.w.vorbereiten('datei_aendern', {'pfad': 'docs/gross.txt', 'alt': 'a', 'neu': 'b'})
+
     def test_neue_datei(self):
         out = self.w.ausfuehren('datei_schreiben', {'pfad': 'docs/neu/c.md', 'inhalt': 'hallo'})
         self.assertEqual(out['status'], 'ok', out)
