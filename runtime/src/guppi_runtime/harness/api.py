@@ -18,6 +18,7 @@
     POST   vorlagen/grenzen                   Stufe 5: {vorlage, max_zuege} → Antrag auf eine Kopie der Vorlage in local_config (HARNESS_VORLAGE_WRITE)
     POST   einstufen                          {werkzeug, ziel} → Stufe, Regel, Begründung (Vorbehalt vor Katalog)
     GET    werkzeuge                          die Werkzeuge mit Kurzbeschreibung
+    GET    vorschau?sitzung=&pfad=            Stufe 6: Datei aus dem Verlauf der Sitzung lesen (nur Lesen, Einstufung wie datei_lesen)
     GET    aufgaben                           Stufe 3: Aufgaben-Freigaben mit Rest und Zustand (HS-27)
     POST   aufgaben                           {titel, zweck, projekt, sitzungen, erlaubt, modelle?, ende} → Aufgabe + warnungen (nur der Captain; Herkunftsprüfung S7)
     GET    aufgaben/<id>                      eine Aufgabe
@@ -50,6 +51,7 @@ from . import projekte as harness_projekte
 from . import schleife
 from . import vorarbeiter as harness_vorarbeiter
 from . import vorlagen as harness_vorlagen
+from . import vorschau as harness_vorschau
 from .werkzeuge import LAUF as LAUF_WERKZEUGE, SCHEMAS as WERKZEUG_SCHEMAS, Werkzeuge
 from .sitzung import SitzungFehler, Sitzungen, titel_aus
 from .strom import Stroeme, ZuVieleAntworten
@@ -61,7 +63,7 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter)(?:/(antrag|entfernen|grenzen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau)(?:/(antrag|entfernen|grenzen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/grenzen)')
@@ -169,6 +171,8 @@ class HarnessApi:
             return 200, harness_antraege.grenzen_antrag(self.hub, payload.get('vorlage'), payload.get('max_zuege'))
         if fest == 'einstufen' and method == 'POST':
             return 200, self.einstufen(payload)
+        if fest == 'vorschau' and method == 'GET' and not unter:
+            return 200, self.vorschau(q)
         if fest == 'vorarbeiter':
             return self.vorarbeiter_weg(method, q, payload)
         if fest == 'vorlagen' and method == 'GET' and not unter:
@@ -555,6 +559,19 @@ class HarnessApi:
             return dict(harness_katalog.laden(self.hub.project_root), fehler=None, vorlage=vorlage)
         except harness_katalog.KatalogFehler as exc:
             return {'regeln': [], 'quelle': None, 'datei': None, 'fehler': str(exc), 'vorlage': vorlage}
+
+    def vorschau(self, q):
+        """GET vorschau?sitzung=S-…&pfad=… (Stufe 6): nur Lesen, nur Pfade aus dem Verlauf der Sitzung, mit der Einstufung von `datei_lesen`."""
+        sid = (q.get('sitzung') or [''])[0]
+        s = self._sitzung(sid)
+        regeln, fehler = self._regeln()
+        if regeln is None:
+            raise ValueError('katalog_ungueltig: ' + fehler)
+        projekt = self._projekt(s['kopf']['projekt'])
+        try:
+            return harness_vorschau.lesen(projekt['wurzel'], regeln, s.get('eintraege'), (q.get('pfad') or [''])[0])
+        except harness_vorschau.VorschauFehler as exc:
+            raise ValueError(str(exc)) from exc
 
     def einstufen(self, payload):
         werkzeug, ziel = str(payload.get('werkzeug') or ''), str(payload.get('ziel') or '')
