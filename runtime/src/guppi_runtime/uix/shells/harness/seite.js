@@ -6,6 +6,13 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
   const ZU_KEY = 'sedra.harness.projekte.zu';
+  const ALT_KEY = 'sedra.harness.projekte.alt';            // Projekte, deren Block „Ältere Sitzungen“ offen ist (nur IDs)
+  const ALT_TAGE = 7;
+  const HILFE = [
+    ['Was ist ein Projekt?', 'Ein Arbeitsordner mit eigenen Sitzungen, Freigaben und einem Vorarbeiter. SEDRA arbeitet nur in dessen Ordner.'],
+    ['Sitzung anlegen', '„+ Neue Sitzung“ oben oder „Neue Sitzung starten“ unter einem Projekt; die Projektwahl steht unter dem Eingabefeld.'],
+    ['Flagge ⚑', 'Der Vorarbeiter des Projekts: Er entscheidet Karten der Stufe „vorarbeiter“ und schlägt Aufgaben vor. Ernennen nur du (⚐ neben der Sitzung).'],
+    ['Aufgaben', 'Unten „⛨ Aufgaben“: freigegebene Arbeitspakete mit Zweck, Frist und Zähler; dort nimmst du sie zurück.']];
 
   function zeit(iso){
     if(!iso) return '';
@@ -20,8 +27,35 @@
     try{ return new Set(JSON.parse(localStorage.getItem(ZU_KEY) || '[]')); }catch(_e){ return new Set(); }
   }
 
-  function merken(set){
-    try{ localStorage.setItem(ZU_KEY, JSON.stringify([...set])); }catch(_e){}
+  function merken(set, key){
+    try{ localStorage.setItem(key || ZU_KEY, JSON.stringify([...set])); }catch(_e){}
+  }
+
+  function altOffen(){
+    try{ return new Set(JSON.parse(localStorage.getItem(ALT_KEY) || '[]')); }catch(_e){ return new Set(); }
+  }
+
+  function istAlt(S, s){                      // älter als 7 Tage; die aktive Sitzung und Vorarbeiter-Sitzungen bleiben immer oben
+    const t = new Date(s.zuletzt || s.angelegt || 0).getTime();
+    const aktiv = S.aktive() && S.aktive().id === s.id;
+    return !aktiv && s.vorlage !== 'vorarbeiter' && !s.laeuft && t > 0 && Date.now() - t > ALT_TAGE * 86400000;
+  }
+
+  function hilfe(S){
+    const box = d().el('div', 'hs-projekte-hilfe'); box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Hilfe zu Projekten');
+    HILFE.forEach(([k, v])=>{ const z = d().el('div', 'hs-hilfe-zeile'); z.append(d().el('b', null, k + ' '), d().el('span', 'hs-leise', v)); box.append(z); });
+    const zu = d().button('Schließen', ()=>{ S._projekteHilfe = false; zeichnen(S); });
+    box.append(zu);
+    box.onkeydown = e=>{ if(e.key === 'Escape'){ e.stopPropagation(); S._projekteHilfe = false; zeichnen(S); } };
+    setTimeout(()=>zu.focus(), 0);
+    return box;
+  }
+
+  function projektInfo(S, p, eigene){
+    const v = S.vorarbeiter && S.vorarbeiter[p.id];
+    const vs = v && eigene.find(s=>s.id === v.sitzung_id);
+    const offen = (S.aufgaben || []).filter(a=>a.projekt === p.id && a.status === 'aktiv').length;
+    return (p.wurzel ? p.wurzel + ' · ' : '') + eigene.length + ' Sitzungen · Vorarbeiter: ' + (vs ? (vs.titel || 'Ohne Titel') : 'keiner') + ' · ' + offen + ' aktive Aufgaben';
   }
 
   function zeile(S, s){
@@ -109,14 +143,31 @@
     S.projekte.forEach(p=>{
       const eigene = S.sitzungen.filter(s=>s.projekt === p.id);
       const inhalt = d().el('div', 'hs-sz-liste');
-      if(!eigene.length) inhalt.append(d().el('small', 'hs-leise', 'Noch keine Sitzung'));
-      eigene.forEach(s=>inhalt.append(zeile(S, s)));
+      if(!eigene.length){
+        inhalt.append(d().el('small', 'hs-leise', 'Noch keine Sitzung. '), d().button('Neue Sitzung starten', ()=>root.sedraHarness.reiter.neu(S)));
+      }
+      const neuere = eigene.filter(s=>!istAlt(S, s)), aeltere = eigene.filter(s=>istAlt(S, s));
+      neuere.forEach(s=>inhalt.append(zeile(S, s)));
+      if(aeltere.length){                     // nur einklappen, nie löschen (HS-67)
+        const det = d().el('details', 'hs-sz-alt'); det.open = altOffen().has(p.id);
+        det.append(d().el('summary', 'hs-leise', 'Ältere Sitzungen (' + aeltere.length + ')'));
+        aeltere.forEach(s=>det.append(zeile(S, s)));
+        det.ontoggle = ()=>{ const o = altOffen(); det.open ? o.add(p.id) : o.delete(p.id); merken(o, ALT_KEY); };
+        inhalt.append(det);
+      }
       const offen = !zu.has(p.id);
       const g = gruppe(p.name, inhalt, offen, ()=>{ offen ? zu.add(p.id) : zu.delete(p.id); merken(zu); zeichnen(S); });
-      g.title = p.wurzel || '';
+      g.title = projektInfo(S, p, eigene);
       projekteBox.append(g);
     });
-    liste.append(d().el('div', 'hs-ueber', 'Projekte'), projekteBox);
+    const kopf = d().el('div', 'hs-ueber hs-projekte-kopf');
+    const fragezeichen = d().el('button', 'hs-sz-knopf', '?'); fragezeichen.type = 'button';
+    fragezeichen.title = 'Was ist ein Projekt?'; fragezeichen.setAttribute('aria-label', 'Hilfe zu Projekten'); fragezeichen.setAttribute('aria-expanded', S._projekteHilfe ? 'true' : 'false');
+    fragezeichen.onclick = ()=>{ S._projekteHilfe = !S._projekteHilfe; zeichnen(S); };
+    kopf.append(d().el('span', null, 'Projekte'), fragezeichen);
+    liste.append(kopf, d().el('small', 'hs-leise hs-projekte-satz', 'Ein Projekt ist ein Arbeitsordner mit eigenen Sitzungen, Freigaben und einem Vorarbeiter.'));
+    if(S._projekteHilfe) liste.append(hilfe(S));
+    liste.append(projekteBox);
     const chats = S.sitzungen.filter(s=>!ids.has(s.projekt));
     const chatBox = d().el('div', 'hs-sz-liste');
     if(!chats.length) chatBox.append(d().el('small', 'hs-leise', 'Keine Sitzung ohne Projekt'));

@@ -385,3 +385,4 @@
 .hs-katalog-leiste{display:flex;flex-wrap:wrap;gap:6px}
 .hs-katalog-vorschau>summary{cursor:pointer;font-size:var(--size-small);color:var(--muted)}
 .hs-auf-satz{font-weight:600;font-size:var(--size-body);margin:2px 0}.hs-auf-darf{margin-bottom:4px}.hs-auf-technik{margin:4px 0}.hs-auf-technik summary{cursor:pointer}
+.hs-projekte-kopf{display:flex;align-items:center;justify-content:space-between}.hs-projekte-satz{display:block;padding:0 8px 4px}.hs-projekte-hilfe{margin:4px 8px;padding:8px;border:1px solid var(--line);border-radius:6px;display:grid;gap:6px}.hs-sz-alt summary{cursor:pointer;padding:2px 8px}
