@@ -15,6 +15,11 @@ Stand: 30.10.2026. Diese Datei hält die Entscheidungen des Captains fest, damit
 - Vor der Code-Änderung prüfen, wo Pfade fest verdrahtet sind (rund 186 Treffer in 45 Dateien).
 - `Test-PortableRuntime.ps1` lehnt Verknüpfungen im Paket ohnehin ab; das Paket auf dem Stick besteht aus echten Ordnern.
 
+## Zielrechner: zwei Stufen (Entscheidung 31.10.2026)
+- **Basis für schwache Systeme (bis 16 GB RAM, 8 GB VRAM):** Bonsai-27B Q1_0 (mit mmproj) und Nemotron 3.5 Bolt E4B. Diese beiden gehören in jede Stick-Version.
+- **Erweiterung für starke Systeme (mehr Kapazität):** Qwen3.6-35B-A3B, Qwen3.5-9B-MTP, Gemma 4 12B QAT (mit mmproj). Qwen3.6 braucht laut Rezept mindestens 18 GB RAM und ist deshalb nur auf starken Systemen sinnvoll.
+- Die Modelle der Erweiterung dürfen auf dem Stick liegen, sind für den schwachen Rechner aber nicht vorgesehen.
+
 ## Modelle (vier, aus `I:\KI-Daten\modelle`)
 1. Qwen3.6-35B-A3B, `unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf` (17,73 GB), Hauptmodell
 2. Qwen3.5-9B-MTP, `unsloth/Qwen3.5-9B-MTP-GGUF/Qwen3.5-9B-Q6_K.gguf` (7,68 GB), Ausweichmodell

@@ -38,6 +38,11 @@
 
 ### 3.2 Modelle (Kopien; die Originale auf `I:\KI-Daten\modelle` bleiben)
 
+**Zwei Stufen (Entscheidung 31.10.2026, `docs/ENTSCHEIDUNGEN_USB_STICK.md`):**
+- **Basis (Pflicht, jede Stick-Version):** Bonsai-27B Q1_0 mit mmproj (für Rechner bis 16 GB RAM und 8 GB VRAM) und Nemotron 3.5 Bolt E4B.
+- **Erweiterung (optional, für starke Systeme):** Qwen3.6-35B-A3B, Qwen3.5-9B-MTP, Gemma 4 12B QAT mit mmproj. Die Dateien dürfen auf dem Stick liegen, sind für schwache Rechner aber nicht vorgesehen.
+- Ersatzkopien (Nemotron, SHA-256 gleich; Qwen3.5-9B und Bonsai) laufen durch den Captain außerhalb dieses Branches. Auf K: wird nicht parallel kopiert.
+
 | Modell | Quelle (relativ zu `I:\KI-Daten\modelle`) | Größe |
 |---|---|---|
 | Qwen3.6-35B-A3B (Hauptmodell) | `unsloth\Qwen3.6-35B-A3B-GGUF\Qwen3.6-35B-A3B-UD-IQ4_XS.gguf` | 16,51 GiB |
