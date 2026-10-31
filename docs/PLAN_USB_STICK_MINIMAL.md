@@ -44,8 +44,9 @@
 | Qwen3.5-9B-MTP (Ausweichmodell) | `unsloth\Qwen3.5-9B-MTP-GGUF\Qwen3.5-9B-Q6_K.gguf` | 7,16 GiB |
 | Gemma 4 12B QAT (Prüfer) | `lmstudio-community\gemma-4-12B-it-QAT-GGUF\gemma-4-12B-it-QAT-Q4_0.gguf` + `mmproj-gemma-4-12B-it-QAT-BF16.gguf` | 6,50 + 0,16 GiB |
 | Nemotron 3.5 Bolt E4B (Agenten) | `lmstudio-community\NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF\NVIDIA-Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf` | 5,76 GiB |
+| Bonsai 27B (Systeme mit wenig VRAM, nachträglich auf Wunsch des Captains) | `lmstudio-community\Bonsai-27B-GGUF\Bonsai-27B-Q1_0.gguf` + `mmproj-Bonsai-27B-BF16.gguf` | 3,54 + 0,87 GiB |
 
-Summe rund 36 GiB. Auf dem Stick liegen sie unter `K:\SEDRA\modelle\` mit denselben Unterordnern. Platz: 125,8 GB frei, Rest nach dem Kopieren rund 85 GB. Der Stick hat keinen Platz-Engpass.
+Summe rund 40 GiB. Auf dem Stick liegen sie unter `K:\SEDRA\modelle\` mit denselben Unterordnern. Platz: 125,8 GB frei, Rest nach dem Kopieren rund 85 GB. Der Stick hat keinen Platz-Engpass.
 
 Eine Einordnung: `unsloth\Qwen3.5-9B-MTP-GGUF\...` ist im Repository der Canary-Modellpfad (`llama_server.yaml`, `<modelle>`). Die anderen drei haben im Repository kein Rezept. Ein Modell startet über SEDRA erst, wenn ein Rezept (Modellprofil) es nennt. Die Prüfung in Abschnitt 6 startet deshalb den Canary-Pfad.
 
@@ -104,3 +105,36 @@ Quelle `repo` ist der Worktree dieser Session, Quelle `bestand` der Hauptcheckou
 
 - `local_config/` im Repository (nur der Captain gibt es frei). Die Konfiguration des Sticks liegt nur auf K:\.
 - Kein Push, kein Merge in `main`.
+
+## 10. Stand (31.10.2026)
+
+**Auf K:\SEDRA**
+- Programm: 734 Dateien, 781 499 521 Byte, Manifest `STICK_MANIFEST.json` (Stand `c1a9d29`). Zählung und Summe aus dem Lauf von `stick_paket.py`.
+- Engine `engines\llama.cpp\b11160`: 31 Dateien, 715 MB. `verify_engine(full=True)` ergibt `(True, 'ok')`.
+- Portables Python `runtime\portable\python\current` (Kopie aus `python.aus`): Test-PortableRuntime grün.
+- Modelle unter `modelle\` (insgesamt 40,49 GiB, 7 Dateien). Größen gegen die Quellen verglichen, alle gleich:
+  - Qwen3.6-35B-A3B-UD-IQ4_XS.gguf (17 730 509 792 Byte)
+  - Qwen3.5-9B-Q6_K.gguf (7 684 551 008 Byte)
+  - NVIDIA-Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf (6 180 446 208 Byte)
+  - gemma-4-12B-it-QAT-Q4_0.gguf (6 975 879 008 Byte)
+  - mmproj-gemma-4-12B-it-QAT-BF16.gguf (175 115 328 Byte)
+  - Bonsai-27B-Q1_0.gguf (3 803 452 576 Byte)
+  - mmproj-Bonsai-27B-BF16.gguf (931 145 888 Byte)
+- Konfiguration: `runtime\config\local_paths.yaml` (`modelle: '..\modelle'`), Standard-Oberfläche Harness (`workspace\GUPPI_OS\local_config\uix.yaml`).
+- Stick-spezifische Änderung: `runtime\config\model_profiles.yaml`. Kleine GPU-Klassen (`nvidia_small`, `nvidia_6_8`) nutzen Bonsai-27B Q1_0, größere (`nvidia_10_12`, `nvidia_16plus`) Gemma 4 12B Q4_0. Die Originaldatei liegt als `model_profiles.yaml.orig` daneben. Diese Datei ist im Manifest nicht erfasst.
+
+**Geprüft**
+- `Test-PortableRuntime.ps1` auf K: grün.
+- `engine_download.py` auf K: meldet „schon installiert und geprüft“, ohne Nachfrage.
+- `START_SEDRA.bat --gewaehlt` auf K:: Server startet, meldet `http://127.0.0.1:57306/`.
+- HTTP: `/` liefert 200 (1 551 Byte), `/retro` liefert 200. `/api/state` ohne Sitzungstoken liefert 403; das ist erwartet.
+- GPU: NVIDIA GeForce RTX 4070 Ti, 12 GB; im Leerlauf 165 MiB belegt.
+
+**Nicht geprüft / offen**
+- Ein Modellstart über SEDRA ist nicht versucht. Der Server läuft noch aus dem Start-Test; das Beenden wurde vom Berechtigungsprüfer abgelehnt.
+- Die Modellprofile nennen `Bonsai-27B` und `gemma-4-12B-it`. Ob die Modellerkennung diese Namen auf die Dateien auflöst, ist nicht geprüft.
+- Kein Modellrezept für Gemma, Nemotron, Qwen3.6 oder Bonsai im Repository.
+- `K:\start_probe.txt` liegt im Stick-Wurzelverzeichnis (Umleitung meines ersten Startversuchs). Nicht gelöscht; zum Entfernen durch dich.
+- `fenster/rekorder.html` fehlt im Repository (Translator-Shell).
+- Zweiter PC ohne Netz und ohne Python, Dauer- und exFAT-Prüfung (Abschnitt 5, S8 und S9): nicht geprüft.
+- Die Engine-Pins in `llama_server.yaml` gelten nur für `b11371`; die Prüfung von `b11160` läuft über `guppi_engine.json`.
