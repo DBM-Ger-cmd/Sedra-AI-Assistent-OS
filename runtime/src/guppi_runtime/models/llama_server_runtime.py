@@ -331,16 +331,10 @@ class LlamaServerRuntime:
     # ---- controller surface (same shape as LMStudioRuntimeController)
     def loaded_models(self):
         self._reap()
+        if self.external:
+            return self._external_loaded()
         if self._info is None or not self._health():
             return []
-        if self.external:
-            # The router is shared: another client may have swapped the model out. Report what is really loaded.
-            try:
-                if self._router_states().get(self._info.get("identifier")) != "loaded":
-                    self._info = None
-                    return []
-            except Exception:
-                return []
         return [dict(self._info)]
 
     def load_model(self, model_key, *, context_length=None, gpu=None, identifier=None, estimate_only=False, yes=False, parallel=None,
@@ -416,10 +410,41 @@ class LlamaServerRuntime:
         data = self._get_json(self.endpoint + "/v1/models")[1]
         return {m.get("id"): (m.get("status") or {}).get("value") for m in data.get("data", []) if m.get("id")}
 
+    def _external_info(self, rid, *, model_key=None, context_length=None, parallel=None, server=None):
+        """The facts of one loaded router model: the window per slot and the slots the ROUTER applies (its own preset), from /props?model=."""
+        try:
+            props = self._get_json(f"{self.endpoint}/props?model={rid}")[1]
+        except Exception:
+            props = {}
+        applied = (props.get("default_generation_settings") or {}).get("n_ctx")
+        slots = props.get("total_slots") if type(props.get("total_slots")) is int else (parallel or 1)
+        per_slot = applied if type(applied) is int else (context_length // slots if context_length is not None else None)
+        return {"modelKey": model_key or rid, "identifier": rid, "contextLength": per_slot, "slots": slots, "pid": None,
+                "kv_cache_type": (server or {}).get("kv_cache_type"), "spec_type": "none", "external": True}
+
+    def _external_loaded(self):
+        """What the shared router really holds. A model another client loaded (Pi, StarNet) is reported too, so the loader can reuse it
+        (same window and slots) or see that it has to be swapped, and the resource plan does not count its memory a second time. The
+        first one found is taken over as this runtime's instance, so `status().running` says the server is there."""
+        if not self._health():
+            self._info = None
+            return []
+        try:
+            loaded = [rid for rid, state in self._router_states().items() if state == "loaded"]
+        except Exception:
+            return []
+        mine = (self._info or {}).get("identifier")
+        out = []
+        for rid in loaded:
+            info = dict(self._info) if rid == mine else self._external_info(rid)
+            out.append(info)
+        if mine not in loaded:
+            self._info = dict(out[0]) if out else None
+        return out
+
     def _load_external(self, model_key, *, context_length, identifier, parallel, server):
         self._reap()
-        if self._info is not None:
-            raise RuntimeControlError("server_already_running")
+        # No "already running" refusal here: the router is shared and holds one model at a time, a load of another model swaps it.
         if not self._health():
             raise RuntimeControlError(f"external_server_unreachable:{self.endpoint}")
         rid = router_id(identifier or model_key)
@@ -440,15 +465,8 @@ class LlamaServerRuntime:
                     raise RuntimeControlError(f"external_model_load_timeout:{self.config.startup_timeout_s}s:{rid}")
                 self._sleep(0.5)
         # What the router really applies (set in its own preset, not by the recipe): window per slot and slots, from /props?model=.
-        try:
-            props = self._get_json(f"{self.endpoint}/props?model={rid}")[1]
-        except Exception:
-            props = {}
-        applied = (props.get("default_generation_settings") or {}).get("n_ctx")
-        slots = props.get("total_slots") if type(props.get("total_slots")) is int else (parallel or 1)
-        per_slot = applied if type(applied) is int else (context_length // slots if context_length is not None else None)
-        self._info = {"modelKey": model_key, "identifier": rid, "contextLength": per_slot, "slots": slots, "pid": None,
-                      "kv_cache_type": (server or {}).get("kv_cache_type", "f16"), "spec_type": "none", "external": True}
+        self._info = self._external_info(rid, model_key=model_key, context_length=context_length, parallel=parallel, server=server)
+        per_slot, slots = self._info["contextLength"], self._info["slots"]
         self._audit("LLAMA_SERVER_EXTERNAL_LOADED", model=model_key, router_id=rid, context=per_slot, slots=slots, seconds=round(self._mono() - started, 1))
         return {"output": f"loaded {rid} on {self.endpoint}", "command": []}
 

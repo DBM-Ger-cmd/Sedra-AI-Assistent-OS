@@ -143,11 +143,13 @@ class ExternalRuntimeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeControlError, "external_server_unreachable"):
             rt.load_model("qwen3.5-9b-q6_k", context_length=65536, server={"gguf": "x.gguf"})
 
-    def test_second_load_without_unload_is_refused_like_the_own_server(self):
-        rt = runtime(FakeRouter())
+    def test_loading_another_model_swaps_it_on_the_shared_router(self):
+        router = FakeRouter()
+        rt = runtime(router)
         rt.load_model("qwen3.5-9b-q6_k", context_length=65536, server={"gguf": "x.gguf"})
-        with self.assertRaisesRegex(RuntimeControlError, "server_already_running"):
-            rt.load_model("gemma-4-12b-qat", context_length=32768, server={"gguf": "x.gguf"})
+        rt.load_model("gemma-4-12b-qat", context_length=32768, server={"gguf": "x.gguf"})        # no refusal: the router holds one model, it swaps
+        self.assertEqual([m["identifier"] for m in rt.loaded_models()], ["gemma-4-12b-qat"])
+        self.assertEqual(router.posts[-1], ("/models/load", {"model": "gemma-4-12b-qat"}))
 
     def test_unload_asks_the_router_and_forgets(self):
         router = FakeRouter()
@@ -163,13 +165,43 @@ class ExternalRuntimeTests(unittest.TestCase):
         rt.load_model("qwen3.5-9b-q6_k", context_length=65536, server={"gguf": "x.gguf"})
         with self.assertRaises(ValueError): rt.unload_model("gemma-4-12b-qat")
 
-    def test_model_swapped_by_another_client_is_not_reported_as_loaded(self):
+    def test_model_swapped_by_another_client_is_reported_as_it_is(self):
         router = FakeRouter()
         rt = runtime(router)
         rt.load_model("qwen3.5-9b-q6_k", context_length=65536, server={"gguf": "x.gguf"})
         router.states["qwen3.5-9b-q6_k"] = "unloaded"; router.states["gemma-4-12b-qat"] = "loaded"     # Pi asked for another model
+        self.assertEqual([m["identifier"] for m in rt.loaded_models()], ["gemma-4-12b-qat"])          # the model of the other client, not ours
+        router.states["gemma-4-12b-qat"] = "unloaded"
         self.assertEqual(rt.loaded_models(), [])
         self.assertFalse(rt.status()["running"])
+
+    def test_model_loaded_by_another_client_is_taken_over_and_reused_by_the_loader(self):
+        """The series of 1.11.: a model that is already on the router (Pi, an earlier Sedra) must not be counted a second time."""
+        from guppi_runtime.models.model_loader import LoaderConfig, ModelLoader
+        router = FakeRouter(ids=("qwen3.5-9b-q6_k",), n_ctx=65536, slots=1)
+        router.states["qwen3.5-9b-q6_k"] = "loaded"
+        rt = runtime(router)
+        loader = ModelLoader(LoaderConfig({"enabled": True}), rt, controllers={"llama-cpp-server": rt})
+        res = {"model": "qwen3.5-9b-q6_k", "context_window": 65536, "provider_ref": "llama-cpp-server", "slots": 1,
+               "estimated_resources": {"vram_gb": 7.5}, "load_profile": {"server": {"gguf": "x.gguf"}}}
+        self.assertEqual(loader.resident_vram_gb(res), 7.5)                      # counted as already resident
+        self.assertEqual(loader.ensure(res)["action"], "reused")
+        self.assertEqual(router.posts, [])                                       # nothing loaded, nothing unloaded
+        self.assertTrue(rt.status()["running"])                                  # so the scheduler does not take the server for gone
+
+    def test_other_window_on_the_router_is_refused_honestly(self):
+        """The window comes from the router's preset, not from the recipe: a mismatch ends in `context_not_applied`, never in a wrong window."""
+        from guppi_runtime.models.model_loader import LoaderConfig, ModelLoader
+        router = FakeRouter(ids=("qwen3.5-9b-q6_k",), n_ctx=32768, slots=1)
+        router.states["qwen3.5-9b-q6_k"] = "loaded"
+        rt = runtime(router)
+        loader = ModelLoader(LoaderConfig({"enabled": True}), rt, controllers={"llama-cpp-server": rt})
+        res = {"model": "qwen3.5-9b-q6_k", "context_window": 65536, "provider_ref": "llama-cpp-server", "slots": 1,
+               "estimated_resources": {"vram_gb": 7.5}, "load_profile": {"server": {"gguf": "x.gguf"}}}
+        self.assertEqual(loader.resident_vram_gb(res), 0.0)                      # not reusable: the router's window differs
+        from guppi_runtime.models.model_loader import LoadError
+        with self.assertRaisesRegex(LoadError, "context_not_applied:32768"):
+            loader.ensure(res)
 
 
 class RouterAdapterTests(unittest.TestCase):
