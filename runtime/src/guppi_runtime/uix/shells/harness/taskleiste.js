@@ -164,9 +164,11 @@
         let wert = String(g.value === undefined || g.value === null ? '–' : g.value);
         if(k === 'decisions') wert = freigabenZelle(S, zelle, g, wert);
         else if(ort){
-          zelle.tabIndex = 0; zelle.setAttribute('role', 'button'); zelle.title += ' – Klick öffnet die App';
+          const modellzelle = k === 'model' || k === 'server';
+          zelle.tabIndex = 0; zelle.setAttribute('role', 'button'); zelle.title += modellzelle ? ' – Klick: Modell laden, wechseln oder entladen' : ' – Klick öffnet die App';
           const oeffnen = ()=>{
             if(k === 'state'){ root.sedraHarness.einstellungen.oeffnen(S, 'system'); return; }          // Stufe 5 (D-U6): Zustand → Einstellungen (System)
+            if(modellzelle){ root.sedraHarness.modell.menue(S); return; }                                // 1.11. (Captain): die Modellsteuerung hängt an der Statusleiste, nicht an der Werkstatt
             const o = root.sedraPlaces.PLACES.find(p=>p.id === ort); if(o) root.sedraHarness.app.oeffnen(S, o);
           };
           zelle.onclick = oeffnen;

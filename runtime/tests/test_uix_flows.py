@@ -117,8 +117,10 @@ class Flows(unittest.TestCase):
             page.click('.pc-verbs button:has-text("Bestätigen")'); page.wait_for_timeout(1200)
             self.assertEqual(page.text_content('.pc-badge'), '1', 'die eigene Handlung zählt sofort')
             page.click('.pc-nav-row:has-text("Dashboard")'); page.wait_for_timeout(1000)
-            page.click('.pc-card button:has-text("Freigeben und anwenden")'); page.wait_for_timeout(1500)
+            page.click('.pc-card button:has-text("Freigeben und anwenden")'); page.wait_for_timeout(300)
+            page.click('.pc-card button:has-text("Sicher? Freigeben und anwenden")'); page.wait_for_timeout(1500)       # 1.11.: zweiter Klick statt confirm()-Dialog
             self.assertTrue(page.evaluate("()=>document.querySelector('.pc-badge').hidden"))
+            page.wait_for_function("()=>(document.querySelector('.pc-kpi[data-tool=\"gauge-mode\"] b')||{}).textContent === 'Sandbox'", timeout=10000)
             self.assertEqual(page.text_content('.pc-kpi[data-tool="gauge-mode"] b'), 'Sandbox')
         self.run_in('paperclip', flow)
 

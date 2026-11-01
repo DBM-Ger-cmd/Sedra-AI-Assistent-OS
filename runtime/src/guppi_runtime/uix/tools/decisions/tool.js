@@ -53,11 +53,19 @@
       }
       const row = d().el('div', 's-row');
       (item.ways || []).forEach(way=>{
-        row.append(d().button(WAY_LABEL[way] || way, async()=>{
-          if(way !== 'ablehnen' && !confirm('Genau das einmal freigeben?\n\n' + item.title + '\n' + (item.describe || ''))) return;
+        // Zweiter Klick statt confirm(): ein Browser-Dialog wird in eingebetteten Fenstern (Pane, App-Fenster) unterdrückt und antwortet dort
+        // still mit „Nein“ – der Knopf tat dann nichts (Modellserver gesperrt, 1.11.2026: „lässt sich nicht entsperren“).
+        const label = WAY_LABEL[way] || way;
+        const knopf = d().button(label, async()=>{
+          if(way !== 'ablehnen' && !knopf.dataset.sicher){
+            knopf.dataset.sicher = '1'; knopf.textContent = 'Sicher? ' + label;
+            setTimeout(()=>{ if(knopf.isConnected){ delete knopf.dataset.sicher; knopf.textContent = label; } }, 5000);
+            return;
+          }
           await this.ctx.shell.decide(item.id, way);
           await this.refresh();
-        }, way === 'ablehnen' ? '' : 'p'));
+        }, way === 'ablehnen' ? '' : 'p');
+        row.append(knopf);
       });
       if(item.mission_id) row.append(d().button('Aufgabe öffnen', ()=>this.ctx.shell.open({type: 'task', id: item.mission_id, title: item.title.slice(0, 40)})));
       card.append(row);

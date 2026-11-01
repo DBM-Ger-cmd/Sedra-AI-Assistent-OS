@@ -108,6 +108,30 @@
     return Object.assign(box, {auffrischen});
   }
 
+  // 1.11. (Captain, Anmerkung am Eingabebereich): die Modellsteuerung steht nicht mehr als Streifen über dem Eingabefeld und hängt auch nicht an der
+  // Werkstatt, sondern öffnet als kleines Fenster über der Statusleiste (Klick auf „Modell“ unten, auf den Modell-Chip im Eingabefeld oder auf
+  // „Modell wählen“ der Erststart-Anleitung). Dieselbe Steuerung, dieselben Wege; nach Erfolg schließt es.
+  function schliessen(S){
+    const p = S._modellMenue;
+    if(p){ p.remove(); S._modellMenue = null; }
+    if(S._modellMenueAb){ S._modellMenueAb(); S._modellMenueAb = null; }
+  }
+  function menue(S, an){
+    const offen = !!(S._modellMenue && S._modellMenue.isConnected);
+    if(an === false || (an === undefined && offen)){ schliessen(S); return; }
+    if(offen){ const wahl = S._modellMenue.querySelector('select'); if(wahl) wahl.focus(); return; }
+    const p = d().el('div', 'hs-modell-menue'); p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Modell');
+    const kopf = d().el('div', 'hs-modell-text', S.modell ? 'Geladen: ' + S.modell.name + '.' : 'Kein Modell geladen.');
+    const zu = d().el('button', 'hs-rund hs-modell-zu', '×'); zu.type = 'button'; zu.setAttribute('aria-label', 'Schließen'); zu.onclick = ()=>schliessen(S);
+    p.append(kopf, zu, steuerung(S, ()=>{ schliessen(S); if(root.sedraHarness.eingabe) root.sedraHarness.eingabe.modellZeigen(S); }));
+    document.body.append(p); S._modellMenue = p;
+    const taste = e=>{ if(e.key === 'Escape') schliessen(S); };
+    const aussen = e=>{ if(!p.contains(e.target) && !(e.target.closest && e.target.closest('[data-zelle=model],[data-zelle=server],.hs-modell,.hs-erststart'))) schliessen(S); };
+    document.addEventListener('keydown', taste); document.addEventListener('mousedown', aussen);
+    S._modellMenueAb = ()=>{ document.removeEventListener('keydown', taste); document.removeEventListener('mousedown', aussen); };
+    const wahl = p.querySelector('select'); if(wahl) wahl.focus();
+  }
+
   // P0 M2 (1.11., E-A7): Modell beim Senden selbst laden – nur wenn der Server es erlaubt (Katalog `modell_laden` frei für das Standard-Rezept).
   // `melden(text, art)` schreibt in die Sitzung („lädt Modell …“). Gibt true zurück, wenn danach ein Modell geladen ist.
   async function autoLaden(S, melden){
@@ -128,5 +152,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.modell = {steuerung, fehlertext, auswahlText, autoLaden, grundtext};
+  root.sedraHarness.modell = {steuerung, menue, schliessen, fehlertext, auswahlText, autoLaden, grundtext};
 })();

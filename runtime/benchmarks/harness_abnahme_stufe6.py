@@ -66,10 +66,11 @@ def teil6(shots=None):
 
             # S6-D: Modell – Handlung statt Verweis
             page.evaluate("()=>%s.reiter.neu(%s)" % (H, S)); page.wait_for_timeout(500)
-            m = page.evaluate("""()=>{ const k = document.querySelector('.hs-kein-modell'); return {sichtbar: !!k && !k.hidden, text: k ? k.textContent : '', wahl: !!(k && k.querySelector('select')),
+            page.click('[data-zelle=model]'); page.wait_for_timeout(500)       # 1.11.: die Modellsteuerung öffnet als Fenster über der Statusleiste (Klick auf „Modell“ unten), nicht als Streifen im Eingabebereich
+            m = page.evaluate("""()=>{ const k = document.querySelector('.hs-modell-menue'); return {sichtbar: !!k && !k.hidden, text: k ? k.textContent : '', wahl: !!(k && k.querySelector('select')),
               knopf: !!(k && [...k.querySelectorAll('button')].some(x=>x.textContent === 'Laden')), pfeil: !!(k && k.textContent.includes('→'))}; }""")
             foto(page, '03_modell')
-            pruefe('S6-D Modell laden im Hinweis', m['sichtbar'] and m['wahl'] and m['knopf'] and not m['pfeil'], **m)
+            pruefe('S6-D Modell laden im Fenster der Statusleiste', m['sichtbar'] and m['wahl'] and m['knopf'] and not m['pfeil'], **m)
             satz = page.evaluate("""()=>({auswahl: %s.modell.auswahlText({lagen: 30, kontext: 32768, vram_gb: 9.8, ram_gb: 10.93, tokens_s: 43.35, quelle: 'gerechnet'}),
               ablehnung: %s.modell.fehlertext(new Error('recipe_not_usable:hardware_pressure:Es fehlen 0.60 GB VRAM und 0.00 GB RAM bei 40 Lagen im RAM und 8192 Kontext.'))})""" % (H, H))
             pruefe('S6-D Auswahl und Ablehnung mit Zahlen', 'mit 30 Lagen im RAM' in satz['auswahl'] and '9,8 GB VRAM' in satz['auswahl'] and satz['ablehnung'].startswith('Es fehlen 0.60 GB VRAM'), **satz)

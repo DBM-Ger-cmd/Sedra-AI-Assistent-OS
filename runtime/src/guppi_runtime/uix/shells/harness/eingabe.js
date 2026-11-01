@@ -166,22 +166,14 @@
     e.modell.title = m ? ('Geladen: ' + m.name + (m.kontext ? ' · Kontext ' + Number(m.kontext).toLocaleString('de-DE') : '') + ' – Klick: Modell wechseln oder entladen')
                        : 'Kein Modell geladen – Klick: Modell laden';
     e.modell.classList.toggle('aus', !m);
-    e.kein.hidden = !!m && !e.menueOffen;
-    // Stufe 6: statt eines Verweises die Handlung selbst – Rezept wählen und laden, wechseln oder entladen
-    const text = m ? 'Geladen: ' + m.name + '.' : 'Kein Modell geladen.';
-    if(!e.kein.firstChild || e.kein.dataset.zustand !== (m ? 'an' : 'aus')){
-      e.kein.dataset.zustand = m ? 'an' : 'aus';
-      e.kein.replaceChildren(d().el('span', 'hs-modell-text', text), root.sedraHarness.modell.steuerung(S, ()=>{ e.menueOffen = false; modellZeigen(S); }));
-    } else {
-      e.kein.firstChild.textContent = text;
-      if(e.kein.lastChild.auffrischen) e.kein.lastChild.auffrischen();
-    }
+    // 1.11. (Captain): die Modellsteuerung steht nicht mehr als Streifen über dem Eingabefeld (und hängt nicht an der Werkstatt), sondern öffnet als kleines
+    // Fenster über der Statusleiste – Klick auf den Modell-Chip hier, auf „Modell“ in der Statusleiste oder auf „Modell wählen“ der Erststart-Anleitung
+    e.kein.hidden = true;
   }
 
   function modellMenue(S, an){
-    const e = S._eingabe; if(!e) return;
-    e.menueOffen = an === undefined ? !e.menueOffen : an;
-    modellZeigen(S);
+    if(!S._eingabe) return;
+    root.sedraHarness.modell.menue(S, an);
   }
 
   function projektwahl(S){
