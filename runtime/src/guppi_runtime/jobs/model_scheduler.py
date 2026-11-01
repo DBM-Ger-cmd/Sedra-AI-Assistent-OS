@@ -222,10 +222,16 @@ class ModelScheduler(HandoverMixin, DecisionMixin):
                                     ram_gb=float(est.get("ram_gb") or 0.0) + (kv if on_cpu else 0.0))
         reserve = self.resources.config.vram_reserve_gb if self.resources is not None else DEFAULT_VRAM_RESERVE_GB
         free = self.resources.measured_free_vram_gb() if self.resources is not None and self.resources.enabled else None
+        if free is not None: free += min(self._resident(resolution)[0], need["vram_gb"])      # an instance of this recipe already on the card (shared router) is no second copy
         denial = vramplan.fits(need["vram_gb"], self.config.vram_limit_gb, reserve, self.config.vram_limit_gb if free is None else free)
         if denial is not None and free is None:
             denial["measured_free_gb"] = None
         return need, denial
+
+    def _resident(self, resolution):
+        """(VRAM, RAM) an already loaded, reusable instance of this resolution holds (the loader decides), else (0, 0)."""
+        try: return (float(self.loader.resident_vram_gb(resolution)), float(self.loader.resident_ram_gb(resolution)))
+        except Exception: return (0.0, 0.0)
 
     def _start(self, resolution, run_id, owner=None):
         recipe, window = resolution.get("capability_id"), resolution.get("context_window")
@@ -252,9 +258,10 @@ class ModelScheduler(HandoverMixin, DecisionMixin):
                 if run_id is not None:            # the starter took its slot while the server was off: it belongs to the new generation
                     conn.execute("UPDATE slot_leases SET server_gen = ? WHERE run_id = ? AND state = 'aktiv'", (server["gen"], run_id))
             if self.resources is not None and self.resources.enabled:
+                rv, rr = self._resident(resolution)
                 grant = self.resources.reserve(f"server:{recipe}", f"gen-{server['gen']}",
                                                {**(resolution.get("estimated_resources") or {}), "vram_gb": need["vram_gb"], "ram_gb": need["ram_gb"],
-                                                "kv_cache_gb": 0.0})
+                                                "kv_cache_gb": 0.0}, **({"resident_vram_gb": rv} if rv > 0 else {}), **({"resident_ram_gb": rr} if rr > 0 else {}))
                 if grant["status"] == "DENIED":
                     raise SchedulerError(grant["reason"], code="hardware_pressure", detail=grant.get("detail"))
                 self._reserved = f"server:{recipe}"

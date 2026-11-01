@@ -122,12 +122,14 @@ class ResourceScheduler:
     def _committed(reservations, key, device=None):
         return sum(r.get(key, 0) for r in reservations if device is None or r.get("device_id") == device)
 
-    def _decide(self, estimate, *, exclusive, reservations, host, resident_vram_gb=0.0):
+    def _decide(self, estimate, *, exclusive, reservations, host, resident_vram_gb=0.0, resident_ram_gb=0.0):
         """None if it fits, else (reason, detail). Pure: reads the host picture and the ledger, changes nothing.
 
         `resident_vram_gb`: VRAM that the very model this request is for already holds on the card (an instance the provider
         keeps loaded and the job will reuse). The measurement counts it as used, but it is not a second copy to fit: it is
-        credited to the MEASURED side only, never above the request. The ledger (what has been promised) stays untouched."""
+        credited to the MEASURED side only, never above the request. The ledger (what has been promised) stays untouched.
+        `resident_ram_gb`: the same for the working memory of that instance (1.11.: a model already on the shared router, loaded by Pi or an
+        earlier run, held its RAM and was counted a second time: ram_measured)."""
         need = need_of(estimate)
         cfg = self.config
         if host["thermal"] in BAD_THERMAL:
@@ -144,7 +146,7 @@ class ResourceScheduler:
                 return "telemetry_unavailable_ram", {}
             if host["ram_total"] - host["ram_reserve"] - self._committed(reservations, "ram_gb") < need["ram_gb"]:
                 return "ram_ledger", {"need_gb": need["ram_gb"], "promised_gb": round(self._committed(reservations, "ram_gb"), 3)}
-            if host["ram_available"] - host["ram_reserve"] < need["ram_gb"]:
+            if host["ram_available"] + min(max(float(resident_ram_gb or 0.0), 0.0), need["ram_gb"]) - host["ram_reserve"] < need["ram_gb"]:
                 return "ram_measured", {"need_gb": need["ram_gb"], "available_gb": host["ram_available"]}
         device = None
         if need["vram_gb"] > 0:
@@ -193,13 +195,13 @@ class ResourceScheduler:
         return {"frei_vram_gb": round(frei_vram, 3), "frei_ram_gb": round(frei_ram, 3), "reserve_vram_gb": self.config.vram_reserve_gb, "reserve_ram_gb": host["ram_reserve"]}
 
     # ---- advisory
-    def explain(self, estimate, *, exclusive=False, resident_vram_gb=0.0, ignore=()):
+    def explain(self, estimate, *, exclusive=False, resident_vram_gb=0.0, resident_ram_gb=0.0, ignore=()):
         """Would this fit right now? A reason string or None. Reserves nothing; reading may be a few seconds old.
         `ignore`: job ids whose reservation is not a rival of this request (the model scheduler's running server, whose room the request shares)."""
         if not self.config.enabled:
             return None
         try:
-            reason, _ = self._decide(estimate, exclusive=exclusive, reservations=[r for r in self._read() if r["job_id"] not in set(ignore or ())], host=self._host(fresh=False), resident_vram_gb=resident_vram_gb)
+            reason, _ = self._decide(estimate, exclusive=exclusive, reservations=[r for r in self._read() if r["job_id"] not in set(ignore or ())], host=self._host(fresh=False), resident_vram_gb=resident_vram_gb, resident_ram_gb=resident_ram_gb)
         except LedgerUnreadable as exc:
             return str(exc)
         except Exception as exc:               # an advisory check must never break role resolution, and must not say "fits" blindly
@@ -207,7 +209,7 @@ class ResourceScheduler:
         return reason
 
     # ---- binding
-    def reserve(self, job_id, attempt_id, estimate, *, exclusive=False, resident_vram_gb=0.0):
+    def reserve(self, job_id, attempt_id, estimate, *, exclusive=False, resident_vram_gb=0.0, resident_ram_gb=0.0):
         if not self.config.enabled:
             return {"status": "GRANTED", "reservation": None, "reason": "scheduler_disabled", "headroom": None, "alternatives": []}
         with append_lock(self.path):
@@ -223,7 +225,7 @@ class ResourceScheduler:
                 reason = "hardware_profile_changed" if str(exc) == "active_profile_hardware_changed" else "hardware_state_unavailable"
                 self._audit("RESOURCE_DENIED", job_id, reason=reason)
                 return {"status": "DENIED", "reservation": None, "reason": reason, "detail": {}, "headroom": None, "alternatives": ["queue"]}
-            outcome, detail = self._decide(estimate, exclusive=exclusive, reservations=reservations, host=host, resident_vram_gb=resident_vram_gb)
+            outcome, detail = self._decide(estimate, exclusive=exclusive, reservations=reservations, host=host, resident_vram_gb=resident_vram_gb, resident_ram_gb=resident_ram_gb)
             headroom = self._headroom(host, reservations, self.config)
             if outcome is not None:
                 self._audit("RESOURCE_DENIED", job_id, reason=outcome, **self._values(detail))     # the numbers, not only the reason (SCH-03)

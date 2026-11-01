@@ -690,6 +690,9 @@ class JobSupervisor:
             resident = self.loader.resident_vram_gb(resolution) if self.loader is not None and self.loader.enabled else 0.0
             if resident > 0:
                 extra["resident_vram_gb"] = resident     # the instance already on the card is not a second copy to fit
+            resident_ram = self.loader.resident_ram_gb(resolution) if self.loader is not None and self.loader.enabled and hasattr(self.loader, "resident_ram_gb") else 0.0
+            if resident_ram > 0:
+                extra["resident_ram_gb"] = resident_ram
             grant = self.scheduler.reserve(job_id, planned_attempt, resolution["estimated_resources"],
                                            exclusive=bool((snapshot.get("role_requirements") or {}).get("exclusive")), **extra)
             if grant["status"] == "DENIED":

@@ -192,7 +192,7 @@ class SupervisorIntegrationTest(unittest.TestCase):
         class Scheduler:
             enabled = True
             def __init__(s): s.reserved = []; s.credit = []
-            def reserve(s, job_id, attempt_id, estimate, exclusive=False, resident_vram_gb=0.0):
+            def reserve(s, job_id, attempt_id, estimate, exclusive=False, resident_vram_gb=0.0, resident_ram_gb=0.0):
                 s.credit.append(resident_vram_gb); s.reserved.append(job_id); return {'status': 'GRANTED', 'reservation': {'reservation_id': 'RSV-T'}}
             def release_job(s, job_id): s.reserved.remove(job_id); self_released.append(job_id)
         self_released = self.released

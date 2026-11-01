@@ -189,9 +189,7 @@ class ModelLoader:
                 continue
         return False
 
-    def resident_vram_gb(self, resolution):
-        """VRAM an already loaded, reusable instance holds (the job will use it as it is). Its real size is not reported by
-        LM Studio, so the resolved estimate stands in; 0 when nothing would be reused."""
+    def _resident(self, resolution, was):
         if not self.config.enabled:
             return 0.0
         try:
@@ -200,7 +198,16 @@ class ModelLoader:
                 return 0.0
         except (LoadError, RuntimeControlError, ValueError, OSError):
             return 0.0
-        return float((resolution.get("estimated_resources") or {}).get("vram_gb") or 0.0)
+        return float((resolution.get("estimated_resources") or {}).get(was) or 0.0)
+
+    def resident_vram_gb(self, resolution):
+        """VRAM an already loaded, reusable instance holds (the job will use it as it is). Its real size is not reported by
+        LM Studio, so the resolved estimate stands in; 0 when nothing would be reused."""
+        return self._resident(resolution, "vram_gb")
+
+    def resident_ram_gb(self, resolution):
+        """The same for the working memory of that instance (a model already on the shared router is not a second copy to fit)."""
+        return self._resident(resolution, "ram_gb")
 
     def clear_stale(self, resolution):
         """Step 1, BEFORE the reservation: the VRAM a stale instance of this very model holds would otherwise be measured as

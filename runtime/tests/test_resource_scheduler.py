@@ -140,6 +140,17 @@ class ReserveTests(Base):
         out = s.reserve('SDJ-B', 'A1', {'vram_gb': 6})
         self.assertEqual((out['status'], out['reason'], out['detail']['best_free_gb']), ('DENIED', 'vram_insufficient', 5.0))
 
+    def test_resident_ram_is_credited_like_the_resident_vram(self):
+        """A model already on the shared router (Pi, an earlier run) holds its working memory: not a second copy to fit (1.11., series warm 0 of 3)."""
+        self.hw.state = sample(ram_total=32.0, ram_available=9.0, gpus=((12.0, 12.0),))
+        s = self.scheduler(vram_reserve_gb=1.0)
+        est = {'ram_gb': 8.0, 'vram_gb': 4.0}
+        self.assertEqual(s.explain(est), 'ram_measured')
+        self.assertIsNone(s.explain(est, resident_ram_gb=8.0))
+        self.assertIsNone(s.explain(est, resident_ram_gb=99.0), 'never credited above the request itself')
+        self.assertEqual(s.reserve('SDJ-A', 'A1', est)['reason'], 'ram_measured')
+        self.assertEqual(s.reserve('SDJ-A', 'A2', est, resident_ram_gb=8.0)['status'], 'GRANTED')
+
     def test_resident_instance_is_credited_to_the_measurement_but_never_above_the_request_or_past_the_ledger(self):
         self.hw.state = sample(gpus=((12.0, 3.0),))                                              # the model itself holds 9 GiB of the card
         s = self.scheduler(vram_reserve_gb=1.0)

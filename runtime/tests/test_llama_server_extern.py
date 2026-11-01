@@ -189,6 +189,41 @@ class ExternalRuntimeTests(unittest.TestCase):
         self.assertEqual(router.posts, [])                                       # nothing loaded, nothing unloaded
         self.assertTrue(rt.status()["running"])                                  # so the scheduler does not take the server for gone
 
+    def test_scheduler_starts_on_a_model_the_router_already_holds_without_counting_it_twice(self):
+        """Series 1.11. 'warm': Pi (or an earlier run) loaded the model; free VRAM looks too small, but the instance is reused, not copied."""
+        import tempfile
+        from pathlib import Path
+        from guppi_runtime.jobs.model_scheduler import ModelScheduler, ModelSchedulerConfig
+        from guppi_runtime.jobs.testlab import TestLab
+        from guppi_runtime.models.model_loader import LoaderConfig, ModelLoader
+        from model_scheduler_fakes import raw_config, Clock, FakeAudit
+
+        class Resources:
+            enabled = True
+            def __init__(self): self.config = type("C", (), {"vram_reserve_gb": 0.7})(); self.reserved = []
+            def measured_free_vram_gb(self): return 3.7                          # the 9B on the router holds the rest of the card
+            def reserve(self, job_id, attempt_id, estimate, **credit): self.reserved.append(credit); return {"status": "GRANTED", "reservation": {}}
+            def audit_denied(self, *a, **k): pass
+            def release_job(self, *a, **k): pass
+
+        router = FakeRouter(ids=("qwen3.5-9b-q6_k",), n_ctx=65536, slots=1)
+        router.states["qwen3.5-9b-q6_k"] = "loaded"
+        rt = runtime(router)
+        loader = ModelLoader(LoaderConfig({"enabled": True}), rt, controllers={"llama-cpp-server": rt})
+        tmp = tempfile.mkdtemp()
+        resources = Resources()
+        sched = ModelScheduler(ModelSchedulerConfig(raw_config()), TestLab(Path(tmp) / "testlab.db", clock=Clock(), alive=lambda p: True, pid=111),
+                               loader=loader, runtime=rt, resources=resources, audit=FakeAudit())
+        res = {"capability_id": "coder.local_qwen3_5_9b_q6_k", "provider_ref": "llama-cpp-server", "model": "qwen3.5-9b-q6_k", "context_window": 65536,
+               "slots": 1, "load_profile": {"server": {"gguf": "x.gguf"}},
+               "estimated_resources": {"ram_gb": 8.0, "vram_gb": 7.0, "kv_cache_gb": 0.5, "kv_cache_placement": "gpu", "complete": True}}
+        out = sched.ensure_server(res, owner="werkstatt")
+        self.assertEqual(out["action"], "started")
+        self.assertEqual(out["load"]["action"], "reused")                             # nothing was loaded again
+        self.assertEqual(router.posts, [])
+        self.assertTrue(resources.reserved[0].get("resident_vram_gb", 0) > 0 and resources.reserved[0].get("resident_ram_gb", 0) > 0)
+        self.assertEqual(sched.view()["server"]["state"], "bereit")
+
     def test_other_window_on_the_router_is_refused_honestly(self):
         """The window comes from the router's preset, not from the recipe: a mismatch ends in `context_not_applied`, never in a wrong window."""
         from guppi_runtime.models.model_loader import LoaderConfig, ModelLoader

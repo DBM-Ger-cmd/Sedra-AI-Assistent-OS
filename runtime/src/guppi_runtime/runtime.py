@@ -228,6 +228,7 @@ class GuppiRuntime:
         sched=getattr(self,"model_scheduler",None)
         own=sched.reservation_for(recipe["id"]) if sched is not None else None
         return self.resource_scheduler.explain(estimated,exclusive=req["exclusive"],resident_vram_gb=(estimated.get("vram_gb") or 0.0) if loaded else 0.0,
+                                               resident_ram_gb=(estimated.get("ram_gb") or 0.0) if loaded else 0.0,
                                                ignore=(own,) if own else ())
 
     def _configure_job_supervisor(self,data):
