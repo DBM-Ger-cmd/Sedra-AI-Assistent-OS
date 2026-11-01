@@ -22,7 +22,7 @@ from .hardware_manager import HardwareManager
 from .tools.hardware_manager import HardwareManagerTool
 from .models.model_profiles import ModelProfileStore
 from .models.model_runtime import ModelRuntimeManager
-from .models import ModelRouter, LMStudioAdapter, LlamaCppServerAdapter
+from .models import ModelRouter, LMStudioAdapter, LlamaCppServerAdapter, LlamaCppRouterAdapter
 from .models.cloud_api import build_cloud_adapters
 from . import cloud_settings
 from .cloud_settings import CloudKeyStore
@@ -375,13 +375,14 @@ class GuppiRuntime:
             config=LlamaServerConfig.load(self.config_root/"llama_server.yaml")
             config.enabled=self.switches.apply("llama_server","enabled",config.enabled)
             config.mtp=self.switches.apply("llama_server","mtp",config.mtp)
+            if config.external_url: config.external_endpoint=config.external_url if self.switches.apply("llama_server","external",config.external_enabled) else None
             if not config.enabled: return
             self.llama_server=LlamaServerRuntime(config,data/config.log_dir,audit=self.audit)
             if config.canary.config_error:      # Entscheidung 2026-10-19: der Server läuft ohne Canary; die Ursache steht im Audit und im Status
                 self.llama_canary_warning=config.canary.config_error
                 self.audit.append("LLAMA_CANARY_OFF",component="runtime",payload={"grund":config.canary.config_error})
             if not self.llama_server.available(): self.llama_server_error="llama_server_executable_not_found"
-            self.model_router.adapters["llama-cpp-server"]=LlamaCppServerAdapter(self.llama_server.endpoint,timeout=600)
+            self.model_router.adapters["llama-cpp-server"]=(LlamaCppRouterAdapter if self.llama_server.external else LlamaCppServerAdapter)(self.llama_server.endpoint,timeout=600)
         except ValueError as exc:
             self.llama_server_error=str(exc)
 
