@@ -21,12 +21,14 @@ import os
 import re
 import subprocess
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 import yaml
 
 from ..models import gpu_canary
+from ..models.base import ModelAdapterError, require_loopback_url
 from ..models.runtime_control import RuntimeControlError
 
 KV_TYPES = frozenset({"f16", "bf16", "q8_0", "q4_0"})
@@ -68,6 +70,22 @@ class LlamaServerConfig:
         if self.host not in {"127.0.0.1", "localhost", "::1"}:
             raise ValueError("llama_server_config_invalid:host_must_be_loopback")
         self.port = self._int(raw, "port", 8089, 1024, 65535)
+        # `external`: an already running llama-server in router mode (several models, loads on demand) takes the place of the process
+        # GUPPI would start itself. Only its loopback address is configured; GUPPI starts and kills nothing there, it asks the router
+        # to load and unload a model (POST /models/load, /models/unload). Off when the key is absent.
+        # The shipped file carries `enabled: false`; the machine turns it on with the local switch llama_server.external (local_switches.py).
+        self.external_url = None
+        self.external_enabled = False
+        external = raw.get("external")
+        if external is not None:
+            if not isinstance(external, dict) or not isinstance(external.get("endpoint"), str) or not isinstance(external.get("enabled", True), bool):
+                raise ValueError("llama_server_config_invalid:external")
+            try:
+                self.external_url = require_loopback_url(external["endpoint"])
+            except ModelAdapterError as exc:
+                raise ValueError(f"llama_server_config_invalid:external:{exc}") from exc
+            self.external_enabled = external.get("enabled", True)
+        self.external_endpoint = self.external_url if self.external_enabled else None
         self.startup_timeout_s = self._int(raw, "startup_timeout_s", 180, 5, 900)
         self.stop_timeout_s = self._int(raw, "stop_timeout_s", 20, 1, 120)
         self.flash_attn = raw.get("flash_attn", "on")
@@ -217,15 +235,35 @@ def _http_json(url, timeout=3):
         return resp.status, json.loads(resp.read().decode("utf-8") or "{}")
 
 
+def _http_post_json(url, payload, timeout=30):
+    """(status, body) of a POST. An HTTP error status is returned, not raised: the router answers 400 "model is already running"."""
+    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), method="POST", headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status, json.loads(resp.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as exc:
+        try:
+            body = json.loads(exc.read().decode("utf-8") or "{}")
+        except ValueError:
+            body = {}
+        return exc.code, body
+
+
+def router_id(model_key):
+    """The name a router knows a model under: the recipe's model name without a vendor prefix ("google/gemma-4-12b-qat" -> "gemma-4-12b-qat")."""
+    return str(model_key).rsplit("/", 1)[-1]
+
+
 class LlamaServerRuntime:
     id = "llama-cpp-server"
     launcher = ()      # a program that starts the server for a measurement (compute-sanitizer, 2026-10-09); set by a benchmark, never by a config file
 
-    def __init__(self, config, state_dir, *, popen=subprocess.Popen, get_json=_http_json, sleep=time.sleep, monotonic=time.monotonic,
-                 home=None, audit=None):
+    def __init__(self, config, state_dir, *, popen=subprocess.Popen, get_json=_http_json, post_json=_http_post_json, sleep=time.sleep,
+                 monotonic=time.monotonic, home=None, audit=None):
         self.config = config
         self.state_dir = Path(state_dir)
         self._popen, self._get_json, self._sleep, self._mono = popen, get_json, sleep, monotonic
+        self._post_json = post_json
         self.audit = audit
         self.executable_dir, self.vendor_dir = discover_backend(config, home)
         self._proc = None
@@ -235,11 +273,17 @@ class LlamaServerRuntime:
     # ---- facts
     @property
     def endpoint(self):
+        if self.config.external_endpoint:
+            return self.config.external_endpoint
         host = "127.0.0.1" if self.config.host == "localhost" else self.config.host
         return f"http://{host}:{self.config.port}"
 
+    @property
+    def external(self):
+        return bool(self.config.external_endpoint)
+
     def available(self):
-        return self.executable_dir is not None
+        return self.external or self.executable_dir is not None
 
     def _audit(self, event, **payload):
         if self.audit:
@@ -273,7 +317,7 @@ class LlamaServerRuntime:
         return {"provider": self.id, "available": self.available(), "endpoint": self.endpoint, "executable_dir": str(self.executable_dir) if self.executable_dir else None,
                 "running": bool(self._info), "model": (self._info or {}).get("modelKey"), "context": (self._info or {}).get("contextLength"), "slots": (self._info or {}).get("slots"),
                 "kv_cache_type": (self._info or {}).get("kv_cache_type"), "spec_type": (self._info or {}).get("spec_type"),
-                "pid": getattr(self._proc, "pid", None), "last_exit": self.last_exit, **self._engine_facts()}
+                "pid": getattr(self._proc, "pid", None), "last_exit": self.last_exit, "external": self.external, **self._engine_facts()}
 
     def _engine_facts(self):
         facts = {"engine_source": self.config.engine_source}
@@ -289,6 +333,14 @@ class LlamaServerRuntime:
         self._reap()
         if self._info is None or not self._health():
             return []
+        if self.external:
+            # The router is shared: another client may have swapped the model out. Report what is really loaded.
+            try:
+                if self._router_states().get(self._info.get("identifier")) != "loaded":
+                    self._info = None
+                    return []
+            except Exception:
+                return []
         return [dict(self._info)]
 
     def load_model(self, model_key, *, context_length=None, gpu=None, identifier=None, estimate_only=False, yes=False, parallel=None,
@@ -297,6 +349,8 @@ class LlamaServerRuntime:
         # global switch and from the recipe.
         if estimate_only:
             return {"output": ""}                        # there is no estimator here; the recipe carries measured numbers
+        if self.external:
+            return self._load_external(model_key, context_length=context_length, identifier=identifier, parallel=parallel, server=server)
         if not self.available():
             raise RuntimeControlError("llama_server_not_found")
         if not isinstance(server, dict) or not server.get("gguf"):
@@ -356,6 +410,61 @@ class LlamaServerRuntime:
         self._audit("LLAMA_SERVER_STARTED", model=model_key, context=self._info["contextLength"], pid=self._proc.pid, seconds=round(self._mono() - started, 1))
         return {"output": f"started {alias}", "command": argv[1:]}
 
+    # ---- external router (config `external`): the process is not ours, only the model on it is
+    def _router_states(self):
+        """{model id: "loaded" | "unloaded" | ...} of the router's /v1/models."""
+        data = self._get_json(self.endpoint + "/v1/models")[1]
+        return {m.get("id"): (m.get("status") or {}).get("value") for m in data.get("data", []) if m.get("id")}
+
+    def _load_external(self, model_key, *, context_length, identifier, parallel, server):
+        self._reap()
+        if self._info is not None:
+            raise RuntimeControlError("server_already_running")
+        if not self._health():
+            raise RuntimeControlError(f"external_server_unreachable:{self.endpoint}")
+        rid = router_id(identifier or model_key)
+        try:
+            states = self._router_states()
+        except Exception as exc:
+            raise RuntimeControlError(f"external_server_unreachable:{self.endpoint}:{exc}") from exc
+        if rid not in states:
+            raise RuntimeControlError(f"external_model_unknown:{rid}")
+        started = self._mono()
+        if states[rid] != "loaded":
+            status, body = self._post_json(self.endpoint + "/models/load", {"model": rid}, timeout=self.config.startup_timeout_s)
+            already = "already running" in json.dumps(body)
+            if status >= 400 and not already:
+                raise RuntimeControlError(f"external_model_load_failed:{status}:{json.dumps(body)[:160]}")
+            while self._router_states().get(rid) != "loaded":
+                if self._mono() - started > self.config.startup_timeout_s:
+                    raise RuntimeControlError(f"external_model_load_timeout:{self.config.startup_timeout_s}s:{rid}")
+                self._sleep(0.5)
+        # What the router really applies (set in its own preset, not by the recipe): window per slot and slots, from /props?model=.
+        try:
+            props = self._get_json(f"{self.endpoint}/props?model={rid}")[1]
+        except Exception:
+            props = {}
+        applied = (props.get("default_generation_settings") or {}).get("n_ctx")
+        slots = props.get("total_slots") if type(props.get("total_slots")) is int else (parallel or 1)
+        per_slot = applied if type(applied) is int else (context_length // slots if context_length is not None else None)
+        self._info = {"modelKey": model_key, "identifier": rid, "contextLength": per_slot, "slots": slots, "pid": None,
+                      "kv_cache_type": (server or {}).get("kv_cache_type", "f16"), "spec_type": "none", "external": True}
+        self._audit("LLAMA_SERVER_EXTERNAL_LOADED", model=model_key, router_id=rid, context=per_slot, slots=slots, seconds=round(self._mono() - started, 1))
+        return {"output": f"loaded {rid} on {self.endpoint}", "command": []}
+
+    def _unload_external(self, model_key, all_models):
+        info = self._info
+        if info is None:
+            return {"output": "nothing to stop"}
+        if not all_models and model_key and model_key not in {info.get("identifier"), info.get("modelKey")}:
+            raise ValueError("unknown_instance")
+        status, body = self._post_json(self.endpoint + "/models/unload", {"model": info["identifier"]}, timeout=self.config.stop_timeout_s)
+        if status >= 400:
+            raise RuntimeControlError(f"external_model_unload_failed:{status}:{json.dumps(body)[:160]}")
+        self._audit("LLAMA_SERVER_EXTERNAL_UNLOADED", model=info.get("modelKey"), router_id=info["identifier"])
+        self._info = None
+        return {"output": "stopped"}
+
     def _check_gpu(self):
         """Run the GPU canary when it has not passed since this Windows start (or since the last crash); refuse the load if it fails."""
         if not self.config.canary.enabled:
@@ -377,6 +486,8 @@ class LlamaServerRuntime:
 
     def unload_model(self, model_key=None, *, all_models=False):
         self._reap()
+        if self.external:
+            return self._unload_external(model_key, all_models)
         if self._proc is None:
             self._info = None
             return {"output": "nothing to stop"}
