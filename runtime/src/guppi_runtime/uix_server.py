@@ -150,6 +150,9 @@ class UIXHub:
         # Harness-Shell (SPEC_HARNESS_SHELL_v1 Stufe 1): Sitzungen, Antwort-Strom, Schleife – eigene Sperren, nie self.lock (K3)
         from .harness.api import HarnessApi
         self.harness = HarnessApi(self)
+        sup = getattr(self.runtime, 'job_supervisor', None)
+        if sup is not None:
+            sup.in_use_extra = self.harness.modelle_in_gebrauch       # P0 M2 (1.11.): laufende Harness-Antworten halten ihr Modell (evict_idle)
 
     def _desk_audit(self, event, payload):
         self.runtime.audit.append(event, component='desk', payload=payload)
@@ -3612,7 +3615,7 @@ def make_server(hub: UIXHub, port=0):
                 pass
 
         def _harness_write(self, method):
-            """PATCH und DELETE gibt es nur für /api/harness/sitzungen/<id> – dieselben Prüfungen wie POST (Herkunft, Token, Allowlist)."""
+            """PATCH und DELETE gibt es nur unter /api/harness/ (sitzungen/<id>, vorarbeiter) – dieselben Prüfungen wie POST (Herkunft, Token, Allowlist)."""
             path = urlsplit(self.path).path
             if not self._same_origin_ok() or self._authorized() != 'browser':
                 self.send_error(403)
@@ -4004,9 +4007,25 @@ FRIENDLY_400 = {      # code -> sentence for the Captain; `code` keeps the code
     'unknown_shell': 'Diese Oberfläche gibt es nicht im Paket.',
     'module_changed_since_the_request': 'Das Modul hat sich seit dem Antrag geändert – bitte neu beantragen.',
     'binding_stale': 'Der Stand hat sich seit dem Antrag geändert – nichts wurde angewendet; bitte neu beantragen.',
+    # Harness (A6, 1.11.): die Codes aus harness/api.py und harness/sitzung.py als Sätze
+    'antwort_laeuft': 'In dieser Sitzung läuft noch eine Antwort – erst abwarten oder stoppen.',
+    'zu_viele_antworten': 'Es laufen schon zu viele Antworten gleichzeitig – eine davon abwarten oder stoppen.',
+    'karte_offen': 'Erst die offene Freigabe-Karte entscheiden – dann geht es weiter.',
+    'text_required': 'Die Nachricht ist leer oder zu lang (höchstens 8 000 Zeichen).',
+    'titel_leer': 'Der Titel darf nicht leer sein.',
+    'projekt_unbekannt': 'Dieses Projekt gibt es nicht (mehr) – die Projektwahl zeigt den Stand.',
+    'sitzung_unbekannt': 'Diese Sitzung gibt es nicht (mehr).',
+    'karte_schon_beantwortet': 'Diese Karte ist schon beantwortet.',
+    'weg_unbekannt': 'Diese Antwort gibt es für eine Karte nicht.',
+    'erlaubnis_unbekannt': 'Diese Erlaubnis ist schon zurückgenommen.',
+    'zweck_fehlt': 'Eine Aufgabe braucht einen Zweck (einen Satz, warum).',
+    'entwurf_unveraendert': 'Der Entwurf ist derselbe wie der geltende Katalog – nichts zu beantragen.',
+    'grenze_unveraendert': 'Die Grenze ist schon so eingestellt.',
+    'keine_datei_des_captains': 'Es gibt keine eigene Katalog-Datei – die Vorlage gilt schon.',
+    'vorgabe_fehlt: rezept_standard oder projekt_standard': 'Keine Vorgabe angegeben.',
 }
 # S7 (Harness Stufe 3, Härtung 30.10.): aus einem Harness-Prozess (befehl, Lauf) darf keine Entscheidung über ein Gate kommen – auf keinem Weg
-HERKUNFT_WEGE = re.compile(r'/api/(?:decisions/answer|mission/(?:approve|reject)|actions|update/uebernehmen|[a-z0-9_/-]+/apply)')
+HERKUNFT_WEGE = re.compile(r'/api/(?:decisions/answer|mission/(?:approve|reject)|actions|update/uebernehmen|model/(?:load|unload)|[a-z0-9_/-]+/apply)')   # A2 (1.11.): auch Modelle
 
 
 def serve(project_root: Path, architecture_root: Path, port=0, open_browser=False, window=False, shell=None):

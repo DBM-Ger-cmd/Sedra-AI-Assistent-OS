@@ -119,7 +119,7 @@
     const kopf = d().el('div', 'hs-app-kopf');
     const f = flaeche(S, objekt);
     box.append(kopf, f.verben, f.koerper);
-    const a = {id, box, S, objekt, mounts: f.mounts, leer: ()=>false, laeuft: ()=>false, nachUnten(){}, stoppen(){}, senden: async ()=>false, abbauen: f.abbauen, verben: f.zeichnen};
+    const a = root.sedraHarness.reiter.stub(id, box, S, {objekt, mounts: f.mounts, abbauen: f.abbauen, verben: f.zeichnen});
     kopf.append(d().el('b', 'hs-app-titel', eintrag.titel), d().el('code', 'hs-app-objekt', objekt.type + ' · ' + objekt.id + (objekt.view ? ' · ' + objekt.view : '')));
     if(f.rechts.length){
       const knopf = d().el('button', 'hs-app-nachweis-knopf', 'Nachweise (' + f.rechts.length + ')'); knopf.type = 'button';
@@ -142,6 +142,14 @@
       localStorage.setItem(NACHWEIS_KEY, JSON.stringify(alle));
     }catch(_e){}
   }
+  function nachweisBereinigen(S){                         // A25 (1.11.): nur offene App-Reiter behalten ihren Eintrag
+    try{
+      const alle = JSON.parse(localStorage.getItem(NACHWEIS_KEY) || '{}') || {};
+      const offen = new Set(liste(S));
+      Object.keys(alle).forEach(k=>{ if(!offen.has(k)) delete alle[k]; });
+      localStorage.setItem(NACHWEIS_KEY, JSON.stringify(alle));
+    }catch(_e){}
+  }
 
   // ---- Schließen (reiter.schliessen → S.verwerfen → ansicht.abbauen); hier nur der Stand
   function geschlossen(S, id){
@@ -150,6 +158,7 @@
     apps(S).delete(id);
     if(S.ctx && a) try{ S.ctx.bus.emit('object.close', {type: a.objekt.type, id: a.objekt.id}); }catch(_e){}
     melden(S);
+    nachweisBereinigen(S);
   }
 
   // ---- Arbeitsstand (§10.2): offen sind die App-Objekte, vorn das aktive

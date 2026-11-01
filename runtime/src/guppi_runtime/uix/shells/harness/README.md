@@ -1,6 +1,6 @@
-# Harness-Shell (Stufe 5, Version 1.5.0)
+# Harness-Shell (Stufe 6 + Bau 1.11.2026, Version 1.9.0)
 
-Spec: `docs/SPEC_HARNESS_SHELL_v1.md` (G1), `docs/SPEC_HARNESS_SHELL_v1_G2.md` (Design Stufe 1/2), `…_G2_STUFE3.md`/`…_G3_STUFE3.md` (Stufe 3), `…_G2_STUFE4.md`/`…_G3_STUFE4.md` (Stufe 4), `…_G2_STUFE5.md`/`…_G3_STUFE5.md` (Stufe 5).
+Spec: `docs/SPEC_HARNESS_SHELL_v1.md` (G1), `docs/SPEC_HARNESS_SHELL_v1_G2.md` (Design Stufe 1/2), `…_G2_STUFE3.md`/`…_G3_STUFE3.md` (Stufe 3), `…_G2_STUFE4.md`/`…_G3_STUFE4.md` (Stufe 4), `…_G2_STUFE5.md`/`…_G3_STUFE5.md` (Stufe 5), `…_G2_STUFE6.md` (Stufe 6); Analyse und Bau 1.11.2026: `docs/ANALYSE_HARNESS_2026-11-01.md`, `docs/BAUBERICHT_HARNESS_BAU_2026-11-01.md`.
 Starten: `START_SEDRA harness` oder in der Start-Shell „Diese Oberfläche nehmen“. Das Cockpit bleibt unverändert daneben.
 
 ## Zonen (HS-01)
@@ -10,19 +10,21 @@ Starten: `START_SEDRA harness` oder in der Start-Shell „Diese Oberfläche nehm
 | Seitenleiste | `.hs-seite` | `seite.js` | Neue Sitzung, Projekte mit Sitzungen, Chats, Einstellungen (Stufe 5); Strg+B |
 | Reiterleiste | `.hs-reiter` | `reiter.js` | ein Reiter je Sitzung; `+` neu, mittlere Maustaste schließt; `localStorage` `sedra.harness.reiter` |
 | Arbeitsfläche | `.hs-flaeche` | `verlauf.js`, `markdown.js` | Gespräch: Strom lesen, Text grau bis geprüft, Denken eingeklappt, Werkzeugzeilen aufklappbar |
-| Eingabefeld | `.hs-eingabe` | `eingabe.js` | Enter sendet, Umschalt+Enter Zeile, Stopp/Esc, Schild, Modell, Mikrofon, `/` Befehle |
+| Eingabefeld | `.hs-eingabe` | `eingabe.js`, `anhang.js`, `modell.js`, `projekt.js` | Enter sendet, Umschalt+Enter Zeile, Stopp/Esc, `+`/`@` Datei anhängen (Stufe 6), Schild, Modell-Steuerung (Laden/Wechseln/Entladen, „passt es?“), Mikrofon (→ Einstellungen → Rekorder), `/` Befehle; Projektzeile mit „Ordner öffnen …“ und „Als Vorgabe merken“ |
+| Vorschau | `.hs-vorschau` | `vorschau.js`, `vorschau.css` | Stufe 6: neben dem Gespräch die Datei, an der gearbeitet wird (Diff, Lauf-Log); Seite wechseln, zuklappen, festhalten (Strg+Umschalt+X) |
 | Taskleiste | `.hs-taskleiste` | `taskleiste.js` | Start (Start-Menü), offene Sitzungen, Apps und Läufe, Statusbereich aus `/api/strip` (HS-32), Uhr |
 | Start-Menü | `.hs-start-menue` | `startmenue.js`, `startliste.js` (rein), `start_gruppen.json` | Apps mit Suche, Gruppen, zuletzt (`uix.shelf.harness`), Oberflächen, Darstellung · Schrift (Stufe 4) |
 | App-Reiter | `.hs-app-box` | `app.js` | ein Werkzeug des Vertrags als Reiter `app:<typ>:<id>`, Nachweise rechts, Arbeitsstand (Stufe 4) |
-| Einstellungen | `.hs-einst` | `einstellungen.js`, `katalog_editor.js`, `katalog_editor_pruefung.js` (rein) | Reiter `einstellungen:[gruppe/punkt]`: sechs Gruppen, Werkzeuge eingehängt (`app.flaeche`), Katalog-Editor, Grenzen, Schalter – alles Schreiben als Antrag mit Gate (Stufe 5) |
+| Einstellungen | `.hs-einst` | `einstellungen.js`, `einstellungen.css`, `katalog_editor.js`, `katalog_editor_pruefung.js` (rein), `erlaubnisse.js` | Reiter `einstellungen:[gruppe/punkt]`: sechs Gruppen, Werkzeuge eingehängt (`app.flaeche`), Katalog-Editor, Sitzungs-Erlaubnisse, Grenzen, Schalter – alles Schreiben als Antrag mit Gate (Stufe 5) |
 
 `shell.js` hält den Zustand und registriert die Shell. Seit Stufe 4 steht `umschalter: menue` im Manifest (Vertrag N3): kein Alt+S-Chip, kein
 Mini-Hub – Alt+S, der Knopf „Start“ und `/start` öffnen das Start-Menü der Shell; der Rekorder ist dort eine App.
 
 ## Wege
 
-`/api/harness/projekte`, `/api/harness/sitzungen[/<id>[/nachricht]]`, `/api/harness/antworten/<id>/strom|stopp` (harness/api.py),
-dazu `/api/strip`, `/api/models`, `/api/events`. Der Strom einer Antwort wird mit `fetch` gelesen (Kopf `X-SEDRA-Shell`).
+`/api/harness/projekte` (GET; POST = Antrag „Ordner öffnen“), `/api/harness/sitzungen[/<id>[/nachricht]]`, `/api/harness/antworten/<id>/strom|stopp`,
+`/api/harness/vorgaben`, `/api/harness/modelle`, `/api/harness/dateien`, `/api/harness/vorschau` (harness/api.py, Kopf der Datei listet alle),
+dazu `/api/strip`, `/api/models`, `/api/model/load|unload`. Der Strom einer Antwort wird mit `fetch` gelesen (Kopf `X-SEDRA-Shell`).
 
 ## Stufe 2 – Hände und Grenzen
 
@@ -33,7 +35,8 @@ Posteingang. Die Werkzeugzeile zeigt Stufe und Regel; das Schild im Eingabefeld 
 
 ## Noch nicht da
 
-Dateien anhängen (`+`, `@`); der Systemtext einer Vorlage (`.md`) ist in den Einstellungen nicht lesbar (kein Lese-Weg; die Datei liegt neben der Vorlage).
+Der Systemtext einer Vorlage (`.md`) ist in den Einstellungen nicht lesbar (kein Lese-Weg; die Datei liegt neben der Vorlage). Suche über Sitzungen,
+Verlauf mit Werkzeugergebnissen und „Karte → Katalog“ sind eigene kleine Specs (Analyse 1.11. V4/V5/V7).
 
 ## Stufe 3 (Version 1.2.0): Vorarbeiter und Aufgaben-Freigabe
 
@@ -72,3 +75,25 @@ Dateien anhängen (`+`, `@`); der Systemtext einer Vorlage (`.md`) ist in den Ei
   `local_config/harness_vorlagen/`; die Datei im Repo bleibt. Herkunftsprüfung S7 auf allen drei Antrag-Wegen (403 aus einem Harness-Prozess).
 - Reine Teile mit `node`: `tests/test_uix_harness_einstellungen.py`; Server: `tests/test_harness_katalog_editor.py`; Browser:
   `benchmarks/uix_check.py --shell harness` (Prüfung „einstellungen“), `harness_abnahme.py --stufe5`.
+
+## Stufe 6 (Version 1.8.0): Dateien, Modell, Vorschau
+
+- **Anhängen** (`anhang.js`, HS-82): `+` oder `@` öffnet die Dateiauswahl des Projekts (`GET /api/harness/dateien`, nur Namen, Einstufung wie `datei_lesen`;
+  gesperrte Ordner erscheinen nicht); gewählte Dateien stehen als `@pfad` im Text, das Modell liest sie mit `datei_lesen`.
+- **Modell im Eingabebereich** (`modell.js`, HS-80/81): Rezept wählen, Laden/Wechseln/Entladen – dieselben Wege wie die Werkstatt.
+- **Vorschau** (`vorschau.js`): die Datei, an der gearbeitet wird, neben dem Gespräch; folgt den Werkzeugaufrufen, lässt sich festhalten.
+
+## Bau 1.11.2026 (Version 1.9.0): Analyse + Harness-Vergleich
+
+- **Sitzungs-Erlaubnis** (P0 M1, `harness/erlaubnis.py`, `erlaubnisse.js`): Knopf „Für diese Sitzung erlauben“ auf der Karte (`POST karten/<id> {weg: sitzung}`) –
+  gleichartige Aufrufe (Ordner der Datei, Anfang des Befehls) laufen bis zum Schließen der Sitzung ohne Karte (Audit `HARNESS_APPROVED_BY sitzung:<karte>`);
+  nie bei Vorbehalt, Warnkarte, Modellen. Liste und „Zurücknehmen“ unter Einstellungen → Agent → Freigabe-Modus. Vorlage: `${schreibbereich}`-Regel frei,
+  Testbefehle (`python -m unittest*`, `pytest*`) frei.
+- **Modell halten / Auto-Laden** (P0 M2): laufende Antworten, offene Karten und 60 s Nachlauf halten das Modell (`JobSupervisor.in_use_extra`);
+  ohne Modell lädt die Shell beim Senden das Standard-Rezept selbst – nur wenn der Katalog `modell_laden` dafür `frei` stellt (`GET vorgaben`).
+- **Ordner öffnen / Vorgaben** (P0 M3, `projekt.js`): Antrag `harness_projekt` → Laufzeitdatei `runtime_data/harness/projekte.yaml` (nie `local_config/`),
+  kein Neustart; „Als Vorgabe merken“ für Projekt und Rezept (`POST vorgaben`).
+- **„Passt das Modell?“** (V1, `GET modelle`): je Rezept Bedarf gegen freien Speicher mit Grund, passende zuerst. **Erststart-Schritte** (V2) in der leeren
+  Sitzung; **Zeitlinie** (V3) in der Taskleiste („denkt · 12 s“, „Werkzeug befehl“, „wartet auf Freigabe“, „Stopp angefordert“); Fehlerzeile mit „Logbuch öffnen“ (V9).
+- Befunde A1–A30 der Analyse (Antwort nie hängend, Herkunft S7 auf allen Schreibwegen, Mikrofon, Seitenleiste, Status-Takt, Sitzungsliste mit Zwischenspeicher …):
+  `docs/BAUBERICHT_HARNESS_BAU_2026-11-01.md`; Tests `tests/test_harness_bau_2026_11_01.py`.

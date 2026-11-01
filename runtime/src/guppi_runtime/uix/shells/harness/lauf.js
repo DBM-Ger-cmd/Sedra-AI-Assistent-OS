@@ -19,8 +19,7 @@
     const liste = d().el('div', 'hs-liste');
     box.append(liste);
     (S._laufAnsichten || (S._laufAnsichten = new Map())).set(lid, ()=>laden());
-    const a = {id, box, S, leer: ()=>false, laeuft: ()=>false, nachUnten(){}, stoppen(){}, senden: async ()=>false, laden: ()=>laden(),
-               abbauen(){ if(S._laufAnsichten) S._laufAnsichten.delete(lid); }};
+    const a = root.sedraHarness.reiter.stub(id, box, S, {laden: ()=>laden(), abbauen(){ if(S._laufAnsichten) S._laufAnsichten.delete(lid); }});
     let ladend = false;
     async function laden(){
       if(ladend) return;

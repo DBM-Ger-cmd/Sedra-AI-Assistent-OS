@@ -7,14 +7,9 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
   const md = ()=>root.sedraHarness.markdown;
-  const ID = /^S-[0-9A-F]{8}$/;
-  const AUSGABE_KURZ = 4000;               // HS-11: gekürzt ab 4000 Zeichen, mit „ganz anzeigen“
-  const ENDE = {erledigt: ['Erledigt', 'ok'], nur_plan: ['Nur Plan – nichts ausgeführt', 'warn'], abgebrochen: ['Abgebrochen', 'warn'],
-                fehler: ['Fehler', 'bad'], wartet: ['Wartet auf Freigabe', 'warn']};
-  const STATUS = {ok: 'ok', fehler: 'Fehler', wiederholt: 'wiederholt', laeuft: 'läuft', wartet: 'wartet auf Freigabe', verboten: 'verboten',
-                  abgelehnt: 'abgelehnt', abgebrochen: 'abgebrochen',
-                  hinweis: 'Hinweis – nicht geschrieben'};            // Nachtrag 434b108 (B-8): Fehlerfarbe, weil nichts geschah
-
+  const Z = ()=>root.sedraHarness.zeilen;              // zeilen.js (1.11., A20/V8): Werkzeugzeile, Denkzeile, Fuß
+  const werkzeugZeile = (...x)=>Z().werkzeugZeile(...x), werkzeugEnde = (...x)=>Z().werkzeugEnde(...x), denkZeile = (...x)=>Z().denkZeile(...x), ende = (...x)=>Z().ende(...x);
+  const ID = root.sedraHarness.reiter.ID;           // A19: eine Quelle für die Sitzungs-ID (reiter.js)
   function token(){ return decodeURIComponent((location.hash || '').replace(/^#/, '')); }
 
   // ---- der Seedrache (HS-04): eine kleine Zeichnung aus Tokens, kein Bild, nichts aus dem Netz
@@ -30,72 +25,26 @@
     return svg;
   }
 
+  // V2/A22 (1.11.): drei Schritte mit Zustand statt eines Satzes – Modell, Projekt, erste Nachricht; dazu die drei Zeichen des Eingabefelds
   function startbild(S){
     const box = d().el('div', 'hs-start');
-    box.append(drache(), d().el('h1', 'hs-start-titel', 'SEDRA'), d().el('p', 'hs-start-text', 'Worum geht es? Die Antwort streamt, Werkzeugaufrufe stehen sichtbar im Verlauf.'));
+    box.append(drache(), d().el('h1', 'hs-start-titel', 'SEDRA'));
+    const schritte = d().el('ol', 'hs-start-schritte');
+    const e = S._eingabe || {};
+    const modell = !!S.modell, projekt = !!(e.projekt && e.projekt.value), vorlage = e.vorlage && e.vorlage.value;
+    const modellName = S.modell && (S.modell.name || S.modell);
+    const schritt = (ok, text, tun)=>{
+      const li = d().el('li', 'hs-start-schritt' + (ok ? ' ok' : ''));
+      li.append(d().el('span', 'hs-start-haken', ok ? '✓' : '○'), d().el('span', null, text));
+      if(!ok && tun){ const k = d().el('button', 'hs-knopf hs-klein', tun[0]); k.type = 'button'; k.onclick = tun[1]; li.append(k); }
+      return li;
+    };
+    schritte.append(schritt(modell, modell ? 'Modell geladen: ' + modellName : 'Ein Modell laden', ['Modell wählen', ()=>root.sedraHarness.eingabe.modellMenue(S, true)]),
+                    schritt(projekt, 'Projekt: ' + ((S.projekte || []).find(p=>p.id === (e.projekt || {}).value) || {}).name + (vorlage ? ' · Vorlage ' + vorlage : ''), null),
+                    schritt(false, 'Die erste Nachricht schreiben – unten im Feld', ['Ins Feld', ()=>root.sedraHarness.eingabe.fokus(S)]));
+    box.append(schritte, d().el('p', 'hs-start-text', 'Im Feld: „+“ hängt eine Datei an, „@“ nennt eine Datei, „/“ gibt Befehle. Die Antwort streamt; jeder Werkzeugaufruf steht sichtbar im Verlauf, und was ändert, fragt vorher.'));
     return box;
   }
-
-  function ende(block, daten){
-    const art = ENDE[daten.ende];
-    const fuss = d().el('div', 'hs-fuss');
-    if(art){
-      const t = d().el('span', 'hs-ende ' + art[1], art[0] + (daten.ende === 'fehler' && daten.grund ? ': ' + daten.grund : ''));
-      fuss.append(t);
-    }
-    if(daten.abgeschnitten) fuss.append(d().el('span', 'hs-ende warn', 'An der Token-Grenze abgeschnitten'));
-    const teile = [];
-    if(daten.zuege) teile.push(daten.zuege + (daten.zuege === 1 ? ' Zug' : ' Züge'));
-    const tk = daten.token || {};
-    if(tk.ein || tk.aus) teile.push((tk.ein || 0).toLocaleString('de-DE') + ' Token ein · ' + (tk.aus || 0).toLocaleString('de-DE') + ' aus');
-    if(teile.length) fuss.append(d().el('small', 'hs-leise', teile.join(' · ')));
-    if(fuss.childNodes.length) block.append(fuss);
-  }
-
-  function werkzeugZeile(name, kurz, args){
-    const row = d().el('details', 'hs-wz laeuft');
-    const sum = d().el('summary');
-    const status = d().el('span', 'hs-wz-status', 'läuft');
-    sum.append(d().el('span', 'hs-wz-icon', '⚙'), d().el('b', 'hs-wz-name', name || '?'), d().el('span', 'hs-wz-kurz', kurz || ''),
-               d().el('span', 'hs-wz-dauer', ''), status);
-    if(args && typeof args.pfad === 'string' && args.pfad && /^datei_/.test(name || '')){          // Stufe 6 (HS-72): die Datei in der Vorschau öffnen und festhalten
-      const pf = d().el('button', 'hs-knopf hs-klein hs-wz-pfad', '▸ Vorschau'); pf.type = 'button'; pf.dataset.pfad = args.pfad; pf.title = 'In der Vorschau öffnen und festhalten';
-      sum.append(pf);
-    }
-    const body = d().el('div', 'hs-wz-body');
-    body.append(d().el('small', 'hs-leise', 'Eingabe'), d().el('pre', 'hs-pre', args === undefined ? '' : JSON.stringify(args, null, 2)));
-    row.append(sum, body);
-    return row;
-  }
-
-  function werkzeugEnde(row, status, dauer, ergebnis, stufe, regel){
-    row.classList.remove('laeuft');
-    row.classList.add(status === 'ok' ? 'ok' : (status === 'wiederholt' || status === 'wartet' || status === 'abgelehnt' ? 'warn' : 'bad'));
-    row.querySelector('.hs-wz-status').textContent = STATUS[status] || status;
-    if(typeof dauer === 'number') row.querySelector('.hs-wz-dauer').textContent = dauer < 1 ? Math.round(dauer * 1000) + ' ms' : dauer.toFixed(1) + ' s';
-    if(stufe){                                           // HS-29: Stufe und Regel stehen am Werkzeugaufruf
-      const marke = d().el('span', 'hs-wz-stufe ' + stufe, stufe + (regel ? ' · ' + regel : ''));
-      marke.title = 'Einstufung: Stufe ' + stufe + (regel ? ', Regel ' + regel : ', keine Regel');
-      row.querySelector('summary').insertBefore(marke, row.querySelector('.hs-wz-dauer'));
-    }
-    const body = row.querySelector('.hs-wz-body');
-    const text = String(ergebnis || '');
-    const pre = d().el('pre', 'hs-pre', text.length > AUSGABE_KURZ ? text.slice(0, AUSGABE_KURZ) + ' …' : text);
-    body.append(d().el('small', 'hs-leise', 'Ausgabe' + (text.length > AUSGABE_KURZ ? ' (' + text.length.toLocaleString('de-DE') + ' Zeichen)' : '')), pre);
-    if(text.length > AUSGABE_KURZ){
-      const ganz = d().el('button', 'hs-knopf hs-klein', 'ganz anzeigen'); ganz.type = 'button';
-      ganz.onclick = ()=>{ pre.textContent = text; ganz.remove(); };
-      body.append(ganz);
-    }
-  }
-
-  function denkZeile(text){
-    const row = d().el('details', 'hs-denken');
-    const sum = d().el('summary', null, text);
-    row.append(sum, d().el('pre', 'hs-pre hs-denken-text', ''));
-    return row;
-  }
-
 
   const karteKarte = (...x)=>root.sedraHarness.karte.karteKarte(...x);        // karte.js: die Freigabe-Karte (HS-22)
   const diffAnsicht = (...x)=>root.sedraHarness.karte.diffAnsicht(...x);
@@ -169,7 +118,11 @@
           }
           else if(e.typ === 'modell'){
             if(!block){ block = this.neu(d().el('div', 'hs-antwort')); this.eintraege++; }
-            if(e.denken_zeichen) block.prepend(denkZeile('Dachte nach · ' + e.denken_zeichen.toLocaleString('de-DE') + ' Zeichen (nicht gespeichert)'));
+            if(e.denken_zeichen){                                   // A16 (1.11.): der gespeicherte Anfang des Denkens (bis 4 000 Zeichen) steht in der Zeile
+              const dz = denkZeile('Dachte nach · ' + e.denken_zeichen.toLocaleString('de-DE') + ' Zeichen' + (e.denken_text ? (e.denken_text.length < e.denken_zeichen ? ' (Anfang gespeichert)' : '') : ' (nicht gespeichert)'));
+              if(e.denken_text) dz.querySelector('pre').textContent = e.denken_text;
+              block.prepend(dz);
+            }
             if(e.zurueckgehalten) block.append(d().el('div', 'hs-zurueck', e.zurueckgehalten));
             else if(e.text) block.append(md().render(e.text));
             ende(block, e);
@@ -186,10 +139,11 @@
 
       // ---- senden: ein Entwurf wird mit der ersten Nachricht zur Sitzung
       async senden(text, projekt, vorlage){
-        if(this.antwortId) return false;
+        if(this.antwortId || this.wartet) return false;        // A15: auch während POST sitzungen läuft, nicht zweimal
         if(this.ladung) await this.ladung;
-        if(!ID.test(this.id) && !S.modell){          // HS-53: ohne Modell keine leere Sitzungsdatei anlegen (der Server prüft trotzdem)
+        if(!S.modell){          // HS-53: ohne Modell keine leere Sitzungsdatei anlegen (der Server prüft trotzdem); P0 M2: selbst laden, wenn der Katalog es erlaubt
           await S.modellLaden();
+          if(!S.modell){ this.wartet = true; try{ await root.sedraHarness.modell.autoLaden(S, (t, art)=>this.notiz(t, art)); }finally{ this.wartet = false; } }
           if(!S.modell){ this.notiz('Kein Modell geladen – wähle unten ein Modell und klicke „Laden“.', 'warn'); root.sedraHarness.eingabe.modellMenue(S, true); return false; }
         }
         this.wartet = true;
@@ -226,6 +180,8 @@
 
       async stoppen(){
         if(!this.antwortId) return;
+        this.phase('Stopp angefordert – endet mit dem nächsten Schritt des Modells');     // A30 (1.11.): während das Modell den Prompt verarbeitet, passiert sichtbar sonst nichts
+        if(this.block) this.block.append(d().el('div', 'hs-notiz s-note warn', 'Stopp angefordert … das Modell hört beim nächsten Schritt auf (bei langer Prompt-Verarbeitung kann das dauern).'));
         try{ await S.api('/api/harness/antworten/' + this.antwortId + '/stopp', {method: 'POST', body: {}}); }
         catch(err){ S.hinweis('Stopp fehlgeschlagen: ' + err.message, 'bad'); }
       },
@@ -263,45 +219,23 @@
         S.sitzungenLaden();
       },
 
-      async lesen(aid, z, block){
+      async lesen(aid, z, block){                     // V8 (1.11.): Zerlegen und Deuten in strom.js (rein, mit node geprüft); hier nur zeichnen
         this.abbruch = new AbortController();
-        const res = await fetch('/api/harness/antworten/' + aid + '/strom', {signal: this.abbruch.signal,
-          headers: {'X-GUPPI-Token': token(), 'X-SEDRA-Shell': 'harness', 'Last-Event-ID': String(z.letzte)}});
-        if(!res.ok){ const e = new Error('HTTP ' + res.status); e.status = res.status; throw e; }
-        const reader = res.body.getReader();
-        const dec = new TextDecoder();
-        let puffer = '';
-        for(;;){
-          const {value, done} = await reader.read();
-          if(done) break;
-          puffer += dec.decode(value, {stream: true});
-          let at;
-          while((at = puffer.indexOf('\n\n')) >= 0){
-            const roh = puffer.slice(0, at); puffer = puffer.slice(at + 2);
-            const ev = {};
-            roh.split('\n').forEach(l=>{ if(!l || l[0] === ':') return; const i = l.indexOf(': '); if(i > 0) ev[l.slice(0, i)] = l.slice(i + 2); });
-            if(!ev.event) continue;
-            let daten = {};
-            try{ daten = JSON.parse(ev.data || '{}'); }catch(_e){}
-            z.letzte = Number(ev.id) || z.letzte;
-            this.ereignis(ev.event, daten, z, block);
-            if(ev.event === 'ende'){ z.fertig = true; this.abbruch.abort(); return; }
-          }
-        }
+        await root.sedraHarness.strom.lesen(aid, z, (name, daten)=>this.ereignis(name, daten, z, block), {'X-GUPPI-Token': token(), 'X-SEDRA-Shell': 'harness'}, this.abbruch);
       },
 
+      phase(text){ this._phase = text ? {text, seit: performance.now()} : null; root.sedraHarness.taskleiste.zeichnen(S); },     // V3 (1.11.): Zeitlinie in der Taskleiste
       ereignis(name, x, z, block){
         const unten = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
-        if(name === 'zug.start'){ z.seg = null; z.roh = ''; }
+        if(name === 'zug.start'){ z.seg = null; z.roh = ''; this.phase('denkt'); }
         else if(name === 'denken'){
           if(!z.denken){ z.denken = denkZeile('Denkt nach …'); block.insertBefore(z.denken, block.firstChild); z.denkenAb = x.t || 0; }
           if(x.stueck){ z.denkenText += x.stueck; z.denken.querySelector('pre').textContent = z.denkenText; }
-          const s = Math.max(0, (x.t || 0) - (z.denkenAb || 0));
-          z.denken.querySelector('summary').textContent = (x.verborgen ? 'Denkt nach (scharfer Modus: Inhalt erst nach dem Urteil)' : 'Denkt nach · ' + s.toFixed(1).replace('.', ',') + ' s');
+          z.denken.querySelector('summary').textContent = root.sedraHarness.strom.denkText(x, z.denkenAb);
         }
         else if(name === 'text.ungeprueft'){
           if(!z.seg){ z.seg = d().el('div', 'hs-text hs-ungeprueft'); z.seg.title = 'ungeprüft: der Inhaltsschutz urteilt nach dem Zug'; block.append(z.seg); z.roh = ''; }
-          if(!z.erstesWort){ z.erstesWort = performance.now(); block.dataset.erstesWortT = String(x.t); }
+          if(!z.erstesWort){ z.erstesWort = performance.now(); block.dataset.erstesWortT = String(x.t); this.phase('schreibt'); }
           z.roh += x.stueck || '';
           z.seg.textContent = z.roh;
         }
@@ -319,6 +253,7 @@
           z.seg = null; z.roh = '';
         }
         else if(name === 'werkzeug.start'){
+          this.phase('Werkzeug ' + (x.name || ''));
           const row = werkzeugZeile(x.name, x.kurz, x.args);
           z.werkzeuge[x.aufruf_id] = row; z.seg = null; (z.args || (z.args = {}))[x.aufruf_id] = {name: x.name, args: x.args};
           block.append(row);
@@ -329,10 +264,16 @@
           const w = (z.args || {})[x.aufruf_id];
           if(w) root.sedraHarness.vorschau.beruehrt(S, this, w.name, w.args, x.status);          // Stufe 6: die Vorschau folgt der Datei
         }
-        else if(name === 'karte'){ block.append(karteKarte(S, this, x, null)); z.seg = null; root.sedraHarness.vorschau.karte(S, this, x); }
+        else if(name === 'karte'){ this.phase('wartet auf Freigabe'); block.append(karteKarte(S, this, x, null)); z.seg = null; root.sedraHarness.vorschau.karte(S, this, x); }
         else if(name === 'kontext'){ block.dataset.kontext = x.belegt + '/' + x.fenster; }
-        else if(name === 'fehler'){ block.append(d().el('div', 'hs-zurueck bad', 'Fehler: ' + (x.grund || ''))); }
+        else if(name === 'fehler'){                                   // V9 (1.11.): die Fehlerzeile zeigt den Weg zum Logbuch (Audit), nicht nur den Typnamen
+          const zeile = d().el('div', 'hs-zurueck bad', 'Fehler: ' + (x.grund || '') + ' ');
+          const weg = d().el('button', 'hs-knopf hs-klein', 'Logbuch öffnen'); weg.type = 'button';
+          weg.onclick = ()=>{ const o = (root.sedraPlaces && root.sedraPlaces.PLACES || []).find(p=>p.id === 'logbook'); if(o) root.sedraHarness.app.oeffnen(S, o); else root.sedraHarness.einstellungen.oeffnen(S, 'system/audit'); };
+          zeile.append(weg); block.append(zeile);
+        }
         else if(name === 'ende'){
+          this._phase = null;
           if(z.seg){ z.seg.classList.remove('hs-ungeprueft'); z.seg = null; }
           if(z.denken && z.denkenText === '' && !z.denken.querySelector('summary').textContent.startsWith('Denkt nach (')) z.denken.querySelector('summary').textContent = 'Dachte nach';
           else if(z.denken) z.denken.querySelector('summary').textContent = z.denken.querySelector('summary').textContent.replace('Denkt', 'Dachte');

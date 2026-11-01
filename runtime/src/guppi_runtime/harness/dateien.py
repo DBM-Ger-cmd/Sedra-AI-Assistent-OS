@@ -54,6 +54,8 @@ def liste(wurzel, regeln, ordner='', q='', limit=LIMIT, besucht_max=BESUCHT_MAX)
             continue
         rel = p.relative_to(basis).as_posix()
         if p.is_dir():
+            if not _erlaubt(regeln, rel + '/x'):                 # A24 (1.11.): ein Ordner, in dem nichts lesbar ist (local_config/), erscheint nicht leer in der Auswahl
+                continue
             out.append({'pfad': rel, 'art': 'ordner', 'groesse': None})
         elif p.is_file() and _erlaubt(regeln, rel):
             out.append({'pfad': rel, 'art': 'datei', 'groesse': _groesse(p)})

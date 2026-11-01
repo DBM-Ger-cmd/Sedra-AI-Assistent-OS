@@ -19,6 +19,7 @@ import time
 from ..devenv.model_tools import FINAL_ANSWER_NOTE, compact_history, parse_calls, relax_schema
 
 MAX_ZUEGE = 24
+DENKEN_MAX = 4000                      # A16: so viele Zeichen des Denkens werden in der Sitzung gespeichert (E-A2)
 KOMPAKT_AB = 0.70                     # Anteil des Fensters, ab dem alte Werkzeugergebnisse gekürzt werden
 ERGEBNIS_MAX = 8000                   # D-E5: so viel eines Ergebnisses steht im Verlauf
 KURZ_MAX = 120
@@ -95,6 +96,7 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
     texte, werkzeuge = [], []
     token = {'ein': 0, 'aus': 0}
     denken = [0]
+    denktext, denktext_len = [], [0]       # A16 (1.11., E-A2): die ersten DENKEN_MAX Zeichen des Denkens – nur im Live-Modus (scharf: nichts), für die Zeile nach dem Neuladen
     ende, grund, zurueck = None, None, None
     letzter, gleich, schluss, abgeschnitten = None, 0, False, False
     warte_karte = None
@@ -118,6 +120,8 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
                 if live_text: antwort.senden('text.ungeprueft', {'stueck': stueck})
             elif kanal == 'denken':
                 denken[0] += len(stueck)
+                if live_text and denktext_len[0] < DENKEN_MAX:                                      # A16: gekürzt speichern
+                    teil = stueck[:DENKEN_MAX - denktext_len[0]]; denktext.append(teil); denktext_len[0] += len(teil)
                 if live_text: antwort.senden('denken', {'stueck': stueck})
                 elif not verborgen[0]:
                     verborgen[0] = True
@@ -216,7 +220,7 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
                 antwort.senden('karte', {'karte_id': karte['karte_id'], 'werkzeug': name, 'ziel': karte.get('ziel'), 'stufe': stufe,
                                          'regel': regel, 'begruendung': karte.get('begruendung'), 'vorschau': karte.get('vorschau'),
                                          'vorschau_kurz': kurz(karte.get('vorschau') or '', 300), 'an': karte.get('an'), 'art': karte.get('art'),
-                                         'vorschau_hash': karte.get('vorschau_hash')})
+                                         'vorschau_hash': karte.get('vorschau_hash'), 'vorbehalt': bool(karte.get('vorbehalt')), 'warnung': karte.get('warnung')})
                 if hasattr(box, 'festhalten'):
                     box.festhalten(karte['karte_id'], {'messages': list(messages), 'cid': cid, 'name': name, 'args': args,
                                                        'rest': [[c, n, a] for c, n, a in calls[n_call + 1:]], 'zug': zug,
@@ -225,7 +229,8 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
                     sitzungen.anhaengen(sitzung_id, {'typ': 'karte', 'karte_id': karte['karte_id'], 'antwort_id': antwort.id, 'werkzeug': name,
                                                      'args': args, 'ziel': karte.get('ziel'), 'stufe': stufe, 'regel': regel,
                                                      'begruendung': karte.get('begruendung'), 'vorschau': karte.get('vorschau'), 'zustand': 'offen',
-                                                     'an': karte.get('an'), 'art': karte.get('art'), 'vorschau_hash': karte.get('vorschau_hash'), 'warnung': karte.get('warnung')})
+                                                     'an': karte.get('an'), 'art': karte.get('art'), 'vorschau_hash': karte.get('vorschau_hash'), 'warnung': karte.get('warnung'),
+                                                     'vorbehalt': bool(karte.get('vorbehalt'))})
                 warte_karte = karte['karte_id']
                 ende = 'wartet'
                 break
@@ -257,6 +262,6 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
     ergebnis = {'ende': ende, 'text': text, 'zuege': zug, 'token': token, 'denken_zeichen': denken[0], 'werkzeuge': werkzeuge, **extra}
     if sitzungen is not None and sitzung_id:
         sitzungen.anhaengen(sitzung_id, {'typ': 'modell', 'antwort_id': antwort.id, 'text': text, 'denken_zeichen': denken[0], 'ende': ende,
-                                         'zuege': zug, 'token': token, **extra})
+                                         'zuege': zug, 'token': token, **({'denken_text': ''.join(denktext)} if denktext else {}), **extra})
     antwort.senden('ende', {'ende': ende, 'zuege': zug, 'token': token, **{k: v for k, v in extra.items() if k != 'zurueckgehalten'}})
     return ergebnis

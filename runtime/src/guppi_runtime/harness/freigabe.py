@@ -21,13 +21,14 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
+from . import erlaubnis as sitzungs_erlaubnis
 from . import vorbehalte
 from .katalog import einstufen
 from .werkzeuge import AKTION_LESEN, LAUF, LESEN, NAMEN as HARNESS_WERKZEUGE, WerkzeugFehler
 from .befehl import BefehlFehler
 
 KARTE_ID = re.compile(r'K-[0-9A-F]{8}')
-WEGE = ('erlauben', 'ablehnen')
+WEGE = ('erlauben', 'ablehnen', 'sitzung')        # `sitzung` (P0 M1): erlauben und für diese Sitzung merken
 
 
 def jetzt():
@@ -133,15 +134,17 @@ def oeffentlich(karte):
     return {k: karte.get(k) for k in ('karte_id', 'sitzung_id', 'antwort_id', 'werkzeug', 'args', 'ziel', 'stufe', 'regel', 'begruendung', 'vorbehalt',
                                       'vorschau', 'status', 'entscheidung', 'von', 'ueber', 'notiz', 'angelegt', 'beantwortet', 'ergebnis_kurz',
                                       'mission_id', 'projekt', 'neue_antwort_id', 'warnung', 'an', 'art', 'vorschau_hash', 'vorgelegt', 'frist_abgelaufen', 'zurueckgenommen',
-                                      'aufgabe_id')} | {'gate_id': (karte.get('gate') or {}).get('gate_id')}
+                                      'aufgabe_id', 'erlaubnis')} | {'gate_id': (karte.get('gate') or {}).get('gate_id')}
 
 
 class Kiste:
     """Die Werkzeugkiste einer Antwort: Harness-Werkzeuge (mit Freigabe) und die lesenden Zustandswerkzeuge (chat_tools, frei).
     Die Schleife ruft `aufruf`; bei `wartet` hält sie mit `festhalten` ihren Zustand an der Karte fest."""
 
-    def __init__(self, werkzeuge, *, regeln, guard, audit, karten, sitzung_id, chat=None, projekt_id=None, aufgaben=None, lokal=True, vorarbeiter=None, extra=None):
+    def __init__(self, werkzeuge, *, regeln, guard, audit, karten, sitzung_id, chat=None, projekt_id=None, aufgaben=None, lokal=True, vorarbeiter=None, extra=None,
+                 erlaubnisse=None):
         self.w, self.regeln, self.guard, self.audit, self.karten = werkzeuge, regeln, guard, audit, karten
+        self.erlaubnisse = list(erlaubnisse or ())        # P0 M1: Sitzungs-Erlaubnisse („Für diese Sitzung erlauben“), gelten nicht bei Vorbehalt/Warnkarte
         self.sitzung_id, self.chat, self.projekt_id = sitzung_id, chat, projekt_id
         self.vorarbeiter, self.extra = vorarbeiter, extra        # Stufe 3: Ernennung (Karten `an: vorarbeiter`) und die Werkzeuge des Vorarbeiters
         self.aufgaben, self.lokal = aufgaben, lokal        # Stufe 3: Aufgaben-Freigabe gilt nur für lokale Modelle (HS-27)
@@ -192,21 +195,26 @@ class Kiste:
                         'stufe': e['stufe'], 'regel': e['regel'], 'wirkung': False}
             e = dict(e, wirkt_als='captain')
             warnkarte = True                                  # Kasten und Entscheidung bleiben beim Captain – keine Aufgabe deckt sie
-        via_aufgabe = None
+        via_aufgabe, via_sitzung = None, None
         if e['wirkt_als'] != 'frei' and self.aufgaben is not None and self.lokal and not e['vorbehalt'] and not warnkarte:
             weich = vorbehalte.pruefen_weich(name, plan['ziel'], args) or plan.get('weich')
             treffer = self.aufgaben.deckt(self.sitzung_id, name, plan['ziel'], weich=weich)
             if treffer and self.aufgaben.zaehlen(treffer['aufgabe_id']):
                 via_aufgabe = treffer['aufgabe_id']
+        if e['wirkt_als'] != 'frei' and not via_aufgabe and not e['vorbehalt'] and not warnkarte and not vorbehalte.pruefen_weich(name, plan['ziel'], args):
+            treffer = sitzungs_erlaubnis.deckt(self.erlaubnisse, name, plan['ziel'])
+            if treffer:
+                via_sitzung = treffer['karte_id']
         self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id, 'aufgabe_id': via_aufgabe}
         gate = self.guard.create_gate(self.w.mission_id, plan['gate']['aktion'], plan['gate']['ziel'], request_binding=plan['gate']['bindung'],
                                       risks=[e['begruendung']], rollback_available=name in ('datei_schreiben', 'datei_aendern'))
-        if e['wirkt_als'] == 'frei' or via_aufgabe:
+        if e['wirkt_als'] == 'frei' or via_aufgabe or via_sitzung:
             token = self.guard.approve(gate)
-            von = f'aufgabe:{via_aufgabe}' if via_aufgabe else f"katalog:{e['regel']}"
+            von = f'aufgabe:{via_aufgabe}' if via_aufgabe else f'sitzung:{via_sitzung}' if via_sitzung else f"katalog:{e['regel']}"
             self._audit('HARNESS_APPROVED_BY', {'approved_by': von, 'werkzeug': name, 'gate_id': gate['gate_id']})
             out = ausfuehren(self.w, self.guard, name, args, plan, token, abbruch)
-            return dict(out, stufe='aufgabe' if via_aufgabe else e['stufe'], regel=von if via_aufgabe else e['regel'])
+            stufe = 'aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else e['stufe']
+            return dict(out, stufe=stufe, regel=von if (via_aufgabe or via_sitzung) else e['regel'])
         an = 'captain'
         if e['stufe'] == 'vorarbeiter' and not e['vorbehalt'] and not warnkarte and self.vorarbeiter is not None:
             zustaendig = self.vorarbeiter.zustaendig(self.projekt_id)
@@ -262,10 +270,20 @@ def _aufgabenkarte(karte, weg, notiz, aufgaben, aenderungen):
 
 
 def beantworten(karten, karte_id, weg, *, notiz=None, von='captain', ueber='karte', guard, audit=None, werkzeuge_fuer, aufgaben=None, aenderungen=None):
-    """Die eine Tür für Karte und Posteingang (HS-22): `erlauben` → Guard.approve → Werkzeug mit Token; `ablehnen` → Guard.reject.
-    `werkzeuge_fuer(karte)` liefert die Werkzeuge des Projekts der Karte. Rückgabe {karte, ergebnis, status, wirkung}."""
+    """Die eine Tür für Karte und Posteingang (HS-22): `erlauben` → Guard.approve → Werkzeug mit Token; `ablehnen` → Guard.reject;
+    `sitzung` (P0 M1) → wie `erlauben`, dazu `erlaubnis` {werkzeug, muster} im Ergebnis – nur vom Captain, nie für Vorbehalt/Warnkarte/Aufgabe.
+    `werkzeuge_fuer(karte)` liefert die Werkzeuge des Projekts der Karte. Rückgabe {karte, ergebnis, status, wirkung, erlaubnis?}."""
     if weg not in WEGE:
         raise ValueError('weg_unbekannt')
+    erlaubnis = None
+    if weg == 'sitzung':
+        vorab = karten.laden(karte_id)
+        if von != 'captain':
+            raise ValueError('sitzung_nur_captain')
+        if not sitzungs_erlaubnis.erlaubt_fuer_karte(vorab):
+            raise ValueError('sitzung_nicht_moeglich: Vorbehalt, Warnkasten oder Aufgabe – nur einzeln erlauben')
+        erlaubnis = {'werkzeug': vorab['werkzeug'], 'muster': sitzungs_erlaubnis.muster_fuer(vorab['werkzeug'], vorab['ziel']), 'regel': vorab.get('regel')}
+        weg = 'erlauben'
     karte = karten.uebernehmen(karte_id)
     gate = karte.get('gate') or {}
     try:
@@ -290,16 +308,18 @@ def beantworten(karten, karte_id, weg, *, notiz=None, von='captain', ueber='kart
         karte['status'] = 'offen'                                   # nichts entschieden: die Karte bleibt offen
         karten.speichern(karte)
         raise
-    karte.update(status='beantwortet', entscheidung=weg, von=von, ueber=ueber, notiz=notiz, beantwortet=jetzt(), gate=gate,
-                 ergebnis_kurz=str(out['ergebnis'])[:300], ergebnis_status=out['status'])
+    karte.update(status='beantwortet', entscheidung='sitzung' if erlaubnis else weg, von=von, ueber=ueber, notiz=notiz, beantwortet=jetzt(), gate=gate,
+                 ergebnis_kurz=str(out['ergebnis'])[:300], ergebnis_status=out['status'], erlaubnis=erlaubnis)
     karten.speichern(karte)
     if audit is not None:
         try:
-            payload = {'karte_id': karte_id, 'weg': weg, 'von': von, 'ueber': ueber, 'werkzeug': karte['werkzeug'],
+            payload = {'karte_id': karte_id, 'weg': karte['entscheidung'], 'von': von, 'ueber': ueber, 'werkzeug': karte['werkzeug'],
                        'regel': karte.get('regel'), 'gate_id': gate.get('gate_id'), 'status': out['status']}
+            if erlaubnis:
+                payload['erlaubnis'] = erlaubnis
             if str(von).startswith('vorarbeiter:'):
                 payload['begruendung'] = notiz                  # HS-29: die Begründung des Vorarbeiters steht im Audit
             audit.append('HARNESS_FREIGABE', component='harness', mission_id=karte.get('mission_id'), payload=payload)
         except Exception:
             pass
-    return {'karte': karte, 'ergebnis': out['ergebnis'], 'status': out['status'], 'wirkung': out.get('wirkung', False)}
+    return {'karte': karte, 'ergebnis': out['ergebnis'], 'status': out['status'], 'wirkung': out.get('wirkung', False), 'erlaubnis': erlaubnis}

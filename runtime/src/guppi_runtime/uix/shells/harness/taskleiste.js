@@ -3,7 +3,7 @@
 // Temperatur, RAM, Modellserver, Scheduler, Zustand) und die Uhr. Zellen ohne Wert werden ausgeblendet, nicht leer gezeigt; ein Klick öffnet die App dazu (G2 §5).
 // Benachrichtigung (HS-33): Endet ein Lauf oder wartet eine Freigabe, blinkt der Knopf einmal und bleibt markiert, bis er angeklickt wird.
 // Gemerkt wird nur, was schon gesehen wurde (IDs in localStorage `sedra.harness.gesehen`), nie Inhalt. Kein Polling: der Status frischt bei Ereignissen auf,
-// höchstens alle 2 s (HS-52); nur die Uhr tickt.
+// höchstens alle 2 s (HS-52); die Uhr tickt, alle 15 s auch der Status (A7).
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
@@ -29,7 +29,7 @@
     S._leiste = {mitte, status, uhr, zuletzt: 0, wartet: null};
     const ticken = ()=>{ uhr.textContent = new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'}); };
     ticken();
-    setInterval(()=>{ ticken(); zeichnen(S); }, 15000);
+    setInterval(()=>{ ticken(); zeichnen(S); if(!document.hidden) root.sedraHarness.taskleiste.status(S); }, 15000);      // A7 (1.11.): Statuszellen frischen auch während langer Antworten auf (HS-52: höchstens alle 2 s bleibt)
   }
 
   function dauer(ms){
@@ -104,7 +104,7 @@
     const l = S._leiste; if(!l) return;
     const reiter = root.sedraHarness.reiter;
     const aktiv = reiter.aktiv(S);
-    const wartet = new Set((S.entscheidungen || []).filter(x=>!gesehenMenge(S).has('frg:' + x.id)).map(x=>(String(x.note || '').match(/Sitzung (S-[0-9A-F]{8})/) || [])[1]).filter(Boolean));
+    const wartet = new Set((S.entscheidungen || []).filter(x=>!gesehenMenge(S).has('frg:' + x.id)).map(x=>x.sitzung_id || (String(x.note || '').match(/Sitzung (S-[0-9A-F]{8})/) || [])[1]).filter(Boolean));     // A18
     const offeneLaeufe = new Set(reiter.liste(S).filter(id=>String(id).startsWith('lauf:')));
     const knoepfe = reiter.liste(S).filter(id=>!String(id).startsWith('lauf:')).map(id=>{
       const a = S.ansichten.get(id);
@@ -115,16 +115,21 @@
       knopf.type = 'button';
       knopf.dataset.reiter = id;
       const app = String(id).startsWith('app:') ? (S._apps && S._apps.get(id)) || {} : null;
-      const name = app ? reiter.name(S, id) : (String(id).startsWith('diff:') ? 'Diff ' + id.slice(5) : (String(id).startsWith('aufgaben:') ? 'Aufgaben' : ((s && s.titel) || (/^S-/.test(id) ? 'Ohne Titel' : 'Neue Sitzung'))));
+      const name = reiter.name(S, id);                              // A4 (1.11.): eine Titel-Logik für alle Reiterarten (reiter.titel)
+      const art = String(id).split(':')[0];
       const vorarbeiter = S.vorarbeiter && Object.values(S.vorarbeiter).some(v=>v.sitzung_id === id);
       if(app) knopf.classList.add('app');
-      knopf.append(d().el('span', 'hs-app-icon', app ? (app.symbol || '▤') : (laeuft ? '●' : (String(id).startsWith('aufgaben:') ? '⛨' : (vorarbeiter ? '⚑' : '💬')))), d().el('span', 'hs-app-name', name));
-      if(laeuft && a && a.block) knopf.append(d().el('small', 'hs-leise', dauer(performance.now() - (a._seit || (a._seit = performance.now())))));
+      const symbol = app ? (app.symbol || '▤') : laeuft ? '●' : art === 'aufgaben' ? '⛨' : art === 'einstellungen' ? '⚙' : art === 'diff' ? '±' : vorarbeiter ? '⚑' : '💬';
+      knopf.append(d().el('span', 'hs-app-icon', symbol), d().el('span', 'hs-app-name', name));
+      if(laeuft && a && a.block){                                       // V3 (1.11.): Zeitlinie – was die Antwort gerade tut und seit wann
+        const ph = a._phase;
+        knopf.append(d().el('small', 'hs-leise', (ph ? ph.text + ' · ' + dauer(performance.now() - ph.seit) + ' · ' : '') + dauer(performance.now() - (a._seit || (a._seit = performance.now())))));
+      }
       else if(a) a._seit = null;
       if(neu) knopf.append(d().el('small', 'hs-leise', 'wartet auf Freigabe'));
       knopf.title = name + (laeuft ? ' – Antwort läuft' : '') + (neu ? ' – eine Freigabe wartet' : '');
       knopf.onclick = ()=>{
-        (S.entscheidungen || []).filter(x=>String(x.note || '').includes(id)).forEach(x=>gesehenMenge(S).add('frg:' + x.id));
+        (S.entscheidungen || []).filter(x=>x.sitzung_id === id || String(x.note || '').includes(id)).forEach(x=>gesehenMenge(S).add('frg:' + x.id));
         gesehenSpeichern(S);
         reiter.aktivieren(S, id);
       };
@@ -189,7 +194,7 @@
     const oeffnen = ()=>{
       alle.forEach(x=>gesehenMenge(S).add('frg:' + x.id)); gesehenSpeichern(S);
       const aufgabe = alle.find(x=>x.kind === 'harness_aufgabe');
-      const sitzung = alle.map(x=>(String(x.note || '').match(/Sitzung (S-[0-9A-F]{8})/) || [])[1]).find(Boolean);
+      const sitzung = alle.map(x=>x.sitzung_id || (String(x.note || '').match(/Sitzung (S-[0-9A-F]{8})/) || [])[1]).find(Boolean);     // A18
       if(aufgabe) root.sedraHarness.reiter.oeffnen(S, 'aufgaben:');
       else if(sitzung) root.sedraHarness.reiter.oeffnen(S, sitzung);
       else if(alle.length) root.sedraHarness.app.oeffnen(S, {object: {type: 'decision', id: 'alle', title: 'Entscheidungen', collection: true}, label: 'Entscheidungen'});   // Stufe 4: der Posteingang als App

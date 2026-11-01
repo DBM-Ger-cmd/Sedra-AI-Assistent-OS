@@ -260,6 +260,7 @@ class JobSupervisor:
         self.permissions = permissions            # PermissionGate (permission_levels.py); None means no action can be checked, so none is allowed
         self.scheduler = scheduler                # ResourceScheduler (resource_scheduler.py); None or disabled means nothing is reserved
         self.loader = None                        # ModelLoader (model_loader.py); None or disabled means the provider keeps its own context default
+        self.in_use_extra = None                  # callable() -> model identifiers that are busy outside the job store (Harness answers/cards, 1.11.) – never evicted
         self.slots = None                         # ModelScheduler (model_scheduler.py); None or disabled means one worker and a reservation per job
         self._slot_recipes = {}                   # role -> recipe of its last resolution, so claim can see a recipe swap early (OP-S2-05)
 
@@ -380,6 +381,12 @@ class JobSupervisor:
             running = [a for a in job.get("attempt_log", []) if a.get("outcome") == "RUNNING"]
             for attempt in running[-1:]:
                 keys.update(x for x in (attempt.get("model"), attempt.get("model_identifier")) if x)
+        if self.in_use_extra is not None:
+            try:
+                keys.update(x for x in (self.in_use_extra() or ()) if x)
+            except Exception as exc:              # a broken hook must not evict a model that is in use: say so, keep what we know
+                if self.audit:
+                    self.audit.append("JOB_IN_USE_HOOK_FAILED", component="job-supervisor", payload={"error": type(exc).__name__})
         return keys
 
     def _report(self, attempt, outcome, failure_class=None):

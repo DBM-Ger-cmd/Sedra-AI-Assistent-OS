@@ -1,22 +1,26 @@
 """Die Wege der Harness-Shell unter /api/harness/ (G2 §4, Stufe 1), eingebunden in uix_server.
 
-    GET    projekte                           Harness-Projekte
+    GET    projekte                           Harness-Projekte (Datei des Captains + Laufzeitdatei)
+    POST   projekte                           P0 M3: {wurzel, name?, schreibbereich?} → Antrag mit Gate (HARNESS_PROJEKT_ADD, Herkunft S7); geschrieben wird erst nach Freigabe
+    POST   vorgaben                           P0 M3: {rezept_standard?, projekt_standard?} merken (Laufzeitdatei; null löscht die Vorgabe)
     GET    sitzungen[?projekt=]               Liste (neueste zuerst) und welche gerade antworten
     POST   sitzungen                          {projekt, titel?, modell?, vorlage?} → Kopf
     GET    sitzungen/<id>                     Verlauf
-    PATCH  sitzungen/<id>                     {titel?, modell?}
+    GET    sitzungen/<id>/export              V6 (1.11.): {markdown, dateiname} – die Sitzung als Markdown, nur lesend
+    PATCH  sitzungen/<id>                     {titel?, modell?, erlaubnis_zuruecknehmen?: karte_id} (P0 M1: Sitzungs-Erlaubnis zurücknehmen)
     DELETE sitzungen/<id>                     nach geloescht/ verschieben (kein echtes Löschen)
     POST   sitzungen/<id>/nachricht           {text} → {antwort_id}; ohne geladenes Modell {status: kein_modell, grund} (HS-53)
     GET    antworten/<id>/strom               SSE der Antwort; Wiederaufnahme mit Last-Event-ID oder ?last=
     POST   antworten/<id>/stopp               Abbruch
     GET    karten/<id>                        Freigabe-Karte mit Vorschau (Stufe 2)
-    POST   karten/<id>                        {weg: erlauben|ablehnen, notiz?, aenderungen?} → Ergebnis und die Fortsetzung der Antwort ({antwort_id}); `von` in der Nutzlast zählt nicht
+    POST   karten/<id>                        {weg: erlauben|ablehnen|sitzung, notiz?, aenderungen?} → Ergebnis und die Fortsetzung der Antwort ({antwort_id}); `von` in der Nutzlast zählt nicht
+                                              (`sitzung`, P0 M1: erlauben und für diese Sitzung merken – Eintrag `erlaubnis` in der Sitzung, Audit HARNESS_SITZUNG_ERLAUBT)
                                               (aenderungen: nur für Aufgabenkarten {auswahl, bis, max_aufrufe})
     GET    katalog                            Regeln des Freigabe-Katalogs, nur lesen (Datei des Captains oder Vorlage)
     POST   katalog/antrag                     Stufe 5: {regeln} → Antrag mit Gate (HARNESS_KATALOG_WRITE); geschrieben wird erst nach Freigabe (Herkunft S7)
     POST   katalog/entfernen                  Stufe 5: Antrag, die Datei des Captains zu entfernen → Vorlage gilt (HARNESS_KATALOG_REMOVE)
     POST   vorlagen/grenzen                   Stufe 5: {vorlage, max_zuege} → Antrag auf eine Kopie der Vorlage in local_config (HARNESS_VORLAGE_WRITE)
-    POST   einstufen                          {werkzeug, ziel} → Stufe, Regel, Begründung (Vorbehalt vor Katalog)
+    POST   einstufen                          {werkzeug, ziel, projekt?} → Stufe, Regel, Begründung (Vorbehalt vor Katalog; mit projekt gilt ${schreibbereich})
     GET    werkzeuge                          die Werkzeuge mit Kurzbeschreibung
     GET    dateien?projekt=&ordner=&q=        Stufe 6: Dateinamen zum Anhängen (nur Namen, Einstufung wie datei_lesen)
     GET    vorschau?sitzung=&pfad=            Stufe 6: Datei aus dem Verlauf der Sitzung lesen (nur Lesen, Einstufung wie datei_lesen)
@@ -29,14 +33,18 @@
     POST   karten/<id>/zuruecknehmen          {grund?} nimmt eine Entscheidung des Vorarbeiters zurück
     GET    laeufe, laeufe/<id>                Läufe der Harness (Register) mit Log-Ende; POST laeufe/<id>/stopp
     GET    vorlagen                           die Vorlagen (Stufe 3, HS-19); `vorlage` beim Anlegen einer Sitzung
+    GET    vorgaben                           P0 M2/M3 (1.11.): {rezept_standard, projekt_standard, auto_laden: {rezept, regel} | null, auto_laden_grund}
+    GET    modelle                            P2 V1 (1.11.): Rezepte des llama-server mit „passt es?“ – Bedarf gegen freien Speicher, Grund, geladen, Sortierung
 
 Die Schleife läuft in einem eigenen Thread und nimmt nie `hub.lock` (K3). Auf dem gemeinsamen Ereignisstrom erscheinen nur
-`harness.sitzung` (angelegt, geändert, verschoben), `harness.antwort` (läuft, fertig), und ab Stufe 3 `harness.aufgabe`, `harness.vorarbeiter`, `harness.lauf`
-sowie `decision.pending/answered` (Kind `harness_freigabe` oder `harness_aufgabe`) – der Text läuft über den eigenen Strom."""
+`harness.sitzung` (angelegt, geändert, verschoben), `harness.antwort` (läuft, fertig), ab Stufe 3 `harness.aufgabe`, `harness.vorarbeiter`, `harness.lauf`, `harness.karte` (Frist), ab Stufe 5
+`harness.katalog`, `harness.vorlage`, seit 1.11. `harness.projekt`, `harness.vorgaben`, sowie `decision.pending/answered` (Kind `harness_freigabe`
+oder `harness_aufgabe`) – der Text läuft über den eigenen Strom."""
 from __future__ import annotations
 
 import re
 import threading
+import time
 from urllib.parse import parse_qs
 
 import yaml
@@ -44,6 +52,7 @@ import yaml
 from . import antraege as harness_antraege
 from . import aufgabe as harness_aufgabe
 from . import dateien as harness_dateien
+from . import export as harness_export
 from . import befehl as befehl_mod
 from . import freigabe
 from . import herkunft as harness_herkunft
@@ -64,11 +73,13 @@ PROVIDER = 'llama-cpp-server'
 # Stufe 1: nur die lesenden Zustandswerkzeuge aus chat_tools (kein Vorschlag, kein Öffnen, kein Netz)
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
-WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien)(?:/(antrag|entfernen|grenzen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle)(?:/(antrag|entfernen|grenzen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
-                        r'|katalog/(?:antrag|entfernen)|vorlagen/grenzen)')
+                        r'|katalog/(?:antrag|entfernen)|vorlagen/grenzen'
+                        r'|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
+NACHLAUF_S = 60                        # P0 M2: so lange nach einer Antwort gilt ihr Modell noch als in Gebrauch (Folgefrage kommt gleich)
 FORTSETZEN_REST = 'nicht ausgeführt: dieser Aufruf kam nach einem, der auf Freigabe wartete – ruf ihn bei Bedarf noch einmal auf.'
 
 
@@ -90,6 +101,8 @@ class HarnessApi:
         self.laeufe = harness_lauf.Laeufe(hub.project_root / 'runtime_data' / 'harness' / 'laeufe', typen=self.lauf_typen, audit=self._audit_roh, melden=self._melden)
         self.vorarbeiter = harness_vorarbeiter.Vorarbeiter(hub.project_root / 'runtime_data' / 'harness' / 'vorarbeiter.json')
         self.aufgaben = harness_aufgabe.Aufgaben(hub.project_root / 'runtime_data' / 'harness' / 'aufgaben', audit=self._audit_roh, melden=self._melden)
+        self._aktiv = {}                       # P0 M2: Antwort-ID → Modell, solange die Antwort läuft
+        self._zuletzt = (0.0, None)            # (monotonic, Modell) der zuletzt beendeten Antwort
 
     # ---- Hilfen
     def _melden(self, name, daten):
@@ -136,7 +149,7 @@ class HarnessApi:
 
     # ---- Herkunft (S7)
     def herkunft_verlangt(self, method, path):
-        return method in ('POST', 'DELETE') and bool(GESCHUETZT.fullmatch(path))
+        return method in ('POST', 'DELETE', 'PATCH') and bool(GESCHUETZT.fullmatch(path))
 
     def herkunft_pruefen(self, client_adresse, server_port):
         """{ok, grund?} – False, wenn die Anfrage aus einem Harness-Prozess (befehl, Lauf) oder dessen Kindern kommt."""
@@ -181,11 +194,19 @@ class HarnessApi:
             return self.vorarbeiter_weg(method, q, payload)
         if fest == 'vorlagen' and method == 'GET' and not unter:
             return 200, {'vorlagen': harness_vorlagen.liste(self.hub.project_root)}
+        if fest == 'vorgaben' and method == 'GET' and not unter:
+            return 200, self.vorgaben()
+        if fest == 'vorgaben' and method == 'POST' and not unter:
+            return 200, self.vorgaben_setzen(payload)
+        if fest == 'modelle' and method == 'GET' and not unter:
+            return 200, self.modelle()
         if fest == 'werkzeuge' and method == 'GET':
             return 200, {'werkzeuge': [{'name': n, 'beschreibung': sch['function']['description']} for n, sch in WERKZEUG_SCHEMAS.items()]
                          + [{'name': n, 'beschreibung': 'liest den Zustand von SEDRA (frei)'} for n in LESEN]}
         if projekte and method == 'GET':
             return 200, self.projekte()
+        if projekte and method == 'POST':
+            return 200, harness_antraege.projekt_antrag(self.hub, payload)
         if sitzungen and not sid:
             if method == 'GET':
                 laufend = {a.sitzung_id: a.id for a in self.stroeme.laufende()}
@@ -204,8 +225,12 @@ class HarnessApi:
                 return 200, self.aendern(sid, payload)
             if method == 'DELETE':
                 return 200, self.loeschen(sid)
-        if nachricht and method == 'POST':
+        if nachricht == 'nachricht' and method == 'POST':
             return 200, self.nachricht(sid, payload)
+        if nachricht == 'export' and method == 'GET':
+            s = self._sitzung(sid)
+            projekt = next((p['name'] for p in self.projekte()['projekte'] if p['id'] == s['kopf'].get('projekt')), None)
+            return 200, {'markdown': harness_export.markdown(s, sid, projekt), 'dateiname': harness_export.dateiname(sid, s['titel'])}
         if aid:
             antwort = self.stroeme.hole(aid)
             if antwort is None:
@@ -262,6 +287,10 @@ class HarnessApi:
             self.sitzungen.titel_aendern(sid, payload.get('titel'))
         if 'modell' in payload:
             self.sitzungen.modell_waehlen(sid, payload.get('modell'))
+        if payload.get('erlaubnis_zuruecknehmen'):
+            kid = str(payload['erlaubnis_zuruecknehmen'])
+            self.sitzungen.erlaubnis_zuruecknehmen(sid, kid)             # SitzungFehler('erlaubnis_unbekannt') → 400
+            self._audit('HARNESS_SITZUNG_ERLAUBNIS_ZURUECK', {'sitzung_id': sid, 'karte_id': kid})
         s = self.sitzungen.laden(sid)
         self._melden('harness.sitzung', {'id': sid, 'was': 'geaendert', 'titel': s['titel']})
         return dict(s, id=sid)
@@ -282,14 +311,16 @@ class HarnessApi:
         if not isinstance(text, str) or not text.strip() or len(text) > TEXT_MAX:
             raise ValueError('text_required')
         if payload.get('anhaenge'):
-            raise ValueError('anhaenge_ab_stufe_2')
+            raise ValueError('anhaenge_nicht_als_feld: Dateien werden im Text mit @pfad genannt (Stufe 6), das Modell liest sie mit datei_lesen')
         s = self._sitzung(sid)
         belegt = self.laeufe.belegt()
         if belegt:
             return {'status': 'kein_modell', 'grund': f"Modell belegt durch Lauf {belegt['id']} ({belegt['name']}) – es ist wieder da, wenn der Lauf endet."}
         loaded, grund = self.geladen()
         if not loaded:
-            return {'status': 'kein_modell', 'grund': 'Kein Modell geladen – Modell wählen.' + (' Grund: ' + str(grund) if grund else '')}
+            v = self.vorgaben()
+            return {'status': 'kein_modell', 'grund': 'Kein Modell geladen – Modell wählen.' + (' Grund: ' + str(grund) if grund else ''),
+                    'auto_laden': v['auto_laden'], 'auto_laden_grund': v['auto_laden_grund']}
         info = loaded[0]
         modell = info.get('identifier') or info.get('modelKey')
         if s['modell'] and any(s['modell'] in (x.get('identifier'), x.get('modelKey')) for x in loaded):
@@ -298,22 +329,145 @@ class HarnessApi:
             raise ValueError('karte_offen')
         verlauf = [{'role': 'user' if e['typ'] == 'captain' else 'assistant', 'content': e.get('text') or ''}
                    for e in s['eintraege'] if e.get('typ') in ('captain', 'modell') and (e.get('text') or '').strip()][-VERLAUF_MAX:]
-        with self._start:
-            antwort = self._antwort_anlegen(sid)
-        self.sitzungen.anhaengen(sid, {'typ': 'captain', 'text': text, 'anhaenge': []})
-        if not s['titel']:
-            self.sitzungen.titel_aendern(sid, text)
-            self._melden('harness.sitzung', {'id': sid, 'was': 'geaendert', 'titel': titel_aus(text)})
-        box, projekt = self._kiste(s)
+        # A1 (1.11.): erst alles vorbereiten, was werfen kann (Vorlage, Kiste) – dann die Antwort anlegen. Sonst blieb bei einer ungültigen
+        # Vorlage eine Antwort für immer „laufend“: Sitzung gesperrt, Zähler belegt, Strom ohne Ende.
         vorlage = self._vorlage(s)
+        box, projekt = self._kiste(s)
         messages = [{'role': 'system', 'content': schleife.system_prompt(projekt['name'] if projekt else None, box.names, vorlage['system'] if vorlage else None)},
                     *verlauf, {'role': 'user', 'content': text}]
-        return self._starten(sid, s, antwort, box, messages, info, modell)
+        with self._start:
+            antwort = self._antwort_anlegen(sid)
+        try:
+            self.sitzungen.anhaengen(sid, {'typ': 'captain', 'text': text, 'anhaenge': []})
+            if not s['titel']:
+                self.sitzungen.titel_aendern(sid, text)
+                self._melden('harness.sitzung', {'id': sid, 'was': 'geaendert', 'titel': titel_aus(text)})
+            return self._starten(sid, s, antwort, box, messages, info, modell)
+        except Exception as exc:
+            self._antwort_verwerfen(antwort, exc)
+            raise
+
+    # ---- P0 M2/M3: Vorgaben und Modelle in Gebrauch
+    def _laufzeit_vorgaben(self):
+        try:
+            return harness_projekte.laufzeit_laden(self.hub.project_root)['vorgaben']
+        except harness_projekte.ProjektFehler:
+            return {k: None for k in harness_projekte.VORGABEN}
+
+    def _rezept_standard(self):
+        """Das Standard-Rezept: aus den Vorgaben der Laufzeitdatei (M3), sonst das zuletzt über diese Oberfläche geladene Rezept des Hubs."""
+        v = self._laufzeit_vorgaben().get('rezept_standard')
+        if v:
+            return v
+        letzte = getattr(self.hub, '_last_recipe', None)
+        try:
+            return (letzte() if callable(letzte) else '') or None
+        except Exception:
+            return None
+
+    def vorgaben_setzen(self, payload):
+        """POST vorgaben: nur bekannte Schlüssel; ein Projekt muss es geben; null löscht. Kein Gate – eine Vorgabe ist eine Wahl, keine Erlaubnis."""
+        payload = payload or {}
+        aenderung = {k: payload[k] for k in harness_projekte.VORGABEN if k in payload}
+        if not aenderung:
+            raise ValueError('vorgabe_fehlt: rezept_standard oder projekt_standard')
+        if aenderung.get('projekt_standard'):
+            self._projekt(str(aenderung['projekt_standard']))
+        stand = harness_projekte.laufzeit_laden(self.hub.project_root)
+        neu = dict(stand['vorgaben'], **{k: (str(v)[:200] if v else None) for k, v in aenderung.items()})
+        out = harness_projekte.laufzeit_schreiben(self.hub.project_root, {'projekte': stand['projekte'], 'vorgaben': neu})
+        self._audit('HARNESS_VORGABEN', dict(neu, datei=out['datei']))
+        self._melden('harness.vorgaben', dict(neu))
+        return dict(self.vorgaben(), datei=out['datei'])
+
+    def vorgaben(self):
+        """Was die Shell vor dem ersten Senden wissen muss: Standard-Rezept, Standard-Projekt und ob sie das Modell selbst laden darf.
+        Auto-Laden gibt es nur, wenn der Katalog `modell_laden` für dieses Rezept `frei` stellt (E-A7) – die Vorlage tut das nicht."""
+        rezept = self._rezept_standard()
+        auto, grund = None, None
+        if not rezept:
+            grund = 'kein_rezept: noch nie ein Modell geladen und keine Vorgabe'
+        else:
+            regeln, fehler = self._regeln()
+            if regeln is None:
+                grund = 'katalog_ungueltig: ' + str(fehler)
+            else:
+                e = harness_katalog.einstufen(regeln, 'modell_laden', rezept)
+                if e['stufe'] == 'frei':
+                    auto = {'rezept': rezept, 'regel': e['regel']}
+                else:
+                    grund = f"katalog_{e['stufe']}: modell_laden „{rezept}“ ist im Katalog nicht frei (Regel {e['regel'] or 'keine'})"
+        projekt = self._laufzeit_vorgaben().get('projekt_standard')
+        if projekt and not any(p['id'] == projekt for p in self.projekte()['projekte']):
+            projekt = None                                       # die Vorgabe zeigt auf ein Projekt, das es nicht mehr gibt
+        return {'rezept_standard': rezept, 'projekt_standard': projekt, 'auto_laden': auto, 'auto_laden_grund': grund}
+
+    def modelle(self):
+        """P2 V1 „Passt das Modell?“: je Rezept des llama-server die Prüfung des Routers (dieselbe wie beim Laden, ohne zu laden): Bedarf an VRAM/RAM,
+        passt/passt nicht mit Grund, dynamische Aufteilung, geladen. Dazu der freie Speicher jetzt. Ohne Router oder Speicherstand: Felder None."""
+        rt = self.hub.runtime
+        router = getattr(rt, 'role_router', None)
+        loaded, _grund = self.geladen()
+        geladen_ids = {v for x in (loaded or []) for v in (x.get('identifier'), x.get('modelKey')) if v}
+        stand = None
+        try:
+            stand = router.speicher_stand() if router is not None and router.speicher_stand is not None else None
+        except Exception:
+            stand = None
+        out = []
+        for r in (router.config.recipes if router is not None else []):
+            if r.get('provider') != 'llama-cpp-server' or not r.get('enabled'):
+                continue
+            eintrag = {'id': r['id'], 'modell': r.get('model'), 'groesse_gb': r.get('model_size_gb'), 'min_vram_gb': r.get('min_vram_gb'),
+                       'dynamisch': bool((r.get('profile') or {}).get('dynamisch')), 'geladen': r.get('model') in geladen_ids,
+                       'passt': None, 'grund': None, 'bedarf_vram_gb': None, 'bedarf_ram_gb': None, 'auswahl': None, 'gemessen': r.get('measured_vram_gb') is not None}
+            try:
+                ok, why = router._evaluate(r, router.normalize(None), exclude=set(), independent_of=[], captain_cloud_approved=False, now=router._clock())
+            except Exception as exc:
+                ok, why = None, {'category': 'fehler', 'reason': f'{type(exc).__name__}: {exc}'[:200]}
+            if ok:
+                est = ok.get('estimated') or {}
+                eintrag.update(passt=True, bedarf_vram_gb=est.get('vram_gb'), bedarf_ram_gb=est.get('ram_gb'), auswahl=est.get('auswahl'), kontext=ok.get('context'))
+            else:
+                eintrag.update(passt=False, grund=str((why or {}).get('reason') or '')[:300], kategorie=(why or {}).get('category'))
+            out.append(eintrag)
+        # Sortierung: geladen, dann passend (gemessene zuerst, kleiner Bedarf zuerst), dann der Rest
+        out.sort(key=lambda e: (not e['geladen'], not e['passt'], not e['gemessen'], e['bedarf_vram_gb'] or 0, e['id']))
+        return {'modelle': out, 'frei_vram_gb': (stand or {}).get('frei_vram_gb'), 'frei_ram_gb': (stand or {}).get('frei_ram_gb'),
+                'reserve_vram_gb': (stand or {}).get('reserve_vram_gb'), 'loader': bool(getattr(rt, 'model_loader', None) and rt.model_loader.enabled)}
+
+    def modelle_in_gebrauch(self):
+        """P0 M2 (Harness-Vergleich: Entlade-Panne): Modelle, die der Lader nicht als „idle“ entladen darf – die laufender Antworten, das der
+        zuletzt beendeten (NACHLAUF_S) und, solange eine Werkzeug-Karte offen ist, alle geladenen des llama-server (die Fortsetzung braucht sie)."""
+        out = {m for m in self._aktiv.values() if m}
+        zeit, modell = self._zuletzt
+        if modell and time.monotonic() - zeit < NACHLAUF_S:
+            out.add(modell)
+        try:
+            if any(k.get('art', 'werkzeug') == 'werkzeug' for k in self.karten.alle('offen')):
+                loaded, _grund = self.geladen()
+                for x in loaded or []:
+                    out.update(v for v in (x.get('identifier'), x.get('modelKey')) if v)
+        except Exception:
+            pass
+        return out
 
     def _vorlage(self, s):
         """Die Vorlage der Sitzung (oder None). Ist sie inzwischen ungültig oder weg, scheitert die Nachricht mit Grund – nie ein stiller Rückfall."""
         vid = s['kopf'].get('vorlage')
         return harness_vorlagen.laden(self.hub.project_root, vid) if vid else None
+
+    def _antwort_verwerfen(self, antwort, exc):
+        """A1: eine angelegte Antwort, deren Start scheiterte, endet sofort mit Grund – nie eine, die für immer „läuft“."""
+        grund = f'{type(exc).__name__}: {exc}'[:300]
+        try:
+            antwort.senden('fehler', {'grund': grund})
+            antwort.senden('ende', {'ende': 'fehler', 'zuege': 0, 'token': {'ein': 0, 'aus': 0}, 'grund': grund})
+        finally:
+            antwort.beenden()
+            self.threads.pop(antwort.id, None)
+            self._aktiv.pop(antwort.id, None)
+        self._audit('HARNESS_ANTWORT_VERWORFEN', {'sitzung_id': antwort.sitzung_id, 'antwort_id': antwort.id, 'grund': grund})
 
     def _antwort_anlegen(self, sid):
         if self.stroeme.laufend_in(sid):
@@ -359,10 +513,11 @@ class HarnessApi:
             if fehler:
                 self._audit('HARNESS_KATALOG_FEHLT', {'fehler': fehler[:200]})
             return self._begrenzen(s, chat), projekt
+        regeln = harness_katalog.mit_projekt(regeln, projekt)          # P0 M1: ${schreibbereich} → Schreibbereich dieses Projekts
         w = self._werkzeuge(projekt['id'], s['kopf'].get('mission_id'), regeln)
         return self._begrenzen(s, freigabe.Kiste(w, regeln=regeln, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, karten=self.karten,
                               sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'], aufgaben=self.aufgaben,
-                              vorarbeiter=self.vorarbeiter, extra=self._vorarbeiter_werkzeuge(s))), projekt
+                              vorarbeiter=self.vorarbeiter, extra=self._vorarbeiter_werkzeuge(s), erlaubnisse=s.get('erlaubnisse'))), projekt
 
     def _starten(self, sid, s, antwort, box, messages, info, modell, bisher=()):
         guard = getattr(self.hub.runtime.model_router, 'content_guard', None)
@@ -388,6 +543,8 @@ class HarnessApi:
                 antwort.senden('ende', {'ende': 'fehler', 'zuege': 0, 'token': {'ein': 0, 'aus': 0}, 'grund': grund})
             finally:
                 antwort.beenden()
+                self._aktiv.pop(antwort.id, None)
+                self._zuletzt = (time.monotonic(), modell)
                 letzte = (antwort.ereignisse[-1]['data'] if antwort.ereignisse else {})
                 self._audit('HARNESS_ANTWORT', {'sitzung_id': sid, 'antwort_id': antwort.id, 'ende': letzte.get('ende'), 'zuege': letzte.get('zuege'),
                                                 'werkzeuge': sum(1 for e in antwort.ereignisse if e['event'] == 'werkzeug.ende')})
@@ -399,6 +556,7 @@ class HarnessApi:
 
         t = threading.Thread(target=lauf, name='harness-' + antwort.id, daemon=True)
         self.threads[antwort.id] = t
+        self._aktiv[antwort.id] = modell
         self._melden('harness.antwort', {'sitzung_id': sid, 'antwort_id': antwort.id, 'zustand': 'laeuft'})
         t.start()
         return {'status': 'laeuft', 'antwort_id': antwort.id, 'modell': modell, 'live': live}
@@ -596,7 +754,8 @@ class HarnessApi:
         if regeln is None:
             raise ValueError('katalog_ungueltig: ' + fehler)
         args = {'inhalt': payload['inhalt']} if 'inhalt' in payload else {}
-        return freigabe.einstufung(regeln, werkzeug, args, {'ziel': ziel, 'vorhanden': bool(payload.get('vorhanden'))})
+        projekt = next((p for p in self.projekte()['projekte'] if p['id'] == payload.get('projekt')), None) if payload.get('projekt') else None
+        return freigabe.einstufung(harness_katalog.mit_projekt(regeln, projekt), werkzeug, args, {'ziel': ziel, 'vorhanden': bool(payload.get('vorhanden'))})
 
     def frist_pruefen(self, frist_min=None):
         """Karten `an: vorarbeiter`, die zu lange offen sind, fallen an den Captain – mit Audit (HARNESS_KARTE_FRIST) und Ereignis."""
@@ -635,16 +794,22 @@ class HarnessApi:
         regeln, _fehler = self._regeln()
         r = freigabe.beantworten(self.karten, kid, weg, notiz=notiz, von=von, ueber=ueber, guard=self.hub.runtime.guard,
                                  audit=self.hub.runtime.audit, aufgaben=self.aufgaben, aenderungen=aenderungen,
-                                 werkzeuge_fuer=lambda k: self._werkzeuge(k['projekt'], k['mission_id'], regeln or []))
+                                 werkzeuge_fuer=lambda k: self._werkzeuge(k['projekt'], k['mission_id'], harness_katalog.mit_projekt(regeln or [], self._projekt(k['projekt']))))
         karte = r['karte']
+        if r.get('erlaubnis'):
+            self.sitzungen.erlauben(sid, kid, r['erlaubnis']['werkzeug'], r['erlaubnis']['muster'], regel=r['erlaubnis'].get('regel'))
+            self._audit('HARNESS_SITZUNG_ERLAUBT', {'sitzung_id': sid, 'karte_id': kid, **r['erlaubnis']})
+            weg = 'erlauben'
+            s = self.sitzungen.laden(sid)                          # die Fortsetzung bekommt die neue Erlaubnis schon mit
         satz = {'typ': 'werkzeug', 'antwort_id': karte.get('antwort_id'), 'name': karte['werkzeug'], 'args': karte['args'], 'stufe': karte['stufe'],
                 'regel': karte['regel'], 'status': r['status'], 'dauer_s': None, 'ergebnis': str(r['ergebnis'])[:schleife.ERGEBNIS_MAX],
                 'wirkung': bool(r['wirkung']), 'karte_id': kid}
-        self.sitzungen.anhaengen(sid, {'typ': 'karte', 'karte_id': kid, 'entscheidung': weg, 'von': von, 'ueber': ueber,
-                                       'notiz': notiz, 'zustand': 'beantwortet'})
+        self.sitzungen.anhaengen(sid, {'typ': 'karte', 'karte_id': kid, 'entscheidung': karte.get('entscheidung') or weg, 'von': von, 'ueber': ueber,
+                                       'notiz': notiz, 'zustand': 'beantwortet', 'erlaubnis': r.get('erlaubnis')})
         self.sitzungen.anhaengen(sid, satz)
         self._melden('decision.answered', {'id': 'harness:' + kid, 'kind': 'harness_aufgabe' if karte.get('art') == 'aufgabe' else 'harness_freigabe', 'way': weg})
-        out = {'status': 'beantwortet', 'karte_id': kid, 'weg': weg, 'ergebnis_status': r['status'], 'ergebnis': str(r['ergebnis'])[:2000]}
+        out = {'status': 'beantwortet', 'karte_id': kid, 'weg': karte.get('entscheidung') or weg, 'ergebnis_status': r['status'], 'ergebnis': str(r['ergebnis'])[:2000],
+               'erlaubnis': r.get('erlaubnis')}
         zustand = karte.get('zustand')
         loaded, _grund = self.geladen()
         if not zustand or not loaded:
@@ -659,10 +824,14 @@ class HarnessApi:
         modell = info.get('identifier') or info.get('modelKey')
         if s['modell'] and any(s['modell'] in (x.get('identifier'), x.get('modelKey')) for x in loaded):
             modell = s['modell']
+        box, _projekt = self._kiste(s)                           # A1: vor der Antwort – kann werfen (Vorlage, Katalog)
         with self._start:
             antwort = self._antwort_anlegen(sid)
-        box, _projekt = self._kiste(s)
-        start = self._starten(sid, s, antwort, box, messages, info, modell, bisher=[satz])
+        try:
+            start = self._starten(sid, s, antwort, box, messages, info, modell, bisher=[satz])
+        except Exception as exc:
+            self._antwort_verwerfen(antwort, exc)
+            raise
         karte['neue_antwort_id'] = start['antwort_id']
         self.karten.speichern(karte)
         out.update(fortsetzung='laeuft', antwort_id=start['antwort_id'], live=start['live'])

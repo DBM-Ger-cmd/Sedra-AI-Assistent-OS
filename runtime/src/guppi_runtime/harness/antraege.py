@@ -9,11 +9,14 @@ from __future__ import annotations
 
 from ..desk import gated
 from . import katalog as harness_katalog
+from . import projekte as harness_projekte
 from . import vorlagen as harness_vorlagen
 
 KIND_KATALOG = 'harness_katalog'
 KIND_VORLAGE = 'harness_vorlage'
+KIND_PROJEKT = 'harness_projekt'            # P0 M3 (1.11.): „Ordner öffnen“ → Laufzeitdatei, nie local_config
 ZIEL_KATALOG = 'local_config/' + harness_katalog.DATEI
+ZIEL_PROJEKTE = harness_projekte.LAUFZEIT.as_posix()
 
 
 def _vorlage_regeln():
@@ -111,7 +114,52 @@ def _grenzen_anwenden(hub, binding):
     return out
 
 
+# ---- P0 M3: Ordner öffnen
+def _laufzeit_hash(daten):
+    return harness_katalog.hash_von([daten['projekte'], daten['vorgaben']])
+
+
+def projekt_antrag(hub, payload):
+    """POST projekte {wurzel, name?, schreibbereich?}: prüfen (400 mit Satz), dann ein Antrag mit genauer Bindung. Geschrieben wird erst nach
+    Freigabe – in die Laufzeitdatei (E-A8), nie in local_config/."""
+    payload = payload or {}
+    alle = harness_projekte.laden(hub.project_root)
+    try:
+        neu = harness_projekte.neues_projekt(payload.get('wurzel'), payload.get('name'), payload.get('schreibbereich'), vergeben=[p['id'] for p in alle],
+                                            sperrzonen=[hub.project_root / 'local_config', hub.project_root / 'runtime_data'])
+    except harness_projekte.ProjektFehler as exc:
+        raise ValueError(str(exc)) from exc
+    if any(p['wurzel'] == neu['wurzel'] for p in alle):
+        raise ValueError('ordner_schon_projekt: ' + next(p['id'] for p in alle if p['wurzel'] == neu['wurzel']))
+    stand = harness_projekte.laufzeit_laden(hub.project_root)
+    binding = {'projekt': neu, 'stand_hash': _laufzeit_hash(stand)}
+    weit = any(m.strip() in ('**', '*') for m in neu['schreibbereich'])
+    risks = [f"Ordner {neu['wurzel']} wird Projekt „{neu['name']}“ ({neu['id']})",
+             'Schreibbereich: ' + ', '.join(neu['schreibbereich']) + (' – das Modell darf nach Katalog überall darin schreiben' if weit else '')]
+    req = gated.request(hub, KIND_PROJEKT, 'HARNESS_PROJEKT_ADD', ZIEL_PROJEKTE, binding, risks=risks, exact=True,
+                        describe=f"Ordner öffnen: {neu['name']}")
+    return {'mission_id': req['mission_id'], 'projekt': neu, 'stand_hash': binding['stand_hash']}
+
+
+def _projekt_anwenden(hub, binding):
+    stand = harness_projekte.laufzeit_laden(hub.project_root)
+    if _laufzeit_hash(stand) != binding.get('stand_hash'):
+        raise ValueError(gated.STALE)
+    neu = dict(binding.get('projekt') or {})
+    try:
+        harness_projekte.pruefen({'projekte': [neu]})
+        if any(p['id'] == neu['id'] for p in harness_projekte.laden(hub.project_root)):
+            raise harness_projekte.ProjektFehler('projekt_id_inzwischen_vergeben')
+        out = harness_projekte.laufzeit_schreiben(hub.project_root, {'projekte': stand['projekte'] + [neu], 'vorgaben': stand['vorgaben']})
+    except (OSError, harness_projekte.ProjektFehler) as exc:
+        raise ValueError(gated.REFUSED + 'projekt_nicht_schreibbar: ' + str(exc)) from None
+    hub.runtime.audit.append('HARNESS_PROJEKT_ADDED', component='harness', payload=dict(out, projekt=neu['id'], wurzel=neu['wurzel'], schreibbereich=neu['schreibbereich']))
+    hub.events.publish('harness.projekt', {'ereignis': 'HARNESS_PROJEKT_ADDED', 'projekt': neu['id'], 'name': neu['name']})
+    return dict(out, projekt=neu)
+
+
 def registrieren(registry):
-    """Vor `kinds.freeze()` in uix_server: die Applier beider Arten."""
+    """Vor `kinds.freeze()` in uix_server: die Applier aller drei Arten."""
     gated.register_applier(KIND_KATALOG, _katalog_anwenden, registry=registry)
     gated.register_applier(KIND_VORLAGE, _grenzen_anwenden, registry=registry)
+    gated.register_applier(KIND_PROJEKT, _projekt_anwenden, registry=registry)

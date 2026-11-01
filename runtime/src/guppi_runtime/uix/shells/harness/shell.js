@@ -69,6 +69,8 @@
       root.addEventListener('resize', ()=>{ this.breite(); this.teilungAnpassen(); });
 
       ctx.bus.on('harness.sitzung', ()=>this.sitzungenLaden());
+      ctx.bus.on('harness.projekt', ()=>this.projekteLaden());                                   // P0 M3: ein Ordner wurde als Projekt freigegeben
+      ctx.bus.on('harness.vorgaben', e=>{ Object.assign(H.projekt.vorgaben(this), e || {}); H.eingabe.projektwahl(this); });
       ctx.bus.on('harness.antwort', e=>{
         this.sitzungenLaden(); H.taskleiste.zeichnen(this);
         if(e && e.zustand === 'fertig'){ H.verlauf.fertigGemeldet(this, e.sitzung_id, e.antwort_id); this.freigabenLaden(); }        // der Zähler einer Aufgabe hat sich geändert
@@ -85,9 +87,15 @@
       ctx.bus.on('harness.vorarbeiter', ()=>this.freigabenLaden());
       ctx.bus.on('harness.karte', e=>{ if(e && e.karte_id) H.karte.aktualisieren(this, e.karte_id); });
       ctx.bus.on('desk.error', e=>this.hinweis('Die Runtime meldet: ' + e.message, 'warn'));
+      ctx.bus.on('system.state', e=>{                                   // A28 (1.11.): ein Neustart des Servers ist sofort sichtbar, danach wird der Stand neu geladen
+        const st = e && e.state;
+        if(st === 'getrennt' && !this._getrennt){ this._getrennt = true; this.hinweis('Verbindung zum Server getrennt – ich versuche es weiter.', 'warn'); }
+        else if(st === 'verbunden' && this._getrennt){ this._getrennt = false; this.hinweis('Wieder verbunden.', 'note'); Promise.all([this.sitzungenLaden(), this.freigabenLaden(), this.modellLaden(), this.projekteLaden()]).catch(()=>{}); }
+      });
       ctx.bus.on('object.open', o=>{ if(o && o.type && o.id) H.app.oeffnen(this, {object: o, label: o.title}); });    // Stufe 4: ein Werkzeug öffnet ein Objekt → App-Reiter (§5)
       root.sedraBoot.onProblem = text=>this.hinweis(text, 'warn');
 
+      await H.projekt.laden(this);                                                                  // P0 M3: Vorgaben vor der Projektwahl
       await Promise.all([this.projekteLaden(), this.sitzungenLaden(), this.modellLaden(), this.vorlagenLaden(), this.freigabenLaden(), this.laeufeLaden()]).catch(err=>ctx.onProblem('Harness', err));
       H.taskleiste.alsGesehenStarten(this);
       this._freigabenGeladen = true;
@@ -110,7 +118,7 @@
     async sitzungenLaden(){
       if(this._laden) return this._laden;
       this._laden = (async ()=>{
-        try{ this.sitzungen = (await this.api('/api/harness/sitzungen')).sitzungen || []; }
+        try{ this.sitzungen = (await this.api('/api/harness/sitzungen')).sitzungen || []; H.vorschau.bereinigen(this); }
         catch(err){ this.hinweis('Sitzungen nicht lesbar: ' + err.message, 'warn'); }
         H.seite.zeichnen(this);
         H.reiter.titel(this);
@@ -125,6 +133,11 @@
 
     // Vorarbeiter je Projekt und aktive Aufgaben: für das Schild, die Seitenleiste und den Reiter „Aufgaben“
     async freigabenLaden(){
+      if(this._freigabenLauf) return this._freigabenLauf;                 // A26 (1.11.): parallele Aufrufe teilen sich einen Abruf
+      this._freigabenLauf = this._freigabenLaden().finally(()=>{ this._freigabenLauf = null; });
+      return this._freigabenLauf;
+    },
+    async _freigabenLaden(){
       try{
         const [v, a, e] = await Promise.all([this.api('/api/harness/vorarbeiter'), this.api('/api/harness/aufgaben'), this.api('/api/decisions')]);
         this.vorarbeiter = v.vorarbeiter || {};
@@ -134,12 +147,13 @@
         if(this._freigabenGeladen){               // HS-33: eine neue Freigabe lässt ihren Knopf einmal blinken und markiert ihn, bis er angeklickt wird
           this.entscheidungen.filter(x=>!vorher.has(x.id)).forEach(x=>{
             H.taskleiste.blinken(this, 'freigaben');
-            const sid = (String(x.note || '').match(/Sitzung (S-[0-9A-F]{8})/) || [])[1];
+            const sid = x.sitzung_id || (String(x.note || '').match(/Sitzung (S-[0-9A-F]{8})/) || [])[1];     // A18: Feld zuerst
             if(sid) H.taskleiste.blinken(this, 'sitzung:' + sid);
           });
         }
       }catch(_err){ /* ohne Antwort bleibt der letzte Stand */ }
       H.seite.zeichnen(this); H.eingabe.schildZeigen(this); H.taskleiste.zeichnen(this); H.taskleiste.status(this);
+      for(const [id, a] of this.ansichten) if(String(id).startsWith('aufgaben:') && a && a.laden) a.laden();     // A8 (1.11.): der offene Aufgaben-Reiter zeichnet sich neu
     },
 
     async laeufeLaden(){
@@ -154,6 +168,7 @@
         this.modell = server.running ? {name: server.model, kontext: server.context} : null;
       }catch(_err){ this.modell = null; }
       H.eingabe.modellZeigen(this);
+      for(const [id, a] of this.ansichten) if(!/^S-/.test(String(id)) && a && a.zeigeLeer && a.leer()) a.zeigeLeer();     // V2: die Erststart-Schritte zeigen den Stand
     },
 
     sitzung(id){ return this.sitzungen.find(s=>s.id === id) || null; },
@@ -175,6 +190,11 @@
       const a = this.ansichten.get(id);
       if(a) a.abbauen();
       this.ansichten.delete(id);
+      if(this._karten){                                     // A13 (1.11.): Karten dieses Reiters vergessen, sonst wächst die Tabelle mit jeder gezeichneten Karte
+        const bleibt = new Set();
+        for(const b of this.ansichten.values()) if(b && b.box) b.box.querySelectorAll('.hs-karte[data-karte]').forEach(k=>bleibt.add(k.dataset.karte));
+        for(const kid of [...this._karten.keys()]) if(!bleibt.has(kid)) this._karten.delete(kid);
+      }
     },
 
     leerGeaendert(a){
@@ -207,7 +227,11 @@
       document.addEventListener('keydown', e=>{
         if((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'b' || e.key === 'B')){ e.preventDefault(); this.seiteUmschalten(); }
         else if((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && (e.key === 'x' || e.key === 'X')){ e.preventDefault(); H.vorschau.tauschen(this); }
-        else if(e.key === 'Escape'){ const a = this.aktive(); if(a && a.laeuft()){ e.preventDefault(); a.stoppen(); } }
+        else if(e.key === 'Escape'){
+          if(this._eingabe && this._eingabe.auswahl) return;                                     // A23 (1.11.): Esc schließt erst die Dateiauswahl, stoppt nicht die Antwort
+          if(this._start && this._start.offen) return;
+          const a = this.aktive(); if(a && a.laeuft()){ e.preventDefault(); a.stoppen(); }
+        }
       });
     }
   });

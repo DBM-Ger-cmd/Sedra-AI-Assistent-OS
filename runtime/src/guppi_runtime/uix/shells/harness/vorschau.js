@@ -8,12 +8,24 @@
   const d = ()=>root.sedraDom;
   const H = ()=>root.sedraHarness;
   const KEY = 'sedra.harness.vorschau';
-  const ID = /^S-[0-9A-F]{8}$/;
+  const ID = root.sedraHarness.reiter.ID;           // A19: eine Quelle für die Sitzungs-ID (reiter.js)
   const SCHMAL = 1100;                 // darunter nur eine Fläche (HS-74)
   const MIN_PX = 420;
   const DATEIEN = ['datei_schreiben', 'datei_aendern', 'datei_lesen'];
 
   function alle(){ try{ return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; }catch(_e){ return {}; } }
+  const HINWEIS_KEY = 'sedra.harness.vorschau.hinweis';
+  function hinweisGesehen(){ try{ return localStorage.getItem(HINWEIS_KEY) === '1'; }catch(_e){ return true; } }
+  function hinweisMerken(){ try{ localStorage.setItem(HINWEIS_KEY, '1'); }catch(_e){} }
+  // A25 (1.11.): Einträge zu Sitzungen, die es nicht mehr gibt, fallen weg (sonst wächst der Speicher mit jeder Sitzung)
+  function bereinigen(S){
+    try{
+      const a = alle(), ids = new Set((S.sitzungen || []).map(s=>s.id));
+      let weg = false;
+      Object.keys(a).forEach(k=>{ if(!ids.has(k)){ delete a[k]; weg = true; } });
+      if(weg) localStorage.setItem(KEY, JSON.stringify(a));
+    }catch(_e){}
+  }
   function klemmen(p, breite){
     const grenze = breite > 0 ? Math.min(45, MIN_PX / breite * 100) : 25;
     return Math.max(grenze, Math.min(100 - grenze, Number(p) || 50));
@@ -114,7 +126,8 @@
     if(!erzwingen && t.z.pin && !(obj.typ === t.z.pin.typ && obj.ref === t.z.pin.ref)) return;       // festgehalten: es folgt nicht mehr
     const neu = !t.obj;
     t.obj = obj;
-    if(neu && !t.hinweisGezeigt && !t.z.zu){ t.hinweisGezeigt = true; t.S.hinweis('Hier erscheint, woran ich arbeite.'); }
+    // A12 (1.11.): der Hinweis einmal je Browser (nicht je Reiter), nur im sichtbaren Reiter – und nicht mehr als Toast über dem Senden-Knopf, sondern im Kopf der Vorschau
+    if(neu && !t.z.zu && !hinweisGesehen() && t.S.aktive() === t.a){ hinweisMerken(); t.titel.title = 'Hier erscheint, woran ich arbeite.'; t.inhalt.replaceChildren(zeile('Hier erscheint, woran ich arbeite.')); }
     anwenden(t);
     zeichnen(t);
   }
@@ -177,5 +190,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.vorschau = {fuer, beruehrt, karte, lauf, oeffnen, tauschen, anwenden, zustand, klemmen};
+  root.sedraHarness.vorschau = {bereinigen, fuer, beruehrt, karte, lauf, oeffnen, tauschen, anwenden, zustand, klemmen};
 })();

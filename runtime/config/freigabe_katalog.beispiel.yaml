@@ -20,6 +20,13 @@ freigabe_katalog:
       muster: ['**/.env', '**/local_config/**', '**/*.key', '**/*.pem']
       stufe: verboten
       begruendung: Zugangsdaten und Einstellungen des Captains liest das Modell nicht.
+    # P0 M1 (1.11.2026, Harness-Vergleich 31.10.): im Schreibbereich des Projekts schreibt das Modell ohne Karte – die genaueren Regeln
+    # darunter (runtime/**, docs/**) gewinnen, und der Schreibbereich selbst bleibt die harte Grenze. ${schreibbereich} wird je Projekt ersetzt.
+    - id: schreiben-schreibbereich
+      werkzeug: [datei_schreiben, datei_aendern]
+      muster: ['${schreibbereich}']
+      stufe: frei
+      begruendung: Im Schreibbereich des Projekts darf das Modell arbeiten; was es schreibt, zeigt git diff.
     - id: schreiben-runtime
       werkzeug: [datei_schreiben, datei_aendern]
       muster: ['runtime/**']
@@ -45,6 +52,11 @@ freigabe_katalog:
       muster: ['python benchmarks/run_tests.py *', 'python benchmarks/spec_check.py *']
       stufe: frei
       begruendung: Tests ändern nichts.
+    - id: befehl-unittests
+      werkzeug: befehl
+      muster: ['python -m unittest*', 'python -m pytest*', 'python3 -m unittest*', 'python3 -m pytest*', 'pytest*']
+      stufe: frei
+      begruendung: Tests ändern nichts (P0 M1).
     - id: befehl-python
       werkzeug: befehl
       muster: ['python *']

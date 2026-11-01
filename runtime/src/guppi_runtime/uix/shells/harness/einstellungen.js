@@ -55,7 +55,7 @@
     const flaeche = d().el('section', 'hs-einst-flaeche');
     box.append(nav, flaeche);
     let offen = null;
-    const a = {id, box, S, leer: ()=>false, laeuft: ()=>false, nachUnten(){}, stoppen(){}, senden: async ()=>false,
+    const a = root.sedraHarness.reiter.stub(id, box, S, {
                abbauen(){ if(offen && offen.abbauen) offen.abbauen(); offen = null; st.ansicht = null; },
                zeigen(punkt){
                  const w = zerlegen(punkt); st.wahl = w.id; merken(w.id);
@@ -65,7 +65,7 @@
                  flaeche.append(kopf);
                  offen = w.punkt.art === 'werkzeug' ? werkzeug(S, flaeche, w.punkt) : eigen(S, flaeche, w.punkt);
                  navZeichnen();
-               }};
+               }});
     const navZeichnen = ()=>{
       nav.replaceChildren(...GRUPPEN.map(g=>{
         const sec = d().el('section', 'hs-einst-gruppe'); sec.append(d().el('div', 'hs-ueber', g.titel));
@@ -187,7 +187,11 @@
     box.append(d().el('div', 'hs-app-satz', 'Der Systemtext (.md) liegt neben der Vorlage; die Grenzen stehen unter „Grenzen der Schleife“.'));
   }
 
-  function freigabe(S, box){ return H().katalogEditor.flaeche(S, box); }
+  function freigabe(S, box){
+    const k = H().katalogEditor.flaeche(S, box);
+    const e = H().erlaubnisse ? H().erlaubnisse.flaeche(S, box) : null;          // P0 M1: Sitzungs-Erlaubnisse unter dem Katalog
+    return {abbauen(){ if(k && k.abbauen) k.abbauen(); if(e) e.abbauen(); }};
+  }
 
   // D-U4: max_zuege je Vorlage → Antrag mit Gate; max_tokens/temperature nur Anzeige
   function grenzen(S, box){

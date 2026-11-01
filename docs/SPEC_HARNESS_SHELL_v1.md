@@ -50,7 +50,7 @@ Nicht Ziel: das Backend umbauen, das Cockpit löschen, eine Kopie von Bionic. Ü
 | HS-13 | **Stopp:** Ein Stopp-Knopf (und Esc) bricht die laufende Antwort und die Werkzeugschleife ab; der Verlauf zeigt „abgebrochen“. | Test |
 | HS-14 | **Wiederholung erkennen (B4/4):** Ruft das Modell dasselbe Werkzeug mit denselben Argumenten zum zweiten Mal hintereinander, bekommt es statt des Ergebnisses einen Hinweis; beim dritten Mal endet die Schleife mit einer Antwort ohne Werkzeuge. | Einheitstest der Schleife |
 | HS-15 | **Kein Zwang durch Stichwörter (B4/5):** In der Harness-Shell wird `tool_choice=required` nicht über Stichwörter gesetzt. | Einheitstest |
-| HS-16 | **Ehrliches Ende (B4/1):** Eine Sitzung meldet „erledigt“ nur, wenn eine Handlung ausgeführt und geprüft wurde; ein reiner Plan heißt „nur Plan“. | Test |
+| HS-16 | **Ehrliches Ende (B4/1):** Eine Sitzung meldet „erledigt“ nur, wenn eine Handlung mit Wirkung **ausgeführt** wurde (Werkzeug mit Wirkung, Ergebnis `ok`); ein reiner Plan heißt „nur Plan“. *Nachtrag 1.11.2026 (E-A3, Analyse A17):* das frühere „und geprüft“ ist gestrichen – ein erzwungener Prüf-Lesezugriff kostete Züge und bewies nichts; was geschrieben wurde, zeigt die Werkzeugzeile und `git diff`. | Test |
 | HS-17 | **Eingabefeld:** mehrzeilig (Enter sendet, Umschalt+Enter Zeilenumbruch); „+“ für Dateien aus dem Projekt; **Schild** zeigt, wer in dieser Sitzung freigibt und welche Aufgaben-Freigabe gilt (HS-26); **Modellwahl** (Rezept, Slots, Kontextgröße; geprüfte schnelle Modelle oben wie S6-E2); **Mikrofon** = vorhandener Rekorder; `/` öffnet Befehle, `@` Dateien. | Test |
 | HS-18 | **Sitzungen bleiben:** Jede Sitzung wird gespeichert (Verlauf, Werkzeugaufrufe, Modell, Projekt, Vorlage) unter `runtime_data/harness/sitzungen/`, eine Datei je Sitzung (JSONL). Nach Neustart ist alles wieder da. Löschen einer Sitzung nur mit Rückfrage im Feld (wie S6-E2 „Leeren“). | Test |
 | HS-19 | **Vorlagen:** Eine Sitzung kann aus einer Vorlage starten (Systemprompt, erlaubte Werkzeuge, Modell). Erste Vorlage: **Vorarbeiter** (Inhalt aus `START_PROMPT_VORARBEITER_BIONIC.md`, ohne die Bionic-Hinweise). Vorlagen liegen als Dateien im Projekt. | Test |
@@ -119,6 +119,8 @@ Nicht Ziel: das Backend umbauen, das Cockpit löschen, eine Kopie von Bionic. Ü
 | HS-E4 | Vorarbeiter erste Vorlage? | „ja“ | Vorlage Vorarbeiter (HS-19) mit dem Recht der Vorarbeiter-Freigabe (HS-26). |
 | HS-E5 | Wer baut was? | „SEDRA baut über Agenten am Ende, das ist Plan“ | Ziel: SEDRA-Agenten (Orchestra: Vorarbeiter, Coder, Prüfer) bauen die Harness-Shell selbst, über die Harness-Shell. Weil sie dafür erst Werkzeuge und Freigaben brauchen, baut Claude die **Grundstufen 1 und 2** (Henne und Ei); ab Stufe 3 bauen SEDRA-Agenten mit Aufgaben-Freigaben unter dem Vorarbeiter, Claude schreibt nur noch Specs, versteckte Tests, Reviews und Harness-Code (L4). Die Quote steht je Stufe im Logbuch. |
 | HS-E6 | Reihenfolge? | „in der besten Empfehlung“ | Siehe §6: Reihenfolge so, dass SEDRA so früh wie möglich selbst bauen kann. |
+
+| HS-E7 | HS-16 Wortlaut (1.11.2026) | „Spec anpassen“ (E-A3) | „erledigt“ = ausgeführt, nicht „ausgeführt und geprüft“ (siehe HS-16). |
 
 Hinweis zu HS-E3: Bisher galt „Läufe nur nach ausdrücklichem Ja des Captains“. Das bleibt die Vorgabe im Katalog (Läufe in Stufe `captain`); der Captain kann es künftig per Aufgaben-Freigabe für eine Aufgabe öffnen.
 

@@ -7,10 +7,10 @@ shell:
   id: harness
   name: Harness
   description: Gespräch in der Mitte mit Sitzungen, Streamen und sichtbaren Werkzeugen; Werkzeuge mit Freigabe-Karte; Vorarbeiter, Aufgaben-Freigabe und Läufe; Start-Menü mit Apps, Oberflächen und Statusbereich (Stufe 4); Einstellungen mit Katalog-Editor (Stufe 5).
-  version: 1.8.0
+  version: 1.9.0
   entry:
-    js: [markdown.js, seite.js, reiter.js, karte.js, aufgabe.js, lauf.js, verlauf.js, eingabe.js, startliste.js, app.js, startmenue.js, katalog_editor_pruefung.js, katalog_editor.js, einstellungen.js, vorschau.js, modell.js, anhang.js, taskleiste.js, shell.js]     # shell.js zuletzt: es registriert
-    css: [shell.css, vorschau.css]
+    js: [markdown.js, projekt.js, seite.js, reiter.js, karte.js, aufgabe.js, lauf.js, zeilen.js, strom.js, verlauf.js, eingabe.js, startliste.js, app.js, startmenue.js, katalog_editor_pruefung.js, katalog_editor.js, erlaubnisse.js, einstellungen.js, vorschau.js, modell.js, anhang.js, taskleiste.js, shell.js]     # shell.js zuletzt: es registriert
+    css: [shell.css, einstellungen.css, vorschau.css]
   provides: [seite, reiter, flaeche, eingabe, taskleiste]
   layout: {persist: browser}
   umschalter: menue           # Stufe 4 (D-S1): kein Alt+S-Chip, kein Mini-Hub – das Start-Menü der Shell; Alt+S ruft es

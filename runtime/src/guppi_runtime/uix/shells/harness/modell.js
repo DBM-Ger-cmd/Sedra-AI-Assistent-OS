@@ -19,6 +19,18 @@
       + (a.tokens_s ? ', ≈ ' + zahl(a.tokens_s, 0) + ' Token/s' : '') + (a.quelle === 'gemessen' ? ' (gemessene Werte)' : '');
   }
 
+  // Die Gründe des Routers als Sätze (P2 V1); Gründe mit Zahlen (dynamische Rezepte) stehen schon als Satz da.
+  const GRUENDE = {host_ram_below_minimum: 'zu wenig Arbeitsspeicher auf diesem Rechner', host_vram_below_minimum: 'zu wenig Grafikspeicher auf diesem Rechner',
+    hardware_incompatible: 'passt nicht zu dieser Hardware', context_capacity: 'das Kontextfenster reicht nicht', slots_not_measured: 'Slots nicht gemessen',
+    recipe_disabled: 'Rezept ausgeschaltet', provider_unavailable: 'der Server ist nicht erreichbar', provider_cooldown: 'der Server erholt sich gerade',
+    location_not_local: 'kein lokales Modell', hardware_profile_changed: 'die Hardware hat sich geändert – Rezepte neu prüfen'};
+  function grundtext(g){
+    const s = String(g || '');
+    if(/GB/.test(s)) return s;
+    const k = Object.keys(GRUENDE).find(k=>s.startsWith(k));
+    return k ? GRUENDE[k] : (s || 'passt nicht');
+  }
+
   function fehlertext(err){
     const m = String((err && err.message) || err || '');
     const nenner = m.match(/recipe_not_usable:[a-z_]+:(.+)$/);                  // der Server nennt bei dynamischen Rezepten die Zahlen: genau diesen Satz zeigen
@@ -34,26 +46,46 @@
     const laden = d().el('button', 'hs-senden p', 'Laden'); laden.type = 'button';
     const weg = d().el('button', 'hs-knopf', 'Entladen'); weg.type = 'button';
     const stand = d().el('span', 'hs-leise hs-modell-stand', ''); stand.setAttribute('role', 'status');
+    const merken = d().el('button', 'hs-knopf hs-vorgabe-knopf', 'Als Vorgabe merken'); merken.type = 'button'; merken.title = 'Dieses Rezept ist dann der Standard (und wird beim Senden geladen, wenn der Katalog es erlaubt)';
+    merken.onclick = ()=>root.sedraHarness.projekt.setzen(S, {rezept_standard: wahl.value || null}, merken).then(auffrischen);
     let geladen = null;
-    box.append(wahl, laden, weg, stand);
+    box.append(wahl, laden, weg, merken, stand);
+    wahl.addEventListener('change', ()=>{ merken.hidden = !wahl.value || (S.vorgaben && S.vorgaben.rezept_standard) === wahl.value; });
 
+    // P2 V1 (1.11.): „Passt das Modell?“ – je Rezept Name, Bedarf gegen freien Speicher und ein Urteil, vom Server mit derselben Prüfung wie beim Laden
+    const zahl = (x, n)=>Number(x).toLocaleString('de-DE', {maximumFractionDigits: n});
+    const urteil = m=>{
+      if(m.passt === true) return '✓ passt' + (m.bedarf_vram_gb ? ' · ≈ ' + zahl(m.bedarf_vram_gb, 1) + ' GB VRAM' : '') + (m.auswahl && typeof m.auswahl.lagen === 'number' ? ', ' + m.auswahl.lagen + ' Lagen im RAM' : '');
+      if(m.passt === false) return '✗ ' + grundtext(m.grund);
+      return '';
+    };
     async function auffrischen(){
       try{
-        const v = await S.api('/api/models');
-        const rezepte = (v.recipes || []).filter(r=>r.enabled && r.provider === 'llama-cpp-server');
-        geladen = rezepte.find(r=>r.loaded) || null;
+        const v = await S.api('/api/harness/modelle');
+        const rezepte = v.modelle || [];
+        geladen = rezepte.find(r=>r.geladen) || null;
         const vorher = wahl.value;
         wahl.replaceChildren(...rezepte.map(r=>{
           const o = document.createElement('option'); o.value = r.id;
-          o.textContent = (r.model || r.id) + (r.size_gb ? ' · ' + r.size_gb + ' GB' : '') + (r.loaded ? ' (geladen)' : '');
-          o.title = (r.roles || []).join(', ');
+          o.textContent = (r.modell || r.id) + (r.groesse_gb ? ' · ' + zahl(r.groesse_gb, 1) + ' GB' : '') + ' · ' + urteil(r) + (r.geladen ? ' (geladen)' : '');
+          o.title = r.id + (r.grund ? ' – ' + r.grund : '') + (r.gemessen ? ' – gemessene Werte' : '');
+          o.dataset.passt = r.passt === true ? 'ja' : r.passt === false ? 'nein' : '';
           return o;
         }));
-        wahl.value = rezepte.some(r=>r.id === vorher) ? vorher : (geladen ? geladen.id : (rezepte.some(r=>r.id === v.zuletzt) ? v.zuletzt : (rezepte[0] ? rezepte[0].id : '')));
+        const vorgabe = S.vorgaben && S.vorgaben.rezept_standard;                                   // P0 M3: die Vorgabe vor „zuletzt“
+        const erstes = rezepte.find(r=>r.passt) || rezepte[0];
+        wahl.value = rezepte.some(r=>r.id === vorher) ? vorher : (geladen ? geladen.id : (rezepte.some(r=>r.id === vorgabe) ? vorgabe : (erstes ? erstes.id : '')));
+        merken.hidden = !wahl.value || vorgabe === wahl.value;
         laden.disabled = !wahl.value;
         laden.textContent = geladen ? 'Wechseln' : 'Laden';
         weg.hidden = !geladen;
-        if(!rezepte.length) stand.textContent = 'Keine Rezepte vorhanden.';
+        stand.classList.remove('bad');
+        const frei = v.frei_vram_gb !== null && v.frei_vram_gb !== undefined ? 'frei: ' + zahl(v.frei_vram_gb, 1) + ' GB VRAM' + (v.frei_ram_gb ? ', ' + zahl(v.frei_ram_gb, 1) + ' GB RAM' : '') : '';
+        if(!rezepte.length){
+          stand.textContent = 'Keine Rezepte vorhanden – ';
+          const w = d().el('button', 'hs-knopf', 'Werkstatt öffnen'); w.type = 'button'; w.onclick = ()=>root.sedraHarness.einstellungen.oeffnen(S, 'modelle/werkstatt');
+          stand.append(w);
+        }else stand.textContent = frei;
       }catch(err){ stand.textContent = 'Rezepte nicht lesbar: ' + err.message; laden.disabled = true; }
     }
 
@@ -76,6 +108,25 @@
     return Object.assign(box, {auffrischen});
   }
 
+  // P0 M2 (1.11., E-A7): Modell beim Senden selbst laden – nur wenn der Server es erlaubt (Katalog `modell_laden` frei für das Standard-Rezept).
+  // `melden(text, art)` schreibt in die Sitzung („lädt Modell …“). Gibt true zurück, wenn danach ein Modell geladen ist.
+  async function autoLaden(S, melden){
+    let v;
+    try{ v = await S.api('/api/harness/vorgaben'); }catch(_e){ return false; }
+    if(!v || !v.auto_laden || !v.auto_laden.rezept) return false;
+    const rezept = v.auto_laden.rezept;
+    melden('Lade Modell „' + rezept + '“ … das kann einige Minuten dauern (Regel ' + (v.auto_laden.regel || 'Katalog') + ').', 'info');
+    const t0 = Date.now();
+    try{
+      const out = await S.api('/api/model/load', {method: 'POST', body: {recipe_id: rezept}});
+      await S.modellLaden();
+      const s = Math.round((Date.now() - t0) / 1000);
+      const satz = auswahlText(out && out.auswahl);
+      melden('Modell geladen nach ' + s + ' s' + (satz ? ' ' + satz : '') + '.', 'ok');
+      return !!S.modell;
+    }catch(err){ melden('Modell nicht geladen: ' + fehlertext(err), 'bad'); return false; }
+  }
+
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.modell = {steuerung, fehlertext, auswahlText};
+  root.sedraHarness.modell = {steuerung, fehlertext, auswahlText, autoLaden, grundtext};
 })();
