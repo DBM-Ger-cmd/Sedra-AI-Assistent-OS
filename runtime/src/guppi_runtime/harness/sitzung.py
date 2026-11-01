@@ -13,9 +13,11 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
+from .erlaubnis import aktive
+
 ID = re.compile(r'S-[0-9A-F]{8}')
 TITEL_MAX = 60
-TYPEN = ('captain', 'modell', 'werkzeug', 'karte', 'titel', 'wahl')     # `wahl`: das Modell der Sitzung wurde geändert (PATCH)
+TYPEN = ('captain', 'modell', 'werkzeug', 'karte', 'titel', 'wahl', 'erlaubnis')     # `wahl`: Modell geändert (PATCH); `erlaubnis`: Sitzungs-Erlaubnis (P0 M1)
 
 
 class SitzungFehler(ValueError):
@@ -37,6 +39,7 @@ class Sitzungen:
         self.ordner = Path(ordner)
         self._sperren = {}
         self._sperre = threading.Lock()
+        self._liste_cache = {}                   # A10 (1.11.): Pfad → ((mtime_ns, size), Zeile) – nur geänderte Dateien werden neu gelesen
 
     # ---- Hilfen
     def _pfad(self, sid):
@@ -84,7 +87,7 @@ class Sitzungen:
         return eintrag
 
     def laden(self, sid):
-        """{'kopf', 'eintraege', 'kaputt', 'titel', 'modell'} – Titel und Modell so, wie sie nach allen Änderungen gelten."""
+        """{'kopf', 'eintraege', 'kaputt', 'titel', 'modell', 'erlaubnisse'} – Titel, Modell und Erlaubnisse so, wie sie nach allen Änderungen gelten."""
         pfad = self._pfad(sid)
         if not pfad.is_file():
             raise SitzungFehler('sitzung_unbekannt')
@@ -111,26 +114,41 @@ class Sitzungen:
         for e in eintraege:
             if e.get('typ') == 'titel': titel = str(e.get('titel') or '')
             if e.get('typ') == 'wahl' and 'modell' in e: modell = e.get('modell')
-        return {'kopf': kopf, 'eintraege': eintraege, 'kaputt': kaputt, 'titel': titel, 'modell': modell}
+        return {'kopf': kopf, 'eintraege': eintraege, 'kaputt': kaputt, 'titel': titel, 'modell': modell, 'erlaubnisse': aktive(eintraege)}
 
     def liste(self, projekt=None):
         """Kopf und letzte Zeit je Sitzung, neueste zuerst; mit `projekt` nur die dieses Projekts."""
         if not self.ordner.is_dir():
             return []
-        out = []
+        out, gesehen = [], set()
         for pfad in self.ordner.glob('S-*.jsonl'):
             if not ID.fullmatch(pfad.stem):
                 continue
             try:
-                s = self.laden(pfad.stem)
-            except (SitzungFehler, OSError):
+                st = pfad.stat()
+            except OSError:
                 continue
-            if projekt is not None and s['kopf'].get('projekt') != projekt:
+            gesehen.add(pfad)
+            marke = (st.st_mtime_ns, st.st_size)
+            alt = self._liste_cache.get(pfad)
+            if alt and alt[0] == marke:
+                zeile = alt[1]
+            else:
+                try:
+                    s = self.laden(pfad.stem)
+                except (SitzungFehler, OSError):
+                    continue
+                zuletzt = datetime.fromtimestamp(st.st_mtime).astimezone().isoformat(timespec='seconds')
+                zeile = {'id': pfad.stem, 'titel': s['titel'], 'projekt': s['kopf'].get('projekt'), 'modell': s['modell'],
+                         'vorlage': s['kopf'].get('vorlage'), 'angelegt': s['kopf'].get('angelegt'), 'zuletzt': zuletzt,
+                         'nachrichten': sum(1 for e in s['eintraege'] if e.get('typ') in ('captain', 'modell')),
+                         'erlaubnisse': len(s['erlaubnisse'])}
+                self._liste_cache[pfad] = (marke, zeile)
+            if projekt is not None and zeile['projekt'] != projekt:
                 continue
-            zuletzt = datetime.fromtimestamp(pfad.stat().st_mtime).astimezone().isoformat(timespec='seconds')
-            out.append({'id': pfad.stem, 'titel': s['titel'], 'projekt': s['kopf'].get('projekt'), 'modell': s['modell'],
-                        'vorlage': s['kopf'].get('vorlage'), 'angelegt': s['kopf'].get('angelegt'), 'zuletzt': zuletzt,
-                        'nachrichten': sum(1 for e in s['eintraege'] if e.get('typ') in ('captain', 'modell'))})
+            out.append(dict(zeile))
+        for pfad in [p for p in self._liste_cache if p not in gesehen]:
+            self._liste_cache.pop(pfad, None)
         out.sort(key=lambda x: x['zuletzt'] or '', reverse=True)
         return out
 
@@ -142,6 +160,15 @@ class Sitzungen:
 
     def modell_waehlen(self, sid, modell):
         return self.anhaengen(sid, {'typ': 'wahl', 'modell': (str(modell)[:200] if modell else None)})
+
+    def erlauben(self, sid, karte_id, werkzeug, muster, regel=None):
+        """P0 M1: eine Sitzungs-Erlaubnis anhängen (gilt, bis sie zurückgenommen oder die Sitzung geschlossen wird)."""
+        return self.anhaengen(sid, {'typ': 'erlaubnis', 'karte_id': karte_id, 'werkzeug': werkzeug, 'muster': muster, 'regel': regel, 'aktiv': True})
+
+    def erlaubnis_zuruecknehmen(self, sid, karte_id):
+        if not any(e['karte_id'] == karte_id for e in self.laden(sid)['erlaubnisse']):
+            raise SitzungFehler('erlaubnis_unbekannt')
+        return self.anhaengen(sid, {'typ': 'erlaubnis', 'karte_id': karte_id, 'aktiv': False})
 
     def loeschen(self, sid):
         """Verschiebt die Datei nach geloescht/ – nichts wird wirklich gelöscht. Gibt den neuen Ort zurück."""

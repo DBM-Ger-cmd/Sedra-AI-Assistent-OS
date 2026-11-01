@@ -1,12 +1,12 @@
 // Harness-Shell – das Eingabefeld (HS-17, HS-53): mehrzeilig, Enter sendet, Umschalt+Enter neue Zeile; Stopp-Knopf (und Esc, shell.js).
-// Daneben: „+“ (Dateien – ab Stufe 2), das Schild (wer in dieser Sitzung freigibt), das Modell (aus /api/models), das Mikrofon
-// (der vorhandene Rekorder der Seite). `/` zeigt die Befehle, `@` die Dateien (ab Stufe 2). Ohne geladenes Modell steht
+// Daneben: „+“ (Datei des Projekts anhängen – Stufe 6, anhang.js), das Schild (wer in dieser Sitzung freigibt), das Modell (Steuerung aus modell.js), das Mikrofon
+// (öffnet den Rekorder in den Einstellungen). `/` zeigt die Befehle, `@` die Dateien. Ohne geladenes Modell steht
 // „Kein Modell geladen – Modell wählen“ da, statt still zu scheitern. In einer leeren Sitzung steht darunter die Projektwahl (HS-04).
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
-  const BEFEHLE = [['/neu', 'neue Sitzung'], ['/stopp', 'laufende Antwort abbrechen'], ['/titel Name', 'Sitzung umbenennen'], ['/seite', 'Seitenleiste ein/aus'], ['/start', 'Start-Menü (Apps, Oberflächen)'], ['/einstellungen', 'Einstellungen (HS-42)']];
+  const BEFEHLE = [['/neu', 'neue Sitzung'], ['/stopp', 'laufende Antwort abbrechen'], ['/titel Name', 'Sitzung umbenennen'], ['/seite', 'Seitenleiste ein/aus'], ['/start', 'Start-Menü (Apps, Oberflächen)'], ['/einstellungen', 'Einstellungen'], ['/export', 'Sitzung als Markdown speichern']];
 
   function mount(S){
     const box = S.el.eingabe;
@@ -32,10 +32,8 @@
     modell.onclick = ()=>modellMenue(S);
     const mikro = d().el('button', 'hs-rund', '🎙'); mikro.type = 'button';
     mikro.title = 'Rekorder (Aufnahme) öffnen'; mikro.setAttribute('aria-label', 'Rekorder öffnen');
-    mikro.onclick = ()=>{
-      const chip = [...document.querySelectorAll('.sx-hub-leiste .sx-chip')].find(c=>!c.classList.contains('sx-umschalter'));
-      if(chip) chip.click(); else S.hinweis('Der Rekorder ist auf dieser Seite nicht da.', 'warn');
-    };
+    // A3 (1.11.): mit `umschalter: menue` gibt es keinen Hub-Chip – der Rekorder ist der Punkt Sprache → Rekorder der Einstellungen (eingehängtes Werkzeug `aufnahme`)
+    mikro.onclick = ()=>root.sedraHarness.einstellungen.oeffnen(S, 'sprache/rekorder');
     const senden = d().el('button', 'hs-senden p', 'Senden'); senden.type = 'button';
     senden.setAttribute('aria-label', 'Senden');
     const projekt = d().el('select', 'hs-projektwahl'); projekt.setAttribute('aria-label', 'Projekt der neuen Sitzung');
@@ -50,6 +48,8 @@
     zeile.append(feld, werkzeuge);
     box.append(kein, vorschlag, zeile, projektZeile);
     S._eingabe = {box, feld, senden, modell, projekt, vorlage, projektZeile, kein, vorschlag, schild, schildBasis: schild.textContent};
+    S._eingabe.ordner = root.sedraHarness.projekt ? root.sedraHarness.projekt.knoepfe(S, projektZeile, projekt) : null;    // P0 M3: Ordner öffnen, Vorgabe merken
+    projekt.addEventListener('change', ()=>{ if(S._eingabe.ordner) S._eingabe.ordner.zeigen(); const a = S.aktive(); if(a && a.zeigeLeer && a.leer()) a.zeigeLeer(); });
 
     const groesse = ()=>{ feld.style.height = 'auto'; feld.style.height = Math.min(feld.scrollHeight, Math.round(root.innerHeight * 0.4)) + 'px'; };
     feld.addEventListener('input', ()=>{ groesse(); hilfe(S); });
@@ -83,6 +83,10 @@
     if(b === '/seite'){ S.seiteUmschalten(); return true; }
     if(b === '/start'){ root.sedraHarness.startmenue.oeffnen(S); return true; }        // Stufe 4 (HS-40)
     if(b === '/einstellungen'){ root.sedraHarness.einstellungen.oeffnen(S, rest[0]); return true; }   // Stufe 5 (HS-42): /einstellungen [gruppe/punkt]
+    if(b === '/export'){                                                               // V6 (1.11.)
+      if(!a || !/^S-/.test(a.id)){ S.hinweis('Erst eine Nachricht senden – dann gibt es die Sitzung.'); return true; }
+      await root.sedraHarness.seite.exportieren(S, a.id); return true;
+    }
     if(b === '/titel'){
       if(!a || !/^S-/.test(a.id)){ S.hinweis('Erst eine Nachricht senden – dann gibt es die Sitzung.'); return true; }
       await S.api('/api/harness/sitzungen/' + a.id, {method: 'PATCH', body: {titel: rest.join(' ')}});
@@ -116,6 +120,7 @@
     e.senden.title = laeuft ? 'Antwort abbrechen (Esc)' : 'Senden (Enter)';
     e.senden.setAttribute('aria-label', laeuft ? 'Antwort abbrechen' : 'Senden');
     e.projektZeile.hidden = !(a && !/^S-/.test(a.id));
+    if(e.ordner){ e.ordner.zeigen(); if(e.projektZeile.hidden) e.ordner.formular.schliessen(); }
   }
 
   function fuer(S, a){
@@ -131,8 +136,8 @@
     const s = sid && S.sitzung(sid);
     const vorarbeiter = S.vorarbeiter && s ? S.vorarbeiter[s.projekt] : null;
     let text = e.schildBasis, hinweis = e.schild.title;
-    if(vorarbeiter && vorarbeiter.sitzung_id === sid){ text = '⚑ Du bist Vorarbeiter · Stufe captain bleibt beim Captain'; }
-    else if(vorarbeiter){ text = text.replace('Captain gibt frei', 'Vorarbeiter gibt frei (Stufe vorarbeiter)'); }
+    if(vorarbeiter && vorarbeiter.sitzung_id === sid){ text = '⚑ Du bist Vorarbeiter · was dem Captain vorbehalten ist, bleibt bei ihm'; }     // A21: Sätze statt Stufen-Namen
+    else if(vorarbeiter){ text = text.replace('Captain gibt frei', 'Vorarbeiter gibt frei, was der Katalog ihm überlässt'); }
     const aufgabe = (S.aufgaben || []).find(x=>x.status === 'aktiv' && sid && x.sitzungen.indexOf(sid) >= 0);
     if(aufgabe){
       const rest = [aufgabe.rest_aufrufe !== null && aufgabe.rest_aufrufe !== undefined ? 'Rest ' + aufgabe.rest_aufrufe : null, aufgabe.rest_min !== null && aufgabe.rest_min !== undefined ? root.sedraHarness.aufgabe.minuten(aufgabe) : null].filter(Boolean).join(', ');
@@ -182,8 +187,10 @@
   function projektwahl(S){
     const e = S._eingabe; if(!e) return;
     const vorher = e.projekt.value;
-    e.projekt.replaceChildren(...S.projekte.map(p=>{ const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; return o; }));
+    e.projekt.replaceChildren(...S.projekte.map(p=>{ const o = document.createElement('option'); o.value = p.id; o.textContent = p.name + (p.quelle === 'laufzeit' ? ' (geöffnet)' : ''); return o; }));
+    const vorgabe = S.vorgaben && S.vorgaben.projekt_standard;                 // P0 M3: die Vorgabe ist der Standard neuer Sitzungen
     if(vorher && S.projekte.some(p=>p.id === vorher)) e.projekt.value = vorher;
+    else if(vorgabe && S.projekte.some(p=>p.id === vorgabe)) e.projekt.value = vorgabe;
     zustand(S);
   }
 

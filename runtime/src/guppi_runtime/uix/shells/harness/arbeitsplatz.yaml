@@ -9,7 +9,9 @@ arbeitsplatz:
   - name: Gespräch
     wo: 'Mitte: Antworten streamen, Denken eingeklappt, Werkzeugzeilen aufklappbar'
   - name: Eingabefeld
-    wo: 'unter dem Gespräch: Enter sendet, Umschalt+Enter neue Zeile, Stopp oder Esc bricht ab'
+    wo: 'unter dem Gespräch: Enter sendet, Umschalt+Enter neue Zeile, Stopp oder Esc bricht ab; + oder @ hängt eine Datei des Projekts an, / zeigt Befehle; der Modell-Knopf öffnet die Modell-Steuerung (Laden, Wechseln, Entladen, passt es?); bei einer neuen Sitzung darunter Projekt und Vorlage, „Ordner öffnen …“ und „Als Vorgabe merken“'
+  - name: Vorschau
+    wo: 'neben dem Gespräch: die Datei, an der SEDRA gerade arbeitet (Diff, Lauf-Log); Seite wechseln, zuklappen, festhalten (Strg+Umschalt+X)'
   - name: Taskleiste
     wo: 'unten: Start (das Start-Menü), offene Sitzungen, Apps und Läufe, rechts der Statusbereich – Freigaben, Modell, GPU mit Temperatur, RAM, Modellserver, Scheduler, Zustand – und die Uhr; ein Klick auf eine Zelle öffnet die App dazu'
   - name: Start-Menü
@@ -31,4 +33,10 @@ arbeitsplatz:
     grenzen der schleife: 'Einstellungen → Agent → Grenzen der Schleife: max_zuege je Vorlage (4–40) als Antrag mit Gate; nach der Freigabe liegt eine Kopie der Vorlage in local_config/harness_vorlagen. max_tokens und temperature sind nur Anzeige.'
     benachrichtigung: 'Einstellungen → Allgemein → Benachrichtigungen: Browser-Hinweis „SEDRA: eine Freigabe wartet“, wenn das Fenster nicht vorn ist (Erlaubnis nur nach Klick, nie der Karteninhalt), und das Blinken in der Taskleiste an/aus.'
     sitzung: 'In der Harness-Shell: ein gespeichertes Gespräch, eine Datei je Sitzung unter runtime_data/harness/sitzungen.'
+    anhängen: 'Im Eingabefeld + oder @: eine Datei des Projekts wählen (nur Namen, nur was der Katalog lesen lässt); sie steht als @pfad im Text, das Modell liest sie.'
+    modell laden: 'Der Modell-Knopf im Eingabefeld: Rezept wählen, Laden oder Wechseln; neben jedem Rezept steht, ob es in den freien Speicher passt und warum nicht. Ohne Modell lädt die Shell beim Senden das Standard-Rezept selbst, wenn der Katalog modell_laden dafür frei stellt.'
+    für diese sitzung erlauben: 'Knopf auf der Freigabe-Karte: der Aufruf läuft, und gleichartige Aufrufe (derselbe Ordner, derselbe Befehlsanfang) laufen bis zum Schließen der Sitzung ohne Karte. Nicht bei festen Vorbehalten, Warnkarten oder Modellen. Liste und Zurücknehmen: Einstellungen → Agent → Freigabe-Modus.'
+    ordner öffnen: 'Unter der Projektzeile einer neuen Sitzung: einen Ordner als Projekt beantragen (Pfad, Name, Schreibbereich); nach der Freigabe im Posteingang steht er in der Projektwahl – ohne Neustart, ohne Konfig-Datei (Laufzeitdatei runtime_data/harness/projekte.yaml).'
+    vorgabe: 'Als Vorgabe merken: dieses Projekt bzw. Rezept ist der Standard neuer Sitzungen.'
+    zeitlinie: 'In der Taskleiste zeigt der Knopf einer laufenden Sitzung, was sie tut: denkt, schreibt, Werkzeug …, wartet auf Freigabe, Stopp angefordert – mit Dauer.'
     ungeprüft: 'Grauer Text in der Harness-Shell: der Inhaltsschutz hat ihn noch nicht geprüft.'

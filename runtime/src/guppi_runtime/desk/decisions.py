@@ -23,6 +23,7 @@ REQUEST_TITLE = {'switch': 'Schalter umstellen', 'routing': 'Modell-Einstellung 
                  'trust': 'Schreibrouten freigeben', 'gateway': 'GateWay-Vorgang freigeben', 'orchestra': 'Agenten-Team ändern', 'standing': 'Dauerfreigabe',
                  'wissen_quelle': 'Wissensquelle freigeben', 'wissen_vorschlag': 'Wissen aufnehmen',          # Spec 7 (D7.3, D7.8)
                  'harness_katalog': 'Freigabe-Katalog schreiben', 'harness_vorlage': 'Grenze einer Vorlage ändern',   # Harness Stufe 5 (D-U2, D-U4)
+                 'harness_projekt': 'Ordner als Projekt öffnen',                                                       # Harness P0 M3 (1.11.)
                  'update': 'Update übernehmen', 'cloud_url': 'Cloud-Adresse ändern'}
 REQUEST_NOTE = {'switch': 'Schalter · gilt nach dem Neustart der Oberfläche', 'routing': 'Modell-Einstellung · gilt nach dem Neustart',
                 'model_add': 'Neues Modell · sofort nutzbar', 'skill': 'Bibliothek · die Datei wird vorher gesichert',
@@ -35,6 +36,7 @@ REQUEST_NOTE = {'switch': 'Schalter · gilt nach dem Neustart der Oberfläche', 
                 'wissen_vorschlag': 'Wissensspeicher · Text eines Agenten wird Wissen für diese Stufe; ändert sich der Vorschlag, wird nichts ausgeführt',
                 'harness_katalog': 'Harness · die Datei des Captains wird vorher gesichert; hat sich der Katalog seit dem Antrag geändert, wird nichts geschrieben',
                 'harness_vorlage': 'Harness · Kopie der Vorlage in local_config mit neuer Grenze; die Datei im Repo bleibt',
+                'harness_projekt': 'Harness · der Ordner steht danach in der Projektwahl (Laufzeitdatei runtime_data/harness/projekte.yaml, nicht local_config); kein Neustart nötig',
                 'update': 'Programmdateien werden ersetzt · Sicherung liegt daneben, Rückweg über „Zurück zur Sicherung“ · wirkt nach dem Neustart',
                 'cloud_url': 'Der API-Schlüssel dieses Anbieters geht danach an die neue Adresse · wirkt nach dem Neustart'}
 WAYS = {'einmal': 'Einmal öffnen', 'freigeben_und_anwenden': 'Freigeben und anwenden', 'aendern': 'Grenze ändern …', 'ablehnen': 'Ablehnen',
@@ -130,7 +132,7 @@ def harness_decision(k):
             'note': f"Stufe {k.get('stufe')} · Regel {k.get('regel') or 'keine'} · Sitzung {k.get('sitzung_id')}" + (' · beim Vorarbeiter' if k.get('an') == 'vorarbeiter' else ''),
             'created_at': k.get('angelegt'), 'ways': ['erlauben', 'ablehnen'], 'apply': None,
             'binding': {'karte_id': k['karte_id'], 'werkzeug': k.get('werkzeug'), 'ziel': k.get('ziel'), 'vorschau': vorschau[:4000]},
-            'agent_id': None}
+            'agent_id': None, 'sitzung_id': k.get('sitzung_id')}          # A18 (1.11.): die Sitzung als Feld, nicht nur im Prosa-Feld `note`
 
 
 def collect(missions, open_requests, crossings=(), contents=(), scheduled=(), harness=()):

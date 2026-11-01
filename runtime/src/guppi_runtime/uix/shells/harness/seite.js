@@ -69,6 +69,9 @@
     umbenennen.title = 'Umbenennen'; umbenennen.setAttribute('aria-label', 'Sitzung umbenennen');
     const weg = d().el('button', 'hs-sz-knopf', '×'); weg.type = 'button';
     weg.title = 'Löschen (nach geloescht/ verschieben)'; weg.setAttribute('aria-label', 'Sitzung löschen');
+    const exp = d().el('button', 'hs-sz-knopf', '↓'); exp.type = 'button';                  // V6 (1.11.): als Markdown speichern
+    exp.title = 'Als Markdown speichern (/export)'; exp.setAttribute('aria-label', 'Sitzung als Markdown speichern');
+    exp.onclick = e=>{ e.stopPropagation(); exportieren(S, s.id); };
     const haupt = d().clickable(d().el('div', 'hs-sz-haupt'), ()=>root.sedraHarness.reiter.oeffnen(S, s.id));
     haupt.append(titel, zeitEl);
     row.append(haupt);
@@ -85,10 +88,22 @@
       };
       row.append(ern);
     }
-    row.append(umbenennen, weg);
+    row.append(exp, umbenennen, weg);
     umbenennen.onclick = e=>{ e.stopPropagation(); umbenennenIm(S, row, s); };
     weg.onclick = e=>{ e.stopPropagation(); loeschenIm(S, row, s); };
     return row;
+  }
+
+  // V6: GET …/export → Datei im Browser speichern (Blob, kein Server-Schreiben)
+  async function exportieren(S, sid){
+    try{
+      const out = await S.api('/api/harness/sitzungen/' + sid + '/export');
+      const blob = new Blob([out.markdown || ''], {type: 'text/markdown;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = out.dateiname || (sid + '.md'); document.body.append(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 1000);
+      S.hinweis('Gespeichert: ' + (out.dateiname || sid + '.md'), 'note');
+    }catch(err){ S.hinweis('Export fehlgeschlagen: ' + err.message, 'bad'); }
   }
 
   function umbenennenIm(S, row, s){
@@ -98,11 +113,13 @@
     let fertig = false;
     const ende = async speichern=>{
       if(fertig) return; fertig = true;
+      feld.dataset.fertig = '1';                                   // A9: ab jetzt darf die Leiste wieder neu gezeichnet werden
       if(speichern && feld.value.trim() && feld.value.trim() !== s.titel){
         try{ await S.api('/api/harness/sitzungen/' + s.id, {method: 'PATCH', body: {titel: feld.value.trim()}}); }
         catch(err){ S.hinweis('Umbenennen fehlgeschlagen: ' + err.message, 'bad'); }
       }
       await S.sitzungenLaden();
+      if(S._seiteAufgeschoben) zeichnen(S);
     };
     feld.onkeydown = e=>{ if(e.key === 'Enter'){ e.preventDefault(); ende(true); } else if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); ende(false); } };
     feld.onblur = ()=>ende(true);
@@ -112,11 +129,17 @@
     const frage = d().el('div', 'hs-sz-frage');
     frage.append(d().el('span', null, '„' + (s.titel || 'Ohne Titel') + '“ in den Ordner geloescht/ verschieben?'));
     const ja = d().button('Ja', async()=>{
-      await S.api('/api/harness/sitzungen/' + s.id, {method: 'DELETE'});
-      root.sedraHarness.reiter.schliessen(S, s.id);
+      frage.dataset.fertig = '1';
+      try{
+        await S.api('/api/harness/sitzungen/' + s.id, {method: 'DELETE'});
+        root.sedraHarness.reiter.schliessen(S, s.id);
+      }catch(err){                                                 // A5: eine Antwort läuft oder die Sitzung ist weg – sagen, nicht hängen
+        S.hinweis(/antwort_laeuft/.test(err.message) ? 'Nicht verschoben: in dieser Sitzung läuft noch eine Antwort – erst stoppen.' : 'Nicht verschoben: ' + err.message, 'warn');
+      }
       await S.sitzungenLaden();
+      zeichnen(S);
     }, 'warn');
-    const nein = d().button('Nein', ()=>zeichnen(S));
+    const nein = d().button('Nein', ()=>{ frage.dataset.fertig = '1'; zeichnen(S); });
     frage.append(ja, nein);
     row.replaceChildren(frage);
     nein.focus();
@@ -134,6 +157,9 @@
 
   function zeichnen(S){
     const el = S.el.seite;
+    // A9 (1.11.): ein offenes Umbenennen-Feld oder eine Lösch-Rückfrage überlebt Ereignisse – der Neuaufbau wartet, bis sie fertig sind
+    if(el.querySelector('.hs-sz-feld:not([data-fertig]), .hs-sz-frage:not([data-fertig])')){ S._seiteAufgeschoben = true; return; }
+    S._seiteAufgeschoben = false;
     const zu = zugeklappt();
     const neu = d().button('+ Neue Sitzung', ()=>root.sedraHarness.reiter.neu(S), 'p hs-neu');
     const liste = d().el('div', 'hs-seite-liste');
@@ -183,5 +209,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.seite = {mount: S=>zeichnen(S), zeichnen, zeit};
+  root.sedraHarness.seite = {exportieren, mount: S=>zeichnen(S), zeichnen, zeit};
 })();

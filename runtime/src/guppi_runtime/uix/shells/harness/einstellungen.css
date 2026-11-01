@@ -1,0 +1,24 @@
+/* Harness-Shell – Einstellungen (HS-42, Stufe 5) und Sitzungs-Erlaubnisse (P0 M1, 1.11.2026). Aus shell.css ausgelagert (A20: Dateigrenze 400 Zeilen). Nur Token aus ui/tokens.css. */
+.hs-einstellungen{width:100%;justify-content:flex-start}
+.hs-einst{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0;height:100%}
+.hs-einst-nav{overflow:auto;border-right:1px solid var(--line);padding:6px 4px}
+.hs-einst-punkt{display:block;width:100%;text-align:left;padding:5px 10px;border:0;border-radius:var(--radius);background:transparent;color:var(--text);font:inherit;font-size:var(--size-small);cursor:pointer}
+.hs-einst-punkt:hover{background:var(--hs-hover)}
+.hs-einst-punkt.on{background:var(--hs-on);box-shadow:inset 2px 0 0 var(--accent)}
+.hs-einst-flaeche{display:flex;flex-direction:column;min-height:0;overflow:auto}
+.hs-einst-kopf{display:flex;align-items:baseline;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.hs-einst-werkzeug{flex:1 1 auto;min-height:0}
+.hs-einst-werkzeug.nur-nachweis .hs-app-koerper{grid-template-columns:minmax(0,1fr)}
+.hs-einst-werkzeug.nur-nachweis .hs-app-inhalt{display:none}
+.hs-einst-eigen{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.hs-einst-zeile{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line-soft);border-radius:var(--radius);font-size:var(--size-small)}
+.hs-einst-label{flex:1 1 220px;color:var(--muted)}
+.hs-einst-wert{font-weight:600}
+.hs-einst-zahl{width:72px;padding:3px 6px;font:inherit;font-size:var(--size-small);color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius)}
+.hs-einst-karte{padding:6px 8px;border:1px solid var(--line-soft);border-radius:var(--radius)}
+.hs-einst-karte>summary{cursor:pointer;font-size:var(--size-small)}
+.hs-einst-antrag{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--radius);color:var(--text)}
+@media (max-width:900px){.hs-einst{grid-template-columns:1fr}.hs-einst-nav{border-right:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:2px}.hs-einst-nav .hs-ueber{width:100%}.hs-einst-punkt{width:auto}}
+.hs-erlaubnis .hs-einst-label{flex:0 0 150px;font-weight:600;color:var(--text)}
+.hs-erlaubnis code{flex:1 1 200px;font-weight:400}
+.hs-erlaubnis-sitzung{margin-top:6px}

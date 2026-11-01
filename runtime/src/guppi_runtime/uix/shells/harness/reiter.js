@@ -13,7 +13,8 @@
 
   function speichern(S){
     const r = stand(S);
-    try{ localStorage.setItem(KEY, JSON.stringify({liste: r.liste.filter(id=>ID.test(id)), aktiv: ID.test(r.aktiv || '') ? r.aktiv : null})); }catch(_e){}
+    const merkbar = id=>ID.test(id) || /^(aufgaben|einstellungen):/.test(String(id));      // A29 (1.11.): auch Aufgaben und Einstellungen überleben das Neuladen
+    try{ localStorage.setItem(KEY, JSON.stringify({liste: r.liste.filter(merkbar), aktiv: merkbar(r.aktiv || '') ? r.aktiv : null})); }catch(_e){}
   }
 
   function titel(S, id){
@@ -114,12 +115,17 @@
     try{ gemerkt = JSON.parse(localStorage.getItem(KEY) || '{}') || gemerkt; }catch(_e){}
     const da = new Set(S.sitzungen.map(s=>s.id));           // nur, was es noch gibt – sonst gäbe es 404 beim Laden
     const r = stand(S);
-    r.liste = (Array.isArray(gemerkt.liste) ? gemerkt.liste : []).filter(id=>ID.test(id) && da.has(id));
+    r.liste = (Array.isArray(gemerkt.liste) ? gemerkt.liste : []).filter(id=>(ID.test(id) && da.has(id)) || /^(aufgaben|einstellungen):/.test(String(id)));
     const aktiv = r.liste.indexOf(gemerkt.aktiv) >= 0 ? gemerkt.aktiv : r.liste[0];
     if(aktiv) aktivieren(S, aktiv); else neu(S);
   }
 
+  // A19 (1.11.): die eine Vorlage einer Ansicht ohne Gespräch (Diff, Aufgaben, Lauf, App, Einstellungen) – `extra` ergänzt oder ersetzt
+  function stub(id, box, S, extra){
+    return Object.assign({id, box, S, leer: ()=>false, laeuft: ()=>false, nachUnten(){}, abbauen(){}, stoppen(){}, senden: async ()=>false, laden(){}}, extra || {});
+  }
+
   root.sedraHarness = root.sedraHarness || {};
   root.sedraHarness.reiter = {mount: S=>zeichnen(S), zeichnen, titel: S=>zeichnen(S), name: titel, aktivieren, oeffnen, neu, schliessen, umbenennen,
-                              wiederherstellen, aktiv: S=>stand(S).aktiv, liste: S=>stand(S).liste.slice(), KEY};
+                              wiederherstellen, aktiv: S=>stand(S).aktiv, liste: S=>stand(S).liste.slice(), KEY, ID, stub};
 })();

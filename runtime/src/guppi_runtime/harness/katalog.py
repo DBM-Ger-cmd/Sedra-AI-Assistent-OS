@@ -156,6 +156,24 @@ def pruefen(doc):
     return out
 
 
+SCHREIBBEREICH = '${schreibbereich}'       # P0 M1 (1.11.): Platzhalter in einem Dateimuster – wird je Projekt durch dessen Schreibbereich ersetzt
+
+
+def mit_projekt(regeln, projekt):
+    """Die Regeln für ein Projekt: `${schreibbereich}` in den Mustern wird durch die Muster des Schreibbereichs ersetzt (jedes einzeln).
+    Ohne Projekt oder ohne Schreibbereich fällt eine solche Regel weg – nie ein Muster, das alles trifft."""
+    bereich = [m for m in ((projekt or {}).get('schreibbereich') or []) if isinstance(m, str) and m.strip()]
+    out = []
+    for r in regeln or []:
+        if not any(SCHREIBBEREICH in m for m in r['muster']):
+            out.append(r)
+            continue
+        muster = [m for m in r['muster'] if SCHREIBBEREICH not in m] + [m.replace(SCHREIBBEREICH, b) for m in r['muster'] if SCHREIBBEREICH in m for b in bereich]
+        if muster:
+            out.append(dict(r, muster=muster))
+    return out
+
+
 def laden(projekt_root: Path, vorlage: Path = VORLAGE):
     """{regeln, quelle, datei} – die Datei des Captains, sonst die Vorlage. Kaputt → KatalogFehler (kein stiller Rückfall)."""
     eigen = Path(projekt_root) / 'local_config' / DATEI

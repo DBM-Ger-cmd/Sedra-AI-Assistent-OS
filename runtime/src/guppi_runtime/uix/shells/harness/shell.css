@@ -61,7 +61,6 @@
 .hs-sz-frage{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px;font-size:var(--size-small);background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--radius)}
 .hs-sz-frage span{flex:1 1 100%}
 .hs-leise{color:var(--muted);font-size:var(--size-xs)}
-.hs-einstellungen{width:100%;justify-content:flex-start}
 
 /* ---- Hauptteil: Reiter, Gespräch, Eingabe */
 .hs-haupt{grid-area:haupt;display:grid;grid-template-rows:var(--hs-reiter-h) minmax(0,1fr) auto;min-width:0;min-height:0}
@@ -348,25 +347,6 @@
 .hs-app-verb{padding:3px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg);color:var(--text);font:inherit;font-size:var(--size-small);cursor:pointer}
 .hs-app-verb:hover{background:var(--hs-hover);border-color:var(--hs-on-line)}
 /* ---- Stufe 5: Einstellungen (HS-42) – Navigation links, Fläche rechts; Werkzeuge mit demselben Rahmen wie der App-Reiter */
-.hs-einst{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0;height:100%}
-.hs-einst-nav{overflow:auto;border-right:1px solid var(--line);padding:6px 4px}
-.hs-einst-punkt{display:block;width:100%;text-align:left;padding:5px 10px;border:0;border-radius:var(--radius);background:transparent;color:var(--text);font:inherit;font-size:var(--size-small);cursor:pointer}
-.hs-einst-punkt:hover{background:var(--hs-hover)}
-.hs-einst-punkt.on{background:var(--hs-on);box-shadow:inset 2px 0 0 var(--accent)}
-.hs-einst-flaeche{display:flex;flex-direction:column;min-height:0;overflow:auto}
-.hs-einst-kopf{display:flex;align-items:baseline;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line)}
-.hs-einst-werkzeug{flex:1 1 auto;min-height:0}
-.hs-einst-werkzeug.nur-nachweis .hs-app-koerper{grid-template-columns:minmax(0,1fr)}
-.hs-einst-werkzeug.nur-nachweis .hs-app-inhalt{display:none}
-.hs-einst-eigen{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
-.hs-einst-zeile{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line-soft);border-radius:var(--radius);font-size:var(--size-small)}
-.hs-einst-label{flex:1 1 220px;color:var(--muted)}
-.hs-einst-wert{font-weight:600}
-.hs-einst-zahl{width:72px;padding:3px 6px;font:inherit;font-size:var(--size-small);color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius)}
-.hs-einst-karte{padding:6px 8px;border:1px solid var(--line-soft);border-radius:var(--radius)}
-.hs-einst-karte>summary{cursor:pointer;font-size:var(--size-small)}
-.hs-einst-antrag{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--radius);color:var(--text)}
-@media (max-width:900px){.hs-einst{grid-template-columns:1fr}.hs-einst-nav{border-right:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:2px}.hs-einst-nav .hs-ueber{width:100%}.hs-einst-punkt{width:auto}}
 /* Katalog-Editor (G2 §4): Tabelle aus Zeilen; rot = Lockerung oder weites Muster, fehler = Antrag nicht möglich, gesperrt = Vorlage verboten */
 .hs-katalog-kopf{padding:4px 0}
 .hs-katalog{display:flex;flex-direction:column;gap:4px;font-size:var(--size-xs)}
@@ -386,3 +366,13 @@
 .hs-katalog-vorschau>summary{cursor:pointer;font-size:var(--size-small);color:var(--muted)}
 .hs-auf-satz{font-weight:600;font-size:var(--size-body);margin:2px 0}.hs-auf-darf{margin-bottom:4px}.hs-auf-technik{margin:4px 0}.hs-auf-technik summary{cursor:pointer}
 .hs-projekte-kopf{display:flex;align-items:center;justify-content:space-between}.hs-projekte-satz{display:block;padding:0 8px 4px}.hs-projekte-hilfe{margin:4px 8px;padding:8px;border:1px solid var(--line);border-radius:6px;display:grid;gap:6px}.hs-sz-alt summary{cursor:pointer;padding:2px 8px}
+/* P0 M3 (1.11.): Ordner öffnen – Formular unter der Projektzeile */
+.hs-ordner{display:flex;flex-direction:column;gap:6px;margin:4px auto 0;max-width:720px;padding:8px;border:1px solid var(--line-soft);border-radius:var(--radius);background:var(--panel)}
+.hs-ordner-feld{font:inherit;font-size:var(--size-small);color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:4px 6px;width:100%}
+.hs-ordner-feld.kurz{width:auto;flex:1 1 160px}
+.hs-ordner-zeile{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+/* V2 (1.11.): Erststart-Schritte */
+.hs-start-schritte{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;text-align:left}
+.hs-start-schritt{display:flex;align-items:center;gap:8px;font-size:var(--size-small);color:var(--muted)}
+.hs-start-schritt.ok{color:var(--text)}
+.hs-start-haken{display:inline-block;width:1.2em;text-align:center;color:var(--accent)}

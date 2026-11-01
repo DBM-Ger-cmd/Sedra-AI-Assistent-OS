@@ -1,0 +1,76 @@
+// Harness-Shell – die Zeilen einer Antwort (aus verlauf.js ausgelagert, 1.11.2026, A20): Werkzeugzeile (HS-11, HS-29, HS-72), Denkzeile (HS-12),
+// Fuß einer Antwort (HS-16). Daten werden nie zu HTML (sedraDom.el mit Text).
+
+(function(){
+  const root = typeof window !== 'undefined' ? window : globalThis;
+  const d = ()=>root.sedraDom;
+  const AUSGABE_KURZ = 4000;               // HS-11: gekürzt ab 4000 Zeichen, mit „ganz anzeigen“
+  const ENDE = {erledigt: ['Erledigt', 'ok'], nur_plan: ['Nur Plan – nichts ausgeführt', 'warn'], abgebrochen: ['Abgebrochen', 'warn'],
+                fehler: ['Fehler', 'bad'], wartet: ['Wartet auf Freigabe', 'warn']};
+  const STATUS = {ok: 'ok', fehler: 'Fehler', wiederholt: 'wiederholt', laeuft: 'läuft', wartet: 'wartet auf Freigabe', verboten: 'verboten',
+                  abgelehnt: 'abgelehnt', abgebrochen: 'abgebrochen',
+                  hinweis: 'Hinweis – nicht geschrieben'};            // Nachtrag 434b108 (B-8): Fehlerfarbe, weil nichts geschah
+
+  function ende(block, daten){
+    const art = ENDE[daten.ende];
+    const fuss = d().el('div', 'hs-fuss');
+    if(art){
+      const t = d().el('span', 'hs-ende ' + art[1], art[0] + (daten.ende === 'fehler' && daten.grund ? ': ' + daten.grund : ''));
+      fuss.append(t);
+    }
+    if(daten.abgeschnitten) fuss.append(d().el('span', 'hs-ende warn', 'An der Token-Grenze abgeschnitten'));
+    const teile = [];
+    if(daten.zuege) teile.push(daten.zuege + (daten.zuege === 1 ? ' Zug' : ' Züge'));
+    const tk = daten.token || {};
+    if(tk.ein || tk.aus) teile.push((tk.ein || 0).toLocaleString('de-DE') + ' Token ein · ' + (tk.aus || 0).toLocaleString('de-DE') + ' aus');
+    if(teile.length) fuss.append(d().el('small', 'hs-leise', teile.join(' · ')));
+    if(fuss.childNodes.length) block.append(fuss);
+  }
+
+  function werkzeugZeile(name, kurz, args){
+    const row = d().el('details', 'hs-wz laeuft');
+    const sum = d().el('summary');
+    const status = d().el('span', 'hs-wz-status', 'läuft');
+    sum.append(d().el('span', 'hs-wz-icon', '⚙'), d().el('b', 'hs-wz-name', name || '?'), d().el('span', 'hs-wz-kurz', kurz || ''),
+               d().el('span', 'hs-wz-dauer', ''), status);
+    if(args && typeof args.pfad === 'string' && args.pfad && /^datei_/.test(name || '')){          // Stufe 6 (HS-72): die Datei in der Vorschau öffnen und festhalten
+      const pf = d().el('button', 'hs-knopf hs-klein hs-wz-pfad', '▸ Vorschau'); pf.type = 'button'; pf.dataset.pfad = args.pfad; pf.title = 'In der Vorschau öffnen und festhalten';
+      sum.append(pf);
+    }
+    const body = d().el('div', 'hs-wz-body');
+    body.append(d().el('small', 'hs-leise', 'Eingabe'), d().el('pre', 'hs-pre', args === undefined ? '' : JSON.stringify(args, null, 2)));
+    row.append(sum, body);
+    return row;
+  }
+
+  function werkzeugEnde(row, status, dauer, ergebnis, stufe, regel){
+    row.classList.remove('laeuft');
+    row.classList.add(status === 'ok' ? 'ok' : (status === 'wiederholt' || status === 'wartet' || status === 'abgelehnt' ? 'warn' : 'bad'));
+    row.querySelector('.hs-wz-status').textContent = STATUS[status] || status;
+    if(typeof dauer === 'number') row.querySelector('.hs-wz-dauer').textContent = dauer < 1 ? Math.round(dauer * 1000) + ' ms' : dauer.toFixed(1) + ' s';
+    if(stufe){                                           // HS-29: Stufe und Regel stehen am Werkzeugaufruf
+      const marke = d().el('span', 'hs-wz-stufe ' + stufe, stufe + (regel ? ' · ' + regel : ''));
+      marke.title = 'Einstufung: Stufe ' + stufe + (regel ? ', Regel ' + regel : ', keine Regel');
+      row.querySelector('summary').insertBefore(marke, row.querySelector('.hs-wz-dauer'));
+    }
+    const body = row.querySelector('.hs-wz-body');
+    const text = String(ergebnis || '');
+    const pre = d().el('pre', 'hs-pre', text.length > AUSGABE_KURZ ? text.slice(0, AUSGABE_KURZ) + ' …' : text);
+    body.append(d().el('small', 'hs-leise', 'Ausgabe' + (text.length > AUSGABE_KURZ ? ' (' + text.length.toLocaleString('de-DE') + ' Zeichen)' : '')), pre);
+    if(text.length > AUSGABE_KURZ){
+      const ganz = d().el('button', 'hs-knopf hs-klein', 'ganz anzeigen'); ganz.type = 'button';
+      ganz.onclick = ()=>{ pre.textContent = text; ganz.remove(); };
+      body.append(ganz);
+    }
+  }
+
+  function denkZeile(text){
+    const row = d().el('details', 'hs-denken');
+    const sum = d().el('summary', null, text);
+    row.append(sum, d().el('pre', 'hs-pre hs-denken-text', ''));
+    return row;
+  }
+
+  root.sedraHarness = root.sedraHarness || {};
+  root.sedraHarness.zeilen = {ende, werkzeugZeile, werkzeugEnde, denkZeile, STATUS, ENDE, AUSGABE_KURZ};
+})();

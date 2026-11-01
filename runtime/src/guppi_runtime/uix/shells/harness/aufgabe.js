@@ -172,7 +172,7 @@
     const box = d().el('div', 'hs-verlauf hs-aufgaben');
     const liste = d().el('div', 'hs-liste');
     box.append(liste);
-    const a = {id, box, S, leer: ()=>false, laeuft: ()=>false, nachUnten(){}, abbauen(){}, stoppen(){}, senden: async ()=>false, laden: ()=>laden()};
+    const a = root.sedraHarness.reiter.stub(id, box, S, {laden: ()=>laden()});
     async function laden(){
       try{
         const [auf, entsch] = await Promise.all([S.api('/api/harness/aufgaben'), S.api('/api/decisions')]);
