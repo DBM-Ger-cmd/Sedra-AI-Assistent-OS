@@ -1,0 +1,10 @@
+harness_vorlage:
+  version: 1
+  id: modellierer
+  name: Modellierer
+  beschreibung: Baut druckbare 3D-Modelle (STL) mit OpenSCAD im Schreibbereich des Projekts; kurze Skripte, jede Version wird exportiert und geprüft.
+  system: modellierer.md
+  werkzeuge: [datei_lesen, dateien_auflisten, suchen, datei_schreiben, datei_aendern, befehl]
+  rechte: {}
+  modell: coder.local_primary
+  max_zuege: 24
