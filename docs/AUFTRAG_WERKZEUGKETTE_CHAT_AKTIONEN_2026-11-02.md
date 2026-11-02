@@ -72,6 +72,12 @@ Token sparen (02.11.2026, gemessen mit dem echten Router: /apply-template und /t
 Das sind 1 019 Token weniger je Anfrage (−31 %), alle Funktionen bleiben. Nur Orte ohne Namen (`id` allein) hätte weitere 120 gespart, aber das Modell findet „Rekorder“ dann nicht mehr als `aufnahme`.
 Nicht geändert: die Lese-Grenze von `datei_lesen` (8 000 Zeichen = rund 2 500 Token; 4 000 wären rund 1 200). Weniger je Aufruf heißt mehr Aufrufe – das ist eine Abwägung des Captains.
 
+Kontextfenster (02.11.2026) – was passiert, wenn es voll wird:
+1. Harte Sicherung (`harness/kontext.py`, in der Schleife vor jedem Modellaufruf): geschätzt wird vorsichtig (3 Zeichen je Token, plus die Token der Antwort; liegt die echte Belegung des letzten Aufrufs vor, gilt sie plus das Neue). Ab 90 % wird der Verlauf stärker gekürzt (nur die letzten 4 Nachrichten bleiben ganz, der Rest auf 300 Zeichen); ab 95 % nach dem Kürzen antwortet das Modell ohne Werkzeuge (Abschluss); ab 100 % endet die Antwort mit einem klaren Hinweis, ohne den Server zu belasten.
+2. Rollende Zusammenfassung: an das Modell gehen die letzten 20 Nachrichten. Fallen 8 weitere heraus, fasst das geladene Modell sie vor der nächsten Antwort in Stichpunkten zusammen (ein kurzer Aufruf); die Zusammenfassung steht als Zeile `zusammenfassung` in der Sitzung und im Systemprompt, die nächste baut darauf auf. Einstellung: Einstellungen → Agent → Gedanken der Modelle → Langes Gespräch (automatisch oder aus).
+3. Füllstand: im Eingabefeld der Chip „Kontext 31 %“, gelb ab 80 %, rot ab 90 %; nach dem Neuladen aus der letzten Antwort der Sitzung. Im Gespräch steht eine Notiz, wenn gekürzt wurde.
+4. Gekürzte Stellen sind markiert („…gekürzt – bei Bedarf neu lesen oder mit erinnern holen…“), damit das Modell weiß, dass etwas fehlt.
+
 Noch offen:
 - Punkt 6 (Aussage „ich nutze jetzt Ordner X“ gegen die Sitzung prüfen): noch nicht gebaut; mit `projekt_beantragen` weniger dringend.
 - Die Vorlagen der Sitzungen (bauagent, modellierer, pruefer) nennen `app_oeffnen` und `projekt_beantragen` noch nicht; Sitzungen ohne Vorlage haben beide.

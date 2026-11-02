@@ -30,6 +30,7 @@
     }).catch(()=>{});
     const modell = d().el('button', 'hs-modell', '…'); modell.type = 'button';
     modell.onclick = ()=>modellMenue(S);
+    const kontext = d().el('span', 'hs-kontext', ''); kontext.hidden = true; kontext.setAttribute('role', 'status');          // Füllstand des Kontextfensters (02.11.2026)
     const mikro = d().el('button', 'hs-rund', '🎙'); mikro.type = 'button';
     mikro.title = 'Rekorder (Aufnahme) öffnen'; mikro.setAttribute('aria-label', 'Rekorder öffnen');
     // A3 (1.11.): mit `umschalter: menue` gibt es keinen Hub-Chip – der Rekorder ist der Punkt Sprache → Rekorder der Einstellungen (eingehängtes Werkzeug `aufnahme`)
@@ -44,10 +45,10 @@
     const kein = d().el('div', 'hs-kein-modell'); kein.hidden = true;
     const zeile = d().el('div', 'hs-eingabe-zeile');
     const werkzeuge = d().el('div', 'hs-eingabe-leiste');
-    werkzeuge.append(plus, schild, modell, d().el('span', 'hs-luecke'), mikro, senden);
+    werkzeuge.append(plus, schild, modell, kontext, d().el('span', 'hs-luecke'), mikro, senden);
     zeile.append(feld, werkzeuge);
     box.append(kein, vorschlag, zeile, projektZeile);
-    S._eingabe = {box, feld, senden, modell, projekt, vorlage, projektZeile, kein, vorschlag, schild, schildBasis: schild.textContent};
+    S._eingabe = {box, feld, senden, modell, kontext, projekt, vorlage, projektZeile, kein, vorschlag, schild, schildBasis: schild.textContent};
     S._eingabe.ordner = root.sedraHarness.projekt ? root.sedraHarness.projekt.knoepfe(S, projektZeile, projekt) : null;    // P0 M3: Ordner öffnen, Vorgabe merken
     projekt.addEventListener('change', ()=>{ if(S._eingabe.ordner) S._eingabe.ordner.zeigen(); const a = S.aktive(); if(a && a.zeigeLeer && a.leer()) a.zeigeLeer(); });
 
@@ -125,7 +126,21 @@
 
   function fuer(S, a){
     S.el.eingabe.classList.toggle('hs-aus', !!a && /^(aufgaben|lauf|diff|app|einstellungen):/.test(String(a.id)));      // in Aufgaben-, Lauf-, Diff-, App- und Einstellungs-Reitern gibt es nichts zu schreiben
-    zustand(S); fokus(S); schildZeigen(S);
+    zustand(S); fokus(S); schildZeigen(S); kontextZeigen(S);
+  }
+
+  // Wie voll das Fenster der aktiven Sitzung ist (aus der letzten Antwort: `kontext`-Ereignis live, danach die Sitzungszeile). Warnung ab 80 %, deutlich ab 90 %.
+  function kontextZeigen(S){
+    const e = S._eingabe; if(!e || !e.kontext) return;
+    const a = S.aktive(), k = S.kontextStand;
+    if(!a || !k || k.sitzung !== a.id || !k.fenster){ e.kontext.hidden = true; return; }
+    const pro = Math.min(100, Math.round(100 * k.belegt / k.fenster));
+    const zahl = n=>Number(n).toLocaleString('de-DE');
+    e.kontext.hidden = false;
+    e.kontext.textContent = 'Kontext ' + pro + ' %';
+    e.kontext.title = zahl(k.belegt) + ' von ' + zahl(k.fenster) + ' Token belegt' + (pro >= 80 ? ' – es wird eng: bei 90 % kürzt SEDRA alte Ergebnisse, bei 95 % antwortet es ohne Werkzeuge. Neue Sitzung oder größeres Fenster erwägen.' : '.');
+    e.kontext.classList.toggle('warn', pro >= 80 && pro < 90);
+    e.kontext.classList.toggle('bad', pro >= 90);
   }
 
   // HS-17/HS-26/HS-27: das Schild sagt, wer in dieser Sitzung freigibt – der Captain, der Vorarbeiter für Stufe „vorarbeiter“ – und welche Aufgabe gilt.
@@ -187,5 +202,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.eingabe = {mount, zustand, fuer, fokus, modellZeigen, modellMenue, projektwahl, schildZeigen, vorlagenwahl, BEFEHLE};
+  root.sedraHarness.eingabe = {mount, zustand, fuer, fokus, modellZeigen, modellMenue, projektwahl, schildZeigen, kontextZeigen, vorlagenwahl, BEFEHLE};
 })();

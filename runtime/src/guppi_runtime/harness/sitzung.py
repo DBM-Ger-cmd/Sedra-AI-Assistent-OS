@@ -17,7 +17,7 @@ from .erlaubnis import aktive
 
 ID = re.compile(r'S-[0-9A-F]{8}')
 TITEL_MAX = 60
-TYPEN = ('captain', 'modell', 'werkzeug', 'karte', 'titel', 'wahl', 'erlaubnis')     # `wahl`: Modell geändert (PATCH); `erlaubnis`: Sitzungs-Erlaubnis (P0 M1)
+TYPEN = ('captain', 'modell', 'werkzeug', 'karte', 'titel', 'wahl', 'erlaubnis', 'zusammenfassung')     # `wahl`: Modell geändert (PATCH); `erlaubnis`: Sitzungs-Erlaubnis (P0 M1)
 
 
 class SitzungFehler(ValueError):

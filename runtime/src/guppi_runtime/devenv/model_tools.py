@@ -154,12 +154,12 @@ def stub_writes(messages, keep_last=6, min_chars=200):
     return out
 
 
-def compact_history(messages, keep_last=8, max_chars=500):
+def compact_history(messages, keep_last=8, max_chars=500, marke=" [...cut...] "):
     """A shorter copy of a conversation for a long run (Cline does the same with a summary, 2026-10-09): the system message, the first user message (the task) and the last `keep_last`
     messages stay as they are; everything in between keeps its role and its tool-call structure but its long texts (tool results, written files in tool-call arguments) are cut to `max_chars`."""
     if len(messages) <= keep_last + 2: return list(messages)
     def cut(text):
-        return text if not isinstance(text, str) or len(text) <= max_chars else text[:max_chars // 2] + " [...cut...] " + text[-max_chars // 4:]
+        return text if not isinstance(text, str) or len(text) <= max_chars else text[:max_chars // 2] + marke + text[-max_chars // 4:]
     out = []
     for i, m in enumerate(messages):
         if i < 2 or i >= len(messages) - keep_last: out.append(m); continue

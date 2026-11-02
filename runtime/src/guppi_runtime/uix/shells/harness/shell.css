@@ -185,6 +185,10 @@
 .hs-rund:hover{border-color:var(--hs-on-line)}
 .hs-schild,.hs-modell{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--size-xs);color:var(--muted);padding:3px 8px;border:1px solid var(--line-soft);border-radius:999px}
 .hs-modell.aus{color:var(--warn);border-color:var(--warn-line)}
+.hs-kontext{flex:0 0 auto;font-size:var(--size-xs);color:var(--muted);padding:3px 8px;border:1px solid var(--line-soft);border-radius:999px;white-space:nowrap}
+.hs-kontext.warn{color:var(--warn);border-color:var(--warn-line)}
+.hs-kontext.bad{color:var(--bad);border-color:var(--bad-line);font-weight:600}
+.hs-zusammenfassung summary{cursor:pointer;color:var(--muted);font-size:var(--size-small)}
 .hs-senden{flex:0 0 auto;border:0;border-radius:var(--radius);padding:6px 14px;background:var(--accent);color:var(--accent-text);cursor:pointer;font:inherit;font-weight:600}
 .hs-senden.stopp{background:var(--bad);color:var(--accent-text)}
 .hs-kein-modell{padding:6px 10px;border-radius:var(--radius);background:var(--warn-bg);border:1px solid var(--warn-line);font-size:var(--size-small)}

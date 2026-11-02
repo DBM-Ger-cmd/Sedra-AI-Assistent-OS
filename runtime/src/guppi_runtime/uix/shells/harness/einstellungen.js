@@ -119,6 +119,27 @@
     zeichne('spur');
     S.api('/api/harness/vorgaben').then(v=>zeichne(v.gedanken_zurueck || 'spur')).catch(()=>{});
     gedaechtnisBereich(S, box);
+    langesGespraech(S, box);
+  }
+
+  // Langes Gespräch: an das Modell gehen die letzten 20 Nachrichten; was davor liegt, fasst Sedra auf Wunsch zusammen (ein kurzer Modellaufruf vor der Antwort)
+  function langesGespraech(S, box){
+    const liste = d().el('div', 'hs-einst-eigen'), meld = d().el('div', 'hs-leise');
+    box.append(d().el('h3', 'hs-ueber', 'Langes Gespräch'),
+               d().el('div', 'hs-app-satz', 'An das Modell gehen die letzten 20 Nachrichten. Was davor liegt, fasst Sedra zusammen und legt es in den Systemprompt – sonst ginge es verloren.'), liste, meld);
+    const WAHL = [['auto', 'Automatisch zusammenfassen (Standard)', 'Fallen 8 Nachrichten aus dem Verlauf, fasst das geladene Modell sie vor der nächsten Antwort kurz zusammen (ein kleiner Modellaufruf, einige Sekunden).'],
+                  ['aus', 'Nicht zusammenfassen', 'Ältere Nachrichten fallen weg. Eine schon vorhandene Zusammenfassung bleibt im Systemprompt.']];
+    const zeichne = aktuell=>liste.replaceChildren(...WAHL.map(([wert, name, text])=>{
+      const z = d().el('label', 'hs-einst-zeile'); const r = d().el('input'); r.type = 'radio'; r.name = 'hs-zusammenfassen'; r.value = wert; r.checked = wert === aktuell;
+      r.onchange = async()=>{
+        try{ await S.api('/api/harness/vorgaben', {method: 'POST', body: {verlauf_zusammenfassen: wert}}); meld.textContent = 'Gespeichert: ' + name + '.'; }
+        catch(err){ meld.textContent = 'Nicht gespeichert: ' + err.message; zeichne(aktuell); }
+      };
+      z.append(r, d().el('b', null, name), d().el('small', 'hs-leise', text));
+      return z;
+    }));
+    zeichne('auto');
+    S.api('/api/harness/vorgaben').then(v=>zeichne(v.verlauf_zusammenfassen || 'auto')).catch(()=>{});
   }
 
   // Das Gedächtnis: je Antwort eine wörtliche Notiz; hier stellt der Captain ein, wie weit das Modell suchen darf, und fasst alte Notizen zusammen (ein Modellaufruf)

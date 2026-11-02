@@ -228,7 +228,7 @@ class SchleifeTests(unittest.TestCase):
 
     def test_kompakt_ab_siebzig_prozent(self):
         a = Attrappe([Zug('', calls=[call('zustand', {'n': i})], usage={'input_tokens': 800, 'output_tokens': 1}) for i in range(6)] + [Zug('ok')])
-        self.lauf(a, fenster=1000)
+        self.lauf(a, fenster=1000, max_tokens=50)                                         # kleines Fenster: die Reserve für die Antwort darf es nicht sprengen (harte Sicherung, test_harness_kontext)
         self.assertIn(('kontext', {'belegt': 800, 'fenster': 1000}), self.ereignisse())
 
     def test_leere_antwort_bekommt_einen_zug_ohne_werkzeuge(self):

@@ -122,8 +122,14 @@
             if(!block){ block = this.neu(d().el('div', 'hs-antwort')); this.eintraege++; }
             block.append(karteKarte(S, this, e, entschieden[e.karte_id] || null));
           }
+          else if(e.typ === 'zusammenfassung'){                     // von Sedra erstellt: das frühere Gespräch in Stichpunkten, aufklappbar
+            const det = d().el('details', 'hs-zusammenfassung');
+            det.append(d().el('summary', null, 'Früheres Gespräch zusammengefasst (' + (e.nachrichten || '?') + ' Nachrichten) – steht im Systemprompt'), d().el('pre', 'hs-pre', e.text || ''));
+            this.neu(det); block = null;
+          }
           else if(e.typ === 'modell'){
             if(!block){ block = this.neu(d().el('div', 'hs-antwort')); this.eintraege++; }
+            if(Array.isArray(e.kontext) && e.kontext[1]) S.kontextStand = {sitzung: this.id, belegt: e.kontext[0], fenster: e.kontext[1]};      // Füllstand der letzten Antwort
             if(e.denken_zeichen){                                   // der von Sedra gespeicherte Anfang des Denkens (bis 20 000 Zeichen, je Zug getrennt) steht aufklappbar in der Zeile; ans Modell geht er nie zurück
               const dz = denkZeile('Dachte nach · ' + e.denken_zeichen.toLocaleString('de-DE') + ' Zeichen' + (e.denken_text ? (e.denken_text.length < e.denken_zeichen ? ' (Anfang gespeichert)' : '') + (e.denken_ungeprueft ? ' · ungeprüft' : '') : ' (nicht gespeichert)'));
               if(e.denken_text){ dz.querySelector('pre').textContent = e.denken_text; if(e.denken_ungeprueft) dz.querySelector('pre').classList.add('hs-ungeprueft'); }
@@ -273,7 +279,15 @@
           if(x.ui && x.ui.oeffnen) this.fensterOeffnen(x.ui);                                      // app_oeffnen: die Shell öffnet das Fenster (nur live, nie beim Laden des Verlaufs)
         }
         else if(name === 'karte'){ this.phase('wartet auf Freigabe'); block.append(karteKarte(S, this, x, null)); z.seg = null; root.sedraHarness.vorschau.karte(S, this, x); }
-        else if(name === 'kontext'){ block.dataset.kontext = x.belegt + '/' + x.fenster; }
+        else if(name === 'kontext'){ block.dataset.kontext = x.belegt + '/' + x.fenster; S.kontextStand = {sitzung: id, belegt: x.belegt, fenster: x.fenster}; root.sedraHarness.eingabe.kontextZeigen(S); }
+        else if(name === 'kontext.gekuerzt'){
+          this.notiz(x.stufe === 'voll' ? 'Das Kontextfenster ist voll.' : 'Kontextfenster fast voll (' + Number(x.vorher).toLocaleString('de-DE') + ' von ' + Number(x.fenster).toLocaleString('de-DE') + ' Token geschätzt): alte Ergebnisse wurden gekürzt (jetzt ≈ ' + Number(x.nachher).toLocaleString('de-DE') + ')' + (x.stufe === 'abschluss' ? ' – SEDRA antwortet jetzt ohne weitere Werkzeuge.' : '.'), x.stufe === 'ok' || x.stufe === 'kuerzen' ? 'note' : 'warn');
+        }
+        else if(name === 'verlauf.zusammenfassung'){
+          if(x.phase === 'start') this.phase('fasst das frühere Gespräch zusammen');
+          else if(x.phase === 'ende') this.notiz('Früheres Gespräch zusammengefasst (' + x.nachrichten + ' Nachrichten, ' + x.zeichen + ' Zeichen) – es steht jetzt im Systemprompt.', 'note');
+          else this.notiz('Zusammenfassung des früheren Gesprächs gescheitert: ' + x.grund + ' – die Antwort läuft ohne sie weiter.', 'warn');
+        }
         else if(name === 'fehler'){                                   // V9 (1.11.): die Fehlerzeile zeigt den Weg zum Logbuch (Audit), nicht nur den Typnamen
           const zeile = d().el('div', 'hs-zurueck bad', 'Fehler: ' + (x.grund || '') + ' ');
           const weg = d().el('button', 'hs-knopf hs-klein', 'Logbuch öffnen'); weg.type = 'button';
