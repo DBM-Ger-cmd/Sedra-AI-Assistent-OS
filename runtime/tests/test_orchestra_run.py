@@ -383,8 +383,10 @@ class Pool(Run):
         self.router.answers.append({'antwort': 'Doku steht.', 'fertig': True})
         pool = orchestra_runner.start_pool(self.hub, self.orch, idle_sleep_s=0.05)
         try:
-            for _ in range(100):
-                if self.row('tasks', 'id', task['id'])['state'] != 'in_arbeit':
+            # warten, bis die Aufgabe einen Endzustand hat: „zugewiesen“ ist der Zustand VOR dem Start des Pools, nicht das Ende (die frühere Bedingung
+            # `!= 'in_arbeit'` brach bei einem spät startenden Pool sofort ab und schwankte unter Last, 1.11.2026)
+            for _ in range(200):
+                if self.row('tasks', 'id', task['id'])['state'] not in ('zugewiesen', 'in_arbeit'):
                     break
                 time.sleep(0.05)
         finally:
