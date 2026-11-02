@@ -12,6 +12,7 @@
   function zeit(s){ s = Math.max(0, Math.floor(s || 0)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
   // Das Werkzeug speichert nichts im Browser (Vertrag): die Empfindlichkeit gilt für diese Ansicht
 let empfindlichkeitWert = 12;
+const gewaehlt = {quelle: null, sprache: null};       // Quelle und Sprache des Pults über ein erneutes Mounten hinweg (nur im Speicher der Seite, Vertrag: kein Browser-Speicher)
 function empfindlichkeit(){ return empfindlichkeitWert; }
 function empfindlichkeitSpeichern(v){ empfindlichkeitWert = Number(v); }
 function pill(text, tone){ return d().el('span', 't-rk-pill ' + (tone || 'muted'), text); }
@@ -81,6 +82,11 @@ function pill(text, tone){ return d().el('span', 't-rk-pill ' + (tone || 'muted'
       SPRACHEN.forEach(([v, l])=>{ const o = d().el('option', null, l); o.value = v; this.sprache.append(o); });
       this.quelle = d().el('select'); this.quelle.setAttribute('aria-label', 'Quelle');
       [['mikrofon', 'Mikrofon'], ['pc_ton', 'PC-Ton']].forEach(([v, l])=>{ const o = d().el('option', null, l); o.value = v; this.quelle.append(o); });
+      // Die Wahl bleibt, solange die Seite offen ist: ein neues Mounten der Blase (Moduswechsel, Shell-Wechsel) zeichnet das Pult neu und fiel sonst auf „Mikrofon“ zurück
+      for(const [feld, schluessel] of [[this.quelle, 'quelle'], [this.sprache, 'sprache']]){
+        const w = gewaehlt[schluessel]; if(w && [...feld.options].some(o=>o.value === w)) feld.value = w;
+        feld.addEventListener('change', ()=>{ gewaehlt[schluessel] = feld.value; });
+      }
       zeile.append(this.titel, this.sprache, this.quelle);
       // Knopf und Pegel; der Regler hebt die Anzeige an (nur Anzeige, die Aufnahme bleibt gleich)
       const mitte = d().el('div', 't-rk-mitte');
@@ -126,6 +132,8 @@ function pill(text, tone){ return d().el('span', 't-rk-pill ' + (tone || 'muted'
       this.knopf.setAttribute('aria-label', laeuft ? 'Aufnahme beenden' : 'Aufnahme starten');
       this.pauseBtn.disabled = !laeuft; this.abbrBtn.disabled = !laeuft; this.pauseBtn.textContent = pause ? 'Weiter' : 'Pause';
       if(laeuft){
+        // Der Kern sagt, was er aufnimmt: die Anzeige folgt ihm (nach einem Shell-Wechsel mitten in der Aufnahme)
+        if(s.quelle && this.quelle.value !== s.quelle && [...this.quelle.options].some(o=>o.value === s.quelle)) this.quelle.value = s.quelle;
         this.uhr.textContent = zeit(s.sekunden); this.zeichnePegel(s.pegel);
         this.meldung.textContent = (pause ? 'Pause · ' : '') + d().fmtBytes(s.groesse) + ' · ' + s.stuecke + ' Stücke gesichert';
       }
