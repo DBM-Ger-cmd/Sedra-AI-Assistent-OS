@@ -410,7 +410,7 @@ class RoleRouter:
         return out
 
     # -- one candidate
-    def _evaluate(self, recipe, req, *, exclude, independent_of, captain_cloud_approved, now):
+    def _evaluate(self, recipe, req, *, exclude, independent_of, captain_cloud_approved, now, kontext=None):
         def no(category, reason): return {"capability_id": recipe["id"], "provider_ref": recipe["provider"], "category": category, "reason": reason}
         if not recipe["enabled"]:
             return None, no("static", "recipe_disabled")
@@ -469,9 +469,13 @@ class RoleRouter:
             # Context is a cost (VRAM, time): load the smallest tier that holds what the job needs, not the biggest that fits.
             need_tokens = max(req["context_min_tokens"] or 0, working_context or 0)
             fitting = [t for t in tiers if need_tokens <= t <= (context or 0)]
+            if isinstance(kontext, int):               # das Fenster hat der Captain gewaehlt (Modellfenster): genau diese Stufe, nicht kleiner, nicht groesser
+                fitting = [t for t in tiers if t == kontext and t <= (context or 0)]
+                if not fitting:
+                    return None, no("static", f"context_not_available:{kontext}")
             if not fitting:
                 return None, no("static", "context_capacity")
-            loaded_context = fitting[0]
+            loaded_context = fitting[-1] if kontext == "auto" else fitting[0]       # "auto": das groesste Fenster, das passt (sonst das kleinste, das reicht)
         key = independence_key(recipe)
         if recipe["provider"] in exclude or (key and key in exclude):
             return None, no("excluded", "excluded_by_caller")
@@ -522,7 +526,7 @@ class RoleRouter:
             stand = self.speicher_stand()
             wunsch = loaded_context or context or working_context
             if stand and wunsch:
-                untergrenze = req["context_min_tokens"] or (tiers[0] if tiers else wunsch)
+                untergrenze = kontext if isinstance(kontext, int) else (req["context_min_tokens"] or (tiers[0] if tiers else wunsch))
                 kontexte = sorted({t for t in (tiers or []) if untergrenze <= t <= wunsch}, reverse=True) or [wunsch]
                 gemessen = self.messwerte(recipe["id"]) if self.messwerte is not None else None
                 wahl = aufteilung.waehlen(dyn, kontexte, stand["frei_vram_gb"], stand["frei_ram_gb"], stand["reserve_vram_gb"], stand["reserve_ram_gb"],
@@ -551,7 +555,7 @@ class RoleRouter:
                 "profile": getattr(self.profiles, "active", None), "purpose": purpose or role,
                 "sampling": {k: v for k, v in (self.profiles.purpose(purpose or role) if self.profiles is not None else {}).items() if k != "prefer"}}
 
-    def resolve_recipe(self, recipe_id, requirements=None):
+    def resolve_recipe(self, recipe_id, requirements=None, kontext=None):
         """The resolution for one NAMED recipe (the Captain picked a model in the UIX), through the same checks as resolve_role
         (policy, hardware, window). Raises ResolutionError when the recipe is unknown or not viable. Audited like a role resolution."""
         recipe = next((r for r in self.config.recipes if r["id"] == recipe_id), None)
@@ -559,7 +563,7 @@ class RoleRouter:
             raise ResolutionError("no_capability", {"recipe": recipe_id})
         role = recipe["roles"][0] if recipe["roles"] else "coder"
         req = self.normalize(requirements)
-        ok, why = self._evaluate(recipe, req, exclude=set(), independent_of=[], captain_cloud_approved=False, now=self._clock())
+        ok, why = self._evaluate(recipe, req, exclude=set(), independent_of=[], captain_cloud_approved=False, now=self._clock(), kontext=kontext)
         if not ok:
             self._failed(role, self._error_code([why]), [why])
             raise ResolutionError(self._error_code([why]), {"recipe": recipe_id, "considered": [why]})

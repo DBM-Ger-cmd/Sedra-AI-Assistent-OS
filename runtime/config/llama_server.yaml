@@ -33,7 +33,10 @@ llama_server:
   # and stops nothing there, it asks the router to load and unload the recipe's model (name without vendor prefix = the router's name).
   # The window and the slots are those of the router's preset, not of the recipe. Off here; the machine turns it on in local_config/switches.yaml
   # (llama_server: {external: true}). Loopback only.
-  external: {enabled: false, endpoint: 'http://127.0.0.1:8090'}
+  # `start`: the Sedra model router. If no router answers, Sedra starts one itself (llama-server --models-preset, its own list under runtime_data/llama_server/router/)
+  # and restarts it when the window of the model to load changes; a router someone else started (Pi, StarNet) is never touched. The captain changes these values
+  # in the window "Modellserver"; `enabled: false` = never start one.
+  external: {enabled: false, endpoint: 'http://127.0.0.1:8090', start: {enabled: true, models_max: 1, sleep_idle_s: 900}}
   log_dir: llama_server          # under runtime_data/
   # backend_dir / vendor_dir: set both to use a llama-server somewhere else (for example your own build) instead of LM Studio's.
   # GUPPI's own engine (2026-10-03, Captain: "nicht LM Studio, nur GUPPI"): the official llama.cpp release, installed by

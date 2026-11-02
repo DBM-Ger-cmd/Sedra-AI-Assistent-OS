@@ -487,7 +487,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
    def loaded_models(self):return [{'identifier':'a'}] if state['loaded'] else []
    def unload_model(self,all_models=False):state['loaded']=False;state['unloaded']+=1;return {'output':'stopped'}
   class FakeRouter:
-   def resolve_recipe(self,rid):
+   def resolve_recipe(self,rid,requirements=None,kontext=None):
     state['calls']+=1
     if state['loaded']:raise ResolutionError('hardware_pressure',{})
     return {'provider_ref':'llama-cpp-server','model':'b'}
@@ -502,7 +502,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
  def test_foreign_pressure_does_not_unload_anything(self):
   from guppi_runtime.models.role_routing import ResolutionError
   class FakeRouter:
-   def resolve_recipe(self,rid):raise ResolutionError('hardware_pressure',{})
+   def resolve_recipe(self,rid,requirements=None,kontext=None):raise ResolutionError('hardware_pressure',{})
   class FakeLoader:enabled=True
   class FakeServer:
    def loaded_models(self):return [{'identifier':'foreign'}]

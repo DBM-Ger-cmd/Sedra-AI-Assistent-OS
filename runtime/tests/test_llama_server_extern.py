@@ -239,6 +239,58 @@ class ExternalRuntimeTests(unittest.TestCase):
             loader.ensure(res)
 
 
+class SedraRouterTests(unittest.TestCase):
+    """Sedra-Modell-Router: ist keiner da, startet Sedra ihn beim Laden selbst und schreibt das gewaehlte Fenster in seine Modellliste."""
+    def test_laden_startet_den_router_und_schreibt_fenster_und_slots(self):
+        import tempfile
+        from pathlib import Path
+        from guppi_runtime.models.router_verwaltung import RouterVerwaltung
+        router = FakeRouter(up=False)
+        rt = runtime(router)
+        with tempfile.TemporaryDirectory() as tmp:
+            gguf = Path(tmp) / "m.gguf"; gguf.write_bytes(b"x")
+            rt.executable_dir = Path(tmp)
+            gestartet = []
+            class P:
+                pid = 77
+                def poll(self): return None
+            def popen(argv, **kw):
+                gestartet.append(argv); router.up = True; return P()
+            rt.router = RouterVerwaltung(endpoint=ENDPOINT, executable_dir=tmp, vendor_dir=None, ordner=Path(tmp) / "r", popen=popen, get_json=router.get_json,
+                                         sleep=lambda s: None, kill=lambda p: setattr(router, "up", False), pid_lebt=lambda p: False)
+            rt.load_model("qwen3.5-9b-q6_k", context_length=131072, parallel=2, server={"gguf": str(gguf)}, identifier="qwen3.5-9b-q6_k")
+            ini = rt.router.preset.read_text(encoding="utf-8")
+            self.assertEqual(len(gestartet), 1)
+            for zeile in ("[qwen3.5-9b-q6_k]", "c = 131072", "np = 2", "model = " + str(gguf)):
+                self.assertIn(zeile, ini)
+            self.assertEqual(router.posts, [("/models/load", {"model": "qwen3.5-9b-q6_k"})])
+            self.assertEqual(rt.router_abschnitte([{"provider": "llama-cpp-server", "enabled": True, "model": "v/x-1", "profile": {
+                "server": {"gguf": str(gguf), "slots": 2}, "context": {"tiers": [8192, 32768], "maximum": 32768, "per_slots": {2: 16384}}}}])["x-1"]["c"],
+                "32768", "das groesste Fenster je Slot (16384) mal zwei Slots")
+
+
+class RouterNichtErreichbarTests(unittest.TestCase):
+    """Windows braucht gut 2 s je abgelehnter Verbindung zu 127.0.0.1; die Modellliste fragt je Rezept. Eine Ablehnung gilt darum kurz."""
+    def test_abgelehnte_verbindung_wird_nur_einmal_wirklich_versucht(self):
+        from guppi_runtime.models import llama_server_runtime as m
+        versuche, zeit = [], [100.0]
+        def roh(url, timeout=3):
+            versuche.append(url); raise m.urllib.error.URLError(ConnectionRefusedError("refused"))
+        alt, m._http_json = m._http_json, roh
+        m._ABGELEHNT.clear()
+        try:
+            for _ in range(5):
+                with self.assertRaises(OSError):
+                    m._http_json_router("http://127.0.0.1:59999/v1/models", _jetzt=lambda: zeit[0])
+            self.assertEqual(len(versuche), 1)
+            zeit[0] += 6.0                                     # nach 5 s wird wieder wirklich gefragt
+            with self.assertRaises(OSError):
+                m._http_json_router("http://127.0.0.1:59999/v1/models", _jetzt=lambda: zeit[0])
+            self.assertEqual(len(versuche), 2)
+        finally:
+            m._http_json = alt; m._ABGELEHNT.clear()
+
+
 class RouterAdapterTests(unittest.TestCase):
     def test_vendor_prefix_removed_in_the_request(self):
         sent = []

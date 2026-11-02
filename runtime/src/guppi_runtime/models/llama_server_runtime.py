@@ -22,6 +22,7 @@ import re
 import subprocess
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -30,6 +31,7 @@ import yaml
 from ..models import gpu_canary
 from ..models.base import ModelAdapterError, require_loopback_url
 from ..models.runtime_control import RuntimeControlError
+from .router_verwaltung import abschnitt_aus_argv
 
 KV_TYPES = frozenset({"f16", "bf16", "q8_0", "q4_0"})
 SPEC_TYPES = frozenset({"none", "draft-mtp"})
@@ -76,6 +78,7 @@ class LlamaServerConfig:
         # The shipped file carries `enabled: false`; the machine turns it on with the local switch llama_server.external (local_switches.py).
         self.external_url = None
         self.external_enabled = False
+        self.router_start = None
         external = raw.get("external")
         if external is not None:
             if not isinstance(external, dict) or not isinstance(external.get("endpoint"), str) or not isinstance(external.get("enabled", True), bool):
@@ -85,6 +88,12 @@ class LlamaServerConfig:
             except ModelAdapterError as exc:
                 raise ValueError(f"llama_server_config_invalid:external:{exc}") from exc
             self.external_enabled = external.get("enabled", True)
+            start = external.get("start")                  # Sedra startet den Router selbst (Sedra-Modell-Router), wenn er nicht laeuft; die Werte sind die Voreinstellung, der Captain aendert sie im Fenster
+            if start is not None:
+                if not isinstance(start, dict) or not isinstance(start.get("enabled", True), bool):
+                    raise ValueError("llama_server_config_invalid:external_start")
+                self.router_start = {"auto_start": start.get("enabled", True), "models_max": self._int(start, "models_max", 1, 1, 8),
+                                     "sleep_idle_s": self._int(start, "sleep_idle_s", 900, 0, 86400)}
         self.external_endpoint = self.external_url if self.external_enabled else None
         self.startup_timeout_s = self._int(raw, "startup_timeout_s", 180, 5, 900)
         self.stop_timeout_s = self._int(raw, "stop_timeout_s", 20, 1, 120)
@@ -235,6 +244,26 @@ def _http_json(url, timeout=3):
         return resp.status, json.loads(resp.read().decode("utf-8") or "{}")
 
 
+_ABGELEHNT = {}          # host:port -> Zeitpunkt der letzten abgelehnten Verbindung (nur der Router-Weg, siehe _http_json_router)
+
+
+def _http_json_router(url, timeout=3, _jetzt=time.monotonic):
+    """Wie _http_json, aber ein nicht laufender Router kostet nicht jedes Mal Sekunden: unter Windows braucht eine abgelehnte Verbindung zu
+    127.0.0.1 gut 2 s, und die Modellliste fragt je Rezept nach. Eine Ablehnung gilt 5 s lang, dann wird wieder wirklich gefragt."""
+    ort = urllib.parse.urlsplit(url).netloc
+    zuletzt = _ABGELEHNT.get(ort)
+    if zuletzt is not None and _jetzt() - zuletzt < 5.0:
+        raise ConnectionRefusedError("Router nicht erreichbar (vor kurzem abgelehnt)")
+    try:
+        return _http_json(url, timeout)
+    except urllib.error.URLError as exc:
+        if isinstance(exc.reason, ConnectionRefusedError): _ABGELEHNT[ort] = _jetzt()
+        raise
+    except ConnectionRefusedError:
+        _ABGELEHNT[ort] = _jetzt()
+        raise
+
+
 def _http_post_json(url, payload, timeout=30):
     """(status, body) of a POST. An HTTP error status is returned, not raised: the router answers 400 "model is already running"."""
     req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), method="POST", headers={"Content-Type": "application/json"})
@@ -262,6 +291,7 @@ class LlamaServerRuntime:
                  monotonic=time.monotonic, home=None, audit=None):
         self.config = config
         self.state_dir = Path(state_dir)
+        if get_json is _http_json and config.external_endpoint: get_json = _http_json_router
         self._popen, self._get_json, self._sleep, self._mono = popen, get_json, sleep, monotonic
         self._post_json = post_json
         self.audit = audit
@@ -269,6 +299,12 @@ class LlamaServerRuntime:
         self._proc = None
         self._info = None
         self.last_exit = None
+        self.router = None
+        if config.external_endpoint and config.router_start is not None and self.executable_dir is not None:
+            from .router_verwaltung import RouterVerwaltung
+            self.router = RouterVerwaltung(endpoint=config.external_endpoint, executable_dir=self.executable_dir, vendor_dir=self.vendor_dir,
+                                           ordner=self.state_dir / "router", standard=config.router_start, popen=popen, get_json=get_json,
+                                           sleep=sleep, mono=monotonic, audit=audit)
 
     # ---- facts
     @property
@@ -337,6 +373,44 @@ class LlamaServerRuntime:
             return []
         return [dict(self._info)]
 
+    def _server_argv(self, server, *, context_length, parallel, alias, gpu=None):
+        """The llama-server arguments for one recipe (the own process and the router's preset section are built from the same list)."""
+        use_mtp = bool(self.config.mtp and server.get("mtp", False))
+        layers = {"max": 99, "off": 0}.get(gpu, 99 if gpu is None else None)
+        if layers is not None and server.get("n_gpu_layers") is not None:
+            layers = server["n_gpu_layers"]      # a DENSE model that does not fit the card: the number of layers on the GPU (a MoE model uses n_cpu_moe instead)
+        if layers is None:
+            raise ValueError("invalid_gpu_offload")
+        return build_command(self.executable_dir / "llama-server.exe", gguf=server["gguf"], context=context_length, host=self.config.host if self.config.host != "localhost" else "127.0.0.1",
+                             port=self.config.port, alias=alias, gpu_layers=layers, parallel=parallel or 1, kv_type=server.get("kv_cache_type", "f16"), kv_type_k=server.get("kv_cache_type_k"), kv_type_v=server.get("kv_cache_type_v"),
+                             flash_attn=server.get("flash_attn", self.config.flash_attn),   # per recipe since 2026-10-03 (qwen crash tests)
+                             spec_type="draft-mtp" if use_mtp else "none", reasoning=server.get("reasoning", "auto"),
+                             reasoning_budget=server.get("reasoning_budget"), mmproj=server.get("mmproj"), cache_ram=server.get("cache_ram"),
+                             ctx_checkpoints=server.get("ctx_checkpoints"), n_cpu_moe=server.get("n_cpu_moe"),
+                             reasoning_format=server.get("reasoning_format"), jinja=server.get("jinja"), ubatch=server.get("ubatch"),
+                             mmap=server.get("mmap"))
+
+    def router_abschnitte(self, recipes):
+        """Die Modellliste des Sedra-Routers aus den Rezepten: je Rezept mit Server-Profil ein Abschnitt mit dem groessten Fenster, das das Rezept hergibt."""
+        out = {}
+        for r in recipes:
+            prof = r.get("profile") or {}
+            server = prof.get("server") or {}
+            if r.get("provider") != "llama-cpp-server" or not r.get("enabled") or not server.get("gguf") or not r.get("model"):
+                continue
+            ctx = prof.get("context") or {}
+            grenze = ctx.get("measured_maximum") or ctx.get("maximum")
+            stufen = [t for t in (ctx.get("tiers") or []) if type(t) is int and (not grenze or t <= grenze)]
+            slots = int(server.get("slots") or 1)
+            je_slot = (ctx.get("per_slots") or {}).get(slots) if slots > 1 else None
+            fenster = min([x for x in (max(stufen) if stufen else ctx.get("recommended"), je_slot) if x] or [8192])
+            rid = router_id(r["model"])
+            try:
+                out[rid] = abschnitt_aus_argv(self._server_argv(server, context_length=fenster * slots, parallel=slots, alias=rid))
+            except Exception:
+                continue                                  # ein Rezept mit fehlender Datei darf die Liste der anderen nicht verhindern
+        return out
+
     def load_model(self, model_key, *, context_length=None, gpu=None, identifier=None, estimate_only=False, yes=False, parallel=None,
                    mtp=None, server=None):
         # `mtp` (the loader's own flag) belongs to the LM Studio path and is ignored here: this runtime decides from its own
@@ -357,19 +431,7 @@ class LlamaServerRuntime:
         self._check_gpu()
         alias = identifier or model_key
         use_mtp = bool(self.config.mtp and server.get("mtp", False))
-        layers = {"max": 99, "off": 0}.get(gpu, 99 if gpu is None else None)
-        if layers is not None and server.get("n_gpu_layers") is not None:
-            layers = server["n_gpu_layers"]      # a DENSE model that does not fit the card: the number of layers on the GPU (a MoE model uses n_cpu_moe instead)
-        if layers is None:
-            raise ValueError("invalid_gpu_offload")
-        argv = build_command(self.executable_dir / "llama-server.exe", gguf=server["gguf"], context=context_length, host=self.config.host if self.config.host != "localhost" else "127.0.0.1",
-                             port=self.config.port, alias=alias, gpu_layers=layers, parallel=parallel or 1, kv_type=server.get("kv_cache_type", "f16"), kv_type_k=server.get("kv_cache_type_k"), kv_type_v=server.get("kv_cache_type_v"),
-                             flash_attn=server.get("flash_attn", self.config.flash_attn),   # per recipe since 2026-10-03 (qwen crash tests)
-                             spec_type="draft-mtp" if use_mtp else "none", reasoning=server.get("reasoning", "auto"),
-                             reasoning_budget=server.get("reasoning_budget"), mmproj=server.get("mmproj"), cache_ram=server.get("cache_ram"),
-                             ctx_checkpoints=server.get("ctx_checkpoints"), n_cpu_moe=server.get("n_cpu_moe"),
-                             reasoning_format=server.get("reasoning_format"), jinja=server.get("jinja"), ubatch=server.get("ubatch"),
-                             mmap=server.get("mmap"))
+        argv = self._server_argv(server, context_length=context_length, parallel=parallel, alias=alias, gpu=gpu)
         argv = [*self.launcher, *argv]
         self.state_dir.mkdir(parents=True, exist_ok=True)
         log_path = self.state_dir / "server.log"
@@ -444,6 +506,10 @@ class LlamaServerRuntime:
 
     def _load_external(self, model_key, *, context_length, identifier, parallel, server):
         self._reap()
+        if self.router is not None and isinstance(server, dict) and server.get("gguf"):
+            # Sedra-Modell-Router: laeuft er nicht (oder hat sich der Abschnitt dieses Modells geaendert), startet Sedra ihn mit der aktuellen Modellliste
+            rid0 = router_id(identifier or model_key)
+            self.router.bereitstellen(rid0, abschnitt_aus_argv(self._server_argv(server, context_length=context_length, parallel=parallel, alias=rid0)))
         # No "already running" refusal here: the router is shared and holds one model at a time, a load of another model swaps it.
         if not self._health():
             raise RuntimeControlError(f"external_server_unreachable:{self.endpoint}")
@@ -479,6 +545,14 @@ class LlamaServerRuntime:
         status, body = self._post_json(self.endpoint + "/models/unload", {"model": info["identifier"]}, timeout=self.config.stop_timeout_s)
         if status >= 400:
             raise RuntimeControlError(f"external_model_unload_failed:{status}:{json.dumps(body)[:160]}")
+        # Der Router entlaedt im Hintergrund (ein 9B-Modell braucht einige Sekunden): erst weitermachen, wenn er es nicht mehr haelt, sonst sieht die naechste Speicherpruefung noch das alte Modell.
+        began = self._mono()
+        while self._mono() - began < self.config.stop_timeout_s:
+            try:
+                if self._router_states().get(info["identifier"]) not in ("loaded", "unloading"): break
+            except Exception:
+                break
+            self._sleep(0.5)
         self._audit("LLAMA_SERVER_EXTERNAL_UNLOADED", model=info.get("modelKey"), router_id=info["identifier"])
         self._info = None
         return {"output": "stopped"}

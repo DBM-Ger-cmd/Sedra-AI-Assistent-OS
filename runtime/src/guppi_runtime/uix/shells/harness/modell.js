@@ -9,7 +9,8 @@
   const GRUND = {
     hardware_pressure: 'Zu wenig freier Arbeits- oder Grafikspeicher für dieses Rezept. Andere Programme beenden oder ein kleineres Rezept wählen.',
     gpu_lease_busy: 'Die Grafikkarte ist gerade belegt (Lauf oder anderer Dienst).',
-    model_loader_unavailable: 'Das Laden von Modellen ist in dieser Installation ausgeschaltet.'
+    model_loader_unavailable: 'Das Laden von Modellen ist in dieser Installation ausgeschaltet.',
+    external_server_unreachable: 'Der Modell-Router läuft nicht. Starte ihn (llama-server mit der Modelldatei, Port 8090) oder schalte llama_server.external in den lokalen Schaltern aus.'
   };
   // Die Auswahl der Aufteilung als ein Satz (DR-06): „lädt mit 30 Lagen im RAM, 32 768 Kontext, ≈ 9,8 GB VRAM, 10,9 GB RAM“.
   function auswahlText(a){
@@ -43,14 +44,29 @@
   function steuerung(S, nachher){
     const box = d().el('div', 'hs-modell-steuer');
     const wahl = d().el('select', 'hs-projektwahl'); wahl.setAttribute('aria-label', 'Modell-Rezept');
+    const fenster = d().el('select', 'hs-projektwahl hs-kontextwahl'); fenster.setAttribute('aria-label', 'Kontextfenster');
+    fenster.title = 'Kontextfenster: „Auto“ startet mit dem größten Fenster, das in den Speicher passt; eine Stufe startet genau mit ihr';
     const laden = d().el('button', 'hs-senden p', 'Laden'); laden.type = 'button';
     const weg = d().el('button', 'hs-knopf', 'Entladen'); weg.type = 'button';
     const stand = d().el('span', 'hs-leise hs-modell-stand', ''); stand.setAttribute('role', 'status');
     const merken = d().el('button', 'hs-knopf hs-vorgabe-knopf', 'Als Vorgabe merken'); merken.type = 'button'; merken.title = 'Dieses Rezept ist dann der Standard (und wird beim Senden geladen, wenn der Katalog es erlaubt)';
     merken.onclick = ()=>root.sedraHarness.projekt.setzen(S, {rezept_standard: wahl.value || null}, merken).then(auffrischen);
     let geladen = null;
-    box.append(wahl, laden, weg, merken, stand);
-    wahl.addEventListener('change', ()=>{ merken.hidden = !wahl.value || (S.vorgaben && S.vorgaben.rezept_standard) === wahl.value; });
+    box.append(wahl, fenster, laden, weg, merken, stand);
+    let liste = [];
+    // Kontextfenster zum Rezept: „Auto“ (das größte, das passt) und die Stufen des Rezepts; ohne Stufen gibt es nur „Auto“
+    function fensterFuellen(vorwahl){
+      const r = liste.find(x=>x.id === wahl.value) || {};
+      const stufen = r.kontexte || [];
+      fenster.replaceChildren(...[['auto', 'Fenster: Auto (größtes)']].concat(stufen.map(t=>[String(t), 'Fenster: ' + Number(t).toLocaleString('de-DE') + ' Token'])).map(([v, t])=>{
+        const o = document.createElement('option'); o.value = v; o.textContent = t; return o;
+      }));
+      const w = vorwahl !== undefined ? String(vorwahl) : (r.kontext_wahl !== undefined ? String(r.kontext_wahl) : 'auto');
+      fenster.value = [...fenster.options].some(o=>o.value === w) ? w : 'auto';
+      fenster.disabled = !stufen.length;
+    }
+    const fensterWert = ()=>fenster.value === 'auto' || !fenster.value ? 'auto' : Number(fenster.value);
+    wahl.addEventListener('change', ()=>{ merken.hidden = !wahl.value || (S.vorgaben && S.vorgaben.rezept_standard) === wahl.value; fensterFuellen(); });
 
     // P2 V1 (1.11.): „Passt das Modell?“ – je Rezept Name, Bedarf gegen freien Speicher und ein Urteil, vom Server mit derselben Prüfung wie beim Laden
     const zahl = (x, n)=>Number(x).toLocaleString('de-DE', {maximumFractionDigits: n});
@@ -60,11 +76,13 @@
       return '';
     };
     async function auffrischen(){
+      if(!wahl.options.length){ stand.textContent = 'Rezepte werden gelesen …'; laden.disabled = true; }   // der Server braucht bei nicht laufendem Router einige Sekunden
       try{
         const v = await S.api('/api/harness/modelle');
         const rezepte = v.modelle || [];
+        liste = rezepte;
         geladen = rezepte.find(r=>r.geladen) || null;
-        const vorher = wahl.value;
+        const vorher = wahl.value, fensterVorher = fenster.value;
         wahl.replaceChildren(...rezepte.map(r=>{
           const o = document.createElement('option'); o.value = r.id;
           o.textContent = (r.modell || r.id) + (r.groesse_gb ? ' · ' + zahl(r.groesse_gb, 1) + ' GB' : '') + ' · ' + urteil(r) + (r.geladen ? ' (geladen)' : '');
@@ -76,6 +94,7 @@
         const erstes = rezepte.find(r=>r.passt) || rezepte[0];
         wahl.value = rezepte.some(r=>r.id === vorher) ? vorher : (geladen ? geladen.id : (rezepte.some(r=>r.id === vorgabe) ? vorgabe : (erstes ? erstes.id : '')));
         merken.hidden = !wahl.value || vorgabe === wahl.value;
+        fensterFuellen(wahl.value === vorher && fensterVorher ? fensterVorher : undefined);
         laden.disabled = !wahl.value;
         laden.textContent = geladen ? 'Wechseln' : 'Laden';
         weg.hidden = !geladen;
@@ -90,7 +109,7 @@
     }
 
     async function tun(pfad, body, text){
-      laden.disabled = weg.disabled = wahl.disabled = true;
+      laden.disabled = weg.disabled = wahl.disabled = fenster.disabled = true;
       stand.textContent = text;
       try{
         const out = await S.api(pfad, {method: 'POST', body});
@@ -102,7 +121,7 @@
       }catch(err){ stand.textContent = fehlertext(err); stand.classList.add('bad'); }
       finally{ wahl.disabled = false; laden.disabled = !wahl.value; weg.disabled = false; await auffrischen(); }
     }
-    laden.onclick = ()=>{ stand.classList.remove('bad'); tun('/api/model/load', {recipe_id: wahl.value}, 'lädt … das kann einige Minuten dauern'); };
+    laden.onclick = ()=>{ stand.classList.remove('bad'); tun('/api/model/load', {recipe_id: wahl.value, kontext: fensterWert()}, 'lädt … das kann einige Minuten dauern'); };
     weg.onclick = ()=>{ stand.classList.remove('bad'); tun('/api/model/unload', {}, 'entlädt …'); };
     auffrischen();
     return Object.assign(box, {auffrischen});
@@ -120,6 +139,7 @@
     const offen = !!(S._modellMenue && S._modellMenue.isConnected);
     if(an === false || (an === undefined && offen)){ schliessen(S); return; }
     if(offen){ const wahl = S._modellMenue.querySelector('select'); if(wahl) wahl.focus(); return; }
+    routerMenue(S, false);
     const p = d().el('div', 'hs-modell-menue'); p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Modell');
     const kopf = d().el('div', 'hs-modell-text', S.modell ? 'Geladen: ' + S.modell.name + '.' : 'Kein Modell geladen.');
     const zu = d().el('button', 'hs-rund hs-modell-zu', '×'); zu.type = 'button'; zu.setAttribute('aria-label', 'Schließen'); zu.onclick = ()=>schliessen(S);
@@ -130,6 +150,67 @@
     document.addEventListener('keydown', taste); document.addEventListener('mousedown', aussen);
     S._modellMenueAb = ()=>{ document.removeEventListener('keydown', taste); document.removeEventListener('mousedown', aussen); };
     const wahl = p.querySelector('select'); if(wahl) wahl.focus();
+  }
+
+  // Fenster „Modellserver“ (Klick auf die Statuszelle): der Sedra-Modell-Router – Zustand, Starten/Beenden und seine Optionen (GET/POST /api/harness/router).
+  const ROUTER_FEHLER = {router_laeuft_schon: 'Der Router läuft schon.', router_fremd: 'Dieser Router wurde von einem anderen Programm gestartet (Pi, StarNet); Sedra beendet ihn nicht.',
+    router_ohne_modelle: 'Es ist noch kein Modell in der Liste.', router_beendet_beim_start: 'Der Router hat sich beim Start beendet (siehe Protokoll).',
+    router_start_zeitueberschreitung: 'Der Router ist nicht rechtzeitig bereit geworden (siehe Protokoll).'};
+  function routerMenue(S, an){
+    const offen = !!(S._routerMenue && S._routerMenue.isConnected);
+    const zu = ()=>{ if(S._routerMenue){ S._routerMenue.remove(); S._routerMenue = null; } if(S._routerMenueAb){ S._routerMenueAb(); S._routerMenueAb = null; } };
+    if(an === false || (an === undefined && offen)){ zu(); return; }
+    if(offen) return;
+    schliessen(S);
+    const p = d().el('div', 'hs-modell-menue hs-router-menue'); p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Modellserver');
+    const x = d().el('button', 'hs-rund hs-modell-zu', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Schließen'); x.onclick = zu;
+    const kopf = d().el('div', 'hs-modell-text', 'Sedra-Modell-Router');
+    const zustand = d().el('div', 'hs-leise hs-router-zustand', 'liest …'); zustand.setAttribute('role', 'status');
+    const knoepfe = d().el('div', 'hs-modell-steuer');
+    const start = d().el('button', 'hs-senden p', 'Starten'); start.type = 'button';
+    const ende = d().el('button', 'hs-knopf', 'Beenden'); ende.type = 'button';
+    const auto = d().el('input'); auto.type = 'checkbox'; auto.id = 'hs-router-auto';
+    const autoText = d().el('label', null, 'Automatisch starten, wenn ein Modell geladen wird'); autoText.htmlFor = 'hs-router-auto';
+    const max = d().el('input', 'hs-router-zahl'); max.type = 'number'; max.min = 1; max.max = 8; max.setAttribute('aria-label', 'Gleichzeitig geladene Modelle');
+    const leer = d().el('input', 'hs-router-zahl'); leer.type = 'number'; leer.min = 0; leer.max = 86400; leer.setAttribute('aria-label', 'Leerlauf in Sekunden');
+    const speichern = d().el('button', 'hs-knopf', 'Optionen speichern'); speichern.type = 'button';
+    const optionen = d().el('div', 'hs-modell-steuer');
+    optionen.append(auto, autoText);
+    const zeile2 = d().el('div', 'hs-modell-steuer');
+    zeile2.append(d().el('label', 'hs-leise', 'Modelle gleichzeitig'), max, d().el('label', 'hs-leise', 'Entladen nach Leerlauf (s, 0 = nie)'), leer, speichern);
+    knoepfe.append(start, ende);
+    const hinweis = d().el('div', 'hs-leise hs-router-hinweis', '');
+    p.append(kopf, x, zustand, knoepfe, optionen, zeile2, hinweis);
+    document.body.append(p); S._routerMenue = p;
+    const taste = e=>{ if(e.key === 'Escape') zu(); };
+    const aussen = e=>{ if(!p.contains(e.target) && !(e.target.closest && e.target.closest('[data-zelle=server]'))) zu(); };
+    document.addEventListener('keydown', taste); document.addEventListener('mousedown', aussen);
+    S._routerMenueAb = ()=>{ document.removeEventListener('keydown', taste); document.removeEventListener('mousedown', aussen); };
+    const text = e=>{ const m = String((e && e.message) || e || ''); const k = Object.keys(ROUTER_FEHLER).find(k=>m.includes(k)); return k ? ROUTER_FEHLER[k] : m; };
+    async function lesen(st){
+      try{
+        const v = st || await S.api('/api/harness/router');
+        if(!v.verfuegbar){
+          zustand.textContent = v.extern ? 'Sedra startet den Router nicht selbst (keine Start-Konfiguration).' : 'Der Router-Modus ist aus: Sedra startet für jedes Laden einen eigenen Modellserver.';
+          knoepfe.hidden = optionen.hidden = zeile2.hidden = true; return;
+        }
+        zustand.textContent = (v.laeuft ? (v.eigen ? 'läuft (von Sedra gestartet)' : 'läuft (von einem anderen Programm gestartet – Sedra fasst ihn nicht an)') : 'aus') + ' · ' + v.endpoint
+          + (v.modelle && v.modelle.length ? ' · ' + v.modelle.length + ' Modelle in der Liste' : '');
+        start.disabled = v.laeuft; ende.disabled = !v.laeuft || !v.eigen;
+        auto.checked = !!v.optionen.auto_start; max.value = v.optionen.models_max; leer.value = v.optionen.sleep_idle_s;
+        hinweis.textContent = v.laeuft ? '' : 'Beim Laden eines Modells startet Sedra den Router selbst' + (v.optionen.auto_start ? '.' : ' – nicht, solange die Automatik aus ist.');
+      }catch(err){ zustand.textContent = 'Zustand nicht lesbar: ' + text(err); }
+    }
+    async function tun(body, wort){
+      start.disabled = ende.disabled = speichern.disabled = true; hinweis.classList.remove('bad'); hinweis.textContent = wort;
+      try{ const v = await S.api('/api/harness/router', {method: 'POST', body}); hinweis.textContent = ''; await lesen(v); if(S.modellLaden) S.modellLaden(); }
+      catch(err){ hinweis.textContent = text(err); hinweis.classList.add('bad'); await lesen(); }
+      finally{ speichern.disabled = false; if(root.sedraHarness.taskleiste) root.sedraHarness.taskleiste.status(S); }
+    }
+    start.onclick = ()=>tun({aktion: 'starten'}, 'startet … das kann eine Minute dauern');
+    ende.onclick = ()=>tun({aktion: 'beenden'}, 'beendet …');
+    speichern.onclick = ()=>tun({optionen: {auto_start: auto.checked, models_max: Number(max.value), sleep_idle_s: Number(leer.value)}}, 'speichert …');
+    lesen();
   }
 
   // P0 M2 (1.11., E-A7): Modell beim Senden selbst laden – nur wenn der Server es erlaubt (Katalog `modell_laden` frei für das Standard-Rezept).
@@ -152,5 +233,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.modell = {steuerung, menue, schliessen, fehlertext, auswahlText, autoLaden, grundtext};
+  root.sedraHarness.modell = {steuerung, menue, routerMenue, schliessen, fehlertext, auswahlText, autoLaden, grundtext};
 })();

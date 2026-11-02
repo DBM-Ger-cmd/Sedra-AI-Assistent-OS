@@ -62,6 +62,7 @@ from . import projekte as harness_projekte
 from . import schleife
 from . import vorarbeiter as harness_vorarbeiter
 from . import vorlagen as harness_vorlagen
+from ..models.runtime_control import RuntimeControlError
 from . import vorschau as harness_vorschau
 from .werkzeuge import LAUF as LAUF_WERKZEUGE, SCHEMAS as WERKZEUG_SCHEMAS, Werkzeuge
 from .sitzung import SitzungFehler, Sitzungen, titel_aus
@@ -74,11 +75,11 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle)(?:/(antrag|entfernen|grenzen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router)(?:/(antrag|entfernen|grenzen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/grenzen'
-                        r'|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
+                        r'|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
 NACHLAUF_S = 60                        # P0 M2: so lange nach einer Antwort gilt ihr Modell noch als in Gebrauch (Folgefrage kommt gleich)
 FORTSETZEN_REST = 'nicht ausgeführt: dieser Aufruf kam nach einem, der auf Freigabe wartete – ruf ihn bei Bedarf noch einmal auf.'
 
@@ -200,6 +201,8 @@ class HarnessApi:
             return 200, self.vorgaben_setzen(payload)
         if fest == 'modelle' and method == 'GET' and not unter:
             return 200, self.modelle()
+        if fest == 'router' and not unter and method in ('GET', 'POST'):
+            return 200, self.router(payload if method == 'POST' else None)
         if fest == 'werkzeuge' and method == 'GET':
             return 200, {'werkzeuge': [{'name': n, 'beschreibung': sch['function']['description']} for n, sch in WERKZEUG_SCHEMAS.items()]
                          + [{'name': n, 'beschreibung': 'liest den Zustand von SEDRA (frei)'} for n in LESEN]}
@@ -421,6 +424,10 @@ class HarnessApi:
             eintrag = {'id': r['id'], 'modell': r.get('model'), 'groesse_gb': r.get('model_size_gb'), 'min_vram_gb': r.get('min_vram_gb'),
                        'dynamisch': bool((r.get('profile') or {}).get('dynamisch')), 'geladen': r.get('model') in geladen_ids,
                        'passt': None, 'grund': None, 'bedarf_vram_gb': None, 'bedarf_ram_gb': None, 'auswahl': None, 'gemessen': r.get('measured_vram_gb') is not None}
+            ctx = (r.get('profile') or {}).get('context') or {}
+            grenze = int(ctx.get('measured_maximum') or ctx.get('maximum') or 0) or None            # die Stufen, die das Rezept hergibt (die Hardware kann sie noch kuerzen: der Server sagt es beim Laden)
+            eintrag['kontexte'] = sorted(t for t in (ctx.get('tiers') or []) if type(t) is int and (grenze is None or t <= grenze))
+            eintrag['kontext_wahl'] = getattr(self.hub, '_last_kontext', lambda _i: 'auto')(r['id'])
             try:
                 ok, why = router._evaluate(r, router.normalize(None), exclude=set(), independent_of=[], captain_cloud_approved=False, now=router._clock())
             except Exception as exc:
@@ -435,6 +442,28 @@ class HarnessApi:
         out.sort(key=lambda e: (not e['geladen'], not e['passt'], not e['gemessen'], e['bedarf_vram_gb'] or 0, e['id']))
         return {'modelle': out, 'frei_vram_gb': (stand or {}).get('frei_vram_gb'), 'frei_ram_gb': (stand or {}).get('frei_ram_gb'),
                 'reserve_vram_gb': (stand or {}).get('reserve_vram_gb'), 'loader': bool(getattr(rt, 'model_loader', None) and rt.model_loader.enabled)}
+
+    def router(self, payload=None):
+        """Der Sedra-Modell-Router (Fenster „Modellserver“): Zustand lesen; mit `aktion` starten/beenden, mit `optionen` die Werte ändern.
+        Ohne Router-Verwaltung (Router-Modus aus oder keine `start`-Konfiguration) steht nur der Zustand da."""
+        server = getattr(self.hub.runtime, 'llama_server', None)
+        verwaltung = getattr(server, 'router', None)
+        if verwaltung is None:
+            return {'verfuegbar': False, 'extern': bool(server is not None and getattr(server, 'external', False)), 'laeuft': False}
+        if payload:
+            if isinstance(payload.get('optionen'), dict):
+                verwaltung.optionen_setzen(payload['optionen'])
+            aktion = payload.get('aktion')
+            try:
+                if aktion == 'starten':
+                    router = getattr(self.hub.runtime, 'role_router', None)
+                    verwaltung.ergaenzen(server.router_abschnitte(router.config.recipes if router is not None else []))        # alle Rezepte kommen in die Liste
+                    verwaltung.starten()
+                elif aktion == 'beenden': verwaltung.beenden()
+                elif aktion is not None: raise ValueError('router_aktion_unbekannt')
+            except RuntimeControlError as exc:
+                raise ValueError(str(exc))
+        return dict(verwaltung.status(), verfuegbar=True, extern=True)
 
     def modelle_in_gebrauch(self):
         """P0 M2 (Harness-Vergleich: Entlade-Panne): Modelle, die der Lader nicht als „idle“ entladen darf – die laufender Antworten, das der

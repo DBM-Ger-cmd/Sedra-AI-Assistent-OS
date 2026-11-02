@@ -256,6 +256,16 @@ class SlotTests(Base):
         self.assertEqual(self.codes(self.slotted(2, {2: 16384}), 'coder', {'context_min_tokens': 20000})[1]['considered'][0]['reason'], 'context_capacity',
                          'a slot never gets more than was measured for N slots')
 
+    def test_context_choice_auto_takes_the_largest_tier_a_number_exactly_that_one_and_none_the_smallest(self):
+        router = self.slotted(None)
+        alt = router.resolve_recipe('c.s')['context_window']                    # wie bisher: das kleinste Fenster, das reicht
+        gross = router.resolve_recipe('c.s', kontext='auto')['context_window']
+        self.assertEqual(alt, 8192)
+        self.assertEqual(gross, 32768, 'das groesste Fenster, das die Hardwareklasse hergibt')
+        self.assertEqual(router.resolve_recipe('c.s', kontext=16384)['context_window'], 16384)
+        with self.assertRaises(ResolutionError):
+            router.resolve_recipe('c.s', kontext=12345)
+
     def test_without_a_measurement_for_n_the_start_is_refused(self):
         for per_slots in (None, {1: 32768}):
             router = self.slotted(2, per_slots) if per_slots else self.slotted(2)

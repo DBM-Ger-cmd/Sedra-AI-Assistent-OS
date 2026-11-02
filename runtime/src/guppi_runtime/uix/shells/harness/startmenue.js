@@ -14,7 +14,7 @@
   // Stufe 5 (G2 §3.1): fester Eintrag in der Gruppe System – kein Ort, kein Werkzeug: die Shell trägt ihn ein
   const EINSTELLUNGEN = {id: 'einstellungen', label: 'Einstellungen', hint: 'Allgemein, Agent, Sprache, Integrationen, Modelle, System', symbol: '⚙', gruppe: 'system', fest: true, werkzeuge: []};
 
-  function stand(S){ return S._start || (S._start = {offen: false, konfig: null, konfigFehler: null, zuletzt: [], liste: null, module: null, wartet: null}); }
+  function stand(S){ return S._start || (S._start = {offen: false, konfig: null, konfigFehler: null, zuletzt: [], liste: null, module: null, wartet: null, offene: new Set()}); }
 
   async function laden(S){
     const st = stand(S);
@@ -108,13 +108,38 @@
     inhalt.replaceChildren();
     let nr = 0;
     st.sichtbar = [];
-    const abschnitt = (titel, apps)=>{
+    const abschnitt = (titel, apps, klasse)=>{
       if(!apps.length) return;
       const box = d().el('section', 'hs-start-gruppe');
       box.append(d().el('div', 'hs-ueber', titel));
-      const raster = d().el('div', 'hs-start-raster');
+      const raster = d().el('div', 'hs-start-raster' + (klasse ? ' ' + klasse : ''));
       apps.forEach(a=>{ st.sichtbar.push(a); raster.append(appKnopf(S, a, nr++)); });
       box.append(raster); inhalt.append(box);
+    };
+    // Kategorie als Kachel: Kopf (Symbol, Titel, Anzahl) und eine kleine Vorschau der ersten Apps; „+N weitere“ klappt die Kachel auf.
+    // Alle Apps stehen im DOM (die versteckten nur mit hidden), die Pfeiltasten gehen über die sichtbaren.
+    const VORSCHAU = 4;
+    const kachel = (g, apps)=>{
+      if(!apps.length) return null;
+      const offen = st.offene.has(g.id);
+      const box = d().el('section', 'hs-start-kachel' + (offen ? ' offen' : '')); box.dataset.gruppe = g.id;
+      const umschalten = ()=>{ offen ? st.offene.delete(g.id) : st.offene.add(g.id); zeichnen(S); };
+      const kopf = d().el('button', 'hs-start-kachel-kopf'); kopf.type = 'button'; kopf.setAttribute('aria-expanded', offen ? 'true' : 'false');
+      kopf.append(d().el('span', 'hs-start-symbol', g.symbol || '▤'), d().el('span', 'hs-start-kachel-titel', g.titel), d().el('small', 'hs-leise', String(apps.length)));
+      kopf.onclick = umschalten;
+      const liste = d().el('div', 'hs-start-kachel-liste');
+      apps.forEach((a, i)=>{
+        const zeigen = offen || i < VORSCHAU;
+        const k = appKnopf(S, a, zeigen ? nr++ : -1);
+        if(zeigen) st.sichtbar.push(a); else k.hidden = true;
+        liste.append(k);
+      });
+      box.append(kopf, liste);
+      if(apps.length > VORSCHAU){
+        const mehr = d().el('button', 'hs-start-mehr', offen ? 'weniger' : '+' + (apps.length - VORSCHAU) + ' weitere'); mehr.type = 'button'; mehr.onclick = umschalten;
+        box.append(mehr);
+      }
+      return box;
     };
     if(st.konfigFehler) inhalt.append(d().el('div', 'hs-app-satz warn', st.konfigFehler));
     if(q){
@@ -122,9 +147,11 @@
       if(!treffer.length) inhalt.append(d().el('div', 'hs-app-satz', 'Keine App zu „' + q + '“. Strg+K sucht Orte und Befehle.'));
       abschnitt('Treffer', treffer);
     }else{
-      abschnitt('Zuletzt benutzt', st.liste.zuletzt);
+      abschnitt('Zuletzt benutzt', st.liste.zuletzt, 'zuletzt');
       const gruppen = st.liste.gruppen.some(g=>g.id === 'system') ? st.liste.gruppen : st.liste.gruppen.concat([{id: 'system', titel: 'System', symbol: '⚙', apps: []}]);
-      gruppen.forEach(g=>abschnitt(g.symbol + ' ' + g.titel, g.id === 'system' ? g.apps.concat([EINSTELLUNGEN]) : g.apps));
+      const kacheln = d().el('div', 'hs-start-kacheln');
+      gruppen.forEach(g=>{ const k = kachel(g, g.id === 'system' ? g.apps.concat([EINSTELLUNGEN]) : g.apps); if(k) kacheln.append(k); });
+      inhalt.append(kacheln);
       if(!st.liste.apps.length) inhalt.append(d().el('div', 'hs-app-satz', 'Kein Werkzeug geladen – das Werkzeug „Module“ sagt, warum.'));
     }
     if(st.wahl >= st.sichtbar.length) st.wahl = Math.max(0, st.sichtbar.length - 1);

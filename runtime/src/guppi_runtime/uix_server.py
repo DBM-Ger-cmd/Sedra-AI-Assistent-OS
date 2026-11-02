@@ -3142,10 +3142,18 @@ class UIXHub:
         try: return str(json.loads(self._last_file().read_text(encoding='utf-8')).get('recipe_id') or '')
         except Exception: return ''
 
-    def _remember_recipe(self, recipe_id):
+    def _last_kontext(self, recipe_id):
+        # die Fensterwahl, mit der dieses Rezept zuletzt geladen wurde; ohne Wahl 'auto' (das groesste Fenster, das passt)
+        try:
+            d = json.loads(self._last_file().read_text(encoding='utf-8'))
+            k = d.get('kontext')
+            return k if d.get('recipe_id') == recipe_id and (k == 'auto' or type(k) is int) else 'auto'
+        except Exception: return 'auto'
+
+    def _remember_recipe(self, recipe_id, kontext=None):
         try:
             path = self._last_file(); path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps({'recipe_id': recipe_id}, ensure_ascii=False), encoding='utf-8')
+            path.write_text(json.dumps({'recipe_id': recipe_id, 'kontext': kontext}, ensure_ascii=False), encoding='utf-8')
         except Exception: pass                                  # die Merkhilfe darf das Laden nicht verhindern
 
     def _log_load_failure(self, recipe_id, resolution, exc):
@@ -3185,20 +3193,22 @@ class UIXHub:
     def load_model(self, payload):
         recipe_id = payload.get('recipe_id') or self._last_recipe()          # ohne Auswahl: das zuletzt geladene Modell
         if not isinstance(recipe_id, str) or not recipe_id: raise ValueError('recipe_id_required')
+        kontext = payload['kontext'] if 'kontext' in payload else self._last_kontext(recipe_id)      # 'auto': das groesste Fenster, das passt (Standard) | Zahl: genau diese Stufe | None: das kleinste, das reicht
+        if kontext is not None and kontext != 'auto' and (type(kontext) is not int or not 256 <= kontext <= 1_048_576): raise ValueError('kontext_invalid')
         rt = self.runtime
         if rt.role_router is None or getattr(rt, 'model_loader', None) is None or not rt.model_loader.enabled: raise ValueError('model_loader_unavailable')
         from .models.role_routing import ResolutionError
         sched = self._scheduler()
-        if sched is not None: return self._load_via_scheduler(sched, recipe_id)
+        if sched is not None: return self._load_via_scheduler(sched, recipe_id, kontext)
         with self.model_lock:
-            try: resolution = rt.role_router.resolve_recipe(recipe_id)
+            try: resolution = rt.role_router.resolve_recipe(recipe_id, kontext=kontext)
             except ResolutionError as exc:
                 # A switch: the model this UIX loaded still holds the VRAM the new one needs. Free it and check again; if the new model
                 # is still not usable, the old one stays unloaded (the caller is told).
                 server = getattr(rt, 'llama_server', None)
                 if 'hardware_pressure' in str(exc) and self.gpu_token is not None and server is not None and server.loaded_models():
                     server.unload_model(all_models=True); time.sleep(2)
-                    try: resolution = rt.role_router.resolve_recipe(recipe_id)
+                    try: resolution = rt.role_router.resolve_recipe(recipe_id, kontext=kontext)
                     except ResolutionError as again: raise ValueError(f'recipe_not_usable:{again}{self._ablehnung(again)}')
                 else: raise ValueError(f'recipe_not_usable:{exc}{self._ablehnung(exc)}')
             took_lease = self.gpu_token is None
@@ -3223,10 +3233,10 @@ class UIXHub:
                 self._log_load_failure(recipe_id, resolution, exc)
                 self._release_gpu()
                 raise
-            self._remember_recipe(recipe_id)
+            self._remember_recipe(recipe_id, kontext)
         return dict(out, recipe_id=recipe_id)
 
-    def _load_via_scheduler(self, sched, recipe_id):
+    def _load_via_scheduler(self, sched, recipe_id, kontext=None):
         """Werkstatt `model laden` with the scheduler on (D2.6): `ensure_server`, no lease and no beat of this process (SCH-11)."""
         from .jobs.model_scheduler import SchedulerError
         from .models.role_routing import ResolutionError
@@ -3239,14 +3249,37 @@ class UIXHub:
                 stopped = sched.stop_server(owner='werkstatt')
                 if stopped['status'] == 'leases_active': raise ValueError('leases_active:' + ','.join(stopped['active']))
                 time.sleep(2)
-            try: resolution = rt.role_router.resolve_recipe(recipe_id)
-            except ResolutionError as exc: raise ValueError(f'recipe_not_usable:{exc}')
+            # Dasselbe Modell mit anderem Kontextfenster: die alte Instanz haelt den Speicher (Router oder Scheduler) und muss weg, bevor die Pruefung und das Laden gelten.
+            modell = next((r.get('model') for r in getattr(getattr(rt.role_router, 'config', None), 'recipes', None) or [] if r['id'] == recipe_id), None)
+            def eigene_instanz():
+                server = getattr(rt, 'llama_server', None)
+                try: geladen = server.loaded_models() if server is not None and modell else []
+                except Exception: geladen = []
+                return [i for i in geladen if modell in (i.get('modelKey'), i.get('identifier')) or str(modell).rsplit('/', 1)[-1] in (i.get('modelKey'), i.get('identifier'))]
+
+            def anhalten():
+                if (sched.view().get('server') or {}).get('state') == 'bereit':
+                    stopped = sched.stop_server(owner='werkstatt')
+                    if stopped['status'] == 'leases_active': raise ValueError('leases_active:' + ','.join(stopped['active']))
+                else: rt.llama_server.unload_model(all_models=True)
+                time.sleep(2)
+            try: resolution = rt.role_router.resolve_recipe(recipe_id, kontext=kontext)
+            except ResolutionError as exc:
+                if not ('hardware_pressure' in str(exc) and eigene_instanz()): raise ValueError(f'recipe_not_usable:{exc}')
+                anhalten()
+                try: resolution = rt.role_router.resolve_recipe(recipe_id, kontext=kontext)
+                except ResolutionError as again: raise ValueError(f'recipe_not_usable:{again}')
+            inst = eigene_instanz()
+            if inst and (inst[0].get('contextLength') != resolution.get('context_window')):
+                anhalten()
+                try: resolution = rt.role_router.resolve_recipe(recipe_id, kontext=kontext)
+                except ResolutionError as exc: raise ValueError(f'recipe_not_usable:{exc}')
             vorher = self._speicher_jetzt()
             try: out = sched.ensure_server(resolution, owner='werkstatt')
             except SchedulerError as exc:
                 self._log_load_failure(recipe_id, resolution, exc)
                 raise ValueError(exc.reason)
-            self._remember_recipe(recipe_id)
+            self._remember_recipe(recipe_id, kontext)
             self._messwert_merken(recipe_id, out['load'], vorher, self._speicher_jetzt())      # Live-Fund 30.10.: im Weg mit Scheduler wurde nichts gemerkt
         return dict(out['load'], recipe_id=recipe_id)
 

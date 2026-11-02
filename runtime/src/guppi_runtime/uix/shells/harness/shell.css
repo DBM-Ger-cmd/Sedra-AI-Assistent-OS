@@ -310,6 +310,23 @@
   background:transparent;color:var(--text);font:inherit;font-size:var(--size-small);text-align:left;cursor:pointer;min-width:0}
 .hs-start-app:hover,.hs-start-app.wahl{background:var(--hs-hover);border-color:var(--hs-on-line)}
 .hs-start-app .hs-start-symbol{color:var(--accent);font-size:var(--size)}
+/* Kategorie-Kacheln mit kleiner Vorschau (Captain 2.11.: Kacheln je Kategorie statt einer langen Liste) */
+.hs-start-kacheln{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;align-items:start}
+.hs-start-kachel{display:flex;flex-direction:column;gap:2px;padding:8px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg)}
+.hs-start-kachel.offen{grid-column:1/-1;border-color:var(--hs-on-line)}
+.hs-start-kachel-kopf{display:flex;align-items:center;gap:8px;padding:2px 4px 6px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);font:inherit;font-weight:600;cursor:pointer;text-align:left}
+.hs-start-kachel-kopf:hover .hs-start-kachel-titel{color:var(--accent)}
+.hs-start-kachel-titel{flex:1 1 auto}
+.hs-start-kachel-liste{display:grid;grid-template-columns:1fr;gap:0}
+.hs-start-kachel.offen .hs-start-kachel-liste{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+.hs-start-kachel .hs-start-app{flex-direction:row;align-items:center;gap:8px;padding:4px 6px}
+.hs-start-kachel:not(.offen) .hs-start-app small{display:none}
+.hs-start-kachel .hs-start-app[hidden]{display:none}
+.hs-start-mehr{align-self:flex-start;margin:2px 4px 0;padding:2px 6px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:var(--size-xs);cursor:pointer}
+.hs-start-mehr:hover{color:var(--accent)}
+.hs-start-raster.zuletzt{display:flex;flex-wrap:wrap;gap:4px}
+.hs-start-raster.zuletzt .hs-start-app{flex-direction:row;align-items:center;gap:6px;padding:3px 8px;border-color:var(--line)}
+.hs-start-raster.zuletzt .hs-start-app small{display:none}
 .hs-start-app .hs-start-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .hs-start-app .hs-leise{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .hs-start-fuss{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px}

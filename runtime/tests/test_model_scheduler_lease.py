@@ -111,7 +111,7 @@ class RouterHookTests(Base):
 
 
 class FakeRoleRouter:
-    def resolve_recipe(self, recipe_id):
+    def resolve_recipe(self, recipe_id, requirements=None, kontext=None):
         return resolution(recipe=recipe_id)
 
 
