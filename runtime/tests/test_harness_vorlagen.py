@@ -174,5 +174,28 @@ class SitzungMitVorlageTests(unittest.TestCase):
         self.assertIn('SEDRA', self.modell.requests[0]['messages'][0]['content'])
 
 
+
+class VorlagenTexte(unittest.TestCase):
+    """02.11.2026: die mitgelieferten Vorlagen sind SEDRA, nicht GUPPI, und verbieten Erfundenes und Wiederholung (Log: erfundene Logbuchzeilen, doppelter Absatz)."""
+
+    def texte(self):
+        from pathlib import Path
+        ordner = Path(__file__).resolve().parents[1] / 'config' / 'harness_vorlagen'
+        return {p.stem: p.read_text(encoding='utf-8') for p in ordner.glob('*.md')}
+
+    def test_keine_vorlage_nennt_guppi_und_alle_verbieten_erfundenes(self):
+        texte = self.texte()
+        self.assertEqual(set(texte), {'bauagent', 'modellierer', 'pruefer', 'vorarbeiter'})
+        for name, text in texte.items():
+            self.assertNotIn('GUPPI', text, name)
+            self.assertIn('Erfinde nichts', text, name)
+
+    def test_der_vorarbeiter_haengt_kein_logbuchformat_an_antworten_und_kommt_mit_einem_leeren_projekt_zurecht(self):
+        v = self.texte()['vorarbeiter']
+        self.assertIn('nur in die Logbuchdatei', v)
+        self.assertIn('keine Tabelle', v)
+        self.assertIn('kein Fehler', v)                                                  # fehlende docs/ und kein Git sind in einem anderen Projekt normal
+        self.assertIn('frage den Captain nach dem Ziel', v)
+
 if __name__ == '__main__':
     unittest.main()

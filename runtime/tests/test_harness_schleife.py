@@ -251,6 +251,27 @@ class SchleifeTests(unittest.TestCase):
         self.assertTrue(self.ereignisse()[-1][1]['abgeschnitten'])
         self.assertTrue(self.sitzungen.laden(self.sid)['eintraege'][-1]['abgeschnitten'])
 
+    def test_derselbe_absatz_in_zwei_zuegen_steht_nur_einmal_im_gespeicherten_text(self):
+        """Log 02.11.2026: das Modell schrieb seine Vorstellung in einem Zug mit Werkzeugaufruf und noch einmal in der Schlussantwort; der Verlauf trug sie doppelt."""
+        vorstellung = 'Ich bin der Vorarbeiter von SEDRA. Meine Rolle: Überblick und Prüfung.'
+        a = Attrappe([Zug(vorstellung, calls=[call('zustand', {'was': 'gpu'})]), Zug(vorstellung + ' Ich lese jetzt den Stand.')])
+        out = self.lauf(a)
+        self.assertEqual(out['text'].count('Ich bin der Vorarbeiter'), 1)
+        self.assertIn('Ich lese jetzt den Stand.', out['text'])                          # der längere, vollständige Text bleibt
+        gespeichert = [e for e in self.sitzungen.laden(self.sid)['eintraege'] if e['typ'] == 'modell'][-1]['text']
+        self.assertEqual(gespeichert, out['text'])
+
+    def test_text_dazu_haengt_verschiedenes_an_und_ueberspringt_gleiches_und_leeres(self):
+        t = []
+        schleife.text_dazu(t, 'Eins')
+        schleife.text_dazu(t, '   ')
+        schleife.text_dazu(t, ' Eins ')                                                   # derselbe Text mit anderen Leerzeichen: gleich
+        schleife.text_dazu(t, 'Zwei')
+        schleife.text_dazu(t, 'Zwei' + chr(10))
+        self.assertEqual(t, ['Eins', 'Zwei'])
+        schleife.text_dazu(t, 'Eins und mehr')                                            # enthält den kürzeren Text: ersetzt ihn
+        self.assertEqual(t, ['Eins und mehr', 'Zwei'])
+
     def test_systemprompt_nennt_das_projekt_aber_zaehlt_die_werkzeuge_nicht_noch_einmal_auf(self):
         """02.11.2026 (Token sparen): die Werkzeuge stehen in der Werkzeugliste der Anfrage; die Namensliste im Systemprompt kostete rund 120 Token je Anfrage."""
         text = schleife.system_prompt('Sedra Entwicklung', ['get_model_status', 'list_models'])

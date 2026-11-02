@@ -62,6 +62,28 @@ def system_prompt(projekt, werkzeuge, vorlage_text=None, zusammenfassung=None):
     return mit_zusammenfassung(SYSTEM.format(projekt=projekt or 'ohne Projekt'), zusammenfassung)
 
 
+def _flach(text):
+    return ' '.join(str(text).split())
+
+
+def text_dazu(texte, content):
+    """Hängt den Text eines Zugs an, ohne ihn doppelt zu speichern: schreibt das Modell denselben Absatz in einem Zug mit Werkzeugaufruf und noch einmal in der
+    Schlussantwort, steht er nur einmal im Verlauf (und kostet im nächsten Zug nicht doppelt Token). Enthält der neue Text den alten, ersetzt er ihn."""
+    neu = _flach(content)
+    if not neu:
+        return
+    for i, alt in enumerate(texte):
+        a = _flach(alt)
+        if not a:
+            continue
+        if neu == a or neu in a:
+            return
+        if a in neu:
+            texte[i] = content
+            return
+    texte.append(content)
+
+
 def kurz(wert, n=KURZ_MAX):
     text = wert if isinstance(wert, str) else json.dumps(wert, ensure_ascii=False, sort_keys=True)
     text = ' '.join(text.split())
@@ -202,8 +224,7 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
                 messages = compact_history(messages, marke=kontext_mod.MARKE)
                 letzte_belegung = None
         content = r.get('content') or ''
-        if content.strip():
-            texte.append(content)
+        text_dazu(texte, content)
         if live_text:
             antwort.senden('text.geprueft', {} if content == ''.join(gestreamt) else {'text': content})
         elif content:
