@@ -44,6 +44,21 @@ Umgesetzt, mit Tests (`runtime/tests/test_harness_app_oeffnen.py`):
 - **`befehl`** (Punkt 5): die Beschreibung nennt die Grenze (kein `mkdir`, `dir`, `copy`, `del`, `start`) und die Alternativen.
 - **Feste Wege** `workspace/GUPPI_OS/wunsch_umsetzen/` und `docs/ARBEITSWEG_WUNSCH_UMSETZEN.md` (Wissensspeicher), Ordnerzweck im Arbeitsumfeld-Wissen.
 
+Härtung (02.11.2026, zweite Runde):
+- Die drei Werkzeuge ohne Karte (`app_oeffnen`, `projekt_beantragen`, `verknuepfung_anlegen`) stehen im Katalog (`katalog.OHNE_KARTE`): eine Regel mit `verboten` schaltet sie ab, ohne Regel laufen sie frei. Sitzungen mit Vorlage haben sie nur, wenn die Vorlage sie nennt.
+- Anträge: derselbe Ordner nur einmal offen, höchstens 5 offene Ordner-Anträge. Verknüpfungen: nur bekannte Orte, höchstens 12, im Audit steht `von` (modell oder captain).
+- Posteingang links: direkt freigeben nur für „Ordner als Projekt“; alles andere (Katalog, Schalter, Cloud …) erst in den Entscheidungen. Die Risiken stehen vor den Knöpfen.
+- Vereinfacht: eine Liste statt dreien, ein Gate-Zweig statt dreien in `werkzeuge.py`, ein Audit-Zweig in `freigabe.py`.
+
+Gedanken der Modelle (02.11.2026):
+- Sedra speichert sie je Antwort in der Sitzungsdatei (bis 20 000 Zeichen, je Zug getrennt, im scharfen Modus als ungeprüft markiert); sie stehen aufklappbar im Gespräch.
+- Ans Modell geht nach Vorgabe `gedanken_zurueck` (Einstellungen → Agent → Gedanken der Modelle): `aus` nichts · `spur` (Standard) eine Zeile je frühere Antwort mit den Werkzeugen und der Zahl gespeicherter Zeichen · `kurz` und `voll` zusätzlich das Ende der Gedanken (begrenzt).
+- Mit dem Werkzeug `gedanken_lesen` holt das Modell bei Bedarf ein Stück der Gedanken einer früheren Antwort derselben Sitzung (ohne Karte, per `verboten` abschaltbar).
+- Gedächtnis: nach jeder Antwort legt Sedra eine kurze Notiz an (Frage des Captains, Anfang der Antwort, Werkzeuge, Anfang und Ende der Gedanken; ohne Modellaufruf) in
+  `runtime_data/harness/gedaechtnis/<projekt>.jsonl` (höchstens 1 500 je Projekt). Das Modell fragt mit `gedaechtnis_suchen` („Was haben wir dazu schon gemacht?“, höchstens 5 Treffer,
+  nur dieses Projekt) und holt bei Bedarf die ganzen Gedanken mit `gedanken_lesen`. Beide Werkzeuge laufen ohne Karte und sind per `verboten` abschaltbar.
+- Noch nicht gebaut: Notizen, die ein Modell zusammenfasst (das Gedächtnis ist bewusst wörtlich und ohne Modellaufruf), und die Suche über mehrere Projekte.
+
 Noch offen:
 - Punkt 6 (Aussage „ich nutze jetzt Ordner X“ gegen die Sitzung prüfen): noch nicht gebaut; mit `projekt_beantragen` weniger dringend.
 - Die Vorlagen der Sitzungen (bauagent, modellierer, pruefer) nennen `app_oeffnen` und `projekt_beantragen` noch nicht; Sitzungen ohne Vorlage haben beide.

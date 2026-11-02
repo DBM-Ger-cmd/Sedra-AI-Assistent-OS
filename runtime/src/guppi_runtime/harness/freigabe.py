@@ -176,10 +176,16 @@ class Kiste:
             return {'status': 'fehler', 'ergebnis': f'error: {exc}', 'stufe': None, 'regel': None, 'wirkung': False}
         if name == 'lauf_status':                              # lesen: keine Karte, kein Katalog (der Inhalt der Ausgabe ist fremder Text, das Werkzeug kennzeichnet ihn)
             return dict(self.w.ausfuehren(name, args, plan=plan), stufe='frei', regel='lauf-lesen')
-        if name in FREI_OHNE_KATALOG:                          # Fenster öffnen und Projekt beantragen: keine Karte, kein Katalog – das Fenster bedient der Captain, der Antrag liegt in seinem Posteingang
+        if name in FREI_OHNE_KATALOG:                          # keine Karte: das Fenster bedient der Captain, der Antrag liegt in seinem Posteingang, die Verknüpfung nimmt er weg
+            e = einstufen(self.regeln, name, plan['ziel'])
+            if e['stufe'] == 'verboten':                        # nur ein ausdrückliches `verboten` des Captains zählt; ohne Regel laufen sie frei
+                self._audit('HARNESS_EINGESTUFT', {'werkzeug': name, 'ziel': plan['ziel'][:300], 'stufe': 'verboten', 'regel': e['regel'], 'vorbehalt': False})
+                return {'status': 'verboten', 'ergebnis': f"verboten: {e['begruendung']}", 'stufe': 'verboten', 'regel': e['regel'], 'wirkung': False}
+            self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id}
             out = self.w.ausfuehren(name, args, plan=plan)
-            self._audit('HARNESS_APP_OEFFNEN' if name == 'app_oeffnen' else 'HARNESS_PROJEKT_BEANTRAGT', {'ziel': plan['ziel'][:300], 'status': out['status']})
-            return dict(out, stufe='frei', regel='app-oeffnen' if name == 'app_oeffnen' else 'projekt-beantragen')
+            if name not in ('verknuepfung_anlegen', 'gedanken_lesen', 'gedaechtnis_suchen'):                  # die Verknüpfung steht schon im Audit des Servers (mit `von`)
+                self._audit('HARNESS_APP_OEFFNEN' if name == 'app_oeffnen' else 'HARNESS_PROJEKT_BEANTRAGT', {'ziel': plan['ziel'][:300], 'status': out['status']})
+            return dict(out, stufe='frei', regel=name.replace('_', '-'))
         e = einstufung(self.regeln, name, args, plan)
         self._audit('HARNESS_EINGESTUFT', {'werkzeug': name, 'ziel': plan['ziel'][:300], 'stufe': e['stufe'], 'regel': e['regel'], 'vorbehalt': e['vorbehalt']})
         if e['wirkt_als'] == 'verboten':

@@ -4,6 +4,10 @@ arbeitsplatz:
   zonen:
   - name: Seitenleiste
     wo: 'links: Neue Sitzung, Projekte mit ihren Sitzungen, Chats, Einstellungen; Strg+B blendet sie ein und aus'
+  - name: Posteingang
+    wo: 'links unten in der Seitenleiste, über Aufgaben: der Knopf zeigt, wie viele Anträge auf den Captain warten (Ordner als Projekt, Katalog, Schalter …) und blinkt bei einem neuen; ein Klick klappt die Liste auf, dort wird direkt freigegeben (mit „Sicher?“) oder abgelehnt, „Genau ansehen“ öffnet die Entscheidungen'
+  - name: Verknüpfungen
+    wo: 'links über dem Posteingang: eigene Knöpfe, die ein Fenster öffnen (z. B. den Rekorder). Der Captain lässt sie im Chat anlegen (Werkzeug verknuepfung_anlegen, höchstens 12) und nimmt sie mit dem Kreuz wieder weg'
   - name: Reiter
     wo: 'oben: jede offene Sitzung ein Reiter; + öffnet eine neue, die mittlere Maustaste schließt'
   - name: Gespräch

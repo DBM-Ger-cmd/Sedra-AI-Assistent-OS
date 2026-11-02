@@ -19,7 +19,7 @@
   // G2 §3.1 – sechs Gruppen, 21 Punkte; `ort` ist die ID aus ui/places.js (dasselbe Objekt wie im Start-Menü)
   const GRUPPEN = [
     {id: 'allgemein', titel: 'Allgemein', punkte: {darstellung: E('darstellung', 'Darstellung'), benachrichtigungen: E('benachrichtigungen', 'Benachrichtigungen'), sprache: E('sprache', 'Sprache der Oberfläche')}},
-    {id: 'agent', titel: 'Agent', punkte: {vorlagen: E('vorlagen', 'Vorlagen'), freigabe: E('freigabe', 'Freigabe-Modus'), grenzen: E('grenzen', 'Grenzen der Schleife')}},
+    {id: 'agent', titel: 'Agent', punkte: {vorlagen: E('vorlagen', 'Vorlagen'), freigabe: E('freigabe', 'Freigabe-Modus'), grenzen: E('grenzen', 'Grenzen der Schleife'), gedanken: E('gedanken', 'Gedanken der Modelle')}},
     {id: 'sprache', titel: 'Sprache', punkte: {rekorder: W('aufnahme', ['rekorder'], 'Rekorder'), quelle: E('quelle', 'Quelle')}},
     {id: 'integrationen', titel: 'Integrationen', punkte: {mcp: E('mcp', 'MCP'), gateway: W('gateway', ['gateway', 'schutz'], 'KI GateWay'), cloud: W('labor', ['labor'], 'Cloud')}},
     {id: 'modelle', titel: 'Lokale Modelle', punkte: {bibliothek: W('library', ['library'], 'Bibliothek'), werkstatt: W('models', ['workshop'], 'Rezepte / Werkstatt'), slots: W('slots', ['slots'], 'Slots'), laufzeit: E('laufzeit', 'Geladene Instanzen · Laufzeit')}},
@@ -96,7 +96,31 @@
   }
 
   // ---- eigene Flächen
-  const FLAECHEN = {darstellung, benachrichtigungen, sprache, vorlagen, freigabe, grenzen, quelle, mcp, laufzeit, schalter};
+  // Gedanken der Modelle: Sedra speichert sie je Antwort; hier steht, wie viel davon wieder an das Modell geht (mehr kostet Token)
+  const GEDANKEN = [['aus', 'Aus', 'Das Modell bekommt nur Text und Ergebnisse. Die Gedanken bleiben bei Sedra und sind für dich aufklappbar.'],
+                    ['spur', 'Spur (Standard)', 'Jede frühere Antwort trägt eine Zeile: was lief und wie viel Gedanken gespeichert sind. Das Modell holt sie bei Bedarf selbst mit „gedanken_lesen“.'],
+                    ['kurz', 'Kurz', 'Spur, dazu das Ende der Gedanken der letzten 2 Antworten (je höchstens 800 Zeichen).'],
+                    ['voll', 'Ausführlich', 'Spur, dazu die Gedanken der letzten 4 Antworten (je höchstens 6 000 Zeichen, insgesamt 12 000). Kostet deutlich mehr Token und füllt das Fenster schneller.']];
+  function gedanken(S, box){
+    box.append(d().el('div', 'hs-app-satz', 'Sedra speichert die Gedanken jedes Modells in der Sitzung (bis 20 000 Zeichen je Antwort, je Zug getrennt). Wähle, wie viel davon beim nächsten Mal wieder an das Modell geht.'));
+    const liste = d().el('div', 'hs-einst-eigen'); box.append(liste);
+    const meld = d().el('div', 'hs-leise'); box.append(meld);
+    const zeichne = aktuell=>{
+      liste.replaceChildren(...GEDANKEN.map(([wert, name, text])=>{
+        const z = d().el('label', 'hs-einst-zeile'); const r = d().el('input'); r.type = 'radio'; r.name = 'hs-gedanken'; r.value = wert; r.checked = wert === aktuell;
+        r.onchange = async()=>{
+          try{ await S.api('/api/harness/vorgaben', {method: 'POST', body: {gedanken_zurueck: wert}}); meld.textContent = 'Gespeichert: ' + name + '. Gilt ab der nächsten Nachricht.'; }
+          catch(err){ meld.textContent = 'Nicht gespeichert: ' + err.message; zeichne(aktuell); }
+        };
+        z.append(r, d().el('b', null, name), d().el('small', 'hs-leise', text));
+        return z;
+      }));
+    };
+    zeichne('spur');
+    S.api('/api/harness/vorgaben').then(v=>zeichne(v.gedanken_zurueck || 'spur')).catch(()=>{});
+  }
+
+  const FLAECHEN = {darstellung, benachrichtigungen, sprache, vorlagen, freigabe, grenzen, gedanken, quelle, mcp, laufzeit, schalter};
   function eigen(S, flaeche, punkt){
     const box = d().el('div', 'hs-einst-eigen'); box.dataset.flaeche = punkt.flaeche;
     flaeche.append(box);

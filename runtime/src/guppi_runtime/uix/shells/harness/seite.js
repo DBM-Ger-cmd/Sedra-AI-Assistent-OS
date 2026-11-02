@@ -155,6 +155,8 @@
     return box;
   }
 
+  const FREIGABE_DIREKT = ['request:harness_projekt'];
+
   function zeichnen(S){
     const el = S.el.seite;
     // A9 (1.11.): ein offenes Umbenennen-Feld oder eine Lösch-Rückfrage überlebt Ereignisse – der Neuaufbau wartet, bis sie fertig sind
@@ -199,13 +201,78 @@
     if(!chats.length) chatBox.append(d().el('small', 'hs-leise', 'Keine Sitzung ohne Projekt'));
     chats.forEach(s=>chatBox.append(zeile(S, s)));
     liste.append(d().el('div', 'hs-ueber', 'Chats'), chatBox);
+    // Verknüpfungen: eigene Knöpfe, die der Captain im Chat verlangt hat (Werkzeug verknuepfung_anlegen); das Kreuz nimmt sie weg
+    const verkn = d().el('div', 'hs-verkn');
+    (S.verknuepfungen || []).forEach(v=>{
+      const zeile = d().el('div', 'hs-verkn-zeile');
+      const knopf = d().el('button', 's-btn hs-einstellungen', v.name); knopf.type = 'button';
+      knopf.title = 'Öffnet ' + v.name;
+      knopf.onclick = ()=>{
+        const ort = (root.sedraPlaces && root.sedraPlaces.PLACES || []).find(p=>p.id === v.ort);
+        if(ort) root.sedraHarness.app.oeffnen(S, ort); else S.hinweis('Das Fenster „' + v.name + '“ gibt es in dieser Oberfläche nicht.', 'note');
+      };
+      const weg = d().el('button', 'hs-sz-knopf', '×'); weg.type = 'button'; weg.title = 'Verknüpfung entfernen'; weg.setAttribute('aria-label', 'Verknüpfung ' + v.name + ' entfernen');
+      weg.onclick = async()=>{
+        try{ await S.api('/api/harness/verknuepfungen?id=' + encodeURIComponent(v.id), {method: 'DELETE'}); }catch(err){ S.hinweis('Die Verknüpfung blieb: ' + (err && err.message || err), 'warn'); }
+        S.freigabenLaden();
+      };
+      zeile.append(knopf, weg); verkn.append(zeile);
+    });
+    // Posteingang: alle Anträge, die auf den Captain warten (Ordner als Projekt, Katalog, Schalter …). Ein Klick klappt die Liste auf; Freigeben und
+    // Ablehnen gehen hier direkt (dieselbe Antwort wie in den Entscheidungen, mit „Sicher?“ vor dem Freigeben).
+    const antraege = S.antraege || [];
+    const offene = antraege.length + (S.entscheidungen || []).length;
+    const blinkt = S._blinken && S._blinken.has('posteingang');
+    const post = d().el('button', 's-btn hs-einstellungen' + (offene ? ' neu' : '') + (blinkt ? ' blinkt' : ''), '✉ Posteingang' + (offene ? ' (' + offene + ')' : '')); post.type = 'button';
+    post.title = offene ? offene + ' warten auf deine Freigabe – Klick klappt sie auf' : 'Keine Anträge offen – hier erscheinen Anträge, die auf deine Freigabe warten';
+    post.dataset.marke = 'hs-posteingang';
+    post.setAttribute('aria-expanded', S._postOffen ? 'true' : 'false');
+    post.onclick = ()=>{ S._postOffen = !S._postOffen; zeichnen(S); };
+    const postBox = d().el('div', 'hs-post');
+    if(S._postOffen){
+      if(!antraege.length) postBox.append(d().el('small', 'hs-leise', (S.entscheidungen || []).length ? 'Nur Freigaben der Sitzungen – sie stehen im Gespräch auf ihrer Karte.' : 'Nichts offen.'));
+      antraege.forEach(x=>{
+        const karte = d().el('div', 'hs-post-antrag');
+        karte.append(d().el('div', 'hs-post-titel', x.title || x.id));
+        if(x.note) karte.append(d().el('small', 'hs-leise', String(x.note).slice(0, 160)));
+        (x.risks || []).slice(0, 3).forEach(rk=>karte.append(d().el('small', 'hs-leise', '⚠ ' + String(rk).slice(0, 200))));          // was die Freigabe bedeutet, steht vor dem Knopf
+        const reihe = d().el('div', 'hs-post-reihe');
+        const ways = x.ways || [];
+        // Direkt freigeben nur, was wenig ändert: ein Ordner als Projekt. Alles andere (Katalog, Schalter, Cloud …) erst in den Entscheidungen, mit allen Angaben.
+        const ja = FREIGABE_DIREKT.indexOf(x.kind) >= 0 ? ['freigeben_und_anwenden', 'einmal'].find(w=>ways.indexOf(w) >= 0) : null;
+        const entscheide = async(way)=>{
+          try{ await S.shellApi.decide(x.id, way); }catch(err){ S.hinweis('Nicht entschieden: ' + (err && err.message || err), 'warn'); }
+          S.freigabenLaden();
+        };
+        if(ja){
+          const k = d().el('button', 'hs-knopf hs-klein p', 'Freigeben'); k.type = 'button';
+          k.onclick = ()=>{
+            if(!k.dataset.sicher){                                    // zweiter Klick statt confirm(): ein Browser-Dialog antwortet in eingebetteten Fenstern still mit Nein
+              k.dataset.sicher = '1'; k.textContent = 'Sicher? Freigeben';
+              setTimeout(()=>{ if(k.isConnected){ delete k.dataset.sicher; k.textContent = 'Freigeben'; } }, 5000);
+              return;
+            }
+            entscheide(ja);
+          };
+          reihe.append(k);
+        }
+        if(ways.indexOf('ablehnen') >= 0){
+          const n = d().el('button', 'hs-knopf hs-klein', 'Ablehnen'); n.type = 'button'; n.onclick = ()=>entscheide('ablehnen'); reihe.append(n);
+        }
+        const mehr = d().el('button', 'hs-knopf hs-klein', 'Genau ansehen'); mehr.type = 'button';
+        mehr.title = 'Öffnet die Entscheidungen mit allen Angaben zu diesem Antrag';
+        mehr.onclick = ()=>S.shellApi.decide();
+        reihe.append(mehr);
+        karte.append(reihe); postBox.append(karte);
+      });
+    }
     const aufgaben = d().el('button', 's-btn hs-einstellungen', '⛨ Aufgaben'); aufgaben.type = 'button';
     aufgaben.title = 'Aufgaben-Freigaben und Vorschläge des Vorarbeiters'; aufgaben.onclick = ()=>root.sedraHarness.reiter.oeffnen(S, 'aufgaben:');
     const einst = d().el('button', 's-btn hs-einstellungen', 'Einstellungen');
     einst.type = 'button';
     einst.title = 'Einstellungen (HS-42): Allgemein, Agent, Sprache, Integrationen, Lokale Modelle, System'; einst.dataset.marke = 'hs-einstellungen';
     einst.onclick = ()=>root.sedraHarness.einstellungen.oeffnen(S);           // Stufe 5
-    el.replaceChildren(neu, liste, aufgaben, einst);
+    el.replaceChildren(neu, liste, verkn, post, postBox, aufgaben, einst);
   }
 
   root.sedraHarness = root.sedraHarness || {};

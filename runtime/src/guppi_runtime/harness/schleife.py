@@ -19,7 +19,7 @@ import time
 from ..devenv.model_tools import FINAL_ANSWER_NOTE, compact_history, parse_calls, relax_schema
 
 MAX_ZUEGE = 24
-DENKEN_MAX = 4000                      # A16: so viele Zeichen des Denkens werden in der Sitzung gespeichert (E-A2)
+DENKEN_MAX = 20000                     # so viele Zeichen des Denkens speichert Sedra je Antwort in der Sitzung (E-A2, 02.11.2026 von 4 000 angehoben); sie gehen nie an das Modell zurück
 KOMPAKT_AB = 0.70                     # Anteil des Fensters, ab dem alte Werkzeugergebnisse gekürzt werden
 ERGEBNIS_MAX = 8000                   # D-E5: so viel eines Ergebnisses steht im Verlauf
 KURZ_MAX = 120
@@ -96,7 +96,7 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
     texte, werkzeuge = [], []
     token = {'ein': 0, 'aus': 0}
     denken = [0]
-    denktext, denktext_len = [], [0]       # A16 (1.11., E-A2): die ersten DENKEN_MAX Zeichen des Denkens – nur im Live-Modus (scharf: nichts), für die Zeile nach dem Neuladen
+    denktext, denktext_len, denk_zug = [], [0], [0]       # die ersten DENKEN_MAX Zeichen des Denkens, nach Zügen getrennt – auch im scharfen Modus (dort als ungeprüft markiert), für die aufklappbare Zeile
     ende, grund, zurueck = None, None, None
     letzter, gleich, schluss, abgeschnitten = None, 0, False, False
     warte_karte = None
@@ -120,7 +120,10 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
                 if live_text: antwort.senden('text.ungeprueft', {'stueck': stueck})
             elif kanal == 'denken':
                 denken[0] += len(stueck)
-                if live_text and denktext_len[0] < DENKEN_MAX:                                      # A16: gekürzt speichern
+                if denktext_len[0] < DENKEN_MAX:                                                    # gekürzt speichern; was der Agent je Zug überlegt, ist für Werkzeug- und Agentenarbeit wichtig
+                    if denk_zug[0] != zug and denktext:
+                        denktext.append('\n\n— Zug %d —\n\n' % zug)
+                    denk_zug[0] = zug
                     teil = stueck[:DENKEN_MAX - denktext_len[0]]; denktext.append(teil); denktext_len[0] += len(teil)
                 if live_text: antwort.senden('denken', {'stueck': stueck})
                 elif not verborgen[0]:
@@ -264,6 +267,6 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
     ergebnis = {'ende': ende, 'text': text, 'zuege': zug, 'token': token, 'denken_zeichen': denken[0], 'werkzeuge': werkzeuge, **extra}
     if sitzungen is not None and sitzung_id:
         sitzungen.anhaengen(sitzung_id, {'typ': 'modell', 'antwort_id': antwort.id, 'text': text, 'denken_zeichen': denken[0], 'ende': ende,
-                                         'zuege': zug, 'token': token, **({'denken_text': ''.join(denktext)} if denktext else {}), **extra})
+                                         'zuege': zug, 'token': token, **({'denken_text': ''.join(denktext)} if denktext else {}), **({'denken_ungeprueft': True} if denktext and not live_text else {}), **extra})
     antwort.senden('ende', {'ende': ende, 'zuege': zug, 'token': token, **{k: v for k, v in extra.items() if k != 'zurueckgehalten'}})
     return ergebnis

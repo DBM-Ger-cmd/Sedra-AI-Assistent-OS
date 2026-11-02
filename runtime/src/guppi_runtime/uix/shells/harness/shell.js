@@ -29,6 +29,8 @@
       this.vorarbeiter = {};
       this.aufgaben = [];
       this.laeufe = [];                      // Läufe der Harness (Register), für Taskleiste und Reiter „Lauf“
+      this.antraege = [];                    // offene Anträge außer den Karten (Posteingang in der Seitenleiste)
+      this.verknuepfungen = [];              // eigene Knöpfe der Seitenleiste (Chat: verknuepfung_anlegen), je {id, ort, name}
       this.entscheidungen = [];              // offene Harness-Freigaben (Karten und Aufgabenvorschläge)
       this.melder = root.sedraStand.makeMelder(this.api);     // Stufe 4: App-Reiter melden ihren Arbeitsstand (§10.2)
       const host = document.getElementById('sedra-root');
@@ -69,6 +71,7 @@
       root.addEventListener('resize', ()=>{ this.breite(); this.teilungAnpassen(); });
 
       ctx.bus.on('harness.sitzung', ()=>this.sitzungenLaden());
+      ctx.bus.on('harness.verknuepfungen', ()=>this.freigabenLaden());                            // eine Verknüpfung wurde angelegt oder entfernt
       ctx.bus.on('harness.projekt', ()=>this.projekteLaden());                                   // P0 M3: ein Ordner wurde als Projekt freigegeben
       ctx.bus.on('harness.vorgaben', e=>{ Object.assign(H.projekt.vorgaben(this), e || {}); H.eingabe.projektwahl(this); });
       ctx.bus.on('harness.antwort', e=>{
@@ -139,11 +142,16 @@
     },
     async _freigabenLaden(){
       try{
-        const [v, a, e] = await Promise.all([this.api('/api/harness/vorarbeiter'), this.api('/api/harness/aufgaben'), this.api('/api/decisions')]);
+        const [v, a, e, vk] = await Promise.all([this.api('/api/harness/vorarbeiter'), this.api('/api/harness/aufgaben'), this.api('/api/decisions'),
+                                                  this.api('/api/harness/verknuepfungen').catch(()=>({verknuepfungen: this.verknuepfungen}))]);
+        this.verknuepfungen = vk.verknuepfungen || [];
         this.vorarbeiter = v.vorarbeiter || {};
         this.aufgaben = a.aufgaben || [];
         const vorher = new Set(this.entscheidungen.map(x=>x.id));
+        const vorherAntraege = new Set(this.antraege.map(x=>x.id));
         this.entscheidungen = (e.items || []).filter(x=>String(x.id).startsWith('harness:'));
+        this.antraege = (e.items || []).filter(x=>!String(x.id).startsWith('harness:'));      // Anträge mit Gate (Ordner als Projekt, Katalog, Schalter …): der Posteingang links zählt sie
+        if(this._freigabenGeladen && this.antraege.some(x=>!vorherAntraege.has(x.id))) H.taskleiste.blinken(this, 'posteingang');       // ein neuer Antrag lässt den Posteingang einmal blinken
         if(this._freigabenGeladen){               // HS-33: eine neue Freigabe lässt ihren Knopf einmal blinken und markiert ihn, bis er angeklickt wird
           this.entscheidungen.filter(x=>!vorher.has(x.id)).forEach(x=>{
             H.taskleiste.blinken(this, 'freigaben');

@@ -181,6 +181,33 @@ class SchleifeTests(unittest.TestCase):
         self.assertEqual([d for n, d in ereignisse if n == 'denken'], [{'stueck': '', 'verborgen': True}])
         self.assertEqual(dict(ereignisse)['text.geprueft'], {'text': 'Nur nach dem Urteil'})
 
+    def _modell_satz(self):
+        return next(e for e in self.sitzungen.laden(self.sid)['eintraege'] if e['typ'] == 'modell')
+
+    def test_gedanken_werden_je_zug_gespeichert_und_gehen_nie_zurueck_ans_modell(self):
+        z = lambda: Zug('', denken='ich brauche den Stand', calls=[call('zustand', {'was': 'gpu'})])
+        a = Attrappe([z(), Zug('Fertig.', denken='jetzt antworten')])
+        self.lauf(a)
+        satz = self._modell_satz()
+        self.assertIn('ich brauche den Stand', satz['denken_text'])
+        self.assertIn('— Zug 2 —', satz['denken_text'])                                   # was der Agent je Zug überlegt, bleibt getrennt lesbar
+        self.assertIn('jetzt antworten', satz['denken_text'])
+        self.assertNotIn('denken_ungeprueft', satz)                                       # im Live-Modus ist es angezeigt worden
+        gesendet = json.dumps([r['messages'] for r in a.requests], ensure_ascii=False)
+        self.assertNotIn('ich brauche den Stand', gesendet)                               # Sedra speichert die Gedanken, das Modell bekommt sie nicht zurück
+
+    def test_gedanken_im_scharfen_modus_werden_gespeichert_aber_als_ungeprueft_markiert(self):
+        self.lauf(Attrappe([Zug('Antwort', denken='abc')]), live_text=False)
+        satz = self._modell_satz()
+        self.assertEqual((satz['denken_text'], satz['denken_ungeprueft']), ('abc', True))
+        self.assertEqual([d for n, d in self.ereignisse() if n == 'denken'], [{'stueck': '', 'verborgen': True}])      # live bleibt es verborgen
+
+    def test_gedanken_werden_bei_der_grenze_gekuerzt(self):
+        self.lauf(Attrappe([Zug('x', denken='y' * (schleife.DENKEN_MAX + 500))]))
+        satz = self._modell_satz()
+        self.assertEqual(len(satz['denken_text']), schleife.DENKEN_MAX)
+        self.assertEqual(satz['denken_zeichen'], schleife.DENKEN_MAX + 500)
+
     def test_fehler_des_modells(self):
         out = self.lauf(Attrappe([Zug('x', status='failed', error='ModelAdapterError:local_model_api_error:refused')]))
         self.assertEqual(out['ende'], 'fehler')

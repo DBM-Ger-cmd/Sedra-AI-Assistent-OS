@@ -8,6 +8,8 @@
 
   const WAY_LABEL = {einmal: 'Einmal freigeben', freigeben_und_anwenden: 'Freigeben und anwenden', aendern: 'Grenze ändern …', ablehnen: 'Ablehnen', cloud_diesen_lauf: 'Nur diesen Lauf in die Cloud', bestaetigen: 'Entsperren'};
 
+  const KIND_LABEL = {harness_projekt: 'Ordner als Projekt öffnen', harness_katalog: 'Freigabe-Regeln des Harness ändern', harness_vorlage: 'Grenzen einer Vorlage ändern', harness_aufgabe: 'Aufgabe für eine Sitzung freigeben'};
+
   const tool = {
     id: 'decisions',
 
@@ -27,6 +29,10 @@
       try{ view = await this.ctx.api('/api/decisions'); }
       catch(err){ this.el.replaceChildren(d().el('div', 's-note bad', 'Entscheidungen nicht lesbar: ' + err.message)); return; }
       this.items = view.items || [];
+      const stand = JSON.stringify(this.items.map(x=>[x.id, x.title, x.ways]));
+      if(stand === this._stand && this.el.firstChild) return;          // nichts Neues: die Stelle, an der man liest, und ein halber „Sicher?“-Klick bleiben
+      this._stand = stand;
+      const oben = this.el.scrollTop;
       const box = d().el('div', 's-col');
       box.append(d().el('h5', 's-head', 'Entscheidungen · ' + (this.items.length || 'keine')));
       if(!this.items.length){
@@ -34,11 +40,13 @@
       }
       this.items.forEach(item=>box.append(this.card(item)));
       this.el.replaceChildren(box);
+      this.el.scrollTop = oben;
     },
 
     card(item){
       const card = d().el('div', 's-note warn t-dec-card');
       card.append(d().el('b', null, item.title));
+      const art = KIND_LABEL[String(item.kind || '').replace('request:', '')] || ''; if(art) card.append(d().el('small', 's-muted', art));
       card.append(d().el('div', 't-dec-what', item.describe || ''));
       if((item.risks || []).length) card.append(d().el('small', 's-muted', 'Risiken: ' + item.risks.join(', ')));
       if(item.note && item.note !== item.describe) card.append(d().el('small', 's-muted', item.note));

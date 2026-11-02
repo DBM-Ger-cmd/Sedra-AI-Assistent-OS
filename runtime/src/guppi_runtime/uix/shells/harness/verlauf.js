@@ -124,9 +124,9 @@
           }
           else if(e.typ === 'modell'){
             if(!block){ block = this.neu(d().el('div', 'hs-antwort')); this.eintraege++; }
-            if(e.denken_zeichen){                                   // A16 (1.11.): der gespeicherte Anfang des Denkens (bis 4 000 Zeichen) steht in der Zeile
-              const dz = denkZeile('Dachte nach · ' + e.denken_zeichen.toLocaleString('de-DE') + ' Zeichen' + (e.denken_text ? (e.denken_text.length < e.denken_zeichen ? ' (Anfang gespeichert)' : '') : ' (nicht gespeichert)'));
-              if(e.denken_text) dz.querySelector('pre').textContent = e.denken_text;
+            if(e.denken_zeichen){                                   // der von Sedra gespeicherte Anfang des Denkens (bis 20 000 Zeichen, je Zug getrennt) steht aufklappbar in der Zeile; ans Modell geht er nie zurück
+              const dz = denkZeile('Dachte nach · ' + e.denken_zeichen.toLocaleString('de-DE') + ' Zeichen' + (e.denken_text ? (e.denken_text.length < e.denken_zeichen ? ' (Anfang gespeichert)' : '') + (e.denken_ungeprueft ? ' · ungeprüft' : '') : ' (nicht gespeichert)'));
+              if(e.denken_text){ dz.querySelector('pre').textContent = e.denken_text; if(e.denken_ungeprueft) dz.querySelector('pre').classList.add('hs-ungeprueft'); }
               block.prepend(dz);
             }
             if(e.zurueckgehalten) block.append(d().el('div', 'hs-zurueck', e.zurueckgehalten));
@@ -269,6 +269,7 @@
           if(row) werkzeugEnde(row, x.status, x.dauer_s, x.ergebnis !== undefined ? x.ergebnis : x.kurz, x.stufe, x.regel);
           const w = (z.args || {})[x.aufruf_id];
           if(w) root.sedraHarness.vorschau.beruehrt(S, this, w.name, w.args, x.status);          // Stufe 6: die Vorschau folgt der Datei
+          if(x.ui && x.ui.verknuepfungen) S.freigabenLaden();                                      // verknuepfung_anlegen: die Seitenleiste zeigt den neuen Knopf
           if(x.ui && x.ui.oeffnen) this.fensterOeffnen(x.ui);                                      // app_oeffnen: die Shell öffnet das Fenster (nur live, nie beim Laden des Verlaufs)
         }
         else if(name === 'karte'){ this.phase('wartet auf Freigabe'); block.append(karteKarte(S, this, x, null)); z.seg = null; root.sedraHarness.vorschau.karte(S, this, x); }

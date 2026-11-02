@@ -14,6 +14,7 @@ from . import vorlagen as harness_vorlagen
 
 KIND_KATALOG = 'harness_katalog'
 KIND_VORLAGE = 'harness_vorlage'
+PROJEKT_ANTRAEGE_MAX = 5                 # offene „Ordner öffnen“-Anträge zugleich
 KIND_PROJEKT = 'harness_projekt'            # P0 M3 (1.11.): „Ordner öffnen“ → Laufzeitdatei, nie local_config
 ZIEL_KATALOG = 'local_config/' + harness_katalog.DATEI
 ZIEL_PROJEKTE = harness_projekte.LAUFZEIT.as_posix()
@@ -131,6 +132,13 @@ def projekt_antrag(hub, payload):
         raise ValueError(str(exc)) from exc
     if any(p['wurzel'] == neu['wurzel'] for p in alle):
         raise ValueError('ordner_schon_projekt: ' + next(p['id'] for p in alle if p['wurzel'] == neu['wurzel']))
+    offen = getattr(hub, '_open_requests', None)
+    offene = [r for r in (offen() if callable(offen) else []) if r.get('kind') == KIND_PROJEKT]
+    if len(offene) >= PROJEKT_ANTRAEGE_MAX:                  # Härtung: ein Modell flutet den Posteingang nicht mit Ordner-Anträgen
+        raise ValueError(f'zu_viele_offene_antraege: {len(offene)} Ordner-Anträge warten schon im Posteingang – erst die entscheiden')
+    for r in offene:          # 02.11.2026: drei Anträge für denselben Ordner endeten nach der ersten Freigabe in `binding_stale`
+        if r.get('kind') == KIND_PROJEKT and ((r.get('binding') or {}).get('projekt') or {}).get('wurzel') == neu['wurzel']:
+            raise ValueError('antrag_liegt_schon_im_posteingang: ' + neu['wurzel'] + ' – bitte dort freigeben oder ablehnen (' + str(r.get('mission_id')) + ')')
     stand = harness_projekte.laufzeit_laden(hub.project_root)
     binding = {'projekt': neu, 'stand_hash': _laufzeit_hash(stand)}
     weit = any(m.strip() in ('**', '*') for m in neu['schreibbereich'])
