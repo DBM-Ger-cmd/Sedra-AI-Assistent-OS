@@ -45,7 +45,7 @@ Umgesetzt, mit Tests (`runtime/tests/test_harness_app_oeffnen.py`):
 - **Feste Wege** `workspace/GUPPI_OS/wunsch_umsetzen/` und `docs/ARBEITSWEG_WUNSCH_UMSETZEN.md` (Wissensspeicher), Ordnerzweck im Arbeitsumfeld-Wissen.
 
 Härtung (02.11.2026, zweite Runde):
-- Die drei Werkzeuge ohne Karte (`app_oeffnen`, `projekt_beantragen`, `verknuepfung_anlegen`) stehen im Katalog (`katalog.OHNE_KARTE`): eine Regel mit `verboten` schaltet sie ab, ohne Regel laufen sie frei. Sitzungen mit Vorlage haben sie nur, wenn die Vorlage sie nennt.
+- Die Werkzeuge ohne Karte (`app_oeffnen`, auch mit `verknuepfung=true`, `projekt_beantragen`, `erinnern`) stehen im Katalog (`katalog.OHNE_KARTE`): eine Regel mit `verboten` schaltet sie ab, ohne Regel laufen sie frei. Sitzungen mit Vorlage haben sie nur, wenn die Vorlage sie nennt.
 - Anträge: derselbe Ordner nur einmal offen, höchstens 5 offene Ordner-Anträge. Verknüpfungen: nur bekannte Orte, höchstens 12, im Audit steht `von` (modell oder captain).
 - Posteingang links: direkt freigeben nur für „Ordner als Projekt“; alles andere (Katalog, Schalter, Cloud …) erst in den Entscheidungen. Die Risiken stehen vor den Knöpfen.
 - Vereinfacht: eine Liste statt dreien, ein Gate-Zweig statt dreien in `werkzeuge.py`, ein Audit-Zweig in `freigabe.py`.
@@ -53,11 +53,24 @@ Härtung (02.11.2026, zweite Runde):
 Gedanken der Modelle (02.11.2026):
 - Sedra speichert sie je Antwort in der Sitzungsdatei (bis 20 000 Zeichen, je Zug getrennt, im scharfen Modus als ungeprüft markiert); sie stehen aufklappbar im Gespräch.
 - Ans Modell geht nach Vorgabe `gedanken_zurueck` (Einstellungen → Agent → Gedanken der Modelle): `aus` nichts · `spur` (Standard) eine Zeile je frühere Antwort mit den Werkzeugen und der Zahl gespeicherter Zeichen · `kurz` und `voll` zusätzlich das Ende der Gedanken (begrenzt).
-- Mit dem Werkzeug `gedanken_lesen` holt das Modell bei Bedarf ein Stück der Gedanken einer früheren Antwort derselben Sitzung (ohne Karte, per `verboten` abschaltbar).
+- Mit dem Werkzeug `erinnern(antwort=…)` holt das Modell bei Bedarf ein Stück der Gedanken einer früheren Antwort derselben Sitzung (ohne Karte, per `verboten` abschaltbar).
 - Gedächtnis: nach jeder Antwort legt Sedra eine kurze Notiz an (Frage des Captains, Anfang der Antwort, Werkzeuge, Anfang und Ende der Gedanken; ohne Modellaufruf) in
-  `runtime_data/harness/gedaechtnis/<projekt>.jsonl` (höchstens 1 500 je Projekt). Das Modell fragt mit `gedaechtnis_suchen` („Was haben wir dazu schon gemacht?“, höchstens 5 Treffer,
-  nur dieses Projekt) und holt bei Bedarf die ganzen Gedanken mit `gedanken_lesen`. Beide Werkzeuge laufen ohne Karte und sind per `verboten` abschaltbar.
+  `runtime_data/harness/gedaechtnis/<projekt>.jsonl` (höchstens 1 500 je Projekt). Das Modell fragt mit `erinnern(frage=…)` („Was haben wir dazu schon gemacht?“, höchstens 5 Treffer,
+  nur dieses Projekt) und holt bei Bedarf die ganzen Gedanken mit `erinnern(antwort=…)`. Beide Werkzeuge laufen ohne Karte und sind per `verboten` abschaltbar.
 - Noch nicht gebaut: Notizen, die ein Modell zusammenfasst (das Gedächtnis ist bewusst wörtlich und ohne Modellaufruf), und die Suche über mehrere Projekte.
+
+Token sparen (02.11.2026, gemessen mit dem echten Router: /apply-template und /tokenize, Gemma 4 12B):
+| Stand | Werkzeuge | Token je Anfrage (Systemprompt + Werkzeugliste) |
+|---|---|---|
+| vorher | 27 | 3 290 |
+| Ortsliste nur einmal (statt in zwei Werkzeugen) | 27 | 3 023 |
+| + Orte als `id=Name`, kürzerer Text | 27 | 2 985 |
+| + Verknüpfung in `app_oeffnen` aufgenommen | 26 | 2 916 |
+| + `gedanken_lesen` und `gedaechtnis_suchen` zu `erinnern` | 25 | 2 724 |
+| + Systemprompt ohne Namensliste | 25 | 2 606 |
+| + elf Zustandswerkzeuge als `zustand` (umgesetzt) | 15 | 2 271 |
+Das sind 1 019 Token weniger je Anfrage (−31 %), alle Funktionen bleiben. Nur Orte ohne Namen (`id` allein) hätte weitere 120 gespart, aber das Modell findet „Rekorder“ dann nicht mehr als `aufnahme`.
+Nicht geändert: die Lese-Grenze von `datei_lesen` (8 000 Zeichen = rund 2 500 Token; 4 000 wären rund 1 200). Weniger je Aufruf heißt mehr Aufrufe – das ist eine Abwägung des Captains.
 
 Noch offen:
 - Punkt 6 (Aussage „ich nutze jetzt Ordner X“ gegen die Sitzung prüfen): noch nicht gebaut; mit `projekt_beantragen` weniger dringend.

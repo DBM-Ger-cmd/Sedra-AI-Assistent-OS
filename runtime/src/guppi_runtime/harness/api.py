@@ -77,16 +77,17 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen)(?:/(antrag|entfernen|grenzen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis)(?:/(antrag|entfernen|grenzen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/grenzen'
-                        r'|verknuepfungen|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
+                        r'|verknuepfungen|gedaechtnis|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
 # Gedanken und Modelle (Captain 02.11.2026): Sedra speichert die Gedanken je Antwort; ans Modell geht je nach Modus nur wenig zurück.
-#   aus  – nichts, nur Text und Ergebnisse        spur – (Standard) eine Zeile je frühere Antwort: was lief, wie viel Gedanken gespeichert sind; abrufbar mit `gedanken_lesen`
+#   aus  – nichts, nur Text und Ergebnisse        spur – (Standard) eine Zeile je frühere Antwort: was lief, wie viel Gedanken gespeichert sind; abrufbar mit `erinnern`
 #   kurz – Spur + das Ende der Gedanken der letzten 2 Antworten (je 800 Zeichen)        voll – Spur + die letzten 4 (je 6 000 Zeichen)
 GEDANKEN_MODI = {'aus': (0, 0), 'spur': (0, 0), 'kurz': (2, 800), 'voll': (4, 6000)}
 GEDANKEN_STANDARD = 'spur'
+REICHWEITEN = ('projekt', 'alle')          # Gedächtnis: nur das Projekt der Sitzung (Standard) oder alle Projekte – nur der Captain stellt das um
 GEDANKEN_GESAMT_MAX = 12000           # Zeichen der Gedanken im ganzen Verlauf, egal welcher Modus
 SPUR_ANTWORTEN = 6                    # so viele frühere Antworten tragen eine Spur
 NACHLAUF_S = 60                        # P0 M2: so lange nach einer Antwort gilt ihr Modell noch als in Gebrauch (Folgefrage kommt gleich)
@@ -106,13 +107,13 @@ def _spur(e, eintraege):
     teile = [f"Antwort {e.get('antwort_id')}", f"{e.get('zuege', 1)} Züge"]
     if namen:
         teile.append('Werkzeuge: ' + ', '.join(namen[:8]))
-    teile.append(f"Gedanken {e['denken_zeichen']:,} Zeichen gespeichert – mit gedanken_lesen abrufbar".replace(',', '.'))
+    teile.append(f"Gedanken {e['denken_zeichen']:,} Zeichen gespeichert – mit erinnern(antwort=…) abrufbar".replace(',', '.'))
     return '[Spur: ' + ' · '.join(teile) + ']'
 
 
 def verlauf_aus(eintraege, modus=GEDANKEN_STANDARD):
     """Der Verlauf, den das Modell zu sehen bekommt: Text des Captains und des Modells. Je nach Modus tragen die letzten Antworten eine Spur und/oder
-    eine Notiz mit dem Ende ihrer gespeicherten Gedanken. Die Gedanken selbst liegen in der Sitzungsdatei; das Modell holt sie bei Bedarf mit `gedanken_lesen`."""
+    eine Notiz mit dem Ende ihrer gespeicherten Gedanken. Die Gedanken selbst liegen in der Sitzungsdatei; das Modell holt sie bei Bedarf mit `erinnern`."""
     n, grenze = GEDANKEN_MODI.get(modus, GEDANKEN_MODI[GEDANKEN_STANDARD])
     sichtbar = [e for e in eintraege if e.get('typ') in ('captain', 'modell') and (e.get('text') or '').strip()][-VERLAUF_MAX:]
     mit_spur = [e for e in sichtbar if e.get('typ') == 'modell' and e.get('denken_zeichen') and e.get('antwort_id')][-SPUR_ANTWORTEN:] if modus != 'aus' else []
@@ -243,6 +244,8 @@ class HarnessApi:
             return 200, self.vorgaben_setzen(payload)
         if fest == 'modelle' and method == 'GET' and not unter:
             return 200, self.modelle()
+        if fest == 'gedaechtnis' and not unter:
+            return 200, self.gedaechtnis_weg(method, q, payload)
         if fest == 'verknuepfungen' and not unter:
             return 200, self.verknuepfungen_weg(method, q, payload)
         if fest == 'router' and not unter and method in ('GET', 'POST'):
@@ -426,16 +429,58 @@ class HarnessApi:
         except Exception as exc:
             self._audit('HARNESS_GEDAECHTNIS_FEHLER', {'sitzung_id': sid, 'antwort_id': antwort_id, 'grund': f'{type(exc).__name__}: {exc}'[:200]})
 
+    def _reichweite(self):
+        r = self._laufzeit_vorgaben().get('gedaechtnis_reichweite')
+        return r if r in REICHWEITEN else 'projekt'
+
     def gedaechtnis_suchen(self, sitzung_id, frage):
-        """Aus dem Werkzeug `gedaechtnis_suchen`: nur die Notizen des Projekts dieser Sitzung."""
+        """Aus dem Werkzeug `gedaechtnis_suchen`: die Notizen des Projekts dieser Sitzung – oder aller bekannten Projekte, wenn der Captain das so eingestellt hat."""
         try:
             projekt = self.sitzungen.laden(str(sitzung_id or ''))['kopf'].get('projekt')
         except SitzungFehler as exc:
             raise ValueError('sitzung_unbekannt') from exc
+        if self._reichweite() == 'alle':
+            ids = [p['id'] for p in self.projekte()['projekte']] or [projekt]
+            return harness_gedaechtnis.text_aus(harness_gedaechtnis.suchen(self.hub.project_root, ids, frage), mehrere=True)
         return harness_gedaechtnis.text_aus(harness_gedaechtnis.suchen(self.hub.project_root, projekt, frage))
 
+    def gedaechtnis_weg(self, method, q, payload):
+        """GET: je Projekt Zahl der Notizen, noch nicht zusammengefasste und Zusammenfassungen · POST {projekt}: fasst die ältesten neuen Notizen mit dem geladenen Modell
+        zusammen (nur der Captain stößt das an; es kostet Token und belegt das Modell kurz)."""
+        if method == 'GET':
+            return {'projekte': [dict(harness_gedaechtnis.stand(self.hub.project_root, p['id']), id=p['id'], name=p['name']) for p in self.projekte()['projekte']],
+                    'mindestens': harness_gedaechtnis.MIN_VERDICHTEN, 'reichweite': self._reichweite()}
+        if method != 'POST':
+            raise ValueError('methode_nicht_erlaubt')
+        pid = str((payload or {}).get('projekt') or '')
+        self._projekt(pid)
+        return self.gedaechtnis_verdichten(pid)
+
+    def gedaechtnis_verdichten(self, pid):
+        notizen = harness_gedaechtnis.zu_verdichten(self.hub.project_root, pid)
+        belegt = self.laeufe.belegt()
+        if belegt:
+            raise ValueError(f"modell_belegt: Lauf {belegt['id']} ({belegt['name']}) hat das Modell")
+        loaded, grund = self.geladen()
+        if not loaded:
+            raise ValueError('kein_modell: erst ein Modell laden' + (f' ({grund})' if grund else ''))
+        modell = loaded[0].get('identifier') or loaded[0].get('modelKey')
+        sitz = self.sitzungen.liste(pid)
+        mission_id = self.sitzungen.laden(sitz[0]['id'])['kopf'].get('mission_id') if sitz else None
+        if not mission_id:
+            raise ValueError('keine_sitzung: das Projekt hat noch keine Sitzung mit Mission')
+        mission = self.hub.runtime.missions.load(mission_id)
+        out = self.execute(mission, {'action': 'model_inference', 'provider': PROVIDER, 'model': modell, 'messages': harness_gedaechtnis.verdichtungs_nachrichten(notizen),
+                                     'temperature': 0.2, 'max_tokens': 700, 'slot_owner': 'captain-chat'})
+        if out.get('status') != 'completed':
+            raise ValueError('modell_fehler: ' + str(out.get('error') or out.get('reason_code') or out.get('status'))[:200])
+        text = ((out.get('model_result') or {}).get('content') or '').strip()
+        neu, z = harness_gedaechtnis.zusammenfassung_speichern(self.hub.project_root, pid, text, notizen, freigabe.jetzt())
+        self._audit('HARNESS_GEDAECHTNIS_VERDICHTET', {'projekt': pid, 'notizen': len(notizen), 'zusammenfassung': z['antwort_id'], 'zeichen': len(z['antwort'])})
+        return {'zusammenfassung': z['antwort_id'], 'notizen': len(notizen), 'stand': harness_gedaechtnis.stand(self.hub.project_root, pid)}
+
     def gedanken_lesen(self, sitzung_id, antwort=None, ab=None, zeichen=None):
-        """Aus dem Werkzeug `gedanken_lesen`: die gespeicherten Gedanken einer früheren Antwort DIESER Sitzung (nie einer fremden), ein Stück davon."""
+        """Aus dem Werkzeug `erinnern` (antwort=…): die gespeicherten Gedanken einer früheren Antwort DIESER Sitzung (nie einer fremden), ein Stück davon."""
         try:
             s = self.sitzungen.laden(str(sitzung_id or ''))
         except SitzungFehler as exc:
@@ -491,6 +536,8 @@ class HarnessApi:
             raise ValueError('vorgabe_fehlt: rezept_standard, projekt_standard oder gedanken_zurueck')
         if aenderung.get('gedanken_zurueck') not in (None, *GEDANKEN_MODI):
             raise ValueError('gedanken_zurueck_ungueltig: ' + ', '.join(GEDANKEN_MODI))
+        if aenderung.get('gedaechtnis_reichweite') not in (None, *REICHWEITEN):
+            raise ValueError('gedaechtnis_reichweite_ungueltig: ' + ', '.join(REICHWEITEN))
         if aenderung.get('projekt_standard'):
             self._projekt(str(aenderung['projekt_standard']))
         stand = harness_projekte.laufzeit_laden(self.hub.project_root)
@@ -520,7 +567,7 @@ class HarnessApi:
         projekt = self._laufzeit_vorgaben().get('projekt_standard')
         if projekt and not any(p['id'] == projekt for p in self.projekte()['projekte']):
             projekt = None                                       # die Vorgabe zeigt auf ein Projekt, das es nicht mehr gibt
-        return {'rezept_standard': rezept, 'projekt_standard': projekt, 'auto_laden': auto, 'auto_laden_grund': grund, 'gedanken_zurueck': self._gedanken_modus()}
+        return {'rezept_standard': rezept, 'projekt_standard': projekt, 'auto_laden': auto, 'auto_laden_grund': grund, 'gedanken_zurueck': self._gedanken_modus(), 'gedaechtnis_reichweite': self._reichweite()}
 
     def modelle(self):
         """P2 V1 „Passt das Modell?“: je Rezept des llama-server die Prüfung des Routers (dieselbe wie beim Laden, ohne zu laden): Bedarf an VRAM/RAM,

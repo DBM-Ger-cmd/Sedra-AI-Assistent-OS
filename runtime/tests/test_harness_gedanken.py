@@ -1,4 +1,4 @@
-"""Gedanken der Modelle (02.11.2026): Sedra speichert sie; ans Modell geht je nach Modus wenig zurück, den Rest holt es mit `gedanken_lesen`."""
+"""Gedanken der Modelle (02.11.2026): Sedra speichert sie; ans Modell geht je nach Modus wenig zurück, den Rest holt es mit `erinnern`."""
 import tempfile
 import unittest
 from pathlib import Path
@@ -32,7 +32,7 @@ class VerlaufTests(unittest.TestCase):
     def test_spur_ist_eine_zeile_ohne_die_gedanken(self):
         v = verlauf_aus(eintraege(), 'spur')
         antwort = v[1]['content']
-        self.assertTrue(antwort.startswith('[Spur: Antwort A-00000001 · 2 Züge · Werkzeuge: lauf_starten, lauf_status · Gedanken 1.234 Zeichen gespeichert – mit gedanken_lesen abrufbar]'))
+        self.assertTrue(antwort.startswith('[Spur: Antwort A-00000001 · 2 Züge · Werkzeuge: lauf_starten, lauf_status · Gedanken 1.234 Zeichen gespeichert – mit erinnern(antwort=…) abrufbar]'))
         self.assertTrue(antwort.endswith('Läuft.'))
         self.assertNotIn('run_tests', antwort)                                         # die Gedanken selbst gehen nicht mit
         self.assertEqual(v[3]['content'], 'Fertig.')                                    # ohne gespeicherte Gedanken keine Spur
@@ -92,13 +92,13 @@ class WerkzeugTests(Basis):
         w = Werkzeuge({'id': 'p', 'name': 'P', 'wurzel': str(self.root / 'projekt'), 'schreibbereich': ['docs/**']}, guard=guard, mission_id='M-G', regeln=regeln,
                       gedanken=self.api.gedanken_lesen)
         kiste = Kiste(w, regeln=regeln, guard=guard, audit=None, karten=Karten(self.root / 'karten'), sitzung_id=self.sid)
-        r = kiste.aufruf('gedanken_lesen', {'antwort': 'A-00000001'})
+        r = kiste.aufruf('erinnern', {'antwort': 'A-00000001'})
         self.assertEqual((r['status'], r['stufe'], r['wirkung']), ('ok', 'frei', False))
         self.assertIn('A' * 30, r['ergebnis'])
         self.assertNotIn('karte', r)
-        verbot = [{'id': 'kein-lesen', 'werkzeug': ['gedanken_lesen'], 'muster': ['**'], 'stufe': 'verboten', 'begruendung': 'Test'}]
+        verbot = [{'id': 'kein-lesen', 'werkzeug': ['erinnern'], 'muster': ['denken/**'], 'stufe': 'verboten', 'begruendung': 'Test'}]
         kiste2 = Kiste(w, regeln=verbot, guard=guard, audit=None, karten=Karten(self.root / 'karten2'), sitzung_id=self.sid)
-        self.assertEqual(kiste2.aufruf('gedanken_lesen', {})['status'], 'verboten')
+        self.assertEqual(kiste2.aufruf('erinnern', {'antwort': 'A-00000001'})['status'], 'verboten')
 
 
 if __name__ == '__main__':

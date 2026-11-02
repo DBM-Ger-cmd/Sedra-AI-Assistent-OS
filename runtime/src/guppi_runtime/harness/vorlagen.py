@@ -143,12 +143,18 @@ class Begrenzt:
         self._erlaubt = frozenset(self.names)
 
     def schemas(self):
-        return [s for s in self._box.schemas() if s['function']['name'] in self._erlaubt]
+        out = [s for s in self._box.schemas() if s['function']['name'] in self._erlaubt]
+        z = self._box.zustand_schema(self._erlaubt) if hasattr(self._box, 'zustand_schema') else None       # die gebündelten Zustandswerkzeuge: nur die, die diese Sitzung hat
+        return out + ([z] if z else [])
 
     def __getattr__(self, attr):
         inner = getattr(self._box, attr)
         if attr == 'aufruf':
             def aufruf(name, args, **kw):
+                if name == 'zustand' and isinstance(args, dict):           # das gebündelte Werkzeug gilt so weit, wie das gewählte einzelne erlaubt ist
+                    if args.get('was') not in self._erlaubt:
+                        return {'status': 'fehler', 'ergebnis': 'error: Werkzeug ' + str(args.get('was')) + ' ist in dieser Vorlage nicht erlaubt', 'stufe': None, 'regel': None, 'wirkung': False}
+                    return inner(name, args, **kw)
                 if name not in self._erlaubt:
                     return {'status': 'fehler', 'ergebnis': f'error: Werkzeug {name} ist in dieser Vorlage nicht erlaubt', 'stufe': None, 'regel': None, 'wirkung': False}
                 return inner(name, args, **kw)

@@ -98,7 +98,7 @@
   // ---- eigene Flächen
   // Gedanken der Modelle: Sedra speichert sie je Antwort; hier steht, wie viel davon wieder an das Modell geht (mehr kostet Token)
   const GEDANKEN = [['aus', 'Aus', 'Das Modell bekommt nur Text und Ergebnisse. Die Gedanken bleiben bei Sedra und sind für dich aufklappbar.'],
-                    ['spur', 'Spur (Standard)', 'Jede frühere Antwort trägt eine Zeile: was lief und wie viel Gedanken gespeichert sind. Das Modell holt sie bei Bedarf selbst mit „gedanken_lesen“.'],
+                    ['spur', 'Spur (Standard)', 'Jede frühere Antwort trägt eine Zeile: was lief und wie viel Gedanken gespeichert sind. Das Modell holt sie bei Bedarf selbst mit „erinnern“.'],
                     ['kurz', 'Kurz', 'Spur, dazu das Ende der Gedanken der letzten 2 Antworten (je höchstens 800 Zeichen).'],
                     ['voll', 'Ausführlich', 'Spur, dazu die Gedanken der letzten 4 Antworten (je höchstens 6 000 Zeichen, insgesamt 12 000). Kostet deutlich mehr Token und füllt das Fenster schneller.']];
   function gedanken(S, box){
@@ -118,6 +118,41 @@
     };
     zeichne('spur');
     S.api('/api/harness/vorgaben').then(v=>zeichne(v.gedanken_zurueck || 'spur')).catch(()=>{});
+    gedaechtnisBereich(S, box);
+  }
+
+  // Das Gedächtnis: je Antwort eine wörtliche Notiz; hier stellt der Captain ein, wie weit das Modell suchen darf, und fasst alte Notizen zusammen (ein Modellaufruf)
+  function gedaechtnisBereich(S, box){
+    const kopf = d().el('div', 'hs-app-satz', 'Gedächtnis: Sedra merkt sich je Antwort eine kurze Notiz (Frage, Antwort, Werkzeuge, Kern der Gedanken). Das Modell sucht darin mit „erinnern“.');
+    const reich = d().el('div', 'hs-einst-eigen'), liste = d().el('div', 'hs-einst-eigen'), meld = d().el('div', 'hs-leise');
+    box.append(d().el('h3', 'hs-ueber', 'Gedächtnis'), kopf, reich, liste, meld);
+    const REICH = [['projekt', 'Nur das Projekt der Sitzung (Standard)', 'Notizen eines Projekts sieht ein anderes nicht.'],
+                   ['alle', 'Alle Projekte', 'Das Modell darf in den Notizen aller Projekte suchen – auch in denen, an denen es gerade nicht arbeitet.']];
+    const zeichneReich = aktuell=>reich.replaceChildren(...REICH.map(([wert, name, text])=>{
+      const z = d().el('label', 'hs-einst-zeile'); const r = d().el('input'); r.type = 'radio'; r.name = 'hs-reichweite'; r.value = wert; r.checked = wert === aktuell;
+      r.onchange = async()=>{
+        try{ await S.api('/api/harness/vorgaben', {method: 'POST', body: {gedaechtnis_reichweite: wert}}); meld.textContent = 'Gespeichert: ' + name + '.'; }
+        catch(err){ meld.textContent = 'Nicht gespeichert: ' + err.message; zeichneReich(aktuell); }
+      };
+      z.append(r, d().el('b', null, name), d().el('small', 'hs-leise', text));
+      return z;
+    }));
+    const zeichneListe = v=>liste.replaceChildren(...(v.projekte || []).map(p=>{
+      const z = d().el('div', 'hs-einst-zeile');
+      const k = d().el('button', 'hs-knopf hs-klein', 'Zusammenfassen'); k.type = 'button';
+      k.disabled = p.unverdichtet < v.mindestens;
+      k.title = k.disabled ? 'Ab ' + v.mindestens + ' neuen Notizen' : 'Fasst die ältesten neuen Notizen mit dem geladenen Modell zusammen (kostet Token, das Modell ist kurz belegt)';
+      k.onclick = async()=>{
+        k.disabled = true; meld.textContent = 'Fasse zusammen … das Modell ist kurz belegt.';
+        try{ const out = await S.api('/api/harness/gedaechtnis', {method: 'POST', body: {projekt: p.id}}); meld.textContent = out.notizen + ' Notizen zusammengefasst (' + out.zusammenfassung + ').'; }
+        catch(err){ meld.textContent = 'Nicht zusammengefasst: ' + err.message; }
+        laden();
+      };
+      z.append(d().el('b', 'hs-einst-label', p.name), d().el('small', 'hs-leise', p.notizen + ' Notizen · ' + p.unverdichtet + ' noch nicht zusammengefasst · ' + p.zusammenfassungen + ' Zusammenfassungen'), k);
+      return z;
+    }));
+    function laden(){ S.api('/api/harness/gedaechtnis').then(v=>{ zeichneReich(v.reichweite || 'projekt'); zeichneListe(v); }).catch(err=>{ meld.textContent = 'Gedächtnis nicht lesbar: ' + err.message; }); }
+    zeichneReich('projekt'); laden();
   }
 
   const FLAECHEN = {darstellung, benachrichtigungen, sprache, vorlagen, freigabe, grenzen, gedanken, quelle, mcp, laufzeit, schalter};

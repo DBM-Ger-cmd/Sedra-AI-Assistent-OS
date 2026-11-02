@@ -152,8 +152,21 @@ class Kiste:
         self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen')
         self._gewarnt = set()            # Nachtrag 434b108: welche Ersetzungen dem Modell schon einen Hinweis bekamen
 
+    def chat_namen(self):
+        return tuple(self.chat.names) if self.chat is not None else ()
+
+    def zustand_schema(self, erlaubt=None):
+        """Die lesenden Zustandswerkzeuge als EIN Werkzeug mit Auswahl `was` – das spart rund 350 Token je Anfrage gegenüber elf einzelnen Beschreibungen (Messung 02.11.2026).
+        `erlaubt`: nur diese Namen (eine Vorlage nennt nicht alle). Die einzelnen Namen gelten beim Aufruf weiter."""
+        namen = [n for n in self.chat_namen() if erlaubt is None or n in erlaubt]
+        if not namen:
+            return None
+        return {'type': 'function', 'function': {'name': 'zustand', 'description': 'Liest den Zustand von SEDRA (nur lesen, frei). was: ' + ', '.join(namen) + '; limit für list_missions/recent_audit, name für read_doc.',
+                'parameters': {'type': 'object', 'properties': {'was': {'type': 'string', 'enum': namen}, 'limit': {'type': 'integer'}, 'name': {'type': 'string'}}, 'required': ['was']}}}
+
     def schemas(self):
-        return self.w.schemas() + (self.chat.schemas() if self.chat is not None else []) + (self.extra.schemas() if self.extra is not None else [])
+        z = self.zustand_schema()
+        return self.w.schemas() + ([z] if z else []) + (self.extra.schemas() if self.extra is not None else [])
 
     def _audit(self, event, payload):
         if self.audit is not None:
@@ -164,6 +177,12 @@ class Kiste:
         """{status: ok|fehler|verboten|wartet|abgebrochen, ergebnis, stufe, regel, wirkung, karte?}."""
         if self.extra is not None and name in self.extra.names:
             return self.extra.call(name, args, self.sitzung_id)       # Vorarbeiter-Werkzeuge: die Sitzung kommt vom Server, nie aus den Argumenten
+        if name == 'zustand':                                         # das gebündelte Zustandswerkzeug: `was` wählt das eigentliche, der Rest sind dessen Argumente
+            args = dict(args) if isinstance(args, dict) else {}
+            was = args.pop('was', None)
+            if was not in self.chat_namen():
+                return {'status': 'fehler', 'ergebnis': 'error: was unbekannt – erlaubt: ' + ', '.join(self.chat_namen()), 'stufe': None, 'regel': None, 'wirkung': False}
+            name = was
         if name not in HARNESS_WERKZEUGE:
             if self.chat is not None and name in self.chat.names:
                 text = self.chat.call(name, args)
@@ -183,7 +202,7 @@ class Kiste:
                 return {'status': 'verboten', 'ergebnis': f"verboten: {e['begruendung']}", 'stufe': 'verboten', 'regel': e['regel'], 'wirkung': False}
             self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id}
             out = self.w.ausfuehren(name, args, plan=plan)
-            if name not in ('verknuepfung_anlegen', 'gedanken_lesen', 'gedaechtnis_suchen'):                  # die Verknüpfung steht schon im Audit des Servers (mit `von`)
+            if name != 'erinnern':                  # die Verknüpfung steht schon im Audit des Servers (mit `von`)
                 self._audit('HARNESS_APP_OEFFNEN' if name == 'app_oeffnen' else 'HARNESS_PROJEKT_BEANTRAGT', {'ziel': plan['ziel'][:300], 'status': out['status']})
             return dict(out, stufe='frei', regel=name.replace('_', '-'))
         e = einstufung(self.regeln, name, args, plan)

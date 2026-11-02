@@ -46,7 +46,7 @@ class AppOeffnen(unittest.TestCase):
 
     def test_das_werkzeug_ist_da_und_nennt_den_rekorder(self):
         self.assertIn('app_oeffnen', NAMEN)
-        self.assertIn('aufnahme (Rekorder)', SCHEMAS['app_oeffnen']['function']['description'])
+        self.assertIn('aufnahme=Rekorder', SCHEMAS['app_oeffnen']['function']['description'])
 
     def test_der_rekorder_oeffnet_ohne_karte_und_ohne_wirkung(self):
         r = self.kiste.aufruf('app_oeffnen', {'ort': 'aufnahme'})
@@ -84,9 +84,9 @@ class AppOeffnen(unittest.TestCase):
 
     def test_verknuepfung_anlegen_legt_den_knopf_an_und_sagt_der_shell_bescheid(self):
         from guppi_runtime.harness import verknuepfungen
-        r = self.kiste.aufruf('verknuepfung_anlegen', {'ort': 'aufnahme', 'name': 'Rekorder schnell'})
-        self.assertEqual((r['status'], r['stufe'], r['regel'], r['wirkung']), ('ok', 'frei', 'verknuepfung-anlegen', False))
-        self.assertEqual(r['ui'], {'verknuepfungen': True})
+        r = self.kiste.aufruf('app_oeffnen', {'ort': 'aufnahme', 'verknuepfung': True, 'name': 'Rekorder schnell'})
+        self.assertEqual((r['status'], r['stufe'], r['regel'], r['wirkung']), ('ok', 'frei', 'app-oeffnen', False))
+        self.assertEqual(r['ui'], {'oeffnen': 'aufnahme', 'titel': 'Rekorder', 'verknuepfungen': True})                 # Fenster öffnen UND Knopf anlegen
         self.assertNotIn('karte', r)
         liste = verknuepfungen.laden(self.root)
         self.assertEqual([(v['ort'], v['name']) for v in liste], [('aufnahme', 'Rekorder schnell')])
@@ -94,9 +94,9 @@ class AppOeffnen(unittest.TestCase):
 
     def test_verknuepfung_grenzen(self):
         from guppi_runtime.harness import verknuepfungen
-        self.assertEqual(self.kiste.aufruf('verknuepfung_anlegen', {'ort': 'gibtsnicht'})['status'], 'fehler')
-        self.assertEqual(self.kiste.aufruf('verknuepfung_anlegen', {'ort': 'logbook'})['status'], 'ok')
-        zweite = self.kiste.aufruf('verknuepfung_anlegen', {'ort': 'logbook'})                 # ein Ort nur einmal
+        self.assertEqual(self.kiste.aufruf('app_oeffnen', {'ort': 'gibtsnicht', 'verknuepfung': True})['status'], 'fehler')
+        self.assertEqual(self.kiste.aufruf('app_oeffnen', {'ort': 'logbook', 'verknuepfung': True})['status'], 'ok')
+        zweite = self.kiste.aufruf('app_oeffnen', {'ort': 'logbook', 'verknuepfung': True})                 # ein Ort nur einmal
         self.assertEqual(zweite['status'], 'fehler')
         self.assertIn('schon_vorhanden', zweite['ergebnis'])
         v = verknuepfungen.laden(self.root)[0]
@@ -120,9 +120,9 @@ class AppOeffnen(unittest.TestCase):
         self.assertIn('zu_viele', str(ctx.exception))
 
     def test_eine_verboten_regel_des_captains_schaltet_die_werkzeuge_ab(self):
-        verbot = [{'id': 'kein-fenster', 'werkzeug': ['app_oeffnen', 'verknuepfung_anlegen', 'projekt_beantragen'], 'muster': ['**'], 'stufe': 'verboten', 'begruendung': 'Test'}]
+        verbot = [{'id': 'kein-fenster', 'werkzeug': ['app_oeffnen', 'projekt_beantragen'], 'muster': ['**'], 'stufe': 'verboten', 'begruendung': 'Test'}]
         kiste = Kiste(self.w, regeln=verbot, guard=self.kiste.guard, audit=None, karten=self.kiste.karten, sitzung_id='S-00000002')
-        for name, args in (('app_oeffnen', {'ort': 'aufnahme'}), ('verknuepfung_anlegen', {'ort': 'aufnahme'}), ('projekt_beantragen', {'wurzel': 'E:/x'})):
+        for name, args in (('app_oeffnen', {'ort': 'aufnahme'}), ('app_oeffnen', {'ort': 'aufnahme', 'verknuepfung': True}), ('projekt_beantragen', {'wurzel': 'E:/x'})):
             r = kiste.aufruf(name, args)
             self.assertEqual((r['status'], r['wirkung']), ('verboten', False), name)
         self.assertEqual(self.antraege, [])                                              # nichts davon lief

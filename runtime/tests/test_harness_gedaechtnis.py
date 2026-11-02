@@ -1,4 +1,4 @@
-"""Gedächtnis (02.11.2026): aus Frage, Antwort, Werkzeugen und dem Kern der Gedanken entsteht je Antwort eine Notiz; das Modell sucht sie mit `gedaechtnis_suchen`."""
+"""Gedächtnis (02.11.2026): aus Frage, Antwort, Werkzeugen und dem Kern der Gedanken entsteht je Antwort eine Notiz; das Modell sucht sie mit `erinnern`."""
 import tempfile
 import unittest
 from pathlib import Path
@@ -113,13 +113,13 @@ class ApiTests(unittest.TestCase):
         w = Werkzeuge({'id': 'sedra', 'name': 'S', 'wurzel': str(self.root / 'projekt'), 'schreibbereich': ['docs/**']}, guard=guard, mission_id='M-G', regeln=regeln,
                       gedaechtnis=self.api.gedaechtnis_suchen)
         kiste = Kiste(w, regeln=regeln, guard=guard, audit=None, karten=Karten(self.root / 'karten'), sitzung_id=self.sid)
-        r = kiste.aufruf('gedaechtnis_suchen', {'frage': 'Rekorder'})
+        r = kiste.aufruf('erinnern', {'frage': 'Rekorder'})
         self.assertEqual((r['status'], r['stufe'], r['wirkung']), ('ok', 'frei', False))
         self.assertIn('A-00000001', r['ergebnis'])
-        self.assertEqual(kiste.aufruf('gedaechtnis_suchen', {'frage': 'ja'})['status'], 'fehler')
-        verbot = [{'id': 'kein-gedaechtnis', 'werkzeug': ['gedaechtnis_suchen'], 'muster': ['**'], 'stufe': 'verboten', 'begruendung': 'Test'}]
+        self.assertEqual(kiste.aufruf('erinnern', {'frage': 'ja'})['status'], 'fehler')
+        verbot = [{'id': 'kein-gedaechtnis', 'werkzeug': ['erinnern'], 'muster': ['suche/**'], 'stufe': 'verboten', 'begruendung': 'Test'}]
         kiste2 = Kiste(w, regeln=verbot, guard=guard, audit=None, karten=Karten(self.root / 'karten2'), sitzung_id=self.sid)
-        self.assertEqual(kiste2.aufruf('gedaechtnis_suchen', {'frage': 'Rekorder'})['status'], 'verboten')
+        self.assertEqual(kiste2.aufruf('erinnern', {'frage': 'Rekorder'})['status'], 'verboten')
 
 
 if __name__ == '__main__':
