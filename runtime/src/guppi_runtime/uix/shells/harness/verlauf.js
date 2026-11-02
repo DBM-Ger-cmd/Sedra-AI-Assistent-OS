@@ -68,6 +68,12 @@
       leer(){ return this.eintraege === 0 && !this.antwortId && !this.wartet; },
       laeuft(){ return !!this.antwortId; },
       nachUnten(){ requestAnimationFrame(()=>{ box.scrollTop = box.scrollHeight; }); },
+      // app_oeffnen (Kern: harness/werkzeuge.py): der Ort kommt aus derselben Liste wie Start-Menü und Chat (ui/places.js); ohne Treffer sagt die Shell es, statt still nichts zu tun
+      fensterOeffnen(ui){
+        const ort = (root.sedraPlaces && root.sedraPlaces.PLACES || []).find(p=>p.id === ui.oeffnen);
+        if(ort) root.sedraHarness.app.oeffnen(S, ort);
+        else S.hinweis('Das Fenster „' + (ui.titel || ui.oeffnen) + '“ gibt es in dieser Oberfläche nicht.', 'note');
+      },
       abbauen(){ if(this.abbruch) this.abbruch.abort(); },
       zeigeLeer(){
         liste.replaceChildren();
@@ -263,6 +269,7 @@
           if(row) werkzeugEnde(row, x.status, x.dauer_s, x.ergebnis !== undefined ? x.ergebnis : x.kurz, x.stufe, x.regel);
           const w = (z.args || {})[x.aufruf_id];
           if(w) root.sedraHarness.vorschau.beruehrt(S, this, w.name, w.args, x.status);          // Stufe 6: die Vorschau folgt der Datei
+          if(x.ui && x.ui.oeffnen) this.fensterOeffnen(x.ui);                                      // app_oeffnen: die Shell öffnet das Fenster (nur live, nie beim Laden des Verlaufs)
         }
         else if(name === 'karte'){ this.phase('wartet auf Freigabe'); block.append(karteKarte(S, this, x, null)); z.seg = null; root.sedraHarness.vorschau.karte(S, this, x); }
         else if(name === 'kontext'){ block.dataset.kontext = x.belegt + '/' + x.fenster; }

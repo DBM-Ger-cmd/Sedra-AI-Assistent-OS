@@ -23,6 +23,14 @@ from ..models.runtime_control import RuntimeControlError
 GPU_ALL = {"max", "all", "99", "100"}
 
 
+def _namen(key):
+    """Die Namen, unter denen ein Modell geladen sein kann: der Schluessel des Rezepts und der Name ohne Anbieter-Praefix, unter dem ihn ein Router
+    kennt ("google/gemma-4-12b-qat" -> "gemma-4-12b-qat"). Gilt fuer jedes Modell gleich."""
+    if not isinstance(key, str) or not key:
+        return set()
+    return {key, key.rsplit("/", 1)[-1]}
+
+
 class LoadError(Exception):
     """`code` is a failure-class reason code the supervisor already understands."""
     def __init__(self, code, reason=None):
@@ -124,10 +132,10 @@ class ModelLoader:
 
     def _instances(self, key, ctl=None):
         """Loaded instances of exactly this model key: `<key>`, `<key>:2`, ..."""
-        out = []
+        out, names = [], _namen(key)
         for item in (ctl or self.controller).loaded_models() or []:
             ident = item.get("identifier") or item.get("modelKey")
-            if item.get("modelKey") == key or ident == key or (isinstance(ident, str) and re.fullmatch(re.escape(key) + r":\d+", ident)):
+            if item.get("modelKey") in names or ident in names or (isinstance(ident, str) and any(re.fullmatch(re.escape(n) + r":\d+", ident) for n in names)):
                 out.append({"identifier": ident, "context": item.get("contextLength"), "slots": item.get("slots")})
         return out
 
@@ -147,7 +155,7 @@ class ModelLoader:
     def _reusable(instances, key, want, slots=1):
         """Reuse only when exactly one instance exists, it has the wanted window (PER SLOT) and slot count and it is the one requests
         for `<key>` reach. A runtime that does not report its slots (LM Studio) counts as one."""
-        return (len(instances) == 1 and instances[0]["context"] == want and instances[0]["identifier"] == key
+        return (len(instances) == 1 and instances[0]["context"] == want and instances[0]["identifier"] in _namen(key)
                 and (instances[0].get("slots") or 1) == slots)
 
     def _slots(self, resolution):
@@ -168,7 +176,7 @@ class ModelLoader:
                 continue
             for item in items:
                 key, ident = item.get("modelKey"), item.get("identifier") or item.get("modelKey")
-                if key in busy or ident in busy or not ident:
+                if busy & (_namen(key) | _namen(ident)) or not ident:
                     continue
                 try:
                     ctl.unload_model(ident)
@@ -275,7 +283,7 @@ class ModelLoader:
             # The reason is the point: a bare "ValueError" hid whether the GGUF, the canary or a setting was at fault (16.10.2026).
             detail = str(exc)[:160] if isinstance(exc, RuntimeControlError) else f"{type(exc).__name__}:{str(exc)[:160]}"
             raise LoadError("provider_unavailable", f"load_failed:{detail}") from exc
-        after = [i for i in self._instances(key, ctl) if i["identifier"] == key]
+        after = [i for i in self._instances(key, ctl) if i["identifier"] in _namen(key)]
         if not after or after[0]["context"] != want:
             # LM Studio accepted the command but is not serving what was asked for. Better a failed start than a wrong window.
             for item in self._instances(key, ctl):

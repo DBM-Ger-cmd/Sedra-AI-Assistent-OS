@@ -278,6 +278,11 @@ def _http_post_json(url, payload, timeout=30):
         return exc.code, body
 
 
+# Ein Modell, das der Router nach `--sleep-idle-seconds` schlafen gelegt hat ("sleeping"), ist weiter da: die naechste Anfrage weckt es.
+# Es zaehlt als geladen, sonst wartet Sedra vergeblich auf "loaded" und meldet den Server als beendet.
+BEREIT = ("loaded", "sleeping")
+
+
 def router_id(model_key):
     """The name a router knows a model under: the recipe's model name without a vendor prefix ("google/gemma-4-12b-qat" -> "gemma-4-12b-qat")."""
     return str(model_key).rsplit("/", 1)[-1]
@@ -492,7 +497,7 @@ class LlamaServerRuntime:
             self._info = None
             return []
         try:
-            loaded = [rid for rid, state in self._router_states().items() if state == "loaded"]
+            loaded = [rid for rid, state in self._router_states().items() if state in BEREIT]
         except Exception:
             return []
         mine = (self._info or {}).get("identifier")
@@ -521,12 +526,12 @@ class LlamaServerRuntime:
         if rid not in states:
             raise RuntimeControlError(f"external_model_unknown:{rid}")
         started = self._mono()
-        if states[rid] != "loaded":
+        if states[rid] not in BEREIT:
             status, body = self._post_json(self.endpoint + "/models/load", {"model": rid}, timeout=self.config.startup_timeout_s)
             already = "already running" in json.dumps(body)
             if status >= 400 and not already:
                 raise RuntimeControlError(f"external_model_load_failed:{status}:{json.dumps(body)[:160]}")
-            while self._router_states().get(rid) != "loaded":
+            while self._router_states().get(rid) not in BEREIT:
                 if self._mono() - started > self.config.startup_timeout_s:
                     raise RuntimeControlError(f"external_model_load_timeout:{self.config.startup_timeout_s}s:{rid}")
                 self._sleep(0.5)
@@ -549,7 +554,7 @@ class LlamaServerRuntime:
         began = self._mono()
         while self._mono() - began < self.config.stop_timeout_s:
             try:
-                if self._router_states().get(info["identifier"]) not in ("loaded", "unloading"): break
+                if self._router_states().get(info["identifier"]) not in (*BEREIT, "unloading"): break
             except Exception:
                 break
             self._sleep(0.5)

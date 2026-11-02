@@ -24,7 +24,7 @@ from pathlib import Path
 from . import erlaubnis as sitzungs_erlaubnis
 from . import vorbehalte
 from .katalog import einstufen
-from .werkzeuge import AKTION_LESEN, LAUF, LESEN, NAMEN as HARNESS_WERKZEUGE, WerkzeugFehler
+from .werkzeuge import AKTION_LESEN, FREI_OHNE_KATALOG, LAUF, LESEN, NAMEN as HARNESS_WERKZEUGE, WerkzeugFehler
 from .befehl import BefehlFehler
 
 KARTE_ID = re.compile(r'K-[0-9A-F]{8}')
@@ -176,6 +176,10 @@ class Kiste:
             return {'status': 'fehler', 'ergebnis': f'error: {exc}', 'stufe': None, 'regel': None, 'wirkung': False}
         if name == 'lauf_status':                              # lesen: keine Karte, kein Katalog (der Inhalt der Ausgabe ist fremder Text, das Werkzeug kennzeichnet ihn)
             return dict(self.w.ausfuehren(name, args, plan=plan), stufe='frei', regel='lauf-lesen')
+        if name in FREI_OHNE_KATALOG:                          # Fenster öffnen und Projekt beantragen: keine Karte, kein Katalog – das Fenster bedient der Captain, der Antrag liegt in seinem Posteingang
+            out = self.w.ausfuehren(name, args, plan=plan)
+            self._audit('HARNESS_APP_OEFFNEN' if name == 'app_oeffnen' else 'HARNESS_PROJEKT_BEANTRAGT', {'ziel': plan['ziel'][:300], 'status': out['status']})
+            return dict(out, stufe='frei', regel='app-oeffnen' if name == 'app_oeffnen' else 'projekt-beantragen')
         e = einstufung(self.regeln, name, args, plan)
         self._audit('HARNESS_EINGESTUFT', {'werkzeug': name, 'ziel': plan['ziel'][:300], 'stufe': e['stufe'], 'regel': e['regel'], 'vorbehalt': e['vorbehalt']})
         if e['wirkt_als'] == 'verboten':

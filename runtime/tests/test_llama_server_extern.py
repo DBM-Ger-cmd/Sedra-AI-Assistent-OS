@@ -224,6 +224,30 @@ class ExternalRuntimeTests(unittest.TestCase):
         self.assertTrue(resources.reserved[0].get("resident_vram_gb", 0) > 0 and resources.reserved[0].get("resident_ram_gb", 0) > 0)
         self.assertEqual(sched.view()["server"]["state"], "bereit")
 
+    def test_a_model_key_with_vendor_prefix_loads_on_the_router(self):
+        """The router knows "gemma-4-12b-qat", the recipe says "google/gemma-4-12b-qat": the load must not end in `context_not_applied:None`."""
+        from guppi_runtime.models.model_loader import LoaderConfig, ModelLoader
+        router = FakeRouter(ids=("gemma-4-12b-qat",), n_ctx=65536, slots=1)
+        rt = runtime(router)
+        loader = ModelLoader(LoaderConfig({"enabled": True}), rt, controllers={"llama-cpp-server": rt})
+        out = loader.ensure({"model": "google/gemma-4-12b-qat", "context_window": 65536, "provider_ref": "llama-cpp-server", "slots": 1,
+                             "estimated_resources": {"vram_gb": 8.7}, "load_profile": {"server": {"gguf": "x.gguf"}}})
+        self.assertEqual((out["action"], out["context_length"]), ("loaded", 65536))
+        self.assertEqual(router.states["gemma-4-12b-qat"], "loaded")
+
+    def test_a_sleeping_model_counts_as_loaded_and_is_not_loaded_again(self):
+        """After `--sleep-idle-seconds` the router reports "sleeping": the model is still there and the next request wakes it."""
+        from guppi_runtime.models.model_loader import LoaderConfig, ModelLoader
+        router = FakeRouter(ids=("gemma-4-12b-qat",), n_ctx=65536, slots=1)
+        router.states["gemma-4-12b-qat"] = "sleeping"
+        rt = runtime(router)
+        loader = ModelLoader(LoaderConfig({"enabled": True}), rt, controllers={"llama-cpp-server": rt})
+        out = loader.ensure({"model": "google/gemma-4-12b-qat", "context_window": 65536, "provider_ref": "llama-cpp-server", "slots": 1,
+                             "estimated_resources": {"vram_gb": 8.7}, "load_profile": {"server": {"gguf": "x.gguf"}}})
+        self.assertEqual(out["action"], "reused")
+        self.assertEqual(router.posts, [])
+        self.assertTrue(loader.loaded("google/gemma-4-12b-qat"))
+
     def test_other_window_on_the_router_is_refused_honestly(self):
         """The window comes from the router's preset, not from the recipe: a mismatch ends in `context_not_applied`, never in a wrong window."""
         from guppi_runtime.models.model_loader import LoaderConfig, ModelLoader

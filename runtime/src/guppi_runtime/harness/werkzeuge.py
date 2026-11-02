@@ -35,9 +35,20 @@ UEBERSPRINGEN = {'.git', 'node_modules', '__pycache__', '.venv', 'engines', '.my
 LESEN = ('datei_lesen', 'dateien_auflisten', 'suchen')
 WIRKUNG = ('datei_schreiben', 'datei_aendern', 'befehl')
 LAUF = ('lauf_starten', 'lauf_stoppen', 'lauf_status', 'modell_laden', 'modell_entladen')       # Stufe 3: Läufe und Modelle; nur Sitzungen, deren Vorlage sie nennt
-NAMEN = LESEN + WIRKUNG + LAUF
+OEFFNEN = ('app_oeffnen',)         # öffnet ein Fenster der Oberfläche (Rekorder, Logbuch …): ändert nichts am Rechner, braucht keine Freigabe
+ANTRAG = ('projekt_beantragen',)   # stellt einen Antrag: wirkt erst, wenn der Captain im Posteingang freigibt
+FREI_OHNE_KATALOG = OEFFNEN + ANTRAG
+NAMEN = LESEN + WIRKUNG + LAUF + OEFFNEN + ANTRAG
 AKTION_LAUF, AKTION_LAUF_STOPP, AKTION_MODELL = 'harness_lauf', 'harness_lauf_stopp', 'harness_modell'
 AKTION_LESEN = 'harness_lesen'
+
+
+def _orte():
+    from ..chat_tools import PLACES            # dieselben Orte wie im Chat und in uix/ui/places.js (ein Test vergleicht sie)
+    return PLACES
+
+
+ORTE = _orte()
 
 
 class WerkzeugFehler(ValueError):
@@ -50,6 +61,7 @@ def _fn(name, beschreibung, eigenschaften, pflicht):
 
 
 S, I = {'type': 'string'}, {'type': 'integer'}
+ORTE_TEXT = ', '.join(f'{k} ({v[0]})' for k, v in ORTE.items())
 SCHEMAS = {
     'datei_lesen': _fn('datei_lesen', 'Liest eine Textdatei des Projekts abschnittsweise, mit Zeilennummern (höchstens 400 Zeilen je Aufruf).',
                        {'pfad': dict(S, description='Pfad relativ zur Projektwurzel'), 'ab_zeile': dict(I, description='erste Zeile, ab 1'),
@@ -67,18 +79,24 @@ SCHEMAS = {
                        {'lauf_id': dict(S, description='optional: ein bestimmter Lauf')}, []),
     'modell_laden': _fn('modell_laden', 'Lädt ein Modell (Rezept-ID). Braucht den Captain oder eine Aufgabe, die das Modell nennt.', {'rezept': dict(S, description='Rezept-ID, z. B. coder.llama_qwen35')}, ['rezept']),
     'modell_entladen': _fn('modell_entladen', 'Entlädt das geladene Modell (Rezept-ID des Modells). Braucht den Captain oder eine Aufgabe, die das Modell nennt.', {'rezept': dict(S, description='Rezept-ID des geladenen Modells')}, ['rezept']),
-    'datei_schreiben': _fn('datei_schreiben', 'Schreibt eine Textdatei im Schreibbereich des Projekts (neu oder ganz ersetzt). Braucht je nach Katalog eine Freigabe.',
+    'app_oeffnen': _fn('app_oeffnen', 'Öffnet ein Fenster der Oberfläche für den Captain (z. B. den Rekorder). Es startet nichts und ändert nichts: aufnehmen, speichern oder bestätigen muss der Captain selbst. Orte: ' + ORTE_TEXT + '.',
+                       {'ort': dict(S, description='ID des Ortes, z. B. aufnahme (Rekorder), logbook, models, hardware')}, ['ort']),
+    'projekt_beantragen': _fn('projekt_beantragen', 'Beantragt einen Ordner als Projekt. Es entsteht nur ein Antrag im Posteingang des Captains; das Projekt gibt es erst nach seiner Freigabe. Danach steht es in der Projektwahl einer neuen Sitzung.',
+                              {'wurzel': dict(S, description='absoluter Pfad des Ordners, z. B. E:/Sedra Umgebung/A1 Sedra Baut'), 'name': dict(S, description='optional: Name des Projekts'),
+                               'schreibbereich': {'type': 'array', 'items': S, 'description': 'optional: Muster, in denen das Modell schreiben darf, z. B. ["docs/**"]; ohne Angabe gilt die Vorgabe'}}, ['wurzel']),
+    'datei_schreiben': _fn('datei_schreiben', 'Schreibt eine Textdatei im Schreibbereich des Projekts (neu oder ganz ersetzt); fehlende Ordner im Pfad werden mit angelegt – so entsteht ein neuer Ordner (z. B. mit einer README.md). Braucht je nach Katalog eine Freigabe.',
                            {'pfad': S, 'inhalt': S}, ['pfad', 'inhalt']),
     'datei_aendern': _fn('datei_aendern', 'Ersetzt in einer Datei genau eine Stelle: `alt` muss genau einmal vorkommen. Braucht je nach Katalog eine Freigabe.',
                          {'pfad': S, 'alt': S, 'neu': S}, ['pfad', 'alt', 'neu']),
-    'befehl': _fn('befehl', 'Führt einen Befehl im Projekt aus (eine Zeile, ohne Pipes und Umleitungen). Lesende Git-Befehle und die Tests sind frei, sonst Freigabe.',
+    'befehl': _fn('befehl', 'Startet ein Programm im Projekt (eine Zeile, ohne Pipes und Umleitungen). Es gibt keine Shell: Befehle der Eingabeaufforderung wie mkdir, dir, copy, del oder start sind keine Programme und gehen nicht – einen Ordner legt datei_schreiben an, ein Fenster öffnet app_oeffnen. Lesende Git-Befehle und die Tests sind frei, sonst Freigabe.',
                   {'befehl': S, 'ordner': dict(S, description='Ordner relativ zur Projektwurzel, Standard „.“'),
                    'zeitlimit_s': dict(I, description='höchstens 600')}, ['befehl']),
 }
 
 
 class Werkzeuge:
-    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None):
+    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None):
+        self.projekt_antrag = projekt_antrag     # vom Server gereicht: stellt den Antrag „Ordner als Projekt öffnen“ (harness/antraege.py)
         self.laeufe, self.lauf_typen, self.modelle, self.andere_antworten = laeufe, lauf_typen, modelle, andere_antworten    # Stufe 3 (N7), vom Server gereicht
         self.kontext = {}                       # Sitzung, Antwort, Aufgabe, Karte des Aufrufs – setzt der Server (Kiste, beantworten), nie das Modell
         self.projekt, self.guard, self.mission_id, self.regeln = projekt, guard, mission_id, regeln
@@ -112,6 +130,18 @@ class Werkzeuge:
         if name not in NAMEN:
             raise WerkzeugFehler(f'werkzeug_unbekannt: {name}')
         args = args if isinstance(args, dict) else {}
+        if name == 'projekt_beantragen':
+            wurzel = self._text(args, 'wurzel').strip()
+            if not wurzel:
+                raise WerkzeugFehler('argument_fehlt: wurzel')
+            return {'ziel': wurzel, 'vorhanden': True, 'vorschau': f'Projekt beantragen: {wurzel}', 'kurz': wurzel,
+                    'gate': {'aktion': AKTION_LESEN, 'ziel': wurzel, 'bindung': {'werkzeug': name, 'args': args}}}
+        if name == 'app_oeffnen':
+            ort = self._text(args, 'ort').strip()
+            if ort not in ORTE:
+                raise WerkzeugFehler('ort_unbekannt: ' + ort + ' – erlaubt: ' + ', '.join(ORTE))
+            return {'ziel': ort, 'vorhanden': True, 'vorschau': f'Fenster {ORTE[ort][0]} öffnen', 'kurz': ort,
+                    'gate': {'aktion': AKTION_LESEN, 'ziel': ort, 'bindung': {'werkzeug': name, 'args': args}}}
         if name in LAUF:
             try:
                 return self._vorbereiten_lauf(name, args)
@@ -268,6 +298,21 @@ class Werkzeuge:
                 return {'status': 'ok', 'ergebnis': f"{plan['ziel']} geschrieben ({out.get('action')}, {out.get('bytes')} Bytes, sha256 {out.get('sha256', '')[:12]})", 'wirkung': True}
             if name in LAUF:
                 return self._lauf_ausfuehren(name, args, plan, token)
+            if name == 'projekt_beantragen':
+                if not callable(self.projekt_antrag):
+                    return {'status': 'fehler', 'ergebnis': 'error: Projekte beantragen geht in dieser Sitzung nicht', 'wirkung': False}
+                nutz = {k: args[k] for k in ('wurzel', 'name', 'schreibbereich') if args.get(k)}
+                try:
+                    r = self.projekt_antrag(nutz)
+                except ValueError as exc:
+                    return {'status': 'fehler', 'ergebnis': f'error: {exc}', 'wirkung': False}
+                p = r.get('projekt') or {}
+                return {'status': 'ok', 'wirkung': False, 'ergebnis': f"Antrag gestellt: Ordner {p.get('wurzel')} als Projekt „{p.get('name')}“ (Schreibbereich {', '.join(p.get('schreibbereich') or [])}). "
+                        'Er wartet im Posteingang auf den Captain; das Projekt gibt es erst nach seiner Freigabe. Sag ihm das und arbeite bis dahin nicht darin.'}
+            if name == 'app_oeffnen':
+                titel = ORTE[plan['ziel']][0]
+                return {'status': 'ok', 'wirkung': False, 'ui': {'oeffnen': plan['ziel'], 'titel': titel},
+                        'ergebnis': f'Das Fenster „{titel}“ wird für den Captain geöffnet. Es läuft nichts von selbst: was dort gestartet wird (z. B. eine Aufnahme), tut der Captain.'}
             if name == 'befehl':
                 r = befehl_mod.ausfuehren(self.wurzel, args.get('befehl'), args.get('ordner') or '.', args.get('zeitlimit_s') or 120,
                                           guard=self.guard, mission_id=self.mission_id, token=token, abbruch=abbruch,

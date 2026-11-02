@@ -515,7 +515,8 @@ class HarnessApi:
     def _werkzeuge(self, projekt_id, mission_id, regeln):
         projekt = self._projekt(projekt_id)
         return Werkzeuge(projekt, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, mission_id=mission_id, regeln=regeln, laeufe=self.laeufe,
-                         lauf_typen=self.lauf_typen, modelle=self._modell_op, andere_antworten=self._andere_antworten)
+                         lauf_typen=self.lauf_typen, modelle=self._modell_op, andere_antworten=self._andere_antworten,
+                         projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz))
 
     def _vorarbeiter_werkzeuge(self, s):
         """Die Werkzeuge des Vorarbeiters – nur für Sitzungen, deren Vorlage das Recht hat; der Server prüft sie bei jedem Aufruf noch einmal (S1)."""

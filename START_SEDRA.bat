@@ -1,6 +1,7 @@
 @echo off
 rem SEDRA - der eine Start. Ersetzt ERSTER_START.bat, START_GUPPI.bat und GUPPI_EINRICHTEN_UND_STARTEN.bat.
-rem   START_SEDRA.bat             -> richtet nur ein, was fehlt, und fragt, welche Oberflaeche starten soll
+rem   START_SEDRA.bat             -> richtet nur ein, was fehlt, und fragt, welche Oberflaeche starten soll;
+rem                                  Enter ohne Eingabe = Harness (der Einstieg), eine Nummer waehlt eine andere
 rem   START_SEDRA.bat cockpit     -> direkt in diese Oberflaeche (nur fuer diesen Start; die Wahl in uix.yaml bleibt)
 rem   START_SEDRA.bat --uebersicht -> die Uebersicht aller Oberflaechen
 rem   START_SEDRA.bat --gewaehlt  -> in die in uix.yaml gewaehlte Oberflaeche, ohne Frage
@@ -19,6 +20,7 @@ set "PYFLAGS=-I -B"
 set "SHELLARG="
 set "REST="
 set "GEWAEHLT=0"
+set "EINSTIEG=harness"
 
 :args
 if "%~1"=="" goto :start
@@ -102,21 +104,21 @@ set "N=0"
 echo.
 echo Welche Oberflaeche soll starten?
 echo   0  Uebersicht aller Oberflaechen
+echo   Enter  Harness (der Einstieg)
 for /f "usebackq tokens=1,* delims=|" %%a in (`"%PY%" %PYFLAGS% -m guppi_runtime.uix_start --liste`) do call :zeile "%%a" "%%b"
 echo.
 set "CHOICE="
-set /p "CHOICE=Nummer eingeben (Enter = Standard, die Oberflaeche aus uix.yaml): "
-if "%CHOICE%"=="" goto :menue_gewaehlt
+set /p "CHOICE=Nummer eingeben (Enter = Harness): "
+if "%CHOICE%"=="" goto :menue_einstieg
 if "%CHOICE%"=="0" goto :menue_uebersicht
-if /i "%CHOICE:~0,1%"=="s" goto :menue_standard
 echo %CHOICE%| findstr /r "^[0-9][0-9]*$" >nul || goto :menue_falsch
 if %CHOICE% GTR %N% goto :menue_falsch
 call set "SEL=%%ID%CHOICE%%%"
 set "SHELLARG=--shell %SEL%"
 goto :starten
 
-:menue_gewaehlt
-set "SHELLARG="
+:menue_einstieg
+set "SHELLARG=--shell %EINSTIEG%"
 goto :starten
 
 :menue_uebersicht
@@ -131,18 +133,7 @@ goto :menue
 set /a N+=1
 set "ID%N%=%~1"
 echo   %N%  %~2
-echo        s%N%  zum Standard machen (dann startet diese Oberflaeche)
 goto :eof
-
-:menue_standard
-set "STD=%CHOICE:~1%"
-echo %STD%| findstr /r "^[0-9][0-9]*$" >nul || goto :menue_falsch
-if %STD% GTR %N% goto :menue_falsch
-if %STD% LSS 1 goto :menue_falsch
-call set "SEL=%%ID%STD%%%"
-"%PY%" %PYFLAGS% -m guppi_runtime.uix_start --root "%PROJ%" --architecture "%ARCH%" --als-standard %SEL% || goto :menue_falsch
-set "SHELLARG="
-goto :starten
 
 :starten
 echo SEDRA startet ...

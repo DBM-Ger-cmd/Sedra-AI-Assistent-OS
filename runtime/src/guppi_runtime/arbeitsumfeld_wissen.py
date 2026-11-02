@@ -37,6 +37,7 @@ SCHNELL_MS = 5000
 ORDNER_ZWECK = {
     'local_config': 'Einstellungen und Zustände: Modelle, Gateway, Schalter. Enthält Schlüssel; der Schlüsselordner wird nie gelesen.',
     'runtime_data': 'Laufzeitdaten: Artefakte, Audit, Kontext, Jobs, Missionen, Wissen.',
+    'wunsch_umsetzen': 'Feste Wege für Wünsche aus dem Chat: 01_wuensche (Wunsch), 02_auftraege (Auftrag mit Schritten und Abnahme), 03_ergebnisse, 04_luecken (fehlende Werkzeuge), 00_vorlagen. Beschreibung: README.md dort und docs/ARBEITSWEG_WUNSCH_UMSETZEN.md.',
     'redesign': 'Sandbox für Läufe: jeder Lauf schreibt nur in seinen Schreibbereich hier (Regelwerk Abschnitt 1).',
     'redesign/laeufe': 'Definitionen frei anlegbarer Läufe, je eine JSON-Datei (Regelwerk Abschnitt 10).',
     'redesign/vorarbeiter': 'Sperrdateien je Lauf-Art (ein Lauf je Art und Sechs-Stunden-Sperre).',
