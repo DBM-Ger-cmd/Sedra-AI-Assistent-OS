@@ -22,6 +22,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import erlaubnis as sitzungs_erlaubnis
+from . import code_stand as code_stand_mod
 from . import vorbehalte
 from .katalog import einstufen
 from .werkzeuge import AKTION_LESEN, FREI_OHNE_KATALOG, LAUF, LESEN, NAMEN as HARNESS_WERKZEUGE, WerkzeugFehler
@@ -37,7 +38,7 @@ def jetzt():
 
 def einstufung(regeln, name, args, plan):
     """{stufe, wirkt_als, regel, begruendung, vorbehalt} – Vorbehalt vor Katalog; `vorarbeiter` wirkt in Stufe 2 wie `captain`."""
-    grund = vorbehalte.pruefen(name, plan['ziel'], args, plan.get('vorhanden', False))
+    grund = vorbehalte.pruefen(name, plan['ziel'], args, plan.get('vorhanden', False), ungesehen=plan.get('code_ungesehen'))
     if grund:
         return {'stufe': 'captain', 'wirkt_als': 'captain', 'regel': 'vorbehalt', 'begruendung': grund, 'vorbehalt': True}
     e = einstufen(regeln, name, plan['ziel'])
@@ -243,7 +244,9 @@ class Kiste:
             token = self.guard.approve(gate)
             von = f'aufgabe:{via_aufgabe}' if via_aufgabe else f'sitzung:{via_sitzung}' if via_sitzung else f"katalog:{e['regel']}"
             self._audit('HARNESS_APPROVED_BY', {'approved_by': von, 'werkzeug': name, 'gate_id': gate['gate_id']})
+            alt = _code_vorher(self.w, name, plan)
             out = ausfuehren(self.w, self.guard, name, args, plan, token, abbruch)
+            _code_nachher(self.w, name, plan, out, sitzung_id=self.sitzung_id, weg='aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else 'katalog', alt=alt)
             stufe = 'aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else e['stufe']
             return dict(out, stufe=stufe, regel=von if (via_aufgabe or via_sitzung) else e['regel'])
         an = 'captain'
@@ -259,6 +262,9 @@ class Kiste:
                                      'warnung': warnung})
         self._audit('HARNESS_KARTE', {'karte_id': karte['karte_id'], 'werkzeug': name, 'ziel': plan['ziel'][:300], 'stufe': e['stufe'], 'an': an,
                                       'regel': e['regel'], 'gate_id': gate['gate_id']})
+        if plan.get('code_ungesehen'):
+            self._audit('HARNESS_CODE_UNGESEHEN', {'karte_id': karte['karte_id'], 'werkzeug': name, 'anzahl': len(plan['code_ungesehen']),
+                                                   'zu_gross': bool(plan.get('code_zu_gross'))})
         return {'status': 'wartet', 'ergebnis': f"wartet auf Freigabe ({karte['karte_id']})", 'stufe': e['stufe'], 'regel': e['regel'],
                 'wirkung': False, 'karte': oeffentlich(karte)}
 
@@ -267,6 +273,43 @@ class Kiste:
         k = self.karten.laden(karte_id)
         k['zustand'] = zustand
         self.karten.speichern(k)
+
+
+def _code_vorher(w, name, plan):
+    """G4: vor dem Schreiben einer Code-Datei die vorige Fassung merken (nur für die Anzeige); liefert ihren Hash."""
+    cs = getattr(w, 'code_stand', None)
+    if cs is None or name not in vorbehalte.SCHREIBEN or not plan.get('code'):
+        return None
+    return cs.vorher_merken(plan['ziel'])
+
+
+def _code_nachher(w, name, plan, out, *, sitzung_id, weg, alt=None, captain=False):
+    """G4 nach der Ausführung. Schreiben: Spur; über eine Karte des Captains gilt die neue Fassung als gesehen (G4-07). Lauf/Befehl über
+    eine Karte des Captains: die gebundene Liste gilt als gesehen (G4-12) – nur Dateien, deren Fassung noch die gebundene ist.
+    Liefert die Zahl der Dateien, die dadurch als gesehen gelten."""
+    cs = getattr(w, 'code_stand', None)
+    if cs is None or not out.get('wirkung'):
+        return 0
+    if name in vorbehalte.SCHREIBEN and plan.get('code'):
+        cs.spur(plan['ziel'], sitzung_id, weg)
+        return 1 if captain and cs.schreiben_gesehen(plan['ziel'], alt) else 0
+    if captain and plan.get('code_ungesehen'):
+        return cs.gesehen_setzen(plan['gate']['bindung'].get('code_ungesehen'))
+    return 0
+
+
+def _code_zu_gross(w, karte):
+    """G4-14: Ist der ungesehene Code zu groß für eine Karte, wird sie im Browser nicht freigegeben (Weg: Konsole, `guppi code-stand`)."""
+    if karte.get('art') != 'werkzeug' or karte.get('werkzeug') not in code_stand_mod.AUSFUEHRUNG or getattr(w, 'code_stand', None) is None:
+        return
+    try:
+        plan = w.vorbereiten(karte['werkzeug'], karte['args'])
+    except (WerkzeugFehler, BefehlFehler):
+        return                                               # der Fehler zeigt sich gleich beim Ausführen
+    if plan.get('code_zu_gross'):
+        konsole = getattr(w.code_stand, 'konsole', 'CODE_STAND.bat <projekt>')
+        raise ValueError(f"code_zu_gross: zu viel ungesehener Code für eine Karte ({len(plan['code_ungesehen'])} Dateien) – in der Konsole "
+                         f"„{konsole} --zeigen“, dann „{konsole} --uebernehmen“; danach den Aufruf wiederholen lassen")
 
 
 def ausfuehren(werkzeuge, guard, name, args, plan, token, abbruch=None):
@@ -321,8 +364,9 @@ def beantworten(karten, karte_id, weg, *, notiz=None, von='captain', ueber='kart
         if karte.get('art') == 'aufgabe':
             out = _aufgabenkarte(karte, weg, notiz, aufgaben, aenderungen)
         elif weg == 'erlauben':
-            token = guard.approve(gate)
             w = werkzeuge_fuer(karte)
+            _code_zu_gross(w, karte)                                # G4-14: vor dem Freigeben, damit nichts halb entschieden ist
+            token = guard.approve(gate)
             w.kontext = {'sitzung_id': karte.get('sitzung_id'), 'antwort_id': karte.get('antwort_id'), 'karte_id': karte_id, 'aufgabe_id': None}
             try:
                 plan = w.vorbereiten(karte['werkzeug'], karte['args'])
@@ -330,7 +374,16 @@ def beantworten(karten, karte_id, weg, *, notiz=None, von='captain', ueber='kart
                 out = {'status': 'fehler', 'ergebnis': f'error: {exc}', 'wirkung': False}
             else:
                 # Hat sich das Ziel seit der Karte geändert, passt die Bindung nicht mehr und der Guard lehnt das Token ab (request_digest_mismatch)
+                alt = _code_vorher(w, karte['werkzeug'], plan)
                 out = ausfuehren(w, guard, karte['werkzeug'], karte['args'], plan, token)
+                gesehen = _code_nachher(w, karte['werkzeug'], plan, out, sitzung_id=karte.get('sitzung_id'), alt=alt,
+                                        weg='vorarbeiter' if str(von).startswith('vorarbeiter') else 'karte', captain=(von == 'captain' and erlaubnis is None))
+                if gesehen and audit is not None and karte['werkzeug'] in code_stand_mod.AUSFUEHRUNG:
+                    try:
+                        audit.append('HARNESS_CODE_GESEHEN', component='harness', mission_id=karte.get('mission_id'),
+                                     payload={'karte_id': karte_id, 'werkzeug': karte['werkzeug'], 'anzahl': gesehen, 'von': von, 'ueber': ueber})
+                    except Exception:
+                        pass
         else:
             guard.reject(gate, note=notiz)
             out = {'status': 'abgelehnt', 'ergebnis': 'abgelehnt: ' + (str(notiz).strip() if notiz and str(notiz).strip() else 'vom Captain, ohne Begründung'),

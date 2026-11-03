@@ -23,6 +23,8 @@ PFADE = (
     ('runtime/src/guppi_runtime/harness/lauf.py', 'Harness-Code: Läufe'),
     ('runtime/src/guppi_runtime/harness/lauf_huelle.py', 'Harness-Code: Hülle der Läufe'),
     ('runtime/src/guppi_runtime/harness/herkunft.py', 'Harness-Code: Herkunft der Antworten'),
+    ('runtime/src/guppi_runtime/harness/code_stand.py', 'Harness-Code: gesehener Code-Stand (G4)'),
+    ('runtime/portable/**', 'portable Laufzeit (Python, Sandbox): läuft bei jedem Start, G4 überwacht sie nicht'),
     ('runtime/config/harness_vorlagen/**', 'Vorlagen der Harness (Systemprompt und Rechte)'),
     ('runtime/config/harness_laeufe.yaml', 'Lauf-Typen der Harness'),
     ('**/runtime_data/harness/**', 'Ablage der Harness (Karten, Aufgaben, Ernennung, Läufe)'),
@@ -43,9 +45,14 @@ def pruefen_weich(werkzeug, ziel, args=None):
     return None
 
 
-def pruefen(werkzeug, ziel, args=None, vorhanden=False):
+def pruefen(werkzeug, ziel, args=None, vorhanden=False, ungesehen=None):
     """Der Grund des Vorbehalts – oder None. `ziel` ist der Pfad relativ zur Wurzel bzw. die Befehlszeile; `vorhanden` sagt, ob die Datei
-    schon da ist (für „leer überschreiben“)."""
+    schon da ist (für „leer überschreiben“). `ungesehen` (G4, harness/code_stand.py): Code im Projekt, den der Captain in dieser Fassung
+    nicht gesehen hat – solange es ihn gibt, startet kein Lauf und kein Befehl ohne seine Karte."""
+    if werkzeug in ('befehl', 'lauf_starten') and ungesehen:
+        n = len(ungesehen)
+        return (f'Captain-Vorbehalt: Ausführung von Code, den du noch nicht gesehen hast ({n} Datei{"" if n == 1 else "en"}); '
+                'keine Aufgabe und keine Sitzungs-Erlaubnis deckt das')
     if werkzeug == 'sitzungen_aufraeumen':
         return 'Captain-Vorbehalt: Sitzungen aufräumen (der Captain bestätigt jede Liste einzeln; nichts wird endgültig gelöscht)'
     if werkzeug == 'befehl':

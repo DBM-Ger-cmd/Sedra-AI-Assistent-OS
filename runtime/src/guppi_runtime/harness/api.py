@@ -35,6 +35,7 @@
     GET    vorlagen                           die Vorlagen (Stufe 3, HS-19); `vorlage` beim Anlegen einer Sitzung
     GET    vorgaben                           P0 M2/M3 (1.11.): {rezept_standard, projekt_standard, auto_laden: {rezept, regel} | null, auto_laden_grund}
     GET    modelle                            P2 V1 (1.11.): Rezepte des llama-server mit „passt es?“ – Bedarf gegen freien Speicher, Grund, geladen, Sortierung
+    GET    code_stand?projekt=                G4 (SPEC_APPS_v1): wie viele Code-Dateien der Captain in dieser Fassung nicht gesehen hat (nur lesen; übernehmen nur in der Konsole)
 
 Die Schleife läuft in einem eigenen Thread und nimmt nie `hub.lock` (K3). Auf dem gemeinsamen Ereignisstrom erscheinen nur
 `harness.sitzung` (angelegt, geändert, verschoben), `harness.antwort` (läuft, fertig), ab Stufe 3 `harness.aufgabe`, `harness.vorarbeiter`, `harness.lauf`, `harness.karte` (Frist), ab Stufe 5
@@ -42,6 +43,7 @@ Die Schleife läuft in einem eigenen Thread und nimmt nie `hub.lock` (K3). Auf d
 oder `harness_aufgabe`) – der Text läuft über den eigenen Strom."""
 from __future__ import annotations
 
+import os
 import re
 from datetime import datetime, timedelta
 import threading
@@ -55,6 +57,7 @@ from . import aufgabe as harness_aufgabe
 from . import dateien as harness_dateien
 from . import export as harness_export
 from . import befehl as befehl_mod
+from . import code_stand as harness_code_stand
 from . import freigabe
 from . import gedaechtnis as harness_gedaechtnis
 from . import herkunft as harness_herkunft
@@ -80,7 +83,7 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen)(?:/(antrag|entfernen|grenzen|notizen|export))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand)(?:/(antrag|entfernen|grenzen|notizen|export))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/grenzen'
@@ -172,6 +175,7 @@ class HarnessApi:
         self.laeufe = harness_lauf.Laeufe(hub.project_root / 'runtime_data' / 'harness' / 'laeufe', typen=self.lauf_typen, audit=self._audit_roh, melden=self._melden)
         self.vorarbeiter = harness_vorarbeiter.Vorarbeiter(hub.project_root / 'runtime_data' / 'harness' / 'vorarbeiter.json')
         self.aufgaben = harness_aufgabe.Aufgaben(hub.project_root / 'runtime_data' / 'harness' / 'aufgaben', audit=self._audit_roh, melden=self._melden)
+        self._code_staende = {}                # G4: je Projekt ein gesehener Code-Stand (harness/code_stand.py), der Zwischenspeicher bleibt erhalten
         self._aktiv = {}                       # P0 M2: Antwort-ID → Modell, solange die Antwort läuft
         self._zuletzt = (0.0, None)            # (monotonic, Modell) der zuletzt beendeten Antwort
 
@@ -271,6 +275,8 @@ class HarnessApi:
             return 200, self.vorgaben_setzen(payload)
         if fest == 'modelle' and method == 'GET' and not unter:
             return 200, self.modelle()
+        if fest == 'code_stand' and method == 'GET' and not unter:
+            return 200, self.code_stand_sicht(q)
         if fest == 'aufraeumen' and not unter and method == 'POST':
             return 200, self.aufraeumen(payload)
         if fest == 'token' and not unter and method == 'GET':
@@ -868,7 +874,38 @@ class HarnessApi:
         projekt = self._projekt(projekt_id)
         return Werkzeuge(projekt, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, mission_id=mission_id, regeln=regeln, laeufe=self.laeufe,
                          lauf_typen=self.lauf_typen, modelle=self._modell_op, andere_antworten=self._andere_antworten,
-                         projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz), lese_grenze=lambda: self._option('lese_grenze'), sitzungen_liste=self.sitzungen_fuer_modell, sitzungen_weg=lambda ids: self.aufraeumen({'ids': ids}), verknuepfung=lambda ort, name: self.verknuepfung_anlegen(ort, name, von='modell'), gedanken=self.gedanken_lesen, gedaechtnis=self.gedaechtnis_suchen)
+                         projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz), lese_grenze=lambda: self._option('lese_grenze'), sitzungen_liste=self.sitzungen_fuer_modell, sitzungen_weg=lambda ids: self.aufraeumen({'ids': ids}), verknuepfung=lambda ort, name: self.verknuepfung_anlegen(ort, name, von='modell'), gedanken=self.gedanken_lesen, gedaechtnis=self.gedaechtnis_suchen,
+                         code_stand=self.code_stand(projekt))
+
+    def code_stand(self, projekt):
+        """G4 (SPEC_APPS_v1): der gesehene Code-Stand eines Projekts – oder None, wenn der Schalter `code_sicht` aus ist (Standard: an)."""
+        switches = getattr(self.hub.runtime, 'switches', None)
+        if switches is not None and switches.apply('code_sicht', 'enabled', True) is False:
+            return None
+        schluessel = (projekt['id'], str(projekt['wurzel']))
+        cs = self._code_staende.get(schluessel)
+        if cs is None:
+            cs = harness_code_stand.CodeStand(self.hub.project_root / 'runtime_data' / 'harness' / 'code_stand', projekt['wurzel'], projekt['id'],
+                                              audit=self._audit, konsole=self._code_konsole(projekt['id']))
+            self._code_staende[schluessel] = cs
+        return cs
+
+    def _code_konsole(self, pid):
+        """Der Konsolenweg zum Code-Stand dieses Servers (G4-16): unter Windows der Starter im SEDRA-Ordner, sonst die Python-Form mit genau
+        diesem Projektordner (`--root` muss der Ordner der Oberfläche sein, sonst liest die Konsole einen anderen Stand)."""
+        if os.name == 'nt':
+            return f'CODE_STAND.bat {pid}'
+        return f'python -m guppi_runtime.harness.code_stand --root "{self.hub.project_root}" {pid}'
+
+    def code_stand_sicht(self, q):
+        """GET code_stand?projekt= (G4-17): {projekt, aktiv, ungesehen, pfade} – nur lesen. Übernehmen geht nur außerhalb des Browsers (Konsole)."""
+        pid = (q.get('projekt') or [''])[0]
+        projekt = self._projekt(pid)
+        cs = self.code_stand(projekt)
+        if cs is None:
+            return {'projekt': pid, 'aktiv': False, 'ungesehen': 0, 'pfade': [], 'konsole': None}
+        liste = cs.ungesehen()
+        return {'projekt': pid, 'aktiv': True, 'ungesehen': len(liste), 'pfade': [e['pfad'] for e in liste[:20]], 'konsole': cs.konsole}
 
     def _vorarbeiter_werkzeuge(self, s):
         """Die Werkzeuge des Vorarbeiters – nur für Sitzungen, deren Vorlage das Recht hat; der Server prüft sie bei jedem Aufruf noch einmal (S1)."""
@@ -1147,7 +1184,16 @@ class HarnessApi:
             raise ValueError('katalog_ungueltig: ' + fehler)
         args = {'inhalt': payload['inhalt']} if 'inhalt' in payload else {}
         projekt = next((p for p in self.projekte()['projekte'] if p['id'] == payload.get('projekt')), None) if payload.get('projekt') else None
-        return freigabe.einstufung(harness_katalog.mit_projekt(regeln, projekt), werkzeug, args, {'ziel': ziel, 'vorhanden': bool(payload.get('vorhanden'))})
+        plan = {'ziel': ziel, 'vorhanden': bool(payload.get('vorhanden'))}
+        hinweis = None
+        if werkzeug in harness_code_stand.AUSFUEHRUNG and not (werkzeug == 'befehl' and harness_code_stand.nur_pruefen(ziel)):
+            cs = self.code_stand(projekt) if projekt is not None else None
+            if cs is not None:
+                plan['code_ungesehen'] = cs.ungesehen()          # G4: dieselbe Prüfung wie beim echten Aufruf
+            elif projekt is None:
+                hinweis = 'Ohne Projekt nicht geprüft: liegt dort Code, den der Captain nicht gesehen hat, kommt zusätzlich eine Karte (G4).'
+        e = freigabe.einstufung(harness_katalog.mit_projekt(regeln, projekt), werkzeug, args, plan)
+        return dict(e, hinweis=hinweis) if hinweis else e
 
     def frist_pruefen(self, frist_min=None):
         """Karten `an: vorarbeiter`, die zu lange offen sind, fallen an den Captain – mit Audit (HARNESS_KARTE_FRIST) und Ereignis."""

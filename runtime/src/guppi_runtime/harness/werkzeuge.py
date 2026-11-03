@@ -21,6 +21,7 @@ from ..core.request_binding import file_request
 from ..tools.base import ToolPermissionError, ToolValidationError
 from ..tools.filesystem import FilesystemTool
 from . import befehl as befehl_mod
+from . import code_stand as code_stand_mod
 from . import lauf as lauf_mod
 from . import projekte as harness_projekte
 from .katalog import OHNE_KARTE, einstufen
@@ -109,7 +110,7 @@ SCHEMAS = {
 
 
 class Werkzeuge:
-    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None):
+    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None):
         self.sitzungen_liste = sitzungen_liste   # vom Server gereicht: (kriterien, aktuelle_sitzung) -> [{id, titel, zuletzt, nachrichten, projekt, geschuetzt}] (harness/api.py)
         self.sitzungen_weg = sitzungen_weg       # vom Server gereicht: ([ids]) -> {verschoben, uebersprungen}
         self.lese_grenze = lese_grenze           # vom Server gereicht: () -> Zeichen je Lese-Aufruf (Token und Gespräch); ohne: LESEN_ZEICHEN_MAX
@@ -119,6 +120,7 @@ class Werkzeuge:
         self.projekt_antrag = projekt_antrag     # vom Server gereicht: stellt den Antrag „Ordner als Projekt öffnen“ (harness/antraege.py)
         self.laeufe, self.lauf_typen, self.modelle, self.andere_antworten = laeufe, lauf_typen, modelle, andere_antworten    # Stufe 3 (N7), vom Server gereicht
         self.kontext = {}                       # Sitzung, Antwort, Aufgabe, Karte des Aufrufs – setzt der Server (Kiste, beantworten), nie das Modell
+        self.code_stand = code_stand            # G4 (SPEC_APPS_v1): gesehener Code-Stand des Projekts (harness/code_stand.py); None = keine Prüfung
         self.projekt, self.guard, self.mission_id, self.regeln = projekt, guard, mission_id, regeln
         self.wurzel = Path(projekt['wurzel']).resolve()
         self.fs = FilesystemTool(self.wurzel, guard=guard, audit=audit)
@@ -207,8 +209,9 @@ class Werkzeuge:
             befehl_mod.zerlegen(zeile)                                   # Interpreterzeichen sofort ablehnen
             cwd = befehl_mod.ordner_in(self.wurzel, args.get('ordner') or '.')
             rel = cwd.relative_to(self.wurzel).as_posix() or '.'
-            return {'ziel': zeile, 'vorhanden': False, 'vorschau': befehl_mod.ziel_text(zeile, rel), 'kurz': zeile,
+            plan = {'ziel': zeile, 'vorhanden': False, 'vorschau': befehl_mod.ziel_text(zeile, rel), 'kurz': zeile,
                     'gate': {'aktion': befehl_mod.AKTION, 'ziel': befehl_mod.ziel_text(zeile, rel), 'bindung': befehl_mod.bindung(zeile, rel)}}
+            return plan if code_stand_mod.nur_pruefen(zeile) else self._code_sicht(plan)
         if name in LESEN:
             p, rel = self._rel(args.get('pfad') or '.', muss_da=True)
             return {'ziel': rel, 'vorhanden': True, 'vorschau': f'{name} {rel}', 'kurz': rel,
@@ -230,7 +233,23 @@ class Werkzeuge:
         # Warnung (Nachtrag 434b108, Captain 29.10.2026): datei_schreiben auf eine BESTEHENDE Datei, die viele Zeilen verliert.
         warnung = ersetzung_warnung(alt_text, neu_text) if (name == 'datei_schreiben' and p.is_file()) else None
         return {'ziel': rel, 'vorhanden': p.exists(), 'vorschau': diff(alt_text, neu_text, rel), 'kurz': rel, 'fsargs': fsargs, 'warnung': warnung,
+                'code': self.code_stand is not None and code_stand_mod.ist_code(rel),
                 'gate': {'aktion': aktion, 'ziel': str(p), 'bindung': file_request('write_text', fsargs, p)}}
+
+    def _code_sicht(self, plan):
+        """G4: Liegt im Projekt Code, den der Captain nicht gesehen hat, kommen die Liste in den Plan (für den Vorbehalt), in die Bindung
+        des Gates (G4-11: ändert sich eine Datei bis zur Antwort, greift die Freigabe nicht) und in die Vorschau der Karte."""
+        if self.code_stand is None:
+            return plan
+        liste = self.code_stand.ungesehen()
+        if not liste:
+            return plan
+        text, zu_gross = self.code_stand.vorschau(liste)
+        plan['code_ungesehen'] = liste
+        plan['code_zu_gross'] = zu_gross
+        plan['gate'] = dict(plan['gate'], bindung=dict(plan['gate']['bindung'], code_ungesehen=code_stand_mod.bindung(liste)))
+        plan['vorschau'] = plan['vorschau'] + '\n\n' + text
+        return plan
 
     # ---- Chat-Liste aufräumen
     def _sitzungs_ids(self, args):
@@ -283,8 +302,8 @@ class Werkzeuge:
                 vorschau.append(f"Modell: {typ['modell']}")
             weich = ({'grund': f"Captain-Vorbehalt: der Lauf braucht oder nimmt das Modell {typ['modell']} (nur eine Aufgabe, die es nennt, deckt ihn)", 'modell': typ['modell']}
                      if (typ['modell_weg'] or typ['braucht_modell']) and typ['modell'] else None)
-            return {'ziel': typ['id'], 'vorhanden': False, 'vorschau': '\n'.join(vorschau), 'kurz': typ['id'], 'weich': weich, 'lauf': (typ, info),
-                    'gate': {'aktion': AKTION_LAUF, 'ziel': typ['id'], 'bindung': info['bindung']}}
+            return self._code_sicht({'ziel': typ['id'], 'vorhanden': False, 'vorschau': '\n'.join(vorschau), 'kurz': typ['id'], 'weich': weich, 'lauf': (typ, info),
+                                     'gate': {'aktion': AKTION_LAUF, 'ziel': typ['id'], 'bindung': info['bindung']}})
         if name == 'lauf_stoppen':
             lid = str(args.get('lauf_id') or '')
             try:
@@ -436,7 +455,7 @@ class Werkzeuge:
             if name == 'befehl':
                 r = befehl_mod.ausfuehren(self.wurzel, args.get('befehl'), args.get('ordner') or '.', args.get('zeitlimit_s') or 120,
                                           guard=self.guard, mission_id=self.mission_id, token=token, abbruch=abbruch,
-                                          aufgabe_id=(self.kontext or {}).get('aufgabe_id'))      # Rücknahme der Aufgabe beendet den Befehl (G2 §4.4)
+                                          aufgabe_id=(self.kontext or {}).get('aufgabe_id'), request_binding=plan['gate']['bindung'])      # Rücknahme der Aufgabe beendet den Befehl (G2 §4.4)
                 kopf = f"Exitcode {r['exitcode']} · {r['dauer_s']} s" + (' · gekürzt' if r['gekuerzt'] else '') + {'zeitlimit': ' · ZEITLIMIT', 'abgebrochen': ' · ABGEBROCHEN', 'zurueckgenommen': ' · AUFGABE ZURÜCKGENOMMEN', 'nicht_erlaubt': ''}.get(r['status'], '')
                 status = {'ok': 'ok', 'abgebrochen': 'abgebrochen', 'zurueckgenommen': 'abgebrochen'}.get(r['status'], 'fehler')
                 return {'status': status, 'ergebnis': kopf + '\n' + r['ausgabe'], 'wirkung': r['status'] in ('ok', 'fehler', 'zeitlimit')}

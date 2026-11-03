@@ -33,6 +33,7 @@ ALLOWED = {
     "orchestra": {"enabled"},          # Spec 0 (G2-S0-10): Orchestrierung; Standard aus, runtime/config/orchestra.yaml sagt enabled: false
     "wissen": {"enabled"},             # Spec 7 (G2-S7-q): Wissensspeicher; Standard aus, runtime/config/wissen.yaml sagt enabled: false
     "entwicklung": {"enabled"},        # SPEC_UIX_STUFE6 §2.2 (S6-E4): Prüfwerkzeuge (zweck: pruefung) der Oberfläche laden; Standard aus
+    "code_sicht": {"enabled"},         # SPEC_APPS_v1 G4: Läufe und Befehle der Harness nur nach Sicht auf geänderten Code; Standard AN, `enabled: false` schaltet es ab
 }
 
 
