@@ -321,13 +321,40 @@ Für fremden Code, der selbst ausgeführt werden soll, gibt es `sandbox/` (micro
 
 ---
 
-## 5. Offene Fragen an den Captain
+## 5. App-Berechtigung: die fünf Fragen als Schalter je App
 
-1. **Aktivieren getrennt vom Einbauen?** Soll eine eingebaute Fremd-App erst nach einem zweiten Klick laufen („eingebaut, aus“)? Empfehlung: ja.
-2. **Fremde Zellen in der Leiste:** erlaubt (mit „fremd“-Kennzeichen, nur Text und Ton) oder nie? Empfehlung: erst nach Stufe 1 und nur für aktivierte Apps.
-3. **Vorbehalt für `uix/**` und `desk/gateway.py`:** soll das Modell dort nie ohne harte Karte schreiben dürfen (wie `core/**`)? Das betrifft auch eigene Bauaufträge an SEDRA. Empfehlung: ja, wie beim Guard.
-4. **Ereignisse für Fremde:** nur die öffentlichen (Zustand, Modell) oder auch Freigabe-/Lauf-Texte, wenn der Captain es pro App erlaubt? Empfehlung: nur öffentliche, Texte nie.
-5. **Dienste (MCP) als Apps:** gewollt, und wenn ja, nur für Dienste, die der Captain selbst gebaut hat (`CAPTAIN`/`GUPPI_BUILT`), oder auch für fremde (dann nur in der microVM)? Empfehlung: zuerst nur eigene.
+Die fünf Fragen der ersten Fassung sind keine einmalige Grundsatzentscheidung. Sie werden **je App** in der Berechtigung festgelegt (Karte „Berechtigung“ im Modul-Werkzeug,
+Änderungen als Antrag mit Gate im Posteingang, §3.6). Der Kern liefert nur die **Obergrenze je Vertrauensstufe**; innerhalb der Grenze entscheidet der Captain pro App.
+
+| Nr | Schalter in der Berechtigung | Werte | Standard COMMUNITY | Obergrenze (Kern, nicht änderbar) |
+|---|---|---|---|---|
+| B1 | **Aktivierung** | `aus` · `an` | `aus` nach dem Einbau; „An“ ist ein eigener Klick mit Audit | – |
+| B2 | **Zelle in der Leiste** | `nein` · `text` (Wert + Ton, gekennzeichnet „fremd“) | `nein` | nie Code in der Leiste, nie Klickziel außerhalb eines Orts |
+| B3 | **Schreiben im Projekt** (`uix/**` u. a.) | gehört nicht zur App-Berechtigung, sondern zu den Vorbehalten des Kerns | – | `uix/**`, `desk/gateway.py`, `desk/install.py`, `uix_server.py` bleiben harte Karte für das Modell, für jede App und jede Sitzung |
+| B4 | **Ereignisse hören** | je Name an/aus; Klassen: `öffentlich` (system.state, model.changed, desk.resync, tools.refresh, slot.changed) · `inhalt` (decision.*, live.line, talk.context, object.open, task.changed) | nur `öffentlich`, ohne Haken nichts | `inhalt` nur mit ausdrücklichem Haken, Nutzlast gefiltert (nie `describe`, `line`) |
+| B5 | **Dienst-Prozess** (MCP u. ä.) | `nein` · `ja, Host (nur eigene)` · `ja, microVM` | `nein` | Dienst auf dem Host nur für `CAPTAIN`/`GUPPI_BUILT`; fremde nur in der microVM |
+
+Dazu die Schalter aus §2.3 (`lesen:<typ>`, `verb:<typ>.<verb>`, `ablage`, `netz:<host>`) in derselben Karte. Vorlage der Karte im Manifest:
+
+```yaml
+rechte:
+  aktivierung: aus            # B1: der Captain schaltet an
+  zelle: nein                 # B2: nein | text
+  ereignisse: [system.state]  # B4: Namen; Klasse `inhalt` nur mit Haken des Captains
+  dienst: nein                # B5: nein | host | microvm
+  lesen: [rechnung]
+  verben: []
+```
+
+Regeln:
+1. **Das Manifest bittet, der Captain gewährt.** Was in `rechte:` steht, ist der Antrag; die gewährte Fassung liegt als Datei des Captains unter `local_config/` (vom Modell nicht beschreibbar, Vorbehalt) und gilt nur, solange der Manifest-Hash passt.
+2. **Mehr verlangt als gewährt = nicht geladen** (mit Grund in `rejected`), nie stillschweigend gekürzt.
+3. **Die Obergrenze ist Code des Kerns** (§2.6) und steht nicht im Manifest. Eine App kann sie nicht mitbringen.
+4. **Jede Änderung nach oben** (B1 an, B2 text, B4 Haken, B5 ja) ist ein Gate; nach unten braucht keines.
+5. **Das Modell darf beantragen**, nie gewähren und nie aktivieren; `app_oeffnen` öffnet nur Kernorte und aktivierte Apps.
+6. B3 steht hier nur der Vollständigkeit halber: es ist kein Schalter. Der Schutz von `uix/**` hängt nicht an der App, sondern am Projekt.
+
+Offen bleibt an den Captain nur noch die **Werkseinstellung** der Tabelle (Spalte „Standard COMMUNITY“). Die Empfehlung steht in der Tabelle.
 
 ---
 
