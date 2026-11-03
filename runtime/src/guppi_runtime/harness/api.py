@@ -62,6 +62,7 @@ from . import katalog as harness_katalog
 from . import projekte as harness_projekte
 from . import schleife
 from . import verbrauch as harness_token
+from . import verbrauch as harness_verbrauch
 from . import verknuepfungen as harness_verknuepfungen
 from . import vorarbeiter as harness_vorarbeiter
 from . import vorlagen as harness_vorlagen
@@ -90,7 +91,8 @@ GEDANKEN_MODI = {'aus': (0, 0), 'spur': (0, 0), 'kurz': (2, 800), 'voll': (4, 60
 GEDANKEN_STANDARD = 'spur'
 # Wählbare Grenzen (Einstellungen → Agent → Token und Gespräch): Name → (Standard, erlaubte Werte); gespeichert als Text in der Laufzeitdatei
 OPTIONEN = {'lese_grenze': ('8000', ('4000', '6000', '8000')), 'verlauf_laenge': ('20', ('10', '20', '30')), 'zusammen_ab': ('8', ('4', '8', '12')),
-            'kontext_sicherung': ('normal', ('frueh', 'normal', 'spaet')), 'denken': ('standard', ('standard', 'aus', 'begrenzt'))}
+            'kontext_sicherung': ('normal', ('frueh', 'normal', 'spaet')), 'denken': ('standard', ('standard', 'aus', 'begrenzt')),
+            'antwort_budget': ('2048', ('2048', '4096', '8192'))}
 ZUSAMMEN_MIN = 8                       # so viele Nachrichten müssen aus dem Verlauf gefallen sein, bevor Sedra sie zusammenfasst
 ZUSAMMEN_MODI = ('auto', 'aus')
 ZUSAMMENFASSUNG_MAX = 1800
@@ -434,7 +436,7 @@ class HarnessApi:
         vorlage = self._vorlage(s)
         box, projekt = self._kiste(s)
         messages = [{'role': 'system', 'content': schleife.system_prompt((f"{projekt['name']} (Ordner {projekt['wurzel']}, Schreibbereich {', '.join(projekt['schreibbereich'])})" if projekt else None), box.names, vorlage['system'] if vorlage else None,
-                                                                         (letzte_zusammenfassung(s['eintraege']) or {}).get('text'))},
+                                                                         (letzte_zusammenfassung(s['eintraege']) or {}).get('text'), harness_verbrauch.heute())},
                     *verlauf, {'role': 'user', 'content': text}]
         with self._start:
             antwort = self._antwort_anlegen(sid)
@@ -874,7 +876,7 @@ class HarnessApi:
                 self._verlauf_zusammenfassen(sid, mission, modell, antwort, messages)
                 schleife.laufen(self.execute, mission, box, messages, antwort, modell=modell, provider=PROVIDER, sitzungen=self.sitzungen,
                                 sitzung_id=sid, fenster=fenster, live_text=live, wirkung=getattr(box, 'wirkung', ()), bisher=bisher, max_zuege=zuege,
-                                sicherung=self._option('kontext_sicherung'), denk_modus=self._option('denken'))
+                                sicherung=self._option('kontext_sicherung'), denk_modus=self._option('denken'), max_tokens=int(self._option('antwort_budget')))
             except Exception as exc:                  # nie still: der Strom endet mit Grund, die Sitzung bekommt eine Zeile
                 grund = f'{type(exc).__name__}: {exc}'[:300]
                 antwort.senden('fehler', {'grund': grund})

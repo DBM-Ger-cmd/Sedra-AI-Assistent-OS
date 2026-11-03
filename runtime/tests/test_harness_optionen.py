@@ -164,5 +164,29 @@ class GedaechtnisVerwaltung(unittest.TestCase):
         self.assertEqual([e for e, _ in gesehen], ['HARNESS_GEDAECHTNIS_GELOESCHT', 'HARNESS_GEDAECHTNIS_GELOESCHT'])
 
 
+@unittest.skipUnless(__import__('shutil').which('node'), 'node fehlt')
+class GespraechsoptionenTests(unittest.TestCase):
+    """Das Feld unter dem Schild (gespraechsoptionen.js) und die Seite „Token und Gespräch“ nutzen dieselben Listen – und die müssen zu den Werten des Servers passen."""
+
+    def optionen(self):
+        import json
+        import subprocess
+        ordner = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'shells' / 'harness'
+        skript = ("globalThis.sedraDom = {}; globalThis.document = {};" + chr(10)
+                  + f"require({json.dumps(str(ordner / 'tokenseite.js'))}); require({json.dumps(str(ordner / 'gespraechsoptionen.js'))});" + chr(10)
+                  + "console.log(JSON.stringify(globalThis.sedraHarness.gespraechsoptionen.zeilen().map(z=>({k: z.schluessel, werte: z.wahl.map(w=>w[0])}))));")
+        r = subprocess.run(['node', '-e', skript], capture_output=True, text=True, timeout=60, encoding='utf-8')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return {z['k']: z['werte'] for z in json.loads(r.stdout)}
+
+    def test_die_zeilen_unter_dem_schild_passen_zum_server(self):
+        from guppi_runtime.harness.api import GEDANKEN_MODI
+        z = self.optionen()
+        self.assertEqual(list(z), ['denken', 'gedanken_zurueck', 'antwort_budget', 'verlauf_laenge'])
+        self.assertEqual(set(z['gedanken_zurueck']), set(GEDANKEN_MODI))
+        for schluessel in ('denken', 'antwort_budget', 'verlauf_laenge'):
+            self.assertEqual(set(z[schluessel]), set(OPTIONEN[schluessel][1]), schluessel)                       # dieselben Werte (die Reihenfolge der Anzeige darf anders sein)
+
+
 if __name__ == '__main__':
     unittest.main()

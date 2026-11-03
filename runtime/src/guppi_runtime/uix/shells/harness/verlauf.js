@@ -296,6 +296,9 @@
         }
         else if(name === 'karte'){ this.phase('wartet auf Freigabe'); block.append(karteKarte(S, this, x, null)); z.seg = null; root.sedraHarness.vorschau.karte(S, this, x); }
         else if(name === 'kontext'){ block.dataset.kontext = x.belegt + '/' + x.fenster; S.kontextStand = {sitzung: id, belegt: x.belegt, fenster: x.fenster}; root.sedraHarness.eingabe.kontextZeigen(S); }
+        else if(name === 'denken.begrenzt'){
+          this.notiz('Das Modell hat sein ganzes Antwortbudget beim Denken verbraucht und nichts geantwortet. SEDRA versucht es einmal mit doppeltem Budget (' + Number(x.max_tokens).toLocaleString('de-DE') + ' Token) und begrenztem Denken (' + Number(x.budget).toLocaleString('de-DE') + ' Token).', 'warn');
+        }
         else if(name === 'kontext.gekuerzt'){
           this.notiz(x.stufe === 'voll' ? 'Das Kontextfenster ist voll.' : 'Kontextfenster fast voll (' + Number(x.vorher).toLocaleString('de-DE') + ' von ' + Number(x.fenster).toLocaleString('de-DE') + ' Token geschätzt): alte Ergebnisse wurden gekürzt (jetzt ≈ ' + Number(x.nachher).toLocaleString('de-DE') + ')' + (x.stufe === 'abschluss' ? ' – SEDRA antwortet jetzt ohne weitere Werkzeuge.' : '.'), x.stufe === 'ok' || x.stufe === 'kuerzen' ? 'note' : 'warn');
         }

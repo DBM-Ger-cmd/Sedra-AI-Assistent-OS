@@ -192,6 +192,11 @@
 .hs-token-verbrauch{display:grid;grid-template-columns:max-content max-content 1fr;gap:4px 14px;align-items:baseline;margin-bottom:6px}
 .hs-token-kopf{grid-column:1/-1;margin-top:8px;font-weight:600;color:var(--muted);font-size:var(--size-small)}
 .hs-token-wert{font-variant-numeric:tabular-nums}
+button.hs-schild{font:inherit;font-size:var(--size-xs);background:transparent;cursor:pointer}
+button.hs-schild::after{content:" ▾"}
+button.hs-schild[aria-expanded="true"]::after{content:" ▴"}
+.hs-optionen{display:flex;flex-direction:column;gap:6px;padding:8px 10px;margin-bottom:6px;border:1px solid var(--line-soft);border-radius:var(--radius);background:var(--panel)}
+.hs-opt-zeile{display:grid;grid-template-columns:minmax(120px,max-content) 1fr;gap:8px;align-items:center}
 .hs-vorlage-hinweis{font-size:var(--size-xs);color:var(--muted);padding:6px 8px;border:1px solid var(--line-soft);border-radius:var(--radius);overflow-wrap:anywhere}
 .hs-vorlage-hinweis.warn{color:var(--warn);border-color:var(--warn-line);background:var(--warn-bg)}
 .hs-dialog-haube{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--bg) 55%, transparent)}

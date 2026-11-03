@@ -13,7 +13,7 @@ arbeitsplatz:
   - name: Gespräch
     wo: 'Mitte: Antworten streamen, Denken eingeklappt, Werkzeugzeilen aufklappbar'
   - name: Eingabefeld
-    wo: 'unter dem Gespräch: Enter sendet, Umschalt+Enter neue Zeile, Stopp oder Esc bricht ab; + oder @ hängt eine Datei des Projekts an, / zeigt Befehle; der Modell-Knopf öffnet die Modell-Steuerung (Laden, Wechseln, Entladen, passt es?); bei einer neuen Sitzung darunter Projekt und Vorlage, „Ordner öffnen …“ und „Als Vorgabe merken“'
+    wo: 'unter dem Gespräch: Enter sendet, Umschalt+Enter neue Zeile, Stopp oder Esc bricht ab; + oder @ hängt eine Datei des Projekts an, / zeigt Befehle; ein Klick auf das Schild („… gibt frei“) klappt Optionen zur Gesprächsführung auf (Denken eingrenzen, Gedanken ans Modell zurücksenden, Antwortbudget, Länge des Verlaufs; mehr unter Einstellungen → Agent → Token und Gespräch); der Modell-Knopf öffnet die Modell-Steuerung (Laden, Wechseln, Entladen, passt es?); bei einer neuen Sitzung darunter Projekt und Vorlage, „Ordner öffnen …“ und „Als Vorgabe merken“'
   - name: Vorschau
     wo: 'neben dem Gespräch: die Datei, an der SEDRA gerade arbeitet (Diff, Lauf-Log); Seite wechseln, zuklappen, festhalten (Strg+Umschalt+X)'
   - name: Taskleiste

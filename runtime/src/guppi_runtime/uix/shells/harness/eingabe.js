@@ -19,8 +19,11 @@
     const plus = d().el('button', 'hs-rund', '+'); plus.type = 'button';
     plus.title = 'Datei des Projekts anhängen (oder @ tippen)'; plus.setAttribute('aria-label', 'Datei anhängen');
     plus.onclick = ()=>root.sedraHarness.anhang.oeffnen(S);                          // Stufe 6 (HS-82)
-    const schild = d().el('span', 'hs-schild', '⛨ Captain gibt frei');
-    schild.title = 'Wer in dieser Sitzung freigibt: der Captain (Karte im Verlauf oder Posteingang). Aufgaben-Freigaben stehen im Reiter „Aufgaben“.';
+    const schild = d().el('button', 'hs-schild', '⛨ Captain gibt frei'); schild.type = 'button';
+    schild.setAttribute('aria-expanded', 'false'); schild.setAttribute('aria-haspopup', 'true');
+    schild.title = 'Wer in dieser Sitzung freigibt: der Captain (Karte im Verlauf oder Posteingang). Aufgaben-Freigaben stehen im Reiter „Aufgaben“. Klick: Optionen zur Gesprächsführung (Denken, Gedanken ans Modell, Budget).';
+    const optionen = root.sedraHarness.gespraechsoptionen.panel(S);                    // aufklappbar unter dem Schild (03.11.2026)
+    schild.onclick = ()=>optionen.umschalten(schild);
     S.api('/api/harness/katalog').then(k=>{                    // HS-17/HS-26: das Schild sagt, wer freigibt und nach welchem Katalog
       if(k.fehler){ schild.textContent = '⛨ Katalog ungültig'; schild.classList.add('warn'); schild.title = 'Freigabe-Katalog: ' + k.fehler + ' – nur lesende Werkzeuge.'; return; }
       schild.textContent = '⛨ Captain gibt frei · Katalog ' + k.regeln.length + ' Regeln' + (k.quelle === 'vorlage' ? ' (Vorlage)' : '');
@@ -48,7 +51,7 @@
     werkzeuge.append(plus, schild, modell, kontext, d().el('span', 'hs-luecke'), mikro, senden);
     zeile.append(feld, werkzeuge);
     const vorlageHinweis = d().el('div', 'hs-vorlage-hinweis'); vorlageHinweis.hidden = true; vorlageHinweis.setAttribute('role', 'note');       // Wofür die gewählte Vorlage da ist (MasterChat u. a.)
-    box.append(kein, vorschlag, zeile, projektZeile, vorlageHinweis);
+    box.append(kein, vorschlag, optionen.el, zeile, projektZeile, vorlageHinweis);
     S._eingabe = {box, feld, senden, modell, kontext, projekt, vorlage, vorlageHinweis, projektZeile, kein, vorschlag, schild, schildBasis: schild.textContent};
     S._eingabe.ordner = root.sedraHarness.projekt ? root.sedraHarness.projekt.knoepfe(S, projektZeile, projekt) : null;    // P0 M3: Ordner öffnen, Vorgabe merken
     vorlage.addEventListener('change', ()=>root.sedraHarness.vorlagenhinweis.zeigen(S));
