@@ -88,6 +88,7 @@ Keines davon ist falsch; sie beantworten verschiedene Fragen. Was fehlt, ist **e
 | F14 | Die Abhängigkeiten einer Shell (Werkzeuge, Kern-Module, ui-Dateien) werden für den USB-Stick von Hand aufgezählt. | `docs/ENTSCHEIDUNGEN_USB_STICK.md:7–9` |
 | F15 | Die Vertrauensstufe `GUPPI_BUILT` wird von **keinem** Code-Pfad vergeben. Der Vertrag sagt, ein von SEDRA gebautes Modul trage sie und komme über das Einbau-Gate (Vertrag §7.2–7.3); das Einbau-Gate setzt aber immer `COMMUNITY`. `GUPPI_BUILT` kommt im Code nur als zulässiger Wert vor. | `desk/gateway.py:50`; `uix_server.py:396–400`; Suche nach `GUPPI_BUILT` im Paket |
 | F17 | **Testläufe umgehen alle Vorbehalte.** Der MasterChat darf in seiner Sitzung Tests und Code unter `runtime/**` schreiben und `run_tests` starten; der Lauf führt den Code auf dem Rechner aus (ohne VM), neue Testdateien werden mitgenommen. Dieser Code kann jede Datei schreiben, auch `core/**` und `uix/ui/**`. | `runtime/config/harness_vorlagen/masterchat.yaml:14–26`; `runtime/config/harness_laeufe.yaml` (`run_tests`); `harness/lauf_huelle.py:1–5`; `runtime/benchmarks/run_tests.py:32` |
+| F18 | **Alle Freigabe-Wege außer der Konsole nimmt der Server mit dem Browser-Token an** (zehn Wege, F1–F10 in der Vorlage AM0-E1 §5b.2). Code in der Seite kann deshalb jede Freigabe erteilen, auch für Programme, Regeln und Datenabfluss. Einzige Ausnahme heute: `guppi approve` in der Konsole. | `uix_server.py:261–310, 2196–2213`; `harness/api.py:245`; `cli.py:316–324` |
 | F16 | Einbau und Rechte-Erhöhung schreiben in die Manifestdatei des Moduls (`trust: COMMUNITY` bzw. `CAPTAIN`). Eine Hash-Prüfung nach dem Einbau muss das berücksichtigen; jede Erhöhung ändert den Hash. | `uix_server.py:462–466, 1324–1327` |
 
 ---
@@ -295,7 +296,7 @@ Eine App darf diese Dinge **anzeigen** (Logbuch, Posteingang als Grundfunktion d
 | **AM6** | `SPEC_APPS_v1_AM6_LANGDOCK_AGENTEN.md` | SEDRA fragt Langdock-Agenten (ausgehend) als Kern-Verb | AM5, AM3 | hoch |
 | **AM7** | `SPEC_APPS_v1_AM7_UNTERNEHMEN.md` | Rollen, Betreiber-Richtlinie, Profile, Verwaltung in der KMU-Shell | AM2, AM3 | hoch |
 | **AM8** | `SPEC_APPS_v1_AM8_VERZEICHNIS.md` | ein Verzeichnis aller Erweiterungen (E1–E8), gemeinsame Wirkungsklassen, Auslieferungsprofile | AM3 | mittel |
-| **AM9** (vorgeschlagen) | Skizze in `SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md` §7 | Werkstatt und Betrieb trennen: SEDRA läuft aus einem freigegebenen Stand, Änderungen kommen nur über die Übernahme des Updaters | AM0 | hoch |
+| **AM9** (aufgenommen 03.11.2026) | Skizze in `SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md` §7 | Werkstatt und Betrieb trennen: SEDRA läuft aus einem freigegebenen Stand, Änderungen kommen nur über die Übernahme des Updaters; **mit G5** (Freigaben auf eigener Herkunft) | AM0 | hoch |
 
 Reihenfolge-Vorschlag: AM0 und AM1 parallel → AM2 → AM3 → AM8 (Anzeige) und AM5 → AM4 → AM6 → AM7.
 Begründung: AM0 ist Voraussetzung für alles mit fremdem Code; AM1/AM2 bringen sichtbaren Nutzen ohne neue Rechte; AM3 ist die Mitte; AM5 ist klein, wenn die Schnittstelle stimmt; AM7 ist der größte Schritt und braucht ein Konto-Modell, das es heute nicht gibt.
@@ -361,4 +362,6 @@ Grenzen dieser Arbeit (ehrlich):
 | 03.11.2026 | AM0-E1 (Schutz des Oberflächen-Codes) **wieder offen**, zur Ausarbeitung zurückgegeben; Vorlage `SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md` (Vorschlag: gestuft hart/weich/frei; Baustein AM9 „Werkstatt und Betrieb trennen“) | Captain / Claude |
 | 03.11.2026 | Auswirkungen „Kern-Verb statt Dienst-App“ für Langdock-Agenten beschrieben (AM6 §12) | Claude, auf Frage des Captains |
 | 03.11.2026 | Restrisiko der gestuften Lösung nachgearbeitet (Vorlage AM0-E1 §5a): neuer Befund F17; Vorschlag „O3+“ mit Abnahme vor Wirkung (G2) und Ausführung von Modell-Code nur nach Sicht (G4, vorrangig) | Claude, auf Auftrag des Captains |
+| 03.11.2026 | **G4 sofort, O3+ übernommen, AM9 mit G5 aufgenommen** | Captain |
+| 03.11.2026 | Fall „bestätigter schädlicher Code erteilt Freigaben“ nachgearbeitet (Vorlage AM0-E1 §5b): Befund F18, Klassen H/N, Vorschlag G9 Bestätigung außerhalb des Browsers, G10 Kanal im Audit, G11 Vollständigkeitstest – offen | Claude, auf Auftrag des Captains |
 | 15.10.2026 | Fremdes Modul kommt als COMMUNITY mit Leserouten; Schreiben nur per Gate | `uix_server.py:1265` (Kommentar) |

@@ -26,7 +26,7 @@ Nichts gebaut; diese Datei ist G2. Pfade relativ zu `runtime/src/guppi_runtime/`
 
 ## 1. Teil A – Vorbehalte (AM0-01)
 
-> **Nicht freigegeben.** AM0-E1 wurde am 03.11.2026 zur Ausarbeitung zurückgegeben. Die Ausarbeitung (`SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md`) zeigt, dass ein harter Vorbehalt nur für den Vertragscode die Lücke nicht schließt, und schlägt eine Stufung vor (hart/weich/frei). Wird sie freigegeben, ersetzt ihr §6 diesen Teil. Die übrigen Teile von AM0 hängen nicht daran.
+> **Ersetzt.** AM0-E1 ist entschieden (03.11.2026): **O3+**. Statt der Liste unten gilt `SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md` §6 (hart/weich/frei) mit G1, G2, G3, G6, G7; deren G2-Entwurf folgt in einem eigenen Dokument. Die Prüfstellen-Einträge dieser Tabelle (gateway, install, registry, herkunft, uix_server, uix_clients, cloud) bleiben als harte Vorbehalte Teil von §6. Die übrigen Teile von AM0 hängen nicht daran.
 
 `harness/vorbehalte.py` `PFADE` (`:10–31`) bekommt nach dem Eintrag `runtime/benchmarks/devvm_*` diese Zeilen:
 
