@@ -24,6 +24,8 @@ PFADE = (
     ('runtime/src/guppi_runtime/harness/lauf_huelle.py', 'Harness-Code: Hülle der Läufe'),
     ('runtime/src/guppi_runtime/harness/herkunft.py', 'Harness-Code: Herkunft der Antworten'),
     ('runtime/src/guppi_runtime/harness/code_stand.py', 'Harness-Code: gesehener Code-Stand (G4)'),
+    ('runtime/src/guppi_runtime/hardware_manager/dashboard.html', 'Seite des Servers (Hardware-Fenster, eigener Hardware-Server; E9)'),
+    ('runtime/src/guppi_runtime/desk/freigabeklasse.py', 'Prüfstelle: Klassen der Freigaben und Bestandsliste der Freigabe-Wege (G9, G11)'),
     ('runtime/portable/**', 'portable Laufzeit (Python, Sandbox): läuft bei jedem Start, G4 überwacht sie nicht'),
     ('runtime/config/harness_vorlagen/**', 'Vorlagen der Harness (Systemprompt und Rechte)'),
     ('runtime/config/harness_laeufe.yaml', 'Lauf-Typen der Harness'),
