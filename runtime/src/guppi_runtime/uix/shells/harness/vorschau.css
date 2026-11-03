@@ -32,3 +32,19 @@
 .hs-modell-menue{position:fixed;right:16px;bottom:52px;z-index:50;width:min(560px,calc(100vw - 32px));display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.45)}.hs-modell-menue .hs-modell-zu{position:absolute;top:6px;right:6px;width:24px;height:24px;line-height:1}.hs-modell-menue .hs-modell-steuer{flex-wrap:wrap}.hs-modell-menue select{max-width:100%;min-width:0}
 .hs-router-menue .hs-modell-text{font-weight:600}.hs-router-zahl{width:6em;font:inherit;font-size:var(--size-small);color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:3px 6px}.hs-router-hinweis.bad{color:var(--bad,#e5534b)}.hs-router-menue label{font-size:var(--size-small)}
 .hs-router-menue button:disabled{opacity:.45;cursor:default}
+
+/* Vorschau bis unten, Eingabe nur unter dem Gespräch; unten in der Vorschau der Werkzeugaufruf (Captain 03.11.2026) */
+.hs-teilung.hs-fl-ohne .hs-fl-gespraech{flex:1 1 auto}
+.hs-fl-vorschau{overflow:hidden}
+.hs-fl-balken-h{flex:0 0 6px;height:6px;cursor:row-resize;background:var(--line)}
+.hs-fl-balken-h:hover,.hs-fl-balken-h:focus-visible{background:var(--accent)}
+.hs-fl-balken-h[hidden],.hs-fl-werk[hidden]{display:none}
+.hs-fl-werk{display:flex;flex-direction:column;min-height:0;min-width:0}
+.hs-fl-werk .hs-fl-inhalt{display:flex;flex-direction:column;gap:4px}
+.hs-fl-werk-kopf{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.hs-fl-werk-kopf .hs-wz-status.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+.hs-fl-werk-kopf .hs-wz-status.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+.hs-fl-werk-kopf .hs-wz-status.bad{background:var(--bad-bg);border-color:var(--bad-line)}
+.hs-fl-werk-kopf .hs-wz-status.laeuft{color:var(--accent);border-color:var(--hs-on-line)}
+.hs-wz.hs-wz-gewaehlt{border-color:var(--accent)}
+.hs-fl-werk .hs-pre{max-height:none}

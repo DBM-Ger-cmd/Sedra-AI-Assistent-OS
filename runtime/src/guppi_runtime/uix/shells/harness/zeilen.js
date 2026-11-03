@@ -40,10 +40,12 @@
     const body = d().el('div', 'hs-wz-body');
     body.append(d().el('small', 'hs-leise', 'Eingabe'), d().el('pre', 'hs-pre', args === undefined ? '' : JSON.stringify(args, null, 2)));
     row.append(sum, body);
+    row._wz = {name: name || '?', kurz: kurz || '', args, status: 'laeuft'};          // die Daten der Zeile: die Vorschau zeigt sie im unteren Teil (vorschau.js, werkzeug)
     return row;
   }
 
   function werkzeugEnde(row, status, dauer, ergebnis, stufe, regel){
+    if(row._wz){ Object.assign(row._wz, {status, dauer, ergebnis: String(ergebnis || ''), stufe, regel}); if(row._wzHaken) row._wzHaken(); }
     row.classList.remove('laeuft');
     row.classList.add(status === 'ok' ? 'ok' : (status === 'wiederholt' || status === 'wartet' || status === 'abgelehnt' ? 'warn' : 'bad'));
     row.querySelector('.hs-wz-status').textContent = STATUS[status] || status;

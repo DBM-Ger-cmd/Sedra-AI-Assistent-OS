@@ -61,7 +61,9 @@
     box.append(liste);
     box.addEventListener('click', e=>{
       const pf = e.target.closest && e.target.closest('.hs-wz-pfad');
-      if(pf){ e.preventDefault(); e.stopPropagation(); root.sedraHarness.vorschau.oeffnen(S, a, pf.dataset.pfad); }
+      if(pf){ e.preventDefault(); e.stopPropagation(); root.sedraHarness.vorschau.oeffnen(S, a, pf.dataset.pfad); return; }
+      const sum = e.target.closest && e.target.closest('.hs-wz > summary');          // Eingabe und Ausgabe stehen in der Vorschau (unterer Teil), wenn sie offen ist
+      if(sum && root.sedraHarness.vorschau.werkzeug(S, a, sum.parentNode)) e.preventDefault();
     });
     const a = {
       id, box, S, eintraege: 0, antwortId: null, abbruch: null, block: null, wartet: false,

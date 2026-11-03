@@ -106,7 +106,7 @@
 .hs-drache-punkt{fill:var(--accent);opacity:.7}
 .hs-start-titel{margin:0;font-size:var(--size-xl);letter-spacing:var(--tracking-label);color:var(--text)}
 .hs-start-text{margin:0;font-size:var(--size-small);max-width:420px}
-.hs.hs-leer .hs-haupt{grid-template-rows:var(--hs-reiter-h) minmax(0,1fr) minmax(0,1.1fr)}
+.hs.hs-leer .hs-fl-gespraech{display:grid;grid-template-rows:minmax(0,1fr) minmax(0,1.1fr)}          /* die Eingabe steht in der Gesprächshälfte (shell.js, zeigen) */
 .hs.hs-leer .hs-verlauf{display:flex;flex-direction:column;justify-content:flex-end}
 .hs.hs-leer .hs-liste{width:100%}
 .hs.hs-leer .hs-eingabe{align-self:start}
