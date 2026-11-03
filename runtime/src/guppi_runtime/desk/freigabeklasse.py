@@ -4,7 +4,7 @@ Rein: kein Netz, kein Zustand, keine Wirkung. Klasse **H** erteilt Rechte für s
 Kern, bringt Code in den Betrieb oder gibt Daten nach außen. Klasse **N** ist eine einzelne Handlung im Projekt ohne diese Folgen
 (AM0-E1 §5b.3). Ablehnen und Zurücknehmen sind immer N; was die Tabelle nicht kennt, ist H.
 
-Stand G11 (03.11.2026): Die Tür aus G9 gibt es noch nicht. Diese Datei ist die Bestandsliste, gegen die
+Stand G9 (03.11.2026): Die Tür steht in `uix_server.UIXHub.freigabe_tuer` und `harness/api.beantworten`. Diese Datei ist die Bestandsliste, gegen die
 `tests/test_freigabe_vollstaendig.py` jede Stelle mit `approve`, jede Route und jede Entscheidungsart prüft. Eine neue Stelle, Route oder
 Art ohne Eintrag hier lässt den Test fehlschlagen – so kann kein neuer Freigabe-Weg an der Klasse H vorbei entstehen.
 Diese Datei ist Prüfstelle (O3-02): Änderungen nur durch Claude mit Freigabe des Captains."""
@@ -37,6 +37,10 @@ ARTEN = {
     'harness_aufgabe': H,                        # Vorschlag einer Aufgabe = Freigabe im Voraus
     'harness_oberflaeche': {'uebernehmen': H, 'zuruecksetzen': N},     # G2 (noch nicht gebaut)
     'startbericht': N,                           # G6 (noch nicht gebaut): nur zur Kenntnis
+    # Harness-Wege, die ohne Karte erteilen (F4, F5, F11)
+    'harness:aufgabe_anlegen': H, 'harness:vorarbeiter_ernennen': H, 'harness:sitzung_erlaubnisse': H,
+    # Routen, die vor G9 ohne Gate etwas der Klasse H taten (Befund N6, E12)
+    'route:cloud_save': H, 'route:cloud_key': H, 'route:cloud_module_model': H, 'route:candidate_test': H,
 }
 
 # Jeder Weg, den eine Entscheidung anbieten kann (desk/decisions.WAYS, Harness-Karte, G2/G6). Ein unbekannter Weg ist H.
@@ -92,6 +96,26 @@ def klasse(art, weg, binding=None):
     return H
 
 
+GRUND_H = ('erteilt Rechte für später, führt Programme aus, ändert Regeln oder Kern, bringt Code in den Betrieb oder gibt Daten '
+           'nach außen')
+
+
+def text(art, id, weg, titel='', beschreibung=''):
+    """Der Text des Systemdialogs und der Konsole – nur aus dem Kern (Art, Kennung, Titel und Beschreibung der Entscheidung), G9-05."""
+    zeilen = [str(titel or art)[:200]]
+    if beschreibung:
+        zeilen.append(str(beschreibung)[:400])
+    zeilen += ['', f'Art: {art} · Weg: {weg} · Kennung: {str(id)[:80]}', f'Klasse H: {GRUND_H}.',
+               'Nur bestätigen, wenn du diese Freigabe gerade selbst in SEDRA gegeben hast.']
+    return '\n'.join(zeilen)
+
+
+def nutzlast_hash(payload):
+    import hashlib
+    import json
+    return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str).encode('utf-8')).hexdigest()
+
+
 # ---------------------------------------------------------------- Routen (G11-02)
 # Art der Route:
 #   liest       – nur lesen (oder fragt auf Klick etwas ab, ohne etwas zu ändern)
@@ -104,6 +128,8 @@ def klasse(art, weg, binding=None):
 
 ROUTEN_SERVER = {
     '/api/decisions/answer': ('freigabe', None, 'Posteingang: alle Arten aus ARTEN (F1)'),
+    '/api/freigabe/offen': ('liest', None, 'G9: wartende Bestätigungen – nur der Konsolen-Token'),
+    '/api/freigabe/bestaetigen': ('freigabe', None, 'G9: Ja/Nein außerhalb des Browsers – nur der Konsolen-Token (Kanal konsole)'),
     '/api/objects': ('liest', None, 'Objekte des Desk (§10.1)'),
     '/api/actions': ('antrag', None, 'Verben des Desk; Verben mit Gate legen einen Antrag an (F7, desk/gated.py)'),
     '/api/live': ('liest', None, ''),
@@ -275,16 +301,19 @@ APPROVE_STELLEN = {
                                                     'grund': 'Lernkarten des Coders, nur über `guppi lessons approve`'},
     'harness/freigabe.py:aufruf:self.guard.approve': {'guard': True, 'kanal': 'aufgabe|sitzung|katalog', 'tuer': False,
                                                       'grund': 'Ausführung unter einer schon erteilten Freigabe; die Erteilung selbst ist H (Aufgabe, Sitzungs-Erlaubnis)'},
-    'harness/freigabe.py:beantworten:guard.approve': {'guard': True, 'kanal': 'seite|vorarbeiter', 'tuer': False,
-                                                      'grund': 'OFFEN bis G9: Karte und Posteingang (F3) – Klasse H soll hinter die Tür'},
-    'uix_server.py:approve_gate:self.runtime.guard.approve': {'guard': True, 'kanal': 'seite', 'tuer': False,
-                                                              'grund': 'OFFEN bis G9: /api/mission/approve (F2) und decide (F1)'},
-    'desk/gated.py:decide:rt.guard.approve': {'guard': True, 'kanal': 'seite', 'tuer': False,
-                                              'grund': 'OFFEN bis G9: Anträge des Desk über decide (F1, F7)'},
+    'harness/freigabe.py:beantworten:guard.approve': {'guard': True, 'kanal': 'seite|vorarbeiter', 'tuer': True,
+                                                      'grund': 'hinter der Tür: harness/api.beantworten (Karte und Posteingang, F3)'},
+    'uix_server.py:approve_gate:self.runtime.guard.approve': {'guard': True, 'kanal': 'seite', 'tuer': True,
+                                                              'grund': 'hinter der Tür: /api/mission/approve über approve_gate_seite (F2), decide (F1)'},
+    'desk/gated.py:decide:rt.guard.approve': {'guard': True, 'kanal': 'seite', 'tuer': True,
+                                              'grund': 'hinter der Tür: Anträge des Desk über decide (F1, F7)'},
 }
 
 # Wege ohne guard.approve, die trotzdem erteilen (G11-04): nur aus decide erreichbar
 ANTWORT_OHNE_GUARD = {'_answer_crossing': 'boundary', '_answer_scheduler': 'cloud_offload|slot_server', 'content_guard.answer': 'content'}
 
-# Befund N6 (G11, 03.11.2026): Handlungen ohne Gate mit Wirkungen der Klasse H. G9 deckt sie nicht (es kennt nur Entscheidungen).
-BEFUNDE_OHNE_GATE = tuple(sorted(r for r, (art, kl, _n) in ROUTEN_SERVER.items() if art == 'handlung' and kl == H))
+# Routen der Seite, die in G9 hinter die Tür kamen (E12, Befund N6): die Route ruft UIXHub.freigabe_tuer
+HINTER_DER_TUER = {'/api/mission/approve': 'gate', '/api/cloud/save': 'route:cloud_save', '/api/cloud/key': 'route:cloud_key',
+                   '/api/cloud/module-model': 'route:cloud_module_model', '/api/candidate': 'route:candidate_test'}
+# Befund N6 (G11): Handlungen ohne Gate mit Wirkungen der Klasse H, die (noch) nicht hinter der Tür liegen. Nach G9 leer.
+BEFUNDE_OHNE_GATE = tuple(sorted(r for r, (art, kl, _n) in ROUTEN_SERVER.items() if art == 'handlung' and kl == H and r not in HINTER_DER_TUER))

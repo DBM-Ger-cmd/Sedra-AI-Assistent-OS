@@ -351,10 +351,21 @@ class HarnessApi:
                                       vorlage_hash=vorlage['hash'] if vorlage else None)
         self._audit('HARNESS_SITZUNG_ANGELEGT', {'sitzung_id': kopf['id'], 'projekt': projekt['id'], 'mission_id': kopf['mission_id'],
                                                  'vorlage': kopf.get('vorlage'), 'vorlage_hash': kopf.get('vorlage_hash')})
-        for n, e in enumerate(erlaubnisse, 1):                                       # als Sitzungs-Erlaubnisse; nicht rückwirkend, zurücknehmbar wie jede andere
-            self.sitzungen.erlauben(kopf['id'], f"V-{vorlage['id']}-{n}", e['werkzeug'], e['muster'], regel='vorlage-' + vorlage['id'])
-        if erlaubnisse:
+        def gewaehren():
+            for n, e in enumerate(erlaubnisse, 1):                                   # als Sitzungs-Erlaubnisse; nicht rückwirkend, zurücknehmbar wie jede andere
+                self.sitzungen.erlauben(kopf['id'], f"V-{vorlage['id']}-{n}", e['werkzeug'], e['muster'], regel='vorlage-' + vorlage['id'])
             self._audit('HARNESS_VORLAGE_ERLAUBNISSE', {'sitzung_id': kopf['id'], 'vorlage': vorlage['id'], 'anzahl': len(erlaubnisse), 'erlaubnisse': erlaubnisse})
+            self._melden('harness.sitzung', {'id': kopf['id'], 'was': 'geaendert', 'projekt': projekt['id'], 'titel': kopf['titel']})
+            return len(erlaubnisse)
+        if erlaubnisse:                                                              # G9 (F11, E11): Sitzung sofort, Erlaubnisse nach dem Ja
+            try:
+                self._tuer('harness:sitzung_erlaubnisse', f"sitzung:{kopf['id']}", 'einmal', {'sitzung_id': kopf['id'], 'vorlage': vorlage['id'], 'erlaubnisse': erlaubnisse},
+                           gewaehren, titel=f"Sitzung {kopf['id']}: weitreichende Freigaben der Vorlage „{vorlage['name']}“",
+                           beschreibung='; '.join(f"{e['werkzeug']} {e['muster']}" for e in erlaubnisse)[:400])
+            except ValueError as exc:
+                if not str(exc).startswith('wartet_auf_bestaetigung'):
+                    raise
+                kopf = dict(kopf, erlaubnisse_wartet=str(exc))
         self._melden('harness.sitzung', {'id': kopf['id'], 'was': 'angelegt', 'projekt': projekt['id'], 'titel': kopf['titel']})
         return kopf
 
@@ -1028,8 +1039,15 @@ class HarnessApi:
                 self._sitzung(sid)
             except (NichtGefunden, KeyError, SitzungFehler):
                 raise ValueError('sitzung_unbekannt: ' + str(sid)) from None
-        a, warnungen = self.aufgaben.anlegen(payload, von='captain')          # `von` setzt der Server, nie die Nutzlast
-        return dict(harness_aufgabe.oeffentlich(a, lauf_namen=self._lauf_namen()), warnungen=warnungen)
+        harness_aufgabe.pruefen_neu(payload)                                  # Fehler sofort, nicht erst nach der Bestätigung
+
+        def anlegen():
+            a, warnungen = self.aufgaben.anlegen(payload, von='captain')          # `von` setzt der Server, nie die Nutzlast
+            return dict(harness_aufgabe.oeffentlich(a, lauf_namen=self._lauf_namen()), warnungen=warnungen)
+        erlaubt = ', '.join(f"{e.get('werkzeug')} {e.get('muster')}" for e in (payload.get('erlaubt') or [])[:6] if isinstance(e, dict))
+        return self._tuer('harness:aufgabe_anlegen', 'aufgabe:neu', 'einmal', {'nutzlast': payload}, anlegen,
+                          titel=f"Aufgabe anlegen: {str(payload.get('titel') or '')[:100]}",
+                          beschreibung=f"Zweck: {str(payload.get('zweck') or '')[:160]} · erlaubt: {erlaubt[:300]}")
 
     # ---- Stufe 3: Läufe (N7)
     def lauf_typen(self):
@@ -1069,7 +1087,12 @@ class HarnessApi:
         if method == 'GET':
             return 200, {'vorarbeiter': self.vorarbeiter.alle()}
         if method == 'POST':
-            return 200, self.ernennen(payload)
+            projekt, sid = str(payload.get('projekt') or ''), str(payload.get('sitzung_id') or '')
+            self._projekt(projekt)
+            self._sitzung(sid)                                                # Fehler sofort, nicht erst nach der Bestätigung
+            return 200, self._tuer('harness:vorarbeiter_ernennen', f'vorarbeiter:{projekt}', 'einmal', {'projekt': projekt, 'sitzung_id': sid},
+                                   lambda: self.ernennen(payload), titel=f'Vorarbeiter für {projekt} ernennen',
+                                   beschreibung=f'Die Sitzung {sid} beantwortet danach Karten der Stufe „vorarbeiter“ (nur Klasse N).')
         if method == 'DELETE':
             projekt = (q.get('projekt') or [payload.get('projekt')])[0]
             alt = self.vorarbeiter.entziehen(str(projekt or ''))
@@ -1219,8 +1242,36 @@ class HarnessApi:
     def audit_ereignis(self, event, payload):
         self._audit(event, payload)
 
+    def _tuer(self, art, id, weg, bindung, ausfuehren, *, titel='', beschreibung='', aktuell=None):
+        """G9: Freigaben der Klasse H aus der Seite warten auf ein Ja außerhalb des Browsers (uix_server.UIXHub.freigabe_tuer)."""
+        tuer = getattr(self.hub, 'freigabe_tuer', None)
+        if tuer is None:
+            return ausfuehren()
+        return tuer(art, id, weg, bindung, ausfuehren, titel=titel, beschreibung=beschreibung, aktuell=aktuell)
+
+    def _karte_offen(self, kid, bindung):
+        try:
+            return bindung if self.karten.laden(kid).get('status') == 'offen' else None
+        except KeyError:
+            return None
+
     def beantworten(self, kid, weg, notiz=None, ueber='karte', von='captain', aenderungen=None):
-        """Die eine Tür für Karte und Posteingang (HS-22): Freigabe entscheiden, Ergebnis in die Sitzung, die Antwort fortsetzen."""
+        """Die eine Tür für Karte und Posteingang (HS-22): Freigabe entscheiden, Ergebnis in die Sitzung, die Antwort fortsetzen.
+        G9: Antwortet der Captain über die Seite mit einer Freigabe der Klasse H, wartet sie auf ein Ja außerhalb des Browsers."""
+        try:
+            karte = self.karten.laden(kid)
+        except KeyError as exc:
+            raise NichtGefunden('karte_unbekannt') from exc
+        if von == 'captain' and weg != 'ablehnen' and karte.get('status') == 'offen':
+            art = 'harness_aufgabe' if karte.get('art') == 'aufgabe' else 'harness_freigabe'
+            bindung = {'karte_id': kid, 'werkzeug': karte.get('werkzeug'), 'ziel': karte.get('ziel'), 'vorschau_hash': karte.get('vorschau_hash')}
+            return self._tuer(art, 'harness:' + kid, weg, bindung,
+                              lambda: self._beantworten_jetzt(kid, weg, notiz, ueber, von, aenderungen),
+                              titel=f"Harness · {karte.get('werkzeug')}: {str(karte.get('ziel') or '')[:120]}",
+                              beschreibung=str(karte.get('begruendung') or '')[:300], aktuell=lambda: self._karte_offen(kid, bindung))
+        return self._beantworten_jetzt(kid, weg, notiz, ueber, von, aenderungen)
+
+    def _beantworten_jetzt(self, kid, weg, notiz, ueber, von, aenderungen):
         try:
             karte = self.karten.laden(kid)
         except KeyError as exc:

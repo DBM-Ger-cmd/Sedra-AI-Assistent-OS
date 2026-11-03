@@ -56,6 +56,8 @@ def quelle_pruefen(payload):
         raise ValueError(f'In diesem Ordner fehlt die Datei {kind}.yaml. Ohne sie gibt es nichts zu importieren.')
     return kind, folder
 from . import local_paths
+from .desk import freigabeklasse, systemdialog
+from .desk.bestaetigung import Bestaetigungen, BestaetigungFehler
 from .models import model_add
 from .chat_tools import ChatTools
 from .devenv.model_tools import run_tool_loop
@@ -150,6 +152,7 @@ class UIXHub:
         # Harness-Shell (SPEC_HARNESS_SHELL_v1 Stufe 1): Sitzungen, Antwort-Strom, Schleife – eigene Sperren, nie self.lock (K3)
         from .harness.api import HarnessApi
         self.harness = HarnessApi(self)
+        self.bestaetigungen = Bestaetigungen()          # G9: Freigaben der Klasse H aus der Seite warten hier auf ein Ja außerhalb des Browsers
         sup = getattr(self.runtime, 'job_supervisor', None)
         if sup is not None:
             sup.in_use_extra = self.harness.modelle_in_gebrauch       # P0 M2 (1.11.): laufende Harness-Antworten halten ihr Modell (evict_idle)
@@ -194,6 +197,97 @@ class UIXHub:
         return [_compact_mission(m) for m in self.runtime.missions.list()]
 
     # ---- the desk (Build 7): one list of decisions, one snapshot the event stream watches, the strip's instruments
+    # ---- G9/G10 (SPEC_APPS_v1_O3PLUS_G9_G2): die eine Tür für Freigaben aus der Seite
+    def _freigabe_ausserhalb(self):
+        switches = getattr(self.runtime, 'switches', None)
+        return not (switches is not None and switches.apply('freigabe_ausserhalb', 'enabled', True) is False)
+
+    def freigabe_tuer(self, art, id, weg, binding, ausfuehren, *, kanal='seite', titel='', beschreibung='', aktuell=None):
+        """Führt `ausfuehren()` aus – außer die Antwort ist Klasse H und kommt über die Seite: dann wartet sie auf den Systemdialog oder die
+        Konsole (G9-02). Jede erteilte Freigabe steht mit Kanal im Audit (G10-01)."""
+        kl = freigabeklasse.klasse(art, weg, binding)
+        if kanal == 'seite' and kl == freigabeklasse.H:
+            if self._freigabe_ausserhalb():
+                text = freigabeklasse.text(art, id, weg, titel, beschreibung)
+                bid = self.bestaetigungen.anlegen(art=art, id=id, weg=weg, binding=binding, text=text, ausfuehren=ausfuehren, aktuell=aktuell)
+                dialog = systemdialog.zeigen('SEDRA – Freigabe bestätigen', text + f'\n\nKennung {bid}', lambda ja, b=bid: self._dialog_antwort(b, ja))
+                self.runtime.audit.append('FREIGABE_WARTET', component='desk', payload={'art': art, 'id': str(id)[:120], 'weg': weg, 'bestaetigung': bid, 'dialog': dialog})
+                self.events.publish('freigabe.wartet', {'bestaetigung': bid, 'art': art, 'id': str(id)[:120]})
+                raise BestaetigungFehler(f'wartet_auf_bestaetigung: Diese Freigabe (Klasse H) bestätigst du außerhalb des Browsers – im Fenster von SEDRA'
+                                         f'{"" if dialog else " (hier nicht verfügbar)"} oder mit „FREIGABE.bat freigeben {bid}“. Kennung {bid}.')
+            self.runtime.audit.append('FREIGABE_KLASSE_H_AUS_DER_SEITE', component='desk', payload={'art': art, 'id': str(id)[:120], 'weg': weg})   # G9-11: Schalter aus
+        out = ausfuehren()
+        if weg not in freigabeklasse.IMMER_N:
+            self.runtime.audit.append('FREIGABE_ERTEILT', component='desk', payload={'art': art, 'id': str(id)[:120], 'weg': weg, 'klasse': kl, 'kanal': kanal})
+        return out
+
+    def freigabe_bestaetigen(self, bid, ja, kanal):
+        """Antwort außerhalb des Browsers (Systemdialog oder Konsole) auf eine wartende Freigabe (G9-02, G9-07)."""
+        if kanal not in ('systemdialog', 'konsole'):
+            raise ValueError('kanal_unbekannt')
+        if not ja:
+            self.bestaetigungen.verwerfen(bid)
+            self.runtime.audit.append('FREIGABE_AUSSERHALB_ABGELEHNT', component='desk', payload={'bestaetigung': str(bid)[:20], 'kanal': kanal})
+            return {'status': 'abgelehnt', 'bestaetigung': bid, 'hinweis': 'Die Entscheidung bleibt offen.'}
+        b = self.bestaetigungen.nehmen(bid)
+        out = b['ausfuehren']()
+        self.runtime.audit.append('FREIGABE_ERTEILT', component='desk', payload={'art': b['art'], 'id': str(b['id'])[:120], 'weg': b['weg'], 'klasse': 'H',
+                                                                               'kanal': kanal, 'bestaetigung': bid})
+        self.events.publish('decision.answered', {'id': b['id'], 'kind': b['art'], 'way': b['weg']})
+        return {'status': 'bestaetigt', 'bestaetigung': bid, 'ergebnis': out}
+
+    def _dialog_antwort(self, bid, ja):
+        try:
+            self.freigabe_bestaetigen(bid, ja, 'systemdialog')
+        except Exception as exc:
+            self.runtime.audit.append('FREIGABE_DIALOG_FEHLER', component='desk', payload={'bestaetigung': bid, 'fehler': str(exc)[:200]})
+
+    def freigabe_offen(self, payload=None):
+        """POST /api/freigabe/offen – nur mit dem Token der Konsole (G9-07, G9-08)."""
+        return {'offen': self.bestaetigungen.offen()}
+
+    def freigabe_konsole(self, payload):
+        """POST /api/freigabe/bestaetigen {id, antwort: ja|nein} – nur mit dem Token der Konsole."""
+        antwort = str((payload or {}).get('antwort') or '')
+        if antwort not in ('ja', 'nein'):
+            raise ValueError('antwort_ja_oder_nein')
+        return self.freigabe_bestaetigen(str((payload or {}).get('id') or ''), antwort == 'ja', 'konsole')
+
+    # Seiten-Routen, die heute ohne Gate etwas der Klasse H tun (Befund N6, E12): dieselbe Tür
+    def approve_gate_seite(self, payload):
+        mid, gid = str((payload or {}).get('mission_id') or ''), str((payload or {}).get('gate_id') or '')
+        return self.freigabe_tuer('gate', f'gate:{gid}', 'einmal', {'mission_id': mid, 'gate_id': gid}, lambda: self.approve_gate(payload),
+                                  titel='Missions-Gate freigeben', beschreibung=f'Mission {mid}', aktuell=lambda: self._gate_offen(mid, gid))
+
+    def _gate_offen(self, mid, gid):
+        try:
+            m = self.runtime.missions.load(mid)
+        except Exception:
+            return None
+        return {'mission_id': mid, 'gate_id': gid} if any(g.get('gate_id') == gid for g in m['human_gates']['pending']) else None
+
+    def route_tuer(self, art, payload, ausfuehren, titel):
+        """Eine Route ohne eigenes Gate hinter der Tür (N6): gebunden an genau diese Nutzlast."""
+        return self.freigabe_tuer(art, art, 'einmal', {'nutzlast': freigabeklasse.nutzlast_hash(payload)}, ausfuehren, titel=titel)
+
+    def cloud_save_seite(self, payload):
+        return self.route_tuer('route:cloud_save', payload, lambda: self.cloud_save(payload), 'Cloud-Einstellungen speichern')
+
+    def cloud_key_seite(self, payload):
+        pid = str((payload or {}).get('provider') or '')[:40]
+        return self.route_tuer('route:cloud_key', payload, lambda: self.cloud_key(payload), f'API-Schlüssel für {pid or "einen Anbieter"} setzen')
+
+    def cloud_module_model_seite(self, payload):
+        p = payload or {}
+        return self.route_tuer('route:cloud_module_model', payload, lambda: self.cloud_module_model(payload),
+                               f'Modul {str(p.get("module") or p.get("modul") or "")[:40]} auf ein Cloud-Modell stellen')
+
+    def candidate_seite(self, payload):
+        op = str((payload or {}).get('operation') or '')
+        if op in ('test', 'test-verify'):           # Tests eines Kandidaten ausführen (accept/rollback haben ihr eigenes Gate)
+            return self.route_tuer('route:candidate_test', payload, lambda: self.candidate_operation(payload), f'Tests eines Kandidaten ausführen ({op})')
+        return self.candidate_operation(payload)
+
     def decisions_view(self):
         """Every open decision in one shape: mission gates and the change requests of chat, Werkstatt and Bibliothek."""
         items = desk_decisions.collect(self.missions(), self._open_requests(), self._open_crossings(), self._content_decisions(), self._scheduler_decisions(),
@@ -266,6 +360,19 @@ class UIXHub:
         items = self.decisions_view()['items']
         decision = next((d for d in items if d['id'] == did), None)
         desk_decisions.check_answer(decision, way)
+        if decision['kind'] in ('harness_freigabe', 'harness_aufgabe'):          # die Harness hat ihre Tür in harness/api.beantworten (Karte und Posteingang)
+            return self._decide_jetzt(decision, did, way, payload)
+        # G9: Klasse H aus der Seite wartet auf ein Ja außerhalb des Browsers (SPEC_APPS_v1_O3PLUS_G9_G2 §3.2)
+        return self.freigabe_tuer(decision['kind'], did, way, decision.get('binding'), lambda: self._decide_jetzt(decision, did, way, payload),
+                                  titel=decision.get('title') or '', beschreibung=decision.get('describe') or '',
+                                  aktuell=lambda: self._entscheidung_bindung(did, way))
+
+    def _entscheidung_bindung(self, did, way):
+        """Die Bindung einer offenen Entscheidung, solange sie diesen Weg noch anbietet – sonst None (G9-04)."""
+        d = next((x for x in self.decisions_view()['items'] if x['id'] == did), None)
+        return d.get('binding') if d is not None and way in (d.get('ways') or []) else None
+
+    def _decide_jetzt(self, decision, did, way, payload):
         if decision['kind'] == 'boundary':
             crossing = self.open_crossings.get(did)
             if crossing is None:
@@ -3817,7 +3924,8 @@ def make_server(hub: UIXHub, port=0):
         def do_POST(self):
             token_class = self._authorized() if self._same_origin_ok() else None
             path = urlsplit(self.path).path
-            if token_class is None or (token_class != 'browser' and path not in uix_clients.ROUTES):
+            if token_class is None or (token_class != 'browser' and not uix_clients.erlaubt(token_class, path)) \
+                    or (token_class == 'browser' and path in uix_clients.NUR_KONSOLE):        # G9-08: die Seite bestätigt sich nicht selbst
                 self.send_error(403)
                 return
             if not self._module_allowed('POST', path):
@@ -3835,6 +3943,8 @@ def make_server(hub: UIXHub, port=0):
                     desk_kinds.refuse_client_field(payload)     # 400 client_is_set_by_server
                 routes = {
                     '/api/decisions/answer': hub.decide,
+                    '/api/freigabe/offen': hub.freigabe_offen,             # G9: nur der Konsolen-Token (uix_clients.ROUTEN_JE_CLIENT)
+                    '/api/freigabe/bestaetigen': hub.freigabe_konsole,
                     '/api/objects': hub.objects_view,               # read-only: ein Objekt oder die Liste eines Typs (§10.1)
                     '/api/actions': lambda p: hub.act(p, client=client),   # Verben statt Routen (§10.2); die Gates darunter bleiben
                     '/api/live': hub.live_view,                     # read-only: die Zeilen einer Aufgabe
@@ -3881,7 +3991,7 @@ def make_server(hub: UIXHub, port=0):
                     '/api/project/create': hub.new_project,
                     '/api/standard-test/start': hub.standard_test_start,
                     '/api/mission/details': hub.mission_details,
-                    '/api/candidate': hub.candidate_operation,
+                    '/api/candidate': hub.candidate_seite,
                     '/api/code/generate': hub.generate_candidate,
                     '/api/route': hub.route,
                     '/api/chat': hub.create_chat_mission,
@@ -3920,11 +4030,11 @@ def make_server(hub: UIXHub, port=0):
                     '/api/diagnose/explain': uix_diag.explain,      # read-only
                     '/api/diagnose/command': lambda payload: uix_diag.command(hub, payload),      # reads; only `/rebind ja` changes the hardware binding
                     '/api/mission/run': hub.run_mission,
-                    '/api/mission/approve': hub.approve_gate,
+                    '/api/mission/approve': hub.approve_gate_seite,          # G9: Missions-Gate aus der Seite = Klasse H
                     '/api/mission/reject': hub.reject_gate,
                     '/api/switch/request': hub.switch_request,
                     '/api/switch/apply': hub.switch_apply,
-                    '/api/cloud/save': hub.cloud_save,                      # Einstellungen schreiben (Captain-Klick, wirkt nach Neustart); base_url nur als Antrag (E2)
+                    '/api/cloud/save': hub.cloud_save_seite,                      # Einstellungen schreiben (Captain-Klick, wirkt nach Neustart); base_url nur als Antrag (E2)
                     '/api/cloud/base-url/apply': hub.cloud_base_url_apply,  # nach der Freigabe (Härtung E2)
                     '/api/cloud/models': hub.cloud_models,          # Modellliste beim Anbieter abfragen (auf Klick, nur lesen)
                     '/api/labor/connection': hub.labor_connection,  # KI Labor: Verbindungstest in Schritten (auf Klick)
@@ -3935,8 +4045,8 @@ def make_server(hub: UIXHub, port=0):
                     '/api/entwurf/list': hub.entwurf_list,
                     '/api/chat/kombi': lambda p: hub._verlauf('kombi', p, hub.chat_kombi(p)),              # Lokal + KI: erst das lokale Modell, dann die Cloud prüft (ein Fenster)
                     '/api/chat/cloud': lambda p: hub._verlauf('cloud', p, hub.chat_cloud(p)),              # Gespräch mit einem Cloud-Modell (Wahl neben Senden); Inhaltsschutz
-                    '/api/cloud/key': hub.cloud_key,
-                    '/api/cloud/module-model': hub.cloud_module_model,   # welches Modell ein Modul nutzt (KI Labor)                        # Schlüssel verschlüsselt ablegen oder löschen; nie zurückgeben
+                    '/api/cloud/key': hub.cloud_key_seite,
+                    '/api/cloud/module-model': hub.cloud_module_model_seite,   # welches Modell ein Modul nutzt (KI Labor)                        # Schlüssel verschlüsselt ablegen oder löschen; nie zurückgeben
                     '/api/routing-config/request': hub.routing_request,
                     '/api/routing-config/apply': hub.routing_apply,
                     '/api/model/pick': hub.model_pick,              # opens the file dialog of this PC, reads nothing else
@@ -4058,7 +4168,7 @@ FRIENDLY_400 = {      # code -> sentence for the Captain; `code` keeps the code
     'vorgabe_fehlt: rezept_standard oder projekt_standard': 'Keine Vorgabe angegeben.',
 }
 # S7 (Harness Stufe 3, Härtung 30.10.): aus einem Harness-Prozess (befehl, Lauf) darf keine Entscheidung über ein Gate kommen – auf keinem Weg
-HERKUNFT_WEGE = re.compile(r'/api/(?:decisions/answer|mission/(?:approve|reject)|actions|update/uebernehmen|model/(?:load|unload)|[a-z0-9_/-]+/apply)')   # A2 (1.11.): auch Modelle
+HERKUNFT_WEGE = re.compile(r'/api/(?:decisions/answer|freigabe/bestaetigen|mission/(?:approve|reject)|actions|update/uebernehmen|model/(?:load|unload)|[a-z0-9_/-]+/apply)')   # A2 (1.11.): auch Modelle
 
 
 def serve(project_root: Path, architecture_root: Path, port=0, open_browser=False, window=False, shell=None):
