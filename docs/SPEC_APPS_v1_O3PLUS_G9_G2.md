@@ -386,3 +386,29 @@ Vorschlag für die Entscheidung des Captains (E12): Diese vier Routen bekommen i
 - `harness/vorbehalte.py`: `runtime/src/guppi_runtime/hardware_manager/dashboard.html` ist harter Vorbehalt.
 - `hardware_manager/dashboard.py`: liefert `/uix/js/hardware_dashboard.js` (nur diese Datei, ohne Token wie im Server der Oberfläche) und sendet `script-src 'self'` statt `'unsafe-inline'`. Damit zeigt `guppi hardware-dashboard` wieder Daten (Nebenbefund aus §9a behoben), und ein Inline-Skript in der Seite läuft in keinem der beiden Server.
 - Test `tests/test_hardware_dashboard_server.py` (5): die Seite lädt genau das ausgelieferte Skript, kein Inline-Skript; das Skript kommt mit JS-Typ; CSP ohne `unsafe-inline`; andere Dateien und Daten ohne Token bleiben zu; Daten mit Token. Ohne die Änderung schlägt der Test fehl. Am PC nicht geprüft: das Fenster im Browser.
+
+### 13.3 G9 und G10 gebaut (03.11.2026)
+
+| Teil | Datei | Stand |
+|---|---|---|
+| Tür (G9-02) | `uix_server.py` `UIXHub.freigabe_tuer`, `freigabe_bestaetigen` | Klasse H aus der Seite → Bestätigung `B-…`, Antwort 400 `wartet_auf_bestaetigung: …` mit dem Satz für den Captain; N, Ablehnen und Kanäle außerhalb gehen sofort |
+| Wege (G9-03, E12) | `decide` (alle Arten außer Harness), `/api/mission/approve` (`approve_gate_seite`), `/api/cloud/save`, `/api/cloud/key`, `/api/cloud/module-model`, `/api/candidate` (nur `test`/`test-verify`); `harness/api.py`: `beantworten` (Karte und Posteingang), Aufgabe anlegen, Vorarbeiter ernennen, Sitzung mit Vorlage-Erlaubnissen (Sitzung sofort, Erlaubnisse nach dem Ja, E11) | gebaut |
+| Bestätigungen (G9-04) | `desk/bestaetigung.py` | im Speicher, Frist 10 min, Bindung geprüft, neue Antwort ersetzt die alte |
+| Systemdialog (G9-05/06) | `desk/systemdialog.py` | Windows `MessageBoxW` in eigenem Thread; sonst kein Dialog |
+| Konsole (G9-07/08) | `desk/freigabe_konsole.py`, `FREIGABE.bat`; Routen `/api/freigabe/offen`, `/api/freigabe/bestaetigen` nur mit CLI-Token (`uix_clients.ROUTEN_JE_CLIENT`, Befund N4), in `HERKUNFT_WEGE` | gebaut |
+| Vorarbeiter nur N (G9-10, E7) | `harness/freigabe.py` | gebaut |
+| Schalter (G9-11) | `freigabe_ausserhalb` in `local_switches.py` | Standard an |
+| Lese-Sperre (O3-06, E8) | `vorbehalte.pruefen_lesen` für `**/runtime_data/uix/clients/**`; in `einstufung` und beim Durchsuchen | gebaut (vorgezogen aus O3) |
+| Kanal (G10-01/02) | `FREIGABE_ERTEILT {art, id, weg, klasse, kanal}`; `HARNESS_APPROVED_BY` mit `kanal` | gebaut |
+| Inhaltsschutz | `desk/decisions.content_decision`: Bindung trägt `route` (lokal = N) | gebaut |
+| Harte Vorbehalte | `desk/bestaetigung.py`, `systemdialog.py`, `freigabe_konsole.py`, `decisions.py`, `freigabeklasse.py`, `hardware_manager/dashboard.html` | gebaut |
+
+**Tests:** `test_freigabe_tuer` (14, Tür an, Fake-Dialog): Klasse H aus der Seite wartet und führt nichts aus (G11-05), N und Ablehnen sofort, Konsole bestätigt genau einmal, Nein lässt offen, Seite und MCP erreichen die Bestätigung nicht (403), Bindung weg oder geändert → hinfällig, Systemdialog Ja/Nein, `/api/mission/approve` und `/api/cloud/key` warten (der Schlüssel steht nie in Text oder Audit), Schalter aus, Frist, Konsolen-Modul. Gegenprobe: Tür durchlassend → rot. `test_freigabe_vollstaendig` angepasst: alle Seiten-Stellen hinter der Tür, Befund N6 leer, MCP ohne Freigabe-Routen. **In allen übrigen Tests ist die Tür aus** (`tests/host_isolation.py`, nur dort, kein Schalter im Code), damit sie die Logik ihrer Stellen weiter prüfen. Ganze Bahn im Container: 3.810 Tests, 0 rot.
+
+**Nicht gebaut oder nicht geprüft (offen):**
+- G9-09 nur teilweise: Die Seite zeigt den Wartezustand als Fehlermeldung mit dem Satz und der Kennung (jede Oberfläche zeigt `message` schon an). Eigene Anzeige an Karte und Posteingang fehlt.
+- Die Harness-Karte hinter der Tür hat keinen eigenen Test; die Harness-Tests laufen mit Tür aus.
+- G10-03: `guppi approve` und die Konsole des Agent Manager schreiben noch kein `FREIGABE_ERTEILT` (Kanal `konsole`).
+- Am PC nicht geprüft: ob das Fenster unter `START_SEDRA.bat` im Vordergrund erscheint; `FREIGABE.bat` unter Windows.
+- Stick-Liste: `FREIGABE.bat` und `desk/freigabe_konsole.py` noch nicht eingetragen.
+- O3 (hart/weich, weich vor Katalog), G1, G2, G3, G6, G7: nicht gebaut (§11 Schritte 4–6).

@@ -61,12 +61,22 @@ class ApproveStellen(unittest.TestCase):
             self.assertEqual(e['guard'], 'guard' in aufruf, schluessel)
             self.assertTrue(e['kanal'] and e['grund'], schluessel)
 
-    def test_heute_liegt_keine_stelle_hinter_der_tuer(self):
-        """Stand G11: die Tür aus G9 gibt es noch nicht. Mit G9 ändert sich dieser Test (die offenen Stellen werden `tuer: True`)."""
-        self.assertEqual([k for k, e in fk.APPROVE_STELLEN.items() if e['tuer']], [])
-        offen = sorted(k for k, e in fk.APPROVE_STELLEN.items() if e['grund'].startswith('OFFEN bis G9'))
-        self.assertEqual(offen, ['desk/gated.py:decide:rt.guard.approve', 'harness/freigabe.py:beantworten:guard.approve',
-                                 'uix_server.py:approve_gate:self.runtime.guard.approve'])
+    def test_stellen_aus_der_seite_liegen_hinter_der_tuer(self):
+        """G9: jede Stelle, die aus der Seite erteilt, liegt hinter der Tür; keine ist mehr „OFFEN“."""
+        self.assertEqual(sorted(k for k, e in fk.APPROVE_STELLEN.items() if e['tuer']),
+                         ['desk/gated.py:decide:rt.guard.approve', 'harness/freigabe.py:beantworten:guard.approve',
+                          'uix_server.py:approve_gate:self.runtime.guard.approve'])
+        self.assertEqual([k for k, e in fk.APPROVE_STELLEN.items() if 'OFFEN' in e['grund']], [])
+        for k, e in fk.APPROVE_STELLEN.items():
+            if 'seite' in e['kanal']:
+                self.assertTrue(e['tuer'], k)
+
+    def test_routen_hinter_der_tuer_rufen_sie(self):
+        quelle = (PAKET / 'uix_server.py').read_text(encoding='utf-8')
+        for route in fk.HINTER_DER_TUER:
+            m = re.search(rf"'{re.escape(route)}':\s*hub\.(\w+)", quelle)
+            self.assertIsNotNone(m, route)
+            self.assertTrue(m.group(1).endswith('_seite'), f'{route} → {m.group(1)}')
 
 
 class Routen(unittest.TestCase):
@@ -127,13 +137,14 @@ class Routen(unittest.TestCase):
 
     def test_externe_clients_erreichen_keine_freigabe(self):
         from guppi_runtime import uix_clients
-        for route in uix_clients.ROUTES:
+        for route in uix_clients.ROUTEN_JE_CLIENT['mcp']:               # MCP = Zugang der Modelle: nie eine Freigabe
             self.assertNotIn(fk.ROUTEN_SERVER[route][0], ('freigabe', 'anwenden'), route)
+        self.assertEqual(set(uix_clients.ROUTEN_JE_CLIENT['cli']) - set(uix_clients.ROUTES), set(uix_clients.NUR_KONSOLE))
 
     def test_befund_n6_handlungen_ohne_gate_mit_klasse_h(self):
         """Befund N6 (G11): diese Routen tun ohne Gate etwas mit Wirkungen der Klasse H. G9 deckt sie nicht (es kennt nur Entscheidungen);
         der Captain entscheidet, ob sie eine Tür bekommen. Ändert sich die Liste, ist das eine bewusste Änderung dieses Tests."""
-        self.assertEqual(list(fk.BEFUNDE_OHNE_GATE), ['/api/candidate', '/api/cloud/key', '/api/cloud/module-model', '/api/cloud/save'])
+        self.assertEqual(list(fk.BEFUNDE_OHNE_GATE), [])                 # E12: alle vier liegen seit G9 hinter der Tür
 
 
 class Entscheidungsarten(unittest.TestCase):
@@ -183,8 +194,11 @@ class AntwortOhneGuard(unittest.TestCase):
         aufrufe = _aufrufe({'_answer_crossing', '_answer_scheduler', 'answer'})
         for datei, fn, aufruf, zeile in aufrufe:
             if aufruf.endswith('_answer_crossing') or aufruf.endswith('_answer_scheduler') or 'content_guard' in aufruf:
-                self.assertEqual((datei, fn), ('uix_server.py', 'decide'), f'{datei}:{zeile} {aufruf} in {fn}')
-        gesehen = {a.rsplit('.', 1)[-1] if 'content_guard' not in a else 'content_guard.answer' for d, f, a, z in aufrufe if f == 'decide'}
+                self.assertEqual((datei, fn), ('uix_server.py', '_decide_jetzt'), f'{datei}:{zeile} {aufruf} in {fn}')
+        gesehen = {a.rsplit('.', 1)[-1] if 'content_guard' not in a else 'content_guard.answer' for d, f, a, z in aufrufe if f == '_decide_jetzt'}
+        # G9: _decide_jetzt wird nur aus decide gerufen – hinter der Tür oder für die Harness, die ihre eigene Tür hat
+        rufer = {(d, fn) for d, fn, a, z in _aufrufe({'_decide_jetzt'})}
+        self.assertEqual(rufer, {('uix_server.py', 'decide')})
         self.assertTrue({'_answer_crossing', '_answer_scheduler', 'content_guard.answer'} <= gesehen)
         self.assertEqual(set(fk.ANTWORT_OHNE_GUARD), {'_answer_crossing', '_answer_scheduler', 'content_guard.answer'})
 

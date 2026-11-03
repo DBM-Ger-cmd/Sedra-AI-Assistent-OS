@@ -25,6 +25,10 @@ PFADE = (
     ('runtime/src/guppi_runtime/harness/herkunft.py', 'Harness-Code: Herkunft der Antworten'),
     ('runtime/src/guppi_runtime/harness/code_stand.py', 'Harness-Code: gesehener Code-Stand (G4)'),
     ('runtime/src/guppi_runtime/hardware_manager/dashboard.html', 'Seite des Servers (Hardware-Fenster, eigener Hardware-Server; E9)'),
+    ('runtime/src/guppi_runtime/desk/bestaetigung.py', 'Prüfstelle: Bestätigungen außerhalb des Browsers (G9)'),
+    ('runtime/src/guppi_runtime/desk/systemdialog.py', 'Prüfstelle: Fenster des Betriebssystems für Freigaben (G9)'),
+    ('runtime/src/guppi_runtime/desk/freigabe_konsole.py', 'Prüfstelle: Konsole für Freigaben (G9)'),
+    ('runtime/src/guppi_runtime/desk/decisions.py', 'Prüfstelle: Liste und Form aller Entscheidungen (G9)'),
     ('runtime/src/guppi_runtime/desk/freigabeklasse.py', 'Prüfstelle: Klassen der Freigaben und Bestandsliste der Freigabe-Wege (G9, G11)'),
     ('runtime/portable/**', 'portable Laufzeit (Python, Sandbox): läuft bei jedem Start, G4 überwacht sie nicht'),
     ('runtime/config/harness_vorlagen/**', 'Vorlagen der Harness (Systemprompt und Rechte)'),
@@ -37,6 +41,21 @@ PFADE = (
 BEFEHLE = ('git push', 'git branch -f', 'git reset --hard', 'del', 'rm', 'rmdir', 'remove-item', 'format', 'curl', 'wget',
            'invoke-webrequest', 'pip install', 'winget')
 SCHREIBEN = ('datei_schreiben', 'datei_aendern')
+
+
+LESEN_GESPERRT = (('**/runtime_data/uix/clients/**', 'Zugänge der externen Clients (Token der Konsole und des MCP)'),)
+LESEN = ('datei_lesen', 'dateien_auflisten', 'suchen')
+
+
+def pruefen_lesen(werkzeug, ziel):
+    """O3-06 (SPEC_APPS_v1_O3PLUS_G9_G2, E8): fest gesperrtes Lesen, unabhängig vom Katalog – Grund oder None."""
+    if werkzeug not in LESEN:
+        return None
+    rel = pfad_normal(ziel)
+    for muster, was in LESEN_GESPERRT:
+        if passt(muster, 'datei_lesen', rel) or passt(muster.removesuffix('/**'), 'datei_lesen', rel):
+            return f'verboten: {was}'
+    return None
 
 
 def pruefen_weich(werkzeug, ziel, args=None):

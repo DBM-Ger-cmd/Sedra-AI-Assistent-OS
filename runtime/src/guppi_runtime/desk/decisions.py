@@ -102,7 +102,8 @@ def content_decision(d):
             'mission_id': d.get('mission_id') or None, 'gate_id': None, 'risks': list(d.get('describe') or []), 'rollback': True,
             'note': 'Inhaltsschutz · „einmal“ lässt genau diesen Aufruf durch, zehn Minuten lang · Abgelehnt geht nichts hinaus',
             'created_at': created, 'ways': list(d.get('ways') or ['einmal', 'ablehnen']), 'apply': None,
-            'binding': {'binding': d.get('binding'), 'rules': list(d.get('rules') or []), 'reasons': list(d.get('reasons') or [])},
+            'binding': {'binding': d.get('binding'), 'rules': list(d.get('rules') or []), 'reasons': list(d.get('reasons') or []),
+                        'route': d.get('route')},          # G9: lokal = Klasse N, Cloud = H (desk/freigabeklasse)
             'agent_id': None}
 
 

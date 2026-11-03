@@ -14,6 +14,8 @@ Stand 20.10.2026 (geändert 20.10.2026, Linie L6). Diese Seite hat zuerst zwei L
 
 **USB-Stick:** [PLAN_USB_STICK_MINIMAL.md](PLAN_USB_STICK_MINIMAL.md) · [ENTSCHEIDUNGEN_USB_STICK.md](ENTSCHEIDUNGEN_USB_STICK.md) · [WISSENSDATENBANK_USB_STICK_CHAT.md](WISSENSDATENBANK_USB_STICK_CHAT.md)
 
+**Übergabe an den lokalen Vorarbeiter (03.11.2026):** [UEBERGABE_VORARBEITER_2026-11-03.md](UEBERGABE_VORARBEITER_2026-11-03.md) – was gebaut ist, Abnahme am PC, was offen ist.
+
 **Stand 1.22.0 (03.11.2026):** [BESTANDSAUFNAHME_v1.22.0_2026-11-03.md](BESTANDSAUFNAHME_v1.22.0_2026-11-03.md) – Release, Tests, Befunde B1–B11, offene Arbeit. Fehlende Dokumente sind am Ende von „Was gilt“ nachgetragen (B8); die übrigen Abschnitte haben den Stand vom 20.10.
 
 **Apps und Erweiterungen (03.11.2026):** [KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md](KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md) (Gesamtkonzept, Bausteine AM0–AM9, Entscheidungsprotokoll) · Specs `SPEC_APPS_v1_AM0_HAERTUNG.md` bis `SPEC_APPS_v1_AM8_VERZEICHNIS.md` · G2: [SPEC_APPS_v1_AM0_G2.md](SPEC_APPS_v1_AM0_G2.md), [SPEC_APPS_v1_AM1_G2.md](SPEC_APPS_v1_AM1_G2.md), [SPEC_APPS_v1_G4_MODELLCODE_G2.md](SPEC_APPS_v1_G4_MODELLCODE_G2.md) (gebaut), [SPEC_APPS_v1_O3PLUS_G9_G2.md](SPEC_APPS_v1_O3PLUS_G9_G2.md) (O3+ und G9–G11, Entwurf) · Entscheidungsvorlage [SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md](SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md) · Verlauf: [ENTWURF_APPS_MODELL_2026-11-03.md](ENTWURF_APPS_MODELL_2026-11-03.md) (abgelöst)
