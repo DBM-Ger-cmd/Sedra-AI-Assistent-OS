@@ -131,7 +131,8 @@ def projekt_antrag(hub, payload):
     except harness_projekte.ProjektFehler as exc:
         raise ValueError(str(exc)) from exc
     if any(p['wurzel'] == neu['wurzel'] for p in alle):
-        raise ValueError('ordner_schon_projekt: ' + next(p['id'] for p in alle if p['wurzel'] == neu['wurzel']))
+        pid = next(p['id'] for p in alle if p['wurzel'] == neu['wurzel'])
+        raise ValueError(f'ordner_schon_projekt: {pid} – dieser Ordner ist schon ein Projekt. Es braucht keinen Antrag: ist die Sitzung in diesem Projekt (list_projects markiert es mit diese_sitzung), arbeite direkt darin; sonst bitte den Captain, dort eine neue Sitzung zu beginnen.')
     offen = getattr(hub, '_open_requests', None)
     offene = [r for r in (offen() if callable(offen) else []) if r.get('kind') == KIND_PROJEKT]
     if len(offene) >= PROJEKT_ANTRAEGE_MAX:                  # Härtung: ein Modell flutet den Posteingang nicht mit Ordner-Anträgen

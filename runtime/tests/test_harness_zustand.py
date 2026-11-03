@@ -1,5 +1,6 @@
 """Zustandswerkzeuge gebündelt (02.11.2026, Token sparen): die elf lesenden Werkzeuge stehen der Anfrage als EIN Werkzeug `zustand` mit Auswahl `was` vor
 (Messung mit dem echten Router: rund 340 Token weniger je Anfrage). Die einzelnen Namen und die Whitelist einer Vorlage gelten weiter."""
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -63,6 +64,20 @@ class ZustandTests(Basis):
         self.assertIn('nicht erlaubt', nein['ergebnis'])
         ohne = Begrenzt(self.kiste, ['datei_lesen'])                                           # nennt die Vorlage keines: kein Zustandswerkzeug
         self.assertNotIn('zustand', [s['function']['name'] for s in ohne.schemas()])
+
+    def test_list_projects_nennt_die_projekte_der_harness_und_markiert_das_der_sitzung(self):
+        """Log 02.11.2026: das Modell hielt „Earth 2140“ für unbekannt, weil die Liste des SEDRA-Kerns leer war, obwohl die Sitzung schon in diesem Projekt lief."""
+        liste = [{'id': 'sedra', 'name': 'Sedra', 'ordner': 'E:/s', 'schreibbereich': ['docs/**'], 'diese_sitzung': False},
+                 {'id': 'earth-2140', 'name': 'Earth 2140', 'ordner': 'F:/GOG/Earth 2140', 'schreibbereich': ['**'], 'diese_sitzung': True}]
+        k = Kiste(self.kiste.w, regeln=self.kiste.regeln, guard=self.kiste.guard, audit=None, karten=self.kiste.karten, sitzung_id='S-00000003',
+                  chat=ChatTools(Hub(), LESEN), projekte=lambda: liste)
+        for r in (k.aufruf('zustand', {'was': 'list_projects'}), k.aufruf('list_projects', {})):
+            self.assertEqual(r['status'], 'ok')
+            daten = json.loads(r['ergebnis'])
+            self.assertEqual([p['id'] for p in daten if p['diese_sitzung']], ['earth-2140'])
+            self.assertIn('F:/GOG/Earth 2140', r['ergebnis'])
+            self.assertNotIn('"id": "sedra", "name": "Sedra"}', r['ergebnis'])           # nicht die Kernliste
+        self.assertIn('Sedra', self.kiste.aufruf('list_projects', {})['ergebnis'])        # ohne die Harness-Liste bleibt es bei der alten Auskunft
 
     def test_ohne_chat_werkzeuge_gibt_es_kein_zustand(self):
         k = Kiste(self.kiste.w, regeln=self.kiste.regeln, guard=self.kiste.guard, audit=None, karten=self.kiste.karten, sitzung_id='S-00000002')

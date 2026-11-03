@@ -402,7 +402,7 @@ class HarnessApi:
         # Vorlage eine Antwort für immer „laufend“: Sitzung gesperrt, Zähler belegt, Strom ohne Ende.
         vorlage = self._vorlage(s)
         box, projekt = self._kiste(s)
-        messages = [{'role': 'system', 'content': schleife.system_prompt(projekt['name'] if projekt else None, box.names, vorlage['system'] if vorlage else None,
+        messages = [{'role': 'system', 'content': schleife.system_prompt((f"{projekt['name']} (Ordner {projekt['wurzel']}, Schreibbereich {', '.join(projekt['schreibbereich'])})" if projekt else None), box.names, vorlage['system'] if vorlage else None,
                                                                          (letzte_zusammenfassung(s['eintraege']) or {}).get('text'))},
                     *verlauf, {'role': 'user', 'content': text}]
         with self._start:
@@ -769,7 +769,14 @@ class HarnessApi:
         w = self._werkzeuge(projekt['id'], s['kopf'].get('mission_id'), regeln)
         return self._begrenzen(s, freigabe.Kiste(w, regeln=regeln, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, karten=self.karten,
                               sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'], aufgaben=self.aufgaben,
-                              vorarbeiter=self.vorarbeiter, extra=self._vorarbeiter_werkzeuge(s), erlaubnisse=s.get('erlaubnisse'))), projekt
+                              vorarbeiter=self.vorarbeiter, extra=self._vorarbeiter_werkzeuge(s), erlaubnisse=s.get('erlaubnisse'),
+                              projekte=lambda: self.projekte_fuer_modell(projekt['id']))), projekt
+
+    def projekte_fuer_modell(self, aktuell):
+        """Was `list_projects` dem Modell in der Harness sagt: die Projekte der Harness (Ordner und Schreibbereich), nicht die des SEDRA-Kerns. Das der Sitzung ist markiert
+        (Log 02.11.2026: das Modell hielt „Earth 2140“ für unbekannt, weil die Kernliste leer war, obwohl die Sitzung schon darin lief)."""
+        return [{'id': p['id'], 'name': p['name'], 'ordner': p['wurzel'], 'schreibbereich': p['schreibbereich'], 'diese_sitzung': p['id'] == aktuell}
+                for p in self.projekte()['projekte']]
 
     def _starten(self, sid, s, antwort, box, messages, info, modell, bisher=()):
         guard = getattr(self.hub.runtime.model_router, 'content_guard', None)
