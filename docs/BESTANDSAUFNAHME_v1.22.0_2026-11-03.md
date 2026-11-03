@@ -99,3 +99,24 @@ Reihenfolge nach Nutzen und Risiko. Alles läuft auf `claude/intelligent-goldber
 4. Danach nach Wahl des Captains: G2 für O3+ und G9–G11, oder AM9 G1, oder Stick-Punkte, die ohne PC gehen (z. B. `fenster/rekorder.html` neu bauen oder weglassen).
 
 Nicht in der Cloud machbar: B1, B9 (Push-Grenze), B10, die G4-Abnahme und alle Stick-Punkte mit Hardware.
+
+## 8. Stand der Überarbeitung (03.11.2026, nach den Entscheidungen des Captains)
+
+Captain: „B4/B5 und Doku zuerst, B2 Vorschlag übernehmen“. Erledigt auf `claude/intelligent-goldberg-7arr50`, PR #3.
+
+| Nr | Stand |
+|---|---|
+| B1 | offen: Tag `v1.22.0` setzt der Captain am PC (§6) |
+| B2 | **entschieden:** vorerst ohne Signatur und nur für den eigenen PC; vor der ersten Weitergabe wird die Signatur gebaut. Festgehalten in `BETRIEB.md` („Release“), `PLAN_ISOLATION_UND_UPDATE_2026-10-19.md` Frage 3 und `PLAN_USB_STICK_MINIMAL.md` §8 (das Werkzeug „System“ mit dem Update-Knopf steht nicht in der Stick-Liste). |
+| B3 | erledigt (Text): Der `BUILD.txt`-Nachtrag nennt 1.22.0. Ein Paket ist nicht gebaut. |
+| B4 | erledigt: `local_paths.folder` nimmt unter macOS/Linux auch `\` als Trennzeichen. **Rest:** `expand` lässt Backslashes im übrigen Pfad stehen (z. B. `<modelle>\unsloth\x.gguf` in Dateien aus git); Modellpfade dieser Form gehen unter macOS/Linux weiter nicht. |
+| B5 | erledigt, **anders als vorgeschlagen:** Es war eine Lücke in `tests/host_isolation.py`, kein reines Container-Problem. `test_tuning` erreichte über `benchmark._take_gpu` das echte `gpu_preflight.clear_leftovers`. Unter Windows konnte ein Testlauf so jeden laufenden GUPPI-llama-server mit `taskkill /F` beenden. Die Lücke ist geschlossen statt übersprungen. `test_night_chain.DryRun` läuft ohne Windows mit einer festen RAM-Zahl. |
+| B6 | erledigt: Logbuch 02.11. 13:46 bis 03.11. 17:59 aus `git log` nachgetragen (Zeiten in MEZ, als nachgetragen gekennzeichnet). |
+| B7 | erledigt: `CHANGELOG` 1.22.0 mit Verweisen auf die Berichte, neuer Abschnitt „Nach 1.22.0“. |
+| B8 | erledigt: Alle 93 Dokumente stehen im Index, nur nach Dateinamen eingeordnet; „Was gilt“ nennt Harness, Rezepte und Stick. |
+| B9, B10 | offen (PC) |
+| B11 | offen (Testhygiene, niedrig) |
+
+**Tests nach der Überarbeitung (Container, Linux):** ganze Bahn 3.764 Tests, **0 rot**, 121 übersprungen. Damit ist die Container-Bahn zum ersten Mal grün; neue Fehler fallen sofort auf.
+Am PC nicht geprüft: ob `test_tuning` dort grün bleibt. Erwartet wird ja, weil die Proben jetzt nichts mehr vom PC lesen.
+
