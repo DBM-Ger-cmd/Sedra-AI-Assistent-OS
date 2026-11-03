@@ -207,6 +207,7 @@ button.hs-schild[aria-expanded="true"]::after{content:" ▴"}
 .hs-dialog-knoepfe{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .hs-sl-werkzeuge{display:flex;flex-direction:column;gap:6px;margin:6px 0}
 .hs-sl-zeile{display:flex;gap:4px;align-items:center}
+.hs-sl-zeile .hs-sz-knopf{visibility:visible;border:1px solid var(--line-soft)}
 .hs-sz-filter{flex:1 1 auto;min-width:0;font:inherit;font-size:var(--size-small);color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:4px 8px}
 .hs-sl-menue,.hs-sl-auswahl{display:flex;flex-direction:column;gap:6px;padding:6px;border:1px solid var(--line-soft);border-radius:var(--radius)}
 .hs-sl-opt{display:flex;flex-direction:column;gap:2px}

@@ -43,6 +43,7 @@ oder `harness_aufgabe`) – der Text läuft über den eigenen Strom."""
 from __future__ import annotations
 
 import re
+from datetime import datetime, timedelta
 import threading
 import time
 from urllib.parse import parse_qs
@@ -381,6 +382,52 @@ class HarnessApi:
         s = self.sitzungen.laden(sid)
         self._melden('harness.sitzung', {'id': sid, 'was': 'geaendert', 'titel': s['titel']})
         return dict(s, id=sid)
+
+    def sitzungen_fuer_modell(self, kriterien, aktuelle=None):
+        """Für die Werkzeuge `sitzungen_auflisten` und `sitzungen_aufraeumen`: die Sitzungen der Chat-Liste, die zu den Kriterien passen (wie die Schnellauswahl links).
+        Jede Zeile trägt `geschuetzt` (Grund) bei einer laufenden, der aktuellen und der Vorarbeiter-Sitzung; mit {'ids': […]} kommen genau diese zurück, auch geschützte."""
+        k = kriterien or {}
+        alle = self.sitzungen.liste()
+        def grund(s):
+            if s['id'] == aktuelle:
+                return 'diese Sitzung'
+            if self.stroeme.laufend_in(s['id']):
+                return 'läuft gerade'
+            if self.vorarbeiter.projekt_von(s['id']):
+                return 'Vorarbeiter'
+            return None
+        if k.get('ids'):
+            return [dict(s, geschuetzt=grund(s)) for s in alle if s['id'] in k['ids']]
+        norm = lambda s: ' '.join(str(s.get('titel') or 'Ohne Titel').lower().split())
+        auswahl = []                                    # je Kriterium die Menge der IDs; es gilt der Schnitt aller genannten
+        if k.get('alle'):
+            auswahl.append({s['id'] for s in alle})
+        if isinstance(k.get('aelter_als_tage'), int) and k['aelter_als_tage'] > 0:
+            grenze = datetime.now().astimezone() - timedelta(days=k['aelter_als_tage'])
+            alt = set()
+            for s in alle:
+                try:
+                    if datetime.fromisoformat(s['zuletzt']) < grenze:
+                        alt.add(s['id'])
+                except (ValueError, KeyError, TypeError):
+                    pass
+            auswahl.append(alt)
+        if k.get('titel_enthaelt'):
+            auswahl.append({s['id'] for s in alle if str(k['titel_enthaelt']).lower() in norm(s)})
+        if k.get('leer') is True:
+            auswahl.append({s['id'] for s in alle if (s.get('nachrichten') or 0) <= 2})
+        if k.get('projekt'):
+            auswahl.append({s['id'] for s in alle if s.get('projekt') == k['projekt']})
+        if k.get('doppelte'):
+            gruppen = {}
+            for s in alle:
+                gruppen.setdefault((s.get('projekt') or '', norm(s)), []).append(s)
+            auswahl.append({s['id'] for g in gruppen.values() if len(g) > 1 for s in sorted(g, key=lambda x: str(x.get('zuletzt') or ''), reverse=True)[1:]})
+        if not auswahl:
+            return []
+        ids = set.intersection(*auswahl)
+        treffer = [s for s in alle if s['id'] in ids]
+        return [dict(s, geschuetzt=grund(s)) for s in treffer if not grund(s)]
 
     def aufraeumen(self, payload):
         """POST aufraeumen {ids: [S-…]}: mehrere Sitzungen auf einmal nach geloescht/ verschieben (wie das Löschen einer einzelnen: nichts wird wirklich gelöscht, eine laufende Antwort
@@ -821,7 +868,7 @@ class HarnessApi:
         projekt = self._projekt(projekt_id)
         return Werkzeuge(projekt, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, mission_id=mission_id, regeln=regeln, laeufe=self.laeufe,
                          lauf_typen=self.lauf_typen, modelle=self._modell_op, andere_antworten=self._andere_antworten,
-                         projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz), lese_grenze=lambda: self._option('lese_grenze'), verknuepfung=lambda ort, name: self.verknuepfung_anlegen(ort, name, von='modell'), gedanken=self.gedanken_lesen, gedaechtnis=self.gedaechtnis_suchen)
+                         projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz), lese_grenze=lambda: self._option('lese_grenze'), sitzungen_liste=self.sitzungen_fuer_modell, sitzungen_weg=lambda ids: self.aufraeumen({'ids': ids}), verknuepfung=lambda ort, name: self.verknuepfung_anlegen(ort, name, von='modell'), gedanken=self.gedanken_lesen, gedaechtnis=self.gedaechtnis_suchen)
 
     def _vorarbeiter_werkzeuge(self, s):
         """Die Werkzeuge des Vorarbeiters – nur für Sitzungen, deren Vorlage das Recht hat; der Server prüft sie bei jedem Aufruf noch einmal (S1)."""

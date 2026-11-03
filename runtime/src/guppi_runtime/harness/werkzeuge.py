@@ -38,7 +38,10 @@ LAUF = ('lauf_starten', 'lauf_stoppen', 'lauf_status', 'modell_laden', 'modell_e
 # Ohne Karte, weil sie nichts am Rechner ändern: ein Fenster öffnen (Rekorder, Logbuch …), einen Antrag stellen (wirkt erst nach der Freigabe im
 # Posteingang), einen Knopf der Seitenleiste anlegen (eine Wahl des Captains, keine Erlaubnis). Nur eine Katalogregel `verboten` schaltet sie ab.
 FREI_OHNE_KATALOG = OHNE_KARTE
-NAMEN = LESEN + WIRKUNG + LAUF + FREI_OHNE_KATALOG
+SITZUNGEN = ('sitzungen_aufraeumen',)       # Chat-Liste aufräumen: immer eine Karte mit der Liste (fester Vorbehalt, harness/vorbehalte.py); `sitzungen_auflisten` (lesen) steht in OHNE_KARTE
+NAMEN = LESEN + WIRKUNG + LAUF + SITZUNGEN + FREI_OHNE_KATALOG
+AKTION_SITZUNGEN = 'harness_sitzungen'
+SITZUNGEN_MAX = 100
 AKTION_LAUF, AKTION_LAUF_STOPP, AKTION_MODELL = 'harness_lauf', 'harness_lauf_stopp', 'harness_modell'
 AKTION_LESEN = 'harness_lesen'
 
@@ -88,6 +91,13 @@ SCHEMAS = {
     'projekt_beantragen': _fn('projekt_beantragen', 'Beantragt einen Ordner als Projekt. Es entsteht nur ein Antrag im Posteingang des Captains; das Projekt gibt es erst nach seiner Freigabe. Danach steht es in der Projektwahl einer neuen Sitzung.',
                               {'wurzel': dict(S, description='absoluter Pfad des Ordners, z. B. E:/Sedra Umgebung/A1 Sedra Baut'), 'name': dict(S, description='optional: Name des Projekts'),
                                'schreibbereich': {'type': 'array', 'items': S, 'description': 'optional: Muster, in denen das Modell schreiben darf, z. B. ["docs/**"]; ohne Angabe gilt die Vorgabe'}}, ['wurzel']),
+    'sitzungen_auflisten': _fn('sitzungen_auflisten', 'Zeigt, welche Sitzungen der Chat-Liste links zu einem Wunsch des Captains passen (nur lesen, nichts wird geändert). Mindestens ein Kriterium: '
+                               'aelter_als_tage, titel_enthaelt, leer (höchstens 2 Nachrichten), doppelte (gleicher Titel, die neueste bleibt), alle, projekt. Laufende, die aktuelle und die Vorarbeiter-Sitzung werden nie gelistet. '
+                               'Die IDs gehen an sitzungen_aufraeumen.',
+                               {'aelter_als_tage': I, 'titel_enthaelt': S, 'leer': {'type': 'boolean'}, 'doppelte': {'type': 'boolean'}, 'alle': {'type': 'boolean'}, 'projekt': S}, []),
+    'sitzungen_aufraeumen': _fn('sitzungen_aufraeumen', 'Räumt die Chat-Liste auf: verschiebt die genannten Sitzungen nach geloescht/ (nichts wird endgültig gelöscht). Immer erst sitzungen_auflisten, dann dem Captain die Liste zeigen und '
+                                'seine Zustimmung im Chat holen; dieser Aufruf legt zusätzlich eine Karte mit der Liste vor, die der Captain freigibt.',
+                                {'ids': {'type': 'array', 'items': S, 'description': 'Sitzungs-IDs S-… aus sitzungen_auflisten, höchstens 100'}}, ['ids']),
     'datei_schreiben': _fn('datei_schreiben', 'Schreibt eine Textdatei im Schreibbereich des Projekts (neu oder ganz ersetzt); fehlende Ordner im Pfad werden mit angelegt – so entsteht ein neuer Ordner (z. B. mit einer README.md). Braucht je nach Katalog eine Freigabe.',
                            {'pfad': S, 'inhalt': S}, ['pfad', 'inhalt']),
     'datei_aendern': _fn('datei_aendern', 'Ersetzt in einer Datei genau eine Stelle: `alt` muss genau einmal vorkommen. Braucht je nach Katalog eine Freigabe.',
@@ -99,7 +109,9 @@ SCHEMAS = {
 
 
 class Werkzeuge:
-    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None):
+    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None):
+        self.sitzungen_liste = sitzungen_liste   # vom Server gereicht: (kriterien, aktuelle_sitzung) -> [{id, titel, zuletzt, nachrichten, projekt, geschuetzt}] (harness/api.py)
+        self.sitzungen_weg = sitzungen_weg       # vom Server gereicht: ([ids]) -> {verschoben, uebersprungen}
         self.lese_grenze = lese_grenze           # vom Server gereicht: () -> Zeichen je Lese-Aufruf (Token und Gespräch); ohne: LESEN_ZEICHEN_MAX
         self.gedaechtnis = gedaechtnis           # vom Server gereicht: (sitzung_id, frage) -> Text (harness/gedaechtnis.py)
         self.gedanken = gedanken                 # vom Server gereicht: (sitzung_id, antwort_id, ab, zeichen) -> Text (harness/api.py)
@@ -165,6 +177,12 @@ class Werkzeuge:
                     if not frage:
                         raise WerkzeugFehler('argument_fehlt: frage oder antwort')
                     ziel, was = 'suche/' + frage, 'Gedächtnis durchsuchen'
+            elif name == 'sitzungen_auflisten':
+                if not callable(self.sitzungen_liste):
+                    raise WerkzeugFehler('sitzungen_nicht_verfuegbar')
+                if not any(args.get(k) for k in ('aelter_als_tage', 'titel_enthaelt', 'leer', 'doppelte', 'alle', 'projekt')):
+                    raise WerkzeugFehler('argument_fehlt: mindestens ein Kriterium (aelter_als_tage, titel_enthaelt, leer, doppelte, alle oder projekt)')
+                ziel, was = 'sitzungen/liste', 'Sitzungen auflisten'
             elif name == 'projekt_beantragen':
                 ziel, was = self._text(args, 'wurzel').strip(), 'Projekt beantragen'
                 if not ziel:
@@ -177,6 +195,8 @@ class Werkzeuge:
                 ziel, was = ('verknuepfung/' + ort if mit else ort), ('Fenster öffnen und Verknüpfung anlegen' if mit else 'Fenster öffnen')
             return {'ziel': ziel, 'ort': ort, 'vorhanden': True, 'vorschau': f'{was}: {ORTE[ort][0] if ort else ziel}', 'kurz': ziel,
                     'gate': {'aktion': AKTION_LESEN, 'ziel': ziel, 'bindung': {'werkzeug': name, 'args': args}}}
+        if name == 'sitzungen_aufraeumen':
+            return self._vorbereiten_sitzungen(args)
         if name in LAUF:
             try:
                 return self._vorbereiten_lauf(name, args)
@@ -211,6 +231,37 @@ class Werkzeuge:
         warnung = ersetzung_warnung(alt_text, neu_text) if (name == 'datei_schreiben' and p.is_file()) else None
         return {'ziel': rel, 'vorhanden': p.exists(), 'vorschau': diff(alt_text, neu_text, rel), 'kurz': rel, 'fsargs': fsargs, 'warnung': warnung,
                 'gate': {'aktion': aktion, 'ziel': str(p), 'bindung': file_request('write_text', fsargs, p)}}
+
+    # ---- Chat-Liste aufräumen
+    def _sitzungs_ids(self, args):
+        ids = args.get('ids')
+        if not isinstance(ids, list) or not ids or not all(isinstance(i, str) and re.fullmatch(r'S-[0-9A-F]{8}', i) for i in ids):
+            raise WerkzeugFehler('ids_ungueltig: eine Liste von Sitzungs-IDs S-… aus sitzungen_auflisten')
+        ids = list(dict.fromkeys(ids))
+        if len(ids) > SITZUNGEN_MAX:
+            raise WerkzeugFehler(f'zu_viele: höchstens {SITZUNGEN_MAX} Sitzungen je Aufruf')
+        return ids
+
+    def _vorbereiten_sitzungen(self, args):
+        if not callable(self.sitzungen_liste) or not callable(self.sitzungen_weg):
+            raise WerkzeugFehler('sitzungen_nicht_verfuegbar')
+        ids = self._sitzungs_ids(args)
+        aktuelle = (self.kontext or {}).get('sitzung_id')
+        bekannt = {s['id']: s for s in self.sitzungen_liste({'ids': ids}, aktuelle)}
+        zeilen, fehlen = [], []
+        for i in ids:
+            s = bekannt.get(i)
+            if s is None:
+                fehlen.append(i)
+            elif s.get('geschuetzt'):
+                raise WerkzeugFehler(f"geschuetzt: {i} ({s.get('geschuetzt')}) bleibt – nimm sie aus der Liste")
+            else:
+                zeilen.append(f"- {i} · {s['titel']} · zuletzt {str(s.get('zuletzt') or '')[:10]} · {s.get('nachrichten', 0)} Nachrichten")
+        if fehlen:
+            raise WerkzeugFehler('sitzung_unbekannt: ' + ', '.join(fehlen))
+        vorschau = f'Verschiebt {len(ids)} Sitzungen aus der Chat-Liste nach geloescht/ (nichts wird endgültig gelöscht):\n' + '\n'.join(zeilen)
+        return {'ziel': f'{len(ids)} Sitzungen', 'vorhanden': True, 'vorschau': vorschau, 'kurz': f'{len(ids)} Sitzungen aufräumen', 'ids': ids,
+                'gate': {'aktion': AKTION_SITZUNGEN, 'ziel': ','.join(sorted(ids)), 'bindung': {'werkzeug': 'sitzungen_aufraeumen', 'ids': sorted(ids)}}}
 
     # ---- Stufe 3: Läufe und Modelle
     def _typ(self, lid):
@@ -333,6 +384,17 @@ class Werkzeuge:
                 return {'status': 'ok', 'ergebnis': f"{plan['ziel']} geschrieben ({out.get('action')}, {out.get('bytes')} Bytes, sha256 {out.get('sha256', '')[:12]})", 'wirkung': True}
             if name in LAUF:
                 return self._lauf_ausfuehren(name, args, plan, token)
+            if name == 'sitzungen_auflisten':
+                treffer = self.sitzungen_liste({k: args.get(k) for k in ('aelter_als_tage', 'titel_enthaelt', 'leer', 'doppelte', 'alle', 'projekt')}, (self.kontext or {}).get('sitzung_id'))
+                zeilen = [f"{s['id']} · {s['titel']} · zuletzt {str(s.get('zuletzt') or '')[:10]} · {s.get('nachrichten', 0)} Nachrichten" for s in treffer[:SITZUNGEN_MAX]]
+                kopf = f'{len(treffer)} Sitzungen passen' + (f' (gezeigt {SITZUNGEN_MAX}; enger fragen)' if len(treffer) > SITZUNGEN_MAX else '') + '. Zeig dem Captain die Liste und frag ihn, bevor du sitzungen_aufraeumen aufrufst.'
+                return {'status': 'ok', 'ergebnis': kopf + ('\n' + '\n'.join(zeilen) if zeilen else ''), 'wirkung': False}
+            if name == 'sitzungen_aufraeumen':
+                r = self.sitzungen_weg(plan['ids'])
+                text = f"{len(r['verschoben'])} Sitzungen nach geloescht/ verschoben"
+                if r['uebersprungen']:
+                    text += '; übersprungen: ' + ', '.join(f"{u['id']} ({u['grund']})" for u in r['uebersprungen'])
+                return {'status': 'ok', 'ergebnis': text, 'wirkung': True}
             if name == 'projekt_beantragen':
                 if not callable(self.projekt_antrag):
                     return {'status': 'fehler', 'ergebnis': 'error: Projekte beantragen geht in dieser Sitzung nicht', 'wirkung': False}

@@ -150,7 +150,7 @@ class Kiste:
         self.vorarbeiter, self.extra = vorarbeiter, extra        # Stufe 3: Ernennung (Karten `an: vorarbeiter`) und die Werkzeuge des Vorarbeiters
         self.aufgaben, self.lokal = aufgaben, lokal        # Stufe 3: Aufgaben-Freigabe gilt nur für lokale Modelle (HS-27)
         self.names = tuple(HARNESS_WERKZEUGE) + (tuple(chat.names) if chat is not None else ()) + (tuple(extra.names) if extra is not None else ())
-        self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen')
+        self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen')
         self._gewarnt = set()            # Nachtrag 434b108: welche Ersetzungen dem Modell schon einen Hinweis bekamen
 
     def chat_namen(self):
@@ -190,6 +190,7 @@ class Kiste:
                 return {'status': 'fehler' if str(text).startswith('error') else 'ok', 'ergebnis': str(text), 'stufe': 'frei',
                         'regel': 'zustand-lesen', 'wirkung': False}
             return {'status': 'fehler', 'ergebnis': f'error: unknown tool {name}', 'stufe': None, 'regel': None, 'wirkung': False}
+        self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id}      # schon beim Vorbereiten bekannt (sitzungen_aufraeumen nimmt die eigene Sitzung aus)
         try:
             plan = self.w.vorbereiten(name, args)
         except (WerkzeugFehler, BefehlFehler) as exc:
@@ -203,7 +204,7 @@ class Kiste:
                 return {'status': 'verboten', 'ergebnis': f"verboten: {e['begruendung']}", 'stufe': 'verboten', 'regel': e['regel'], 'wirkung': False}
             self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id}
             out = self.w.ausfuehren(name, args, plan=plan)
-            if name != 'erinnern':                  # die Verknüpfung steht schon im Audit des Servers (mit `von`)
+            if name not in ('erinnern', 'sitzungen_auflisten'):                  # die Verknüpfung steht schon im Audit des Servers (mit `von`)
                 self._audit('HARNESS_APP_OEFFNEN' if name == 'app_oeffnen' else 'HARNESS_PROJEKT_BEANTRAGT', {'ziel': plan['ziel'][:300], 'status': out['status']})
             return dict(out, stufe='frei', regel=name.replace('_', '-'))
         e = einstufung(self.regeln, name, args, plan)

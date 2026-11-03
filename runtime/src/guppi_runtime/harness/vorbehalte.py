@@ -46,6 +46,8 @@ def pruefen_weich(werkzeug, ziel, args=None):
 def pruefen(werkzeug, ziel, args=None, vorhanden=False):
     """Der Grund des Vorbehalts – oder None. `ziel` ist der Pfad relativ zur Wurzel bzw. die Befehlszeile; `vorhanden` sagt, ob die Datei
     schon da ist (für „leer überschreiben“)."""
+    if werkzeug == 'sitzungen_aufraeumen':
+        return 'Captain-Vorbehalt: Sitzungen aufräumen (der Captain bestätigt jede Liste einzeln; nichts wird endgültig gelöscht)'
     if werkzeug == 'befehl':
         zeile = befehl_normal(ziel)
         for b in BEFEHLE:
