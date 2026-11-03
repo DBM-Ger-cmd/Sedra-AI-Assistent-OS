@@ -1,6 +1,6 @@
 # Entscheidungsvorlage AM0-E1: Wie schützen wir den Code der Oberfläche vor Änderungen durch das Modell? (03.11.2026)
 
-Status: **entschieden** am 03.11.2026: O3+ (§6 mit G1, G2, G3, G6, G7), G4 sofort, AM9 mit G5. **Neu offen:** G9–G11 aus §5b. Verlauf: Der Captain hatte AM0-E1 zuerst zur Ausarbeitung zurückgegeben („Das müssen wir mehr ausarbeiten, was am besten und praktikabel ist“), danach das Restrisiko (§5a) und den Fall „bestätigter schädlicher Code“ (§5b) nacharbeiten lassen.
+Status: **entschieden** am 03.11.2026: O3+ (§6 mit G1, G2, G3, G6, G7), G4 sofort, AM9 mit G5. G9–G11 aus §5b am selben Tag übernommen. Verlauf: Der Captain hatte AM0-E1 zuerst zur Ausarbeitung zurückgegeben („Das müssen wir mehr ausarbeiten, was am besten und praktikabel ist“), danach das Restrisiko (§5a) und den Fall „bestätigter schädlicher Code“ (§5b) nacharbeiten lassen.
 Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
 ## 1. Die Frage
@@ -258,10 +258,6 @@ Offene Fragen für dieses spätere G1: Wie arbeitet der Captain im Alltag mit zw
 | AM0-E1c | Ausführung von Modell-Code nur nach Sicht (G4) | **sofort**, als eigener Punkt, unabhängig von O3+ |
 | AM0-E1b/d | Werkstatt und Betrieb trennen | **AM9 aufnehmen, mit G5** (Freigaben auf eigener Herkunft) |
 
-**Offen (neu aus §5b):**
+**Entschieden vom Captain am 03.11.2026 (zweiter Schritt):** G9 (Bestätigung außerhalb des Browsers für Klasse H, Konsole als Ersatz), G10 (Kanal im Audit), G11 (Vollständigkeitstest der Freigabe-Wege) übernommen. Die Klasseneinteilung H/N aus §5b.3 (Unbekanntes = H) ist die Grundlage von G9 und gilt damit als mit übernommen; wenn der Captain sie einzeln ändern will, ist das in G2 von G9 möglich.
 
-| Nr | Frage | Vorschlag |
-|---|---|---|
-| AM0-E1e | Bestätigung außerhalb des Browsers für Freigaben der Klasse H (G9), mit Konsole als Ersatz | ja, vor oder mit O3+ |
-| AM0-E1f | Kanal im Audit (G10) und Vollständigkeitstest der Freigabe-Wege (G11) | ja, mit G9 |
-| AM0-E1g | Klasseneinteilung H/N wie §5b.3 (Unbekanntes = H) | ja |
+Nächster Schritt: G2 für G4 in `docs/SPEC_APPS_v1_G4_MODELLCODE_G2.md`.
