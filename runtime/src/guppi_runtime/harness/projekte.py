@@ -83,7 +83,8 @@ def laden(projekt_root: Path):
 
 # ---- P0 M3: Laufzeitdatei
 LAUFZEIT = Path('runtime_data') / 'harness' / 'projekte.yaml'
-VORGABEN = ('rezept_standard', 'projekt_standard', 'gedanken_zurueck', 'gedaechtnis_reichweite', 'verlauf_zusammenfassen')
+VORGABEN = ('rezept_standard', 'projekt_standard', 'gedanken_zurueck', 'gedaechtnis_reichweite', 'verlauf_zusammenfassen',
+            'lese_grenze', 'verlauf_laenge', 'zusammen_ab', 'kontext_sicherung', 'denken')
 
 
 def laufzeit_pfad(projekt_root: Path):

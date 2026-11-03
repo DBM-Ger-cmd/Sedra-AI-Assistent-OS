@@ -83,6 +83,12 @@ Token und Gespräch (02.11.2026) – ein Ort für Verbrauch und Optionen:
 - Seite **Einstellungen → Agent → Token und Gespräch**: oben der Verbrauch (Sitzung: Antworten, Züge, ↑, ↓, Ø je Antwort, letzte Antwort, Erzeugungstempo in Token/s, Kontextfenster; dazu der Tag über alle Sitzungen), darunter die Optionen: Spur und Gedanken (aus, Spur, kurz, ausführlich), Gedächtnis (Reichweite, Zusammenfassen) und Langes Gespräch (automatisch zusammenfassen). Die alte Seite „Gedanken der Modelle“ ist darin aufgegangen.
 - Daten: `GET /api/harness/token[?sitzung=S-…]` (`harness/verbrauch.py`), gezählt wird aus den Modellzeilen der Sitzungen, ohne Inhalt. Neu in der Sitzungszeile: `modell_s` (Zeit in Modellaufrufen), daraus das Tempo; ältere Sitzungen haben es nicht.
 
+Token sparen als Optionen und Gedächtnis verwalten (03.11.2026), alles auf der Seite Einstellungen → Agent → Token und Gespräch (`uix/shells/harness/tokenseite.js`):
+- **Wählbare Grenzen** (Vorgaben der Laufzeitdatei, gelten ab der nächsten Nachricht, „Alles auf Standard“ nimmt sie zurück): Denken eingrenzen (Standard · begrenzt auf 1 000 Token via `thinking_budget_tokens` · aus via `reasoning_effort: none`), Lese-Grenze je Aufruf (4 000 · 6 000 · 8 000 Zeichen), Länge des Verlaufs (10 · 20 · 30 Nachrichten), Zusammenfassen ab (4 · 8 · 12), Kontext-Sicherung (früh 80/90 % · normal 90/95 % · spät 93/97 %). Die Wirkung von „aus“ beim Denken ist mit LM Studio gemessen (`jobs/token_policy.py`), mit dem Modell-Router noch nicht.
+- **Gedanken nicht zurücksenden:** die Stufe „Aus – Gedanken nicht zurücksenden“ der Spur-Auswahl (nichts geht zurück, auch keine Spur).
+- **Gedächtnis:** je Projekt ansehen (neueste zuerst, Suche, einzelne Notiz löschen), als Markdown exportieren, alles löschen (zweiter Klick zur Bestätigung). Löschen nur über die Oberfläche (Herkunftsprüfung), Audit `HARNESS_GEDAECHTNIS_GELOESCHT`.
+- **Denken sichtbar:** im scharfen Modus bleibt das Denken beim Streamen verborgen; nach dem Ende der Antwort holt die Zeile „Dachte nach“ es aus der Sitzung (ungeprüft markiert). Antworten von vor dem Speichern der Gedanken zeigen „nicht gespeichert“.
+
 Noch offen:
 - Punkt 6 (Aussage „ich nutze jetzt Ordner X“ gegen die Sitzung prüfen): noch nicht gebaut; mit `projekt_beantragen` weniger dringend.
 - Die Vorlagen der Sitzungen (bauagent, modellierer, pruefer) nennen `app_oeffnen` und `projekt_beantragen` noch nicht; Sitzungen ohne Vorlage haben beide.

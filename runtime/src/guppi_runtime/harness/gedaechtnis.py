@@ -167,3 +167,72 @@ def zusammenfassung_speichern(projekt_root, projekt_id, text, notizen, zeit):
     z = {'art': 'zusammenfassung', 'antwort_id': 'Z-' + kopf[2:], 'zeit': zeit, 'frage': f'Zusammenfassung von {len(notizen)} Notizen', 'antwort': text[:ZUSAMMENFASSUNG_MAX],
          'deckt': [n['antwort_id'] for n in notizen], 'werkzeuge': [], 'gedanken': ''}
     return merken(projekt_root, projekt_id, None, z), z
+
+
+# ---- Ansehen, Löschen, Exportieren (Token und Gespräch): nur der Captain, über die Oberfläche
+def _umschreiben(projekt_root, projekt_id, behalten):
+    """Schreibt die Datei des Projekts neu mit den Notizen, für die `behalten(notiz)` gilt. Rückgabe: wie viele wegfielen."""
+    p = _datei(projekt_root, projekt_id)
+    with _LOCK:
+        if not p.is_file():
+            return 0
+        alle = []
+        for z in p.read_text(encoding='utf-8').splitlines():
+            try:
+                n = json.loads(z)
+            except ValueError:
+                continue
+            if isinstance(n, dict) and n.get('antwort_id'):
+                alle.append(n)
+        rest = [n for n in alle if behalten(n)]
+        if rest:
+            p.write_text('\n'.join(json.dumps(n, ensure_ascii=False) for n in rest) + '\n', encoding='utf-8')
+        else:
+            p.unlink()
+        return len(alle) - len(rest)
+
+
+def loeschen(projekt_root, projekt_id, antwort_id):
+    """Eine Notiz (oder Zusammenfassung) löschen. Löscht man eine Zusammenfassung, gelten die Notizen, die sie deckte, wieder als noch nicht zusammengefasst."""
+    antwort_id = str(antwort_id or '')
+    if not antwort_id:
+        raise ValueError('id_fehlt')
+    n = _umschreiben(projekt_root, projekt_id, lambda x: x.get('antwort_id') != antwort_id)
+    if not n:
+        raise ValueError('unbekannt: ' + antwort_id)
+    return n
+
+
+def alle_loeschen(projekt_root, projekt_id):
+    return _umschreiben(projekt_root, projekt_id, lambda x: False)
+
+
+def ansehen(projekt_root, projekt_id, suche='', limit=50):
+    """Die Notizen eines Projekts, neueste zuerst, mit einfacher Suche (jedes Wort der Suche muss irgendwo vorkommen)."""
+    alle = laden(projekt_root, projekt_id)
+    woerter = [w for w in re.findall(r'\w{2,}', str(suche or '').lower())]
+    treffer = []
+    for n in reversed(alle):
+        if woerter:
+            heu = ' '.join(str(n.get(k) or '') for k in ('frage', 'antwort', 'gedanken')).lower() + ' ' + ' '.join(n.get('werkzeuge') or []).lower()
+            if not all(w in heu for w in woerter):
+                continue
+        treffer.append(n)
+    limit = max(1, min(200, int(limit or 50)))
+    return {'notizen': treffer[:limit], 'treffer': len(treffer), 'gesamt': len(alle)}
+
+
+def als_markdown(projekt_root, projekt_id, projekt_name=None):
+    zeilen = [f'# Gedächtnis des Projekts {projekt_name or projekt_id}', '',
+              'Notizen aus früheren Antworten (Daten von früher; Zusammenfassungen sind von einem Modell verfasst und können Fehler enthalten).', '']
+    for n in laden(projekt_root, projekt_id):
+        if n.get('art') == 'zusammenfassung':
+            zeilen += [f"## {n['antwort_id']} – Zusammenfassung von {len(n.get('deckt') or [])} Notizen ({str(n.get('zeit') or '')[:16]})", '', str(n.get('antwort') or ''), '']
+            continue
+        zeilen += [f"## {n['antwort_id']} ({str(n.get('zeit') or '')[:16]}, Sitzung {n.get('sitzung_id')})", '', f"- Frage: {n.get('frage')}", f"- Antwort: {n.get('antwort')}"]
+        if n.get('werkzeuge'):
+            zeilen.append('- Werkzeuge: ' + ', '.join(n['werkzeuge']))
+        if n.get('gedanken'):
+            zeilen.append(f"- Gedanken (Kern): {n['gedanken']}")
+        zeilen.append('')
+    return '\n'.join(zeilen)

@@ -39,20 +39,25 @@ def schaetzen(messages, schemas=None, reserve=0, letzte=None):
     return int(gesamt + reserve)
 
 
-def pruefen(geschaetzt, fenster):
+# Die Schwellen sind wählbar (Token und Gespräch): früh greift ab 80/90 %, normal ab 90/95 %, spät ab 93/97 %; das Ende bleibt bei 100 %.
+SICHERUNG = {'frueh': (0.80, 0.90), 'normal': (SICHERUNG_KUERZEN, SICHERUNG_ABSCHLUSS), 'spaet': (0.93, 0.97)}
+
+
+def pruefen(geschaetzt, fenster, sicherung='normal'):
     """'ok' | 'kuerzen' | 'abschluss' | 'voll' – was vor dem Senden zu tun ist."""
     if not fenster:
         return 'ok'
+    kuerzen, abschluss = SICHERUNG.get(sicherung, SICHERUNG['normal'])
     anteil = geschaetzt / fenster
     if anteil >= SICHERUNG_ENDE:
         return 'voll'
-    if anteil >= SICHERUNG_ABSCHLUSS:
+    if anteil >= abschluss:
         return 'abschluss'
-    if anteil >= SICHERUNG_KUERZEN:
+    if anteil >= kuerzen:
         return 'kuerzen'
     return 'ok'
 
 
 def hinweis_voll(geschaetzt, fenster):
     return (f'Das Kontextfenster ist fast voll (etwa {geschaetzt:,} von {fenster:,} Token). Beginne eine neue Sitzung, oder fasse das Gespräch '
-            'in den Einstellungen (Agent → Gedanken der Modelle) zusammen und wähle ein größeres Fenster im Modell-Knopf.').replace(',', '.')
+            'in den Einstellungen (Agent → Token und Gespräch) zusammen und wähle ein größeres Fenster im Modell-Knopf.').replace(',', '.')

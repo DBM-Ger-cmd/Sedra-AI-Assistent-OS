@@ -78,7 +78,7 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token)(?:/(antrag|entfernen|grenzen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token)(?:/(antrag|entfernen|grenzen|notizen|export))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/grenzen'
@@ -88,6 +88,9 @@ GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)
 #   kurz – Spur + das Ende der Gedanken der letzten 2 Antworten (je 800 Zeichen)        voll – Spur + die letzten 4 (je 6 000 Zeichen)
 GEDANKEN_MODI = {'aus': (0, 0), 'spur': (0, 0), 'kurz': (2, 800), 'voll': (4, 6000)}
 GEDANKEN_STANDARD = 'spur'
+# Wählbare Grenzen (Einstellungen → Agent → Token und Gespräch): Name → (Standard, erlaubte Werte); gespeichert als Text in der Laufzeitdatei
+OPTIONEN = {'lese_grenze': ('8000', ('4000', '6000', '8000')), 'verlauf_laenge': ('20', ('10', '20', '30')), 'zusammen_ab': ('8', ('4', '8', '12')),
+            'kontext_sicherung': ('normal', ('frueh', 'normal', 'spaet')), 'denken': ('standard', ('standard', 'aus', 'begrenzt'))}
 ZUSAMMEN_MIN = 8                       # so viele Nachrichten müssen aus dem Verlauf gefallen sein, bevor Sedra sie zusammenfasst
 ZUSAMMEN_MODI = ('auto', 'aus')
 ZUSAMMENFASSUNG_MAX = 1800
@@ -132,11 +135,11 @@ def _spur(e, eintraege):
     return '[Spur: ' + ' · '.join(teile) + ']'
 
 
-def verlauf_aus(eintraege, modus=GEDANKEN_STANDARD):
+def verlauf_aus(eintraege, modus=GEDANKEN_STANDARD, laenge=VERLAUF_MAX):
     """Der Verlauf, den das Modell zu sehen bekommt: Text des Captains und des Modells. Je nach Modus tragen die letzten Antworten eine Spur und/oder
     eine Notiz mit dem Ende ihrer gespeicherten Gedanken. Die Gedanken selbst liegen in der Sitzungsdatei; das Modell holt sie bei Bedarf mit `erinnern`."""
     n, grenze = GEDANKEN_MODI.get(modus, GEDANKEN_MODI[GEDANKEN_STANDARD])
-    sichtbar = [e for e in eintraege if e.get('typ') in ('captain', 'modell') and (e.get('text') or '').strip()][-VERLAUF_MAX:]
+    sichtbar = [e for e in eintraege if e.get('typ') in ('captain', 'modell') and (e.get('text') or '').strip()][-laenge:]
     mit_spur = [e for e in sichtbar if e.get('typ') == 'modell' and e.get('denken_zeichen') and e.get('antwort_id')][-SPUR_ANTWORTEN:] if modus != 'aus' else []
     mit_gedanken = [e for e in mit_spur if (e.get('denken_text') or '').strip()][-n:] if n else []
     rest, out = GEDANKEN_GESAMT_MAX, []
@@ -267,8 +270,8 @@ class HarnessApi:
             return 200, self.modelle()
         if fest == 'token' and not unter and method == 'GET':
             return 200, self.token_stand((q.get('sitzung') or [''])[0])
-        if fest == 'gedaechtnis' and not unter:
-            return 200, self.gedaechtnis_weg(method, q, payload)
+        if fest == 'gedaechtnis' and unter in (None, '', 'notizen', 'export'):
+            return 200, self.gedaechtnis_weg(method, q, payload, unter)
         if fest == 'verknuepfungen' and not unter:
             return 200, self.verknuepfungen_weg(method, q, payload)
         if fest == 'router' and not unter and method in ('GET', 'POST'):
@@ -400,7 +403,7 @@ class HarnessApi:
             modell = s['modell']
         if any(k.get('sitzung_id') == sid and k.get('art', 'werkzeug') == 'werkzeug' for k in self.karten.alle('offen')):
             raise ValueError('karte_offen')
-        verlauf = verlauf_aus(s['eintraege'], self._gedanken_modus())
+        verlauf = verlauf_aus(s['eintraege'], self._gedanken_modus(), int(self._option('verlauf_laenge')))
         # A1 (1.11.): erst alles vorbereiten, was werfen kann (Vorlage, Kiste) – dann die Antwort anlegen. Sonst blieb bei einer ungültigen
         # Vorlage eine Antwort für immer „laufend“: Sitzung gesperrt, Zähler belegt, Strom ohne Ende.
         vorlage = self._vorlage(s)
@@ -441,7 +444,7 @@ class HarnessApi:
     def token_stand(self, sid=''):
         """GET token[?sitzung=S-…]: Verbrauch der Sitzung und des heutigen Tages (nur Zahlen) plus die Vorgaben, die den Verbrauch bestimmen."""
         out = {'sitzung': None, 'heute': None, 'vorgaben': {'gedanken_zurueck': self._gedanken_modus(), 'verlauf_zusammenfassen': self._zusammenfassen_modus(),
-                                                          'gedaechtnis_reichweite': self._reichweite()}}
+                                                          'gedaechtnis_reichweite': self._reichweite(), **{n: self._option(n) for n in OPTIONEN}}}
         if sid:
             out['sitzung'] = harness_token.summe(self._sitzung(sid)['eintraege'])
         tag = harness_token.heute()
@@ -461,6 +464,12 @@ class HarnessApi:
         out['heute'] = dict(gesamt, tag=tag, modell_s=round(gesamt['modell_s'], 1))
         return out
 
+    def _option(self, name):
+        """Eine wählbare Grenze (OPTIONEN): der Wert der Laufzeitdatei, sonst der Standard; ein unbekannter Wert gilt nie."""
+        standard, erlaubt = OPTIONEN[name]
+        v = self._laufzeit_vorgaben().get(name)
+        return v if v in erlaubt else standard
+
     def _zusammenfassen_modus(self):
         v = self._laufzeit_vorgaben().get('verlauf_zusammenfassen')
         return v if v in ZUSAMMEN_MODI else 'auto'
@@ -473,10 +482,10 @@ class HarnessApi:
         try:
             eintraege = self.sitzungen.laden(sid)['eintraege']
             sicht = sichtbare(eintraege)[:-1]                                  # ohne die neue Nachricht des Captains
-            grenze = len(sicht) - VERLAUF_MAX
+            grenze = len(sicht) - int(self._option('verlauf_laenge'))
             alt = letzte_zusammenfassung(eintraege)
             bis = int(alt.get('bis_n') or 0) if alt else 0
-            if grenze - bis < ZUSAMMEN_MIN:
+            if grenze - bis < int(self._option('zusammen_ab')):
                 return
             neu = sicht[bis:grenze]
             antwort.senden('verlauf.zusammenfassung', {'phase': 'start', 'nachrichten': len(neu)})
@@ -526,9 +535,27 @@ class HarnessApi:
             return harness_gedaechtnis.text_aus(harness_gedaechtnis.suchen(self.hub.project_root, ids, frage), mehrere=True)
         return harness_gedaechtnis.text_aus(harness_gedaechtnis.suchen(self.hub.project_root, projekt, frage))
 
-    def gedaechtnis_weg(self, method, q, payload):
+    def gedaechtnis_weg(self, method, q, payload, unter=None):
         """GET: je Projekt Zahl der Notizen, noch nicht zusammengefasste und Zusammenfassungen · POST {projekt}: fasst die ältesten neuen Notizen mit dem geladenen Modell
         zusammen (nur der Captain stößt das an; es kostet Token und belegt das Modell kurz)."""
+        pid_q = (q.get('projekt') or [''])[0]
+        if method == 'GET' and unter == 'notizen':
+            self._projekt(pid_q)
+            return harness_gedaechtnis.ansehen(self.hub.project_root, pid_q, (q.get('suche') or [''])[0], (q.get('limit') or ['50'])[0])
+        if method == 'GET' and unter == 'export':
+            p = self._projekt(pid_q)
+            return {'dateiname': f'gedaechtnis-{pid_q}.md', 'text': harness_gedaechtnis.als_markdown(self.hub.project_root, pid_q, p.get('name'))}
+        if method == 'DELETE':                                                   # nur der Captain (Herkunftsprüfung im Server)
+            self._projekt(pid_q)
+            if (q.get('alle') or [''])[0] == '1':
+                n = harness_gedaechtnis.alle_loeschen(self.hub.project_root, pid_q)
+            else:
+                try:
+                    n = harness_gedaechtnis.loeschen(self.hub.project_root, pid_q, (q.get('id') or [''])[0])
+                except ValueError:
+                    raise
+            self._audit('HARNESS_GEDAECHTNIS_GELOESCHT', {'projekt': pid_q, 'anzahl': n, 'alle': (q.get('alle') or [''])[0] == '1'})
+            return {'geloescht': n, 'stand': harness_gedaechtnis.stand(self.hub.project_root, pid_q)}
         if method == 'GET':
             return {'projekte': [dict(harness_gedaechtnis.stand(self.hub.project_root, p['id']), id=p['id'], name=p['name']) for p in self.projekte()['projekte']],
                     'mindestens': harness_gedaechtnis.MIN_VERDICHTEN, 'reichweite': self._reichweite()}
@@ -620,6 +647,9 @@ class HarnessApi:
             raise ValueError('gedanken_zurueck_ungueltig: ' + ', '.join(GEDANKEN_MODI))
         if aenderung.get('verlauf_zusammenfassen') not in (None, *ZUSAMMEN_MODI):
             raise ValueError('verlauf_zusammenfassen_ungueltig: ' + ', '.join(ZUSAMMEN_MODI))
+        for name, (_standard, erlaubt) in OPTIONEN.items():
+            if name in aenderung and aenderung[name] is not None and str(aenderung[name]) not in erlaubt:
+                raise ValueError(f"{name}_ungueltig: " + ', '.join(erlaubt))
         if aenderung.get('gedaechtnis_reichweite') not in (None, *REICHWEITEN):
             raise ValueError('gedaechtnis_reichweite_ungueltig: ' + ', '.join(REICHWEITEN))
         if aenderung.get('projekt_standard'):
@@ -651,7 +681,7 @@ class HarnessApi:
         projekt = self._laufzeit_vorgaben().get('projekt_standard')
         if projekt and not any(p['id'] == projekt for p in self.projekte()['projekte']):
             projekt = None                                       # die Vorgabe zeigt auf ein Projekt, das es nicht mehr gibt
-        return {'rezept_standard': rezept, 'projekt_standard': projekt, 'auto_laden': auto, 'auto_laden_grund': grund, 'gedanken_zurueck': self._gedanken_modus(), 'gedaechtnis_reichweite': self._reichweite(), 'verlauf_zusammenfassen': self._zusammenfassen_modus()}
+        return {'rezept_standard': rezept, 'projekt_standard': projekt, 'auto_laden': auto, 'auto_laden_grund': grund, 'gedanken_zurueck': self._gedanken_modus(), 'gedaechtnis_reichweite': self._reichweite(), 'verlauf_zusammenfassen': self._zusammenfassen_modus(), **{n: self._option(n) for n in OPTIONEN}}
 
     def modelle(self):
         """P2 V1 „Passt das Modell?“: je Rezept des llama-server die Prüfung des Routers (dieselbe wie beim Laden, ohne zu laden): Bedarf an VRAM/RAM,
@@ -764,7 +794,7 @@ class HarnessApi:
         projekt = self._projekt(projekt_id)
         return Werkzeuge(projekt, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, mission_id=mission_id, regeln=regeln, laeufe=self.laeufe,
                          lauf_typen=self.lauf_typen, modelle=self._modell_op, andere_antworten=self._andere_antworten,
-                         projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz), verknuepfung=lambda ort, name: self.verknuepfung_anlegen(ort, name, von='modell'), gedanken=self.gedanken_lesen, gedaechtnis=self.gedaechtnis_suchen)
+                         projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz), lese_grenze=lambda: self._option('lese_grenze'), verknuepfung=lambda ort, name: self.verknuepfung_anlegen(ort, name, von='modell'), gedanken=self.gedanken_lesen, gedaechtnis=self.gedaechtnis_suchen)
 
     def _vorarbeiter_werkzeuge(self, s):
         """Die Werkzeuge des Vorarbeiters – nur für Sitzungen, deren Vorlage das Recht hat; der Server prüft sie bei jedem Aufruf noch einmal (S1)."""
@@ -818,7 +848,8 @@ class HarnessApi:
                 mission = self.hub.runtime.missions.load(mission_id)
                 self._verlauf_zusammenfassen(sid, mission, modell, antwort, messages)
                 schleife.laufen(self.execute, mission, box, messages, antwort, modell=modell, provider=PROVIDER, sitzungen=self.sitzungen,
-                                sitzung_id=sid, fenster=fenster, live_text=live, wirkung=getattr(box, 'wirkung', ()), bisher=bisher, max_zuege=zuege)
+                                sitzung_id=sid, fenster=fenster, live_text=live, wirkung=getattr(box, 'wirkung', ()), bisher=bisher, max_zuege=zuege,
+                                sicherung=self._option('kontext_sicherung'), denk_modus=self._option('denken'))
             except Exception as exc:                  # nie still: der Strom endet mit Grund, die Sitzung bekommt eine Zeile
                 grund = f'{type(exc).__name__}: {exc}'[:300]
                 antwort.senden('fehler', {'grund': grund})

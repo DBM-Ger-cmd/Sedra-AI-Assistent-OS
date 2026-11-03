@@ -99,7 +99,8 @@ SCHEMAS = {
 
 
 class Werkzeuge:
-    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None):
+    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None):
+        self.lese_grenze = lese_grenze           # vom Server gereicht: () -> Zeichen je Lese-Aufruf (Token und Gespräch); ohne: LESEN_ZEICHEN_MAX
         self.gedaechtnis = gedaechtnis           # vom Server gereicht: (sitzung_id, frage) -> Text (harness/gedaechtnis.py)
         self.gedanken = gedanken                 # vom Server gereicht: (sitzung_id, antwort_id, ab, zeichen) -> Text (harness/api.py)
         self.verknuepfung = verknuepfung         # vom Server gereicht: legt die Verknüpfung an (harness/verknuepfungen.py)
@@ -373,15 +374,16 @@ class Werkzeuge:
         n = max(1, min(LESEN_MAX, int(args.get('zeilen') or 200)))
         # Zeichen- und Tokengrenze (28.10.2026, Abnahme Nemotron C2): 200 Zeilen einer Logbuchdatei waren 126 KB und sprengten das
         # Fenster (47 734 Token gegen 16 384). Je Aufruf höchstens LESEN_ZEICHEN_MAX Zeichen; die nächste Stelle nennt `ab_zeile`.
+        grenze = int(self.lese_grenze()) if callable(self.lese_grenze) else LESEN_ZEICHEN_MAX
         stueck, zeichen, i = [], 0, ab - 1
         breite = len(str(min(len(zeilen), ab - 1 + n)))
         while i < min(len(zeilen), ab - 1 + n):
             zeile = zeilen[i]
             kopfzeile = len(f'{i + 1:>{breite}}| ')
-            if zeichen + kopfzeile + len(zeile) > LESEN_ZEICHEN_MAX:
+            if zeichen + kopfzeile + len(zeile) > grenze:
                 if stueck:
                     break
-                zeile = zeile[:LESEN_ZEICHEN_MAX - kopfzeile] + ' […Zeile gekürzt]'
+                zeile = zeile[:grenze - kopfzeile] + ' […Zeile gekürzt]'
             stueck.append(zeile)
             zeichen += kopfzeile + len(zeile) + 1
             i += 1

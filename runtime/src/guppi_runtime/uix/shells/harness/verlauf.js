@@ -68,6 +68,19 @@
       leer(){ return this.eintraege === 0 && !this.antwortId && !this.wartet; },
       laeuft(){ return !!this.antwortId; },
       nachUnten(){ requestAnimationFrame(()=>{ box.scrollTop = box.scrollHeight; }); },
+      // Das gespeicherte Denken einer fertigen Antwort in ihre Zeile holen (der scharfe Modus streamt es nicht; Sedra speichert es trotzdem, bis 20 000 Zeichen, ungeprüft markiert)
+      async denkenNachladen(z, aid){
+        try{
+          const s = await S.api('/api/harness/sitzungen/' + this.id);
+          const e = (s.eintraege || []).filter(x=>x.typ === 'modell' && x.antwort_id === aid).pop();
+          if(!e || !e.denken_text || !z.denken) return;
+          const pre = z.denken.querySelector('pre');
+          pre.textContent = e.denken_text;
+          if(e.denken_ungeprueft) pre.classList.add('hs-ungeprueft');
+          z.denken.querySelector('summary').textContent = 'Dachte nach · ' + Number(e.denken_zeichen || e.denken_text.length).toLocaleString('de-DE') + ' Zeichen'
+            + (e.denken_text.length < (e.denken_zeichen || 0) ? ' (Anfang gespeichert)' : '') + (e.denken_ungeprueft ? ' · ungeprüft' : '');
+        }catch(_e){ /* die Zeile bleibt, wie sie ist; nach dem Neuladen steht das Denken da */ }
+      },
       // app_oeffnen (Kern: harness/werkzeuge.py): der Ort kommt aus derselben Liste wie Start-Menü und Chat (ui/places.js); ohne Treffer sagt die Shell es, statt still nichts zu tun
       fensterOeffnen(ui){
         const ort = (root.sedraPlaces && root.sedraPlaces.PLACES || []).find(p=>p.id === ui.oeffnen);
@@ -131,7 +144,7 @@
             if(!block){ block = this.neu(d().el('div', 'hs-antwort')); this.eintraege++; }
             if(Array.isArray(e.kontext) && e.kontext[1]) S.kontextStand = {sitzung: this.id, belegt: e.kontext[0], fenster: e.kontext[1]};      // Füllstand der letzten Antwort
             if(e.denken_zeichen){                                   // der von Sedra gespeicherte Anfang des Denkens (bis 20 000 Zeichen, je Zug getrennt) steht aufklappbar in der Zeile; ans Modell geht er nie zurück
-              const dz = denkZeile('Dachte nach · ' + e.denken_zeichen.toLocaleString('de-DE') + ' Zeichen' + (e.denken_text ? (e.denken_text.length < e.denken_zeichen ? ' (Anfang gespeichert)' : '') + (e.denken_ungeprueft ? ' · ungeprüft' : '') : ' (nicht gespeichert)'));
+              const dz = denkZeile('Dachte nach · ' + e.denken_zeichen.toLocaleString('de-DE') + ' Zeichen' + (e.denken_text ? (e.denken_text.length < e.denken_zeichen ? ' (Anfang gespeichert)' : '') + (e.denken_ungeprueft ? ' · ungeprüft' : '') : ' (nicht gespeichert – ältere Antwort, vor dem Speichern der Gedanken)'));
               if(e.denken_text){ dz.querySelector('pre').textContent = e.denken_text; if(e.denken_ungeprueft) dz.querySelector('pre').classList.add('hs-ungeprueft'); }
               block.prepend(dz);
             }
@@ -299,6 +312,7 @@
           if(z.seg){ z.seg.classList.remove('hs-ungeprueft'); z.seg = null; }
           if(z.denken && z.denkenText === '' && !z.denken.querySelector('summary').textContent.startsWith('Denkt nach (')) z.denken.querySelector('summary').textContent = 'Dachte nach';
           else if(z.denken) z.denken.querySelector('summary').textContent = z.denken.querySelector('summary').textContent.replace('Denkt', 'Dachte');
+          if(z.denken && z.denkenText === '') this.denkenNachladen(z, this.antwortId);        // scharfer Modus: live bleibt das Denken verborgen, nach dem Ende steht es (ungeprüft) in der Zeile
           ende(block, x);
           S.tokenLaden();                                              // Verbrauch aktualisieren
         }

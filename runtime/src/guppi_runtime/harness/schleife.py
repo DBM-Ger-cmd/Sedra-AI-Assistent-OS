@@ -21,6 +21,7 @@ from . import kontext as kontext_mod
 
 MAX_ZUEGE = 24
 DENKEN_MAX = 20000                     # so viele Zeichen des Denkens speichert Sedra je Antwort in der Sitzung (E-A2, 02.11.2026 von 4 000 angehoben); sie gehen nie an das Modell zurück
+DENKEN_BUDGET = 1000                   # Token, auf die das Denken bei `denken: begrenzt` gekappt wird
 KOMPAKT_AB = 0.70                     # Anteil des Fensters, ab dem alte Werkzeugergebnisse gekürzt werden
 ERGEBNIS_MAX = 8000                   # D-E5: so viel eines Ergebnisses steht im Verlauf
 KURZ_MAX = 120
@@ -118,7 +119,7 @@ def guard_grund(fehler):
 
 
 def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-cpp-server', sitzungen=None, sitzung_id=None,
-           max_zuege=MAX_ZUEGE, fenster=None, live_text=True, max_tokens=2048, temperature=0.7, wirkung=(), bisher=(), clock=time.monotonic):
+           max_zuege=MAX_ZUEGE, fenster=None, live_text=True, max_tokens=2048, temperature=0.7, wirkung=(), bisher=(), clock=time.monotonic, sicherung='normal', denk_modus='standard'):
     """Führt die Schleife für eine Antwort aus, schreibt Werkzeug- und Modellzeile in die Sitzung und sendet zuletzt `ende`.
 
     `execute(mission, request)` ist `control.execute`; `box` hat `schemas()` und `call(name, args)` (wie ChatTools); `antwort` ist eine
@@ -148,17 +149,17 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
         schemas = [] if ohne_werkzeuge else box.schemas()
         # Harte Sicherung (02.11.2026): vor dem Senden schätzen und rechtzeitig handeln, statt den rohen Serverfehler zu bekommen
         geschaetzt = kontext_mod.schaetzen(messages, schemas, max_tokens, letzte_belegung)
-        if kontext_mod.pruefen(geschaetzt, fenster) != 'ok':
+        if kontext_mod.pruefen(geschaetzt, fenster, sicherung) != 'ok':
             vorher = geschaetzt
             messages = compact_history(messages, keep_last=kontext_mod.KUERZEN_KEEP_LAST, max_chars=kontext_mod.KUERZEN_MAX_CHARS, marke=kontext_mod.MARKE)
             letzte_belegung = None
             geschaetzt = kontext_mod.schaetzen(messages, schemas, max_tokens)
-            stufe = kontext_mod.pruefen(geschaetzt, fenster)
+            stufe = kontext_mod.pruefen(geschaetzt, fenster, sicherung)
             if stufe in ('abschluss', 'voll') and not ohne_werkzeuge:        # noch zu voll: jetzt ohne Werkzeuge antworten (Abschluss)
                 ohne_werkzeuge, schemas = True, []
                 messages.append({'role': 'user', 'content': FINAL_ANSWER_NOTE})
                 geschaetzt = kontext_mod.schaetzen(messages, schemas, max_tokens)
-                stufe = kontext_mod.pruefen(geschaetzt, fenster)
+                stufe = kontext_mod.pruefen(geschaetzt, fenster, sicherung)
             antwort.senden('kontext.gekuerzt', {'vorher': vorher, 'nachher': geschaetzt, 'fenster': fenster, 'stufe': stufe})
             if stufe == 'voll':
                 grund = kontext_mod.hinweis_voll(geschaetzt, fenster)[:300]
@@ -187,6 +188,10 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
                     antwort.senden('denken', {'stueck': '', 'verborgen': True})   # scharf: dass es denkt, nicht was
         request = {'action': 'model_inference', 'provider': provider, 'model': modell, 'messages': messages, 'temperature': temperature,
                    'max_tokens': max_tokens, 'slot_owner': 'captain-chat', 'stream': on_delta}
+        if denk_modus == 'aus':                           # Denken begrenzen (Token und Gespräch): gemessen wurde `none` mit LM Studio (docs: jobs/token_policy.py), nicht mit dem Router
+            request['reasoning_effort'] = 'none'
+        elif denk_modus == 'begrenzt':
+            request['thinking_budget_tokens'] = DENKEN_BUDGET
         if schemas:
             request['tools'] = relax_schema(schemas)
             request['tool_choice'] = 'auto'               # HS-15: immer auto
