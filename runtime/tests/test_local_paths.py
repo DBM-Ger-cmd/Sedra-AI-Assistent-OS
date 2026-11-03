@@ -31,6 +31,17 @@ class LocalPathsTests(unittest.TestCase):
                 with self.assertRaises(ValueError, msg=text):
                     local_paths.load(bad)
 
+    def test_a_relative_folder_counts_from_the_runtime_folder(self):
+        """USB stick: K:\\SEDRA\\runtime\\config\\local_paths.yaml with `..\\modelle` finds K:\\SEDRA\\modelle, whatever the drive letter is."""
+        with tempfile.TemporaryDirectory() as tmp:
+            text = "local_paths:\n  modelle: '..\\modelle'\n  abs: 'D:\\m'\n"
+            cfg = Path(tmp) / "local_paths.yaml"
+            cfg.write_text(text, encoding="utf-8")
+            loaded = local_paths.load(cfg)
+            self.assertEqual(Path(loaded["modelle"]), local_paths.RUNTIME.parent / "modelle")
+            self.assertEqual(loaded["abs"], "D:\\m")
+            self.assertEqual(local_paths.expand(r"<modelle>\x.gguf", loaded), str(local_paths.RUNTIME.parent / "modelle" / "x.gguf"))
+
     def test_a_canary_whose_model_folder_is_not_set_up_is_off(self):
         config = CanaryConfig({"enabled": True, "gguf": "<not-set-up-here>/x.gguf"})
         self.assertEqual((config.enabled, config.disabled_reason), (False, "local_paths_missing"))
