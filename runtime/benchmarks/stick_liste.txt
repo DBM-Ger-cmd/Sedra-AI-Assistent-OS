@@ -5,6 +5,9 @@
 # quelle <pfad> -> <ziel>  = umbenannt kopieren
 
 repo START_SEDRA.bat
+# Konsolenweg fuer G4 (gesehener Code-Stand, docs/SPEC_APPS_v1_G4_MODELLCODE_G2.md, PR #1, Version 1.22.0). Das Modul selbst liegt schon in
+# runtime/src/guppi_runtime/harness/. Die Quelle (--repo) muss ein Stand mit PR #1 sein, sonst meldet --pruefen die Datei als fehlend.
+repo CODE_STAND.bat
 repo LICENSE
 repo architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT/
 repo runtime/config/
