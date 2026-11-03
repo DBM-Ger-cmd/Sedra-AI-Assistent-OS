@@ -2,8 +2,8 @@
 // der Harness – laufende mit Fortschritt oder Zeit –, rechts der Statusbereich aus /api/strip (HS-32: Freigaben „n · beim Vorarbeiter m“, Modell, GPU mit
 // Temperatur, RAM, Modellserver, Scheduler, Zustand) und die Uhr. Zellen ohne Wert werden ausgeblendet, nicht leer gezeigt; ein Klick öffnet die App dazu (G2 §5).
 // Benachrichtigung (HS-33): Endet ein Lauf oder wartet eine Freigabe, blinkt der Knopf einmal und bleibt markiert, bis er angeklickt wird.
-// Gemerkt wird nur, was schon gesehen wurde (IDs in localStorage `sedra.harness.gesehen`), nie Inhalt. Kein Polling: der Status frischt bei Ereignissen auf,
-// höchstens alle 2 s (HS-52); die Uhr tickt, alle 15 s auch der Status (A7).
+// Gemerkt wird nur, was schon gesehen wurde (IDs in localStorage `sedra.harness.gesehen`), nie Inhalt. Kein Dauer-Abruf im Hintergrund: der Status frischt bei Ereignissen auf,
+// höchstens alle 2 s (HS-52); die Uhr tickt, alle 15 s bei sichtbarem Tab auch der Status (A7, HS-52a).
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
@@ -174,6 +174,8 @@
     }
     l.zuletzt = jetzt;
     S.api('/api/strip').then(v=>{
+      S.strip = v;                                                                               // die Kacheln des Start-Menüs nehmen dasselbe Ergebnis (HS-52a): eine Abfrage für beide
+      const sm = root.sedraHarness.startmenue; if(sm && sm.stripNeu) sm.stripNeu(S, v);
       // HS-32: eine Zelle ohne Wert (– und Ton off) wird ausgeblendet – kleine Bildschirme, Stick an fremdem PC
       const da = ZELLEN.filter(([k])=>v[k] && !(String(v[k].value ?? '–') === '–' && (v[k].tone || 'off') === 'off'));
       const zellen = da.map(([k, label, ort])=>{

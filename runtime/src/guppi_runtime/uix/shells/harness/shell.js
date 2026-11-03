@@ -6,7 +6,7 @@
 // (app.js: Werkzeuge des Vertrags als Reiter), Oberflächen, Darstellung und Schrift; der Rekorder ist dort eine App. Stufe 5: die
 // Einstellungen (einstellungen.js, HS-42) als Reiter `einstellungen:` – Werkzeuge eingehängt, Katalog-Editor (katalog_editor.js) mit Gate.
 // Diese Datei hält den Zustand und verbindet die Teile; sie registriert die Shell und ist deshalb die letzte im Manifest.
-// Daten kommen nur über die Wege unter /api/harness/ (harness/api.py) und /api/strip, /api/models; nichts wird gepollt außer der Uhr.
+// Daten kommen nur über die Wege unter /api/harness/ (harness/api.py) und /api/strip, /api/models; kein Dauer-Abruf im Hintergrund (HS-52a): Ereignisse zuerst, ein Takt nur für Sichtbares (Uhr und Status der Taskleiste, ein offenes Start-Menü), nur bei sichtbarem Tab.
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;

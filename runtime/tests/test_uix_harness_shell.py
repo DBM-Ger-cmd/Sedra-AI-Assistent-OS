@@ -117,6 +117,17 @@ class HarnessShellTests(unittest.TestCase):
         self.assertEqual((innen['art'], innen['text']), ('link', '**fett**'))
         self.assertEqual(arten('`[a](https://b.de)`'), [('code', '[a](https://b.de)')])
 
+    def test_takt_nur_fuer_sichtbares(self):
+        # HS-52a: ein Takt nur für sichtbare Anzeigen (Taskleiste, offenes Start-Menü) und nur bei sichtbarem Tab; sonst Ereignisse
+        erlaubt = {'taskleiste.js', 'startmenue.js'}
+        for js in ORDNER.glob('*.js'):
+            text = js.read_text(encoding='utf-8')
+            if 'setInterval' in text:
+                self.assertIn(js.name, erlaubt, js.name + ': ein neuer Takt braucht einen Eintrag in HS-52a')
+                self.assertIn('document.hidden', text, js.name + ': der Takt ruht bei verstecktem Tab')
+        menue = (ORDNER / 'startmenue.js').read_text(encoding='utf-8')
+        self.assertIn('clearInterval', menue, 'der Takt des Start-Menüs endet mit dem Schließen')
+
 
 if __name__ == '__main__':
     unittest.main()

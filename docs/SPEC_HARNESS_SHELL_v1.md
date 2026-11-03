@@ -100,6 +100,7 @@ Nicht Ziel: das Backend umbauen, das Cockpit löschen, eine Kopie von Bionic. Ü
 | HS-50 | Die Shell nutzt nur den vorhandenen Modellserver (llama-server, Port 8080); kein zweiter Modellprozess, kein Bionic. | Test, Konfiguration |
 | HS-51 | `START_SEDRA harness` startet sie; das Cockpit bleibt unverändert erreichbar (`START_SEDRA cockpit`, Start-Menü). | Startprobe |
 | HS-52 | Antwortzeit der Oberfläche: erstes Wort spätestens 1 s nach dem ersten Token des Modells; Taskleiste frischt höchstens alle 2 s auf. | Messung |
+| HS-52a | Aktualisierung (Captain 03.11.2026, ersetzt „nichts wird gepollt außer der Uhr“): Kein Dauer-Abruf im Hintergrund. Ereignisse des Servers haben Vorrang. Ein Takt ist nur für eine **sichtbare** Anzeige erlaubt – Uhr und Status der Taskleiste alle 15 s, ein offenes Start-Menü alle 5 s (Modelle und Token alle 15 s, KI-Labor alle 30 s) –, nur bei sichtbarem Tab (`document.hidden`), höchstens eine Abfrage je Quelle und 2 s, und er endet mit dem Schließen der Anzeige. Anzeigen mit derselben Quelle teilen die Abfrage (die Kacheln nehmen das Ergebnis von `/api/strip` der Taskleiste). Ein neuer Takt braucht einen Eintrag hier. | Test `test_takt_nur_fuer_sichtbares` (`setInterval` nur in `taskleiste.js` und `startmenue.js`, dort mit `document.hidden`) |
 | HS-53 | Ohne geladenes Modell zeigt das Eingabefeld „Kein Modell geladen – Modell wählen“, statt still zu scheitern. | Test |
 
 ## 4. Abgrenzung
