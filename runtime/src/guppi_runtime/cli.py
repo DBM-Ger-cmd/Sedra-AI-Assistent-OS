@@ -33,34 +33,10 @@ def desk_command(args):
     print(json.dumps(out,indent=2,ensure_ascii=False)); return 0 if status==200 else 2
 
 def code_stand_command(args):
-    """`guppi code-stand <projekt> [--uebernehmen]` (SPEC_APPS_v1 G4-16): den Code ansehen, den der Captain in dieser Fassung noch nicht gesehen
-    hat, und ihn als gesehen übernehmen – außerhalb des Browsers. Dieselbe Ablage wie die Oberfläche (`<root>/runtime_data/harness/code_stand`)."""
-    from .harness import projekte as harness_projekte
-    from .harness.code_stand import CodeStand
-    root=Path(args.root).resolve()
-    if not (root/'runtime_data'/'harness').is_dir():
-        # sonst entstünde still ein zweiter Stand neben dem der Oberfläche, und „übernehmen“ wirkte nicht (Befund 03.11.2026)
-        print(json.dumps({'status':'refused','error':'root_ist_nicht_der_projektordner',
-                          'grund':f'Unter {root} gibt es kein runtime_data/harness. --root muss der Projektordner der Oberfläche sein (z. B. workspace/GUPPI_OS); unter Windows: CODE_STAND.bat im SEDRA-Ordner.'},ensure_ascii=False)); return 2
-    try:
-        projekte=harness_projekte.laden(root)
-    except harness_projekte.ProjektFehler as exc:
-        print(json.dumps({'status':'refused','error':str(exc)},ensure_ascii=False)); return 2
-    projekt=next((p for p in projekte if p['id']==args.projekt),None)
-    if projekt is None:
-        print(json.dumps({'status':'refused','error':'projekt_unbekannt','projekte':[p['id'] for p in projekte]},ensure_ascii=False)); return 2
-    from .core.audit import AuditLog
-    audit=AuditLog(root/'runtime_data'/'audit'/'events.jsonl')        # dieselbe Kette wie die Oberfläche (wie audit-repair, ohne die ganze Runtime)
-    def melden(event,payload):
-        audit.append(event,component='harness',payload=payload)
-    cs=CodeStand(root/'runtime_data'/'harness'/'code_stand',projekt['wurzel'],projekt['id'],audit=melden)
-    liste=cs.ungesehen()
-    if args.uebernehmen:
-        n=cs.uebernehmen()
-        melden('HARNESS_CODE_STAND_UEBERNOMMEN',{'projekt':projekt['id'],'anzahl':n,'kanal':'konsole'})
-        print(json.dumps({'status':'uebernommen','projekt':projekt['id'],'anzahl':n},ensure_ascii=False)); return 0
-    print(cs.vorschau(liste,begrenzt=False)[0] if liste else f"Kein ungesehener Code im Projekt {projekt['id']}.")
-    return 0
+    """`guppi code-stand <projekt> [--uebernehmen]` (SPEC_APPS_v1 G4-16) – dieselbe Funktion wie `python -m guppi_runtime.harness.code_stand`."""
+    from .harness.code_stand import konsole
+    code,text=konsole(args.root,args.projekt,args.uebernehmen)
+    print(text); return code
 
 def main(argv=None):
     p=argparse.ArgumentParser(prog='guppi')

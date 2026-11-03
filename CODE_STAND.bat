@@ -3,7 +3,7 @@ rem SEDRA - Code, den du in dieser Fassung noch nicht gesehen hast (SPEC_APPS_v1
 rem   CODE_STAND.bat <projekt>                -> zeigt ihn (mit Diff, wo die gesehene Fassung vorliegt)
 rem   CODE_STAND.bat <projekt> --uebernehmen  -> der aktuelle Stand gilt als gesehen (z. B. nach eigener Arbeit oder git pull)
 rem Projekt-ID wie in der Harness, Standard: sedra-entwicklung. Gleiche Ablage wie die Oberflaeche (workspace\GUPPI_OS\runtime_data\harness\code_stand).
-rem Pfade und Python wie START_SEDRA.bat.
+rem Pfade und Python wie START_SEDRA.bat; schlanker Einstieg ohne die ganze Runtime (laeuft auch auf dem USB-Stick).
 setlocal
 set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
@@ -25,5 +25,5 @@ if "%~1"=="" (
   exit /b 2
 )
 cd /d "%RT%"
-"%PY%" %PYFLAGS% -m guppi_runtime --root "%PROJ%" code-stand %*
+"%PY%" %PYFLAGS% -m guppi_runtime.harness.code_stand --root "%PROJ%" %*
 exit /b %ERRORLEVEL%

@@ -215,3 +215,9 @@ Tests danach: `test_harness_code_stand` 32 Tests, Harness-Gruppe grün (Zahlen i
 
 **Offen für den Stick** (Branch `plan/usb-stick-minimal`, nicht in diesem PR): `stick_liste.txt` braucht `modul guppi_runtime.cli` und `repo CODE_STAND.bat`, sonst fehlt auf dem Stick der Konsolenweg. Die Karte selbst funktioniert dort auch ohne.
 
+### 13b. Konsole schlank, Stick, Version (03.11.2026)
+
+- `cli.py` importiert die ganze Runtime; als Zeile `modul guppi_runtime.cli` in der Stick-Liste kämen 14 Dateien dazu (Buildflow, DevVM, Selbst-Integration; gemessen mit `stick_paket.closure`). Deshalb hat `harness/code_stand.py` einen eigenen Einstieg (`konsole`, `main`; `python -m guppi_runtime.harness.code_stand --root <projektordner> <projekt> [--uebernehmen]`). Seine Import-Hülle liegt vollständig in der heutigen Stick-Hülle (0 zusätzliche Dateien). `CODE_STAND.bat` ruft diesen Einstieg; `guppi code-stand` nutzt dieselbe Funktion. Test: `test_schlanker_einstieg_wie_code_stand_bat` (Unterprozess).
+- Stick-Branch `plan/usb-stick-minimal`: `repo CODE_STAND.bat` in `stick_liste.txt` nachgetragen (Entscheidung des Captains, 03.11.2026). Der Stick-Bau braucht als Quelle einen Stand mit diesem PR; vorher meldet `stick_paket.py --pruefen` die Datei als fehlend.
+- Version 1.22.0 (Entscheidung des Captains): `version.py`, `BUILD.txt`. Release-Tag und `release/MANIFEST.sha256` für den Updater entstehen erst nach dem Merge.
+

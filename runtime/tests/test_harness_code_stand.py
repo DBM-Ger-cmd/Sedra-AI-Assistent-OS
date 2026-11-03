@@ -333,6 +333,21 @@ class Konsole(Projekt):
         self.assertEqual(json.loads(out.getvalue())['error'], 'root_ist_nicht_der_projektordner')
         self.assertFalse((leer / 'runtime_data').exists(), 'kein zweiter Stand angelegt')
 
+    def test_schlanker_einstieg_wie_code_stand_bat(self):
+        """CODE_STAND.bat ruft `python -m guppi_runtime.harness.code_stand --root … <projekt>` – ohne cli.py und ohne die ganze Runtime (Stick)."""
+        import subprocess, sys
+        self.cs.stand()
+        self.schreiben('tools/neu.py', 'x = 1\n')
+        env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1] / 'src'))
+        r = subprocess.run([sys.executable, '-m', 'guppi_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p'],
+                           capture_output=True, text=True, encoding='utf-8', env=env, timeout=60)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('tools/neu.py – neu', r.stdout)
+        r = subprocess.run([sys.executable, '-m', 'guppi_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p', '--uebernehmen'],
+                           capture_output=True, text=True, encoding='utf-8', env=env, timeout=60)
+        self.assertEqual((r.returncode, json.loads(r.stdout)['anzahl']), (0, 1), r.stderr)
+        self.assertEqual(self.cs.ungesehen(), [])
+
     def test_unbekanntes_projekt(self):
         code, text = self.cli('gibt-es-nicht')
         self.assertEqual(code, 2)
@@ -361,7 +376,7 @@ class Route(Projekt):
         sicht = a.code_stand_sicht({'projekt': ['p']})
         self.assertEqual((sicht['aktiv'], sicht['ungesehen'], sicht['pfade']), (True, 1, ['tools/neu.py']))
         if os.name != 'nt':
-            self.assertIn(f'--root "{self.wurzel_root}" code-stand p', sicht['konsole'], 'die Konsole nennt genau den Projektordner dieses Servers')
+            self.assertIn(f'code_stand --root "{self.wurzel_root}" p', sicht['konsole'], 'die Konsole nennt genau den Projektordner dieses Servers')
         else:
             self.assertEqual(sicht['konsole'], 'CODE_STAND.bat p')
 

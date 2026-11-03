@@ -2,13 +2,14 @@
 
 Jeder Build hat eine fortlaufende Nummer in `BUILD.txt` und einen Eintrag hier; das Paket entsteht mit `runtime/benchmarks/make_build.py` (Prüfsummen, Zip, Patch gegen den Vorgänger). Ältere Versionsnotizen (v1.2–v1.20): `docs/historie/`.
 
-## Apps-Modell v1 und G4 – 2026-11-03 (Konzept und Specs; G4 gebaut; PR #1, nicht abgenommen)
+## Version 1.22.0 – Apps-Modell v1 und G4 – 2026-11-03 (Konzept und Specs; G4 gebaut; PR #1, nicht abgenommen)
 - **Konzept und Specs „Apps und Erweiterungen“** (nur Dokumente): `KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` (acht Erweiterungswege, Rechte-Vokabulare, Befunde F1–F18, Bausteine AM0–AM9, Entscheidungsprotokoll), je Baustein ein Spec `SPEC_APPS_v1_AM0_…` bis `…_AM8_…`, G2 für AM0 und AM1, Entscheidungsvorlage `SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md` (O3+, Klassen H/N, G9–G11).
 - **G4 – Läufe und Befehle der Harness nur nach Sicht auf geänderten Code** (`SPEC_APPS_v1_G4_MODELLCODE_G2.md`): neues Modul `harness/code_stand.py` (gesehener Code-Stand je Projekt, Vergleich mit dem Dateisystem, Spur, vorige Fassung); liegt Code vor, den der Captain in dieser Fassung nicht gesehen hat, ist jeder `befehl` und `lauf_starten` eine Karte (harter Vorbehalt; keine Aufgabe, Sitzungs-Erlaubnis oder Vorarbeiter deckt sie); die Code-Liste ist Teil der Bindung, die Karte zeigt den Diff. Ausnahmen: `python -m py_compile`, `node --check`. `runtime/portable` wird nicht gescannt und ist dafür harter Vorbehalt.
-- **Konsole:** `CODE_STAND.bat <projekt> [--uebernehmen]` (Windows, wie `START_SEDRA.bat`) bzw. `guppi --root workspace/GUPPI_OS code-stand <projekt>`; lehnt ab, wenn `--root` nicht der Projektordner der Oberfläche ist. Lesend: `GET /api/harness/code_stand?projekt=`; Hinweis beim Anlegen einer Sitzung; die Einstufungs-Vorschau (`POST /api/harness/einstufen` mit Projekt) zeigt den Vorbehalt.
+- **Konsole:** `CODE_STAND.bat <projekt> [--uebernehmen]` (Windows, wie `START_SEDRA.bat`; schlanker Einstieg `python -m guppi_runtime.harness.code_stand`, ohne die ganze Runtime, läuft auch auf dem Stick) bzw. `guppi --root workspace/GUPPI_OS code-stand <projekt>`; lehnt ab, wenn `--root` nicht der Projektordner der Oberfläche ist. Lesend: `GET /api/harness/code_stand?projekt=`; Hinweis beim Anlegen einer Sitzung; die Einstufungs-Vorschau (`POST /api/harness/einstufen` mit Projekt) zeigt den Vorbehalt.
 - **Schalter** `code_sicht` in `local_config/switches.yaml` (Standard an; nur in der Datei, nicht auf der Schalter-Seite).
 - Vorlagen (MasterChat, Bauagent, Prüfer, Modellierer, Vorarbeiter) und Arbeitsplatz-Wissen kennen die neue Karte.
 - Tests: +`test_harness_code_stand` (32); Harness-Gruppe grün. Nicht geprüft: Browser-Tests (Python-Playwright fehlt im Container), ein echter Lauf mit Karte von Anfang bis Ende.
+- **Version:** `version.py` 1.22.0 (vorher 1.21.0), `BUILD.txt` `version: 1.22.0` (Build-Nummer und Datum setzt `make_build.py --bump` beim Paket). Ein Release-Tag `v1.22.0` für den Updater gibt es noch nicht.
 - **Hinweis:** Die Harness-Stufen vom 28.10. bis 03.11. (Commits „Harness: …“ auf `main`) stehen nicht in diesem Changelog; die Einträge sind nicht nachgetragen (Quelle: `git log`).
 
 ## UIX Stufe 6 – 2026-10-27 (Rahmen, Gespräch, Stimmigkeit, kleine Bildschirme; Spec SPEC_UIX_STUFE6_RAHMEN_v1, S6-E1 bis E5; nicht abgenommen)

@@ -307,3 +307,53 @@ class CodeStand:
                           f'in der Konsole mit „{self.konsole} --zeigen“ ansehen und mit „{self.konsole} --uebernehmen“ übernehmen, '
                           'dann den Aufruf wiederholen lassen.')
         return '\n'.join(zeilen), zu_gross
+
+
+# ---------------------------------------------------------------- Konsole (G4-16): außerhalb des Browsers ansehen und übernehmen
+def konsole(root, projekt_id, uebernehmen=False):
+    """(Exitcode, Text). `root` ist der Projektordner der Oberfläche (z. B. workspace/GUPPI_OS) – dieselbe Ablage wie der Server.
+    Ein `root` ohne runtime_data/harness wird abgelehnt: sonst entstünde still ein zweiter Stand, und „übernehmen“ wirkte nicht.
+    Schlanker Einstieg ohne die ganze Runtime (auch für den USB-Stick): nur Kern und Harness."""
+    from ..core.audit import AuditLog
+    from . import projekte as harness_projekte
+    root = Path(root).resolve()
+    if not (root / 'runtime_data' / 'harness').is_dir():
+        return 2, json.dumps({'status': 'refused', 'error': 'root_ist_nicht_der_projektordner',
+                              'grund': f'Unter {root} gibt es kein runtime_data/harness. --root muss der Projektordner der Oberfläche sein '
+                                       '(z. B. workspace/GUPPI_OS); unter Windows: CODE_STAND.bat im SEDRA-Ordner.'}, ensure_ascii=False)
+    try:
+        projekte = harness_projekte.laden(root)
+    except harness_projekte.ProjektFehler as exc:
+        return 2, json.dumps({'status': 'refused', 'error': str(exc)}, ensure_ascii=False)
+    projekt = next((p for p in projekte if p['id'] == projekt_id), None)
+    if projekt is None:
+        return 2, json.dumps({'status': 'refused', 'error': 'projekt_unbekannt', 'projekte': [p['id'] for p in projekte]}, ensure_ascii=False)
+    audit = AuditLog(root / 'runtime_data' / 'audit' / 'events.jsonl')         # dieselbe Kette wie die Oberfläche (Dateisperre beim Anhängen)
+
+    def melden(event, payload):
+        audit.append(event, component='harness', payload=payload)
+
+    cs = CodeStand(root / 'runtime_data' / 'harness' / 'code_stand', projekt['wurzel'], projekt['id'], audit=melden)
+    liste = cs.ungesehen()
+    if uebernehmen:
+        n = cs.uebernehmen()
+        melden('HARNESS_CODE_STAND_UEBERNOMMEN', {'projekt': projekt['id'], 'anzahl': n, 'kanal': 'konsole'})
+        return 0, json.dumps({'status': 'uebernommen', 'projekt': projekt['id'], 'anzahl': n}, ensure_ascii=False)
+    return 0, (cs.vorschau(liste, begrenzt=False)[0] if liste else f"Kein ungesehener Code im Projekt {projekt['id']}.")
+
+
+def main(argv=None):
+    """`python -m guppi_runtime.harness.code_stand --root <projektordner> <projekt> [--uebernehmen]` (so ruft es CODE_STAND.bat)."""
+    import argparse
+    p = argparse.ArgumentParser(prog='code_stand', description='Code, den der Captain in dieser Fassung noch nicht gesehen hat (G4)')
+    p.add_argument('--root', required=True)
+    p.add_argument('projekt')
+    p.add_argument('--uebernehmen', action='store_true')
+    a = p.parse_args(argv)
+    code, text = konsole(a.root, a.projekt, a.uebernehmen)
+    print(text)
+    return code
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

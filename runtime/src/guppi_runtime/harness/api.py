@@ -895,7 +895,7 @@ class HarnessApi:
         diesem Projektordner (`--root` muss der Ordner der Oberfläche sein, sonst liest die Konsole einen anderen Stand)."""
         if os.name == 'nt':
             return f'CODE_STAND.bat {pid}'
-        return f'python -m guppi_runtime --root "{self.hub.project_root}" code-stand {pid}'
+        return f'python -m guppi_runtime.harness.code_stand --root "{self.hub.project_root}" {pid}'
 
     def code_stand_sicht(self, q):
         """GET code_stand?projekt= (G4-17): {projekt, aktiv, ungesehen, pfade} – nur lesen. Übernehmen geht nur außerhalb des Browsers (Konsole)."""
