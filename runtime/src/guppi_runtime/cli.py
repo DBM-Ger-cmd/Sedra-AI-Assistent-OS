@@ -32,6 +32,32 @@ def desk_command(args):
         print(json.dumps({'status':'refused','error':str(exc)},ensure_ascii=False)); return 2
     print(json.dumps(out,indent=2,ensure_ascii=False)); return 0 if status==200 else 2
 
+def code_stand_command(args):
+    """`guppi code-stand <projekt> [--uebernehmen]` (SPEC_APPS_v1 G4-16): den Code ansehen, den der Captain in dieser Fassung noch nicht gesehen
+    hat, und ihn als gesehen übernehmen – außerhalb des Browsers. Dieselbe Ablage wie die Oberfläche (`<root>/runtime_data/harness/code_stand`)."""
+    from .harness import projekte as harness_projekte
+    from .harness.code_stand import CodeStand
+    root=Path(args.root).resolve()
+    try:
+        projekte=harness_projekte.laden(root)
+    except harness_projekte.ProjektFehler as exc:
+        print(json.dumps({'status':'refused','error':str(exc)},ensure_ascii=False)); return 2
+    projekt=next((p for p in projekte if p['id']==args.projekt),None)
+    if projekt is None:
+        print(json.dumps({'status':'refused','error':'projekt_unbekannt','projekte':[p['id'] for p in projekte]},ensure_ascii=False)); return 2
+    from .core.audit import AuditLog
+    audit=AuditLog(root/'runtime_data'/'audit'/'events.jsonl')        # dieselbe Kette wie die Oberfläche (wie audit-repair, ohne die ganze Runtime)
+    def melden(event,payload):
+        audit.append(event,component='harness',payload=payload)
+    cs=CodeStand(root/'runtime_data'/'harness'/'code_stand',projekt['wurzel'],projekt['id'],audit=melden)
+    liste=cs.ungesehen()
+    if args.uebernehmen:
+        n=cs.uebernehmen()
+        melden('HARNESS_CODE_STAND_UEBERNOMMEN',{'projekt':projekt['id'],'anzahl':n,'kanal':'konsole'})
+        print(json.dumps({'status':'uebernommen','projekt':projekt['id'],'anzahl':n},ensure_ascii=False)); return 0
+    print(cs.vorschau(liste,begrenzt=False)[0] if liste else f"Kein ungesehener Code im Projekt {projekt['id']}.")
+    return 0
+
 def main(argv=None):
     p=argparse.ArgumentParser(prog='guppi')
     p.add_argument('--root',default='.')
@@ -106,11 +132,15 @@ def main(argv=None):
     sub.add_parser('audit-repair',help='move a torn last line of the audit log aside so appends work again')
     ls=sub.add_parser('lessons',help='lesson cards of the coder (E-11): list, propose, approve, reject, sweep; nothing is used before you approve it')
     ls.add_argument('action',choices=['list','propose','approve','reject','sweep']); ls.add_argument('--text'); ls.add_argument('--source',default='captain'); ls.add_argument('--id'); ls.add_argument('--reason')
+    cst=sub.add_parser('code-stand',help='code the Captain has not seen in this version (SPEC_APPS_v1 G4): show it, or take the current state as seen')
+    cst.add_argument('projekt'); cst.add_argument('--uebernehmen',action='store_true')
     ob=sub.add_parser('objects',help='read desk objects through the running desk (POST /api/objects, Spec 0 D2)'); ob.add_argument('type'); ob.add_argument('id',nargs='?')
     ac=sub.add_parser('act',help='run a verb through the running desk (POST /api/actions, gates as in the desk); id - = verb without object'); ac.add_argument('type'); ac.add_argument('id'); ac.add_argument('verb'); ac.add_argument('--args',default='{}')
     args=p.parse_args(argv)
     if args.cmd in {'objects','act'}:       # only over the desk API with the CLI token – no way past the desk
         return desk_command(args)
+    if args.cmd=='code-stand':              # G4: außerhalb des Browsers ansehen und übernehmen
+        return code_stand_command(args)
     if args.cmd=='audit-repair':       # before the runtime is built: a torn log must not stop the repair itself
         from .core.audit import AuditLog
         out=AuditLog(Path(args.root).resolve()/'runtime_data'/'audit'/'events.jsonl').repair()

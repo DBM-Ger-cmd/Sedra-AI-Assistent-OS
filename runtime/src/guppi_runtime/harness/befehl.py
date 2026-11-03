@@ -133,10 +133,11 @@ def _beenden(proc):
         except OSError: proc.kill()
 
 
-def ausfuehren(wurzel, zeile, ordner='.', zeitlimit_s=120, *, guard, mission_id, token, abbruch=None, aufgabe_id=None, clock=time.monotonic):
+def ausfuehren(wurzel, zeile, ordner='.', zeitlimit_s=120, *, guard, mission_id, token, abbruch=None, aufgabe_id=None, clock=time.monotonic, request_binding=None):
     """Führt den Befehl aus, wenn das Token genau dazu passt. Rückgabe {status, exitcode, ausgabe, gekuerzt, dauer_s};
     status ∈ ok, fehler (exitcode ≠ 0), zeitlimit, abgebrochen, zurueckgenommen, nicht_erlaubt. `aufgabe_id`: läuft der Befehl unter einer
-    Aufgaben-Freigabe, endet er mit deren Rücknahme (RUECKNAHME)."""
+    Aufgaben-Freigabe, endet er mit deren Rücknahme (RUECKNAHME). `request_binding`: die Bindung des Gates, wenn sie mehr trägt als Zeile und
+    Ordner (G4: die Liste des ungesehenen Codes); Zeile und Ordner müssen darin unverändert stehen."""
     argv = zerlegen(zeile)
     cwd = ordner_in(wurzel, ordner)
     rel = cwd.relative_to(Path(wurzel).resolve()).as_posix() or '.'
@@ -144,7 +145,10 @@ def ausfuehren(wurzel, zeile, ordner='.', zeitlimit_s=120, *, guard, mission_id,
         zeitlimit = max(1, min(ZEITLIMIT_MAX, int(zeitlimit_s)))
     except (TypeError, ValueError) as exc:
         raise BefehlFehler('zeitlimit_ungueltig') from exc
-    auth = guard.authorize(token, mission_id=mission_id, action=AKTION, target=ziel_text(zeile, rel), request_binding=bindung(zeile, rel))
+    eigene = bindung(zeile, rel)
+    if request_binding is not None and any(request_binding.get(k) != v for k, v in eigene.items()):
+        return {'status': 'nicht_erlaubt', 'exitcode': None, 'ausgabe': 'Kein passendes Token: Bindung passt nicht zur Befehlszeile', 'gekuerzt': False, 'dauer_s': 0}
+    auth = guard.authorize(token, mission_id=mission_id, action=AKTION, target=ziel_text(zeile, rel), request_binding=request_binding or eigene)
     if not auth.get('authorized'):
         return {'status': 'nicht_erlaubt', 'exitcode': None, 'ausgabe': 'Kein passendes Token: ' + str(auth.get('reason')), 'gekuerzt': False, 'dauer_s': 0}
     if argv[0].lower() in ('python', 'python.exe', 'py'):

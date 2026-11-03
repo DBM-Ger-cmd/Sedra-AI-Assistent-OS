@@ -366,4 +366,5 @@ Grenzen dieser Arbeit (ehrlich):
 | 03.11.2026 | Fall „bestätigter schädlicher Code erteilt Freigaben“ nachgearbeitet (Vorlage AM0-E1 §5b): Befund F18, Klassen H/N, Vorschlag G9 Bestätigung außerhalb des Browsers, G10 Kanal im Audit, G11 Vollständigkeitstest | Claude, auf Auftrag des Captains |
 | 03.11.2026 | **G9, G10, G11 übernommen** (Klassen H/N als Grundlage von G9); G2 für G4 schreiben | Captain |
 | 03.11.2026 | G4-E1 bis E4 übernommen, G4 bauen (G3) | Captain |
+| 03.11.2026 | **G4 gebaut** (G3, Branch `claude/intelligent-goldberg-7arr50`); Stand und Lücken in `SPEC_APPS_v1_G4_MODELLCODE_G2.md` §13 | Claude |
 | 15.10.2026 | Fremdes Modul kommt als COMMUNITY mit Leserouten; Schreiben nur per Gate | `uix_server.py:1265` (Kommentar) |

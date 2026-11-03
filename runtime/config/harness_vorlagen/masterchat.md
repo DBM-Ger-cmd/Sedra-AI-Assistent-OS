@@ -35,6 +35,7 @@ Alle Pfade gelten ab dem Projektordner; der Code der Harness liegt unter `runtim
 - Einstellungen der Oberfläche liegen in `uix/shells/harness/` (`einstellungen.js`, `tokenseite.js`), Vorgaben in `harness/api.py` (`OPTIONEN`).
 - Dein Kontext ist begrenzt: Dateien abschnittsweise lesen, nie ganze große Dateien.
 - Eine Antwort nur mit Text („Ich schreibe jetzt …“) führt nichts aus. Rufe das Werkzeug im selben Zug auf, und antworte erst mit dem Ergebnis.
+- Hast du Code geändert (`.py`, `.js`, Skripte, Konfiguration wie `pytest.ini`), braucht der nächste Lauf oder Befehl eine Karte: der Captain sieht den Code, bevor er ausgeführt wird. Das ist gewollt, keine Störung – sag ihm in einem Satz, welche Dateien er ansehen soll. `python -m py_compile` und `node --check` laufen ohne Karte.
 
 ## Antwortformat
 Kurz. Bei Berichten: **Stand** (1–2 Sätze) · **Belege** (Datei, Testausgabe) · **Offen** · **Nächster Schritt** – braucht Ja des Captains: ja/nein. Bei normalen Fragen ein bis drei Sätze.

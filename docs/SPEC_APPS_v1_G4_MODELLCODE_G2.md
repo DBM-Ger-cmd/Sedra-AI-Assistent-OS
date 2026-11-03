@@ -174,3 +174,31 @@ Schreiben (nur Claude, Harness-Code unter Vorbehalt): `harness/code_stand.py` (n
 ## 12. Nächste Gates
 
 G2 (diese Datei) → Freigabe durch den Captain → G3 T1–T5 → G4 Abnahme am PC: MasterChat schreibt einen Test und startet `run_tests` → Karte mit Inhalt; nach Freigabe läuft der Test; zweiter Lauf ohne Änderung ohne Karte; nach `git pull` → Karte bzw. `code-stand --uebernehmen`.
+
+## 13. Stand des Baus (G3, 03.11.2026)
+
+**Gebaut** auf `claude/intelligent-goldberg-7arr50`, T1–T5:
+
+| Teil | Dateien | Stand |
+|---|---|---|
+| T1 Code-Stand | neu `harness/code_stand.py` | Erkennung, gesehener Stand (Ausgangsstand beim ersten Gebrauch, Audit `HARNESS_CODE_STAND_ANGELEGT`), Vergleich mit Zwischenspeicher nach Größe/Änderungszeit, Spur, vorige Fassung, Vorschau mit Grenzen (30 Dateien / 2.000 Zeilen) |
+| T2 Prüfung vor Ausführung | `harness/werkzeuge.py` (`_code_sicht`, Flag `code` beim Schreiben), `harness/vorbehalte.py` (Grund für `befehl`/`lauf_starten`, `code_stand.py` unter Vorbehalt), `harness/freigabe.py` (`einstufung`), `harness/befehl.py` (nimmt die erweiterte Bindung an, prüft Zeile und Ordner darin) | harter Vorbehalt; Liste in der Bindung des Gates |
+| T3 Spur und „gesehen“ | `harness/freigabe.py` (`_code_vorher`, `_code_nachher`, `_code_zu_gross`) | Schreiben: Spur je Weg; Karte des Captains (nicht `sitzung`, nicht Vorarbeiter) → gesehen, wenn die vorige Fassung gesehen war; Lauf/Befehl über Karte → gebundene Liste gesehen, Audit `HARNESS_CODE_GESEHEN`; Karte erzeugt `HARNESS_CODE_UNGESEHEN`; zu großer Code → Karte bleibt offen, Fehler `code_zu_gross` |
+| T4 Konsole, Hinweis | `cli.py` (`guppi code-stand <projekt> [--uebernehmen]`, Audit `HARNESS_CODE_STAND_UEBERNOMMEN` mit `kanal: konsole`), `harness/api.py` (`GET /api/harness/code_stand?projekt=`, Schalter `code_sicht`), `uix/shells/harness/verlauf.js` (Notiz beim Anlegen einer Sitzung), `local_switches.py` (Abschnitt `code_sicht`) | gebaut |
+| T5 Tests | neu `runtime/tests/test_harness_code_stand.py` (29 Tests) | grün |
+| Wissen | `uix/shells/harness/arbeitsplatz.yaml` (Begriff „ungesehener Code“), `runtime/config/harness_vorlagen/masterchat.md` (ein Satz: die Karte ist gewollt) | ergänzt |
+
+**Prüfungen:**
+- Harness-Gruppe: 493 Tests, 0 rot (vorher 464; +29 neue).
+- Schnelle Bahn gesamt (`run_tests.py all`): 3.690 Tests, 9 rot – dieselben 9 sind auf dem Ausgangsstand `c364081` ebenfalls rot (`test_tuning`: kein `nvidia-smi` im Container; `test_night_chain.DryRun`), nicht durch G4 verursacht.
+- `test_arbeitsplatz`, `test_uix_contract`, Schalter- und CLI-Tests: grün.
+- Messung im Container (Linux): 1.237 Code-Dateien im Repo; Ausgangsstand 74 ms, erster Vergleich 75 ms, weiterer Vergleich 42 ms. Auf dem PC des Captains (Windows) nicht gemessen.
+
+**Abweichungen und Lücken – ehrlich:**
+- **Browser-Tests nicht gelaufen:** Python-Playwright ist im Container nicht installiert; die Notiz in `verlauf.js` ist nur mit `node --check` geprüft. Abnahme am PC nötig.
+- **Lauf nicht von Anfang bis Ende getestet:** Für `lauf_starten` sind Vorbehalt, Einstufung und die gemeinsame Funktion `_code_sicht` geprüft, nicht ein echter Lauf mit Karte (dafür braucht es das Lauf-Register; der Befehl-Weg ist vollständig getestet).
+- **G4-17 nur in der Sitzung:** Die Zeile erscheint als Notiz, wenn eine neue Sitzung angelegt wird; eine Zeile im Posteingang ist nicht gebaut. Der Startbericht (G6) ist nicht Teil von G4.
+- **Schalter nur in der Datei:** `code_sicht` steht in `local_switches.ALLOWED`, aber **nicht** auf der Schalter-Seite der Oberfläche (`SWITCH_ALLOWED`) – bewusst: einen Schutz abzuschalten soll kein Klick im Browser sein (Klasse H, G9).
+- **Konsole schreibt ins Audit über `AuditLog` direkt** (wie `audit-repair`), nicht über eine ganze Runtime; die Kette ist dieselbe (`runtime_data/audit/events.jsonl`, Dateisperre).
+- **Vorhandene Warnung:** `harness/befehl.py` schließt die Ausgabe-Pipe nicht (`ResourceWarning` in Tests); das war vorher so und ist nicht Teil von G4.
+

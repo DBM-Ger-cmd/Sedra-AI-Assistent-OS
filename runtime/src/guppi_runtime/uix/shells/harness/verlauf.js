@@ -111,6 +111,15 @@
         return n;
       },
       notiz(text, ton){ this.eintraege++; this.neu(d().el('div', 'hs-notiz s-note ' + (ton || 'note'), text)); },
+      // G4 (SPEC_APPS_v1, G4-17): liegt Code im Projekt, den der Captain nicht gesehen hat, sagt es die neue Sitzung gleich – Läufe und Befehle brauchen dann seine Karte
+      codeHinweis(S, projekt){
+        if(!projekt) return;
+        S.api('/api/harness/code_stand?projekt=' + encodeURIComponent(projekt)).then(c=>{
+          if(!c || !c.aktiv || !c.ungesehen) return;
+          this.notiz(c.ungesehen + (c.ungesehen === 1 ? ' Code-Datei ist' : ' Code-Dateien sind') + ' in dieser Fassung noch nicht von dir gesehen (z. B. ' + c.pfade.slice(0, 3).join(', ')
+                     + '). Läufe und Befehle zeigen sie dir zuerst auf einer Karte; ansehen und übernehmen auch in der Konsole: guppi code-stand ' + projekt + ' --zeigen', 'warn');
+        }).catch(()=>{});
+      },
 
       async laden(){
         if(!ID.test(this.id)){ this.zeigeLeer(); return; }
@@ -182,6 +191,7 @@
             const alt = this.id;
             this.id = kopf.id;
             root.sedraHarness.reiter.umbenennen(S, alt, kopf.id);
+            this.codeHinweis(S, projekt);
           }
           // erst die Nachricht zeichnen, dann senden: die Antwort kann über den Ereignisstrom schneller da sein als die HTTP-Antwort
           blase = this.captain(text);

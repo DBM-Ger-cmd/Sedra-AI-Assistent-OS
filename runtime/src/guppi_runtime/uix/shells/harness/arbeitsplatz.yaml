@@ -44,3 +44,4 @@ arbeitsplatz:
     vorgabe: 'Als Vorgabe merken: dieses Projekt bzw. Rezept ist der Standard neuer Sitzungen.'
     zeitlinie: 'In der Taskleiste zeigt der Knopf einer laufenden Sitzung, was sie tut: denkt, schreibt, Werkzeug …, wartet auf Freigabe, Stopp angefordert – mit Dauer.'
     ungeprüft: 'Grauer Text in der Harness-Shell: der Inhaltsschutz hat ihn noch nicht geprüft.'
+    ungesehener code: 'Code-Dateien eines Projekts (.py, .js, Skripte, Konfiguration), die seit der letzten Freigabe geändert wurden – von der Harness, einem Lauf oder von außen. Solange es sie gibt, zeigt jeder Lauf und Befehl der Harness sie zuerst auf einer Karte (mit Diff, wo die vorige Fassung vorliegt); keine Aufgabe und keine Sitzungs-Erlaubnis deckt das. Nach „Erlauben“ gilt die Fassung als gesehen. In der Konsole: guppi code-stand <projekt> --zeigen bzw. --uebernehmen (z. B. nach einem git pull). Schalter code_sicht in local_config/switches.yaml (Standard an).'
