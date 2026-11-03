@@ -213,7 +213,7 @@ G2 (diese Datei) → Freigabe durch den Captain → G3 T1–T5 → G4 Abnahme am
 
 Tests danach: `test_harness_code_stand` 32 Tests, Harness-Gruppe grün (Zahlen im PR).
 
-**Offen für den Stick** (Branch `plan/usb-stick-minimal`, nicht in diesem PR): `stick_liste.txt` braucht `modul guppi_runtime.cli` und `repo CODE_STAND.bat`, sonst fehlt auf dem Stick der Konsolenweg. Die Karte selbst funktioniert dort auch ohne.
+**Stick:** erledigt in §13b (nur `repo CODE_STAND.bat` nötig, Commit d650079 auf `plan/usb-stick-minimal`).
 
 ### 13b. Konsole schlank, Stick, Version (03.11.2026)
 
