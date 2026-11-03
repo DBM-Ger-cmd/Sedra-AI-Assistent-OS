@@ -106,7 +106,7 @@ Captain: „B4/B5 und Doku zuerst, B2 Vorschlag übernehmen“. Erledigt auf `cl
 
 | Nr | Stand |
 |---|---|
-| B1 | offen: Tag `v1.22.0` setzt der Captain am PC (§6) |
+| B1 | **erledigt** (Captain am PC): Tag `v1.22.0` auf `4e051f0`; `release_manifest.py --pruefen v1.22.0` → Manifest vorhanden und stimmig, 769 Dateien |
 | B2 | **entschieden:** vorerst ohne Signatur und nur für den eigenen PC; vor der ersten Weitergabe wird die Signatur gebaut. Festgehalten in `BETRIEB.md` („Release“), `PLAN_ISOLATION_UND_UPDATE_2026-10-19.md` Frage 3 und `PLAN_USB_STICK_MINIMAL.md` §8 (das Werkzeug „System“ mit dem Update-Knopf steht nicht in der Stick-Liste). |
 | B3 | erledigt (Text): Der `BUILD.txt`-Nachtrag nennt 1.22.0. Ein Paket ist nicht gebaut. |
 | B4 | erledigt: `local_paths.folder` nimmt unter macOS/Linux auch `\` als Trennzeichen. **Rest:** `expand` lässt Backslashes im übrigen Pfad stehen (z. B. `<modelle>\unsloth\x.gguf` in Dateien aus git); Modellpfade dieser Form gehen unter macOS/Linux weiter nicht. |
