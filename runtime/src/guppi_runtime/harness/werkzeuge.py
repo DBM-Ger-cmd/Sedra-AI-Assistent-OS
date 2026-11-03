@@ -24,6 +24,7 @@ from . import befehl as befehl_mod
 from . import code_stand as code_stand_mod
 from . import lauf as lauf_mod
 from . import projekte as harness_projekte
+from . import vorbehalte
 from .katalog import OHNE_KARTE, einstufen
 
 LESEN_MAX = 400
@@ -499,6 +500,8 @@ class Werkzeuge:
         return {'status': 'ok', 'ergebnis': kopf + '\n' + '\n'.join(zeilen), 'wirkung': False}
 
     def _darf_lesen(self, rel):
+        if vorbehalte.pruefen_lesen('suchen', rel):                         # O3-06: fest gesperrt, auch beim Durchsuchen
+            return False
         return einstufen(self.regeln, 'suchen', rel)['stufe'] != 'verboten' and einstufen(self.regeln, 'datei_lesen', rel)['stufe'] != 'verboten'
 
     def _suchen(self, args, plan):

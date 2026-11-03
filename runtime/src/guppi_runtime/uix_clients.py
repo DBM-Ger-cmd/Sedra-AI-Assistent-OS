@@ -20,6 +20,15 @@ from .core.util import atomic_write_json
 
 CLIENTS = ('cli', 'mcp')
 ROUTES = ('/api/objects', '/api/actions')       # was ein externer Client aufrufen darf
+# G9 (SPEC_APPS_v1_O3PLUS_G9_G2 G9-07, G9-08): Bestätigungen außerhalb des Browsers – nur der Konsolen-Client, nie MCP (der Zugang der
+# Modelle), nie der Browser-Token. Routen je Client statt einer gemeinsamen Liste (Befund N4).
+NUR_KONSOLE = ('/api/freigabe/offen', '/api/freigabe/bestaetigen')
+ROUTEN_JE_CLIENT = {'cli': ROUTES + NUR_KONSOLE, 'mcp': ROUTES}
+
+
+def erlaubt(client, path):
+    """Darf dieser externe Client diese Route aufrufen?"""
+    return path in ROUTEN_JE_CLIENT.get(client, ())
 
 
 def clients_dir(project_root) -> Path:
@@ -90,7 +99,7 @@ def status(project_root):
 
 def call(project_root, client, path, body, timeout=120):
     """`POST path` an die laufende Oberfläche mit dem Token dieses Clients. Rückgabe (status, antwort)."""
-    if path not in ROUTES:
+    if not erlaubt(client, path):
         raise ValueError('route_not_for_clients')
     info = read(project_root, client)
     conn = http.client.HTTPConnection('127.0.0.1', info['port'], timeout=timeout)

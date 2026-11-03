@@ -53,8 +53,15 @@ def _gpu_preflight_patches():
     return [mock.patch.object(gp, name, _host_only(getattr(gp, name), answer)) for name, answer in harmless.items()]
 
 
+def _tuer_aus():
+    """G9 (SPEC_APPS_v1_O3PLUS_G9_G2): Die Tür für Freigaben der Klasse H ist in Tests aus, damit die Tests ihrer Stellen weiter deren Logik
+    prüfen (sie erteilen über die Seite). Die Tür selbst prüft tests/test_freigabe_tuer.py – dort ist sie ausdrücklich an. Kein Schalter im
+    Code: nur dieser Patch in der Testumgebung."""
+    return [mock.patch('guppi_runtime.uix_server.UIXHub._freigabe_ausserhalb', lambda self: False)]
+
+
 def _patches():
-    return _gpu_preflight_patches() + [
+    return _gpu_preflight_patches() + _tuer_aus() + [
         mock.patch('guppi_runtime.hardware._nvidia', side_effect=lambda: dict(TEST_GPU)),
         mock.patch('guppi_runtime.hardware_manager.collector.shutil', SimpleNamespace(which=lambda *a, **k: None, disk_usage=shutil.disk_usage)),
         mock.patch('guppi_runtime.hardware_manager.collector.subprocess', SimpleNamespace(run=_no_program)),

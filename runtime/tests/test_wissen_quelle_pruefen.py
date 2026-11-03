@@ -3,6 +3,7 @@ Audit. Sie sagt, wie viele Dateien und ungefähr wie viele Abschnitte eine Quell
 überschneidet (Lehre aus Prüfung F4: das Logbuch stand doppelt im Index) und ob es genau diese Quelle schon gibt."""
 import unittest
 
+from host_isolation import setUpModule, tearDownModule  # noqa: F401  G9: die Tür ist in Tests aus
 from test_wissen_desk import Basis
 
 

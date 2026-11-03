@@ -282,11 +282,14 @@ Beide Teile lassen sich über Schalter in der Datei abschalten (`oberflaeche_abn
 | E6 | Ohne Windows nur Konsole, keine Dialog-Programme anderer Systeme (`osascript`, `zenity`). | ja |
 | E7 | Klasse-H-Karten nie an den Vorarbeiter (G9-10). | ja |
 | E8 | Lese-Sperre für `runtime_data/uix/clients/**` im Code (O3-06) und Routen je externem Client (G9-08). | ja |
-| E9 | `hardware_manager/dashboard.html` hart? | ~~nein, erst mit AM9~~ – vom Captain zur genaueren Ausarbeitung zurückgegeben; **neue Empfehlung: C** (§9a) |
+| E9 | `hardware_manager/dashboard.html` hart? | **entschieden: Variante C** (§9a) – hart, und der Hardware-Server liefert sein Skript selbst mit CSP ohne `unsafe-inline`; gebaut (§13.2) |
 | E10 | Frist der Bestätigung 10 min; nach Neustart keine offenen Bestätigungen. | ja |
 | E11 | Sitzung mit Vorlage-Erlaubnissen: Sitzung sofort, Erlaubnisse nach dem Ja. | ja |
+| E12 | (neu aus G11, §13.1) Die vier Handlungen ohne Gate mit Klasse H (`/api/cloud/save`, `/api/cloud/key`, `/api/cloud/module-model`, `/api/candidate`) bekommen in G9 dieselbe Tür. | ja |
+| E13 | (neu aus G11) Gedächtnis der Harness bleibt N. | ja |
+| E14 | (neu aus G11) `tests/test_freigabe_*.py` werden mit O3 harter Vorbehalt. | ja |
 
-**Entschieden vom Captain am 03.11.2026:** E1–E8, E10 und E11 wie vorgeschlagen. E9 sollte genauer ausgeführt werden (§9a); die Entscheidung darüber ist offen.
+**Entschieden vom Captain am 03.11.2026:** E1–E8, E10 und E11 wie vorgeschlagen. E12–E14 (aus G11) ebenfalls wie vorgeschlagen. E9 nach der Ausarbeitung: Variante C. E9 sollte genauer ausgeführt werden (§9a); die Entscheidung darüber ist offen.
 
 ### 9a. E9 genauer: Soll `hardware_manager/dashboard.html` ein harter Vorbehalt werden?
 
@@ -340,3 +343,72 @@ Nach jedem Schritt: die betroffenen Testgruppen, nach Schritt 7 die ganze Bahn (
 ## 12. Nächste Gates
 
 G2 (dieses Dokument) → Freigabe durch den Captain mit E1–E11 → G3 (Bau in der Reihenfolge §11) → G4 (Abnahme am PC: Fenster erscheint im Vordergrund, Konsole, Sammelkarte, Rückweg ohne Oberfläche).
+
+## 13. Stand des Baus (G3)
+
+### 13.1 Schritt 1: G11 gebaut (03.11.2026)
+
+| Datei | Inhalt |
+|---|---|
+| `desk/freigabeklasse.py` (neu) | `klasse(art, weg, binding)` nach §3.3 (Ablehnen/Zurücknehmen immer N, Unbekanntes H; GateWay nach `weg`, Inhaltsschutz nach `route`, Harness-Karte nach Werkzeug, Ziel und Weg über `vorbehalte`). Dazu die Bestandslisten: `ROUTEN_SERVER` (alle 121 POST-Routen), `ROUTEN_HARNESS` (24 schreibende Wege), `HARNESS_WEGE`/`HARNESS_UNTERWEGE` (alle Wege aus `WEG`), `APPROVE_STELLEN` (8 Stellen mit `.approve(`, je Kanal und Tür), `ANTWORT_OHNE_GUARD`, `BEFUNDE_OHNE_GATE`. |
+| `harness/vorbehalte.py` | `desk/freigabeklasse.py` ist harter Vorbehalt (O3-02 vorgezogen: die Tabelle soll nicht ohne Karte änderbar sein, solange O3 nicht gebaut ist). |
+| `tests/test_freigabe_vollstaendig.py` (neu, 16 Tests) | G11-01 bis G11-04 über den AST und die Muster: jede `approve`-Stelle, jede POST-Route, jeder Harness-Weg, jede Antragsart (aus `REQUEST_TITLE`, `APPLY`, `_remember('…')`, `register_applier`), jede weitere Art und jeder Weg; Freigabe- und Anwende-Routen in `HERKUNFT_WEGE` (S7); externe Clients erreichen keine Freigabe; Grenzüberschreitung, Scheduler und Inhaltsschutz nur aus `decide`. |
+| `tests/test_freigabe_klasse.py` (neu, 9 Tests) | §3.3 Zeile für Zeile. |
+
+**Gegenproben:** Für jede Prüfung wurde ein Eintrag entfernt oder eine falsche Einordnung gesetzt (approve-Stelle, Server-Route, Client-Route als Freigabe, Freigabe-Route ohne S7, Harness-Weg, geschützter Harness-Weg, Antragsart, Harness-Art, Weg). Jedes Mal war der Test rot. Ein Aufruf von `_answer_crossing` außerhalb von `decide` (vorübergehende Datei im Paket) wurde erkannt.
+
+**Was die Bestandsliste zeigt:**
+- Drei Stellen erteilen heute aus der Seite, ohne Tür: `harness/freigabe.beantworten` (F3), `uix_server.approve_gate` (F1, F2), `desk/gated.decide` (F1, F7). Sie stehen als „OFFEN bis G9“ in `APPROVE_STELLEN`.
+- Außerhalb des Browsers: `guppi approve`, die Konsole des Agent Manager und `guppi lessons approve` (Lernkarten des Coders, kein Guard).
+- `/api/mission/run` setzt eine Freigabe um, steht aber nicht in `HERKUNFT_WEGE`. Das ist kein Loch: Ein Harness-Prozess hat den Browser-Token nicht, und die externen Clients dürfen nur `/api/objects` und `/api/actions`.
+
+**Neuer Befund N6 – Handlungen ohne Gate mit Wirkungen der Klasse H.** G9 deckt sie nicht, denn die Tür kennt nur Entscheidungen. Code in der Seite kann sie heute direkt aufrufen:
+
+| Route | Wirkung |
+|---|---|
+| `/api/cloud/save` | schreibt die Cloud-Einstellungen (an/aus, Anbieter, Modelle) ohne Gate; nur eine geänderte `base_url` wird seit E2 zum Antrag (`uix_server.py:2670–2686`) |
+| `/api/cloud/key` | setzt den API-Schlüssel ohne Gate; ein fremder Schlüssel heißt ein fremdes Konto beim Anbieter |
+| `/api/cloud/module-model` | stellt ein Modul ohne Gate auf ein Cloud-Modell um, wirkt sofort für neue Aufrufe (`:2888`) |
+| `/api/candidate` | `test`/`test-verify` führen Tests eines Kandidaten aus (wo sie laufen, ist nicht geprüft); `accept`/`rollback` nur mit Gate (`selfdev/candidate_acceptance.py:109–111`) |
+
+Vorschlag für die Entscheidung des Captains (E12): Diese vier Routen bekommen in G9 dieselbe Tür. Die drei Cloud-Routen würden dann zu Anträgen wie `request:cloud_url`; bei `/api/candidate` wird zuerst geprüft, wo die Tests laufen.
+
+**Offene Einordnung:** Das Gedächtnis der Harness (`POST /api/harness/gedaechtnis`) ist als Handlung N eingeordnet: dauerhafter Text für das Modell, der keine Rechte vergibt. Skills und `arbeitsplatz.yaml` sind aus demselben Grund H („dauerhafte Anweisung an das Modell“). Ob das Gedächtnis gleich behandelt werden soll, entscheidet der Captain (E13). Vorschlag: N lassen, denn es ist eine häufige Alltagsfunktion, und jede Wirkung braucht weiter Karten.
+
+**Grenze:** Die Tests unter `runtime/tests/**` kann ein Modell in einer MasterChat-Sitzung ändern, also auch diesen Vollständigkeitstest abschwächen. Eine solche Änderung zeigt der G4-Code-Stand als ungesehen; verhindern wird sie erst O3 (falls die Tests der Prüfstellen hart werden sollen: E14, Vorschlag ja für `test_freigabe_*.py`).
+
+**Nicht gebaut:** G11-05 (Verhaltensprüfung) kommt mit der Tür aus G9.
+
+**Tests:** `test_freigabe_vollstaendig` 16 und `test_freigabe_klasse` 9 grün; Harness-, Freigabe-, Client-, Arbeitsplatz- und Vertragstests 452, 0 rot (Container). Ganze Bahn im Container: 3.789 Tests, 0 rot, 121 übersprungen.
+
+### 13.2 E9 Variante C gebaut (03.11.2026)
+
+- `harness/vorbehalte.py`: `runtime/src/guppi_runtime/hardware_manager/dashboard.html` ist harter Vorbehalt.
+- `hardware_manager/dashboard.py`: liefert `/uix/js/hardware_dashboard.js` (nur diese Datei, ohne Token wie im Server der Oberfläche) und sendet `script-src 'self'` statt `'unsafe-inline'`. Damit zeigt `guppi hardware-dashboard` wieder Daten (Nebenbefund aus §9a behoben), und ein Inline-Skript in der Seite läuft in keinem der beiden Server.
+- Test `tests/test_hardware_dashboard_server.py` (5): die Seite lädt genau das ausgelieferte Skript, kein Inline-Skript; das Skript kommt mit JS-Typ; CSP ohne `unsafe-inline`; andere Dateien und Daten ohne Token bleiben zu; Daten mit Token. Ohne die Änderung schlägt der Test fehl. Am PC nicht geprüft: das Fenster im Browser.
+
+### 13.3 G9 und G10 gebaut (03.11.2026)
+
+| Teil | Datei | Stand |
+|---|---|---|
+| Tür (G9-02) | `uix_server.py` `UIXHub.freigabe_tuer`, `freigabe_bestaetigen` | Klasse H aus der Seite → Bestätigung `B-…`, Antwort 400 `wartet_auf_bestaetigung: …` mit dem Satz für den Captain; N, Ablehnen und Kanäle außerhalb gehen sofort |
+| Wege (G9-03, E12) | `decide` (alle Arten außer Harness), `/api/mission/approve` (`approve_gate_seite`), `/api/cloud/save`, `/api/cloud/key`, `/api/cloud/module-model`, `/api/candidate` (nur `test`/`test-verify`); `harness/api.py`: `beantworten` (Karte und Posteingang), Aufgabe anlegen, Vorarbeiter ernennen, Sitzung mit Vorlage-Erlaubnissen (Sitzung sofort, Erlaubnisse nach dem Ja, E11) | gebaut |
+| Bestätigungen (G9-04) | `desk/bestaetigung.py` | im Speicher, Frist 10 min, Bindung geprüft, neue Antwort ersetzt die alte |
+| Systemdialog (G9-05/06) | `desk/systemdialog.py` | Windows `MessageBoxW` in eigenem Thread; sonst kein Dialog |
+| Konsole (G9-07/08) | `desk/freigabe_konsole.py`, `FREIGABE.bat`; Routen `/api/freigabe/offen`, `/api/freigabe/bestaetigen` nur mit CLI-Token (`uix_clients.ROUTEN_JE_CLIENT`, Befund N4), in `HERKUNFT_WEGE` | gebaut |
+| Vorarbeiter nur N (G9-10, E7) | `harness/freigabe.py` | gebaut |
+| Schalter (G9-11) | `freigabe_ausserhalb` in `local_switches.py` | Standard an |
+| Lese-Sperre (O3-06, E8) | `vorbehalte.pruefen_lesen` für `**/runtime_data/uix/clients/**`; in `einstufung` und beim Durchsuchen | gebaut (vorgezogen aus O3) |
+| Kanal (G10-01/02) | `FREIGABE_ERTEILT {art, id, weg, klasse, kanal}`; `HARNESS_APPROVED_BY` mit `kanal` | gebaut |
+| Inhaltsschutz | `desk/decisions.content_decision`: Bindung trägt `route` (lokal = N) | gebaut |
+| Harte Vorbehalte | `desk/bestaetigung.py`, `systemdialog.py`, `freigabe_konsole.py`, `decisions.py`, `freigabeklasse.py`, `hardware_manager/dashboard.html` | gebaut |
+
+**Tests:** `test_freigabe_tuer` (14, Tür an, Fake-Dialog): Klasse H aus der Seite wartet und führt nichts aus (G11-05), N und Ablehnen sofort, Konsole bestätigt genau einmal, Nein lässt offen, Seite und MCP erreichen die Bestätigung nicht (403), Bindung weg oder geändert → hinfällig, Systemdialog Ja/Nein, `/api/mission/approve` und `/api/cloud/key` warten (der Schlüssel steht nie in Text oder Audit), Schalter aus, Frist, Konsolen-Modul. Gegenprobe: Tür durchlassend → rot. `test_freigabe_vollstaendig` angepasst: alle Seiten-Stellen hinter der Tür, Befund N6 leer, MCP ohne Freigabe-Routen. **In allen übrigen Tests ist die Tür aus** (`tests/host_isolation.py`, nur dort, kein Schalter im Code), damit sie die Logik ihrer Stellen weiter prüfen. Ganze Bahn im Container: 3.810 Tests, 0 rot.
+
+**Nicht gebaut oder nicht geprüft (offen):**
+- G9-09 nur teilweise: Die Seite zeigt den Wartezustand als Fehlermeldung mit dem Satz und der Kennung (jede Oberfläche zeigt `message` schon an). Eigene Anzeige an Karte und Posteingang fehlt.
+- Die Harness-Karte hinter der Tür hat keinen eigenen Test; die Harness-Tests laufen mit Tür aus.
+- G10-03: `guppi approve` und die Konsole des Agent Manager schreiben noch kein `FREIGABE_ERTEILT` (Kanal `konsole`).
+- Am PC nicht geprüft: ob das Fenster unter `START_SEDRA.bat` im Vordergrund erscheint; `FREIGABE.bat` unter Windows.
+- Stick-Liste: `FREIGABE.bat` und `desk/freigabe_konsole.py` noch nicht eingetragen.
+- O3 (hart/weich, weich vor Katalog), G1, G2, G3, G6, G7: nicht gebaut (§11 Schritte 4–6).

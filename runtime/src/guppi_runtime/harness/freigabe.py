@@ -38,6 +38,9 @@ def jetzt():
 
 def einstufung(regeln, name, args, plan):
     """{stufe, wirkt_als, regel, begruendung, vorbehalt} – Vorbehalt vor Katalog; `vorarbeiter` wirkt in Stufe 2 wie `captain`."""
+    gesperrt = vorbehalte.pruefen_lesen(name, plan['ziel'])
+    if gesperrt:
+        return {'stufe': 'verboten', 'wirkt_als': 'verboten', 'regel': 'vorbehalt', 'begruendung': gesperrt, 'vorbehalt': True}
     grund = vorbehalte.pruefen(name, plan['ziel'], args, plan.get('vorhanden', False), ungesehen=plan.get('code_ungesehen'))
     if grund:
         return {'stufe': 'captain', 'wirkt_als': 'captain', 'regel': 'vorbehalt', 'begruendung': grund, 'vorbehalt': True}
@@ -243,7 +246,8 @@ class Kiste:
         if e['wirkt_als'] == 'frei' or via_aufgabe or via_sitzung:
             token = self.guard.approve(gate)
             von = f'aufgabe:{via_aufgabe}' if via_aufgabe else f'sitzung:{via_sitzung}' if via_sitzung else f"katalog:{e['regel']}"
-            self._audit('HARNESS_APPROVED_BY', {'approved_by': von, 'werkzeug': name, 'gate_id': gate['gate_id']})
+            self._audit('HARNESS_APPROVED_BY', {'approved_by': von, 'werkzeug': name, 'gate_id': gate['gate_id'],
+                                                'kanal': 'aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else 'katalog'})     # G10
             alt = _code_vorher(self.w, name, plan)
             out = ausfuehren(self.w, self.guard, name, args, plan, token, abbruch)
             _code_nachher(self.w, name, plan, out, sitzung_id=self.sitzung_id, weg='aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else 'katalog', alt=alt)
@@ -254,6 +258,9 @@ class Kiste:
             zustaendig = self.vorarbeiter.zustaendig(self.projekt_id)
             if zustaendig and zustaendig != self.sitzung_id:      # S2: in der eigenen Sitzung des Vorarbeiters wirkt `vorarbeiter` wie `captain`
                 an = 'vorarbeiter'
+            from ..desk import freigabeklasse                       # G9-10 (E7): Klasse H geht nie an den Vorarbeiter
+            if freigabeklasse.klasse('harness_freigabe', 'erlauben', {'werkzeug': name, 'ziel': plan['ziel']}) == freigabeklasse.H:
+                an = 'captain'
         vorschau_hash = hashlib.sha256(json.dumps([plan['ziel'], args, plan['vorschau']], ensure_ascii=False, sort_keys=True, default=str).encode('utf-8')).hexdigest()
         karte = self.karten.anlegen({'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id, 'werkzeug': name, 'args': args, 'ziel': plan['ziel'],
                                      'an': an, 'art': 'werkzeug', 'vorschau_hash': vorschau_hash,

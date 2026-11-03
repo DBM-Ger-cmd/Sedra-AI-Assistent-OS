@@ -144,6 +144,7 @@ Cloud-Modelle laufen nur über den API-Zugang (`models/cloud_api.py`, Einstellun
 | Modelle | `model-status`, `model-chat`, `model-doctor`, `model-scan`, `model-catalog`, `model-pass`, `model-benchmark`, `routing-profile`, `model-remove-preview`, `model-remove`, `model-restore` |
 | Hardware | `hardware`, `hardware-state`, `hardware-inventory`, `hardware-preview`, `hardware-dashboard`, `tuning-plan`, `tuning-run` |
 | Sandbox | `sandbox-doctor`, `sandbox-preview`, `sandbox-run`, `sandbox-history`, `dev-image-preview`, `dev-image-import` |
+| Freigaben (G9) | `FREIGABE.bat liste` – was auf deine Bestätigung außerhalb des Browsers wartet; `FREIGABE.bat freigeben B-…` bzw. `ablehnen B-…`. SEDRA muss laufen. Freigaben der Klasse H aus der Seite fragt SEDRA unter Windows zusätzlich in einem eigenen Fenster. Schalter `freigabe_ausserhalb` in `local_config/switches.yaml` (Standard an). |
 | Harness (G4) | `code-stand <projekt> [--zeigen \| --uebernehmen]` – Code, den du in dieser Fassung noch nicht gesehen hast, ansehen bzw. als gesehen übernehmen; `--root` muss `workspace/GUPPI_OS` sein. Unter Windows einfacher: `CODE_STAND.bat <projekt> [--zeigen \| --uebernehmen]` (`--zeigen` ist der Standard) im SEDRA-Ordner (Pfade und Python wie `START_SEDRA.bat`, ruft `python -m guppi_runtime.harness.code_stand --root workspace\GUPPI_OS …`; braucht nur Kern und Harness, läuft auch auf dem Stick) |
 
 ## Release (Tag für den Updater)
