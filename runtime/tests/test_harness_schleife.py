@@ -251,6 +251,21 @@ class SchleifeTests(unittest.TestCase):
         self.assertTrue(self.ereignisse()[-1][1]['abgeschnitten'])
         self.assertTrue(self.sitzungen.laden(self.sid)['eintraege'][-1]['abgeschnitten'])
 
+    def test_ein_riesiges_werkzeugergebnis_geht_nur_gekuerzt_an_das_modell(self):
+        """Log 03.11.2026: ein suchen mit 200 Treffern schickte rund 12 000 Token an das Modell, gespeichert wurden aber nur ERGEBNIS_MAX Zeichen."""
+        self.box.call = lambda name, args: 'Treffer ' + 'x' * (schleife.ERGEBNIS_MAX * 3)
+        a = Attrappe([Zug('', calls=[call('zustand', {'was': 'gpu'})]), Zug('Fertig.')])
+        self.lauf(a)
+        werkzeugnachricht = [m for m in a.requests[1]['messages'] if m['role'] == 'tool'][0]['content']
+        self.assertLess(len(werkzeugnachricht), schleife.ERGEBNIS_MAX + 400)
+        self.assertIn('gekürzt', werkzeugnachricht)
+        self.assertIn('Enge es ein', werkzeugnachricht)
+        kurz = Attrappe([Zug('', calls=[call('zustand', {'was': 'gpu'})]), Zug('Fertig.')])
+        self.box.call = lambda name, args: 'kurz'
+        self.antwort = Stroeme().anlegen(self.sid)
+        self.lauf(kurz)
+        self.assertNotIn('gekürzt', [m for m in kurz.requests[1]['messages'] if m['role'] == 'tool'][0]['content'])      # kurze Ergebnisse bleiben, wie sie sind
+
     def test_derselbe_absatz_in_zwei_zuegen_steht_nur_einmal_im_gespeicherten_text(self):
         """Log 02.11.2026: das Modell schrieb seine Vorstellung in einem Zug mit Werkzeugaufruf und noch einmal in der Schlussantwort; der Verlauf trug sie doppelt."""
         vorstellung = 'Ich bin der Vorarbeiter von SEDRA. Meine Rolle: Überblick und Prüfung.'

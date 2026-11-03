@@ -55,6 +55,16 @@ class VorlageTests(unittest.TestCase):
         for wort in ('Erfinde nichts', 'Feste Vorbehalte', 'docs/wunsch_umsetzen', 'Nachweis', 'Abnahme', 'git commit', 'Neustart', '400 Zeilen'):
             self.assertIn(wort, text, wort)
 
+    def test_der_systemtext_nennt_volle_pfade_und_verlangt_in_jeder_antwort_einen_schritt(self):
+        """Log 03.11.2026: das Modell schrieb nach docs/01_wuensche statt docs/wunsch_umsetzen/01_wuensche und antwortete auf „setze um“ nur mit einer Suche."""
+        text = (CONFIG / 'masterchat.md').read_text(encoding='utf-8')
+        for pfad in ('docs/wunsch_umsetzen/01_wuensche/W-', 'docs/wunsch_umsetzen/02_auftraege/A-', 'docs/wunsch_umsetzen/03_ergebnisse/', 'docs/wunsch_umsetzen/04_luecken/L-'):
+            self.assertIn(pfad, text)
+        self.assertIn('jeder Antwort einen Schritt weiter', text)
+        self.assertIn('nur sucht oder zusammenfasst', text)
+        self.assertIn('pfad: runtime/src', text)
+        self.assertIn('ohne dass es einen Auftrag gibt', text)
+
     def test_zu_weite_oder_verbotene_erlaubnisse_lehnt_die_pruefung_ab(self):
         schlecht = [
             {'werkzeug': 'datei_schreiben', 'muster': '**'}, {'werkzeug': 'datei_aendern', 'muster': '*'}, {'werkzeug': 'datei_aendern', 'muster': '../x/**'},

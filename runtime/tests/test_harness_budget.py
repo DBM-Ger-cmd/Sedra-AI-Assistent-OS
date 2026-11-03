@@ -38,9 +38,9 @@ class DenkenFrisstBudget(Basis):
         self.assertEqual(erster['max_tokens'], 2048)
         self.assertNotIn('thinking_budget_tokens', erster)
         self.assertEqual(zweiter['max_tokens'], 4096)                                        # doppeltes Budget
-        self.assertEqual(zweiter['thinking_budget_tokens'], schleife.DENKEN_BUDGET)          # begrenztes Denken
+        self.assertNotIn('thinking_budget_tokens', zweiter)                                  # das Denken wird nicht beschnitten
         self.assertNotIn('tools', zweiter)                                                   # und ohne Werkzeuge, wie bisher
-        self.assertIn(('denken.begrenzt', {'max_tokens': 4096, 'budget': schleife.DENKEN_BUDGET}), self.ereignisse())
+        self.assertIn(('denken.begrenzt', {'max_tokens': 4096}), self.ereignisse())
 
     def test_ist_auch_der_zweite_versuch_leer_sagt_der_fehler_was_zu_tun_ist(self):
         a = Attrappe([Zug('', denken='x', finish='length'), Zug('', denken='y', finish='length')])
@@ -51,15 +51,26 @@ class DenkenFrisstBudget(Basis):
         self.assertIn('Token und Gespräch', out['grund'])
         self.assertEqual(len(a.requests), 2)                                                 # nicht endlos weiter
 
-    def test_das_budget_wird_nie_ueber_8192_verdoppelt_und_ein_gewaehltes_denken_bleibt(self):
+    def test_das_budget_wird_nie_ueber_16384_verdoppelt_und_ein_gewaehltes_denken_bleibt(self):
         a = Attrappe([Zug('', finish='length'), Zug('ok')])
-        self.lauf(a, max_tokens=8192)
-        self.assertEqual(a.requests[1]['max_tokens'], 8192)
+        self.lauf(a, max_tokens=16384)
+        self.assertEqual(a.requests[1]['max_tokens'], 16384)
         b = Attrappe([Zug('', finish='length'), Zug('ok')])
         self.antwort = Stroeme().anlegen(self.sitzungen.anlegen('p')['id'])
         self.lauf(b, max_tokens=2048, denk_modus='aus')
         self.assertEqual(b.requests[1]['reasoning_effort'], 'none')                          # „aus“ bleibt aus, es wird nicht auf „begrenzt“ gedreht
         self.assertNotIn('thinking_budget_tokens', b.requests[1])
+
+    def test_auch_der_abschlusszug_ohne_werkzeuge_wird_wiederholt_wenn_das_denken_ihn_frisst(self):
+        """Log 03.11.2026, zweite Sitzung: Zug 1 leer ohne Abbruch, der Abschluss-Zug ohne Werkzeuge wurde vom Denken gefressen – dafür griff der zweite Versuch nicht."""
+        a = Attrappe([Zug(''), Zug('', denken='x' * 40, finish='length'), Zug('Jetzt endlich.')])
+        out = self.lauf(a, max_tokens=2048)
+        self.assertEqual((out['ende'], out['text']), ('antwort', 'Jetzt endlich.'))
+        self.assertEqual([r['max_tokens'] for r in a.requests], [2048, 2048, 4096])
+        self.assertNotIn('thinking_budget_tokens', a.requests[1])
+        self.assertNotIn('thinking_budget_tokens', a.requests[2])
+        self.assertTrue(all('tools' not in r for r in a.requests[1:]))
+        self.assertEqual([n for n, _ in self.ereignisse()].count('denken.begrenzt'), 1)       # nur einmal, nicht endlos
 
     def test_eine_normale_antwort_aendert_nichts(self):
         a = Attrappe([Zug('Gleich da.')])
@@ -83,7 +94,7 @@ class OptionUndDatum(unittest.TestCase):
             s = schleife.system_prompt('P', [], vorlage, None, '2026-11-03')
             self.assertIn('Heute ist der 2026-11-03', s)
             self.assertNotIn('Heute ist der', schleife.system_prompt('P', [], vorlage))
-        self.assertIn('Halte dein Denken kurz', schleife.system_prompt('P', [], None))
+        self.assertIn('am Ende steht immer eine Antwort', schleife.system_prompt('P', [], None))
         from guppi_runtime.harness import verbrauch
         self.assertRegex(verbrauch.heute(), r'^\d{4}-\d{2}-\d{2}$')
 
@@ -91,7 +102,6 @@ class OptionUndDatum(unittest.TestCase):
         text = (Path(__file__).resolve().parents[1] / 'config' / 'harness_vorlagen' / 'masterchat.md').read_text(encoding='utf-8')
         self.assertIn('Heute ist der', text)
         self.assertIn('rate nie ein anderes', text)
-        self.assertIn('Halte dein Denken kurz', text)
 
 
 if __name__ == '__main__':
