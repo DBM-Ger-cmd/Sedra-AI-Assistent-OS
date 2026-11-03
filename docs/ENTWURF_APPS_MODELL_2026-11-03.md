@@ -265,6 +265,26 @@ setzt die Obergrenze der Berechtigungen; die Beschäftigten nutzen nur, was blei
 **Was das im Plan bedeutet:** Stufe 0 bis 3 bleiben gültig für den Captain-Betrieb. Rollen, Richtlinie und Profile sind ein **eigener großer Schritt (Stufe 4)** mit eigener Spec; vorher gibt es keine
 Unternehmens-Freigabe des App-Modells. In Stufe 2 reicht es, das Feld `shells:` und `rolle:` im Schema **vorzusehen**, ohne es auszuwerten, damit Manifeste nicht später gebrochen werden.
 
+### 2.2c Langdock anbinden (Captain, 03.11.2026)
+
+Wunsch: SEDRA soll auch mit **Langdock** arbeiten können (Unternehmens-KI-Plattform; für die KMU-Kundschaft naheliegend). Im Repo kommt „Langdock“ bisher nirgends vor.
+Was Langdock genau bietet (Schnittstelle, Hosting, Vertragsunterlagen, Modellliste), habe ich **nicht geprüft** und aus keiner Quelle belegt; die Punkte unten sind Annahmen und vor dem Bau gegen die Unterlagen von Langdock zu prüfen.
+
+Zwei verschiedene Dinge, die man trennen muss:
+
+**(1) Langdock als Modellquelle (Anbieter)** – SEDRA schickt Anfragen an Langdock, wie es heute an NVIDIA/OpenAI/Anthropic schicken kann.
+- Das ist **keine App**, sondern ein Eintrag im bestehenden Cloud-Zugang: `models/cloud_api.py` (Adapter „OpenAI-kompatibel“, nur https, keine Weiterleitung, Schlüssel nur als `secret://langdock/api-key`), Konfiguration `local_config/cloud_providers.yaml`, Standard aus, `route = "cloud"`, jeder Aufruf durch den Inhaltsschutz (`core/content_guard.py`). Ob Langdock eine OpenAI-kompatible Route anbietet, ist **zu prüfen**; falls ja, braucht es vermutlich nur einen Konfigurationseintrag, falls nein, einen dritten Adapter.
+- **Gateway-Regeln gelten unverändert:** Personendaten bleiben lokal, solange keine Rechtsgrundlage und kein Auftragsverarbeitungsvertrag dokumentiert sind (R-01); Zugangs- und Kartendaten gehen nie hinaus (R-07). Langdock wäre ein *Empfänger* im Sinne des Gateways und braucht einen Eintrag mit Weg, Zweck und dokumentierter Rechtsgrundlage. **Echter Cloud-Versand ist im Gateway-MVP ausdrücklich noch nicht vorgesehen** (`SPEC_GATEWAY_VORGANG_v1.md:77`, im Ist-Stand simuliert); Langdock hängt daran.
+- Im Unternehmen entscheidet der **Betreiber** (Richtlinie, §2.2b), ob und für welche Rollen und Schutzklassen Langdock erlaubt ist. Der Standard ist „nur Schutzklasse ohne Personendaten“, der Schlüssel gehört dem Betreiber, nicht den Beschäftigten.
+
+**(2) Langdock als Gegenstelle / Erweiterung** – Langdock-Assistenten oder -Integrationen sollen auf SEDRA zugreifen oder SEDRA soll Langdock-Dienste als Werkzeug nutzen.
+- Das ist ein **Dienst im Sinne von B5** (Stufe 3b): außerhalb des Prozesses, eigenes Token, Scope nur `/api/objects` und `/api/actions`, Fähigkeiten aus der Berechtigung (Stufe B, „gefährlich“). Die vorhandenen Client-Tokens (`cli`, `mcp`) sind das Muster; ein Client `langdock` wäre ein dritter Herkunftswert, vom Server gesetzt (R4), nie vom Aufrufer.
+- Antworten von Langdock sind **Fremdinhalt** und laufen vor einer Aktion durch den Inhaltsschutz (Anweisungen an die KI im Dokument sperren den Vorgang, R-08/R-09). Eine Anweisung aus Langdock löst nie ein Verb ohne Gate aus.
+- Erst nach der Klärung, **welche** dieser Richtung gemeint ist; sie hat andere Risiken als (1).
+
+Einordnung ins App-Modell: (1) braucht **keine** neue App-Mechanik (Konfiguration + Inhaltsschutz + Richtlinie), (2) hängt an Stufe 3b. Eine App darf nie selbst einen Cloud-Schlüssel halten oder selbst
+nach Langdock senden (Rahmen: `connect-src` leer, §3.3 Nr. 7); alles läuft über den Server und das Gateway. Grundfunktionen und Nachweis (Audit ohne Inhalt, Empfängerverzeichnis) bleiben unverändert.
+
 ### 2.3 Rechte statt Routen
 
 Heute sind „Rechte“ eine Liste von Routen. Das ist für Menschen schwer zu lesen („`POST /api/actions` darf *alles*“, Verben stehen im Body, die Allowlist sieht sie nicht).
@@ -451,6 +471,14 @@ Für fremden Code, der selbst ausgeführt werden soll, gibt es `sandbox/` (micro
 - **Risiko:** hoch. Berührt Token-Vergabe (Kern), Prozessstart (Gate) und den Server-Bau. Deshalb zuletzt, mit eigener Spec.
 - **Tests:** Token-Scope (Verb ohne Fähigkeit → 403 + Audit), Dienst ohne Aktivierung startet nicht, Entzug beendet den Prozess, Client-Feld `mcp` bleibt vom Server gesetzt, Audit-Kette intakt, Fake-Host für `test_desk_*`.
 - **Rückfall:** Dienst-Apps sind ein Schalter (`apps_dienste`, Standard aus); aus = heutiger Zustand der MCP-Clients.
+
+### Stufe 3c – Langdock als Modellquelle (nach Gateway-Cloud-Versand)
+
+- **Inhalt:** Eintrag `langdock` in `cloud_providers.yaml` (oder Adapter, falls die Schnittstelle nicht OpenAI-kompatibel ist), Empfängereintrag im Gateway mit Rechtsgrundlage und Vertragsangabe, Schalter in Einstellungen → Integrationen.
+- **Voraussetzung:** echter Cloud-Versand im Gateway (heute simuliert); Schnittstelle von Langdock geprüft; für Unternehmen Betreiber-Richtlinie (Stufe 4).
+- **Risiko:** mittel bis hoch (Daten verlassen den Rechner). Schutz kommt vom Gateway, nicht vom Anbieter.
+- **Tests:** Personendaten ohne Rechtsgrundlage erreichen Langdock nie (Fake-Server, kein Aufruf); Schlüssel erscheint nie in Datei, Log, Audit oder Fehlermeldung; Weiterleitung und http werden abgelehnt; Anbieter aus = kein Aufruf.
+- **Rückfall:** Anbieter-Schalter aus (Standard).
 
 ### Stufe 4 – Betrieb im Unternehmen (KMU): Rollen, Richtlinie, Profile
 
