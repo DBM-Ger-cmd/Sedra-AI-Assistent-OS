@@ -68,7 +68,7 @@ from . import vorlagen as harness_vorlagen
 from ..models.runtime_control import RuntimeControlError
 from . import vorschau as harness_vorschau
 from .werkzeuge import LAUF as LAUF_WERKZEUGE, SCHEMAS as WERKZEUG_SCHEMAS, Werkzeuge
-from .sitzung import SitzungFehler, Sitzungen, titel_aus
+from .sitzung import ID as SITZUNG_ID, SitzungFehler, Sitzungen, titel_aus
 from .strom import Stroeme, ZuVieleAntworten
 
 TEXT_MAX = 8000
@@ -78,11 +78,11 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token)(?:/(antrag|entfernen|grenzen|notizen|export))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen)(?:/(antrag|entfernen|grenzen|notizen|export))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/grenzen'
-                        r'|verknuepfungen|gedaechtnis|token|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
+                        r'|verknuepfungen|gedaechtnis|token|aufraeumen|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
 # Gedanken und Modelle (Captain 02.11.2026): Sedra speichert die Gedanken je Antwort; ans Modell geht je nach Modus nur wenig zurück.
 #   aus  – nichts, nur Text und Ergebnisse        spur – (Standard) eine Zeile je frühere Antwort: was lief, wie viel Gedanken gespeichert sind; abrufbar mit `erinnern`
 #   kurz – Spur + das Ende der Gedanken der letzten 2 Antworten (je 800 Zeichen)        voll – Spur + die letzten 4 (je 6 000 Zeichen)
@@ -268,6 +268,8 @@ class HarnessApi:
             return 200, self.vorgaben_setzen(payload)
         if fest == 'modelle' and method == 'GET' and not unter:
             return 200, self.modelle()
+        if fest == 'aufraeumen' and not unter and method == 'POST':
+            return 200, self.aufraeumen(payload)
         if fest == 'token' and not unter and method == 'GET':
             return 200, self.token_stand((q.get('sitzung') or [''])[0])
         if fest == 'gedaechtnis' and unter in (None, '', 'notizen', 'export'):
@@ -370,6 +372,22 @@ class HarnessApi:
         s = self.sitzungen.laden(sid)
         self._melden('harness.sitzung', {'id': sid, 'was': 'geaendert', 'titel': s['titel']})
         return dict(s, id=sid)
+
+    def aufraeumen(self, payload):
+        """POST aufraeumen {ids: [S-…]}: mehrere Sitzungen auf einmal nach geloescht/ verschieben (wie das Löschen einer einzelnen: nichts wird wirklich gelöscht, eine laufende Antwort
+        hält sie zurück). Rückgabe: was verschoben wurde und was warum übersprungen."""
+        ids = (payload or {}).get('ids')
+        if not isinstance(ids, list) or not ids or len(ids) > 200 or not all(isinstance(i, str) and SITZUNG_ID.fullmatch(i) for i in ids):
+            raise ValueError('ids_ungueltig: eine Liste von 1 bis 200 Sitzungs-IDs')
+        verschoben, uebersprungen = [], []
+        for sid in dict.fromkeys(ids):
+            try:
+                self.loeschen(sid)
+                verschoben.append(sid)
+            except (ValueError, NichtGefunden, SitzungFehler) as exc:
+                uebersprungen.append({'id': sid, 'grund': str(exc)})
+        self._audit('HARNESS_SITZUNGEN_AUFGERAEUMT', {'verschoben': len(verschoben), 'uebersprungen': len(uebersprungen)})
+        return {'verschoben': verschoben, 'uebersprungen': uebersprungen}
 
     def loeschen(self, sid):
         s = self._sitzung(sid)

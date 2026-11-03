@@ -7,7 +7,6 @@
   const d = ()=>root.sedraDom;
   const ZU_KEY = 'sedra.harness.projekte.zu';
   const ALT_KEY = 'sedra.harness.projekte.alt';            // Projekte, deren Block „Ältere Sitzungen“ offen ist (nur IDs)
-  const ALT_TAGE = 7;
   const HILFE = [
     ['Was ist ein Projekt?', 'Ein Arbeitsordner mit eigenen Sitzungen, Freigaben und einem Vorarbeiter. SEDRA arbeitet nur in dessen Ordner.'],
     ['Sitzung anlegen', '„+ Neue Sitzung“ oben oder „Neue Sitzung starten“ unter einem Projekt; die Projektwahl steht unter dem Eingabefeld.'],
@@ -38,7 +37,8 @@
   function istAlt(S, s){                      // älter als 7 Tage; die aktive Sitzung und Vorarbeiter-Sitzungen bleiben immer oben
     const t = new Date(s.zuletzt || s.angelegt || 0).getTime();
     const aktiv = S.aktive() && S.aktive().id === s.id;
-    return !aktiv && s.vorlage !== 'vorarbeiter' && !s.laeuft && t > 0 && Date.now() - t > ALT_TAGE * 86400000;
+    const sl = root.sedraHarness.seitenleiste, tage = sl.altTage();                           // wählbar (⋯): 3, 7, 14, 30 Tage oder nie; mit einem Suchtext bleibt alles sichtbar
+    return !aktiv && s.vorlage !== 'vorarbeiter' && !s.laeuft && t > 0 && tage > 0 && !sl.filterText(S) && Date.now() - t > tage * 86400000;
   }
 
   function hilfe(S){
@@ -74,6 +74,8 @@
     exp.onclick = e=>{ e.stopPropagation(); exportieren(S, s.id); };
     const haupt = d().clickable(d().el('div', 'hs-sz-haupt'), ()=>root.sedraHarness.reiter.oeffnen(S, s.id));
     haupt.append(titel, zeitEl);
+    const hk = root.sedraHarness.seitenleiste.haken(S, s, ()=>zeichnen(S, true));            // Auswahl-Modus: ein Haken vor der Zeile
+    if(hk) row.append(hk);
     row.append(haupt);
     if(s.vorlage === 'vorarbeiter'){                    // nur der Captain ernennt (Stufe 3, HS-26)
       const ern = d().el('button', 'hs-sz-knopf' + (istVorarbeiter ? ' an' : ''), istVorarbeiter ? '⚑' : '⚐'); ern.type = 'button';
@@ -157,10 +159,10 @@
 
   const FREIGABE_DIREKT = ['request:harness_projekt'];
 
-  function zeichnen(S){
+  function zeichnen(S, erzwingen){
     const el = S.el.seite;
-    // A9 (1.11.): ein offenes Umbenennen-Feld oder eine Lösch-Rückfrage überlebt Ereignisse – der Neuaufbau wartet, bis sie fertig sind
-    if(el.querySelector('.hs-sz-feld:not([data-fertig]), .hs-sz-frage:not([data-fertig])')){ S._seiteAufgeschoben = true; return; }
+    // A9 (1.11.): ein offenes Umbenennen-Feld oder eine Lösch-Rückfrage überlebt Ereignisse – der Neuaufbau wartet, bis sie fertig sind; ebenso das Suchfeld, solange man darin tippt
+    if(!erzwingen && el.querySelector('.hs-sz-feld:not([data-fertig]), .hs-sz-frage:not([data-fertig]), .hs-sz-filter:focus')){ S._seiteAufgeschoben = true; return; }
     S._seiteAufgeschoben = false;
     const zu = zugeklappt();
     const neu = d().button('+ Neue Sitzung', ()=>root.sedraHarness.reiter.neu(S), 'p hs-neu');
@@ -169,9 +171,10 @@
     const projekteBox = d().el('div', 'hs-projekte');
     if(S.projektFehler) projekteBox.append(d().el('div', 's-note warn', 'Projekte: ' + S.projektFehler));
     S.projekte.forEach(p=>{
-      const eigene = S.sitzungen.filter(s=>s.projekt === p.id);
+      const alle = S.sitzungen.filter(s=>s.projekt === p.id);
+      const eigene = root.sedraHarness.seitenleiste.ordnen(S, alle);                        // gefiltert und sortiert (⋯)
       const inhalt = d().el('div', 'hs-sz-liste');
-      if(!eigene.length){
+      if(!alle.length){
         inhalt.append(d().el('small', 'hs-leise', 'Noch keine Sitzung. '), d().button('Neue Sitzung starten', ()=>root.sedraHarness.reiter.neu(S)));
       }
       const neuere = eigene.filter(s=>!istAlt(S, s)), aeltere = eigene.filter(s=>istAlt(S, s));
@@ -185,7 +188,7 @@
       }
       const offen = !zu.has(p.id);
       const g = gruppe(p.name, inhalt, offen, ()=>{ offen ? zu.add(p.id) : zu.delete(p.id); merken(zu); zeichnen(S); });
-      g.title = projektInfo(S, p, eigene);
+      g.title = projektInfo(S, p, alle);
       projekteBox.append(g);
     });
     const kopf = d().el('div', 'hs-ueber hs-projekte-kopf');
@@ -195,8 +198,8 @@
     kopf.append(d().el('span', null, 'Projekte'), fragezeichen);
     liste.append(kopf, d().el('small', 'hs-leise hs-projekte-satz', 'Ein Projekt ist ein Arbeitsordner mit eigenen Sitzungen, Freigaben und einem Vorarbeiter.'));
     if(S._projekteHilfe) liste.append(hilfe(S));
-    liste.append(projekteBox);
-    const chats = S.sitzungen.filter(s=>!ids.has(s.projekt));
+    liste.append(root.sedraHarness.seitenleiste.werkzeugzeile(S, ()=>zeichnen(S, true)), projekteBox);
+    const chats = root.sedraHarness.seitenleiste.ordnen(S, S.sitzungen.filter(s=>!ids.has(s.projekt)));
     const chatBox = d().el('div', 'hs-sz-liste');
     if(!chats.length) chatBox.append(d().el('small', 'hs-leise', 'Keine Sitzung ohne Projekt'));
     chats.forEach(s=>chatBox.append(zeile(S, s)));

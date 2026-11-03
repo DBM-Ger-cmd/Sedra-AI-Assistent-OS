@@ -192,6 +192,13 @@
 .hs-token-verbrauch{display:grid;grid-template-columns:max-content max-content 1fr;gap:4px 14px;align-items:baseline;margin-bottom:6px}
 .hs-token-kopf{grid-column:1/-1;margin-top:8px;font-weight:600;color:var(--muted);font-size:var(--size-small)}
 .hs-token-wert{font-variant-numeric:tabular-nums}
+.hs-sl-werkzeuge{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.hs-sl-zeile{display:flex;gap:4px;align-items:center}
+.hs-sz-filter{flex:1 1 auto;min-width:0;font:inherit;font-size:var(--size-small);color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:4px 8px}
+.hs-sl-menue,.hs-sl-auswahl{display:flex;flex-direction:column;gap:6px;padding:6px;border:1px solid var(--line-soft);border-radius:var(--radius)}
+.hs-sl-opt{display:flex;flex-direction:column;gap:2px}
+.hs-sl-knoepfe{display:flex;gap:4px;flex-wrap:wrap}
+.hs-sz-haken{flex:0 0 auto;margin:0 4px 0 0}
 .hs-spar-zeile{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
 .hs-gedaechtnis-block{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
 .hs-gedaechtnis-feld{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto;padding:6px;border:1px solid var(--line-soft);border-radius:var(--radius)}

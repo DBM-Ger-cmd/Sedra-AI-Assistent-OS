@@ -3,7 +3,7 @@ arbeitsplatz:
   satz: Das Gespräch in der Mitte, links die Sitzungen, oben Reiter, unten die Taskleiste.
   zonen:
   - name: Seitenleiste
-    wo: 'links: Neue Sitzung, Projekte mit ihren Sitzungen, Chats, Einstellungen; Strg+B blendet sie ein und aus'
+    wo: 'links: Neue Sitzung, darunter eine Suche und die Knöpfe ☑ (mehrere Sitzungen auswählen und auf einmal nach geloescht/ verschieben, mit Schnellauswahl für gleiche Titel, Ältere und fast Leere) und ⋯ (Sortierung, Älteres einklappen ab 3/7/14/30 Tagen oder nie), Projekte mit ihren Sitzungen, Chats, Einstellungen; Strg+B blendet sie ein und aus'
   - name: Posteingang
     wo: 'links unten in der Seitenleiste, über Aufgaben: der Knopf zeigt, wie viele Anträge auf den Captain warten (Ordner als Projekt, Katalog, Schalter …) und blinkt bei einem neuen; ein Klick klappt die Liste auf, dort wird direkt freigegeben (mit „Sicher?“) oder abgelehnt, „Genau ansehen“ öffnet die Entscheidungen'
   - name: Verknüpfungen

@@ -89,6 +89,8 @@ Token sparen als Optionen und Gedächtnis verwalten (03.11.2026), alles auf der 
 - **Gedächtnis:** je Projekt ansehen (neueste zuerst, Suche, einzelne Notiz löschen), als Markdown exportieren, alles löschen (zweiter Klick zur Bestätigung). Löschen nur über die Oberfläche (Herkunftsprüfung), Audit `HARNESS_GEDAECHTNIS_GELOESCHT`.
 - **Denken sichtbar:** im scharfen Modus bleibt das Denken beim Streamen verborgen; nach dem Ende der Antwort holt die Zeile „Dachte nach“ es aus der Sitzung (ungeprüft markiert). Antworten von vor dem Speichern der Gedanken zeigen „nicht gespeichert“.
 
+Seitenleiste (03.11.2026, `uix/shells/harness/seitenleiste.js`): Suchfeld über den Sitzungen; ⋯ mit Sortierung (neueste, älteste, Titel) und „Ältere einklappen ab“ (3, 7, 14, 30 Tage oder nie; nur im Browser gemerkt); ☑ Auswahl-Modus mit Haken je Sitzung, Schnellauswahl (gleiche Titel – die neueste bleibt, ältere als die Einklapp-Grenze, fast leere, alle sichtbaren; nie laufende, aktive und Vorarbeiter-Sitzungen) und „Löschen (n)“ mit zweitem Klick. Server: `POST /api/harness/aufraeumen {ids}` (bis 200, nur der Captain) verschiebt nach geloescht/ – wie das Löschen einzelner Sitzungen, nichts wird wirklich gelöscht; eine laufende Antwort hält die Sitzung zurück.
+
 Noch offen:
 - Punkt 6 (Aussage „ich nutze jetzt Ordner X“ gegen die Sitzung prüfen): noch nicht gebaut; mit `projekt_beantragen` weniger dringend.
 - Die Vorlagen der Sitzungen (bauagent, modellierer, pruefer) nennen `app_oeffnen` und `projekt_beantragen` noch nicht; Sitzungen ohne Vorlage haben beide.
