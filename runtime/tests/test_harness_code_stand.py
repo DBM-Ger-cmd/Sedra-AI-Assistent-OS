@@ -350,6 +350,18 @@ class Konsole(Projekt):
         self.assertEqual((r.returncode, json.loads(r.stdout)['anzahl']), (0, 1), r.stderr)
         self.assertEqual(self.cs.ungesehen(), [])
 
+    def test_pipe_mit_cp1252_wie_unter_windows(self):
+        """Unter Windows ist eine Pipe cp1252; „■“ (gelöschte Datei) ließ den Aufruf abstürzen. Beide Einstiege geben UTF-8 aus."""
+        import subprocess, sys
+        self.cs.stand()
+        (self.root / 'tools' / 'skript.py').unlink()
+        env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1] / 'src'), PYTHONIOENCODING='cp1252')
+        for aufruf in (['-m', 'guppi_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p'],
+                       ['-m', 'guppi_runtime', '--root', str(self.wurzel_root), 'code-stand', 'p']):
+            r = subprocess.run([sys.executable, *aufruf], capture_output=True, env=env, timeout=120)
+            self.assertEqual(r.returncode, 0, r.stderr.decode('utf-8', 'replace'))
+            self.assertIn('■ tools/skript.py – gelöscht', r.stdout.decode('utf-8'))
+
     def test_unbekanntes_projekt(self):
         code, text = self.cli('gibt-es-nicht')
         self.assertEqual(code, 2)

@@ -342,6 +342,15 @@ def konsole(root, projekt_id, uebernehmen=False):
     return 0, (cs.vorschau(liste, begrenzt=False)[0] if liste else f"Kein ungesehener Code im Projekt {projekt['id']}.")
 
 
+def utf8_ausgabe():
+    """Unter Windows ist eine Pipe cp1252: „■“ der Vorschau ließ den Aufruf abstürzen. Gilt für beide Einstiege (main und `guppi code-stand`)."""
+    import sys
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except (AttributeError, ValueError):        # z. B. StringIO in Tests
+        pass
+
+
 def main(argv=None):
     """`python -m guppi_runtime.harness.code_stand --root <projektordner> <projekt> [--zeigen | --uebernehmen]` (so ruft es CODE_STAND.bat).
     `--zeigen` ist der Standard und darf fehlen; die Karte nennt ihn ausdrücklich."""
@@ -353,11 +362,7 @@ def main(argv=None):
     art.add_argument('--zeigen', action='store_true', help='ungesehenen Code mit Diff zeigen (Standard)')
     art.add_argument('--uebernehmen', action='store_true', help='den aktuellen Stand als gesehen übernehmen')
     a = p.parse_args(argv)
-    import sys
-    try:
-        sys.stdout.reconfigure(encoding='utf-8')          # unter Windows ist eine Pipe cp1252: „■“ und „–“ der Vorschau liessen den Aufruf abstuerzen
-    except (AttributeError, ValueError):
-        pass
+    utf8_ausgabe()
     code, text = konsole(a.root, a.projekt, a.uebernehmen)
     print(text)
     return code

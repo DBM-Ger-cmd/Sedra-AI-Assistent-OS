@@ -34,7 +34,8 @@ def desk_command(args):
 
 def code_stand_command(args):
     """`guppi code-stand <projekt> [--zeigen | --uebernehmen]` (SPEC_APPS_v1 G4-16; --zeigen ist der Standard) – dieselbe Funktion wie `python -m guppi_runtime.harness.code_stand`."""
-    from .harness.code_stand import konsole
+    from .harness.code_stand import konsole, utf8_ausgabe
+    utf8_ausgabe()                          # wie der schlanke Einstieg: unter Windows ist eine Pipe cp1252
     code,text=konsole(args.root,args.projekt,args.uebernehmen)
     print(text); return code
 
