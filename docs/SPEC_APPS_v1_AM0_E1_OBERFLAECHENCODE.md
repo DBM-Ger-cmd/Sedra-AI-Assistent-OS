@@ -260,4 +260,4 @@ Offene Fragen für dieses spätere G1: Wie arbeitet der Captain im Alltag mit zw
 
 **Entschieden vom Captain am 03.11.2026 (zweiter Schritt):** G9 (Bestätigung außerhalb des Browsers für Klasse H, Konsole als Ersatz), G10 (Kanal im Audit), G11 (Vollständigkeitstest der Freigabe-Wege) übernommen. Die Klasseneinteilung H/N aus §5b.3 (Unbekanntes = H) ist die Grundlage von G9 und gilt damit als mit übernommen; wenn der Captain sie einzeln ändern will, ist das in G2 von G9 möglich.
 
-Nächster Schritt: G2 für G4 in `docs/SPEC_APPS_v1_G4_MODELLCODE_G2.md`.
+Nächster Schritt: G2 für G4 in `docs/SPEC_APPS_v1_G4_MODELLCODE_G2.md` (gebaut, Release 1.22.0). G2 für O3+ und G9–G11: `docs/SPEC_APPS_v1_O3PLUS_G9_G2.md` (03.11.2026, wartet auf Freigabe).
