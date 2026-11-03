@@ -1,6 +1,6 @@
 @echo off
 rem SEDRA - Code, den du in dieser Fassung noch nicht gesehen hast (SPEC_APPS_v1 G4), ausserhalb des Browsers ansehen und uebernehmen.
-rem   CODE_STAND.bat <projekt>                -> zeigt ihn (mit Diff, wo die gesehene Fassung vorliegt)
+rem   CODE_STAND.bat <projekt> [--zeigen]     -> zeigt ihn (mit Diff, wo die gesehene Fassung vorliegt); --zeigen ist der Standard
 rem   CODE_STAND.bat <projekt> --uebernehmen  -> der aktuelle Stand gilt als gesehen (z. B. nach eigener Arbeit oder git pull)
 rem Projekt-ID wie in der Harness, Standard: sedra-entwicklung. Gleiche Ablage wie die Oberflaeche (workspace\GUPPI_OS\runtime_data\harness\code_stand).
 rem Pfade und Python wie START_SEDRA.bat; schlanker Einstieg ohne die ganze Runtime (laeuft auch auf dem USB-Stick).
@@ -21,7 +21,7 @@ exit /b 2
 
 :los
 if "%~1"=="" (
-  echo Aufruf: CODE_STAND.bat ^<projekt^> [--uebernehmen]   z. B. CODE_STAND.bat sedra-entwicklung
+  echo Aufruf: CODE_STAND.bat ^<projekt^> [--zeigen ^| --uebernehmen]   z. B. CODE_STAND.bat sedra-entwicklung
   exit /b 2
 )
 cd /d "%RT%"
