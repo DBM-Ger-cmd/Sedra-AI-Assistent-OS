@@ -216,12 +216,54 @@ Was der Captain zum Entscheiden, Prüfen und Schützen braucht, darf nicht von d
 (Liste ist ein Vorschlag; der Captain streicht oder ergänzt. Der Kern der Liste ist: alles, was Freigabe, Nachweis, Schutz oder Rechte berührt.)
 
 Regeln:
-1. **Eine Shell darf Grundfunktionen anders *zeichnen* (Layout, Platz), aber nicht weglassen, umbenennen oder ersetzen.** Prüfung: Eine Shell, deren `provides`/Orte eine Grundfunktion nicht anbieten, wird beim Laden abgewiesen (`grundfunktion_fehlt:<id>`); `uix_check` prüft es je Shell.
+1. **Eine Shell darf Grundfunktionen anders *zeichnen* (Layout, Platz), aber nicht umbenennen oder ersetzen, und sie muss jede für die passende Rolle *erreichbar* machen** (§2.2b: nicht jede Rolle sieht jede Grundfunktion). Prüfung: Eine Shell, über die eine Grundfunktion für ihre Rolle nicht erreichbar ist, wird beim Laden abgewiesen (`grundfunktion_fehlt:<id>`); `uix_check` prüft es je Shell. **Achtung, Ist-Stand:** `gateway-kmu` bietet nur `[dock, talk]` und eine Antwortroute für Freigaben (`shell.yaml`); die Prüfung würde sie heute abweisen. Einführung deshalb zuerst als Warnung.
 2. **`grundfunktion: true` kann nur das Paket setzen** (wie `CORE`); in `local_config` oder aus dem Einbau-Gate wird das Feld abgewiesen. Eine Shell-eigene App (§2.2a) kann keine Grundfunktion sein.
 3. **`shells:` gilt für Grundfunktionen nicht** (immer alle). Eine Shell kann sie weder ausblenden noch auf sich beschränken.
 4. **Eine Shell-eigene App darf eine Grundfunktion nicht überdecken**: gleicher Ort oder gleiche Wörter wie eine Grundfunktion = Kollision, abgewiesen (Nr. 11 in §3.3).
 5. **Freigaben und Berechtigungen werden nur in der Grundfunktion erteilt**, nie in einer Shell-App (§2.6 gilt unverändert).
 6. Die übrigen Apps (Wissen, Hardware, Rekorder, Übersetzer, GateWay …) sind **frei verteilbar**: gemeinsam, nur für ausgewählte Shells oder nur in einer Shell.
+
+### 2.2b Die KMU-Shell: Betrieb im Unternehmen
+
+Die Shell „KI Gateway für KMU“ (`gateway-kmu`) zielt auf die künftige Kundschaft: Unternehmen, die Dokumente mit KI bearbeiten und für ihre Beschäftigten eine **kontrollierte Umgebung**
+brauchen (Datenschutz, EU-Regeln für KI). Sie hat andere Probleme als die Captain-Shells. Das App-Modell muss sie von Anfang an mitdenken, sonst wird es später umgebaut.
+
+**Ist-Stand (aus dem Code und den Dokumenten):**
+- `uix/shells/gateway-kmu/shell.yaml`: `provides: [dock, talk]`, `trust: CAPTAIN`, nur Route `POST /api/decisions/answer`. Keine Leiste, kein Baum, kein Posteingang, keine Einstellungen. Das Werkstück ist das Gateway-Werkzeug; Nachweis-Werkzeuge zeigt sie nicht (README).
+- Der Kern setzt Schutzregeln R-01 bis R-16 durch (`gateway/klassen.py`), Personendaten bleiben lokal ohne Rechtsgrundlage, eine Freigabe gilt einmal und ist an Anfrage, Dokument, Schutzklasse, Weg, Zweck und **verantwortliche Person** gebunden, das Audit speichert Prüfsummen und Gründe, **nie den Inhalt** (`SEDRA_KERN_UND_KMU_SHELL_AUSFUEHRLICH_2026-10-20.md` §2.3).
+- **Rollen und Berechtigungen sind im Gateway-MVP ausdrücklich ausgeschlossen** (`SPEC_GATEWAY_VORGANG_v1.md:77`). Es gibt einen Captain, nicht „Beschäftigte“. Das ganze Berechtigungsmodell dieses Entwurfs (§2.3, §5) kennt bisher auch nur einen Gewährenden.
+
+**Was im Unternehmen anders ist:**
+
+| Thema | Captain-Betrieb heute | Unternehmen |
+|---|---|---|
+| Wer gewährt Rechte? | der Captain | ein **Betreiber** (Administration), nicht die Beschäftigten |
+| Wer arbeitet? | der Captain | **mehrere Beschäftigte** mit Rollen (z. B. Sachbearbeitung, Prüfung, Datenschutz, Leitung) |
+| Welche Apps? | Captain wählt frei | **Positivliste des Betriebs**: nur freigegebene Apps; nie `COMMUNITY` ohne Prüfung durch den Betreiber |
+| Entscheidungen | Captain gibt frei | die **verantwortliche Person** je Vorgang entscheidet; Betreiber sieht, entscheidet nicht anstelle |
+| Nachweis | Audit-Kette | Nachweis für Dritte (Revision, Aufsicht): lückenlos, ohne Inhalt, exportierbar; Aufbewahrung festgelegt |
+| Dokumente | Dateien im Projekt | **Dokumentenverwaltung** mit Klassen, Ablage, Zugriff je Rolle |
+| Schutzeinstellungen | Captain stellt Modus/Grenzen | **vom Betreiber festgelegt**, Beschäftigte können sie nicht lockern |
+| Einstellungen/Module | sichtbar | für Beschäftigte **nicht sichtbar**, nur für den Betreiber |
+
+**Abbildung auf Android:** Das ist der Fall „Arbeitsprofil mit Geräterichtlinie“ (Work Profile / Device Owner). Der Betreiber ist der Richtliniengeber, bestimmt die erlaubten Apps und
+setzt die Obergrenze der Berechtigungen; die Beschäftigten nutzen nur, was bleibt. Der Kern bleibt derselbe, es kommt eine **Richtlinie** darüber.
+
+**Folgen für das App-Modell:**
+1. **Rolle als neue Achse** neben Vertrauensstufe und Shell. Eine Berechtigung gilt `für Rolle X`. Die Rollen kommen aus dem Kern (Konto/Profil), nie aus einer App oder Shell.
+2. **Betreiber-Richtlinie** (Datei unter `local_config/`, Vorbehalt, nur vom Betreiber über Gate änderbar): erlaubte Apps (Positivliste), Obergrenze der Berechtigungen (z. B. „kein Dienst-Prozess, keine Zellen, keine Netzfähigkeit, `COMMUNITY` verboten“), erlaubte Shells. Sie liegt **über** der Captain-Gewährung (§5); die engere Grenze gewinnt.
+3. **Grundfunktionen nach Rolle statt „überall sichtbar“.** Die Liste in §2.2a bleibt (vom Captain bestätigt), wird aber geteilt:
+   - *Für alle Rollen erreichbar:* Gespräch, Entscheidungen (die eigenen Vorgänge), Aufgaben (die eigenen).
+   - *Nur Betreiber/Prüfung/Datenschutz:* Logbuch, Modus und Grenzen, Module und Berechtigungen, Einstellungen und Zustand.
+   Gleich bleibt der **Name, die Bedeutung und der Kernweg**; verschieden ist, **wer sie sieht**. In der KMU-Shell fehlen sie für Beschäftigte also zu Recht, aber der Betreiber muss sie in dieser Shell erreichen (eigener Zugang „Verwaltung“, der dieselben Grundfunktionen öffnet, kein Nachbau).
+4. **Shell-eigene Apps der KMU-Shell** (§2.2a) sind der richtige Ort für das Fachliche: Dokumentenverwaltung, Vorgangsliste, Schutzklassen-Übersicht, Verzeichnis der eingesetzten KI. Sie kommen als Paket-Apps (`CORE`/Paket) in `uix/shells/gateway-kmu/apps/`. Die Captain-Shells müssen sie nicht zeigen.
+5. **Schreiben und Entscheiden bleibt Kern.** Eine Dokumenten-App darf Dokumente anzeigen und Verben beantragen, aber weder Schutzklassen ändern noch freigeben (§2.6). Zugriff auf Dokumente je Rolle entscheidet der Kern, nicht die App.
+6. **Audit und Nachweis (EU-Regeln für KI).** Die vorhandene Hash-Kette ohne Inhalt trägt die Protokollpflicht gut. Was das Modell zusätzlich bieten muss: je App und Rolle ein **Verzeichnis der Berechtigungen** (wer hat was wann gewährt, exportierbar), Protokoll der Aktivierung/Entziehung, Kennzeichnung von KI-Ausgaben, und der Weg **menschliche Aufsicht** (Prüfen vor Freigeben) ist schon die Grundlage des Gateways. Welche Pflichten im Einzelfall gelten (Rolle als Anbieter oder Betreiber, Risikoklasse, Fristen), ist eine **rechtliche Frage**: dieser Entwurf macht keine Rechtsberatung und nennt keine Artikel als erfüllt; das muss mit Fachleuten geklärt werden.
+7. **Isolation wird wichtiger, nicht weniger.** Mehrere Beschäftigte teilen einen Browser/Rechner? Dann darf eine App nicht Daten einer Rolle in die einer anderen tragen: Ablage der Apps (`gedaechtnis`) wird je Profil getrennt, Ereignisse mit Inhalt (B4 `inhalt`) fließen nie an Apps fremder Rollen.
+8. **Updates des Betreibers**: ein Update einer App ändert bei Unternehmen nichts ohne Freigabe des Betreibers; Rückweg ist Pflicht (die Update-Mechanik im Repo hat Sicherung und Rückweg, `update_anwenden.py`).
+
+**Was das im Plan bedeutet:** Stufe 0 bis 3 bleiben gültig für den Captain-Betrieb. Rollen, Richtlinie und Profile sind ein **eigener großer Schritt (Stufe 4)** mit eigener Spec; vorher gibt es keine
+Unternehmens-Freigabe des App-Modells. In Stufe 2 reicht es, das Feld `shells:` und `rolle:` im Schema **vorzusehen**, ohne es auszuwerten, damit Manifeste nicht später gebrochen werden.
 
 ### 2.3 Rechte statt Routen
 
@@ -409,6 +451,13 @@ Für fremden Code, der selbst ausgeführt werden soll, gibt es `sandbox/` (micro
 - **Risiko:** hoch. Berührt Token-Vergabe (Kern), Prozessstart (Gate) und den Server-Bau. Deshalb zuletzt, mit eigener Spec.
 - **Tests:** Token-Scope (Verb ohne Fähigkeit → 403 + Audit), Dienst ohne Aktivierung startet nicht, Entzug beendet den Prozess, Client-Feld `mcp` bleibt vom Server gesetzt, Audit-Kette intakt, Fake-Host für `test_desk_*`.
 - **Rückfall:** Dienst-Apps sind ein Schalter (`apps_dienste`, Standard aus); aus = heutiger Zustand der MCP-Clients.
+
+### Stufe 4 – Betrieb im Unternehmen (KMU): Rollen, Richtlinie, Profile
+
+- **Inhalt:** Rollen aus dem Kern, Betreiber-Richtlinie (Positivliste, Obergrenzen), Grundfunktionen nach Rolle, Verwaltungszugang in `gateway-kmu`, Shell-eigene Fach-Apps (Dokumentenverwaltung u. a.), getrennte Ablage je Profil, exportierbares Berechtigungsverzeichnis.
+- **Risiko:** hoch. Berührt das Konto-/Profilmodell, das bisher nur den Captain kennt, und den Gateway-MVP, der Rollen ausschließt. Rechtliche Anforderungen sind mit Fachleuten zu klären, bevor etwas als „konform“ bezeichnet wird.
+- **Tests:** Beschäftigte sehen/erreichen keine Betreiber-Grundfunktion; Betreiber-Obergrenze schlägt Captain-Gewährung; App außerhalb der Positivliste lädt nicht; Daten einer Rolle erscheinen nie bei einer anderen (Ablage, Ereignisse); Audit bleibt ohne Inhalt und intakt.
+- **Rückfall:** Schalter `betrieb_unternehmen`, Standard aus; aus = Captain-Betrieb wie bisher.
 
 ---
 
