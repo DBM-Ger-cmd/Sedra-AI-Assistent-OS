@@ -189,6 +189,9 @@
 .hs-kontext.warn{color:var(--warn);border-color:var(--warn-line)}
 .hs-kontext.bad{color:var(--bad);border-color:var(--bad-line);font-weight:600}
 .hs-zusammenfassung summary{cursor:pointer;color:var(--muted);font-size:var(--size-small)}
+.hs-token-verbrauch{display:grid;grid-template-columns:max-content max-content 1fr;gap:4px 14px;align-items:baseline;margin-bottom:6px}
+.hs-token-kopf{grid-column:1/-1;margin-top:8px;font-weight:600;color:var(--muted);font-size:var(--size-small)}
+.hs-token-wert{font-variant-numeric:tabular-nums}
 .hs-senden{flex:0 0 auto;border:0;border-radius:var(--radius);padding:6px 14px;background:var(--accent);color:var(--accent-text);cursor:pointer;font:inherit;font-weight:600}
 .hs-senden.stopp{background:var(--bad);color:var(--accent-text)}
 .hs-kein-modell{padding:6px 10px;border-radius:var(--radius);background:var(--warn-bg);border:1px solid var(--warn-line);font-size:var(--size-small)}

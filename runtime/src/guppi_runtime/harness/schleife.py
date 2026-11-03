@@ -135,6 +135,7 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
     warte_karte = None
     zug = 0
     aufruf_nr = 0
+    modell_s = 0.0                         # Summe der Zeit in Modellaufrufen (ohne Werkzeuge): Token je Sekunde = aus / modell_s
     letzte_belegung = None                 # die echte Belegung des letzten Aufrufs: {'belegt', 'anzahl'} – Grundlage der Schätzung vor dem nächsten
     kontext_stand = None                   # [belegt, fenster] zuletzt gemeldet; steht mit in der Sitzungszeile (Füllstand nach dem Neuladen)
     while zug < max_zuege:
@@ -189,10 +190,12 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
         if schemas:
             request['tools'] = relax_schema(schemas)
             request['tool_choice'] = 'auto'               # HS-15: immer auto
+        t_modell = clock()
         try:
             out = execute(mission, request)
         except Exception as exc:                          # control fängt selbst; das hier ist nur der letzte Schutz
             out = {'status': 'failed', 'error': f'{type(exc).__name__}:{exc}'}
+        modell_s += clock() - t_modell
         if antwort.abbruch.is_set():
             r = out.get('model_result') or {}
             if out.get('status') == 'completed' and (r.get('content') or '').strip():
@@ -324,6 +327,6 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
     ergebnis = {'ende': ende, 'text': text, 'zuege': zug, 'token': token, 'denken_zeichen': denken[0], 'werkzeuge': werkzeuge, **extra}
     if sitzungen is not None and sitzung_id:
         sitzungen.anhaengen(sitzung_id, {'typ': 'modell', 'antwort_id': antwort.id, 'text': text, 'denken_zeichen': denken[0], 'ende': ende,
-                                         'zuege': zug, 'token': token, **({'denken_text': ''.join(denktext)} if denktext else {}), **({'denken_ungeprueft': True} if denktext and not live_text else {}), **({'kontext': kontext_stand} if kontext_stand else {}), **extra})
+                                         'zuege': zug, 'token': token, **({'denken_text': ''.join(denktext)} if denktext else {}), **({'denken_ungeprueft': True} if denktext and not live_text else {}), **({'kontext': kontext_stand} if kontext_stand else {}), **({'modell_s': round(modell_s, 1)} if modell_s else {}), **extra})
     antwort.senden('ende', {'ende': ende, 'zuege': zug, 'token': token, **{k: v for k, v in extra.items() if k != 'zurueckgehalten'}})
     return ergebnis

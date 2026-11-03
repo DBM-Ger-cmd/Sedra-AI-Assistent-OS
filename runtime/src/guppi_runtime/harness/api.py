@@ -61,6 +61,7 @@ from . import lauf as harness_lauf
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
 from . import schleife
+from . import verbrauch as harness_token
 from . import verknuepfungen as harness_verknuepfungen
 from . import vorarbeiter as harness_vorarbeiter
 from . import vorlagen as harness_vorlagen
@@ -77,11 +78,11 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis)(?:/(antrag|entfernen|grenzen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token)(?:/(antrag|entfernen|grenzen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/grenzen'
-                        r'|verknuepfungen|gedaechtnis|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
+                        r'|verknuepfungen|gedaechtnis|token|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
 # Gedanken und Modelle (Captain 02.11.2026): Sedra speichert die Gedanken je Antwort; ans Modell geht je nach Modus nur wenig zurück.
 #   aus  – nichts, nur Text und Ergebnisse        spur – (Standard) eine Zeile je frühere Antwort: was lief, wie viel Gedanken gespeichert sind; abrufbar mit `erinnern`
 #   kurz – Spur + das Ende der Gedanken der letzten 2 Antworten (je 800 Zeichen)        voll – Spur + die letzten 4 (je 6 000 Zeichen)
@@ -264,6 +265,8 @@ class HarnessApi:
             return 200, self.vorgaben_setzen(payload)
         if fest == 'modelle' and method == 'GET' and not unter:
             return 200, self.modelle()
+        if fest == 'token' and not unter and method == 'GET':
+            return 200, self.token_stand((q.get('sitzung') or [''])[0])
         if fest == 'gedaechtnis' and not unter:
             return 200, self.gedaechtnis_weg(method, q, payload)
         if fest == 'verknuepfungen' and not unter:
@@ -434,6 +437,29 @@ class HarnessApi:
             return (letzte() if callable(letzte) else '') or None
         except Exception:
             return None
+
+    def token_stand(self, sid=''):
+        """GET token[?sitzung=S-…]: Verbrauch der Sitzung und des heutigen Tages (nur Zahlen) plus die Vorgaben, die den Verbrauch bestimmen."""
+        out = {'sitzung': None, 'heute': None, 'vorgaben': {'gedanken_zurueck': self._gedanken_modus(), 'verlauf_zusammenfassen': self._zusammenfassen_modus(),
+                                                          'gedaechtnis_reichweite': self._reichweite()}}
+        if sid:
+            out['sitzung'] = harness_token.summe(self._sitzung(sid)['eintraege'])
+        tag = harness_token.heute()
+        gesamt = {'antworten': 0, 'zuege': 0, 'ein': 0, 'aus': 0, 'sitzungen': 0, 'modell_s': 0.0}
+        for z in self.sitzungen.liste():
+            if not str(z.get('zuletzt') or '').startswith(tag):
+                continue
+            try:
+                s = harness_token.summe(self.sitzungen.laden(z['id'])['eintraege'], tag)
+            except SitzungFehler:
+                continue
+            if s['antworten']:
+                gesamt['sitzungen'] += 1
+                for k in ('antworten', 'zuege', 'ein', 'aus', 'modell_s'):
+                    gesamt[k] += s[k]
+        gesamt['tok_s'] = round(gesamt['aus'] / gesamt['modell_s'], 1) if gesamt['modell_s'] else None
+        out['heute'] = dict(gesamt, tag=tag, modell_s=round(gesamt['modell_s'], 1))
+        return out
 
     def _zusammenfassen_modus(self):
         v = self._laufzeit_vorgaben().get('verlauf_zusammenfassen')

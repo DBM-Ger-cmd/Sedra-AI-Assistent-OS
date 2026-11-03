@@ -17,7 +17,7 @@ arbeitsplatz:
   - name: Vorschau
     wo: 'neben dem Gespräch: die Datei, an der SEDRA gerade arbeitet (Diff, Lauf-Log); Seite wechseln, zuklappen, festhalten (Strg+Umschalt+X)'
   - name: Taskleiste
-    wo: 'unten: Start (das Start-Menü), offene Sitzungen, Apps und Läufe, rechts der Statusbereich – Freigaben, Modell, GPU mit Temperatur, RAM, Modellserver, Scheduler, Zustand – und die Uhr; ein Klick auf eine Zelle öffnet die App dazu'
+    wo: 'unten: Start (das Start-Menü), offene Sitzungen, Apps und Läufe, rechts der Statusbereich – Freigaben, Token (eingehend ↑ und erzeugt ↓ der Sitzung; Klick öffnet Token und Gespräch), Modell, GPU mit Temperatur, RAM, Modellserver, Scheduler, Zustand – und die Uhr; ein Klick auf eine Zelle öffnet die App dazu'
   - name: Start-Menü
     wo: 'unten links der Knopf Start, Alt+S oder /start: oben die Suche, dann Zuletzt benutzt und die Gruppen Arbeit · Modelle · Wissen · System (· Prüfung); unten die anderen Oberflächen, Darstellung und Schrift'
   - name: App
@@ -31,7 +31,7 @@ arbeitsplatz:
     werkstatt: 'Start → Modelle → Werkstatt: Modelle laden, Rezepte, Teststrecke – oder Klick auf die Zelle Modell in der Taskleiste.'
     nachweise: 'Im App-Reiter rechts: die Nachweis-Werkzeuge zum Werkstück, zugeklappt bis zum Klick auf „Nachweise“.'
     oberfläche wechseln: 'Start → Oberflächen: Cockpit, Minimal, Paperclip … – offene Apps gehen mit (Arbeitsstand).'
-    einstellungen: 'Reiter Einstellungen (Seitenleiste unten, Start → System, /einstellungen, Zelle Zustand): Allgemein (Darstellung, Benachrichtigungen), Agent (Vorlagen, Freigabe-Modus mit Katalog-Editor, Grenzen der Schleife), Sprache, Integrationen (MCP, KI GateWay, Cloud), Lokale Modelle (Bibliothek, Werkstatt, Slots, Laufzeit), System (Schutz, Schalter, Modus und Grenzen, Module, Audit). Alles, was auf den Rechner schreibt, ist ein Antrag mit Gate im Posteingang.'
+    einstellungen: 'Reiter Einstellungen (Seitenleiste unten, Start → System, /einstellungen, Zelle Zustand): Allgemein (Darstellung, Benachrichtigungen), Agent (Vorlagen, Freigabe-Modus mit Katalog-Editor, Grenzen der Schleife, Token und Gespräch), Sprache, Integrationen (MCP, KI GateWay, Cloud), Lokale Modelle (Bibliothek, Werkstatt, Slots, Laufzeit), System (Schutz, Schalter, Modus und Grenzen, Module, Audit). Alles, was auf den Rechner schreibt, ist ein Antrag mit Gate im Posteingang.'
     katalog-editor: 'Einstellungen → Agent → Freigabe-Modus: die Regeln des Freigabe-Katalogs bearbeiten (ID, Werkzeug, Muster, Stufe, Begründung). Vorlage-Regeln mit verboten sind gesperrt; Lockerungen und weite Muster stehen rot. „Antrag stellen“ legt einen Antrag mit Gate an – geschrieben wird erst nach „Freigeben und anwenden“ im Posteingang, mit Sicherung (.bak-<zeit>). „Zurück zur Vorlage“ entfernt die Datei des Captains, ebenfalls mit Gate.'
     schalter: 'Einstellungen → System → Schalter: die Schalter aus local_switches lesen; „Einschalten/Ausschalten beantragen“ legt den Antrag an (Gate), wirkt erst nach Neustart der Oberfläche.'
     grenzen der schleife: 'Einstellungen → Agent → Grenzen der Schleife: max_zuege je Vorlage (4–40) als Antrag mit Gate; nach der Freigabe liegt eine Kopie der Vorlage in local_config/harness_vorlagen. max_tokens und temperature sind nur Anzeige.'

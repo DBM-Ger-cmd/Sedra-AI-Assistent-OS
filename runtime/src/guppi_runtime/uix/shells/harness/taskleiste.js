@@ -144,6 +144,26 @@
     }
   }
 
+  // Token: eingehend (was an das Modell ging – jeder Zug zählt den ganzen Verlauf neu) und erzeugt (was es geschrieben hat, Denken eingeschlossen) der aktiven Sitzung;
+  // der Ton folgt dem Füllstand des Kontextfensters. Ein Klick öffnet die Seite „Token und Gespräch“ (Verbrauch und die Optionen dazu).
+  function zahl(n){ n = Number(n) || 0; return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace('.', ',') + 'k' : String(n); }
+  function tokenZelle(S){
+    const t = S.tokenStand, s = t && t.sitzung, h = t && t.heute;
+    const k = s && s.kontext, pro = k && k.fenster ? Math.round(100 * k.belegt / k.fenster) : null;
+    const ton = pro === null ? 'off' : pro >= 90 ? 'bad' : pro >= 80 ? 'warn' : 'ok';
+    const zelle = d().el('span', 'hs-zelle ' + ton);
+    zelle.dataset.zelle = 'token';
+    const wert = s ? zahl(s.ein) + ' ↑ ' + zahl(s.aus) + ' ↓' : (h && h.antworten ? 'heute ' + zahl(h.ein) + ' ↑ ' + zahl(h.aus) + ' ↓' : '–');
+    zelle.title = 'Token' + (s ? ' dieser Sitzung' : ' heute') + ': ↑ eingehend ' + (s ? s.ein : h ? h.ein : 0).toLocaleString('de-DE') + ' (jeder Zug zählt den Verlauf neu), ↓ erzeugt ' + (s ? s.aus : h ? h.aus : 0).toLocaleString('de-DE')
+      + (s && s.tok_s ? ' · Ø ' + String(s.tok_s).replace('.', ',') + ' Token/s' : '') + (pro !== null ? ' · Kontext ' + pro + ' %' : '') + ' – Klick: Token und Gespräch (Verbrauch, Spur, Gedächtnis, Zusammenfassung)';
+    zelle.tabIndex = 0; zelle.setAttribute('role', 'button');
+    const oeffnen = ()=>root.sedraHarness.einstellungen.oeffnen(S, 'agent/token');
+    zelle.onclick = oeffnen;
+    zelle.onkeydown = e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); oeffnen(); } };
+    zelle.append(d().el('small', null, 'Token'), d().el('b', null, wert));
+    return zelle;
+  }
+
   // rechts: der Status aus /api/strip, höchstens alle 2 s
   function status(S){
     const l = S._leiste; if(!l) return;
@@ -156,7 +176,7 @@
     S.api('/api/strip').then(v=>{
       // HS-32: eine Zelle ohne Wert (– und Ton off) wird ausgeblendet – kleine Bildschirme, Stick an fremdem PC
       const da = ZELLEN.filter(([k])=>v[k] && !(String(v[k].value ?? '–') === '–' && (v[k].tone || 'off') === 'off'));
-      l.status.replaceChildren(...da.map(([k, label, ort])=>{
+      const zellen = da.map(([k, label, ort])=>{
         const g = v[k];
         const zelle = d().el('span', 'hs-zelle ' + (g.tone || 'off'));
         zelle.dataset.zelle = k;
@@ -176,7 +196,9 @@
         }
         zelle.append(d().el('small', null, label), d().el('b', null, wert));
         return zelle;
-      }));
+      });
+      zellen.splice(Math.min(1, zellen.length), 0, tokenZelle(S));            // 02.11.2026: Token gleich hinter den Freigaben, vor Modell und GPU
+      l.status.replaceChildren(...zellen);
     }).catch(err=>{
       l.status.replaceChildren(d().el('span', 'hs-zelle warn', 'Status nicht lesbar'));
       l.status.title = err.message;

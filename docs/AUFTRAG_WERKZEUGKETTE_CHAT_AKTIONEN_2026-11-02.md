@@ -78,6 +78,11 @@ Kontextfenster (02.11.2026) – was passiert, wenn es voll wird:
 3. Füllstand: im Eingabefeld der Chip „Kontext 31 %“, gelb ab 80 %, rot ab 90 %; nach dem Neuladen aus der letzten Antwort der Sitzung. Im Gespräch steht eine Notiz, wenn gekürzt wurde.
 4. Gekürzte Stellen sind markiert („…gekürzt – bei Bedarf neu lesen oder mit erinnern holen…“), damit das Modell weiß, dass etwas fehlt.
 
+Token und Gespräch (02.11.2026) – ein Ort für Verbrauch und Optionen:
+- Taskleiste: die Zelle **Token** gleich hinter den Freigaben (vor Modell und GPU) zeigt die Token der aktiven Sitzung, eingehend ↑ (was an das Modell ging; jeder Zug zählt den ganzen Verlauf neu) und erzeugt ↓ (mit Denken). Der Ton folgt dem Füllstand des Kontextfensters (gelb ab 80 %, rot ab 90 %). Ein Klick öffnet die Seite.
+- Seite **Einstellungen → Agent → Token und Gespräch**: oben der Verbrauch (Sitzung: Antworten, Züge, ↑, ↓, Ø je Antwort, letzte Antwort, Erzeugungstempo in Token/s, Kontextfenster; dazu der Tag über alle Sitzungen), darunter die Optionen: Spur und Gedanken (aus, Spur, kurz, ausführlich), Gedächtnis (Reichweite, Zusammenfassen) und Langes Gespräch (automatisch zusammenfassen). Die alte Seite „Gedanken der Modelle“ ist darin aufgegangen.
+- Daten: `GET /api/harness/token[?sitzung=S-…]` (`harness/verbrauch.py`), gezählt wird aus den Modellzeilen der Sitzungen, ohne Inhalt. Neu in der Sitzungszeile: `modell_s` (Zeit in Modellaufrufen), daraus das Tempo; ältere Sitzungen haben es nicht.
+
 Noch offen:
 - Punkt 6 (Aussage „ich nutze jetzt Ordner X“ gegen die Sitzung prüfen): noch nicht gebaut; mit `projekt_beantragen` weniger dringend.
 - Die Vorlagen der Sitzungen (bauagent, modellierer, pruefer) nennen `app_oeffnen` und `projekt_beantragen` noch nicht; Sitzungen ohne Vorlage haben beide.

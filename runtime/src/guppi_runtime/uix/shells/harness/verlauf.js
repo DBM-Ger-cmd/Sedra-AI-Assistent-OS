@@ -300,6 +300,7 @@
           if(z.denken && z.denkenText === '' && !z.denken.querySelector('summary').textContent.startsWith('Denkt nach (')) z.denken.querySelector('summary').textContent = 'Dachte nach';
           else if(z.denken) z.denken.querySelector('summary').textContent = z.denken.querySelector('summary').textContent.replace('Denkt', 'Dachte');
           ende(block, x);
+          S.tokenLaden();                                              // Verbrauch aktualisieren
         }
         if(unten) this.nachUnten();
       }

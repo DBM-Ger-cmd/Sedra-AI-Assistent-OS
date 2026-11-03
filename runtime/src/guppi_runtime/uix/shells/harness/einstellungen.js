@@ -19,7 +19,7 @@
   // G2 §3.1 – sechs Gruppen, 21 Punkte; `ort` ist die ID aus ui/places.js (dasselbe Objekt wie im Start-Menü)
   const GRUPPEN = [
     {id: 'allgemein', titel: 'Allgemein', punkte: {darstellung: E('darstellung', 'Darstellung'), benachrichtigungen: E('benachrichtigungen', 'Benachrichtigungen'), sprache: E('sprache', 'Sprache der Oberfläche')}},
-    {id: 'agent', titel: 'Agent', punkte: {vorlagen: E('vorlagen', 'Vorlagen'), freigabe: E('freigabe', 'Freigabe-Modus'), grenzen: E('grenzen', 'Grenzen der Schleife'), gedanken: E('gedanken', 'Gedanken der Modelle')}},
+    {id: 'agent', titel: 'Agent', punkte: {vorlagen: E('vorlagen', 'Vorlagen'), freigabe: E('freigabe', 'Freigabe-Modus'), grenzen: E('grenzen', 'Grenzen der Schleife'), token: E('token', 'Token und Gespräch')}},
     {id: 'sprache', titel: 'Sprache', punkte: {rekorder: W('aufnahme', ['rekorder'], 'Rekorder'), quelle: E('quelle', 'Quelle')}},
     {id: 'integrationen', titel: 'Integrationen', punkte: {mcp: E('mcp', 'MCP'), gateway: W('gateway', ['gateway', 'schutz'], 'KI GateWay'), cloud: W('labor', ['labor'], 'Cloud')}},
     {id: 'modelle', titel: 'Lokale Modelle', punkte: {bibliothek: W('library', ['library'], 'Bibliothek'), werkstatt: W('models', ['workshop'], 'Rezepte / Werkstatt'), slots: W('slots', ['slots'], 'Slots'), laufzeit: E('laufzeit', 'Geladene Instanzen · Laufzeit')}},
@@ -176,7 +176,45 @@
     zeichneReich('projekt'); laden();
   }
 
-  const FLAECHEN = {darstellung, benachrichtigungen, sprache, vorlagen, freigabe, grenzen, gedanken, quelle, mcp, laufzeit, schalter};
+  // Token und Gespräch: oben der Verbrauch (Sitzung und Tag), darunter alles, was ihn bestimmt – Spur, Gedanken, Gedächtnis, Zusammenfassung des langen Gesprächs
+  function tokenSeite(S, box){
+    const fmt = n=>Number(n || 0).toLocaleString('de-DE');
+    const komma = x=>String(x).replace('.', ',');
+    box.append(d().el('h3', 'hs-ueber', 'Verbrauch'));
+    const v = d().el('div', 'hs-token-verbrauch'); box.append(v);
+    const knopf = d().el('button', 'hs-knopf hs-klein', 'Aktualisieren'); knopf.type = 'button'; box.append(knopf);
+    const zeile = (name, wert, hinweis)=>{ v.append(d().el('span', 'hs-token-name', name), d().el('b', 'hs-token-wert', wert), d().el('small', 'hs-leise', hinweis || '')); };
+    const zeichne = ()=>{
+      v.replaceChildren();
+      const t = S.tokenStand;
+      if(!t){ v.append(d().el('small', 'hs-leise', 'Noch keine Zahlen.')); return; }
+      const s = t.sitzung, h = t.heute;
+      if(s && s.antworten){
+        v.append(d().el('div', 'hs-token-kopf', 'Diese Sitzung'));
+        zeile('Antworten', fmt(s.antworten), fmt(s.zuege) + ' Züge insgesamt');
+        zeile('Eingehend ↑', fmt(s.ein), 'was an das Modell ging – jeder Zug zählt den ganzen Verlauf neu');
+        zeile('Erzeugt ↓', fmt(s.aus), 'was das Modell geschrieben hat, Denken eingeschlossen');
+        zeile('Ø je Antwort', fmt(Math.round(s.ein / s.antworten)) + ' ↑ · ' + fmt(Math.round(s.aus / s.antworten)) + ' ↓', '');
+        if(s.letzte) zeile('Letzte Antwort', fmt(s.letzte.ein) + ' ↑ · ' + fmt(s.letzte.aus) + ' ↓', s.letzte.zuege + ' Züge' + (s.letzte.tok_s ? ' · ' + komma(s.letzte.tok_s) + ' Token/s' : ''));
+        if(s.tok_s) zeile('Erzeugungstempo', komma(s.tok_s) + ' Token/s', 'Ø über die Zeit in Modellaufrufen (ohne Werkzeuge)');
+        if(s.kontext && s.kontext.fenster) zeile('Kontextfenster', Math.round(100 * s.kontext.belegt / s.kontext.fenster) + ' %', fmt(s.kontext.belegt) + ' von ' + fmt(s.kontext.fenster) + ' Token belegt');
+      }else if(t.fuer){
+        v.append(d().el('small', 'hs-leise', 'Diese Sitzung hat noch keine Antwort – oder sie ist von vor dem Zählen der Token.'));
+      }
+      if(h && h.antworten){
+        v.append(d().el('div', 'hs-token-kopf', 'Heute (' + h.tag + ')'));
+        zeile('Antworten', fmt(h.antworten), 'in ' + h.sitzungen + (h.sitzungen === 1 ? ' Sitzung' : ' Sitzungen') + ' · ' + fmt(h.zuege) + ' Züge');
+        zeile('Eingehend ↑', fmt(h.ein), '');
+        zeile('Erzeugt ↓', fmt(h.aus), h.tok_s ? 'Ø ' + komma(h.tok_s) + ' Token/s' : '');
+      }
+    };
+    knopf.onclick = ()=>S.tokenLaden().then(zeichne);
+    zeichne(); S.tokenLaden().then(zeichne);
+    box.append(d().el('h3', 'hs-ueber', 'Gespräch und Gedanken'));
+    gedanken(S, box);
+  }
+
+  const FLAECHEN = {darstellung, benachrichtigungen, sprache, vorlagen, freigabe, grenzen, token: tokenSeite, quelle, mcp, laufzeit, schalter};
   function eigen(S, flaeche, punkt){
     const box = d().el('div', 'hs-einst-eigen'); box.dataset.flaeche = punkt.flaeche;
     flaeche.append(box);

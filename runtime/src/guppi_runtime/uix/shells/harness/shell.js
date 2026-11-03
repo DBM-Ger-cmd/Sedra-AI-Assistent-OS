@@ -30,6 +30,7 @@
       this.aufgaben = [];
       this.laeufe = [];                      // Läufe der Harness (Register), für Taskleiste und Reiter „Lauf“
       this.antraege = [];                    // offene Anträge außer den Karten (Posteingang in der Seitenleiste)
+      this.tokenStand = null;                // Verbrauch der aktiven Sitzung und des Tages (GET /api/harness/token), für die Zelle „Token“ und die Seite Token und Gespräch
       this.verknuepfungen = [];              // eigene Knöpfe der Seitenleiste (Chat: verknuepfung_anlegen), je {id, ort, name}
       this.entscheidungen = [];              // offene Harness-Freigaben (Karten und Aufgabenvorschläge)
       this.melder = root.sedraStand.makeMelder(this.api);     // Stufe 4: App-Reiter melden ihren Arbeitsstand (§10.2)
@@ -127,6 +128,15 @@
         H.reiter.titel(this);
       })();
       try{ await this._laden; } finally { this._laden = null; }
+    },
+
+    // Verbrauch neu lesen: nach jeder Antwort, beim Wechsel des Reiters und beim Öffnen der Seite „Token und Gespräch“
+    async tokenLaden(){
+      const a = this.aktive && this.aktive();
+      const sid = a && /^S-[0-9A-F]{8}$/.test(String(a.id)) ? a.id : '';
+      try{ this.tokenStand = Object.assign(await this.api('/api/harness/token' + (sid ? '?sitzung=' + sid : '')), {fuer: sid}); }catch(_e){ /* der letzte Stand bleibt */ }
+      H.taskleiste.status(this);
+      return this.tokenStand;
     },
 
     async vorlagenLaden(){
