@@ -33,8 +33,9 @@ def desk_command(args):
     print(json.dumps(out,indent=2,ensure_ascii=False)); return 0 if status==200 else 2
 
 def code_stand_command(args):
-    """`guppi code-stand <projekt> [--uebernehmen]` (SPEC_APPS_v1 G4-16) – dieselbe Funktion wie `python -m guppi_runtime.harness.code_stand`."""
-    from .harness.code_stand import konsole
+    """`guppi code-stand <projekt> [--zeigen | --uebernehmen]` (SPEC_APPS_v1 G4-16; --zeigen ist der Standard) – dieselbe Funktion wie `python -m guppi_runtime.harness.code_stand`."""
+    from .harness.code_stand import konsole, utf8_ausgabe
+    utf8_ausgabe()                          # wie der schlanke Einstieg: unter Windows ist eine Pipe cp1252
     code,text=konsole(args.root,args.projekt,args.uebernehmen)
     print(text); return code
 
@@ -113,7 +114,7 @@ def main(argv=None):
     ls=sub.add_parser('lessons',help='lesson cards of the coder (E-11): list, propose, approve, reject, sweep; nothing is used before you approve it')
     ls.add_argument('action',choices=['list','propose','approve','reject','sweep']); ls.add_argument('--text'); ls.add_argument('--source',default='captain'); ls.add_argument('--id'); ls.add_argument('--reason')
     cst=sub.add_parser('code-stand',help='code the Captain has not seen in this version (SPEC_APPS_v1 G4): show it, or take the current state as seen')
-    cst.add_argument('projekt'); cst.add_argument('--uebernehmen',action='store_true')
+    cst.add_argument('projekt'); cst_art=cst.add_mutually_exclusive_group(); cst_art.add_argument('--zeigen',action='store_true'); cst_art.add_argument('--uebernehmen',action='store_true')
     ob=sub.add_parser('objects',help='read desk objects through the running desk (POST /api/objects, Spec 0 D2)'); ob.add_argument('type'); ob.add_argument('id',nargs='?')
     ac=sub.add_parser('act',help='run a verb through the running desk (POST /api/actions, gates as in the desk); id - = verb without object'); ac.add_argument('type'); ac.add_argument('id'); ac.add_argument('verb'); ac.add_argument('--args',default='{}')
     args=p.parse_args(argv)

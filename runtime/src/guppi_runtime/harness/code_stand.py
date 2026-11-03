@@ -342,19 +342,27 @@ def konsole(root, projekt_id, uebernehmen=False):
     return 0, (cs.vorschau(liste, begrenzt=False)[0] if liste else f"Kein ungesehener Code im Projekt {projekt['id']}.")
 
 
+def utf8_ausgabe():
+    """Unter Windows ist eine Pipe cp1252: „■“ der Vorschau ließ den Aufruf abstürzen. Gilt für beide Einstiege (main und `guppi code-stand`)."""
+    import sys
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except (AttributeError, ValueError):        # z. B. StringIO in Tests
+        pass
+
+
 def main(argv=None):
-    """`python -m guppi_runtime.harness.code_stand --root <projektordner> <projekt> [--uebernehmen]` (so ruft es CODE_STAND.bat)."""
+    """`python -m guppi_runtime.harness.code_stand --root <projektordner> <projekt> [--zeigen | --uebernehmen]` (so ruft es CODE_STAND.bat).
+    `--zeigen` ist der Standard und darf fehlen; die Karte nennt ihn ausdrücklich."""
     import argparse
     p = argparse.ArgumentParser(prog='code_stand', description='Code, den der Captain in dieser Fassung noch nicht gesehen hat (G4)')
     p.add_argument('--root', required=True)
     p.add_argument('projekt')
-    p.add_argument('--uebernehmen', action='store_true')
+    art = p.add_mutually_exclusive_group()
+    art.add_argument('--zeigen', action='store_true', help='ungesehenen Code mit Diff zeigen (Standard)')
+    art.add_argument('--uebernehmen', action='store_true', help='den aktuellen Stand als gesehen übernehmen')
     a = p.parse_args(argv)
-    import sys
-    try:
-        sys.stdout.reconfigure(encoding='utf-8')          # unter Windows ist eine Pipe cp1252: „■“ und „–“ der Vorschau liessen den Aufruf abstuerzen
-    except (AttributeError, ValueError):
-        pass
+    utf8_ausgabe()
     code, text = konsole(a.root, a.projekt, a.uebernehmen)
     print(text)
     return code

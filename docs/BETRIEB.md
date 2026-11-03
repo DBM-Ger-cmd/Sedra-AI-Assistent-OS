@@ -144,7 +144,19 @@ Cloud-Modelle laufen nur über den API-Zugang (`models/cloud_api.py`, Einstellun
 | Modelle | `model-status`, `model-chat`, `model-doctor`, `model-scan`, `model-catalog`, `model-pass`, `model-benchmark`, `routing-profile`, `model-remove-preview`, `model-remove`, `model-restore` |
 | Hardware | `hardware`, `hardware-state`, `hardware-inventory`, `hardware-preview`, `hardware-dashboard`, `tuning-plan`, `tuning-run` |
 | Sandbox | `sandbox-doctor`, `sandbox-preview`, `sandbox-run`, `sandbox-history`, `dev-image-preview`, `dev-image-import` |
-| Harness (G4) | `code-stand <projekt> [--uebernehmen]` – Code, den du in dieser Fassung noch nicht gesehen hast, ansehen bzw. als gesehen übernehmen; `--root` muss `workspace/GUPPI_OS` sein. Unter Windows einfacher: `CODE_STAND.bat <projekt> [--uebernehmen]` im SEDRA-Ordner (Pfade und Python wie `START_SEDRA.bat`, ruft `python -m guppi_runtime.harness.code_stand --root workspace\GUPPI_OS …`; braucht nur Kern und Harness, läuft auch auf dem Stick) |
+| Harness (G4) | `code-stand <projekt> [--zeigen \| --uebernehmen]` – Code, den du in dieser Fassung noch nicht gesehen hast, ansehen bzw. als gesehen übernehmen; `--root` muss `workspace/GUPPI_OS` sein. Unter Windows einfacher: `CODE_STAND.bat <projekt> [--zeigen \| --uebernehmen]` (`--zeigen` ist der Standard) im SEDRA-Ordner (Pfade und Python wie `START_SEDRA.bat`, ruft `python -m guppi_runtime.harness.code_stand --root workspace\GUPPI_OS …`; braucht nur Kern und Harness, läuft auch auf dem Stick) |
+
+## Release (Tag für den Updater)
+
+Der Updater (Werkzeug „System“, Abschnitt „Updates“, Knopf „Nach Updates suchen“) bietet nur Tags `vX.Y.Z` an. Er lädt das Zip des Tags von GitHub und verlangt darin `release/MANIFEST.sha256`: jede Datei unter `runtime/src/guppi_runtime/` und `runtime/config/` muss darin stehen und stimmen, sonst bricht er ab (`update_manifest_fehlt`, `dateien_passen_nicht`, `pruefsumme_falsch`). Ändert der Release Rechte eines Moduls, nennt die Vorschau jede Änderung einzeln.
+
+1. `runtime/src/guppi_runtime/version.py` und `BUILD.txt` auf die neue Version, Eintrag in `docs/CHANGELOG.md`, committen.
+2. Manifest aus dem Commit erzeugen (nicht aus dem Arbeitsbaum – dort liegen `local_paths.yaml`, `.bak`-Dateien und `__pycache__`): `python -I -B runtime/benchmarks/release_manifest.py` schreibt `release/MANIFEST.sha256` aus `HEAD`.
+3. Nur diese Datei committen (`git add release/MANIFEST.sha256`), Tests, `main` pushen.
+4. Genau diesen Commit taggen und den Tag pushen: `git tag -a vX.Y.Z -m "SEDRA vX.Y.Z: …"`, `git push origin vX.Y.Z`.
+5. Probe: `python -I -B runtime/benchmarks/release_manifest.py --pruefen vX.Y.Z` → „Manifest vorhanden und stimmig“.
+
+Das Manifest gilt nur für den getaggten Stand; auf `main` veraltet es mit dem nächsten Commit. Vor jedem Tag neu erzeugen. `v1.21.0` hat keins (älter als der Updater); `v1.22.0` ist der erste Tag, den der Updater übernehmen kann. Releases sind nicht signiert (offen: `PLAN_ISOLATION_UND_UPDATE_2026-10-19.md`, Frage 3).
 
 ## Störungen
 

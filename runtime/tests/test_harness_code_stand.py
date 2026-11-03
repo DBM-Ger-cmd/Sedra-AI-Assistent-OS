@@ -314,6 +314,7 @@ class Konsole(Projekt):
         code, text = self.cli('p')
         self.assertEqual(code, 0)
         self.assertIn('tools/neu.py – neu', text)
+        self.assertEqual(self.cli('p', '--zeigen'), (code, text), '--zeigen (so nennt es die Karte) ist der Standard')
         code, text = self.cli('p', '--uebernehmen')
         self.assertEqual((code, json.loads(text)['anzahl']), (0, 1))
         self.assertEqual(self.cs.ungesehen(), [])
@@ -339,14 +340,27 @@ class Konsole(Projekt):
         self.cs.stand()
         self.schreiben('tools/neu.py', 'x = 1\n')
         env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1] / 'src'))
-        r = subprocess.run([sys.executable, '-m', 'guppi_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p'],
-                           capture_output=True, text=True, encoding='utf-8', env=env, timeout=60)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn('tools/neu.py – neu', r.stdout)
+        for zusatz in ([], ['--zeigen']):                                  # die Karte nennt „CODE_STAND.bat <projekt> --zeigen“
+            r = subprocess.run([sys.executable, '-m', 'guppi_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p', *zusatz],
+                               capture_output=True, text=True, encoding='utf-8', env=env, timeout=60)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn('tools/neu.py – neu', r.stdout)
         r = subprocess.run([sys.executable, '-m', 'guppi_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p', '--uebernehmen'],
                            capture_output=True, text=True, encoding='utf-8', env=env, timeout=60)
         self.assertEqual((r.returncode, json.loads(r.stdout)['anzahl']), (0, 1), r.stderr)
         self.assertEqual(self.cs.ungesehen(), [])
+
+    def test_pipe_mit_cp1252_wie_unter_windows(self):
+        """Unter Windows ist eine Pipe cp1252; „■“ (gelöschte Datei) ließ den Aufruf abstürzen. Beide Einstiege geben UTF-8 aus."""
+        import subprocess, sys
+        self.cs.stand()
+        (self.root / 'tools' / 'skript.py').unlink()
+        env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1] / 'src'), PYTHONIOENCODING='cp1252')
+        for aufruf in (['-m', 'guppi_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p'],
+                       ['-m', 'guppi_runtime', '--root', str(self.wurzel_root), 'code-stand', 'p']):
+            r = subprocess.run([sys.executable, *aufruf], capture_output=True, env=env, timeout=120)
+            self.assertEqual(r.returncode, 0, r.stderr.decode('utf-8', 'replace'))
+            self.assertIn('■ tools/skript.py – gelöscht', r.stdout.decode('utf-8'))
 
     def test_unbekanntes_projekt(self):
         code, text = self.cli('gibt-es-nicht')
