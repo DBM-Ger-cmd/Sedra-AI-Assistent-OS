@@ -61,6 +61,21 @@ class LesenTests(Basis):
         einzeln = self.w.ausfuehren('datei_lesen', {'pfad': 'docs/a.md', 'zeilen': 5})
         self.assertIn('Zeilen 1–5 von 1000', einzeln['ergebnis'])
 
+    def test_fehlender_pfad_nennt_die_eindeutige_datei_mit_vollem_pfad(self):
+        """Log 03.11.2026: `harness/export.py` statt `runtime/src/guppi_runtime/harness/export.py` – das Modell gab auf."""
+        tief = self.root / 'runtime' / 'src' / 'harness'
+        tief.mkdir(parents=True)
+        (tief / 'export.py').write_text('x\n', encoding='utf-8')
+        with self.assertRaises(WerkzeugFehler) as f:
+            self.w.vorbereiten('datei_lesen', {'pfad': 'harness/export.py'})
+        self.assertIn('pfad_fehlt: harness/export.py', str(f.exception))
+        self.assertIn('runtime/src/harness/export.py', str(f.exception))
+        (self.root / 'docs' / 'harness').mkdir()
+        (self.root / 'docs' / 'harness' / 'export.py').write_text('y\n', encoding='utf-8')
+        with self.assertRaises(WerkzeugFehler) as f:                      # zwei Treffer: nicht raten
+            self.w.vorbereiten('datei_lesen', {'pfad': 'harness/export.py'})
+        self.assertNotIn('vermutlich', str(f.exception))
+
     def test_pfad_ausserhalb_wird_abgelehnt(self):
         for pfad in ('../x', 'C:/Windows/win.ini', 'docs/../../x'):
             with self.assertRaises(WerkzeugFehler):

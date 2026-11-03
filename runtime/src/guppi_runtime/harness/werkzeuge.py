@@ -121,8 +121,25 @@ class Werkzeuge:
         except ToolPermissionError as exc:
             raise WerkzeugFehler('pfad_ausserhalb: der Pfad liegt nicht im Projekt') from exc
         except ToolValidationError as exc:
-            raise WerkzeugFehler('pfad_fehlt: ' + str(pfad)) from exc
+            raise WerkzeugFehler('pfad_fehlt: ' + str(pfad) + self._vorschlag(pfad)) from exc
         return p, (p.relative_to(self.wurzel).as_posix() or '.')
+
+    def _vorschlag(self, pfad):
+        """Pfade gelten ab dem Projektordner. Gibt es genau eine Datei, deren Pfad auf das Gesuchte endet (Log 03.11.2026: `harness/export.py` statt `runtime/src/guppi_runtime/harness/export.py`), nennt die Meldung sie."""
+        ende = str(pfad or '').replace('\\', '/').strip('/')
+        if not ende or ende.startswith('.') or '..' in ende.split('/'):
+            return ''
+        treffer = []
+        for wurzel, ordner, dateien in os.walk(self.wurzel):
+            ordner[:] = [o for o in ordner if o not in UEBERSPRINGEN and not o.startswith('.')]
+            name = ende.rsplit('/', 1)[-1]
+            if name in dateien or name in ordner:
+                rel = (Path(wurzel) / name).relative_to(self.wurzel).as_posix()
+                if rel == ende or rel.endswith('/' + ende):
+                    treffer.append(rel)
+            if len(treffer) > 1:
+                return ''
+        return f' – gemeint ist vermutlich: {treffer[0]} (Pfade gelten ab dem Projektordner)' if treffer else ''
 
     def _text(self, args, key, pflicht=True):
         v = args.get(key)
