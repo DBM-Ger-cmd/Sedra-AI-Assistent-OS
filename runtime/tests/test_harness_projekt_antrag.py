@@ -50,6 +50,18 @@ class ProjektAntragDuplikat(unittest.TestCase):
         out, _ = self.antrag(offen, self.anderer)                          # ein anderer Ordner ist nicht betroffen
         self.assertEqual(out['mission_id'], 'M-NEU')
 
+    def test_ein_ordner_der_schon_ein_projekt_ist_sagt_dem_modell_was_zu_tun_ist(self):
+        """Log 02.11.2026: „ordner_schon_projekt: earth-2140“ allein führte das Modell in die Irre; es versuchte den Antrag immer wieder."""
+        from guppi_runtime.harness import projekte as harness_projekte
+        gesamt = [{'id': 'baut', 'name': 'Baut', 'wurzel': str(self.ordner.resolve()), 'schreibbereich': ['**']}]
+        with mock.patch.object(harness_projekte, 'laden', return_value=gesamt), mock.patch.object(antraege.gated, 'request') as anfrage:
+            with self.assertRaises(ValueError) as ctx:
+                antraege.projekt_antrag(Hub(self.root, []), {'wurzel': str(self.ordner)})
+        self.assertIn('ordner_schon_projekt: baut', str(ctx.exception))
+        self.assertIn('braucht keinen Antrag', str(ctx.exception))
+        self.assertIn('diese_sitzung', str(ctx.exception))
+        anfrage.assert_not_called()
+
     def test_ein_modell_flutet_den_posteingang_nicht(self):
         offen = [{'kind': antraege.KIND_PROJEKT, 'mission_id': f'M-{i}', 'binding': {'projekt': {'wurzel': f'X:/{i}'}}} for i in range(antraege.PROJEKT_ANTRAEGE_MAX)]
         with mock.patch.object(antraege.gated, 'request') as anfrage:

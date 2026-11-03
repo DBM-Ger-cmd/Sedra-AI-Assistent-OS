@@ -142,7 +142,8 @@ class Kiste:
     Die Schleife ruft `aufruf`; bei `wartet` hält sie mit `festhalten` ihren Zustand an der Karte fest."""
 
     def __init__(self, werkzeuge, *, regeln, guard, audit, karten, sitzung_id, chat=None, projekt_id=None, aufgaben=None, lokal=True, vorarbeiter=None, extra=None,
-                 erlaubnisse=None):
+                 erlaubnisse=None, projekte=None):
+        self.projekte = projekte      # () -> die Projekte des Harness (nicht die des SEDRA-Kerns), das der Sitzung markiert; für `list_projects`
         self.w, self.regeln, self.guard, self.audit, self.karten = werkzeuge, regeln, guard, audit, karten
         self.erlaubnisse = list(erlaubnisse or ())        # P0 M1: Sitzungs-Erlaubnisse („Für diese Sitzung erlauben“), gelten nicht bei Vorbehalt/Warnkarte
         self.sitzung_id, self.chat, self.projekt_id = sitzung_id, chat, projekt_id
@@ -185,7 +186,7 @@ class Kiste:
             name = was
         if name not in HARNESS_WERKZEUGE:
             if self.chat is not None and name in self.chat.names:
-                text = self.chat.call(name, args)
+                text = json.dumps(self.projekte(), ensure_ascii=False) if name == 'list_projects' and callable(self.projekte) else self.chat.call(name, args)
                 return {'status': 'fehler' if str(text).startswith('error') else 'ok', 'ergebnis': str(text), 'stufe': 'frei',
                         'regel': 'zustand-lesen', 'wirkung': False}
             return {'status': 'fehler', 'ergebnis': f'error: unknown tool {name}', 'stufe': None, 'regel': None, 'wirkung': False}
