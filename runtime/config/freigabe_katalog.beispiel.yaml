@@ -20,6 +20,11 @@ freigabe_katalog:
       muster: ['**/.env', '**/local_config/**', '**/*.key', '**/*.pem']
       stufe: verboten
       begruendung: Zugangsdaten und Einstellungen des Captains liest das Modell nicht.
+    - id: schreiben-geheim
+      werkzeug: [datei_schreiben, datei_aendern]
+      muster: ['**/.env', '**/local_config/**', '**/*.key', '**/*.pem', '**/.git/**']
+      stufe: verboten
+      begruendung: Zugangsdaten, Einstellungen des Captains und das Git-Verzeichnis schreibt das Modell nie, auch nicht in einem Schreibbereich mit **.
     # P0 M1 (1.11.2026, Harness-Vergleich 31.10.): im Schreibbereich des Projekts schreibt das Modell ohne Karte – die genaueren Regeln
     # darunter (runtime/**, docs/**) gewinnen, und der Schreibbereich selbst bleibt die harte Grenze. ${schreibbereich} wird je Projekt ersetzt.
     - id: schreiben-schreibbereich
