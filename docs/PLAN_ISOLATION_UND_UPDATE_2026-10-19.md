@@ -82,7 +82,7 @@ Begründung: Stufe A schließt die größte bekannte Lücke. Das Update braucht 
 
 1. ~~Update-Suche automatisch oder auf Klick?~~ **Entschieden:** nur auf Klick, mit Hinweis auf die neue Version und Bestätigung vor dem Start.
 2. ~~Besondere Freigabe für Rechteänderungen?~~ **Entschieden:** ja, eigene Freigabe mit Nennung jeder Änderung (Abschnitt 4.3).
-3. Sollen Releases signiert werden, bevor das Update in den Alltag geht? *Empfehlung:* ja, vor dem ersten Update für andere Nutzer.
+3. ~~Sollen Releases signiert werden, bevor das Update in den Alltag geht?~~ **Entschieden (03.11.2026, Bestandsaufnahme B2):** vorerst ohne Signatur und nur für den eigenen PC des Captains; vor der ersten Weitergabe eines Standes an andere (z. B. der Stick für einen Kollegen) wird die Signatur gebaut. Grenze in `BETRIEB.md`, Abschnitt „Release“.
 4. Reicht Stufe A als Zwischenstand, oder soll Stufe C direkt geplant werden? *Empfehlung:* Stufe A zuerst, C als eigenes Projekt.
 
 ## 7. Risiken

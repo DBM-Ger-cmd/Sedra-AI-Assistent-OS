@@ -137,7 +137,9 @@ class DryRun(unittest.TestCase):
             (project / "local_config").mkdir(parents=True)
             (project / "local_config" / nc.ORDER).write_text(json.dumps([{"spec": "s1_graphs"}]), encoding="utf-8")
             before = sorted(p.relative_to(project).as_posix() for p in project.rglob("*"))
-            with mock.patch("subprocess.run", side_effect=AssertionError("startet etwas")), mock.patch("subprocess.Popen", side_effect=AssertionError("startet etwas")):
+            # Der freie RAM wird über die Windows-API gelesen (kurzstart.ram); anderswo steht eine feste Zahl in der Ausgabezeile, geprüft wird dasselbe.
+            ram = mock.patch.object(nc, "free_ram_gb", return_value=32.0) if sys.platform != "win32" else mock.patch.object(nc, "free_ram_gb", nc.free_ram_gb)
+            with ram, mock.patch("subprocess.run", side_effect=AssertionError("startet etwas")), mock.patch("subprocess.Popen", side_effect=AssertionError("startet etwas")):
                 self.assertEqual(nc.main([str(project), "--bis", "2026-11-30", "--dry-run"]), 0)
             self.assertEqual(sorted(p.relative_to(project).as_posix() for p in project.rglob("*")), before)
 

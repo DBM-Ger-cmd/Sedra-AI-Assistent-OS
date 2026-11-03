@@ -35,9 +35,12 @@ def load(path=None):
 
 
 def folder(value):
-    """An absolute folder unchanged; a relative one (`..\\modelle`) counted from the runtime folder, so a folder beside the program moves with it."""
-    if ntpath.isabs(value):
+    """An absolute folder unchanged; a relative one (`..\\modelle`) counted from the runtime folder, so a folder beside the program moves with it.
+    Off Windows a backslash in a relative folder is a separator too: the stick's `..\\modelle` is no folder named `..\\modelle` on macOS/Linux."""
+    if ntpath.isabs(value) or os.path.isabs(value):
         return value
+    if os.sep == "/":
+        value = value.replace("\\", "/")
     return os.path.normpath(os.path.join(RUNTIME, value))
 
 

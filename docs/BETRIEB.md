@@ -151,12 +151,12 @@ Cloud-Modelle laufen nur über den API-Zugang (`models/cloud_api.py`, Einstellun
 Der Updater (Werkzeug „System“, Abschnitt „Updates“, Knopf „Nach Updates suchen“) bietet nur Tags `vX.Y.Z` an. Er lädt das Zip des Tags von GitHub und verlangt darin `release/MANIFEST.sha256`: jede Datei unter `runtime/src/guppi_runtime/` und `runtime/config/` muss darin stehen und stimmen, sonst bricht er ab (`update_manifest_fehlt`, `dateien_passen_nicht`, `pruefsumme_falsch`). Ändert der Release Rechte eines Moduls, nennt die Vorschau jede Änderung einzeln.
 
 1. `runtime/src/guppi_runtime/version.py` und `BUILD.txt` auf die neue Version, Eintrag in `docs/CHANGELOG.md`, committen.
-2. Manifest aus dem Commit erzeugen (nicht aus dem Arbeitsbaum – dort liegen `local_paths.yaml`, `.bak`-Dateien und `__pycache__`): `python -I -B runtime/benchmarks/release_manifest.py` schreibt `release/MANIFEST.sha256` aus `HEAD`.
+2. Manifest aus dem Commit erzeugen (nicht aus dem Arbeitsbaum – dort liegen `local_paths.yaml`, `.bak`-Dateien und `__pycache__`): `python -I -B runtime/benchmarks/release_manifest.py` schreibt `release/MANIFEST.sha256` aus `HEAD`. Das Python braucht PyYAML (unter Windows `runtime\.venv\Scripts\python.exe` oder `runtime\portable\python\current\python.exe`).
 3. Nur diese Datei committen (`git add release/MANIFEST.sha256`), Tests, `main` pushen.
 4. Genau diesen Commit taggen und den Tag pushen: `git tag -a vX.Y.Z -m "SEDRA vX.Y.Z: …"`, `git push origin vX.Y.Z`.
 5. Probe: `python -I -B runtime/benchmarks/release_manifest.py --pruefen vX.Y.Z` → „Manifest vorhanden und stimmig“.
 
-Das Manifest gilt nur für den getaggten Stand; auf `main` veraltet es mit dem nächsten Commit. Vor jedem Tag neu erzeugen. `v1.21.0` hat keins (älter als der Updater); `v1.22.0` ist der erste Tag, den der Updater übernehmen kann. Releases sind nicht signiert (offen: `PLAN_ISOLATION_UND_UPDATE_2026-10-19.md`, Frage 3).
+Das Manifest gilt nur für den getaggten Stand; auf `main` veraltet es mit dem nächsten Commit. Vor jedem Tag neu erzeugen. `v1.21.0` hat keins (älter als der Updater); `v1.22.0` ist der erste Tag, den der Updater übernehmen kann. **Grenze (Entscheidung des Captains 03.11.2026, B2):** Releases sind nicht signiert. Das Update über den Updater ist deshalb nur für den eigenen PC des Captains gedacht. Vor der ersten Weitergabe eines Standes an andere (z. B. der Stick für einen Kollegen) wird die Signatur gebaut (`PLAN_ISOLATION_UND_UPDATE_2026-10-19.md`, Frage 3). Die Prüfsummen im Manifest schützen gegen Übertragungsfehler, nicht gegen einen veränderten Release oder ein übernommenes GitHub-Konto.
 
 ## Störungen
 
