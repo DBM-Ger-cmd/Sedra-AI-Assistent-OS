@@ -64,7 +64,7 @@ nächsten Start auf. Einen Server, dessen Starter noch lebt (zum Beispiel einen 
 
 **Maschinenlokal** in `workspace/GUPPI_OS/local_config/` (nicht im Git):
 - `role_routing.yaml`: **die Rezepte**. Vor jeder Änderung eine Sicherung `role_routing.yaml.bak-<Datum>-<Grund>` anlegen.
-- `switches.yaml`: An/Aus-Schalter (context_manager, job_supervisor, llama_server, mtp …), gemeldet als `LOCAL_SWITCHES_APPLIED`.
+- `switches.yaml`: An/Aus-Schalter (context_manager, job_supervisor, llama_server, mtp …), gemeldet als `LOCAL_SWITCHES_APPLIED`. `code_sicht: {enabled: false}` schaltet G4 ab (Läufe und Befehle der Harness nur nach Sicht auf geänderten Code; Standard an, `docs/SPEC_APPS_v1_G4_MODELLCODE_G2.md`).
 - `routing_profiles.yaml`: Modellkombinationen, die der Captain umschalten kann (`guppi routing-profile`).
 
 ## Modelle und Rezepte
@@ -144,6 +144,7 @@ Cloud-Modelle laufen nur über den API-Zugang (`models/cloud_api.py`, Einstellun
 | Modelle | `model-status`, `model-chat`, `model-doctor`, `model-scan`, `model-catalog`, `model-pass`, `model-benchmark`, `routing-profile`, `model-remove-preview`, `model-remove`, `model-restore` |
 | Hardware | `hardware`, `hardware-state`, `hardware-inventory`, `hardware-preview`, `hardware-dashboard`, `tuning-plan`, `tuning-run` |
 | Sandbox | `sandbox-doctor`, `sandbox-preview`, `sandbox-run`, `sandbox-history`, `dev-image-preview`, `dev-image-import` |
+| Harness (G4) | `code-stand <projekt> [--uebernehmen]` – Code, den du in dieser Fassung noch nicht gesehen hast, ansehen bzw. als gesehen übernehmen; `--root` muss `workspace/GUPPI_OS` sein. Unter Windows einfacher: `CODE_STAND.bat <projekt> [--uebernehmen]` im SEDRA-Ordner (Pfade und Python wie `START_SEDRA.bat`) |
 
 ## Störungen
 

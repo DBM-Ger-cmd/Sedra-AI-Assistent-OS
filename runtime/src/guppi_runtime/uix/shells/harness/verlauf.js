@@ -117,7 +117,7 @@
         S.api('/api/harness/code_stand?projekt=' + encodeURIComponent(projekt)).then(c=>{
           if(!c || !c.aktiv || !c.ungesehen) return;
           this.notiz(c.ungesehen + (c.ungesehen === 1 ? ' Code-Datei ist' : ' Code-Dateien sind') + ' in dieser Fassung noch nicht von dir gesehen (z. B. ' + c.pfade.slice(0, 3).join(', ')
-                     + '). Läufe und Befehle zeigen sie dir zuerst auf einer Karte; ansehen und übernehmen auch in der Konsole: guppi code-stand ' + projekt + ' --zeigen', 'warn');
+                     + '). Läufe und Befehle zeigen sie dir zuerst auf einer Karte; ansehen und übernehmen auch in der Konsole: ' + (c.konsole || 'CODE_STAND.bat ' + projekt) + ' --zeigen', 'warn');
         }).catch(()=>{});
       },
 

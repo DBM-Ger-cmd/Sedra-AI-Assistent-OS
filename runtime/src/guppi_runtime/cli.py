@@ -38,6 +38,10 @@ def code_stand_command(args):
     from .harness import projekte as harness_projekte
     from .harness.code_stand import CodeStand
     root=Path(args.root).resolve()
+    if not (root/'runtime_data'/'harness').is_dir():
+        # sonst entstünde still ein zweiter Stand neben dem der Oberfläche, und „übernehmen“ wirkte nicht (Befund 03.11.2026)
+        print(json.dumps({'status':'refused','error':'root_ist_nicht_der_projektordner',
+                          'grund':f'Unter {root} gibt es kein runtime_data/harness. --root muss der Projektordner der Oberfläche sein (z. B. workspace/GUPPI_OS); unter Windows: CODE_STAND.bat im SEDRA-Ordner.'},ensure_ascii=False)); return 2
     try:
         projekte=harness_projekte.laden(root)
     except harness_projekte.ProjektFehler as exc:

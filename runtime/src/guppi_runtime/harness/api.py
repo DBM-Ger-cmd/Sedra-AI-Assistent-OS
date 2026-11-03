@@ -43,6 +43,7 @@ Die Schleife läuft in einem eigenen Thread und nimmt nie `hub.lock` (K3). Auf d
 oder `harness_aufgabe`) – der Text läuft über den eigenen Strom."""
 from __future__ import annotations
 
+import os
 import re
 from datetime import datetime, timedelta
 import threading
@@ -885,9 +886,16 @@ class HarnessApi:
         cs = self._code_staende.get(schluessel)
         if cs is None:
             cs = harness_code_stand.CodeStand(self.hub.project_root / 'runtime_data' / 'harness' / 'code_stand', projekt['wurzel'], projekt['id'],
-                                              audit=self._audit)
+                                              audit=self._audit, konsole=self._code_konsole(projekt['id']))
             self._code_staende[schluessel] = cs
         return cs
+
+    def _code_konsole(self, pid):
+        """Der Konsolenweg zum Code-Stand dieses Servers (G4-16): unter Windows der Starter im SEDRA-Ordner, sonst die Python-Form mit genau
+        diesem Projektordner (`--root` muss der Ordner der Oberfläche sein, sonst liest die Konsole einen anderen Stand)."""
+        if os.name == 'nt':
+            return f'CODE_STAND.bat {pid}'
+        return f'python -m guppi_runtime --root "{self.hub.project_root}" code-stand {pid}'
 
     def code_stand_sicht(self, q):
         """GET code_stand?projekt= (G4-17): {projekt, aktiv, ungesehen, pfade} – nur lesen. Übernehmen geht nur außerhalb des Browsers (Konsole)."""
@@ -895,9 +903,9 @@ class HarnessApi:
         projekt = self._projekt(pid)
         cs = self.code_stand(projekt)
         if cs is None:
-            return {'projekt': pid, 'aktiv': False, 'ungesehen': 0, 'pfade': []}
+            return {'projekt': pid, 'aktiv': False, 'ungesehen': 0, 'pfade': [], 'konsole': None}
         liste = cs.ungesehen()
-        return {'projekt': pid, 'aktiv': True, 'ungesehen': len(liste), 'pfade': [e['pfad'] for e in liste[:20]]}
+        return {'projekt': pid, 'aktiv': True, 'ungesehen': len(liste), 'pfade': [e['pfad'] for e in liste[:20]], 'konsole': cs.konsole}
 
     def _vorarbeiter_werkzeuge(self, s):
         """Die Werkzeuge des Vorarbeiters – nur für Sitzungen, deren Vorlage das Recht hat; der Server prüft sie bei jedem Aufruf noch einmal (S1)."""
@@ -1176,7 +1184,16 @@ class HarnessApi:
             raise ValueError('katalog_ungueltig: ' + fehler)
         args = {'inhalt': payload['inhalt']} if 'inhalt' in payload else {}
         projekt = next((p for p in self.projekte()['projekte'] if p['id'] == payload.get('projekt')), None) if payload.get('projekt') else None
-        return freigabe.einstufung(harness_katalog.mit_projekt(regeln, projekt), werkzeug, args, {'ziel': ziel, 'vorhanden': bool(payload.get('vorhanden'))})
+        plan = {'ziel': ziel, 'vorhanden': bool(payload.get('vorhanden'))}
+        hinweis = None
+        if werkzeug in harness_code_stand.AUSFUEHRUNG and not (werkzeug == 'befehl' and harness_code_stand.nur_pruefen(ziel)):
+            cs = self.code_stand(projekt) if projekt is not None else None
+            if cs is not None:
+                plan['code_ungesehen'] = cs.ungesehen()          # G4: dieselbe Prüfung wie beim echten Aufruf
+            elif projekt is None:
+                hinweis = 'Ohne Projekt nicht geprüft: liegt dort Code, den der Captain nicht gesehen hat, kommt zusätzlich eine Karte (G4).'
+        e = freigabe.einstufung(harness_katalog.mit_projekt(regeln, projekt), werkzeug, args, plan)
+        return dict(e, hinweis=hinweis) if hinweis else e
 
     def frist_pruefen(self, frist_min=None):
         """Karten `an: vorarbeiter`, die zu lange offen sind, fallen an den Captain – mit Audit (HARNESS_KARTE_FRIST) und Ereignis."""

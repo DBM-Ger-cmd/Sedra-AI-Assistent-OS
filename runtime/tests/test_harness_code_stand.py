@@ -77,9 +77,12 @@ class Stand(Projekt):
 
     def test_ausgelassene_ordner_zaehlen_nicht(self):
         self.cs.stand()
-        for rel in ('node_modules/x.js', '.git/hooks/pre-commit.sh', 'runtime_data/y.py', '__pycache__/z.py', '.versteckt/a.py'):
+        for rel in ('node_modules/x.js', '.git/hooks/pre-commit.sh', 'runtime_data/y.py', '__pycache__/z.py', '.versteckt/a.py',
+                    'runtime/portable/python/current/Lib/os.py', 'runtime/portable/python.aus/current/Lib/site.py', 'runtime/portable/sandbox/x.ps1'):
             self.schreiben(rel, 'x\n')
         self.assertEqual(self.cs.ungesehen(), [])
+        self.schreiben('tools/portable/x.py', 'nur runtime/portable ist ausgenommen\n')
+        self.assertEqual([e['pfad'] for e in self.cs.ungesehen()], ['tools/portable/x.py'])
 
     def test_gesehen_setzen_nur_bei_der_gebundenen_fassung(self):
         self.cs.stand()
@@ -161,7 +164,7 @@ class Vorschau(Projekt):
             self.schreiben(f'gen/m{i:02d}.py', f'x = {i}\n')
         text, zu_gross = self.cs.vorschau(self.cs.ungesehen())
         self.assertTrue(zu_gross)
-        self.assertIn('guppi code-stand p --zeigen', text)
+        self.assertIn('CODE_STAND.bat p --zeigen', text)
 
     def test_zu_viele_zeilen(self):
         self.cs.stand()
@@ -187,6 +190,11 @@ class Vorbehalt(unittest.TestCase):
     def test_code_stand_ist_selbst_harness_code_unter_vorbehalt(self):
         grund = vorbehalte.pruefen('datei_aendern', 'runtime/src/guppi_runtime/harness/code_stand.py', {})
         self.assertIn('Code-Stand', grund)
+
+    def test_portable_laufzeit_ist_vorbehalt(self):
+        """G4 scannt runtime/portable nicht – dafür schreibt das Modell dort nicht (sonst liefe z. B. ein sitecustomize.py ungesehen)."""
+        grund = vorbehalte.pruefen('datei_schreiben', 'runtime/portable/python/current/Lib/site-packages/sitecustomize.py', {'inhalt': 'x'})
+        self.assertIn('portable Laufzeit', grund)
 
 
 class Weg(Projekt):
@@ -288,6 +296,7 @@ class Konsole(Projekt):
         super().setUp()
         self.wurzel_root = Path(self.tmp.name)                       # <root>: dieselbe Ablage wie die Oberfläche (runtime_data/harness/code_stand)
         (self.wurzel_root / 'local_config').mkdir()
+        (self.wurzel_root / 'runtime_data' / 'harness').mkdir(parents=True, exist_ok=True)
         (self.wurzel_root / 'local_config' / 'harness_projekte.yaml').write_text(
             'projekte:\n  - id: p\n    name: P\n    wurzel: ' + json.dumps(str(self.root)) + '\n    schreibbereich: ["**"]\n', encoding='utf-8')
 
@@ -311,6 +320,18 @@ class Konsole(Projekt):
         ereignisse = [json.loads(z)['event_type'] for z in (self.wurzel_root / 'runtime_data' / 'audit' / 'events.jsonl').read_text(encoding='utf-8').splitlines()]
         self.assertIn('HARNESS_CODE_STAND_UEBERNOMMEN', ereignisse)
         self.assertIn('Kein ungesehener Code', self.cli('p')[1])
+
+    def test_falscher_root_wird_abgelehnt(self):
+        import contextlib, io
+        from guppi_runtime import cli
+        leer = Path(self.tmp.name) / 'kein_projektordner'
+        leer.mkdir()
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = cli.main(['--root', str(leer), 'code-stand', 'p', '--uebernehmen'])
+        self.assertEqual(code, 2)
+        self.assertEqual(json.loads(out.getvalue())['error'], 'root_ist_nicht_der_projektordner')
+        self.assertFalse((leer / 'runtime_data').exists(), 'kein zweiter Stand angelegt')
 
     def test_unbekanntes_projekt(self):
         code, text = self.cli('gibt-es-nicht')
@@ -339,6 +360,22 @@ class Route(Projekt):
         self.schreiben('tools/neu.py', 'x = 1\n')
         sicht = a.code_stand_sicht({'projekt': ['p']})
         self.assertEqual((sicht['aktiv'], sicht['ungesehen'], sicht['pfade']), (True, 1, ['tools/neu.py']))
+        if os.name != 'nt':
+            self.assertIn(f'--root "{self.wurzel_root}" code-stand p', sicht['konsole'], 'die Konsole nennt genau den Projektordner dieses Servers')
+        else:
+            self.assertEqual(sicht['konsole'], 'CODE_STAND.bat p')
+
+    def test_einstufen_zeigt_den_vorbehalt(self):
+        """B8: die Einstufungs-Vorschau (Katalog-Editor) sagt dasselbe wie der echte Aufruf."""
+        a = self.api()
+        a.projekte = lambda: {'projekte': [{'id': 'p', 'name': 'P', 'wurzel': str(self.root), 'schreibbereich': ['**']}]}
+        a._regeln = lambda: ([{'id': 'python', 'werkzeug': ['befehl'], 'muster': ['python *'], 'stufe': 'frei', 'begruendung': 'x'}], None)
+        self.assertFalse(a.einstufen({'werkzeug': 'befehl', 'ziel': 'python tools/skript.py', 'projekt': 'p'})['vorbehalt'])
+        self.schreiben('tools/skript.py', 'print("neu")\n')
+        e = a.einstufen({'werkzeug': 'befehl', 'ziel': 'python tools/skript.py', 'projekt': 'p'})
+        self.assertTrue(e['vorbehalt'])
+        self.assertFalse(a.einstufen({'werkzeug': 'befehl', 'ziel': 'python -m py_compile tools/skript.py', 'projekt': 'p'})['vorbehalt'])
+        self.assertIn('G4', a.einstufen({'werkzeug': 'befehl', 'ziel': 'python tools/skript.py'})['hinweis'])
 
     def test_schalter_aus(self):
         a = self.api({'code_sicht': {'enabled': False}})

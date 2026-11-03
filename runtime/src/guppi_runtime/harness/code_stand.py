@@ -30,6 +30,9 @@ CODE_NAMEN = frozenset({'pyproject.toml', 'setup.cfg', 'setup.py', 'tox.ini', 'p
                         'sitecustomize.py', 'usercustomize.py'})
 BINAER = frozenset({'.exe', '.dll'})
 AUSLASSEN = frozenset({'.git', 'node_modules', '__pycache__', '.venv', 'engines', '.mypy_cache', '.pytest_cache', 'runtime_data'})
+# Ordner (relativ zur Projektwurzel), die nicht gescannt werden: die portable Laufzeit (Python mit Standardbibliothek, Sandbox-SDK; auf dem PC und
+# dem Stick tausende Dateien, Bau-PC zusätzlich `python.aus`). Das Modell schreibt dort nicht – harter Vorbehalt in harness/vorbehalte.py.
+AUSLASSEN_PFADE = ('runtime/portable',)
 NUR_PRUEFEN = ('python -m py_compile', 'node --check')          # G4-E1: prüfen nur die Schreibweise, führen keinen Projekt-Code aus
 AUSFUEHRUNG = ('befehl', 'lauf_starten')
 KARTE_DATEIEN_MAX = 30
@@ -68,7 +71,7 @@ def _sha_datei(pfad):
 class CodeStand:
     """Der gesehene Stand eines Projekts. `ablage` ist der Ordner unter runtime_data/harness/, `audit(event, payload)` optional."""
 
-    def __init__(self, ablage, wurzel, projekt_id, *, audit=None):
+    def __init__(self, ablage, wurzel, projekt_id, *, audit=None, konsole=None):
         self.ablage = Path(ablage)
         self.wurzel = Path(wurzel).resolve()
         self.projekt_id = str(projekt_id)
@@ -76,6 +79,8 @@ class CodeStand:
         self.spur_datei = self.ablage / f'{self.projekt_id}.spur.json'
         self.vorher = self.ablage / 'vorher'
         self.audit = audit
+        # wie man den Stand außerhalb des Browsers ansieht – setzt der Server (G4-16); ohne Angabe die Form aus docs/BETRIEB.md
+        self.konsole = konsole or f'CODE_STAND.bat {self.projekt_id}'
         self._cache = {}                     # rel → (size, mtime_ns, sha): nur Geändertes wird neu gehasht
         self._sperre = threading.RLock()
 
@@ -91,7 +96,9 @@ class CodeStand:
         """{rel: sha256} aller Code-Dateien des Projekts."""
         out, cache = {}, {}
         for ordner, unter, dateien in os.walk(self.wurzel):
-            unter[:] = [u for u in unter if u not in AUSLASSEN and not u.startswith('.')]
+            basis = Path(ordner).relative_to(self.wurzel).as_posix()
+            basis = '' if basis == '.' else basis + '/'
+            unter[:] = [u for u in unter if u not in AUSLASSEN and not u.startswith('.') and (basis + u).lower() not in AUSLASSEN_PFADE]
             for name in dateien:
                 if not ist_code(name):
                     continue
@@ -297,6 +304,6 @@ class CodeStand:
             zeilen.extend(stueck)
         if zu_gross:
             zeilen.append(f'… Zu viel ungesehener Code für eine Karte ({n} Dateien). Diese Karte lässt sich nicht im Browser freigeben: '
-                          f'in der Konsole mit „guppi code-stand {self.projekt_id} --zeigen“ ansehen und mit „--uebernehmen“ übernehmen, '
+                          f'in der Konsole mit „{self.konsole} --zeigen“ ansehen und mit „{self.konsole} --uebernehmen“ übernehmen, '
                           'dann den Aufruf wiederholen lassen.')
         return '\n'.join(zeilen), zu_gross

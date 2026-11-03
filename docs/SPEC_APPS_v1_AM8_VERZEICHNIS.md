@@ -10,7 +10,7 @@ Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 |---|---|---|
 | B1 | Acht Erweiterungswege mit eigener Form und Prüfung (Konzept §2.1). Es gibt keine Stelle, die sie gemeinsam zeigt. | Konzept §2.1 |
 | B2 | Fünf Vokabulare für Rechte/Wirkung (Konzept §2.2). Am genauesten sind die Wirkungsklassen der Agenten-Vorlagen. | `agent_manager/agent_import.py:126–186` |
-| B3 | Für die USB-Ausgabe werden die Abhängigkeiten der Translator-Shell von Hand aufgezählt (Werkzeuge, Kern-Module `fisch/`, `sprache/`, ui-Dateien, Fenster). | `docs/ENTSCHEIDUNGEN_USB_STICK.md:7–9` |
+| B3 | Für die USB-Ausgabe werden die Abhängigkeiten der Translator-Shell von Hand aufgezählt (Werkzeuge, Kern-Module `fisch/`, `sprache/`, ui-Dateien, Fenster). **Nachtrag 03.11.:** Auf dem Branch `plan/usb-stick-minimal` gibt es `runtime/benchmarks/stick_liste.txt` (Zeilen `repo`, `bestand`, `modul`; `modul` nimmt ein Python-Modul mit allen statischen Importen `guppi_runtime.*` mit) und `stick_paket.py` (prüfen, kopieren ohne Verknüpfungen, `STICK_MANIFEST.json` mit Hashes). Werkzeuge und Shells stehen dort als ganze Ordner; was die Oberfläche braucht, wird weiter von Hand gewählt. | `docs/ENTSCHEIDUNGEN_USB_STICK.md:7–9`; Branch `plan/usb-stick-minimal` |
 | B4 | Der Release-Updater führt eine Liste aller Programmdateien mit Hash (`release/MANIFEST.sha256`) und vergleicht Rechte von Modulen zwischen Ständen. | `update_anwenden.py:3–8, 36–115` |
 | B5 | Harness-Werkzeuge haben Gruppen (`LESEN`, `WIRKUNG`, `LAUF`, …), aber keine Wirkungsklasse. | `harness/werkzeuge.py:35–42` |
 | B6 | Ob Desk-Verben eine Wirkungsklasse tragen, ist nicht bekannt (`desk/kinds.py` teilweise, `desk/actions.py` nicht gelesen). | – |
@@ -41,14 +41,14 @@ Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 | ID | Anforderung | Prüfbar durch |
 |---|---|---|
 | AM8-10 | Manifeste nennen Abhängigkeiten: `needs.apps` (AM2-19), `needs.kern` (Liste von Kern-Paketen, z. B. `[fisch, sprache]`), `needs.ui` (Vertragsdateien, z. B. `[sprache.js, wechsel.js]`). Shells nennen ihre Apps über Grundfunktionen und Start-Gruppen. | Schema-Test |
-| AM8-11 | Ein Werkzeug `python -m guppi_runtime.auslieferung --profil <datei>` berechnet aus einem Profil (Shells, Apps) die **Hülle** aller benötigten Dateien und meldet fehlende Abhängigkeiten. Es kopiert nichts. | Test |
-| AM8-12 | Gegenprobe: Für das Profil „Stick minimal“ (`docs/ENTSCHEIDUNGEN_USB_STICK.md:7–9`) ergibt die Berechnung mindestens die dort von Hand genannten Teile; Abweichungen werden als Befund aufgeschrieben, nicht still angeglichen. | Test |
+| AM8-11 | **Kein zweites Werkzeug:** `stick_paket.py` bekommt eine Zeilenart `shell <id>` bzw. `app <id>`, die aus den Manifesten (`needs.apps`, `needs.kern`, `needs.ui`, Grundfunktionen) die Hülle der Ordner und Module ableitet; `--pruefen` meldet fehlende Abhängigkeiten. Voraussetzung: der Stick-Branch ist auf `main`. | Test im Stil von `test_stick_paket.py` |
+| AM8-12 | Gegenprobe: Für den Stick ergibt die Ableitung aus den Manifesten mindestens die Zeilen der heutigen `stick_liste.txt`; Abweichungen werden als Befund aufgeschrieben, nicht still angeglichen. | Test |
 
 ## 3. Entwurf
 
 - `desk/verzeichnis.py` (neu, ≤ 400 Zeilen, nur lesen) sammelt aus den Quellen in AM8-02; je Quelle eine kleine Lesefunktion, die bei Fehlern `zustand: unbekannt` liefert.
 - Wirkungsklassen in `harness/werkzeuge.py` als Wörterbuch neben `SCHEMAS`; Test gegen `NAMEN`.
-- Auslieferung: neue Datei `auslieferung.py`; nutzt `Registry.module_dirs` und die Manifeste; Kern-Pakete als Ordner unter `guppi_runtime/`.
+- Auslieferung: Erweiterung von `runtime/benchmarks/stick_paket.py` (Branch `plan/usb-stick-minimal`) statt einer neuen Datei; nutzt `Registry.module_dirs` und die Manifeste; Kern-Pakete als Ordner unter `guppi_runtime/`.
 
 ## 4. Tests und Abnahme
 

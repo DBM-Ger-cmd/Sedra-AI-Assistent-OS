@@ -18,6 +18,10 @@ Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081. Rechtliche B
 | B7 | Das Audit ist eine Hash-Kette ohne Inhalte; es gibt keine Angabe, **welche Person** gehandelt hat (es gibt nur eine). | `core/audit.py` (ARCHITEKTUR §1); B1 |
 | B8 | Der Release-Updater verlangt die Bestätigung jeder Rechteänderung eines Moduls. | `update_anwenden.py:7–8` |
 
+### 1a. Erster realer Fall (Nachtrag 03.11.2026)
+
+Der USB-Stick für einen Arbeitskollegen (`docs/WISSENSDATENBANK_USB_STICK_CHAT.md` auf Branch `fix/harness-list-projects`; `docs/PLAN_USB_STICK_MINIMAL.md` auf Branch `plan/usb-stick-minimal`) ist genau die Betriebsart A: eigener Rechner, eigene SEDRA, Harness als Standard. Heute ohne Richtlinie, ohne Rollen, ohne festgelegte Person. Er eignet sich als **Pilot** für AM7: zuerst die Richtlinie (AM7-04) als Datei auf dem Stick, die der Kollege nicht über SEDRA ändern kann.
+
 ## 2. Die Grundsatzfrage: Betriebsart
 
 SEDRA ist heute ein Programm für **eine Person an einem Rechner**. Für Beschäftigte gibt es drei Betriebsarten. Sie unterscheiden sich so stark, dass alles Weitere davon abhängt:

@@ -202,3 +202,16 @@ G2 (diese Datei) → Freigabe durch den Captain → G3 T1–T5 → G4 Abnahme am
 - **Konsole schreibt ins Audit über `AuditLog` direkt** (wie `audit-repair`), nicht über eine ganze Runtime; die Kette ist dieselbe (`runtime_data/audit/events.jsonl`, Dateisperre).
 - **Vorhandene Warnung:** `harness/befehl.py` schließt die Ausgabe-Pipe nicht (`ResourceWarning` in Tests); das war vorher so und ist nicht Teil von G4.
 
+### 13a. Nacharbeit nach der Durchsicht (03.11.2026, im selben PR)
+
+| Nr | Befund | Änderung | Test |
+|---|---|---|---|
+| A1 | Auf dem PC und dem Stick liegt die portable Laufzeit im Projekt (`runtime\portable\python\current`, Bau-PC zusätzlich `python.aus`, `sandbox`; `START_SEDRA.bat:18, 60`). G4 hätte tausende Dateien gescannt; nach jeder Ersteinrichtung käme eine Riesenkarte. | `code_stand.AUSLASSEN_PFADE = ('runtime/portable',)`; dafür harter Vorbehalt `runtime/portable/**` für Schreiben (sonst könnte das Modell z. B. ein `sitecustomize.py` ungesehen dort ablegen). | `test_ausgelassene_ordner_zaehlen_nicht`, `test_portable_laufzeit_ist_vorbehalt` |
+| A2 | Der Konsolenweg stand ohne `--root` in Karte, Sitzungshinweis und PR. `guppi` läuft aber mit `--root workspace/GUPPI_OS` (`docs/BETRIEB.md:137`); ohne ihn entstünde still ein zweiter Stand. | neuer Starter `CODE_STAND.bat` im SEDRA-Ordner (Pfade und Python wie `START_SEDRA.bat`); der Server nennt den passenden Weg (`HarnessApi._code_konsole`: Windows `CODE_STAND.bat <projekt>`, sonst `python -m guppi_runtime --root "<projektordner>" code-stand <projekt>`); die Konsole lehnt einen `--root` ohne `runtime_data/harness` ab (`root_ist_nicht_der_projektordner`). | `test_falscher_root_wird_abgelehnt`, `test_zahl_und_pfade` |
+| A3 | Nur der MasterChat kannte die Karte. | Ein Satz in `bauagent.md`, `pruefer.md`, `modellierer.md`; Regel 6 in `vorarbeiter.md` nennt die Karte als Captain-Karte. | – |
+| B8 | Die Einstufungs-Vorschau (`POST /api/harness/einstufen`) zeigte „frei“, obwohl eine G4-Karte käme. | Mit Projekt: dieselbe Prüfung wie beim Aufruf (Vorbehalt); ohne Projekt: Feld `hinweis`. | `test_einstufen_zeigt_den_vorbehalt` |
+
+Tests danach: `test_harness_code_stand` 32 Tests, Harness-Gruppe grün (Zahlen im PR).
+
+**Offen für den Stick** (Branch `plan/usb-stick-minimal`, nicht in diesem PR): `stick_liste.txt` braucht `modul guppi_runtime.cli` und `repo CODE_STAND.bat`, sonst fehlt auf dem Stick der Konsolenweg. Die Karte selbst funktioniert dort auch ohne.
+

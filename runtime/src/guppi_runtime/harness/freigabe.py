@@ -307,8 +307,9 @@ def _code_zu_gross(w, karte):
     except (WerkzeugFehler, BefehlFehler):
         return                                               # der Fehler zeigt sich gleich beim Ausführen
     if plan.get('code_zu_gross'):
+        konsole = getattr(w.code_stand, 'konsole', 'CODE_STAND.bat <projekt>')
         raise ValueError(f"code_zu_gross: zu viel ungesehener Code für eine Karte ({len(plan['code_ungesehen'])} Dateien) – in der Konsole "
-                         f"„guppi code-stand {getattr(w.code_stand, 'projekt_id', '<projekt>')} --zeigen“, dann „--uebernehmen“; danach den Aufruf wiederholen lassen")
+                         f"„{konsole} --zeigen“, dann „{konsole} --uebernehmen“; danach den Aufruf wiederholen lassen")
 
 
 def ausfuehren(werkzeuge, guard, name, args, plan, token, abbruch=None):
