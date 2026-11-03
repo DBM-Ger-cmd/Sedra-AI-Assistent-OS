@@ -1,6 +1,6 @@
 # SPEC Apps v1 – AM4: Dienste außerhalb des Server-Prozesses, MCP-Zugang mit Berechtigung (03.11.2026)
 
-Status: **G1** (Anforderungen mit Entwurf), nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Setzt AM3 voraus.
+Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen); G2 steht noch aus. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Setzt AM3 voraus.
 Ziel: (A) Der vorhandene MCP-Zugang zum Desk bekommt eine Berechtigung wie eine App. (B) Eine App kann ein **Dienst** sein: ein eigener Prozess, den der Kern startet und stoppt, der nur über Desk-Objekte und -Verben spricht. (C) Was es bräuchte, damit SEDRA fremde MCP-Server als Werkzeuge nutzt – mit der Empfehlung, das zurückzustellen.
 Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
@@ -76,6 +76,8 @@ Kein fremder Python-Code im Server-Prozess. Keine Netzfreigabe für Dienste durc
 - Die Einschränkung des MCP-Zugangs (AM4-02) kann bestehende Abläufe des Captains mit MCP-Hosts (z. B. Claude Desktop) brechen, wenn sie Verben nutzen. Gegenmittel: Übergang mit „Verben wie bisher“ und Hinweis.
 
 ## 8. Entscheidungen des Captains
+
+**Entschieden vom Captain am 03.11.2026: alle Vorschläge dieser Tabelle übernommen.**
 
 | Nr | Frage | Vorschlag |
 |---|---|---|

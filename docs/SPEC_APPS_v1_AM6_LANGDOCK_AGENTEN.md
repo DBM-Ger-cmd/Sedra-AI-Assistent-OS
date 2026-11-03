@@ -1,6 +1,6 @@
 # SPEC Apps v1 – AM6: Langdock-Agenten fragen (Richtung 2a, ausgehend) (03.11.2026)
 
-Status: **G1** (Anforderungen mit Entwurf), nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Setzt AM5 und AM3 voraus.
+Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen); G2 steht noch aus. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Setzt AM5 und AM3 voraus.
 Ziel: SEDRA kann einen bei Langdock eingerichteten **Agenten** fragen und die Antwort nutzen. Nur **ausgehend** (SEDRA ruft Langdock). Der umgekehrte Weg (Richtung 2b: Langdock ruft SEDRA) ist ausgeschlossen (§7).
 Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081. Langdock-Angaben: nur Suchauszüge, siehe AM5 §1.
 
@@ -62,6 +62,8 @@ Keine Langdock-Werkzeuge im Modell von SEDRA (das wäre AM4 Teil C). Kein MCP-Tr
 - Abhängigkeit von einem Format (UIMessage), das Langdock ändern kann.
 
 ## 9. Entscheidungen des Captains
+
+**Entschieden vom Captain am 03.11.2026: alle Vorschläge dieser Tabelle übernommen.**
 
 | Nr | Frage | Vorschlag |
 |---|---|---|

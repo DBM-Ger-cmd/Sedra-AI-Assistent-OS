@@ -1,6 +1,6 @@
 # SPEC Apps v1 – AM2: Orte aus Manifesten, Shell-eigene Apps, Grundfunktionen (03.11.2026)
 
-Status: **G1** (Anforderungen mit Entwurf), nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Setzt AM1 (`shells`) voraus.
+Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen); G2 steht noch aus. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Setzt AM1 (`shells`) voraus.
 Ziel: (1) Eine App bringt ihren Ort (Name, Wörter, Gruppe) im Manifest mit, statt in zwei Listen des Kerns zu stehen. (2) Shells können eigene Apps haben. (3) Die bestätigten Grundfunktionen sind in jeder Shell erreichbar, und das wird geprüft.
 Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
@@ -109,6 +109,8 @@ Keine Rechte (AM3), keine Rollen-Auswertung (AM7). Kein eigenes Bild als Symbol.
 - Die Prüfung der Grundfunktionen deckt Lücken in bestehenden Shells auf (KMU, Translator). Das ist gewollt, darf aber nicht zur Abweisung im Betrieb führen, bevor sie behoben sind (AM2-15 Warnung zuerst).
 
 ## 8. Entscheidungen des Captains
+
+**Entschieden vom Captain am 03.11.2026: alle Vorschläge dieser Tabelle übernommen.**
 
 | Nr | Frage | Vorschlag |
 |---|---|---|

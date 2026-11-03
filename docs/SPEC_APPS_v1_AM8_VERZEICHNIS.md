@@ -1,6 +1,6 @@
 # SPEC Apps v1 – AM8: Ein Verzeichnis für alle Erweiterungen, gemeinsame Wirkungsklassen, Auslieferungsprofile (03.11.2026)
 
-Status: **G1** (Anforderungen mit Entwurf), nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §2.1, §2.2, §5.3, §11. Setzt AM3 voraus.
+Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen); G2 steht noch aus. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §2.1, §2.2, §5.3, §11. Setzt AM3 voraus.
 Ziel: Die acht Erweiterungswege (E1–E8) bleiben technisch, wie sie sind, bekommen aber **eine gemeinsame Sicht**: ein Verzeichnis, in dem jede Erweiterung mit Herkunft, Vertrauen, Wirkungsklassen ihrer Fähigkeiten und Abhängigkeiten steht. Daraus lassen sich Auslieferungen (z. B. der USB-Stick) ableiten statt von Hand aufzählen.
 Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
@@ -68,6 +68,8 @@ Keine Zusammenlegung der Vokabulare, keine neue Entscheidungsinstanz, kein gemei
 - Das Verzeichnis kann veraltete Quellen zeigen (z. B. Architektur-Module, die nicht mehr genutzt werden); das ist ein nützlicher Befund, kein Fehler des Bausteins.
 
 ## 8. Entscheidungen des Captains
+
+**Entschieden vom Captain am 03.11.2026: alle Vorschläge dieser Tabelle übernommen.**
 
 | Nr | Frage | Vorschlag |
 |---|---|---|

@@ -1,6 +1,6 @@
 # SPEC Apps v1 – AM3: App-Berechtigung (03.11.2026)
 
-Status: **G1** (Anforderungen mit Entwurf), nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §5, §8, §9, §11. Setzt AM0 voraus.
+Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen); G2 steht noch aus. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §5, §8, §9, §11. Setzt AM0 voraus.
 Ziel: Jede App außerhalb des Pakets hat eine **Berechtigung**: was sie beantragt, was gewährt ist, ob sie aktiv ist. Gewährt wird im Posteingang mit Gate, entzogen sofort. Updates zeigen Datei- und Rechteänderungen. Ereignisse werden nach Klassen gefiltert. Fremde Apps sind sichtbar als fremd gekennzeichnet und können eine Leistenzelle als reine Daten liefern.
 Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
@@ -146,6 +146,8 @@ Keine Rollen (AM7). Keine Dienste (AM4). Kein Senden von App-Ereignissen. Keine 
 - Ein unsichtbarer Rahmen je fremder Zelle kostet Speicher; deshalb nur, wenn die Zelle in der Leiste steht.
 
 ## 8. Entscheidungen des Captains
+
+**Entschieden vom Captain am 03.11.2026: alle Vorschläge dieser Tabelle übernommen.**
 
 | Nr | Frage | Vorschlag |
 |---|---|---|

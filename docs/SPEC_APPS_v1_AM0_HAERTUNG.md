@@ -1,6 +1,6 @@
 # SPEC Apps v1 – AM0: Härtung des Bestehenden (03.11.2026)
 
-Status: **G1** (Anforderungen mit Entwurf), nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11.
+Status: **G1 freigegeben** (03.11.2026, Entscheidungen wie vorgeschlagen); **G2** in `docs/SPEC_APPS_v1_AM0_G2.md`. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11.
 Ziel: die Lücken schließen, die beim Lesen des App-Wegs gefunden wurden, **bevor** irgendetwas für fremden Code geöffnet wird. Kein neuer Funktionsumfang.
 Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
@@ -66,6 +66,8 @@ Keine Signatur (offen, Konzept §12). Keine Abschottung von CORE. Keine neue Ber
 - AM0-06 bricht eine eingebaute fremde Code-Shell, falls es eine gibt. Unbekannt.
 
 ## 8. Entscheidungen des Captains
+
+**Entschieden vom Captain am 03.11.2026: alle Vorschläge dieser Tabelle übernommen.**
 
 | Nr | Frage | Vorschlag |
 |---|---|---|

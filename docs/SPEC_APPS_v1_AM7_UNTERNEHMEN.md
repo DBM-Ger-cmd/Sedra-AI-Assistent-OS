@@ -1,8 +1,8 @@
 # SPEC Apps v1 – AM7: Betrieb im Unternehmen (KMU-Shell): Betreiber, Rollen, Richtlinie, Profile (03.11.2026)
 
-Status: **G1 mit offenen Grundsatzfragen**, nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Setzt AM2 und AM3 voraus.
+Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen: Betriebsart **A**); vor G2 wird dieses G1 auf Betriebsart A zugeschnitten. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Setzt AM2 und AM3 voraus.
 Ziel: SEDRA lässt sich in einem Unternehmen so betreiben, dass ein **Betreiber** festlegt, welche Apps, Shells, Anbieter und Rechte es gibt, und **Beschäftigte** in einer kontrollierten Umgebung (KMU-Shell) mit Dokumenten und KI arbeiten – mit Nachweis.
-**Diese Spec kann erst nach der Entscheidung AM7-E1 (Betriebsart) in G2 gehen.** Ohne sie wäre jeder technische Entwurf geraten.
+**AM7-E1 ist entschieden (Betriebsart A, 03.11.2026).** Nächster Schritt: dieses G1 auf Betriebsart A zuschneiden, dann G2.
 Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081. Rechtliche Begriffe sind Einordnung, keine Rechtsprüfung.
 
 ## 1. Befund
@@ -101,6 +101,8 @@ Kein Server-Betrieb (Art C), kein Mandantenbetrieb, keine frei definierbaren Rol
 - Protokollierung mit Personenbezug (AM7-12) ist selbst eine Verarbeitung personenbezogener Daten der Beschäftigten.
 
 ## 9. Entscheidungen des Captains
+
+**Entschieden vom Captain am 03.11.2026: alle Vorschläge dieser Tabelle übernommen.**
 
 | Nr | Frage | Vorschlag |
 |---|---|---|

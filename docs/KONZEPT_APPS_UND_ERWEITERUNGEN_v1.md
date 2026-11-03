@@ -1,7 +1,7 @@
 # Konzept: Apps und Erweiterungen in SEDRA v1 (03.11.2026)
 
 Stand des Codes: `main` c364081. Dieses Konzept ersetzt `docs/ENTWURF_APPS_MODELL_2026-11-03.md` als Grundlage; der Entwurf bleibt als Verlauf.
-Die Bausteine stehen je in einem eigenen Spec (`docs/SPEC_APPS_v1_AM0_…` bis `…_AM8_…`, §11). Nichts davon ist gebaut.
+Die Bausteine stehen je in einem eigenen Spec (`docs/SPEC_APPS_v1_AM0_…` bis `…_AM8_…`, §11). Nichts davon ist gebaut. Stand 03.11.2026: alle Entscheidungen wie vorgeschlagen; AM0 und AM1 in **G2** (`SPEC_APPS_v1_AM0_G2.md`, `SPEC_APPS_v1_AM1_G2.md`).
 
 Pfade ohne Vorsatz sind relativ zu `runtime/src/guppi_runtime/`. Zeilennummern gelten für c364081. Wo etwas nicht im Code gelesen wurde, steht das dabei.
 Alles, was rechtliche Pflichten betrifft (DSGVO, EU-KI-Verordnung, Verträge), ist **Einordnung, keine Rechtsprüfung**.
@@ -350,5 +350,7 @@ Grenzen dieser Arbeit (ehrlich):
 | 03.11.2026 | Langdock: beide Richtungen, zuerst Modellquelle | Captain |
 | 03.11.2026 | Ausarbeitung als Gesamtkonzept mit Specs; Weiterarbeit ohne Langdock-Volltexte | Captain |
 | 19.10.2026 | CORE-Werkzeuge bleiben in der Seite; Nicht-CORE im Rahmen | `PLAN_STUFE_C` §6, §10 |
-| 03.11.2026 | **Vorschlag, zur Bestätigung:** Richtung 2a (Langdock-Agenten fragen) als Kern-Verb statt als Dienst-App, wie im Entwurf noch angenommen. Grund: kein Netz in der microVM, keine Sicherheitsgrenze für Dienste auf dem Host, Schlüssel und Inhaltsschutz liegen im Kern (AM6 §1) | Claude |
+| 03.11.2026 | Richtung 2a (Langdock-Agenten fragen) als **Kern-Verb** statt als Dienst-App. Grund: kein Netz in der microVM, keine Sicherheitsgrenze für Dienste auf dem Host, Schlüssel und Inhaltsschutz liegen im Kern (AM6 §1) | Vorschlag Claude, übernommen vom Captain |
+| 03.11.2026 | **Alle Vorschläge** der Entscheidungstabellen AM0-E… bis AM8-E… übernommen (u. a. Vorbehalt für ganz `uix/**`, Werkseinstellung fremder Apps, Betriebsart A im Unternehmen, Langdock zuerst außerhalb des Gateway-Vorgangs) | Captain |
+| 03.11.2026 | AM0 und AM1 in G2 bringen | Captain |
 | 15.10.2026 | Fremdes Modul kommt als COMMUNITY mit Leserouten; Schreiben nur per Gate | `uix_server.py:1265` (Kommentar) |

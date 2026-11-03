@@ -1,6 +1,6 @@
 # SPEC Apps v1 – AM5: Langdock als Modellquelle (Richtung 1) (03.11.2026)
 
-Status: **G1** (Anforderungen mit Entwurf), nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Captain 03.11.2026: Langdock in beiden Richtungen, **zuerst als Modellquelle**.
+Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen); G2 steht noch aus. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Captain 03.11.2026: Langdock in beiden Richtungen, **zuerst als Modellquelle**.
 Ziel: SEDRA kann Modelle über Langdock aufrufen – über den vorhandenen Cloud-Zugang, mit fester EU-Region, durch den Inhaltsschutz, mit Empfängerangaben, die der Betreiber pflegt. **Langdock ist dabei keine App**, sondern ein Anbieter im Kern (Konzept §9: Apps haben kein Netz).
 Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
@@ -87,6 +87,8 @@ Kein echter Cloudweg im Gateway-Vorgang (B7). Keine Agenten (AM6). Keine Änderu
 - Das Zeitlimit von 100 s ist knapp unter dem Abbruch bei Langdock; lange Antworten scheitern. Streaming wäre die Lösung, ist aber nicht Teil dieses Bausteins.
 
 ## 9. Entscheidungen des Captains
+
+**Entschieden vom Captain am 03.11.2026: alle Vorschläge dieser Tabelle übernommen.**
 
 | Nr | Frage | Vorschlag |
 |---|---|---|
