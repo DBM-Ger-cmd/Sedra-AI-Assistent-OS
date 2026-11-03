@@ -76,6 +76,7 @@ class DenkenFrisstBudget(Basis):
         a = Attrappe([Zug('Gleich da.')])
         self.lauf(a, max_tokens=2048)
         self.assertEqual(a.requests[0]['max_tokens'], 2048)
+        self.assertIs(a.requests[0]['stream_guard'], True)                                   # der Wächter gegen Wiederholungsschleifen ist an
         self.assertNotIn('denken.begrenzt', [n for n, _ in self.ereignisse()])
 
 

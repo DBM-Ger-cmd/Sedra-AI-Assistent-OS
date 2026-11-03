@@ -192,7 +192,8 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
         zug_tokens = min(max_tokens * 2, MAX_RETRY) if nach_denken_leer else max_tokens
         denk_jetzt = denk_modus                  # das Denken wird nicht beschnitten: Gedanken kosten nur Zeit, nicht Kontext (sie gehen nicht zurück ans Modell); nur Platz für die Antwort fehlte
         request = {'action': 'model_inference', 'provider': provider, 'model': modell, 'messages': messages, 'temperature': temperature,
-                   'max_tokens': zug_tokens, 'slot_owner': 'captain-chat', 'stream': on_delta}
+                   'max_tokens': zug_tokens, 'slot_owner': 'captain-chat', 'stream': on_delta,
+                   'stream_guard': True}                   # Log 03.11.2026: ein Zug erzeugte 8 000 Token, die Eingabe stand 4½ Minuten auf Stopp – wiederholt sich das Modell nur noch, schließt der Wächter (runaway_guard.py) die Verbindung
         if denk_jetzt == 'aus':                           # Denken begrenzen (Token und Gespräch): gemessen wurde `none` mit LM Studio (docs: jobs/token_policy.py), nicht mit dem Router
             request['reasoning_effort'] = 'none'
         elif denk_jetzt == 'begrenzt':
