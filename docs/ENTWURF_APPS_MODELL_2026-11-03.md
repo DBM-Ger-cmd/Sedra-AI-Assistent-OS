@@ -16,8 +16,11 @@ Idee des Captains: Werkzeuge und Erweiterungen sind einheitlich **Apps**, die ü
 4. Beim Lesen sind **fünf Lücken** aufgefallen, die vor jeder Öffnung für Fremde zu schließen sind (§3.5). Zwei davon sind klein und billig:
    die Rahmenseite hat dieselbe CSP wie die Shell (`connect-src 'self'`), und `uix/**` steht nicht unter den harten Vorbehalten
    der Harness (ein Modell mit Schreibbereich `runtime/**` könnte ein Werkzeug als „Paket“ ablegen, das dann `CORE` ist).
-5. Reihenfolge: Stufe 0 (Lücken + Tests, kein Funktionsgewinn), 1 (Zellen aus `kind: instrument`), 2 (Ort/Gebiet aus dem Manifest),
-   3 (serverseitige Erweiterungen wie MCP, nur außerhalb des Prozesses).
+5. Leitbild **Android** (§2.0): Kern, Apps mit Manifest, Berechtigungen in Schutzstufen A (normal), B (gefährlich, nur auf Antrag), C (nur Kern). Berechtigung je App mit Schaltern (§5).
+6. **Apps je Shell** (§2.2a): Shells bringen eigene Apps mit, Apps müssen nicht überall verfügbar sein. Ausnahme **Grundfunktionen** (Entscheidungen, Gespräch, Aufgaben, Logbuch, Modus und Grenzen, Module und Berechtigungen, Einstellungen): in allen Shells gleich, aber nach Rolle sichtbar.
+7. **KMU-Shell** (§2.2b): Betrieb im Unternehmen braucht Rollen, Betreiber-Richtlinie, Positivliste und getrennte Profile. Das ist ein eigener großer Schritt (Stufe 4); der Gateway-MVP schließt Rollen heute aus.
+8. **Langdock** (§2.2c): Richtung 1 (Modellquelle) voraussichtlich nur Konfiguration, Region fest `eu`; Richtung 2 nur ausgehend (2a). Die Angaben stammen aus Suchauszügen, nicht aus gelesenen Volltexten.
+9. Reihenfolge: Stufe 0 (Lücken + Tests) → 1 (Zellen aus `kind: instrument`) → 2 (Ort/Gruppe/`shells:` im Manifest) → 3 (Dienste außerhalb des Prozesses) → 3c (Langdock Modellquelle) → 3d (Langdock Agenten, ausgehend) → 4 (Unternehmen). 3c braucht den echten Cloud-Versand im Gateway; 3d braucht 3b; 4 ist Voraussetzung für den produktiven Einsatz in Firmen.
 
 ---
 
@@ -526,7 +529,7 @@ Für fremden Code, der selbst ausgeführt werden soll, gibt es `sandbox/` (micro
 
 ### Stufe 3c – Langdock als Modellquelle (nach Gateway-Cloud-Versand)
 
-- **Inhalt:** Eintrag `langdock` in `cloud_providers.yaml` (oder Adapter, falls die Schnittstelle nicht OpenAI-kompatibel ist), Empfängereintrag im Gateway mit Rechtsgrundlage und Vertragsangabe, Schalter in Einstellungen → Integrationen.
+- **Inhalt:** Eintrag `langdock` in `cloud_providers.yaml` (laut Suchauszug OpenAI-kompatibel, Region fest `eu`, `global`/`us` abgelehnt; ein eigener Adapter ist nur nötig, wenn die Volltexte etwas anderes zeigen), Empfängereintrag im Gateway mit Rechtsgrundlage und Vertragsangabe, Schalter in Einstellungen → Integrationen.
 - **Voraussetzung:** echter Cloud-Versand im Gateway (heute simuliert); Schnittstelle von Langdock geprüft; für Unternehmen Betreiber-Richtlinie (Stufe 4).
 - **Risiko:** mittel bis hoch (Daten verlassen den Rechner). Schutz kommt vom Gateway, nicht vom Anbieter.
 - **Tests:** Personendaten ohne Rechtsgrundlage erreichen Langdock nie (Fake-Server, kein Aufruf); Schlüssel erscheint nie in Datei, Log, Audit oder Fehlermeldung; Weiterleitung und http werden abgelehnt; Anbieter aus = kein Aufruf.
@@ -534,7 +537,7 @@ Für fremden Code, der selbst ausgeführt werden soll, gibt es `sandbox/` (micro
 
 ### Stufe 3d – Langdock als Gegenstelle (Richtung 2)
 
-- **Inhalt:** Dienst-App `langdock` (B5) mit eigenem Token und Scope, ausgehender Weg zuerst (Pull); Herkunftswert `langdock` vom Server gesetzt.
+- **Inhalt:** Dienst-App `langdock` (B5), **nur Richtung 2a**: SEDRA ruft freigegebene Langdock-Agenten (Agents-API) über eine ausgehende Verbindung, Antworten sind Fremdinhalt; Herkunftswert `langdock` vom Server gesetzt. Richtung 2b (Langdock ruft SEDRA) ist ausgeschlossen, bis es eine eigene Sicherheits-Spec gibt.
 - **Voraussetzung:** Stufe 3b, 3c, geklärter Zugang (Punkt 2 der Tabelle in §2.2c), Fremdinhalt-Prüfung.
 - **Risiko:** hoch. **Tests:** Verb ohne Fähigkeit → 403 + Audit; Anweisung in Antwort löst nichts aus; Entzug beendet den Zugang sofort. **Rückfall:** Dienst aus (Standard).
 
@@ -584,9 +587,22 @@ Offen bleibt an den Captain nur noch die **Werkseinstellung** der Tabelle (Spalt
 
 ---
 
-## 6. Quellen (gelesen)
+## 6. Quellen
 
-`uix/tools/_template/{tool.yaml,README.md}`, `docs/SHELL_WERKZEUG_VERTRAG_v1.md`, `docs/SPEC_HARNESS_SHELL_v1_STUFE6_G1.md`, `docs/ARCHITEKTUR.md`, `docs/ARBEITSWEG_WUNSCH_UMSETZEN.md`,
+**Gelesen (Repo, Stand c364081):** `uix/tools/_template/{tool.yaml,README.md}`, `docs/SHELL_WERKZEUG_VERTRAG_v1.md`, `docs/SPEC_HARNESS_SHELL_v1_STUFE6_G1.md`, `docs/ARCHITEKTUR.md`, `docs/ARBEITSWEG_WUNSCH_UMSETZEN.md`,
+`docs/SEDRA_KERN_UND_KMU_SHELL_AUSFUEHRLICH_2026-10-20.md`, `docs/SPEC_GATEWAY_VORGANG_v1.md` (nur Ausschnitte), `uix/shells/gateway-kmu/{shell.yaml,README.md}`,
 `uix/shells/harness/{taskleiste.js,startmenue.js,start_gruppen.json,arbeitsplatz.yaml,einstellungen.js}`, `uix/ui/{loader.js,bruecke.js,rahmen.js,places.js}`,
 `desk/{gateway.py,install.py}`, `uix_server.py` (Allowlist, Einbau, Vertrauen, Strip, Rahmenseite, CSP), `harness/{werkzeuge.py,freigabe.py,vorbehalte.py}`, `chat_tools.py:108`,
-`uix/tools/gauge-gpu/`. Nicht gelesen: `uix/shells/_template/` (liegt im Paket unter `runtime/src/guppi_runtime/uix/shells/_template`, nicht im Wurzelverzeichnis), die Stufe-C-Tests, `uix_clients.py`, `core/content_guard.py` im Einzelnen.
+`models/cloud_api.py` (Kopf), `cloud_settings.py` (Ausschnitte), `uix/tools/gauge-gpu/`.
+
+**Nicht gelesen:** `uix/shells/_template/` (liegt im Paket unter `runtime/src/guppi_runtime/uix/shells/_template`), die Stufe-C-Tests, `uix_clients.py`, `core/content_guard.py` im Einzelnen, `gateway/klassen.py` (Regeln R-01 bis R-16 nur aus der Übersicht).
+
+**Langdock (nur Suchauszüge, Volltext nicht abrufbar, Domains in der Sitzung nicht erreichbar, Stand 03.11.2026):**
+[Chat Completion](https://docs.langdock.com/en/developer/completion-api/openai) ·
+[API Introduction](https://docs.langdock.com/en/developer/overview/api-introduction) ·
+[Workspace Settings](https://docs.langdock.com/en/admin/workspace/workspace) ·
+[Agents Completions API](https://docs.langdock.com/en/developer/agents-api/agent) ·
+[Agent MCP Server](https://docs.langdock.com/en/using-langdock/guides/integrations/mcp/langdock-agent-mcp-server) ·
+[Audit Logs API](https://docs.langdock.com/en/developer/audit-logs-api/intro-to-audit-logs-api) ·
+[DPA](https://langdock.com/dpa) · [Security](https://langdock.com/security) · [Terms](https://langdock.com/terms).
+Vor dem Bau im Volltext lesen und schriftlich bestätigen lassen.
