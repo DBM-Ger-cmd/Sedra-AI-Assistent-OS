@@ -183,6 +183,7 @@ tool:
   shells: [harness, cockpit]     # Verfügbarkeit; fehlt das Feld = alle Shells (heutiges Verhalten, keine Migration)
 ```
 - **Gemeinsame Apps** bleiben in `uix/tools/<id>/`. `shells:` begrenzt, in welchen Shells sie erscheinen (Start-Menü, Palette, Chat-Ort, Leiste).
+- **Ausgenommen sind die Grundfunktionen** (unten): sie gelten in allen Shells.
 - **Shell-eigene Apps** liegen in `uix/shells/<shell>/apps/<id>/tool.yaml`. Sie gelten **nur** in dieser Shell; `shells:` ist dort implizit `[<shell>]` und darf nicht erweitert werden.
   Wird die Shell gewechselt, verschwinden Zellen, Orte und Reiter dieser Apps; offene Reiter gehen im Arbeitsstand mit der Shell zurück in den Zustand „App nicht verfügbar“ (kein stiller Verlust, ein Hinweis).
 - Eine Shell darf Apps nur **anbieten und anordnen** (Zeichnen von Zellen, Gruppen, Orte). Sie darf einer App keine Rechte geben, die diese nicht hat (§2.3, §5). Eine Shell-eigene App steht in der Berechtigung wie jede andere.
@@ -196,6 +197,31 @@ Regeln und Sicherheit:
 6. **Wechsel der Shell bleibt Vertragscode** (`sedraWechsel`, Nachtrag N3): eine Shell baut keinen eigenen Wechsel; offene Apps gehen mit, soweit sie in der Ziel-Shell verfügbar sind.
 
 Auswirkung auf den Plan: Stufe 2 bekommt `shells:` und den Ordner `apps/` (Lader liest beide Orte; ohne Feld = alle). Stufe 1 (Zellen) gilt zunächst nur für die Harness-Shell. Die Tests (`handles`-Zuordnung, `start_gruppen`) prüfen je Shell.
+
+#### Ausnahme: Grundfunktionen, die in allen Shells gleich sein müssen
+
+Was der Captain zum Entscheiden, Prüfen und Schützen braucht, darf nicht von der Shell abhängen. Diese **Grundfunktionen** sind Apps des Pakets (`CORE`) mit dem Marker
+`grundfunktion: true` und gelten in **jeder** Shell, mit gleichem Namen, gleicher Bedeutung und gleichem Weg dorthin (Start-Menü, Palette, Chat):
+
+| Grundfunktion | Warum für alle gleich | Heutiger Ort (`places.js`) |
+|---|---|---|
+| Entscheidungen / Posteingang (Freigaben) | sonst entscheidet man in jeder Shell anders oder gar nicht | `decisions` |
+| Gespräch | der Zugang zum Modell | Slot `talk` |
+| Aufgaben | was läuft, was wartet | `tasks` |
+| Logbuch (Audit-Kette) | Nachweis darf nicht verschwinden | `logbook` |
+| Modus und Grenzen | Schutzeinstellungen | `boundary` |
+| Module und Berechtigungen (App-Berechtigung, §5) | hier wird gewährt und entzogen | `modules` |
+| Einstellungen / Zustand | Betrieb und Diagnose | `machine`, Einstellungen |
+
+(Liste ist ein Vorschlag; der Captain streicht oder ergänzt. Der Kern der Liste ist: alles, was Freigabe, Nachweis, Schutz oder Rechte berührt.)
+
+Regeln:
+1. **Eine Shell darf Grundfunktionen anders *zeichnen* (Layout, Platz), aber nicht weglassen, umbenennen oder ersetzen.** Prüfung: Eine Shell, deren `provides`/Orte eine Grundfunktion nicht anbieten, wird beim Laden abgewiesen (`grundfunktion_fehlt:<id>`); `uix_check` prüft es je Shell.
+2. **`grundfunktion: true` kann nur das Paket setzen** (wie `CORE`); in `local_config` oder aus dem Einbau-Gate wird das Feld abgewiesen. Eine Shell-eigene App (§2.2a) kann keine Grundfunktion sein.
+3. **`shells:` gilt für Grundfunktionen nicht** (immer alle). Eine Shell kann sie weder ausblenden noch auf sich beschränken.
+4. **Eine Shell-eigene App darf eine Grundfunktion nicht überdecken**: gleicher Ort oder gleiche Wörter wie eine Grundfunktion = Kollision, abgewiesen (Nr. 11 in §3.3).
+5. **Freigaben und Berechtigungen werden nur in der Grundfunktion erteilt**, nie in einer Shell-App (§2.6 gilt unverändert).
+6. Die übrigen Apps (Wissen, Hardware, Rekorder, Übersetzer, GateWay …) sind **frei verteilbar**: gemeinsam, nur für ausgewählte Shells oder nur in einer Shell.
 
 ### 2.3 Rechte statt Routen
 
