@@ -1,7 +1,7 @@
 # SPEC Apps v1 – G4 „Ausführung von Modell-Code nur nach Sicht“ – G2 Design (03.11.2026)
 
 Grundlage: `docs/SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md` §5a.3 (Befund), §5a.5 (Maßnahme G4), §5a.7 (Skizze); Entscheidung des Captains vom 03.11.2026: **G4 sofort**, als eigener Punkt, unabhängig von O3+.
-Da G4 kein eigenes G1 hat, stehen die Anforderungen hier mit (Teil 1). Nichts gebaut; diese Datei ist G2.
+Da G4 kein eigenes G1 hat, stehen die Anforderungen hier mit (Teil 1). G2 freigegeben am 03.11.2026; Bau (G3) auf dem Branch `claude/intelligent-goldberg-7arr50`.
 Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
 ## 0. Ziel in einem Satz
@@ -146,7 +146,9 @@ def vorschau(wurzel, liste) -> str              # Text für die Karte (G4-13/14)
 
 Schalter `code_sicht` in `local_switches` (Standard **an**). Aus = heutiges Verhalten; die Stand-Dateien bleiben liegen, und beim Wiedereinschalten gilt der dann aktuelle Stand **nicht** automatisch als gesehen (die Karte listet alle Abweichungen).
 
-## 9. Entscheidungen des Captains (offen)
+## 9. Entscheidungen des Captains
+
+**Entschieden vom Captain am 03.11.2026: G4-E1 bis G4-E4 wie vorgeschlagen; G2 freigegeben, G3 bauen.**
 
 | Nr | Frage | Vorschlag |
 |---|---|---|
