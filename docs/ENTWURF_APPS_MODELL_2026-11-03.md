@@ -3,7 +3,7 @@
 Stand: `main` c364081. Nur Entwurf, nichts davon ist gebaut. Pfade unten sind relativ zu `runtime/src/guppi_runtime/` (`uix/…`, `desk/…`),
 sofern nichts anderes steht. Zeilennummern gelten für c364081.
 
-Idee des Captains: Werkzeuge und Erweiterungen sind einheitlich **Apps**, die über ein **Manifest** mit Kern und Shell reden.
+Idee des Captains: Werkzeuge und Erweiterungen sind einheitlich **Apps**, die über ein **Manifest** mit Kern und Shell reden. Vorbild ist **Android**: ein Kern, darauf aufsetzende Apps, Berechtigungen in Schutzstufen (§2.0).
 
 ## 0. Kurzfassung
 
@@ -80,6 +80,43 @@ Zwischenbefund: **Das Manifest beschreibt, was ein Werkzeug *darf*, aber nicht, 
 ---
 
 ## 2. Zielbild
+
+### 2.0 Vorbild Android: ein Kern, darauf aufsetzende Apps
+
+Leitbild (Captain, 03.11.2026): SEDRA verhält sich wie Android. Es gibt einen kleinen, geschützten **Kern**; alles andere sind **Apps**, die nur über definierte Schnittstellen und
+mit **gewährten Berechtigungen** auf den Kern zugreifen. Die Abbildung zeigt, was SEDRA schon hat und was fehlt:
+
+| Android | SEDRA | Stand |
+|---|---|---|
+| Linux-Kernel + Systemdienste (nicht austauschbar) | Kern: Guard, Audit, Missionen, Inhaltsschutz, Desk (§2.6) | vorhanden |
+| App-Sandbox (eigene UID je App) | iframe `sandbox="allow-scripts"`, Opaque Origin, kein Token (`loader.js:151`) | vorhanden, nur für Nicht-CORE |
+| `AndroidManifest.xml` | `tool.yaml` | vorhanden, Schlüssel fehlen (§2.2) |
+| Systemapps (in der Firmware) | `trust: CORE`, nur aus dem Paket | vorhanden; läuft aber **in** der Seite, nicht abgeschottet (L1) |
+| Nutzer-Apps aus dem Store | `COMMUNITY` / `CAPTAIN` / `GUPPI_BUILT` in `local_config/` | vorhanden |
+| `<uses-permission>` im Manifest | `rechte:` (§2.3, §5) | fehlt, heute nur Routenlisten |
+| Schutzstufen `normal` / `dangerous` / `signature` | Stufen A / B / C (unten) | fehlt |
+| Laufzeit-Dialog „App möchte …“ | Antrag mit Gate im Posteingang | Muster vorhanden (`trust_request`) |
+| Intents / Binder (App ruft Dienst über den Kern) | Desk: `POST /api/objects`, `POST /api/actions` (Verben mit Gate) | vorhanden |
+| ContentProvider (Daten einer App für andere) | eigene Objekttypen (`handles`) mit Lese-Fähigkeit | teilweise |
+| Broadcasts mit Berechtigung | Ereignisbus, `listens` nach Klassen (B4) | Klassen fehlen |
+| Hintergrunddienste | Dienst-Apps außerhalb des Prozesses (B5, Stufe 3) | fehlt |
+| Paketsignatur, Installer-Prüfung (Play Protect) | Hashes im Gate, `herkunft` | Hashes ja, Signatur und Ladeprüfung fehlen (L1) |
+| Einstellungen → Apps → Berechtigungen | Karte „Berechtigung“ im Modul-Werkzeug | fehlt |
+| Nur der Kern ist root | nur der Kern gibt Tokens und Freigaben aus | vorhanden |
+
+**Schutzstufen der Berechtigungen** (wie bei Android; die Stufe legt der Kern fest, nicht die App):
+
+| Stufe | Wie bei Android | Beispiele | Vergabe |
+|---|---|---|---|
+| **A normal** | `normal` | lesen eigener Typen, eigene Ablage, Ereignisse der Klasse `öffentlich`, Ort im Start-Menü | mit dem Einbau gewährt; im Gate sichtbar, kein eigener Klick |
+| **B gefährlich** | `dangerous` | Zelle in der Leiste, Ereignisse der Klasse `inhalt`, Verben mit Gate, Netz über den Server, Lesen fremder Typen | nur auf Antrag: eigenes Gate, im Klartext, jederzeit entziehbar |
+| **C Kern** | `signature` | Guard, Audit, Freigabe, Tokenvergabe, Einbau-Gate, Schreiben in `uix/**` | nie an Apps; nur Paket-Code (CORE) im Kern |
+
+Folgerungen für den Plan:
+- **Systemapps sollten ebenfalls abgeschottet laufen**, soweit möglich (Android lässt Systemapps trotzdem in eigenen Prozessen laufen). Heute laufen CORE-Werkzeuge in der Seite; ein
+  Ziel für später: auch sie hinter der Brücke, damit „CORE“ nicht „hat den Token“ heißt. Das ist teuer (Zeichnen, `ctx.einbetten`, Tests) und kein Teil von Stufe 0 bis 3.
+- **Kein App-Store** (kein Katalog, keine Bewertungen). Die Quelle ist ein Ordner oder Git-Klon mit Commit-ID; „Signatur“ ist vorerst der Hash im Gate.
+- **Kein „alles erlauben“** (Android kennt das Muster „Berechtigung einmal pauschal“ nicht; hier auch nicht): jede Fähigkeit einzeln.
 
 ### 2.1 Begriff
 
@@ -334,7 +371,7 @@ Die fünf Fragen der ersten Fassung sind keine einmalige Grundsatzentscheidung. 
 | B4 | **Ereignisse hören** | je Name an/aus; Klassen: `öffentlich` (system.state, model.changed, desk.resync, tools.refresh, slot.changed) · `inhalt` (decision.*, live.line, talk.context, object.open, task.changed) | nur `öffentlich`, ohne Haken nichts | `inhalt` nur mit ausdrücklichem Haken, Nutzlast gefiltert (nie `describe`, `line`) |
 | B5 | **Dienst-Prozess** (MCP u. ä.) | `nein` · `ja, Host (nur eigene)` · `ja, microVM` | `nein` | Dienst auf dem Host nur für `CAPTAIN`/`GUPPI_BUILT`; fremde nur in der microVM |
 
-Dazu die Schalter aus §2.3 (`lesen:<typ>`, `verb:<typ>.<verb>`, `ablage`, `netz:<host>`) in derselben Karte. Vorlage der Karte im Manifest:
+Einordnung nach Schutzstufe: B1 und die Kennzeichnung der Zelle sind Stufe A/B (Aktivierung ist ein Klick, Zelle ist `dangerous`), B4 `öffentlich` = A, `inhalt` = B, B5 = B (fremd nur microVM), B3 = C. Dazu die Schalter aus §2.3 (`lesen:<typ>`, `verb:<typ>.<verb>`, `ablage`, `netz:<host>`) in derselben Karte. Vorlage der Karte im Manifest:
 
 ```yaml
 rechte:
