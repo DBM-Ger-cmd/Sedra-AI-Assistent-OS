@@ -66,6 +66,34 @@ class HarnessShellTests(unittest.TestCase):
         self.assertEqual(out[4]['reihen'], [['1', '2']])
         self.assertEqual(out[5]['text'], '<script>alert(1)</script>', 'Code bleibt Text')
 
+    def bloecke(self, text):
+        code = ('const m = require(' + json.dumps(str(ORDNER / 'markdown.js')) + '); '
+                'process.stdout.write(JSON.stringify(m.bloecke(' + json.dumps(text) + ')));')
+        return json.loads(subprocess.run(['node', '-e', code], capture_output=True, text=True, encoding='utf-8', check=True).stdout)
+
+    @unittest.skipUnless(shutil.which('node'), 'node fehlt')
+    def test_markdown_listen(self):
+        # eine nummerierte Liste mit Leerzeilen bleibt eine Liste (vorher zwei Listen, beide ab 1)
+        lose = self.bloecke('1. a\n\n2. b\n\n3. c')
+        self.assertEqual([(b['art'], [p['text'] for p in b['punkte']]) for b in lose], [('ol', ['a', 'b', 'c'])])
+        # die Startnummer bleibt erhalten
+        self.assertEqual(self.bloecke('3. drei\n4. vier')[0]['start'], 3)
+        # verschachtelt: der Punkt nach der Unterliste gehört wieder zur äußeren Liste
+        tief = self.bloecke('- a\n  - b\n    - c\n  - d\n- e')[0]
+        self.assertEqual([p['text'] for p in tief['punkte']], ['a', 'e'])
+        unter = tief['punkte'][0]['inhalt'][0]
+        self.assertEqual([p['text'] for p in unter['punkte']], ['b', 'd'])
+        self.assertEqual(unter['punkte'][0]['inhalt'][0]['punkte'][0]['text'], 'c')
+        # Code in einem Punkt bleibt Code (mit Zeilenumbrüchen), nicht eine Zeile Text
+        mit_code = self.bloecke('1. a\n   ```py\n   x = 1\n   y = 2\n   ```\n2. b')[0]
+        self.assertEqual(mit_code['punkte'][0]['inhalt'], [{'art': 'code', 'sprache': 'py', 'text': 'x = 1\ny = 2'}])
+        self.assertEqual(mit_code['punkte'][1]['text'], 'b')
+        # Fortsetzungszeile und neuer Absatz im Punkt; die Liste endet am Absatz ohne Einzug; ul und ol wechseln die Liste
+        fort = self.bloecke('- a\n  weiter\n\n  neu\n- b\n\nEnde\n\n1. x')
+        self.assertEqual([b['art'] for b in fort], ['ul', 'absatz', 'ol'])
+        self.assertEqual(fort[0]['punkte'][0]['text'], 'a weiter')
+        self.assertEqual(fort[0]['punkte'][0]['inhalt'], [{'art': 'absatz', 'text': 'neu'}])
+
 
 if __name__ == '__main__':
     unittest.main()
