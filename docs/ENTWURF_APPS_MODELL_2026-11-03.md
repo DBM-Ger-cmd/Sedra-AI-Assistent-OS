@@ -285,6 +285,27 @@ Zwei verschiedene Dinge, die man trennen muss:
 Einordnung ins App-Modell: (1) braucht **keine** neue App-Mechanik (Konfiguration + Inhaltsschutz + Richtlinie), (2) hängt an Stufe 3b. Eine App darf nie selbst einen Cloud-Schlüssel halten oder selbst
 nach Langdock senden (Rahmen: `connect-src` leer, §3.3 Nr. 7); alles läuft über den Server und das Gateway. Grundfunktionen und Nachweis (Audit ohne Inhalt, Empfängerverzeichnis) bleiben unverändert.
 
+**Entscheidung des Captains (03.11.2026): beide Richtungen, zuerst (1), dann (2).** Stufe 3c = Richtung 1, Stufe 3d = Richtung 2 (hängt an 3b).
+
+**Was dabei noch zu berücksichtigen ist:**
+
+| Nr | Punkt | Warum / Vorschlag |
+|---|---|---|
+| 1 | **Unterlagen von Langdock prüfen, bevor etwas gebaut wird** | Schnittstelle und Authentisierung, Modellliste, Region/Hosting, Aufbewahrung und Nutzung der Daten (u. a. ob mit ihnen trainiert wird), Vertragsunterlagen (Auftragsverarbeitung), Rate-Limits, Preise. Nichts davon ist hier belegt. |
+| 2 | **Erreichbarkeit bei Richtung 2** | SEDRA lauscht nur lokal. Eine Cloud-Plattform kann einen lokalen Rechner nicht erreichen. Ein Tunnel oder Relay würde den Kern ins Netz öffnen und widerspricht „nur lokal erreichbar“. Empfehlung: **nur ausgehend** (SEDRA holt/ruft, Pull), kein eingehender Zugang. Wer „Langdock ruft SEDRA“ will, braucht eine eigene Sicherheits-Spec. |
+| 3 | **Langdock-Agenten handeln selbst** | Ein Assistent dort kann eigene Integrationen nutzen. Aktionen, die dort passieren, sieht das SEDRA-Audit nicht. Der Nachweis endet an der Grenze; im Verzeichnis muss das stehen. |
+| 4 | **Zwei Protokolle, zwei Aufbewahrungen** | Langdock führt eigene Verläufe. Inhalte, die SEDRA hinausschickt, liegen dort nach deren Regeln, auch wenn das SEDRA-Audit keinen Inhalt speichert. Das gehört in die Rechtsgrundlage des Empfängers und in die Information an die Beschäftigten. |
+| 5 | **Pseudonymisierung vor dem Versand** | Der Schutzkern (`core/b6core`) pseudonymisiert; Rückübersetzung der Antwort nur lokal. Anhänge: der MVP kennt nur .md/.txt. Datei-Upload in die Wissensfunktion von Langdock ist **standardmäßig aus**. |
+| 6 | **Schlüssel im Unternehmen** | Heute `secret://…` aus der Umgebung, optional DPAPI (Windows). Mehrere Rechner, Rotation, Entzug beim Ausscheiden: Schlüssel gehört dem Betreiber, ein Schlüssel je Workspace, nicht je Person. Auf dem Stick (Plan `usb-stick-minimal`) nie im Klartext mitnehmen. |
+| 7 | **Kosten und Budget** | Der Meter zählt lokal; Cloud-Kosten je Rolle/Projekt begrenzen, Warnung statt stillem Weiterlaufen (`budget.warning` gibt es als Ereignis). |
+| 8 | **Ausfall und Umschalten** | Fällt Langdock aus, darf SEDRA **nicht still** auf einen anderen Anbieter oder ein lokales Modell wechseln (heute zählt ein Eintrag mit unbekanntem Anbieter nicht, `cloud_settings.py:138`). Fehler zeigen, Betreiber entscheidet über Ersatz. Der Weg darf nur **strenger** werden, nie offener (Kernregel). |
+| 9 | **Routing nach Schutzklasse** | Welche Schutzklasse darf zu welchem Empfänger? Tabelle in der Betreiber-Richtlinie, nicht im Code der App. Neue Anbieter ändern die Grundregeln nicht. |
+| 10 | **Prompt-Injektion aus Antworten** | Antworten und Dokumente von Langdock sind Fremdinhalt (R-08/R-09); ein Verb daraus nie ohne Gate. Das gilt besonders für Richtung 2. |
+| 11 | **Mandantentrennung** | Ein Workspace je Unternehmen; Ablage und Ereignisse bleiben je Profil getrennt (§2.2b Nr. 7). |
+| 12 | **Tests ohne echten Zugang** | Fake-Server, keine echten Daten, keine echten Schlüssel in Tests oder Repo (Schlüsselsuche vor jedem Push). |
+| 13 | **Rechtliche Klärung** | Auftragsverarbeitung, Datenübermittlung, Rolle nach EU-KI-Regeln, Informationspflichten gegenüber Beschäftigten: mit Fachleuten, vor dem produktiven Einsatz. Dieser Entwurf bewertet das nicht. |
+| 14 | **Austauschbarkeit** | Langdock ist ein Anbieter von mehreren. Keine Sonderlogik im Kern; Anbieterliste, Empfängerverzeichnis und Richtlinie sind generisch (spätere Anbieter ohne Umbau). |
+
 ### 2.3 Rechte statt Routen
 
 Heute sind „Rechte“ eine Liste von Routen. Das ist für Menschen schwer zu lesen („`POST /api/actions` darf *alles*“, Verben stehen im Body, die Allowlist sieht sie nicht).
@@ -479,6 +500,12 @@ Für fremden Code, der selbst ausgeführt werden soll, gibt es `sandbox/` (micro
 - **Risiko:** mittel bis hoch (Daten verlassen den Rechner). Schutz kommt vom Gateway, nicht vom Anbieter.
 - **Tests:** Personendaten ohne Rechtsgrundlage erreichen Langdock nie (Fake-Server, kein Aufruf); Schlüssel erscheint nie in Datei, Log, Audit oder Fehlermeldung; Weiterleitung und http werden abgelehnt; Anbieter aus = kein Aufruf.
 - **Rückfall:** Anbieter-Schalter aus (Standard).
+
+### Stufe 3d – Langdock als Gegenstelle (Richtung 2)
+
+- **Inhalt:** Dienst-App `langdock` (B5) mit eigenem Token und Scope, ausgehender Weg zuerst (Pull); Herkunftswert `langdock` vom Server gesetzt.
+- **Voraussetzung:** Stufe 3b, 3c, geklärter Zugang (Punkt 2 der Tabelle in §2.2c), Fremdinhalt-Prüfung.
+- **Risiko:** hoch. **Tests:** Verb ohne Fähigkeit → 403 + Audit; Anweisung in Antwort löst nichts aus; Entzug beendet den Zugang sofort. **Rückfall:** Dienst aus (Standard).
 
 ### Stufe 4 – Betrieb im Unternehmen (KMU): Rollen, Richtlinie, Profile
 
