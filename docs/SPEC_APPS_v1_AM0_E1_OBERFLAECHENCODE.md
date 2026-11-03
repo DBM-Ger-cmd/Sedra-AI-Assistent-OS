@@ -1,6 +1,6 @@
 # Entscheidungsvorlage AM0-E1: Wie schützen wir den Code der Oberfläche vor Änderungen durch das Modell? (03.11.2026)
 
-Status: **offen.** Der Captain hat AM0-E1 am 03.11.2026 zur Ausarbeitung zurückgegeben („Das müssen wir mehr ausarbeiten, was am besten und praktikabel ist“). Bis zur Entscheidung gilt Teil A von `SPEC_APPS_v1_AM0_G2.md` als **nicht freigegeben**; alle anderen Teile von AM0 sind davon unabhängig.
+Status: **entschieden** am 03.11.2026: O3+ (§6 mit G1, G2, G3, G6, G7), G4 sofort, AM9 mit G5. **Neu offen:** G9–G11 aus §5b. Verlauf: Der Captain hatte AM0-E1 zuerst zur Ausarbeitung zurückgegeben („Das müssen wir mehr ausarbeiten, was am besten und praktikabel ist“), danach das Restrisiko (§5a) und den Fall „bestätigter schädlicher Code“ (§5b) nacharbeiten lassen.
 Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
 ## 1. Die Frage
@@ -119,7 +119,7 @@ Ein Fehler in einer Shell-Datei kann die Oberfläche unbenutzbar machen – auch
 
 | Mit | Was bleibt | Wie groß |
 |---|---|---|
-| O3 + G1, G2, G3, G4, G6, G7 | (1) Der Captain bestätigt die Sammelkarte, ohne den Diff zu lesen, oder übersieht gut versteckten Code. G3 hilft, verhindert es nicht. (2) Python-Änderungen im Betrieb wirken beim Neustart; G6 zeigt sie nur an. (3) Bestätigter schädlicher Code kann danach Entscheidungen beantworten (K4). (4) Änderungen, die Claude direkt im Repo macht, laufen an der Harness vorbei – das ist der vertraute Weg und bleibt so. (5) Fehler in den neuen Prüfstellen selbst. | (1) und (3) hängen an einem bewussten Schritt des Captains statt an einem Neuladen; (2) bleibt bis AM9; (5) durch Tests begrenzt |
+| O3 + G1, G2, G3, G4, G6, G7 | (1) Der Captain bestätigt die Sammelkarte, ohne den Diff zu lesen, oder übersieht gut versteckten Code. G3 hilft, verhindert es nicht. (2) Python-Änderungen im Betrieb wirken beim Neustart; G6 zeigt sie nur an. (3) Bestätigter schädlicher Code kann danach Entscheidungen beantworten (K4) – nachgearbeitet in §5b: mit G9 nur noch Klasse N. (4) Änderungen, die Claude direkt im Repo macht, laufen an der Harness vorbei – das ist der vertraute Weg und bleibt so. (5) Fehler in den neuen Prüfstellen selbst. | (1) und (3) hängen an einem bewussten Schritt des Captains statt an einem Neuladen; (2) bleibt bis AM9; (5) durch Tests begrenzt |
 | zusätzlich G5 | (3) entfällt: Auch bestätigter Code kann keine Entscheidung mehr erteilen | – |
 | zusätzlich G8 | (2) entfällt: Python und Oberfläche kommen nur über die Übernahme in den Betrieb | – |
 
@@ -130,6 +130,85 @@ Ein Fehler in einer Shell-Datei kann die Oberfläche unbenutzbar machen – auch
 - **G2**: Die Harness merkt sich beim Schreiben unter einer Oberflächen-Aufgabe Pfad und vorige Fassung (Ablage unter `runtime_data/harness/oberflaeche/` – dort schon harter Vorbehalt `**/runtime_data/harness/**`, `harness/vorbehalte.py`). `Gateway.file` (die eine Stelle, die `/uix/{ui,shells,tools}/…` ausliefert, `uix_server.py:3575–3590`) liefert für gemerkte Pfade die bestätigte Fassung. Sammelkarte als Gate mit Bindung an die Liste der Hashes. Vorschau: neue Route, die einen Prüfserver wie `uix_check.start_server` startet und seine Adresse nennt.
 - **G4**: Die Harness führt je Sitzung eine Liste „seit dem letzten gesehenen Lauf geschriebene `.py`-Dateien“. `vorbehalte.pruefen` gibt für `lauf_starten` (und `befehl` mit `python <datei im Projekt>`) einen Vorbehaltsgrund zurück, solange die Liste nicht leer ist; die Karte zeigt die Diffs; nach der Antwort ist die Liste leer.
 - Beides berührt Harness-Code unter Vorbehalt (`harness/freigabe.py`, `vorbehalte.py`, `lauf.py`) – Änderung nur durch Claude, mit Freigabe des Captains.
+
+## 5b. „Bestätigter schädlicher Code kann Freigaben erteilen“ – gezielt nachgearbeitet (Auftrag des Captains, 03.11.2026)
+
+Gemeint ist der Fall nach G2: Code steht in der Oberfläche, weil er bestätigt wurde (oder aus dem Paket, von Claude oder über den Updater kam), und er ist schädlich oder fehlerhaft. Frage: Was hindert ihn daran, Freigaben zu erteilen?
+
+### 5b.1 Warum man den Token in der Seite nicht verstecken kann
+
+Geprüft und verworfen: den Token nach dem Lesen aus der Adresse entfernen und nur in `ui/api.js` halten.
+- Alle Skripte einer Herkunft teilen sich Fenster, DOM und eingebaute Funktionen. Ein späteres Skript kann `fetch` umhüllen, die Funktionen von `api.js` ersetzen oder den Token aus der Liste der geladenen Adressen lesen (der Ereignisstrom trägt ihn in der Adresse, `ui/api.js:40`).
+- Ohne Token in der Adresse ginge außerdem das Neuladen der Seite verloren.
+- Der Vertrag sagt es selbst: Die Grenze ist die Abschottung, nicht das Verstecken (`ui/api.js:6`).
+
+**Folgerung:** Gegen Code in der Seite hilft nur ein Weg, den dieser Code **nicht erreicht**: eine andere Herkunft (G5) oder ein Kanal außerhalb des Browsers.
+
+### 5b.2 Alle Wege, auf denen heute eine Freigabe erteilt wird
+
+| Nr | Weg | Wo | Was er erteilt |
+|---|---|---|---|
+| F1 | `POST /api/decisions/answer` (Posteingang) | `uix_server.py:261–310` | alle Entscheidungen: Missions-Gates, Grenzüberschreitungen, Scheduler (`cloud_offload`, `slot_server`), Inhaltsschutz, Harness-Karten und -Aufgaben, Anträge mit Anwenden: Schalter, Routing, Modell hinzufügen, Bibliothek, Grenzen, **Modul einbauen**, **Schreibrechte für Module**, Gateway, **Update übernehmen**, **Cloud-Adresse** (`:302–306`) |
+| F2 | `POST /api/mission/approve` | `uix_server.py:2196–2213` | ein Missions-Gate direkt |
+| F3 | `POST /api/harness/karten/<id>` | `harness/api.py:245`; `harness/freigabe.py:303–324` | eine Harness-Karte; mit Weg `sitzung` zusätzlich eine **Sitzungs-Erlaubnis** für gleichartige Aufrufe |
+| F4 | `POST /api/harness/aufgaben` | `harness/api.py` (Route, geschützt durch S7) | eine **Aufgabe** = Freigabe im Voraus für eine Liste von Aufrufen (`harness/freigabe.py:230–243`) |
+| F5 | `POST /api/harness/vorarbeiter` | `harness/api.py:85` | ernennt den **Vorarbeiter**, der Karten der Stufe `vorarbeiter` selbst beantwortet |
+| F6 | `POST /api/harness/katalog/antrag` und Anwenden | `harness/api.py:85–86` | ändert den **Freigabe-Katalog** (künftig `frei`) |
+| F7 | Verben des Desk mit Gate | `desk/gated.py:145` | Freigabe eines Desk-Verbs |
+| F8 | `POST /api/update/uebernehmen` | `uix_server.py:3862` | übernimmt einen geprüften Release-Stand mit der Rechte-Bestätigung aus der Vorschau |
+| F9 | ohne Gate, nur Audit: Shell wechseln, Werkzeug an/aus, künftig App aktivieren (AM3-08) | `uix_server.py:3848–3850` | Form, keine Rechte |
+| F10 | **Konsole**: `guppi approve <mission> <gate>` | `cli.py:316–324` | ein Missions-Gate – **außerhalb des Browsers** |
+
+Alle Wege F1–F9 nimmt der Server mit dem Browser-Token an. S7 schützt F3–F6 gegen Prozesse der Harness, nicht gegen den Browser (§5a.1, K4). F10 ist der einzige Weg, den Code in der Seite nicht erreicht.
+
+### 5b.3 Was bestätigter schädlicher Code damit tun könnte
+
+| Wirkung | über | Klasse |
+|---|---|---|
+| beliebige Programme auf dem Rechner starten | Karte zu `befehl` beantworten (F3); Lauf freigeben (F3/F4) | **H** |
+| dauerhaft weiter freigeben, auch ohne Seite | Aufgabe anlegen (F4), Vorarbeiter ernennen (F5), Sitzungs-Erlaubnis (F3, Weg `sitzung`), Katalog lockern (F6) | **H** |
+| Regeln und Kern ändern | Karten zu harten Vorbehalten (`core/**`, Guard, Harness-Code), Grenzen, Schalter (F1, F3) | **H** |
+| weiteren Code in den Betrieb bringen | G2-Sammelkarte, Modul einbauen, Schreibrechte für Module, Update übernehmen (F1, F8) | **H** |
+| Daten nach außen geben | Cloud-Adresse ändern, Inhaltsschutz-Entscheidung für die Cloud, Langdock-Frage (AM6), Gateway-Weg Cloud (F1, F7) | **H** |
+| Dateien im Projekt schreiben (außerhalb der Vorbehalte) | Karte zu `datei_schreiben`/`datei_aendern` (F3) | **N** – Python davon wirkt beim Neustart (G6 zeigt es an) |
+| Modelle laden, lokale Gateway-Vorgänge freigeben, Inhaltsschutz lokal | F1, F3 | **N** |
+| ablehnen, zurücknehmen, stören | alle | **N** – lästig, keine neuen Rechte |
+| lesen, was die Seite lesen darf | Leserouten | – (ohne Weg nach außen bleibt es lokal; der Weg nach außen ist **H**) |
+
+**Klasse H** = erteilt Rechte für später, führt Code oder Programme aus, ändert Regeln oder Kern, bringt Code in den Betrieb oder gibt Daten nach außen. **Klasse N** = einzelne Handlung im Projekt ohne diese Folgen.
+
+### 5b.4 Maßnahmen
+
+| Nr | Maßnahme | Was sie bewirkt | Aufwand | Empfehlung |
+|---|---|---|---|---|
+| **G9 (neu)** | **Bestätigung außerhalb des Browsers für Klasse H.** Antwortet die Seite auf eine Freigabe der Klasse H, führt der Server sie **nicht** aus, sondern zeigt ein Fenster des Betriebssystems (Windows: Systemdialog aus dem Server-Prozess, immer im Vordergrund) mit dem Text, den **der Kern** erzeugt (Gate-Beschreibung, Klasse, Ziel, Kennung) und „Freigeben“/„Ablehnen“. Erst das Ja dort ruft `guard.approve`. Ohne Dialog möglich (anderes System, keine Anzeige): nur über die Konsole (`guppi freigeben <kennung>`, wie F10). | Code in der Seite erreicht weder das Fenster noch die Konsole. Klasse H ist damit für ihn **gesperrt**, auch wenn er bestätigt wurde. | gering bis mittel | **ja, vor oder mit O3+** |
+| G5 | Freigaben auf eigener Herkunft (AM9, beschlossen) | macht die Freigabe im Browser selbst vertrauenswürdig; kann G9 für viele Fälle ersetzen | hoch | ja (AM9) |
+| G10 (neu) | **Kanal im Audit**: jede Freigabe trägt `kanal` = `seite` · `systemdialog` · `konsole` · `freigabefenster` (G5) · `aufgabe` · `sitzung` · `vorarbeiter` · `katalog` | Nachweis, woher eine Freigabe kam; macht Missbrauch erkennbar | gering | ja |
+| G11 (neu) | **Vollständigkeitstest**: ein Test findet jede Stelle, die `guard.approve` ruft (heute `cli.py:322`, `harness/freigabe.py:243, 324`, `uix_server.py:2213`, `desk/gated.py:145`, `agent_manager/cli.py:74`), und jede geschützte Route, und verlangt für jede eine Klasse (H/N) | verhindert, dass ein neuer Freigabe-Weg die Klasse H umgeht | gering | ja |
+| – | Heuristiken (z. B. „Freigabe schneller als 1 s nach Erscheinen der Karte“ anhalten) | Code in der Seite kann Wartezeiten nachahmen; nur als Hinweis brauchbar | gering | nein (falsche Sicherheit) |
+
+**Wie häufig wäre der Systemdialog?** Nur bei Klasse H. Im Alltag des MasterChat sind das: Aufgaben anlegen, Karten zu `befehl` außerhalb der freien Muster, Läufe nach G4, die G2-Sammelkarte, Änderungen an Regeln und Modulen, Updates. Dateien schreiben, Modelle laden und lokale Gateway-Vorgänge bleiben im Browser (Klasse N). Eine Messung, wie oft das am Tag ist, gibt es nicht; das Audit (`HARNESS_EINGESTUFT`, `HARNESS_APPROVED_BY`) erlaubt sie nachträglich.
+
+### 5b.5 Was danach bleibt
+
+| Bleibt | Warum | Wer/was hilft |
+|---|---|---|
+| Der Captain bestätigt den Systemdialog, ohne zu lesen | Gewohnheit | Klasse H ist selten; der Text kommt vom Kern, nicht von der Seite; die Seite kann ihn nicht beeinflussen |
+| Täuschung: die Seite löst eine echte, aber andere Freigabe aus, während der Captain eine erwartet | Code kann den Zeitpunkt wählen | der Dialog nennt Ziel und Kennung; G10 zeigt den Kanal; ganz verhindern lässt es sich nicht |
+| Klasse N durch Code in der Seite (Dateien im Projekt, Modelle laden) | bewusst im Browser gelassen | Python-Änderungen wirken erst beim Neustart (G6 zeigt sie an); mit AM9 kommen sie nur über die Übernahme in den Betrieb |
+| Andere Programme unter dem Konto des Captains können das Fenster bedienen (Eingaben simulieren) | Betriebssystem erlaubt das demselben Benutzer | außerhalb dieses Konzepts; G4 verhindert, dass vom Modell geschriebener Code ohne Sicht auf dem Rechner läuft |
+| Ein vergessener Freigabe-Weg | Code wächst | G11 |
+
+**Kurzfassung:** Mit G9 kann bestätigter schädlicher Code keine Freigabe der Klasse H mehr erteilen, und Klasse H umfasst alles, was zu mehr Rechten, zu Programmausführung, zu Kernänderungen, zu weiterem Code im Betrieb oder zu Daten nach außen führt. Was ihm bleibt, ist Klasse N und Lesen.
+
+### 5b.6 G9 im Code (Skizze für G2)
+
+- Neue Datei `desk/freigabeklasse.py`: Tabelle Entscheidungsart/Harness-Werkzeug/Route → Klasse; Vorgabe für Unbekanntes: **H**.
+- An den Stellen F1–F8: Ist die Klasse H und kam die Antwort über die Seite, wird statt `approve` ein **Wartezustand** gespeichert („wartet auf Bestätigung außerhalb des Browsers“) und der Dialog angestoßen; die Seite zeigt den Zustand.
+- Dialog: unter Windows `MessageBoxW` (ohne neue Abhängigkeit, wie `harness/herkunft.py` schon `ctypes` nutzt) mit `MB_YESNO | MB_TOPMOST | MB_SETFOREGROUND | MB_SYSTEMMODAL` in einem eigenen Thread; Antwort ruft `approve` oder `reject`; Zeitlimit 10 min, dann bleibt die Entscheidung offen. Ob ein Server ohne angemeldete Sitzung (z. B. als Dienst) Dialoge zeigen kann: nein – dann gilt nur die Konsole.
+- Konsole: `guppi freigeben <kennung>` / `guppi ablehnen <kennung>` für alle Entscheidungen (heute nur Missions-Gates, `cli.py:316`).
+- Audit: `FREIGABE_AUSSERHALB_BESTAETIGT {id, kanal}`, `…_ABGELEHNT`, `…_ZEIT_ABGELAUFEN`.
+- Test: Antwort der Klasse H über die Seite führt nie zu `approve` ohne Dialog-/Konsolen-Antwort (Fake-Dialog im Test); G11.
 
 ## 6. O3 im Detail (ersetzt Teil A von `SPEC_APPS_v1_AM0_G2.md`, wenn freigegeben)
 
@@ -171,9 +250,18 @@ Offene Fragen für dieses spätere G1: Wie arbeitet der Captain im Alltag mit zw
 
 ## 8. Entscheidung
 
+**Entschieden vom Captain am 03.11.2026:**
+
+| Nr | Frage | Entscheidung |
+|---|---|---|
+| AM0-E1 | Schutz des Oberflächen-Codes | **O3+**: gestuft hart/weich/frei (§6) mit G1, G2, G3, G6, G7 |
+| AM0-E1c | Ausführung von Modell-Code nur nach Sicht (G4) | **sofort**, als eigener Punkt, unabhängig von O3+ |
+| AM0-E1b/d | Werkstatt und Betrieb trennen | **AM9 aufnehmen, mit G5** (Freigaben auf eigener Herkunft) |
+
+**Offen (neu aus §5b):**
+
 | Nr | Frage | Vorschlag |
 |---|---|---|
-| AM0-E1 (neu) | Schutz des Oberflächen-Codes jetzt | **O3 mit G1, G2, G3, G6, G7** („O3+“): gestuft hart/weich/frei, eng gefasste Aufgaben, Abnahme vor Wirkung mit Vorschau im Prüfserver, Hinweise im Diff, Startbericht, Rückweg |
-| AM0-E1c | Ausführung von Modell-Code nur nach Sicht (G4) – sofort, als eigener Punkt, unabhängig von AM0-E1? | **ja, vorrangig**: der Weg über Testläufe umgeht heute alle Vorbehalte |
-| AM0-E1b | Werkstatt und Betrieb trennen als eigener Baustein AM9 (erst G1)? | ja |
-| AM0-E1d | Freigaben auf eigener Herkunft (G5) in AM9 mitplanen? | ja |
+| AM0-E1e | Bestätigung außerhalb des Browsers für Freigaben der Klasse H (G9), mit Konsole als Ersatz | ja, vor oder mit O3+ |
+| AM0-E1f | Kanal im Audit (G10) und Vollständigkeitstest der Freigabe-Wege (G11) | ja, mit G9 |
+| AM0-E1g | Klasseneinteilung H/N wie §5b.3 (Unbekanntes = H) | ja |
