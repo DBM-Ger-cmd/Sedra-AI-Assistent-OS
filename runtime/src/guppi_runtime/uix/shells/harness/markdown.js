@@ -79,20 +79,57 @@
     return out;
   }
 
-  // `code`, **fett**, *kursiv* – als Knoten; alles andere bleibt Text
-  function inline(el, text){
-    const re = /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*\s][^*]*\*)/g;
-    let at = 0, m;
-    while((m = re.exec(text))){
-      if(m.index > at) el.append(document.createTextNode(text.slice(at, m.index)));
-      const t = m[0];
-      let n;
-      if(t[0] === '`'){ n = document.createElement('code'); n.textContent = t.slice(1, -1); }
-      else if(t.startsWith('**') || t.startsWith('__')){ n = document.createElement('strong'); n.textContent = t.slice(2, -2); }
-      else { n = document.createElement('em'); n.textContent = t.slice(1, -1); }
-      el.append(n); at = m.index + t.length;
+  // Ein Link wird nur zu einem Anker, wenn das Ziel http, https oder mailto ist; alles andere (javascript:, data:, relative Pfade) bleibt als Text stehen; rein
+  function sichereUrl(u){
+    try{
+      const url = new URL(String(u));
+      return ['http:', 'https:', 'mailto:'].indexOf(url.protocol) >= 0 ? url.href : null;
+    }catch(_e){ return null; }
+  }
+
+  // Text → Teile {art: text | code | fett | kursiv | streich | link, text, url?}; rein.
+  // `code`, **fett**/__fett__, *kursiv*/_kursiv_, ~~durchgestrichen~~, [Text](Adresse). _kursiv_ gilt nur zwischen Nicht-Wortzeichen (snake_case bleibt Text);
+  // der Text eines Links darf fett/kursiv/durchgestrichen/Code sein, aber kein zweiter Link (tief).
+  function teile(text, tief){
+    const re = tief
+      ? /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\*[^*\s][^*]*\*|(?<![\w])_[^_\s][^_]*_(?![\w]))/g
+      : /(`[^`]+`|\[[^\]\n]+\]\([^)\s]+\)|\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\*[^*\s][^*]*\*|(?<![\w])_[^_\s][^_]*_(?![\w]))/g;
+    const out = [];
+    let at = 0, hit;
+    const roh = (von, bis)=>{ if(bis > von) out.push({art: 'text', text: text.slice(von, bis)}); };
+    while((hit = re.exec(text))){
+      const t = hit[0];
+      let tok;
+      if(t[0] === '`') tok = {art: 'code', text: t.slice(1, -1)};
+      else if(t[0] === '['){
+        const l = t.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+        const url = l && sichereUrl(l[2]);
+        tok = url ? {art: 'link', text: l[1], url} : {art: 'text', text: t};          // unsicheres Ziel: der Text bleibt, wie er ist
+      }
+      else if(t.startsWith('**') || t.startsWith('__')) tok = {art: 'fett', text: t.slice(2, -2)};
+      else if(t.startsWith('~~')) tok = {art: 'streich', text: t.slice(2, -2)};
+      else tok = {art: 'kursiv', text: t.slice(1, -1)};
+      roh(at, hit.index);
+      out.push(tok);
+      at = hit.index + t.length;
     }
-    if(at < text.length) el.append(document.createTextNode(text.slice(at)));
+    if(at < text.length) out.push({art: 'text', text: text.slice(at)});
+    return out;
+  }
+
+  const ELEMENT = {code: 'code', fett: 'strong', kursiv: 'em', streich: 's'};
+  function inline(el, text, tief){
+    for(const t of teile(text, tief)){
+      if(t.art === 'text'){ el.append(document.createTextNode(t.text)); continue; }
+      if(t.art === 'link'){
+        const a = document.createElement('a');
+        a.href = t.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = t.url;
+        inline(a, t.text, true); el.append(a); continue;
+      }
+      const n = document.createElement(ELEMENT[t.art]);
+      if(t.art === 'code') n.textContent = t.text; else inline(n, t.text, true);
+      el.append(n);
+    }
     return el;
   }
 
@@ -143,6 +180,6 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.markdown = {bloecke, render};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {bloecke};
+  root.sedraHarness.markdown = {bloecke, render, teile, sichereUrl};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {bloecke, teile, sichereUrl};
 })();

@@ -94,6 +94,29 @@ class HarnessShellTests(unittest.TestCase):
         self.assertEqual(fort[0]['punkte'][0]['text'], 'a weiter')
         self.assertEqual(fort[0]['punkte'][0]['inhalt'], [{'art': 'absatz', 'text': 'neu'}])
 
+    def teile(self, text):
+        code = ('const m = require(' + json.dumps(str(ORDNER / 'markdown.js')) + '); '
+                'process.stdout.write(JSON.stringify(m.teile(' + json.dumps(text) + ')));')
+        return json.loads(subprocess.run(['node', '-e', code], capture_output=True, text=True, encoding='utf-8', check=True).stdout)
+
+    @unittest.skipUnless(shutil.which('node'), 'node fehlt')
+    def test_markdown_links_streichung_kursiv(self):
+        arten = lambda text: [(x['art'], x['text']) for x in self.teile(text)]
+        self.assertEqual(arten('a ~~alt~~ b'), [('text', 'a '), ('streich', 'alt'), ('text', ' b')])
+        self.assertEqual(arten('_kursiv_ und *auch*'), [('kursiv', 'kursiv'), ('text', ' und '), ('kursiv', 'auch')])
+        # snake_case und Rechnungen bleiben Text
+        self.assertEqual(arten('a_b_c und 2 * 3 * 4'), [('text', 'a_b_c und 2 * 3 * 4')])
+        link = self.teile('Siehe [Doku](https://example.com/x?y=1).')[1]
+        self.assertEqual((link['art'], link['text'], link['url']), ('link', 'Doku', 'https://example.com/x?y=1'))
+        self.assertEqual(self.teile('[m](mailto:a@b.de)')[0]['url'], 'mailto:a@b.de')
+        # nur http, https und mailto werden zu Ankern; alles andere bleibt Text
+        for boese in ('[x](javascript:alert(1))', '[x](data:text/html,hi)', '[x](/relativ)', '[x](file:///C:/geheim)'):
+            self.assertNotIn('link', [x['art'] for x in self.teile(boese)], boese)
+        # ein Link darf Formatierung tragen, aber keinen zweiten Link; Code bleibt Code
+        innen = self.teile('[**fett**](https://a.de)')[0]
+        self.assertEqual((innen['art'], innen['text']), ('link', '**fett**'))
+        self.assertEqual(arten('`[a](https://b.de)`'), [('code', '[a](https://b.de)')])
+
 
 if __name__ == '__main__':
     unittest.main()
