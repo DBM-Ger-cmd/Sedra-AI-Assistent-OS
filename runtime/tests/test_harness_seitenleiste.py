@@ -50,7 +50,6 @@ class AufraeumenTests(unittest.TestCase):
                 self.api.aufraeumen({'ids': bad})
 
 
-@unittest.skipUnless(shutil.which('node'), 'node fehlt')
 class SichtbarkeitTests(unittest.TestCase):
     def test_die_knoepfe_der_werkzeugzeile_sind_immer_sichtbar(self):
         """Captain 03.11.2026: „die Kästchen zum Anhaken sehe ich nicht“ – .hs-sz-knopf ist sonst nur beim Überfahren einer Zeile sichtbar, der ☑-Knopf stand aber in der Werkzeugzeile."""
@@ -59,6 +58,7 @@ class SichtbarkeitTests(unittest.TestCase):
         self.assertIn('.hs-sz-knopf{', css)
 
 
+@unittest.skipUnless(shutil.which('node'), 'node fehlt')
 class LogikTests(unittest.TestCase):
     def node(self, code):
         skript = ("globalThis.localStorage = {_d: {}, getItem(k){ return this._d[k] ?? null; }, setItem(k, v){ this._d[k] = v; }};\n"

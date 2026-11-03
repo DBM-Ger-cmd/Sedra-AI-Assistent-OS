@@ -48,17 +48,24 @@
     const kein = d().el('div', 'hs-kein-modell'); kein.hidden = true;
     const zeile = d().el('div', 'hs-eingabe-zeile');
     const werkzeuge = d().el('div', 'hs-eingabe-leiste');
-    werkzeuge.append(plus, schild, modell, kontext, d().el('span', 'hs-luecke'), mikro, senden);
+    const vormerk = d().el('button', 'hs-vormerk-knopf', 'Vormerken'); vormerk.type = 'button'; vormerk.hidden = true;          // nur während einer Antwort, mit Text im Feld
+    vormerk.title = 'Die Nachricht geht raus, sobald die Antwort fertig ist (Enter)';
+    werkzeuge.append(plus, schild, modell, kontext, d().el('span', 'hs-luecke'), mikro, vormerk, senden);
     zeile.append(feld, werkzeuge);
     const vorlageHinweis = d().el('div', 'hs-vorlage-hinweis'); vorlageHinweis.hidden = true; vorlageHinweis.setAttribute('role', 'note');       // Wofür die gewählte Vorlage da ist (MasterChat u. a.)
-    box.append(kein, vorschlag, optionen.el, zeile, projektZeile, vorlageHinweis);
-    S._eingabe = {box, feld, senden, modell, kontext, projekt, vorlage, vorlageHinweis, projektZeile, kein, vorschlag, schild, schildBasis: schild.textContent};
+    const vorgemerkt = d().el('div', 'hs-vorgemerkt'); vorgemerkt.id = 'hs-vorgemerkt'; vorgemerkt.hidden = true; vorgemerkt.setAttribute('role', 'status');
+    const zurueck = d().el('button', 'hs-knopf hs-klein', 'Zurücknehmen'); zurueck.type = 'button';
+    vorgemerkt.append(d().el('span', null, 'Vorgemerkt – geht raus, sobald die Antwort fertig ist. Du kannst den Text noch ändern.'), zurueck);
+    zurueck.onclick = ()=>{ vormerken(S, false); feld.focus(); };
+    vormerk.onclick = ()=>absenden(S);
+    box.append(kein, vorschlag, optionen.el, zeile, vorgemerkt, projektZeile, vorlageHinweis);
+    S._eingabe = {box, feld, senden, vormerk, vorgemerkt, modell, kontext, projekt, vorlage, vorlageHinweis, projektZeile, kein, vorschlag, schild, schildBasis: schild.textContent};
     S._eingabe.ordner = root.sedraHarness.projekt ? root.sedraHarness.projekt.knoepfe(S, projektZeile, projekt) : null;    // P0 M3: Ordner öffnen, Vorgabe merken
     vorlage.addEventListener('change', ()=>root.sedraHarness.vorlagenhinweis.zeigen(S));
     projekt.addEventListener('change', ()=>{ if(S._eingabe.ordner) S._eingabe.ordner.zeigen(); const a = S.aktive(); if(a && a.zeigeLeer && a.leer()) a.zeigeLeer(); });
 
     const groesse = ()=>{ feld.style.height = 'auto'; feld.style.height = Math.min(feld.scrollHeight, Math.round(root.innerHeight * 0.4)) + 'px'; };
-    feld.addEventListener('input', ()=>{ groesse(); hilfe(S); });
+    feld.addEventListener('input', ()=>{ groesse(); hilfe(S); if(S._vormerk && !feld.value.trim()) vormerken(S, false); zustand(S); });       // Text weg → die Vormerkung auch
     feld.addEventListener('keydown', e=>{
       if(e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); absenden(S); }
     });
@@ -105,7 +112,15 @@
   async function absenden(S){
     const e = S._eingabe, a = S.aktive();
     const text = e.feld.value.trim();
-    if(!text || !a || a.laeuft()) return;
+    if(!text || !a) return;
+    if(a.laeuft()){                                       // Eingabe während der Antwort: Befehle gehen sofort (/stopp), alles andere wird vorgemerkt und bleibt bis zum Absenden änderbar
+      if(text.startsWith('/') && !text.includes('\n')){
+        try{ if(await befehl(S, text)){ e.feld.value = ''; hilfe(S); S._groesse(); zustand(S); } }
+        catch(err){ S.hinweis('Befehl fehlgeschlagen: ' + err.message, 'bad'); }
+        return;
+      }
+      vormerken(S, true); return;
+    }
     if(text.startsWith('/') && !text.includes('\n')){
       try{ if(await befehl(S, text)){ e.feld.value = ''; hilfe(S); S._groesse(); return; } }
       catch(err){ S.hinweis('Befehl fehlgeschlagen: ' + err.message, 'bad'); return; }
@@ -117,10 +132,24 @@
     zustand(S);
   }
 
+  // eine Nachricht für nach der Antwort vormerken (an) oder zurücknehmen (aus); gesendet wird in zustand(), wenn die Antwort der Sitzung fertig ist
+  function vormerken(S, an){
+    const e = S._eingabe, a = S.aktive();
+    S._vormerk = an && a ? {sid: a.id} : null;
+    e.vorgemerkt.hidden = !S._vormerk;
+    e.feld.setAttribute('aria-describedby', S._vormerk ? 'hs-vorgemerkt' : '');
+  }
+
   function zustand(S){
     const e = S._eingabe; if(!e) return;
     const a = S.aktive();
     const laeuft = !!(a && a.laeuft());
+    e.vormerk.hidden = !(laeuft && e.feld.value.trim() && !S._vormerk);
+    if(S._vormerk && !laeuft){
+      const gleich = !!a && S._vormerk.sid === a.id && !!e.feld.value.trim();
+      vormerken(S, false);
+      if(gleich) setTimeout(()=>absenden(S), 0);          // die Antwort ist fertig: die vorgemerkte Nachricht geht jetzt raus
+    }
     e.senden.textContent = laeuft ? 'Stopp' : 'Senden';
     e.senden.classList.toggle('stopp', laeuft);
     e.senden.title = laeuft ? 'Antwort abbrechen (Esc)' : 'Senden (Enter)';
@@ -209,5 +238,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.eingabe = {mount, zustand, fuer, fokus, modellZeigen, modellMenue, projektwahl, schildZeigen, kontextZeigen, vorlagenwahl, BEFEHLE};
+  root.sedraHarness.eingabe = {mount, zustand, absenden, vormerken, fuer, fokus, modellZeigen, modellMenue, projektwahl, schildZeigen, kontextZeigen, vorlagenwahl, BEFEHLE};
 })();
