@@ -78,3 +78,20 @@ Schreiben `models/langdock_agent.py`, `desk/langdock_kinds.py`, `desk/extensions
 ## 11. Nächste Gates
 
 AM6-01 → G2 → G3 → G4 am PC.
+
+## 12. Auswirkungen der Entscheidung „Kern-Verb statt Dienst-App“ (Frage des Captains, 03.11.2026)
+
+| Bereich | Auswirkung | Beleg / Grund |
+|---|---|---|
+| **Wo der Code liegt** | im Paket: `models/langdock_agent.py`, `desk/langdock_kinds.py`, ein Eintrag in `desk/extensions.MODULES`. Er kommt nur mit einem SEDRA-Stand (Release/Updater), nicht als eingebaute App. | `desk/extensions.py:3`; Register wird beim Start eingefroren (Vertrag R1) |
+| **Wer ihn bauen kann** | Claude oder der Captain (Paketcode, Review). Kein Dritter kann eine „Langdock-App“ liefern, die selbst nach außen spricht. | Konzept §10 |
+| **Schlüssel** | bleibt im Kern (Umgebung oder Schlüsselspeicher mit DPAPI), nie in einer App, nie in einem fremden Prozess | `cloud_settings.py:51–109` |
+| **Inhaltsschutz** | dieselbe Stelle wie bei allen Modellaufrufen; ausgehend (Personenbezug bleibt lokal) und eingehend (Antwort als Fremdinhalt). Bei einem Dienst müsste der Dienst den Schutz selbst aufrufen – das wäre nicht erzwingbar. | AM6-06, AM6-07 |
+| **Freigabe** | über das Desk-Verb immer eine Entscheidung im Posteingang. Die neue Guard-Aktion bekommt Permission-Stufe 6 (`EXTERNAL_ACTION`); der Abgleich-Test verlangt dafür `CAPTAIN_REQUIRED`. Im Gespräch (Harness) entscheidet zusätzlich der Freigabe-Katalog, wer `approve` ruft – stünde dort `frei`, würde die Harness selbst freigeben; deshalb Vorgabe `captain` (AM6-E2). | `test_permission_levels.py:85–88`; `harness/freigabe.py:240–244` |
+| **Nachweis** | ein Audit-Eintrag je Frage in der Kette von SEDRA (Hashes, keine Texte). Was der Agent **bei Langdock** tut, bleibt außerhalb – egal ob Kern-Verb oder Dienst. | AM6-04, AM6-09 |
+| **Wer es nutzen kann** | ein Weg für alle: das Modell über das Chat-Werkzeug `langdock_fragen`, Apps über die gewährte Fähigkeit `verb:langdock_agent.fragen` (AM3), MCP-Clients nur, wenn ihr Zugang das Verb gewährt bekommt (AM4 Teil A) | AM3-11, AM4-02 |
+| **Unternehmen (AM7)** | der Betreiber steuert über die Richtlinie, welche Agenten erlaubt sind; keine Software beim Beschäftigten nötig außer SEDRA selbst | AM7-04 |
+| **Abhängigkeiten** | braucht AM5 (Anbieter, Empfängerverzeichnis) und AM3 (Verben für Apps); **nicht** AM4 (keine Prozessverwaltung, kein Token je Dienst, kein Kanal aus der microVM) | Konzept §11 |
+| **Aufwand** | kleiner als ein Dienst: ein Adapter, ein Objekttyp mit einem Verb, ein Chat-Werkzeug | – |
+| **Was man aufgibt** | keine eigene Fassung je Kunde als App; neue Langdock-Funktionen kommen mit einem SEDRA-Stand; ein Ausfall des Adapters betrifft den Server-Prozess (Fehler werden als Satz gemeldet, AM6-10) | – |
+| **Umkehrbar?** | ja, bis zum Bau. Kommt später ein Grund für einen Dienst (z. B. kundenspezifische Logik), kann er nach AM4 dazukommen; der Weg nach außen bliebe trotzdem das Kern-Verb mit Inhaltsschutz. | – |

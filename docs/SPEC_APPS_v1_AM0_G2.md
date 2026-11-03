@@ -1,6 +1,6 @@
 # SPEC Apps v1 – AM0 Härtung – G2 Design (03.11.2026)
 
-Grundlage: `docs/SPEC_APPS_v1_AM0_HAERTUNG.md` (G1), freigegeben vom Captain am 03.11.2026 mit allen Entscheidungen wie vorgeschlagen (AM0-E1 ganz `uix/**`, AM0-E2 eigene `CAPTAIN`-Shells behalten Code, AM0-E3 Abweichung der Herkunft abweisen, AM0-E4 Sperrliste übernehmen und je Route prüfen).
+Grundlage: `docs/SPEC_APPS_v1_AM0_HAERTUNG.md` (G1), freigegeben vom Captain am 03.11.2026 mit den Entscheidungen AM0-E2 (eigene `CAPTAIN`-Shells behalten Code), AM0-E3 (Abweichung der Herkunft abweisen), AM0-E4 (Sperrliste übernehmen und je Route prüfen). **AM0-E1 ist wieder offen** (Teil A).
 Nichts gebaut; diese Datei ist G2. Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
 ## 0. Was G2 im Code geklärt hat
@@ -25,6 +25,8 @@ Nichts gebaut; diese Datei ist G2. Pfade relativ zu `runtime/src/guppi_runtime/`
 | N4 | Die Allowlist-Prüfung `Gateway.allowed` ruft bei **jeder** Anfrage mit `X-SEDRA-Tool` `_load` auf und liest alle Manifeste neu. Eine Hashprüfung in `_load` liefe damit bei jeder Anfrage. | `desk/gateway.py:408–418` | Teil B: Zwischenspeicher nach Dateistand |
 
 ## 1. Teil A – Vorbehalte (AM0-01)
+
+> **Nicht freigegeben.** AM0-E1 wurde am 03.11.2026 zur Ausarbeitung zurückgegeben. Die Ausarbeitung (`SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md`) zeigt, dass ein harter Vorbehalt nur für den Vertragscode die Lücke nicht schließt, und schlägt eine Stufung vor (hart/weich/frei). Wird sie freigegeben, ersetzt ihr §6 diesen Teil. Die übrigen Teile von AM0 hängen nicht daran.
 
 `harness/vorbehalte.py` `PFADE` (`:10–31`) bekommt nach dem Eintrag `runtime/benchmarks/devvm_*` diese Zeilen:
 

@@ -294,6 +294,7 @@ Eine App darf diese Dinge **anzeigen** (Logbuch, Posteingang als Grundfunktion d
 | **AM6** | `SPEC_APPS_v1_AM6_LANGDOCK_AGENTEN.md` | SEDRA fragt Langdock-Agenten (ausgehend) als Kern-Verb | AM5, AM3 | hoch |
 | **AM7** | `SPEC_APPS_v1_AM7_UNTERNEHMEN.md` | Rollen, Betreiber-Richtlinie, Profile, Verwaltung in der KMU-Shell | AM2, AM3 | hoch |
 | **AM8** | `SPEC_APPS_v1_AM8_VERZEICHNIS.md` | ein Verzeichnis aller Erweiterungen (E1–E8), gemeinsame Wirkungsklassen, Auslieferungsprofile | AM3 | mittel |
+| **AM9** (vorgeschlagen) | Skizze in `SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md` §7 | Werkstatt und Betrieb trennen: SEDRA läuft aus einem freigegebenen Stand, Änderungen kommen nur über die Übernahme des Updaters | AM0 | hoch |
 
 Reihenfolge-Vorschlag: AM0 und AM1 parallel → AM2 → AM3 → AM8 (Anzeige) und AM5 → AM4 → AM6 → AM7.
 Begründung: AM0 ist Voraussetzung für alles mit fremdem Code; AM1/AM2 bringen sichtbaren Nutzen ohne neue Rechte; AM3 ist die Mitte; AM5 ist klein, wenn die Schnittstelle stimmt; AM7 ist der größte Schritt und braucht ein Konto-Modell, das es heute nicht gibt.
@@ -307,7 +308,8 @@ Begründung: AM0 ist Voraussetzung für alles mit fremdem Code; AM1/AM2 bringen 
 | Acht Erweiterungswege statt einem | „Alles ist eine App“ trifft heute nur zwei davon; ein ganzheitliches Konzept braucht eine gemeinsame Sicht | §2.1, AM8 |
 | Fünf Rechte-Vokabulare | Der Captain sieht sonst je Stelle andere Wörter für dieselbe Wirkung | §2.2, §5.3, AM8 |
 | Fremde Shells laufen mit Code in der Seite | Die Abschottung der Werkzeuge wäre über eine fremde Shell umgehbar | F4, AM0-06 |
-| Das Modell kann Paketcode schreiben | Herkunft ist die einzige Grenze von CORE | F5, AM0-01 |
+| Das Modell kann Paketcode schreiben | Herkunft ist die einzige Grenze von CORE; Code in der Seite liest den Token und kann Freigaben selbst erteilen (`ui/api.js:6`) | F5, AM0-01, Vorlage AM0-E1 |
+| Werkstatt und Betrieb sind derselbe Ordner | SEDRA ändert sich selbst, während es läuft – für Oberfläche und Python | Vorlage AM0-E1 §3, AM9 |
 | `GUPPI_BUILT` wird nie vergeben | Der Selbstbau-Weg des Vertrags (§7) endet heute als `COMMUNITY` | F15, AM3-29 |
 | Rechte im Manifest gespeichert | Widerspricht jeder Hash-Prüfung | F16, AM3-05 |
 | Gate-Texte und Guard-Regeln für den Einbau | Der Captain entscheidet auf Grundlage dieser Texte | F10, F11, AM0-07/08 |
@@ -353,4 +355,7 @@ Grenzen dieser Arbeit (ehrlich):
 | 03.11.2026 | Richtung 2a (Langdock-Agenten fragen) als **Kern-Verb** statt als Dienst-App. Grund: kein Netz in der microVM, keine Sicherheitsgrenze für Dienste auf dem Host, Schlüssel und Inhaltsschutz liegen im Kern (AM6 §1) | Vorschlag Claude, übernommen vom Captain |
 | 03.11.2026 | **Alle Vorschläge** der Entscheidungstabellen AM0-E… bis AM8-E… übernommen (u. a. Vorbehalt für ganz `uix/**`, Werkseinstellung fremder Apps, Betriebsart A im Unternehmen, Langdock zuerst außerhalb des Gateway-Vorgangs) | Captain |
 | 03.11.2026 | AM0 und AM1 in G2 bringen | Captain |
+| 03.11.2026 | AM3-E1 (Werkseinstellung fremder Apps: nach dem Einbau aus, nur normale Rechte) ausdrücklich bestätigt | Captain |
+| 03.11.2026 | AM0-E1 (Schutz des Oberflächen-Codes) **wieder offen**, zur Ausarbeitung zurückgegeben; Vorlage `SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md` (Vorschlag: gestuft hart/weich/frei; Baustein AM9 „Werkstatt und Betrieb trennen“) | Captain / Claude |
+| 03.11.2026 | Auswirkungen „Kern-Verb statt Dienst-App“ für Langdock-Agenten beschrieben (AM6 §12) | Claude, auf Frage des Captains |
 | 15.10.2026 | Fremdes Modul kommt als COMMUNITY mit Leserouten; Schreiben nur per Gate | `uix_server.py:1265` (Kommentar) |

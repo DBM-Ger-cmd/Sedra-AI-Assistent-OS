@@ -67,7 +67,7 @@ Keine Signatur (offen, Konzept §12). Keine Abschottung von CORE. Keine neue Ber
 
 ## 8. Entscheidungen des Captains
 
-**Entschieden vom Captain am 03.11.2026: alle Vorschläge dieser Tabelle übernommen.**
+**Entschieden vom Captain am 03.11.2026: alle Vorschläge dieser Tabelle übernommen – außer AM0-E1:** zur Ausarbeitung zurückgegeben (03.11.2026); Ausarbeitung und neuer Vorschlag in `docs/SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md`.
 
 | Nr | Frage | Vorschlag |
 |---|---|---|
