@@ -151,7 +151,7 @@ Cloud-Modelle laufen nur über den API-Zugang (`models/cloud_api.py`, Einstellun
 Der Updater (Werkzeug „System“, Abschnitt „Updates“, Knopf „Nach Updates suchen“) bietet nur Tags `vX.Y.Z` an. Er lädt das Zip des Tags von GitHub und verlangt darin `release/MANIFEST.sha256`: jede Datei unter `runtime/src/guppi_runtime/` und `runtime/config/` muss darin stehen und stimmen, sonst bricht er ab (`update_manifest_fehlt`, `dateien_passen_nicht`, `pruefsumme_falsch`). Ändert der Release Rechte eines Moduls, nennt die Vorschau jede Änderung einzeln.
 
 1. `runtime/src/guppi_runtime/version.py` und `BUILD.txt` auf die neue Version, Eintrag in `docs/CHANGELOG.md`, committen.
-2. Manifest aus dem Commit erzeugen (nicht aus dem Arbeitsbaum – dort liegen `local_paths.yaml`, `.bak`-Dateien und `__pycache__`): `python -I -B runtime/benchmarks/release_manifest.py` schreibt `release/MANIFEST.sha256` aus `HEAD`.
+2. Manifest aus dem Commit erzeugen (nicht aus dem Arbeitsbaum – dort liegen `local_paths.yaml`, `.bak`-Dateien und `__pycache__`): `python -I -B runtime/benchmarks/release_manifest.py` schreibt `release/MANIFEST.sha256` aus `HEAD`. Das Python braucht PyYAML (unter Windows `runtime\.venv\Scripts\python.exe` oder `runtime\portable\python\current\python.exe`).
 3. Nur diese Datei committen (`git add release/MANIFEST.sha256`), Tests, `main` pushen.
 4. Genau diesen Commit taggen und den Tag pushen: `git tag -a vX.Y.Z -m "SEDRA vX.Y.Z: …"`, `git push origin vX.Y.Z`.
 5. Probe: `python -I -B runtime/benchmarks/release_manifest.py --pruefen vX.Y.Z` → „Manifest vorhanden und stimmig“.
