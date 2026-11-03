@@ -289,7 +289,7 @@ Beide Teile lassen sich über Schalter in der Datei abschalten (`oberflaeche_abn
 | E13 | (neu aus G11) Gedächtnis der Harness bleibt N. | ja |
 | E14 | (neu aus G11) `tests/test_freigabe_*.py` werden mit O3 harter Vorbehalt. | ja |
 
-**Entschieden vom Captain am 03.11.2026:** E1–E8, E10 und E11 wie vorgeschlagen. E9 sollte genauer ausgeführt werden (§9a); die Entscheidung darüber ist offen.
+**Entschieden vom Captain am 03.11.2026:** E1–E8, E10 und E11 wie vorgeschlagen. E12–E14 (aus G11) ebenfalls wie vorgeschlagen. E9 sollte genauer ausgeführt werden (§9a); die Entscheidung darüber ist offen.
 
 ### 9a. E9 genauer: Soll `hardware_manager/dashboard.html` ein harter Vorbehalt werden?
 
