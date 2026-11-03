@@ -71,20 +71,25 @@
     document.addEventListener('click', e=>{ if(st.offen && !panel.contains(e.target) && !(e.target.closest && e.target.closest('.hs-start-knopf'))) schliessen(S); });
     document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && st.offen){ e.preventDefault(); schliessen(S); } });
     if(root.sedraWechsel && root.sedraWechsel.menueHaken) root.sedraWechsel.menueHaken(()=>umschalten(S));
+    Object.keys(EREIGNISSE).forEach(n=>S.ctx.bus.on(n, ()=>{ if(st.offen) vormerken(S, EREIGNISSE[n]); }));
     laden(S);
   }
 
   function oeffnen(S){
     const st = stand(S); if(!st.el) return;
     st.offen = true; st.el.panel.hidden = false; st.el.suche.value = ''; st.wahl = 0;
+    st.blick = st.blick || {};
+    if(S.strip) st.blick.strip = S.strip;
     zeichnen(S);
-    blickLaden(S);
+    auffrischen(S, ['arbeit', 'token', 'modelle', 'labor']);
+    taktStart(S);
     st.el.suche.focus();
     const knopf = document.querySelector('.hs-start-knopf'); if(knopf) knopf.setAttribute('aria-expanded', 'true');
   }
   function schliessen(S){
     const st = stand(S); if(!st.el) return;
     st.offen = false; st.el.panel.hidden = true;
+    taktStop(S);
     const knopf = document.querySelector('.hs-start-knopf'); if(knopf){ knopf.setAttribute('aria-expanded', 'false'); knopf.focus(); }
   }
   function umschalten(S){ stand(S).offen ? schliessen(S) : oeffnen(S); }
@@ -172,10 +177,12 @@
 
   // „Auf einen Blick“ (Captain 03.11.2026): kleine Apps mit den wichtigsten Werten – KI-Labor, Sedra Token, Hardware, Modelle. Nur lesend; ein Klick öffnet die App.
   const BLICK = [
+    {ort: 'tasks', titel: 'Aufgaben', symbol: '▤', werte: b=>b.arbeit ? [['Freigaben offen', String(b.arbeit.freigaben), b.arbeit.freigaben ? 'warn' : ''], ['Anträge', String(b.arbeit.antraege), b.arbeit.antraege ? 'warn' : ''], ['Aufgaben aktiv', String(b.arbeit.aufgaben)], ['Läufe', String(b.arbeit.laeufe)]] : null},
     {ort: 'labor', titel: 'KI-Labor', symbol: '☁', werte: b=>b.labor ? [['Cloud', b.labor.enabled ? 'an' : 'aus', b.labor.enabled ? 'ok' : ''], ['Anbieter bereit', b.labor.bereit + ' von ' + b.labor.gesamt], ['Aktiv', b.labor.live || 'keiner']] : null},
-    {ort: 'meter', titel: 'Sedra Token', symbol: '◎', werte: b=>b.token ? [['Antworten heute', String(b.token.antworten)], ['Eingehend ↑', zahl(b.token.ein)], ['Erzeugt ↓', zahl(b.token.aus)]] : null},
+    {ort: 'meter', titel: 'Sedra Token', symbol: '◎', werte: b=>b.token ? [['Antworten heute', String(b.token.antworten)], ['Eingehend ↑', zahl(b.token.ein)], ['Erzeugt ↓', zahl(b.token.aus)], ['Tempo', b.token.tok_s ? b.token.tok_s + ' Token/s' : '–']] : null},
     {ort: 'hardware', titel: 'Hardware', symbol: '▦', werte: b=>b.strip ? [['GPU', wertVon(b.strip.gpu), tonVon(b.strip.gpu)], ['RAM', wertVon(b.strip.ram), tonVon(b.strip.ram)]] : null},
-    {ort: 'models', titel: 'Modelle', symbol: '◆', werte: b=>b.strip ? [['Modell', wertVon(b.strip.model), tonVon(b.strip.model)], ['Server', wertVon(b.strip.server), tonVon(b.strip.server)]] : null}
+    {ort: 'models', titel: 'Modelle', symbol: '◆', werte: b=>b.strip ? [['Modell', wertVon(b.strip.model), tonVon(b.strip.model)], ['Server', b.modelle ? (b.modelle.laeuft ? 'läuft' : 'aus') : wertVon(b.strip.server), b.modelle && b.modelle.laeuft ? 'ok' : tonVon(b.strip.server)]].concat(b.modelle ? [['Kontext', b.modelle.kontext ? zahl(b.modelle.kontext) + ' Token' : '–'], ['Slots', b.modelle.slots !== undefined ? String(b.modelle.slots) : '–']] : []) : null},
+    {einst: true, titel: 'Einstellungen', symbol: '⚙'}
   ];
   const zahl = n=>Number(n || 0).toLocaleString('de-DE');
   const wertVon = g=>String((g && g.value !== undefined && g.value !== null) ? g.value : '–');
@@ -184,7 +191,23 @@
   function blick(S){
     const st = stand(S);
     const box = d().el('section', 'hs-start-blick'); box.setAttribute('aria-label', 'Auf einen Blick');
+    st.blickEl = box;
     BLICK.forEach(k=>{
+      if(k.einst){
+        const E = root.sedraHarness.einstellungen;
+        const kachel = d().el('section', 'hs-start-blick-kachel hs-start-blick-einst'); kachel.dataset.blick = 'einstellungen';
+        const kopf = d().el('button', 'hs-start-blick-kopf'); kopf.type = 'button';
+        kopf.append(d().el('span', 'hs-start-symbol', k.symbol), d().el('b', null, k.titel), d().el('small', 'hs-leise', 'Startseite'));
+        kopf.onclick = ()=>{ schliessen(S); E.oeffnen(S); };
+        const gruppen = d().el('span', 'hs-start-blick-gruppen');
+        (E.GRUPPEN || []).forEach(g=>{
+          const c = d().el('button', 'hs-start-chip', g.titel); c.type = 'button'; c.dataset.gruppe = g.id;
+          c.onclick = ()=>{ schliessen(S); E.oeffnen(S, g.id); };
+          gruppen.append(c);
+        });
+        kachel.append(kopf, gruppen); box.append(kachel);
+        return;
+      }
       const ort = (root.sedraPlaces.PLACES || []).find(p=>p.id === k.ort);
       if(!ort) return;
       const b = d().el('button', 'hs-start-blick-kachel'); b.type = 'button'; b.dataset.blick = k.ort;
@@ -199,21 +222,64 @@
     return box;
   }
 
-  // beim Öffnen des Menüs lesen (nichts wird gepollt); jede Quelle für sich, fällt eine aus, bleiben die anderen
-  function blickLaden(S){
+  // ---- Aktualisierung der Kacheln (Regel HS-52a, Captain 03.11.2026): Ereignisse zuerst, ein Takt nur, solange das Menü offen und der Tab sichtbar ist.
+  // Beim Öffnen wird alles gelesen; danach kommt Neues aus den Ereignissen des Servers (kurz gesammelt) und aus einem Takt von 5 s (Modelle alle 15 s, KI-Labor
+  // alle 30 s – die teureren Quellen; Token alle 15 s und bei jeder Antwort). Der Takt endet mit dem Schließen. Die Statuswerte (GPU, RAM, Modell …) liest weiter
+  // nur die Taskleiste (/api/strip) und reicht sie her (stripNeu) – eine Abfrage für beide Anzeigen. Es ersetzt nur den Kachelstreifen; Suche, Auswahl und ein bedienter Knopf bleiben.
+  const TAKT_MS = 5000, MODELLE_JEDE = 3, LABOR_JEDE = 6;
+  const QUELLEN = {
+    token: S=>Promise.resolve(S.tokenLaden ? S.tokenLaden() : null).then(()=>{ const t = S.tokenStand && S.tokenStand.heute; if(t) stand(S).blick.token = t; }),
+    arbeit: S=>Promise.all([S.freigabenLaden ? S.freigabenLaden() : null, S.laeufeLaden ? S.laeufeLaden() : null]).then(()=>{
+      stand(S).blick.arbeit = {freigaben: (S.entscheidungen || []).length, antraege: (S.antraege || []).length,
+                               aufgaben: (S.aufgaben || []).filter(a=>a.status === 'aktiv').length, laeufe: (S.laeufe || []).filter(l=>l.status === 'laeuft').length};
+    }),
+    modelle: S=>S.api('/api/models').then(v=>{ const s = (v && v.server) || {}; stand(S).blick.modelle = {laeuft: !!s.running, kontext: s.context || 0, slots: s.slots}; }),
+    labor: S=>S.api('/api/cloud').then(c=>{
+      const p = c.providers || [];
+      stand(S).blick.labor = {enabled: !!c.enabled, bereit: p.filter(x=>x.status === 'bereit').length, gesamt: p.length, live: (c.live || []).join(', ')};
+    })
+  };
+  const EREIGNISSE = {'model.changed': ['modelle'], 'decision.pending': ['arbeit'], 'decision.answered': ['arbeit'], 'harness.aufgabe': ['arbeit'],
+                      'harness.lauf': ['arbeit'], 'harness.antwort': ['token', 'arbeit']};          // der Status (GPU, RAM, Modell …) kommt über die Taskleiste: sie liest bei diesen Ereignissen selbst, und jedes tokenLaden/freigabenLaden stößt sie an
+
+  function blickNeu(S){
+    const st = stand(S);
+    if(!st.offen || !st.blickEl || !st.blickEl.isConnected || st.el.suche.value.trim()) return;
+    if(st.blickEl.contains(document.activeElement)) return;                  // ein bedienter Knopf wird nicht unter dem Finger ersetzt
+    const alt = st.blickEl, neu = blick(S);                                   // blick() merkt sich den neuen Streifen
+    alt.replaceWith(neu);
+  }
+  function auffrischen(S, welche){
     const st = stand(S);
     st.blick = st.blick || {};
-    const neu = ()=>{ if(st.offen && !st.el.suche.value.trim()) zeichnen(S); };
-    const heute = ()=>{ const t = S.tokenStand && S.tokenStand.heute; if(t) st.blick.token = t; };
-    heute();
-    if(S.tokenLaden) Promise.resolve(S.tokenLaden()).then(()=>{ heute(); neu(); }, ()=>{});
-    S.api('/api/strip').then(v=>{ st.blick.strip = v || {}; neu(); }).catch(()=>{});
-    S.api('/api/cloud').then(c=>{
-      const p = c.providers || [];
-      st.blick.labor = {enabled: !!c.enabled, bereit: p.filter(x=>x.status === 'bereit').length, gesamt: p.length, live: (c.live || []).join(', ')};
-      neu();
-    }).catch(()=>{});
+    [].concat(welche).forEach(n=>{
+      let p = null;
+      try{ p = QUELLEN[n](S); }catch(_e){ p = null; }
+      if(p && p.then) p.then(()=>blickNeu(S), ()=>{});                       // jede Quelle für sich: fällt eine aus, bleiben die anderen
+    });
   }
+  function stripNeu(S, v){ const st = stand(S); st.blick = st.blick || {}; st.blick.strip = v || {}; blickNeu(S); }
+  function vormerken(S, welche){
+    const st = stand(S);
+    (st.vorgemerkt = st.vorgemerkt || new Set());
+    welche.forEach(n=>st.vorgemerkt.add(n));
+    if(st.vormerkZeit) return;
+    st.vormerkZeit = setTimeout(()=>{ st.vormerkZeit = null; const w = [...st.vorgemerkt]; st.vorgemerkt.clear(); if(st.offen && !document.hidden) auffrischen(S, w); }, 800);
+  }
+  function taktStart(S){
+    const st = stand(S);
+    taktStop(S);
+    st.zaehler = 0;
+    st.takt = setInterval(()=>{                                              // nur bei offenem Menü und sichtbarem Tab
+      if(document.hidden || !st.offen) return;
+      st.zaehler++;
+      const w = ['arbeit'];                                                  // freigabenLaden stößt die Statusabfrage der Taskleiste an: ein /api/strip je Takt
+      if(st.zaehler % MODELLE_JEDE === 0) w.push('modelle', 'token');
+      if(st.zaehler % LABOR_JEDE === 0) w.push('labor');
+      auffrischen(S, w);
+    }, TAKT_MS);
+  }
+  function taktStop(S){ const st = stand(S); if(st.takt){ clearInterval(st.takt); st.takt = null; } }
 
   // Oberflächen (HS-41) und Darstellung · Schrift – unten, einmal gezeichnet, Wechsel über sedraWechsel
   function fuss(S){
@@ -267,5 +333,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.startmenue = {mount, oeffnen, schliessen, umschalten, laden, zeichnen, waehlen, benutzt, bauen, KONFIG_URL};
+  root.sedraHarness.startmenue = {mount, oeffnen, schliessen, umschalten, laden, zeichnen, waehlen, benutzt, bauen, stripNeu, KONFIG_URL};
 })();
