@@ -169,6 +169,34 @@ Regeln dazu:
 - **`needs.apps`** und **`version`** sind schon im Schlüsselsatz angelegt (`version`, `needs`), aber nur `needs.ui` wird ausgewertet.
 - **`herkunft`** schreibt der Einbau, nicht der Autor (der Autor kann sie nicht fälschen, weil das Gate sie erzeugt).
 
+### 2.2a Apps je Shell (Captain, 03.11.2026)
+
+Shells dürfen **eigene Apps** mitbringen. Eine App muss nicht in jeder Shell verfügbar sein. Android-Vergleich: Hersteller-Oberfläche mit eigenen Apps neben den gemeinsamen.
+
+Heute gibt es dafür keinen Platz: `TOOL_KEYS` (`desk/gateway.py:63`) kennt kein Feld für die Shell, Orte gelten „in jeder Shell“ (Vertrag, Nachtrag Orte G2-S4-21), und `uix/tools/` ist ein gemeinsamer Ordner. Werkzeuge mit `handles` zeigt jede Shell, die `dock` oder `windows` anbietet (`OPENS_OBJECTS`).
+
+Vorschlag, zwei Wege, ein Mechanismus:
+
+```yaml
+tool:
+  id: rechnung
+  shells: [harness, cockpit]     # Verfügbarkeit; fehlt das Feld = alle Shells (heutiges Verhalten, keine Migration)
+```
+- **Gemeinsame Apps** bleiben in `uix/tools/<id>/`. `shells:` begrenzt, in welchen Shells sie erscheinen (Start-Menü, Palette, Chat-Ort, Leiste).
+- **Shell-eigene Apps** liegen in `uix/shells/<shell>/apps/<id>/tool.yaml`. Sie gelten **nur** in dieser Shell; `shells:` ist dort implizit `[<shell>]` und darf nicht erweitert werden.
+  Wird die Shell gewechselt, verschwinden Zellen, Orte und Reiter dieser Apps; offene Reiter gehen im Arbeitsstand mit der Shell zurück in den Zustand „App nicht verfügbar“ (kein stiller Verlust, ein Hinweis).
+- Eine Shell darf Apps nur **anbieten und anordnen** (Zeichnen von Zellen, Gruppen, Orte). Sie darf einer App keine Rechte geben, die diese nicht hat (§2.3, §5). Eine Shell-eigene App steht in der Berechtigung wie jede andere.
+
+Regeln und Sicherheit:
+1. **Vertrauen folgt dem Ursprung, nicht der Shell.** Liegt eine App im Paket (`uix/shells/<shell>/apps/`), ist sie `CORE`/Paket; kommt sie über das Einbau-Gate, ist sie `COMMUNITY`, auch wenn sie für eine Shell gebaut wurde. Eine Shell-Datei aus `local_config/shells/<id>/` kann kein CORE bringen (`local_module_cannot_be_core`).
+2. **Die Verfügbarkeit ist eine Sichtbarkeit, keine Sperre.** Der Server beantwortet die Routen einer App unabhängig von der aktiven Shell; die Allowlist (`api`) bleibt die einzige Grenze. Eine App, die in keiner aktiven Shell erscheint, ist trotzdem „eingebaut“ und kann nicht still starten (B1 Aktivierung).
+3. **Kein Umweg über die Shell.** Eine Shell kann keine fremde App an der Aktivierung vorbei starten, und `app_oeffnen` (Modell) öffnet nur Apps, die in der **aktiven** Shell verfügbar **und** aktiviert sind. Sonst könnte eine Shell als Hintertür für COMMUNITY-Apps dienen.
+4. **Zusammensetzung statt Kopie.** Orte, Zellen und Gruppen einer Shell = Kernorte + gemeinsame Apps mit passender `shells:` + eigene Apps der Shell (Stufe 2). Kollisionsprüfung gilt je Shell; ein Ort darf in zwei Shells verschieden belegt sein.
+5. **Shells ohne Slot** (z. B. Minimal ohne `dock`) zeigen keine Flächen-Apps; Prüfung bleibt `OPENS_OBJECTS`. Das Manifest einer App kann `shells:` nennen, die den Slot nicht haben: Warnung im Modul-Werkzeug, kein Fehler.
+6. **Wechsel der Shell bleibt Vertragscode** (`sedraWechsel`, Nachtrag N3): eine Shell baut keinen eigenen Wechsel; offene Apps gehen mit, soweit sie in der Ziel-Shell verfügbar sind.
+
+Auswirkung auf den Plan: Stufe 2 bekommt `shells:` und den Ordner `apps/` (Lader liest beide Orte; ohne Feld = alle). Stufe 1 (Zellen) gilt zunächst nur für die Harness-Shell. Die Tests (`handles`-Zuordnung, `start_gruppen`) prüfen je Shell.
+
 ### 2.3 Rechte statt Routen
 
 Heute sind „Rechte“ eine Liste von Routen. Das ist für Menschen schwer zu lesen („`POST /api/actions` darf *alles*“, Verben stehen im Body, die Allowlist sieht sie nicht).
@@ -363,7 +391,7 @@ Für fremden Code, der selbst ausgeführt werden soll, gibt es `sandbox/` (micro
 Die fünf Fragen der ersten Fassung sind keine einmalige Grundsatzentscheidung. Sie werden **je App** in der Berechtigung festgelegt (Karte „Berechtigung“ im Modul-Werkzeug,
 Änderungen als Antrag mit Gate im Posteingang, §3.6). Der Kern liefert nur die **Obergrenze je Vertrauensstufe**; innerhalb der Grenze entscheidet der Captain pro App.
 
-| Nr | Schalter in der Berechtigung | Werte | Standard COMMUNITY | Obergrenze (Kern, nicht änderbar) |
+| Nr | Schalter in der Berechtigung (gilt je App; Verfügbarkeit je Shell siehe §2.2a) | Werte | Standard COMMUNITY | Obergrenze (Kern, nicht änderbar) |
 |---|---|---|---|---|
 | B1 | **Aktivierung** | `aus` · `an` | `aus` nach dem Einbau; „An“ ist ein eigener Klick mit Audit | – |
 | B2 | **Zelle in der Leiste** | `nein` · `text` (Wert + Ton, gekennzeichnet „fremd“) | `nein` | nie Code in der Leiste, nie Klickziel außerhalb eines Orts |
