@@ -350,6 +350,11 @@ def main(argv=None):
     p.add_argument('projekt')
     p.add_argument('--uebernehmen', action='store_true')
     a = p.parse_args(argv)
+    import sys
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')          # unter Windows ist eine Pipe cp1252: „■“ und „–“ der Vorschau liessen den Aufruf abstuerzen
+    except (AttributeError, ValueError):
+        pass
     code, text = konsole(a.root, a.projekt, a.uebernehmen)
     print(text)
     return code
