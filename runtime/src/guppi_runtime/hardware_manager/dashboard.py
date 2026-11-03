@@ -8,10 +8,16 @@ import threading
 from urllib.parse import urlsplit
 import webbrowser
 
+SKRIPT_PFAD = '/uix/js/hardware_dashboard.js'      # das einzige Skript der Seite (dashboard.html)
+
 
 def make_server(manager, port=0):
     token = secrets.token_urlsafe(32)
     html = (Path(__file__).parent / 'dashboard.html').read_bytes()
+    # Seit der Härtungsrunde E3 (30.10.) lädt die Seite ihr Skript von /uix/js/ – dieser Server liefert genau diese eine Datei mit aus
+    # (SPEC_APPS_v1_O3PLUS_G9_G2 §9a, E9 Variante C). Gelesen bei jeder Anfrage wie im Server der Oberfläche; ohne Token, denn ein
+    # <script src> trägt keinen Kopf – es ist Code, keine Daten.
+    skript = Path(__file__).resolve().parents[1] / 'uix' / 'js' / 'hardware_dashboard.js'
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args): pass
@@ -25,6 +31,9 @@ def make_server(manager, port=0):
                 self.send_error(403); return
             path = urlsplit(self.path).path
             if path == '/': body, kind = html, 'text/html; charset=utf-8'
+            elif path == SKRIPT_PFAD:
+                try: body, kind = skript.read_bytes(), 'text/javascript; charset=utf-8'
+                except OSError: self.send_error(404); return
             else:
                 if not hmac.compare_digest(self.headers.get('X-GUPPI-Token', ''), token):
                     self.send_error(403); return
@@ -43,7 +52,7 @@ def make_server(manager, port=0):
             self.send_header('Cache-Control', 'no-store')
             self.send_header('X-Content-Type-Options', 'nosniff')
             self.send_header('Referrer-Policy', 'no-referrer')
-            self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'")
+            self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'")
             self.end_headers(); self.wfile.write(body)
 
     server = ThreadingHTTPServer(('127.0.0.1', port), Handler)

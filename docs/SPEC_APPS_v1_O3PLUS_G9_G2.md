@@ -282,14 +282,14 @@ Beide Teile lassen sich über Schalter in der Datei abschalten (`oberflaeche_abn
 | E6 | Ohne Windows nur Konsole, keine Dialog-Programme anderer Systeme (`osascript`, `zenity`). | ja |
 | E7 | Klasse-H-Karten nie an den Vorarbeiter (G9-10). | ja |
 | E8 | Lese-Sperre für `runtime_data/uix/clients/**` im Code (O3-06) und Routen je externem Client (G9-08). | ja |
-| E9 | `hardware_manager/dashboard.html` hart? | ~~nein, erst mit AM9~~ – vom Captain zur genaueren Ausarbeitung zurückgegeben; **neue Empfehlung: C** (§9a) |
+| E9 | `hardware_manager/dashboard.html` hart? | **entschieden: Variante C** (§9a) – hart, und der Hardware-Server liefert sein Skript selbst mit CSP ohne `unsafe-inline`; gebaut (§13.2) |
 | E10 | Frist der Bestätigung 10 min; nach Neustart keine offenen Bestätigungen. | ja |
 | E11 | Sitzung mit Vorlage-Erlaubnissen: Sitzung sofort, Erlaubnisse nach dem Ja. | ja |
 | E12 | (neu aus G11, §13.1) Die vier Handlungen ohne Gate mit Klasse H (`/api/cloud/save`, `/api/cloud/key`, `/api/cloud/module-model`, `/api/candidate`) bekommen in G9 dieselbe Tür. | ja |
 | E13 | (neu aus G11) Gedächtnis der Harness bleibt N. | ja |
 | E14 | (neu aus G11) `tests/test_freigabe_*.py` werden mit O3 harter Vorbehalt. | ja |
 
-**Entschieden vom Captain am 03.11.2026:** E1–E8, E10 und E11 wie vorgeschlagen. E12–E14 (aus G11) ebenfalls wie vorgeschlagen. E9 sollte genauer ausgeführt werden (§9a); die Entscheidung darüber ist offen.
+**Entschieden vom Captain am 03.11.2026:** E1–E8, E10 und E11 wie vorgeschlagen. E12–E14 (aus G11) ebenfalls wie vorgeschlagen. E9 nach der Ausarbeitung: Variante C. E9 sollte genauer ausgeführt werden (§9a); die Entscheidung darüber ist offen.
 
 ### 9a. E9 genauer: Soll `hardware_manager/dashboard.html` ein harter Vorbehalt werden?
 
@@ -380,3 +380,9 @@ Vorschlag für die Entscheidung des Captains (E12): Diese vier Routen bekommen i
 **Nicht gebaut:** G11-05 (Verhaltensprüfung) kommt mit der Tür aus G9.
 
 **Tests:** `test_freigabe_vollstaendig` 16 und `test_freigabe_klasse` 9 grün; Harness-, Freigabe-, Client-, Arbeitsplatz- und Vertragstests 452, 0 rot (Container). Ganze Bahn: siehe PR.
+
+### 13.2 E9 Variante C gebaut (03.11.2026)
+
+- `harness/vorbehalte.py`: `runtime/src/guppi_runtime/hardware_manager/dashboard.html` ist harter Vorbehalt.
+- `hardware_manager/dashboard.py`: liefert `/uix/js/hardware_dashboard.js` (nur diese Datei, ohne Token wie im Server der Oberfläche) und sendet `script-src 'self'` statt `'unsafe-inline'`. Damit zeigt `guppi hardware-dashboard` wieder Daten (Nebenbefund aus §9a behoben), und ein Inline-Skript in der Seite läuft in keinem der beiden Server.
+- Test `tests/test_hardware_dashboard_server.py` (5): die Seite lädt genau das ausgelieferte Skript, kein Inline-Skript; das Skript kommt mit JS-Typ; CSP ohne `unsafe-inline`; andere Dateien und Daten ohne Token bleiben zu; Daten mit Token. Ohne die Änderung schlägt der Test fehl. Am PC nicht geprüft: das Fenster im Browser.
