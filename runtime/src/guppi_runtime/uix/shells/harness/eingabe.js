@@ -47,9 +47,11 @@
     const werkzeuge = d().el('div', 'hs-eingabe-leiste');
     werkzeuge.append(plus, schild, modell, kontext, d().el('span', 'hs-luecke'), mikro, senden);
     zeile.append(feld, werkzeuge);
-    box.append(kein, vorschlag, zeile, projektZeile);
-    S._eingabe = {box, feld, senden, modell, kontext, projekt, vorlage, projektZeile, kein, vorschlag, schild, schildBasis: schild.textContent};
+    const vorlageHinweis = d().el('div', 'hs-vorlage-hinweis'); vorlageHinweis.hidden = true; vorlageHinweis.setAttribute('role', 'note');       // Wofür die gewählte Vorlage da ist (MasterChat u. a.)
+    box.append(kein, vorschlag, zeile, projektZeile, vorlageHinweis);
+    S._eingabe = {box, feld, senden, modell, kontext, projekt, vorlage, vorlageHinweis, projektZeile, kein, vorschlag, schild, schildBasis: schild.textContent};
     S._eingabe.ordner = root.sedraHarness.projekt ? root.sedraHarness.projekt.knoepfe(S, projektZeile, projekt) : null;    // P0 M3: Ordner öffnen, Vorgabe merken
+    vorlage.addEventListener('change', ()=>root.sedraHarness.vorlagenhinweis.zeigen(S));
     projekt.addEventListener('change', ()=>{ if(S._eingabe.ordner) S._eingabe.ordner.zeigen(); const a = S.aktive(); if(a && a.zeigeLeer && a.leer()) a.zeigeLeer(); });
 
     const groesse = ()=>{ feld.style.height = 'auto'; feld.style.height = Math.min(feld.scrollHeight, Math.round(root.innerHeight * 0.4)) + 'px'; };
@@ -171,6 +173,7 @@
     const keine = document.createElement('option'); keine.value = ''; keine.textContent = 'ohne Vorlage';
     e.vorlage.replaceChildren(keine, ...(S.vorlagen || []).filter(v=>!v.fehler).map(v=>{ const o = document.createElement('option'); o.value = v.id; o.textContent = v.name; o.title = v.beschreibung || ''; return o; }));
     if(vorher) e.vorlage.value = vorher;
+    root.sedraHarness.vorlagenhinweis.zeigen(S);
   }
 
   function fokus(S){ const e = S._eingabe; if(e) setTimeout(()=>e.feld.focus(), 0); }

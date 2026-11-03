@@ -175,7 +175,10 @@
         let blase = null;
         try{
           if(!ID.test(this.id)){
-            const kopf = await S.api('/api/harness/sitzungen', {method: 'POST', body: {projekt, vorlage: vorlage || undefined}});
+            const vl = vorlage ? root.sedraHarness.vorlagenhinweis.vorlage(S, vorlage) : null;
+            const weit = !!(vl && (vl.erlaubnisse || []).length);                       // weitreichende Freigaben: erst das ausdrückliche Ja des Captains (MasterChat)
+            if(weit && !(await root.sedraHarness.vorlagenhinweis.bestaetigen(S, vl))){ this.notiz('Abgebrochen: ohne die Freigaben legt SEDRA diese Sitzung nicht an.', 'note'); return false; }
+            const kopf = await S.api('/api/harness/sitzungen', {method: 'POST', body: Object.assign({projekt, vorlage: vorlage || undefined}, weit ? {erlaubnisse_bestaetigt: true} : {})});
             const alt = this.id;
             this.id = kopf.id;
             root.sedraHarness.reiter.umbenennen(S, alt, kopf.id);

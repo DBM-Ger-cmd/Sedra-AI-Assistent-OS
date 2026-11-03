@@ -192,6 +192,14 @@
 .hs-token-verbrauch{display:grid;grid-template-columns:max-content max-content 1fr;gap:4px 14px;align-items:baseline;margin-bottom:6px}
 .hs-token-kopf{grid-column:1/-1;margin-top:8px;font-weight:600;color:var(--muted);font-size:var(--size-small)}
 .hs-token-wert{font-variant-numeric:tabular-nums}
+.hs-vorlage-hinweis{font-size:var(--size-xs);color:var(--muted);padding:6px 8px;border:1px solid var(--line-soft);border-radius:var(--radius);overflow-wrap:anywhere}
+.hs-vorlage-hinweis.warn{color:var(--warn);border-color:var(--warn-line);background:var(--warn-bg)}
+.hs-dialog-haube{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--bg) 55%, transparent)}
+.hs-dialog{max-width:min(560px,92vw);max-height:86vh;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:16px 18px;background:var(--panel);border:1px solid var(--warn-line);border-radius:var(--radius-2);box-shadow:var(--shadow)}
+.hs-dialog h3{margin:0}
+.hs-dialog p{margin:0;overflow-wrap:anywhere}
+.hs-dialog-liste{margin:0;padding-left:18px;font-family:var(--mono);font-size:var(--size-small);overflow-wrap:anywhere}
+.hs-dialog-knoepfe{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .hs-sl-werkzeuge{display:flex;flex-direction:column;gap:6px;margin:6px 0}
 .hs-sl-zeile{display:flex;gap:4px;align-items:center}
 .hs-sz-filter{flex:1 1 auto;min-width:0;font:inherit;font-size:var(--size-small);color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:4px 8px}

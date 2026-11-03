@@ -330,6 +330,9 @@ class HarnessApi:
         if payload.get('vorlage') is not None:
             vorlage = harness_vorlagen.laden(self.hub.project_root, payload.get('vorlage'))     # VorlageFehler ist ein ValueError → 400
         projekt = self._projekt(str(payload.get('projekt') or harness_projekte.STANDARD['id']))
+        erlaubnisse = (vorlage or {}).get('erlaubnisse') or []
+        if erlaubnisse and payload.get('erlaubnisse_bestaetigt') is not True:       # weitreichende Freigabe: nur nach dem ausdrücklichen Ja des Captains beim Anlegen
+            raise ValueError(f"erlaubnisse_nicht_bestaetigt: die Vorlage „{vorlage['name']}“ braucht weitreichende Freigaben; der Captain bestätigt sie beim Anlegen der Sitzung")
         titel = titel_aus(payload.get('titel') or '')
         # Eine Mission je Sitzung (wie chat_reply): alle Züge hängen daran (Audit, Nutzung). Ohne hub.lock (K3).
         mission = self.hub.runtime.brain.create_mission('Harness-Sitzung ' + (titel or projekt['name']), None, 'S1')
@@ -339,6 +342,10 @@ class HarnessApi:
                                       vorlage_hash=vorlage['hash'] if vorlage else None)
         self._audit('HARNESS_SITZUNG_ANGELEGT', {'sitzung_id': kopf['id'], 'projekt': projekt['id'], 'mission_id': kopf['mission_id'],
                                                  'vorlage': kopf.get('vorlage'), 'vorlage_hash': kopf.get('vorlage_hash')})
+        for n, e in enumerate(erlaubnisse, 1):                                       # als Sitzungs-Erlaubnisse; nicht rückwirkend, zurücknehmbar wie jede andere
+            self.sitzungen.erlauben(kopf['id'], f"V-{vorlage['id']}-{n}", e['werkzeug'], e['muster'], regel='vorlage-' + vorlage['id'])
+        if erlaubnisse:
+            self._audit('HARNESS_VORLAGE_ERLAUBNISSE', {'sitzung_id': kopf['id'], 'vorlage': vorlage['id'], 'anzahl': len(erlaubnisse), 'erlaubnisse': erlaubnisse})
         self._melden('harness.sitzung', {'id': kopf['id'], 'was': 'angelegt', 'projekt': projekt['id'], 'titel': kopf['titel']})
         return kopf
 

@@ -21,6 +21,11 @@ SYSTEM_MAX = 12_000
 # Werkzeuge, die spätere Aufgaben von Stufe 3 liefern; eine Vorlage darf sie schon nennen, die Kiste bietet nur, was es gibt.
 VORGESEHEN = ('lauf_starten', 'lauf_stoppen', 'lauf_status', 'freigaben_offen', 'freigabe_entscheiden', 'aufgabe_vorschlagen', 'aufgabe_beenden')
 RECHTE = ('vorarbeiter_freigabe', 'aufgaben_vorschlagen')
+HINWEIS_MAX = 900
+ERLAUBNISSE_MAX = 30
+# Eine Vorlage darf dem Captain **Sitzungs-Erlaubnisse** vorschlagen (weitreichende Freigabe, z. B. MasterChat). Sie gelten erst, wenn der Captain beim Anlegen der Sitzung ausdrücklich
+# bestätigt (harness/api.py `anlegen`); nie für Modelle, nie für einen festen Vorbehalt (der gilt trotzdem), nur für diese Werkzeuge und nur mit engem Muster.
+ERLAUBNIS_WERKZEUGE = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten')
 
 
 class VorlageFehler(ValueError):
@@ -34,6 +39,36 @@ def _chat_namen():
 
 def bekannte_werkzeuge():
     return tuple(HARNESS_WERKZEUGE) + VORGESEHEN + _chat_namen()
+
+
+def _erlaubnisse(vid, roh, werkzeuge):
+    """Die Erlaubnisse einer Vorlage als Liste von {werkzeug, muster} – oder VorlageFehler. Eng gehalten: kein Muster, das alles trifft, kein `..`, kein absoluter Pfad,
+    kein Befehl, der ein fester Vorbehalt ist, Läufe nur mit ihrer Kennung; das Werkzeug muss in der Whitelist der Vorlage stehen."""
+    from . import vorbehalte
+    if roh is None:
+        return []
+    if not isinstance(roh, list) or len(roh) > ERLAUBNISSE_MAX:
+        raise VorlageFehler(f'{vid}_erlaubnisse_ungueltig: eine Liste mit höchstens {ERLAUBNISSE_MAX} Einträgen')
+    out = []
+    for n, e in enumerate(roh, 1):
+        w, m = (e.get('werkzeug'), e.get('muster')) if isinstance(e, dict) else (None, None)
+        if w not in ERLAUBNIS_WERKZEUGE or w not in werkzeuge:
+            raise VorlageFehler(f'{vid}_erlaubnis_{n}_werkzeug: erlaubt {", ".join(ERLAUBNIS_WERKZEUGE)}, und es muss in `werkzeuge` stehen')
+        if not isinstance(m, str) or not m.strip() or len(m) > 200:
+            raise VorlageFehler(f'{vid}_erlaubnis_{n}_muster_fehlt')
+        m = m.strip()
+        norm = m.replace('\\', '/')
+        if w in ('datei_schreiben', 'datei_aendern'):
+            if norm in ('*', '**', '**/*', './**') or '..' in norm.split('/') or re.match(r'^([A-Za-z]:|/)', norm) or '/' not in norm:
+                raise VorlageFehler(f'{vid}_erlaubnis_{n}_muster_zu_weit: ein Ordner mit /** (nicht alles, kein .., kein absoluter Pfad)')
+        elif w == 'befehl':
+            kern = norm.rstrip('*').strip()
+            if len(kern) < 10 or vorbehalte.pruefen('befehl', kern) or re.search(r'[|<>&;`]|\$\(', norm):
+                raise VorlageFehler(f'{vid}_erlaubnis_{n}_befehl_ungueltig: mindestens 10 feste Zeichen, kein fester Vorbehalt, keine Verkettung')
+        elif not re.fullmatch(r'[a-z][a-z0-9_]{0,40}', m):
+            raise VorlageFehler(f'{vid}_erlaubnis_{n}_lauf_ungueltig: die Kennung eines Lauf-Typs')
+        out.append({'werkzeug': w, 'muster': m})
+    return out
 
 
 def pruefen(doc, system_text, bekannt=None):
@@ -72,9 +107,14 @@ def pruefen(doc, system_text, bekannt=None):
     modell = v.get('modell')
     if modell is not None and not isinstance(modell, str):
         raise VorlageFehler(f'{vid}_modell_ungueltig')
+    hinweis = v.get('hinweis')
+    if hinweis is not None and (not isinstance(hinweis, str) or len(hinweis) > HINWEIS_MAX):
+        raise VorlageFehler(f'{vid}_hinweis_ungueltig: Text, höchstens {HINWEIS_MAX} Zeichen')
+    erlaubnisse = _erlaubnisse(vid, v.get('erlaubnisse'), werkzeuge)
     return {'id': vid, 'name': v['name'].strip(), 'beschreibung': str(v.get('beschreibung') or '').strip(), 'system': system_text.strip(),
             'werkzeuge': list(dict.fromkeys(werkzeuge)), 'rechte': {k: bool(rechte.get(k, False)) for k in RECHTE},
-            'modell': modell, 'max_zuege': zuege, 'frist_min': frist, 'bremse_pro_stunde': bremse}
+            'modell': modell, 'max_zuege': zuege, 'frist_min': frist, 'bremse_pro_stunde': bremse,
+            'hinweis': ' '.join(str(hinweis or '').split()), 'erlaubnisse': erlaubnisse}
 
 
 def _lesen(yaml_pfad: Path):
@@ -127,7 +167,7 @@ def liste(projekt_root, repo_dir=VORLAGEN_DIR):
     for vid in sorted(ids):
         try:
             v = laden(projekt_root, vid, repo_dir)
-            out.append({k: v[k] for k in ('id', 'name', 'beschreibung', 'werkzeuge', 'rechte', 'modell', 'max_zuege', 'hash', 'quelle')} | {'fehler': None})
+            out.append({k: v[k] for k in ('id', 'name', 'beschreibung', 'hinweis', 'erlaubnisse', 'werkzeuge', 'rechte', 'modell', 'max_zuege', 'hash', 'quelle')} | {'fehler': None})
         except VorlageFehler as exc:
             out.append({'id': vid, 'name': vid, 'fehler': str(exc)})
     return out
