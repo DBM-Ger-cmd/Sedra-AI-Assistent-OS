@@ -56,7 +56,80 @@ Begründung:
 - O4 löst nur die Hälfte (Python nicht) und baut einen zweiten Mechanismus neben dem Updater.
 - O5 ist die eigentliche Antwort: Solange Werkstatt und Betrieb derselbe Ordner sind, ist jeder Schutz in der Harness ein Schutz an der Tür eines Hauses, an dessen Wänden das Modell baut. O5 ist aber ein großer Schritt und braucht eigene Entscheidungen (§7).
 
-**Restrisiko von O3 – ehrlich:** Innerhalb einer freigegebenen Aufgabe kann das Modell Code schreiben, der nach dem Neuladen mit allen Rechten der Seite läuft – auch fehlerhaft oder durch eingeschleuste Anweisungen in gelesenen Dateien. Die Aufgabe begrenzt das auf genannte Pfade, eine Zahl von Aufrufen und eine Frist; sie verhindert es nicht. Deshalb sagt die Freigabe-Karte der Aufgabe das ausdrücklich (§6).
+**Restrisiko von O3:** nachgearbeitet in §5a. Ergebnis vorweg: O3 allein reicht nicht; es braucht zwei Ergänzungen (Abnahme vor Wirkung, Ausführung von Modell-Code nur nach Sicht), und eine davon betrifft alle Vorbehalte, nicht nur die Oberfläche.
+
+## 5a. Restrisiko der gestuften Lösung – nachgearbeitet (Auftrag des Captains, 03.11.2026)
+
+### 5a.1 Die Kette, um die es geht
+
+| Schritt | Was passiert | Beleg |
+|---|---|---|
+| K1 | Das Modell schreibt in einer freigegebenen Aufgabe JavaScript in einen Oberflächen-Pfad (z. B. `uix/shells/harness/`). | O3, §6 |
+| K2 | Der Captain lädt die Seite neu (oder öffnet sie neu). Der neue Code läuft in der Seite. | `uix_server.py:3682` (`no-store`) |
+| K3 | Der Code liest den Token aus der Adresse. | `ui/api.js:6, 9` |
+| K4 | Mit dem Token beantwortet er wartende Karten und Entscheidungen, legt Aufgaben an, ernennt den Vorarbeiter oder gibt Module frei. Die zusätzliche Herkunftsprüfung S7 hilft hier **nicht**: Sie lehnt Anfragen aus Prozessen ab, die die Harness gestartet hat (`befehl`, Läufe); der Browser ist keiner davon. | `harness/herkunft.py:1–10`; `harness/api.py:85–87, 223`; `uix_server.py:3609–3618` |
+| K5 | Damit fallen auch die **harten** Vorbehalte (`core/**`, Guard-Regeln, Freigabe-Code): Ihr Schutz ist eine Karte an den Captain – und die Karte kann der Code beantworten. | `harness/freigabe.py:38–44` |
+
+Was die Kette **begrenzt**: Die Seite darf nur mit dem eigenen Server sprechen (`connect-src 'self'`, `uix_server.py:3686–3687`); Daten können nicht direkt ins Netz abfließen, nur über Wege des Servers – deren Gates der Code aber nach K4 selbst beantworten könnte (z. B. eine Cloud-Adresse ändern, `uix_server.py:2673–2703`). Am Ende hängt alles an **K2 und K4**.
+
+### 5a.2 Woher eine schädliche Änderung kommen kann
+
+| Quelle | Beispiel | Einschätzung |
+|---|---|---|
+| Fehler des Modells | kaputter Code, falscher Pfad, Endlosschleife | am wahrscheinlichsten; meist kein Angriff, aber eine **kaputte Oberfläche** (§5a.4) |
+| Eingeschleuste Anweisungen in gelesenen Inhalten | eine Datei im Projekt, ein Dokument, ein Text aus der Skill-Bibliothek (verdächtige werden markiert, `skill_library/__init__.py:8–10`), der Wissensspeicher, eine Antwort eines fremden Modells (Langdock, AM6), `arbeitsplatz.yaml` (W6) | heute niedrig bis mittel (lokales Modell, wenige fremde Quellen); steigt mit Cloud, Langdock und fremden Dokumenten |
+| Manipuliertes Modell (Gewichte) | – | niedrig; außerhalb dieses Konzepts |
+
+Eine Zahl für die Wahrscheinlichkeit gibt es nicht; dafür fehlen Messungen. Die Einschätzung ist qualitativ.
+
+### 5a.3 Neuer Befund: ein zweiter Weg an **allen** Vorbehalten vorbei
+
+| Schritt | Beleg |
+|---|---|
+| Die MasterChat-Vorlage gibt für die Sitzung frei: Schreiben in `runtime/tests/**` und `runtime/src/**`, den Lauf `run_tests`. | `runtime/config/harness_vorlagen/masterchat.yaml:14–26` |
+| `run_tests` startet `python benchmarks/run_tests.py <gruppen>` **auf dem Rechner** (Hülle ohne Shell, aber ohne VM). | `runtime/config/harness_laeufe.yaml` (`run_tests`); `harness/lauf_huelle.py:1–5` |
+| Die Gruppen sind Muster; neue Testdateien werden mitgenommen („Glob nimmt neue Dateien auf“); einzelne Testdateien lassen sich auch beim Namen nennen. | `runtime/benchmarks/run_tests.py:3–9, 32, 38` |
+| Folge: Das Modell schreibt eine Testdatei (oder eine Python-Datei, die ein Test importiert) und startet `run_tests`. Der Code läuft mit den Rechten des Captains und kann **jede Datei** schreiben – `uix/ui/**`, `core/**`, `local_config/**`. Die Vorbehalte prüfen nur die Werkzeuge `datei_schreiben`/`datei_aendern` (`harness/vorbehalte.py:35`, `SCHREIBEN`). S7 verhindert nur, dass dieser Prozess Karten über HTTP beantwortet. | – |
+
+Das ist **kein** Problem der Oberfläche allein und besteht heute schon. Es muss unabhängig von AM0-E1 geschlossen werden (§5a.5, G4).
+
+Ebenso, aber schwächer: Python-Dateien unter `runtime/src/**`, die das Modell in einer MasterChat-Sitzung schreibt, wirken beim **nächsten Start** von SEDRA ohne weitere Prüfung.
+
+### 5a.4 Verfügbarkeit: wenn die Oberfläche kaputt ist
+
+Ein Fehler in einer Shell-Datei kann die Oberfläche unbenutzbar machen – auch den Posteingang. Was es heute gibt:
+- Wechsel in eine andere Shell (Start-Shell, Auswahl in `local_config/uix.yaml`). Ob der Wechsel bei einer kaputten aktiven Shell aus der Oberfläche heraus möglich ist, wurde nicht geprüft.
+- Die Karte einer Dateiänderung ist mit `rollback_available=True` angelegt (`harness/freigabe.py:240`); einen Rückweg-Mechanismus für einzelne Dateien habe ich im Harness-Code **nicht** gefunden. Der Rückweg ist heute Git (von Hand).
+- Ob die CLI (`guppi …`) Freigaben beantworten kann, wurde nicht geprüft (ARCHITEKTUR §6 nennt „Freigaben“ unter den Befehlen).
+
+### 5a.5 Gegenmaßnahmen
+
+| Nr | Maßnahme | Bricht | Aufwand | Empfehlung |
+|---|---|---|---|---|
+| G1 | **Aufgabe eng**: `oberflaeche` höchstens ein Shell- oder Werkzeugordner (§6); Ende Pflicht (`bis` oder `max_aufrufe`, besteht schon: `harness/aufgabe.py:123–125`); höchstens **eine** aktive Aufgabe mit `oberflaeche` je Projekt | verkleinert K1 | gering | ja |
+| G2 | **Abnahme vor Wirkung**: Schreibt das Modell unter einer Aufgabe in einen Oberflächen-Pfad, liefert der Server im Betrieb **weiter die zuletzt bestätigte Fassung** dieser Datei aus. Die neue Fassung liegt auf der Platte (Tests und `uix_check` sehen sie), wirkt aber nicht in der Oberfläche des Captains. Am Ende der Aufgabe (erledigt, abgelaufen, zurückgenommen) oder auf Wunsch entsteht **eine** Sammelkarte „Oberflächen-Änderungen übernehmen“ mit dem vollständigen Diff je Datei. Erst nach Freigabe liefert der Server die neue Fassung. Zum Ansehen vorher: **Vorschau im Prüfserver** – ein eigener Server mit leerem Prüfprojekt und eigenem Token auf einem anderen Port (wie `benchmarks/uix_check.py:298–316` ihn schon startet); dort erreicht Code keine echten Entscheidungen. | bricht **K2** im Betrieb | mittel | **ja – Kern der Nacharbeit** |
+| G3 | **Hinweise im Diff**: Die Sammelkarte markiert Zeilen mit Mustern wie Zugriff auf `location`/Adresse, `decisions/answer`, `/api/harness/karten`, `aufgaben`, `/api/uix/install`, `trust`, `eval`, `new Function`, `innerHTML` (Muster wie `desk/install.py:26–46`). Umgehbar, aber eine Lesehilfe. | erleichtert das Prüfen in G2 | gering | ja |
+| G4 | **Ausführung von Modell-Code nur nach Sicht**: Hat die Sitzung seit dem letzten vom Captain gesehenen Lauf `.py`-Dateien unter `runtime/**` geschrieben oder geändert, wird `lauf_starten` (jeder Lauf, der Python im Projekt ausführt) zu einer **Karte** mit der Liste und dem Diff dieser Dateien; keine Sitzungs-Erlaubnis und keine Aufgabe deckt das. Gleiches gilt für `befehl`, wenn die Befehlszeile eine Datei im Projekt ausführt (`python <datei>`). Alternative: Läufe mit vom Modell geschriebenem Code nur in der microVM. | schließt den Weg aus §5a.3 | gering bis mittel | **ja, sofort und unabhängig von AM0-E1** |
+| G5 | **Freigaben auf eigener Herkunft**: Posteingang und Antworten auf Karten laufen auf einem **zweiten Port** mit eigenem Token und nur Vertragscode; der Token der Arbeitsoberfläche kann keine Entscheidung mehr beantworten. Wie bei Android, wo Berechtigungsdialoge nicht von der App gezeichnet werden. | bricht **K4** grundsätzlich – auch für Code, der durch G2 durchgerutscht ist | hoch (Karten stehen heute im Gespräch und in der Seitenleiste; sie würden zu eingebetteten Fenstern einer anderen Herkunft) | später, mit AM9 |
+| G6 | **Startbericht**: Beim Start nennt SEDRA die Dateien unter `runtime/src/**`, die seit dem letzten Start über die Harness geändert wurden (aus dem Audit), im Posteingang. | macht Python-Änderungen beim Neustart sichtbar (verhindert nichts) | gering | ja, als Übergang bis AM9 |
+| G7 | **Rückweg**: Die bestätigten Fassungen aus G2 bleiben gespeichert; „Übernahme zurücknehmen“ stellt die vorige Fassung wieder her – auch ohne Oberfläche (Befehl der CLI). | Verfügbarkeit (§5a.4) | gering (fällt bei G2 mit an) | ja |
+| G8 | **Werkstatt und Betrieb trennen** (AM9) | K2 für Oberfläche **und** Python | hoch | ja, als Baustein |
+
+### 5a.6 Restrisiko nach den Maßnahmen
+
+| Mit | Was bleibt | Wie groß |
+|---|---|---|
+| O3 + G1, G2, G3, G4, G6, G7 | (1) Der Captain bestätigt die Sammelkarte, ohne den Diff zu lesen, oder übersieht gut versteckten Code. G3 hilft, verhindert es nicht. (2) Python-Änderungen im Betrieb wirken beim Neustart; G6 zeigt sie nur an. (3) Bestätigter schädlicher Code kann danach Entscheidungen beantworten (K4). (4) Änderungen, die Claude direkt im Repo macht, laufen an der Harness vorbei – das ist der vertraute Weg und bleibt so. (5) Fehler in den neuen Prüfstellen selbst. | (1) und (3) hängen an einem bewussten Schritt des Captains statt an einem Neuladen; (2) bleibt bis AM9; (5) durch Tests begrenzt |
+| zusätzlich G5 | (3) entfällt: Auch bestätigter Code kann keine Entscheidung mehr erteilen | – |
+| zusätzlich G8 | (2) entfällt: Python und Oberfläche kommen nur über die Übernahme in den Betrieb | – |
+
+**Ehrliche Kurzfassung:** Mit O3 allein ist das Restrisiko groß, weil ein Neuladen genügt und weil Testläufe heute alle Vorbehalte umgehen. Mit G2 und G4 hängt jeder Schritt von Modell-Code in den Betrieb an einer Entscheidung des Captains, die er mit vollem Diff sieht. Ganz weg ist es erst mit G5 und G8.
+
+### 5a.7 Was G2 und G4 im Code bedeuten (für ein späteres G2-Dokument)
+
+- **G2**: Die Harness merkt sich beim Schreiben unter einer Oberflächen-Aufgabe Pfad und vorige Fassung (Ablage unter `runtime_data/harness/oberflaeche/` – dort schon harter Vorbehalt `**/runtime_data/harness/**`, `harness/vorbehalte.py`). `Gateway.file` (die eine Stelle, die `/uix/{ui,shells,tools}/…` ausliefert, `uix_server.py:3575–3590`) liefert für gemerkte Pfade die bestätigte Fassung. Sammelkarte als Gate mit Bindung an die Liste der Hashes. Vorschau: neue Route, die einen Prüfserver wie `uix_check.start_server` startet und seine Adresse nennt.
+- **G4**: Die Harness führt je Sitzung eine Liste „seit dem letzten gesehenen Lauf geschriebene `.py`-Dateien“. `vorbehalte.pruefen` gibt für `lauf_starten` (und `befehl` mit `python <datei im Projekt>`) einen Vorbehaltsgrund zurück, solange die Liste nicht leer ist; die Karte zeigt die Diffs; nach der Antwort ist die Liste leer.
+- Beides berührt Harness-Code unter Vorbehalt (`harness/freigabe.py`, `vorbehalte.py`, `lauf.py`) – Änderung nur durch Claude, mit Freigabe des Captains.
 
 ## 6. O3 im Detail (ersetzt Teil A von `SPEC_APPS_v1_AM0_G2.md`, wenn freigegeben)
 
@@ -100,5 +173,7 @@ Offene Fragen für dieses spätere G1: Wie arbeitet der Captain im Alltag mit zw
 
 | Nr | Frage | Vorschlag |
 |---|---|---|
-| AM0-E1 (neu) | Schutz des Oberflächen-Codes jetzt | **O3** (hart/weich/frei wie §6) |
+| AM0-E1 (neu) | Schutz des Oberflächen-Codes jetzt | **O3 mit G1, G2, G3, G6, G7** („O3+“): gestuft hart/weich/frei, eng gefasste Aufgaben, Abnahme vor Wirkung mit Vorschau im Prüfserver, Hinweise im Diff, Startbericht, Rückweg |
+| AM0-E1c | Ausführung von Modell-Code nur nach Sicht (G4) – sofort, als eigener Punkt, unabhängig von AM0-E1? | **ja, vorrangig**: der Weg über Testläufe umgeht heute alle Vorbehalte |
 | AM0-E1b | Werkstatt und Betrieb trennen als eigener Baustein AM9 (erst G1)? | ja |
+| AM0-E1d | Freigaben auf eigener Herkunft (G5) in AM9 mitplanen? | ja |

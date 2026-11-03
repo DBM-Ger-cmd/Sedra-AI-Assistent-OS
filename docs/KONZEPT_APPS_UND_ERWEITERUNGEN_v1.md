@@ -87,6 +87,7 @@ Keines davon ist falsch; sie beantworten verschiedene Fragen. Was fehlt, ist **e
 | F13 | Der Gateway-Vorgang kennt **keine Rollen** und **keinen echten Cloudweg**: verantwortlich ist „Nutzer“, Cloud nur `simuliert`, Rechtsgrundlage für Personenbezug in der Cloud fest `False`. | `gateway/vorgang.py:43, 48–49`; `gateway/klassen.py:19` |
 | F14 | Die Abhängigkeiten einer Shell (Werkzeuge, Kern-Module, ui-Dateien) werden für den USB-Stick von Hand aufgezählt. | `docs/ENTSCHEIDUNGEN_USB_STICK.md:7–9` |
 | F15 | Die Vertrauensstufe `GUPPI_BUILT` wird von **keinem** Code-Pfad vergeben. Der Vertrag sagt, ein von SEDRA gebautes Modul trage sie und komme über das Einbau-Gate (Vertrag §7.2–7.3); das Einbau-Gate setzt aber immer `COMMUNITY`. `GUPPI_BUILT` kommt im Code nur als zulässiger Wert vor. | `desk/gateway.py:50`; `uix_server.py:396–400`; Suche nach `GUPPI_BUILT` im Paket |
+| F17 | **Testläufe umgehen alle Vorbehalte.** Der MasterChat darf in seiner Sitzung Tests und Code unter `runtime/**` schreiben und `run_tests` starten; der Lauf führt den Code auf dem Rechner aus (ohne VM), neue Testdateien werden mitgenommen. Dieser Code kann jede Datei schreiben, auch `core/**` und `uix/ui/**`. | `runtime/config/harness_vorlagen/masterchat.yaml:14–26`; `runtime/config/harness_laeufe.yaml` (`run_tests`); `harness/lauf_huelle.py:1–5`; `runtime/benchmarks/run_tests.py:32` |
 | F16 | Einbau und Rechte-Erhöhung schreiben in die Manifestdatei des Moduls (`trust: COMMUNITY` bzw. `CAPTAIN`). Eine Hash-Prüfung nach dem Einbau muss das berücksichtigen; jede Erhöhung ändert den Hash. | `uix_server.py:462–466, 1324–1327` |
 
 ---
@@ -309,6 +310,7 @@ Begründung: AM0 ist Voraussetzung für alles mit fremdem Code; AM1/AM2 bringen 
 | Fünf Rechte-Vokabulare | Der Captain sieht sonst je Stelle andere Wörter für dieselbe Wirkung | §2.2, §5.3, AM8 |
 | Fremde Shells laufen mit Code in der Seite | Die Abschottung der Werkzeuge wäre über eine fremde Shell umgehbar | F4, AM0-06 |
 | Das Modell kann Paketcode schreiben | Herkunft ist die einzige Grenze von CORE; Code in der Seite liest den Token und kann Freigaben selbst erteilen (`ui/api.js:6`) | F5, AM0-01, Vorlage AM0-E1 |
+| Testläufe führen Modell-Code auf dem Rechner aus | umgeht alle Vorbehalte, nicht nur die der Oberfläche | F17, Vorlage AM0-E1 §5a.3, Maßnahme G4 |
 | Werkstatt und Betrieb sind derselbe Ordner | SEDRA ändert sich selbst, während es läuft – für Oberfläche und Python | Vorlage AM0-E1 §3, AM9 |
 | `GUPPI_BUILT` wird nie vergeben | Der Selbstbau-Weg des Vertrags (§7) endet heute als `COMMUNITY` | F15, AM3-29 |
 | Rechte im Manifest gespeichert | Widerspricht jeder Hash-Prüfung | F16, AM3-05 |
@@ -358,4 +360,5 @@ Grenzen dieser Arbeit (ehrlich):
 | 03.11.2026 | AM3-E1 (Werkseinstellung fremder Apps: nach dem Einbau aus, nur normale Rechte) ausdrücklich bestätigt | Captain |
 | 03.11.2026 | AM0-E1 (Schutz des Oberflächen-Codes) **wieder offen**, zur Ausarbeitung zurückgegeben; Vorlage `SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md` (Vorschlag: gestuft hart/weich/frei; Baustein AM9 „Werkstatt und Betrieb trennen“) | Captain / Claude |
 | 03.11.2026 | Auswirkungen „Kern-Verb statt Dienst-App“ für Langdock-Agenten beschrieben (AM6 §12) | Claude, auf Frage des Captains |
+| 03.11.2026 | Restrisiko der gestuften Lösung nachgearbeitet (Vorlage AM0-E1 §5a): neuer Befund F17; Vorschlag „O3+“ mit Abnahme vor Wirkung (G2) und Ausführung von Modell-Code nur nach Sicht (G4, vorrangig) | Claude, auf Auftrag des Captains |
 | 15.10.2026 | Fremdes Modul kommt als COMMUNITY mit Leserouten; Schreiben nur per Gate | `uix_server.py:1265` (Kommentar) |
