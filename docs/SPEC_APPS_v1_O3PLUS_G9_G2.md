@@ -379,7 +379,7 @@ Vorschlag für die Entscheidung des Captains (E12): Diese vier Routen bekommen i
 
 **Nicht gebaut:** G11-05 (Verhaltensprüfung) kommt mit der Tür aus G9.
 
-**Tests:** `test_freigabe_vollstaendig` 16 und `test_freigabe_klasse` 9 grün; Harness-, Freigabe-, Client-, Arbeitsplatz- und Vertragstests 452, 0 rot (Container). Ganze Bahn: siehe PR.
+**Tests:** `test_freigabe_vollstaendig` 16 und `test_freigabe_klasse` 9 grün; Harness-, Freigabe-, Client-, Arbeitsplatz- und Vertragstests 452, 0 rot (Container). Ganze Bahn im Container: 3.789 Tests, 0 rot, 121 übersprungen.
 
 ### 13.2 E9 Variante C gebaut (03.11.2026)
 
