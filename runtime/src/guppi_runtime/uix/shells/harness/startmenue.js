@@ -15,7 +15,7 @@
   const EINSTELLUNGEN = {id: 'einstellungen', label: 'Einstellungen', hint: 'Startseite, Allgemein, Agent, Sprache, Integrationen, Modelle, System', symbol: '⚙', gruppe: 'system', fest: true, werkzeuge: []};
   // Captain 03.11.2026: „Token und Gespräch“ bleibt in den Einstellungen und ist im Start-Menü unter Sedra Token nur verlinkt (`fest` nennt den Punkt)
   const TOKEN_GESPRAECH = {id: 'token-gespraech', label: 'Token und Gespräch', hint: 'Verbrauch, Denken, Antwortbudget, Länge des Verlaufs', symbol: '◎', gruppe: 'token', fest: 'agent/token', words: ['token', 'gespräch', 'gespraech', 'denken', 'budget'], werkzeuge: []};
-  const FEST = {system: [EINSTELLUNGEN], token: [TOKEN_GESPRAECH]};          // feste Einträge je Gruppe – kein Ort, kein Werkzeug: die Shell trägt sie ein
+  const FEST = {token: [TOKEN_GESPRAECH]};          // feste Einträge je Gruppe – kein Ort, kein Werkzeug: die Shell trägt sie ein (Einstellungen: die Kachel „Einstellungen“ oben, die Suche findet sie über FESTE)
   const FESTE = [EINSTELLUNGEN, TOKEN_GESPRAECH];
 
   function stand(S){ return S._start || (S._start = {offen: false, konfig: null, konfigFehler: null, zuletzt: [], liste: null, module: null, wartet: null, offene: new Set()}); }
@@ -299,18 +299,11 @@
     });
     if(!shells.length) zeile.append(d().el('small', 'hs-leise', st.moduleFehler ? 'Oberflächen nicht lesbar: ' + st.moduleFehler : 'keine andere Oberfläche im Paket'));
     const look = d().el('div', 'hs-start-look');
-    const seg = (titel, optionen, aktuell, tun)=>{
-      const g = d().el('span', 'hs-start-seg'); g.setAttribute('role', 'group'); g.setAttribute('aria-label', titel);
-      g.append(d().el('small', 'hs-leise', titel));
-      optionen.forEach(([id, label])=>{
-        const b = d().el('button', 'hs-start-seg-btn' + (id === aktuell ? ' on' : ''), label); b.type = 'button'; b.setAttribute('aria-pressed', id === aktuell ? 'true' : 'false');
-        b.onclick = ()=>{ tun(id); fuss(S); };
-        g.append(b);
-      });
-      return g;
-    };
-    look.append(seg('Darstellung', [['klar', 'Klar'], ['nacht', 'Nacht']], document.documentElement.dataset.theme || 'nacht', v=>root.sedraBoot.setTheme(v)),
-                seg('Schrift', [['normal', 'Normal'], ['gross', 'Groß']], document.documentElement.dataset.scale || 'normal', v=>root.sedraWechsel.setScale(v)));
+    // Darstellung und Schrift gibt es nur noch in den Einstellungen (Allgemein); hier führt ein Knopf hin (Captain 03.11.2026: nicht zweimal dieselben Schalter)
+    const dar = d().el('button', 'hs-start-leeren hs-start-dar', 'Darstellung und Schrift …'); dar.type = 'button';
+    dar.title = 'Klar oder Nacht, Normal oder Groß – unter Einstellungen → Allgemein';
+    dar.onclick = ()=>{ schliessen(S); root.sedraHarness.einstellungen.oeffnen(S, 'allgemein/darstellung'); };
+    look.append(dar);
     const leeren = d().el('button', 'hs-start-leeren', 'Gedächtnis leeren'); leeren.type = 'button';
     leeren.title = 'offene Apps, Ablage der Werkzeuge, Gesprächsverlauf – zweimal klicken';
     let scharf = null;

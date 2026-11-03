@@ -12,8 +12,19 @@
   const GESEHEN_KEY = 'sedra.harness.gesehen';
   const GESEHEN_MAX = 300;
   // Zelle → Beschriftung und die App, die ein Klick öffnet (Ort-ID aus ui/places.js)
-  const ZELLEN = [['decisions', 'Freigaben', null], ['model', 'Modell', 'models'], ['gpu', 'GPU', 'hardware'], ['ram', 'RAM', 'hardware'],
+  const ZELLEN = [['decisions', 'Freigaben', null], ['model', 'Modell', 'models'], ['gpu', 'GPU · RAM', 'hardware'],
                   ['server', 'Modellserver', 'models'], ['scheduler', 'Scheduler', 'slots'], ['state', 'Zustand', 'machine']];
+  // GPU und RAM sind eine Zelle (beide öffneten dieselbe App; Captain 03.11.2026): „40 °C · 1.5/12 GB · RAM 15.4/31 GB“, der strengere Ton, beide Hinweise
+  const TON_RANG = {off: 0, ok: 1, warn: 2, bad: 3};
+  function zusammen(v){
+    const g = v.gpu, r = v.ram;
+    if(!g && !r) return v;
+    const wert = x=>x && x.value !== undefined && x.value !== null ? String(x.value) : null;
+    const teile = [wert(g), wert(r) ? 'RAM ' + wert(r) : null].filter(Boolean);
+    const ton = [g, r].filter(Boolean).map(x=>x.tone || 'off').reduce((a, b)=>(TON_RANG[b] || 0) > (TON_RANG[a] || 0) ? b : a, 'off');
+    const hint = [g && g.hint, r && r.hint ? 'RAM: ' + r.hint : null].filter(Boolean).join(' · ');
+    return Object.assign({}, v, {gpu: {value: teile.join(' · ') || '–', tone: ton, hint}});
+  }
   const ENDE_ICON = {ok: '✓', fehler: '✗', gestoppt: '■', abgebrochen: '■', verloren: '?', zeitlimit: '⏱'};
 
   function mount(S){
@@ -173,9 +184,10 @@
       return;
     }
     l.zuletzt = jetzt;
-    S.api('/api/strip').then(v=>{
-      S.strip = v;                                                                               // die Kacheln des Start-Menüs nehmen dasselbe Ergebnis (HS-52a): eine Abfrage für beide
-      const sm = root.sedraHarness.startmenue; if(sm && sm.stripNeu) sm.stripNeu(S, v);
+    S.api('/api/strip').then(roh=>{
+      S.strip = roh;                                                                             // die Kacheln des Start-Menüs nehmen dasselbe Ergebnis (HS-52a): eine Abfrage für beide
+      const sm = root.sedraHarness.startmenue; if(sm && sm.stripNeu) sm.stripNeu(S, roh);
+      const v = zusammen(roh);
       // HS-32: eine Zelle ohne Wert (– und Ton off) wird ausgeblendet – kleine Bildschirme, Stick an fremdem PC
       const da = ZELLEN.filter(([k])=>v[k] && !(String(v[k].value ?? '–') === '–' && (v[k].tone || 'off') === 'off'));
       const zellen = da.map(([k, label, ort])=>{

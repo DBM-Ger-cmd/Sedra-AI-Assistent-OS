@@ -51,21 +51,20 @@ Verlauf mit Werkzeugergebnissen und „Karte → Katalog“ sind eigene kleine S
 - **Start-Menü** (`startmenue.js`, HS-40/41): Knopf „Start“, Alt+S, `/start`. Suche über Name, Hinweis und die Suchwörter aus `ui/places.js`;
   „Zuletzt benutzt“ liegt in `uix.shelf.harness` (`/api/uix/shelf`, auf dem Rechner, nicht im Browser); Gruppen aus `start_gruppen.json`
   (Ort-ID oder Objekttyp → Gruppe) oder aus dem Manifest-Feld `gruppe` (Vertrag N2); „Prüfung“ nur, wenn ein reiner Prüf-Ort geladen ist.
-  Unten die anderen Oberflächen (Wechsel über `sedraWechsel.wechseln`, offene Apps gehen mit), Darstellung, Schrift, „Gedächtnis leeren“.
+  Unten die anderen Oberflächen (Wechsel über `sedraWechsel.wechseln`, offene Apps gehen mit), ein Knopf „Darstellung und Schrift …“ (führt in die Einstellungen), „Gedächtnis leeren“.
 - **App-Reiter** (`app.js`): `ctx.tools.forObject` → `ctx.makeContext` → `sedraLifecycle.mountTool` – derselbe Weg wie Cockpit und Minimal.
   `inhalt` in der Fläche, `nachweis` rechts zum Aufklappen; `shellApi.open(objekt)` öffnet oder aktiviert; höchstens 8 Apps (der älteste
   nicht aktive geht mit Satz zu); Objekte werden an `sedraStand` gemeldet und beim Start aus dem Arbeitsstand übernommen.
-- **Statusbereich** (`taskleiste.js`, HS-32/43): Freigaben, Modell, GPU (Temperatur mit Quelle, VRAM belegt/gesamt, thermischer Zustand),
-  RAM, Modellserver, Scheduler, Zustand, Uhr – alles aus `/api/strip` (≤ alle 2 s). Zellen ohne Wert sind ausgeblendet; ein Klick öffnet die App.
+- **Statusbereich** (`taskleiste.js`, HS-32/43): Freigaben, Modell, GPU · RAM (eine Zelle: Temperatur mit Quelle, VRAM belegt/gesamt, thermischer Zustand, RAM), Modellserver, Scheduler, Zustand, Uhr – alles aus `/api/strip` (≤ alle 2 s). Zellen ohne Wert sind ausgeblendet; ein Klick öffnet die App.
 - Reine Teile mit `node`: `tests/test_uix_harness_start.py`; Browser: `benchmarks/uix_check.py --shell harness`, `harness_abnahme.py --stufe4`.
 
 ## Stufe 5 (Version 1.5.0): Einstellungen und Katalog-Editor
 
-- **Einstellungen** (`einstellungen.js`, HS-42): Reiter `einstellungen:` über den Knopf in der Seitenleiste, Start → System → Einstellungen,
+- **Einstellungen** (`einstellungen.js`, HS-42): Reiter `einstellungen:` über den Knopf in der Seitenleiste, die Kachel „Einstellungen“ im Start-Menü,
   `/einstellungen [gruppe/punkt]` und die Zelle „Zustand“ (D-U6). Sechs Gruppen, 21 Punkte (G2 §3.1). Die meisten Punkte sind vorhandene
   Werkzeuge, eingehängt über `app.flaeche` (derselbe Weg wie der App-Reiter, nur auf das genannte Werkzeug beschränkt) – kein Nachbau (D-U1).
   Eigene Flächen: Darstellung, Benachrichtigungen (K9: Browser-Hinweis „eine Freigabe wartet“ nur nach Klick-Erlaubnis, Blinken an/aus),
-  Vorlagen, Freigabe-Modus, Grenzen der Schleife, Quelle, MCP (`GET /api/uix/clients`, nie der Token), Laufzeit, Schalter (`switch_request`).
+  Vorlagen, Freigabe-Modus, Züge je Vorlage, Quelle, MCP (`GET /api/uix/clients`, nie der Token), Laufzeit, Schalter (`switch_request`).
 - **Katalog-Editor** (`katalog_editor.js`, G2 §4): Tabelle aller Regeln mit Herkunft (Vorlage/Datei/neu), alle Felder bearbeitbar (D-U3);
   Vorlage-`verboten` gesperrt; Befunde live aus `katalog_editor_pruefung.js` (Fehler, Lockerung und weite Muster rot, Diff, YAML-Vorschau).
   Der Editor schreibt nie: „Antrag stellen“ → `POST /api/harness/katalog/antrag` (Art `harness_katalog`, `HARNESS_KATALOG_WRITE`, Bindung

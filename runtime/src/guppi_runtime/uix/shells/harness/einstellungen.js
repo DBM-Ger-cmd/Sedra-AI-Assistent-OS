@@ -19,11 +19,11 @@
   // G2 §3.1 – sechs Gruppen, 21 Punkte; `ort` ist die ID aus ui/places.js (dasselbe Objekt wie im Start-Menü)
   const GRUPPEN = [
     {id: 'allgemein', titel: 'Allgemein', punkte: {darstellung: E('darstellung', 'Darstellung'), benachrichtigungen: E('benachrichtigungen', 'Benachrichtigungen'), sprache: E('sprache', 'Sprache der Oberfläche')}},
-    {id: 'agent', titel: 'Agent', punkte: {vorlagen: E('vorlagen', 'Vorlagen'), freigabe: E('freigabe', 'Freigabe-Modus'), grenzen: E('grenzen', 'Grenzen der Schleife'), token: E('token', 'Token und Gespräch')}},
-    {id: 'sprache', titel: 'Sprache', punkte: {rekorder: W('aufnahme', ['rekorder'], 'Rekorder'), quelle: E('quelle', 'Quelle')}},
-    {id: 'integrationen', titel: 'Integrationen', punkte: {mcp: E('mcp', 'MCP'), gateway: W('gateway', ['gateway', 'schutz'], 'KI GateWay'), cloud: W('labor', ['labor'], 'Cloud')}},
+    {id: 'agent', titel: 'Agent', punkte: {vorlagen: E('vorlagen', 'Vorlagen'), freigabe: E('freigabe', 'Freigabe-Modus'), grenzen: E('grenzen', 'Züge je Vorlage'), token: E('token', 'Token und Gespräch')}},
+    {id: 'sprache', titel: 'Sprache und Ton', punkte: {rekorder: W('aufnahme', ['rekorder'], 'Rekorder'), quelle: E('quelle', 'Quelle')}},
+    {id: 'integrationen', titel: 'Integrationen', punkte: {mcp: E('mcp', 'MCP'), gateway: W('gateway', ['gateway', 'schutz'], 'KI GateWay'), cloud: W('labor', ['labor'], 'KI-Labor')}},
     {id: 'modelle', titel: 'Lokale Modelle', punkte: {bibliothek: W('library', ['library'], 'Bibliothek'), werkstatt: W('models', ['workshop'], 'Rezepte / Werkstatt'), slots: W('slots', ['slots'], 'Slots'), laufzeit: E('laufzeit', 'Geladene Instanzen · Laufzeit')}},
-    {id: 'system', titel: 'System', punkte: {schutz: W('gateway', ['schutz'], 'Guard / Inhaltsschutz'), schalter: E('schalter', 'Schalter'), grenzen: W('boundary', ['boundaries'], 'Modus und Grenzen'), module: W('modules', ['modules'], 'Module'), audit: W('logbook', ['logbook'], 'Audit')}}
+    {id: 'system', titel: 'System', punkte: {schutz: W('gateway', ['schutz'], 'Guard / Inhaltsschutz'), schalter: E('schalter', 'Schalter'), grenzen: W('boundary', ['boundaries'], 'Modus und Grenzen'), module: W('modules', ['modules'], 'Module'), audit: W('logbook', ['logbook'], 'Logbuch')}}
   ];
 
   function stand(S){ return S._einst || (S._einst = {wahl: null, ansicht: null}); }
@@ -213,7 +213,7 @@
       box.append(k);
     });
     if(!(S.vorlagen || []).length) box.append(d().el('div', 'hs-app-satz', 'Keine Vorlage gefunden (runtime/config/harness_vorlagen).'));
-    box.append(d().el('div', 'hs-app-satz', 'Der Systemtext (.md) liegt neben der Vorlage; die Grenzen stehen unter „Grenzen der Schleife“.'));
+    box.append(d().el('div', 'hs-app-satz', 'Der Systemtext (.md) liegt neben der Vorlage; die Grenzen stehen unter „Züge je Vorlage“.'));
   }
 
   function freigabe(S, box){
