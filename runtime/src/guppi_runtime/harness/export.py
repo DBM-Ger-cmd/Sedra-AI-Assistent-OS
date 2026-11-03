@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import re
 
+from .verbrauch import summe
+
 ERGEBNIS_MAX = 1200           # Zeichen je Werkzeugausgabe im Export (die ganze steht in der Sitzung)
 DATEINAME = re.compile(r'[^a-z0-9äöüß-]+')
 
@@ -19,6 +21,10 @@ def _kurz(text, n=ERGEBNIS_MAX):
     return s if len(s) <= n else s[:n].rstrip() + '\n… (' + f'{len(s):,}'.replace(',', '.') + ' Zeichen, gekürzt)'
 
 
+def _de(n):
+    return f'{n:,}'.replace(',', '.')
+
+
 def dateiname(sid, titel):
     kern = DATEINAME.sub('-', str(titel or '').casefold()).strip('-')[:40] or 'sitzung'
     return f'{sid}-{kern}.md'
@@ -28,7 +34,8 @@ def markdown(s, sid, projekt_name=None):
     """Der Export einer geladenen Sitzung (`Sitzungen.laden`): Kopf, dann je Eintrag ein Block in Reihenfolge."""
     kopf, eintraege = s.get('kopf') or {}, s.get('eintraege') or []
     titel = s.get('titel') or 'Ohne Titel'
-    zeilen = [f'# {titel}', '',
+    v = summe(eintraege)
+    zeilen = [f'# {titel}', '', f"Token: {v['antworten']} Antworten · {_de(v['ein'])} eingehend · {_de(v['aus'])} erzeugt", '',
               f"Sitzung {sid} · Projekt {projekt_name or kopf.get('projekt') or '–'} · angelegt {str(kopf.get('angelegt') or '')[:16].replace('T', ' ')}"
               + (f" · Vorlage {kopf.get('vorlage')}" if kopf.get('vorlage') else '') + (f" · Modell {s.get('modell')}" if s.get('modell') else ''), '']
     karten = {e.get('karte_id'): e for e in eintraege if e.get('typ') == 'karte' and e.get('entscheidung')}

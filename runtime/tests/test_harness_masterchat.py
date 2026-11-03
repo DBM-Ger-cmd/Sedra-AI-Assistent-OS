@@ -65,6 +65,16 @@ class VorlageTests(unittest.TestCase):
         self.assertIn('pfad: runtime/src', text)
         self.assertIn('ohne dass es einen Auftrag gibt', text)
 
+    def test_der_systemtext_verlangt_die_syntaxpruefung_nach_jeder_aenderung(self):
+        """Log 03.11.2026: der MasterChat liess in export.py eine Zeile doppelt stehen (Syntaxfehler) und merkte es nicht."""
+        text = (CONFIG / 'masterchat.md').read_text(encoding='utf-8')
+        self.assertIn('python -m py_compile', text)
+        self.assertIn('node --check', text)
+        self.assertIn('Prüfe jede Änderung sofort', text)
+        yaml_text = (CONFIG / 'masterchat.yaml').read_text(encoding='utf-8')
+        self.assertIn('py_compile', yaml_text)
+        self.assertIn('node --check', yaml_text)
+
     def test_zu_weite_oder_verbotene_erlaubnisse_lehnt_die_pruefung_ab(self):
         schlecht = [
             {'werkzeug': 'datei_schreiben', 'muster': '**'}, {'werkzeug': 'datei_aendern', 'muster': '*'}, {'werkzeug': 'datei_aendern', 'muster': '../x/**'},
