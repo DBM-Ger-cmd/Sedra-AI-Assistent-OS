@@ -144,5 +144,29 @@ class LeaseHookTests(unittest.TestCase):
         self.assertIn("preflight_failed", [e["kind"] for e in self.lab.events()])
 
 
+class HostIsolationTests(unittest.TestCase):
+    """host_isolation: with the default `run` (the real subprocess.run) the probes start no program and stop nothing (test_tuning reached
+    clear_leftovers through benchmark._take_gpu and, on Windows, could stop every running GUPPI llama-server)."""
+
+    def test_the_default_run_starts_no_program(self):
+        from unittest import mock
+        with mock.patch("subprocess.Popen", side_effect=AssertionError("ein Programm dieses PCs gestartet")):
+            self.assertEqual(gp.clear_leftovers("t", say=lambda *_: self.fail("nichts zu stoppen"), settle_s=0), 0.0)
+            self.assertEqual((gp.listener_pid(8089), gp.guppi_llama_servers(), gp.gpu_users()), (None, {}, []))
+            with self.assertRaises(FileNotFoundError):
+                gp._stop(4242)
+
+    def test_a_run_passed_in_is_still_used(self):
+        seen = []
+
+        def run(cmd, **kw):
+            seen.append(cmd[0])
+            return type("R", (), {"stdout": "2048\n", "returncode": 0})()
+        self.assertEqual(gp.vram_used_gb(run), 2.0)
+        gp._stop(4242, run)
+        self.assertEqual(seen[0], "nvidia-smi")
+        self.assertEqual(len(seen), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

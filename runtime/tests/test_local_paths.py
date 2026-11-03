@@ -1,3 +1,4 @@
+import os
 import sys
 import tempfile
 import unittest
@@ -40,7 +41,8 @@ class LocalPathsTests(unittest.TestCase):
             loaded = local_paths.load(cfg)
             self.assertEqual(Path(loaded["modelle"]), local_paths.RUNTIME.parent / "modelle")
             self.assertEqual(loaded["abs"], "D:\\m")
-            self.assertEqual(local_paths.expand(r"<modelle>\x.gguf", loaded), str(local_paths.RUNTIME.parent / "modelle" / "x.gguf"))
+            # expand setzt nur den Ordner ein; der Rest bleibt, wie er geschrieben ist – hier mit dem Trennzeichen dieses Systems
+            self.assertEqual(local_paths.expand("<modelle>" + os.sep + "x.gguf", loaded), str(local_paths.RUNTIME.parent / "modelle" / "x.gguf"))
 
     def test_a_canary_whose_model_folder_is_not_set_up_is_off(self):
         config = CanaryConfig({"enabled": True, "gguf": "<not-set-up-here>/x.gguf"})

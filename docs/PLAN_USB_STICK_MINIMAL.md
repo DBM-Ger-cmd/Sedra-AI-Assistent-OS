@@ -106,6 +106,7 @@ Quelle `repo` ist der Worktree dieser Session, Quelle `bestand` der Hauptcheckou
 6. Q5 (Fenster schließen) bleibt wie heute: Fenster schließen beendet SEDRA.
 7. Hashes der großen Modelle: nur Größenvergleich in S5. Die SHA-256-Prüfung der Modelle ist nicht gemacht.
 8. Nachtrag 03.11.2026 (Version 1.22.0, PR #1): `CODE_STAND.bat` steht in der Liste – der Konsolenweg zu G4 (Läufe und Befehle der Harness nur nach Sicht auf geänderten Code). Er braucht nur Kern und Harness (`python -m guppi_runtime.harness.code_stand`), keine weiteren Module. Der Stick-Bau braucht dafür als Quelle (`--repo`) einen Stand mit PR #1; vorher meldet `stick_paket.py --pruefen` die Datei als fehlend. `runtime\portable` prüft G4 nicht (dafür ist Schreiben dort Vorbehalt).
+9. Nachtrag 03.11.2026 (Entscheidung B2): Releases sind nicht signiert; das Update über den Updater gilt nur für den eigenen PC des Captains. Vor der Weitergabe des Sticks an einen Kollegen wird die Signatur gebaut. Heute steht das Werkzeug „System“ (mit „Nach Updates suchen“) nicht in `stick_liste.txt`; soll der Stick Updates beziehen, kommt es erst nach der Signatur dazu.
 
 ## 9. Was nicht geändert wird
 

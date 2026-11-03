@@ -156,7 +156,7 @@ Der Updater (Werkzeug „System“, Abschnitt „Updates“, Knopf „Nach Updat
 4. Genau diesen Commit taggen und den Tag pushen: `git tag -a vX.Y.Z -m "SEDRA vX.Y.Z: …"`, `git push origin vX.Y.Z`.
 5. Probe: `python -I -B runtime/benchmarks/release_manifest.py --pruefen vX.Y.Z` → „Manifest vorhanden und stimmig“.
 
-Das Manifest gilt nur für den getaggten Stand; auf `main` veraltet es mit dem nächsten Commit. Vor jedem Tag neu erzeugen. `v1.21.0` hat keins (älter als der Updater); `v1.22.0` ist der erste Tag, den der Updater übernehmen kann. Releases sind nicht signiert (offen: `PLAN_ISOLATION_UND_UPDATE_2026-10-19.md`, Frage 3).
+Das Manifest gilt nur für den getaggten Stand; auf `main` veraltet es mit dem nächsten Commit. Vor jedem Tag neu erzeugen. `v1.21.0` hat keins (älter als der Updater); `v1.22.0` ist der erste Tag, den der Updater übernehmen kann. **Grenze (Entscheidung des Captains 03.11.2026, B2):** Releases sind nicht signiert. Das Update über den Updater ist deshalb nur für den eigenen PC des Captains gedacht. Vor der ersten Weitergabe eines Standes an andere (z. B. der Stick für einen Kollegen) wird die Signatur gebaut (`PLAN_ISOLATION_UND_UPDATE_2026-10-19.md`, Frage 3). Die Prüfsummen im Manifest schützen gegen Übertragungsfehler, nicht gegen einen veränderten Release oder ein übernommenes GitHub-Konto.
 
 ## Störungen
 

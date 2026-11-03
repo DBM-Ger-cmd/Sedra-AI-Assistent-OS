@@ -15,7 +15,7 @@ Grundlage: GitHub-Stand `main` = `4e051f0`, Testlauf im Container (Linux, ohne G
 
 ## 2. Stand des Repositorys
 
-- **Version** 1.22.0 (`version.py`, `BUILD.txt`). Seit `v1.21.0` (19.10.) sind es 103 Commits; 1.320 Dateien geändert, +115.102 / −4.227 Zeilen.
+- **Version** 1.22.0 (`version.py`, `BUILD.txt`). Gegenüber `v1.21.0` (19.10.) sind 1.320 Dateien geändert (+115.102 / −4.227 Zeilen). Eine Zahl der Commits „seit v1.21.0“ gibt es nicht: Die Historie von `main` auf GitHub beginnt am 30.10. mit `ca5c123` (103 Commits bis `4e051f0`) und hat keinen gemeinsamen Vorfahren mit `v1.21.0` (32 Commits ab 15.10.). Für den Updater spielt das keine Rolle, er vergleicht Dateien. *(Korrigiert am 03.11.; zuerst stand hier „103 Commits seit v1.21.0“.)*
 - **Release-Manifest** `release/MANIFEST.sha256`: 769 Dateien (`runtime/src/guppi_runtime/`, `runtime/config/`). `release_manifest.py --pruefen origin/main` meldet es als stimmig.
 - **Branches auf GitHub:** `main`, `claude/intelligent-goldberg-7arr50` (= `main`), `docs/apps-modell`, `fix/harness-list-projects`, `plan/usb-stick-minimal`. Alle sind vollständig in `main` enthalten und können gelöscht werden (Entscheidung des Captains, siehe B9).
 - **Tags:** `archiv/build25-basis`, `v1.21.0`. `v1.22.0` fehlt auf GitHub (B1).
