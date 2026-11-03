@@ -12,7 +12,11 @@
   const KONFIG_URL = '/uix/shells/harness/start_gruppen.json';
   const SCHUB_MS = 2000;
   // Stufe 5 (G2 §3.1): fester Eintrag in der Gruppe System – kein Ort, kein Werkzeug: die Shell trägt ihn ein
-  const EINSTELLUNGEN = {id: 'einstellungen', label: 'Einstellungen', hint: 'Allgemein, Agent, Sprache, Integrationen, Modelle, System', symbol: '⚙', gruppe: 'system', fest: true, werkzeuge: []};
+  const EINSTELLUNGEN = {id: 'einstellungen', label: 'Einstellungen', hint: 'Startseite, Allgemein, Agent, Sprache, Integrationen, Modelle, System', symbol: '⚙', gruppe: 'system', fest: true, werkzeuge: []};
+  // Captain 03.11.2026: „Token und Gespräch“ bleibt in den Einstellungen und ist im Start-Menü unter Sedra Token nur verlinkt (`fest` nennt den Punkt)
+  const TOKEN_GESPRAECH = {id: 'token-gespraech', label: 'Token und Gespräch', hint: 'Verbrauch, Denken, Antwortbudget, Länge des Verlaufs', symbol: '◎', gruppe: 'token', fest: 'agent/token', words: ['token', 'gespräch', 'gespraech', 'denken', 'budget'], werkzeuge: []};
+  const FEST = {system: [EINSTELLUNGEN], token: [TOKEN_GESPRAECH]};          // feste Einträge je Gruppe – kein Ort, kein Werkzeug: die Shell trägt sie ein
+  const FESTE = [EINSTELLUNGEN, TOKEN_GESPRAECH];
 
   function stand(S){ return S._start || (S._start = {offen: false, konfig: null, konfigFehler: null, zuletzt: [], liste: null, module: null, wartet: null, offene: new Set()}); }
 
@@ -74,6 +78,7 @@
     const st = stand(S); if(!st.el) return;
     st.offen = true; st.el.panel.hidden = false; st.el.suche.value = ''; st.wahl = 0;
     zeichnen(S);
+    blickLaden(S);
     st.el.suche.focus();
     const knopf = document.querySelector('.hs-start-knopf'); if(knopf) knopf.setAttribute('aria-expanded', 'true');
   }
@@ -96,7 +101,7 @@
 
   function waehlen(S, app){
     schliessen(S);
-    if(app.fest){ root.sedraHarness.einstellungen.oeffnen(S); return; }
+    if(app.fest){ root.sedraHarness.einstellungen.oeffnen(S, app.fest === true ? undefined : app.fest); return; }
     root.sedraHarness.app.oeffnen(S, app);
     benutzt(S, app);
   }
@@ -143,20 +148,71 @@
     };
     if(st.konfigFehler) inhalt.append(d().el('div', 'hs-app-satz warn', st.konfigFehler));
     if(q){
-      const treffer = L().suchen(st.liste, q).concat('einstellungen'.startsWith(q.toLowerCase()) ? [EINSTELLUNGEN] : []);
+      const ql = q.toLowerCase();
+      const treffer = L().suchen(st.liste, q).concat(FESTE.filter(f=>[f.label].concat(f.words || []).some(w=>String(w).toLowerCase().startsWith(ql))));
       if(!treffer.length) inhalt.append(d().el('div', 'hs-app-satz', 'Keine App zu „' + q + '“. Strg+K sucht Orte und Befehle.'));
       abschnitt('Treffer', treffer);
     }else{
       abschnitt('Zuletzt benutzt', st.liste.zuletzt, 'zuletzt');
-      const gruppen = st.liste.gruppen.some(g=>g.id === 'system') ? st.liste.gruppen : st.liste.gruppen.concat([{id: 'system', titel: 'System', symbol: '⚙', apps: []}]);
+      inhalt.append(blick(S));
+      // die Gruppen in der Reihenfolge der Datei; System und Sedra Token gibt es auch ohne Ort, sie tragen feste Einträge
+      const jeId = {};
+      st.liste.gruppen.forEach(g=>{ jeId[g.id] = g; });
+      const reihe = (st.konfig && st.konfig.gruppen) || L().GRUPPEN, sym = (st.konfig && st.konfig.symbole) || L().SYMBOLE;
+      const gruppen = reihe.filter(id=>jeId[id] || FEST[id]).map(id=>jeId[id] || {id, titel: L().TITEL[id], symbol: sym[id], apps: []});
       const kacheln = d().el('div', 'hs-start-kacheln');
-      gruppen.forEach(g=>{ const k = kachel(g, g.id === 'system' ? g.apps.concat([EINSTELLUNGEN]) : g.apps); if(k) kacheln.append(k); });
+      gruppen.forEach(g=>{ const k = kachel(g, g.apps.concat(FEST[g.id] || [])); if(k) kacheln.append(k); });
       inhalt.append(kacheln);
       if(!st.liste.apps.length) inhalt.append(d().el('div', 'hs-app-satz', 'Kein Werkzeug geladen – das Werkzeug „Module“ sagt, warum.'));
     }
     if(st.wahl >= st.sichtbar.length) st.wahl = Math.max(0, st.sichtbar.length - 1);
     inhalt.querySelectorAll('.hs-start-app').forEach(k=>k.classList.toggle('wahl', Number(k.dataset.nr) === st.wahl));
     fuss(S);
+  }
+
+  // „Auf einen Blick“ (Captain 03.11.2026): kleine Apps mit den wichtigsten Werten – KI-Labor, Sedra Token, Hardware, Modelle. Nur lesend; ein Klick öffnet die App.
+  const BLICK = [
+    {ort: 'labor', titel: 'KI-Labor', symbol: '☁', werte: b=>b.labor ? [['Cloud', b.labor.enabled ? 'an' : 'aus', b.labor.enabled ? 'ok' : ''], ['Anbieter bereit', b.labor.bereit + ' von ' + b.labor.gesamt], ['Aktiv', b.labor.live || 'keiner']] : null},
+    {ort: 'meter', titel: 'Sedra Token', symbol: '◎', werte: b=>b.token ? [['Antworten heute', String(b.token.antworten)], ['Eingehend ↑', zahl(b.token.ein)], ['Erzeugt ↓', zahl(b.token.aus)]] : null},
+    {ort: 'hardware', titel: 'Hardware', symbol: '▦', werte: b=>b.strip ? [['GPU', wertVon(b.strip.gpu), tonVon(b.strip.gpu)], ['RAM', wertVon(b.strip.ram), tonVon(b.strip.ram)]] : null},
+    {ort: 'models', titel: 'Modelle', symbol: '◆', werte: b=>b.strip ? [['Modell', wertVon(b.strip.model), tonVon(b.strip.model)], ['Server', wertVon(b.strip.server), tonVon(b.strip.server)]] : null}
+  ];
+  const zahl = n=>Number(n || 0).toLocaleString('de-DE');
+  const wertVon = g=>String((g && g.value !== undefined && g.value !== null) ? g.value : '–');
+  const tonVon = g=>(g && g.tone && g.tone !== 'off') ? g.tone : '';
+
+  function blick(S){
+    const st = stand(S);
+    const box = d().el('section', 'hs-start-blick'); box.setAttribute('aria-label', 'Auf einen Blick');
+    BLICK.forEach(k=>{
+      const ort = (root.sedraPlaces.PLACES || []).find(p=>p.id === k.ort);
+      if(!ort) return;
+      const b = d().el('button', 'hs-start-blick-kachel'); b.type = 'button'; b.dataset.blick = k.ort;
+      b.append(d().el('span', 'hs-start-blick-kopf'), d().el('span', 'hs-start-blick-werte'));
+      b.firstChild.append(d().el('span', 'hs-start-symbol', k.symbol), d().el('b', null, k.titel));
+      const werte = k.werte(st.blick || {});
+      const ziel = b.lastChild;
+      (werte || [['Stand', 'wird geladen …']]).forEach(([label, wert, ton])=>{ const z = d().el('span', 'hs-start-blick-zeile'); z.append(d().el('small', 'hs-leise', label), d().el('b', ton ? 'hs-start-ton ' + ton : null, wert)); ziel.append(z); });
+      b.onclick = ()=>{ schliessen(S); root.sedraHarness.app.oeffnen(S, ort); benutzt(S, {id: ort.id}); };
+      box.append(b);
+    });
+    return box;
+  }
+
+  // beim Öffnen des Menüs lesen (nichts wird gepollt); jede Quelle für sich, fällt eine aus, bleiben die anderen
+  function blickLaden(S){
+    const st = stand(S);
+    st.blick = st.blick || {};
+    const neu = ()=>{ if(st.offen && !st.el.suche.value.trim()) zeichnen(S); };
+    const heute = ()=>{ const t = S.tokenStand && S.tokenStand.heute; if(t) st.blick.token = t; };
+    heute();
+    if(S.tokenLaden) Promise.resolve(S.tokenLaden()).then(()=>{ heute(); neu(); }, ()=>{});
+    S.api('/api/strip').then(v=>{ st.blick.strip = v || {}; neu(); }).catch(()=>{});
+    S.api('/api/cloud').then(c=>{
+      const p = c.providers || [];
+      st.blick.labor = {enabled: !!c.enabled, bereit: p.filter(x=>x.status === 'bereit').length, gesamt: p.length, live: (c.live || []).join(', ')};
+      neu();
+    }).catch(()=>{});
   }
 
   // Oberflächen (HS-41) und Darstellung · Schrift – unten, einmal gezeichnet, Wechsel über sedraWechsel

@@ -169,7 +169,7 @@ class AppListe(unittest.TestCase):
           console.log(JSON.stringify({gruppen: l.gruppen.map(g=>[g.id, g.apps.length]), ohne: l.apps.filter(a=>a.gruppe === 'arbeit' && !konfig.zuordnung[a.id] && !konfig.zuordnung[a.object.type]).map(a=>a.id)}));
         """ % json.dumps(konfig))
         self.assertEqual(out['ohne'], [], 'jeder echte Ort hat einen Platz in der Datei (sonst still in Arbeit)')
-        self.assertEqual([g for g, _ in out['gruppen']], ['arbeit', 'modelle', 'wissen', 'system'])
+        self.assertEqual([g for g, _ in out['gruppen']], ['arbeit', 'modelle', 'token', 'wissen', 'system'], 'Sedra Token (Captain 03.11.2026): meter gehört dorthin, nicht mehr nach System')
 
 
 if __name__ == '__main__':

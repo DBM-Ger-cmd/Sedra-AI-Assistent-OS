@@ -1,0 +1,10 @@
+/* Harness-Shell – Start-Menü: „Auf einen Blick“ (Captain 03.11.2026), kleine Apps mit den wichtigsten Werten. Nur Token aus ui/tokens.css. */
+.hs-start-blick{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:2px 0 8px}
+.hs-start-blick-kachel{display:flex;flex-direction:column;gap:6px;padding:8px 10px;text-align:left;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer}
+.hs-start-blick-kachel:hover,.hs-start-blick-kachel:focus-visible{background:var(--hs-hover);border-color:var(--hs-on-line)}
+.hs-start-blick-kopf{display:flex;align-items:center;gap:6px}
+.hs-start-blick-kopf .hs-start-symbol{color:var(--accent)}
+.hs-start-blick-werte{display:flex;flex-direction:column;gap:1px}
+.hs-start-blick-zeile{display:flex;justify-content:space-between;gap:8px;font-size:var(--size-xs)}
+.hs-start-blick-zeile b{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs-start-ton.ok{color:var(--ok,var(--accent))}.hs-start-ton.warn{color:var(--warn,var(--text))}.hs-start-ton.bad{color:var(--bad)}
