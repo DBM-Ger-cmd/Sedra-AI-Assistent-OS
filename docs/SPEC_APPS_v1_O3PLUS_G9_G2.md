@@ -1,7 +1,7 @@
 # SPEC Apps v1 – O3+ (Schutz des Oberflächen-Codes) und G9–G11 (Freigaben außerhalb des Browsers) – G2 Design (03.11.2026)
 
 Grundlage: `docs/SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md`. Darin: §6 (O3 hart/weich/frei), §5a.5 (G1, G2, G3, G6, G7), §5b (Klassen H/N, G9, G10, G11), §8 (Entscheidungen). Entschieden vom Captain am 03.11.2026: **O3+** mit G1, G2, G3, G6, G7; danach **G9, G10, G11**. G4 ist gebaut (`SPEC_APPS_v1_G4_MODELLCODE_G2.md`), G5 und G8 gehören zu AM9 und sind nicht Teil dieses Dokuments.
-Status: **G2-Entwurf**, wartet auf Freigabe. Nichts gebaut.
+Status: **G2 freigegeben** am 03.11.2026 (E1–E8, E10, E11 wie vorgeschlagen; E9 nach der Ausarbeitung in §9a offen). Bau (G3) beginnt mit G11 (§11 Schritt 1).
 Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für `00cef7c` (`main` nach PR #3).
 
 ## 0. Ziel in zwei Sätzen
@@ -282,9 +282,44 @@ Beide Teile lassen sich über Schalter in der Datei abschalten (`oberflaeche_abn
 | E6 | Ohne Windows nur Konsole, keine Dialog-Programme anderer Systeme (`osascript`, `zenity`). | ja |
 | E7 | Klasse-H-Karten nie an den Vorarbeiter (G9-10). | ja |
 | E8 | Lese-Sperre für `runtime_data/uix/clients/**` im Code (O3-06) und Routen je externem Client (G9-08). | ja |
-| E9 | `hardware_manager/dashboard.html` hart? | nein, erst mit AM9 (wirkt nur beim Neustart, außerhalb der Oberflächen-Ordner) |
+| E9 | `hardware_manager/dashboard.html` hart? | ~~nein, erst mit AM9~~ – vom Captain zur genaueren Ausarbeitung zurückgegeben; **neue Empfehlung: C** (§9a) |
 | E10 | Frist der Bestätigung 10 min; nach Neustart keine offenen Bestätigungen. | ja |
 | E11 | Sitzung mit Vorlage-Erlaubnissen: Sitzung sofort, Erlaubnisse nach dem Ja. | ja |
+
+**Entschieden vom Captain am 03.11.2026:** E1–E8, E10 und E11 wie vorgeschlagen. E9 sollte genauer ausgeführt werden (§9a); die Entscheidung darüber ist offen.
+
+### 9a. E9 genauer: Soll `hardware_manager/dashboard.html` ein harter Vorbehalt werden?
+
+**Was die Datei ist.** 16 Zeilen HTML mit eingebettetem Stil. Sie lädt genau ein Skript, `/uix/js/hardware_dashboard.js` (13 Zeilen). Das Skript liest den Token aus der Adresse und ruft nur Leserouten (`/api/state`, `/api/inventory`, `/api/profiles`, `/api/capabilities`). Zuletzt geändert am 30.10. in der Härtungsrunde E3 (Inline-Skript ausgelagert, `958a7a0`).
+
+**Wer sie ausliefert.**
+
+| Server | Adresse | Gelesen | CSP für Skripte | Wer die Seite öffnet |
+|---|---|---|---|---|
+| Server der Oberfläche | `/hardware` | einmal beim Start (`uix_server.py:3526`) | `script-src 'self'`, kein Inline (`:3686–3687`) | nur das Archiv `/retro` (Build 6), als Rahmen **ohne** `sandbox` und mit dem Browser-Token in der Adresse (`uix/retro_desktop.html:182`, `uix/js/status.js:93–97`). Keine heutige Shell nutzt `/hardware`. |
+| Hardware-Server (`guppi hardware-dashboard`, `runtime/run_hardware_manager.sh`) | `/` | einmal beim Start (`hardware_manager/dashboard.py:14`) | `script-src 'unsafe-inline'`, **ohne** `'self'` (`dashboard.py:46`) | der Browser des Captains; eigener Port, eigener Token, nur Leserouten (`dashboard.py:1, 32–34`) |
+
+**Was eine geänderte Datei bewirken könnte.**
+- *Im Server der Oberfläche* bringt sie **keinen neuen Code** in den Betrieb. Inline-Skripte sperrt die CSP. Skripte kommen nur von derselben Herkunft und nur mit JS-Typ (`nosniff`), und alle ausgelieferten `.js` liegen nach O3 unter harten (`uix/ui`, `uix/js`) oder zurückgehaltenen (Shells, Werkzeuge) Pfaden. Möglich bleibt:
+  - (a) schon bestätigte Skripte in den Rahmen `/hardware` laden. Der Rahmen hat den Browser-Token und ist nicht abgeschottet, reicht also bis in die Seite `/retro`. Es läuft dabei nur bestätigter Code, aber in einem anderen Zusammenhang.
+  - (b) eine täuschende Anzeige im Hardware-Fenster des Archivs.
+  - (c) das Fenster unbrauchbar machen.
+
+  Eine Freigabe auslösen kann die Seite so nicht: Formulare setzen keinen Token-Kopf. Bilder, Rahmen und Schriften fremder Adressen sperrt die CSP. Eine Weiterleitung auf eine fremde Seite trägt den Token nicht mit, denn der Teil nach `#` wird nicht gesendet (`Referrer-Policy: no-referrer`).
+- *Im Hardware-Server* **läuft ein Inline-Skript**, denn die CSP erlaubt es. Es hätte den Token dieses Servers und könnte Hardware-Daten lesen (Inventar, Profile, Zustand). Freigaben erreicht es nicht: anderer Port, anderer Token, keine schreibende Route. Nach außen: `connect-src 'self'` sperrt `fetch`, eine Navigation des Fensters mit Daten in der Adresse sperrt die CSP aber nicht.
+- Wirksam wird eine Änderung jeweils erst beim nächsten Start des Servers.
+
+**Nebenbefund (geprüft).** Der Hardware-Server zeigt seit der Härtungsrunde vom 30.10. **keine Daten**. Seine Seite lädt `/uix/js/hardware_dashboard.js`, und er antwortet darauf mit 403: Er liefert nur `/` und Datenrouten mit Token-Kopf. Seine CSP würde ein Skript derselben Herkunft außerdem nicht zulassen (`script-src` ohne `'self'`). Nachgeprüft im Container mit einem Fake-Manager: `/` → 200, `/uix/js/hardware_dashboard.js` → 403. Ob der Hardware-Server am PC noch genutzt wird, ist nicht bekannt. `BETRIEB.md:145` nennt den Befehl.
+
+**Optionen.**
+
+| Option | Was | Kosten | Nutzen |
+|---|---|---|---|
+| A – nicht hart (bisheriger Vorschlag) | bleibt wie jede Datei unter `runtime/src/**` | keine | – |
+| B – hart | Eintrag in `PFADE`; jede Änderung wird eine Karte (Klasse H, E3) | gering: geändert seit Build 6 nur einmal (30.10.) | gleich behandelt wie `desk.html`; ein Modell kann kein Inline-Skript für den Hardware-Server mehr ohne Karte hineinschreiben |
+| C – hart und Hardware-Server richtig | B, dazu: Der Hardware-Server liefert `hardware_dashboard.js` selbst aus, die CSP wird `script-src 'self'` ohne `unsafe-inline` (wie im Server der Oberfläche), dazu ein Test | klein (`hardware_manager/dashboard.py`, wenige Zeilen, ein Test) | B, und der Nebenbefund ist behoben; Inline-Skript ist dann auch für Änderungen von Claude oder aus `git` gesperrt |
+
+**Neue Empfehlung: C.** Der Grund für „nein“ („wirkt nur beim Neustart, außerhalb der Oberflächen-Ordner“) trifft auf `desk.html` genauso zu, und die ist hart. Die Kosten sind gering, weil die Datei fast nie geändert wird. Die Reparatur des Hardware-Servers gehört streng genommen nicht zu O3, ist aber klein und behebt einen Fehler. Sie käme in §11 zu Schritt 4. Alternative zur Reparatur: den Hardware-Server stilllegen, weil die Oberfläche die Hardware selbst zeigt (Leiste, Werkzeug `system`). Das wäre eine eigene Entscheidung.
 
 ## 10. Berechtigungen vorab (für G3)
 
@@ -295,7 +330,7 @@ Schreiben: die Dateien aus §3.1, neue Tests aus §5, `FREIGABE.bat`, `runtime/b
 1. **G11 zuerst**: `desk/freigabeklasse.py` mit der Tabelle und `tests/test_freigabe_vollstaendig.py`. Der Test zeigt jede Stelle und jede Route, bevor etwas umgebaut wird.
 2. **G10**: `FREIGABE_ERTEILT` und `kanal` an allen Stellen aus Schritt 1.
 3. **G9**: Bestätigungen, Tür an F1–F5 und F11, Dialog, Konsole, Routen je Client, Lese-Sperre (O3-06), Vorarbeiter nur N.
-4. **O3 und G1**: harte und weiche Muster, weich vor Katalog, Feld `oberflaeche`.
+4. **O3 und G1**: harte und weiche Muster, weich vor Katalog, Feld `oberflaeche`; je nach E9 auch `dashboard.html` und der Hardware-Server (§9a).
 5. **G2, G3, G7**: Zurückhalten, Ausliefern, Sammelkarte mit Hinweisen, Übernahme, Rückweg, Konsole, Vorschau.
 6. **G6**: Startbericht.
 7. Oberfläche (Harness, Posteingang), Vorlage MasterChat, Doku, Stick-Liste.

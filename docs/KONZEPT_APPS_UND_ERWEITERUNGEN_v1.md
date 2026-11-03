@@ -381,4 +381,5 @@ Grenzen dieser Arbeit (ehrlich):
 | 03.11.2026 | PR #1 angelegt; Nacharbeiten A (portable Laufzeit, Konsolenweg `CODE_STAND.bat`, Prompts der Vorlagen) und B (Changelog, BETRIEB, README, Einstufungs-Vorschau) nachgezogen; Änderungen der Branches `fix/harness-list-projects` und `plan/usb-stick-minimal` einbezogen (§2.5) | Captain / Claude |
 | 03.11.2026 | Release 1.22.0 (Tag `v1.22.0` auf `4e051f0`, Manifest für den Updater); Bestandsaufnahme mit B1–B11; B2 entschieden (Signatur vor der ersten Weitergabe) | Captain |
 | 03.11.2026 | **G2 für O3+ und G9–G11** geschrieben: `SPEC_APPS_v1_O3PLUS_G9_G2.md` (mit fünf neuen Befunden N1–N5, Entscheidungen E1–E11); wartet auf Freigabe | Claude |
+| 03.11.2026 | G2 für O3+ und G9–G11 **freigegeben**: E1–E8, E10, E11 wie vorgeschlagen; E9 (`dashboard.html` hart?) ausgearbeitet in §9a, neue Empfehlung C, offen | Captain |
 | 15.10.2026 | Fremdes Modul kommt als COMMUNITY mit Leserouten; Schreiben nur per Gate | `uix_server.py:1265` (Kommentar) |
