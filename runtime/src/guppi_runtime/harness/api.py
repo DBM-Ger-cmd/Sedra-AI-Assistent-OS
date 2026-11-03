@@ -563,13 +563,13 @@ class HarnessApi:
                 return
             neu = sicht[bis:grenze]
             antwort.senden('verlauf.zusammenfassung', {'phase': 'start', 'nachrichten': len(neu)})
-            out = self.execute(mission, {'action': 'model_inference', 'provider': PROVIDER, 'model': modell, 'temperature': 0.2, 'max_tokens': 700, 'slot_owner': 'captain-chat',
+            out = self.execute(mission, {'action': 'model_inference', 'provider': PROVIDER, 'model': modell, 'temperature': 0.2, 'max_tokens': 1200, 'reasoning_effort': 'none', 'slot_owner': 'captain-chat',
                                          'messages': zusammenfassung_nachrichten((alt or {}).get('text'), neu)})
             if out.get('status') != 'completed':
                 raise ValueError('modell_fehler: ' + str(out.get('error') or out.get('reason_code') or out.get('status'))[:160])
             text = ((out.get('model_result') or {}).get('content') or '').strip()[:ZUSAMMENFASSUNG_MAX]
             if not text:
-                raise ValueError('zusammenfassung_leer')
+                raise ValueError('zusammenfassung_leer: ' + str((out.get('model_result') or {}).get('finish_reason') or 'ohne Grund'))
             self.sitzungen.anhaengen(sid, {'typ': 'zusammenfassung', 'text': text, 'bis_n': grenze, 'nachrichten': len(neu)})
             messages[0]['content'] = schleife.mit_zusammenfassung(messages[0]['content'], text)
             antwort.senden('verlauf.zusammenfassung', {'phase': 'ende', 'nachrichten': len(neu), 'zeichen': len(text)})
