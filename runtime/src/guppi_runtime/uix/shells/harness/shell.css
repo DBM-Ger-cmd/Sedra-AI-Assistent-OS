@@ -441,3 +441,5 @@ button.hs-schild[aria-expanded="true"]::after{content:" ▴"}
 .hs-start-haken{display:inline-block;width:1.2em;text-align:center;color:var(--accent)}
 .hs-vorgemerkt{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:var(--size-xs);color:var(--muted);padding:4px 8px;border:1px dashed var(--hs-on-line);border-radius:var(--radius)}
 .hs-vormerk-knopf{font:inherit;font-size:var(--size-xs);border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:var(--radius);padding:2px 8px;cursor:pointer}
+.hs-hinweis-kopf{display:block;width:100%;text-align:left;font:inherit;font-size:var(--size-xs);font-weight:600;color:inherit;background:transparent;border:0;padding:0;cursor:pointer}
+.hs-hinweis-text{margin-top:4px}

@@ -9,14 +9,31 @@
 
   function vorlage(S, id){ return (S.vorlagen || []).find(v=>v.id === id) || null; }
 
-  // der Text unter der Vorlagenwahl
+  // einklappbar (Captain 03.11.2026): die Wahl wird je Vorlage im Browser gemerkt, ohne Speicher bleibt der Hinweis aufgeklappt
+  const KLAPP = 'sedra.harness.hinweis.zu.';
+  function zu(id){ try{ return localStorage.getItem(KLAPP + id) === '1'; }catch(_e){ return false; } }
+  function merken(id, an){ try{ an ? localStorage.setItem(KLAPP + id, '1') : localStorage.removeItem(KLAPP + id); }catch(_e){ /* ohne Speicher bleibt es bei dieser Ansicht */ } }
+
+  // der Text unter der Vorlagenwahl: eine Kopfzeile zum Ein- und Ausklappen, darunter der Hinweis
   function zeigen(S){
     const e = S._eingabe; if(!e || !e.vorlageHinweis) return;
     const v = vorlage(S, e.vorlage.value);
     const text = v && v.hinweis ? v.hinweis : '';
-    e.vorlageHinweis.textContent = text;
-    e.vorlageHinweis.hidden = !text;
-    e.vorlageHinweis.classList.toggle('warn', !!(v && (v.erlaubnisse || []).length));
+    const box = e.vorlageHinweis;
+    box.replaceChildren();
+    box.hidden = !text;
+    box.classList.toggle('warn', !!(v && (v.erlaubnisse || []).length));
+    if(!text) return;
+    const kopf = d().el('button', 'hs-hinweis-kopf'); kopf.type = 'button';
+    const inhalt = d().el('div', 'hs-hinweis-text', text);
+    const stellen = klappt=>{
+      box.classList.toggle('zu', klappt); inhalt.hidden = klappt;
+      kopf.textContent = (klappt ? '▸ ' : '▾ ') + v.name + (klappt ? ' – Hinweis anzeigen' : ' – Hinweis');
+      kopf.setAttribute('aria-expanded', klappt ? 'false' : 'true');
+    };
+    kopf.onclick = ()=>{ const klappt = !box.classList.contains('zu'); merken(v.id, klappt); stellen(klappt); };
+    box.append(kopf, inhalt);
+    stellen(zu(v.id));
   }
 
   // Der Dialog: Promise<boolean>. Der Fokus liegt auf „Abbrechen“ (Enter gibt nichts frei), Escape bricht ab.
