@@ -268,7 +268,7 @@ Unternehmens-Freigabe des App-Modells. In Stufe 2 reicht es, das Feld `shells:` 
 ### 2.2c Langdock anbinden (Captain, 03.11.2026)
 
 Wunsch: SEDRA soll auch mit **Langdock** arbeiten können (Unternehmens-KI-Plattform; für die KMU-Kundschaft naheliegend). Im Repo kommt „Langdock“ bisher nirgends vor.
-Was Langdock genau bietet (Schnittstelle, Hosting, Vertragsunterlagen, Modellliste), habe ich **nicht geprüft** und aus keiner Quelle belegt; die Punkte unten sind Annahmen und vor dem Bau gegen die Unterlagen von Langdock zu prüfen.
+Was Langdock genau bietet, ist weiter unten („Prüfung der Langdock-Unterlagen“) aus Suchauszügen zusammengetragen, **nicht** aus gelesenen Volltexten; vor dem Bau gegen die Unterlagen von Langdock zu prüfen.
 
 Zwei verschiedene Dinge, die man trennen muss:
 
@@ -305,6 +305,37 @@ nach Langdock senden (Rahmen: `connect-src` leer, §3.3 Nr. 7); alles läuft üb
 | 12 | **Tests ohne echten Zugang** | Fake-Server, keine echten Daten, keine echten Schlüssel in Tests oder Repo (Schlüsselsuche vor jedem Push). |
 | 13 | **Rechtliche Klärung** | Auftragsverarbeitung, Datenübermittlung, Rolle nach EU-KI-Regeln, Informationspflichten gegenüber Beschäftigten: mit Fachleuten, vor dem produktiven Einsatz. Dieser Entwurf bewertet das nicht. |
 | 14 | **Austauschbarkeit** | Langdock ist ein Anbieter von mehreren. Keine Sonderlogik im Kern; Anbieterliste, Empfängerverzeichnis und Richtlinie sind generisch (spätere Anbieter ohne Umbau). |
+
+#### Prüfung der Langdock-Unterlagen (03.11.2026)
+
+**Quellenlage, ehrlich:** Die Seiten von Langdock (`docs.langdock.com`, `langdock.com`) ließen sich in dieser Sitzung **nicht direkt abrufen** (Domain nicht freigegeben). Die Angaben stammen aus
+**Auszügen der Websuche** zu den offiziellen Seiten, nicht aus gelesenen Volltexten. Sie sind ein Anhaltspunkt, kein Beleg. Vor dem Bau: die Seiten selbst lesen, die DPA-Fassung und die Unterauftragsverarbeiter-Liste prüfen, Zusagen schriftlich bestätigen lassen.
+Gesucht wurde in: Chat-Completions-Doku (`docs.langdock.com/en/developer/completion-api/openai`), API-Einführung, Workspace-Einstellungen, Agents-API und MCP-Seiten, Audit-Logs-API, `langdock.com/dpa`, `/security`, `/terms`.
+
+| Thema | Befund laut Suchauszug | Folge für SEDRA |
+|---|---|---|
+| **Schnittstelle (Richtung 1)** | OpenAI-kompatibel: `https://api.langdock.com/openai/{region}/v1/chat/completions`, Modellliste `GET /openai/{region}/v1/models`, Bearer-Schlüssel. Region `eu`, `us` oder `global`; sie muss zur Region des Modells passen. Auch Anthropic-kompatibler und Mistral-Endpunkt, Responses-Endpunkt. | Der vorhandene Adapter „OpenAI-kompatibel“ (`models/cloud_api.py`) reicht voraussichtlich; **kein dritter Adapter nötig**. Eintrag mit fester Region. |
+| **Region festnageln** | Modelle mit „global deployment“ nutzen andere Verarbeiter, Verarbeitung kann in den USA stattfinden; ein Admin muss sie freischalten. | Konfiguration erlaubt nur `eu`; Region `global`/`us` und Modelle ohne EU-Region werden **abgelehnt** (Richtlinie, nicht Standard). Modellliste vor Nutzung gegen die Regionsangabe prüfen. |
+| **Nicht unterstützte Parameter** | u. a. `n`, `service_tier`, `parallel_tool_calls`, `stream_options`. | passt zu `UNSUPPORTED_OPTIONS` (tools, response_format werden laut abgelehnt); beim Bau prüfen, ob `tools`/`response_format` bei Langdock gehen und gewollt sind. |
+| **Zeitgrenzen/Fehler** | HTTP 429 bei Überschreiten; nicht gestreamte Anfrage über 105 s → 504. | Zeitlimit und klare Fehlermeldung; lange Aufgaben streamen oder aufteilen; kein stilles Wiederholen mit Inhalt. |
+| **Schlüssel** | Persönliche Schlüssel und Workspace-Schlüssel; Scope „Completion API“; Workspace-Schlüssel für gemeinsame Anwendungen. Weitere Scopes je Endpunkt (Agent, Integration, Prompt, Skills). | Betreiber legt **einen Workspace-Schlüssel mit nur dem nötigen Scope** an; kein persönlicher Schlüssel in SEDRA. Schlüssel wie bisher nur als `secret://langdock/…`. |
+| **Limits und Kosten** | Laut Suche uneinheitlich: 500 Anfragen/min und 150.000 Token/min *oder* 60.000 Token/min; Standard-Monatslimit für Workspace-Schlüssel 100 €. | Budget je Rolle in SEDRA **zusätzlich** zum Limit bei Langdock; 429 und Budget-Ende sichtbar melden. Zahlen vor dem Bau bei Langdock klären. |
+| **Auftragsverarbeitung** | DPA ist Teil der Nutzungsbedingungen und gilt automatisch; Langdock als Auftragsverarbeiter (Art. 28); Löschung binnen 30 Tagen nach Vertragsende. Die Suche nennt die DPA-Fassung 2.1 (September 2026). | Der Empfängereintrag im Gateway verweist auf die **gültige DPA-Fassung** und deren Datum; ändert sie sich, muss der Betreiber neu bestätigen. Rechtliche Würdigung bleibt bei Fachleuten. |
+| **Unterauftragsverarbeiter** | Genannt: Microsoft Azure, AWS, Google Cloud, OpenAI, Mistral (EU-Region); Sentry und Cloudflare (US-Unternehmen, Verarbeitung in der EU mit Rahmen/Klauseln); eigene Liste für „global deployment“. | Liste in das Empfängerverzeichnis übernehmen (mit Datum); Änderungen beobachten. |
+| **Training/Speicherung** | Laut Seite kein Training mit Kundendaten, weder durch Langdock noch durch Modellanbieter; Zero Data Retention mit OpenAI und Mistral vereinbart, bei AWS Bedrock Aufbewahrung „none“. **Ausnahme:** Modelle mit „Extended data retention“ (Anthropic: bis zu 30 Tage unabhängig von den Einstellungen). | Richtlinie je Modell: Modelle mit verlängerter Aufbewahrung nur mit ausdrücklichem Haken des Betreibers; im Empfängerverzeichnis je Modell die Aufbewahrung ausweisen. Die Zusagen stammen von Langdock selbst. |
+| **Chat-Aufbewahrung bei Langdock** | Admin kann 7 Tage bis „für immer“ einstellen; Löschung täglich, unwiderruflich. | Betreiber stellt kurze Frist ein; Information an Beschäftigte. Ob über die API gesendete Anfragen im Verlauf bleiben, **nicht geklärt**. |
+| **Audit-Log bei Langdock** | Audit-Logs-API; Einträge **90 Tage** aufbewahrt, vorher exportieren; im DPA-Anhang Protokollierung mit Benutzerbezug. | Eigener Nachweis in SEDRA bleibt Hauptnachweis; regelmäßiger Export der Langdock-Logs durch den Betreiber, wenn sie als Beleg dienen sollen. |
+| **Zertifizierungen** | Langdock nennt SOC 2 Typ II, ISO 27001, DSGVO. Kein unabhängiger Bericht gefunden. | Nicht als Beleg werten; Bericht anfordern. |
+| **Richtung 2a: SEDRA ruft Langdock-Agenten** | Agents-API `https://api.langdock.com/agent/v1/chat/completions` (Bearer, Agent-API-Scope); Admin muss den Agenten für den Schlüssel freigeben; Unter-Agenten extra. Die ältere Assistants-API ist durch die Agents-API ersetzt. | **Ausgehend**, passt zum Pull-Grundsatz. Dienst-App `langdock` (3d) ruft nur freigegebene Agenten; Antworten sind Fremdinhalt. |
+| **Richtung 2b: Langdock ruft SEDRA** | Langdock-Agenten können entfernte MCP-Server als Aktionen einbinden (API-Schlüssel oder OAuth 2.0); **neu gespeicherte Werkzeuge laufen standardmäßig ohne Rückfrage**. Umgekehrt bietet Langdock selbst einen MCP-Server (`https://api.langdock.com/mcp`: `find_agent`, `ask_agent`, `ask_custom_agent`) für Clients wie Claude Desktop oder Cursor. | 2b setzt einen **von außen erreichbaren** SEDRA-Endpunkt voraus: **nicht empfohlen** (§2.2c Punkt 2). Wenn je, dann nur mit Bestätigungspflicht je Werkzeug und Rechten der Stufe B. Der Langdock-MCP-Server als Quelle für SEDRA-Clients (`mcp`) ist dagegen ein ausgehender Weg. |
+
+**Was sich dadurch an den Annahmen ändert:**
+1. Richtung 1 ist voraussichtlich **Konfiguration statt Adapterbau** (Stufe 3c wird kleiner).
+2. Richtung 2 zerfällt in **2a (ausgehend, machbar)** und **2b (eingehend, nicht empfohlen)**. Stufe 3d meint zunächst nur 2a.
+3. **Regionen und Aufbewahrung sind je Modell verschieden**; die Richtlinie muss je Modell entscheiden, nicht je Anbieter.
+4. Vertragsangaben (DPA-Fassung, Unterauftragsverarbeiter) haben ein **Datum** und gehören in das Empfängerverzeichnis.
+
+**Offen (bei Langdock zu klären, schriftlich):** gültige Rate-Limits; ob API-Anfragen im Chatverlauf landen und wie lange; Liste der EU-Modelle mit ZDR; Umfang der SOC-2-/ISO-Nachweise; ob ein dedizierter Betrieb (eigene Domain) angeboten wird, der für KMU mit höheren Anforderungen nötig wäre.
 
 ### 2.3 Rechte statt Routen
 
