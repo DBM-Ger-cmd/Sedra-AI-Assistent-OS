@@ -1,5 +1,7 @@
 # Entwurf: Werkzeuge und Erweiterungen als Apps (03.11.2026)
 
+> **Abgelöst** durch `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` und die Specs `docs/SPEC_APPS_v1_AM0_…` bis `…_AM8_…` (03.11.2026). Dieser Entwurf bleibt als Verlauf der Diskussion; wo er abweicht (Stufennummern, Langdock 2a als Dienst-App, Rechte im Manifest), gilt das Konzept.
+
 Stand: `main` c364081. Nur Entwurf, nichts davon ist gebaut. Pfade unten sind relativ zu `runtime/src/guppi_runtime/` (`uix/…`, `desk/…`),
 sofern nichts anderes steht. Zeilennummern gelten für c364081.
 
