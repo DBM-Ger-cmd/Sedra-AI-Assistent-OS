@@ -1,8 +1,9 @@
 /* Harness-Shell – Einstellungen (HS-42, Stufe 5) und Sitzungs-Erlaubnisse (P0 M1, 1.11.2026). Aus shell.css ausgelagert (A20: Dateigrenze 400 Zeilen). Nur Token aus ui/tokens.css. */
 .hs-einstellungen{width:100%;justify-content:flex-start}
-.hs-einst{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0;height:100%}
+.hs-einst{display:flex;flex-direction:column;min-height:0;height:100%}
+.hs-einst-rumpf{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:240px minmax(0,1fr)}
 .hs-einst-nav{overflow:auto;border-right:1px solid var(--line);padding:6px 4px}
-.hs-einst-punkt{display:block;width:100%;text-align:left;padding:5px 10px;border:0;border-radius:var(--radius);background:transparent;color:var(--text);font:inherit;font-size:var(--size-small);cursor:pointer}
+.hs-einst-punkt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:7px 10px;border:0;border-radius:var(--radius);background:transparent;color:var(--text);font:inherit;font-size:var(--size-small);cursor:pointer}
 .hs-einst-punkt:hover{background:var(--hs-hover)}
 .hs-einst-punkt.on{background:var(--hs-on);box-shadow:inset 2px 0 0 var(--accent)}
 .hs-einst-flaeche{display:flex;flex-direction:column;min-height:0;overflow:auto}
@@ -18,7 +19,46 @@
 .hs-einst-karte{padding:6px 8px;border:1px solid var(--line-soft);border-radius:var(--radius)}
 .hs-einst-karte>summary{cursor:pointer;font-size:var(--size-small)}
 .hs-einst-antrag{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--radius);color:var(--text)}
-@media (max-width:900px){.hs-einst{grid-template-columns:1fr}.hs-einst-nav{border-right:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:2px}.hs-einst-nav .hs-ueber{width:100%}.hs-einst-punkt{width:auto}}
+@media (max-width:900px){.hs-einst-rumpf{grid-template-columns:1fr}.hs-einst-nav{border-right:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:2px}.hs-einst-nav .hs-ueber{width:100%}.hs-einst-punkt{width:auto}}
 .hs-erlaubnis .hs-einst-label{flex:0 0 150px;font-weight:600;color:var(--text)}
 .hs-erlaubnis code{flex:1 1 200px;font-weight:400}
 .hs-erlaubnis-sitzung{margin-top:6px}
+/* ---- Windows-Stil (Captain 03.11.2026, Referenzbilder): Kopfzeile mit Suche, Profil, Gruppenliste, Seiten aus Reihen und Kacheln */
+.hs-einst-kopfzeile{display:grid;grid-template-columns:minmax(0,1fr) minmax(200px,400px) minmax(0,1fr);align-items:center;gap:8px;padding:8px 12px}
+.hs-einst-zurueck{grid-column:1;grid-row:1;justify-self:start;border:0;background:transparent;color:var(--text);font:inherit;font-size:var(--size-large,1.1em);cursor:pointer;padding:2px 8px;border-radius:var(--radius)}
+.hs-einst-zurueck:hover:not(:disabled){background:var(--hs-hover)}.hs-einst-zurueck:disabled{opacity:.35;cursor:default}
+.hs-einst-kopf-name{grid-column:1;grid-row:1;justify-self:start;margin-left:40px;font-size:var(--size-small)}
+.hs-einst-suche{grid-column:2;grid-row:1;width:100%;padding:6px 12px;font:inherit;font-size:var(--size-small);color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:999px}
+.hs-einst-profil{display:flex;align-items:center;gap:10px;padding:8px 10px 14px}
+.hs-einst-avatar{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:var(--hs-on);border:1px solid var(--hs-on-line);color:var(--accent);font-weight:700}
+.hs-einst-profil-text{display:flex;flex-direction:column;min-width:0}
+.hs-einst-nav{display:flex;flex-direction:column;gap:2px;padding:6px 8px}
+.hs-einst-symbol{width:1.4em;text-align:center;color:var(--accent)}
+.hs-einst-punkt{position:relative}.hs-einst-punkt.on::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:2px;background:var(--accent)}
+.hs-einst-flaeche{align-items:stretch;padding:0 24px 24px}
+.hs-einst-seite{width:100%;max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.hs-einst-seite.breit{max-width:none}
+.hs-einst-titel{margin:8px 0 4px;font-size:var(--size-xl);font-weight:600}
+.hs-einst-kopf{border-bottom:0;padding:8px 0;align-items:center}.hs-einst-kopf .hs-einst-titel{margin:0}
+.hs-einst-ober{border:0;background:transparent;color:var(--muted);font:inherit;font-size:var(--size-xl);cursor:pointer;padding:0}.hs-einst-ober:hover{color:var(--text)}
+.hs-einst-reihen{display:flex;flex-direction:column;gap:4px}
+.hs-einst-reihe{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:12px 16px;font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius-2);cursor:pointer}
+.hs-einst-reihe:hover,.hs-einst-reihe:focus-visible{background:var(--panel-2);border-color:var(--line)}
+.hs-einst-reihen.eng .hs-einst-reihe{padding:9px 14px}
+.hs-einst-reihe-symbol{flex:0 0 1.6em;text-align:center;font-size:1.15em;color:var(--accent)}
+.hs-einst-reihe-text{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hs-einst-pfeil{color:var(--muted);font-size:1.3em}
+.hs-einst-gerat{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:6px 2px 10px}
+.hs-einst-gerat-name{display:flex;flex-direction:column;gap:2px}
+.hs-einst-chips{display:flex;gap:18px;flex-wrap:wrap}
+.hs-einst-chip{display:flex;flex-direction:column;min-width:0}.hs-einst-chip.bad b{color:var(--bad)}.hs-einst-chip.warn b{color:var(--warn,var(--text))}
+.hs-einst-startraster{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start}
+@media (max-width:1100px){.hs-einst-startraster{grid-template-columns:1fr}}
+.hs-einst-spalte{display:flex;flex-direction:column;gap:10px;min-width:0}
+.hs-einst-kachel{display:flex;flex-direction:column;gap:8px;padding:14px 16px;background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius-2)}
+.hs-einst-kachel-titel{margin:0;font-size:var(--size-large,1.05em);font-weight:600}.hs-einst-kachel-satz{margin:0}
+.hs-einst-kachel .hs-einst-reihen{margin:0 -8px}.hs-einst-kachel>button{align-self:flex-start}
+.hs-einst-werte{display:flex;flex-direction:column;gap:2px}
+.hs-einst-wertzeile{display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:var(--size-small);border-bottom:1px solid var(--line-soft)}
+.hs-einst-wertzeile:last-child{border-bottom:0}
+.hs-einst-wert.ok{color:var(--ok,var(--accent))}.hs-einst-wert.bad{color:var(--bad)}

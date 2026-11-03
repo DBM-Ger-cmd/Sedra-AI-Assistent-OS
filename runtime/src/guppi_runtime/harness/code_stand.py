@@ -353,6 +353,11 @@ def main(argv=None):
     art.add_argument('--zeigen', action='store_true', help='ungesehenen Code mit Diff zeigen (Standard)')
     art.add_argument('--uebernehmen', action='store_true', help='den aktuellen Stand als gesehen übernehmen')
     a = p.parse_args(argv)
+    import sys
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')          # unter Windows ist eine Pipe cp1252: „■“ und „–“ der Vorschau liessen den Aufruf abstuerzen
+    except (AttributeError, ValueError):
+        pass
     code, text = konsole(a.root, a.projekt, a.uebernehmen)
     print(text)
     return code

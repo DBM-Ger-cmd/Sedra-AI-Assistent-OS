@@ -35,9 +35,10 @@ def markdown(s, sid, projekt_name=None):
     kopf, eintraege = s.get('kopf') or {}, s.get('eintraege') or []
     titel = s.get('titel') or 'Ohne Titel'
     v = summe(eintraege)
-    zeilen = [f'# {titel}', '', f"Token: {v['antworten']} Antworten · {_de(v['ein'])} eingehend · {_de(v['aus'])} erzeugt", '',
+    modell = [f"Modell: {s.get('modell')}"] if s.get('modell') else []          # Wunsch des Captains 03.11.2026: eine eigene Zeile unter der Token-Zeile, nur wenn die Sitzung ein Modell hat
+    zeilen = [f'# {titel}', '', f"Token: {v['antworten']} Antworten · {_de(v['ein'])} eingehend · {_de(v['aus'])} erzeugt", ''] + modell + [
               f"Sitzung {sid} · Projekt {projekt_name or kopf.get('projekt') or '–'} · angelegt {str(kopf.get('angelegt') or '')[:16].replace('T', ' ')}"
-              + (f" · Vorlage {kopf.get('vorlage')}" if kopf.get('vorlage') else '') + (f" · Modell {s.get('modell')}" if s.get('modell') else ''), '']
+              + (f" · Vorlage {kopf.get('vorlage')}" if kopf.get('vorlage') else ''), '']
     karten = {e.get('karte_id'): e for e in eintraege if e.get('typ') == 'karte' and e.get('entscheidung')}
     for e in eintraege:
         typ = e.get('typ')

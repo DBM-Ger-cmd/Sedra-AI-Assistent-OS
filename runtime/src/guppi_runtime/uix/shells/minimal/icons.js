@@ -19,7 +19,7 @@
     entscheidung: ['Entscheidung', ['M12 3l8 4v5c0 4.5-3.5 8-8 9c-4.5-1-8-4.5-8-9V7z', 'M8.5 12l2.5 2.5l4.5-5']],
     maschine:   ['Maschinenraum', ['M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6', 'M12 2v3', 'M12 19v3', 'M2 12h3', 'M19 12h3', 'M4.9 4.9l2.1 2.1', 'M17 17l2.1 2.1', 'M4.9 19.1L7 17', 'M17 7l2.1-2.1']],
     hardware:   ['Hardware',   ['M6 6h12v12H6z', 'M9.5 9.5h5v5h-5z', 'M9 2v4', 'M15 2v4', 'M9 18v4', 'M15 18v4', 'M2 9h4', 'M2 15h4', 'M18 9h4', 'M18 15h4']],
-    meter:      ['Guppy-Meter', ['M4 20V10', 'M10 20V4', 'M16 20v-7', 'M22 20H2']],
+    meter:      ['Sedra Token', ['M4 20V10', 'M10 20V4', 'M16 20v-7', 'M22 20H2']],
     module:     ['Module',     ['M4 4h7v7H4z', 'M13 4h7v7h-7z', 'M4 13h7v7H4z', 'M16.5 13v7', 'M13 16.5h7']],
     grenzen:    ['Grenzen',    ['M5 11h14v10H5z', 'M8 11V7a4 4 0 0 1 8 0v4']],
     kandidat:   ['Kandidat',   ['M8 7l-5 5l5 5', 'M16 7l5 5l-5 5', 'M14 4l-4 16']],

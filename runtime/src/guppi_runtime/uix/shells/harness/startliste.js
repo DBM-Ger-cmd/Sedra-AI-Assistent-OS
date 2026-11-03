@@ -9,9 +9,9 @@
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
-  const GRUPPEN = ['arbeit', 'modelle', 'wissen', 'system', 'pruefung'];
-  const TITEL = {arbeit: 'Arbeit', modelle: 'Modelle', wissen: 'Wissen', system: 'System', pruefung: 'Prüfung'};
-  const SYMBOLE = {arbeit: '▤', modelle: '◆', wissen: '▣', system: '⚙', pruefung: '✓'};
+  const GRUPPEN = ['arbeit', 'modelle', 'token', 'wissen', 'system', 'pruefung'];
+  const TITEL = {arbeit: 'Arbeit', modelle: 'Modelle', token: 'Sedra Token', wissen: 'Wissen', system: 'System', pruefung: 'Prüfung'};
+  const SYMBOLE = {arbeit: '▤', modelle: '◆', token: '◎', wissen: '▣', system: '⚙', pruefung: '✓'};
   const NIE = ['talk'];
 
   // Die Zuordnung aus start_gruppen.json – geprüft; kaputt ist ein Fehler mit Satz, kein leeres Menü

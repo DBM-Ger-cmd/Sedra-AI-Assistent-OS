@@ -5,9 +5,46 @@
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
 
+  // Eine Liste (ul/ol) ab Zeile i: {art, start, punkte: [{text, inhalt: [Absatz | Code | Liste …]}]}; rein.
+  // Leerzeilen zwischen Punkten trennen die Liste nicht (eine nummerierte Liste zählt weiter), eingerückte Zeilen gehören zum Punkt:
+  // Fortsetzung, neuer Absatz, Codezaun oder eine Unterliste (ab zwei Leerzeichen mehr als der Punkt).
+  const PUNKT = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
+  const ZAUN = /^\s*(```|~~~)\s*([\w+-]*)\s*$/;
+  function liste(zeilen, i){
+    const n = zeilen.length;
+    const m0 = zeilen[i].match(PUNKT);
+    const basis = m0[1].length, geordnet = /\d/.test(m0[2]);
+    const block = {art: geordnet ? 'ol' : 'ul', start: geordnet ? Number(m0[2].replace(/\D/g, '')) : 1, punkte: []};
+    while(i < n){
+      const m = zeilen[i].match(PUNKT);
+      if(!m || m[1].length < basis || m[1].length >= basis + 2 || /\d/.test(m[2]) !== geordnet) break;
+      const punkt = {text: m[3].trim(), inhalt: []};
+      block.punkte.push(punkt); i++;
+      while(i < n){
+        let j = i; while(j < n && !zeilen[j].trim()) j++;
+        if(j >= n){ i = j; break; }
+        const z = zeilen[j], einzug = z.match(/^\s*/)[0].length, pm = z.match(PUNKT);
+        if(einzug < basis + 2){ i = (pm ? j : i); break; }              // nächster Punkt dieser oder einer äußeren Ebene, sonst Ende der Liste
+        if(pm){ const r = liste(zeilen, j); punkt.inhalt.push(r[0]); i = r[1]; continue; }
+        const zaun = z.match(ZAUN);
+        if(zaun){
+          const code = []; i = j + 1;
+          while(i < n && !zeilen[i].trim().startsWith(zaun[1])){ code.push(zeilen[i].slice(Math.min(einzug, zeilen[i].match(/^\s*/)[0].length))); i++; }
+          i++; punkt.inhalt.push({art: 'code', sprache: zaun[2] || '', text: code.join('\n')}); continue;
+        }
+        const letzter = punkt.inhalt[punkt.inhalt.length - 1];
+        if(j === i && !letzter) punkt.text += ' ' + z.trim();            // Fortsetzungszeile des Punkts
+        else if(j === i && letzter.art === 'absatz') letzter.text += ' ' + z.trim();
+        else punkt.inhalt.push({art: 'absatz', text: z.trim()});          // nach einer Leerzeile: ein neuer Absatz im Punkt
+        i = j + 1;
+      }
+    }
+    return [block, i];
+  }
+
   // Text → Liste von Blöcken {art, …}; rein
   function bloecke(text){
-    const zeilen = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+    const zeilen = String(text || '').replace(/\r\n?/g, '\n').replace(/\t/g, '    ').split('\n');
     const out = [];
     let i = 0;
     while(i < zeilen.length){
@@ -28,17 +65,7 @@
         while(i < zeilen.length && /^\s*\|.*\|\s*$/.test(zeilen[i])){ reihen.push(zelle(zeilen[i])); i++; }
         out.push({art: 'tabelle', kopf, reihen}); continue;
       }
-      const liste = z.match(/^\s*([-*+]|\d+[.)])\s+(.*)$/);
-      if(liste){
-        const geordnet = /\d/.test(liste[1]); const punkte = [];
-        while(i < zeilen.length){
-          const m = zeilen[i].match(/^\s*([-*+]|\d+[.)])\s+(.*)$/);
-          if(m && /\d/.test(m[1]) === geordnet){ punkte.push(m[2]); i++; }
-          else if(zeilen[i].trim() && /^\s{2,}/.test(zeilen[i]) && punkte.length){ punkte[punkte.length - 1] += ' ' + zeilen[i].trim(); i++; }
-          else break;
-        }
-        out.push({art: geordnet ? 'ol' : 'ul', punkte}); continue;
-      }
+      if(PUNKT.test(z)){ const r = liste(zeilen, i); out.push(r[0]); i = r[1]; continue; }
       if(/^\s*>/.test(z)){
         const teile = [];
         while(i < zeilen.length && /^\s*>/.test(zeilen[i])){ teile.push(zeilen[i].replace(/^\s*>\s?/, '')); i++; }
@@ -52,20 +79,57 @@
     return out;
   }
 
-  // `code`, **fett**, *kursiv* – als Knoten; alles andere bleibt Text
-  function inline(el, text){
-    const re = /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*\s][^*]*\*)/g;
-    let at = 0, m;
-    while((m = re.exec(text))){
-      if(m.index > at) el.append(document.createTextNode(text.slice(at, m.index)));
-      const t = m[0];
-      let n;
-      if(t[0] === '`'){ n = document.createElement('code'); n.textContent = t.slice(1, -1); }
-      else if(t.startsWith('**') || t.startsWith('__')){ n = document.createElement('strong'); n.textContent = t.slice(2, -2); }
-      else { n = document.createElement('em'); n.textContent = t.slice(1, -1); }
-      el.append(n); at = m.index + t.length;
+  // Ein Link wird nur zu einem Anker, wenn das Ziel http, https oder mailto ist; alles andere (javascript:, data:, relative Pfade) bleibt als Text stehen; rein
+  function sichereUrl(u){
+    try{
+      const url = new URL(String(u));
+      return ['http:', 'https:', 'mailto:'].indexOf(url.protocol) >= 0 ? url.href : null;
+    }catch(_e){ return null; }
+  }
+
+  // Text → Teile {art: text | code | fett | kursiv | streich | link, text, url?}; rein.
+  // `code`, **fett**/__fett__, *kursiv*/_kursiv_, ~~durchgestrichen~~, [Text](Adresse). _kursiv_ gilt nur zwischen Nicht-Wortzeichen (snake_case bleibt Text);
+  // der Text eines Links darf fett/kursiv/durchgestrichen/Code sein, aber kein zweiter Link (tief).
+  function teile(text, tief){
+    const re = tief
+      ? /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\*[^*\s][^*]*\*|(?<![\w])_[^_\s][^_]*_(?![\w]))/g
+      : /(`[^`]+`|\[[^\]\n]+\]\([^)\s]+\)|\*\*[^*]+\*\*|__[^_]+__|~~[^~]+~~|\*[^*\s][^*]*\*|(?<![\w])_[^_\s][^_]*_(?![\w]))/g;
+    const out = [];
+    let at = 0, hit;
+    const roh = (von, bis)=>{ if(bis > von) out.push({art: 'text', text: text.slice(von, bis)}); };
+    while((hit = re.exec(text))){
+      const t = hit[0];
+      let tok;
+      if(t[0] === '`') tok = {art: 'code', text: t.slice(1, -1)};
+      else if(t[0] === '['){
+        const l = t.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+        const url = l && sichereUrl(l[2]);
+        tok = url ? {art: 'link', text: l[1], url} : {art: 'text', text: t};          // unsicheres Ziel: der Text bleibt, wie er ist
+      }
+      else if(t.startsWith('**') || t.startsWith('__')) tok = {art: 'fett', text: t.slice(2, -2)};
+      else if(t.startsWith('~~')) tok = {art: 'streich', text: t.slice(2, -2)};
+      else tok = {art: 'kursiv', text: t.slice(1, -1)};
+      roh(at, hit.index);
+      out.push(tok);
+      at = hit.index + t.length;
     }
-    if(at < text.length) el.append(document.createTextNode(text.slice(at)));
+    if(at < text.length) out.push({art: 'text', text: text.slice(at)});
+    return out;
+  }
+
+  const ELEMENT = {code: 'code', fett: 'strong', kursiv: 'em', streich: 's'};
+  function inline(el, text, tief){
+    for(const t of teile(text, tief)){
+      if(t.art === 'text'){ el.append(document.createTextNode(t.text)); continue; }
+      if(t.art === 'link'){
+        const a = document.createElement('a');
+        a.href = t.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = t.url;
+        inline(a, t.text, true); el.append(a); continue;
+      }
+      const n = document.createElement(ELEMENT[t.art]);
+      if(t.art === 'code') n.textContent = t.text; else inline(n, t.text, true);
+      el.append(n);
+    }
     return el;
   }
 
@@ -74,22 +138,26 @@
     try{ navigator.clipboard.writeText(text).then(()=>fertig(true), ()=>fertig(false)); }catch(_e){ fertig(false); }
   }
 
-  function render(text){
-    const box = document.createElement('div');
-    box.className = 'hs-md';
-    const mk = (tag, cls)=>{ const n = document.createElement(tag); if(cls) n.className = cls; return n; };
-    for(const b of bloecke(text)){
-      if(b.art === 'kopf'){ box.append(inline(mk('h' + Math.min(6, b.stufe + 2)), b.text)); }
-      else if(b.art === 'absatz'){ box.append(inline(mk('p'), b.text)); }
-      else if(b.art === 'zitat'){ box.append(inline(mk('blockquote'), b.text)); }
-      else if(b.art === 'linie'){ box.append(mk('hr')); }
-      else if(b.art === 'ul' || b.art === 'ol'){ const l = mk(b.art); b.punkte.forEach(p=>l.append(inline(mk('li'), p))); box.append(l); }
+  const mk = (tag, cls)=>{ const n = document.createElement(tag); if(cls) n.className = cls; return n; };
+
+  function knoten(b){
+    {
+      if(b.art === 'kopf'){ return inline(mk('h' + Math.min(6, b.stufe + 2)), b.text); }
+      else if(b.art === 'absatz'){ return inline(mk('p'), b.text); }
+      else if(b.art === 'zitat'){ return inline(mk('blockquote'), b.text); }
+      else if(b.art === 'linie'){ return mk('hr'); }
+      else if(b.art === 'ul' || b.art === 'ol'){
+        const l = mk(b.art);
+        if(b.art === 'ol' && b.start > 1) l.start = b.start;
+        b.punkte.forEach(p=>{ const li = inline(mk('li'), p.text); (p.inhalt || []).forEach(x=>{ const k = knoten(x); if(k) li.append(k); }); l.append(li); });
+        return l;
+      }
       else if(b.art === 'tabelle'){
         const wrap = mk('div', 'hs-md-tab'); const t = mk('table'); const kopf = mk('tr');
         b.kopf.forEach(k=>kopf.append(inline(mk('th'), k)));
         const thead = mk('thead'); thead.append(kopf); const tbody = mk('tbody');
         b.reihen.forEach(r=>{ const tr = mk('tr'); r.forEach(c=>tr.append(inline(mk('td'), c))); tbody.append(tr); });
-        t.append(thead, tbody); wrap.append(t); box.append(wrap);
+        t.append(thead, tbody); wrap.append(t); return wrap;
       }
       else if(b.art === 'code'){
         const wrap = mk('div', 'hs-md-code'); const leiste = mk('div', 'hs-md-code-kopf');
@@ -98,13 +166,20 @@
         knopf.addEventListener('click', ()=>kopieren(b.text, knopf));
         leiste.append(sprache, knopf);
         const pre = mk('pre'); const code = mk('code'); code.textContent = b.text; pre.append(code);
-        wrap.append(leiste, pre); box.append(wrap);
+        wrap.append(leiste, pre); return wrap;
       }
     }
+    return null;
+  }
+
+  function render(text){
+    const box = document.createElement('div');
+    box.className = 'hs-md';
+    for(const b of bloecke(text)){ const k = knoten(b); if(k) box.append(k); }
     return box;
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.markdown = {bloecke, render};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {bloecke};
+  root.sedraHarness.markdown = {bloecke, render, teile, sichereUrl};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {bloecke, teile, sichereUrl};
 })();

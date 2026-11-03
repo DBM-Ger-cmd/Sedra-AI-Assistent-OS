@@ -32,11 +32,11 @@
   }
   function zustand(id){
     const z = ID.test(id) ? (alle()[id] || {}) : {};
-    return {seite: z.seite === 'rechts' ? 'rechts' : 'links', zu: !!z.zu, breite: Number(z.breite) || 50, pin: z.pin && typeof z.pin.ref === 'string' ? z.pin : null};
+    return {seite: z.seite === 'rechts' ? 'rechts' : 'links', zu: !!z.zu, breite: Number(z.breite) || 50, hoehe: Number(z.hoehe) || 40, pin: z.pin && typeof z.pin.ref === 'string' ? z.pin : null};
   }
   function merken(t){
     if(!ID.test(t.a.id)) return;
-    try{ const a = alle(); a[t.a.id] = {seite: t.z.seite, zu: t.z.zu, breite: Math.round(t.z.breite), pin: t.z.pin}; localStorage.setItem(KEY, JSON.stringify(a)); }catch(_e){}
+    try{ const a = alle(); a[t.a.id] = {seite: t.z.seite, zu: t.z.zu, breite: Math.round(t.z.breite), hoehe: Math.round(t.z.hoehe), pin: t.z.pin}; localStorage.setItem(KEY, JSON.stringify(a)); }catch(_e){}
   }
 
   const zeile = (text, cls)=>d().el('div', cls || 'hs-leise', text);
@@ -53,7 +53,14 @@
     t.vor = d().el('div', 'hs-fl-vorschau'); t.vor.setAttribute('aria-label', 'Vorschau');
     t.kopf = d().el('div', 'hs-fl-kopf'); t.titel = d().el('span', 'hs-fl-titel', ''); t.inhalt = d().el('div', 'hs-fl-inhalt');
     t.pinKnopf = knopf('📌', 'Festhalten', ()=>festhalten(t), 'hs-fl-pin');
-    t.vor.append(t.kopf, t.inhalt);
+    t.balkenH = d().el('div', 'hs-fl-balken-h'); t.balkenH.setAttribute('role', 'separator'); t.balkenH.setAttribute('aria-orientation', 'horizontal');
+    t.balkenH.setAttribute('aria-label', 'Höhe des Werkzeugaufrufs'); t.balkenH.tabIndex = 0; t.balkenH.hidden = true;
+    t.wPane = d().el('div', 'hs-fl-werk'); t.wPane.setAttribute('aria-label', 'Werkzeugaufruf'); t.wPane.hidden = true;
+    t.wKopf = d().el('div', 'hs-fl-kopf'); t.wTitel = d().el('span', 'hs-fl-titel', ''); t.wInhalt = d().el('div', 'hs-fl-inhalt');
+    t.wKopf.append(t.wTitel, knopf('✕', 'Werkzeugaufruf schließen', ()=>werkSchliessen(t)));
+    t.wPane.append(t.wKopf, t.wInhalt);
+    t.wz = null; t.wzZeile = null;
+    t.vor.append(t.kopf, t.inhalt, t.balkenH, t.wPane);
     t.kopf.append(t.titel, t.pinKnopf, knopf('⇄', 'Seiten tauschen (Strg+Umschalt+X)', ()=>tauschen(S, t)), knopf('✕', 'Vorschau zuklappen', ()=>zuklappen(t, true)));
     t.auf = knopf('Vorschau', 'Vorschau wieder öffnen', ()=>zuklappen(t, false), 'hs-fl-auf');
     t.gesp.append(t.auf);
@@ -61,6 +68,7 @@
     t.leiste.append(...t.umschalter);
     t.el.append(t.leiste, t.gesp, t.balken, t.vor);
     balkenBedienen(t);
+    hoeheBedienen(t);
     t.pruefeBreite = ()=>anwenden(t);
     a._teilung = t;
     anwenden(t);
@@ -77,18 +85,22 @@
   // ---- Aufbau und Maße
   function anwenden(t){
     const schmal = root.innerWidth < SCHMAL;
-    const sichtbar = !!t.obj && !t.z.zu;
+    const sichtbar = (!!t.obj || !!t.wz) && !t.z.zu;
     t.el.classList.toggle('hs-fl-ohne', !sichtbar);
     t.el.classList.toggle('hs-fl-klein', schmal && sichtbar);
     t.el.classList.toggle('hs-fl-zeige-vorschau', schmal && t.zeige === 'vorschau');
     t.el.dataset.seite = t.z.seite;
-    t.auf.hidden = !t.obj || !t.z.zu;
+    t.auf.hidden = (!t.obj && !t.wz) || !t.z.zu;
     t.umschalter.forEach((b, i)=>b.classList.toggle('on', (i === 0) === (t.zeige === 'gespraech')));
     const b = klemmen(t.z.breite, t.el.clientWidth || root.innerWidth);
     t.z.breite = b;
     t.el.style.gridTemplateColumns = t.z.seite === 'links' ? `${b}% 6px minmax(0, 1fr)` : `minmax(0, 1fr) 6px ${b}%`;
     t.vor.style.order = t.z.seite === 'links' ? 0 : 2; t.balken.style.order = 1; t.gesp.style.order = t.z.seite === 'links' ? 2 : 0;
     t.balken.setAttribute('aria-valuenow', String(Math.round(b)));
+    t.z.hoehe = hoeheKlemmen(t.z.hoehe, t.vor.clientHeight || root.innerHeight);
+    t.wPane.hidden = !t.wz; t.balkenH.hidden = !t.wz || !t.obj; t.inhalt.hidden = !t.obj;
+    t.wPane.style.flex = t.obj ? `0 0 ${t.z.hoehe}%` : '1 1 auto';
+    t.balkenH.setAttribute('aria-valuenow', String(Math.round(t.z.hoehe)));
     const fest = t.z.pin && t.obj && t.z.pin.ref === t.obj.ref;
     t.pinKnopf.classList.toggle('on', !!fest); t.pinKnopf.title = fest ? 'Festhalten lösen' : 'Festhalten';
   }
@@ -107,6 +119,63 @@
       if(pfeil === undefined) return;
       e.preventDefault(); setzen(t.z.breite + (t.z.seite === 'links' ? pfeil : -pfeil));
     });
+  }
+
+  function hoeheKlemmen(p, hoehe){
+    const grenze = hoehe > 0 ? Math.min(40, 120 / hoehe * 100) : 15;          // mindestens ≈120 px je Teil
+    return Math.max(grenze, Math.min(100 - grenze, Number(p) || 40));
+  }
+  function hoeheBedienen(t){
+    const setzen = prozent=>{ t.z.hoehe = hoeheKlemmen(prozent, t.vor.clientHeight); anwenden(t); merken(t); };
+    t.balkenH.addEventListener('pointerdown', e=>{
+      e.preventDefault();
+      const rect = t.vor.getBoundingClientRect();
+      const bewegen = ev=>setzen((rect.bottom - ev.clientY) / rect.height * 100);
+      const ende = ()=>{ root.removeEventListener('pointermove', bewegen); root.removeEventListener('pointerup', ende); };
+      root.addEventListener('pointermove', bewegen); root.addEventListener('pointerup', ende);
+    });
+    t.balkenH.addEventListener('keydown', e=>{
+      const pfeil = {ArrowUp: 5, ArrowDown: -5}[e.key];
+      if(pfeil === undefined) return;
+      e.preventDefault(); setzen(t.z.hoehe + pfeil);
+    });
+  }
+
+  // ---- der Werkzeugaufruf im unteren Teil (Captain 03.11.2026): Eingabe und Ausgabe stehen hier statt aufgeklappt im Gespräch
+  function werkSchliessen(t){
+    if(t.wzZeile) t.wzZeile.classList.remove('hs-wz-gewaehlt');
+    t.wz = null; t.wzZeile = null; anwenden(t);
+  }
+  // true, wenn die Vorschau den Aufruf übernommen hat; sonst (Vorschau zu, schmales Fenster) klappt die Zeile im Gespräch auf wie bisher
+  function werkzeug(S, a, row){
+    if(!row || !row._wz || !a) return false;
+    const t = fuer(S, a);
+    if(root.innerWidth < SCHMAL || t.z.zu) return false;
+    if(t.wzZeile === row){ werkSchliessen(t); return true; }
+    if(t.wzZeile) t.wzZeile.classList.remove('hs-wz-gewaehlt');
+    t.wzZeile = row; t.wz = row._wz; row.classList.add('hs-wz-gewaehlt');
+    row._wzHaken = ()=>{ if(t.wzZeile === row) werkZeichnen(t); };        // ein laufender Aufruf zeichnet sich neu, wenn sein Ergebnis da ist
+    anwenden(t); werkZeichnen(t);
+    return true;
+  }
+  function werkZeichnen(t){
+    const w = t.wz; if(!w) return;
+    const Z = H().zeilen;
+    t.wTitel.textContent = w.name + (w.kurz ? ' · ' + w.kurz : '');
+    t.wTitel.title = t.wTitel.textContent;
+    const art = w.status === 'ok' ? 'ok' : (w.status === 'laeuft' ? 'laeuft' : (w.status === 'wiederholt' || w.status === 'wartet' || w.status === 'abgelehnt' ? 'warn' : 'bad'));
+    const kopf = d().el('div', 'hs-fl-werk-kopf');
+    kopf.append(d().el('span', 'hs-wz-status ' + art, (Z && Z.STATUS[w.status]) || w.status));
+    if(w.stufe) kopf.append(d().el('span', 'hs-wz-stufe ' + w.stufe, w.stufe + (w.regel ? ' · ' + w.regel : '')));
+    if(typeof w.dauer === 'number') kopf.append(d().el('span', 'hs-leise', w.dauer < 1 ? Math.round(w.dauer * 1000) + ' ms' : w.dauer.toFixed(1) + ' s'));
+    const teile = [kopf, d().el('small', 'hs-leise', 'Eingabe'), d().el('pre', 'hs-pre', w.args === undefined ? '' : JSON.stringify(w.args, null, 2))];
+    if(w.status !== 'laeuft'){
+      const kurz = (Z && Z.AUSGABE_KURZ) || 4000, text = String(w.ergebnis || '');
+      const pre = d().el('pre', 'hs-pre', text.length > kurz ? text.slice(0, kurz) + ' …' : text);
+      teile.push(d().el('small', 'hs-leise', 'Ausgabe' + (text.length > kurz ? ' (' + text.length.toLocaleString('de-DE') + ' Zeichen)' : '')), pre);
+      if(text.length > kurz){ const ganz = d().el('button', 'hs-knopf hs-klein', 'ganz anzeigen'); ganz.type = 'button'; ganz.onclick = ()=>{ pre.textContent = text; ganz.remove(); }; teile.push(ganz); }
+    }else teile.push(d().el('small', 'hs-leise', 'läuft …'));
+    t.wInhalt.replaceChildren(...teile);
   }
 
   function tauschen(S, t){
@@ -190,5 +259,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.vorschau = {bereinigen, fuer, beruehrt, karte, lauf, oeffnen, tauschen, anwenden, zustand, klemmen};
+  root.sedraHarness.vorschau = {bereinigen, fuer, beruehrt, karte, lauf, oeffnen, werkzeug, tauschen, anwenden, zustand, klemmen, hoeheKlemmen};
 })();

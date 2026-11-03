@@ -1,4 +1,4 @@
-# Werkzeug `meter` – Guppy-Meter
+# Werkzeug `meter` – Sedra Token
 
 Was die Arbeit kostet: Token je Zeitraum, Zeilen und das Münzloch.
 

@@ -105,7 +105,7 @@
         (data.boundaries || {}).confirmed === false ? 'nicht bestätigt' : ((data.boundaries || {}).mode || ''),
         (data.boundaries || {}).confirmed === false ? 'warn' : '');
     row('Logbuch', {type: 'logbook', id: 'audit', title: 'Logbuch'}, 'jedes Ereignis, mit Prüfsumme');
-    row('Guppy-Meter', {type: 'meter', id: 'meter', title: 'Guppy-Meter'}, 'Token, Zeilen, Kosten');
+    row('Sedra Token', {type: 'meter', id: 'meter', title: 'Sedra Token'}, 'Token, Zeilen, Kosten');
 
     // §3.2: was wartet, darf nicht zugeklappt verschwinden – Köpfe und Untergruppen zählen ihre wartenden Zeilen
     rows.forEach(h=>{

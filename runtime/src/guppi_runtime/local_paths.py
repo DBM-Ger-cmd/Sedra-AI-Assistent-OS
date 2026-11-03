@@ -11,12 +11,15 @@ this PC (the GPU canary is then off, as on any other PC).
 """
 from __future__ import annotations
 
+import ntpath
+import os
 import re
 from pathlib import Path
 
 import yaml
 
 FILE = Path(__file__).resolve().parents[2] / "config" / "local_paths.yaml"
+RUNTIME = FILE.parents[1]  # the runtime folder; a relative folder in local_paths.yaml counts from here (USB stick: `..\modelle` = K:\SEDRA\modelle)
 TOKEN = re.compile(r"<([a-z][a-z0-9_-]{0,31})>")
 
 
@@ -28,7 +31,14 @@ def load(path=None):
     raw = (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("local_paths") or {}
     if not isinstance(raw, dict) or any(not isinstance(k, str) or not TOKEN.fullmatch(f"<{k}>") or not isinstance(v, str) or not v for k, v in raw.items()):
         raise ValueError("local_paths_invalid")
-    return dict(raw)
+    return {k: folder(v) for k, v in raw.items()}
+
+
+def folder(value):
+    """An absolute folder unchanged; a relative one (`..\\modelle`) counted from the runtime folder, so a folder beside the program moves with it."""
+    if ntpath.isabs(value):
+        return value
+    return os.path.normpath(os.path.join(RUNTIME, value))
 
 
 def expand(value, paths=None):

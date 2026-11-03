@@ -198,7 +198,10 @@
     zeigen(id){
       let a = this.ansichten.get(id);
       if(!a){ a = H.verlauf.ansicht(this, id); this.ansichten.set(id, a); }
-      this.el.flaeche.replaceChildren(/^(S-[0-9A-F]{8}|neu-\d+)$/.test(String(id)) ? H.vorschau.fuer(this, a).el : a.box);          // Stufe 6: Gespräch mit Vorschau in einem Reiter
+      const sitzung = /^(S-[0-9A-F]{8}|neu-\d+)$/.test(String(id));
+      this.el.flaeche.replaceChildren(sitzung ? H.vorschau.fuer(this, a).el : a.box);          // Stufe 6: Gespräch mit Vorschau in einem Reiter
+      // Layout (Captain 03.11.2026): die Vorschau läuft bis zur Taskleiste durch, die Eingabe steht nur unter dem Gespräch (in dessen Hälfte); sonst bleibt sie unter der Fläche
+      (sitzung ? a._teilung.gesp : this.el.haupt).append(this.el.eingabe);
       document.getElementById('sedra-root').classList.toggle('hs-leer', a.leer());
       H.eingabe.fuer(this, a);
       a.nachUnten();

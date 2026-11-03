@@ -29,17 +29,19 @@
   function stand(S){ return S._einst || (S._einst = {wahl: null, ansicht: null}); }
   function gemerkt(){ try{ return localStorage.getItem(KEY) || ''; }catch(_e){ return ''; } }
   function merken(punkt){ try{ localStorage.setItem(KEY, punkt); }catch(_e){} }
+  // typ: start (die Startseite), gruppe (die Liste der Punkte einer Gruppe) oder punkt (der Punkt selbst)
   function zerlegen(punkt){
     const [g, p] = String(punkt || '').split('/');
-    const gruppe = GRUPPEN.find(x=>x.id === g) || GRUPPEN[0];
-    const pid = gruppe.punkte[p] ? p : Object.keys(gruppe.punkte)[0];
-    return {gruppe, pid, punkt: gruppe.punkte[pid], id: gruppe.id + '/' + pid};
+    const gruppe = GRUPPEN.find(x=>x.id === g);
+    if(!gruppe) return {typ: 'start', gruppe: null, pid: null, punkt: null, id: 'start'};
+    if(!p || !gruppe.punkte[p]) return {typ: 'gruppe', gruppe, pid: null, punkt: null, id: gruppe.id};
+    return {typ: 'punkt', gruppe, pid: p, punkt: gruppe.punkte[p], id: gruppe.id + '/' + p};
   }
 
   // ---- öffnen: Seitenleiste, Start-Menü (System → Einstellungen), /einstellungen, Zelle Zustand (D-U6), Reiter-ID mit Punkt
   function oeffnen(S, punkt){
     const st = stand(S);
-    const wahl = zerlegen(punkt || st.wahl || gemerkt() || 'allgemein/darstellung').id;
+    const wahl = zerlegen(punkt || 'start').id;          // wie die Windows-Einstellungen: ohne Angabe die Startseite
     st.wahl = wahl; merken(wahl);
     H().reiter.aktivieren(S, ID);
     if(st.ansicht) st.ansicht.zeigen(wahl);
@@ -47,40 +49,67 @@
   }
   function istReiter(id){ return String(id).startsWith(ID); }
 
-  // ---- die Ansicht (S.zeigen → verlauf.ansicht → hier)
+  // ---- die Ansicht (S.zeigen → verlauf.ansicht → hier): Kopfzeile mit Suche, links die Gruppen, rechts die Seite – Startseite, Gruppe oder Punkt (Captain 03.11.2026, Windows-Stil)
   function ansicht(S, id){
     const st = stand(S);
+    const X = H().einstSeiten;
     const box = d().el('div', 'hs-verlauf hs-einst');
+    const kopfzeile = d().el('header', 'hs-einst-kopfzeile');
+    const zurueck = d().el('button', 'hs-einst-zurueck', '←'); zurueck.type = 'button'; zurueck.title = 'Zurück'; zurueck.setAttribute('aria-label', 'Zurück');
+    const suche = d().el('input', 'hs-einst-suche'); suche.type = 'search'; suche.placeholder = 'Einstellung suchen'; suche.setAttribute('aria-label', 'Einstellung suchen');
+    kopfzeile.append(zurueck, d().el('span', 'hs-einst-kopf-name', 'Einstellungen'), suche);
+    const rumpf = d().el('div', 'hs-einst-rumpf');
     const nav = d().el('nav', 'hs-einst-nav'); nav.setAttribute('aria-label', 'Einstellungen');
     const flaeche = d().el('section', 'hs-einst-flaeche');
-    box.append(nav, flaeche);
+    rumpf.append(nav, flaeche);
+    box.append(kopfzeile, rumpf);
     let offen = null;
+    const gehe = punkt=>{ suche.value = ''; a.zeigen(punkt); };
     const a = root.sedraHarness.reiter.stub(id, box, S, {
                abbauen(){ if(offen && offen.abbauen) offen.abbauen(); offen = null; st.ansicht = null; },
-               zeigen(punkt){
+               zeigen(punkt, suchtext){
                  const w = zerlegen(punkt); st.wahl = w.id; merken(w.id);
                  if(offen && offen.abbauen) offen.abbauen();
+                 offen = null;
                  flaeche.replaceChildren();
-                 const kopf = d().el('div', 'hs-einst-kopf'); kopf.append(d().el('small', 'hs-leise', w.gruppe.titel), d().el('b', null, w.punkt.titel));
-                 flaeche.append(kopf);
-                 offen = w.punkt.art === 'werkzeug' ? werkzeug(S, flaeche, w.punkt) : eigen(S, flaeche, w.punkt);
+                 const breit = !suchtext && w.typ === 'punkt' && w.punkt.art === 'werkzeug';
+                 const seite = d().el('div', 'hs-einst-seite' + (breit ? ' breit' : ''));
+                 flaeche.append(seite);
+                 if(suchtext) X.trefferSeite(seite, GRUPPEN, suchtext, gehe);
+                 else if(w.typ === 'start') X.startseite(S, seite, GRUPPEN, gehe);
+                 else if(w.typ === 'gruppe') X.gruppenseite(S, seite, w.gruppe, gehe);
+                 else{
+                   X.zuletztMerken(w.id);
+                   const kopf = d().el('div', 'hs-einst-kopf');
+                   const ober = d().el('button', 'hs-einst-ober', w.gruppe.titel); ober.type = 'button'; ober.onclick = ()=>gehe(w.gruppe.id);
+                   kopf.append(ober, d().el('span', 'hs-leise', '›'), d().el('b', 'hs-einst-titel', w.punkt.titel));
+                   seite.append(kopf);
+                   offen = w.punkt.art === 'werkzeug' ? werkzeug(S, seite, w.punkt) : eigen(S, seite, w.punkt);
+                 }
+                 zurueck.disabled = !suchtext && w.typ === 'start';
                  navZeichnen();
                }});
     const navZeichnen = ()=>{
-      nav.replaceChildren(...GRUPPEN.map(g=>{
-        const sec = d().el('section', 'hs-einst-gruppe'); sec.append(d().el('div', 'hs-ueber', g.titel));
-        Object.keys(g.punkte).forEach(pid=>{
-          const k = d().el('button', 'hs-einst-punkt' + (st.wahl === g.id + '/' + pid ? ' on' : ''), g.punkte[pid].titel); k.type = 'button';
-          k.dataset.punkt = g.id + '/' + pid; k.setAttribute('aria-current', st.wahl === g.id + '/' + pid ? 'page' : 'false');
-          k.onclick = ()=>a.zeigen(g.id + '/' + pid);
-          sec.append(k);
-        });
-        return sec;
+      const profil = d().el('div', 'hs-einst-profil');
+      const text = d().el('div', 'hs-einst-profil-text'); text.append(d().el('b', null, 'Captain'), d().el('small', 'hs-leise', 'SEDRA · Harness'));
+      profil.append(d().el('span', 'hs-einst-avatar', 'C'), text);
+      const jetzt = zerlegen(st.wahl);
+      const aktuell = jetzt.gruppe ? jetzt.gruppe.id : 'start';
+      const eintraege = [{id: 'start', titel: 'Startseite'}].concat(GRUPPEN.map(g=>({id: g.id, titel: g.titel})));
+      nav.replaceChildren(profil, ...eintraege.map(p=>{
+        const on = aktuell === p.id;
+        const k = d().el('button', 'hs-einst-punkt' + (on ? ' on' : '')); k.type = 'button';
+        k.append(d().el('span', 'hs-einst-symbol', X.SYMBOL[p.id] || '•'), d().el('span', null, p.titel));
+        k.dataset.gruppe = p.id; k.setAttribute('aria-current', on ? 'page' : 'false');
+        k.onclick = ()=>gehe(p.id);
+        return k;
       }));
     };
+    zurueck.onclick = ()=>{ if(suche.value){ suche.value = ''; a.zeigen(st.wahl); return; } const w = zerlegen(st.wahl); a.zeigen(w.typ === 'punkt' ? w.gruppe.id : 'start'); };
+    suche.oninput = ()=>{ const t = suche.value.trim(); a.zeigen(st.wahl, t || undefined); };
     st.ansicht = a;
     const start = id.length > ID.length ? id.slice(ID.length) : null;
-    a.zeigen(start || st.wahl || gemerkt() || 'allgemein/darstellung');
+    a.zeigen(start || st.wahl || gemerkt() || 'start');
     return a;
   }
 

@@ -14,7 +14,7 @@ const COMMANDS = [
   {id:'projects',   label:'Projekte zeigen',               hint:'Projektordner auf dem Desktop',                    words:['projekt','projekte','ordner','workspace']},
   {id:'bridge',     label:'Karten (Brücke)',               hint:'Alle Karten, Freigaben zuerst',                    words:['brücke','bruecke','karten','freigabe','freigaben','missionen']},
   {id:'agents',     label:'Besatzung',                     hint:'Organigramm, Rollen, Agenten',                     words:['besatzung','agent','agenten','crew','organigramm','rollen']},
-  {id:'meter',      label:'Guppy-Meter',                   hint:'Zeilen und Token: wer hat was geschrieben',        words:['meter','token','zeilen','budget','kosten','münzloch','muenzloch']},
+  {id:'meter',      label:'Sedra Token',                   hint:'Zeilen und Token: wer hat was geschrieben',        words:['meter','token','zeilen','budget','kosten','münzloch','muenzloch']},
   {id:'logbook',    label:'Logbuch',                       hint:'Missionen, Audit-Kette, Jobs',                     words:['logbuch','audit','verlauf','protokoll']},
   {id:'hardware',   label:'Hardware',                      hint:'GPU, Speicher, Profil',                            words:['hardware','gpu','grafikkarte','speicher','vram']},
   {id:'machine',    label:'Maschinenraum',                 hint:'Live-Status der Runtime',                          words:['maschinenraum','runtime','status','system']},

@@ -1,6 +1,6 @@
 tool:
   id: meter
-  name: "Guppy-Meter"
+  name: "Sedra Token"
   description: "Token, Zeilen und das Münzloch – was die Arbeit kostet."
   version: 1.0.0
   kind: object
