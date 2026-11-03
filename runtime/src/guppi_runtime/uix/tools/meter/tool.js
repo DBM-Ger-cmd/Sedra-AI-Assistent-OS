@@ -1,4 +1,4 @@
-// Werkzeug „Guppy-Meter“ – what the work costs: tokens per day, lines written, and the Münzloch as a picture of the running cost
+// Werkzeug „Sedra Token“ – what the work costs: tokens per day, lines written, and the Münzloch as a picture of the running cost
 // (COCKPIT_MODUL_v1 rule 5: Kosten gehören zu den Nachweisen). Reading only; the cost boundary itself comes with Build 9.
 
 (function(){
