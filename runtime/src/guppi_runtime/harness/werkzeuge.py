@@ -98,6 +98,11 @@ SCHEMAS = {
                               {'video': dict(S, description='YouTube-Adresse oder 11-stellige Video-ID'), 'sprachen': {'type': 'array', 'items': S, 'description': 'optional, z. B. ["de"]; ohne Angabe die Sprache des Videos'},
                                'uebersetzen_nach': dict(S, description='optional: Zielsprache, z. B. de; das geladene Modell übersetzt den ganzen Text (dauert etwa eine Minute je 25 Minuten Video) und die Übersetzung wird abgelegt'),
                                'ab': I, 'zeichen': I}, ['video']),
+    'vorlage_beantragen': _fn('vorlage_beantragen', 'Beantragt eine neue Vorlage (Rolle für Sitzungen: Werkzeuge und Anweisung). Es entsteht nur ein Antrag im Posteingang des Captains; die Vorlage gibt es erst nach seiner Freigabe. '
+                              'Sie hat nie Rechte oder Sitzungs-Erlaubnisse; die Werkzeuge des Vorarbeiters gibt es nicht. Entweder basis (id einer vorhandenen Vorlage, z. B. pruefer) oder werkzeuge und system.',
+                              {'name': dict(S, description='Name der Vorlage, daraus wird die id'), 'beschreibung': S, 'basis': dict(S, description='id einer vorhandenen Vorlage als Vorgabe'),
+                               'werkzeuge': {'type': 'array', 'items': S, 'description': 'Werkzeugnamen; ohne Angabe die der Basis'}, 'system': dict(S, description='Anweisung für das Modell; ohne Angabe die der Basis'),
+                               'modell': dict(S, description='optional: Rezept-ID des Modells')}, ['name']),
     'sitzungen_auflisten': _fn('sitzungen_auflisten', 'Zeigt, welche Sitzungen der Chat-Liste links zu einem Wunsch des Captains passen (nur lesen, nichts wird geändert). Mindestens ein Kriterium: '
                                'aelter_als_tage, titel_enthaelt, leer (höchstens 2 Nachrichten), doppelte (gleicher Titel, die neueste bleibt), alle, projekt. Laufende, die aktuelle und die Vorarbeiter-Sitzung werden nie gelistet. '
                                'Die IDs gehen an sitzungen_aufraeumen.',
@@ -116,7 +121,8 @@ SCHEMAS = {
 
 
 class Werkzeuge:
-    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None):
+    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None):
+        self.vorlage_antrag = vorlage_antrag     # vom Server gereicht: stellt den Antrag „Neue Vorlage“ (harness/antraege.py `vorlage_neu_antrag`)
         self.uebersetzer = uebersetzer           # vom Server gereicht: (text, ziel, quelle) -> {content, sha256} – übersetzt mit dem geladenen Modell und legt das Ergebnis ab
         self.web_transkript = web_transkript     # vom Server gereicht: (video, sprachen) -> Ergebnis des Web-Werkzeugs `youtube_transcript` (Hostliste, Guard, Ablage)
         self.sitzungen_liste = sitzungen_liste   # vom Server gereicht: (kriterien, aktuelle_sitzung) -> [{id, titel, zuletzt, nachrichten, projekt, geschuetzt}] (harness/api.py)
@@ -187,6 +193,12 @@ class Werkzeuge:
                     if not frage:
                         raise WerkzeugFehler('argument_fehlt: frage oder antwort')
                     ziel, was = 'suche/' + frage, 'Gedächtnis durchsuchen'
+            elif name == 'vorlage_beantragen':
+                if not callable(self.vorlage_antrag):
+                    raise WerkzeugFehler('vorlage_antrag_nicht_verfuegbar')
+                ziel, was = 'vorlage/' + self._text(args, 'name').strip()[:60], 'Neue Vorlage beantragen'
+                if ziel == 'vorlage/':
+                    raise WerkzeugFehler('argument_fehlt: name')
             elif name == 'youtube_transkript':
                 if not callable(self.web_transkript):
                     raise WerkzeugFehler('transkript_nicht_verfuegbar')
@@ -447,6 +459,14 @@ class Werkzeuge:
                 if r['uebersprungen']:
                     text += '; übersprungen: ' + ', '.join(f"{u['id']} ({u['grund']})" for u in r['uebersprungen'])
                 return {'status': 'ok', 'ergebnis': text, 'wirkung': True}
+            if name == 'vorlage_beantragen':
+                nutz = {k: args[k] for k in ('name', 'beschreibung', 'basis', 'werkzeuge', 'system', 'modell') if args.get(k)}
+                try:
+                    r = self.vorlage_antrag(nutz)
+                except ValueError as exc:
+                    return {'status': 'fehler', 'ergebnis': f'error: {exc}', 'wirkung': False}
+                return {'status': 'ok', 'wirkung': False, 'ergebnis': f"Antrag gestellt: neue Vorlage „{r.get('name')}“ ({r.get('vorlage')}) mit {len(r.get('werkzeuge') or [])} Werkzeugen. "
+                        'Er wartet im Posteingang auf den Captain; die Vorlage gibt es erst nach seiner Freigabe. Sag ihm das.'}
             if name == 'projekt_beantragen':
                 if not callable(self.projekt_antrag):
                     return {'status': 'fehler', 'ergebnis': 'error: Projekte beantragen geht in dieser Sitzung nicht', 'wirkung': False}

@@ -208,7 +208,7 @@ class Kiste:
                 return {'status': 'verboten', 'ergebnis': f"verboten: {e['begruendung']}", 'stufe': 'verboten', 'regel': e['regel'], 'wirkung': False}
             self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id}
             out = self.w.ausfuehren(name, args, plan=plan)
-            if name not in ('erinnern', 'sitzungen_auflisten', 'youtube_transkript'):                  # die Verknüpfung steht schon im Audit des Servers (mit `von`)
+            if name not in ('erinnern', 'sitzungen_auflisten', 'youtube_transkript', 'vorlage_beantragen'):                  # die Verknüpfung steht schon im Audit des Servers (mit `von`)
                 self._audit('HARNESS_APP_OEFFNEN' if name == 'app_oeffnen' else 'HARNESS_PROJEKT_BEANTRAGT', {'ziel': plan['ziel'][:300], 'status': out['status']})
             return dict(out, stufe='frei', regel=name.replace('_', '-'))
         e = einstufung(self.regeln, name, args, plan)

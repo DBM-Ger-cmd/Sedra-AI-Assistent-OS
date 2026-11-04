@@ -88,5 +88,34 @@ class Werkzeug(unittest.TestCase):
         self.assertIn('uebersetzen_nicht_verfuegbar', r['ergebnis'])
 
 
+class VorlageBeantragen(unittest.TestCase):
+    """`vorlage_beantragen` im Chat: wie projekt_beantragen nur ein Antrag, ohne Karte, nie eine Wirkung."""
+    def kiste(self, antrag):
+        t = tempfile.TemporaryDirectory(); self.addCleanup(t.cleanup)
+        root = Path(t.name) / 'p'; root.mkdir()
+        guard = Guard(ARCH / 'core' / 'guard' / 'guard_rules.yaml', None, Path(t.name) / 'tokens.json')
+        regeln = katalog.laden(Path('gibt-es-nicht'))['regeln']
+        w = Werkzeuge({'id': 'p', 'name': 'P', 'wurzel': str(root), 'schreibbereich': []}, guard=guard, mission_id='M-V', regeln=regeln, vorlage_antrag=antrag)
+        return Kiste(w, regeln=regeln, guard=guard, audit=None, karten=Karten(Path(t.name) / 'k'), sitzung_id='S-00000001')
+
+    def test_der_antrag_geht_mit_den_angaben_raus_und_das_ergebnis_sagt_posteingang(self):
+        gesehen = []
+
+        def antrag(nutz):
+            gesehen.append(nutz)
+            return {'name': 'Leser', 'vorlage': 'leser', 'werkzeuge': ['datei_lesen']}
+        r = self.kiste(antrag).aufruf('vorlage_beantragen', {'name': 'Leser', 'werkzeuge': ['datei_lesen'], 'system': 'Du liest.', 'rechte': {'x': 1}})
+        self.assertEqual(r['status'], 'ok')
+        self.assertIn('Posteingang', r['ergebnis'])
+        self.assertEqual(gesehen, [{'name': 'Leser', 'werkzeuge': ['datei_lesen'], 'system': 'Du liest.'}], 'Rechte aus dem Aufruf gehen nie weiter')
+        self.assertFalse(r['wirkung'])
+
+    def test_fehler_und_fehlender_name(self):
+        def kaputt(nutz): raise ValueError('id_vergeben: leser')
+        self.assertIn('id_vergeben', self.kiste(kaputt).aufruf('vorlage_beantragen', {'name': 'Leser'})['ergebnis'])
+        self.assertEqual(self.kiste(kaputt).aufruf('vorlage_beantragen', {})['status'], 'fehler')
+        self.assertIn('nicht_verfuegbar', self.kiste(None).aufruf('vorlage_beantragen', {'name': 'X'})['ergebnis'])
+
+
 if __name__ == '__main__':
     unittest.main()

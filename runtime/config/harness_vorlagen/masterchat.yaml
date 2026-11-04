@@ -9,7 +9,7 @@ harness_vorlage:
     JavaScript-Dateien auf Syntax prüfen. Es gilt nur für diese Sitzung und lässt sich unter Einstellungen → Agent → Freigabe-Modus jederzeit zurücknehmen.
     Der Kern (Guard, Missionen, Inhaltsschutz), der Freigabe-Code der Harness, die Vorlagen, local_config, Netz und Installieren, Löschen und Git-Push bleiben immer bei dir.
   system: masterchat.md
-  werkzeuge: [datei_lesen, dateien_auflisten, suchen, datei_schreiben, datei_aendern, befehl, lauf_starten, lauf_status, app_oeffnen, projekt_beantragen, erinnern, sitzungen_auflisten, sitzungen_aufraeumen, youtube_transkript,
+  werkzeuge: [datei_lesen, dateien_auflisten, suchen, datei_schreiben, datei_aendern, befehl, lauf_starten, lauf_status, app_oeffnen, projekt_beantragen, vorlage_beantragen, erinnern, sitzungen_auflisten, sitzungen_aufraeumen, youtube_transkript,
               get_model_status, list_models, get_routing_profile, get_switches, list_projects, list_missions, recent_audit, list_docs, read_doc, list_decisions, arbeitsplatz_stand]
   erlaubnisse:
     - {werkzeug: datei_schreiben, muster: 'runtime/src/**'}
