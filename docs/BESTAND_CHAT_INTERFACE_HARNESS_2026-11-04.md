@@ -48,3 +48,12 @@ Quellen: `workspace/GUPPI_OS/runtime_data/harness/sitzungen/` (`S-CF53AF6C`, `S-
 - Nicht geklärt: Welche Zahlen der Scheduler verglichen hat (`need_gb`, `best_free_gb`); ein `RESOURCE_DENIED`-Eintrag dazu steht nicht im Audit. Die Ursache im Rezept ist damit eine Vermutung, kein Beleg.
 
 **Folgerung** (`masterchat.md`, Abschnitt Auskunft): neue Zeile für Meldungen und Störungen (erst `recent_audit`, dann Modellstand, Routing; Rezepte in `role_routing.yaml`), „zwei Teile = zwei Aufrufe“, nur genannte Werkzeuge, die wirklich aufgerufen wurden, Lesen ohne „Ja“. Test: `test_der_auskunftsteil_hat_die_lehren_aus_dem_testgespraech_vom_04_11`. Ob das Modell der Anweisung folgt, zeigt erst ein neuer Lauf.
+
+## Code-Stand als Antrag im Posteingang (Captain 04.11.2026)
+
+Wunsch: Die Notiz „48 Code-Dateien sind in dieser Fassung noch nicht von dir gesehen“ soll im Posteingang landen und einmal bestätigt werden; der Code stammt aus anderen Claude-Sitzungen und ist im Projekt hinterlegt.
+- `POST /api/harness/code_stand/antrag {projekt}` (`harness/antraege.py`: `code_stand_antrag`, Art `harness_code_stand`, Klasse H, Freigabe-Tür/Windows-Fenster/`FREIGABE.bat`). Der Antrag bindet genau die ungesehenen Dateien in ihrer jetzigen Fassung; ändert sich danach eine, wird nichts übernommen (`binding_stale`). Derselbe Stand wird nicht zweimal beantragt.
+- Der Antrag nennt die Herkunft: wie viele Dateien die Harness selbst geschrieben hat (Spur), die letzten Commits an diesen Dateien (`git log`) und wie viele noch nicht committet sind (`git status`).
+- Die Notiz in der neuen Sitzung (`verlauf.js`, `codeHinweis`) legt den Antrag an und sagt, dass er im Posteingang wartet; ohne Antrag (Fehler, Code-Sicht aus) bleibt der alte Text mit Konsolenweg.
+- Übernommen wird nie ohne Bestätigung des Captains; die Konsole (`CODE_STAND.bat … --uebernehmen`) bleibt als zweiter Weg.
+- Tests: `test_harness_code_stand_antrag.py` (10, mit Gegenprobe: Stale-Prüfung entfernt → rot), `test_harness_masterchat_dialog.py` (+2). Gruppen `uix harness desk`: 1051 Tests, 0 rot.

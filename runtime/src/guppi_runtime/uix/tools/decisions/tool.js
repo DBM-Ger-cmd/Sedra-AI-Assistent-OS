@@ -8,7 +8,7 @@
 
   const WAY_LABEL = {einmal: 'Einmal freigeben', freigeben_und_anwenden: 'Freigeben und anwenden', aendern: 'Grenze ändern …', ablehnen: 'Ablehnen', cloud_diesen_lauf: 'Nur diesen Lauf in die Cloud', bestaetigen: 'Entsperren'};
 
-  const KIND_LABEL = {harness_projekt: 'Ordner als Projekt öffnen', harness_katalog: 'Freigabe-Regeln des Harness ändern', harness_vorlage: 'Grenzen einer Vorlage ändern', harness_aufgabe: 'Aufgabe für eine Sitzung freigeben'};
+  const KIND_LABEL = {harness_code_stand: 'Code-Stand übernehmen', harness_projekt: 'Ordner als Projekt öffnen', harness_katalog: 'Freigabe-Regeln des Harness ändern', harness_vorlage: 'Grenzen einer Vorlage ändern', harness_aufgabe: 'Aufgabe für eine Sitzung freigeben'};
 
   const tool = {
     id: 'decisions',
