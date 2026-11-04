@@ -19,4 +19,4 @@ Die Funktion `harness_export.markdown` soll so erweitert werden, dass sie nach d
 - Fehler beim Abrufen der Token-Daten könnten den Export unterbrechen (Abhilfe: Fehlerbehandlung oder Standardwerte).
 - Falsche Formatierung der Zeile.
 
-Status: Offen
+Status: umgesetzt (Commit 26b2fa1, Tests runtime/tests/test_harness_export_token.py), Abnahme durch den Captain offen

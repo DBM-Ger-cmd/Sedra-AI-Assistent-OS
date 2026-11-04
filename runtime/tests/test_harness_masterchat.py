@@ -1,9 +1,11 @@
 """MasterChat (03.11.2026): Vorlage mit weitreichenden Freigaben zur Anpassung und Einrichtung von SEDRA aus dem Chat. Die Freigaben gelten nur nach dem ausdrücklichen Ja des Captains
 beim Anlegen der Sitzung, nur für diese Sitzung, und die festen Vorbehalte gelten trotzdem."""
+import re
 import tempfile
 import unittest
 from pathlib import Path
 
+from guppi_runtime.chat_tools import SCHEMAS as CHAT_SCHEMAS
 from guppi_runtime.core.guard import Guard
 from guppi_runtime.harness import katalog
 from guppi_runtime.harness import vorlagen as harness_vorlagen
@@ -12,7 +14,7 @@ from guppi_runtime.harness.erlaubnis import aktive
 from guppi_runtime.harness.freigabe import Karten, Kiste
 from guppi_runtime.harness.sitzung import Sitzungen
 from guppi_runtime.harness.vorlagen import VorlageFehler, pruefen
-from guppi_runtime.harness.werkzeuge import Werkzeuge
+from guppi_runtime.harness.werkzeuge import NAMEN as HARNESS_NAMEN, Werkzeuge
 
 ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
 CONFIG = Path(__file__).resolve().parents[1] / 'config' / 'harness_vorlagen'
@@ -74,6 +76,31 @@ class VorlageTests(unittest.TestCase):
         yaml_text = (CONFIG / 'masterchat.yaml').read_text(encoding='utf-8')
         self.assertIn('py_compile', yaml_text)
         self.assertIn('node --check', yaml_text)
+
+    def test_der_systemtext_hat_einen_auskunftsteil_mit_lesenden_werkzeugen(self):
+        """Der MasterChat gibt auch Auskunft über Sitzungen, Projekte und die Arbeit der Harness (Captain 04.11.2026): erst das Werkzeug fragen, dann antworten."""
+        text = (CONFIG / 'masterchat.md').read_text(encoding='utf-8')
+        teil = text.split('## Auskunft und Lenkung', 1)[1].split('\n## ', 1)[0]
+        self.assertIn('frag das Werkzeug', teil)
+        self.assertIn('nenne die Quelle', teil)
+        for w in ('arbeitsplatz_stand', 'lauf_status', 'sitzungen_auflisten', 'list_projects', 'list_missions', 'erinnern', 'recent_audit', 'app_oeffnen'):
+            self.assertIn('`' + w + '`', teil, w)
+            self.assertIn(w, self.m['werkzeuge'])
+        self.assertLess(len(teil), 1400)                                                                                # jede Zeile kostet bei jeder Anfrage Token
+
+    def test_jedes_werkzeug_der_vorlage_gibt_es_wirklich(self):
+        """Die Ladeprüfung lässt auch „vorgesehene“ Namen durch, die noch nichts ausführen; hier zählt nur, was die Harness oder der Chat wirklich kennt."""
+        wirklich = set(HARNESS_NAMEN) | set(CHAT_SCHEMAS)
+        self.assertEqual([w for w in self.m['werkzeuge'] if w not in wirklich], [])
+        self.assertEqual(len(self.m['werkzeuge']), len(set(self.m['werkzeuge'])))
+
+    def test_jedes_im_systemtext_genannte_werkzeug_steht_in_der_whitelist(self):
+        """Nennt der Text ein Werkzeug (in Rückstrichen), das die Vorlage nicht hat, ruft das Modell etwas auf, das der Server abweist."""
+        text = (CONFIG / 'masterchat.md').read_text(encoding='utf-8')
+        genannt = {n for n in re.findall(r'`([a-z][a-z_]+)`', text) if n in set(HARNESS_NAMEN) | set(CHAT_SCHEMAS)}
+        self.assertIn('sitzungen_aufraeumen', genannt)
+        self.assertIn('datei_aendern', genannt)
+        self.assertEqual(sorted(genannt - set(self.m['werkzeuge'])), [])
 
     def test_zu_weite_oder_verbotene_erlaubnisse_lehnt_die_pruefung_ab(self):
         schlecht = [
