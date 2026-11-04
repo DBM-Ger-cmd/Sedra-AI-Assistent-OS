@@ -61,6 +61,7 @@ from . import befehl as befehl_mod
 from . import code_stand as harness_code_stand
 from . import freigabe
 from . import gedaechtnis as harness_gedaechtnis
+from . import uebersetzen as harness_uebersetzen
 from . import herkunft as harness_herkunft
 from . import hilfswerkzeuge
 from . import lauf as harness_lauf
@@ -898,7 +899,30 @@ class HarnessApi:
                          lauf_typen=self.lauf_typen, modelle=self._modell_op, andere_antworten=self._andere_antworten,
                          projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz), lese_grenze=lambda: self._option('lese_grenze'), sitzungen_liste=self.sitzungen_fuer_modell, sitzungen_weg=lambda ids: self.aufraeumen({'ids': ids}), verknuepfung=lambda ort, name: self.verknuepfung_anlegen(ort, name, von='modell'), gedanken=self.gedanken_lesen, gedaechtnis=self.gedaechtnis_suchen,
                          code_stand=self.code_stand(projekt),
+                         uebersetzer=lambda text, ziel, quelle: self.text_uebersetzen(mission_id, text, ziel, quelle),
                          web_transkript=lambda video, sprachen: self.hub.runtime.web_tool.execute(mission_id, 'youtube_transcript', {'video': video, 'languages': sprachen}))
+
+    def text_uebersetzen(self, mission_id, text, ziel, quelle):
+        """Für `youtube_transkript` mit uebersetzen_nach: das geladene Modell übersetzt Teil für Teil; das Ergebnis liegt wie jeder Webtext unter runtime_data/external/."""
+        belegt = self.laeufe.belegt()
+        if belegt:
+            raise ValueError(f"modell_belegt: Lauf {belegt['id']} ({belegt['name']}) hat das Modell")
+        loaded, grund = self.geladen()
+        if not loaded:
+            raise ValueError('kein_modell: erst ein Modell laden' + (f' ({grund})' if grund else ''))
+        modell = loaded[0].get('identifier') or loaded[0].get('modelKey')
+        mission = self.hub.runtime.missions.load(mission_id)
+
+        def fragen(nachrichten):
+            out = self.execute(mission, {'action': 'model_inference', 'provider': PROVIDER, 'model': modell, 'messages': nachrichten, 'temperature': 0.2,
+                                         'max_tokens': 3000, 'reasoning_effort': 'none', 'slot_owner': 'captain-chat'})
+            if out.get('status') != 'completed':
+                raise ValueError('modell_fehler: ' + str(out.get('error') or out.get('reason_code') or out.get('status'))[:200])
+            return (out.get('model_result') or {}).get('content')
+        uebersetzt = harness_uebersetzen.uebersetzen(text, ziel, fragen)
+        rec = self.hub.runtime.web_tool._store(mission_id, quelle or '', 'youtube_transcript_' + ziel, uebersetzt)
+        self._audit('HARNESS_UEBERSETZT', {'quelle': str(quelle)[:200], 'ziel': ziel, 'zeichen': len(uebersetzt), 'sha256': rec['sha256']})
+        return {'content': uebersetzt, 'sha256': rec['sha256']}
 
     def code_stand(self, projekt):
         """G4 (SPEC_APPS_v1): der gesehene Code-Stand eines Projekts – oder None, wenn der Schalter `code_sicht` aus ist (Standard: an)."""
