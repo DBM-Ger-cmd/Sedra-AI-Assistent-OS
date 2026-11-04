@@ -59,7 +59,7 @@ class LadenTests(unittest.TestCase):
         self.assertTrue(all(v['fehler'] is None for v in ids.values()), ids)
         self.assertTrue(ids['vorarbeiter']['rechte']['vorarbeiter_freigabe'])
         self.assertFalse(ids['bauagent']['rechte']['vorarbeiter_freigabe'])
-        self.assertEqual(ids['pruefer']['werkzeuge'], ['datei_lesen', 'dateien_auflisten', 'suchen', 'befehl'])
+        self.assertEqual(ids['pruefer']['werkzeuge'], ['datei_lesen', 'dateien_auflisten', 'suchen', 'befehl', 'youtube_transkript'])
         v = vorlagen.laden(self.root, 'vorarbeiter')
         self.assertIn('Vorarbeiter', v['system'])
         self.assertNotIn('Bionic', v['system'])
@@ -156,7 +156,7 @@ class SitzungMitVorlageTests(unittest.TestCase):
         erster = self.modell.requests[0]
         self.assertIn('Prüfer', erster['messages'][0]['content'])
         angeboten = {t['function']['name'] for t in erster['tools']}
-        self.assertEqual(angeboten, {'datei_lesen', 'dateien_auflisten', 'suchen', 'befehl'})
+        self.assertEqual(angeboten, {'datei_lesen', 'dateien_auflisten', 'suchen', 'befehl', 'youtube_transkript'})
         ende = next(e[2] for e in ev if e[1] == 'werkzeug.ende')
         self.assertEqual(ende['status'], 'fehler')
         self.assertIn('nicht erlaubt', ende['ergebnis'])
