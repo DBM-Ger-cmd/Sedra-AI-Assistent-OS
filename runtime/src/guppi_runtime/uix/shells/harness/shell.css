@@ -251,6 +251,13 @@ button.hs-schild[aria-expanded="true"]::after{content:" ▴"}
 .hs-app.laeuft .hs-app-icon{color:var(--accent)}
 .hs-app-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
 .hs-status{flex:0 1 auto;min-width:0;display:flex;gap:4px;overflow:hidden}
+.hs-rec{flex:0 0 auto;display:flex;align-items:center;gap:6px;height:28px;padding:0 12px;margin:0 6px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2);color:var(--text);cursor:pointer;font:inherit;font-size:var(--size-small)}
+.hs-rec:hover{background:var(--hs-hover)}.hs-rec:disabled{opacity:.6;cursor:default}
+.hs-rec small{color:inherit;opacity:.85}
+.hs-rec.rec{background:var(--bad-bg);border-color:var(--bad)}.hs-rec.rec .hs-rec-punkt{color:var(--bad);animation:hs-rec-puls 1.2s ease-in-out infinite}
+.hs-rec.pause{border-color:var(--warn);box-shadow:inset 0 -2px 0 var(--warn)}
+@keyframes hs-rec-puls{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.hs-rec.rec .hs-rec-punkt{animation:none}}
 .hs-zelle{flex:0 1 auto;min-width:0;display:flex;align-items:baseline;gap:4px;padding:2px 8px;border-radius:var(--radius);font-size:var(--size-xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hs-zelle small{color:var(--muted)}
 .hs-zelle b{overflow:hidden;text-overflow:ellipsis;max-width:160px}

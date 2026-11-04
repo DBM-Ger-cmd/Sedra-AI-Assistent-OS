@@ -12,7 +12,7 @@ Starten: `START_SEDRA harness` oder in der Start-Shell „Diese Oberfläche nehm
 | Arbeitsfläche | `.hs-flaeche` | `verlauf.js`, `markdown.js` | Gespräch: Strom lesen, Text grau bis geprüft, Denken eingeklappt, Werkzeugzeilen aufklappbar |
 | Eingabefeld | `.hs-eingabe` | `eingabe.js`, `anhang.js`, `modell.js`, `projekt.js` | Enter sendet, Umschalt+Enter Zeile, Stopp/Esc, `+`/`@` Datei anhängen (Stufe 6), Schild, Modell-Steuerung (Laden/Wechseln/Entladen, „passt es?“), Mikrofon (→ Einstellungen → Rekorder), `/` Befehle; Projektzeile mit „Ordner öffnen …“ und „Als Vorgabe merken“ |
 | Vorschau | `.hs-vorschau` | `vorschau.js`, `vorschau.css` | Stufe 6: neben dem Gespräch die Datei, an der gearbeitet wird (Diff, Lauf-Log); Seite wechseln, zuklappen, festhalten (Strg+Umschalt+X) |
-| Taskleiste | `.hs-taskleiste` | `taskleiste.js` | Start (Start-Menü), Läufe, Statusbereich aus `/api/strip` (HS-32), Uhr |
+| Taskleiste | `.hs-taskleiste` | `taskleiste.js` | Start (Start-Menü), Läufe, Aufnahme-Knopf (`schnell.js`), Statusbereich aus `/api/strip` (HS-32), Uhr |
 | Start-Menü | `.hs-start-menue` | `startmenue.js`, `startliste.js` (rein), `start_gruppen.json` | Apps mit Suche, Gruppen, zuletzt (`uix.shelf.harness`), Oberflächen, Darstellung · Schrift (Stufe 4) |
 | App-Reiter | `.hs-app-box` | `app.js` | ein Werkzeug des Vertrags als Reiter `app:<typ>:<id>`, Nachweise rechts, Arbeitsstand (Stufe 4) |
 | Einstellungen | `.hs-einst` | `einstellungen.js`, `einstellungen.css`, `katalog_editor.js`, `katalog_editor_pruefung.js` (rein), `erlaubnisse.js` | Reiter `einstellungen:[gruppe/punkt]`: sechs Gruppen, Werkzeuge eingehängt (`app.flaeche`), Katalog-Editor, Sitzungs-Erlaubnisse, Grenzen, Schalter – alles Schreiben als Antrag mit Gate (Stufe 5) |

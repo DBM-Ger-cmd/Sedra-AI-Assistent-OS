@@ -17,7 +17,7 @@ arbeitsplatz:
   - name: Vorschau
     wo: 'neben dem Gespräch: die Datei, an der SEDRA gerade arbeitet (Diff, Lauf-Log); Seite wechseln, zuklappen, festhalten (Strg+Umschalt+X)'
   - name: Taskleiste
-    wo: 'unten: Start (das Start-Menü), die Läufe (offene Sitzungen und Apps stehen oben in den Reitern), rechts der Statusbereich – Freigaben, Token (eingehend ↑ und erzeugt ↓ der Sitzung; Klick öffnet die App Sedra Token mit den Reitern Verbrauch, Kosten und Zeilen, Gespräch), Modell, GPU und RAM in einer Zelle (Temperatur, VRAM, RAM), Modellserver, Scheduler, Zustand – und die Uhr; ein Klick auf eine Zelle öffnet die App dazu'
+    wo: 'unten: Start (das Start-Menü), die Läufe (offene Sitzungen und Apps stehen oben in den Reitern), der Aufnahme-Knopf „🎙 Aufnehmen“ (Klick startet die Sprachaufnahme, dann rot mit Zeit und „Stopp“; Umschalt+Klick oder Rechtsklick öffnet den Rekorder), rechts der Statusbereich – Freigaben, Token (eingehend ↑ und erzeugt ↓ der Sitzung; Klick öffnet die App Sedra Token mit den Reitern Verbrauch, Kosten und Zeilen, Gespräch), Modell, GPU und RAM in einer Zelle (Temperatur, VRAM, RAM), Modellserver, Scheduler, Zustand – und die Uhr; ein Klick auf eine Zelle öffnet die App dazu'
   - name: Start-Menü
     wo: 'unten links der Knopf Start, Alt+S oder /start: oben die Suche, dann Zuletzt benutzt und die Gruppen Arbeit · Modelle · Wissen · System (· Prüfung); oben die Kacheln „Auf einen Blick“ und „Einstellungen“, unten die anderen Oberflächen und der Knopf „Darstellung und Schrift …“ (führt in die Einstellungen)'
   - name: App

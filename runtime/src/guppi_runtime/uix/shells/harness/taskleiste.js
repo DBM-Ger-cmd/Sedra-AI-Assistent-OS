@@ -36,7 +36,8 @@
     const mitte = d().el('div', 'hs-apps');
     const status = d().el('div', 'hs-status');
     const uhr = d().el('span', 'hs-uhr');
-    bar.append(start, mitte, status, uhr);
+    const sc = root.sedraHarness.schnell;
+    bar.append(start, mitte, ...(sc ? [sc.knopf(S)] : []), status, uhr);          // der Aufnahme-Knopf steht fest in der Taskleiste (Captain 04.11.2026)
     S._leiste = {mitte, status, uhr, zuletzt: 0, wartet: null};
     const ticken = ()=>{ uhr.textContent = new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'}); };
     ticken();
@@ -174,6 +175,7 @@
       return;
     }
     l.zuletzt = jetzt;
+    if(root.sedraHarness.schnell) root.sedraHarness.schnell.lesen(S);                      // Stand der Sprachaufnahme mit dem Status (läuft sie auch aus der App oder dem Mikrofon-Knopf?)
     S.api('/api/strip').then(roh=>{
       S.strip = roh;                                                                             // die Kacheln des Start-Menüs nehmen dasselbe Ergebnis (HS-52a): eine Abfrage für beide
       const sm = root.sedraHarness.startmenue; if(sm && sm.stripNeu) sm.stripNeu(S, roh);
