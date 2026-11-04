@@ -15,6 +15,9 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shutil
+import subprocess
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -27,6 +30,70 @@ from .base import BaseTool, ToolValidationError
 
 USER_AGENT = "GUPPI-external-read/0.1 (+local; read-only)"
 VIDEO_ID = re.compile(r"(?:v=|youtu\.be/|shorts/|embed/|live/)([A-Za-z0-9_-]{11})|^([A-Za-z0-9_-]{11})$")
+
+
+def _run_ytdlp(args, cwd):
+    """yt-dlp as a plain program (no shell): only reads from the network, writes only into `cwd`."""
+    done = subprocess.run(["yt-dlp", "--no-warnings", "--no-playlist", *args], cwd=cwd, capture_output=True, text=True, encoding="utf-8",
+                          errors="replace", timeout=120)
+    return done.returncode, done.stdout
+
+
+def _pick_language(info, languages):
+    """(code, manual) of the best subtitle track: requested languages first, else the video's own language (original auto captions)."""
+    manual, auto = info.get("subtitles") or {}, info.get("automatic_captions") or {}
+    own = (info.get("language") or "").split("-")[0]
+    for lang in (languages or [own] if (languages or own) else []):
+        if lang in manual:
+            return lang, True
+        for code in (lang + "-orig", lang):
+            if code in auto:
+                return code, False
+    for code in auto:
+        if code.endswith("-orig"):
+            return code, False
+    for code in manual:
+        return code, True
+    return None, False
+
+
+def parse_vtt(text):
+    """WebVTT -> [{start, text}]; tags and the rolling repeats of automatic captions are dropped."""
+    out, last, start, in_cue = [], "", 0.0, False
+    for raw in text.splitlines():
+        line = raw.strip()
+        m = re.match(r"(?:(\d+):)?(\d{2}):(\d{2})\.\d{3}\s+-->", line)
+        if m:
+            start, in_cue = int(m.group(1) or 0) * 3600 + int(m.group(2)) * 60 + int(m.group(3)), True
+            continue
+        if not line:
+            in_cue = False
+            continue
+        if not in_cue:
+            continue
+        line = re.sub(r"<[^>]+>", "", line).strip()
+        if line and line != last:
+            out.append({"start": float(start), "text": line})
+            last = line
+    return out
+
+
+def _ytdlp_segments(run, source, languages):
+    """Two reads, no media download: the video's info (which subtitle tracks exist), then the one chosen track as a .vtt text file."""
+    code, stdout = run(["--skip-download", "--dump-single-json", source], None)
+    if code != 0:
+        raise RuntimeError("yt_dlp_info_failed")
+    info = json.loads(stdout)
+    lang, manual = _pick_language(info, languages)
+    if lang is None:
+        raise RuntimeError("no_subtitles_for_video")
+    with tempfile.TemporaryDirectory() as tmp:
+        code, _ = run(["--skip-download", "--write-subs" if manual else "--write-auto-subs", "--sub-langs", lang, "--sub-format", "vtt",
+                       "-o", "t.%(ext)s", source], tmp)
+        files = sorted(Path(tmp).glob("*.vtt"))
+        if code != 0 or not files:
+            raise RuntimeError("yt_dlp_subtitles_failed")
+        return parse_vtt(files[0].read_text(encoding="utf-8", errors="replace")), lang
 
 
 class WebAccessConfig:
@@ -67,12 +134,13 @@ class WebTool(BaseTool):
     version = "0.1.0"
     supported_operations = {"get", "youtube_transcript"}
 
-    def __init__(self, root: Path, guard=None, audit=None, config=None, store_dir=None, opener=None, transcript_api=None):
+    def __init__(self, root: Path, guard=None, audit=None, config=None, store_dir=None, opener=None, transcript_api=None, ytdlp=None):
         super().__init__(root, guard, audit)
         self.config = config or WebAccessConfig({})
         self.store_dir = Path(store_dir) if store_dir else self.root / "external"
         self._opener = opener or urllib.request.build_opener(_CheckedRedirects(self.config))
         self._transcript_api = transcript_api            # injectable for tests; default: youtube_transcript_api if installed
+        self._ytdlp = ytdlp                              # injectable for tests: (args, cwd) -> (returncode, stdout); default: the yt-dlp program if on PATH
 
     def health(self):
         return bool(self.config.allowed_domains)
@@ -156,16 +224,26 @@ class WebTool(BaseTool):
         if api is None:
             try:
                 from youtube_transcript_api import YouTubeTranscriptApi
+                api = YouTubeTranscriptApi()
             except ImportError:
-                return {"status": "failed", "error": "youtube_transcript_api_not_installed"}
-            api = YouTubeTranscriptApi()
+                api = None
+        fetched = None
         try:
-            fetched = api.fetch(vid, languages=languages) if languages else api.fetch(vid)
-            segments = [{"text": s.text, "start": float(s.start)} for s in fetched]
+            if api is not None:
+                fetched = api.fetch(vid, languages=languages) if languages else api.fetch(vid)
+                segments = [{"text": s.text, "start": float(s.start)} for s in fetched]
+                language = getattr(fetched, "language_code", None)
+            else:
+                run = self._ytdlp or _run_ytdlp
+                if self._ytdlp is None and not shutil.which("yt-dlp"):
+                    return {"status": "failed", "error": "youtube_transcript_api_and_yt_dlp_not_installed"}
+                segments, language = _ytdlp_segments(run, source, languages)
         except Exception as exc:
             return {"status": "failed", "error": f"{type(exc).__name__}: {str(exc)[:300]}"}
+        if not segments:
+            return {"status": "failed", "error": "no_transcript_text"}
         lines = [f"[{int(s['start']) // 60:02d}:{int(s['start']) % 60:02d}] {s['text']}" for s in segments]
         text = "\n".join(lines)[: self.config.max_bytes]
         record = self._store(mission_id, source, "youtube_transcript", text)
         return {"status": "completed", "video_id": vid, "segments": len(segments), "content": text,
-                "language": getattr(fetched, "language_code", None), **record}
+                "language": language, **record}
