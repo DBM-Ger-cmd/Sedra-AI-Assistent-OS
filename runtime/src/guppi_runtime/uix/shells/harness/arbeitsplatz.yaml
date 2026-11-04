@@ -17,7 +17,7 @@ arbeitsplatz:
   - name: Vorschau
     wo: 'neben dem Gespräch: die Datei, an der SEDRA gerade arbeitet (Diff, Lauf-Log); Seite wechseln, zuklappen, festhalten (Strg+Umschalt+X)'
   - name: Taskleiste
-    wo: 'unten: Start (das Start-Menü), offene Sitzungen, Apps und Läufe, rechts der Statusbereich – Freigaben, Token (eingehend ↑ und erzeugt ↓ der Sitzung; Klick öffnet Token und Gespräch), Modell, GPU und RAM in einer Zelle (Temperatur, VRAM, RAM), Modellserver, Scheduler, Zustand – und die Uhr; ein Klick auf eine Zelle öffnet die App dazu'
+    wo: 'unten: Start (das Start-Menü), die Läufe (offene Sitzungen und Apps stehen oben in den Reitern), rechts der Statusbereich – Freigaben, Token (eingehend ↑ und erzeugt ↓ der Sitzung; Klick öffnet Token und Gespräch), Modell, GPU und RAM in einer Zelle (Temperatur, VRAM, RAM), Modellserver, Scheduler, Zustand – und die Uhr; ein Klick auf eine Zelle öffnet die App dazu'
   - name: Start-Menü
     wo: 'unten links der Knopf Start, Alt+S oder /start: oben die Suche, dann Zuletzt benutzt und die Gruppen Arbeit · Modelle · Wissen · System (· Prüfung); oben die Kacheln „Auf einen Blick“ und „Einstellungen“, unten die anderen Oberflächen und der Knopf „Darstellung und Schrift …“ (führt in die Einstellungen)'
   - name: App
@@ -42,6 +42,6 @@ arbeitsplatz:
     für diese sitzung erlauben: 'Knopf auf der Freigabe-Karte: der Aufruf läuft, und gleichartige Aufrufe (derselbe Ordner, derselbe Befehlsanfang) laufen bis zum Schließen der Sitzung ohne Karte. Nicht bei festen Vorbehalten, Warnkarten oder Modellen. Liste und Zurücknehmen: Einstellungen → Agent → Freigabe-Modus.'
     ordner öffnen: 'Unter der Projektzeile einer neuen Sitzung: einen Ordner als Projekt beantragen (Pfad, Name, Schreibbereich); nach der Freigabe im Posteingang steht er in der Projektwahl – ohne Neustart, ohne Konfig-Datei (Laufzeitdatei runtime_data/harness/projekte.yaml).'
     vorgabe: 'Als Vorgabe merken: dieses Projekt bzw. Rezept ist der Standard neuer Sitzungen.'
-    zeitlinie: 'In der Taskleiste zeigt der Knopf einer laufenden Sitzung, was sie tut: denkt, schreibt, Werkzeug …, wartet auf Freigabe, Stopp angefordert – mit Dauer.'
+    zeitlinie: 'In der Reiterleiste zeigt der Reiter einer laufenden Sitzung, was sie tut: denkt, schreibt, Werkzeug …, wartet auf Freigabe, Stopp angefordert – mit Dauer.'
     ungeprüft: 'Grauer Text in der Harness-Shell: der Inhaltsschutz hat ihn noch nicht geprüft.'
     ungesehener code: 'Code-Dateien eines Projekts (.py, .js, Skripte, Konfiguration), die seit der letzten Freigabe geändert wurden – von der Harness, einem Lauf oder von außen. Solange es sie gibt, zeigt jeder Lauf und Befehl der Harness sie zuerst auf einer Karte (mit Diff, wo die vorige Fassung vorliegt); keine Aufgabe und keine Sitzungs-Erlaubnis deckt das. Nach „Erlauben“ gilt die Fassung als gesehen. In der Konsole: guppi code-stand <projekt> --zeigen bzw. --uebernehmen (z. B. nach einem git pull). Schalter code_sicht in local_config/switches.yaml (Standard an).'

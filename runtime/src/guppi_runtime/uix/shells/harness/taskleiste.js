@@ -1,4 +1,4 @@
-// Harness-Shell – die Taskleiste (HS-30 bis HS-33): links „Start“ (öffnet das Start-Menü, Stufe 4), in der Mitte die offenen Sitzungen, Apps und die Läufe
+// Harness-Shell – die Taskleiste (HS-30 bis HS-33): links „Start“ (öffnet das Start-Menü, Stufe 4), in der Mitte die Läufe (die offenen Sitzungen und Apps stehen in der Reiterleiste, ihr Zustand im Reiter)
 // der Harness – laufende mit Fortschritt oder Zeit –, rechts der Statusbereich aus /api/strip (HS-32: Freigaben „n · beim Vorarbeiter m“, Modell, GPU mit
 // Temperatur, RAM, Modellserver, Scheduler, Zustand) und die Uhr. Zellen ohne Wert werden ausgeblendet, nicht leer gezeigt; ein Klick öffnet die App dazu (G2 §5).
 // Benachrichtigung (HS-33): Endet ein Lauf oder wartet eine Freigabe, blinkt der Knopf einmal und bleibt markiert, bis er angeklickt wird.
@@ -110,45 +110,35 @@
     return k;
   }
 
-  // die Mitte: jeder offene Reiter ein Knopf; laufende Antworten zeigen ihre Zeit (HS-31); dazu die Läufe
+  // die Mitte: die Läufe; der Zustand der Reiter (Antwort läuft mit Zeit HS-31, Freigabe wartet) wird in die Reiterleiste geschrieben
+  // Zustand eines Reiters für die Reiterleiste: läuft (mit Phase und Zeit), wartet auf Freigabe, blinkt bei Benachrichtigung
+  function zustand(S, id){
+    const a = S.ansichten.get(id), s = S.sitzung(id);
+    const wartet = (S.entscheidungen || []).some(x=>!gesehenMenge(S).has('frg:' + x.id) && (x.sitzung_id === id || (String(x.note || '').match(/Sitzung (S-[0-9A-F]{8})/) || [])[1] === id));     // A18
+    const laeuft = !!((a && a.laeuft()) || (s && s.laeuft));
+    let text = '';
+    if(laeuft && a && a.block){                                       // V3 (1.11.): Zeitlinie – was die Antwort gerade tut und seit wann
+      const ph = a._phase;
+      text = (ph ? ph.text + ' · ' + dauer(performance.now() - ph.seit) + ' · ' : '') + dauer(performance.now() - (a._seit || (a._seit = performance.now())));
+    }
+    else if(a) a._seit = null;
+    if(wartet) text = 'wartet auf Freigabe';
+    return {laeuft, neu: wartet, blinkt: !!pruefe(S, 'sitzung:' + id), text};
+  }
+  function sitzungGesehen(S, id){
+    (S.entscheidungen || []).filter(x=>x.sitzung_id === id || String(x.note || '').includes(id)).forEach(x=>gesehenMenge(S).add('frg:' + x.id));
+    gesehenSpeichern(S);
+  }
+
   function zeichnen(S){
     const l = S._leiste; if(!l) return;
     const reiter = root.sedraHarness.reiter;
     const aktiv = reiter.aktiv(S);
-    const wartet = new Set((S.entscheidungen || []).filter(x=>!gesehenMenge(S).has('frg:' + x.id)).map(x=>x.sitzung_id || (String(x.note || '').match(/Sitzung (S-[0-9A-F]{8})/) || [])[1]).filter(Boolean));     // A18
     const offeneLaeufe = new Set(reiter.liste(S).filter(id=>String(id).startsWith('lauf:')));
-    const knoepfe = reiter.liste(S).filter(id=>!String(id).startsWith('lauf:')).map(id=>{
-      const a = S.ansichten.get(id);
-      const s = S.sitzung(id);
-      const laeuft = (a && a.laeuft()) || (s && s.laeuft);
-      const neu = wartet.has(id);
-      const knopf = d().el('button', 'hs-app' + (id === aktiv ? ' on' : '') + (laeuft ? ' laeuft' : '') + (neu ? ' neu' : '') + (pruefe(S, 'sitzung:' + id) ? ' blinkt' : ''));
-      knopf.type = 'button';
-      knopf.dataset.reiter = id;
-      const app = String(id).startsWith('app:') ? (S._apps && S._apps.get(id)) || {} : null;
-      const name = reiter.name(S, id);                              // A4 (1.11.): eine Titel-Logik für alle Reiterarten (reiter.titel)
-      const art = String(id).split(':')[0];
-      const vorarbeiter = S.vorarbeiter && Object.values(S.vorarbeiter).some(v=>v.sitzung_id === id);
-      if(app) knopf.classList.add('app');
-      const symbol = app ? (app.symbol || '▤') : laeuft ? '●' : art === 'aufgaben' ? '⛨' : art === 'einstellungen' ? '⚙' : art === 'diff' ? '±' : vorarbeiter ? '⚑' : '💬';
-      knopf.append(d().el('span', 'hs-app-icon', symbol), d().el('span', 'hs-app-name', name));
-      if(laeuft && a && a.block){                                       // V3 (1.11.): Zeitlinie – was die Antwort gerade tut und seit wann
-        const ph = a._phase;
-        knopf.append(d().el('small', 'hs-leise', (ph ? ph.text + ' · ' + dauer(performance.now() - ph.seit) + ' · ' : '') + dauer(performance.now() - (a._seit || (a._seit = performance.now())))));
-      }
-      else if(a) a._seit = null;
-      if(neu) knopf.append(d().el('small', 'hs-leise', 'wartet auf Freigabe'));
-      knopf.title = name + (laeuft ? ' – Antwort läuft' : '') + (neu ? ' – eine Freigabe wartet' : '');
-      knopf.onclick = ()=>{
-        (S.entscheidungen || []).filter(x=>x.sitzung_id === id || String(x.note || '').includes(id)).forEach(x=>gesehenMenge(S).add('frg:' + x.id));
-        gesehenSpeichern(S);
-        reiter.aktivieren(S, id);
-      };
-      return knopf;
-    });
+    reiter.zustandAuffrischen(S);                                   // A1 (Captain 03.11.2026): die offenen Sitzungen und Apps stehen nur noch in der Reiterleiste; ihr Zustand sitzt im Reiter
     const laeufe = (S.laeufe || []).filter(x=>x.status === 'laeuft' || offeneLaeufe.has('lauf:' + x.id) || !gesehenMenge(S).has('lauf:' + x.id))
                                    .map(x=>laufKnopf(S, x, aktiv));
-    l.mitte.replaceChildren(...knoepfe, ...laeufe);
+    l.mitte.replaceChildren(...laeufe);
     if(l.uhrSchnell) return;
     if(reiter.liste(S).some(id=>{ const a = S.ansichten.get(id); return a && a.laeuft(); })){
       l.uhrSchnell = setTimeout(()=>{ l.uhrSchnell = null; zeichnen(S); }, 1000);
@@ -245,5 +235,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.taskleiste = {mount, zeichnen, status, gesehen, blinken, alsGesehenStarten, laufName, KEY: GESEHEN_KEY};
+  root.sedraHarness.taskleiste = {mount, zeichnen, zustand, sitzungGesehen, status, gesehen, blinken, alsGesehenStarten, laufName, KEY: GESEHEN_KEY};
 })();

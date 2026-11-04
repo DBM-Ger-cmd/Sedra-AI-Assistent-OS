@@ -12,7 +12,7 @@ Starten: `START_SEDRA harness` oder in der Start-Shell „Diese Oberfläche nehm
 | Arbeitsfläche | `.hs-flaeche` | `verlauf.js`, `markdown.js` | Gespräch: Strom lesen, Text grau bis geprüft, Denken eingeklappt, Werkzeugzeilen aufklappbar |
 | Eingabefeld | `.hs-eingabe` | `eingabe.js`, `anhang.js`, `modell.js`, `projekt.js` | Enter sendet, Umschalt+Enter Zeile, Stopp/Esc, `+`/`@` Datei anhängen (Stufe 6), Schild, Modell-Steuerung (Laden/Wechseln/Entladen, „passt es?“), Mikrofon (→ Einstellungen → Rekorder), `/` Befehle; Projektzeile mit „Ordner öffnen …“ und „Als Vorgabe merken“ |
 | Vorschau | `.hs-vorschau` | `vorschau.js`, `vorschau.css` | Stufe 6: neben dem Gespräch die Datei, an der gearbeitet wird (Diff, Lauf-Log); Seite wechseln, zuklappen, festhalten (Strg+Umschalt+X) |
-| Taskleiste | `.hs-taskleiste` | `taskleiste.js` | Start (Start-Menü), offene Sitzungen, Apps und Läufe, Statusbereich aus `/api/strip` (HS-32), Uhr |
+| Taskleiste | `.hs-taskleiste` | `taskleiste.js` | Start (Start-Menü), Läufe, Statusbereich aus `/api/strip` (HS-32), Uhr |
 | Start-Menü | `.hs-start-menue` | `startmenue.js`, `startliste.js` (rein), `start_gruppen.json` | Apps mit Suche, Gruppen, zuletzt (`uix.shelf.harness`), Oberflächen, Darstellung · Schrift (Stufe 4) |
 | App-Reiter | `.hs-app-box` | `app.js` | ein Werkzeug des Vertrags als Reiter `app:<typ>:<id>`, Nachweise rechts, Arbeitsstand (Stufe 4) |
 | Einstellungen | `.hs-einst` | `einstellungen.js`, `einstellungen.css`, `katalog_editor.js`, `katalog_editor_pruefung.js` (rein), `erlaubnisse.js` | Reiter `einstellungen:[gruppe/punkt]`: sechs Gruppen, Werkzeuge eingehängt (`app.flaeche`), Katalog-Editor, Sitzungs-Erlaubnisse, Grenzen, Schalter – alles Schreiben als Antrag mit Gate (Stufe 5) |
@@ -93,6 +93,6 @@ Verlauf mit Werkzeugergebnissen und „Karte → Katalog“ sind eigene kleine S
 - **Ordner öffnen / Vorgaben** (P0 M3, `projekt.js`): Antrag `harness_projekt` → Laufzeitdatei `runtime_data/harness/projekte.yaml` (nie `local_config/`),
   kein Neustart; „Als Vorgabe merken“ für Projekt und Rezept (`POST vorgaben`).
 - **„Passt das Modell?“** (V1, `GET modelle`): je Rezept Bedarf gegen freien Speicher mit Grund, passende zuerst. **Erststart-Schritte** (V2) in der leeren
-  Sitzung; **Zeitlinie** (V3) in der Taskleiste („denkt · 12 s“, „Werkzeug befehl“, „wartet auf Freigabe“, „Stopp angefordert“); Fehlerzeile mit „Logbuch öffnen“ (V9).
+  Sitzung; **Zeitlinie** (V3) im Reiter („denkt · 12 s“, „Werkzeug befehl“, „wartet auf Freigabe“, „Stopp angefordert“); Fehlerzeile mit „Logbuch öffnen“ (V9).
 - Befunde A1–A30 der Analyse (Antwort nie hängend, Herkunft S7 auf allen Schreibwegen, Mikrofon, Seitenleiste, Status-Takt, Sitzungsliste mit Zwischenspeicher …):
   `docs/BAUBERICHT_HARNESS_BAU_2026-11-01.md`; Tests `tests/test_harness_bau_2026_11_01.py`.

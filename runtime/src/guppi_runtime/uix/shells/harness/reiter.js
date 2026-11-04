@@ -44,7 +44,8 @@
       name.title = titel(S, id);
       const zu = d().el('button', 'hs-tab-zu', '×'); zu.type = 'button'; zu.setAttribute('aria-label', 'Reiter schließen'); zu.tabIndex = -1;
       zu.onclick = e=>{ e.stopPropagation(); schliessen(S, id); };
-      tab.append(name, zu);
+      const z = d().el('small', 'hs-tab-zustand'); z.hidden = true;                                  // A1: was der Reiter gerade tut (Phase, Zeit, Freigabe)
+      tab.append(name, z, zu);
       tab.onclick = ()=>aktivieren(S, id);
       tab.onkeydown = e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); aktivieren(S, id); } };
       tab.onauxclick = e=>{ if(e.button === 1){ e.preventDefault(); schliessen(S, id); } };
@@ -55,12 +56,27 @@
     plus.title = 'Neue Sitzung'; plus.setAttribute('aria-label', 'Neue Sitzung');
     plus.onclick = ()=>neu(S);
     leiste.replaceChildren(...kids, plus);
+    zustandAuffrischen(S);
     const on = leiste.querySelector('.hs-tab.on');
     if(on && on.scrollIntoView) on.scrollIntoView({block: 'nearest', inline: 'nearest'});
   }
 
+  // Zustand in die Reiter schreiben, ohne die Leiste neu zu bauen (die Taskleiste ruft das im Sekundentakt, solange etwas läuft)
+  function zustandAuffrischen(S){
+    const T = root.sedraHarness.taskleiste;
+    if(!T || !T.zustand || !S.el || !S.el.reiter) return;
+    S.el.reiter.querySelectorAll('.hs-tab').forEach(tab=>{
+      const id = tab.dataset.reiter, z = T.zustand(S, id);
+      tab.classList.toggle('laeuft', z.laeuft); tab.classList.toggle('neu', z.neu); tab.classList.toggle('blinkt', z.blinkt);
+      const k = tab.querySelector('.hs-tab-zustand');
+      if(k){ k.textContent = z.text; k.hidden = !z.text; }
+      tab.title = titel(S, id) + (z.laeuft ? ' – Antwort läuft' : '') + (z.neu ? ' – eine Freigabe wartet' : '');
+    });
+  }
+
   function aktivieren(S, id){
     const r = stand(S);
+    if(root.sedraHarness.taskleiste && root.sedraHarness.taskleiste.sitzungGesehen) root.sedraHarness.taskleiste.sitzungGesehen(S, id);
     if(r.liste.indexOf(id) < 0) r.liste.push(id);
     r.aktiv = id;
     speichern(S);
@@ -126,6 +142,6 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.reiter = {mount: S=>zeichnen(S), zeichnen, titel: S=>zeichnen(S), name: titel, aktivieren, oeffnen, neu, schliessen, umbenennen,
+  root.sedraHarness.reiter = {mount: S=>zeichnen(S), zeichnen, zustandAuffrischen, titel: S=>zeichnen(S), name: titel, aktivieren, oeffnen, neu, schliessen, umbenennen,
                               wiederherstellen, aktiv: S=>stand(S).aktiv, liste: S=>stand(S).liste.slice(), KEY, ID, stub};
 })();

@@ -87,6 +87,10 @@
 .hs-tab:hover{background:var(--hs-hover);color:var(--text)}
 .hs-tab.on{background:var(--bg);border-color:var(--line);color:var(--text);margin-bottom:-1px;height:calc(var(--hs-reiter-h) - 5px)}
 .hs-tab.laeuft .hs-tab-name::before{content:"● ";color:var(--accent)}
+.hs-tab-zustand{flex:0 1 auto;min-width:0;max-width:16em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:var(--size-small)}
+.hs-tab.neu{box-shadow:inset 0 -2px 0 var(--warn);background:var(--warn-bg)}
+.hs-tab.neu .hs-tab-zustand{color:var(--warn)}
+.hs-tab.blinkt{animation:hs-einmal 1.4s ease-out 1}
 .hs-tab-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hs-tab-zu{flex:0 0 auto;border:0;background:transparent;color:var(--muted);cursor:pointer;border-radius:var(--radius);padding:1px 5px}
 .hs-tab-zu:hover{background:var(--panel-2);color:var(--text)}
