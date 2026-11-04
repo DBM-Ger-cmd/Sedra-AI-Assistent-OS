@@ -3194,16 +3194,21 @@ class UIXHub:
         """Die letzten Ereignisse mit kurzem Auszug des Inhalts (Grund, Rezept, Zahlen). `such`: nur Ereignisse, deren Typ oder Inhalt den Text enthält (z. B. FAILED, qwen) –
         ohne Filter versinkt eine Meldung von vor einer Stunde unter hunderten Modellaufrufen, ohne Inhalt bleibt ihr Grund unsichtbar (Testgespräch 04.11.2026)."""
         lines = Path(self.runtime.audit.path).read_text(encoding='utf-8', errors='replace').splitlines()
-        such = str(such).strip().lower() if such else ''
+        # Wörter des Filters: jedes muss vorkommen, ohne Gross/Klein und ohne Trennzeichen („qwen 3.5 9b mtp“ findet qwen3.5-9b-mtp)
+        worte = [w for w in (re.sub(r'[^a-z0-9]', '', x) for x in str(such or '').lower().split()) if w]
         out = []
-        for line in reversed(lines[-20000:] if such else lines[-limit:]):
+        for line in reversed(lines[-20000:] if worte else lines[-limit:]):
             try: e = json.loads(line)
             except ValueError: continue
             inhalt = json.dumps(e.get('payload') or {}, ensure_ascii=False)
-            if such and such not in str(e.get('event_type') or '').lower() and such not in inhalt.lower(): continue
+            if worte:
+                heu = re.sub(r'[^a-z0-9]', '', (str(e.get('event_type') or '') + inhalt).lower())
+                if not all(w in heu for w in worte): continue
             out.append({'time': e.get('timestamp'), 'event': e.get('event_type'), 'component': (e.get('source') or {}).get('component'),
                         'inhalt': inhalt if len(inhalt) <= 240 else inhalt[:239] + '…'})
             if len(out) >= limit: break
+        if worte and not out:
+            return [{'hinweis': f'Kein Ereignis passt zu „{such}“ (alle Wörter müssen vorkommen). Kürzer filtern, z. B. FAILED, DENIED oder ein Modellname, oder ohne Filter die letzten ansehen.'}]
         return list(reversed(out))
 
     def chat_docs(self):
