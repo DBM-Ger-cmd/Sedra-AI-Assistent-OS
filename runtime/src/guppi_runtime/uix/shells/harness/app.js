@@ -41,9 +41,13 @@
   function liste(S){ return root.sedraHarness.reiter.liste(S).filter(id=>String(id).startsWith('app:')); }
 
   // ---- öffnen: ort = {label?, gruppe?, symbol?, object: {type, id, title?, view?, collection?}}
+  // A6 (Captain 03.11.2026): in der Harness-Shell heißt die Liste der wartenden Freigaben „Posteingang“, egal von wo sie geöffnet wird (Werkzeuge nennen sie noch „Entscheidungen“)
+  const NAME = {'decision:alle': 'Posteingang'};
   function oeffnen(S, ort){
     const objekt = Object.assign({}, ort.object || ort);
     if(!objekt.type || !objekt.id) return null;
+    const name = NAME[objekt.type + ':' + objekt.id];
+    if(name){ objekt.title = name; ort = Object.assign({}, ort, {label: name}); }
     if(!objekt.title) objekt.title = ort.label || objekt.type;
     const id = reiterId(objekt);
     const R = root.sedraHarness.reiter;

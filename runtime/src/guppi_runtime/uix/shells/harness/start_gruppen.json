@@ -60,5 +60,6 @@
     "token": "◎"
   },
   "ausblenden": ["hardware"],
+  "umbenennen": {"decisions": {"label": "Posteingang", "hint": "alles, was auf dich wartet: Freigaben, Anträge, Vorschläge", "words": ["posteingang", "antrag", "anträge", "antraege"]}},
   "zuletzt_max": 6
 }

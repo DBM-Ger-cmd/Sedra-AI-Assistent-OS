@@ -228,14 +228,14 @@
     if(neu.length) zelle.classList.add('neu');
     if(pruefe(S, 'freigaben')) zelle.classList.add('blinkt');
     zelle.tabIndex = 0; zelle.setAttribute('role', 'button');
-    zelle.title = 'Freigaben: ' + (g.hint || '') + (beim ? ' – ' + beim + ' beim Vorarbeiter' : '') + ' – Klick öffnet, was wartet';
+    zelle.title = 'Freigaben: ' + (g.hint || '') + (beim ? ' – ' + beim + ' beim Vorarbeiter' : '') + ' – Klick öffnet den Posteingang bzw. die Stelle, an der es wartet';
     const oeffnen = ()=>{
       alle.forEach(x=>gesehenMenge(S).add('frg:' + x.id)); gesehenSpeichern(S);
       const aufgabe = alle.find(x=>x.kind === 'harness_aufgabe');
       const sitzung = alle.map(x=>x.sitzung_id || (String(x.note || '').match(/Sitzung (S-[0-9A-F]{8})/) || [])[1]).find(Boolean);     // A18
       if(aufgabe) root.sedraHarness.reiter.oeffnen(S, 'aufgaben:');
       else if(sitzung) root.sedraHarness.reiter.oeffnen(S, sitzung);
-      else if(alle.length) root.sedraHarness.app.oeffnen(S, {object: {type: 'decision', id: 'alle', title: 'Entscheidungen', collection: true}, label: 'Entscheidungen'});   // Stufe 4: der Posteingang als App
+      else if(alle.length) root.sedraHarness.app.oeffnen(S, {object: {type: 'decision', id: 'alle', title: 'Posteingang', collection: true}, label: 'Posteingang'});   // Stufe 4: der Posteingang als App
       else S.hinweis('Nichts wartet.');
       zeichnen(S); status(S);
     };

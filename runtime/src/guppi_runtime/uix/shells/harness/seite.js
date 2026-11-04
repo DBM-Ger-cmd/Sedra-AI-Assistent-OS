@@ -233,6 +233,9 @@
     post.onclick = ()=>{ S._postOffen = !S._postOffen; zeichnen(S); };
     const postBox = d().el('div', 'hs-post');
     if(S._postOffen){
+      const alle = d().el('button', 'hs-knopf hs-klein', 'Alles im Posteingang ansehen'); alle.type = 'button'; alle.onclick = ()=>S.shellApi.decide();
+      alle.title = 'Öffnet den Posteingang als App: Freigaben der Sitzungen, Anträge und Vorschläge in einer Liste';
+      postBox.append(alle);
       if(!antraege.length) postBox.append(d().el('small', 'hs-leise', (S.entscheidungen || []).length ? 'Nur Freigaben der Sitzungen – sie stehen im Gespräch auf ihrer Karte.' : 'Nichts offen.'));
       antraege.forEach(x=>{
         const karte = d().el('div', 'hs-post-antrag');
@@ -263,14 +266,14 @@
           const n = d().el('button', 'hs-knopf hs-klein', 'Ablehnen'); n.type = 'button'; n.onclick = ()=>entscheide('ablehnen'); reihe.append(n);
         }
         const mehr = d().el('button', 'hs-knopf hs-klein', 'Genau ansehen'); mehr.type = 'button';
-        mehr.title = 'Öffnet die Entscheidungen mit allen Angaben zu diesem Antrag';
+        mehr.title = 'Öffnet den Posteingang mit allen Angaben zu diesem Antrag';
         mehr.onclick = ()=>S.shellApi.decide();
         reihe.append(mehr);
         karte.append(reihe); postBox.append(karte);
       });
     }
     const aufgaben = d().el('button', 's-btn hs-einstellungen', '⛨ Aufgaben'); aufgaben.type = 'button';
-    aufgaben.title = 'Aufgaben-Freigaben und Vorschläge des Vorarbeiters'; aufgaben.onclick = ()=>root.sedraHarness.reiter.oeffnen(S, 'aufgaben:');
+    aufgaben.title = 'Was läuft: Aufgaben, Läufe, Vorschläge des Vorarbeiters (was auf dich wartet, steht im Posteingang)'; aufgaben.onclick = ()=>root.sedraHarness.reiter.oeffnen(S, 'aufgaben:');
     const einst = d().el('button', 's-btn hs-einstellungen', 'Einstellungen');
     einst.type = 'button';
     einst.title = 'Einstellungen (HS-42): Allgemein, Agent, Sprache, Integrationen, Lokale Modelle, System'; einst.dataset.marke = 'hs-einstellungen';

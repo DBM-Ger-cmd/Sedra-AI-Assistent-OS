@@ -59,7 +59,7 @@
                        // Härtung 30.10. (HU-S16): decide(id, way) beantwortet die Entscheidung (Vertrag §4) – vorher öffnete es nur den Posteingang und ließ die Antwort fallen;
                        // ohne Kennung öffnet es weiter den Posteingang als App (Stufe 4)
                        decide: (id, way)=>id && way ? root.sedraStand.entscheiden(this.api, ctx.bus, id, way).then(out=>{ this.freigabenLaden(); return out; })
-                                                    : H.app.oeffnen(this, {object: {type: 'decision', id: 'alle', title: 'Entscheidungen', collection: true}, label: 'Entscheidungen'}),
+                                                    : H.app.oeffnen(this, {object: {type: 'decision', id: 'alle', title: 'Posteingang', collection: true}, label: 'Posteingang'}),
                        theme: name=>root.sedraBoot.setTheme(name), reload: ()=>location.reload()};
 
       H.seite.mount(this);

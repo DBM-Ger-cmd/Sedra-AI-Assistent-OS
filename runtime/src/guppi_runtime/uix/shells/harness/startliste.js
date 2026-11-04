@@ -22,9 +22,10 @@
     Object.keys(z).forEach(k=>{ if(GRUPPEN.indexOf(z[k]) < 0) throw new Error('start_gruppen: unbekannte Gruppe „' + z[k] + '“ für „' + k + '“'); });
     const gruppen = Array.isArray(roh.gruppen) && roh.gruppen.length ? roh.gruppen : GRUPPEN;
     gruppen.forEach(g=>{ if(GRUPPEN.indexOf(g) < 0) throw new Error('start_gruppen: unbekannte Gruppe „' + g + '“'); });
+    const umbenennen = roh.umbenennen && typeof roh.umbenennen === 'object' && !Array.isArray(roh.umbenennen) ? roh.umbenennen : {};
     const ausblenden = Array.isArray(roh.ausblenden) ? roh.ausblenden.filter(x=>typeof x === 'string') : [];
     const max = Number.isInteger(roh.zuletzt_max) && roh.zuletzt_max >= 0 ? roh.zuletzt_max : 6;
-    return {gruppen, zuordnung: z, symbole: Object.assign({}, SYMBOLE, roh.symbole && typeof roh.symbole === 'object' ? roh.symbole : {}), zuletzt_max: max, ausblenden};
+    return {gruppen, zuordnung: z, symbole: Object.assign({}, SYMBOLE, roh.symbole && typeof roh.symbole === 'object' ? roh.symbole : {}), zuletzt_max: max, ausblenden, umbenennen};
   }
 
   function gruppeVon(ort, werkzeuge, zuordnung){
@@ -64,6 +65,11 @@
     });
     // Orte, die ein anderer Ort schon trägt (Hardware: dasselbe Werkzeug wie der Maschinenraum), stehen nicht noch einmal im Menü; Befehl und Kachel bleiben
     for(let i = apps.length - 1; i >= 0; i--) if(k.ausblenden.indexOf(apps[i].id) >= 0) apps.splice(i, 1);
+    apps.forEach(a=>{                                                    // Namen der Harness-Shell (A6): „Entscheidungen“ heißt hier Posteingang, die alten Wörter bleiben für die Suche
+      const u = k.umbenennen[a.id]; if(!u) return;
+      if(u.label) a.label = u.label; if(u.hint) a.hint = u.hint;
+      a.words = (u.words || []).concat(a.words);
+    });
     apps.forEach(a=>{ a.symbol = k.symbole[a.gruppe] || SYMBOLE.arbeit; });
     const gruppen = k.gruppen.map(g=>({id: g, titel: TITEL[g], symbol: k.symbole[g], apps: apps.filter(a=>a.gruppe === g)})).filter(g=>g.apps.length);
     const jeId = {};
