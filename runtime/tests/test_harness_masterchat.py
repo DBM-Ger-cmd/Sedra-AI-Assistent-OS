@@ -90,10 +90,11 @@ class VorlageTests(unittest.TestCase):
 
     def test_der_auskunftsteil_hat_die_lehren_aus_dem_testgespraech_vom_04_11(self):
         """Log S-CF53AF6C: „der lauf_status ist leer“ ohne Aufruf, zwei Fragen mit einem Aufruf beantwortet. Log S-4EE7CB56 (Qwen 9B MTP lädt nicht): 20 Minuten Suche in runtime/src,
-        obwohl recent_audit ROLE_RESOLUTION_FAILED (vram_insufficient, Rezept coder.llama_qwen35) lieferte und das Rezept in local_config/role_routing.yaml steht; fünfmal „ja mach weiter“."""
+        obwohl das Audit ROLE_RESOLUTION_FAILED (vram_insufficient, Rezept coder.llama_qwen35) enthielt und das Rezept in local_config/role_routing.yaml steht; fünfmal „ja mach weiter“.
+        Zweiter Lauf: recent_audit lieferte ohne Inhalt nur die letzten 10 Typen – daher Filter `name` und Feld `inhalt` (test_chat_audit_inhalt.py)."""
         text = (CONFIG / 'masterchat.md').read_text(encoding='utf-8')
         teil = text.split('## Auskunft und Lenkung', 1)[1].split('\n## ', 1)[0]
-        for satz in ('zuerst `recent_audit`', 'ROLE_RESOLUTION_FAILED', '`role_routing.yaml` im Ordner `local_config`', 'Eine Frage mit zwei Teilen braucht zwei Aufrufe',
+        for satz in ('zuerst `recent_audit` mit `name` als Filter', 'im Feld `inhalt`', 'ROLE_RESOLUTION_FAILED', '`role_routing.yaml` im Ordner `local_config`', 'Eine Frage mit zwei Teilen braucht zwei Aufrufe',
                      'wirklich aufgerufen', 'nicht geprüft', 'sofort, ohne nach einem „Ja“ zu fragen'):
             self.assertIn(satz, teil, satz)
         self.assertIn('recent_audit', self.m['werkzeuge'])

@@ -3190,14 +3190,21 @@ class UIXHub:
     def chat_missions(self, limit):
         return [_compact_mission(m) for m in self.runtime.missions.list()[:limit]]
 
-    def chat_audit(self, limit):
-        lines = Path(self.runtime.audit.path).read_text(encoding='utf-8', errors='replace').splitlines()[-limit:]
+    def chat_audit(self, limit, such=None):
+        """Die letzten Ereignisse mit kurzem Auszug des Inhalts (Grund, Rezept, Zahlen). `such`: nur Ereignisse, deren Typ oder Inhalt den Text enthält (z. B. FAILED, qwen) –
+        ohne Filter versinkt eine Meldung von vor einer Stunde unter hunderten Modellaufrufen, ohne Inhalt bleibt ihr Grund unsichtbar (Testgespräch 04.11.2026)."""
+        lines = Path(self.runtime.audit.path).read_text(encoding='utf-8', errors='replace').splitlines()
+        such = str(such).strip().lower() if such else ''
         out = []
-        for line in lines:
+        for line in reversed(lines[-20000:] if such else lines[-limit:]):
             try: e = json.loads(line)
             except ValueError: continue
-            out.append({'time': e.get('timestamp'), 'event': e.get('event_type'), 'component': (e.get('source') or {}).get('component')})
-        return out
+            inhalt = json.dumps(e.get('payload') or {}, ensure_ascii=False)
+            if such and such not in str(e.get('event_type') or '').lower() and such not in inhalt.lower(): continue
+            out.append({'time': e.get('timestamp'), 'event': e.get('event_type'), 'component': (e.get('source') or {}).get('component'),
+                        'inhalt': inhalt if len(inhalt) <= 240 else inhalt[:239] + '…'})
+            if len(out) >= limit: break
+        return list(reversed(out))
 
     def chat_docs(self):
         return sorted(p.name for p in self.DOCS_DIR.glob('*.md'))

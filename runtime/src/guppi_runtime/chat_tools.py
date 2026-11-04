@@ -37,8 +37,8 @@ SCHEMAS = {
     "list_projects": _fn("list_projects", "The projects (folders) registered in SEDRA: name and id."),
     "list_missions": _propose("list_missions", "The latest cards (missions): id, intent, objective, phase, status, pending gates.",
                               {"limit": {"type": "integer", "description": "how many, 1 to 20"}}, []),
-    "recent_audit": _propose("recent_audit", "The last audit events: time, event type, component. Read-only history of what SEDRA did.",
-                             {"limit": {"type": "integer", "description": "how many, 1 to 30"}}, []),
+    "recent_audit": _propose("recent_audit", "The last audit events: time, event type, component, short content (reason, recipe, numbers). Optional name = text the event type or content must contain (e.g. FAILED, qwen). Read-only.",
+                             {"limit": {"type": "integer", "description": "how many, 1 to 30"}, "name": {"type": "string", "description": "filter text, e.g. FAILED or a model name"}}, []),
     "list_docs": _fn("list_docs", "The documentation files of this SEDRA package (docs folder), by name."),
     "read_doc": _propose("read_doc", "Read one documentation file by its name from list_docs (the first part of it).",
                          {"name": {"type": "string", "description": "file name such as BETRIEB.md"}}, ["name"]),
@@ -198,7 +198,7 @@ class ChatTools:
             if name == "list_missions":
                 return json.dumps(self.hub.chat_missions(_limit(args, 10, 20)), ensure_ascii=False, default=str)
             if name == "recent_audit":
-                return json.dumps(self.hub.chat_audit(_limit(args, 10, 30)), ensure_ascii=False)
+                return json.dumps(self.hub.chat_audit(_limit(args, 10, 30), args.get("name")), ensure_ascii=False)
             if name == "list_docs":
                 return json.dumps(self.hub.chat_docs(), ensure_ascii=False)
             if name == "read_doc":
