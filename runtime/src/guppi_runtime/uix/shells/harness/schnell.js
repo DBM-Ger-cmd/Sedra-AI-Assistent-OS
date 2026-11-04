@@ -7,6 +7,13 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
 
+  // Quelle des Knopfs (Captain 04.11.2026): Standard ist „beides“ (PC-Ton und Mikrofon in einer Spur); eine kleine Auswahl daneben wählt nur PC-Ton oder nur Mikrofon.
+  // Die Wahl wird im Browser gemerkt (ohne Speicher bleibt es beim Standard). Nur eine abweichende Wahl geht als `quelle` an den Kern – so greift beim Standard dessen Rückfall auf das Mikrofon.
+  const QUELLEN = [['beides', 'Beides'], ['pc_ton', 'PC-Ton'], ['mikrofon', 'Mikro']];
+  const SCHLUESSEL = 'sedra.harness.aufnahme.quelle';
+  function gemerkt(){ try{ const v = localStorage.getItem(SCHLUESSEL); return QUELLEN.some(q=>q[0] === v) ? v : 'beides'; }catch(_e){ return 'beides'; } }
+  function merken(v){ try{ localStorage.setItem(SCHLUESSEL, v); }catch(_e){ /* ohne Speicher gilt die Wahl nur für diese Ansicht */ } }
+
   const zeit = s=>{ s = Math.max(0, Math.round(Number(s) || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
   function st(S){ return S._schnell || (S._schnell = {aufnahme: null, gelesen: 0, knopf: null, takt: null}); }
   const aktiv = a=>!!a && (a.status === 'laeuft' || a.status === 'pause');
@@ -27,6 +34,7 @@
     k.title = an ? 'Es wird aufgenommen' + (pause ? ' (Pause)' : '') + ' – Klick beendet und sichert die Aufnahme im Projekt'
                  : 'Sprachaufnahme starten (PC-Ton und Mikrofon, Standard) – Umschalt+Klick öffnet den Rekorder';
     k.setAttribute('aria-pressed', an ? 'true' : 'false');
+    if(x.quelle) x.quelle.disabled = an;                      // während der Aufnahme bleibt die Quelle, wie sie ist
     takt(S);
   }
 
@@ -55,7 +63,7 @@
         const a = await S.api('/api/sprache/kern/stopp', {method: 'POST', body: {}});
         S.hinweis('Aufnahme gesichert: „' + (a.titel || 'Aufnahme') + '“ · ' + zeit(a.dauer) + ' – in der App Rekorder ansehen und abschreiben.');
       }else{
-        await S.api('/api/sprache/kern/start', {method: 'POST', body: {titel: '', sprache: 'de'}});
+        await S.api('/api/sprache/kern/start', {method: 'POST', body: Object.assign({titel: '', sprache: 'de'}, x.quelle && x.quelle.value !== 'beides' ? {quelle: x.quelle.value} : {})});
       }
     }catch(err){ S.hinweis((an ? 'Nicht gesichert: ' : 'Keine Aufnahme: ') + (err && err.message || err), 'warn'); }
     x.knopf.disabled = false;
@@ -71,11 +79,17 @@
       umschalten(S);
     };
     k.oncontextmenu = e=>{ e.preventDefault(); const o = (root.sedraPlaces.PLACES || []).find(p=>p.id === 'aufnahme'); if(o) root.sedraHarness.app.oeffnen(S, o); };
+    const q = d().el('select', 'hs-rec-quelle'); q.setAttribute('aria-label', 'Quelle der Aufnahme'); q.title = 'Quelle der Aufnahme – Standard: PC-Ton und Mikrofon zusammen';
+    QUELLEN.forEach(([v, l])=>{ const o = d().el('option', null, l); o.value = v; q.append(o); });
+    q.value = gemerkt();
+    q.onchange = ()=>merken(q.value);
+    st(S).quelle = q;
+    const gruppe = d().el('div', 'hs-rec-gruppe'); gruppe.append(k, q);
     anzeigen(S);
     lesen(S);
-    return k;
+    return gruppe;
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.schnell = {knopf, anzeigen, lesen, laeuft, takt, zeit};
+  root.sedraHarness.schnell = {QUELLEN, knopf, anzeigen, lesen, laeuft, takt, zeit};
 })();

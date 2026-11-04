@@ -252,6 +252,8 @@ button.hs-schild[aria-expanded="true"]::after{content:" ▴"}
 .hs-app-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
 .hs-status{flex:0 1 auto;min-width:0;display:flex;gap:4px;overflow:hidden}
 .hs-rec{flex:0 0 auto;display:flex;align-items:center;gap:6px;height:28px;padding:0 12px;margin:0 6px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2);color:var(--text);cursor:pointer;font:inherit;font-size:var(--size-small)}
+.hs-rec-gruppe{flex:0 0 auto;display:flex;align-items:center}.hs-rec-gruppe .hs-rec{margin-right:0;border-top-right-radius:0;border-bottom-right-radius:0}
+.hs-rec-quelle{height:28px;margin:0 6px 0 0;padding:0 6px;border:1px solid var(--line);border-left:0;border-radius:0 14px 14px 0;background:var(--panel-2);color:var(--muted);font:inherit;font-size:var(--size-small);cursor:pointer}.hs-rec-quelle:disabled{opacity:.6;cursor:default}
 .hs-rec:hover{background:var(--hs-hover)}.hs-rec:disabled{opacity:.6;cursor:default}
 .hs-rec small{color:inherit;opacity:.85}
 .hs-rec.rec{background:var(--bad-bg);border-color:var(--bad)}.hs-rec.rec .hs-rec-punkt{color:var(--bad);animation:hs-rec-puls 1.2s ease-in-out infinite}
