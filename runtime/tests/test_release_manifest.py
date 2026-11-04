@@ -15,7 +15,8 @@ from guppi_runtime.update_anwenden import MANIFEST, UpdateFehler, manifest_lesen
 def _schreibe(wurzel, rel, text):
     pfad = Path(wurzel, rel)
     pfad.parent.mkdir(parents=True, exist_ok=True)
-    pfad.write_text(text, encoding="utf-8")
+    with open(pfad, "w", encoding="utf-8", newline="") as f:      # genau die Bytes des Textes: write_text machte unter Windows CRLF, der Commit trüge sie
+        f.write(text)
 
 
 @unittest.skipUnless(shutil.which("git"), "git fehlt")

@@ -39,8 +39,8 @@ Jede Zeile ersetzt eine Modell-Antwort durch ein festes, prüfbares Ergebnis.
 |---|---|---|---|
 | F1 | **Geheimnis-Scan** vor Commit, Antwort und Export | detect-secrets oder gitleaks | ergänzt die Schutzregeln (`.env`, `local_config`, Schlüssel); Fund = Freigabe nötig |
 | F2 | **Sprache erkennen** | lingua-py oder fastText-LID | Rekorder und Übersetzer raten `de`/`en` selbst, statt nur auf Angabe zu laufen (LocalScribe-Regel: Angabe des Captains bleibt Vorrang) |
-| F3 | **Zusammenfassen ohne Modell** (extraktiv: TextRank, YAKE) | sumy, yake | Rückfall, wenn die Zusammenfassung des früheren Gesprächs leer bleibt (Fehler `zusammenfassung_leer` vom 03.11.) |
-| F4 | **Exakter Token-Zähler** | `POST /tokenize` des laufenden `llama-server` | `kontext.schaetzen()` bekommt echte Zahlen; kein neues Paket |
+| F3 | **Zusammenfassen ohne Modell** (extraktiv: TextRank, YAKE) | sumy, yake | Rückfall, wenn die Zusammenfassung des früheren Gesprächs leer bleibt (Fehler `zusammenfassung_leer` vom 03.11.) – **umgesetzt (04.11.)** als einfacher Auszug der ersten Sätze mit Standardbibliothek (`harness/auszug.py`), ohne sumy |
+| F4 | ~~Exakter Token-Zähler~~ | `POST /tokenize` des laufenden `llama-server` | **entfällt (04.11.):** `kontext.schaetzen()` rechnet schon mit der echten Zahl des letzten Aufrufs plus nur dem Neuen (`letzte`), die Zeichen-Schätzung gilt nur für das Neue; ein Zähler brächte kaum Genauigkeit |
 | F5 | **Web-Seite zu Text** | trafilatura | HTML-Rauschen nicht an das Modell schicken (`config/web_access.yaml`), spart viele Token |
 | F6 | **Tabellen abfragen** (CSV, Excel) | DuckDB | Kundenanfragen und Wissen: SQL statt „Tabelle lesen lassen“; das Modell schreibt nur die Frage |
 | F7 | **Rechnen, Einheiten, Daten** | sympy, pint, dateparser | Modelle rechnen schlecht; ein Werkzeug `rechnen` liefert das Ergebnis |
@@ -65,7 +65,7 @@ Nach dem Vorbild von `sprache/stt.py`:
 ## 6. Reihenfolge
 
 1. **P0 (erledigt):** W1 als Provider vorbereitet, getestet.
-2. **P1:** Register und Seite „Hilfswerkzeuge“ (nur Erkennung und Status, keine Installation); F4 (Token-Zähler über `/tokenize`) und F3 als Rückfall der Gesprächs-Zusammenfassung, weil beide nichts Neues installieren.
+2. **P1 (erledigt 04.11.):** Register und Seite „Hilfswerkzeuge“ (`config/hilfswerkzeuge.yaml`, `harness/hilfswerkzeuge.py`, Einstellungen → Integrationen; nur Erkennung und Status, keine Installation); F3 als Rückfall der Gesprächs-Zusammenfassung; F4 entfällt.
 3. **P2:** W4/W5 (Dokumente lesen) und F5 (Web-Text), dann F8 (Prüfen vor Freigabe).
 4. **P3:** W3 (Reranker), W2 (VAD), F2 (Spracherkennung).
 5. **P4:** W6, W8, F6, F7, F9 bis F14 nach Bedarf.

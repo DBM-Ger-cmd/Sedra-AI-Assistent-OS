@@ -32,7 +32,9 @@ from guppi_runtime.update_anwenden import MANIFEST, UpdateFehler, manifest_erzeu
 
 def auspacken(repo: Path, rev: str, ziel: Path) -> None:
     """Der Stand eines Commits wie im Tag-Zip von GitHub (git archive), ohne Arbeitsbaum."""
-    daten = subprocess.run(["git", "-C", str(repo), "archive", "--format=tar", rev], check=True, capture_output=True).stdout
+    # core.autocrlf des Rechners darf den Inhalt nicht ändern: unter Windows machte `git archive` sonst CRLF aus den LF-Dateien des Commits, und die Prüfsummen
+    # stimmten nicht mit dem Tag-Zip von GitHub (LF) überein, das der Updater auf anderen Rechnern liest
+    daten = subprocess.run(["git", "-c", "core.autocrlf=false", "-c", "core.eol=lf", "-C", str(repo), "archive", "--format=tar", rev], check=True, capture_output=True).stdout
     with tarfile.open(fileobj=io.BytesIO(daten)) as tf:
         for m in tf.getmembers():
             if m.issym() or m.islnk() or m.name.startswith("/") or ".." in Path(m.name).parts:
