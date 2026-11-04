@@ -59,5 +59,6 @@
     "pruefung": "✓",
     "token": "◎"
   },
+  "ausblenden": ["hardware"],
   "zuletzt_max": 6
 }
