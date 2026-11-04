@@ -41,9 +41,9 @@ class SpracheHub:
         return self.kern.stand()
 
     def kern_start(self, payload):
-        """POST /api/sprache/kern/start {titel, sprache, quelle: mikrofon|pc_ton} – das Mikrofon oder der Ton des Rechners (Standard-Ausgang) wird aufgenommen; ohne Mikrofon sagt der Kern das."""
+        """POST /api/sprache/kern/start {titel, sprache, quelle: pc_ton|mikrofon|beides} – Standard ist der Ton des Rechners (Standard-Ausgang); das Mikrofon oder beides gemischt sind die Alternativen; ohne Gerät sagt der Kern das."""
         p = payload or {}
-        out = self.kern.start(p.get('titel'), str(p.get('sprache') or 'de'), utcnow(), str(p.get('quelle') or 'mikrofon'))
+        out = self.kern.start(p.get('titel'), str(p.get('sprache') or 'de'), utcnow(), p.get('quelle') or None)
         self.hub.runtime.audit.append('SPRACHE_KERN_START', component='sprache', payload={'id': out.get('id'), 'sprache': p.get('sprache') or 'de', 'quelle': out.get('quelle')})
         return out
 

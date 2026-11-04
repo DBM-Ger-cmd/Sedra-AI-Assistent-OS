@@ -33,7 +33,8 @@ def _sd_oeffnen(callback, rate):
     return sd.RawInputStream(samplerate=rate, channels=KANAELE, dtype='int16', callback=callback)
 
 
-QUELLEN = ('mikrofon', 'pc_ton')   # pc_ton: was der Rechner über den Standard-Ausgang abspielt (WASAPI-Loopback)
+QUELLEN = ('pc_ton', 'mikrofon', 'beides')   # pc_ton: was der Rechner über den Standard-Ausgang abspielt (WASAPI-Loopback); beides: beides gemischt in eine Spur
+STANDARD_QUELLE = 'pc_ton'                    # Captain 04.11.2026: der Ton des Rechners ist der Standard, das Mikrofon kommt dazu (Auswahl oder „beides“)
 
 
 class _PcTonStrom:
@@ -87,6 +88,60 @@ def _pc_oeffnen(callback, rate):
     return _PcTonStrom(callback, rate)
 
 
+class _BeidesStrom:
+    """PC-Ton und Mikrofon in einer Spur (04.11.2026). Das Mikrofon gibt den Takt: bei jedem Block seiner Proben wird, was vom PC-Ton bereitliegt, dazugemischt (Summe, auf int16
+    begrenzt). Der Loopback liefert nur, wenn etwas abgespielt wird – fehlt er, bleibt es beim Mikrofon (Stille wird ergänzt, nie gewartet). Der Puffer des PC-Tons ist auf
+    eine Sekunde begrenzt, damit ein Versatz nicht anwächst. Beide Ströme gehen aus demselben Callback in die Aufnahme."""
+    PUFFER_MAX = RATE
+
+    def __init__(self, callback, rate, oeffnen, oeffnen_pc):
+        import array
+        self._array = array
+        self.callback = callback
+        self.pc = array.array('h')
+        self.sperre = threading.Lock()
+        self.pc_strom = oeffnen_pc(self._pc_block, rate)
+        try:
+            self.mic_strom = oeffnen(self._mic_block, rate)
+        except Exception:
+            try: self.pc_strom.close()
+            except Exception: pass
+            raise
+
+    def _pc_block(self, daten, frames, _zeit, _status):
+        a = self._array.array('h'); a.frombytes(bytes(daten))
+        with self.sperre:
+            self.pc.extend(a)
+            if len(self.pc) > self.PUFFER_MAX: del self.pc[:len(self.pc) - self.PUFFER_MAX]
+
+    def _mic_block(self, daten, frames, _zeit, _status):
+        m = self._array.array('h'); m.frombytes(bytes(daten))
+        with self.sperre:
+            n = min(len(m), len(self.pc))
+            p = self.pc[:n]
+            del self.pc[:n]
+        aus = self._array.array('h', (max(-32768, min(32767, m[i] + (p[i] if i < n else 0))) for i in range(len(m))))
+        self.callback(aus.tobytes(), len(aus), None, None)
+
+    def start(self):
+        self.pc_strom.start()
+        try:
+            self.mic_strom.start()
+        except Exception:
+            self.stop(); self.close()
+            raise
+
+    def stop(self):
+        for s in (self.mic_strom, self.pc_strom):
+            try: s.stop()
+            except Exception: pass
+
+    def close(self):
+        for s in (self.mic_strom, self.pc_strom):
+            try: s.close()
+            except Exception: pass
+
+
 class Kern:
     def __init__(self, store, oeffnen=None, oeffnen_pc=None):
         self.store = store
@@ -108,9 +163,10 @@ class Kern:
         return max(0.0, jetzt - l['start'] - l['pausiert'])
 
     # ---------------------------------------------------------------- Aufnehmen
-    def start(self, titel, sprache, now, quelle='mikrofon'):
+    def start(self, titel, sprache, now, quelle=None):
         with self.lock:
             if self.lauf: raise ValueError('laeuft_schon')
+            quelle = quelle or STANDARD_QUELLE
             if quelle not in QUELLEN: raise ValueError('quelle_unbekannt')
             a = self.store.beginnen(titel, 'audio/wav', sprache, now)
             datei = Path(self.store.dir) / (a['id'] + '.pcm')
@@ -128,15 +184,18 @@ class Kern:
                 l['pegel'] = pegel_von(werte)
 
             try:
-                strom = (self.oeffnen_pc if quelle == 'pc_ton' else self.oeffnen)(aufnehmen, RATE)
+                if quelle == 'beides': strom = _BeidesStrom(aufnehmen, RATE, self.oeffnen, self.oeffnen_pc)
+                else: strom = (self.oeffnen_pc if quelle == 'pc_ton' else self.oeffnen)(aufnehmen, RATE)
                 strom.start()
             except ImportError:
                 l['f'].close(); datei.unlink(missing_ok=True); self.store.loeschen(a['id'])
-                raise ValueError('kein_mikrofon: Das Paket PyAudioWPatch fehlt auf diesem Rechner (pip install PyAudioWPatch), danach die Runtime neu starten.' if quelle == 'pc_ton'
-                                 else 'kein_mikrofon: Das Paket sounddevice fehlt auf diesem Rechner (pip install sounddevice), danach die Runtime neu starten.')
+                raise ValueError({'pc_ton': 'kein_mikrofon: Das Paket PyAudioWPatch fehlt auf diesem Rechner (pip install PyAudioWPatch), danach die Runtime neu starten.',
+                                  'mikrofon': 'kein_mikrofon: Das Paket sounddevice fehlt auf diesem Rechner (pip install sounddevice), danach die Runtime neu starten.',
+                                  'beides': 'kein_mikrofon: Für PC-Ton und Mikrofon fehlt PyAudioWPatch oder sounddevice (pip install PyAudioWPatch sounddevice), danach die Runtime neu starten.'}[quelle])
             except Exception as exc:
                 l['f'].close(); datei.unlink(missing_ok=True); self.store.loeschen(a['id'])
-                raise ValueError(('kein_mikrofon: Kein Ausgabegerät zum Mitschneiden bereit (' if quelle == 'pc_ton' else 'kein_mikrofon: Kein Eingabegerät bereit (') + str(exc)[:160] + ').')
+                raise ValueError({'pc_ton': 'kein_mikrofon: Kein Ausgabegerät zum Mitschneiden bereit (', 'mikrofon': 'kein_mikrofon: Kein Eingabegerät bereit (',
+                                  'beides': 'kein_mikrofon: Für PC-Ton und Mikrofon fehlt ein Ausgabe- oder Eingabegerät ('}[quelle] + str(exc)[:160] + ').')
             l['strom'] = strom
             self.lauf = l
             return self.stand()
