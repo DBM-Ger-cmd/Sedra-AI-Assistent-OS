@@ -38,6 +38,16 @@ class Basis(unittest.TestCase):
         return out, anfrage
 
 
+class Weg(unittest.TestCase):
+    def test_der_weg_ist_bekannt_und_geschuetzt(self):
+        from guppi_runtime.harness.api import GESCHUETZT, WEG
+        for pfad in ('/api/harness/vorlagen/neu', '/api/harness/vorlagen/grenzen'):
+            m = WEG.fullmatch(pfad)
+            self.assertIsNotNone(m, pfad)
+            self.assertIn('vorlagen', m.groups())
+        self.assertIsNotNone(GESCHUETZT.fullmatch('/api/harness/vorlagen/neu'), 'die Herkunft der Anfrage wird geprüft')
+
+
 class Entwurf(Basis):
     def test_id_aus_dem_namen(self):
         self.assertEqual(vn.id_aus_name('Mein Prüfer 2'), 'mein-pruefer-2')
