@@ -1,0 +1,28 @@
+# Bausteine für Aufgaben-Freigaben (Captain 04.11.2026): fertige Erlaubnisse mit einem Klick statt Zeilen mit Muster-Syntax.
+# Das ist die Vorgabe im Repo. Eigene Bausteine legt nur der Captain an: local_config/freigabe_bausteine.yaml (gleiches Format; gleiche id ersetzt die Vorgabe).
+# Ein Baustein ist nur eine Auswahlhilfe im Formular: was daraus wird, prüft beim Anlegen der Aufgabe derselbe Code wie bei jeder Zeile (harness/aufgabe.py),
+# und `verboten`, feste Vorbehalte, Warnkarten und der Schreibbereich des Projekts gelten weiter. Erlaubte Werkzeuge: datei_lesen, dateien_auflisten, suchen,
+# datei_schreiben, datei_aendern, befehl, lauf_starten, lauf_stoppen. Kein Muster, das alles trifft (*, **).
+schema: 1
+bausteine:
+  - id: tests-starten
+    name: Tests starten
+    hinweis: Den Lauf run_tests starten (Ergebnis lesen darf der Agent ohnehin).
+    zeilen:
+      - {werkzeug: lauf_starten, muster: run_tests}
+  - id: docs-aendern
+    name: Dokumente in docs/ ändern
+    hinweis: Bestehende Dateien unter docs/ ändern.
+    zeilen:
+      - {werkzeug: datei_aendern, muster: 'docs/**'}
+  - id: docs-anlegen
+    name: Neue Dateien in docs/ anlegen
+    hinweis: Neue Dateien unter docs/ schreiben.
+    zeilen:
+      - {werkzeug: datei_schreiben, muster: 'docs/**'}
+  - id: tests-schreiben
+    name: Testdateien ändern und anlegen
+    hinweis: Dateien unter runtime/tests/ ändern und neu schreiben.
+    zeilen:
+      - {werkzeug: datei_aendern, muster: 'runtime/tests/**'}
+      - {werkzeug: datei_schreiben, muster: 'runtime/tests/**'}

@@ -157,7 +157,10 @@
     return box;
   }
 
-  const FREIGABE_DIREKT = ['request:harness_projekt'];
+  // Direkt in der Seitenleiste freigeben, was nur Daten der Harness anlegt und keine Regel lockert: ein Projekt, eine neue Vorlage (ohne Rechte), der gesehene Code-Stand.
+  // Regeln (Katalog) und alles andere erst im Posteingang mit allen Angaben. Gleiche Leiter wie dort: Freigeben (zweiter Klick bestätigt) · Ablehnen · Ansehen.
+  const FREIGABE_DIREKT = ['request:harness_projekt', 'request:harness_vorlage', 'request:harness_code_stand'];
+  const SICHER_MS = 10000;                  // so lange gilt der zweite Klick (5 s waren zu knapp: die Rückfrage fiel zurück, bevor man sie las)
 
   function zeichnen(S, erzwingen){
     const el = S.el.seite;
@@ -255,7 +258,7 @@
           k.onclick = ()=>{
             if(!k.dataset.sicher){                                    // zweiter Klick statt confirm(): ein Browser-Dialog antwortet in eingebetteten Fenstern still mit Nein
               k.dataset.sicher = '1'; k.textContent = 'Sicher? Freigeben';
-              setTimeout(()=>{ if(k.isConnected){ delete k.dataset.sicher; k.textContent = 'Freigeben'; } }, 5000);
+              setTimeout(()=>{ if(k.isConnected){ delete k.dataset.sicher; k.textContent = 'Freigeben'; } }, SICHER_MS);
               return;
             }
             entscheide(ja);
@@ -265,7 +268,7 @@
         if(ways.indexOf('ablehnen') >= 0){
           const n = d().el('button', 'hs-knopf hs-klein', 'Ablehnen'); n.type = 'button'; n.onclick = ()=>entscheide('ablehnen'); reihe.append(n);
         }
-        const mehr = d().el('button', 'hs-knopf hs-klein', 'Genau ansehen'); mehr.type = 'button';
+        const mehr = d().el('button', 'hs-knopf hs-klein', 'Ansehen'); mehr.type = 'button';
         mehr.title = 'Öffnet den Posteingang mit allen Angaben zu diesem Antrag';
         mehr.onclick = ()=>S.shellApi.decide();
         reihe.append(mehr);

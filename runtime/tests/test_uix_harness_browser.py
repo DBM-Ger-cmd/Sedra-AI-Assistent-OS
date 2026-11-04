@@ -124,6 +124,7 @@ class BrowserDurchlauf(unittest.TestCase):
         # ---- B: Aufgabe anlegen, Aufruf ohne Karte, Rücknahme, wieder eine Karte
         page.click('text=⛨ Aufgaben')
         page.wait_for_selector('.hs-auf-form', timeout=10000)
+        page.click('.hs-auf-form summary')                     # „Erweitert“ (Titel, Zweck, eigene Zeilen) ist zugeklappt
         page.fill('.hs-auf-form input[aria-label="Zweck"]', 'Die Notiz bis zu dreimal ohne Karte pflegen')
         page.fill('.hs-auf-form input[aria-label="Titel"]', 'Notiz pflegen')
         page.check(f'.hs-auf-form input[value="{b}"]')
@@ -131,7 +132,7 @@ class BrowserDurchlauf(unittest.TestCase):
         page.fill('.hs-auf-form input[aria-label="Höchstens so viele Aufrufe"]', '3')
         page.click('.hs-auf-form button:has-text("Freigeben")')
         page.wait_for_selector('.hs-auf-aktiv', timeout=15000)
-        self.assertIn('Rest 3 Aufrufe', page.inner_text('.hs-auf-aktiv'))
+        self.assertIn('noch 3 Aufrufe', page.inner_text('.hs-auf-aktiv'))
         karten_vorher = len(api.karten.alle())
         schreibe(b, 'Nochmal ändern', 'B')
         page.wait_for_selector('.hs-wz-stufe.aufgabe', timeout=20000)

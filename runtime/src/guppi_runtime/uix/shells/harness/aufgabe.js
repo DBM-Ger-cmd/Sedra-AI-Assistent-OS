@@ -30,7 +30,7 @@
 
   function technisch(liste){
     const det = d().el('details', 'hs-auf-technik');
-    det.append(d().el('summary', 'hs-leise', 'Technische Muster (' + (liste || []).length + ')'), eintraege(liste));
+    det.append(d().el('summary', 'hs-leise', 'Genaue Regeln (' + (liste || []).length + ')'), eintraege(liste));
     return det;
   }
 
@@ -96,8 +96,8 @@
     box.dataset.aufgabe = a.id;
     const kopf = d().el('div', 'hs-karte-kopf');
     kopf.append(d().el('b', null, a.titel), d().el('code', 'hs-karte-ziel', a.id));
-    const rest = [a.rest_aufrufe !== null && a.rest_aufrufe !== undefined ? 'Rest ' + a.rest_aufrufe + ' Aufrufe' : null, a.rest_min !== null && a.rest_min !== undefined ? 'noch ' + minuten(a) : null].filter(Boolean).join(' · ');
-    box.append(kopf, zweckZeilen(a), d().el('div', 'hs-leise', (a.status === 'aktiv' ? rest : a.status + (a.grund ? ' – ' + a.grund : '')) + ' · ' + a.aufrufe + ' Aufrufe bisher' + (a.vorschlag_von ? ' · Vorschlag des Vorarbeiters' : '')),
+    const rest = [a.rest_aufrufe !== null && a.rest_aufrufe !== undefined ? 'noch ' + a.rest_aufrufe + ' Aufrufe übrig' : null, a.rest_min !== null && a.rest_min !== undefined ? 'noch ' + minuten(a) : null].filter(Boolean).join(' · ');
+    box.append(kopf, zweckZeilen(a), d().el('div', 'hs-leise', (a.status === 'aktiv' ? rest : a.status + (a.grund ? ' – ' + a.grund : '')) + ' · ' + a.aufrufe + ' benutzt' + (a.vorschlag_von ? ' · Vorschlag des Vorarbeiters' : '')),
                d().el('div', 'hs-leise', 'Sitzungen: ' + a.sitzungen.map(id=>sitzungsName(S, id)).join(', ')), technisch(a.erlaubt));
     if((a.modelle || []).length) box.append(d().el('div', 'hs-leise', 'Modelle: ' + a.modelle.join(', ')));
     (a.warnungen || []).forEach(w=>box.append(d().el('div', 'hs-karte-warnung', '⚠ ' + w)));
@@ -118,8 +118,9 @@
     return box;
   }
 
-  // ---- 3. das Formular
-  // Was die Zeile „Werkzeug Muster“ bedeutet, in einem Satz – das Formular zeigt es vor dem Freigeben, damit man sieht, was man erlaubt.
+  // ---- 3. das Formular (Analyse Freigaben S1, 04.11.2026): Bausteine statt Muster-Zeilen, die neueste Sitzung vorgewählt, Frist und Aufrufe mit Vorgabe.
+  // Titel, Zweck, eigene Zeilen und Modelle stehen unter „Erweitert“ (leer = aus den Bausteinen). Gesendet wird dasselbe wie vorher (POST /api/harness/aufgaben);
+  // die Prüfung, was erlaubt sein darf, bleibt im Code (harness/aufgabe.py), das Formular zeigt nur vorher in einem Satz, was man erlaubt.
   const WAS = {datei_lesen: 'Dateien lesen', dateien_auflisten: 'Ordner auflisten', suchen: 'in Dateien suchen', datei_schreiben: 'Dateien neu schreiben',
                datei_aendern: 'Dateien ändern', befehl: 'Befehl ausführen', lauf_starten: 'Lauf starten', lauf_stoppen: 'Lauf stoppen',
                modell_laden: 'Modell laden', modell_entladen: 'Modell entladen'};
@@ -134,30 +135,64 @@
     return {text: was + ': ' + wo + (weit ? ' – ALLES, ohne Einschränkung' : ''), schlecht: weit};
   }
 
-  const SCHNELL = [['Tests starten', 'lauf_starten run_tests'], ['Dokumente in docs/ ändern', 'datei_aendern docs/**'], ['Neue Dateien in docs/ anlegen', 'datei_schreiben docs/**']];
+  // Rückfall, falls /api/harness/bausteine nicht antwortet: dieselben drei wie in der Vorgabe (runtime/config/freigabe_bausteine.yaml).
+  const NOTFALL = [{id: 'tests-starten', name: 'Tests starten', zeilen: [{werkzeug: 'lauf_starten', muster: 'run_tests'}]},
+                   {id: 'docs-aendern', name: 'Dokumente in docs/ ändern', zeilen: [{werkzeug: 'datei_aendern', muster: 'docs/**'}]},
+                   {id: 'docs-anlegen', name: 'Neue Dateien in docs/ anlegen', zeilen: [{werkzeug: 'datei_schreiben', muster: 'docs/**'}]}];
+  const FRISTEN = [[30, '30 Minuten'], [120, '2 Stunden'], [480, '8 Stunden'], [1440, '24 Stunden']];
+  const FRIST_VORGABE = 120, AUFRUFE_VORGABE = 50;
   const SITZUNGEN_ZUERST = 6;
+
+  function vor(iso){
+    const m = Math.round((Date.now() - Date.parse(iso)) / 60000);
+    if(!(m >= 0)) return '';
+    return m < 1 ? 'gerade eben' : m < 60 ? 'vor ' + m + ' min' : m < 1440 ? 'vor ' + Math.floor(m / 60) + ' h' : 'vor ' + Math.floor(m / 1440) + ' Tagen';
+  }
 
   function formular(S, neuLaden){
     const f = d().el('form', 'hs-karte hs-auf-form');
     f.setAttribute('aria-label', 'Aufgabe freigeben');
     f.onsubmit = e=>e.preventDefault();
     const schritt = (nr, text, hilfe)=>{ const k = d().el('div', 'hs-auf-schritt'); k.append(d().el('b', null, nr + ' · ' + text)); if(hilfe) k.append(d().el('small', 'hs-leise', hilfe)); return k; };
-    const titel = d().el('input', 'hs-karte-notiz'); titel.placeholder = 'Titel (kurz)'; titel.setAttribute('aria-label', 'Titel');
-    const zweck = d().el('input', 'hs-karte-notiz'); zweck.maxLength = 160; zweck.setAttribute('aria-label', 'Zweck');
-    zweck.placeholder = 'Zweck in einem Satz, z. B. Testläufe der Gruppe harness starten und das Ergebnis lesen';
-    const zaehler = d().el('small', 'hs-leise', '0/160'); zweck.oninput = ()=>{ zaehler.textContent = zweck.value.length + '/160'; };
-    const projekt = d().el('select', 'hs-projektwahl'); projekt.setAttribute('aria-label', 'Projekt');
+    // 1 · Was darf der Agent? – Bausteine zum Anklicken, darunter in Klartext, was daraus wird
+    const gewaehlteBausteine = new Set();
+    let bausteine = NOTFALL;
+    const schnell = d().el('div', 'hs-auf-schnell'); schnell.setAttribute('role', 'group'); schnell.setAttribute('aria-label', 'Bausteine');
+    const erlaubt = d().el('textarea', 'hs-auf-text'); erlaubt.rows = 3; erlaubt.setAttribute('aria-label', 'Erlaubte Aufrufe');
+    erlaubt.placeholder = 'Eigene Zeilen, eine je Erlaubnis: Werkzeug Muster\ndatei_aendern docs/spec_entwuerfe/**\nlauf_starten run_tests';
+    const summe = d().el('div', 'hs-auf-summe'); summe.setAttribute('aria-live', 'polite');
+    const eigene = ()=>erlaubt.value.split('\n').map(z=>z.trim()).filter(Boolean);
+    const zeilen = ()=>[...new Set(bausteine.filter(b=>gewaehlteBausteine.has(b.id)).flatMap(b=>b.zeilen.map(z=>z.werkzeug + ' ' + z.muster)).concat(eigene()))];
+    const zeigeSumme = ()=>{
+      const z = zeilen();
+      if(!z.length){ summe.replaceChildren(d().el('small', 'hs-leise', 'Noch nichts gewählt – klick oben einen Baustein an.')); return; }
+      summe.replaceChildren(d().el('b', null, 'Der Agent darf, ohne zu fragen:'), ...z.map(x=>{ const k = klartextZeile(x); return d().el('div', k.schlecht ? 'hs-karte-warnung' : 'hs-auf-darf-zeile', (k.schlecht ? '⚠ ' : '✓ ') + k.text); }));
+    };
+    const zeichneBausteine = ()=>{
+      schnell.replaceChildren(...bausteine.map(b=>{
+        const k = d().el('button', 'hs-knopf hs-klein', b.name); k.type = 'button'; k.dataset.baustein = b.id; k.title = b.hinweis || b.zeilen.map(z=>z.werkzeug + ' ' + z.muster).join(' · ');
+        const an = ()=>{ k.setAttribute('aria-pressed', gewaehlteBausteine.has(b.id) ? 'true' : 'false'); k.classList.toggle('p', gewaehlteBausteine.has(b.id)); };
+        k.onclick = ()=>{ gewaehlteBausteine.has(b.id) ? gewaehlteBausteine.delete(b.id) : gewaehlteBausteine.add(b.id); an(); zeigeSumme(); };
+        an();
+        return k;
+      }));
+    };
+    zeichneBausteine(); zeigeSumme(); erlaubt.oninput = zeigeSumme;
+    S.api('/api/harness/bausteine').then(out=>{ if((out.bausteine || []).length){ bausteine = out.bausteine; zeichneBausteine(); zeigeSumme(); } }).catch(()=>{});
+    // 2 · In welchen Sitzungen? – die neueste ist vorgewählt
+    const projekt = d().el('select', 'hs-projektwahl'); projekt.setAttribute('aria-label', 'Projekt'); projekt.hidden = (S.projekte || []).length < 2;
     (S.projekte || []).forEach(p=>{ const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; projekt.append(o); });
     const sitzungen = d().el('div', 'hs-auf-sitzungen');
-    let alleZeigen = false;
+    let alleZeigen = false, vorgewaehlt = false;
     const gewaehlt = new Set();
     const zeichneSitzungen = ()=>{
       const meine = (S.sitzungen || []).filter(s=>s.projekt === projekt.value);
+      if(!vorgewaehlt && meine.length){ gewaehlt.add(meine[0].id); vorgewaehlt = true; }
       const sichtbar = alleZeigen ? meine : meine.filter((s, i)=>i < SITZUNGEN_ZUERST || gewaehlt.has(s.id));
       sitzungen.replaceChildren(...sichtbar.map(s=>{
         const l = d().el('label', 'hs-auf-zeile'); const cb = d().el('input'); cb.type = 'checkbox'; cb.value = s.id; cb.checked = gewaehlt.has(s.id);
         cb.onchange = ()=>{ cb.checked ? gewaehlt.add(s.id) : gewaehlt.delete(s.id); };
-        l.append(cb, d().el('span', null, (s.titel || 'Ohne Titel').slice(0, 90) + (s.vorlage ? ' · ' + s.vorlage : '')), d().el('small', 'hs-leise', s.id));
+        l.append(cb, d().el('span', null, (s.titel || 'Ohne Titel').slice(0, 70) + (s.vorlage ? ' · ' + s.vorlage : '')), d().el('small', 'hs-leise', vor(s.zuletzt) || s.id));
         return l;
       }));
       if(!meine.length) sitzungen.append(d().el('small', 'hs-leise', 'Noch keine Sitzung in diesem Projekt.'));
@@ -167,41 +202,37 @@
         sitzungen.append(mehr);
       }
     };
-    projekt.onchange = ()=>{ gewaehlt.clear(); zeichneSitzungen(); }; zeichneSitzungen();
-    const erlaubt = d().el('textarea', 'hs-auf-text'); erlaubt.rows = 3;
-    erlaubt.placeholder = 'Eine Zeile je Erlaubnis: Werkzeug Muster\ndatei_aendern docs/spec_entwuerfe/**\nlauf_starten run_tests';
-    erlaubt.setAttribute('aria-label', 'Erlaubte Aufrufe');
-    const summe = d().el('div', 'hs-auf-summe'); summe.setAttribute('aria-live', 'polite');
-    const zeilen = ()=>erlaubt.value.split('\n').map(z=>z.trim()).filter(Boolean);
-    const zeigeSumme = ()=>{
-      const z = zeilen();
-      if(!z.length){ summe.replaceChildren(d().el('small', 'hs-leise', 'Noch nichts erlaubt – wähle unten eine Schnellwahl oder schreibe eine Zeile.')); return; }
-      summe.replaceChildren(d().el('b', null, 'Du erlaubst:'), ...z.map(x=>{ const k = klartextZeile(x); return d().el('div', k.schlecht ? 'hs-karte-warnung' : 'hs-auf-darf-zeile', (k.schlecht ? '⚠ ' : '✓ ') + k.text); }));
-    };
-    erlaubt.oninput = zeigeSumme; zeigeSumme();
-    const schnell = d().el('div', 'hs-auf-schnell');
-    SCHNELL.forEach(([name, zeile])=>{
-      const b = d().el('button', 'hs-knopf hs-klein', '+ ' + name); b.type = 'button'; b.title = zeile;
-      b.onclick = ()=>{ if(!zeilen().includes(zeile)) erlaubt.value = (erlaubt.value.trim() ? erlaubt.value.trim() + '\n' : '') + zeile; zeigeSumme(); };
-      schnell.append(b);
-    });
+    projekt.onchange = ()=>{ gewaehlt.clear(); vorgewaehlt = false; zeichneSitzungen(); }; zeichneSitzungen();
+    // 3 · Wie lange und wie oft? – Vorgabe 2 Stunden und 50 Aufrufe; die Frist ist höchstens 24 Stunden
+    const frist = d().el('select', 'hs-auf-feld'); frist.setAttribute('aria-label', 'Frist');
+    FRISTEN.forEach(([min, text])=>{ const o = document.createElement('option'); o.value = String(min); o.textContent = text; frist.append(o); });
+    const max = d().el('input', 'hs-auf-feld'); max.type = 'number'; max.min = '1'; max.max = '500'; max.placeholder = 'ohne Grenze'; max.setAttribute('aria-label', 'Höchstens so viele Aufrufe');
+    const grenzen = d().el('div', 'hs-auf-grenzen'); grenzen.append(d().el('label', 'hs-leise', 'Frist '), frist, d().el('label', 'hs-leise', ' Aufrufe höchstens '), max);
+    const werte = ()=>{ frist.value = String(FRIST_VORGABE); max.value = String(AUFRUFE_VORGABE); };
+    werte();
+    // Erweitert: Titel, Zweck, eigene Zeilen, Modelle
+    const titel = d().el('input', 'hs-karte-notiz'); titel.placeholder = 'Titel (leer = aus den Bausteinen)'; titel.setAttribute('aria-label', 'Titel');
+    const zweck = d().el('input', 'hs-karte-notiz'); zweck.maxLength = 160; zweck.setAttribute('aria-label', 'Zweck'); zweck.placeholder = 'Wofür? Ein Satz (leer = aus den Bausteinen)';
     const modelle = d().el('input', 'hs-karte-notiz'); modelle.placeholder = 'Modelle (Rezept-IDs, durch Komma) – nur für Läufe mit Modell'; modelle.setAttribute('aria-label', 'Modelle');
-    const max = d().el('input', 'hs-auf-feld'); max.type = 'number'; max.min = '1'; max.max = '500'; max.placeholder = 'Aufrufe'; max.setAttribute('aria-label', 'Höchstens so viele Aufrufe');
-    const frist = d().el('input', 'hs-auf-feld'); frist.type = 'number'; frist.min = '1'; frist.max = '1440'; frist.placeholder = 'Minuten'; frist.setAttribute('aria-label', 'Frist in Minuten');
-    const grenzen = d().el('div', 'hs-auf-grenzen'); grenzen.append(d().el('label', 'hs-leise', 'Aufrufe höchstens '), max, d().el('label', 'hs-leise', ' Frist (höchstens 24 h) '), frist);
+    const mehr = d().el('details', 'hs-auf-erweitert'); mehr.append(d().el('summary', 'hs-leise', 'Erweitert: Titel, Zweck, eigene Zeilen, Modelle'), titel, zweck, erlaubt, modelle);
     const meldung = d().el('div', 'hs-auf-meldung'); meldung.setAttribute('role', 'status');
     const ok = d().el('button', 'hs-senden', 'Freigeben'); ok.type = 'submit';
     ok.onclick = async()=>{
       meldung.replaceChildren();
-      const liste = zeilen().map(z=>{ const i = z.indexOf(' '); return i < 0 ? {werkzeug: z, muster: ''} : {werkzeug: z.slice(0, i), muster: z.slice(i + 1).trim()}; });
-      const ende = {}; if(max.value) ende.max_aufrufe = Number(max.value); if(frist.value) ende.bis = new Date(Date.now() + Number(frist.value) * 60000).toISOString();
+      const z = zeilen();
+      if(!z.length){ meldung.replaceChildren(d().el('div', 'hs-karte-warnung', 'Wähle zuerst mindestens einen Baustein.')); return; }
+      if(!gewaehlt.size){ meldung.replaceChildren(d().el('div', 'hs-karte-warnung', 'Wähle mindestens eine Sitzung, in der es gelten soll.')); return; }
+      const liste = z.map(x=>{ const i = x.indexOf(' '); return i < 0 ? {werkzeug: x, muster: ''} : {werkzeug: x.slice(0, i), muster: x.slice(i + 1).trim()}; });
+      const namen = bausteine.filter(b=>gewaehlteBausteine.has(b.id)).map(b=>b.name);
+      const ende = {bis: new Date(Date.now() + Number(frist.value) * 60000).toISOString()}; if(max.value) ende.max_aufrufe = Number(max.value);
       ok.disabled = true;
       try{
-        const out = await S.api('/api/harness/aufgaben', {method: 'POST', body: {titel: titel.value.trim(), zweck: zweck.value.trim(), projekt: projekt.value,
-          sitzungen: [...gewaehlt], erlaubt: liste,
-          modelle: modelle.value.split(',').map(m=>m.trim()).filter(Boolean), ende}});
+        const out = await S.api('/api/harness/aufgaben', {method: 'POST', body: {titel: titel.value.trim() || namen.join(', ').slice(0, 60) || 'Aufgabe',
+          zweck: zweck.value.trim() || ('Erlaubt: ' + (namen.join(', ') || liste.map(x=>x.werkzeug).join(', '))).slice(0, 160), projekt: projekt.value,
+          sitzungen: [...gewaehlt], erlaubt: liste, modelle: modelle.value.split(',').map(m=>m.trim()).filter(Boolean), ende}});
         S.hinweis('Aufgabe ' + out.id + ' freigegeben.' + ((out.warnungen || []).length ? ' Achtung: ' + out.warnungen.length + ' Warnung(en).' : ''), (out.warnungen || []).length ? 'warn' : 'note');
-        ok.disabled = false; f.reset(); gewaehlt.clear(); zeichneSitzungen(); zeigeSumme(); zaehler.textContent = '0/160';
+        ok.disabled = false; titel.value = zweck.value = modelle.value = erlaubt.value = ''; gewaehlteBausteine.clear(); zeichneBausteine(); werte();
+        gewaehlt.clear(); vorgewaehlt = false; zeichneSitzungen(); zeigeSumme();
         neuLaden(true);
       }catch(err){
         ok.disabled = false;
@@ -209,11 +240,11 @@
       }
     };
     f.append(d().el('b', null, 'Neue Aufgabe freigeben'),
-             d().el('small', 'hs-leise', 'Innerhalb dieser Liste arbeitet der Agent ohne Karte. Verbotenes, feste Vorbehalte und Warnkarten bleiben beim Captain.'),
-             schritt(1, 'Worum geht es?', 'Titel und ein Satz Zweck – so erkennst du die Aufgabe später.'), titel, zweck, zaehler,
-             schritt(2, 'Für welche Sitzungen?', 'Nur die angehakten dürfen diese Liste nutzen.'), projekt, sitzungen,
-             schritt(3, 'Was ist erlaubt?', 'Eine Zeile je Erlaubnis; darunter steht in Klartext, was daraus wird.'), schnell, erlaubt, summe, modelle,
-             schritt(4, 'Wie viel und wie lange?', 'Leer lassen heißt: ohne Grenze (die Frist ist höchstens 24 h).'), grenzen, meldung, ok);
+             d().el('small', 'hs-leise', 'Der Agent darf das Gewählte in den gewählten Sitzungen ohne Rückfrage tun, nur so lange und so oft wie eingestellt. Verbotenes, feste Vorbehalte und Warnkarten bleiben bei dir.'),
+             schritt(1, 'Was darf der Agent?', 'Klick einen oder mehrere Bausteine an.'), schnell, summe,
+             schritt(2, 'In welchen Sitzungen?', 'Die neueste ist vorgewählt. Nur die angehakten dürfen es nutzen.'), projekt, sitzungen,
+             schritt(3, 'Wie lange und wie oft?', 'Vorgabe: 2 Stunden und 50 Aufrufe. Die Frist ist höchstens 24 Stunden.'), grenzen,
+             mehr, meldung, ok);
     return f;
   }
 
@@ -243,8 +274,8 @@
         const oben = box.scrollTop;
         vorschlaege.replaceChildren(d().el('h3', 'hs-ueber', 'Vorschläge des Vorarbeiters (' + karten.length + ')'),
           ...(karten.length ? karten.map(k=>vorschlagKarte(S, k, laden)) : [d().el('small', 'hs-leise', 'Keine offenen Vorschläge.')]));
-        aktivBox.replaceChildren(d().el('h3', 'hs-ueber', 'Aktiv (' + aktiv.length + ')'),
-          ...(aktiv.length ? aktiv.map(x=>aufgabenZeile(S, x, laden)) : [d().el('small', 'hs-leise', 'Keine aktive Aufgabe.')]));
+        aktivBox.replaceChildren(d().el('h3', 'hs-ueber', 'Gilt gerade (' + aktiv.length + ')'),
+          ...(aktiv.length ? aktiv.map(x=>aufgabenZeile(S, x, laden)) : [d().el('small', 'hs-leise', 'Keine Aufgabe gilt gerade – unten kannst du eine freigeben.')]));
         if(!formEl){ formEl = formular(S, laden); liste.append(formEl, altBox); }
         altBox.replaceChildren(...(alt.length ? [d().el('h3', 'hs-ueber', 'Zuletzt beendet'), ...alt.map(x=>aufgabenZeile(S, x, laden))] : []));
         box.scrollTop = oben;

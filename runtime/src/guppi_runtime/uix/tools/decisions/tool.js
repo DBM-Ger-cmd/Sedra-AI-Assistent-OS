@@ -67,7 +67,7 @@
         const knopf = d().button(label, async()=>{
           if(way !== 'ablehnen' && !knopf.dataset.sicher){
             knopf.dataset.sicher = '1'; knopf.textContent = 'Sicher? ' + label;
-            setTimeout(()=>{ if(knopf.isConnected){ delete knopf.dataset.sicher; knopf.textContent = label; } }, 5000);
+            setTimeout(()=>{ if(knopf.isConnected){ delete knopf.dataset.sicher; knopf.textContent = label; } }, 10000);          // 10 s: 5 s fielen zurück, bevor man die Rückfrage gelesen hatte
             return;
           }
           await this.ctx.shell.decide(item.id, way);
@@ -75,7 +75,7 @@
         }, way === 'ablehnen' ? '' : 'p');
         row.append(knopf);
       });
-      if(item.mission_id) row.append(d().button('Aufgabe öffnen', ()=>this.ctx.shell.open({type: 'task', id: item.mission_id, title: item.title.slice(0, 40)})));
+      if(item.mission_id) row.append(d().button('Vorgang ansehen', ()=>this.ctx.shell.open({type: 'task', id: item.mission_id, title: item.title.slice(0, 40)})));
       card.append(row);
       return card;
     },
