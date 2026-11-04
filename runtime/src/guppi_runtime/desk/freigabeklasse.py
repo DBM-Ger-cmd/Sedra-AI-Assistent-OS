@@ -286,8 +286,8 @@ ROUTEN_HARNESS = {
 # stehen zusätzlich oben in ROUTEN_HARNESS. Die übrigen lesen nur (GET).
 HARNESS_WEGE = frozenset({'projekte', 'sitzungen', 'antworten', 'karten', 'katalog', 'einstufen', 'werkzeuge', 'vorlagen', 'vorarbeiter',
                           'vorschau', 'dateien', 'vorgaben', 'modelle', 'router', 'verknuepfungen', 'gedaechtnis', 'token', 'aufraeumen',
-                          'code_stand', 'aufgaben', 'laeufe'})
-HARNESS_UNTERWEGE = frozenset({'nachricht', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'notizen'})
+                          'code_stand', 'aufgaben', 'laeufe', 'hilfswerkzeuge', 'bausteine'})
+HARNESS_UNTERWEGE = frozenset({'nachricht', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen'})
 # In GESCHUETZT (S7), aber heute nur mit GET geroutet – keine schreibende Route (harness/api.py, Weg `token`)
 HARNESS_GESCHUETZT_OHNE_SCHREIBEN = {'token': 'nur GET token_stand'}
 

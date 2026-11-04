@@ -308,6 +308,61 @@ class SlotTests(Base):
         refused(2, {'2': 8192})                # keys are numbers
 
 
+class AutoWindowMemoryTests(SlotTests):
+    """„Auto“ heißt das größte Fenster, das in den Speicher passt – für jedes Rezept mit Stufen, nicht nur für dynamische (04.11.2026: Qwen 3.5 MTP wurde mit
+    `vram_insufficient` abgelehnt, weil Auto stur 65536 je Slot × 2 Slots nahm, obwohl 32768 oder 16384 je Slot gepasst hätten)."""
+
+    @staticmethod
+    def bedarf(fenster, slots=2, gemessen=8.0, messfenster=8192, rate=0.025):
+        return round(gemessen + max(0.0, rate * (fenster * slots - messfenster) / 1000), 3)
+
+    def router_mit_budget(self, budget, per_slots=None):
+        gesehen = []
+
+        def pruefung(recipe, estimated, req):
+            gesehen.append(round(estimated['vram_gb'] + (estimated['kv_cache_gb'] or 0), 3))
+            return None if gesehen[-1] <= budget else 'vram_insufficient'
+        raw = self.slotted(2, per_slots or {2: 65536}).config
+        router = RoleRouter(raw, snapshot=self.GPU, health=self.health, audit=self.audit, clock=self.clock.now, load_check=pruefung)
+        return router, gesehen
+
+    def test_auto_nimmt_das_groesste_fenster_das_passt(self):
+        for budget, erwartet in ((20.0, 32768), (self.bedarf(32768) + 0.01, 32768), (self.bedarf(16384) + 0.01, 16384), (self.bedarf(8192) + 0.01, 8192)):
+            router, _ = self.router_mit_budget(budget)
+            self.assertEqual(router.resolve_recipe('c.s', kontext='auto')['context_window'], erwartet, f'Budget {budget}')
+
+    def test_die_aufloesung_nennt_den_bedarf_der_gewaehlten_stufe(self):
+        router, _ = self.router_mit_budget(self.bedarf(32768) + 0.01)
+        est = router.resolve_recipe('c.s', kontext='auto')['estimated_resources']
+        self.assertEqual(round(est['vram_gb'] + est['kv_cache_gb'], 3), self.bedarf(32768))
+
+    def test_passt_gar_nichts_ist_es_die_kleinste_stufe_und_eine_ablehnung(self):
+        router, gesehen = self.router_mit_budget(5.0)
+        with self.assertRaises(ResolutionError) as ctx:
+            router.resolve_recipe('c.s', kontext='auto')
+        self.assertEqual(ctx.exception.code, 'hardware_pressure')
+        self.assertEqual(ctx.exception.detail['considered'][0]['reason'], 'vram_insufficient')
+        self.assertEqual(gesehen[-1], self.bedarf(8192), 'zuletzt wurde die kleinste Stufe geprueft, ihr Bedarf steht in der Ablehnung')
+
+    def test_eine_gewaehlte_zahl_und_die_rollenwahl_bleiben_wie_sie_waren(self):
+        router, _ = self.router_mit_budget(self.bedarf(16384) + 0.01)
+        with self.assertRaises(ResolutionError):                                   # genau diese Stufe, nicht kleiner: der Captain hat sie gewaehlt
+            router.resolve_recipe('c.s', kontext=32768)
+        self.assertEqual(router.resolve_recipe('c.s', kontext=16384)['context_window'], 16384)
+        router, _ = self.router_mit_budget(20.0)
+        self.assertEqual(router.resolve_role('coder')['context_window'], 8192, 'ohne Wahl: das kleinste Fenster, das reicht (wie bisher)')
+
+    def test_ohne_speicherpruefung_bleibt_auto_beim_groessten_fenster(self):
+        self.assertEqual(self.slotted(2, {2: 65536}).resolve_recipe('c.s', kontext='auto')['context_window'], 32768, 'wie vorher: das groesste, das die Hardwareklasse hergibt')
+
+    def test_eine_pruefung_die_selbst_scheitert_aendert_nichts(self):
+        def kaputt(recipe, estimated, req): raise RuntimeError('x')
+        raw = self.slotted(2, {2: 65536}).config
+        router = RoleRouter(raw, snapshot=self.GPU, health=self.health, audit=self.audit, clock=self.clock.now, load_check=kaputt)
+        with self.assertRaises(RuntimeError):
+            router.resolve_recipe('c.s', kontext='auto')                            # wie vorher: der Fehler des Checks kommt an der alten Stelle
+
+
 class ContextTierTests(Base):
     GPU = SimpleNamespace(hardware_class='nvidia_10_12', cpu_threads=16, gpu_vendor='NVIDIA', ram_gb=32, vram_gb=12)
 

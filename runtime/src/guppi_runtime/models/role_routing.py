@@ -520,6 +520,34 @@ class RoleRouter:
                      "complete": recipe["model_size_gb"] is not None and kv is not None}      # False = the numbers are declared minimums, not an estimate
         plan = None
         dyn = recipe["profile"].get("dynamisch")
+        if kontext == "auto" and not dyn and tiers and loaded_context and self.load_check is not None:
+            # „Auto“ heißt „das größte Fenster, das in den Speicher passt“ (so sagt es die Oberfläche). Für dynamische Rezepte tut das der Block darunter; ohne diesen Block
+            # nahm jedes andere Rezept stur die größte Stufe, rechnete den Bedarf darauf hoch und wurde mit `vram_insufficient` abgelehnt, obwohl eine kleinere Stufe gepasst hätte
+            # (Beispiel: 65536 je Slot mal 2 Slots = 10,9 GB, 32768 je Slot = 9,2 GB, 16384 je Slot = 8,3 GB; 04.11.2026). Die Prüfung ist dieselbe wie beim Laden
+            # (`load_check`: Ledger, Messung, Reserve, schon geladenes Modell gutgeschrieben); nur lesen, nichts wird reserviert.
+            def _schaetzen(fenster):
+                kc = fenster * slots if fenster else fenster
+                kv_ = round(rate * (kc or 0) / 1000, 3) if rate is not None and kc else None
+                if recipe["measured_vram_gb"] is not None and rate is not None and measured_context and kc:
+                    kv_ = round(max(0.0, rate * (kc - measured_context) / 1000), 3)
+                return dict(estimated, kv_cache_gb=kv_, complete=recipe["model_size_gb"] is not None and kv_ is not None)
+            boden = req["context_min_tokens"] or tiers[0]
+            kandidaten = sorted((t for t in tiers if type(t) is int and boden <= t <= (context or 0)), reverse=True)
+            if len(kandidaten) > 1:
+                wahl_fenster = None
+                try:
+                    for t in kandidaten:
+                        est_t = _schaetzen(t)
+                        if not self.load_check(recipe, est_t, req):
+                            wahl_fenster = (t, est_t)
+                            break
+                except Exception:
+                    wahl_fenster = None                          # die Prüfung selbst scheitert: es bleibt bei der größten Stufe, wie vorher
+                else:
+                    if wahl_fenster is None:                      # nichts passt: die kleinste Stufe, damit die Ablehnung den kleinsten Bedarf nennt
+                        wahl_fenster = (kandidaten[-1], _schaetzen(kandidaten[-1]))
+                if wahl_fenster is not None and wahl_fenster[0] != loaded_context:
+                    loaded_context, estimated = wahl_fenster
         if dyn and self.speicher_stand is not None and recipe["model_size_gb"]:
             # Dynamische Rezepte (SPEC_DYNAMISCHE_REZEPTE_v1): statt einer festen Aufteilung die kleinste Lagenzahl im RAM, die jetzt in den freien Speicher passt;
             # reicht der Speicher nicht, erst ein kleinerer Kontext (nie unter dem verlangten Mindestkontext), sonst eine Ablehnung mit Zahlen.

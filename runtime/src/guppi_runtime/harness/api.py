@@ -817,7 +817,8 @@ class HarnessApi:
             eintrag['kontexte'] = sorted(t for t in (ctx.get('tiers') or []) if type(t) is int and (grenze is None or t <= grenze))
             eintrag['kontext_wahl'] = getattr(self.hub, '_last_kontext', lambda _i: 'auto')(r['id'])
             try:
-                ok, why = router._evaluate(r, router.normalize(None), exclude=set(), independent_of=[], captain_cloud_approved=False, now=router._clock())
+                ok, why = router._evaluate(r, router.normalize(None), exclude=set(), independent_of=[], captain_cloud_approved=False, now=router._clock(),
+                                           kontext=eintrag['kontext_wahl'] or 'auto')       # mit der Fensterwahl, mit der Laden es versucht: Auto = das groesste Fenster, das passt
             except Exception as exc:
                 ok, why = None, {'category': 'fehler', 'reason': f'{type(exc).__name__}: {exc}'[:200]}
             if ok:
