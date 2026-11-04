@@ -139,11 +139,10 @@
     const offen = !!(S._modellMenue && S._modellMenue.isConnected);
     if(an === false || (an === undefined && offen)){ schliessen(S); return; }
     if(offen){ const wahl = S._modellMenue.querySelector('select'); if(wahl) wahl.focus(); return; }
-    routerMenue(S, false);
     const p = d().el('div', 'hs-modell-menue'); p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Modell');
     const kopf = d().el('div', 'hs-modell-text', S.modell ? 'Geladen: ' + S.modell.name + '.' : 'Kein Modell geladen.');
     const zu = d().el('button', 'hs-rund hs-modell-zu', '×'); zu.type = 'button'; zu.setAttribute('aria-label', 'Schließen'); zu.onclick = ()=>schliessen(S);
-    p.append(kopf, zu, steuerung(S, ()=>{ schliessen(S); if(root.sedraHarness.eingabe) root.sedraHarness.eingabe.modellZeigen(S); }));
+    p.append(kopf, zu, steuerung(S, ()=>{ schliessen(S); if(root.sedraHarness.eingabe) root.sedraHarness.eingabe.modellZeigen(S); }), routerTeil(S));
     document.body.append(p); S._modellMenue = p;
     const taste = e=>{ if(e.key === 'Escape') schliessen(S); };
     const aussen = e=>{ if(!p.contains(e.target) && !(e.target.closest && e.target.closest('[data-zelle=model],[data-zelle=server],.hs-modell,.hs-erststart'))) schliessen(S); };
@@ -152,18 +151,13 @@
     const wahl = p.querySelector('select'); if(wahl) wahl.focus();
   }
 
-  // Fenster „Modellserver“ (Klick auf die Statuszelle): der Sedra-Modell-Router – Zustand, Starten/Beenden und seine Optionen (GET/POST /api/harness/router).
+  // Abschnitt „Modellserver“ im Modell-Menü (Captain 03.11.2026: Modell und Server sind ein Menü, die Zellen „Modell“ und „Modellserver“ öffnen beide dieses): der
+  // Sedra-Modell-Router – Zustand, Starten/Beenden und seine Optionen (GET/POST /api/harness/router).
   const ROUTER_FEHLER = {router_laeuft_schon: 'Der Router läuft schon.', router_fremd: 'Dieser Router wurde von einem anderen Programm gestartet (Pi, StarNet); Sedra beendet ihn nicht.',
     router_ohne_modelle: 'Es ist noch kein Modell in der Liste.', router_beendet_beim_start: 'Der Router hat sich beim Start beendet (siehe Protokoll).',
     router_start_zeitueberschreitung: 'Der Router ist nicht rechtzeitig bereit geworden (siehe Protokoll).'};
-  function routerMenue(S, an){
-    const offen = !!(S._routerMenue && S._routerMenue.isConnected);
-    const zu = ()=>{ if(S._routerMenue){ S._routerMenue.remove(); S._routerMenue = null; } if(S._routerMenueAb){ S._routerMenueAb(); S._routerMenueAb = null; } };
-    if(an === false || (an === undefined && offen)){ zu(); return; }
-    if(offen) return;
-    schliessen(S);
-    const p = d().el('div', 'hs-modell-menue hs-router-menue'); p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Modellserver');
-    const x = d().el('button', 'hs-rund hs-modell-zu', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Schließen'); x.onclick = zu;
+  function routerTeil(S){
+    const p = d().el('div', 'hs-router-menue hs-router-teil'); p.setAttribute('role', 'group'); p.setAttribute('aria-label', 'Modellserver');
     const kopf = d().el('div', 'hs-modell-text', 'Sedra-Modell-Router');
     const zustand = d().el('div', 'hs-leise hs-router-zustand', 'liest …'); zustand.setAttribute('role', 'status');
     const knoepfe = d().el('div', 'hs-modell-steuer');
@@ -180,12 +174,7 @@
     zeile2.append(d().el('label', 'hs-leise', 'Modelle gleichzeitig'), max, d().el('label', 'hs-leise', 'Entladen nach Leerlauf (s, 0 = nie)'), leer, speichern);
     knoepfe.append(start, ende);
     const hinweis = d().el('div', 'hs-leise hs-router-hinweis', '');
-    p.append(kopf, x, zustand, knoepfe, optionen, zeile2, hinweis);
-    document.body.append(p); S._routerMenue = p;
-    const taste = e=>{ if(e.key === 'Escape') zu(); };
-    const aussen = e=>{ if(!p.contains(e.target) && !(e.target.closest && e.target.closest('[data-zelle=server]'))) zu(); };
-    document.addEventListener('keydown', taste); document.addEventListener('mousedown', aussen);
-    S._routerMenueAb = ()=>{ document.removeEventListener('keydown', taste); document.removeEventListener('mousedown', aussen); };
+    p.append(kopf, zustand, knoepfe, optionen, zeile2, hinweis);
     const text = e=>{ const m = String((e && e.message) || e || ''); const k = Object.keys(ROUTER_FEHLER).find(k=>m.includes(k)); return k ? ROUTER_FEHLER[k] : m; };
     async function lesen(st){
       try{
@@ -211,7 +200,9 @@
     ende.onclick = ()=>tun({aktion: 'beenden'}, 'beendet …');
     speichern.onclick = ()=>tun({optionen: {auto_start: auto.checked, models_max: Number(max.value), sleep_idle_s: Number(leer.value)}}, 'speichert …');
     lesen();
+    return p;
   }
+  function routerMenue(S){ menue(S, true); }                                 // die Zelle „Modellserver“ öffnet das Modell-Menü
 
   // P0 M2 (1.11., E-A7): Modell beim Senden selbst laden – nur wenn der Server es erlaubt (Katalog `modell_laden` frei für das Standard-Rezept).
   // `melden(text, art)` schreibt in die Sitzung („lädt Modell …“). Gibt true zurück, wenn danach ein Modell geladen ist.
