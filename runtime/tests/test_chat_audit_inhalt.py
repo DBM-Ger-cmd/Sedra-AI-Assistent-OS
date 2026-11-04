@@ -49,6 +49,24 @@ class ChatAuditInhalt(unittest.TestCase):
         self.assertEqual(len(out), 1)
         self.assertIn('Qwen3.5-9B', out[0]['inhalt'])
 
+    def test_filter_nimmt_die_schreibweise_des_captains_wie_im_lauf_vom_04_11(self):
+        """Lauf S-1A8B635E: das Modell filterte mit „qwen 3.5 9b mtp“ und bekam [], weil im Audit qwen3.5-9b-mtp steht."""
+        schreiben(self.pfad, [ereignis('MODEL_LOADED', {'model': 'qwen3.5-9b-mtp'}), ereignis('MODEL_LOADED', {'model': 'gemma-4-12b-qat'}),
+                              ereignis('ROLE_RESOLUTION_FAILED', {'rejected': [{'capability_id': 'coder.llama_qwen35', 'reason': 'vram_insufficient'}]})])
+        out = self.audit(10, 'qwen 3.5 9b mtp')
+        self.assertEqual([e['event'] for e in out], ['MODEL_LOADED'])
+        self.assertIn('qwen3.5-9b-mtp', out[0]['inhalt'])
+        self.assertEqual([e['event'] for e in self.audit(10, 'Role Resolution failed')], ['ROLE_RESOLUTION_FAILED'])         # Trennzeichen egal
+        self.assertEqual([e['event'] for e in self.audit(10, 'vram insufficient qwen35')], ['ROLE_RESOLUTION_FAILED'])       # alle Wörter müssen vorkommen
+        self.assertEqual([list(e) for e in self.audit(10, 'gemma qwen')], [['hinweis']])                                       # kein Treffer: ein Hinweis statt []
+
+    def test_ohne_treffer_kommt_ein_hinweis_statt_einer_leeren_liste(self):
+        schreiben(self.pfad, [ereignis('A')])
+        out = self.audit(5, 'gibt es nicht')
+        self.assertEqual(len(out), 1)
+        self.assertIn('Kein Ereignis passt zu „gibt es nicht“', out[0]['hinweis'])
+        self.assertIn('FAILED', out[0]['hinweis'])
+
     def test_limit_gilt_nach_dem_filter_und_langer_inhalt_wird_gekuerzt(self):
         schreiben(self.pfad, [ereignis('X', {'text': 'a' * 1000, 'n': i}) for i in range(5)])
         out = self.audit(3, 'X')
@@ -60,7 +78,7 @@ class ChatAuditInhalt(unittest.TestCase):
         self.pfad.write_text('kein json\n' + json.dumps(ereignis('OK')) + '\n', encoding='utf-8')
         self.assertEqual([e['event'] for e in self.audit(5)], ['OK'])
         self.pfad.write_text('', encoding='utf-8')
-        self.assertEqual(self.audit(5, 'x'), [])
+        self.assertEqual([list(e) for e in self.audit(5, 'x')], [['hinweis']])
 
 
 if __name__ == '__main__':
