@@ -77,6 +77,17 @@ class VorlageTests(unittest.TestCase):
         self.assertIn('py_compile', yaml_text)
         self.assertIn('node --check', yaml_text)
 
+    def test_der_systemtext_hat_einen_auskunftsteil_mit_lesenden_werkzeugen(self):
+        """Der MasterChat gibt auch Auskunft über Sitzungen, Projekte und die Arbeit der Harness (Captain 04.11.2026): erst das Werkzeug fragen, dann antworten."""
+        text = (CONFIG / 'masterchat.md').read_text(encoding='utf-8')
+        teil = text.split('## Auskunft und Lenkung', 1)[1].split('\n## ', 1)[0]
+        self.assertIn('frag das Werkzeug', teil)
+        self.assertIn('nenne die Quelle', teil)
+        for w in ('arbeitsplatz_stand', 'lauf_status', 'sitzungen_auflisten', 'list_projects', 'list_missions', 'erinnern', 'recent_audit', 'app_oeffnen'):
+            self.assertIn('`' + w + '`', teil, w)
+            self.assertIn(w, self.m['werkzeuge'])
+        self.assertLess(len(teil), 1400)                                                                                # jede Zeile kostet bei jeder Anfrage Token
+
     def test_jedes_werkzeug_der_vorlage_gibt_es_wirklich(self):
         """Die Ladeprüfung lässt auch „vorgesehene“ Namen durch, die noch nichts ausführen; hier zählt nur, was die Harness oder der Chat wirklich kennt."""
         wirklich = set(HARNESS_NAMEN) | set(CHAT_SCHEMAS)
