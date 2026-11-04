@@ -1,6 +1,7 @@
 """Sprache → Text (Kern): welcher Provider auf diesem Rechner da ist, seine Kommandozeile, sein Lauf. Rein bis auf `which` und `run`,
 beide sind Parameter – die Tests geben Attrappen. Provider in dieser Reihenfolge: `whisperx` (m-bain/whisperX, BSD-2: faster-whisper,
-Wort-Zeiten, VAD, CPU mit int8) und `whisper` (openai-whisper). Beide schreiben eine SRT; die wird ein Transkript.
+Wort-Zeiten, VAD, CPU mit int8), `faster-whisper` (die Kommandozeile `whisper-ctranslate2`: CTranslate2 auf der CPU mit int8, ohne PyTorch, daher leichter
+zu installieren als WhisperX) und `whisper` (openai-whisper). Alle schreiben eine SRT; die wird ein Transkript.
 Die Sprecher-Trennung von WhisperX (pyannote, Hugging-Face-Token, Netz) wird nicht aufgerufen – eine Entscheidung des Captains."""
 from __future__ import annotations
 
@@ -18,6 +19,8 @@ MODELLE = ('tiny', 'base', 'small', 'medium', 'large-v2', 'large-v3')
 # Name, ausführbare Datei, Installationsbefehl, Hinweis – Reihenfolge = Vorzug
 PROVIDER = (
     ('whisperx', 'whisperx', 'pip install whisperx', 'WhisperX (m-bain/whisperX): faster-whisper, Wort-Zeiten, VAD; CPU mit int8 möglich.'),
+    ('faster-whisper', 'whisper-ctranslate2', 'pip install whisper-ctranslate2', 'whisper-ctranslate2 (CTranslate2, die Engine von faster-whisper): CPU mit int8 ohne PyTorch, '
+     'lässt die Grafikkarte dem Sprachmodell; ohne Wort-Zeiten.'),
     ('whisper', 'whisper', 'pip install -U openai-whisper', 'openai-whisper: die Referenz-Kommandozeile; langsamer, ohne Wort-Zeiten.'),
 )
 
@@ -54,7 +57,7 @@ def provider_finden(which=shutil.which, e=None):
                         note=hinweis + ' Aber ffmpeg fehlt – ohne ffmpeg kann der Provider webm/ogg/m4a nicht lesen.')
         return dict(grund, status='bereit', provider=name, befehl=str(pfad), install=install, note=hinweis)
     return dict(grund, status='platzhalter', provider='keiner', befehl='', install=PROVIDER[0][2],
-                note='Kein Sprach-zu-Text-Provider auf diesem Rechner. SEDRA erkennt „whisperx“ (empfohlen) oder „whisper“ im PATH; '
+                note='Kein Sprach-zu-Text-Provider auf diesem Rechner. SEDRA erkennt „whisperx“ (empfohlen), „whisper-ctranslate2“ (faster-whisper) oder „whisper“ im PATH; '
                      'danach läuft die Transkription lokal. Bis dahin: Abschrift von Hand oder ein fertiges Transkript (TXT, SRT, VTT) importieren.')
 
 
@@ -63,7 +66,7 @@ def befehl(p, datei, sprache, ziel):
     if sprache not in SPRACHEN: raise ValueError('sprache_unbekannt')
     exe = p.get('befehl') or p['provider']
     gemeinsam = [exe, str(datei), '--model', p['modell'], '--language', sprache, '--output_format', 'srt', '--output_dir', str(ziel), '--device', p['geraet']]
-    if p['provider'] == 'whisperx':
+    if p['provider'] in ('whisperx', 'faster-whisper'):
         return gemeinsam + ['--compute_type', p['rechenart']]
     if p['provider'] == 'whisper':
         return gemeinsam + ['--fp16', 'False' if p['rechenart'] != 'float16' else 'True']

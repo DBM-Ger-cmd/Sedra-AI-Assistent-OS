@@ -833,7 +833,7 @@ class UIXHub:
 
     @property
     def sprache(self):
-        """Der Kern „Sprache“ (19.10.2026, sprache/hub.py): Aufnehmen und Sprache → Text für jede Shell – Provider auf dem Rechner (whisperx, whisper)."""
+        """Der Kern „Sprache“ (19.10.2026, sprache/hub.py): Aufnehmen und Sprache → Text für jede Shell – Provider auf dem Rechner (whisperx, whisper-ctranslate2, whisper)."""
         s = self.__dict__.get('_sprache')
         if s is None:
             from .sprache.hub import SpracheHub

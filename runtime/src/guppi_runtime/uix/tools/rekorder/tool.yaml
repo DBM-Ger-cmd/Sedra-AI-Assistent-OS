@@ -1,5 +1,5 @@
 # Werkzeug „Rekorder“ (Kern Sprache, 19.10.2026): aufnehmen (Mikrofon, Stücke an den Kern), abspielen, Sprache → Text mit dem
-# Provider des Rechners (whisperx, whisper) oder Abschrift von Hand. Für jede Shell: es zeichnet den Typ `aufnahme`.
+# Provider des Rechners (whisperx, whisper-ctranslate2, whisper) oder Abschrift von Hand. Für jede Shell: es zeichnet den Typ `aufnahme`.
 tool:
   id: rekorder
   name: "Rekorder"
