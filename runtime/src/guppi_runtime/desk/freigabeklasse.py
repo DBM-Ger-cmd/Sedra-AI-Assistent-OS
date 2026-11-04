@@ -22,6 +22,7 @@ ARTEN = {
     # Anträge (request:<art>, desk/decisions.REQUEST_TITLE)
     'request:switch': H, 'request:routing': H, 'request:boundaries': H,                 # Regeln
     'request:harness_katalog': H, 'request:harness_vorlage': H,                          # Regeln der Harness
+    'request:harness_code_stand': H,                                                     # Code gilt als gesehen: Läufe und Befehle ohne Karte (G4, 04.11.2026)
     'request:install': H, 'request:trust': H, 'request:update': H,                       # Code und Rechte in den Betrieb
     'request:model_add': H, 'request:skill': H,                                          # neues Modell; Skill = Text für das Modell
     'request:cloud_url': H,                                                              # Daten nach außen
@@ -259,6 +260,7 @@ ROUTEN_HARNESS = {
     'POST katalog/antrag': ('antrag', None, 'request:harness_katalog (F6)'),
     'POST katalog/entfernen': ('antrag', None, 'request:harness_katalog'),
     'POST vorlagen/grenzen': ('antrag', None, 'request:harness_vorlage'),
+    'POST code_stand/antrag': ('antrag', None, 'request:harness_code_stand'),
     'POST einstufen': ('liest', None, 'Vorschau der Einstufung'),
     'POST vorarbeiter': ('freigabe', H, 'Vorarbeiter ernennen (F5)'),
     'DELETE vorarbeiter': ('zurueck', None, 'Ernennung entziehen'),

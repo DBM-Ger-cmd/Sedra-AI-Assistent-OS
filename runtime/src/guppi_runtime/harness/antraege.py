@@ -7,7 +7,10 @@ damit `register_applier` sie bei einem zweiten Hub im selben Prozess wiedererken
 `kinds.freeze()` (wie `desk_wissen`)."""
 from __future__ import annotations
 
+import subprocess
+
 from ..desk import gated
+from . import code_stand as harness_code_stand
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
 from . import vorlagen as harness_vorlagen
@@ -16,6 +19,8 @@ KIND_KATALOG = 'harness_katalog'
 KIND_VORLAGE = 'harness_vorlage'
 PROJEKT_ANTRAEGE_MAX = 5                 # offene „Ordner öffnen“-Anträge zugleich
 KIND_PROJEKT = 'harness_projekt'            # P0 M3 (1.11.): „Ordner öffnen“ → Laufzeitdatei, nie local_config
+KIND_CODE_STAND = 'harness_code_stand'      # 04.11.: „Code-Stand übernehmen“ → gesehener Stand unter runtime_data/harness/code_stand
+ZIEL_CODE_STAND = 'runtime_data/harness/code_stand'
 ZIEL_KATALOG = 'local_config/' + harness_katalog.DATEI
 ZIEL_PROJEKTE = harness_projekte.LAUFZEIT.as_posix()
 
@@ -167,8 +172,77 @@ def _projekt_anwenden(hub, binding):
     return dict(out, projekt=neu)
 
 
+# ---- Code-Stand übernehmen (Captain 04.11.2026): ein Antrag im Posteingang statt einer Notiz in jeder neuen Sitzung
+def _offene_code_stand(hub, projekt_id):
+    offen = getattr(hub, '_open_requests', None)
+    return [r for r in (offen() if callable(offen) else []) if r.get('kind') == KIND_CODE_STAND and (r.get('binding') or {}).get('projekt') == projekt_id]
+
+
+def _git(wurzel, *args):
+    """Eine lesende git-Abfrage im Projekt; ohne git, ohne Repo oder bei Fehler ''. Nur Anzeige, nie Grundlage einer Entscheidung."""
+    try:
+        r = subprocess.run(['git', '-C', str(wurzel), *args], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=15)
+        return r.stdout.strip() if r.returncode == 0 else ''
+    except (OSError, subprocess.SubprocessError):
+        return ''
+
+
+def code_herkunft(wurzel, liste):
+    """Wo der Code herkommt, als Zeilen für den Antrag: von der Harness selbst geschrieben (Spur), Commits laut git (die letzten) und was noch nicht committet ist.
+    Der Code liegt im Projekt; die Quelle ist dort nachzulesen (`git log`, `git diff`)."""
+    pfade = [e['pfad'] for e in liste]
+    zeilen = []
+    selbst = [e for e in liste if e.get('herkunft')]
+    zeilen.append(f'Herkunft: {len(selbst)} von {len(liste)} Dateien hat die Harness selbst geschrieben (Sitzung und Weg stehen in der Spur)' if selbst
+                  else 'Herkunft: keine der Dateien hat die Harness selbst geschrieben – der Code kam von außen (andere Arbeit im Projekt, git pull, Programme)')
+    if (_git(wurzel, 'rev-parse', '--is-inside-work-tree') == 'true'):
+        offen = {z[3:].strip().strip('"').replace('\\', '/') for z in _git(wurzel, 'status', '--porcelain', '--', *pfade).splitlines()}
+        log = _git(wurzel, 'log', '-n', '6', '--format=%h %s', '--', *pfade)
+        if log:
+            zeilen.append('Letzte Commits an diesen Dateien (git log): ' + ' · '.join(z[:90] for z in log.splitlines()))
+        zeilen.append(f'{len(offen)} der Dateien sind noch nicht committet (git status)' if offen else 'Alle Dateien sind committet; Änderungen: git log und git diff im Projekt')
+    return zeilen
+
+
+def code_stand_antrag(hub, projekt, cs):
+    """POST code_stand/antrag {projekt}: legt für genau die jetzt ungesehenen Dateien in genau ihrer Fassung einen Antrag in den Posteingang. Der Captain bestätigt einmal
+    (Klasse H, Freigabe-Tür), ohne den Code zu lesen; ändert sich danach eine Datei, ist die Bindung veraltet (`binding_stale`). Derselbe Stand ist schon beantragt: kein zweiter Antrag."""
+    liste = cs.ungesehen()
+    if not liste:
+        raise ValueError('nichts_ungesehen: im Projekt ' + projekt['id'] + ' gibt es keinen Code, den der Captain nicht gesehen hat')
+    dateien = harness_code_stand.bindung(liste)
+    for r in _offene_code_stand(hub, projekt['id']):
+        if (r.get('binding') or {}).get('dateien') == dateien:
+            return {'mission_id': r.get('mission_id'), 'anzahl': len(liste), 'schon_offen': True}
+    neu = sum(1 for e in liste if e['alt'] is None)
+    weg = sum(1 for e in liste if e['neu'] is None)
+    binding = {'projekt': projekt['id'], 'wurzel': str(projekt['wurzel']), 'dateien': dateien}
+    risks = [f'{len(liste)} Code-Dateien in Projekt „{projekt["name"]}“ ({neu} neu, {weg} gelöscht, {len(liste) - neu - weg} geändert) gelten danach als gesehen',
+             'Danach laufen Läufe und Befehle ohne Code-Karte; nur diese Fassung ist gedeckt, jede spätere Änderung braucht wieder eine Bestätigung',
+             'Zum Beispiel: ' + ', '.join(e['pfad'] for e in liste[:5]) + (' …' if len(liste) > 5 else '')] + code_herkunft(projekt['wurzel'], liste)
+    req = gated.request(hub, KIND_CODE_STAND, 'HARNESS_CODE_STAND_UEBERNEHMEN', ZIEL_CODE_STAND + '/' + projekt['id'], binding, risks=risks, exact=True,
+                        describe=f'Code-Stand übernehmen: {len(liste)} Dateien in {projekt["name"]}')
+    return {'mission_id': req['mission_id'], 'anzahl': len(liste), 'schon_offen': False}
+
+
+def _code_stand_anwenden(hub, binding):
+    pid = binding.get('projekt')
+    projekt = next((p for p in harness_projekte.laden(hub.project_root) if p['id'] == pid), None)
+    if projekt is None or str(projekt['wurzel']) != binding.get('wurzel'):
+        raise ValueError(gated.REFUSED + 'projekt_unbekannt')
+    cs = harness_code_stand.CodeStand(hub.project_root / 'runtime_data' / 'harness' / 'code_stand', projekt['wurzel'], pid,
+                                      audit=lambda e, p: hub.runtime.audit.append(e, component='harness', payload=p))
+    if harness_code_stand.bindung(cs.ungesehen()) != binding.get('dateien'):
+        raise ValueError(gated.STALE)                  # seit dem Antrag hat sich Code geändert: nichts wird übernommen
+    n = cs.gesehen_setzen(binding['dateien'])
+    hub.runtime.audit.append('HARNESS_CODE_STAND_UEBERNOMMEN', component='harness', payload={'projekt': pid, 'anzahl': n, 'kanal': 'posteingang'})
+    hub.events.publish('harness.code_stand', {'ereignis': 'HARNESS_CODE_STAND_UEBERNOMMEN', 'projekt': pid, 'anzahl': n})
+    return {'projekt': pid, 'anzahl': n}
+
+
 def registrieren(registry):
-    """Vor `kinds.freeze()` in uix_server: die Applier aller drei Arten."""
+    """Vor `kinds.freeze()` in uix_server: die Applier aller Arten."""
+    gated.register_applier(KIND_CODE_STAND, _code_stand_anwenden, registry=registry)
     gated.register_applier(KIND_KATALOG, _katalog_anwenden, registry=registry)
     gated.register_applier(KIND_VORLAGE, _grenzen_anwenden, registry=registry)
     gated.register_applier(KIND_PROJEKT, _projekt_anwenden, registry=registry)

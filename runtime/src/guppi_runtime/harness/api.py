@@ -259,6 +259,8 @@ class HarnessApi:
             return 200, harness_antraege.katalog_entfernen_antrag(self.hub)
         if fest == 'vorlagen' and method == 'POST' and unter == 'grenzen':
             return 200, harness_antraege.grenzen_antrag(self.hub, payload.get('vorlage'), payload.get('max_zuege'))
+        if fest == 'code_stand' and method == 'POST' and unter == 'antrag':
+            return 200, self.code_stand_antrag(payload)
         if fest == 'einstufen' and method == 'POST':
             return 200, self.einstufen(payload)
         if fest == 'vorschau' and method == 'GET' and not unter:
@@ -908,8 +910,16 @@ class HarnessApi:
             return f'CODE_STAND.bat {pid}'
         return f'python -m guppi_runtime.harness.code_stand --root "{self.hub.project_root}" {pid}'
 
+    def code_stand_antrag(self, payload):
+        """POST code_stand/antrag {projekt} (04.11.2026): ein Antrag im Posteingang für genau den jetzt ungesehenen Code; übernommen wird erst nach der Bestätigung (Klasse H)."""
+        projekt = self._projekt(str((payload or {}).get('projekt') or ''))
+        cs = self.code_stand(projekt)
+        if cs is None:
+            raise ValueError('code_sicht_aus: die Code-Sicht ist abgeschaltet, es gibt nichts zu übernehmen')
+        return harness_antraege.code_stand_antrag(self.hub, projekt, cs)
+
     def code_stand_sicht(self, q):
-        """GET code_stand?projekt= (G4-17): {projekt, aktiv, ungesehen, pfade} – nur lesen. Übernehmen geht nur außerhalb des Browsers (Konsole)."""
+        """GET code_stand?projekt= (G4-17): {projekt, aktiv, ungesehen, pfade} – nur lesen. Übernehmen: Antrag im Posteingang (POST code_stand/antrag) oder die Konsole."""
         pid = (q.get('projekt') or [''])[0]
         projekt = self._projekt(pid)
         cs = self.code_stand(projekt)

@@ -118,8 +118,12 @@
         if(!projekt) return;
         S.api('/api/harness/code_stand?projekt=' + encodeURIComponent(projekt)).then(c=>{
           if(!c || !c.aktiv || !c.ungesehen) return;
-          this.notiz(c.ungesehen + (c.ungesehen === 1 ? ' Code-Datei ist' : ' Code-Dateien sind') + ' in dieser Fassung noch nicht von dir gesehen (z. B. ' + c.pfade.slice(0, 3).join(', ')
-                     + '). Läufe und Befehle zeigen sie dir zuerst auf einer Karte; ansehen und übernehmen auch in der Konsole: ' + (c.konsole || 'CODE_STAND.bat ' + projekt) + ' --zeigen', 'warn');
+          const wer = c.ungesehen + (c.ungesehen === 1 ? ' Code-Datei ist' : ' Code-Dateien sind') + ' in dieser Fassung noch nicht von dir gesehen (z. B. ' + c.pfade.slice(0, 3).join(', ') + '). ';
+          const konsole = 'Ansehen auch in der Konsole: ' + (c.konsole || 'CODE_STAND.bat ' + projekt) + ' --zeigen';
+          // 04.11.2026: ein Antrag im Posteingang – einmal bestätigen genügt; ohne Antrag bleibt es bei der Karte vor Läufen und Befehlen
+          S.api('/api/harness/code_stand/antrag', {method: 'POST', body: {projekt}}).then(a=>{
+            this.notiz(wer + 'Ein Antrag wartet im Posteingang (' + (a.anzahl || c.ungesehen) + ' Dateien): einmal bestätigen genügt. Bis dahin zeigen Läufe und Befehle sie dir auf einer Karte. ' + konsole, 'warn');
+          }).catch(()=>this.notiz(wer + 'Läufe und Befehle zeigen sie dir zuerst auf einer Karte; übernehmen in der Konsole. ' + konsole, 'warn'));
         }).catch(()=>{});
       },
 

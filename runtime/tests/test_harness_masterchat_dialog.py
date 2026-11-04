@@ -21,11 +21,14 @@ globalThis.sedraDom = {el};
 globalThis.sedraHarness = {markdown: {}, zeilen: {}, reiter: {ID: /^S-[0-9A-F]{8}$/, umbenennen(){}}, eingabe: {modellMenue(){}}};
 require(%s);
 require(%s);
-const gefragt = [], posts = [], notizen = [];
+const gefragt = [], posts = [], notizen = [], antraege = [];
+let ANTRAG_FEHLER = false;
 const S = {modell: {name: 'm'}, ansichten: new Map(), sitzungenLaden(){}, leerGeaendert(){}, hinweis(){}, _eingabe: {},
   vorlagen: [{id: 'masterchat', name: 'MasterChat', hinweis: 'h', erlaubnisse: [{werkzeug: 'datei_schreiben', muster: 'docs/**'}]}, {id: 'bauagent', name: 'Bauagent', hinweis: '', erlaubnisse: []}],
   async api(pfad, opt){
     if(opt && opt.method === 'POST' && pfad === '/api/harness/sitzungen'){ posts.push(opt.body); return {id: 'S-AABBCCDD'}; }
+    if(pfad.startsWith('/api/harness/code_stand?')) return {aktiv: true, ungesehen: 48, pfade: ['CODE_STAND.bat', 'FREIGABE.bat', 'a.py', 'b.py'], konsole: 'CODE_STAND.bat sedra-entwicklung'};
+    if(pfad === '/api/harness/code_stand/antrag'){ antraege.push(opt.body); if(ANTRAG_FEHLER) throw new Error('code_sicht_aus'); return {anzahl: 48, schon_offen: false}; }
     if(opt && opt.method === 'POST') return {antwort_id: 'A-1'};
     return {};
   }};
@@ -65,6 +68,31 @@ class DialogZumServer(unittest.TestCase):
         out = self.node("(async()=>{ console.log(JSON.stringify(await lauf('bauagent', true))); })();")
         self.assertEqual(out['gefragt'], [])
         self.assertEqual(out['posts'], [{'projekt': 'sedra-entwicklung', 'vorlage': 'bauagent'}])
+
+    def test_code_stand_hinweis_legt_einen_antrag_an_und_sagt_wo_er_wartet(self):
+        out = self.node("""(async()=>{
+  notizen.length = 0;
+  const a = globalThis.sedraHarness.verlauf.ansicht(S, 'neu-codestand'); a.notiz = (t, ton)=>{ notizen.push([t, ton]); };
+  a.codeHinweis(S, 'sedra-entwicklung'); await new Promise(r=>setImmediate(r)); await new Promise(r=>setImmediate(r));
+  ANTRAG_FEHLER = true; notizen.length = 0;
+  a.codeHinweis(S, 'sedra-entwicklung'); await new Promise(r=>setImmediate(r)); await new Promise(r=>setImmediate(r));
+  console.log(JSON.stringify({antraege, fallback: notizen}));
+})();""")
+        self.assertEqual(out['antraege'], [{'projekt': 'sedra-entwicklung'}, {'projekt': 'sedra-entwicklung'}])
+        self.assertEqual(len(out['fallback']), 1)
+        self.assertIn('Läufe und Befehle zeigen sie dir zuerst auf einer Karte', out['fallback'][0][0])     # ohne Antrag bleibt der alte Weg
+
+    def test_code_stand_hinweis_nennt_den_antrag_im_posteingang(self):
+        out = self.node("""(async()=>{
+  notizen.length = 0;
+  const a = globalThis.sedraHarness.verlauf.ansicht(S, 'neu-codestand2'); a.notiz = (t, ton)=>{ notizen.push([t, ton]); };
+  a.codeHinweis(S, 'sedra-entwicklung'); await new Promise(r=>setImmediate(r)); await new Promise(r=>setImmediate(r));
+  console.log(JSON.stringify(notizen));
+})();""")
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0][1], 'warn')
+        for teil in ('48 Code-Dateien sind', 'Ein Antrag wartet im Posteingang (48 Dateien)', 'einmal bestätigen genügt', 'CODE_STAND.bat sedra-entwicklung --zeigen'):
+            self.assertIn(teil, out[0][0])
 
 
 if __name__ == '__main__':
