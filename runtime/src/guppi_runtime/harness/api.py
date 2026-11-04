@@ -53,6 +53,7 @@ from urllib.parse import parse_qs
 import yaml
 
 from . import antraege as harness_antraege
+from . import auszug as harness_auszug
 from . import aufgabe as harness_aufgabe
 from . import dateien as harness_dateien
 from . import export as harness_export
@@ -591,12 +592,16 @@ class HarnessApi:
             if out.get('status') != 'completed':
                 raise ValueError('modell_fehler: ' + str(out.get('error') or out.get('reason_code') or out.get('status'))[:160])
             text = ((out.get('model_result') or {}).get('content') or '').strip()[:ZUSAMMENFASSUNG_MAX]
-            if not text:
-                raise ValueError('zusammenfassung_leer: ' + str((out.get('model_result') or {}).get('finish_reason') or 'ohne Grund'))
-            self.sitzungen.anhaengen(sid, {'typ': 'zusammenfassung', 'text': text, 'bis_n': grenze, 'nachrichten': len(neu)})
+            art = 'modell'
+            if not text:                                                       # leere Antwort (03.11.2026): ein Auszug ohne Modell statt eines wachsenden Verlaufs, ehrlich als Auszug benannt
+                grund = str((out.get('model_result') or {}).get('finish_reason') or 'ohne Grund')
+                text = harness_auszug.auszug((alt or {}).get('text'), neu, ZUSAMMENFASSUNG_MAX)
+                art = 'auszug'
+                self._audit('HARNESS_VERLAUF_ZUSAMMENFASSUNG_LEER', {'sitzung_id': sid, 'grund': grund[:80], 'rueckfall': 'auszug'})
+            self.sitzungen.anhaengen(sid, {'typ': 'zusammenfassung', 'text': text, 'bis_n': grenze, 'nachrichten': len(neu), 'art': art})
             messages[0]['content'] = schleife.mit_zusammenfassung(messages[0]['content'], text)
-            antwort.senden('verlauf.zusammenfassung', {'phase': 'ende', 'nachrichten': len(neu), 'zeichen': len(text)})
-            self._audit('HARNESS_VERLAUF_ZUSAMMENGEFASST', {'sitzung_id': sid, 'nachrichten': len(neu), 'bis_n': grenze, 'zeichen': len(text)})
+            antwort.senden('verlauf.zusammenfassung', {'phase': 'ende', 'nachrichten': len(neu), 'zeichen': len(text), 'art': art})
+            self._audit('HARNESS_VERLAUF_ZUSAMMENGEFASST', {'sitzung_id': sid, 'nachrichten': len(neu), 'bis_n': grenze, 'zeichen': len(text), 'art': art})
         except Exception as exc:
             grund = f'{type(exc).__name__}: {exc}'[:200]
             antwort.senden('verlauf.zusammenfassung', {'phase': 'fehler', 'grund': grund})

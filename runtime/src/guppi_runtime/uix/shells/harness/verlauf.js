@@ -152,7 +152,7 @@
           }
           else if(e.typ === 'zusammenfassung'){                     // von Sedra erstellt: das frühere Gespräch in Stichpunkten, aufklappbar
             const det = d().el('details', 'hs-zusammenfassung');
-            det.append(d().el('summary', null, 'Früheres Gespräch zusammengefasst (' + (e.nachrichten || '?') + ' Nachrichten) – steht im Systemprompt'), d().el('pre', 'hs-pre', e.text || ''));
+            det.append(d().el('summary', null, (e.art === 'auszug' ? 'Früheres Gespräch als Auszug ohne Modell (' : 'Früheres Gespräch zusammengefasst (') + (e.nachrichten || '?') + ' Nachrichten) – steht im Systemprompt'), d().el('pre', 'hs-pre', e.text || ''));
             this.neu(det); block = null;
           }
           else if(e.typ === 'modell'){
@@ -320,7 +320,7 @@
         }
         else if(name === 'verlauf.zusammenfassung'){
           if(x.phase === 'start') this.phase('fasst das frühere Gespräch zusammen');
-          else if(x.phase === 'ende') this.notiz('Früheres Gespräch zusammengefasst (' + x.nachrichten + ' Nachrichten, ' + x.zeichen + ' Zeichen) – es steht jetzt im Systemprompt.', 'note');
+          else if(x.phase === 'ende') this.notiz(x.art === 'auszug' ? 'Das Modell hat nichts zusammengefasst – stattdessen steht ein Auszug (erste Sätze von ' + x.nachrichten + ' Nachrichten) im Systemprompt.' : 'Früheres Gespräch zusammengefasst (' + x.nachrichten + ' Nachrichten, ' + x.zeichen + ' Zeichen) – es steht jetzt im Systemprompt.', x.art === 'auszug' ? 'warn' : 'note');
           else this.notiz('Zusammenfassung des früheren Gesprächs gescheitert: ' + x.grund + ' – die Antwort läuft ohne sie weiter.', 'warn');
         }
         else if(name === 'fehler'){                                   // V9 (1.11.): die Fehlerzeile zeigt den Weg zum Logbuch (Audit), nicht nur den Typnamen
