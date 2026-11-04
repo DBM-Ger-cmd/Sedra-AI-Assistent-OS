@@ -16,4 +16,4 @@
 **Risiken:**
 - Verwechslung der Variablen für eingehende/erzeugte Tokens.
 
-**Status:** Offen
+**Status:** umgesetzt (Commit 26b2fa1, Tests runtime/tests/test_harness_export_token.py), Abnahme durch den Captain offen

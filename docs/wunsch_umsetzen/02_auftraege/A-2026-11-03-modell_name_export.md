@@ -18,3 +18,5 @@ Im Markdown-Export der Harness soll unter der Zeile mit den Token-Informationen 
 **Risiken**
 - Falsche Formatierung des Markdown-Strings (z.B. Zeilenumbrüche).
 - Zugriff auf einen ungültigen Kontext-Key für den Modellnamen.
+
+**Status:** umgesetzt (Commit 078694b, Tests runtime/tests/test_harness_export_token.py), Abnahme durch den Captain offen
