@@ -13,10 +13,9 @@
   const SCHUB_MS = 2000;
   // Stufe 5 (G2 §3.1): fester Eintrag in der Gruppe System – kein Ort, kein Werkzeug: die Shell trägt ihn ein
   const EINSTELLUNGEN = {id: 'einstellungen', label: 'Einstellungen', hint: 'Startseite, Allgemein, Agent, Sprache, Integrationen, Modelle, System', symbol: '⚙', gruppe: 'system', fest: true, werkzeuge: []};
-  // Captain 03.11.2026: „Token und Gespräch“ bleibt in den Einstellungen und ist im Start-Menü unter Sedra Token nur verlinkt (`fest` nennt den Punkt)
-  const TOKEN_GESPRAECH = {id: 'token-gespraech', label: 'Token und Gespräch', hint: 'Verbrauch, Denken, Antwortbudget, Länge des Verlaufs', symbol: '◎', gruppe: 'token', fest: 'agent/token', words: ['token', 'gespräch', 'gespraech', 'denken', 'budget'], werkzeuge: []};
-  const FEST = {token: [TOKEN_GESPRAECH]};          // feste Einträge je Gruppe – kein Ort, kein Werkzeug: die Shell trägt sie ein (Einstellungen: die Kachel „Einstellungen“ oben, die Suche findet sie über FESTE)
-  const FESTE = [EINSTELLUNGEN, TOKEN_GESPRAECH];
+  // A3 (Captain 03.11.2026): „Token und Gespräch“ ist in die App „Sedra Token“ gewandert (Reiter Verbrauch, Kosten und Zeilen, Gespräch); feste Einträge gibt es nur noch für System
+  const FEST = {};          // feste Einträge je Gruppe – kein Ort, kein Werkzeug: die Shell trägt sie ein (Einstellungen: die Kachel „Einstellungen“ oben, die Suche findet sie über FESTE)
+  const FESTE = [EINSTELLUNGEN];
 
   function stand(S){ return S._start || (S._start = {offen: false, konfig: null, konfigFehler: null, zuletzt: [], liste: null, module: null, wartet: null, offene: new Set()}); }
 

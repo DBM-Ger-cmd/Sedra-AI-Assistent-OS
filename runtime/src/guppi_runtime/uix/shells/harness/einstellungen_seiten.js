@@ -17,7 +17,7 @@
     'agent/vorlagen': ['▤', 'Bauagent, Vorarbeiter, Modellierer, Prüfer, MasterChat'],
     'agent/freigabe': ['⛨', 'Katalog der Regeln und Erlaubnisse dieser Sitzungen'],
     'agent/grenzen': ['↻', 'Züge der Schleife je Vorlage (Antrag mit Gate)'],
-    'agent/token': ['◎', 'Verbrauch, Denken, Antwortbudget, Länge des Verlaufs'],
+    'agent/token': ['◎', 'Verweis auf die App Sedra Token: Verbrauch, Denken, Antwortbudget, Gedächtnis'],
     'sprache/rekorder': ['●', 'Aufnehmen, abspielen, Sprache zu Text'],
     'sprache/quelle': ['♪', 'Welcher Anbieter Sprache zu Text liefert'],
     'integrationen/mcp': ['⇄', 'Clients, Port und Alter der Datei – nie der Token'],
@@ -105,7 +105,7 @@
     rechts.append(labor);
 
     const token = kachel('Sedra Token', 'Verbrauch heute');
-    const tWerte = d().el('div', 'hs-einst-werte'); token.append(tWerte, d().button('Token und Gespräch', ()=>gehe('agent/token')));
+    const tWerte = d().el('div', 'hs-einst-werte'); token.append(tWerte, d().button('Sedra Token öffnen', ()=>root.sedraHarness.tokenseite.oeffnen(S)));
     rechts.append(token);
 
     // Daten: alles lesend, jede Kachel für sich – fällt eine aus, bleiben die anderen

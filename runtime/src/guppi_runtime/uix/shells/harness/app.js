@@ -115,6 +115,28 @@
   }
 
   // ---- die Ansicht (S.zeigen → verlauf.ansicht → hier): Werkzeuge einhängen
+  // A3: „Sedra Token“ ist eine App mit drei Reitern; Kosten und Zeilen ist das Werkzeug Meter, die anderen beiden stehen in tokenseite.js
+  function tokenReiter(S, box, f){
+    const T = root.sedraHarness.tokenseite; if(!T) return;
+    const feld = d().el('div', 'hs-app-koerper hs-token-feld'); feld.hidden = true;
+    const leiste = d().el('div', 'hs-app-reiter'); leiste.setAttribute('role', 'tablist');
+    const REITER = [['verbrauch', 'Verbrauch'], ['kosten', 'Kosten und Zeilen'], ['gespraech', 'Gespräch']];
+    const knoepfe = {};
+    const zeigen = name=>{
+      f.koerper.hidden = name !== 'kosten'; feld.hidden = name === 'kosten';
+      if(name !== 'kosten'){ feld.replaceChildren(); const innen = d().el('div', 'hs-einst-seite'); feld.append(innen); (name === 'verbrauch' ? T.verbrauch : T.gespraech)(S, innen); }
+      REITER.forEach(([n])=>{ knoepfe[n].classList.toggle('on', n === name); knoepfe[n].setAttribute('aria-selected', n === name ? 'true' : 'false'); });
+    };
+    REITER.forEach(([n, text])=>{
+      const b = d().el('button', 'hs-app-reiter-knopf', text); b.type = 'button'; b.setAttribute('role', 'tab'); b.onclick = ()=>zeigen(n);
+      knoepfe[n] = b; leiste.append(b);
+    });
+    box.insertBefore(leiste, box.children[1] || null);
+    box.append(feld);
+    const start = S._tokenReiter || 'verbrauch'; S._tokenReiter = null;
+    zeigen(start);
+  }
+
   function ansicht(S, id){
     const eintrag = apps(S).get(id) || {objekt: objektVon(S, id), titel: titel(S, id), seit: Date.now()};
     apps(S).set(id, eintrag);
@@ -123,6 +145,7 @@
     const kopf = d().el('div', 'hs-app-kopf');
     const f = flaeche(S, objekt);
     box.append(kopf, f.verben, f.koerper);
+    if(objekt.type === 'meter') tokenReiter(S, box, f);
     const a = root.sedraHarness.reiter.stub(id, box, S, {objekt, mounts: f.mounts, abbauen: f.abbauen, verben: f.zeichnen});
     kopf.append(d().el('b', 'hs-app-titel', eintrag.titel), d().el('code', 'hs-app-objekt', objekt.type + ' · ' + objekt.id + (objekt.view ? ' · ' + objekt.view : '')));
     if(f.rechts.length){

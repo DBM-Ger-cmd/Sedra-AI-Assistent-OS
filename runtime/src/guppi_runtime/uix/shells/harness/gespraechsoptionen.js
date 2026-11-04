@@ -39,7 +39,7 @@
         el.append(zeile);
       });
       const mehr = d().el('button', 'hs-knopf hs-klein', 'Alle Optionen …'); mehr.type = 'button';
-      mehr.onclick = ()=>{ el.hidden = true; root.sedraHarness.einstellungen.oeffnen(S, 'agent/token'); };
+      mehr.onclick = ()=>{ el.hidden = true; root.sedraHarness.tokenseite.oeffnen(S, 'gespraech'); };
       el.append(mehr, meld);
     };
     function laden(){

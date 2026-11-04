@@ -146,7 +146,7 @@
   }
 
   // Token: eingehend (was an das Modell ging – jeder Zug zählt den ganzen Verlauf neu) und erzeugt (was es geschrieben hat, Denken eingeschlossen) der aktiven Sitzung;
-  // der Ton folgt dem Füllstand des Kontextfensters. Ein Klick öffnet die Seite „Token und Gespräch“ (Verbrauch und die Optionen dazu).
+  // der Ton folgt dem Füllstand des Kontextfensters. Ein Klick öffnet die App „Sedra Token“.
   function zahl(n){ n = Number(n) || 0; return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace('.', ',') + 'k' : String(n); }
   function tokenZelle(S){
     const t = S.tokenStand, s = t && t.sitzung, h = t && t.heute;
@@ -156,9 +156,9 @@
     zelle.dataset.zelle = 'token';
     const wert = s ? zahl(s.ein) + ' ↑ ' + zahl(s.aus) + ' ↓' : (h && h.antworten ? 'heute ' + zahl(h.ein) + ' ↑ ' + zahl(h.aus) + ' ↓' : '–');
     zelle.title = 'Token' + (s ? ' dieser Sitzung' : ' heute') + ': ↑ eingehend ' + (s ? s.ein : h ? h.ein : 0).toLocaleString('de-DE') + ' (jeder Zug zählt den Verlauf neu), ↓ erzeugt ' + (s ? s.aus : h ? h.aus : 0).toLocaleString('de-DE')
-      + (s && s.tok_s ? ' · Ø ' + String(s.tok_s).replace('.', ',') + ' Token/s' : '') + (pro !== null ? ' · Kontext ' + pro + ' %' : '') + ' – Klick: Token und Gespräch (Verbrauch, Spur, Gedächtnis, Zusammenfassung)';
+      + (s && s.tok_s ? ' · Ø ' + String(s.tok_s).replace('.', ',') + ' Token/s' : '') + (pro !== null ? ' · Kontext ' + pro + ' %' : '') + ' – Klick: App Sedra Token (Verbrauch, Kosten, Gespräch)';
     zelle.tabIndex = 0; zelle.setAttribute('role', 'button');
-    const oeffnen = ()=>root.sedraHarness.einstellungen.oeffnen(S, 'agent/token');
+    const oeffnen = ()=>root.sedraHarness.tokenseite.oeffnen(S);
     zelle.onclick = oeffnen;
     zelle.onkeydown = e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); oeffnen(); } };
     zelle.append(d().el('small', null, 'Token'), d().el('b', null, wert));

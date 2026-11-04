@@ -176,7 +176,8 @@
   }
 
   // Token und Gespräch: oben der Verbrauch (Sitzung und Tag), darunter alles, was ihn bestimmt – Spur, Gedanken, Gedächtnis, Zusammenfassung des langen Gesprächs
-  function tokenSeite(S, box){
+  // A3 (Captain 03.11.2026): die App „Sedra Token“ hat drei Reiter – Verbrauch (mit den Grenzen zum Sparen), Kosten und Zeilen (das Werkzeug Meter) und Gespräch (Gedanken, Gedächtnis, langes Gespräch)
+  function verbrauch(S, box){
     const fmt = n=>Number(n || 0).toLocaleString('de-DE');
     const komma = x=>String(x).replace('.', ',');
     box.append(d().el('h3', 'hs-ueber', 'Verbrauch'));
@@ -210,10 +211,19 @@
     knopf.onclick = ()=>S.tokenLaden().then(zeichne);
     zeichne(); S.tokenLaden().then(zeichne);
     sparenBereich(S, box);
+  }
+  function gespraech(S, box){
     box.append(d().el('h3', 'hs-ueber', 'Gespräch und Gedanken'));
     gedanken(S, box);
   }
+  function tokenSeite(S, box){ verbrauch(S, box); gespraech(S, box); }
+  function oeffnen(S, reiter){
+    const ort = root.sedraPlaces && root.sedraPlaces.PLACES.find(p=>p.id === 'meter');
+    if(!ort) return;
+    if(reiter) S._tokenReiter = reiter;
+    root.sedraHarness.app.oeffnen(S, ort);
+  }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.tokenseite = {zeigen: tokenSeite, SPAREN, GEDANKEN};         // die Listen nutzt auch das Feld unter dem Schild (gespraechsoptionen.js)
+  root.sedraHarness.tokenseite = {zeigen: tokenSeite, verbrauch, gespraech, oeffnen, SPAREN, GEDANKEN};         // die Listen nutzt auch das Feld unter dem Schild (gespraechsoptionen.js)
 })();

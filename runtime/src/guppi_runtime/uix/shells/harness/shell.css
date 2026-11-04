@@ -397,6 +397,10 @@ button.hs-schild[aria-expanded="true"]::after{content:" ▴"}
 .hs-app-objekt{color:var(--muted);font-size:var(--size-xs)}
 .hs-app-nachweis-knopf{margin-left:auto;padding:3px 8px;border:1px solid var(--line);border-radius:var(--radius);background:transparent;color:var(--text);font:inherit;font-size:var(--size-xs);cursor:pointer}
 .hs-app-nachweis-knopf[aria-expanded="true"]{background:var(--hs-on);border-color:var(--hs-on-line)}
+.hs-app-koerper[hidden]{display:none}.hs-token-feld{overflow:auto}
+.hs-app-reiter{display:flex;gap:4px;padding:6px 10px 0;border-bottom:1px solid var(--line)}
+.hs-app-reiter-knopf{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font:inherit;padding:4px 10px}
+.hs-app-reiter-knopf:hover{color:var(--text)}.hs-app-reiter-knopf.on{color:var(--text);border-bottom-color:var(--accent)}
 .hs-app-koerper{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden}
 .hs-app-box.nachweis-auf .hs-app-koerper{grid-template-columns:minmax(0,1fr) minmax(240px,34%)}
 .hs-app-inhalt,.hs-app-nachweis{min-height:0;overflow:auto;padding:8px 10px}
