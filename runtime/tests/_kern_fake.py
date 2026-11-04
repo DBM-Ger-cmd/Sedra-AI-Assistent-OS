@@ -30,3 +30,4 @@ class FakeStrom:
 def installieren(hub):
     """Den Kern des Hubs auf das Fake-Mikrofon setzen; das echte Gerät bleibt in diesen Tests aus."""
     hub.sprache.kern.oeffnen = lambda cb, rate: FakeStrom(cb)
+    hub.sprache.kern.oeffnen_pc = lambda cb, rate: FakeStrom(cb)       # Standard ist der PC-Ton (04.11.2026)
