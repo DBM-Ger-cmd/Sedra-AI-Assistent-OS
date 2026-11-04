@@ -204,6 +204,8 @@
   function sprache(S, box){ zeile(box, 'Sprache der Oberfläche', 'Deutsch', 'Es gibt keine zweite.'); }
 
   function vorlagen(S, box){
+    const nach = antraege(S, box, 'harness_vorlage', 'die Vorlage entsteht erst mit der');
+    if(root.sedraHarness.vorlagenneu) root.sedraHarness.vorlagenneu.knopf(S, box, nach);
     (S.vorlagen || []).forEach(v=>{
       const k = d().el('details', 'hs-einst-karte'); const s = d().el('summary'); s.append(d().el('b', null, v.name || v.id), d().el('small', 'hs-leise', ' · ' + v.id + ' · ' + (v.quelle === 'local_config' ? 'Datei des Captains' : 'Repo')));
       k.append(s);

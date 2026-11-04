@@ -15,6 +15,7 @@ from . import code_stand as harness_code_stand
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
 from . import vorlagen as harness_vorlagen
+from . import vorlagen_neu as harness_vorlagen_neu
 
 KIND_KATALOG = 'harness_katalog'
 KIND_VORLAGE = 'harness_vorlage'
@@ -105,7 +106,40 @@ def grenzen_antrag(hub, vorlage_id, max_zuege):
     return {'mission_id': req['mission_id'], 'vorlage': v['id'], 'max_zuege': max_zuege, 'vorher': v['max_zuege']}
 
 
+def vorlage_neu_antrag(hub, payload):
+    """POST vorlagen/neu {name, beschreibung?, basis?, werkzeuge?, system?, modell?}: prüfen (400 mit Satz), dann ein Antrag; die Dateien entstehen erst nach der Freigabe."""
+    try:
+        e = harness_vorlagen_neu.entwurf(hub.project_root, payload)
+    except harness_vorlagen.VorlageFehler as exc:
+        raise ValueError(str(exc)) from exc
+    v = e['vorlage']
+    offen = getattr(hub, '_open_requests', None)
+    offene = [r for r in (offen() if callable(offen) else []) if r.get('kind') == KIND_VORLAGE and (r.get('binding') or {}).get('neu')]
+    if len(offene) >= harness_vorlagen_neu.OFFEN_MAX:
+        raise ValueError(f'zu_viele_offene_antraege: {len(offene)} Vorlagen-Anträge warten schon im Posteingang – erst die entscheiden')
+    if any((r.get('binding') or {}).get('vorlage') == v['id'] for r in offene):
+        raise ValueError('antrag_liegt_schon_im_posteingang: Vorlage ' + v['id'])
+    binding = {'neu': True, 'vorlage': v['id'], 'yaml': e['yaml'], 'md': e['md']}
+    ziel = f'local_config/harness_vorlagen/{v["id"]}.yaml'
+    risks = [f'Neue Vorlage „{v["name"]}“ ({v["id"]}) mit {len(v["werkzeuge"])} Werkzeugen: ' + ', '.join(v['werkzeuge']),
+             'Keine Rechte und keine Sitzungs-Erlaubnisse; Modell der Vorlage: ' + (v['modell'] or 'das der Sitzung')]
+    req = gated.request(hub, KIND_VORLAGE, 'HARNESS_VORLAGE_WRITE', ziel, binding, risks=risks, exact=True, describe=f'Neue Vorlage anlegen: {v["name"]}')
+    return {'mission_id': req['mission_id'], 'vorlage': v['id'], 'name': v['name'], 'werkzeuge': v['werkzeuge'], 'basis': e['basis']}
+
+
+def _vorlage_neu_anwenden(hub, binding):
+    try:
+        out = harness_vorlagen_neu.schreiben(hub.project_root, binding.get('yaml') or '', binding.get('md') or '', binding.get('vorlage'))
+    except (OSError, harness_vorlagen.VorlageFehler) as exc:
+        raise ValueError(gated.REFUSED + 'vorlage_nicht_angelegt: ' + str(exc)) from None
+    hub.runtime.audit.append('HARNESS_VORLAGE_ANGELEGT', component='harness', payload=dict(out, vorlage=binding.get('vorlage')))
+    hub.events.publish('harness.vorlage', {'ereignis': 'HARNESS_VORLAGE_ANGELEGT', 'vorlage': binding.get('vorlage')})
+    return out
+
+
 def _grenzen_anwenden(hub, binding):
+    if binding.get('neu') is True:
+        return _vorlage_neu_anwenden(hub, binding)
     try:
         v = harness_vorlagen.laden(hub.project_root, binding.get('vorlage'))
     except harness_vorlagen.VorlageFehler as exc:

@@ -19,6 +19,7 @@
     GET    katalog                            Regeln des Freigabe-Katalogs, nur lesen (Datei des Captains oder Vorlage)
     POST   katalog/antrag                     Stufe 5: {regeln} → Antrag mit Gate (HARNESS_KATALOG_WRITE); geschrieben wird erst nach Freigabe (Herkunft S7)
     POST   katalog/entfernen                  Stufe 5: Antrag, die Datei des Captains zu entfernen → Vorlage gilt (HARNESS_KATALOG_REMOVE)
+    POST   vorlagen/neu                       {name, beschreibung?, basis?, werkzeuge?, system?, modell?} → Antrag (HARNESS_VORLAGE_WRITE); die Dateien entstehen erst nach der Freigabe
     POST   vorlagen/grenzen                   Stufe 5: {vorlage, max_zuege} → Antrag auf eine Kopie der Vorlage in local_config (HARNESS_VORLAGE_WRITE)
     POST   einstufen                          {werkzeug, ziel, projekt?} → Stufe, Regel, Begründung (Vorbehalt vor Katalog; mit projekt gilt ${schreibbereich})
     GET    werkzeuge                          die Werkzeuge mit Kurzbeschreibung
@@ -89,7 +90,7 @@ WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/
                  r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|hilfswerkzeuge)(?:/(antrag|entfernen|grenzen|notizen|export))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
-                        r'|katalog/(?:antrag|entfernen)|vorlagen/grenzen'
+                        r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)'
                         r'|verknuepfungen|gedaechtnis|token|aufraeumen|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
 # Gedanken und Modelle (Captain 02.11.2026): Sedra speichert die Gedanken je Antwort; ans Modell geht je nach Modus nur wenig zurück.
 #   aus  – nichts, nur Text und Ergebnisse        spur – (Standard) eine Zeile je frühere Antwort: was lief, wie viel Gedanken gespeichert sind; abrufbar mit `erinnern`
@@ -260,6 +261,8 @@ class HarnessApi:
             return 200, harness_antraege.katalog_antrag(self.hub, payload.get('regeln'))
         if fest == 'katalog' and method == 'POST' and unter == 'entfernen':
             return 200, harness_antraege.katalog_entfernen_antrag(self.hub)
+        if fest == 'vorlagen' and method == 'POST' and unter == 'neu':
+            return 200, harness_antraege.vorlage_neu_antrag(self.hub, payload)
         if fest == 'vorlagen' and method == 'POST' and unter == 'grenzen':
             return 200, harness_antraege.grenzen_antrag(self.hub, payload.get('vorlage'), payload.get('max_zuege'))
         if fest == 'code_stand' and method == 'POST' and unter == 'antrag':

@@ -66,3 +66,7 @@
 .hs-hw-zeile{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:5px 8px;border:1px solid var(--line);border-radius:var(--radius)}
 .hs-hw-zeile.da .hs-hw-punkt{color:var(--ok)}.hs-hw-zeile.fehlt .hs-hw-punkt{color:var(--muted)}.hs-hw-name{min-width:12em}.hs-hw-zweck{flex:1 1 16em}
 .hs-hw-befehl{font-size:var(--size-small);padding:1px 6px;background:var(--panel-2);border-radius:var(--radius)}
+.hs-vn{gap:8px}
+.hs-vn-feld{display:flex;flex-direction:column;gap:2px}
+.hs-vn-werkzeuge{display:flex;flex-wrap:wrap;gap:4px 12px}
+.hs-vn-haken{display:inline-flex;align-items:center;gap:4px;font-size:var(--size-small);color:var(--text)}

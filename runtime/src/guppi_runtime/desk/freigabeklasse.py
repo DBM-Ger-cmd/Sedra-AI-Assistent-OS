@@ -260,6 +260,7 @@ ROUTEN_HARNESS = {
     'POST katalog/antrag': ('antrag', None, 'request:harness_katalog (F6)'),
     'POST katalog/entfernen': ('antrag', None, 'request:harness_katalog'),
     'POST vorlagen/grenzen': ('antrag', None, 'request:harness_vorlage'),
+    'POST vorlagen/neu': ('antrag', None, 'request:harness_vorlage'),
     'POST code_stand/antrag': ('antrag', None, 'request:harness_code_stand'),
     'POST einstufen': ('liest', None, 'Vorschau der Einstufung'),
     'POST vorarbeiter': ('freigabe', H, 'Vorarbeiter ernennen (F5)'),
