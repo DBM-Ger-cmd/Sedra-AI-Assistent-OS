@@ -8,6 +8,7 @@ damit `register_applier` sie bei einem zweiten Hub im selben Prozess wiedererken
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 
 from ..desk import gated
 from . import code_stand as harness_code_stand
@@ -130,9 +131,15 @@ def projekt_antrag(hub, payload):
     Freigabe – in die Laufzeitdatei (E-A8), nie in local_config/."""
     payload = payload or {}
     alle = harness_projekte.laden(hub.project_root)
+    anlegen = payload.get('anlegen') is True                 # „Neues Projekt“: `eltern` + `name` → der Ordner wird nach der Freigabe angelegt
     try:
-        neu = harness_projekte.neues_projekt(payload.get('wurzel'), payload.get('name'), payload.get('schreibbereich'), vergeben=[p['id'] for p in alle],
-                                            sperrzonen=[hub.project_root / 'local_config', hub.project_root / 'runtime_data'])
+        wurzel = payload.get('wurzel')
+        if anlegen:
+            if not isinstance(payload.get('eltern'), str) or not payload['eltern'].strip():
+                raise harness_projekte.ProjektFehler('eltern_fehlt: der Ordner, in dem das neue Projekt angelegt wird (vollständiger Pfad)')
+            wurzel = str(Path(payload['eltern'].strip()) / harness_projekte.ordnername(payload.get('name')))
+        neu = harness_projekte.neues_projekt(wurzel, payload.get('name'), payload.get('schreibbereich'), vergeben=[p['id'] for p in alle],
+                                            sperrzonen=[hub.project_root / 'local_config', hub.project_root / 'runtime_data'], anlegen=anlegen)
     except harness_projekte.ProjektFehler as exc:
         raise ValueError(str(exc)) from exc
     if any(p['wurzel'] == neu['wurzel'] for p in alle):
@@ -146,12 +153,12 @@ def projekt_antrag(hub, payload):
         if r.get('kind') == KIND_PROJEKT and ((r.get('binding') or {}).get('projekt') or {}).get('wurzel') == neu['wurzel']:
             raise ValueError('antrag_liegt_schon_im_posteingang: ' + neu['wurzel'] + ' – bitte dort freigeben oder ablehnen (' + str(r.get('mission_id')) + ')')
     stand = harness_projekte.laufzeit_laden(hub.project_root)
-    binding = {'projekt': neu, 'stand_hash': _laufzeit_hash(stand)}
+    binding = dict({'projekt': neu, 'stand_hash': _laufzeit_hash(stand)}, **({'anlegen': True} if anlegen else {}))
     weit = any(m.strip() in ('**', '*') for m in neu['schreibbereich'])
-    risks = [f"Ordner {neu['wurzel']} wird Projekt „{neu['name']}“ ({neu['id']})",
+    risks = [(f"Der Ordner {neu['wurzel']} wird neu angelegt und" if anlegen else f"Ordner {neu['wurzel']}") + f" wird Projekt „{neu['name']}“ ({neu['id']})",
              'Schreibbereich: ' + ', '.join(neu['schreibbereich']) + (' – das Modell darf nach Katalog überall darin schreiben' if weit else '')]
     req = gated.request(hub, KIND_PROJEKT, 'HARNESS_PROJEKT_ADD', ZIEL_PROJEKTE, binding, risks=risks, exact=True,
-                        describe=f"Ordner öffnen: {neu['name']}")
+                        describe=(f"Neues Projekt anlegen: {neu['name']}" if anlegen else f"Ordner öffnen: {neu['name']}"))
     return {'mission_id': req['mission_id'], 'projekt': neu, 'stand_hash': binding['stand_hash']}
 
 
@@ -160,6 +167,11 @@ def _projekt_anwenden(hub, binding):
     if _laufzeit_hash(stand) != binding.get('stand_hash'):
         raise ValueError(gated.STALE)
     neu = dict(binding.get('projekt') or {})
+    if binding.get('anlegen') is True:       # der Ordner entsteht erst jetzt, nach der Freigabe; er darf dann noch nicht da sein
+        try:
+            Path(neu['wurzel']).mkdir(parents=False, exist_ok=False)
+        except OSError as exc:
+            raise ValueError(gated.REFUSED + 'ordner_nicht_angelegt: ' + str(exc)) from None
     try:
         harness_projekte.pruefen({'projekte': [neu]})
         if any(p['id'] == neu['id'] for p in harness_projekte.laden(hub.project_root)):
@@ -167,7 +179,7 @@ def _projekt_anwenden(hub, binding):
         out = harness_projekte.laufzeit_schreiben(hub.project_root, {'projekte': stand['projekte'] + [neu], 'vorgaben': stand['vorgaben']})
     except (OSError, harness_projekte.ProjektFehler) as exc:
         raise ValueError(gated.REFUSED + 'projekt_nicht_schreibbar: ' + str(exc)) from None
-    hub.runtime.audit.append('HARNESS_PROJEKT_ADDED', component='harness', payload=dict(out, projekt=neu['id'], wurzel=neu['wurzel'], schreibbereich=neu['schreibbereich']))
+    hub.runtime.audit.append('HARNESS_PROJEKT_ADDED', component='harness', payload=dict(out, projekt=neu['id'], wurzel=neu['wurzel'], schreibbereich=neu['schreibbereich'], angelegt=binding.get('anlegen') is True))
     hub.events.publish('harness.projekt', {'ereignis': 'HARNESS_PROJEKT_ADDED', 'projekt': neu['id'], 'name': neu['name']})
     return dict(out, projekt=neu)
 

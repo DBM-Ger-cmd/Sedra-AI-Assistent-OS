@@ -39,16 +39,56 @@
     return {box, oeffnen(){ box.hidden = false; pfad.focus(); }, schliessen};
   }
 
-  // Die Knöpfe neben der Projektwahl: „Ordner öffnen …“ und „Als Vorgabe merken“. `wahl` ist das <select> der Projekte.
+  // „Neues Projekt …“ (Captain 04.11.2026): Name und übergeordneter Ordner → Antrag; der Ordner wird erst nach der Freigabe im Posteingang angelegt und ist dann ein Projekt.
+  // Der übergeordnete Ordner ist vorbelegt mit dem Ordner über der Wurzel des ersten Projekts (dort liegen auch die anderen), sonst wird er getippt.
+  function elternVorschlag(S){
+    const w = String(((S.projekte || [])[0] || {}).wurzel || '').replace(/[\\/]+$/, '');
+    const i = Math.max(w.lastIndexOf('/'), w.lastIndexOf(String.fromCharCode(92)));
+    return i > 0 ? w.slice(0, i) : '';
+  }
+  function formularNeu(S){
+    const box = d().el('form', 'hs-ordner'); box.hidden = true; box.setAttribute('aria-label', 'Neues Projekt anlegen');
+    const name = d().el('input', 'hs-ordner-feld'); name.placeholder = 'Name des neuen Projekts (wird auch der Ordnername)'; name.setAttribute('aria-label', 'Name');
+    const eltern = d().el('input', 'hs-ordner-feld'); eltern.placeholder = 'Ordner, in dem es angelegt wird (vollständiger Pfad)'; eltern.setAttribute('aria-label', 'Übergeordneter Ordner');
+    const bereich = d().el('input', 'hs-ordner-feld kurz'); bereich.value = '**'; bereich.setAttribute('aria-label', 'Schreibbereich'); bereich.title = 'Muster relativ zum Ordner, mit Komma getrennt; ** = überall darin';
+    const senden = d().el('button', 'hs-senden p', 'Antrag stellen'); senden.type = 'submit';
+    const zu = d().el('button', 'hs-knopf', 'Abbrechen'); zu.type = 'button';
+    const satz = d().el('div', 'hs-leise', 'Der Ordner wird erst nach deiner Freigabe im Posteingang angelegt und ist dann ein Projekt – ohne Neustart. Das Modell darf darin nach Katalog schreiben; außerhalb nie.');
+    const stand = d().el('div', 'hs-leise hs-ordner-stand'); stand.setAttribute('role', 'status');
+    const zeile = d().el('div', 'hs-ordner-zeile'); zeile.append(bereich, senden, zu);
+    box.append(name, eltern, zeile, satz, stand);
+    const schliessen = ()=>{ box.hidden = true; stand.textContent = ''; };
+    zu.onclick = schliessen;
+    box.onsubmit = async e=>{
+      e.preventDefault();
+      if(!name.value.trim()){ stand.textContent = 'Ein Name fehlt.'; name.focus(); return; }
+      if(!eltern.value.trim()){ stand.textContent = 'Der übergeordnete Ordner fehlt.'; eltern.focus(); return; }
+      senden.disabled = true; stand.textContent = 'Antrag wird gestellt …';
+      try{
+        const muster = bereich.value.split(',').map(x=>x.trim()).filter(Boolean);
+        const out = await S.api('/api/harness/projekte', {method: 'POST', body: {anlegen: true, name: name.value.trim(), eltern: eltern.value.trim(), schreibbereich: muster.length ? muster : undefined}});
+        stand.textContent = 'Antrag gestellt: „' + (out.projekt && out.projekt.name) + '“ in ' + (out.projekt && out.projekt.wurzel) + ' – Entscheidung im Posteingang (Freigaben). Danach steht es in der Projektwahl.';
+        S.hinweis('Neues Projekt: Antrag im Posteingang.', 'note');
+        if(S.freigabenLaden) S.freigabenLaden();
+      }catch(err){ stand.textContent = 'Nicht gestellt: ' + err.message; }
+      finally{ senden.disabled = false; }
+    };
+    return {box, oeffnen(){ box.hidden = false; if(!eltern.value) eltern.value = elternVorschlag(S); name.focus(); }, schliessen};
+  }
+
+  // Die Knöpfe neben der Projektwahl: „Ordner öffnen …“, „Neues Projekt …“ und „Als Vorgabe merken“. `wahl` ist das <select> der Projekte.
   function knoepfe(S, zeile, wahl){
     const f = formular(S);
+    const fn = formularNeu(S);
+    const neu = d().el('button', 'hs-knopf hs-ordner-knopf', 'Neues Projekt …'); neu.type = 'button'; neu.title = 'Einen neuen Ordner anlegen und als Projekt öffnen (Antrag mit Freigabe)';
+    neu.onclick = ()=>{ f.schliessen(); if(fn.box.hidden) fn.oeffnen(); else fn.schliessen(); };
     const auf = d().el('button', 'hs-knopf hs-ordner-knopf', 'Ordner öffnen …'); auf.type = 'button'; auf.title = 'Einen Ordner außerhalb des Repos als Projekt öffnen (Antrag mit Freigabe)';
-    auf.onclick = ()=>{ if(f.box.hidden) f.oeffnen(); else f.schliessen(); };
+    auf.onclick = ()=>{ fn.schliessen(); if(f.box.hidden) f.oeffnen(); else f.schliessen(); };
     const merken = d().el('button', 'hs-knopf hs-vorgabe-knopf', 'Als Vorgabe merken'); merken.type = 'button'; merken.title = 'Dieses Projekt ist dann der Standard neuer Sitzungen';
     merken.onclick = ()=>setzen(S, {projekt_standard: wahl.value || null}, merken);
-    zeile.append(auf, merken);
-    zeile.parentNode && zeile.parentNode.insertBefore(f.box, zeile.nextSibling);
-    return {formular: f, auf, merken, zeigen(){ merken.hidden = !wahl.value || vorgaben(S).projekt_standard === wahl.value; }};
+    zeile.append(auf, neu, merken);
+    if(zeile.parentNode){ zeile.parentNode.insertBefore(f.box, zeile.nextSibling); zeile.parentNode.insertBefore(fn.box, f.box.nextSibling); }
+    return {formular: f, formularNeu: fn, auf, neu, merken, zeigen(){ merken.hidden = !wahl.value || vorgaben(S).projekt_standard === wahl.value; }};
   }
 
   async function setzen(S, teil, knopf){
@@ -67,5 +107,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.projekt = {formular, knoepfe, setzen, laden, vorgaben};
+  root.sedraHarness.projekt = {formular, formularNeu, elternVorschlag, knoepfe, setzen, laden, vorgaben};
 })();

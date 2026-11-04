@@ -140,15 +140,34 @@ def id_aus(name, vergeben=()):
     return kandidat
 
 
-def neues_projekt(wurzel, name=None, schreibbereich=None, vergeben=(), sperrzonen=()):
+ORDNERNAME_VERBOTEN = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+ORDNERNAME_RESERVIERT = frozenset({'con', 'prn', 'aux', 'nul', *(f'com{i}' for i in range(1, 10)), *(f'lpt{i}' for i in range(1, 10))})
+
+
+def ordnername(name):
+    """Der Ordnername für „Neues Projekt“ aus dem Namen – oder ProjektFehler. Keine Pfadteile, keine Windows-Sonderzeichen oder reservierten Namen."""
+    n = str(name or '').strip()
+    if not n or n in ('.', '..') or n.endswith('.') or ORDNERNAME_VERBOTEN.search(n) or n.split('.')[0].lower() in ORDNERNAME_RESERVIERT or len(n) > 80:
+        raise ProjektFehler('name_ungueltig: ein Name ohne Schrägstriche und ohne : * ? " < > | und ohne Punkt am Ende (höchstens 80 Zeichen)')
+    return n
+
+
+def neues_projekt(wurzel, name=None, schreibbereich=None, vergeben=(), sperrzonen=(), anlegen=False):
     """Prüft die Eingabe von „Ordner öffnen“ und liefert den Projekt-Eintrag – oder ProjektFehler. `sperrzonen`: Ordner, die kein Projekt werden
     (das SEDRA-Projekt mit local_config, sein runtime_data). Ein Projekt darf Unterordner des Repos sein, nur nicht local_config/ oder runtime_data/."""
     if not isinstance(wurzel, str) or not wurzel.strip():
         raise ProjektFehler('wurzel_fehlt: ein vollständiger Pfad zu einem vorhandenen Ordner')
     p = Path(wurzel.strip())
-    if not p.is_absolute() or not p.is_dir():
+    if anlegen:                          # „Neues Projekt“: der Ordner gibt es noch nicht, sein übergeordneter schon
+        if not p.is_absolute() or not p.parent.is_dir():
+            raise ProjektFehler('eltern_ungueltig: der übergeordnete Ordner muss vorhanden sein (vollständiger Pfad)')
+        if p.exists():
+            raise ProjektFehler(f'ordner_vorhanden: {p.name} gibt es dort schon – dafür „Ordner öffnen“ nehmen')
+        p = p.parent.resolve() / p.name
+    elif not p.is_absolute() or not p.is_dir():
         raise ProjektFehler('wurzel_ungueltig: ein vorhandener Ordner mit vollständigem Pfad')
-    p = p.resolve()
+    else:
+        p = p.resolve()
     for zone in sperrzonen:
         z = Path(zone).resolve()
         if p == z or z in p.parents:
