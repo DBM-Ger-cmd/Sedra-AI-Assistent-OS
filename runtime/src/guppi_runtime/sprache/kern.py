@@ -33,8 +33,8 @@ def _sd_oeffnen(callback, rate):
     return sd.RawInputStream(samplerate=rate, channels=KANAELE, dtype='int16', callback=callback)
 
 
-QUELLEN = ('pc_ton', 'mikrofon', 'beides')   # pc_ton: was der Rechner über den Standard-Ausgang abspielt (WASAPI-Loopback); beides: beides gemischt in eine Spur
-STANDARD_QUELLE = 'pc_ton'                    # Captain 04.11.2026: der Ton des Rechners ist der Standard, das Mikrofon kommt dazu (Auswahl oder „beides“)
+QUELLEN = ('beides', 'pc_ton', 'mikrofon')   # pc_ton: was der Rechner über den Standard-Ausgang abspielt (WASAPI-Loopback); beides: beides gemischt in eine Spur
+STANDARD_QUELLE = 'beides'                    # Captain 04.11.2026: PC-Ton und Mikrofon in einer Spur sind der Standard; fehlt ein Gerät oder Paket, nimmt der Kern das Mikrofon allein
 
 
 class _PcTonStrom:
@@ -164,9 +164,18 @@ class Kern:
 
     # ---------------------------------------------------------------- Aufnehmen
     def start(self, titel, sprache, now, quelle=None):
+        vorgabe = not quelle
+        quelle = quelle or STANDARD_QUELLE
+        try:
+            return self._start(titel, sprache, now, quelle)
+        except ValueError as exc:
+            if vorgabe and quelle == 'beides' and str(exc).startswith('kein_mikrofon'):      # der Standard fällt auf das Mikrofon allein zurück (keine Angabe des Captains, nur der Standard)
+                return self._start(titel, sprache, now, 'mikrofon')
+            raise
+
+    def _start(self, titel, sprache, now, quelle):
         with self.lock:
             if self.lauf: raise ValueError('laeuft_schon')
-            quelle = quelle or STANDARD_QUELLE
             if quelle not in QUELLEN: raise ValueError('quelle_unbekannt')
             a = self.store.beginnen(titel, 'audio/wav', sprache, now)
             datei = Path(self.store.dir) / (a['id'] + '.pcm')

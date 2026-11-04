@@ -106,18 +106,30 @@ class KernQuelle(KernAufnahme):
         with self.assertRaisesRegex(ValueError, 'quelle_unbekannt'):
             self.kern.start('x', 'de', '2026-10-28T10:00:00', 'radio')
 
-    def test_the_default_source_is_the_pc_sound_and_the_order_in_the_list_says_so(self):
-        """Captain 04.11.2026: der Ton des Rechners ist der Standard, das Mikrofon kommt dazu, und es gibt beides gemischt."""
-        self.assertEqual(kn.STANDARD_QUELLE, 'pc_ton')
-        self.assertEqual(kn.QUELLEN, ('pc_ton', 'mikrofon', 'beides'))
+    def test_the_default_source_is_both_mixed_and_the_order_in_the_list_says_so(self):
+        """Captain 04.11.2026: PC-Ton und Mikrofon in einer Spur sind der Standard."""
+        self.assertEqual(kn.STANDARD_QUELLE, 'beides')
+        self.assertEqual(kn.QUELLEN, ('beides', 'pc_ton', 'mikrofon'))
         gerufen = []
         self.kern.oeffnen_pc = lambda cb, rate: gerufen.append('pc') or FakeStrom(cb)
         self.kern.oeffnen = lambda cb, rate: gerufen.append('mic') or FakeStrom(cb)
-        self.assertEqual(self.kern.start('Standard', 'de', '2026-11-04T10:00:00')['quelle'], 'pc_ton')
-        self.assertEqual(gerufen, ['pc'])
+        self.assertEqual(self.kern.start('Standard', 'de', '2026-11-04T10:00:00')['quelle'], 'beides')
+        self.assertEqual(sorted(gerufen), ['mic', 'pc'])
         self.kern.verwerfen()
-        self.assertEqual(self.kern.start('Leer', 'de', '2026-11-04T10:00:00', '')['quelle'], 'pc_ton')           # leere Angabe: Standard
+        self.assertEqual(self.kern.start('Leer', 'de', '2026-11-04T10:00:00', '')['quelle'], 'beides')           # leere Angabe: Standard
         self.kern.verwerfen()
+
+    def test_the_default_falls_back_to_the_microphone_but_an_explicit_choice_does_not(self):
+        def ohne_paket(cb, rate): raise ImportError('PyAudioWPatch')
+        self.kern.oeffnen_pc = ohne_paket
+        self.kern.oeffnen = lambda cb, rate: FakeStrom(cb)
+        self.assertEqual(self.kern.start('Rueckfall', 'de', '2026-11-04T10:00:00')['quelle'], 'mikrofon')
+        self.kern.verwerfen()
+        with self.assertRaises(ValueError) as e:
+            self.kern.start('Gewaehlt', 'de', '2026-11-04T10:00:00', 'beides')
+        self.assertTrue(str(e.exception).startswith('kein_mikrofon'))
+        with self.assertRaises(ValueError):
+            self.kern.start('Ton', 'de', '2026-11-04T10:00:00', 'pc_ton')
 
     def test_both_sources_are_mixed_into_one_track_with_the_microphone_as_clock(self):
         pc, mic = {}, {}

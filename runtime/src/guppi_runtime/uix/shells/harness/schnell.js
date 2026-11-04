@@ -1,4 +1,4 @@
-// Harness-Shell – der Aufnahme-Knopf der Taskleiste (Captain 04.11.2026): „🎙 Aufnehmen“ steht immer sichtbar in der Taskleiste; ein Klick startet die Sprachaufnahme (PC-Ton als Standard, wie im Werkzeug
+// Harness-Shell – der Aufnahme-Knopf der Taskleiste (Captain 04.11.2026): „🎙 Aufnehmen“ steht immer sichtbar in der Taskleiste; ein Klick startet die Sprachaufnahme (PC-Ton und Mikrofon in einer Spur als Standard, wie im Werkzeug
 // „Rekorder“: POST /api/sprache/kern/start). Während der Aufnahme wird der Knopf rot und zeigt die Zeit („● 0:42 Stopp“); ein Klick beendet und sichert sie. Pause, Abspielen und die
 // Abschrift bleiben in der App Rekorder (Rechtsklick oder Umschalt+Klick auf den Knopf öffnet sie). Der Übersetzer bleibt eine App (Start → Übersetzer).
 // Kein Dauer-Abruf (HS-52a): der Stand wird mit dem Status der Taskleiste gelesen; nur die Sekundenanzeige tickt, solange eine Aufnahme läuft und der Tab sichtbar ist.
@@ -25,7 +25,7 @@
                       d().el('b', null, an ? zeit(sekunden(S)) : 'Aufnehmen'),
                       d().el('small', null, an ? 'Stopp' : ''));
     k.title = an ? 'Es wird aufgenommen' + (pause ? ' (Pause)' : '') + ' – Klick beendet und sichert die Aufnahme im Projekt'
-                 : 'Sprachaufnahme starten (PC-Ton, Standard) – Umschalt+Klick öffnet den Rekorder';
+                 : 'Sprachaufnahme starten (PC-Ton und Mikrofon, Standard) – Umschalt+Klick öffnet den Rekorder';
     k.setAttribute('aria-pressed', an ? 'true' : 'false');
     takt(S);
   }

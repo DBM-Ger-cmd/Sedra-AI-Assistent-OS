@@ -81,7 +81,7 @@ function pill(text, tone){ return d().el('span', 't-rk-pill ' + (tone || 'muted'
       this.sprache = d().el('select'); this.sprache.setAttribute('aria-label', 'Sprache');
       SPRACHEN.forEach(([v, l])=>{ const o = d().el('option', null, l); o.value = v; this.sprache.append(o); });
       this.quelle = d().el('select'); this.quelle.setAttribute('aria-label', 'Quelle');
-      [['pc_ton', 'PC-Ton'], ['mikrofon', 'Mikrofon'], ['beides', 'PC-Ton + Mikrofon']].forEach(([v, l])=>{ const o = d().el('option', null, l); o.value = v; this.quelle.append(o); });
+      [['beides', 'PC-Ton + Mikrofon'], ['pc_ton', 'PC-Ton'], ['mikrofon', 'Mikrofon']].forEach(([v, l])=>{ const o = d().el('option', null, l); o.value = v; this.quelle.append(o); });
       // Die Wahl bleibt, solange die Seite offen ist: ein neues Mounten der Blase (Moduswechsel, Shell-Wechsel) zeichnet das Pult neu und fiel sonst auf „Mikrofon“ zurück
       for(const [feld, schluessel] of [[this.quelle, 'quelle'], [this.sprache, 'sprache']]){
         const w = gewaehlt[schluessel]; if(w && [...feld.options].some(o=>o.value === w)) feld.value = w;
