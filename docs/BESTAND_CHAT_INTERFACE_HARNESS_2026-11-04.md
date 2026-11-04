@@ -22,7 +22,7 @@ Server: `harness/vorlagen.py`, `harness/api.py` (`anlegen`, `OPTIONEN`), `harnes
 1. **Auskunft fehlte im Systemtext** – behoben (`09d5d90`): Abschnitt „Auskunft und Lenkung“ in `masterchat.md`.
 2. **Werkzeugnamen** der Vorlage und des Systemtexts gegen die Harness abgesichert – keine Abweichung (`49a35bc`). Die Ladeprüfung ließ „vorgesehene“, nicht vorhandene Namen zu; der Test schließt das für diese Vorlage.
 3. **Dialog bis Server** hatte keinen Test – behoben (`50576c8`); Gegenprobe: Feld entfernt → Test rot.
-4. **Ohne Verhaltenstest**: `schnell.js` (Aufnahme-Knopf, neu), `anhang.js`, `erlaubnisse.js`, `karte.js`, `zeilen.js`. Vorschlag: je ein node-Test im Stil von `test_harness_hinweis_klappen.py`, zuerst `karte.js` (Freigabe) und `erlaubnisse.js` (Zurücknehmen), weil beide Rechte berühren.
+4. **Ohne Verhaltenstest**: `schnell.js` (Aufnahme-Knopf, neu), `anhang.js`, `zeilen.js`. `karte.js` und `erlaubnisse.js` sind seit `test_harness_karte_erlaubnisse.py` (10 Tests, mit Gegenprobe) abgedeckt.
 5. **Kein Lauf mit echtem Modell** belegt, dass der MasterChat die Auskunftsanweisung befolgt (Punkt 3 der Sitzung, siehe unten).
 6. **Übergabe 03.11., Punkt 4**: Harness-Karte → Fenster → Ja hat keinen eigenen Test (die Harness-Tests laufen mit abgeschalteter Tür). Offen, gehört zum Freigabe-Code (fester Vorbehalt des MasterChats, nicht der Entwicklung).
 7. **Dateigröße**: `verlauf.js` hat 365 Zeilen; Grenze der Oberfläche laut Vertrag 400. Neues im Verlauf besser in eigene Dateien.
