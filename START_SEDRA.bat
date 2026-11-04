@@ -1,7 +1,7 @@
 @echo off
 rem SEDRA - der eine Start. Ersetzt ERSTER_START.bat, START_GUPPI.bat und GUPPI_EINRICHTEN_UND_STARTEN.bat.
-rem   START_SEDRA.bat             -> richtet nur ein, was fehlt, und fragt, welche Oberflaeche starten soll;
-rem                                  Enter ohne Eingabe = Harness (der Einstieg), eine Nummer waehlt eine andere
+rem   START_SEDRA.bat             -> richtet nur ein, was fehlt, und startet gleich Sedra Harness (keine Auswahl;
+rem                                  die anderen Oberflaechen waehlt man in den Menues der Oberflaeche)
 rem   START_SEDRA.bat cockpit     -> direkt in diese Oberflaeche (nur fuer diesen Start; die Wahl in uix.yaml bleibt)
 rem   START_SEDRA.bat --uebersicht -> die Uebersicht aller Oberflaechen
 rem   START_SEDRA.bat --gewaehlt  -> in die in uix.yaml gewaehlte Oberflaeche, ohne Frage
@@ -95,45 +95,9 @@ if errorlevel 1 goto :fail
 goto :wahl
 
 :wahl
-if "%GEWAEHLT%"=="1" goto :starten
-goto :menue
-
-:menue
-cd /d "%RT%"
-set "N=0"
-echo.
-echo Welche Oberflaeche soll starten?
-echo   0  Uebersicht aller Oberflaechen
-echo   Enter  Harness (der Einstieg)
-for /f "usebackq tokens=1,* delims=|" %%a in (`"%PY%" %PYFLAGS% -m guppi_runtime.uix_start --liste`) do call :zeile "%%a" "%%b"
-echo.
-set "CHOICE="
-set /p "CHOICE=Nummer eingeben (Enter = Harness): "
-if "%CHOICE%"=="" goto :menue_einstieg
-if "%CHOICE%"=="0" goto :menue_uebersicht
-echo %CHOICE%| findstr /r "^[0-9][0-9]*$" >nul || goto :menue_falsch
-if %CHOICE% GTR %N% goto :menue_falsch
-call set "SEL=%%ID%CHOICE%%%"
-set "SHELLARG=--shell %SEL%"
+rem Ohne Auswahl: gleich in Sedra Harness (Captain 04.11.2026). Die anderen Oberflaechen waehlt man in den Menues der Oberflaeche.
+if "%GEWAEHLT%"=="0" set "SHELLARG=--shell %EINSTIEG%"
 goto :starten
-
-:menue_einstieg
-set "SHELLARG=--shell %EINSTIEG%"
-goto :starten
-
-:menue_uebersicht
-set "SHELLARG=--uebersicht"
-goto :starten
-
-:menue_falsch
-echo Keine gueltige Nummer. Bitte erneut waehlen.
-goto :menue
-
-:zeile
-set /a N+=1
-set "ID%N%=%~1"
-echo   %N%  %~2
-goto :eof
 
 :starten
 echo SEDRA startet ...
