@@ -33,3 +33,18 @@ Server: `harness/vorlagen.py`, `harness/api.py` (`anlegen`, `OPTIONEN`), `harnes
 - `03_ergebnisse/` und `04_luecken/` enthalten nur die Beschreibung (README); es gibt zu keinem der Aufträge einen Bericht. Wunsch `W-2026-11-03-chatfenster-layout` und `…startmenue-ausbau` haben keinen Auftrag.
 - `docs/ARBEITSWEG_WUNSCH_UMSETZEN.md` und die README dort verweisen aufeinander; Verweise stimmen.
 - `docs/CHANGELOG.md` und `LOGBUCH_AGENT_MANAGER.md` nennen den MasterChat; der Eintrag zu den heutigen Änderungen (Auskunft, drei Tests) steht noch aus und folgt mit dem Commit.
+
+## Testgespräch und Logs, 04.11.2026 (offenes Sedra, Modell `gemma-4-12b-qat`, Vorlage MasterChat)
+
+Quellen: `workspace/GUPPI_OS/runtime_data/harness/sitzungen/` (`S-CF53AF6C`, `S-4EE7CB56`, `S-1E3EBD15`) und `runtime_data/audit/events.jsonl`.
+
+**Sitzung S-CF53AF6C** (Frage: Projekte und laufende Sitzungen; Vorlagen-Hash passt zum Text mit Abschnitt „Auskunft“):
+- Aufgerufen wurde nur `zustand(list_projects)`. Die Antwort nennt aber „der `lauf_status` ist leer“ – ein Aufruf von `lauf_status` steht im Protokoll nicht. `sitzungen_auflisten` wurde nicht gefragt. Das ist die Art Erfindung, die „Erfinde nichts“ verbietet.
+- Der Pflichtsatz fehlte in der ersten vollständigen Antwort (die erste war abgebrochen).
+
+**Sitzung S-4EE7CB56** (Captain: Qwen 3,5 9B MTP lädt nicht, „ungenügender Speicher“, Rezept anpassen):
+- 12 Züge Suche in `runtime/src`; 6 von 8 Antworten endeten mit „Plan, warte auf Ja“; der Captain musste fünfmal „ja mach weiter“ schreiben. Ein Pfad wurde falsch zitiert (`runtime/src/uix/js/models.js` statt `…/guppi_runtime/uix/js/models.js`).
+- Die Meldung selbst steht im Audit: 08:03–08:05 UTC sechsmal `ROLE_RESOLUTION_FAILED`, Code `hardware_pressure`, abgelehnt `coder.llama_qwen35`, Grund `vram_insufficient`. Das Werkzeug `recent_audit` hat der MasterChat nie aufgerufen. Das Rezept steht in `local_config/role_routing.yaml` (`measured_vram_gb: 8.3` gemessen bei Kontext 32768, im Rezept `slots: 2`, Kontext bis 98304), nicht im Code.
+- Nicht geklärt: Welche Zahlen der Scheduler verglichen hat (`need_gb`, `best_free_gb`); ein `RESOURCE_DENIED`-Eintrag dazu steht nicht im Audit. Die Ursache im Rezept ist damit eine Vermutung, kein Beleg.
+
+**Folgerung** (`masterchat.md`, Abschnitt Auskunft): neue Zeile für Meldungen und Störungen (erst `recent_audit`, dann Modellstand, Routing; Rezepte in `role_routing.yaml`), „zwei Teile = zwei Aufrufe“, nur genannte Werkzeuge, die wirklich aufgerufen wurden, Lesen ohne „Ja“. Test: `test_der_auskunftsteil_hat_die_lehren_aus_dem_testgespraech_vom_04_11`. Ob das Modell der Anweisung folgt, zeigt erst ein neuer Lauf.

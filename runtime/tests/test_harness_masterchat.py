@@ -86,7 +86,18 @@ class VorlageTests(unittest.TestCase):
         for w in ('arbeitsplatz_stand', 'lauf_status', 'sitzungen_auflisten', 'list_projects', 'list_missions', 'erinnern', 'recent_audit', 'app_oeffnen'):
             self.assertIn('`' + w + '`', teil, w)
             self.assertIn(w, self.m['werkzeuge'])
-        self.assertLess(len(teil), 1400)                                                                                # jede Zeile kostet bei jeder Anfrage Token
+        self.assertLess(len(teil), 2200)                                                                                # jede Zeile kostet bei jeder Anfrage Token
+
+    def test_der_auskunftsteil_hat_die_lehren_aus_dem_testgespraech_vom_04_11(self):
+        """Log S-CF53AF6C: „der lauf_status ist leer“ ohne Aufruf, zwei Fragen mit einem Aufruf beantwortet. Log S-4EE7CB56 (Qwen 9B MTP lädt nicht): 20 Minuten Suche in runtime/src,
+        obwohl recent_audit ROLE_RESOLUTION_FAILED (vram_insufficient, Rezept coder.llama_qwen35) lieferte und das Rezept in local_config/role_routing.yaml steht; fünfmal „ja mach weiter“."""
+        text = (CONFIG / 'masterchat.md').read_text(encoding='utf-8')
+        teil = text.split('## Auskunft und Lenkung', 1)[1].split('\n## ', 1)[0]
+        for satz in ('zuerst `recent_audit`', 'ROLE_RESOLUTION_FAILED', '`role_routing.yaml` im Ordner `local_config`', 'Eine Frage mit zwei Teilen braucht zwei Aufrufe',
+                     'wirklich aufgerufen', 'nicht geprüft', 'sofort, ohne nach einem „Ja“ zu fragen'):
+            self.assertIn(satz, teil, satz)
+        self.assertIn('recent_audit', self.m['werkzeuge'])
+        self.assertIn('get_routing_profile', self.m['werkzeuge'])
 
     def test_jedes_werkzeug_der_vorlage_gibt_es_wirklich(self):
         """Die Ladeprüfung lässt auch „vorgesehene“ Namen durch, die noch nichts ausführen; hier zählt nur, was die Harness oder der Chat wirklich kennt."""
