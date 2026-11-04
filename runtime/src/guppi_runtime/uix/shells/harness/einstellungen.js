@@ -21,7 +21,7 @@
     {id: 'allgemein', titel: 'Allgemein', punkte: {darstellung: E('darstellung', 'Darstellung'), benachrichtigungen: E('benachrichtigungen', 'Benachrichtigungen'), sprache: E('sprache', 'Sprache der Oberfläche')}},
     {id: 'agent', titel: 'Agent', punkte: {vorlagen: E('vorlagen', 'Vorlagen'), freigabe: E('freigabe', 'Freigabe-Modus'), grenzen: E('grenzen', 'Züge je Vorlage'), token: E('token', 'Sedra Token (Verweis)')}},
     {id: 'sprache', titel: 'Sprache und Ton', punkte: {rekorder: W('aufnahme', ['rekorder'], 'Rekorder'), quelle: E('quelle', 'Quelle')}},
-    {id: 'integrationen', titel: 'Integrationen', punkte: {mcp: E('mcp', 'MCP'), gateway: W('gateway', ['gateway', 'schutz'], 'KI GateWay (Guard)'), cloud: W('labor', ['labor'], 'KI-Labor')}},
+    {id: 'integrationen', titel: 'Integrationen', punkte: {mcp: E('mcp', 'MCP'), gateway: W('gateway', ['gateway', 'schutz'], 'KI GateWay (Guard)'), cloud: W('labor', ['labor'], 'KI-Labor'), hilfswerkzeuge: E('hilfswerkzeuge', 'Hilfswerkzeuge')}},
     {id: 'modelle', titel: 'Lokale Modelle', punkte: {bibliothek: W('library', ['library'], 'Bibliothek'), werkstatt: W('models', ['workshop'], 'Rezepte / Werkstatt'), slots: W('slots', ['slots'], 'Slots'), laufzeit: E('laufzeit', 'Geladene Instanzen · Laufzeit')}},
     {id: 'system', titel: 'System', punkte: {schalter: E('schalter', 'Schalter'), grenzen: W('boundary', ['boundaries'], 'Modus und Grenzen'), module: W('modules', ['modules'], 'Module'), audit: W('logbook', ['logbook'], 'Logbuch')}}
   ];
@@ -125,7 +125,7 @@
   }
 
   // ---- eigene Flächen
-  const FLAECHEN = {darstellung, benachrichtigungen, sprache, vorlagen, freigabe, grenzen, token: (S, box)=>{ box.append(d().el('div', 'hs-app-satz', 'Verbrauch, Kosten, Denken, Gedächtnis und das lange Gespräch stehen in der App „Sedra Token“ (Start → Sedra Token, oder Klick auf die Zelle Token).')); box.append(d().button('Sedra Token öffnen', ()=>root.sedraHarness.tokenseite.oeffnen(S))); }, quelle, mcp, laufzeit, schalter};
+  const FLAECHEN = {hilfswerkzeuge: (S, box)=>root.sedraHarness.hilfswerkzeugseite.zeigen(S, box), darstellung, benachrichtigungen, sprache, vorlagen, freigabe, grenzen, token: (S, box)=>{ box.append(d().el('div', 'hs-app-satz', 'Verbrauch, Kosten, Denken, Gedächtnis und das lange Gespräch stehen in der App „Sedra Token“ (Start → Sedra Token, oder Klick auf die Zelle Token).')); box.append(d().button('Sedra Token öffnen', ()=>root.sedraHarness.tokenseite.oeffnen(S))); }, quelle, mcp, laufzeit, schalter};
   function eigen(S, flaeche, punkt){
     const box = d().el('div', 'hs-einst-eigen'); box.dataset.flaeche = punkt.flaeche;
     flaeche.append(box);

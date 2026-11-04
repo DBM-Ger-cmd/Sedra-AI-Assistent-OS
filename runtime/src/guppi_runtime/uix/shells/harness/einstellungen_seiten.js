@@ -23,6 +23,7 @@
     'integrationen/mcp': ['⇄', 'Clients, Port und Alter der Datei – nie der Token'],
     'integrationen/gateway': ['⛨', 'KI GateWay mit Guard und Inhaltsschutz: Anfrage prüfen, Entwurf, Prüfung'],
     'integrationen/cloud': ['☁', 'KI-Labor: Anbieter, Schlüssel, Modelle, Tests'],
+    'integrationen/hilfswerkzeuge': ['⚒', 'Programme und Pakete auf der CPU: was da ist, was fehlt und wie es installiert wird'],
     'modelle/bibliothek': ['▣', 'Skills ansehen und schreiben'],
     'modelle/werkstatt': ['◆', 'Modelle laden, Rezepte, Teststrecke'],
     'modelle/slots': ['▦', 'Belegte Plätze und Warteschlange'],

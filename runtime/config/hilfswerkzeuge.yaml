@@ -1,0 +1,30 @@
+# Hilfswerkzeuge auf der CPU (docs/PLAN_CPU_HILFSWERKZEUGE_2026-11-04.md). Sedra erkennt nur, ob sie da sind (Programm im PATH oder Python-Paket
+# installiert) und nennt sonst den Installationsbefehl. Nichts wird von Sedra heruntergeladen oder installiert – das macht der Captain.
+# `plan` verweist auf die Nummer im Plan (W = angefragtes Werkzeug, F = weitere Funktion, vorhanden = schon im Kern genutzt).
+schema: 1
+werkzeuge:
+  # Sprache → Text (sprache/stt.py nutzt die Programme in dieser Reihenfolge)
+  - {id: whisperx, name: WhisperX, art: programm, name_im_system: whisperx, zweck: "Sprache zu Text mit Wort-Zeiten und VAD (CPU int8 möglich)", install: "pip install whisperx", plan: vorhanden}
+  - {id: faster-whisper, name: "faster-whisper (whisper-ctranslate2)", art: programm, name_im_system: whisper-ctranslate2, zweck: "Sprache zu Text auf der CPU ohne PyTorch", install: "pip install whisper-ctranslate2", plan: W1}
+  - {id: whisper, name: openai-whisper, art: programm, name_im_system: whisper, zweck: "Sprache zu Text (Referenz, langsamer)", install: "pip install -U openai-whisper", plan: vorhanden}
+  - {id: ffmpeg, name: ffmpeg, art: programm, name_im_system: ffmpeg, zweck: "Audio lesen und vorbereiten (Voraussetzung der Provider)", install: "ffmpeg installieren (Paketverwaltung des Systems)", plan: vorhanden}
+  - {id: silero-vad, name: "Silero VAD", art: paket, name_im_system: silero_vad, zweck: "Stille vor dem Whisper-Lauf abschneiden", install: "pip install silero-vad", plan: W2}
+  - {id: piper, name: Piper, art: programm, name_im_system: piper, zweck: "Antworten vorlesen (Sprachausgabe auf der CPU)", install: "pip install piper-tts", plan: W6}
+  # Dokumente und Bilder
+  - {id: markitdown, name: MarkItDown, art: paket, name_im_system: markitdown, zweck: "PDF, Excel, PowerPoint zu Markdown", install: "pip install markitdown", plan: W4}
+  - {id: docling, name: Docling, art: paket, name_im_system: docling, zweck: "Dokumente mit Layout zu Markdown", install: "pip install docling", plan: W4}
+  - {id: rapidocr, name: RapidOCR, art: paket, name_im_system: rapidocr_onnxruntime, zweck: "Text aus Bildern und Scans", install: "pip install rapidocr-onnxruntime", plan: W5}
+  - {id: tesseract, name: Tesseract, art: programm, name_im_system: tesseract, zweck: "Text aus Bildern und Scans", install: "Tesseract installieren (Paketverwaltung des Systems)", plan: W5}
+  - {id: trafilatura, name: trafilatura, art: paket, name_im_system: trafilatura, zweck: "Web-Seite zu Text (weniger Token)", install: "pip install trafilatura", plan: F5}
+  # Wissen, Schutz, Übersetzen
+  - {id: onnxruntime, name: "ONNX Runtime", art: paket, name_im_system: onnxruntime, zweck: "Grundlage für Reranker und kleine Klassifikationsmodelle", install: "pip install onnxruntime", plan: W3}
+  - {id: presidio, name: Presidio, art: paket, name_im_system: presidio_analyzer, zweck: "zusätzlicher Erkenner für Namen und Orte", install: "pip install presidio-analyzer", plan: W7}
+  - {id: spacy, name: spaCy, art: paket, name_im_system: spacy, zweck: "Sprachmodell für Presidio und Textzerlegung", install: "pip install spacy", plan: W7}
+  - {id: argos, name: "Argos Translate", art: paket, name_im_system: argostranslate, zweck: "Übersetzung ohne Modellaufruf", install: "pip install argostranslate", plan: W8}
+  - {id: lingua, name: lingua-py, art: paket, name_im_system: lingua, zweck: "Sprache eines Textes erkennen", install: "pip install lingua-language-detector", plan: F2}
+  # Prüfen, Rechnen, Auswerten
+  - {id: detect-secrets, name: detect-secrets, art: paket, name_im_system: detect_secrets, zweck: "Geheimnisse vor Commit und Export finden", install: "pip install detect-secrets", plan: F1}
+  - {id: ruff, name: ruff, art: programm, name_im_system: ruff, zweck: "Python prüfen vor der Freigabe", install: "pip install ruff", plan: F8}
+  - {id: duckdb, name: DuckDB, art: paket, name_im_system: duckdb, zweck: "CSV und Excel mit SQL abfragen", install: "pip install duckdb", plan: F6}
+  - {id: rapidfuzz, name: rapidfuzz, art: paket, name_im_system: rapidfuzz, zweck: "ähnliche Einträge finden (Duplikate)", install: "pip install rapidfuzz", plan: F9}
+  - {id: sumy, name: sumy, art: paket, name_im_system: sumy, zweck: "Zusammenfassen ohne Modell (Rückfall)", install: "pip install sumy", plan: F3}
