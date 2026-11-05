@@ -1,0 +1,684 @@
+[00:02] understanding how processes work so that
+[00:02] we can improve them create them and
+[00:05] communicate them is an essential
+[00:07] business skill today we're going to talk
+[00:09] about cypoc one of the simplest and most
+[00:12] trusted techniques to understand your
+[00:14] business processes and by the end of
+[00:16] this video you'll be able to use it just
+[00:18] like an
+[00:31] expert hi my name is raf welcome to
+[00:32] ryzer where my mission is to help you go
+[00:34] further faster in your career
+[00:37] maybe you've already heard of cypok and
+[00:39] you want to learn a little more or maybe
+[00:41] this is your first introduction to it
+[00:43] you're interested in creating or
+[00:45] improving a process and you're now down
+[00:47] in the rabbit hole of discovering
+[00:49] various tools and techniques
+[00:51] either way you'll really benefit from
+[00:53] what i'm about to cover in this video
+[00:55] starting with what cypok is and then
+[00:57] moving on to why it's important before
+[01:00] diving into how to make a cypok diagram
+[01:03] step by step how to use it properly
+[01:05] including how to draw insights from it
+[01:08] and finally there'll be three powerful
+[01:10] pro tips that will really help you
+[01:12] master the technique in minutes so make
+[01:14] sure you stick around for those because
+[01:16] i really do think they're going to make
+[01:17] a huge difference for a very small
+[01:19] amount of effort so starting with what
+[01:21] cypok is
+[01:23] well cypok which is sometimes called a
+[01:25] cypok diagram is a very simple high
+[01:28] level overview of a process that's
+[01:31] rarely what it is in a nutshell but at
+[01:33] the same time i have to say it's so much
+[01:35] more than that don't be fooled its power
+[01:37] is rarely in its simplicity its ease of
+[01:40] use and the insights that we can draw
+[01:41] from it all of which i'll be getting
+[01:43] into very very shortly so cypok is a
+[01:46] high level process overview
+[01:48] but exactly what does that mean
+[01:51] well the first piece of any process
+[01:53] overview is establishing that processes
+[01:55] boundaries the start and stop points
+[01:58] defining exactly where the process
+[02:00] begins and exactly where it ends
+[02:02] the second piece is the key process
+[02:04] steps between those beginning and end
+[02:06] points linking them together
+[02:09] and the third important piece of any
+[02:11] process overview is defining what goes
+[02:13] into each process step to make that step
+[02:15] happen and what comes out of each
+[02:17] process step as a result of that step
+[02:19] doing something
+[02:20] cypok helps us figure all of this out in
+[02:23] a pretty simple way ensuring that key
+[02:25] elements aren't left out
+[02:27] the word cypok is actually an acronym
+[02:29] which stands for supplier
+[02:32] input
+[02:33] process
+[02:34] output and customer as you'll soon
+[02:37] discover this acronym is really the
+[02:39] framework pretty much all we need to
+[02:41] remember in order to draw and understand
+[02:43] a high-level process now let's talk a
+[02:45] little bit about why we need cypok what
+[02:48] purpose does it serve because it
+[02:50] provides us with a complete high-level
+[02:53] process overview or snapshot it's most
+[02:55] often used as a first step towards
+[02:58] improving or enhancing a process
+[03:00] for example to make it more efficient
+[03:02] and effective or to address other
+[03:04] business or customer needs
+[03:06] having a good quality high level
+[03:08] overview provides us with the framework
+[03:10] to then deep dive and focus on specific
+[03:13] aspects of that process
+[03:15] cypok can also be used to sketch out a
+[03:17] brand new process that you might be
+[03:19] designing from scratch because it forces
+[03:22] us to consider key elements of that new
+[03:24] process as well as its scope
+[03:26] so whether you're improving or designing
+[03:28] a process cypok serves as a really solid
+[03:31] foundation to move forward with more
+[03:33] detailed analysis such as process
+[03:36] mapping flow charting data collection
+[03:38] plans which is understanding what
+[03:40] information together and from where
+[03:43] risk and control assessments which is
+[03:45] understanding what could go wrong and
+[03:48] how badly it could affect the business
+[03:50] and even stakeholder mapping to
+[03:52] understand who are the people
+[03:54] responsible and accountable for parts of
+[03:56] the process and also who might need to
+[03:58] be consulted or informed about any
+[04:00] changes
+[04:02] and i should also mention that cypok is
+[04:04] a really powerful communication and
+[04:06] change management tool and in fact i've
+[04:09] used cypok in the past to give
+[04:10] stakeholders an overview of a process
+[04:12] that is already understood by
+[04:14] specialists but needs to be understood
+[04:16] by other teams who might be affected by
+[04:19] process changes for example or to
+[04:21] communicate with different departments
+[04:23] about an issue or even with certain
+[04:25] individuals right up to c-suite so these
+[04:29] are just some of the ways in which cypok
+[04:31] can help us
+[04:32] if you want to go further faster at work
+[04:35] i really do think that cypok is an
+[04:36] essential tool that you'll use many many
+[04:39] times over the course of your career and
+[04:41] it's an essential process improvement
+[04:43] tool that's used right across the globe
+[04:45] but what i really like about cypoc is
+[04:47] that you don't have to be any kind of
+[04:49] process expert to use it and get a great
+[04:51] deal of value for a very small amount of
+[04:53] effort so what we're going to do now is
+[04:55] spend about five minutes making coffee
+[04:59] what i'm going to do is take you through
+[05:01] how i make coffee at home and create a
+[05:03] cypok at the same time
+[05:05] this way you'll get to understand how a
+[05:07] cypok is made in real life and it's a
+[05:09] pretty decent cup of coffee if you ever
+[05:11] find that you can't get to a coffee shop
+[05:13] by the way the method i'm going to be
+[05:14] using is inspired by james hoffman who
+[05:17] is a world barista champion and a coffee
+[05:19] legend and i'm going to link to his
+[05:20] video below
+[05:22] now it's often a good idea to create
+[05:24] cypox in a group setting with people who
+[05:26] are part of the process this will ensure
+[05:28] that we get a full picture of the
+[05:29] process without leaving anything
+[05:31] important out and also make sure that
+[05:33] our stakeholders are engaged and aligned
+[05:35] from the very beginning
+[05:37] so once we have our stakeholders
+[05:38] together the first thing that we need to
+[05:40] do in creating our cypok as i mentioned
+[05:43] before is to determine our scope the
+[05:46] start and the end points of the process
+[05:49] in our case we're only mapping the
+[05:51] coffee making process at home so we are
+[05:54] excluding all the other potential
+[05:55] processes such as the coffee purchasing
+[05:57] process and the coffee consuming process
+[06:01] those are all out of scope so now that
+[06:03] we have limited our scope to coffee
+[06:05] making let's refine our scope by
+[06:08] figuring out where that coffee making
+[06:09] process starts and where it ends
+[06:12] in this case i start with
+[06:15] coffee beans and i end up with
+[06:17] a cup of coffee
+[06:19] actually it'll be two cups of coffee
+[06:21] because my wife's going to want one as
+[06:22] well
+[06:23] these will be my basic start and end
+[06:25] points in a business setting that's what
+[06:28] we're after within our scope what do we
+[06:30] start with as our first step and what do
+[06:32] we end up with as our last step
+[06:35] so now let's go ahead and give our cypok
+[06:37] a name and let's call it
+[06:41] making coffee at home
+[06:43] for two
+[06:45] naming our process is important as a
+[06:47] reference to ensure that we keep our
+[06:48] focus and not get distracted as we build
+[06:51] this out
+[06:52] so now that we've determined our scope
+[06:54] and our name let's try to figure out the
+[06:56] major steps in our coffee making process
+[06:58] to get from our beans the first step to
+[07:01] our finished coffees at the last step
+[07:05] now the first thing to remember is that
+[07:07] cypok is a high level summary this is
+[07:09] not a detailed process map in fact it's
+[07:11] not a process map at all
+[07:13] as a guide we're usually looking for our
+[07:15] process to be described within about
+[07:17] four to eight steps of course there's
+[07:20] some flexibility here but i'd say try to
+[07:22] avoid having more than eight or nine
+[07:24] maybe 10 steps if you really want to
+[07:27] push the limits and the reason you want
+[07:28] so few steps is because if it's too
+[07:31] detailed it won't be an overview anymore
+[07:33] which is the whole purpose of the
+[07:34] exercise
+[07:36] if you do end up with too many steps
+[07:38] you'll probably need to be a little more
+[07:40] ruthless in figuring out what's truly
+[07:42] important versus detail that doesn't add
+[07:44] much value
+[07:46] describing a process in just a few steps
+[07:48] does take a little practice but i've
+[07:50] found that if you start off with too
+[07:52] many you can often group two or three of
+[07:54] them together into a single step to
+[07:56] eliminate that unnecessary detail
+[07:58] and with this in mind let's begin
+[08:00] defining our steps starting with
+[08:02] grinding our coffee beans which we're
+[08:04] going to describe as
+[08:06] grind
+[08:07] coffee beans
+[08:09] the way you write process steps is
+[08:10] actually really important so that
+[08:12] they're not misinterpreted later
+[08:14] they also need to be action oriented
+[08:17] because each step is doing something
+[08:19] so you want to write them using what's
+[08:21] called a verb noun construct in other
+[08:24] words a doing word followed by a thing
+[08:27] so grind
+[08:29] coffee beans is perfect
+[08:32] so after grinding our coffee beans we're
+[08:34] going to extract our coffee liquid using
+[08:36] something called a mocha pot one of
+[08:38] those stovetop coffee makers so let's
+[08:40] call this next step
+[08:42] extract coffee remember verb then noun
+[08:46] okay great while the coffee's on the
+[08:47] stove we need to warm our milk so let's
+[08:50] say
+[08:51] warm up milk
+[08:53] and then we're going to froth our milk
+[08:55] so let's call this next step froth milk
+[08:58] after which we'll pour our espresso
+[09:00] coffee into our cups so let's name this
+[09:02] one
+[09:03] pour espresso
+[09:05] and then we're going to also pour our
+[09:07] milk into those cups to complete the
+[09:08] process so let's name this final step
+[09:11] poor milk
+[09:13] so we have one
+[09:15] two
+[09:16] three four five six steps in our process
+[09:19] perfect we're within our 4 to 8 step
+[09:22] guideline so we know this is at the
+[09:23] right process level and not too detailed
+[09:26] now ask yourself looking at these six
+[09:29] steps is this enough information to give
+[09:31] you a really good overview of the coffee
+[09:33] making process and be honest
+[09:36] well
+[09:37] it
+[09:38] it really isn't is it
+[09:40] because we're missing some important
+[09:41] information here like
+[09:43] what beans did i use
+[09:45] where did those beans come from
+[09:47] what happened after i ground those
+[09:49] coffee beans how did they get turned in
+[09:51] miraculously into coffee liquid and so
+[09:54] much more to solve this little problem
+[09:56] we now need to add for each of our six
+[09:58] steps what are the inputs the things we
+[10:01] need for that step to happen which could
+[10:03] be materials information knowledge etc
+[10:06] and we also want to understand what are
+[10:08] the outputs what did that step result in
+[10:11] what is the value being added through
+[10:13] that step and looking at our inputs it's
+[10:16] important to know who or what supplied
+[10:18] the things that we needed for that step
+[10:20] we call these our suppliers
+[10:23] our suppliers are both internal and
+[10:25] external to the business and include
+[10:27] individuals and groups other companies
+[10:29] as well as systems and processes and
+[10:32] similarly let's look at our outputs
+[10:35] who received these outputs we call these
+[10:38] our customers and our customers just
+[10:40] like our suppliers are both internal and
+[10:43] external to the business and they
+[10:45] include anyone who received the output
+[10:46] of that step such as internal people
+[10:50] internal departments and external
+[10:52] customers of the business so here we can
+[10:54] see that our cyborg columns provide us
+[10:56] with a framework for the information we
+[10:58] now need to gather
+[11:00] now with this in mind let's work through
+[11:02] our high level process step by step
+[11:05] starting with grinding the coffee beans
+[11:07] which i buy from a place called toby's
+[11:09] estate a well-known brand where i'm from
+[11:11] in sydney australia
+[11:13] i need 43 grams or one and a half ounces
+[11:15] of beans for the amount of coffee that
+[11:17] i'm making so that will go into the
+[11:20] input column and i'm going to put down
+[11:22] toby's estate as a supplier
+[11:24] and for this step i also need a digital
+[11:27] scale to weigh the beans which i got
+[11:30] from amazon
+[11:31] a coffee grinder i use an electric burr
+[11:34] grinder from baratza
+[11:36] and i'm also going to add that james
+[11:38] hoffman video to the input as i couldn't
+[11:40] have done this step without that
+[11:41] information
+[11:42] and that video was supplied by his
+[11:44] youtube channel so i'm going to add that
+[11:46] to the suppliers as well
+[11:48] now i could replace all of those
+[11:50] supplies with myself because
+[11:52] i bought all this stuff
+[11:54] that would simplify things but if i did
+[11:56] that you might find that you're back to
+[11:58] square one again not having quite enough
+[12:00] information to give you a decent
+[12:02] overview of the step and ultimately the
+[12:04] coffee making process
+[12:06] so in this example i'm just going to
+[12:08] leave it as is for the time being
+[12:10] in a business setting you're going to
+[12:12] need to decide for yourself on the right
+[12:14] level of detail and this is where it's
+[12:16] valuable to get that input from your
+[12:17] stakeholders you'll generally know if
+[12:19] you've gone too far and over summarizing
+[12:22] because you'll end up with just one or
+[12:24] two suppliers or one or two inputs
+[12:26] across all of your process steps and of
+[12:29] course the same goes for your outputs
+[12:30] and your customers basically it's just
+[12:33] not enough information to be useful
+[12:35] speaking of outputs and customers
+[12:38] let's move to the other side of the
+[12:39] process
+[12:41] the outputs of this step are that we
+[12:42] have 43 grams or one and a half ounces
+[12:45] of fine espresso grounds of which i am
+[12:48] the only recipient or customer now
+[12:51] you'll notice that i've merged the
+[12:52] supplier and the customer rows so that
+[12:54] they show up as single columns you can
+[12:57] actually do this with your inputs and
+[12:59] your outputs as well but as a general
+[13:01] rule i prefer to segment this all as
+[13:03] much as possible because it's more
+[13:05] descriptive and forces us to draw out
+[13:07] all the important information and not
+[13:09] take shortcuts in this example though
+[13:11] the reason why i've merged the customer
+[13:13] and the supplier rows is simply because
+[13:16] i already know that we're going to have
+[13:17] some of the same customers and suppliers
+[13:19] come up again and again and again and
+[13:22] rather than have to repeat them all the
+[13:23] way down the rows it's clearer and
+[13:25] neater just to list them once
+[13:28] there's no right or wrong here but i did
+[13:30] want to demonstrate some variation in
+[13:31] how we can draw this so hopefully that
+[13:33] makes sense the next step is to extract
+[13:36] the coffee to get a nice strong black
+[13:39] coffee from those grounds
+[13:41] my inputs here are the mocha pot
+[13:44] into which we pour boiling water
+[13:47] and then we fill the filter of the mocha
+[13:48] pot with the coffee grounds we just
+[13:50] produced
+[13:52] then we close up the mocha pot and this
+[13:54] all goes onto my stovetop so i'll need
+[13:56] to include this as an input as well
+[13:59] that james hoffman video is an input as
+[14:01] well
+[14:02] it's an input for all of the steps so i
+[14:04] won't mention it again and as you can
+[14:06] see i've been filling in my suppliers as
+[14:08] we've been going and again we're just
+[14:10] adding new suppliers because we've
+[14:12] merged the supplier rows so we can save
+[14:14] some time and confusion by not having to
+[14:17] list that youtube channel for example
+[14:19] again and again
+[14:21] you can also see that i purposely left
+[14:23] out the lower level process detail such
+[14:25] as filling the filter with the coffee
+[14:27] and closing up the mocha pot because
+[14:29] these are just not as important to our
+[14:31] high level understanding of the process
+[14:33] understanding what to leave out takes
+[14:35] some skill but as i mentioned earlier
+[14:37] you'll soon find yourself with too many
+[14:39] process steps if you're including too
+[14:41] much detail
+[14:42] going back to our process
+[14:44] this step is going to give us around 100
+[14:46] milliliters or about three and a half
+[14:48] ounces of hot espresso coffee liquid
+[14:50] from the mocha pot
+[14:52] so this is our output and i'm still the
+[14:55] customer
+[14:56] but note that in a business process
+[14:58] where a process step might be performed
+[15:00] by a different person or a different
+[15:01] department you could very well have a
+[15:04] number of different customers by this
+[15:05] stage
+[15:07] step three is to warm up our milk and
+[15:09] for this we'll need 150 milliliters or
+[15:12] five ounces of milk and i warm up the
+[15:15] milk in the base of a manual milk
+[15:17] frother which is very similar to a
+[15:19] coffee plunger you could in fact use a
+[15:21] coffee plunger instead if you wanted to
+[15:23] i use a microwave to warm the milk until
+[15:26] it reaches 60 to 65 degrees centigrade
+[15:28] that's around 140 to 150 degrees
+[15:31] fahrenheit
+[15:32] which reminds me i almost forgot about
+[15:34] the milk thermometer which i used to
+[15:36] check the temperature of the milk so
+[15:38] let's add this one in as well this was a
+[15:40] great example of the cypok exercise
+[15:42] helping us to draw out all the important
+[15:44] information we need to describe a
+[15:46] process
+[15:47] again i've added in the suppliers as
+[15:49] we've been going
+[15:50] and the output here is our warmed milk
+[15:53] and once again
+[15:55] i'm the only customer and again i'll
+[15:57] remind you that in a business process
+[15:58] this can often be a different customer
+[16:01] or customers
+[16:02] step four involves aerating that milk to
+[16:05] get the fine silky texture that we're
+[16:07] after once it's reached the right
+[16:09] temperature
+[16:10] and for this we're using the base of
+[16:11] that milk frother with the warmed milk
+[16:13] but we'll need the plunger part as well
+[16:15] which is the bit that actually does the
+[16:17] propping
+[16:18] basically you need to insert the plunger
+[16:20] into the base and then move it up and
+[16:22] down plunging the milk several times to
+[16:24] create bubbles and then break down those
+[16:26] bubbles into a fine milky foam that has
+[16:29] the texture of ice cream and the output
+[16:32] is warm frothed milk
+[16:34] and nothing else and i'm still the only
+[16:36] customer at this point step five is to
+[16:39] pour the coffee into the cups and for
+[16:41] this i need two cups
+[16:43] they are very special cups from an
+[16:45] upmarket scandinavian design firm
+[16:48] because
+[16:49] on this channel we spare no expense
+[16:52] the outputs here are 50 milliliters or
+[16:55] about 1.7 ounces of espresso in each cup
+[16:58] no special method for pouring or
+[17:00] anything like that
+[17:02] we also have a dirty mocha pot so i'm
+[17:04] gonna list that as an output as well
+[17:06] step six is to pour the milk into the
+[17:08] two cups and i actually transfer the
+[17:11] milk from the frother into a milk jug as
+[17:13] this allows me to pour it nicely and
+[17:15] sometimes create a sad little decoration
+[17:17] on the top which vaguely resembles a
+[17:19] cross between a half dead tulip
+[17:21] and a blob
+[17:22] anyway the outputs are an additional 75
+[17:25] milliliters or two and a half ounces of
+[17:27] milk in each cup on top of the coffee
+[17:28] that's already there which makes our
+[17:30] finished cups of coffee which we call a
+[17:32] flat white in australia but you might
+[17:34] call it a latte or something else
+[17:37] we also have a dirty milk frother and a
+[17:39] dirty milk jug as outputs and we have a
+[17:42] new customer to add which is my wife the
+[17:45] group ceo so there we have it our
+[17:47] completed cypok
+[17:49] now let's ask that question from earlier
+[17:52] is this enough information to give us a
+[17:54] really good high level overview of the
+[17:56] coffee making process
+[17:58] and i think looking at this diagram now
+[18:01] the answer is
+[18:04] yes
+[18:05] we have our process summary which
+[18:07] outlines the steps we need to take to
+[18:09] make coffee at home for two and
+[18:11] importantly we can see what goes into
+[18:13] and comes out of our steps and also
+[18:15] where it all comes from and where it all
+[18:17] ends up so you can see how this can also
+[18:20] be used as an effective communication
+[18:22] tool as i mentioned earlier
+[18:24] but it's generally used as a process
+[18:26] improvement or process design tool
+[18:29] for example if we start looking at this
+[18:31] information a little more closely we've
+[18:33] already identified some issues such as
+[18:35] those dirty items there's pain involved
+[18:37] in that and if we were to repeat this
+[18:39] process for a second cup of coffee
+[18:41] there's some washing up to be done first
+[18:43] also the complexity of this process
+[18:45] being performed by one person
+[18:48] me
+[18:49] tells us that there's a level of skill
+[18:50] involved and there's key person risk
+[18:53] if i'm not around
+[18:54] how does my wife get a coffee
+[18:56] and that's not the only risk we also
+[18:58] have potential supply issues with the
+[19:00] consumables we'll need to ensure that we
+[19:02] always have fresh milk and coffee beans
+[19:04] on hand for example so we might want to
+[19:06] look at the way we manage our inventory
+[19:08] there's potentially quite a lot of waste
+[19:10] in the process that could be addressed
+[19:11] such as when i pour the milk from one
+[19:13] vessel the milk frother into another
+[19:16] vessel the milk pouring jug it looks
+[19:18] like i might be over processing a little
+[19:20] bit there so we might want to look at
+[19:22] the benefits and the drawbacks of
+[19:23] eliminating using the milk pouring jug
+[19:25] all together which by the way gets dirty
+[19:27] so we can eliminate having to clean it
+[19:29] as well
+[19:30] if we wanted to we could look at
+[19:31] simplifying this whole process in fact
+[19:34] we might even decide to replace it with
+[19:35] an entirely new one design a new process
+[19:38] from scratch the good news is my
+[19:41] stakeholders are engaged and accessible
+[19:44] and we can use cypok to sketch this out
+[19:46] so we can make these decisions quickly
+[19:48] and easily
+[19:49] get the picture
+[19:50] now you can truly see how valuable cypok
+[19:53] is as a communication
+[19:55] process improvement and process design
+[19:57] tool
+[19:58] so to recap quickly
+[20:00] this is usually best conducted as a
+[20:02] group exercise to get a shared and
+[20:04] holistic understanding of a high level
+[20:06] process
+[20:07] first we determined the scope of the
+[20:09] process that we were looking at and its
+[20:11] start and its end points
+[20:13] and we gave our process a name
+[20:15] next we articulated our process steps
+[20:18] ensuring that our cypok was at the right
+[20:20] level by trying to keep within that four
+[20:22] to eight step range
+[20:24] and then by thinking through what's
+[20:26] required for each of those steps we
+[20:28] noted the inputs as well as who or what
+[20:31] supplied those inputs whether internal
+[20:33] or external to the business
+[20:36] then we thought about what each of those
+[20:38] steps resulted in in other words what
+[20:40] were the outputs and then who were the
+[20:43] recipients of those outputs our
+[20:45] customers both internal and external to
+[20:48] the business
+[20:49] and finally we drew various insights
+[20:51] from the information that we had which
+[20:53] helped us decide how we were going to
+[20:55] proceed whether that was more detailed
+[20:57] process mapping redesigning parts of the
+[20:59] process or designing a whole new process
+[21:02] from scratch
+[21:03] so now that you understand the basics
+[21:05] there are three tips that are going to
+[21:06] turn you into an expert within just a
+[21:08] couple of minutes so stick with me
+[21:10] firstly whilst i work through the cybox
+[21:12] steps in a particular order we looked at
+[21:15] inputs and suppliers and then outputs
+[21:17] and customers
+[21:18] you could do this in whatever order
+[21:20] makes sense for your needs for example
+[21:23] if you're wanting to focus heavily on
+[21:25] customer outcomes then after defining
+[21:27] your process as you work your way down
+[21:30] you might wish to start with your
+[21:31] customer and work your way back in the
+[21:33] opposite direction from customer to
+[21:36] output and then to input and supplier
+[21:39] this is sometimes referred to as copis
+[21:42] which is cypok backwards
+[21:44] another option you have when creating a
+[21:46] cypok is to look at one column like
+[21:48] inputs all the way down the process
+[21:50] steps before moving on to another column
+[21:52] in our case this might actually have
+[21:54] saved us some time
+[21:56] i'm a big believer in using whatever you
+[21:58] feel is going to work best for your
+[22:00] intended purpose so feel free to play
+[22:02] around with this when you do it yourself
+[22:04] my second tip is to remember to keep it
+[22:06] simple you don't need a fancy program to
+[22:08] perform an effective cypok in fact i
+[22:11] strongly advise against using
+[22:13] spreadsheets or anything like that a
+[22:15] whiteboard even a digital one or a big
+[22:17] piece of paper is perfect the more
+[22:20] interactive the better and don't over
+[22:22] complicate it by adding unnecessary
+[22:24] detail in fact after the initial diagram
+[22:26] is completed i usually take a few
+[22:28] minutes to review the cypok and
+[22:30] eliminate unnecessary information
+[22:32] the reality here is that i wouldn't have
+[22:34] lost anything critical by taking out
+[22:35] companies that supplied my digital scale
+[22:38] coffee grinder marker pot milk frother
+[22:41] microwave milk jug and coffee cups
+[22:44] because these were one-off equipment
+[22:45] purchases so they're not really part of
+[22:47] a repeated process which is what we were
+[22:49] focused on and the last tip is if you're
+[22:52] familiar with this channel you'll know i
+[22:53] talk quite a lot about mental models as
+[22:55] powerful frameworks for problem solving
+[22:57] that you can use throughout your career
+[23:00] well cypoc is another method that's
+[23:02] simple enough to use as a framework when
+[23:03] thinking about a process
+[23:05] for example if you're in a meeting and
+[23:07] you're asked to talk about an issue
+[23:08] related to your process
+[23:10] you can use cypok as a mental reference
+[23:12] to describe what's going on and make
+[23:14] sure that you're covering the basics
+[23:15] without going into too much detail and
+[23:18] by the way guess what
+[23:20] you now understand cypok just like an
+[23:22] expert and how easy was that
+[23:25] now all you need to do is try it out for
+[23:27] yourself and let us know how you went
+[23:29] if you want to see how cypok fits into
+[23:31] the bigger process improvement picture
+[23:32] then check out the introduction to
+[23:34] business process management video which
+[23:36] i'll link to below
+[23:37] and keep an eye out for future episodes
+[23:39] where i'll be covering more of these
+[23:41] foundational business and process
+[23:42] improvement tools to help you go further
+[23:44] faster in your career as always if you
+[23:47] have any questions or observations let
+[23:49] me know in the comments below hit the
+[23:50] like button if you enjoyed this video
+[23:52] and while you're there why not subscribe
+[23:54] and hit the notification bell to make
+[23:55] sure that you don't miss out on any
+[23:57] future episodes and don't forget to
+[23:59] share this with a friend or a colleague
+[24:01] till next time keep rising
+[24:28] [Music]
+[24:28] you

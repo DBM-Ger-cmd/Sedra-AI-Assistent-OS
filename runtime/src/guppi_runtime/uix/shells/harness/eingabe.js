@@ -21,7 +21,7 @@
     plus.onclick = ()=>root.sedraHarness.anhang.oeffnen(S);                          // Stufe 6 (HS-82)
     const schild = d().el('button', 'hs-schild', '⛨ Captain gibt frei'); schild.type = 'button';
     schild.setAttribute('aria-expanded', 'false'); schild.setAttribute('aria-haspopup', 'true');
-    schild.title = 'Wer in dieser Sitzung freigibt: der Captain (Karte im Verlauf oder Posteingang). Aufgaben-Freigaben stehen im Reiter „Aufgaben“. Klick: Optionen zur Gesprächsführung (Denken, Gedanken ans Modell, Budget).';
+    schild.title = 'Wer in dieser Sitzung freigibt: der Captain (Karte im Verlauf oder Posteingang). Aufgaben-Freigaben stehen im Reiter „Freigaben“. Klick: Optionen zur Gesprächsführung (Denken, Gedanken ans Modell, Budget).';
     const optionen = root.sedraHarness.gespraechsoptionen.panel(S);                    // aufklappbar unter dem Schild (03.11.2026)
     schild.onclick = ()=>optionen.umschalten(schild);
     S.api('/api/harness/katalog').then(k=>{                    // HS-17/HS-26: das Schild sagt, wer freigibt und nach welchem Katalog

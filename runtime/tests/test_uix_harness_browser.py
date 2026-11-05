@@ -122,7 +122,8 @@ class BrowserDurchlauf(unittest.TestCase):
         self.assertEqual(self.text(), 'A')
 
         # ---- B: Aufgabe anlegen, Aufruf ohne Karte, Rücknahme, wieder eine Karte
-        page.click('text=⛨ Aufgaben')
+        page.click('text=⛨ Freigaben')
+        page.click('.hs-app-reiter-knopf[data-reiter="gilt"]')           # S3: das Formular steht im Reiter „Gilt gerade“
         page.wait_for_selector('.hs-auf-form', timeout=10000)
         page.click('.hs-auf-form summary')                     # „Erweitert“ (Titel, Zweck, eigene Zeilen) ist zugeklappt
         page.fill('.hs-auf-form input[aria-label="Zweck"]', 'Die Notiz bis zu dreimal ohne Karte pflegen')
@@ -139,7 +140,7 @@ class BrowserDurchlauf(unittest.TestCase):
         self.assertEqual(self.text(), 'B')
         self.assertEqual(len(api.karten.alle()), karten_vorher, 'innerhalb der Aufgabe keine neue Karte')
         self.assertIn('Aufgabe T-', page.inner_text('.hs-schild'))
-        page.click('text=⛨ Aufgaben')
+        page.click('text=⛨ Freigaben')                                   # der Reiter „Gilt gerade“ bleibt gewählt
         page.wait_for_selector('.hs-auf-aktiv', timeout=10000)
         page.click('.hs-auf-aktiv button:has-text("Zurücknehmen")')
         page.wait_for_function("()=>!document.querySelector('.hs-auf-aktiv button')", timeout=15000)

@@ -3353,7 +3353,7 @@ class UIXHub:
                 self._release_gpu()
                 raise
             self._remember_recipe(recipe_id, kontext)
-        return dict(out, recipe_id=recipe_id)
+        return dict(out, recipe_id=recipe_id, **self._fenster_angepasst(resolution))
 
     def _load_via_scheduler(self, sched, recipe_id, kontext=None):
         """Werkstatt `model laden` with the scheduler on (D2.6): `ensure_server`, no lease and no beat of this process (SCH-11)."""
@@ -3400,7 +3400,13 @@ class UIXHub:
                 raise ValueError(exc.reason)
             self._remember_recipe(recipe_id, kontext)
             self._messwert_merken(recipe_id, out['load'], vorher, self._speicher_jetzt())      # Live-Fund 30.10.: im Weg mit Scheduler wurde nichts gemerkt
-        return dict(out['load'], recipe_id=recipe_id)
+        return dict(out['load'], recipe_id=recipe_id, **self._fenster_angepasst(resolution))
+
+    @staticmethod
+    def _fenster_angepasst(resolution):
+        """Passte das gewählte Fenster nicht in den Speicher, hat der Router die nächstkleinere Stufe genommen (Router `fenster_angepasst`); die Antwort sagt es, die Oberfläche zeigt es."""
+        a = ((resolution or {}).get('estimated_resources') or {}).get('fenster_angepasst')
+        return {'fenster_angepasst': a} if a else {}
 
     def unload_model(self, payload):
         sched = self._scheduler()

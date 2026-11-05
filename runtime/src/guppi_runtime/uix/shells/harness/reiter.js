@@ -19,7 +19,7 @@
 
   function titel(S, id){
     if(String(id).startsWith('diff:')) return 'Diff ' + id.slice(5);
-    if(String(id).startsWith('aufgaben:')) return 'Aufgaben';
+    if(String(id).startsWith('aufgaben:')) return 'Freigaben';
     if(String(id).startsWith('lauf:')){ const l = (S.laeufe || []).find(x=>x.id === id.slice(5)); return 'Lauf ' + (l ? l.name : id.slice(5)); }
     if(String(id).startsWith('app:')) return root.sedraHarness.app.titel(S, id);                   // Stufe 4
     if(String(id).startsWith('einstellungen:')) return 'Einstellungen';                            // Stufe 5

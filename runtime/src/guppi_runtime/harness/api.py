@@ -68,6 +68,7 @@ from . import bausteine as harness_bausteine
 from . import hilfswerkzeuge
 from . import info as harness_info
 from . import betriebslog as harness_betriebslog
+from . import ladeprobe as harness_ladeprobe
 from . import lauf as harness_lauf
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
@@ -247,6 +248,7 @@ class HarnessApi:
         payload = payload or {}
         q = parse_qs(query or '')
         self._betriebslog_nachfuehren()
+        self._ladeprobe_beim_start()
         if kid:
             if method == 'GET' and not kak:
                 return 200, self.karte(kid)
@@ -979,6 +981,25 @@ class HarnessApi:
         except Exception:
             return None
 
+    def ladeprobe(self):
+        """Könnte jedes Rezept laden? Ohne zu laden (harness/ladeprobe.py); Fehler der Probe selbst werden zum Ergebnis, nie zur Störung."""
+        try:
+            router = getattr(self.hub.runtime, 'role_router', None)
+            return harness_ladeprobe.pruefen(self.modelle(), router.config.recipes if router is not None else [])
+        except Exception as exc:
+            return {'ok': 0, 'gesamt': 0, 'loader': False, 'rezepte': [], 'fehler': f'{type(exc).__name__}: {exc}'[:200]}
+
+    def _ladeprobe_beim_start(self):
+        """Einmal nach jedem Start: die Probe ins Audit-Log (`LADEPROBE`, bei Problemen `LADEPROBE_PROBLEM`), damit der Verlauf zeigt, was nach einem Update anders war."""
+        if getattr(self, '_ladeprobe_gelaufen', False):
+            return
+        self._ladeprobe_gelaufen = True
+        probe = self.ladeprobe()
+        if probe.get('fehler'):
+            return
+        problem = not probe['loader'] or probe['ok'] < probe['gesamt']
+        self._audit('LADEPROBE_PROBLEM' if problem else 'LADEPROBE', {'satz': harness_ladeprobe.satz(probe), 'ok': probe['ok'], 'gesamt': probe['gesamt']})
+
     def _wissen_quelle(self):
         """Steht der Ordner des Betriebslogs schon als Quelle in der Wissensdatenbank? 'aufgenommen', 'nicht' oder 'aus' (Wissensspeicher abgeschaltet)."""
         sp = getattr(getattr(self.hub, 'runtime', None), 'wissen', None)
@@ -995,6 +1016,7 @@ class HarnessApi:
             out = harness_info.stand(self.hub.runtime.audit.path, (q.get('limit') or ['60'])[0], (q.get('such') or [''])[0], (q.get('art') or ['alle'])[0])
         except ValueError as exc:
             out = {'modelle': {'laeuft': [], 'abgelehnt': []}, 'ereignisse': [], 'fehler': str(exc)}
+        out['ladeprobe'] = self.ladeprobe()
         out['verlauf'] = {'tage': harness_betriebslog.tage(self.hub.project_root), 'wissen': self._wissen_quelle(), 'ordner': harness_betriebslog.QUELLE_PFAD}
         tag = (q.get('tag') or [''])[0]
         if tag:

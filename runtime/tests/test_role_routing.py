@@ -344,11 +344,20 @@ class AutoWindowMemoryTests(SlotTests):
         self.assertEqual(ctx.exception.detail['considered'][0]['reason'], 'vram_insufficient')
         self.assertEqual(gesehen[-1], self.bedarf(8192), 'zuletzt wurde die kleinste Stufe geprueft, ihr Bedarf steht in der Ablehnung')
 
-    def test_eine_gewaehlte_zahl_und_die_rollenwahl_bleiben_wie_sie_waren(self):
+    def test_eine_gewaehlte_zahl_wird_bei_knappem_speicher_kleiner_und_sagt_es(self):
+        # 05.11.2026: der freie Speicher schwankt von Start zu Start; eine gewaehlte Stufe ist ein Wunsch nach „hoechstens so viel“, das Laden soll nicht daran scheitern
         router, _ = self.router_mit_budget(self.bedarf(16384) + 0.01)
-        with self.assertRaises(ResolutionError):                                   # genau diese Stufe, nicht kleiner: der Captain hat sie gewaehlt
+        r = router.resolve_recipe('c.s', kontext=32768)
+        self.assertEqual(r['context_window'], 16384)
+        self.assertEqual(r['estimated_resources']['fenster_angepasst'], {'gewuenscht': 32768, 'gewaehlt': 16384})
+        r = router.resolve_recipe('c.s', kontext=16384)
+        self.assertEqual(r['context_window'], 16384)
+        self.assertNotIn('fenster_angepasst', r['estimated_resources'], 'passte die Stufe, gibt es nichts zu melden')
+        router, _ = self.router_mit_budget(5.0)
+        with self.assertRaises(ResolutionError):                                   # auch die kleinste Stufe passt nicht: Ablehnung mit dem Grund
             router.resolve_recipe('c.s', kontext=32768)
-        self.assertEqual(router.resolve_recipe('c.s', kontext=16384)['context_window'], 16384)
+
+    def test_die_rollenwahl_bleibt_wie_sie_war(self):
         router, _ = self.router_mit_budget(20.0)
         self.assertEqual(router.resolve_role('coder')['context_window'], 8192, 'ohne Wahl: das kleinste Fenster, das reicht (wie bisher)')
 

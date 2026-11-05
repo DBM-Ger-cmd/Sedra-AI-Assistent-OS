@@ -75,3 +75,4 @@
 .hs-info-liste{display:flex;flex-direction:column;gap:2px}.hs-info-ereignis{display:flex;gap:10px;padding:2px 6px;font-size:var(--size-small)}.hs-info-zeit{flex:0 0 8.5em}
 .hs-info-fehler{border-left:3px solid var(--bad)}
 .hs-info-verlauf{margin-top:14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.hs-info-verlauf h3,.hs-info-verlauf .hs-info-zeile,.hs-info-tag{flex:1 1 100%}.hs-info-tag{max-height:260px;overflow:auto;font-size:var(--size-small);white-space:pre-wrap;padding:6px 8px;background:var(--panel-2);border-radius:var(--radius)}
+.hs-aufgaben .hs-app-reiter{padding:0;margin-bottom:6px}.hs-aufgaben [hidden]{display:none}

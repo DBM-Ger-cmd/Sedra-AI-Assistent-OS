@@ -12,9 +12,23 @@
     return isNaN(t) ? String(iso || '') : t.toLocaleString('de-DE', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'});
   }
 
-  function modelleZeigen(box, m){
+  // Die Ladeprobe: könnte jedes Rezept jetzt laden (ohne zu laden)? Sie läuft nach jedem Start und bei jedem Öffnen dieser Seite.
+  function probeZeilen(p){
+    if(!p) return [];
+    if(p.fehler) return [d().el('h3', 'hs-ueber', 'Laden (Probe)'), d().el('small', 'hs-info-fehler', 'Die Probe ließ sich nicht rechnen: ' + p.fehler)];
+    const kopf = !p.loader ? 'Der Modell-Lader ist aus – es lässt sich nichts laden.' : p.ok + ' von ' + p.gesamt + ' Rezepten könnten jetzt laden.';
+    const zeilen = [d().el('h3', 'hs-ueber', 'Laden (Probe)'), d().el('div', 'hs-hw-kopf' + (p.loader && p.ok === p.gesamt ? '' : ' hs-info-fehler'), kopf)];
+    (p.rezepte || []).forEach(x=>{
+      const z = d().el('div', 'hs-info-zeile' + (x.ok ? '' : ' hs-info-fehler'));
+      z.append(d().el('span', null, x.ok ? '✓' : '✗'), d().el('b', null, x.id), d().el('span', null, x.ok ? 'passt' + (x.fenster ? ' · Fenster ' + Number(x.fenster).toLocaleString('de-DE') : '') + (x.geladen ? ' · geladen' : '') : x.grund));
+      zeilen.push(z);
+    });
+    return zeilen;
+  }
+
+  function modelleZeigen(box, m, probe){
     const laeuft = (m && m.laeuft) || [], abgelehnt = (m && m.abgelehnt) || [];
-    const zeilen = [d().el('h3', 'hs-ueber', 'Läuft jetzt (laut Log)')];
+    const zeilen = probeZeilen(probe).concat([d().el('h3', 'hs-ueber', 'Läuft jetzt (laut Log)')]);
     if(!laeuft.length) zeilen.push(d().el('small', 'hs-leise', 'Laut Log läuft seit dem letzten Start von Sedra kein Modellserver.'));
     laeuft.forEach(x=>{
       const z = d().el('div', 'hs-info-zeile');
@@ -76,7 +90,7 @@
       const q = '?art=' + encodeURIComponent(art.value) + '&such=' + encodeURIComponent(such.value) + '&limit=80';
       S.api('/api/harness/info' + q).then(v=>{
         if(v.fehler){ kopf.textContent = 'Das Log ließ sich nicht lesen: ' + v.fehler; return; }
-        modelleZeigen(modelleBox, v.modelle);
+        modelleZeigen(modelleBox, v.modelle, v.ladeprobe);
         if(v.verlauf) verlaufZeigen(S, verlaufBox, v.verlauf);
         const e = v.ereignisse || [];
         kopf.textContent = e.length ? 'Die letzten ' + e.length + ' Ereignisse (neueste unten)' : 'Kein Ereignis passt zu dieser Auswahl.';

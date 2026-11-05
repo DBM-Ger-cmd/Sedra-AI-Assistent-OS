@@ -20,6 +20,12 @@
       + (a.tokens_s ? ', ≈ ' + zahl(a.tokens_s, 0) + ' Token/s' : '') + (a.quelle === 'gemessen' ? ' (gemessene Werte)' : '');
   }
 
+  // Passte das gewählte Fenster nicht in den Speicher, lädt Sedra die nächstkleinere Stufe und sagt es (Antwort `fenster_angepasst`).
+  function angepasstText(out){
+    const a = out && out.fenster_angepasst; if(!a) return '';
+    return 'Fenster ' + Number(a.gewuenscht).toLocaleString('de-DE') + ' passte nicht in den freien Speicher – geladen mit ' + Number(a.gewaehlt).toLocaleString('de-DE') + ' Token.';
+  }
+
   // Die Gründe des Routers als Sätze (P2 V1); Gründe mit Zahlen (dynamische Rezepte) stehen schon als Satz da.
   const GRUENDE = {host_ram_below_minimum: 'zu wenig Arbeitsspeicher auf diesem Rechner', host_vram_below_minimum: 'zu wenig Grafikspeicher auf diesem Rechner',
     hardware_incompatible: 'passt nicht zu dieser Hardware', context_capacity: 'das Kontextfenster reicht nicht', slots_not_measured: 'Slots nicht gemessen',
@@ -45,7 +51,7 @@
     const box = d().el('div', 'hs-modell-steuer');
     const wahl = d().el('select', 'hs-projektwahl'); wahl.setAttribute('aria-label', 'Modell-Rezept');
     const fenster = d().el('select', 'hs-projektwahl hs-kontextwahl'); fenster.setAttribute('aria-label', 'Kontextfenster');
-    fenster.title = 'Kontextfenster: „Auto“ startet mit dem größten Fenster, das in den Speicher passt; eine Stufe startet genau mit ihr';
+    fenster.title = 'Kontextfenster: „Auto“ startet mit dem größten Fenster, das in den Speicher passt; eine Stufe ist der Wunsch „höchstens so viel“: passt sie nicht in den Speicher, nimmt Sedra die nächstkleinere';
     const laden = d().el('button', 'hs-senden p', 'Laden'); laden.type = 'button';
     const weg = d().el('button', 'hs-knopf', 'Entladen'); weg.type = 'button';
     const stand = d().el('span', 'hs-leise hs-modell-stand', ''); stand.setAttribute('role', 'status');
@@ -116,6 +122,7 @@
         stand.textContent = '';
         const satz = auswahlText(out && out.auswahl);
         if(satz) S.hinweis('Modell geladen ' + satz + '.');
+        if(angepasstText(out)) S.hinweis(angepasstText(out));
         await S.modellLaden();
         if(nachher) nachher(out);
       }catch(err){ stand.textContent = fehlertext(err); stand.classList.add('bad'); }
@@ -218,7 +225,7 @@
       await S.modellLaden();
       const s = Math.round((Date.now() - t0) / 1000);
       const satz = auswahlText(out && out.auswahl);
-      melden('Modell geladen nach ' + s + ' s' + (satz ? ' ' + satz : '') + '.', 'ok');
+      melden('Modell geladen nach ' + s + ' s' + (satz ? ' ' + satz : '') + '.' + (angepasstText(out) ? ' ' + angepasstText(out) : ''), 'ok');
       return !!S.modell;
     }catch(err){ melden('Modell nicht geladen: ' + fehlertext(err), 'bad'); return false; }
   }

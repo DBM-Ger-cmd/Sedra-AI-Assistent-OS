@@ -11,7 +11,7 @@
     ['Was ist ein Projekt?', 'Ein Arbeitsordner mit eigenen Sitzungen, Freigaben und einem Vorarbeiter. SEDRA arbeitet nur in dessen Ordner.'],
     ['Sitzung anlegen', '„+ Neue Sitzung“ oben oder „Neue Sitzung starten“ unter einem Projekt; die Projektwahl steht unter dem Eingabefeld.'],
     ['Flagge ⚑', 'Der Vorarbeiter des Projekts: Er entscheidet Karten der Stufe „vorarbeiter“ und schlägt Aufgaben vor. Ernennen nur du (⚐ neben der Sitzung).'],
-    ['Aufgaben', 'Unten „⛨ Aufgaben“: freigegebene Arbeitspakete mit Zweck, Frist und Zähler; dort nimmst du sie zurück.']];
+    ['Aufgaben', 'Unten „⛨ Freigaben“: was wartet, was gerade gilt (Aufgaben mit Zweck, Frist und Zähler, Erlaubnisse) und die Regeln des Katalogs; dort nimmst du auch zurück.']];
 
   function zeit(iso){
     if(!iso) return '';
@@ -275,8 +275,8 @@
         karte.append(reihe); postBox.append(karte);
       });
     }
-    const aufgaben = d().el('button', 's-btn hs-einstellungen', '⛨ Aufgaben'); aufgaben.type = 'button';
-    aufgaben.title = 'Was läuft: Aufgaben, Läufe, Vorschläge des Vorarbeiters (was auf dich wartet, steht im Posteingang)'; aufgaben.onclick = ()=>root.sedraHarness.reiter.oeffnen(S, 'aufgaben:');
+    const aufgaben = d().el('button', 's-btn hs-einstellungen', '⛨ Freigaben'); aufgaben.type = 'button';
+    aufgaben.title = 'Ein Ort für alles rund um Freigaben: was wartet, was gerade gilt (Aufgaben, Erlaubnisse) und die Regeln des Katalogs'; aufgaben.onclick = ()=>root.sedraHarness.reiter.oeffnen(S, 'aufgaben:');
     const einst = d().el('button', 's-btn hs-einstellungen', 'Einstellungen');
     einst.type = 'button';
     einst.title = 'Einstellungen (HS-42): Allgemein, Agent, Sprache, Integrationen, Lokale Modelle, System'; einst.dataset.marke = 'hs-einstellungen';

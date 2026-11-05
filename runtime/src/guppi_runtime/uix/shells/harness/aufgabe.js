@@ -254,12 +254,29 @@
   function ansicht(S, id){
     const box = d().el('div', 'hs-verlauf hs-aufgaben');
     const liste = d().el('div', 'hs-liste');
-    const kopf = d().el('h2', 'hs-diff-titel', 'Aufgaben-Freigaben');
-    const vorschlaege = d().el('div', 'hs-auf-abschnitt'), aktivBox = d().el('div', 'hs-auf-abschnitt'), altBox = d().el('div', 'hs-auf-abschnitt');
-    let formEl = null, letzte = '', laeuft = false, nochmal = false;
-    liste.append(kopf, vorschlaege, aktivBox);
+    const kopf = d().el('h2', 'hs-diff-titel', 'Freigaben');
+    const vorschlaege = d().el('div', 'hs-auf-abschnitt'), antraegeBox = d().el('div', 'hs-auf-abschnitt'), aktivBox = d().el('div', 'hs-auf-abschnitt'), altBox = d().el('div', 'hs-auf-abschnitt');
+    // S3 (Analyse Freigaben): ein Ort, drei Reiter – Wartet (was auf dich wartet), Gilt gerade (Aufgaben und Erlaubnisse, neu freigeben), Regeln (der Katalog)
+    const wartet = d().el('div', 'hs-auf-abschnitt'), gilt = d().el('div', 'hs-auf-abschnitt'), regeln = d().el('div', 'hs-auf-abschnitt');
+    const erlaubnisBox = d().el('div', 'hs-auf-abschnitt'), formPlatz = d().el('div', 'hs-auf-abschnitt');
+    wartet.append(vorschlaege, antraegeBox); gilt.append(aktivBox, erlaubnisBox, formPlatz, altBox);
+    let formEl = null, letzte = '', laeuft = false, nochmal = false, katalog = null, erlaubnisse = null;
+    const REITER = [['wartet', 'Wartet', wartet], ['gilt', 'Gilt gerade', gilt], ['regeln', 'Regeln', regeln]];
+    const leiste = d().el('div', 'hs-app-reiter'); leiste.setAttribute('role', 'tablist');
+    const knoepfe = {};
+    const reiterZeigen = name=>{
+      REITER.forEach(([n, , feld])=>{ feld.hidden = n !== name; knoepfe[n].classList.toggle('on', n === name); knoepfe[n].setAttribute('aria-selected', n === name ? 'true' : 'false'); });
+      S._freigabenReiter = name;
+      if(name === 'regeln' && !katalog && root.sedraHarness.katalogEditor) katalog = root.sedraHarness.katalogEditor.flaeche(S, regeln);        // erst beim ersten Öffnen: er liest den Katalog
+      if(name === 'gilt' && !erlaubnisse && root.sedraHarness.erlaubnisse) erlaubnisse = root.sedraHarness.erlaubnisse.flaeche(S, erlaubnisBox);
+    };
+    REITER.forEach(([n, text])=>{
+      const b = d().el('button', 'hs-app-reiter-knopf', text); b.type = 'button'; b.setAttribute('role', 'tab'); b.dataset.reiter = n; b.onclick = ()=>reiterZeigen(n);
+      knoepfe[n] = b; leiste.append(b);
+    });
+    liste.append(kopf, leiste, wartet, gilt, regeln);
     box.append(liste);
-    const a = root.sedraHarness.reiter.stub(id, box, S, {laden: force=>laden(force)});
+    const a = root.sedraHarness.reiter.stub(id, box, S, {laden: force=>laden(force), abbauen(){ if(katalog && katalog.abbauen) katalog.abbauen(); if(erlaubnisse && erlaubnisse.abbauen) erlaubnisse.abbauen(); }});
     async function laden(force){
       if(laeuft){ nochmal = true; return; }
       laeuft = true;
@@ -268,24 +285,40 @@
         const karten = await Promise.all((entsch.items || []).filter(x=>x.kind === 'harness_aufgabe').map(x=>S.api('/api/harness/karten/' + String(x.id).replace('harness:', ''))));
         const aktiv = (auf.aufgaben || []).filter(x=>x.status === 'aktiv');
         const alt = (auf.aufgaben || []).filter(x=>x.status !== 'aktiv').slice(-5).reverse();
-        const stand = JSON.stringify([karten, aktiv, alt, (S.sitzungen || []).length]);
+        const offen = (S.antraege || []).map(x=>[x.id, x.title]);
+        const stand = JSON.stringify([karten, aktiv, alt, offen, (S.sitzungen || []).length]);
         if(stand === letzte && !force && formEl) return;
         letzte = stand;
         const oben = box.scrollTop;
         vorschlaege.replaceChildren(d().el('h3', 'hs-ueber', 'Vorschläge des Vorarbeiters (' + karten.length + ')'),
           ...(karten.length ? karten.map(k=>vorschlagKarte(S, k, laden)) : [d().el('small', 'hs-leise', 'Keine offenen Vorschläge.')]));
+        antraegeBox.replaceChildren(d().el('h3', 'hs-ueber', 'Anträge im Posteingang (' + offen.length + ')'),
+          ...(offen.length ? (S.antraege || []).map(antragZeile.bind(null, S)) : [d().el('small', 'hs-leise', 'Kein Antrag wartet.')]));
         aktivBox.replaceChildren(d().el('h3', 'hs-ueber', 'Gilt gerade (' + aktiv.length + ')'),
           ...(aktiv.length ? aktiv.map(x=>aufgabenZeile(S, x, laden)) : [d().el('small', 'hs-leise', 'Keine Aufgabe gilt gerade – unten kannst du eine freigeben.')]));
-        if(!formEl){ formEl = formular(S, laden); liste.append(formEl, altBox); }
+        if(!formEl){ formEl = formular(S, laden); formPlatz.append(formEl); }
         altBox.replaceChildren(...(alt.length ? [d().el('h3', 'hs-ueber', 'Zuletzt beendet'), ...alt.map(x=>aufgabenZeile(S, x, laden))] : []));
         box.scrollTop = oben;
       }catch(err){ vorschlaege.replaceChildren(d().el('div', 's-note bad', 'Aufgaben nicht lesbar: ' + err.message)); }
       finally{ laeuft = false; if(nochmal){ nochmal = false; laden(); } }
     }
+    reiterZeigen(S._freigabenReiter || 'wartet');
     laden();
     return a;
   }
 
+  // Ein offener Antrag des Posteingangs in einer Zeile: Titel, was die Freigabe bedeutet, und „Ansehen“ (entschieden wird im Posteingang mit allen Angaben).
+  function antragZeile(S, x){
+    const z = d().el('div', 'hs-post-antrag'); z.dataset.antrag = x.id;
+    z.append(d().el('div', 'hs-post-titel', x.title || x.id));
+    if(x.note) z.append(d().el('small', 'hs-leise', String(x.note).slice(0, 160)));
+    (x.risks || []).slice(0, 3).forEach(rk=>z.append(d().el('small', 'hs-leise', '⚠ ' + String(rk).slice(0, 200))));
+    const mehr = d().el('button', 'hs-knopf hs-klein', 'Ansehen'); mehr.type = 'button'; mehr.title = 'Öffnet den Posteingang mit allen Angaben zu diesem Antrag';
+    mehr.onclick = ()=>S.shellApi.decide();
+    z.append(mehr);
+    return z;
+  }
+
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.aufgabe = {ansicht, vorschlagKarte, aufgabenZeile, formular, minuten, zweckZeilen, klartextZeile};
+  root.sedraHarness.aufgabe = {ansicht, antragZeile, vorschlagKarte, aufgabenZeile, formular, minuten, zweckZeilen, klartextZeile};
 })();
