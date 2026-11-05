@@ -78,8 +78,38 @@ Der n8n-Assistent-Chat entspricht der Harness. Er wird nicht nachgebaut, später
 - Gezielte Python-Abnahme der Workflow-, Desk- und Update-Tests wie beim Kandidaten 1.22.2.
 - Paket 1.22.3 über `package_n8n_update.py` / `verify_n8n_update.py`, Einspielen erst nach Freigabe.
 
+### Phase 5 – Selbstabbild: SEDRA bildet seine eigenen Abläufe ab (Test und Dauerprobe)
+Anforderung des Captains (05.11.2026): als Test sollen die Arbeitsabläufe von SEDRA selbst in den
+Apps dargestellt werden; SEDRA soll seine eigenen Prozesse abbilden können.
+
+- **Prozessmodelle, nicht ausführbar.** Die Abbilder sind Prozessmodelle im Sinn von
+  `workflows/process.py` (Rollen, Lieferant, Input, Output, Empfänger, Nachweis, Abschlusskriterium).
+  Menschliche Schritte (Captain-Freigabe) erscheinen als Rolle, nie als technischer noOp.
+  Sie bekommen keine Ausführungsrechte.
+- **Aus der Wahrheit erzeugt, nicht von Hand gemalt.** Ein Generator liest die tatsächlichen Quellen
+  und erzeugt daraus Prozessmodelle, damit sie nicht veralten: `runtime/config` (Harness-Vorlagen,
+  Freigabebausteine, Router, Rollenrouting, Token- und Modellrichtlinien), die Missions- und
+  Rezeptdefinitionen sowie die Ablaufdokumente (ARCHITEKTUR, ABLAUF_GESPRAECH, ANALYSE_KETTE_EINGABE_AUSFUEHRUNG).
+  Jeder Schritt trägt seine Quelle (Datei und Stelle) als Nachweis.
+- **Erste Abläufe (Vorschlag, mit dem Captain zu bestätigen):**
+  1. Auftrag -> Antwort (Eingabe, Router, Modell, Werkzeugkette, Antwort).
+  2. Freigabe (Guard, Posteingang, Captain, Fortsetzen, Audit).
+  3. Bauablauf (Vorarbeiter, Bauagent, Prüfer).
+  4. Lernschleife (Lob/Korrektur, Belohnung, Lessons, Systemprompt).
+  5. Modell laden und Scheduler.
+  6. Update (Vorschau, Bestätigung, Übernahme, Sicherung, Rückweg).
+- **Speicherung.** Als Revisionen im gemeinsamen Prozessbestand, Änderungsgrund "aus Quellen erzeugt
+  <Stand>". Beide Apps zeigen denselben Bestand: n8n-Stil (technische Sicht) und Szenario-Stil
+  (Modulsicht) dürfen denselben Ablauf unterschiedlich darstellen.
+- **Abweichungsprüfung als Test.** Ein Test erzeugt die Modelle neu und vergleicht sie mit dem
+  gespeicherten Stand; weicht die Wirklichkeit (Config/Code) ab, schlägt er fehl und zeigt den
+  Unterschied über den vorhandenen Vorher/Nachher-Vergleich. So wird das Selbstabbild zur
+  Dauerprobe der Prozess-Apps und der Dokumentation zugleich.
+- **Grenze.** Es entsteht nur eine Darstellung. SEDRA ändert sich nicht über diese Modelle, und eine
+  Rückrichtung (Modell -> Code/Config) gibt es nicht.
+
 ## Reihenfolge und Abnahmen
-1 -> 2 -> 3, nach jeder Phase Screenshots zur Abnahme durch den Captain. Phase 1 zuerst, damit
+1 -> 2 -> 3 -> 5 (Phase 4 läuft jeweils mit), nach jeder Phase Screenshots zur Abnahme durch den Captain. Phase 1 zuerst, damit
 beide Apps dieselben Bausteine nutzen und nicht doppelt angepasst werden.
 
 ## Risiken
