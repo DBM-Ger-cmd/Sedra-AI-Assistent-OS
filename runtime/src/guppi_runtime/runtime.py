@@ -199,16 +199,15 @@ class GuppiRuntime:
         ungültig oder öffnet die Datei nicht, bleibt er aus und sagt warum (`wissen_error`, einmal Audit WISSEN_OFF). READY hängt
         davon nicht ab. Das Einbetten läuft nur auf der CPU; die Lage der GPU liest er aus dem Testlabor (D7.4)."""
         def build():
-            if self.switches.apply("wissen","enabled",False) is not True: return None
+            if self.switches.apply("wissen","enabled",True) is not True: return None     # SPEC_WISSEN_KERN_v1 WK-03 (05.11.2026): Standard an, Grundfunktion; aus nur der Captain
             from .wissen import konfig as wissen_konfig
             from .wissen.speicher import WissenSpeicher
-            from .wissen.embed import TestLabZugang
+            from .wissen.embed import TestLabZugang, VerzoegertesLabor
             from .jobs.testlab import TestLab, default_path
             cfg=wissen_konfig.load(self.config_root/"wissen.yaml",self.project_root/"local_config"/"wissen.yaml")
-            try:                                                  # ein Fehler beim Öffnen schaltet nur `wissen` aus, nie den Start
-                lab=TestLab(default_path(self.project_root))
-            except Exception as exc:
-                raise ValueError("wis_testlab_nicht_lesbar:"+(str(exc) or type(exc).__name__)[:80]) from None
+            # SPEC_WISSEN_KERN_v1 K1: das Labor erst öffnen, wenn es die Datei gibt – der Start des Wissens (Standard an) legt kein testlab.db an;
+            # ein unlesbares Labor hält nur das Einbetten an (TestLabZugang.lage), die Suche bleibt
+            lab=VerzoegertesLabor(default_path(self.project_root),TestLab)
             return WissenSpeicher.oeffnen(cfg,projekt_root=self.project_root,repo_root=self.config_root.parents[1],
                                           audit=lambda event,payload: self.audit.append(event,component="wissen",payload=payload),
                                           gpu=TestLabZugang(lab))

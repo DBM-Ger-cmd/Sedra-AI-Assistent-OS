@@ -8,7 +8,8 @@
   const d = ()=>root.sedraDom;
   const md = ()=>root.sedraHarness.markdown;
   const Z = ()=>root.sedraHarness.zeilen;              // zeilen.js (1.11., A20/V8): Werkzeugzeile, Denkzeile, Fuß
-  const werkzeugZeile = (...x)=>Z().werkzeugZeile(...x), werkzeugEnde = (...x)=>Z().werkzeugEnde(...x), denkZeile = (...x)=>Z().denkZeile(...x), ende = (...x)=>Z().ende(...x);
+  const werkzeugZeile = (...x)=>Z().werkzeugZeile(...x), werkzeugEnde = (...x)=>Z().werkzeugEnde(...x), denkZeile = (...x)=>Z().denkZeile(...x), ende = (...x)=>Z().ende(...x),
+        wissenOeffnen = (...x)=>Z().wissenOeffnen(...x), wissenBlock = (...x)=>Z().wissenBlock(...x);       // Wissen im Chat (SPEC_WISSEN_KERN_v1 WK-14/15)
   const ID = root.sedraHarness.reiter.ID;           // A19: eine Quelle für die Sitzungs-ID (reiter.js)
   function token(){ return decodeURIComponent((location.hash || '').replace(/^#/, '')); }
 
@@ -176,6 +177,7 @@
             if(!block){ block = this.neu(d().el('div', 'hs-antwort')); this.eintraege++; }
             block.append(karteKarte(S, this, e, entschieden[e.karte_id] || null));
           }
+          else if(e.typ === 'wissen'){ this.neu(wissenBlock(e.text)); this.eintraege++; block = null; }
           else if(e.typ === 'zusammenfassung'){                     // von Sedra erstellt: das frühere Gespräch in Stichpunkten, aufklappbar
             const det = d().el('details', 'hs-zusammenfassung');
             det.append(d().el('summary', null, (e.art === 'auszug' ? 'Früheres Gespräch als Auszug ohne Modell (' : 'Früheres Gespräch zusammengefasst (') + (e.nachrichten || '?') + ' Nachrichten) – steht im Systemprompt'), d().el('pre', 'hs-pre', e.text || ''));
@@ -191,7 +193,7 @@
             }
             if(e.zurueckgehalten) block.append(d().el('div', 'hs-zurueck', e.zurueckgehalten));
             else if(e.text) block.append(md().render(e.text));
-            ende(block, e);
+            ende(block, e, wissenOeffnen(S));
             if(gelobt[e.antwort_id]) block.append(lobZeichen(gelobt[e.antwort_id]));
             block = null;
           }
@@ -211,7 +213,7 @@
         if(!S.modell){          // HS-53: ohne Modell keine leere Sitzungsdatei anlegen (der Server prüft trotzdem); P0 M2: selbst laden, wenn der Katalog es erlaubt
           await S.modellLaden();
           if(!S.modell){ this.wartet = true; try{ await root.sedraHarness.modell.autoLaden(S, (t, art)=>this.notiz(t, art)); }finally{ this.wartet = false; } }
-          if(!S.modell){ this.notiz('Kein Modell geladen – wähle unten ein Modell und klicke „Laden“.', 'warn'); root.sedraHarness.eingabe.modellMenue(S, true); return false; }
+          if(!S.modell && !ID.test(this.id)){ this.notiz('Kein Modell geladen – wähle unten ein Modell und klicke „Laden“.', 'warn'); root.sedraHarness.eingabe.modellMenue(S, true); return false; }
         }
         this.wartet = true;
         let blase = null;
@@ -229,6 +231,7 @@
           // erst die Nachricht zeichnen, dann senden: die Antwort kann über den Ereignisstrom schneller da sein als die HTTP-Antwort
           blase = this.captain(text);
           const out = await S.api('/api/harness/sitzungen/' + this.id + '/nachricht', {method: 'POST', body: {text}});
+          if(out.status === 'kein_modell' && out.wissen_antwort){ this.neu(wissenBlock(out.wissen_antwort)); this.eintraege++; root.sedraHarness.eingabe.modellMenue(S, true); S.sitzungenLaden(); return true; }   // WK-15: Frage bleibt, darunter die Fundstellen
           if(out.status === 'kein_modell'){
             blase.remove(); this.eintraege--; blase = null;
             this.notiz(out.grund || 'Kein Modell geladen – wähle unten ein Modell und klicke „Laden“.', 'warn'); root.sedraHarness.eingabe.modellMenue(S, true);
@@ -362,7 +365,7 @@
           if(z.denken && z.denkenText === '' && !z.denken.querySelector('summary').textContent.startsWith('Denkt nach (')) z.denken.querySelector('summary').textContent = 'Dachte nach';
           else if(z.denken) z.denken.querySelector('summary').textContent = z.denken.querySelector('summary').textContent.replace('Denkt', 'Dachte');
           if(z.denken && z.denkenText === '') this.denkenNachladen(z, this.antwortId);        // scharfer Modus: live bleibt das Denken verborgen, nach dem Ende steht es (ungeprüft) in der Zeile
-          ende(block, x);
+          ende(block, x, wissenOeffnen(S));
           S.tokenLaden();                                              // Verbrauch aktualisieren
         }
         if(unten) this.nachUnten();

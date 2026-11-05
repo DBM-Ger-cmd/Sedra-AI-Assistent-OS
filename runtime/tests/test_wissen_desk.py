@@ -57,6 +57,21 @@ class Basis(unittest.TestCase):
         return self.act('wissen', None, 'quelle_beantragen', adapter='markdown', wurzel='projekt', pfad=pfad, stufe=more.pop('stufe', 1), **more)
 
 
+class OhneSchalterAn(unittest.TestCase):
+    """SPEC_WISSEN_KERN_v1 WK-03 (05.11.2026): ohne Eintrag in switches.yaml ist das Wissen an (Grundfunktion)."""
+
+    def test_ohne_eintrag_ist_das_wissen_an(self):
+        from guppi_runtime.uix_server import UIXHub
+        tmp = tempfile.TemporaryDirectory(prefix='wissen-vorgabe-')
+        self.addCleanup(tmp.cleanup)
+        project = Path(tmp.name) / 'project'
+        (project / 'local_config').mkdir(parents=True)
+        hub = UIXHub(project, ARCH)
+        self.addCleanup(hub.close)
+        self.assertIsNotNone(hub.runtime.wissen)
+        self.assertTrue(hub.runtime.boot()['wissen']['enabled'])
+
+
 class SchalterAus(Basis):
     wissen_an = False
 

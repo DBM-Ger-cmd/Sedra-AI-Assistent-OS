@@ -26,6 +26,7 @@ class ImportEndToEndTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / "project", ARCH)
+        self.addCleanup(self.hub.close)      # der Wissensspeicher (Grundfunktion) hält wissen.sqlite offen, bis die Oberfläche schließt
         self.quelle = _kopie(Path(self.tmp.name) / "quelle" / "minimal-test", "minimal-test")
 
     def test_vorlegen_freigabe_einbau(self):

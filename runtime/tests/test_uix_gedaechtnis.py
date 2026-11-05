@@ -185,8 +185,16 @@ class Routen(unittest.TestCase):
     def test_nichts_auf_der_platte(self):
         """A19: Die Ablage liegt nur im Prozess – kein Text daraus in einer Datei des Projekts."""
         self.call('POST', '/api/ablage/schreiben', {'objekt': 'wissen:speicher', 'werte': {'frage': 'NUR-IM-SPEICHER-42'}}, **{'X-SEDRA-Tool': 'wissen'})
-        hits = [p for p in Path(self.tmp.name).rglob('*') if p.is_file() and p.stat().st_size < 5_000_000
-                and b'NUR-IM-SPEICHER-42' in p.read_bytes()]
+        hits, gesperrt = [], []
+        for p in Path(self.tmp.name).rglob('*'):
+            if not p.is_file() or p.stat().st_size >= 5_000_000:
+                continue
+            try:
+                if b'NUR-IM-SPEICHER-42' in p.read_bytes():
+                    hits.append(p)
+            except PermissionError:                  # eine vom Kern offen gehaltene Datei (wissen.sqlite mit -wal/-shm) ist unter Windows nicht lesbar
+                gesperrt.append(p.name)
+        self.assertTrue(all('.sqlite' in n or n == 'takt.lock' for n in gesperrt), gesperrt)      # nur die Dateien des Wissensspeichers
         self.assertEqual(hits, [])
 
 
