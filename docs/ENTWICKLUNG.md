@@ -135,6 +135,13 @@ Ein Bau besteht aus einer Spec, einer Referenz, dem Bau durch GUPPI und der Abna
 - Stufentests einer Spec dürfen keine Regel einer späteren Stufe voraussetzen. Scheitert eine Stufe nach allen Nacharbeiten, zuerst den versteckten Test gegen den Kandidaten laufen lassen: Der Fehler kann in der Spec liegen (skill_rank2, 13.10.: 30 Minuten GPU-Zeit verloren).
 - Der Fehlerbericht nennt die erste falsche Teilaussage mit beiden Werten. Ein roher Traceback hilft dem Modell deutlich weniger.
 
+## Ergänzung 05.11.2026: Prozess-Apps, Selbstabbild und Prüfwege
+
+- **Prozess-Apps** (n8n Workflows, Szenario Studio) und das **Selbstabbild** (`runtime/config/selbstabbild.yaml`, `workflows/selbstabbild.py`): Die Abläufe von SEDRA stehen als nicht ausführbare Prozessmodelle in der Übersicht. Jeder Schritt nennt seine Quelle; `test_selbstabbild` schlägt fehl, sobald Code und Abbild auseinanderlaufen. Dann wird entweder die Quelle in der YAML nachgezogen oder der Ablauf angepasst, nie der Test gelockert.
+- **Testgruppe `workflow`** in `run_tests.py` (Prozess-Apps, Selbstabbild; die Browser-Tests laufen in der langsamen Bahn mit gesetztem `SEDRA_BROWSER`). Lauf-Typ `workflow_js` für die JavaScript-Tests (`node --test`). Neue Tests dieser Apps gehören in diese Gruppe.
+- **Rollen im Bauablauf:** Bauagent, Prüfer und Vorarbeiter lesen vor Planung und Review `belohnungen_lesen` (gelobte ★ und korrigierte ⚑ Lösungen). Der Prüfer benennt Wiederholungen korrigierter Fehler als Punkt.
+- Das UIX-Vorhaben (Phasen 1 bis 6) steht in [PLAN_PROZESS_APPS_UIX.md](PLAN_PROZESS_APPS_UIX.md); gebaut wird in einem eigenen Worktree auf einem eigenen Branch (Regel 12).
+
 ## Regeln für alle Sitzungen (Mensch und KI)
 
 1. **Gates entscheidet der Captain**, einzeln und per ID. Eine Freigabe in einem Zusammenhang gilt nicht für den nächsten.

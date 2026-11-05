@@ -23,6 +23,14 @@ harness_laeufe:
       gpu: keine
       fortschritt: {art: text}
       zeitlimit_min: 90
+    - id: workflow_js
+      name: Tests der Prozess-Apps (JavaScript)
+      argv: [node, --test, tests/n8n_model.test.cjs, tests/workflow_ui.test.cjs]
+      ordner: runtime
+      parameter: {}
+      gpu: keine
+      fortschritt: {art: text}
+      zeitlimit_min: 5
     - id: spec_check
       name: Spec prüfen (Stempel)
       argv: [python, benchmarks/spec_check.py, '{spec}', --vm, --project, ../workspace/GUPPI_OS]

@@ -1,7 +1,7 @@
 # Plan: Prozess-Apps näher an ihre Vorlagen (UIX-Überarbeitung)
 
 Stand 05.11.2026. Basis: main a261f87 (SEDRA 1.22.2). Arbeitszweig: `feat/prozess-apps-uix`
-im Worktree `E:\Sedra Umgebung\A1-wt-prozess-apps-uix`. Entscheidungen des Captains:
+in einem eigenen Worktree neben der Hauptumgebung. Entscheidungen des Captains:
 helles Thema zusätzlich zum dunklen; Make-Screenshots liegen als Vorlage vor; Arbeit im Worktree.
 
 Übernommen werden Layout, Bedienlogik und Formensprache. Nicht übernommen werden Logos,
