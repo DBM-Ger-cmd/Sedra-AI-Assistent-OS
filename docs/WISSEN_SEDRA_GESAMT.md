@@ -71,8 +71,34 @@ Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzei
 6. **Minimal/USB:** Die Minimal-Version liegt auf `E:\Sedra Umgebung\Sedra Test umgebung für Minimale USB Stick Version` (Kopie von `K:\SEDRA` vom 31.10.). Offen: Rückübertragung nach K vor Tests; ob eine Modellablage im neuen Ordner sinnvoll ist; Aufbau auf `K:\` in den Sitzungen „Sedra USB-Stick auf K:\ einrichten“ und „Sedra Minimal USB-Stick Arbeitsumgebung“.
 7. **Kurs-Präsentation:** Zahlen der 14 Folien noch gegen das Logbuch prüfen.
 
+## 10. Arbeit im Chat vom 04.–05.11.2026 (Claude Code, One Sedra)
+**Stand:** alles auf `main` bis `b9913bc` (GitHub `DBM-Ger-cmd/Sedra-AI-Assistent-OS`). Das Gespräch liegt als Export in `C:\Users\David\Downloads\session-export-1793880935459.zip` (20 MB).
+
+**Entscheidung des Captains (05.11.):** Die Harness ist der zentrale Punkt und heißt **One Sedra** (nur der Anzeigename; Kennung `harness` bleibt). Sedra XP und der Retro-Desktop werden nicht weiterentwickelt; die Funktionen der anderen Shells wandern in One Sedra. Zuschnitt für Auftraggeber über Profile, nicht über neue Shells.
+
+**Gebaut (Ort und Test in Klammern):**
+- **Modelle laden:** „Fenster Auto“ nahm für Rezepte mit Stufen immer die größte Stufe und wurde mit `vram_insufficient` abgelehnt. Fix in `models/role_routing.py`: Auto = größtes Fenster, das passt; eine gewählte Stufe ist „höchstens so viel“ (`fenster_angepasst`); Ladeprobe nach jedem Start (`harness/ladeprobe.py`); Vertragstest auf den Rezepten der Maschine (`tests/test_model_laden_vertrag.py`).
+- **Info-Hub und Betriebslog** (`harness/info.py`, `betriebslog.py`): Einstellungen → System → Info; Tagesdateien unter `runtime_data/harness/betriebslog/` als Wissensquelle (Antrag, Freigabe im Posteingang).
+- **Freigaben** (S1–S3): Aufgaben-Formular mit Bausteinen, Reiter „Freigaben“ (Wartet / Gilt gerade / Regeln). S4 (gemeinsames Modell „Erlaubnis mit Dauer“) offen.
+- **YouTube-Transkript** mit yt-dlp-Rückfall und Übersetzen; **Neue Vorlage** per Maske und Chat-Werkzeug; Start ohne Auswahl direkt in One Sedra.
+- **Desktop Builder** (Start → System; `harness/desktop.py`, `builder.js`, `layouteditor.js`, `bausteine.js`, `kontext.js`): Rechtsklick-Menü mit „Im Chat anpassen“, Reiter Module, Start-Menü, Taskleiste, Layout (Bühne, Raster, Seitenaufbau, Start-Menü-Abschnitte) und Profile mit Marke, Logo, Schrift, Startseite; Grundfunktionen (Posteingang, Aufgaben, Freigaben, Schild, Senden, App-Gruppen, Einstellungen) nie ausblendbar; Entwurf `docs/ENTWURF_AUFTRAGGEBER_PROFILE_2026-11-05.md`. Vorlage **Oberflächen-Designer** (`desktop-designer`) und Chat-Werkzeug `desktop_lesen`.
+- **Lernsystem** (`harness/belohnung.py`, `config/belohnung.yaml`, Entwurf `docs/ENTWURF_BELOHNUNG_UND_LERNEN_2026-11-05.md`): Lob („danke“, „perfekt“) = ★/★★, Korrektur („das stimmt nicht“) = ⚑, Tagesdateien in `runtime_data/harness/belohnungen/` für die Wissensdatenbank, bei Code mit den geänderten Dateien; Vorlage **Rückblick** (Hermes-Muster aus `E:\HermesAgentOrdner\hermes-config-backup\…\skills\workflow\rueckblick`), Werkzeug `belohnungen_lesen`, gelernte Regeln `docs/AAR/LESSONS.md` im Systemprompt (höchstens 25 Zeilen); **Vorhersagen beim Tippen** (`vorschlaege.js`, Tab übernimmt, ⚑-Warnung).
+- **Cache-Messung:** Prompt-Cache des Modellservers (`cache_n`, `prompt_n`) je Zug in der Sitzungszeile, auf der Token-Seite („Aus dem Cache x %“) und in der Token-Zelle. Der Systemprompt muss mitgeschickt werden (zustandslos), kostet aber fast nichts, solange sein Anfang gleich bleibt; Veränderliches steht hinten.
+- **Taskleiste:** Temp, VRAM (belegt) und RAM (frei) als drei Zellen.
+
+**Fallen und Praxiswissen dieser Sitzung:**
+- Bash-Heredocs verdoppeln Backslashes und machen aus `\n` echte Zeilenumbrüche: Python-Skripte mit Zeichenketten über das Write-Werkzeug als Datei schreiben, nicht per Heredoc (auch Windows-Pfade mit `\U` brechen dort).
+- Neue Wege der Harness brauchen Einträge in `desk/freigabeklasse.py` (`HARNESS_WEGE`, `HARNESS_UNTERWEGE`, `ROUTEN_HARNESS`) und im Regex `WEG`/`GESCHUETZT` in `harness/api.py`; Test `test_freigabe_vollstaendig` liegt außerhalb der Gruppen `harness uix desk`.
+- Vorlagen-Kennungen dürfen nur `a-z 0-9 -` enthalten (kein Unterstrich).
+- Browser-Prüfung nur an einer eigenen Testinstanz (`scratchpad/testserver.py`, eigener Token), nie am laufenden Sedra des Captains.
+- Wackelige Tests unter Last: `test_harness_lauf`, `test_uix_harness_lauf`, `test_uix_stufe6.ImBrowser` (einzeln grün).
+- Das Audit-Log (`workspace/GUPPI_OS/runtime_data/audit/events.jsonl`) zuerst selbst lesen, bevor man den Captain fragt (`SLOT_SERVER_STARTED`, `ROLE_RESOLUTION_FAILED`, `LADEPROBE`, `HARNESS_BELOHNUNG`).
+
+**Offen (Stand 05.11.2026):** Freigaben S4; Funktionen der anderen Shells als Apps in One Sedra holen (Reihenfolge nennt der Captain, Vorschlag Translator oder Wissensbasis); Richtlinie für Betreiber (Stufe 4 des Apps-Modells); Lernsystem und Cache-Zahl im echten Sedra ausprobieren (Anträge für Betriebslog und gute Antworten im Posteingang freigeben); E1–E5 des Plans CPU-Hilfswerkzeuge, MasterChat-Probelauf, Stick-Branch `claude/usb-stick-minimal-3c1b19`.
+
 ## 9. Alle Chats (Sitzungen), nach Datum
 **Sedra Vorarbeiter (Gruppe):**
+- 04.–05.11. Claude Code, Vorarbeiter-Sitzung „VORARBEITER“: One Sedra, Desktop Builder, Lernsystem, Cache-Messung (siehe Abschnitt 10).
 - 31.10. Sedra Minimal USB-Stick Arbeitsumgebung (läuft); Sedra USB-Stick auf K:\ einrichten; SEDRA: minimale USB-Version auf K:\ einrichten (Worktree `claude/usb-stick-minimal-3c1b19`).
 - 30.10. Test: Bonsai und Nemotron gleichzeitig (Worktree `claude/test-bonsai-nemotron-ac86cc`); Earth 2140 DOS-zu-Windows AI-Integration (archiviert); Start-Prompt für Seadra-Vorarbeiter (Vorarbeiter-Sitzung, startete die Harness-Sitzungen).
 - 29.10. Harness Stufe 3 planen (G2, G3); C-Laufwerk Datenmüll aufräumen; Modelle zu KI-Daten hinzufügen; Harness-Shell Stufe 1 bauen.
