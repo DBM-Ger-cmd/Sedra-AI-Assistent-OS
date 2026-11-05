@@ -31,7 +31,8 @@
     'system/schalter': ['⏻', 'Schalter aus local_switches (Antrag mit Gate)'],
     'system/grenzen': ['⊘', 'Projekt, Netz, Löschen, Kosten'],
     'system/module': ['▦', 'Shell, Werkzeuge, Vorlagen'],
-    'system/audit': ['☰', 'Audit-Kette und Verlauf']
+    'system/audit': ['☰', 'Audit-Kette und Verlauf'],
+    'system/info': ['ⓘ', 'Welche Modelle laufen, was abgelehnt wurde und warum, die letzten Ereignisse in Klartext']
   };
   const symbolVon = id=>(PUNKT[id] || ['•', ''])[0];
   const satzVon = id=>(PUNKT[id] || ['', ''])[1];

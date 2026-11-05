@@ -70,3 +70,7 @@
 .hs-vn-feld{display:flex;flex-direction:column;gap:2px}
 .hs-vn-werkzeuge{display:flex;flex-wrap:wrap;gap:4px 12px}
 .hs-vn-haken{display:inline-flex;align-items:center;gap:4px;font-size:var(--size-small);color:var(--text)}
+.hs-info-zeile{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:5px 8px;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:4px}
+.hs-info-leiste{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.hs-info-such{flex:1 1 14em}
+.hs-info-liste{display:flex;flex-direction:column;gap:2px}.hs-info-ereignis{display:flex;gap:10px;padding:2px 6px;font-size:var(--size-small)}.hs-info-zeit{flex:0 0 8.5em}
+.hs-info-fehler{border-left:3px solid var(--bad)}

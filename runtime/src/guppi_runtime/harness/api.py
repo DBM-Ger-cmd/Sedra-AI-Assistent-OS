@@ -66,6 +66,7 @@ from . import uebersetzen as harness_uebersetzen
 from . import herkunft as harness_herkunft
 from . import bausteine as harness_bausteine
 from . import hilfswerkzeuge
+from . import info as harness_info
 from . import lauf as harness_lauf
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
@@ -88,7 +89,7 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|hilfswerkzeuge|bausteine)(?:/(antrag|entfernen|grenzen|neu|notizen|export))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|hilfswerkzeuge|bausteine|info)(?:/(antrag|entfernen|grenzen|neu|notizen|export))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)'
@@ -299,6 +300,9 @@ class HarnessApi:
         if fest == 'bausteine' and not unter and method == 'GET':        # Bausteine der Aufgaben-Freigabe (Analyse Freigaben S1): nur lesen
             try: return 200, harness_bausteine.laden(self.hub.project_root)
             except ValueError as exc: return 200, {'bausteine': [], 'hinweise': [str(exc)]}
+        if fest == 'info' and not unter and method == 'GET':        # Info-Hub (05.11.): was Sedra laut Audit-Log getan hat, in Klartext; nur lesen
+            try: return 200, harness_info.stand(self.hub.runtime.audit.path, (q.get('limit') or ['60'])[0], (q.get('such') or [''])[0], (q.get('art') or ['alle'])[0])
+            except ValueError as exc: return 200, {'modelle': {'laeuft': [], 'abgelehnt': []}, 'ereignisse': [], 'fehler': str(exc)}
         if fest == 'hilfswerkzeuge' and not unter and method == 'GET':        # P1 des Plans CPU-Hilfswerkzeuge: nur lesen, was da ist
             try: return 200, hilfswerkzeuge.stand()
             except ValueError as exc: return 200, {'werkzeuge': [], 'da': 0, 'gesamt': 0, 'fehler': str(exc)}
