@@ -33,7 +33,7 @@ class WorkflowBrowser(unittest.TestCase):
                 page.wait_for_function("()=>{const e=document.querySelector('.t-workflow');return e && !e.inert;}")
                 self.assertEqual(app.locator('.t-wf-node').count(), 5)
                 # Reiter, Themenschalter und Übersicht gehören zur Oberfläche.
-                self.assertEqual(app.get_by_role('tab').count(), 4)
+                self.assertEqual([t.inner_text() for t in app.get_by_role('tab').all()], ['Übersicht', 'Vorlagen', 'Editor', 'Versionen', 'Ausführungen'])
                 theme = app.get_by_role('button', name='Farbthema wechseln', exact=False)
                 before = app.get_attribute('data-wf-theme');theme.click()
                 self.assertNotEqual(before, app.get_attribute('data-wf-theme'))

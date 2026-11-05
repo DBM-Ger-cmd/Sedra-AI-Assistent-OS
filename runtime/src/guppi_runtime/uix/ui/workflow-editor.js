@@ -71,7 +71,7 @@
       // Reiter
       this.tabButtons = {};this.panels = {};
       const tabs = el('div', 't-wf-tabs');tabs.setAttribute('role', 'tablist');
-      [['overview', options.overviewTitle || 'Übersicht'], ['editor', 'Editor'], ['versions', 'Versionen'], ['runs', options.runTitle || 'Ausführungen']].forEach(([key, text])=>{
+      [['overview', options.overviewTitle || 'Übersicht'], ['templates', 'Vorlagen'], ['editor', 'Editor'], ['versions', 'Versionen'], ['runs', options.runTitle || 'Ausführungen']].forEach(([key, text])=>{
         const b = button(text, ()=>this.setTab(key));b.setAttribute('role', 'tab');b.className = 't-wf-tab';this.tabButtons[key] = b;tabs.append(b);
         this.panels[key] = el('section', 't-wf-panel');this.panels[key].setAttribute('role', 'tabpanel');
       });
@@ -81,7 +81,8 @@
       this.templateBox = el('div', 't-wf-cards');
       this.selfBox = el('div', 't-wf-selfbox');this.selfStatus = el('p', 't-wf-hint', 'SEDRA kann seine eigenen Abläufe als Prozessmodelle zeigen: aus den Quellen im Code erzeugt, nur Darstellung, nie ausführbar.');
       this.selfBox.append(this.selfStatus, button('Selbstabbild prüfen', ()=>this.safe(()=>this.selfCheck())), button('Abläufe von SEDRA anlegen oder aktualisieren', ()=>this.safe(()=>this.selfCreate())));
-      this.panels.overview.append(el('div', 't-wf-toolbar', ''), this.cards, el('h3', '', 'Abläufe von SEDRA (Selbstabbild)'), this.selfBox, el('h3', '', 'Vorlagen'), this.templateBox);
+      this.panels.overview.append(el('div', 't-wf-toolbar', ''), this.cards, el('h3', '', 'Abläufe von SEDRA (Selbstabbild)'), this.selfBox);
+      this.panels.templates.append(el('p', 't-wf-hint', 'Eigene Startvorlagen von SEDRA. Muster A: Auslöser, dann Aktion. Muster B: mit Bedingung. Muster C: mit KI-Schritt (nur als Prozessmodell). Nach dem Anlegen führt das geführte Einrichten durch die Schritte.'), this.templateBox);
       this.renderTemplates();
       this.panels.overview.firstChild.append(find, button(options.newTitle || 'Neuer Workflow', ()=>{if(this.discard()){this.adopt(this.blank(), null, null);this.setTab('editor');this.notice('Neuer Entwurf. Erster Schritt: „Knoten hinzufügen“.');}}));
       // Editor
@@ -89,7 +90,7 @@
       this.viewSelect = el('select');this.viewSelect.setAttribute('aria-label', 'Prozessansicht');
       [['canvas', 'Gesamtprozess'], ['core', 'Kernschritte · verdichtet'], ['sipoc', 'SIPOC'], ['details', 'Alle Schritte / Prüfpunkte']].forEach(([k, v])=>this.viewSelect.append(new Option(v, k)));
       this.viewSelect.onchange = ()=>{this.view = this.viewSelect.value;this.draw();};
-      views.append(this.viewSelect, button('In ' + options.otherTitle + ' öffnen', ()=>{
+      views.append(this.viewSelect, button('Geführt einrichten', ()=>this.startGuide()), button('In ' + options.otherTitle + ' öffnen', ()=>{
         if(this.dirty()){this.notice('Für den Wechsel zuerst speichern. Beide Apps teilen gespeicherte Versionen.', true);return;}
         this.ctx.shell.open({type: options.otherType, id: this.wid || 'alle', title: options.otherTitle});
       }));
@@ -98,7 +99,8 @@
       this.fab = el('div', 't-wf-fab');
       this.addButton = button('+', ()=>this.openPicker());this.addButton.setAttribute('aria-label', 'Knoten hinzufügen');this.addButton.title = 'Knoten hinzufügen';
       this.propsButton = button('☰', ()=>{this.inspectorOpen = !this.inspectorOpen;this.inspect();});this.propsButton.setAttribute('aria-label', 'Eigenschaften');this.propsButton.title = 'Eigenschaften';
-      this.fab.append(this.addButton, this.propsButton);this.stage.append(this.surface, this.fab, this.inspector);
+      this.guide = el('div', 't-wf-guide');this.guide.hidden = true;this.guide.setAttribute('role', 'region');this.guide.setAttribute('aria-label', 'Geführtes Einrichten');
+      this.fab.append(this.addButton, this.propsButton);this.stage.append(this.surface, this.fab, this.inspector, this.guide);
       this.stage.addEventListener('keydown', event=>{if(event.key === 'Escape' && this.inspectorOpen && !event.defaultPrevented){this.inspectorOpen = false;this.inspect();}});
       this.report = el('pre', 't-wf-report');this.report.setAttribute('aria-label', 'Kompatibilitätsbericht');
       this.bottom = el('div', 't-wf-bottombar');this.bottom.hidden = !options.runBar;
@@ -120,7 +122,7 @@
         button('Aktualisieren', ()=>this.safe(()=>this.refreshRuns())));
       this.runs = el('div', 't-wf-runs');this.output = el(options.renderRun ? 'div' : 'pre', 't-wf-output');this.output.setAttribute('aria-label', 'Laufergebnis');run.append(this.runs, this.output);
       this.panels.runs.append(run);
-      this.el.replaceChildren(head, this.engine, top, this.message, tabs, this.panels.overview, this.panels.editor, this.panels.versions, this.panels.runs, this.file);
+      this.el.replaceChildren(head, this.engine, top, this.message, tabs, this.panels.overview, this.panels.templates, this.panels.editor, this.panels.versions, this.panels.runs, this.file);
       this.setTab(this.tab || 'editor');
       this.el.addEventListener('keydown', event=>{
         if((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)){
@@ -141,6 +143,48 @@
       const s = this.stage.getBoundingClientRect(), r = n.getBoundingClientRect();if(!s.width)return;
       const at = root.sedraWorkflowDialog.place({w: s.width, h: s.height}, {w: box.offsetWidth || 360, h: Math.min(box.offsetHeight || 320, s.height - 24)}, {x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height});
       box.style.right = 'auto';box.style.left = at.left + 'px';box.style.top = at.top + 'px';
+    },
+    // Geführtes Einrichten: Schritt für Schritt durch die Knoten, mit Hinweis je Art. Ändert nichts von selbst; Überspringen ist jederzeit möglich.
+    guideOrder(){
+      const doc = this.state.doc, byName = new Map(doc.nodes.map(n=>[n.name, n])), seen = new Set(), out = [];
+      const start = doc.nodes.find(n=>n.type.endsWith('.manualTrigger')) || doc.nodes[0], queue = start ? [start] : [];
+      while(queue.length){
+        const n = queue.shift();if(seen.has(n.id))continue;seen.add(n.id);out.push(n);
+        Object.values(doc.connections[n.name] || {}).forEach(branches=>branches.forEach(b=>b.forEach(e=>{const t = byName.get(e.node);if(t)queue.push(t);})));
+      }
+      doc.nodes.forEach(n=>{if(!seen.has(n.id))out.push(n);});
+      return out.filter(n=>!n.type.endsWith('.stickyNote'));
+    },
+    guideHint(node){
+      const I = root.sedraWorkflowIcons, meta = P().get(node), key = I ? I.key(node, meta) : 'unknown';
+      const text = {manualTrigger: 'Womit beginnt der Ablauf? Name und Zweck des Auslösers prüfen.', start: 'Womit beginnt der Ablauf? Name und Zweck des Auslösers prüfen.', set: 'Welche Felder werden gesetzt? Die Parameter prüfen oder anpassen.',
+        if: 'Nach welcher Bedingung verzweigt der Ablauf? Ja- und Nein-Weg prüfen.', decision: 'Nach welcher Bedingung verzweigt der Ablauf? Ja- und Nein-Weg prüfen.', noOp: 'Wohin geht das Ergebnis? Name so wählen, dass er sagt, was passiert.',
+        human: 'Wer entscheidet hier? Rolle und Nachweis eintragen. Menschliche Schritte bleiben beim Menschen.', task: 'Was passiert in diesem Schritt? Rolle, Eingabe, Ergebnis und Nachweis prüfen.', end: 'Was ist das klare Ergebnis? Abschlusskriterium prüfen.'}[key];
+      let gap = '';
+      if(meta){const g = P().gaps({nodes: [node]});if(g.missing)gap = ' Noch offen: ' + g.items[0].fields.join(', ') + '.';}
+      return (text || 'Name und Parameter prüfen.') + gap;
+    },
+    offerGuide(){
+      this.guideOrderList = null;this.guideIndex = null;
+      const box = this.guide;box.replaceChildren(el('p', '', 'Geführtes Einrichten: Schritt für Schritt durch alle Knoten, mit Hinweisen. Jederzeit überspringbar.'),
+        button('Geführtes Einrichten starten', ()=>this.startGuide()), button('Geführtes Einrichten überspringen', ()=>this.endGuide()));box.hidden = false;
+    },
+    startGuide(){
+      if(this.view !== 'canvas'){this.view = 'canvas';this.draw();}
+      this.setTab('editor');this.guideOrderList = this.guideOrder();this.guideIndex = 0;this.renderGuide();
+    },
+    endGuide(){this.guide.hidden = true;this.guide.replaceChildren();this.guideIndex = null;this.guideOrderList = null;},
+    renderGuide(){
+      const list = this.guideOrderList || [];if(!list.length){this.endGuide();return;}
+      const i = Math.max(0, Math.min(this.guideIndex, list.length - 1)), node = list[i];this.guideIndex = i;
+      this.state.selected = node.id;this.inspectorOpen = true;this.inspect();if(this.canvas){this.canvas.draw();this.canvas.focus();}
+      const box = this.guide;box.hidden = false;
+      const head = el('p', 't-wf-guide-step', 'Schritt ' + (i + 1) + ' von ' + list.length + ' · ' + node.name);
+      box.replaceChildren(head, el('p', '', this.guideHint(node)),
+        button('Zurück zum vorigen Schritt', ()=>{this.guideIndex = i - 1;this.renderGuide();}),
+        i + 1 < list.length ? button('Weiter zum nächsten Schritt', ()=>{this.guideIndex = i + 1;this.renderGuide();}) : button('Einrichten abschließen', ()=>{this.endGuide();this.notice('Geführtes Einrichten beendet. Speichern erzeugt die erste Revision.');}),
+        button('Geführtes Einrichten überspringen', ()=>this.endGuide()));
+      box.firstChild.nextSibling.nextSibling.disabled = i === 0;
     },
     blank(){const doc = M().example();doc.name = options.newTitle === 'Neues Szenario' ? 'Neues Szenario' : 'Neuer Workflow';doc.nodes = [M().node('manualTrigger', [])];doc.connections = {};return doc;},
     setTab(name){
@@ -168,7 +212,7 @@
       T.list().forEach(t=>{
         const card = el('article', 't-wf-card');card.append(el('h3', '', t.title), el('p', 't-wf-hint', t.description));
         const chips = el('div', 't-wf-chips');t.chips.forEach(kind=>chips.append(el('span', 't-wf-chip', root.sedraWorkflowIcons ? root.sedraWorkflowIcons.label(kind) : kind)));card.append(chips);
-        card.append(button('Vorlage verwenden', ()=>{if(this.discard()){this.adopt(T.build(t.id), null, null);this.setTab('editor');this.notice('Aus Vorlage „' + t.title + '“ angelegt. Speichern erzeugt die erste Revision.');}}));
+        card.append(button('Vorlage verwenden', ()=>{if(this.discard()){this.adopt(T.build(t.id), null, null);this.setTab('editor');this.notice('Aus Vorlage „' + t.title + '“ angelegt. Speichern erzeugt die erste Revision.');this.offerGuide();}}));
         card.setAttribute('aria-label', 'Vorlage ' + t.title);this.templateBox.append(card);
       });
     },
@@ -202,6 +246,7 @@
     dirty(){return JSON.stringify(this.state.doc) !== this.saved;},
     discard(){return !this.dirty() || root.confirm('Nicht gespeicherte Änderungen verwerfen?');},
     adopt(doc, id, revision){
+      if(this.guide)this.endGuide();
       this.state.doc = M().clone(doc);this.state.selected = null;this.wid = id;this.revision = revision;
       this.saved = id ? JSON.stringify(doc) : null;this.history = [];this.future = [];this.revisions = [];this.report.textContent = '';
       this.view = P().cores(doc).length > 1 ? 'core' : 'canvas';this.changeNote.value = id ? '' : 'Erstfassung';this.draw();if(!id)PV().history(this.historyBox, [], null, null);

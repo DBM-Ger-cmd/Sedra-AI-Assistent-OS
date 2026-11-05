@@ -88,7 +88,7 @@ class ProcessBrowser(unittest.TestCase):
         def run(page, url):
             scenario = self.open(page, 'scenario')
             # Vorlage aus der Übersicht anlegen
-            scenario.get_by_role('tab', name='Szenarien').click()
+            scenario.get_by_role('tab', name='Vorlagen').click()
             self.assertGreaterEqual(scenario.get_by_role('button', name='Vorlage verwenden').count(), 3)
             scenario.get_by_role('button', name='Vorlage verwenden').nth(1).click()
             page.wait_for_function("()=>document.querySelectorAll('.t-scenario .t-wf-node').length===3")
@@ -112,12 +112,45 @@ class ProcessBrowser(unittest.TestCase):
             page.wait_for_function("()=>document.querySelectorAll('.t-scenario .t-wf-node').length===4")
         self.session(run)
 
+    def test_gefuehrtes_einrichten_und_minimap(self):
+        def run(page, url):
+            app = self.open(page, 'workflow')
+            app.get_by_role('tab', name='Vorlagen').click()
+            app.get_by_role('article', name='Vorlage Muster B: Prüfkette mit zwei Wegen').get_by_role('button', name='Vorlage verwenden').click()
+            page.wait_for_function("()=>document.querySelectorAll('.t-n8n-workflow .t-wf-node').length===5")
+            # Angebot nach dem Anlegen; Überspringen räumt auf
+            self.assertTrue(app.get_by_role('button', name='Geführtes Einrichten starten').is_visible())
+            app.get_by_role('button', name='Geführtes Einrichten überspringen').click()
+            self.assertFalse(app.locator('.t-wf-guide').is_visible())
+            # Geführt durch alle fünf Schritte, Auswahl und Panel folgen dem Schritt
+            app.get_by_role('button', name='Geführt einrichten').click()
+            self.assertIn('Schritt 1 von 5', app.locator('.t-wf-guide').inner_text())
+            self.assertTrue(app.get_by_role('button', name='Zurück zum vorigen Schritt').is_disabled())
+            first = app.locator('.t-wf-guide-step').inner_text()
+            for n in range(2, 6):
+                app.get_by_role('button', name='Weiter zum nächsten Schritt').click()
+                self.assertIn('Schritt %d von 5' % n, app.locator('.t-wf-guide').inner_text())
+            self.assertNotEqual(first, app.locator('.t-wf-guide-step').inner_text())
+            self.assertTrue(app.locator('.t-wf-inspector').is_visible())
+            app.get_by_role('button', name='Einrichten abschließen').click()
+            self.assertFalse(app.locator('.t-wf-guide').is_visible())
+            # Minimap: alle Knoten, ein Klick verschiebt den Ausschnitt
+            app.get_by_role('button', name='Eigenschaften schließen').click()      # das Panel läge sonst über der Minimap
+            mini = app.locator('.t-wf-minimap-svg')
+            self.assertEqual(app.locator('.t-wf-mini-node').count(), 5)
+            app.get_by_role('button', name='Zoom +').click(); app.get_by_role('button', name='Zoom +').click()
+            before = app.locator('.t-wf-svg').get_attribute('viewBox')
+            box = mini.bounding_box()
+            page.mouse.click(box['x'] + 8, box['y'] + 8)
+            self.assertNotEqual(before, app.locator('.t-wf-svg').get_attribute('viewBox'))
+        self.session(run)
+
     def test_course_symbols_and_pattern_c(self):
         def run(page, url):
             from guppi_runtime.workflows.process import PREFIX
             app = self.open(page, 'workflow')
             # Muster C aus der Vorlagengalerie: Prozessmodell mit Kandidaten-Markierung, speicherbar, nicht ausführbar
-            app.get_by_role('tab', name='Übersicht').click()
+            app.get_by_role('tab', name='Vorlagen').click()
             app.get_by_role('article', name='Vorlage Muster C: Auslöser, KI-Schritt, Aktion (Prozessmodell)').get_by_role('button', name='Vorlage verwenden').click()
             page.wait_for_function("()=>document.querySelectorAll('.t-n8n-workflow .t-wf-node').length===4")
             self.assertEqual(app.locator('.t-wf-candidate').count(), 1)

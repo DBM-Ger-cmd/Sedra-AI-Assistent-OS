@@ -30,7 +30,9 @@
     [['Ansicht einpassen', '⤢', ()=>api.fit()], ['Zoom +', '+', ()=>api.zoom(1.2)], ['Zoom −', '−', ()=>api.zoom(1 / 1.2)], ['Auf Auswahl zentrieren', '◎', ()=>api.focus()]].forEach(([label, text, fn])=>{
       const b = document.createElement('button'); b.type = 'button'; b.className = 't-wf-zoom-btn'; b.textContent = text; b.setAttribute('aria-label', label); b.title = label; b.onclick = fn; controls.append(b);
     });
-    wrapEl.append(svg, controls);
+    const mini = document.createElement('div'); mini.className = 't-wf-minimap';
+    const msvg = element('svg', {class: 't-wf-minimap-svg', role: 'img', 'aria-label': 'Minimap: Übersicht des ganzen Prozesses, anklicken zum Springen', preserveAspectRatio: 'xMidYMid meet'}); mini.append(msvg);
+    wrapEl.append(svg, controls, mini);
     container.replaceChildren(hint, wrapEl);
     let lastDown = null, drag = null, pending = null, offset = [0, 0], zoom = 1, frame = null;
     const uid = Math.random().toString(16).slice(2), marker = 'wf-arrow-' + uid, grid = 'wf-grid-' + uid;
@@ -126,8 +128,30 @@
         }
         svg.append(g);
       });
+      drawMini();
       if(handlers.drawn) handlers.drawn();
     }
+    // Minimap: alle Knoten klein, dazu der sichtbare Ausschnitt. Klick oder Ziehen setzt die Mitte des Ausschnitts.
+    function drawMini(){
+      if(!frame) return;
+      const v = svg.viewBox.baseVal;
+      msvg.setAttribute('viewBox', [frame.minX, frame.minY, frame.width, frame.height].join(' '));
+      msvg.replaceChildren();
+      state.doc.nodes.forEach(n=>msvg.append(element('rect', {x: n.position[0], y: n.position[1], width: G.w, height: G.h, rx: 10, class: 't-wf-mini-node' + (state.selected === n.id ? ' selected' : '')})));
+      msvg.append(element('rect', {x: v.x, y: v.y, width: v.width, height: v.height, class: 't-wf-mini-view'}));
+    }
+    let miniDrag = false;
+    function jump(event){
+      if(!frame) return;
+      const pt = msvg.createSVGPoint(); pt.x = event.clientX; pt.y = event.clientY;
+      const p = pt.matrixTransform(msvg.getScreenCTM().inverse());
+      offset = [p.x - frame.width / zoom / 2 - frame.minX, p.y - frame.height / zoom / 2 - frame.minY];
+      draw();
+    }
+    msvg.addEventListener('pointerdown', event=>{event.preventDefault();miniDrag = true;msvg.setPointerCapture(event.pointerId);jump(event);});
+    msvg.addEventListener('pointermove', event=>{if(miniDrag)jump(event);});
+    msvg.addEventListener('pointerup', ()=>{miniDrag = false;});
+    msvg.addEventListener('pointercancel', ()=>{miniDrag = false;});
     svg.addEventListener('pointerdown', event=>{
       if(event.button !== 0 || event.target.closest('.t-wf-node'))return;
       const view = svg.viewBox.baseVal;
