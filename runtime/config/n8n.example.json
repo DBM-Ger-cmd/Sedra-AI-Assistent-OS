@@ -1,0 +1,5 @@
+{
+  "enabled": false,
+  "base_url": "http://127.0.0.1:5678",
+  "api_key_env": "SEDRA_N8N_API_KEY"
+}

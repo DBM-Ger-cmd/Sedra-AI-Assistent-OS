@@ -26,6 +26,9 @@ class ControlMasterModule(BaseModule):
             check=self.check_execution(mission,request)
             if check['status']!='EXECUTABLE':
                 return {'status':'waiting' if check['status']=='NOT_NOW' else 'blocked','feasibility':check,'reason_code':check['reason_code'],'artifacts':[]}
+        if action == 'n8n_workflow':
+            from ..workflows.execution import execute
+            return execute(self, mission, request, approval_token)
         if action == "candidate_acceptance":
             from ..selfdev.candidate_acceptance import apply
             return apply(self,request["runtime"],mission,request.get("plan"),approval_token)

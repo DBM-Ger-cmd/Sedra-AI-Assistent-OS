@@ -25,6 +25,11 @@ MANIFEST = 'release/MANIFEST.sha256'
 ZEILE = re.compile(r'^([0-9a-f]{64})  (\S.*)$')
 
 
+def lokal_behalten(rel: str) -> bool:
+    """Machine paths and local backups are neither release payload nor deletion targets."""
+    return rel == 'runtime/config/local_paths.yaml' or '.bak-' in Path(rel).name
+
+
 class UpdateFehler(ValueError):
     pass
 
@@ -42,6 +47,8 @@ def _programmdateien(root: Path) -> dict:
             continue
         for p in sorted(base.rglob('*')):
             if not p.is_file() or p.is_symlink() or '__pycache__' in p.parts or p.suffix == '.pyc':
+                continue
+            if lokal_behalten(p.relative_to(root).as_posix()):
                 continue
             out[p.relative_to(root).as_posix()] = _sha(p)
     return out
@@ -63,6 +70,8 @@ def manifest_lesen(text: str) -> dict:
         rel = m.group(2)
         if rel.startswith('/') or '..' in rel.split('/') or '\\' in rel or not rel.startswith(PRUEFBEREICHE):
             raise UpdateFehler(f'manifest_pfad_nicht_erlaubt:{rel}')
+        if lokal_behalten(rel):
+            raise UpdateFehler(f'manifest_lokale_datei_nicht_erlaubt:{rel}')
         out[rel] = m.group(1)
     if not out:
         raise UpdateFehler('manifest_leer')
@@ -180,6 +189,8 @@ def zurueck(root: Path) -> dict:
         if rel not in info['dateien']:
             (Path(root) / rel).unlink(missing_ok=True)
     for rel in info['dateien']:
+        if lokal_behalten(rel):
+            continue
         ziel = Path(root) / rel
         ziel.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(sicherung / rel, ziel)

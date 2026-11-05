@@ -1,0 +1,17 @@
+tool:
+  id: scenario
+  name: "Szenario Studio"
+  description: "Module, Feldzuordnung und Routen. Gemeinsame Prozessbasis mit n8n Workflows."
+  version: 0.2.0
+  kind: object
+  handles: [scenario]
+  order: 19
+  slot: inhalt
+  instanzen: viele
+  gruppe: arbeit
+  entry: {js: [forms.js, tool.js], css: tool.css}
+  api: [POST /api/objects, POST /api/actions]
+  events: {emits: [], listens: [task.changed, decision.answered]}
+  trust: CORE
+  tests: []
+  needs: {ui: ">=1.0 <2"}

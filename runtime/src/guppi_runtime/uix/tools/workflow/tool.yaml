@@ -1,0 +1,21 @@
+tool:
+  id: workflow
+  name: "n8n Workflows"
+  description: "n8n-JSON zeichnen, bearbeiten, versionieren und kontrolliert lokal ausführen."
+  version: 0.2.0
+  kind: object
+  handles: [workflow]
+  order: 18
+  slot: inhalt
+  instanzen: viele
+  gruppe: arbeit
+  entry: {js: tool.js, css: tool.css}
+  api:
+    - POST /api/objects
+    - POST /api/actions
+  events:
+    emits: []
+    listens: [task.changed, decision.answered]
+  trust: CORE
+  tests: []
+  needs: {ui: ">=1.0 <2"}

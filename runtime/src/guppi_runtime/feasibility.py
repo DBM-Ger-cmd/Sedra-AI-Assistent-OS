@@ -35,8 +35,12 @@ def assess(control,mission,request):
     if type(context) is not int or context<0: return verdict('BLOCKED','INVALID_CONTEXT_REQUIREMENT')
     if context: return verdict('UNSUPPORTED','CONTEXT_CAPACITY_UNQUALIFIED')
     action=request.get('action','create_text_artifact')
-    handlers={'inspect_tools','model_inference','tool_call','tool_sequence','inspect_project','prepare_code_candidate','create_text_artifact'}
+    handlers={'inspect_tools','model_inference','tool_call','tool_sequence','inspect_project','prepare_code_candidate','create_text_artifact','n8n_workflow'}
     if action not in handlers: return verdict('UNSUPPORTED','NO_HANDLER')
+    if action == 'n8n_workflow':
+        from .workflows.execution import context
+        try: context(control, mission, request)
+        except ValueError as exc: return verdict('BLOCKED', str(exc))
     if action=='inspect_project' and not getattr(control,'inspector',None): return verdict('UNSUPPORTED','NO_INSPECTOR')
     if action=='prepare_code_candidate' and not getattr(control,'candidate_preparer',None): return verdict('UNSUPPORTED','NO_CANDIDATE_HANDLER')
     if action=='tool_call':

@@ -17,6 +17,7 @@
   --heading:#d8d8df;
   /* meaning (never a colour without one) */
   --accent:#00d9a5;
+  --scenario-accent:#b89bff;
   --accent-text:#0b0b0d;
   --ok:#34c759;
   --ok-bg:#0f2a1c;
@@ -98,6 +99,7 @@ html[data-theme="klar"]{
   --muted:#5b6673;
   --heading:#36404d;
   --accent:#2563c9;
+  --scenario-accent:#7443c9;
   --accent-text:#ffffff;
   --ok:#2f7a3f;
   --ok-bg:#e4f1e4;
