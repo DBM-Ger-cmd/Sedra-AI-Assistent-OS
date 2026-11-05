@@ -98,6 +98,9 @@ SCHEMAS = {
                               {'video': dict(S, description='YouTube-Adresse oder 11-stellige Video-ID'), 'sprachen': {'type': 'array', 'items': S, 'description': 'optional, z. B. ["de"]; ohne Angabe die Sprache des Videos'},
                                'uebersetzen_nach': dict(S, description='optional: Zielsprache, z. B. de; das geladene Modell übersetzt den ganzen Text (dauert etwa eine Minute je 25 Minuten Video) und die Übersetzung wird abgelegt'),
                                'ab': I, 'zeichen': I}, ['video']),
+    'desktop_lesen': _fn('desktop_lesen', 'Liest den Zuschnitt der Oberfläche (Desktop Builder): was im Start-Menü und in der Taskleiste ausgeblendet oder umgeordnet ist, die Marke, die Profile und die Grundfunktionen, die nie wegfallen. '
+                         'Nur lesen. Ändern tut der Captain im Desktop Builder (Start → System); du lieferst einen Vorschlag als Profil-Text, den er dort importiert. Mit profil=<id> liest du ein gespeichertes Profil.',
+                         {'profil': dict(S, description='optional: Kennung eines Profils')}, []),
     'vorlage_beantragen': _fn('vorlage_beantragen', 'Beantragt eine neue Vorlage (Rolle für Sitzungen: Werkzeuge und Anweisung). Es entsteht nur ein Antrag im Posteingang des Captains; die Vorlage gibt es erst nach seiner Freigabe. '
                               'Sie hat nie Rechte oder Sitzungs-Erlaubnisse; die Werkzeuge des Vorarbeiters gibt es nicht. Entweder basis (id einer vorhandenen Vorlage, z. B. pruefer) oder werkzeuge und system.',
                               {'name': dict(S, description='Name der Vorlage, daraus wird die id'), 'beschreibung': S, 'basis': dict(S, description='id einer vorhandenen Vorlage als Vorgabe'),
@@ -121,7 +124,8 @@ SCHEMAS = {
 
 
 class Werkzeuge:
-    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None):
+    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None, desktop_stand=None):
+        self.desktop_stand = desktop_stand       # vom Server gereicht: (profil|None) -> Zuschnitt der Oberfläche (harness/desktop.py), nur lesen
         self.vorlage_antrag = vorlage_antrag     # vom Server gereicht: stellt den Antrag „Neue Vorlage“ (harness/antraege.py `vorlage_neu_antrag`)
         self.uebersetzer = uebersetzer           # vom Server gereicht: (text, ziel, quelle) -> {content, sha256} – übersetzt mit dem geladenen Modell und legt das Ergebnis ab
         self.web_transkript = web_transkript     # vom Server gereicht: (video, sprachen) -> Ergebnis des Web-Werkzeugs `youtube_transcript` (Hostliste, Guard, Ablage)
@@ -193,6 +197,10 @@ class Werkzeuge:
                     if not frage:
                         raise WerkzeugFehler('argument_fehlt: frage oder antwort')
                     ziel, was = 'suche/' + frage, 'Gedächtnis durchsuchen'
+            elif name == 'desktop_lesen':
+                if not callable(self.desktop_stand):
+                    raise WerkzeugFehler('desktop_nicht_verfuegbar')
+                ziel, was = 'desktop/' + ((self._text(args, 'profil', pflicht=False) or '').strip()[:40] or 'wahl'), 'Zuschnitt der Oberfläche lesen'
             elif name == 'vorlage_beantragen':
                 if not callable(self.vorlage_antrag):
                     raise WerkzeugFehler('vorlage_antrag_nicht_verfuegbar')
@@ -459,6 +467,12 @@ class Werkzeuge:
                 if r['uebersprungen']:
                     text += '; übersprungen: ' + ', '.join(f"{u['id']} ({u['grund']})" for u in r['uebersprungen'])
                 return {'status': 'ok', 'ergebnis': text, 'wirkung': True}
+            if name == 'desktop_lesen':
+                try:
+                    stand = self.desktop_stand((self._text(args, 'profil', pflicht=False) or '').strip() or None)
+                except ValueError as exc:
+                    return {'status': 'fehler', 'ergebnis': f'error: {exc}', 'wirkung': False}
+                return {'status': 'ok', 'wirkung': False, 'ergebnis': json.dumps(stand, ensure_ascii=False, indent=1)}
             if name == 'vorlage_beantragen':
                 nutz = {k: args[k] for k in ('name', 'beschreibung', 'basis', 'werkzeuge', 'system', 'modell') if args.get(k)}
                 try:

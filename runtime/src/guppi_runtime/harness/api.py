@@ -928,7 +928,7 @@ class HarnessApi:
                          lauf_typen=self.lauf_typen, modelle=self._modell_op, andere_antworten=self._andere_antworten,
                          projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz), lese_grenze=lambda: self._option('lese_grenze'), sitzungen_liste=self.sitzungen_fuer_modell, sitzungen_weg=lambda ids: self.aufraeumen({'ids': ids}), verknuepfung=lambda ort, name: self.verknuepfung_anlegen(ort, name, von='modell'), gedanken=self.gedanken_lesen, gedaechtnis=self.gedaechtnis_suchen,
                          code_stand=self.code_stand(projekt),
-                         vorlage_antrag=lambda nutz: harness_antraege.vorlage_neu_antrag(self.hub, nutz),
+                         vorlage_antrag=lambda nutz: harness_antraege.vorlage_neu_antrag(self.hub, nutz), desktop_stand=self.desktop_stand,
                          uebersetzer=lambda text, ziel, quelle: self.text_uebersetzen(mission_id, text, ziel, quelle),
                          web_transkript=lambda video, sprachen: self.hub.runtime.web_tool.execute(mission_id, 'youtube_transcript', {'video': video, 'languages': sprachen}))
 
@@ -1034,6 +1034,13 @@ class HarnessApi:
         if tag:
             out['tag'] = {'tag': tag, 'text': harness_betriebslog.tag_lesen(self.hub.project_root, tag)}
         return out
+
+    def desktop_stand(self, profil=None):
+        """Für das Chat-Werkzeug `desktop_lesen`: der Zuschnitt der Oberfläche (oder ein Profil) mit den festen Angaben, die ein Vorschlag kennen muss. Nur lesen."""
+        inhalt = harness_desktop.profil_lesen(self.hub.project_root, profil) if profil else harness_desktop.laden(self.hub.project_root)
+        return {'zuschnitt': inhalt, 'grundfunktionen': {'start': list(harness_desktop.GRUND_START), 'zellen': list(harness_desktop.GRUND_ZELLEN)}, 'gruppen': list(harness_desktop.GRUPPEN),
+                'zellen': ['decisions', 'token', 'model', 'temp', 'vram', 'ram', 'server', 'scheduler', 'state'],
+                'hinweis': 'Ausblenden ist nur Zuschnitt, keine Sperre. Der Captain ändert im Desktop Builder (Start, System); ein Vorschlag als Profil-Text lässt sich dort importieren.'}
 
     def info_wissen_beantragen(self):
         from ..wissen import desk_wissen

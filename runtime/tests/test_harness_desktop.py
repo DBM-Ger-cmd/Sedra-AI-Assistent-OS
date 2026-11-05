@@ -7,7 +7,11 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
+from guppi_runtime.core.guard import Guard
 from guppi_runtime.harness import desktop as dt
+from guppi_runtime.harness import katalog, vorlagen
+from guppi_runtime.harness.freigabe import Karten, Kiste
+from guppi_runtime.harness.werkzeuge import Werkzeuge
 from guppi_runtime.harness.api import GESCHUETZT, WEG
 from guppi_runtime.uix_server import UIXHub
 
@@ -95,6 +99,69 @@ class Profile(unittest.TestCase):
         with self.assertRaises(ValueError):
             dt.profil_speichern(p, 'kunde-zu-viel', 'K')
         dt.profil_speichern(p, 'kunde-00', 'K neu')                                         # ein vorhandenes ersetzen geht immer
+
+
+class ChatWerkzeug(unittest.TestCase):
+    """`desktop_lesen` im Chat (05.11.2026): nur lesen, ohne Karte; der Oberflaechen-Designer kennt es, aendert aber nie selbst."""
+
+    def kiste(self, stand):
+        t = tempfile.TemporaryDirectory()
+        self.addCleanup(t.cleanup)
+        root = Path(t.name) / 'p'
+        root.mkdir()
+        guard = Guard(ARCH / 'core' / 'guard' / 'guard_rules.yaml', None, Path(t.name) / 'tokens.json')
+        regeln = katalog.laden(Path('gibt-es-nicht'))['regeln']
+        w = Werkzeuge({'id': 'p', 'name': 'P', 'wurzel': str(root), 'schreibbereich': []}, guard=guard, mission_id='M-D', regeln=regeln, desktop_stand=stand)
+        return Kiste(w, regeln=regeln, guard=guard, audit=None, karten=Karten(Path(t.name) / 'k'), sitzung_id='S-00000001')
+
+    def test_lesen_ohne_karte_mit_profil_und_fehlern(self):
+        gesehen = []
+
+        def stand(profil):
+            gesehen.append(profil)
+            if profil == 'weg':
+                raise ValueError('profil_unbekannt')
+            return {'zuschnitt': {'start': {}}, 'grundfunktionen': {'start': ['decisions', 'tasks']}}
+        k = self.kiste(stand)
+        r = k.aufruf('desktop_lesen', {})
+        self.assertEqual((r['status'], r['wirkung']), ('ok', False))
+        self.assertIn('grundfunktionen', r['ergebnis'])
+        k.aufruf('desktop_lesen', {'profil': 'kunde-a'})
+        self.assertEqual(k.aufruf('desktop_lesen', {'profil': 'weg'})['status'], 'fehler')
+        self.assertEqual(gesehen, [None, 'kunde-a', 'weg'])
+        self.assertIn('nicht_verfuegbar', self.kiste(None).aufruf('desktop_lesen', {})['ergebnis'])
+
+    def test_der_server_nennt_zuschnitt_grundfunktionen_und_erlaubte_werte(self):
+        tmp = tempfile.TemporaryDirectory(prefix='desktop-chat-')
+        self.addCleanup(tmp.cleanup)
+        projekt_ = Path(tmp.name) / 'project'
+        (projekt_ / 'local_config').mkdir(parents=True)
+        hub = UIXHub(projekt_, ARCH)
+        self.addCleanup(hub.close)
+        dt.speichern(str(projekt_), WAHL)
+        dt.aktion(str(projekt_), {'aktion': 'profil_speichern', 'id': 'kunde-a', 'name': 'Kunde A'})
+        s = hub.harness.desktop_stand()
+        self.assertEqual((s['grundfunktionen']['start'], s['gruppen'][:2]), (['decisions', 'tasks'], ['arbeit', 'modelle']))
+        self.assertIn('state', s['zellen'])
+        self.assertEqual(hub.harness.desktop_stand('kunde-a')['zuschnitt']['name'], 'Kunde A')
+
+    def test_die_vorlage_oberflaechen_designer_liest_nur_und_aendert_code_mit_karte(self):
+        wurzel = Path(tempfile.mkdtemp())
+        v = vorlagen.laden(wurzel, 'desktop-designer')
+        self.assertEqual(v['rechte'], {'vorarbeiter_freigabe': False, 'aufgaben_vorschlagen': False})
+        self.assertIn('desktop_lesen', v['werkzeuge'])
+        self.assertNotIn('datei_schreiben', v['werkzeuge'], 'bestehende Dateien aendern, nicht ueberschreiben')
+        for satz in ('kontextmodule.js', 'Ausblenden ist keine Sperre', 'Profil als Text', 'Erfinde nichts'):
+            self.assertIn(satz, v['system'])
+        self.assertNotIn('GUPPI', v['system'])
+
+    def test_das_beispiel_im_skill_laesst_sich_importieren(self):
+        text = (Path(__file__).resolve().parents[1] / 'config' / 'harness_vorlagen' / 'desktop-designer.md').read_text(encoding='utf-8')
+        beispiel = json.loads(text.split('```json')[1].split('```')[0])
+        w = dt.aktion(projekt(), {'aktion': 'profil_importieren', 'profil': beispiel})
+        self.assertEqual([p['id'] for p in w['profile']], [beispiel['id']], 'ein Skill, dessen Beispiel der Importeur abweist, fuehrt in die Irre')
+        erlaubt = text.split('Gruppen `')[1].split('`;')[0]
+        self.assertEqual(erlaubt.split(', '), list(dt.GRUPPEN))
 
 
 class Weg(unittest.TestCase):

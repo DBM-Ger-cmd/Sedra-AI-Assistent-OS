@@ -55,7 +55,7 @@ class LadenTests(unittest.TestCase):
 
     def test_mitgelieferte_vorlagen_sind_gueltig(self):
         ids = {v['id']: v for v in vorlagen.liste(self.root)}
-        self.assertEqual(sorted(ids), ['bauagent', 'masterchat', 'modellierer', 'pruefer', 'vorarbeiter'])
+        self.assertEqual(sorted(ids), ['bauagent', 'desktop-designer', 'masterchat', 'modellierer', 'pruefer', 'vorarbeiter'])
         self.assertTrue(all(v['fehler'] is None for v in ids.values()), ids)
         self.assertTrue(ids['vorarbeiter']['rechte']['vorarbeiter_freigabe'])
         self.assertFalse(ids['bauagent']['rechte']['vorarbeiter_freigabe'])
@@ -142,7 +142,7 @@ class SitzungMitVorlageTests(unittest.TestCase):
     def test_wege_vorlagen_und_unbekannte_vorlage(self):
         code, out = anfrage(self.url, 'GET', '/api/harness/vorlagen')
         self.assertEqual(code, 200)
-        self.assertEqual(sorted(v['id'] for v in out['vorlagen']), ['bauagent', 'masterchat', 'modellierer', 'pruefer', 'vorarbeiter'])
+        self.assertEqual(sorted(v['id'] for v in out['vorlagen']), ['bauagent', 'desktop-designer', 'masterchat', 'modellierer', 'pruefer', 'vorarbeiter'])
         code, body = anfrage(self.url, 'POST', '/api/harness/sitzungen', {'projekt': 'pruef', 'vorlage': 'gibt-es-nicht'})
         self.assertEqual((code, body['code']), (400, 'vorlage_unbekannt'))
 
@@ -185,7 +185,7 @@ class VorlagenTexte(unittest.TestCase):
 
     def test_keine_vorlage_nennt_guppi_und_alle_verbieten_erfundenes(self):
         texte = self.texte()
-        self.assertEqual(set(texte), {'bauagent', 'masterchat', 'modellierer', 'pruefer', 'vorarbeiter'})
+        self.assertEqual(set(texte), {'bauagent', 'desktop-designer', 'masterchat', 'modellierer', 'pruefer', 'vorarbeiter'})
         for name, text in texte.items():
             self.assertNotIn('GUPPI', text, name)
             self.assertIn('Erfinde nichts', text, name)

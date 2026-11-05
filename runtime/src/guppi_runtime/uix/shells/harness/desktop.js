@@ -71,5 +71,22 @@
     return S._desktop;
   }
 
-  root.sedraHarness.desktop = {ZELLEN, GRUND_START, GRUND_ZELLEN, wahl, startKonfig, zellenAnwenden, markeAnwenden, laden, speichern, aktion, LEER};
+  // Die Auswahl „Profil“ für das Start-Menü: Vorgabe der Shell, eine eigene Wahl oder eines der gespeicherten Profile; null, wenn es keine Profile gibt
+  function profilWahl(S, danach){
+    const w = wahl(S);
+    if(!w.profile.length) return null;
+    const sel = document.createElement('select'); sel.className = 'hs-projektwahl hs-start-profil'; sel.setAttribute('aria-label', 'Profil der Oberfläche');
+    const eigen = !w.profil && (w.start.ausblenden.length || Object.keys(w.start.zuordnung).length || w.zellen.ausblenden.length || w.zellen.reihenfolge.length || w.marke.name || w.marke.akzent);
+    [['', eigen ? 'Profil: eigene Wahl' : 'Profil: Vorgabe der Shell']].concat(w.profile.map(p=>[p.id, 'Profil: ' + p.name])).forEach(([wert, text])=>{ const o = document.createElement('option'); o.value = wert; o.textContent = text; sel.append(o); });
+    sel.value = w.profil || '';
+    sel.onchange = async()=>{
+      try{
+        if(sel.value) await aktion(S, {aktion: 'profil_anwenden', id: sel.value}); else await speichern(S, {start: null, zellen: null, marke: null});
+        if(danach) danach();
+      }catch(err){ S.hinweis('Profil nicht gewechselt: ' + err.message, 'warn'); sel.value = w.profil || ''; }
+    };
+    return sel;
+  }
+
+  root.sedraHarness.desktop = {profilWahl, ZELLEN, GRUND_START, GRUND_ZELLEN, wahl, startKonfig, zellenAnwenden, markeAnwenden, laden, speichern, aktion, LEER};
 })();

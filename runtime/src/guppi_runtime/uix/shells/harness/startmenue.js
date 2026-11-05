@@ -312,6 +312,8 @@
     dar.title = 'Klar oder Nacht, Normal oder Groß – unter Einstellungen → Allgemein';
     dar.onclick = ()=>{ schliessen(S); root.sedraHarness.einstellungen.oeffnen(S, 'allgemein/darstellung'); };
     look.append(dar);
+    const profilwahl = root.sedraHarness.desktop && root.sedraHarness.desktop.profilWahl(S, ()=>zeichnen(S));         // Profil wechseln (Desktop Builder), nur wenn es Profile gibt
+    if(profilwahl) look.append(profilwahl);
     const leeren = d().el('button', 'hs-start-leeren', 'Gedächtnis leeren'); leeren.type = 'button';
     leeren.title = 'offene Apps, Ablage der Werkzeuge, Gesprächsverlauf – zweimal klicken';
     let scharf = null;

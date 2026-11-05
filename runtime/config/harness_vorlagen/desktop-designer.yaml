@@ -1,0 +1,10 @@
+harness_vorlage:
+  version: 1
+  id: desktop-designer
+  name: Oberflächen-Designer
+  beschreibung: Bearbeitet Aufträge zu Aussehen und Zuschnitt der Harness (Start-Menü, Taskleiste, Module, Profile je Auftraggeber) in einem festen Ablauf; ändert Code nur mit Karte, Zuschnitt liefert er als Profil-Text für den Desktop Builder.
+  system: desktop-designer.md
+  werkzeuge: [datei_lesen, dateien_auflisten, suchen, datei_aendern, befehl, desktop_lesen]
+  rechte: {}
+  modell: coder.llama_qwen35
+  max_zuege: 24
