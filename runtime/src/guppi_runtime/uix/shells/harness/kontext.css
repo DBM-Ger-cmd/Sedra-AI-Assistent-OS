@@ -5,3 +5,8 @@
 .hs-ctxmenu-punkt:hover,.hs-ctxmenu-punkt:focus{background:var(--hs-hover);outline:none}
 .hs-ctxmenu-strich{height:1px;margin:3px 4px;background:var(--line)}
 .hs-ctxmenu-fuss{padding:4px 8px 2px}
+.hs-baustein-aus{display:none !important}.hs-baustein-gruppe{display:inline-flex;align-items:center;gap:8px}
+.hs-start-block{display:flex;flex-direction:column;align-items:center;gap:6px}
+.hs-start>.hs-baustein{display:contents}
+.hs-start.hs-raster{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:minmax(28px,auto);gap:8px 12px;align-items:start;justify-items:stretch;width:min(100%,900px);margin:auto auto 0}
+.hs-start.hs-raster>.hs-baustein{display:flex;flex-direction:column;align-items:center;min-width:0}

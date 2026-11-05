@@ -133,6 +133,7 @@
       const raster = d().el('div', 'hs-start-raster' + (klasse ? ' ' + klasse : ''));
       apps.forEach(a=>{ st.sichtbar.push(a); raster.append(appKnopf(S, a, nr++)); });
       box.append(raster); inhalt.append(box);
+      return box;
     };
     // Kategorie als Kachel: Kopf (Symbol, Titel, Anzahl) und eine kleine Vorschau der ersten Apps; „+N weitere“ klappt die Kachel auf.
     // Alle Apps stehen im DOM (die versteckten nur mit hidden), die Pfeiltasten gehen über die sichtbaren.
@@ -166,14 +167,15 @@
       if(!treffer.length) inhalt.append(d().el('div', 'hs-app-satz', 'Keine App zu „' + q + '“. Strg+K sucht Orte und Befehle.'));
       abschnitt('Treffer', treffer);
     }else{
-      abschnitt('Zuletzt benutzt', st.liste.zuletzt, 'zuletzt');
+      const zuletzt = abschnitt('Zuletzt benutzt', st.liste.zuletzt, 'zuletzt');
+      if(zuletzt) zuletzt.dataset.baustein = 'zuletzt';                        // Baukasten (bausteine.js): Kennung je Abschnitt
       inhalt.append(blick(S));
       // die Gruppen in der Reihenfolge der Datei; System und Sedra Token gibt es auch ohne Ort, sie tragen feste Einträge
       const jeId = {};
       st.liste.gruppen.forEach(g=>{ jeId[g.id] = g; });
       const reihe = (st.konfig && st.konfig.gruppen) || L().GRUPPEN, sym = (st.konfig && st.konfig.symbole) || L().SYMBOLE;
       const gruppen = reihe.filter(id=>jeId[id] || FEST[id]).map(id=>jeId[id] || {id, titel: L().TITEL[id], symbol: sym[id], apps: []});
-      const kacheln = d().el('div', 'hs-start-kacheln');
+      const kacheln = d().el('div', 'hs-start-kacheln'); kacheln.dataset.baustein = 'gruppen';
       gruppen.forEach(g=>{ const k = kachel(g, g.apps.concat(FEST[g.id] || [])); if(k) kacheln.append(k); });
       inhalt.append(kacheln);
       if(!st.liste.apps.length) inhalt.append(d().el('div', 'hs-app-satz', 'Kein Werkzeug geladen – das Werkzeug „Module“ sagt, warum.'));
@@ -181,6 +183,7 @@
     if(st.wahl >= st.sichtbar.length) st.wahl = Math.max(0, st.sichtbar.length - 1);
     inhalt.querySelectorAll('.hs-start-app').forEach(k=>k.classList.toggle('wahl', Number(k.dataset.nr) === st.wahl));
     fuss(S);
+    if(root.sedraHarness.bausteine) root.sedraHarness.bausteine.menueAnwenden(S, st.el);
   }
 
   // „Auf einen Blick“ (Captain 03.11.2026): kleine Apps mit den wichtigsten Werten – KI-Labor, Sedra Token, Hardware, Modelle. Nur lesend; ein Klick öffnet die App.
@@ -198,12 +201,12 @@
 
   function blick(S){
     const st = stand(S);
-    const box = d().el('section', 'hs-start-blick'); box.setAttribute('aria-label', 'Auf einen Blick');
+    const box = d().el('section', 'hs-start-blick'); box.setAttribute('aria-label', 'Auf einen Blick'); box.dataset.baustein = 'blick';
     st.blickEl = box;
     BLICK.forEach(k=>{
       if(k.einst){
         const E = root.sedraHarness.einstellungen;
-        const kachel = d().el('section', 'hs-start-blick-kachel hs-start-blick-einst'); kachel.dataset.blick = 'einstellungen';
+        const kachel = d().el('section', 'hs-start-blick-kachel hs-start-blick-einst'); kachel.dataset.blick = 'einstellungen'; kachel.dataset.baustein = 'einstellungen';
         const kopf = d().el('button', 'hs-start-blick-kopf'); kopf.type = 'button';
         kopf.append(d().el('span', 'hs-start-symbol', k.symbol), d().el('b', null, k.titel), d().el('small', 'hs-leise', 'Startseite'));
         kopf.onclick = ()=>{ schliessen(S); E.oeffnen(S); };
@@ -218,7 +221,7 @@
       }
       const ort = (root.sedraPlaces.PLACES || []).find(p=>p.id === k.ort);
       if(!ort) return;
-      const b = d().el('button', 'hs-start-blick-kachel'); b.type = 'button'; b.dataset.blick = k.ort;
+      const b = d().el('button', 'hs-start-blick-kachel'); b.type = 'button'; b.dataset.blick = k.ort; b.dataset.baustein = {tasks: 'aufgaben', labor: 'labor', meter: 'token', hardware: 'hardware', models: 'modelle'}[k.ort] || k.ort;
       b.append(d().el('span', 'hs-start-blick-kopf'), d().el('span', 'hs-start-blick-werte'));
       b.firstChild.append(d().el('span', 'hs-start-symbol', k.symbol), d().el('b', null, k.titel));
       const werte = k.werte(st.blick || {});
@@ -256,6 +259,7 @@
     if(st.blickEl.contains(document.activeElement)) return;                  // ein bedienter Knopf wird nicht unter dem Finger ersetzt
     const alt = st.blickEl, neu = blick(S);                                   // blick() merkt sich den neuen Streifen
     alt.replaceWith(neu);
+    if(root.sedraHarness.bausteine) root.sedraHarness.bausteine.menueAnwenden(S, st.el);      // Reihenfolge und Sichtbarkeit des Profils gelten auch für den neuen Streifen
   }
   function auffrischen(S, welche){
     const st = stand(S);
@@ -295,6 +299,7 @@
     const f = st.el.fuss; f.replaceChildren();
     const shells = ((st.module && st.module.shells) || []).filter(s=>s.id !== 'start' && s.id !== 'harness');
     const zeile = d().el('div', 'hs-start-oberflaechen'); zeile.setAttribute('role', 'group'); zeile.setAttribute('aria-label', 'Oberflächen');
+    zeile.dataset.baustein = 'oberflaechen';
     zeile.append(d().el('span', 'hs-ueber', 'Oberflächen'));
     shells.forEach(s=>{
       const k = d().el('button', 'hs-start-shell'); k.type = 'button'; k.dataset.shell = s.id;
@@ -306,7 +311,7 @@
       zeile.append(k);
     });
     if(!shells.length) zeile.append(d().el('small', 'hs-leise', st.moduleFehler ? 'Oberflächen nicht lesbar: ' + st.moduleFehler : 'keine andere Oberfläche im Paket'));
-    const look = d().el('div', 'hs-start-look');
+    const look = d().el('div', 'hs-start-look'); look.dataset.baustein = 'darstellung';
     // Darstellung und Schrift gibt es nur noch in den Einstellungen (Allgemein); hier führt ein Knopf hin (Captain 03.11.2026: nicht zweimal dieselben Schalter)
     const dar = d().el('button', 'hs-start-leeren hs-start-dar', 'Darstellung und Schrift …'); dar.type = 'button';
     dar.title = 'Klar oder Nacht, Normal oder Groß – unter Einstellungen → Allgemein';

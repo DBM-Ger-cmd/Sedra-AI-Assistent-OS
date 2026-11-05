@@ -136,6 +136,64 @@ class LogoSchriftStartseite(unittest.TestCase):
         self.assertEqual((w['marke']['logo'], w['startseite']['titel']), (PNG, 'Hallo'))
 
 
+class LayoutBaukasten(unittest.TestCase):
+    """Baukasten und Raster (05.11.2026): das Layout ist Teil der Wahl und der Profile; nur bekannte Bausteine, nur Zellen im Raster, Grundfunktionen bleiben sichtbar."""
+
+    LAYOUT = {'start': {'schritte': {'x': 4, 'y': 5, 'b': 6, 'h': 3, 'sichtbar': True}, 'hilfe': {'sichtbar': False}},
+              'zeile': {'reihenfolge': ['vorgabe', 'projekt'], 'ausblenden': ['neues-projekt']},
+              'werkzeuge': {'reihenfolge': ['plus', 'schild', 'modell', 'senden', 'mikro'], 'ausblenden': ['mikro']}}
+
+    def test_layout_wird_gespeichert_und_zurueckgesetzt(self):
+        p = projekt()
+        w = dt.speichern(p, {'layout': self.LAYOUT})
+        self.assertEqual(w['layout']['start']['schritte'], {'x': 4, 'y': 5, 'b': 6, 'h': 3, 'sichtbar': True})
+        self.assertEqual(w['layout']['start']['hilfe'], {'x': 1, 'y': 1, 'b': 12, 'h': 1, 'sichtbar': False}, 'fehlende Angaben werden aufgefuellt')
+        self.assertEqual((w['layout']['zeile']['ausblenden'], w['layout']['werkzeuge']['reihenfolge'][3]), (['neues-projekt'], 'senden'))
+        w = dt.speichern(p, {'layout': None})
+        leer = {'reihenfolge': [], 'ausblenden': []}
+        self.assertEqual(w['layout'], {'start': {}, 'zeile': leer, 'werkzeuge': leer, 'menue': leer, 'blick': leer})
+
+    def test_ungueltiges_layout_wird_abgewiesen(self):
+        for schlecht in ({'start': {'gibtsnicht': {}}}, {'start': {'gruss': {'x': 12, 'b': 2}}}, {'start': {'gruss': {'x': 0}}}, {'start': {'gruss': {'y': 41}}}, {'start': {'gruss': {'h': 21}}},
+                         {'start': {'gruss': {'x': '1'}}}, {'start': {'gruss': {'x': True}}}, {'start': {'gruss': {'sichtbar': 'ja'}}}, {'start': {'gruss': {'z': 1}}}, {'start': []},
+                         {'zeile': {'reihenfolge': ['plus']}}, {'zeile': {'ausblenden': ['../x']}}, {'werkzeuge': {'reihenfolge': ['gibtsnicht']}}, {'fremd': {}}):
+            with self.assertRaises(ValueError, msg=str(schlecht)[:70]):
+                dt.speichern(projekt(), {'layout': schlecht})
+
+    def test_start_menue_abschnitte_und_kacheln(self):
+        p = projekt()
+        w = dt.speichern(p, {'layout': {'menue': {'reihenfolge': ['gruppen', 'blick'], 'ausblenden': ['zuletzt', 'oberflaechen']}, 'blick': {'reihenfolge': ['hardware', 'einstellungen'], 'ausblenden': ['labor']}}})
+        self.assertEqual((w['layout']['menue']['ausblenden'], w['layout']['blick']['reihenfolge']), (['zuletzt', 'oberflaechen'], ['hardware', 'einstellungen']))
+        for schlecht, grund in (({'menue': {'ausblenden': ['gruppen']}}, 'desktop_grundfunktion'), ({'blick': {'ausblenden': ['einstellungen']}}, 'desktop_grundfunktion'),
+                                ({'menue': {'reihenfolge': ['plus']}}, 'desktop_layout_ungueltig'), ({'blick': {'reihenfolge': ['gibtsnicht']}}, 'desktop_layout_ungueltig')):
+            with self.assertRaises(ValueError, msg=str(schlecht)) as ctx:
+                dt.speichern(projekt(), {'layout': schlecht})
+            self.assertTrue(str(ctx.exception).startswith(grund))
+        dt.speichern(projekt(), {'layout': {'menue': {'reihenfolge': ['gruppen']}, 'blick': {'reihenfolge': ['einstellungen']}}})      # verschieben darf man sie
+
+    def test_freigabe_schild_und_senden_lassen_sich_nie_ausblenden(self):
+        for baustein in dt.GRUND_WERKZEUGE:
+            with self.assertRaises(ValueError) as ctx:
+                dt.speichern(projekt(), {'layout': {'werkzeuge': {'ausblenden': [baustein]}}})
+            self.assertTrue(str(ctx.exception).startswith('desktop_grundfunktion'), baustein)
+        w = dt.speichern(projekt(), {'layout': {'werkzeuge': {'reihenfolge': ['senden', 'schild']}}})          # verschieben darf man sie
+        self.assertEqual(w['layout']['werkzeuge']['reihenfolge'], ['senden', 'schild'])
+
+    def test_ein_profil_nimmt_das_layout_mit_auch_beim_importieren(self):
+        a, b = projekt(), projekt()
+        dt.speichern(a, {'layout': self.LAYOUT})
+        dt.aktion(a, {'aktion': 'profil_speichern', 'id': 'kunde', 'name': 'Kunde'})
+        export = json.loads(json.dumps(dt.profil_lesen(a, 'kunde')))
+        dt.aktion(b, {'aktion': 'profil_importieren', 'profil': export})
+        w = dt.aktion(b, {'aktion': 'profil_anwenden', 'id': 'kunde'})
+        self.assertEqual(w['layout'], dt.laden(a)['layout'])
+        boese = json.loads(json.dumps(export))
+        boese['id'] = 'boese'
+        boese['layout']['werkzeuge']['ausblenden'] = ['senden']
+        with self.assertRaises(ValueError):
+            dt.aktion(b, {'aktion': 'profil_importieren', 'profil': boese})
+
+
 class ChatWerkzeug(unittest.TestCase):
     """`desktop_lesen` im Chat (05.11.2026): nur lesen, ohne Karte; der Oberflaechen-Designer kennt es, aendert aber nie selbst."""
 

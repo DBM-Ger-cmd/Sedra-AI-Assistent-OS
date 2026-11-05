@@ -86,6 +86,7 @@
     auf.onclick = ()=>{ fn.schliessen(); if(f.box.hidden) f.oeffnen(); else f.schliessen(); };
     const merken = d().el('button', 'hs-knopf hs-vorgabe-knopf', 'Als Vorgabe merken'); merken.type = 'button'; merken.title = 'Dieses Projekt ist dann der Standard neuer Sitzungen';
     merken.onclick = ()=>setzen(S, {projekt_standard: wahl.value || null}, merken);
+    [[auf, 'ordner'], [neu, 'neues-projekt'], [merken, 'vorgabe']].forEach(([el, id])=>{ if(el.dataset) el.dataset.baustein = id; });          // Baukasten (bausteine.js)
     zeile.append(auf, neu, merken);
     if(zeile.parentNode){ zeile.parentNode.insertBefore(f.box, zeile.nextSibling); zeile.parentNode.insertBefore(fn.box, f.box.nextSibling); }
     return {formular: f, formularNeu: fn, auf, neu, merken, zeigen(){ merken.hidden = !wahl.value || vorgaben(S).projekt_standard === wahl.value; }};

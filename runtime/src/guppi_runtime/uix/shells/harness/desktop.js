@@ -4,7 +4,9 @@
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
-  const LEER = ()=>({start: {ausblenden: [], zuordnung: {}}, zellen: {ausblenden: [], reihenfolge: []}, marke: {name: '', akzent: '', logo: '', schrift: ''}, startseite: {ort: '', titel: '', text: ''}, profil: null, profile: []});
+  const LEER = ()=>({start: {ausblenden: [], zuordnung: {}}, zellen: {ausblenden: [], reihenfolge: []}, marke: {name: '', akzent: '', logo: '', schrift: ''}, startseite: {ort: '', titel: '', text: ''},
+                         layout: {start: {}, zeile: {reihenfolge: [], ausblenden: []}, werkzeuge: {reihenfolge: [], ausblenden: []}, menue: {reihenfolge: [], ausblenden: []}, blick: {reihenfolge: [], ausblenden: []}},
+                         profil: null, profile: []});
   // Schriftfamilien ohne Nachladen aus dem Netz (der Server kennt dieselben Namen); leer = die Schrift der Shell
   const SCHRIFTEN = {serif: 'Georgia,"Times New Roman",serif', mono: 'Consolas,"Courier New",monospace', humanist: '"Trebuchet MS","Gill Sans",Verdana,sans-serif', breit: 'Verdana,Tahoma,"Segoe UI",sans-serif'};
   const SCHRIFT_NAMEN = {serif: 'Serif (Georgia)', mono: 'Technisch (Consolas)', humanist: 'Freundlich (Trebuchet)', breit: 'Breit (Verdana)'};
@@ -67,6 +69,7 @@
   function neuZeichnen(S){
     const H = root.sedraHarness;
     markeAnwenden(S);
+    if(H.bausteine){ H.bausteine.anwenden(S); if(S._start && S._start.el) H.bausteine.menueAnwenden(S, S._start.el); }        // Baukasten: Leisten im Eingabebereich und Abschnitte des Start-Menüs
     if(S.ansichten && S.ansichten.forEach) S.ansichten.forEach(a=>{ if(a && a.zeigeLeer && a.leer && a.leer()) a.zeigeLeer(); });       // leere Sitzungen zeigen Logo und Begrüßung des Profils
     if(H.startmenue && S._start) { try{ H.startmenue.bauen(S); }catch(_e){ /* das Menü baut sich beim nächsten Öffnen neu */ } }
     if(H.taskleiste && S._leiste){ S._leiste.zuletzt = 0; H.taskleiste.status(S); }

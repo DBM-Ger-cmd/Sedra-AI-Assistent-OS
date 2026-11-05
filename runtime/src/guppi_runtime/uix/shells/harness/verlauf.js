@@ -29,10 +29,11 @@
   function startbild(S){
     const box = d().el('div', 'hs-start');
     const D = root.sedraHarness.desktop, gruss = D ? D.begruessung(S) : {logo: '', titel: 'SEDRA', text: '', marke: ''};
-    if(gruss.logo){ const bild = d().el('img', 'hs-start-logo'); bild.src = gruss.logo; bild.alt = gruss.marke || 'Logo'; box.append(bild); }       // Logo des Profils statt des Drachen (nur eine Daten-Adresse, vom Server geprüft)
-    else box.append(drache());
-    box.append(d().el('h1', 'hs-start-titel', gruss.titel));
-    if(gruss.text) box.append(d().el('p', 'hs-start-gruss', gruss.text));
+    const grussEl = d().el('div', 'hs-start-block');                                          // Baustein „gruss“ (bausteine.js): Logo, Titel, Text
+    if(gruss.logo){ const bild = d().el('img', 'hs-start-logo'); bild.src = gruss.logo; bild.alt = gruss.marke || 'Logo'; grussEl.append(bild); }       // Logo des Profils statt des Drachen (nur eine Daten-Adresse, vom Server geprüft)
+    else grussEl.append(drache());
+    grussEl.append(d().el('h1', 'hs-start-titel', gruss.titel));
+    if(gruss.text) grussEl.append(d().el('p', 'hs-start-gruss', gruss.text));
     const schritte = d().el('ol', 'hs-start-schritte');
     const e = S._eingabe || {};
     const modell = !!S.modell, projekt = !!(e.projekt && e.projekt.value), vorlage = e.vorlage && e.vorlage.value;
@@ -46,7 +47,9 @@
     schritte.append(schritt(modell, modell ? 'Modell geladen: ' + modellName : 'Ein Modell laden', ['Modell wählen', ()=>root.sedraHarness.eingabe.modellMenue(S, true)]),
                     schritt(projekt, 'Projekt: ' + ((S.projekte || []).find(p=>p.id === (e.projekt || {}).value) || {}).name + (vorlage ? ' · Vorlage ' + vorlage : ''), null),
                     schritt(false, 'Die erste Nachricht schreiben – unten im Feld', ['Ins Feld', ()=>root.sedraHarness.eingabe.fokus(S)]));
-    box.append(schritte, d().el('p', 'hs-start-text', 'Im Feld: „+“ hängt eine Datei an, „@“ nennt eine Datei, „/“ gibt Befehle. Die Antwort streamt; jeder Werkzeugaufruf steht sichtbar im Verlauf, und was ändert, fragt vorher.'));
+    const hilfeEl = d().el('p', 'hs-start-text', 'Im Feld: „+“ hängt eine Datei an, „@“ nennt eine Datei, „/“ gibt Befehle. Die Antwort streamt; jeder Werkzeugaufruf steht sichtbar im Verlauf, und was ändert, fragt vorher.');
+    const B = root.sedraHarness.bausteine;                                                      // Baukasten: Wahl des Profils auf dem Raster, sonst untereinander wie bisher
+    if(B) B.startAnwenden(S, box, {gruss: grussEl, schritte, hilfe: hilfeEl}); else box.append(grussEl, schritte, hilfeEl);
     return box;
   }
 

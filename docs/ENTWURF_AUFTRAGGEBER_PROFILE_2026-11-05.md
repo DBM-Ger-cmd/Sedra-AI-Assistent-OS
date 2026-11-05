@@ -25,9 +25,13 @@ Ein Profil **schützt nichts**: wer eine App im Menü ausblendet, nimmt sie nich
 
 Die **Wahl**, die gerade gilt, steht in `runtime_data/harness/desktop.json` (dasselbe ohne Name, dazu `profil`: welches Profil gerade gilt). Leer heißt: die Vorgabe der Shell (`start_gruppen.json`, die Zellen der Taskleiste). Die Oberfläche legt die Wahl über die Vorgabe (`desktop.js` → `startmenue.js`, `taskleiste.js`).
 
+### Baukasten und Raster (Layout)
+
+Jedes anpassbare Teil ist ein **Baustein** mit Kennung (`data-baustein`, Tabelle in `bausteine.js`). Das `layout` im Profil legt fest: die Bausteine der **leeren Sitzung** (`gruss`, `schritte`, `hilfe`) auf einem **Raster mit 12 Spalten und 40 Zeilen** (`x`, `y`, `b`, `h`, `sichtbar`), die **Zeile unter dem Eingabefeld** (`projekt`, `vorlage`, `ordner`, `neues-projekt`, `vorgabe`) und die **Leiste im Eingabefeld** (`plus`, `schild`, `modell`, `mikro`, `senden`) nach Reihenfolge und Sichtbarkeit. Im Desktop Builder (Reiter **Layout**) zieht man Bausteine mit der Maus, ändert die Größe an der Ecke, verschiebt mit den Pfeiltasten (Umschalt: Größe) und sortiert die Leisten per Ziehen. Dieselbe Bauart gilt für das **Start-Menü**: die Abschnitte (`zuletzt`, `blick`, `gruppen`, `oberflaechen`, `darstellung`; sie wechseln nur innerhalb ihrer Zone Inhalt oder Fuß) und die Kacheln „Auf einen Blick“ (`aufgaben`, `labor`, `token`, `hardware`, `modelle`, `einstellungen`) nach Reihenfolge und Sichtbarkeit; die App-Gruppen und die Kachel Einstellungen bleiben immer. Der Layout-Reiter zeigt dafür eine **Bühne** je Bereich (leere Sitzung, Start-Menü) mit Rahmen, Hilfslinien und Chips zum Tauschen. Ohne Eintrag bleibt das Aussehen wie bisher. Stufe 3 (freie Platzierung von Eingabefeld, Seitenleiste und Taskleiste) ist nicht gebaut.
+
 ## 3. Grundfunktionen bleiben erreichbar
 
-Nach `ENTWURF_APPS_MODELL` §2.2a lassen sich **Posteingang, Aufgaben und die Zelle Freigaben nie ausblenden**, weder in der Oberfläche noch im Server (`desktop_grundfunktion`), auch nicht durch einen importierten Profil-Text. Der Desktop Builder selbst ist ein fester Eintrag der Gruppe System und lässt sich ebenfalls nicht ausblenden (sonst käme man nicht zurück).
+Nach `ENTWURF_APPS_MODELL` §2.2a lassen sich **Posteingang, Aufgaben, die Zelle Freigaben, das Freigabe-Schild und „Senden“ nie ausblenden**, weder in der Oberfläche noch im Server (`desktop_grundfunktion`), auch nicht durch einen importierten Profil-Text. Der Desktop Builder selbst ist ein fester Eintrag der Gruppe System und lässt sich ebenfalls nicht ausblenden (sonst käme man nicht zurück).
 
 ## 4. So richtest du einen neuen Auftraggeber ein
 

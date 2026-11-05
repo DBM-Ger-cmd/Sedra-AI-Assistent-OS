@@ -8,7 +8,7 @@
   const d = ()=>root.sedraDom;
   const H = ()=>root.sedraHarness;
   const ID = 'builder:';
-  const REITER = [['module', 'Module'], ['start', 'Start-Menü'], ['taskleiste', 'Taskleiste'], ['profile', 'Profile und Marke']];
+  const REITER = [['module', 'Module'], ['start', 'Start-Menü'], ['taskleiste', 'Taskleiste'], ['layout', 'Layout'], ['profile', 'Profile und Marke']];
 
   function oeffnen(S){ H().reiter.aktivieren(S, ID); return ID; }
   const istReiter = id=>String(id).startsWith(ID);
@@ -179,7 +179,7 @@
   }
 
   // ---- die Ansicht (verlauf.js → hier): Kopf, Reiter, Feld
-  const FELDER = {module, start, taskleiste, profile};
+  const FELDER = {module, start, taskleiste, layout: (S, feld)=>H().layouteditor.zeigen(S, feld), profile};
   function zeigen(S, name){
     const st = S._builder; if(!st) return;
     st.name = name; S._builderReiter = name;
@@ -206,5 +206,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.builder = {oeffnen, ansicht, istReiter, ID};
+  root.sedraHarness.builder = {oeffnen, ansicht, istReiter, zeigen, ID};
 })();

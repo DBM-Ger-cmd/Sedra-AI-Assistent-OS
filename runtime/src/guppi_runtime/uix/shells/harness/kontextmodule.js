@@ -27,6 +27,7 @@
     {id: 'app', titel: 'App', selektor: '.hs-app-box', dateien: ['app.js']},
     {id: 'freigaben', titel: 'Freigaben', selektor: '.hs-aufgaben', dateien: ['aufgabe.js', 'erlaubnisse.js', 'katalog_editor.js']},
     {id: 'token', titel: 'Sedra Token', selektor: '.hs-token-feld', dateien: ['tokenseite.js']},
+    {id: 'layout', titel: 'Layout (Baukasten und Raster)', selektor: '.hs-lay-raster, .hs-lay-leiste, .hs-lay-feld', dateien: ['layouteditor.js', 'bausteine.js']},
     {id: 'builder', titel: 'Desktop Builder', selektor: '.hs-builder', dateien: ['builder.js', 'desktop.js']},
     {id: 'info', titel: 'Info', selektor: '.hs-info-modelle, .hs-info-leiste, .hs-info-liste, .hs-info-verlauf', dateien: ['infoseite.js']},
     {id: 'einstellungen', titel: 'Einstellungen', selektor: '[class*="hs-einst-"]', dateien: ['einstellungen.js', 'einstellungen_seiten.js', 'einstellungen.css']}

@@ -42,15 +42,17 @@
     senden.setAttribute('aria-label', 'Senden');
     const projekt = d().el('select', 'hs-projektwahl'); projekt.setAttribute('aria-label', 'Projekt der neuen Sitzung');
     const projektZeile = d().el('label', 'hs-projektzeile');
-    projektZeile.append(d().el('span', 'hs-leise', 'Projekt'), projekt);
+    const baustein = (id, ...kinder)=>{ const g = d().el('span', 'hs-baustein-gruppe'); g.dataset.baustein = id; g.append(...kinder); return g; };      // Baukasten (bausteine.js): Kennung je Teil
+    projektZeile.append(baustein('projekt', d().el('span', 'hs-leise', 'Projekt'), projekt));
     const vorlage = d().el('select', 'hs-projektwahl'); vorlage.setAttribute('aria-label', 'Vorlage der neuen Sitzung');
-    projektZeile.append(d().el('span', 'hs-leise', 'Vorlage'), vorlage);
+    projektZeile.append(baustein('vorlage', d().el('span', 'hs-leise', 'Vorlage'), vorlage));
     const kein = d().el('div', 'hs-kein-modell'); kein.hidden = true;
     const zeile = d().el('div', 'hs-eingabe-zeile');
     const werkzeuge = d().el('div', 'hs-eingabe-leiste');
     const vormerk = d().el('button', 'hs-vormerk-knopf', 'Vormerken'); vormerk.type = 'button'; vormerk.hidden = true;          // nur während einer Antwort, mit Text im Feld
     vormerk.title = 'Die Nachricht geht raus, sobald die Antwort fertig ist (Enter)';
     werkzeuge.append(plus, schild, modell, kontext, d().el('span', 'hs-luecke'), mikro, vormerk, senden);
+    [['plus', plus], ['schild', schild], ['modell', modell], ['mikro', mikro], ['senden', senden]].forEach(([id, el])=>{ el.dataset.baustein = id; });          // Baukasten (bausteine.js)
     zeile.append(feld, werkzeuge);
     const vorlageHinweis = d().el('div', 'hs-vorlage-hinweis'); vorlageHinweis.hidden = true; vorlageHinweis.setAttribute('role', 'note');       // Wofür die gewählte Vorlage da ist (MasterChat u. a.)
     const vorgemerkt = d().el('div', 'hs-vorgemerkt'); vorgemerkt.id = 'hs-vorgemerkt'; vorgemerkt.hidden = true; vorgemerkt.setAttribute('role', 'status');

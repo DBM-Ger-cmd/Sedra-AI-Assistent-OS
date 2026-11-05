@@ -2,8 +2,9 @@
 
 Zwei Ebenen, beide nur Zuschnitt der Oberfläche – eine Wahl, keine Erlaubnis; sie vergibt keine Rechte und ändert keinen Schutz (Rechte und Positivliste eines Betreibers sind die
 Richtlinie, Stufe 4 des Apps-Modells, nicht hier):
-  * die **Wahl** (`desktop.json`): was im Start-Menü und in der Taskleiste erscheint, wohin es gehört, die Marke (Name, Akzentfarbe, Logo, Schrift) und die Startseite (welche App
-    beim Start vorn liegt, Titel und Text der Begrüßung);
+  * die **Wahl** (`desktop.json`): was im Start-Menü und in der Taskleiste erscheint, wohin es gehört, die Marke (Name, Akzentfarbe, Logo, Schrift), die Startseite (welche App
+    beim Start vorn liegt, Titel und Text der Begrüßung) und das **Layout** (Baukasten und Raster: die Bausteine der leeren Sitzung auf einem 12-Spalten-Raster, Reihenfolge und
+    Sichtbarkeit der Bausteine in den beiden Leisten des Eingabebereichs);
   * die **Profile** (`profile/<id>.json`): benannte Wahlen mit Auftraggeber und Beschreibung, speicher-, anwend-, export- und importierbar – ein Profil je Auftraggeber.
 Grundfunktionen bleiben erreichbar (ENTWURF_APPS_MODELL §2.2a): das Gespräch, der Posteingang und die Aufgaben lassen sich weder ausblenden noch wegsortieren. Leer heißt: die Vorgabe
 der Shell. Ablage: `<Projekt>/runtime_data/harness/`; die Oberfläche legt die Wahl über die Vorgabe (startmenue.js, taskleiste.js, desktop.js)."""
@@ -22,12 +23,24 @@ PROFIL_ID = re.compile(r'^[a-z0-9][a-z0-9-]{1,39}$')
 FARBE = re.compile(r'^#[0-9a-fA-F]{6}$')
 MAX_LISTE = 80
 MAX_PROFILE = 40
-TEILE = ('start', 'zellen', 'marke', 'startseite')
+TEILE = ('start', 'zellen', 'marke', 'startseite', 'layout')
+# Baukasten: die Bausteine, die sich anpassen lassen (die Namen stehen in bausteine.js); Grundfunktionen lassen sich verschieben, aber nie ausblenden
+START_BLOECKE = ('gruss', 'schritte', 'hilfe')                                 # die leere Sitzung: Begrüßung, die drei Schritte, der Hilfetext
+ZEILE_BAUSTEINE = ('projekt', 'vorlage', 'ordner', 'neues-projekt', 'vorgabe')    # die Zeile unter dem Eingabefeld
+WERKZEUG_BAUSTEINE = ('plus', 'schild', 'modell', 'mikro', 'senden')              # die Leiste im Eingabefeld
+GRUND_WERKZEUGE = ('schild', 'senden')                                            # wer freigibt und das Senden bleiben immer sichtbar
+MENUE_BAUSTEINE = ('zuletzt', 'blick', 'gruppen', 'oberflaechen', 'darstellung')    # die Abschnitte des Start-Menüs: zuletzt benutzt, Auf einen Blick, die Gruppen der Apps, Oberflächen, Darstellung
+GRUND_MENUE = ('gruppen',)                                                        # die App-Gruppen sind das Start-Menü: verschiebbar, nie ausblendbar
+BLICK_BAUSTEINE = ('aufgaben', 'labor', 'token', 'hardware', 'modelle', 'einstellungen')   # die Kacheln „Auf einen Blick“
+GRUND_BLICK = ('einstellungen',)                                                  # der Weg in die Einstellungen bleibt
+RASTER_SPALTEN, RASTER_ZEILEN, RASTER_HOEHE = 12, 40, 20
 SCHRIFTEN = ('serif', 'mono', 'humanist', 'breit')      # Schriftfamilien ohne Nachladen aus dem Netz; leer = die Schrift der Shell (die Stapel stehen in desktop.js)
 LOGO = re.compile(r'^data:image/(?:png|jpeg|webp|svg\+xml);base64,[A-Za-z0-9+/]+={0,2}$')
 LOGO_MAX = 200_000                                      # Zeichen der Daten-Adresse, rund 150 KB Bild: ein Logo gehört in das Profil, nicht in eine Bilddatei daneben
 LEER = {'start': {'ausblenden': [], 'zuordnung': {}}, 'zellen': {'ausblenden': [], 'reihenfolge': []}, 'marke': {'name': '', 'akzent': '', 'logo': '', 'schrift': ''},
-        'startseite': {'ort': '', 'titel': '', 'text': ''}}
+        'startseite': {'ort': '', 'titel': '', 'text': ''},
+        'layout': {'start': {}, 'zeile': {'reihenfolge': [], 'ausblenden': []}, 'werkzeuge': {'reihenfolge': [], 'ausblenden': []},
+                   'menue': {'reihenfolge': [], 'ausblenden': []}, 'blick': {'reihenfolge': [], 'ausblenden': []}}}
 
 
 def _datei(projekt_root):
@@ -59,12 +72,51 @@ def _ids(wert, name):
     return out
 
 
+def _raster(wert):
+    """Die Bausteine der leeren Sitzung auf dem Raster: {id: {x, y, b, h, sichtbar}}; nur bekannte Bausteine, nur Zellen innerhalb von 12 Spalten und 40 Zeilen."""
+    if wert is None:
+        return {}
+    if not isinstance(wert, dict):
+        raise ValueError('desktop_layout_ungueltig')
+    out = {}
+    for k, b in wert.items():
+        if k not in START_BLOECKE or not isinstance(b, dict) or set(b) - {'x', 'y', 'b', 'h', 'sichtbar'}:
+            raise ValueError('desktop_layout_ungueltig: unbekannter Baustein %s' % str(k)[:30])
+        zahlen = [b.get(n, v) for n, v in (('x', 1), ('y', 1), ('b', RASTER_SPALTEN), ('h', 1))]
+        if any(type(z) is not int for z in zahlen):
+            raise ValueError('desktop_layout_ungueltig: x, y, b und h sind ganze Zahlen')
+        x, y, br, h = zahlen
+        if not (1 <= x <= RASTER_SPALTEN and 1 <= br <= RASTER_SPALTEN and x + br - 1 <= RASTER_SPALTEN and 1 <= y <= RASTER_ZEILEN and 1 <= h <= RASTER_HOEHE):
+            raise ValueError('desktop_layout_ungueltig: ausserhalb des Rasters (12 Spalten, 40 Zeilen)')
+        sichtbar = b.get('sichtbar', True)
+        if type(sichtbar) is not bool:
+            raise ValueError('desktop_layout_ungueltig: sichtbar ist wahr oder falsch')
+        out[k] = {'x': x, 'y': y, 'b': br, 'h': h, 'sichtbar': sichtbar}
+    return out
+
+
+def _reihe(wert, erlaubt, grund, name):
+    """Eine Leiste: Reihenfolge und ausgeblendete Bausteine; nur bekannte, Grundfunktionen nie ausgeblendet."""
+    wert = {} if wert is None else wert
+    if not isinstance(wert, dict) or set(wert) - {'reihenfolge', 'ausblenden'}:
+        raise ValueError('desktop_layout_ungueltig')
+    reihe, aus = _ids(wert.get('reihenfolge'), 'reihenfolge'), _ids(wert.get('ausblenden'), 'ausblenden')
+    if any(i not in erlaubt for i in reihe + aus):
+        raise ValueError('desktop_layout_ungueltig: unbekannter Baustein in %s (erlaubt: %s)' % (name, ', '.join(erlaubt)))
+    if set(aus) & set(grund):
+        raise ValueError('desktop_grundfunktion: %s bleiben immer sichtbar' % ', '.join(grund))
+    return {'reihenfolge': reihe, 'ausblenden': aus}
+
+
 def pruefen(roh):
     """Die Wahl prüfen und normieren; fehlende Teile sind leer. Wirft ValueError mit einem Kennwort, wenn etwas nicht stimmt (auch bei dem Versuch, eine Grundfunktion auszublenden)."""
     roh = {} if roh is None else roh
     if not isinstance(roh, dict) or set(roh) - set(TEILE):
         raise ValueError('desktop_unbekannter_schluessel')
     start, zellen, marke, seite = roh.get('start') or {}, roh.get('zellen') or {}, roh.get('marke') or {}, roh.get('startseite') or {}
+    layout = roh.get('layout') or {}
+    if not isinstance(layout, dict) or set(layout) - {'start', 'zeile', 'werkzeuge', 'menue', 'blick'}:
+        raise ValueError('desktop_unbekannter_schluessel')
     if (not isinstance(start, dict) or set(start) - {'ausblenden', 'zuordnung'} or not isinstance(zellen, dict) or set(zellen) - {'ausblenden', 'reihenfolge'}
             or not isinstance(marke, dict) or set(marke) - {'name', 'akzent', 'logo', 'schrift'} or not isinstance(seite, dict) or set(seite) - {'ort', 'titel', 'text'}):
         raise ValueError('desktop_unbekannter_schluessel')
@@ -91,7 +143,10 @@ def pruefen(roh):
     return {'start': {'ausblenden': aus_start, 'zuordnung': dict(zuordnung)},
             'zellen': {'ausblenden': aus_zellen, 'reihenfolge': _ids(zellen.get('reihenfolge'), 'reihenfolge')},
             'marke': {'name': name.strip(), 'akzent': akzent, 'logo': logo, 'schrift': schrift},
-            'startseite': {'ort': ort, 'titel': titel.strip(), 'text': text.strip()}}
+            'startseite': {'ort': ort, 'titel': titel.strip(), 'text': text.strip()},
+            'layout': {'start': _raster(layout.get('start')), 'zeile': _reihe(layout.get('zeile'), ZEILE_BAUSTEINE, (), 'zeile'),
+                       'werkzeuge': _reihe(layout.get('werkzeuge'), WERKZEUG_BAUSTEINE, GRUND_WERKZEUGE, 'werkzeuge'),
+                       'menue': _reihe(layout.get('menue'), MENUE_BAUSTEINE, GRUND_MENUE, 'menue'), 'blick': _reihe(layout.get('blick'), BLICK_BAUSTEINE, GRUND_BLICK, 'blick')}}
 
 
 def _leer():
