@@ -208,7 +208,8 @@ class RoutenImManifest(unittest.TestCase):
     ROUTE = re.compile(r"""['"`](/api/[a-z0-9_/\-]+)['"`]""")
     PRAEFIX = re.compile(r"""['"`](/api/[a-z0-9_/\-]*)['"`]\s*\+""")
     HELFER = {'sedraStand.entscheiden': ['POST /api/decisions/answer'],
-              'sedraVorgabe.block': ['GET /api/uix/vorgaben', 'POST /api/uix/vorgabe', 'POST /api/uix/scaffold']}
+              'sedraVorgabe.block': ['GET /api/uix/vorgaben', 'POST /api/uix/vorgabe', 'POST /api/uix/scaffold'],
+              'sedraWorkflowEditor.create': ['POST /api/actions', 'POST /api/objects']}   # n8n Workflows und Szenario Studio: der gemeinsame Editor ruft Objekte und Aktionen
     AUSNAHMEN = {'tools/rahmen-probe': {'/api/update/zurueck'},                         # ruft absichtlich eine verbotene Route als Probe
                  'tools/gateway': {'GET /api/decisions', 'GET /api/guard/status', 'POST /api/guard/probe'}}   # das eingebettete Werkzeug `schutz` läuft mit der Kennung von gateway (Befund T1, Entscheidung E4)
 
