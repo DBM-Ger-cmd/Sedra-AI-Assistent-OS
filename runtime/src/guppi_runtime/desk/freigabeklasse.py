@@ -261,6 +261,7 @@ ROUTEN_HARNESS = {
     'POST katalog/entfernen': ('antrag', None, 'request:harness_katalog'),
     'POST vorlagen/grenzen': ('antrag', None, 'request:harness_vorlage'),
     'POST vorlagen/neu': ('antrag', None, 'request:harness_vorlage'),
+    'POST info/wissen': ('antrag', None, 'request:wissen_quelle (Betriebslog als Quelle der Wissensdatenbank)'),
     'POST code_stand/antrag': ('antrag', None, 'request:harness_code_stand'),
     'POST einstufen': ('liest', None, 'Vorschau der Einstufung'),
     'POST vorarbeiter': ('freigabe', H, 'Vorarbeiter ernennen (F5)'),
@@ -287,7 +288,7 @@ ROUTEN_HARNESS = {
 HARNESS_WEGE = frozenset({'projekte', 'sitzungen', 'antworten', 'karten', 'katalog', 'einstufen', 'werkzeuge', 'vorlagen', 'vorarbeiter',
                           'vorschau', 'dateien', 'vorgaben', 'modelle', 'router', 'verknuepfungen', 'gedaechtnis', 'token', 'aufraeumen',
                           'code_stand', 'aufgaben', 'laeufe', 'hilfswerkzeuge', 'bausteine', 'info'})
-HARNESS_UNTERWEGE = frozenset({'nachricht', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen'})
+HARNESS_UNTERWEGE = frozenset({'nachricht', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen', 'wissen'})
 # In GESCHUETZT (S7), aber heute nur mit GET geroutet – keine schreibende Route (harness/api.py, Weg `token`)
 HARNESS_GESCHUETZT_OHNE_SCHREIBEN = {'token': 'nur GET token_stand'}
 

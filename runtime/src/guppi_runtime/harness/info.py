@@ -62,6 +62,8 @@ def _grund(code):
 def klartext(e):
     """Ein Satz für ein Ereignis; bei unbekannten Arten der Typ mit dem kurzen Inhalt."""
     t, p = e.get('event_type') or '', e.get('payload') or {}
+    if t == 'BOOT_STARTED':
+        return 'Sedra gestartet'
     if t == 'SLOT_SERVER_STARTED':
         return 'Modellserver gestartet: %s, %s Slots, je %s Token Fenster, %s GB Grafikspeicher' % (p.get('recipe'), p.get('slots'), p.get('context_per_slot'), _gb(p.get('vram_gb')))
     if t == 'SLOT_SERVER_STOPPED':

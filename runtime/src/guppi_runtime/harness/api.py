@@ -67,6 +67,7 @@ from . import herkunft as harness_herkunft
 from . import bausteine as harness_bausteine
 from . import hilfswerkzeuge
 from . import info as harness_info
+from . import betriebslog as harness_betriebslog
 from . import lauf as harness_lauf
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
@@ -89,10 +90,10 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|hilfswerkzeuge|bausteine|info)(?:/(antrag|entfernen|grenzen|neu|notizen|export))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|hilfswerkzeuge|bausteine|info)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
-                        r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)'
+                        r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)|info/wissen'
                         r'|verknuepfungen|gedaechtnis|token|aufraeumen|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
 # Gedanken und Modelle (Captain 02.11.2026): Sedra speichert die Gedanken je Antwort; ans Modell geht je nach Modus nur wenig zurück.
 #   aus  – nichts, nur Text und Ergebnisse        spur – (Standard) eine Zeile je frühere Antwort: was lief, wie viel Gedanken gespeichert sind; abrufbar mit `erinnern`
@@ -245,6 +246,7 @@ class HarnessApi:
         projekte, sitzungen, sid, nachricht, aid, aktion, kid, kak, fest, unter, aufgaben, tid, tak, laeufe, lid, lak = m.groups()
         payload = payload or {}
         q = parse_qs(query or '')
+        self._betriebslog_nachfuehren()
         if kid:
             if method == 'GET' and not kak:
                 return 200, self.karte(kid)
@@ -300,9 +302,10 @@ class HarnessApi:
         if fest == 'bausteine' and not unter and method == 'GET':        # Bausteine der Aufgaben-Freigabe (Analyse Freigaben S1): nur lesen
             try: return 200, harness_bausteine.laden(self.hub.project_root)
             except ValueError as exc: return 200, {'bausteine': [], 'hinweise': [str(exc)]}
-        if fest == 'info' and not unter and method == 'GET':        # Info-Hub (05.11.): was Sedra laut Audit-Log getan hat, in Klartext; nur lesen
-            try: return 200, harness_info.stand(self.hub.runtime.audit.path, (q.get('limit') or ['60'])[0], (q.get('such') or [''])[0], (q.get('art') or ['alle'])[0])
-            except ValueError as exc: return 200, {'modelle': {'laeuft': [], 'abgelehnt': []}, 'ereignisse': [], 'fehler': str(exc)}
+        if fest == 'info' and not unter and method == 'GET':        # Info-Hub (05.11.): was Sedra laut Audit-Log getan hat, in Klartext; schreibt nur das Betriebslog (Tagesdateien)
+            return 200, self.info_sicht(q)
+        if fest == 'info' and unter == 'wissen' and method == 'POST':        # Antrag, den Ordner des Betriebslogs als Quelle der Wissensdatenbank aufzunehmen (Freigabe im Posteingang)
+            return 200, self.info_wissen_beantragen()
         if fest == 'hilfswerkzeuge' and not unter and method == 'GET':        # P1 des Plans CPU-Hilfswerkzeuge: nur lesen, was da ist
             try: return 200, hilfswerkzeuge.stand()
             except ValueError as exc: return 200, {'werkzeuge': [], 'da': 0, 'gesamt': 0, 'fehler': str(exc)}
@@ -964,6 +967,52 @@ class HarnessApi:
         if cs is None:
             raise ValueError('code_sicht_aus: die Code-Sicht ist abgeschaltet, es gibt nichts zu übernehmen')
         return harness_antraege.code_stand_antrag(self.hub, projekt, cs)
+
+    def _betriebslog_nachfuehren(self, sofort=False):
+        """Das Betriebslog fortschreiben: bei jeder Anfrage an die Harness, aber höchstens alle 5 Minuten (oder sofort, wenn die Info-Seite es verlangt). Fehler stören nie die Anfrage."""
+        jetzt = time.monotonic()
+        if not sofort and jetzt - getattr(self, '_betriebslog_zeit', -1e9) < 300:
+            return None
+        self._betriebslog_zeit = jetzt
+        try:
+            return harness_betriebslog.sichern(self.hub.runtime.audit.path, self.hub.project_root)
+        except Exception:
+            return None
+
+    def _wissen_quelle(self):
+        """Steht der Ordner des Betriebslogs schon als Quelle in der Wissensdatenbank? 'aufgenommen', 'nicht' oder 'aus' (Wissensspeicher abgeschaltet)."""
+        sp = getattr(getattr(self.hub, 'runtime', None), 'wissen', None)
+        if sp is None:
+            return 'aus'
+        try:
+            return 'aufgenommen' if any(q.get('wurzel') == 'projekt' and q.get('pfad') == harness_betriebslog.QUELLE_PFAD and q.get('aktiv') for q in sp.quellen()) else 'nicht'
+        except Exception:
+            return 'aus'
+
+    def info_sicht(self, q):
+        self._betriebslog_nachfuehren(sofort=True)
+        try:
+            out = harness_info.stand(self.hub.runtime.audit.path, (q.get('limit') or ['60'])[0], (q.get('such') or [''])[0], (q.get('art') or ['alle'])[0])
+        except ValueError as exc:
+            out = {'modelle': {'laeuft': [], 'abgelehnt': []}, 'ereignisse': [], 'fehler': str(exc)}
+        out['verlauf'] = {'tage': harness_betriebslog.tage(self.hub.project_root), 'wissen': self._wissen_quelle(), 'ordner': harness_betriebslog.QUELLE_PFAD}
+        tag = (q.get('tag') or [''])[0]
+        if tag:
+            out['tag'] = {'tag': tag, 'text': harness_betriebslog.tag_lesen(self.hub.project_root, tag)}
+        return out
+
+    def info_wissen_beantragen(self):
+        from ..wissen import desk_wissen
+        stand = self._wissen_quelle()
+        if stand == 'aus':
+            raise ValueError('Die Wissensdatenbank ist abgeschaltet (Schalter wissen in den Einstellungen unter System).')
+        if stand == 'aufgenommen':
+            return {'status': 'schon_aufgenommen'}
+        self._betriebslog_nachfuehren(sofort=True)
+        antwort = desk_wissen._quelle_beantragen(self.hub, None, {'adapter': 'markdown', 'wurzel': 'projekt', 'pfad': harness_betriebslog.QUELLE_PFAD, 'muster': '*.md', 'stufe': 1})
+        if antwort.get('status') == 'fehler':
+            raise ValueError(antwort.get('satz') or antwort.get('code') or 'wissen_antrag_fehlgeschlagen')
+        return antwort
 
     def code_stand_sicht(self, q):
         """GET code_stand?projekt= (G4-17): {projekt, aktiv, ungesehen, pfade} – nur lesen. Übernehmen: Antrag im Posteingang (POST code_stand/antrag) oder die Konsole."""

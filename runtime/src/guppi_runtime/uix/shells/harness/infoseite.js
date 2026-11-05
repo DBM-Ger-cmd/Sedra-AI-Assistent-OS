@@ -1,5 +1,5 @@
 // Harness-Shell – die Seite „Info“ (Einstellungen → System): der Info-Hub. Sagt in Klartext, welche Modelle laufen (Fenster, Slots, Grafikspeicher), was zuletzt abgelehnt wurde
-// und warum, und zeigt die letzten Ereignisse des Audit-Logs, filterbar nach Art und Suchwort (GET /api/harness/info). Nur Anzeige: nichts wird geschrieben oder freigegeben.
+// und warum, und zeigt die letzten Ereignisse des Audit-Logs, filterbar nach Art und Suchwort (GET /api/harness/info). Zusätzlich das Betriebslog: Tagesdateien, die als Quelle in die Wissensdatenbank können (Antrag, Freigabe im Posteingang).
 // Daten werden nie zu HTML.
 
 (function(){
@@ -32,8 +32,36 @@
     box.replaceChildren(...zeilen);
   }
 
+  // Verlauf: Sedra schreibt die wichtigen Ereignisse tageweise in das Betriebslog (Ordner im Projekt); dieser Ordner kann als Quelle in die Wissensdatenbank (Freigabe im Posteingang)
+  function verlaufZeigen(S, box, v){
+    const zeilen = [d().el('h3', 'hs-ueber', 'Verlauf (gespeichert)')];
+    const tage = (v && v.tage) || [];
+    const wiss = d().el('div', 'hs-info-zeile');
+    if(v.wissen === 'aufgenommen') wiss.append(d().el('span', null, 'Der Verlauf läuft in die Wissensdatenbank ein.'));
+    else if(v.wissen === 'aus') wiss.append(d().el('span', 'hs-leise', 'Die Wissensdatenbank ist abgeschaltet – der Verlauf wird trotzdem gespeichert.'));
+    else{
+      const knopf = d().el('button', 'hs-knopf', 'In die Wissensdatenbank aufnehmen'); knopf.type = 'button';
+      const meld = d().el('small', 'hs-leise');
+      knopf.onclick = async()=>{
+        try{ const a = await S.api('/api/harness/info/wissen', {method: 'POST', body: {}}); knopf.disabled = true; meld.textContent = a && a.status === 'schon_aufgenommen' ? 'Schon aufgenommen.' : 'Antrag gestellt – im Posteingang freigeben.'; }
+        catch(err){ meld.textContent = 'Nicht möglich: ' + err.message; }
+      };
+      wiss.append(knopf, meld, d().el('small', 'hs-leise', 'Ordner: ' + v.ordner));
+    }
+    zeilen.push(wiss);
+    const text = d().el('pre', 'hs-info-tag'); text.hidden = true;
+    if(!tage.length) zeilen.push(d().el('small', 'hs-leise', 'Noch kein Tag gespeichert.'));
+    tage.forEach(t=>{
+      const k = d().el('button', 'hs-knopf hs-klein', t.tag + ' (' + t.zeilen + ')'); k.type = 'button';
+      k.onclick = ()=>S.api('/api/harness/info?limit=1&tag=' + encodeURIComponent(t.tag)).then(r=>{ text.textContent = r.tag ? r.tag.text : ''; text.hidden = false; }).catch(err=>{ text.textContent = 'Nicht lesbar: ' + err.message; text.hidden = false; });
+      zeilen.push(k);
+    });
+    zeilen.push(text);
+    box.replaceChildren(...zeilen);
+  }
+
   function zeigen(S, box){
-    box.append(d().el('div', 'hs-app-satz', 'Hier steht in Klartext, was Sedra laut seinem Audit-Log getan hat: welche Modelle laufen, was abgelehnt wurde und warum. Nur Anzeige.'));
+    box.append(d().el('div', 'hs-app-satz', 'Hier steht in Klartext, was Sedra laut seinem Audit-Log getan hat: welche Modelle laufen, was abgelehnt wurde und warum. Die wichtigen Ereignisse bleiben tageweise gespeichert (Verlauf unten) und können in die Wissensdatenbank einlaufen.'));
     const modelleBox = d().el('div', 'hs-info-modelle'); box.append(modelleBox);
     const leiste = d().el('div', 'hs-info-leiste');
     const art = d().el('select', 'hs-projektwahl'); art.setAttribute('aria-label', 'Art der Ereignisse');
@@ -43,11 +71,13 @@
     leiste.append(art, such, neu); box.append(leiste);
     const kopf = d().el('div', 'hs-hw-kopf', 'liest …'); box.append(kopf);
     const liste = d().el('div', 'hs-info-liste'); box.append(liste);
+    const verlaufBox = d().el('div', 'hs-info-verlauf'); box.append(verlaufBox);
     const laden = ()=>{
       const q = '?art=' + encodeURIComponent(art.value) + '&such=' + encodeURIComponent(such.value) + '&limit=80';
       S.api('/api/harness/info' + q).then(v=>{
         if(v.fehler){ kopf.textContent = 'Das Log ließ sich nicht lesen: ' + v.fehler; return; }
         modelleZeigen(modelleBox, v.modelle);
+        if(v.verlauf) verlaufZeigen(S, verlaufBox, v.verlauf);
         const e = v.ereignisse || [];
         kopf.textContent = e.length ? 'Die letzten ' + e.length + ' Ereignisse (neueste unten)' : 'Kein Ereignis passt zu dieser Auswahl.';
         liste.replaceChildren(...e.map(x=>{
