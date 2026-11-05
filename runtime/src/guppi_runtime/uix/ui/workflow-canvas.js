@@ -84,7 +84,14 @@
           g.append(element('rect', {x: bx - 9, y: by - 13, width: 20, height: 18, rx: 4, class: 't-wf-badge-rect'}), element('text', {x: bx + 1, y: by + 1, 'text-anchor': 'middle', class: 't-wf-badge-text'}, String(order + 1)));
           g.append(element('text', {x: cx, y: 142 + lines.length * 18 + 4, 'text-anchor': 'middle', class: 't-wf-node-type'}, subtitle));
         }else{
-          g.append(element('rect', {width: 72, height: 72, rx: meta && ['start', 'end'].includes(meta.kind) ? 36 : 14, class: 't-wf-tile'}));
+          // Symbolsatz des Workflow-Diagramms: Oval = Start/Ende, Rechteck = Schritt, Raute = Entscheidung, Parallelogramm = Ein-/Ausgabe, Zylinder = Datenspeicher.
+          const shape = meta ? meta.kind : '';
+          if(shape === 'start' || shape === 'end') g.append(element('rect', {x: 0, y: 10, width: 72, height: 52, rx: 26, class: 't-wf-tile'}));
+          else if(shape === 'decision') g.append(element('polygon', {points: '36,0 72,36 36,72 0,36', class: 't-wf-tile'}));
+          else if(shape === 'data') g.append(element('polygon', {points: '16,10 72,10 56,62 0,62', class: 't-wf-tile'}));
+          else if(shape === 'store') g.append(element('path', {d: 'M 6 18 C 6 6, 66 6, 66 18 L 66 54 C 66 66, 6 66, 6 54 Z M 6 18 C 6 30, 66 30, 66 18', class: 't-wf-tile'}));
+          else g.append(element('rect', {width: 72, height: 72, rx: 14, class: 't-wf-tile'}));
+          if(meta && meta.mode === 'automatable') g.append(element('circle', {cx: 66, cy: 6, r: 9, class: 't-wf-candidate'}), element('text', {x: 66, y: 10, 'text-anchor': 'middle', class: 't-wf-candidate-text'}, 'A'));
           if(I) I.append(g, kindKey, cx, cy, 34);
           if(!['manualTrigger', 'start'].includes(kindKey) && !node.type.endsWith('.stickyNote')) g.append(element('circle', {cx: 0, cy: 36, r: 4, class: 't-wf-in'}));
           const lines = wrap(node.name, 20, 2);

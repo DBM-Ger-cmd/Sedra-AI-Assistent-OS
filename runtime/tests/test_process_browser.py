@@ -112,6 +112,26 @@ class ProcessBrowser(unittest.TestCase):
             page.wait_for_function("()=>document.querySelectorAll('.t-scenario .t-wf-node').length===4")
         self.session(run)
 
+    def test_course_symbols_and_pattern_c(self):
+        def run(page, url):
+            from guppi_runtime.workflows.process import PREFIX
+            app = self.open(page, 'workflow')
+            # Muster C aus der Vorlagengalerie: Prozessmodell mit Kandidaten-Markierung, speicherbar, nicht ausführbar
+            app.get_by_role('tab', name='Übersicht').click()
+            app.get_by_role('article', name='Vorlage Muster C: Auslöser, KI-Schritt, Aktion (Prozessmodell)').get_by_role('button', name='Vorlage verwenden').click()
+            page.wait_for_function("()=>document.querySelectorAll('.t-n8n-workflow .t-wf-node').length===4")
+            self.assertEqual(app.locator('.t-wf-candidate').count(), 1)
+            self.save(app, 1, 'Muster C angelegt')
+            # Symbolsatz: Raute, Parallelogramm, Zylinder, Oval
+            doc = process_sample()
+            kinds = ['data', 'store']
+            for node, kind in zip(doc['nodes'], kinds):
+                meta = json.loads(node['notes'][len(PREFIX):]); meta['kind'] = kind; node['notes'] = PREFIX + json.dumps(meta)
+            app.locator('.t-wf-menu > summary').click(); app.get_by_role('button', name='Importieren', exact=True).click()
+            self.import_doc(app, doc)
+            page.wait_for_function("()=>document.querySelectorAll('.t-n8n-workflow polygon.t-wf-tile').length===1 && document.querySelectorAll('.t-n8n-workflow path.t-wf-tile').length===1")
+        self.session(run)
+
     def test_external_process_in_both_apps_and_roundtrip(self):
         path = os.environ.get('SEDRA_PROCESS_FIXTURE')
         doc = json.loads(Path(path).read_text(encoding='utf-8')) if path else process_sample()

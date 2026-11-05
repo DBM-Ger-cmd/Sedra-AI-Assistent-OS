@@ -48,9 +48,12 @@ test('Dialog bleibt im Host und weicht aus, wenn rechts kein Platz ist', () => {
 
 test('Vorlagen: jede baut einen gueltigen Ablauf ohne Rechte', () => {
   require(path.join(ui, 'workflow-model.js'));
+  require(path.join(ui, 'workflow-process.js'));
   require(path.join(ui, 'workflow-templates.js'));
   const T = globalThis.sedraWorkflowTemplates;
-  assert.ok(T.list().length >= 3);
+  assert.ok(T.list().length >= 4);
+  const c = T.build('muster-c');
+  assert.ok(c.nodes.every(n => n.disabled === true && n.notes.startsWith('SEDRA_PROCESS_V1')), 'Prozessmodell ist deaktiviert');
   for (const t of T.list()) {
     const doc = T.build(t.id);
     const names = new Set(doc.nodes.map(n => n.name));

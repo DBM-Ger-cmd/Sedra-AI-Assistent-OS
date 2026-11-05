@@ -33,7 +33,7 @@
     if(!old){container.append(button('Prozessbeschreibung hinzufügen', ()=>apply(P().blank(node))));return;}
     const form = el('div', 't-wf-process-fields');form.append(el('h3', '', 'Prozessbeschreibung'));
     const fields = {};
-    const enums = {kind: ['Schrittart', ['start', 'task', 'decision', 'end', 'annotation']],
+    const enums = {kind: ['Schrittart', ['start', 'task', 'decision', 'end', 'annotation', 'data', 'store']],
       mode: ['Arbeitsweise', ['manual', 'assisted', 'automatable']], source: ['Herkunft', ['board', 'proposal']],
       role_status: ['Rollenstatus', ['proposal', 'confirmed']]};
     Object.entries(enums).forEach(([key, [label, choices]])=>{

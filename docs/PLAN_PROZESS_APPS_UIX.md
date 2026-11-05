@@ -133,6 +133,15 @@ Bei abweichender Absicht vor Baubeginn klären.)
 - **Grenze.** Angelegte Prozesse sind Darstellung und Planung. Sie erweitern keine Rechte von SEDRA
   und führen nichts aus.
 
+## Kursbezug (KIAUPRO Tag 02, Eingang 05.11.2026)
+Das Kursmaterial (Workflows skizzieren, n8n-Einführung) liefert Anforderungen an die Darstellung. Kursdaten selbst gehören nicht ins Update-Paket.
+- **Symbolsatz des Workflow-Diagramms = n8n-Knoten:** Oval = Start/Ende (Trigger), Rechteck = Schritt/Aktion, Raute = Entscheidung (IF/Switch),
+  Parallelogramm = Ein-/Ausgabe von Daten, Zylinder = Datenspeicher, Verbinder = Pfeile. Umsetzung: Schrittarten `data` und `store` neu, Formen im Canvas.
+- **Manuell gegen systemfähig markieren, zwei Automatisierungskandidaten benennen:** Kandidaten-Markierung "A" am Knoten (Arbeitsweise automatisierbar), Begründung im Feld Automatisierungsbegründung.
+- **Muster A (Auslöser, Aktion), B (Auslöser, Bedingung, Aktion), C (Auslöser, KI-Schritt, Aktion):** als Vorlagen. C ist ein Prozessmodell, weil der Adapter keine KI-Knoten ausführt.
+- **Schrittnamen Verb + Substantiv** ("Anfrage erfassen"): Hinweis in der Prozessbeschreibung und in den Selbstabbildern.
+- Szenario Studio bleibt der Make-Ersatz ("gleiche Konzepte, andere Oberfläche"); die Modellierung bleibt werkzeugneutral.
+
 ## Reihenfolge und Abnahmen
 1 -> 2 -> 3 -> 5 -> 6 (Phase 4 läuft jeweils mit), nach jeder Phase Screenshots zur Abnahme durch den Captain. Phase 1 zuerst, damit
 beide Apps dieselben Bausteine nutzen und nicht doppelt angepasst werden.

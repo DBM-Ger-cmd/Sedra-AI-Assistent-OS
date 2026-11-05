@@ -1,0 +1,110 @@
+# Selbstabbild: SEDRA beschreibt seine eigenen Abläufe als Prozessmodelle (Plan docs/PLAN_PROZESS_APPS_UIX.md, Phase 5).
+# Reine Darstellung, nie ausführbar. Jeder Schritt nennt seine Quelle (datei + suche): `suche` muss wörtlich in der Datei stehen,
+# sonst meldet der Abweichungstest (workflows/selbstabbild.py: pruefen) den Schritt als veraltet. Pfade sind relativ zum Projektwurzelordner.
+# Schrittarten: start, task, decision, end. Arbeitsweise: manual (Mensch), assisted, automatable.
+# `weiter`: Liste der Folgeschritte. Bei einer Entscheidung ist der erste Eintrag der Ja-Weg, der zweite der Nein-Weg.
+schema: 1
+ablaeufe:
+  - id: auftrag-antwort
+    name: Auftrag zur Antwort
+    zweck: Wie ein Auftrag des Captains in der Harness zu einer Antwort wird.
+    schritte:
+      - {id: eingabe, name: Auftrag eingeben, art: start, arbeitsweise: manual, rolle: Captain, lieferant: Captain, eingabe: Auftrag im Chat, ergebnis: Nachricht an die Sitzung, empfaenger: Harness, nachweis: Chat-Eintrag, abschluss: Nachricht angenommen,
+         quelle: {datei: runtime/src/guppi_runtime/harness/schleife.py, suche: 'def laufen('}, weiter: [prompt]}
+      - {id: prompt, name: Systemprompt zusammenstellen, art: task, arbeitsweise: automatable, rolle: Harness, lieferant: Vorlage und Projekt, eingabe: Vorlage, Werkzeugliste, gelernte Regeln, ergebnis: Systemprompt, empfaenger: Modell, nachweis: Sitzungsverlauf, abschluss: Prompt gebaut,
+         quelle: {datei: runtime/src/guppi_runtime/harness/schleife.py, suche: 'def system_prompt('}, weiter: [zug]}
+      - {id: zug, name: Modell antwortet im Zug, art: task, arbeitsweise: automatable, rolle: Modell, lieferant: Harness, eingabe: Nachrichten, ergebnis: Text oder Werkzeugaufruf, empfaenger: Werkzeugschleife, nachweis: Antwort im Strom, abschluss: Zug beendet,
+         quelle: {datei: runtime/src/guppi_runtime/harness/schleife.py, suche: 'def laufen('}, weiter: [werkzeug]}
+      - {id: werkzeug, name: Werkzeug verlangt?, art: decision, arbeitsweise: automatable, rolle: Harness, lieferant: Modell, eingabe: Antwort des Zuges, ergebnis: Werkzeugaufruf oder Endantwort, empfaenger: Freigabeprüfung oder Captain, nachweis: Werkzeugaufruf im Verlauf, abschluss: Weg gewählt,
+         quelle: {datei: runtime/src/guppi_runtime/harness/schleife.py, suche: 'def ende_aus('}, weiter: [freigabe-pruefen, antwort]}
+      - {id: freigabe-pruefen, name: Aufruf einstufen (Freigabe), art: task, arbeitsweise: automatable, rolle: Freigabe, lieferant: Werkzeugschleife, eingabe: Werkzeugname und Argumente, ergebnis: Einstufung, empfaenger: Guard, nachweis: Audit-Eintrag, abschluss: Aufruf erlaubt oder abgewiesen,
+         quelle: {datei: runtime/src/guppi_runtime/harness/freigabe.py, suche: 'def einstufung('}, weiter: [zug]}
+      - {id: antwort, name: Antwort anzeigen, art: end, arbeitsweise: automatable, rolle: Harness, lieferant: Modell, eingabe: Endantwort, ergebnis: Antwort im Chat, empfaenger: Captain, nachweis: Chat-Eintrag, abschluss: Antwort sichtbar,
+         quelle: {datei: runtime/src/guppi_runtime/harness/schleife.py, suche: 'def laufen('}, weiter: []}
+
+  - id: freigabe
+    name: Freigabe eines Werkzeugaufrufs
+    zweck: Wie ein Aufruf eine Freigabe braucht und der Captain darüber entscheidet. Der Captain entscheidet, die Harness führt nur aus.
+    schritte:
+      - {id: aufruf, name: Werkzeug soll laufen, art: start, arbeitsweise: automatable, rolle: Harness, lieferant: Werkzeugschleife, eingabe: Werkzeugaufruf, ergebnis: Aufruf zur Prüfung, empfaenger: Vorbehalte und Katalog, nachweis: Aufruf im Verlauf, abschluss: Prüfung beginnt,
+         quelle: {datei: runtime/src/guppi_runtime/harness/freigabe.py, suche: 'def ausfuehren('}, weiter: [einstufen]}
+      - {id: einstufen, name: Vorbehalt, Katalog und Guard prüfen, art: task, arbeitsweise: automatable, rolle: Freigabe, lieferant: Harness, eingabe: Werkzeug, Argumente, Plan, ergebnis: Einstufung, empfaenger: Entscheidung, nachweis: Einstufung im Audit, abschluss: Stufe festgelegt,
+         quelle: {datei: runtime/src/guppi_runtime/harness/freigabe.py, suche: 'def einstufung('}, weiter: [erlaubt]}
+      - {id: erlaubt, name: Schon erlaubt?, art: decision, arbeitsweise: automatable, rolle: Freigabe, lieferant: Einstufung, eingabe: Erlaubnisse der Sitzung, ergebnis: erlaubt oder Karte nötig, empfaenger: Ausführung oder Captain, nachweis: Erlaubnis im Verlauf, abschluss: Weg gewählt,
+         quelle: {datei: runtime/src/guppi_runtime/harness/erlaubnis.py, suche: 'def deckt('}, weiter: [ausfuehren, karte]}
+      - {id: karte, name: Freigabe-Karte beantworten, art: task, arbeitsweise: manual, rolle: Captain, lieferant: Posteingang, eingabe: Karte mit Aufruf und Warnungen, ergebnis: Erlauben oder Ablehnen, empfaenger: Freigabe, nachweis: Entscheidung im Audit, abschluss: Karte beantwortet,
+         quelle: {datei: runtime/src/guppi_runtime/harness/freigabe.py, suche: 'def beantworten('}, weiter: [ausfuehren]}
+      - {id: ausfuehren, name: Werkzeug ausführen, art: task, arbeitsweise: automatable, rolle: Harness, lieferant: Freigabe, eingabe: erlaubter Aufruf, ergebnis: Werkzeugergebnis, empfaenger: Modell, nachweis: Ergebnis im Verlauf und Audit, abschluss: Aufruf beendet,
+         quelle: {datei: runtime/src/guppi_runtime/harness/freigabe.py, suche: 'def ausfuehren('}, weiter: [fertig]}
+      - {id: fertig, name: Ergebnis an die Sitzung, art: end, arbeitsweise: automatable, rolle: Harness, lieferant: Ausführung, eingabe: Ergebnis, ergebnis: Ergebnis im Gespräch, empfaenger: Modell, nachweis: Verlauf, abschluss: Zug geht weiter,
+         quelle: {datei: runtime/src/guppi_runtime/harness/freigabe.py, suche: 'class Kiste'}, weiter: []}
+
+  - id: bauablauf
+    name: Bauablauf mit Vorarbeiter, Bauagent und Prüfer
+    zweck: Wie Entwicklungsarbeit auf drei Rollen verteilt wird. Der Vorarbeiter entscheidet Karten seiner Stufe, der Captain behält die übrigen.
+    schritte:
+      - {id: auftrag, name: Bauauftrag formulieren, art: start, arbeitsweise: manual, rolle: Captain, lieferant: Captain, eingabe: Wunsch, ergebnis: Bauauftrag, empfaenger: Vorarbeiter, nachweis: Auftrag im Chat, abschluss: Auftrag übergeben,
+         quelle: {datei: runtime/config/harness_vorlagen/vorarbeiter.yaml, suche: 'id: vorarbeiter'}, weiter: [leiten]}
+      - {id: leiten, name: Entwicklung leiten, art: task, arbeitsweise: assisted, rolle: Vorarbeiter, lieferant: Captain, eingabe: Bauauftrag, ergebnis: Aufgaben für den Bauagent, empfaenger: Bauagent, nachweis: Aufgabenliste, abschluss: Aufgaben verteilt,
+         quelle: {datei: runtime/src/guppi_runtime/harness/vorarbeiter.py, suche: 'class Vorarbeiter'}, weiter: [bauen]}
+      - {id: bauen, name: Änderung bauen, art: task, arbeitsweise: assisted, rolle: Bauagent, lieferant: Vorarbeiter, eingabe: Aufgabe, ergebnis: Änderung im Arbeitsbereich, empfaenger: Prüfer, nachweis: Änderungen und Testlauf, abschluss: Änderung liegt vor,
+         quelle: {datei: runtime/config/harness_vorlagen/bauagent.yaml, suche: 'id: bauagent'}, weiter: [pruefen]}
+      - {id: pruefen, name: Änderung prüfen, art: task, arbeitsweise: assisted, rolle: Prüfer, lieferant: Bauagent, eingabe: Änderung, ergebnis: Prüfbefund, empfaenger: Vorarbeiter, nachweis: Prüfbericht, abschluss: Befund liegt vor,
+         quelle: {datei: runtime/config/harness_vorlagen/pruefer.yaml, suche: 'id: pruefer'}, weiter: [gut]}
+      - {id: gut, name: Befund in Ordnung?, art: decision, arbeitsweise: assisted, rolle: Vorarbeiter, lieferant: Prüfer, eingabe: Prüfbefund, ergebnis: übernehmen oder nacharbeiten, empfaenger: Captain oder Bauagent, nachweis: Entscheidung im Verlauf, abschluss: Weg gewählt,
+         quelle: {datei: runtime/src/guppi_runtime/harness/vorarbeiter.py, suche: 'class Vorarbeiter'}, weiter: [uebernahme, bauen]}
+      - {id: uebernahme, name: Übernahme durch den Captain, art: end, arbeitsweise: manual, rolle: Captain, lieferant: Vorarbeiter, eingabe: geprüfte Änderung, ergebnis: übernommene Änderung, empfaenger: Projekt, nachweis: Entscheidung des Captains, abschluss: Änderung übernommen oder verworfen,
+         quelle: {datei: runtime/src/guppi_runtime/harness/freigabe.py, suche: 'def beantworten('}, weiter: []}
+
+  - id: lernschleife
+    name: Lernschleife aus Lob und Korrektur
+    zweck: Wie Lob und Korrekturen des Captains zu gemerkten Antworten und Regeln im Systemprompt werden.
+    schritte:
+      - {id: urteil, name: Captain lobt oder korrigiert, art: start, arbeitsweise: manual, rolle: Captain, lieferant: Captain, eingabe: Rückmeldung im Chat, ergebnis: Lob oder Korrektur, empfaenger: Belohnungssystem, nachweis: Chat-Eintrag, abschluss: Rückmeldung gesendet,
+         quelle: {datei: runtime/src/guppi_runtime/harness/belohnung.py, suche: 'def urteil('}, weiter: [erkennen]}
+      - {id: erkennen, name: Lob- oder Korrekturwörter erkennen, art: task, arbeitsweise: automatable, rolle: Belohnungssystem, lieferant: Chat, eingabe: Text des Captains, ergebnis: Urteil, empfaenger: Vermerk, nachweis: Treffer im Vermerk, abschluss: Urteil festgestellt,
+         quelle: {datei: runtime/src/guppi_runtime/harness/belohnung.py, suche: 'def erkennen('}, weiter: [art]}
+      - {id: art, name: Lob oder Korrektur?, art: decision, arbeitsweise: automatable, rolle: Belohnungssystem, lieferant: Urteil, eingabe: Urteil, ergebnis: Weg, empfaenger: Vermerk, nachweis: Vermerk, abschluss: Weg gewählt,
+         quelle: {datei: runtime/src/guppi_runtime/harness/belohnung.py, suche: 'def korrektur('}, weiter: [merken, merken]}
+      - {id: merken, name: Antwort vermerken, art: task, arbeitsweise: automatable, rolle: Belohnungssystem, lieferant: Urteil, eingabe: Frage, Antwort, Urteil, ergebnis: Tagesdatei für die Wissensdatenbank, empfaenger: Lessons, nachweis: Eintrag mit Stern oder Flagge, abschluss: Vermerkt,
+         quelle: {datei: runtime/src/guppi_runtime/harness/belohnung.py, suche: 'def vermerken('}, weiter: [regeln]}
+      - {id: regeln, name: Gelernte Regeln in den Systemprompt, art: end, arbeitsweise: automatable, rolle: Harness, lieferant: Lessons, eingabe: gelernte Regeln, ergebnis: Regeln im nächsten Systemprompt, empfaenger: Modell, nachweis: Systemprompt, abschluss: Regeln wirken ab der nächsten Sitzung,
+         quelle: {datei: runtime/src/guppi_runtime/harness/schleife.py, suche: 'def system_prompt('}, weiter: []}
+
+  - id: modell-scheduler
+    name: Modell laden und Scheduler
+    zweck: Wie ein Modell auf die GPU kommt, ohne dass etwas Fremdes darauf liegt.
+    schritte:
+      - {id: wunsch, name: Modell wird gebraucht, art: start, arbeitsweise: automatable, rolle: Harness, lieferant: Sitzung, eingabe: Modellwunsch, ergebnis: Ladeanfrage, empfaenger: Scheduler, nachweis: Anfrage im Betriebslog, abschluss: Anfrage gestellt,
+         quelle: {datei: runtime/config/model_scheduler.yaml, suche: 'Model scheduler'}, weiter: [pruefen]}
+      - {id: pruefen, name: GPU vor dem Laden prüfen, art: task, arbeitsweise: automatable, rolle: Scheduler, lieferant: Ladeanfrage, eingabe: Zustand der GPU, ergebnis: sauber oder belegt, empfaenger: Entscheidung, nachweis: Prüfergebnis, abschluss: Zustand bekannt,
+         quelle: {datei: runtime/src/guppi_runtime/models/gpu_preflight.py, suche: 'class GpuNotClean'}, weiter: [sauber]}
+      - {id: sauber, name: GPU sauber?, art: decision, arbeitsweise: automatable, rolle: Scheduler, lieferant: Prüfung, eingabe: Prüfergebnis, ergebnis: laden oder abweisen, empfaenger: Modellserver oder Captain, nachweis: Entscheidung im Log, abschluss: Weg gewählt,
+         quelle: {datei: runtime/src/guppi_runtime/models/gpu_preflight.py, suche: 'def is_guppi_server('}, weiter: [laden, abweisen]}
+      - {id: laden, name: Modell laden, art: task, arbeitsweise: automatable, rolle: Modellserver, lieferant: Scheduler, eingabe: Modellprofil, ergebnis: bereites Modell, empfaenger: Sitzung, nachweis: Server bereit, abschluss: Modell antwortet,
+         quelle: {datei: runtime/config/model_scheduler.yaml, suche: 'Model scheduler'}, weiter: [bereit]}
+      - {id: abweisen, name: Laden abweisen und melden, art: end, arbeitsweise: automatable, rolle: Scheduler, lieferant: Prüfung, eingabe: belegte GPU, ergebnis: Meldung, empfaenger: Captain, nachweis: Meldung im Betriebslog, abschluss: Captain informiert,
+         quelle: {datei: runtime/src/guppi_runtime/models/gpu_preflight.py, suche: 'class GpuNotClean'}, weiter: []}
+      - {id: bereit, name: Modell bereit, art: end, arbeitsweise: automatable, rolle: Modellserver, lieferant: Laden, eingabe: laufender Server, ergebnis: bereit, empfaenger: Sitzung, nachweis: Statusleiste, abschluss: Sitzung kann antworten,
+         quelle: {datei: runtime/config/model_scheduler.yaml, suche: 'Model scheduler'}, weiter: []}
+
+  - id: update
+    name: Update einspielen
+    zweck: Wie ein geprüftes Update in die Installation kommt, mit Vorschau, Bestätigung, Sicherung und Rückweg.
+    schritte:
+      - {id: paket, name: Update-Paket bereitstellen, art: start, arbeitsweise: manual, rolle: Captain, lieferant: Entwicklung, eingabe: geprüftes ZIP, ergebnis: entpacktes Paket, empfaenger: Installer, nachweis: Prüfsumme, abschluss: Paket entpackt,
+         quelle: {datei: runtime/src/guppi_runtime/update_anwenden.py, suche: 'def manifest_lesen('}, weiter: [vorschau]}
+      - {id: vorschau, name: Vorschau ohne Änderung, art: task, arbeitsweise: automatable, rolle: Updater, lieferant: Paket, eingabe: Paket und Installation, ergebnis: geänderte Dateien, Rechte, Bestätigungsschlüssel, empfaenger: Captain, nachweis: Vorschau-Ausgabe, abschluss: Vorschau vollständig,
+         quelle: {datei: runtime/src/guppi_runtime/update_anwenden.py, suche: 'def plan('}, weiter: [rechte]}
+      - {id: rechte, name: Vorschau und Rechte durchsehen, art: task, arbeitsweise: manual, rolle: Captain, lieferant: Updater, eingabe: Vorschau, ergebnis: Freigabe oder Abbruch, empfaenger: Updater, nachweis: Bestätigungsschlüssel, abschluss: Entscheidung getroffen,
+         quelle: {datei: runtime/src/guppi_runtime/update_anwenden.py, suche: 'def rechteaenderungen('}, weiter: [sichern]}
+      - {id: sichern, name: Sicherung anlegen, art: task, arbeitsweise: automatable, rolle: Updater, lieferant: Installation, eingabe: aktueller Stand, ergebnis: Sicherung, empfaenger: Rückweg, nachweis: Sicherungsordner, abschluss: Sicherung liegt vor,
+         quelle: {datei: runtime/src/guppi_runtime/update_anwenden.py, suche: 'def sichern('}, weiter: [anwenden]}
+      - {id: anwenden, name: Dateien übernehmen, art: task, arbeitsweise: automatable, rolle: Updater, lieferant: Paket, eingabe: bestätigter Plan, ergebnis: neue Programmdateien, empfaenger: Installation, nachweis: Übernahmebericht, abschluss: SEDRA neu starten,
+         quelle: {datei: runtime/src/guppi_runtime/update_anwenden.py, suche: 'def anwenden('}, weiter: [ok]}
+      - {id: ok, name: Läuft nach Neustart?, art: decision, arbeitsweise: manual, rolle: Captain, lieferant: Installation, eingabe: Start von SEDRA, ergebnis: behalten oder zurück, empfaenger: Updater, nachweis: Beobachtung, abschluss: Entscheidung getroffen,
+         quelle: {datei: runtime/src/guppi_runtime/update_anwenden.py, suche: 'def zurueck('}, weiter: [fertig, zurueck]}
+      - {id: zurueck, name: Auf die Sicherung zurück, art: end, arbeitsweise: automatable, rolle: Updater, lieferant: Sicherung, eingabe: letzte Sicherung, ergebnis: alter Stand, empfaenger: Installation, nachweis: Rückbericht, abschluss: Alter Stand wiederhergestellt,
+         quelle: {datei: runtime/src/guppi_runtime/update_anwenden.py, suche: 'def zurueck('}, weiter: []}
+      - {id: fertig, name: Update bleibt, art: end, arbeitsweise: manual, rolle: Captain, lieferant: Installation, eingabe: laufendes System, ergebnis: neuer Stand, empfaenger: Betrieb, nachweis: Version in der Anzeige, abschluss: Update abgeschlossen,
+         quelle: {datei: runtime/src/guppi_runtime/update_anwenden.py, suche: 'def anwenden('}, weiter: []}

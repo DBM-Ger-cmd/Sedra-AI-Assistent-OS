@@ -117,3 +117,6 @@
 .t-workflow .t-wf-chips{display:flex;flex-wrap:wrap;gap:4px}
 .t-workflow .t-wf-chip{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
 .t-workflow .t-wf-panel>h3{margin:8px 0 0}
+
+.t-workflow .t-wf-candidate{fill:var(--ok);stroke:var(--wf-tile);stroke-width:2}
+.t-workflow .t-wf-candidate-text{fill:#fff;font-size:10px;font-weight:700;pointer-events:none}

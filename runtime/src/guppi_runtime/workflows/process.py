@@ -4,7 +4,7 @@ import json
 PREFIX = 'SEDRA_PROCESS_V1\n'
 TEXT_FIELDS = {'supplier', 'input', 'output', 'customer', 'role', 'evidence', 'completion',
                'exception', 'automation_reason', 'risk', 'original_notes'}
-ENUMS = {'kind': {'start', 'task', 'decision', 'end', 'annotation'},
+ENUMS = {'kind': {'start', 'task', 'decision', 'end', 'annotation', 'data', 'store'},
          'mode': {'manual', 'assisted', 'automatable'}, 'source': {'board', 'proposal'},
          'role_status': {'proposal', 'confirmed'}}
 

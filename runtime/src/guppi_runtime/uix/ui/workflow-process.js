@@ -4,7 +4,7 @@
   const PREFIX = 'SEDRA_PROCESS_V1\n';
   const labels = {manual: 'Menschlich', assisted: 'Assistiert', automatable: 'Automatisierungskandidat',
     board: 'Aus Vorlage / Board', proposal: 'Ergänzter Vorschlag', confirmed: 'Bestätigt',
-    start: 'Start', task: 'Arbeitsschritt', decision: 'Entscheidung', end: 'Ende', annotation: 'Hinweis'};
+    start: 'Start', task: 'Arbeitsschritt', decision: 'Entscheidung', end: 'Ende', annotation: 'Hinweis', data: 'Ein-/Ausgabe (Daten)', store: 'Datenspeicher'};
   function get(node){
     if(typeof node.notes !== 'string' || !node.notes.startsWith(PREFIX))return null;
     try{return JSON.parse(node.notes.slice(PREFIX.length));}catch(_e){return null;}
