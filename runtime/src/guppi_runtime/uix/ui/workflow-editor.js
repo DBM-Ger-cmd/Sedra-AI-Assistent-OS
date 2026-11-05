@@ -78,7 +78,9 @@
       // Übersicht
       const find = el('input');find.type = 'search';find.placeholder = 'Suchen …';find.setAttribute('aria-label', 'Prozesse suchen');find.oninput = ()=>this.renderCards(find.value);
       this.cards = el('div', 't-wf-cards');this.findBox = find;
-      this.panels.overview.append(el('div', 't-wf-toolbar', ''), this.cards);
+      this.templateBox = el('div', 't-wf-cards');
+      this.panels.overview.append(el('div', 't-wf-toolbar', ''), this.cards, el('h3', '', 'Vorlagen'), this.templateBox);
+      this.renderTemplates();
       this.panels.overview.firstChild.append(find, button(options.newTitle || 'Neuer Workflow', ()=>{if(this.discard()){this.adopt(this.blank(), null, null);this.setTab('editor');this.notice('Neuer Entwurf. Erster Schritt: „Knoten hinzufügen“.');}}));
       // Editor
       const views = el('div', 't-wf-toolbar');
@@ -97,7 +99,12 @@
       this.fab.append(this.addButton, this.propsButton);this.stage.append(this.surface, this.fab, this.inspector);
       this.stage.addEventListener('keydown', event=>{if(event.key === 'Escape' && this.inspectorOpen && !event.defaultPrevented){this.inspectorOpen = false;this.inspect();}});
       this.report = el('pre', 't-wf-report');this.report.setAttribute('aria-label', 'Kompatibilitätsbericht');
-      this.panels.editor.append(views, this.processBanner, this.stage, this.report);
+      this.bottom = el('div', 't-wf-bottombar');this.bottom.hidden = !options.runBar;
+      const once = button('Einmal ausführen', ()=>this.submitRun());once.title = 'Legt einen Lauf zur Freigabe vor. Ausgeführt wird erst nach Captain-Freigabe.';
+      const plan = button('Zeitplan: aus', ()=>{});plan.disabled = true;plan.title = 'Zeitpläne gibt es im Adapter nicht. Läufe starten nur von Hand und mit Freigabe.';
+      const settings = button('Einstellungen', ()=>{this.inspectorOpen = !this.inspectorOpen;this.inspect();});
+      this.bottom.append(once, plan, settings, button('Posteingang', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'})));
+      this.panels.editor.append(views, this.processBanner, this.stage, this.bottom, this.report);
       // Versionen
       const history = el('details', 't-wf-history');history.open = true;history.append(el('summary', '', 'Versionshistorie und Vergleich'));this.historyBox = el('div');history.append(this.historyBox);
       this.panels.versions.append(history);
@@ -105,11 +112,7 @@
       const run = el('section', 't-wf-run');this.runSection = run;run.append(el('h3', '', options.runTitle || 'Ausführungen'));
       this.input = el('textarea');this.input.value = '{}';this.input.setAttribute('aria-label', 'Laufeingaben als JSON');this.input.rows = 3;
       run.append(el('p', 't-wf-hint', 'Nur geprüfte Datenknoten. Zugangsdaten werden in der lokalen n8n-Testinstanz eingerichtet. Eine Freigabe ist immer erforderlich.'), this.input,
-        button('Lauf zur Freigabe vorlegen', ()=>this.safe(async()=>{
-          if(!this.wid || this.dirty())throw new Error('Workflow zuerst speichern.');
-          const out = await this.call('workflow', this.wid, 'starten', {revision: this.revision, inputs: JSON.parse(this.input.value)});
-          this.runId = out.id;await this.showRun(out.id);this.notice('Mission angelegt. Freigabe im Posteingang prüfen, dann hier fortsetzen.');
-        })), button('Posteingang öffnen', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'})),
+        button('Lauf zur Freigabe vorlegen', ()=>this.submitRun()), button('Posteingang öffnen', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'})),
         button('Nach Freigabe fortsetzen', ()=>this.safe(async()=>{if(!this.runId)throw new Error('Zuerst einen Lauf wählen.');await this.call('workflow_run', this.runId, 'fortsetzen');await this.showRun(this.runId);})),
         button('Lauf beenden', ()=>this.safe(async()=>{if(!this.runId)throw new Error('Zuerst einen Lauf wählen.');await this.call('workflow_run', this.runId, 'abbrechen');await this.showRun(this.runId);})),
         button('Aktualisieren', ()=>this.safe(()=>this.refreshRuns())));
@@ -123,6 +126,20 @@
         }
       });
     },
+    submitRun(){return this.safe(async()=>{
+      if(!this.wid || this.dirty())throw new Error('Workflow zuerst speichern.');
+      const out = await this.call('workflow', this.wid, 'starten', {revision: this.revision, inputs: JSON.parse(this.input.value)});
+      this.runId = out.id;await this.showRun(out.id);this.notice('Mission angelegt. Freigabe im Posteingang prüfen, dann hier fortsetzen.');
+    });},
+    placeInspector(){
+      const box = this.inspector;if(!box)return;
+      const reset = ()=>{box.style.left = '';box.style.top = '';box.style.right = '';};
+      if(options.style !== 'scenario' || box.hidden){reset();return;}
+      const n = this.surface.querySelector('.t-wf-node.selected');if(!n){reset();return;}
+      const s = this.stage.getBoundingClientRect(), r = n.getBoundingClientRect();if(!s.width)return;
+      const at = root.sedraWorkflowDialog.place({w: s.width, h: s.height}, {w: box.offsetWidth || 360, h: Math.min(box.offsetHeight || 320, s.height - 24)}, {x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height});
+      box.style.right = 'auto';box.style.left = at.left + 'px';box.style.top = at.top + 'px';
+    },
     blank(){const doc = M().example();doc.name = options.newTitle === 'Neues Szenario' ? 'Neues Szenario' : 'Neuer Workflow';doc.nodes = [M().node('manualTrigger', [])];doc.connections = {};return doc;},
     setTab(name){
       const model = this.state && P().has(this.state.doc);
@@ -130,6 +147,16 @@
       this.tab = name;
       Object.entries(this.panels).forEach(([key, panel])=>{panel.hidden = key !== name;});
       Object.entries(this.tabButtons).forEach(([key, b])=>{b.setAttribute('aria-selected', String(key === name));b.classList.toggle('active', key === name);});
+    },
+    renderTemplates(){
+      const T = root.sedraWorkflowTemplates;if(!T || !this.templateBox)return;
+      this.templateBox.replaceChildren();
+      T.list().forEach(t=>{
+        const card = el('article', 't-wf-card');card.append(el('h3', '', t.title), el('p', 't-wf-hint', t.description));
+        const chips = el('div', 't-wf-chips');t.chips.forEach(kind=>chips.append(el('span', 't-wf-chip', root.sedraWorkflowIcons ? root.sedraWorkflowIcons.label(kind) : kind)));card.append(chips);
+        card.append(button('Vorlage verwenden', ()=>{if(this.discard()){this.adopt(T.build(t.id), null, null);this.setTab('editor');this.notice('Aus Vorlage „' + t.title + '“ angelegt. Speichern erzeugt die erste Revision.');}}));
+        card.setAttribute('aria-label', 'Vorlage ' + t.title);this.templateBox.append(card);
+      });
     },
     renderCards(filter){
       if(!this.cards)return;
@@ -174,7 +201,7 @@
       const model = P().has(this.state.doc), core = this.view === 'core';
       this.viewSelect.value = this.view;
       this.runSection.hidden = model;this.tabButtons.runs.hidden = model;if(model && this.tab === 'runs')this.setTab('editor');this.processBanner.hidden = !model;
-      this.engine.hidden = model;this.addButton.hidden = (model && core) || this.view !== 'canvas';this.report.hidden = model;
+      this.engine.hidden = model;this.addButton.hidden = (model && core) || this.view !== 'canvas';this.bottom.hidden = !options.runBar || model;this.report.hidden = model;
       this.processBanner.textContent = 'Prozessmodell · ' + P().cores(this.state.doc).length + ' Kernschritte · ' + P().rows(this.state.doc).filter(r=>r.meta.source === 'proposal').length + ' ergänzte Vorschläge. Fachliche und technische Ausführung sind noch nicht eingerichtet.';
       this.version.textContent = (this.wid ? 'Revision ' + this.revision : 'Neuer Entwurf') + (this.dirty() ? ' · ungespeichert' : ' · gespeichert');
       if(this.canvas)this.canvas.destroy();
@@ -185,14 +212,14 @@
       const visual = core ? {doc: P().coreProjection(this.state.doc), selected: this.state.selected} : this.state;
       this.canvas = root.sedraWorkflowCanvas.mount(this.surface, visual, {
         style: this.style, readOnly: core,
-        select: id=>{this.state.selected = id;this.inspect();}, open: id=>{this.state.selected = id;this.inspectorOpen = true;this.inspect();}, checkpoint: ()=>this.checkpoint(),
+        select: id=>{this.state.selected = id;this.inspect();}, open: id=>{this.state.selected = id;this.inspectorOpen = true;this.inspect();}, drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
         change: ()=>{this.version.textContent = 'Ungespeicherte Änderungen';this.inspect();},
         connect: (a, b, branch)=>{try{this.change(()=>M().connect(this.state.doc, a, b, branch));}catch(e){this.notice(e.message, true);}}
       });this.inspect();
     },
     inspect(){
       const box = this.inspector;const bar = el('div', 't-wf-inspector-head');const closeBtn = button('✕', ()=>{this.inspectorOpen = false;this.inspect();});closeBtn.setAttribute('aria-label', 'Eigenschaften schließen');bar.append(el('h3', '', 'Eigenschaften'), closeBtn);box.replaceChildren(bar);
-      box.hidden = !this.inspectorOpen;this.propsButton.setAttribute('aria-pressed', String(!!this.inspectorOpen));
+      box.hidden = !this.inspectorOpen;root.requestAnimationFrame(()=>{if(!this.dead)this.placeInspector();});this.propsButton.setAttribute('aria-pressed', String(!!this.inspectorOpen));
       if(this.wid && this.revisions && this.revisions.length){
         const versions = el('select');versions.setAttribute('aria-label', 'Frühere Revision');
         this.revisions.forEach(r=>versions.append(new Option('Revision ' + r, String(r))));versions.value = String(this.revision);

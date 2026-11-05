@@ -110,3 +110,10 @@
 .t-workflow .t-wf-card h3{margin:0;font-size:15px;overflow-wrap:anywhere}
 .t-workflow .t-wf-panel>.t-wf-toolbar input[type=search]{flex:1 1 240px}
 .t-workflow .t-wf-fab[hidden],.t-workflow .t-wf-inspector[hidden]{display:none!important}
+
+.t-workflow .t-wf-bottombar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px}
+.t-workflow .t-wf-bottombar button:first-child{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.t-workflow .t-wf-bottombar[hidden]{display:none!important}
+.t-workflow .t-wf-chips{display:flex;flex-wrap:wrap;gap:4px}
+.t-workflow .t-wf-chip{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+.t-workflow .t-wf-panel>h3{margin:8px 0 0}

@@ -5,7 +5,7 @@
     const p = root.sedraWorkflowProcess.blank(n);p.mode = 'manual';p.evidence = 'Dokumentierte menschliche Entscheidung';root.sedraWorkflowProcess.set(n, p);return n;
   }
   root.sedra.registerTool(root.sedraWorkflowEditor.create({id: 'scenario', title: 'Szenario Studio',
-    objectType: 'scenario', style: 'scenario', className: 't-scenario',
+    objectType: 'scenario', style: 'scenario', runBar: true, newTitle: 'Neues Szenario', overviewTitle: 'Szenarien', className: 't-scenario',
     otherTitle: 'n8n Workflows', otherType: 'workflow', routeTitle: 'Routen', runTitle: 'Szenarioläufe',
     inspector: root.sedraScenarioForms.inspect, renderRun: root.sedraScenarioForms.run,
     palette: [{kind: 'manualTrigger', label: 'Auslöser'}, {kind: 'set', label: 'Daten bearbeiten'},

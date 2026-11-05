@@ -45,3 +45,22 @@ test('Dialog bleibt im Host und weicht aus, wenn rechts kein Platz ist', () => {
   const centred = D.place(host, size, null);
   assert.equal(centred.left, 240);
 });
+
+test('Vorlagen: jede baut einen gueltigen Ablauf ohne Rechte', () => {
+  require(path.join(ui, 'workflow-model.js'));
+  require(path.join(ui, 'workflow-templates.js'));
+  const T = globalThis.sedraWorkflowTemplates;
+  assert.ok(T.list().length >= 3);
+  for (const t of T.list()) {
+    const doc = T.build(t.id);
+    const names = new Set(doc.nodes.map(n => n.name));
+    assert.equal(names.size, doc.nodes.length, 'Namen eindeutig');
+    assert.equal(doc.active, false);
+    for (const [from, out] of Object.entries(doc.connections)) {
+      assert.ok(names.has(from));
+      for (const branches of out.main) for (const e of branches) assert.ok(names.has(e.node));
+    }
+    assert.ok(doc.nodes.some(n => n.type.endsWith('.manualTrigger')) || doc.nodes.length);
+  }
+  assert.throws(() => T.build('gibt-es-nicht'));
+});

@@ -84,6 +84,34 @@ class ProcessBrowser(unittest.TestCase):
             app.locator('.t-wf-history').get_by_text('Feldzuordnung geändert', exact=True).wait_for(state='attached')
         self.session(run)
 
+    def test_templates_bottom_bar_and_anchored_panel(self):
+        def run(page, url):
+            scenario = self.open(page, 'scenario')
+            # Vorlage aus der Übersicht anlegen
+            scenario.get_by_role('tab', name='Szenarien').click()
+            self.assertGreaterEqual(scenario.get_by_role('button', name='Vorlage verwenden').count(), 3)
+            scenario.get_by_role('button', name='Vorlage verwenden').nth(1).click()
+            page.wait_for_function("()=>document.querySelectorAll('.t-scenario .t-wf-node').length===3")
+            self.assertIn('Einfache Weitergabe', scenario.get_by_label('Workflow-Titel').input_value())
+            # Untere Leiste: Zeitplan bleibt aus, Ausführung nur zur Freigabe
+            self.assertTrue(scenario.get_by_role('button', name='Einmal ausführen').is_visible())
+            self.assertTrue(scenario.get_by_role('button', name='Zeitplan: aus').is_disabled())
+            scenario.get_by_role('button', name='Einmal ausführen').click()
+            scenario.get_by_role('status').filter(has_text='Workflow zuerst speichern.').wait_for()
+            # Doppelklick öffnet das Panel am Modul (nicht fest rechts)
+            scenario.get_by_role('button', name='Daten setzen', exact=True).dblclick()
+            panel = scenario.locator('.t-wf-inspector')
+            panel.wait_for(state='visible')
+            page.wait_for_function("()=>{const p=document.querySelector('.t-scenario .t-wf-inspector');return p && p.style.left!=='';}")
+            panel.get_by_role('button', name='Eigenschaften schließen').click()
+            self.assertFalse(panel.is_visible())
+            # Knotenauswahl mit Suche
+            scenario.get_by_role('button', name='Knoten hinzufügen').click()
+            scenario.get_by_label('Knoten suchen').fill('mensch')
+            scenario.get_by_label('Knoten suchen').press('Enter')
+            page.wait_for_function("()=>document.querySelectorAll('.t-scenario .t-wf-node').length===4")
+        self.session(run)
+
     def test_external_process_in_both_apps_and_roundtrip(self):
         path = os.environ.get('SEDRA_PROCESS_FIXTURE')
         doc = json.loads(Path(path).read_text(encoding='utf-8')) if path else process_sample()

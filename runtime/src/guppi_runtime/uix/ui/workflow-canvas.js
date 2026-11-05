@@ -119,6 +119,7 @@
         }
         svg.append(g);
       });
+      if(handlers.drawn) handlers.drawn();
     }
     svg.addEventListener('pointerdown', event=>{
       if(event.button !== 0 || event.target.closest('.t-wf-node'))return;
