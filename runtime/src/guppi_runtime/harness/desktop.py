@@ -33,6 +33,10 @@ MENUE_BAUSTEINE = ('zuletzt', 'blick', 'gruppen', 'oberflaechen', 'darstellung')
 GRUND_MENUE = ('gruppen',)                                                        # die App-Gruppen sind das Start-Menü: verschiebbar, nie ausblendbar
 BLICK_BAUSTEINE = ('aufgaben', 'labor', 'token', 'hardware', 'modelle', 'einstellungen')   # die Kacheln „Auf einen Blick“
 GRUND_BLICK = ('einstellungen',)                                                  # der Weg in die Einstellungen bleibt
+# Seitenaufbau (Stufe 3): wo die großen Zonen stehen. Keine Zone verschwindet (Seitenleiste, Eingabefeld und Taskleiste sind Grundfunktionen), sie wechseln nur den Platz oder die Breite.
+ZONEN_PLATZ = {'seite': ('links', 'rechts'), 'taskleiste': ('unten', 'oben'), 'eingabe': ('unten', 'oben')}
+SEITE_BREITE, EINGABE_BREITE = (180, 480), (480, 1400)                            # in Pixel; 0 = die Breite der Shell
+ZONEN_VORGABE = {'seite': {'platz': 'links', 'breite': 0}, 'taskleiste': {'platz': 'unten'}, 'eingabe': {'platz': 'unten', 'breite': 0}}
 RASTER_SPALTEN, RASTER_ZEILEN, RASTER_HOEHE = 12, 40, 20
 SCHRIFTEN = ('serif', 'mono', 'humanist', 'breit')      # Schriftfamilien ohne Nachladen aus dem Netz; leer = die Schrift der Shell (die Stapel stehen in desktop.js)
 LOGO = re.compile(r'^data:image/(?:png|jpeg|webp|svg\+xml);base64,[A-Za-z0-9+/]+={0,2}$')
@@ -40,7 +44,8 @@ LOGO_MAX = 200_000                                      # Zeichen der Daten-Adre
 LEER = {'start': {'ausblenden': [], 'zuordnung': {}}, 'zellen': {'ausblenden': [], 'reihenfolge': []}, 'marke': {'name': '', 'akzent': '', 'logo': '', 'schrift': ''},
         'startseite': {'ort': '', 'titel': '', 'text': ''},
         'layout': {'start': {}, 'zeile': {'reihenfolge': [], 'ausblenden': []}, 'werkzeuge': {'reihenfolge': [], 'ausblenden': []},
-                   'menue': {'reihenfolge': [], 'ausblenden': []}, 'blick': {'reihenfolge': [], 'ausblenden': []}}}
+                   'menue': {'reihenfolge': [], 'ausblenden': []}, 'blick': {'reihenfolge': [], 'ausblenden': []},
+                   'zonen': {'seite': {'platz': 'links', 'breite': 0}, 'taskleiste': {'platz': 'unten'}, 'eingabe': {'platz': 'unten', 'breite': 0}}}}
 
 
 def _datei(projekt_root):
@@ -108,6 +113,28 @@ def _reihe(wert, erlaubt, grund, name):
     return {'reihenfolge': reihe, 'ausblenden': aus}
 
 
+def _zonen(wert):
+    """Der Seitenaufbau: je Zone der Platz und (Seitenleiste, Eingabefeld) die Breite in Pixel; fehlende Angaben gelten als Vorgabe der Shell."""
+    wert = {} if wert is None else wert
+    if not isinstance(wert, dict) or set(wert) - set(ZONEN_VORGABE):
+        raise ValueError('desktop_zonen_ungueltig: seite, taskleiste, eingabe')
+    out = json.loads(json.dumps(ZONEN_VORGABE))
+    for zone, angabe in wert.items():
+        erlaubt = {'platz'} | ({'breite'} if zone in ('seite', 'eingabe') else set())
+        if not isinstance(angabe, dict) or set(angabe) - erlaubt:
+            raise ValueError('desktop_zonen_ungueltig: %s kennt nur %s' % (zone, ', '.join(sorted(erlaubt))))
+        if 'platz' in angabe:
+            if angabe['platz'] not in ZONEN_PLATZ[zone]:
+                raise ValueError('desktop_zonen_ungueltig: Platz von %s: %s' % (zone, ', '.join(ZONEN_PLATZ[zone])))
+            out[zone]['platz'] = angabe['platz']
+        if 'breite' in angabe:
+            b, (von, bis) = angabe['breite'], (SEITE_BREITE if zone == 'seite' else EINGABE_BREITE)
+            if type(b) is not int or not (b == 0 or von <= b <= bis):
+                raise ValueError('desktop_zonen_ungueltig: Breite von %s: 0 (Vorgabe) oder %d bis %d' % (zone, von, bis))
+            out[zone]['breite'] = b
+    return out
+
+
 def pruefen(roh):
     """Die Wahl prüfen und normieren; fehlende Teile sind leer. Wirft ValueError mit einem Kennwort, wenn etwas nicht stimmt (auch bei dem Versuch, eine Grundfunktion auszublenden)."""
     roh = {} if roh is None else roh
@@ -115,7 +142,7 @@ def pruefen(roh):
         raise ValueError('desktop_unbekannter_schluessel')
     start, zellen, marke, seite = roh.get('start') or {}, roh.get('zellen') or {}, roh.get('marke') or {}, roh.get('startseite') or {}
     layout = roh.get('layout') or {}
-    if not isinstance(layout, dict) or set(layout) - {'start', 'zeile', 'werkzeuge', 'menue', 'blick'}:
+    if not isinstance(layout, dict) or set(layout) - {'start', 'zeile', 'werkzeuge', 'menue', 'blick', 'zonen'}:
         raise ValueError('desktop_unbekannter_schluessel')
     if (not isinstance(start, dict) or set(start) - {'ausblenden', 'zuordnung'} or not isinstance(zellen, dict) or set(zellen) - {'ausblenden', 'reihenfolge'}
             or not isinstance(marke, dict) or set(marke) - {'name', 'akzent', 'logo', 'schrift'} or not isinstance(seite, dict) or set(seite) - {'ort', 'titel', 'text'}):
@@ -146,7 +173,8 @@ def pruefen(roh):
             'startseite': {'ort': ort, 'titel': titel.strip(), 'text': text.strip()},
             'layout': {'start': _raster(layout.get('start')), 'zeile': _reihe(layout.get('zeile'), ZEILE_BAUSTEINE, (), 'zeile'),
                        'werkzeuge': _reihe(layout.get('werkzeuge'), WERKZEUG_BAUSTEINE, GRUND_WERKZEUGE, 'werkzeuge'),
-                       'menue': _reihe(layout.get('menue'), MENUE_BAUSTEINE, GRUND_MENUE, 'menue'), 'blick': _reihe(layout.get('blick'), BLICK_BAUSTEINE, GRUND_BLICK, 'blick')}}
+                       'menue': _reihe(layout.get('menue'), MENUE_BAUSTEINE, GRUND_MENUE, 'menue'), 'blick': _reihe(layout.get('blick'), BLICK_BAUSTEINE, GRUND_BLICK, 'blick'),
+                       'zonen': _zonen(layout.get('zonen'))}}
 
 
 def _leer():

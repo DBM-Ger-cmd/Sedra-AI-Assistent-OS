@@ -177,7 +177,7 @@
 .hs-klein{font-size:var(--size-xs);padding:1px 8px}
 
 /* ---- Eingabefeld (HS-17) */
-.hs-eingabe{position:relative;width:100%;max-width:calc(var(--hs-text-w) + 40px);margin:0 auto;padding:6px 20px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.hs-eingabe{position:relative;width:100%;max-width:var(--hs-eingabe-w,calc(var(--hs-text-w) + 40px));margin:0 auto;padding:6px 20px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .hs-eingabe-zeile{display:flex;flex-direction:column;gap:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-2);background:var(--panel);box-shadow:var(--shadow)}
 .hs-eingabe-zeile:focus-within{border-color:var(--hs-on-line)}
 .hs-feld{width:100%;min-height:24px;max-height:40vh;resize:none;border:0;outline:0;background:transparent;color:var(--text);font:inherit;line-height:1.5;padding:2px 2px}

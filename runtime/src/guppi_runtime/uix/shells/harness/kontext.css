@@ -10,3 +10,12 @@
 .hs-start>.hs-baustein{display:contents}
 .hs-start.hs-raster{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:minmax(28px,auto);gap:8px 12px;align-items:start;justify-items:stretch;width:min(100%,900px);margin:auto auto 0}
 .hs-start.hs-raster>.hs-baustein{display:flex;flex-direction:column;align-items:center;min-width:0}
+/* Seitenaufbau (Stufe 3, Desktop Builder): die großen Zonen wechseln den Platz; keine verschwindet */
+.hs.hs-seite-rechts{grid-template-columns:minmax(0,1fr) var(--hs-seite-w);grid-template-areas:"haupt seite" "leiste leiste"}
+.hs.hs-seite-rechts.hs-seite-zu{grid-template-columns:minmax(0,1fr) 0}
+.hs.hs-leiste-oben{grid-template-rows:var(--hs-leiste-h) minmax(0,1fr);grid-template-areas:"leiste leiste" "seite haupt"}
+.hs.hs-leiste-oben.hs-seite-rechts{grid-template-areas:"leiste leiste" "haupt seite"}
+.hs.hs-leiste-oben .hs-start-menue{top:calc(var(--hs-leiste-h) + 6px);bottom:auto}
+.hs.hs-eingabe-oben .hs-haupt{grid-template-rows:var(--hs-reiter-h) auto minmax(0,1fr)}
+.hs.hs-eingabe-oben .hs-haupt>.hs-eingabe{grid-row:2}
+.hs.hs-eingabe-oben .hs-haupt>.hs-flaeche{grid-row:3}

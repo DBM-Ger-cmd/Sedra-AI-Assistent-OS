@@ -1042,7 +1042,7 @@ class HarnessApi:
                 'zellen': ['decisions', 'token', 'model', 'temp', 'vram', 'ram', 'server', 'scheduler', 'state'],
                 'bausteine': {'start': list(harness_desktop.START_BLOECKE), 'zeile': list(harness_desktop.ZEILE_BAUSTEINE), 'werkzeuge': list(harness_desktop.WERKZEUG_BAUSTEINE),
                               'immer_sichtbar': list(harness_desktop.GRUND_WERKZEUGE) + list(harness_desktop.GRUND_MENUE) + list(harness_desktop.GRUND_BLICK),
-                              'menue': list(harness_desktop.MENUE_BAUSTEINE), 'blick': list(harness_desktop.BLICK_BAUSTEINE), 'raster': [harness_desktop.RASTER_SPALTEN, harness_desktop.RASTER_ZEILEN]},
+                              'menue': list(harness_desktop.MENUE_BAUSTEINE), 'blick': list(harness_desktop.BLICK_BAUSTEINE), 'zonen': harness_desktop.ZONEN_PLATZ, 'raster': [harness_desktop.RASTER_SPALTEN, harness_desktop.RASTER_ZEILEN]},
                 'hinweis': 'Ausblenden ist nur Zuschnitt, keine Sperre. Der Captain ändert im Desktop Builder (Start, System); ein Vorschlag als Profil-Text lässt sich dort importieren.'}
 
     def info_wissen_beantragen(self):

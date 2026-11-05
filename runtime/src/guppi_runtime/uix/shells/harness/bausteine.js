@@ -17,7 +17,9 @@
   const GRUND_MENUE = ['gruppen'], GRUND_BLICK = ['einstellungen'];
   // die Vorgabe der Shell: untereinander, volle Breite (so sieht die leere Sitzung ohne Wahl aus)
   const STANDARD = {gruss: {x: 1, y: 1, b: SPALTEN, h: 5, sichtbar: true}, schritte: {x: 1, y: 6, b: SPALTEN, h: 3, sichtbar: true}, hilfe: {x: 1, y: 9, b: SPALTEN, h: 2, sichtbar: true}};
-  const LEER = ()=>({start: {}, zeile: {reihenfolge: [], ausblenden: []}, werkzeuge: {reihenfolge: [], ausblenden: []}, menue: {reihenfolge: [], ausblenden: []}, blick: {reihenfolge: [], ausblenden: []}});
+  // Seitenaufbau (Stufe 3): Platz der großen Zonen und Breiten; 0 = die Breite der Shell
+  const ZONEN = ()=>({seite: {platz: 'links', breite: 0}, taskleiste: {platz: 'unten'}, eingabe: {platz: 'unten', breite: 0}});
+  const LEER = ()=>({zonen: ZONEN(), start: {}, zeile: {reihenfolge: [], ausblenden: []}, werkzeuge: {reihenfolge: [], ausblenden: []}, menue: {reihenfolge: [], ausblenden: []}, blick: {reihenfolge: [], ausblenden: []}});
 
   const layoutVon = S=>{ const l = S && S._desktop && S._desktop.layout; return l ? Object.assign(LEER(), l) : LEER(); };
   const ids = liste=>liste.map(x=>x[0]);
@@ -80,6 +82,23 @@
     }
     return true;
   }
+  // Die Zonen mit der Wahl darüber (fehlendes gilt als Vorgabe); die CSS-Klassen, die der Platz setzt; die Breiten als Wert für die CSS-Variable (leer = Vorgabe der Shell)
+  function zonenVon(layout){
+    const z = ZONEN(), w = (layout && layout.zonen) || {};
+    Object.keys(z).forEach(n=>{ Object.assign(z[n], w[n] || {}); });
+    return z;
+  }
+  const zonenKlassen = z=>({'hs-seite-rechts': z.seite.platz === 'rechts', 'hs-leiste-oben': z.taskleiste.platz === 'oben', 'hs-eingabe-oben': z.eingabe.platz === 'oben'});
+  function zonenAnwenden(S, wurzel){
+    const el = wurzel || (typeof document !== 'undefined' ? document.getElementById('sedra-root') : null);
+    if(!el) return false;
+    const z = zonenVon(layoutVon(S)), k = zonenKlassen(z);
+    Object.keys(k).forEach(n=>el.classList.toggle(n, k[n]));
+    const wert = (n, px)=>{ if(px) el.style.setProperty(n, px + 'px'); else el.style.removeProperty(n); };
+    wert('--hs-seite-w', z.seite.breite); wert('--hs-eingabe-w', z.eingabe.breite);
+    return true;
+  }
+
   // Das Start-Menü (startmenue.js trägt die Kennungen ein): Abschnitte im Inhalt und im Fuß nach der Wahl ordnen, die Kacheln „Auf einen Blick“ ebenso
   function menueAnwenden(S, teile){
     const l = layoutVon(S);
@@ -105,6 +124,6 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.bausteine = {SPALTEN, ZEILEN, HOEHE, START, ZEILE, WERKZEUGE, GRUND_WERKZEUGE, MENUE, BLICK, GRUND_MENUE, GRUND_BLICK, menueAnwenden, STANDARD, LEER, layoutVon, klemmen, bewegen, groesse, rasterVon, hatEigenesRaster, rasterStil, reihenfolge,
+  root.sedraHarness.bausteine = {SPALTEN, ZEILEN, HOEHE, START, ZEILE, WERKZEUGE, GRUND_WERKZEUGE, MENUE, BLICK, GRUND_MENUE, GRUND_BLICK, menueAnwenden, ZONEN, zonenVon, zonenKlassen, zonenAnwenden, STANDARD, LEER, layoutVon, klemmen, bewegen, groesse, rasterVon, hatEigenesRaster, rasterStil, reihenfolge,
                                   reiheAnwenden, anwenden, startAnwenden};
 })();

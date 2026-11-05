@@ -151,7 +151,7 @@ class LayoutBaukasten(unittest.TestCase):
         self.assertEqual((w['layout']['zeile']['ausblenden'], w['layout']['werkzeuge']['reihenfolge'][3]), (['neues-projekt'], 'senden'))
         w = dt.speichern(p, {'layout': None})
         leer = {'reihenfolge': [], 'ausblenden': []}
-        self.assertEqual(w['layout'], {'start': {}, 'zeile': leer, 'werkzeuge': leer, 'menue': leer, 'blick': leer})
+        self.assertEqual(w['layout'], {'start': {}, 'zeile': leer, 'werkzeuge': leer, 'menue': leer, 'blick': leer, 'zonen': dt.ZONEN_VORGABE})
 
     def test_ungueltiges_layout_wird_abgewiesen(self):
         for schlecht in ({'start': {'gibtsnicht': {}}}, {'start': {'gruss': {'x': 12, 'b': 2}}}, {'start': {'gruss': {'x': 0}}}, {'start': {'gruss': {'y': 41}}}, {'start': {'gruss': {'h': 21}}},
@@ -170,6 +170,19 @@ class LayoutBaukasten(unittest.TestCase):
                 dt.speichern(projekt(), {'layout': schlecht})
             self.assertTrue(str(ctx.exception).startswith(grund))
         dt.speichern(projekt(), {'layout': {'menue': {'reihenfolge': ['gruppen']}, 'blick': {'reihenfolge': ['einstellungen']}}})      # verschieben darf man sie
+
+    def test_seitenaufbau_platz_und_breite(self):
+        p = projekt()
+        w = dt.speichern(p, {'layout': {'zonen': {'seite': {'platz': 'rechts', 'breite': 320}, 'taskleiste': {'platz': 'oben'}, 'eingabe': {'platz': 'oben', 'breite': 900}}}})
+        self.assertEqual(w['layout']['zonen'], {'seite': {'platz': 'rechts', 'breite': 320}, 'taskleiste': {'platz': 'oben'}, 'eingabe': {'platz': 'oben', 'breite': 900}})
+        w = dt.speichern(p, {'layout': {'zonen': {'seite': {'platz': 'rechts'}}}})
+        self.assertEqual(w['layout']['zonen']['seite'], {'platz': 'rechts', 'breite': 0}, 'fehlende Angaben gelten als Vorgabe')
+        self.assertEqual(w['layout']['zonen']['eingabe'], {'platz': 'unten', 'breite': 0})
+        for schlecht in ({'seite': {'platz': 'aus'}}, {'seite': {'platz': 'mitte'}}, {'taskleiste': {'platz': 'links'}}, {'eingabe': {'platz': 'oben', 'breite': 100}}, {'seite': {'breite': 9999}},
+                         {'seite': {'breite': '300'}}, {'seite': {'breite': True}}, {'taskleiste': {'breite': 300}}, {'reiter': {'platz': 'oben'}}, {'seite': 'rechts'}):
+            with self.assertRaises(ValueError, msg=str(schlecht)):
+                dt.speichern(projekt(), {'layout': {'zonen': schlecht}})
+        self.assertEqual(dt.speichern(p, {'layout': None})['layout']['zonen'], dt.ZONEN_VORGABE)
 
     def test_freigabe_schild_und_senden_lassen_sich_nie_ausblenden(self):
         for baustein in dt.GRUND_WERKZEUGE:

@@ -100,6 +100,30 @@ class Baukasten(unittest.TestCase):
         self.assertEqual(out[4], [server.RASTER_SPALTEN, server.RASTER_ZEILEN, server.RASTER_HOEHE])
         self.assertEqual((tuple(out[5]), tuple(out[6]), tuple(out[7]), tuple(out[8])), (server.MENUE_BAUSTEINE, server.BLICK_BAUSTEINE, server.GRUND_MENUE, server.GRUND_BLICK))
 
+    def test_seitenaufbau_klassen_breiten_und_zurueck_zur_vorgabe(self):
+        out = run_js(DATEIEN, """
+          const B = box.sedraHarness.bausteine;
+          const el = {cl: new Set(), vars: {}, classList: {toggle(n, an){ if(an) el.cl.add(n); else el.cl.delete(n); }}, style: {setProperty(n, v){ el.vars[n] = v; }, removeProperty(n){ delete el.vars[n]; }}};
+          const S = layout=>({_desktop: {layout}});
+          const stand = ()=>({klassen: [...el.cl].sort(), vars: Object.assign({}, el.vars)});
+          B.zonenAnwenden(S({zonen: {seite: {platz: 'rechts', breite: 320}, taskleiste: {platz: 'oben'}, eingabe: {platz: 'oben', breite: 900}}}), el);
+          const mit = stand();
+          B.zonenAnwenden(S({zonen: {seite: {platz: 'rechts'}}}), el);
+          const teil = stand();
+          B.zonenAnwenden(S(undefined), el);
+          console.log(JSON.stringify({mit, teil, vorgabe: stand(), voll: B.zonenVon({}), ohneWurzel: B.zonenAnwenden(S({}), null)}));
+        """)
+        self.assertEqual(out['mit'], {'klassen': ['hs-eingabe-oben', 'hs-leiste-oben', 'hs-seite-rechts'], 'vars': {'--hs-seite-w': '320px', '--hs-eingabe-w': '900px'}})
+        self.assertEqual(out['teil'], {'klassen': ['hs-seite-rechts'], 'vars': {}}, 'fehlende Angaben gelten als Vorgabe, eine Breite 0 setzt nichts')
+        self.assertEqual(out['vorgabe'], {'klassen': [], 'vars': {}}, 'ohne Wahl ist alles wie die Shell es ausliefert')
+        self.assertEqual(out['voll'], {'seite': {'platz': 'links', 'breite': 0}, 'taskleiste': {'platz': 'unten'}, 'eingabe': {'platz': 'unten', 'breite': 0}})
+
+    def test_zonen_vorgabe_im_client_und_im_server_sind_dieselbe(self):
+        from guppi_runtime.harness import desktop as server
+        out = run_js(DATEIEN, "const B = box.sedraHarness.bausteine; console.log(JSON.stringify([B.ZONEN(), B.zonenVon({})]));")
+        self.assertEqual(out[0], server.ZONEN_VORGABE)
+        self.assertEqual(out[1], server.ZONEN_VORGABE)
+
 
 if __name__ == '__main__':
     unittest.main()

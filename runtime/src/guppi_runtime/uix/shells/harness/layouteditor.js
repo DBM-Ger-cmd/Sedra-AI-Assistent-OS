@@ -214,6 +214,68 @@
                 d().el('small', 'hs-leise', 'Abschnitte am Griff ⠿ ziehen, Kacheln „Auf einen Blick“ per Ziehen (oder Alt+Pfeil) tauschen, mit dem Kreuz ausblenden. Die App-Gruppen und die Kachel Einstellungen bleiben immer.'), rahmen);
   }
 
+  // ---- der Seitenaufbau (Stufe 3): wo die großen Zonen stehen. Seitenleiste, Eingabefeld und Taskleiste ziehst du auf die andere Seite; Breiten gibt man in Zahlen an.
+  // Keine Zone verschwindet: sie wechseln nur Platz oder Breite (der Server prüft es). In der leeren Sitzung bleibt das Eingabefeld, wo der Baukasten es hinstellt.
+  function zonenBuehne(S, feld, st){
+    const B = H().bausteine;
+    const fenster = d().el('div', 'hs-lay-fenster'); fenster.setAttribute('role', 'group'); fenster.setAttribute('aria-label', 'Bühne: Seitenaufbau des Fensters');
+    const zone = (id, text)=>{ const z = d().el('div', 'hs-lay-zone hs-lay-zone-' + id, text); z.dataset.zone = id; z.tabIndex = 0; return z; };
+    const seite = zone('seite', 'Seitenleiste'), leiste = zone('leiste', 'Taskleiste (Start, Status)');
+    const haupt = d().el('div', 'hs-lay-haupt');
+    const reiter = d().el('div', 'hs-lay-reiter', 'Reiter'), flaeche = d().el('div', 'hs-lay-flaeche', 'Arbeitsfläche'), eingabe = zone('eingabe', 'Eingabefeld');
+    haupt.append(reiter, flaeche, eingabe);
+    fenster.append(seite, haupt, leiste);
+    const zeichne = ()=>{
+      const z = st.zonen, k = B.zonenKlassen(z);
+      Object.keys(k).forEach(n=>fenster.classList.toggle(n, k[n]));
+      fenster.style.setProperty('--lay-seite-b', (z.seite.breite || 260) / 13 + '%');
+      eingabe.style.width = z.eingabe.breite ? Math.min(100, z.eingabe.breite / 14) + '%' : '';
+      seite.textContent = 'Seitenleiste · ' + z.seite.platz + (z.seite.breite ? ' · ' + z.seite.breite + ' px' : '');
+      leiste.textContent = 'Taskleiste · ' + z.taskleiste.platz;
+      eingabe.textContent = 'Eingabefeld · ' + z.eingabe.platz + (z.eingabe.breite ? ' · ' + z.eingabe.breite + ' px' : '');
+      Object.keys(felder).forEach(n=>felder[n]());
+    };
+    // Ziehen: die Seite, auf der die Maus beim Loslassen (und beim Ziehen) steht, ist der neue Platz
+    const ziehen = (el, id)=>el.addEventListener('pointerdown', ev=>{
+      ev.preventDefault();
+      try{ el.setPointerCapture(ev.pointerId); }catch(_e){ /* ohne Capture folgt die Maus nur im Element */ }
+      const r = fenster.getBoundingClientRect(), h = haupt.getBoundingClientRect();
+      const bewegt = e=>{
+        if(id === 'seite') st.zonen.seite.platz = e.clientX - r.left > r.width / 2 ? 'rechts' : 'links';
+        else if(id === 'leiste') st.zonen.taskleiste.platz = e.clientY - r.top > r.height / 2 ? 'unten' : 'oben';
+        else st.zonen.eingabe.platz = e.clientY - h.top > h.height / 2 ? 'unten' : 'oben';
+        zeichne();
+      };
+      const ende = ()=>{ el.removeEventListener('pointermove', bewegt); el.removeEventListener('pointerup', ende); el.removeEventListener('pointercancel', ende); };
+      el.addEventListener('pointermove', bewegt); el.addEventListener('pointerup', ende); el.addEventListener('pointercancel', ende);
+    });
+    ziehen(seite, 'seite'); ziehen(leiste, 'leiste'); ziehen(eingabe, 'eingabe');
+    // genaue Eingabe: Platz und Breite (für Tastatur und Feinarbeit); jede Zeile spiegelt den Stand der Bühne
+    const felder = {};
+    const zeile = (name, titel, optionen, breitenTitel, von, bis)=>{
+      const z = d().el('div', 'hs-einst-zeile hs-lay-zonenzeile'); z.dataset.zone = name;
+      const sel = d().el('select', 'hs-projektwahl'); sel.setAttribute('aria-label', 'Platz: ' + titel);
+      optionen.forEach(o=>{ const e = document.createElement('option'); e.value = o; e.textContent = o; sel.append(e); });
+      sel.onchange = ()=>{ st.zonen[name].platz = sel.value; zeichne(); };
+      z.append(d().el('b', 'hs-einst-label', titel), sel);
+      let zahl = null;
+      if(breitenTitel){
+        zahl = d().el('input', 'hs-einst-zahl'); zahl.type = 'number'; zahl.step = '10'; zahl.setAttribute('aria-label', breitenTitel);
+        zahl.onchange = ()=>{ const w = Math.round(Number(zahl.value) || 0); st.zonen[name].breite = w === 0 ? 0 : Math.max(von, Math.min(bis, w)); zeichne(); };
+        z.append(d().el('small', 'hs-leise', 'Breite in px (0 = Vorgabe, ' + von + ' bis ' + bis + ')'), zahl);
+      }
+      felder[name] = ()=>{ sel.value = st.zonen[name].platz; if(zahl) zahl.value = st.zonen[name].breite; };
+      return z;
+    };
+    const genau = d().el('div', 'hs-liste');
+    genau.append(zeile('seite', 'Seitenleiste', ['links', 'rechts'], 'Breite der Seitenleiste', 180, 480), zeile('taskleiste', 'Taskleiste', ['unten', 'oben']),
+                 zeile('eingabe', 'Eingabefeld', ['unten', 'oben'], 'Breite des Eingabefelds', 480, 1400));
+    feld.append(d().el('h3', 'hs-ueber', 'Seitenaufbau: wo die großen Zonen stehen'),
+                d().el('small', 'hs-leise', 'Seitenleiste nach links oder rechts, Taskleiste nach oben oder unten, Eingabefeld über oder unter die Arbeitsfläche – ziehen oder in der Liste wählen. Keine Zone verschwindet. In der leeren Sitzung bleibt das Eingabefeld, wo der Baukasten es hinstellt.'),
+                fenster, genau);
+    zeichne();
+  }
+
   function zeigen(S, feld){
     const B = H().bausteine, D = H().desktop;
     if(!B || !D){ feld.append(d().el('small', 'hs-leise', 'Der Baukasten ist nicht geladen.')); return; }
@@ -222,6 +284,8 @@
     const meld = d().el('div', 'hs-leise');
     const liste = (alle, wahl)=>{ const platz = B.reihenfolge(alle, wahl.reihenfolge); return {reihe: alle.slice().sort((a, b)=>platz[a] - platz[b]), aus: new Set(wahl.ausblenden || [])}; };
     const st = {start: B.rasterVon(l), zeile: liste(B.ZEILE.map(x=>x[0]), l.zeile), werkzeuge: liste(B.WERKZEUGE.map(x=>x[0]), l.werkzeuge)};
+    st.zonen = JSON.parse(JSON.stringify(B.zonenVon(l)));
+    zonenBuehne(S, feld, st);
     st.menue = liste(B.MENUE.map(x=>x[0]), l.menue); st.blick = liste(B.BLICK.map(x=>x[0]), l.blick);
     bauen(S, feld, st);
     menueBuehne(S, feld, st);
@@ -231,7 +295,7 @@
       B.START.forEach(([id])=>{ if(!gleich(st.start[id], B.klemmen(B.STANDARD[id]))) start[id] = st.start[id]; });
       try{
         await D.speichern(S, {layout: {start, zeile: holen(st.zeile, B.ZEILE.map(x=>x[0])), werkzeuge: holen(st.werkzeuge, B.WERKZEUGE.map(x=>x[0])),
-                                       menue: holen(st.menue, B.MENUE.map(x=>x[0])), blick: holen(st.blick, B.BLICK.map(x=>x[0]))}});
+                                       menue: holen(st.menue, B.MENUE.map(x=>x[0])), blick: holen(st.blick, B.BLICK.map(x=>x[0])), zonen: st.zonen}});
         meldung(meld, 'Gespeichert – das Layout gilt sofort.');
       }catch(err){ meldung(meld, 'Nicht gespeichert: ' + err.message, true); }
     });
