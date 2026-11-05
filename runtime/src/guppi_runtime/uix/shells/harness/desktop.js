@@ -4,7 +4,10 @@
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
-  const LEER = ()=>({start: {ausblenden: [], zuordnung: {}}, zellen: {ausblenden: [], reihenfolge: []}, marke: {name: '', akzent: ''}, profil: null, profile: []});
+  const LEER = ()=>({start: {ausblenden: [], zuordnung: {}}, zellen: {ausblenden: [], reihenfolge: []}, marke: {name: '', akzent: '', logo: '', schrift: ''}, startseite: {ort: '', titel: '', text: ''}, profil: null, profile: []});
+  // Schriftfamilien ohne Nachladen aus dem Netz (der Server kennt dieselben Namen); leer = die Schrift der Shell
+  const SCHRIFTEN = {serif: 'Georgia,"Times New Roman",serif', mono: 'Consolas,"Courier New",monospace', humanist: '"Trebuchet MS","Gill Sans",Verdana,sans-serif', breit: 'Verdana,Tahoma,"Segoe UI",sans-serif'};
+  const SCHRIFT_NAMEN = {serif: 'Serif (Georgia)', mono: 'Technisch (Consolas)', humanist: 'Freundlich (Trebuchet)', breit: 'Breit (Verdana)'};
   // Grundfunktionen (ENTWURF_APPS_MODELL §2.2a): Posteingang, Aufgaben und die Zelle Freigaben lassen sich nie ausblenden – dasselbe prüft der Server
   const GRUND_START = ['decisions', 'tasks'], GRUND_ZELLEN = ['decisions'];
   // Die Zellen der Taskleiste in der Vorgabe-Reihenfolge: Schlüssel (= data-zelle) und Name für den Desktop Builder
@@ -38,11 +41,33 @@
     document.title = m.name || S._titelVorgabe;
     const r = document.documentElement.style;
     if(m.akzent) r.setProperty('--accent', m.akzent); else r.removeProperty('--accent');
+    if(m.schrift && SCHRIFTEN[m.schrift]) r.setProperty('--font', SCHRIFTEN[m.schrift]); else r.removeProperty('--font');
+  }
+
+  // Die Begrüßung der leeren Sitzung (verlauf.js `startbild`): Logo, Titel und Text des Profils; ohne Wahl die Vorgabe der Shell
+  function begruessung(S){
+    const w = wahl(S), m = w.marke || {}, s = w.startseite || {};
+    return {logo: m.logo || '', titel: s.titel || m.name || 'SEDRA', text: s.text || '', marke: m.name || ''};
+  }
+
+  // Die Startseite: liegt beim Start nur ein neuer Entwurf offen, kommt die gewählte App nach vorn (offene Reiter des Captains bleiben, wie sie waren)
+  function startseiteOeffnen(S){
+    const H = root.sedraHarness, ort = (wahl(S).startseite || {}).ort;
+    if(!ort || S._startseiteOffen || !H.app || !H.reiter) return false;
+    S._startseiteOffen = true;
+    const liste = H.reiter.liste(S);
+    if(liste.length > 1 || (liste[0] && !String(liste[0]).startsWith('neu-'))) return false;
+    if(ort === 'builder'){ H.builder.oeffnen(S); return true; }
+    const p = (root.sedraPlaces && root.sedraPlaces.PLACES || []).find(x=>x.id === ort);
+    if(!p) return false;
+    H.app.oeffnen(S, p);
+    return true;
   }
 
   function neuZeichnen(S){
     const H = root.sedraHarness;
     markeAnwenden(S);
+    if(S.ansichten && S.ansichten.forEach) S.ansichten.forEach(a=>{ if(a && a.zeigeLeer && a.leer && a.leer()) a.zeigeLeer(); });       // leere Sitzungen zeigen Logo und Begrüßung des Profils
     if(H.startmenue && S._start) { try{ H.startmenue.bauen(S); }catch(_e){ /* das Menü baut sich beim nächsten Öffnen neu */ } }
     if(H.taskleiste && S._leiste){ S._leiste.zuletzt = 0; H.taskleiste.status(S); }
   }
@@ -88,5 +113,5 @@
     return sel;
   }
 
-  root.sedraHarness.desktop = {profilWahl, ZELLEN, GRUND_START, GRUND_ZELLEN, wahl, startKonfig, zellenAnwenden, markeAnwenden, laden, speichern, aktion, LEER};
+  root.sedraHarness.desktop = {SCHRIFTEN, SCHRIFT_NAMEN, begruessung, startseiteOeffnen, profilWahl, ZELLEN, GRUND_START, GRUND_ZELLEN, wahl, startKonfig, zellenAnwenden, markeAnwenden, laden, speichern, aktion, LEER};
 })();

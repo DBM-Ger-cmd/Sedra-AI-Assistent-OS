@@ -2,7 +2,8 @@
 
 Zwei Ebenen, beide nur Zuschnitt der Oberfläche – eine Wahl, keine Erlaubnis; sie vergibt keine Rechte und ändert keinen Schutz (Rechte und Positivliste eines Betreibers sind die
 Richtlinie, Stufe 4 des Apps-Modells, nicht hier):
-  * die **Wahl** (`desktop.json`): was im Start-Menü und in der Taskleiste erscheint, wohin es gehört, und die Marke (Name, Akzentfarbe);
+  * die **Wahl** (`desktop.json`): was im Start-Menü und in der Taskleiste erscheint, wohin es gehört, die Marke (Name, Akzentfarbe, Logo, Schrift) und die Startseite (welche App
+    beim Start vorn liegt, Titel und Text der Begrüßung);
   * die **Profile** (`profile/<id>.json`): benannte Wahlen mit Auftraggeber und Beschreibung, speicher-, anwend-, export- und importierbar – ein Profil je Auftraggeber.
 Grundfunktionen bleiben erreichbar (ENTWURF_APPS_MODELL §2.2a): das Gespräch, der Posteingang und die Aufgaben lassen sich weder ausblenden noch wegsortieren. Leer heißt: die Vorgabe
 der Shell. Ablage: `<Projekt>/runtime_data/harness/`; die Oberfläche legt die Wahl über die Vorgabe (startmenue.js, taskleiste.js, desktop.js)."""
@@ -21,7 +22,12 @@ PROFIL_ID = re.compile(r'^[a-z0-9][a-z0-9-]{1,39}$')
 FARBE = re.compile(r'^#[0-9a-fA-F]{6}$')
 MAX_LISTE = 80
 MAX_PROFILE = 40
-LEER = {'start': {'ausblenden': [], 'zuordnung': {}}, 'zellen': {'ausblenden': [], 'reihenfolge': []}, 'marke': {'name': '', 'akzent': ''}}
+TEILE = ('start', 'zellen', 'marke', 'startseite')
+SCHRIFTEN = ('serif', 'mono', 'humanist', 'breit')      # Schriftfamilien ohne Nachladen aus dem Netz; leer = die Schrift der Shell (die Stapel stehen in desktop.js)
+LOGO = re.compile(r'^data:image/(?:png|jpeg|webp|svg\+xml);base64,[A-Za-z0-9+/]+={0,2}$')
+LOGO_MAX = 200_000                                      # Zeichen der Daten-Adresse, rund 150 KB Bild: ein Logo gehört in das Profil, nicht in eine Bilddatei daneben
+LEER = {'start': {'ausblenden': [], 'zuordnung': {}}, 'zellen': {'ausblenden': [], 'reihenfolge': []}, 'marke': {'name': '', 'akzent': '', 'logo': '', 'schrift': ''},
+        'startseite': {'ort': '', 'titel': '', 'text': ''}}
 
 
 def _datei(projekt_root):
@@ -56,11 +62,11 @@ def _ids(wert, name):
 def pruefen(roh):
     """Die Wahl prüfen und normieren; fehlende Teile sind leer. Wirft ValueError mit einem Kennwort, wenn etwas nicht stimmt (auch bei dem Versuch, eine Grundfunktion auszublenden)."""
     roh = {} if roh is None else roh
-    if not isinstance(roh, dict) or set(roh) - {'start', 'zellen', 'marke'}:
+    if not isinstance(roh, dict) or set(roh) - set(TEILE):
         raise ValueError('desktop_unbekannter_schluessel')
-    start, zellen, marke = roh.get('start') or {}, roh.get('zellen') or {}, roh.get('marke') or {}
+    start, zellen, marke, seite = roh.get('start') or {}, roh.get('zellen') or {}, roh.get('marke') or {}, roh.get('startseite') or {}
     if (not isinstance(start, dict) or set(start) - {'ausblenden', 'zuordnung'} or not isinstance(zellen, dict) or set(zellen) - {'ausblenden', 'reihenfolge'}
-            or not isinstance(marke, dict) or set(marke) - {'name', 'akzent'}):
+            or not isinstance(marke, dict) or set(marke) - {'name', 'akzent', 'logo', 'schrift'} or not isinstance(seite, dict) or set(seite) - {'ort', 'titel', 'text'}):
         raise ValueError('desktop_unbekannter_schluessel')
     zuordnung = start.get('zuordnung') or {}
     if not isinstance(zuordnung, dict) or len(zuordnung) > MAX_LISTE:
@@ -74,9 +80,18 @@ def pruefen(roh):
     name, akzent = marke.get('name') or '', marke.get('akzent') or ''
     if not isinstance(name, str) or len(name) > 40 or not isinstance(akzent, str) or (akzent and not FARBE.match(akzent)):
         raise ValueError('desktop_marke_ungueltig: Name höchstens 40 Zeichen, Akzent als #rrggbb')
+    logo, schrift = marke.get('logo') or '', marke.get('schrift') or ''
+    if not isinstance(logo, str) or (logo and (len(logo) > LOGO_MAX or not LOGO.match(logo))):
+        raise ValueError('desktop_logo_ungueltig: PNG, JPEG, WebP oder SVG als Daten-Adresse, höchstens %d Zeichen' % LOGO_MAX)
+    if schrift not in ('',) + SCHRIFTEN:
+        raise ValueError('desktop_schrift_ungueltig: ' + ', '.join(SCHRIFTEN))
+    ort, titel, text = seite.get('ort') or '', seite.get('titel') or '', seite.get('text') or ''
+    if not isinstance(ort, str) or (ort and not ID.match(ort)) or not isinstance(titel, str) or len(titel) > 60 or not isinstance(text, str) or len(text) > 300:
+        raise ValueError('desktop_startseite_ungueltig: Ort als Kennung, Titel höchstens 60, Text höchstens 300 Zeichen')
     return {'start': {'ausblenden': aus_start, 'zuordnung': dict(zuordnung)},
             'zellen': {'ausblenden': aus_zellen, 'reihenfolge': _ids(zellen.get('reihenfolge'), 'reihenfolge')},
-            'marke': {'name': name.strip(), 'akzent': akzent}}
+            'marke': {'name': name.strip(), 'akzent': akzent, 'logo': logo, 'schrift': schrift},
+            'startseite': {'ort': ort, 'titel': titel.strip(), 'text': text.strip()}}
 
 
 def _leer():
@@ -87,7 +102,7 @@ def laden(projekt_root):
     """Die gespeicherte Wahl samt aktivem Profil und Profilliste; fehlt die Datei oder ist sie kaputt, gilt die Vorgabe der Shell (leer) – nie ein Fehler beim Start."""
     try:
         roh = json.loads(_datei(projekt_root).read_text(encoding='utf-8'))
-        wahl = pruefen({k: roh.get(k) for k in ('start', 'zellen', 'marke')})
+        wahl = pruefen({k: roh.get(k) for k in TEILE})
         profil = roh.get('profil') if isinstance(roh.get('profil'), str) and PROFIL_ID.match(roh['profil']) else None
     except (OSError, ValueError, AttributeError):
         wahl, profil = _leer(), None
@@ -101,10 +116,10 @@ def _sichern(projekt_root, wahl, profil):
 
 def speichern(projekt_root, aenderung):
     """Teile ersetzen: `start`, `zellen` und/oder `marke`; `null` setzt den Teil auf die Vorgabe zurück. Eine Änderung löst die Bindung an ein Profil (`profil` wird leer)."""
-    if not isinstance(aenderung, dict) or not aenderung or set(aenderung) - {'start', 'zellen', 'marke'}:
-        raise ValueError('desktop_aenderung_fehlt: start, zellen oder marke')
+    if not isinstance(aenderung, dict) or not aenderung or set(aenderung) - set(TEILE):
+        raise ValueError('desktop_aenderung_fehlt: start, zellen, marke oder startseite')
     jetzt = laden(projekt_root)
-    neu = {k: jetzt[k] for k in ('start', 'zellen', 'marke')}
+    neu = {k: jetzt[k] for k in TEILE}
     for teil in aenderung:
         neu[teil] = pruefen({teil: aenderung[teil]})[teil]
     return _sichern(projekt_root, neu, None)
@@ -130,13 +145,13 @@ def _profil_id(wert):
 
 
 def profil_lesen(projekt_root, pid):
-    """Ein Profil (auch zum Exportieren): {id, name, auftraggeber, beschreibung, start, zellen, marke}."""
+    """Ein Profil (auch zum Exportieren): {id, name, auftraggeber, beschreibung, start, zellen, marke, startseite}."""
     pid = _profil_id(pid)
     try:
         d = json.loads((_profile(projekt_root) / (pid + '.json')).read_text(encoding='utf-8'))
     except (OSError, ValueError):
         raise ValueError('profil_unbekannt')
-    return dict(pruefen({k: d.get(k) for k in ('start', 'zellen', 'marke')}), id=pid, name=str(d.get('name') or pid)[:60], auftraggeber=str(d.get('auftraggeber') or '')[:60],
+    return dict(pruefen({k: d.get(k) for k in TEILE}), id=pid, name=str(d.get('name') or pid)[:60], auftraggeber=str(d.get('auftraggeber') or '')[:60],
                 beschreibung=str(d.get('beschreibung') or '')[:200])
 
 
@@ -150,7 +165,7 @@ def profil_speichern(projekt_root, pid, name, auftraggeber='', beschreibung='', 
         raise ValueError('profile_zu_viele')
     if wahl is None:
         jetzt = laden(projekt_root)
-        wahl = {k: jetzt[k] for k in ('start', 'zellen', 'marke')}
+        wahl = {k: jetzt[k] for k in TEILE}
     inhalt = dict(pruefen(wahl), name=name, auftraggeber=str(auftraggeber or '').strip()[:60], beschreibung=str(beschreibung or '').strip()[:200])
     _schreiben(_profile(projekt_root) / (pid + '.json'), inhalt)
     return dict(inhalt, id=pid)
@@ -159,7 +174,7 @@ def profil_speichern(projekt_root, pid, name, auftraggeber='', beschreibung='', 
 def profil_anwenden(projekt_root, pid):
     """Das Profil wird zur Wahl; `profil` merkt, welches gilt."""
     p = profil_lesen(projekt_root, pid)
-    return _sichern(projekt_root, {k: p[k] for k in ('start', 'zellen', 'marke')}, p['id'])
+    return _sichern(projekt_root, {k: p[k] for k in TEILE}, p['id'])
 
 
 def profil_loeschen(projekt_root, pid):
@@ -170,7 +185,7 @@ def profil_loeschen(projekt_root, pid):
     p.unlink()
     jetzt = laden(projekt_root)
     if jetzt['profil'] == pid:                                       # das gelöschte Profil galt: die Wahl bleibt, die Bindung fällt
-        return _sichern(projekt_root, {k: jetzt[k] for k in ('start', 'zellen', 'marke')}, None)
+        return _sichern(projekt_root, {k: jetzt[k] for k in TEILE}, None)
     return jetzt
 
 
@@ -180,7 +195,7 @@ def aktion(projekt_root, payload):
     if a == 'profil_speichern':
         profil_speichern(projekt_root, payload.get('id'), payload.get('name'), payload.get('auftraggeber'), payload.get('beschreibung'))
         jetzt = laden(projekt_root)
-        return _sichern(projekt_root, {k: jetzt[k] for k in ('start', 'zellen', 'marke')}, payload['id'])
+        return _sichern(projekt_root, {k: jetzt[k] for k in TEILE}, payload['id'])
     if a == 'profil_anwenden':
         return profil_anwenden(projekt_root, payload.get('id'))
     if a == 'profil_loeschen':
@@ -189,6 +204,6 @@ def aktion(projekt_root, payload):
         p = payload.get('profil')
         if not isinstance(p, dict):
             raise ValueError('profil_fehlt')
-        profil_speichern(projekt_root, p.get('id'), p.get('name'), p.get('auftraggeber'), p.get('beschreibung'), {k: p.get(k) for k in ('start', 'zellen', 'marke')})
+        profil_speichern(projekt_root, p.get('id'), p.get('name'), p.get('auftraggeber'), p.get('beschreibung'), {k: p.get(k) for k in TEILE})
         return laden(projekt_root)
     raise ValueError('aktion_unbekannt: profil_speichern, profil_anwenden, profil_loeschen, profil_importieren')

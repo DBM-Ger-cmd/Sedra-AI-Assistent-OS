@@ -5,7 +5,7 @@
 # Stufe 5: Einstellungen (HS-42) als Reiter – sechs Gruppen, Werkzeuge eingehängt, Katalog-Editor und Grenzen nur über Antrag mit Gate.
 shell:
   id: harness
-  name: Harness
+  name: One Sedra          # Anzeigename seit 05.11.2026 (vorher Harness); die technische Kennung `harness` bleibt: Adressen, /api/harness, Dateien, START_SEDRA harness
   description: Gespräch in der Mitte mit Sitzungen, Streamen und sichtbaren Werkzeugen; Werkzeuge mit Freigabe-Karte; Vorarbeiter, Aufgaben-Freigabe und Läufe; Start-Menü mit Apps, Oberflächen und Statusbereich (Stufe 4); Einstellungen mit Katalog-Editor (Stufe 5).
   version: 1.9.0
   entry:

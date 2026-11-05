@@ -78,3 +78,5 @@
 .hs-aufgaben .hs-app-reiter{padding:0;margin-bottom:6px}.hs-aufgaben [hidden]{display:none}
 .hs-builder-aktion{display:flex;gap:8px;margin:10px 0}.hs-builder-json{width:100%;font-family:var(--mono,monospace);font-size:var(--size-small);background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:var(--radius);padding:6px 8px;margin:8px 0}.hs-builder .bad{color:var(--bad)}.hs-builder-modul small,.hs-builder-app small{flex:1 1 12em}
 .hs-builder input[type="text"]{flex:1 1 9em;min-width:9em}
+.hs-start-logo{display:block;max-height:96px;max-width:240px;margin:0 auto 8px;object-fit:contain}.hs-start-gruss{margin:4px 0 10px;text-align:center;color:var(--muted)}
+.hs-builder-logo{max-height:48px;max-width:160px;object-fit:contain;border:1px solid var(--line);border-radius:var(--radius);padding:2px}

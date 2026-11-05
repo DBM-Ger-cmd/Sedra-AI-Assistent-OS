@@ -28,7 +28,11 @@
   // V2/A22 (1.11.): drei Schritte mit Zustand statt eines Satzes – Modell, Projekt, erste Nachricht; dazu die drei Zeichen des Eingabefelds
   function startbild(S){
     const box = d().el('div', 'hs-start');
-    box.append(drache(), d().el('h1', 'hs-start-titel', 'SEDRA'));
+    const D = root.sedraHarness.desktop, gruss = D ? D.begruessung(S) : {logo: '', titel: 'SEDRA', text: '', marke: ''};
+    if(gruss.logo){ const bild = d().el('img', 'hs-start-logo'); bild.src = gruss.logo; bild.alt = gruss.marke || 'Logo'; box.append(bild); }       // Logo des Profils statt des Drachen (nur eine Daten-Adresse, vom Server geprüft)
+    else box.append(drache());
+    box.append(d().el('h1', 'hs-start-titel', gruss.titel));
+    if(gruss.text) box.append(d().el('p', 'hs-start-gruss', gruss.text));
     const schritte = d().el('ol', 'hs-start-schritte');
     const e = S._eingabe || {};
     const modell = !!S.modell, projekt = !!(e.projekt && e.projekt.value), vorlage = e.vorlage && e.vorlage.value;

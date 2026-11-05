@@ -1,7 +1,7 @@
 #!/bin/sh
 # Start of SEDRA on macOS and Linux (the counterpart of START_SEDRA.bat). First run: creates runtime/.venv with the system python3 and
 # installs PyYAML (and dulwich when reachable). Then the UIX opens as its own window (Chrome/Edge/Chromium app mode) or in the browser.
-# Ohne Argument: gleich Sedra Harness, keine Auswahl (die anderen Oberflächen wählt man in den Menüs). ./start_sedra.sh cockpit: direkt in diese Oberfläche (nur dieser Start).
+# Ohne Argument: gleich One Sedra, keine Auswahl (die anderen Oberflächen wählt man in den Menüs). ./start_sedra.sh cockpit: direkt in diese Oberfläche (nur dieser Start).
 # ./start_sedra.sh --gewaehlt: die in uix.yaml gewählte. Weitere Optionen werden durchgereicht (--open, --replace). Fenster zu = Server aus.
 set -eu
 SHELLARG="--shell harness"

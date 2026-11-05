@@ -1,4 +1,6 @@
-# Harness-Shell (Stufe 6 + Bau 1.11.2026, Version 1.9.0)
+# One Sedra – die Harness-Shell (Stufe 6 + Bau 1.11.2026, Version 1.9.0)
+
+**Name seit 05.11.2026:** die Oberfläche heißt **One Sedra** und bündelt die Fähigkeiten der anderen Shells (Cockpit, Translator, Gateway, Paperclip, Wissensbasis, Minimal). Nur der Anzeigename ist neu; die technische Kennung bleibt `harness` (Adressen, `/api/harness/*`, Ordner, `START_SEDRA harness`), damit nichts bricht.
 
 Spec: `docs/SPEC_HARNESS_SHELL_v1.md` (G1), `docs/SPEC_HARNESS_SHELL_v1_G2.md` (Design Stufe 1/2), `…_G2_STUFE3.md`/`…_G3_STUFE3.md` (Stufe 3), `…_G2_STUFE4.md`/`…_G3_STUFE4.md` (Stufe 4), `…_G2_STUFE5.md`/`…_G3_STUFE5.md` (Stufe 5), `…_G2_STUFE6.md` (Stufe 6); Analyse und Bau 1.11.2026: `docs/ANALYSE_HARNESS_2026-11-01.md`, `docs/BAUBERICHT_HARNESS_BAU_2026-11-01.md`.
 Starten: `START_SEDRA harness` oder in der Start-Shell „Diese Oberfläche nehmen“. Das Cockpit bleibt unverändert daneben.

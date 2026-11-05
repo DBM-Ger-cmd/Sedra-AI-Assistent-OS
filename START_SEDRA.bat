@@ -1,6 +1,6 @@
 @echo off
 rem SEDRA - der eine Start. Ersetzt ERSTER_START.bat, START_GUPPI.bat und GUPPI_EINRICHTEN_UND_STARTEN.bat.
-rem   START_SEDRA.bat             -> richtet nur ein, was fehlt, und startet gleich Sedra Harness (keine Auswahl;
+rem   START_SEDRA.bat             -> richtet nur ein, was fehlt, und startet gleich One Sedra (keine Auswahl;
 rem                                  die anderen Oberflaechen waehlt man in den Menues der Oberflaeche)
 rem   START_SEDRA.bat cockpit     -> direkt in diese Oberflaeche (nur fuer diesen Start; die Wahl in uix.yaml bleibt)
 rem   START_SEDRA.bat --uebersicht -> die Uebersicht aller Oberflaechen
@@ -95,7 +95,7 @@ if errorlevel 1 goto :fail
 goto :wahl
 
 :wahl
-rem Ohne Auswahl: gleich in Sedra Harness (Captain 04.11.2026). Die anderen Oberflaechen waehlt man in den Menues der Oberflaeche.
+rem Ohne Auswahl: gleich in One Sedra (Captain 04.11.2026). Die anderen Oberflaechen waehlt man in den Menues der Oberflaeche.
 if "%GEWAEHLT%"=="0" set "SHELLARG=--shell %EINSTIEG%"
 goto :starten
 

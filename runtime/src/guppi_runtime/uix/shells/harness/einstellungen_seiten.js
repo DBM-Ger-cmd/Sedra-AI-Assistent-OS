@@ -79,7 +79,7 @@
   function startseite(S, seite, gruppen, gehe){
     seite.append(d().el('h2', 'hs-einst-titel', 'Startseite'));
     const kopf = d().el('div', 'hs-einst-gerat');
-    const name = d().el('div', 'hs-einst-gerat-name'); name.append(d().el('b', null, 'SEDRA · Harness'), d().el('small', 'hs-leise', 'Captain · ' + (S.modell ? 'Modell ' + (S.modell.name || S.modell) : 'kein Modell geladen')));
+    const name = d().el('div', 'hs-einst-gerat-name'); name.append(d().el('b', null, 'One Sedra'), d().el('small', 'hs-leise', 'Captain · ' + (S.modell ? 'Modell ' + (S.modell.name || S.modell) : 'kein Modell geladen')));
     const chips = d().el('div', 'hs-einst-chips');
     kopf.append(name, chips);
     seite.append(kopf);

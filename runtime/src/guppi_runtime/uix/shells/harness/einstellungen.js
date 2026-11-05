@@ -175,7 +175,7 @@
     const m = meldung();
     if(!m.browser || typeof Notification === 'undefined' || Notification.permission !== 'granted') return false;
     if(document.visibilityState === 'visible' && document.hasFocus()) return false;
-    try{ const n = new Notification('SEDRA: eine Freigabe wartet', {body: 'Im Posteingang der Harness-Shell.', tag: 'sedra-freigabe'}); n.onclick = ()=>{ root.focus(); n.close(); }; return true; }
+    try{ const n = new Notification('SEDRA: eine Freigabe wartet', {body: 'Im Posteingang von One Sedra.', tag: 'sedra-freigabe'}); n.onclick = ()=>{ root.focus(); n.close(); }; return true; }
     catch(_e){ return false; }
   }
   function benachrichtigungen(S, box){

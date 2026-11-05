@@ -28,7 +28,8 @@ class Wahl(unittest.TestCase):
     def test_ohne_datei_gilt_die_vorgabe_der_shell(self):
         w = dt.laden(projekt())
         self.assertEqual((w['start'], w['zellen'], w['marke'], w['profil'], w['profile']),
-                         ({'ausblenden': [], 'zuordnung': {}}, {'ausblenden': [], 'reihenfolge': []}, {'name': '', 'akzent': ''}, None, []))
+                         ({'ausblenden': [], 'zuordnung': {}}, {'ausblenden': [], 'reihenfolge': []}, {'name': '', 'akzent': '', 'logo': '', 'schrift': ''}, None, []))
+        self.assertEqual(w['startseite'], {'ort': '', 'titel': '', 'text': ''})
 
     def test_speichern_ersetzt_teile_und_null_setzt_zurueck(self):
         p = projekt()
@@ -99,6 +100,40 @@ class Profile(unittest.TestCase):
         with self.assertRaises(ValueError):
             dt.profil_speichern(p, 'kunde-zu-viel', 'K')
         dt.profil_speichern(p, 'kunde-00', 'K neu')                                         # ein vorhandenes ersetzen geht immer
+
+
+PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+SVG = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciLz4='
+
+
+class LogoSchriftStartseite(unittest.TestCase):
+    """Marke mit Logo und Schrift, Startseite (05.11.2026): was erlaubt ist, was nie durchkommt, und dass Profile alles mitnehmen."""
+
+    def test_logo_schrift_und_startseite_werden_gespeichert(self):
+        p = projekt()
+        w = dt.speichern(p, {'marke': {'name': 'Muster', 'logo': PNG, 'schrift': 'serif'}, 'startseite': {'ort': 'tasks', 'titel': 'Willkommen', 'text': 'Hier arbeitest du.'}})
+        self.assertEqual((w['marke']['logo'], w['marke']['schrift'], w['startseite']),
+                         (PNG, 'serif', {'ort': 'tasks', 'titel': 'Willkommen', 'text': 'Hier arbeitest du.'}))
+        self.assertEqual(dt.speichern(p, {'marke': {'logo': SVG}})['marke']['logo'], SVG)
+        self.assertEqual(dt.speichern(p, {'startseite': None})['startseite'], {'ort': '', 'titel': '', 'text': ''})
+
+    def test_ungueltige_logos_schriften_und_startseiten(self):
+        for schlecht in ({'marke': {'logo': 'https://fremd.example/logo.png'}}, {'marke': {'logo': 'data:text/html;base64,PHNjcmlwdD4='}},
+                         {'marke': {'logo': 'data:image/png;base64,' + 'A' * 200_001}}, {'marke': {'logo': 'data:image/png;base64,@@@'}}, {'marke': {'logo': 5}},
+                         {'marke': {'schrift': 'Comic Sans'}}, {'marke': {'schrift': 'serif; background: url(x)'}},
+                         {'startseite': {'ort': '../x'}}, {'startseite': {'titel': 'x' * 61}}, {'startseite': {'text': 'x' * 301}}, {'startseite': {'html': '<b>'}}):
+            with self.assertRaises(ValueError, msg=str(schlecht)[:60]):
+                dt.speichern(projekt(), schlecht)
+
+    def test_ein_profil_nimmt_logo_schrift_und_startseite_mit(self):
+        a, b = projekt(), projekt()
+        dt.speichern(a, {'marke': {'name': 'Kunde', 'logo': PNG, 'schrift': 'humanist'}, 'startseite': {'ort': 'decisions', 'titel': 'Hallo'}})
+        dt.aktion(a, {'aktion': 'profil_speichern', 'id': 'kunde', 'name': 'Kunde'})
+        export = json.loads(json.dumps(dt.profil_lesen(a, 'kunde')))
+        self.assertEqual((export['marke']['schrift'], export['startseite']['ort']), ('humanist', 'decisions'))
+        dt.aktion(b, {'aktion': 'profil_importieren', 'profil': export})
+        w = dt.aktion(b, {'aktion': 'profil_anwenden', 'id': 'kunde'})
+        self.assertEqual((w['marke']['logo'], w['startseite']['titel']), (PNG, 'Hallo'))
 
 
 class ChatWerkzeug(unittest.TestCase):

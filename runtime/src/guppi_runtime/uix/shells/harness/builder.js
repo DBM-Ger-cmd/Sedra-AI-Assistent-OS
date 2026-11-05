@@ -19,7 +19,7 @@
   // ---- Module: die Landkarte der Oberfläche
   function module(S, feld){
     const K = H().kontext;
-    feld.append(satz('So ist die Oberfläche der Harness aufgebaut: jedes Modul meldet sich mit Namen, Selektor und Dateien an (kontext.js, kontextmodule.js). Ein Rechtsklick auf etwas in Sedra zeigt dasselbe an der Stelle; „Im Chat anpassen“ legt das Modul als Entwurf ins Eingabefeld.'));
+    feld.append(satz('So ist die Oberfläche von One Sedra aufgebaut: jedes Modul meldet sich mit Namen, Selektor und Dateien an (kontext.js, kontextmodule.js). Ein Rechtsklick auf etwas in Sedra zeigt dasselbe an der Stelle; „Im Chat anpassen“ legt das Modul als Entwurf ins Eingabefeld.'));
     if(!K){ feld.append(d().el('small', 'hs-leise', 'Das Kontextmenü ist nicht geladen.')); return; }
     const liste = K.liste();
     feld.append(d().el('div', 'hs-hw-kopf', liste.length + ' Module'));
@@ -111,18 +111,49 @@
   // ---- Profile und Marke: ein Zuschnitt je Auftraggeber (wie die KMU-Shell, ohne eigene Shell)
   function profile(S, feld){
     const D = H().desktop, w = D.wahl(S);
-    feld.append(satz('Ein Profil ist ein benannter Zuschnitt der Oberfläche für einen Auftraggeber: Start-Menü, Taskleiste und Marke. Profile lassen sich speichern, anwenden, exportieren und importieren. Das ist nur der Zuschnitt der Oberfläche; Rechte und erlaubte Apps eines Betreibers sind die Richtlinie und stehen nicht hier.'));
+    feld.append(satz('Ein Profil ist ein benannter Zuschnitt der Oberfläche für einen Auftraggeber: Start-Menü, Taskleiste, Marke (Name, Farbe, Schrift, Logo) und Startseite. Profile lassen sich speichern, anwenden, exportieren und importieren. Das ist nur der Zuschnitt der Oberfläche; Rechte und erlaubte Apps eines Betreibers sind die Richtlinie und stehen nicht hier.'));
     const meld = d().el('div', 'hs-leise');
     const tun = (text, fn)=>async()=>{ try{ await fn(); meldung(meld, text); zeigen(S, 'profile'); }catch(err){ meldung(meld, 'Nicht möglich: ' + err.message, true); } };
     const eingabe = (label, wert, ph)=>{ const e = d().el('input', 'hs-einst-zahl'); e.type = 'text'; e.value = wert || ''; e.placeholder = ph || ''; e.setAttribute('aria-label', label); return e; };
-    // Marke
+    // Marke: Name, Akzentfarbe, Schrift und Logo (das Logo liegt als Daten-Adresse im Profil, höchstens 200 000 Zeichen; der Server prüft es)
     feld.append(d().el('h3', 'hs-ueber', 'Marke'));
     const name = eingabe('Name der Marke', w.marke.name, 'Name im Titel des Fensters');
     const farbe = d().el('input'); farbe.type = 'color'; farbe.value = w.marke.akzent || '#3b82f6'; farbe.setAttribute('aria-label', 'Akzentfarbe');
     const farbeAn = d().el('input'); farbeAn.type = 'checkbox'; farbeAn.checked = !!w.marke.akzent; farbeAn.setAttribute('aria-label', 'Akzentfarbe verwenden');
-    const marke = d().el('div', 'hs-einst-zeile'); marke.append(name, farbeAn, d().el('small', 'hs-leise', 'Akzentfarbe'), farbe,
-      d().button('Marke speichern', tun('Marke gespeichert.', ()=>D.speichern(S, {marke: {name: name.value, akzent: farbeAn.checked ? farbe.value : ''}}))));
+    const schrift = d().el('select', 'hs-projektwahl'); schrift.setAttribute('aria-label', 'Schrift');
+    [['', 'Schrift: Vorgabe der Shell']].concat(Object.keys(D.SCHRIFT_NAMEN).map(k=>[k, 'Schrift: ' + D.SCHRIFT_NAMEN[k]])).forEach(([v, t])=>{ const o = document.createElement('option'); o.value = v; o.textContent = t; schrift.append(o); });
+    schrift.value = w.marke.schrift || '';
+    const marke = d().el('div', 'hs-einst-zeile'); marke.append(name, farbeAn, d().el('small', 'hs-leise', 'Akzentfarbe'), farbe, schrift);
     feld.append(marke);
+    let logo = w.marke.logo || '';
+    const vorschau = d().el('img', 'hs-builder-logo'); vorschau.alt = 'Vorschau des Logos'; vorschau.hidden = !logo; if(logo) vorschau.src = logo;
+    const datei = d().el('input'); datei.type = 'file'; datei.accept = 'image/png,image/jpeg,image/webp,image/svg+xml'; datei.setAttribute('aria-label', 'Logo wählen');
+    datei.onchange = ()=>{
+      const f = datei.files && datei.files[0]; if(!f) return;
+      const leser = new FileReader();
+      leser.onload = ()=>{
+        const url = String(leser.result || '');
+        if(url.length > 200000){ meldung(meld, 'Das Logo ist zu groß (höchstens rund 150 KB). Verkleinere das Bild oder nimm eine SVG-Datei.', true); return; }
+        logo = url; vorschau.src = url; vorschau.hidden = false; meldung(meld, 'Logo gewählt – „Marke speichern“ übernimmt es.');
+      };
+      leser.onerror = ()=>meldung(meld, 'Die Datei ließ sich nicht lesen.', true);
+      leser.readAsDataURL(f);
+    };
+    const ohneLogo = d().button('Logo entfernen', ()=>{ logo = ''; vorschau.hidden = true; vorschau.removeAttribute('src'); datei.value = ''; });
+    const logozeile = d().el('div', 'hs-einst-zeile'); logozeile.append(d().el('small', 'hs-leise', 'Logo (PNG, JPEG, WebP oder SVG)'), datei, vorschau, ohneLogo);
+    feld.append(logozeile,
+      d().button('Marke speichern', tun('Marke gespeichert.', ()=>D.speichern(S, {marke: {name: name.value, akzent: farbeAn.checked ? farbe.value : '', logo, schrift: schrift.value}}))));
+    // Startseite: welche App beim Start vorn liegt (nur wenn sonst nichts offen war) und was die leere Sitzung sagt
+    feld.append(d().el('h3', 'hs-ueber', 'Startseite'));
+    const s0 = w.startseite || {};
+    const ort = d().el('select', 'hs-projektwahl'); ort.setAttribute('aria-label', 'App beim Start');
+    [['', 'Beim Start: das Gespräch (Vorgabe)'], ['builder', 'Beim Start: Desktop Builder']].concat((root.sedraPlaces && root.sedraPlaces.PLACES || []).filter(p=>p.object && p.object.type !== 'talk').map(p=>[p.id, 'Beim Start: ' + p.label]))
+      .forEach(([v, t])=>{ const o = document.createElement('option'); o.value = v; o.textContent = t; ort.append(o); });
+    ort.value = s0.ort || '';
+    const titel = eingabe('Titel der Begrüßung', s0.titel, 'Titel, z. B. Willkommen bei …'), gruss = eingabe('Text der Begrüßung', s0.text, 'ein Satz unter dem Titel');
+    const seite = d().el('div', 'hs-einst-zeile'); seite.append(ort, titel, gruss,
+      d().button('Startseite speichern', tun('Startseite gespeichert.', ()=>D.speichern(S, {startseite: {ort: ort.value, titel: titel.value, text: gruss.value}}))));
+    feld.append(seite);
     // Aktuelle Anordnung als Profil
     feld.append(d().el('h3', 'hs-ueber', 'Aktuelle Anordnung als Profil speichern'));
     const pid = eingabe('Kennung des Profils', '', 'kennung, z. B. muster-gmbh'), pn = eingabe('Name des Profils', w.marke.name, 'Name'), pa = eingabe('Auftraggeber', '', 'Auftraggeber'), pb = eingabe('Beschreibung', '', 'wofür');

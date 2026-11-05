@@ -9,7 +9,7 @@
   const klick = text=>(S, el)=>[{text, tun: ()=>el.click()}];
 
   [
-    {id: 'harness', titel: 'Sedra Harness', selektor: 'body', dateien: ['shell.js', 'shell.yaml']},
+    {id: 'harness', titel: 'One Sedra', selektor: 'body', dateien: ['shell.js', 'shell.yaml']},
     {id: 'seitenleiste', titel: 'Seitenleiste', selektor: '.hs-seite', dateien: ['seite.js', 'seitenleiste.js']},
     {id: 'sitzung', titel: 'Sitzung', selektor: '.hs-sz', dateien: ['seite.js'], eintraege: klick('Sitzung öffnen')},
     {id: 'reiterleiste', titel: 'Reiterleiste', selektor: '.hs-reiter', dateien: ['reiter.js']},

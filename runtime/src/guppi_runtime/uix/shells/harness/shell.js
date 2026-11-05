@@ -35,7 +35,7 @@
       this.entscheidungen = [];              // offene Harness-Freigaben (Karten und Aufgabenvorschläge)
       this.melder = root.sedraStand.makeMelder(this.api);     // Stufe 4: App-Reiter melden ihren Arbeitsstand (§10.2)
       const host = document.getElementById('sedra-root');
-      host.setAttribute('aria-label', 'SEDRA Harness');
+      host.setAttribute('aria-label', 'One Sedra');
       host.classList.add('hs');
       document.body.classList.add('hs-body');
       host.replaceChildren();
@@ -106,6 +106,7 @@
       H.taskleiste.alsGesehenStarten(this);
       this._freigabenGeladen = true;
       H.reiter.wiederherstellen(this);
+      if(H.desktop) H.desktop.startseiteOeffnen(this);        // Profil: die gewählte Startseite kommt nach vorn, wenn nichts anderes offen war
       H.taskleiste.status(this);
       await H.app.uebernehmen(this).catch(err=>ctx.onProblem('Apps übernehmen', err));      // §10.4: was eine andere Oberfläche offen hatte
     },
