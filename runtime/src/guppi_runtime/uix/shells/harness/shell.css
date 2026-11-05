@@ -463,3 +463,12 @@ button.hs-schild[aria-expanded="true"]::after{content:" ▴"}
 .hs-auf-erweitert{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .hs-auf-erweitert>summary{cursor:pointer}
 .hs-auf-schnell .hs-knopf[aria-pressed=true]{border-color:var(--accent)}
+/* Wissen im Chat (SPEC_WISSEN_KERN_v1 WK-14/15): Fundstellen unter der Antwort, fremde Kennungen markiert; nur Tokens, kein Hex */
+.hs-wissen{margin-top:6px;font-size:var(--size-small)}
+.hs-wissen summary{cursor:pointer;color:var(--muted)}
+.hs-wissen.warn summary{color:inherit}
+.hs-wissen-body{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 0}
+.hs-wissen-id{font-family:var(--mono);font-size:var(--size-xs);padding:1px 6px;border-radius:999px;border:1px solid var(--line)}
+.hs-wissen-id.belegt{border-color:var(--ok-line);background:var(--ok-bg)}
+.hs-wissen-fremd{flex:1 1 100%;padding:4px 8px;border-radius:6px;border:1px solid var(--warn-line);background:var(--warn-bg)}
+.hs-wissen-antwort .hs-pre{white-space:pre-wrap}

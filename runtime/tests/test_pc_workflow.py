@@ -10,7 +10,7 @@ from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nv
 ARCH=Path(__file__).resolve().parents[2]/'architecture/GUPPI_Architecture_v1.17_RUNTIME_SYNC'
 class WorkflowCase(unittest.TestCase):
  def setUp(self):
-  self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.rt=GuppiRuntime(Path(self.tmp.name),ARCH)
+  self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.rt=GuppiRuntime(Path(self.tmp.name),ARCH);self.addCleanup(lambda:self.rt.wissen and self.rt.wissen.schliessen())      # Wissensspeicher (Kern) hält wissen.sqlite offen
   self.source=self.rt.filesystem_tool.root/'demo';self.source.mkdir();self.old='value = 1\r\n';self.new='value = 2\n';(self.source/'app.py').write_bytes(self.old.encode())
   req={'project_path':'demo','files':['app.py'],'changes':[{'path':'app.py','expected_sha256':hashlib.sha256(self.old.encode()).hexdigest(),'content':self.new}]}
   m=self.rt.brain.create_mission('Ändere Code als Kandidat',inputs=req);self.m=self.rt.brain.run(m['identity']['mission_id']);self.mid=m['identity']['mission_id']
@@ -54,7 +54,7 @@ class WorkflowCase(unittest.TestCase):
   registry=ProjectRegistry(self.rt);item=registry.create('<img src=x>');self.assertTrue((self.rt.filesystem_tool.root/item['workspace_path']).is_dir())
   self.assertEqual(ProjectRegistry(self.rt).get(item['project_id']),item)
  def test_ui_require_exact_gate_and_bounded_steps(self):
-  hub=UIXHub(Path(self.tmp.name)/'hub',ARCH)
+  hub=UIXHub(Path(self.tmp.name)/'hub',ARCH);self.addCleanup(hub.close)
   for payload in [{'mission_id':'M-X','max_steps':-1},{'mission_id':'M-X','max_steps':1000}]:
    with self.assertRaises(ValueError):hub.run_mission(payload)
   with self.assertRaises(ValueError):hub.approve_gate({'mission_id':'M-X'})

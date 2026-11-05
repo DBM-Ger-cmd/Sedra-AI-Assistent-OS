@@ -11,6 +11,26 @@ from test_uix_contract import NODE, UIX, run_js
 TESTS = Path(__file__).resolve().parent
 BENCH = TESTS.parent / 'benchmarks'
 
+# Unter Last (volle Suite parallel, 2 Kerne) braucht der Start einer Shell im Browser mehr als die 15 s von uix_check.wait_until_started,
+# das eine Zeitüberschreitung still schluckt; danach scheiterten die Prüfungen mit „null“ statt mit einem Befund (U9, 05.11.2026).
+# Deshalb: auf Zustände warten statt auf feste Millisekunden, mit großzügiger Grenze, und einen ausbleibenden Start als solchen melden.
+START_MS = 60000
+WARTE_MS = 20000
+GESTARTET = '()=>!!(window.sedraBoot && window.sedraBoot.ctx && window.sedraBoot.ctx.manifest)'
+
+
+def gestartet(page, shell=None):
+    bedingung = GESTARTET if not shell else f"()=>!!(window.sedraBoot && window.sedraBoot.ctx && window.sedraBoot.ctx.manifest && window.sedraBoot.ctx.manifest.shell.id === '{shell}')"
+    page.wait_for_function(bedingung, timeout=START_MS)
+
+
+def warte(page, bedingung, ms=WARTE_MS):
+    """Wartet, bis `bedingung` (JS) gilt; bleibt sie aus, entscheidet die folgende Prüfung mit ihrer eigenen Meldung."""
+    try:
+        page.wait_for_function(bedingung, timeout=ms)
+    except Exception:
+        pass
+
 
 class Rein(unittest.TestCase):
     def setUp(self):
@@ -114,7 +134,7 @@ class ImBrowser(unittest.TestCase):
         self.addCleanup(page.close)
         fehler = []
         page.on('pageerror', lambda e: fehler.append(str(e)))
-        page.goto(url); self.uix.wait_until_started(page); page.wait_for_timeout(2200)
+        page.goto(url); gestartet(page, shell); page.wait_for_timeout(2200)
         return page, fehler
 
     def test_r1_leiste_und_mini_hub_in_jeder_shell(self):
@@ -123,7 +143,7 @@ class ImBrowser(unittest.TestCase):
             for breite in (1400, 1024):
                 with self.subTest(shell=shell, breite=breite):
                     page, fehler = self.seite(shell, breite)
-                    page.wait_for_selector('.sx-hub .sx-hub-shell', timeout=5000)
+                    page.wait_for_selector('.sx-hub .sx-hub-shell', timeout=WARTE_MS)
                     hub = page.evaluate("""()=>{const h=document.querySelector('.sx-hub'), r=h.getBoundingClientRect();
                         return {fix: getComputedStyle(h).position, shells: h.querySelectorAll('.sx-hub-shell').length, an: (h.querySelector('.sx-hub-shell.on')||{}).textContent,
                                 rek: !!h.querySelector('.sx-hub-leiste .sx-chip:not(.sx-umschalter)'), drin: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight}}""")
@@ -137,32 +157,39 @@ class ImBrowser(unittest.TestCase):
 
     def test_mini_hub_ziehen_klappen_merken_wechseln(self):
         page, fehler = self.seite('cockpit', 1400, 860)
-        page.wait_for_selector('.sx-hub .sx-hub-shell', timeout=5000)
+        page.wait_for_selector('.sx-hub .sx-hub-shell', timeout=WARTE_MS)
         kopf = page.locator('.sx-hub-kopf').bounding_box()
         page.mouse.move(kopf['x'] + 60, kopf['y'] + 8); page.mouse.down(); page.mouse.move(300, 120, steps=5); page.mouse.up()
         oben = page.evaluate("()=>Math.round(document.querySelector('.sx-hub').getBoundingClientRect().top)")
         self.assertLess(oben, 200, 'gezogen')
         page.locator('.sx-hub-zu').click()
         self.assertTrue(page.locator('.sx-hub-klein').is_visible()); self.assertFalse(page.locator('.sx-hub-fenster').is_visible())
-        page.reload(); self.uix.wait_until_started(page); page.wait_for_timeout(1500)
+        page.reload(); gestartet(page, 'cockpit'); page.wait_for_timeout(1500)
         self.assertTrue(page.locator('.sx-hub-klein').is_visible(), 'zusammengeklappt bleibt es nach dem Neuladen')
         self.assertLess(page.evaluate("()=>Math.round(document.querySelector('.sx-hub').getBoundingClientRect().top)"), 200, 'die Lage bleibt')
         page.locator('.sx-hub-klein').click()
         page.locator('.sx-hub-kopf').dblclick()
         self.assertGreater(page.evaluate("()=>document.querySelector('.sx-hub').getBoundingClientRect().top"), 400, 'Doppelklick: zurück nach unten rechts')
-        page.locator('.sx-hub-shell', has_text='Paperclip').click(); page.wait_for_timeout(2500)
-        self.uix.wait_until_started(page)
+        # Der Wechsel ist POST, bis zu 1,5 s Ablage schreiben, dann Neuladen: nach festen 2,5 s stand unter Last noch die alte Seite,
+        # wait_until_started kehrte dort sofort zurück und das Neuladen riss den Kontext danach weg (ctx undefined). Auf das Neuladen warten.
+        with page.expect_navigation(timeout=WARTE_MS):
+            page.locator('.sx-hub-shell', has_text='Paperclip').click()
+        gestartet(page)
         self.assertEqual(page.evaluate("()=>window.sedraBoot.ctx.manifest.shell.id"), 'paperclip', 'ein Klick wechselt die Oberfläche')
         self.assertEqual(fehler, [])
 
     def test_r1_mehr_zeigt_die_uebrigen(self):
         page, fehler = self.seite('cockpit', 1024)
         mehr = page.locator('.ck-strip .lst-mehr')
+        mehr.wait_for(state='visible', timeout=WARTE_MS)              # die Leiste ordnet sich gebündelt, nachdem die Instrumente ihre Werte haben
         self.assertTrue(mehr.is_visible())
-        n = int(mehr.locator('b').inner_text().strip('+ ▾'))
-        mehr.click(); page.wait_for_timeout(200)
-        self.assertEqual(page.locator('.lst-panel .ck-gauge').count(), n)
-        page.keyboard.press('Escape'); page.wait_for_timeout(200)
+        mehr.click()
+        page.wait_for_function("()=>!document.querySelector('.lst-panel').hidden", timeout=WARTE_MS)
+        # Zahl auf dem Knopf und Zellen im Feld in einem Zug lesen: ein späteres Neuordnen der Leiste schließt das Feld und ändert die Zahl
+        n, im_feld = page.evaluate("()=>[parseInt(document.querySelector('.ck-strip .lst-mehr b').textContent.replace(/[^0-9]/g, ''), 10), document.querySelectorAll('.lst-panel .ck-gauge').length]")
+        self.assertEqual(im_feld, n)
+        page.keyboard.press('Escape')
+        page.wait_for_function("()=>document.querySelector('.lst-panel').hidden", timeout=WARTE_MS)
         self.assertTrue(page.evaluate("()=>document.querySelector('.lst-panel').hidden"))
         self.assertEqual(fehler, [])
 
@@ -171,15 +198,21 @@ class ImBrowser(unittest.TestCase):
         page, fehler = self.seite('wissensbasis', 1400, 860, prepare=mit_quelle, switches={'wissen': True})
         breite = lambda: page.evaluate("()=>{const n=document.querySelector('.fr-nachweis'); return n ? Math.round(n.getBoundingClientRect().width) : -1}")
         self.assertLessEqual(breite(), 40, 'ohne Treffer ist die Fundstelle eingeklappt')
+        breit_genug = "()=>{const n=document.querySelector('.fr-nachweis'); return !!n && n.getBoundingClientRect().width >= 280}"
+        zeige = lambda wert: f"()=>{{const b=document.querySelector('.fr-body'); return !!b && b.dataset.zeige === '{wert}'}}"
         page.fill('.t-wissen input.t-wissen-frage', 'Lease'); page.press('.t-wissen input.t-wissen-frage', 'Enter'); page.wait_for_timeout(1200)
-        page.locator('.t-wissen-treffer').first.locator('button', has_text='Fundstelle').click(); page.wait_for_timeout(900)
+        page.locator('.t-wissen-treffer').first.locator('button', has_text='Fundstelle').click()
+        warte(page, breit_genug)
         self.assertGreaterEqual(breite(), 280, 'mit Treffer klappt sie auf')
-        page.set_viewport_size({'width': 1024, 'height': 700}); page.wait_for_timeout(600)
+        page.set_viewport_size({'width': 1024, 'height': 700})
+        page.locator('.fr-seg-schmal').wait_for(state='visible', timeout=WARTE_MS)
         self.assertTrue(page.locator('.fr-seg-schmal').is_visible(), 'schmal: Reiter')
         self.assertEqual(page.evaluate("()=>document.querySelector('.fr-body').dataset.zeige"), 'inhalt')
         page.press('.t-wissen input.t-wissen-frage', 'Enter'); page.wait_for_timeout(1200)          # neue Suche: der Treffer ist wieder zu
-        page.locator('.t-wissen-treffer').first.locator('button', has_text='Fundstelle').click(); page.wait_for_timeout(900)
+        page.locator('.t-wissen-treffer').first.locator('button', has_text='Fundstelle').click()
+        warte(page, zeige('nachweis'))
         self.assertEqual(page.evaluate("()=>document.querySelector('.fr-body').dataset.zeige"), 'nachweis', 'ein Treffer schaltet auf die Fundstelle')
+        warte(page, "()=>{const f=document.querySelector('.t-fundstelle'); return !!f && f.innerText.includes('Vor dem Laden')}")   # unter Last stand nach 900 ms noch „Lese …“
         self.assertIn('Vor dem Laden', page.locator('.t-fundstelle').inner_text())
         self.assertEqual(fehler, [])
 

@@ -16,7 +16,7 @@ from guppi_runtime.harness.api import GESCHUETZT, WEG
 from guppi_runtime.uix_server import UIXHub
 
 ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
-WAHL = {'start': {'ausblenden': ['wissen'], 'zuordnung': {'models': 'system'}}, 'zellen': {'ausblenden': ['scheduler'], 'reihenfolge': ['state', 'model']},
+WAHL = {'start': {'ausblenden': ['logbook'], 'zuordnung': {'models': 'system'}}, 'zellen': {'ausblenden': ['scheduler'], 'reihenfolge': ['state', 'model']},
         'marke': {'name': 'Muster GmbH', 'akzent': '#2266aa'}}
 
 
@@ -46,10 +46,21 @@ class Wahl(unittest.TestCase):
         self.assertEqual(dt.laden(p)['start']['ausblenden'], [])
 
     def test_grundfunktionen_lassen_sich_nicht_ausblenden(self):
-        for schlecht in ({'start': {'ausblenden': ['decisions']}}, {'start': {'ausblenden': ['wissen', 'tasks']}}, {'zellen': {'ausblenden': ['decisions']}}):
+        for schlecht in ({'start': {'ausblenden': ['decisions']}}, {'start': {'ausblenden': ['logbook', 'tasks']}}, {'start': {'ausblenden': ['wissen']}}, {'zellen': {'ausblenden': ['decisions']}}):
             with self.assertRaises(ValueError) as ctx:
                 dt.speichern(projekt(), schlecht)
             self.assertTrue(str(ctx.exception).startswith('desktop_grundfunktion'))
+
+    def test_alter_zuschnitt_mit_wissen_ausgeblendet_bleibt_erhalten(self):
+        """SPEC_WISSEN_KERN_v1 WK-04: Wissen ist seit 05.11.2026 Grundfunktion; ein früher gespeicherter Zuschnitt verliert beim Laden nur diesen Eintrag."""
+        p = projekt()
+        (Path(p) / 'runtime_data' / 'harness' / 'profile').mkdir(parents=True)
+        alt = {'start': {'ausblenden': ['wissen', 'logbook']}, 'marke': {'name': 'Alt GmbH'}}
+        (Path(p) / 'runtime_data' / 'harness' / 'desktop.json').write_text(json.dumps(alt), encoding='utf-8')
+        jetzt = dt.laden(p)
+        self.assertEqual((jetzt['start']['ausblenden'], jetzt['marke']['name']), (['logbook'], 'Alt GmbH'))
+        (Path(p) / 'runtime_data' / 'harness' / 'profile' / 'alt.json').write_text(json.dumps(dict(alt, name='Alt')), encoding='utf-8')
+        self.assertEqual(dt.profil_lesen(p, 'alt')['start']['ausblenden'], ['logbook'])
 
     def test_eingaben_werden_geprueft(self):
         for schlecht in ({'start': {'zuordnung': {'x': 'gibtsnicht'}}}, {'start': {'ausblenden': ['../x']}}, {'start': {'ausblenden': 'nein'}}, {'zellen': {'reihenfolge': [1]}},
@@ -247,7 +258,7 @@ class ChatWerkzeug(unittest.TestCase):
         dt.speichern(str(projekt_), WAHL)
         dt.aktion(str(projekt_), {'aktion': 'profil_speichern', 'id': 'kunde-a', 'name': 'Kunde A'})
         s = hub.harness.desktop_stand()
-        self.assertEqual((s['grundfunktionen']['start'], s['gruppen'][:2]), (['decisions', 'tasks'], ['arbeit', 'modelle']))
+        self.assertEqual((s['grundfunktionen']['start'], s['gruppen'][:2]), (['decisions', 'tasks', 'wissen'], ['arbeit', 'modelle']))
         self.assertIn('state', s['zellen'])
         self.assertEqual(hub.harness.desktop_stand('kunde-a')['zuschnitt']['name'], 'Kunde A')
 

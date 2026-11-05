@@ -166,8 +166,13 @@ class Kiste:
         namen = [n for n in self.chat_namen() if erlaubt is None or n in erlaubt]
         if not namen:
             return None
-        return {'type': 'function', 'function': {'name': 'zustand', 'description': 'Liest den Zustand von SEDRA (nur lesen, frei). was: ' + ', '.join(namen) + '; limit für list_missions/recent_audit, name für read_doc.',
-                'parameters': {'type': 'object', 'properties': {'was': {'type': 'string', 'enum': namen}, 'limit': {'type': 'integer'}, 'name': {'type': 'string'}}, 'required': ['was']}}}
+        eigenschaften, hinweis = {'was': {'type': 'string', 'enum': namen}, 'limit': {'type': 'integer'}, 'name': {'type': 'string'}}, '; limit für list_missions/recent_audit, name für read_doc'
+        if 'gateway_vorgang' in namen:                                # SPEC_WISSEN_KERN_v1 WK-12: die GateWay-Auskunft braucht ihre Argumente
+            eigenschaften['id'], hinweis = {'type': 'string'}, hinweis + ', id für gateway_vorgang (GW-…)'
+        if 'gateway_regel' in namen:
+            eigenschaften['frage'], hinweis = {'type': 'string'}, hinweis + ', frage für gateway_regel (Regel, Merkmal, Begriff, Fehlercode)'
+        return {'type': 'function', 'function': {'name': 'zustand', 'description': 'Liest den Zustand von SEDRA (nur lesen, frei). was: ' + ', '.join(namen) + hinweis + '.',
+                'parameters': {'type': 'object', 'properties': eigenschaften, 'required': ['was']}}}
 
     def schemas(self):
         z = self.zustand_schema()
@@ -208,7 +213,7 @@ class Kiste:
                 return {'status': 'verboten', 'ergebnis': f"verboten: {e['begruendung']}", 'stufe': 'verboten', 'regel': e['regel'], 'wirkung': False}
             self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id}
             out = self.w.ausfuehren(name, args, plan=plan)
-            if name not in ('erinnern', 'sitzungen_auflisten', 'youtube_transkript', 'vorlage_beantragen', 'desktop_lesen', 'belohnungen_lesen', 'prozess_beantragen'):                  # die Verknüpfung steht schon im Audit des Servers (mit `von`)
+            if name not in ('erinnern', 'sitzungen_auflisten', 'youtube_transkript', 'vorlage_beantragen', 'desktop_lesen', 'belohnungen_lesen', 'prozess_beantragen', 'wissen_suchen', 'wissen_beantragen'):                  # wissen_*: eigenes Audit im Wissen, nie der Fragetext (WK-06); die Verknüpfung steht schon im Audit des Servers (mit `von`)
                 self._audit('HARNESS_APP_OEFFNEN' if name == 'app_oeffnen' else 'HARNESS_PROJEKT_BEANTRAGT', {'ziel': plan['ziel'][:300], 'status': out['status']})
             return dict(out, stufe='frei', regel=name.replace('_', '-'))
         e = einstufung(self.regeln, name, args, plan)

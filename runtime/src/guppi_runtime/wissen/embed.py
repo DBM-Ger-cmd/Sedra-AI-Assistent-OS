@@ -45,6 +45,32 @@ class OhneGpuZugang:
         return GpuLage("frei", "")
 
 
+class VerzoegertesLabor:
+    """Das Testlabor erst öffnen, wenn es die Datei gibt (SPEC_WISSEN_KERN_v1 K1, 05.11.2026): seit das Wissen Standard an ist, darf sein Start
+    kein `testlab.db` anlegen. Ohne Datei hält niemand die GPU – dann ist die Lage frei (keine Reservierung, kein Halter, keine Runde).
+    `oeffnen(pfad)` baut das Labor (im Kern `jobs.testlab.TestLab`); ein Fehler dabei kommt in `TestLabZugang.lage` an und hält die Aufnahme an."""
+
+    def __init__(self, pfad, oeffnen):
+        self.pfad, self._oeffnen, self._lab = Path(pfad), oeffnen, None
+
+    def _labor(self):
+        if self._lab is None and self.pfad.exists():
+            self._lab = self._oeffnen(self.pfad)
+        return self._lab
+
+    def reservations(self):
+        lab = self._labor()
+        return lab.reservations() if lab is not None else []
+
+    def holder(self):
+        lab = self._labor()
+        return lab.holder() if lab is not None else None
+
+    def queue(self, zustaende):
+        lab = self._labor()
+        return lab.queue(zustaende) if lab is not None else []
+
+
 class TestLabZugang:
     """Die Lage der GPU aus den heutigen Tabellen von `testlab.db` (D7.4), nur lesend."""
     DIENST_EIGNER = frozenset({"guppi-uix"})

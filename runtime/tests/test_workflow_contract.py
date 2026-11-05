@@ -17,7 +17,9 @@ class WorkflowCase(unittest.TestCase):
         self.rt=GuppiRuntime(self.root,ARCH)
         self.m=self.rt.brain.create_mission('Create a report')
         self.mid=self.m['identity']['mission_id'];self.fs=self.rt.filesystem_tool
-    def tearDown(self):self.tmp.cleanup()
+    def tearDown(self):
+        if self.rt.wissen:self.rt.wissen.schliessen()      # Wissensspeicher (Kern) hält wissen.sqlite offen
+        self.tmp.cleanup()
     def pending_write(self):
         (self.fs.root/'a.txt').write_text('old')
         args={'path':'a.txt','content':'reviewed'}

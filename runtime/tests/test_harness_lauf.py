@@ -156,6 +156,22 @@ class LaufTests(LaufBasis):
         (d / 'lauf.json').write_text(json.dumps(roh), encoding='utf-8')
         self.assertEqual(lauf.Laeufe(self.store.ordner, typen=self.typen).laden(l['id'])['status'], 'verloren')
 
+    def test_ende_zwischen_lesen_und_prozesspruefung_ist_nicht_verloren(self):
+        """U9: `laden` las erst ende.json (noch nicht da), dann die Prozesstabelle (Hülle schon weg) und meldete einen sauber
+        beendeten Lauf als `verloren`. Unter Last wird das Fenster dazwischen größer (unter Linux startet die Prüfung `ps`)."""
+        fake = lambda d: (os.getpid(), None)
+        store = lauf.Laeufe(Path(self.tmp.name) / 'rennen', typen=self.typen, starten=fake)
+        l = store.starten(self.typen['probe'], lauf.argv_bauen(self.typen['probe'], None, self.wurzel))
+        d = store.ordner / l['id']
+        echt = lauf._pid_lebt
+
+        def huelle_endet_genau_jetzt(pid, start):                     # die Hülle schreibt ihr Ende und ist fort, während `laden` die Tabelle liest
+            (d / 'ende.json').write_text(json.dumps({'exit': 0, 'grund': 'ok', 'zeit': lauf.jetzt_text()}), encoding='utf-8')
+            return False
+        lauf._pid_lebt = huelle_endet_genau_jetzt
+        self.addCleanup(setattr, lauf, '_pid_lebt', echt)
+        self.assertEqual(store.laden(l['id'])['status'], 'ok')
+
     def test_grenzen(self):
         fake = lambda d: (os.getpid(), None)                          # läuft „für immer“: die PID gehört dem Test
         store = lauf.Laeufe(Path(self.tmp.name) / 'grenzen', typen=self.typen, starten=fake)

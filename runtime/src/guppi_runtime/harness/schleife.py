@@ -73,9 +73,14 @@ def cache_messung(usage, timings):
     return None
 
 
-def system_prompt(projekt, werkzeuge, vorlage_text=None, zusammenfassung=None, heute=None, regeln=None):
-    """Der Systemprompt; mit einer Vorlage (HS-19) steht ihr Text vorn, danach Projekt und Werkzeuge. `regeln`: die gelernten Regeln des Projekts (Lernsystem, harness/belohnung.py `lessons`)."""
+WISSEN_KOPF = '\n\nWissen zuerst: Vor der Frage des Captains kann ein Block mit Fundstellen aus dem Wissen von SEDRA stehen. '
+
+
+def system_prompt(projekt, werkzeuge, vorlage_text=None, zusammenfassung=None, heute=None, regeln=None, wissen=None):
+    """Der Systemprompt; mit einer Vorlage (HS-19) steht ihr Text vorn, danach Projekt und Werkzeuge. `regeln`: die gelernten Regeln des Projekts (Lernsystem, harness/belohnung.py `lessons`).
+    `wissen`: der feste Satz über den Wissensblock (SPEC_WISSEN_KERN_v1 WK-13) – steht bei eingeschaltetem „Wissen zuerst“ in **jedem** Zug, auch ohne Treffer, damit der Anfang gleich bleibt (Cache)."""
     basis = _system_basis(projekt, werkzeuge, vorlage_text, heute)
+    basis += (WISSEN_KOPF + wissen.strip()) if wissen and wissen.strip() else ''
     return mit_zusammenfassung(basis + (GELERNT_KOPF + regeln.strip() if regeln and regeln.strip() else ''), zusammenfassung)
 
 
@@ -143,7 +148,7 @@ def guard_grund(fehler):
 
 
 def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-cpp-server', sitzungen=None, sitzung_id=None,
-           max_zuege=MAX_ZUEGE, fenster=None, live_text=True, max_tokens=2048, temperature=0.7, wirkung=(), bisher=(), clock=time.monotonic, sicherung='normal', denk_modus='standard'):
+           max_zuege=MAX_ZUEGE, fenster=None, live_text=True, max_tokens=2048, temperature=0.7, wirkung=(), bisher=(), clock=time.monotonic, sicherung='normal', denk_modus='standard', nachbereiten=None):
     """Führt die Schleife für eine Antwort aus, schreibt Werkzeug- und Modellzeile in die Sitzung und sendet zuletzt `ende`.
 
     `execute(mission, request)` ist `control.execute`; `box` hat `schemas()` und `call(name, args)` (wie ChatTools); `antwort` ist eine
@@ -370,6 +375,12 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
     if ende == 'wartet': extra['karte_id'] = warte_karte
     if grund: extra['grund'] = grund
     if zurueck: extra['zurueckgehalten'] = zurueck
+    if callable(nachbereiten) and ende != 'wartet':           # SPEC_WISSEN_KERN_v1 WK-14: Fundstellen und Zitatprüfung; der Text selbst bleibt (Verlauf und Cache)
+        try:
+            wissen = nachbereiten(text)
+        except Exception:                                     # die Prüfung hält nie die Antwort auf
+            wissen = None
+        if wissen: extra['wissen'] = wissen
     if abgeschnitten and text and ende not in ('abgebrochen', 'fehler'): extra['abgeschnitten'] = True     # an der Token-Grenze abgeschnitten
     ergebnis = {'ende': ende, 'text': text, 'zuege': zug, 'token': token, 'cache': cache if cache['zuege'] else None, 'denken_zeichen': denken[0], 'werkzeuge': werkzeuge, **extra}
     if sitzungen is not None and sitzung_id:

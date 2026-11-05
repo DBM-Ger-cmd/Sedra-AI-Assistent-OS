@@ -17,7 +17,7 @@ from .erlaubnis import aktive
 
 ID = re.compile(r'S-[0-9A-F]{8}')
 TITEL_MAX = 60
-TYPEN = ('captain', 'modell', 'werkzeug', 'karte', 'titel', 'wahl', 'erlaubnis', 'zusammenfassung', 'belohnung')     # `wahl`: Modell geändert (PATCH); `erlaubnis`: Sitzungs-Erlaubnis (P0 M1)
+TYPEN = ('captain', 'modell', 'werkzeug', 'karte', 'titel', 'wahl', 'erlaubnis', 'zusammenfassung', 'belohnung', 'wissen')     # `wissen`: Trefferliste ohne Modell (SPEC_WISSEN_KERN_v1 WK-15)     # `wahl`: Modell geändert (PATCH); `erlaubnis`: Sitzungs-Erlaubnis (P0 M1)
 
 
 class SitzungFehler(ValueError):
@@ -110,11 +110,12 @@ class Sitzungen:
                 eintraege.append(wert)
         if kopf is None:
             raise SitzungFehler('sitzung_ohne_kopf')
-        titel, modell = kopf.get('titel') or '', kopf.get('modell')
+        titel, modell, wissen_zuerst = kopf.get('titel') or '', kopf.get('modell'), None
         for e in eintraege:
             if e.get('typ') == 'titel': titel = str(e.get('titel') or '')
             if e.get('typ') == 'wahl' and 'modell' in e: modell = e.get('modell')
-        return {'kopf': kopf, 'eintraege': eintraege, 'kaputt': kaputt, 'titel': titel, 'modell': modell, 'erlaubnisse': aktive(eintraege)}
+            if e.get('typ') == 'wahl' and 'wissen_zuerst' in e: wissen_zuerst = e.get('wissen_zuerst')     # None = die Vorgabe der Einstellungen
+        return {'kopf': kopf, 'eintraege': eintraege, 'kaputt': kaputt, 'titel': titel, 'modell': modell, 'erlaubnisse': aktive(eintraege), 'wissen_zuerst': wissen_zuerst}
 
     def liste(self, projekt=None):
         """Kopf und letzte Zeit je Sitzung, neueste zuerst; mit `projekt` nur die dieses Projekts."""
@@ -160,6 +161,12 @@ class Sitzungen:
 
     def modell_waehlen(self, sid, modell):
         return self.anhaengen(sid, {'typ': 'wahl', 'modell': (str(modell)[:200] if modell else None)})
+
+    def wissen_zuerst_waehlen(self, sid, wert):
+        """SPEC_WISSEN_KERN_v1 WK-13: „Wissen zuerst“ für diese Sitzung an, aus oder wieder nach der Vorgabe (None)."""
+        if wert not in ('an', 'aus', None):
+            raise SitzungFehler('wissen_zuerst_ungueltig: an, aus oder null')
+        return self.anhaengen(sid, {'typ': 'wahl', 'wissen_zuerst': wert})
 
     def erlauben(self, sid, karte_id, werkzeug, muster, regel=None):
         """P0 M1: eine Sitzungs-Erlaubnis anhängen (gilt, bis sie zurückgenommen oder die Sitzung geschlossen wird)."""

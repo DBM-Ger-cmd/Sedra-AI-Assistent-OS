@@ -116,6 +116,7 @@ def python_exe(browser=False):
 
 def run_group(modules, timeout):
     env = {**os.environ, 'PYTHONPATH': os.pathsep.join([str(RUNTIME / 'src'), str(TESTS)])}
+    env.setdefault('SEDRA_WISSEN_STANDARD', 'aus')   # Wissen ist Standard an; Testläufe in Temp-Ordnern halten sonst wissen.sqlite offen (Windows: Aufräumen scheitert). Tests, die das Wissen brauchen, schalten es selbst an
     if any(m in SLOW_FILES for m in modules):
         env.setdefault('SEDRA_BROWSER', '1')   # test_n8n_browser und test_process_browser laufen nur mit diesem Schalter
     started = time.monotonic()

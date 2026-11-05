@@ -18,12 +18,12 @@ class DesktopWahl(unittest.TestCase):
           const konfig = {ausblenden: ['hardware'], zuordnung: {tasks: 'arbeit', models: 'modelle'}, gruppen: ['arbeit']};
           const leer = {};
           const gleich = D.startKonfig(leer, konfig) === konfig;
-          const S = {_desktop: Object.assign(D.LEER(), {start: {ausblenden: ['wissen'], zuordnung: {models: 'system'}}})};
+          const S = {_desktop: Object.assign(D.LEER(), {start: {ausblenden: ['logbook', 'wissen'], zuordnung: {models: 'system'}}})};
           const k = D.startKonfig(S, konfig);
           console.log(JSON.stringify({gleich, ausblenden: k.ausblenden, zuordnung: k.zuordnung, gruppen: k.gruppen, vorgabeUnveraendert: konfig.ausblenden}));
         """)
         self.assertTrue(out['gleich'], 'ohne Wahl bleibt die Vorgabe dieselbe')
-        self.assertEqual(out['ausblenden'], ['hardware', 'wissen'])
+        self.assertEqual(out['ausblenden'], ['hardware', 'logbook'], 'eine Grundfunktion (Wissen) fällt auch im Client heraus')
         self.assertEqual(out['zuordnung'], {'tasks': 'arbeit', 'models': 'system'})
         self.assertEqual(out['vorgabeUnveraendert'], ['hardware'], 'die Vorgabe wird nie veraendert')
 

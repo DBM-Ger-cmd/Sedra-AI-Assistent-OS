@@ -182,9 +182,9 @@ class GespraechsoptionenTests(unittest.TestCase):
     def test_die_zeilen_unter_dem_schild_passen_zum_server(self):
         from guppi_runtime.harness.api import GEDANKEN_MODI
         z = self.optionen()
-        self.assertEqual(list(z), ['denken', 'gedanken_zurueck', 'antwort_budget', 'verlauf_laenge'])
+        self.assertEqual(list(z), ['denken', 'gedanken_zurueck', 'antwort_budget', 'verlauf_laenge', 'wissen_zuerst'])     # wissen_zuerst: SPEC_WISSEN_KERN_v1 WK-13
         self.assertEqual(set(z['gedanken_zurueck']), set(GEDANKEN_MODI))
-        for schluessel in ('denken', 'antwort_budget', 'verlauf_laenge'):
+        for schluessel in ('denken', 'antwort_budget', 'verlauf_laenge', 'wissen_zuerst'):
             self.assertEqual(set(z[schluessel]), set(OPTIONEN[schluessel][1]), schluessel)                       # dieselben Werte (die Reihenfolge der Anzeige darf anders sein)
 
 

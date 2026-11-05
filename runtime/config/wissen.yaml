@@ -1,12 +1,13 @@
-# Wissensspeicher (Spec 7, D7.2 bis D7.5; G2-S7-c, -e, -q, -r): Paket-Vorgabe ohne Pfade. Eingeschaltet wird nur über den
-# Schalter in local_config/switches.yaml (switches: {wissen: {enabled: true}}); `enabled` hier ist die dokumentierte Vorgabe und
-# schaltet allein nicht ein. Engine, Modell und Prüfsumme stehen in local_config/wissen.yaml (nicht im Git):
+# Wissensspeicher (Spec 7, D7.2 bis D7.5; G2-S7-c, -e, -q, -r): Paket-Vorgabe ohne Pfade. Seit SPEC_WISSEN_KERN_v1 (05.11.2026) ist das
+# Wissen Grundfunktion und Standard AN; abgeschaltet wird nur über den Schalter in local_config/switches.yaml
+# (switches: {wissen: {enabled: false}}, nur der Captain). `enabled` hier ist die dokumentierte Vorgabe und schaltet allein nichts.
+# Engine, Modell und Prüfsumme stehen in local_config/wissen.yaml (nicht im Git):
 #   wissen: {engine: '<guppi>/engines/llama.cpp/b11160/llama-server.exe', modell: '<modelle>/bge-m3/bge-m3-q8_0.gguf',
 #            modell_sha256: '<sha256 der GGUF>', modell_name: bge-m3-q8_0}
 # Ohne diese Datei läuft der Speicher mit Volltextsuche (WIS-06), das Einbetten bleibt „nicht bereit“.
 wissen:
   schema: 1
-  enabled: false
+  enabled: true
   speicher: wissen/wissen.sqlite        # relativ zu local_config, kein absoluter Pfad, kein ..
   takt: {an: true, intervall_s: 600, schritt_s: 120}     # D7.3: alle 600 s ein Abgleich und ein Einbett-Schritt von höchstens 120 s
   einbetten:                            # D7.4: eigener llama-server --embeddings, nur CPU, nie Port 8089

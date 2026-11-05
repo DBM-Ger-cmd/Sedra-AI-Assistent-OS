@@ -31,7 +31,7 @@ ALLOWED = {
     "llama_server": {"enabled", "mtp", "external"},   # external: use the running router of llama_server.yaml `external` instead of a process of its own
     "token_policy": {"enabled"},
     "orchestra": {"enabled"},          # Spec 0 (G2-S0-10): Orchestrierung; Standard aus, runtime/config/orchestra.yaml sagt enabled: false
-    "wissen": {"enabled"},             # Spec 7 (G2-S7-q): Wissensspeicher; Standard aus, runtime/config/wissen.yaml sagt enabled: false
+    "wissen": {"enabled"},             # Spec 7 (G2-S7-q): Wissensspeicher; seit SPEC_WISSEN_KERN_v1 (05.11.2026) Standard AN, `enabled: false` schaltet es ab (nur der Captain)
     "entwicklung": {"enabled"},        # SPEC_UIX_STUFE6 §2.2 (S6-E4): Prüfwerkzeuge (zweck: pruefung) der Oberfläche laden; Standard aus
     "code_sicht": {"enabled"},
     "freigabe_ausserhalb": {"enabled"},   # SPEC_APPS_v1 G9: Freigaben der Klasse H nur über Systemdialog oder Konsole; Standard AN, `enabled: false` schaltet es ab         # SPEC_APPS_v1 G4: Läufe und Befehle der Harness nur nach Sicht auf geänderten Code; Standard AN, `enabled: false` schaltet es ab

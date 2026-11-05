@@ -5,8 +5,7 @@ die Zitatprüfung; aus der Antwort das optionale Feld `wissen_vorschlag`. Der Le
 gilt als Cloud, A-9): Treffer mit Personenbezug gehen nie in einen Cloud-Weg (WIS-11). Ohne Treffer bleibt der Lauf, wie er war."""
 from __future__ import annotations
 
-from ..orchestra.runner import external_block
-from . import ausgabe
+from . import dienst
 from .speicher import leser as leser_von
 
 MAX_FRAGE = 500
@@ -20,12 +19,12 @@ def frage_aus_aufgabe(task):
 
 
 def route_von(router, provider_ref):
-    """`local` nur, wenn der Anbieter des Versuchs bekannt ist und keine Cloud-Route trägt; alles andere gilt als Cloud."""
-    adapters = getattr(router, "adapters", None) or {}
-    adapter = adapters.get(provider_ref) if isinstance(adapters, dict) and provider_ref else None
-    if adapter is None:
-        return "cloud"
-    return "cloud" if getattr(adapter, "route", "local") == "cloud" else "local"
+    """`local` nur, wenn der Anbieter des Versuchs bekannt ist und keine Cloud-Route trägt; alles andere gilt als Cloud (über `dienst`)."""
+    return dienst.route_aus_anbieter(provider_ref, router if router is not None else _KEIN_ROUTER)
+
+
+class _KEIN_ROUTER:                                                # ohne Router kennt der Lauf keinen Anbieter: alles gilt als Cloud
+    adapters = {}
 
 
 def leser_aus_scope(scope):
@@ -36,27 +35,11 @@ def leser_aus_scope(scope):
 
 def kontext_nachrichten(speicher, frage, *, leser, route, mission_id):
     """([Systemsatz, Datenblock], Ergebnis) oder ([], Ergebnis|None): ohne Treffer kein Block. Treffer mit Personenbezug werden auf
-    dem Cloud-Weg verworfen (`WIS_CLOUD_GEFILTERT`), nie gesendet."""
-    k = speicher.konfig
-    try:
-        ergebnis = speicher.suche(frage, leser=leser, k=k.kontext_treffer, route=route, mission_id=mission_id, protokoll=False)
-    except ValueError:
+    dem Cloud-Weg verworfen (`WIS_CLOUD_GEFILTERT`), nie gesendet. Seit K1 ein dünner Anschluss an `dienst.fragen`/`dienst.block`."""
+    antwort = dienst.fragen(speicher, frage, leser=leser, route=route, mission_id=mission_id, protokoll=False)
+    if antwort.ergebnis is None:
         return [], None
-    treffer = list(ergebnis["treffer"])
-    if route == "cloud":
-        verworfen = [t["id"] for t in treffer if t["personenbezug"]]
-        if verworfen:
-            speicher.audit("WIS_CLOUD_GEFILTERT", {"mission_id": mission_id, "ids": verworfen})
-            treffer = [t for t in treffer if not t["personenbezug"]]
-    ergebnis = dict(ergebnis, treffer=treffer)
-    if not treffer:
-        return [], ergebnis
-    marken = bool(getattr(k, "datamarking", False))
-    records = ausgabe.datensaetze(treffer, je_treffer=k.je_treffer, gesamt=k.gesamt, hoechstens=k.kontext_treffer, datamarking=marken)
-    block = external_block(records, max_chars=k.je_treffer)
-    speicher.audit("WIS_KONTEXT", {"mission_id": mission_id, "ids": [t["id"] for t in treffer][:len(records)], "zeichen": len(block), "modus": ergebnis["modus"]})
-    system = ausgabe.SYSTEM_WISSEN_MARKIERT if marken else ausgabe.SYSTEM_WISSEN
-    return [{"role": "system", "content": system, "trust": "system"}, {"role": "user", "content": block, "trust": "untrusted"}], ergebnis
+    return dienst.block(speicher, antwort, mission_id=mission_id), antwort.ergebnis
 
 
 def block_ids(ergebnis):
@@ -74,16 +57,8 @@ def nachrichten_mit(plan_messages, extra):
 
 def nachbereite(text, ergebnis, *, mission_id, audit):
     """Zitatprüfung (WIS-07): fremde IDs bekommen den Hinweis (`WIS_ZITAT_FREMD`), keine ID trotz Treffern die Fundstellen
-    (`WIS_ZITAT_FEHLT`); ein Hinweis der Suche (Volltext, Abdeckung) hängt immer an."""
-    ids = [t["id"] for t in (ergebnis or {}).get("treffer") or []]
-    if text is None:
-        return ausgabe.schlusstext(None, ids_im_block=ids, hinweis=(ergebnis or {}).get("hinweis"))
-    belegt, fremd = ausgabe.pruefe_zitate(text, set(ids))
-    if fremd:
-        audit("WIS_ZITAT_FREMD", {"mission_id": mission_id, "ids": fremd})
-    if ids and not belegt:
-        audit("WIS_ZITAT_FEHLT", {"mission_id": mission_id, "ids": ids})
-    return ausgabe.schlusstext(text, ids_im_block=ids, hinweis=(ergebnis or {}).get("hinweis"))
+    (`WIS_ZITAT_FEHLT`); ein Hinweis der Suche (Volltext, Abdeckung) hängt immer an. Über `dienst.nachbereiten`."""
+    return dienst.nachbereiten(text, dienst.aus_ergebnis(ergebnis), audit=audit, mission_id=mission_id)
 
 
 def nachbereite_ausgang(out, ergebnis, *, mission_id, audit):

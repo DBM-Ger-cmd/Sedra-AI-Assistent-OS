@@ -1,23 +1,3 @@
-/* Aussehen der Prozess-Apps: helles und dunkles Thema, nur im Geltungsbereich .t-workflow.
-   Die übrigen Ansichten von One Sedra bleiben unberührt. Themenwahl über data-wf-theme am App-Container. */
-.t-workflow{
-  --wf-canvas:var(--bg);--wf-dot:rgba(255,255,255,.16);--wf-edge:var(--accent);--wf-tile:var(--panel);--wf-tile-line:var(--line);
-  --wf-icon:var(--text);--wf-shadow:0 1px 3px rgba(0,0,0,.4);
-  --mod-manualTrigger:#7b5cd6;--mod-start:#7b5cd6;--mod-set:#1f9d8a;--mod-if:#d9822b;--mod-router:#d9822b;--mod-decision:#d9822b;--mod-noOp:#5b6b86;
-  --mod-stickyNote:#b59a2e;--mod-human:#c2547a;--mod-task:#3b82c4;--mod-end:#2e9e5a;--mod-unknown:#7a7f8a;
-}
-.t-workflow[data-wf-theme="light"]{
-  --bg:#f5f6f8;--panel:#ffffff;--panel-2:#eef0f3;--line:#d5d9e0;--line-soft:#e6e9ee;
-  --text:#1f2430;--muted:#566070;--heading:#111827;
-  --accent:#0d8a6a;--accent-text:#ffffff;--scenario-accent:#7a2fe0;
-  --ok:#15803d;--ok-bg:#e8f6ee;--ok-line:#a7d9bb;--warn:#a85a00;--warn-bg:#fff3de;--warn-line:#f0cf9a;--bad:#c0362c;--bad-bg:#fdeceb;--bad-line:#f0b8b3;
-  --wf-canvas:#f7f7f9;--wf-dot:rgba(30,36,48,.20);--wf-tile:#ffffff;--wf-tile-line:#c9ced8;--wf-icon:#1f2430;--wf-shadow:0 1px 4px rgba(20,30,50,.18);
-  color-scheme:light;
-}
-.t-workflow[data-wf-theme="dark"]{color-scheme:dark}
-.t-scenario{--wf-edge:var(--scenario-accent)}
-.t-scenario[data-wf-theme="light"]{--wf-canvas:#f4f4f6}
-
 /* Zeichenfläche */
 .t-workflow .t-wf-canvas{position:relative;border-radius:10px;overflow:hidden;background:var(--wf-canvas)}
 .t-workflow .t-wf-svg{height:clamp(420px,62vh,780px);background:var(--wf-canvas)}
@@ -49,7 +29,7 @@
 .t-scenario .t-wf-node.mod-human .t-wf-module-ring{fill:var(--mod-human)}
 .t-scenario .t-wf-node.mod-task .t-wf-module-ring{fill:var(--mod-task)}
 .t-scenario .t-wf-node.mod-end .t-wf-module-ring{fill:var(--mod-end)}
-.t-scenario .t-wf-icon{stroke:#fff;stroke-width:1.5}
+.t-scenario .t-wf-icon{stroke:var(--wf-on-color);stroke-width:1.5}
 .t-scenario .t-wf-cap{fill:var(--wf-edge);opacity:.45}
 .t-scenario .t-wf-node.selected .t-wf-module-ring{stroke:var(--text);stroke-width:4}
 .t-scenario .t-wf-node.unsupported .t-wf-module-ring{stroke:var(--warn);stroke-width:4;stroke-dasharray:6 4}
@@ -119,7 +99,7 @@
 .t-workflow .t-wf-panel>h3{margin:8px 0 0}
 
 .t-workflow .t-wf-candidate{fill:var(--ok);stroke:var(--wf-tile);stroke-width:2}
-.t-workflow .t-wf-candidate-text{fill:#fff;font-size:10px;font-weight:700;pointer-events:none}
+.t-workflow .t-wf-candidate-text{fill:var(--wf-on-color);font-size:10px;font-weight:700;pointer-events:none}
 
 .t-workflow .t-wf-minimap{position:absolute;right:12px;bottom:12px;width:170px;height:110px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--wf-shadow);overflow:hidden}
 .t-workflow .t-wf-minimap-svg{width:100%;height:100%;display:block;cursor:pointer;touch-action:none}

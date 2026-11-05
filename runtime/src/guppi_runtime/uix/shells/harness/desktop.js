@@ -11,8 +11,8 @@
   // Schriftfamilien ohne Nachladen aus dem Netz (der Server kennt dieselben Namen); leer = die Schrift der Shell
   const SCHRIFTEN = {serif: 'Georgia,"Times New Roman",serif', mono: 'Consolas,"Courier New",monospace', humanist: '"Trebuchet MS","Gill Sans",Verdana,sans-serif', breit: 'Verdana,Tahoma,"Segoe UI",sans-serif'};
   const SCHRIFT_NAMEN = {serif: 'Serif (Georgia)', mono: 'Technisch (Consolas)', humanist: 'Freundlich (Trebuchet)', breit: 'Breit (Verdana)'};
-  // Grundfunktionen (ENTWURF_APPS_MODELL §2.2a): Posteingang, Aufgaben und die Zelle Freigaben lassen sich nie ausblenden – dasselbe prüft der Server
-  const GRUND_START = ['decisions', 'tasks'], GRUND_ZELLEN = ['decisions'];
+  // Grundfunktionen (ENTWURF_APPS_MODELL §2.2a, SPEC_WISSEN_KERN_v1 WK-04): Posteingang, Aufgaben, Wissen und die Zelle Freigaben lassen sich nie ausblenden – dasselbe prüft der Server
+  const GRUND_START = ['decisions', 'tasks', 'wissen'], GRUND_ZELLEN = ['decisions'];
   // Die Zellen der Taskleiste in der Vorgabe-Reihenfolge: Schlüssel (= data-zelle) und Name für den Desktop Builder
   const ZELLEN = [['decisions', 'Freigaben'], ['token', 'Token'], ['model', 'Modell'], ['temp', 'Temperatur'], ['vram', 'Grafikspeicher (VRAM)'], ['ram', 'Arbeitsspeicher (RAM)'],
                   ['server', 'Modellserver'], ['scheduler', 'Scheduler'], ['state', 'Zustand']];
@@ -23,7 +23,7 @@
   function startKonfig(S, konfig){
     const w = wahl(S).start;
     if(!konfig || (!w.ausblenden.length && !Object.keys(w.zuordnung).length)) return konfig;
-    return Object.assign({}, konfig, {ausblenden: (konfig.ausblenden || []).concat(w.ausblenden), zuordnung: Object.assign({}, konfig.zuordnung, w.zuordnung)});
+    return Object.assign({}, konfig, {ausblenden: (konfig.ausblenden || []).concat(w.ausblenden.filter(id=>!GRUND_START.includes(id))), zuordnung: Object.assign({}, konfig.zuordnung, w.zuordnung)});
   }
 
   // Die Zellen der Taskleiste (DOM-Knoten mit dataset.zelle): ausgeblendete fallen weg, die übrigen folgen der gewählten Reihenfolge (nicht genannte behalten ihren Platz dahinter).

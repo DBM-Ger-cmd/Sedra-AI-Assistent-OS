@@ -15,7 +15,9 @@
     const spar = T.SPAREN.filter(z=>SPAR_SCHLUESSEL.indexOf(z[0]) >= 0).map(([schluessel, titel, wahl, hilfe])=>({schluessel, titel, hilfe, wahl}));
     const gedanken = {schluessel: 'gedanken_zurueck', titel: 'Gedanken ans Modell zurücksenden', wahl: T.GEDANKEN,
                       hilfe: 'Sedra speichert die Gedanken immer und zeigt sie dir aufklappbar. Hier wählst du, wie viel davon beim nächsten Mal wieder an das Modell geht (mehr kostet Token).'};
-    return [spar[0], gedanken, ...spar.slice(1)].filter(Boolean);
+    const wissen = {schluessel: 'wissen_zuerst', titel: 'Wissen zuerst', wahl: [['an', 'an', ''], ['aus', 'aus', '']],
+                    hilfe: 'An: vor jeder Frage sucht Sedra im Wissen und gibt die Fundstellen mit (SPEC_WISSEN_KERN_v1). Aus: das Modell sucht nur, wenn es selbst wissen_suchen ruft.'};
+    return [spar[0], gedanken, ...spar.slice(1), wissen].filter(Boolean);
   }
 
   // das Feld: { el, umschalten(knopf) }

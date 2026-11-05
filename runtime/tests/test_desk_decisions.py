@@ -123,7 +123,8 @@ class ThroughTheHub(unittest.TestCase):
     def test_the_snapshot_the_stream_watches_holds_what_the_shell_needs(self):
         snap = self.hub.desk_snapshot()
         # 'live' kam mit Build 8 dazu (Zeilenzahl je laufender Aufgabe); wächst diese Liste, muss desk/events.diff mitwachsen.
-        self.assertEqual(sorted(snap), ["decisions", "live", "missions", "model", "state"])
+        erwartet = ["decisions", "live", "missions", "model", "state"] + (["wissen"] if self.hub.runtime.wissen is not None else [])      # der Testlauf setzt SEDRA_WISSEN_STANDARD=aus
+        self.assertEqual(sorted(snap), sorted(erwartet))     # Wissen ist seit 05.11.2026 Standard an (SPEC_WISSEN_KERN_v1 WK-03)
         self.assertEqual(snap["state"], "READY")
         self.assertEqual(self.hub.desk_snapshot(), snap, "two looks without a change must be equal, or the stream never rests")
 

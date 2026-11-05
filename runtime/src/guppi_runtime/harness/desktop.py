@@ -16,7 +16,7 @@ from pathlib import Path
 
 ORDNER = ('runtime_data', 'harness')
 GRUPPEN = ('arbeit', 'modelle', 'token', 'wissen', 'system', 'pruefung')     # wie start_gruppen.json / startliste.js
-GRUND_START = ('decisions', 'tasks')            # Orte (ui/places.js): Posteingang und Aufgaben – nie ausblendbar
+GRUND_START = ('decisions', 'tasks', 'wissen')  # Orte (ui/places.js): Posteingang, Aufgaben und Wissen (SPEC_WISSEN_KERN_v1 WK-04) – nie ausblendbar
 GRUND_ZELLEN = ('decisions',)                   # die Zelle Freigaben der Taskleiste
 ID = re.compile(r'^[a-z0-9][a-z0-9_.:-]{0,59}$')
 PROFIL_ID = re.compile(r'^[a-z0-9][a-z0-9-]{1,39}$')
@@ -135,6 +135,19 @@ def _zonen(wert):
     return out
 
 
+def bereinigt(roh):
+    """Gespeicherte Daten von früher (Zuschnitt, Profil): eine Grundfunktion, die erst später dazukam (Wissen, 05.11.2026), fällt still aus
+    `ausblenden` heraus – sonst ginge beim Laden der ganze Zuschnitt verloren. Neues Speichern lehnt das Ausblenden weiter ab (`pruefen`)."""
+    if not isinstance(roh, dict):
+        return roh
+    out = dict(roh)
+    for teil, grund in (('start', GRUND_START), ('zellen', GRUND_ZELLEN)):
+        t = out.get(teil)
+        if isinstance(t, dict) and isinstance(t.get('ausblenden'), list):
+            out[teil] = dict(t, ausblenden=[x for x in t['ausblenden'] if x not in grund])
+    return out
+
+
 def pruefen(roh):
     """Die Wahl prüfen und normieren; fehlende Teile sind leer. Wirft ValueError mit einem Kennwort, wenn etwas nicht stimmt (auch bei dem Versuch, eine Grundfunktion auszublenden)."""
     roh = {} if roh is None else roh
@@ -155,7 +168,7 @@ def pruefen(roh):
             raise ValueError('desktop_zuordnung_ungueltig')
     aus_start, aus_zellen = _ids(start.get('ausblenden'), 'ausblenden'), _ids(zellen.get('ausblenden'), 'ausblenden')
     if set(aus_start) & set(GRUND_START) or set(aus_zellen) & set(GRUND_ZELLEN):
-        raise ValueError('desktop_grundfunktion: Posteingang, Aufgaben und die Zelle Freigaben bleiben immer erreichbar')
+        raise ValueError('desktop_grundfunktion: Posteingang, Aufgaben, Wissen und die Zelle Freigaben bleiben immer erreichbar')
     name, akzent = marke.get('name') or '', marke.get('akzent') or ''
     if not isinstance(name, str) or len(name) > 40 or not isinstance(akzent, str) or (akzent and not FARBE.match(akzent)):
         raise ValueError('desktop_marke_ungueltig: Name höchstens 40 Zeichen, Akzent als #rrggbb')
@@ -185,7 +198,7 @@ def laden(projekt_root):
     """Die gespeicherte Wahl samt aktivem Profil und Profilliste; fehlt die Datei oder ist sie kaputt, gilt die Vorgabe der Shell (leer) – nie ein Fehler beim Start."""
     try:
         roh = json.loads(_datei(projekt_root).read_text(encoding='utf-8'))
-        wahl = pruefen({k: roh.get(k) for k in TEILE})
+        wahl = pruefen(bereinigt({k: roh.get(k) for k in TEILE}))
         profil = roh.get('profil') if isinstance(roh.get('profil'), str) and PROFIL_ID.match(roh['profil']) else None
     except (OSError, ValueError, AttributeError):
         wahl, profil = _leer(), None
@@ -234,7 +247,7 @@ def profil_lesen(projekt_root, pid):
         d = json.loads((_profile(projekt_root) / (pid + '.json')).read_text(encoding='utf-8'))
     except (OSError, ValueError):
         raise ValueError('profil_unbekannt')
-    return dict(pruefen({k: d.get(k) for k in TEILE}), id=pid, name=str(d.get('name') or pid)[:60], auftraggeber=str(d.get('auftraggeber') or '')[:60],
+    return dict(pruefen(bereinigt({k: d.get(k) for k in TEILE})), id=pid, name=str(d.get('name') or pid)[:60], auftraggeber=str(d.get('auftraggeber') or '')[:60],
                 beschreibung=str(d.get('beschreibung') or '')[:200])
 
 

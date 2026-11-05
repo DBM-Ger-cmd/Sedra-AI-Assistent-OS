@@ -3,9 +3,11 @@
 ein Vorschlag wird Antrag → Freigabe legt genau einen Abschnitt an, Ablehnung keinen, ein geänderter Vorschlag ist `binding_stale`;
 der Takt läuft unter `takt.lock`. Ohne Embedding-Server (kein Modell): Modus volltext."""
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
@@ -55,6 +57,22 @@ class Basis(unittest.TestCase):
 
     def beantrage(self, pfad='notizen/werkbank.md', **more):
         return self.act('wissen', None, 'quelle_beantragen', adapter='markdown', wurzel='projekt', pfad=pfad, stufe=more.pop('stufe', 1), **more)
+
+
+class OhneSchalterAn(unittest.TestCase):
+    """SPEC_WISSEN_KERN_v1 WK-03 (05.11.2026): ohne Eintrag in switches.yaml ist das Wissen an (Grundfunktion)."""
+
+    def test_ohne_eintrag_ist_das_wissen_an(self):
+        from guppi_runtime.uix_server import UIXHub
+        tmp = tempfile.TemporaryDirectory(prefix='wissen-vorgabe-')
+        self.addCleanup(tmp.cleanup)
+        project = Path(tmp.name) / 'project'
+        (project / 'local_config').mkdir(parents=True)
+        with mock.patch.dict(os.environ, {'SEDRA_WISSEN_STANDARD': 'an'}):      # der Testlauf setzt sonst `aus`
+            hub = UIXHub(project, ARCH)
+        self.addCleanup(hub.close)
+        self.assertIsNotNone(hub.runtime.wissen)
+        self.assertTrue(hub.runtime.boot()['wissen']['enabled'])
 
 
 class SchalterAus(Basis):

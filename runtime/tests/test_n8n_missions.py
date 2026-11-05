@@ -14,7 +14,7 @@ ARCH = Path(__file__).resolve().parents[2] / 'architecture/GUPPI_Architecture_v1
 class Missions(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
-        self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
+        self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH); self.addCleanup(self.hub.close)      # Wissensspeicher (Kern) hält wissen.sqlite offen
         cfg = self.hub.project_root / 'local_config/n8n.json'; cfg.parent.mkdir(exist_ok=True)
         cfg.write_text(json.dumps({'enabled': True, 'base_url': 'http://127.0.0.1:5678', 'api_key_env': 'SEDRA_N8N_TEST_KEY'}))
         self.record = _save(self.hub, None, {'workflow': sample()})

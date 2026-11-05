@@ -648,10 +648,13 @@ class LoadFailureLog(unittest.TestCase):
  def test_the_failure_carries_the_recipe_file_and_whether_it_exists(self):
   with tempfile.TemporaryDirectory() as tmp:
    hub=UIXHub(Path(tmp)/'project',ARCH)
-   gguf=Path(tmp)/'m.gguf';gguf.write_bytes(b'GGUF')
-   resolution={'provider_ref':'llama-cpp-server','profile':'Standard','load_profile':{'server':{'gguf':str(gguf)}}}
-   with unittest.mock.patch.object(hub.runtime.audit,'append') as append:
-    hub._log_load_failure('coder.local_qwen3_5_9b_q6_k',resolution,ValueError('valid_gguf_model_required'))
+   try:
+    gguf=Path(tmp)/'m.gguf';gguf.write_bytes(b'GGUF')
+    resolution={'provider_ref':'llama-cpp-server','profile':'Standard','load_profile':{'server':{'gguf':str(gguf)}}}
+    with unittest.mock.patch.object(hub.runtime.audit,'append') as append:
+     hub._log_load_failure('coder.local_qwen3_5_9b_q6_k',resolution,ValueError('valid_gguf_model_required'))
+   finally:
+    hub.close()      # der Wissensspeicher hält wissen.sqlite offen, bis die Oberfläche schließt
   name,=append.call_args.args
   payload=append.call_args.kwargs['payload']
   self.assertEqual(name,'MODEL_LOAD_FAILED')

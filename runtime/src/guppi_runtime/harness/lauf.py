@@ -364,13 +364,20 @@ class Laeufe:
                 return lauf
             d = self._dir(lid)
             ende = self._ende_lesen(d)
+            if ende is None and not _pid_lebt(lauf.get('pid'), lauf.get('start_zeit_pid')):
+                # Die Hülle kann ihr Ende zwischen dem Lesen oben und der Prozessprüfung geschrieben haben und schon fort sein:
+                # erst nach einem zweiten Blick auf ende.json heißt der Lauf `verloren` (U9, 05.11.2026 – unter Last sonst „verloren“ statt „ok“).
+                ende = self._ende_lesen(d)
+                verloren = ende is None
+            else:
+                verloren = False
             geaendert = None
             if ende is not None:
                 st = {'ok': 'ok', 'fehler': 'fehler', 'gestoppt': 'abgebrochen' if (d / 'abgebrochen.txt').exists() else 'gestoppt', 'zeitlimit': 'zeitlimit',
                       'start_fehlgeschlagen': 'fehler'}.get(ende.get('grund'), 'fehler')
                 lauf.update(status=st, exit=ende.get('exit'), ende=ende.get('zeit') or jetzt_text(), grund=ende.get('grund'))
                 geaendert = 'ende'
-            elif not _pid_lebt(lauf.get('pid'), lauf.get('start_zeit_pid')):
+            elif verloren:
                 lauf.update(status='verloren', ende=jetzt_text(), grund='Prozess weg, kein Ende gemeldet')
                 geaendert = 'ende'
             fort = fortschritt_aus(self.tail(lid, 200, roh=True), lauf.get('fortschritt_regel'))
