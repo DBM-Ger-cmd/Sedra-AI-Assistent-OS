@@ -76,12 +76,18 @@
 
   // Gute Antworten (Belohnungssystem, harness/belohnung.py): wie viele, je Vorlage und Modell, die letzten; der Ordner kann als Quelle in die Wissensdatenbank
   function belohnungZeigen(S, box, b){
-    const zeilen = [d().el('h3', 'hs-ueber', 'Gute Antworten (Lob wie „danke“ oder „das hast du gut gemacht“)')];
-    if(!b || !b.anzahl){ zeilen.push(d().el('small', 'hs-leise', 'Noch keine. Sagt der Captain nach einer Antwort „danke“, „das hast du gut gemacht“ oder „perfekt“, merkt Sedra sie sich – mit ★ im Gespräch.')); }
+    const zeilen = [d().el('h3', 'hs-ueber', 'Gute und korrigierte Antworten (Lob wie „danke“, Korrektur wie „das stimmt nicht“)')];
+    if(!b || (!b.anzahl && !b.korrekturen)){ zeilen.push(d().el('small', 'hs-leise', 'Noch keine. Sagt der Captain nach einer Antwort „danke“, „das hast du gut gemacht“ oder „perfekt“, merkt Sedra sie sich – mit ★ im Gespräch.')); }
     else{
-      zeilen.push(d().el('div', 'hs-hw-kopf', b.anzahl + ' gute Antworten · ' + b.besonders + ' besonders gut · ' + b.code + ' mit Code'));
+      zeilen.push(d().el('div', 'hs-hw-kopf', b.anzahl + ' gute Antworten · ' + b.besonders + ' besonders gut · ' + b.code + ' mit Code · ' + (b.korrekturen || 0) + ' Korrekturen'));
       const zaehlen = (titel, liste)=>{ if(liste && liste.length){ const z = d().el('div', 'hs-info-zeile'); z.append(d().el('b', null, titel), d().el('span', null, liste.map(x=>x.name + ' ×' + x.anzahl).join(' · '))); zeilen.push(z); } };
       zaehlen('Je Vorlage', b.je_vorlage); zaehlen('Je Modell', b.je_modell);
+      (b.letzte_korrekturen || []).forEach(x=>{
+        const z = d().el('div', 'hs-info-zeile hs-bel-zeile hs-info-fehler');
+        z.append(d().el('span', null, '⚑'), d().el('b', null, x.titel || x.sitzung_id), d().el('small', 'hs-leise', [uhrzeit(x.zeit), x.vorlage || 'ohne Vorlage', x.modell || '?', '„' + x.ausloeser + '“'].join(' · ')));
+        if(x.korrektur) z.append(d().el('div', 'hs-bel-text', 'Korrektur: ' + x.korrektur));
+        zeilen.push(z);
+      });
       (b.letzte || []).forEach(x=>{
         const z = d().el('div', 'hs-info-zeile hs-bel-zeile');
         z.append(d().el('span', null, x.stufe === 2 ? '★★' : '★'), d().el('b', null, x.titel || x.sitzung_id), d().el('small', 'hs-leise', [uhrzeit(x.zeit), x.vorlage || 'ohne Vorlage', x.modell || '?', '„' + x.ausloeser + '“', x.art === 'code' ? 'Code' : ''].filter(Boolean).join(' · ')));

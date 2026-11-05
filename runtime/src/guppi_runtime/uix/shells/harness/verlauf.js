@@ -25,10 +25,11 @@
     return svg;
   }
 
-  // ★ an einer gelobten Antwort (Belohnungssystem, harness/belohnung.py): ★★ bei „besonders gut“
+  // ★ an einer gelobten Antwort, ⚑ an einer korrigierten (Belohnungs- und Lernsystem, harness/belohnung.py): ★★ bei „besonders gut“
   function lobZeichen(b){
-    const z = d().el('div', 'hs-lob', (b.stufe === 2 ? '★★ besonders gute Antwort' : '★ gute Antwort') + (b.ausloeser ? ' · „' + b.ausloeser + '“' : ''));
-    z.title = 'Der Captain hat diese Antwort gelobt; sie steht in den guten Antworten (Einstellungen → System → Info) und kann in die Wissensdatenbank.';
+    const korr = b.urteil === 'korrektur';
+    const z = d().el('div', 'hs-lob' + (korr ? ' hs-korrigiert' : ''), (korr ? '⚑ korrigiert' : (b.stufe === 2 ? '★★ besonders gute Antwort' : '★ gute Antwort')) + (b.ausloeser ? ' · „' + b.ausloeser + '“' : ''));
+    z.title = korr ? 'Der Captain hat diese Antwort korrigiert; seine Worte sind die Lehre für den Rückblick (Vorlage Rückblick).' : 'Der Captain hat diese Antwort gelobt; sie steht in den guten Antworten (Einstellungen → System → Info) und kann in die Wissensdatenbank.';
     return z;
   }
 

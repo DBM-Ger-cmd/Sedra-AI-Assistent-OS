@@ -2,6 +2,7 @@
 
     GET    projekte                           Harness-Projekte (Datei des Captains + Laufzeitdatei)
     POST   projekte                           P0 M3: {wurzel, name?, schreibbereich?} → Antrag mit Gate (HARNESS_PROJEKT_ADD, Herkunft S7); geschrieben wird erst nach Freigabe
+    GET    vorschlaege?q=&vorlage=            Vorhersagen beim Tippen: {an, vorschlaege: [{frage, stufe, dateien, vorlage}], warnungen: [{frage, korrektur}]} aus gelobten und korrigierten Antworten
     GET/POST desktop                          Desktop Builder: die Wahl des Captains für Start-Menü (ausblenden, Gruppe) und Taskleiste (ausblenden, Reihenfolge); POST ersetzt Teile, null = Vorgabe der Shell
     POST   vorgaben                           P0 M3: {rezept_standard?, projekt_standard?} merken (Laufzeitdatei; null löscht die Vorgabe)
     GET    sitzungen[?projekt=]               Liste (neueste zuerst) und welche gerade antworten
@@ -94,7 +95,7 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|hilfswerkzeuge|bausteine|info|desktop)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|hilfswerkzeuge|bausteine|info|desktop|vorschlaege)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)|info/wissen|desktop'
@@ -307,6 +308,8 @@ class HarnessApi:
         if fest == 'bausteine' and not unter and method == 'GET':        # Bausteine der Aufgaben-Freigabe (Analyse Freigaben S1): nur lesen
             try: return 200, harness_bausteine.laden(self.hub.project_root)
             except ValueError as exc: return 200, {'bausteine': [], 'hinweise': [str(exc)]}
+        if fest == 'vorschlaege' and not unter and method == 'GET':        # Vorhersagen beim Tippen aus gelobten und korrigierten Antworten (harness/belohnung.py); nur lesen
+            return 200, harness_belohnung.vorschlaege(self.hub.project_root, (q.get('q') or [''])[0][:300], (q.get('vorlage') or [''])[0] or None)
         if fest == 'desktop' and not unter and method == 'GET':        # Desktop Builder: die Wahl des Captains für Start-Menü und Taskleiste (leer = Vorgabe der Shell)
             if (q.get('profil') or [''])[0]:                      # ein Profil zum Ansehen und Exportieren
                 return 200, harness_desktop.profil_lesen(self.hub.project_root, (q.get('profil') or [''])[0])
@@ -537,7 +540,8 @@ class HarnessApi:
         vorlage = self._vorlage(s)
         box, projekt = self._kiste(s)
         messages = [{'role': 'system', 'content': schleife.system_prompt((f"{projekt['name']} (Ordner {projekt['wurzel']}, Schreibbereich {', '.join(projekt['schreibbereich'])})" if projekt else None), box.names, vorlage['system'] if vorlage else None,
-                                                                         (letzte_zusammenfassung(s['eintraege']) or {}).get('text'), harness_verbrauch.heute())},
+                                                                         (letzte_zusammenfassung(s['eintraege']) or {}).get('text'), harness_verbrauch.heute(),
+                                                                         harness_belohnung.lessons(projekt['wurzel']) if projekt else None)},
                     *verlauf, {'role': 'user', 'content': text}]
         with self._start:
             antwort = self._antwort_anlegen(sid)
@@ -930,7 +934,7 @@ class HarnessApi:
                          lauf_typen=self.lauf_typen, modelle=self._modell_op, andere_antworten=self._andere_antworten,
                          projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz), lese_grenze=lambda: self._option('lese_grenze'), sitzungen_liste=self.sitzungen_fuer_modell, sitzungen_weg=lambda ids: self.aufraeumen({'ids': ids}), verknuepfung=lambda ort, name: self.verknuepfung_anlegen(ort, name, von='modell'), gedanken=self.gedanken_lesen, gedaechtnis=self.gedaechtnis_suchen,
                          code_stand=self.code_stand(projekt),
-                         vorlage_antrag=lambda nutz: harness_antraege.vorlage_neu_antrag(self.hub, nutz), desktop_stand=self.desktop_stand,
+                         vorlage_antrag=lambda nutz: harness_antraege.vorlage_neu_antrag(self.hub, nutz), desktop_stand=self.desktop_stand, lernen_lesen=self.lernen_lesen,
                          uebersetzer=lambda text, ziel, quelle: self.text_uebersetzen(mission_id, text, ziel, quelle),
                          web_transkript=lambda video, sprachen: self.hub.runtime.web_tool.execute(mission_id, 'youtube_transcript', {'video': video, 'languages': sprachen}))
 
@@ -1018,19 +1022,28 @@ class HarnessApi:
         """Belohnungssystem (harness/belohnung.py): steht in einer kurzen Nachricht ein Lobwort, direkt nach einer zu Ende gekommenen Antwort, wird sie als gute Antwort gemerkt – Eintrag in der
         Sitzung (★), Tagesdatei für die Wissensdatenbank, Audit, Ereignis. Hält nie die Nachricht auf: jeder Fehler hier bleibt ohne Folgen."""
         try:
-            treffer = harness_belohnung.erkennen(text, harness_belohnung.einstellungen(self.hub.project_root))
-            antwort, frage = harness_belohnung.gelobte_antwort(s['eintraege']) if treffer else (None, None)
+            u = harness_belohnung.urteil(text, harness_belohnung.einstellungen(self.hub.project_root))
+            antwort, frage = harness_belohnung.gelobte_antwort(s['eintraege'], streng=(u[0] == 'lob')) if u else (None, None)
             if antwort is None:
                 return None
-            wort, stufe = treffer
+            art, wort, stufe = u
             tat = harness_belohnung.loesung(s['eintraege'], antwort['antwort_id'])
-            satz = harness_belohnung.vermerken(self.hub.project_root, wort, antwort, frage, sitzung_id=sid, titel=s['titel'], vorlage=(s['kopf'] or {}).get('vorlage'), modell=s['modell'], stufe=stufe, tat=tat)
-            self.sitzungen.anhaengen(sid, {'typ': 'belohnung', 'antwort_id': antwort['antwort_id'], 'ausloeser': wort, 'stufe': stufe, 'quelle': 'wort'})
-            self._audit('HARNESS_BELOHNUNG', {'sitzung_id': sid, 'antwort_id': antwort['antwort_id'], 'ausloeser': wort, 'stufe': stufe, 'code': tat['code'], 'vorlage': satz['vorlage'], 'modell': satz['modell']})
-            self._melden('harness.belohnung', {'sitzung_id': sid, 'antwort_id': antwort['antwort_id'], 'ausloeser': wort, 'stufe': stufe, 'code': tat['code']})
+            satz = harness_belohnung.vermerken(self.hub.project_root, wort, antwort, frage, sitzung_id=sid, titel=s['titel'], vorlage=(s['kopf'] or {}).get('vorlage'), modell=s['modell'],
+                                               stufe=stufe, tat=tat, art_urteil=art, korrektur_text=text if art == 'korrektur' else None)
+            self.sitzungen.anhaengen(sid, {'typ': 'belohnung', 'urteil': art, 'antwort_id': antwort['antwort_id'], 'ausloeser': wort, 'stufe': stufe, 'quelle': 'wort'})
+            self._audit('HARNESS_BELOHNUNG', {'sitzung_id': sid, 'antwort_id': antwort['antwort_id'], 'urteil': art, 'ausloeser': wort, 'stufe': stufe, 'code': tat['code'], 'vorlage': satz['vorlage'], 'modell': satz['modell']})
+            self._melden('harness.belohnung', {'sitzung_id': sid, 'antwort_id': antwort['antwort_id'], 'urteil': art, 'ausloeser': wort, 'stufe': stufe, 'code': tat['code']})
             return satz
         except Exception:
             return None
+
+    def lernen_lesen(self, tage=7, art='alle', suche='', limit=20):
+        """Für das Chat-Werkzeug `belohnungen_lesen` (Rückblick): gute und korrigierte Antworten als Text für das Modell. Nur lesen."""
+        wurzel = self.hub.project_root
+        liste = harness_belohnung.lesen(wurzel, tage, art, suche, limit)
+        u = harness_belohnung.uebersicht(wurzel)
+        kopf = f"Insgesamt {u['anzahl']} gute Antworten ({u['besonders']} besonders gut, {u['code']} mit Code) und {u['korrekturen']} Korrekturen. Treffer: {len(liste)}."
+        return kopf + ('\n\n' + '\n\n'.join(harness_belohnung.zeile(x) for x in liste) if liste else ' Nichts gefunden.')
 
     def _wissen_quelle(self, pfad=None):
         """Steht der Ordner (Betriebslog oder gute Antworten) schon als Quelle in der Wissensdatenbank? 'aufgenommen', 'nicht' oder 'aus' (Wissensspeicher abgeschaltet)."""

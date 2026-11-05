@@ -120,3 +120,5 @@
 .hs-lay-reiter,.hs-lay-flaeche{display:flex;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);font-size:var(--size-small)}
 .hs-lay-zonenzeile .hs-einst-zahl{width:5.5em}
 .hs-lob{margin-top:6px;font-size:var(--size-xs);color:var(--warn)}.hs-bel-zeile{flex-wrap:wrap}.hs-bel-text{flex:1 1 100%;color:var(--muted);font-size:var(--size-small)}
+.hs-lob.hs-korrigiert{color:var(--bad)}
+.hs-vorschlag-gut{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.hs-vorschlag-stern{color:var(--warn)}.hs-vorschlag-warn{color:var(--bad)}.hs-vorschlag-datei{margin-left:auto}

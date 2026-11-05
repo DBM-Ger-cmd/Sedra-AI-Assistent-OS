@@ -78,7 +78,7 @@
       ctx.bus.on('harness.belohnung', e=>{                                                  // Belohnungssystem: „danke“ nach einer Antwort – sie bekommt ein ★
         if(!e) return;
         const a = this.ansichten.get(e.sitzung_id); if(a && a.lobMarkieren) a.lobMarkieren(e);
-        this.hinweis((e.stufe === 2 ? '★★ Besonders gute Antwort' : '★ Gute Antwort') + ' gemerkt' + (e.code ? ' (Lösung mit Code)' : '') + '.', 'note');
+        this.hinweis(e.urteil === 'korrektur' ? '⚑ Korrektur gemerkt – sie fließt in den Rückblick ein.' : (e.stufe === 2 ? '★★ Besonders gute Antwort' : '★ Gute Antwort') + ' gemerkt' + (e.code ? ' (Lösung mit Code)' : '') + '.', 'note');
       });
       ctx.bus.on('harness.projekt', ()=>this.projekteLaden());                                   // P0 M3: ein Ordner wurde als Projekt freigegeben
       ctx.bus.on('harness.vorgaben', e=>{ Object.assign(H.projekt.vorgaben(this), e || {}); H.eingabe.projektwahl(this); });

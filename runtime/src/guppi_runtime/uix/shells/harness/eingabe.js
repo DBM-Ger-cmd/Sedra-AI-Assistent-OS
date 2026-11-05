@@ -69,6 +69,7 @@
     const groesse = ()=>{ feld.style.height = 'auto'; feld.style.height = Math.min(feld.scrollHeight, Math.round(root.innerHeight * 0.4)) + 'px'; };
     feld.addEventListener('input', ()=>{ groesse(); hilfe(S); if(S._vormerk && !feld.value.trim()) vormerken(S, false); zustand(S); });       // Text weg → die Vormerkung auch
     feld.addEventListener('keydown', e=>{
+      if(e.key === 'Tab' && !e.shiftKey && root.sedraHarness.vorschlaege && root.sedraHarness.vorschlaege.erstenUebernehmen(S)){ e.preventDefault(); return; }       // Tab übernimmt den ersten Vorschlag
       if(e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); absenden(S); }
     });
     senden.onclick = ()=>{ const a = S.aktive(); if(a && a.laeuft()) a.stoppen(); else absenden(S); };
@@ -86,6 +87,8 @@
       });
     }else if(/(^|\s)@\S*$/.test(t)){
       root.sedraHarness.anhang.vorschlaege(S, t.match(/(^|\s)@(\S*)$/)[2] || '');          // Stufe 6 (HS-84): Dateien des Projekts vorschlagen
+    }else if(root.sedraHarness.vorschlaege){
+      root.sedraHarness.vorschlaege.planen(S);                                              // Vorhersagen aus gelobten und korrigierten Antworten (vorschlaege.js)
     }
     e.vorschlag.hidden = !e.vorschlag.childNodes.length;
   }

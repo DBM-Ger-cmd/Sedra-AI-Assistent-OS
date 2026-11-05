@@ -125,5 +125,27 @@ class Baukasten(unittest.TestCase):
         self.assertEqual(out[1], server.ZONEN_VORGABE)
 
 
+class VorschlaegeClient(unittest.TestCase):
+    def setUp(self):
+        if not NODE:
+            self.skipTest('node is not installed')
+
+    def test_wann_gefragt_wird_und_tab_uebernimmt_den_ersten(self):
+        out = run_js([HARNESS / 'vorschlaege.js'], """
+          box.Event = function(t){ this.type = t; };
+          const V = box.sedraHarness.vorschlaege;
+          const soll = ['Tests', 'Te', '/neu', 'Tests f\\nur', 'sieh @src/a', 'sieh @src/a.py an', '   ', null].map(t=>V.soll(t));
+          const feld = {value: 'Tests f', focus(){}, dispatchEvent(){}, selectionStart: 0, selectionEnd: 0};
+          const S = {_eingabe: {feld, vorschlag: {hidden: false, replaceChildren(){}}, _vsErste: {frage: 'Tests für den Login schreiben'}}};
+          const ja = V.erstenUebernehmen(S);
+          const nochmal = V.erstenUebernehmen(S);
+          console.log(JSON.stringify({soll, ja, nochmal, wert: feld.value}));
+        """)
+        self.assertEqual(out['soll'], [True, False, False, False, False, True, False, False])
+        self.assertTrue(out['ja'])
+        self.assertFalse(out['nochmal'], 'nach dem Uebernehmen gibt es nichts mehr zu uebernehmen')
+        self.assertEqual(out['wert'], 'Tests für den Login schreiben')
+
+
 if __name__ == '__main__':
     unittest.main()

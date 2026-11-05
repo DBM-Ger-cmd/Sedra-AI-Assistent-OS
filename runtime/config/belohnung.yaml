@@ -21,6 +21,23 @@ belohnung:
     - hervorragend
   # besonders gut (Stufe 2): diese Wörter zählen doppelt; für Lösungen beim Programmieren ist es der Hinweis „so bitte wieder“
   besonders: [perfekt, genau so, hervorragend, ausgezeichnet, sehr gut, richtig gut, genial, großartig, exzellent, super gelöst]
+  # Korrektur (Gegenstück zum Lob; im Hermes-Agent der Auslöser für den Rückblick „Korrektur durch den Nutzer“): die Antwort wird als korrigiert gemerkt, das Gesagte des Captains ist die Lehre
+  korrektur:
+    - falsch
+    - das ist falsch
+    - das stimmt nicht
+    - stimmt nicht
+    - so nicht
+    - nicht richtig
+    - nicht gut gemacht
+    - schlecht gemacht
+    - das war nichts
+    - so war das nicht gemeint
+    - nicht so gemeint
+    - das habe ich nicht gewollt
   # steht eines dieser Wörter kurz vor dem Lobwort („nicht gut gemacht“, „kein danke“), zählt es nicht
   verneinung: [nicht, kein, keine, nie, niemals, nix]
   max_zeichen: 300        # längere Nachrichten sind Aufträge, kein Lob
+  # Vorhersagen beim Tippen: Sedra schlägt Aufträge vor, die der Captain schon einmal so gestellt und deren Antwort er gelobt hat (mit den Dateien, in denen sie gelöst wurden),
+  # und warnt, wenn ein ähnlicher Auftrag zuletzt korrigiert wurde. Nur lokal, nur aus den eigenen gelobten und korrigierten Antworten.
+  vorschlaege: {an: true, min_zeichen: 3, max: 5}

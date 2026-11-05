@@ -65,7 +65,8 @@ def klartext(e):
     if t == 'BOOT_STARTED':
         return 'Sedra gestartet'
     if t == 'HARNESS_BELOHNUNG':
-        return '%s: Sitzung %s, Vorlage %s, Modell %s (Lobwort „%s“%s)' % ('Besonders gute Antwort' if p.get('stufe') == 2 else 'Gute Antwort', p.get('sitzung_id'), p.get('vorlage') or 'ohne', p.get('modell') or '?', p.get('ausloeser'), ', Code' if p.get('code') else '')
+        return '%s: Sitzung %s, Vorlage %s, Modell %s (Wort „%s“%s)' % ('Korrigierte Antwort' if p.get('urteil') == 'korrektur' else ('Besonders gute Antwort' if p.get('stufe') == 2 else 'Gute Antwort'),
+                                                                           p.get('sitzung_id'), p.get('vorlage') or 'ohne', p.get('modell') or '?', p.get('ausloeser'), ', Code' if p.get('code') else '')
     if t in ('LADEPROBE', 'LADEPROBE_PROBLEM'):
         return str(p.get('satz') or t)
     if t == 'SLOT_SERVER_STARTED':
