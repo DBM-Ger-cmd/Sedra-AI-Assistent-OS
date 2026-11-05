@@ -167,7 +167,7 @@
     offerGuide(){
       this.guideOrderList = null;this.guideIndex = null;
       const box = this.guide;box.replaceChildren(el('p', '', 'Geführtes Einrichten: Schritt für Schritt durch alle Knoten, mit Hinweisen. Jederzeit überspringbar.'),
-        button('Geführtes Einrichten starten', ()=>this.startGuide()), button('Geführtes Einrichten überspringen', ()=>this.endGuide()));box.hidden = false;
+        (()=>{const b = button('Geführtes Einrichten starten', ()=>this.startGuide());b.className = 't-wf-primary';return b;})(), button('Geführtes Einrichten überspringen', ()=>this.endGuide()));box.hidden = false;
     },
     startGuide(){
       if(this.view !== 'canvas'){this.view = 'canvas';this.draw();}
@@ -177,12 +177,12 @@
     renderGuide(){
       const list = this.guideOrderList || [];if(!list.length){this.endGuide();return;}
       const i = Math.max(0, Math.min(this.guideIndex, list.length - 1)), node = list[i];this.guideIndex = i;
-      this.state.selected = node.id;this.inspectorOpen = true;this.inspect();if(this.canvas){this.canvas.draw();this.canvas.focus();}
+      this.state.selected = node.id;this.inspectorOpen = true;this.inspect();if(this.canvas)this.canvas.draw();
       const box = this.guide;box.hidden = false;
       const head = el('p', 't-wf-guide-step', 'Schritt ' + (i + 1) + ' von ' + list.length + ' · ' + node.name);
       box.replaceChildren(head, el('p', '', this.guideHint(node)),
         button('Zurück zum vorigen Schritt', ()=>{this.guideIndex = i - 1;this.renderGuide();}),
-        i + 1 < list.length ? button('Weiter zum nächsten Schritt', ()=>{this.guideIndex = i + 1;this.renderGuide();}) : button('Einrichten abschließen', ()=>{this.endGuide();this.notice('Geführtes Einrichten beendet. Speichern erzeugt die erste Revision.');}),
+        (()=>{const b = i + 1 < list.length ? button('Weiter zum nächsten Schritt', ()=>{this.guideIndex = i + 1;this.renderGuide();}) : button('Einrichten abschließen', ()=>{this.endGuide();this.notice('Geführtes Einrichten beendet. Speichern erzeugt die erste Revision.');});b.className = 't-wf-primary';return b;})(),
         button('Geführtes Einrichten überspringen', ()=>this.endGuide()));
       box.firstChild.nextSibling.nextSibling.disabled = i === 0;
     },

@@ -110,4 +110,4 @@
 .t-workflow .t-wf-guide p{margin:0}
 .t-workflow .t-wf-guide-step{font-weight:600;color:var(--heading)}
 .t-workflow .t-wf-guide[hidden]{display:none!important}
-.t-workflow .t-wf-guide button:first-of-type{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.t-workflow .t-wf-guide button.t-wf-primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
