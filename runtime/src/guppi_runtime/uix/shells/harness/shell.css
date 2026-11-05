@@ -274,7 +274,7 @@ button.hs-schild[aria-expanded="true"]::after{content:" ▴"}
 
 /* schmal (HS-05): unter 1100 px ist die Seitenleiste zu (shell.js); unter 1200 px nur Freigaben und Modell rechts */
 @media (max-width:1200px){
-  .hs-zelle[data-zelle="gpu"],.hs-zelle[data-zelle="state"]{display:none}
+  .hs-zelle[data-zelle="temp"],.hs-zelle[data-zelle="vram"],.hs-zelle[data-zelle="ram"],.hs-zelle[data-zelle="state"]{display:none}
 }
 .hs-schild{max-width:52vw}                       /* das Schild bleibt auch schmal sichtbar (zeigt, wer freigibt und welche Aufgabe gilt); es kürzt sich mit … */
 

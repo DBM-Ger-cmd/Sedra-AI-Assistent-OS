@@ -1,6 +1,6 @@
 // Harness-Shell – die Taskleiste (HS-30 bis HS-33): links „Start“ (öffnet das Start-Menü, Stufe 4), in der Mitte die Läufe (die offenen Sitzungen und Apps stehen in der Reiterleiste, ihr Zustand im Reiter)
-// der Harness – laufende mit Fortschritt oder Zeit –, rechts der Statusbereich aus /api/strip (HS-32: Freigaben „n · beim Vorarbeiter m“, Modell, GPU mit
-// Temperatur, RAM, Modellserver, Scheduler, Zustand) und die Uhr. Zellen ohne Wert werden ausgeblendet, nicht leer gezeigt; ein Klick öffnet die App dazu (G2 §5).
+// der Harness – laufende mit Fortschritt oder Zeit –, rechts der Statusbereich aus /api/strip (HS-32: Freigaben „n · beim Vorarbeiter m“, Modell, Temperatur,
+// VRAM, RAM, Modellserver, Scheduler, Zustand) und die Uhr. Zellen ohne Wert werden ausgeblendet, nicht leer gezeigt; ein Klick öffnet die App dazu (G2 §5).
 // Benachrichtigung (HS-33): Endet ein Lauf oder wartet eine Freigabe, blinkt der Knopf einmal und bleibt markiert, bis er angeklickt wird.
 // Gemerkt wird nur, was schon gesehen wurde (IDs in localStorage `sedra.harness.gesehen`), nie Inhalt. Kein Dauer-Abruf im Hintergrund: der Status frischt bei Ereignissen auf,
 // höchstens alle 2 s (HS-52); die Uhr tickt, alle 15 s bei sichtbarem Tab auch der Status (A7, HS-52a).
@@ -12,18 +12,20 @@
   const GESEHEN_KEY = 'sedra.harness.gesehen';
   const GESEHEN_MAX = 300;
   // Zelle → Beschriftung und die App, die ein Klick öffnet (Ort-ID aus ui/places.js)
-  const ZELLEN = [['decisions', 'Freigaben', null], ['model', 'Modell', 'models'], ['gpu', 'GPU · RAM', 'hardware'],
+  const ZELLEN = [['decisions', 'Freigaben', null], ['model', 'Modell', 'models'], ['temp', 'Temp', 'hardware'], ['vram', 'VRAM belegt', 'hardware'], ['ram', 'RAM frei', 'hardware'],
                   ['server', 'Modellserver', 'models'], ['scheduler', 'Scheduler', 'slots'], ['state', 'Zustand', 'machine']];
-  // GPU und RAM sind eine Zelle (beide öffneten dieselbe App; Captain 03.11.2026): „40 °C · 1.5/12 GB · RAM 15.4/31 GB“, der strengere Ton, beide Hinweise
-  const TON_RANG = {off: 0, ok: 1, warn: 2, bad: 3};
-  function zusammen(v){
-    const g = v.gpu, r = v.ram;
-    if(!g && !r) return v;
-    const wert = x=>x && x.value !== undefined && x.value !== null ? String(x.value) : null;
-    const teile = [wert(g), wert(r) ? 'RAM ' + wert(r) : null].filter(Boolean);
-    const ton = [g, r].filter(Boolean).map(x=>x.tone || 'off').reduce((a, b)=>(TON_RANG[b] || 0) > (TON_RANG[a] || 0) ? b : a, 'off');
-    const hint = [g && g.hint, r && r.hint ? 'RAM: ' + r.hint : null].filter(Boolean).join(' · ');
-    return Object.assign({}, v, {gpu: {value: teile.join(' · ') || '–', tone: ton, hint}});
+  // Temperatur, Grafikspeicher und Arbeitsspeicher sind drei Zellen (Captain 05.11.2026; am 03.11. waren es eine, „40 °C · 1.5/12 GB · RAM 15.4/31 GB“ wurde abgeschnitten).
+  // Der Server liefert Temperatur und Grafikspeicher in einem Wert („42 °C · 10.7/12 GB“); hier wird er getrennt. VRAM zeigt belegt/gesamt, RAM frei/gesamt – die Beschriftung sagt es.
+  function trennen(v){
+    const g = v.gpu;
+    if(!g) return v;
+    const teile = String(g.value === undefined || g.value === null ? '' : g.value).split(' · ');
+    const temp = teile.find(t=>t.indexOf('°C') >= 0), vram = teile.find(t=>t.indexOf('GB') >= 0);
+    const raus = Object.assign({}, v);
+    delete raus.gpu;
+    if(temp) raus.temp = {value: temp, tone: g.tone || 'off', hint: g.hint};
+    if(vram) raus.vram = {value: vram, tone: g.tone === 'bad' || g.tone === 'warn' ? g.tone : 'ok', hint: g.hint};
+    return raus;
   }
   const ENDE_ICON = {ok: '✓', fehler: '✗', gestoppt: '■', abgebrochen: '■', verloren: '?', zeitlimit: '⏱'};
 
@@ -179,7 +181,7 @@
     S.api('/api/strip').then(roh=>{
       S.strip = roh;                                                                             // die Kacheln des Start-Menüs nehmen dasselbe Ergebnis (HS-52a): eine Abfrage für beide
       const sm = root.sedraHarness.startmenue; if(sm && sm.stripNeu) sm.stripNeu(S, roh);
-      const v = zusammen(roh);
+      const v = trennen(roh);
       // HS-32: eine Zelle ohne Wert (– und Ton off) wird ausgeblendet – kleine Bildschirme, Stick an fremdem PC
       const da = ZELLEN.filter(([k])=>v[k] && !(String(v[k].value ?? '–') === '–' && (v[k].tone || 'off') === 'off'));
       const zellen = da.map(([k, label, ort])=>{
