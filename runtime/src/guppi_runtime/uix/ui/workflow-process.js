@@ -25,5 +25,16 @@
     for(let i = 0; i < nodes.length - 1; i++)out.connections[nodes[i].name] = {main: [[{node: nodes[i + 1].name, type: 'main', index: 0}]]};
     return out;
   }
-  root.sedraWorkflowProcess = {PREFIX, labels, get, has, blank, set, rows, cores, coreProjection};
+  // Lücken in den Prozessangaben: je Schritt fehlende Pflichtangaben (Start und Ende brauchen keinen Input bzw. Output; Hinweise nichts).
+  const NEED = {role: 'Rolle', input: 'Eingabe', output: 'Ergebnis', evidence: 'Nachweis', completion: 'Abschlusskriterium'};
+  function gaps(doc){
+    const items = [];
+    rows(doc).forEach(({node, meta})=>{
+      if(meta.kind === 'annotation')return;
+      const missing = Object.keys(NEED).filter(k=>!(meta[k] || '').trim() && !(k === 'input' && meta.kind === 'start') && !(k === 'output' && meta.kind === 'end'));
+      if(missing.length)items.push({name: node.name, fields: missing.map(k=>NEED[k])});
+    });
+    return {steps: items.length, missing: items.reduce((n, i)=>n + i.fields.length, 0), items};
+  }
+  root.sedraWorkflowProcess = {PREFIX, labels, get, has, blank, set, rows, cores, coreProjection, gaps};
 })();

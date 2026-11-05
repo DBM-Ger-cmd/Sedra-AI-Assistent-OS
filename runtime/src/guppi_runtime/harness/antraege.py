@@ -20,6 +20,8 @@ from . import vorlagen_neu as harness_vorlagen_neu
 KIND_KATALOG = 'harness_katalog'
 KIND_VORLAGE = 'harness_vorlage'
 PROJEKT_ANTRAEGE_MAX = 5                 # offene „Ordner öffnen“-Anträge zugleich
+KIND_PROZESS = 'harness_prozess'            # 05.11.: „Prozess anlegen“ (von SEDRA vorgeschlagen) → Entwurf im Prozessbestand, nie ausführbar
+PROZESS_ANTRAEGE_MAX = 5
 KIND_PROJEKT = 'harness_projekt'            # P0 M3 (1.11.): „Ordner öffnen“ → Laufzeitdatei, nie local_config
 KIND_CODE_STAND = 'harness_code_stand'      # 04.11.: „Code-Stand übernehmen“ → gesehener Stand unter runtime_data/harness/code_stand
 ZIEL_CODE_STAND = 'runtime_data/harness/code_stand'
@@ -135,6 +137,37 @@ def _vorlage_neu_anwenden(hub, binding):
     hub.runtime.audit.append('HARNESS_VORLAGE_ANGELEGT', component='harness', payload=dict(out, vorlage=binding.get('vorlage')))
     hub.events.publish('harness.vorlage', {'ereignis': 'HARNESS_VORLAGE_ANGELEGT', 'vorlage': binding.get('vorlage')})
     return out
+
+
+def prozess_antrag(hub, payload):
+    """Werkzeug prozess_beantragen {name, zweck?, schritte}: prüfen (ValueError mit Satz), dann ein Antrag im Posteingang. Der Entwurf (Prozessmodell, nie ausführbar)
+    entsteht erst nach der Freigabe des Captains und wird dann als erste Revision im Prozessbestand der Prozess-Apps gespeichert."""
+    from ..workflows import selbstabbild
+    doc = selbstabbild.entwurf(payload)
+    offen = getattr(hub, '_open_requests', None)
+    offene = [r for r in (offen() if callable(offen) else []) if r.get('kind') == KIND_PROZESS]
+    if len(offene) >= PROZESS_ANTRAEGE_MAX:
+        raise ValueError(f'zu_viele_offene_antraege: {len(offene)} Prozess-Anträge warten schon im Posteingang – erst die entscheiden')
+    if any((r.get('binding') or {}).get('workflow', {}).get('name') == doc['name'] for r in offene):
+        raise ValueError('antrag_liegt_schon_im_posteingang: ' + doc['name'])
+    risks = [f'Neuer Prozess „{doc["name"]}“ mit {len(doc["nodes"])} Schritten als Entwurf im Prozessbestand.',
+             'Nur eine Darstellung: nicht ausführbar, ohne Rechte; alle Angaben sind Vorschläge von SEDRA und müssen fachlich bestätigt werden.']
+    req = gated.request(hub, KIND_PROZESS, 'HARNESS_PROZESS_ENTWURF', 'runtime_data/workflows', {'workflow': doc}, risks=risks, exact=True, describe=f'Prozess-Entwurf anlegen: {doc["name"]}')
+    return {'mission_id': req['mission_id'], 'name': doc['name'], 'schritte': len(doc['nodes'])}
+
+
+def _prozess_anwenden(hub, binding):
+    from ..workflows.store import WorkflowStore
+    from ..workflows.selbstabbild import ENTWURF_PREFIX
+    doc = binding.get('workflow')
+    if not isinstance(doc, dict) or not str(doc.get('name', '')).startswith(ENTWURF_PREFIX):
+        raise ValueError(gated.REFUSED + 'prozess_entwurf_ungueltig')
+    try:
+        record = WorkflowStore(hub.project_root).save(doc, None, None, 'Entwurf von SEDRA, vom Captain übernommen')
+    except ValueError as exc:
+        raise ValueError(gated.REFUSED + 'prozess_nicht_angelegt: ' + str(exc)) from None
+    hub.runtime.audit.append('WORKFLOW_ENTWURF_UEBERNOMMEN', component='harness', payload={'workflow_id': record['id'], 'revision': record['revision'], 'digest': record['digest']})
+    return {'workflow_id': record['id'], 'revision': record['revision']}
 
 
 def _grenzen_anwenden(hub, binding):
@@ -292,3 +325,4 @@ def registrieren(registry):
     gated.register_applier(KIND_KATALOG, _katalog_anwenden, registry=registry)
     gated.register_applier(KIND_VORLAGE, _grenzen_anwenden, registry=registry)
     gated.register_applier(KIND_PROJEKT, _projekt_anwenden, registry=registry)
+    gated.register_applier(KIND_PROZESS, _prozess_anwenden, registry=registry)

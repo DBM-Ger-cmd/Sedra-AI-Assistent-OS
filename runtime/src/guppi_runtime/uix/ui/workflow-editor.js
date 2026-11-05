@@ -216,7 +216,7 @@
       this.viewSelect.value = this.view;
       this.runSection.hidden = model;this.tabButtons.runs.hidden = model;if(model && this.tab === 'runs')this.setTab('editor');this.processBanner.hidden = !model;
       this.engine.hidden = model;this.addButton.hidden = (model && core) || this.view !== 'canvas';this.bottom.hidden = !options.runBar || model;this.report.hidden = model;
-      this.processBanner.textContent = 'Prozessmodell · ' + P().cores(this.state.doc).length + ' Kernschritte · ' + P().rows(this.state.doc).filter(r=>r.meta.source === 'proposal').length + ' ergänzte Vorschläge. Fachliche und technische Ausführung sind noch nicht eingerichtet.';
+      this.processBanner.textContent = 'Prozessmodell · ' + P().cores(this.state.doc).length + ' Kernschritte · ' + P().rows(this.state.doc).filter(r=>r.meta.source === 'proposal').length + ' ergänzte Vorschläge. ' + (() => {const g = P().gaps(this.state.doc);return g.missing ? 'Lücken: ' + g.missing + ' Angaben fehlen in ' + g.steps + ' Schritten (z. B. ' + g.items[0].name + ': ' + g.items[0].fields.join(', ') + '). ' : 'Alle Pflichtangaben sind ausgefüllt. ';})() + 'Fachliche und technische Ausführung sind noch nicht eingerichtet.';
       this.version.textContent = (this.wid ? 'Revision ' + this.revision : 'Neuer Entwurf') + (this.dirty() ? ' · ungespeichert' : ' · gespeichert');
       if(this.canvas)this.canvas.destroy();
       this.canvas = null;

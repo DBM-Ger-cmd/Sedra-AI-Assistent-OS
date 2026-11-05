@@ -935,7 +935,7 @@ class HarnessApi:
                          lauf_typen=self.lauf_typen, modelle=self._modell_op, andere_antworten=self._andere_antworten,
                          projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz), lese_grenze=lambda: self._option('lese_grenze'), sitzungen_liste=self.sitzungen_fuer_modell, sitzungen_weg=lambda ids: self.aufraeumen({'ids': ids}), verknuepfung=lambda ort, name: self.verknuepfung_anlegen(ort, name, von='modell'), gedanken=self.gedanken_lesen, gedaechtnis=self.gedaechtnis_suchen,
                          code_stand=self.code_stand(projekt),
-                         vorlage_antrag=lambda nutz: harness_antraege.vorlage_neu_antrag(self.hub, nutz), desktop_stand=self.desktop_stand, lernen_lesen=self.lernen_lesen,
+                         vorlage_antrag=lambda nutz: harness_antraege.vorlage_neu_antrag(self.hub, nutz), prozess_antrag=lambda nutz: harness_antraege.prozess_antrag(self.hub, nutz), desktop_stand=self.desktop_stand, lernen_lesen=self.lernen_lesen,
                          uebersetzer=lambda text, ziel, quelle: self.text_uebersetzen(mission_id, text, ziel, quelle),
                          web_transkript=lambda video, sprachen: self.hub.runtime.web_tool.execute(mission_id, 'youtube_transcript', {'video': video, 'languages': sprachen}))
 

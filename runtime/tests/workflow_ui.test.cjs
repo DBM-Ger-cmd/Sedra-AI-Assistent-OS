@@ -67,3 +67,19 @@ test('Vorlagen: jede baut einen gueltigen Ablauf ohne Rechte', () => {
   }
   assert.throws(() => T.build('gibt-es-nicht'));
 });
+
+test('Prozessangaben: Luecken werden je Schritt benannt, Start braucht keine Eingabe', () => {
+  require(path.join(ui, 'workflow-model.js'));
+  require(path.join(ui, 'workflow-process.js'));
+  const P = globalThis.sedraWorkflowProcess, M = globalThis.sedraWorkflowModel;
+  const doc = {name: 'x', nodes: [M.node('manualTrigger', []), M.node('noOp', [])], connections: {}};
+  doc.nodes[0].name = 'Anfrage erfassen';
+  const start = P.blank(doc.nodes[0]); start.kind = 'start'; start.role = 'Fachstelle'; start.output = 'Vorgang'; start.evidence = 'Eintrag'; start.completion = 'erfasst';
+  P.set(doc.nodes[0], start);
+  const task = P.blank(doc.nodes[1]); task.role = 'Prüfung'; P.set(doc.nodes[1], task);
+  const g = P.gaps(doc);
+  assert.equal(g.steps, 1);
+  assert.deepEqual(g.items[0].fields, ['Eingabe', 'Ergebnis', 'Nachweis', 'Abschlusskriterium']);
+  const full = Object.assign({}, task, {input: 'a', output: 'b', evidence: 'c', completion: 'd'}); P.set(doc.nodes[1], full);
+  assert.equal(P.gaps(doc).missing, 0);
+});

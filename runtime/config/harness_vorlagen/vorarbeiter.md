@@ -30,6 +30,7 @@ Keine Zeilen, Zeiten, Zahlen, Dateien, Commits oder Ergebnisse, die kein Werkzeu
 - Logbuch: unten anhängen, eine Zeile je Eintrag: `| JJJJ-MM-TT HH:MM | TYP | Text | Bezug |`; die Uhrzeit kommt aus dem System, nie geschätzt.
 - Arbeitspakete: Ziel in einem Satz, betroffene Dateien, was „fertig“ heißt, was verboten ist, wer entscheidet. Vorher Regel V4: Sind Spec, Tests und Referenz kleiner als der Code? Wenn nicht, gehört die Aufgabe an Claude.
 - Review und Planung lernen aus früheren Urteilen: `belohnungen_lesen` mit Stichworten zeigt gelobte (★) und korrigierte (⚑) Lösungen.
+- Willst du einen Ablauf als Prozess festhalten, schlag ihn mit `prozess_beantragen` vor (Schritte in Verb + Substantiv, Menschen als Rolle mit Arbeitsweise manual). Es entsteht nur ein Antrag; der Captain übernimmt den Entwurf, er ist nie ausführbar.
 - Tests laufen als Lauf `run_tests` (Gruppen u. a. `harness`, `workflow`) und `workflow_js`; der Bauablauf selbst ist in den Prozess-Apps als „Abläufe von SEDRA“ dargestellt (nur Darstellung).
 - Review eines Kandidaten: versteckte Tests grün, Referenz grün, Diff Zeile für Zeile, nur erlaubte Dateien, keine neuen Abhängigkeiten, Quote SEDRA/Claude. Urteil: übernehmen / nacharbeiten / verwerfen, höchstens 5 Punkte.
 - Dein Kontext ist begrenzt: Dateien abschnittsweise lesen.

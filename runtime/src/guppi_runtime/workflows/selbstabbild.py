@@ -22,6 +22,33 @@ FELDER = {'lieferant': 'supplier', 'eingabe': 'input', 'ergebnis': 'output', 'em
           'nachweis': 'evidence', 'abschluss': 'completion', 'ausnahme': 'exception', 'rolle': 'role'}
 
 
+def ablauf_pruefen(a, quelle_pflicht=True):
+    """Ein Ablauf {id, name, schritte}: Form, Schrittarten, Folgeschritte, genau ein Start. Fehler: ValueError mit Satz."""
+    if not isinstance(a, dict) or not isinstance(a.get('id'), str) or not isinstance(a.get('name'), str) or not a['name'].strip():
+        raise ValueError('selbstabbild_ablauf_ungueltig')
+    schritte = a.get('schritte')
+    if not isinstance(schritte, list) or not 2 <= len(schritte) <= 32 or not all(isinstance(s, dict) for s in schritte):
+        raise ValueError('selbstabbild_schritte_ungueltig: ' + a['id'])
+    namen = {s.get('id'): s for s in schritte}
+    if len(namen) != len(schritte) or len({s.get('name') for s in schritte}) != len(schritte) or not all(isinstance(s.get('name'), str) and s['name'].strip() for s in schritte):
+        raise ValueError('selbstabbild_schritt_doppelt: ' + a['id'])
+    if sum(s.get('art') == 'start' for s in schritte) != 1:
+        raise ValueError('selbstabbild_genau_ein_start: ' + a['id'])
+    for s in schritte:
+        if s.get('art') not in ARTEN or s.get('arbeitsweise') not in WEISEN:
+            raise ValueError('selbstabbild_art_oder_weise: ' + a['id'] + '.' + str(s.get('id')))
+        q = s.get('quelle')
+        if quelle_pflicht and (not isinstance(q, dict) or not isinstance(q.get('datei'), str) or not isinstance(q.get('suche'), str) or not q['suche']):
+            raise ValueError('selbstabbild_quelle_fehlt: ' + a['id'] + '.' + str(s.get('id')))
+        weiter = s.get('weiter', [])
+        if not isinstance(weiter, list) or any(w not in namen for w in weiter):
+            raise ValueError('selbstabbild_weiter_unbekannt: ' + a['id'] + '.' + str(s.get('id')))
+        if s['art'] == 'decision' and len(weiter) != 2:
+            raise ValueError('selbstabbild_entscheidung_zwei_wege: ' + a['id'] + '.' + s['id'])
+        if s['art'] == 'end' and weiter:
+            raise ValueError('selbstabbild_ende_ohne_folge: ' + a['id'] + '.' + s['id'])
+
+
 def laden(pfad=KONFIG):
     """Die Abläufe, geprüft. Fehler: ValueError mit Satz."""
     try:
@@ -33,30 +60,10 @@ def laden(pfad=KONFIG):
         raise ValueError('selbstabbild_ohne_ablaeufe')
     ids = set()
     for a in liste:
-        if not isinstance(a, dict) or not isinstance(a.get('id'), str) or not isinstance(a.get('name'), str) or a['id'] in ids:
+        if not isinstance(a, dict) or a.get('id') in ids:
             raise ValueError('selbstabbild_ablauf_ungueltig')
-        ids.add(a['id'])
-        schritte = a.get('schritte')
-        if not isinstance(schritte, list) or not 2 <= len(schritte) <= 32:
-            raise ValueError('selbstabbild_schritte_ungueltig: ' + a['id'])
-        namen = {s.get('id'): s for s in schritte if isinstance(s, dict)}
-        if len(namen) != len(schritte) or len({s['name'] for s in schritte}) != len(schritte):
-            raise ValueError('selbstabbild_schritt_doppelt: ' + a['id'])
-        if sum(s.get('art') == 'start' for s in schritte) != 1:
-            raise ValueError('selbstabbild_genau_ein_start: ' + a['id'])
-        for s in schritte:
-            if s.get('art') not in ARTEN or s.get('arbeitsweise') not in WEISEN:
-                raise ValueError('selbstabbild_art_oder_weise: ' + a['id'] + '.' + str(s.get('id')))
-            q = s.get('quelle')
-            if not isinstance(q, dict) or not isinstance(q.get('datei'), str) or not isinstance(q.get('suche'), str) or not q['suche']:
-                raise ValueError('selbstabbild_quelle_fehlt: ' + a['id'] + '.' + str(s.get('id')))
-            weiter = s.get('weiter')
-            if not isinstance(weiter, list) or any(w not in namen for w in weiter):
-                raise ValueError('selbstabbild_weiter_unbekannt: ' + a['id'] + '.' + str(s.get('id')))
-            if s['art'] == 'decision' and len(weiter) != 2:
-                raise ValueError('selbstabbild_entscheidung_zwei_wege: ' + a['id'] + '.' + s['id'])
-            if s['art'] == 'end' and weiter:
-                raise ValueError('selbstabbild_ende_ohne_folge: ' + a['id'] + '.' + s['id'])
+        ids.add(a.get('id'))
+        ablauf_pruefen(a)
     return liste
 
 
@@ -77,7 +84,7 @@ def _tiefen(schritte):
 
 def modell(ablauf):
     """Ein Ablauf als n8n-Dokument mit Prozessangaben. Alle Knoten sind deaktiviert; das Dokument besteht `validate`."""
-    schritte = ablauf['schritte']
+    schritte = [dict(s, weiter=s.get('weiter', [])) for s in ablauf['schritte']]
     tiefe, reihe = _tiefen(schritte)
     nummer = {sid: i + 1 for i, sid in enumerate(reihe + [s['id'] for s in schritte if s['id'] not in reihe])}
     spalte, nodes, name_von = {}, [], {s['id']: s['name'] for s in schritte}
@@ -85,7 +92,7 @@ def modell(ablauf):
         zeile = spalte.get(tiefe[s['id']], 0)
         spalte[tiefe[s['id']]] = zeile + 1
         meta = {'schema': 1, 'kind': s['art'], 'mode': s['arbeitsweise'], 'source': 'proposal', 'role_status': 'proposal', 'core_step': nummer[s['id']],
-                'original_notes': 'Quelle: ' + s['quelle']['datei'] + ' · ' + s['quelle']['suche']}
+                'original_notes': ('Quelle: ' + s['quelle']['datei'] + ' · ' + s['quelle']['suche']) if s.get('quelle') else 'Entwurf von SEDRA, noch nicht bestätigt' + (' · Zweck: ' + ablauf['zweck'] if s['art'] == 'start' and ablauf.get('zweck') else '')}
         for de, en in FELDER.items():
             if s.get(de):
                 meta[en] = str(s[de])
@@ -100,7 +107,7 @@ def modell(ablauf):
         zweige = [[{'node': name_von[w], 'type': 'main', 'index': 0}] for w in s['weiter']] if s['art'] == 'decision' \
             else [[{'node': name_von[w], 'type': 'main', 'index': 0} for w in s['weiter']]]
         verbindungen[s['name']] = {'main': zweige}
-    return validate({'name': PREFIX_NAME + ablauf['name'], 'nodes': nodes, 'connections': verbindungen, 'settings': {'executionOrder': 'v1'}, 'active': False})
+    return validate({'name': ablauf.get('anzeigename') or PREFIX_NAME + ablauf['name'], 'nodes': nodes, 'connections': verbindungen, 'settings': {'executionOrder': 'v1'}, 'active': False})
 
 
 def pruefen(pfad=KONFIG, wurzel=REPO):
@@ -161,3 +168,39 @@ def anlegen(store, pfad=KONFIG, wurzel=REPO):
             status = 'aktualisiert'
         out.append({'ablauf': a['id'], 'name': doc['name'], 'status': status, 'id': saved['id'], 'revision': saved['revision']})
     return out
+
+
+ENTWURF_PREFIX = 'Entwurf · '
+ENTWURF_MAX_SCHRITTE = 16
+
+
+def entwurf(payload):
+    """Ein von SEDRA vorgeschlagener Prozess (Werkzeug prozess_beantragen) als Prozessmodell. Nie ausführbar, jede Angabe ist ein Vorschlag.
+    payload: {name, zweck?, schritte: [{name, art, arbeitsweise, rolle?, eingabe?, ergebnis?, ... , weiter?}]}; ohne `weiter` folgt der nächste Schritt der Liste."""
+    if not isinstance(payload, dict) or not isinstance(payload.get('name'), str) or not payload['name'].strip() or len(payload['name']) > 120:
+        raise ValueError('prozess_name_fehlt')
+    roh = payload.get('schritte')
+    if not isinstance(roh, list) or not 2 <= len(roh) <= ENTWURF_MAX_SCHRITTE or not all(isinstance(s, dict) for s in roh):
+        raise ValueError('prozess_schritte_ungueltig: 2 bis %d Schritte' % ENTWURF_MAX_SCHRITTE)
+    schritte = []
+    for i, s in enumerate(roh):
+        t = {k: (str(v)[:400] if k in FELDER or k == 'name' else v) for k, v in s.items() if k in set(FELDER) | {'name', 'art', 'arbeitsweise', 'weiter'}}
+        t['id'] = 's%d' % (i + 1)
+        t.setdefault('art', 'start' if i == 0 else 'end' if i == len(roh) - 1 else 'task')
+        t.setdefault('arbeitsweise', 'manual')
+        schritte.append(t)
+    namen = {s['name']: s['id'] for s in schritte if isinstance(s.get('name'), str)}
+    for i, s in enumerate(schritte):
+        if 'weiter' in s:
+            if not isinstance(s['weiter'], list) or any(w not in namen for w in s['weiter']):
+                raise ValueError('prozess_weiter_unbekannt: ' + str(s.get('name')))
+            s['weiter'] = [namen[w] for w in s['weiter']]
+        elif s['art'] != 'end' and i + 1 < len(schritte):
+            s['weiter'] = [schritte[i + 1]['id']]
+        else:
+            s['weiter'] = []
+    ablauf = {'id': 'entwurf', 'name': payload['name'].strip(), 'anzeigename': ENTWURF_PREFIX + payload['name'].strip(), 'schritte': schritte}
+    ablauf_pruefen(ablauf, quelle_pflicht=False)
+    if isinstance(payload.get('zweck'), str) and payload['zweck'].strip():
+        ablauf['zweck'] = payload['zweck'].strip()[:400]
+    return modell(ablauf)
