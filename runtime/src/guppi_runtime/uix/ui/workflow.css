@@ -17,10 +17,7 @@
 .t-workflow .t-wf-svg{width:100%;height:440px;touch-action:none;display:block}
 .t-workflow .t-wf-edge{fill:none;stroke:var(--muted);stroke-width:2}
 .t-workflow .t-wf-arrow{fill:var(--muted)}
-.t-workflow .t-wf-node rect{fill:var(--panel);stroke:var(--line);stroke-width:2}
 .t-workflow .t-wf-node{cursor:grab}
-.t-workflow .t-wf-node.selected rect{stroke:var(--accent);stroke-width:3}
-.t-workflow .t-wf-node.unsupported rect{stroke:var(--warn);stroke-dasharray:5 3}
 .t-workflow .t-wf-node-title{fill:var(--text);font-size:14px;font-weight:600}
 .t-workflow .t-wf-node-type{fill:var(--muted);font-size:11px}
 .t-workflow .t-wf-port{fill:var(--accent);stroke:var(--bg);stroke-width:2;cursor:crosshair}
@@ -31,12 +28,6 @@
 .t-workflow .t-wf-runs{display:flex;flex-wrap:wrap;gap:8px}
 .t-workflow [hidden]{display:none!important}
 .t-workflow .t-wf-process-banner{padding:12px;border:1px solid var(--warn-line);background:var(--warn-bg);color:var(--text);border-radius:8px;margin:0}
-.t-workflow .t-wf-module-ring{fill:var(--panel-2);stroke:var(--accent);stroke-width:3}
-.t-workflow .t-wf-module-icon{fill:var(--accent);font-size:35px}
-.t-workflow .t-wf-node.manual rect,.t-workflow .t-wf-node.manual .t-wf-module-ring{stroke:var(--warn)}
-.t-workflow .t-wf-node.assisted rect,.t-workflow .t-wf-node.assisted .t-wf-module-ring{stroke:var(--accent)}
-.t-workflow .t-wf-node.automatable rect,.t-workflow .t-wf-node.automatable .t-wf-module-ring{stroke:var(--ok)}
-.t-workflow .t-wf-node.selected rect,.t-workflow .t-wf-node.selected .t-wf-module-ring{stroke-width:5}
 .t-workflow .t-wf-edge-label{fill:var(--text);font-size:12px;paint-order:stroke;stroke:var(--bg);stroke-width:4px;stroke-linejoin:round}
 .t-workflow .t-wf-table-scroll{overflow:auto;width:100%;max-height:600px}
 .t-workflow .t-wf-table{border-collapse:collapse;width:100%;min-width:650px;font-size:12px}

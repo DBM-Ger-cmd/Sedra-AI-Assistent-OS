@@ -1,7 +1,6 @@
 .t-scenario{--accent:var(--scenario-accent)}
 .t-scenario .t-wf-header{border-bottom:2px solid var(--scenario-accent);padding-bottom:14px}
 .t-scenario .t-wf-surface{border-radius:20px}
-.t-scenario .t-wf-module-ring{fill:var(--panel-2);stroke-width:4}
 .t-scenario .t-wf-toolbar button{border-radius:20px}
 .t-scenario .t-sc-mapping{display:flex;flex-direction:column;gap:8px;padding:8px;border:1px solid var(--line);border-radius:12px}
 .t-scenario .t-sc-mapping label{display:flex;flex-direction:column;gap:4px}

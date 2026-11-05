@@ -1,63 +1,95 @@
 // Shared canvas owns no transport or state outside its supplied container.
+// Zwei Darstellungen aus einer Zeichenfläche: Kacheln (n8n-Stil) und Kreismodule (Szenario-Stil).
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const NS = 'http://www.w3.org/2000/svg';
+  // Maße je Darstellung: Kante des Knotens, Lage der Ausgänge (n Ausgänge, Nr.) und des Eingangs, relativ zur linken oberen Ecke.
+  const TILE = {w: 72, h: 72, out: (i, n)=>[72, n === 2 ? 24 + i * 24 : 36], inn: [0, 36], pad: [90, 70, 100, 90], center: [36, 36]};
+  const CIRCLE = {w: 120, h: 120, out: (i, n)=>[118, n === 2 ? 40 + i * 40 : 60], inn: [2, 60], pad: [70, 40, 130, 110], center: [60, 60]};
   function element(tag, attrs, text){
     const el = document.createElementNS(NS, tag);
     Object.entries(attrs || {}).forEach(([k, v])=>el.setAttribute(k, String(v)));
     if(text !== undefined) el.textContent = text;
     return el;
   }
+  function wrap(text, max, lines){
+    const out = [''];
+    String(text).split(' ').forEach(word=>{
+      if(out[out.length - 1] && (out[out.length - 1] + ' ' + word).length > max && out.length < lines) out.push('');
+      out[out.length - 1] += (out[out.length - 1] ? ' ' : '') + word;
+    });
+    return out.map(line=>line.length > max + 4 ? line.slice(0, max + 3) + '…' : line);
+  }
   function mount(container, state, handlers){
-    const scenario = handlers.style === 'scenario';
+    const scenario = handlers.style === 'scenario', G = scenario ? CIRCLE : TILE;
+    const wrapEl = document.createElement('div'); wrapEl.className = 't-wf-canvas' + (scenario ? ' scenario' : '');
     const svg = element('svg', {class: 't-wf-svg' + (scenario ? ' scenario' : ''), role: 'group', 'aria-label': scenario ? 'Szenarioansicht' : 'Workflow-Canvas'});
     const hint = document.createElement('p'); hint.className = 't-wf-hint';
     hint.textContent = handlers.readOnly ? 'Verdichtete Kernübersicht. Verbindungen fassen Zwischenschritte zusammen. Bearbeiten in der Gesamtansicht.' : 'Module ziehen, Hintergrund zum Verschieben ziehen, Mausrad zum Zoomen. Ausgang anklicken, dann Ziel wählen.';
-    container.replaceChildren(hint, svg);
+    const controls = document.createElement('div'); controls.className = 't-wf-zoom'; controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', 'Ansicht');
+    [['Ansicht einpassen', '⤢', ()=>api.fit()], ['Zoom +', '+', ()=>api.zoom(1.2)], ['Zoom −', '−', ()=>api.zoom(1 / 1.2)]].forEach(([label, text, fn])=>{
+      const b = document.createElement('button'); b.type = 'button'; b.className = 't-wf-zoom-btn'; b.textContent = text; b.setAttribute('aria-label', label); b.title = label; b.onclick = fn; controls.append(b);
+    });
+    wrapEl.append(svg, controls);
+    container.replaceChildren(hint, wrapEl);
     let drag = null, pending = null, offset = [0, 0], zoom = 1, frame = null;
-    const marker = 'wf-arrow-' + Math.random().toString(16).slice(2);
+    const uid = Math.random().toString(16).slice(2), marker = 'wf-arrow-' + uid, grid = 'wf-grid-' + uid;
     function point(event){
       const pt = svg.createSVGPoint(); pt.x = event.clientX; pt.y = event.clientY;
       return pt.matrixTransform(svg.getScreenCTM().inverse());
     }
     function draw(){
       const doc = state.doc, nodes = doc.nodes;
-      const minX = Math.min(0, ...nodes.map(n=>n.position[0])) - 45;
-      const minY = Math.min(0, ...nodes.map(n=>n.position[1])) - 35;
-      const width = Math.max(800, ...nodes.map(n=>n.position[0] - minX + 270));
-      const height = Math.max(420, ...nodes.map(n=>n.position[1] - minY + (scenario ? 210 : 150)));
+      const minX = Math.min(0, ...nodes.map(n=>n.position[0])) - G.pad[1];
+      const minY = Math.min(0, ...nodes.map(n=>n.position[1])) - G.pad[1];
+      const width = Math.max(640, ...nodes.map(n=>n.position[0] - minX + G.pad[2] + 80));
+      const height = Math.max(360, ...nodes.map(n=>n.position[1] - minY + G.pad[3] + 40));
       frame = {minX, minY, width, height};
       if(!drag || drag.pan) svg.setAttribute('viewBox', [minX + offset[0], minY + offset[1], width / zoom, height / zoom].join(' '));
       const defs = element('defs');
       const arrow = element('marker', {id: marker, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse'});
       arrow.append(element('path', {d: 'M 0 0 L 10 5 L 0 10 z', class: 't-wf-arrow'})); defs.append(arrow);
+      const pattern = element('pattern', {id: grid, width: 20, height: 20, patternUnits: 'userSpaceOnUse'});
+      pattern.append(element('circle', {cx: 1, cy: 1, r: 1, class: 't-wf-grid-dot'})); defs.append(pattern);
       svg.replaceChildren(defs);
+      const view = svg.viewBox.baseVal;
+      if(!scenario) svg.append(element('rect', {x: view.x, y: view.y, width: view.width, height: view.height, fill: 'url(#' + grid + ')', class: 't-wf-grid', 'pointer-events': 'none'}));
       const byName = new Map(nodes.map(n=>[n.name, n]));
       Object.entries(doc.connections).forEach(([source, out])=>Object.entries(out).forEach(([kind, branches])=>branches.forEach((branch, index)=>branch.forEach(edge=>{
         const a = byName.get(source), b = byName.get(edge.node); if(!a || !b) return;
-        const x = a.position[0] + (scenario ? 156 : 220), y = a.position[1] + (scenario ? 50 : 36 + index * 22);
-        const tx = b.position[0] + (scenario ? 64 : 0), ty = b.position[1] + (scenario ? 50 : 44);
-        const path = element('path', {d: `M ${x} ${y} C ${x + 65} ${y}, ${tx - 65} ${ty}, ${tx} ${ty}`, class: 't-wf-edge', 'marker-end': 'url(#' + marker + ')'});
+        const count = a.type.endsWith('.if') ? 2 : 1, o = G.out(Math.min(index, count - 1), count);
+        const gap = scenario ? 12 : 0;
+        const x = a.position[0] + o[0] + gap, y = a.position[1] + o[1];
+        const tx = b.position[0] + G.inn[0] - (scenario ? 14 : 0), ty = b.position[1] + G.inn[1];
+        const d = Math.max(40, Math.abs(tx - x) / 2);
+        const path = element('path', {d: `M ${x} ${y} C ${x + d} ${y}, ${tx - d} ${ty}, ${tx} ${ty}`, class: 't-wf-edge' + (scenario ? ' scenario' : ''), 'marker-end': scenario ? 'none' : 'url(#' + marker + ')'});
         path.append(element('title', {}, source + ' → ' + edge.node + ' (' + kind + ':' + index + ')')); svg.append(path);
-        if(a.type.endsWith('.if'))svg.append(element('text', {x: (x + tx) / 2, y: (y + ty) / 2 - 8, class: 't-wf-edge-label'}, index === 0 ? 'Ja' : 'Nein'));
+        if(a.type.endsWith('.if'))svg.append(element('text', {x: (x + tx) / 2, y: (y + ty) / 2 - 8, 'text-anchor': 'middle', class: 't-wf-edge-label'}, index === 0 ? 'Ja' : 'Nein'));
       }))));
-      nodes.forEach(node=>{
+      nodes.forEach((node, order)=>{
         const known = root.sedraWorkflowModel.types.some(t=>'n8n-nodes-base.' + t[0] === node.type && t[2] === node.typeVersion);
-        const P = root.sedraWorkflowProcess, meta = P && P.get(node);
-        const g = element('g', {transform: `translate(${node.position[0]} ${node.position[1]})`, class: 't-wf-node' + (state.selected === node.id ? ' selected' : '') + (!known ? ' unsupported' : '') + (meta ? ' process ' + meta.mode : ''), tabindex: 0, role: 'button', 'aria-label': node.name});
+        const P = root.sedraWorkflowProcess, meta = P && P.get(node), I = root.sedraWorkflowIcons;
+        const kindKey = I ? I.key(node, meta) : 'unknown';
+        const g = element('g', {transform: `translate(${node.position[0]} ${node.position[1]})`, class: 't-wf-node mod-' + kindKey + (state.selected === node.id ? ' selected' : '') + (!known ? ' unsupported' : '') + (meta ? ' process ' + meta.mode : ''), tabindex: 0, role: 'button', 'aria-label': node.name});
+        const subtitle = meta ? P.labels[meta.mode] : known ? (I ? I.label(kindKey) : node.type.split('.').pop()) : 'Erhalten · nicht ausführbar';
+        const [cx, cy] = G.center;
         if(scenario){
-          g.append(element('circle', {cx: 110, cy: 50, r: 44, class: 't-wf-module-ring'}));
-          const icon = meta ? ({start: '▶', decision: '◇', end: '✓', task: meta.mode === 'manual' ? '♙' : '▤'}[meta.kind] || '·') : ({manualTrigger: '▶', set: '▤', if: '◇', noOp: '➜', stickyNote: '≡'}[node.type.split('.').pop()] || '?');
-          g.append(element('text', {x: 110, y: 62, 'text-anchor': 'middle', class: 't-wf-module-icon'}, icon));
-          const words = node.name.split(' '), lines = [''];words.forEach(w=>{if((lines[lines.length - 1] + w).length > 26 && lines.length < 3)lines.push('');lines[lines.length - 1] += w + ' ';});
-          lines.forEach((line, i)=>g.append(element('text', {x: 110, y: 118 + i * 17, 'text-anchor': 'middle', class: 't-wf-node-title'}, line.trim())));
-          g.append(element('text', {x: 110, y: 172, 'text-anchor': 'middle', class: 't-wf-node-type'}, meta ? P.labels[meta.mode] : node.type.split('.').pop()));
+          g.append(element('path', {d: 'M 8 44 A 14 14 0 0 0 8 76 Z', class: 't-wf-cap'}), element('path', {d: 'M 112 44 A 14 14 0 0 1 112 76 Z', class: 't-wf-cap'}));
+          g.append(element('circle', {cx, cy, r: 50, class: 't-wf-module-ring'}));
+          if(I) I.append(g, kindKey, cx, cy, 52);
+          if(kindKey === 'manualTrigger' || kindKey === 'start'){const t = element('g', {class: 't-wf-trigger-mark'});t.append(element('circle', {cx: 22, cy: 96, r: 17}));if(I)I.append(t, 'bolt', 22, 96, 18);g.append(t);}
+          const lines = wrap(node.name, 22, 2);
+          lines.forEach((line, i)=>g.append(element('text', {x: cx, y: 142 + i * 18, 'text-anchor': 'middle', class: 't-wf-node-title'}, line)));
+          const last = lines[lines.length - 1], bx = cx + last.length * 4.4 + 14, by = 142 + (lines.length - 1) * 18;
+          g.append(element('rect', {x: bx - 9, y: by - 13, width: 20, height: 18, rx: 4, class: 't-wf-badge-rect'}), element('text', {x: bx + 1, y: by + 1, 'text-anchor': 'middle', class: 't-wf-badge-text'}, String(order + 1)));
+          g.append(element('text', {x: cx, y: 142 + lines.length * 18 + 4, 'text-anchor': 'middle', class: 't-wf-node-type'}, subtitle));
         }else{
-          g.append(element('rect', {width: 220, height: 105, rx: meta && ['start', 'end'].includes(meta.kind) ? 35 : 12}));
-          const chunks = [''];node.name.split(' ').forEach(word=>{if((chunks[chunks.length - 1] + word).length > 27 && chunks.length < 2)chunks.push('');chunks[chunks.length - 1] += word + ' ';});
-          chunks.forEach((line, i)=>g.append(element('text', {x: 12, y: 24 + 17 * i, class: 't-wf-node-title'}, line)));
-          g.append(element('text', {x: 12, y: 68, class: 't-wf-node-type'}, meta ? P.labels[meta.mode] : node.type.split('.').pop() + ' · v' + node.typeVersion));
-          g.append(element('text', {x: 12, y: 88, class: 't-wf-node-type'}, meta ? P.labels[meta.source] : known ? 'Bearbeitbar' : 'Erhalten · nicht ausführbar'));
+          g.append(element('rect', {width: 72, height: 72, rx: meta && ['start', 'end'].includes(meta.kind) ? 36 : 14, class: 't-wf-tile'}));
+          if(I) I.append(g, kindKey, cx, cy, 34);
+          if(!['manualTrigger', 'start'].includes(kindKey) && !node.type.endsWith('.stickyNote')) g.append(element('circle', {cx: 0, cy: 36, r: 4, class: 't-wf-in'}));
+          const lines = wrap(node.name, 20, 2);
+          lines.forEach((line, i)=>g.append(element('text', {x: cx, y: 94 + i * 15, 'text-anchor': 'middle', class: 't-wf-node-title'}, line)));
+          g.append(element('text', {x: cx, y: 94 + lines.length * 15 + 2, 'text-anchor': 'middle', class: 't-wf-node-type'}, subtitle));
         }
         g.append(element('title', {}, node.name + '\n' + node.type));
         g.addEventListener('pointerdown', event=>{
@@ -69,6 +101,7 @@
           handlers.checkpoint();
           const pt = point(event); drag = {node, x: pt.x, y: pt.y, original: node.position.slice()}; svg.setPointerCapture(event.pointerId);
         });
+        g.addEventListener('dblclick', event=>{event.preventDefault();if(handlers.open)handlers.open(node.id);});
         g.addEventListener('keydown', event=>{
           if(['Enter', ' '].includes(event.key)){event.preventDefault();handlers.select(node.id);draw();}
           const delta = {ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10]}[event.key];
@@ -77,7 +110,8 @@
         if(!handlers.readOnly && !node.type.endsWith('.stickyNote') && (!meta || meta.kind !== 'end')){
           const count = node.type.endsWith('.if') ? 2 : 1;
           for(let i = 0; i < count; i++){
-            const port = element('circle', {cx: scenario ? 154 : 220, cy: scenario ? 40 + i * 22 : 36 + i * 22, r: 8, class: 't-wf-port', tabindex: 0, role: 'button', 'aria-label': node.name + ' Ausgang ' + (count === 2 ? (i ? 'Nein' : 'Ja') : '0')});
+            const [px, py] = G.out(i, count);
+            const port = element('circle', {cx: px, cy: py, r: scenario ? 9 : 7, class: 't-wf-port', tabindex: 0, role: 'button', 'aria-label': node.name + ' Ausgang ' + (count === 2 ? (i ? 'Nein' : 'Ja') : '0')});
             const begin = event=>{event.stopPropagation();pending = {name: node.name, branch: i};hint.textContent = 'Ziel für „' + node.name + '“ wählen (Escape bricht ab).';};
             port.addEventListener('click', begin); port.addEventListener('keydown', event=>{if(event.key === 'Enter')begin(event);});g.append(port);
           }
@@ -106,10 +140,11 @@
       if(frame){offset = [offset[0] + frame.width / previous / 2 - frame.width / zoom / 2, offset[1] + frame.height / previous / 2 - frame.height / zoom / 2];}draw();
     }
     svg.addEventListener('wheel', event=>{event.preventDefault();setZoom(zoom * (event.deltaY < 0 ? 1.15 : 1 / 1.15));}, {passive: false});
-    draw();
-    return {draw, zoom(value){setZoom(zoom * value);}, fit(){zoom = 1;offset = [0, 0];draw();},
-      focus(){const n = state.doc.nodes.find(x=>x.id === state.selected);if(!n || !frame)return;zoom = Math.min(8, Math.max(1, frame.width / 550));offset = [n.position[0] - frame.minX - frame.width / zoom / 2 + 110, n.position[1] - frame.minY - frame.height / zoom / 2 + 70];draw();},
+    const api = {draw, zoom(value){setZoom(zoom * value);}, fit(){zoom = 1;offset = [0, 0];draw();},
+      focus(){const n = state.doc.nodes.find(x=>x.id === state.selected);if(!n || !frame)return;zoom = Math.min(8, Math.max(1, frame.width / 550));offset = [n.position[0] - frame.minX - frame.width / zoom / 2 + G.center[0], n.position[1] - frame.minY - frame.height / zoom / 2 + G.center[1]];draw();},
       destroy(){container.replaceChildren();}};
+    draw();
+    return api;
   }
   root.sedraWorkflowCanvas = {mount};
 })();

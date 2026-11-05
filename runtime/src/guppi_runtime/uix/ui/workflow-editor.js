@@ -19,7 +19,7 @@
         if(ctx.object && ctx.object.type === 'workflow_run') return this.showRun(ctx.object.id);
       }).finally(()=>{this.busy = false;if(!this.dead){this.el.inert = false;this.el.removeAttribute('aria-busy');}});
     },
-    unmount(){this.dead = true;this.off.forEach(fn=>fn());if(this.canvas)this.canvas.destroy();this.el.replaceChildren();this.el.classList.remove('t-workflow', options.className);},
+    unmount(){this.dead = true;this.off.forEach(fn=>fn());if(this.canvas)this.canvas.destroy();this.el.replaceChildren();this.el.classList.remove('t-workflow', options.className);this.el.removeAttribute('data-wf-theme');},
     shown(){if(this.wid && !this.dirty())this.safe(()=>this.load(this.wid, true));},
     async call(type, id, verb, args){
       const out = await this.ctx.api('/api/actions', {method: 'POST', body: {type, id, verb, args: args || {}}}); return out.result;
@@ -35,6 +35,9 @@
     change(fn){this.checkpoint();fn();this.draw();},
     build(){
       const head = el('div', 't-wf-header');head.append(el('h2', '', options.title), el('span', 't-wf-badge', 'Gemeinsamer Prozessbestand · 0.2'));
+      this.applyTheme(this.storedTheme() || (root.document.documentElement.dataset.theme === 'klar' ? 'light' : 'dark'));
+      this.themeButton = button('', ()=>{const next = this.el.dataset.wfTheme === 'light' ? 'dark' : 'light';this.applyTheme(next);try{root.localStorage.setItem('sedra.wf.theme', next);}catch(e){}});
+      this.themeButton.className = 't-wf-theme';head.append(this.themeButton);this.applyTheme(this.el.dataset.wfTheme);
       this.message = el('p', 't-wf-message', 'Prozess zeichnen oder eine n8n-JSON-Datei importieren.');this.message.setAttribute('role', 'status');
       this.engine = el('p', 't-wf-hint');
       const bar = el('div', 't-wf-toolbar');
@@ -99,6 +102,11 @@
           event.preventDefault();this.undo(event.shiftKey);
         }
       });
+    },
+    storedTheme(){try{const v = root.localStorage.getItem('sedra.wf.theme');return v === 'light' || v === 'dark' ? v : null;}catch(e){return null;}},
+    applyTheme(theme){
+      this.el.dataset.wfTheme = theme;
+      if(this.themeButton){this.themeButton.textContent = theme === 'light' ? 'Dunkel' : 'Hell';this.themeButton.setAttribute('aria-label', 'Farbthema wechseln, aktuell ' + (theme === 'light' ? 'hell' : 'dunkel'));}
     },
     dirty(){return JSON.stringify(this.state.doc) !== this.saved;},
     discard(){return !this.dirty() || root.confirm('Nicht gespeicherte Änderungen verwerfen?');},

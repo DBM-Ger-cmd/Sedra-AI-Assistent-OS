@@ -1,0 +1,81 @@
+/* Aussehen der Prozess-Apps: helles und dunkles Thema, nur im Geltungsbereich .t-workflow.
+   Die übrigen Ansichten von One Sedra bleiben unberührt. Themenwahl über data-wf-theme am App-Container. */
+.t-workflow{
+  --wf-canvas:var(--bg);--wf-dot:rgba(255,255,255,.16);--wf-edge:var(--accent);--wf-tile:var(--panel);--wf-tile-line:var(--line);
+  --wf-icon:var(--text);--wf-shadow:0 1px 3px rgba(0,0,0,.4);
+  --mod-manualTrigger:#7b5cd6;--mod-start:#7b5cd6;--mod-set:#1f9d8a;--mod-if:#d9822b;--mod-router:#d9822b;--mod-decision:#d9822b;--mod-noOp:#5b6b86;
+  --mod-stickyNote:#b59a2e;--mod-human:#c2547a;--mod-task:#3b82c4;--mod-end:#2e9e5a;--mod-unknown:#7a7f8a;
+}
+.t-workflow[data-wf-theme="light"]{
+  --bg:#f5f6f8;--panel:#ffffff;--panel-2:#eef0f3;--line:#d5d9e0;--line-soft:#e6e9ee;
+  --text:#1f2430;--muted:#566070;--heading:#111827;
+  --accent:#0d8a6a;--accent-text:#ffffff;--scenario-accent:#7a2fe0;
+  --ok:#15803d;--ok-bg:#e8f6ee;--ok-line:#a7d9bb;--warn:#a85a00;--warn-bg:#fff3de;--warn-line:#f0cf9a;--bad:#c0362c;--bad-bg:#fdeceb;--bad-line:#f0b8b3;
+  --wf-canvas:#f7f7f9;--wf-dot:rgba(30,36,48,.20);--wf-tile:#ffffff;--wf-tile-line:#c9ced8;--wf-icon:#1f2430;--wf-shadow:0 1px 4px rgba(20,30,50,.18);
+  color-scheme:light;
+}
+.t-workflow[data-wf-theme="dark"]{color-scheme:dark}
+.t-scenario{--wf-edge:var(--scenario-accent)}
+.t-scenario[data-wf-theme="light"]{--wf-canvas:#f4f4f6}
+
+/* Zeichenfläche */
+.t-workflow .t-wf-canvas{position:relative;border-radius:10px;overflow:hidden;background:var(--wf-canvas)}
+.t-workflow .t-wf-svg{height:clamp(420px,62vh,780px);background:var(--wf-canvas)}
+.t-workflow .t-wf-grid-dot{fill:var(--wf-dot)}
+.t-workflow .t-wf-edge{stroke:var(--wf-edge);stroke-width:2.2;opacity:.9}
+.t-workflow .t-wf-arrow{fill:var(--wf-edge)}
+.t-workflow .t-wf-edge.scenario{stroke:var(--wf-edge);stroke-width:7;stroke-linecap:round;stroke-dasharray:0 14;opacity:.55}
+.t-workflow .t-wf-tile{fill:var(--wf-tile);stroke:var(--wf-tile-line);stroke-width:2;filter:drop-shadow(0 1px 2px rgba(0,0,0,.18))}
+.t-workflow .t-wf-node.selected .t-wf-tile{stroke:var(--accent);stroke-width:3.5}
+.t-workflow .t-wf-node.unsupported .t-wf-tile{stroke:var(--warn);stroke-dasharray:5 3}
+.t-workflow .t-wf-node.manual .t-wf-tile{stroke:var(--warn)}
+.t-workflow .t-wf-node.automatable .t-wf-tile{stroke:var(--ok)}
+.t-workflow .t-wf-node.assisted .t-wf-tile{stroke:var(--accent)}
+.t-workflow .t-wf-icon{fill:none;stroke:var(--wf-icon);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.t-workflow .t-wf-in{fill:var(--wf-tile);stroke:var(--wf-tile-line);stroke-width:1.5}
+.t-workflow .t-wf-node-title{fill:var(--text);font-size:13px;font-weight:600}
+.t-workflow .t-wf-node-type{fill:var(--muted);font-size:11px}
+.t-workflow .t-wf-port{fill:var(--wf-tile);stroke:var(--accent);stroke-width:2.5}
+.t-workflow .t-wf-port:hover,.t-workflow .t-wf-port:focus{fill:var(--accent)}
+.t-workflow .t-wf-edge-label{font-size:12px;fill:var(--text)}
+
+/* Szenario: Kreismodule */
+.t-scenario .t-wf-module-ring{fill:var(--mod-unknown);stroke:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
+.t-scenario .t-wf-node.mod-manualTrigger .t-wf-module-ring,.t-scenario .t-wf-node.mod-start .t-wf-module-ring{fill:var(--mod-manualTrigger)}
+.t-scenario .t-wf-node.mod-set .t-wf-module-ring{fill:var(--mod-set)}
+.t-scenario .t-wf-node.mod-if .t-wf-module-ring,.t-scenario .t-wf-node.mod-router .t-wf-module-ring,.t-scenario .t-wf-node.mod-decision .t-wf-module-ring{fill:var(--mod-if)}
+.t-scenario .t-wf-node.mod-noOp .t-wf-module-ring{fill:var(--mod-noOp)}
+.t-scenario .t-wf-node.mod-stickyNote .t-wf-module-ring{fill:var(--mod-stickyNote)}
+.t-scenario .t-wf-node.mod-human .t-wf-module-ring{fill:var(--mod-human)}
+.t-scenario .t-wf-node.mod-task .t-wf-module-ring{fill:var(--mod-task)}
+.t-scenario .t-wf-node.mod-end .t-wf-module-ring{fill:var(--mod-end)}
+.t-scenario .t-wf-icon{stroke:#fff;stroke-width:1.5}
+.t-scenario .t-wf-cap{fill:var(--wf-edge);opacity:.45}
+.t-scenario .t-wf-node.selected .t-wf-module-ring{stroke:var(--text);stroke-width:4}
+.t-scenario .t-wf-node.unsupported .t-wf-module-ring{stroke:var(--warn);stroke-width:4;stroke-dasharray:6 4}
+.t-scenario .t-wf-node.manual .t-wf-module-ring{stroke:var(--warn);stroke-width:4}
+.t-scenario .t-wf-trigger-mark circle{fill:var(--panel);stroke:var(--wf-edge);stroke-width:2}
+.t-scenario .t-wf-trigger-mark .t-wf-icon{stroke:var(--wf-edge)}
+.t-scenario .t-wf-node-title{font-size:15px}
+.t-scenario .t-wf-badge-rect{fill:var(--panel-2);stroke:var(--line)}
+.t-scenario .t-wf-badge-text{fill:var(--muted);font-size:11px;font-weight:600}
+
+/* Zoom-Knöpfe unten links in der Fläche */
+.t-workflow .t-wf-zoom{position:absolute;left:12px;bottom:12px;display:flex;gap:6px;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--wf-shadow)}
+.t-workflow .t-wf-zoom-btn{min-width:32px;padding:4px 8px;font-size:16px;line-height:1}
+
+/* Themenschalter, Dialog und Auswahl */
+.t-workflow .t-wf-theme{margin-left:auto}
+.t-workflow .t-wf-surface{position:relative}
+.t-wf-dialog{position:absolute;z-index:5;min-width:300px;max-width:min(440px,92%);max-height:80%;overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+.t-wf-dialog-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:2px solid var(--accent)}
+.t-wf-dialog-head h3{margin:0;flex:1;font-size:15px;color:var(--heading)}
+.t-wf-dialog-body{padding:12px;display:flex;flex-direction:column;gap:8px}
+.t-wf-picker{position:absolute;z-index:6;right:12px;top:12px;width:300px;max-height:80%;display:flex;flex-direction:column;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+.t-wf-picker input{margin:10px}
+.t-wf-picker-list{overflow:auto;padding:0 6px 10px;display:flex;flex-direction:column;gap:2px}
+.t-wf-picker-cat{margin:8px 6px 2px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.t-wf-picker-item{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border:1px solid transparent;background:transparent;border-radius:7px;padding:7px 9px}
+.t-wf-picker-item:hover,.t-wf-picker-item.active{background:var(--panel-2);border-color:var(--accent)}
+.t-wf-picker-item small{color:var(--muted)}
+.t-wf-picker-empty{padding:10px;color:var(--muted);font-size:12px}

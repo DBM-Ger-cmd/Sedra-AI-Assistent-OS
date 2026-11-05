@@ -3,6 +3,6 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "test:workflow": "node --test runtime/tests/n8n_model.test.cjs"
+    "test:workflow": "node --test runtime/tests/n8n_model.test.cjs runtime/tests/workflow_ui.test.cjs"
   }
 }
