@@ -9,8 +9,8 @@ shell:
   description: Gespräch in der Mitte mit Sitzungen, Streamen und sichtbaren Werkzeugen; Werkzeuge mit Freigabe-Karte; Vorarbeiter, Aufgaben-Freigabe und Läufe; Start-Menü mit Apps, Oberflächen und Statusbereich (Stufe 4); Einstellungen mit Katalog-Editor (Stufe 5).
   version: 1.9.0
   entry:
-    js: [markdown.js, projekt.js, vorlagenhinweis.js, gespraechsoptionen.js, seitenleiste.js, seite.js, reiter.js, karte.js, aufgabe.js, lauf.js, zeilen.js, strom.js, verlauf.js, eingabe.js, startliste.js, app.js, startmenue.js, katalog_editor_pruefung.js, katalog_editor.js, erlaubnisse.js, tokenseite.js, hilfswerkzeugseite.js, infoseite.js, vorlagenneu.js, einstellungen_seiten.js, einstellungen.js, vorschau.js, modell.js, anhang.js, schnell.js, taskleiste.js, shell.js]     # shell.js zuletzt: es registriert
-    css: [shell.css, einstellungen.css, vorschau.css, startmenue.css]
+    js: [markdown.js, projekt.js, vorlagenhinweis.js, gespraechsoptionen.js, seitenleiste.js, seite.js, reiter.js, karte.js, aufgabe.js, lauf.js, zeilen.js, strom.js, verlauf.js, eingabe.js, startliste.js, app.js, startmenue.js, katalog_editor_pruefung.js, katalog_editor.js, erlaubnisse.js, tokenseite.js, hilfswerkzeugseite.js, infoseite.js, vorlagenneu.js, desktop.js, builder.js, kontext.js, kontextmodule.js, einstellungen_seiten.js, einstellungen.js, vorschau.js, modell.js, anhang.js, schnell.js, taskleiste.js, shell.js]     # shell.js zuletzt: es registriert
+    css: [shell.css, einstellungen.css, vorschau.css, startmenue.css, kontext.css]
   provides: [seite, reiter, flaeche, eingabe, taskleiste]
   layout: {persist: browser}
   umschalter: menue           # Stufe 4 (D-S1): kein Alt+S-Chip, kein Mini-Hub – das Start-Menü der Shell; Alt+S ruft es

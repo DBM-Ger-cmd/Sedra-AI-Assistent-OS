@@ -159,7 +159,7 @@
   }
 
   function fuer(S, a){
-    S.el.eingabe.classList.toggle('hs-aus', !!a && /^(aufgaben|lauf|diff|app|einstellungen):/.test(String(a.id)));      // in Aufgaben-, Lauf-, Diff-, App- und Einstellungs-Reitern gibt es nichts zu schreiben
+    S.el.eingabe.classList.toggle('hs-aus', !!a && /^(aufgaben|lauf|diff|app|einstellungen|builder):/.test(String(a.id)));      // in Aufgaben-, Lauf-, Diff-, App- und Einstellungs-Reitern gibt es nichts zu schreiben
     zustand(S); fokus(S); schildZeigen(S); kontextZeigen(S);
     if(S.tokenLaden) S.tokenLaden();
   }

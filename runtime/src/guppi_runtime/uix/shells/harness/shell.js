@@ -67,12 +67,14 @@
       H.eingabe.mount(this);
       H.taskleiste.mount(this);
       H.startmenue.mount(this);
+      if(H.kontext) H.kontext.mount(this);                 // Rechtsklick-Menü der Oberfläche (kontext.js; die Module melden sich in kontextmodule.js an)
       this.tasten();
       this.breite();
       root.addEventListener('resize', ()=>{ this.breite(); this.teilungAnpassen(); });
 
       ctx.bus.on('harness.sitzung', ()=>this.sitzungenLaden());
       ctx.bus.on('harness.verknuepfungen', ()=>this.freigabenLaden());                            // eine Verknüpfung wurde angelegt oder entfernt
+      ctx.bus.on('harness.desktop', e=>{ if(H.desktop && e){ this._desktop = Object.assign(H.desktop.LEER(), e); } });        // Desktop Builder: die Wahl wurde gespeichert (auch aus einem anderen Fenster)
       ctx.bus.on('harness.projekt', ()=>this.projekteLaden());                                   // P0 M3: ein Ordner wurde als Projekt freigegeben
       ctx.bus.on('harness.vorgaben', e=>{ Object.assign(H.projekt.vorgaben(this), e || {}); H.eingabe.projektwahl(this); });
       ctx.bus.on('harness.antwort', e=>{
@@ -100,7 +102,7 @@
       root.sedraBoot.onProblem = text=>this.hinweis(text, 'warn');
 
       await H.projekt.laden(this);                                                                  // P0 M3: Vorgaben vor der Projektwahl
-      await Promise.all([this.projekteLaden(), this.sitzungenLaden(), this.modellLaden(), this.vorlagenLaden(), this.freigabenLaden(), this.laeufeLaden()]).catch(err=>ctx.onProblem('Harness', err));
+      await Promise.all([this.projekteLaden(), this.sitzungenLaden(), this.modellLaden(), this.vorlagenLaden(), this.freigabenLaden(), this.laeufeLaden(), H.desktop ? H.desktop.laden(this) : null]).catch(err=>ctx.onProblem('Harness', err));
       H.taskleiste.alsGesehenStarten(this);
       this._freigabenGeladen = true;
       H.reiter.wiederherstellen(this);

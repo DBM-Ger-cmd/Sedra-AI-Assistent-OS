@@ -96,3 +96,13 @@ Verlauf mit Werkzeugergebnissen und „Karte → Katalog“ sind eigene kleine S
   Sitzung; **Zeitlinie** (V3) im Reiter („denkt · 12 s“, „Werkzeug befehl“, „wartet auf Freigabe“, „Stopp angefordert“); Fehlerzeile mit „Logbuch öffnen“ (V9).
 - Befunde A1–A30 der Analyse (Antwort nie hängend, Herkunft S7 auf allen Schreibwegen, Mikrofon, Seitenleiste, Status-Takt, Sitzungsliste mit Zwischenspeicher …):
   `docs/BAUBERICHT_HARNESS_BAU_2026-11-01.md`; Tests `tests/test_harness_bau_2026_11_01.py`.
+
+## Kontextmenü und Module (05.11.2026)
+
+Rechtsklick auf etwas in der Harness öffnet ein Menü innerhalb von Sedra (`kontext.js`, `kontext.css`). Jedes Modul der Oberfläche meldet sich mit `root.sedraHarness.kontext.registrieren({id, titel, selektor, dateien, eintraege?})` an: Name im Menü, Selektor, an dem man es erkennt, die Dateien, in denen es lebt, und optional eigene Einträge (`eintraege(S, element)` → `[{text, tun}]`). Die Tabelle der bestehenden Module steht in `kontextmodule.js`; ein neues Modul trägt sich in seiner eigenen Datei ein.
+
+Das Menü nennt den Ort („Sedra Harness › Taskleiste › Statuszelle“) und bietet: die Einträge des Moduls, **Im Chat anpassen …** (legt Ort, Modul, Dateien und den sichtbaren Text als Entwurf ins Eingabefeld, der Captain schreibt dazu, was anders sein soll; ohne Gespräch öffnet sich ein neues), **Frage dazu stellen**, Kopieren, Aus Zwischenablage einfügen, Neues Gespräch, Datei anhängen. Umschalt+Rechtsklick und Eingabefelder behalten das Menü des Browsers (wie bei herdr; die Einträge „Neuer Chat“ und „Dokument öffnen“ stammen aus dem Desktop-Menü der alten Oberfläche). Texte kommen nur als `textContent` in die Oberfläche. Test: `tests/test_uix_harness_kontext.py`.
+
+## Desktop Builder und Profile (05.11.2026)
+
+Start → System → **Desktop Builder** (`builder.js`, `desktop.js`, Server `harness/desktop.py`, `GET/POST /api/harness/desktop`): vier Reiter – **Module** (die Landkarte der Oberfläche aus `kontext.js`), **Start-Menü** (Apps aus- und einblenden, Gruppe wählen), **Taskleiste** (Zellen aus- und einblenden, Reihenfolge) und **Profile und Marke** (Name, Akzentfarbe, Profile je Auftraggeber speichern, anwenden, exportieren, importieren). Leer heißt die Vorgabe der Shell (`start_gruppen.json`). Posteingang, Aufgaben und die Zelle Freigaben lassen sich nie ausblenden (Client und Server prüfen es). Ein Profil ist nur Zuschnitt der Oberfläche, keine Sperre; Rechte sind Sache der Richtlinie (Stufe 4). Entwurf und Ablauf für einen neuen Auftraggeber: `docs/ENTWURF_AUFTRAGGEBER_PROFILE_2026-11-05.md`. Tests: `tests/test_harness_desktop.py`, `tests/test_uix_harness_desktop.py`.

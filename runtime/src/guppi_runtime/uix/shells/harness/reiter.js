@@ -13,7 +13,7 @@
 
   function speichern(S){
     const r = stand(S);
-    const merkbar = id=>ID.test(id) || /^(aufgaben|einstellungen):/.test(String(id));      // A29 (1.11.): auch Aufgaben und Einstellungen überleben das Neuladen
+    const merkbar = id=>ID.test(id) || /^(aufgaben|einstellungen|builder):/.test(String(id));      // A29 (1.11.): auch Aufgaben und Einstellungen überleben das Neuladen, ebenso der Desktop Builder
     try{ localStorage.setItem(KEY, JSON.stringify({liste: r.liste.filter(merkbar), aktiv: merkbar(r.aktiv || '') ? r.aktiv : null})); }catch(_e){}
   }
 
@@ -22,7 +22,8 @@
     if(String(id).startsWith('aufgaben:')) return 'Freigaben';
     if(String(id).startsWith('lauf:')){ const l = (S.laeufe || []).find(x=>x.id === id.slice(5)); return 'Lauf ' + (l ? l.name : id.slice(5)); }
     if(String(id).startsWith('app:')) return root.sedraHarness.app.titel(S, id);                   // Stufe 4
-    if(String(id).startsWith('einstellungen:')) return 'Einstellungen';                            // Stufe 5
+    if(String(id).startsWith('einstellungen:')) return 'Einstellungen';
+    if(String(id).startsWith('builder:')) return 'Desktop Builder';                            // Stufe 5
     if(!ID.test(id)) return 'Neue Sitzung';
     const s = S.sitzung(id);
     return (s && s.titel) || 'Ohne Titel';
@@ -91,7 +92,7 @@
 
   function neu(S){
     const r = stand(S);
-    const leer = r.liste.find(id=>!ID.test(id) && !/^(diff|aufgaben|lauf|app|einstellungen):/.test(String(id)));          // ein offener Entwurf genügt
+    const leer = r.liste.find(id=>!ID.test(id) && !/^(diff|aufgaben|lauf|app|einstellungen|builder):/.test(String(id)));          // ein offener Entwurf genügt
     aktivieren(S, leer || ('neu-' + (++zaehler)));
     root.sedraHarness.eingabe.fokus(S);
   }
@@ -131,7 +132,7 @@
     try{ gemerkt = JSON.parse(localStorage.getItem(KEY) || '{}') || gemerkt; }catch(_e){}
     const da = new Set(S.sitzungen.map(s=>s.id));           // nur, was es noch gibt – sonst gäbe es 404 beim Laden
     const r = stand(S);
-    r.liste = (Array.isArray(gemerkt.liste) ? gemerkt.liste : []).filter(id=>(ID.test(id) && da.has(id)) || /^(aufgaben|einstellungen):/.test(String(id)));
+    r.liste = (Array.isArray(gemerkt.liste) ? gemerkt.liste : []).filter(id=>(ID.test(id) && da.has(id)) || /^(aufgaben|einstellungen|builder):/.test(String(id)));
     const aktiv = r.liste.indexOf(gemerkt.aktiv) >= 0 ? gemerkt.aktiv : r.liste[0];
     if(aktiv) aktivieren(S, aktiv); else neu(S);
   }

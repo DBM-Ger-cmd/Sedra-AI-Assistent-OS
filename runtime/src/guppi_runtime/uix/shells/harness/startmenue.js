@@ -15,6 +15,9 @@
   const EINSTELLUNGEN = {id: 'einstellungen', label: 'Einstellungen', hint: 'Startseite, Allgemein, Agent, Sprache, Integrationen, Modelle, System', symbol: '⚙', gruppe: 'system', fest: true, werkzeuge: []};
   // A3 (Captain 03.11.2026): „Token und Gespräch“ ist in die App „Sedra Token“ gewandert (Reiter Verbrauch, Kosten und Zeilen, Gespräch); feste Einträge gibt es nur noch für System
   const FEST = {};          // feste Einträge je Gruppe – kein Ort, kein Werkzeug: die Shell trägt sie ein (Einstellungen: die Kachel „Einstellungen“ oben, die Suche findet sie über FESTE)
+  // Desktop Builder (Captain 05.11.2026): Module, Start-Menü, Taskleiste, Profile und Marke an einem Ort
+  const BUILDER = {id: 'desktop-builder', label: 'Desktop Builder', hint: 'Module der Oberfläche, Start-Menü, Taskleiste, Profile und Marke', words: ['builder', 'desktop', 'profil', 'marke', 'oberfläche'], symbol: '▦', gruppe: 'system', fest: true,
+                   oeffnen: S=>root.sedraHarness.builder.oeffnen(S), werkzeuge: []};
   const FESTE = [EINSTELLUNGEN];
 
   function stand(S){ return S._start || (S._start = {offen: false, konfig: null, konfigFehler: null, zuletzt: [], liste: null, module: null, wartet: null, offene: new Set()}); }
@@ -37,7 +40,12 @@
   function bauen(S){
     const st = stand(S);
     const werkzeuge = (st.module && st.module.tools) || [];
-    st.liste = L().bauen(root.sedraPlaces.PLACES, werkzeuge, o=>S.ctx.tools.forObject(o), st.konfig, st.zuletzt);
+    const D = root.sedraHarness.desktop;                                  // Desktop Builder: die Wahl des Captains liegt über der Vorgabe
+    st.liste = L().bauen(root.sedraPlaces.PLACES, werkzeuge, o=>S.ctx.tools.forObject(o), D ? D.startKonfig(S, st.konfig) : st.konfig, st.zuletzt);
+    // der Desktop Builder ist ein fester Eintrag der Shell in der Gruppe System (kein Ort, kein Werkzeug) und lässt sich nicht ausblenden: wer ihn ausblendet, käme nicht zurück
+    const sys = st.liste.gruppen.find(g=>g.id === 'system');
+    if(sys) sys.apps.push(BUILDER); else st.liste.gruppen.push({id: 'system', titel: 'System', symbol: BUILDER.symbol, apps: [BUILDER]});
+    st.liste.apps.push(BUILDER);
     return st.liste;
   }
 
@@ -105,6 +113,7 @@
 
   function waehlen(S, app){
     schliessen(S);
+    if(app.oeffnen){ app.oeffnen(S); return; }
     if(app.fest){ root.sedraHarness.einstellungen.oeffnen(S, app.fest === true ? undefined : app.fest); return; }
     root.sedraHarness.app.oeffnen(S, app);
     benutzt(S, app);

@@ -1,0 +1,7 @@
+.hs-ctxmenu{position:fixed;z-index:60;min-width:220px;max-width:340px;display:flex;flex-direction:column;padding:4px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel-2);color:var(--text);box-shadow:var(--shadow)}
+.hs-ctxmenu-kopf{display:flex;flex-direction:column;gap:1px;padding:4px 8px 6px;border-bottom:1px solid var(--line);margin-bottom:3px}
+.hs-ctxmenu-kopf small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs-ctxmenu-punkt{text-align:left;border:0;background:transparent;color:inherit;font:inherit;padding:5px 8px;border-radius:var(--radius);cursor:pointer}
+.hs-ctxmenu-punkt:hover,.hs-ctxmenu-punkt:focus{background:var(--hs-hover);outline:none}
+.hs-ctxmenu-strich{height:1px;margin:3px 4px;background:var(--line)}
+.hs-ctxmenu-fuss{padding:4px 8px 2px}

@@ -52,8 +52,8 @@ class HarnessShellTests(unittest.TestCase):
     def test_reiter_merken_nur_ids(self):
         reiter = (ORDNER / 'reiter.js').read_text(encoding='utf-8')
         self.assertIn("'sedra.harness.reiter'", reiter)
-        # A29 (1.11.): gemerkt werden Sitzungs-IDs und die Reiter aufgaben:/einstellungen: – nie diff:, lauf: oder app: (die kommen aus dem Arbeitsstand)
-        self.assertIn("const merkbar = id=>ID.test(id) || /^(aufgaben|einstellungen):/.test(String(id));", reiter)
+        # A29 (1.11.): gemerkt werden Sitzungs-IDs und die Reiter aufgaben:/einstellungen:/builder: (Desktop Builder, 05.11.) – nie diff:, lauf: oder app: (die kommen aus dem Arbeitsstand)
+        self.assertIn("const merkbar = id=>ID.test(id) || /^(aufgaben|einstellungen|builder):/.test(String(id));", reiter)
         self.assertIn('filter(merkbar)', reiter)
 
     @unittest.skipUnless(shutil.which('node'), 'node fehlt')

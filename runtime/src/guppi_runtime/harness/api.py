@@ -2,6 +2,7 @@
 
     GET    projekte                           Harness-Projekte (Datei des Captains + Laufzeitdatei)
     POST   projekte                           P0 M3: {wurzel, name?, schreibbereich?} → Antrag mit Gate (HARNESS_PROJEKT_ADD, Herkunft S7); geschrieben wird erst nach Freigabe
+    GET/POST desktop                          Desktop Builder: die Wahl des Captains für Start-Menü (ausblenden, Gruppe) und Taskleiste (ausblenden, Reihenfolge); POST ersetzt Teile, null = Vorgabe der Shell
     POST   vorgaben                           P0 M3: {rezept_standard?, projekt_standard?} merken (Laufzeitdatei; null löscht die Vorgabe)
     GET    sitzungen[?projekt=]               Liste (neueste zuerst) und welche gerade antworten
     POST   sitzungen                          {projekt, titel?, modell?, vorlage?} → Kopf
@@ -69,6 +70,7 @@ from . import hilfswerkzeuge
 from . import info as harness_info
 from . import betriebslog as harness_betriebslog
 from . import ladeprobe as harness_ladeprobe
+from . import desktop as harness_desktop
 from . import lauf as harness_lauf
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
@@ -91,10 +93,10 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand')
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|hilfswerkzeuge|bausteine|info)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|hilfswerkzeuge|bausteine|info|desktop)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
-                        r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)|info/wissen'
+                        r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)|info/wissen|desktop'
                         r'|verknuepfungen|gedaechtnis|token|aufraeumen|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
 # Gedanken und Modelle (Captain 02.11.2026): Sedra speichert die Gedanken je Antwort; ans Modell geht je nach Modus nur wenig zurück.
 #   aus  – nichts, nur Text und Ergebnisse        spur – (Standard) eine Zeile je frühere Antwort: was lief, wie viel Gedanken gespeichert sind; abrufbar mit `erinnern`
@@ -304,6 +306,16 @@ class HarnessApi:
         if fest == 'bausteine' and not unter and method == 'GET':        # Bausteine der Aufgaben-Freigabe (Analyse Freigaben S1): nur lesen
             try: return 200, harness_bausteine.laden(self.hub.project_root)
             except ValueError as exc: return 200, {'bausteine': [], 'hinweise': [str(exc)]}
+        if fest == 'desktop' and not unter and method == 'GET':        # Desktop Builder: die Wahl des Captains für Start-Menü und Taskleiste (leer = Vorgabe der Shell)
+            if (q.get('profil') or [''])[0]:                      # ein Profil zum Ansehen und Exportieren
+                return 200, harness_desktop.profil_lesen(self.hub.project_root, (q.get('profil') or [''])[0])
+            return 200, harness_desktop.laden(self.hub.project_root)
+        if fest == 'desktop' and not unter and method == 'POST':
+            neu = harness_desktop.aktion(self.hub.project_root, payload) if 'aktion' in payload else harness_desktop.speichern(self.hub.project_root, payload)
+            self._audit('HARNESS_DESKTOP', {'aktion': payload.get('aktion') or 'wahl', 'profil': neu.get('profil'), 'start_ausgeblendet': len(neu['start']['ausblenden']),
+                                            'zellen_ausgeblendet': len(neu['zellen']['ausblenden']), 'marke': (neu['marke'] or {}).get('name')})
+            self._melden('harness.desktop', neu)
+            return 200, neu
         if fest == 'info' and not unter and method == 'GET':        # Info-Hub (05.11.): was Sedra laut Audit-Log getan hat, in Klartext; schreibt nur das Betriebslog (Tagesdateien)
             return 200, self.info_sicht(q)
         if fest == 'info' and unter == 'wissen' and method == 'POST':        # Antrag, den Ordner des Betriebslogs als Quelle der Wissensdatenbank aufzunehmen (Freigabe im Posteingang)

@@ -206,7 +206,7 @@
         return zelle;
       });
       zellen.splice(Math.min(1, zellen.length), 0, tokenZelle(S));            // 02.11.2026: Token gleich hinter den Freigaben, vor Modell und GPU
-      l.status.replaceChildren(...zellen);
+      l.status.replaceChildren(...(root.sedraHarness.desktop ? root.sedraHarness.desktop.zellenAnwenden(S, zellen) : zellen));      // Desktop Builder: Auswahl und Reihenfolge des Captains
     }).catch(err=>{
       l.status.replaceChildren(d().el('span', 'hs-zelle warn', 'Status nicht lesbar'));
       l.status.title = err.message;

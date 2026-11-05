@@ -44,6 +44,7 @@ Stand: 31.10.2026. Quellen: Gedächtnisdateien von Claude (Memory), die Sitzungs
 - Rekorder mit wählbarer Quelle (`78f08fb`, `e7c67fe`): Mikrofon oder PC-Ton; Live-Test mit abgespieltem Ton ergab echtes Signal. Die Auswahl wird nicht gespeichert (Werkzeuge dürfen kein `localStorage`).
 - Startfehler `UnicodeDecodeError` (cp1252, Byte 0x81) in der Prozessliste behoben: PowerShell gibt UTF-8 aus und Python liest UTF-8 (`models/gpu_preflight.py`). Vorher blieb ein altes Cockpit unerkannt.
 - Kurs-Präsentation `docs/KURS_PRAESENTATION_SEDRA.md` (14 Folien) durch eigene Sitzung; ihre Zahlen sind noch nicht gegen das Logbuch geprüft.
+- **Arbeitsumgebung Minimal (31.10.):** Sedra A1 bleibt Hauptumgebung für die PC-Version (Stable). Für Entwicklung und Test der Minimal-Version gibt es `E:\Sedra Umgebung\Sedra Test umgebung für Minimale USB Stick Version`. Dorthin wurde die Minimal-Version von `K:\SEDRA` kopiert (752 Dateien, 44,26 GB, ohne `_speedtest_tmp.bin`; Anzahl und Größe stimmen überein). Arbeitsweg: auf E entwickeln, auf K testen; Änderungen müssen vor dem Test auf K übertragen werden (nur auf Ansage). Modelle liegen weiterhin unter `I:\KI-Daten\modelle`. Die Kopie auf K enthält 40,5 GB Modelle unter `modelle`.
 
 ## 6. Fallen und Praxiswissen
 - **Zwei Python-Umgebungen:** Das Cockpit läuft in `runtime\.venv` (Python 3.14), das System-Python hat mehr Pakete. `sounddevice` fehlte in der venv (jetzt 0.5.6 und `PyAudioWPatch` dort installiert); `numpy` fehlt in der venv, deshalb überspringt der Runner `test_sprache_kern` – direkt starten: im Ordner `runtime/tests` `PYTHONPATH=../src python -m unittest test_sprache_kern`. Stand 30.10.: die Test-Attrappe `_kern_fake` braucht kein numpy mehr.
@@ -67,7 +68,7 @@ Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzei
 3. **Dynamische Rezepte:** Tempo je Lagenzahl und Laden bei knappem Speicher nicht gemessen; `kv_cache_gb_per_1k_tokens` (0,0125 GiB/1k) noch nicht im Rezept; LibreHardwareMonitor nicht gestartet.
 4. **Harness:** `harness.nemotron_e4b` `per_slots` ungemessen; 18 hängende Chat-Sitzungs-Missionen; Web-Browser-Spec (WBQ-3, WBQ-6, WBQ-7) und Wunsch-Anbindung G2 warten auf Entscheidungen.
 5. **Alt:** Freigabe-Antrag „Agent Leitung Betriebsstunde (foreman) an T-6206f857dda4“ im Posteingang (Altbestand?); „kindi“ auf GitHub nicht gefunden (Link/Autor nötig); Cockpit-Test `test_k5`/Docktest wackelt unter Last.
-6. **Minimal/USB:** Aufbau auf `K:\` läuft in den Sitzungen „Sedra USB-Stick auf K:\ einrichten“ und „Sedra Minimal USB-Stick Arbeitsumgebung“; ob eine Modellablage im neuen Ordner sinnvoll ist, ist offen.
+6. **Minimal/USB:** Die Minimal-Version liegt auf `E:\Sedra Umgebung\Sedra Test umgebung für Minimale USB Stick Version` (Kopie von `K:\SEDRA` vom 31.10.). Offen: Rückübertragung nach K vor Tests; ob eine Modellablage im neuen Ordner sinnvoll ist; Aufbau auf `K:\` in den Sitzungen „Sedra USB-Stick auf K:\ einrichten“ und „Sedra Minimal USB-Stick Arbeitsumgebung“.
 7. **Kurs-Präsentation:** Zahlen der 14 Folien noch gegen das Logbuch prüfen.
 
 ## 9. Alle Chats (Sitzungen), nach Datum
