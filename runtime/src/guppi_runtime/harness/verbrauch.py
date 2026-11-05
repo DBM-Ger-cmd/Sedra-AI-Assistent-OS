@@ -11,7 +11,7 @@ def _zahl(x):
 
 def summe(eintraege, tag=None):
     """{antworten, zuege, ein, aus, modell_s, tok_s, letzte, kontext} über die Modellzeilen; mit `tag` ('JJJJ-MM-TT') nur die dieses Tages."""
-    out = {'antworten': 0, 'zuege': 0, 'ein': 0, 'aus': 0, 'modell_s': 0.0, 'tok_s': None, 'letzte': None, 'kontext': None}
+    out = {'antworten': 0, 'zuege': 0, 'ein': 0, 'aus': 0, 'modell_s': 0.0, 'tok_s': None, 'letzte': None, 'kontext': None, 'aus_cache': 0, 'neu_gerechnet': 0, 'cache_zuege': 0, 'cache_anteil': None}
     aus_mit_zeit = 0
     for e in eintraege:
         if e.get('typ') != 'modell' or not isinstance(e.get('token'), dict):
@@ -23,6 +23,11 @@ def summe(eintraege, tag=None):
         out['zuege'] += _zahl(e.get('zuege'))
         out['ein'] += ein
         out['aus'] += aus
+        c = e.get('cache') if isinstance(e.get('cache'), dict) else None
+        if c:
+            out['aus_cache'] += _zahl(c.get('aus_cache'))
+            out['neu_gerechnet'] += _zahl(c.get('neu'))
+            out['cache_zuege'] += _zahl(c.get('zuege'))
         s = e.get('modell_s')
         if isinstance(s, (int, float)) and s > 0:
             out['modell_s'] += s
@@ -32,9 +37,16 @@ def summe(eintraege, tag=None):
         if isinstance(e.get('kontext'), list) and len(e['kontext']) == 2:
             out['kontext'] = {'belegt': _zahl(e['kontext'][0]), 'fenster': _zahl(e['kontext'][1])}
     out['modell_s'] = round(out['modell_s'], 1)
+    out['cache_anteil'] = anteil(out['aus_cache'], out['neu_gerechnet'])
     if out['modell_s'] > 0 and aus_mit_zeit:
         out['tok_s'] = round(aus_mit_zeit / out['modell_s'], 1)
     return out
+
+
+def anteil(aus_cache, neu):
+    """Wie viel Prozent der Eingabe kamen aus dem Prompt-Cache; None, wenn nichts gemessen wurde."""
+    gesamt = (aus_cache or 0) + (neu or 0)
+    return round(100 * aus_cache / gesamt) if gesamt else None
 
 
 def heute():

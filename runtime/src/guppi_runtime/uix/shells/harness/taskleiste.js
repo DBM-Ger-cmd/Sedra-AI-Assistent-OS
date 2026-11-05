@@ -159,7 +159,7 @@
     zelle.dataset.zelle = 'token';
     const wert = s ? zahl(s.ein) + ' ↑ ' + zahl(s.aus) + ' ↓' : (h && h.antworten ? 'heute ' + zahl(h.ein) + ' ↑ ' + zahl(h.aus) + ' ↓' : '–');
     zelle.title = 'Token' + (s ? ' dieser Sitzung' : ' heute') + ': ↑ eingehend ' + (s ? s.ein : h ? h.ein : 0).toLocaleString('de-DE') + ' (jeder Zug zählt den Verlauf neu), ↓ erzeugt ' + (s ? s.aus : h ? h.aus : 0).toLocaleString('de-DE')
-      + (s && s.tok_s ? ' · Ø ' + String(s.tok_s).replace('.', ',') + ' Token/s' : '') + (pro !== null ? ' · Kontext ' + pro + ' %' : '') + ' – Klick: App Sedra Token (Verbrauch, Kosten, Gespräch)';
+      + (s && s.tok_s ? ' · Ø ' + String(s.tok_s).replace('.', ',') + ' Token/s' : '') + (pro !== null ? ' · Kontext ' + pro + ' %' : '') + (s && s.cache_zuege ? ' · Cache ' + s.cache_anteil + ' %' : '') + ' – Klick: App Sedra Token (Verbrauch, Kosten, Gespräch)';
     zelle.tabIndex = 0; zelle.setAttribute('role', 'button');
     const oeffnen = ()=>root.sedraHarness.tokenseite.oeffnen(S);
     zelle.onclick = oeffnen;

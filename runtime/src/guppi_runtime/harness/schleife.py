@@ -59,6 +59,20 @@ def mit_zusammenfassung(system, text):
 GELERNT_KOPF = '\n\nGelernte Regeln dieses Projekts (vom Captain bestätigt, docs/AAR/LESSONS.md – halte sie ein):\n'
 
 
+def cache_messung(usage, timings):
+    """(aus dem Cache, neu gerechnet, Zeit der Eingabeverarbeitung in ms) eines Zugs aus dem, was der Server meldet, oder None, wenn er nichts meldet. Bevorzugt die `timings` des llama-server
+    (`cache_n`, `prompt_n`); sonst `usage.cached_tokens` mit der Eingabe als Summe. Nie geraten: ohne Angabe wird nicht gezählt."""
+    t = timings if isinstance(timings, dict) else {}
+    u = usage if isinstance(usage, dict) else {}
+    cn, pn = t.get('cache_n'), t.get('prompt_n')
+    ms = t.get('prompt_ms') if isinstance(t.get('prompt_ms'), (int, float)) and not isinstance(t.get('prompt_ms'), bool) else 0.0
+    if type(cn) is int and type(pn) is int:
+        return cn, pn, ms
+    if type(u.get('cached_tokens')) is int and type(u.get('input_tokens')) is int and u['cached_tokens'] <= u['input_tokens']:
+        return u['cached_tokens'], u['input_tokens'] - u['cached_tokens'], ms
+    return None
+
+
 def system_prompt(projekt, werkzeuge, vorlage_text=None, zusammenfassung=None, heute=None, regeln=None):
     """Der Systemprompt; mit einer Vorlage (HS-19) steht ihr Text vorn, danach Projekt und Werkzeuge. `regeln`: die gelernten Regeln des Projekts (Lernsystem, harness/belohnung.py `lessons`)."""
     basis = _system_basis(projekt, werkzeuge, vorlage_text, heute)
@@ -139,6 +153,7 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
     messages = list(messages)
     texte, werkzeuge = [], []
     token = {'ein': 0, 'aus': 0}
+    cache = {'aus_cache': 0, 'neu': 0, 'zuege': 0, 'prompt_ms': 0.0}      # Prompt-Cache des Modellservers (Cache-Messung, 05.11.2026): wie viel der Eingabe nicht neu gerechnet wurde
     denken = [0]
     denktext, denktext_len, denk_zug = [], [0], [0]       # die ersten DENKEN_MAX Zeichen des Denkens, nach Zügen getrennt – auch im scharfen Modus (dort als ungeprüft markiert), für die aufklappbare Zeile
     ende, grund, zurueck = None, None, None
@@ -237,6 +252,9 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
         usage = r.get('usage') or {}
         token['ein'] += usage.get('input_tokens') or 0
         token['aus'] += usage.get('output_tokens') or 0
+        gemessen = cache_messung(usage, r.get('timings'))
+        if gemessen:
+            cache['aus_cache'] += gemessen[0]; cache['neu'] += gemessen[1]; cache['zuege'] += 1; cache['prompt_ms'] = round(cache['prompt_ms'] + gemessen[2], 1)
         if usage.get('input_tokens'):
             letzte_belegung = {'belegt': usage['input_tokens'] + (usage.get('output_tokens') or 0), 'anzahl': len(messages)}
         if fenster and usage.get('input_tokens'):
@@ -353,9 +371,9 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
     if grund: extra['grund'] = grund
     if zurueck: extra['zurueckgehalten'] = zurueck
     if abgeschnitten and text and ende not in ('abgebrochen', 'fehler'): extra['abgeschnitten'] = True     # an der Token-Grenze abgeschnitten
-    ergebnis = {'ende': ende, 'text': text, 'zuege': zug, 'token': token, 'denken_zeichen': denken[0], 'werkzeuge': werkzeuge, **extra}
+    ergebnis = {'ende': ende, 'text': text, 'zuege': zug, 'token': token, 'cache': cache if cache['zuege'] else None, 'denken_zeichen': denken[0], 'werkzeuge': werkzeuge, **extra}
     if sitzungen is not None and sitzung_id:
         sitzungen.anhaengen(sitzung_id, {'typ': 'modell', 'antwort_id': antwort.id, 'text': text, 'denken_zeichen': denken[0], 'ende': ende,
-                                         'zuege': zug, 'token': token, **({'denken_text': ''.join(denktext)} if denktext else {}), **({'denken_ungeprueft': True} if denktext and not live_text else {}), **({'kontext': kontext_stand} if kontext_stand else {}), **({'modell_s': round(modell_s, 1)} if modell_s else {}), **extra})
-    antwort.senden('ende', {'ende': ende, 'zuege': zug, 'token': token, **{k: v for k, v in extra.items() if k != 'zurueckgehalten'}})
+                                         'zuege': zug, 'token': token, **({'cache': cache} if cache['zuege'] else {}), **({'denken_text': ''.join(denktext)} if denktext else {}), **({'denken_ungeprueft': True} if denktext and not live_text else {}), **({'kontext': kontext_stand} if kontext_stand else {}), **({'modell_s': round(modell_s, 1)} if modell_s else {}), **extra})
+    antwort.senden('ende', {'ende': ende, 'zuege': zug, 'token': token, **({'cache': cache} if cache['zuege'] else {}), **{k: v for k, v in extra.items() if k != 'zurueckgehalten'}})
     return ergebnis

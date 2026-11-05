@@ -196,6 +196,8 @@
         zeile('Erzeugt ↓', fmt(s.aus), 'was das Modell geschrieben hat, Denken eingeschlossen');
         zeile('Ø je Antwort', fmt(Math.round(s.ein / s.antworten)) + ' ↑ · ' + fmt(Math.round(s.aus / s.antworten)) + ' ↓', '');
         if(s.letzte) zeile('Letzte Antwort', fmt(s.letzte.ein) + ' ↑ · ' + fmt(s.letzte.aus) + ' ↓', s.letzte.zuege + ' Züge' + (s.letzte.tok_s ? ' · ' + komma(s.letzte.tok_s) + ' Token/s' : ''));
+        if(s.cache_zuege) zeile('Aus dem Cache', s.cache_anteil + ' %', fmt(s.aus_cache) + ' von ' + fmt(s.aus_cache + s.neu_gerechnet) + ' Token der Eingabe wurden nicht neu gerechnet (Prompt-Cache des Modellservers)' + (s.cache_zuege >= 3 && s.cache_anteil < 10 ? ' – der Cache greift kaum: Systemprompt und Verlauf werden jedes Mal neu gerechnet' : ''));
+        else if(s.antworten >= 3) zeile('Aus dem Cache', 'nicht gemessen', 'Der Modellserver meldet keine Cache-Zahlen (cache_n) – ältere Antworten oder ein Modell ohne Angabe');
         if(s.tok_s) zeile('Erzeugungstempo', komma(s.tok_s) + ' Token/s', 'Ø über die Zeit in Modellaufrufen (ohne Werkzeuge)');
         if(s.kontext && s.kontext.fenster) zeile('Kontextfenster', Math.round(100 * s.kontext.belegt / s.kontext.fenster) + ' %', fmt(s.kontext.belegt) + ' von ' + fmt(s.kontext.fenster) + ' Token belegt');
       }else if(t.fuer){
@@ -206,6 +208,7 @@
         zeile('Antworten', fmt(h.antworten), 'in ' + h.sitzungen + (h.sitzungen === 1 ? ' Sitzung' : ' Sitzungen') + ' · ' + fmt(h.zuege) + ' Züge');
         zeile('Eingehend ↑', fmt(h.ein), '');
         zeile('Erzeugt ↓', fmt(h.aus), h.tok_s ? 'Ø ' + komma(h.tok_s) + ' Token/s' : '');
+        if(h.cache_zuege) zeile('Aus dem Cache', h.cache_anteil + ' %', fmt(h.aus_cache) + ' von ' + fmt(h.aus_cache + h.neu_gerechnet) + ' Token der Eingabe');
       }
     };
     knopf.onclick = ()=>S.tokenLaden().then(zeichne);

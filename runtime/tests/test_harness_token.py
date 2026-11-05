@@ -92,3 +92,57 @@ class ApiTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class CacheMessung(unittest.TestCase):
+    """Cache-Messung (05.11.2026): wie viel der Eingabe der Prompt-Cache des Modellservers gespart hat – gemessen aus dem, was der Server meldet, nie geraten."""
+
+    def test_zug_aus_timings_oder_usage_sonst_nichts(self):
+        self.assertEqual(schleife.cache_messung({'input_tokens': 1000}, {'cache_n': 900, 'prompt_n': 100, 'prompt_ms': 50.5}), (900, 100, 50.5))
+        self.assertEqual(schleife.cache_messung({'input_tokens': 1000, 'cached_tokens': 400}, None), (400, 600, 0.0), 'ohne timings die Angabe der usage')
+        self.assertEqual(schleife.cache_messung({'input_tokens': 1000, 'cached_tokens': 400}, {'cache_n': 10, 'prompt_n': 20}), (10, 20, 0.0), 'timings gehen vor')
+        for usage, timings in (({'input_tokens': 1000}, None), ({}, {}), ({'input_tokens': 10, 'cached_tokens': 99}, None), (None, {'cache_n': 5}), ({'input_tokens': 5}, {'cache_n': True, 'prompt_n': 1})):
+            self.assertIsNone(schleife.cache_messung(usage, timings), str((usage, timings)))
+
+    def test_adapter_normalisiert_die_timings(self):
+        from guppi_runtime.models import openai_local
+        self.assertEqual(openai_local.normalize_timings({'cache_n': 5, 'prompt_n': 7, 'prompt_ms': 1.234, 'predicted_ms': 9, 'fremd': 1}), {'cache_n': 5, 'prompt_n': 7, 'prompt_ms': 1.2, 'predicted_ms': 9.0})
+        for schlecht in (None, {}, 'x', {'cache_n': -1}, {'cache_n': True}, {'prompt_ms': 'a'}):
+            self.assertIsNone(openai_local.normalize_timings(schlecht), str(schlecht))
+
+    def test_anteil_und_summe(self):
+        self.assertEqual((verbrauch.anteil(900, 100), verbrauch.anteil(0, 0), verbrauch.anteil(0, 50), verbrauch.anteil(None, None)), (90, None, 0, None))
+        e1 = dict(modell('2026-11-05T10:00:00+01:00', 3000, 100, 2, aid='A-1'), cache={'aus_cache': 1800, 'neu': 1200, 'zuege': 2, 'prompt_ms': 10.0})
+        e2 = dict(modell('2026-11-05T10:05:00+01:00', 4000, 100, 1, aid='A-2'), cache={'aus_cache': 3900, 'neu': 100, 'zuege': 1, 'prompt_ms': 5.0})
+        e3 = modell('2026-11-05T10:06:00+01:00', 500, 10, aid='A-3')                                  # alte Zeile ohne Messung
+        s = verbrauch.summe([e1, e2, e3])
+        self.assertEqual((s['aus_cache'], s['neu_gerechnet'], s['cache_zuege'], s['cache_anteil']), (5700, 1300, 3, 81))
+        self.assertIsNone(verbrauch.summe([e3])['cache_anteil'], 'nichts gemessen: keine Zahl')
+
+    def test_schleife_zaehlt_den_cache_je_zug_und_meldet_ihn(self):
+        class Messung(Attrappe):
+            def __call__(self, mission, request):
+                out = super().__call__(mission, request)
+                if out['status'] == 'completed':
+                    out['model_result']['timings'] = {'cache_n': 800, 'prompt_n': 200, 'prompt_ms': 12.0} if len(self.requests) > 1 else {'cache_n': 0, 'prompt_n': 1000, 'prompt_ms': 90.0}
+                return out
+        with tempfile.TemporaryDirectory() as t:
+            sitzungen = Sitzungen(Path(t))
+            sid = sitzungen.anlegen('p')['id']
+            antwort = Stroeme().anlegen(sid)
+            a = Messung([Zug('Ich schaue nach.', calls=[call('zustand', {'was': 'gpu'})], usage={'input_tokens': 1000, 'output_tokens': 1}), Zug('Fertig.', usage={'input_tokens': 1000, 'output_tokens': 5})])
+            out = schleife.laufen(a, MISSION, Box(), [{'role': 'user', 'content': 'Hallo'}], antwort, modell='m', sitzungen=sitzungen, sitzung_id=sid)
+            self.assertEqual((out['cache']['aus_cache'], out['cache']['neu'], out['cache']['zuege'], out['cache']['prompt_ms']), (800, 1200, 2, 102.0))
+            zeile = [e for e in sitzungen.laden(sid)['eintraege'] if e['typ'] == 'modell'][-1]
+            self.assertEqual(zeile['cache']['aus_cache'], 800, 'die Messung steht in der Sitzungszeile (daraus rechnen Token-Seite und Zelle)')
+            ende = [e['data'] for e in antwort.lesen(0, timeout=0) if e['event'] == 'ende'][-1]
+            self.assertEqual(ende['cache']['zuege'], 2)
+
+    def test_ohne_meldung_des_servers_steht_keine_messung_da(self):
+        with tempfile.TemporaryDirectory() as t:
+            sitzungen = Sitzungen(Path(t))
+            sid = sitzungen.anlegen('p')['id']
+            antwort = Stroeme().anlegen(sid)
+            out = schleife.laufen(Attrappe([Zug('Hallo.')]), MISSION, Box(), [{'role': 'user', 'content': 'Hi'}], antwort, modell='m', sitzungen=sitzungen, sitzung_id=sid)
+            self.assertIsNone(out['cache'])
+            self.assertNotIn('cache', [e for e in sitzungen.laden(sid)['eintraege'] if e['typ'] == 'modell'][-1])

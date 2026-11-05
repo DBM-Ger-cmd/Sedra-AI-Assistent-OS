@@ -581,7 +581,7 @@ class HarnessApi:
         if sid:
             out['sitzung'] = harness_token.summe(self._sitzung(sid)['eintraege'])
         tag = harness_token.heute()
-        gesamt = {'antworten': 0, 'zuege': 0, 'ein': 0, 'aus': 0, 'sitzungen': 0, 'modell_s': 0.0}
+        gesamt = {'antworten': 0, 'zuege': 0, 'ein': 0, 'aus': 0, 'sitzungen': 0, 'modell_s': 0.0, 'aus_cache': 0, 'neu_gerechnet': 0, 'cache_zuege': 0}
         for z in self.sitzungen.liste():
             if not str(z.get('zuletzt') or '').startswith(tag):
                 continue
@@ -591,9 +591,10 @@ class HarnessApi:
                 continue
             if s['antworten']:
                 gesamt['sitzungen'] += 1
-                for k in ('antworten', 'zuege', 'ein', 'aus', 'modell_s'):
+                for k in ('antworten', 'zuege', 'ein', 'aus', 'modell_s', 'aus_cache', 'neu_gerechnet', 'cache_zuege'):
                     gesamt[k] += s[k]
         gesamt['tok_s'] = round(gesamt['aus'] / gesamt['modell_s'], 1) if gesamt['modell_s'] else None
+        gesamt['cache_anteil'] = harness_token.anteil(gesamt['aus_cache'], gesamt['neu_gerechnet'])
         out['heute'] = dict(gesamt, tag=tag, modell_s=round(gesamt['modell_s'], 1))
         return out
 

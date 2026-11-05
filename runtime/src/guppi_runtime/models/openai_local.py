@@ -82,7 +82,7 @@ class OpenAICompatibleLocalAdapter(BaseModelAdapter):
             reasoning=(reasoning+"\n"+thinking) if isinstance(reasoning,str) and reasoning else thinking
         # A reasoning model can spend the whole token limit on thinking and return an empty `content` without any error.
         # Say so, so a caller never mistakes "ran out of tokens while thinking" for "answered with nothing".
-        return {"provider":self.id,"model":model,"content":content,"raw":data,"usage":normalize_usage(data.get("usage")),
+        return {"provider":self.id,"model":model,"content":content,"raw":data,"usage":normalize_usage(data.get("usage")),"timings":normalize_timings(data.get("timings")),
                 "finish_reason":finish,"truncated":finish=="length","reasoning_chars":len(reasoning) if isinstance(reasoning,str) else 0,
                 "empty_answer":not content.strip(),"message":message if tools else None}
 
@@ -105,7 +105,7 @@ class OpenAICompatibleLocalAdapter(BaseModelAdapter):
                     headers={"Content-Type":"application/json","Accept":"text/event-stream"})
         parts={"answer":[],"thinking":[]}
         calls={}                                     # index -> {"id","type","function":{"name","arguments"}}
-        finish=usage=runaway=stopped=None
+        finish=usage=runaway=stopped=timings=None
         chunks=0
         try:
             with urlopen(req,timeout=self.timeout) as resp:
@@ -118,6 +118,7 @@ class OpenAICompatibleLocalAdapter(BaseModelAdapter):
                     except ValueError: continue
                     chunks+=1
                     if event.get("usage"): usage=event["usage"]
+                    if event.get("timings"): timings=event["timings"]
                     for choice in event.get("choices") or []:
                         delta=choice.get("delta") or {}
                         for channel,piece in (("answer",delta.get("content") or ""),("thinking",delta.get("reasoning_content") or delta.get("reasoning") or "")):
@@ -157,7 +158,7 @@ class OpenAICompatibleLocalAdapter(BaseModelAdapter):
             for n,call in enumerate(tool_calls):
                 if not call["id"]: call["id"]=f"call_{n}"
             if tool_calls: message["tool_calls"]=tool_calls
-        return {"provider":self.id,"model":model,"content":content,"raw":{"streamed":True,"chunks":chunks},"usage":normalize_usage(usage),
+        return {"provider":self.id,"model":model,"content":content,"raw":{"streamed":True,"chunks":chunks},"usage":normalize_usage(usage),"timings":normalize_timings(timings),
                 "finish_reason":finish,"truncated":finish in ("length","runaway"),"reasoning_chars":len(reasoning),"empty_answer":not content.strip(),
                 "runaway":runaway,"message":message,"stopped":stopped}
 
@@ -184,6 +185,19 @@ def split_harmony(text):
     for channel,body in _HARMONY_MESSAGE.findall(text):
         (final if channel=="final" else thinking).append(body.strip())
     return ("\n".join(final),"\n".join(thinking))
+
+
+def normalize_timings(value):
+    """The llama-server timings of one call, or None: `cache_n` = prompt tokens reused from the prompt cache, `prompt_n` = prompt tokens it had to evaluate, plus times. Never a guess."""
+    if not isinstance(value,dict): return None
+    out={}
+    for key in ("cache_n","prompt_n","predicted_n"):
+        v=value.get(key)
+        if type(v) is int and v>=0: out[key]=v
+    for key in ("prompt_ms","predicted_ms"):
+        v=value.get(key)
+        if isinstance(v,(int,float)) and not isinstance(v,bool) and v>=0: out[key]=round(float(v),1)
+    return out or None
 
 
 def normalize_usage(value):
