@@ -79,7 +79,9 @@
       const find = el('input');find.type = 'search';find.placeholder = 'Suchen …';find.setAttribute('aria-label', 'Prozesse suchen');find.oninput = ()=>this.renderCards(find.value);
       this.cards = el('div', 't-wf-cards');this.findBox = find;
       this.templateBox = el('div', 't-wf-cards');
-      this.panels.overview.append(el('div', 't-wf-toolbar', ''), this.cards, el('h3', '', 'Vorlagen'), this.templateBox);
+      this.selfBox = el('div', 't-wf-selfbox');this.selfStatus = el('p', 't-wf-hint', 'SEDRA kann seine eigenen Abläufe als Prozessmodelle zeigen: aus den Quellen im Code erzeugt, nur Darstellung, nie ausführbar.');
+      this.selfBox.append(this.selfStatus, button('Selbstabbild prüfen', ()=>this.safe(()=>this.selfCheck())), button('Abläufe von SEDRA anlegen oder aktualisieren', ()=>this.safe(()=>this.selfCreate())));
+      this.panels.overview.append(el('div', 't-wf-toolbar', ''), this.cards, el('h3', '', 'Abläufe von SEDRA (Selbstabbild)'), this.selfBox, el('h3', '', 'Vorlagen'), this.templateBox);
       this.renderTemplates();
       this.panels.overview.firstChild.append(find, button(options.newTitle || 'Neuer Workflow', ()=>{if(this.discard()){this.adopt(this.blank(), null, null);this.setTab('editor');this.notice('Neuer Entwurf. Erster Schritt: „Knoten hinzufügen“.');}}));
       // Editor
@@ -147,6 +149,18 @@
       this.tab = name;
       Object.entries(this.panels).forEach(([key, panel])=>{panel.hidden = key !== name;});
       Object.entries(this.tabButtons).forEach(([key, b])=>{b.setAttribute('aria-selected', String(key === name));b.classList.toggle('active', key === name);});
+    },
+    async selfCheck(){
+      const out = await this.call('workflow', null, 'selbstabbild_pruefen');if(this.dead)return;
+      const sum = {fehlt: 0, gleich: 0, abweichend: 0};out.abweichung.forEach(x=>{sum[x.status] = (sum[x.status] || 0) + 1;});
+      this.selfStatus.textContent = (out.probleme.length ? out.probleme.length + ' Schritt(e) stimmen nicht mehr mit den Quellen überein: ' + out.probleme.slice(0, 3).map(p=>p.ablauf + '.' + p.schritt + ' (' + p.grund + ')').join(', ') + '. ' : 'Alle Quellen stimmen. ')
+        + 'Stand: ' + sum.gleich + ' aktuell, ' + sum.abweichend + ' abweichend, ' + sum.fehlt + ' noch nicht angelegt.';
+    },
+    async selfCreate(){
+      const out = await this.call('workflow', null, 'selbstabbild_anlegen');if(this.dead)return;
+      await this.refresh();
+      this.selfStatus.textContent = out.ergebnis.map(x=>x.name.replace('SEDRA-Selbstabbild · ', '') + ': ' + x.status + ' (Revision ' + x.revision + ')').join(' · ');
+      this.notice('Abläufe von SEDRA aus den Quellen erzeugt. Nur Darstellung, nicht ausführbar.');
     },
     renderTemplates(){
       const T = root.sedraWorkflowTemplates;if(!T || !this.templateBox)return;

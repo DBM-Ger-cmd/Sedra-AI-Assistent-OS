@@ -51,6 +51,20 @@ def _save(hub, oid, args):
     return dict(_workflow(record), revisions=_store(hub).revisions(record['id']))
 
 
+def _selbstabbild_pruefen(hub, oid, args):
+    from . import selbstabbild
+    return {'probleme': selbstabbild.pruefen(), 'abweichung': selbstabbild.abweichung(_store(hub))}
+
+
+def _selbstabbild_anlegen(hub, oid, args):
+    from . import selbstabbild
+    with hub.lock:
+        out = selbstabbild.anlegen(_store(hub))
+        hub.runtime.audit.append('WORKFLOW_SELBSTABBILD_ERZEUGT', component='workflows',
+                                 payload={'ablaeufe': [{'workflow_id': r['id'], 'revision': r['revision'], 'status': r['status']} for r in out]})
+    return {'ergebnis': out}
+
+
 def _run_read(hub, mid):
     m = hub.runtime.missions.load(mid)
     ref = (m.get('context') or {}).get('n8n_workflow')
@@ -124,7 +138,9 @@ def register(registry, hub):
         type_verbs=[Verb('importieren', 'Workflow speichern', _save),
                     Verb('versionen', 'Versionshistorie lesen', _history), Verb('vergleichen', 'Versionen vergleichen', _compare),
                     Verb('revision_lesen', 'Frühere Revision lesen', lambda h, o, a: _workflow(_store(h).read(a.get('id'), a.get('revision')))),
-                    Verb('pruefen', 'Kompatibilität prüfen', _check)]))
+                    Verb('pruefen', 'Kompatibilität prüfen', _check),
+                    Verb('selbstabbild_pruefen', 'Selbstabbild gegen die Quellen prüfen', _selbstabbild_pruefen),
+                    Verb('selbstabbild_anlegen', 'Abläufe von SEDRA aus den Quellen anlegen', _selbstabbild_anlegen)]))
     canonical = registry.get('workflow')
     registry.register(registry.Kind('scenario', 'Szenario Studio',
         lambda h, oid: dict(_read(h, oid), type='scenario'),

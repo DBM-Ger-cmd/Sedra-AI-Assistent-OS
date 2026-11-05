@@ -132,6 +132,26 @@ class ProcessBrowser(unittest.TestCase):
             page.wait_for_function("()=>document.querySelectorAll('.t-n8n-workflow polygon.t-wf-tile').length===1 && document.querySelectorAll('.t-n8n-workflow path.t-wf-tile').length===1")
         self.session(run)
 
+    def test_sedra_bildet_seine_ablaeufe_ab(self):
+        def run(page, url):
+            app = self.open(page, 'workflow')
+            app.get_by_role('tab', name='Übersicht').click()
+            app.get_by_role('button', name='Selbstabbild prüfen').click()
+            page.wait_for_function("()=>document.querySelector('.t-selfbox, .t-wf-selfbox').textContent.includes('Alle Quellen stimmen')")
+            app.get_by_role('button', name='Abläufe von SEDRA anlegen oder aktualisieren').click()
+            page.wait_for_function("()=>document.querySelectorAll('.t-n8n-workflow .t-wf-card').length>=6")
+            self.assertIn('angelegt', app.locator('.t-wf-selfbox').inner_text())
+            # zweiter Lauf ändert nichts
+            app.get_by_role('button', name='Abläufe von SEDRA anlegen oder aktualisieren').click()
+            page.wait_for_function("()=>document.querySelector('.t-wf-selfbox').textContent.includes('unveraendert')")
+            # Ablauf öffnen: Prozessmodell mit Entscheidung (Raute), nicht ausführbar
+            app.locator('.t-wf-card', has_text='Freigabe eines Werkzeugaufrufs').get_by_role('button', name='Öffnen').click()
+            page.wait_for_function("()=>document.querySelector('.t-n8n-workflow input[aria-label=\"Workflow-Titel\"]').value.includes('Freigabe eines Werkzeugaufrufs')")
+            app.get_by_label('Prozessansicht').select_option('canvas')
+            page.wait_for_function("()=>document.querySelectorAll('.t-n8n-workflow polygon.t-wf-tile').length>=1")
+            self.assertFalse(app.get_by_role('button', name='Lauf zur Freigabe vorlegen').is_visible())
+        self.session(run)
+
     def test_external_process_in_both_apps_and_roundtrip(self):
         path = os.environ.get('SEDRA_PROCESS_FIXTURE')
         doc = json.loads(Path(path).read_text(encoding='utf-8')) if path else process_sample()
