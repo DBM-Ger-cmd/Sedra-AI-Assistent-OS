@@ -108,8 +108,33 @@ Apps dargestellt werden; SEDRA soll seine eigenen Prozesse abbilden können.
 - **Grenze.** Es entsteht nur eine Darstellung. SEDRA ändert sich nicht über diese Modelle, und eine
   Rückrichtung (Modell -> Code/Config) gibt es nicht.
 
+### Phase 6 – Prozesse in SEDRA anlegen (Stufe 6)
+Anforderung des Captains (05.11.2026): Als nächste Stufe sollen in SEDRA solche Prozesse
+angelegt werden können, nicht nur importiert oder aus Quellen erzeugt.
+(Lesart: Anlegen durch den Captain in den Apps und durch SEDRA selbst auf Auftrag, z. B. aus dem Chat.
+Bei abweichender Absicht vor Baubeginn klären.)
+
+- **Anlegen in den Apps.** "Neuer Prozess" aus leerer Fläche, aus Vorlage (Galerie) oder aus
+  einem Selbstabbild-Ablauf (Phase 5) als Kopie. Pflichtangaben: Name, Zweck, Rollen, Änderungsgrund.
+- **Anlegen durch SEDRA.** Ein Harness-Werkzeug `prozess_anlegen` / `prozess_aendern` erzeugt aus
+  einer Beschreibung im Chat einen Entwurf (Prozessmodell). Der Entwurf landet als neue Revision
+  mit Herkunft "Harness, Auftrag <ID>" und wird nie automatisch aktiv. Der Captain sieht ihn im
+  Editor und übernimmt ihn ausdrücklich; Änderungen laufen über den bestehenden
+  Freigabeweg (Guard, Posteingang, Audit).
+- **Vorlagen für eigene Prozesse.** Vorlagenkatalog (Name, Zweck, Rollen, Beispielkette),
+  eigene Prozesse als Vorlage speichern; Beispiele aus den Selbstabbildern.
+- **Prüfung beim Anlegen.** Vollständigkeit der Prozessangaben (Rolle, Input, Output, Nachweis,
+  Abschlusskriterium), Warnung bei Lücken; Unterscheidung Beschreibung/ausführbar bleibt strikt,
+  Ausführbarkeit nur durch bewusste Umwandlung mit eigener Freigabe.
+- **Verwaltung.** Liste mit Suche, Ordnern/Labels (wie Make), Archivieren statt Löschen,
+  Versionsfolge unverändert.
+- **Test.** SEDRA legt per Chat-Auftrag einen Beispielprozess an, der Captain übernimmt ihn,
+  die Revisionskette und das Audit werden geprüft; ohne Freigabe bleibt es beim Entwurf.
+- **Grenze.** Angelegte Prozesse sind Darstellung und Planung. Sie erweitern keine Rechte von SEDRA
+  und führen nichts aus.
+
 ## Reihenfolge und Abnahmen
-1 -> 2 -> 3 -> 5 (Phase 4 läuft jeweils mit), nach jeder Phase Screenshots zur Abnahme durch den Captain. Phase 1 zuerst, damit
+1 -> 2 -> 3 -> 5 -> 6 (Phase 4 läuft jeweils mit), nach jeder Phase Screenshots zur Abnahme durch den Captain. Phase 1 zuerst, damit
 beide Apps dieselben Bausteine nutzen und nicht doppelt angepasst werden.
 
 ## Risiken
