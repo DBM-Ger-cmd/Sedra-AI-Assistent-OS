@@ -74,6 +74,35 @@
     box.replaceChildren(...zeilen);
   }
 
+  // Gute Antworten (Belohnungssystem, harness/belohnung.py): wie viele, je Vorlage und Modell, die letzten; der Ordner kann als Quelle in die Wissensdatenbank
+  function belohnungZeigen(S, box, b){
+    const zeilen = [d().el('h3', 'hs-ueber', 'Gute Antworten (Lob wie „danke“ oder „das hast du gut gemacht“)')];
+    if(!b || !b.anzahl){ zeilen.push(d().el('small', 'hs-leise', 'Noch keine. Sagt der Captain nach einer Antwort „danke“, „das hast du gut gemacht“ oder „perfekt“, merkt Sedra sie sich – mit ★ im Gespräch.')); }
+    else{
+      zeilen.push(d().el('div', 'hs-hw-kopf', b.anzahl + ' gute Antworten · ' + b.besonders + ' besonders gut · ' + b.code + ' mit Code'));
+      const zaehlen = (titel, liste)=>{ if(liste && liste.length){ const z = d().el('div', 'hs-info-zeile'); z.append(d().el('b', null, titel), d().el('span', null, liste.map(x=>x.name + ' ×' + x.anzahl).join(' · '))); zeilen.push(z); } };
+      zaehlen('Je Vorlage', b.je_vorlage); zaehlen('Je Modell', b.je_modell);
+      (b.letzte || []).forEach(x=>{
+        const z = d().el('div', 'hs-info-zeile hs-bel-zeile');
+        z.append(d().el('span', null, x.stufe === 2 ? '★★' : '★'), d().el('b', null, x.titel || x.sitzung_id), d().el('small', 'hs-leise', [uhrzeit(x.zeit), x.vorlage || 'ohne Vorlage', x.modell || '?', '„' + x.ausloeser + '“', x.art === 'code' ? 'Code' : ''].filter(Boolean).join(' · ')));
+        if(x.frage) z.append(d().el('div', 'hs-bel-text', 'Frage: ' + x.frage));
+        if(x.tat && x.tat.dateien && x.tat.dateien.length) z.append(d().el('div', 'hs-bel-text', 'Gelöst in: ' + x.tat.dateien.join(', ')));
+        zeilen.push(z);
+      });
+    }
+    const wiss = d().el('div', 'hs-info-zeile');
+    if(b && b.wissen === 'aufgenommen') wiss.append(d().el('span', null, 'Die guten Antworten laufen in die Wissensdatenbank ein.'));
+    else if(b && b.wissen === 'aus') wiss.append(d().el('span', 'hs-leise', 'Die Wissensdatenbank ist abgeschaltet – die guten Antworten werden trotzdem gespeichert.'));
+    else{
+      const knopf = d().el('button', 'hs-knopf', 'Gute Antworten in die Wissensdatenbank aufnehmen'); knopf.type = 'button'; const meld = d().el('small', 'hs-leise');
+      knopf.onclick = async()=>{ try{ const a = await S.api('/api/harness/info/wissen', {method: 'POST', body: {quelle: 'belohnungen'}}); knopf.disabled = true; meld.textContent = a && a.status === 'schon_aufgenommen' ? 'Schon aufgenommen.' : 'Antrag gestellt – im Posteingang freigeben.'; }
+                          catch(err){ meld.textContent = 'Nicht möglich: ' + err.message; } };
+      wiss.append(knopf, meld);
+    }
+    zeilen.push(wiss);
+    box.replaceChildren(...zeilen);
+  }
+
   function zeigen(S, box){
     box.append(d().el('div', 'hs-app-satz', 'Hier steht in Klartext, was Sedra laut seinem Audit-Log getan hat: welche Modelle laufen, was abgelehnt wurde und warum. Die wichtigen Ereignisse bleiben tageweise gespeichert (Verlauf unten) und können in die Wissensdatenbank einlaufen.'));
     const modelleBox = d().el('div', 'hs-info-modelle'); box.append(modelleBox);
@@ -86,12 +115,14 @@
     const kopf = d().el('div', 'hs-hw-kopf', 'liest …'); box.append(kopf);
     const liste = d().el('div', 'hs-info-liste'); box.append(liste);
     const verlaufBox = d().el('div', 'hs-info-verlauf'); box.append(verlaufBox);
+    const belohnungBox = d().el('div', 'hs-info-belohnung'); box.append(belohnungBox);
     const laden = ()=>{
       const q = '?art=' + encodeURIComponent(art.value) + '&such=' + encodeURIComponent(such.value) + '&limit=80';
       S.api('/api/harness/info' + q).then(v=>{
         if(v.fehler){ kopf.textContent = 'Das Log ließ sich nicht lesen: ' + v.fehler; return; }
         modelleZeigen(modelleBox, v.modelle, v.ladeprobe);
         if(v.verlauf) verlaufZeigen(S, verlaufBox, v.verlauf);
+        belohnungZeigen(S, belohnungBox, v.belohnungen);
         const e = v.ereignisse || [];
         kopf.textContent = e.length ? 'Die letzten ' + e.length + ' Ereignisse (neueste unten)' : 'Kein Ereignis passt zu dieser Auswahl.';
         liste.replaceChildren(...e.map(x=>{

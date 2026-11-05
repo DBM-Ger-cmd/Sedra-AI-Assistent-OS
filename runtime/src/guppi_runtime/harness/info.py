@@ -10,7 +10,7 @@ from pathlib import Path
 LESE_BYTES = 6_000_000                      # so viel vom Ende der Datei genügt für Stunden bis Tage; die Datei kann sehr groß werden
 MAX_EREIGNISSE = 200
 FEHLER_MARKEN = ('FAILED', 'DENIED', 'ERROR', 'REJECTED', 'EXITED', 'PROBLEM')
-MODELL_EREIGNISSE = ('LADEPROBE', 'MODEL_', 'SLOT_SERVER_', 'ROLE_RESOLVED', 'ROLE_RESOLUTION_FAILED', 'RESOURCE_', 'LLAMA_SERVER_')
+MODELL_EREIGNISSE = ('HARNESS_BELOHNUNG', 'LADEPROBE', 'MODEL_', 'SLOT_SERVER_', 'ROLE_RESOLVED', 'ROLE_RESOLUTION_FAILED', 'RESOURCE_', 'LLAMA_SERVER_')
 FREIGABE_EREIGNISSE = ('HARNESS_FREIGABE', 'HARNESS_APPROVED_BY', 'CAPTAIN_GATE_', 'HARNESS_AUFGABE', 'HARNESS_ERLAUBNIS', 'HARNESS_KARTE')
 ARTEN = ('alle', 'modelle', 'fehler', 'freigaben')
 
@@ -64,6 +64,8 @@ def klartext(e):
     t, p = e.get('event_type') or '', e.get('payload') or {}
     if t == 'BOOT_STARTED':
         return 'Sedra gestartet'
+    if t == 'HARNESS_BELOHNUNG':
+        return '%s: Sitzung %s, Vorlage %s, Modell %s (Lobwort „%s“%s)' % ('Besonders gute Antwort' if p.get('stufe') == 2 else 'Gute Antwort', p.get('sitzung_id'), p.get('vorlage') or 'ohne', p.get('modell') or '?', p.get('ausloeser'), ', Code' if p.get('code') else '')
     if t in ('LADEPROBE', 'LADEPROBE_PROBLEM'):
         return str(p.get('satz') or t)
     if t == 'SLOT_SERVER_STARTED':

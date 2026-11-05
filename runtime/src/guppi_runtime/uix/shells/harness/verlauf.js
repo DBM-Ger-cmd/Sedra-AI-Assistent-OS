@@ -25,6 +25,13 @@
     return svg;
   }
 
+  // ★ an einer gelobten Antwort (Belohnungssystem, harness/belohnung.py): ★★ bei „besonders gut“
+  function lobZeichen(b){
+    const z = d().el('div', 'hs-lob', (b.stufe === 2 ? '★★ besonders gute Antwort' : '★ gute Antwort') + (b.ausloeser ? ' · „' + b.ausloeser + '“' : ''));
+    z.title = 'Der Captain hat diese Antwort gelobt; sie steht in den guten Antworten (Einstellungen → System → Info) und kann in die Wissensdatenbank.';
+    return z;
+  }
+
   // V2/A22 (1.11.): drei Schritte mit Zustand statt eines Satzes – Modell, Projekt, erste Nachricht; dazu die drei Zeichen des Eingabefelds
   function startbild(S){
     const box = d().el('div', 'hs-start');
@@ -98,6 +105,16 @@
         else S.hinweis('Das Fenster „' + (ui.titel || ui.oeffnen) + '“ gibt es in dieser Oberfläche nicht.', 'note');
       },
       abbauen(){ if(this.abbruch) this.abbruch.abort(); },
+      // Belohnungssystem: die Antwort vor der letzten Nachricht des Captains bekommt das ★ (live, wenn die Harness „danke“ erkannt hat)
+      lobMarkieren(info){
+        const kinder = [...liste.children];
+        let i = kinder.length - 1;
+        while(i >= 0 && !kinder[i].classList.contains('hs-captain')) i--;
+        for(let j = (i < 0 ? kinder.length : i) - 1; j >= 0; j--){
+          if(kinder[j].classList.contains('hs-antwort')){ if(!kinder[j].querySelector('.hs-lob')) kinder[j].append(lobZeichen(info)); return true; }
+        }
+        return false;
+      },
       zeigeLeer(){
         liste.replaceChildren();
         if(this.leer()) liste.append(startbild(S));
@@ -143,8 +160,8 @@
         liste.replaceChildren();
         this.eintraege = 0;
         let block = null, letzte = null;
-        const entschieden = {};
-        (s.eintraege || []).forEach(e=>{ if(e.typ === 'karte' && e.entscheidung) entschieden[e.karte_id] = e; });
+        const entschieden = {}, gelobt = {};
+        (s.eintraege || []).forEach(e=>{ if(e.typ === 'karte' && e.entscheidung) entschieden[e.karte_id] = e; if(e.typ === 'belohnung') gelobt[e.antwort_id] = e; });       // Belohnungssystem: gelobte Antworten tragen ein ★
         for(const e of s.eintraege || []){
           if(e.typ === 'captain'){ this.captain(e.text || ''); block = null; }
           else if(e.typ === 'werkzeug' && e.antwort_id !== s.laeuft){
@@ -174,6 +191,7 @@
             if(e.zurueckgehalten) block.append(d().el('div', 'hs-zurueck', e.zurueckgehalten));
             else if(e.text) block.append(md().render(e.text));
             ende(block, e);
+            if(gelobt[e.antwort_id]) block.append(lobZeichen(gelobt[e.antwort_id]));
             block = null;
           }
         }

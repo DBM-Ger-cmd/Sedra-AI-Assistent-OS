@@ -1,0 +1,26 @@
+# Belohnungssystem der Harness (Captain 05.11.2026): sagt der Captain nach einer Antwort „danke“ oder „das hast du gut gemacht“, merkt sich Sedra diese Antwort als gute Antwort
+# (Zeichen ★ im Gespräch, Eintrag im Betriebsverzeichnis `runtime_data/harness/belohnungen/`, das als Quelle in die Wissensdatenbank kann; Übersicht unter Einstellungen → System → Info).
+# Eigene Wörter: local_config/belohnung.yaml mit `lob_zusaetzlich: [...]` (kommt dazu) oder `lob: [...]` (ersetzt diese Liste).
+belohnung:
+  version: 1
+  lob:
+    - danke
+    - vielen dank
+    - gut gemacht
+    - das hast du gut gemacht
+    - sehr gut
+    - richtig gut
+    - super
+    - perfekt
+    - genau so
+    - klasse
+    - prima
+    - top
+    - toll
+    - ausgezeichnet
+    - hervorragend
+  # besonders gut (Stufe 2): diese Wörter zählen doppelt; für Lösungen beim Programmieren ist es der Hinweis „so bitte wieder“
+  besonders: [perfekt, genau so, hervorragend, ausgezeichnet, sehr gut, richtig gut, genial, großartig, exzellent, super gelöst]
+  # steht eines dieser Wörter kurz vor dem Lobwort („nicht gut gemacht“, „kein danke“), zählt es nicht
+  verneinung: [nicht, kein, keine, nie, niemals, nix]
+  max_zeichen: 300        # längere Nachrichten sind Aufträge, kein Lob

@@ -119,3 +119,4 @@
 .hs-lay-zone-eingabe{justify-self:center;min-width:40%}
 .hs-lay-reiter,.hs-lay-flaeche{display:flex;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted);font-size:var(--size-small)}
 .hs-lay-zonenzeile .hs-einst-zahl{width:5.5em}
+.hs-lob{margin-top:6px;font-size:var(--size-xs);color:var(--warn)}.hs-bel-zeile{flex-wrap:wrap}.hs-bel-text{flex:1 1 100%;color:var(--muted);font-size:var(--size-small)}

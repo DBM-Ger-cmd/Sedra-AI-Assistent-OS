@@ -75,6 +75,11 @@
       ctx.bus.on('harness.sitzung', ()=>this.sitzungenLaden());
       ctx.bus.on('harness.verknuepfungen', ()=>this.freigabenLaden());                            // eine Verknüpfung wurde angelegt oder entfernt
       ctx.bus.on('harness.desktop', e=>{ if(H.desktop && e){ this._desktop = Object.assign(H.desktop.LEER(), e); } });        // Desktop Builder: die Wahl wurde gespeichert (auch aus einem anderen Fenster)
+      ctx.bus.on('harness.belohnung', e=>{                                                  // Belohnungssystem: „danke“ nach einer Antwort – sie bekommt ein ★
+        if(!e) return;
+        const a = this.ansichten.get(e.sitzung_id); if(a && a.lobMarkieren) a.lobMarkieren(e);
+        this.hinweis((e.stufe === 2 ? '★★ Besonders gute Antwort' : '★ Gute Antwort') + ' gemerkt' + (e.code ? ' (Lösung mit Code)' : '') + '.', 'note');
+      });
       ctx.bus.on('harness.projekt', ()=>this.projekteLaden());                                   // P0 M3: ein Ordner wurde als Projekt freigegeben
       ctx.bus.on('harness.vorgaben', e=>{ Object.assign(H.projekt.vorgaben(this), e || {}); H.eingabe.projektwahl(this); });
       ctx.bus.on('harness.antwort', e=>{

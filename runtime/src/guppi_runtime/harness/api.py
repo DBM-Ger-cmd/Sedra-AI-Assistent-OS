@@ -71,6 +71,7 @@ from . import info as harness_info
 from . import betriebslog as harness_betriebslog
 from . import ladeprobe as harness_ladeprobe
 from . import desktop as harness_desktop
+from . import belohnung as harness_belohnung
 from . import lauf as harness_lauf
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
@@ -319,7 +320,7 @@ class HarnessApi:
         if fest == 'info' and not unter and method == 'GET':        # Info-Hub (05.11.): was Sedra laut Audit-Log getan hat, in Klartext; schreibt nur das Betriebslog (Tagesdateien)
             return 200, self.info_sicht(q)
         if fest == 'info' and unter == 'wissen' and method == 'POST':        # Antrag, den Ordner des Betriebslogs als Quelle der Wissensdatenbank aufzunehmen (Freigabe im Posteingang)
-            return 200, self.info_wissen_beantragen()
+            return 200, self.info_wissen_beantragen(payload)
         if fest == 'hilfswerkzeuge' and not unter and method == 'GET':        # P1 des Plans CPU-Hilfswerkzeuge: nur lesen, was da ist
             try: return 200, hilfswerkzeuge.stand()
             except ValueError as exc: return 200, {'werkzeuge': [], 'da': 0, 'gesamt': 0, 'fehler': str(exc)}
@@ -542,6 +543,7 @@ class HarnessApi:
             antwort = self._antwort_anlegen(sid)
         try:
             self.sitzungen.anhaengen(sid, {'typ': 'captain', 'text': text, 'anhaenge': []})
+            self._belohnung_pruefen(sid, s, text)                      # „danke“ nach einer Antwort: gute Antwort merken (Belohnungssystem)
             if not s['titel']:
                 self.sitzungen.titel_aendern(sid, text)
                 self._melden('harness.sitzung', {'id': sid, 'was': 'geaendert', 'titel': titel_aus(text)})
@@ -1012,13 +1014,32 @@ class HarnessApi:
         problem = not probe['loader'] or probe['ok'] < probe['gesamt']
         self._audit('LADEPROBE_PROBLEM' if problem else 'LADEPROBE', {'satz': harness_ladeprobe.satz(probe), 'ok': probe['ok'], 'gesamt': probe['gesamt']})
 
-    def _wissen_quelle(self):
-        """Steht der Ordner des Betriebslogs schon als Quelle in der Wissensdatenbank? 'aufgenommen', 'nicht' oder 'aus' (Wissensspeicher abgeschaltet)."""
+    def _belohnung_pruefen(self, sid, s, text):
+        """Belohnungssystem (harness/belohnung.py): steht in einer kurzen Nachricht ein Lobwort, direkt nach einer zu Ende gekommenen Antwort, wird sie als gute Antwort gemerkt – Eintrag in der
+        Sitzung (★), Tagesdatei für die Wissensdatenbank, Audit, Ereignis. Hält nie die Nachricht auf: jeder Fehler hier bleibt ohne Folgen."""
+        try:
+            treffer = harness_belohnung.erkennen(text, harness_belohnung.einstellungen(self.hub.project_root))
+            antwort, frage = harness_belohnung.gelobte_antwort(s['eintraege']) if treffer else (None, None)
+            if antwort is None:
+                return None
+            wort, stufe = treffer
+            tat = harness_belohnung.loesung(s['eintraege'], antwort['antwort_id'])
+            satz = harness_belohnung.vermerken(self.hub.project_root, wort, antwort, frage, sitzung_id=sid, titel=s['titel'], vorlage=(s['kopf'] or {}).get('vorlage'), modell=s['modell'], stufe=stufe, tat=tat)
+            self.sitzungen.anhaengen(sid, {'typ': 'belohnung', 'antwort_id': antwort['antwort_id'], 'ausloeser': wort, 'stufe': stufe, 'quelle': 'wort'})
+            self._audit('HARNESS_BELOHNUNG', {'sitzung_id': sid, 'antwort_id': antwort['antwort_id'], 'ausloeser': wort, 'stufe': stufe, 'code': tat['code'], 'vorlage': satz['vorlage'], 'modell': satz['modell']})
+            self._melden('harness.belohnung', {'sitzung_id': sid, 'antwort_id': antwort['antwort_id'], 'ausloeser': wort, 'stufe': stufe, 'code': tat['code']})
+            return satz
+        except Exception:
+            return None
+
+    def _wissen_quelle(self, pfad=None):
+        """Steht der Ordner (Betriebslog oder gute Antworten) schon als Quelle in der Wissensdatenbank? 'aufgenommen', 'nicht' oder 'aus' (Wissensspeicher abgeschaltet)."""
+        pfad = pfad or harness_betriebslog.QUELLE_PFAD
         sp = getattr(getattr(self.hub, 'runtime', None), 'wissen', None)
         if sp is None:
             return 'aus'
         try:
-            return 'aufgenommen' if any(q.get('wurzel') == 'projekt' and q.get('pfad') == harness_betriebslog.QUELLE_PFAD and q.get('aktiv') for q in sp.quellen()) else 'nicht'
+            return 'aufgenommen' if any(q.get('wurzel') == 'projekt' and q.get('pfad') == pfad and q.get('aktiv') for q in sp.quellen()) else 'nicht'
         except Exception:
             return 'aus'
 
@@ -1029,6 +1050,7 @@ class HarnessApi:
         except ValueError as exc:
             out = {'modelle': {'laeuft': [], 'abgelehnt': []}, 'ereignisse': [], 'fehler': str(exc)}
         out['ladeprobe'] = self.ladeprobe()
+        out['belohnungen'] = dict(harness_belohnung.uebersicht(self.hub.project_root), wissen=self._wissen_quelle(harness_belohnung.QUELLE_PFAD))
         out['verlauf'] = {'tage': harness_betriebslog.tage(self.hub.project_root), 'wissen': self._wissen_quelle(), 'ordner': harness_betriebslog.QUELLE_PFAD}
         tag = (q.get('tag') or [''])[0]
         if tag:
@@ -1045,15 +1067,20 @@ class HarnessApi:
                               'menue': list(harness_desktop.MENUE_BAUSTEINE), 'blick': list(harness_desktop.BLICK_BAUSTEINE), 'zonen': harness_desktop.ZONEN_PLATZ, 'raster': [harness_desktop.RASTER_SPALTEN, harness_desktop.RASTER_ZEILEN]},
                 'hinweis': 'Ausblenden ist nur Zuschnitt, keine Sperre. Der Captain ändert im Desktop Builder (Start, System); ein Vorschlag als Profil-Text lässt sich dort importieren.'}
 
-    def info_wissen_beantragen(self):
+    def info_wissen_beantragen(self, payload=None):
         from ..wissen import desk_wissen
-        stand = self._wissen_quelle()
+        quelle = (payload or {}).get('quelle') or 'betriebslog'
+        if quelle not in ('betriebslog', 'belohnungen'):
+            raise ValueError('quelle_unbekannt: betriebslog oder belohnungen')
+        pfad = harness_belohnung.QUELLE_PFAD if quelle == 'belohnungen' else harness_betriebslog.QUELLE_PFAD
+        stand = self._wissen_quelle(pfad)
         if stand == 'aus':
             raise ValueError('Die Wissensdatenbank ist abgeschaltet (Schalter wissen in den Einstellungen unter System).')
         if stand == 'aufgenommen':
             return {'status': 'schon_aufgenommen'}
-        self._betriebslog_nachfuehren(sofort=True)
-        antwort = desk_wissen._quelle_beantragen(self.hub, None, {'adapter': 'markdown', 'wurzel': 'projekt', 'pfad': harness_betriebslog.QUELLE_PFAD, 'muster': '*.md', 'stufe': 1})
+        if quelle == 'betriebslog':
+            self._betriebslog_nachfuehren(sofort=True)
+        antwort = desk_wissen._quelle_beantragen(self.hub, None, {'adapter': 'markdown', 'wurzel': 'projekt', 'pfad': pfad, 'muster': '*.md', 'stufe': 1})
         if antwort.get('status') == 'fehler':
             raise ValueError(antwort.get('satz') or antwort.get('code') or 'wissen_antrag_fehlgeschlagen')
         return antwort
