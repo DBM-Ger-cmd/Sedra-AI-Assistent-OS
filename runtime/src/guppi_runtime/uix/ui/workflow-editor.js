@@ -40,7 +40,6 @@
       this.themeButton.className = 't-wf-theme';head.append(this.themeButton);this.applyTheme(this.el.dataset.wfTheme);
       this.message = el('p', 't-wf-message', 'Prozess zeichnen oder eine n8n-JSON-Datei importieren.');this.message.setAttribute('role', 'status');
       this.engine = el('p', 't-wf-hint');
-      const bar = el('div', 't-wf-toolbar');
       this.file = el('input');this.file.type = 'file';this.file.accept = '.json,application/json';this.file.hidden = true;
       this.file.onchange = ()=>this.safe(async()=>{
         const f = this.file.files[0]; if(!f)return;if(f.size > 1000000)throw new Error('Datei ist größer als 1 MB.');
@@ -52,21 +51,36 @@
         }else{
           this.adopt(checked.workflow, null, null);this.notice('Importiert. Unbekannte Felder und Knoten bleiben erhalten.');
         }
-        this.file.value = '';this.importRevision = false;
+        this.file.value = '';this.importRevision = false;this.setTab('editor');
       });
-      bar.append(button('Beispiel', ()=>{if(this.discard())this.adopt(M().example(), null, null);}),
-        button('Importieren', ()=>{this.importRevision = false;this.file.click();}),
-        button('Als neue Version importieren', ()=>{if(!this.wid){this.notice('Zuerst die Ausgangsfassung speichern oder laden.', true);return;}this.importRevision = true;this.file.click();}),
-        button('Speichern', ()=>this.safe(()=>this.save())),
-        button('Exportieren', ()=>this.export(false)), button('Bereinigter Export', ()=>this.export(true)),
-        button('Prüfen', ()=>this.safe(()=>this.check())), button('Zurück', ()=>this.undo(false)), button('Wiederholen', ()=>this.undo(true)));
-      this.picker = el('select');this.picker.setAttribute('aria-label', 'Gespeicherte Workflows');
-      this.picker.onchange = ()=>{if(this.picker.value)this.safe(()=>this.load(this.picker.value));};bar.append(this.picker);
-      const titleRow = el('div', 't-wf-toolbar');this.title = el('input');this.title.setAttribute('aria-label', 'Workflow-Titel');
+      // Obere Leiste: Name, Stand, Änderungsgrund, Speichern, Zurück/Wiederholen, Menü „Mehr“.
+      const top = el('div', 't-wf-toolbar t-wf-top');
+      this.title = el('input');this.title.setAttribute('aria-label', 'Workflow-Titel');
       this.title.onchange = ()=>this.change(()=>{this.state.doc.name = this.title.value;});
-      this.version = el('span', 't-wf-hint'); titleRow.append(this.title, this.version);
-      const versionRow = el('div', 't-wf-toolbar');this.changeNote = el('input');this.changeNote.maxLength = 500;this.changeNote.placeholder = 'Was wurde geändert?';this.changeNote.setAttribute('aria-label', 'Änderungsgrund');versionRow.append(el('label', '', 'Änderungsgrund'), this.changeNote);
-      const history = el('details', 't-wf-history');history.append(el('summary', '', 'Versionshistorie und Vergleich'));this.historyBox = el('div');history.append(this.historyBox);
+      this.version = el('span', 't-wf-hint');
+      this.changeNote = el('input');this.changeNote.maxLength = 500;this.changeNote.placeholder = 'Was wurde geändert?';this.changeNote.setAttribute('aria-label', 'Änderungsgrund');
+      const menu = el('details', 't-wf-menu');menu.append(el('summary', '', 'Mehr'));const list = el('div', 't-wf-menu-list');menu.append(list);this.menu = menu;
+      const item = (text, fn)=>list.append(button(text, ()=>{menu.open = false;fn();}));
+      item('Beispiel', ()=>{if(this.discard())this.adopt(M().example(), null, null);});
+      item('Importieren', ()=>{this.importRevision = false;this.file.click();});
+      item('Als neue Version importieren', ()=>{if(!this.wid){this.notice('Zuerst die Ausgangsfassung speichern oder laden.', true);return;}this.importRevision = true;this.file.click();});
+      item('Exportieren', ()=>this.export(false));item('Bereinigter Export', ()=>this.export(true));item('Prüfen', ()=>this.safe(()=>this.check()));
+      this.picker = el('select');this.picker.setAttribute('aria-label', 'Gespeicherte Workflows');
+      this.picker.onchange = ()=>{if(this.picker.value)this.safe(()=>this.load(this.picker.value));};
+      top.append(this.title, this.version, this.changeNote, button('Speichern', ()=>this.safe(()=>this.save())), button('Zurück', ()=>this.undo(false)), button('Wiederholen', ()=>this.undo(true)), this.picker, menu);
+      // Reiter
+      this.tabButtons = {};this.panels = {};
+      const tabs = el('div', 't-wf-tabs');tabs.setAttribute('role', 'tablist');
+      [['overview', options.overviewTitle || 'Übersicht'], ['editor', 'Editor'], ['versions', 'Versionen'], ['runs', options.runTitle || 'Ausführungen']].forEach(([key, text])=>{
+        const b = button(text, ()=>this.setTab(key));b.setAttribute('role', 'tab');b.className = 't-wf-tab';this.tabButtons[key] = b;tabs.append(b);
+        this.panels[key] = el('section', 't-wf-panel');this.panels[key].setAttribute('role', 'tabpanel');
+      });
+      // Übersicht
+      const find = el('input');find.type = 'search';find.placeholder = 'Suchen …';find.setAttribute('aria-label', 'Prozesse suchen');find.oninput = ()=>this.renderCards(find.value);
+      this.cards = el('div', 't-wf-cards');this.findBox = find;
+      this.panels.overview.append(el('div', 't-wf-toolbar', ''), this.cards);
+      this.panels.overview.firstChild.append(find, button(options.newTitle || 'Neuer Workflow', ()=>{if(this.discard()){this.adopt(this.blank(), null, null);this.setTab('editor');this.notice('Neuer Entwurf. Erster Schritt: „Knoten hinzufügen“.');}}));
+      // Editor
       const views = el('div', 't-wf-toolbar');
       this.viewSelect = el('select');this.viewSelect.setAttribute('aria-label', 'Prozessansicht');
       [['canvas', 'Gesamtprozess'], ['core', 'Kernschritte · verdichtet'], ['sipoc', 'SIPOC'], ['details', 'Alle Schritte / Prüfpunkte']].forEach(([k, v])=>this.viewSelect.append(new Option(v, k)));
@@ -76,14 +90,18 @@
         this.ctx.shell.open({type: options.otherType, id: this.wid || 'alle', title: options.otherTitle});
       }));
       this.processBanner = el('p', 't-wf-process-banner');
-      const palette = el('div', 't-wf-toolbar');this.palette = palette;
-      (options.palette || M().types.map(([kind, label])=>({kind, label}))).forEach(item=>palette.append(button('+ ' + item.label, ()=>this.change(()=>{
-        const n = item.make ? item.make(this.state.doc.nodes) : M().node(item.kind, this.state.doc.nodes);this.state.doc.nodes.push(n);this.state.selected = n.id;this.view = 'canvas';
-      }))));
-      palette.append(button('Vergrößern', ()=>{if(this.canvas)this.canvas.zoom(1.2);}), button('Verkleinern', ()=>{if(this.canvas)this.canvas.zoom(1 / 1.2);}),
-        button('Einpassen', ()=>{if(this.canvas)this.canvas.fit();}), button('Zur Auswahl', ()=>{if(this.canvas)this.canvas.focus();}));
-      const grid = el('div', 't-wf-grid');this.surface = el('section', 't-wf-surface');this.inspector = el('aside', 't-wf-inspector');grid.append(this.surface, this.inspector);
+      this.stage = el('div', 't-wf-stage');this.surface = el('section', 't-wf-surface');this.inspector = el('aside', 't-wf-inspector');this.inspector.hidden = true;
+      this.fab = el('div', 't-wf-fab');
+      this.addButton = button('+', ()=>this.openPicker());this.addButton.setAttribute('aria-label', 'Knoten hinzufügen');this.addButton.title = 'Knoten hinzufügen';
+      this.propsButton = button('☰', ()=>{this.inspectorOpen = !this.inspectorOpen;this.inspect();});this.propsButton.setAttribute('aria-label', 'Eigenschaften');this.propsButton.title = 'Eigenschaften';
+      this.fab.append(this.addButton, this.propsButton);this.stage.append(this.surface, this.fab, this.inspector);
+      this.stage.addEventListener('keydown', event=>{if(event.key === 'Escape' && this.inspectorOpen && !event.defaultPrevented){this.inspectorOpen = false;this.inspect();}});
       this.report = el('pre', 't-wf-report');this.report.setAttribute('aria-label', 'Kompatibilitätsbericht');
+      this.panels.editor.append(views, this.processBanner, this.stage, this.report);
+      // Versionen
+      const history = el('details', 't-wf-history');history.open = true;history.append(el('summary', '', 'Versionshistorie und Vergleich'));this.historyBox = el('div');history.append(this.historyBox);
+      this.panels.versions.append(history);
+      // Ausführungen
       const run = el('section', 't-wf-run');this.runSection = run;run.append(el('h3', '', options.runTitle || 'Ausführungen'));
       this.input = el('textarea');this.input.value = '{}';this.input.setAttribute('aria-label', 'Laufeingaben als JSON');this.input.rows = 3;
       run.append(el('p', 't-wf-hint', 'Nur geprüfte Datenknoten. Zugangsdaten werden in der lokalen n8n-Testinstanz eingerichtet. Eine Freigabe ist immer erforderlich.'), this.input,
@@ -96,12 +114,44 @@
         button('Lauf beenden', ()=>this.safe(async()=>{if(!this.runId)throw new Error('Zuerst einen Lauf wählen.');await this.call('workflow_run', this.runId, 'abbrechen');await this.showRun(this.runId);})),
         button('Aktualisieren', ()=>this.safe(()=>this.refreshRuns())));
       this.runs = el('div', 't-wf-runs');this.output = el(options.renderRun ? 'div' : 'pre', 't-wf-output');this.output.setAttribute('aria-label', 'Laufergebnis');run.append(this.runs, this.output);
-      this.el.replaceChildren(head, this.engine, bar, titleRow, versionRow, history, views, this.processBanner, palette, this.file, this.message, grid, this.report, run);
+      this.panels.runs.append(run);
+      this.el.replaceChildren(head, this.engine, top, this.message, tabs, this.panels.overview, this.panels.editor, this.panels.versions, this.panels.runs, this.file);
+      this.setTab(this.tab || 'editor');
       this.el.addEventListener('keydown', event=>{
         if((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)){
           event.preventDefault();this.undo(event.shiftKey);
         }
       });
+    },
+    blank(){const doc = M().example();doc.name = options.newTitle === 'Neues Szenario' ? 'Neues Szenario' : 'Neuer Workflow';doc.nodes = [M().node('manualTrigger', [])];doc.connections = {};return doc;},
+    setTab(name){
+      const model = this.state && P().has(this.state.doc);
+      if(name === 'runs' && model) name = 'editor';
+      this.tab = name;
+      Object.entries(this.panels).forEach(([key, panel])=>{panel.hidden = key !== name;});
+      Object.entries(this.tabButtons).forEach(([key, b])=>{b.setAttribute('aria-selected', String(key === name));b.classList.toggle('active', key === name);});
+    },
+    renderCards(filter){
+      if(!this.cards)return;
+      const q = String(filter === undefined ? this.findBox.value : filter).toLocaleLowerCase('de');
+      this.cards.replaceChildren();
+      const rows = (this.records || []).filter(r=>!q || String(r.title).toLocaleLowerCase('de').includes(q));
+      if(!rows.length){this.cards.append(el('p', 't-wf-hint', q ? 'Keine Treffer.' : 'Noch nichts gespeichert. Mit „' + (options.newTitle || 'Neuer Workflow') + '“ beginnen oder ein Beispiel laden (Menü „Mehr“).'));return;}
+      rows.forEach(r=>{
+        const card = el('article', 't-wf-card');card.append(el('h3', '', r.title), el('p', 't-wf-hint', 'Revision ' + r.revision));
+        card.append(button('Öffnen', ()=>this.safe(async()=>{await this.load(r.id);this.setTab('editor');})));this.cards.append(card);
+      });
+    },
+    openPicker(){
+      if(this.view !== 'canvas')return;
+      const CAT = {manualTrigger: 'Auslöser', set: 'Daten', if: 'Ablauf', noOp: 'Ablauf', stickyNote: 'Notiz'};
+      const HINT = {manualTrigger: 'Startet den Ablauf von Hand', set: 'Felder setzen oder ändern', if: 'Verzweigt nach einer Bedingung', noOp: 'Reicht die Daten unverändert weiter', stickyNote: 'Notiz ohne Wirkung'};
+      const palette = options.palette || M().types.map(([kind, label])=>({kind, label}));
+      const items = palette.map(entry=>({label: entry.label, category: entry.make ? 'Mensch' : CAT[entry.kind] || 'Weitere', hint: entry.make ? 'Menschliche Entscheidung, keine Automatik' : HINT[entry.kind], keywords: entry.kind || '', entry}));
+      root.sedraWorkflowPicker.open({host: this.stage, items, title: 'Knoten hinzufügen', onPick: choice=>{
+        const entry = choice.entry;
+        this.change(()=>{const n = entry.make ? entry.make(this.state.doc.nodes) : M().node(entry.kind, this.state.doc.nodes);this.state.doc.nodes.push(n);this.state.selected = n.id;this.view = 'canvas';});
+      }});
     },
     storedTheme(){try{const v = root.localStorage.getItem('sedra.wf.theme');return v === 'light' || v === 'dark' ? v : null;}catch(e){return null;}},
     applyTheme(theme){
@@ -123,26 +173,26 @@
       if(this.dead)return;this.title.value = this.state.doc.name;
       const model = P().has(this.state.doc), core = this.view === 'core';
       this.viewSelect.value = this.view;
-      this.runSection.hidden = model;this.processBanner.hidden = !model;
-      this.engine.hidden = model;this.palette.hidden = model && core;this.report.hidden = model;
+      this.runSection.hidden = model;this.tabButtons.runs.hidden = model;if(model && this.tab === 'runs')this.setTab('editor');this.processBanner.hidden = !model;
+      this.engine.hidden = model;this.addButton.hidden = (model && core) || this.view !== 'canvas';this.report.hidden = model;
       this.processBanner.textContent = 'Prozessmodell · ' + P().cores(this.state.doc).length + ' Kernschritte · ' + P().rows(this.state.doc).filter(r=>r.meta.source === 'proposal').length + ' ergänzte Vorschläge. Fachliche und technische Ausführung sind noch nicht eingerichtet.';
       this.version.textContent = (this.wid ? 'Revision ' + this.revision : 'Neuer Entwurf') + (this.dirty() ? ' · ungespeichert' : ' · gespeichert');
       if(this.canvas)this.canvas.destroy();
       this.canvas = null;
       if(['sipoc', 'details'].includes(this.view)){
-        PV().render(this.surface, this.state.doc, this.view, id=>{this.state.selected = id;this.inspect();});this.inspect();return;
+        PV().render(this.surface, this.state.doc, this.view, id=>{this.state.selected = id;this.inspectorOpen = true;this.inspect();});this.inspect();return;
       }
       const visual = core ? {doc: P().coreProjection(this.state.doc), selected: this.state.selected} : this.state;
       this.canvas = root.sedraWorkflowCanvas.mount(this.surface, visual, {
         style: this.style, readOnly: core,
-        select: id=>{this.state.selected = id;this.inspect();}, checkpoint: ()=>this.checkpoint(),
+        select: id=>{this.state.selected = id;this.inspect();}, open: id=>{this.state.selected = id;this.inspectorOpen = true;this.inspect();}, checkpoint: ()=>this.checkpoint(),
         change: ()=>{this.version.textContent = 'Ungespeicherte Änderungen';this.inspect();},
         connect: (a, b, branch)=>{try{this.change(()=>M().connect(this.state.doc, a, b, branch));}catch(e){this.notice(e.message, true);}}
       });this.inspect();
     },
     inspect(){
-      const box = this.inspector;box.replaceChildren(el('h3', '', 'Eigenschaften'));
-      box.hidden = this.view !== 'canvas' && !this.state.selected;
+      const box = this.inspector;const bar = el('div', 't-wf-inspector-head');const closeBtn = button('✕', ()=>{this.inspectorOpen = false;this.inspect();});closeBtn.setAttribute('aria-label', 'Eigenschaften schließen');bar.append(el('h3', '', 'Eigenschaften'), closeBtn);box.replaceChildren(bar);
+      box.hidden = !this.inspectorOpen;this.propsButton.setAttribute('aria-pressed', String(!!this.inspectorOpen));
       if(this.wid && this.revisions && this.revisions.length){
         const versions = el('select');versions.setAttribute('aria-label', 'Frühere Revision');
         this.revisions.forEach(r=>versions.append(new Option('Revision ' + r, String(r))));versions.value = String(this.revision);
@@ -196,7 +246,7 @@
       if(this.dead)return;this.records = data.items || [];this.picker.replaceChildren(new Option('Gespeicherten Workflow wählen', ''));
       this.records.forEach(r=>this.picker.append(new Option(r.title + ' · r' + r.revision, r.id)));this.picker.value = this.wid || '';
       this.engine.textContent = data.engine.enabled ? 'Lokale n8n-Verbindung konfiguriert: ' + data.engine.base_url : 'n8n-Ausführung aus. Import, Editor, Versionen und Export sind verfügbar.';
-      this.renderRuns(data.runs || []);
+      this.renderRuns(data.runs || []);this.renderCards();
       await this.loadHistory();
     },
     async load(id, initial){

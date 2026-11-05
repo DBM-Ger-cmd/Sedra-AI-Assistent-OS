@@ -27,12 +27,12 @@
     const hint = document.createElement('p'); hint.className = 't-wf-hint';
     hint.textContent = handlers.readOnly ? 'Verdichtete Kernübersicht. Verbindungen fassen Zwischenschritte zusammen. Bearbeiten in der Gesamtansicht.' : 'Module ziehen, Hintergrund zum Verschieben ziehen, Mausrad zum Zoomen. Ausgang anklicken, dann Ziel wählen.';
     const controls = document.createElement('div'); controls.className = 't-wf-zoom'; controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', 'Ansicht');
-    [['Ansicht einpassen', '⤢', ()=>api.fit()], ['Zoom +', '+', ()=>api.zoom(1.2)], ['Zoom −', '−', ()=>api.zoom(1 / 1.2)]].forEach(([label, text, fn])=>{
+    [['Ansicht einpassen', '⤢', ()=>api.fit()], ['Zoom +', '+', ()=>api.zoom(1.2)], ['Zoom −', '−', ()=>api.zoom(1 / 1.2)], ['Auf Auswahl zentrieren', '◎', ()=>api.focus()]].forEach(([label, text, fn])=>{
       const b = document.createElement('button'); b.type = 'button'; b.className = 't-wf-zoom-btn'; b.textContent = text; b.setAttribute('aria-label', label); b.title = label; b.onclick = fn; controls.append(b);
     });
     wrapEl.append(svg, controls);
     container.replaceChildren(hint, wrapEl);
-    let drag = null, pending = null, offset = [0, 0], zoom = 1, frame = null;
+    let lastDown = null, drag = null, pending = null, offset = [0, 0], zoom = 1, frame = null;
     const uid = Math.random().toString(16).slice(2), marker = 'wf-arrow-' + uid, grid = 'wf-grid-' + uid;
     function point(event){
       const pt = svg.createSVGPoint(); pt.x = event.clientX; pt.y = event.clientY;
@@ -96,12 +96,13 @@
           if(event.button !== 0 || event.target.classList.contains('t-wf-port')) return;
           event.preventDefault();
           if(pending){ handlers.connect(pending.name, node.name, pending.branch); pending = null; hint.textContent = 'Verbindung angelegt.'; return; }
+          const now = Date.now();
+          if(lastDown && lastDown.id === node.id && now - lastDown.t < 400 && handlers.open){lastDown = null;handlers.open(node.id);}else lastDown = {id: node.id, t: now};
           handlers.select(node.id);
           if(handlers.readOnly){draw();return;}
           handlers.checkpoint();
           const pt = point(event); drag = {node, x: pt.x, y: pt.y, original: node.position.slice()}; svg.setPointerCapture(event.pointerId);
         });
-        g.addEventListener('dblclick', event=>{event.preventDefault();if(handlers.open)handlers.open(node.id);});
         g.addEventListener('keydown', event=>{
           if(['Enter', ' '].includes(event.key)){event.preventDefault();handlers.select(node.id);draw();}
           const delta = {ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10]}[event.key];

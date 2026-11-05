@@ -11,6 +11,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'benchmarks'))
 
 @unittest.skipUnless(os.environ.get('SEDRA_BROWSER') == '1', 'Set SEDRA_BROWSER=1 for headless UI acceptance')
 class WorkflowBrowser(unittest.TestCase):
+    def menu(self, app, name):
+        app.locator('.t-wf-menu > summary').click()
+        app.get_by_role('button', name=name, exact=True).click()
+
     def test_editor_import_edit_export_and_versions(self):
         from playwright.sync_api import sync_playwright
         from uix_check import start_server
@@ -28,14 +32,22 @@ class WorkflowBrowser(unittest.TestCase):
                 app = page.locator('.t-workflow').first
                 page.wait_for_function("()=>{const e=document.querySelector('.t-workflow');return e && !e.inert;}")
                 self.assertEqual(app.locator('.t-wf-node').count(), 5)
+                # Reiter, Themenschalter und Übersicht gehören zur Oberfläche.
+                self.assertEqual(app.get_by_role('tab').count(), 4)
+                theme = app.get_by_role('button', name='Farbthema wechseln', exact=False)
+                before = app.get_attribute('data-wf-theme');theme.click()
+                self.assertNotEqual(before, app.get_attribute('data-wf-theme'))
                 # Actual node editing and graph mutations, including undo.
+                app.get_by_role('button', name='Eigenschaften', exact=True).click()
                 app.get_by_label('Knoten auswählen', exact=True).select_option(label='Felder setzen')
                 app.get_by_label('Knotenname', exact=True).fill('Daten vorbereiten')
                 app.get_by_role('button', name='Parameter übernehmen').click()
                 self.assertTrue(app.locator('.t-wf-node').filter(has_text='Daten vorbereiten').count())
                 app.get_by_role('button', name='Zurück', exact=True).click()
                 self.assertTrue(app.locator('.t-wf-node').filter(has_text='Felder setzen').count())
-                app.get_by_role('button', name='+ No Operation', exact=True).click()
+                app.get_by_role('button', name='Knoten hinzufügen', exact=True).click()
+                app.get_by_label('Knoten suchen').fill('no operation')
+                app.get_by_label('Knoten suchen').press('Enter')
                 self.assertEqual(app.locator('.t-wf-node').count(), 6)
                 app.get_by_role('button', name='Zurück', exact=True).click()
                 self.assertEqual(app.locator('.t-wf-node').count(), 5)
@@ -55,16 +67,16 @@ class WorkflowBrowser(unittest.TestCase):
                 app.get_by_role('status').filter(has_text='Importiert.').wait_for()
                 self.assertEqual(app.locator('.unsupported').count(), 1)
                 with page.expect_download() as download:
-                    app.get_by_role('button', name='Exportieren', exact=True).click()
+                    self.menu(app, 'Exportieren')
                 exported = json.loads(Path(download.value.path()).read_text(encoding='utf-8'))
                 self.assertEqual(exported, doc)
-                app.get_by_role('button', name='Prüfen', exact=True).click()
+                self.menu(app, 'Prüfen')
                 page.wait_for_function("()=>document.querySelector('.t-wf-report').textContent.includes('unsupported_node')")
                 for width in (1400, 1024):
                     page.set_viewport_size({'width': width, 'height': 950})
                     self.assertTrue(app.locator('.t-wf-svg').is_visible())
                 # A fresh example is the useful review screenshot.
-                app.get_by_role('button', name='Beispiel', exact=True).click()
+                self.menu(app, 'Beispiel')
                 output = os.environ.get('SEDRA_N8N_SCREENSHOT')
                 if output:
                     page.set_viewport_size({'width': 1440, 'height': 1100})

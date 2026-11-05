@@ -79,3 +79,34 @@
 .t-wf-picker-item:hover,.t-wf-picker-item.active{background:var(--panel-2);border-color:var(--accent)}
 .t-wf-picker-item small{color:var(--muted)}
 .t-wf-picker-empty{padding:10px;color:var(--muted);font-size:12px}
+
+/* Aufbau: obere Leiste, Reiter, Bühne mit schwebenden Knöpfen und Eigenschaften-Panel */
+.t-workflow .t-wf-header h2{flex:0 0 auto}
+.t-workflow .t-wf-top{padding:8px 10px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px}
+.t-workflow .t-wf-top input[aria-label="Workflow-Titel"]{flex:1 1 220px;min-width:160px;font-weight:600}
+.t-workflow .t-wf-top input[aria-label="Änderungsgrund"]{flex:1 1 180px;min-width:140px}
+.t-workflow .t-wf-top select{max-width:220px}
+.t-workflow .t-wf-menu{position:relative}
+.t-workflow .t-wf-menu>summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:7px;padding:8px 12px;background:var(--panel)}
+.t-workflow .t-wf-menu>summary::-webkit-details-marker{display:none}
+.t-workflow .t-wf-menu-list{position:absolute;right:0;top:calc(100% + 4px);z-index:8;display:flex;flex-direction:column;gap:2px;min-width:230px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+.t-workflow .t-wf-menu-list button{text-align:left;border-color:transparent;background:transparent}
+.t-workflow .t-wf-menu-list button:hover{background:var(--panel-2)}
+.t-workflow .t-wf-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.t-workflow .t-wf-tab{border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;padding:9px 14px;color:var(--muted)}
+.t-workflow .t-wf-tab.active{color:var(--heading);border-bottom-color:var(--accent);font-weight:600}
+.t-workflow .t-wf-panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.t-workflow .t-wf-stage{position:relative;min-width:0}
+.t-workflow .t-wf-stage .t-wf-surface{padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.t-workflow .t-wf-stage .t-wf-hint{margin:8px 12px}
+.t-workflow .t-wf-fab{position:absolute;right:12px;top:44px;z-index:4;display:flex;flex-direction:column;gap:6px}
+.t-workflow .t-wf-fab button{min-width:40px;height:40px;font-size:18px;line-height:1;background:var(--panel);box-shadow:var(--wf-shadow)}
+.t-workflow .t-wf-fab button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-text)}
+.t-workflow .t-wf-inspector{position:absolute;z-index:5;right:64px;top:44px;width:min(360px,calc(100% - 90px));max-height:calc(100% - 60px);overflow:auto;flex:none;border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.28);background:var(--panel)}
+.t-workflow .t-wf-inspector-head{display:flex;align-items:center;gap:8px}
+.t-workflow .t-wf-inspector-head h3{flex:1;margin:0}
+.t-workflow .t-wf-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.t-workflow .t-wf-card{display:flex;flex-direction:column;gap:6px;padding:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px}
+.t-workflow .t-wf-card h3{margin:0;font-size:15px;overflow-wrap:anywhere}
+.t-workflow .t-wf-panel>.t-wf-toolbar input[type=search]{flex:1 1 240px}
+.t-workflow .t-wf-fab[hidden],.t-workflow .t-wf-inspector[hidden]{display:none!important}
