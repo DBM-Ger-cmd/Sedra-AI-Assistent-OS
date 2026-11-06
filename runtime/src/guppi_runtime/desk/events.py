@@ -199,7 +199,10 @@ class Poller:
     def stop(self):
         self._stop.set()
         if self._thread is not None:
-            self._thread.join(timeout=2)
+            # start() sets the thread before its first snapshot. If that
+            # snapshot fails, the thread was never started and cannot join.
+            if self._thread.is_alive():
+                self._thread.join(timeout=2)
             self._thread = None
 
 

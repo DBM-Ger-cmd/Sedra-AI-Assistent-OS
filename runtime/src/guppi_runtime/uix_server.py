@@ -118,6 +118,18 @@ class UIXHub:
         self.project_root = Path(project_root).resolve()
         self.architecture_root = Path(architecture_root).resolve()
         self.runtime = GuppiRuntime(self.project_root, self.architecture_root)
+        try:
+            self._initialize_services()
+        except BaseException as exc:
+            # The runtime has been created, but the desktop did not finish.
+            # Release its resources without hiding the startup error.
+            try:
+                self.runtime.close()
+            except Exception as cleanup_exc:
+                exc.add_note(f'Runtime cleanup after UIX init failed: {type(cleanup_exc).__name__}')
+            raise
+
+    def _initialize_services(self):
         self.boot_state = self.runtime.boot()
         self.lock = threading.RLock()
         from .projects import ProjectRegistry
@@ -4198,36 +4210,44 @@ HERKUNFT_WEGE = re.compile(r'/api/(?:decisions/answer|freigabe/bestaetigen|missi
 
 def serve(project_root: Path, architecture_root: Path, port=0, open_browser=False, window=False, shell=None):
     hub = UIXHub(project_root, architecture_root)
+    server = None
     try:
-        chosen = choose_start_shell(hub, shell)
-    except ValueError as exc:
-        print(str(exc), flush=True); hub.close(); return 4
-    server, url = make_server(hub, port)
-    hub.poller.start()      # the scheduler's step must not wait for a browser: it runs in the poller's beat
-    print('SEDRA Desktop (UIX):', url, flush=True)
-    if chosen:
-        print(f'Oberfläche für diesen Start: {chosen} (die Wahl in uix.yaml bleibt unverändert).', flush=True)
-    print('Loopback-only. Captain gates remain enforced by the runtime.', flush=True)
-    if window:
-        proc = open_app_window(url)
-        if proc is None:
-            print('Kein Edge, Chrome oder Chromium gefunden: die Oberfläche öffnet im Standardbrowser. Beenden mit Strg+C (macOS: ctrl+C) im Terminal.', flush=True)
+        try:
+            chosen = choose_start_shell(hub, shell)
+        except ValueError as exc:
+            print(str(exc), flush=True)
+            return 4
+        server, url = make_server(hub, port)
+        hub.poller.start()      # scheduler's step runs with the desk poller, not the browser
+        print('SEDRA Desktop (UIX):', url, flush=True)
+        if chosen:
+            print(f'Oberfläche für diesen Start: {chosen} (die Wahl in uix.yaml bleibt unverändert).', flush=True)
+        print('Loopback-only. Captain gates remain enforced by the runtime.', flush=True)
+        if window:
+            proc = open_app_window(url)
+            if proc is None:
+                print('Kein Edge, Chrome oder Chromium gefunden: die Oberfläche öffnet im Standardbrowser. Beenden mit Strg+C (macOS: ctrl+C) im Terminal.', flush=True)
+                webbrowser.open(url)
+            else:
+                def stop_with_window():
+                    proc.wait()      # the window was closed
+                    server.shutdown()
+                threading.Thread(target=stop_with_window, daemon=True).start()
+        elif open_browser:
             webbrowser.open(url)
-        else:
-            def stop_with_window():
-                proc.wait()      # the window was closed
-                server.shutdown()
-            threading.Thread(target=stop_with_window, daemon=True).start()
-    elif open_browser:
-        webbrowser.open(url)
-    try:
-        server.serve_forever(poll_interval=0.25)
-    except KeyboardInterrupt:
-        pass
+        try:
+            server.serve_forever(poll_interval=0.25)
+        except KeyboardInterrupt:
+            pass
+        return 0
     finally:
-        hub.close()
-        server.server_close()
-    return 0
+        # Failures while choosing a shell, binding a port, or starting the
+        # poller must not leave the runtime or an allocated socket alive.
+        try:
+            hub.close()
+        finally:
+            if server is not None:
+                server.server_close()
 
 
 def main(argv=None):

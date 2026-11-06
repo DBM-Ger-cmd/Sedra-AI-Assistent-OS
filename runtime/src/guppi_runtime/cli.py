@@ -135,6 +135,15 @@ def main(argv=None):
         except (ValueError,KeyError) as exc: print(json.dumps({'status':'refused','error':str(exc)},ensure_ascii=False)); return 2
         print(json.dumps(out,indent=2,ensure_ascii=False)); return 0
     rt=runtime_from_args(args)
+    try:
+        return _execute_runtime_command(rt, args)
+    finally:
+        # The CLI owns this runtime for the duration of its command.
+        # The desk/API-only commands above never construct one.
+        rt.close()
+
+
+def _execute_runtime_command(rt, args):
     if args.cmd=='doctor': print(json.dumps(rt.boot(),indent=2,ensure_ascii=False)); return 0
     if args.cmd=='new-mission':
         inputs=mission_inputs(args)
