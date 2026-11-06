@@ -41,6 +41,6 @@ fi
 cd "$RUNTIME"
 PYTHONPATH="$RUNTIME/src${PYTHONPATH:+:$PYTHONPATH}"
 export PYTHONPATH
-"$RUNTIME/.venv/bin/python" -B -m sedra_runtime.legacy_names --root "$HERE" || true
+"$RUNTIME/.venv/bin/python" -B -m sedra_runtime.umzug --root "$HERE" || true
 # shellcheck disable=SC2086
 exec "$RUNTIME/.venv/bin/python" -B -m sedra_runtime.uix_start --root "$PROJECT" --architecture "$ARCH" $SHELLARG $REST

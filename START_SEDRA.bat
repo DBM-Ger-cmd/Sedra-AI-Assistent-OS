@@ -106,7 +106,7 @@ goto :starten
 :starten
 echo SEDRA startet ...
 cd /d "%RT%"
-"%PY%" %PYFLAGS% -m sedra_runtime.legacy_names --root "%ROOT%" >> "%LOG%" 2>&1
+"%PY%" %PYFLAGS% -m sedra_runtime.umzug --root "%ROOT%" >> "%LOG%" 2>&1
 "%PY%" %PYFLAGS% -m sedra_runtime.uix_start --root "%PROJ%" --architecture "%ARCH%" %SHELLARG% %REST%
 if errorlevel 1 goto :fail
 exit /b 0

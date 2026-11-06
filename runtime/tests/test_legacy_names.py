@@ -84,5 +84,36 @@ class TestUmziehen(unittest.TestCase):
         self.assertEqual(ln.umziehen(self.root), [])
 
 
+
+class TestBefehlszeile(unittest.TestCase):
+    def test_umzug_meldet_schritte_und_code_null(self):
+        import contextlib
+        import io
+        from sedra_runtime import umzug
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'workspace' / ln.PROJEKTORDNER_ALT).mkdir(parents=True)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = umzug.main(['--root', tmp])
+            self.assertEqual(code, 0)
+            self.assertIn('Projektordner umbenannt', out.getvalue())
+            self.assertTrue((Path(tmp) / 'workspace' / ln.PROJEKTORDNER_NEU).is_dir())
+
+    def test_gesperrter_ordner_gibt_code_drei_und_aendert_nichts(self):
+        import contextlib
+        import io
+        from unittest import mock
+        from sedra_runtime import umzug
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'workspace' / ln.PROJEKTORDNER_ALT).mkdir(parents=True)
+            err = io.StringIO()
+            with mock.patch.object(Path, 'rename', side_effect=PermissionError('gesperrt')), contextlib.redirect_stderr(err):
+                code = umzug.main(['--root', tmp])
+            self.assertEqual(code, 3)
+            self.assertIn('Umzug nicht möglich', err.getvalue())
+            self.assertTrue((Path(tmp) / 'workspace' / ln.PROJEKTORDNER_ALT).is_dir())
+            self.assertFalse((Path(tmp) / 'workspace' / ln.PROJEKTORDNER_NEU).exists())
+
+
 if __name__ == '__main__':
     unittest.main()

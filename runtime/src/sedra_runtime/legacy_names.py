@@ -3,12 +3,11 @@
 Der alte Name steht hier nur, damit bestehende Installationen, Umgebungsvariablen und Projektordner
 beim ersten Start sauber umziehen. Neuer Code benutzt ausschließlich die SEDRA-Namen.
 
-Aufruf beim Start: `python -m sedra_runtime.legacy_names --root <Installationsordner>`.
+Aufruf beim Start: `python -m sedra_runtime.umzug --root <Installationsordner>`.
 Es wird nichts gelöscht: Alte Ordner, die ersetzt wurden, wandern in `local_config/update/sicherung/alt_namen`.
 """
 from __future__ import annotations
 
-import argparse
 import os
 import shutil
 from pathlib import Path
@@ -78,14 +77,3 @@ def umziehen(root) -> list[str]:
     return schritte
 
 
-def main(argv=None) -> int:
-    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument('--root', required=True, help='Installationsordner (enthält runtime, workspace, architecture)')
-    args = p.parse_args(argv)
-    for zeile in umziehen(args.root):
-        print(zeile)
-    return 0
-
-
-if __name__ == '__main__':
-    raise SystemExit(main())
