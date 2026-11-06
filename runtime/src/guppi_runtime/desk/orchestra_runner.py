@@ -19,6 +19,7 @@ Ohne Schalter `wissen` oder ohne Treffer läuft alles wie bisher.
 Missionen (OP-S1-02): eine Mission ohne `brain.run` läuft regulär NEW → UNDERSTAND → READY → EXECUTE beim Start und
 EXECUTE → VERIFY → COMPLETE am Ende, EXECUTE → FAILED bei einem Fehler; jeder Schritt steht als MISSION_STATE_CHANGED im Audit."""
 import threading
+import time
 
 from ..jobs.job_worker import HandlerError
 from ..orchestra import board, budget, heartbeat, messages, org, runner, wakeplan
@@ -337,8 +338,11 @@ class WorkerPool:
         for worker in self.workers:
             worker.idle_sleep_s = idle_sleep_s
         self.threads = []
+        self._stop_requested = False
 
     def start(self):
+        if self._stop_requested:
+            raise RuntimeError("worker_pool_stopping")
         if self.threads:
             return self
         self.workers[0].supervisor.startup_recovery()
@@ -359,11 +363,21 @@ class WorkerPool:
                 worker._sleep(worker.idle_sleep_s)
 
     def stop(self, wait_s=5):
+        """Request a stop, then wait up to one shared deadline.
+
+        False means a worker is still running: retain its thread handle so a
+        later caller can finish draining. Never confuse a join timeout with a
+        completed attempt or a released lease.
+        """
+        self._stop_requested = True
         for worker in self.workers:
             worker.stop()
+        deadline = time.monotonic() + max(0.0, float(wait_s))
         for thread in self.threads:
-            thread.join(timeout=wait_s)
-        self.threads = []
+            if thread is not threading.current_thread() and thread.is_alive():
+                thread.join(timeout=max(0.0, deadline - time.monotonic()))
+        self.threads = [thread for thread in self.threads if thread.is_alive()]
+        return not self.threads
 
 
 def start_pool(hub, orch=None, idle_sleep_s=1.0):

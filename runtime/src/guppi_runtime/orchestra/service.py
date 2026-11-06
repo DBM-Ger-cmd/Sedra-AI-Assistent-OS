@@ -1,5 +1,6 @@
 import os
 import threading
+import time
 from datetime import datetime, timezone
 
 from . import board, chain as chain_mod
@@ -57,6 +58,7 @@ class Orchestra:
         self.data_dir = data_dir
         self.lock = threading.RLock()          # eine Verbindung, mehrere Threads: Takt und Desk schreiben nacheinander
         self.tick_thread = None
+        self._stopping = False
         self._blocked_noted = set()
 
     # ---- Uhr, Audit, Grenzen
@@ -95,6 +97,8 @@ class Orchestra:
 
     def start_tick(self):
         """Startet den Takt-Thread (einmal); ein zweiter Takter bekommt `tick_busy`."""
+        if self._stopping:
+            raise RuntimeError("orchestra_stopping")
         from . import tick
         if self.tick_thread is None:
             self.sync_all_standing()
@@ -102,13 +106,26 @@ class Orchestra:
         return self.tick_thread
 
     def stop_tick(self, wait_s=5):
-        pool, self.worker_pool = getattr(self, "worker_pool", None), None
-        if pool is not None:
-            pool.stop(wait_s)
-        thread, self.tick_thread = self.tick_thread, None
+        """Signal the tick before draining workers; keep handles on timeout.
+
+        No job state, external lease or database is modified here. A False
+        result must prevent the caller from closing the shared connection.
+        """
+        self._stopping = True
+        deadline = time.monotonic() + max(0.0, float(wait_s))
+        thread = self.tick_thread
         if thread is not None:
             thread.stop.set()
-            thread.join(wait_s)
+        pool = getattr(self, "worker_pool", None)
+        pool_done = True if pool is None else bool(pool.stop(max(0.0, deadline - time.monotonic())))
+        if thread is not None and thread is not threading.current_thread() and thread.is_alive():
+            thread.join(timeout=max(0.0, deadline - time.monotonic()))
+        tick_done = thread is None or not thread.is_alive()
+        if tick_done:
+            self.tick_thread = None
+        if pool_done:
+            self.worker_pool = None
+        return pool_done and tick_done
 
     # ---- Lauf: lebt er noch, darf einer starten
     def run_alive(self, job_id):
@@ -135,6 +152,8 @@ class Orchestra:
             return None
 
     def run_blocked(self):
+        if self._stopping:
+            return "orchestra_stopping"
         if self.supervisor is None or not getattr(self.supervisor, "enabled", False):
             return "supervisor_off"
         if self.start_run is None or self.request_run is None:
@@ -201,8 +220,11 @@ class Orchestra:
             return 0
         return int(rows[0]["value"])
 
-    def close(self):
-        self.stop_tick()
+    def close(self, wait_s=5):
+        # A live worker may still be using this SQLite connection. Never close
+        # it, or declare shutdown complete, merely because a join timed out.
+        if not self.stop_tick(wait_s=wait_s):
+            raise RuntimeError("orchestra_shutdown_pending")
         self.conn.close()
 
     def agents(self):

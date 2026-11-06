@@ -610,6 +610,10 @@ class GuppiRuntime:
                     getattr(service, method)()
                 except Exception as exc:
                     failures.append((name, exc))
+                    if name == "orchestra" and str(exc) == "orchestra_shutdown_pending":
+                        # A worker may still read from Wissen. Do not close
+                        # that service until the drain completes on retry.
+                        break
                 else:
                     self._closed_services.add(name)
             if failures:
