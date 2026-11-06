@@ -37,9 +37,17 @@ Der eingebaute Updater einer älteren Installation prüft nur Pfade unter `runti
 
 SEDRA vorher beenden. Danach laufen weitere Updates wieder über den eingebauten Updater, weil die Installation die neuen Pfade kennt. Der Updater-Weg über das GitHub-Release (Tag `v1.23.0`) bleibt für Installationen vor 1.23.0 gesperrt; sie brauchen dieses Paket. Ein Entwicklungsordner, der per `git merge` nachzieht, braucht den Installer nicht: `START_SEDRA.bat` führt den Übergang aus.
 
+## Nach dem Umstieg: Agenten-Vorlagen einmal neu anlegen
+
+Die Registry der Agenten-Vorlagen (`runtime_data/agent_manager/registry.sqlite`) führt die Vorlagen unter ihren alten Kennungen. Der neue Code sucht sie unter `sedra.*` und legt sie nicht von selbst an. Deshalb einmal je Projektordner, mit beendetem SEDRA:
+
+    python -m sedra_runtime.agent_manager.bootstrap <Projektordner>
+
+Das legt die acht Vorlagen und die Crew unter den neuen Kennungen an. Ein zweiter Lauf ändert nichts („unchanged“). Die alten Einträge bleiben als Verlauf stehen. Vorher eine Kopie von `runtime_data/agent_manager` sichern. Im Entwicklungsordner ist der Schritt am 06.11.2026 gelaufen (Sicherung unter `local_config/update/sicherung/vor_bootstrap_2026-11-06`).
+
 ## Grenzen
 
-- Gespeicherte Werte in laufenden Datenbanken (Registry-Einträge der Agenten-Vorlagen mit den alten Kennungen) werden nicht umgeschrieben. Neue Vorlagen werden unter den neuen Kennungen angelegt; Altzuweisungen bleiben als Verlauf lesbar.
+- Gespeicherte Werte in laufenden Datenbanken werden nicht umgeschrieben. Registry-Einträge und Zuweisungen mit den alten Kennungen bleiben als Verlauf lesbar; neue Arbeit nutzt die neuen Kennungen (siehe vorigen Abschnitt).
 - Geprüft sind: der volle Testlauf der schnellen Gruppen (4447 Tests, 0 rot), der Start des Servers mit den neuen Namen und mit einer Kopie der echten Registry, und der Umstieg Ende zu Ende an einer wegwerfbaren Kopie einer Installation mit den alten Namen (Vorschau, Anwenden, Serverstart, Rollback: alle 2502 Dateien des alten Stands unverändert zurück). Ein Lauf mit Modell und die Browser-Bahn stehen aus.
 
 ## Prüfung
