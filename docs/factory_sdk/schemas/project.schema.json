@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sedra:factory-sdk:1:project",
+  "title": "Factory SDK 1 - Project",
+  "description": "Sicht auf genau ein vorhandenes Projekt. Kein eigener Speicher: Quelle ist ProjectRegistry (runtime/src/guppi_runtime/projects.py) oder ein Harness-Projekt (harness/projekte.py). Welche Quelle Factory nutzt, ist offen (Luecke L-P1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "backing",
+    "display_name",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/schema_version"
+    },
+    "kind": {
+      "const": "factory.project"
+    },
+    "backing": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "store",
+            "project_id",
+            "workspace_path",
+            "qualification",
+            "created_at"
+          ],
+          "properties": {
+            "store": {
+              "const": "project_registry"
+            },
+            "project_id": {
+              "$ref": "urn:sedra:factory-sdk:1:common#/$defs/registry_project_id"
+            },
+            "workspace_path": {
+              "type": "string",
+              "pattern": "^projects/PRJ-[0-9a-f]{12}$"
+            },
+            "qualification": {
+              "const": "MANAGED_WORKSPACE_NOT_VM"
+            },
+            "created_at": {
+              "$ref": "urn:sedra:factory-sdk:1:common#/$defs/timestamp"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "store",
+            "project_id"
+          ],
+          "properties": {
+            "store": {
+              "const": "harness_projekt"
+            },
+            "project_id": {
+              "$ref": "urn:sedra:factory-sdk:1:common#/$defs/harness_project_id"
+            }
+          }
+        }
+      ]
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "status": {
+      "description": "Nur der Wert, den ProjectRegistry.create heute schreibt. Weitere Zustaende (Archiv) gibt es im Bestand nicht (Luecke L-P2).",
+      "enum": [
+        "ACTIVE"
+      ]
+    }
+  }
+}

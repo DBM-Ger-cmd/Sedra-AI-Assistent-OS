@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "kind": "factory.approval",
+  "gate_id": "HG-5E6F7A8B",
+  "mission_id": "M-1A2B3C4D",
+  "action": "run_n8n_workflow",
+  "targets": [
+    "http://127.0.0.1:5678/sedra-workflow/068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  ],
+  "request_digest": "80f70afeef3caa57646fd20afb95be9c3f2c03d38e091906de31838813dcc22e",
+  "risks": [
+    "Lokale n8n-Testinstanz; nur Datenprofil v1, keine Außenaktionen."
+  ],
+  "rollback_available": false,
+  "status": "resolved",
+  "decision": "APPROVE_ONCE",
+  "decided_at": "2026-11-06T11:40:12.345678+00:00",
+  "single_use": true,
+  "token_id": "APR-0BADF00D"
+}

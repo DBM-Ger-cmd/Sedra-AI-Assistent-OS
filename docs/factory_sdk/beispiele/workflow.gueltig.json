@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "kind": "factory.workflow",
+  "workflow_id": "WF-55cf1725549ddc93e4855595",
+  "revision": 2,
+  "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3",
+  "record_digest": "8e4284462977901081a032495c0de1253dcd7fde585c6eeeaf82292ea4a382a5",
+  "previous_revision": 1,
+  "name": "Anfrage prüfen",
+  "change_note": "IF-Bedingung ergänzt",
+  "process_model": false,
+  "execution": {
+    "executable": true,
+    "profile": "n8n-local-data-v1",
+    "reason": null
+  }
+}

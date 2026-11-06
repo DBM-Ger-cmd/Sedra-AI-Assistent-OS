@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sedra:factory-sdk:1:task_run",
+  "title": "Factory SDK 1 - Task/Run",
+  "description": "Sicht auf genau eine Mission (core/mission.py MissionStore) mit ihrem Schrittjournal (core/step_journal.py). Ein Lauf eines Workflows ist eine Mission mit context.n8n_workflow (workflows/desk.py _start, Kind workflow_run). Kein eigener Speicher, keine eigene Orchestrierung.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "mission_id",
+    "phase",
+    "status",
+    "project_refs",
+    "steps",
+    "result"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/schema_version"
+    },
+    "kind": {
+      "const": "factory.task_run"
+    },
+    "mission_id": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/mission_id"
+    },
+    "phase": {
+      "description": "Schluessel von core/mission.py ALLOWED.",
+      "enum": [
+        "NEW",
+        "UNDERSTAND",
+        "PLAN",
+        "READY",
+        "EXECUTE",
+        "VERIFY",
+        "CANDIDATE_REVIEW",
+        "REWORK",
+        "CAPTAIN_REVIEW",
+        "PAUSED",
+        "COMPLETE",
+        "FAILED"
+      ]
+    },
+    "status": {
+      "description": "mission.lifecycle.status: 'closed' setzen MissionStore.transition (COMPLETE/FAILED) und das Verb schliessen (uix_server.py mission_lifecycle, nicht in EXECUTE/VERIFY/REWORK); 'archived' nur aus 'closed'.",
+      "enum": [
+        "active",
+        "closed",
+        "archived"
+      ]
+    },
+    "project_refs": {
+      "description": "Aus mission.context.refs (uix_server.py setzt {project_id, workspace_path}). Leer, wenn die Mission an kein Projekt gebunden ist.",
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ],
+        "properties": {
+          "project_id": {
+            "$ref": "urn:sedra:factory-sdk:1:common#/$defs/registry_project_id"
+          }
+        }
+      }
+    },
+    "workflow_ref": {
+      "description": "Aus mission.context.n8n_workflow; fehlt bei Missionen ohne Workflow.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workflow_id",
+        "revision",
+        "digest"
+      ],
+      "properties": {
+        "workflow_id": {
+          "$ref": "urn:sedra:factory-sdk:1:common#/$defs/workflow_id"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "digest": {
+          "$ref": "urn:sedra:factory-sdk:1:common#/$defs/sha256"
+        }
+      }
+    },
+    "steps": {
+      "description": "Aus mission.execution.step_journal.steps; 0 Eintraege, solange das Journal fehlt. Hoechstens 32 (step_journal.py plan_steps).",
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "step_id",
+          "status",
+          "attempts"
+        ],
+        "properties": {
+          "step_id": {
+            "$ref": "urn:sedra:factory-sdk:1:common#/$defs/step_id"
+          },
+          "status": {
+            "description": "Werte aus step_journal.py (checkpoint, start, finish). RUNNING nach einem Neustart heisst: Ausgang unbekannt, nie automatisch wiederholen.",
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "COMPLETED",
+              "GATE",
+              "WAITING",
+              "BLOCKED",
+              "FAILED"
+            ]
+          },
+          "attempts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "outcome": {
+            "description": "SDK-Ableitung: 'unknown', wenn der Schritt RUNNING ist und kein laufender Prozess ihn besitzt (step_journal.start: UNKNOWN_EXECUTION_OUTCOME).",
+            "enum": [
+              "known",
+              "unknown"
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "PENDING"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "attempts": {
+                  "const": 0
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "RUNNING"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "attempts": {
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "outcome"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "not": {
+                    "const": "RUNNING"
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "outcome": {
+                  "const": "known"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "result": {
+      "description": "Aus mission.result (core/mission.py new_mission, core/brain.py Phase VERIFY).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "qualification",
+        "accepted"
+      ],
+      "properties": {
+        "qualification": {
+          "enum": [
+            "PENDING",
+            "ARTIFACT_ONLY",
+            "PREPARED_NOT_TESTED",
+            "VERIFIED_INVENTORY"
+          ]
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "tests_executed": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "phase": {
+            "enum": [
+              "COMPLETE",
+              "FAILED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "status": {
+            "enum": [
+              "closed",
+              "archived"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "closed",
+              "archived"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "phase": {
+            "not": {
+              "enum": [
+                "EXECUTE",
+                "VERIFY",
+                "REWORK"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "properties": {
+              "qualification": {
+                "const": "PENDING"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "result": {
+            "properties": {
+              "accepted": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sedra:factory-sdk:1:artifact",
+  "title": "Factory SDK 1 - Artifact",
+  "description": "Sicht auf genau einen Eintrag aus ArtifactStore (runtime/src/guppi_runtime/artifacts.py register). Der Store fuehrt den Pfad absolut; das SDK-Objekt fuehrt ihn nur relativ zum Arbeitsbereich der Mission (Umrechnung ist Luecke L-A2). Typisierte Artefakte gibt es im Bestand nicht: artifact_type ist in Version 1 immer 'file' (Luecke L-A1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "artifact_id",
+    "mission_id",
+    "path",
+    "artifact_type",
+    "integrity",
+    "provenance",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/schema_version"
+    },
+    "kind": {
+      "const": "factory.artifact"
+    },
+    "artifact_id": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/artifact_id"
+    },
+    "mission_id": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/mission_id"
+    },
+    "path": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/relative_path"
+    },
+    "artifact_type": {
+      "const": "file"
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "hash"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "sha256"
+        },
+        "hash": {
+          "$ref": "urn:sedra:factory-sdk:1:common#/$defs/sha256"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "created_by",
+        "source_component",
+        "created_at"
+      ],
+      "properties": {
+        "created_by": {
+          "const": "system"
+        },
+        "source_component": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.:-]{0,63}$"
+        },
+        "created_at": {
+          "$ref": "urn:sedra:factory-sdk:1:common#/$defs/timestamp"
+        }
+      }
+    },
+    "status": {
+      "const": "active"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "description": "Wie im Store auf oberster Ebene; nur bei Artefakten aus dem Job-System vorhanden."
+    }
+  }
+}

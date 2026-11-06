@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sedra:factory-sdk:1:workflow",
+  "title": "Factory SDK 1 - Workflow (eine Revision)",
+  "description": "Sicht auf genau eine unveraenderliche Revision aus WorkflowStore (runtime/src/guppi_runtime/workflows/store.py). Die Definition selbst bleibt im Store; das SDK-Objekt traegt nur Kennung, Digests und die Bewertung von workflows/policy.py assessment. Ausfuehrbar heisst nur: das Profil wuerde den Lauf zur Freigabe zulassen.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "workflow_id",
+    "revision",
+    "digest",
+    "record_digest",
+    "name",
+    "process_model",
+    "execution"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/schema_version"
+    },
+    "kind": {
+      "const": "factory.workflow"
+    },
+    "workflow_id": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/workflow_id"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "digest": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/sha256"
+    },
+    "record_digest": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/sha256"
+    },
+    "previous_revision": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "change_note": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "process_model": {
+      "description": "true, wenn ein Knoten Prozess-Metadaten SEDRA_PROCESS_V1 traegt (workflows/process.py has_process). Ein Prozessmodell ist nie ausfuehrbar.",
+      "type": "boolean"
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "executable",
+        "profile",
+        "reason"
+      ],
+      "properties": {
+        "executable": {
+          "type": "boolean"
+        },
+        "profile": {
+          "const": "n8n-local-data-v1"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "executable": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "executable": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "process_model": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution": {
+            "properties": {
+              "executable": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "revision": {
+            "const": 1
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "previous_revision": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}
