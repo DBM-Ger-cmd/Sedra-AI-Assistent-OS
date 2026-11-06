@@ -59,6 +59,7 @@ class Orchestra:
         self.lock = threading.RLock()          # eine Verbindung, mehrere Threads: Takt und Desk schreiben nacheinander
         self.tick_thread = None
         self._stopping = False
+        self._quiesce_state = "RUNNING"
         self._blocked_noted = set()
 
     # ---- Uhr, Audit, Grenzen
@@ -106,13 +107,22 @@ class Orchestra:
         return self.tick_thread
 
     def stop_tick(self, wait_s=5):
-        """Signal the tick before draining workers; keep handles on timeout.
-
-        No job state, external lease or database is modified here. A False
-        result must prevent the caller from closing the shared connection.
-        """
+        """Close admission before tick/worker draining; keep resources on timeout."""
         self._stopping = True
+        self._quiesce_state = "QUIESCING"
         deadline = time.monotonic() + max(0.0, float(wait_s))
+        sup = getattr(self, "supervisor", None)
+        quiesce_ok = True
+        if sup is not None and hasattr(sup, "request_quiesce"):
+            try:
+                quiesce_ok = sup.request_quiesce(max(0.0, deadline - time.monotonic()))
+            except Exception as exc:
+                quiesce_ok = False
+                self._quiesce_state = "SHUTDOWN_PENDING"
+                try:
+                    self.tick_error("quiesce", exc)
+                except Exception:
+                    pass
         thread = self.tick_thread
         if thread is not None:
             thread.stop.set()
@@ -125,7 +135,12 @@ class Orchestra:
             self.tick_thread = None
         if pool_done:
             self.worker_pool = None
-        return pool_done and tick_done
+        local_done = True
+        if sup is not None and hasattr(sup, "complete_quiesce"):
+            local_done = bool(sup.complete_quiesce())
+        done = quiesce_ok and pool_done and tick_done and local_done
+        self._quiesce_state = "DRAINED" if done else "SHUTDOWN_PENDING"
+        return done
 
     # ---- Lauf: lebt er noch, darf einer starten
     def run_alive(self, job_id):

@@ -334,6 +334,7 @@ class WorkerPool:
     """Der Worker-Pool (Spec 2, S2.H4b, G2-S2-04): so viele Threads, wie der Supervisor Läufe zulässt (`workers`, genau 1 solange der
     Modell-Scheduler aus ist), jeder mit eigenem Worker. Die Wiederherstellung nach dem Start läuft einmal, nicht je Thread."""
     def __init__(self, hub, size, idle_sleep_s=1.0):
+        self.orch = getattr(hub.runtime, "orchestra", None)
         self.workers = [make_worker(hub, f"orchestra-{n}") for n in range(1, size + 1)]
         for worker in self.workers:
             worker.idle_sleep_s = idle_sleep_s
@@ -345,11 +346,26 @@ class WorkerPool:
             raise RuntimeError("worker_pool_stopping")
         if self.threads:
             return self
-        self.workers[0].supervisor.startup_recovery()
-        for worker in self.workers:
-            thread = threading.Thread(target=self._loop, args=(worker,), name=worker.worker_id, daemon=True)
-            self.threads.append(thread)
-            thread.start()
+        sup = self.workers[0].supervisor if self.workers else None
+        if sup is not None:
+            if sup.quiescing or getattr(getattr(self, "orch", None), "_stopping", False):
+                raise RuntimeError("worker_pool_stopping")
+            # Recovery can acquire the JobStore lock. NEVER call it while holding
+            # the gate lock (the only permitted nested order is Store -> Gate).
+            sup.startup_recovery()
+            acquired = sup._quiesce_lock.acquire(timeout=10.0)
+            if not acquired:
+                raise RuntimeError("worker_pool_stopping")
+            try:
+                if (self._stop_requested or sup.quiescing
+                        or getattr(getattr(self, "orch", None), "_stopping", False)):
+                    raise RuntimeError("worker_pool_stopping")
+                for worker in self.workers:
+                    thread = threading.Thread(target=self._loop, args=(worker,), name=worker.worker_id, daemon=True)
+                    self.threads.append(thread)
+                    thread.start()
+            finally:
+                sup._quiesce_lock.release()
         return self
 
     @staticmethod
@@ -386,6 +402,8 @@ def start_pool(hub, orch=None, idle_sleep_s=1.0):
     sup = getattr(orch, "supervisor", None)
     if sup is None or not sup.enabled:
         return None
+    if getattr(orch, "_stopping", False) or getattr(sup, "quiescing", False):
+        raise RuntimeError("worker_pool_stopping")
     return WorkerPool(hub, sup._worker_limit(), idle_sleep_s).start()
 
 

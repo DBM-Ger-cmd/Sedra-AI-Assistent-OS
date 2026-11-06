@@ -102,10 +102,13 @@ class Worker:
                 # no_slot: jobs are queued but every slot is taken (or the server is starting); the job loses nothing by waiting
                 return {"status": {"no_job": "idle", "worker_busy": "busy", "no_slot": "waiting"}[exc.code]}
             raise
+        if claimed["status"] == "waiting":
+            return {"status": "waiting", "code": claimed.get("code"), "reason": claimed.get("reason")}
         job_id = claimed["job"]["job_id"]
         started = sup.confirm_start(job_id, self.worker_id)
         if started["status"] != "running":
-            return {"status": started["status"], "job_id": job_id, "code": started.get("code"), "decision": started.get("decision")}
+            return {"status": started["status"], "job_id": job_id, "code": started.get("code"),
+                    "reason": started.get("reason"), "decision": started.get("decision")}
         attempt = started["job"]["attempt_log"][-1]
         ctx = WorkerContext(sup, job_id, self.worker_id)
         beat = _Heartbeat(ctx, self.heartbeat_every)

@@ -15,6 +15,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import random
+import threading
 import time
 
 import yaml
@@ -263,6 +264,105 @@ class JobSupervisor:
         self.in_use_extra = None                  # callable() -> model identifiers that are busy outside the job store (Harness answers/cards, 1.11.) – never evicted
         self.slots = None                         # ModelScheduler (model_scheduler.py); None or disabled means one worker and a reservation per job
         self._slot_recipes = {}                   # role -> recipe of its last resolution, so claim can see a recipe swap early (OP-S2-05)
+        # F0-05B: one owner per live Supervisor instance, never a reusable worker name.
+        self.quiesce_owner_id = f"SUP-{uuid.uuid4().hex.upper()}"
+        self._quiesce_requested = threading.Event()    # sticky: never reopen during shutdown
+        self._quiesce_lock = threading.Lock()        # acquired AFTER the JobStore lock by claim/start
+        self._quiesce_state = "RUNNING"
+        self._quiesce_issue = None
+
+    @property
+    def quiescing(self):
+        return self._quiesce_requested.is_set()
+
+    @property
+    def quiesce_state(self):
+        return self._quiesce_state
+
+    def _quiesce_problem(self, reason):
+        # Unknown ownership/commit or failed cleanup must never allow a later
+        # admission to proceed while an operator investigates.
+        self._quiesce_requested.set()
+        self._quiesce_issue = str(reason)[:160]
+        self._quiesce_state = "SHUTDOWN_PENDING"
+
+    def _deferred(self, code, *, worker_id=None, job=None):
+        """A neutral non-admission, never a job failure, retry or attempt."""
+        try:
+            if self.audit is not None:
+                self.audit.append("JOB_CLAIM_DEFERRED", component="job-supervisor",
+                                  payload={"code": code, "worker_id": worker_id,
+                                           "owner_id": self.quiesce_owner_id,
+                                           "job_id": job.get("job_id") if job else None})
+        except Exception as exc:
+            # Audit failures must never reopen admission or pretend shutdown succeeded.
+            self._quiesce_problem("audit_failed:" + type(exc).__name__)
+        return {"status": "waiting", "code": code, "reason": code, "job": job}
+
+    def request_quiesce(self, wait_s=5):
+        """Linearization cut: acquire gate lock; never hold the JobStore lock here.
+
+        The requested bit is set *before* waiting: even an uncontended new claim
+        fails closed. A timed-out cut is PENDING and can be retried; it is never
+        mistaken for DRAINED. Existing running attempts are not cancelled.
+        """
+        self._quiesce_requested.set()
+        if self._quiesce_state != "SHUTDOWN_PENDING":
+            self._quiesce_state = "QUIESCING"
+        acquired = self._quiesce_lock.acquire(timeout=max(0.0, float(wait_s)))
+        if not acquired:
+            self._quiesce_problem("gate_lock_timeout")
+            return False
+        self._quiesce_lock.release()
+        if self._quiesce_issue in {"gate_lock_timeout", "claim_cleanup_failed:RuntimeError", "claim_scan_failed:RuntimeError"}:
+            self._quiesce_issue = None
+            self._quiesce_state = "QUIESCING"
+        # Roll back only claims bearing this instance's unique ticket.
+        try:
+            jobs, damaged = self.store.scan()
+            if damaged:
+                self._quiesce_problem("damaged_job_records")
+            for job in jobs:
+                worker = job.get("worker") or {}
+                if worker.get("state") != "claimed" or worker.get("owner_id") != self.quiesce_owner_id:
+                    continue
+                outcome = self._unclaim(job["job_id"], worker["worker_id"], "quiesced",
+                                        expected_ticket=worker.get("claim_ticket"))
+                if outcome.get("reason") == "ownership_uncertain":
+                    self._quiesce_problem("claim_ownership_uncertain")
+        except Exception as exc:
+            self._quiesce_problem("claim_cleanup_failed:" + type(exc).__name__)
+        return self._quiesce_issue is None
+
+    def has_local_work(self):
+        """Includes unstarted claims: no local SQLite/database drain while they live."""
+        try:
+            jobs, damaged = self.store.scan()
+            if damaged:
+                self._quiesce_problem("damaged_job_records")
+                return True
+            for job in jobs:
+                worker = job.get("worker") or {}
+                if worker.get("state") not in {"claimed", "running"}:
+                    continue
+                if worker.get("owner_id") == self.quiesce_owner_id:
+                    return True
+                if not worker.get("owner_id"):
+                    # Legacy worker records predate the unique owner token: a
+                    # shared worker name is insufficient proof of foreignness.
+                    # Leave them untouched and do not claim a complete drain.
+                    return True
+            return False
+        except Exception as exc:
+            self._quiesce_problem("claim_scan_failed:" + type(exc).__name__)
+            return True
+
+    def complete_quiesce(self):
+        if not self.quiescing or self._quiesce_issue or self.has_local_work():
+            self._quiesce_state = "SHUTDOWN_PENDING"
+            return False
+        self._quiesce_state = "DRAINED"
+        return True
 
     # ---- helpers
     @property
@@ -328,12 +428,18 @@ class JobSupervisor:
     def _slot_requeue(self, job):
         """A claim that ended before its attempt started: the job's slot goes back to the queue (it keeps its place in line)."""
         if not self._slots_on():
-            return
+            return True
         try:
             self.slots.wait_for_job(job["job_id"], job["queue"]["priority"], agent_id=job.get("agent_id"), task_id=job.get("task_id"), enqueued=self._utc_text(job))
+            return True
         except Exception as exc:
+            self._quiesce_problem("slot_requeue_failed:" + type(exc).__name__)
             if self.audit:
-                self.audit.append("JOB_SLOT_RELEASE_FAILED", component="job-supervisor", payload={"job_id": job["job_id"], "error": type(exc).__name__})
+                try:
+                    self.audit.append("JOB_SLOT_RELEASE_FAILED", component="job-supervisor", payload={"job_id": job["job_id"], "error": type(exc).__name__})
+                except Exception:
+                    pass
+            return False
 
     def _reap_slots(self, jobs):
         """Slot leases of jobs that can no longer ask (finished, cancelled, gone) end; waiting and running jobs keep theirs."""
@@ -599,39 +705,73 @@ class JobSupervisor:
         self._worker_id(worker_id)
         if not isinstance(roles, (list, tuple, set)) or not roles or any(r not in self.config.roles for r in roles):
             raise JobError("invalid_roles")
+        # Fast refusal prevents waiting on a store lock after shutdown has started.
+        if self.quiescing:
+            return self._deferred("quiesced", worker_id=worker_id)
         now = self._now()
-        with self.store._lock():
-            jobs, _ = self.store.scan()
-            busy = [j for j in jobs if j.get("worker")]
-            if len(busy) >= self._worker_limit():
-                raise JobError("worker_busy")
-            states = {j["job_id"]: j["state"] for j in jobs}
-            ready = []
-            for job in jobs:
-                if job["state"] != "QUEUED" or job.get("worker") or job.get("cancel"):
-                    continue
-                if job.get("requested_role") not in roles:
-                    continue
-                not_before = self._parse(job["queue"].get("not_before"))
-                if not_before and not_before > now:
-                    continue
-                if not self._dependencies_met(job, states):
-                    continue
-                ready.append(job)
-            if not ready:
-                raise JobError("no_job")
-            ready.sort(key=lambda j: self._claim_key(j, now))
-            chosen = ready[0]
-            if self._slots_on():
-                chosen = self._take_slot(ready)       # a job is claimed only with a slot; the others stay QUEUED and lose nothing
-            try:
-                with self.store.mutate(chosen["job_id"]) as job:
-                    job["worker"] = {"worker_id": worker_id, "claimed_at": self._iso(now), "lease_until": None,
-                                     "grace_until": None, "state": "claimed"}
-                    self._audit("JOB_CLAIMED", job, worker_id=worker_id)
-            except Exception:
-                self._slot_requeue(chosen)            # the claim was not recorded: its slot goes back to the queue, or it is never free
-                raise
+        store_locked = False
+        mutation_entered = False
+        try:
+            with self.store._lock():
+                store_locked = True
+                if self.quiescing:
+                    return self._deferred("quiesced", worker_id=worker_id)
+                jobs, _ = self.store.scan()
+                busy = [j for j in jobs if j.get("worker")]
+                if len(busy) >= self._worker_limit():
+                    raise JobError("worker_busy")
+                states = {j["job_id"]: j["state"] for j in jobs}
+                ready = []
+                for job in jobs:
+                    if job["state"] != "QUEUED" or job.get("worker") or job.get("cancel"):
+                        continue
+                    if job.get("requested_role") not in roles:
+                        continue
+                    not_before = self._parse(job["queue"].get("not_before"))
+                    if not_before and not_before > now:
+                        continue
+                    if not self._dependencies_met(job, states):
+                        continue
+                    ready.append(job)
+                if not ready:
+                    raise JobError("no_job")
+                ready.sort(key=lambda j: self._claim_key(j, now))
+                chosen = ready[0]
+                if self._slots_on():
+                    chosen = self._take_slot(ready)
+                # Store lock -> gate lock -> mutate. The gate remains held UNTIL
+                # mutate has persisted; request_quiesce acquires only this gate.
+                acquired = self._quiesce_lock.acquire(timeout=10.0)
+                if not acquired:
+                    self._slot_requeue(chosen)
+                    self._quiesce_problem("claim_gate_lock_timeout")
+                    return self._deferred("claim_gate_timeout", worker_id=worker_id)
+                try:
+                    if self.quiescing:
+                        self._slot_requeue(chosen)
+                        return self._deferred("quiesced", worker_id=worker_id)
+                    try:
+                        mutation_entered = True
+                        with self.store.mutate(chosen["job_id"]) as job:
+                            job["worker"] = {"worker_id": worker_id, "claimed_at": self._iso(now),
+                                             "lease_until": None, "grace_until": None, "state": "claimed",
+                                             "owner_id": self.quiesce_owner_id,
+                                             "claim_ticket": uuid.uuid4().hex}
+                            self._audit("JOB_CLAIMED", job, worker_id=worker_id)
+                    except Exception:
+                        self._slot_requeue(chosen)
+                        raise
+                finally:
+                    self._quiesce_lock.release()
+        except RuntimeError as exc:
+            if str(exc) == "append_lock_timeout":
+                if store_locked or mutation_entered:
+                    # A later failure can follow a slot grant or unknown commit:
+                    # never represent it as a harmless no-write decision.
+                    self._quiesce_problem("claim_outcome_unknown")
+                    raise JobError("claim_outcome_unknown") from exc
+                return self._deferred("claim_lock_timeout", worker_id=worker_id)
+            raise
         return {"status": "claimed", "job": job}
 
     def _take_slot(self, ready):
@@ -648,25 +788,39 @@ class JobSupervisor:
             reasons.append(grant["reason"])
         raise JobError("no_slot", reasons[0] if reasons else None)
 
-    def _unclaim(self, job_id, worker_id, reason):
-        """The scheduler said "not now" after the claim (the server is starting, another recipe runs, a handover): the job goes back
-        to the queue without an attempt, and its slot back to waiting."""
+    def _unclaim(self, job_id, worker_id, reason, *, expected_ticket=None):
+        """Return only THIS instance's unstarted claim, with no attempt consumed.
+
+        The ticket protects a late cleanup from clearing a same-named worker's
+        newer claim (ABA). Never free a foreign owner or running attempt.
+        """
         ours = False
         with self.store.mutate(job_id) as job:
-            worker = job.get("worker")
-            if worker and worker["worker_id"] == worker_id and worker["state"] == "claimed":
+            worker = job.get("worker") or {}
+            ticket = worker.get("claim_ticket")
+            if (worker.get("worker_id") == worker_id and worker.get("state") == "claimed"
+                    and worker.get("owner_id") == self.quiesce_owner_id and ticket
+                    and (expected_ticket is None or expected_ticket == ticket)):
                 job["worker"] = None
                 ours = True
                 self._audit("JOB_SLOT_WAITING", job, worker_id=worker_id, reason_code=str(reason)[:100])
-        if ours:                                  # a claim that is no longer ours must not take another worker's slot away
-            self._slot_requeue(job)
-        return {"status": "waiting", "reason": reason, "job": job}
+        if ours:
+            if not self._slot_requeue(job):
+                return {"status": "waiting", "reason": "slot_cleanup_pending", "job": job}
+            return {"status": "waiting", "reason": reason, "job": job}
+        # Ownership cannot be inferred from a worker_id (which can repeat in
+        # multiple runtimes). Uncertain records remain untouched.
+        self._quiesce_problem("claim_ownership_uncertain")
+        return {"status": "waiting", "reason": "ownership_uncertain", "job": job}
 
     def confirm_start(self, job_id, worker_id, *, attempt_id=None):
         self._require_enabled()
         now = self._now()
         resolution = resolution_error = reservation = None
         snapshot = self._load(job_id)
+        if self.quiescing:
+            return self._unclaim(job_id, worker_id, "quiesced",
+                                 expected_ticket=(snapshot.get("worker") or {}).get("claim_ticket"))
         # A repair (job_repair.py) leaves a prepared attempt id, manifest and checkpoint; the next attempt takes them over.
         planned_attempt = attempt_id or snapshot.get("pending_attempt_id") or f"ATT-{uuid.uuid4().hex[:12].upper()}"
         if self.resolver is not None:     # outside the store lock: the Control Master may take a moment
@@ -709,9 +863,16 @@ class JobSupervisor:
                     self._release(job_id)             # nothing was loaded, so nothing stays promised
                     reservation = None
         try:
-            return self._start_attempt(job_id, worker_id, now, planned_attempt, resolution, resolution_error, reservation)
+            return self._start_attempt(job_id, worker_id, now, planned_attempt, resolution, resolution_error,
+                                       reservation, expected_ticket=(snapshot.get("worker") or {}).get("claim_ticket"))
+        except RuntimeError as exc:
+            if str(exc) == "append_lock_timeout":
+                self._quiesce_problem("start_outcome_unknown")
+                raise JobError("start_outcome_unknown") from exc
+            self._release(job_id)
+            raise
         except Exception:
-            self._release(job_id)             # the start failed (claim lost or expired): give the promised room back
+            self._release(job_id)             # start failed with known outcome
             raise
 
     def _confirm_with_slot(self, job_id, worker_id, now, planned_attempt, snapshot, resolution, resolution_error):
@@ -725,18 +886,59 @@ class JobSupervisor:
                 resolution = dict(resolution, load=out["load"])
             except SchedulerError as exc:
                 if str(exc.reason).startswith(SLOT_WAIT_REASONS):
-                    return self._unclaim(job_id, worker_id, exc.reason)
+                    return self._unclaim(job_id, worker_id, exc.reason,
+                                         expected_ticket=(snapshot.get("worker") or {}).get("claim_ticket"))
                 resolution_error = _SlotRefused(exc)
         try:
-            return self._start_attempt(job_id, worker_id, now, planned_attempt, resolution, resolution_error, None)
+            return self._start_attempt(job_id, worker_id, now, planned_attempt, resolution, resolution_error,
+                                       None, expected_ticket=(snapshot.get("worker") or {}).get("claim_ticket"))
+        except RuntimeError as exc:
+            if str(exc) == "append_lock_timeout":
+                self._quiesce_problem("start_outcome_unknown")
+                raise JobError("start_outcome_unknown") from exc
+            self._release(job_id)
+            raise
         except Exception:
             self._release(job_id)
             raise
 
-    def _start_attempt(self, job_id, worker_id, now, planned_attempt, resolution, resolution_error, reservation):
+    def _release_unstarted_reservation(self, job_id, reservation):
+        """Only a reservation from THIS unresolved start may be released here.
+
+        Slot leases are handled by _unclaim (return to waiting), never by a
+        blanket release which could discard another owner's slot.
+        """
+        if reservation is None or self.scheduler is None:
+            return
+        try:
+            self.scheduler.release_job(job_id)
+        except Exception as exc:
+            self._quiesce_problem("reservation_release_failed:" + type(exc).__name__)
+
+    def _start_attempt(self, job_id, worker_id, now, planned_attempt, resolution, resolution_error, reservation, *, expected_ticket=None):
+        # Second linearization cut. Model resolution may have taken time; only
+        # the persisted attempt start is the point of no return.
+        with self.store._lock():
+            acquired = self._quiesce_lock.acquire(timeout=10.0)
+            if not acquired:
+                self._quiesce_problem("start_gate_lock_timeout")
+                self._release_unstarted_reservation(job_id, reservation)
+                return self._unclaim(job_id, worker_id, "claim_gate_timeout", expected_ticket=expected_ticket)
+            try:
+                if self.quiescing:
+                    self._release_unstarted_reservation(job_id, reservation)
+                    return self._unclaim(job_id, worker_id, "quiesced", expected_ticket=expected_ticket)
+                return self._commit_start_attempt(job_id, worker_id, now, planned_attempt,
+                                                  resolution, resolution_error, reservation, expected_ticket=expected_ticket)
+            finally:
+                self._quiesce_lock.release()
+
+    def _commit_start_attempt(self, job_id, worker_id, now, planned_attempt, resolution, resolution_error, reservation, *, expected_ticket=None):
         with self.store.mutate(job_id) as job:
             worker = job.get("worker")
-            if not worker or worker["worker_id"] != worker_id or worker["state"] != "claimed":
+            if (not worker or worker["worker_id"] != worker_id or worker["state"] != "claimed"
+                    or worker.get("owner_id") != self.quiesce_owner_id
+                    or (expected_ticket is not None and worker.get("claim_ticket") != expected_ticket)):
                 raise JobError("not_claimed")
             if self._parse(worker["claimed_at"]) + timedelta(seconds=self.config.claim_timeout_s) < now:
                 raise JobError("claim_expired")
@@ -1495,6 +1697,8 @@ class JobSupervisor:
             if exc.code in {"no_job", "no_slot"}:
                 return {"status": "idle"}
             raise
+        if claimed["status"] == "waiting":
+            return {"status": "waiting", "code": claimed.get("code"), "reason": claimed.get("reason")}
         job_id = claimed["job"]["job_id"]
         started = self.confirm_start(job_id, worker_id)
         if started["status"] == "waiting":
