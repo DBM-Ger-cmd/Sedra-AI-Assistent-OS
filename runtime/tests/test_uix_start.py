@@ -70,3 +70,56 @@ class UIXStartTests(unittest.TestCase):
   said=[]
   self.assertEqual(uix_start.preflight(rows+[{'ProcessId':'4711','CommandLine':'python -m guppi_runtime.uix_server'}],{1},say=said.append),3)
   self.assertTrue(any('Build_009' in t for t in said),said)
+
+ def test_normal_entrypoints_and_future_sedra_names_are_detected(self):
+  variants=[
+   r'"C:\SEDRA Dev\python.exe" -I -B -m guppi_runtime.uix_start --root x',
+   'python.exe -B -m guppi_runtime.uix_server --root x',
+   'python.exe -B -m sedra_runtime.uix_start --root x',
+   'python.exe -B -m sedra_runtime.uix_server --root x',
+  ]
+  rows=[row(100+i,1,'python.exe',cmd) for i,cmd in enumerate(variants)]
+  code,said,stopped=self.run_pre(rows,{999})
+  self.assertEqual(code,3)
+  self.assertEqual(stopped,[])
+  for pid in range(100,104): self.assertIn(str(pid),said[0])
+  code,_,stopped=self.run_pre(rows,{999},replace=True)
+  self.assertEqual(code,0)
+  self.assertEqual(stopped,[100,101,102,103])
+
+ def test_replace_only_targets_real_python_module_invocations(self):
+  rows=[row(10,1,'python.exe','python.exe worker.py --text "-m guppi_runtime.uix_start"'),
+        row(11,1,'powershell.exe','powershell.exe -m guppi_runtime.uix_start'),
+        row(12,1,'python.exe','python.exe -B -m guppi_runtime.uix_start_extra'),
+        row(13,1,'python.exe','python.exe -B -m guppi_runtime.uix_start --root x'),
+        row(13,1,'python.exe','python.exe -B -m guppi_runtime.uix_start --root x')]
+  code,_,stopped=self.run_pre(rows,{999},replace=True)
+  self.assertEqual(code,0)
+  self.assertEqual(stopped,[13])
+
+ def test_incomplete_process_rows_do_not_crash_or_trigger_replace(self):
+  rows=[None,{}, {'ProcessId':'not-a-pid','CommandLine':'python -m guppi_runtime.uix_start'},
+        {'ProcessId':21,'Name':'python.exe'},
+        row(25,1,'python.exe','python.exe -m guppi_runtime.uix_start --root x')]
+  code,_,stopped=self.run_pre(rows,{999},replace=True)
+  self.assertEqual(code,0)
+  self.assertEqual(stopped,[25])
+  self.assertIn('Ordner unbekannt',uix_start.describe_running(rows,21))
+
+ def test_incomplete_llama_inventory_does_not_kill_unknown_process(self):
+  info={'name':'llama-server.exe','path':'','cmd':'llama-server.exe --alias test'}
+  code,said,stopped=self.run_pre([{'ProcessId':42,'Name':'llama-server.exe'}],{999},leftovers={42:info})
+  self.assertEqual((code,stopped),(0,[]))
+  self.assertTrue(any('42' in msg for msg in said))
+
+ def test_broken_windows_inventory_is_reported_not_treated_as_empty(self):
+  from unittest.mock import patch
+  for text in ('', 'broken-json', '42', 'null'):
+   with self.subTest(text=text), patch.object(uix_start.gpu_preflight,'_powershell',return_value=text):
+    with self.assertRaises(uix_start.ProcessInventoryError):
+     uix_start.process_rows(platform='win32')
+  with patch.object(uix_start.gpu_preflight,'_powershell',return_value='[null,{}, {"ProcessId":17,"Name":"python.exe"}]'):
+   self.assertEqual(uix_start.process_rows(platform='win32'),[{}, {'ProcessId':17,'Name':'python.exe'}])
+  with patch.object(uix_start,'process_rows',side_effect=uix_start.ProcessInventoryError('failed')):
+   with patch.object(uix_start,'serve',side_effect=AssertionError('server must not start')):
+    self.assertEqual(uix_start.main(['--root','x','--architecture','y']),4)

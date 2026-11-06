@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -17,28 +18,78 @@ from .models import gpu_preflight
 from .uix_server import serve
 
 
+class ProcessInventoryError(RuntimeError):
+    """Windows process inventory could not be trusted for a safe second-start check."""
+
+
+# Match actual Python module invocations, not a module name embedded in
+# a script argument or in another program's command line.
+_UIX_MODULE_COMMAND = re.compile(
+    r'^\s*(?:"[^"\r\n]*?(?:[\\/])?pythonw?(?:\.exe)?"|'
+    r'(?:\S*[\\/])?pythonw?(?:\.exe)?)\s+'
+    r'(?:(?:-[IBEsSOuq])\s+)*'
+    r'-m\s+(?:guppi_runtime|sedra_runtime)\.(?:uix_start|uix_server)(?=\s|$)',
+    re.IGNORECASE,
+)
+
+
+def _pid(value):
+    """Return a valid positive PID, or None for incomplete inventory rows."""
+    try:
+        number = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return number if number > 0 else None
+
+
 def process_rows(run=subprocess.run, platform=sys.platform):
-    """The python/llama-server processes of this PC. Only Windows has the PowerShell inventory; on macOS and Linux the start does not
-    know other processes and therefore neither stops leftovers nor refuses a second UIX (2026-10-14: start for Mac users)."""
+    """Return Windows process rows, fail closed if PowerShell cannot inventory them.
+
+    Unix has no PowerShell inventory in this launcher; do not report it as a
+    successful duplicate check there.
+    """
     if platform != "win32":
         return []
-    text = gpu_preflight._powershell(
-        "Get-CimInstance Win32_Process | Where-Object { $_.Name -in 'llama-server.exe','python.exe','pythonw.exe' } | "
-        "Select-Object ProcessId,ParentProcessId,Name,ExecutablePath,CommandLine | ConvertTo-Json -Compress", run)
-    data = json.loads(text) if text else []
-    return data if isinstance(data, list) else [data]
+    try:
+        raw = gpu_preflight._powershell(
+            "Get-CimInstance Win32_Process | Where-Object { $_.Name -in 'llama-server.exe','python.exe','pythonw.exe' } | "
+            "Select-Object ProcessId,ParentProcessId,Name,ExecutablePath,CommandLine | ConvertTo-Json -Compress", run)
+        data = json.loads(raw) if raw else None
+    except (ValueError, TypeError, OSError, subprocess.SubprocessError) as exc:
+        raise ProcessInventoryError('Windows process inventory unavailable') from exc
+    if isinstance(data, dict):
+        data = [data]
+    if not isinstance(data, list):
+        raise ProcessInventoryError('Windows process inventory returned invalid JSON')
+    rows = [item for item in data if isinstance(item, dict)]
+    if not rows:
+        raise ProcessInventoryError('Windows process inventory returned no process rows')
+    return rows
 
 
 def other_uix_pids(rows, own_pids):
-    """Pids of running UIX servers except this process and its launcher (the venv python.exe starts the real interpreter as a child)."""
-    return [int(r['ProcessId']) for r in rows
-            if 'guppi_runtime.uix_server' in (r.get('CommandLine') or '') + ' ' and int(r['ProcessId']) not in own_pids]
+    """Identify only Python processes invoking known SEDRA/legacy UIX modules."""
+    excluded = {_pid(pid) for pid in own_pids}
+    matches, seen = [], set()
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        pid = _pid(row.get('ProcessId'))
+        if pid is None or pid in excluded or pid in seen:
+            continue
+        name = str(row.get('Name') or '').lower()
+        if name and name not in {'python', 'pythonw', 'python.exe', 'pythonw.exe'}:
+            continue
+        cmd = row.get('CommandLine')
+        if isinstance(cmd, str) and _UIX_MODULE_COMMAND.match(cmd):
+            matches.append(pid)
+            seen.add(pid)
+    return matches
 
 
 def describe_running(rows, pid):
-    """Woher ein laufender UIX kommt: der Ordner seines Interpreters – so sieht der Captain sofort, ob ein altes Paket läuft
-    (15.10.2026: SEDRA „startete in die alte Oberfläche“ – es war das Fenster eines noch laufenden früheren Builds)."""
-    row = next((r for r in rows if int(r.get('ProcessId') or 0) == pid), {})
+    """Show the package location of a detected UIX even with partial rows."""
+    row = next((r for r in rows if isinstance(r, dict) and _pid(r.get('ProcessId')) == pid), {})
     exe = str(row.get('ExecutablePath') or '').replace('/', '\\')
     folder = exe.split('\\runtime\\')[0] if '\\runtime\\' in exe else (exe or 'Ordner unbekannt')
     return f'PID {pid}, aus {folder}'
@@ -54,10 +105,15 @@ def preflight(rows, own_pids, *, replace=False, say=print, stop=gpu_preflight._s
     for pid in others:
         say(f'Beende laufende UIX (PID {pid}).')
         stop(pid, run)
-    alive = {int(r['ProcessId']) for r in rows} - set(others)
-    by_pid = {int(r['ProcessId']): r for r in rows}
+    by_pid = {_pid(r.get('ProcessId')): r for r in rows
+              if isinstance(r, dict) and _pid(r.get('ProcessId')) is not None}
+    alive = set(by_pid) - set(others)
     for pid, info in gpu_preflight.guppi_llama_servers(run).items():
-        parent = int(by_pid.get(pid, {}).get('ParentProcessId') or 0)
+        proc = by_pid.get(pid)
+        parent = _pid(proc.get('ParentProcessId')) if proc else None
+        if parent is None:
+            say(f'llama-server PID {pid}: Besitzverhaeltnis nicht verifiziert; unberuehrt gelassen.')
+            continue
         if parent in alive:
             say(f'llama-server PID {pid} gehört zu einem laufenden Prozess (PID {parent}); unberührt gelassen.')
             continue
@@ -137,7 +193,12 @@ def main(argv=None):
     shell = 'start' if args.uebersicht else args.shell
     if sys.platform != "win32":
         print("Hinweis: Prozessprüfung und Aufräumen alter Modell-Server gibt es nur unter Windows; hier startet die Oberfläche direkt.")
-    code = preflight(process_rows(), {os.getpid(), os.getppid()}, replace=args.replace)
+    try:
+        rows = process_rows()
+    except ProcessInventoryError as exc:
+        print(f'SEDRA-Start verweigert: Prozesspruefung fehlgeschlagen ({exc}).')
+        return 4
+    code = preflight(rows, {os.getpid(), os.getppid()}, replace=args.replace)
     if code: return code
     show_lease()
     return serve(Path(args.root), Path(args.architecture), 0, args.open, not args.open, shell=shell) or 0

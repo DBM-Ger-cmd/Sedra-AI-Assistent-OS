@@ -59,10 +59,28 @@ from .orchestra import service as orchestra_service
 from .orchestra.config import OrchestraConfig
 from .orchestra.store import open_db as orchestra_open_db
 
+_ARCHITECTURE_NAME = re.compile(r"^(GUPPI|SEDRA)_Architecture_v(\d+(?:\.\d+)*)(?:_.*)?$")
+
+
 def _architecture_version(path):
-    """(1, 20) for GUPPI_Architecture_v1.20_SELF_DEVELOPMENT. Numbers, not text: v1.9 is older than v1.20."""
-    match=re.match(r"GUPPI_Architecture_v(\d+(?:\.\d+)*)",Path(path).name)
-    return (tuple(int(x) for x in match.group(1).split(".")) if match else (),Path(path).name)
+    """Sort legacy and SEDRA architecture versions numerically; prefer SEDRA on ties."""
+    name = Path(path).name
+    match = _ARCHITECTURE_NAME.fullmatch(name)
+    if not match:
+        return ((), -1, name)
+    version = tuple(int(part) for part in match.group(2).split('.'))
+    return (version, 1 if match.group(1) == 'SEDRA' else 0, name)
+
+
+def _find_architecture_root(project_root: Path) -> Path:
+    """Discover an architecture directory without renaming or moving legacy data."""
+    location = Path(project_root).parent / 'architecture'
+    candidates = [candidate for prefix in ('GUPPI', 'SEDRA')
+                  for candidate in location.glob(f'{prefix}_Architecture_v*')
+                  if candidate.is_dir() and _architecture_version(candidate)[0]]
+    if not candidates:
+        raise FileNotFoundError('architecture root required')
+    return max(candidates, key=_architecture_version)
 
 class GuppiRuntime:
     ORCHESTRA_CONFIG="orchestra.yaml"      # unter config_root; die Paket-Vorgabe (Spec 0, D3.4)
@@ -70,9 +88,7 @@ class GuppiRuntime:
     def __init__(self,project_root: Path, architecture_root: Path|None=None):
         self.project_root=Path(project_root).resolve(); self.project_root.mkdir(parents=True,exist_ok=True)
         if architecture_root is None:
-            candidates=sorted((self.project_root.parent/"architecture").glob("GUPPI_Architecture_v*"),key=_architecture_version)
-            if not candidates: raise FileNotFoundError("architecture root required")
-            architecture_root=candidates[-1]
+            architecture_root=_find_architecture_root(self.project_root)
         self.architecture_root=Path(architecture_root).resolve()
         self.config_root=Path(__file__).resolve().parents[2]/"config"
         data=self.project_root/"runtime_data"; data.mkdir(parents=True,exist_ok=True)
@@ -536,3 +552,7 @@ class GuppiRuntime:
             "orchestra":orchestra_service.boot_entry(self.orchestra,self.orchestra_error),
             "wissen":self.wissen_status(),
         }
+
+
+# Public SEDRA name during the compatibility migration; legacy imports remain valid.
+SedraRuntime = GuppiRuntime

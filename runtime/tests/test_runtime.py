@@ -691,3 +691,36 @@ class RuntimeCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ArchitectureDiscoveryTests(unittest.TestCase):
+    def test_legacy_and_sedra_architectures_sort_by_numeric_version(self):
+        from guppi_runtime.runtime import _architecture_version
+        names=['GUPPI_Architecture_v1.20_LEGACY','SEDRA_Architecture_v1.9_OLD',
+               'SEDRA_Architecture_v1.21_NEW','GUPPI_Architecture_v1.21_LEGACY']
+        self.assertEqual(sorted(names,key=_architecture_version)[-1],'SEDRA_Architecture_v1.21_NEW')
+
+    def test_architecture_discovery_prefers_sedra_and_ignores_files(self):
+        from guppi_runtime.runtime import _find_architecture_root
+        with tempfile.TemporaryDirectory() as td:
+            workspace=Path(td)/'workspace'; project=workspace/'SEDRA'
+            base=workspace/'architecture'; base.mkdir(parents=True)
+            (base/'GUPPI_Architecture_v1.20_OLD').mkdir()
+            (base/'SEDRA_Architecture_v1.21_NEW').mkdir()
+            (base/'SEDRA_Architecture_v9.0_NOT_A_DIRECTORY').touch()
+            self.assertEqual(_find_architecture_root(project),base/'SEDRA_Architecture_v1.21_NEW')
+
+    def test_sedra_runtime_is_backward_compatible_alias(self):
+        from guppi_runtime.runtime import GuppiRuntime, SedraRuntime
+        self.assertIs(SedraRuntime, GuppiRuntime)
+
+    def test_real_architecture_can_boot_under_sedra_directory_name(self):
+        from guppi_runtime.runtime import SedraRuntime
+        with tempfile.TemporaryDirectory() as td:
+            workspace=Path(td)/'workspace'
+            archdir=workspace/'architecture'/'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
+            shutil.copytree(ARCH, archdir)
+            project=workspace/'SEDRA'
+            rt=SedraRuntime(project)
+            self.assertEqual(rt.architecture_root,archdir.resolve())
+            self.assertEqual(rt.boot()['state'],'READY')
