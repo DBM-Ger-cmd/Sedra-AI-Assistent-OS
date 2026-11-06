@@ -990,10 +990,10 @@ print("ok S4")
 '''
 
 STAGES = [
-    {"name": "S1", "task": TASK_S1, "hidden": HIDDEN_S1},
-    {"name": "S2", "task": TASK_S2, "hidden": HIDDEN_S2},
-    {"name": "S3", "task": TASK_S3, "hidden": HIDDEN_S3},
-    {"name": "S4", "task": TASK_S4, "hidden": HIDDEN_S4},
+    {"name": "S1", "task": TASK_S1, "hidden": {"hidden_factory_s1.py": HIDDEN_S1}},
+    {"name": "S2", "task": TASK_S2, "hidden": {"hidden_factory_s2.py": HIDDEN_S2}},
+    {"name": "S3", "task": TASK_S3, "hidden": {"hidden_factory_s3.py": HIDDEN_S3}},
+    {"name": "S4", "task": TASK_S4, "hidden": {"hidden_factory_s4.py": HIDDEN_S4}},
 ]
 TASK = TASK_S1
-HIDDEN = HIDDEN_S1
+HIDDEN = {"hidden_factory_s1.py": HIDDEN_S1}
