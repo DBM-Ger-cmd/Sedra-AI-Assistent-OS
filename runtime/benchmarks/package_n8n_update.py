@@ -54,7 +54,7 @@ def package(repo, output, git='git', baseline=BASELINE, previous_candidate=None)
         release = root / 'release'; release.mkdir()
         manifest = ua.manifest_erzeugen(root)
         (release / 'MANIFEST.sha256').write_text(manifest, encoding='utf-8', newline='\n')
-        meta = {'schema': 1, 'version': VERSION, 'status': 'UNPUBLISHED_CANDIDATE', 'app_version': '0.2.0',
+        meta = {'schema': 1, 'version': VERSION, 'status': 'UNPUBLISHED_CANDIDATE', 'app_version': '0.3.0',
                 'baseline_commit': base, 'baseline_files': baseline, 'engine_live_tested': False}
         if previous_candidate:
             with zipfile.ZipFile(previous_candidate) as old:
