@@ -22,6 +22,7 @@ ARTEN = {
     # Anträge (request:<art>, desk/decisions.REQUEST_TITLE)
     'request:switch': H, 'request:routing': H, 'request:boundaries': H,                 # Regeln
     'request:harness_katalog': H, 'request:harness_vorlage': H,                          # Regeln der Harness
+    'request:harness_prozess': H,                                                        # Prozess-Entwurf in den Bestand (nie ausführbar; wie eine Vorlage)
     'request:harness_code_stand': H,                                                     # Code gilt als gesehen: Läufe und Befehle ohne Karte (G4, 04.11.2026)
     'request:install': H, 'request:trust': H, 'request:update': H,                       # Code und Rechte in den Betrieb
     'request:model_add': H, 'request:skill': H,                                          # neues Modell; Skill = Text für das Modell
@@ -296,8 +297,8 @@ HARNESS_GESCHUETZT_OHNE_SCHREIBEN = {'token': 'nur GET token_stand'}
 # ---------------------------------------------------------------- Stellen, die `approve` rufen (G11-01)
 # Schlüssel 'datei:funktion:aufruf' (Aufruf wie im Quelltext). tuer: ob die Stelle hinter der Tür aus G9 liegt (heute keine).
 APPROVE_STELLEN = {
-    'cli.py:main:rt.guard.approve': {'guard': True, 'kanal': 'konsole', 'tuer': False,
-                                     'grund': '`guppi approve` – außerhalb des Browsers; braucht keine Tür'},
+    'cli.py:_execute_runtime_command:rt.guard.approve': {'guard': True, 'kanal': 'konsole', 'tuer': False,
+                                                         'grund': '`guppi approve` – außerhalb des Browsers; braucht keine Tür (seit F0 aus main ausgelagert)'},
     'agent_manager/cli.py:approve:self.guard.approve': {'guard': True, 'kanal': 'konsole', 'tuer': False,
                                                         'grund': 'Konsole des Agent Manager – außerhalb des Browsers'},
     'agent_manager/cli.py:main:manager.approve': {'guard': False, 'kanal': 'konsole', 'tuer': False,
