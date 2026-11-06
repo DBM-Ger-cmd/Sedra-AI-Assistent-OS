@@ -23,6 +23,15 @@ harness_laeufe:
       gpu: keine
       fortschritt: {art: text}
       zeitlimit_min: 90
+    - id: selbsttest
+      name: Selbsttest (Testbatterie, Ergebnis als JSON und Markdown)
+      argv: [python, benchmarks/selbsttest.py, '{gruppen}']
+      ordner: runtime
+      parameter:
+        gruppen: {muster: '[a-z][a-z0-9_]{0,40}', vorgabe: all, mehrere: true}
+      gpu: keine
+      fortschritt: {art: text}
+      zeitlimit_min: 90
     - id: workflow_js
       name: Tests der Prozess-Apps (JavaScript)
       argv: [node, --test, tests/n8n_model.test.cjs, tests/workflow_ui.test.cjs]

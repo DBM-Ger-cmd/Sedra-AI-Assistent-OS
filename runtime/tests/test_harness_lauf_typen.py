@@ -22,7 +22,7 @@ def doc(*typen):
 class DateiTests(unittest.TestCase):
     def test_die_mitgelieferte_datei_ist_gueltig(self):
         d = lauf.laden()
-        self.assertEqual(sorted(d['laeufe']), ['devvm_build', 'harness_abnahme', 'nachtlauf_3d', 'run_tests', 'spec_check', 'wissen_aufnahme', 'workflow_js'])
+        self.assertEqual(sorted(d['laeufe']), ['devvm_build', 'harness_abnahme', 'nachtlauf_3d', 'run_tests', 'selbsttest', 'spec_check', 'wissen_aufnahme', 'workflow_js'])
         b = d['laeufe']['devvm_build']
         self.assertEqual((b['gpu'], b['modell_weg'], b['braucht_modell'], b['modell']), ('exklusiv', True, True, 'coder.local_primary'))
         t = d['laeufe']['run_tests']
