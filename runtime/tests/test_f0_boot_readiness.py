@@ -10,7 +10,23 @@ from unittest.mock import patch
 
 from guppi_runtime.runtime import GuppiRuntime, SedraRuntime, _readiness_from_boot
 from guppi_runtime.wissen.speicher import WissenSpeicher
-from host_isolation import setUpModule, tearDownModule  # noqa: F401: no physical hosts in tests
+import os
+from host_isolation import setUpModule as _host_hoch, tearDownModule as _host_runter
+_WISSEN = {}
+
+
+def setUpModule():
+    _host_hoch()
+    _WISSEN['alt'] = os.environ.get('SEDRA_WISSEN_STANDARD')
+    os.environ['SEDRA_WISSEN_STANDARD'] = 'an'      # diese Tests prüfen das Schließen des Wissensspeichers; der Testlauf setzt sonst `aus`
+
+
+def tearDownModule():
+    if _WISSEN.get('alt') is None:
+        os.environ.pop('SEDRA_WISSEN_STANDARD', None)
+    else:
+        os.environ['SEDRA_WISSEN_STANDARD'] = _WISSEN['alt']
+    _host_runter()
 
 ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
 
