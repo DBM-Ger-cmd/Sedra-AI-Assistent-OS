@@ -2,7 +2,7 @@
 import copy
 from .common import FabrikFehler, verlange_aufzaehlung, verlange_feld, verlange_objekt
 
-STATUS = ("ACTIVE", "PAUSED")
+STATUS = ("ACTIVE",)
 
 
 def pruefe_project(daten):
