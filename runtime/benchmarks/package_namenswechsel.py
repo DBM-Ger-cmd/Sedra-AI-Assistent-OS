@@ -41,9 +41,12 @@ def bauen(output: Path, rev: str = 'HEAD') -> dict:
     with tempfile.TemporaryDirectory(prefix='sedra-namenswechsel-') as tmp:
         wurzel = Path(tmp) / 'SEDRA-Namenswechsel'
         wurzel.mkdir()
-        daten = git('archive', '--format=tar', commit, *programm, *zusatz)
-        with tarfile.open(fileobj=io.BytesIO(daten)) as tar:
-            tar.extractall(wurzel, filter='data')
+        gewollt = set(programm) | set(zusatz)
+        with tarfile.open(fileobj=io.BytesIO(git('archive', '--format=tar', commit))) as tar:
+            tar.extractall(wurzel, members=[m for m in tar.getmembers() if m.isfile() and m.name in gewollt], filter='data')
+        fehlt = sorted(n for n in gewollt if not (wurzel / n).is_file())
+        if fehlt:
+            raise SystemExit('Dateien fehlen im Commit: ' + ', '.join(fehlt[:5]))
         manifest = ''.join(f'{hashlib.sha256((wurzel / n).read_bytes()).hexdigest()}  {n}\n' for n in sorted(programm))
         (wurzel / 'release').mkdir(exist_ok=True)
         (wurzel / 'release/MANIFEST_NAMENSWECHSEL.sha256').write_text(manifest, encoding='utf-8', newline='\n')
