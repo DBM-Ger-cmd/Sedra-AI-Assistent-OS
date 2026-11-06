@@ -1,0 +1,89 @@
+"""SEDRA-F0-05B: NICHT AUSFUEHRBARER G1/G2-Race-Testentwurf (nur .draft).
+
+Basis: 2b13daa. Kein Produktivcode und keine Testfreigabe.
+Die folgenden Szenarien sind G3-Vertragsanforderungen, KEINE gruenen Tests.
+Nach G3 sind passende Fixtures/Fake-Clock/Slot-Backend/Barrieren zu bauen.
+"""
+
+# Testfall-Datensaetze fuer spaetere pytest/unittest-Umsetzung.
+# 'assertions' sind fachliche Sollbedingungen; hier wird nichts ausgefuehrt.
+SCENARIOS = [
+    dict(id="QB01", name="gate_is_per_supervisor_instance",
+         setup="Zwei Supervisor-Instanzen auf gemeinsamem Store; eigene IDs, verschiedene Worker",
+         race="quiesce(A) parallel claim(B)",
+         assertions=["A kann keinen Claim mehr committen", "B bleibt unabhaengig berechtigt", "kein Fremd-Lease geloest"]),
+    dict(id="QB02", name="same_worker_id_is_not_owner_identity",
+         setup="Zwei Supervisoren mit gleichlautendem worker_id",
+         race="A quiesced, B beansprucht eigenen Job",
+         assertions=["A darf B-Claim nicht _unclaimen", "ohne eindeutigen Nachweis -> pending statt Freigabe"]),
+    dict(id="QB03", name="fast_reject_after_quiesce",
+         setup="Gate A geschlossen; neuer Claim wartet noch vor Store-Lock",
+         race="claim() gegen quiesce",
+         assertions=["sofortige neutrale Nichtannahme", "QUEUED bleibt QUEUED", "attempts unveraendert"]),
+    dict(id="QB04", name="store_lock_held_before_gate_closed",
+         setup="Claim A haelt Store-Lock und wartet in scan; Quiesce A beginnt",
+         race="Gate schliesst vor finalem Claim-Guard",
+         assertions=["kein Claim-Commit nach Gate-Cut", "kein Deadlock", "queued job bleibt queued"]),
+    dict(id="QB05", name="commit_inside_store_and_gate_locks",
+         setup="Claim haelt Store+Gate und ist im mutate-Commit",
+         race="quiesce fordert Gate gleichzeitig an",
+         assertions=["Claim komplett vor Gate-Cut oder komplett abgelehnt", "kein Commit nach Cut"]),
+    dict(id="QB06", name="quiesce_during_slot_grant",
+         setup="_take_slot blockiert nach moeglichem Grant im separaten SQLite-Slot-Store",
+         race="Gate schliesst waehrend slot grant",
+         assertions=["kein Job-Claim", "eigener Slot zurueck in Wartestatus", "fremde Slot-Warteschlange bleibt"]),
+    dict(id="QB07", name="slot_requeue_failure_does_not_claim_or_drain",
+         setup="Slot gewaehlt; quiesce geschlossen; slot backend fail bei _slot_requeue",
+         race="Claim-Exit waehrend Cleanup",
+         assertions=["kein Claim-Commit", "PENDING/Audit", "keine stillschweigend verlorene Slot-Lease"]),
+    dict(id="QB08", name="unclaim_previously_claimed_not_started",
+         setup="Job vor Cut von A geclaimt, confirm_start noch nicht aufgerufen",
+         race="quiesce(A) laeuft",
+         assertions=["_unclaim nur bei bewiesener lokaler Ownership", "worker=None", "attempts unveraendert", "Job QUEUED"]),
+    dict(id="QB09", name="start_after_gate_closed_is_forbidden",
+         setup="claim vor Cut, confirm_start loest Resolver/Loader aus",
+         race="quiesce schliesst Gate vor _start_attempt",
+         assertions=["kein neuer Attempt-Commit", "kein neuer Handler-Start", "lokaler Claim zurueck/sonst PENDING"]),
+    dict(id="QB10", name="started_before_quiesce_stays_visible",
+         setup="_start_attempt persistiert RUNNING vor Gate-Cut",
+         race="quiesce wartet auf Gate-Release",
+         assertions=["Attempt zaehlt als gestartet", "F0-05A tracked laufenden Worker", "keine automatische Mutation-Wiederholung"]),
+    dict(id="QB11", name="claim_append_lock_timeout_neutral",
+         setup="append_lock wirft RuntimeError('append_lock_timeout')",
+         race="Worker.run_once und Supervisor.run_next",
+         assertions=["keine unhandled RuntimeError", "neutrale Nichtannahme mit Audit-Grund", "kein Job-Fehler oder Attempt-Verbrauch"]),
+    dict(id="QB12", name="other_runtimeerror_not_swallowed",
+         setup="claim wirft RuntimeError('unexpected_fault')",
+         race="Worker.run_once oder run_next",
+         assertions=["unerwarteter Fehler bleibt diagnostizierbar", "nicht als quiesced/idle verschleiert"]),
+    dict(id="QB13", name="retry_close_is_monotonic",
+         setup="runtime.close() mehrfach parallel; erster Worker bleibt haengen",
+         race="zweiter close bevor Drain endet",
+         assertions=["Gate bleibt zu", "SHUTDOWN_PENDING bis Drain bewiesen", "kein vorschnelles SQLite-Schliessen"]),
+    dict(id="QB14", name="gate_lock_timeout_fail_closed",
+         setup="Gate-Lock wird laenger als Deadline gehalten",
+         race="request_quiesce versucht Cut",
+         assertions=["stop_requested klebt", "SHUTDOWN_PENDING", "neue Annahmen werden fail-closed abgewiesen"]),
+    dict(id="QB15", name="audit_failure_cannot_reopen_gate",
+         setup="Audit append wirft Ausnahme nach Gate-Cut",
+         race="Quiesce gleichzeitig mit Claim",
+         assertions=["Gate bleibt geschlossen", "Fehler separat sichtbar", "DRAINED nicht allein wegen Auditfehler behauptet"]),
+    dict(id="QB16", name="foreign_lease_is_never_unclaimed",
+         setup="fremder Claim mit identischem worker_id, aber anderem Claim-Snapshot",
+         race="lokale Quiesce-Bereinigung",
+         assertions=["fremder Job/Slot/Lease unveraendert", "wenn Ownership unklar -> PENDING"]),
+    dict(id="QB17", name="unknown_mutation_not_replayed",
+         setup="laufender mutierender Attempt mit unbekanntem Ergebnis",
+         race="Shutdown / Restart",
+         assertions=["kein automatisches Replay", "kein SUCCESS/CANCELLED behauptet", "bestehendes Recovery-Gate bleibt"]),
+    dict(id="QB18", name="worker_loop_contract",
+         setup="run_forever und Orchestra WorkerPool._loop mit no-claim/quiesced",
+         race="Gate-Schluss waehrend Worker-Poll",
+         assertions=["kein Worker-Crash auf erwarteter Nichtannahme", "kein Fehler als idle ohne Audit maskiert"]),
+]
+
+# Umsetzungsnotizen fuer G3 (noch kein Testcode):
+# - Deterministische threading.Barrier/Event/Clock-Fixtures, Timeouts begrenzt.
+# - Fall QB04-QB06 unter Linux UND nativen Windows-Locks/Multiprocessing pruefen.
+# - Separate Slot-Backend-Failure-Injektion; Snapshot job.rev/attempts/worker/slots.
+# - Ohne G3-Freigabe keine .draft-Datei in .py umbenennen oder starten.
