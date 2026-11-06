@@ -231,6 +231,11 @@ class FilesAndAllowlist(unittest.TestCase):
             for route in man["api"]:
                 path = route.split(" ", 1)[1].rstrip("/*")
                 with self.subTest(tid + " " + route):
+                    if path.startswith('/api/harness/'):      # die Wege der Harness stehen als Muster in harness/api.py (WEG), nicht als Zeichenkette im Server
+                        from guppi_runtime.harness import api as harness_api
+                        wort = path.split('/')[3]
+                        self.assertIn(f"({wort})", Path(harness_api.__file__).read_text(encoding="utf-8"), f"{tid} lists {route}, but the harness API has no such route")
+                        continue
                     self.assertIn(f"'{path}'", source, f"{tid} lists {route}, but the server has no such route")
 
 
