@@ -22,6 +22,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 MANIFEST = "sedra_engine.json"
+# Manifest-Name vor dem Namenswechsel GUPPI -> SEDRA. Installationen von davor tragen ihn noch; er wird gelesen, nie neu geschrieben.
+LEGACY_MANIFESTS = ("guppi_engine.json",)
 BUILD_RE = re.compile(r"b\d{3,6}")
 SHA_RE = re.compile(r"[0-9a-f]{64}")
 DEFAULT_ROOT = Path(__file__).resolve().parents[4] / "engines"     # <SEDRA_Runtime>/engines, next to runtime/ and workspace/
@@ -98,6 +100,14 @@ def provision(download_dir, *, build, assets, root=DEFAULT_ROOT, now=None):
     return manifest
 
 
+def _manifest_path(target):
+    """Das Manifest des Ordners: sedra_engine.json, sonst das alte Namensmuster (nur lesen)."""
+    for name in (MANIFEST,) + LEGACY_MANIFESTS:
+        if (target / name).is_file():
+            return target / name
+    return target / MANIFEST
+
+
 def verify_engine(root, build, *, full=False):
     """(ok, reason). Quick check: manifest + build + llama-server.exe hash. full=True re-hashes every recorded file."""
     try:
@@ -105,7 +115,7 @@ def verify_engine(root, build, *, full=False):
     except EngineError as exc:
         return False, str(exc)
     try:
-        manifest = json.loads((target / MANIFEST).read_text(encoding="utf-8"))
+        manifest = json.loads(_manifest_path(target).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return False, "engine_not_installed"
     except (OSError, ValueError):
@@ -113,7 +123,7 @@ def verify_engine(root, build, *, full=False):
     if manifest.get("build") != build or not isinstance(manifest.get("files"), dict):
         return False, "engine_manifest_mismatch"
     # A DLL planted next to llama-server.exe is loaded by it: a file that the manifest does not list fails the quick check too (cheap, the folder is flat).
-    listed = {name.lower() for name in manifest["files"]} | {MANIFEST.lower()}
+    listed = {name.lower() for name in manifest["files"]} | {MANIFEST.lower()} | {n.lower() for n in LEGACY_MANIFESTS}
     for path in target.rglob("*"):
         if path.is_file() and path.relative_to(target).as_posix().lower() not in listed:
             return False, f"engine_unlisted_file:{path.relative_to(target).as_posix()}"

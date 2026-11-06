@@ -5,7 +5,7 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from sedra_runtime.models.engine_provision import EngineError, MANIFEST, engine_dir, provision, verify_engine
+from sedra_runtime.models.engine_provision import EngineError, LEGACY_MANIFESTS, MANIFEST, engine_dir, provision, verify_engine
 from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, discover_backend
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
@@ -33,6 +33,19 @@ class EngineProvision(unittest.TestCase):
         self.assertEqual(verify_engine(self.root, "b1234"), (True, "ok"))
         self.assertEqual(verify_engine(self.root, "b1234", full=True), (True, "ok"))
         self.assertFalse(any(p.name.startswith(".staging") for p in target.parent.iterdir()))
+
+    def test_altes_manifest_guppi_wird_gelesen(self):
+        provision(self.dl, build="b1234", assets=self.assets, root=self.root)
+        target = engine_dir(self.root, "b1234")
+        (target / MANIFEST).rename(target / LEGACY_MANIFESTS[0])
+        self.assertEqual(verify_engine(self.root, "b1234"), (True, "ok"))
+        self.assertEqual(verify_engine(self.root, "b1234", full=True), (True, "ok"))
+
+    def test_fehlt_jedes_manifest_ist_der_ordner_nicht_installiert(self):
+        provision(self.dl, build="b1234", assets=self.assets, root=self.root)
+        target = engine_dir(self.root, "b1234")
+        (target / MANIFEST).unlink()
+        self.assertEqual(verify_engine(self.root, "b1234"), (False, "engine_not_installed"))
 
     def test_wrong_hash_missing_zip_and_reinstall_are_refused(self):
         bad = dict(self.assets, **{"cudart.zip": "0" * 64})
