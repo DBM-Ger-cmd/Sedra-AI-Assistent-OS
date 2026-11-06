@@ -67,7 +67,7 @@ enthalten. Kein GNPKG-Bestand ist enthalten. Prüfsummen sind keine Signatur.
 1. ZIP in einen neuen, getrennten Ordner entpacken. SEDRA vor Übernahme beenden.
 2. Mit dem Python der vorhandenen SEDRA-Umgebung INSTALL_UPDATE.py aufrufen:
 
-   `python INSTALL_UPDATE.py --root "E:\Sedra Umgebung\A1 Sedra Main Branch Entwicklungs umgebung"`
+   `python INSTALL_UPDATE.py --root "<sedra>"`
 
    Das ist nur eine Vorschau. Sie nennt geänderte Dateien, Modulrechte und einen
    Bestätigungsschlüssel. Ohne --apply wird nichts in der Installation geändert.
