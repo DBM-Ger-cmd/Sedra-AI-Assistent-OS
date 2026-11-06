@@ -40,7 +40,7 @@ SEDRA vorher beenden. Danach laufen weitere Updates wieder über den eingebauten
 ## Grenzen
 
 - Gespeicherte Werte in laufenden Datenbanken (Registry-Einträge der Agenten-Vorlagen mit den alten Kennungen) werden nicht umgeschrieben. Neue Vorlagen werden unter den neuen Kennungen angelegt; Altzuweisungen bleiben als Verlauf lesbar.
-- Geprüft sind: der volle Testlauf der schnellen Gruppen (4437 Tests, 0 rot), der Start des Servers mit den neuen Namen und mit einer Kopie der echten Registry, und der Umstieg Ende zu Ende an einer wegwerfbaren Kopie einer Installation mit den alten Namen (Vorschau, Anwenden, Serverstart, Rollback: alle 2502 Dateien des alten Stands unverändert zurück). Ein Lauf mit Modell und die Browser-Bahn stehen aus.
+- Geprüft sind: der volle Testlauf der schnellen Gruppen (4447 Tests, 0 rot), der Start des Servers mit den neuen Namen und mit einer Kopie der echten Registry, und der Umstieg Ende zu Ende an einer wegwerfbaren Kopie einer Installation mit den alten Namen (Vorschau, Anwenden, Serverstart, Rollback: alle 2502 Dateien des alten Stands unverändert zurück). Ein Lauf mit Modell und die Browser-Bahn stehen aus.
 
 ## Prüfung
 
