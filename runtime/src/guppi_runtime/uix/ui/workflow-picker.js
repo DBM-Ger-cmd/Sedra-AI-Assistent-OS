@@ -34,7 +34,8 @@
           const b = document.createElement('button'); b.type = 'button'; b.className = 't-wf-picker-item'; b.setAttribute('role', 'option');
           const t = document.createElement('span'); t.textContent = item.label; b.append(t);
           if(item.hint){const s = document.createElement('small'); s.textContent = item.hint; b.append(s);}
-          b.onclick = ()=>pick(item); rows.push({b, item}); list.append(b);
+          if(item.disabled){b.setAttribute('aria-disabled', 'true');b.classList.add('disabled');b.onclick = ()=>{};}else b.onclick = ()=>pick(item);
+          rows.push({b, item}); list.append(b);
         });
       });
       active = Math.min(active, rows.length - 1); mark();
@@ -44,7 +45,7 @@
       if(event.key === 'Escape'){event.stopPropagation();shut();}
       else if(event.key === 'ArrowDown' && rows.length){event.preventDefault();active = (active + 1) % rows.length;mark();rows[active].b.scrollIntoView({block: 'nearest'});}
       else if(event.key === 'ArrowUp' && rows.length){event.preventDefault();active = (active - 1 + rows.length) % rows.length;mark();rows[active].b.scrollIntoView({block: 'nearest'});}
-      else if(event.key === 'Enter' && event.target === input && rows[active]){event.preventDefault();pick(rows[active].item);}
+      else if(event.key === 'Enter' && event.target === input && rows[active] && !rows[active].item.disabled){event.preventDefault();pick(rows[active].item);}
     });
     render(); input.focus();
     return {el: box, close: shut};

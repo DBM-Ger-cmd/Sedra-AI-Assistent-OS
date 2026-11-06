@@ -186,3 +186,30 @@
 .t-workflow .t-wf-edge-dot{fill:var(--accent);fill-opacity:0;cursor:pointer}
 .t-workflow .t-wf-edge-hitbox:hover .t-wf-edge-dot,.t-workflow .t-wf-edge-hitbox:focus .t-wf-edge-dot{fill-opacity:.35}
 .t-workflow .t-wf-edge-hitbox:focus{outline:none}
+
+/* Parameteransicht (Eingabe | Parameter | Ausgabe) und Marke des letzten Laufs */
+.t-workflow .t-wf-ndv{position:absolute;inset:8px;z-index:9;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.35);overflow:hidden}
+.t-workflow .t-ndv-head{display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:2px solid var(--accent)}
+.t-workflow .t-ndv-head input{flex:1;font-weight:600}
+.t-workflow .t-ndv-cols{display:grid;grid-template-columns:minmax(180px,1fr) minmax(280px,1.6fr) minmax(180px,1fr);flex:1;min-height:0}
+.t-workflow .t-ndv-col{padding:12px;overflow:auto;min-width:0;border-right:1px solid var(--line)}
+.t-workflow .t-ndv-col:last-child{border-right:0}
+.t-workflow .t-ndv-col h3{margin:0 0 6px}.t-workflow .t-ndv-col h4{margin:10px 0 4px;color:var(--muted)}
+.t-workflow .t-ndv-mid{background:var(--panel-2)}
+.t-workflow .t-ndv-fields{display:flex;flex-direction:column;gap:4px}
+.t-workflow .t-ndv-fields button{display:flex;gap:6px;text-align:left;font-size:12px;overflow:hidden}
+.t-workflow .t-ndv-fields span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-workflow .t-ndv-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.t-workflow .t-ndv-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.t-workflow .t-ndv-row input,.t-workflow .t-ndv-row select{min-width:90px;flex:1}
+.t-workflow .t-ndv-value{display:flex;gap:6px;align-items:center;flex:2 1 160px}
+.t-workflow .t-ndv-expr{display:flex;gap:4px;align-items:center;font-size:12px;color:var(--muted);white-space:nowrap}
+.t-workflow .t-ndv-field{display:flex;flex-direction:column;gap:4px;margin-top:8px;font-size:12px;color:var(--muted)}
+.t-workflow .t-ndv-out{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px}
+.t-workflow .t-wf-runchip{position:absolute;left:12px;top:44px;z-index:4;font-size:12px;padding:4px 10px;border-radius:12px;background:var(--panel);box-shadow:var(--wf-shadow)}
+.t-workflow .t-wf-runchip.ok{border-color:var(--ok);color:var(--ok)}
+.t-workflow .t-wf-runchip.bad{border-color:var(--bad);color:var(--bad)}
+.t-workflow .t-wf-runchip.wait{border-color:var(--warn);color:var(--warn)}
+.t-wf-picker-item.disabled{opacity:.55;cursor:not-allowed}
+.t-wf-picker-item.disabled:hover{background:transparent;border-color:transparent}
+@media (max-width:1100px){.t-workflow .t-ndv-cols{grid-template-columns:1fr}.t-workflow .t-ndv-col{border-right:0;border-bottom:1px solid var(--line)}}

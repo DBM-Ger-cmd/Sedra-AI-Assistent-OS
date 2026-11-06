@@ -83,3 +83,36 @@ test('Prozessangaben: Luecken werden je Schritt benannt, Start braucht keine Ein
   const full = Object.assign({}, task, {input: 'a', output: 'b', evidence: 'c', completion: 'd'}); P.set(doc.nodes[1], full);
   assert.equal(P.gaps(doc).missing, 0);
 });
+
+test('Parameteransicht: Vorschau rechnet Felder setzen und Bedingung wie das Ausfuehrungsprofil', () => {
+  require(path.join(ui, 'workflow-model.js'));
+  require(path.join(ui, 'workflow-ndv.js'));
+  const N = globalThis.sedraWorkflowNdv, M = globalThis.sedraWorkflowModel;
+  assert.equal(N.resolve('={{ $json.a.b }}', {a: {b: 5}}), 5);
+  assert.equal(N.resolve('={{ $json.__proto__.x }}', {}), undefined);
+  assert.equal(N.resolve('fest', {}), 'fest');
+  const doc = M.example();                      // Start -> Felder setzen -> Bedingung -> Treffer / Abweichung
+  const sim = N.simulate(doc, {text: 'egal'});
+  assert.deepEqual(sim.get('Felder setzen').outs[0], {text: 'Hallo aus SEDRA'});
+  assert.equal(sim.get('Treffer anzeigen').input.text, 'Hallo aus SEDRA');
+  assert.equal(sim.has('Abweichung anzeigen'), false, 'der Nein-Weg bekommt keinen Eintrag');
+  const set = doc.nodes[1]; set.parameters.assignments.assignments[0].value = 'anders';
+  const sim2 = N.simulate(doc, {});
+  assert.ok(sim2.has('Abweichung anzeigen') && !sim2.has('Treffer anzeigen'));
+  assert.equal(N.previewIf({conditions: {conditions: [{leftValue: 5, rightValue: 3, operator: {type: 'number', operation: 'gt'}}], combinator: 'and', options: {}}}, {}), true);
+  assert.equal(N.previewIf({conditions: {conditions: [{leftValue: 'ABC', rightValue: 'abc', operator: {type: 'string', operation: 'equals'}}], combinator: 'and', options: {caseSensitive: false}}}, {}), true);
+  assert.equal(N.previewSet({includeOtherFields: true, assignments: {assignments: [{name: 'n', value: '={{ $json.x }}', type: 'string'}]}}, {x: 1, y: 2}).y, 2);
+});
+
+test('Parameteransicht: Pruefung lehnt ab, was das Ausfuehrungsprofil ablehnt', () => {
+  require(path.join(ui, 'workflow-ndv.js'));
+  const N = globalThis.sedraWorkflowNdv;
+  const set = rows => ({assignments: {assignments: rows}});
+  assert.throws(() => N.check('set', set([])), /Mindestens ein Feld/);
+  assert.throws(() => N.check('set', set([{name: '1x', value: 'a', type: 'string'}])), /ungültig/);
+  assert.throws(() => N.check('set', set([{name: 'a', value: '={{ process.env.X }}', type: 'string'}])), /nicht erlaubt/);
+  assert.throws(() => N.check('set', set([{name: 'a', value: 'text', type: 'number'}])), /Zahl/);
+  assert.doesNotThrow(() => N.check('set', set([{name: 'a', value: '={{ $json.b }}', type: 'number'}])));
+  assert.throws(() => N.check('if', {conditions: {conditions: []}}), /Mindestens eine Bedingung/);
+  assert.throws(() => N.check('if', {conditions: {conditions: [{operator: {type: 'string', operation: 'gt'}}]}}), /Operator/);
+});

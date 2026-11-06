@@ -224,6 +224,46 @@ class ProcessBrowser(unittest.TestCase):
             self.assertEqual(app.locator('path.t-wf-tile').count(), 1)
         self.session(run)
 
+    def test_parameteransicht_katalog_und_laufmarke(self):
+        def run(page, url):
+            app = self.open(page, 'workflow')
+            # Doppelklick öffnet die Parameteransicht: Eingabe | Parameter | Ausgabe
+            app.locator('.t-wf-node', has_text='Felder setzen').first.dblclick()
+            ndv = app.locator('.t-wf-ndv'); ndv.wait_for()
+            self.assertEqual([h.inner_text() for h in ndv.locator('h3').all()], ['Eingabe', 'Parameter', 'Ausgabe'])
+            self.assertIn('Hallo aus SEDRA', ndv.get_by_label('Ergebnis', exact=True).inner_text())      # Vorschau, lokal berechnet
+            # Wert ändern: die Vorschau folgt sofort, gespeichert wird erst mit „Übernehmen“
+            ndv.get_by_label('Wert', exact=True).fill('Neuer Text')
+            self.assertIn('Neuer Text', ndv.get_by_label('Ergebnis', exact=True).inner_text())
+            ndv.get_by_label('Feldname').fill('1ungueltig')
+            ndv.get_by_role('button', name='Übernehmen').click()
+            app.get_by_role('alert').filter(has_text='ungültig').wait_for()
+            ndv.get_by_label('Feldname').fill('text')
+            ndv.get_by_role('button', name='Übernehmen').click()
+            ndv.wait_for(state='detached')
+            app.get_by_role('button', name='Eigenschaften', exact=True).click()
+            app.get_by_label('Knoten auswählen', exact=True).select_option(label='Felder setzen')
+            self.assertIn('Neuer Text', app.get_by_label('Knotenparameter als JSON', exact=True).input_value())
+            app.get_by_role('button', name='Eigenschaften schließen').click()
+            # Bedingung: Operator wechseln, Ja-/Nein-Vorschau
+            app.locator('.t-wf-node', has_text='Bedingung prüfen').first.dblclick()
+            ndv = app.locator('.t-wf-ndv'); ndv.wait_for()
+            self.assertIn('kein Eintrag', ndv.get_by_label('Ja-Weg', exact=True).inner_text())       # Text wurde geändert: der Ja-Weg bleibt leer
+            self.assertIn('Neuer Text', ndv.get_by_label('Nein-Weg', exact=True).inner_text())
+            ndv.get_by_role('button', name='Parameteransicht schließen').click()
+            # Katalog: gesperrte n8n-Knoten sind sichtbar und erklärt, aber nicht wählbar
+            n0 = app.locator('.t-wf-node').count()
+            app.get_by_role('button', name='Knoten hinzufügen', exact=True).click()
+            app.get_by_label('Knoten suchen').fill('webhook')
+            gesperrt = app.get_by_role('option', name='Webhook')
+            self.assertEqual(gesperrt.get_attribute('aria-disabled'), 'true')
+            gesperrt.click(force=True); app.get_by_label('Knoten suchen').press('Enter')
+            self.assertEqual(app.locator('.t-wf-node').count(), n0)
+            app.get_by_label('Knoten suchen').press('Escape')
+            # Laufmarke: ohne gespeicherten Lauf keine Marke
+            self.assertFalse(app.locator('.t-wf-runchip').is_visible())
+        self.session(run)
+
     def test_course_symbols_and_pattern_c(self):
         def run(page, url):
             from guppi_runtime.workflows.process import PREFIX

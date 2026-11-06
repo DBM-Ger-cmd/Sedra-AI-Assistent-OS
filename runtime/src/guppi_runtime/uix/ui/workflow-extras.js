@@ -100,8 +100,40 @@
       this.change(()=>{reihe.forEach(n=>{const d = tiefe.get(n.id), z = zeilen.get(d) || 0;zeilen.set(d, z + 1);n.position = [d * sz[0], z * sz[1]];});});
       this.notice('Knoten geordnet. „Zurück“ stellt die alte Anordnung wieder her.');
     },
+    // Parameteransicht (Eingabe, Parameter, Ausgabe) für die n8n-Darstellung; übernimmt Name und Parameter erst mit „Übernehmen“ als eine Änderung
+    openNdv(id){
+      const node = this.state.doc.nodes.find(n=>n.id === id), N = root.sedraWorkflowNdv;if(!node || !N)return;
+      if(this.ndv)this.ndv.close();
+      this.state.selected = id;this.inspectorOpen = false;this.inspect();if(this.canvas)this.canvas.draw();
+      this.sampleData = this.sampleData || {text: 'Hallo aus SEDRA'};
+      this.ndv = N.open({host: this.stage, doc: this.state.doc, node, sample: this.sampleData, setSample: v=>{this.sampleData = v;}, onClose: ()=>{this.ndv = null;},
+        apply: (name, params)=>{this.change(()=>{if(name !== node.name)M().rename(this.state.doc, node.name, name);node.parameters = params;});this.notice('Parameter von „' + name + '“ übernommen.');}});
+    },
+    // Katalog wie im Knotenkatalog von n8n: Kategorien in fester Reihenfolge, nicht unterstützte Knoten sichtbar, aber gesperrt (im Austausch erhalten)
+    catalogItems(palette){
+      const CAT = {manualTrigger: 'Auslöser', set: 'Daten', if: 'Ablauf', noOp: 'Ablauf', stickyNote: 'Notiz'};
+      const HINT = {manualTrigger: 'Startet den Ablauf von Hand', set: 'Felder setzen oder ändern', if: 'Verzweigt nach einer Bedingung', noOp: 'Reicht die Daten unverändert weiter', stickyNote: 'Notiz ohne Wirkung'};
+      const ORDER = ['Auslöser', 'Daten', 'Ablauf', 'Aktionen', 'KI', 'Notiz', 'Mensch'];
+      const items = palette.map(entry=>({label: entry.label, category: entry.make ? 'Mensch' : CAT[entry.kind] || 'Weitere', hint: entry.make ? 'Menschliche Entscheidung, keine Automatik' : HINT[entry.kind], keywords: entry.kind || '', entry}));
+      const LOCKED = [['Auslöser', 'Schedule Trigger', 'Zeitplan'], ['Auslöser', 'Webhook', 'HTTP-Aufruf'], ['Auslöser', 'Form Trigger', 'Formular'], ['Daten', 'Code', 'Eigener Code'], ['Daten', 'Filter', 'Einträge filtern'],
+        ['Ablauf', 'Switch', 'Mehrere Wege'], ['Ablauf', 'Merge', 'Wege zusammenführen'], ['Ablauf', 'Wait', 'Warten'], ['Aktionen', 'HTTP Request', 'Webanfrage'], ['Aktionen', 'Google Sheets', 'Tabellen'], ['KI', 'AI Agent', 'KI-Agent']];
+      LOCKED.forEach(([category, label, kw])=>items.push({label, category, hint: 'Nur im Austausch erhalten, hier nicht ausführbar', keywords: kw, disabled: true}));
+      return items.map((it, i)=>[ORDER.indexOf(it.category) < 0 ? 99 : ORDER.indexOf(it.category), i, it]).sort((a, b)=>a[0] - b[0] || a[1] - b[1]).map(x=>x[2]);
+    },
+    // Marke des letzten Laufs dieses Prozesses. Die Engine liefert nur das Endergebnis, darum gibt es eine Marke für den ganzen Lauf, keine je Knoten.
+    updateRunChip(runs){
+      if(!this.runChip)return;
+      const mine = (runs || this.lastRuns || []).filter(r=>r.workflow_id && r.workflow_id === this.wid), last = mine[mine.length - 1];
+      this.lastRuns = runs || this.lastRuns;
+      this.runChip.hidden = !last;
+      if(!last)return;
+      const TEXT = {COMPLETE: 'abgeschlossen', CAPTAIN_REVIEW: 'wartet auf Freigabe', READY: 'bereit', EXECUTE: 'läuft', FAILED: 'fehlgeschlagen', PAUSED: 'pausiert', CLOSED: 'beendet'};
+      this.runChip.textContent = 'Letzter Lauf: ' + (TEXT[last.state] || String(last.state).toLowerCase());
+      this.runChip.className = 't-wf-runchip ' + (last.state === 'COMPLETE' ? 'ok' : last.state === 'FAILED' ? 'bad' : 'wait');
+    },
     nodeAction(what, id){
       const node = this.state.doc.nodes.find(n=>n.id === id);if(!node)return;
+      if(what === 'open' && options.ndv && !P().get(node)){this.openNdv(id);return;}
       if(what === 'open'){this.state.selected = id;this.inspectorOpen = true;this.inspect();return;}
       if(what === 'delete'){this.change(()=>{M().remove(this.state.doc, node.name);this.state.selected = null;});this.notice('Knoten „' + node.name + '“ entfernt. „Zurück“ stellt ihn wieder her.');return;}
       if(what === 'duplicate'){

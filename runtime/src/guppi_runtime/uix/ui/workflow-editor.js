@@ -112,6 +112,7 @@
       this.addButton = button('+', ()=>this.openPicker());this.addButton.setAttribute('aria-label', 'Knoten hinzufügen');this.addButton.title = 'Knoten hinzufügen';
       this.propsButton = button('☰', ()=>{this.inspectorOpen = !this.inspectorOpen;this.inspect();});this.propsButton.setAttribute('aria-label', 'Eigenschaften');this.propsButton.title = 'Eigenschaften';
       this.guide = el('div', 't-wf-guide');this.guide.hidden = true;this.guide.setAttribute('role', 'region');this.guide.setAttribute('aria-label', 'Geführtes Einrichten');
+      this.runChip = button('', ()=>this.setTab('runs'));this.runChip.hidden = true;this.runChip.title = 'Zu den Ausführungen';this.stage.append(this.runChip);
       this.fab.append(this.addButton, this.propsButton);this.stage.append(this.surface, this.fab, this.inspector, this.guide);
       this.stage.addEventListener('keydown', event=>{if(event.key === 'Escape' && this.inspectorOpen && !event.defaultPrevented){this.inspectorOpen = false;this.inspect();}});
       this.report = el('pre', 't-wf-report');this.report.setAttribute('aria-label', 'Kompatibilitätsbericht');
@@ -186,10 +187,8 @@
     },
     openPicker(after, insert){
       if(this.view !== 'canvas')return;
-      const CAT = {manualTrigger: 'Auslöser', set: 'Daten', if: 'Ablauf', noOp: 'Ablauf', stickyNote: 'Notiz'};
-      const HINT = {manualTrigger: 'Startet den Ablauf von Hand', set: 'Felder setzen oder ändern', if: 'Verzweigt nach einer Bedingung', noOp: 'Reicht die Daten unverändert weiter', stickyNote: 'Notiz ohne Wirkung'};
       const palette = options.palette || M().types.map(([kind, label])=>({kind, label}));
-      const items = palette.map(entry=>({label: entry.label, category: entry.make ? 'Mensch' : CAT[entry.kind] || 'Weitere', hint: entry.make ? 'Menschliche Entscheidung, keine Automatik' : HINT[entry.kind], keywords: entry.kind || '', entry}));
+      const items = this.catalogItems(palette);
       root.sedraWorkflowPicker.open({host: this.stage, items, title: 'Knoten hinzufügen', onPick: choice=>{
         const entry = choice.entry;
         this.change(()=>{const n = entry.make ? entry.make(this.state.doc.nodes) : M().node(entry.kind, this.state.doc.nodes);this.state.doc.nodes.push(n);this.state.selected = n.id;this.view = 'canvas';
@@ -240,7 +239,7 @@
       const visual = core ? {doc: P().coreProjection(this.state.doc), selected: this.state.selected} : this.state;
       this.canvas = root.sedraWorkflowCanvas.mount(this.surface, visual, {
         style: this.style, readOnly: core,
-        select: id=>{this.state.selected = id;this.inspect();}, open: id=>{this.state.selected = id;this.inspectorOpen = true;this.inspect();}, addAfter: (name, branch)=>this.openPicker({name, branch}), edgeAdd: (from, branch, to)=>this.openPicker(null, {from, branch, to}), edgeDelete: (a, k, i, b)=>this.edgeDelete(a, k, i, b), tidy: ()=>this.tidy(), act: (what, id)=>this.nodeAction(what, id), drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
+        select: id=>{this.state.selected = id;this.inspect();}, open: id=>this.nodeAction('open', id), addAfter: (name, branch)=>this.openPicker({name, branch}), edgeAdd: (from, branch, to)=>this.openPicker(null, {from, branch, to}), edgeDelete: (a, k, i, b)=>this.edgeDelete(a, k, i, b), tidy: ()=>this.tidy(), act: (what, id)=>this.nodeAction(what, id), drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
         change: ()=>{this.version.textContent = 'Ungespeicherte Änderungen';this.inspect();},
         connect: (a, b, branch)=>{try{this.change(()=>M().connect(this.state.doc, a, b, branch));}catch(e){this.notice(e.message, true);}}
       });this.inspect();
@@ -301,7 +300,7 @@
       if(this.dead)return;this.records = data.items || [];this.picker.replaceChildren(new Option('Gespeicherten Workflow wählen', ''));
       this.records.forEach(r=>this.picker.append(new Option(r.title + ' · r' + r.revision, r.id)));this.picker.value = this.wid || '';
       this.engine.textContent = data.engine.enabled ? 'Lokale n8n-Verbindung konfiguriert: ' + data.engine.base_url : 'n8n-Ausführung aus. Import, Editor, Versionen und Export sind verfügbar.';
-      this.renderRuns(data.runs || []);this.renderCards();
+      this.renderRuns(data.runs || []);this.updateRunChip(data.runs || []);this.renderCards();
       await this.loadHistory();
     },
     async load(id, initial){
