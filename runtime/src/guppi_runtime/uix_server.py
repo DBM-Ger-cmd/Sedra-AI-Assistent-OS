@@ -3620,9 +3620,16 @@ class UIXHub:
             if w is not None:
                 try: w.close()
                 except Exception: pass
-        if getattr(self.runtime, 'wissen', None) is not None:    # Spec 7: Takt und eigener Embedding-Server enden mit der Oberfläche
-            try: self.runtime.wissen.schliessen()
-            except Exception: pass
+        # The runtime owns Orchestra/Wissen resources; it closes both once.
+        try:
+            self.runtime.close()
+        except Exception as exc:
+            # Shutdown must continue, but the failure must be visible in the audit.
+            try:
+                self.runtime.audit.append('RUNTIME_SHUTDOWN_ERROR', component='uix',
+                                          payload={'error': type(exc).__name__, 'reason': str(exc)[:120]})
+            except Exception:
+                pass
 
     def dev_environment(self):
         rt = self.runtime

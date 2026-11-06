@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
+import threading
 import os
 import re
 import yaml
@@ -86,6 +87,8 @@ class GuppiRuntime:
     ORCHESTRA_CONFIG="orchestra.yaml"      # unter config_root; die Paket-Vorgabe (Spec 0, D3.4)
 
     def __init__(self,project_root: Path, architecture_root: Path|None=None):
+        self._close_lock = threading.Lock()
+        self._closed_services = set()
         self.project_root=Path(project_root).resolve(); self.project_root.mkdir(parents=True,exist_ok=True)
         if architecture_root is None:
             architecture_root=_find_architecture_root(self.project_root)
@@ -511,6 +514,30 @@ class GuppiRuntime:
             host_root=(report.get('sandbox_plan') or {}).get('host_root')
             if isinstance(host_root,str) and host_root:reports.append({'mission_id':mid,'host_root':host_root})
         return str(self.project_root.resolve()),reports
+
+    def close(self):
+        """Close runtime-owned services without changing jobs or external model ownership.
+
+        UIX stops its poller and GPU-owned model server before calling this.
+        Each successfully closed service is skipped on subsequent calls. If one
+        fails, other services still close and the failing one may be retried.
+        """
+        with self._close_lock:
+            failures = []
+            for name, method in (("orchestra", "close"), ("wissen", "schliessen")):
+                if name in self._closed_services:
+                    continue
+                service = getattr(self, name, None)
+                if service is None:
+                    continue
+                try:
+                    getattr(service, method)()
+                except Exception as exc:
+                    failures.append((name, exc))
+                else:
+                    self._closed_services.add(name)
+            if failures:
+                raise RuntimeError("runtime_close_failed:" + ",".join(name for name, _ in failures)) from failures[0][1]
 
     def boot(self):
         self.audit.append("BOOT_STARTED")

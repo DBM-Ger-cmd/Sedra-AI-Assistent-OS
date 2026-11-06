@@ -37,7 +37,10 @@ class RuntimeCase(unittest.TestCase):
         models=self.root/'portable'/'models'; models.mkdir(parents=True)
         self.rt.model_runtime.portable_root=models.parent.resolve(); self.rt.model_runtime.catalog.allowed_roots=[models.resolve()]
     def tearDown(self):
-        self.tmp.cleanup()
+        try:
+            self.rt.close()
+        finally:
+            self.tmp.cleanup()
 
     def test_boot_ready(self):
         report = self.rt.boot()
@@ -54,6 +57,7 @@ class RuntimeCase(unittest.TestCase):
         self.assertEqual(rt.resource_status(), {'enabled': False, 'error': None})
         self.assertEqual(rt.permission_status(), {'available': False, 'error': None})
         self.assertIsNone(rt.model_loader)
+        rt.close()
 
     def test_architecture_versions_sort_by_number(self):
         from guppi_runtime.runtime import _architecture_version
@@ -332,9 +336,12 @@ class RuntimeCase(unittest.TestCase):
         pending=self.rt.tools.execute('filesystem',mid,'write_text',{'path':'persist.txt','content':'two'})
         token=self.rt.guard.approve(pending['gate'])
         restarted=GuppiRuntime(self.root, ARCH)
-        done=restarted.tools.execute('filesystem',mid,'write_text',{'path':'persist.txt','content':'two'},token)
-        self.assertEqual(done['status'],'completed')
-        self.assertEqual(token['status'],'used')
+        try:
+            done=restarted.tools.execute('filesystem',mid,'write_text',{'path':'persist.txt','content':'two'},token)
+            self.assertEqual(done['status'],'completed')
+            self.assertEqual(token['status'],'used')
+        finally:
+            restarted.close()
 
 
     def test_hardware_detector_and_profile_selection(self):
@@ -722,5 +729,8 @@ class ArchitectureDiscoveryTests(unittest.TestCase):
             shutil.copytree(ARCH, archdir)
             project=workspace/'SEDRA'
             rt=SedraRuntime(project)
-            self.assertEqual(rt.architecture_root,archdir.resolve())
-            self.assertEqual(rt.boot()['state'],'READY')
+            try:
+                self.assertEqual(rt.architecture_root,archdir.resolve())
+                self.assertEqual(rt.boot()['state'],'READY')
+            finally:
+                rt.close()
