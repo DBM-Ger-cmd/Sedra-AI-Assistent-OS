@@ -19,8 +19,8 @@ def skills():
 
 
 class EigeneSkills(unittest.TestCase):
-    def test_es_gibt_die_vier_skills(self):
-        self.assertEqual(skills(), ['sedra-tests-windows', 'sedra-ui-vertrag', 'selbstabbild-erweitern', 'update-einspielen'])
+    def test_es_gibt_die_skills(self):
+        self.assertEqual(skills(), ['chat-sichern', 'sedra-tests-windows', 'sedra-ui-vertrag', 'selbstabbild-erweitern', 'update-einspielen'])
 
     def test_kopf_und_ordnername_stimmen(self):
         for name in skills():
