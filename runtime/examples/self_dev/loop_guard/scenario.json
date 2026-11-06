@@ -6,6 +6,6 @@
   "generation": {"context_min_tokens": 32768, "max_tokens": 20000},
   "evidence": [
     {"source": "2026-10-03 rework loop", "detail": "gpt-oss at temperature 0.1 looped through 20000 tokens; the uix_window rework ran 12 generations, several with the same cause, and nothing flagged the repetition"},
-    {"source": "2026-10-04 cognithor review", "detail": "cognithor core/loop_detector.py detects generic_repeat (same call, same result, N times) and ping_pong (two calls alternating without new information) with a sliding window; GUPPI has no equivalent"}
+    {"source": "2026-10-04 cognithor review", "detail": "cognithor core/loop_detector.py detects generic_repeat (same call, same result, N times) and ping_pong (two calls alternating without new information) with a sliding window; SEDRA has no equivalent"}
   ]
 }

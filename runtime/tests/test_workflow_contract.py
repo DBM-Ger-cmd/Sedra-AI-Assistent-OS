@@ -3,18 +3,18 @@ import threading
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.feasibility import AdmissionUnavailable
-from guppi_runtime.core.request_binding import path_state
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.feasibility import AdmissionUnavailable
+from sedra_runtime.core.request_binding import path_state
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH=sorted((Path(__file__).resolve().parents[2]/'architecture').glob('GUPPI_Architecture_v*'))[-1]
+ARCH=sorted((Path(__file__).resolve().parents[2]/'architecture').glob('SEDRA_Architecture_v*'))[-1]
 
 class WorkflowCase(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name)
-        self.rt=GuppiRuntime(self.root,ARCH)
+        self.rt=SedraRuntime(self.root,ARCH)
         self.m=self.rt.brain.create_mission('Create a report')
         self.mid=self.m['identity']['mission_id'];self.fs=self.rt.filesystem_tool
     def tearDown(self):
@@ -64,7 +64,7 @@ class WorkflowCase(unittest.TestCase):
         for th in threads:th.join()
         self.assertEqual(sum(results),1)
     def test_token_lock_fails_closed(self):
-        from guppi_runtime.core.mission_lock import exclusive
+        from sedra_runtime.core.mission_lock import exclusive
         path=self.rt.guard.token_store_path.with_suffix('.lock')
         held=threading.Event();release=threading.Event()
         def holder():

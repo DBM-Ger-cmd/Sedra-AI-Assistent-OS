@@ -2,7 +2,7 @@
 
 Stand: `main` `d51083a`. Gate **G1**; G2/G3 erst nach Freigabe. Unterchat **U4** (Phase R2, UIX X3, Werkzeug W3).
 Grundlage: Beschlüsse des Captains vom 05.11.2026 – Zuschnitt für Auftraggeber über **Profile**, nicht über neue Shells; **`shells:` bleibt** im Manifest, **`profile:` kommt daneben**; Minimal wird ein Profil; Wissen ist Grundfunktion (nie ausblendbar, neben Posteingang und Aufgaben). Entwurf: `docs/ENTWURF_AUFTRAGGEBER_PROFILE_2026-11-05.md`. Grenze: `docs/SPEC_APPS_v1_AM7_UNTERNEHMEN.md`.
-Pfade relativ zu `runtime/src/guppi_runtime/`, sonst ab Repo-Wurzel.
+Pfade relativ zu `runtime/src/sedra_runtime/`, sonst ab Repo-Wurzel.
 
 **Ergebnis in einem Satz:** Speichern, Anwenden, Exportieren und Importieren eines Profils mit Prüfung **sind schon gebaut** (Server und Desktop Builder, 24 + 6 Tests) – es fehlen ein Dateiformat mit Kennung und Version, Export/Import als Datei, Schutz vor stillem Überschreiben, die Bindung an Apps (`profile:` im Manifest), vier Profilvorlagen und ein vollständiger Roundtrip-Test.
 

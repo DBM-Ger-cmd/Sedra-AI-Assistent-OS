@@ -24,10 +24,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import judge as judge_mod                                                            # noqa: E402
 import small_team as st                                                              # noqa: E402
 from team_tasks import SETS                                                          # noqa: E402
-from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 RULE = ("Rule: when a library call raises an exception that the contract wants turned into another one, catch the exception TYPE and raise the contract's "
         "error unconditionally. Never decide by looking at the text of the library's message.")
@@ -46,10 +46,10 @@ def main():
     task = next(t for t in SETS["all"] if t["id"] == args.task)
     log = RunLog(project / "runtime_data" / "measurements", "feedback_probe", config={"task": args.task, "seeds": args.seeds, "rounds": args.rounds})
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_probe_")))
-    work = Path(tempfile.mkdtemp(prefix="guppi_probe_files_"))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_probe_")))
+    work = Path(tempfile.mkdtemp(prefix="sedra_probe_files_"))
     result = {"task": args.task, "variants": {}}
-    from guppi_runtime.knowledge import KnowledgeStore
+    from sedra_runtime.knowledge import KnowledgeStore
     kb = [r["content"]["summary"] for r in KnowledgeStore(project / "runtime_data" / "knowledge" / "records.jsonl").lessons_for(task["code"] + task["repro"])]
     with log, TestLab(default_path(project)).lease(os.environ.get("TESTLAB_OWNER", "feedback_probe"), "feedback probe isoformat", ttl_s=1800, wait_s=3600, preflight=clear_leftovers):
         for name in [v for v in args.variants.split(",") if v in VARIANTS]:

@@ -9,12 +9,12 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
 
-from guppi_runtime.selfdev.kev import KevProviderError, KevVerificationProvider
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.selfdev.kev import KevProviderError, KevVerificationProvider
+from sedra_runtime.runtime import SedraRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]
-ARCH = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 REAL_API = RUNTIME.parents[1] / 'kev-main' / 'kev-main' / 'kev' / 'api.py'
 URL = 'http://127.0.0.1:8008/v1/systemone'
 
@@ -255,7 +255,7 @@ class RuntimeWiringTests(unittest.TestCase):
         old = os.environ.get('KEV_API_KEY'); os.environ['KEV_API_KEY'] = 'env-secret-777'
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+                rt = SedraRuntime(Path(tmp) / 'project', ARCH)
                 self.assertTrue(rt.kev.status()['api_key_configured'])
                 self.assertEqual(rt.kev.endpoint, 'http://127.0.0.1:8008/v1/systemone')
                 self.assertEqual(rt.kev.model, 'kev-latest')
@@ -270,7 +270,7 @@ class RuntimeWiringTests(unittest.TestCase):
         old = os.environ.pop('KEV_API_KEY', None)
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                self.assertFalse(GuppiRuntime(Path(tmp) / 'project', ARCH).kev.status()['api_key_configured'])
+                self.assertFalse(SedraRuntime(Path(tmp) / 'project', ARCH).kev.status()['api_key_configured'])
         finally:
             if old is not None: os.environ['KEV_API_KEY'] = old
 

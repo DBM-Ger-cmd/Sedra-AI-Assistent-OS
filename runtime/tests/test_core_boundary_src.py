@@ -1,14 +1,14 @@
-"""The core boundary of GUPPI itself (review 2026-10-11, finding 4): the core modules must not import the DevVM, agent manager or coder-extension parts, neither
-directly nor through other modules (also not lazily inside a function: core_boundary reads every import with ast). Uses core_boundary.py, which GUPPI built in the
+"""The core boundary of SEDRA itself (review 2026-10-11, finding 4): the core modules must not import the DevVM, agent manager or coder-extension parts, neither
+directly nor through other modules (also not lazily inside a function: core_boundary reads every import with ast). Uses core_boundary.py, which SEDRA built in the
 night chain of 2026-10-11 (integrated 2026-10-12). When this test fails, the message names the import chain to cut."""
 import unittest
 from pathlib import Path
 
-from guppi_runtime.selfdev.core_boundary import chains, violations
+from sedra_runtime.selfdev.core_boundary import chains, violations
 
 SRC = Path(__file__).resolve().parents[1] / "src"
-P = "guppi_runtime."
-# Since the package split of 2026-10-12 the core is the package guppi_runtime.core; runtime.py (the composition root) is checked with it.
+P = "sedra_runtime."
+# Since the package split of 2026-10-12 the core is the package sedra_runtime.core; runtime.py (the composition root) is checked with it.
 CORE = [P + "core", P + "runtime"]
 MOVED = ("mission", "brain", "guard", "audit", "message_bus", "registry", "step_journal", "permission_levels", "util", "mission_lock",
          "request_binding", "errors", "manual_plan")
@@ -19,7 +19,7 @@ FORBIDDEN = [P + m for m in ("devenv", "devvm", "devvm_agents", "devvm_evidence"
 
 def sources():
     out = {}
-    for path in sorted((SRC / "guppi_runtime").rglob("*.py")):
+    for path in sorted((SRC / "sedra_runtime").rglob("*.py")):
         parts = list(path.relative_to(SRC).with_suffix("").parts)
         if parts[-1] == "__init__":
             parts = parts[:-1]

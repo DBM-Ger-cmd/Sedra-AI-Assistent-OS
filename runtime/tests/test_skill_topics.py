@@ -3,18 +3,18 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.topics import TopicStore
-from guppi_runtime.cli import main
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.topics import TopicStore
+from sedra_runtime.cli import main
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 ROOT=Path(__file__).resolve().parents[2]
-ARCH=next((ROOT/'architecture').glob('GUPPI_Architecture_v*'))
+ARCH=next((ROOT/'architecture').glob('SEDRA_Architecture_v*'))
 
 class SkillTopicCase(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
-        self.rt=GuppiRuntime(Path(self.tmp.name),ARCH);self.router=self.rt.capability_router
+        self.rt=SedraRuntime(Path(self.tmp.name),ARCH);self.router=self.rt.capability_router
     def ids(self,r,key):return {x['id'] for x in r[key]}
     def test_catalogue_and_sync(self):
         self.assertEqual(len(self.rt.registry.skills),20);self.assertEqual(len(self.router.topic_catalog()),15)
@@ -70,7 +70,7 @@ class SkillTopicCase(unittest.TestCase):
         self.assertEqual(set(self.rt.registry.skills),before);self.assertEqual(r['risk']['level'],'high')
         self.assertNotIn('shell',self.ids(r,'tools'));self.assertNotIn('tools',r['proposed_topics'][0])
     def test_greeting_does_not_create_topic(self):
-        self.assertFalse(self.router.route('Hallo Guppi')['proposed_topics']);self.assertFalse(self.rt.topic_store.list())
+        self.assertFalse(self.router.route('Hallo Sedra')['proposed_topics']);self.assertFalse(self.rt.topic_store.list())
     def test_topic_validation(self):
         self.assertEqual(self.rt.topic_store.propose('Astronomie')['id'],self.rt.topic_store.propose('ASTRONOMIE')['id'])
         for title in ['', 'a'*101, '\x00']:
@@ -86,7 +86,7 @@ class SkillTopicCase(unittest.TestCase):
     def test_tampered_record_no_tools(self):
         draft=self.rt.topic_store.propose('Root Shell');draft['tools']=['shell']
         (self.rt.topic_store.root/'drafts.json').write_text(json.dumps({'schema':1,'topics':{draft['id']:draft}}))
-        r=self.router.route('Hallo Guppi');self.assertTrue(any(x['type']=='topic_store_unavailable' for x in r['unresolved']));self.assertNotIn('shell',self.ids(r,'tools'))
+        r=self.router.route('Hallo Sedra');self.assertTrue(any(x['type']=='topic_store_unavailable' for x in r['unresolved']));self.assertNotIn('shell',self.ids(r,'tools'))
     def test_bounded_multi_topic(self):
         r=self.router.route('README Bedrohungsmodell CSV USB Datenanalyse Architektur')
         self.assertLessEqual(len(r['intent_families']),3);self.assertLessEqual(len(r['skills']),5);self.assertLessEqual(len(r['tools']),6)

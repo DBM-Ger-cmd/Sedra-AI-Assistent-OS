@@ -29,7 +29,7 @@ class Lease(unittest.TestCase):
 
     def make(self, root, heartbeat_age=None, ttl=300):
         import sqlite3
-        d = Path(root) / "workspace" / "GUPPI_OS" / "runtime_data" / "testlab"
+        d = Path(root) / "workspace" / "SEDRA_OS" / "runtime_data" / "testlab"
         d.mkdir(parents=True)
         db = d / "testlab.db"
         conn = sqlite3.connect(db)

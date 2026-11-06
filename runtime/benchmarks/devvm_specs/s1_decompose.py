@@ -4,7 +4,7 @@ answer all or nothing (one bad entry and no subtask is created, the reason goes 
 without the right to delegate (so a subtask is never decomposed again) and refuses blocker indexes and cycles. `report` builds the table of the report from the
 database rows, never from the model: a child without check_result is 'nicht_geprueft', whatever the model says. runner.py imports it (seed of s1_runner).
 `check` takes an optional fourth argument `roles` (all roles of the organisation) to tell an unknown role from a role that is no subordinate; D1.1 names the first three.
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_decompose)."""
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_decompose)."""
 
 NOTES = '''# Notes for s1_decompose
 Python 3 standard library only, and nothing needs to be imported: no sqlite3, no files, no clock, no network, no JSON-schema library (the checks are written by hand).

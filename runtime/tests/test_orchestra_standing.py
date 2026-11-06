@@ -10,9 +10,9 @@ from unittest import mock
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.core.request_binding import digest
-from guppi_runtime.desk import gated
-from guppi_runtime.orchestra import org, service
+from sedra_runtime.core.request_binding import digest
+from sedra_runtime.desk import gated
+from sedra_runtime.orchestra import org, service
 from test_orchestra_desk import Desk
 
 

@@ -6,8 +6,8 @@ import tempfile
 import unittest
 import env_skip
 
-from guppi_runtime.agent_manager import run_worker
-from guppi_runtime.agent_manager.devvm_runtime import DevVmRuntime, RefusedStart
+from sedra_runtime.agent_manager import run_worker
+from sedra_runtime.agent_manager.devvm_runtime import DevVmRuntime, RefusedStart
 
 RUN = "run-0123456789ab"
 
@@ -33,7 +33,7 @@ class DevVmRuntimeTest(unittest.TestCase):
         return FakeProcess()
 
     def assignment(self, spec="am_demo"):
-        return {"agent_ref": "guppi.devvm.coder@1.0.0", "mission_id": "M-1", "input_ref": spec}
+        return {"agent_ref": "sedra.devvm.coder@1.0.0", "mission_id": "M-1", "input_ref": spec}
 
     def write_done(self, text):
         with open(os.path.join(self.run_dir, "done.json"), "w") as handle:
@@ -42,7 +42,7 @@ class DevVmRuntimeTest(unittest.TestCase):
     def test_start_launches_one_detached_worker_and_records_the_request(self):
         self.port.start(RUN, self.assignment())
         cmd, kw = self.calls[0]
-        self.assertEqual(cmd[:3], ["py", "-m", "guppi_runtime.agent_manager.run_worker"])
+        self.assertEqual(cmd[:3], ["py", "-m", "sedra_runtime.agent_manager.run_worker"])
         self.assertEqual(kw["stdin"], subprocess.DEVNULL)
         self.assertEqual(json.load(open(os.path.join(self.run_dir, "request.json")))["spec"], "am_demo")
         self.assertEqual(open(os.path.join(self.run_dir, "pid")).read(), "4242")
@@ -135,11 +135,11 @@ class StopTest(DevVmRuntimeTest):
         self.assertIn("belongs to another program", self.port.result(RUN)["reason"])
 
     def test_the_real_check_needs_the_run_worker_and_the_run_id_in_the_command_line(self):
-        from guppi_runtime.agent_manager import devvm_runtime as module
-        line = "py.exe -m guppi_runtime.agent_manager.run_worker C:/x/runs/" + RUN + " rt project"
+        from sedra_runtime.agent_manager import devvm_runtime as module
+        line = "py.exe -m sedra_runtime.agent_manager.run_worker C:/x/runs/" + RUN + " rt project"
         original = module.process_command_line
         try:
-            for command, expected in ((line, True), ("notepad.exe", False), ("py.exe -m guppi_runtime.agent_manager.run_worker C:/x/runs/run-ffffffffffff", False), (None, False)):
+            for command, expected in ((line, True), ("notepad.exe", False), ("py.exe -m sedra_runtime.agent_manager.run_worker C:/x/runs/run-ffffffffffff", False), (None, False)):
                 module.process_command_line = lambda pid, command=command: command
                 self.assertIs(module.process_belongs_to(1, RUN), expected, command)
         finally:

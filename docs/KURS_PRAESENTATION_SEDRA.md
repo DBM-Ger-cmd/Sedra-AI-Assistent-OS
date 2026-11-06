@@ -1,4 +1,4 @@
-# SEDRA / GUPPI – Material für die Kurspräsentation
+# SEDRA – Material für die Kurspräsentation
 
 Stand 28.10.2026. Alle Zahlen stammen aus dem Repository (`docs/LOGBUCH_AGENT_MANAGER.md`, `docs/ARCHITEKTUR.md`, `docs/MODELLE.md`, `docs/MESSBERICHT_SLOTS_2026-10-23.md`, `docs/CHANGELOG.md`, `git log`) oder aus den Projektnotizen. Wo etwas unklar oder nur vermutet ist, steht „(Vermutung)“ oder „(unklar)“. Der „Captain“ ist die menschliche Entscheidungsrolle im Projekt.
 
@@ -19,7 +19,7 @@ Hinweis: Der Git-Verlauf beginnt am 15.10.2026. Das Logbuch reicht aber bis zum 
 
 # Teil 1 – Folienvorschlag (14 Folien)
 
-## Folie 1 – Titel: SEDRA/GUPPI – ein lokaler KI-Assistent, der den Menschen entscheiden lässt
+## Folie 1 – Titel: SEDRA – ein lokaler KI-Assistent, der den Menschen entscheiden lässt
 - Projekt im Selbstversuch: KI-Agenten bauen und betreiben ein KI-System auf einem einzelnen PC
 - Zeitraum der Dokumentation: Oktober 2026 (gut drei Wochen)
 - Leitfrage: Wie viel darf eine KI selbst tun, und wo muss der Mensch entscheiden?
@@ -27,12 +27,12 @@ Hinweis: Der Git-Verlauf beginnt am 15.10.2026. Das Logbuch reicht aber bis zum 
 *Sprechernotiz:* Kurz vorstellen, dass es ein Praxisprojekt ist und die Zahlen aus echten Messläufen stammen. Die Leitfrage zieht sich durch den ganzen Vortrag.
 
 ## Folie 2 – Zweck und Grundidee
-- GUPPI ist die Laufzeit (Python-Paket `guppi_runtime`), SEDRA die Oberfläche und Produktlinie darum
+- SEDRA ist die Laufzeit (Python-Paket `sedra_runtime`), SEDRA die Oberfläche und Produktlinie darum
 - „Local First, Cloud Second“: Modelle laufen lokal; Cloud nur über Router, Inhaltsschutz und GateWay, sichtbar und mit Budget
-- Ziel laut Entwicklungsdokument: GUPPI soll sich selbst erweitern, immer hinter der Freigabe des Captains
+- Ziel laut Entwicklungsdokument: SEDRA soll sich selbst erweitern, immer hinter der Freigabe des Captains
 - Ziel der Agenten-Orchestrierung: mehrere KI-Agenten arbeiten wie ein kleines Team (Rollen, Aufgaben, Budgets)
 
-*Sprechernotiz:* Der Name GUPPI ist die Laufzeit, SEDRA das Gesamtprodukt. „Captain“ ist die Rolle des menschlichen Entscheiders (Begriff im Projekt, nicht eine Person im Kurs).
+*Sprechernotiz:* Der Name SEDRA ist die Laufzeit, SEDRA das Gesamtprodukt. „Captain“ ist die Rolle des menschlichen Entscheiders (Begriff im Projekt, nicht eine Person im Kurs).
 
 ## Folie 3 – Architektur im Überblick
 - Kern (rund 1.200 Zeilen): Mission mit Zustandsautomat, Brain, Message-Bus, Guard, Audit, Step-Journal
@@ -121,9 +121,9 @@ Hinweis: Der Git-Verlauf beginnt am 15.10.2026. Das Logbuch reicht aber bis zum 
 *Sprechernotiz:* Wichtig: Ein früherer 12-von-51-Anteil der Parse-Fehler kam nicht vom Modell, sondern vom Skript – abgeschnittene Antworten ließen eine Markdown-Zaunzeile in der Datei. Nach dem Fix stieg die Quote von 76 auf 88 Prozent. Erst die Ursachenanalyse zeigte, was Modell und was Werkzeug war.
 
 ## Folie 13 – Mensch-KI-Arbeitsteilung im Projekt
-- GUPPI (lokale Modelle) schreibt Produktionscode neuer Module; Claude schreibt Specs, versteckte Tests, Referenzen und den Harness (Guard, Bridge, Bauskripte); der Captain entscheidet jedes Gate
+- SEDRA (lokale Modelle) schreibt Produktionscode neuer Module; Claude schreibt Specs, versteckte Tests, Referenzen und den Harness (Guard, Bridge, Bauskripte); der Captain entscheidet jedes Gate
 - Eingriffe von Claude werden im Logbuch eingetragen und gezählt; ein Code-Zähler misst Zeilen der Modelle gegen Zeilen von Claude
-- Ziel „50 % des neuen Codes durch GUPPI“ wurde am 20.10. ersetzt durch eine gemessene Quote je Aufgabe
+- Ziel „50 % des neuen Codes durch SEDRA“ wurde am 20.10. ersetzt durch eine gemessene Quote je Aufgabe
 - Entscheidungsweg: Anforderungen → Design → Aufgaben → Umsetzung, jede Stufe endet mit einem Tor (G1 bis G4)
 
 *Sprechernotiz:* Ehrlich benennen, dass die lokalen Modelle ohne externe Abnahme unzuverlässig waren (siehe Folie „Was wir gelernt haben“).

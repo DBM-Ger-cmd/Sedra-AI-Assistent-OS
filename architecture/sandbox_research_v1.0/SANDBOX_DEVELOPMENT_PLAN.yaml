@@ -1,7 +1,7 @@
 sandbox_development_plan:
   schema: 1
   date: '2026-09-30'
-  base_runtime: 'GUPPI 1.6.0'
+  base_runtime: 'SEDRA 1.6.0'
   status: planned_not_implemented
   captain_requirement: integrated_all_in_one
   preferred_poc_backend: microsandbox

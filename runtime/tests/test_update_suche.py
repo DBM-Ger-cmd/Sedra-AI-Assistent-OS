@@ -1,7 +1,7 @@
 """Die Update-Suche (Plan Abschnitt 4, Teil 1): nur lesen, nur auf Klick. Im Test kein Netzzugriff: die Tags werden eingespeist."""
 import unittest
 
-from guppi_runtime.update_suche import suche, versionen
+from sedra_runtime.update_suche import suche, versionen
 
 
 class UpdateSuche(unittest.TestCase):

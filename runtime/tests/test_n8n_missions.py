@@ -3,12 +3,12 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from guppi_runtime.uix_server import UIXHub
-from guppi_runtime.workflows.desk import _save, _start, _run_read
+from sedra_runtime.uix_server import UIXHub
+from sedra_runtime.workflows.desk import _save, _start, _run_read
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 from workflow_fixture import sample
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture/SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 
 
 class Missions(unittest.TestCase):
@@ -25,7 +25,7 @@ class Missions(unittest.TestCase):
         return run, m, m['human_gates']['pending'][0]
 
     def test_start_always_waits_without_touching_engine(self):
-        with patch('guppi_runtime.workflows.execution.LocalN8n') as engine:
+        with patch('sedra_runtime.workflows.execution.LocalN8n') as engine:
             run, m, gate = self.pending()
             self.assertEqual(run['state'], 'CAPTAIN_REVIEW')
             self.assertEqual(gate['request']['exact_action'], 'run_n8n_workflow')
@@ -36,7 +36,7 @@ class Missions(unittest.TestCase):
     def test_fresh_approval_executes_once_and_keeps_result(self):
         run, m, gate = self.pending(); token = self.hub.runtime.guard.approve(gate)
         m['execution']['approval_token'] = token; m['human_gates']['pending'] = []; self.hub.runtime.missions.save(m)
-        with patch('guppi_runtime.workflows.execution.LocalN8n') as engine:
+        with patch('sedra_runtime.workflows.execution.LocalN8n') as engine:
             engine.return_value.run.return_value = {'status': 'completed', 'output': [{'text': 'Hello'}], 'cleanup_errors': []}
             self.hub.run_mission({'mission_id': run['id']})
             self.hub.run_mission({'mission_id': run['id']})
@@ -49,7 +49,7 @@ class Missions(unittest.TestCase):
     def test_changed_input_cannot_reuse_gate(self):
         run, m, gate = self.pending(); token = self.hub.runtime.guard.approve(gate)
         request = dict(m['plan']['steps'][0]); request['inputs'] = {'changed': True}
-        with patch('guppi_runtime.workflows.execution.LocalN8n') as engine:
+        with patch('sedra_runtime.workflows.execution.LocalN8n') as engine:
             out = self.hub.runtime.control.execute(m, request, token)
             self.assertEqual(out['status'], 'captain_required'); engine.assert_not_called()
 
@@ -57,14 +57,14 @@ class Missions(unittest.TestCase):
         run, m, gate = self.pending(); token = self.hub.runtime.guard.approve(gate)
         cfg = self.hub.project_root / 'local_config/n8n.json'
         cfg.write_text(cfg.read_text().replace('5678', '5679'))
-        with patch('guppi_runtime.workflows.execution.LocalN8n') as engine:
+        with patch('sedra_runtime.workflows.execution.LocalN8n') as engine:
             out = self.hub.runtime.control.execute(m, m['plan']['steps'][0], token)
             self.assertEqual(out['status'], 'captain_required'); engine.assert_not_called()
 
     def test_timeout_closes_mission_without_replay(self):
         run, m, gate = self.pending(); token = self.hub.runtime.guard.approve(gate)
         m['execution']['approval_token'] = token; self.hub.runtime.missions.save(m)
-        with patch('guppi_runtime.workflows.execution.LocalN8n') as engine:
+        with patch('sedra_runtime.workflows.execution.LocalN8n') as engine:
             engine.return_value.run.return_value = {'status': 'failed', 'error': 'UNKNOWN_REMOTE_OUTCOME', 'cleanup_errors': []}
             self.hub.run_mission({'mission_id': run['id']})
             self.assertEqual(_run_read(self.hub, run['id'])['state'], 'FAILED')
@@ -81,7 +81,7 @@ class Missions(unittest.TestCase):
 
     def test_guard_block_is_authoritative(self):
         self.hub.runtime.guard.rules['run_n8n_workflow'] = {'action': 'run_n8n_workflow', 'decision': 'BLOCK', 'id': 'test'}
-        with patch('guppi_runtime.workflows.execution.LocalN8n') as engine:
+        with patch('sedra_runtime.workflows.execution.LocalN8n') as engine:
             run = _start(self.hub, self.record['id'], {'revision': 1})
             self.assertEqual(run['state'], 'PAUSED'); engine.assert_not_called()
 

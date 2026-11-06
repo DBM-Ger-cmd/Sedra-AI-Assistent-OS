@@ -19,7 +19,7 @@ class DenseProbeTests(unittest.TestCase):
         self.assertEqual(plan([], True), [])
 
     def test_the_manager_finds_the_probe(self):
-        from guppi_runtime.agent_manager.run_worker import probe_script
+        from sedra_runtime.agent_manager.run_worker import probe_script
         self.assertTrue(Path(probe_script(str(RUNTIME), "probe_dense")).is_file())
 
 

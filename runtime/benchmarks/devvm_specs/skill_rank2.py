@@ -1,7 +1,7 @@
-"""Skill search ranking, round 2 (Captain 2026-10-13: "GUPPI soll die zweite Runde bauen"). Round 1 (skill_rank, built by GUPPI) counts every shared word the same. Audit result on the real libraries: "test" is in dozens of descriptions
+"""Skill search ranking, round 2 (Captain 2026-10-13: "SEDRA soll die zweite Runde bauen"). Round 1 (skill_rank, built by SEDRA) counts every shared word the same. Audit result on the real libraries: "test" is in dozens of descriptions
 and still counts fully, so `browser-testing-with-devtools` ranks before `test-driven-development`; in the large library the sum of many weak synonym hits in descriptions puts unrelated skills (analytics-tracking) into the result.
 Round 2 changes `rank` in the existing `skill_rank.py` (seed: benchmarks/skill_rank2_seed): every word is weighted by how rare it is in the library (IDF), the synonym hits in descriptions are capped, and results far below the
-best one are cut. GUPPI builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/skill_rank2)."""
+best one are cut. SEDRA builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/skill_rank2)."""
 
 SEED = "benchmarks/skill_rank2_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 NOTES = '''# Notes for skill_rank (round 2)

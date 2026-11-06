@@ -14,9 +14,9 @@ import yaml
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-UIX = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
+UIX = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix'
 PAPERCLIP = UIX / 'shells' / 'paperclip'
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 
 
 def run_js(files, code):
@@ -88,7 +88,7 @@ class PureParts(unittest.TestCase):
           console.log(JSON.stringify({types: [...new Set(n.NAV.filter(x=>x.object).map(x=>x.object.type))],
                                       on: n.activeIndex(n.NAV, {type:'task', id:'alle'}), off: n.activeIndex(n.NAV, null)}));
         """ % json.dumps(str(PAPERCLIP / 'nav.js')))
-        from guppi_runtime.desk.gateway import OBJECT_TYPES
+        from sedra_runtime.desk.gateway import OBJECT_TYPES
         for t in out['types']:
             # `issue` kommt als Desk-Typ mit G2-S0-12; bis dahin öffnet „Issues“ die Missionen (issuesTarget, D4.1)
             self.assertIn(t, list(OBJECT_TYPES) + ['dashboard', 'issue'], f'{t} ist kein Objekttyp des Vertrags')
@@ -223,7 +223,7 @@ class ShellD(unittest.TestCase):
 
 class ThreeShells(unittest.TestCase):
     def test_all_three_shells_load_the_same_tools(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         seen = {}
         for shell in ('cockpit', 'minimal', 'paperclip'):
             with tempfile.TemporaryDirectory(prefix=f'shell-{shell}-') as tmp:
@@ -256,7 +256,7 @@ class ThreeShells(unittest.TestCase):
                 self.assertIn(shell, mod.PROFILES, f'{shell} öffnet Objekte – dafür braucht die Abnahme ein Profil')
             elif shell in mod.PROFILES:
                 # Eine Shell mit eigenem Gesprächsfeld (Harness, Captain 28.10.2026, Frage 2) braucht ein Profil für ihre talk-Prüfung;
-                # ein Archiv-Profil (guppi-xp → /retro, Härtung 30.10.: provides ohne windows) prüft nur den archivierten Desktop
+                # ein Archiv-Profil (sedra-xp → /retro, Härtung 30.10.: provides ohne windows) prüft nur den archivierten Desktop
                 self.assertTrue('talk' in mod.PROFILES[shell] or mod.PROFILES[shell].get('archive'), f'{shell} öffnet keine Objekte – ein Profil nur mit eigenem Gesprächsfeld oder Archiv')
             else:
                 self.assertNotIn(shell, mod.PROFILES, f'{shell} öffnet keine Objekte – das allgemeine Profil genügt')

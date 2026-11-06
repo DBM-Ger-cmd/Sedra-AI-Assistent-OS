@@ -2,7 +2,7 @@
 
 Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen); G2 steht noch aus. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Setzt AM3 voraus.
 Ziel: (A) Der vorhandene MCP-Zugang zum Desk bekommt eine Berechtigung wie eine App. (B) Eine App kann ein **Dienst** sein: ein eigener Prozess, den der Kern startet und stoppt, der nur über Desk-Objekte und -Verben spricht. (C) Was es bräuchte, damit SEDRA fremde MCP-Server als Werkzeuge nutzt – mit der Empfehlung, das zurückzustellen.
-Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
+Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für c364081.
 
 ## 1. Befund
 
@@ -25,7 +25,7 @@ Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
 | ID | Anforderung | Prüfbar durch |
 |---|---|---|
-| AM4-01 | Der Zugang `mcp` wird in der Berechtigung als **Zugang** geführt (kein Manifest, kein Start durch SEDRA – der MCP-Host startet `python -m guppi_runtime.desk_mcp` selbst): Eintrag `zugaenge: {mcp: {lesen, verben}}` in `local_config/apps/berechtigung.yaml` (AM3-05). Die Berechtigungsseite zeigt, welche Typen er lesen und welche Verben er rufen darf. | uix_check |
+| AM4-01 | Der Zugang `mcp` wird in der Berechtigung als **Zugang** geführt (kein Manifest, kein Start durch SEDRA – der MCP-Host startet `python -m sedra_runtime.desk_mcp` selbst): Eintrag `zugaenge: {mcp: {lesen, verben}}` in `local_config/apps/berechtigung.yaml` (AM3-05). Die Berechtigungsseite zeigt, welche Typen er lesen und welche Verben er rufen darf. | uix_check |
 | AM4-02 | Vorgabe: lesen alle Typen, Verben **keine**. Verben auf Antrag (Gate `grant_app_rights`), je `typ.verb`. Der Server prüft bei Token-Klasse `mcp` den Körper wie AM3-11. | Test: Verb ohne Gewährung → 403 `verb_nicht_gewaehrt`, Audit |
 | AM4-03 | Für `cli` gilt dasselbe als Zugang `cli`, Vorgabe: lesen alle, Verben alle (heutiges Verhalten, weil der Captain selbst tippt). | Test |
 | AM4-04 | Die Seite „Integrationen → MCP“ zeigt statt „nichts zu konfigurieren“ die Berechtigung von `desk-mcp` und den Satz aus B2 in Klartext („jedes Programm unter deinem Windows-Konto kann diesen Zugang nutzen“). | uix_check |
@@ -36,7 +36,7 @@ Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 |---|---|---|
 | AM4-05 | `kind: dienst` mit Block `dienst: {start: [<programm>, <arg>…], ort: host|microvm, neustart: nie|bei_fehler, protokoll_max: <KB>}`. `start[0]` muss eine Datei **im Ordner der App** sein; Pfade mit `..`, absolute Pfade und Shell-Zeichen → abgewiesen. Ein Dienst hat keine Fläche und keinen Ort (darf eine `zelle` haben, AM3-23 sinngemäß über den Desk). | Schema-Test |
 | AM4-06 | `dienst` ist eine Fähigkeit der Schutzstufe B (Antrag mit Gate). Start nur, wenn gewährt **und** aktiv. Deaktivieren/Entzug stoppt den Prozess (erst Bitte, nach 5 s beenden) und macht seinen Token sofort ungültig. | Test mit Fake-Prozess |
-| AM4-07 | `ort: host` nur für Vertrauen `CAPTAIN` und `GUPPI_BUILT`. `COMMUNITY` nur `ort: microvm` – und erst, wenn B7 geklärt ist; bis dahin ist ein `COMMUNITY`-Dienst nicht einbaubar (`dienst_fremd_nur_microvm`). | Test |
+| AM4-07 | `ort: host` nur für Vertrauen `CAPTAIN` und `SEDRA_BUILT`. `COMMUNITY` nur `ort: microvm` – und erst, wenn B7 geklärt ist; bis dahin ist ein `COMMUNITY`-Dienst nicht einbaubar (`dienst_fremd_nur_microvm`). | Test |
 | AM4-08 | Jeder Dienst bekommt einen **eigenen** Client-Token (`dienst:<id>`), übergeben über eine Datei, deren Pfad in der Umgebungsvariable `SEDRA_DIENST_TOKEN_DATEI` steht; der Server ordnet ihn der App zu; `client` im Audit = `dienst:<id>` (vom Server gesetzt, R4). Der Token öffnet nur `objects`/`actions`, geprüft gegen die Gewährung (AM3-11). | Test |
 | AM4-09 | Ausgaben (stdout/stderr) gehen nach `runtime_data/dienste/<id>/protokoll.txt`, begrenzt auf `protokoll_max` (Vorgabe 512 KB, rollierend). Kein Inhalt ins Audit. | Test |
 | AM4-10 | Audit: `DIENST_GESTARTET`, `DIENST_GESTOPPT {grund}`, `DIENST_ABGESTUERZT {exitcode}`, `DIENST_TOKEN_ENTZOGEN`. `neustart: bei_fehler` höchstens 3 Mal je Stunde, dann aus mit Hinweis. | Test |
@@ -72,7 +72,7 @@ Kein fremder Python-Code im Server-Prozess. Keine Netzfreigabe für Dienste durc
 
 ## 7. Risiken
 
-- Hoch: Prozessstart auf dem Host ist Ausführung von Code mit den Rechten des Captains. Darum nur eigene (`CAPTAIN`) oder von SEDRA gebaute (`GUPPI_BUILT`) Dienste auf dem Host.
+- Hoch: Prozessstart auf dem Host ist Ausführung von Code mit den Rechten des Captains. Darum nur eigene (`CAPTAIN`) oder von SEDRA gebaute (`SEDRA_BUILT`) Dienste auf dem Host.
 - Die Einschränkung des MCP-Zugangs (AM4-02) kann bestehende Abläufe des Captains mit MCP-Hosts (z. B. Claude Desktop) brechen, wenn sie Verben nutzen. Gegenmittel: Übergang mit „Verben wie bisher“ und Hinweis.
 
 ## 8. Entscheidungen des Captains

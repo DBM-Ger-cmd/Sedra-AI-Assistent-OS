@@ -4,10 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.desk import arbeitsplatz as ap
-from guppi_runtime.desk.registry import Registry
+from sedra_runtime.desk import arbeitsplatz as ap
+from sedra_runtime.desk.registry import Registry
 
-UIX = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
+UIX = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix'
 
 
 def module():
@@ -63,7 +63,7 @@ class DieReinenTeile(unittest.TestCase):
         self.assertEqual(len(ruhe), 1); self.assertIn('Nichts wartet', ruhe[0][0])
 
     def test_jede_anleitung_oeffnet_ein_objekt_des_vertrags(self):
-        from guppi_runtime.desk.gateway import OBJECT_TYPES
+        from sedra_runtime.desk.gateway import OBJECT_TYPES
         self.assertEqual(set(ap.OBJEKT_TYPEN) - {'routine'}, set(OBJECT_TYPES) - {'routine'}, 'dieselben Typen wie der Vertrag – ohne routine (kein Werkzeug)')
         _, anleitungen, _, _ = ap.sammle(module())
         for a in anleitungen:
@@ -134,9 +134,9 @@ class ImGespraech(unittest.TestCase):
     """Im Cockpit und in Paperclip antwortet der Arbeitsplatz vor dem Modell; alles andere bleibt, wie es war."""
 
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='ap-chat-'); self.addCleanup(self.tmp.cleanup)
-        arch = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+        arch = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
         self.hub = UIXHub(Path(self.tmp.name) / 'project', arch); self.addCleanup(self.hub.close)
         self.hub.new_project({'name': 'Nordwerk'})
         self.hub.gateway.registry.save_config(shell='paperclip')
@@ -170,7 +170,7 @@ class ImGespraech(unittest.TestCase):
 
     def test_die_modellwerkzeuge_lesen_den_arbeitsplatz(self):
         import json
-        from guppi_runtime.chat_tools import ChatTools
+        from sedra_runtime.chat_tools import ChatTools
         box = ChatTools(self.hub)
         hit = json.loads(box.call('arbeitsplatz_wissen', {'frage': 'wie lege ich ein projekt an'}))
         self.assertEqual(hit['shell'], 'paperclip'); self.assertEqual(hit['treffer'][0]['id'], 'A-projekt_anlegen')

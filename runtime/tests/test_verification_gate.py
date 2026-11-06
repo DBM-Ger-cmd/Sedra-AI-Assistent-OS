@@ -5,11 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.selfdev.development_contracts import canonical_digest, development_contract, verification_contract
-from guppi_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
-from guppi_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore, supervisor_state
-from guppi_runtime.jobs.verification_gate import VerificationGate, document_check, record_check, record_review
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.selfdev.development_contracts import canonical_digest, development_contract, verification_contract
+from sedra_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
+from sedra_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore, supervisor_state
+from sedra_runtime.jobs.verification_gate import VerificationGate, document_check, record_check, record_review
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]
@@ -53,7 +53,7 @@ class Base(unittest.TestCase):
 
     def built(self, role='documentation', candidate_hash=CHASH, contract=None, checks=('doc_ok',), park=True):
         job_id, worker = self.start(role, contract=contract)
-        self.sup.bind_candidate(job_id, worker, stage='guppi-candidates/note', parent_version='v0', candidate_hash=candidate_hash, changed_files=['note.md'])
+        self.sup.bind_candidate(job_id, worker, stage='sedra-candidates/note', parent_version='v0', candidate_hash=candidate_hash, changed_files=['note.md'])
         self.sup.complete_step(job_id, worker, 'TESTING')
         refs = []
         for cid in checks:
@@ -178,7 +178,7 @@ class GapTest(Base):
 
     def test_a_candidate_without_a_content_hash_cannot_pass(self):
         job_id, worker = self.start('documentation')
-        self.sup.bind_candidate(job_id, worker, stage='guppi-candidates/x', parent_version='v0', candidate_hash=None)
+        self.sup.bind_candidate(job_id, worker, stage='sedra-candidates/x', parent_version='v0', candidate_hash=None)
         self.sup.complete_step(job_id, worker, 'TESTING'); self.sup.complete_step(job_id, worker, 'VERIFYING')
         self.assertIn('candidate_hash_required', self.gaps(job_id, self.verification(job_id, [])))
         with self.assertRaises(ValueError): record_check(self.evidence, self.sup.store.load(job_id), criterion_id='doc_ok', status='PASS', check='c')
@@ -229,11 +229,11 @@ class IndependenceTest(Base):
 class MechanicsTest(Base):
     def test_candidate_is_bound_only_by_the_owner_while_building(self):
         job_id, worker = self.start('documentation')
-        with self.assertRaises(JobError): self.sup.bind_candidate(job_id, 'someone-else', stage='guppi-candidates/x', parent_version='v0', candidate_hash=CHASH)
+        with self.assertRaises(JobError): self.sup.bind_candidate(job_id, 'someone-else', stage='sedra-candidates/x', parent_version='v0', candidate_hash=CHASH)
         with self.assertRaises(ValueError): self.sup.bind_candidate(job_id, worker, stage='elsewhere/x', parent_version='v0', candidate_hash=CHASH)
-        self.sup.bind_candidate(job_id, worker, stage='guppi-candidates/x', parent_version='v0', candidate_hash=CHASH)
+        self.sup.bind_candidate(job_id, worker, stage='sedra-candidates/x', parent_version='v0', candidate_hash=CHASH)
         self.sup.complete_step(job_id, worker, 'TESTING')
-        with self.assertRaises(JobError): self.sup.bind_candidate(job_id, worker, stage='guppi-candidates/x', parent_version='v0', candidate_hash=CHASH)
+        with self.assertRaises(JobError): self.sup.bind_candidate(job_id, worker, stage='sedra-candidates/x', parent_version='v0', candidate_hash=CHASH)
 
     def test_parking_needs_a_candidate_and_the_verifying_state(self):
         job_id, worker = self.start('documentation')
@@ -262,7 +262,7 @@ class MechanicsTest(Base):
 
     def test_in_place_mark_passed_asks_the_same_gate(self):
         job_id, worker = self.start('documentation')
-        self.sup.bind_candidate(job_id, worker, stage='guppi-candidates/x', parent_version='v0', candidate_hash=CHASH)
+        self.sup.bind_candidate(job_id, worker, stage='sedra-candidates/x', parent_version='v0', candidate_hash=CHASH)
         self.sup.complete_step(job_id, worker, 'TESTING'); self.sup.complete_step(job_id, worker, 'VERIFYING')
         with self.assertRaises(JobError) as ctx: self.sup.mark_passed(job_id, worker, self.verification(job_id, []))
         self.assertEqual(ctx.exception.code, 'verification_gate_failed')

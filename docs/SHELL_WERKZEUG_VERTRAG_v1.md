@@ -20,7 +20,7 @@ die erste Shell, `UIX_2_RICHTUNG_C.md` die Herleitung.
 ## 2. Ordner und Dateien
 
 ```
-runtime/src/guppi_runtime/uix/
+runtime/src/sedra_runtime/uix/
   ui/
     api.js  bus.js  lifecycle.js  tokens.css  schema/tool.schema.json  schema/shell.schema.json
   shells/
@@ -54,7 +54,7 @@ tool:
     - GET /api/candidate/*
     - POST /api/mission/approve
   events: {emits: [decision.answered], listens: [object.open, task.changed]}
-  trust: CORE                   # CORE | CAPTAIN | GUPPI_BUILT | COMMUNITY
+  trust: CORE                   # CORE | CAPTAIN | SEDRA_BUILT | COMMUNITY
   tests: [test.spec.js]         # Browserabnahme (uix_check läuft sie je Werkzeug)
   needs: {ui: ">=1.0 <2"}       # Vertragsversion
 ```
@@ -133,17 +133,17 @@ Benannte Ereignisse, flache Objekte, keine Funktionen darin. Die Shell darf alle
 - **Installation** (Build 9+): `POST /api/uix/install {kind, source}` → Gate `install_module` mit Manifest, Dateiliste, SHA-256 je Datei,
   Commit-ID; Flag-Prüfung wie bei Skills (`scan`), zusätzlich: kein `eval`, kein `fetch` auf fremde Hosts, keine `import()` von außerhalb.
   Nach Freigabe liegt das Modul unter `local_config/…`; `uix.yaml` führt es. Entfernen ist kein Gate (nur Audit).
-- Vertrauensränge: `CORE` (im Paket), `CAPTAIN` (vom Captain geschrieben), `GUPPI_BUILT` (aus einer Spec mit verstecktem Test, Nachweiskette),
+- Vertrauensränge: `CORE` (im Paket), `CAPTAIN` (vom Captain geschrieben), `SEDRA_BUILT` (aus einer Spec mit verstecktem Test, Nachweiskette),
   `COMMUNITY` (fremd; nie ohne Durchsicht, bekommt standardmäßig nur `GET`-Routen).
 
-## 7. Wie SEDRA selbst ein Modul baut (GUPPI-Weg)
+## 7. Wie SEDRA selbst ein Modul baut (SEDRA-Weg)
 
 1. **Spec** in `benchmarks/devvm_specs/tool_<id>.py` wie heute (NOTES/STAGES): Zielobjekt, Handlungen, API-Routen, Ereignisse; die
    reinen Teile (Zustandsmodell, Formatierung) als `host_hidden`-Node-Tests, der Browser-Teil als `uix_check`-Abnahme (`test.spec.js`:
    mount in leeren Container, Ereignis senden, DOM prüfen).
-2. **Bauen** in der DevVM nach `tool.yaml`-Schema; `spec_check.py` muss `result ok` sagen; der Kandidat trägt `trust: GUPPI_BUILT`.
+2. **Bauen** in der DevVM nach `tool.yaml`-Schema; `spec_check.py` muss `result ok` sagen; der Kandidat trägt `trust: SEDRA_BUILT`.
 3. **Einbau** über denselben Install-Gate wie fremde Module (Manifest, Hashes, Spec-Nachweis im Gate sichtbar).
-4. **Vorlagen** für GUPPI: `tools/_template/` (Werkzeug) und `shells/_template/` (Shell) mit funktionierendem Minimum und Kommentaren;
+4. **Vorlagen** für SEDRA: `tools/_template/` (Werkzeug) und `shells/_template/` (Shell) mit funktionierendem Minimum und Kommentaren;
    ein neues Modul beginnt immer als Kopie der Vorlage.
 
 ## 8. Abnahme
@@ -159,8 +159,8 @@ Benannte Ereignisse, flache Objekte, keine Funktionen darin. Die Shell darf alle
    Gespräch, Palette), Werkzeuge aus den heutigen Fenstern: `talk`, `decisions`, `workshop`, `library`, `crew`, `meter`, `logbook`,
    Instrumente. Retro ins Archiv. `uix_check` auf Werkzeuge umgestellt.
 2. **Build 8**: Werkzeuge `task`, `candidate` (diff2html lokal), `tests`, `live` (SSE), `files`, `costs` (Münzloch).
-3. **Build 9**: Modus und Grenzen, `decisions` an der Grenze, Vorhaben und „＋ Neu“, Installation mit Gate, Vorlagen für GUPPI.
-4. Danach: Shell `minimal` (E), dann `paperclip` (D); erste GUPPI-Spec für ein eigenes Werkzeug (z. B. „Routinen“).
+3. **Build 9**: Modus und Grenzen, `decisions` an der Grenze, Vorhaben und „＋ Neu“, Installation mit Gate, Vorlagen für SEDRA.
+4. Danach: Shell `minimal` (E), dann `paperclip` (D); erste SEDRA-Spec für ein eigenes Werkzeug (z. B. „Routinen“).
 
 ## 10. Andockstelle im Backend: das Desk (Captain 18:47)
 
@@ -169,7 +169,7 @@ Architektur dafür neu gedacht wird. Heute macht `uix_server.py` (≈ 1.300 Zeil
 Das wird getrennt:
 
 ```
-guppi_runtime/
+sedra_runtime/
   desk/                     ← die Andockstelle (neu, Build 7)
     gateway.py              Manifeste (Shell, Werkzeuge), Dateien aus registrierten Ordnern, Allowlist je Werkzeug, CSP, Token
     objects.py              EIN Objektmodell für alles: project, intent, task, candidate, file, model, skill, agent, decision, routine
@@ -289,9 +289,9 @@ Freigegeben mit G2-S0-13; Wortlaut aus `SPEC_AGENTEN_ORCHESTRIERUNG_v1.md`, D1 b
   Angabe eine Selbstauskunft; Werkzeuge mit `trust: COMMUNITY` bekommen ohnehin nur `GET`-Routen.
 - **R5 – Client-Token (§6, Anmeldung).** Neben dem Browser-Token schreibt der Server beim Start je externem Client (`cli`, `mcp`) einen
   eigenen Zufallstoken mit Port und PID nach `runtime_data/uix/clients/<client>.json` (atomar; unter Windows mit der DPAPI, sonst
-  Datei mit Rechten 0600) und löscht die Dateien beim Beenden. Die Anmeldung bleibt der Kopf `X-GUPPI-Token`. Ein Client-Token
+  Datei mit Rechten 0600) und löscht die Dateien beim Beenden. Die Anmeldung bleibt der Kopf `X-SEDRA-Token`. Ein Client-Token
   öffnet nur `POST /api/objects` und `POST /api/actions`; jede andere Route antwortet ihm mit `403`. Die externen Clients sind
-  `guppi objects <typ> [<id>]`, `guppi act <typ> <id|-> <verb> [--args JSON]` und der MCP-Server `desk_mcp.py` (Werkzeuge `objects`,
+  `sedra objects <typ> [<id>]`, `sedra act <typ> <id|-> <verb> [--args JSON]` und der MCP-Server `desk_mcp.py` (Werkzeuge `objects`,
   `act`); ohne laufende Oberfläche melden sie `uix_not_running` – es gibt keinen Weg am Desk vorbei.
 
 ## Nachtrag 29.10.2026 (Harness Stufe 4): Gruppe im Start-Menü, Umschalter als Menü

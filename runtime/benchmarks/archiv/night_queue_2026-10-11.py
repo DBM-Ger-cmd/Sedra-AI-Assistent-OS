@@ -2,7 +2,7 @@ r"""Night run of 2026-10-11 (Captain: "die Modelle sollen jeweils was anderes ba
 
     .venv\Scripts\python.exe benchmarks/night_queue_2026-10-11.py <project_dir>
 
-Every model runs in GUPPI's own coder (DevVM, solo, --coder-ext all) with the settings of the stable runs of 2026-10-11 (engine b11160 via GUPPI_ENGINE_BUILD,
+Every model runs in SEDRA's own coder (DevVM, solo, --coder-ext all) with the settings of the stable runs of 2026-10-11 (engine b11160 via SEDRA_ENGINE_BUILD,
 flash attention on, KV q8_0, ubatch 512, 1 slot) and does three things, one after the other:
   1. the standard test bench_std (the same task for everybody, the only directly comparable number; solo-none like the reference runs),
   2. its OWN missing coder part (spec in devvm_specs/, hidden tests checked against Claude's reference in devvm_refs/),
@@ -43,7 +43,7 @@ class Queue:
         self.out = self.project / "runtime_data" / "measurements" / "night_2026-10-11"
         self.out.mkdir(parents=True, exist_ok=True)
         self.summary = {"started": stamp(), "server": SERVER, "engine": "b11160", "models": {}, "leftover_builds": []}
-        self.env = {**os.environ, "GUPPI_ENGINE_BUILD": "b11160", "TESTLAB_OWNER": "claude_night_2026-10-11", "PYTHONIOENCODING": "utf-8"}
+        self.env = {**os.environ, "SEDRA_ENGINE_BUILD": "b11160", "TESTLAB_OWNER": "claude_night_2026-10-11", "PYTHONIOENCODING": "utf-8"}
 
     def say(self, text):
         line = f"{stamp()} {text}"

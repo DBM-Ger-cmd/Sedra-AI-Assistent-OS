@@ -1,14 +1,14 @@
 """Tests never start this PC's programs: nvidia-smi, LM Studio's lms, powercfg, PowerShell.
 
-Every test module does `from host_isolation import setUpModule, tearDownModule`. While a module runs, the GUPPI modules that would
+Every test module does `from host_isolation import setUpModule, tearDownModule`. While a module runs, the SEDRA modules that would
 start such a program see a missing program instead (as on a PC without it), and hardware detection reports one fixed GPU. Only the
-names inside those GUPPI modules are replaced, never the global subprocess/shutil: a test that patches for example
-`guppi_runtime.hardware_manager.collector.subprocess.run` itself still works.
+names inside those SEDRA modules are replaced, never the global subprocess/shutil: a test that patches for example
+`sedra_runtime.hardware_manager.collector.subprocess.run` itself still works.
 
 `models/gpu_preflight` binds the real `subprocess.run` as default argument, so its probes are wrapped instead (2026-11-03): called with that
 default they answer like a PC without PowerShell and with an empty card and never stop a process; a `run` passed in by a test is used as
 before. Before, `test_tuning` reached `clear_leftovers` through `benchmark._take_gpu` and on Windows listed the real llama-servers, read the
-real card and could stop every running GUPPI llama-server with taskkill /F (off Windows it failed on the missing nvidia-smi).
+real card and could stop every running SEDRA llama-server with taskkill /F (off Windows it failed on the missing nvidia-smi).
 
 Why (2026-10-03): with the real programs, results and run time depended on the PC (LM Studio's CLI may wait up to 30 s, a busy GPU
 or another chat's model changes what nvidia-smi says), and 19 tests started the real lms.exe 38 times per suite run.
@@ -17,7 +17,7 @@ import shutil
 from types import SimpleNamespace
 from unittest import mock
 
-# Matches the GUPPI PC (one 12 GB NVIDIA card), so hardware classes and model profiles stay as they were measured there.
+# Matches the SEDRA PC (one 12 GB NVIDIA card), so hardware classes and model profiles stay as they were measured there.
 TEST_GPU = {'vendor': 'NVIDIA', 'name': 'Test GPU (host_isolation)', 'vram_gb': 12.0}
 
 
@@ -43,7 +43,7 @@ def _host_only(fn, harmless):
 
 
 def _gpu_preflight_patches():
-    from guppi_runtime.models import gpu_preflight as gp
+    from sedra_runtime.models import gpu_preflight as gp
     harmless = {
         '_powershell': lambda a: '',                 # no PowerShell: no listener, no processes, no llama-servers
         'vram_used_gb': lambda a: 0.0,               # an empty card
@@ -57,16 +57,16 @@ def _tuer_aus():
     """G9 (SPEC_APPS_v1_O3PLUS_G9_G2): Die Tür für Freigaben der Klasse H ist in Tests aus, damit die Tests ihrer Stellen weiter deren Logik
     prüfen (sie erteilen über die Seite). Die Tür selbst prüft tests/test_freigabe_tuer.py – dort ist sie ausdrücklich an. Kein Schalter im
     Code: nur dieser Patch in der Testumgebung."""
-    return [mock.patch('guppi_runtime.uix_server.UIXHub._freigabe_ausserhalb', lambda self: False)]
+    return [mock.patch('sedra_runtime.uix_server.UIXHub._freigabe_ausserhalb', lambda self: False)]
 
 
 def _patches():
     return _gpu_preflight_patches() + _tuer_aus() + [
-        mock.patch('guppi_runtime.hardware._nvidia', side_effect=lambda: dict(TEST_GPU)),
-        mock.patch('guppi_runtime.hardware_manager.collector.shutil', SimpleNamespace(which=lambda *a, **k: None, disk_usage=shutil.disk_usage)),
-        mock.patch('guppi_runtime.hardware_manager.collector.subprocess', SimpleNamespace(run=_no_program)),
-        mock.patch('guppi_runtime.hardware_manager.power.subprocess', SimpleNamespace(run=_no_program)),
-        mock.patch('guppi_runtime.models.runtime_control.shutil', SimpleNamespace(which=lambda *a, **k: None)),
+        mock.patch('sedra_runtime.hardware._nvidia', side_effect=lambda: dict(TEST_GPU)),
+        mock.patch('sedra_runtime.hardware_manager.collector.shutil', SimpleNamespace(which=lambda *a, **k: None, disk_usage=shutil.disk_usage)),
+        mock.patch('sedra_runtime.hardware_manager.collector.subprocess', SimpleNamespace(run=_no_program)),
+        mock.patch('sedra_runtime.hardware_manager.power.subprocess', SimpleNamespace(run=_no_program)),
+        mock.patch('sedra_runtime.models.runtime_control.shutil', SimpleNamespace(which=lambda *a, **k: None)),
     ]
 
 

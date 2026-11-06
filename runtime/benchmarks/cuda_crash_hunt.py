@@ -29,11 +29,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import small_team as st                                                              # noqa: E402
 from rework_bench import TASKS                                                       # noqa: E402
-from guppi_runtime.models import gpu_preflight
-from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
+from sedra_runtime.models import gpu_preflight
+from sedra_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 VARIANTS = {
     "baseline": {},
@@ -101,7 +101,7 @@ def one_run(variant, spec, args, log, project, model):
     if spec.get("engine_build"): config.engine_build = spec["engine_build"]
     if spec.get("sanitizer"):
         config.startup_timeout_s = 900      # under the sanitizer the model needs minutes to load
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_crashhunt_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_crashhunt_")))
     if spec.get("sanitizer"):
         runtime.launcher = (str(SANITIZER), "--tool", "memcheck", "--print-limit", "20", "--show-backtrace", "no")
     if not runtime.available(): return {"error": f"engine_not_available:{spec.get('engine_build')}"}
@@ -109,7 +109,7 @@ def one_run(variant, spec, args, log, project, model):
     if "flash_attn" in spec: server["flash_attn"] = spec["flash_attn"]
     saved = {k: os.environ.get(k) for k in spec.get("env", {})}
     os.environ.update(spec.get("env", {}))
-    work = Path(tempfile.mkdtemp(prefix="guppi_crashhunt_files_"))
+    work = Path(tempfile.mkdtemp(prefix="sedra_crashhunt_files_"))
     events0, done, crash, speed, t0 = driver_events(), 0, None, None, time.monotonic()
     try:
         runtime.load_model(model["alias"], context_length=spec.get("context", model["context"]), gpu="max", identifier=model["alias"], parallel=1, server=server)

@@ -1,14 +1,14 @@
-"""Phase 8f: GUPPI starts and watches its own llama-server. No real process: popen and HTTP are replaced."""
+"""Phase 8f: SEDRA starts and watches its own llama-server. No real process: popen and HTTP are replaced."""
 import tempfile
 import unittest
 from pathlib import Path
 
 import yaml
 
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime, build_command, discover_backend
-from guppi_runtime.models.model_loader import LoaderConfig, LoadError, ModelLoader
-from guppi_runtime.models.runtime_control import RuntimeControlError
-from guppi_runtime.models.role_routing import RoutingConfig
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime, build_command, discover_backend
+from sedra_runtime.models.model_loader import LoaderConfig, LoadError, ModelLoader
+from sedra_runtime.models.runtime_control import RuntimeControlError
+from sedra_runtime.models.role_routing import RoutingConfig
 from test_model_loader import FakeController, inst
 from test_role_routing import recipe, routing_raw
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests

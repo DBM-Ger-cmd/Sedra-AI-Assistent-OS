@@ -4,8 +4,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from guppi_runtime.harness import hilfswerkzeuge as hw
-from guppi_runtime.harness.api import WEG
+from sedra_runtime.harness import hilfswerkzeuge as hw
+from sedra_runtime.harness.api import WEG
 
 KOPF = 'schema: 1\nwerkzeuge:\n'
 EINS = '  - {id: a, name: A, art: programm, name_im_system: aprog, zweck: z, install: "pip install a", plan: W1}\n'
@@ -66,7 +66,7 @@ class Konfiguration(unittest.TestCase):
             self.assertTrue(e['plan'].strip(), e['id'] + ' braucht eine Plan-Nummer')
 
     def test_der_provider_faster_whisper_steht_hier_wie_im_kern(self):
-        from guppi_runtime.sprache import stt
+        from sedra_runtime.sprache import stt
         exe = {e['id']: e['name_im_system'] for e in hw.lesen()}
         for name, programm, _install, _hinweis in stt.PROVIDER:
             self.assertEqual(exe.get(name), programm, name)

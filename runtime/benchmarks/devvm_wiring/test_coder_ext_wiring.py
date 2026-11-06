@@ -7,12 +7,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
-from guppi_runtime.devenv.devvm import DevWorkspace  # noqa: E402
-from guppi_runtime.devenv.devvm_agents import AgentBudget, run_agent  # noqa: E402
-from guppi_runtime.devenv.devvm_tools import DevToolBox  # noqa: E402
-from guppi_runtime.coder_ext import CoderExtensions  # noqa: E402
-from guppi_runtime.coder_ext.replay_log import Player  # noqa: E402
-from guppi_runtime.coder_ext.coder_cards import CARDS  # noqa: E402
+from sedra_runtime.devenv.devvm import DevWorkspace  # noqa: E402
+from sedra_runtime.devenv.devvm_agents import AgentBudget, run_agent  # noqa: E402
+from sedra_runtime.devenv.devvm_tools import DevToolBox  # noqa: E402
+from sedra_runtime.coder_ext import CoderExtensions  # noqa: E402
+from sedra_runtime.coder_ext.replay_log import Player  # noqa: E402
+from sedra_runtime.coder_ext.coder_cards import CARDS  # noqa: E402
 
 POLICY = {"max_files": 40, "max_file_bytes": 60000, "max_input_bytes": 200000}
 A = "a = 1\nb = 2\n"

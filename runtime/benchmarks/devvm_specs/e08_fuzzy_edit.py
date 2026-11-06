@@ -1,7 +1,7 @@
 """E-08 (coder extension "tolerant edit", 2026-10-10): `fuzzy_edit.py` finds the text an edit_file call means when the model's `old` differs from the file only in trailing spaces,
 indentation or typographic characters (smart quotes, dashes), and re-indents `new` to fit. Half of the edits of a Cline session failed on exactly this (2026-10-09, see edit_hint in
 devvm_tools.py); idea and strategy order from Hermes tools/fuzzy_match.py (MIT). Never guesses: more than one match is an error. Pure functions, no file access; the edit_file
-integration comes after acceptance. GUPPI builds it, Claude only wrote this file and the hidden tests. Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
+integration comes after acceptance. SEDRA builds it, Claude only wrote this file and the hidden tests. Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
 
 NOTES = '''# Notes for fuzzy_edit
 Pure Python 3 standard library, no file, process or network access, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code.

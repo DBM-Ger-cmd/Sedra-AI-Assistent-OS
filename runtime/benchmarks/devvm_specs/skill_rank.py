@@ -1,7 +1,7 @@
-"""Skill search ranking (Captain 2026-10-13: "GUPPI soll die Suche verbessern"). The first search of the skill library counts shared words of at least 3 letters, so "debug root cause" does not
+"""Skill search ranking (Captain 2026-10-13: "SEDRA soll die Suche verbessern"). The first search of the skill library counts shared words of at least 3 letters, so "debug root cause" does not
 find `systematic-debugging` (debug != debugging), "write failing test first" ranks `ci-cd-and-automation` before the test skills, and nothing knows that bug, error and debug mean nearly the same.
 `skill_rank.py` is the new pure ranking: word stems, stop words, name hits worth more than description hits, synonym groups worth less than direct hits, a bonus when the name covers the whole
-query, a fixed order for equal scores. The hook into SkillLibrary.search (and a group table for the real library) is wired by Claude after acceptance. GUPPI builds it, Claude wrote this file,
+query, a fixed order for equal scores. The hook into SkillLibrary.search (and a group table for the real library) is wired by Claude after acceptance. SEDRA builds it, Claude wrote this file,
 the hidden tests and the reference (benchmarks/devvm_refs/skill_rank)."""
 
 NOTES = '''# Notes for skill_rank

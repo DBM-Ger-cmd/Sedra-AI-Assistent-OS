@@ -2,7 +2,7 @@ r"""Cross-check: does the long-context CUDA crash also happen through Ollama (a 
 
     .venv\Scripts\python.exe benchmarks/ollama_crosscheck.py <project_dir> <ollama_model> [--ctx 65536] [--probes 3] [--fill 0.85]
 
-Captain 2026-10-03: "prüfe ob mit der ollama schnittstelle die fehler auch auftreten bei qwen". GUPPI's llama-server (llama.cpp b11371)
+Captain 2026-10-03: "prüfe ob mit der ollama schnittstelle die fehler auch auftreten bei qwen". SEDRA's llama-server (llama.cpp b11371)
 crashed with "CUDA error: an illegal memory access" + nvlddmkm events on qwen3-coder at 64k (2nd probe, ~55.8k tokens) and on
 qwen3.5 at >= 23k. Same needle prompts as context_ladder.py, sent to Ollama's own /api/generate (raw ChatML, num_ctx per request).
 If Ollama crashes the same way, the GPU/driver is the suspect; if not, llama.cpp's kernels are. Holds the GPU lease.
@@ -27,7 +27,7 @@ sys.path.insert(0, str(RUNTIME / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from context_ladder import RESERVE_GIB, driver_events_since, gpu_mib, haystack     # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                           # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                           # noqa: E402
 
 OLLAMA = "http://127.0.0.1:11434"
 

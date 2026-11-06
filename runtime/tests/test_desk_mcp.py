@@ -8,9 +8,9 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime import uix_clients
-from guppi_runtime.desk_mcp import DeskMcpServer
-from guppi_runtime.uix_server import UIXHub, make_server
+from sedra_runtime import uix_clients
+from sedra_runtime.desk_mcp import DeskMcpServer
+from sedra_runtime.uix_server import UIXHub, make_server
 from test_desk_kinds import ARCH, audit_payloads
 
 

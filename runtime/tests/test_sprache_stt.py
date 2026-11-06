@@ -2,7 +2,7 @@
 (die Kommandozeile `whisper-ctranslate2`) als CPU-Provider neben WhisperX und openai-whisper."""
 import unittest
 
-from guppi_runtime.sprache import stt
+from sedra_runtime.sprache import stt
 
 
 def gefunden(*namen):

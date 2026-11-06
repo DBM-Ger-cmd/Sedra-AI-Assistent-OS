@@ -4,9 +4,9 @@ r"""Qwen Code in the stage loop of the DevVM build (Captain 2026-10-10: a ready 
     .venv\Scripts\python.exe benchmarks/qwen_build.py <project_dir> --spec bench_std --fake-model        # rehearsal without GPU: the model is a scripted fake, everything else is real
 
 What runs where:
-  - the model: GUPPI's llama-server (GPU lease held) - or, with --fake-model, a scripted fake on 127.0.0.1;
+  - the model: SEDRA's llama-server (GPU lease held) - or, with --fake-model, a scripted fake on 127.0.0.1;
   - the agent: Qwen Code (Node, installed in its own folder) headless, in an EMPTY working folder, with its own empty home, no secrets; its built-in tools are denied and removed and the bridge to withheld tools is off: the model sees ONLY the
-    tools of GUPPI's MCP server (`guppi_runtime.devvm_mcp`, attached to the workspace of this run); `run_python` (only with --self-check light|full) runs in the microVM;
+    tools of SEDRA's MCP server (`sedra_runtime.devvm_mcp`, attached to the workspace of this run); `run_python` (only with --self-check light|full) runs in the microVM;
   - the judge: the hidden acceptance test of the stage in the microVM, as in devvm_build.py; a failed stage gets the readable bug report in a rework that CONTINUES the session (`--continue`).
 BEFORE every run the tool list that the agent shows to the model is recorded with a fake model and compared with ours (agent_tool_probe); any other tool stops the whole run (exit 3). Results go to the same files as devvm_build.py
 (`devvm_build_<spec>_*.json/.log`, mode column "qwen-code"), the candidate to runtime_data/devvm_candidates, a snapshot after every passed stage to runtime_data/devvm_snapshots.
@@ -41,7 +41,7 @@ def qwen_command(node, entry, prompt, continue_session=False, system_mode="asis"
 
 def our_system_text(self_check):
     """The system text of our solo developer (the same words, the check clause of the chosen way)."""
-    from guppi_runtime.devenv.devvm_tools import SELF_CHECK, SYSTEM
+    from sedra_runtime.devenv.devvm_tools import SELF_CHECK, SYSTEM
     text = SYSTEM["solo"]
     if self_check != "full": text = text.replace(SELF_CHECK["full"]["system"], SELF_CHECK[self_check]["system"])
     return text
@@ -137,12 +137,12 @@ def main():
 
     import devvm_agents_bench as bench
     from devvm_build import DEFAULT_MODEL, acceptance, export_snapshot, hidden_report, without_test_duty
-    from guppi_runtime.devenv.devvm import DevWorkspace
-    from guppi_runtime.devenv.devvm_agents import CONTINUE_PROMPT, SOLO_PROMPT
-    from guppi_runtime.devenv.devvm_tools import SELF_CHECK
-    from guppi_runtime.jobs.run_log import RunLog
-    from guppi_runtime.sandbox.broker import SandboxBroker
-    from guppi_runtime.sandbox.provider import MicrosandboxProvider
+    from sedra_runtime.devenv.devvm import DevWorkspace
+    from sedra_runtime.devenv.devvm_agents import CONTINUE_PROMPT, SOLO_PROMPT
+    from sedra_runtime.devenv.devvm_tools import SELF_CHECK
+    from sedra_runtime.jobs.run_log import RunLog
+    from sedra_runtime.sandbox.broker import SandboxBroker
+    from sedra_runtime.sandbox.provider import MicrosandboxProvider
 
     project = Path(args.project)
     if args.spec == "bench_std" and not args.seed: args.seed = str(RUNTIME / "benchmarks" / "bench_std_seed")      # the standard test needs its seed files (util.py, main.py, ledger.py); the first Qwen Code runs of 2026-10-10 had none (see docs/QWEN_ANSCHLUSS)
@@ -150,7 +150,7 @@ def main():
     spec = importlib.import_module(f"devvm_specs.{args.spec}")
     log = RunLog(project / "runtime_data" / "measurements", f"devvm_build_{args.spec}", config={"spec": args.spec, "attempts": 1, "agent": "qwen-code"})
     log_stamp = time.strftime("%Y%m%d_%H%M%S")
-    tool_root = Path(tempfile.mkdtemp(prefix="guppi_qwen_build_"))
+    tool_root = Path(tempfile.mkdtemp(prefix="sedra_qwen_build_"))
     entry = Path(args.install_dir) / "node_modules" / "@qwen-code" / "qwen-code" / "cli-entry.js"
     if not entry.is_file():
         print(f"Qwen Code is not installed at {entry}", file=sys.stderr)
@@ -195,11 +195,11 @@ def main():
             server_handle = probe.make_server(records, script)
             endpoint, alias, context = f"http://127.0.0.1:{server_handle.server_address[1]}", "fake-model", int(args.context)
         else:
-            from guppi_runtime.models.gpu_preflight import clear_leftovers
-            from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-            from guppi_runtime.jobs.testlab import TestLab, default_path
+            from sedra_runtime.models.gpu_preflight import clear_leftovers
+            from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+            from sedra_runtime.jobs.testlab import TestLab, default_path
             config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled = True
-            runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_qwen_build_rt_")))
+            runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_qwen_build_rt_")))
             key = args.coder or DEFAULT_MODEL
             loader = bench.BenchLoader(runtime, project, {"coder": key}, log, context=int(args.context), server_extra={"reasoning": args.reasoning})
             lease = TestLab(default_path(project)).lease(os.environ.get("TESTLAB_OWNER", "qwen_build"), f"qwen build {args.spec}", ttl_s=1800, wait_s=36000, preflight=clear_leftovers)

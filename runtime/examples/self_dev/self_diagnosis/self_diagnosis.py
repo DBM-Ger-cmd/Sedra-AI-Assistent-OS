@@ -1,4 +1,4 @@
-"""GUPPI self-diagnosis: turn collected facts into findings. Pure: no files, no processes, no clock; only the standard library.
+"""SEDRA self-diagnosis: turn collected facts into findings. Pure: no files, no processes, no clock; only the standard library.
 
 The caller collects the facts (see `diagnose`) and passes them in; this module only judges them. Every rule below comes from
 a real problem on the Captain's PC on 2026-10-02.
@@ -54,7 +54,7 @@ def disk_findings(free_bytes, runtime_data_bytes):
 
 
 def path_findings(path_health):
-    """`path_health` is the dict of GUPPI's path_health capability, or None.
+    """`path_health` is the dict of SEDRA's path_health capability, or None.
     - None, or a dict whose "status" is not "OK"/"ATTENTION": INFO id "path_health_unavailable", area "paths",
       detail = its "status" (or "missing" for None).
     - vm_path.ok is False: CRITICAL id "vm_path_too_long", area "paths", detail "<longest> of <limit - 1> characters".

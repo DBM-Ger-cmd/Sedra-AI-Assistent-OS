@@ -1,9 +1,9 @@
-r"""Archiv der alten Installation als Zip (Umzug nach A1, U2-12): `E:\Sedra Umgebung\Archiv\Entwickler_Archiv\GUPPI_Runtime_v1.20.Archiv.zip` mit Manifest, verifiziert. Löscht NICHTS.
+r"""Archiv der alten Installation als Zip (Umzug nach A1, U2-12): `E:\Sedra Umgebung\Archiv\Entwickler_Archiv\SEDRA_Runtime_v1.20.Archiv.zip` mit Manifest, verifiziert. Löscht NICHTS.
 
     python benchmarks/archiv_zip.py                      Trockenlauf: zählt, prüft Platz und Ruhe, startet nichts
     python benchmarks/archiv_zip.py --go                 Zip und Manifest erzeugen, gegen das Manifest und den Ordner verifizieren (Captain-Gate)
     python benchmarks/archiv_zip.py --verify             vorhandenes Zip erneut prüfen (Zip gegen Manifest; Ordner gegen Manifest, wenn er noch da ist)
-    optionen: --source <Ordner>  --target-dir <Ordner>  --name GUPPI_Runtime_v1.20.Archiv  --level 6  --exclude <relativer Pfad> (wiederholbar)  --no-checks (nur Tests)
+    optionen: --source <Ordner>  --target-dir <Ordner>  --name SEDRA_Runtime_v1.20.Archiv  --level 6  --exclude <relativer Pfad> (wiederholbar)  --no-checks (nur Tests)
 
 Ablauf von --go: Prüfungen (kein Prozess aus dem Ordner, Port 8089 frei, kein llama-server, GPU-Lease frei, genug Platz, Ziel noch nicht vorhanden) -> Zip in `<name>.zip.part` und Manifest
 (`path,size,sha256`, ein Durchgang: derselbe Lesevorgang schreibt und hasht) -> Zip gegen das Manifest (jede Datei neu gelesen und gehasht, keine fehlt, keine zu viel, `testzip`) -> Umbenennen
@@ -25,9 +25,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 RUNTIME = Path(__file__).resolve().parents[1]
-DEFAULT_SOURCE = r"E:\Sedra Umgebung\GUPPI_Runtime_v1.20"
+DEFAULT_SOURCE = r"E:\Sedra Umgebung\SEDRA_Runtime_v1.20"
 DEFAULT_DIR = r"E:\Sedra Umgebung\Archiv\Entwickler_Archiv"
-DEFAULT_NAME = "GUPPI_Runtime_v1.20.Archiv"
+DEFAULT_NAME = "SEDRA_Runtime_v1.20.Archiv"
 CHUNK = 1 << 20
 
 
@@ -167,7 +167,7 @@ def lease_problems(source):
     """GPU-Lease der Installation, REIN LESEND (SQLite `immutable=1`: schreibt nie, legt keine Datei an). `TestLab(...)` darf hier nicht benutzt werden:
     es migriert die Datenbank beim Öffnen auf Schema 2 und legt eine Sicherung an (so geschehen am 26.10.2026 und zurückgestellt)."""
     import sqlite3
-    db = Path(source) / "workspace" / "GUPPI_OS" / "runtime_data" / "testlab" / "testlab.db"
+    db = Path(source) / "workspace" / "SEDRA_OS" / "runtime_data" / "testlab" / "testlab.db"
     if not db.is_file():
         return []
     try:

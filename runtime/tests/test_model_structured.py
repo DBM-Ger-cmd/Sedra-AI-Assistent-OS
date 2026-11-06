@@ -1,10 +1,10 @@
 """Build 17, Schritt 1: strukturierte Antworten vom lokalen Modell (models/structured.py, ModelRouter.chat(schema=…))."""
 import unittest
 
-from guppi_runtime.core.content_guard import ContentGuard
-from guppi_runtime.models import structured
-from guppi_runtime.models.base import BaseModelAdapter, ModelAdapterError
-from guppi_runtime.models.router import ModelRouter
+from sedra_runtime.core.content_guard import ContentGuard
+from sedra_runtime.models import structured
+from sedra_runtime.models.base import BaseModelAdapter, ModelAdapterError
+from sedra_runtime.models.router import ModelRouter
 
 VORGABE = {'type': 'object', 'additionalProperties': False, 'required': ['id', 'name', 'raster'],
            'properties': {'id': {'type': 'string', 'pattern': '^[a-z][a-z0-9-]{1,30}$'},
@@ -74,7 +74,7 @@ class DasSchema(unittest.TestCase):
                 structured.check_schema({'type': 'object', 'additionalProperties': False, 'properties': {'x': {'type': bad}}})
 
     def test_the_foreman_schema_passes_the_checker(self):
-        from guppi_runtime.orchestra import decompose
+        from sedra_runtime.orchestra import decompose
         structured.check_schema(decompose.SCHEMA)
         self.assertEqual(structured.validate({'teilaufgaben': [{'titel': 'a', 'beschreibung': 'b', 'rolle': 'coder', 'blocker': [], 'akzeptanz': 'c'}], 'rueckfrage': None}, decompose.SCHEMA), [])
 

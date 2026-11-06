@@ -6,13 +6,13 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.artifacts import ArtifactStore
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.jobs.context_manager import ContextConfig, ContextError, ContextManager
-from guppi_runtime.selfdev.development_contracts import development_contract
-from guppi_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
-from guppi_runtime.jobs.job_worker import model_text_handler
-from guppi_runtime.jobs.working_set import WorkingSet, common_prefix, keywords
+from sedra_runtime.artifacts import ArtifactStore
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.jobs.context_manager import ContextConfig, ContextError, ContextManager
+from sedra_runtime.selfdev.development_contracts import development_contract
+from sedra_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
+from sedra_runtime.jobs.job_worker import model_text_handler
+from sedra_runtime.jobs.working_set import WorkingSet, common_prefix, keywords
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]
@@ -309,14 +309,14 @@ class HandlerIntegrationTest(Base):
 
 
 class RuntimeFactoryTest(unittest.TestCase):
-    ARCH = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+    ARCH = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 
     def runtime(self, switches):
-        from guppi_runtime.runtime import GuppiRuntime
+        from sedra_runtime.runtime import SedraRuntime
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
         project = Path(tmp.name) / 'project'; (project / 'local_config').mkdir(parents=True)
         if switches: (project / 'local_config' / 'switches.yaml').write_text(switches, encoding='utf-8')
-        return GuppiRuntime(project, architecture_root=self.ARCH)
+        return SedraRuntime(project, architecture_root=self.ARCH)
 
     def test_the_factory_builds_a_working_set_for_the_loaded_window_and_is_off_without_the_switch(self):
         rt = self.runtime('switches:' + chr(10) + '  context_manager: {enabled: true}' + chr(10))

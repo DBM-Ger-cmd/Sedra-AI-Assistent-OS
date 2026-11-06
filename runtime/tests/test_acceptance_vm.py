@@ -3,14 +3,14 @@ import os
 import unittest
 from pathlib import Path
 
-from guppi_runtime.selfdev.acceptance_suite import candidate_hash, load_suite, run_suite
-from guppi_runtime.selfdev.acceptance_vm import vm_runner
+from sedra_runtime.selfdev.acceptance_suite import candidate_hash, load_suite, run_suite
+from sedra_runtime.selfdev.acceptance_vm import vm_runner
 
 RUNTIME = Path(__file__).resolve().parents[1]
-PROJECT = RUNTIME.parent / "workspace" / "GUPPI_OS"
+PROJECT = RUNTIME.parent / "workspace" / "SEDRA_OS"
 
 
-@unittest.skipUnless(os.environ.get("GUPPI_VM_TESTS") == "1", "needs the microVM; set GUPPI_VM_TESTS=1")
+@unittest.skipUnless(os.environ.get("SEDRA_VM_TESTS") == "1", "needs the microVM; set SEDRA_VM_TESTS=1")
 class VmRunnerTest(unittest.TestCase):
     def test_a_command_runs_in_the_vm_and_a_failing_one_is_reported_as_failed(self):
         run = vm_runner(PROJECT, RUNTIME)

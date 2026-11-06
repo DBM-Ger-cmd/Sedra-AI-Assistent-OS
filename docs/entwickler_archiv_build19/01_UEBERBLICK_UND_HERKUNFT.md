@@ -4,7 +4,7 @@
 
 SEDRA (*Self-Evolving Development & Research Assistant*) ist ein **lokaler Agenten-Betriebsrahmen für den eigenen PC**. Er plant Aufgaben, führt sie mit lokalen Sprachmodellen aus und kann unter strenger Kontrolle eigene Teile des Codes erweitern.
 
-Der technische Name im Code ist **GUPPI** (Paket `guppi_runtime`, Archiv, Logbuch). **GUPPI** ist zugleich das Maskottchen und die Stimme im Chat. Diese Trennung gilt seit dem 14.10.2026 und ist im README festgehalten.
+Der technische Name im Code ist **SEDRA** (Paket `sedra_runtime`, Archiv, Logbuch). **SEDRA** ist zugleich das Maskottchen und die Stimme im Chat. Diese Trennung gilt seit dem 14.10.2026 und ist im README festgehalten.
 
 ## Grundsätze
 
@@ -31,19 +31,19 @@ Daraus folgen harte Regeln, die auch die Selbstentwicklung nicht umgehen kann:
 - **Oberflächen (Shells)** aus Code oder aus einer Vorgabe-Datei (seit Build 14 und 17), mit eigenem Einstieg (seit Build 18).
 - **Das KI GateWay** als erster Anwendungsfall, der auf dem Kern aufsetzt (seit Build 19).
 
-## Herkunft: Von GUPPI zu SEDRA – die Stationen
+## Herkunft: Von SEDRA zu SEDRA – die Stationen
 
 Die Entwicklung lief über mehrere Versionen (v1.2 bis v1.20). Ältere Notizen liegen im Quellcode unter `docs/historie/`. Die Stationen, die für dieses Archiv zählen:
 
 | Zeitpunkt | Station | Bedeutung |
 |---|---|---|
-| bis 13.10. | GUPPI-Paket v1.2 bis v1.20 | Missionen, Agent Manager, DevVM, Retro-Oberfläche „GUPPI XP“ |
-| 14.10. | Namensgebung und Oberflächen | SEDRA als Systemname, GUPPI als technischer Name und Maskottchen; Desk, Werkbank und Grenzen (Build 7 bis 9); Werkzeug- und Shell-Vertrag (`SHELL_WERKZEUG_VERTRAG_v1`) |
+| bis 13.10. | SEDRA-Paket v1.2 bis v1.20 | Missionen, Agent Manager, DevVM, Retro-Oberfläche „SEDRA XP“ |
+| 14.10. | Namensgebung und Oberflächen | SEDRA als Systemname, SEDRA als technischer Name und Maskottchen; Desk, Werkbank und Grenzen (Build 7 bis 9); Werkzeug- und Shell-Vertrag (`SHELL_WERKZEUG_VERTRAG_v1`) |
 | 14.10. | Start-Shell | Einstieg „Start“ mit Karten je Oberfläche (Build 14) |
 | 15.10. | Erste Lieferung von außen | Zwei Werkzeuge eines anderen Chats durch das Gate; Vertragsbefunde V1 und V2 geschlossen (Build 15) |
 | 15.10. | Inhaltsschutz im Kern | Kein Modellaufruf ohne Prüfung (Build 16) |
-| 15.10. | Shell-Creator | Schema-Zwang beim Modell, Rahmen aus Vorgabe, Satz an GUPPI (Build 17) |
-| 15.10. | START_SEDRA | Sauberer Einstieg; GUPPI XP als wählbare Shell (Build 18) |
+| 15.10. | Shell-Creator | Schema-Zwang beim Modell, Rahmen aus Vorgabe, Satz an SEDRA (Build 17) |
+| 15.10. | START_SEDRA | Sauberer Einstieg; SEDRA XP als wählbare Shell (Build 18) |
 | 15.10. | KI GateWay in SEDRA | Vorgang nach dem Studio Flow, Schutzklassen, Studio-Shell (Build 19) |
 
 Eine ausführliche Chronik mit den Abnahmezahlen steht in `07_BUILD_CHRONIK_14_BIS_19.md`.

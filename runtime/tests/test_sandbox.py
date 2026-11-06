@@ -7,13 +7,13 @@ import unittest
 from unittest.mock import patch
 import yaml
 
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.sandbox.broker import SandboxBroker
-from guppi_runtime.sandbox.provider import MicrosandboxProvider
-from guppi_runtime.tools.base import ToolValidationError
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.sandbox.broker import SandboxBroker
+from sedra_runtime.sandbox.provider import MicrosandboxProvider
+from sedra_runtime.tools.base import ToolValidationError
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH = sorted((Path(__file__).resolve().parents[2]/'architecture').glob('GUPPI_Architecture_v*'))[-1]
+ARCH = sorted((Path(__file__).resolve().parents[2]/'architecture').glob('SEDRA_Architecture_v*'))[-1]
 
 
 class FakeProvider:
@@ -29,7 +29,7 @@ class FakeProvider:
 class SandboxCase(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name)
-        self.rt=GuppiRuntime(self.root, ARCH)
+        self.rt=SedraRuntime(self.root, ARCH)
         self.source=self.rt.filesystem_tool.root/'project';self.source.mkdir()
         (self.source/'example.py').write_text('value = 1\n')
         self.fake=FakeProvider()
@@ -53,7 +53,7 @@ class SandboxCase(unittest.TestCase):
 
     def test_failure_before_the_provider_starts_leaves_no_lock_behind(self):
         plan=self.plan()
-        with patch('guppi_runtime.sandbox.broker.atomic_write_json',side_effect=OSError('disk full')):
+        with patch('sedra_runtime.sandbox.broker.atomic_write_json',side_effect=OSError('disk full')):
             with self.assertRaises(OSError): self.broker._run('M-SBX',plan)
         self.assertFalse((self.broker.data_root/'active.lock').exists())      # no VM existed, so nothing is pending cleanup
         self.assertEqual(self.fake.calls,[])
@@ -290,7 +290,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
         from types import SimpleNamespace as NS
         self.NS=NS
         self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name)
-        self.p=GuppiPolicyForTest()
+        self.p=SedraPolicyForTest()
         self.request={'policy':self.p,'job_id':'SBX-test','source':str(self.root),'commands':[['python3','x.py']],
                       'exports':[],'job_root':str(self.root)}
         self.created=[];self.stopped=[];self.exec_calls=[];self.kill_calls=[]
@@ -332,7 +332,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):self.tmp.cleanup()
 
     async def test_worker_constructs_offline_unmounted_guest_and_cleans_up(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         result=await run_job(self.request,self.sdk)
         self.assertEqual(result['status'],'PASS');self.assertTrue(result['cleanup_confirmed'])
         kw=self.created[0]
@@ -345,7 +345,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.stopped),1)
 
     async def test_runtime_share_is_locked_before_any_guest_command(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         result=await run_job(self.request,self.sdk)
         self.assertEqual(result['status'],'PASS')
         calls=[(a[0],a[1],kw.get('user')) for a,kw in self.plain_execs]
@@ -353,20 +353,20 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(calls[-1][2],'65534')                        # the lock is proven with the guest user, last before commands
 
     async def test_guest_command_never_runs_when_the_share_stays_writable(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         self.share_writable=True
         result=await run_job(self.request,self.sdk)
         self.assertEqual(result['status'],'FAILED');self.assertIn('runtime_share_writable_by_guest',result['error'])
         self.assertEqual(self.exec_calls,[]);self.assertTrue(result['cleanup_confirmed'])
 
     async def test_sandbox_name_is_short_and_stable(self):
-        from guppi_runtime.sandbox.worker import sandbox_name
+        from sedra_runtime.sandbox.worker import sandbox_name
         long_id='SBX-96875c51adf94b76921018261c2aadbc'
         self.assertEqual(len(sandbox_name(long_id)),18);self.assertEqual(sandbox_name(long_id),sandbox_name(long_id))
         self.assertNotEqual(sandbox_name(long_id),sandbox_name(long_id+'x'))
 
     async def test_source_tree_is_copied_file_by_file(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         src=self.root/'src';(src/'pkg').mkdir(parents=True);(src/'x.py').write_text('print(1)');(src/'pkg'/'m.py').write_bytes(b'a=1')
         self.request['source']=str(src)
         result=await run_job(self.request,self.sdk)
@@ -375,7 +375,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.written,{'/workspace/pkg/m.py':b'a=1','/workspace/x.py':b'print(1)'})
 
     async def test_ephemeral_sandbox_gone_after_stop_counts_as_cleaned(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         SandboxNotFoundError=type('SandboxNotFoundError',(Exception,),{})
         async def gone(name):raise SandboxNotFoundError(name)
         self.sdk.Sandbox.remove=gone
@@ -383,7 +383,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['status'],'PASS');self.assertTrue(result['cleanup_confirmed'])
 
     async def test_cleanup_failure_keeps_the_job_error(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         async def boom(**kw):raise RuntimeError('stop failed')
         async def bad_copy(*a):raise OSError('copy failed')
         guest=await self.sdk.Sandbox.create('n');type(guest).stop=lambda self,**kw:boom(**kw);type(guest.fs).mkdir=lambda self,p:bad_copy(p)
@@ -392,21 +392,21 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
         self.assertIn('stop failed',result['error']);self.assertIn('copy failed',result['error'])
 
     async def test_worker_output_limit_stops_and_discards_exports(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         self.p['max_log_bytes']=1
         result=await run_job(self.request,self.sdk)
         self.assertEqual(result['status'],'FAILED');self.assertTrue(result['cleanup_confirmed'])
         self.assertEqual(self.kill_calls,['kill']);self.assertEqual(result['exports'],[])
 
     async def test_worker_startup_failure_does_not_claim_cleanup(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         async def fail(*args,**kw):raise RuntimeError('partial startup')
         self.sdk.Sandbox.create=fail
         result=await run_job(self.request,self.sdk)
         self.assertEqual(result['status'],'CLEANUP_UNCONFIRMED');self.assertFalse(result['cleanup_confirmed'])
 
     async def test_failed_start_is_cleaned_only_when_the_sdk_says_not_found(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         async def fail(*args,**kw):raise RuntimeError('sandbox process exited before agent relay became available')
         self.sdk.Sandbox.create=fail
         NotFound=type('SandboxNotFoundError',(Exception,),{})
@@ -420,7 +420,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['status'],'CLEANUP_UNCONFIRMED')
 
     async def test_exit_code_comes_from_the_exited_event(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         NS=self.NS
         class Handle:
             def __init__(self):self.events=[NS(data=b'42\n',code=None),NS(data=None,code=3)]
@@ -438,7 +438,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
 
     async def test_command_timeout_is_enforced_by_the_worker(self):
         import asyncio
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         self.p['command_timeout_seconds']=0.2
         killed=[]
         class Hang:
@@ -453,7 +453,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
         self.assertIn('guest_command_timeout',result['error']);self.assertTrue(result['cleanup_confirmed'])
 
     async def test_worker_missing_image_refuses_before_launch(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         async def fail(*args,**kw):raise FileNotFoundError('cache missing')
         self.sdk.Image.get=fail
         result=await run_job(self.request,self.sdk)
@@ -462,7 +462,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
 
     async def test_worker_cancel_before_execution_retains_safe_status(self):
         import asyncio
-        from guppi_runtime.sandbox.worker import supervise
+        from sedra_runtime.sandbox.worker import supervise
         async def hang(*args,**kw):await asyncio.sleep(10)
         self.sdk.Image.get=hang
         (self.root/'cancel').touch()
@@ -480,7 +480,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
         guest.fs.list=lst;guest.fs.stat=stat;guest.fs.read_stream=read_stream
 
     async def test_export_dirs_refused_unless_the_policy_allows_them(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         self.request['export_dirs']=['out']
         result=await run_job(self.request,self.sdk)
         self.assertEqual(result['status'],'FAILED');self.assertIn('export_dirs_disabled_by_policy',result['error']);self.assertTrue(result['cleanup_confirmed'])
@@ -488,7 +488,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
 
     async def test_export_dirs_walk_the_guest_directory_with_the_sdk_and_return_every_file(self):
         import base64
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         NS=self.NS
         self.p.update(allow_export_dirs=True,max_files=5)
         await self.prepare_guest_tree({'/workspace/out':[NS(path='/workspace/out/a.py',kind='file',size=3),NS(path='sub',kind='directory',size=0)],
@@ -500,7 +500,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual({e['path']:base64.b64decode(e['data_base64']) for e in result['exports']},{'out/a.py':b'a=1','out/sub/b.txt':b'hi'})
 
     async def test_export_dirs_fail_closed_on_symlinks_special_files_counts_and_bad_paths(self):
-        from guppi_runtime.sandbox.worker import run_job
+        from sedra_runtime.sandbox.worker import run_job
         NS=self.NS
         self.p.update(allow_export_dirs=True,max_files=2)
         for kind,expected in (('symlink','guest_export_symlink'),('other','guest_export_special_file')):
@@ -517,7 +517,7 @@ class WorkerCase(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result['cleanup_confirmed'])
 
 
-def GuppiPolicyForTest():
+def SedraPolicyForTest():
     return {'image':'test@sha256:'+'a'*64,'cpus':2,'memory_mib':1024,'root_disk_mib':256,
             'job_timeout_seconds':120,'command_timeout_seconds':30,'cleanup_timeout_seconds':5,
             'max_processes':64,'max_file_bytes':1024,'max_export_bytes':1024,'max_log_bytes':32768}

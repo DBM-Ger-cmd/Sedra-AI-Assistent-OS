@@ -32,10 +32,10 @@ def pruefungen_laufen(spec_name, modul_name, paket_modul):
 
 class BauPruefungenTests(unittest.TestCase):
     def test_n2_aufgabe_deckung(self):
-        pruefungen_laufen('harness_aufgabe_deckung', 'aufgabe_deckung', 'guppi_runtime.harness.aufgabe_deckung')
+        pruefungen_laufen('harness_aufgabe_deckung', 'aufgabe_deckung', 'sedra_runtime.harness.aufgabe_deckung')
 
     def test_n8_lauf_fortschritt(self):
-        pruefungen_laufen('harness_lauf_fortschritt', 'lauf_fortschritt', 'guppi_runtime.harness.lauf_fortschritt')
+        pruefungen_laufen('harness_lauf_fortschritt', 'lauf_fortschritt', 'sedra_runtime.harness.lauf_fortschritt')
 
     def test_hoechstens_20_pruefungen_je_bau(self):
         for spec, grenze in (('harness_aufgabe_deckung', 20), ('harness_lauf_fortschritt', 12)):

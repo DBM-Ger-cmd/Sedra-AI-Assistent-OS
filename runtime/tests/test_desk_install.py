@@ -9,9 +9,9 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import install, intents
+from sedra_runtime.desk import install, intents
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 
 MANIFEST = '''tool:
   id: fremd
@@ -87,7 +87,7 @@ class Review(unittest.TestCase):
 
 class ThroughTheHub(unittest.TestCase):
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='desk-install-')
         self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
@@ -148,8 +148,8 @@ class ThroughTheHub(unittest.TestCase):
     def test_the_templates_are_never_loaded_but_keep_the_contract(self):
         """`_template` ist eine Vorlage, kein Modul – und muss trotzdem bestehen, sonst taugt sie nicht als Anfang (§7.4)."""
         import yaml
-        from guppi_runtime.desk.gateway import check_shell, check_tool
-        uix = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
+        from sedra_runtime.desk.gateway import check_shell, check_tool
+        uix = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix'
         self.assertNotIn('beispiel', [t['id'] for t in self.hub.gateway.manifest()['tools']])
         for folder, check, name, key in ((uix / 'tools' / '_template', check_tool, 'tool.yaml', 'tool'),
                                          (uix / 'shells' / '_template', check_shell, 'shell.yaml', 'shell')):
@@ -169,7 +169,7 @@ class ThroughTheHub(unittest.TestCase):
 
 class Intents(unittest.TestCase):
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='desk-intent-')
         self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
@@ -184,7 +184,7 @@ class Intents(unittest.TestCase):
         self.assertEqual(obj['tasks'], [])
         self.assertEqual(self.hub.decisions_view()['summary']['count'], 0, 'ein Vorhaben braucht keine Freigabe')
 
-    def test_guppi_makes_a_task_out_of_it(self):
+    def test_sedra_makes_a_task_out_of_it(self):
         entry = self.hub.intent_create({'title': 'CSV-Export aufräumen', 'text': 'Semikolon und Umlaute.'})
         out = self.hub.act({'type': 'intent', 'id': entry['id'], 'verb': 'aufgabe_machen'})
         mission_id = out['result']['mission_id']
@@ -265,7 +265,7 @@ class Hardening(unittest.TestCase):
 
     def test_a_foreign_module_is_community_whatever_it_claims(self):
         """Gefunden mit der ersten externen Lieferung: ihr Manifest sagte `trust: CAPTAIN` – und hätte so seine Schreibrouten behalten."""
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
         self.addCleanup(hub.close)
         claims = MANIFEST.replace('trust: COMMUNITY', 'trust: CAPTAIN')
@@ -283,7 +283,7 @@ class Hardening(unittest.TestCase):
 
     def test_write_routes_are_granted_only_through_a_gate_that_names_them(self):
         """Captain-Entscheidung 15.10.2026: ein fremdes Modul schreibt erst, wenn genau seine Routen freigegeben sind."""
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
         self.addCleanup(hub.close)
         source = module(Path(self.tmp.name) / 'quelle' / 'fremd', CODE)
@@ -305,7 +305,7 @@ class Hardening(unittest.TestCase):
             hub.trust_request({'kind': 'tool', 'id': 'fremd'})          # ist jetzt CAPTAIN – nichts mehr zu heben
 
     def test_a_manifest_changed_after_the_trust_request_is_not_raised(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
         self.addCleanup(hub.close)
         source = module(Path(self.tmp.name) / 'quelle' / 'fremd', CODE)
@@ -323,7 +323,7 @@ class Hardening(unittest.TestCase):
 
     def test_what_is_copied_is_hashed_again(self):
         """Geprüft ist, was jetzt dort steht – nicht, was eben noch dort stand."""
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
         self.addCleanup(hub.close)
         source = module(Path(self.tmp.name) / 'quelle' / 'fremd', CODE)

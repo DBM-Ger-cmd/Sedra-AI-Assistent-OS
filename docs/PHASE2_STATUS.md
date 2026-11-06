@@ -3,7 +3,7 @@
 Stand: 2026-10-01 · Testumgebung: Windows 11, Python 3.14.7. **Kein Zielgerät, keine Modelle, keine Hardware-Qualifizierung.**
 
 **Ergebnis:** `python -m unittest discover -s tests` → **483 Tests, 0 Fehler, 5 übersprungen** (alle 5 sind Symlink-Tests, siehe PHASE0_STATUS). `validate_package.py` und `compileall` sind OK.
-Der Supervisor ist **standardmäßig AUS** (`enabled: false`). Mit dem Flag aus verhält sich GUPPI wie v1.20.
+Der Supervisor ist **standardmäßig AUS** (`enabled: false`). Mit dem Flag aus verhält sich SEDRA wie v1.20.
 
 ## Umgesetzte Entscheidungen (vom Captain übernommen)
 
@@ -22,13 +22,13 @@ Der Supervisor ist **standardmäßig AUS** (`enabled: false`). Mit dem Flag aus 
 
 | Datei | Inhalt |
 |---|---|
-| `src/guppi_runtime/job_supervisor.py` (neu) | `SupervisorConfig`, `SupervisorJobStore`, `supervisor_state()`, `JobSupervisor`, `WorkerContext` |
+| `src/sedra_runtime/job_supervisor.py` (neu) | `SupervisorConfig`, `SupervisorJobStore`, `supervisor_state()`, `JobSupervisor`, `WorkerContext` |
 | `config/job_supervisor.yaml` (neu) | alle Schwellen, Flag, 11 Rollen |
 | `tests/test_job_supervisor.py` (neu) | 78 Tests |
-| `src/guppi_runtime/runtime.py` | Supervisor wird verdrahtet, `boot()` meldet Status, bei ungültiger Config bleibt er aus und nennt den Grund |
-| `src/guppi_runtime/uix_server.py` | `/api/supervisor` (nur lesend) |
-| `src/guppi_runtime/self_development.py` | `mutate()` schreibt nur bei tatsächlicher Änderung (idempotente Wiederholung ändert `rev` nicht) |
-| `src/guppi_runtime/evolution_targets.py`, `tests/test_evolution_targets.py` | E1-Positivliste |
+| `src/sedra_runtime/runtime.py` | Supervisor wird verdrahtet, `boot()` meldet Status, bei ungültiger Config bleibt er aus und nennt den Grund |
+| `src/sedra_runtime/uix_server.py` | `/api/supervisor` (nur lesend) |
+| `src/sedra_runtime/self_development.py` | `mutate()` schreibt nur bei tatsächlicher Änderung (idempotente Wiederholung ändert `rev` nicht) |
+| `src/sedra_runtime/evolution_targets.py`, `tests/test_evolution_targets.py` | E1-Positivliste |
 
 ## Was der Supervisor kann
 

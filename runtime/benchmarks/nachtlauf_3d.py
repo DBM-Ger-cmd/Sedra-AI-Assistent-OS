@@ -11,7 +11,7 @@ nicht vom Agenten; das steht im Bericht.
 
 Sicherheit: Frist (--stunden), Stopp-Datei `STOP.txt` im Ausgabeordner, RAM-Schutz (unter 2 GB frei: Modell entladen und 5 Minuten Pause), Temperatur ab 84 Grad Pause,
 hoechstens 40 Modellaufrufe je Objekt-Runde. Es werden keine Dateien ausserhalb des Ausgabeordners geschrieben, nichts geloescht, nichts committet oder gepusht, kein
-Rezept und kein Schalter geaendert. Ausgabe: workspace/GUPPI_OS/runtime_data/nachtlauf_3d_<datum>/ (log.jsonl, messung.jsonl, berichte/, objekte/, bericht.md).
+Rezept und kein Schalter geaendert. Ausgabe: workspace/SEDRA_OS/runtime_data/nachtlauf_3d_<datum>/ (log.jsonl, messung.jsonl, berichte/, objekte/, bericht.md).
 """
 from __future__ import annotations
 
@@ -34,8 +34,8 @@ import objekt_aufgaben_schwer as schwer       # --schwer: wechselnde, mehrteilig
 HERE = Path(__file__).resolve().parent
 RUNTIME = HERE.parent
 ROOT = RUNTIME.parent
-PROJECT = ROOT / "workspace" / "GUPPI_OS"
-ARCH = ROOT / "architecture" / "GUPPI_Architecture_v1.20_SELF_DEVELOPMENT"
+PROJECT = ROOT / "workspace" / "SEDRA_OS"
+ARCH = ROOT / "architecture" / "SEDRA_Architecture_v1.20_SELF_DEVELOPMENT"
 OPENSCAD = ROOT / "engines" / "tools" / "openscad-2021.01" / "openscad.exe"
 RES_AGENT = "A-FDB69726"                      # Recherche Betriebsstunde (VERIFIED, eingestellt am 27.10.2026)
 RECIPE = "coder.llama_qwen35"
@@ -114,7 +114,7 @@ class Run:
 
     # ---- Cockpit
     def start_cockpit(self):
-        code = ("import sys; sys.path.insert(0,'src'); from guppi_runtime.uix_server import main; "
+        code = ("import sys; sys.path.insert(0,'src'); from sedra_runtime.uix_server import main; "
                 f"raise SystemExit(main(['--root',r'{PROJECT}','--architecture',r'{ARCH}']))")
         log = (self.out / "cockpit.log").open("w", encoding="utf-8")
         self.cockpit = subprocess.Popen([sys.executable, "-I", "-B", "-c", code], cwd=str(RUNTIME), stdout=log, stderr=subprocess.STDOUT)
@@ -132,7 +132,7 @@ class Run:
 
     def call(self, path, payload=None, timeout=900):
         data = json.dumps(payload).encode() if payload is not None else None
-        req = urllib.request.Request(self.base + path, data=data, headers={"X-GUPPI-Token": self.token, "Content-Type": "application/json", "Origin": self.base})
+        req = urllib.request.Request(self.base + path, data=data, headers={"X-SEDRA-Token": self.token, "Content-Type": "application/json", "Origin": self.base})
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return json.loads(r.read())

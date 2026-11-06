@@ -1,4 +1,4 @@
-# Phase 8f – GUPPI startet und überwacht seinen eigenen llama-server (2026-10-01)
+# Phase 8f – SEDRA startet und überwacht seinen eigenen llama-server (2026-10-01)
 
 Auslöser: Bei langen Erzeugungen stürzte die qwen-Engine in LM Studio ab (`CUDA error: an illegal memory access`, danach
 HTTP 400 für alle Anfragen, und LM Studio lud still mit eigenen Standardwerten neu: 2 Slots, 100k Kontext). Vorschlag des Captains:
@@ -17,7 +17,7 @@ mitbringt (nichts heruntergeladen oder installiert; LM Studios Ordner werden nur
 
 Ablauf eines Starts: Befehl wird aus dem Rezept gebaut (`-m`, `-c`, `-ngl`, `-np 1`, `-ctk/-ctv`, `-fa`, `--alias`, `--spec-type`,
 `--reasoning`, optional `--reasoning-budget`, `--no-mmproj`), Prozess startet ohne Shell mit den CUDA-Bibliotheken im Suchpfad,
-GUPPI wartet auf `/health`, liest danach über `/props` den **wirklich angewandten** Kontext und gibt ihn an den Lader zurück
+SEDRA wartet auf `/health`, liest danach über `/props` den **wirklich angewandten** Kontext und gibt ihn an den Lader zurück
 (stimmt er nicht, wird gestoppt und der Start schlägt fehl). Beendet sich der Prozess von selbst, ist das ein Absturz: er wird
 mit Exit-Code vermerkt, und der nächste Job startet neu. Ein fremder Server auf dem Port wird nie übernommen oder beendet.
 
@@ -32,7 +32,7 @@ mit Exit-Code vermerkt, und der nächste Job startet neu. Ein fremder Server auf
 
 Stabilität (4 lange Denk-Aufgaben je Lauf, einziger Prozess auf der GPU): qwen ohne MTP 0/4, qwen mit MTP 0/4, gemma 0/4.
 
-VRAM (GUPPIs eigener Start, `--no-mmproj`, ein Slot, idle nach dem Start, Basis 0,53 GiB abgezogen; Start dauert 5–6 s):
+VRAM (SEDRAs eigener Start, `--no-mmproj`, ein Slot, idle nach dem Start, Basis 0,53 GiB abgezogen; Start dauert 5–6 s):
 
 | Kontext | qwen ohne MTP | qwen mit MTP | gemma |
 |---|---|---|---|
@@ -66,7 +66,7 @@ Reihenfolge: 1. `coder.local_primary` und `verifier.llama_gemma` (eigener llama-
 ## Grenzen und Offen
 
 - **Ein Server, ein Modell:** Modellwechsel heißt Stoppen und Neustarten (5–6 s). Kein gleichzeitiges Laden beider Modelle.
-- **Reste früherer Läufe:** Läuft nach einem Absturz von GUPPI noch ein eigener Server, wird das gemeldet (`leftover()`), aber nicht
+- **Reste früherer Läufe:** Läuft nach einem Absturz von SEDRA noch ein eigener Server, wird das gemeldet (`leftover()`), aber nicht
   automatisch beendet. Das Aufräumen verwaister Server beim Start ist nicht gebaut.
 - **Denk-Tokens:** `llama-server` meldet sie nicht in `usage`. Der Bericht enthält deshalb `reasoning_chars` (Größe des Denk-Textes).
 - **MTP bei gemma** ist nicht getestet (im Rezept aus). **`reasoning_budget`** ist hier ein Startwert pro Modell; pro Anfrage

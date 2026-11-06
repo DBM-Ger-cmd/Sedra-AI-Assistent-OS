@@ -7,7 +7,7 @@ optimiere es gleich dabei").
 2. backs up local_config/role_routing.yaml and points coder.llama_qwen35 at unsloth\Qwen3.5-9B-MTP-GGUF\Qwen3.5-9B-Q6_K.gguf with the settings that ran stable
    on the same weights without MTP (night 2026-10-11: engine b11160, flash attention on, KV q8_0, ubatch 512, 1 slot, reasoning off) plus mtp: true.
    The recipe stays switched off (enabled: false); context limits are set by the Captain after the ladder.
-3. Speed: MTP on vs off at a 32768 window, the same ~8k-token prompt of GUPPI source and a code-writing task (512 tokens), 2 runs each; tokens/s from
+3. Speed: MTP on vs off at a 32768 window, the same ~8k-token prompt of SEDRA source and a code-writing task (512 tokens), 2 runs each; tokens/s from
    the server's own timings, free GPU memory after the answer.
 Then the context ladder runs separately (it holds the lease itself): benchmarks/context_ladder.py <project> coder.llama_qwen35 --probes 2 --tag mtp_q6.
 Results: runtime_data/measurements/mtp_tune_qwen35_2026-10-12.json and the ladder file.
@@ -29,11 +29,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from context_ladder import gpu_mib                                                   # noqa: E402
 from moe_sweep import source_text                                                    # noqa: E402
-from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.local_paths import expand                                     # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
-from guppi_runtime.core.util import atomic_write_text                                     # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.local_paths import expand                                     # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
+from sedra_runtime.core.util import atomic_write_text                                     # noqa: E402
 
 RECIPE = "coder.llama_qwen35"
 OLD_GGUF = expand(r"<modelle>\unsloth\Qwen3.5-9B-MTP-GGUF\Qwen3.5-9B-UD-Q4_K_XL.gguf")      # <modelle>: runtime/config/local_paths.yaml
@@ -112,7 +112,7 @@ def main():
         recipes = {r["id"]: r for r in yaml.safe_load((project / "local_config" / "role_routing.yaml").read_text(encoding="utf-8"))["role_routing"]["capabilities"]}
         recipe = recipes[RECIPE]
         config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled = True; config.mtp = True
-        runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_mtptune_")))
+        runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_mtptune_")))
         prompt = source_text(8000 * 3)
         for run in (1, 2):
             for mtp in (True, False):

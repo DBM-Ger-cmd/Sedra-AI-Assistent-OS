@@ -9,10 +9,10 @@ import yaml
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk.gateway import HANDLE, Gateway, check_shell, check_tool, needs_ok, route_allowed
-from guppi_runtime.desk.registry import Registry, UixConfigError
+from sedra_runtime.desk.gateway import HANDLE, Gateway, check_shell, check_tool, needs_ok, route_allowed
+from sedra_runtime.desk.registry import Registry, UixConfigError
 
-PACKAGE = Path(__file__).resolve().parents[1] / "src" / "guppi_runtime" / "uix"
+PACKAGE = Path(__file__).resolve().parents[1] / "src" / "sedra_runtime" / "uix"
 
 TOOL = {"tool": {"id": "probe", "name": "Probe", "version": "1.0.0", "kind": "object", "handles": ["task"],
                  "entry": {"js": "tool.js"}, "api": ["GET /api/missions"], "events": {"emits": ["object.open"], "listens": ["task.changed"]},
@@ -225,14 +225,14 @@ class FilesAndAllowlist(unittest.TestCase):
         self.assertTrue(self.gateway.allowed("shell", "cockpit", "POST", "/api/decisions/answer"))
 
     def test_every_route_a_shipped_tool_lists_exists_in_the_server(self):
-        from guppi_runtime import uix_server
+        from sedra_runtime import uix_server
         source = Path(uix_server.__file__).read_text(encoding="utf-8")
         for tid, (_folder, man) in sorted(self.gateway.tools().items()):
             for route in man["api"]:
                 path = route.split(" ", 1)[1].rstrip("/*")
                 with self.subTest(tid + " " + route):
                     if path.startswith('/api/harness/'):      # die Wege der Harness stehen als Muster in harness/api.py (WEG), nicht als Zeichenkette im Server
-                        from guppi_runtime.harness import api as harness_api
+                        from sedra_runtime.harness import api as harness_api
                         wort = path.split('/')[3]
                         self.assertIn(f"({wort})", Path(harness_api.__file__).read_text(encoding="utf-8"), f"{tid} lists {route}, but the harness API has no such route")
                         continue

@@ -1,16 +1,16 @@
 import unittest
-from guppi_runtime import uix_start
+from sedra_runtime import uix_start
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real PowerShell / taskkill in tests
 
 def row(pid,parent,name,cmd):return {'ProcessId':pid,'ParentProcessId':parent,'Name':name,'ExecutablePath':'','CommandLine':cmd}
-UIX='python.exe -B -m guppi_runtime.uix_server --root x'
+UIX='python.exe -B -m sedra_runtime.uix_server --root x'
 
 class UIXStartTests(unittest.TestCase):
  def run_pre(self,rows,own,leftovers=None,**kw):
   said,stopped=[],[]
-  orig=uix_start.gpu_preflight.guppi_llama_servers
-  uix_start.gpu_preflight.guppi_llama_servers=lambda run=None:leftovers or {}
-  self.addCleanup(setattr,uix_start.gpu_preflight,'guppi_llama_servers',orig)
+  orig=uix_start.gpu_preflight.sedra_llama_servers
+  uix_start.gpu_preflight.sedra_llama_servers=lambda run=None:leftovers or {}
+  self.addCleanup(setattr,uix_start.gpu_preflight,'sedra_llama_servers',orig)
   code=uix_start.preflight(rows,own,say=said.append,stop=lambda pid,run:stopped.append(pid),**kw)
   return code,said,stopped
  def test_off_windows_the_start_has_no_process_inventory_and_still_starts(self):
@@ -25,7 +25,7 @@ class UIXStartTests(unittest.TestCase):
   for name in ('start_sedra.sh','START_SEDRA.command'):
    text=(root/name).read_bytes()
    self.assertTrue(text.startswith(b'#!/bin/sh'),name);self.assertNotIn(b'\r\n',text,name+' must keep LF line endings for sh')
-  self.assertIn('guppi_runtime.uix_start',(root/'start_sedra.sh').read_text(encoding='utf-8'))
+  self.assertIn('sedra_runtime.uix_start',(root/'start_sedra.sh').read_text(encoding='utf-8'))
  def test_second_start_is_refused_but_own_launcher_is_not_counted(self):
   rows=[row(10,1,'python.exe',UIX),row(11,10,'python.exe',UIX),row(20,1,'python.exe',UIX)]
   code,said,stopped=self.run_pre(rows,{11,10})
@@ -43,8 +43,8 @@ class UIXStartTests(unittest.TestCase):
   from pathlib import Path
   root=Path(__file__).resolve().parents[2]
   for name in ('START_SEDRA.bat','start_sedra.sh'):
-   self.assertIn('guppi_runtime.uix_start',(root/name).read_text(encoding='utf-8'))
-  for old in ('ERSTER_START.bat','START_GUPPI.bat','GUPPI_EINRICHTEN_UND_STARTEN.bat'):
+   self.assertIn('sedra_runtime.uix_start',(root/name).read_text(encoding='utf-8'))
+  for old in ('ERSTER_START.bat','SEDRA_EINRICHTEN_UND_STARTEN.bat'):
    self.assertFalse((root/old).exists(),old+' ist durch START_SEDRA.bat ersetzt')
 
  def test_start_sedra_knows_overview_and_a_direct_shell(self):
@@ -64,17 +64,17 @@ class UIXStartTests(unittest.TestCase):
   self.assertEqual(uix_start.main(['--liste']),0)
 
  def test_a_running_uix_is_described_with_its_folder(self):
-  rows=[{'ProcessId':'4711','ExecutablePath':r'C:\SEDRA\GUPPI_Runtime_v1.20_Build_009\runtime\portable\python\current\python.exe','CommandLine':'python -m guppi_runtime.uix_start'}]
-  self.assertEqual(uix_start.describe_running(rows,4711),r'PID 4711, aus C:\SEDRA\GUPPI_Runtime_v1.20_Build_009')
+  rows=[{'ProcessId':'4711','ExecutablePath':r'C:\SEDRA\SEDRA_Runtime_v1.20_Build_009\runtime\portable\python\current\python.exe','CommandLine':'python -m sedra_runtime.uix_start'}]
+  self.assertEqual(uix_start.describe_running(rows,4711),r'PID 4711, aus C:\SEDRA\SEDRA_Runtime_v1.20_Build_009')
   self.assertIn('Ordner unbekannt',uix_start.describe_running([],1))
   said=[]
-  self.assertEqual(uix_start.preflight(rows+[{'ProcessId':'4711','CommandLine':'python -m guppi_runtime.uix_server'}],{1},say=said.append),3)
+  self.assertEqual(uix_start.preflight(rows+[{'ProcessId':'4711','CommandLine':'python -m sedra_runtime.uix_server'}],{1},say=said.append),3)
   self.assertTrue(any('Build_009' in t for t in said),said)
 
  def test_normal_entrypoints_and_future_sedra_names_are_detected(self):
   variants=[
-   r'"C:\SEDRA Dev\python.exe" -I -B -m guppi_runtime.uix_start --root x',
-   'python.exe -B -m guppi_runtime.uix_server --root x',
+   r'"C:\SEDRA Dev\python.exe" -I -B -m sedra_runtime.uix_start --root x',
+   'python.exe -B -m sedra_runtime.uix_server --root x',
    'python.exe -B -m sedra_runtime.uix_start --root x',
    'python.exe -B -m sedra_runtime.uix_server --root x',
   ]
@@ -88,19 +88,19 @@ class UIXStartTests(unittest.TestCase):
   self.assertEqual(stopped,[100,101,102,103])
 
  def test_replace_only_targets_real_python_module_invocations(self):
-  rows=[row(10,1,'python.exe','python.exe worker.py --text "-m guppi_runtime.uix_start"'),
-        row(11,1,'powershell.exe','powershell.exe -m guppi_runtime.uix_start'),
-        row(12,1,'python.exe','python.exe -B -m guppi_runtime.uix_start_extra'),
-        row(13,1,'python.exe','python.exe -B -m guppi_runtime.uix_start --root x'),
-        row(13,1,'python.exe','python.exe -B -m guppi_runtime.uix_start --root x')]
+  rows=[row(10,1,'python.exe','python.exe worker.py --text "-m sedra_runtime.uix_start"'),
+        row(11,1,'powershell.exe','powershell.exe -m sedra_runtime.uix_start'),
+        row(12,1,'python.exe','python.exe -B -m sedra_runtime.uix_start_extra'),
+        row(13,1,'python.exe','python.exe -B -m sedra_runtime.uix_start --root x'),
+        row(13,1,'python.exe','python.exe -B -m sedra_runtime.uix_start --root x')]
   code,_,stopped=self.run_pre(rows,{999},replace=True)
   self.assertEqual(code,0)
   self.assertEqual(stopped,[13])
 
  def test_incomplete_process_rows_do_not_crash_or_trigger_replace(self):
-  rows=[None,{}, {'ProcessId':'not-a-pid','CommandLine':'python -m guppi_runtime.uix_start'},
+  rows=[None,{}, {'ProcessId':'not-a-pid','CommandLine':'python -m sedra_runtime.uix_start'},
         {'ProcessId':21,'Name':'python.exe'},
-        row(25,1,'python.exe','python.exe -m guppi_runtime.uix_start --root x')]
+        row(25,1,'python.exe','python.exe -m sedra_runtime.uix_start --root x')]
   code,_,stopped=self.run_pre(rows,{999},replace=True)
   self.assertEqual(code,0)
   self.assertEqual(stopped,[25])

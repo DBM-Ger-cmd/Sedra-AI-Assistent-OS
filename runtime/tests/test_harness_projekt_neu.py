@@ -9,8 +9,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from guppi_runtime.harness import antraege
-from guppi_runtime.harness import projekte as harness_projekte
+from sedra_runtime.harness import antraege
+from sedra_runtime.harness import projekte as harness_projekte
 
 
 class Hub:
@@ -101,7 +101,7 @@ class NeuesProjekt(unittest.TestCase):
             self.antrag()
 
 
-JS = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'shells' / 'harness' / 'projekt.js'
+JS = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'shells' / 'harness' / 'projekt.js'
 
 KOPF = """
 function el(tag, klasse, text){

@@ -26,7 +26,7 @@ nach, weil es keinen anderen Weg gab, die Werkzeuge zu zeigen.
 ## 2. Die Idee: die Anordnung beschreiben, nicht programmieren
 
 Eine **Vorgabe** (`shell.vorgabe.yaml`) sagt, *was wo steht*; ein **Rahmen** im Vertrag (`ui/frame.js`) baut daraus die Shell.
-Wer eine eigene Form will, schreibt zwölf Zeilen YAML – oder sagt es GUPPI, das die Vorgabe schreibt.
+Wer eine eigene Form will, schreibt zwölf Zeilen YAML – oder sagt es SEDRA, das die Vorgabe schreibt.
 
 ```yaml
 vorgabe:
@@ -51,7 +51,7 @@ Vorgabe besteht dann nur noch aus `shell.yaml`, `shell.vorgabe.yaml` und optiona
 | Für wen | Was |
 |---|---|
 | **Der Captain** | Im Einstieg „Eigene Oberfläche anlegen“ wird aus dem Namensfeld ein kleines Formular: Raster wählen (drei Vorlagen: *Reiter* · *Fenster* · *Seiten*), Orte ankreuzen, Gespräch unten oder als Schublade, Entscheidungen als Karte oder Werkzeug. Anlegen → läuft sofort, `uix_check` sagt ok. |
-| **GUPPI** | „Ich will links die Aufgaben, rechts das Gespräch, keine Instrumente“ → GUPPI schreibt die Vorgabe, legt sie an, zeigt sie. Die erste GUPPI-Spec für ein eigenes Modul – ohne dass GUPPI JavaScript schreiben muss. |
+| **SEDRA** | „Ich will links die Aufgaben, rechts das Gespräch, keine Instrumente“ → SEDRA schreibt die Vorgabe, legt sie an, zeigt sie. Die erste SEDRA-Spec für ein eigenes Modul – ohne dass SEDRA JavaScript schreiben muss. |
 | **Jemand von außen** | Eine Lieferung bringt eine Vorgabe statt 400 Zeilen Code mit; die Durchsicht hat nichts zu finden, weil kein Code kommt. |
 | **Die Abnahme** | Eine Shell aus Vorgabe ist **vollständig prüfbar**: der Rahmen setzt die Marken, kennt seine Zonen und sein Layout – `uix_check` braucht kein Profil, alles ist „geprüft“, nichts „nicht geprüft“. |
 
@@ -59,7 +59,7 @@ Vorgabe besteht dann nur noch aus `shell.yaml`, `shell.vorgabe.yaml` und optiona
 
 - Eine Shell aus Vorgabe wird **schlichter** sein als eine von Hand: kein Dashboard mit vier Karten (Paperclip), kein freies
   Ziehen von Fenstern (Minimal), es sei denn, der Rahmen lernt es als Darstellung. Die handgebauten bleiben; die Vorgabe ist der
-  Einstieg für alle, die nicht programmieren – und für GUPPI.
+  Einstieg für alle, die nicht programmieren – und für SEDRA.
 - Der Rahmen ist **neuer Vertragscode** (`ui/frame.js`, ≤ 400 Zeilen, oder zwei Dateien). Er muss dieselbe Prüfung bestehen wie
   jede Shell – und er wird zum fünften Beweis, dass der Vertrag trägt: wenn der Rahmen alle vier Formen *beschreiben* kann,
   gibt es in ihnen nichts, was nicht Vertrag wäre.
@@ -71,7 +71,7 @@ Vorgabe besteht dann nur noch aus `shell.yaml`, `shell.vorgabe.yaml` und optiona
 |---|---|---|
 | 1 | `ui/frame.js` + `ui/schema/vorgabe.schema.json`: der Rahmen, mit `raster`, sechs Inhalten, Nachweise als Seitenleiste/Umschalter/Spalten, Gespräch unten/Schublade, Entscheidungen als Karte/Werkzeug. Pure Teile (Raster parsen, Vorgabe prüfen) mit node. | eine Vorgabe, die das Cockpit nachbaut, läuft 27/27 |
 | 2 | Einstieg und Werkzeug Module: „Eigene Oberfläche anlegen“ mit den drei Vorlagen und den Kreuzchen; `scaffold` nimmt `vorgabe` statt nur `id`. | Klick-Test: anlegen, nehmen, neu laden, Aufgaben öffnen |
-| 3 | GUPPI: der Ort „Oberfläche“ in der Ortskunde; ein Auftrag „bau mir eine Oberfläche mit …“ wird eine Vorgabe (Verb `oberflaeche_anlegen` am Objekt `module`, ohne Gate – eigene Form). | Gespräch → Vorgabe → Shell, in einem Zug |
+| 3 | SEDRA: der Ort „Oberfläche“ in der Ortskunde; ein Auftrag „bau mir eine Oberfläche mit …“ wird eine Vorgabe (Verb `oberflaeche_anlegen` am Objekt `module`, ohne Gate – eigene Form). | Gespräch → Vorgabe → Shell, in einem Zug |
 
 Vorher offen für den Captain: **ob der Rahmen die vier bestehenden Shells ersetzen soll** (eine Datei statt 1 400 Zeilen) oder
 nur neben ihnen steht. Mein Vorschlag: daneben – die handgebauten sind die Beweise, der Rahmen ist das Werkzeug. Ersetzen kann
@@ -86,7 +86,7 @@ Als **Muster** sind drei Dinge für den Rahmen wertvoll:
 | Muster bei Photocraft | Was es für die Vorgabe heißt |
 |---|---|
 | **Command-Registry** (`crates/engine/src/commands.rs`): jede Oberfläche – UI, CLI, Steuerkanal, MCP – ruft nur `id + JSON-Params` | bestätigt „Verben statt Routen“; die Vorgabe nennt Verben, nie Routen |
-| **UI-Zustand als reine Daten** (`UiState`, serde; von außen lesbar und setzbar) | der Rahmen hält seinen Zustand als JSON (gewählter Ort, Layout, offenes Objekt), nichts lebt versteckt im DOM – damit GUPPI und `uix_check` ihn lesen können |
+| **UI-Zustand als reine Daten** (`UiState`, serde; von außen lesbar und setzbar) | der Rahmen hält seinen Zustand als JSON (gewählter Ort, Layout, offenes Objekt), nichts lebt versteckt im DOM – damit SEDRA und `uix_check` ihn lesen können |
 | **Benannte Layouts** („Workspaces“: Essentials, Photography …; Dock-Snapshot in den Prefs) | eine Vorgabe darf mehrere `ansichten:` tragen (etwa *schreiben* · *prüfen*), umschaltbar über die Palette; das Layout-Merken des Rahmens wird je Ansicht gespeichert |
 | **Plugin-Manifest mit Parameter-Schema**, aus dem der Dialog entsteht (`docs/plugins.md`: number/int/bool/choice) | wenn ein Werkzeug Einstellungen braucht, stehen sie als Schema in `tool.yaml` (`settings:`), und der Rahmen baut das Formular – kein Werkzeug schreibt eigene Einstellungs-Oberfläche |
 
@@ -100,7 +100,7 @@ Punkte *ansichten* und *settings-Schema*; der Rest bleibt.
   Zonennamen mit `inhalt:` gibt es nicht – sechs Zonen, jede höchstens einmal.
 - `entscheidungen: karte` ist in der Raster-Zone **oder** schwebend rechts; `suche: feld` braucht die Leiste.
 - Die Vorgabe wird an **einer** Stelle geprüft (`desk/vorgabe.check`) – für die Datei im Ordner wie für die Antwort des Modells.
-- Schritt 3 ist als Block gebaut („Eigene Oberfläche aus einer Vorgabe“: Satz an GUPPI oder Vorlage → Skizze → anlegen), nicht als
+- Schritt 3 ist als Block gebaut („Eigene Oberfläche aus einer Vorgabe“: Satz an SEDRA oder Vorlage → Skizze → anlegen), nicht als
   Ort in der Ortskunde und nicht als Verb im Gespräch. Das Verb `oberflaeche_anlegen` bleibt offen.
 - Die Frage aus §5 (ersetzt der Rahmen die handgebauten Shells?) ist mit drei Vorgaben, die die drei Formen 27/27 nachbauen,
   beantwortbar – entschieden ist sie nicht. Details: `BUILD_17_SHELL_CREATOR_2026-10-15.md`.

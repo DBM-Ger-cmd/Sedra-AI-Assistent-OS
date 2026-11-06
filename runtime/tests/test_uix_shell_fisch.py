@@ -10,7 +10,7 @@ from pathlib import Path
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'benchmarks'))
-UIX = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
+UIX = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix'
 SHELL = UIX / 'shells' / 'fisch'
 # Unter Last (run_tests --jobs 4 --slow auf 2 Kernen) reichten feste Pausen nicht (UIX-Check 05.11.2026): gewartet wird auf Zustände
 # bis WARTE_MS; den Start meldet uix_check.wait_until_started selbst, wenn er ausbleibt. Die Prüfungen danach sind unverändert.

@@ -3,7 +3,7 @@ import re
 import unittest
 from pathlib import Path
 
-TOKENS = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'ui' / 'tokens.css'
+TOKENS = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'ui' / 'tokens.css'
 
 
 def block_values(css, selector):

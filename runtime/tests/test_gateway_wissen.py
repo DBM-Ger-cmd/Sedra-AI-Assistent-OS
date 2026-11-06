@@ -3,9 +3,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.gateway import klassen
-from guppi_runtime.gateway.vorgang import GateWay
-from guppi_runtime.gateway.wissen import GatewayWissen, LEITFADEN, SCHRITT_VON_ZUSTAND, ZUSTAENDE
+from sedra_runtime.gateway import klassen
+from sedra_runtime.gateway.vorgang import GateWay
+from sedra_runtime.gateway.wissen import GatewayWissen, LEITFADEN, SCHRITT_VON_ZUSTAND, ZUSTAENDE
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
 ANFRAGE = 'Lena Beispiel fragt per lena@example.com nach dem Stand von NORD-42. Kundennummer: K-1042.'

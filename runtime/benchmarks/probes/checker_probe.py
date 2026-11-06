@@ -45,7 +45,7 @@ def stage_is_right(valid, killed, total):
 def real_faults(suite, stage, reference, host_run, per_stage):
     """The faulty versions of the stage's files that the hidden test of the stage catches: [(file, kind, index, source)]."""
     from suite_mutants import mutate, sites
-    from guppi_runtime.selfdev.acceptance_suite import run_suite
+    from sedra_runtime.selfdev.acceptance_suite import run_suite
     found = []
     for name in STAGE_FILES[stage]:
         source = reference[name]
@@ -77,14 +77,14 @@ def main():
     project = Path(args.project)
 
     import devvm_agents_bench as bench
-    from guppi_runtime.selfdev.acceptance_suite import host_runner, load_suite
-    from guppi_runtime.selfdev.acceptance_vm import vm_runner
-    from guppi_runtime.devenv.devvm import DevWorkspace
-    from guppi_runtime.devenv.devvm_agents import CHECKER_FIRST_NOTE, DevOrchestrator, ModelHost
-    from guppi_runtime.models.gpu_preflight import clear_leftovers
-    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.jobs.run_log import RunLog
-    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.selfdev.acceptance_suite import host_runner, load_suite
+    from sedra_runtime.selfdev.acceptance_vm import vm_runner
+    from sedra_runtime.devenv.devvm import DevWorkspace
+    from sedra_runtime.devenv.devvm_agents import CHECKER_FIRST_NOTE, DevOrchestrator, ModelHost
+    from sedra_runtime.models.gpu_preflight import clear_leftovers
+    from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from sedra_runtime.jobs.run_log import RunLog
+    from sedra_runtime.jobs.testlab import TestLab, default_path
 
     spec = importlib.import_module("devvm_specs.bench_std")
     stages = {s["name"]: s for s in spec.STAGES}
@@ -98,9 +98,9 @@ def main():
     log = RunLog(project / "runtime_data" / "measurements", "checker_probe", config=vars(args))
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml")
     config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_checkerprobe_rt_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_checkerprobe_rt_")))
     vm = vm_runner(project, RUNTIME, mission="M-CHECKER")
-    tool_root = Path(tempfile.mkdtemp(prefix="guppi_checkerprobe_"))
+    tool_root = Path(tempfile.mkdtemp(prefix="sedra_checkerprobe_"))
     policy = {"max_files": 40, "max_file_bytes": 60000, "max_input_bytes": 200000}
     rows, counter = [], 0
     with log, TestLab(default_path(project)).lease(os.environ.get("TESTLAB_OWNER", "checker_probe"), "checker probe", ttl_s=1800, wait_s=3600, preflight=clear_leftovers):

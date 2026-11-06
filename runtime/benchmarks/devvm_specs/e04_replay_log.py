@@ -1,6 +1,6 @@
 """E-04 (coder extension "record and replay", 2026-10-10): `replay_log.py` records the real answers of the model server during a run and plays them back later without a GPU,
 so that harness changes (E-01, E-02, E-03 ...) can be tested on real model behaviour without the lease. Ideas from deepseek-harness (llm-replay) and StarNet (replay provider).
-Wraps the `post(body)` function of the tool loop; no file access (the caller stores the JSONL text). GUPPI builds it, Claude only wrote this file and the hidden tests.
+Wraps the `post(body)` function of the tool loop; no file access (the caller stores the JSONL text). SEDRA builds it, Claude only wrote this file and the hidden tests.
 Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
 
 NOTES = '''# Notes for replay_log

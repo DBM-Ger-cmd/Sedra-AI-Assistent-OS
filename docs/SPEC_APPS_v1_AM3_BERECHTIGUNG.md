@@ -2,7 +2,7 @@
 
 Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen); G2 steht noch aus. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §5, §8, §9, §11. Setzt AM0 voraus.
 Ziel: Jede App außerhalb des Pakets hat eine **Berechtigung**: was sie beantragt, was gewährt ist, ob sie aktiv ist. Gewährt wird im Posteingang mit Gate, entzogen sofort. Updates zeigen Datei- und Rechteänderungen. Ereignisse werden nach Klassen gefiltert. Fremde Apps sind sichtbar als fremd gekennzeichnet und können eine Leistenzelle als reine Daten liefern.
-Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
+Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für c364081.
 
 ## 1. Befund
 
@@ -95,7 +95,7 @@ Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
 | ID | Anforderung | Prüfbar durch |
 |---|---|---|
-| AM3-29 | Das Vertrauen nach dem Einbau setzt der Kern, nie das Manifest: Vorgabe `COMMUNITY`. `GUPPI_BUILT` nur, wenn die Quelle ein von SEDRA gebauter, abgenommener Kandidat ist und das Gate den Nachweis trägt (Mission/Kandidat mit bestandenem verstecktem Test, Vertrag §7.1–7.3). Heute vergibt kein Code-Pfad `GUPPI_BUILT` (Konzept F15). Welche Obergrenze `GUPPI_BUILT` gegenüber `COMMUNITY` hat (z. B. Dienst auf dem Host, AM4-07), steht in der Berechtigung. | Test: Einbau ohne Nachweis → COMMUNITY; mit gültigem Nachweis → GUPPI_BUILT |
+| AM3-29 | Das Vertrauen nach dem Einbau setzt der Kern, nie das Manifest: Vorgabe `COMMUNITY`. `SEDRA_BUILT` nur, wenn die Quelle ein von SEDRA gebauter, abgenommener Kandidat ist und das Gate den Nachweis trägt (Mission/Kandidat mit bestandenem verstecktem Test, Vertrag §7.1–7.3). Heute vergibt kein Code-Pfad `SEDRA_BUILT` (Konzept F15). Welche Obergrenze `SEDRA_BUILT` gegenüber `COMMUNITY` hat (z. B. Dienst auf dem Host, AM4-07), steht in der Berechtigung. | Test: Einbau ohne Nachweis → COMMUNITY; mit gültigem Nachweis → SEDRA_BUILT |
 | AM3-30 | `CAPTAIN` bleibt den Modulen vorbehalten, die der Captain selbst ablegt oder aus der Vorlage anlegt; über das Einbau-Gate entsteht nie `CAPTAIN`. | Test |
 
 ### 2.10 Werkseinstellung

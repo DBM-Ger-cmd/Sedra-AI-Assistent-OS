@@ -1,6 +1,6 @@
 import unittest
 
-from guppi_runtime.redesign_prep import pseudonymize, restore
+from sedra_runtime.redesign_prep import pseudonymize, restore
 
 
 class OwnTerms(unittest.TestCase):

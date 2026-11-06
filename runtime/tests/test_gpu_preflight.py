@@ -2,13 +2,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.models import gpu_preflight as gp
-from guppi_runtime.jobs.testlab import TestLab
+from sedra_runtime.models import gpu_preflight as gp
+from sedra_runtime.jobs.testlab import TestLab
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 OURS = {"name": "llama-server.exe", "path": r"C:\Users\x\.lmstudio\extensions\backends\llama.cpp-win-x86_64-nvidia-cuda12-avx2-2.50.0\llama-server.exe",
         "cmd": "llama-server.exe -m a.gguf --port 8089 --no-webui --alias gpt-oss-20b --spec-type none"}
-LMS = {**OURS, "cmd": "llama-server.exe -m a.gguf --port 8089"}                       # LM Studio's own launch: no GUPPI signature
+LMS = {**OURS, "cmd": "llama-server.exe -m a.gguf --port 8089"}                       # LM Studio's own launch: no SEDRA signature
 GAME = {"name": "game.exe", "path": r"C:\Games\game.exe", "cmd": "game.exe"}
 
 
@@ -19,7 +19,7 @@ class Fake:
         info = procs or {}
         monkey(gp, "listener_pid", lambda port, run=None: listener)
         monkey(gp, "process_info", lambda pid, run=None: info.get(pid))
-        monkey(gp, "guppi_llama_servers", lambda run=None: dict(servers or {}))
+        monkey(gp, "sedra_llama_servers", lambda run=None: dict(servers or {}))
         monkey(gp, "vram_used_gb", lambda run=None: self.vram.pop(0) if len(self.vram) > 1 else self.vram[0])
         monkey(gp, "gpu_users", lambda run=None: self.users)
         monkey(gp, "_stop", lambda pid, run=None: self.stopped.append(pid))
@@ -41,7 +41,7 @@ class PreflightTests(unittest.TestCase):
         fake = Fake(self.monkey)
         self.assertEqual(self.run_clear(), 0.7); self.assertEqual(fake.stopped, [])
 
-    def test_leftover_guppi_server_on_the_port_is_stopped(self):
+    def test_leftover_sedra_server_on_the_port_is_stopped(self):
         fake = Fake(self.monkey, listener=10, procs={10: OURS}, servers={10: OURS}, vram=(9.0, 0.7))
         self.assertEqual(self.run_clear(), 0.7); self.assertEqual(fake.stopped, [10])
 
@@ -59,18 +59,18 @@ class PreflightTests(unittest.TestCase):
         with self.assertRaises(gp.GpuNotClean): self.run_clear()
         self.assertEqual(fake.stopped, [])
 
-    def test_busy_card_without_a_guppi_server_is_refused_with_the_users_named(self):
+    def test_busy_card_without_a_sedra_server_is_refused_with_the_users_named(self):
         Fake(self.monkey, vram=(8.0,), users=["999, game.exe, [N/A]"])
         with self.assertRaisesRegex(gp.GpuNotClean, "game.exe"): self.run_clear(settle_s=3)
 
     def test_signature_check(self):
-        self.assertTrue(gp.is_guppi_server(OURS)); self.assertFalse(gp.is_guppi_server(LMS)); self.assertFalse(gp.is_guppi_server(None))
+        self.assertTrue(gp.is_sedra_server(OURS)); self.assertFalse(gp.is_sedra_server(LMS)); self.assertFalse(gp.is_sedra_server(None))
 
     def test_own_engine_server_is_recognised_but_only_with_the_signature(self):
-        own = {**OURS, "path": r"<projekte>\Guppy\GUPPI_Runtime_v1.20\engines\llama.cpp\b11371\llama-server.exe"}
-        self.assertTrue(gp.is_guppi_server(own))
-        self.assertFalse(gp.is_guppi_server({**own, "cmd": "llama-server.exe -m a.gguf --port 8089"}))
-        self.assertFalse(gp.is_guppi_server({**own, "path": r"C:\tools\llama-server.exe"}))
+        own = {**OURS, "path": r"<projekte>\Guppy\SEDRA_Runtime_v1.20\engines\llama.cpp\b11371\llama-server.exe"}
+        self.assertTrue(gp.is_sedra_server(own))
+        self.assertFalse(gp.is_sedra_server({**own, "cmd": "llama-server.exe -m a.gguf --port 8089"}))
+        self.assertFalse(gp.is_sedra_server({**own, "path": r"C:\tools\llama-server.exe"}))
 
 
 class SchedulerServerTests(unittest.TestCase):
@@ -87,7 +87,7 @@ class SchedulerServerTests(unittest.TestCase):
         return gp.clear_leftovers(say=lambda *_: None, sleep=lambda s: None, **kw)
 
     def serve(self, state="bereit", pid=20, hold=True):
-        from guppi_runtime.jobs import slot_store
+        from sedra_runtime.jobs import slot_store
         conn = self.lab.connect()
         try:
             slot_store.set_server(conn, "2026-10-24T00:00:00Z", state, recipe="main.local", slots=2, pid=pid)
@@ -146,13 +146,13 @@ class LeaseHookTests(unittest.TestCase):
 
 class HostIsolationTests(unittest.TestCase):
     """host_isolation: with the default `run` (the real subprocess.run) the probes start no program and stop nothing (test_tuning reached
-    clear_leftovers through benchmark._take_gpu and, on Windows, could stop every running GUPPI llama-server)."""
+    clear_leftovers through benchmark._take_gpu and, on Windows, could stop every running SEDRA llama-server)."""
 
     def test_the_default_run_starts_no_program(self):
         from unittest import mock
         with mock.patch("subprocess.Popen", side_effect=AssertionError("ein Programm dieses PCs gestartet")):
             self.assertEqual(gp.clear_leftovers("t", say=lambda *_: self.fail("nichts zu stoppen"), settle_s=0), 0.0)
-            self.assertEqual((gp.listener_pid(8089), gp.guppi_llama_servers(), gp.gpu_users()), (None, {}, []))
+            self.assertEqual((gp.listener_pid(8089), gp.sedra_llama_servers(), gp.gpu_users()), (None, {}, []))
             with self.assertRaises(FileNotFoundError):
                 gp._stop(4242)
 

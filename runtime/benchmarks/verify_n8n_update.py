@@ -12,8 +12,8 @@ import zipfile
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / 'runtime/src'))
-from guppi_runtime import update_anwenden as ua
-from guppi_runtime.update_holen import _sicher_zip
+from sedra_runtime import update_anwenden as ua
+from sedra_runtime.update_holen import _sicher_zip
 
 
 def verify(package, git='git', previous_candidate=None):
@@ -28,7 +28,7 @@ def verify(package, git='git', previous_candidate=None):
         candidate = folders[0]
         meta = json.loads((candidate / 'release/CANDIDATE.json').read_text())
         data = subprocess.run([git, '-c', 'safe.directory=' + str(REPO), '-c', 'core.autocrlf=false', '-C', str(REPO),
-                               'archive', '--format=tar', meta['baseline_commit'], 'runtime/src/guppi_runtime', 'runtime/config'],
+                               'archive', '--format=tar', meta['baseline_commit'], 'runtime/src/sedra_runtime', 'runtime/config'],
                               check=True, capture_output=True).stdout
         target = temporary / 'installation'; target.mkdir()
         with tarfile.open(fileobj=io.BytesIO(data)) as archive:
@@ -55,7 +55,7 @@ def verify(package, git='git', previous_candidate=None):
         if rejected.returncode != 2 or ua._programmdateien(target) != before:
             raise ValueError('wrong_confirmation_not_refused')
         call('--apply', '--confirm', preview['confirmation'])
-        if (target / 'runtime/src/guppi_runtime/workflows/engine.py').read_bytes() != (candidate / 'runtime/src/guppi_runtime/workflows/engine.py').read_bytes():
+        if (target / 'runtime/src/sedra_runtime/workflows/engine.py').read_bytes() != (candidate / 'runtime/src/sedra_runtime/workflows/engine.py').read_bytes():
             raise ValueError('app_missing_after_install')
         for rel, text in sentinels.items():
             if (target / rel).read_text() != text:
@@ -80,7 +80,7 @@ def verify(package, git='git', previous_candidate=None):
                 path = target / rel;path.parent.mkdir(parents=True, exist_ok=True);path.write_text(text)
             before_previous = ua._programmdateien(target)
             upgrade = json.loads(call());call('--apply', '--confirm', upgrade['confirmation'])
-            if not (target / 'runtime/src/guppi_runtime/uix/tools/scenario/tool.yaml').is_file():
+            if not (target / 'runtime/src/sedra_runtime/uix/tools/scenario/tool.yaml').is_file():
                 raise ValueError('scenario_app_missing_after_upgrade')
             ua.zurueck(target)
             if ua._programmdateien(target) != before_previous:

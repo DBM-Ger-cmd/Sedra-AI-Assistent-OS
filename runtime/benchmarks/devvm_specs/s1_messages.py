@@ -3,7 +3,7 @@ gates G2-S1-12, G2-S4-12, G2-S1-22): `orchestra/messages.py`, the conversation o
 added once per idempotency key (a double click of `anweisen` gives the same message, no second issue), its status follows a fixed order (accepted -> waiting for approval ->
 running -> answered or error; with a standing approval accepted -> running directly; an error is possible at every step before the end), and the history is read page by
 page, newest last. The connection comes from store.open_db (schema 2 of the seed benchmarks/s1_schema2_seed); every write runs in store.immediate.
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_messages)."""
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_messages)."""
 
 SEED = "benchmarks/s1_schema2_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 

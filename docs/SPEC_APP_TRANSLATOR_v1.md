@@ -2,7 +2,7 @@
 
 Stand: `main` `d51083a`. Gate **G1** (Anforderungen); Design (G2) und Bau-Aufgaben (G3) erst nach Freigabe. Unterchat **U2** (Phase R1, Stufe A3, UIX X2, Werkzeug W2).
 Grundlage: Beschlüsse des Captains vom 05.11.2026 (`ROADMAP_ONE_SEDRA_RENEW_2026-11-05.md` §1, `ROADMAP_ONE_SEDRA_APPS_KERN_SHELL_2026-11-05.md` §2, §4, §7): One Sedra (Kennung `harness`) ist die Zentrale; Funktionen der anderen Shells kommen als Apps; die alte Shell bleibt bis zum Gleichstand unverändert; nur eigene Pakete bis A0/A4.
-Pfade relativ zu `runtime/src/guppi_runtime/`, sonst ab Repo-Wurzel. Zeilen für `d51083a`.
+Pfade relativ zu `runtime/src/sedra_runtime/`, sonst ab Repo-Wurzel. Zeilen für `d51083a`.
 
 **Ergebnis in einem Satz:** Die vier Werkzeuge des Translators laufen in One Sedra schon – aber nur als vier lose Reiter; es fehlt **eine** App „Translator“ mit Modus-Reitern, einer gemeinsamen Eingabe („Wolke“), Zustand je Modus und einer Übergabe Transkript → Übersetzer, die auch bei offenem Reiter ankommt. Kein neuer Kernweg, keine neue Route nötig.
 

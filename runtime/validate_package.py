@@ -2,7 +2,7 @@ from pathlib import Path
 import sys, yaml
 
 runtime = Path(__file__).resolve().parent
-archive = sorted((runtime.parent / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+archive = sorted((runtime.parent / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
 errors=[]
 for p in sorted(archive.rglob('*.yaml')):
     try:

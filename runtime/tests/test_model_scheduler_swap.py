@@ -2,7 +2,7 @@
 import tempfile
 import unittest
 
-from guppi_runtime.jobs.model_scheduler import SchedulerError
+from sedra_runtime.jobs.model_scheduler import SchedulerError
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 from model_scheduler_fakes import make_scheduler, resolution
 

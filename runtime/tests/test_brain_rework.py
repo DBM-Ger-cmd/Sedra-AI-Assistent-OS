@@ -3,16 +3,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.runtime import SedraRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 
 
 class ReworkTests(unittest.TestCase):
     def runtime(self, verdicts):
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
-        rt = GuppiRuntime(Path(tmp.name) / 'p', ARCH)
+        rt = SedraRuntime(Path(tmp.name) / 'p', ARCH)
         orig = rt.bus.send; self.calls = {'verify': 0, 'plan': 0}
         def send(msg):
             if msg.type == 'verification_request':

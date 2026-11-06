@@ -11,8 +11,8 @@ import yaml
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.harness import antraege, katalog, vorlagen
-from guppi_runtime.uix_server import UIXHub, make_server
+from sedra_runtime.harness import antraege, katalog, vorlagen
+from sedra_runtime.uix_server import UIXHub, make_server
 from test_uix_harness_api import ARCH, anfrage
 
 KATALOG = 'local_config/freigabe_katalog.yaml'
@@ -214,7 +214,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn('HARNESS_VORLAGE_WRITTEN', self.ereignisse())
 
     def test_applier_registriert(self):
-        from guppi_runtime.desk import gated
+        from sedra_runtime.desk import gated
         self.assertIsNotNone(gated.applier(antraege.KIND_KATALOG))
         self.assertIsNotNone(gated.applier(antraege.KIND_VORLAGE))
 

@@ -1,9 +1,9 @@
 # Test-Labor: gemeinsame GPU-Sperre und Ergebnis-Datenbank (Phase 9c)
 
-Für alle Chats, Skripte und GUPPI-Instanzen auf diesem PC. Zweck: Es gibt **eine** GPU (12 GB) und **einen** festen llama-server-Port (8089).
+Für alle Chats, Skripte und SEDRA-Instanzen auf diesem PC. Zweck: Es gibt **eine** GPU (12 GB) und **einen** festen llama-server-Port (8089).
 Zwei gleichzeitige Läufe stören sich gegenseitig (Messwerte, Abstürze, "port_in_use"). Niemand soll raten müssen, ob die GPU frei ist.
 
-**Datei:** `workspace/GUPPI_OS/runtime_data/testlab/testlab.db` (SQLite, WAL). Code: `runtime/src/guppi_runtime/testlab.py`,
+**Datei:** `workspace/SEDRA_OS/runtime_data/testlab/testlab.db` (SQLite, WAL). Code: `runtime/src/sedra_runtime/testlab.py`,
 Kommandozeile: `runtime/benchmarks/testlab_cli.py`. 15 Tests in `tests/test_testlab.py`.
 
 ## Die Regel
@@ -43,9 +43,9 @@ sind noch `planned`.
 
 ## Vorprüfung der GPU (2026-10-02)
 
-Wer die Sperre über `lab.lease(..., preflight=clear_leftovers)` oder `testlab_cli.py hold` holt, bekommt vor dem Lauf eine bereinigte GPU: ein verwaister GUPPI-llama-server
+Wer die Sperre über `lab.lease(..., preflight=clear_leftovers)` oder `testlab_cli.py hold` holt, bekommt vor dem Lauf eine bereinigte GPU: ein verwaister SEDRA-llama-server
 (Reste eines abgestürzten oder abgebrochenen Laufs, Port 8089) wird beendet, damit weder `port_in_use` noch ein halb volles Gedächtnis die Messung verfälscht.
 Es passiert nur etwas, wenn ein solcher Rest da ist. Fremde Prozesse (Spiel, LM Studio mit geladenem Modell, anderes auf dem Port) werden nie beendet; dann bricht der Lauf mit einer
 Meldung ab, die den Verursacher nennt (Grenze: 2,5 GiB belegt, `GpuNotClean`). Von Hand: `python benchmarks/testlab_cli.py clean` (nur wenn niemand die Sperre hält).
-Code: `runtime/src/guppi_runtime/gpu_preflight.py`, Tests: `tests/test_gpu_preflight.py`. Schlägt die Vorprüfung fehl, steht `preflight_failed` in `events` und die Sperre ist wieder frei.
+Code: `runtime/src/sedra_runtime/gpu_preflight.py`, Tests: `tests/test_gpu_preflight.py`. Schlägt die Vorprüfung fehl, steht `preflight_failed` in `events` und die Sperre ist wieder frei.
 

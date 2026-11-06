@@ -42,7 +42,7 @@ Dazu: Thermik muss Arbeit zulassen (WARM: höchstens eine Reservierung), das Job
 - **KV-Cache:** nur aus einer deklarierten Rate je Modell (0,5 GB je 1k Token bei Arbeitskontext 8192 ergibt 4,096 GB), wird dort gezählt, wo das Profil es hinlegt (GPU oder RAM). **Ohne Rate steht `null` und `complete: false`**, die Zahl gilt dann als Mindestwert und das Hauptbuch vermerkt es. Unbekannt ist nie 0.
 - **Kleineres Modell statt Absage:** Passt das große Modell wegen Last nicht, wählt der Router über `load_check` das kleinere (Rezept erscheint mit Kategorie `pressure` in der Begründung). Passt keines, kommt `hardware_pressure`.
 - **Supervisor:** Start reserviert, der Versuch merkt sich die Reservierung. Jedes Ende gibt den Platz frei (vier Wege einzeln getestet, dazu geparkte Jobs, Neustart, gescheiterter Start). Ein Heartbeat berührt das Hauptbuch nicht. Der Reaper entfernt verwaiste Reservierungen, **nie** die eines lebenden Jobs. Ein kaputtes Hauptbuch hält einen endenden Job nicht auf (Audit `JOB_RESOURCE_RELEASE_FAILED`).
-- **Ablehnung heißt „jetzt nicht":** Der Job wird mit Wartezeit neu eingereiht, nicht eskaliert. Mit Platz startet er. Wiederholte Ablehnungen enden nach dem Retry-Limit in der Eskalation an GUPPI statt in einer Schleife.
+- **Ablehnung heißt „jetzt nicht":** Der Job wird mit Wartezeit neu eingereiht, nicht eskaliert. Mit Platz startet er. Wiederholte Ablehnungen enden nach dem Retry-Limit in der Eskalation an SEDRA statt in einer Schleife.
 - Exklusive Jobs warten auf eine freie Maschine.
 - Der Scheduler **schreibt nichts an der Maschine** (statisch geprüft: kein `subprocess`, keine Profil-Schreibzugriffe, kein Beenden von Prozessen) und nennt keinen Provider.
 

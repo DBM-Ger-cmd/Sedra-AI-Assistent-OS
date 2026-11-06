@@ -19,8 +19,8 @@ import zipfile
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / 'runtime/src'))
-from guppi_runtime import update_anwenden as ua
-from guppi_runtime.version import VERSION
+from sedra_runtime import update_anwenden as ua
+from sedra_runtime.version import VERSION
 
 
 BASELINE = 'd51083aa16d573c59be276dc407cbd59468a9fa4'
@@ -36,7 +36,7 @@ def package(repo, output, git='git', baseline=BASELINE, previous_candidate=None)
     def program(name):
         return name.startswith(ua.PRUEFBEREICHE) and not ua.lokal_behalten(name) and '__pycache__' not in name and not name.endswith('.pyc')
     baseline = {}
-    with tarfile.open(fileobj=io.BytesIO(command('archive', '--format=tar', base, 'runtime/src/guppi_runtime', 'runtime/config'))) as archive:
+    with tarfile.open(fileobj=io.BytesIO(command('archive', '--format=tar', base, 'runtime/src/sedra_runtime', 'runtime/config'))) as archive:
         for member in archive.getmembers():
             if member.isfile() and program(member.name):
                 baseline[member.name] = hashlib.sha256(archive.extractfile(member).read().replace(b'\r\n', b'\n')).hexdigest()
@@ -58,7 +58,7 @@ def package(repo, output, git='git', baseline=BASELINE, previous_candidate=None)
                 'baseline_commit': base, 'baseline_files': baseline, 'engine_live_tested': False}
         if previous_candidate:
             with zipfile.ZipFile(previous_candidate) as old:
-                from guppi_runtime.update_holen import _sicher_zip
+                from sedra_runtime.update_holen import _sicher_zip
                 _sicher_zip(old)
                 roots = {p.split('/')[0] for p in old.namelist()}
                 if len(roots) != 1:

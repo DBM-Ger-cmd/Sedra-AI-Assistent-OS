@@ -17,12 +17,12 @@ import yaml
 RUNTIME = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.models.role_routing import RoleRouter, RoutingConfig   # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path            # noqa: E402
-from guppi_runtime.core.util import atomic_write_bytes                  # noqa: E402
+from sedra_runtime.models.role_routing import RoleRouter, RoutingConfig   # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path            # noqa: E402
+from sedra_runtime.core.util import atomic_write_bytes                  # noqa: E402
 
 NL = "\n"
-OLD_FLAG = "      enabled: false   # guppi-model-remove RM-20261003T185920" + NL
+OLD_FLAG = "      enabled: false   # sedra-model-remove RM-20261003T185920" + NL
 NEW_FLAG = "      enabled: true    # 2026-10-12 Captain: on (Q6 + MTP, 131k); off before since RM-20261003T185920" + NL
 ROLES = ("coder", "planner", "reviewer", "tester", "documentation", "researcher", "verifier")
 

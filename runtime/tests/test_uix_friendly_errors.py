@@ -1,6 +1,6 @@
 import unittest
 
-from guppi_runtime import uix_server
+from sedra_runtime import uix_server
 
 
 class FriendlyErrors(unittest.TestCase):

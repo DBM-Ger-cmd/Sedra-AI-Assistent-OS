@@ -11,7 +11,7 @@
 | Herkunft dieses Textes | `NEW_AI_GENERATED` (Befunde aus dem Quellcode, Zitate = `EXISTING_REUSE`) |
 | Status | `CODER_HANDOFF` (Lesebefund), Auftrag selbst bleibt `PLANNED` |
 
-**Belegregel:** Jede Zeilenangabe gilt für `2b13daa`. `git diff 20ef720 2b13daa -- runtime/src/guppi_runtime/workflows` ist leer; das ganze Paket `workflows/` ist also unverändert. Im übrigen Inventarbereich ändert sich nur `desk/freigabeklasse.py` (+1 Zeile `request:harness_prozess`, Umbenennung der approve-Stelle in `cli.py`).
+**Belegregel:** Jede Zeilenangabe gilt für `2b13daa`. `git diff 20ef720 2b13daa -- runtime/src/sedra_runtime/workflows` ist leer; das ganze Paket `workflows/` ist also unverändert. Im übrigen Inventarbereich ändert sich nur `desk/freigabeklasse.py` (+1 Zeile `request:harness_prozess`, Umbenennung der approve-Stelle in `cli.py`).
 
 ## 1. Kurzbefund
 
@@ -26,7 +26,7 @@ Eine zweite Workflow-Engine, ein zweiter Parser oder ein eigener Freigabeweg wä
 
 ## 2. Modulinventar (CODE_VERIFIED auf `2b13daa`)
 
-Paket: `runtime/src/guppi_runtime/workflows/` (989 Zeilen, 10 Dateien).
+Paket: `runtime/src/sedra_runtime/workflows/` (989 Zeilen, 10 Dateien).
 
 | Datei | Zweck | Wichtigste Stellen |
 |---|---|---|

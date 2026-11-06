@@ -1,6 +1,6 @@
-"""Process starter for the background jobs of the coder (E-06 `bg_jobs` needs a `spawn` function; Captain 2026-10-13: GUPPI builds it). The microVM can only run one command to the end
+"""Process starter for the background jobs of the coder (E-06 `bg_jobs` needs a `spawn` function; Captain 2026-10-13: SEDRA builds it). The microVM can only run one command to the end
 and give back its output, so a "process" here is one such VM run in a thread: it exits when the run ends, its output arrives at the end, and a stop abandons the run (the result is
-thrown away). The VM run itself is injected as `run(argv) -> {"status", "output"}`, so everything is pure logic that tests with fake runs. GUPPI builds it; Claude only wrote this file,
+thrown away). The VM run itself is injected as `run(argv) -> {"status", "output"}`, so everything is pure logic that tests with fake runs. SEDRA builds it; Claude only wrote this file,
 the hidden tests and the reference (benchmarks/devvm_refs/vm_process)."""
 
 NOTES = '''# Notes for vm_process

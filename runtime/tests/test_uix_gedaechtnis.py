@@ -9,12 +9,12 @@ import threading
 import unittest
 from pathlib import Path
 
-from guppi_runtime.desk import arbeitsstand as A
-from guppi_runtime.desk.gateway import check_tool
-from guppi_runtime.uix_server import UIXHub, make_server
+from sedra_runtime.desk import arbeitsstand as A
+from sedra_runtime.desk.gateway import check_tool
+from sedra_runtime.uix_server import UIXHub, make_server
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture/GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture/SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 
 
 class Uhr:
@@ -135,7 +135,7 @@ class Routen(unittest.TestCase):
         c = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=5)
         try:
             data = json.dumps(body) if body is not None else None
-            h = dict({'X-GUPPI-Token': self.token}, **headers)
+            h = dict({'X-SEDRA-Token': self.token}, **headers)
             if data is not None: h.update({'Content-Type': 'application/json', 'Content-Length': str(len(data.encode()))})
             c.request(method, path, data, h); r = c.getresponse()
             return r.status, json.loads(r.read() or b'{}')

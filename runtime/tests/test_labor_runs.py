@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime import labor_runs
+from sedra_runtime import labor_runs
 
 
 def write(path, events):

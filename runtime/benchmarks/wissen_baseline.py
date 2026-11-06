@@ -23,8 +23,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 GOLD = Path(__file__).resolve().parent / "wissen_goldsatz.json"
-PY_QUELLEN = ["runtime/src/guppi_runtime/knowledge.py", "runtime/src/guppi_runtime/arbeitsumfeld_wissen.py",
-              "runtime/src/guppi_runtime/gateway/wissen.py", "runtime/src/guppi_runtime/gateway/klassen.py"]
+PY_QUELLEN = ["runtime/src/sedra_runtime/knowledge.py", "runtime/src/sedra_runtime/arbeitsumfeld_wissen.py",
+              "runtime/src/sedra_runtime/gateway/wissen.py", "runtime/src/sedra_runtime/gateway/klassen.py"]
 LOGBUCH = "docs/LOGBUCH_AGENT_MANAGER.md"
 AUSGESCHLOSSEN = ("Vorbereitung S7.1",)
 MAX_ZEICHEN = 2500

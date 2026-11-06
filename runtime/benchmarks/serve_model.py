@@ -1,4 +1,4 @@
-r"""Serves one GUPPI model through GUPPI's own llama-server runtime for an editor (VS Code with Cline or Continue) and measures what the editor asks of it (Captain 2026-10-09).
+r"""Serves one SEDRA model through SEDRA's own llama-server runtime for an editor (VS Code with Cline or Continue) and measures what the editor asks of it (Captain 2026-10-09).
 
     .venv\Scripts\python.exe benchmarks/serve_model.py serve <project_dir> [--recipe coder.local_primary] [--context 32768] [--reasoning off] [--hours 4]
     .venv\Scripts\python.exe benchmarks/serve_model.py stats <project_dir>
@@ -44,10 +44,10 @@ def summarize(log_text):
 
 def serve(args):
     import devvm_agents_bench as bench
-    from guppi_runtime.models.gpu_preflight import clear_leftovers
-    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.jobs.run_log import RunLog
-    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.models.gpu_preflight import clear_leftovers
+    from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from sedra_runtime.jobs.run_log import RunLog
+    from sedra_runtime.jobs.testlab import TestLab, default_path
 
     project = Path(args.project)
     folder = session_dir(project)

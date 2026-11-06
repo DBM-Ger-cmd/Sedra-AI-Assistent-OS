@@ -2,7 +2,7 @@
 erkennt den Zugriff auf den Kern-Zugang, die Adresse mit dem Token, Cookies und das Elternfenster."""
 import unittest
 
-from guppi_runtime.desk.install import scan_text
+from sedra_runtime.desk.install import scan_text
 
 
 def flags(code):

@@ -144,7 +144,7 @@ class ContextManager:
     plan_repair(job, *, trigger) -> RepairPlan
     record_usage(job_id, attempt_id, usage|None, estimate) -> ContextMetric
 ```
-`retriever` ist ein Hook, den GUPPI/Control Master liefert (liest Dateiausschnitte, Wissen). Der Context Manager liest **nicht selbst** das Projekt am Guard vorbei: jedes Lesen läuft über das bestehende `filesystem`-Tool bzw. die Guard-Aktion `read_project_file`.
+`retriever` ist ein Hook, den SEDRA/Control Master liefert (liest Dateiausschnitte, Wissen). Der Context Manager liest **nicht selbst** das Projekt am Guard vorbei: jedes Lesen läuft über das bestehende `filesystem`-Tool bzw. die Guard-Aktion `read_project_file`.
 
 Fehlercodes: `context_window_unknown, budget_invalid, manifest_invalid, piece_not_found, offload_failed, artifact_range_too_large, checkpoint_too_large, pin_missing_source, minimum_context_exceeds_window, repair_not_possible`.
 
@@ -221,7 +221,7 @@ plan_repair(job, trigger) -> RepairPlan{
 Regeln:
 - Gleiche `job_id`, **neue** `attempt_id`.
 - Ein **mutierender Schritt mit unbekanntem Ausgang wird nie durch Repair wiederholt** (`UNKNOWN_EXECUTION_OUTCOME`, wie `step_journal`).
-- Repair-Versuche je Job begrenzt (Config). Danach Eskalation an GUPPI.
+- Repair-Versuche je Job begrenzt (Config). Danach Eskalation an SEDRA.
 - Ein Modellwechsel ist ein **Wunsch** (`worker_change_requested`), keine Anweisung.
 
 ### 8.3 Fresh Context an Task-Grenzen

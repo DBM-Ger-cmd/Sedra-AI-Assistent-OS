@@ -52,13 +52,13 @@ def main():
 
     import devvm_agents_bench as bench
     from checker_probe import real_faults
-    from guppi_runtime.selfdev.acceptance_suite import host_runner, load_suite
-    from guppi_runtime.devenv.devvm import DevWorkspace
-    from guppi_runtime.devenv.devvm_agents import DevOrchestrator, ModelHost
-    from guppi_runtime.models.gpu_preflight import clear_leftovers
-    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.jobs.run_log import RunLog
-    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.selfdev.acceptance_suite import host_runner, load_suite
+    from sedra_runtime.devenv.devvm import DevWorkspace
+    from sedra_runtime.devenv.devvm_agents import DevOrchestrator, ModelHost
+    from sedra_runtime.models.gpu_preflight import clear_leftovers
+    from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from sedra_runtime.jobs.run_log import RunLog
+    from sedra_runtime.jobs.testlab import TestLab, default_path
 
     spec = importlib.import_module("devvm_specs.bench_std")
     stages = {s["name"]: s for s in spec.STAGES}
@@ -71,8 +71,8 @@ def main():
     log = RunLog(project / "runtime_data" / "measurements", "review_probe", config=vars(args))
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml")
     config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_reviewprobe_rt_")))
-    tool_root = Path(tempfile.mkdtemp(prefix="guppi_reviewprobe_"))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_reviewprobe_rt_")))
+    tool_root = Path(tempfile.mkdtemp(prefix="sedra_reviewprobe_"))
     policy = {"max_files": 40, "max_file_bytes": 60000, "max_input_bytes": 200000}
     context = 32768 if args.context == "max" else int(args.context)
     rows, counter = [], 0

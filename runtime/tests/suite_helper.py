@@ -1,5 +1,5 @@
-"""Runs the hidden scripts of a stored acceptance suite against the integrated modules (the imports are pointed at guppi_runtime.agent_manager). The suites live under
-workspace/GUPPI_OS/acceptance/suites (not in the repository); without the suite the test is skipped, with an unreadable or changed suite it fails."""
+"""Runs the hidden scripts of a stored acceptance suite against the integrated modules (the imports are pointed at sedra_runtime.agent_manager). The suites live under
+workspace/SEDRA_OS/acceptance/suites (not in the repository); without the suite the test is skipped, with an unreadable or changed suite it fails."""
 import os
 import subprocess
 import sys
@@ -7,12 +7,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.selfdev.acceptance_suite import SuiteError, load_suite
+from sedra_runtime.selfdev.acceptance_suite import SuiteError, load_suite
 
 RUNTIME = Path(__file__).resolve().parents[1]
-SUITES = RUNTIME.parent / "workspace" / "GUPPI_OS" / "acceptance" / "suites"
+SUITES = RUNTIME.parent / "workspace" / "SEDRA_OS" / "acceptance" / "suites"
 MODULES = ("agent_contracts", "agent_registry", "agent_import", "agent_matcher", "code_meter", "code_collector")
-MODULE_HOME = {"crew_planner": "guppi_runtime.agent_manager.crews", "comment_archive": "guppi_runtime.devenv.comment_archive"}
+MODULE_HOME = {"crew_planner": "sedra_runtime.agent_manager.crews", "comment_archive": "sedra_runtime.devenv.comment_archive"}
 
 
 def make_suite_case(suite_name):
@@ -34,7 +34,7 @@ def make_suite_case(suite_name):
             for criterion in self.suite.criteria:
                 script, text = self.suite.scripts[criterion["id"]]
                 for name in MODULES:
-                    text = text.replace(f"from {name} import", f"from guppi_runtime.agent_manager.{name} import")
+                    text = text.replace(f"from {name} import", f"from sedra_runtime.agent_manager.{name} import")
                 for name, home in MODULE_HOME.items():
                     text = text.replace(f"from {name} import", f"from {home} import")
                 with tempfile.TemporaryDirectory() as tmp:

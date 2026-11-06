@@ -5,7 +5,7 @@ import threading
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness.sitzung import ID, SitzungFehler, Sitzungen, titel_aus
+from sedra_runtime.harness.sitzung import ID, SitzungFehler, Sitzungen, titel_aus
 
 
 class SitzungTests(unittest.TestCase):

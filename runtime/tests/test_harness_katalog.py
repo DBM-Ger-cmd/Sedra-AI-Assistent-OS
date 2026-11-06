@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import katalog
+from sedra_runtime.harness import katalog
 
 
 class KatalogLadenTests(unittest.TestCase):

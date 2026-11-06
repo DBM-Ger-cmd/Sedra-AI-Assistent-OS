@@ -7,9 +7,9 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.uix_server import UIXHub
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 
 
 def m(value, unit='°C'):

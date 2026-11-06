@@ -1,6 +1,6 @@
-"""AM-007 (crew planning), the first module that GUPPI builds for itself on the Captain's rule "GUPPI does the main work" (2026-10-08). Claude's part is only this file: the task text per stage,
+"""AM-007 (crew planning), the first module that SEDRA builds for itself on the Captain's rule "SEDRA does the main work" (2026-10-08). Claude's part is only this file: the task text per stage,
 the hidden tests, and (outside this file) an independent reference implementation that passes them (`agent_manager/crews.py`, written by Claude on 2026-10-08 and now the reference of the suite).
-Six small stages, each with its own hidden test, and a last stage "all". The workspace is seeded with the accepted `agent_contracts.py` and `agent_matcher.py` (GUPPI's own earlier builds).
+Six small stages, each with its own hidden test, and a last stage "all". The workspace is seeded with the accepted `agent_contracts.py` and `agent_matcher.py` (SEDRA's own earlier builds).
 Build only, no integration."""
 
 NOTES = '''# Notes for crew_planner
@@ -18,8 +18,8 @@ H = {"planner": "a" * 64, "coder": "b" * 64, "reviewer": "c" * 64}
 
 
 def slot(sid, effect, qual="VERIFIED", exclusive=True):
-    return {"id": sid, "template_id": f"guppi.devvm.{sid}", "template_version": "1.0.0", "template_sha256": H[sid], "minimum_qualification": qual, "exclusive": exclusive,
-            "requirements": [{"id": f"guppi.devvm.{sid}", "minimum_version": "1.0.0", "side_effect": effect, "required": True}]}
+    return {"id": sid, "template_id": f"sedra.devvm.{sid}", "template_version": "1.0.0", "template_sha256": H[sid], "minimum_qualification": qual, "exclusive": exclusive,
+            "requirements": [{"id": f"sedra.devvm.{sid}", "minimum_version": "1.0.0", "side_effect": effect, "required": True}]}
 
 
 def step(sid, slot_id, depends, inp, out, kind="agent_step"):
@@ -27,21 +27,21 @@ def step(sid, slot_id, depends, inp, out, kind="agent_step"):
 
 
 CREW = {
-    "schema_version": "guppi.crew-template/v1", "id": "guppi.crew.devvm_build", "version": "1.0.0", "purpose": "plan, build, review",
+    "schema_version": "sedra.crew-template/v1", "id": "sedra.crew.devvm_build", "version": "1.0.0", "purpose": "plan, build, review",
     "slots": [slot("planner", "proposal_only"), slot("coder", "reversible_write"), slot("reviewer", "read_only")],
-    "workflow": [step("planner_step", "planner", [], "guppi.gap", "guppi.plan"), step("coder_step", "coder", ["planner_step"], "guppi.plan", "guppi.candidate"),
-                 step("reviewer_step", "reviewer", ["coder_step"], "guppi.candidate", "guppi.review"),
-                 step("acceptance", None, ["reviewer_step"], "guppi.review", "guppi.decision", kind="system_decision")],
+    "workflow": [step("planner_step", "planner", [], "sedra.gap", "sedra.plan"), step("coder_step", "coder", ["planner_step"], "sedra.plan", "sedra.candidate"),
+                 step("reviewer_step", "reviewer", ["coder_step"], "sedra.candidate", "sedra.review"),
+                 step("acceptance", None, ["reviewer_step"], "sedra.review", "sedra.decision", kind="system_decision")],
     "independence": [{"left_slot": "coder", "right_slot": "reviewer", "different_agent_instance": True, "separate_workspace": True}],
     "limits": {"max_iterations": 3, "max_wall_seconds": 10800, "resource_mode": "sequential"},
-    "acceptance": {"authority": "guppi_officer"}, "initial_qualification": "DRAFT",
+    "acceptance": {"authority": "sedra_officer"}, "initial_qualification": "DRAFT",
 }
 SNAP = {"cpu_cores": 8, "ram_mib": 16000, "vram_mib": 8000, "disk_mib": 100000, "vm_slots": 4}
 
 
 def inst(agent_id, role, effect, model, **kw):
-    c = {"agent_id": agent_id, "lifecycle": "ACTIVE", "qualification": "VERIFIED", "admission": {"valid": True, "revoked": False}, "template_ref": f"guppi.devvm.{role}@1.0.0",
-         "template_digest": H[role], "model_key": model, "capabilities": [{"id": f"guppi.devvm.{role}", "version": "1.0.0", "side_effect": effect}], "stats": {"successes": 8, "runs": 8},
+    c = {"agent_id": agent_id, "lifecycle": "ACTIVE", "qualification": "VERIFIED", "admission": {"valid": True, "revoked": False}, "template_ref": f"sedra.devvm.{role}@1.0.0",
+         "template_digest": H[role], "model_key": model, "capabilities": [{"id": f"sedra.devvm.{role}", "version": "1.0.0", "side_effect": effect}], "stats": {"successes": 8, "runs": 8},
          "available": "now", "resources": {}}
     c.update(kw)
     return c
@@ -104,15 +104,15 @@ C3 = r"""
 def with_steps(*steps):
     return crew(workflow=list(steps))
 w = CREW["workflow"]
-assert "unknown_slot" in validate_crew(with_steps(step("planner_step", "ghost", [], "guppi.gap", "guppi.plan"), *w[1:]))
-assert "unknown_dependency" in validate_crew(with_steps(w[0], step("coder_step", "coder", ["nowhere"], "guppi.plan", "guppi.candidate"), *w[2:]))
-assert "unknown_dependency" in validate_crew(with_steps(step("planner_step", "planner", ["planner_step"], "guppi.gap", "guppi.plan"), *w[1:]))
+assert "unknown_slot" in validate_crew(with_steps(step("planner_step", "ghost", [], "sedra.gap", "sedra.plan"), *w[1:]))
+assert "unknown_dependency" in validate_crew(with_steps(w[0], step("coder_step", "coder", ["nowhere"], "sedra.plan", "sedra.candidate"), *w[2:]))
+assert "unknown_dependency" in validate_crew(with_steps(step("planner_step", "planner", ["planner_step"], "sedra.gap", "sedra.plan"), *w[1:]))
 assert "duplicate_step" in validate_crew(crew(workflow=w + [w[0]]))
-assert "cycle" in validate_crew(with_steps(step("planner_step", "planner", ["reviewer_step"], "guppi.review", "guppi.plan"), *w[1:]))
-assert "contract_mismatch" in validate_crew(with_steps(w[0], step("coder_step", "coder", ["planner_step"], "something.else", "guppi.candidate"), *w[2:]))
+assert "cycle" in validate_crew(with_steps(step("planner_step", "planner", ["reviewer_step"], "sedra.review", "sedra.plan"), *w[1:]))
+assert "contract_mismatch" in validate_crew(with_steps(w[0], step("coder_step", "coder", ["planner_step"], "something.else", "sedra.candidate"), *w[2:]))
 assert "orphan_slot" in validate_crew(crew(slots=CREW["slots"] + [{**slot("reviewer", "read_only"), "id": "extra"}]))
-assert "bad_step" in validate_crew(with_steps(*w[:3], step("acceptance", "reviewer", ["reviewer_step"], "guppi.review", "guppi.decision", kind="system_decision")))
-assert "bad_step" in validate_crew(with_steps(*w[:3], step("acceptance", None, ["reviewer_step"], "guppi.review", "guppi.decision", kind="magic")))
+assert "bad_step" in validate_crew(with_steps(*w[:3], step("acceptance", "reviewer", ["reviewer_step"], "sedra.review", "sedra.decision", kind="system_decision")))
+assert "bad_step" in validate_crew(with_steps(*w[:3], step("acceptance", None, ["reviewer_step"], "sedra.review", "sedra.decision", kind="magic")))
 assert "bad_step" in validate_crew(crew(workflow=["x"] + w[1:]))
 assert "cycle" not in validate_crew(CREW) and "unknown_dependency" not in validate_crew(CREW)
 snap = copy.deepcopy(CREW); validate_crew(crew(workflow=w + [w[0]])); assert CREW == snap
@@ -146,7 +146,7 @@ C5 = r"""
 plan = assemble(CREW, pool(), SNAP)
 assert plan["ok"] is True and set(plan) == {"ok", "crew", "problems", "order", "assignments", "gaps", "queued"}, plan
 assert {k: v["agent_id"] for k, v in plan["assignments"].items()} == {"planner": "ins-planner", "coder": "ins-coder", "reviewer": "ins-reviewer"}
-assert plan["crew"] == "guppi.crew.devvm_build@1.0.0" and plan["order"] == [["planner_step"], ["coder_step"], ["reviewer_step"], ["acceptance"]] and plan["gaps"] == [] and plan["problems"] == [] and plan["queued"] == []
+assert plan["crew"] == "sedra.crew.devvm_build@1.0.0" and plan["order"] == [["planner_step"], ["coder_step"], ["reviewer_step"], ["acceptance"]] and plan["gaps"] == [] and plan["problems"] == [] and plan["queued"] == []
 assert all(set(v) == {"agent_id", "score"} and isinstance(v["score"], float) for v in plan["assignments"].values())
 bad = assemble(crew(slots=[]), pool(), SNAP)
 assert bad["ok"] is False and bad["assignments"] == {} and bad["problems"] == validate_crew(crew(slots=[])) and bad["order"] == []
@@ -158,7 +158,7 @@ assert (plan["gaps"][0]["slot"], plan["gaps"][0]["reason"]) == ("reviewer", "no_
 assert plan["gaps"][0]["excluded"] == [{"agent_id": "ins-reviewer", "reasons": ["admission_invalid", "qualification_too_low"]}]
 changed = pool(); changed[1]["template_digest"] = "f" * 64
 assert [(g["slot"], g["reason"]) for g in assemble(CREW, changed, SNAP)["gaps"]] == [("coder", "no_candidate_for_pin")]
-other = pool(); other[1]["template_ref"] = "guppi.devvm.coder@2.0.0"
+other = pool(); other[1]["template_ref"] = "sedra.devvm.coder@2.0.0"
 assert [(g["slot"], g["reason"]) for g in assemble(CREW, other, SNAP)["gaps"]] == [("coder", "no_candidate_for_pin")]
 nothing = assemble(CREW, [], SNAP)
 assert [g["slot"] for g in nothing["gaps"]] == ["planner", "coder", "reviewer"] and {g["reason"] for g in nothing["gaps"]} == {"no_candidate_for_pin"}
@@ -166,8 +166,8 @@ pc, cr, sn = copy.deepcopy(pool()), copy.deepcopy(CREW), dict(SNAP); assemble(cr
 """
 
 C6 = r"""
-all_in_one = [inst("ins-all", r, e, "qwen", capabilities=[{"id": f"guppi.devvm.{x}", "version": "1.0.0", "side_effect": ef} for x, ef in (("planner", "proposal_only"), ("coder", "reversible_write"), ("reviewer", "read_only"))],
-                   template_ref=f"guppi.devvm.{r}@1.0.0", template_digest=H[r]) for r, e in (("planner", "proposal_only"), ("coder", "reversible_write"), ("reviewer", "read_only"))]
+all_in_one = [inst("ins-all", r, e, "qwen", capabilities=[{"id": f"sedra.devvm.{x}", "version": "1.0.0", "side_effect": ef} for x, ef in (("planner", "proposal_only"), ("coder", "reversible_write"), ("reviewer", "read_only"))],
+                   template_ref=f"sedra.devvm.{r}@1.0.0", template_digest=H[r]) for r, e in (("planner", "proposal_only"), ("coder", "reversible_write"), ("reviewer", "read_only"))]
 plan = assemble(CREW, all_in_one, SNAP)
 assert plan["ok"] is False and plan["gaps"][0]["reason"] == "no_combination_satisfies_exclusivity_and_independence"
 same_model = pool(); same_model[2]["model_key"] = "qwen"
@@ -209,7 +209,7 @@ STAGES = [
      "task": """In this workspace `agent_contracts.py` and `agent_matcher.py` already exist (do not change them). Create `crew_planner.py` (Python 3 standard library only). Add `validate_crew(crew) -> list`: it returns the SORTED list of UNIQUE problem codes (str) of a crew template and never raises; an empty list means the crew is usable.
 A crew is a dict with the keys schema_version, id, version, purpose, slots, workflow, independence, limits, acceptance, initial_qualification. In this stage check only:
 - `crew` is not a dict: return exactly ["not_a_crew"].
-- schema_version is not exactly "guppi.crew-template/v1": "schema_version" (a missing key counts).
+- schema_version is not exactly "sedra.crew-template/v1": "schema_version" (a missing key counts).
 - id is not a str that fully matches `[a-z][a-z0-9_.-]{2,127}`: "bad_id".
 - version is not a str of the form "<n>.<n>.<n>" (ASCII digits only): "bad_version".
 - `slots` is missing, not a list or empty: "no_slots". `workflow` is missing, not a list or empty: "no_workflow".
@@ -241,7 +241,7 @@ Never modify the argument.""" + STYLE + """ Add `tests/test_crew_planner.py` (un
 given in another order. For a crew where `validate_crew` returns any problem raise `ValueError("invalid_crew:" + the codes joined by ",")`.""" + STYLE + """ Add tests to `tests/test_crew_planner.py`.""",
      "hidden": {"hidden_c4.py": hidden("validate_crew, step_levels", C4)}},
     {"name": "assemble_basic",
-     "task": """In the existing `crew_planner.py` (keep the other functions) add `assemble(crew, candidates, snapshot) -> dict`. `candidates` are instance dicts for the matcher of `agent_matcher.py` (`match(requirement, candidates, snapshot)`): agent_id, lifecycle, qualification, admission, capabilities, stats, available, resources, plus "template_ref" (e.g. "guppi.devvm.coder@1.0.0") and "template_digest" (64 hex).
+     "task": """In the existing `crew_planner.py` (keep the other functions) add `assemble(crew, candidates, snapshot) -> dict`. `candidates` are instance dicts for the matcher of `agent_matcher.py` (`match(requirement, candidates, snapshot)`): agent_id, lifecycle, qualification, admission, capabilities, stats, available, resources, plus "template_ref" (e.g. "sedra.devvm.coder@1.0.0") and "template_digest" (64 hex).
 The result always has exactly the keys "ok", "crew", "problems", "order", "assignments", "gaps", "queued"; "crew" is "<id>@<version>" of the template (None when the template is not a dict); "problems" is `validate_crew(crew)`.
 If there are problems: ok False, order [], assignments {}, gaps [], queued [], and nothing else is done. Otherwise "order" is `step_levels(crew)`.
 For each slot (in the order in which the agent steps of the workflow use it, each slot once): the candidates for it are those whose template_ref equals "<template_id>@<template_version>" of the slot AND whose template_digest equals the slot's template_sha256. They are matched with `match` using the requirement

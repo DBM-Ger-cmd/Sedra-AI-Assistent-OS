@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime import update_anwenden as ua
+from sedra_runtime import update_anwenden as ua
 
 
 def schreibe(base, dateien):
@@ -15,9 +15,9 @@ def schreibe(base, dateien):
 
 def baum(routen=('GET /api/a',), trust='CORE'):
     return {
-        'runtime/src/guppi_runtime/kern.py': 'X = 1\n',
+        'runtime/src/sedra_runtime/kern.py': 'X = 1\n',
         'runtime/config/llama.yaml': 'a: 1\n',
-        'runtime/src/guppi_runtime/uix/tools/gw/tool.yaml': f'tool:\n  api: [{", ".join(routen)}]\n  trust: {trust}\n',
+        'runtime/src/sedra_runtime/uix/tools/gw/tool.yaml': f'tool:\n  api: [{", ".join(routen)}]\n  trust: {trust}\n',
     }
 
 
@@ -41,13 +41,13 @@ class UpdateTest(unittest.TestCase):
 
     def test_veraenderte_datei_wird_abgelehnt(self):
         manifest = self.manifest()
-        schreibe(self.staging, {'runtime/src/guppi_runtime/kern.py': 'X = 2\n'})
+        schreibe(self.staging, {'runtime/src/sedra_runtime/kern.py': 'X = 2\n'})
         with self.assertRaisesRegex(ua.UpdateFehler, 'pruefsumme_falsch'):
             ua.plan(self.staging, self.root, manifest)
 
     def test_zusaetzliche_datei_ohne_manifest_wird_abgelehnt(self):
         manifest = self.manifest()
-        schreibe(self.staging, {'runtime/src/guppi_runtime/neu.py': 'Y = 1\n'})
+        schreibe(self.staging, {'runtime/src/sedra_runtime/neu.py': 'Y = 1\n'})
         with self.assertRaisesRegex(ua.UpdateFehler, 'dateien_passen_nicht'):
             ua.plan(self.staging, self.root, manifest)
 
@@ -62,7 +62,7 @@ class UpdateTest(unittest.TestCase):
         self.assertEqual(p['rechte'], ['tool:gw: neue Route POST /api/xyz'])
         with self.assertRaisesRegex(ua.UpdateFehler, 'rechte_nicht_bestaetigt'):
             ua.anwenden(self.staging, self.root, self.manifest(), '', '1.22.0')
-        self.assertEqual((self.root / 'runtime/src/guppi_runtime/kern.py').read_text(encoding='utf-8'), 'X = 1\n')
+        self.assertEqual((self.root / 'runtime/src/sedra_runtime/kern.py').read_text(encoding='utf-8'), 'X = 1\n')
 
     def test_vertrauensstufe_aenderung_ist_eigene_zeile(self):
         schreibe(self.staging, baum(trust='COMMUNITY'))
@@ -70,19 +70,19 @@ class UpdateTest(unittest.TestCase):
         self.assertIn('tool:gw: Vertrauensstufe CORE → COMMUNITY', p['rechte'])
 
     def test_uebernahme_mit_bestaetigung_sichert_und_der_rueckweg_stellt_her(self):
-        schreibe(self.staging, {'runtime/src/guppi_runtime/kern.py': 'X = 2\n', 'runtime/src/guppi_runtime/neu.py': 'Y = 1\n'})
+        schreibe(self.staging, {'runtime/src/sedra_runtime/kern.py': 'X = 2\n', 'runtime/src/sedra_runtime/neu.py': 'Y = 1\n'})
         manifest = self.manifest()
         ergebnis = ua.anwenden(self.staging, self.root, manifest, '', '1.22.0')
         self.assertEqual(ergebnis['status'], 'uebernommen')
-        self.assertEqual((self.root / 'runtime/src/guppi_runtime/kern.py').read_text(encoding='utf-8'), 'X = 2\n')
+        self.assertEqual((self.root / 'runtime/src/sedra_runtime/kern.py').read_text(encoding='utf-8'), 'X = 2\n')
         self.assertTrue((self.root / 'local_config/update/stand.json').is_file())
         zurueck = ua.zurueck(self.root)
         self.assertEqual(zurueck['status'], 'zurueckgesetzt')
-        self.assertEqual((self.root / 'runtime/src/guppi_runtime/kern.py').read_text(encoding='utf-8'), 'X = 1\n')
-        self.assertFalse((self.root / 'runtime/src/guppi_runtime/neu.py').exists())
+        self.assertEqual((self.root / 'runtime/src/sedra_runtime/kern.py').read_text(encoding='utf-8'), 'X = 1\n')
+        self.assertFalse((self.root / 'runtime/src/sedra_runtime/neu.py').exists())
 
     def test_geschuetzte_ordner_bleiben_unberuehrt(self):
-        schreibe(self.staging, {'runtime/src/guppi_runtime/kern.py': 'X = 2\n'})
+        schreibe(self.staging, {'runtime/src/sedra_runtime/kern.py': 'X = 2\n'})
         ua.anwenden(self.staging, self.root, self.manifest(), '', '1.22.0')
         self.assertEqual((self.root / 'local_config/gateway/eingang/a.md').read_text(encoding='utf-8'), 'Original')
         self.assertEqual((self.root / 'workspace/x.txt').read_text(encoding='utf-8'), 'arbeit')

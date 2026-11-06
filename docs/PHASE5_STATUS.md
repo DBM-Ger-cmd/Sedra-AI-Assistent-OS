@@ -10,7 +10,7 @@ Alles bleibt **hinter dem Flag** `role_routing.enabled` (AUS). Ausgeschaltet ver
 | Baustein | Datei |
 |---|---|
 | Deklarative Capability-Rezepte, Policy, Health-Parameter | `config/role_routing.yaml` |
-| Rollenauflösung, Fallback, `independence_key`, `ProviderHealth` | `src/guppi_runtime/role_routing.py` |
+| Rollenauflösung, Fallback, `independence_key`, `ProviderHealth` | `src/sedra_runtime/role_routing.py` |
 | Rolle → Provider im Control Master | `modules/control.py` (`resolve_role`, `resolve_fallback`) |
 | Provider-Zustand im Modell-Router (nur wenn angehängt) | `models/router.py` |
 | Auflösung beim Start, Meldung des Ergebnisses, Unabhängigkeit | `job_supervisor.py` (`resolver`, `provider_report`, `requirements`, `independent_of`) |
@@ -30,7 +30,7 @@ Alles bleibt **hinter dem Flag** `role_routing.enabled` (AUS). Ausgeschaltet ver
 
 **Policy**
 - Berechtigungsstufe des Jobs über der des Rezepts → `policy_denied`. Netzwerkregeln. **Cloud nur mit Policy-Freigabe, Captain-Freigabe pro Auflösung und unkritischer Datenklasse.**
-- `GUPPI_GENERATED` und `EXTERNAL_UNVERIFIED` können **nie** in die erlaubten Vertrauensstufen aufgenommen werden (Start wird verweigert).
+- `SEDRA_GENERATED` und `EXTERNAL_UNVERIFIED` können **nie** in die erlaubten Vertrauensstufen aufgenommen werden (Start wird verweigert).
 - Ein Fallback lockert weder Netzwerk, Datenklasse noch Berechtigung (`fallback_loosens_requirements`). Ein Fallback nach `policy_denied` ist **immer** verboten.
 
 **Unabhängiger Verifier (schließt F-4)**
@@ -46,7 +46,7 @@ Alles bleibt **hinter dem Flag** `role_routing.enabled` (AUS). Ausgeschaltet ver
 
 **Zusammenspiel mit dem Supervisor**
 - Der Start löst die Rolle auf und trägt `provider_ref`, `capability`, `independence_key` am Versuch ein. Die Berechtigungsstufe des Jobs geht an den Router.
-- Scheitert die Auflösung, ist nichts gelaufen, der Ausgang ist bekannt: `policy_denied` → Captain, `no_capability`/`requirements_unmet` → GUPPI, `provider_unavailable`/`hardware_pressure` → neu einreihen mit Wartezeit. Kein Provider wird dafür verantwortlich gemacht.
+- Scheitert die Auflösung, ist nichts gelaufen, der Ausgang ist bekannt: `policy_denied` → Captain, `no_capability`/`requirements_unmet` → SEDRA, `provider_unavailable`/`hardware_pressure` → neu einreihen mit Wartezeit. Kein Provider wird dafür verantwortlich gemacht.
 - Ein abstürzender Resolver lässt den Job nicht hängen (der Claim verfällt).
 - Ergebnisse gehen an die Health: Fehler (inkl. verlorener Worker als `timeout`) und Erfolg bei `mark_passed`.
 - **Fallback Ende zu Ende:** Nach zwei Timeouts ist p1 DEGRADED, der Router wählt für den dritten Versuch das gesunde p2. Dessen Timeout fordert den Fallback an (`exclude: [p2]`), der nächste Versuch läuft wieder auf p1.

@@ -1,9 +1,9 @@
 """PIPE-09 (20.10.2026): Ein Ort, von dem aus gebaut wird.
 
-Gebaut wird aus dem Arbeitsstand (Git). Die Laufzeit-Installation (<guppi>) muss dieselbe Engine und dieselbe llama_server.yaml haben, sonst
+Gebaut wird aus dem Arbeitsstand (Git). Die Laufzeit-Installation (<sedra>) muss dieselbe Engine und dieselbe llama_server.yaml haben, sonst
 baut der eine Ort mit einer anderen Engine als der andere (Build 24: still b11371 statt b11160, der GPU-Canary scheiterte).
-Die Laufzeit-Installation kommt aus dem Platzhalter <guppi> (runtime/config/local_paths.yaml, nicht im Git); fehlt der Eintrag, wird der
-Nachbarordner "GUPPI_Runtime_v1.20" neben dem Arbeitsstand versucht. Findet sich keine, wird übersprungen."""
+Die Laufzeit-Installation kommt aus dem Platzhalter <sedra> (runtime/config/local_paths.yaml, nicht im Git); fehlt der Eintrag, wird der
+Nachbarordner "SEDRA_Runtime_v1.20" neben dem Arbeitsstand versucht. Findet sich keine, wird übersprungen."""
 import sys
 import unittest
 from pathlib import Path
@@ -11,10 +11,10 @@ from pathlib import Path
 import yaml
 
 import env_skip
-from guppi_runtime import local_paths
+from sedra_runtime import local_paths
 
 ARBEITSSTAND = env_skip.RUNTIME.parent
-NACHBAR = "GUPPI_Runtime_v1.20"
+NACHBAR = "SEDRA_Runtime_v1.20"
 
 # Freigegebene Engine-Versionen. Änderung nur mit Captain-Gate.
 FREIGEGEBEN = ("b11160",)
@@ -22,7 +22,7 @@ FREIGEGEBEN = ("b11160",)
 
 def finde_laufzeit():
     kandidaten = []
-    wert = local_paths.expand("<guppi>")
+    wert = local_paths.expand("<sedra>")
     if not local_paths.unresolved(wert):
         kandidaten.append(Path(wert))
     kandidaten.append(ARBEITSSTAND.parent / NACHBAR)
@@ -39,7 +39,7 @@ def lade(ordner):
     return yaml.safe_load((ordner / "runtime" / "config" / "llama_server.yaml").read_text(encoding="utf-8"))["llama_server"]
 
 
-@unittest.skipIf(LAUFZEIT is None, "Laufzeit-Installation (<guppi> oder Nachbarordner GUPPI_Runtime_v1.20) auf diesem PC nicht gefunden")
+@unittest.skipIf(LAUFZEIT is None, "Laufzeit-Installation (<sedra> oder Nachbarordner SEDRA_Runtime_v1.20) auf diesem PC nicht gefunden")
 class BauOrtTest(unittest.TestCase):
     def setUp(self):
         self.a = lade(ARBEITSSTAND)

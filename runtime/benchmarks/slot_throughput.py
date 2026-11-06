@@ -29,9 +29,9 @@ RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
 from context_ladder import driver_events_since, gpu_mib, overlap, timed_ask                 # noqa: E402
-from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
 
 TOPICS = ("the tides of a small harbor", "how a clock escapement works", "the life cycle of a river", "a market day in an old town", "the way a lighthouse lamp turns",
           "how bread rises in an oven", "a train crossing a mountain pass", "the habits of migrating birds")
@@ -188,7 +188,7 @@ def main():
     if not recipe or recipe.get("provider") != "llama-cpp-server":
         raise SystemExit(f"{args.recipe}: not a llama-cpp-server recipe")
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled, config.mtp = True, True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_slots_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_slots_")))
     out_dir = project / "runtime_data" / "measurements"; out_dir.mkdir(parents=True, exist_ok=True)
     with TestLab(default_path(project)).lease(os.environ.get("TESTLAB_OWNER", "slot_throughput"), f"slot throughput {args.recipe} x{args.parallel}", ttl_s=1800, wait_s=1800,
                                               preflight=clear_leftovers):

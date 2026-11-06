@@ -11,12 +11,12 @@ from unittest import mock
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import gated
-from guppi_runtime.uix_server import UIXHub
-from guppi_runtime.wissen import desk_wissen
-from guppi_runtime.wissen import speicher as S
+from sedra_runtime.desk import gated
+from sedra_runtime.uix_server import UIXHub
+from sedra_runtime.wissen import desk_wissen
+from sedra_runtime.wissen import speicher as S
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 NOTIZ = "# Werkbank\n\n## Lease\n\nVor dem Laden die Lease des Testlabors holen.\n\n## Vertraulich\n\nDie Steuernummer liegt im Ordner Finanzen.\n"
 
 
@@ -63,7 +63,7 @@ class OhneSchalterAn(unittest.TestCase):
     """SPEC_WISSEN_KERN_v1 WK-03 (05.11.2026): ohne Eintrag in switches.yaml ist das Wissen an (Grundfunktion)."""
 
     def test_ohne_eintrag_ist_das_wissen_an(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         tmp = tempfile.TemporaryDirectory(prefix='wissen-vorgabe-')
         self.addCleanup(tmp.cleanup)
         project = Path(tmp.name) / 'project'
@@ -287,9 +287,9 @@ class Vorschlaege(Basis):
 
 class Takt(Basis):
     def test_der_takt_laeuft_unter_der_sperre_und_ein_zweiter_nicht(self):
-        from guppi_runtime.wissen import aufnahme
+        from sedra_runtime.wissen import aufnahme
         thread = self.hub.start_extensions()
-        self.assertIn('guppi_runtime.wissen.desk_wissen', thread)
+        self.assertIn('sedra_runtime.wissen.desk_wissen', thread)
         self.assertTrue(self.sp.takt_thread.is_alive())
         self.assertTrue((self.project / 'local_config' / 'wissen' / 'takt.lock').exists())
         with self.assertRaisesRegex(ValueError, 'wis_takt_busy'):

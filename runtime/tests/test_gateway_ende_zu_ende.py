@@ -12,12 +12,12 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from guppi_runtime.models.base import BaseModelAdapter, ModelAdapterError
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.models.base import BaseModelAdapter, ModelAdapterError
+from sedra_runtime.uix_server import UIXHub
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
-KEY_ENV = 'GUPPI_SECRET_TESTANBIETER_API_KEY'
+ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
+KEY_ENV = 'SEDRA_SECRET_TESTANBIETER_API_KEY'
 SK0_TEXT = 'Bitte eine kurze Übersicht für die nächste Projektabstimmung vorbereiten. Nenne offene Punkte, ohne Termine zu erfinden.'
 SK1_TEXT = ('Bereite eine Antwort vor: Max Muster (max.muster@beispiel.test) fragt nach dem Stand von NORD-42. '
             'Kundennummer K-1042. Nenne offene Punkte, ohne Termine zu erfinden.')
@@ -120,14 +120,14 @@ class KIGateWayEndeZuEnde(unittest.TestCase):
     def test_systemprompt_hat_kein_beispiel_platzhalter_zum_nachplappern(self):
         # Real (2026-10-19, qwen3.5-9b): das Modell übernahm „<Typ>“ und „<Nummer>“ aus dem Prompt in den Entwurf, die Prüfung
         # sah einen fehlerhaften Platzhalter (B6_PSEUDO_MALFORMED_PLACEHOLDER). Darum steht im Prompt kein Platzhalter in spitzen Klammern.
-        from guppi_runtime.gateway import vorgang
+        from sedra_runtime.gateway import vorgang
         self.assertNotIn('<', vorgang.SYSTEM)
         self.assertNotIn('>', vorgang.SYSTEM)
         self.assertIn('dreistelligen Nummer', vorgang.SYSTEM)
 
     def test_nutzernachricht_trennt_anfrage_und_quelle(self):
         # Die Abgrenzung kommt vor den Text (Modellqualität: das 9B-Modell fand die Aufgabe nicht im Fließtext)
-        from guppi_runtime.gateway import vorgang
+        from sedra_runtime.gateway import vorgang
         nur_anfrage = vorgang.nutzernachricht({'text': 'Frage A', 'dokument': ''})
         self.assertEqual(nur_anfrage, 'Anfrage:\nFrage A')
         mit_quelle = vorgang.nutzernachricht({'text': 'Frage A', 'dokument': 'Fakt B'})
@@ -138,7 +138,7 @@ class KIGateWayEndeZuEnde(unittest.TestCase):
 
     def test_docx_wird_als_text_gelesen_und_txt_bleibt_utf8(self):
         import zipfile
-        from guppi_runtime.gateway import dokumente
+        from sedra_runtime.gateway import dokumente
         ordner = Path(self.tmp.name)
         docx = ordner / 'anfrage.docx'
         xml = ('<?xml version="1.0" encoding="UTF-8"?>'
@@ -154,7 +154,7 @@ class KIGateWayEndeZuEnde(unittest.TestCase):
         self.assertEqual(dokumente.lies_datei(txt), 'Ein Satz über Ärger.')
 
     def test_kaputtes_docx_ist_ein_fehler_und_kein_leerer_text(self):
-        from guppi_runtime.gateway import dokumente
+        from sedra_runtime.gateway import dokumente
         ordner = Path(self.tmp.name)
         kaputt = ordner / 'kaputt.docx'
         kaputt.write_bytes(b'das ist kein zip-archiv')

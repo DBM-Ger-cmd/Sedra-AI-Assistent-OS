@@ -5,10 +5,10 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.harness import ladeprobe as lp
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.harness import ladeprobe as lp
+from sedra_runtime.uix_server import UIXHub
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 
 
 def modell(i, passt=True, grund=None, **mehr):

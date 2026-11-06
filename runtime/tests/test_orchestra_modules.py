@@ -1,6 +1,6 @@
 """Abnahme der Orchestrierungs-Module gegen `src` (Spec 1, D1.7: ORC-02, 03, 05, 06, 08, 10, 11, 17, 18 stecken in den versteckten Tests der Bau-Specs).
 
-Die SEDRA-Bauten `s1_*` wurden beim Bau gegen den Kandidaten geprüft; nach der Übernahme in `guppi_runtime/orchestra/` lief ihre
+Die SEDRA-Bauten `s1_*` wurden beim Bau gegen den Kandidaten geprüft; nach der Übernahme in `sedra_runtime/orchestra/` lief ihre
 Abnahme nie wieder. Dieser Test führt die versteckten Tests der letzten Stufe jeder Spec gegen den übernommenen Code aus:
 die Module werden in einen temporären Ordner kopiert (nur die relativen Importe werden zu einfachen Namen, wie die Specs sie
 brauchen), jede versteckte Datei läuft als `python <datei>` mit diesem Ordner als Arbeitsordner, Exit-Code 0 = bestanden.
@@ -14,11 +14,11 @@ from pathlib import Path
 import bau_abnahme
 
 RUNTIME = Path(__file__).resolve().parents[1]
-ORCHESTRA = RUNTIME / 'src' / 'guppi_runtime' / 'orchestra'
+ORCHESTRA = RUNTIME / 'src' / 'sedra_runtime' / 'orchestra'
 SPECS = ('s1_graphs', 's1_wakeplan', 's1_decompose', 's1_cron', 's1_org', 's1_board', 's1_heartbeat', 's1_messages', 's1_routines',
          's1_budget', 's1_runner')
 PURE = ('board', 'budget', 'budgetcalc', 'chain', 'cron', 'decompose', 'graphs', 'heartbeat', 'messages', 'org', 'routines', 'runner',
-        'store', 'wakeplan')                        # ohne guppi_runtime-Importe; service, tick und config gehören zum Desk
+        'store', 'wakeplan')                        # ohne sedra_runtime-Importe; service, tick und config gehören zum Desk
 SEED = RUNTIME / 'benchmarks' / 's1_schema2_seed'
 # Bekannte, gewollte Abweichungen von den versteckten Tests (spätere Spezifikationen, die den Bau-Spec nicht kannte): (Datei, Muster, Ersatz, Grund).
 # Jede Abweichung steht hier mit Grund; eine neue Abweichung ist ein Befund, kein Grund, den Test zu lockern.
@@ -52,7 +52,7 @@ class Modules(unittest.TestCase):
         for name in PURE:
             text = (self.tree / f'{name}.py').read_text(encoding='utf-8')
             self.assertIsNone(re.search(r'^from \.', text, flags=re.M), name)
-            self.assertNotIn('guppi_runtime', text, name)
+            self.assertNotIn('sedra_runtime', text, name)
 
 
 if __name__ == '__main__':

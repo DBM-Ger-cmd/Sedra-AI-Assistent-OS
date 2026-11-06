@@ -64,8 +64,8 @@ Bewiesen mit: 47 Tests, einem **echten HTTP-Rundlauf** (Bearer, 401, nichts laus
 - Größen: 0,8B / 4B / 9B (Adapter auf eingefrorener Basis), 27B (51 GB volle Gewichte). Kev-4B braucht rund 9 GB GPU-Speicher für die Gewichte, ~14 GB mit Server-Puffern.
 - **Eigene Genauigkeit (laut Projekt):** auf neuen Quellen 0,82 (4B/9B) bis 0,85 (27B). Kev-4B kann bei 5 % Fehlerbudget nur 0,52–0,69 der Entscheidungen automatisieren. Das Projekt sagt selbst: Schwellen auf eigenen Daten prüfen. Wissensfragen und Datumsrechnung sind schwach. Eine geänderte Antwortreihenfolge kann die Antwort ändern.
 
-### Konsequenzen für GUPPI (offen, bitte entscheiden)
-1. **Kev ist nicht portabel installierbar.** Es braucht Python 3.12/3.13 (hier läuft 3.14), `torch` 2.6–2.8, `transformers` ≥ 5.17, `uv` und eine **GPU oder Apple Silicon** (CPU-Pfad existiert, aber 0,8B/4B sind für L4/Mac gedacht). Das widerspricht dem Ziel „portabel ohne globale Installation". Nichts davon habe ich installiert oder gestartet. Möglich wäre ein **eigener portabler Ordner mit eigener Python-Umgebung**, gestartet von GUPPI nur nach Ihrer Freigabe (Guard-Aktion `model_runtime_control`, Stufe 5).
+### Konsequenzen für SEDRA (offen, bitte entscheiden)
+1. **Kev ist nicht portabel installierbar.** Es braucht Python 3.12/3.13 (hier läuft 3.14), `torch` 2.6–2.8, `transformers` ≥ 5.17, `uv` und eine **GPU oder Apple Silicon** (CPU-Pfad existiert, aber 0,8B/4B sind für L4/Mac gedacht). Das widerspricht dem Ziel „portabel ohne globale Installation". Nichts davon habe ich installiert oder gestartet. Möglich wäre ein **eigener portabler Ordner mit eigener Python-Umgebung**, gestartet von SEDRA nur nach Ihrer Freigabe (Guard-Aktion `model_runtime_control`, Stufe 5).
 2. **Gemeinsame Abstammung:** Kev basiert auf **Qwen3.5**, unser Coder ebenfalls. Der `independence_key` (Familie + Gewichte) wäre `kev:…` gegen `qwen3.5:…`, also „unabhängig". Die gemeinsame Basis macht korrelierte Fehler wahrscheinlicher. Ob das als unabhängig genug gilt, ist eine **fachliche Entscheidung**, die das System nicht für Sie trifft. Möglicher Schritt: ein Feld `lineage` im Rezept, und Unabhängigkeit verlangt abweichende `lineage`, wenn beide bekannt sind.
 3. **Wofür Kev taugt:** als **zusätzliche** Meinung (z. B. „erfüllt dieser Diff die Akzeptanzkriterien?") neben deterministischen Tests, nie als Ersatz. Die Regeln aus Phase 0.6 (PASS braucht deterministischen Beleg) bleiben bindend.
 4. **Verifier-Rezept bleibt abgeschaltet** (`enabled: false`) und der Provider-Standard bleibt `enabled: false`, bis ein lokaler Server qualifiziert ist.
@@ -76,7 +76,7 @@ Bewiesen mit: 47 Tests, einem **echten HTTP-Rundlauf** (Bearer, 401, nichts laus
 3. **Der Token-Speicher (`approval_tokens.json`) wächst unbegrenzt**, der Guard räumt nichts auf (Bestand, nicht neu).
 4. **Pfadprüfung** löst Symlinks auf und vergleicht Wurzeln, aber der **Symlink-Test lief hier nicht** (Windows-Recht, siehe Phase 0).
 5. **Die Stufe 3-Aktionen sind nicht „isoliert"**: Sie sind nur freigabepflichtig. Die Isolation liefert die Sandbox, die hier nicht gelaufen ist.
-6. **`GuppiRuntime.kev` ist weiter nirgends in einen Ablauf eingebunden.** Nichts ruft `verify` auf. Die Abbildung „Prüffrage aus Akzeptanzkriterium → Kev-Frage" gibt es nicht.
+6. **`SedraRuntime.kev` ist weiter nirgends in einen Ablauf eingebunden.** Nichts ruft `verify` auf. Die Abbildung „Prüffrage aus Akzeptanzkriterium → Kev-Frage" gibt es nicht.
 7. Die Aufteilung der Stufen ist **meine Einordnung** der Guard-Regeln. Der Captain sollte sie bestätigen, besonders `shell_execute` (3), `git_init` (4) und `execution_recovery` (4).
 
 ## Abweichungen vom Vertrag

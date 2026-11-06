@@ -4,7 +4,7 @@ gates G2-S1-01, G2-S1-16, G2-S1-22): `orchestra/board.py`, the task board in orc
 the rows for the goal chain, the test whether all children of a root are done, the orphaned checkouts after a restart, and the delegation of a foreman's decomposition
 (all subtasks in one transaction, levels inherited downwards). Builds on the seed benchmarks/s1_schema2_seed (store.py schema 2, graphs.py = reference of s1_graphs).
 Additions to D1.1: clear_blocker returns the number of open blockers left (for the wake-up "unblocked"); create checks its fields.
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_board)."""
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_board)."""
 
 SEED = "benchmarks/s1_schema2_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 

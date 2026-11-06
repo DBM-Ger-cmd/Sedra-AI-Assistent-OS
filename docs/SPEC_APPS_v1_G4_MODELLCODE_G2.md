@@ -2,7 +2,7 @@
 
 Grundlage: `docs/SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md` §5a.3 (Befund), §5a.5 (Maßnahme G4), §5a.7 (Skizze); Entscheidung des Captains vom 03.11.2026: **G4 sofort**, als eigener Punkt, unabhängig von O3+.
 Da G4 kein eigenes G1 hat, stehen die Anforderungen hier mit (Teil 1). G2 freigegeben am 03.11.2026; Bau (G3) auf dem Branch `claude/intelligent-goldberg-7arr50`.
-Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
+Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für c364081.
 
 ## 0. Ziel in einem Satz
 
@@ -64,7 +64,7 @@ Die Harness startet keinen Lauf und keinen Befehl, solange es im Projekt Code gi
 
 | ID | Anforderung | Prüfbar durch |
 |---|---|---|
-| G4-16 | Konsole: `guppi code-stand <projekt> [--zeigen]` listet die ungesehenen Dateien mit Diff, wo möglich; `guppi code-stand <projekt> --uebernehmen` erklärt den aktuellen Stand als gesehen (z. B. nach eigener Arbeit von Claude oder einem `git pull`). Audit `HARNESS_CODE_STAND_UEBERNOMMEN {anzahl, kanal: konsole}`. | Test der CLI |
+| G4-16 | Konsole: `sedra code-stand <projekt> [--zeigen]` listet die ungesehenen Dateien mit Diff, wo möglich; `sedra code-stand <projekt> --uebernehmen` erklärt den aktuellen Stand als gesehen (z. B. nach eigener Arbeit von Claude oder einem `git pull`). Audit `HARNESS_CODE_STAND_UEBERNOMMEN {anzahl, kanal: konsole}`. | Test der CLI |
 | G4-17 | Beim Start einer Harness-Sitzung (und für G6 beim Start von SEDRA) steht eine Zeile im Posteingang bzw. in der Sitzung, wenn ungesehener Code vorliegt („n Code-Dateien ungesehen – Läufe und Befehle brauchen deine Sicht“). | Test |
 | G4-18 | Audit ohne Inhalte, nur Pfade, Hashes, Zahlen: `HARNESS_CODE_STAND_ANGELEGT`, `HARNESS_CODE_UNGESEHEN {karte_id, anzahl}`, `HARNESS_CODE_GESEHEN`, `HARNESS_CODE_STAND_UEBERNOMMEN`. | Test |
 
@@ -90,7 +90,7 @@ def vorschau(wurzel, liste) -> str              # Text für die Karte (G4-13/14)
 | Datei | Änderung |
 |---|---|
 | `harness/werkzeuge.py` `vorbereiten` | für `befehl` und `lauf_starten`: `plan['code_ungesehen'] = code_stand.ungesehen(…)` (außer `NUR_PRUEFEN`); Liste in `plan['gate']['bindung']`; Vorschau-Block anhängen. Für `datei_schreiben`/`datei_aendern` auf eine Code-Datei: `plan['code'] = True`. |
-| `harness/vorbehalte.py` `pruefen` | neuer Grund für `befehl`/`lauf_starten`, wenn `plan['code_ungesehen']` nicht leer ist (Parameter `ungesehen`); `PFADE` um `runtime/src/guppi_runtime/harness/code_stand.py` ergänzt |
+| `harness/vorbehalte.py` `pruefen` | neuer Grund für `befehl`/`lauf_starten`, wenn `plan['code_ungesehen']` nicht leer ist (Parameter `ungesehen`); `PFADE` um `runtime/src/sedra_runtime/harness/code_stand.py` ergänzt |
 | `harness/freigabe.py` `einstufung` | reicht `plan.get('code_ungesehen')` an `vorbehalte.pruefen` |
 | `harness/freigabe.py` `aufruf` (automatischer Weg) und `beantworten` (Karte) | vor `ausfuehren` einer Code-Schreibung: `vorher_merken`; danach `spur` mit Weg (`aufgabe`/`sitzung`/`katalog` bzw. `karte`/`vorarbeiter`); bei Karte + `erlauben` + `von == 'captain'`: `gesehen` für diese Datei (G4-07). Nach `ausfuehren` eines Laufs/Befehls über eine Karte mit Code-Liste: `gesehen` für die gebundene Liste (G4-12). |
 | `cli.py` | Befehl `code-stand` (G4-16) |
@@ -108,7 +108,7 @@ def vorschau(wurzel, liste) -> str              # Text für die Karte (G4-13/14)
 3. Captain liest, gibt frei → Lauf startet; `test_x.py` gilt als gesehen. Der nächste `run_tests` ohne neue Code-Änderung läuft wieder ohne Karte.
 
 **B – Claude hat im Repo gearbeitet, danach startet der MasterChat Tests**
-- Die Karte listet die von Claude geänderten Dateien unter „außerhalb der Harness geändert“ (ohne Diff). Weg für den Captain: `guppi code-stand <projekt> --uebernehmen` in der Konsole, nachdem er die Änderung kennt – oder die Karte freigeben.
+- Die Karte listet die von Claude geänderten Dateien unter „außerhalb der Harness geändert“ (ohne Diff). Weg für den Captain: `sedra code-stand <projekt> --uebernehmen` in der Konsole, nachdem er die Änderung kennt – oder die Karte freigeben.
 
 **C – Bauagent mit Aufgabe: schreiben, testen, schreiben, testen**
 - Jeder Testlauf nach einer Code-Änderung ist eine Karte. Das bremst selbständige Bau-Schleifen bewusst (§6, G4-E3).
@@ -130,7 +130,7 @@ def vorschau(wurzel, liste) -> str              # Text für die Karte (G4-13/14)
 |---|---|
 | MasterChat | Erster Testlauf nach neuen oder geänderten Code-Dateien braucht eine Karte; danach frei, bis wieder Code geändert wird. |
 | Bauagent / Aufgaben | Selbständige Schleifen „ändern → testen“ halten an jeder Testrunde an. |
-| Captain nach eigener Arbeit / Claude / `git pull` | Einmal `guppi code-stand … --uebernehmen` oder die nächste Karte freigeben. |
+| Captain nach eigener Arbeit / Claude / `git pull` | Einmal `sedra code-stand … --uebernehmen` oder die nächste Karte freigeben. |
 | Claude direkt im Repo | nicht betroffen (läuft nicht über die Harness). |
 
 ## 7. Grenzen (ehrlich)
@@ -184,7 +184,7 @@ G2 (diese Datei) → Freigabe durch den Captain → G3 T1–T5 → G4 Abnahme am
 | T1 Code-Stand | neu `harness/code_stand.py` | Erkennung, gesehener Stand (Ausgangsstand beim ersten Gebrauch, Audit `HARNESS_CODE_STAND_ANGELEGT`), Vergleich mit Zwischenspeicher nach Größe/Änderungszeit, Spur, vorige Fassung, Vorschau mit Grenzen (30 Dateien / 2.000 Zeilen) |
 | T2 Prüfung vor Ausführung | `harness/werkzeuge.py` (`_code_sicht`, Flag `code` beim Schreiben), `harness/vorbehalte.py` (Grund für `befehl`/`lauf_starten`, `code_stand.py` unter Vorbehalt), `harness/freigabe.py` (`einstufung`), `harness/befehl.py` (nimmt die erweiterte Bindung an, prüft Zeile und Ordner darin) | harter Vorbehalt; Liste in der Bindung des Gates |
 | T3 Spur und „gesehen“ | `harness/freigabe.py` (`_code_vorher`, `_code_nachher`, `_code_zu_gross`) | Schreiben: Spur je Weg; Karte des Captains (nicht `sitzung`, nicht Vorarbeiter) → gesehen, wenn die vorige Fassung gesehen war; Lauf/Befehl über Karte → gebundene Liste gesehen, Audit `HARNESS_CODE_GESEHEN`; Karte erzeugt `HARNESS_CODE_UNGESEHEN`; zu großer Code → Karte bleibt offen, Fehler `code_zu_gross` |
-| T4 Konsole, Hinweis | `cli.py` (`guppi code-stand <projekt> [--uebernehmen]`, Audit `HARNESS_CODE_STAND_UEBERNOMMEN` mit `kanal: konsole`), `harness/api.py` (`GET /api/harness/code_stand?projekt=`, Schalter `code_sicht`), `uix/shells/harness/verlauf.js` (Notiz beim Anlegen einer Sitzung), `local_switches.py` (Abschnitt `code_sicht`) | gebaut |
+| T4 Konsole, Hinweis | `cli.py` (`sedra code-stand <projekt> [--uebernehmen]`, Audit `HARNESS_CODE_STAND_UEBERNOMMEN` mit `kanal: konsole`), `harness/api.py` (`GET /api/harness/code_stand?projekt=`, Schalter `code_sicht`), `uix/shells/harness/verlauf.js` (Notiz beim Anlegen einer Sitzung), `local_switches.py` (Abschnitt `code_sicht`) | gebaut |
 | T5 Tests | neu `runtime/tests/test_harness_code_stand.py` (29 Tests) | grün |
 | Wissen | `uix/shells/harness/arbeitsplatz.yaml` (Begriff „ungesehener Code“), `runtime/config/harness_vorlagen/masterchat.md` (ein Satz: die Karte ist gewollt) | ergänzt |
 
@@ -207,7 +207,7 @@ G2 (diese Datei) → Freigabe durch den Captain → G3 T1–T5 → G4 Abnahme am
 | Nr | Befund | Änderung | Test |
 |---|---|---|---|
 | A1 | Auf dem PC und dem Stick liegt die portable Laufzeit im Projekt (`runtime\portable\python\current`, Bau-PC zusätzlich `python.aus`, `sandbox`; `START_SEDRA.bat:18, 60`). G4 hätte tausende Dateien gescannt; nach jeder Ersteinrichtung käme eine Riesenkarte. | `code_stand.AUSLASSEN_PFADE = ('runtime/portable',)`; dafür harter Vorbehalt `runtime/portable/**` für Schreiben (sonst könnte das Modell z. B. ein `sitecustomize.py` ungesehen dort ablegen). | `test_ausgelassene_ordner_zaehlen_nicht`, `test_portable_laufzeit_ist_vorbehalt` |
-| A2 | Der Konsolenweg stand ohne `--root` in Karte, Sitzungshinweis und PR. `guppi` läuft aber mit `--root workspace/GUPPI_OS` (`docs/BETRIEB.md:137`); ohne ihn entstünde still ein zweiter Stand. | neuer Starter `CODE_STAND.bat` im SEDRA-Ordner (Pfade und Python wie `START_SEDRA.bat`); der Server nennt den passenden Weg (`HarnessApi._code_konsole`: Windows `CODE_STAND.bat <projekt>`, sonst `python -m guppi_runtime --root "<projektordner>" code-stand <projekt>`); die Konsole lehnt einen `--root` ohne `runtime_data/harness` ab (`root_ist_nicht_der_projektordner`). | `test_falscher_root_wird_abgelehnt`, `test_zahl_und_pfade` |
+| A2 | Der Konsolenweg stand ohne `--root` in Karte, Sitzungshinweis und PR. `sedra` läuft aber mit `--root workspace/SEDRA_OS` (`docs/BETRIEB.md:137`); ohne ihn entstünde still ein zweiter Stand. | neuer Starter `CODE_STAND.bat` im SEDRA-Ordner (Pfade und Python wie `START_SEDRA.bat`); der Server nennt den passenden Weg (`HarnessApi._code_konsole`: Windows `CODE_STAND.bat <projekt>`, sonst `python -m sedra_runtime --root "<projektordner>" code-stand <projekt>`); die Konsole lehnt einen `--root` ohne `runtime_data/harness` ab (`root_ist_nicht_der_projektordner`). | `test_falscher_root_wird_abgelehnt`, `test_zahl_und_pfade` |
 | A3 | Nur der MasterChat kannte die Karte. | Ein Satz in `bauagent.md`, `pruefer.md`, `modellierer.md`; Regel 6 in `vorarbeiter.md` nennt die Karte als Captain-Karte. | – |
 | B8 | Die Einstufungs-Vorschau (`POST /api/harness/einstufen`) zeigte „frei“, obwohl eine G4-Karte käme. | Mit Projekt: dieselbe Prüfung wie beim Aufruf (Vorbehalt); ohne Projekt: Feld `hinweis`. | `test_einstufen_zeigt_den_vorbehalt` |
 
@@ -217,7 +217,7 @@ Tests danach: `test_harness_code_stand` 32 Tests, Harness-Gruppe grün (Zahlen i
 
 ### 13b. Konsole schlank, Stick, Version (03.11.2026)
 
-- `cli.py` importiert die ganze Runtime; als Zeile `modul guppi_runtime.cli` in der Stick-Liste kämen 14 Dateien dazu (Buildflow, DevVM, Selbst-Integration; gemessen mit `stick_paket.closure`). Deshalb hat `harness/code_stand.py` einen eigenen Einstieg (`konsole`, `main`; `python -m guppi_runtime.harness.code_stand --root <projektordner> <projekt> [--uebernehmen]`). Seine Import-Hülle liegt vollständig in der heutigen Stick-Hülle (0 zusätzliche Dateien). `CODE_STAND.bat` ruft diesen Einstieg; `guppi code-stand` nutzt dieselbe Funktion. Test: `test_schlanker_einstieg_wie_code_stand_bat` (Unterprozess).
+- `cli.py` importiert die ganze Runtime; als Zeile `modul sedra_runtime.cli` in der Stick-Liste kämen 14 Dateien dazu (Buildflow, DevVM, Selbst-Integration; gemessen mit `stick_paket.closure`). Deshalb hat `harness/code_stand.py` einen eigenen Einstieg (`konsole`, `main`; `python -m sedra_runtime.harness.code_stand --root <projektordner> <projekt> [--uebernehmen]`). Seine Import-Hülle liegt vollständig in der heutigen Stick-Hülle (0 zusätzliche Dateien). `CODE_STAND.bat` ruft diesen Einstieg; `sedra code-stand` nutzt dieselbe Funktion. Test: `test_schlanker_einstieg_wie_code_stand_bat` (Unterprozess).
 - Stick-Branch `plan/usb-stick-minimal`: `repo CODE_STAND.bat` in `stick_liste.txt` nachgetragen (Entscheidung des Captains, 03.11.2026). Der Stick-Bau braucht als Quelle einen Stand mit diesem PR; vorher meldet `stick_paket.py --pruefen` die Datei als fehlend.
 - Version 1.22.0 (Entscheidung des Captains): `version.py`, `BUILD.txt`. Release-Tag und `release/MANIFEST.sha256` für den Updater entstehen erst nach dem Merge.
 - Fehler bei der Durchsicht gefunden und behoben: Die Karte bei zu viel Code nennt „`… --zeigen`“ (G4-16), der Einstieg kannte `--zeigen` aber nicht (argparse hätte abgebrochen). Jetzt nehmen beide Einstiege `--zeigen` (Standard, darf fehlen) oder `--uebernehmen`, nicht beide zusammen. Tests: `test_zeigen_und_uebernehmen`, `test_schlanker_einstieg_wie_code_stand_bat` (mit und ohne `--zeigen`).

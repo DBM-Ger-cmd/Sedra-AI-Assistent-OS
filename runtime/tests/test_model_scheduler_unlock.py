@@ -5,11 +5,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.uix_server import UIXHub
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 from model_scheduler_fakes import FakeAudit, FakeLoader, FakeRuntime, resolution
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 
 
 class Rehearsal(unittest.TestCase):
@@ -28,7 +28,7 @@ class Rehearsal(unittest.TestCase):
         self.addCleanup(self.sched._release_gpu)
 
     def test_the_loader_takes_the_overlay_and_there_is_no_lock_left(self):
-        from guppi_runtime.jobs import model_scheduler_config as cfg
+        from sedra_runtime.jobs import model_scheduler_config as cfg
         self.assertFalse(hasattr(cfg, 'ENABLE_LOCK'))
         self.assertTrue(cfg.ModelSchedulerConfig.load(Path(__file__).resolve().parents[1] / 'config' / 'model_scheduler.yaml',
                                                      Path(self.tmp.name) / 'project' / 'local_config' / 'model_scheduler.yaml').enabled)
@@ -79,7 +79,7 @@ class Rehearsal(unittest.TestCase):
             self.assertEqual(self.sched._server(conn)['state'], 'gesperrt')
 
     def test_forcing_during_an_overdue_drain_stops_the_server_and_keeps_the_request(self):
-        from guppi_runtime.jobs.testlab import TestLab
+        from sedra_runtime.jobs.testlab import TestLab
         bench = TestLab(self.sched.lab.path, clock=self.sched.lab.clock, alive=lambda p: True, pid=222)
         self.assertTrue(self.sched.take_for_job('SDJ-1', 5)['granted'])
         self.sched.ensure_server(resolution(), run_id='SDJ-1')

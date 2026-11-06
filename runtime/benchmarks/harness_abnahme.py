@@ -45,7 +45,7 @@ def anfrage(url, method, path, body=None):
     parts = urlsplit(url)
     c = http.client.HTTPConnection(parts.hostname, parts.port, timeout=60)
     try:
-        h = {'X-GUPPI-Token': parts.fragment}
+        h = {'X-SEDRA-Token': parts.fragment}
         if body is not None: h['Content-Type'] = 'application/json'
         c.request(method, path, body=None if body is None else json.dumps(body), headers=h)
         r = c.getresponse()
@@ -58,7 +58,7 @@ def strom(url, aid, bei=None):
     """[(empfangen_s, event, data)] bis `ende`; `bei(event, data)` wird je Ereignis gerufen."""
     parts = urlsplit(url)
     c = http.client.HTTPConnection(parts.hostname, parts.port, timeout=600)
-    c.request('GET', f'/api/harness/antworten/{aid}/strom', headers={'X-GUPPI-Token': parts.fragment})
+    c.request('GET', f'/api/harness/antworten/{aid}/strom', headers={'X-SEDRA-Token': parts.fragment})
     r = c.getresponse()
     if r.status != 200: raise RuntimeError(f'strom HTTP {r.status}')
     out, block, t0 = [], {}, time.monotonic()

@@ -1,14 +1,14 @@
 # E-21 Kernverdrahtung `coder_ext` (Spec, 2026-10-10)
 
-Ziel: Die abgenommenen und aufgeräumten Module E-01 bis E-09 und `coder_ext.py` (E-20) werden über genau drei Hook-Punkte an GUPPIs Kern angeschlossen. Ohne `--coder-ext` verhält sich alles wie vorher, Byte für Byte.
+Ziel: Die abgenommenen und aufgeräumten Module E-01 bis E-09 und `coder_ext.py` (E-20) werden über genau drei Hook-Punkte an SEDRAs Kern angeschlossen. Ohne `--coder-ext` verhält sich alles wie vorher, Byte für Byte.
 
-Die Abnahme macht `test_coder_ext_wiring.py` in diesem Ordner. Die Datei kommt erst nach der Umsetzung nach `runtime/tests/`. Bis dahin wird sie dem Umsetzenden nicht gezeigt, wenn das GUPPI ist.
+Die Abnahme macht `test_coder_ext_wiring.py` in diesem Ordner. Die Datei kommt erst nach der Umsetzung nach `runtime/tests/`. Bis dahin wird sie dem Umsetzenden nicht gezeigt, wenn das SEDRA ist.
 
 Hinweis zum Bauweg: Ein DevVM-Workspace kann die Kerndateien nicht aufnehmen. `devvm_agents.py` ist allein 60 KB groß, und die Kerndateien importieren das halbe Paket. Deshalb ist der Bauweg eine eigene Entscheidung des Captains, siehe Ende.
 
 ## 0. Paket
 
-- `src/guppi_runtime/coder_ext/` mit den aufgeräumten Kandidaten `read_tracker.py`, `fuzzy_edit.py`, `replay_log.py`, `think_guard.py`, `no_call_monitor.py`, `syntax_note.py`, `result_pruner.py`, `tool_cards.py`, außerdem `coder_cards.py` von Claude und `coder_ext.py` als `__init__.py`.
+- `src/sedra_runtime/coder_ext/` mit den aufgeräumten Kandidaten `read_tracker.py`, `fuzzy_edit.py`, `replay_log.py`, `think_guard.py`, `no_call_monitor.py`, `syntax_note.py`, `result_pruner.py`, `tool_cards.py`, außerdem `coder_cards.py` von Claude und `coder_ext.py` als `__init__.py`.
 - Die einzige Änderung am Modulcode: In `__init__.py` werden die Importe relativ (`from . import fuzzy_edit` ...). Die anderen Module importieren sich nicht gegenseitig.
 - Die Herkunft jedes Moduls (Kandidaten-Ordner, Datum, Hermes/little-coder/dsh-Idee) wird in einer Zeile in `coder_ext/README.md` festgehalten. In den Modulen selbst stehen keine Kommentare.
 
@@ -60,5 +60,5 @@ Hinweis zum Bauweg: Ein DevVM-Workspace kann die Kerndateien nicht aufnehmen. `d
 
 ## Offene Entscheidung Captain: wer setzt um?
 
-1. **Claude setzt um**, etwa 60 bis 90 Zeilen in vier Dateien. Das ist der schnelle und sichere Weg. GUPPIs Anteil bleibt der Modul-Code, über 900 Zeilen.
-2. **GUPPI setzt um**: Dafür bräuchte der DevVM-Workspace eine höhere Dateigrößen-Grenze und eine Kopie des ganzen Pakets, und die Abnahmetests müssten in der VM laufen. Das wäre ein eigenes Infrastruktur-Paket.
+1. **Claude setzt um**, etwa 60 bis 90 Zeilen in vier Dateien. Das ist der schnelle und sichere Weg. SEDRAs Anteil bleibt der Modul-Code, über 900 Zeilen.
+2. **SEDRA setzt um**: Dafür bräuchte der DevVM-Workspace eine höhere Dateigrößen-Grenze und eine Kopie des ganzen Pakets, und die Abnahmetests müssten in der VM laufen. Das wäre ein eigenes Infrastruktur-Paket.

@@ -33,7 +33,7 @@ class ModelCompareTest(unittest.TestCase):
 
     def run_files(self):
         (self.logs / "devvm_build_s_1.log").write_text(LOG, encoding="utf-8")
-        relative = BS.join(["..", "workspace", "GUPPI_OS", "runtime_data", "devvm_candidates", "s", "a1"])
+        relative = BS.join(["..", "workspace", "SEDRA_OS", "runtime_data", "devvm_candidates", "s", "a1"])
         attempts = [{"attempt": 1, "hidden_passed": False, "seconds": 100.0, "calls": 7, "agent_runs": 2, "coder": "q", "models": {"coder": "m", "planner": "m"}, "stages": [{"hidden_passed": False}], "exported_to": relative},
                     {"attempt": 2, "hidden_passed": True, "seconds": 60.0, "calls": 3, "agent_runs": 1, "coder": "q", "models": {"coder": "m"}, "stages": [{"hidden_passed": True}], "exported_to": str(self.candidates / "a2")}]
         (self.logs / "devvm_build_s_1.json").write_text(json.dumps({"spec": "s", "attempts": attempts}), encoding="utf-8")

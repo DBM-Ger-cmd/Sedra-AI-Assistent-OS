@@ -1,7 +1,7 @@
 """Churn guard (coder extension, 2026-10-12, Captain: "daran sollten wir arbeiten"): in the coin hole build Qwen3.6 deleted and rewrote the same file again and again
 (22 writes, 21 deletes, 22 syntax notes) until the round limit. `churn_guard.py` watches the tool calls of one agent run and returns ONE correction text per file when a file
 is deleted and written again `limit` times, or `limit` writes in a row leave a syntax error; reading the file resets it. Pure logic; the hook into the tool loop (after each
-tool call, like coder_ext) comes after acceptance. GUPPI builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/churn_guard)."""
+tool call, like coder_ext) comes after acceptance. SEDRA builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/churn_guard)."""
 
 NOTES = '''# Notes for churn_guard
 Pure Python 3 standard library, no file, process or network access, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code.

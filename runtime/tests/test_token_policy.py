@@ -3,13 +3,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.artifacts import ArtifactStore
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.jobs.context_manager import ContextConfig, ContextManager
-from guppi_runtime.jobs.job_worker import HandlerError, Worker, model_text_handler
-from guppi_runtime.models.base import ModelAdapterError
-from guppi_runtime.models.openai_local import OpenAICompatibleLocalAdapter
-from guppi_runtime.jobs.token_policy import TokenBudgetError, TokenPolicy, TokenPolicyConfig
+from sedra_runtime.artifacts import ArtifactStore
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.jobs.context_manager import ContextConfig, ContextManager
+from sedra_runtime.jobs.job_worker import HandlerError, Worker, model_text_handler
+from sedra_runtime.models.base import ModelAdapterError
+from sedra_runtime.models.openai_local import OpenAICompatibleLocalAdapter
+from sedra_runtime.jobs.token_policy import TokenBudgetError, TokenPolicy, TokenPolicyConfig
 from test_job_worker import Base as WorkerBase
 from test_model_loader import KEY
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests

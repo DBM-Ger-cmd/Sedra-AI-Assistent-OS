@@ -4,4 +4,4 @@ set -eu
 . .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e .
-echo "GUPPI runtime environment ready."
+echo "SEDRA runtime environment ready."

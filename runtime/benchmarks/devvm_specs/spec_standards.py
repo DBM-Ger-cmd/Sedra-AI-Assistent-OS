@@ -2,7 +2,7 @@
 `build_request` (the result of a conversation: stages with catalog checks) and checks it WITHOUT a GPU: T1 the request is valid, T2 the catalog kinds it uses pass their proofs, T3 the examples do not contradict each other, T4 the first
 stage fails on the seed, T6 no absolute path or address in the parameters, T7 every stage test passes on a pattern (a reference or an existing module), T8 a mutation probe on that pattern (a mutant that no test catches shows a test gap).
 What cannot be checked (no seed, no pattern) is NOT hidden: it is listed in `unchecked`, so the spec card can say "not checked against a pattern". (T5, one statement per assert, holds for catalog code by construction.) Seed: benchmarks/g2_seed
-(assert_catalog.py, catalog_proofs.py, build_request.py, all finished). GUPPI builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/spec_standards)."""
+(assert_catalog.py, catalog_proofs.py, build_request.py, all finished). SEDRA builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/spec_standards)."""
 
 SEED = "benchmarks/g2_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 NOTES = '''# Notes for spec_standards

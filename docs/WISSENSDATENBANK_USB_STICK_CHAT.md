@@ -8,7 +8,7 @@ Weitere Wissensdateien: `docs/WISSEN_SEDRA_GESAMT.md` (alle Chats), `docs/ENTWIC
 
 - Eine portable SEDRA-Minimalversion auf dem USB-Stick GIGASTONE (exFAT, entfernbar, Laufwerk K:\). Zielrechner für die Basis: 16 GB RAM, 8 GB VRAM. Ein Kollege soll damit arbeiten können.
 - Enthalten: Kern, Harness-Shell (Standard), Cockpit, Paperclip, Translator-Shell (Ordner `uix/shells/fisch`, intern noch „fisch“).
-- Nicht enthalten: Start-, Minimal-, Gateway-, Guppi-XP-Shell, Wissensbasis, Vorlagen, das Projekt als Ganzes.
+- Nicht enthalten: Start-, Minimal-, Gateway-, Sedra-XP-Shell, Wissensbasis, Vorlagen, das Projekt als Ganzes.
 - Die „Transkript-Shell“ gibt es nicht. Gemeint ist die Translator-Shell.
 - Die Arbeit findet in der Umgebung `E:\Sedra Umgebung\Sedra Test umgebung für Minimale USB Stick Version` statt. A1 (`E:\Sedra Umgebung\A1 Sedra Main Branch Entwicklungs umgebung`) bleibt die Hauptumgebung der PC-Version.
 
@@ -32,7 +32,7 @@ Offen: Ob der Start ohne `--shell` für ein Minimalpaket mit vier Oberflächen s
 ## 3. Repository-Stand
 
 - Branch `claude/usb-stick-minimal-3c1b19` (Worktree `.claude\worktrees\usb-stick-minimal-3c1b19`). Commits `07f49fa`, `03bd44e`, `c1a9d29`, `33fccca`, `8a5a427`. Nur lokal, nicht gepusht, nicht in `main`.
-- Inhalt dieser Commits: Plan `docs/PLAN_USB_STICK_MINIMAL.md`, relative Modellordner in `runtime/src/guppi_runtime/local_paths.py`, Paketbau `runtime/benchmarks/stick_paket.py` mit Stick-Liste `stick_liste.txt` (Importhülle per AST), Tests `test_local_paths.py` und `test_stick_paket.py`.
+- Inhalt dieser Commits: Plan `docs/PLAN_USB_STICK_MINIMAL.md`, relative Modellordner in `runtime/src/sedra_runtime/local_paths.py`, Paketbau `runtime/benchmarks/stick_paket.py` mit Stick-Liste `stick_liste.txt` (Importhülle per AST), Tests `test_local_paths.py` und `test_stick_paket.py`.
 - Die Stick-Liste ergänzt `desk.html`, `retro_desktop.html`, `dashboard.html`. Ohne sie brach der Start mit FileNotFoundError ab.
 - Auf `main` liegt inzwischen `b147788` mit den drei Dokumenten (Entscheidungen, Entwicklerpaket, Wissensdatei gesamt) sowie weitere Harness-Commits.
 - Ein Cloud-Worker kann die Commits nur sehen, wenn der Branch gepusht ist. Push nur auf ausdrückliches Ja.
@@ -61,7 +61,7 @@ Die Kopien waren zuerst beschädigt, obwohl die Größe stimmte: Nemotron, Qwen3
 - Engine `engines\llama.cpp\b11160\`: 31 Dateien, 715 MB. `verify_engine(full=True)` ergibt `(True, 'ok')`. Pfad über `DEFAULT_ROOT = parents[4] / "engines"` in `engine_provision.py`.
 - Portables Python `runtime\portable\python\current\` (Python 3.14.8, PyYAML 6.0.3). Kopie aus `runtime\portable\python.aus\current\` des Bau-PCs. `Test-PortableRuntime.ps1` grün.
 - `runtime\config\local_paths.yaml`: `modelle: '..\modelle'`.
-- `workspace\GUPPI_OS\local_config\uix.yaml`: Harness als Standard.
+- `workspace\SEDRA_OS\local_config\uix.yaml`: Harness als Standard.
 - `runtime\config\model_profiles.yaml` auf dem Stick geändert, Original als `.orig`. Die Zuordnung (Bonsai für kleine GPU-Klassen, Gemma für größere) passt nicht zur Zwei-Stufen-Entscheidung. Nicht geändert.
 - Im Manifest nicht erfasst: `model_profiles.yaml`.
 

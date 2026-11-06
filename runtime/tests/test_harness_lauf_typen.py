@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.harness import katalog, lauf
+from sedra_runtime.harness import katalog, lauf
 
 
 def typ(**kw):
@@ -99,7 +99,7 @@ class ArgvTests(unittest.TestCase):
 
     def test_feste_argumente_bleiben_und_parameter_werden_eingesetzt(self):
         a = self.bauen('devvm_build', {'spec': 'harness_katalog'})
-        self.assertEqual(a['argv'], ['python', 'benchmarks/devvm_build.py', '../workspace/GUPPI_OS', '--spec', 'harness_katalog', '--profile', 'standard'])
+        self.assertEqual(a['argv'], ['python', 'benchmarks/devvm_build.py', '../workspace/SEDRA_OS', '--spec', 'harness_katalog', '--profile', 'standard'])
         self.assertEqual(self.bauen('nachtlauf_3d')['argv'][-1], '6')
 
     def test_parameter_grenzen(self):

@@ -5,18 +5,18 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.selfdev.execution_binder import BindingError
-from guppi_runtime.cli import main
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.selfdev.execution_binder import BindingError
+from sedra_runtime.cli import main
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 ROOT=Path(__file__).resolve().parents[2]
-ARCH=next((ROOT/'architecture').glob('GUPPI_Architecture_v*'))
+ARCH=next((ROOT/'architecture').glob('SEDRA_Architecture_v*'))
 
 class BinderCase(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
-        self.root=Path(self.tmp.name);self.rt=GuppiRuntime(self.root,ARCH)
+        self.root=Path(self.tmp.name);self.rt=SedraRuntime(self.root,ARCH)
         self.project=self.rt.filesystem_tool.root/'demo';self.project.mkdir()
         (self.project/'README.md').write_bytes(b'# Demo\r\nRead-only project\r\n')
         (self.project/'app.py').write_text('raise RuntimeError("must never import project code")\n')

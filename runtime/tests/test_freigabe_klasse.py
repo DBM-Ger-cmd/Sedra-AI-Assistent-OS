@@ -1,7 +1,7 @@
 """G9-01 (SPEC_APPS_v1_O3PLUS_G9_G2 §3.3): die Klassen H/N der Freigaben – Ablehnen ist immer N, Unbekanntes ist H."""
 import unittest
 
-from guppi_runtime.desk.freigabeklasse import ARTEN, H, N, klasse
+from sedra_runtime.desk.freigabeklasse import ARTEN, H, N, klasse
 
 
 class Grundregeln(unittest.TestCase):
@@ -57,10 +57,10 @@ class Tabelle(unittest.TestCase):
         self.assertEqual(k('lauf_starten', 'run_tests'), H)
         self.assertEqual(k('datei_schreiben', 'docs/notiz.md'), N)
         self.assertEqual(k('datei_aendern', 'runtime/tests/test_x.py'), N)
-        self.assertEqual(k('datei_aendern', 'runtime/src/guppi_runtime/core/guard.py'), H)      # harter Vorbehalt
-        self.assertEqual(k('datei_schreiben', 'runtime/src/guppi_runtime/harness/freigabe.py'), H)
+        self.assertEqual(k('datei_aendern', 'runtime/src/sedra_runtime/core/guard.py'), H)      # harter Vorbehalt
+        self.assertEqual(k('datei_schreiben', 'runtime/src/sedra_runtime/harness/freigabe.py'), H)
         self.assertEqual(k('datei_schreiben', 'local_config/switches.yaml'), H)
-        self.assertEqual(k('datei_aendern', 'runtime/src/guppi_runtime/desk/freigabeklasse.py'), H)           # die Tabelle selbst
+        self.assertEqual(k('datei_aendern', 'runtime/src/sedra_runtime/desk/freigabeklasse.py'), H)           # die Tabelle selbst
         self.assertEqual(k('modell_laden', 'chat.local'), N)
         self.assertEqual(k('sitzungen_aufraeumen', 'S-1'), N)
         self.assertEqual(k('datei_schreiben', 'docs/notiz.md', weg='sitzung'), H)                # Sitzungs-Erlaubnis

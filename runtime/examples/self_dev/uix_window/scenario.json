@@ -5,7 +5,7 @@
   "files": ["uix_window.py", "tests/test_uix_window.py"],
   "generation": {"context_min_tokens": 32768, "max_tokens": 20000},
   "evidence": [
-    {"source": "2026-10-03 Captain request", "detail": "GUPPI's UIX should be usable as its own Windows window, not as a page in the normal browser"},
+    {"source": "2026-10-03 Captain request", "detail": "SEDRA's UIX should be usable as its own Windows window, not as a page in the normal browser"},
     {"source": "2026-10-03 inventory", "detail": "uix_server only has --open (default browser tab); Edge is installed, pywebview is not; nothing may be downloaded for this"}
   ]
 }

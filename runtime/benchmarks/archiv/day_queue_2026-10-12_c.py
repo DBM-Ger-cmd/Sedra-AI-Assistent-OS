@@ -1,6 +1,6 @@
 r"""Qwen3.6-35B-A3B IQ4_XS against Q4_K_M in agent mode (Captain 2026-10-12: "Q4_K_M behalten und pruefen gegeneinander auch im Agenten-Modus").
 
-Same runner and settings as the night queue (GUPPI's coder, DevVM, solo, --coder-ext all, b11160, FA on, KV q8_0, ubatch 512). IQ4_XS = coder.local_primary (n_cpu_moe 28),
+Same runner and settings as the night queue (SEDRA's coder, DevVM, solo, --coder-ext all, b11160, FA on, KV q8_0, ubatch 512). IQ4_XS = coder.local_primary (n_cpu_moe 28),
 Q4_K_M = coder.local_q4km (n_cpu_moe 32, recipe off, server settings set per run). Order: S0 connection check of Q4_K_M with exactly these settings (the comparison stops when it fails; every build then runs with --require-s0), Q4_K_M standard test 2x, then E-06 and E-10 as FRESH builds (no seed, no review)
 for both quantisations alternately, then the agent test AG-01 (benchmarks/devvm_specs/ag01_shop.py) for both in --mode delegating (helpers allowed) and --mode solo, then the context
 ladder of Q4_K_M. The IQ4_XS standard tests and ladder of the night run are the reference. Results:
@@ -39,7 +39,7 @@ class QuantCompare(night.Queue):
         for item in night.SERVER:
             argv += ["--set", item]
         self.run("s0_" + Q4KM, argv, 3600)
-        from guppi_runtime.devenv.s0_status import status as s0_state
+        from sedra_runtime.devenv.s0_status import status as s0_state
         import yaml
         recipe = next(r for r in yaml.safe_load((self.project / "local_config" / "role_routing.yaml").read_text(encoding="utf-8"))["role_routing"]["capabilities"] if r["id"] == Q4KM)
         server = {**recipe["profile"]["server"], **{k: (int(v) if v.isdigit() else v) for k, v in (i.split("=", 1) for i in night.SERVER)}}

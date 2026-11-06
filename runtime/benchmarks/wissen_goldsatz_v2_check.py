@@ -26,7 +26,7 @@ ADAPTER_JE_GRUPPE = {'doku': {'markdown', 'text'}, 'logbuch': {'logbuch'}, 'know
 _WORT = re.compile(r'[a-zäöüß0-9_\-]{4,}')
 # Wörter, die eine Stelle nicht kennzeichnen (Allerweltswörter, Gliederung, Datumsteile)
 _ALLGEMEIN = frozenset('''zeile lauf regel fehler schritt zustand ordner captain stand spec eine eines einer dieses nicht ohne
-sedra guppi 2026 ablage mvp dieser diese nach über ueber vorarbeiter-aktion präzedenzfall praezedenzfall zeit datei lokal'''.split())
+sedra sedra 2026 ablage mvp dieser diese nach über ueber vorarbeiter-aktion präzedenzfall praezedenzfall zeit datei lokal'''.split())
 
 
 def _woerter(text):
@@ -76,7 +76,7 @@ def main():
         fehler.append('IDs sind nicht A001 bis A120 in Reihenfolge')
     logbuch_text = (REPO / LOGBUCH).read_text(encoding='utf-8') if (REPO / LOGBUCH).is_file() else ''
     gw_text = ''
-    for rel in ('runtime/src/guppi_runtime/gateway/klassen.py', 'runtime/src/guppi_runtime/gateway/wissen.py'):
+    for rel in ('runtime/src/sedra_runtime/gateway/klassen.py', 'runtime/src/sedra_runtime/gateway/wissen.py'):
         p = REPO / rel
         if p.is_file():
             gw_text += p.read_text(encoding='utf-8')

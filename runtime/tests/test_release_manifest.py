@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "benchmarks"))
 
 import release_manifest  # noqa: E402
-from guppi_runtime.update_anwenden import MANIFEST, UpdateFehler, manifest_lesen  # noqa: E402
+from sedra_runtime.update_anwenden import MANIFEST, UpdateFehler, manifest_lesen  # noqa: E402
 
 
 def _schreibe(wurzel, rel, text):
@@ -26,15 +26,15 @@ class ReleaseManifest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.repo = Path(self.tmp.name)
         self.git("init", "-q")
-        _schreibe(self.repo, "runtime/src/guppi_runtime/kern.py", "X = 1\n")
-        _schreibe(self.repo, "runtime/src/guppi_runtime/uix/tools/t/tool.yaml", "tool:\n  api: [GET /api/x]\n  trust: COMMUNITY\n")
+        _schreibe(self.repo, "runtime/src/sedra_runtime/kern.py", "X = 1\n")
+        _schreibe(self.repo, "runtime/src/sedra_runtime/uix/tools/t/tool.yaml", "tool:\n  api: [GET /api/x]\n  trust: COMMUNITY\n")
         _schreibe(self.repo, "runtime/config/a.yaml", "a: 1\n")
         _schreibe(self.repo, "docs/x.md", "nicht im Pruefbereich\n")
         self.commit("Stand")
         # Arbeitsbaum: gehoert nicht ins Release
         _schreibe(self.repo, "runtime/config/local_paths.yaml", "modelle: D:/m\n")
-        _schreibe(self.repo, "runtime/src/guppi_runtime/__pycache__/kern.cpython-311.pyc", "x")
-        _schreibe(self.repo, "runtime/src/guppi_runtime/kern.py", "X = 2  # nicht committet\n")
+        _schreibe(self.repo, "runtime/src/sedra_runtime/__pycache__/kern.cpython-311.pyc", "x")
+        _schreibe(self.repo, "runtime/src/sedra_runtime/kern.py", "X = 2  # nicht committet\n")
 
     def git(self, *args):
         return subprocess.run(["git", "-C", str(self.repo), "-c", "user.name=t", "-c", "user.email=t@t", *args],
@@ -47,11 +47,11 @@ class ReleaseManifest(unittest.TestCase):
     def test_manifest_aus_dem_commit_nicht_aus_dem_arbeitsbaum(self):
         text, n = release_manifest.erzeugen(self.repo, "HEAD")
         eintraege = manifest_lesen(text)
-        self.assertEqual(sorted(eintraege), ["runtime/config/a.yaml", "runtime/src/guppi_runtime/kern.py",
-                                             "runtime/src/guppi_runtime/uix/tools/t/tool.yaml"])
+        self.assertEqual(sorted(eintraege), ["runtime/config/a.yaml", "runtime/src/sedra_runtime/kern.py",
+                                             "runtime/src/sedra_runtime/uix/tools/t/tool.yaml"])
         self.assertEqual(n, 3)
         import hashlib
-        self.assertEqual(eintraege["runtime/src/guppi_runtime/kern.py"], hashlib.sha256(b"X = 1\n").hexdigest(), "Inhalt aus dem Commit")
+        self.assertEqual(eintraege["runtime/src/sedra_runtime/kern.py"], hashlib.sha256(b"X = 1\n").hexdigest(), "Inhalt aus dem Commit")
 
     def test_schreiben_taggen_pruefen(self):
         self.git("checkout", "-q", "--", ".")
@@ -63,7 +63,7 @@ class ReleaseManifest(unittest.TestCase):
         self.assertEqual(release_manifest.pruefen(self.repo, "v9.9.9")["anzahl"], 3)
         self.assertEqual(release_manifest.main(["--repo", str(self.repo), "--pruefen", "v9.9.9"]), 0)
         # Ein spaeterer Commit macht das Manifest auf main veraltet – der Tag bleibt stimmig.
-        _schreibe(self.repo, "runtime/src/guppi_runtime/kern.py", "X = 3\n")
+        _schreibe(self.repo, "runtime/src/sedra_runtime/kern.py", "X = 3\n")
         self.git("commit", "-q", "-am", "weiter")
         with self.assertRaisesRegex(UpdateFehler, "pruefsumme_falsch"):
             release_manifest.pruefen(self.repo, "HEAD")

@@ -4,12 +4,12 @@
 #     powershell -ExecutionPolicy Bypass -File benchmarks\sandbox_dns_capture.ps1
 #
 # What it does: records only port-53 traffic on all host adapters with Windows' built-in pktmon, runs the boundary check (the
-# guest queries a unique random name such as gp<random>.guppi-boundary.example.com via UDP and TCP to 1.1.1.1, 8.8.8.8 and
+# guest queries a unique random name such as gp<random>.sedra-boundary.example.com via UDP and TCP to 1.1.1.1, 8.8.8.8 and
 # 9.9.9.9), stops the capture and searches it for that name. Found = a query left the host. Not found = no query left.
 # It changes no setting permanently: the pktmon filter is removed at the end. Output: runtime_data\acceptance\dns_capture_<time>.*
 $ErrorActionPreference = "Stop"
 $runtime = Split-Path -Parent $PSScriptRoot
-$project = Join-Path (Split-Path -Parent $runtime) "workspace\GUPPI_OS"
+$project = Join-Path (Split-Path -Parent $runtime) "workspace\SEDRA_OS"
 $outDir = Join-Path $project "runtime_data\acceptance"
 New-Item -ItemType Directory -Force $outDir | Out-Null
 $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
@@ -23,7 +23,7 @@ if (-not $isAdmin) { throw "Bitte in einer Administrator-PowerShell starten (pkt
 $ErrorActionPreference = "Continue"
 cmd /c "pktmon stop >nul 2>&1"
 cmd /c "pktmon filter remove >nul 2>&1"
-cmd /c "pktmon filter add GUPPI-DNS -p 53 >nul 2>&1"
+cmd /c "pktmon filter add SEDRA-DNS -p 53 >nul 2>&1"
 cmd /c "pktmon start --capture --pkt-size 0 --file-name `"$etl`" >nul 2>&1"
 if ($LASTEXITCODE -ne 0) { throw "pktmon konnte den Mitschnitt nicht starten (Exit-Code $LASTEXITCODE)." }
 try {

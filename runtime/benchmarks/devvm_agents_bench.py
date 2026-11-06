@@ -34,16 +34,16 @@ import cuda_crash_hunt as hunt                                                  
 import devvm_tools_bench as tb                                                      # noqa: E402
 import judge as judge_mod                                                            # noqa: E402
 from team_tasks import SETS                                                          # noqa: E402
-from guppi_runtime.knowledge import KnowledgeStore                                   # noqa: E402
+from sedra_runtime.knowledge import KnowledgeStore                                   # noqa: E402
 import small_team as st                                                              # noqa: E402
-from guppi_runtime.devenv.devvm import DevWorkspace                                         # noqa: E402
-from guppi_runtime.devenv.devvm_agents import AgentBudget, DevOrchestrator, ModelHost, run_agent  # noqa: E402
-from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.sandbox.broker import SandboxBroker                               # noqa: E402
-from guppi_runtime.sandbox.provider import MicrosandboxProvider                      # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
+from sedra_runtime.devenv.devvm import DevWorkspace                                         # noqa: E402
+from sedra_runtime.devenv.devvm_agents import AgentBudget, DevOrchestrator, ModelHost, run_agent  # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from sedra_runtime.sandbox.broker import SandboxBroker                               # noqa: E402
+from sedra_runtime.sandbox.provider import MicrosandboxProvider                      # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 PROMPTS = {
     "create_package": ("Create a small Python package in this empty workspace: a folder `calc` with an empty `__init__.py` and `ops.py` (functions add(a, b) and sub(a, b)), and a folder `tests` "
@@ -79,7 +79,7 @@ def big_window_server(spec):
 
 
 class BenchLoader:
-    """ModelHost's loader: starts one llama-server model at a time through GUPPI's own runtime (server settings from the recipe, plus server_extra)."""
+    """ModelHost's loader: starts one llama-server model at a time through SEDRA's own runtime (server settings from the recipe, plus server_extra)."""
 
     def __init__(self, runtime, project, keys, log, context=None, parallel=1, server_extra=None, sampling_extra=None):
         self.runtime, self.project, self.log = runtime, project, log
@@ -115,7 +115,7 @@ def main():
     project = Path(args.project)
     modes = [m for m in args.modes.split(",") if m in ("solo", "team", "delegating", "escalating")]
     log = RunLog(project / "runtime_data" / "measurements", "devvm_agents_bench", config={"seeds": args.seeds, "modes": modes, "same_model": args.same_model})
-    tool_root = Path(tempfile.mkdtemp(prefix="guppi_devvm_agents_"))
+    tool_root = Path(tempfile.mkdtemp(prefix="sedra_devvm_agents_"))
     cfg_path = tool_root / "sandbox-bench.yaml"; cfg_path.write_text((RUNTIME / "config" / "sandbox.yaml").read_text(encoding="utf-8"), encoding="utf-8")
     broker = SandboxBroker(tool_root, tool_root / "sandbox-data", cfg_path, MicrosandboxProvider(project / "runtime_data" / "sandboxes" / "backend_home", RUNTIME), None, None)
     counter = {"n": 0}
@@ -147,7 +147,7 @@ def main():
         kb = KnowledgeStore(project / "runtime_data" / "knowledge" / "records.jsonl")
         by_id = {t["id"]: t for t in SETS["all"]}
         prompts = {tid: (f"The module `mod.py` in the workspace has a defect. Its contract (the docstring) is correct and the tests are correct.\n\nThe tests fail:\n{t['failure']}\n\n"
-                         f"GUPPI reproduced the failure in its VM:\n{t['repro']}\n\nFix the defect in mod.py: keep the function name and the contract.") for tid, t in by_id.items()}
+                         f"SEDRA reproduced the failure in its VM:\n{t['repro']}\n\nFix the defect in mod.py: keep the function name and the contract.") for tid, t in by_id.items()}
         setup = {tid: (lambda ws, t=t: ws.write("mod.py", t["code"])) for tid, t in by_id.items()}
         lessons_of = lambda task: [r["content"]["summary"] for r in kb.lessons_for(by_id[task]["code"] + by_id[task]["repro"], limit=1, rank=True, min_specificity=8)]
 
@@ -155,7 +155,7 @@ def main():
             try: return judge_mod.all_passed(judge_mod.judge(project, {"k": (task, ws.read("mod.py"))})["k"])
             except Exception: return False
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_agentsbench_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_agentsbench_")))
     result = {"modes": {}}
     with log, TestLab(default_path(project)).lease(os.environ.get("TESTLAB_OWNER", "devvm_agents_bench"), "devvm agents bench", ttl_s=1800, wait_s=3600, preflight=clear_leftovers):
         for mode in modes:

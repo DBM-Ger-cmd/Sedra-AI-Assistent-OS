@@ -7,10 +7,10 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.models.messwerte import Messwerte
-from guppi_runtime.models.model_loader import LoadError, LoaderConfig, ModelLoader
-from guppi_runtime.models.role_routing import ProviderHealth, ResolutionError, RoleRouter, RoutingConfig
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.models.messwerte import Messwerte
+from sedra_runtime.models.model_loader import LoadError, LoaderConfig, ModelLoader
+from sedra_runtime.models.role_routing import ProviderHealth, ResolutionError, RoleRouter, RoutingConfig
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 from test_model_loader import FakeController
 from test_role_routing import Clock, recipe, routing_raw
@@ -167,14 +167,14 @@ class MesswerteTests(unittest.TestCase):
 
 class ServerHilfenTests(unittest.TestCase):
     def test_ablehnung_haengt_den_grund_mit_den_zahlen_an(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         exc = ResolutionError('hardware_pressure', {'considered': [{'reason': 'Es fehlen 0.60 GB VRAM und 0.00 GB RAM bei 40 Lagen im RAM und 8192 Kontext.'}]})
         self.assertEqual(UIXHub._ablehnung(exc), ':Es fehlen 0.60 GB VRAM und 0.00 GB RAM bei 40 Lagen im RAM und 8192 Kontext.')
         self.assertEqual(UIXHub._ablehnung(ResolutionError('no_capability', None)), '')
         self.assertEqual(UIXHub._ablehnung(ValueError('x')), '')
 
     def test_messwert_wird_nach_dem_laden_gemerkt_nur_bei_dynamischer_wahl_und_echtem_laden(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         with tempfile.TemporaryDirectory() as tmp:
             audit = []
             hub = SimpleNamespace(runtime=SimpleNamespace(messwerte=Messwerte(Path(tmp) / 'm.json'), audit=SimpleNamespace(append=lambda *a, **k: audit.append((a, k)))))

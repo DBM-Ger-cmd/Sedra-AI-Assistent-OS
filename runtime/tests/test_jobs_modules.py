@@ -9,7 +9,7 @@ from pathlib import Path
 import bau_abnahme
 
 RUNTIME = Path(__file__).resolve().parents[1]
-JOBS = RUNTIME / 'src' / 'guppi_runtime' / 'jobs'
+JOBS = RUNTIME / 'src' / 'sedra_runtime' / 'jobs'
 SEED = RUNTIME / 'benchmarks' / 's2_schema_seed' / 'slot_db.py'
 # `slot_store.py` hängt im Paket über `slot_db` am Testlabor; die versteckten Tests öffnen `slot_db.open_db(":memory:")`. Deshalb läuft der Speicher gegen
 # das Saatgut `slot_db.py` (dieselbe Tabellentext, Verbindung im Speicher): geprüft wird `slot_store.py` selbst; `slot_db` im Paket ist nur der Schalter.

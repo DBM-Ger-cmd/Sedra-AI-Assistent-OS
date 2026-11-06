@@ -1,7 +1,7 @@
 # SPEC Apps v1 – AM0 Härtung – G2 Design (03.11.2026)
 
 Grundlage: `docs/SPEC_APPS_v1_AM0_HAERTUNG.md` (G1), freigegeben vom Captain am 03.11.2026 mit den Entscheidungen AM0-E2 (eigene `CAPTAIN`-Shells behalten Code), AM0-E3 (Abweichung der Herkunft abweisen), AM0-E4 (Sperrliste übernehmen und je Route prüfen). **AM0-E1 ist wieder offen** (Teil A).
-Nichts gebaut; diese Datei ist G2. Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
+Nichts gebaut; diese Datei ist G2. Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für c364081.
 
 ## 0. Was G2 im Code geklärt hat
 
@@ -32,20 +32,20 @@ Nichts gebaut; diese Datei ist G2. Pfade relativ zu `runtime/src/guppi_runtime/`
 
 | Muster | Text der Karte („Captain-Vorbehalt: …“) |
 |---|---|
-| `runtime/src/guppi_runtime/uix/**` | Oberfläche: Lader, Brücke, Rahmen, Shells und Paket-Werkzeuge (ein Werkzeug im Paket läuft mit Seitenzugriff) |
-| `runtime/src/guppi_runtime/desk/gateway.py` | Prüfung der Manifeste und Allowlist |
-| `runtime/src/guppi_runtime/desk/install.py` | Durchsicht beim Einbau von Modulen |
-| `runtime/src/guppi_runtime/desk/registry.py` | Register der Module und der Oberfläche |
-| `runtime/src/guppi_runtime/desk/herkunft.py` | Herkunft eingebauter Module (neu, Teil B) |
-| `runtime/src/guppi_runtime/uix_server.py` | Server der Oberfläche: Token, Einbau, Rechte |
-| `runtime/src/guppi_runtime/uix_clients.py` | Zugänge der externen Clients |
-| `runtime/src/guppi_runtime/cloud_settings.py` | Cloud-Zugang: Anbieter und Schlüssel |
-| `runtime/src/guppi_runtime/models/cloud_api.py` | Cloud-Zugang: Adapter |
+| `runtime/src/sedra_runtime/uix/**` | Oberfläche: Lader, Brücke, Rahmen, Shells und Paket-Werkzeuge (ein Werkzeug im Paket läuft mit Seitenzugriff) |
+| `runtime/src/sedra_runtime/desk/gateway.py` | Prüfung der Manifeste und Allowlist |
+| `runtime/src/sedra_runtime/desk/install.py` | Durchsicht beim Einbau von Modulen |
+| `runtime/src/sedra_runtime/desk/registry.py` | Register der Module und der Oberfläche |
+| `runtime/src/sedra_runtime/desk/herkunft.py` | Herkunft eingebauter Module (neu, Teil B) |
+| `runtime/src/sedra_runtime/uix_server.py` | Server der Oberfläche: Token, Einbau, Rechte |
+| `runtime/src/sedra_runtime/uix_clients.py` | Zugänge der externen Clients |
+| `runtime/src/sedra_runtime/cloud_settings.py` | Cloud-Zugang: Anbieter und Schlüssel |
+| `runtime/src/sedra_runtime/models/cloud_api.py` | Cloud-Zugang: Adapter |
 | `runtime/config/cloud_providers.yaml` | Cloud-Anbieter des Pakets |
 
 - Die Muster gelten relativ zur Wurzel des Harness-Projekts, wie die bestehenden Einträge (`pruefen` → `pfad_normal`, `passt`).
 - Wirkung (aus §0): Jede Schreib- oder Änderungsaktion des Modells an diesen Pfaden erzeugt eine Karte an den Captain; Aufgaben, Vorarbeiter und Sitzungs-Erlaubnis greifen nicht.
-- Grenze: Ist ein Projekt so eingerichtet, dass seine Wurzel **innerhalb** von `runtime/` liegt, passen die Muster nicht. Das gilt heute für alle Einträge gleich (z. B. `runtime/src/guppi_runtime/core/**`); G2 ändert daran nichts, der Test nennt es.
+- Grenze: Ist ein Projekt so eingerichtet, dass seine Wurzel **innerhalb** von `runtime/` liegt, passen die Muster nicht. Das gilt heute für alle Einträge gleich (z. B. `runtime/src/sedra_runtime/core/**`); G2 ändert daran nichts, der Test nennt es.
 
 ## 2. Teil B – Herkunft (AM0-02)
 

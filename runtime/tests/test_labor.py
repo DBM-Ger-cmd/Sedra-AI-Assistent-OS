@@ -1,8 +1,8 @@
 import unittest
 from unittest import mock
 
-from guppi_runtime import labor
-from guppi_runtime.models.base import ModelAdapterError
+from sedra_runtime import labor
+from sedra_runtime.models.base import ModelAdapterError
 
 
 class Protokoll:
@@ -61,12 +61,12 @@ class ConnectionTest(unittest.TestCase):
 
     def test_key_problem_is_shown_as_the_failing_step(self):
         fake = FakeAdapter([])
-        fake.fetch_models = mock.Mock(side_effect=ModelAdapterError('secret_not_set:GUPPI_SECRET_NVIDIA_API_KEY'))
+        fake.fetch_models = mock.Mock(side_effect=ModelAdapterError('secret_not_set:SEDRA_SECRET_NVIDIA_API_KEY'))
         with mock.patch.object(labor, 'provider_adapter', return_value=fake):
             res = labor.connection_test(config(), 'nvidia', audit=Protokoll())
         self.assertFalse(res['ok'])
         self.assertEqual(res['steps'][-1]['step'], 'Schlüssel und Anbieter')
-        self.assertIn('GUPPI_SECRET_NVIDIA_API_KEY', res['steps'][-1]['detail'])
+        self.assertIn('SEDRA_SECRET_NVIDIA_API_KEY', res['steps'][-1]['detail'])
 
 
 class CloudChatTest(unittest.TestCase):

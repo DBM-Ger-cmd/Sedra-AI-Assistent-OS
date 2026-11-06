@@ -2,7 +2,7 @@
 
 Grundlage: `docs/SPEC_APPS_v1_AM0_E1_OBERFLAECHENCODE.md`. Darin: §6 (O3 hart/weich/frei), §5a.5 (G1, G2, G3, G6, G7), §5b (Klassen H/N, G9, G10, G11), §8 (Entscheidungen). Entschieden vom Captain am 03.11.2026: **O3+** mit G1, G2, G3, G6, G7; danach **G9, G10, G11**. G4 ist gebaut (`SPEC_APPS_v1_G4_MODELLCODE_G2.md`), G5 und G8 gehören zu AM9 und sind nicht Teil dieses Dokuments.
 Status: **G2 freigegeben** am 03.11.2026 (E1–E8, E10, E11 wie vorgeschlagen; E9 nach der Ausarbeitung in §9a offen). Bau (G3) beginnt mit G11 (§11 Schritt 1).
-Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für `00cef7c` (`main` nach PR #3).
+Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für `00cef7c` (`main` nach PR #3).
 
 ## 0. Ziel in zwei Sätzen
 
@@ -16,7 +16,7 @@ Die Vorlage AM0-E1 bleibt gültig. Beim Lesen des heutigen Codes kamen Präzisie
 |---|---|---|
 | B1 | Die Seite (`/`, `desk.html`) und das Archiv (`/retro`) liest der Server **einmal beim Start**. Alles unter `/uix/{ui,shells,tools}/…` (`Gateway.file`) und `/uix/{css,js}/…` (`STATIC_FILE`) liest er **bei jeder Anfrage**, ohne Zwischenspeicher. | `uix_server.py:3523–3526`, `3575–3586`, `3718–3724`; `desk/gateway.py:382–405`; `Cache-Control: no-store` `uix_server.py:3682` |
 | B2 | Ausgeliefert werden Dateien mit den Endungen `js, css, json, svg, png, html`. Es geht also nicht nur um Programmcode: CSS kann Knöpfe umgestalten, eine `html`- oder `svg`-Datei kann Skripte derselben Herkunft laden. | `desk/gateway.py:55–56` |
-| B3 | Im Standardprojekt `sedra-entwicklung` ist die Wurzel das Repo selbst. Was die Harness unter `runtime/src/guppi_runtime/uix/**` schreibt, sind **genau die Dateien, die der laufende Server ausliefert**. | `harness/projekte.py:19–21` |
+| B3 | Im Standardprojekt `sedra-entwicklung` ist die Wurzel das Repo selbst. Was die Harness unter `runtime/src/sedra_runtime/uix/**` schreibt, sind **genau die Dateien, die der laufende Server ausliefert**. | `harness/projekte.py:19–21` |
 | B4 | Das Muster `…/uix/**/tool.yaml` (Doppelstern in der Mitte) trifft jede Tiefe; `pfad_normal` vergleicht ohne Groß-/Kleinschreibung. Damit ist die offene Frage aus AM0-E1 §6 („zu prüfen in G3“) beantwortet. | `harness/katalog.py:46–84` |
 | B5 | Der G4-Code-Stand kennt je Projekt den gesehenen Hash jeder Code-Datei, die Spur der Harness (Sitzung, Weg, Zeit) und legt die gesehene Fassung vor dem Schreiben ab (`vorher/<sha>`). „Code“ heißt dort aber nur `.py, .js, …`, also **nicht** CSS, JSON, HTML und SVG. | `harness/code_stand.py:28–30, 176–196, 198–203` |
 | B6 | Über `POST /api/decisions/answer` erteilt der Server Freigaben für **sechs Arten** von Entscheidungen. Nur ein Teil davon läuft über `guard.approve`: Grenzüberschreitungen, Fragen des Scheduler und der Inhaltsschutz haben eigene Wege. | `uix_server.py:261–311`; `desk/decisions.py:46–136` |
@@ -26,7 +26,7 @@ Die Vorlage AM0-E1 bleibt gültig. Beim Lesen des heutigen Codes kamen Präzisie
 | **N2** | **Ein `frei` im Katalog überspringt heute den weichen Vorbehalt.** `pruefen_weich` wird nur gefragt, wenn die Stufe nicht `frei` ist (für die Deckung durch Aufgaben und den Ausschluss der Sitzungs-Erlaubnis). In der Vorlage greift das nicht, weil `runtime/**` dort `captain` ist. Ein eigener Katalog des Captains mit `frei` für `modell_laden` hebt den weichen Vorbehalt für Modelle aber schon heute auf. Für O3 („weich“ = nur eine Aufgabe mit Nennung deckt) muss das geschlossen werden. | `harness/freigabe.py:39–45, 230–238`; `runtime/config/freigabe_katalog.beispiel.yaml:30–39` |
 | **N3** | **Der Token des Konsolen-Clients ist nicht lesegeschützt.** `runtime_data/uix/clients/cli.json` liegt im Projekt; der Lese-Vorbehalt `lesen-geheim` steht nur in der Katalog-Vorlage und nennt diesen Ordner nicht. Unter Windows ist der Token mit DPAPI verschlüsselt, unter macOS/Linux steht er im Klartext (Datei `0600`, für die Harness desselben Benutzers lesbar). Wenn G9 die Konsole als Kanal nutzt, darf kein Modell diesen Token lesen können. | `uix_clients.py:35–58`; `runtime/config/freigabe_katalog.beispiel.yaml:18–22` |
 | **N4** | Externe Clients teilen sich eine Routenliste: `ROUTES = ('/api/objects', '/api/actions')` gilt für `cli` **und** `mcp`. Der MCP-Client ist der Zugang für Modelle. Eine neue Konsolen-Route darf nicht automatisch auch für MCP gelten. | `uix_clients.py:21–22, 93` |
-| **N5** | Die Konsole `guppi approve` arbeitet in einem eigenen Prozess direkt auf dem Missionsspeicher. Eine Harness-Karte setzt sie nicht fort, denn deren Schleife, Grenzüberschreitungen, Inhaltsschutz und Scheduler-Fragen leben im Speicher des Servers. Eine Konsole für G9 muss deshalb **mit dem laufenden Server sprechen**. | `cli.py:327–335`; `uix_server.py:261–311` |
+| **N5** | Die Konsole `sedra approve` arbeitet in einem eigenen Prozess direkt auf dem Missionsspeicher. Eine Harness-Karte setzt sie nicht fort, denn deren Schleife, Grenzüberschreitungen, Inhaltsschutz und Scheduler-Fragen leben im Speicher des Servers. Eine Konsole für G9 muss deshalb **mit dem laufenden Server sprechen**. | `cli.py:327–335`; `uix_server.py:261–311` |
 
 ## 2. Anforderungen
 
@@ -34,7 +34,7 @@ Die Vorlage AM0-E1 bleibt gültig. Beim Lesen des heutigen Codes kamen Präzisie
 
 | ID | Anforderung | Prüfbar durch |
 |---|---|---|
-| O3-01 | **Hart** (neue Einträge in `harness/vorbehalte.py` `PFADE`, nur Karte an den Captain): `runtime/src/guppi_runtime/uix/ui/**`; `…/uix/**/tool.yaml`, `…/uix/**/shell.yaml`, `…/uix/**/shell.vorgabe.yaml`; `…/uix/**/arbeitsplatz.yaml`; `…/uix/desk.html`, `…/uix/retro_desktop.html`, `…/uix/js/**`. | Test je Muster |
+| O3-01 | **Hart** (neue Einträge in `harness/vorbehalte.py` `PFADE`, nur Karte an den Captain): `runtime/src/sedra_runtime/uix/ui/**`; `…/uix/**/tool.yaml`, `…/uix/**/shell.yaml`, `…/uix/**/shell.vorgabe.yaml`; `…/uix/**/arbeitsplatz.yaml`; `…/uix/desk.html`, `…/uix/retro_desktop.html`, `…/uix/js/**`. | Test je Muster |
 | O3-02 | **Hart, Prüfstellen** (aus AM0-G2 Teil A übernommen): `desk/gateway.py`, `desk/install.py`, `desk/registry.py`, `uix_server.py`, `uix_clients.py`, `cloud_settings.py`, `models/cloud_api.py`, `runtime/config/cloud_providers.yaml`. Dazu die neuen Dateien dieses Dokuments: `desk/decisions.py`, `desk/freigabeklasse.py`, `desk/bestaetigung.py`, `desk/systemdialog.py`, `desk/freigabe_konsole.py`, `harness/oberflaeche.py`. (`desk/herkunft.py` aus AM0-G2 Teil B kommt mit dessen Bau.) | Test je Muster |
 | O3-03 | **Weich** (neu: `vorbehalte.pruefen_weich` erkennt für `datei_schreiben`/`datei_aendern` die Muster `…/uix/shells/**`, `…/uix/tools/**`, `…/uix/css/**`, soweit nicht hart): Ergebnis `{grund: 'Captain-Vorbehalt: Code der Oberfläche (läuft in der Seite mit allen Rechten)', oberflaeche: <pfad>}`. | Test |
 | O3-04 | **Weich heißt: nur eine Aufgabe mit Nennung deckt** – und zwar auch dann, wenn der Katalog `frei` sagt (schließt N2). In `freigabe.einstufung` wird ein weicher Vorbehalt zur Stufe `captain`, außer eine aktive Aufgabe deckt ihn. Das gilt für die Oberfläche **und** für Modelle (heute `modelle`). Sitzungs-Erlaubnis, Vorarbeiter und Katalog decken nie. | Test: Katalog `frei` + weicher Vorbehalt → Karte |
@@ -64,7 +64,7 @@ Die Vorlage AM0-E1 bleibt gültig. Beim Lesen des heutigen Codes kamen Präzisie
 | G2-06 | Inhalt der Sammelkarte: je Datei der vollständige Diff bestätigt → jetzt (wie die G4-Vorschau, `code_stand.vorschau`), mit Hinweisen (G3). Gebunden an die Liste `(pfad, sha_jetzt)`. Ändert sich danach eine Datei, ist die Karte hinfällig und wird neu vorgelegt. Grenzen wie bei G4 (30 Dateien, 2.000 Zeilen); darüber nur über die Konsole (G7-04). | Test |
 | G2-07 | **`uebernehmen`** (Klasse H): Für jede gebundene Datei, deren Fassung noch stimmt, endet das Zurückhalten. Dateien unter Code-Endungen gelten zugleich als gesehen im G4-Code-Stand (`gesehen_setzen`). Es entsteht ein Übernahme-Satz `U-…` (G7). **`zuruecksetzen`** (Klasse N): stellt die bestätigten Fassungen auf der Platte wieder her; neue Dateien wandern nach `runtime_data/harness/oberflaeche/verworfen/<zeit>/`, gelöscht wird nichts. **`ablehnen`** (Klasse N): Karte zu, Dateien bleiben zurückgehalten. | Test |
 | G2-08 | **Ablage**: `<SEDRA-Projekt>/runtime_data/harness/oberflaeche/` (dort schon harter Vorbehalt `**/runtime_data/harness/**`): `stand.json` `{schema, dateien: {rel: {bestaetigt_sha, sitzung, aufgabe, zeit}}, uebernahmen: [...]}`, Inhalte unter `inhalt/<sha>` (≤ 1 MB je Datei, wie `VORHER_MAX`). Größere Dateien werden nicht zurückgehalten, sondern die Schreibaktion wird zur Karte. | Test |
-| G2-09 | **Vorschau**: `POST /api/harness/oberflaeche/vorschau {shell?}` startet einen **Prüfserver als eigenen Prozess** (`python -m guppi_runtime.uix_server --root <leeres Prüfprojekt> --architecture <wie Betrieb> --port 0 [--shell …]`) und nennt seine Adresse. Code dort erreicht keine echten Entscheidungen (eigener Token, eigener Port, leeres Projekt). Ende nach 30 min, beim Beantworten der Sammelkarte oder beim Ende des Servers. | Test (Prozess startet, Adresse, Ende) |
+| G2-09 | **Vorschau**: `POST /api/harness/oberflaeche/vorschau {shell?}` startet einen **Prüfserver als eigenen Prozess** (`python -m sedra_runtime.uix_server --root <leeres Prüfprojekt> --architecture <wie Betrieb> --port 0 [--shell …]`) und nennt seine Adresse. Code dort erreicht keine echten Entscheidungen (eigener Token, eigener Port, leeres Projekt). Ende nach 30 min, beim Beantworten der Sammelkarte oder beim Ende des Servers. | Test (Prozess startet, Adresse, Ende) |
 | G2-10 | Schalter `oberflaeche_abnahme` in `local_config/switches.yaml` (Standard an, nur in der Datei, wie `code_sicht`). Aus: Es wird nicht mehr zurückgehalten; schon zurückgehaltene Dateien bleiben es, bis zur Sammelkarte oder Konsole. | Test |
 
 ### 2.4 G3: Hinweise im Diff
@@ -103,7 +103,7 @@ Die Vorlage AM0-E1 bleibt gültig. Beim Lesen des heutigen Codes kamen Präzisie
 | G9-04 | Die Bestätigung bindet Art, Kennung, Weg und den Hash der Bindung der Entscheidung. Ändert sich die Entscheidung in der Zwischenzeit oder ist sie schon beantwortet, wird nichts ausgeführt (`bestaetigung_hinfaellig`). Frist 10 min, danach bleibt die Entscheidung offen und kann neu beantwortet werden. Nach einem Neustart des Servers gibt es keine offenen Bestätigungen mehr; die Entscheidungen bleiben offen. | Test |
 | G9-05 | **Systemdialog** (Windows): `desk/systemdialog.py` zeigt `MessageBoxW` mit `MB_YESNO \| MB_ICONWARNING \| MB_TOPMOST \| MB_SETFOREGROUND \| MB_SYSTEMMODAL` in einem eigenen Thread des Servers (`ctypes`, ohne neue Abhängigkeit; Vorbild `harness/herkunft.py:51–60`). Der Text kommt **nur aus dem Kern**: Art, Titel und Beschreibung der Entscheidung, Ziel, Kennung `B-…`, Klasse-H-Grund, Uhrzeit. Ein Ja ruft die Tür mit `kanal: systemdialog`, ein Nein lehnt die Bestätigung ab (die Entscheidung bleibt offen). | Test mit Fake; Abnahme am PC |
 | G9-06 | Ohne Windows oder wenn der Dialog nicht angezeigt werden kann: kein Dialog, nur die Konsole. Die Seite nennt dann den Befehl. | Test |
-| G9-07 | **Konsole**: `FREIGABE.bat liste` · `FREIGABE.bat freigeben B-…` · `FREIGABE.bat ablehnen B-…` (Windows, Pfade und Python wie `CODE_STAND.bat`; sonst `python -m guppi_runtime.desk.freigabe_konsole --root workspace/GUPPI_OS …`). Der Befehl spricht mit dem laufenden Server über `POST /api/freigabe/offen` und `POST /api/freigabe/bestaetigen` mit dem **CLI-Token** (N5). `liste` zeigt denselben Kern-Text wie der Dialog. | Test (Unterprozess gegen einen Prüfserver) |
+| G9-07 | **Konsole**: `FREIGABE.bat liste` · `FREIGABE.bat freigeben B-…` · `FREIGABE.bat ablehnen B-…` (Windows, Pfade und Python wie `CODE_STAND.bat`; sonst `python -m sedra_runtime.desk.freigabe_konsole --root workspace/SEDRA_OS …`). Der Befehl spricht mit dem laufenden Server über `POST /api/freigabe/offen` und `POST /api/freigabe/bestaetigen` mit dem **CLI-Token** (N5). `liste` zeigt denselben Kern-Text wie der Dialog. | Test (Unterprozess gegen einen Prüfserver) |
 | G9-08 | Die neuen Routen nimmt der Server **nur** mit dem CLI-Token an: nicht mit dem Browser-Token, nicht mit dem MCP-Token (schließt N4: Routen je Client statt einer gemeinsamen Liste). Sie stehen in `HERKUNFT_WEGE` (S7). | Test |
 | G9-09 | Die Seite zeigt den Wartezustand: an der Karte bzw. im Posteingang „Wartet auf deine Bestätigung außerhalb des Browsers (Fenster von SEDRA oder `FREIGABE.bat freigeben B-…`)“. Aus der Seite heraus gibt es keinen Knopf, der die Bestätigung erteilt. | uix_check |
 | G9-10 | Karten der Klasse H gehen immer an den Captain (`an: captain`), auch wenn der Katalog `vorarbeiter` sagt. Der Vorarbeiter beantwortet nur Klasse N. | Test |
@@ -115,7 +115,7 @@ Die Vorlage AM0-E1 bleibt gültig. Beim Lesen des heutigen Codes kamen Präzisie
 |---|---|---|
 | G10-01 | Jede erteilte Freigabe erzeugt `FREIGABE_ERTEILT {art, id, weg, klasse, kanal, gate_id?}` mit `kanal` aus `seite` · `systemdialog` · `konsole` · `aufgabe` · `sitzung` · `vorarbeiter` · `katalog` (künftig `freigabefenster` mit G5). Das Ereignis entsteht in der Tür (G9-02), nicht verstreut. | Test |
 | G10-02 | `HARNESS_APPROVED_BY` (automatische Freigaben über Aufgabe, Sitzung, Katalog) bekommt `kanal` dazu. `CAPTAIN_GATE_APPROVED` im Guard bleibt unverändert (`core/**` bleibt unberührt); die Zuordnung läuft über `gate_id`. | Test |
-| G10-03 | Die Konsole `guppi approve` (`cli.py:327–335`) und `agent_manager/cli.py:74` schreiben `FREIGABE_ERTEILT` mit `kanal: konsole`. | Test |
+| G10-03 | Die Konsole `sedra approve` (`cli.py:327–335`) und `agent_manager/cli.py:74` schreiben `FREIGABE_ERTEILT` mit `kanal: konsole`. | Test |
 
 ### 2.9 G11: Vollständigkeitstest
 
@@ -214,7 +214,7 @@ Grundlage AM0-E1 §5b.3. `ablehnen` und Zurücknehmen sind überall N.
 | F7 Desk-Verben mit Gate | legen einen Antrag an; die Freigabe läuft über F1 |
 | F8 Update | Freigabe über F1 (`request:update`); die Route `update/uebernehmen` braucht die erteilte Freigabe |
 | F9 Shell wechseln, Werkzeug an/aus | unverändert ohne Gate (Form, keine Rechte) |
-| F10 `guppi approve` | Kanal `konsole` (außerhalb des Browsers) |
+| F10 `sedra approve` | Kanal `konsole` (außerhalb des Browsers) |
 | **F11** (N1) Sitzung mit Vorlage-Erlaubnissen | hinter der Tür |
 
 ## 4. Abläufe
@@ -300,7 +300,7 @@ Beide Teile lassen sich über Schalter in der Datei abschalten (`oberflaeche_abn
 | Server | Adresse | Gelesen | CSP für Skripte | Wer die Seite öffnet |
 |---|---|---|---|---|
 | Server der Oberfläche | `/hardware` | einmal beim Start (`uix_server.py:3526`) | `script-src 'self'`, kein Inline (`:3686–3687`) | nur das Archiv `/retro` (Build 6), als Rahmen **ohne** `sandbox` und mit dem Browser-Token in der Adresse (`uix/retro_desktop.html:182`, `uix/js/status.js:93–97`). Keine heutige Shell nutzt `/hardware`. |
-| Hardware-Server (`guppi hardware-dashboard`, `runtime/run_hardware_manager.sh`) | `/` | einmal beim Start (`hardware_manager/dashboard.py:14`) | `script-src 'unsafe-inline'`, **ohne** `'self'` (`dashboard.py:46`) | der Browser des Captains; eigener Port, eigener Token, nur Leserouten (`dashboard.py:1, 32–34`) |
+| Hardware-Server (`sedra hardware-dashboard`, `runtime/run_hardware_manager.sh`) | `/` | einmal beim Start (`hardware_manager/dashboard.py:14`) | `script-src 'unsafe-inline'`, **ohne** `'self'` (`dashboard.py:46`) | der Browser des Captains; eigener Port, eigener Token, nur Leserouten (`dashboard.py:1, 32–34`) |
 
 **Was eine geänderte Datei bewirken könnte.**
 - *Im Server der Oberfläche* bringt sie **keinen neuen Code** in den Betrieb. Inline-Skripte sperrt die CSP. Skripte kommen nur von derselben Herkunft und nur mit JS-Typ (`nosniff`), und alle ausgelieferten `.js` liegen nach O3 unter harten (`uix/ui`, `uix/js`) oder zurückgehaltenen (Shells, Werkzeuge) Pfaden. Möglich bleibt:
@@ -359,7 +359,7 @@ G2 (dieses Dokument) → Freigabe durch den Captain mit E1–E11 → G3 (Bau in 
 
 **Was die Bestandsliste zeigt:**
 - Drei Stellen erteilen heute aus der Seite, ohne Tür: `harness/freigabe.beantworten` (F3), `uix_server.approve_gate` (F1, F2), `desk/gated.decide` (F1, F7). Sie stehen als „OFFEN bis G9“ in `APPROVE_STELLEN`.
-- Außerhalb des Browsers: `guppi approve`, die Konsole des Agent Manager und `guppi lessons approve` (Lernkarten des Coders, kein Guard).
+- Außerhalb des Browsers: `sedra approve`, die Konsole des Agent Manager und `sedra lessons approve` (Lernkarten des Coders, kein Guard).
 - `/api/mission/run` setzt eine Freigabe um, steht aber nicht in `HERKUNFT_WEGE`. Das ist kein Loch: Ein Harness-Prozess hat den Browser-Token nicht, und die externen Clients dürfen nur `/api/objects` und `/api/actions`.
 
 **Neuer Befund N6 – Handlungen ohne Gate mit Wirkungen der Klasse H.** G9 deckt sie nicht, denn die Tür kennt nur Entscheidungen. Code in der Seite kann sie heute direkt aufrufen:
@@ -383,8 +383,8 @@ Vorschlag für die Entscheidung des Captains (E12): Diese vier Routen bekommen i
 
 ### 13.2 E9 Variante C gebaut (03.11.2026)
 
-- `harness/vorbehalte.py`: `runtime/src/guppi_runtime/hardware_manager/dashboard.html` ist harter Vorbehalt.
-- `hardware_manager/dashboard.py`: liefert `/uix/js/hardware_dashboard.js` (nur diese Datei, ohne Token wie im Server der Oberfläche) und sendet `script-src 'self'` statt `'unsafe-inline'`. Damit zeigt `guppi hardware-dashboard` wieder Daten (Nebenbefund aus §9a behoben), und ein Inline-Skript in der Seite läuft in keinem der beiden Server.
+- `harness/vorbehalte.py`: `runtime/src/sedra_runtime/hardware_manager/dashboard.html` ist harter Vorbehalt.
+- `hardware_manager/dashboard.py`: liefert `/uix/js/hardware_dashboard.js` (nur diese Datei, ohne Token wie im Server der Oberfläche) und sendet `script-src 'self'` statt `'unsafe-inline'`. Damit zeigt `sedra hardware-dashboard` wieder Daten (Nebenbefund aus §9a behoben), und ein Inline-Skript in der Seite läuft in keinem der beiden Server.
 - Test `tests/test_hardware_dashboard_server.py` (5): die Seite lädt genau das ausgelieferte Skript, kein Inline-Skript; das Skript kommt mit JS-Typ; CSP ohne `unsafe-inline`; andere Dateien und Daten ohne Token bleiben zu; Daten mit Token. Ohne die Änderung schlägt der Test fehl. Am PC nicht geprüft: das Fenster im Browser.
 
 ### 13.3 G9 und G10 gebaut (03.11.2026)
@@ -408,7 +408,7 @@ Vorschlag für die Entscheidung des Captains (E12): Diese vier Routen bekommen i
 **Nicht gebaut oder nicht geprüft (offen):**
 - G9-09 nur teilweise: Die Seite zeigt den Wartezustand als Fehlermeldung mit dem Satz und der Kennung (jede Oberfläche zeigt `message` schon an). Eigene Anzeige an Karte und Posteingang fehlt.
 - Die Harness-Karte hinter der Tür hat keinen eigenen Test; die Harness-Tests laufen mit Tür aus.
-- G10-03: `guppi approve` und die Konsole des Agent Manager schreiben noch kein `FREIGABE_ERTEILT` (Kanal `konsole`).
+- G10-03: `sedra approve` und die Konsole des Agent Manager schreiben noch kein `FREIGABE_ERTEILT` (Kanal `konsole`).
 - Am PC nicht geprüft: ob das Fenster unter `START_SEDRA.bat` im Vordergrund erscheint; `FREIGABE.bat` unter Windows.
 - Stick-Liste: `FREIGABE.bat` und `desk/freigabe_konsole.py` noch nicht eingetragen.
 - O3 (hart/weich, weich vor Katalog), G1, G2, G3, G6, G7: nicht gebaut (§11 Schritte 4–6).

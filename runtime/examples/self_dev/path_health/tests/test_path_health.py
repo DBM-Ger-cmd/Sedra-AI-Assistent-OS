@@ -2,8 +2,8 @@ import unittest
 
 from path_health import MSB_SUFFIX, path_health, stale_bindings, vm_path_budget
 
-OLD = r"D:\Projekte-Neu\Guppy\GUPPI_Developer_Archive_v1.20_SELF_DEVELOPMENT_FOUNDATION\GUPPI_Runtime_v1.20\workspace\GUPPI_OS"
-NEW = r"D:\Projekte-Neu\Guppy\GUPPI v1.20_S D A\GUPPI_Runtime_v1.20\workspace\GUPPI_OS"
+OLD = r"D:\Projekte-Neu\Guppy\SEDRA_Developer_Archive_v1.20_SELF_DEVELOPMENT_FOUNDATION\SEDRA_Runtime_v1.20\workspace\SEDRA_OS"
+NEW = r"D:\Projekte-Neu\Guppy\SEDRA v1.20_S D A\SEDRA_Runtime_v1.20\workspace\SEDRA_OS"
 HOME_OLD = OLD + r"\runtime_data\sandboxes\backend_home"
 
 

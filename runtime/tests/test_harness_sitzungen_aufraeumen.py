@@ -5,13 +5,13 @@ import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.harness import erlaubnis, katalog
-from guppi_runtime.harness.api import HarnessApi
-from guppi_runtime.harness.freigabe import Karten, Kiste, beantworten
-from guppi_runtime.harness.werkzeuge import NAMEN, Werkzeuge
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.harness import erlaubnis, katalog
+from sedra_runtime.harness.api import HarnessApi
+from sedra_runtime.harness.freigabe import Karten, Kiste, beantworten
+from sedra_runtime.harness.werkzeuge import NAMEN, Werkzeuge
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 MISSION = 'M-AUFRAEUMEN'
 JETZT = datetime.now().astimezone()
 

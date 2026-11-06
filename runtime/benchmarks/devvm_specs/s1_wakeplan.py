@@ -2,7 +2,7 @@
 `orchestra/wakeplan.py`, the pure rules of the heartbeat: the idempotency key of a wake-up, the coalescing of the open wake-ups of an agent into one run, the choice of
 the task (never a blocked or checked-out one, ORC-05) and the decision what a wake-up leads to (run with a standing approval, a request, or an end without a mission).
 heartbeat.py imports it (seed of s1_heartbeat). Times are UTC texts "YYYY-MM-DDTHH:MM:SSZ"; there is no clock in the module.
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_wakeplan)."""
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_wakeplan)."""
 
 NOTES = '''# Notes for s1_wakeplan
 Python 3 standard library only (datetime); no sqlite3, no files, no clock (never datetime.now), no network. Times are texts in the form 2026-10-21T08:00:00Z (UTC).

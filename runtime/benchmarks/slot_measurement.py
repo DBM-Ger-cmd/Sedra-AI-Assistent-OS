@@ -5,7 +5,7 @@ r"""The measurement S2.1 of Spec 2 (model scheduler) in ONE command: main model 
 
     options: --recipe coder.local_primary   --small coder.llama_qwen35   --no-small   --slots 1,2,3,4   --limit-h 3   --small-limit-h 1   --max-temp 85   --wait 0
 
-What it does, in this order, under ONE GPU lease (TestLab, with the usual leftover clean-up; refused when the card holds more than 3.0 GiB that is not a GUPPI server):
+What it does, in this order, under ONE GPU lease (TestLab, with the usual leftover clean-up; refused when the card holds more than 3.0 GiB that is not a SEDRA server):
   per model and slot count N: S0 connection check (connection_check.check, S0 state NOT written), context ladder with N slots (context_ladder.ladder, window per slot),
   throughput of N parallel requests at the safe window up to 32768 (slot_throughput.throughput; for a recipe with MTP also without MTP);
   helper model additionally on the CPU (n_gpu_layers=0, slots 1 and 2, short answers).
@@ -259,7 +259,7 @@ def main(argv=None):
     ap.add_argument("--recipe", default="coder.local_primary"); ap.add_argument("--small", default="coder.llama_qwen35"); ap.add_argument("--no-small", action="store_true")
     ap.add_argument("--slots", default="1,2,3,4"); ap.add_argument("--limit-h", type=float, default=3.0); ap.add_argument("--small-limit-h", type=float, default=1.0)
     ap.add_argument("--max-temp", type=int, default=85); ap.add_argument("--wait", type=float, default=0)
-    ap.add_argument("--guppi", default=None, help="the installed runtime folder (<guppi>): its engines/ folder and runtime/config/local_paths.yaml are used when this script runs from a worktree that has neither")
+    ap.add_argument("--sedra", default=None, help="the installed runtime folder (<sedra>): its engines/ folder and runtime/config/local_paths.yaml are used when this script runs from a worktree that has neither")
     ap.add_argument("--only", choices=("ladder",), default=None, help="run only the context ladders (no S0, no throughput)")
     ap.add_argument("--ladder", default=None, help='JSON {"main": {"2": [from, max], ...}, "small": {...}}: window per slot to start at and to stop at')
     ap.add_argument("--go", action="store_true", help="really run (without it: print the plan and the checks only)")
@@ -281,7 +281,7 @@ def main(argv=None):
     print(f"Plan: {len(plan)} steps, about {total} min ({total / 60:.1f} h; estimate from an assumed prompt speed of {PROMPT_TPS} tok/s, not measured); limits {args.limit_h} h main, {args.small_limit_h} h helper")
     for s in plan:
         print(f"  {describe(s):70s} ~{s['minutes']:3d} min")
-    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.jobs.testlab import TestLab, default_path
     holder = TestLab(default_path(project)).holder()
     print("GPU lease:", "free" if not holder or holder["stale"] else f"HELD by {holder['owner']} ({holder['purpose']})")
     for p in problems:
@@ -291,24 +291,24 @@ def main(argv=None):
         return 1 if problems else 0
     if problems:
         return 2
-    from guppi_runtime.models.gpu_preflight import clear_leftovers
-    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from sedra_runtime.models.gpu_preflight import clear_leftovers
+    from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
     lab = TestLab(default_path(project))
     owner = os.environ.get("TESTLAB_OWNER", "slot_measurement")
     qid = lab.plan(owner, "slot-messung", "Slots 1-4 Hauptmodell und Hilfsmodell (Spec 2, S2.1)", [m for m in (main_id, small_id) if m])
     say = lambda s: print(s, flush=True)             # noqa: E731
-    guppi = Path(args.guppi) if args.guppi else None
-    hash_paths = [project / "local_config", RUNTIME / "config"] + ([guppi / "runtime" / "config"] if guppi else [])
+    sedra = Path(args.sedra) if args.sedra else None
+    hash_paths = [project / "local_config", RUNTIME / "config"] + ([sedra / "runtime" / "config"] if sedra else [])
     run = Run(project, recipes, real_tools(), say, args.max_temp, {"main": args.limit_h, "small": args.small_limit_h}, hash_paths)
 
     def factory():
-        if guppi:                                    # read-only use of the installation: engines and the folders of this PC; no file of it is changed
-            from guppi_runtime import local_paths
-            local_paths.FILE = guppi / "runtime" / "config" / "local_paths.yaml"
+        if sedra:                                    # read-only use of the installation: engines and the folders of this PC; no file of it is changed
+            from sedra_runtime import local_paths
+            local_paths.FILE = sedra / "runtime" / "config" / "local_paths.yaml"
         config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled, config.mtp = True, True
-        if guppi:
-            config.engine_root = str(guppi / "engines")
-        return LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_slotmeasure_")))
+        if sedra:
+            config.engine_root = str(sedra / "engines")
+        return LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_slotmeasure_")))
     run.runtime_factory = factory
     rows_file = project / "runtime_data" / "measurements" / f"slot_messung_{date.today().isoformat()}.rows.jsonl"
     rows_file.parent.mkdir(parents=True, exist_ok=True)

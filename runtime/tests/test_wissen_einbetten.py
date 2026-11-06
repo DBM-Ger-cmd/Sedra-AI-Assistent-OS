@@ -10,8 +10,8 @@ from unittest import mock
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.wissen import embed, schema
-from guppi_runtime.wissen import speicher as S
+from sedra_runtime.wissen import embed, schema
+from sedra_runtime.wissen import speicher as S
 from wissen_fixture import FakeEmbedServer, alle_freigeben, oeffnen
 
 
@@ -68,7 +68,7 @@ class Server(Basis):
         self.assertEqual(cmd[cmd.index("-ngl") + 1], "0")
         self.assertEqual(cmd[cmd.index("--device") + 1], "none")
         self.assertEqual(cmd[cmd.index("--alias") + 1], "wissen-embed")
-        self.assertNotIn("--no-webui", cmd, "keine GUPPI-Signatur")
+        self.assertNotIn("--no-webui", cmd, "keine SEDRA-Signatur")
         starts = self.audit.nur("WIS_EMBED_SERVER")
         self.assertEqual((starts[0]["aktion"], starts[0]["pid"], starts[0]["geraet"]), ("start", proc.pid, "cpu"))
         self.assertEqual(self.sp.dienst.stoppe(), proc.pid)
@@ -130,7 +130,7 @@ class Modell(Basis):
 
     def test_eine_neue_zerleger_version_bettet_alles_neu_ein(self):
         self.sp.einbetten_schritt()
-        with mock.patch("guppi_runtime.wissen.zerlegen.ZERLEGER_VERSION", "z3"):
+        with mock.patch("sedra_runtime.wissen.zerlegen.ZERLEGER_VERSION", "z3"):
             with schema._immediate(self.sp.db):
                 self.sp.db.execute("UPDATE quellen SET quell_hash = NULL")
             a = self.sp.abgleich()
@@ -147,7 +147,7 @@ class Pause(Basis):
         self.assertEqual(self.sp.einbetten_schritt()["ende"], "pause")
         self.assertEqual(self.audit.nur("WIS_EINBETTEN_PAUSE"), [{"grund": "lease:devvm-build"}], "einmal je Pause")
         self.assertEqual(self.sp.stand()["pause_grund"], "lease:devvm-build")
-        self.lab.halter = {"owner": "guppi-uix", "stale": False}
+        self.lab.halter = {"owner": "sedra-uix", "stale": False}
         out = self.sp.einbetten_schritt()
         self.assertEqual((out["ende"], out["geraet"], out["eingebettet"]), ("fertig", "cpu", 12), "der Modellserver für Chat und Agenten hält nicht an")
         e = self.audit.nur("WIS_EINBETTEN")[-1]

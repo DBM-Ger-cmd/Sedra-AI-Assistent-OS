@@ -36,7 +36,7 @@ def speed_rows(measurements):
 
 
 def editor_rows(measurements):
-    """Sessions of GUPPI models in an editor (VS Code with Cline or Continue): rows of the key "editor_sessions" in model_comparison_manual.json."""
+    """Sessions of SEDRA models in an editor (VS Code with Cline or Continue): rows of the key "editor_sessions" in model_comparison_manual.json."""
     manual = Path(measurements) / "model_comparison_manual.json"
     try:
         return list(json.loads(manual.read_text(encoding="utf-8")).get("editor_sessions", []))
@@ -147,7 +147,7 @@ def render(speed, builds, editor=()):
     for r in builds:
         lines.append(f"| {r['run']} | {r['attempt']} | {r['spec']} | {', '.join(r['models'])} | {r['mode']} | {r['seconds']} | {r['stages_passed']}/{r['stages']} | {r['calls']} | {r['tokens']} | {r['prompt_tokens']} | {r['tokens_per_second']} | {r['built_lines']} | {r['used_lines']} | {r['own_tests_failed']} | {'ja' if r['passed'] else 'nein'} | {r.get('layer_cell') or '–'} |")
     if editor:
-        lines += ["", "## Sitzungen im Editor (VS Code, GUPPIs Modell über den lokalen Server)", "",
+        lines += ["", "## Sitzungen im Editor (VS Code, SEDRAs Modell über den lokalen Server)", "",
                   "| Werkzeug | Modell | Aufgabe | Dauer min | Anfragen | Prompt-Token | Erzeugte Token | Werkzeugaufrufe (Fehler) | versteckte Suite | Code / Tests (Zeilen) | Ordner |", "|---|---|---|---|---|---|---|---|---|---|---|"]
         for s in editor:
             lines.append(f"| {s.get('tool')} | {s.get('model')} | {s.get('task')} | {s.get('minutes')} | {s.get('requests')} | {s.get('prompt_tokens')} | {s.get('generated_tokens')} | {s.get('tool_calls')} ({s.get('tool_errors')}) | {s.get('suite')} | {s.get('code_lines')} / {s.get('test_lines')} | {s.get('folder')} |")

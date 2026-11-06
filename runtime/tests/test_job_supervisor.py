@@ -13,17 +13,17 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.selfdev.development_contracts import development_contract
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.jobs.job_supervisor import (JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore, supervisor_state)
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.selfdev.self_development import DevelopmentJobStore
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.selfdev.development_contracts import development_contract
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.jobs.job_supervisor import (JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore, supervisor_state)
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.selfdev.self_development import DevelopmentJobStore
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]
 CONFIG = RUNTIME / 'config' / 'job_supervisor.yaml'
-ARCH = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 SRC = str(RUNTIME / 'src')
 
 
@@ -125,7 +125,7 @@ class ConfigTests(unittest.TestCase):
 
     def test_runtime_wires_the_supervisor_disabled_and_reports_it(self):
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
             self.assertIsNotNone(rt.job_supervisor)
             self.assertFalse(rt.job_supervisor.enabled)
             status = rt.boot()['job_supervisor']
@@ -310,7 +310,7 @@ class QueueTests(Base):
     def test_claim_is_atomic_across_processes(self):
         self.sup.enqueue(self.job()['job_id'])
         code = ("import sys, yaml\nsys.path.insert(0, sys.argv[1])\nfrom pathlib import Path\n"
-                "from guppi_runtime.jobs.job_supervisor import *\n"
+                "from sedra_runtime.jobs.job_supervisor import *\n"
                 "raw = yaml.safe_load(Path(sys.argv[3]).read_text(encoding='utf-8'))['job_supervisor']; raw['enabled'] = True\n"
                 "sup = JobSupervisor(SupervisorJobStore(Path(sys.argv[2]) / 'jobs'), SupervisorConfig(raw))\n"
                 "try: print(sup.claim('wp' + sys.argv[4], ['reviewer'])['status'])\n"
@@ -418,7 +418,7 @@ class ReaperTests(Base):
         stored = self.load(job_id)
         self.assertEqual((stored['state'], supervisor_state(stored)), ('DEAD', 'DEAD'))
         self.assertEqual(stored['attempt_log'][0]['outcome'], 'UNKNOWN')
-        self.assertEqual(stored['supervisor_flags']['escalated_to'], 'guppi')
+        self.assertEqual(stored['supervisor_flags']['escalated_to'], 'sedra')
         with self.assertRaises(JobError): self.sup.enqueue(job_id)
         with self.assertRaises(JobError) as ctx: self.sup.claim('w2', ['coder'])
         self.assertEqual(ctx.exception.code, 'no_job')
@@ -427,7 +427,7 @@ class ReaperTests(Base):
         job_id = self.running('reviewer', priority=9)
         self.sup.reap(); self.expire(job_id); self.sup.reap(); self.clock.advance(self.sup.config.grace_s + 1); self.sup.reap()
         stored = self.load(job_id)
-        self.assertEqual((stored['state'], stored['supervisor_flags']['escalated_to']), ('BLOCKED', 'guppi'))
+        self.assertEqual((stored['state'], stored['supervisor_flags']['escalated_to']), ('BLOCKED', 'sedra'))
 
     def test_wall_clock_jump_forward_does_not_kill_a_live_worker(self):
         job_id = self.running('reviewer')
@@ -548,7 +548,7 @@ class RetryTests(Base):
         out = self.sup.fail(job_id, 'w1', reason_code='TOOL_UNAVAILABLE')
         stored = self.load(job_id)
         self.assertEqual(out['decision']['reason'], 'retry_limit_reached')
-        self.assertEqual((stored['state'], stored['supervisor_flags']['escalated_to']), ('BLOCKED', 'guppi'))
+        self.assertEqual((stored['state'], stored['supervisor_flags']['escalated_to']), ('BLOCKED', 'sedra'))
         self.assertEqual(len(stored['attempt_log']), self.sup.config.retry_limit + 1)
 
     def test_third_timeout_asks_for_fallback_and_excludes_the_provider(self):
@@ -570,7 +570,7 @@ class RetryTests(Base):
         self.assertEqual(stored['supervisor_flags']['escalated_to'], 'captain')
         self.assertEqual(supervisor_state(stored), 'ESCALATED_TO_CAPTAIN')
         self.assertEqual(stored['retry']['exclude'], [])
-        for call in (lambda: self.sup.enqueue(job_id), lambda: self.sup.resume(job_id, resolved_by='guppi')):
+        for call in (lambda: self.sup.enqueue(job_id), lambda: self.sup.resume(job_id, resolved_by='sedra')):
             with self.assertRaises(JobError) as ctx: call()
             self.assertEqual(ctx.exception.code, 'captain_resolution_required')
         self.assertNotIn('JOB_FALLBACK_DECIDED', self.event_types())
@@ -580,11 +580,11 @@ class RetryTests(Base):
         self.assertEqual(out['failure_class'], 'policy_denied')
         self.assertEqual(self.load(job_id)['state'], 'BLOCKED')
 
-    def test_guppi_escalation_can_be_resumed(self):
+    def test_sedra_escalation_can_be_resumed(self):
         job_id, _ = self.fail_once(message='something odd')
-        self.assertEqual(supervisor_state(self.load(job_id)), 'ESCALATED_TO_GUPPI')
+        self.assertEqual(supervisor_state(self.load(job_id)), 'ESCALATED_TO_SEDRA')
         with self.assertRaises(JobError): self.sup.enqueue(job_id)   # escalation must be resolved first
-        resumed = self.sup.resume(job_id, resolved_by='guppi')
+        resumed = self.sup.resume(job_id, resolved_by='sedra')
         self.assertEqual(resumed['state'], 'QUEUED')
         self.assertIsNone(resumed['supervisor_flags']['escalated_to'])
 
@@ -742,7 +742,7 @@ class RecoveryTests(Base):
 
     def test_recover_needs_the_captain_and_never_replays_mutating_work(self):
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
             guard = rt.guard
             sup = self.make_supervisor(guard=guard)
             job_id = self.running('reviewer', worker='wr')            # via self.sup, same store
@@ -770,7 +770,7 @@ class RecoveryTests(Base):
 
     def test_recover_token_is_bound_to_the_job_state(self):
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
             sup = self.make_supervisor(guard=rt.guard)
             crit = self.running('reviewer', worker='wc', priority=9)
             sup.reap(); self.clock.advance(sup.config.lease_s + sup.config.suspect_after_s + 1); sup.reap()
@@ -847,7 +847,7 @@ class AuditAndBoundaryTests(Base):
         self.assertNotIn('write my diary', blob)
 
     def test_supervisor_source_names_no_provider_or_model(self):
-        source = Path(importlib.import_module('guppi_runtime.jobs.job_supervisor').__file__).read_text(encoding='utf-8').lower()
+        source = Path(importlib.import_module('sedra_runtime.jobs.job_supervisor').__file__).read_text(encoding='utf-8').lower()
         for word in ('lm-studio', 'lmstudio', 'llama', 'qwen', 'kev', 'openai', 'anthropic', 'gpt'):
             self.assertNotRegex(source, rf'\b{re.escape(word)}\b', word)
 
@@ -1029,7 +1029,7 @@ class SlotTests(Base):
 
     def setUp(self):
         super().setUp()
-        from guppi_runtime.jobs.testlab import TestLab
+        from sedra_runtime.jobs.testlab import TestLab
         from model_scheduler_fakes import make_scheduler, resolution
         self.make_resolution = resolution
         self.big = False
@@ -1166,7 +1166,7 @@ class SlotTests(Base):
         self.assertEqual((self.lease(a)['state'], self.lease(b)['state']), ('aktiv', 'verfallen'))
 
     def test_the_worker_waits_quietly_when_no_slot_is_free(self):
-        from guppi_runtime.jobs.job_worker import Worker
+        from sedra_runtime.jobs.job_worker import Worker
         for _ in range(3):
             self.queued()
         for worker in ('w1', 'w2'):

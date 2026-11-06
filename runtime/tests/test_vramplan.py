@@ -7,7 +7,7 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.jobs.vramplan import fits, max_slots, server_need  # noqa: E402
+from sedra_runtime.jobs.vramplan import fits, max_slots, server_need  # noqa: E402
 
 
 class ServerNeed(unittest.TestCase):
@@ -85,7 +85,7 @@ class MaxSlots(unittest.TestCase):
 
 class Boundary(unittest.TestCase):
     def test_pure_module(self):
-        tree = ast.parse((RUNTIME / "src" / "guppi_runtime" / "jobs" / "vramplan.py").read_text(encoding="utf-8"))
+        tree = ast.parse((RUNTIME / "src" / "sedra_runtime" / "jobs" / "vramplan.py").read_text(encoding="utf-8"))
         imported = {n.module if isinstance(n, ast.ImportFrom) else a.name for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom))
                     for a in (n.names if isinstance(n, ast.Import) else [None])}
         self.assertEqual(imported - {"__future__"}, set())

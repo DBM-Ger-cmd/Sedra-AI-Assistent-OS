@@ -19,7 +19,7 @@ PATTERNS = {
 }
 # Pfad -> (Muster, Grund): bekannte Demo- und Testwerte
 ALLOWED = {
-    "runtime/src/guppi_runtime/uix/tools/schutz/tool.js": ("Zuweisung mit langem Wert", "Beispieltext `sk-Demo…` für die Anzeige des Inhaltsschutzes"),
+    "runtime/src/sedra_runtime/uix/tools/schutz/tool.js": ("Zuweisung mit langem Wert", "Beispieltext `sk-Demo…` für die Anzeige des Inhaltsschutzes"),
 }
 FORBIDDEN_NAMES = ("cloud_keys.json", "approval_tokens.json", "tokens.json", ".env", "id_rsa", "id_ed25519")
 FORBIDDEN_SUFFIX = (".pem", ".key", ".pfx", ".p12", ".token")
@@ -77,8 +77,8 @@ class Secrets(unittest.TestCase):
         self.assertEqual(bad, [], "Geheimnisdateien dürfen nicht im Git-Index stehen")
 
     def test_secret_paths_stay_ignored(self):
-        for rel in ("workspace/GUPPI_OS/local_config/cloud_keys.json", "workspace/GUPPI_OS/runtime_data/guard/approval_tokens.json",
-                    "runtime/config/local_paths.yaml", "workspace/GUPPI_OS/runtime_data/guard/tokens.json"):
+        for rel in ("workspace/SEDRA_OS/local_config/cloud_keys.json", "workspace/SEDRA_OS/runtime_data/guard/approval_tokens.json",
+                    "runtime/config/local_paths.yaml", "workspace/SEDRA_OS/runtime_data/guard/tokens.json"):
             done = subprocess.run(["git", "-C", str(ROOT), "check-ignore", "-q", rel])
             self.assertEqual(done.returncode, 0, f"{rel} muss in .gitignore stehen")
 

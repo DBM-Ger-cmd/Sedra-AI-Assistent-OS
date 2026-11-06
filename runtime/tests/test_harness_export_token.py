@@ -2,7 +2,7 @@
 über die ganze Sitzung (nicht nur den heutigen Tag), Tausender mit Punkt."""
 import unittest
 
-from guppi_runtime.harness.export import markdown
+from sedra_runtime.harness.export import markdown
 
 
 def sitzung(*token):

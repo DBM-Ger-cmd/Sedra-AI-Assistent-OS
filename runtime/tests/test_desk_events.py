@@ -7,7 +7,7 @@ import unittest
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk.events import EventStream, Poller, diff, sse, stream_to
+from sedra_runtime.desk.events import EventStream, Poller, diff, sse, stream_to
 
 
 def mission(mid, phase="EXECUTE", done=0, pending=0, steps=3):
@@ -201,7 +201,7 @@ class SnapshotHook(unittest.TestCase):
 
     def test_modules_add_fields_a_broken_one_costs_only_its_part(self):
         from types import SimpleNamespace
-        from guppi_runtime.desk import extensions
+        from sedra_runtime.desk import extensions
 
         def broken(hub):
             raise RuntimeError("db belegt")
@@ -213,7 +213,7 @@ class SnapshotHook(unittest.TestCase):
 
     def test_the_orchestra_kinds_module_adds_nothing_while_the_switch_is_off(self):
         from types import SimpleNamespace
-        from guppi_runtime.desk import extensions, orchestra_kinds
+        from sedra_runtime.desk import extensions, orchestra_kinds
         self.assertEqual(extensions.snapshot(SimpleNamespace(runtime=SimpleNamespace(orchestra=None)), [orchestra_kinds]), {})
 
 
@@ -224,7 +224,7 @@ class SchedulerSlots(unittest.TestCase):
     def setUp(self):
         import tempfile
         from types import SimpleNamespace
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         from model_scheduler_fakes import make_scheduler, resolution
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.sched, self.lab, self.loader, self.runtime, self.audit, self.clock = make_scheduler(self.tmp.name)
@@ -266,7 +266,7 @@ class SchedulerSlots(unittest.TestCase):
         self.assertEqual(diff(full, dict(full)), [])
 
     def test_off_there_is_no_slots_field_anywhere(self):
-        from guppi_runtime.desk import builtin_kinds
+        from sedra_runtime.desk import builtin_kinds
         off, *_ = make_off(self.tmp.name)
         for scheduler in (None, off):
             self.rt.model_scheduler = scheduler
@@ -276,7 +276,7 @@ class SchedulerSlots(unittest.TestCase):
             self.hub.scheduler_poll()                                                       # nothing, no error
 
     def test_the_model_list_carries_slots(self):
-        from guppi_runtime.desk import builtin_kinds
+        from sedra_runtime.desk import builtin_kinds
         self.start()
         extra = builtin_kinds._model_extra(self.hub, {})
         self.assertEqual(sorted(extra["slots"]), ["belegt", "gesamt", "modell", "schlange", "warte_max_s"])

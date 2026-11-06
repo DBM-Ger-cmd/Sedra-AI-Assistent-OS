@@ -5,11 +5,11 @@ $Rt = $PSScriptRoot
 $Root = Split-Path -Parent $Rt
 $Py = Join-Path $Rt 'portable\python\current\python.exe'
 $Cfg = Join-Path $Rt 'config\local_paths.yaml'
-$LocalCfg = Join-Path $Root 'workspace\GUPPI_OS\local_config'
+$LocalCfg = Join-Path $Root 'workspace\SEDRA_OS\local_config'
 New-Item -ItemType Directory -Force -Path $LocalCfg | Out-Null
 
 if (!(Test-Path -LiteralPath $Cfg)) {
- $Default = Join-Path $env:USERPROFILE 'GUPPI\Modelle'
+ $Default = Join-Path $env:USERPROFILE 'SEDRA\Modelle'
  Write-Host ''
  Write-Host 'Modellordner: hier liegen die GGUF-Modelldateien (.gguf). Ein Modell wird dadurch nicht geladen.'
  $Answer = Read-Host "Modellordner eingeben [Enter = $Default]"
@@ -32,6 +32,6 @@ if (!(Test-Path -LiteralPath $Sw)) {
 
 $Build = (Select-String -LiteralPath (Join-Path $Rt 'config\llama_server.yaml') -Pattern '^\s*engine_build:\s*(\S+)').Matches[0].Groups[1].Value
 $Engine = Join-Path $Root 'engines'
-$Check = & $Py -I -B -c "import sys; from pathlib import Path; from guppi_runtime.models import engine_provision as e; print(e.verify_engine(Path(sys.argv[1]), sys.argv[2]))" $Engine $Build
+$Check = & $Py -I -B -c "import sys; from pathlib import Path; from sedra_runtime.models import engine_provision as e; print(e.verify_engine(Path(sys.argv[1]), sys.argv[2]))" $Engine $Build
 Write-Host "Engine $Build geprüft: $Check"
 if ($Check -notmatch "^\(True") { Write-Warning "Engine $Build fehlt oder ist verändert (engines\llama.cpp\$Build). Die Oberfläche startet trotzdem; ohne Engine antwortet kein Modell. START_SEDRA.bat erneut starten, dann wird die Engine geladen (fragt vor dem Download)." }

@@ -1,7 +1,7 @@
-# Vorlage guppi.orchestra.foreman (Spec 1, S1.H8, G2-S1-21). SOUL.md ist über sha256 gebunden; geprüft wird sie mit der Suite
+# Vorlage sedra.orchestra.foreman (Spec 1, S1.H8, G2-S1-21). SOUL.md ist über sha256 gebunden; geprüft wird sie mit der Suite
 # orchestra.foreman (agent_templates/orchestra/suites), bevor agent.promote möglich ist.
-schema_version: guppi.agent-template/v1
-id: guppi.orchestra.foreman
+schema_version: sedra.agent-template/v1
+id: sedra.orchestra.foreman
 version: 1.0.0
 role: foreman
 soul:
@@ -9,7 +9,7 @@ soul:
   version: 1.0.0
   sha256: 5e3d67df66223ce688107084097bba3dfe1b6a1f8428509a54b7d0ee49deb9f0
 capabilities:
-- id: guppi.orchestra.foreman
+- id: sedra.orchestra.foreman
   version: 1.0.0
   side_effect: proposal_only
 tools: []
@@ -20,7 +20,7 @@ permissions:
   external_write: false
   privileged: false
 runtime:
-  adapter_id: guppi.orchestra.runner
+  adapter_id: sedra.orchestra.runner
   isolation: none
   model_role: foreman
 verification:

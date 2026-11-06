@@ -8,8 +8,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from guppi_runtime.runtime import GuppiRuntime, SedraRuntime, _readiness_from_boot
-from guppi_runtime.wissen.speicher import WissenSpeicher
+from sedra_runtime.runtime import SedraRuntime, SedraRuntime, _readiness_from_boot
+from sedra_runtime.wissen.speicher import WissenSpeicher
 import os
 from host_isolation import setUpModule as _host_hoch, tearDownModule as _host_runter
 _WISSEN = {}
@@ -28,7 +28,7 @@ def tearDownModule():
         os.environ['SEDRA_WISSEN_STANDARD'] = _WISSEN['alt']
     _host_runter()
 
-ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
 
 
 class ServiceReadinessTest(unittest.TestCase):
@@ -85,9 +85,9 @@ class ServiceReadinessTest(unittest.TestCase):
 
 class RuntimeBootstrapTest(unittest.TestCase):
     def test_public_alias_and_boot_compatibility(self):
-        self.assertIs(GuppiRuntime, SedraRuntime)
+        self.assertIs(SedraRuntime, SedraRuntime)
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp), ARCH)
+            rt = SedraRuntime(Path(tmp), ARCH)
             try:
                 boot = rt.boot()
                 self.assertEqual(boot['state'], 'READY')
@@ -107,9 +107,9 @@ class RuntimeBootstrapTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with patch.object(WissenSpeicher, 'schliessen', record_close), \
-                 patch.object(GuppiRuntime, '_configure_context_manager', side_effect=ValueError('simulated_boot_failure')):
+                 patch.object(SedraRuntime, '_configure_context_manager', side_effect=ValueError('simulated_boot_failure')):
                 with self.assertRaisesRegex(ValueError, 'simulated_boot_failure'):
-                    GuppiRuntime(Path(tmp), ARCH)
+                    SedraRuntime(Path(tmp), ARCH)
         self.assertEqual(len(closed_objects), 1)
         with self.assertRaises(sqlite3.ProgrammingError):
             closed_objects[0].db.execute('SELECT 1')
@@ -123,18 +123,18 @@ class RuntimeBootstrapTest(unittest.TestCase):
             rt.wissen = FailingWissen()
             raise ValueError('primary_boot_error')
 
-        with patch.object(GuppiRuntime, '_initialize', raise_after_resource):
+        with patch.object(SedraRuntime, '_initialize', raise_after_resource):
             with self.assertRaisesRegex(ValueError, 'primary_boot_error') as caught:
-                GuppiRuntime(Path('/unused'))
+                SedraRuntime(Path('/unused'))
         self.assertTrue(any('RuntimeError' in n for n in caught.exception.__notes__))
 
     def test_error_before_service_creation_has_no_cleanup_dependency(self):
         def raise_first(_rt, *args):
             raise FileNotFoundError('missing_architecture')
 
-        with patch.object(GuppiRuntime, '_initialize', raise_first):
+        with patch.object(SedraRuntime, '_initialize', raise_first):
             with self.assertRaisesRegex(FileNotFoundError, 'missing_architecture'):
-                GuppiRuntime(Path('/unused'))
+                SedraRuntime(Path('/unused'))
 
 
 if __name__ == '__main__':

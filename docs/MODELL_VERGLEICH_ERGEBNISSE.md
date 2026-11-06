@@ -221,7 +221,7 @@ Die Token jedes Versuchs stammen aus dem Log bis zu dessen Abschlusszeile; auch 
 | devvm_build_phase5_window_2026-10-07_101728 | 1 | phase5_window | qwen3coder | escalating | 1655.3 | 0/1 | 47 | 39914 | None | 24.1 | 0 | 0 | 0 | nein |
 | devvm_build_s0_conn_check_2026-10-12_025231 | 1 | s0_conn_check | coder.local_q38 | solo | 3200.4 | 3/3 | 88 | 13053 | 513508 | 4.1 | 198 | 198 | 0 | ja |
 
-## Sitzungen im Editor (VS Code, GUPPIs Modell über den lokalen Server)
+## Sitzungen im Editor (VS Code, SEDRAs Modell über den lokalen Server)
 
 | Werkzeug | Modell | Aufgabe | Dauer min | Anfragen | Prompt-Token | Erzeugte Token | Werkzeugaufrufe (Fehler) | versteckte Suite | Code / Tests (Zeilen) | Ordner |
 |---|---|---|---|---|---|---|---|---|---|---|

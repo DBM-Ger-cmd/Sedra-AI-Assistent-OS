@@ -9,8 +9,8 @@ from types import SimpleNamespace
 
 import yaml
 
-from guppi_runtime.jobs.resource_scheduler import ResourceConfig, ResourceScheduler
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.jobs.resource_scheduler import ResourceConfig, ResourceScheduler
+from sedra_runtime.runtime import SedraRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 from model_scheduler_fakes import make_scheduler, resolution
 
@@ -48,12 +48,12 @@ class SecondJob(unittest.TestCase):
         self.res = resolution()
         self.recipe = {"id": "main.local", "model": "main-model"}
         self.estimated = self.res["estimated_resources"]
-        # what GuppiRuntime._resource_load_check reads; the loader says the model is on the card
+        # what SedraRuntime._resource_load_check reads; the loader says the model is on the card
         self.rt = SimpleNamespace(resource_scheduler=self.resources, model_scheduler=self.sched,
                                   model_loader=SimpleNamespace(enabled=True, loaded=lambda key: key == "main-model"))
 
     def check(self):
-        return GuppiRuntime._resource_load_check(self.rt, self.recipe, self.estimated, {"exclusive": False})
+        return SedraRuntime._resource_load_check(self.rt, self.recipe, self.estimated, {"exclusive": False})
 
     def start_server(self):
         self.assertTrue(self.sched.take_for_job("SDJ-1", 5)["granted"])

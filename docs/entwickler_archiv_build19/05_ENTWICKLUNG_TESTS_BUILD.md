@@ -70,7 +70,7 @@ PYTHONPATH=src:tests .venv/bin/python -m unittest tests.test_uix_frame tests.tes
 
 ## 5. Prüfen der Oberfläche: `uix_check`
 
-`uix_check` ist das Werkzeug, das Shells und Werkzeuge gegen den Vertrag im Browser-Modus prüft (siehe `04_SHELLS_WERKZEUGE_VORGABEN.md`, Abschnitt 6). Die Abnahme aus Build 19: Studio 29/29, Cockpit, Minimal und Paperclip je 29/29, GUPPI XP 3/3.
+`uix_check` ist das Werkzeug, das Shells und Werkzeuge gegen den Vertrag im Browser-Modus prüft (siehe `04_SHELLS_WERKZEUGE_VORGABEN.md`, Abschnitt 6). Die Abnahme aus Build 19: Studio 29/29, Cockpit, Minimal und Paperclip je 29/29, SEDRA XP 3/3.
 
 ## 6. Ein Build entsteht
 
@@ -78,7 +78,7 @@ Ein Paket entsteht mit `runtime/benchmarks/make_build.py`. Die Build-Nummer steh
 
 ```
 cd runtime
-.venv/bin/python benchmarks/make_build.py --bump --out /pfad/outNN --previous /pfad/verifyNN-1/GUPPI_Runtime_v1.20
+.venv/bin/python benchmarks/make_build.py --bump --out /pfad/outNN --previous /pfad/verifyNN-1/SEDRA_Runtime_v1.20
 ```
 
 Das Skript liest `BUILD.txt` aus dem Wurzelordner des Repositorys (eine Ebene über `runtime/`).

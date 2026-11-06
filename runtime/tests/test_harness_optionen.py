@@ -3,16 +3,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.harness import gedaechtnis, katalog, kontext, schleife
-from guppi_runtime.harness.api import OPTIONEN, VERLAUF_MAX, HarnessApi, verlauf_aus
-from guppi_runtime.harness.sitzung import Sitzungen
-from guppi_runtime.harness.strom import Stroeme
-from guppi_runtime.harness.werkzeuge import LESEN_ZEICHEN_MAX, Werkzeuge
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.harness import gedaechtnis, katalog, kontext, schleife
+from sedra_runtime.harness.api import OPTIONEN, VERLAUF_MAX, HarnessApi, verlauf_aus
+from sedra_runtime.harness.sitzung import Sitzungen
+from sedra_runtime.harness.strom import Stroeme
+from sedra_runtime.harness.werkzeuge import LESEN_ZEICHEN_MAX, Werkzeuge
 
 from test_harness_schleife import MISSION, Attrappe, Box, Zug
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 
 
 class OptionenTests(unittest.TestCase):
@@ -40,7 +40,7 @@ class OptionenTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     api.vorgaben_setzen(bad)
             api.vorgaben_setzen({'lese_grenze': '4000', 'denken': 'aus'})
-            api._laufzeit_vorgaben = lambda: __import__('guppi_runtime.harness.projekte', fromlist=['x']).laufzeit_laden(Path(tmp))['vorgaben']
+            api._laufzeit_vorgaben = lambda: __import__('sedra_runtime.harness.projekte', fromlist=['x']).laufzeit_laden(Path(tmp))['vorgaben']
             self.assertEqual((api._option('lese_grenze'), api._option('denken')), ('4000', 'aus'))
             api.vorgaben_setzen({'lese_grenze': None})
             self.assertEqual(api._option('lese_grenze'), '8000')
@@ -171,7 +171,7 @@ class GespraechsoptionenTests(unittest.TestCase):
     def optionen(self):
         import json
         import subprocess
-        ordner = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'shells' / 'harness'
+        ordner = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'shells' / 'harness'
         skript = ("globalThis.sedraDom = {}; globalThis.document = {};" + chr(10)
                   + f"require({json.dumps(str(ordner / 'tokenseite.js'))}); require({json.dumps(str(ordner / 'gespraechsoptionen.js'))});" + chr(10)
                   + "console.log(JSON.stringify(globalThis.sedraHarness.gespraechsoptionen.zeilen().map(z=>({k: z.schluessel, werte: z.wahl.map(w=>w[0])}))));")
@@ -180,7 +180,7 @@ class GespraechsoptionenTests(unittest.TestCase):
         return {z['k']: z['werte'] for z in json.loads(r.stdout)}
 
     def test_die_zeilen_unter_dem_schild_passen_zum_server(self):
-        from guppi_runtime.harness.api import GEDANKEN_MODI
+        from sedra_runtime.harness.api import GEDANKEN_MODI
         z = self.optionen()
         self.assertEqual(list(z), ['denken', 'gedanken_zurueck', 'antwort_budget', 'verlauf_laenge', 'wissen_zuerst'])     # wissen_zuerst: SPEC_WISSEN_KERN_v1 WK-13
         self.assertEqual(set(z['gedanken_zurueck']), set(GEDANKEN_MODI))

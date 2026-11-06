@@ -2,7 +2,7 @@
 G2-S2-03, G2-S2-14): `jobs/slot_store.py`, the memory of the model scheduler in the test lab database (tables slot_server, slot_leases, handover_requests, slot_events): a run asks
 for a slot (request), gets it when the pure rules of slotplan.py say so (take), keeps it alive (beat), gives it back (release) or loses it (reap, a server that goes away); another
 process asks for the GPU (handover); the Desk reads the queue (view). The connection comes from slot_db.open_db (the seed benchmarks/s2_schema_seed); every write runs in
-slot_db.immediate; times are UTC texts "YYYY-MM-DDTHH:MM:SSZ", there is no clock in the module. GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference
+slot_db.immediate; times are UTC texts "YYYY-MM-DDTHH:MM:SSZ", there is no clock in the module. SEDRA builds it; Claude only wrote this file, the hidden tests and the reference
 (benchmarks/devvm_refs/s2_slot_store)."""
 
 SEED = "benchmarks/s2_schema_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given

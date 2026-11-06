@@ -11,9 +11,9 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.harness import dateien, erlaubnis, export, katalog, projekte
-from guppi_runtime.harness.sitzung import SitzungFehler, Sitzungen
-from guppi_runtime.uix_server import UIXHub, make_server
+from sedra_runtime.harness import dateien, erlaubnis, export, katalog, projekte
+from sedra_runtime.harness.sitzung import SitzungFehler, Sitzungen
+from sedra_runtime.uix_server import UIXHub, make_server
 from test_uix_contract import NODE, UIX, run_js
 from test_uix_harness_api import ARCH, MODELL, anfrage, strom
 from test_uix_harness_freigabe import Skript
@@ -224,7 +224,7 @@ class SitzungsErlaubnisServer(unittest.TestCase):
             self.assertTrue(h.herkunft_verlangt(method, path), (method, path))
         self.assertFalse(h.herkunft_verlangt('GET', '/api/harness/sitzungen/S-00000001'))
         self.assertFalse(h.herkunft_verlangt('POST', '/api/harness/sitzungen'), 'Anlegen bleibt frei')
-        from guppi_runtime import uix_server
+        from sedra_runtime import uix_server
         self.assertTrue(uix_server.HERKUNFT_WEGE.fullmatch('/api/model/load'))
         self.assertTrue(uix_server.HERKUNFT_WEGE.fullmatch('/api/model/unload'))
 
@@ -311,7 +311,7 @@ class P1Befunde(unittest.TestCase):
             self.assertNotIn('local_config', pfade)
 
     def test_v1_modelle_mit_urteil(self):
-        from guppi_runtime.harness import api as harness_api
+        from sedra_runtime.harness import api as harness_api
         self.assertTrue(harness_api.WEG.fullmatch('/api/harness/modelle'))
         self.assertTrue(harness_api.WEG.fullmatch('/api/harness/vorgaben'))
 
@@ -333,7 +333,7 @@ class P1Befunde(unittest.TestCase):
         self.assertEqual(export.dateiname('S-00000001', 'Textstats bauen!'), 'S-00000001-textstats-bauen.md')
 
     def test_a6_fehlertexte(self):
-        from guppi_runtime.uix_server import FRIENDLY_400
+        from sedra_runtime.uix_server import FRIENDLY_400
         for code in ('antwort_laeuft', 'zu_viele_antworten', 'karte_offen', 'titel_leer', 'zweck_fehlt', 'projekt_unbekannt', 'erlaubnis_unbekannt'):
             self.assertIn(code, FRIENDLY_400)
             self.assertNotIn('_', FRIENDLY_400[code].split(' ')[0], 'ein Satz, kein Code')

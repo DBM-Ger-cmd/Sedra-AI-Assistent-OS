@@ -43,7 +43,7 @@ class DesktopWahl(unittest.TestCase):
         self.assertEqual(out['sortiert'], ['state', 'model', 'decisions', 'token', 'ram'], 'genannte zuerst, die uebrigen behalten ihre Reihenfolge dahinter')
 
     def test_grundfunktionen_stehen_im_client_wie_im_server(self):
-        from guppi_runtime.harness import desktop as server
+        from sedra_runtime.harness import desktop as server
         out = run_js([HARNESS / 'desktop.js'], "const D = box.sedraHarness.desktop; console.log(JSON.stringify([D.GRUND_START, D.GRUND_ZELLEN]));")
         self.assertEqual((tuple(out[0]), tuple(out[1])), (server.GRUND_START, server.GRUND_ZELLEN))
 
@@ -61,7 +61,7 @@ class DesktopWahl(unittest.TestCase):
         self.assertEqual((out[2]['titel'], out[2]['text']), ('Willkommen', 'Hallo'))
 
     def test_schriften_im_client_und_im_server_sind_dieselben_und_ohne_netz(self):
-        from guppi_runtime.harness import desktop as server
+        from sedra_runtime.harness import desktop as server
         out = run_js([HARNESS / 'desktop.js'], "const D = box.sedraHarness.desktop; console.log(JSON.stringify([Object.keys(D.SCHRIFTEN), Object.keys(D.SCHRIFT_NAMEN), Object.values(D.SCHRIFTEN)]));")
         self.assertEqual(tuple(out[0]), server.SCHRIFTEN)
         self.assertEqual(out[0], out[1])

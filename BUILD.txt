@@ -1,5 +1,5 @@
 build: 25
 date: 2026-10-19
 version: 1.22.0
-name: SEDRA (technischer Name GUPPI)
+name: SEDRA (technischer Name SEDRA)
 nachtrag: Release 1.22.0 vom 03.11.2026 (Tag v1.22.0, erster Release mit Manifest fuer den Updater) - build und date gelten fuer das letzte Paket (Build 25, 19.10.); ein Paket fuer 1.22.0 ist nicht gebaut (make_build.py --bump) - siehe docs/CHANGELOG.md und docs/BESTANDSAUFNAHME_v1.22.0_2026-11-03.md

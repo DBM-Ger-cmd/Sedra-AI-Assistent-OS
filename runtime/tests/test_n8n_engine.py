@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from guppi_runtime.workflows.engine import LocalN8n, EngineError, configuration
+from sedra_runtime.workflows.engine import LocalN8n, EngineError, configuration
 from workflow_fixture import sample
 
 CONFIG = {'enabled': True, 'base_url': 'http://127.0.0.1:5678', 'api_key_env': 'SEDRA_N8N_TEST_KEY'}
@@ -86,7 +86,7 @@ class EngineTests(unittest.TestCase):
         class Response:
             status = 302
             def read(self, limit): return b'{}'
-        with patch('guppi_runtime.workflows.engine.http.client.HTTPConnection') as connection:
+        with patch('sedra_runtime.workflows.engine.http.client.HTTPConnection') as connection:
             connection.return_value.getresponse.return_value = Response()
             with self.assertRaisesRegex(EngineError, '302'): LocalN8n(CONFIG).request('GET', '/api/v1/workflows')
             connection.assert_called_once_with('127.0.0.1', 5678, timeout=5)

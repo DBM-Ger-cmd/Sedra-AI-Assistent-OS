@@ -1,6 +1,6 @@
 """Layer summary (coder measurement, 2026-10-11): every build attempt and the comparison table should say in which LAYER the time went (1 server/model, 2 connection, 3 model
 behaviour, 4 agent budget, 5 understanding, ok). Today benchmarks/failure_layers.py can only read whole log files by hand. `layer_summary.py` works on the agent run rows that
-devvm_build already stores (agent_detail: stopped_by, seconds, completion_tokens), so the result file and model_compare can carry the layers. Pure functions. GUPPI builds it
+devvm_build already stores (agent_detail: stopped_by, seconds, completion_tokens), so the result file and model_compare can carry the layers. Pure functions. SEDRA builds it
 (model comparison 2026-10-11), Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/layer_summary). Process: docs/PROZESS_GUPPY_VON_UNTEN_2026-10-10.md."""
 
 NOTES = '''# Notes for layer_summary

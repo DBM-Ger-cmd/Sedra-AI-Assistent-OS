@@ -8,7 +8,7 @@
                                                           zaehlt SLOT_*/JOB_*-Ereignisse des Audits, schreibt jede Messung sofort in
                                                           runtime_data/measurements/beobachtung_<datum>.jsonl und druckt am Ende den Bericht mit Bestanden/Nicht bestanden
 
-Optionen: --project <Ordner> (Standard workspace/GUPPI_OS im Paket), --sekunden N (Takt, Standard 3).
+Optionen: --project <Ordner> (Standard workspace/SEDRA_OS im Paket), --sekunden N (Takt, Standard 3).
 Es startet kein Modell, stoppt keinen Prozess und schreibt keine Datei ausser der Ausgabe.
 """
 from __future__ import annotations
@@ -41,7 +41,7 @@ SCHRITTE = """Schritte 3 bis 7 (Spec 2, Checkliste OP-S2-18). Vorher: `vor` ohne
     "Modellserver gesperrt, bitte pruefen" (SLOT_SERVER_GESPERRT).
 
 Erste Stunde beobachten: kein SLOT_POLL_FAILED, keine slot_wait_timeout, Rest-VRAM nach dem Entladen nahe der Ausgangslage.
-Rueckweg: workspace/GUPPI_OS/local_config/model_scheduler.yaml loeschen (oder enabled: false), Oberflaeche neu starten; haengt eine Lease: testlab_cli.py clean.
+Rueckweg: workspace/SEDRA_OS/local_config/model_scheduler.yaml loeschen (oder enabled: false), Oberflaeche neu starten; haengt eine Lease: testlab_cli.py clean.
 """
 
 
@@ -53,11 +53,11 @@ def free_ram_gb():
 
 
 def project_dir(arg):
-    return Path(arg) if arg else RUNTIME.parent / "workspace" / "GUPPI_OS"
+    return Path(arg) if arg else RUNTIME.parent / "workspace" / "SEDRA_OS"
 
 
 def lab(project):
-    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.jobs.testlab import TestLab, default_path
     return TestLab(default_path(project))
 
 
@@ -81,7 +81,7 @@ def lab_state(project):
 
 def cmd_vor(project):
     import yaml
-    from guppi_runtime.jobs.model_scheduler_config import ModelSchedulerConfig
+    from sedra_runtime.jobs.model_scheduler_config import ModelSchedulerConfig
     bad = 0
 
     def line(ok, text):

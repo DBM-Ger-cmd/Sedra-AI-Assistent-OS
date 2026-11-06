@@ -1,5 +1,5 @@
 @echo off
-rem SEDRA - der eine Start. Ersetzt ERSTER_START.bat, START_GUPPI.bat und GUPPI_EINRICHTEN_UND_STARTEN.bat.
+rem SEDRA - der eine Start. Ersetzt ERSTER_START.bat, START_SEDRA.bat und SEDRA_EINRICHTEN_UND_STARTEN.bat.
 rem   START_SEDRA.bat             -> richtet nur ein, was fehlt, und startet gleich One Sedra (keine Auswahl;
 rem                                  die anderen Oberflaechen waehlt man in den Menues der Oberflaeche)
 rem   START_SEDRA.bat cockpit     -> direkt in diese Oberflaeche (nur fuer diesen Start; die Wahl in uix.yaml bleibt)
@@ -12,8 +12,8 @@ set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 set "RT=%ROOT%\runtime"
 set "LOG=%RT%\einrichtung.log"
-set "PROJ=%ROOT%\workspace\GUPPI_OS"
-set "ARCH=%ROOT%\architecture\GUPPI_Architecture_v1.20_SELF_DEVELOPMENT"
+set "PROJ=%ROOT%\workspace\SEDRA_OS"
+set "ARCH=%ROOT%\architecture\SEDRA_Architecture_v1.20_SELF_DEVELOPMENT"
 set "PS=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 set "PY=%RT%\portable\python\current\python.exe"
 set "PYFLAGS=-I -B"
@@ -50,6 +50,10 @@ shift
 goto :args
 
 :start
+rem Uebergang vom alten Ordnernamen (vor 1.23.0): der alte Name ist hier absichtlich zerlegt, damit er sonst nirgends im Programm vorkommt.
+set "ALT=GUP"
+set "ALT=%ALT%PI_OS"
+if exist "%ROOT%\workspace\%ALT%" if not exist "%PROJ%" move "%ROOT%\workspace\%ALT%" "%PROJ%" >nul
 if not exist "%PROJ%" mkdir "%PROJ%"
 echo SEDRA
 echo Ordner: %ROOT%
@@ -102,7 +106,8 @@ goto :starten
 :starten
 echo SEDRA startet ...
 cd /d "%RT%"
-"%PY%" %PYFLAGS% -m guppi_runtime.uix_start --root "%PROJ%" --architecture "%ARCH%" %SHELLARG% %REST%
+"%PY%" %PYFLAGS% -m sedra_runtime.legacy_names --root "%ROOT%" >> "%LOG%" 2>&1
+"%PY%" %PYFLAGS% -m sedra_runtime.uix_start --root "%PROJ%" --architecture "%ARCH%" %SHELLARG% %REST%
 if errorlevel 1 goto :fail
 exit /b 0
 

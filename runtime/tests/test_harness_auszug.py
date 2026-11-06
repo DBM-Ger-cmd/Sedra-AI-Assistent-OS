@@ -1,8 +1,8 @@
 """Rückfall der Gesprächs-Zusammenfassung ohne Modell (F3 des Plans vom 04.11.2026): bei leerer Antwort steht ein Auszug, ehrlich als Auszug benannt."""
 import unittest
 
-from guppi_runtime.harness import auszug as az
-from guppi_runtime.harness.api import HarnessApi
+from sedra_runtime.harness import auszug as az
+from sedra_runtime.harness.api import HarnessApi
 
 NACHRICHTEN = [
     {'typ': 'captain', 'text': 'Bitte die Taskleiste umbauen. Alles andere später.'},

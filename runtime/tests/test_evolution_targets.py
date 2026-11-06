@@ -3,13 +3,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.selfdev.evolution import EvolutionManager
-from guppi_runtime.selfdev.evolution_targets import CORE_TARGETS, MODULE_TARGETS, classify_target
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.selfdev import self_development
+from sedra_runtime.selfdev.evolution import EvolutionManager
+from sedra_runtime.selfdev.evolution_targets import CORE_TARGETS, MODULE_TARGETS, classify_target
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.selfdev import self_development
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 
 # Both pre-0.5 copies. Every entry must keep its old class or become stricter, never looser.
 OLD_EVOLUTION_CORE = {'brain', 'mission_state', 'message_bus', 'guard', 'registry', 'lifecycle', 'updater', 'core_contract'}
@@ -51,7 +51,7 @@ class TargetClassificationTests(unittest.TestCase):
         self.assertFalse(manager.propose(gap)['development']['requires_captain_gate'])
 
     def test_e1_list_does_not_overlap_protected_sets(self):
-        from guppi_runtime.selfdev.evolution_targets import E1_TARGETS
+        from sedra_runtime.selfdev.evolution_targets import E1_TARGETS
         self.assertEqual(E1_TARGETS & (CORE_TARGETS | MODULE_TARGETS), set())
 
     def test_case_and_whitespace_cannot_dodge_core_protection(self):
@@ -64,7 +64,7 @@ class TargetClassificationTests(unittest.TestCase):
 
     def test_admission_and_evolution_agree_for_every_listed_target(self):
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
             manager = EvolutionManager()
             for name in sorted(CORE_TARGETS | MODULE_TARGETS) + ['skill']:
                 out = rt.self_development.admission.evaluate(

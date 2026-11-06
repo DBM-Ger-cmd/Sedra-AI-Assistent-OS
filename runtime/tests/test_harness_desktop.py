@@ -7,15 +7,15 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.harness import desktop as dt
-from guppi_runtime.harness import katalog, vorlagen
-from guppi_runtime.harness.freigabe import Karten, Kiste
-from guppi_runtime.harness.werkzeuge import Werkzeuge
-from guppi_runtime.harness.api import GESCHUETZT, WEG
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.harness import desktop as dt
+from sedra_runtime.harness import katalog, vorlagen
+from sedra_runtime.harness.freigabe import Karten, Kiste
+from sedra_runtime.harness.werkzeuge import Werkzeuge
+from sedra_runtime.harness.api import GESCHUETZT, WEG
+from sedra_runtime.uix_server import UIXHub
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 WAHL = {'start': {'ausblenden': ['logbook'], 'zuordnung': {'models': 'system'}}, 'zellen': {'ausblenden': ['scheduler'], 'reihenfolge': ['state', 'model']},
         'marke': {'name': 'Muster GmbH', 'akzent': '#2266aa'}}
 
@@ -270,7 +270,6 @@ class ChatWerkzeug(unittest.TestCase):
         self.assertNotIn('datei_schreiben', v['werkzeuge'], 'bestehende Dateien aendern, nicht ueberschreiben')
         for satz in ('kontextmodule.js', 'Ausblenden ist keine Sperre', 'Profil als Text', 'Erfinde nichts'):
             self.assertIn(satz, v['system'])
-        self.assertNotIn('GUPPI', v['system'])
 
     def test_das_beispiel_im_skill_laesst_sich_importieren(self):
         text = (Path(__file__).resolve().parents[1] / 'config' / 'harness_vorlagen' / 'desktop-designer.md').read_text(encoding='utf-8')

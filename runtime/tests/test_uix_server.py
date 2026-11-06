@@ -1,14 +1,14 @@
 import unittest, unittest.mock, tempfile, threading, json, http.client, re, shutil, subprocess
 from pathlib import Path
-from guppi_runtime.uix_server import UIXHub, make_server
+from sedra_runtime.uix_server import UIXHub, make_server
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
-UIX_DIR=Path(__file__).parents[1]/'src/guppi_runtime/uix'
+UIX_DIR=Path(__file__).parents[1]/'src/sedra_runtime/uix'
 def page_source():
  """The page as the browser gets it: markup, styles and every script file (the UIX is split into uix/css and uix/js)."""
  parts=[(UIX_DIR/'retro_desktop.html').read_text(encoding='utf-8')]
  parts+=[f.read_text(encoding='utf-8') for f in sorted((UIX_DIR/'css').glob('*.css'))+sorted((UIX_DIR/'js').glob('*.js'))]
  return chr(10).join(parts)
-ARCH=Path(__file__).resolve().parents[2]/'architecture/GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH=Path(__file__).resolve().parents[2]/'architecture/SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 class UIXTests(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
@@ -19,7 +19,7 @@ class UIXTests(unittest.TestCase):
   self.assertGreaterEqual(status['capability_router']['skills'],1)
   self.assertFalse(status['development_environment']['unsafe_host_fallback'])
  def test_chat_plans_without_execution(self):
-  out=self.hub.create_chat_mission({'intent':'Create a GUPPI demo artifact'})
+  out=self.hub.create_chat_mission({'intent':'Create a SEDRA demo artifact'})
   m=self.hub.runtime.missions.load(out['mission']['mission_id'])
   self.assertIn(m['lifecycle']['phase'],{'READY','PAUSED'});self.assertEqual(m['execution']['results'],[])
  def test_real_route(self):
@@ -42,7 +42,7 @@ class UIXTests(unittest.TestCase):
     c.request(method,path,body,headers or {});res=c.getresponse();data=res.read();return res.status,data
    finally:c.close()
   self.assertEqual(request('GET','/api/missions')[0],403)
-  h={'X-GUPPI-Token':token}
+  h={'X-SEDRA-Token':token}
   self.assertEqual(request('GET','/api/missions',headers=h)[0],200)
   self.assertEqual(request('GET','/api/missions',headers=dict(h,Origin='http://evil.example'))[0],403)
   self.assertEqual(request('GET','/api/missions',headers=dict(h,Host='evil.example'))[0],403)
@@ -59,7 +59,7 @@ class UIXTests(unittest.TestCase):
   def get(path,token=None):
    c=http.client.HTTPConnection('127.0.0.1',server.server_port,timeout=3)
    try:
-    c.request('GET',path,headers={'X-GUPPI-Token':token} if token else {});res=c.getresponse();return res.status,res.read().decode('utf-8')
+    c.request('GET',path,headers={'X-SEDRA-Token':token} if token else {});res=c.getresponse();return res.status,res.read().decode('utf-8')
    finally:c.close()
   status,body=get('/')
   self.assertEqual(status,200)
@@ -79,11 +79,11 @@ class UIXTests(unittest.TestCase):
  def test_no_project_greeting_and_single_open_bridge(self):
   html=page_source()
   self.assertIn('Noch kein Projekt gewählt',html);self.assertIn('let activeProject = null;',html)
-  self.assertNotIn("'GUPPI OS';\n",html.split('let activeProject')[1][:80])
+  self.assertNotIn("'SEDRA OS';\n",html.split('let activeProject')[1][:80])
   self.assertEqual(html.count('function openBridge('),1)
   self.assertEqual(html.count('function closeWindow('),1)
  def test_chat_without_project_id_gives_mission(self):
-  out=self.hub.create_chat_mission({'intent':'Hallo GUPPI','project_id':None})
+  out=self.hub.create_chat_mission({'intent':'Hallo SEDRA','project_id':None})
   self.assertTrue(out['mission']['mission_id'])
  def test_audit_view_is_read_only_and_compact(self):
   self.hub.create_chat_mission({'intent':'Audit probe'})
@@ -94,7 +94,7 @@ class UIXTests(unittest.TestCase):
   html=page_source()
   for needle in ('function renderMission(','/api/mission/run','/api/mission/approve','function candidateSteps(','/api/audit'):self.assertIn(needle,html)
  def test_run_after_chat_completes_mission(self):
-  mid=self.hub.create_chat_mission({'intent':'Create a GUPPI demo artifact'})['mission']['mission_id']
+  mid=self.hub.create_chat_mission({'intent':'Create a SEDRA demo artifact'})['mission']['mission_id']
   out=self.hub.run_mission({'mission_id':mid,'max_steps':20})
   self.assertEqual(out['pending_gates'],[]);self.assertEqual(self.hub.mission_details({'mission_id':mid})['lifecycle']['phase'],'COMPLETE')
 
@@ -133,7 +133,7 @@ class UIXTests(unittest.TestCase):
    self.assertNotIn('height:100%',rule.replace('min-height:100%',''),cls)
  def test_taskbar_has_one_button_per_window(self):
   html=(UIX_DIR/'retro_desktop.html').read_text(encoding='utf-8');js=(UIX_DIR/'js'/'desktop.js').read_text(encoding='utf-8')
-  for w in ('deckWindow','guppiWindow','modelWindow','agentWindow'):self.assertIn('class="taskbtn launcher" data-window="'+w+'"',html)      # Build 5: Deck, GUPPI, Werkstatt, Besatzung (+ Projekte without a window)
+  for w in ('deckWindow','sedraWindow','modelWindow','agentWindow'):self.assertIn('class="taskbtn launcher" data-window="'+w+'"',html)      # Build 5: Deck, SEDRA, Werkstatt, Besatzung (+ Projekte without a window)
   self.assertIn(".taskbtn.launcher[data-window=",js);self.assertIn("classList.toggle('open', open)",js)
   self.assertIn('.taskbtn.launcher.open{display:none}',(UIX_DIR/'css'/'desktop.css').read_text(encoding='utf-8'))
  def test_model_without_name_is_shown_by_recipe_id(self):
@@ -276,7 +276,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
  def test_shell_reports_errors_and_server_times_out_idle_clients(self):
   html=page_source()
   for needle in ('function uiError(',"addEventListener('unhandledrejection'","addEventListener('error'",'Keine Verbindung zur Runtime (Server beendet'):self.assertIn(needle,html)
-  src=Path(__file__).parents[1].joinpath('src/guppi_runtime/uix_server.py').read_text(encoding='utf-8')
+  src=Path(__file__).parents[1].joinpath('src/sedra_runtime/uix_server.py').read_text(encoding='utf-8')
   self.assertRegex(src,r'class Handler\(BaseHTTPRequestHandler\):\s+server_version = .*\s+timeout = 30')
  def test_chat_attach_is_read_only_and_reaches_the_model(self):
   d=Path(self.tmp.name)/'anhang';d.mkdir();(d/'a.txt').write_text('Inhalt A',encoding='utf-8');(d/'b.bin').write_bytes(bytes([0xff,0xfe,0,1]))
@@ -314,7 +314,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
           {'ProcessId':11,'ParentProcessId':10,'Name':'llama-server.exe','ExecutablePath':'E:\\x\\engines\\llama.cpp\\b1\\llama-server.exe','Started':'2026-10-04T10:01:00','CommandLine':srv},
           {'ProcessId':12,'ParentProcessId':1,'Name':'llama-server.exe','ExecutablePath':'C:\\LM\\llama-server.exe','Started':'x','CommandLine':'llama-server.exe -m other.gguf'},
           {'ProcessId':13,'ParentProcessId':1,'Name':'python.exe','ExecutablePath':'p','Started':'x','CommandLine':'python other_tool.py'}]
- def test_processes_view_lists_only_guppi_servers_and_runs(self):
+ def test_processes_view_lists_only_sedra_servers_and_runs(self):
   self._fake_host(self._rows());v=self.hub.processes_view()
   self.assertEqual([s['pid'] for s in v['servers']],[11]);self.assertEqual(v['servers'][0]['alias'],'gpt-oss-20b');self.assertEqual(v['servers'][0]['parent_pid'],10)
   self.assertIn('e1_golden_path.py',v['servers'][0]['parent']);self.assertNotIn('python.exe',v['servers'][0]['parent'])
@@ -376,7 +376,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   status,csp,body=get('/hardware');self.assertEqual(status,200);self.assertIn(b'Maschinenraum',body);self.assertIn("frame-ancestors 'self'",csp)
   self.assertIn("frame-ancestors 'none'",get('/')[1])        # the main page can still not be framed
   self.assertEqual(get('/api/state')[0],403)               # data needs the token
-  h={'X-GUPPI-Token':token}
+  h={'X-SEDRA-Token':token}
   self.assertEqual(json.loads(get('/api/state',h)[2])['state']['timestamp'],'t')
   self.assertEqual(json.loads(get('/api/capabilities',h)[2])['native_telemetry'],True)
   c=http.client.HTTPConnection('127.0.0.1',server.server_port,timeout=3)
@@ -391,7 +391,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   for needle in ("el('div','mr-grid')",".mr-card{","card('GPU und Arbeitsspeicher')","card('Entwicklungsumgebung')"):self.assertIn(needle,html)
   self.assertNotIn("section('Hardware',st",html)       # the old text dump is gone
  def test_hardware_dashboard_uses_the_uix_look(self):
-  dash=(Path(__file__).parents[1]/'src/guppi_runtime/hardware_manager/dashboard.html').read_text(encoding='utf-8')
+  dash=(Path(__file__).parents[1]/'src/sedra_runtime/hardware_manager/dashboard.html').read_text(encoding='utf-8')
   self.assertIn('#f8f6ec',dash);self.assertNotIn('color-scheme:dark',dash);self.assertIn('Maschinenraum',dash)
 
  def _project_with_files(self):
@@ -481,7 +481,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   self.assertNotIn('<script>',html);self.assertNotIn('<style>',html)
   for f in (UIX_DIR/'js').glob('*.js'):self.assertLess(len(f.read_text(encoding='utf-8').splitlines()),400,f.name)   # small enough for a model to edit
  def test_switching_models_frees_the_old_one_when_vram_is_short(self):
-  from guppi_runtime.models.role_routing import ResolutionError
+  from sedra_runtime.models.role_routing import ResolutionError
   state={'loaded':True,'calls':0,'unloaded':0}
   class FakeServer:
    def loaded_models(self):return [{'identifier':'a'}] if state['loaded'] else []
@@ -495,12 +495,12 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
    enabled=True
    def ensure(self,res):return {'identifier':'b','action':'loaded'}
   rt=self.hub.runtime;rt.llama_server=FakeServer();rt.role_router=FakeRouter();rt.model_loader=FakeLoader()
-  self.hub.gpu_token=self.hub.lab.try_acquire('guppi-uix','test',ttl_s=600);self.addCleanup(self.hub._release_gpu)
-  import guppi_runtime.uix_server as u
+  self.hub.gpu_token=self.hub.lab.try_acquire('sedra-uix','test',ttl_s=600);self.addCleanup(self.hub._release_gpu)
+  import sedra_runtime.uix_server as u
   with unittest.mock.patch.object(u.time,'sleep'):out=self.hub.load_model({'recipe_id':'x'})
   self.assertEqual(out['identifier'],'b');self.assertEqual((state['calls'],state['unloaded']),(2,1))
  def test_foreign_pressure_does_not_unload_anything(self):
-  from guppi_runtime.models.role_routing import ResolutionError
+  from sedra_runtime.models.role_routing import ResolutionError
   class FakeRouter:
    def resolve_recipe(self,rid,requirements=None,kontext=None):raise ResolutionError('hardware_pressure',{})
   class FakeLoader:enabled=True
@@ -541,7 +541,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
  def test_routing_enable_context_kv_and_new_key(self):
   f=self._routing_overlay();before=f.read_text(encoding='utf-8')
   self._routing_apply('coder.llama_qwen35','enabled',True)
-  text=f.read_text(encoding='utf-8');self.assertIn('      enabled: true   # set in the UIX',text);self.assertNotIn('guppi-model-remove RM-20261003T185920\n      version: 1\n      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]\n      provider: llama-cpp-server\n      model: qwen3.5-9b',text)
+  text=f.read_text(encoding='utf-8');self.assertIn('      enabled: true   # set in the UIX',text);self.assertNotIn('sedra-model-remove RM-20261003T185920\n      version: 1\n      roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]\n      provider: llama-cpp-server\n      model: qwen3.5-9b',text)
   self._routing_apply('coder.llama_gptoss','context_recommended',16384);self.assertIn('context: {recommended: 16384, maximum: 49152',f.read_text(encoding='utf-8'))
   self._routing_apply('verifier.llama_gemma','kv_cache_type','q8_0');self.assertRegex(f.read_text(encoding='utf-8'),r"gemma-4-12B-it-QAT-Q4_0\.gguf', kv_cache_type: q8_0")
   self._routing_apply('verifier.llama_gemma','n_cpu_moe',3);self.assertRegex(f.read_text(encoding='utf-8'),r"mtp: false, reasoning: auto, n_cpu_moe: 3\}")
@@ -571,7 +571,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   for needle in ('function renderRoutingConfig(','/api/routing-config','/api/routing-config/request','/api/routing-config/apply','n_cpu_moe'):self.assertIn(needle,js)
  # ---- rework watch (plan 2026-10-04): stalled reworks wait for the Captain's hint
  def _e1_state(self,name='demo',hint=None,failures=2):
-  from guppi_runtime.jobs.rework_watch import ReworkWatch,failure_signature
+  from sedra_runtime.jobs.rework_watch import ReworkWatch,failure_signature
   state={'job_id':'SDJ-STALLED','scenario':name}
   if hint: state['captain_hint']=hint
   w=ReworkWatch();sig=failure_signature('gen','model_answer_truncated')
@@ -609,7 +609,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   with self.assertRaises(ValueError) as ctx:self.hub.rework_hint({'job_id':'SDJ-STALLED','text':'first'})
   self.assertEqual(str(ctx.exception),'hint_not_new')
  def test_rework_view_and_hint_for_a_stalled_supervisor_job(self):
-  from guppi_runtime.jobs.rework_watch import ReworkWatch,failure_signature
+  from sedra_runtime.jobs.rework_watch import ReworkWatch,failure_signature
   w=ReworkWatch();sig=failure_signature('test','FAIL: test_a (m.C.test_a)')
   w.record(sig);w.record(sig)
   job={'job_id':'SDJ-SUP','state':'BLOCKED','supervisor_flags':{'escalated_to':'captain'},'last_error':{'reason_code':'rework_stalled'},
@@ -620,7 +620,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
   self.assertEqual((item['kind'],item['job_id'],item['detector'],item['count']),('supervisor','SDJ-SUP','generic_repeat',3))
   self.hub.rework_hint({'job_id':'SDJ-SUP','text':'look at the port check'})
   sup.give_hint.assert_called_once_with('SDJ-SUP','look at the port check',resolved_by='captain-uix')
-  from guppi_runtime.jobs.job_supervisor import JobError
+  from sedra_runtime.jobs.job_supervisor import JobError
   sup.give_hint.side_effect=JobError('hint_not_new')
   with self.assertRaises(ValueError):self.hub.rework_hint({'job_id':'SDJ-SUP','text':'again'})
  def test_rework_panel_is_wired(self):
@@ -638,7 +638,7 @@ out.push(c({lifecycle:{phase:'FAILED'},plan,execution:{results:[1,2]}}));out.pus
    finally:c.close()
   self.assertEqual(get('/uix/js/rework.js')[0],200)
   self.assertEqual(get('/api/rework')[0],403)                            # needs the token like every API call
-  status,body=get('/api/rework',{'X-GUPPI-Token':token})
+  status,body=get('/api/rework',{'X-SEDRA-Token':token})
   self.assertEqual((status,json.loads(body)),(200,{'stalled':[]}))
 
 

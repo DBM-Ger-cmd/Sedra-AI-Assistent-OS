@@ -17,7 +17,7 @@ Der Captain löscht Chats mit `/clear` und will eine einzige Anlaufstelle. Gesic
 7. **Rückmeldung** in wenigen Zeilen: was wo gesichert ist (Dateien, Commit), was offen bleibt, welche Branches und Worktrees noch gebraucht werden. Erst danach "gesichert".
 
 ## Regeln
-- Keine lokalen Laufwerks- oder Benutzerpfade in eingecheckte Dateien, dort Platzhalter wie `<guppi>` (`docs/ENTWICKLUNG.md` Regel 10). In den Projektnotizen dürfen Pfade stehen, sie liegen nicht im Repo.
+- Keine lokalen Laufwerks- oder Benutzerpfade in eingecheckte Dateien, dort Platzhalter wie `<sedra>` (`docs/ENTWICKLUNG.md` Regel 10). In den Projektnotizen dürfen Pfade stehen, sie liegen nicht im Repo.
 - Keine Schlüssel, Tokens oder Zugangsdaten schreiben, auch nicht in Notizen.
 - Nichts erfinden: was nicht geprüft wurde, steht als "nicht geprüft" da.
 - Nichts löschen, keine Notiz überschreiben, ohne sie vorher gelesen zu haben.

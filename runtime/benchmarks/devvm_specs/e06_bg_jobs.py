@@ -1,7 +1,7 @@
 """E-06 (coder extension "background jobs with wake_on", 2026-10-11): the coder can start a long-running command (a server, a watcher, a slow test), keep working and is
 woken when the job exits, prints a matching line or stays silent too long; plus job log and stop. The stop waits until the process is really gone and kills it when terminate is
 ignored (pattern from deepseek-harness). Idea from little-coder. The process is injected (spawn function), so the table is pure logic and the tool wiring in the sandbox comes
-after acceptance. GUPPI builds it (model comparison 2026-10-11), Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/e06_bg_jobs).
+after acceptance. SEDRA builds it (model comparison 2026-10-11), Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/e06_bg_jobs).
 Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
 
 NOTES = '''# Notes for bg_jobs

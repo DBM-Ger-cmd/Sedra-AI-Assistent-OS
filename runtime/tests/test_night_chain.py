@@ -71,7 +71,7 @@ class Pass(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="nachtkette-")
         self.addCleanup(self.tmp.cleanup)
-        self.project = Path(self.tmp.name) / "GUPPI_OS"
+        self.project = Path(self.tmp.name) / "SEDRA_OS"
         (self.project / "local_config").mkdir(parents=True)
         (self.project / "local_config" / nc.GATE).write_text("frei", encoding="utf-8")
         self.night = lambda: D(2026, 11, 3, 23, 30)
@@ -133,7 +133,7 @@ class Pass(unittest.TestCase):
 class DryRun(unittest.TestCase):
     def test_writes_nothing_and_starts_nothing(self):
         with tempfile.TemporaryDirectory(prefix="nachtkette-dry-") as tmp:
-            project = Path(tmp) / "GUPPI_OS"
+            project = Path(tmp) / "SEDRA_OS"
             (project / "local_config").mkdir(parents=True)
             (project / "local_config" / nc.ORDER).write_text(json.dumps([{"spec": "s1_graphs"}]), encoding="utf-8")
             before = sorted(p.relative_to(project).as_posix() for p in project.rglob("*"))

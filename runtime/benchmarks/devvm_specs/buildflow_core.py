@@ -1,6 +1,6 @@
-"""Buildflow core (docs/BUILDFLOW_2026-10-13.md; Captain 2026-10-13: "schaffe eine richtige Funktion in GUPPI fuer so einen Workflow"). `buildflow_core.py` is the pure logic of a build task: how a task is made, the
+"""Buildflow core (docs/BUILDFLOW_2026-10-13.md; Captain 2026-10-13: "schaffe eine richtige Funktion in SEDRA fuer so einen Workflow"). `buildflow_core.py` is the pure logic of a build task: how a task is made, the
 state machine (draft -> checked -> spec_approved -> queued -> building -> built/failed -> reported -> adopt_approved -> adopted, cancel from nearly everywhere), the order of the queue (priority, then age; night tasks only at
-night) and the one-line text of a task. No files, no clock, no processes: the store, the runner and the command line (Claude) call these functions and give them the time. GUPPI builds it, Claude wrote this file, the
+night) and the one-line text of a task. No files, no clock, no processes: the store, the runner and the command line (Claude) call these functions and give them the time. SEDRA builds it, Claude wrote this file, the
 hidden tests and the reference (benchmarks/devvm_refs/buildflow_core)."""
 
 NOTES = '''# Notes for buildflow_core

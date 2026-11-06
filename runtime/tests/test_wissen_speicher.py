@@ -7,8 +7,8 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.wissen import ausgabe, schema
-from guppi_runtime.wissen import speicher as S
+from sedra_runtime.wissen import ausgabe, schema
+from sedra_runtime.wissen import speicher as S
 from wissen_fixture import FakeEmbedServer, alle_freigeben, freigeben, oeffnen
 
 AGENT1 = S.leser("agent", 1, None, "A1")

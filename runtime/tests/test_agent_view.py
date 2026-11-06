@@ -3,8 +3,8 @@ import sqlite3
 import tempfile
 import unittest
 
-from guppi_runtime.agent_manager.agent_registry import Registry
-from guppi_runtime.agent_manager.view import agents_view
+from sedra_runtime.agent_manager.agent_registry import Registry
+from sedra_runtime.agent_manager.view import agents_view
 
 
 class AgentsViewTest(unittest.TestCase):

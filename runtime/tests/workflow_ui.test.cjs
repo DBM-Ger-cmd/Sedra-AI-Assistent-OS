@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const ui = path.join(__dirname, '..', 'src', 'guppi_runtime', 'uix', 'ui');
+const ui = path.join(__dirname, '..', 'src', 'sedra_runtime', 'uix', 'ui');
 for (const f of ['workflow-icons.js', 'workflow-dialog.js', 'workflow-picker.js']) require(path.join(ui, f));
 const I = globalThis.sedraWorkflowIcons, D = globalThis.sedraWorkflowDialog, P = globalThis.sedraWorkflowPicker;
 

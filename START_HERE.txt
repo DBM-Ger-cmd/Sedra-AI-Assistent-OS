@@ -1,4 +1,4 @@
-SEDRA (technischer Name GUPPI) - Start (Stand 15.10.2026, Build 24)
+SEDRA (technischer Name SEDRA) - Start (Stand 15.10.2026, Build 24)
 
 WINDOWS
 1. Ordner an einen beschreibbaren Ort legen (nicht unter Programme).
@@ -9,7 +9,7 @@ WINDOWS
    trotzdem; nur die Selbstentwicklung (DevVM) braucht das SDK spaeter. Fehlt die Engine, startet die
    Oberflaeche trotzdem; es antwortet dann kein Modell.
 3. Danach fragt START_SEDRA.bat, welche Oberflaeche starten soll (0 = Uebersicht). Direkt:
-   START_SEDRA.bat cockpit | minimal | paperclip | gateway-studio | guppi-xp   (nur dieser Start)
+   START_SEDRA.bat cockpit | minimal | paperclip | gateway-studio | sedra-xp   (nur dieser Start)
    START_SEDRA.bat --gewaehlt (die in uix.yaml gewaehlte) · --uebersicht · --replace (laufenden SEDRA beenden)
 4. Fenster schliessen = Server und Modell beenden. Protokoll: runtime\einrichtung.log
 5. READY_TEST_WINDOWS.bat prueft die PC-Voraussetzungen; runtime\run_tests.bat die Testsuite.

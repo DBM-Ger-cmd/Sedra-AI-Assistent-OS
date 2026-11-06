@@ -1,5 +1,5 @@
-r"""Night chain 2026-10-13 (Captain 2026-10-13: "GUPPI soll die Spezifikation bauen, aber erst in der Nacht-Warteschlange"): GUPPI's standard coder (coder.local_primary, Qwen3.6) builds
-benchmarks/devvm_specs/cchat.py (chat sessions store, SSE frames and parser; steps 1 and 2 of docs/AUFTRAG_GUPPI_CHAT_AUSBAU_2026-10-13.md) in its own coder with the settings of the night
+r"""Night chain 2026-10-13 (Captain 2026-10-13: "SEDRA soll die Spezifikation bauen, aber erst in der Nacht-Warteschlange"): SEDRA's standard coder (coder.local_primary, Qwen3.6) builds
+benchmarks/devvm_specs/cchat.py (chat sessions store, SSE frames and parser; steps 1 and 2 of docs/AUFTRAG_SEDRA_CHAT_AUSBAU_2026-10-13.md) in its own coder with the settings of the night
 queue (DevVM, solo, --coder-ext all, engine b11160, flash attention on, KV q8_0, ubatch 512).
 
     .venv\Scripts\python.exe benchmarks/night_queue_2026-10-13.py <project_dir> [<start hour, default 22>] [<pid of a running chain to wait for>]

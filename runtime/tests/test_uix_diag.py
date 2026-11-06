@@ -2,9 +2,9 @@ import importlib.util, json, shutil, subprocess, sys, tempfile, threading, unitt
 from pathlib import Path
 from types import SimpleNamespace
 
-from guppi_runtime import uix_diag
+from sedra_runtime import uix_diag
 
-SRC = Path(__file__).resolve().parents[1] / "src" / "guppi_runtime"
+SRC = Path(__file__).resolve().parents[1] / "src" / "sedra_runtime"
 SPEC = Path(__file__).resolve().parents[1] / "benchmarks" / "devvm_specs" / "chat_diag.py"
 
 
@@ -24,7 +24,7 @@ class FakeHardware:
 
 
 class Hub:
-    LEASE_OWNER = "guppi-uix"
+    LEASE_OWNER = "sedra-uix"
 
     def __init__(self, tmp):
         self.audit_path = Path(tmp) / "events.jsonl"

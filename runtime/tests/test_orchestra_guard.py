@@ -9,7 +9,7 @@ import yaml
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
 RUNTIME = Path(__file__).resolve().parents[1]
-ARCH = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 RULES = ARCH / 'core' / 'guard' / 'guard_rules.yaml'
 PERMS = RUNTIME / 'config' / 'permission_levels.yaml'
 D4 = [('GR-029', 'set_org', 'CAPTAIN_REQUIRED', 5), ('GR-030', 'assign_task', 'ALLOW', 2), ('GR-031', 'delegate_task', 'ALLOW', 2),
@@ -29,8 +29,8 @@ class OrchestraGuard(unittest.TestCase):
         self.assertEqual(len({r['id'] for r in rules}), len(rules), 'jede Regel-ID einmal')
 
     def test_the_guard_decides_by_the_rule_not_by_the_default(self):
-        from guppi_runtime.core.audit import AuditLog
-        from guppi_runtime.core.guard import Guard
+        from sedra_runtime.core.audit import AuditLog
+        from sedra_runtime.core.guard import Guard
         with tempfile.TemporaryDirectory() as tmp:
             guard = Guard(RULES, AuditLog(Path(tmp) / 'audit.jsonl'), Path(tmp) / 'tokens.json')
             for rid, action, decision, _ in D4:
@@ -39,9 +39,9 @@ class OrchestraGuard(unittest.TestCase):
                     self.assertEqual((out['decision'], out['rule_id']), (decision, rid))
 
     def test_the_runtime_loads_both_files(self):
-        from guppi_runtime.runtime import GuppiRuntime
+        from sedra_runtime.runtime import SedraRuntime
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
             self.assertIsNone(rt.permission_error)
             levels = rt.permission_status()['actions']
             for _, action, _, level in D4:

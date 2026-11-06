@@ -10,11 +10,11 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from guppi_runtime.models.base import BaseModelAdapter
-from guppi_runtime.models.llamacpp import LlamaCppServerAdapter
-from guppi_runtime.models.recording import SAMPLING_KEYS
-from guppi_runtime.models.router import ModelRouter
-from guppi_runtime.modules.control import ControlMasterModule
+from sedra_runtime.models.base import BaseModelAdapter
+from sedra_runtime.models.llamacpp import LlamaCppServerAdapter
+from sedra_runtime.models.recording import SAMPLING_KEYS
+from sedra_runtime.models.router import ModelRouter
+from sedra_runtime.modules.control import ControlMasterModule
 
 MESSAGES = [{'role': 'user', 'content': 'go'}]
 TOOLS = [{'type': 'function', 'function': {'name': 'zustand', 'parameters': {'type': 'object', 'properties': {}}}}]

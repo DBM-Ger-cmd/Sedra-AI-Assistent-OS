@@ -1,6 +1,6 @@
 """What does the working set save in a real session, and does the model still answer correctly? (a measurement, not a test)
 
-A synthetic coding session on a real model through GUPPI's own path (loader -> model_call -> router -> llama-server): N modules, one step
+A synthetic coding session on a real model through SEDRA's own path (loader -> model_call -> router -> llama-server): N modules, one step
 per module. At each step the tool output (the module's source, ~2k tokens) enters the history and the model is asked for one fact from
 that module. The last steps ask for facts from the EARLIEST modules, which in the working-set run live only in the archive.
 
@@ -69,10 +69,10 @@ def main():
     ap.add_argument("--context", type=int, default=102400, help="context the server is started with")
     args = ap.parse_args()
 
-    from guppi_runtime.selfdev.development_contracts import development_contract
-    from guppi_runtime.runtime import GuppiRuntime
-    from guppi_runtime.jobs.testlab import TestLab, default_path
-    from guppi_runtime.models.gpu_preflight import clear_leftovers
+    from sedra_runtime.selfdev.development_contracts import development_contract
+    from sedra_runtime.runtime import SedraRuntime
+    from sedra_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.models.gpu_preflight import clear_leftovers
 
     lab = TestLab(default_path(args.project))
     owner = os.environ.get("TESTLAB_OWNER", "workingset_real_run")
@@ -80,10 +80,10 @@ def main():
         run_id = lab.start_run(owner, "workingset", f"{args.model} {args.modules} modules", vars(args))
         try:
             tmp = Path(tempfile.mkdtemp())
-            project = tmp / "GUPPI_OS"
+            project = tmp / "SEDRA_OS"
             shutil.copytree(Path(args.project) / "local_config", project / "local_config")
-            arch = sorted((RUNTIME.parent / "architecture").glob("GUPPI_Architecture_v*"))[-1]
-            rt = GuppiRuntime(project, architecture_root=arch)
+            arch = sorted((RUNTIME.parent / "architecture").glob("SEDRA_Architecture_v*"))[-1]
+            rt = SedraRuntime(project, architecture_root=arch)
             if not (rt.model_loader and rt.model_loader.enabled and rt.context_manager and rt.context_manager.enabled):
                 sys.exit("model_loader and context_manager must be enabled by the local switches")
             rt.model_router.adapters[PROVIDER].timeout = 900

@@ -18,7 +18,7 @@ sys.path.insert(0, str(BENCH))
 import context_ladder as ladder_tool  # noqa: E402
 import slot_measurement as sm  # noqa: E402
 import slot_throughput as st  # noqa: E402
-from guppi_runtime.jobs.testlab import LeaseBusy, TestLab  # noqa: E402
+from sedra_runtime.jobs.testlab import LeaseBusy, TestLab  # noqa: E402
 
 
 class FakeRuntime:

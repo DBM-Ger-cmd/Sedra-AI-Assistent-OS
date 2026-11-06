@@ -4,7 +4,7 @@ in the tree, the role, recipe, level, delegation right, parallel limit and budge
 with live subordinates), and the readers. Every structural change goes through graphs.check_org (one root, no cycle, depth limit) and raises the agent's revision; the
 fingerprint is what the standing approval of the guard is bound to (D1.4). Builds on the seed benchmarks/s1_schema2_seed (store.py schema 2, graphs.py = reference of s1_graphs).
 Additions to D1.1: set_org also takes the budget fields (the desk verb `festlegen` of type budget), hire checks required and unknown fields.
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_org)."""
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_org)."""
 
 SEED = "benchmarks/s1_schema2_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 
@@ -30,7 +30,7 @@ def raises(text, fn, *args, **kw):
 
 
 def h(id, boss=None, **kw):
-    out = {"id": id, "instance_id": "inst-" + id, "template_id": "guppi.orchestra.coder", "name": "Name " + id, "role": "coder", "permission_level": 2, "reports_to": boss}
+    out = {"id": id, "instance_id": "inst-" + id, "template_id": "sedra.orchestra.coder", "name": "Name " + id, "role": "coder", "permission_level": 2, "reports_to": boss}
     out.update(kw)
     return out
 
@@ -66,7 +66,7 @@ C1 = r'''
 c = store.open_db(":memory:")
 a = hire(c, h("A", role="foreman", can_delegate=True), T0, 6)
 assert (a["id"], a["status"], a["reports_to"], a["role"], a["can_delegate"], a["max_parallel"], a["budget_period"], a["revision"]) == ("A", "aktiv", None, "foreman", 1, 1, "gesamt", 1)
-assert (a["created_at"], a["updated_at"], a["pause_reason"], a["instance_id"], a["template_id"]) == (T0, T0, None, "inst-A", "guppi.orchestra.coder")
+assert (a["created_at"], a["updated_at"], a["pause_reason"], a["instance_id"], a["template_id"]) == (T0, T0, None, "inst-A", "sedra.orchestra.coder")
 assert a == raw(c, "A")
 assert type(a["can_delegate"]) is int
 b = hire(c, h("B", "A", budget_tokens=1000, recipe_id="r1", max_parallel=2, budget_period="monat", budget_eur_cent=50), T1, 6)

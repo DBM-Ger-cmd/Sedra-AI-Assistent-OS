@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from guppi_runtime.readiness import build_report, initialization_failure
+from sedra_runtime.readiness import build_report, initialization_failure
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 
@@ -103,7 +103,7 @@ class ReadinessCase(unittest.TestCase):
         spec = importlib.util.spec_from_file_location('ready_cli', Path(__file__).parents[1] / 'ready_test.py')
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        with patch.object(module, 'GuppiRuntime', side_effect=ValueError('invalid_configuration')), \
+        with patch.object(module, 'SedraRuntime', side_effect=ValueError('invalid_configuration')), \
              patch('sys.argv', ['ready_test.py', '--root', self.tmp.name]), patch('builtins.print'):
             self.assertEqual(module.main(), 2)
         report = json.loads((Path(self.tmp.name) / 'runtime_data/reports/PC_READY_TEST_v1.15.json').read_text())

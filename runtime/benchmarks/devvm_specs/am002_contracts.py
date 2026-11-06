@@ -5,7 +5,7 @@ Build only, no integration: the result stays a candidate under runtime_data/devv
 
 NOTES = '''# Notes for agent_contracts
 Pure Python 3 standard library, no file or network access, never modify the arguments. Errors are always `ContractError` (a ValueError subclass) with a `code` and an optional `field`.
-Part of the GUPPI Agent Manager (ticket AM-002). Built as a candidate only.
+Part of the SEDRA Agent Manager (ticket AM-002). Built as a candidate only.
 '''
 
 COMMON = r'''

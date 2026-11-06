@@ -5,7 +5,7 @@ once; a date in the doubled hour of autumn runs once, at its first occurrence, f
 Shell D's cronText for the common forms (display only). A zone is a name ("UTC" always works; other names need the zone data of zoneinfo, unknown ->
 cron_timezone_unknown) or a tzinfo object. OP-S1-03 (21.10.2026): the .venv has no tzdata, so on Windows only "UTC" and tzinfo objects work until tzdata gets its gate;
 the hidden tests therefore bring their own Europe/Berlin rule as a tzinfo class (EU rule, PEP 495 fold) and never need zone data. routines.py imports it (seed of s1_routines).
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_cron)."""
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_cron)."""
 
 NOTES = '''# Notes for s1_cron
 Python 3 standard library only (datetime; zoneinfo imported only inside the zone lookup); no sqlite3, no files of your own, no clock (never datetime.now), no network.

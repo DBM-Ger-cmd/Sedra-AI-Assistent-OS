@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock
 
-from guppi_runtime.runtime import GuppiRuntime, SedraRuntime
+from sedra_runtime.runtime import SedraRuntime, SedraRuntime
 import os
 from host_isolation import setUpModule as _host_hoch, tearDownModule as _host_runter
 _WISSEN = {}
@@ -25,13 +25,13 @@ def tearDownModule():
         os.environ['SEDRA_WISSEN_STANDARD'] = _WISSEN['alt']
     _host_runter()
 
-ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
 
 
 class RuntimeTeardown(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.rt = GuppiRuntime(Path(self.tmp.name), ARCH)
+        self.rt = SedraRuntime(Path(self.tmp.name), ARCH)
 
     def tearDown(self):
         try:
@@ -40,7 +40,7 @@ class RuntimeTeardown(unittest.TestCase):
             self.tmp.cleanup()
 
     def test_sedra_alias_exposes_same_shutdown_contract(self):
-        self.assertIs(SedraRuntime, GuppiRuntime)
+        self.assertIs(SedraRuntime, SedraRuntime)
         self.assertTrue(callable(self.rt.close))
 
     def test_closes_wissen_database_twice_without_error(self):
@@ -77,7 +77,7 @@ class RuntimeTeardown(unittest.TestCase):
 class UixTeardown(unittest.TestCase):
     def _hub(self):
         # The shutdown path itself is tested without opening a browser or port.
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         hub = UIXHub.__new__(UIXHub)
         hub.poller = Mock()
         hub.runtime = Mock()

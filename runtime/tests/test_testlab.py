@@ -3,7 +3,7 @@ import threading
 import unittest
 from pathlib import Path
 
-from guppi_runtime.jobs.testlab import LeaseBusy, TestLab, pid_alive
+from sedra_runtime.jobs.testlab import LeaseBusy, TestLab, pid_alive
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 
@@ -255,13 +255,13 @@ class SchemaTwoTests(LabCase):
         seed = Path(__file__).resolve().parents[1] / "benchmarks" / "s2_schema_seed" / "slot_db.py"
         tree = ast.parse(seed.read_text(encoding="utf-8"))
         text = next(n.value.value for n in tree.body if isinstance(n, ast.Assign) and n.targets[0].id == "SCHEMA")
-        from guppi_runtime.jobs import slot_db, testlab
+        from sedra_runtime.jobs import slot_db, testlab
         self.assertEqual(testlab.SLOT_SCHEMA, text)
         self.assertIs(slot_db.SCHEMA, testlab.SLOT_SCHEMA)
 
     def _schema_one_file(self):
         import sqlite3
-        from guppi_runtime.jobs.testlab import SCHEMA
+        from sedra_runtime.jobs.testlab import SCHEMA
         path = Path(self.tmp.name) / "old" / "testlab.db"
         path.parent.mkdir()
         db = sqlite3.connect(path)
@@ -290,15 +290,15 @@ class SchemaTwoTests(LabCase):
     def test_a_failed_backup_leaves_schema_1_and_the_lease_works_as_before(self):
         from unittest import mock
         path = self._schema_one_file()
-        with mock.patch("guppi_runtime.jobs.testlab_slots.backup_path", return_value=path.parent):     # a directory: sqlite cannot open it
+        with mock.patch("sedra_runtime.jobs.testlab_slots.backup_path", return_value=path.parent):     # a directory: sqlite cannot open it
             lab = TestLab(path, clock=self.clock, alive=lambda p: True, pid=111)
         self.assertEqual(lab.schema, 1)
         self.assertTrue(lab.schema_error.startswith("testlab_schema2_failed:"))
         self.assertNotIn("slot_leases", self._tables(lab)[0])
         self.assertTrue(lab.try_acquire("chat-1", "x"))
         self.assertFalse(lab.register_waiter("bench", "y"))
-        from guppi_runtime.jobs import slot_db
-        with mock.patch("guppi_runtime.jobs.testlab_slots.backup_path", return_value=path.parent):
+        from sedra_runtime.jobs import slot_db
+        with mock.patch("sedra_runtime.jobs.testlab_slots.backup_path", return_value=path.parent):
             with self.assertRaises(ValueError):
                 slot_db.open_db(path)
 
@@ -347,7 +347,7 @@ class SchemaTwoTests(LabCase):
         self.assertFalse(self.a.clear_waiter("bench"))
 
     def test_the_slot_store_works_on_the_test_lab_file(self):
-        from guppi_runtime.jobs import slot_db, slot_store
+        from sedra_runtime.jobs import slot_db, slot_store
         conn = slot_db.open_db(self.path)
         self.addCleanup(conn.close)
         cfg = {"age_after_s": 120, "age_cap": 5, "swap": "none", "queue_max": 6, "wait_max_s": 600}
@@ -360,7 +360,7 @@ class SchemaTwoTests(LabCase):
 MIGRATE = r"""
 import sys
 sys.path.insert(0, sys.argv[1])
-from guppi_runtime.jobs.testlab import TestLab
+from sedra_runtime.jobs.testlab import TestLab
 lab = TestLab(sys.argv[2])
 print(lab.schema, lab.schema_error)
 """

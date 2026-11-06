@@ -4,7 +4,7 @@ from unittest.mock import patch
 import unittest
 import test_sandbox
 import test_code_candidate
-from guppi_runtime.selfdev.candidate_tests import run_candidate_tests, verify_candidate_tests
+from sedra_runtime.selfdev.candidate_tests import run_candidate_tests, verify_candidate_tests
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 
@@ -63,7 +63,7 @@ class EvidenceCase(unittest.TestCase):
         import yaml
         p=yaml.safe_load(self.cfg.read_text());p['sandbox']['max_files']=1;self.cfg.write_text(yaml.safe_dump(p))
         for i in range(9):(self.source/f'dir{i}').mkdir()
-        from guppi_runtime.tools.base import ToolValidationError
+        from sedra_runtime.tools.base import ToolValidationError
         with self.assertRaises(ToolValidationError):self.plan()
 
     def test_bad_job_id_never_reads_outside(self):

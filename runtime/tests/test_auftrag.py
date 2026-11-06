@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime import auftrag, laufdefinition, vorarbeiter
+from sedra_runtime import auftrag, laufdefinition, vorarbeiter
 
 BEISPIEL = Path(__file__).resolve().parents[2] / "docs" / "auftrag_beispiel"
 
@@ -177,7 +177,7 @@ class PruefungTest(unittest.TestCase):
         from unittest import mock
         m = auftrag.manifest_pruefen(_manifest(ausgaben=["out/app.js"], pruefregeln=["schreibbereich", "ausgaben_vollstaendig", "syntax_js"]))
         (self.box / "out" / "app.js").write_text("let a = 1;\n", encoding="utf-8")
-        with mock.patch("guppi_runtime.auftrag.shutil.which", return_value=None):
+        with mock.patch("sedra_runtime.auftrag.shutil.which", return_value=None):
             befunde = auftrag.pruefe_ausgaben(self.box, m, [{"path": "out/app.js", "bytes": 1}])
         self.assertEqual(self._status(befunde)["syntax_js"], "nicht_geprueft")
         self.assertEqual(auftrag.ergebnis(befunde), "maschinell_ok")

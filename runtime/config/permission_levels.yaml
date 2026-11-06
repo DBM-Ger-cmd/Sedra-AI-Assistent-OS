@@ -39,7 +39,7 @@ permission_levels:
     hardware_profile_control: {level: 5, path_scoped: false}
     sandbox_image_import:     {level: 5, path_scoped: false}
     core_update_install:      {level: 5, path_scoped: false}
-    # GUPPI's own code (self_integration.py, 2026-10-02). Level 5: an E1 job (level 2) can never ask for it itself.
+    # SEDRA's own code (self_integration.py, 2026-10-02). Level 5: an E1 job (level 2) can never ask for it itself.
     self_integration:          {level: 5, path_scoped: false}
     self_integration_rollback: {level: 5, path_scoped: false}
     # Verwaltung der Orchestrierung durch den Captain (Spec 0, D4). Level 5: ein Agent fragt sie nie selbst an.

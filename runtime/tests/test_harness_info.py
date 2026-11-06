@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import info
-from guppi_runtime.harness.api import WEG
+from sedra_runtime.harness import info
+from sedra_runtime.harness.api import WEG
 
 
 def log(*ereignisse):

@@ -2,7 +2,7 @@
 A new use case is one module with `register(registry, hub)` plus one line in `MODULES`; `uix_server.py` stays untouched (KERN-04). An extension that fails on import or in
 `register` is left out completely (its half registration is undone), the reason goes to `registry.problems` and to the audit as `DESK_KIND_REFUSED`, and the desk starts anyway.
 `start(hub, loaded)` calls the optional `start(hub)` of each loaded module (the heartbeat clock of Spec 1). Pure logic: the importer, the registry and the audit are injected.
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/k0_extensions). Wiring into uix_server.py is harness work (K0.11)."""
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/k0_extensions). Wiring into uix_server.py is harness work (K0.11)."""
 
 NOTES = '''# Notes for k0_extensions
 Python 3 standard library only (importlib), no file, process or network access of its own. Modules are imported ONLY through the injected `importer`; the registry and the audit are the objects passed in.
@@ -97,7 +97,7 @@ def hidden(imports, body):
 
 
 C1 = r'''
-assert MODULES == ("guppi_runtime.desk.orchestra_kinds",)
+assert MODULES == ("sedra_runtime.desk.orchestra_kinds",)
 r = FakeRegistry()
 order = ["ext.a", "ext.missing", "ext.b", "ext.c", "ext.d", "ext.empty", "ext.e"]
 keep = list(order)
@@ -163,7 +163,7 @@ assert lst == [A, C]
 
 STAGES = [
     {"name": "load",
-     "task": """Create `extensions.py` (Python 3 standard library only). Module constant `MODULES = ("guppi_runtime.desk.orchestra_kinds",)`.
+     "task": """Create `extensions.py` (Python 3 standard library only). Module constant `MODULES = ("sedra_runtime.desk.orchestra_kinds",)`.
 `load(registry, hub, modules=MODULES, importer=importlib.import_module, audit=None) -> list`: docks the extension modules onto the registry, in the order of `modules`.
 - For each name: take `mark = registry.mark()`; module = importer(name); `register = getattr(module, "register", None)`; when it is not callable raise ValueError("extension_without_register") (treated like any failure); call register(registry, hub).
 - Any Exception in these steps (import, missing register, register itself): `registry.reset(mark)` (a half registration is undone), `registry.refuse(name, reason)` and, when audit is not None, `audit("DESK_KIND_REFUSED", {"module": name, "reason": reason})`; then go on with the next name. reason = str(exc), or the class name of the exception when str(exc) is empty.

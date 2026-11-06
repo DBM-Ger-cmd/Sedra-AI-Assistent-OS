@@ -2,7 +2,7 @@ r"""Follow-up link of the night chain 2026-10-11 (Captain 2026-10-11 evening: "g
 
     .venv\Scripts\python.exe benchmarks/night_queue_2026-10-11_b.py <project_dir> <pid of the running night queue>
 
-Waits until the first night queue (night_queue_2026-10-11.py) has ended - it only WAITS for that process, it never stops it - and then lets GUPPI's standard coder
+Waits until the first night queue (night_queue_2026-10-11.py) has ended - it only WAITS for that process, it never stops it - and then lets SEDRA's standard coder
 (coder.local_primary, Qwen3.6) build `core_boundary` in its own coder with the same settings as the night queue (DevVM, solo, --coder-ext all, engine b11160,
 flash attention on, KV q8_0, ubatch 512). If the GPU canary failed, nothing is built. Results: runtime_data/measurements/night_2026-10-11/ (queue.log, summary_b.json);
 nothing is integrated.

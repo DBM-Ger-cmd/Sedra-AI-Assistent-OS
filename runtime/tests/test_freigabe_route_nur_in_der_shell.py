@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-TOOLS = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'tools'
+TOOLS = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'tools'
 ROUTE = 'POST /api/decisions/answer'
 
 

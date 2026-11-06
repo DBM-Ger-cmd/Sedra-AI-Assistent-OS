@@ -9,18 +9,18 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.artifacts import ArtifactStore
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.jobs.context_budget import ContextBudgetManager
-from guppi_runtime.jobs.context_manager import (ContextConfig, ContextError, ContextManager, collect_pins, make_piece, redact_text, score_piece)
-from guppi_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
-from guppi_runtime.models.openai_local import normalize_usage
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.artifacts import ArtifactStore
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.jobs.context_budget import ContextBudgetManager
+from sedra_runtime.jobs.context_manager import (ContextConfig, ContextError, ContextManager, collect_pins, make_piece, redact_text, score_piece)
+from sedra_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
+from sedra_runtime.models.openai_local import normalize_usage
+from sedra_runtime.runtime import SedraRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]
 CONFIG = RUNTIME / 'config' / 'job_supervisor.yaml'
-ARCH = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 JOB = 'SDJ-0123456789AB'
 
 
@@ -74,7 +74,7 @@ class ConfigTests(unittest.TestCase):
 
     def test_runtime_wires_it_off_and_reports_status(self):
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
             self.assertIsNotNone(rt.context_manager)
             self.assertFalse(rt.context_manager.enabled)
             self.assertFalse(rt.boot()['context_manager']['enabled'])
@@ -241,7 +241,7 @@ class BudgetTests(Base):
 
     def test_self_development_marks_a_guessed_window_and_accepts_a_resolved_budget(self):
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
             guessed = rt.self_development.start('budget_probe_a', evidence=[{'source': 't'}])['job']['context_manifest']['budget']
             self.assertEqual(guessed['budget_source'], 'default')
             explicit = rt.self_development.start('budget_probe_b', evidence=[{'source': 't'}], context_window=4096)['job']['context_manifest']['budget']
@@ -405,7 +405,7 @@ class CheckpointTests(Base):
                 {'kind': 'path', 'ref': {'path': 'src/app.py'}, 'digest': 'a' * 64, 'value': 'src/app.py'}]
         cp = self.cm.checkpoint(JOB, 'A1', goal='make tests pass', changed=[{'path': 'src/app.py', 'sha256': 'a' * 64}],
                                 artifacts=[art['artifact_id']], tests=[{'id': 't1', 'result': 'PASS', 'evidence_id': rec['evidence_id']}],
-                                open_errors=[{'class': 'validation_failure', 'summary': 'x'}], decisions=[{'text': 'use lock', 'decided_by': 'guppi', 'ref': 'D1'}],
+                                open_errors=[{'class': 'validation_failure', 'summary': 'x'}], decisions=[{'text': 'use lock', 'decided_by': 'sedra', 'ref': 'D1'}],
                                 next_steps=['review'], permission_state={'level': 2, 'tokens_used': ['APR-1'], 'gates_pending': []}, pins=pins)
         loaded = self.cm.checkpoints.load(JOB, cp['checkpoint_id'])
         self.assertEqual(loaded, cp)
@@ -593,7 +593,7 @@ class WatermarkTests(Base):
 class ControlMasterIntegrationTests(unittest.TestCase):
     def test_inference_is_measured_only_when_enabled_and_never_breaks(self):
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
 
             class FakeRouter:
                 adapters = {}
@@ -621,7 +621,7 @@ class ControlMasterIntegrationTests(unittest.TestCase):
 class AtomicReplaceTests(unittest.TestCase):
     def test_transient_permission_error_is_retried_on_windows_only(self):
         from unittest.mock import patch
-        from guppi_runtime.core import util
+        from sedra_runtime.core import util
         calls = {'n': 0}
 
         def flaky(src, dst):
@@ -642,12 +642,12 @@ class AtomicReplaceTests(unittest.TestCase):
 class BoundaryTests(unittest.TestCase):
     def test_module_names_no_provider_or_model(self):
         import re
-        source = Path(importlib.import_module('guppi_runtime.jobs.context_manager').__file__).read_text(encoding='utf-8').lower()
+        source = Path(importlib.import_module('sedra_runtime.jobs.context_manager').__file__).read_text(encoding='utf-8').lower()
         for word in ('lm-studio', 'lmstudio', 'llama', 'qwen', 'kev', 'openai', 'anthropic'):
             self.assertNotRegex(source, rf'\b{re.escape(word)}\b', word)
 
     def test_module_does_not_touch_job_state(self):
-        source = Path(importlib.import_module('guppi_runtime.jobs.context_manager').__file__).read_text(encoding='utf-8')
+        source = Path(importlib.import_module('sedra_runtime.jobs.context_manager').__file__).read_text(encoding='utf-8')
         for forbidden in ('.transition(', 'JobSupervisor', 'DevelopmentJobStore', 'guard.approve'):
             self.assertNotIn(forbidden, source)
 

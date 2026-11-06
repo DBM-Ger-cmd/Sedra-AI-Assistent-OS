@@ -10,6 +10,6 @@ S0 connection check: coder.local_primary ok
    agent solo developer         qwen3.6-35b-a3b        hand_in     15 calls   94.0 s 1848 tokens, 72827 prompt, peak 6657
    agent solo developer (rework 1) qwen3.6-35b-a3b        hand_in     11 calls  207.5 s 4295 tokens, 86857 prompt, peak 9479
    stage all: hidden PASSED (own check accepted=UNJUDGED, own tests none, 94.1 s)
-attempt 1: hidden test PASSED | own check accepted=UNJUDGED | 420.5 s, 5 agent runs, 41 calls -> ..\workspace\GUPPI_OS\runtime_data\devvm_candidates\skill_unify\attempt_01_20261013_143008
+attempt 1: hidden test PASSED | own check accepted=UNJUDGED | 420.5 s, 5 agent runs, 41 calls -> ..\workspace\SEDRA_OS\runtime_data\devvm_candidates\skill_unify\attempt_01_20261013_143008
 # run ended: done
 DONE -> devvm_build_skill_unify_2026-10-13_142306.json

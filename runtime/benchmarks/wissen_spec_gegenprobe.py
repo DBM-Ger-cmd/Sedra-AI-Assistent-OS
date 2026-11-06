@@ -1,5 +1,5 @@
 """Gegenprobe Spec 7: die versteckten Stufen-Tests der Bau-Specs `wis_store`, `wis_chunk`, `wis_fuse` laufen gegen die Module des
-Pakets `guppi_runtime.wissen` (schema.py, zerlegen.py, fusion.py) statt gegen die Referenz in `devvm_refs/`.
+Pakets `sedra_runtime.wissen` (schema.py, zerlegen.py, fusion.py) statt gegen die Referenz in `devvm_refs/`.
 
     python3 benchmarks/wissen_spec_gegenprobe.py [wis_store|wis_chunk|wis_fuse …]
 
@@ -17,7 +17,7 @@ RUNTIME = BENCH.parent
 sys.path.insert(0, str(BENCH))
 import spec_check  # noqa: E402
 
-PAKET = RUNTIME / "src" / "guppi_runtime" / "wissen"
+PAKET = RUNTIME / "src" / "sedra_runtime" / "wissen"
 SPECS = {
     "wis_store": [("schema.py", PAKET / "schema.py"), ("wis_ddl.py", BENCH / "wis_schema_seed" / "wis_ddl.py")],
     "wis_chunk": [("zerlegen.py", PAKET / "zerlegen.py")],

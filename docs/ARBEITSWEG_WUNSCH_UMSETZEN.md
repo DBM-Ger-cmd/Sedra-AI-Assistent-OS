@@ -1,6 +1,6 @@
 # Arbeitsweg: einen Wunsch aus dem Chat umsetzen (feste Wege, 02.11.2026)
 
-Gilt für Sedra und die Harness-Shell. Wo etwas liegt: `workspace/GUPPI_OS/wunsch_umsetzen/` (Beschreibung dort in `README.md`).
+Gilt für Sedra und die Harness-Shell. Wo etwas liegt: `workspace/SEDRA_OS/wunsch_umsetzen/` (Beschreibung dort in `README.md`).
 
 ## Wege
 - **Wunsch:** `01_wuensche/W-<Datum>-<kurz>.md`. Der Wunsch des Captains in seinen Worten, dazu was das Modell verstanden hat.

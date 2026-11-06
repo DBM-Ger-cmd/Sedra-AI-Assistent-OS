@@ -3,14 +3,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.jobs import slot_store
-from guppi_runtime.jobs.model_scheduler import ModelScheduler, ModelSchedulerConfig, SchedulerError
-from guppi_runtime.jobs.testlab import TestLab
+from sedra_runtime.jobs import slot_store
+from sedra_runtime.jobs.model_scheduler import ModelScheduler, ModelSchedulerConfig, SchedulerError
+from sedra_runtime.jobs.testlab import TestLab
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 from model_scheduler_fakes import CONFIG, Clock, make_scheduler, raw_config, resolution
 
 RUNTIME = Path(__file__).resolve().parents[1]
-ARCH = RUNTIME.parent / "architecture" / "GUPPI_Architecture_v1.20_SELF_DEVELOPMENT"
+ARCH = RUNTIME.parent / "architecture" / "SEDRA_Architecture_v1.20_SELF_DEVELOPMENT"
 
 
 class Resources:
@@ -354,14 +354,14 @@ class ViewTests(Base):
 
 class RuntimeWiringTests(unittest.TestCase):
     def runtime(self, overlay=None):
-        from guppi_runtime.runtime import GuppiRuntime
+        from sedra_runtime.runtime import SedraRuntime
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         project = Path(tmp.name) / "project"
         if overlay is not None:
             (project / "local_config").mkdir(parents=True)
             (project / "local_config" / "model_scheduler.yaml").write_text(overlay, encoding="utf-8")
-        return GuppiRuntime(project, ARCH), project
+        return SedraRuntime(project, ARCH), project
 
     def test_off_by_default_one_worker_and_boot_says_so(self):
         rt, project = self.runtime()
@@ -377,7 +377,7 @@ class RuntimeWiringTests(unittest.TestCase):
         self.assertEqual(rt.model_scheduler_status(), {"enabled": False, "error": "model_scheduler_config_invalid:overlay:poll_s"})
 
     def test_switching_it_on_in_the_overlay_builds_the_scheduler_through_the_loader(self):
-        from guppi_runtime.jobs.testlab import default_path
+        from sedra_runtime.jobs.testlab import default_path
         rt, project = self.runtime("model_scheduler:\n  enabled: true\n  wait_max_s: 300\n")
         self.addCleanup(rt.model_scheduler._release_gpu)
         self.assertTrue(rt.model_scheduler.enabled)
@@ -410,11 +410,11 @@ class RuntimeWiringTests(unittest.TestCase):
         self.assertEqual(len(offs), 2)
 
     def test_built_directly_it_is_attached_to_the_supervisor(self):
-        from guppi_runtime.jobs.testlab import default_path
+        from sedra_runtime.jobs.testlab import default_path
         rt, project = self.runtime()
         from unittest import mock
         on = ModelSchedulerConfig(raw_config())
-        with mock.patch("guppi_runtime.runtime.ModelSchedulerConfig.load", return_value=on):
+        with mock.patch("sedra_runtime.runtime.ModelSchedulerConfig.load", return_value=on):
             rt._configure_model_scheduler(project / "runtime_data")
         self.assertIs(rt.job_supervisor.slots, rt.model_scheduler)
         self.assertTrue(default_path(project).exists())

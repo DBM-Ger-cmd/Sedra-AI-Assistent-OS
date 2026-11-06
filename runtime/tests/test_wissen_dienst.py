@@ -4,8 +4,8 @@ mit Kennungen aus dem Werkzeug, die Route aus dem Anbieter. Mit einem Speicher-E
 import unittest
 from types import SimpleNamespace
 
-from guppi_runtime.wissen import ausgabe, dienst
-from guppi_runtime.wissen.speicher import CAPTAIN, leser
+from sedra_runtime.wissen import ausgabe, dienst
+from sedra_runtime.wissen.speicher import CAPTAIN, leser
 
 A, B = "W0123456789ab", "Wbbbbbbbbbbbb"
 
@@ -131,7 +131,7 @@ class Labor(unittest.TestCase):
     def test_ohne_datei_frei_und_nichts_angelegt(self):
         import tempfile
         from pathlib import Path
-        from guppi_runtime.wissen.embed import TestLabZugang, VerzoegertesLabor
+        from sedra_runtime.wissen.embed import TestLabZugang, VerzoegertesLabor
         with tempfile.TemporaryDirectory() as tmp:
             pfad = Path(tmp) / "testlab" / "testlab.db"
             geoeffnet = []

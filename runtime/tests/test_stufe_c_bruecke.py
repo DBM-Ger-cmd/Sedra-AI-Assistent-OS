@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 NODE = shutil.which('node')
-BRUECKE = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'ui' / 'bruecke.js'
+BRUECKE = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'ui' / 'bruecke.js'
 
 
 def run_node(script):

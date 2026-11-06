@@ -12,11 +12,11 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk.kinds import SHAPE
-from guppi_runtime.orchestra.store import open_db
-from guppi_runtime.uix_server import make_server
+from sedra_runtime.desk.kinds import SHAPE
+from sedra_runtime.orchestra.store import open_db
+from sedra_runtime.uix_server import make_server
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 from test_desk_kinds import FakeHost, call, cases, data, key, post, GOLDEN
 
 ROWS = Path(__file__).resolve().parent / 'fixtures' / 'orchestra_desk' / 'rows.json'
@@ -159,7 +159,7 @@ class Desk(unittest.TestCase):
     """Ein echter Hub je Test (Missionen, Guard, Entscheidungen echt), Orchestrierung an, Fixture-Datenbank, feste Uhr."""
 
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         tmp = tempfile.TemporaryDirectory(prefix='orchestra-verbs-')
         self.addCleanup(tmp.cleanup)
         project = Path(tmp.name) / 'project'
@@ -248,7 +248,7 @@ class DirectVerbs(Desk):
                                                                                            'needs_gate': False, 'confirm': None}])
 
     def test_pausieren_frees_the_task_closes_wakeups_and_revokes(self):
-        from guppi_runtime.orchestra import board, heartbeat
+        from sedra_runtime.orchestra import board, heartbeat
         self.act('issue', 'I-101', 'zuweisen', bearbeiter='A-UA')
         board.checkout(self.db, 'I-101', 'A-UA', 'run-1', NOW)
         heartbeat.enqueue(self.db, 'A-UA', 'captain', None, NOW, 0)
@@ -293,8 +293,8 @@ class Requests(Desk):
         self.assertEqual(self.row('agents', 'id', 'A-3')['reports_to'], 'A-UA')
 
     def test_a_stale_wake_request_closes_its_wakeup(self):
-        from guppi_runtime.desk import orchestra_kinds
-        from guppi_runtime.orchestra import heartbeat
+        from sedra_runtime.desk import orchestra_kinds
+        from sedra_runtime.orchestra import heartbeat
         heartbeat.enqueue(self.db, 'A-UA', 'captain', None, NOW, 0)
         wakeup_id = self.db.execute("SELECT id FROM wakeups WHERE agent_id = 'A-UA'").fetchone()[0]
         self.db.execute("UPDATE wakeups SET outcome = 'antrag' WHERE id = ?", (wakeup_id,))

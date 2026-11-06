@@ -1,6 +1,6 @@
 """S0 connection check (process "from the bottom up", 2026-10-11): before a model is measured, its server and connection must be proven: a tool call comes back, a long
 argument arrives unchanged, the answer is no garbage or repetition, a 90 % window works and an over-full one is refused cleanly, the prompt cache hits. `conn_check.py` holds these
-checks against an injected `post` function, so they are pure logic; the benchmark that runs them per recipe comes after acceptance. GUPPI builds it (model comparison 2026-10-11),
+checks against an injected `post` function, so they are pure logic; the benchmark that runs them per recipe comes after acceptance. SEDRA builds it (model comparison 2026-10-11),
 Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s0_conn_check). Process: docs/PROZESS_GUPPY_VON_UNTEN_2026-10-10.md (S0)."""
 
 NOTES = '''# Notes for conn_check

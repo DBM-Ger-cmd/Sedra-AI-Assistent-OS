@@ -1,4 +1,4 @@
-r"""Background job test with a real model (Captain 2026-10-13): Qwen3.6 (coder.local_primary) works on benchmarks/devvm_specs/bg_report.py in GUPPI's coder with --bg-jobs (shell_start, shell_log,
+r"""Background job test with a real model (Captain 2026-10-13): Qwen3.6 (coder.local_primary) works on benchmarks/devvm_specs/bg_report.py in SEDRA's coder with --bg-jobs (shell_start, shell_log,
 shell_stop; the VM limit is raised to 100 s in the build's own sandbox config). The seed holds crunch.py (about 50 s); the task needs its TOTAL and a summary.py. Results: summary_m.json
 next to the day summaries; whether the job tools were used is in the journal of the run (agent_detail.tool_counts of the build result). Nothing is integrated.
 

@@ -10,13 +10,13 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.artifacts import ArtifactStore
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.jobs.context_manager import ContextConfig, ContextError, ContextManager
-from guppi_runtime.selfdev.development_contracts import canonical_digest, context_manifest, development_contract
-from guppi_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
-from guppi_runtime.jobs.job_repair import repair_job, trigger_for
-from guppi_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
+from sedra_runtime.artifacts import ArtifactStore
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.jobs.context_manager import ContextConfig, ContextError, ContextManager
+from sedra_runtime.selfdev.development_contracts import canonical_digest, context_manifest, development_contract
+from sedra_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
+from sedra_runtime.jobs.job_repair import repair_job, trigger_for
+from sedra_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]
@@ -90,7 +90,7 @@ class ManifestTests(Base):
         parent_chat = [{'role': 'user', 'content': f'turn {i} {MARKER}'} for i in range(50)]
         self.assertEqual(len(parent_chat), 50)                     # exists in the "parent session", has no channel to the child
         art = self.cm.offloader.offload(JOB, 'A1', {'tool': 'shell'}, 'ARTIFACT-BODY-SHOULD-STAY-OUT\n' * 400)
-        cp = self.write_checkpoint(decisions=[{'text': 'use the lock', 'decided_by': 'guppi', 'ref': 'D1'}],
+        cp = self.write_checkpoint(decisions=[{'text': 'use the lock', 'decided_by': 'sedra', 'ref': 'D1'}],
                                    open_errors=[{'class': 'validation_failure', 'summary': 'sha mismatch on app.py'}],
                                    artifacts=[art['artifact_id']], next_steps=['rerun tests'])
         retriever = FakeRetriever({('file', 'src/app.py'): 'def run():\n    return 1\n', ('symbol', 'Worker.start'): 'class Worker:\n    def start(self): pass\n'})
@@ -292,7 +292,7 @@ class FreshContextTests(Base):
 
     def test_next_job_starts_from_checkpoint_and_artifacts_not_from_history(self):
         art = self.cm.offloader.offload(JOB, 'A1', {'tool': 't'}, 'result\n' * 3000)['artifact_id']
-        cp = self.write_checkpoint(artifacts=[art], decisions=[{'text': 'done with step one', 'decided_by': 'guppi', 'ref': 'R1'}])
+        cp = self.write_checkpoint(artifacts=[art], decisions=[{'text': 'done with step one', 'decided_by': 'sedra', 'ref': 'R1'}])
         history = [f'turn {i} {MARKER}' for i in range(40)]
         self.assertTrue(history)
         out = self.cm.assemble(self.cm.fresh_context(self.job, cp, task='step two'))
@@ -454,7 +454,7 @@ class SupervisorGlueTests(Base):
                 with self.assertRaises(ContextError) as ctx: self.fix(job_id)
                 self.assertEqual(ctx.exception.detail, 'repair_limit_reached')
         stored = self.sup.store.load(job_id)
-        self.assertEqual((stored['state'], stored['supervisor_flags']['escalated_to']), ('BLOCKED', 'guppi'))
+        self.assertEqual((stored['state'], stored['supervisor_flags']['escalated_to']), ('BLOCKED', 'sedra'))
         self.assertIn('context_repair_failed:repair_not_possible', stored['last_error']['reason_code'])
 
     def test_repair_without_awaiting_change_is_refused(self):
@@ -466,7 +466,7 @@ class SupervisorGlueTests(Base):
         job_id = self.start(); self.sup.fail(job_id, 'w1', reason_code='CONTEXT_CAPACITY_UNQUALIFIED')
         bad = self.checkpoint_source(pins=[{'kind': 'hash', 'ref': {'artifact_id': 'ART-NOPE0000'}, 'digest': 'x'}])
         with self.assertRaises(ContextError): repair_job(self.sup, self.cm, job_id, task='t', checkpoint_source=bad)
-        self.assertEqual(self.sup.store.load(job_id)['supervisor_flags']['escalated_to'], 'guppi')
+        self.assertEqual(self.sup.store.load(job_id)['supervisor_flags']['escalated_to'], 'sedra')
 
     def test_golden_path_work_stalls_gets_repaired_and_finishes(self):
         job_id = self.start(); self.stall(job_id)
@@ -485,7 +485,7 @@ class SupervisorGlueTests(Base):
         job = self.sup.escalate(job_id, to='captain', reason='needs a human')
         self.assertEqual((job['state'], job['supervisor_flags']['escalated_to']), ('BLOCKED', 'captain'))
         done = self.sup.create_job(contract(), requested_role='reviewer'); self.sup.cancel(done['job_id'], requested_by='t', reason='r')
-        with self.assertRaises(JobError) as ctx: self.sup.escalate(done['job_id'], to='guppi', reason='x')
+        with self.assertRaises(JobError) as ctx: self.sup.escalate(done['job_id'], to='sedra', reason='x')
         self.assertEqual(ctx.exception.code, 'already_final')
 
     def test_explicit_attempt_id_still_wins_over_a_prepared_one(self):
@@ -496,7 +496,7 @@ class SupervisorGlueTests(Base):
 
 
 class BoundaryTests(unittest.TestCase):
-    SRC = RUNTIME / 'src' / 'guppi_runtime'
+    SRC = RUNTIME / 'src' / 'sedra_runtime'
 
     def test_modules_name_no_provider_or_model(self):
         for name in ('jobs/context_assembly.py', 'jobs/job_repair.py'):

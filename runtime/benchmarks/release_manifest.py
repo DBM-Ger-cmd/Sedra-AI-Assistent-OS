@@ -1,7 +1,7 @@
 """Release-Manifest fuer den Updater: `release/MANIFEST.sha256` aus einem Commit erzeugen und einen Tag pruefen.
 
 Der Updater laedt das Zip eines Tags vX.Y.Z von GitHub und verlangt darin `release/MANIFEST.sha256`
-(`uix_server.update_vorschau`, `update_anwenden.plan`): jede Datei unter runtime/src/guppi_runtime/ und runtime/config/
+(`uix_server.update_vorschau`, `update_anwenden.plan`): jede Datei unter runtime/src/sedra_runtime/ und runtime/config/
 muss darin stehen und stimmen, sonst bricht er ab. Erzeugt wird das Manifest aus dem **Commit** (git archive), nicht aus
 dem Arbeitsbaum - dort liegen local_paths.yaml, .bak-Dateien und __pycache__, die nicht ins Release gehoeren.
 Die Datei gilt nur fuer den Stand, den der Tag bekommt; auf main veraltet sie mit dem naechsten Commit. Vor jedem Tag neu erzeugen.
@@ -27,7 +27,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 sys.path.insert(0, str(REPO / "runtime" / "src"))
 
-from guppi_runtime.update_anwenden import MANIFEST, UpdateFehler, manifest_erzeugen, plan  # noqa: E402
+from sedra_runtime.update_anwenden import MANIFEST, UpdateFehler, manifest_erzeugen, plan  # noqa: E402
 
 
 def auspacken(repo: Path, rev: str, ziel: Path) -> None:

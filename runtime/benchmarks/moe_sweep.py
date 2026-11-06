@@ -3,7 +3,7 @@ r"""Balance of expert layers in host RAM vs. VRAM for a MoE recipe on THIS PC (a
     .venv\\Scripts\\python.exe benchmarks/moe_sweep.py <project_dir> <recipe_id> --window 49152 --moe 48,40,36,32 --ubatch 512,2048
         [--prompt-tokens 16000]
 
-For every (n_cpu_moe, ubatch) the recipe's server is started with that window, one prompt of real GUPPI source (~prompt-tokens) is
+For every (n_cpu_moe, ubatch) the recipe's server is started with that window, one prompt of real SEDRA source (~prompt-tokens) is
 answered (max 256 tokens), and the server's own timings (prompt and generation tokens/s) plus the free GPU memory after the answer are
 recorded. A combination below the 1 GiB reserve is marked and the sweep does not go further down that ubatch (fewer layers in RAM
 only needs more memory). Results: runtime_data/measurements/moe_sweep_<recipe>_<date>.json. Nothing in any recipe is changed.
@@ -27,14 +27,14 @@ sys.path.insert(0, str(RUNTIME / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from context_ladder import RESERVE_GIB, gpu_mib                                       # noqa: E402
-from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
 
 
 def source_text(n_chars):
     parts, size = [], 0
-    for f in sorted((RUNTIME / "src" / "guppi_runtime").rglob("*.py")):
+    for f in sorted((RUNTIME / "src" / "sedra_runtime").rglob("*.py")):
         t = f.read_text(encoding="utf-8")
         parts.append(f"# file: {f.name}\n{t}\n"); size += len(t)
         if size >= n_chars:
@@ -95,7 +95,7 @@ def main():
     recipe = recipes[args.recipe]
     alias = str(recipe.get("model") or recipe["id"])
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_moesweep_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_moesweep_")))
     prompt = source_text(int(args.prompt_tokens * 3.2))
     rows = []
     out = project / "runtime_data" / "measurements" / f"moe_sweep_{args.recipe}_{date.today().isoformat()}_{time.strftime('%H%M%S')}.json"

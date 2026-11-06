@@ -24,6 +24,6 @@ if args.install:
         raise SystemExit('Bundled SDK currently targets Windows x64; no automatic download or alternate backend')
     expected=(root/'.venv').resolve()
     if Path(sys.prefix).resolve()!=expected:
-        raise SystemExit('Use the GUPPI .venv Python interpreter; global installation refused')
+        raise SystemExit('Use the SEDRA .venv Python interpreter; global installation refused')
     subprocess.run([sys.executable,'-m','pip','install','--no-index','--no-deps',str(wheel)],check=True)
-    print('Integrated SDK installed in GUPPI environment; target PC acceptance remains required')
+    print('Integrated SDK installed in SEDRA environment; target PC acceptance remains required')

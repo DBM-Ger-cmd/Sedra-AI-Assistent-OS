@@ -266,7 +266,7 @@ class ProcessBrowser(unittest.TestCase):
 
     def test_course_symbols_and_pattern_c(self):
         def run(page, url):
-            from guppi_runtime.workflows.process import PREFIX
+            from sedra_runtime.workflows.process import PREFIX
             app = self.open(page, 'workflow')
             # Muster C aus der Vorlagengalerie: Prozessmodell mit Kandidaten-Markierung, speicherbar, nicht ausführbar
             app.get_by_role('tab', name='Vorlagen').click()

@@ -17,7 +17,7 @@ def canonical_sha(path):
 
 
 def preview(candidate, target):
-    from guppi_runtime import update_anwenden as ua
+    from sedra_runtime import update_anwenden as ua
     candidate, target = Path(candidate).resolve(), Path(target).resolve()
     if candidate == target or candidate.is_relative_to(target) or target.is_relative_to(candidate):
         raise ValueError('candidate_and_installation_must_be_separate')
@@ -50,10 +50,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     candidate = Path(__file__).resolve().parent
     # In the repository this script lives in release/; the ZIP puts it at its root.
-    if not (candidate / 'runtime/src/guppi_runtime').is_dir():
+    if not (candidate / 'runtime/src/sedra_runtime').is_dir():
         candidate = candidate.parent
     sys.path.insert(0, str(candidate / 'runtime/src'))
-    from guppi_runtime import update_anwenden as ua
+    from sedra_runtime import update_anwenden as ua
     try:
         plan, key, manifest, meta = preview(candidate, args.root)
         print(json.dumps({'candidate': meta['version'], 'baseline': meta['baseline_commit'],

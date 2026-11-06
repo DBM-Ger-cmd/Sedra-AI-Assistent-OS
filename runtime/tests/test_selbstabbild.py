@@ -5,10 +5,10 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.workflows import selbstabbild as sa
-from guppi_runtime.workflows.policy import assessment
-from guppi_runtime.workflows.process import metadata
-from guppi_runtime.workflows.store import WorkflowStore
+from sedra_runtime.workflows import selbstabbild as sa
+from sedra_runtime.workflows.policy import assessment
+from sedra_runtime.workflows.process import metadata
+from sedra_runtime.workflows.store import WorkflowStore
 
 
 class Selbstabbild(unittest.TestCase):

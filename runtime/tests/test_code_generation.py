@@ -1,14 +1,14 @@
 ﻿import unittest,tempfile,json
 from pathlib import Path
 from unittest.mock import patch
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.projects import ProjectRegistry
-from guppi_runtime.selfdev.code_generation import generate
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.projects import ProjectRegistry
+from sedra_runtime.selfdev.code_generation import generate
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
-ARCH=Path(__file__).resolve().parents[2]/'architecture/GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH=Path(__file__).resolve().parents[2]/'architecture/SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 class GenerationTests(unittest.TestCase):
  def setUp(self):
-  t=tempfile.TemporaryDirectory();self.addCleanup(t.cleanup);self.rt=GuppiRuntime(Path(t.name),ARCH)
+  t=tempfile.TemporaryDirectory();self.addCleanup(t.cleanup);self.rt=SedraRuntime(Path(t.name),ARCH)
   self.project=ProjectRegistry(self.rt).create('Demo');self.file=self.rt.filesystem_tool.root/self.project['workspace_path']/'app.py';self.file.write_text('x = 1\n')
   t=self.file.parent/'tests';t.mkdir();(t/'test_app.py').write_text('import unittest\n')
   self.m=self.rt.brain.create_mission('Ändere Code als Kandidat')
@@ -20,11 +20,11 @@ class GenerationTests(unittest.TestCase):
  def test_repro_harness_runs_first_only_when_selected_and_stays_read_only(self):
   with self.output({'changes':[{'path':'app.py','content':'x = 2\n'}]}):out=generate(self.rt,self.m,self.project,['app.py','tests/test_app.py'])
   self.assertEqual(out['candidate_request']['test_commands'],[['python3','-m','unittest','discover','-s','tests','-v']])
-  (self.file.parent/'tests'/'_guppi_repro.py').write_text('print("REPRO all tests pass")\n')
-  files=['app.py','tests/test_app.py','tests/_guppi_repro.py']
+  (self.file.parent/'tests'/'_sedra_repro.py').write_text('print("REPRO all tests pass")\n')
+  files=['app.py','tests/test_app.py','tests/_sedra_repro.py']
   with self.output({'changes':[{'path':'app.py','content':'x = 2\n'}]}):out=generate(self.rt,self.m,self.project,files)
-  self.assertEqual(out['candidate_request']['test_commands'],[['python3','tests/_guppi_repro.py'],['python3','-m','unittest','discover','-s','tests','-v']])
-  with self.output({'changes':[{'path':'tests/_guppi_repro.py','content':'import os\n'}]}):
+  self.assertEqual(out['candidate_request']['test_commands'],[['python3','tests/_sedra_repro.py'],['python3','-m','unittest','discover','-s','tests','-v']])
+  with self.output({'changes':[{'path':'tests/_sedra_repro.py','content':'import os\n'}]}):
    with self.assertRaises(ValueError):generate(self.rt,self.m,self.project,files)
  def test_invented_path_refused(self):
   with self.output({'changes':[{'path':'outside.py','content':'x=2'}]}):
@@ -57,7 +57,7 @@ class GenerationTests(unittest.TestCase):
    with self.assertRaises(ValueError) as ctx:generate(self.rt,self.m,self.project,['app.py','tests/test_app.py'])
   self.assertIn('model_output_not_json:truncated',str(ctx.exception))
  def test_source_limit_grows_with_the_window(self):
-  from guppi_runtime.selfdev.code_generation import source_limit
+  from sedra_runtime.selfdev.code_generation import source_limit
   self.assertEqual(source_limit(None,4096),65536)
   self.assertEqual(source_limit(49152,16000),(49152-16000-2048)*3)
   self.assertEqual(source_limit(8192,4096),65536)

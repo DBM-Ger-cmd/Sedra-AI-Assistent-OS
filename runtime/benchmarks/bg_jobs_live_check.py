@@ -16,11 +16,11 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.devenv.devvm import DevWorkspace                       # noqa: E402
-from guppi_runtime.devenv.devvm_agents import make_jobs                    # noqa: E402
-from guppi_runtime.devenv.devvm_tools import DevToolBox                    # noqa: E402
-from guppi_runtime.sandbox.broker import SandboxBroker              # noqa: E402
-from guppi_runtime.sandbox.provider import MicrosandboxProvider    # noqa: E402
+from sedra_runtime.devenv.devvm import DevWorkspace                       # noqa: E402
+from sedra_runtime.devenv.devvm_agents import make_jobs                    # noqa: E402
+from sedra_runtime.devenv.devvm_tools import DevToolBox                    # noqa: E402
+from sedra_runtime.sandbox.broker import SandboxBroker              # noqa: E402
+from sedra_runtime.sandbox.provider import MicrosandboxProvider    # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from devvm_build import sandbox_text                                # noqa: E402

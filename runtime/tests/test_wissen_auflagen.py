@@ -15,9 +15,9 @@ from unittest import mock
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import gated
-from guppi_runtime.wissen import adapter, desk_wissen, hilfen, zerlegen
-from guppi_runtime.wissen import speicher as S
+from sedra_runtime.desk import gated
+from sedra_runtime.wissen import adapter, desk_wissen, hilfen, zerlegen
+from sedra_runtime.wissen import speicher as S
 from test_wissen_desk import Basis as DeskBasis
 from wissen_fixture import FakeEmbedServer, alle_freigeben, freigeben, konfig_fuer, oeffnen, repo_anlegen, speicher_anlegen
 
@@ -61,7 +61,7 @@ class AtomarSchreiben(Basis):
         self.aufnehmen(erster)
         vorher = self.jsonl().read_text(encoding="utf-8")
         zweiter = self.vorschlag("Zweiter")
-        with mock.patch("guppi_runtime.wissen.hilfen.os.replace", side_effect=OSError("Platte voll")):
+        with mock.patch("sedra_runtime.wissen.hilfen.os.replace", side_effect=OSError("Platte voll")):
             with self.assertRaises(OSError):
                 self.aufnehmen(zweiter)
         self.assertEqual(self.jsonl().read_text(encoding="utf-8"), vorher, "die Datei ist entweder ganz alt oder ganz neu")
@@ -74,7 +74,7 @@ class AtomarSchreiben(Basis):
         v = self.vorschlag()
         self.aufnehmen(v)
         vorher = self.jsonl().read_text(encoding="utf-8")
-        with mock.patch("guppi_runtime.wissen.hilfen.os.replace", side_effect=OSError("gesperrt")):
+        with mock.patch("sedra_runtime.wissen.hilfen.os.replace", side_effect=OSError("gesperrt")):
             with self.assertRaises(OSError):
                 self.sp.vorschlag_zuruecknehmen(v["id"])
         self.assertEqual(self.jsonl().read_text(encoding="utf-8"), vorher)
@@ -89,7 +89,7 @@ class AtomarSchreiben(Basis):
         self.assertEqual(len(saetze), 2)
         datei = self.sp._nachmessung_datei()
         vorher = datei.read_text(encoding="utf-8")
-        with mock.patch("guppi_runtime.wissen.hilfen.os.replace", side_effect=OSError("gesperrt")):
+        with mock.patch("sedra_runtime.wissen.hilfen.os.replace", side_effect=OSError("gesperrt")):
             with self.assertRaises(OSError):
                 self.sp.nachmessung_bewerten(saetze[0]["frage_sha256"], "getroffen")
             self.sp.suche("Kartendaten mit Prüfwert", leser=S.CAPTAIN)                 # das Protokoll selbst ist nur ein Nebenzweck: kein Fehler nach außen
@@ -448,7 +448,7 @@ class AntragSchliesstSichBeiNichtAnwendbar(DeskBasis):
         block = {r[0] for r in self.sp.db.execute("SELECT id FROM abschnitte")}
         v = self.sp.vorschlagen(titel="Lease zuerst", text="Vor jedem Laden die Lease holen.", belege=[], agent_id="A-3", lauf_id="J-1", aufgabe_id="I-1",
                                 block_ids=block, leser=S.leser("agent", 1, None, "A-3"))
-        with mock.patch("guppi_runtime.wissen.vorschlaege.schreibe_atomar", side_effect=PermissionError("von einem anderen Programm geöffnet")):
+        with mock.patch("sedra_runtime.wissen.vorschlaege.schreibe_atomar", side_effect=PermissionError("von einem anderen Programm geöffnet")):
             res = self.hub.decide({"id": "request:" + v["mission_id"], "way": "freigeben_und_anwenden"})["result"]
         self.assertEqual((res["status"], res["reason"]), ("guard_refused", "wis_speicher_nicht_lesbar"))
         self.assertEqual(self.mission(v["mission_id"])["lifecycle"]["status"], "closed")

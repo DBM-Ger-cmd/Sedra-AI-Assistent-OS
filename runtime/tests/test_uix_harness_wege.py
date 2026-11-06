@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.uix_server import UIXHub, make_server
+from sedra_runtime.uix_server import UIXHub, make_server
 from test_harness_lauf import SKRIPT
 from test_uix_harness_api import ARCH, MODELL, anfrage
 from test_uix_harness_lauf import KATALOG, typen

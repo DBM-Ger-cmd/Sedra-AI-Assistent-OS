@@ -4,9 +4,9 @@ import os
 import tempfile
 import unittest
 
-from guppi_runtime.agent_manager.devvm_templates import export_role_templates, role_template
-from guppi_runtime.agent_manager.service import AgentManager
-from guppi_runtime.devenv.devvm_tools import ROLE_TOOLS, SCHEMAS, SYSTEM, TERMINAL
+from sedra_runtime.agent_manager.devvm_templates import export_role_templates, role_template
+from sedra_runtime.agent_manager.service import AgentManager
+from sedra_runtime.devenv.devvm_tools import ROLE_TOOLS, SCHEMAS, SYSTEM, TERMINAL
 
 
 class DevvmTemplatesTest(unittest.TestCase):
@@ -20,7 +20,7 @@ class DevvmTemplatesTest(unittest.TestCase):
                 self.assertEqual([r["status"] for r in results], ["created"] * len(ROLE_TOOLS))
                 self.assertEqual([r["problems"] for r in results], [[]] * len(ROLE_TOOLS))
                 listing = manager.list_templates()
-                self.assertEqual([t["ref"] for t in listing], sorted(f"guppi.devvm.{r}@1.0.0" for r in ROLE_TOOLS))
+                self.assertEqual([t["ref"] for t in listing], sorted(f"sedra.devvm.{r}@1.0.0" for r in ROLE_TOOLS))
                 self.assertTrue(all(t["trust"] == "UNVERIFIED" and t["ok"] for t in listing))
                 self.assertEqual(manager.import_templates(folder)[0]["status"], "unchanged")
             finally:

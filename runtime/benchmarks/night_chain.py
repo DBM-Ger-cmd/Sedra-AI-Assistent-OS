@@ -111,7 +111,7 @@ def free_ram_gb():
 
 
 def canary_failed():
-    from guppi_runtime.models import gpu_canary
+    from sedra_runtime.models import gpu_canary
     state = gpu_canary.read_state()
     return state.get("passed") is False and state.get("result") != "port_in_use"
 
@@ -131,7 +131,7 @@ def real_runner(argv, env, log_path, timeout_s):
 
 def work_pass(project, order, args, *, now=datetime.datetime.now, runner=real_runner, canary=canary_failed, ram=free_ram_gb, sleep=time.sleep, say=print):
     """Ein Durchgang über die offenen Aufträge; (Liste der Zeilen, Stoppgrund oder None). Hält die Lease-Reservierung, solange gebaut wird."""
-    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.jobs.testlab import TestLab, default_path
     project = Path(project)
     out = project / "runtime_data" / "measurements" / f"night_{now().date().isoformat()}"
     out.mkdir(parents=True, exist_ok=True)

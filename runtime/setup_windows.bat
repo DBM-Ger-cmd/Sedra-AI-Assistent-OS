@@ -7,4 +7,4 @@ if errorlevel 1 exit /b 1
 if errorlevel 1 exit /b 1
 ".venv\Scripts\python.exe" prepare_sandbox.py --install
 if errorlevel 1 exit /b 1
-echo GUPPI runtime and integrated sandbox SDK installed. PC acceptance is pending.
+echo SEDRA runtime and integrated sandbox SDK installed. PC acceptance is pending.

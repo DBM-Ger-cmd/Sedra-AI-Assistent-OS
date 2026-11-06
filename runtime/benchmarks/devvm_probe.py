@@ -1,4 +1,4 @@
-r"""Phase 0 of the DevVM mission (docs/DEVVM_AUFTRAG_2026-10-05.md): what is GUPPI's microVM as a developer environment? A measurement, nothing is changed.
+r"""Phase 0 of the DevVM mission (docs/DEVVM_AUFTRAG_2026-10-05.md): what is SEDRA's microVM as a developer environment? A measurement, nothing is changed.
 
     .venv\Scripts\python.exe benchmarks/devvm_probe.py <project_dir> [--starts 8]
 
@@ -25,7 +25,7 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from sedra_runtime.jobs.run_log import RunLog                                             # noqa: E402
 
 GUEST_PARTS = {
     "tools": r'''
@@ -139,7 +139,7 @@ def make_wheel(folder: Path):
 
 
 def run_job(provider, policy, source, commands, exports=(), label="job"):
-    job_root = Path(tempfile.mkdtemp(prefix="guppi_devvm_job_"))
+    job_root = Path(tempfile.mkdtemp(prefix="sedra_devvm_job_"))
     request = {"job_id": f"devvm-{label}-{int(time.time() * 1000)}", "policy": policy, "source": str(source), "job_root": str(job_root),
                "commands": commands, "exports": list(exports)}
     t0 = time.time()
@@ -164,7 +164,7 @@ def main():
     ap.add_argument("project"); ap.add_argument("--starts", type=int, default=8)
     args = ap.parse_args()
     import yaml
-    from guppi_runtime.sandbox.provider import MicrosandboxProvider
+    from sedra_runtime.sandbox.provider import MicrosandboxProvider
     project = Path(args.project)
     policy = yaml.safe_load((RUNTIME / "config" / "sandbox.yaml").read_text(encoding="utf-8"))["sandbox"]
     provider = MicrosandboxProvider(project / "runtime_data" / "sandboxes" / "backend_home", RUNTIME)
@@ -172,7 +172,7 @@ def main():
     report = {}
     with log:
         # ---- starts
-        src = Path(tempfile.mkdtemp(prefix="guppi_devvm_src_")); (src / "hello.py").write_text("print('ok')\n", encoding="utf-8")
+        src = Path(tempfile.mkdtemp(prefix="sedra_devvm_src_")); (src / "hello.py").write_text("print('ok')\n", encoding="utf-8")
         rows = []
         for i in range(args.starts):
             res = run_job(provider, policy, src, [["python3", "/workspace/hello.py"]], label=f"start{i}")
@@ -184,7 +184,7 @@ def main():
         log.say(f"== starts: {report['starts']['ok']} ok, median {report['starts']['median_seconds']} s")
         log.save(report)
         # ---- capability (one VM, several commands: the files written by one are read by the next)
-        src = Path(tempfile.mkdtemp(prefix="guppi_devvm_src_")); make_wheel(src / "wheels")
+        src = Path(tempfile.mkdtemp(prefix="sedra_devvm_src_")); make_wheel(src / "wheels")
         for name, code in GUEST_PARTS.items():
             if name != "export_files": (src / f"p_{name}.py").write_text(code, encoding="utf-8")
         order = ["tools", "resources", "files", "state", "timing", "pip"]
@@ -197,7 +197,7 @@ def main():
         log.say(f"== capability: {res.get('status')} {res.get('error') or ''} {res['wall_seconds']} s, parts {sorted(got)}")
         log.save(report)
         # ---- export
-        src2 = Path(tempfile.mkdtemp(prefix="guppi_devvm_src_")); (src2 / "p_export_files.py").write_text(GUEST_PARTS["export_files"], encoding="utf-8")
+        src2 = Path(tempfile.mkdtemp(prefix="sedra_devvm_src_")); (src2 / "p_export_files.py").write_text(GUEST_PARTS["export_files"], encoding="utf-8")
         res = run_job(provider, policy, src2, [["python3", "/workspace/p_export_files.py"]], exports=["out/small.txt", "out/medium.bin"], label="export")
         exported = {e["path"]: len(base64.b64decode(e["data_base64"])) for e in res.get("exports", [])}
         report["export"] = {"status": res.get("status"), "error": res.get("error"), "bytes_back": exported}
@@ -205,7 +205,7 @@ def main():
         # ---- source size / count
         rows = []
         for count in (1, 50, 200):
-            srcn = Path(tempfile.mkdtemp(prefix="guppi_devvm_src_"))
+            srcn = Path(tempfile.mkdtemp(prefix="sedra_devvm_src_"))
             for i in range(count): (srcn / f"f{i}.py").write_text(f"x = {i}\n" * 40, encoding="utf-8")
             r = run_job(provider, policy, srcn, [["python3", "-c", "import os; print(len(os.listdir('/workspace')))"]], label=f"src{count}")
             rows.append({"files": count, "status": r.get("status"), "error": r.get("error"), "wall_seconds": r["wall_seconds"]})

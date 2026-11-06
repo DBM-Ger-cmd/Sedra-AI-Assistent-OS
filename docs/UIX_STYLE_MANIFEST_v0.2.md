@@ -1,12 +1,12 @@
 # UIX Style Manifest v0.2 (Stand 14.10.2026)
 
-Abgeleitet aus dem, was in `runtime/src/guppi_runtime/uix/` tatsächlich steht: `css/desktop.css` (451 Zeilen), `retro_desktop.html` (9 Fenster), 15 Skripte in `js/`. Nichts hier ist erfunden; wo das Manifest etwas vorschreibt, das der Code noch nicht einhält, steht es unter „Soll“ oder in Abschnitt 9. Das Übergabepaket vom 13.10. verlangt dieses Dokument als ersten Schritt vor Shell-Architektur, Tokens, Komponenten und Design-Skills.
+Abgeleitet aus dem, was in `runtime/src/sedra_runtime/uix/` tatsächlich steht: `css/desktop.css` (451 Zeilen), `retro_desktop.html` (9 Fenster), 15 Skripte in `js/`. Nichts hier ist erfunden; wo das Manifest etwas vorschreibt, das der Code noch nicht einhält, steht es unter „Soll“ oder in Abschnitt 9. Das Übergabepaket vom 13.10. verlangt dieses Dokument als ersten Schritt vor Shell-Architektur, Tokens, Komponenten und Design-Skills.
 
 Zahlen zur Ausgangslage: 301 Farbangaben im CSS, davon 178 verschiedene; 13 Tokens in `:root`, aber nur 15-mal per `var()` benutzt. 186 CSS-Klassen. Das Erscheinungsbild ist konsistent, weil **eine** Hand es geschrieben hat, nicht weil es festgehalten wäre. Dieses Manifest hält es fest.
 
 ## 1. Charakter
 
-GUPPI OS ist ein **Retro-Desktop im Stil von Windows XP** mit nautisch-technischer Sprache (Captain, Brücke, Maschinenraum, Logbuch, Besatzung) und einem Maskottchen, dem Guppy. Die Oberfläche ist freundlich, hell und dicht: kleine Schrift, viele Informationen, klare Kästen. Sie soll vertraut wirken (Fenster, Taskleiste, Startmenü) und dabei immer sagen, was wirklich ist. Vier Grundsätze, alle schon im Code sichtbar:
+SEDRA OS ist ein **Retro-Desktop im Stil von Windows XP** mit nautisch-technischer Sprache (Captain, Brücke, Maschinenraum, Logbuch, Besatzung) und einem Maskottchen, dem Guppy. Die Oberfläche ist freundlich, hell und dicht: kleine Schrift, viele Informationen, klare Kästen. Sie soll vertraut wirken (Fenster, Taskleiste, Startmenü) und dabei immer sagen, was wirklich ist. Vier Grundsätze, alle schon im Code sichtbar:
 
 1. **Ehrlich.** Jeder Zustand kommt aus `/api/...`. Ohne Verbindung steht „OFFLINE“, ohne Modell „nur planen“, ohne Projekt ein ganzer Satz. Platzhalter wie „null“ oder „undefined“ sind Fehler (Test `test_model_without_name_is_shown_by_recipe_id`).
 2. **Deutsch, in ganzen Sätzen.** Beschriftungen und Hinweise in der Sprache des Captains; technische Namen (Rezept-IDs, Phasen wie READY, Fehlercodes) bleiben englisch und werden daneben erklärt.
@@ -23,7 +23,7 @@ GUPPI OS ist ein **Retro-Desktop im Stil von Windows XP** mit nautisch-technisch
 
 Regeln, die daraus für jede Datei in `uix/js` folgen (heute eingehalten, künftig per Test):
 - Code auf oberster Ebene nur in `main.js` (`test_only_main_runs_code_at_load`).
-- Jede Datei unter 400 Zeilen, damit GUPPI sie als Kandidat ändern kann.
+- Jede Datei unter 400 Zeilen, damit SEDRA sie als Kandidat ändern kann.
 - Namen so, wie die Runtime sie nennt: Phasen `READY`, `PAUSED`, `COMPLETE`, `FAILED`; Zustände `ok`/`warn`/`bad`; nie eigene Synonyme.
 - Browser-Speicher nur für Anzeige-Komfort (Fensterlage, Chat-Anzeige, Filter) und immer in `try/catch`; nie für etwas, das die Runtime wissen muss.
 - Die Abnahme ist der echte Browser: `benchmarks/uix_check.py` muss `result ok` melden.
@@ -79,7 +79,7 @@ Regel: **Eine neue Farbe im CSS braucht ein Token oder eine Begründung im Komme
 |---|---|---|
 | Grundschrift | `Tahoma, Verdana, Segoe UI, sans-serif` | unverändert, als `--font-ui` |
 | Monospace | `Consolas, monospace` (Rohdaten, Diagnose, Dateivorschau) | `--font-mono` |
-| Serife | `Georgia, serif` nur im Fenster „GUPPI Chat“ (`.cc-a`, `.cc-empty h2`) | bewusste Ausnahme, solange das Fenster den Claude-Desktop-Stil nachahmt; fällt mit der Entscheidung zu den zwei Chats (UIX_ANALYSE 4.1 Nr. 3) |
+| Serife | `Georgia, serif` nur im Fenster „SEDRA Chat“ (`.cc-a`, `.cc-empty h2`) | bewusste Ausnahme, solange das Fenster den Claude-Desktop-Stil nachahmt; fällt mit der Entscheidung zu den zwei Chats (UIX_ANALYSE 4.1 Nr. 3) |
 | Größen | 12 px Standard (29-mal), 13 px Fließtext/Chat (11), 11 px Nebentext (8), 10 px Badges (8), 20–22 px Fensterüberschriften, 44 px Datei-Symbol | Stufen: `--fs-xs 10`, `--fs-s 11`, `--fs-m 12`, `--fs-l 13`, `--fs-h 20`; die Einzelwerte 12.5/14.5/15/21 auf die Stufen ziehen |
 | Zeilenhöhe | 1.4–1.55 in Fließtext | `1.45` |
 
@@ -101,8 +101,8 @@ Regel: **Eine neue Farbe im CSS braucht ein Token oder eine Begründung im Komme
 | Zeilen in Karten | `.info-row`, `.dev-row`, `.mr-card .line` | Beschriftung links (darf umbrechen), Wert rechts (bricht nicht). Drei Klassen, ein Muster → Soll: `.row`. |
 | **Knöpfe** | `.action` (Handlung, blau), `.tool` (Werkzeug, beige), `.send` (= `.action`), `.dev-primary/.dev-secondary/.dev-danger`, `.cc-new`, `.cc-bar button` | Handlung mit Wirkung = `.action`; Ansicht/Navigation = `.tool`; gefährlich = `.dev-danger` (rot). `chatButton` sperrt sich während der Aktion, `actionButton` meldet Fehler per `alert`. Soll: `.dev-*` und `.send` auf `.action`/`.tool` zurückführen. |
 | **Zustandsmarken** | `.badge` (Mission-Liste), `.phase` (+ `.warn .bad`), `.tag` (+ `.warn .bad`), `.step` (+ `.done .active .fail`), `.dev-state` (+ `.bad`), `.ok`, `.bad`, `.mbad` | Pille 10 px fett; Farbe nur aus ok/warn/bad. `.badge` und `.phase` sind dasselbe Element → Soll: `.pill` mit Zustandsmodifikator; `.step` behält die Leiste. |
-| **Chat** | `.msg .av .bub`, `.bub .card .gate .row .muted`, `.attachbar .chip`, `.modelbar`, `.inputbar`, `.diag-pane .diag-row .diag-dot .diag-out .diag-details` | GUPPI-Avatar Guppy-Blau, „Du“ Blau-Violett; Gate-Karte warn-gelb mit zwei Knöpfen (Ablehnen / genau diese Aktion einmal freigeben); Fehler mit `<details>` und Kopierknopf. |
-| Desktop | `.desktop .hill .projects .stations .desktop-icon .folder .guppi-dock .guppi-bubble .guppi` | Icons sind nur Launcher (Doppelklick/Enter), `.selected` zur Hervorhebung; Sprechblase ist GUPPIs einzige „Stimme“ außerhalb der Fenster. |
+| **Chat** | `.msg .av .bub`, `.bub .card .gate .row .muted`, `.attachbar .chip`, `.modelbar`, `.inputbar`, `.diag-pane .diag-row .diag-dot .diag-out .diag-details` | SEDRA-Avatar Guppy-Blau, „Du“ Blau-Violett; Gate-Karte warn-gelb mit zwei Knöpfen (Ablehnen / genau diese Aktion einmal freigeben); Fehler mit `<details>` und Kopierknopf. |
+| Desktop | `.desktop .hill .projects .stations .desktop-icon .folder .sedra-dock .sedra-bubble .sedra` | Icons sind nur Launcher (Doppelklick/Enter), `.selected` zur Hervorhebung; Sprechblase ist SEDRAs einzige „Stimme“ außerhalb der Fenster. |
 | Taskleiste | `.taskbar .start .taskbtn (+ .launcher .open .on) .tray .clock` | ein Knopf je offenem Fenster; Launcher verbirgt sich, solange sein Fenster offen ist; Knöpfe schrumpfen mit Ellipse; Uhr und Zustand bleiben immer sichtbar. |
 | Startmenü / Kontextmenü | `.startmenu .starthead .menu-main .menu-side .menuitem`, `.context-menu .ctx-item .ctx-sep` | schließen bei Klick daneben und Escape; Einträge per Tastatur. |
 | Verarbeitungsfenster | `.processor .preview .processor-side .meta .proc-actions .file-placeholder .steps .mr-grid` | ein gemeinsames Fenster für Datei, Mission, Brücke, Logbuch, Maschinenraum (Grenze: nur eines zur Zeit, siehe UIX_ANALYSE 4.1 Nr. 1). Vorschau ist eine Spalte; Bild/Platzhalter zentriert. |
@@ -122,14 +122,14 @@ Regel: Grün heißt „es ist gut“, nie „es ist ein Zustand“. Ein `BLOCKED
 
 ## 6. Sprache und Texte
 
-- Anrede „du“, GUPPI spricht als „ich“, der Mensch heißt Captain.
+- Anrede „du“, SEDRA spricht als „ich“, der Mensch heißt Captain.
 - Ein Hinweis sagt **was ist, warum, und was man tun kann** („Nicht genug freier Grafikspeicher … Beende andere Programme … oder wähle ein kleineres Modell“). `explainModelError` und `/api/diagnose/explain` sind die Vorbilder.
 - Keine Schein-Dialoge: `alert()`/`confirm()`/`prompt()` nur für Freigaben und Fehler, nicht für Hinweise (seit 13.10.: „Projekte“ ohne `alert`). Offene Ausnahmen: `attachPath` (Pfad per `prompt`), `requestCodeCandidate` (zwei `prompt`), `createProject`. Soll: eigene kleine Eingabe im Fenster.
 - Jede Zahl mit Einheit und Bezug („10,7 GB frei von 12,0 GB“, „Kontext 8192“).
 
 ## 7. Bedienung mit der Tastatur (Phase 5, begonnen)
 
-Ist: Tab/Enter/Leertaste für Fenstersteuerung, Startmenü, Kontextmenü, Taskleiste, Projektordner; Enter sendet, Umschalt+Enter neue Zeile (GUPPI Chat); Escape schließt Menüs; sichtbarer Fokusrahmen (weiß auf Blau, Blau in Menüs).
+Ist: Tab/Enter/Leertaste für Fenstersteuerung, Startmenü, Kontextmenü, Taskleiste, Projektordner; Enter sendet, Umschalt+Enter neue Zeile (SEDRA Chat); Escape schließt Menüs; sichtbarer Fokusrahmen (weiß auf Blau, Blau in Menüs).
 Soll: echte `<button>`-Elemente statt `div` + `makeKeyboardButton`; Alt-Tab-Ersatz (Fensterwechsel per Tastatur); Fokus landet beim Öffnen eines Fensters auf dessen erstem Bedienelement.
 
 ## 8. Themes: wie ein Wechsel möglich wird, ohne die Shell anzufassen
@@ -151,10 +151,10 @@ Ein Theme ist ein zweiter `:root`-Block mit denselben Token-Namen, aktiviert üb
 | `.badge`/`.phase`/`.tag` dreifach, `.info-row`/`.dev-row`/`.line` dreifach, `.dev-primary`/`.send` doppelt zu `.action` | `.pill`, `.row`, `.action` als Basis; alte Namen bleiben als Aliase, bis die JS-Dateien nachgezogen sind |
 | 9 Titelleisten von Hand im HTML | Fenstervorlage `<template id="windowFrame">` + `makeWindow(id, title, toolbar)` (UIX_ANALYSE 4.3 Nr. 12); danach kann `showProcessor` mehrere Fenster öffnen |
 | `role="dialog"` nur bei 3 von 9 Fenstern | mit der Fenstervorlage automatisch |
-| Serife nur im GUPPI Chat | fällt mit der Chat-Entscheidung |
+| Serife nur im SEDRA Chat | fällt mit der Chat-Entscheidung |
 | Hardware-Fenster dunkel | mit Themes (8) |
 
-Reihenfolge: ~~Tokens~~ → Komponenten-Basisklassen → Fenstervorlage → Themes. Jeder Schritt einzeln, jeder mit `uix_check.py` abgenommen; die ersten drei eignen sich als GUPPI-Kandidaten (CSS/HTML-Änderung mit Browser-Abnahme als verstecktem Test), sobald `uix_check.py` auf dem GUPPI-PC läuft.
+Reihenfolge: ~~Tokens~~ → Komponenten-Basisklassen → Fenstervorlage → Themes. Jeder Schritt einzeln, jeder mit `uix_check.py` abgenommen; die ersten drei eignen sich als SEDRA-Kandidaten (CSS/HTML-Änderung mit Browser-Abnahme als verstecktem Test), sobald `uix_check.py` auf dem SEDRA-PC läuft.
 
 ## 10. Quellen
 
@@ -162,14 +162,14 @@ Reihenfolge: ~~Tokens~~ → Komponenten-Basisklassen → Fenstervorlage → Them
 
 ## 11. Nachtrag 14.10., Bewegung und Name
 
-**Name:** Das System heißt SEDRA (Startknopf, Startmenü, Tray, Seitentitel, Hardware-Seite, README). GUPPI bleibt Maskottchen und Stimme: der Guppy, „GUPPI:“ im Chat, die Fenster „GUPPI Interface“ und „GUPPI Chat“. Systemfenster tragen keinen Präfix mehr („Modelle“, „Hardware“, „Besatzung“, „Entwicklungsumgebung“, „Verarbeitung“).
+**Name:** Das System heißt SEDRA (Startknopf, Startmenü, Tray, Seitentitel, Hardware-Seite, README). SEDRA bleibt Maskottchen und Stimme: der Guppy, „SEDRA:“ im Chat, die Fenster „SEDRA Interface“ und „SEDRA Chat“. Systemfenster tragen keinen Präfix mehr („Modelle“, „Hardware“, „Besatzung“, „Entwicklungsumgebung“, „Verarbeitung“).
 
 **Bewegung (Regel: nur wo sie Zustand trägt, höchstens eine halbe Sekunde je Ereignis, alles unter `prefers-reduced-motion` aus):**
 - Der Guppy ist der Ambient-Status (`#guppyFigure`, Klassen `idle`/`busy`/`gate`/`offline`, gesetzt von `setGuppyMood` aus `/api/models` und `/api/missions` nach jedem Statuslauf): ruhiges Atmen im Leerlauf; schnellerer Flossenschlag und Schwimmen, wenn ein Modell geladen ist oder lädt; Blase mit der Zahl offener Freigaben (Klick öffnet die Brücke); grau mit geschlossenem Auge ohne Verbindung.
 - Fenster blenden in 120 ms ein (`winin`) und schrumpfen beim Minimieren 160 ms Richtung Taskleiste (`.minimizing`, `winout`), danach erst `minimized`.
 - „Denkt nach“ pulsiert mit laufenden Punkten (`.thinking`), bis die Antwort da ist.
 - Seekarte (`js/sea_chart.js`, `.sea-chart`): in jeder Missionskarte und im Mission-Fenster. Hafen → eine Boje je Plan-Schritt → Zielflagge; erledigte Bojen grün, die aktive pulsiert gelb; das Schiff steht an der Phase (im Hafen bis READY, unterwegs bei EXECUTE/VERIFY mit Kielwasser, am Ziel bei COMPLETE, rotes Segel bei FAILED); eine gestrichelte Schranke „Freigabe“ vor der nächsten Boje, solange ein Gate offen ist. `chartModel()` ist rein und wird mit Node geprüft.
-- Anhängen ohne `prompt()`: ein Eingabefeld in der Anhang-Leiste (Enter hängt an, Escape schließt, Fehler erscheinen als GUPPI-Nachricht). Offen bleiben `createProject` und `requestCodeCandidate`.
+- Anhängen ohne `prompt()`: ein Eingabefeld in der Anhang-Leiste (Enter hängt an, Escape schließt, Fehler erscheinen als SEDRA-Nachricht). Offen bleiben `createProject` und `requestCodeCandidate`.
 
 Abgenommen mit `uix_check.py` (13/13), Browser-Proben für Formular, Minimieren und die drei Guppy-Zustände, Node-Test für `chartModel`.
 

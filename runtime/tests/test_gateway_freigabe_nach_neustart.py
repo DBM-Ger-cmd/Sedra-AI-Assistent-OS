@@ -3,11 +3,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.models.base import BaseModelAdapter
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.models.base import BaseModelAdapter
+from sedra_runtime.uix_server import UIXHub
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
 TEXT = 'Bitte eine kurze Übersicht für die Projektabstimmung. Nenne offene Punkte, ohne Termine zu erfinden.'
 
 

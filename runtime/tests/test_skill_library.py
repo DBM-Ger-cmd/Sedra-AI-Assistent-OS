@@ -1,9 +1,9 @@
 import env_skip; env_skip.need_dulwich()   # whole module needs the DevVM git (dulwich); skipped with reason where it is missing
 import tempfile, unittest
 from pathlib import Path
-from guppi_runtime.devenv.devvm import DevWorkspace
-from guppi_runtime.devenv.devvm_tools import DevToolBox
-from guppi_runtime.skill_library import SkillLibrary, build_library, parse_frontmatter, scan
+from sedra_runtime.devenv.devvm import DevWorkspace
+from sedra_runtime.devenv.devvm_tools import DevToolBox
+from sedra_runtime.skill_library import SkillLibrary, build_library, parse_frontmatter, scan
 
 POLICY = {'max_files': 20, 'max_file_bytes': 4000, 'max_input_bytes': 20000}
 GOOD = '---\nname: code-reviewer\ndescription: >\n  Review a diff for correctness bugs.\n  Use for pull requests.\n---\n# Review\n' + ''.join(f'line {i}\n' for i in range(300))
@@ -172,7 +172,7 @@ class ConfigTests(Case):
         self.assertEqual(lib.read('test-driven-development-2')[0], 'body a')
 
     def test_build_configured_expands_placeholders_and_names_the_missing_one(self):
-        from guppi_runtime.skill_library.config import build_configured, library_path
+        from sedra_runtime.skill_library.config import build_configured, library_path
         a, b = self.sources()
         cfg = {'core': {'output': 'out_core', 'license': 'MIT', 'sources': {'first': '<s>/sa', 'second': '<s>/sb'}}, 'bad': {'output': 'out_bad', 'sources': {'x': '<nowhere>/z'}}}
         counts = build_configured('core', cfg, runtime=self.tmp.name, paths={'s': self.tmp.name})
@@ -187,7 +187,7 @@ class ConfigTests(Case):
 
 class WiringTests(Case):
     def test_config_makes_the_library_only_when_asked(self):
-        from guppi_runtime.devenv.devvm_agents import make_skills
+        from sedra_runtime.devenv.devvm_agents import make_skills
         self.assertIsNone(make_skills(None)); self.assertIsNone(make_skills({'enabled': 'all'}))
         self.assertEqual(len(make_skills({'skills': str(self.lib)})), 2)
         with self.assertRaises(OSError): make_skills({'skills': str(self.lib / 'missing')})

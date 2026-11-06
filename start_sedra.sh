@@ -16,8 +16,11 @@ for a in "$@"; do
 done
 HERE=$(cd "$(dirname "$0")" && pwd)
 RUNTIME="$HERE/runtime"
-PROJECT="$HERE/workspace/GUPPI_OS"
-ARCH="$HERE/architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT"
+PROJECT="$HERE/workspace/SEDRA_OS"
+ARCH="$HERE/architecture/SEDRA_Architecture_v1.20_SELF_DEVELOPMENT"
+# Übergang vom alten Ordnernamen (vor 1.23.0); der alte Name ist absichtlich zerlegt, damit er sonst nirgends vorkommt.
+ALT="GUP""PI_OS"
+if [ -d "$HERE/workspace/$ALT" ] && [ ! -e "$PROJECT" ]; then mv "$HERE/workspace/$ALT" "$PROJECT"; fi
 mkdir -p "$PROJECT"
 
 if [ ! -x "$RUNTIME/.venv/bin/python" ]; then
@@ -38,5 +41,6 @@ fi
 cd "$RUNTIME"
 PYTHONPATH="$RUNTIME/src${PYTHONPATH:+:$PYTHONPATH}"
 export PYTHONPATH
+"$RUNTIME/.venv/bin/python" -B -m sedra_runtime.legacy_names --root "$HERE" || true
 # shellcheck disable=SC2086
-exec "$RUNTIME/.venv/bin/python" -B -m guppi_runtime.uix_start --root "$PROJECT" --architecture "$ARCH" $SHELLARG $REST
+exec "$RUNTIME/.venv/bin/python" -B -m sedra_runtime.uix_start --root "$PROJECT" --architecture "$ARCH" $SHELLARG $REST

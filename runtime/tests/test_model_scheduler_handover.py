@@ -3,9 +3,9 @@ same file): request in `TestLab.acquire` -> scheduler drains -> server off -> le
 import tempfile
 import unittest
 
-from guppi_runtime.jobs.model_scheduler import SchedulerError
-from guppi_runtime.jobs.testlab import LeaseBusy, TestLab
-from guppi_runtime.models import gpu_preflight
+from sedra_runtime.jobs.model_scheduler import SchedulerError
+from sedra_runtime.jobs.testlab import LeaseBusy, TestLab
+from sedra_runtime.models import gpu_preflight
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 from model_scheduler_fakes import make_scheduler, resolution
 

@@ -10,8 +10,8 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.orchestra import board
-from guppi_runtime.orchestra.store import open_db
+from sedra_runtime.orchestra import board
+from sedra_runtime.orchestra.store import open_db
 
 ROUNDS = 100
 NOW = '2026-10-22T08:00:00Z'

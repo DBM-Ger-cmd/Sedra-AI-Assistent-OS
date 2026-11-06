@@ -1,6 +1,6 @@
 import unittest
-from guppi_runtime.agent_manager.agent_import import parse_semver, template_ref, check_soul, preview_template
-from guppi_runtime.agent_manager.agent_contracts import ContractError
+from sedra_runtime.agent_manager.agent_import import parse_semver, template_ref, check_soul, preview_template
+from sedra_runtime.agent_manager.agent_contracts import ContractError
 
 class TestParseSemver(unittest.TestCase):
     

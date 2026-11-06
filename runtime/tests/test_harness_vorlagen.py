@@ -7,9 +7,9 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.harness import schleife
-from guppi_runtime.harness import vorlagen
-from guppi_runtime.uix_server import UIXHub, make_server
+from sedra_runtime.harness import schleife
+from sedra_runtime.harness import vorlagen
+from sedra_runtime.uix_server import UIXHub, make_server
 from test_uix_harness_api import ARCH, MODELL, anfrage, strom
 from test_uix_harness_freigabe import Skript
 
@@ -176,18 +176,17 @@ class SitzungMitVorlageTests(unittest.TestCase):
 
 
 class VorlagenTexte(unittest.TestCase):
-    """02.11.2026: die mitgelieferten Vorlagen sind SEDRA, nicht GUPPI, und verbieten Erfundenes und Wiederholung (Log: erfundene Logbuchzeilen, doppelter Absatz)."""
+    """02.11.2026: die mitgelieferten Vorlagen sind SEDRA, nicht SEDRA, und verbieten Erfundenes und Wiederholung (Log: erfundene Logbuchzeilen, doppelter Absatz)."""
 
     def texte(self):
         from pathlib import Path
         ordner = Path(__file__).resolve().parents[1] / 'config' / 'harness_vorlagen'
         return {p.stem: p.read_text(encoding='utf-8') for p in ordner.glob('*.md')}
 
-    def test_keine_vorlage_nennt_guppi_und_alle_verbieten_erfundenes(self):
+    def test_alle_vorlagen_verbieten_erfundenes(self):
         texte = self.texte()
         self.assertEqual(set(texte), {'bauagent', 'desktop-designer', 'masterchat', 'modellierer', 'prozessmodellierer', 'pruefer', 'rueckblick', 'vorarbeiter'})
         for name, text in texte.items():
-            self.assertNotIn('GUPPI', text, name)
             self.assertIn('Erfinde nichts', text, name)
 
     def test_der_vorarbeiter_haengt_kein_logbuchformat_an_antworten_und_kommt_mit_einem_leeren_projekt_zurecht(self):

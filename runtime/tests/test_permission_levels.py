@@ -11,17 +11,17 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.selfdev.development_contracts import development_contract
-from guppi_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore, supervisor_state
-from guppi_runtime.core.permission_levels import PermissionConfig, PermissionGate
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.selfdev.development_contracts import development_contract
+from sedra_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore, supervisor_state
+from sedra_runtime.core.permission_levels import PermissionConfig, PermissionGate
+from sedra_runtime.runtime import SedraRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]
 PERMS = RUNTIME / 'config' / 'permission_levels.yaml'
 SUPERVISOR = RUNTIME / 'config' / 'job_supervisor.yaml'
-ARCH = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 RULES = ARCH / 'core' / 'guard' / 'guard_rules.yaml'
 
 
@@ -45,7 +45,7 @@ class Base(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        self.rt = GuppiRuntime(self.root / 'project', ARCH)
+        self.rt = SedraRuntime(self.root / 'project', ARCH)
         self.guard, self.gate = self.rt.guard, self.rt.permission_gate
         self.dev = self.root / 'dev'; self.dev.mkdir()
         self.clock = Clock()
@@ -369,7 +369,7 @@ class ApprovalTests(SupervisorBase):
 
     def test_a_parked_job_cannot_be_queued_resumed_or_claimed(self):
         job_id = self.start(level=3); self.ask(job_id)
-        for call in (lambda: self.sup.enqueue(job_id), lambda: self.sup.resume(job_id, resolved_by='guppi')):
+        for call in (lambda: self.sup.enqueue(job_id), lambda: self.sup.resume(job_id, resolved_by='sedra')):
             with self.assertRaises(JobError) as ctx: call()
             self.assertEqual(ctx.exception.code, 'approval_pending')
         with self.assertRaises(JobError) as ctx: self.sup.claim('w1', ['reviewer'])
@@ -456,7 +456,7 @@ class ApprovalTests(SupervisorBase):
 
     def test_cancelling_a_parked_job_closes_its_approval(self):
         job_id = self.start(level=3); self.ask(job_id)
-        self.sup.cancel(job_id, requested_by='guppi', reason='obsolete')
+        self.sup.cancel(job_id, requested_by='sedra', reason='obsolete')
         self.assertEqual(self.load(job_id)['approval']['status'], 'cancelled')
         self.assertNotEqual(supervisor_state(self.load(job_id)), 'WAITING_APPROVAL')
 
@@ -484,7 +484,7 @@ class ApprovalTests(SupervisorBase):
 class RuntimeAndBoundaryTests(unittest.TestCase):
     def test_runtime_wires_the_gate_and_reports_the_levels(self):
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
             self.assertIs(rt.job_supervisor.permissions, rt.permission_gate)
             status = rt.boot()['permissions']
             self.assertTrue(status['available'])
@@ -494,12 +494,12 @@ class RuntimeAndBoundaryTests(unittest.TestCase):
             self.assertEqual(status['policy_hash'], rt.permission_gate.policy_hash())
 
     def test_a_broken_permission_file_leaves_no_gate_and_says_why(self):
-        import guppi_runtime.runtime as runtime_module
+        import sedra_runtime.runtime as runtime_module
         real = runtime_module.PermissionConfig.load
         runtime_module.PermissionConfig.load = staticmethod(lambda path: (_ for _ in ()).throw(ValueError('permission_config_invalid:test')))
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+                rt = SedraRuntime(Path(tmp) / 'project', ARCH)
         finally:
             runtime_module.PermissionConfig.load = real
         self.assertIsNone(rt.permission_gate)
@@ -507,13 +507,13 @@ class RuntimeAndBoundaryTests(unittest.TestCase):
         self.assertEqual(rt.permission_status(), {'available': False, 'error': 'permission_config_invalid:test'})
 
     def test_the_gate_never_grants_or_changes_anything_itself(self):
-        source = Path(importlib.import_module('guppi_runtime.core.permission_levels').__file__).read_text(encoding='utf-8')
+        source = Path(importlib.import_module('sedra_runtime.core.permission_levels').__file__).read_text(encoding='utf-8')
         for forbidden in ('.approve(', 'create_gate(', 'authorize(', '.transition(', 'atomic_write_json', '.write_text(', 'open('):
             self.assertNotIn(forbidden, source)
 
     def test_gate_source_names_no_provider_or_model(self):
         for name in ('core/permission_levels.py',):
-            source = (RUNTIME / 'src' / 'guppi_runtime' / name).read_text(encoding='utf-8').lower()
+            source = (RUNTIME / 'src' / 'sedra_runtime' / name).read_text(encoding='utf-8').lower()
             for word in ('lm-studio', 'llama', 'qwen', 'kev', 'openai', 'anthropic'):
                 self.assertNotRegex(source, rf'\b{re.escape(word)}\b', word)
 

@@ -1,12 +1,12 @@
 # Role -> capability -> provider routing (docs/JOB_SUPERVISOR_CONTRACTS.md section 8).
-# GUPPI asks for a role; the Control Master resolves it against these declarative recipes. Provider and model names
+# SEDRA asks for a role; the Control Master resolves it against these declarative recipes. Provider and model names
 # live here, never in code. Numbers are starting values without measurement behind them.
 role_routing:
   schema: 1
   enabled: false                 # Feature flag. Default OFF: model selection behaves exactly like v1.20.
 
   policy:
-    # GUPPI_GENERATED and EXTERNAL_UNVERIFIED can never be listed here (refused at load): a capability GUPPI built itself
+    # SEDRA_GENERATED and EXTERNAL_UNVERIFIED can never be listed here (refused at load): a capability SEDRA built itself
     # is not trusted automatically, and only the Captain can promote it.
     allowed_trust_levels: [BUILT_IN, KNOWN_GOOD, CAPTAIN_CUSTOM]
     cloud_allowed: false         # a cloud recipe additionally needs an explicit Captain approval per resolution

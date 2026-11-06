@@ -124,7 +124,7 @@ Der Creator sitzt im Einstieg und im Werkzeug „Module“. Ohne Modell bleiben 
 - `uix_check --vorgabe <datei>` prüft eine Vorgabe vor dem Anlegen.
 - `uix_check --tool <id>` prüft ein Werkzeug mit eigener Sammlung.
 
-Ergebnisse aus Build 19: Studio 29/29, Cockpit, Minimal und Paperclip je 29/29, GUPPI XP 3/3 (ehrlich: nur das Laden, Rest nicht geprüft). Das Ergebnis nennt jede nicht geprüfte Stelle.
+Ergebnisse aus Build 19: Studio 29/29, Cockpit, Minimal und Paperclip je 29/29, SEDRA XP 3/3 (ehrlich: nur das Laden, Rest nicht geprüft). Das Ergebnis nennt jede nicht geprüfte Stelle.
 
 ## 7. Das Muster: Shell mit Rahmen, Werkzeug mit Verträgen
 
@@ -140,6 +140,6 @@ Ein typischer neuer Teil:
 
 Die Start-Shell (`uix/shells/start/`) ist der Einstieg. Sie zeigt eine Karte je Oberfläche mit Bild, „Diese Oberfläche nehmen“, „Eigene anlegen“ (Vorlage, Audit) und „Von außen vorlegen“ (Gate). Das Gespräch liegt unten, die Entscheidungen rechts, sobald eine wartet. Der Einstieg öffnet keine Objekte.
 
-Die Oberfläche **GUPPI XP** (`shells/guppi-xp/`) ist der alte Retro-Desktop als wählbare Karte. Sie führt auf `/retro` und baut nichts nach. Sie ist „archiviert“, aber über den Einstieg erreichbar (Build 18).
+Die Oberfläche **SEDRA XP** (`shells/sedra-xp/`) ist der alte Retro-Desktop als wählbare Karte. Sie führt auf `/retro` und baut nichts nach. Sie ist „archiviert“, aber über den Einstieg erreichbar (Build 18).
 
 Ein Name hinter `START_SEDRA.bat` gilt nur für diesen Start. Die dauerhafte Wahl steht in `local_config/uix.yaml`; `START_SEDRA.bat --gewaehlt` startet sie.

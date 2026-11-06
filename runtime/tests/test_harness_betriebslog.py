@@ -6,11 +6,11 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.harness import betriebslog as bl
-from guppi_runtime.harness.api import GESCHUETZT, WEG
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.harness import betriebslog as bl
+from sedra_runtime.harness.api import GESCHUETZT, WEG
+from sedra_runtime.uix_server import UIXHub
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 
 
 def audit(*zeilen):

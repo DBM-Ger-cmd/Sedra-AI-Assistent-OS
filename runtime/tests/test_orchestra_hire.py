@@ -3,7 +3,7 @@
 Die AM-Instanz gibt es vorher (eigener AM-Ablauf, hier als Eintrag in der AM-Registry). `einstellen {name, instance_id, reports_to,
 budget_tokens}` ist ein Antrag mit Gate `set_org`; ohne Freigabe keine Zeile in `agents`. Nach „Freigeben und anwenden“ liefert
 `POST /api/objects {type: agent, id}` Vorgesetzten, Rolle, Stufe und Budget. Rolle und Stufe kommen aus der Vorlage, das
-Delegationsrecht nur für `guppi.orchestra.foreman`. Ist die Instanz seit dem Antrag nicht mehr aktiv oder geändert:
+Delegationsrecht nur für `sedra.orchestra.foreman`. Ist die Instanz seit dem Antrag nicht mehr aktiv oder geändert:
 `binding_stale`; eine schon vergebene Instanz: `instance_taken`. Abgelehnt bleibt die Instanz stehen (kein Aufräumen)."""
 import json
 import sqlite3
@@ -11,11 +11,11 @@ import unittest
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.agent_manager.agent_registry import Registry
+from sedra_runtime.agent_manager.agent_registry import Registry
 from test_orchestra_desk import Desk
 
-TEMPLATES = {'guppi.orchestra.foreman': {'role': 'unterarbeiter', 'recipe': 'foreman.local', 'capabilities': [{'side_effect': 'proposal_only'}]},
-             'guppi.orchestra.coder': {'role': 'coder', 'capabilities': [{'side_effect': 'read_only'}, {'side_effect': 'reversible_write'}]},
+TEMPLATES = {'sedra.orchestra.foreman': {'role': 'unterarbeiter', 'recipe': 'foreman.local', 'capabilities': [{'side_effect': 'proposal_only'}]},
+             'sedra.orchestra.coder': {'role': 'coder', 'capabilities': [{'side_effect': 'read_only'}, {'side_effect': 'reversible_write'}]},
              'leer': {'role': 'x', 'capabilities': []}}
 
 
@@ -28,7 +28,7 @@ class Hire(Desk):
         try:
             for ref, template in TEMPLATES.items():
                 reg.command('cmd-t-' + ref, 'create', 'template', ref, {'template': dict(template, id=ref), 'preview': {'ok': True}, 'digest': 'd-' + ref})
-            for iid, ref in (('ins-ua', 'guppi.orchestra.foreman'), ('ins-co', 'guppi.orchestra.coder'), ('ins-leer', 'leer'), ('ins-q', 'guppi.orchestra.coder')):
+            for iid, ref in (('ins-ua', 'sedra.orchestra.foreman'), ('ins-co', 'sedra.orchestra.coder'), ('ins-leer', 'leer'), ('ins-q', 'sedra.orchestra.coder')):
                 reg.command('cmd-' + iid, 'create', 'agent', iid, {'template_ref': ref, 'template_digest': 'd-' + ref, 'lifecycle': 'ACTIVE',
                                                                    'qualification': 'UNVERIFIED', 'admission': {'valid': False, 'revoked': False}})
         finally:
@@ -66,7 +66,7 @@ class Hire(Desk):
         self.assertEqual((agent['title'], agent['reports_to'], agent['rolle'], agent['stufe'], agent['can_delegate'], agent['budget']['grenze_token']),
                          ('Unterarbeiter 2', 'A-UA', 'unterarbeiter', 1, 1, 20000))
         row = self.row('agents', 'id', agent['id'])
-        self.assertEqual((row['instance_id'], row['template_id'], row['recipe_id'], row['status']), ('ins-ua', 'guppi.orchestra.foreman', 'foreman.local', 'aktiv'))
+        self.assertEqual((row['instance_id'], row['template_id'], row['recipe_id'], row['status']), ('ins-ua', 'sedra.orchestra.foreman', 'foreman.local', 'aktiv'))
         self.assertEqual(self.audit('ORC_AGENT_HIRED')[0]['instance_id'], 'ins-ua')
 
     def test_level_from_the_strongest_effect_and_no_delegation_for_other_templates(self):

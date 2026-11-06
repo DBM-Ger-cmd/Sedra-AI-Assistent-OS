@@ -1,6 +1,6 @@
 # SEDRA – Entwickler-Archiv, Build 19 (Stand 15.10.2026)
 
-Dieses Archiv gibt Entwicklern einen vollständigen Einstieg in SEDRA (technischer Name GUPPI) mit dem Stand, in dem das **KI GateWay** in SEDRA eingebaut wurde.
+Dieses Archiv gibt Entwicklern einen vollständigen Einstieg in SEDRA (technischer Name SEDRA) mit dem Stand, in dem das **KI GateWay** in SEDRA eingebaut wurde.
 
 ## Was im Archiv liegt
 
@@ -10,7 +10,7 @@ Dieses Archiv gibt Entwicklern einen vollständigen Einstieg in SEDRA (technisch
 | `dokumentation/` | sieben Dokumente mit Überblick, Architektur, KI-GateWay-Einbindung, Werkzeugen, Entwicklung, Entscheidungen und Chronik |
 | `quellcode/` | der Arbeitsstand des Pakets (Build 19) ohne `.git`, ohne Modelle, ohne Laufzeitdaten |
 | `git/sedra_gupti_history.bundle` | die vollständige Git-Historie bis Commit `2692c37` (Build 19) |
-| `git/GUPPI_Runtime_v1.20_Build_019_2026-10-15.patch` | der Patch von Build 18 auf Build 19 (alles, was das KI GateWay und START_SEDRA ändert) |
+| `git/SEDRA_Runtime_v1.20_Build_019_2026-10-15.patch` | der Patch von Build 18 auf Build 19 (alles, was das KI GateWay und START_SEDRA ändert) |
 | `git/aenderungen_START_SEDRA_und_Auswahl.patch` | nicht committete Änderungen nach Build 19: ein einziger Start (`START_SEDRA.bat`), Oberflächenauswahl beim Start, `uix_start --liste` |
 | `PRUEFSUMMEN.sha256` | SHA-256 aller Dateien im Archiv |
 

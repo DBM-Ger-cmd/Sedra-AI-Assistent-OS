@@ -4,9 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.models.llama_server_runtime import build_command
-from guppi_runtime.models.router_verwaltung import RouterVerwaltung, abschnitt_aus_argv, preset_text
-from guppi_runtime.models.runtime_control import RuntimeControlError
+from sedra_runtime.models.llama_server_runtime import build_command
+from sedra_runtime.models.router_verwaltung import RouterVerwaltung, abschnitt_aus_argv, preset_text
+from sedra_runtime.models.runtime_control import RuntimeControlError
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
 

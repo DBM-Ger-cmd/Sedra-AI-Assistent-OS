@@ -13,9 +13,9 @@ from urllib.parse import urlsplit
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.harness import befehl as befehl_mod
-from guppi_runtime.harness import herkunft
-from guppi_runtime.uix_server import UIXHub, make_server
+from sedra_runtime.harness import befehl as befehl_mod
+from sedra_runtime.harness import herkunft
+from sedra_runtime.uix_server import UIXHub, make_server
 from test_uix_harness_api import ARCH, anfrage
 
 
@@ -109,7 +109,7 @@ class EchtTests(unittest.TestCase):
         port, token, weg, pfad = int(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
         c = http.client.HTTPConnection('127.0.0.1', port, timeout=20)
         c.request('POST', pfad, body=json.dumps({'weg': 'erlauben', 'id': 'x', 'way': 'erlauben'}),
-                  headers={'Host': f'127.0.0.1:{port}', 'X-GUPPI-Token': token, 'Content-Type': 'application/json'})
+                  headers={'Host': f'127.0.0.1:{port}', 'X-SEDRA-Token': token, 'Content-Type': 'application/json'})
         r = c.getresponse()
         print(r.status, r.read().decode()[:200])
     ''')
@@ -153,7 +153,7 @@ class EchtTests(unittest.TestCase):
 
 class BefehlRegistriertTests(unittest.TestCase):
     def test_befehl_traegt_seinen_prozess_ein_und_aus(self):
-        from guppi_runtime.core.guard import Guard
+        from sedra_runtime.core.guard import Guard
         with tempfile.TemporaryDirectory() as tmp:
             wurzel = Path(tmp) / 'p'
             wurzel.mkdir()

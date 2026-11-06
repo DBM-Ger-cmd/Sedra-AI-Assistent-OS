@@ -42,7 +42,7 @@ harness_laeufe:
       zeitlimit_min: 5
     - id: spec_check
       name: Spec prüfen (Stempel)
-      argv: [python, benchmarks/spec_check.py, '{spec}', --vm, --project, ../workspace/GUPPI_OS]
+      argv: [python, benchmarks/spec_check.py, '{spec}', --vm, --project, ../workspace/SEDRA_OS]
       ordner: runtime
       parameter:
         spec: {muster: '[a-z][a-z0-9_]{0,60}'}
@@ -51,7 +51,7 @@ harness_laeufe:
       zeitlimit_min: 30
     - id: devvm_build
       name: SEDRA-Bau (devvm_build, Profil standard)
-      argv: [python, benchmarks/devvm_build.py, ../workspace/GUPPI_OS, --spec, '{spec}', --profile, standard]
+      argv: [python, benchmarks/devvm_build.py, ../workspace/SEDRA_OS, --spec, '{spec}', --profile, standard]
       ordner: runtime
       parameter:
         spec: {muster: '[a-z][a-z0-9_]{0,60}'}
@@ -63,7 +63,7 @@ harness_laeufe:
       zeitlimit_min: 120
     - id: wissen_aufnahme
       name: Wissen – Erstaufnahme einer Quelle
-      argv: [python, benchmarks/wissen_aufnahme.py, --project, ../workspace/GUPPI_OS, --quelle, '{quelle}']
+      argv: [python, benchmarks/wissen_aufnahme.py, --project, ../workspace/SEDRA_OS, --quelle, '{quelle}']
       ordner: runtime
       parameter:
         quelle: {muster: 'Q-[0-9a-f]{8}'}

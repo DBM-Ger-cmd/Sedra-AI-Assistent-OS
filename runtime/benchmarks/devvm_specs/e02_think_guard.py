@@ -1,7 +1,7 @@
 """E-02 (coder extension "thinking budget", 2026-10-10): `think_guard.py` measures how many tokens the model spent thinking in each answer and, when it thinks too long, first gives ONE
 note to decide now and then switches thinking down for the rest of the run (Qwen: enable_thinking false; gpt-oss: reasoning_effort low). Run time is almost only generation
-(memory guppi-solo-workflow), and llama-server cannot cut a non-streamed answer, so the guard acts between answers. Idea from little-coder (thinking-budget). Pure class, no file access.
-GUPPI builds it, Claude only wrote this file and the hidden tests. Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
+(memory sedra-solo-workflow), and llama-server cannot cut a non-streamed answer, so the guard acts between answers. Idea from little-coder (thinking-budget). Pure class, no file access.
+SEDRA builds it, Claude only wrote this file and the hidden tests. Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
 
 NOTES = '''# Notes for think_guard
 Pure Python 3 standard library, no file, process or network access, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code.

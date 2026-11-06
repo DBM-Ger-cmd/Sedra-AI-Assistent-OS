@@ -30,7 +30,7 @@ Stand des Codes: `78e802d` ff., Zweig `spec/agenten-orchestrierung`. Dieses Doku
 
 ## 3. Aufbau
 
-### 3.1 Neues Paket `guppi_runtime/harness/`
+### 3.1 Neues Paket `sedra_runtime/harness/`
 
 | Datei | Inhalt | Art | Stufe |
 |---|---|---|---|
@@ -98,7 +98,7 @@ Aufruf ─► Vorbehalt (HS-28)? ── ja ──► Stufe captain (fest)
 
 - Der Guard bleibt die einzige Stelle, die Tokens ausgibt; die Harness ruft nur `approve`, wenn Katalog, Aufgaben-Freigabe oder der Berechtigte es erlauben. Lesen (`datei_lesen`, `dateien_auflisten`, `suchen`) braucht laut Guard kein Gate; der Katalog kann es trotzdem auf `captain` oder `verboten` setzen (z. B. `.env`, `local_config/**`).
 - **Einstufung (`katalog.py`, rein):** Regel = `{werkzeug, muster, stufe, begruendung}`; `werkzeug` ist ein Name oder `*`. Muster: für Dateien Glob relativ zur Projektwurzel (`**` erlaubt), für `befehl` ein Präfix der normalisierten Befehlszeile mit optionalem `*` am Ende. „Genaueste“ = längstes Muster ohne Platzhalter; bei Gleichstand gewinnt die strengere Stufe (`verboten` > `captain` > `vorarbeiter` > `frei`). Pfade werden vorher aufgelöst (kein `..`, kein Laufwerkswechsel, Groß-/Kleinschreibung wie Windows).
-- **Vorbehalte (`vorbehalte.py`):** Pfade `local_config/**`, der Katalog selbst, `runtime/src/guppi_runtime/core/**`, `…/harness/{freigabe,vorbehalte,befehl}.py`, `…/devenv/**`, `runtime/benchmarks/devvm_*`, `architecture/**/guard/**`, `.git/**`; Befehle, die mit `git push`, `git branch -f`, `git reset --hard`, `del`, `rm`, `rmdir`, `Remove-Item`, `format`, `curl`, `wget`, `Invoke-WebRequest`, `pip install`, `winget` beginnen; jedes `datei_schreiben` mit leerem Inhalt auf eine vorhandene Datei. Diese Liste ändert nur Claude mit Captain-Gate.
+- **Vorbehalte (`vorbehalte.py`):** Pfade `local_config/**`, der Katalog selbst, `runtime/src/sedra_runtime/core/**`, `…/harness/{freigabe,vorbehalte,befehl}.py`, `…/devenv/**`, `runtime/benchmarks/devvm_*`, `architecture/**/guard/**`, `.git/**`; Befehle, die mit `git push`, `git branch -f`, `git reset --hard`, `del`, `rm`, `rmdir`, `Remove-Item`, `format`, `curl`, `wget`, `Invoke-WebRequest`, `pip install`, `winget` beginnen; jedes `datei_schreiben` mit leerem Inhalt auf eine vorhandene Datei. Diese Liste ändert nur Claude mit Captain-Gate.
 - **Vorarbeiter-Freigabe:** In Stufe 2 nur als Stufe im Katalog vorhanden; solange es keine Vorarbeiter-Sitzung gibt (Stufe 3), behandelt die Harness `vorarbeiter` wie `captain`.
 
 ### 3.6 Freigabe-Karte und Posteingang (HS-22)
@@ -109,7 +109,7 @@ Aufruf ─► Vorbehalt (HS-28)? ── ja ──► Stufe captain (fest)
 
 ### 3.7 Sitzungen (HS-18, HS-19)
 
-Datei `<projekt>/runtime_data/harness/sitzungen/<sitzung_id>.jsonl` (Projekt = `workspace/GUPPI_OS`, wie alle Laufdaten; D-E4). Erste Zeile Kopf, danach eine Zeile je Ereignis:
+Datei `<projekt>/runtime_data/harness/sitzungen/<sitzung_id>.jsonl` (Projekt = `workspace/SEDRA_OS`, wie alle Laufdaten; D-E4). Erste Zeile Kopf, danach eine Zeile je Ereignis:
 
 ```
 {"typ":"kopf","version":1,"id":"S-1A2B3C4D","titel":"…","projekt":"sedra-entwicklung","vorlage":null,"modell":"coder.llama_qwen35","mission_id":"M-…","angelegt":"…"}
@@ -184,6 +184,6 @@ Captain 28.10.2026: „Ja, wie vorgeschlagen“ – D-E1 bis D-E6 entschieden wi
 | D-E1 | **`befehl` auf dem Host (K1)?** Die Regel v1.7 sagt: Projektcode nur in der Sandbox. Für die Entwicklung von SEDRA müssen Tests, `git` und Werkzeuge im A1-Ordner laufen. | **Host**, aber nur im Harness-Projekt, ohne Shell-Interpreter, mit Katalog und Vorbehalten. Die Regel v1.7 bleibt für Missionen und SEDRA-Kandidaten (Bauweg) unverändert. Vorgabe-Katalog: `git status/log/diff/show`, `nvidia-smi`, `python benchmarks/run_tests.py *`, `python benchmarks/spec_check.py *` = `frei`; `python *` sonst = `captain`; alles ohne Regel = `captain`. |
 | D-E2 | **Streamen vor dem Urteil des Inhaltsschutzes (K2)?** | Ja, als „ungeprüft“ (grau) und danach bestätigt oder ersetzt; im Modus „scharf“ des Projekts **ohne** Live-Text (Antwort erscheint erst nach dem Urteil). |
 | D-E3 | **Harness-Projekte (K5):** Wurzel und Schreibbereich? | `local_config/harness_projekte.yaml`; erstes Projekt „Sedra Entwicklung“ = A1, Schreibbereich `runtime/**`, `docs/**`, `redesign/**`; alles andere in A1 nur lesen. |
-| D-E4 | Ablage der Sitzungen | `workspace/GUPPI_OS/runtime_data/harness/` (wie alle Laufdaten, nicht im Repo). |
+| D-E4 | Ablage der Sitzungen | `workspace/SEDRA_OS/runtime_data/harness/` (wie alle Laufdaten, nicht im Repo). |
 | D-E5 | Werkzeug-Ausgaben an das Modell | Lesen höchstens 400 Zeilen je Aufruf, Befehlsausgabe 20 000 Zeichen, Suchtreffer 200; Gespeichertes im Verlauf höchstens 8000 Zeichen je Ergebnis. |
 | D-E6 | Bauweg | Stufe 1 und 2 baut Claude in einem eigenen Worktree (Branch `harness/stufe-1`, danach `harness/stufe-2`), jede Stufe mit Review und Übernahme durch den Captain; `katalog.py` als Bau-Spec für SEDRA (`devvm_build --profile standard`) mit Referenz und Stempel – scheitert der Bau, gilt V4 und Claude übernimmt die Referenz. |

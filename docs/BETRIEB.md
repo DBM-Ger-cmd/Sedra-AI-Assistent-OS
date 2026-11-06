@@ -1,4 +1,4 @@
-# Betrieb von GUPPI OS
+# Betrieb von SEDRA OS
 
 Stand 20.10.2026 (geändert 20.10.2026, Linie L1/L6; vorher 12.10.2026), Windows 11, RTX 4070 Ti (12 GB), Ryzen 7 7700X, 31 GB RAM.
 
@@ -8,26 +8,26 @@ Stand 20.10.2026 (geändert 20.10.2026, Linie L1/L6; vorher 12.10.2026), Windows
    vor Downloads fragt es nach. Ohne Internet: Die Dateien, die das Skript nennt, nach `runtime/portable/downloads` legen. Das Skript umgeht keine
    PowerShell-Ausführungsrichtlinie.
 2. Für Entwicklung und Tests gibt es zusätzlich die venv `runtime/.venv` (`setup_windows.bat`). Die vorhandene venv wurde in einem früheren Ordner angelegt:
-   `activate.bat` zeigt dorthin, und `guppi_runtime` ist darin nicht installiert. Die Skripte rufen deshalb `.venv\Scripts\python.exe` direkt auf und setzen
+   `activate.bat` zeigt dorthin, und `sedra_runtime` ist darin nicht installiert. Die Skripte rufen deshalb `.venv\Scripts\python.exe` direkt auf und setzen
    `PYTHONPATH=src`. Wer die venv neu anlegt (`setup_windows.bat`), hat beides sauber.
 3. **Engine:** llama.cpp-Builds unter `engines/llama.cpp/<build>/`. Standard ist **b11160** (CUDA 13); gewählt wird sie in `runtime/config/llama_server.yaml`, für einen
-   einzelnen Lauf mit der Umgebungsvariable `GUPPI_ENGINE_BUILD`.
+   einzelnen Lauf mit der Umgebungsvariable `SEDRA_ENGINE_BUILD`.
 4. **Modelle:** GGUF-Dateien unter `<modelle>\<Anbieter>\<Modell>-GGUF\`. Eingebunden wird ein Modell über ein Rezept (siehe unten).
 5. **Lokale Ordner:** Eingecheckte Dateien nennen die Ordner dieses PCs nur als Platzhalter: `<modelle>` (Modelldateien), `<modelle-test>`, `<hermes>`,
-   `<projekte>` (Projektordner) und `<guppi>` (dieser Ordner). Die echten Ordner stehen in `runtime/config/local_paths.yaml`; diese Datei ist **nicht im Git**:
+   `<projekte>` (Projektordner) und `<sedra>` (dieser Ordner). Die echten Ordner stehen in `runtime/config/local_paths.yaml`; diese Datei ist **nicht im Git**:
    ```yaml
    local_paths:
      modelle: 'D:\Modelle\lokale-modelle'
    ```
-   Fehlt der Eintrag `modelle`, bleibt der GPU-Canary aus, wie auf jedem fremden PC. Gelesen wird die Datei von `guppi_runtime/local_paths.py`.
+   Fehlt der Eintrag `modelle`, bleibt der GPU-Canary aus, wie auf jedem fremden PC. Gelesen wird die Datei von `sedra_runtime/local_paths.py`.
 
 ## Starten und Beenden
 
 | Datei | Zweck |
 |---|---|
-| `START_SEDRA.bat` | **Der eine Start** (ersetzt ERSTER_START.bat, START_GUPPI.bat und GUPPI_EINRICHTEN_UND_STARTEN.bat): richtet ein, was fehlt, und öffnet SEDRAs eigenes Fenster (App-Modus von Edge oder Chrome) mit der Übersicht der Oberflächen. `START_SEDRA.bat <id>` startet direkt in eine Oberfläche (nur dieser Start; `cockpit`, `minimal`, `paperclip`, `guppi-xp` = der alte Desktop, oder eine eigene), `--gewaehlt` in die in `uix.yaml` gewählte. Läuft schon ein SEDRA – auch aus einem alten Paket –, kein zweiter Start: die Konsole nennt PID und Ordner; `--replace` beendet ihn. Fenster schließen beendet den Server und entlädt das Modell. `START_GUPPI.bat` ist der alte Name und leitet weiter. In jeder Oberfläche: der runde Knopf unten rechts (Alt+S) wechselt die Oberfläche, führt zur Übersicht und stellt Darstellung und Schriftgröße ein (Build 22). |
-| `READY_TEST_WINDOWS.bat` | PC-Diagnose → `workspace/GUPPI_OS/runtime_data/reports/` |
-| `runtime/run_doctor.bat` | `guppi doctor`: Startbericht (READY oder SAFE_MODE, mit dem Grund jedes abgeschalteten Teils) |
+| `START_SEDRA.bat` | **Der eine Start** (ersetzt ERSTER_START.bat, START_SEDRA.bat und SEDRA_EINRICHTEN_UND_STARTEN.bat): richtet ein, was fehlt, und öffnet SEDRAs eigenes Fenster (App-Modus von Edge oder Chrome) mit der Übersicht der Oberflächen. `START_SEDRA.bat <id>` startet direkt in eine Oberfläche (nur dieser Start; `cockpit`, `minimal`, `paperclip`, `sedra-xp` = der alte Desktop, oder eine eigene), `--gewaehlt` in die in `uix.yaml` gewählte. Läuft schon ein SEDRA – auch aus einem alten Paket –, kein zweiter Start: die Konsole nennt PID und Ordner; `--replace` beendet ihn. Fenster schließen beendet den Server und entlädt das Modell. `START_SEDRA.bat` ist der alte Name und leitet weiter. In jeder Oberfläche: der runde Knopf unten rechts (Alt+S) wechselt die Oberfläche, führt zur Übersicht und stellt Darstellung und Schriftgröße ein (Build 22). |
+| `READY_TEST_WINDOWS.bat` | PC-Diagnose → `workspace/SEDRA_OS/runtime_data/reports/` |
+| `runtime/run_doctor.bat` | `sedra doctor`: Startbericht (READY oder SAFE_MODE, mit dem Grund jedes abgeschalteten Teils) |
 | `runtime/run_tests.bat` | alle Tests (dauert lange; im Alltag nur die betroffenen, siehe unten) |
 
 ### macOS und Linux
@@ -62,10 +62,10 @@ nächsten Start auf. Einen Server, dessen Starter noch lebt (zum Beispiel einen 
 | `web_access.yaml` | erlaubte Hosts für das lesende Web-Werkzeug |
 | `kev.yaml` | lokaler Verifier „Kev“ (aus, bis ein Server bereitsteht) |
 
-**Maschinenlokal** in `workspace/GUPPI_OS/local_config/` (nicht im Git):
+**Maschinenlokal** in `workspace/SEDRA_OS/local_config/` (nicht im Git):
 - `role_routing.yaml`: **die Rezepte**. Vor jeder Änderung eine Sicherung `role_routing.yaml.bak-<Datum>-<Grund>` anlegen.
 - `switches.yaml`: An/Aus-Schalter (context_manager, job_supervisor, llama_server, mtp …), gemeldet als `LOCAL_SWITCHES_APPLIED`. `code_sicht: {enabled: false}` schaltet G4 ab (Läufe und Befehle der Harness nur nach Sicht auf geänderten Code; Standard an, `docs/SPEC_APPS_v1_G4_MODELLCODE_G2.md`).
-- `routing_profiles.yaml`: Modellkombinationen, die der Captain umschalten kann (`guppi routing-profile`).
+- `routing_profiles.yaml`: Modellkombinationen, die der Captain umschalten kann (`sedra routing-profile`).
 
 ## Modelle und Rezepte
 
@@ -87,7 +87,7 @@ Der lange Weg (Messen und Qualifizieren):
 5. Standardtest: `benchmarks/devvm_build.py <projekt> --spec bench_std --coder <rezept> --all-models <rezept>`.
 6. Ein- oder Umschalten und Kontextgrenzen setzen: **nur mit Freigabe des Captains**.
 
-Modelle entfernen nur über `guppi model-remove-preview` → `guppi model-remove --plan …` (Gate). Die Dateien kommen in die Quarantäne, die Rezepte werden
+Modelle entfernen nur über `sedra model-remove-preview` → `sedra model-remove --plan …` (Gate). Die Dateien kommen in die Quarantäne, die Rezepte werden
 ausgeschaltet. Endgültig löscht der Captain die Quarantäne von Hand. Welche Modelle wofür taugen: [MODELLE.md](MODELLE.md).
 
 ## GPU: Lease, Canary, Reserve
@@ -117,24 +117,24 @@ set PYTHONPATH=src;tests
 
 ## Messungen und Ketten
 
-Ergebnisse unter `workspace/GUPPI_OS/runtime_data/measurements/`:
+Ergebnisse unter `workspace/SEDRA_OS/runtime_data/measurements/`:
 - `logs/devvm_build_<spec>_<zeit>.json/.log`: jeder Bau, mit Token, Aufrufen, Stufen und Fehlern.
 - `context_ladder_*`, `moe_sweep_*`, `mtp_tune_*`: Kontext und Tempo.
 - `night_<datum>/`, `day_<datum>/`: Ketten mehrerer Läufe (`queue.log`, `summary.json`).
 - `benchmarks/model_compare.py` erzeugt daraus [MODELL_VERGLEICH_ERGEBNISSE.md](MODELL_VERGLEICH_ERGEBNISSE.md).
 
-**Bauweg (geändert 20.10.2026, Linie L1):** Gebaut wird mit `devvm_build.py` direkt, Standardbefehl `--profile standard` (siehe [ENTWICKLUNG.md](ENTWICKLUNG.md#die-einheitliche-linie-captain-20102026)). Die Ketten-Skripte (`day_queue_*`, `night_queue_*`, `mtp_*`) sind Archiv unter `benchmarks/archiv/` (Übersicht in dessen `README.md`) und nur noch Dokumentation. Davor läuft `spec_check.py <spec> --vm --project <projekt>`; ohne dessen Stempel bricht `devvm_build.py` ab (Ausnahmen `--skip-spec-stamp`, `--allow-host-stamp`; Schritte: [SO_WIRD_GEBAUT.md](SO_WIRD_GEBAUT.md)). Buildflow (`guppi buildflow`) ist Reserve, kein Standardweg.
+**Bauweg (geändert 20.10.2026, Linie L1):** Gebaut wird mit `devvm_build.py` direkt, Standardbefehl `--profile standard` (siehe [ENTWICKLUNG.md](ENTWICKLUNG.md#die-einheitliche-linie-captain-20102026)). Die Ketten-Skripte (`day_queue_*`, `night_queue_*`, `mtp_*`) sind Archiv unter `benchmarks/archiv/` (Übersicht in dessen `README.md`) und nur noch Dokumentation. Davor läuft `spec_check.py <spec> --vm --project <projekt>`; ohne dessen Stempel bricht `devvm_build.py` ab (Ausnahmen `--skip-spec-stamp`, `--allow-host-stamp`; Schritte: [SO_WIRD_GEBAUT.md](SO_WIRD_GEBAUT.md)). Buildflow (`sedra buildflow`) ist Reserve, kein Standardweg.
 
 Früher galt: Eine Kette ist ein Python-Skript in `benchmarks/` (Beispiel: `night_queue_2026-10-11.py`). Es startet jeden Schritt als eigenen Prozess, prüft nach jedem Schritt
 den Canary und schreibt eine Zusammenfassung. Ein Folge-Glied wartet nur auf das Ende der laufenden Kette (`night_queue_2026-10-11_b.py`) und stoppt sie nie.
 
 ## Cloud-Zugang und KI-Labor (Stand 20.10.2026)
 
-Cloud-Modelle laufen nur über den API-Zugang (`models/cloud_api.py`, Einstellungen `cloud_settings.py`). **Standard ist aus:** `config/cloud_providers.yaml` hat `enabled: false` (Hauptschalter) und je Anbieter `enabled: false`; erst beide an, plus Modell und Schlüssel, schalten den Weg frei. Schlüssel liegen verschlüsselt (Windows-DPAPI) in `local_config/cloud_keys.json` oder als Umgebungsvariable `GUPPI_SECRET_<ANBIETER>_<ID>`. Jeder Aufruf geht durch den Inhaltsschutz und steht im Audit (`SG_MODEL_CALL`); ohne Logbuch verweigert der Inhaltsschutz den Aufruf. Das **KI-Labor** (Werkstatt, Werkzeug `labor`) testet Verbindung und Modelle auf Knopfdruck. Quellen: `docs/CHANGELOG.md` (Build 24+, 16.10.), `DOKUMENTATION_KLAUS_TORSTEN_2026-10-16.md`.
+Cloud-Modelle laufen nur über den API-Zugang (`models/cloud_api.py`, Einstellungen `cloud_settings.py`). **Standard ist aus:** `config/cloud_providers.yaml` hat `enabled: false` (Hauptschalter) und je Anbieter `enabled: false`; erst beide an, plus Modell und Schlüssel, schalten den Weg frei. Schlüssel liegen verschlüsselt (Windows-DPAPI) in `local_config/cloud_keys.json` oder als Umgebungsvariable `SEDRA_SECRET_<ANBIETER>_<ID>`. Jeder Aufruf geht durch den Inhaltsschutz und steht im Audit (`SG_MODEL_CALL`); ohne Logbuch verweigert der Inhaltsschutz den Aufruf. Das **KI-Labor** (Werkstatt, Werkzeug `labor`) testet Verbindung und Modelle auf Knopfdruck. Quellen: `docs/CHANGELOG.md` (Build 24+, 16.10.), `DOKUMENTATION_KLAUS_TORSTEN_2026-10-16.md`.
 
 ## Befehle
 
-`guppi <befehl>` beziehungsweise `python -m guppi_runtime <befehl>` (mit `--root workspace/GUPPI_OS --architecture …`, siehe `START_SEDRA.bat`):
+`sedra <befehl>` beziehungsweise `python -m sedra_runtime <befehl>` (mit `--root workspace/SEDRA_OS --architecture …`, siehe `START_SEDRA.bat`):
 
 | Bereich | Befehle |
 |---|---|
@@ -145,13 +145,13 @@ Cloud-Modelle laufen nur über den API-Zugang (`models/cloud_api.py`, Einstellun
 | Hardware | `hardware`, `hardware-state`, `hardware-inventory`, `hardware-preview`, `hardware-dashboard`, `tuning-plan`, `tuning-run` |
 | Sandbox | `sandbox-doctor`, `sandbox-preview`, `sandbox-run`, `sandbox-history`, `dev-image-preview`, `dev-image-import` |
 | Freigaben (G9) | `FREIGABE.bat liste` – was auf deine Bestätigung außerhalb des Browsers wartet; `FREIGABE.bat freigeben B-…` bzw. `ablehnen B-…`. SEDRA muss laufen. Freigaben der Klasse H aus der Seite fragt SEDRA unter Windows zusätzlich in einem eigenen Fenster. Schalter `freigabe_ausserhalb` in `local_config/switches.yaml` (Standard an). |
-| Harness (G4) | `code-stand <projekt> [--zeigen \| --uebernehmen]` – Code, den du in dieser Fassung noch nicht gesehen hast, ansehen bzw. als gesehen übernehmen; `--root` muss `workspace/GUPPI_OS` sein. Unter Windows einfacher: `CODE_STAND.bat <projekt> [--zeigen \| --uebernehmen]` (`--zeigen` ist der Standard) im SEDRA-Ordner (Pfade und Python wie `START_SEDRA.bat`, ruft `python -m guppi_runtime.harness.code_stand --root workspace\GUPPI_OS …`; braucht nur Kern und Harness, läuft auch auf dem Stick) |
+| Harness (G4) | `code-stand <projekt> [--zeigen \| --uebernehmen]` – Code, den du in dieser Fassung noch nicht gesehen hast, ansehen bzw. als gesehen übernehmen; `--root` muss `workspace/SEDRA_OS` sein. Unter Windows einfacher: `CODE_STAND.bat <projekt> [--zeigen \| --uebernehmen]` (`--zeigen` ist der Standard) im SEDRA-Ordner (Pfade und Python wie `START_SEDRA.bat`, ruft `python -m sedra_runtime.harness.code_stand --root workspace\SEDRA_OS …`; braucht nur Kern und Harness, läuft auch auf dem Stick) |
 
 ## Release (Tag für den Updater)
 
-Der Updater (Werkzeug „System“, Abschnitt „Updates“, Knopf „Nach Updates suchen“) bietet nur Tags `vX.Y.Z` an. Er lädt das Zip des Tags von GitHub und verlangt darin `release/MANIFEST.sha256`: jede Datei unter `runtime/src/guppi_runtime/` und `runtime/config/` muss darin stehen und stimmen, sonst bricht er ab (`update_manifest_fehlt`, `dateien_passen_nicht`, `pruefsumme_falsch`). Ändert der Release Rechte eines Moduls, nennt die Vorschau jede Änderung einzeln.
+Der Updater (Werkzeug „System“, Abschnitt „Updates“, Knopf „Nach Updates suchen“) bietet nur Tags `vX.Y.Z` an. Er lädt das Zip des Tags von GitHub und verlangt darin `release/MANIFEST.sha256`: jede Datei unter `runtime/src/sedra_runtime/` und `runtime/config/` muss darin stehen und stimmen, sonst bricht er ab (`update_manifest_fehlt`, `dateien_passen_nicht`, `pruefsumme_falsch`). Ändert der Release Rechte eines Moduls, nennt die Vorschau jede Änderung einzeln.
 
-1. `runtime/src/guppi_runtime/version.py` und `BUILD.txt` auf die neue Version, Eintrag in `docs/CHANGELOG.md`, committen.
+1. `runtime/src/sedra_runtime/version.py` und `BUILD.txt` auf die neue Version, Eintrag in `docs/CHANGELOG.md`, committen.
 2. Manifest aus dem Commit erzeugen (nicht aus dem Arbeitsbaum – dort liegen `local_paths.yaml`, `.bak`-Dateien und `__pycache__`): `python -I -B runtime/benchmarks/release_manifest.py` schreibt `release/MANIFEST.sha256` aus `HEAD`. Das Python braucht PyYAML (unter Windows `runtime\.venv\Scripts\python.exe` oder `runtime\portable\python\current\python.exe`).
 3. Nur diese Datei committen (`git add release/MANIFEST.sha256`), Tests, `main` pushen.
 4. Genau diesen Commit taggen und den Tag pushen: `git tag -a vX.Y.Z -m "SEDRA vX.Y.Z: …"`, `git push origin vX.Y.Z`.
@@ -166,7 +166,7 @@ Das Manifest gilt nur für den getaggten Stand; auf `main` veraltet es mit dem n
 | Modell liefert Zeichensalat, Canary schlägt fehl, `nvlddmkm`-Ereignisse | Grafikkarte übertaktet: NVIDIA-Debug-Modus an (nach Neustart erneut), dann den Canary laufen lassen. |
 | Jedes Laden scheitert mit `hardware_pressure` | Ein übrig gebliebener llama-server hält VRAM. SEDRA über `START_SEDRA.bat` neu starten; `uix_start` räumt auf. |
 | Skript wartet „waiting for the GPU lease“ | Ein anderer Lauf hält die GPU. Halter prüfen (siehe oben) und warten; nicht beenden. |
-| `boot` meldet SAFE_MODE oder `*_error` | Eine Konfigurationsdatei fehlt oder ist ungültig; der Teil ist aus. `guppi doctor` nennt den Grund. |
+| `boot` meldet SAFE_MODE oder `*_error` | Eine Konfigurationsdatei fehlt oder ist ungültig; der Teil ist aus. `sedra doctor` nennt den Grund. |
 | Windows verweigert das Ersetzen einer Datei („Zugriff verweigert“) | Ein Leser hält sie offen. Kurz wiederholen oder in-place schreiben, vorher sichern. |
-| Tests finden `yaml` oder `guppi_runtime` nicht | Venv-Python direkt mit `PYTHONPATH=src;tests` aufrufen (siehe Einrichtung). |
-| Audit-Log nach Absturz nicht lesbar | `guppi audit-repair` verschiebt nur die zerrissene letzte Zeile. |
+| Tests finden `yaml` oder `sedra_runtime` nicht | Venv-Python direkt mit `PYTHONPATH=src;tests` aufrufen (siehe Einrichtung). |
+| Audit-Log nach Absturz nicht lesbar | `sedra audit-repair` verschiebt nur die zerrissene letzte Zeile. |

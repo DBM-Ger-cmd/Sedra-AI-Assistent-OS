@@ -9,11 +9,11 @@ import re
 import unittest
 from pathlib import Path
 
-from guppi_runtime.desk import decisions as desk_decisions
-from guppi_runtime.desk import freigabeklasse as fk
-from guppi_runtime.harness import api as harness_api
+from sedra_runtime.desk import decisions as desk_decisions
+from sedra_runtime.desk import freigabeklasse as fk
+from sedra_runtime.harness import api as harness_api
 
-PAKET = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime'
+PAKET = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime'
 
 
 def _quellen():
@@ -91,7 +91,7 @@ class Routen(unittest.TestCase):
                 for n in ast.walk(fn):
                     if isinstance(n, ast.Dict):
                         cls.post |= {k.value for k in n.keys if isinstance(k, ast.Constant) and isinstance(k.value, str) and k.value.startswith('/api/')}
-        from guppi_runtime import uix_server
+        from sedra_runtime import uix_server
         cls.herkunft = uix_server.HERKUNFT_WEGE
 
     def test_post_routen_des_servers(self):
@@ -119,7 +119,7 @@ class Routen(unittest.TestCase):
     def test_mission_run_braucht_den_browser_token(self):
         """/api/mission/run setzt eine Freigabe um, steht aber nicht in HERKUNFT_WEGE: Ein Harness-Prozess hat den Browser-Token nicht,
         und die externen Clients dürfen nur ihre eigenen Routen."""
-        from guppi_runtime import uix_clients
+        from sedra_runtime import uix_clients
         self.assertNotIn('/api/mission/run', uix_clients.ROUTES)
 
     def test_harness_wege(self):
@@ -136,7 +136,7 @@ class Routen(unittest.TestCase):
         self.assertEqual(fehlend, [])
 
     def test_externe_clients_erreichen_keine_freigabe(self):
-        from guppi_runtime import uix_clients
+        from sedra_runtime import uix_clients
         for route in uix_clients.ROUTEN_JE_CLIENT['mcp']:               # MCP = Zugang der Modelle: nie eine Freigabe
             self.assertNotIn(fk.ROUTEN_SERVER[route][0], ('freigabe', 'anwenden'), route)
         self.assertEqual(set(uix_clients.ROUTEN_JE_CLIENT['cli']) - set(uix_clients.ROUTES), set(uix_clients.NUR_KONSOLE))

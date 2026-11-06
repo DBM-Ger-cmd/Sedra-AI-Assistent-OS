@@ -22,7 +22,7 @@ Kandidat geht ungeprüft ans Modell. Lokal ist das verschmerzbar; sobald irgende
 
 | Nr. | Was | Wo | Warum hier |
 |---|---|---|---|
-| **S1** | **Der Inhaltsschutz wird Teil des Kerns.** `ModelGuard` (Scan, Policy, Pseudonymisierung, Antwortprüfung) zieht nach `guppi_runtime/core/content_guard.py`; `b6core` kommt als geprüfter Fremdcode mit (`B6CORE_HERKUNFT.sha256`). | `core/` | Ein Schutz, der nur in einem Modul lebt, schützt nur dieses Modul. |
+| **S1** | **Der Inhaltsschutz wird Teil des Kerns.** `ModelGuard` (Scan, Policy, Pseudonymisierung, Antwortprüfung) zieht nach `sedra_runtime/core/content_guard.py`; `b6core` kommt als geprüfter Fremdcode mit (`B6CORE_HERKUNFT.sha256`). | `core/` | Ein Schutz, der nur in einem Modul lebt, schützt nur dieses Modul. |
 | **S2** | **`ModelRouter.chat` ruft ihn bei jedem Aufruf.** Vorher: Scan und Policy; nachher: Antwortprüfung. Es gibt keinen Aufruf am Guard vorbei – ein Test setzt einen Adapter ein und zählt. | `models/router.py` | Das ist *die eine Stelle*; alles andere wäre ein zweiter Weg. |
 | **S3** | **Entscheidungen des Inhaltsschutzes sind SEDRA-Entscheidungen.** `REVIEW` wird ein Gate mit Inhaltsbindung (Hash des Aufrufs), beantwortet wie jede andere; der eigene `ApprovalStore` entfällt. | `desk/decisions.py` | Regel 2: ein Ort. |
 | **S4** | **Sein Logbuch ist die Audit-Kette.** Die Ereignisse (`SG_*`) gehen in `audit.append`, mit denselben Feldern, ohne Text. | `core/audit.py` | Eine Kette, ein Nachweis. |
@@ -38,7 +38,7 @@ machen“: nicht ein Modul mehr, sondern ein Schutz an der einen Stelle.
 
 | Nr. | Was | Wo |
 |---|---|---|
-| G1 | `sedra_gateway` (Einlesen, Vorgang, Triage, Vorgaben) kommt als `guppi_runtime/gateway/`. `guard.py` entfällt zugunsten von S1; `desk.py` wird die Andockstelle `desk/gateway_vorgang.py`. | Paket |
+| G1 | `sedra_gateway` (Einlesen, Vorgang, Triage, Vorgaben) kommt als `sedra_runtime/gateway/`. `guard.py` entfällt zugunsten von S1; `desk.py` wird die Andockstelle `desk/gateway_vorgang.py`. | Paket |
 | G2 | Routen `/api/gateway/*` und `/api/guard/*` im Vermittler; Vorgänge und Ergebnisse unter `local_config/gateway/`. Objekttyp `gateway` wird Vertragstyp (dann darf die Palette ihn kennen). | `uix_server.py`, `desk/` |
 | G3 | Die Freigabe eines Vorgangs ist ein Gate `kind: gateway_release` mit Inhaltsbindung: Prüfsumme der Vorgaben, der Policy und **jeder Einheit** (ID, Stufe, Hash des Ausgehenden). Ändert sich eine Einheit, passt die Freigabe nicht mehr (ihr Test, übernommen). | `desk/decisions.py` |
 | G4 | Der Versand (Station 5) ist ein Verb des Objekts `gateway` mit Deckungsprüfung vor dem Gate (`actions._boundary_first('netz', …)`) – wie *Kandidat übernehmen* für `projekt`. | `desk/actions.py` |

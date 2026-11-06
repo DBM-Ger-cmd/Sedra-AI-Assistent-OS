@@ -1,7 +1,7 @@
 """Spec 2, Bau-Spec s2_slotplan (docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md, Design Stufe 2, D2.2 `slotplan.py`, D2.3, D2.10, SCH-02, SCH-04, SCH-06, SCH-07; gates G2-S2-02, G2-S2-14):
 `jobs/slotplan.py`, the pure rules of the model scheduler: the effective priority of a waiting run (aging), the order of the waiting runs, which of them get a slot now, why a run
 has to wait (the reason shown in the queue), and when the scheduler proposes the cloud stage. slot_store.py imports it (seed of s2_slot_store). Times are UTC texts
-"YYYY-MM-DDTHH:MM:SSZ"; there is no clock in the module. GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s2_slotplan)."""
+"YYYY-MM-DDTHH:MM:SSZ"; there is no clock in the module. SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s2_slotplan)."""
 
 NOTES = '''# Notes for s2_slotplan
 Python 3 standard library only (datetime); no sqlite3, no files, no clock (never datetime.now), no network. Times are texts in the form 2026-10-21T08:00:00Z (UTC).

@@ -7,14 +7,14 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.harness import belohnung as bl
-from guppi_runtime.harness import katalog, schleife, vorlagen
-from guppi_runtime.harness.freigabe import Karten, Kiste
-from guppi_runtime.harness.werkzeuge import Werkzeuge
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.harness import belohnung as bl
+from sedra_runtime.harness import katalog, schleife, vorlagen
+from sedra_runtime.harness.freigabe import Karten, Kiste
+from sedra_runtime.harness.werkzeuge import Werkzeuge
+from sedra_runtime.uix_server import UIXHub
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 EINST = bl.einstellungen()
 
 
@@ -226,7 +226,6 @@ class Regeln(unittest.TestCase):
         self.assertIn('belohnungen_lesen', v['werkzeuge'])
         for satz in ('vier Fragen', 'Fakten sammeln, nicht erinnern', 'höchstens 30 Zeilen', 'docs/AAR/LESSONS.md', 'wartest auf sein Ja', 'höchstens 25 Zeilen', 'Erfinde nichts'):
             self.assertIn(satz, v['system'])
-        self.assertNotIn('GUPPI', v['system'])
         for vid in ('bauagent', 'desktop-designer', 'masterchat'):
             self.assertIn('belohnungen_lesen', vorlagen.laden(Path(tempfile.mkdtemp()), vid)['werkzeuge'], vid)
 
@@ -279,7 +278,7 @@ class Vorschlaege(unittest.TestCase):
         self.assertEqual(bl.einstellungen()['vorschlaege']['max'], 5)
 
     def test_weg_und_route(self):
-        from guppi_runtime.harness.api import GESCHUETZT, WEG
+        from sedra_runtime.harness.api import GESCHUETZT, WEG
         self.assertIn('vorschlaege', WEG.fullmatch('/api/harness/vorschlaege').groups())
         self.assertFalse(GESCHUETZT.match('/api/harness/vorschlaege'), 'nur lesen: keine Herkunftspruefung noetig')
 

@@ -5,8 +5,8 @@ import os
 # Add the current directory to the path so we can import agent_matcher
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/..")
 
-from guppi_runtime.agent_manager.agent_matcher import version_at_least, qualification_rank, hard_filter, resource_fit, score_candidate, match
-from guppi_runtime.agent_manager.agent_contracts import ContractError
+from sedra_runtime.agent_manager.agent_matcher import version_at_least, qualification_rank, hard_filter, resource_fit, score_candidate, match
+from sedra_runtime.agent_manager.agent_contracts import ContractError
 
 class TestAgentMatcher(unittest.TestCase):
     

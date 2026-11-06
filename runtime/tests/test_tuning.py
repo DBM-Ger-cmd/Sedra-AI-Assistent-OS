@@ -4,18 +4,18 @@ from unittest.mock import patch
 import tempfile
 import unittest
 
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.models.tuning import digest
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.models.tuning import digest
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
 
 
 class TuningCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        self.rt = GuppiRuntime(self.root, ARCH)
+        self.rt = SedraRuntime(self.root, ARCH)
         self.manager = self.rt.model_runtime
         self.manager.catalog.add_allowed_root(self.root)
         self.model = self.root / 'test-Q4_K_M.gguf'
@@ -121,7 +121,7 @@ class TuningCase(unittest.TestCase):
     def test_budget_prevents_next_candidate(self):
         with patch.object(self.manager.benchmark, 'benchmark_managed_llamacpp') as runner, \
              patch.object(self.manager.controller('llama-cpp-server'), 'status', return_value={'managed_running': False}), \
-             patch('guppi_runtime.models.tuning.time.monotonic', side_effect=[0, 31]):
+             patch('sedra_runtime.models.tuning.time.monotonic', side_effect=[0, 31]):
             result = self.tuning.run(self.plan(budget_seconds=30))
         runner.assert_not_called()
         self.assertEqual(result['status'], 'BUDGET_EXHAUSTED')
@@ -183,7 +183,7 @@ class TuningCase(unittest.TestCase):
         lab = self.manager.benchmark._test_lab()
         self.assertTrue(lab.try_acquire('model-scheduler', 'Modellserver'))
         self.manager.benchmark.policy['gpu_wait_s'] = 0
-        from guppi_runtime.jobs.testlab import LeaseBusy
+        from sedra_runtime.jobs.testlab import LeaseBusy
         with self.assertRaises(LeaseBusy):
             self.run_managed(ctl, started, stopped)
         self.assertNotIn('holder', seen)                           # start_server never ran
@@ -216,7 +216,7 @@ class TuningCase(unittest.TestCase):
         self.assertIsNone(lab.holder())
 
     def test_the_managed_benchmark_cleans_up_after_it_has_the_lease_and_a_dirty_card_gives_it_back(self):
-        from guppi_runtime.models import gpu_preflight
+        from sedra_runtime.models import gpu_preflight
         ctl, seen, self._state, started, stopped = self.managed()
         calls = []
         with patch.object(gpu_preflight, 'clear_leftovers', side_effect=lambda owner, **kw: calls.append((owner, kw['lab'] is self.manager.benchmark._test_lab()))):
@@ -250,7 +250,7 @@ class TuningCase(unittest.TestCase):
         token = lab.try_acquire('model-scheduler', 'Modellserver')
         self.assertTrue(token)
         self.manager.benchmark.policy['gpu_wait_s'] = 0
-        from guppi_runtime.jobs.testlab import LeaseBusy
+        from sedra_runtime.jobs.testlab import LeaseBusy
         out, start = self.start_action(ctl, return_value={'pid': None, 'endpoint': 'x'})
         self.assertIsInstance(out, LeaseBusy)
         start.assert_not_called()
@@ -261,7 +261,7 @@ class TuningCase(unittest.TestCase):
 
     def test_every_start_of_a_llama_server_in_src_sits_next_to_a_lease(self):
         import re
-        src = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime'
+        src = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime'
         callers = {f.relative_to(src).as_posix() for f in src.rglob('*.py') if re.search(r'\.start_server\(', f.read_text(encoding='utf-8', errors='replace'))}
         self.assertEqual(callers, {'models/benchmark.py', 'models/model_runtime.py'})
         for name in callers:

@@ -5,8 +5,8 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from guppi_runtime.models.engine_provision import EngineError, MANIFEST, engine_dir, provision, verify_engine
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, discover_backend
+from sedra_runtime.models.engine_provision import EngineError, MANIFEST, engine_dir, provision, verify_engine
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, discover_backend
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 
@@ -82,14 +82,14 @@ class EngineProvision(unittest.TestCase):
         home = Path(self.root.parent) / "home"
         lm = home / ".lmstudio" / "extensions" / "backends" / "llama.cpp-win-x86_64-nvidia-cuda12-avx2-2.49.0"
         lm.mkdir(parents=True); (lm / "llama-server.exe").write_bytes(b"MZlm")
-        cfg = LlamaServerConfig({"engine_source": "guppi", "engine_build": "b1234", "engine_root": str(self.root)})
+        cfg = LlamaServerConfig({"engine_source": "sedra", "engine_build": "b1234", "engine_root": str(self.root)})
         self.assertEqual(discover_backend(cfg, home), (None, None))                    # not installed: no LM Studio fallback
         provision(self.dl, build="b1234", assets=self.assets, root=self.root)
         target = engine_dir(self.root, "b1234")
         self.assertEqual(discover_backend(cfg, home), (target, target))
         old = LlamaServerConfig({})
         self.assertEqual(discover_backend(old, home)[0], lm)                           # the earlier default still works
-        for raw in ({"engine_source": "cloud"}, {"engine_source": "guppi"}, {"engine_source": "guppi", "engine_build": "latest"}):
+        for raw in ({"engine_source": "cloud"}, {"engine_source": "sedra"}, {"engine_source": "sedra", "engine_build": "latest"}):
             with self.assertRaises(ValueError):
                 LlamaServerConfig(raw)
 

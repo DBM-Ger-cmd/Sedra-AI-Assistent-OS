@@ -30,15 +30,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import cuda_crash_hunt as hunt                                                      # noqa: E402
 import small_team as st                                                              # noqa: E402
-from guppi_runtime.devenv.devvm import DevWorkspace                                         # noqa: E402
-from guppi_runtime.devenv.devvm_tools import DevToolBox                                     # noqa: E402
-from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.devenv.model_tools import parse_calls, run_tool_loop                     # noqa: E402
-from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.sandbox.broker import SandboxBroker                               # noqa: E402
-from guppi_runtime.sandbox.provider import MicrosandboxProvider                      # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
+from sedra_runtime.devenv.devvm import DevWorkspace                                         # noqa: E402
+from sedra_runtime.devenv.devvm_tools import DevToolBox                                     # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.devenv.model_tools import parse_calls, run_tool_loop                     # noqa: E402
+from sedra_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from sedra_runtime.sandbox.broker import SandboxBroker                               # noqa: E402
+from sedra_runtime.sandbox.provider import MicrosandboxProvider                      # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 GREET = "def greet(name):\n    return 'hi ' + name\n"
 
@@ -118,7 +118,7 @@ def main():
     project = Path(args.project)
     names = [m for m in args.models.split(",") if m in MODELS]
     log = RunLog(project / "runtime_data" / "measurements", "devvm_tools_bench", config={"seeds": args.seeds, "models": names})
-    tool_root = Path(tempfile.mkdtemp(prefix="guppi_devvm_bench_"))
+    tool_root = Path(tempfile.mkdtemp(prefix="sedra_devvm_bench_"))
     cfg_path = tool_root / "sandbox-bench.yaml"
     cfg_path.write_text((RUNTIME / "config" / "sandbox.yaml").read_text(encoding="utf-8"), encoding="utf-8")
     provider = MicrosandboxProvider(project / "runtime_data" / "sandboxes" / "backend_home", RUNTIME)
@@ -138,7 +138,7 @@ def main():
 
     result = {"models": {}}
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_devbench_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_devbench_")))
     with log, TestLab(default_path(project)).lease(os.environ.get("TESTLAB_OWNER", "devvm_tools_bench"), "devvm tools bench", ttl_s=1800, wait_s=3600, preflight=clear_leftovers):
         for mname in names:
             role, key = MODELS[mname]

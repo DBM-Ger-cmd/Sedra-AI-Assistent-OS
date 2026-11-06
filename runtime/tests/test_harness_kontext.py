@@ -4,9 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import kontext, schleife
-from guppi_runtime.harness.sitzung import Sitzungen
-from guppi_runtime.harness.strom import Stroeme
+from sedra_runtime.harness import kontext, schleife
+from sedra_runtime.harness.sitzung import Sitzungen
+from sedra_runtime.harness.strom import Stroeme
 
 from test_harness_schleife import MISSION, Attrappe, Box, Zug, call
 

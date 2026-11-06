@@ -3,10 +3,10 @@
     .venv\\Scripts\\python.exe benchmarks/context_coding.py <project_dir> <recipe_id> [--windows 8192,32768,65536] [--seeds 2]
         [--set kv_cache_type=f16 ...] [--tag f16]
 
-Captain's goal (2026-10-03): GUPPI builds its own user interface and codes with a 64k window; 32k is accepted if the code is better there.
+Captain's goal (2026-10-03): SEDRA builds its own user interface and codes with a 64k window; 32k is accepted if the code is better there.
 A needle search (context_ladder.py) only shows that a model can FIND a line. This shows whether it can USE what it found:
 
-  - the window is filled to ~85 % with real GUPPI source files (src/guppi_runtime, fixed order per seed),
+  - the window is filled to ~85 % with real SEDRA source files (src/sedra_runtime, fixed order per seed),
   - somewhere in it (10 / 50 / 90 %) sits `uix_kit.py`, a small UI helper library whose names are random per seed (so they cannot be
     guessed) and which contains a deprecated look-alike helper,
   - the model writes `build_dashboard(status)` with that library.
@@ -36,9 +36,9 @@ sys.path.insert(0, str(RUNTIME / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from context_ladder import RESERVE_GIB, gpu_mib                                                  # noqa: E402
-from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
 
 FILL = 0.85
 MAX_TOKENS = 8000
@@ -56,8 +56,8 @@ def make_kit(rng):
          "old": None, "alarm": f"TONE_{word(rng).upper()}", "calm": f"TONE_{word(rng).upper()}", "gap": f"GAP_{word(rng).upper()}",
          "gap_other": f"GAP_{word(rng).upper()}"}
     n["old"] = n["header"].replace("_heading", "_heading_v1")
-    src = f'''# file: uix_kit.py  (GUPPI's small UI helper library; every UI module must render through it)
-"""Building blocks for GUPPI's status pages. All helpers return HTML strings."""
+    src = f'''# file: uix_kit.py  (SEDRA's small UI helper library; every UI module must render through it)
+"""Building blocks for SEDRA's status pages. All helpers return HTML strings."""
 
 {n["alarm"]} = "alarm"   # tone for anything that failed or needs the Captain's attention
 {n["calm"]} = "calm"     # tone for anything that is fine
@@ -94,12 +94,12 @@ def {n["join"]}(parts, *, gap):
 
 TASK = """
 
-Task: write a Python module `dashboard.py` for GUPPI's user interface. Use ONLY the helper library `uix_kit` shown in the context above
+Task: write a Python module `dashboard.py` for SEDRA's user interface. Use ONLY the helper library `uix_kit` shown in the context above
 (import it with `import uix_kit`; do not write HTML yourself). Define
 
     def build_dashboard(status: dict) -> str
 
-`status` looks like {"name": "GUPPI", "jobs": [{"name": "build", "state": "failed"}, {"name": "test", "state": "done"}]}.
+`status` looks like {"name": "SEDRA", "jobs": [{"name": "build", "state": "failed"}, {"name": "test", "state": "done"}]}.
 It must return: the dashboard heading (the right heading level for a dashboard) with the escaped status name, then one label/value line
 per job (label = escaped job name, value = the state) whose tone is the failure tone for state "failed" and the fine tone otherwise, all
 stacked with the standard dashboard gap. Follow the library's docstrings exactly (keyword-only arguments, deprecated helpers).
@@ -107,7 +107,7 @@ Answer with the complete module in one ```python block."""
 
 
 def corpus(rng):
-    files = sorted((RUNTIME / "src" / "guppi_runtime").rglob("*.py"))
+    files = sorted((RUNTIME / "src" / "sedra_runtime").rglob("*.py"))
     rng.shuffle(files)
     for f in files:
         try:
@@ -127,7 +127,7 @@ def build_context(n_chars, kit_src, where, seed):
     text = "".join(parts)
     # Placed by size, at the line boundary nearest to `where` (files are 1-60k characters, so file boundaries would be too coarse).
     at = text.rfind("\n", 0, max(1, int(len(text) * where))) + 1
-    return "Context: source files of the GUPPI project.\n\n" + text[:at] + "\n" + kit_src + "\n" + text[at:]
+    return "Context: source files of the SEDRA project.\n\n" + text[:at] + "\n" + kit_src + "\n" + text[at:]
 
 
 def extract_code(text):
@@ -200,7 +200,7 @@ def grade(code, n):
 def ask(endpoint, alias, prompt, effort):
     import urllib.error
     import urllib.request
-    from guppi_runtime.models.openai_local import split_harmony
+    from sedra_runtime.models.openai_local import split_harmony
     body = json.dumps({"model": alias, "messages": [{"role": "user", "content": prompt}], "max_tokens": MAX_TOKENS, "temperature": TEMPERATURE,
                        **({"reasoning_effort": effort} if effort != "default" else {})}).encode()
     req = urllib.request.Request(endpoint + "/v1/chat/completions", data=body, headers={"Content-Type": "application/json"})
@@ -315,7 +315,7 @@ def main():
     ap.add_argument("--windows", default="8192,32768,65536"); ap.add_argument("--seeds", type=int, default=2)
     ap.add_argument("--effort", default="default", choices=("default", "low", "medium", "high"))
     ap.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE"); ap.add_argument("--tag", default="")
-    ap.add_argument("--ollama", metavar="MODEL", help="run the same tasks through Ollama's API with this model instead of GUPPI's llama-server")
+    ap.add_argument("--ollama", metavar="MODEL", help="run the same tasks through Ollama's API with this model instead of SEDRA's llama-server")
     ap.add_argument("--cpt", type=float, default=3.0, help="starting characters per token (Ollama cannot tell when a prompt is too long)")
     args = ap.parse_args()
     project = Path(args.project)
@@ -329,11 +329,11 @@ def main():
     server = {**recipe["profile"]["server"], **overrides}
     alias = str(recipe.get("model") or recipe["id"])
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled, config.mtp = True, True
-    runtime = OllamaRuntime(args.ollama) if args.ollama else LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_ctxcode_")))
+    runtime = OllamaRuntime(args.ollama) if args.ollama else LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_ctxcode_")))
     out_dir = project / "runtime_data" / "measurements"; out_dir.mkdir(parents=True, exist_ok=True)
     tag = f"_{args.tag}" if args.tag else ""
     target = out_dir / f"context_coding_{args.recipe}{tag}_{date.today().isoformat()}.json"
-    result = {"recipe": args.recipe, "model": alias, "server": {k: v for k, v in server.items() if k != "gguf"}, "overrides": overrides, "backend": ("ollama:" + args.ollama) if args.ollama else "guppi-llama-server",
+    result = {"recipe": args.recipe, "model": alias, "server": {k: v for k, v in server.items() if k != "gguf"}, "overrides": overrides, "backend": ("ollama:" + args.ollama) if args.ollama else "sedra-llama-server",
               "effort": args.effort, "temperature": TEMPERATURE, "fill": FILL, "max_tokens": MAX_TOKENS, "rows": []}
     lab = TestLab(default_path(project))
     with lab.lease(os.environ.get("TESTLAB_OWNER", "context_coding"), f"context coding {args.recipe}{tag}", ttl_s=1800, wait_s=3600,

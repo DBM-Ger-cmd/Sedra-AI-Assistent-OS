@@ -12,7 +12,7 @@ Normative Wörter: **MUSS** = Pflicht, **SOLL** = Standard, Abweichung begründe
 
 | Komponente | Verantwortet | DARF NICHT |
 |---|---|---|
-| **GUPPI** | Ziele, Planung, Entscheidungen, Eskalationsbewertung | Jobs selbst ausführen |
+| **SEDRA** | Ziele, Planung, Entscheidungen, Eskalationsbewertung | Jobs selbst ausführen |
 | **Job Supervisor** | Queue, Zustand, Lease, Heartbeat, Retry-Entscheidung, Cancel, Recovery, Audit der Übergänge | Provider/Modell wählen, Hardware steuern, Policy ändern, eigenes Projektgedächtnis führen |
 | **Control Master** | Rolle → konkrete Runtime/Modell/Tool, Ausführung, Provider-Zustand, Cooldown | Jobzustand verändern |
 | **Context Manager** | Budget, Manifest, Offloading, Checkpoint (siehe `CONTEXT_MANAGER_CONTRACTS.md`) | Jobzustand verändern |
@@ -56,7 +56,7 @@ Job (neu, optional):
   attempt_log          [Attempt]                             # []
   retry                {limit, count, next_not_before, last_class} # limit aus Config
   cancel               {requested_at, requested_by, reason} | null
-  supervisor_flags     {escalated_to: null|"guppi"|"captain", dead: bool, rollback: null|"pending"|"done"}
+  supervisor_flags     {escalated_to: null|"sedra"|"captain", dead: bool, rollback: null|"pending"|"done"}
   last_error           {class, reason_code, message(<=500), at} | null
   context_checkpoint_id str | null
 ```
@@ -95,7 +95,7 @@ usage             {input_tokens, output_tokens, peak_fill} | null     # nur Verw
 | `supervisor_flags.dead` | DEAD |
 | `cancel != null` und `state` nicht final | CANCELLED (nach Abschluss des Abbruchs) / bis dahin Zustand wie gespeichert |
 | `supervisor_flags.escalated_to == "captain"` | ESCALATED_TO_CAPTAIN |
-| `supervisor_flags.escalated_to == "guppi"` | ESCALATED_TO_GUPPI |
+| `supervisor_flags.escalated_to == "sedra"` | ESCALATED_TO_SEDRA |
 | `supervisor_flags.rollback == "pending"` | ROLLBACK_PENDING |
 | `state == ROLLED_BACK` | ROLLED_BACK |
 | `worker != null` und `worker.state == "claimed"` | CLAIMED |
@@ -118,7 +118,7 @@ usage             {input_tokens, output_tokens, peak_fill} | null     # nur Verw
 | BLOCKED | BLOCKED |
 | REJECTED | FAILED |
 | ROLLED_BACK | ROLLED_BACK |
-| *unbekannter Wert* | UNKNOWN (Job wird nicht angefasst, Eskalation an GUPPI) |
+| *unbekannter Wert* | UNKNOWN (Job wird nicht angefasst, Eskalation an SEDRA) |
 
 ### 4.3 Neue gespeicherte Zustände
 
@@ -203,7 +203,7 @@ Läuft periodisch (Intervall Config) und beim Start. Uhrensprünge dürfen keine
 |---|---|
 | CLAIMED, kein confirm_start | Claim verwerfen → QUEUED |
 | RUNNING, Attempt `RUNNING`, Prozess unbekannt, **nichtmutierende** Rolle (reiner Lesejob) | Attempt `ABANDONED`, → QUEUED |
-| RUNNING, **mutierend oder unklar** | Attempt `UNKNOWN`, Job → DEAD, Eskalation an GUPPI; Wiederaufnahme nur über `recover` + Guard |
+| RUNNING, **mutierend oder unklar** | Attempt `UNKNOWN`, Job → DEAD, Eskalation an SEDRA; Wiederaufnahme nur über `recover` + Guard |
 | `cancel != null`, Zustand nicht final | Abbruch abschließen |
 | `supervisor_flags.rollback == "pending"` | Rollback fortsetzen (über `candidate_acceptance`, nicht hier) |
 | unlesbare Datei | **Original sichern** (`jobs/_corrupt/<name>.<rev>.bak`, max. 3 Kopien), Job als `corrupt` melden, **nicht überschreiben** (Idee aus herdr) |
@@ -217,8 +217,8 @@ Eingabe: `failure_class` (aus `failure_classes.classify`), Zähler, Config. Ausg
 ```text
 decide(job, failure_class, mutated):
   rule = failure_classes.retry_rule(failure_class)
-  if rule.escalate:                            -> ESCALATE (Captain bei policy_denied, sonst GUPPI)
-  if job.retry.count >= job.retry.limit:       -> ESCALATE (GUPPI)
+  if rule.escalate:                            -> ESCALATE (Captain bei policy_denied, sonst SEDRA)
+  if job.retry.count >= job.retry.limit:       -> ESCALATE (SEDRA)
   if mutated and attempt_outcome unknown:      -> DEAD + ESCALATE (nie automatisch wiederholen)
   if rule.next_action == "retry_with_backoff": -> RETRY, not_before = now + backoff(count)
   if "retry_limited_then_fallback":            -> RETRY bis `timeout_retry_limit`, danach FALLBACK_REQUEST

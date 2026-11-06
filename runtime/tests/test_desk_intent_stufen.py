@@ -8,10 +8,10 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import intents as desk_intents
-from guppi_runtime.desk import vorhaben_vorlagen as vv
+from sedra_runtime.desk import intents as desk_intents
+from sedra_runtime.desk import vorhaben_vorlagen as vv
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 
 
 class Pure(unittest.TestCase):
@@ -61,7 +61,7 @@ class Store(unittest.TestCase):
 
 class ThroughTheHub(unittest.TestCase):
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='desk-stufen-')
         self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)

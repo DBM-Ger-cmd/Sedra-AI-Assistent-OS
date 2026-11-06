@@ -11,9 +11,9 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 FIXTURES = RUNTIME / "benchmarks" / "fixtures"
 
-from guppi_runtime.devenv import buildflow_cli, buildflow_core as core
-from guppi_runtime.devenv.buildflow_runner import build_command, run_queue, run_task
-from guppi_runtime.devenv.buildflow_store import BuildflowStore
+from sedra_runtime.devenv import buildflow_cli, buildflow_core as core
+from sedra_runtime.devenv.buildflow_runner import build_command, run_queue, run_task
+from sedra_runtime.devenv.buildflow_store import BuildflowStore
 
 NOW = "2026-10-14T08:00:00"
 PASSED = (FIXTURES / "build_log_passed.txt").read_text(encoding="utf-8")
@@ -192,9 +192,9 @@ class ReportAdoptTests(Case):
         super().setUp()
         self.runtime = Path(self.tmp.name, "runtime")
         self.repo = Path(self.tmp.name, "repo")
-        (self.repo / "runtime" / "src" / "guppi_runtime" / "devenv").mkdir(parents=True)
+        (self.repo / "runtime" / "src" / "sedra_runtime" / "devenv").mkdir(parents=True)
         (self.repo / "runtime" / "tests").mkdir(parents=True)
-        (self.repo / "runtime" / "src" / "guppi_runtime" / "old.py").write_text('"""Moved to guppi_runtime.devenv.old."""\n', encoding="utf-8")
+        (self.repo / "runtime" / "src" / "sedra_runtime" / "old.py").write_text('"""Moved to sedra_runtime.devenv.old."""\n', encoding="utf-8")
         self.candidate = Path(self.tmp.name, "candidate")
         self.candidate.mkdir()
         (self.candidate / "newmod.py").write_text('import os\n\n\ndef f(x):\n    return x  # note\n', encoding="utf-8")
@@ -226,9 +226,9 @@ class ReportAdoptTests(Case):
         self.cli("report", "BF-AAAA0001")
         code, lines = self.cli("adopt", "BF-AAAA0001")
         self.assertEqual(code, 0)
-        self.assertIn("neu: runtime/src/guppi_runtime/devenv/newmod.py", "\n".join(lines))
+        self.assertIn("neu: runtime/src/sedra_runtime/devenv/newmod.py", "\n".join(lines))
         self.assertIn("Test fehlt: runtime/tests/test_newmod.py", "\n".join(lines))
-        target = self.repo / "runtime" / "src" / "guppi_runtime" / "devenv" / "newmod.py"
+        target = self.repo / "runtime" / "src" / "sedra_runtime" / "devenv" / "newmod.py"
         self.assertFalse(target.exists())
         self.assertEqual(self.cli("adopt", "BF-AAAA0001", "--yes")[0], 2)
         self.assertFalse(target.exists())
@@ -247,16 +247,16 @@ class ReportAdoptTests(Case):
 
     def test_a_shim_is_refused_in_the_plan(self):
         (self.candidate / "old.py").write_text("x = 1\n", encoding="utf-8")
-        (self.repo / "runtime" / "src" / "guppi_runtime" / "devenv" / "old.py").write_text("x = 0\n", encoding="utf-8")
+        (self.repo / "runtime" / "src" / "sedra_runtime" / "devenv" / "old.py").write_text("x = 0\n", encoding="utf-8")
         self.cli("report", "BF-AAAA0001")
         code, lines = self.cli("adopt", "BF-AAAA0001")
         self.assertEqual(code, 0)
         self.assertNotIn("abgelehnt", "\n".join(lines))
-        top = self.repo / "runtime" / "src" / "guppi_runtime" / "devenv" / "old.py"
-        top.write_text('"""Moved to guppi_runtime.somewhere."""\n', encoding="utf-8")
-        code, lines = self.cli("adopt", "BF-AAAA0001", "--target-dir", "runtime/src/guppi_runtime")
+        top = self.repo / "runtime" / "src" / "sedra_runtime" / "devenv" / "old.py"
+        top.write_text('"""Moved to sedra_runtime.somewhere."""\n', encoding="utf-8")
+        code, lines = self.cli("adopt", "BF-AAAA0001", "--target-dir", "runtime/src/sedra_runtime")
         self.assertEqual(code, 1)
-        self.assertIn("abgelehnt: runtime/src/guppi_runtime/old.py (shim: edit the file in the subpackage)", "\n".join(lines))
+        self.assertIn("abgelehnt: runtime/src/sedra_runtime/old.py (shim: edit the file in the subpackage)", "\n".join(lines))
 
 
 if __name__ == "__main__":

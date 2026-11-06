@@ -1,9 +1,9 @@
-"""Open GUPPI's UIX as its own Windows window (a browser in app mode: no address bar, no tabs, own taskbar entry).
+"""Open SEDRA's UIX as its own Windows window (a browser in app mode: no address bar, no tabs, own taskbar entry).
 
 Pure: no processes, no file system access, no environment reads; only the standard library. The caller passes the
 environment and an `exists(path) -> bool` function and starts the returned argument list itself.
 
-Safety rule: the window may only ever show GUPPI's own UIX on the loopback address. Any other URL is refused.
+Safety rule: the window may only ever show SEDRA's own UIX on the loopback address. Any other URL is refused.
 """
 
 DEFAULT_SIZE = (1280, 820)
@@ -30,7 +30,7 @@ def pick_browser(candidates, exists):
 
 
 def check_uix_url(url):
-    """Return `url` unchanged if it is GUPPI's own UIX, else raise ValueError("uix_url_not_allowed").
+    """Return `url` unchanged if it is SEDRA's own UIX, else raise ValueError("uix_url_not_allowed").
     Allowed exactly: starts with "http://127.0.0.1:", then a port of 1 to 5 digits whose value is 1..65535, then "/",
     then optionally "#" followed by anything except whitespace. Nothing else (no path, no query, no other host, no https)."""
     raise NotImplementedError

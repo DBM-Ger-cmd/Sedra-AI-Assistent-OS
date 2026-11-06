@@ -1,7 +1,7 @@
 """G6 adopt_plan (docs/ABLAUF_GESPRAECH_2026-10-13.md step 7, "Uebernahme"). When a candidate has passed, its files have to go into the package, and that has traps the project already met: the old top-level files of the
 package are SHIMS (editing them breaks the alias, docs/ENTWICKLUNG.md and the memory "package split"), the self-integration path E1 allows only NEW files, and every module needs its test. `adopt_plan.py` makes the PLAN of
 such an adoption from names alone (no file is read or written): which candidate file goes where, what is refused and why, which tests must run, whether a Captain's gate is needed, and the German text for the chat; the actual
-copying is done by the caller with the pairs this module returns. GUPPI builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/adopt_plan)."""
+copying is done by the caller with the pairs this module returns. SEDRA builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/adopt_plan)."""
 
 NOTES = '''# Notes for adopt_plan
 Pure Python 3 standard library (`posixpath` is allowed), no file, process or network access, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code, `import` lines at the top. Texts contain the characters ü ö (UTF-8 source).
@@ -10,9 +10,9 @@ All paths are texts with "/" as the separator; `candidate_files` are relative to
 
 HEAD = r'''
 CAND = ["NOTES.md", "assert_catalog.py", "catalog_proofs.py", "hidden_x.py", "check_it.py", "pkg/__pycache__/x.pyc", "pkg/mod.py", "readme.txt", "devvm_tools.py"]
-EXISTING = ["runtime/src/guppi_runtime/devenv/catalog_proofs.py", "runtime/src/guppi_runtime/devenv/devvm_tools.py", "runtime/tests/test_catalog_proofs.py"]
-SHIMS = ["runtime/src/guppi_runtime/devenv/devvm_tools.py"]
-D = "runtime/src/guppi_runtime/devenv"
+EXISTING = ["runtime/src/sedra_runtime/devenv/catalog_proofs.py", "runtime/src/sedra_runtime/devenv/devvm_tools.py", "runtime/tests/test_catalog_proofs.py"]
+SHIMS = ["runtime/src/sedra_runtime/devenv/devvm_tools.py"]
+D = "runtime/src/sedra_runtime/devenv"
 '''
 
 S1 = HEAD + r'''

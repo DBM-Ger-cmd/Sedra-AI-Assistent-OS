@@ -87,7 +87,7 @@ Für den späteren Bau (nach G2/G3), hier schon benannt:
 
 | Nr | Berechtigung | Begründung |
 |---|---|---|
-| P6-1 | Schreiben in `runtime/src/guppi_runtime/harness/aufgabe.py`, `api.py`, `vorarbeiter.py` (nur Feld `zweck`, Klartext-Zeile) | HS-60 bis HS-63 |
+| P6-1 | Schreiben in `runtime/src/sedra_runtime/harness/aufgabe.py`, `api.py`, `vorarbeiter.py` (nur Feld `zweck`, Klartext-Zeile) | HS-60 bis HS-63 |
 | P6-2 | Schreiben in `uix/shells/harness/*` (`aufgabe.js`, `seite.js`, `reiter.js`, `shell.js`, `shell.css`, `verlauf.js`, neu `vorschau.js`) | HS-61 bis HS-75 |
 | P6-3 | Schreiben von Tests und `harness_abnahme_stufe6.py`; Browser-Prüfung ohne Modell (Playwright: das Paket fehlt in der `.venv`, **Installation nur nach Ja des Captains**) | Abnahme |
 | P6-4 | Branch `harness/stufe-6`, Commits, kein Push | wie bisher |

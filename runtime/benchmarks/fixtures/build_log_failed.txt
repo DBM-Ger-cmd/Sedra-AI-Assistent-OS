@@ -16,7 +16,7 @@ S0 connection check: coder.local_primary ok
    agent solo developer (rework 3) qwen3.6-35b-a3b        hand_in      6 calls  111.3 s 2894 tokens, 99071 prompt, peak 17729
    stage rest: hidden FAILED (own check accepted=UNJUDGED, own tests none, 974.7 s)
    stopped after the failed stage rest; skipped: all (--keep-going builds them anyway)
-   resume: benchmarks/devvm_build.py <project> --spec assert_catalog --from-stage rest --seed "..\workspace\GUPPI_OS\runtime_data\devvm_snapshots\assert_catalog\20261013_180229\after_more" (plus the options of this run)
-attempt 1: hidden test FAILED | own check accepted=UNJUDGED | 5845.0 s, 9 agent runs, 145 calls -> ..\workspace\GUPPI_OS\runtime_data\devvm_candidates\assert_catalog\attempt_01_20261013_193955
+   resume: benchmarks/devvm_build.py <project> --spec assert_catalog --from-stage rest --seed "..\workspace\SEDRA_OS\runtime_data\devvm_snapshots\assert_catalog\20261013_180229\after_more" (plus the options of this run)
+attempt 1: hidden test FAILED | own check accepted=UNJUDGED | 5845.0 s, 9 agent runs, 145 calls -> ..\workspace\SEDRA_OS\runtime_data\devvm_candidates\assert_catalog\attempt_01_20261013_193955
 # run ended: done
 DONE -> devvm_build_assert_catalog_2026-10-13_180229.json

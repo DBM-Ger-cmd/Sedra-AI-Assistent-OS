@@ -1,0 +1,15 @@
+example_mission:
+  mission_id: "M-0042"
+  captain_intent: "Implementiere eine neue SEDRA-Funktion kontrolliert und prüfbar."
+
+  flow:
+    - {from: "sedra-core", to: "planning-context", message: "planning_request"}
+    - {from: "planning-context", to: "control-master", message: "capability_query"}
+    - {from: "planning-context", to: "sedra-core", message: "plan_ready"}
+    - {from: "sedra-core", to: "control-master", message: "execution_request"}
+    - {from: "control-master", to: "sedra-core", message: "execution_complete"}
+    - {from: "sedra-core", to: "verification", message: "verification_request"}
+    - {from: "verification", to: "control-master", message: "verification_retest"}
+    - {from: "verification", to: "sedra-core", message: "verification_pass"}
+
+  final_state: "COMPLETE"

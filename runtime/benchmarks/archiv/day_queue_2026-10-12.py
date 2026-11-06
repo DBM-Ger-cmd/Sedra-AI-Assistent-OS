@@ -1,4 +1,4 @@
-r"""Second attempts of 2026-10-12 (Captain: "offene Punkte angehen") with the runner of the night queue (same settings: GUPPI's coder, solo, --coder-ext all,
+r"""Second attempts of 2026-10-12 (Captain: "offene Punkte angehen") with the runner of the night queue (same settings: SEDRA's coder, solo, --coder-ext all,
 b11160, FA on, KV q8_0, ubatch 512):
   1. E-06 bg_jobs: Qwen3.6 continues its own candidate of the night with a review of the five deviations (benchmarks/devvm_reviews/e06_review_2026-10-12.txt);
   2. E-10 self_repo_guard: Qwen3-Coder instead of Gemma (Gemma failed 0/3 on the turn limit), a fresh build.

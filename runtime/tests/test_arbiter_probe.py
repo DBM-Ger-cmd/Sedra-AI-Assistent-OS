@@ -7,7 +7,7 @@ sys.path.insert(0, str(RUNTIME / "benchmarks"))
 
 from probes.arbiter_probe import build_cases, run_probe, summarize   # noqa: E402
 
-PROJECT = RUNTIME.parent / "workspace" / "GUPPI_OS"
+PROJECT = RUNTIME.parent / "workspace" / "SEDRA_OS"
 
 
 class FakeTeam:

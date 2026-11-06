@@ -7,9 +7,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.core.mission_lock import exclusive
-from guppi_runtime.harness import lauf
-from guppi_runtime.wissen import aufnahme, aufnahme_lauf
+from sedra_runtime.core.mission_lock import exclusive
+from sedra_runtime.harness import lauf
+from sedra_runtime.wissen import aufnahme, aufnahme_lauf
 from wissen_fixture import FakeEmbedServer, freigeben, oeffnen
 
 MD = "# Akte {n}\n\n## Vertrag\n\nLaufzeit {n} Jahre, Kündigung drei Monate.\n\n## Kontakt\n\nAnsprechpartner {n} im Einkauf.\n"

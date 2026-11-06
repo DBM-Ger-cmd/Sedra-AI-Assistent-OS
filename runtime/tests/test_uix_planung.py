@@ -12,10 +12,10 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.chat_tools import ChatTools, PLANUNG_TOOLS, SCHEMAS
+from sedra_runtime.chat_tools import ChatTools, PLANUNG_TOOLS, SCHEMAS
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'benchmarks'))
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 
 
 class FakeServer:
@@ -48,7 +48,7 @@ class Proposals(unittest.TestCase):
 
 class PlanningMode(unittest.TestCase):
     def test_the_role_is_in_the_system_sentence_and_only_planning_tools_are_offered(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         with tempfile.TemporaryDirectory() as tmp:
             hub = UIXHub(Path(tmp) / 'project', ARCH)
             try:

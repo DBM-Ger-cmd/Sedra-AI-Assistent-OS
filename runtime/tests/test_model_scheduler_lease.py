@@ -6,10 +6,10 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from guppi_runtime.models.base import ModelAdapterError
-from guppi_runtime.models.router import ModelRouter
-from guppi_runtime.models.slot_guard import SlotGuard
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.models.base import ModelAdapterError
+from sedra_runtime.models.router import ModelRouter
+from sedra_runtime.models.slot_guard import SlotGuard
+from sedra_runtime.uix_server import UIXHub
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 from model_scheduler_fakes import make_scheduler, resolution
 
@@ -133,7 +133,7 @@ class WorkshopTests(Base):
         out = self.hub.load_model({"recipe_id": "main.local"})
         self.assertEqual((out["recipe_id"], out["action"]), ("main.local", "loaded"))
         self.assertEqual(self.loader.loaded, [("main.local", 2, 32768)])
-        self.assertEqual(self.lab.holder()["owner"], self.sched.owner)               # the scheduler holds `gpu`, not 'guppi-uix'
+        self.assertEqual(self.lab.holder()["owner"], self.sched.owner)               # the scheduler holds `gpu`, not 'sedra-uix'
         self.assertNotIn("gpu_token", vars(self.hub))
         self.assertTrue(self.hub._lease_is_mine(self.lab.holder()))
         self.assertEqual(self.audit.of("SLOT_SERVER_STARTED")[0]["asked_by"], "werkstatt")
@@ -165,7 +165,7 @@ class WorkshopTests(Base):
         self.assertNotIn("gpu_token", vars(self.hub))
 
     def test_another_recipe_replaces_the_running_one_only_without_active_runs(self):
-        from guppi_runtime import uix_server
+        from sedra_runtime import uix_server
         real = uix_server.time.sleep
         uix_server.time.sleep = lambda s: None
         self.addCleanup(lambda: setattr(uix_server.time, "sleep", real))
@@ -185,8 +185,8 @@ class WorkshopTests(Base):
 
     def test_the_runtime_wires_the_guard_next_to_the_supervisor(self):
         import inspect
-        from guppi_runtime import runtime
-        source = inspect.getsource(runtime.GuppiRuntime._configure_model_scheduler).replace(" ", "")
+        from sedra_runtime import runtime
+        source = inspect.getsource(runtime.SedraRuntime._configure_model_scheduler).replace(" ", "")
         self.assertIn("self.model_router.slot_guard=SlotGuard(", source)
         self.assertIn("job_supervisor.slots=self.model_scheduler", source)
 
@@ -194,7 +194,7 @@ class WorkshopTests(Base):
 class StructureTests(unittest.TestCase):
     """SCH-11, OP-S2-02: who talks to a local llama server over HTTP. Every file that does is listed with the reason it may; a new one fails here
     until someone decides (router hook, scheduler lease, or a reason)."""
-    SRC = Path(__file__).resolve().parents[1] / "src" / "guppi_runtime"
+    SRC = Path(__file__).resolve().parents[1] / "src" / "sedra_runtime"
     PATTERN = __import__("re").compile(r"chat/completions|_request\(.POST|adapter\.chat\(|LlamaCppServerAdapter\(|OpenAICompatibleLocalAdapter\(")
     ALLOWED = {
         "models/router.py": "the router: the one door for chat, gateway, orchestra, vorgabe and the CLI (the slot hook sits here)",

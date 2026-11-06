@@ -2,7 +2,7 @@
 are registered once at start instead of standing in if-elif chains of `uix_server.py`; `view`, `listing` and `request` give every object in the one form
 {type, id, title, state, summary, actions, links} and set `actions` from the verbs of its type. `client_for` derives the audit field `client` from the token class (the server
 sets it, never the caller). Pure logic: readers, verbs and the not-found object are injected, nothing of the desk is imported. The verb objects are the existing
-`desk.actions.Verb` (attributes `verb`, methods `offered(obj)` and `describe()`); the tests use a small copy. GUPPI/SEDRA builds it; Claude only wrote this file, the hidden
+`desk.actions.Verb` (attributes `verb`, methods `offered(obj)` and `describe()`); the tests use a small copy. SEDRA builds it; Claude only wrote this file, the hidden
 tests and the reference (benchmarks/devvm_refs/k0_kinds). The integration (builtin kinds, uix_server.py, actions.table) is harness work (K0.10, K0.11).
 Stages cut to at most 20 new hidden checks each (Captain, line L3, 20.10.2026)."""
 

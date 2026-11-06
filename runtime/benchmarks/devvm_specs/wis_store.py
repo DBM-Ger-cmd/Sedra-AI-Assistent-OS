@@ -7,7 +7,7 @@ the module. SEDRA builds it; Claude only wrote this file, the hidden tests and t
 SEED = "benchmarks/wis_schema_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 
 NOTES = '''# Notes for wis_store
-Python 3 standard library only (sqlite3, hashlib, json, contextlib) plus `from wis_ddl import MIGRATIONEN` (wis_ddl.py is given in the workspace: do not change it). No clock (every time is an argument), no other files, no network, no guppi_runtime import.
+Python 3 standard library only (sqlite3, hashlib, json, contextlib) plus `from wis_ddl import MIGRATIONEN` (wis_ddl.py is given in the workspace: do not change it). No clock (every time is an argument), no other files, no network, no sedra_runtime import.
 The connection is opened by the caller with wis_ddl.open_db (rows are sqlite3.Row, isolation_level None, foreign keys on); return plain dicts, lists and tuples. Every write runs inside one `BEGIN IMMEDIATE` ... `COMMIT` (ROLLBACK on any exception); a refusal (ValueError) is raised BEFORE anything is written.
 Every refusal is a ValueError with exactly the code the task names. No comments and no docstrings, small private helpers instead of copied code.
 '''

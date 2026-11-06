@@ -4,20 +4,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.jobs.context_budget import ContextBudgetManager
-from guppi_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
-from guppi_runtime.selfdev.kev import KevVerificationProvider
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.jobs.context_budget import ContextBudgetManager
+from sedra_runtime.selfdev.development_evidence import DevelopmentEvidenceStore
+from sedra_runtime.selfdev.kev import KevVerificationProvider
+from sedra_runtime.runtime import SedraRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 
 
 class SelfDevelopmentTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name) / 'project'
-        self.rt = GuppiRuntime(self.root, ARCH)
+        self.rt = SedraRuntime(self.root, ARCH)
 
     def test_capability_admission_reuses_existing(self):
         out = self.rt.self_development.admission.evaluate(
@@ -73,7 +73,7 @@ class SelfDevelopmentTests(unittest.TestCase):
         jid=out['job']['job_id']
         self.rt.self_development.prepare_development_environment(jid, {'execution_ready':True})
         self.rt.self_development.assign_roles(jid,['planner','coder','tester','reviewer','verifier'])
-        self.rt.self_development.bind_candidate(jid,attempt_id='attempt-1',stage=f'guppi-candidates/{jid}/project',parent_version='1.19.0',candidate_hash='a'*64,builder='coder')
+        self.rt.self_development.bind_candidate(jid,attempt_id='attempt-1',stage=f'sedra-candidates/{jid}/project',parent_version='1.19.0',candidate_hash='a'*64,builder='coder')
         return jid
 
     def _evidence(self, jid, status='PASS', trust='deterministic', candidate=True):
@@ -86,7 +86,7 @@ class SelfDevelopmentTests(unittest.TestCase):
         out=self.rt.self_development.start('keyed_cap',evidence=[{'source':'test'}])
         jid=out['job']['job_id']; sd=self.rt.self_development
         sd.prepare_development_environment(jid,{'execution_ready':True})
-        sd.bind_candidate(jid,attempt_id='a1',stage=f'guppi-candidates/{jid}/p',parent_version='1',candidate_hash='a'*64,builder='coder',builder_key=builder_key)
+        sd.bind_candidate(jid,attempt_id='a1',stage=f'sedra-candidates/{jid}/p',parent_version='1',candidate_hash='a'*64,builder='coder',builder_key=builder_key)
         return jid
 
     def test_actual_identities_decide_independence_not_the_current_resolution(self):
@@ -113,7 +113,7 @@ class SelfDevelopmentTests(unittest.TestCase):
         sd=self.rt.self_development; sd.independence_check=None
         out=sd.start('acc_cap_'+mid[-4:].lower(),evidence=[{'source':'test'}]); jid=out['job']['job_id']
         sd.prepare_development_environment(jid,{'execution_ready':True})
-        sd.bind_candidate(jid,attempt_id='a1',stage=f'guppi-candidates/{mid}',parent_version='1',candidate_hash='a'*64,builder='coder',builder_key=builder_key)
+        sd.bind_candidate(jid,attempt_id='a1',stage=f'sedra-candidates/{mid}',parent_version='1',candidate_hash='a'*64,builder='coder',builder_key=builder_key)
         refs=[self._evidence(jid,status='PASS' if verdict=='PASS' else 'FAIL')]
         sd.attach_verification(jid,verifier='verifier',result=verdict,evidence_refs=refs,verifier_key=verifier_key)
         return jid
@@ -140,14 +140,14 @@ class SelfDevelopmentTests(unittest.TestCase):
         self.assertEqual([e['phase'] for e in sd.jobs.load(jid)['activation_log']],['started','applied','rolled_back'])
 
     def test_acceptance_preview_refuses_a_job_that_is_not_ready(self):
-        from guppi_runtime.selfdev.candidate_acceptance import preview
+        from sedra_runtime.selfdev.candidate_acceptance import preview
         self._mission_job('M-AAAA6666',verdict='FAIL')
         mission={'identity':{'mission_id':'M-AAAA6666'},'execution':{}}
         with self.assertRaises(ValueError) as ctx: preview(self.rt,mission,'accept')
         self.assertIn('development_job_not_ready',str(ctx.exception))
 
     def test_two_jobs_on_one_candidate_are_ambiguous(self):
-        from guppi_runtime.selfdev.candidate_acceptance import linked_job
+        from sedra_runtime.selfdev.candidate_acceptance import linked_job
         self._mission_job('M-AAAA7777'); self._mission_job('M-AAAA7777')
         with self.assertRaises(ValueError) as ctx: linked_job(self.rt,'M-AAAA7777')
         self.assertIn('ambiguous_development_jobs',str(ctx.exception))
@@ -156,7 +156,7 @@ class SelfDevelopmentTests(unittest.TestCase):
         sd=self.rt.self_development; sd.independence_check=None
         jid=self._mission_job('M-BBBB1111',verdict='FAIL')
         self.assertEqual(sd.jobs.load(jid)['state'],'REWORK')
-        sd.bind_candidate(jid,attempt_id='a2',stage='guppi-candidates/M-BBBB2222',parent_version='1',candidate_hash='b'*64,builder='coder',builder_key='gpt-oss:k1')
+        sd.bind_candidate(jid,attempt_id='a2',stage='sedra-candidates/M-BBBB2222',parent_version='1',candidate_hash='b'*64,builder='coder',builder_key='gpt-oss:k1')
         self.assertEqual(sd.jobs.load(jid)['state'],'BUILDING')
         rec=sd.attach_verification(jid,verifier='verifier',result='PASS',evidence_refs=[self._evidence(jid)],verifier_key='gemma4:k2')
         self.assertEqual((rec['result'],sd.jobs.load(jid)['state']),('PASS','READY_FOR_ACCEPTANCE'))

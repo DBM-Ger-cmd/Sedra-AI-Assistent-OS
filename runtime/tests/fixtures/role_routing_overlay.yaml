@@ -7,7 +7,7 @@
 #
 # TWO WAYS TO RUN EACH MODEL, in this order of preference (the router takes the first one that is usable, and falls back on a
 # provider failure):
-#   1. provider llama-cpp-server: a llama-server that GUPPI starts and watches itself (llama_server_runtime.py). Every option is
+#   1. provider llama-cpp-server: a llama-server that SEDRA starts and watches itself (llama_server_runtime.py). Every option is
 #      explicit; the model file, KV type, MTP and reasoning options are in `profile.server`.
 #   2. provider lm-studio: through LM Studio's own server. Its engine crashed under long generations on this PC (CUDA illegal memory
 #      access), MTP stays off there (model_loader.yaml), so it is the fallback.
@@ -16,7 +16,7 @@
 #  - Weights ids are the SHA-256 of the exact GGUF files:
 #      qwen3.5-9b-mtp           -> unsloth/Qwen3.5-9B-MTP-GGUF/Qwen3.5-9B-UD-Q4_K_XL.gguf              6,135,034,208 bytes
 #      google/gemma-4-12b-qat   -> lmstudio-community/gemma-4-12B-it-QAT-GGUF/gemma-4-12B-it-QAT-Q4_0.gguf  6,975,879,008 bytes
-#  - llama-server (GUPPI's own start, --no-mmproj, one slot, idle after start, GPU baseline 0.53 GiB subtracted):
+#  - llama-server (SEDRA's own start, --no-mmproj, one slot, idle after start, GPU baseline 0.53 GiB subtracted):
 #      qwen  MTP off  ctx  8192 5.50  16384 5.67  32768 6.02  65536 6.71 GiB
 #      qwen  MTP on   ctx  8192 5.92  16384 6.14  32768 6.53  65536 7.35 GiB      (about twice the speed: 140 vs 69 tokens/s)
 #      gemma          ctx  8192 7.41  16384 7.54  32768 7.80  65536 8.33 GiB
@@ -66,16 +66,16 @@ role_routing:
         kv_cache: {placement: gpu}
         server: {gguf: '<modelle>\ggml-org\gpt-oss-20b-GGUF\gpt-oss-20b-MXFP4.gguf', kv_cache_type: f16, mtp: false, reasoning: auto, n_cpu_moe: 7, jinja: false}
         # jinja: false (2026-10-02): with the Jinja template the server's Harmony parser rejects a correct `<|constrain|>JSON` answer with
-        # HTTP 500 (default and reasoning_format none failed 1-3 of 3; --no-jinja 3 of 3 OK). GUPPI's adapter splits the raw Harmony output.
+        # HTTP 500 (default and reasoning_format none failed 1-3 of 3; --no-jinja 3 of 3 OK). SEDRA's adapter splits the raw Harmony output.
       permissions: {max_level: 2}
       network: {allowed: false}
       tests: [capability_smoke_test, syntax_test, deterministic_task_test]
       rollback: {supported: true}
       metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
 
-    # 1b. coder side, qwen3.5 on GUPPI's own llama-server (was first choice as coder.local_primary v3 until 2026-10-02).
+    # 1b. coder side, qwen3.5 on SEDRA's own llama-server (was first choice as coder.local_primary v3 until 2026-10-02).
     - id: coder.llama_qwen35
-      enabled: false   # guppi-model-remove RM-20261003T185920
+      enabled: false   # sedra-model-remove RM-20261003T185920
       version: 1
       roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
       provider: llama-cpp-server
@@ -102,7 +102,7 @@ role_routing:
       rollback: {supported: true}
       metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
 
-    # 1b. verifier side, GUPPI's own llama-server.
+    # 1b. verifier side, SEDRA's own llama-server.
     - id: verifier.llama_gemma
       version: 1
       roles: [verifier, security_reviewer]
@@ -132,7 +132,7 @@ role_routing:
     # max_tokens >= 400. Stable at 14-16k and 24-28k token prompts (5/5 each, ctx 32768, KV q8_0, ~4400 tokens/s prompt processing).
     # With ctx 102400 it spilled out of VRAM (30-40 tokens/s), so the maximum is 32768.
     - id: coder.llama_deepseek
-      enabled: false   # guppi-model-remove RM-20261003T185920
+      enabled: false   # sedra-model-remove RM-20261003T185920
       version: 1
       roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
       provider: llama-cpp-server
@@ -160,7 +160,7 @@ role_routing:
     # build from lmstudio-community (sha256 712c0791...) lies next to it unused. 9 GB of weights leave little room for the window on 12 GB.
     # Numbers below are measured with benchmarks/measure_recipe.py; stability under long prompts is not measured yet.
     - id: coder.llama_qwen3_14b
-      enabled: false   # guppi-model-remove RM-20261003T185920
+      enabled: false   # sedra-model-remove RM-20261003T185920
       version: 1
       roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
       provider: llama-cpp-server
@@ -378,7 +378,7 @@ role_routing:
 
     # Qwen3-30B-A3B-Instruct-2507 (general instruct model of the Qwen3-Coder generation, same architecture and size class as Qwen3-Coder-30B: same settings as coder.local_primary).
     - id: coder.llama_qwen3_30b_2507
-      enabled: false   # guppi-model-remove RM-20261010T065753
+      enabled: false   # sedra-model-remove RM-20261010T065753
       enabled: false   # 2026-10-09: not measured yet
       version: 1
       roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
@@ -451,7 +451,7 @@ role_routing:
 
     # 2a. coder side through LM Studio (fallback)
     - id: coder.lmstudio_qwen
-      enabled: false   # 2026-10-03, Captain: "nicht LM Studio nutzen, nur GUPPI" (also: qwen3.5 crashes >=23k, this offered 64k)
+      enabled: false   # 2026-10-03, Captain: "nicht LM Studio nutzen, nur SEDRA" (also: qwen3.5 crashes >=23k, this offered 64k)
       version: 1
       roles: [coder, planner, reviewer, tester, documentation, context_curator, tool_operator, researcher]
       provider: lm-studio
@@ -473,7 +473,7 @@ role_routing:
 
     # 2b. verifier side through LM Studio (fallback)
     - id: verifier.lmstudio_gemma
-      enabled: false   # 2026-10-03, Captain: "nicht LM Studio nutzen, nur GUPPI" (also: qwen3.5 crashes >=23k, this offered 64k)
+      enabled: false   # 2026-10-03, Captain: "nicht LM Studio nutzen, nur SEDRA" (also: qwen3.5 crashes >=23k, this offered 64k)
       version: 1
       roles: [verifier, security_reviewer]
       provider: lm-studio

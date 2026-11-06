@@ -1,8 +1,8 @@
 import unittest
 import tempfile
 import os
-from guppi_runtime.agent_manager.agent_registry import Registry
-from guppi_runtime.agent_manager.agent_contracts import ContractError
+from sedra_runtime.agent_manager.agent_registry import Registry
+from sedra_runtime.agent_manager.agent_contracts import ContractError
 
 class TestRegistry(unittest.TestCase):
     def setUp(self):

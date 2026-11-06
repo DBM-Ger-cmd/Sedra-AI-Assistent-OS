@@ -2,7 +2,7 @@
 
 Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen); G2 steht noch aus. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Setzt AM1 (`shells`) voraus.
 Ziel: (1) Eine App bringt ihren Ort (Name, Wörter, Gruppe) im Manifest mit, statt in zwei Listen des Kerns zu stehen. (2) Shells können eigene Apps haben. (3) Die bestätigten Grundfunktionen sind in jeder Shell erreichbar, und das wird geprüft.
-Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
+Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für c364081.
 
 ## 1. Befund
 
@@ -25,7 +25,7 @@ Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 | `fisch` (Translator) | `dock, talk, notify` | `talk` | über Ort? | nicht geprüft |
 | `gateway-kmu` | `dock, talk` | `talk` | nur Antwortroute `POST /api/decisions/answer` | keine Leiste, kein Baum, keine Palette |
 | `start` | `chooser, talk, notify, inbox` | `talk` | `inbox` | Einstieg/Auswahl |
-| `guppi-xp` | `chooser` | – | – | leitet nur auf das Archiv `/retro` um |
+| `sedra-xp` | `chooser` | – | – | leitet nur auf das Archiv `/retro` um |
 | `gateway-studio`, `wissensbasis` | Vorgabe (Rahmen `ui/frame.js`) | Zone `gespraech` | Zone `entscheidungen` (falls im Raster) | `FRAME_ZONES` `desk/gateway.py:70` |
 
 ## 2. Anforderungen
@@ -60,7 +60,7 @@ Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 | AM2-14 | Jede Shell **erklärt** in `shell.yaml` unter `grundfunktionen:` je Grundfunktion, wie sie erreichbar ist: `ort` (über einen Ort/Start-Menü/Palette), `slot:<name>` (eigener Slot, z. B. `slot:inbox`), `eigen` (eigene Fläche der Shell, die den Kernweg nutzt), `verwaltung` (nur über den Verwaltungszugang, ab AM7). Vorgabe-Shells bekommen die Erklärung vom Rahmen (aus Raster und Zonen). | Schema-Test |
 | AM2-15 | Prüfung: fehlende Erklärung → im Vertrag 1.1 eine **Warnung** (`grundfunktion_nicht_erklaert:<name>`, sichtbar im Werkzeug „Module“), ab Vertrag 1.2 ein **Fehler** (Shell wird abgewiesen). Zeitpunkt AM2-E2. | Test |
 | AM2-16 | `uix_check` prüft je Shell, dass jede erklärte Grundfunktion tatsächlich erreichbar ist: `ort` → Öffnen ergibt eine gezeichnete Fläche; `slot:x` → Element vorhanden; `eigen` → die Shell meldet ein Element mit `data-grundfunktion="<name>"`. | Browser-Prüfung je Shell |
-| AM2-17 | Ausnahme für Shells, die keine Arbeitsoberfläche sind: `archiv: true` in `shell.yaml` (heute `guppi-xp`, leitet auf `/retro`) und `einstieg: true` (heute `start`). Sie müssen nur `module_berechtigungen` und den Wechsel in eine andere Shell erreichbar machen. | Schema-Test |
+| AM2-17 | Ausnahme für Shells, die keine Arbeitsoberfläche sind: `archiv: true` in `shell.yaml` (heute `sedra-xp`, leitet auf `/retro`) und `einstieg: true` (heute `start`). Sie müssen nur `module_berechtigungen` und den Wechsel in eine andere Shell erreichbar machen. | Schema-Test |
 | AM2-18 | Eine App, die eine Grundfunktion überdecken würde (gleiche `ort.id`, gleiches Wort, gleicher Objekttyp mit `collection`), wird abgewiesen (`grundfunktion_ueberdeckt`). | Test |
 
 ### 2.4 Vorbereitung für später

@@ -6,7 +6,7 @@ import unittest
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import live
+from sedra_runtime.desk import live
 
 
 def mission(**kw):
@@ -112,7 +112,7 @@ class Lines(unittest.TestCase):
         self.assertIn('Aufgabe angelegt', rows[0]['line'])
 
     def test_the_stream_only_announces_what_grew(self):
-        from guppi_runtime.desk.events import diff
+        from sedra_runtime.desk.events import diff
         before = {'missions': [], 'decisions': [], 'model': {}, 'state': 'READY', 'live': {'M-1': 4}}
         same = dict(before)
         self.assertEqual(diff(before, same), [])

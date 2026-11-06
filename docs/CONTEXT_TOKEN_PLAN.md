@@ -1,4 +1,4 @@
-# CONTEXT_TOKEN_PLAN – Context Manager für GUPPI
+# CONTEXT_TOKEN_PLAN – Context Manager für SEDRA
 
 Stand: 2026-10-01 · Grundlage: `ARCHITECTURE_GAP_REPORT.md` §2.4
 Status: **Entwurf zur Freigabe. Es wurde noch kein Code geändert.**
@@ -40,7 +40,7 @@ Befunde:
 ## 2. Zielbild
 
 ```text
-GUPPI
+SEDRA
   └─▶ ContextManager  (context_manager.py)
         ├─ TokenEstimator        konservativ, Provider-usage bevorzugt
         ├─ BudgetResolver        Fenster aus ControlMaster/HardwareModelPass → ContextBudgetManager
@@ -139,7 +139,7 @@ Ablauf (gleiche Job-ID, neue Attempt-ID):
 2. Kontext aus Schicht 0–2 + Pins + relevante Artefakte neu zusammenbauen
 3. Optional anderes Modell: **Wunsch** an Control Master, kein Direktzugriff
 4. Attempt fortsetzen, Audit-Event `CONTEXT_REPAIR`
-Erlaubte Wiederholungen begrenzt. Danach Eskalation an GUPPI.
+Erlaubte Wiederholungen begrenzt. Danach Eskalation an SEDRA.
 Das Journal-Verhalten bleibt maßgeblich: Ein mutierender Schritt mit unbekanntem Ausgang wird **nicht** durch Repair wiederholt.
 
 ### 3.10 MetricsRecorder

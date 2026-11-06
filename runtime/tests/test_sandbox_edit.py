@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.sandbox_edit import Sandbox, SandboxError, MAX_WRITE_BYTES, parse_action, run_action
+from sedra_runtime.sandbox_edit import Sandbox, SandboxError, MAX_WRITE_BYTES, parse_action, run_action
 
 
 class SandboxBoundary(unittest.TestCase):

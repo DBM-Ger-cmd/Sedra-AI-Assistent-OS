@@ -2,9 +2,9 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from guppi_runtime.workflows.schema import validate, strict_json, redacted
-from guppi_runtime.workflows.policy import executable, assessment
-from guppi_runtime.workflows.store import WorkflowStore
+from sedra_runtime.workflows.schema import validate, strict_json, redacted
+from sedra_runtime.workflows.policy import executable, assessment
+from sedra_runtime.workflows.store import WorkflowStore
 from workflow_fixture import sample
 
 

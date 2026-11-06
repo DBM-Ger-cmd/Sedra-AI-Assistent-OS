@@ -1,6 +1,6 @@
 """Vertrag des Modell-Ladens (Captain 05.11.2026: „ich möchte nicht, dass nach jedem Update das Laden der Modelle nicht mehr funktioniert“).
 
-Gilt für die Rezepte dieser Maschine: die ausgelieferte `config/role_routing.yaml` mit der Datei des Captains darüber (`workspace/GUPPI_OS/local_config/role_routing.yaml`, nicht im Git).
+Gilt für die Rezepte dieser Maschine: die ausgelieferte `config/role_routing.yaml` mit der Datei des Captains darüber (`workspace/SEDRA_OS/local_config/role_routing.yaml`, nicht im Git).
 Ohne diese Datei (andere Maschine, CI) wird übersprungen; die allgemeine Regel prüfen `AutoWindowMemoryTests` in test_role_routing.py mit eigenen Rezepten. Jedes aktive Rezept des
 llama-server muss sich mit „Auto“ und mit jeder seiner Stufen auflösen lassen, solange die kleinste Stufe in den Speicher passt – und nie ein Fenster wählen, dessen Bedarf das Budget übersteigt. Ein Update, das das bricht (neues Rezept
 ohne Stufen, Messung ohne Fenster, Prüfung, die zu streng wird), macht diesen Test rot, bevor der Captain es merkt."""
@@ -10,11 +10,11 @@ from types import SimpleNamespace
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.models.role_routing import ResolutionError, RoleRouter, RoutingConfig
+from sedra_runtime.models.role_routing import ResolutionError, RoleRouter, RoutingConfig
 
 RUNTIME = Path(__file__).resolve().parents[1]
 ROUTING = RUNTIME / 'config' / 'role_routing.yaml'
-LOKAL = RUNTIME.parent / 'workspace' / 'GUPPI_OS' / 'local_config' / 'role_routing.yaml'
+LOKAL = RUNTIME.parent / 'workspace' / 'SEDRA_OS' / 'local_config' / 'role_routing.yaml'
 GPU = SimpleNamespace(hardware_class='nvidia_10_12', cpu_threads=16, gpu_vendor='NVIDIA', ram_gb=32, vram_gb=12)
 
 

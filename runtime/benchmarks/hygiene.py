@@ -4,7 +4,7 @@ r"""Hygiene-Prüfung für die Arbeitsumgebung (Regel 2026-10-26: keine eigene Se
     python benchmarks/hygiene.py --root "E:\Sedra Umgebung" --temp-hours 24
     python benchmarks/hygiene.py --apply-temp    # löscht NUR Temp-Ordner mit Sedra-Präfix (TEMP_PREFIXES), älter als --temp-hours
 
-Was gilt als Kopie: ein Ordner unter --root, der nicht in ALLOWED steht (Name oder Präfix) und ein `.git`, `runtime` oder `GUPPI_OS` enthält.
+Was gilt als Kopie: ein Ordner unter --root, der nicht in ALLOWED steht (Name oder Präfix) und ein `.git`, `runtime` oder `SEDRA_OS` enthält.
 Erlaubt sind die Installation, der Entwicklungsstand A1 und die Ablagen, die der Captain benannt hat; alles andere ist ein Befund.
 Worktrees kommen nur von der App (git worktree list); Prüfung zeigt solche, deren Branch vollständig im Hauptbranch steht (aufräumbar)."""
 import argparse
@@ -18,9 +18,9 @@ from pathlib import Path
 # Zielbild (Captain, 26.10.2026): unter E:\Sedra Umgebung gibt es nur A1 (die Hauptentwicklungsumgebung) und Archiv; die Engine liegt in A1 (engines/), die Modelle außerhalb unter E:\HermesAgentOrdner.
 # Der Hub-Ordner zählt als erlaubt, solange das Git-Verzeichnis von A1 darin liegt (bis U2-13, `benchmarks/repo_unabhaengig.py`).
 ALLOWED = ('A1 Sedra Main Branch Entwicklungs umgebung', 'Archiv')
-TEMP_PREFIXES = ('gw-wissen', 'guppi_judge_src', 'guppi_devvm_build_rt', 'guppi-uix-check', 'guppi-uix-window', 'guppi_slotmeasure',
+TEMP_PREFIXES = ('gw-wissen', 'sedra_judge_src', 'sedra_devvm_build_rt', 'sedra-uix-check', 'sedra-uix-window', 'sedra_slotmeasure',
                  'orchestra-', 'hidden-', 'jobs-modules-', 'arbeitsplatz')
-MARKERS = ('.git', 'runtime', 'GUPPI_OS')
+MARKERS = ('.git', 'runtime', 'SEDRA_OS')
 MAIN = 'spec/agenten-orchestrierung'
 
 
@@ -78,7 +78,7 @@ def temp_leftovers(hours):
 def sedra_processes():
     if sys.platform != 'win32':
         return []
-    cmd = ("Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'uix_server|uix_start|llama-server|guppi_runtime' -and $_.Name -match 'python|llama' }"
+    cmd = ("Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'uix_server|uix_start|llama-server|sedra_runtime' -and $_.Name -match 'python|llama' }"
            " | ForEach-Object { \"$($_.ProcessId) $($_.Name) \" + $_.CommandLine.Substring(0, [Math]::Min(120, $_.CommandLine.Length)) }")
     done = subprocess.run(['powershell', '-NoProfile', '-Command', cmd], capture_output=True, text=True)
     return [l for l in done.stdout.splitlines() if l.strip()]

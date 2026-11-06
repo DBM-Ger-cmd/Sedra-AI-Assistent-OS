@@ -21,20 +21,20 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime import chat_tools
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.desk import freigabeklasse as fk
-from guppi_runtime.harness import api as harness_api
-from guppi_runtime.harness import freigabe as harness_freigabe
-from guppi_runtime.harness import katalog
-from guppi_runtime.harness import vorarbeiter as harness_vorarbeiter
-from guppi_runtime.harness import vorlagen as harness_vorlagen
-from guppi_runtime.harness import werkzeuge as wz
+from sedra_runtime import chat_tools
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.desk import freigabeklasse as fk
+from sedra_runtime.harness import api as harness_api
+from sedra_runtime.harness import freigabe as harness_freigabe
+from sedra_runtime.harness import katalog
+from sedra_runtime.harness import vorarbeiter as harness_vorarbeiter
+from sedra_runtime.harness import vorlagen as harness_vorlagen
+from sedra_runtime.harness import werkzeuge as wz
 
 RUNTIME = Path(__file__).resolve().parents[1]
-ARCH = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 VORLAGEN = RUNTIME / 'config' / 'harness_vorlagen'
-ARBEITSPLATZ = RUNTIME / 'src' / 'guppi_runtime' / 'uix' / 'shells' / 'harness' / 'arbeitsplatz.yaml'
+ARBEITSPLATZ = RUNTIME / 'src' / 'sedra_runtime' / 'uix' / 'shells' / 'harness' / 'arbeitsplatz.yaml'
 LAEUFE = RUNTIME / 'config' / 'harness_laeufe.yaml'
 
 # ---------------------------------------------------------------- Ausnahmelisten (jeder Eintrag mit Grund; ein veralteter Eintrag lässt den Test fehlschlagen)

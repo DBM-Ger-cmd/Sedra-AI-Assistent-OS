@@ -2,11 +2,11 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from guppi_runtime.workflows.process import PREFIX, metadata
-from guppi_runtime.workflows.schema import validate, report
-from guppi_runtime.workflows.policy import assessment
-from guppi_runtime.workflows.store import WorkflowStore
-from guppi_runtime.workflows.versions import compare
+from sedra_runtime.workflows.process import PREFIX, metadata
+from sedra_runtime.workflows.schema import validate, report
+from sedra_runtime.workflows.policy import assessment
+from sedra_runtime.workflows.store import WorkflowStore
+from sedra_runtime.workflows.versions import compare
 from workflow_fixture import process_sample
 
 

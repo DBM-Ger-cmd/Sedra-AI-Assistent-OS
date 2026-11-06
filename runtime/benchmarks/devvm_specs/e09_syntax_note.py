@@ -1,6 +1,6 @@
 """E-09 (coder extension "syntax note after a write", 2026-10-10): after every write_file / append_file / edit_file the toolbox adds a short note to the tool result when the file does
 not parse any more, so the model fixes it at once instead of finding out at the end (today only `--step-syntax-check` checks, and only after a whole step). Idea from Hermes
-(tools/file_operations_lint.py). Pure function, no file access, nothing is executed. GUPPI builds it, Claude only wrote this file and the hidden tests.
+(tools/file_operations_lint.py). Pure function, no file access, nothing is executed. SEDRA builds it, Claude only wrote this file and the hidden tests.
 Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
 
 NOTES = '''# Notes for syntax_note

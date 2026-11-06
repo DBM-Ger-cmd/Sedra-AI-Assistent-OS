@@ -3,15 +3,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.selfdev.acceptance_suite import candidate_hash, host_runner, load_suite, run_suite, write_suite
-from guppi_runtime.agent_manager.agent_contracts import ContractError
-from guppi_runtime.agent_manager.agent_registry import Registry
-from guppi_runtime.agent_manager.instances import InstanceService, promotion_gaps
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.core.guard import Guard
+from sedra_runtime.selfdev.acceptance_suite import candidate_hash, host_runner, load_suite, run_suite, write_suite
+from sedra_runtime.agent_manager.agent_contracts import ContractError
+from sedra_runtime.agent_manager.agent_registry import Registry
+from sedra_runtime.agent_manager.instances import InstanceService, promotion_gaps
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.core.guard import Guard
 
-ARCHITECTURE = sorted((Path(__file__).resolve().parents[2] / "architecture").glob("GUPPI_Architecture_v*"))[-1]
-REF = "guppi.agent.demo@1.0.0"
+ARCHITECTURE = sorted((Path(__file__).resolve().parents[2] / "architecture").glob("SEDRA_Architecture_v*"))[-1]
+REF = "sedra.agent.demo@1.0.0"
 CRITERIA = [{"id": "calc.add", "description": "add", "script": "t_add.py", "text": "from calc import add\nassert add(1, 2) == 3\n"},
             {"id": "calc.neg", "description": "neg", "script": "t_neg.py", "text": "from calc import add\nassert add(-1, 1) == 0\n"}]
 GOOD = {"calc.py": "def add(a, b):\n    return a + b\n"}
@@ -30,7 +30,7 @@ class InstanceCase(unittest.TestCase):
         template = {"role": "Demo", "capabilities": [{"id": "code.write", "version": "1.2.0", "side_effect": "reversible_write"}],
                     "verification": {"suite_id": "calc.demo", "suite_version": "1", "required_cases": ["calc.add", "calc.neg"]}}
         self.registry.create("template", REF, {"template": template, "preview": {"ok": True, "problems": []}, "trust": "UNVERIFIED", "digest": "d" * 64})
-        self.registry.create("template", "guppi.agent.bad@1.0.0", {"template": {}, "preview": {"ok": False, "problems": ["soul_hash"]}, "trust": "UNVERIFIED", "digest": "e" * 64})
+        self.registry.create("template", "sedra.agent.bad@1.0.0", {"template": {}, "preview": {"ok": False, "problems": ["soul_hash"]}, "trust": "UNVERIFIED", "digest": "e" * 64})
         self.service = InstanceService(self.registry, self.guard, self.audit)
         self.suite = write_suite(os.path.join(self.tmp.name, "suite"), "calc.demo", "1", CRITERIA, GOOD)
 
@@ -79,7 +79,7 @@ class InstantiationTest(InstanceCase):
         self.assertEqual(len(self.registry.list("agent")), 1)
 
     def test_unknown_or_unclean_templates_and_bad_purposes_get_no_gate(self):
-        for ref, purpose, code in (("guppi.agent.nobody@1.0.0", "build small modules", "agent_unknown"), ("guppi.agent.bad@1.0.0", "build small modules", "agent_not_importable"), (REF, "x", "bad_purpose"), (REF, 5, "bad_purpose")):
+        for ref, purpose, code in (("sedra.agent.nobody@1.0.0", "build small modules", "agent_unknown"), ("sedra.agent.bad@1.0.0", "build small modules", "agent_not_importable"), (REF, "x", "bad_purpose"), (REF, 5, "bad_purpose")):
             with self.assertRaises(ContractError) as ctx:
                 self.service.instantiation_gate(ref, purpose, "M-1")
             self.assertEqual(ctx.exception.code, code)
@@ -103,7 +103,7 @@ class PromotionTest(InstanceCase):
         self.assertEqual(self.service.gaps(instance_id, decision=True), ["independent_review_missing"], "a review of other files does not count")
         self.service.record_review(instance_id, "gemma", "PASS", run["candidate_hash"])
         self.assertEqual(self.service.gaps(instance_id, decision=True), [])
-        self.assertEqual(self.service.gaps(instance_id), ["guppi_decision_missing"])
+        self.assertEqual(self.service.gaps(instance_id), ["sedra_decision_missing"])
 
     def test_promotion_needs_the_gate_and_sets_verified_with_an_admission(self):
         instance_id, run = self.promotable()

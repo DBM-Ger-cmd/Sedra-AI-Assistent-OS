@@ -6,7 +6,7 @@ import sys
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import katalog
+from sedra_runtime.harness import katalog
 
 SPEC = Path(__file__).resolve().parents[1] / 'benchmarks' / 'devvm_specs' / 'harness_katalog.py'
 
@@ -29,7 +29,7 @@ class EinstufenTests(unittest.TestCase):
         regeln = katalog.laden(Path('gibt-es-nicht'))['regeln']
         e = lambda w, z: katalog.einstufen(regeln, w, z)['stufe']
         self.assertEqual(e('datei_lesen', 'runtime/src/x.py'), 'frei')
-        self.assertEqual(e('datei_lesen', 'workspace/GUPPI_OS/local_config/switches.yaml'), 'verboten')
+        self.assertEqual(e('datei_lesen', 'workspace/SEDRA_OS/local_config/switches.yaml'), 'verboten')
         self.assertEqual(e('datei_aendern', 'docs/LOGBUCH_AGENT_MANAGER.md'), 'vorarbeiter')       # Stufe 3, D-G6
         self.assertEqual(e('datei_aendern', 'docs/ENTWICKLUNG.md'), 'captain')
         self.assertEqual(e('datei_schreiben', 'docs/spec_entwuerfe/x.md'), 'frei')

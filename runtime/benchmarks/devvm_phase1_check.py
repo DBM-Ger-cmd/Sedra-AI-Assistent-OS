@@ -22,10 +22,10 @@ import yaml
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.devenv.devvm import DevWorkspace                                         # noqa: E402
-from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.sandbox.broker import SandboxBroker                               # noqa: E402
-from guppi_runtime.sandbox.provider import MicrosandboxProvider                      # noqa: E402
+from sedra_runtime.devenv.devvm import DevWorkspace                                         # noqa: E402
+from sedra_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from sedra_runtime.sandbox.broker import SandboxBroker                               # noqa: E402
+from sedra_runtime.sandbox.provider import MicrosandboxProvider                      # noqa: E402
 
 CODE = "def add(a, b):\n    return a + b\n"
 TEST = "import unittest\nfrom calc import add\n\n\nclass T(unittest.TestCase):\n    def test_add(self):\n        self.assertEqual(add(2, 3), 5)\n"
@@ -38,7 +38,7 @@ def main():
     log = RunLog(project / "runtime_data" / "measurements", "devvm_phase1_check")
     results = {}
     with log:
-        tool_root = Path(tempfile.mkdtemp(prefix="guppi_devvm_check_"))
+        tool_root = Path(tempfile.mkdtemp(prefix="sedra_devvm_check_"))
         cfg = yaml.safe_load((RUNTIME / "config" / "sandbox.yaml").read_text(encoding="utf-8"))
         cfg["sandbox"]["allow_export_dirs"] = True
         cfg_path = tool_root / "sandbox-check.yaml"; cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")

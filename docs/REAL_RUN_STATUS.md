@@ -39,9 +39,9 @@ qwen with LM Studio's default context: 9.82 GiB. The two models do not fit in VR
 3. **Token estimate was too low** for the second model (21 vs 23). Overhead raised to 12 per message + 8 per request. This
    rests on two data points; per-model calibration should replace it.
 4. **The model pass uses total VRAM, not free VRAM.** Not changed yet.
-5. **Resolved window was 32768 while 8192 was actually loaded.** GUPPI does not tell LM Studio which context to load; the
+5. **Resolved window was 32768 while 8192 was actually loaded.** SEDRA does not tell LM Studio which context to load; the
    recipe's `maximum` was therefore too optimistic. Overlay `maximum` is now 8192 (the value the VRAM was measured at).
-   GUPPI did not set the loaded context itself at that point. **Update:** Phase 8a (`model_loader`, see PHASE8_STATUS.md) now does,
+   SEDRA did not set the loaded context itself at that point. **Update:** Phase 8a (`model_loader`, see PHASE8_STATUS.md) now does,
    behind its own flag (off by default); the VRAM of an already loaded model is no longer counted twice.
 6. **Thermal protection is admission only** (`admission_only; no_fan_writes; no_inflight_cancellation`): WARM → one job at a
    time, HOT/CRITICAL → no new jobs. Running jobs are never stopped.
@@ -61,6 +61,6 @@ qwen with LM Studio's default context: 9.82 GiB. The two models do not fit in VR
 ## Next decisions (Captain)
 
 - Enable routing/scheduler/supervisor/context manager in the real config, or keep them off until Phase 8.
-- Whether GUPPI should pass the context length to LM Studio itself (finding 5).
+- Whether SEDRA should pass the context length to LM Studio itself (finding 5).
 - Remaining open items from earlier phases (stage mapping, Kev environment and lineage, tool chain through the gate, reaper
   thread, Phase 8 worker loop).

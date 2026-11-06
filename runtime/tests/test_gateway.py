@@ -5,13 +5,13 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from guppi_runtime.gateway import klassen
-from guppi_runtime.gateway.vorgang import GateWay, GatewayError
-from guppi_runtime.core.content_guard import ContentGuardStop
+from sedra_runtime.gateway import klassen
+from sedra_runtime.gateway.vorgang import GateWay, GatewayError
+from sedra_runtime.core.content_guard import ContentGuardStop
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 from test_content_guard import FakeAdapter, Audit
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 ANFRAGE = ('Bereite eine kurze Übersicht für die nächste Projektabstimmung vor.\n\nLena Beispiel von der Nordwerk Muster GmbH fragt nach dem '
            'Stand von NORD-42. Kundennummer: K-1042.\n\nKontakt: lena@example.com · +49 30 000000. Nenne offene Punkte, ohne Termine zu erfinden.')
 KEY = 'hier mein Token ghp_' + 'a' * 36
@@ -279,7 +279,7 @@ class DerVorgang(unittest.TestCase):
 
     def test_g01_a_cloud_capable_case_that_cannot_be_pseudonymized_stays_an_error(self):
         from unittest import mock
-        from guppi_runtime.core.b6core import pseudo
+        from sedra_runtime.core.b6core import pseudo
         v = self.gw.neu('C', 'cloud')
         with mock.patch.object(klassen, 'RECHTSGRUNDLAGE_CLOUD', True), mock.patch.object(pseudo, 'recheck', return_value=('B6_PSEUDO_RECHECK_FAILED',)):
             v = self.gw.pruefen(v.id, 'Lena Beispiel fragt per lena@example.com nach dem Stand.')
@@ -305,7 +305,7 @@ class DurchDenHub(unittest.TestCase):
     """Der ganze Weg mit Gate, Fake-Modell durch den Inhaltsschutz, Entscheidung in der einen Liste."""
 
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='gw-hub-'); self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH); self.addCleanup(self.hub.close)
         self.project = self.hub.new_project({'name': 'Nordwerk'})
@@ -387,12 +387,12 @@ class DurchDenHub(unittest.TestCase):
         self.assertEqual(m['context']['gateway_request']['verantwortlich'], 'Torsten')
 
 class DerKorpusAdapter(unittest.TestCase):
-    """G-06: der Messadapter (benchmarks/b6_korpus_gegen_guppi.py) läuft auf der Beispieldatei und nennt eine Falschfreigabe als kritisch."""
+    """G-06: der Messadapter (benchmarks/b6_korpus_gegen_sedra.py) läuft auf der Beispieldatei und nennt eine Falschfreigabe als kritisch."""
 
     def test_the_adapter_measures_and_names_critical_misses(self):
         import importlib.util
         bench = Path(__file__).resolve().parents[1] / 'benchmarks'
-        spec = importlib.util.spec_from_file_location('b6_korpus_gegen_guppi', bench / 'b6_korpus_gegen_guppi.py')
+        spec = importlib.util.spec_from_file_location('b6_korpus_gegen_sedra', bench / 'b6_korpus_gegen_sedra.py')
         mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
         cases = json.loads((bench / 'b6_korpus_beispiel.json').read_text(encoding='utf-8'))['test_cases']
         rows = [mod.pruefe(c) for c in cases]
@@ -407,7 +407,7 @@ class DasGespraech(unittest.TestCase):
     """AP2: Fragen an das GateWay beantwortet die Wissensbasis vor dem Modell – auch ohne Modell; alles andere bleibt, wie es war."""
 
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='gw-chat-'); self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH); self.addCleanup(self.hub.close)
         self.hub.new_project({'name': 'Nordwerk'})
@@ -451,8 +451,8 @@ class DieWerkzeugeDesModells(unittest.TestCase):
     """AP3: ein geladenes Modell schlägt in derselben Wissensbasis nach – lesend, ohne Anfragetext, Öffnen nur als Knopf."""
 
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
-        from guppi_runtime.chat_tools import ChatTools
+        from sedra_runtime.uix_server import UIXHub
+        from sedra_runtime.chat_tools import ChatTools
         self.tmp = tempfile.TemporaryDirectory(prefix='gw-tools-'); self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH); self.addCleanup(self.hub.close)
         self.hub.new_project({'name': 'Nordwerk'})

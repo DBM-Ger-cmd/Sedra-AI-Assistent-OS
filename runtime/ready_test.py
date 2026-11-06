@@ -2,9 +2,9 @@
 import argparse
 import json
 from pathlib import Path
-from guppi_runtime.readiness import build_report, initialization_failure
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.core.util import atomic_write_json
+from sedra_runtime.readiness import build_report, initialization_failure
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.core.util import atomic_write_json
 
 
 def main():
@@ -13,7 +13,7 @@ def main():
     args = parser.parse_args()
     root = Path(args.root).resolve()
     try:
-        report = build_report(GuppiRuntime(root))
+        report = build_report(SedraRuntime(root))
     except Exception as exc:
         report = initialization_failure(exc)
     path = root / 'runtime_data/reports/PC_READY_TEST_v1.15.json'

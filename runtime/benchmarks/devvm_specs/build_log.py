@@ -1,7 +1,7 @@
 """G3 build_log (docs/ABLAUF_GESPRAECH_2026-10-13.md, docs/BUILDFLOW_2026-10-13.md; the build runner has to know what a running build does: the output of devvm_build.py is text). `build_log.py` reads that text:
 `parse_log` makes a data structure of it (spec, model, stages with their agent runs and reworks, the attempt, the way to resume), `summary` writes the German status block for the chat, and `events` turns the lines that
 came in since the last look into short German progress events (a live log is read again and again; a half-written last line is never read). Pure functions on text, no files, no clock. The test data are two REAL logs
-(benchmarks/fixtures/build_log_failed.txt, build_log_passed.txt). GUPPI builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/build_log)."""
+(benchmarks/fixtures/build_log_failed.txt, build_log_passed.txt). SEDRA builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/build_log)."""
 from pathlib import Path
 
 NOTES = '''# Notes for build_log
@@ -16,7 +16,7 @@ S0 connection check: coder.local_primary ok
    stage rest: hidden FAILED (own check accepted=UNJUDGED, own tests none, 974.7 s)
    stopped after the failed stage rest; skipped: all (--keep-going builds them anyway)
    resume: benchmarks/devvm_build.py <project> --spec assert_catalog --from-stage rest --seed "..." (plus the options of this run)
-attempt 1: hidden test FAILED | own check accepted=UNJUDGED | 5845.0 s, 9 agent runs, 145 calls -> ..\\workspace\\GUPPI_OS\\runtime_data\\devvm_candidates\\assert_catalog\\attempt_01_20261013_193955
+attempt 1: hidden test FAILED | own check accepted=UNJUDGED | 5845.0 s, 9 agent runs, 145 calls -> ..\\workspace\\SEDRA_OS\\runtime_data\\devvm_candidates\\assert_catalog\\attempt_01_20261013_193955
 # run ended: done
 DONE -> devvm_build_assert_catalog_2026-10-13_180229.json
 Every other line (for example "   lesson for stage ...") is ignored. The agent lines of a stage come BEFORE its stage line.
@@ -69,7 +69,7 @@ assert parse_log("")["stages"] == [] and parse_log(None)["stages"] == []
 
 S3 = S2 + r'''
 assert (f["stopped_after"], f["skipped"], f["ended"], f["end_state"], f["report"]) == ("rest", ["all"], True, "done", "devvm_build_assert_catalog_2026-10-13_180229.json")
-assert f["attempt"] == {"number": 1, "passed": False, "seconds": 5845.0, "agent_runs": 9, "calls": 145, "exported_to": chr(46) * 2 + chr(92) + "workspace" + chr(92) + "GUPPI_OS" + chr(92) + "runtime_data" + chr(92) + "devvm_candidates" + chr(92) + "assert_catalog" + chr(92) + "attempt_01_20261013_193955"}
+assert f["attempt"] == {"number": 1, "passed": False, "seconds": 5845.0, "agent_runs": 9, "calls": 145, "exported_to": chr(46) * 2 + chr(92) + "workspace" + chr(92) + "SEDRA_OS" + chr(92) + "runtime_data" + chr(92) + "devvm_candidates" + chr(92) + "assert_catalog" + chr(92) + "attempt_01_20261013_193955"}
 assert f["resume"].startswith("benchmarks/devvm_build.py <project> --spec assert_catalog --from-stage rest --seed ") and f["resume"].endswith("(plus the options of this run)")
 assert (q["stopped_after"], q["skipped"], q["resume"], q["ended"], q["end_state"]) == (None, [], None, True, "done")
 assert q["attempt"]["passed"] is True and q["attempt"]["seconds"] == 420.5 and q["attempt"]["agent_runs"] == 5 and q["attempt"]["calls"] == 41

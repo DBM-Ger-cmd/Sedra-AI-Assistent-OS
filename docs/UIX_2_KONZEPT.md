@@ -6,7 +6,7 @@ behalten, **aber nur dort, wo es wichtig ist**. Skizze: `shots/uix2/uix2_skizze.
 
 ## 1. Leitsätze
 
-1. **Ein Gespräch, ein Arbeitsplatz, ein Pult.** Nicht zehn Fenster. Das Gespräch mit GUPPI ist der Ausgangspunkt für alles; der
+1. **Ein Gespräch, ein Arbeitsplatz, ein Pult.** Nicht zehn Fenster. Das Gespräch mit SEDRA ist der Ausgangspunkt für alles; der
    Arbeitsplatz zeigt das Objekt, um das es gerade geht; das Pult ist eine Zeile mit allem, was man wissen muss. Fenster bleiben für
    Nebenräume (Hardware, Maschinenraum, Logbuch), aber sie sind nicht mehr der Normalfall.
 2. **Karten verschwinden aus dem Blick, nicht aus dem System.** Eine Mission bleibt die Buchführung der Runtime (Audit, Gates, Phasen),
@@ -28,8 +28,8 @@ behalten, **aber nur dort, wo es wichtig ist**. Skizze: `shots/uix2/uix2_skizze.
 | Zone | Inhalt | Werkzeuge |
 | --- | --- | --- |
 | **Pult** (oben, eine Zeile) | Zustand, Modell, GPU, offene Entscheidungen, laufende Aufgaben, Vertrauensstufe des Projekts, Kommando-Feld, Erscheinungsbild | Klick auf ein Element öffnet den passenden Nebenraum |
-| **Gespräch** (links) | Ein Gespräch mit GUPPI (Verlauf mit Sitzungen); Aufgaben als Fortschrittszeile; Entscheidungen als eine hervorgehobene Zeile mit zwei bis drei Knöpfen; Ergebnisse als Satz mit Verweis auf den Arbeitsplatz | Anhängen per Ziehen, `/`-Befehle optional, Vorschläge für den nächsten Schritt |
-| **Arbeitsplatz** (Mitte) | Das aktive Objekt: Projektdateien (Explorer mit Vorschau), Aufgabe (Fortschritt, Seekarte klein), **Kandidat (Diff)**, Tests, Logbuch-Auszug; Modell (Werkstatt-Leiste), Skill (Editor) | Werkzeugleiste des Objekts: Übernehmen/Verwerfen, Erst ansehen, Mit GUPPI besprechen, Als Skill festhalten, Laden/Testen, Bearbeiten |
+| **Gespräch** (links) | Ein Gespräch mit SEDRA (Verlauf mit Sitzungen); Aufgaben als Fortschrittszeile; Entscheidungen als eine hervorgehobene Zeile mit zwei bis drei Knöpfen; Ergebnisse als Satz mit Verweis auf den Arbeitsplatz | Anhängen per Ziehen, `/`-Befehle optional, Vorschläge für den nächsten Schritt |
+| **Arbeitsplatz** (Mitte) | Das aktive Objekt: Projektdateien (Explorer mit Vorschau), Aufgabe (Fortschritt, Seekarte klein), **Kandidat (Diff)**, Tests, Logbuch-Auszug; Modell (Werkstatt-Leiste), Skill (Editor) | Werkzeugleiste des Objekts: Übernehmen/Verwerfen, Erst ansehen, Mit SEDRA besprechen, Als Skill festhalten, Laden/Testen, Bearbeiten |
 | **Besatzung und Maschine** (rechts, schmal) | Rollen mit Modell und Zustand, Entwicklungsumgebung, Token heute, nächste Routine, Bibliothek | Klick öffnet Besatzung/Werkstatt/Bibliothek |
 | **Leiste** (unten) | Deck · Gespräch · Werkstatt · Besatzung · Bibliothek · System ▾ · Uhr | – |
 
@@ -46,7 +46,7 @@ behalten, **aber nur dort, wo es wichtig ist**. Skizze: `shots/uix2/uix2_skizze.
 ## 4. Werkzeuge, die bei der Arbeit tragen (Reihenfolge nach Nutzen)
 
 1. **Kandidat-Diff** mit Datei-Liste, Übernehmen je Datei oder ganz – das ist der Moment, in dem der Captain wirklich gebraucht wird.
-2. **Projekt-Explorer mit Vorschau** (Text, Bild, Markdown gerendert) und „An GUPPI geben“ per Ziehen.
+2. **Projekt-Explorer mit Vorschau** (Text, Bild, Markdown gerendert) und „An SEDRA geben“ per Ziehen.
 3. **Testergebnis als Satz + Tabelle** (bestanden/fehlgeschlagen, Dauer, Token/s), fehlgeschlagene Tests aufklappbar.
 4. **Vertrauensstufe** im Pult, je Projekt umschaltbar (selbst ein Gate).
 5. **Kommando** (Strg+K) mit den Objekten des Arbeitsplatzes („öffne export/parser.py“, „teste nochmal“, „thema nacht“).
@@ -63,7 +63,7 @@ Shell-Neubau, Umzug Fenster für Fenster; jeder Build startfähig:
 - **Build 9 – Vertrauen und Routinen:** Vertrauensstufe je Projekt (Guard-Regel + Gate), Routinen-Zeile, „Als Skill festhalten“; Nebenräume
   ins System-Fenster; Abnahme auf dem PC; Retro bleibt als Erscheinungsbild.
 
-Aufwand: drei Bauabende dieser Größe (Schätzung aus `UIX_KOMMANDODECK_v1.md` §6). GUPPI bekommt daraus Specs für die reinen Teile
+Aufwand: drei Bauabende dieser Größe (Schätzung aus `UIX_KOMMANDODECK_v1.md` §6). SEDRA bekommt daraus Specs für die reinen Teile
 (Aufgaben-Zusammenfassung, Entscheidungsregeln, Diff-Modell), wie bisher mit versteckten Tests.
 
 ## 6. Ökosystem statt Monolith (Captain 17:47, Vorbild github.com/storytold – ArtCraft)
@@ -75,12 +75,12 @@ ArtCraft ist eine Familie eigenständiger Werkzeuge (Photo-, Film-, Vector-, Dec
 | --- | --- | --- |
 | craft-libs | Design-Tokens, Komponenten-Basisklassen, Fenstervorlage, `api()`-Helfer | `sedra-ui` (heute `uix/css/desktop.css` + `core.js`/`desktop.js`) |
 | craft-launcher | Pult + Leiste + Kommando (öffnet Werkzeuge, zeigt Zustand) | `sedra-shell` |
-| artcraft-services | Runtime, Guard, Audit, API | `sedra-core` (heute `guppi_runtime`) |
+| artcraft-services | Runtime, Guard, Audit, API | `sedra-core` (heute `sedra_runtime`) |
 | ein Craft-Werkzeug | ein **Werkzeug** für einen Objekttyp: Explorer, Kandidat-Diff, Tests, Werkstatt (Modelle), Bibliothek, Besatzung, Meter | `sedra-tool-<name>`, je ein Repo |
 
 **Werkzeug-Vertrag** (`tool.yaml`, Geschwister von `skill.yaml`): `id`, `name`, `handles` (Objekttypen: file, task, candidate, model, skill, agent),
 `entry` (eine JS- und eine CSS-Datei, klassische Skripte wie heute), `api` (Allowlist der Routen, die es rufen darf), `trust`
-(`CORE` · `CAPTAIN` · `GUPPI_BUILT` · `COMMUNITY`), `version`, `tests` (Browserabnahme wie `uix_check.py`). Der Arbeitsplatz fragt
+(`CORE` · `CAPTAIN` · `SEDRA_BUILT` · `COMMUNITY`), `version`, `tests` (Browserabnahme wie `uix_check.py`). Der Arbeitsplatz fragt
 bei einem Objekt die installierten Werkzeuge: wer `handles` passt, bekommt einen Reiter.
 
 **Installation = Git + Gate.** Ein Werkzeug kommt als Repo nach `local_config/tools/<id>` (git clone oder Kopie, Commit-ID wird
@@ -89,9 +89,9 @@ festgehalten); ein Gate zeigt Vertrag, Dateiliste, Hashes und die API-Allowlist,
 dazu: Werkzeuge sind *ausführbarer* UI-Code, deshalb Rang `COMMUNITY` nie ohne Durchsicht, und ein Werkzeug darf nur die Routen seiner
 Allowlist rufen (der Server prüft den Referer/Tool-Header, nicht nur der Browser).
 
-**Was das bringt:** GUPPI baut Werkzeuge als Repos mit Spec und verstecktem Test – genau sein heutiger Bauweg (`devvm_specs`), nur mit
+**Was das bringt:** SEDRA baut Werkzeuge als Repos mit Spec und verstecktem Test – genau sein heutiger Bauweg (`devvm_specs`), nur mit
 einem klaren Einbauort. Der Captain kann ein Werkzeug entfernen, ohne dass die Shell bricht. Dritte können Werkzeuge beisteuern, ohne
-Zugriff auf den Kern. Die Bibliothek bekommt ein viertes Regal: *Werkzeuge* (installiert · verfügbar · von GUPPI vorgeschlagen).
+Zugriff auf den Kern. Die Bibliothek bekommt ein viertes Regal: *Werkzeuge* (installiert · verfügbar · von SEDRA vorgeschlagen).
 
 **Erster Schritt (Build 7):** `tool.yaml` + Lader für *lokale* Werkzeuge aus dem Paket selbst – Explorer, Werkstatt, Bibliothek, Besatzung,
 Meter werden intern schon als Werkzeuge registriert. Externe Repos erst, wenn der Vertrag an fünf eigenen Werkzeugen gehalten hat.

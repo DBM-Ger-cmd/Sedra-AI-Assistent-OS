@@ -1,8 +1,8 @@
 """`youtube_transkript` im Chat (04.11.2026): lesen, ohne Karte; das Ergebnis ist ein Ausschnitt mit Kopf, der Text gilt als fremde Daten."""
 import unittest
 
-from guppi_runtime.harness.werkzeuge import NAMEN, SCHEMAS
-from guppi_runtime.harness.katalog import OHNE_KARTE
+from sedra_runtime.harness.werkzeuge import NAMEN, SCHEMAS
+from sedra_runtime.harness.katalog import OHNE_KARTE
 
 
 class Namen(unittest.TestCase):

@@ -13,12 +13,12 @@ from unittest import mock
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.core import guard as guard_module
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.core.guard import TOKEN_KEEP_S, Guard
+from sedra_runtime.core import guard as guard_module
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.core.guard import TOKEN_KEEP_S, Guard
 
 RUNTIME = Path(__file__).resolve().parents[1]
-RULES = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT' / 'core' / 'guard' / 'guard_rules.yaml'
+RULES = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT' / 'core' / 'guard' / 'guard_rules.yaml'
 START = datetime(2026, 10, 21, 8, 0, tzinfo=timezone.utc)
 
 

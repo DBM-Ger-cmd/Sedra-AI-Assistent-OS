@@ -11,8 +11,8 @@ import yaml
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-UIX = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+UIX = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'benchmarks'))
 
 
@@ -25,7 +25,7 @@ class Manifest(unittest.TestCase):
             self.assertIn(route, doc['api'])
 
     def test_without_a_choice_the_entry_loads_and_a_choice_sticks(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         with tempfile.TemporaryDirectory(prefix='start-') as tmp:
             hub = UIXHub(Path(tmp) / 'project', ARCH)
             try:
@@ -41,7 +41,7 @@ class DirectStart(unittest.TestCase):
     """START_SEDRA <id>: die Shell nur für diesen Start; eine ausdrückliche Wahl hebt das auf; eine unbekannte ist ein Satz."""
 
     def test_the_override_holds_until_the_captain_chooses(self):
-        from guppi_runtime.uix_server import UIXHub, choose_start_shell
+        from sedra_runtime.uix_server import UIXHub, choose_start_shell
         with tempfile.TemporaryDirectory(prefix='start-') as tmp:
             hub = UIXHub(Path(tmp) / 'project', ARCH)
             try:
@@ -54,18 +54,18 @@ class DirectStart(unittest.TestCase):
                 self.assertIsNone(choose_start_shell(hub, None))
                 with self.assertRaises(ValueError) as ctx:
                     choose_start_shell(hub, 'gibt-es-nicht')
-                self.assertIn('Vorhanden: cockpit, fisch, gateway-kmu, gateway-studio, guppi-xp, harness, minimal, paperclip, start, wissensbasis', str(ctx.exception))
+                self.assertIn('Vorhanden: cockpit, fisch, gateway-kmu, gateway-studio, sedra-xp, harness, minimal, paperclip, start, wissensbasis', str(ctx.exception))
                 self.assertEqual(hub.gateway.manifest()['shell']['id'], 'minimal', 'ein Fehler ändert nichts')
             finally:
                 hub.close()
 
-    def test_guppi_xp_is_a_choice_that_leads_to_the_archive(self):
-        man = yaml.safe_load((UIX / 'shells' / 'guppi-xp' / 'shell.yaml').read_text(encoding='utf-8'))['shell']
+    def test_sedra_xp_is_a_choice_that_leads_to_the_archive(self):
+        man = yaml.safe_load((UIX / 'shells' / 'sedra-xp' / 'shell.yaml').read_text(encoding='utf-8'))['shell']
         self.assertEqual(man['trust'], 'CORE')
         self.assertEqual(man['api'], [], 'der alte Desktop ruft mit seinem eigenen Token, nicht über den Vertrag')
-        js = (UIX / 'shells' / 'guppi-xp' / 'shell.js').read_text(encoding='utf-8')
+        js = (UIX / 'shells' / 'sedra-xp' / 'shell.js').read_text(encoding='utf-8')
         self.assertIn("location.replace('/retro' + location.hash)", js)
-        self.assertTrue((UIX / 'shells' / 'guppi-xp' / 'preview.png').is_file(), 'die Karte im Einstieg hat ein Bild')
+        self.assertTrue((UIX / 'shells' / 'sedra-xp' / 'preview.png').is_file(), 'die Karte im Einstieg hat ein Bild')
 
 
 def browser_or_skip():
@@ -125,9 +125,9 @@ class InTheBrowser(unittest.TestCase):
         finally:
             stop()
 
-    def test_a_shell_from_a_vorgabe_in_the_entry_template_and_guppi(self):
+    def test_a_shell_from_a_vorgabe_in_the_entry_template_and_sedra(self):
         """Build 17: „Eigene Oberfläche aus einer Vorgabe“ – eine Vorlage wählen, Skizze sehen, anlegen, sie läuft (Rahmen);
-        und der Satz an GUPPI: ein Fake-Modell liefert die Vorgabe, geprüft gegen das Schema, nichts angelegt, bis der Captain es sagt."""
+        und der Satz an SEDRA: ein Fake-Modell liefert die Vorgabe, geprüft gegen das Schema, nichts angelegt, bis der Captain es sagt."""
         sync_playwright = browser_or_skip()
         import uix_check
         from uix_check import start_server, wait_until_started
@@ -140,7 +140,7 @@ class InTheBrowser(unittest.TestCase):
                 b = pw.chromium.launch(); page = b.new_page(viewport={'width': 1400, 'height': 900})
                 errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
                 page.goto(url); wait_until_started(page); page.wait_for_timeout(1500)
-                # der Satz an GUPPI
+                # der Satz an SEDRA
                 page.fill('.vg-text', 'nur das Werkstück, das Gespräch als Schublade, keine Suche, Start im Logbuch')
                 page.fill('.vg input[aria-label="id der Oberfläche"]', 'schlicht')
                 page.click('.vg button:has-text("SEDRA fragen")')

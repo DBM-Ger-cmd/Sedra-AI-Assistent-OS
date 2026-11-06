@@ -1,5 +1,5 @@
 import unittest
-from guppi_runtime.models.openai_local import OpenAICompatibleLocalAdapter, normalize_usage, split_harmony
+from sedra_runtime.models.openai_local import OpenAICompatibleLocalAdapter, normalize_usage, split_harmony
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 

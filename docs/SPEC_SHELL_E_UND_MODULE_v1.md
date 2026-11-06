@@ -24,7 +24,7 @@ Entscheidung. Kein Baum, keine Reiter, keine zwei Spalten.
 
 | Zone | Was dort steht | Woher es kommt |
 |---|---|---|
-| **Menüleiste** (26 px) | GUPPI-Marke, fünf Menüs, rechts die Instrumente | Instrumente sind Werkzeuge der Art `instrument` mit `update(reading)` aus `GET /api/strip` – **genau wie im Cockpit** |
+| **Menüleiste** (26 px) | SEDRA-Marke, fünf Menüs, rechts die Instrumente | Instrumente sind Werkzeuge der Art `instrument` mit `update(reading)` aus `GET /api/strip` – **genau wie im Cockpit** |
 | **Fenster** (frei, ziehbar) | je ein Objekt; im Körper das Werkzeug, das es zeichnet | `ctx.tools.for(type)` |
 | **Umschalter** im Fenster | `inhalt` zuerst, dann die `nachweis`-Werkzeuge | `manifest.slot` – dieselbe Unterscheidung wie die zwei Spalten des Cockpits, nur anders dargestellt |
 | **Gespräch** | ein eigenes Fenster, das sich **nicht schließen lässt** | das Werkzeug `talk` (Regel 1: ein Eingabefeld) |
@@ -130,7 +130,7 @@ Absicht und steht so auch im Werkzeug.
 - Es zeigt **keinen fremden Code als Text an**, bevor der Captain ihn sehen will: die Funde der Durchsicht stehen mit Datei und
   Zeile im Gate, nicht als bunte Vorschau im Fenster. Wer eine Datei lesen will, öffnet sie im Dateiwerkzeug.
 - Es installiert nichts aus dem Netz. Ein Ordner auf diesem Rechner, mehr nicht.
-- Es schreibt kein Modul um. „Aus Vorlage anlegen“ kopiert und benennt um; alles Weitere macht der Captain oder GUPPI im Editor.
+- Es schreibt kein Modul um. „Aus Vorlage anlegen“ kopiert und benennt um; alles Weitere macht der Captain oder SEDRA im Editor.
 
 ---
 
@@ -251,7 +251,7 @@ Was D stattdessen gefunden hat, lag **im Prüfwerkzeug und in der Shell selbst**
   Profil (`before_tools`, `before_talk`) – nicht in der Shell.
 - Ein Gitter ohne Zeilenmaß lief unten aus dem Bild (`grid-template-rows: minmax(0, 1fr)` fehlte); ein `display: grid` schlug
   das Attribut `hidden` der Schublade, sie stand beim Start offen. Beides hat die Abnahme gemeldet, nicht das Nachdenken.
-- Zwei Knöpfe „Mit GUPPI sprechen“ (Kopfzeile und rechts unten) – einer reicht; der Entwurf hatte auch nur einen.
+- Zwei Knöpfe „Mit SEDRA sprechen“ (Kopfzeile und rechts unten) – einer reicht; der Entwurf hatte auch nur einen.
 
 Damit gilt das Urteil aus §4 in der zweiten Hälfte: **der Vertrag ist erwachsen.** Die vierte Form wird ihn nicht mehr
 verändern; sie wird nur noch zeigen, was eine Shell gut oder schlecht macht.

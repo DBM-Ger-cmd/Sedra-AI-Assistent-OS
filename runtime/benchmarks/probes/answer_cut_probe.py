@@ -70,12 +70,12 @@ def main():
     project = Path(args.project)
 
     import devvm_agents_bench as bench
-    from guppi_runtime.devenv.devvm import DevWorkspace
-    from guppi_runtime.devenv.devvm_agents import SOLO_TASK, AgentBudget, run_agent
-    from guppi_runtime.models.gpu_preflight import clear_leftovers
-    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.jobs.run_log import RunLog
-    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.devenv.devvm import DevWorkspace
+    from sedra_runtime.devenv.devvm_agents import SOLO_TASK, AgentBudget, run_agent
+    from sedra_runtime.models.gpu_preflight import clear_leftovers
+    from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from sedra_runtime.jobs.run_log import RunLog
+    from sedra_runtime.jobs.testlab import TestLab, default_path
 
     spec = importlib.import_module("devvm_specs.am008_meter")
     stages = {stage["name"]: stage for stage in spec.STAGES}
@@ -85,9 +85,9 @@ def main():
     log = RunLog(project / "runtime_data" / "measurements", "answer_cut_probe", config=vars(args))
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml")
     config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_cutprobe_rt_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_cutprobe_rt_")))
     loader = bench.BenchLoader(runtime, project, {"coder": args.model}, log, context=int(args.context), server_extra={"reasoning": args.reasoning}, sampling_extra=json.loads(args.sampling) if args.sampling else None)
-    tool_root = Path(tempfile.mkdtemp(prefix="guppi_cutprobe_"))
+    tool_root = Path(tempfile.mkdtemp(prefix="sedra_cutprobe_"))
     policy = {"max_files": 40, "max_file_bytes": 60000, "max_input_bytes": 200000}
     results = []
     with log, TestLab(default_path(project)).lease(os.environ.get("TESTLAB_OWNER", "answer_cut_probe"), "answer cut probe", ttl_s=1800, wait_s=3600, preflight=clear_leftovers):

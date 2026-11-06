@@ -125,7 +125,7 @@ class Basis(unittest.TestCase):
         page.goto(self.url); self.uix.wait_until_started(page, shell='cockpit')
         # jeder Test beginnt leer: Arbeitsstand und Ablage auf dem Server, Layout und Sitzung im Browser
         page.evaluate("""async()=>{ await fetch('/api/arbeitsstand/leeren', {method: 'POST', body: '{}', headers: {'Content-Type': 'application/json',
-                         'X-GUPPI-Token': decodeURIComponent(location.hash.slice(1))}}); localStorage.clear(); sessionStorage.clear(); }""")
+                         'X-SEDRA-Token': decodeURIComponent(location.hash.slice(1))}}); localStorage.clear(); sessionStorage.clear(); }""")
         page.reload(); self.uix.wait_until_started(page, shell='cockpit')
         # statt 1200 ms: der Start hat das Dock gefüllt (leer: die Aufgaben), wenn ein Reiter steht
         page.wait_for_function("()=>document.querySelectorAll('.dk-tab').length >= 1", timeout=WARTE_MS)
@@ -248,7 +248,7 @@ class UeberDenWechsel(Basis):
 
     def wechseln(self, page, shell):
         page.evaluate("""async(s)=>{ await fetch('/api/uix/shell', {method: 'POST', body: JSON.stringify({shell: s}), headers: {'Content-Type': 'application/json',
-                         'X-GUPPI-Token': decodeURIComponent(location.hash.slice(1))}}); await window.sedraWechsel.vorDemWechsel(); }""", shell)
+                         'X-SEDRA-Token': decodeURIComponent(location.hash.slice(1))}}); await window.sedraWechsel.vorDemWechsel(); }""", shell)
         # statt 1800 ms: auf den Start genau dieser Shell warten; ein ausbleibender Start ist ein eigener Befund (uix_check)
         page.reload(); self.uix.wait_until_started(page, shell=shell)
         self.assertEqual(page.evaluate("()=>window.sedraBoot.ctx.manifest.shell.id"), shell)

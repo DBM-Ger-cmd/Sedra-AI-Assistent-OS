@@ -4,13 +4,13 @@ import unittest
 from pathlib import Path
 import env_skip
 
-from guppi_runtime.agent_manager.agent_contracts import ContractError
-from guppi_runtime.agent_manager.agent_registry import Registry
-from guppi_runtime.agent_manager.bridge import FakeRuntime
-from guppi_runtime.agent_manager.cli import Manager
+from sedra_runtime.agent_manager.agent_contracts import ContractError
+from sedra_runtime.agent_manager.agent_registry import Registry
+from sedra_runtime.agent_manager.bridge import FakeRuntime
+from sedra_runtime.agent_manager.cli import Manager
 
-ARCHITECTURE = sorted((Path(__file__).resolve().parents[2] / "architecture").glob("GUPPI_Architecture_v*"))[-1]
-AGENT = "guppi.devvm.coder@1.0.0"
+ARCHITECTURE = sorted((Path(__file__).resolve().parents[2] / "architecture").glob("SEDRA_Architecture_v*"))[-1]
+AGENT = "sedra.devvm.coder@1.0.0"
 
 
 class CliTest(unittest.TestCase):
@@ -21,7 +21,7 @@ class CliTest(unittest.TestCase):
         (self.project / "runtime_data" / "agent_manager").mkdir(parents=True)
         reg = Registry(str(self.project / "runtime_data" / "agent_manager" / "registry.sqlite"))
         reg.create("template", AGENT, {"preview": {"ok": True, "problems": []}})
-        reg.create("template", "guppi.devvm.bad@1.0.0", {"preview": {"ok": False, "problems": ["soul_hash"]}})
+        reg.create("template", "sedra.devvm.bad@1.0.0", {"preview": {"ok": False, "problems": ["soul_hash"]}})
         reg.close()
         self.runtime = FakeRuntime()
         self.manager = Manager(self.project, Path(self.tmp.name), ARCHITECTURE, runtime=self.runtime)
@@ -42,7 +42,7 @@ class CliTest(unittest.TestCase):
         self.assertIn("AGENT_ASSIGNMENT_PROPOSED", self.events())
 
     def test_unknown_or_unclean_template_gets_no_gate(self):
-        for agent in ("guppi.devvm.nobody@1.0.0", "guppi.devvm.bad@1.0.0"):
+        for agent in ("sedra.devvm.nobody@1.0.0", "sedra.devvm.bad@1.0.0"):
             with self.assertRaises(ContractError):
                 self.manager.propose(agent, "M-1", "am_demo")
 
@@ -92,7 +92,7 @@ class CrewFlowTest(unittest.TestCase):
     """The whole way: template -> gate -> instance -> suite in the runner -> independent review -> gap check -> gate -> VERIFIED -> matcher -> view."""
 
     def setUp(self):
-        from guppi_runtime.selfdev.acceptance_suite import write_suite
+        from sedra_runtime.selfdev.acceptance_suite import write_suite
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.project = Path(self.tmp.name) / "project"
@@ -116,7 +116,7 @@ class CrewFlowTest(unittest.TestCase):
 
     @env_skip.needs_dulwich
     def test_from_template_to_a_matched_verified_instance_with_every_gate_in_the_audit(self):
-        from guppi_runtime.selfdev.acceptance_suite import host_runner
+        from sedra_runtime.selfdev.acceptance_suite import host_runner
         gate = self.manager.hire(AGENT, "build small modules", "M-1")
         self.assertEqual(self.manager.registry.list("agent"), [])
         with self.assertRaises(ContractError):
@@ -148,8 +148,8 @@ class CrewFlowTest(unittest.TestCase):
 
     @env_skip.needs_dulwich
     def test_the_view_shows_the_instance_with_its_state(self):
-        from guppi_runtime.selfdev.acceptance_suite import host_runner
-        from guppi_runtime.agent_manager.view import agents_view
+        from sedra_runtime.selfdev.acceptance_suite import host_runner
+        from sedra_runtime.agent_manager.view import agents_view
         gate = self.manager.hire(AGENT, "build small modules", "M-1")
         iid = self.manager.create(self.approved(gate))["instance_id"]
         self.manager.suite(iid, "calc", self.candidate, "qwen3-coder", runner=host_runner())

@@ -7,9 +7,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from guppi_runtime.harness import antraege, vorlagen
-from guppi_runtime.harness import vorlagen_neu as vn
-from guppi_runtime.harness.vorlagen import VorlageFehler
+from sedra_runtime.harness import antraege, vorlagen
+from sedra_runtime.harness import vorlagen_neu as vn
+from sedra_runtime.harness.vorlagen import VorlageFehler
 
 REPO = vorlagen.VORLAGEN_DIR
 
@@ -40,7 +40,7 @@ class Basis(unittest.TestCase):
 
 class Weg(unittest.TestCase):
     def test_der_weg_ist_bekannt_und_geschuetzt(self):
-        from guppi_runtime.harness.api import GESCHUETZT, WEG
+        from sedra_runtime.harness.api import GESCHUETZT, WEG
         for pfad in ('/api/harness/vorlagen/neu', '/api/harness/vorlagen/grenzen'):
             m = WEG.fullmatch(pfad)
             self.assertIsNotNone(m, pfad)

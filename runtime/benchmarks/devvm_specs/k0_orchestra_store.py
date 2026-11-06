@@ -3,7 +3,7 @@
 wakeups, routines, routine_runs, spend, with their CHECKs, keys and indexes); `migrate` brings a database up to the version of the code, a database NEWER than the code is
 refused; `immediate` is the helper for `BEGIN IMMEDIATE` (the checkout of Spec 1 uses it); `open_db` opens with WAL, `busy_timeout` and `foreign_keys`. Every refusal is a
 ValueError whose text `runtime.py` reports as `orchestra_error` (KERN-06). The logic of org, board, heartbeat, budget and routines comes in Spec 1.
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/k0_orchestra_store).
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/k0_orchestra_store).
 Stages cut to at most 20 new hidden checks each (Captain, line L3, 20.10.2026); the schema is built in four steps (columns, indexes, constraints of agents and tasks, constraints of the rest)."""
 
 NOTES = '''# Notes for k0_orchestra_store

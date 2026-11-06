@@ -24,7 +24,7 @@ keine Python-Laufzeit, kein llama.cpp, keine Modelle, keine Laufzeitdaten, keine
 ## Schnelleinstieg
 
 1. **Lesen:** `01_UEBERBLICK.md`, dann `02_DESIGN.md`.
-2. **Einbinden:** `03_EINBINDUNG.md`. Die Shell-Dateien aus `shell/` in `runtime/src/guppi_runtime/uix/shells/gateway-kmu/`
+2. **Einbinden:** `03_EINBINDUNG.md`. Die Shell-Dateien aus `shell/` in `runtime/src/sedra_runtime/uix/shells/gateway-kmu/`
    legen und das Patch auf die gemeinsamen Dateien anwenden (`git apply patches/gemeinsame_dateien.patch`).
 3. **Prüfen:** der Browser-Test `tests/test_gateway_kmu_shell.py` (braucht die Engine, siehe `03`).
 4. **Offenes:** `04_OFFENES.md` vor jeder Veröffentlichung lesen.

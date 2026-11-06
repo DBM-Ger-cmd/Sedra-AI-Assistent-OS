@@ -3,7 +3,7 @@
 of the one form {type, id, title, state, summary, actions, links} for the types `agent` (replaces the placeholder), `issue`, `routine` and `budget`, and registers them only
 when `hub.runtime.orchestra` exists; with the switch off the desk stays as it is. `actions` is left empty here: the registry sets it from the verbs (K0.8). The verbs of D3.2
 (zuweisen, wecken, pausieren, ... with their gates) come in Spec 1 together with org and board; Spec 0 registers the types read-only. The registry is passed in by
-`desk/extensions.py` (K0.9), so this module imports nothing of the desk. GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference
+`desk/extensions.py` (K0.9), so this module imports nothing of the desk. SEDRA builds it; Claude only wrote this file, the hidden tests and the reference
 (benchmarks/devvm_refs/k0_orchestra_kinds). Stages cut to at most 20 new hidden checks each (Captain, line L3, 20.10.2026)."""
 
 NOTES = '''# Notes for k0_orchestra_kinds

@@ -4,13 +4,13 @@ import env_skip
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'benchmarks'))
 import cuda_crash_hunt as hunt
 import small_team as st
-from guppi_runtime.models.llama_server_runtime import build_command
+from sedra_runtime.models.llama_server_runtime import build_command
 
 # Genau die Dateien, die diese Tests brauchen – nicht nur die Ordner. Fehlen sie, steht der Grund im Lauf (statt rot).
 ENGINE_DA = (hunt.RUNTIME.parent / 'engines' / 'llama.cpp' / hunt.VARIANTS['engine_b11160']['engine_build']).is_dir()
 def _modelle_da():
     try:
-        project = Path(__file__).resolve().parents[2] / 'workspace' / 'GUPPI_OS'
+        project = Path(__file__).resolve().parents[2] / 'workspace' / 'SEDRA_OS'
         return all(Path(hunt.model_spec(n, project)['server']['gguf']).is_file() for n in ('jan', 'swe', 'qwen3coder'))
     except Exception:
         return False
@@ -36,7 +36,7 @@ class CrashHuntTests(unittest.TestCase):
 class ModelsTests(unittest.TestCase):
  @unittest.skipUnless(MODELLE_DA, 'Modelldateien (jan, swe, qwen3coder) liegen nicht auf diesem Rechner')
  def test_model_specs_and_variants_cover_the_three_models(self):
-  project = Path(__file__).resolve().parents[2] / 'workspace' / 'GUPPI_OS'
+  project = Path(__file__).resolve().parents[2] / 'workspace' / 'SEDRA_OS'
   for name, workload in (('jan', 'repair'), ('swe', 'review'), ('qwen3coder', 'repair')):
    spec = hunt.model_spec(name, project)
    self.assertEqual(spec['workload'], workload); self.assertTrue(Path(spec['server']['gguf']).is_file(), name)

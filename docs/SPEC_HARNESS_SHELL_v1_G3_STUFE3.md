@@ -12,7 +12,7 @@ das zweite als **Pilot über die Harness** (HS-E5: erster Bau eines SEDRA-Agente
 ## Aufgaben
 
 Nummern `N1` bis `N12`. „SEDRA“ = Bau über `devvm_build --profile standard` gegen eine Bau-Spec mit Referenz, Stempel (`spec_check --vm`) und **höchstens 20** versteckten Prüfungen (L3);
-alles andere baut Claude. Neue Dateien stehen im Paket `runtime/src/guppi_runtime/harness/` (kurz `harness/`), Tests in `runtime/tests/`.
+alles andere baut Claude. Neue Dateien stehen im Paket `runtime/src/sedra_runtime/harness/` (kurz `harness/`), Tests in `runtime/tests/`.
 
 | Nr | Aufgabe | Wer | Dateien | Fertig, wenn |
 |---|---|---|---|---|

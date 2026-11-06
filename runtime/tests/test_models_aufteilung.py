@@ -5,7 +5,7 @@ import sys
 import unittest
 from pathlib import Path
 
-from guppi_runtime.models import aufteilung
+from sedra_runtime.models import aufteilung
 
 SPEC = Path(__file__).resolve().parents[1] / 'benchmarks' / 'devvm_specs' / 'modelle_aufteilung.py'
 DYN = {"n_cpu_moe": {"min": 24, "max": 40}, "vram_fix_gb": 1.5, "ram_aufschlag_gb": 1.5, "ram_untergrenze_gb": 8,

@@ -2,7 +2,7 @@
 
 Status: **G1 freigegeben** (03.11.2026, Entscheidungen wie vorgeschlagen); **G2** in `docs/SPEC_APPS_v1_AM1_G2.md`. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11.
 Ziel: Die Taskleiste der Harness-Shell entsteht aus den Manifesten der Instrumente, wie es Cockpit und Rahmen-Shells schon tun. Dazu das Manifestfeld `shells`, damit ein Instrument (und später jede App) nur in bestimmten Shells erscheint. Nur Paket-Instrumente (CORE).
-Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
+Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für c364081.
 
 ## 1. Befund
 

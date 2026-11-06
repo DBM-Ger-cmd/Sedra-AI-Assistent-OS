@@ -7,7 +7,7 @@ from array import array
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.wissen import vektor
+from sedra_runtime.wissen import vektor
 
 
 def v(*werte):

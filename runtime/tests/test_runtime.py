@@ -9,30 +9,30 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from unittest.mock import patch
 
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.core.mission import MissionStore
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.core.message_bus import MessageBus, Message
-from guppi_runtime.selfdev.evolution import EvolutionManager
-from guppi_runtime.updater import UpdateBuilder
-from guppi_runtime.core.errors import InvalidTransition, CompatibilityError
-from guppi_runtime.knowledge import KnowledgeStore
-from guppi_runtime.hardware import detect_hardware
-from guppi_runtime.models.model_profiles import ModelProfileStore
-from guppi_runtime.models.lmstudio import LMStudioAdapter
-from guppi_runtime.models.base import ModelAdapterError
-from guppi_runtime.models.router import ModelRouter
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.core.mission import MissionStore
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.core.message_bus import MessageBus, Message
+from sedra_runtime.selfdev.evolution import EvolutionManager
+from sedra_runtime.updater import UpdateBuilder
+from sedra_runtime.core.errors import InvalidTransition, CompatibilityError
+from sedra_runtime.knowledge import KnowledgeStore
+from sedra_runtime.hardware import detect_hardware
+from sedra_runtime.models.model_profiles import ModelProfileStore
+from sedra_runtime.models.lmstudio import LMStudioAdapter
+from sedra_runtime.models.base import ModelAdapterError
+from sedra_runtime.models.router import ModelRouter
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
 
 class RuntimeCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        self.rt = GuppiRuntime(self.root, ARCH)
-        # Own portable model folder: the runtime points at the package's real runtime/portable/models, which other GUPPI
+        self.rt = SedraRuntime(self.root, ARCH)
+        # Own portable model folder: the runtime points at the package's real runtime/portable/models, which other SEDRA
         # processes on this PC scan. Test files (fake .gguf) must never appear there.
         models=self.root/'portable'/'models'; models.mkdir(parents=True)
         self.rt.model_runtime.portable_root=models.parent.resolve(); self.rt.model_runtime.catalog.allowed_roots=[models.resolve()]
@@ -50,9 +50,9 @@ class RuntimeCase(unittest.TestCase):
     def test_broken_supervisor_config_leaves_status_views_working(self):
         # Review 2026-10-11: an invalid job_supervisor.yaml returned early and left resource_scheduler, permission_gate and
         # model_loader unset, so boot() died with AttributeError instead of saying why.
-        from guppi_runtime import runtime as runtime_module
+        from sedra_runtime import runtime as runtime_module
         with patch.object(runtime_module.SupervisorConfig, 'load', side_effect=ValueError('job_supervisor_config_invalid')):
-            rt = GuppiRuntime(self.root / 'broken', ARCH)
+            rt = SedraRuntime(self.root / 'broken', ARCH)
         self.assertEqual(rt.job_supervisor_error, 'job_supervisor_config_invalid')
         self.assertEqual(rt.resource_status(), {'enabled': False, 'error': None})
         self.assertEqual(rt.permission_status(), {'available': False, 'error': None})
@@ -60,9 +60,9 @@ class RuntimeCase(unittest.TestCase):
         rt.close()
 
     def test_architecture_versions_sort_by_number(self):
-        from guppi_runtime.runtime import _architecture_version
-        names = ['GUPPI_Architecture_v1.20_SELF_DEVELOPMENT', 'GUPPI_Architecture_v1.9_OLD', 'GUPPI_Architecture_v1.17_RUNTIME_SYNC']
-        self.assertEqual(sorted(names, key=_architecture_version)[-1], 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT')
+        from sedra_runtime.runtime import _architecture_version
+        names = ['SEDRA_Architecture_v1.20_SELF_DEVELOPMENT', 'SEDRA_Architecture_v1.9_OLD', 'SEDRA_Architecture_v1.17_RUNTIME_SYNC']
+        self.assertEqual(sorted(names, key=_architecture_version)[-1], 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT')
 
     def test_new_artifact_that_appears_after_guard_check_is_not_overwritten(self):
         m = self.rt.brain.create_mission('Race')
@@ -190,7 +190,7 @@ class RuntimeCase(unittest.TestCase):
 
     def test_update_builder_base_mismatch(self):
         evo = self.root/'evo.yaml'
-        evo.write_text('evolution:\n  base:\n    guppi_version: "9.9.9"\n')
+        evo.write_text('evolution:\n  base:\n    sedra_version: "9.9.9"\n')
         with self.assertRaises(CompatibilityError):
             UpdateBuilder('1.0.0').validate_evolution(evo)
 
@@ -222,7 +222,7 @@ class RuntimeCase(unittest.TestCase):
         self.assertIsNone(em.propose(em.record_gap('same fail', gap_type='repeated_failure', target_type='module')))
         proposal = em.propose(em.record_gap('same fail', gap_type='repeated_failure', target_type='module'))
         self.assertEqual(proposal['proposed_change']['classification'], 'E2')
-        path = self.root/'GUPPI_EVOLUTION.yaml'
+        path = self.root/'SEDRA_EVOLUTION.yaml'
         em.generate_evolution_file(proposal, path, '1.0.0')
         self.assertTrue(path.exists())
 
@@ -335,7 +335,7 @@ class RuntimeCase(unittest.TestCase):
         self.rt.tools.execute('filesystem',mid,'write_text',{'path':'persist.txt','content':'one'})
         pending=self.rt.tools.execute('filesystem',mid,'write_text',{'path':'persist.txt','content':'two'})
         token=self.rt.guard.approve(pending['gate'])
-        restarted=GuppiRuntime(self.root, ARCH)
+        restarted=SedraRuntime(self.root, ARCH)
         try:
             done=restarted.tools.execute('filesystem',mid,'write_text',{'path':'persist.txt','content':'two'},token)
             self.assertEqual(done['status'],'completed')
@@ -472,7 +472,7 @@ class RuntimeCase(unittest.TestCase):
             self.rt.tools.execute('filesystem',mid,'write_text',{'path':'link/escape.txt','content':'nope'})
 
     def test_filesystem_bad_encoding_is_a_validation_error_not_a_crash(self):
-        from guppi_runtime.tools.base import ToolValidationError
+        from sedra_runtime.tools.base import ToolValidationError
         fs=self.rt.filesystem_tool
         (fs.root/'latin.txt').write_bytes('Grüße'.encode('latin-1'))
         with self.assertRaisesRegex(ToolValidationError,'invalid_encoding'):
@@ -560,7 +560,7 @@ class RuntimeCase(unittest.TestCase):
         self.assertEqual(out['gate']['request']['exact_action'],'model_runtime_control')
 
     def test_lmstudio_controller_command_contract(self):
-        from guppi_runtime.models.runtime_control import LMStudioRuntimeController
+        from sedra_runtime.models.runtime_control import LMStudioRuntimeController
         class FakeRunner:
             def __init__(self): self.calls=[]
             def run(self,argv,timeout=30):
@@ -573,12 +573,12 @@ class RuntimeCase(unittest.TestCase):
         runner=FakeRunner(); ctl=LMStudioRuntimeController('/fake/lms',runner=runner)
         status=ctl.status(); self.assertTrue(status['available'])
         ctl.list_models(); ctl.loaded_models()
-        load=ctl.load_model('example/model',context_length=4096,gpu='max',identifier='guppi')
+        load=ctl.load_model('example/model',context_length=4096,gpu='max',identifier='sedra')
         self.assertIn('--context-length',load['command'])
         self.assertIn('--gpu',load['command'])
 
     def test_llamacpp_start_command_is_loopback_and_tuned(self):
-        from guppi_runtime.models.runtime_control import LlamaCppRuntimeController
+        from sedra_runtime.models.runtime_control import LlamaCppRuntimeController
         model=self.rt.model_runtime.portable_models_dir/'Cmd-4B-Q4_K_M.gguf'
         model.write_bytes(b'x')
         try:
@@ -611,7 +611,7 @@ class RuntimeCase(unittest.TestCase):
         self.assertFalse(Path(rec['path']).exists())
 
     def test_llamacpp_managed_process_contract(self):
-        from guppi_runtime.models.runtime_control import LlamaCppRuntimeController
+        from sedra_runtime.models.runtime_control import LlamaCppRuntimeController
         class FakeProcess:
             pid=4242
             def __init__(self): self.running=True
@@ -629,7 +629,7 @@ class RuntimeCase(unittest.TestCase):
             started=ctl.start_server(model,passed['effective_profile'],port=18081,log_path=log)
             self.assertEqual(started['pid'],4242)
             # status() also asks the endpoint's /health; no real port in tests (a server of this PC could answer on 8080).
-            with patch('guppi_runtime.models.runtime_control.urlopen',side_effect=OSError('no network in tests')) as probe:
+            with patch('sedra_runtime.models.runtime_control.urlopen',side_effect=OSError('no network in tests')) as probe:
                 self.assertTrue(ctl.status()['managed_running'])
             probe.assert_called_once()
             stopped=ctl.stop_server(); self.assertTrue(stopped['stopped'])
@@ -641,7 +641,7 @@ class RuntimeCase(unittest.TestCase):
         self.assertEqual(fp1,fp2); self.assertEqual(len(fp1),24)
 
     def test_benchmark_active_and_known_good_promotion(self):
-        from guppi_runtime.models.benchmark import ModelBenchmarkRunner
+        from sedra_runtime.models.benchmark import ModelBenchmarkRunner
         class FakeAdapter:
             def health(self): return True
             def list_models(self): return ['fake-model']
@@ -702,27 +702,27 @@ if __name__ == '__main__':
 
 class ArchitectureDiscoveryTests(unittest.TestCase):
     def test_legacy_and_sedra_architectures_sort_by_numeric_version(self):
-        from guppi_runtime.runtime import _architecture_version
-        names=['GUPPI_Architecture_v1.20_LEGACY','SEDRA_Architecture_v1.9_OLD',
-               'SEDRA_Architecture_v1.21_NEW','GUPPI_Architecture_v1.21_LEGACY']
+        from sedra_runtime.runtime import _architecture_version
+        names=['SEDRA_Architecture_v1.20_LEGACY','SEDRA_Architecture_v1.9_OLD',
+               'SEDRA_Architecture_v1.21_NEW','SEDRA_Architecture_v1.21_LEGACY']
         self.assertEqual(sorted(names,key=_architecture_version)[-1],'SEDRA_Architecture_v1.21_NEW')
 
     def test_architecture_discovery_prefers_sedra_and_ignores_files(self):
-        from guppi_runtime.runtime import _find_architecture_root
+        from sedra_runtime.runtime import _find_architecture_root
         with tempfile.TemporaryDirectory() as td:
             workspace=Path(td)/'workspace'; project=workspace/'SEDRA'
             base=workspace/'architecture'; base.mkdir(parents=True)
-            (base/'GUPPI_Architecture_v1.20_OLD').mkdir()
+            (base/'SEDRA_Architecture_v1.20_OLD').mkdir()
             (base/'SEDRA_Architecture_v1.21_NEW').mkdir()
             (base/'SEDRA_Architecture_v9.0_NOT_A_DIRECTORY').touch()
             self.assertEqual(_find_architecture_root(project),base/'SEDRA_Architecture_v1.21_NEW')
 
     def test_sedra_runtime_is_backward_compatible_alias(self):
-        from guppi_runtime.runtime import GuppiRuntime, SedraRuntime
-        self.assertIs(SedraRuntime, GuppiRuntime)
+        from sedra_runtime.runtime import SedraRuntime, SedraRuntime
+        self.assertIs(SedraRuntime, SedraRuntime)
 
     def test_real_architecture_can_boot_under_sedra_directory_name(self):
-        from guppi_runtime.runtime import SedraRuntime
+        from sedra_runtime.runtime import SedraRuntime
         with tempfile.TemporaryDirectory() as td:
             workspace=Path(td)/'workspace'
             archdir=workspace/'architecture'/'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'

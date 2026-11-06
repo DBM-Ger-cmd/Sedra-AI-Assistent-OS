@@ -1,7 +1,7 @@
 """Skill digest (Captain 2026-10-13: "ja das soll er machen"). The 5-stage need test showed that the coder finds the right skill but does not copy its template exactly: a skill is 200-600 lines, the template stands somewhere in the
 middle, the model reads 120-line pages and writes its own scaffold (stage spec: 0/3 even with skills). `skill_digest.py` builds a short view of a skill text: a one-line summary, then the markdown templates (fenced blocks of the
 languages markdown or md) with their title and line numbers, then an outline of the headings with line numbers so the model can read on exactly where it needs to. Pure text functions; the tool parameter `brief` of skill_read and
-SkillLibrary.brief are wired by Claude after acceptance. GUPPI builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/skill_digest)."""
+SkillLibrary.brief are wired by Claude after acceptance. SEDRA builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/skill_digest)."""
 
 NOTES = '''# Notes for skill_digest
 Pure Python 3 standard library, no file, process or network access, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code. `import` lines at the top.

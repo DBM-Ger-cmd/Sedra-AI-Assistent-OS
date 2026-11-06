@@ -1,7 +1,7 @@
-"""G1 build_request (docs/ABLAUF_GESPRAECH_2026-10-13.md; Captain 2026-10-13: the tests come from the examples of the conversation, GUPPI writes the asserts, the Captain confirms a spec card; a catalog of test patterns
+"""G1 build_request (docs/ABLAUF_GESPRAECH_2026-10-13.md; Captain 2026-10-13: the tests come from the examples of the conversation, SEDRA writes the asserts, the Captain confirms a spec card; a catalog of test patterns
 saves new tests). `build_request.py` takes the RESULT of a conversation as data (name, title, notes, stages with a task text and a list of catalog checks) and makes two things from it: the text of a devvm spec file
 (NOTES and STAGES with the hidden tests that `assert_catalog.build_test` writes, each stage test cumulative) and the spec card the Captain reads and confirms. Pure functions; the conversation itself and the files are
-handled elsewhere. Seed: benchmarks/g1_seed (the finished test catalog: assert_catalog.py and catalog_proofs.py). GUPPI builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/build_request)."""
+handled elsewhere. Seed: benchmarks/g1_seed (the finished test catalog: assert_catalog.py and catalog_proofs.py). SEDRA builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/build_request)."""
 
 SEED = "benchmarks/g1_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 NOTES = '''# Notes for build_request

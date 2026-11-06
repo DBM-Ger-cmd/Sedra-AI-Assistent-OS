@@ -1,6 +1,6 @@
 """E-11 part 1 (coder extension "learning loop", 2026-10-11): lessons from runs become small cards; the Captain approves them; unused cards go stale and are archived (life
 cycle proposed / active / stale / archived, after the OpenClaw scheme); the coder gets the best matching active card for a task. Idea from Hermes background_review. This is the
-card store only (pure logic, JSON in and out); proposing cards from a finished run and the Captain's approval in the UIX come after acceptance. GUPPI builds it (model comparison
+card store only (pure logic, JSON in and out); proposing cards from a finished run and the Captain's approval in the UIX come after acceptance. SEDRA builds it (model comparison
 2026-10-11), Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/e11_lesson_cards). Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
 
 NOTES = '''# Notes for lesson_cards

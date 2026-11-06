@@ -3,7 +3,7 @@
 Stand des Codes: `main` c364081. Dieses Konzept ersetzt `docs/ENTWURF_APPS_MODELL_2026-11-03.md` als Grundlage; der Entwurf bleibt als Verlauf.
 Die Bausteine stehen je in einem eigenen Spec (`docs/SPEC_APPS_v1_AM0_…` bis `…_AM8_…`, §11). Nichts davon ist gebaut. Stand 03.11.2026: alle Entscheidungen wie vorgeschlagen; AM0 und AM1 in **G2** (`SPEC_APPS_v1_AM0_G2.md`, `SPEC_APPS_v1_AM1_G2.md`).
 
-Pfade ohne Vorsatz sind relativ zu `runtime/src/guppi_runtime/`. Zeilennummern gelten für c364081. Wo etwas nicht im Code gelesen wurde, steht das dabei.
+Pfade ohne Vorsatz sind relativ zu `runtime/src/sedra_runtime/`. Zeilennummern gelten für c364081. Wo etwas nicht im Code gelesen wurde, steht das dabei.
 Alles, was rechtliche Pflichten betrifft (DSGVO, EU-KI-Verordnung, Verträge), ist **Einordnung, keine Rechtsprüfung**.
 
 ---
@@ -48,7 +48,7 @@ Folgerung: Die Idee „alles ist eine App“ trifft heute nur E1 und E2. Ein gan
 | Permission-Stufen | 0 `READ_ONLY` … 6 `EXTERNAL_ACTION` | `runtime/config/permission_levels.yaml:7–14` | Obergrenze über dem Guard (Jobs) |
 | Harness-Katalog | `frei`, `vorarbeiter`, `captain`, `verboten` | `harness/katalog.py:18` | Werkzeugaufrufe im Gespräch |
 | Wirkungsklassen der Agenten | `read_only`, `proposal_only`, `preview`, `reversible_write`, `destructive_write`, `external_side_effect`, `privileged` | `agent_manager/agent_import.py:170–180` | Fähigkeiten einer Agenten-Vorlage |
-| Vertrauen der Module | `CORE`, `CAPTAIN`, `GUPPI_BUILT`, `COMMUNITY` + Routenliste | `desk/gateway.py:50` | UI-Werkzeuge und Shells |
+| Vertrauen der Module | `CORE`, `CAPTAIN`, `SEDRA_BUILT`, `COMMUNITY` + Routenliste | `desk/gateway.py:50` | UI-Werkzeuge und Shells |
 
 Keines davon ist falsch; sie beantworten verschiedene Fragen. Was fehlt, ist **eine Abbildung**, damit der Captain in einer App-Berechtigung dieselben Worte sieht wie in einer Agenten-Vorlage. Das Konzept führt deshalb keine sechste Sprache ein, sondern nimmt die **Wirkungsklassen der Agenten** (die genaueste Sprache, die es schon gibt) als gemeinsame Anzeigesprache und bildet die anderen darauf ab (§5.3). Der Guard bleibt, was er ist: die einzige Stelle, die entscheidet.
 
@@ -86,9 +86,9 @@ Keines davon ist falsch; sie beantworten verschiedene Fragen. Was fehlt, ist **e
 | F12 | Im Rahmen fehlen Design-Tokens der Seite; Tastatur und Fokus über die Rahmengrenze sind ein bekanntes Risiko; der Rahmen ist nur im Cockpit im Browser geprüft. | `PLAN_STUFE_C` §5, §10 „Bekannte Grenzen“ |
 | F13 | Der Gateway-Vorgang kennt **keine Rollen** und **keinen echten Cloudweg**: verantwortlich ist „Nutzer“, Cloud nur `simuliert`, Rechtsgrundlage für Personenbezug in der Cloud fest `False`. | `gateway/vorgang.py:43, 48–49`; `gateway/klassen.py:19` |
 | F14 | Die Abhängigkeiten einer Shell (Werkzeuge, Kern-Module, ui-Dateien) werden für den USB-Stick von Hand aufgezählt. **Nachtrag 03.11.:** Auf dem Branch `plan/usb-stick-minimal` (nicht auf `main`) gibt es dafür schon eine Liste `runtime/benchmarks/stick_liste.txt` (Ordner, Python-Module mit Import-Hülle, Bestand außerhalb von Git) und den Paketbau `stick_paket.py` mit Manifest; siehe §2.5. | `docs/ENTSCHEIDUNGEN_USB_STICK.md:7–9`; Branch `plan/usb-stick-minimal` |
-| F15 | Die Vertrauensstufe `GUPPI_BUILT` wird von **keinem** Code-Pfad vergeben. Der Vertrag sagt, ein von SEDRA gebautes Modul trage sie und komme über das Einbau-Gate (Vertrag §7.2–7.3); das Einbau-Gate setzt aber immer `COMMUNITY`. `GUPPI_BUILT` kommt im Code nur als zulässiger Wert vor. | `desk/gateway.py:50`; `uix_server.py:396–400`; Suche nach `GUPPI_BUILT` im Paket |
+| F15 | Die Vertrauensstufe `SEDRA_BUILT` wird von **keinem** Code-Pfad vergeben. Der Vertrag sagt, ein von SEDRA gebautes Modul trage sie und komme über das Einbau-Gate (Vertrag §7.2–7.3); das Einbau-Gate setzt aber immer `COMMUNITY`. `SEDRA_BUILT` kommt im Code nur als zulässiger Wert vor. | `desk/gateway.py:50`; `uix_server.py:396–400`; Suche nach `SEDRA_BUILT` im Paket |
 | F17 | **Testläufe umgehen alle Vorbehalte.** → *Geschlossen durch G4 (gebaut 03.11.2026, PR #1; Abnahme am PC offen).* Der MasterChat darf in seiner Sitzung Tests und Code unter `runtime/**` schreiben und `run_tests` starten; der Lauf führt den Code auf dem Rechner aus (ohne VM), neue Testdateien werden mitgenommen. Dieser Code kann jede Datei schreiben, auch `core/**` und `uix/ui/**`. | `runtime/config/harness_vorlagen/masterchat.yaml:14–26`; `runtime/config/harness_laeufe.yaml` (`run_tests`); `harness/lauf_huelle.py:1–5`; `runtime/benchmarks/run_tests.py:32` |
-| F18 | **Alle Freigabe-Wege außer der Konsole nimmt der Server mit dem Browser-Token an** (zehn Wege, F1–F10 in der Vorlage AM0-E1 §5b.2). Code in der Seite kann deshalb jede Freigabe erteilen, auch für Programme, Regeln und Datenabfluss. Einzige Ausnahme heute: `guppi approve` in der Konsole. | `uix_server.py:261–310, 2196–2213`; `harness/api.py:245`; `cli.py:316–324` |
+| F18 | **Alle Freigabe-Wege außer der Konsole nimmt der Server mit dem Browser-Token an** (zehn Wege, F1–F10 in der Vorlage AM0-E1 §5b.2). Code in der Seite kann deshalb jede Freigabe erteilen, auch für Programme, Regeln und Datenabfluss. Einzige Ausnahme heute: `sedra approve` in der Konsole. | `uix_server.py:261–310, 2196–2213`; `harness/api.py:245`; `cli.py:316–324` |
 | F16 | Einbau und Rechte-Erhöhung schreiben in die Manifestdatei des Moduls (`trust: COMMUNITY` bzw. `CAPTAIN`). Eine Hash-Prüfung nach dem Einbau muss das berücksichtigen; jede Erhöhung ändert den Hash. | `uix_server.py:462–466, 1324–1327` |
 
 ### 2.5 Änderungen in SEDRA außerhalb von `main`, in den Plan einbezogen (Stand 03.11.2026)
@@ -99,7 +99,7 @@ Geprüft wurden die Branches auf GitHub. Was auf dem PC des Captains liegt und n
 |---|---|---|
 | `fix/harness-list-projects` 513400b | `list_projects` nennt in der Harness deren Projekte und markiert die Sitzung | inhaltlich schon auf `main` (gleicher Patch); G4 baut darauf auf |
 | `fix/harness-list-projects` aa443d5 | `docs/WISSENSDATENBANK_USB_STICK_CHAT.md`: Stand des Sticks, 12 offene Punkte (Modelle, Rezepte, `fenster/rekorder.html`, Abnahme auf 8 GB VRAM …) | Der Stick „für einen Kollegen“ ist der **erste reale Fall der Betriebsart A** (AM7): eigener Rechner, eigene SEDRA – bisher ohne Richtlinie. AM7 nimmt das als Pilot auf. |
-| `plan/usb-stick-minimal` (6 Commits) | `PLAN_USB_STICK_MINIMAL.md`, `stick_liste.txt`, `stick_paket.py` (Liste lesen, Import-Hülle `guppi_runtime.*`, kopieren ohne Verknüpfungen, `STICK_MANIFEST.json` mit Hashes), relative Modellordner (Option B, `local_paths.py`) | **AM8** baut auf `stick_paket.py` auf, statt ein zweites Werkzeug zu schreiben. **G4:** Die Stick-Liste enthielt `harness/`, aber nicht den Konsolenweg. **Nachgetragen** auf dem Stick-Branch (Commit d650079): `repo CODE_STAND.bat`; `cli.py` ist nicht nötig, weil `harness/code_stand.py` einen eigenen schlanken Einstieg hat (sonst kämen 14 Dateien mit). Der Stick nimmt `local_config` nicht mit (`AUSSCHLUSS`) – Gewährungen der App-Berechtigung (AM3) bleiben damit maschinenlokal, wie vorgesehen. Die portable Laufzeit (`runtime\portable\python\current`, auf dem Bau-PC zusätzlich `python.aus`) bestätigt die Nacharbeit A1 an G4. |
+| `plan/usb-stick-minimal` (6 Commits) | `PLAN_USB_STICK_MINIMAL.md`, `stick_liste.txt`, `stick_paket.py` (Liste lesen, Import-Hülle `sedra_runtime.*`, kopieren ohne Verknüpfungen, `STICK_MANIFEST.json` mit Hashes), relative Modellordner (Option B, `local_paths.py`) | **AM8** baut auf `stick_paket.py` auf, statt ein zweites Werkzeug zu schreiben. **G4:** Die Stick-Liste enthielt `harness/`, aber nicht den Konsolenweg. **Nachgetragen** auf dem Stick-Branch (Commit d650079): `repo CODE_STAND.bat`; `cli.py` ist nicht nötig, weil `harness/code_stand.py` einen eigenen schlanken Einstieg hat (sonst kämen 14 Dateien mit). Der Stick nimmt `local_config` nicht mit (`AUSSCHLUSS`) – Gewährungen der App-Berechtigung (AM3) bleiben damit maschinenlokal, wie vorgesehen. Die portable Laufzeit (`runtime\portable\python\current`, auf dem Bau-PC zusätzlich `python.aus`) bestätigt die Nacharbeit A1 an G4. |
 
 ---
 
@@ -151,7 +151,7 @@ Geprüft wurden die Branches auf GitHub. Was auf dem PC des Captains liegt und n
 
 ### 5.1 Die vier Achsen
 
-1. **Vertrauen** (Herkunft): `CORE` (Paket), `CAPTAIN` (vom Captain selbst abgelegt oder aus der Vorlage angelegt), `GUPPI_BUILT` (von SEDRA gebaut, mit Spec und verstecktem Test, Vertrag §7 – heute von keinem Code-Pfad vergeben, F15, AM3-29), `COMMUNITY` (alles, was durch den Einbau kommt). Legt die **Abschottung** und die **Obergrenze** fest.
+1. **Vertrauen** (Herkunft): `CORE` (Paket), `CAPTAIN` (vom Captain selbst abgelegt oder aus der Vorlage angelegt), `SEDRA_BUILT` (von SEDRA gebaut, mit Spec und verstecktem Test, Vertrag §7 – heute von keinem Code-Pfad vergeben, F15, AM3-29), `COMMUNITY` (alles, was durch den Einbau kommt). Legt die **Abschottung** und die **Obergrenze** fest.
 2. **Schutzstufe** der Fähigkeit: **A** normal, **B** gefährlich, **C** Kern. Legt fest, **wie** gewährt wird.
 3. **Shell**: wo die App sichtbar ist (`shells:`). Sichtbarkeit, keine Sicherheitsgrenze.
 4. **Rolle** (ab AM7): wer die App benutzen darf.
@@ -192,7 +192,7 @@ Hinweis zur Genauigkeit: Die Spalte „entspricht“ ist eine **Lesehilfe**. Die
 | Aktivierung | aus / an | – (Klick, Audit) | aus | – |
 | Zelle in der Leiste | nein / text | B | nein | nie Code in der Leiste |
 | Ereignisse | je Name; Klasse `öffentlich` / `inhalt` | A / B | nur `öffentlich` | `inhalt` nur gefiltert |
-| Dienst-Prozess | nein / Host / microVM | B | nein | Host nur `CAPTAIN`/`GUPPI_BUILT` |
+| Dienst-Prozess | nein / Host / microVM | B | nein | Host nur `CAPTAIN`/`SEDRA_BUILT` |
 | Lesen | eigene Typen / benannte fremde Typen | A / B | eigene | sensible Bereiche nie (AM0-03) |
 | Verben | je `typ.verb` | B | keine | Verb behält sein Gate |
 | Kern-Verben mit Außenwirkung | je Verb, z. B. `langdock_agent.fragen` (AM6) | B | keine | eine App hat selbst nie Netz (`connect-src 'none'`, AM0-04); hinaus geht nur der Kern durch den Inhaltsschutz |
@@ -323,7 +323,7 @@ Begründung: AM0 ist Voraussetzung für alles mit fremdem Code; AM1/AM2 bringen 
 | Das Modell kann Paketcode schreiben | Herkunft ist die einzige Grenze von CORE; Code in der Seite liest den Token und kann Freigaben selbst erteilen (`ui/api.js:6`) | F5, AM0-01, Vorlage AM0-E1 |
 | Testläufe führen Modell-Code auf dem Rechner aus | umgeht alle Vorbehalte, nicht nur die der Oberfläche | F17, Vorlage AM0-E1 §5a.3, Maßnahme G4 |
 | Werkstatt und Betrieb sind derselbe Ordner | SEDRA ändert sich selbst, während es läuft – für Oberfläche und Python | Vorlage AM0-E1 §3, AM9 |
-| `GUPPI_BUILT` wird nie vergeben | Der Selbstbau-Weg des Vertrags (§7) endet heute als `COMMUNITY` | F15, AM3-29 |
+| `SEDRA_BUILT` wird nie vergeben | Der Selbstbau-Weg des Vertrags (§7) endet heute als `COMMUNITY` | F15, AM3-29 |
 | Rechte im Manifest gespeichert | Widerspricht jeder Hash-Prüfung | F16, AM3-05 |
 | Gate-Texte und Guard-Regeln für den Einbau | Der Captain entscheidet auf Grundlage dieser Texte | F10, F11, AM0-07/08 |
 | Design, Tastatur, Fokus im Rahmen | Fremde Apps sollen bedienbar und erkennbar sein | F12, AM3-19–22 |

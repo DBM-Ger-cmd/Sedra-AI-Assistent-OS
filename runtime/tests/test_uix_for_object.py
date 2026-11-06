@@ -5,7 +5,7 @@ import re
 import unittest
 from pathlib import Path
 
-UIX = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
+UIX = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix'
 WITH_OBJECT = (UIX / 'shells' / 'cockpit' / 'dock.js', UIX / 'shells' / 'minimal' / 'windows.js', UIX / 'ui' / 'frame.js')
 PLACE_ID = re.compile(r"\{\s*id:\s*'([a-z0-9_-]+)'")
 

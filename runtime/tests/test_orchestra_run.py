@@ -2,7 +2,7 @@
 aus der Herkunft (Spec 2 D2.4), Handler mit Fixture-Modell. Kein Modell, keine GPU: `model_router` und `web` sind Fixtures, der
 Supervisor ist echt (eigener Speicher im Temp-Ordner, eingeschaltet nur hier).
 
-Dazu die Vorlagen `guppi.orchestra.foreman`/`researcher`: Import über den AM-Weg ohne Befund, Abnahme-Suite gültig (Referenz
+Dazu die Vorlagen `sedra.orchestra.foreman`/`researcher`: Import über den AM-Weg ohne Befund, Abnahme-Suite gültig (Referenz
 besteht), die Fälle der Vorlage sind die Kriterien der Suite – damit ist `agent.promote` möglich."""
 import json
 import time
@@ -11,10 +11,10 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import orchestra_runner
-from guppi_runtime.jobs.job_worker import HandlerError
-from guppi_runtime.jobs.job_supervisor import JobSupervisor, SupervisorConfig, SupervisorJobStore
-from guppi_runtime.orchestra import board, heartbeat
+from sedra_runtime.desk import orchestra_runner
+from sedra_runtime.jobs.job_worker import HandlerError
+from sedra_runtime.jobs.job_supervisor import JobSupervisor, SupervisorConfig, SupervisorJobStore
+from sedra_runtime.orchestra import board, heartbeat
 from test_orchestra_desk import Desk
 
 RUNTIME = Path(__file__).resolve().parents[1]
@@ -221,8 +221,8 @@ class Decompose(Run):
         with mock.patch.object(orchestra_runner.runner, 'outcome', side_effect=TypeError("unhashable type: 'list'")), self.assertRaises(HandlerError) as ctx:
             self.run_job(run)
         self.assertEqual(ctx.exception.code, 'unknown_failure')
-        from guppi_runtime.models.role_routing import PROVIDER_FAULTS
-        from guppi_runtime.jobs.failure_classes import classify
+        from sedra_runtime.models.role_routing import PROVIDER_FAULTS
+        from sedra_runtime.jobs.failure_classes import classify
         self.assertNotIn(classify(ctx.exception.code), PROVIDER_FAULTS)
 
     def test_a_router_that_gives_up_ends_as_model_schema_failed(self):
@@ -400,13 +400,13 @@ class Templates(unittest.TestCase):
 
     def test_import_through_the_agent_manager_without_problems(self):
         import tempfile
-        from guppi_runtime.agent_manager.service import AgentManager
+        from sedra_runtime.agent_manager.service import AgentManager
         with tempfile.TemporaryDirectory() as tmp:
             service = AgentManager(Path(tmp) / 'registry.sqlite')
             registry = service.registry
             try:
                 results = {r['key']: r for r in service.import_templates(str(TEMPLATES))}
-                self.assertEqual(sorted(results), ['guppi.orchestra.foreman@1.0.0', 'guppi.orchestra.researcher@1.0.0'])
+                self.assertEqual(sorted(results), ['sedra.orchestra.foreman@1.0.0', 'sedra.orchestra.researcher@1.0.0'])
                 for key, r in results.items():
                     with self.subTest(key):
                         self.assertEqual((r['status'], r['problems']), ('created', []))
@@ -417,8 +417,8 @@ class Templates(unittest.TestCase):
 
     def test_suites_are_valid_and_match_the_declared_cases(self):
         import yaml
-        from guppi_runtime.agent_manager.instances import promotion_gaps
-        from guppi_runtime.selfdev.acceptance_suite import host_runner, load_suite, run_suite, validate_suite
+        from sedra_runtime.agent_manager.instances import promotion_gaps
+        from sedra_runtime.selfdev.acceptance_suite import host_runner, load_suite, run_suite, validate_suite
         for name in ('foreman', 'researcher'):
             with self.subTest(name):
                 template = yaml.safe_load((TEMPLATES / name / 'template.yaml').read_text(encoding='utf-8'))

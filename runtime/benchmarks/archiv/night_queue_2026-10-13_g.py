@@ -1,4 +1,4 @@
-r"""Night chain G (Captain 2026-10-13: "den Rest in die Nacht-Warteschlange als ERSTES einfuegen, damit die anderen Laeufe damit arbeiten koennen"): GUPPI builds the blocks of
+r"""Night chain G (Captain 2026-10-13: "den Rest in die Nacht-Warteschlange als ERSTES einfuegen, damit die anderen Laeufe damit arbeiten koennen"): SEDRA builds the blocks of
 docs/ABLAUF_GESPRAECH_2026-10-13.md (test catalog, spec/test tools, ...) BEFORE the other night chains, so that they can use the results.
 
     .venv\Scripts\python.exe benchmarks/night_queue_2026-10-13_g.py <project_dir> [<start hour, default 22>]
@@ -17,7 +17,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "src"))
-from guppi_runtime.jobs.testlab import TestLab, default_path
+from sedra_runtime.jobs.testlab import TestLab, default_path
 
 _spec = importlib.util.spec_from_file_location("night_queue", HERE / "night_queue_2026-10-11.py")
 night = importlib.util.module_from_spec(_spec)

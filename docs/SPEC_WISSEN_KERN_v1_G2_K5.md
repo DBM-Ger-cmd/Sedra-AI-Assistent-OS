@@ -73,7 +73,7 @@ heißt die Antwort numpy (ein `pip install numpy`), nicht B.
 | `.pdf` | MarkItDown, sonst `pypdf` (nur Text) | Hilfswerkzeug | Markdown von MarkItDown, Seiten als Köpfe bei `pypdf` |
 | `.xlsx`, `.pptx` | MarkItDown | Hilfswerkzeug | Tabellen bzw. Folien als Köpfe |
 
-- **Umwandlung in einem eigenen Prozess** (`python -I -m guppi_runtime.wissen.leser.umwandeln <datei>`), mit Zeitgrenze (60 s, einstellbar), ohne Netz und mit Größengrenze. Ein hängendes oder böswilliges Dokument hält so nicht den Server auf. Die Ausgabe ist UTF-8-Text über stdout, höchstens 20 MB.
+- **Umwandlung in einem eigenen Prozess** (`python -I -m sedra_runtime.wissen.leser.umwandeln <datei>`), mit Zeitgrenze (60 s, einstellbar), ohne Netz und mit Größengrenze. Ein hängendes oder böswilliges Dokument hält so nicht den Server auf. Die Ausgabe ist UTF-8-Text über stdout, höchstens 20 MB.
 - **Fehlt das Hilfswerkzeug:** Die Datei steht als `uebersprungen`, Grund `hilfswerkzeug_fehlt:markitdown`, dazu der Installationsbefehl aus `hilfswerkzeuge.yaml`. Sie wird nie still weggelassen.
 - **Kein OCR in v1:** Eine PDF ohne Textschicht ergibt `uebersprungen`, Grund `kein_text` (Hinweis auf W5, Texterkennung).
 - Der Inhaltsschutz (`befunde_von`) läuft je Abschnitt wie heute. Ein harter Fund sperrt den Abschnitt (`gesperrt`), nicht die ganze Datei.
@@ -106,7 +106,7 @@ heißt die Antwort numpy (ein `pip install numpy`), nicht B.
 
 ### 2.7 Erstaufnahme als Lauf (WK-24)
 
-- Ein neuer Lauftyp `wissen_aufnahme` in `runtime/config/harness_laeufe.yaml` (fester Vorbehalt, also nur mit Captain-Gate). Er startet `python -m guppi_runtime.wissen.aufnahme_lauf --quelle <id>` als eigenen Prozess über die bestehende Lauf-Hülle: Fortschritt in der Taskleiste, Stopp, Ende melden, Wiederaufnahme nach einem Neustart über die Tabelle `dateien`.
+- Ein neuer Lauftyp `wissen_aufnahme` in `runtime/config/harness_laeufe.yaml` (fester Vorbehalt, also nur mit Captain-Gate). Er startet `python -m sedra_runtime.wissen.aufnahme_lauf --quelle <id>` als eigenen Prozess über die bestehende Lauf-Hülle: Fortschritt in der Taskleiste, Stopp, Ende melden, Wiederaufnahme nach einem Neustart über die Tabelle `dateien`.
 - Der Lauf nimmt die **Takt-Sperre** (`takt.lock`). Der Takt des Servers setzt so lange aus (`wis_takt_busy`, das gibt es schon), und zwei Schreiber gleichzeitig kann es nicht geben.
 - Ablauf: Abgleich in Schritten von 200 Dateien, danach Einbetten in Stapeln. Die Fortschrittszeile lautet `Dateien n/m · Abschnitte k/l · eingebettet e/l`, passend zur `fortschritt_regel` der Lauf-Typen.
 - Gerät: nur die CPU (WK-05). Hält jemand die GPU-Lease für einen Bau, pausiert der Lauf wie der Takt (`TestLabZugang.lage`).

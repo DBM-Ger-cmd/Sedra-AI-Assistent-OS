@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import katalog, vorschau
+from sedra_runtime.harness import katalog, vorschau
 
 
 def verlauf(*pfade, name='datei_schreiben'):

@@ -4,7 +4,7 @@ and becomes due after the coalescing window; `due` groups the open wake-ups per 
 within a second -> one run); `finish` closes a wake-up with its outcome (a wake-up waiting for a single approval can still turn into a run or a refusal);
 `pending_request` keeps the tick from filing a second request; `in_flight` lists the checked-out runs for the comparison with the supervisor (ORC-11).
 Builds on the seed benchmarks/s1_schema2_seed (store.py schema 2, wakeplan.py = reference of s1_wakeplan).
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_heartbeat)."""
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_heartbeat)."""
 
 SEED = "benchmarks/s1_schema2_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 

@@ -3,10 +3,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import schleife
-from guppi_runtime.harness.api import (VERLAUF_MAX, ZUSAMMEN_MIN, HarnessApi, letzte_zusammenfassung, sichtbare, verlauf_aus, zusammenfassung_nachrichten)
-from guppi_runtime.harness.sitzung import Sitzungen
-from guppi_runtime.harness.strom import Stroeme
+from sedra_runtime.harness import schleife
+from sedra_runtime.harness.api import (VERLAUF_MAX, ZUSAMMEN_MIN, HarnessApi, letzte_zusammenfassung, sichtbare, verlauf_aus, zusammenfassung_nachrichten)
+from sedra_runtime.harness.sitzung import Sitzungen
+from sedra_runtime.harness.strom import Stroeme
 
 
 class SystemPromptTests(unittest.TestCase):

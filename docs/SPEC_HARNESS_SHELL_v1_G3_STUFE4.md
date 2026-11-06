@@ -9,7 +9,7 @@ ab `ce433c0`; Lieferung als Fork-Version (ZIP), kein Push; Übernahme durch den 
 
 ## Aufgaben
 
-Nummern `N1` bis `N9`. Dateien der Shell in `runtime/src/guppi_runtime/uix/shells/harness/` (kurz `harness/`), Tests in `runtime/tests/`.
+Nummern `N1` bis `N9`. Dateien der Shell in `runtime/src/sedra_runtime/uix/shells/harness/` (kurz `harness/`), Tests in `runtime/tests/`.
 Vertrag: keine Shell-Datei über 400 Zeilen, Schrift und Farben nur als Token, kein `innerHTML` mit fremdem Text, Top-Level-Code nur in `shell.js`.
 
 | Nr | Aufgabe | Dateien | Fertig, wenn |

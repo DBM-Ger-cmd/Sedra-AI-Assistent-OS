@@ -9,10 +9,10 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import gated, orchestra_runner
-from guppi_runtime.orchestra import board, runner
-from guppi_runtime.wissen import ausgabe, lauf
-from guppi_runtime.wissen import speicher as S
+from sedra_runtime.desk import gated, orchestra_runner
+from sedra_runtime.orchestra import board, runner
+from sedra_runtime.wissen import ausgabe, lauf
+from sedra_runtime.wissen import speicher as S
 from test_orchestra_desk import fixture_db
 from test_orchestra_run import ATTEMPT, Ctx, FakeRouter, Run
 
@@ -32,7 +32,7 @@ class LokalAdapter:
 
 class Lauf(Run):
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         import tempfile
         tmp = tempfile.TemporaryDirectory(prefix='wissen-lauf-')
         self.addCleanup(tmp.cleanup)
@@ -51,7 +51,7 @@ class Lauf(Run):
         self.db = self.orch.conn
         self.db.execute("INSERT INTO agents (id, instance_id, template_id, name, role, reports_to, status, permission_level, created_at, updated_at)"
                         " VALUES ('A-3', 'I-3', 'reviewer', 'Prüfer', 'Prüfung', 'A-UA', 'aktiv', 2, ?, ?)", (NOW, NOW))
-        from guppi_runtime.jobs.job_supervisor import JobSupervisor, SupervisorConfig, SupervisorJobStore
+        from sedra_runtime.jobs.job_supervisor import JobSupervisor, SupervisorConfig, SupervisorJobStore
         config = SupervisorConfig.load(RUNTIME / 'config' / 'job_supervisor.yaml')
         config.enabled = True
         self.sup = JobSupervisor(SupervisorJobStore(self.hub.project_root / 'runtime_data' / 'jobs_test'), config, audit=self.hub.runtime.audit)

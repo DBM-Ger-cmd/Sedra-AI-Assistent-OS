@@ -2,7 +2,7 @@ r"""Phase 2 acceptance of the DevVM mission: a model's `run_tests` goes through 
 
     .venv\Scripts\python.exe benchmarks/devvm_phase2_check.py <project_dir>
 
-A temporary GuppiRuntime (own folder, own audit chain) gives a real Guard and a real SandboxBroker with the real provider and the real sandbox config. The check plays the Captain
+A temporary SedraRuntime (own folder, own audit chain) gives a real Guard and a real SandboxBroker with the real provider and the real sandbox config. The check plays the Captain
 for ITS OWN temporary gates only (like the unit tests do): it approves a gate it created itself and nothing else. Steps:
   1 coder box with a `broker_runner` and NO approval token: `run_tests` answers "NOT STARTED ... gate", the VM was not started (no job folder)
   2 the gate is approved for exactly this plan: the same run now executes in the VM and the model sees the unittest output
@@ -18,12 +18,12 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.devenv.devvm import DevWorkspace                                         # noqa: E402
-from guppi_runtime.devenv.devvm_tools import DevToolBox, broker_runner                      # noqa: E402
-from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.runtime import GuppiRuntime                                       # noqa: E402
-from guppi_runtime.sandbox.broker import SandboxBroker                               # noqa: E402
-from guppi_runtime.sandbox.provider import MicrosandboxProvider                      # noqa: E402
+from sedra_runtime.devenv.devvm import DevWorkspace                                         # noqa: E402
+from sedra_runtime.devenv.devvm_tools import DevToolBox, broker_runner                      # noqa: E402
+from sedra_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from sedra_runtime.runtime import SedraRuntime                                       # noqa: E402
+from sedra_runtime.sandbox.broker import SandboxBroker                               # noqa: E402
+from sedra_runtime.sandbox.provider import MicrosandboxProvider                      # noqa: E402
 
 CODE = "def add(a, b):\n    return a + b\n"
 TEST = "import unittest\nfrom calc import add\n\n\nclass T(unittest.TestCase):\n    def test_add(self):\n        self.assertEqual(add(2, 3), 5)\n"
@@ -31,12 +31,12 @@ TEST = "import unittest\nfrom calc import add\n\n\nclass T(unittest.TestCase):\n
 
 def main():
     project = Path(sys.argv[1])
-    arch = sorted((RUNTIME.parent / "architecture").glob("GUPPI_Architecture_v*"))[-1]
+    arch = sorted((RUNTIME.parent / "architecture").glob("SEDRA_Architecture_v*"))[-1]
     log = RunLog(project / "runtime_data" / "measurements", "devvm_phase2_check")
     results = {}
     with log:
-        root = Path(tempfile.mkdtemp(prefix="guppi_devvm_p2_"))
-        rt = GuppiRuntime(root, arch)
+        root = Path(tempfile.mkdtemp(prefix="sedra_devvm_p2_"))
+        rt = SedraRuntime(root, arch)
         provider = MicrosandboxProvider(project / "runtime_data" / "sandboxes" / "backend_home", RUNTIME)
         broker = SandboxBroker(rt.filesystem_tool.root, root / "sandbox-data", RUNTIME / "config" / "sandbox.yaml", provider, rt.guard, rt.audit)
         mission = "M-GATE0001"

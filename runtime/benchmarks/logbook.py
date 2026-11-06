@@ -3,7 +3,7 @@ r"""Add one row to the logbook with the REAL time (rule 5 of docs/ENTWICKLUNG.md
     .venv\Scripts\python.exe benchmarks/logbook.py add BAU "what happened" [--ref "file or report"] [--late] [--file PATH]
 
 ART is one word of the fixed list ARTS (ENTSCHEIDUNG, SPEC, BAU, INTEGRATION, MESSUNG, FEHLER, AENDERUNG, DOKU, RECHERCHE, HINWEIS); ÄNDERUNG is taken as AENDERUNG, any other word stops with the list (V2, 2026-10-20). The row is appended in the file's own line ending. A row with a local path (E:\..., C:\Users\...)
-is refused (rule 10: placeholders <modelle>, <projekte>, <guppi>). `--late` marks a row that is written after the event ("nachgetragen"). The row is printed."""
+is refused (rule 10: placeholders <modelle>, <projekte>, <sedra>). `--late` marks a row that is written after the event ("nachgetragen"). The row is printed."""
 import argparse
 import re
 import sys
@@ -34,7 +34,7 @@ def make_row(art, text, ref="", late=False, now=None):
     if not text:
         raise ValueError("the text is empty")
     if LOCAL_PATH.search(text) or LOCAL_PATH.search(ref):
-        raise ValueError("local path in the row (rule 10): use <modelle>, <projekte>, <guppi> or a path inside the repository")
+        raise ValueError("local path in the row (rule 10): use <modelle>, <projekte>, <sedra> or a path inside the repository")
     stamp = (now or datetime.now()).strftime("%Y-%m-%d %H:%M") + (" (nachgetragen)" if late else "")
     return f"| {stamp} | {art} | {text} | {ref} |"
 

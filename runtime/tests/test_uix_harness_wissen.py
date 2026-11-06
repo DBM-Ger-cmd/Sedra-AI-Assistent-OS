@@ -6,7 +6,7 @@ from pathlib import Path
 
 from test_uix_contract import NODE, run_js
 
-HARNESS = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'shells' / 'harness'
+HARNESS = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'shells' / 'harness'
 DOM = """
   box.sedraDom = {el(tag, cls, text){
     const n = {tag, cls: cls || '', text: text === undefined ? '' : String(text), kinder: [], title: '', type: '', onclick: null,

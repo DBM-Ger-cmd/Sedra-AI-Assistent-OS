@@ -6,7 +6,7 @@ decompose.check (all or nothing), the report table comes from decompose.report o
 answer is only a list of addresses and a summary with sources: no verb, no assignment, no request. `external_block` puts fetched web texts into a block marked untrusted.
 Additions to D1.1 (needed by D1.5): RunPlan carries `mode` and `daten`; the outcome carries `fertig`; `research_outcome` checks the second research call.
 Builds on the seed benchmarks/s1_schema2_seed (decompose.py is the reference of s1_decompose).
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_runner)."""
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_runner)."""
 
 SEED = "benchmarks/s1_schema2_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 

@@ -2,7 +2,7 @@
 
 Stand: `main` `d51083a`. Gate **G1**; G2/G3 erst nach Freigabe. Unterchat **U8** (Phase R6, Stufe A9, UIX X3). Braucht U1 (Inventur, liegt vor) und U4 (`SPEC_PROFILE_v1.md`).
 Grundlage: Beschlüsse des Captains vom 05.11.2026 – One Sedra ist die Zentrale; „Minimal-Stick mit 4 Shells“ wird **Profil „Stick“ von One Sedra** (`ROADMAP_ONE_SEDRA_APPS_KERN_SHELL_2026-11-05.md` §2, A9); Wissen ist Grundfunktion; nur eigene Pakete. Die Entscheidungen zum Stick vom 30./31.10. gelten weiter (`docs/ENTSCHEIDUNGEN_USB_STICK.md`), soweit dieser Beschluss sie nicht ändert.
-Pfade relativ zu `runtime/src/guppi_runtime/`, sonst ab Repo-Wurzel.
+Pfade relativ zu `runtime/src/sedra_runtime/`, sonst ab Repo-Wurzel.
 
 **Ergebnis in einem Satz:** Der Paketbau für den Stick ist schon auf `main` (Liste, Importhülle, Manifest, relative Modellordner, Tests), aber die Liste ist **von Hand** und nach Shells geschnitten: sie bringt vier Oberflächen, von denen nur zwei tragen, und lässt Grundfunktionen (Posteingang, Aufgaben, Wissen) als Apps weg. Ziel: Die Liste entsteht aus dem Profil „Stick“ (Apps mit `profile: [stick]` + Grundfunktionen), nur One Sedra kommt mit, Wissen läuft dort im Volltext.
 

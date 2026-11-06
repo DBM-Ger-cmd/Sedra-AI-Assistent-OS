@@ -5,11 +5,11 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.uix_server import UIXHub, quelle_pruefen
+from sedra_runtime.uix_server import UIXHub, quelle_pruefen
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH = Path(__file__).resolve().parents[2] / "architecture/GUPPI_Architecture_v1.17_RUNTIME_SYNC"
-MINIMAL = Path(__file__).resolve().parents[1] / "src/guppi_runtime/uix/shells/minimal"
+ARCH = Path(__file__).resolve().parents[2] / "architecture/SEDRA_Architecture_v1.17_RUNTIME_SYNC"
+MINIMAL = Path(__file__).resolve().parents[1] / "src/sedra_runtime/uix/shells/minimal"
 
 
 def _kopie(ziel, neue_id):

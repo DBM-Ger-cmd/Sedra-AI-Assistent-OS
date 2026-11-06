@@ -7,9 +7,9 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from guppi_runtime.gateway import dokumente as gw_dokumente
-from guppi_runtime.wissen import adapter, konfig
-from guppi_runtime.wissen.leser import docx as docx_leser, tabelle
+from sedra_runtime.gateway import dokumente as gw_dokumente
+from sedra_runtime.wissen import adapter, konfig
+from sedra_runtime.wissen.leser import docx as docx_leser, tabelle
 from wissen_fixture import FakeEmbedServer, freigeben, oeffnen
 
 NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'

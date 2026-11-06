@@ -41,11 +41,11 @@ import yaml
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.jobs.job_worker import degenerate_reason                              # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.models.openai_local import split_harmony                         # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from sedra_runtime.jobs.job_worker import degenerate_reason                              # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.models.openai_local import split_harmony                         # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
 
 LADDER = (8192, 16384, 24576, 32768, 49152, 65536, 98304, 131072, 196608, 262144)      # above 131072 only with --max (2026-10-13, mmap test: how much fits next to DDR5 and 12 GB VRAM)
 RESERVE_GIB = 1.0
@@ -345,7 +345,7 @@ def main():
     recipes = {r["id"]: r for r in (yaml.safe_load((project / "local_config" / "role_routing.yaml").read_text(encoding="utf-8"))
                                     or {})["role_routing"]["capabilities"]}
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled, config.mtp = True, True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_ladder_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_ladder_")))
     out_dir = project / "runtime_data" / "measurements"; out_dir.mkdir(parents=True, exist_ok=True)
     lab = TestLab(default_path(project))
     with lab.lease(os.environ.get("TESTLAB_OWNER", "context_ladder"), f"context ladder {','.join(args.recipes)}", ttl_s=1800, wait_s=1800,

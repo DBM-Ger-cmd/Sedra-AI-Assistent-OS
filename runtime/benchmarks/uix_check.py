@@ -188,9 +188,9 @@ PROFILES = {
         'before_tools': "()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'dashboard', id:'start', title:'Dashboard'})",
         'before_talk': "()=>{ const f = document.querySelector('.pc-fab'); if(f && getComputedStyle(f).display !== 'none') f.click(); }",
     },
-    # GUPPI XP (Build 18): der Build-6-Desktop als Wahl. Er hat Fenster, aber keine des Vertrags – geprüft wird nur, dass die
+    # SEDRA XP (Build 18): der Build-6-Desktop als Wahl. Er hat Fenster, aber keine des Vertrags – geprüft wird nur, dass die
     # alte Seite mit Desktop lädt (siehe run_checks, Zweig /retro); alles andere „nicht geprüft“.
-    'guppi-xp': dict(GENERIC, archive='/retro'),
+    'sedra-xp': dict(GENERIC, archive='/retro'),
     'minimal': {
         'zones': ('sh-min-bar-top', 'sh-min-desk', 'sh-min-shelf'),
         'gauges': '.sh-min-gauge',
@@ -307,9 +307,9 @@ def start_server(say, shell=None, prepare=None, switches=None):
         host_isolation.setUpModule()
     except Exception as exc:                     # the check still works, it just talks to the real nvidia-smi etc.
         say(f'note: host isolation not active ({exc})')
-    from guppi_runtime.uix_server import UIXHub, make_server
-    arch = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
-    tmp = tempfile.TemporaryDirectory(prefix='guppi-uix-check-')
+    from sedra_runtime.uix_server import UIXHub, make_server
+    arch = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
+    tmp = tempfile.TemporaryDirectory(prefix='sedra-uix-check-')
     if switches:
         config = Path(tmp.name) / 'project' / 'local_config'
         config.mkdir(parents=True, exist_ok=True)
@@ -322,7 +322,7 @@ def start_server(say, shell=None, prepare=None, switches=None):
     project = hub.new_project({'name': 'Prüfprojekt'})
     ws = hub.runtime.filesystem_tool._resolve(project['workspace_path'], must_exist=True)
     (ws / 'README.md').write_text('# Prüfprojekt\n', encoding='utf-8')
-    hub.create_chat_mission({'intent': 'Create a GUPPI demo artifact', 'project_id': project['project_id']})
+    hub.create_chat_mission({'intent': 'Create a SEDRA demo artifact', 'project_id': project['project_id']})
     _candidate(hub, ws)
     _vorgang(hub)
     if prepare: prepare(hub)
@@ -483,7 +483,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
         page.on('request', lambda r: calls.append((r.method, r.url.split('#')[0], (r.headers or {}).get('x-sedra-tool', ''), (r.headers or {}).get('x-sedra-shell', ''))) if '/api/' in r.url else None)
         page.on('dialog', lambda d: d.accept() if d.type != 'prompt' else d.dismiss())
         page.goto(url)
-        # GUPPI XP (shells/guppi-xp): die Shell führt auf den archivierten Desktop. Dort gibt es keinen Vertrag – geprüft wird nur,
+        # SEDRA XP (shells/sedra-xp): die Shell führt auf den archivierten Desktop. Dort gibt es keinen Vertrag – geprüft wird nur,
         # dass die alte Seite mit Desktop und Token lädt; alles andere heißt ehrlich „nicht geprüft“.
         try:
             page.wait_for_function("()=>location.pathname === '/retro' || !!(window.sedraBoot && window.sedraBoot.ctx)", timeout=START_MS)
@@ -491,18 +491,18 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
             pass
         try:
             page.wait_for_load_state(); on_retro = page.evaluate("()=>location.pathname") == '/retro'
-        except Exception:                                   # die Seite wechselt gerade (GUPPI XP leitet weiter): kurz warten, nochmal
+        except Exception:                                   # die Seite wechselt gerade (SEDRA XP leitet weiter): kurz warten, nochmal
             page.wait_for_timeout(1500); on_retro = page.evaluate("()=>location.pathname") == '/retro'
         if on_retro:
             page.wait_for_timeout(1500)
             has_desktop = page.evaluate("()=>!!document.getElementById('desktop')")
             bad = [f for f in failed if not any(a in f[1] for a in ALLOWED_FAILURES)]
-            check('load', has_desktop and not bad and not errors, 'GUPPI XP: der alte Desktop (/retro) ist da' if has_desktop else 'kein Desktop auf /retro')
+            check('load', has_desktop and not bad and not errors, 'SEDRA XP: der alte Desktop (/retro) ist da' if has_desktop else 'kein Desktop auf /retro')
             for name in ('zones', 'strip', 'tools', 'breite', 'unmount', 'talk', 'palette', 'layout'):
-                check(name, None, 'nicht geprüft – GUPPI XP ist der alte Desktop ohne Vertragsmarken')
+                check(name, None, 'nicht geprüft – SEDRA XP ist der alte Desktop ohne Vertragsmarken')
             check('retro', has_desktop, 'HTTP 200' if has_desktop else 'kein Desktop')
             check('console', not console and not errors, '; '.join(console + errors)[:300])
-            if shots: page.screenshot(path=str(Path(shots) / '00_guppi_xp.png'))
+            if shots: page.screenshot(path=str(Path(shots) / '00_sedra_xp.png'))
             b.close(); return results
         page.wait_for_timeout(1500)
         if profile.get('bereit'):                 # auf den Zustand warten, nicht auf eine feste Zeit (unter Last reichen 1,5 s nicht)
@@ -542,7 +542,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
 
         # Aufgaben dieses Prüfprojekts: der Kandidat für candidate/tests, die Aufgabe für live/costs
         found = page.evaluate("""async ()=>{
-          const ms = await (await fetch('/api/missions', {headers: {'X-GUPPI-Token': decodeURIComponent(location.hash.slice(1))}})).json();
+          const ms = await (await fetch('/api/missions', {headers: {'X-SEDRA-Token': decodeURIComponent(location.hash.slice(1))}})).json();
           return {candidate: (ms.find(m=>m.phase === 'CANDIDATE_REVIEW') || {}).mission_id || null, task: (ms[0] || {}).mission_id || null};
         }""")
         # Ein fremdes Werkzeug mit eigenem Objekttyp steht nicht in OBJECTS: sein Objekt ist dann seine Sammlung (handles[0], 'alle')

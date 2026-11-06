@@ -16,9 +16,9 @@ from types import SimpleNamespace
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.wissen import adapter as adapter_mod
-from guppi_runtime.wissen import desk_wissen, zerlegen
-from guppi_runtime.wissen import speicher as S
+from sedra_runtime.wissen import adapter as adapter_mod
+from sedra_runtime.wissen import desk_wissen, zerlegen
+from sedra_runtime.wissen import speicher as S
 from wissen_fixture import FakeEmbedServer, alle_freigeben, freigeben, konfig_fuer, oeffnen, repo_anlegen
 
 

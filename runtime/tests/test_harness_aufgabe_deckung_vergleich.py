@@ -7,7 +7,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from guppi_runtime.harness import aufgabe_deckung
+from sedra_runtime.harness import aufgabe_deckung
 
 REF = Path(__file__).resolve().parents[1] / 'benchmarks' / 'devvm_refs' / 'harness_aufgabe_deckung' / 'aufgabe_deckung.py'
 J = datetime(2026, 10, 29, 12, 0, tzinfo=timezone.utc)

@@ -6,16 +6,16 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.harness import antraege, katalog
-from guppi_runtime.harness.freigabe import Karten, Kiste
-from guppi_runtime.harness.werkzeuge import Werkzeuge
-from guppi_runtime.workflows import selbstabbild
-from guppi_runtime.workflows.policy import assessment
-from guppi_runtime.workflows.process import metadata
-from guppi_runtime.workflows.store import WorkflowStore
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.harness import antraege, katalog
+from sedra_runtime.harness.freigabe import Karten, Kiste
+from sedra_runtime.harness.werkzeuge import Werkzeuge
+from sedra_runtime.workflows import selbstabbild
+from sedra_runtime.workflows.policy import assessment
+from sedra_runtime.workflows.process import metadata
+from sedra_runtime.workflows.store import WorkflowStore
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 
 SCHRITTE = [
     {'name': 'Anfrage erfassen', 'rolle': 'Sachbearbeitung', 'eingabe': 'Anfrage', 'ergebnis': 'Erfasster Vorgang'},

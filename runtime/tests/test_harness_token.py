@@ -4,10 +4,10 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from guppi_runtime.harness import schleife, verbrauch
-from guppi_runtime.harness.api import HarnessApi
-from guppi_runtime.harness.sitzung import Sitzungen
-from guppi_runtime.harness.strom import Stroeme
+from sedra_runtime.harness import schleife, verbrauch
+from sedra_runtime.harness.api import HarnessApi
+from sedra_runtime.harness.sitzung import Sitzungen
+from sedra_runtime.harness.strom import Stroeme
 
 from test_harness_schleife import MISSION, Attrappe, Box, Zug, call
 
@@ -105,7 +105,7 @@ class CacheMessung(unittest.TestCase):
             self.assertIsNone(schleife.cache_messung(usage, timings), str((usage, timings)))
 
     def test_adapter_normalisiert_die_timings(self):
-        from guppi_runtime.models import openai_local
+        from sedra_runtime.models import openai_local
         self.assertEqual(openai_local.normalize_timings({'cache_n': 5, 'prompt_n': 7, 'prompt_ms': 1.234, 'predicted_ms': 9, 'fremd': 1}), {'cache_n': 5, 'prompt_n': 7, 'prompt_ms': 1.2, 'predicted_ms': 9.0})
         for schlecht in (None, {}, 'x', {'cache_n': -1}, {'cache_n': True}, {'prompt_ms': 'a'}):
             self.assertIsNone(openai_local.normalize_timings(schlecht), str(schlecht))

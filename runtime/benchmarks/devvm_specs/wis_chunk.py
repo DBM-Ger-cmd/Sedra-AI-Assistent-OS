@@ -5,7 +5,7 @@ one-line heading for the data block, the section hash and the embedding input te
 the hidden tests and the reference (benchmarks/devvm_refs/wis_chunk)."""
 
 NOTES = '''# Notes for wis_chunk
-Python 3 standard library only (re, hashlib, unicodedata); no files, no clock, no sqlite3, no network, no guppi_runtime import.
+Python 3 standard library only (re, hashlib, unicodedata); no files, no clock, no sqlite3, no network, no sedra_runtime import.
 Every function is pure and never modifies its arguments. Lengths are counted in characters (len of the str). Every refusal is a ValueError with exactly the code the task names.
 No comments and no docstrings, small private helpers instead of copied code.
 '''

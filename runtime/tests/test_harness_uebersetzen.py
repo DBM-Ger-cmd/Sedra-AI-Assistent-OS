@@ -3,13 +3,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.harness import katalog
-from guppi_runtime.harness import uebersetzen as ue
-from guppi_runtime.harness.freigabe import Karten, Kiste
-from guppi_runtime.harness.werkzeuge import Werkzeuge
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.harness import katalog
+from sedra_runtime.harness import uebersetzen as ue
+from sedra_runtime.harness.freigabe import Karten, Kiste
+from sedra_runtime.harness.werkzeuge import Werkzeuge
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 
 
 class Teilen(unittest.TestCase):

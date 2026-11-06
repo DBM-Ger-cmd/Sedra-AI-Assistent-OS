@@ -11,8 +11,8 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.devenv.devvm import DevWorkspace  # noqa: E402
-from guppi_runtime.devvm_mcp import POLICY, DevvmMcpServer, short_args  # noqa: E402
+from sedra_runtime.devenv.devvm import DevWorkspace  # noqa: E402
+from sedra_runtime.devvm_mcp import POLICY, DevvmMcpServer, short_args  # noqa: E402
 
 
 def rpc(method, params=None, ident=1):
@@ -43,7 +43,7 @@ class McpTests(unittest.TestCase):
 
     def test_the_handshake_and_the_tool_list(self):
         init = self.server.handle(rpc("initialize", {"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}))
-        self.assertEqual((init["result"]["protocolVersion"], init["result"]["serverInfo"]["name"]), ("2025-03-26", "guppi-devvm"))
+        self.assertEqual((init["result"]["protocolVersion"], init["result"]["serverInfo"]["name"]), ("2025-03-26", "sedra-devvm"))
         self.assertIn("tools", init["result"]["capabilities"])
         self.assertEqual(self.server.handle(rpc("initialize", {"protocolVersion": "1999-01-01"}))["result"]["protocolVersion"], "2025-06-18")
         self.assertIsNone(self.server.handle({"jsonrpc": "2.0", "method": "notifications/initialized"}))
@@ -124,7 +124,7 @@ class ProcessTests(unittest.TestCase):
             messages = "\n".join(json.dumps(m) for m in (rpc("initialize", {"protocolVersion": "2025-06-18"}, 1), {"jsonrpc": "2.0", "method": "notifications/initialized"},
                                                          rpc("tools/call", {"name": "write_file", "arguments": {"path": "a.py", "content": "x = 1\n"}}, 2),
                                                          rpc("tools/call", {"name": "read_file", "arguments": {"path": "a.py"}}, 3))) + "\n"
-            done = subprocess.run([sys.executable, "-m", "guppi_runtime.devvm_mcp", "--project", tmp, "--no-vm", "--workspace-root", tmp], input=messages, capture_output=True, text=True,
+            done = subprocess.run([sys.executable, "-m", "sedra_runtime.devvm_mcp", "--project", tmp, "--no-vm", "--workspace-root", tmp], input=messages, capture_output=True, text=True,
                                   timeout=60, cwd=str(RUNTIME), env={**os.environ, "PYTHONPATH": str(RUNTIME / "src")})
             answers = [json.loads(x) for x in done.stdout.splitlines()]
             self.assertEqual([a["id"] for a in answers], [1, 2, 3], done.stderr)
@@ -137,7 +137,7 @@ if __name__ == "__main__":
 
 class AttachTests(unittest.TestCase):
     def test_a_server_can_attach_to_a_workspace_that_the_caller_made(self):
-        from guppi_runtime.devvm_mcp import build, main
+        from sedra_runtime.devvm_mcp import build, main
         import argparse
         with tempfile.TemporaryDirectory() as tmp:
             ws = DevWorkspace(Path(tmp), "M-ATT00001", policy=dict(POLICY)); ws.create()

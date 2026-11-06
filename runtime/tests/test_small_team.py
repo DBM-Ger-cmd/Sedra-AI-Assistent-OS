@@ -55,7 +55,7 @@ class SmallTeamTests(unittest.TestCase):
 
     def test_small_models_get_at_most_one_lesson_the_best_fitting_one(self):
         from types import SimpleNamespace as NS
-        from guppi_runtime.knowledge import KnowledgeStore
+        from sedra_runtime.knowledge import KnowledgeStore
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
         store = KnowledgeStore(Path(tmp.name) / 'r.jsonl')
         store.add_lesson('digits', 'DIGITS lesson', triggers=['regex', 'digits', 'port'])

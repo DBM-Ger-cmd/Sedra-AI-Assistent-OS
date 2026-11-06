@@ -13,7 +13,7 @@ sys.path.insert(0, str(RUNTIME / "src"))
 
 from plan_probe import MIN_COVERAGE, plan_metrics  # noqa: E402
 from review_probe import rate  # noqa: E402
-from guppi_runtime.agent_manager import run_worker  # noqa: E402
+from sedra_runtime.agent_manager import run_worker  # noqa: E402
 
 
 class PlanMetricsTests(unittest.TestCase):

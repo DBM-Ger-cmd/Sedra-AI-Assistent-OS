@@ -6,11 +6,11 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.orchestra import budgetcalc
+from sedra_runtime.orchestra import budgetcalc
 
 RUNTIME = Path(__file__).resolve().parents[1]
 SEED = RUNTIME / 'benchmarks' / 's1_schema2_seed' / 'budgetcalc.py'
-PACKAGE = RUNTIME / 'src' / 'guppi_runtime' / 'orchestra' / 'budgetcalc.py'
+PACKAGE = RUNTIME / 'src' / 'sedra_runtime' / 'orchestra' / 'budgetcalc.py'
 NOW = '2026-10-21T08:00:00Z'
 ROWS = [{'ts': '2026-09-30T23:59:59Z', 'tokens_in': 100, 'tokens_out': 50, 'eur_cent': 3, 'requests': 1, 'estimated': 0},
         {'ts': '2026-10-01T00:00:00Z', 'tokens_in': 10, 'tokens_out': 20, 'eur_cent': 0, 'requests': 2, 'estimated': 1},

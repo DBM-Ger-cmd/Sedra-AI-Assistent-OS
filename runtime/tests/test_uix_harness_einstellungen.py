@@ -6,7 +6,7 @@ import yaml
 
 from test_uix_contract import NODE, UIX, run_js
 
-from guppi_runtime.harness import katalog
+from sedra_runtime.harness import katalog
 
 HARNESS = UIX / 'shells' / 'harness'
 

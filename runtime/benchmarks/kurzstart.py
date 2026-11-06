@@ -102,7 +102,7 @@ def main(argv=None):
     moe = ((recipe or {}).get("profile", {}).get("server", {}) or {}).get("n_cpu_moe")
     estimate = "gering (Gewichte auf der GPU, nur Seitencache beim Laden)" if not moe else f"hoch: n_cpu_moe {moe} hält einen großen Teil der {size} GB im Hauptspeicher"
     vr = vram()
-    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.jobs.testlab import TestLab, default_path
     holder = TestLab(default_path(project)).holder()
     running = subprocess.run(["powershell", "-NoProfile", "-Command", "@(Get-Process llama-server -ErrorAction SilentlyContinue).Count"], capture_output=True, text=True).stdout.strip()
     print(f"Rezept {args.recipe} | Slots {args.slots} | Fenster je Slot {context} | Modell {size} GB | RAM-Bedarf: {estimate}")
@@ -121,12 +121,12 @@ def main(argv=None):
         return 1 if problems else 0
     if problems:
         return 2
-    from guppi_runtime.models.gpu_preflight import clear_leftovers
-    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from sedra_runtime.models.gpu_preflight import clear_leftovers
+    from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
     switches = yaml.safe_load((project / "local_config" / "switches.yaml").read_text(encoding="utf-8-sig"))["switches"]
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml")
     config.enabled, config.mtp = True, bool((switches.get("llama_server") or {}).get("mtp", False))
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_kurzstart_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_kurzstart_")))
     alias = str(recipe.get("model") or recipe["id"])
     report = {"recipe": args.recipe, "model": alias, "slots": args.slots, "per_slot": context, "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
               "engine_build": config.engine_build, "mtp": config.mtp, "ram_before": {"free_gb": free_ram, "total_gb": total_ram}, "vram_before": vr, "status": "gestartet"}

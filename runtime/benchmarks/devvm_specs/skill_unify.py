@@ -1,7 +1,7 @@
 """Skill library unification (Captain 2026-10-13: "doppelte Punkte zusammenlegen, damit es nicht zu Verwechslung oder Mehrfachaufruf kommt, das ist eine Aufgabe fuer Guppy").
 The core library (64 skills from three repos) holds the same skill several times (test-driven-development twice, context-engineering twice, debugging variants); the coder would
 find both and read both. `skill_unify.py` finds such duplicates in the index entries and merges each group into ONE entry with aliases for the others. Pure logic; the hook into
-build_library and SkillLibrary.read (aliases in index.json) is wired by Claude after acceptance. GUPPI builds it, Claude wrote this file, the hidden tests and the reference
+build_library and SkillLibrary.read (aliases in index.json) is wired by Claude after acceptance. SEDRA builds it, Claude wrote this file, the hidden tests and the reference
 (benchmarks/devvm_refs/skill_unify)."""
 
 NOTES = '''# Notes for skill_unify

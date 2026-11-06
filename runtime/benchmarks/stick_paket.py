@@ -4,7 +4,7 @@ Keine Verknuepfungen (exFAT kennt keine Junctions und Symlinks): jede Quelle wir
 Die Liste steht in `stick_liste.txt` neben diesem Skript. Zeilen:
     repo <pfad>        aus diesem Repository (Ordner mit / am Ende)
     bestand <pfad>     aus dem Hauptcheckout (nicht in git: Engine, portables Python)
-    modul <name>       ein Python-Modul mit allen statischen Importen (guppi_runtime.*)
+    modul <name>       ein Python-Modul mit allen statischen Importen (sedra_runtime.*)
     <quelle> <pfad> -> <ziel>   umbenannt kopieren
 Aufruf (Bau-PC):  python -I -B runtime/benchmarks/stick_paket.py --repo <worktree> --bestand <hauptcheckout> --ziel K:\\SEDRA
 Nur pruefen:      ... --pruefen        (fehlende Importe und fehlende Dateien melden, nichts kopieren)
@@ -21,7 +21,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-PAKET = "guppi_runtime"
+PAKET = "sedra_runtime"
 AUSSCHLUSS = {"__pycache__", ".pytest_cache", "local_paths.yaml", "local_config", ".git"}
 SCHREIBEN = {"STICK_MANIFEST.json"}
 HERE = Path(__file__).resolve().parent
@@ -56,7 +56,7 @@ def modul_datei(src, name):
 
 
 def closure(src, einstiegs):
-    """Alle Dateien, die die Einstiegsmodule (und ihre Eltern-Pakete) brauchen. `src` enthaelt den Ordner guppi_runtime."""
+    """Alle Dateien, die die Einstiegsmodule (und ihre Eltern-Pakete) brauchen. `src` enthaelt den Ordner sedra_runtime."""
     src = Path(src)
     bekannt, offen, dateien = set(), list(einstiegs), set()
     while offen:

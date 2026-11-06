@@ -60,7 +60,7 @@
 <span class="a">+         rows = list(csv.DictReader(fh, delimiter=";"))</span>
 <span class="r">-     return rows</span>
 <span class="a">+     return [normalize(r) for r in rows]</span></div>
-    <div class="decide" style="margin-top:0"><b>Entscheidung · Netzgrenze: pypi.org</b><small>GUPPI will „python-dateutil“ nachladen · im Modus Sandbox ist Netz zu · einmal öffnen, Grenze für dieses Projekt ändern oder ablehnen</small><span class="btn p">Einmal öffnen</span><span class="btn">Grenze ändern …</span><span class="btn">Ablehnen</span></div></div>
+    <div class="decide" style="margin-top:0"><b>Entscheidung · Netzgrenze: pypi.org</b><small>SEDRA will „python-dateutil“ nachladen · im Modus Sandbox ist Netz zu · einmal öffnen, Grenze für dieses Projekt ändern oder ablehnen</small><span class="btn p">Einmal öffnen</span><span class="btn">Grenze ändern …</span><span class="btn">Ablehnen</span></div></div>
    <div class="col"><h5>Live · Schritt 3: Tests ausführen</h5><div class="code" style="background:#111827;color:#d1d5db;border-color:#111827;max-height:150px;overflow:hidden">$ pytest tests/test_export.py -q
 <span style="color:#8fd9a0">............</span>                                   [100%]
 12 passed in 9.8s
@@ -71,5 +71,5 @@
     <h5 style="margin-top:12px">Kosten</h5><div style="display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted)"><div style="width:120px;height:34px;border-radius:50%/40%;background:radial-gradient(ellipse at 50% 60%,#2b2b2b 0 38%,#d8d3c0 40%);border:1px solid var(--line)"></div><div>4.120 Token · 1 Min 40 s GPU · Coder Qwen3.5 9B<br><span style="font-size:11px">Kupfer 41 · Silber 4 · Gold 0 – Münzen fallen live, während das Modell arbeitet</span></div></div></div>
   </div>
  </div>
- </div><div class="talk"><div class="log"><b>GUPPI</b> Der Parser ist fertig und getestet; die Übernahme ist im Plan erteilt und erledigt (2 Dateien, Rücknahme im Logbuch). Für die Datumsfelder bräuchte ich python-dateutil – das überschreitet die Netzgrenze. Die Entscheidung liegt an der Werkbank (oder antworte hier mit „einmal ja“). <br><b>Du</b> ja, und zeig mir danach den Diff.</div><div class="in"><input placeholder="Antwort oder Auftrag · Enter sendet · Ziehen hängt an"><span class="btn p" style="margin:0">Senden</span></div></div>
+ </div><div class="talk"><div class="log"><b>SEDRA</b> Der Parser ist fertig und getestet; die Übernahme ist im Plan erteilt und erledigt (2 Dateien, Rücknahme im Logbuch). Für die Datumsfelder bräuchte ich python-dateutil – das überschreitet die Netzgrenze. Die Entscheidung liegt an der Werkbank (oder antworte hier mit „einmal ja“). <br><b>Du</b> ja, und zeig mir danach den Diff.</div><div class="in"><input placeholder="Antwort oder Auftrag · Enter sendet · Ziehen hängt an"><span class="btn p" style="margin:0">Senden</span></div></div>
 </body></html>

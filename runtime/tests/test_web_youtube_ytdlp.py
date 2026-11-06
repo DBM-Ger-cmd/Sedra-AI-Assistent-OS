@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from guppi_runtime.tools import web
-from guppi_runtime.tools.web import WebAccessConfig, WebTool
+from sedra_runtime.tools import web
+from sedra_runtime.tools.web import WebAccessConfig, WebTool
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
 VTT = ("WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello <c>there</c>\n\n00:00:03.000 --> 00:00:05.000\nHello there\nsecond line\n\n"

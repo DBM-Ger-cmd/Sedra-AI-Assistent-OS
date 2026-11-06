@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from guppi_runtime.harness import freigabe, vorarbeiter, vorlagen
+from sedra_runtime.harness import freigabe, vorarbeiter, vorlagen
 
 JETZT = datetime(2026, 10, 29, 12, 0, tzinfo=timezone.utc)
 

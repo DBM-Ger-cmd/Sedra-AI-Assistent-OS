@@ -4,9 +4,9 @@ r"""Do two small models work better together than alone? Jan-code-4b writes the 
 
 Extends rework_bench.py (same five tasks, same static grading: model code is never executed on this host).
 Captain 2026-10-05: "erst Jan und SWE-Review testen ... nur mit tools funktionieren richtig, daher tools anbinden". Both models are Qwen3 builds with
-a <tool_call> template, so both work through guppi_runtime.devenv.model_tools (read_file, check_syntax, submit_fix / submit_review) in the loop below.
+a <tool_call> template, so both work through sedra_runtime.devenv.model_tools (read_file, check_syntax, submit_fix / submit_review) in the loop below.
 
-Reviewer modes `test` and `test+review` (since 2026-10-05): an EXECUTED test decides, run inside GUPPI's microVM (benchmarks/judge.py, never on this host).
+Reviewer modes `test` and `test+review` (since 2026-10-05): an EXECUTED test decides, run inside SEDRA's microVM (benchmarks/judge.py, never on this host).
 `test`: the coder gets the failing checks back ("input, expected, got"). `test+review`: SWE-Review is asked only for rejected candidates and its cause is added.
 Their final grade is the number of candidates that pass every check (`*_pass`); the static grade stays in the rows for comparison.
 
@@ -42,14 +42,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rework_bench import TASKS, grade                                                 # noqa: E402  (TASKS: the five original tasks, used by other benches)
 from team_tasks import SETS                                                          # noqa: E402
 import judge as judge_mod                                                            # noqa: E402
-from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.knowledge import KnowledgeStore                                   # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.devenv.model_tools import ToolBox, run_tool_loop                         # noqa: E402
-from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from sedra_runtime.knowledge import KnowledgeStore                                   # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.devenv.model_tools import ToolBox, run_tool_loop                         # noqa: E402
+from sedra_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
-from guppi_runtime.local_paths import expand                                     # noqa: E402
+from sedra_runtime.local_paths import expand                                     # noqa: E402
 
 MODELS_ROOT = Path(expand("<modelle>"))      # the model folder of this PC (runtime/config/local_paths.yaml)
 CODER = {"alias": "jan-code-4b", "gguf": MODELS_ROOT / "janhq/Jan-code-4b-gguf/Jan-code-4b-Q4_K_M.gguf", "temperature": 0.1}
@@ -73,9 +73,9 @@ def pick_lessons(knowledge, task, args):
 
 
 def failure_text(task, lessons):
-    text = f"The tests fail:\n{task['failure']}\n\nGUPPI reproduced the failure in its VM:\n{task['repro']}\n"
+    text = f"The tests fail:\n{task['failure']}\n\nSEDRA reproduced the failure in its VM:\n{task['repro']}\n"
     if lessons:
-        text += "\nLessons from GUPPI's knowledge base that match this code:\n" + "\n".join(f"- {l}" for l in lessons) + "\n"
+        text += "\nLessons from SEDRA's knowledge base that match this code:\n" + "\n".join(f"- {l}" for l in lessons) + "\n"
     return text
 
 
@@ -186,12 +186,12 @@ def main():
     project = Path(args.project)
     knowledge = KnowledgeStore(project / "runtime_data" / "knowledge" / "records.jsonl")
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_smallteam_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_smallteam_")))
     measurements = project / "runtime_data" / "measurements"
     out_path = measurements / f"smallteam_{date.today().isoformat()}.json"      # the latest finished result; the run log keeps every run
     log = RunLog(measurements, "smallteam", config={"seeds": args.seeds, "rounds": args.rounds, "modes": modes, "tasks": args.tasks, "lessons": "none" if args.no_lessons else "all" if args.all_lessons else args.max_lessons,
                                                     "coder": CODER["alias"], "reviewer": REVIEWER["alias"]})
-    work = Path(tempfile.mkdtemp(prefix="guppi_smallteam_files_"))
+    work = Path(tempfile.mkdtemp(prefix="sedra_smallteam_files_"))
     result = {"tasks": [t["id"] for t in tasks], "seeds": args.seeds, "rounds": args.rounds, "lessons": "none" if args.no_lessons else "all" if args.all_lessons else args.max_lessons, "coder": CODER["alias"],
               "reviewer": REVIEWER["alias"], "modes": {}}
 

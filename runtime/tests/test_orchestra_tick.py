@@ -13,9 +13,9 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.orchestra import board, heartbeat, routines, service, tick
-from guppi_runtime.orchestra.config import OrchestraConfig
-from guppi_runtime.orchestra.store import open_db
+from sedra_runtime.orchestra import board, heartbeat, routines, service, tick
+from sedra_runtime.orchestra.config import OrchestraConfig
+from sedra_runtime.orchestra.store import open_db
 
 RUNTIME = Path(__file__).resolve().parents[1]
 CONFIG = RUNTIME / 'config' / 'orchestra.yaml'
@@ -448,7 +448,7 @@ class Quelle(Base):
     """D1.7, Fehlerfälle zwei Takter, Takt fällt aus, Supervisor aus: was Shell D über `quelle` sieht."""
     def quelle(self, orch=None):
         from types import SimpleNamespace
-        from guppi_runtime.desk import orchestra_kinds
+        from sedra_runtime.desk import orchestra_kinds
         return orchestra_kinds.quelle(SimpleNamespace(runtime=SimpleNamespace(orchestra=orch or self.orch)))
 
     def test_the_second_ticker_does_not_move_the_takt_of_the_first(self):

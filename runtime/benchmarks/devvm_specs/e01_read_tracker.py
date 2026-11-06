@@ -1,7 +1,7 @@
 """E-01 (coder extension "read before change", 2026-10-10): `read_tracker.py` remembers which files and which lines the coder has seen in this run, so that the DevToolBox can refuse
 edit_file on a file the model never read and a whole-file write_file over content it has not fully seen. Ideas from little-coder (edit refuses on unread files) and Hermes
 (file_tools_read_tracking: overwrite only with a full-read baseline, warning when the file changed since the read). Pure class, no file access; the toolbox integration comes after
-acceptance. GUPPI builds it, Claude only wrote this file and the hidden tests. Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
+acceptance. SEDRA builds it, Claude only wrote this file and the hidden tests. Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
 
 NOTES = '''# Notes for read_tracker
 Pure Python 3 standard library, no file, process or network access, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code.

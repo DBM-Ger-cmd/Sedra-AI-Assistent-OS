@@ -1,7 +1,7 @@
-# Vorlage guppi.orchestra.researcher (Spec 1, S1.H8, G2-S1-21). SOUL.md ist über sha256 gebunden; geprüft wird sie mit der Suite
+# Vorlage sedra.orchestra.researcher (Spec 1, S1.H8, G2-S1-21). SOUL.md ist über sha256 gebunden; geprüft wird sie mit der Suite
 # orchestra.researcher (agent_templates/orchestra/suites), bevor agent.promote möglich ist.
-schema_version: guppi.agent-template/v1
-id: guppi.orchestra.researcher
+schema_version: sedra.agent-template/v1
+id: sedra.orchestra.researcher
 version: 1.0.0
 role: researcher
 soul:
@@ -9,7 +9,7 @@ soul:
   version: 1.0.0
   sha256: 6e0b46098db333de3eb9cd063cbfe813311bc2e3ce037365d98b9b8ecae72781
 capabilities:
-- id: guppi.orchestra.researcher
+- id: sedra.orchestra.researcher
   version: 1.0.0
   side_effect: read_only
 tools: []
@@ -20,7 +20,7 @@ permissions:
   external_write: false
   privileged: false
 runtime:
-  adapter_id: guppi.orchestra.runner
+  adapter_id: sedra.orchestra.runner
   isolation: none
   model_role: researcher
 verification:

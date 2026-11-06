@@ -1,23 +1,23 @@
 import unittest,tempfile,json,hashlib
 from pathlib import Path
 from unittest.mock import patch
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.uix_server import UIXHub,make_server
-from guppi_runtime.selfdev.candidate_acceptance import preview,command
-from guppi_runtime.projects import ProjectRegistry
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.uix_server import UIXHub,make_server
+from sedra_runtime.selfdev.candidate_acceptance import preview,command
+from sedra_runtime.projects import ProjectRegistry
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH=Path(__file__).resolve().parents[2]/'architecture/GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH=Path(__file__).resolve().parents[2]/'architecture/SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 class WorkflowCase(unittest.TestCase):
  def setUp(self):
-  self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.rt=GuppiRuntime(Path(self.tmp.name),ARCH);self.addCleanup(lambda:self.rt.wissen and self.rt.wissen.schliessen())      # Wissensspeicher (Kern) hält wissen.sqlite offen
+  self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.rt=SedraRuntime(Path(self.tmp.name),ARCH);self.addCleanup(lambda:self.rt.wissen and self.rt.wissen.schliessen())      # Wissensspeicher (Kern) hält wissen.sqlite offen
   self.source=self.rt.filesystem_tool.root/'demo';self.source.mkdir();self.old='value = 1\r\n';self.new='value = 2\n';(self.source/'app.py').write_bytes(self.old.encode())
   req={'project_path':'demo','files':['app.py'],'changes':[{'path':'app.py','expected_sha256':hashlib.sha256(self.old.encode()).hexdigest(),'content':self.new}]}
   m=self.rt.brain.create_mission('Ändere Code als Kandidat',inputs=req);self.m=self.rt.brain.run(m['identity']['mission_id']);self.mid=m['identity']['mission_id']
  def test_missing_tests_and_simulation_refuse_acceptance(self):
   with self.assertRaises(ValueError):preview(self.rt,self.m)
   self.assertEqual((self.source/'app.py').read_bytes(),self.old.encode())
- def qualified(self):return patch('guppi_runtime.selfdev.candidate_acceptance.test_qualification',return_value={'qualification':'TEST_CONTRACT_FIXTURE'})
+ def qualified(self):return patch('sedra_runtime.selfdev.candidate_acceptance.test_qualification',return_value={'qualification':'TEST_CONTRACT_FIXTURE'})
  def approved(self,op,plan):
   gate=command(self.rt,self.mid,op,plan)['gate'];token=self.rt.guard.approve(gate);m=self.rt.missions.load(self.mid);m['execution']['approval_token']=token;self.rt.missions.save(m)
   return command(self.rt,self.mid,op,plan)
@@ -42,12 +42,12 @@ class WorkflowCase(unittest.TestCase):
  def test_write_interruption_stays_review_required(self):
   with self.qualified():
    plan=preview(self.rt,self.m)
-   import guppi_runtime.selfdev.candidate_acceptance as ca
+   import sedra_runtime.selfdev.candidate_acceptance as ca
    original=ca.os.replace
    def fail(src,dst):
     if Path(dst)==self.source/'app.py':raise OSError('fixture interrupted')
     return original(src,dst)
-   with patch('guppi_runtime.selfdev.candidate_acceptance.os.replace',side_effect=fail):out=self.approved('accept',plan)
+   with patch('sedra_runtime.selfdev.candidate_acceptance.os.replace',side_effect=fail):out=self.approved('accept',plan)
    self.assertEqual(out['acceptance']['status'],'REVIEW_REQUIRED')
    with self.assertRaises(ValueError):command(self.rt,self.mid,'accept',plan)
  def test_project_records_are_real_and_persistent(self):

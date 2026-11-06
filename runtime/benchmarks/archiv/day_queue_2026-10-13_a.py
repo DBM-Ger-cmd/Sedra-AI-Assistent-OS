@@ -1,5 +1,5 @@
-r"""Process starter and lesson proposals (Captain 2026-10-13: GUPPI builds the specs for the process starter and the lesson cards): Qwen3.6 (coder.local_primary) builds
-benchmarks/devvm_specs/vm_process.py and lesson_proposer.py one after the other in GUPPI's coder with the settings of the night queue. Results: summary_g.json next to the other day
+r"""Process starter and lesson proposals (Captain 2026-10-13: SEDRA builds the specs for the process starter and the lesson cards): Qwen3.6 (coder.local_primary) builds
+benchmarks/devvm_specs/vm_process.py and lesson_proposer.py one after the other in SEDRA's coder with the settings of the night queue. Results: summary_g.json next to the other day
 summaries. Nothing is integrated; Claude reads every line afterwards and wires them in.
 
     .venv\Scripts\python.exe benchmarks/day_queue_2026-10-13_a.py <project_dir>

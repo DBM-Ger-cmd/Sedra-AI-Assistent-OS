@@ -2,7 +2,7 @@
 
 Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen); G2 steht noch aus. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §2.1, §2.2, §5.3, §11. Setzt AM3 voraus.
 Ziel: Die acht Erweiterungswege (E1–E8) bleiben technisch, wie sie sind, bekommen aber **eine gemeinsame Sicht**: ein Verzeichnis, in dem jede Erweiterung mit Herkunft, Vertrauen, Wirkungsklassen ihrer Fähigkeiten und Abhängigkeiten steht. Daraus lassen sich Auslieferungen (z. B. der USB-Stick) ableiten statt von Hand aufzählen.
-Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
+Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für c364081.
 
 ## 1. Befund
 
@@ -10,7 +10,7 @@ Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 |---|---|---|
 | B1 | Acht Erweiterungswege mit eigener Form und Prüfung (Konzept §2.1). Es gibt keine Stelle, die sie gemeinsam zeigt. | Konzept §2.1 |
 | B2 | Fünf Vokabulare für Rechte/Wirkung (Konzept §2.2). Am genauesten sind die Wirkungsklassen der Agenten-Vorlagen. | `agent_manager/agent_import.py:126–186` |
-| B3 | Für die USB-Ausgabe werden die Abhängigkeiten der Translator-Shell von Hand aufgezählt (Werkzeuge, Kern-Module `fisch/`, `sprache/`, ui-Dateien, Fenster). **Nachtrag 03.11.:** Auf dem Branch `plan/usb-stick-minimal` gibt es `runtime/benchmarks/stick_liste.txt` (Zeilen `repo`, `bestand`, `modul`; `modul` nimmt ein Python-Modul mit allen statischen Importen `guppi_runtime.*` mit) und `stick_paket.py` (prüfen, kopieren ohne Verknüpfungen, `STICK_MANIFEST.json` mit Hashes). Werkzeuge und Shells stehen dort als ganze Ordner; was die Oberfläche braucht, wird weiter von Hand gewählt. | `docs/ENTSCHEIDUNGEN_USB_STICK.md:7–9`; Branch `plan/usb-stick-minimal` |
+| B3 | Für die USB-Ausgabe werden die Abhängigkeiten der Translator-Shell von Hand aufgezählt (Werkzeuge, Kern-Module `fisch/`, `sprache/`, ui-Dateien, Fenster). **Nachtrag 03.11.:** Auf dem Branch `plan/usb-stick-minimal` gibt es `runtime/benchmarks/stick_liste.txt` (Zeilen `repo`, `bestand`, `modul`; `modul` nimmt ein Python-Modul mit allen statischen Importen `sedra_runtime.*` mit) und `stick_paket.py` (prüfen, kopieren ohne Verknüpfungen, `STICK_MANIFEST.json` mit Hashes). Werkzeuge und Shells stehen dort als ganze Ordner; was die Oberfläche braucht, wird weiter von Hand gewählt. | `docs/ENTSCHEIDUNGEN_USB_STICK.md:7–9`; Branch `plan/usb-stick-minimal` |
 | B4 | Der Release-Updater führt eine Liste aller Programmdateien mit Hash (`release/MANIFEST.sha256`) und vergleicht Rechte von Modulen zwischen Ständen. | `update_anwenden.py:3–8, 36–115` |
 | B5 | Harness-Werkzeuge haben Gruppen (`LESEN`, `WIRKUNG`, `LAUF`, …), aber keine Wirkungsklasse. | `harness/werkzeuge.py:35–42` |
 | B6 | Ob Desk-Verben eine Wirkungsklasse tragen, ist nicht bekannt (`desk/kinds.py` teilweise, `desk/actions.py` nicht gelesen). | – |
@@ -48,7 +48,7 @@ Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
 
 - `desk/verzeichnis.py` (neu, ≤ 400 Zeilen, nur lesen) sammelt aus den Quellen in AM8-02; je Quelle eine kleine Lesefunktion, die bei Fehlern `zustand: unbekannt` liefert.
 - Wirkungsklassen in `harness/werkzeuge.py` als Wörterbuch neben `SCHEMAS`; Test gegen `NAMEN`.
-- Auslieferung: Erweiterung von `runtime/benchmarks/stick_paket.py` (Branch `plan/usb-stick-minimal`) statt einer neuen Datei; nutzt `Registry.module_dirs` und die Manifeste; Kern-Pakete als Ordner unter `guppi_runtime/`.
+- Auslieferung: Erweiterung von `runtime/benchmarks/stick_paket.py` (Branch `plan/usb-stick-minimal`) statt einer neuen Datei; nutzt `Registry.module_dirs` und die Manifeste; Kern-Pakete als Ordner unter `sedra_runtime/`.
 
 ## 4. Tests und Abnahme
 

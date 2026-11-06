@@ -15,8 +15,8 @@ import env_skip  # noqa: E402
 env_skip.need_numpy()          # ganzes Modul: ohne numpy nicht lauffähig (nur der Test braucht es)
 import numpy as np  # noqa: E402
 
-from guppi_runtime.sprache import aufnahmen as au  # noqa: E402
-from guppi_runtime.sprache import kern as kn  # noqa: E402
+from sedra_runtime.sprache import aufnahmen as au  # noqa: E402
+from sedra_runtime.sprache import kern as kn  # noqa: E402
 
 
 class FakeStrom:
@@ -70,7 +70,7 @@ class KernAufnahme(unittest.TestCase):
         self.assertEqual(self.kern.stand()['status'], 'aus')
 
     def test_the_size_limit_stops_growth_and_is_reported(self):
-        import guppi_runtime.sprache.kern as km
+        import sedra_runtime.sprache.kern as km
         old = km.au.MAX_GROESSE
         km.au.MAX_GROESSE = 3200 * 2          # zwei Stücke à 1600 Frames
         self.addCleanup(lambda: setattr(km.au, 'MAX_GROESSE', old))

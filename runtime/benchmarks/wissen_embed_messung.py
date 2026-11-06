@@ -2,9 +2,9 @@ r"""S7.1: Messung eines Embedding-Modells mit llama-server (`--embeddings`) gege
 
 Läuft nur unter der GPU-Lease des Testlabs (Aufruf, Pfade durch die eigenen ersetzen):
 
-    <guppi>/runtime/.venv/Scripts/python.exe benchmarks/testlab_cli.py hold --owner spec7-s71 --purpose "S7.1 Embedding" --ttl 1800 --wait 600 -- \
-        <guppi>/runtime/.venv/Scripts/python.exe -I benchmarks/wissen_embed_messung.py --gguf <modelle>/<ordner>/<datei>.gguf --name bge-m3 \
-        --engine <guppi>/engines/llama.cpp/b11160/llama-server.exe --port 8094 --rev 0155a83 --json ergebnis_bge-m3.json
+    <sedra>/runtime/.venv/Scripts/python.exe benchmarks/testlab_cli.py hold --owner spec7-s71 --purpose "S7.1 Embedding" --ttl 1800 --wait 600 -- \
+        <sedra>/runtime/.venv/Scripts/python.exe -I benchmarks/wissen_embed_messung.py --gguf <modelle>/<ordner>/<datei>.gguf --name bge-m3 \
+        --engine <sedra>/engines/llama.cpp/b11160/llama-server.exe --port 8094 --rev 0155a83 --json ergebnis_bge-m3.json
 
 Ablauf: eigenen `llama-server --embeddings` starten (nur diese PID wird beendet), alle Abschnitte des Korpus von wissen_baseline.py einbetten
 (GPU: 1 Aufwärmlauf + 3 Läufe, Zeit je 1000 Abschnitte als Median), VRAM über nvidia-smi (nur lesend), dann CPU (`-ngl 0`) mit einer Stichprobe

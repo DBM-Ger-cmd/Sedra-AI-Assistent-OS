@@ -3,7 +3,7 @@ r"""Layers on the GPU for a DENSE model (Qwen3.8-27B) on THIS PC, with and witho
     .venv\Scripts\python.exe benchmarks/probes/dense_probe.py <project_dir> [--models coder.local_q38]
 
 The manager starts it as `probe_dense` (options file seeds/probe_dense.options.json: models (recipe ids), window, ngl (list of n_gpu_layers), mtp (true: also measure with MTP), prompt_tokens).
-For every n_gpu_layers (ascending, MTP off) the recipe's server is started, one prompt of real GUPPI source is answered (benchmarks/moe_sweep.py `one`), and the speed and the free VRAM are recorded; the ascending part stops
+For every n_gpu_layers (ascending, MTP off) the recipe's server is started, one prompt of real SEDRA source is answered (benchmarks/moe_sweep.py `one`), and the speed and the free VRAM are recorded; the ascending part stops
 below the 1 GiB reserve or at a failed start. Then the two highest layer counts inside the reserve are measured again with MTP on (if the options ask for it). It holds the GPU lease and changes no recipe.
 Results: runtime_data/measurements/dense_probe_<recipe>_<date>.json.
 """
@@ -49,9 +49,9 @@ def main():
         sys.exit(2)
     import yaml
     from context_ladder import RESERVE_GIB
-    from guppi_runtime.models.gpu_preflight import clear_leftovers
-    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.models.gpu_preflight import clear_leftovers
+    from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from sedra_runtime.jobs.testlab import TestLab, default_path
     from moe_sweep import RAM_FLOOR_GIB, free_ram_gib, one, source_text
     window = options.get("window") if type(options.get("window")) is int and 4096 <= options["window"] <= 65536 else 32768
     ngl_list = int_list(options.get("ngl"), 0, 99, [24, 28, 32, 36, 40, 44])
@@ -60,7 +60,7 @@ def main():
     table = {r["id"]: r for r in yaml.safe_load((project / "local_config" / "role_routing.yaml").read_text(encoding="utf-8"))["role_routing"]["capabilities"]}
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml")
     config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_dense_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_dense_")))
     prompt = source_text(int(tokens * 3.2))
     recipe_id = recipes[0]
     recipe = table[recipe_id]

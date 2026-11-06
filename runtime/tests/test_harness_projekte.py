@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import projekte
+from sedra_runtime.harness import projekte
 
 
 class ProjekteTests(unittest.TestCase):
@@ -22,7 +22,7 @@ class ProjekteTests(unittest.TestCase):
         self.assertEqual(len(p), 1)
         self.assertEqual((p[0]['id'], p[0]['name']), ('sedra-entwicklung', 'Sedra Entwicklung'))
         self.assertEqual(p[0]['schreibbereich'], ['runtime/**', 'docs/**', 'redesign/**'])
-        self.assertTrue((Path(p[0]['wurzel']) / 'runtime' / 'src' / 'guppi_runtime').is_dir(), 'Wurzel = dieses Repo')
+        self.assertTrue((Path(p[0]['wurzel']) / 'runtime' / 'src' / 'sedra_runtime').is_dir(), 'Wurzel = dieses Repo')
         self.assertFalse((self.root / 'local_config').exists(), 'es wird nichts in local_config geschrieben')
 
     def test_gueltige_datei(self):

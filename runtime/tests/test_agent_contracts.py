@@ -1,7 +1,7 @@
 import unittest
 import json
 import hashlib
-from guppi_runtime.agent_manager.agent_contracts import ContractError, canonical_digest, check_version, validate_record
+from sedra_runtime.agent_manager.agent_contracts import ContractError, canonical_digest, check_version, validate_record
 
 class TestAgentContracts(unittest.TestCase):
     

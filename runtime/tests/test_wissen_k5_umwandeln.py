@@ -9,8 +9,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from guppi_runtime.wissen.leser import extern
-from guppi_runtime.wissen.speicher import satz
+from sedra_runtime.wissen.leser import extern
+from sedra_runtime.wissen.speicher import satz
 from wissen_fixture import FakeEmbedServer, freigeben, oeffnen
 
 DA = {n: importlib.util.find_spec(n) is not None for n in ('pypdf', 'markitdown', 'openpyxl', 'pptx')}

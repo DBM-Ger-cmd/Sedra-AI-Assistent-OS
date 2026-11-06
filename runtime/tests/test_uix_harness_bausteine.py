@@ -91,7 +91,7 @@ class Baukasten(unittest.TestCase):
         self.assertEqual((out[1]['raster'], out[1]['stil'], out[1]['hilfeAus']), (True, '7 / span 6', True))
 
     def test_bausteine_im_client_und_im_server_sind_dieselben(self):
-        from guppi_runtime.harness import desktop as server
+        from sedra_runtime.harness import desktop as server
         out = run_js(DATEIEN, "const B = box.sedraHarness.bausteine; console.log(JSON.stringify([B.START.map(x=>x[0]), B.ZEILE.map(x=>x[0]), B.WERKZEUGE.map(x=>x[0]), B.GRUND_WERKZEUGE, [B.SPALTEN, B.ZEILEN, B.HOEHE], B.MENUE.map(x=>x[0]), B.BLICK.map(x=>x[0]), B.GRUND_MENUE, B.GRUND_BLICK]));")
         self.assertEqual(tuple(out[0]), server.START_BLOECKE)
         self.assertEqual(tuple(out[1]), server.ZEILE_BAUSTEINE)
@@ -119,7 +119,7 @@ class Baukasten(unittest.TestCase):
         self.assertEqual(out['voll'], {'seite': {'platz': 'links', 'breite': 0}, 'taskleiste': {'platz': 'unten'}, 'eingabe': {'platz': 'unten', 'breite': 0}})
 
     def test_zonen_vorgabe_im_client_und_im_server_sind_dieselbe(self):
-        from guppi_runtime.harness import desktop as server
+        from sedra_runtime.harness import desktop as server
         out = run_js(DATEIEN, "const B = box.sedraHarness.bausteine; console.log(JSON.stringify([B.ZONEN(), B.zonenVon({})]));")
         self.assertEqual(out[0], server.ZONEN_VORGABE)
         self.assertEqual(out[1], server.ZONEN_VORGABE)

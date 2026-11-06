@@ -19,7 +19,7 @@ class MoeProbeTests(unittest.TestCase):
         self.assertNotIn("--full-gpu", cmd)
 
     def test_the_manager_finds_the_probe(self):
-        from guppi_runtime.agent_manager.run_worker import probe_script
+        from sedra_runtime.agent_manager.run_worker import probe_script
         self.assertTrue(Path(probe_script(str(RUNTIME), "probe_moe")).is_file())
 
 

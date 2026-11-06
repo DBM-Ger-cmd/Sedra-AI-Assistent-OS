@@ -1,5 +1,5 @@
-r"""Chat diagnosis (Captain 2026-10-12: a real chat window, error details visible, diagnosis side bar, commands in the chat; GUPPI builds as much as possible itself): waits for the
-night chain (PID in runtime_data/measurements/day_2026-10-12/queue_c.pid), then Qwen3.6 (coder.local_primary) builds benchmarks/devvm_specs/chat_diag.py in GUPPI's coder with the
+r"""Chat diagnosis (Captain 2026-10-12: a real chat window, error details visible, diagnosis side bar, commands in the chat; SEDRA builds as much as possible itself): waits for the
+night chain (PID in runtime_data/measurements/day_2026-10-12/queue_c.pid), then Qwen3.6 (coder.local_primary) builds benchmarks/devvm_specs/chat_diag.py in SEDRA's coder with the
 settings of the night queue. Results: summary_f.json next to it. Nothing is integrated; Claude wires it into uix_server.py and the chat window after the review.
 
     .venv\Scripts\python.exe benchmarks/day_queue_2026-10-12_f.py <project_dir>

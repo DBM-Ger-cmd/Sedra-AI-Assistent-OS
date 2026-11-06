@@ -12,7 +12,7 @@ import yaml
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-UIX = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
+UIX = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix'
 MINIMAL = UIX / 'shells' / 'minimal'
 
 
@@ -89,8 +89,8 @@ class BothShells(unittest.TestCase):
 
     def test_both_shells_load_the_same_tools(self):
         import tempfile
-        from guppi_runtime.uix_server import UIXHub
-        arch = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+        from sedra_runtime.uix_server import UIXHub
+        arch = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
         seen = {}
         for shell in ('cockpit', 'minimal'):
             with tempfile.TemporaryDirectory(prefix=f'shell-{shell}-') as tmp:

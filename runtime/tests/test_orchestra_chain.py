@@ -5,7 +5,7 @@ import unittest
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.orchestra import chain
+from sedra_runtime.orchestra import chain
 
 TASK = {'id': 'T3', 'title': 'Test schreiben', 'description': 'Prüft den Parser.', 'goal_ref': 'V1', 'project_id': 'P1', 'parent_id': 'T2'}
 PARENTS = [{'id': 'T1', 'title': 'Wurzel', 'parent_id': None}, {'id': 'T2', 'title': 'Zwischen', 'parent_id': 'T1'}]

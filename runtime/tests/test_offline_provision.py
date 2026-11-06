@@ -2,9 +2,9 @@ from copy import deepcopy
 import hashlib
 import unittest
 import test_sandbox
-from guppi_runtime.sandbox.provision import preview_image, import_image
-from guppi_runtime.sandbox.worker import import_image as worker_import
-from guppi_runtime.tools.base import ToolValidationError
+from sedra_runtime.sandbox.provision import preview_image, import_image
+from sedra_runtime.sandbox.worker import import_image as worker_import
+from sedra_runtime.tools.base import ToolValidationError
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 class ImportCase(unittest.TestCase):
@@ -34,7 +34,7 @@ class ImportCase(unittest.TestCase):
         with self.assertRaises(ToolValidationError):import_image(self.broker,'M-IMG',plan,token)
         self.assertFalse(self.fake.imports)
     def test_content_bound_single_use_gate(self):
-        from guppi_runtime.models.tuning import digest
+        from sedra_runtime.models.tuning import digest
         plan=self.plan();gate=import_image(self.broker,'M-IMG',plan)['gate'];token=self.rt.guard.approve(gate)
         other=deepcopy(plan);other['request']['image_reference']='other@sha256:'+'a'*64;other.pop('plan_digest');other['plan_digest']=digest(other)
         self.assertEqual(import_image(self.broker,'M-IMG',other,token)['status'],'captain_required')

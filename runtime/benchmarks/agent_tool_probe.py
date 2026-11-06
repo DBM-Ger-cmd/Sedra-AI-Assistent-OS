@@ -5,7 +5,7 @@ r"""Which tools does an agent really offer to the model? (Captain 2026-10-10: be
 No model and no GPU: a tiny fake OpenAI-compatible server on 127.0.0.1 answers every request with a short text ("ok", no tool call) and RECORDS the request. The agent is started headless with its own empty home folder, in an empty
 working folder, with the fake server as its model. The `tools` array of the recorded request is what the model would be shown. Variants:
   baseline  the agent as it is (shows its built-in tools)
-  confined  the agent with our configuration: its built-in file and shell tools denied, GUPPI's MCP server (`guppi_runtime.devvm_mcp --no-vm`) as the only tool source
+  confined  the agent with our configuration: its built-in file and shell tools denied, SEDRA's MCP server (`sedra_runtime.devvm_mcp --no-vm`) as the only tool source
 The probe prints the tool names of each variant and whether the confined list contains only our tools. The agent process runs on this PC (Node); it gets no secrets, no project path and no real model, and it is stopped by its own PID.
 """
 import argparse
@@ -21,7 +21,7 @@ from pathlib import Path
 
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
-from guppi_runtime.local_paths import expand                                     # noqa: E402
+from sedra_runtime.local_paths import expand                                     # noqa: E402
 
 DEFAULT_INSTALL = Path(expand(r"<projekte>\qwen-code-main\qwen-code-installed"))      # folders of this PC: runtime/config/local_paths.yaml
 OUR_TOOLS = ("list_dir", "read_file", "outline", "write_file", "append_file", "edit_file", "make_dir", "move_file", "delete_file", "search_text", "diff_files", "check_syntax", "git_status", "git_log", "submit_result")
@@ -90,7 +90,7 @@ def make_server(records, script=None):
 
 
 def qwen_settings(confined, python, project, work_root, *, vm=False, mission="M-MCP00001", attach=False, journal=None, result_file=None, self_check="full", max_vm_runs=None, model=None):
-    """The `~/.qwen/settings.json` of the agent. `confined`: its built-in tools are denied and removed, the bridge to withheld tools is off and GUPPI's MCP server is the only tool source. `vm`: the server also offers run_python (in the microVM).
+    """The `~/.qwen/settings.json` of the agent. `confined`: its built-in tools are denied and removed, the bridge to withheld tools is off and SEDRA's MCP server is the only tool source. `vm`: the server also offers run_python (in the microVM).
     `attach`: the workspace of `mission` under `work_root` exists already (the harness judges the same folder). `model`: settings for a REAL model server: {"alias", "context", "temperature", "max_turns", "max_tokens"} (None: the fake model of the probe)."""
     settings = {"security": {"auth": {"selectedType": "openai"}}, "model": {"name": "fake-model"}, "general": {"enableAutoUpdate": False}}
     if model:
@@ -102,7 +102,7 @@ def qwen_settings(confined, python, project, work_root, *, vm=False, mission="M-
         settings["permissions"] = {"deny": DENY, "allow": [f"mcp__devvm__{name}" for name in names]}      # only OUR tools run without a question (non-interactive mode cannot ask)
         settings["tools"] = {"disabled": DISABLED, "visible": [f"mcp__devvm__{name}" for name in names], "toolSearch": {"enabled": False}}      # no bridge to withheld tools: ours are declared up front, the rest is not registered
         settings["goals"] = {"modelProposed": "disabled"}
-        args = ["-m", "guppi_runtime.devvm_mcp", "--project", str(project), "--workspace-root", str(work_root), "--mission", mission, "--self-check", self_check]
+        args = ["-m", "sedra_runtime.devvm_mcp", "--project", str(project), "--workspace-root", str(work_root), "--mission", mission, "--self-check", self_check]
         if attach: args.append("--attach")
         if not vm: args.append("--no-vm")
         if max_vm_runs is not None: args += ["--max-vm-runs", str(int(max_vm_runs))]
@@ -201,7 +201,7 @@ def main():
     ap.add_argument("agent", choices=["qwen-code"])
     ap.add_argument("--variant", choices=["baseline", "confined", "both", "attack"], default="both", help="attack: the fake model calls our tool and then tries denied tools (shell, built-in write and read); a marker file shows whether any of them ran")
     ap.add_argument("--install-dir", default=str(DEFAULT_INSTALL))
-    ap.add_argument("--project", default=str(RUNTIME.parent / "workspace" / "GUPPI_OS"))
+    ap.add_argument("--project", default=str(RUNTIME.parent / "workspace" / "SEDRA_OS"))
     args = ap.parse_args()
     if args.variant == "attack":
         attack(args)

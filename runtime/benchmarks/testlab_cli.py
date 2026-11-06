@@ -1,4 +1,4 @@
-"""Command line for the shared test lab (see guppi_runtime/jobs/testlab.py and docs/TESTLAB.md).
+"""Command line for the shared test lab (see sedra_runtime/jobs/testlab.py and docs/TESTLAB.md).
 
     python benchmarks/testlab_cli.py status                       who holds the GPU, what is planned, the last runs and events
     python benchmarks/testlab_cli.py hold --owner NAME --purpose TEXT [--ttl 600] [--wait 1800] -- <command ...>
@@ -10,8 +10,8 @@
     python benchmarks/testlab_cli.py runs                         the last runs
     python benchmarks/testlab_cli.py summary RUN_ID               per model and variant: calls, share ok, mean tokens, mean seconds
 
-`--project DIR` (before the command) names the project directory; default is workspace/GUPPI_OS next to the runtime. `hold` is meant for
-anything that puts a model on the GPU without going through GUPPI: LM Studio loads, hermes runs, a manual llama-server. Exit code of `hold`
+`--project DIR` (before the command) names the project directory; default is workspace/SEDRA_OS next to the runtime. `hold` is meant for
+anything that puts a model on the GPU without going through SEDRA: LM Studio loads, hermes runs, a manual llama-server. Exit code of `hold`
 is the command's own; 75 when the lease could not be had in time.
 """
 from __future__ import annotations
@@ -25,9 +25,9 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.jobs.testlab import LeaseBusy, TestLab, default_path  # noqa: E402
+from sedra_runtime.jobs.testlab import LeaseBusy, TestLab, default_path  # noqa: E402
 
-from guppi_runtime.models.gpu_preflight import GpuNotClean, clear_leftovers
+from sedra_runtime.models.gpu_preflight import GpuNotClean, clear_leftovers
 
 
 def stamp(ts):
@@ -36,7 +36,7 @@ def stamp(ts):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--project", default=str(RUNTIME.parent / "workspace" / "GUPPI_OS"))
+    ap.add_argument("--project", default=str(RUNTIME.parent / "workspace" / "SEDRA_OS"))
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("status")
     sub.add_parser("clean", help="stop leftovers of earlier runs on the GPU (only while nobody holds the lease)")

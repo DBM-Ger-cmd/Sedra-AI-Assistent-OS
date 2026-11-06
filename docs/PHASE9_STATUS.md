@@ -9,7 +9,7 @@ benötigten Teile; der Rest wird außerhalb des Fensters gespeichert. Gleichzeit
 |---|---|---|
 | Arbeitsset | `working_set.py` | stabiler Kopf, Archiv-Index, aktive Turns, aktueller Schritt mit zurückgerufenen Auszügen; Block-Verdichtung; deterministisch (kein Modell fasst zusammen) |
 | Handler-Haken | `job_worker.py` | `model_text_handler(..., on_result=)` meldet die fertige Antwort, damit das Arbeitsset sie als Turn speichert |
-| Fabrik | `runtime.py` | `GuppiRuntime.working_set(...)` |
+| Fabrik | `runtime.py` | `SedraRuntime.working_set(...)` |
 | Tests | `tests/test_working_set.py` | 27 Tests |
 
 Grenzen (bewusst): Die Relevanz ist lexikalisch (gemeinsame Wörter, Fehler, Dateinamen), nicht semantisch. Ein Block, dessen Wörter
@@ -70,13 +70,13 @@ Aussage „Gemma stabil bei 100k" gilt für Einzel-Abfragen, nicht belegt für w
 
 ## Befund 2: GPU-Ausnahmen des Treibers, nicht (nur) ein Modell-Fehler (2026-10-02)
 
-Der Prüflauf `benchmarks/garbage_hunt.py` (frischer Server pro Durchgang, direkte HTTP-Anfragen ohne GUPPI-Aufrufpfad) lief im Basisfall 3 Durchgänge sauber
+Der Prüflauf `benchmarks/garbage_hunt.py` (frischer Server pro Durchgang, direkte HTTP-Anfragen ohne SEDRA-Aufrufpfad) lief im Basisfall 3 Durchgänge sauber
 und stürzte im 4. ab: `CUDA error: an illegal memory access was encountered` in `ggml_cuda_kernel_launch` (Gemma, f16, Kontext 102400, bei ~29k Tokens).
 Zur selben Sekunde (11:08:29) schrieb der NVIDIA-Treiber in das Windows-Systemprotokoll `nvlddmkm` Ereignis 13 („Graphics Exception: ESR …") und 153
 („Error occurred on GPUID").
 
 Solche Ereignisse gibt es auf diesem PC schon lange: **1405 in den letzten 60 Tagen** (Ereignis 13 und 153), verteilt auf Tage mit GPU-Last, z. B. 20.08. (139),
-04.09. (304), 18.–22.09. (75/66/19/130/113), 01.10. (446, davon 354 in der Stunde der Qwen3.5-Absturzmatrix), 02.10. (8). Das sind Zeiten vor jeder GUPPI-Messung.
+04.09. (304), 18.–22.09. (75/66/19/130/113), 01.10. (446, davon 354 in der Stunde der Qwen3.5-Absturzmatrix), 02.10. (8). Das sind Zeiten vor jeder SEDRA-Messung.
 Der Treiber (32.0.16.1692, Datum 04.09.2026) trägt dasselbe Datum wie der erste große Ausschlag; ob er an dem Tag installiert wurde, ist nicht geprüft.
 
 Folgerung: Die beiden Fehlerbilder (Qwen3.5: Absturz ab ~23k Tokens; Gemma: zeitweise Müll-Ausgabe und gelegentlich Absturz) haben mindestens eine gemeinsame
@@ -100,7 +100,7 @@ medium 24/24, high 23/24 (6,3 s; eine Aufgabe lief bis 3000 Token ohne Antwort).
 Der Test ist für dieses Modell an der Decke (nichts trennt mehr); ein härterer Aufgabensatz fehlt noch.
 
 **Arbeitsset, harter Test** (zweite Konstante steht nur in der ausgelagerten Datei): vor der Änderung 24/28, die vier Rückfragen waren geraten
-(`blocks 0, recalled 0`). Ursache war GUPPI, nicht das Modell: große Tool-Ergebnisse gehen als Kurzfassung in den Verlauf, `compose` rief aber nur
+(`blocks 0, recalled 0`). Ursache war SEDRA, nicht das Modell: große Tool-Ergebnisse gehen als Kurzfassung in den Verlauf, `compose` rief aber nur
 Auszüge aus verdichteten Blöcken ab, nie aus ausgelagerten Ausgaben. Neu: `WorkingSet._recall_offloaded` liest die passenden Zeilen aus dem
 hash-geprüften Artefakt (Wörter der Frage, nach Seltenheit über alle Ausgaben gewichtet, höchstens 2 Ausgaben und 40 Zeilen, innerhalb des Budgets,
 deterministisch, am Ende des Prompts wegen der Präfix-Wiederverwendung). Bei langen Schritten zählt nur der letzte Absatz als Frage (`_ask_of`), damit
@@ -109,7 +109,7 @@ Das Arbeitsset-Skript hat dafür `--effort` und `--max-tokens` (vorher fest `non
 leerer Antwort nicht mehr ab. 8 neue Tests in `tests/test_working_set.py` (35 insgesamt), gesamte Suite 1002 Tests OK.
 
 **GPU-Vorprüfung** `gpu_preflight.clear_leftovers` (Hook `lab.lease(..., preflight=...)`, in allen Messskripten, Kommando `testlab_cli.py clean`): nur
-unter gehaltener Sperre; beendet einen verwaisten GUPPI-llama-server (Port 8089 oder Startsignatur `--no-webui --spec-type` im LM-Studio-Backend-Ordner),
+unter gehaltener Sperre; beendet einen verwaisten SEDRA-llama-server (Port 8089 oder Startsignatur `--no-webui --spec-type` im LM-Studio-Backend-Ordner),
 sonst nichts. Ist der Port von etwas anderem belegt oder die GPU über 2,5 GiB voll, wird der Lauf mit Namen der Verursacher abgelehnt, nichts fremdes beendet.
 Anlass: ein Rest von 8 GB machte die erste Messung des Tages wertlos.
 

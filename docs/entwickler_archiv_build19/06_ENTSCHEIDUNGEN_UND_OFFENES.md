@@ -6,10 +6,10 @@ Dieses Dokument hält fest, was entschieden ist, warum, und was offen bleibt. En
 
 | Datum | Entscheidung | Stand |
 |---|---|---|
-| 14.10. | Systemname SEDRA, technischer Name GUPPI, Maskottchen GUPPI | gilt |
+| 14.10. | Systemname SEDRA, technischer Name SEDRA, Maskottchen SEDRA | gilt |
 | 15.10. | „Der sichere Weg zuerst“: Inhaltsschutz im Kern vor allen Funktionen | umgesetzt (Build 16) |
-| 15.10. | Shell-Creator: drei Empfehlungen (Schema-Zwang am Router, Rahmen aus Vorgabe, Satz an GUPPI) | umgesetzt (Build 17) |
-| 15.10. | Die alte GUPPI-XP-Oberfläche bleibt als wählbare Shell, der Einstieg ist START_SEDRA | umgesetzt (Build 18) |
+| 15.10. | Shell-Creator: drei Empfehlungen (Schema-Zwang am Router, Rahmen aus Vorgabe, Satz an SEDRA) | umgesetzt (Build 17) |
+| 15.10. | Die alte SEDRA-XP-Oberfläche bleibt als wählbare Shell, der Einstieg ist START_SEDRA | umgesetzt (Build 18) |
 | 15.10. | Das KI GateWay heißt in der Oberfläche KI GateWay; SEDRA erscheint nur im Hintergrund | gilt |
 | 15.10. | Das KI GateWay wird als Vorgang nach dem Studio Flow v1.1 gebaut, mit Schutzklassen und Studio-Shell | umgesetzt (Build 19) |
 | 15.10. | Die Lieferung der 0.3.0 wird nicht als Paket übernommen, nur ihre Werkzeuge; der Bestandsablauf bleibt MVP 2 | umgesetzt |

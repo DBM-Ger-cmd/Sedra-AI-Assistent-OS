@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime import uix_start
+from sedra_runtime import uix_start
 
 
 class StandardShellTest(unittest.TestCase):

@@ -1,6 +1,6 @@
 """Which server setting makes a model stop emitting garbage (`<unused49><unused49>...`)? A repeated measurement, not a test.
 
-Gemma 4 12B on GUPPI's llama-server sometimes turns to garbage output partway through a multi-turn session and stays broken until the server
+Gemma 4 12B on SEDRA's llama-server sometimes turns to garbage output partway through a multi-turn session and stays broken until the server
 restarts (see docs/PHASE9_STATUS.md). The fault is intermittent, so one run proves nothing. This tool runs the SAME session many times per
 variant, each time on a freshly started server, and stops a run at the first garbage answer:
 
@@ -8,7 +8,7 @@ variant, each time on a freshly started server, and stops a run at the first gar
 
 A variant is a set of server options (`profile.server` keys), the flash-attention setting, and extra request fields. The session is the
 naive one from workingset_real_run.py (history grows, one fact is asked per module). It talks to the server directly over HTTP, so a
-difference to the GUPPI-path runs is itself a result (`direct_baseline` against the 4-in-12 garbage runs seen through `model_call`).
+difference to the SEDRA-path runs is itself a result (`direct_baseline` against the 4-in-12 garbage runs seen through `model_call`).
 It takes the shared GPU lease and writes one row per run to the test lab (task RUN, ok = the run stayed clean).
 """
 from __future__ import annotations
@@ -84,15 +84,15 @@ def main():
         sys.exit(f"unknown variants {unknown}; known: {sorted(VARIANTS)}")
 
     import yaml
-    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.jobs.testlab import TestLab, default_path
-    from guppi_runtime.models.gpu_preflight import clear_leftovers
+    from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from sedra_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.models.gpu_preflight import clear_leftovers
 
     recipe = next(c for c in (yaml.safe_load((Path(args.project) / "local_config" / "role_routing.yaml").read_text(encoding="utf-8"))["role_routing"]["capabilities"])
                   if c.get("model") == args.model and c.get("provider") == "llama-cpp-server")
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml")
     config.enabled, config.mtp = True, False
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_hunt_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_hunt_")))
     lab = TestLab(default_path(args.project))
     owner = os.environ.get("TESTLAB_OWNER", "garbage_hunt")
     with lab.lease(owner, f"garbage hunt {args.model}", ttl_s=600, wait_s=1800, preflight=clear_leftovers):

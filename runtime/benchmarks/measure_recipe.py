@@ -28,10 +28,10 @@ import yaml
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path  # noqa: E402
-from guppi_runtime.models.gpu_preflight import clear_leftovers
-from guppi_runtime.models.recipe_measure import MeasureError, apply_measurements, http_generate, measure_recipe  # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path  # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers
+from sedra_runtime.models.recipe_measure import MeasureError, apply_measurements, http_generate, measure_recipe  # noqa: E402
 
 
 def read_vram():
@@ -63,7 +63,7 @@ def main():
     project = Path(args.project)
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml")
     config.enabled, config.mtp = True, True              # the recipe decides MTP; --mtp off overrides it below
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_measure_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_measure_")))
     if not runtime.available():
         raise SystemExit("llama-server not found")
     tiers = [int(t) for t in args.tiers.split(",")] if args.tiers else None

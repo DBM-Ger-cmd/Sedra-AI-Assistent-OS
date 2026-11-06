@@ -3,9 +3,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import gedaechtnis
-from guppi_runtime.harness.api import HarnessApi
-from guppi_runtime.harness.sitzung import Sitzungen
+from sedra_runtime.harness import gedaechtnis
+from sedra_runtime.harness.api import HarnessApi
+from sedra_runtime.harness.sitzung import Sitzungen
 
 
 def notiz(i, frage='Frage', antwort='Antwort'):

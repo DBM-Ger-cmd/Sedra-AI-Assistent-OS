@@ -1,6 +1,6 @@
-# Entwicklung: Wie GUPPI sich selbst weiterbaut
+# Entwicklung: Wie SEDRA sich selbst weiterbaut
 
-Stand 20.10.2026 (geändert 20.10.2026, Linie L1 bis L6; vorher 12.10.2026). Das Ziel des Projekts ist ein GUPPI, das sich selbst erweitert, immer hinter der Freigabe des Captains.
+Stand 20.10.2026 (geändert 20.10.2026, Linie L1 bis L6; vorher 12.10.2026). Das Ziel des Projekts ist ein SEDRA, das sich selbst erweitert, immer hinter der Freigabe des Captains.
 
 ## Regel: Spec vor Umsetzung (Captain, 28.10.2026)
 
@@ -15,9 +15,9 @@ Berechtigungen werden vorher eingeholt (Captain, 29.10.2026): Bevor eine Aufgabe
 
 | Rolle | Aufgabe |
 |---|---|
-| **GUPPI** (lokale Modelle in der DevVM) | schreibt den Produktionscode neuer Module. ~~Ziel: mindestens 50 % des neuen Codes~~ (geändert 20.10.2026, Linie L4: statt „50 %“ eine gemessene Quote je Aufgabe, siehe unten). SEDRA baut neue Module mit klarer Schnittstelle (reine Logik). Gezählt wird mit `agent_manager/code_meter`. |
+| **SEDRA** (lokale Modelle in der DevVM) | schreibt den Produktionscode neuer Module. ~~Ziel: mindestens 50 % des neuen Codes~~ (geändert 20.10.2026, Linie L4: statt „50 %“ eine gemessene Quote je Aufgabe, siehe unten). SEDRA baut neue Module mit klarer Schnittstelle (reine Logik). Gezählt wird mit `agent_manager/code_meter`. |
 | **Captain** | entscheidet über jedes Gate (per Gate-ID), über Übernahmen in den Kern, Rezepte, Modelle und Kontextgrenzen. |
-| **Claude / KI-Sitzungen** | schreiben Specs, versteckte Abnahmetests, Referenzlösungen, Reviews und den Harness, also den Code, den GUPPI nicht an sich selbst ändern darf: Guard, Bridge, Suite-Mechanik, Bauskripte. Code der Modelle wird nur bei trivialen oder blockierenden Fehlern von Hand korrigiert, und das wird als Eingriff im Logbuch eingetragen. |
+| **Claude / KI-Sitzungen** | schreiben Specs, versteckte Abnahmetests, Referenzlösungen, Reviews und den Harness, also den Code, den SEDRA nicht an sich selbst ändern darf: Guard, Bridge, Suite-Mechanik, Bauskripte. Code der Modelle wird nur bei trivialen oder blockierenden Fehlern von Hand korrigiert, und das wird als Eingriff im Logbuch eingetragen. |
 
 ## Die einheitliche Linie (Captain, 20.10.2026)
 
@@ -25,14 +25,14 @@ Grundlage: `ANALYSE_BAUABLAUF_2026-10-20.md`; Beschluss in `SPEC_AGENTEN_ORCHEST
 
 | Linie | Regel |
 |---|---|
-| L1 | **Ein Bauweg:** `devvm_build.py` direkt, Standardbefehl mit `--profile standard` (ersetzt die neun Flags unten). Inhalt des Profils: `--attempts 1`, `--coder` und `--all-models coder.local_primary`, `--context 32768`, `--tidy`, `--reasoning off`, `--coder-ext all`, `--self-check none` (geändert 21.10.2026, PROFIL-01; Messung 21.10.: full 1850 s, none 170 s, gleiches Ergebnis), `--server-set flash_attn=on`, `kv_cache_type=q8_0`, `ubatch=512`; ein einzeln angegebener Schalter gewinnt. Zweites Profil `--profile schnell-klein` (geändert 21.10.2026, PROFIL-02): wie `standard`, aber Coder und alle Modelle `coder.llama_qwen35` (Qwen3.5-9B mit MTP); Reserve, nicht Standard. Ketten- und Einmal-Skripte (`day_queue_*`, `night_queue_*`, `mtp_*`, `ab_queue`, `resume_queue`) liegen im Archiv `runtime/benchmarks/archiv/` (Übersicht dort in `README.md`), nur noch als Beleg. Buildflow (`guppi buildflow`) bleibt Reserve. Experimentelle Optionen (`--plan-steps`, `--fresh-rework`, `--step-syntax-check`, `--parallel-check`, `--checker`, `--arbiter`) nur mit `--experimental`. Auch der Agent Manager (`run_worker`) baut nur diesen Weg. |
+| L1 | **Ein Bauweg:** `devvm_build.py` direkt, Standardbefehl mit `--profile standard` (ersetzt die neun Flags unten). Inhalt des Profils: `--attempts 1`, `--coder` und `--all-models coder.local_primary`, `--context 32768`, `--tidy`, `--reasoning off`, `--coder-ext all`, `--self-check none` (geändert 21.10.2026, PROFIL-01; Messung 21.10.: full 1850 s, none 170 s, gleiches Ergebnis), `--server-set flash_attn=on`, `kv_cache_type=q8_0`, `ubatch=512`; ein einzeln angegebener Schalter gewinnt. Zweites Profil `--profile schnell-klein` (geändert 21.10.2026, PROFIL-02): wie `standard`, aber Coder und alle Modelle `coder.llama_qwen35` (Qwen3.5-9B mit MTP); Reserve, nicht Standard. Ketten- und Einmal-Skripte (`day_queue_*`, `night_queue_*`, `mtp_*`, `ab_queue`, `resume_queue`) liegen im Archiv `runtime/benchmarks/archiv/` (Übersicht dort in `README.md`), nur noch als Beleg. Buildflow (`sedra buildflow`) bleibt Reserve. Experimentelle Optionen (`--plan-steps`, `--fresh-rework`, `--step-syntax-check`, `--parallel-check`, `--checker`, `--arbiter`) nur mit `--experimental`. Auch der Agent Manager (`run_worker`) baut nur diesen Weg. |
 | L2 | **Kein Bau ohne Stempel:** `spec_check.py <spec> --vm --project <projekt>` prüft Lint, Referenz und versteckte Tests in der Python-Umgebung der microVM und schreibt den Stempel `<projekt>/runtime_data/spec_stamps/<spec>.json` (Hashes von Spec, Referenz und Saat-Ordner; geändert 21.10.2026, PIPE-10). `devvm_build.py` bricht ohne gültigen Stempel für genau diese Spec-Fassung ab: `spec_not_checked` (kein Stempel), `spec_changed_since_check` (Spec, Referenz oder Saat seither geändert; ein Stempel ohne `seed_sha256` gilt als geändert), `spec_stamp_host_only` (Stempel nur von `spec_check --host-only`, also ohne microVM; wird nur mit `--allow-host-stamp` angenommen). Die einzige Umgehung ist `--skip-spec-stamp`; sie steht als Warnung im Log. |
 | L3 | **Stufengröße:** höchstens 20 neue Prüfungen je Stufe; Warnung über 20, Fehler über 30. |
 | L4 | **Aufgabenteilung:** SEDRA baut neue Module mit klarer Schnittstelle (reine Logik). Claude baut offiziell Integration, Oberfläche und Harness. Statt „50 %“ gilt eine **gemessene Quote je Aufgabe**: Zeilen von SEDRA gegen Zeilen von Claude, einschließlich Spec und Referenz; sie steht im Logbuch bei jedem Bau. |
-| L5 | **Übernahme:** `adopt_plan` (`devenv/adopt_plan.py`) und Handkopie sind Standard. `selfdev/` (Selbst-Integration, `guppi self-integrate`) ist Reserve. |
+| L5 | **Übernahme:** `adopt_plan` (`devenv/adopt_plan.py`) und Handkopie sind Standard. `selfdev/` (Selbst-Integration, `sedra self-integrate`) ist Reserve. |
 | L6 | **Regel 12 (eigene Branches) geht Regel 8 vor.** Dokumente, Logbuch-Arten: siehe unten. |
 
-**Ein Bau-Ort (PIPE-09, 20.10.2026)** (geändert 20.10.2026, PIPE-09) Gebaut wird immer aus dem Arbeitsstand (Git). Projektordner ist `<guppi>/workspace/GUPPI_OS`, **nicht** `<guppi>` selbst (das legt einen leeren VM-Cache an). Das Python mit allen Paketen kommt aus `<guppi>/runtime/.venv`. Engine (`engines/llama.cpp/<engine_build>`) und `runtime/config/llama_server.yaml` sind im Arbeitsstand und in der Laufzeit-Installation gleich; `runtime/tests/test_bau_ort.py` prüft das (und dass `engine_build` freigegeben ist, derzeit b11160). Engine-Wechsel nur mit Captain-Gate.
+**Ein Bau-Ort (PIPE-09, 20.10.2026)** (geändert 20.10.2026, PIPE-09) Gebaut wird immer aus dem Arbeitsstand (Git). Projektordner ist `<sedra>/workspace/SEDRA_OS`, **nicht** `<sedra>` selbst (das legt einen leeren VM-Cache an). Das Python mit allen Paketen kommt aus `<sedra>/runtime/.venv`. Engine (`engines/llama.cpp/<engine_build>`) und `runtime/config/llama_server.yaml` sind im Arbeitsstand und in der Laufzeit-Installation gleich; `runtime/tests/test_bau_ort.py` prüft das (und dass `engine_build` freigegeben ist, derzeit b11160). Engine-Wechsel nur mit Captain-Gate.
 
 L7 (später): Bau-Specs ohne Ergebnis abschließen, Weichen am Paket-Stamm entfernen.
 
@@ -40,7 +40,7 @@ L7 (später): Bau-Specs ohne Ergebnis abschließen, Weichen am Paket-Stamm entfe
 
 Die Schritte eines Baus auf einer Seite: [SO_WIRD_GEBAUT.md](SO_WIRD_GEBAUT.md).
 
-Wenn GUPPI-Bauten Stunden dauern und wiederholt scheitern, kann der Captain entscheiden, dass Claude ein Modul selbst schreibt. Der Anteil wird dann ehrlich gezählt.
+Wenn SEDRA-Bauten Stunden dauern und wiederholt scheitern, kann der Captain entscheiden, dass Claude ein Modul selbst schreibt. Der Anteil wird dann ehrlich gezählt.
 
 ## Ein Bau im Solo-Workflow (Standard seit 2026-10-10)
 
@@ -102,11 +102,11 @@ Der Bau hält die GPU-Lease und exportiert jeden Versuch. Nach jeder bestandenen
 
 **4. Prüfen und übernehmen:** Claude liest **jede** Fassung Zeile für Zeile. Die versteckten Tests prüfen nur das Verhalten; Doppelungen, kopierter Code und
 übersehene Review-Punkte fallen nur beim Lesen auf. Danach entscheidet der Captain. Übernommen wird unverändert, nur relative Importe werden angepasst.
-Dazu kommen Tests in `runtime/tests/`. Übernahme per `adopt_plan` und Handkopie ist Standard (geändert 20.10.2026, Linie L5); `guppi self-integrate-preview` / `self-integrate` (E1, mit Rücknahme) ist Reserve.
+Dazu kommen Tests in `runtime/tests/`. Übernahme per `adopt_plan` und Handkopie ist Standard (geändert 20.10.2026, Linie L5); `sedra self-integrate-preview` / `self-integrate` (E1, mit Rücknahme) ist Reserve.
 
-## Rezept: eine Aufgabe an GUPPI geben (Stand 13.10.2026)
+## Rezept: eine Aufgabe an SEDRA geben (Stand 13.10.2026)
 
-Ein Bau besteht aus einer Spec, einer Referenz, dem Bau durch GUPPI und der Abnahme. Die Werkzeuge liegen in `runtime/benchmarks/`.
+Ein Bau besteht aus einer Spec, einer Referenz, dem Bau durch SEDRA und der Abnahme. Die Werkzeuge liegen in `runtime/benchmarks/`.
 
 1. **Spec und Referenz schreiben.** Spec in `devvm_specs/<name>.py`, Referenz in `devvm_refs/<name>/`, Saat (wenn der Bau auf vorhandenem Code aufsetzt) in `<name>_seed/`. Dateien nur mit den Datei-Werkzeugen (Write/Edit) ändern, nie mit eingefügten Skripten: Backslashes und Zeilenumbrüche gehen dabei verloren.
    - Erwartete Zahlen und Texte kommen aus der Referenz (ausrechnen lassen), nicht aus dem Kopf.
@@ -151,15 +151,15 @@ Ein Bau besteht aus einer Spec, einer Referenz, dem Bau durch GUPPI und der Abna
    laufende, stoppt seinen Server und übergibt die Lade-Lease. Rezepte, Engine und Schalter nie ändern, solange ein Lauf die GPU nutzt, auch nicht über eine Slot-Lease. Prozesse nur
    über die eigene PID beenden, nie per Namensmuster; der Scheduler beendet nur seinen eigenen Server, und Aufräumen (`gpu_preflight`) fasst keinen Server an, der zu einer lebenden
    Lease gehört; andere Sitzungen teilen sich GPU und Skripte. (geändert 2026-10-26, Spec 2 S2.2, Gate G3-S2-14)
-3. **Vor jeder Konfigurationsänderung eine Sicherung** (`*.bak-<datum>-<grund>`). Danach prüfen, ob GUPPIs Lader die Datei noch annimmt.
+3. **Vor jeder Konfigurationsänderung eine Sicherung** (`*.bak-<datum>-<grund>`). Danach prüfen, ob SEDRAs Lader die Datei noch annimmt.
 4. **Nur betroffene Tests** laufen lassen; neue Tests in die passende Testdatei.
 5. **Logbuch** ([LOGBUCH_AGENT_MANAGER.md](LOGBUCH_AGENT_MANAGER.md)): Jeder Schritt wird eingetragen, die Uhrzeit kommt aus `date`, nie geschätzt.
 6. **Kein Weg wird stillschweigend geweitet:** Guard-Regeln, Token-Semantik, Audit-Kette und der Selbst-Integrationsweg (nur neue Module, nur E1) ändern sich nur nach ausdrücklicher Zustimmung.
 7. **Modelle entfernen** nur über `model-remove` (Quarantäne); endgültig löscht nur der Captain.
 8. **Commits** gehen auf `main`, mit Co-Autor-Zeile, wenn eine KI beteiligt war; Laufdaten, Modelle, Engines und Sicherungsdateien bleiben draußen (`.gitignore`). (geändert 20.10.2026, Linie L6: Regel 12 geht vor – Commits gehen auf den eigenen Branch der Sitzung; auf `main` kommt nur, was der Captain zusammenführt.)
 9. Wenn Speicher fehlt, dürfen untätige Programme (Steam, Chrome …) geschlossen werden; was geschlossen wurde, wird gemeldet.
-10. **Keine lokalen Pfade in eingecheckten Dateien**, auch nicht im Logbuch: statt `E:\…` oder `C:\Users\…` die Platzhalter `<modelle>`, `<projekte>`, `<guppi>` und `C:\Users\<user>`.
-    Code, der einen solchen Ordner braucht, liest ihn über `guppi_runtime.local_paths.expand("<modelle>")` (siehe [BETRIEB.md](BETRIEB.md#einrichtung)). Tests nutzen eigene Testdaten
+10. **Keine lokalen Pfade in eingecheckten Dateien**, auch nicht im Logbuch: statt `E:\…` oder `C:\Users\…` die Platzhalter `<modelle>`, `<projekte>`, `<sedra>` und `C:\Users\<user>`.
+    Code, der einen solchen Ordner braucht, liest ihn über `sedra_runtime.local_paths.expand("<modelle>")` (siehe [BETRIEB.md](BETRIEB.md#einrichtung)). Tests nutzen eigene Testdaten
     (`runtime/tests/fixtures/`), nie die Konfiguration dieses PCs.
 11. **Nichts auf GitHub hochladen** ohne ausdrücklichen Auftrag des Captains. Dabei gilt: Ein Push lädt die ganze Commit-Geschichte hoch. Ältere Commits enthalten noch lokale Pfade
     und müssten vorher bereinigt werden.

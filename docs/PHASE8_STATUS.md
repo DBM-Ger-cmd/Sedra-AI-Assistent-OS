@@ -3,7 +3,7 @@
 Fertig: 8a (Kontext/Laden), 8b (Worker-Schleife, Modellwechsel), 8c (Token-Steuerung, Kontext-Stufen), 8d (Prüfgate, erster E1-Fall
 bis `READY_FOR_ACCEPTANCE`, real). Offene Punkte am Ende; die Abschnitte "Offen" von 8a/8b sind durch den Nachtrag teilweise überholt.
 
-## Prüfung: kann GUPPI die Kontextlänge an LM Studio übergeben?
+## Prüfung: kann SEDRA die Kontextlänge an LM Studio übergeben?
 
 **Ja, aber nicht über die Chat-API.** Gemessen auf dem Ziel-PC (LM Studio, `lms` CLI):
 
@@ -129,7 +129,7 @@ Beide Modelle laden real mit 64k. LM Studios eigene Schätzung (`--estimate-only
 65536: 11,99 geschätzt, 9,39 gemessen; gemma: 16,81 geschätzt, 8,66 gemessen). Sie ist deshalb in `model_loader.yaml` aus
 (`check_estimate: false`); die Rezepte tragen gemessene Werte. Wachstum je 1000 Token: qwen 0,0248 GiB, gemma 0,0162 GiB.
 
-Die KV-Cache-Typen kommen aus LM Studios gespeicherten Modellvorgaben; `lms load` hat keine Option dafür, und GUPPI ändert sie
+Die KV-Cache-Typen kommen aus LM Studios gespeicherten Modellvorgaben; `lms load` hat keine Option dafür, und SEDRA ändert sie
 nicht (das wären private Dateien von LM Studio). Dein Hinweis (q8: 64k, f16: 54k) deckt sich in der Größenordnung mit der Messung;
 die exakten Zahlen weichen ab, vermutlich weil dort andere Einstellungen galten.
 

@@ -18,7 +18,7 @@ const DESK = {width: 1366, height: 730};
 '''
 
 JS1 = r'''
-assert.strictEqual(box.WINDOW_STATE_KEY, "guppi.windows.v1");
+assert.strictEqual(box.WINDOW_STATE_KEY, "sedra.windows.v1");
 assert.deepStrictEqual(plain(box.WINDOW_MIN), {width: 320, height: 200});
 assert.deepStrictEqual(plain(box.WINDOW_KEEP), {width: 80, height: 70});
 const cb = (b, d, m) => plain(box.clampBox(b, d, m));
@@ -68,7 +68,7 @@ assert.deepStrictEqual(plain(box.packWindows([], "t")), {v: 1, saved: 0, windows
 assert.strictEqual(plain(box.packWindows([{id: "a", z: 2.6}], 0)).windows[0].z, 3);
 const before = JSON.stringify(L); box.packWindows(L, 1); assert.strictEqual(JSON.stringify(L), before);
 
-const known = ["a", "b", "c", "guppiWindow"];
+const known = ["a", "b", "c", "sedraWindow"];
 const saved = JSON.stringify(box.packWindows(L, 777));
 const u = plain(box.unpackWindows(saved, known, DESK));
 assert.deepStrictEqual(u, [
@@ -86,7 +86,7 @@ assert.strictEqual(box.unpackWindows(JSON.stringify({v: 1, windows: "x"}), known
 assert.deepStrictEqual(plain(box.unpackWindows(JSON.stringify({v: 1, windows: []}), known, DESK)), []);
 const twice = JSON.stringify({v: 1, saved: 0, windows: [{id: "a", open: true, box: {left: 1, top: 1, width: 400, height: 300}}, {id: "a", open: false, box: {left: 9, top: 9, width: 400, height: 300}}, {id: "zz", open: true}]});
 assert.deepStrictEqual(plain(box.unpackWindows(twice, known, DESK)), [{id: "a", open: true, minimized: false, maximized: false, box: {left: 1, top: 1, width: 400, height: 300}}]);
-const far = JSON.stringify({v: 1, windows: [{id: "guppiWindow", open: true, box: {left: 5000, top: 5000, width: 9000, height: 9000}}]});
+const far = JSON.stringify({v: 1, windows: [{id: "sedraWindow", open: true, box: {left: 5000, top: 5000, width: 9000, height: 9000}}]});
 assert.deepStrictEqual(plain(box.unpackWindows(far, known, DESK))[0].box, {left: 1286, top: 660, width: 1366, height: 730});
 console.log("ok");
 '''
@@ -94,7 +94,7 @@ console.log("ok");
 STAGES = [
     {"name": "clamp",
      "task": """Create `window_state.js` (a classic browser script, see NOTES.md) with:
-- `var WINDOW_STATE_KEY = "guppi.windows.v1"`, `var WINDOW_MIN = {width: 320, height: 200}`, `var WINDOW_KEEP = {width: 80, height: 70}` (how much of a window must stay on the desktop).
+- `var WINDOW_STATE_KEY = "sedra.windows.v1"`, `var WINDOW_MIN = {width: 320, height: 200}`, `var WINDOW_KEEP = {width: 80, height: 70}` (how much of a window must stay on the desktop).
 - `clampBox(box, desk, min)` -> a new {left, top, width, height} of integers (Math.round) that fits the desktop. box, desk and min are objects with number fields;
   any field that is not a finite number counts as 0 for left/top and as the minimum for width/height; a missing object counts as {} (desk then has width 0 and height 0; a missing min means WINDOW_MIN).
   width = max(min.width, min(box.width, max(min.width, desk.width))), height the same with the heights;

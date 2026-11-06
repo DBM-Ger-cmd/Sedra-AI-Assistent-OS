@@ -389,7 +389,7 @@
     },
     {
       "id": "A023",
-      "frage": "Welches Modul legt entfernte GGUF-Dateien unter _guppi_entfernt ab und schaltet ihre Rezepte aus?",
+      "frage": "Welches Modul legt entfernte GGUF-Dateien unter _sedra_entfernt ab und schaltet ihre Rezepte aus?",
       "art": "fachbegriff",
       "gruppe": "doku",
       "liste_oder_tabelle": true,
@@ -1181,7 +1181,7 @@
           "abschnitt": "Ordner local_config"
         }
       ],
-      "hinweis": "Ordner-Einträge entstehen nur, wenn der Ordner im Arbeitsbereich (workspace/GUPPI_OS) vorhanden ist; der Zwecktext stammt aus der festen Liste von arbeitsumfeld_wissen.py."
+      "hinweis": "Ordner-Einträge entstehen nur, wenn der Ordner im Arbeitsbereich (workspace/SEDRA_OS) vorhanden ist; der Zwecktext stammt aus der festen Liste von arbeitsumfeld_wissen.py."
     },
     {
       "id": "A076",
@@ -1197,7 +1197,7 @@
           "abschnitt": "Ordner redesign/vorarbeiter"
         }
       ],
-      "hinweis": "Ordner-Einträge entstehen nur, wenn der Ordner im Arbeitsbereich (workspace/GUPPI_OS) vorhanden ist; der Zwecktext stammt aus der festen Liste von arbeitsumfeld_wissen.py."
+      "hinweis": "Ordner-Einträge entstehen nur, wenn der Ordner im Arbeitsbereich (workspace/SEDRA_OS) vorhanden ist; der Zwecktext stammt aus der festen Liste von arbeitsumfeld_wissen.py."
     },
     {
       "id": "A077",
@@ -1213,7 +1213,7 @@
           "abschnitt": "Ordner redesign/omni_mapping"
         }
       ],
-      "hinweis": "Ordner-Einträge entstehen nur, wenn der Ordner im Arbeitsbereich (workspace/GUPPI_OS) vorhanden ist; der Zwecktext stammt aus der festen Liste von arbeitsumfeld_wissen.py."
+      "hinweis": "Ordner-Einträge entstehen nur, wenn der Ordner im Arbeitsbereich (workspace/SEDRA_OS) vorhanden ist; der Zwecktext stammt aus der festen Liste von arbeitsumfeld_wissen.py."
     },
     {
       "id": "A078",

@@ -1,4 +1,4 @@
-# GUPPIs eigene VM (microsandbox) – Stand der Grenzprüfung (2026-10-02)
+# SEDRAs eigene VM (microsandbox) – Stand der Grenzprüfung (2026-10-02)
 
 Zweck: Belege für die Abnahme PC-03 (Isolation) und PC-07 (Aufräumen) aus `PC_DIAGNOSE_PLAN_v1.16.yaml`.
 **`target_qualified` ist weiterhin `false`.** Die Entscheidung trifft der Captain nach diesem Bericht.
@@ -9,8 +9,8 @@ Zweck: Belege für die Abnahme PC-03 (Isolation) und PC-07 (Aufräumen) aus `PC_
 |---|---|
 | SDK | microsandbox 0.7.4 (gepinntes Windows-Wheel aus `portable/sandbox/wheels`, Prüfsumme gegen `RELEASE_LOCK.json`), offline in `runtime/.venv` installiert |
 | PyYAML | 6.0.3 in `runtime/.venv` (PyPI) |
-| Gastimage | `python:3.12-slim`, von GUPPIs eigener Laufzeit `msb` geladen (ohne Docker), Archiv `runtime_data/tool_workspace/offline-assets/python-3.12-slim.tar`, SHA256 `b5f4a99f…41b4a6` |
-| Import | über GUPPIs Importpfad, Mission `M-3E8064C0`, Gate `HG-94AD5BF2`: `IMPORTED_NOT_QUALIFIED` |
+| Gastimage | `python:3.12-slim`, von SEDRAs eigener Laufzeit `msb` geladen (ohne Docker), Archiv `runtime_data/tool_workspace/offline-assets/python-3.12-slim.tar`, SHA256 `b5f4a99f…41b4a6` |
+| Import | über SEDRAs Importpfad, Mission `M-3E8064C0`, Gate `HG-94AD5BF2`: `IMPORTED_NOT_QUALIFIED` |
 | Pin | `config/sandbox.yaml`: `image: python:3.12-slim@sha256:b0f67293…736721844` (lokaler Digest; der Registry-Digest `6b1f85a0…` überlebt `msb save/load` nicht). Sicherung `sandbox.yaml.bak-2026-10-02-before-image` |
 | `sandbox-doctor` | einziger offener Blocker: `target_boundary_acceptance_pending` |
 
@@ -53,7 +53,7 @@ Der Gast hat `eth0` mit Route über `172.16.0.5`. Jede Anfrage an Port 53 (TCP u
 Das spricht für einen Resolver im Netzwerkstapel von microsandbox, der leer antwortet. Host-seitige Teilprüfung (ohne Adminrechte): Während der Gast 16 DNS-Anfragen stellte, wurde alle 0,2 s die Verbindungstabelle der `msb`-Prozesse gelesen. Ergebnis: **keine** TCP-Verbindung nach außen, **kein** UDP-Socket. Das spricht stark dafür, dass die Antworten lokal entstehen.
 **Nicht belegt** ist es trotzdem: Die Verbindungstabelle ist kein Paketmitschnitt, und sehr kurze Sockets können zwischen zwei Abfragen liegen. DNS-Namen wären ein Kanal, um Daten hinauszuschmuggeln. Für die Abnahme nötig: ein Paketmitschnitt mit Adminrechten (`pktmon` oder Wireshark) während eines Laufs (PC-03 „network capture“).
 
-**Paketmitschnitt (vorbereitet, braucht Adminrechte):** `runtime/benchmarks/sandbox_dns_capture.ps1`. Es zeichnet mit dem Windows-eigenen `pktmon` nur Port-53-Verkehr auf allen Adaptern auf. Dann startet es den Grenztest: Der Gast fragt einen einmaligen Zufallsnamen (`gp<zufall>.guppi-boundary.example.com`) per UDP und TCP bei 1.1.1.1, 8.8.8.8 und 9.9.9.9 ab. Anschließend sucht es diesen Namen im Mitschnitt. `NO_QUERY_LEFT_THE_HOST` heißt: Keine Anfrage hat den Rechner verlassen. Der pktmon-Filter wird am Ende wieder entfernt. Die Antworten im Gast sind auch hier leer (63/65 Bytes = nur Kopf und Frage).
+**Paketmitschnitt (vorbereitet, braucht Adminrechte):** `runtime/benchmarks/sandbox_dns_capture.ps1`. Es zeichnet mit dem Windows-eigenen `pktmon` nur Port-53-Verkehr auf allen Adaptern auf. Dann startet es den Grenztest: Der Gast fragt einen einmaligen Zufallsnamen (`gp<zufall>.sedra-boundary.example.com`) per UDP und TCP bei 1.1.1.1, 8.8.8.8 und 9.9.9.9 ab. Anschließend sucht es diesen Namen im Mitschnitt. `NO_QUERY_LEFT_THE_HOST` heißt: Keine Anfrage hat den Rechner verlassen. Der pktmon-Filter wird am Ende wieder entfernt. Die Antworten im Gast sind auch hier leer (63/65 Bytes = nur Kopf und Frage).
 
 ### Befund 2: Laufzeitordner `/.msb` beschreibbar (BEHOBEN)
 
@@ -70,7 +70,7 @@ In etwa 2 von 8 Starts endete die VM sofort („sandbox process exited … befor
 
 ## Paketmitschnitt (Captain, Adminrechte, 2026-10-02)
 
-`dns_capture_20261002T185451Z`: Gastname `gpd6caba5d9f73217c.guppi-boundary.example.com`, **0 Treffer** in 38 844 Bytes Port-53-Mitschnitt.
+`dns_capture_20261002T185451Z`: Gastname `gpd6caba5d9f73217c.sedra-boundary.example.com`, **0 Treffer** in 38 844 Bytes Port-53-Mitschnitt.
 Als Kontrolle enthält der Mitschnitt 132 DNS-Namen aus dem normalen Verkehr des Rechners, die Aufzeichnung hat also funktioniert.
 Ergebnis: `NO_QUERY_LEFT_THE_HOST`. Befund 1 ist damit entkräftet: Port 53 wird nur lokal und leer beantwortet.
 
@@ -82,7 +82,7 @@ Zurücknehmen: `target_qualified` wieder auf `false` setzen.
 
 ## Wichtig beim Verschieben oder Umbenennen des Projektordners
 
-Gelernt am 2026-10-02, als `GUPPI_Developer_Archive_v1.20_SELF_DEVELOPMENT_FOUNDATION` zu `GUPPI v1.20_S D A` wurde:
+Gelernt am 2026-10-02, als `SEDRA_Developer_Archive_v1.20_SELF_DEVELOPMENT_FOUNDATION` zu `SEDRA v1.20_S D A` wurde:
 - **Image-Cache:** microsandbox speichert absolute Pfade (`backend_home\cache\fsmeta\…erofs`). Nach einem Umzug startet die VM nicht mehr („Data storage file … not found“). Abhilfe: `msb image rm python:3.12-slim` mit `MSB_HOME` auf `backend_home`, dann Neuimport über `dev-image-preview` und `dev-image-import` (ein Gate). Das Archiv in `offline-assets` bleibt gültig, gleicher Hash und gleicher Digest.
 - **Vorbereitete Kandidaten:** Sie sind an absolute Pfade gebunden. Nach einem Umzug gilt `candidate_binding_changed_replan_required`, also neu generieren. Freigaben für den alten Plan gelten nicht mehr.
-- **Pfadlänge:** msb ist nicht für lange Pfade ausgelegt. Projektpfad plus `backend_home\sandboxes\<name>\runtime\…tmp` muss unter 260 Zeichen bleiben. Der Worker nutzt deshalb kurze VM-Namen (`guppi-` plus 12 Hex-Zeichen).
+- **Pfadlänge:** msb ist nicht für lange Pfade ausgelegt. Projektpfad plus `backend_home\sandboxes\<name>\runtime\…tmp` muss unter 260 Zeichen bleiben. Der Worker nutzt deshalb kurze VM-Namen (`sedra-` plus 12 Hex-Zeichen).

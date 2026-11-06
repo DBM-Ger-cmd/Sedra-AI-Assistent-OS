@@ -90,7 +90,7 @@ class OfferTests(Base):
     def test_a_waiting_direct_call_is_never_offered_the_cloud(self):
         self.sched.take_for_job("SDJ-2", 5)
         with self.sched._conn() as conn:
-            from guppi_runtime.jobs import slot_store
+            from sedra_runtime.jobs import slot_store
             slot_store.request(conn, "direkt-x", "direkt", "chat", 7, "2026-10-23T00:00:00Z", ttl_s=120)      # older than every job
         self.clock.t += 700
         self.sched.poll()
@@ -109,7 +109,7 @@ class DeskTests(Base):
         import threading
         from contextlib import contextmanager
         from types import SimpleNamespace
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.jobs, self.audit_log = {}, []
 
         @contextmanager
@@ -124,7 +124,7 @@ class DeskTests(Base):
         self.sched.poll()
 
     def test_the_offer_is_a_decision_with_two_ways_and_nothing_else(self):
-        from guppi_runtime.desk import decisions
+        from sedra_runtime.desk import decisions
         (item,) = decisions.collect([], [], scheduled=self.hub._scheduler_decisions())
         self.assertEqual((item["id"], item["kind"], item["ways"], item["mission_id"], item["apply"]), ("cloud_offload:SDJ-2", "cloud_offload", ["ablehnen", "cloud_diesen_lauf"], None, None))
         self.assertEqual(item["binding"], {"run_id": "SDJ-2", "grund": "schlange"})

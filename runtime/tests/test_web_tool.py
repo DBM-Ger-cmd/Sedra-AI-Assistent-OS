@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from guppi_runtime.tools.base import ToolValidationError
-from guppi_runtime.tools.web import WebAccessConfig, WebTool
+from sedra_runtime.tools.base import ToolValidationError
+from sedra_runtime.tools.web import WebAccessConfig, WebTool
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 

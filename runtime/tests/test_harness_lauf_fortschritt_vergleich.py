@@ -5,7 +5,7 @@ import random
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import lauf_fortschritt
+from sedra_runtime.harness import lauf_fortschritt
 
 REF = Path(__file__).resolve().parents[1] / 'benchmarks' / 'devvm_refs' / 'harness_lauf_fortschritt' / 'lauf_fortschritt.py'
 Z = {'art': 'zeilen', 'regex': r'(\d+)\s*/\s*(\d+)'}

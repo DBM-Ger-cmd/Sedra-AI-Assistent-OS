@@ -2,7 +2,7 @@
 
 Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen); G2 steht noch aus. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Captain 03.11.2026: Langdock in beiden Richtungen, **zuerst als Modellquelle**.
 Ziel: SEDRA kann Modelle über Langdock aufrufen – über den vorhandenen Cloud-Zugang, mit fester EU-Region, durch den Inhaltsschutz, mit Empfängerangaben, die der Betreiber pflegt. **Langdock ist dabei keine App**, sondern ein Anbieter im Kern (Konzept §9: Apps haben kein Netz).
-Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
+Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für c364081.
 
 ## 1. Quellenlage zu Langdock (ehrlich)
 

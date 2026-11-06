@@ -1,41 +1,41 @@
 # Minimalpaket fuer den USB-Stick (K:\SEDRA). Gelesen von stick_paket.py. Entscheidungen: docs/ENTSCHEIDUNGEN_USB_STICK.md
 # repo    = aus diesem Repository (Ordner mit / am Ende)
 # bestand = aus dem Hauptcheckout, nicht in git (Engine, portables Python)
-# modul   = Python-Modul samt allen statischen Importen (guppi_runtime.*)
+# modul   = Python-Modul samt allen statischen Importen (sedra_runtime.*)
 # quelle <pfad> -> <ziel>  = umbenannt kopieren
 
 repo START_SEDRA.bat
 # Konsolenweg fuer G4 (gesehener Code-Stand, docs/SPEC_APPS_v1_G4_MODELLCODE_G2.md, PR #1, Version 1.22.0). Das Modul selbst liegt schon in
-# runtime/src/guppi_runtime/harness/. Die Quelle (--repo) muss ein Stand mit PR #1 sein, sonst meldet --pruefen die Datei als fehlend.
+# runtime/src/sedra_runtime/harness/. Die Quelle (--repo) muss ein Stand mit PR #1 sein, sonst meldet --pruefen die Datei als fehlend.
 repo CODE_STAND.bat
 repo LICENSE
-repo architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT/
+repo architecture/SEDRA_Architecture_v1.20_SELF_DEVELOPMENT/
 repo runtime/config/
 repo runtime/Ersteinrichtung.ps1
 repo runtime/Erststart_Konfig.ps1
 repo runtime/Test-PortableRuntime.ps1
 repo runtime/benchmarks/engine_download.py
-repo runtime/src/guppi_runtime/core/
-repo runtime/src/guppi_runtime/harness/
-repo runtime/src/guppi_runtime/fisch/
-repo runtime/src/guppi_runtime/sprache/
-repo runtime/src/guppi_runtime/uix/shells/cockpit/
-repo runtime/src/guppi_runtime/uix/shells/harness/
-repo runtime/src/guppi_runtime/uix/shells/paperclip/
-repo runtime/src/guppi_runtime/uix/shells/fisch/
-repo runtime/src/guppi_runtime/uix/ui/
-repo runtime/src/guppi_runtime/uix/js/
-repo runtime/src/guppi_runtime/uix/css/
+repo runtime/src/sedra_runtime/core/
+repo runtime/src/sedra_runtime/harness/
+repo runtime/src/sedra_runtime/fisch/
+repo runtime/src/sedra_runtime/sprache/
+repo runtime/src/sedra_runtime/uix/shells/cockpit/
+repo runtime/src/sedra_runtime/uix/shells/harness/
+repo runtime/src/sedra_runtime/uix/shells/paperclip/
+repo runtime/src/sedra_runtime/uix/shells/fisch/
+repo runtime/src/sedra_runtime/uix/ui/
+repo runtime/src/sedra_runtime/uix/js/
+repo runtime/src/sedra_runtime/uix/css/
 # Dateien, die der Server per Pfad liest (nicht ueber Importe): desk.html, retro_desktop.html, Hardware-Manager-Ansicht
-repo runtime/src/guppi_runtime/uix/desk.html
-repo runtime/src/guppi_runtime/uix/retro_desktop.html
-repo runtime/src/guppi_runtime/hardware_manager/dashboard.html
-repo runtime/src/guppi_runtime/uix/tools/uebersetzer/
-repo runtime/src/guppi_runtime/uix/tools/nachrichten/
-repo runtime/src/guppi_runtime/uix/tools/transkript/
-repo runtime/src/guppi_runtime/uix/tools/rekorder/
-modul guppi_runtime.uix_start
-modul guppi_runtime.uix_server
-modul guppi_runtime.models.engine_provision
+repo runtime/src/sedra_runtime/uix/desk.html
+repo runtime/src/sedra_runtime/uix/retro_desktop.html
+repo runtime/src/sedra_runtime/hardware_manager/dashboard.html
+repo runtime/src/sedra_runtime/uix/tools/uebersetzer/
+repo runtime/src/sedra_runtime/uix/tools/nachrichten/
+repo runtime/src/sedra_runtime/uix/tools/transkript/
+repo runtime/src/sedra_runtime/uix/tools/rekorder/
+modul sedra_runtime.uix_start
+modul sedra_runtime.uix_server
+modul sedra_runtime.models.engine_provision
 bestand engines/llama.cpp/b11160/
 bestand runtime/portable/python.aus/current/ -> runtime/portable/python/current/

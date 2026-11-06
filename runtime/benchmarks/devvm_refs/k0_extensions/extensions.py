@@ -1,6 +1,6 @@
 import importlib
 
-MODULES = ("guppi_runtime.desk.orchestra_kinds",)
+MODULES = ("sedra_runtime.desk.orchestra_kinds",)
 
 
 def _reason(exc):

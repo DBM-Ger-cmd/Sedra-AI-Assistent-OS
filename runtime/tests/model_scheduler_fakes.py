@@ -4,9 +4,9 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.jobs.model_scheduler import ModelScheduler, ModelSchedulerConfig
-from guppi_runtime.jobs.testlab import TestLab
-from guppi_runtime.models.model_loader import LoadError
+from sedra_runtime.jobs.model_scheduler import ModelScheduler, ModelSchedulerConfig
+from sedra_runtime.jobs.testlab import TestLab
+from sedra_runtime.models.model_loader import LoadError
 
 RUNTIME = Path(__file__).resolve().parents[1]
 CONFIG = RUNTIME / "config" / "model_scheduler.yaml"

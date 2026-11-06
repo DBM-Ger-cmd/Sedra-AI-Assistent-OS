@@ -1,17 +1,17 @@
-"""Die Importgrenze des Pakets `orchestra/` (Spec 0, D3.1, G2-S0-08): es darf `guppi_runtime.core` und `guppi_runtime.jobs`
+"""Die Importgrenze des Pakets `orchestra/` (Spec 0, D3.1, G2-S0-08): es darf `sedra_runtime.core` und `sedra_runtime.jobs`
 importieren, sonst nur die Standardbibliothek und `yaml` – auch nicht über Umwege. Nur so bleibt `runtime.py`, das `orchestra`
 zusammenbaut, unter `test_core_boundary_src` grün."""
 import sys
 import unittest
 
-from guppi_runtime.selfdev.core_boundary import chains, imports_of, violations
+from sedra_runtime.selfdev.core_boundary import chains, imports_of, violations
 from test_core_boundary_src import P, sources
 
 ORCHESTRA = [P + "orchestra"]
 FORBIDDEN = [P + m for m in ("desk", "uix_server", "uix", "chat_tools", "agent_manager", "devenv", "devvm", "devvm_agents",
                              "devvm_evidence", "devvm_mcp", "devvm_style", "devvm_tools", "coder_ext", "models.cloud_api")]
 ALLOWED_INSIDE = (P + "core", P + "jobs", P + "orchestra")
-# Spec 1 (D1.1, S1.H6): zweite Regel – die sieben reinen Module importieren nichts aus `guppi_runtime` und nicht `sqlite3`;
+# Spec 1 (D1.1, S1.H6): zweite Regel – die sieben reinen Module importieren nichts aus `sedra_runtime` und nicht `sqlite3`;
 # einzig `runner` darf `chain` und `decompose` nutzen.
 PURE = {"graphs": (), "cron": (), "wakeplan": (), "budgetcalc": (), "chain": (), "decompose": (), "runner": ("chain", "decompose")}
 
@@ -24,7 +24,7 @@ def pure_ok(name, siblings):
     if any(name == P + "orchestra." + s for s in siblings):
         return True
     top = name.split(".")[0]
-    return top != "guppi_runtime" and top != "sqlite3" and top in sys.stdlib_module_names
+    return top != "sedra_runtime" and top != "sqlite3" and top in sys.stdlib_module_names
 
 
 class OrchestraBoundary(unittest.TestCase):
@@ -42,7 +42,7 @@ class OrchestraBoundary(unittest.TestCase):
             for name in imports_of(text, module):
                 with self.subTest(module=module, name=name):
                     top = name.split(".")[0]
-                    self.assertTrue(_inside(name, ALLOWED_INSIDE) or (top != "guppi_runtime" and (top in sys.stdlib_module_names or top == "yaml")),
+                    self.assertTrue(_inside(name, ALLOWED_INSIDE) or (top != "sedra_runtime" and (top in sys.stdlib_module_names or top == "yaml")),
                                     f"{module} importiert {name}")
 
     def test_the_pure_modules_import_only_the_standard_library(self):

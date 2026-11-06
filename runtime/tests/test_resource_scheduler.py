@@ -13,18 +13,18 @@ from types import SimpleNamespace
 
 import yaml
 
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.selfdev.development_contracts import development_contract
-from guppi_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
-from guppi_runtime.jobs.resource_scheduler import ResourceConfig, ResourceScheduler, need_of
-from guppi_runtime.models.role_routing import ProviderHealth, ResolutionError, RoleRouter, RoutingConfig
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.selfdev.development_contracts import development_contract
+from sedra_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
+from sedra_runtime.jobs.resource_scheduler import ResourceConfig, ResourceScheduler, need_of
+from sedra_runtime.models.role_routing import ProviderHealth, ResolutionError, RoleRouter, RoutingConfig
+from sedra_runtime.runtime import SedraRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]
 CONFIG = RUNTIME / 'config' / 'resource_scheduler.yaml'
 SUPERVISOR = RUNTIME / 'config' / 'job_supervisor.yaml'
-ARCH = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 SRC = str(RUNTIME / 'src')
 
 
@@ -301,7 +301,7 @@ class ReserveTests(Base):
         self.assertEqual(sum(r['vram_gb'] for r in s.reservations()), 14.0)
 
     def test_concurrent_processes_cannot_overbook_either(self):
-        code = ("import sys, json\nsys.path.insert(0, sys.argv[1])\nfrom pathlib import Path\nfrom guppi_runtime.jobs.resource_scheduler import *\n"
+        code = ("import sys, json\nsys.path.insert(0, sys.argv[1])\nfrom pathlib import Path\nfrom sedra_runtime.jobs.resource_scheduler import *\n"
                 "hw = type('H', (), {'get_state': lambda self, fresh=False: json.loads(sys.argv[3]), 'active_profile': lambda self: {'ram_reserve_gib': 2, 'max_jobs': 10}})()\n"
                 "s = ResourceScheduler(ResourceConfig({'enabled': True, 'vram_reserve_gb': 1.0}), hw, Path(sys.argv[2]))\n"
                 "print(s.reserve('SDJ-P' + sys.argv[4], 'A1', {'vram_gb': 7})['status'])\n")
@@ -343,7 +343,7 @@ class ReserveTests(Base):
         self.assertIn('error', s.view())                                                         # a status view never raises
 
     def test_source_is_read_only_towards_the_machine(self):
-        source = Path(importlib.import_module('guppi_runtime.jobs.resource_scheduler').__file__).read_text(encoding='utf-8')
+        source = Path(importlib.import_module('sedra_runtime.jobs.resource_scheduler').__file__).read_text(encoding='utf-8')
         for forbidden in ('subprocess', 'apply_profile', 'save_profile', 'constrain_runtime_profile', 'os.system', 'unload', 'kill'):
             self.assertNotIn(forbidden, source)
         for word in ('lm-studio', 'llama', 'qwen', 'kev', 'openai', 'anthropic'):
@@ -467,8 +467,8 @@ class SupervisorLifecycleTests(SupervisorBase):
                 self.assertEqual(self.held(), [], name)
 
     def test_a_parked_job_holds_no_hardware(self):
-        from guppi_runtime.core.permission_levels import PermissionConfig, PermissionGate
-        rt = GuppiRuntime(self.root / 'rt', ARCH)
+        from sedra_runtime.core.permission_levels import PermissionConfig, PermissionGate
+        rt = SedraRuntime(self.root / 'rt', ARCH)
         self.sup.permissions = rt.permission_gate; self.sup.guard = rt.guard
         self.router.config.recipes[0]['max_level'] = 3                                           # the recipe must allow a level-3 job to start at all
         contract = development_contract(objective='probe', classification='E1', permission_level=3, acceptance_criteria=[{'type': 'x', 'id': 's'}], verification_plan=[{'type': 'd'}])
@@ -526,7 +526,7 @@ class SupervisorLifecycleTests(SupervisorBase):
         for _ in range(self.sup.config.retry_limit):
             self.advance(300); self.sup.claim('w1', ['coder']); out = self.sup.confirm_start(job_id, 'w1')
         stored = self.load(job_id)
-        self.assertEqual((stored['state'], stored['supervisor_flags']['escalated_to']), ('BLOCKED', 'guppi'))
+        self.assertEqual((stored['state'], stored['supervisor_flags']['escalated_to']), ('BLOCKED', 'sedra'))
         self.assertEqual(stored['last_error']['reason_code'], 'hardware_pressure')
 
     def test_exclusive_jobs_wait_for_a_free_machine(self):
@@ -572,7 +572,7 @@ class SupervisorLifecycleTests(SupervisorBase):
 class RuntimeWiringTests(unittest.TestCase):
     def test_runtime_wires_the_scheduler_off_and_reports_it(self):
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
             self.assertFalse(rt.resource_scheduler.enabled)
             self.assertIs(rt.job_supervisor.scheduler, rt.resource_scheduler)
             self.assertIsNone(rt.role_router.load_check)
@@ -581,7 +581,7 @@ class RuntimeWiringTests(unittest.TestCase):
             self.assertFalse((Path(tmp) / 'project' / 'runtime_data' / 'resource_reservations.json').exists())
 
     def test_enabled_scheduler_feeds_the_router_and_keeps_the_ledger_in_runtime_data(self):
-        import guppi_runtime.runtime as runtime_module
+        import sedra_runtime.runtime as runtime_module
         real = runtime_module.ResourceConfig.load
 
         def enabled(path):
@@ -590,7 +590,7 @@ class RuntimeWiringTests(unittest.TestCase):
         runtime_module.ResourceConfig.load = staticmethod(enabled)
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+                rt = SedraRuntime(Path(tmp) / 'project', ARCH)
                 self.assertTrue(rt.resource_scheduler.enabled)
                 self.assertIsNotNone(rt.role_router.load_check)
                 self.assertEqual(rt.resource_scheduler.path, rt.project_root / 'runtime_data' / 'resource_reservations.json')
@@ -599,12 +599,12 @@ class RuntimeWiringTests(unittest.TestCase):
             runtime_module.ResourceConfig.load = real
 
     def test_a_broken_resource_file_leaves_no_scheduler_and_says_why(self):
-        import guppi_runtime.runtime as runtime_module
+        import sedra_runtime.runtime as runtime_module
         real = runtime_module.ResourceConfig.load
         runtime_module.ResourceConfig.load = staticmethod(lambda path: (_ for _ in ()).throw(ValueError('resource_config_invalid:test')))
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+                rt = SedraRuntime(Path(tmp) / 'project', ARCH)
         finally:
             runtime_module.ResourceConfig.load = real
         self.assertIsNone(rt.resource_scheduler); self.assertIsNone(rt.job_supervisor.scheduler)

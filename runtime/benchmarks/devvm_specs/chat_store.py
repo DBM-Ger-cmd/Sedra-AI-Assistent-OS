@@ -19,7 +19,7 @@ const H = [{role: "user", content: "Hallo"}, {role: "assistant", content: "Guten
 '''
 
 JS1 = r'''
-assert.strictEqual(box.CHAT_STORE_KEY, "guppi.chat.v1");
+assert.strictEqual(box.CHAT_STORE_KEY, "sedra.chat.v1");
 assert.strictEqual(box.CHAT_STORE_TURNS, 40);
 assert.strictEqual(box.CHAT_STORE_MAX_AGE_MS, 7 * 864e5);
 assert.strictEqual(box.CHAT_STORE_CHARS, 4000);
@@ -85,7 +85,7 @@ console.log("ok");
 STAGES = [
     {"name": "pack",
      "task": """Create `chat_store.js` (a classic browser script, see NOTES.md) with:
-- `var CHAT_STORE_KEY = "guppi.chat.v1"`, `var CHAT_STORE_TURNS = 40`, `var CHAT_STORE_MAX_AGE_MS = 7 * 864e5`, `var CHAT_STORE_CHARS = 4000`.
+- `var CHAT_STORE_KEY = "sedra.chat.v1"`, `var CHAT_STORE_TURNS = 40`, `var CHAT_STORE_MAX_AGE_MS = 7 * 864e5`, `var CHAT_STORE_CHARS = 4000`.
 - `packChat(history, mission, project, now)` -> a plain object {v: 1, saved, mission, project, history} that the page will store as JSON:
   saved = now if now is a number, else 0; mission = mission if it is a non-empty string, else null;
   project = {id, name} if project is an object whose id is a non-empty string and whose name is a string (other keys dropped), else null;

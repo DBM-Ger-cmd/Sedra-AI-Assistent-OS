@@ -6,7 +6,7 @@ Status: **Entwurf zur Freigabe. Es wurde noch kein Code geändert.**
 ## 1. Leitentscheidungen
 
 1. **Erweitern statt ersetzen.** Der Supervisor wird eine dünne Schicht über `DevelopmentJobStore` und `step_journal`. Beide behalten ihr Verhalten.
-2. **Zuständigkeit nach Handoff §19.** Intelligenz → GUPPI. Kontext → Context Manager. Runtime/Provider/Hardware → Control Master. Queue/Lease/Retry → Supervisor. Code/Test → Entwicklungsumgebung. Grenze/Freigabe → Guard.
+2. **Zuständigkeit nach Handoff §19.** Intelligenz → SEDRA. Kontext → Context Manager. Runtime/Provider/Hardware → Control Master. Queue/Lease/Retry → Supervisor. Code/Test → Entwicklungsumgebung. Grenze/Freigabe → Guard.
 3. **Keine neuen Python-Abhängigkeiten.** Nur Standardbibliothek und das vorhandene `yaml`.
 4. **Alles hinter Feature Flags, Default AUS.** Neue Datei `config/job_supervisor.yaml`. Ohne Flag verhält sich v1.20 unverändert.
 5. **Rückbaubar.** Jede Phase ist ein eigenes Modul. Löschen des Moduls plus Flag AUS stellt v1.20 wieder her. Es gibt keine Änderung am Format bestehender Dateien (nur optionale zusätzliche Felder).
@@ -29,7 +29,7 @@ Risiko: Audit-Änderung berührt alles. Deshalb zuerst, klein, mit Vorher/Nachhe
 
 ## 3. Neue und geänderte Module
 
-Alle neuen Module in `runtime/src/guppi_runtime/`. Namen sind Vorschläge.
+Alle neuen Module in `runtime/src/sedra_runtime/`. Namen sind Vorschläge.
 
 | Modul | Zweck | Wiederverwendet |
 |---|---|---|
@@ -52,7 +52,7 @@ Geändert, minimal:
 ## 4. Schnittstellen (Entwurf)
 
 ```text
-GUPPI ──create_job(kind, contract, role_requests, parent?)──▶ JobSupervisor
+SEDRA ──create_job(kind, contract, role_requests, parent?)──▶ JobSupervisor
 JobSupervisor ──build_manifest(job, parent_checkpoint)──▶ ContextManager ──▶ manifest (hash)
 JobSupervisor ──resolve_role(role, requirements)──▶ ControlMaster ──▶ {provider, model, profile, ctx_window}
 ControlMaster ──fit?(profile, requirements)──▶ HardwareModelPass / HardwareManager
@@ -102,7 +102,7 @@ last_error, last_checkpoint_id, context_manifest_id
 | REJECTED | FAILED |
 | ROLLED_BACK | ROLLED_BACK |
 
-Neu hinzu kommen nur die Zustände, die der Dev-Pfad nicht kennt: `QUEUED`, `CLAIMED`, `DEAD`, `CANCELLED`, `ROLLBACK_PENDING`, `ESCALATED_TO_GUPPI`, `ESCALATED_TO_CAPTAIN`. Sie werden als **zusätzliche** Einträge in einer erweiterten Übergangstabelle geführt. Bestehende Übergänge bleiben gültig.
+Neu hinzu kommen nur die Zustände, die der Dev-Pfad nicht kennt: `QUEUED`, `CLAIMED`, `DEAD`, `CANCELLED`, `ROLLBACK_PENDING`, `ESCALATED_TO_SEDRA`, `ESCALATED_TO_CAPTAIN`. Sie werden als **zusätzliche** Einträge in einer erweiterten Übergangstabelle geführt. Bestehende Übergänge bleiben gültig.
 
 Entscheidung offen (siehe 9): ob `supervisor_state` gespeichert oder nur berechnet wird. Empfehlung: **berechnet**, damit es keine zwei Wahrheiten gibt. Gespeichert wird nur, was der Dev-Pfad nicht ausdrücken kann.
 

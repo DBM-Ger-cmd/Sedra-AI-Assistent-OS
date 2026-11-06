@@ -14,10 +14,10 @@
 
 | Punkt | Befund | Folge |
 |---|---|---|
-| Hart verdrahtete Pfade | Suche `engines|workspace|parents[n]|Path.home()|Laufwerk` in `runtime/src`: 276 Treffer in 77 Dateien (grobe Suche, viele Kommentare und Beispiele). Die Laufzeitpfade sind **relativ zum Paket**: `workspace\GUPPI_OS` über `parents[3]`, `engines` über `engine_provision.DEFAULT_ROOT`. Beides stimmt auf dem Stick ohne Verknüpfung. | Kein Umbau von 45 Dateien nötig. Einzige Stelle mit PC-Bezug: die Modellordner in `local_paths.yaml` (Code: `runtime/src/guppi_runtime/local_paths.py`). |
+| Hart verdrahtete Pfade | Suche `engines|workspace|parents[n]|Path.home()|Laufwerk` in `runtime/src`: 276 Treffer in 77 Dateien (grobe Suche, viele Kommentare und Beispiele). Die Laufzeitpfade sind **relativ zum Paket**: `workspace\SEDRA_OS` über `parents[3]`, `engines` über `engine_provision.DEFAULT_ROOT`. Beides stimmt auf dem Stick ohne Verknüpfung. | Kein Umbau von 45 Dateien nötig. Einzige Stelle mit PC-Bezug: die Modellordner in `local_paths.yaml` (Code: `runtime/src/sedra_runtime/local_paths.py`). |
 | Modellordner | `local_paths.yaml` hält `modelle: 'I:\KI-Daten\modelle'`. Platzhalter `<modelle>` in `llama_server.yaml`, `gpu_canary`, `uix_server` (Modellwahl). | Option B umgesetzt (Abschnitt 4). |
 | Start ohne Netz | `START_SEDRA.bat` ruft `Ersteinrichtung.ps1` nur auf, wenn `runtime\portable\python\current\python.exe` fehlt. | Auf dem Stick ist das Python vorhanden. Der Aufruf bleibt im Paket, lädt aber nur bei fehlendem Python. |
-| Engine | `engines\llama.cpp\b11160\` liegt auf dem Bau-PC (Hauptcheckout, 715 MB inkl. Ordner; `b11160` allein ist der Bezug). `engine_source: guppi`, kein LM-Studio-Rückfall. | Kopie, kein Download. |
+| Engine | `engines\llama.cpp\b11160\` liegt auf dem Bau-PC (Hauptcheckout, 715 MB inkl. Ordner; `b11160` allein ist der Bezug). `engine_source: sedra`, kein LM-Studio-Rückfall. | Kopie, kein Download. |
 | Portables Python | Auf dem Bau-PC liegt ein fertig gebauter Bundle unter `runtime\portable\python.aus\current\` (Python 3.14.8, PyYAML 6.0.3, Audio-Wheels, `sdk_version: none`, Qualifikation `ASSEMBLED_NOT_PC_TESTED`). Das Verzeichnis heißt `python.aus`, nicht `current`. | Kopie nach `runtime\portable\python\current\`, Prüfung über `Test-PortableRuntime.ps1`. Der Bundle-Name `python.aus` bleibt im Bau-PC unverändert. |
 | Fenster `fenster/rekorder.html` (Entscheidung) | Im Repository nicht vorhanden (Suche über den ganzen Baum). | **Offen**, siehe Abschnitt 8. |
 | Übersicht `start` | Entscheidung: Start-Shell nicht enthalten. Der Befehl ohne Argument im `START_SEDRA.bat` führt in das Menü mit der Übersicht. | Auf dem Stick wird die Standard-Oberfläche per `uix.yaml` gesetzt; der Menüpfad bleibt, nutzt die Übersicht aber nicht als Standard. |
@@ -26,15 +26,15 @@
 
 ### 3.1 Umfang (Liste `runtime/benchmarks/stick_liste.txt`)
 
-- Kern: `runtime/src/guppi_runtime/core/`, dazu alles, was der Start über statische Importe braucht (Importhülle, ermittelt von `stick_paket.py`).
-- Harness: `uix/shells/harness/`, `guppi_runtime/harness/`. Standard in `local_config\uix.yaml` des Sticks.
+- Kern: `runtime/src/sedra_runtime/core/`, dazu alles, was der Start über statische Importe braucht (Importhülle, ermittelt von `stick_paket.py`).
+- Harness: `uix/shells/harness/`, `sedra_runtime/harness/`. Standard in `local_config\uix.yaml` des Sticks.
 - Cockpit: `uix/shells/cockpit/`. Paperclip: `uix/shells/paperclip/`.
-- Translator-Shell: `uix/shells/fisch/`, `guppi_runtime/fisch/`, `guppi_runtime/sprache/`, Werkzeuge `uebersetzer`, `nachrichten`, `transkript`, `rekorder`, `uix/ui/` (enthält `sprache.js` und `wechsel.js`).
+- Translator-Shell: `uix/shells/fisch/`, `sedra_runtime/fisch/`, `sedra_runtime/sprache/`, Werkzeuge `uebersetzer`, `nachrichten`, `transkript`, `rekorder`, `uix/ui/` (enthält `sprache.js` und `wechsel.js`).
 - Oberflächenbasis: `uix/js/`, `uix/css/`, `uix/ui/`.
-- Architektur-Pflichtordner `architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT/` (Pflicht für `--architecture`).
+- Architektur-Pflichtordner `architecture/SEDRA_Architecture_v1.20_SELF_DEVELOPMENT/` (Pflicht für `--architecture`).
 - Konfiguration `runtime/config/` (ohne `local_paths.yaml`, die schreibt der Stick, Abschnitt 4).
 - Start: `START_SEDRA.bat`, `LICENSE`, `Ersteinrichtung.ps1`, `Erststart_Konfig.ps1`, `Test-PortableRuntime.ps1`, `benchmarks/engine_download.py`.
-- Nicht enthalten: Start-, Minimal-, Gateway-, Guppi-XP-, Wissensbasis-Shell, Vorlagen, das Projekt als Ganzes, Entwicklungswerkzeuge, Tests, Dokumentation außer `README`-Kurzfassung.
+- Nicht enthalten: Start-, Minimal-, Gateway-, Sedra-XP-, Wissensbasis-Shell, Vorlagen, das Projekt als Ganzes, Entwicklungswerkzeuge, Tests, Dokumentation außer `README`-Kurzfassung.
 
 ### 3.2 Modelle (Kopien; die Originale auf `I:\KI-Daten\modelle` bleiben)
 
@@ -57,7 +57,7 @@ Eine Einordnung: `unsloth\Qwen3.5-9B-MTP-GGUF\...` ist im Repository der Canary-
 
 ## 4. Option B: Pfade über die Konfiguration
 
-- `runtime/src/guppi_runtime/local_paths.py`: `load()` übersetzt relative Ordner über `folder()` gegen `RUNTIME` (= `runtime\`). Absolute Pfade bleiben unverändert. Test: `runtime/tests/test_local_paths.py::test_a_relative_folder_counts_from_the_runtime_folder`.
+- `runtime/src/sedra_runtime/local_paths.py`: `load()` übersetzt relative Ordner über `folder()` gegen `RUNTIME` (= `runtime\`). Absolute Pfade bleiben unverändert. Test: `runtime/tests/test_local_paths.py::test_a_relative_folder_counts_from_the_runtime_folder`.
 - Stick-Konfiguration `K:\SEDRA\runtime\config\local_paths.yaml`:
   ```yaml
   local_paths:
@@ -105,7 +105,7 @@ Quelle `repo` ist der Worktree dieser Session, Quelle `bestand` der Hauptcheckou
 5. Modellrezepte für Gemma, Nemotron und Qwen3.6: nicht angelegt (Abschnitt 3.2).
 6. Q5 (Fenster schließen) bleibt wie heute: Fenster schließen beendet SEDRA.
 7. Hashes der großen Modelle: nur Größenvergleich in S5. Die SHA-256-Prüfung der Modelle ist nicht gemacht.
-8. Nachtrag 03.11.2026 (Version 1.22.0, PR #1): `CODE_STAND.bat` steht in der Liste – der Konsolenweg zu G4 (Läufe und Befehle der Harness nur nach Sicht auf geänderten Code). Er braucht nur Kern und Harness (`python -m guppi_runtime.harness.code_stand`), keine weiteren Module. Der Stick-Bau braucht dafür als Quelle (`--repo`) einen Stand mit PR #1; vorher meldet `stick_paket.py --pruefen` die Datei als fehlend. `runtime\portable` prüft G4 nicht (dafür ist Schreiben dort Vorbehalt).
+8. Nachtrag 03.11.2026 (Version 1.22.0, PR #1): `CODE_STAND.bat` steht in der Liste – der Konsolenweg zu G4 (Läufe und Befehle der Harness nur nach Sicht auf geänderten Code). Er braucht nur Kern und Harness (`python -m sedra_runtime.harness.code_stand`), keine weiteren Module. Der Stick-Bau braucht dafür als Quelle (`--repo`) einen Stand mit PR #1; vorher meldet `stick_paket.py --pruefen` die Datei als fehlend. `runtime\portable` prüft G4 nicht (dafür ist Schreiben dort Vorbehalt).
 9. Nachtrag 03.11.2026 (Entscheidung B2): Releases sind nicht signiert; das Update über den Updater gilt nur für den eigenen PC des Captains. Vor der Weitergabe des Sticks an einen Kollegen wird die Signatur gebaut. Heute steht das Werkzeug „System“ (mit „Nach Updates suchen“) nicht in `stick_liste.txt`; soll der Stick Updates beziehen, kommt es erst nach der Signatur dazu.
 
 ## 9. Was nicht geändert wird
@@ -127,7 +127,7 @@ Quelle `repo` ist der Worktree dieser Session, Quelle `bestand` der Hauptcheckou
   - mmproj-gemma-4-12B-it-QAT-BF16.gguf (175 115 328 Byte)
   - Bonsai-27B-Q1_0.gguf (3 803 452 576 Byte)
   - mmproj-Bonsai-27B-BF16.gguf (931 145 888 Byte)
-- Konfiguration: `runtime\config\local_paths.yaml` (`modelle: '..\modelle'`), Standard-Oberfläche Harness (`workspace\GUPPI_OS\local_config\uix.yaml`).
+- Konfiguration: `runtime\config\local_paths.yaml` (`modelle: '..\modelle'`), Standard-Oberfläche Harness (`workspace\SEDRA_OS\local_config\uix.yaml`).
 - Stick-spezifische Änderung: `runtime\config\model_profiles.yaml`. Kleine GPU-Klassen (`nvidia_small`, `nvidia_6_8`) nutzen Bonsai-27B Q1_0, größere (`nvidia_10_12`, `nvidia_16plus`) Gemma 4 12B Q4_0. Die Originaldatei liegt als `model_profiles.yaml.orig` daneben. Diese Datei ist im Manifest nicht erfasst.
 
 **Geprüft**
@@ -144,4 +144,4 @@ Quelle `repo` ist der Worktree dieser Session, Quelle `bestand` der Hauptcheckou
 - `K:\start_probe.txt` liegt im Stick-Wurzelverzeichnis (Umleitung meines ersten Startversuchs). Nicht gelöscht; zum Entfernen durch dich.
 - `fenster/rekorder.html` fehlt im Repository (Translator-Shell).
 - Zweiter PC ohne Netz und ohne Python, Dauer- und exFAT-Prüfung (Abschnitt 5, S8 und S9): nicht geprüft.
-- Die Engine-Pins in `llama_server.yaml` gelten nur für `b11371`; die Prüfung von `b11160` läuft über `guppi_engine.json`.
+- Die Engine-Pins in `llama_server.yaml` gelten nur für `b11371`; die Prüfung von `b11160` läuft über `sedra_engine.json`.

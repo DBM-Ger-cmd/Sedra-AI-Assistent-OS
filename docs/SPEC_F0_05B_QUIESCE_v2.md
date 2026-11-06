@@ -15,17 +15,17 @@ Captain hat **Variante B** entschieden: nach der Quiesce-Grenze kein neuer Claim
 
 | Thema | Befund / Source |
 |---|---|
-| Supervisor-Konstruktion | `runtime/src/guppi_runtime/jobs/job_supervisor.py:243-265`: `JobSupervisor` nimmt `store`, `config` etc., bisher **keine** runtimegebundene Quiesce-Owner-ID; `runtime/src/guppi_runtime/runtime.py:357-360` erzeugt den Supervisor. |
+| Supervisor-Konstruktion | `runtime/src/sedra_runtime/jobs/job_supervisor.py:243-265`: `JobSupervisor` nimmt `store`, `config` etc., bisher **keine** runtimegebundene Quiesce-Owner-ID; `runtime/src/sedra_runtime/runtime.py:357-360` erzeugt den Supervisor. |
 | Worker-ID | `job_supervisor.py:294-298`: `worker_id` ist ein Format-validierter String, **keine** Instanzidentität. `job_supervisor.py:628-630`: persistierter Claim nennt nur `worker_id`/Zeit/State. |
 | Claim-Commit | `job_supervisor.py:597-635`: `store._lock()` ab 603, Scan ab 604, optionale Slot-Vergabe 625-626, persistierende `store.mutate` 628-634. **Kein Quiesce-Gate**. |
 | Slot-Speicher | `job_supervisor.py:637-649`: `wait_for_job` / `take_for_job` laufen in einem **separaten** Slot-Backend; `_slot_requeue` bei Fehler 328-336/632-634. |
 | `_unclaim` | `job_supervisor.py:651-663`: setzt nur bei passendem `worker_id` und `worker.state=='claimed'` den Worker auf `None`; requeued Slot; kein Attempt wird erzeugt. Vor Wiederverwendung Ownership-Rennen prüfen. |
 | Start-Commit | `job_supervisor.py:665-715`, `717-774`: Resolver/Loader/Scheduler außerhalb Store-Lock; `_start_attempt` nutzt `store.mutate` ab 737 und erhöht `attempts` bei 760-764; **kein Gate vor Start-Commit**. |
-| Lock-Mechanik | `runtime/src/guppi_runtime/selfdev/self_development.py:126-151`: Store-Lock via `append_lock`, `mutate` verwendet ihn reentrant und schreibt vor dem Exit. `core/util.py:93-120`: OS-/Thread-Lock; Timeout `RuntimeError('append_lock_timeout')` an Zeile 115. |
-| Worker-Fehler | `runtime/src/guppi_runtime/jobs/job_worker.py:95-108`: `run_once()` behandelt beim Claim nur `JobError`, nicht `RuntimeError`; `run_forever` 154-163 hat keinen äußeren Catch. |
+| Lock-Mechanik | `runtime/src/sedra_runtime/selfdev/self_development.py:126-151`: Store-Lock via `append_lock`, `mutate` verwendet ihn reentrant und schreibt vor dem Exit. `core/util.py:93-120`: OS-/Thread-Lock; Timeout `RuntimeError('append_lock_timeout')` an Zeile 115. |
+| Worker-Fehler | `runtime/src/sedra_runtime/jobs/job_worker.py:95-108`: `run_once()` behandelt beim Claim nur `JobError`, nicht `RuntimeError`; `run_forever` 154-163 hat keinen äußeren Catch. |
 | Direkter Helfer | `job_supervisor.py:1490-1509`: `run_next()` behandelt nur `JobError` (`no_job`, `no_slot`); `RuntimeError` propagiert. |
-| Orchestra-Pool | `runtime/src/guppi_runtime/desk/orchestra_runner.py:355-364`: `_loop()` fängt ausnahmsweise `Exception`, setzt auf `idle` zurück; **nicht** ausreichend als allgemeiner API-Vertrag; `365-380` Drain-Schutz durch F0-05A. |
-| Runtime-Shutdown | `runtime/src/guppi_runtime/runtime.py:594-620`: `close()` schützt Wissen bei `orchestra_shutdown_pending`; Quiesce-Gate fehlt bisher. `orchestra/service.py:108-128,223-228`: bei fehlendem Drain SQLite nicht schließen. |
+| Orchestra-Pool | `runtime/src/sedra_runtime/desk/orchestra_runner.py:355-364`: `_loop()` fängt ausnahmsweise `Exception`, setzt auf `idle` zurück; **nicht** ausreichend als allgemeiner API-Vertrag; `365-380` Drain-Schutz durch F0-05A. |
+| Runtime-Shutdown | `runtime/src/sedra_runtime/runtime.py:594-620`: `close()` schützt Wissen bei `orchestra_shutdown_pending`; Quiesce-Gate fehlt bisher. `orchestra/service.py:108-128,223-228`: bei fehlendem Drain SQLite nicht schließen. |
 
 ### Ergebnis des Fehlerpfad-Checks (v2 Auftrag Nr. 3)
 
@@ -33,7 +33,7 @@ Captain hat **Variante B** entschieden: nach der Quiesce-Grenze kein neuer Claim
 
 ## 3. Owner-Schlüssel – konkret
 
-**Vorschlag für G3:** Jede `JobSupervisor`-Instanz erzeugt beim Erstellen eine **einmalige, zufällige** `instance_owner_id` (z. B. `uuid.uuid4().hex`), sofern ihr keine eindeutige Runtime-Boot-ID explizit übergeben wurde. `GuppiRuntime` kann bei Boot eine eigene Laufzeit-ID erzeugen und an genau ihren Supervisor übergeben (`runtime.py:357-360`). Eine direkt für Tests/CLI erzeugte `JobSupervisor`-Instanz braucht ihren eigenen Fallback. ID bleibt **prozesslokal/ephemer** und dient Gate-, In-flight- und Audit-Korrelation, **nicht** als Sicherheits-Token oder persistenter Lease-Owner.
+**Vorschlag für G3:** Jede `JobSupervisor`-Instanz erzeugt beim Erstellen eine **einmalige, zufällige** `instance_owner_id` (z. B. `uuid.uuid4().hex`), sofern ihr keine eindeutige Runtime-Boot-ID explizit übergeben wurde. `SedraRuntime` kann bei Boot eine eigene Laufzeit-ID erzeugen und an genau ihren Supervisor übergeben (`runtime.py:357-360`). Eine direkt für Tests/CLI erzeugte `JobSupervisor`-Instanz braucht ihren eigenen Fallback. ID bleibt **prozesslokal/ephemer** und dient Gate-, In-flight- und Audit-Korrelation, **nicht** als Sicherheits-Token oder persistenter Lease-Owner.
 
 - Gate, `STOP_REQUESTED`, Claim-In-flight-Liste und Zustandsautomat sind **an genau diese Supervisor-Instanz** gebunden. Zwei Supervisoren, die dieselben Jobs-Dateien verwenden, besitzen getrennte Gates; der bestehende Store-Lock serialisiert gemeinsame Schreibvorgänge.
 - `worker_id` scheidet als Gate-Schlüssel aus: an `job_supervisor.py:294-298` wird nur Form geprüft, und Orchestra verwendet potenziell wiederkehrende Namen. Gleicher String in zwei Instanzen beweist **keine** gemeinsame Ownership. Ein Claim gehört nicht einfach deshalb uns, weil seine `worker_id` zufällig passt.
@@ -123,7 +123,7 @@ Datei `tests/test_f0_05b_quiesce.py.draft` enthält nicht ausführbare G2-Szenar
 
 ## 9. SQLite-Testhygiene – nur Befund, keine Korrektur
 
-Gezielt auf dem isolierten Bundle-Snapshot ausgeführter `runtime/tests/test_job_supervisor.py`-Lauf meldete **zwei** `ResourceWarning: unclosed database` bei der Garbage Collection. Der Trace verweist auf `runtime/src/guppi_runtime/wissen/schema.py:129` (`sqlite3.connect`). **Drei** Tests erzeugen `GuppiRuntime`, ohne `rt.close()` aufzurufen: `runtime/tests/test_job_supervisor.py:126-134`, `743-745` und `771-773`. Aus zwei Warnungen kann **nicht** ohne Attribution auf genau zwei Tests geschlossen werden; die drei Stellen sind konkrete Review-Kandidaten. `GuppiRuntime.close` schließt den Wissen-Dienst normalerweise (`runtime.py:594-620`); das ist ein **Testhygiene-Hinweis**, kein Beleg für einen produktiven Leak. Keine Warnung unterdrücken; Testfix nur separat genehmigt.
+Gezielt auf dem isolierten Bundle-Snapshot ausgeführter `runtime/tests/test_job_supervisor.py`-Lauf meldete **zwei** `ResourceWarning: unclosed database` bei der Garbage Collection. Der Trace verweist auf `runtime/src/sedra_runtime/wissen/schema.py:129` (`sqlite3.connect`). **Drei** Tests erzeugen `SedraRuntime`, ohne `rt.close()` aufzurufen: `runtime/tests/test_job_supervisor.py:126-134`, `743-745` und `771-773`. Aus zwei Warnungen kann **nicht** ohne Attribution auf genau zwei Tests geschlossen werden; die drei Stellen sind konkrete Review-Kandidaten. `SedraRuntime.close` schließt den Wissen-Dienst normalerweise (`runtime.py:594-620`); das ist ein **Testhygiene-Hinweis**, kein Beleg für einen produktiven Leak. Keine Warnung unterdrücken; Testfix nur separat genehmigt.
 
 ## 10. Offene Fragen an Captain/Koordinator
 

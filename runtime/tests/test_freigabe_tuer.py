@@ -10,10 +10,10 @@ import unittest
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime import uix_clients, uix_server
-from guppi_runtime.desk import systemdialog
-from guppi_runtime.desk.bestaetigung import Bestaetigungen, BestaetigungFehler
-from guppi_runtime.uix_server import make_server
+from sedra_runtime import uix_clients, uix_server
+from sedra_runtime.desk import systemdialog
+from sedra_runtime.desk.bestaetigung import Bestaetigungen, BestaetigungFehler
+from sedra_runtime.uix_server import make_server
 from test_desk_kinds import FakeHost, audit_payloads, data, post
 
 ECHT = uix_server.UIXHub._freigabe_ausserhalb          # beim Import: noch nicht von host_isolation ersetzt
@@ -126,7 +126,7 @@ class Tuer(unittest.TestCase):
         self.assertEqual(self.hub.ausgefuehrt, [])
 
     def test_konsolen_modul(self):
-        from guppi_runtime.desk import freigabe_konsole
+        from sedra_runtime.desk import freigabe_konsole
         self.assertEqual(freigabe_konsole.ausfuehren(self.hub.project_root, 'liste'), (0, 'Keine Freigabe wartet auf deine Bestätigung.'))
         self.antworten('request:R1', 'freigeben_und_anwenden')
         code, text = freigabe_konsole.ausfuehren(self.hub.project_root, 'liste')

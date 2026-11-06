@@ -3,8 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import bausteine as bs
-from guppi_runtime.harness.api import WEG
+from sedra_runtime.harness import bausteine as bs
+from sedra_runtime.harness.api import WEG
 
 
 def doc(*eintraege):

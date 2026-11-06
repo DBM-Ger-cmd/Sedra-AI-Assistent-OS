@@ -1,4 +1,4 @@
-r"""Executable judge for the small-team bench: runs the tests of every candidate INSIDE GUPPI's own microVM, never on this host.
+r"""Executable judge for the small-team bench: runs the tests of every candidate INSIDE SEDRA's own microVM, never on this host.
 
     from judge import judge
     results = judge(project_dir, {"key": (task_id, code), ...})
@@ -7,7 +7,7 @@ r"""Executable judge for the small-team bench: runs the tests of every candidate
 One VM job per call (the same code the sandbox worker uses: no network, RESTRICTED, tmpfs, command timeout from config/sandbox.yaml); all candidates are
 copied in and judged one after the other, each in its own python process with a time limit, so a candidate that loops or exits only loses itself.
 VM starts fail about 2 times in 8 (docs/SANDBOX_BOUNDARY_STATUS.md): the job is retried, and a candidate that got no result says so (`error`).
-The failure lines are what the coder gets back, in the same form GUPPI's own reworks use ("input, expected, got").
+The failure lines are what the coder gets back, in the same form SEDRA's own reworks use ("input, expected, got").
 
 Why a judge: SWE-Review's verdict alone was wrong too often (small_team run 2026-10-05: 13 of 19 right; 2 false rejections, 2 false passes).
 """
@@ -124,12 +124,12 @@ print("JUDGE_ALL=" + json.dumps(results))
 def _sandbox_run(project, source, attempts=3):
     """One VM job over the prepared folder; returns the parsed JUDGE_ALL dict, or raises RuntimeError with the last failure."""
     import yaml
-    from guppi_runtime.sandbox.provider import MicrosandboxProvider
+    from sedra_runtime.sandbox.provider import MicrosandboxProvider
     policy = yaml.safe_load((RUNTIME / "config" / "sandbox.yaml").read_text(encoding="utf-8"))["sandbox"]
     provider = MicrosandboxProvider(Path(project) / "runtime_data" / "sandboxes" / "backend_home", RUNTIME)
     last = "no attempt"
     for attempt in range(1, attempts + 1):
-        job_root = Path(tempfile.mkdtemp(prefix="guppi_judge_job_"))
+        job_root = Path(tempfile.mkdtemp(prefix="sedra_judge_job_"))
         request = {"job_id": f"judge-{int(time.time())}-{attempt}", "policy": policy, "source": str(source), "job_root": str(job_root),
                    "commands": [["python3", "/workspace/judge_all.py"]], "exports": []}
         result = provider._execute_worker("run", request, job_root)
@@ -144,7 +144,7 @@ def _sandbox_run(project, source, attempts=3):
 
 def prepare(candidates):
     """Writes the folder that is copied into the VM: judge scripts, cases.json and one cand_<key>.py per candidate. Returns the folder."""
-    folder = Path(tempfile.mkdtemp(prefix="guppi_judge_src_"))
+    folder = Path(tempfile.mkdtemp(prefix="sedra_judge_src_"))
     cases = {}
     for key, (task_id, code) in candidates.items():
         if task_id not in TESTS: raise KeyError(f"no tests for task {task_id}")

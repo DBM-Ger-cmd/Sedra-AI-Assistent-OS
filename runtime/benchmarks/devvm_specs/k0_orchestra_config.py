@@ -3,7 +3,7 @@ of the orchestration package. `OrchestraConfig.from_dict` checks the content of 
 `SupervisorConfig._int`: a bool is no int), `coalesce_s < tick_s`, `warn_percent < stop_percent`, `database` relative and without `..`. Every error is
 ValueError("orchestra_config_invalid:<field>") with the dotted field name; a missing file is ValueError("orchestra_config_missing"). `runtime.py` turns these texts into
 `orchestra_error` and `boot()["orchestra"]["error"]` (harness, K0.20). The YAML parser is injected (the tests use json, which is a subset of YAML), so the module needs no yaml
-in the microVM. GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/k0_orchestra_config)."""
+in the microVM. SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/k0_orchestra_config)."""
 
 NOTES = '''# Notes for k0_orchestra_config
 Python 3 standard library only (pathlib); `yaml` is imported only inside `load` and only when no `parse` function is given (the tests always give one). Reading a file is allowed in `load`, nothing else touches files, processes or the network.

@@ -2,7 +2,7 @@ r"""Qwen Code against our solo developer, through the gate system (Captain 2026-
 
     .venv\Scripts\python.exe benchmarks/probes/qwen_probe.py <project_dir> [--models coder.local_primary] [--modes qwen-none,qwen-light] [--trials 1] [--specs bench_std] [--stage <name>] [--seed <path below runtime_data/devvm_snapshots>] [--reasoning off]
 
-For every model, spec, way of checking and trial it runs `benchmarks/qwen_build.py` (Qwen Code confined to GUPPI's MCP server, same model server, same workspace, same hidden test) and prints one line "<model> <mode> ... right k/n ...".
+For every model, spec, way of checking and trial it runs `benchmarks/qwen_build.py` (Qwen Code confined to SEDRA's MCP server, same model server, same workspace, same hidden test) and prints one line "<model> <mode> ... right k/n ...".
 The ways: qwen-none (the agent cannot run code), qwen-light (one small check, 2 VM runs), qwen-full (up to 8 VM runs). A single hard stage can be repeated with --stage and --seed (a snapshot taken after the stage before). The manager starts it as `probe_qwen`
 (options file seeds/probe_qwen.options.json: models, modes, trials, specs, stage, seed, reasoning). The tool-list check of qwen_build.py runs before every trial; a trial that is not confined stops the probe with exit 3. Holds the GPU lease per trial.
 """

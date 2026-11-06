@@ -3,7 +3,7 @@
     python benchmarks/agentenlauf_probe.py                    Trockenlauf: baut das Wegwerf-Projekt und die Oberflaeche, prueft alles, laedt KEIN Modell
     python benchmarks/agentenlauf_probe.py --go               der Lauf (braucht GPU-Zeitfenster und den Start des Captains)
     Optionen: --agents 3 (Zahl der Agenten/Aufgaben, 2 bis 6)  --workers 3 (Zahl der Pool-Threads, nicht mehr als Agenten) 
-              --timeout 900 (Sekunden)  --live-project <Ordner> (woher local_config kommt, Standard workspace/GUPPI_OS)
+              --timeout 900 (Sekunden)  --live-project <Ordner> (woher local_config kommt, Standard workspace/SEDRA_OS)
 
 Was es tut: legt in einem WEGWERF-Projekt (Temp-Ordner, wird am Ende geloescht) eine Orchestra-Datenbank mit N Agenten und je einer Aufgabe an, kopiert nur die
 Konfiguration (role_routing, routing_profiles, switches, model_scheduler) aus dem Live-Projekt, startet den Worker-Pool des Supervisors und die Laeufe (`start_run`)
@@ -25,7 +25,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 RUNTIME = HERE.parent
 sys.path.insert(0, str(RUNTIME / "src"))
-ARCH = RUNTIME.parent / "architecture" / "GUPPI_Architecture_v1.20_SELF_DEVELOPMENT"
+ARCH = RUNTIME.parent / "architecture" / "SEDRA_Architecture_v1.20_SELF_DEVELOPMENT"
 COPY = ("role_routing.yaml", "routing_profiles.yaml", "switches.yaml", "model_scheduler.yaml")
 NOW = lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -51,7 +51,7 @@ def build_project(live: Path, agents: int, recipe: str) -> Path:
     overlay = project / "local_config" / "model_scheduler.yaml"
     if not overlay.exists():
         overlay.write_text("model_scheduler:\n  enabled: true\n", encoding="utf-8")
-    from guppi_runtime.orchestra.store import open_db
+    from sedra_runtime.orchestra.store import open_db
     conn = open_db(project / "runtime_data" / "orchestra" / "orchestra.db")
     try:
         now = NOW()
@@ -84,7 +84,7 @@ def main(argv=None):
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--rezept", default="coder.llama_qwen35", help="Rezept fuer alle Agentenrollen im Wegwerf-Projekt (braucht server.slots und per_slots)")
     ap.add_argument("--timeout", type=int, default=900)
-    ap.add_argument("--live-project", default=str(RUNTIME.parent / "workspace" / "GUPPI_OS"))
+    ap.add_argument("--live-project", default=str(RUNTIME.parent / "workspace" / "SEDRA_OS"))
     ap.add_argument("--aufraeumen", metavar="ORDNER", help="loescht ein Wegwerf-Projekt dieses Skripts (Name sedra-agentenprobe-*) nach der Auswertung")
     args = ap.parse_args(argv)
     if args.aufraeumen:
@@ -102,9 +102,9 @@ def main(argv=None):
         print("Abbruch: das Live-Lab haelt die GPU-Lease (ein Lauf oder die Oberflaeche). Erst freigeben."); return 3
     project = build_project(live, args.agents, args.rezept)
     print(f"Wegwerf-Projekt: {project}")
-    from guppi_runtime.uix_server import UIXHub
-    from guppi_runtime.desk import orchestra_runner
-    from guppi_runtime.orchestra import board, heartbeat
+    from sedra_runtime.uix_server import UIXHub
+    from sedra_runtime.desk import orchestra_runner
+    from sedra_runtime.orchestra import board, heartbeat
     hub = pool = None
     try:
         hub = UIXHub(project, ARCH)

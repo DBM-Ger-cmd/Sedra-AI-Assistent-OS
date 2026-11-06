@@ -1,6 +1,6 @@
 ---
 name: sedra-ui-vertrag
-description: Regeln und Muster für Oberflächen und Apps von One Sedra (Tools, Shells, ui/-Bausteine, Prozess-Apps n8n Workflows und Szenario Studio): Dateigrenzen, Farben, Routen, Browser-Tests. Nutzen, wenn Dateien unter runtime/src/guppi_runtime/uix angelegt oder geändert werden.
+description: Regeln und Muster für Oberflächen und Apps von One Sedra (Tools, Shells, ui/-Bausteine, Prozess-Apps n8n Workflows und Szenario Studio): Dateigrenzen, Farben, Routen, Browser-Tests. Nutzen, wenn Dateien unter runtime/src/sedra_runtime/uix angelegt oder geändert werden.
 ---
 
 # UI-Vertrag One Sedra

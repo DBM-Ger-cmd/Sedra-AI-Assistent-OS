@@ -7,7 +7,7 @@ import subprocess
 import unittest
 from pathlib import Path
 
-UIX_DIR = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
+UIX_DIR = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix'
 NODE = shutil.which('node')
 
 
@@ -23,7 +23,7 @@ class KommandoTests(unittest.TestCase):
     def setUp(self):
         if not NODE: self.skipTest('node is not installed')
 
-    def test_router_sends_navigation_to_windows_and_everything_else_to_guppi(self):
+    def test_router_sends_navigation_to_windows_and_everything_else_to_sedra(self):
         out = _run(['command.js'], '''const r=t=>box.routeCommand(t);console.log(JSON.stringify([r('neues modell'),r('Modell laden'),r('thema nacht'),r('besatzung'),
           r('Erkläre mir die Schalter'),r('was ist ein gate?'),r('Baue einen Parser für CSV'),r('/status'),r(''),r('   '),r('bitte repariere den test'),r('schalter')]));''')
         add, load, theme, agents, explain, question, order, slash, empty, blank, polite, switches = out
@@ -31,7 +31,7 @@ class KommandoTests(unittest.TestCase):
         self.assertEqual((load['kind'], load['id']), ('command', 'models'))
         self.assertEqual((theme['kind'], theme['id']), ('command', 'theme'))
         self.assertEqual(agents['id'], 'agents')
-        self.assertEqual(explain['kind'], 'chat'); self.assertFalse(explain['order'])          # a question is for GUPPI, never a window
+        self.assertEqual(explain['kind'], 'chat'); self.assertFalse(explain['order'])          # a question is for SEDRA, never a window
         self.assertEqual(question['kind'], 'chat')
         self.assertEqual((order['kind'], order['order']), ('chat', True))                     # an order: chat first, "Als Karte planen" offered
         self.assertEqual((slash['kind'], slash['text']), ('chat', '/status'))
@@ -71,7 +71,7 @@ class KommandoTests(unittest.TestCase):
           [{phase:'READY',pending_gates:2},{phase:'EXECUTE',pending_gates:0},{phase:'COMPLETE',pending_gates:0}],
           {templates:[{ref:'t1',role:'coder'}],instances:[{instance_id:'i1',template_ref:'t1'}]},{tokens:{ranges:{today:{tokens:1234,runs:3}}}});console.log(JSON.stringify(o));''')
         self.assertEqual((out['captain']['gates'], out['captain']['running']), (2, 1))
-        self.assertEqual((out['guppi']['model'], out['guppi']['context']), ('qwen', 8192))
+        self.assertEqual((out['sedra']['model'], out['sedra']['context']), ('qwen', 8192))
         roles = {r['role']: r for r in out['roles']}
         self.assertEqual(list(roles), ['planner', 'coder', 'reviewer'])                     # disabled recipes bring no role; order planner, coder, reviewer
         self.assertEqual((roles['coder']['state'], roles['coder']['agents']), ('ok', 1))
@@ -89,7 +89,7 @@ class WiringTests(unittest.TestCase):
         for must in ('id="deckWindow"', 'id="deckBody"', 'id="palette"', 'id="paletteInput"', 'id="themePick"', 'data-window="deckWindow"'):
             self.assertIn(must, html)
         for script in ('theme', 'command', 'workbench', 'org', 'deck'): self.assertIn(f'/uix/js/{script}.js', html)
-        self.assertNotIn('<script>', html)                                                  # GUPPI's inline attachIconDrag call moved to main.js
+        self.assertNotIn('<script>', html)                                                  # SEDRA's inline attachIconDrag call moved to main.js
         # navigation lives in the Deck, the taskbar and the start menu; a window's toolbar only holds the verbs of that window
         for wid, toolbar in re.findall(r'<div class="window" id="(\w+)".*?<div class="toolbar">(.*?)</div>', html, re.S):
             if wid == 'processorWindow': continue
@@ -128,10 +128,10 @@ if __name__ == '__main__':
 
 # ---- Bibliothek (Captain 15:54: see the skill library and edit it)
 import tempfile
-from guppi_runtime.uix_library import LibraryDesk, check_skill_text, custom_index
+from sedra_runtime.uix_library import LibraryDesk, check_skill_text, custom_index
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 GOOD = "---\nname: Review-Checkliste\ndescription: Prüfliste für Reviews in SEDRA-Projekten.\n---\n\n# Review\n\n1. Tests gelaufen?\n"
 
 
@@ -152,13 +152,13 @@ class LibraryPureTests(unittest.TestCase):
             self.assertEqual([e['id'] for e in entries], ['alpha']); self.assertEqual(entries[0]['flags'], [])
             index = json.loads((root / 'index.json').read_text(encoding='utf-8'))
             self.assertEqual((index['source'], len(index['skills'])), ('captain', 1))
-            from guppi_runtime.skill_library import SkillLibrary
+            from sedra_runtime.skill_library import SkillLibrary
             self.assertEqual(SkillLibrary(root).read('alpha')[1], GOOD.count('\n'))
 
 
 class LibraryHubTests(unittest.TestCase):
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
         self.desk = self.hub.library
@@ -226,7 +226,7 @@ class LibraryHubTests(unittest.TestCase):
 # ---- Build 6: Freigabe-Leiste and sea charts on the Deck
 class DeckGateTests(unittest.TestCase):
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
 
@@ -236,7 +236,7 @@ class DeckGateTests(unittest.TestCase):
         m = rows[gate['mission_id']]
         self.assertEqual(m['pending_gates'], 1); self.assertEqual(m['gates'][0]['action'], 'change_skill'); self.assertEqual(m['gates'][0]['targets'], ['skill:deck-probe'])
         self.assertTrue(m['gates'][0]['rollback']); self.assertIn('steps', m); self.assertEqual(m['steps_done'], 0)
-        out = self.hub.create_chat_mission({'intent': 'Create a GUPPI demo artifact'})
+        out = self.hub.create_chat_mission({'intent': 'Create a SEDRA demo artifact'})
         card = {x['mission_id']: x for x in self.hub.missions()}[out['mission']['mission_id']]
         self.assertTrue(card['steps'])                                                      # the Deck draws the sea chart from these
 

@@ -1,11 +1,11 @@
-"""GUPPI builds a module itself in a DevVM workspace (Captain 2026-10-06: build approved, integration NOT approved).
+"""SEDRA builds a module itself in a DevVM workspace (Captain 2026-10-06: build approved, integration NOT approved).
 
     .venv\\Scripts\\python.exe benchmarks/devvm_build.py <project_dir> --spec <name> --profile standard
 
 The ONE way to build (Captain 2026-10-20, line L1): first `benchmarks/spec_check.py <name> --vm --project <project_dir>` (it writes the stamp this script needs), then the
 build with --profile standard (single flags override the profile). Options of finished measurements need --experimental.
 
-A spec (benchmarks/devvm_specs/<name>.py) holds TASK (the text GUPPI gets), NOTES (a NOTES.md that is put in the workspace) and HIDDEN (acceptance files the agents never see).
+A spec (benchmarks/devvm_specs/<name>.py) holds TASK (the text SEDRA gets), NOTES (a NOTES.md that is put in the workspace) and HIDDEN (acceptance files the agents never see).
 The default orchestrator mode (escalating: Jan alone -> Qwen3-Coder writes the check -> executed test -> strong coder only on failure) builds the module; afterwards the hidden test
 runs in the microVM against the result. Each attempt exports its files to <project>/runtime_data/devvm_candidates/<spec>/<attempt>/ and the run is logged (RunLog + TestLab lease).
 Nothing is copied into the runtime source tree: integration stays a separate decision of the Captain.
@@ -29,18 +29,18 @@ import devvm_agents_bench as bench                                              
 import logbook                                                                       # noqa: E402
 import spec_stamp                                                                    # noqa: E402
 from devvm_vm import hidden_plan, sandbox_text, vm_env                               # noqa: E402
-from guppi_runtime.devenv.devvm import DevWorkspace
-from guppi_runtime.devenv.devvm_evidence import DRIVER, bug_report, parse as parse_evidence
-from guppi_runtime.devenv.devvm_style import snapshot as ws_snapshot                                         # noqa: E402
-from guppi_runtime.devenv.devvm_agents import DevOrchestrator, ModelHost                    # noqa: E402
-from guppi_runtime.models.gpu_preflight import clear_leftovers
-from guppi_runtime.knowledge import KnowledgeStore
-from guppi_runtime.devenv.lesson_store import default_path as lesson_cards_path, lesson_for
-from guppi_runtime.devenv.layer_summary import cell as layer_cell, summary as layer_table
-from guppi_runtime.devenv.s0_status import status as s0_state                              # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
+from sedra_runtime.devenv.devvm import DevWorkspace
+from sedra_runtime.devenv.devvm_evidence import DRIVER, bug_report, parse as parse_evidence
+from sedra_runtime.devenv.devvm_style import snapshot as ws_snapshot                                         # noqa: E402
+from sedra_runtime.devenv.devvm_agents import DevOrchestrator, ModelHost                    # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers
+from sedra_runtime.knowledge import KnowledgeStore
+from sedra_runtime.devenv.lesson_store import default_path as lesson_cards_path, lesson_for
+from sedra_runtime.devenv.layer_summary import cell as layer_cell, summary as layer_table
+from sedra_runtime.devenv.s0_status import status as s0_state                              # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 
 REWORK_TASK = ("{task}\n\nThe work is in the workspace, but an acceptance test of the Captain fails (you do not see the test, only its output):\n{output}\n\n"
@@ -48,7 +48,7 @@ REWORK_TASK = ("{task}\n\nThe work is in the workspace, but an acceptance test o
 
 
 NL = chr(10)
-DEFAULT_MODEL = "coder.local_primary"      # the standard coder of GUPPI: Qwen3.6-35B-A3B since 2026-10-09 (was Qwen3-Coder, now the recipe coder.llama_qwen3_coder, key qwen3coder)
+DEFAULT_MODEL = "coder.local_primary"      # the standard coder of SEDRA: Qwen3.6-35B-A3B since 2026-10-09 (was Qwen3-Coder, now the recipe coder.llama_qwen3_coder, key qwen3coder)
 THINK_LIMIT = 2000      # e02: thinking tokens per answer before the note, then thinking is switched down (the options --think-limit and --think-family were removed 2026-10-20, ANA-10)
 THINK_FAMILY = {DEFAULT_MODEL: "qwen"}      # E-21: how a model switches its thinking down (E-02); keys whose name says it are found by think_family()
 
@@ -66,12 +66,12 @@ def coder_ext_config(args):
     which is ON for every build unless --no-record (2026-10-12: the night run had no recording, so its 135 syntax notes could not be traced to the calls). None = neither."""
     enabled = args.coder_ext or ""
     if enabled:
-        from guppi_runtime.coder_ext import parse_enabled
+        from sedra_runtime.coder_ext import parse_enabled
         parse_enabled(enabled)
     skills = None
     if args.skills:
-        from guppi_runtime.skill_library import SkillLibrary
-        from guppi_runtime.skill_library.config import library_path
+        from sedra_runtime.skill_library import SkillLibrary
+        from sedra_runtime.skill_library.config import library_path
         try: skills = str(library_path(args.skills))
         except KeyError: raise SystemExit(f"--skills {args.skills}: not a configured library (core, full) and no library folder")
         SkillLibrary(skills)      # a missing or broken library stops the build here
@@ -82,7 +82,7 @@ def coder_ext_config(args):
 
 def save_replays(project, spec_name, target, agent_runs):
     """The recorded server answers (and what was sent, "sent") of every agent run as JSONL, one file per run (runtime_data/devvm_replays/<spec>/<attempt>/<n>_<label>.jsonl)."""
-    from guppi_runtime.coder_ext.replay_log import dumps
+    from sedra_runtime.coder_ext.replay_log import dumps
     folder = Path(project) / "runtime_data" / "devvm_replays" / spec_name / target.name
     for n, run in enumerate(agent_runs, 1):
         if not run.get("replay_records"): continue
@@ -92,10 +92,10 @@ def save_replays(project, spec_name, target, agent_runs):
 
 def propose_lessons(project, spec_name, stamp, stage_rows, agent_runs, say):
     """E-11: known mistakes in the error texts of this attempt (failed stages, failed tool calls) become lesson card PROPOSALS in runtime_data/lesson_cards.json. Nothing is used before
-    the Captain approves a card (`guppi lessons approve --id ...`). A problem here never ends a build."""
+    the Captain approves a card (`sedra lessons approve --id ...`). A problem here never ends a build."""
     try:
-        from guppi_runtime.devenv.lesson_proposer import propose
-        from guppi_runtime.devenv.lesson_store import default_path, load, manage
+        from sedra_runtime.devenv.lesson_proposer import propose
+        from sedra_runtime.devenv.lesson_store import default_path, load, manage
         failures = [{"stage": r.get("stage"), "text": r.get("error") or r.get("hidden_output") or ""} for r in stage_rows if not r.get("hidden_passed") and not r.get("skipped")]
         for run in agent_runs:
             for entry in run.get("journal") or []:
@@ -105,7 +105,7 @@ def propose_lessons(project, spec_name, stamp, stage_rows, agent_runs, say):
         for item in propose(failures, f"{spec_name}-{stamp}", known=[c["text"] for c in load(path).cards.values()]):
             try: manage(path, "propose", text=item["text"], source=item["source"]); made += 1
             except ValueError: continue      # a duplicate of an open card, or a text the card store refuses
-        if made: say(f"   lesson proposals: {made} new (guppi lessons list)")
+        if made: say(f"   lesson proposals: {made} new (sedra lessons list)")
     except Exception as exc:
         say(f"   lesson proposals skipped: {type(exc).__name__}: {str(exc)[:120]}")
 
@@ -122,7 +122,7 @@ def clean_old_work(work_root, max_age_s=24 * 3600):
 def host_node(ws, files):
     """Runs node scripts on the HOST against a copy of the workspace (for JS, which the python microVM cannot judge). Returns {"status", "output"} like vm_copy."""
     import shutil, subprocess
-    tmp = Path(tempfile.mkdtemp(prefix="guppi_build_node_"))
+    tmp = Path(tempfile.mkdtemp(prefix="sedra_build_node_"))
     try:
         for path in ws.tree():
             (tmp / path).parent.mkdir(parents=True, exist_ok=True); (tmp / path).write_text(ws.read(path), encoding="utf-8")
@@ -454,7 +454,7 @@ def main():
     if args.require_s0 and any(r["state"] not in ("ok", "not_a_recipe") for r in s0):
         log.say("refused: --require-s0 and a model has no passing S0 check for these settings -> run benchmarks/connection_check.py first")
         raise SystemExit(4)
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_devvm_build_rt_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_devvm_build_rt_")))
     kb = KnowledgeStore(project / "runtime_data" / "knowledge" / "records.jsonl")
     out_root = project / "runtime_data" / "devvm_candidates" / args.spec
     result = {"spec": args.spec, "attempts": []}

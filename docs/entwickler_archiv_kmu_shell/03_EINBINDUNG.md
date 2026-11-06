@@ -3,8 +3,8 @@
 ## Dateien und Orte
 | Archiv | Im Repository |
 |---|---|
-| `shell/shell.yaml`, `shell.js`, `shell.css`, `README.md`, `kmu-grafik.png` | `runtime/src/guppi_runtime/uix/shells/gateway-kmu/` |
-| `ui/tokens.css` (vollständig) | `runtime/src/guppi_runtime/uix/ui/tokens.css` |
+| `shell/shell.yaml`, `shell.js`, `shell.css`, `README.md`, `kmu-grafik.png` | `runtime/src/sedra_runtime/uix/shells/gateway-kmu/` |
+| `ui/tokens.css` (vollständig) | `runtime/src/sedra_runtime/uix/ui/tokens.css` |
 | `assets/` | `runtime/assets/kmu-praesentation/` (wird vom Server nicht ausgeliefert) |
 | `tests/test_gateway_kmu_shell.py` | `runtime/tests/test_gateway_kmu_shell.py` |
 | `patches/gemeinsame_dateien.patch` | auf `benchmarks/uix_check.py`, `tests/test_uix_shell_start.py` und `ui/tokens.css` anwenden |

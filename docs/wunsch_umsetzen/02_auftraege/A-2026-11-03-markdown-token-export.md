@@ -4,8 +4,8 @@
 Die Funktion `harness_export.markdown` soll so erweitert werden, dass sie nach der Überschrift des Exports eine Zeile mit dem Token-Verbrauch der Sitzung anzeigt.
 
 ## Schritte
-1. **Datenquellen prüfen**: `runtime/src/guppi_runtime/harness/verbrauch.py` lesen, um die Struktur der Token-Daten zu verstehen.
-2. **Export-Logik vorbereiten**: Die Funktion `markdown` in `runtime/src/guppi_runtime/harness/export.py` analysieren und die Stelle für die neue Zeile identifizieren.
+1. **Datenquellen prüfen**: `runtime/src/sedra_runtime/harness/verbrauch.py` lesen, um die Struktur der Token-Daten zu verstehen.
+2. **Export-Logik vorbereiten**: Die Funktion `markdown` in `runtime/src/sedra_runtime/harness/export.py` analysieren und die Stelle für die neue Zeile identifizieren.
 3. **Daten abrufen**: Sicherstellen, dass die Token-Daten (Anzahl Antworten, eingehend, erzeugt) korrekt aus dem Sitzungsobjekt oder über die `verbrauch`-Module extrahiert werden können.
 4. **Code anpassen**: Die neue Zeile in `export.py` einfügen.
 5. **Testen**: Den Markdown-Export prüfen und die Anzeige verifizieren.

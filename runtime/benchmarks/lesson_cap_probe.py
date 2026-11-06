@@ -21,11 +21,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import judge as judge_mod                                                            # noqa: E402
 import small_team as st                                                              # noqa: E402
 from team_tasks import SETS                                                          # noqa: E402
-from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.knowledge import KnowledgeStore                                   # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.jobs.run_log import RunLog                                             # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from sedra_runtime.knowledge import KnowledgeStore                                   # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.jobs.run_log import RunLog                                             # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                              # noqa: E402
 
 CAPS = {"none": 0, "cap1": 1, "cap2": 2, "all": 99}
 
@@ -39,8 +39,8 @@ def main():
     kb = KnowledgeStore(project / "runtime_data" / "knowledge" / "records.jsonl")
     log = RunLog(project / "runtime_data" / "measurements", "lesson_cap_probe", config={"seeds": args.seeds, "variants": names})
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_cap_")))
-    work = Path(tempfile.mkdtemp(prefix="guppi_cap_files_"))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_cap_")))
+    work = Path(tempfile.mkdtemp(prefix="sedra_cap_files_"))
     result = {"variants": {}}
     with log, TestLab(default_path(project)).lease(os.environ.get("TESTLAB_OWNER", "lesson_cap_probe"), "lesson cap probe", ttl_s=1800, wait_s=3600, preflight=clear_leftovers):
         for name in names:

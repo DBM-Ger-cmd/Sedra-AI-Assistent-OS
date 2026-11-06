@@ -1,9 +1,9 @@
-# SEDRA / GUPPI – Wissensdatei (alle Chats zusammengeführt)
+# SEDRA – Wissensdatei (alle Chats zusammengeführt)
 
 Stand: 31.10.2026. Quellen: Gedächtnisdateien von Claude (Memory), die Sitzungsliste des Cockpits (alle Chats, auch archivierte), das Logbuch `docs/LOGBUCH_AGENT_MANAGER.md`, der Git-Verlauf (527 Commits auf `main`) und der Arbeitschat vom 27. bis 31.10.2026. Kein Inhalt ist erfunden; was nur vermutet ist, steht als Vermutung da. Der Captain ist der Nutzer (David); er entscheidet alle Freigaben.
 
 ## 1. Was SEDRA ist
-- SEDRA/GUPPI: lokales KI-Betriebssystem mit Cockpit-Oberfläche (UIX), Agenten-Orchestrierung (Orchestra), Modell-Scheduler, Freigabe-Prinzip („Captain entscheidet“, Guard, Gates) und lokalen Modellen (llama-server).
+- SEDRA: lokales KI-Betriebssystem mit Cockpit-Oberfläche (UIX), Agenten-Orchestrierung (Orchestra), Modell-Scheduler, Freigabe-Prinzip („Captain entscheidet“, Guard, Gates) und lokalen Modellen (llama-server).
 - Repo `DBM-Ger-cmd/Sedra-AI-Assistent-OS`. Hauptumgebung A1: `E:\Sedra Umgebung\A1 Sedra Main Branch Entwicklungs umgebung`, Zweig `spec/agenten-orchestrierung`; `main` steht auf demselben Commit.
 - Seit 31.10.2026: Minimal-/USB-Stick-Version wird in `E:\Sedra Umgebung\Sedra Test umgebung für Minimale USB Stick Version` entwickelt und getestet. A1 bleibt die Hauptumgebung der PC-Version (Stable). Ohne Rückfrage nichts verschieben, kopieren oder umbenennen.
 - Modelle: `I:\KI-Daten\modelle` (seit 29.10.2026; vorher `E:\HermesAgentOrdner\lokale-modelle`).
@@ -22,10 +22,10 @@ Stand: 31.10.2026. Quellen: Gedächtnisdateien von Claude (Memory), die Sitzungs
 | 31.10. | USB-Stick-Version auf `K:\` (Sitzungen laufen), Arbeitsumgebung für Minimal angelegt. |
 
 ## 3. Architektur in Stichpunkten
-- **Desk/Cockpit/UIX:** Server `guppi_runtime.uix_server`, mehrere Shells (cockpit, minimal, paperclip, start, harness, fisch, gateway-kmu), Werkzeuge unter `uix/tools/*`. Werkzeuge rufen nur `ctx.api()` auf und nutzen kein `fetch` und kein `localStorage` (Vertrags-Test `test_uix_contract`); Speichern ist Sache der Shell.
+- **Desk/Cockpit/UIX:** Server `sedra_runtime.uix_server`, mehrere Shells (cockpit, minimal, paperclip, start, harness, fisch, gateway-kmu), Werkzeuge unter `uix/tools/*`. Werkzeuge rufen nur `ctx.api()` auf und nutzen kein `fetch` und kein `localStorage` (Vertrags-Test `test_uix_contract`); Speichern ist Sache der Shell.
 - **Orchestra:** Agenten (Leitung `foreman`, Recherche `researcher`), Aufgaben, Weckrufe (`wakeups`, Ausgang u. a. `antrag`, `lauf`, `abgelehnt`), Heartbeat, Anträge über `desk/gated.py` und `desk/orchestra_kinds.py` (Applier mit `binding_stale`).
 - **Freigaben:** Jeder Lauf braucht eine Einzelfreigabe, außer bei einer Dauerfreigabe (Art `standing`, Token genau einmal). Ein Antrag ist an einen Stand gebunden (Revision/Fingerabdruck); ändert sich der Stand, endet er mit `binding_stale`.
-- **Modell-Scheduler:** `ResourceScheduler`, Slots, Rezepte in `workspace/GUPPI_OS/local_config/role_routing.yaml` (nicht in Git). Dynamische Rezepte R1–R6: Block `profile.dynamisch`, `models/aufteilung.py`, Messspeicher `runtime_data/model_messwerte.json`.
+- **Modell-Scheduler:** `ResourceScheduler`, Slots, Rezepte in `workspace/SEDRA_OS/local_config/role_routing.yaml` (nicht in Git). Dynamische Rezepte R1–R6: Block `profile.dynamisch`, `models/aufteilung.py`, Messspeicher `runtime_data/model_messwerte.json`.
 - **Harness-Shell** (SPEC_HARNESS_SHELL_v1): Gespräch, Streamen, Sitzungen, Taskleiste (Stufe 1); Werkzeuge, Freigabe-Katalog, Karten, Überschreib-Warnung (Stufe 2); danach Klartext der Aufgaben, Projekte, Vorschau, Modell laden im Eingabebereich, Dateien anhängen mit `+` und `@`.
 - **SEDRA baut selbst:** Bau über den Vorarbeiter (`devvm_build`), Claude schreibt Spec, Referenz und versteckte Prüfungen und prüft den Kandidaten. Scheitert der Bau → V4: Referenz bleibt, Befund ins Logbuch.
 - **Aufnahme (Sprache):** `sprache/kern.py` (16 kHz, mono, 16 Bit, WAV), Quelle wählbar: Mikrofon (`sounddevice`) oder PC-Ton (WASAPI-Loopback über `PyAudioWPatch`); Route `POST /api/sprache/kern/start {titel, sprache, quelle}`.
@@ -52,7 +52,7 @@ Stand: 31.10.2026. Quellen: Gedächtnisdateien von Claude (Memory), die Sitzungs
 - **Git:** `main` nachziehen: `git branch -f main HEAD`, `git push origin spec/agenten-orchestrierung:refs/heads/main` (nie force). Push, Merge nach `main`, Löschen von Worktrees/Branches und das Beenden fremder Prozesse nur auf ausdrückliches Ja. Commit-Anhang `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
 - **Logbuch** `docs/LOGBUCH_AGENT_MANAGER.md`: Zeilen `| Datum Zeit | TYP | Text | OP-S2-18 |` unten anhängen, CRLF-bewusst (mit `newline=''` lesen/schreiben).
 - **Heredocs im Bash-Tool** verfälschen Backslashes und `\x00` in Python-Strings; Dateien mit Write/Edit schreiben.
-- **Cockpit ohne Fenster starten:** `PYTHONPATH=src python -B -u -m guppi_runtime.uix_server --root workspace/GUPPI_OS --architecture architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT --port 8765` (URL mit Token steht in der Ausgabe, Header `X-GUPPI-Token`). `START_SEDRA.bat cockpit --replace` beendet vorher alle laufenden SEDRA-Server; der Start meldet sonst „SEDRA läuft bereits“.
+- **Cockpit ohne Fenster starten:** `PYTHONPATH=src python -B -u -m sedra_runtime.uix_server --root workspace/SEDRA_OS --architecture architecture/SEDRA_Architecture_v1.20_SELF_DEVELOPMENT --port 8765` (URL mit Token steht in der Ausgabe, Header `X-SEDRA-Token`). `START_SEDRA.bat cockpit --replace` beendet vorher alle laufenden SEDRA-Server; der Start meldet sonst „SEDRA läuft bereits“.
 - **Worktree-Bau** (`devvm_build`) braucht `runtime/config/local_paths.yaml` (Kopie, gitignoriert) und `engines` (Junction auf A1; mit `rmdir` entfernen, nie rekursiv löschen), sonst `llama_server_not_found`/`engine_not_installed`.
 - **`per_slots`-Werte** im Rezept müssen auf den `tiers` liegen, sonst wird die ganze `role_routing.yaml` ungültig; `server.slots > 1` ohne `per_slots` → `slots_not_measured`. Inhaltsschutz ohne bestätigten Modus ist scharf → Harness zeigt keinen Live-Text.
 - **llama-server** überlebt das Beenden des Cockpits und hält VRAM/RAM; am Ende mit `nvidia-smi` prüfen (Beenden nur mit Ja).
@@ -92,7 +92,7 @@ Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzei
 - Vorlagen-Kennungen dürfen nur `a-z 0-9 -` enthalten (kein Unterstrich).
 - Browser-Prüfung nur an einer eigenen Testinstanz (`scratchpad/testserver.py`, eigener Token), nie am laufenden Sedra des Captains.
 - Wackelige Tests unter Last: `test_harness_lauf`, `test_uix_harness_lauf`, `test_uix_stufe6.ImBrowser` (einzeln grün).
-- Das Audit-Log (`workspace/GUPPI_OS/runtime_data/audit/events.jsonl`) zuerst selbst lesen, bevor man den Captain fragt (`SLOT_SERVER_STARTED`, `ROLE_RESOLUTION_FAILED`, `LADEPROBE`, `HARNESS_BELOHNUNG`).
+- Das Audit-Log (`workspace/SEDRA_OS/runtime_data/audit/events.jsonl`) zuerst selbst lesen, bevor man den Captain fragt (`SLOT_SERVER_STARTED`, `ROLE_RESOLUTION_FAILED`, `LADEPROBE`, `HARNESS_BELOHNUNG`).
 
 **Offen (Stand 05.11.2026):** Freigaben S4; Funktionen der anderen Shells als Apps in One Sedra holen (Reihenfolge nennt der Captain, Vorschlag Translator oder Wissensbasis); Richtlinie für Betreiber (Stufe 4 des Apps-Modells); Lernsystem und Cache-Zahl im echten Sedra ausprobieren (Anträge für Betriebslog und gute Antworten im Posteingang freigeben); E1–E5 des Plans CPU-Hilfswerkzeuge, MasterChat-Probelauf, Stick-Branch `claude/usb-stick-minimal-3c1b19`.
 
@@ -101,7 +101,7 @@ Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzei
 
 **Gebaut (Ort und Test in Klammern):**
 - **Update 1.22.2 Prozess-Apps** eingespielt (Updater-Weg des Pakets, Sicherung vorhanden). Das Paket enthielt weder Tests noch Paketier-Skript; die Tests kamen aus der Entwicklungskopie (`test_n8n_*`, `test_process_*`, `n8n_model.test.cjs`).
-- **UIX der Prozess-Apps** (`runtime/src/guppi_runtime/uix/ui/workflow-*.js`, Plan `docs/PLAN_PROZESS_APPS_UIX.md`): helles und dunkles Thema (Farben in `tokens.css`), Symbolsatz des Workflow-Diagramms (Oval, Raute, Parallelogramm, Zylinder), Seitenleiste (einklappbar) mit Startseite, Vorlagen Muster A/B/C, Knotenauswahl mit gesperrten n8n-Knoten, Folgeschritt per „+“, Schnellleiste am Knoten, Leiste an der Verbindung (einfügen, löschen), Aufräumen, Haftnotiz, Minimap, geführtes Einrichten, Parameteransicht (Eingabe, Parameter, lokale Vorschau der Ausgabe), Marke des letzten Laufs. Nach dem Vorbild von n8n und Make, ohne deren Code (n8n: Sustainable Use License).
+- **UIX der Prozess-Apps** (`runtime/src/sedra_runtime/uix/ui/workflow-*.js`, Plan `docs/PLAN_PROZESS_APPS_UIX.md`): helles und dunkles Thema (Farben in `tokens.css`), Symbolsatz des Workflow-Diagramms (Oval, Raute, Parallelogramm, Zylinder), Seitenleiste (einklappbar) mit Startseite, Vorlagen Muster A/B/C, Knotenauswahl mit gesperrten n8n-Knoten, Folgeschritt per „+“, Schnellleiste am Knoten, Leiste an der Verbindung (einfügen, löschen), Aufräumen, Haftnotiz, Minimap, geführtes Einrichten, Parameteransicht (Eingabe, Parameter, lokale Vorschau der Ausgabe), Marke des letzten Laufs. Nach dem Vorbild von n8n und Make, ohne deren Code (n8n: Sustainable Use License).
 - **Selbstabbild** (`config/selbstabbild.yaml`, `workflows/selbstabbild.py`, `test_selbstabbild`): sechs SEDRA-Abläufe als nicht ausführbare Prozessmodelle, jeder Schritt mit Quelle; der Test schlägt bei Abweichung fehl.
 - **Prozess-Entwurf durch SEDRA:** Werkzeug `prozess_beantragen` (nur Antrag im Posteingang, Entwurf erst nach dem Ja des Captains), Vorlage `prozessmodellierer`; aus den Apps startet „Von SEDRA entwerfen lassen“ eine Harness-Sitzung, die links unter „Sitzungen“ erscheint.
 - **Bauablauf angepasst:** Testgruppe `workflow` und `runtime` in `run_tests.py`, Lauf `workflow_js`, `belohnungen_lesen` für Prüfer und Vorarbeiter.

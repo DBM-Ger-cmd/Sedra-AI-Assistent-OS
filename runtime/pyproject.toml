@@ -3,19 +3,19 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "guppi-runtime"
+name = "sedra-runtime"
 version = "1.20.0"
-description = "Executable baseline runtime for the GUPPI OS architecture"
+description = "Executable baseline runtime for the SEDRA OS architecture"
 requires-python = ">=3.11"
 dependencies = ["PyYAML>=6.0"]
 
 [project.scripts]
-guppi = "guppi_runtime.cli:main"
-guppi-uix = "guppi_runtime.uix_server:main"
+sedra = "sedra_runtime.cli:main"
+sedra-uix = "sedra_runtime.uix_server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-"guppi_runtime.hardware_manager" = ["dashboard.html"]
-"guppi_runtime" = ["uix/*.html"]
+"sedra_runtime.hardware_manager" = ["dashboard.html"]
+"sedra_runtime" = ["uix/*.html"]

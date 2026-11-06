@@ -6,12 +6,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.selfdev.acceptance_suite import SuiteError, load_suite
-from guppi_runtime.devenv.devvm import DevWorkspace
-from guppi_runtime.devenv.devvm_style import StyleError, snapshot, strip_comments, style_report, tidy
+from sedra_runtime.selfdev.acceptance_suite import SuiteError, load_suite
+from sedra_runtime.devenv.devvm import DevWorkspace
+from sedra_runtime.devenv.devvm_style import StyleError, snapshot, strip_comments, style_report, tidy
 
 RUNTIME = Path(__file__).resolve().parents[1]
-SUITE = RUNTIME.parent / "workspace" / "GUPPI_OS" / "acceptance" / "suites" / "am006_style"
+SUITE = RUNTIME.parent / "workspace" / "SEDRA_OS" / "acceptance" / "suites" / "am006_style"
 POLICY = {'max_files': 30, 'max_file_bytes': 20000, 'max_input_bytes': 40000}
 
 
@@ -26,7 +26,7 @@ class SuiteParityTest(unittest.TestCase):
             self.skipTest(str(exc))
         for criterion in suite.criteria:
             script, text = suite.scripts[criterion["id"]]
-            text = text.replace("from agent_contracts import ContractError", "from guppi_runtime.devenv.devvm_style import StyleError as ContractError").replace("from style_check import", "from guppi_runtime.devenv.devvm_style import")
+            text = text.replace("from agent_contracts import ContractError", "from sedra_runtime.devenv.devvm_style import StyleError as ContractError").replace("from style_check import", "from sedra_runtime.devenv.devvm_style import")
             with tempfile.TemporaryDirectory() as tmp:
                 Path(tmp, script).write_text(text, encoding="utf-8")
                 run = subprocess.run([sys.executable, script], cwd=tmp, capture_output=True, text=True, env={**os.environ, "PYTHONPATH": str(RUNTIME / "src")}, timeout=120)

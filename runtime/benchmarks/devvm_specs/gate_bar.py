@@ -1,7 +1,7 @@
 """Gate bar, the computing part (G7 of docs/ABLAUF_GESPRAECH_2026-10-13.md; Captain 2026-10-13: approvals do not stand as buttons in the conversation but in a bar under it: red = waiting, green = approved,
 grey = rejected, with symbol and text; one click opens a detail view; every gate is decided alone, by its ID; the conversation only gets a quiet text line). `gate_bar.py` turns the gates of the mission system
-(see guppi_runtime/core/guard.py create_gate and uix_server approve_gate / reject_gate) into the rows, texts and requests for that bar. Pure functions, no drawing, no network: the window code (after
-the GUPPI Chat window is finished) only draws what these functions return. GUPPI builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/gate_bar)."""
+(see sedra_runtime/core/guard.py create_gate and uix_server approve_gate / reject_gate) into the rows, texts and requests for that bar. Pure functions, no drawing, no network: the window code (after
+the SEDRA Chat window is finished) only draws what these functions return. SEDRA builds it, Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/gate_bar)."""
 
 NOTES = '''# Notes for gate_bar
 Pure Python 3 standard library (`datetime` is allowed), no file, process or network access, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code, `import` lines at the top. Texts contain the characters ● ✓ ✕ · and ü; write them as they are (UTF-8 source).

@@ -1,8 +1,8 @@
 """Ortsnamen nach der Spezifikation Gateway, Abschnitt 6b: O-1 ersetzt Anschrift und Wohnort, O-2 lässt Ereignisse und Themen stehen."""
 import unittest
 
-from guppi_runtime.core.b6core import pseudo
-from guppi_runtime.core.b6core.privacy import scan_text
+from sedra_runtime.core.b6core import pseudo
+from sedra_runtime.core.b6core.privacy import scan_text
 
 
 def orte(text):

@@ -1,11 +1,11 @@
-r"""Which model REPAIRS best, and how much do GUPPI's knowledge-base lessons help? (a measurement, not a test)
+r"""Which model REPAIRS best, and how much do SEDRA's knowledge-base lessons help? (a measurement, not a test)
 
     .venv\Scripts\python.exe benchmarks/rework_bench.py <project_dir> [--models coder.local_primary,coder.llama_gptoss,verifier.llama_gemma]
         [--seeds 2]
 
 Captain 2026-10-03: "mit gefüllter Wissensdatenbank - wäre ein kleineres, stabileres Modell besser als Prüfer / Coder?" -> measure it.
 Five small repair tasks of the kind the local coders failed that day (uix_window): a validator whose contract names one exact error,
-a buggy version, the failing test output and GUPPI's REPRO lines (input, exception, line) - exactly what a real rework sees.
+a buggy version, the failing test output and SEDRA's REPRO lines (input, exception, line) - exactly what a real rework sees.
 Every model repairs every task `seeds` times WITHOUT and WITH the matching lessons (knowledge.lessons_for). Sampling per model comes
 from the routing profile purpose "rework" if that recipe is preferred there, else the coder defaults (temperature 0.1).
 
@@ -32,12 +32,12 @@ import yaml
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
-from guppi_runtime.knowledge import KnowledgeStore                                   # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.models.openai_local import split_harmony                         # noqa: E402
-from guppi_runtime.models.routing_profiles import RoutingProfiles                          # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers                              # noqa: E402
+from sedra_runtime.knowledge import KnowledgeStore                                   # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.models.openai_local import split_harmony                         # noqa: E402
+from sedra_runtime.models.routing_profiles import RoutingProfiles                          # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                             # noqa: E402
 
 
 def _try_guarded(fn, attr_or_call, exc_name, message):
@@ -97,9 +97,9 @@ TASKS = [
 
 def prompt_for(task, lessons):
     body = (f"Fix this Python module. Its contract (the docstring) is correct and the tests are correct.\n\n```python\n{task['code']}```\n\n"
-            f"The tests fail:\n{task['failure']}\n\nGUPPI reproduced the failure in its VM:\n{task['repro']}\n")
+            f"The tests fail:\n{task['failure']}\n\nSEDRA reproduced the failure in its VM:\n{task['repro']}\n")
     if lessons:
-        body += "\nLessons from GUPPI's knowledge base that match this code:\n" + "\n".join(f"- {l}" for l in lessons) + "\n"
+        body += "\nLessons from SEDRA's knowledge base that match this code:\n" + "\n".join(f"- {l}" for l in lessons) + "\n"
     return body + "\nAnswer with the complete fixed module in one ```python block."
 
 
@@ -145,7 +145,7 @@ def main():
     profiles = RoutingProfiles.load(project / "local_config" / "routing_profiles.yaml")
     knowledge = KnowledgeStore(project / "runtime_data" / "knowledge" / "records.jsonl")
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_rework_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_rework_")))
     out = project / "runtime_data" / "measurements" / f"rework_bench_{date.today().isoformat()}.json"
     result = {"tasks": [t["id"] for t in TASKS], "seeds": args.seeds, "models": {}}
     with TestLab(default_path(project)).lease(os.environ.get("TESTLAB_OWNER", "rework_bench"), "rework bench", ttl_s=1800, wait_s=3600,

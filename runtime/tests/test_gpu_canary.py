@@ -7,9 +7,9 @@ from unittest import mock
 import env_skip
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  (also puts src/ on the path)
-from guppi_runtime.models import gpu_canary
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig
-from guppi_runtime.models.runtime_control import RuntimeControlError
+from sedra_runtime.models import gpu_canary
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig
+from sedra_runtime.models.runtime_control import RuntimeControlError
 from test_llama_server_runtime import Base, FakeProc
 
 
@@ -156,10 +156,10 @@ class RuntimeHook(Base):
         self.assertIn("server exited with 3", invalidate.call_args[0][0])
 
     def test_engine_override_from_environment(self):
-        with mock.patch.dict(os.environ, {"GUPPI_ENGINE_BUILD": "b11160"}):
-            self.assertEqual(LlamaServerConfig({"enabled": True, "engine_source": "guppi", "engine_build": "b11371"}).engine_build, "b11160")
-        with mock.patch.dict(os.environ, {"GUPPI_ENGINE_BUILD": "../evil"}):
-            self.assertEqual(LlamaServerConfig({"enabled": True, "engine_source": "guppi", "engine_build": "b11371"}).engine_build, "b11371")
+        with mock.patch.dict(os.environ, {"SEDRA_ENGINE_BUILD": "b11160"}):
+            self.assertEqual(LlamaServerConfig({"enabled": True, "engine_source": "sedra", "engine_build": "b11371"}).engine_build, "b11160")
+        with mock.patch.dict(os.environ, {"SEDRA_ENGINE_BUILD": "../evil"}):
+            self.assertEqual(LlamaServerConfig({"enabled": True, "engine_source": "sedra", "engine_build": "b11371"}).engine_build, "b11371")
 
 
 class MissingCanaryFile(Base):

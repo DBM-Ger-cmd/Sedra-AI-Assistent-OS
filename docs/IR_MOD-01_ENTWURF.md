@@ -12,7 +12,7 @@ Eine neue Paket-App mit Server-Teil muss drei Dinge eintragen können, ohne dass
 
 | # | Stelle (`2b13daa`) | Heutiger Stand | Benötigter Wortlaut (Platzhalter, endgültige Namen erst aus MOD-03) |
 |---|---|---|---|
-| Z1 | `desk/extensions.py:3` `MODULES` | `("guppi_runtime.desk.orchestra_kinds", "guppi_runtime.wissen.desk_wissen", "guppi_runtime.workflows.desk")` | ein weiterer Eintrag am Ende, z. B. `"guppi_runtime.factory.desk"` |
+| Z1 | `desk/extensions.py:3` `MODULES` | `("sedra_runtime.desk.orchestra_kinds", "sedra_runtime.wissen.desk_wissen", "sedra_runtime.workflows.desk")` | ein weiterer Eintrag am Ende, z. B. `"sedra_runtime.factory.desk"` |
 | Z2 | `desk/gateway.py:23–30` `OBJECT_TYPES` | Tupel plus fünf `+=`-Zeilen (`issue/budget/gespraech`, `wissen`, `workflow`, `scenario`) | eine neue Zeile im selben Stil: `OBJECT_TYPES += ('factory',)  # Factory Studio (MOD-04/F3-01); Ausführung bleibt im Missionskern` |
 | Z3 | `desk/freigabeklasse.py:20 ff.` `ARTEN` | Antragsarten mit Klasse | je freigabepflichtigem Factory-Verb eine Zeile `'request:factory_<art>': H,  # <Satz>`; die Liste der Arten kommt aus MOD-03 |
 

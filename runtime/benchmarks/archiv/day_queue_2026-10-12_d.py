@@ -1,4 +1,4 @@
-r"""Coin hole for the Guppy meter (Captain 2026-10-12, a test task of another kind): Qwen3.6 (coder.local_primary) builds benchmarks/devvm_specs/coin_hole.py in GUPPI's
+r"""Coin hole for the Guppy meter (Captain 2026-10-12, a test task of another kind): Qwen3.6 (coder.local_primary) builds benchmarks/devvm_specs/coin_hole.py in SEDRA's
 coder with the settings of the night queue. Results: runtime_data/measurements/day_2026-10-12/summary_d.json. Nothing is integrated; Claude wires it in after the review.
 
     .venv\Scripts\python.exe benchmarks/day_queue_2026-10-12_d.py <project_dir>

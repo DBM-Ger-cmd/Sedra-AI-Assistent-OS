@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.gateway import ablage
+from sedra_runtime.gateway import ablage
 
 
 class Ablage(unittest.TestCase):
@@ -64,10 +64,10 @@ class VorschauUndAusgabe(unittest.TestCase):
 
     def setUp(self):
         from unittest import mock
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='vorschau-')
         self.addCleanup(self.tmp.cleanup)
-        arch = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+        arch = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
         self.hub = UIXHub(Path(self.tmp.name) / 'project', arch)
         self.addCleanup(self.hub.close)
         self.eingang = self.hub.gateway_eingang()

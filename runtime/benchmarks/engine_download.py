@@ -1,5 +1,5 @@
-r"""Erststart: holt GUPPI's llama.cpp-Engine von GitHub (offizielle Release), prüft jede Datei gegen die SHA256-Pins aus
-config/llama_server.yaml (engine_assets) und installiert sie nach <GUPPI_Runtime>/engines/llama.cpp/<engine_build>/.
+r"""Erststart: holt SEDRA's llama.cpp-Engine von GitHub (offizielle Release), prüft jede Datei gegen die SHA256-Pins aus
+config/llama_server.yaml (engine_assets) und installiert sie nach <SEDRA_Runtime>/engines/llama.cpp/<engine_build>/.
 
     portable\python\current\python.exe -I -B benchmarks\engine_download.py [--ja]
 
@@ -17,7 +17,7 @@ import yaml
 
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
-from guppi_runtime.models.engine_provision import DEFAULT_ROOT, provision, verify_engine  # noqa: E402
+from sedra_runtime.models.engine_provision import DEFAULT_ROOT, provision, verify_engine  # noqa: E402
 
 URL = "https://github.com/ggml-org/llama.cpp/releases/download/{build}/{name}"
 

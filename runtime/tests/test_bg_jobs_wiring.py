@@ -2,9 +2,9 @@ import env_skip; env_skip.need_dulwich()   # whole module needs the DevVM git (d
 import argparse, sys, tempfile, time, unittest
 from pathlib import Path
 
-from guppi_runtime.devenv.devvm import DevWorkspace
-from guppi_runtime.devenv.devvm_agents import make_jobs
-from guppi_runtime.devenv.devvm_tools import DevToolBox
+from sedra_runtime.devenv.devvm import DevWorkspace
+from sedra_runtime.devenv.devvm_agents import make_jobs
+from sedra_runtime.devenv.devvm_tools import DevToolBox
 
 BENCH = str(Path(__file__).resolve().parents[1] / "benchmarks")
 POLICY = {'max_files': 20, 'max_file_bytes': 4000, 'max_input_bytes': 20000}
@@ -74,7 +74,7 @@ class LessonProposalTests(unittest.TestCase):
         return devvm_build
 
     def test_known_mistakes_of_an_attempt_become_open_cards_once(self):
-        from guppi_runtime.devenv.lesson_store import default_path, manage
+        from sedra_runtime.devenv.lesson_store import default_path, manage
         build = self.build_module()
         said = []
         with tempfile.TemporaryDirectory() as tmp:

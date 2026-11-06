@@ -12,7 +12,7 @@ import tempfile
 import time
 import unittest
 
-from guppi_runtime.wissen import schema, vektor
+from sedra_runtime.wissen import schema, vektor
 from wissen_fixture import FakeEmbedServer, oeffnen
 
 AN = os.environ.get('SEDRA_WISSEN_MENGE') == '1'
@@ -67,7 +67,7 @@ class Menge(unittest.TestCase):
         blobs = [(nr, vektor.packe([rng.gauss(0, 1) for _ in range(DIM)])) for nr in self.nr[:N]]
         erlaubt = set(self.nr)
         if importlib.util.find_spec('numpy'):
-            from guppi_runtime.wissen import vektor_np
+            from sedra_runtime.wissen import vektor_np
             t = time.perf_counter(); m = vektor_np.Matrix(blobs, DIM); aufbau = time.perf_counter() - t
             t = time.perf_counter(); m.top_k(q, 50, erlaubt=erlaubt); d = time.perf_counter() - t
             print(f"\nMenge: numpy {len(m)} Vektoren, Aufbau {aufbau:.2f} s, Suche mit Filter {d * 1000:.0f} ms, Matrix {m.bytes / 1e6:.0f} MB")

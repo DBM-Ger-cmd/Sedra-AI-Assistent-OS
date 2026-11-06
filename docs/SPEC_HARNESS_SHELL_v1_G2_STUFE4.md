@@ -170,7 +170,7 @@ Ereignisse: keine neuen. `tool.*`/`object.open` aus eingehängten Werkzeugen lau
 
 | Nr | Was | Vorschlag |
 |---|---|---|
-| P4-1 | Schreiben in `runtime/src/guppi_runtime/uix/shells/harness/**`, `uix/ui/wechsel.js`, `uix_server.py` (nur `strip_view`), `tests/test_uix_harness_start.py`, `tests/test_uix_strip.py`, `benchmarks/uix_check.py`, `docs/SPEC_HARNESS_SHELL_v1_G3_STUFE4.md`, `docs/BAUBERICHT_HARNESS_STUFE4_<datum>.md`, `docs/SHELL_WERKZEUG_VERTRAG_v1.md` (Nachträge), Logbuch (anhängen) | ja |
+| P4-1 | Schreiben in `runtime/src/sedra_runtime/uix/shells/harness/**`, `uix/ui/wechsel.js`, `uix_server.py` (nur `strip_view`), `tests/test_uix_harness_start.py`, `tests/test_uix_strip.py`, `benchmarks/uix_check.py`, `docs/SPEC_HARNESS_SHELL_v1_G3_STUFE4.md`, `docs/BAUBERICHT_HARNESS_STUFE4_<datum>.md`, `docs/SHELL_WERKZEUG_VERTRAG_v1.md` (Nachträge), Logbuch (anhängen) | ja |
 | P4-2 | Befehle: `python benchmarks/run_tests.py uix harness`, `node` für reine Tests, `python benchmarks/uix_check.py --shell <id>` (Playwright, ohne Modell) | ja |
 | P4-3 | Kein Modell, kein Lauf, kein Download, kein Push; Lieferung als Fork-ZIP (Captain 15:53) | – |
 | P4-4 | Keine Änderung an `local_config/`, `config/`, Katalog, `places.js` | – |

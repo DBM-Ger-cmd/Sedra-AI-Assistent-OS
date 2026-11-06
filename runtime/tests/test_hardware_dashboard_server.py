@@ -8,7 +8,7 @@ import unittest
 import urllib.error
 import urllib.request
 
-from guppi_runtime.hardware_manager.dashboard import SKRIPT_PFAD, make_server
+from sedra_runtime.hardware_manager.dashboard import SKRIPT_PFAD, make_server
 
 
 class Manager:
@@ -28,7 +28,7 @@ class HardwareServer(unittest.TestCase):
         self.basis, self.token = url.split('#')
 
     def holen(self, pfad, token=None):
-        req = urllib.request.Request(self.basis.rstrip('/') + pfad, headers={'X-GUPPI-Token': token} if token else {})
+        req = urllib.request.Request(self.basis.rstrip('/') + pfad, headers={'X-SEDRA-Token': token} if token else {})
         return urllib.request.urlopen(req, timeout=10)
 
     def test_seite_laedt_genau_das_ausgelieferte_skript(self):

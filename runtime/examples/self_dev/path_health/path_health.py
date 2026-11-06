@@ -1,4 +1,4 @@
-"""Path health for GUPPI's own VM and prepared candidates. Read-only: it reports, it never changes anything.
+"""Path health for SEDRA's own VM and prepared candidates. Read-only: it reports, it never changes anything.
 
 Why (2026-10-02, two real failures on the Captain's PC):
   1. msb (microsandbox 0.7.4) is not long-path aware. It writes files such as
@@ -29,7 +29,7 @@ def stale_bindings(current_root, reports):
     """Mission ids of prepared candidates that are bound to another folder.
 
     `reports` is a list of dicts {"mission_id": str, "host_root": str}. A report is stale when its host_root is not
-    current_root itself and not inside it. A sibling folder whose name only starts the same ("...\\GUPPI_OS2") is NOT inside.
+    current_root itself and not inside it. A sibling folder whose name only starts the same ("...\\SEDRA_OS2") is NOT inside.
     Returns the stale mission ids sorted, without duplicates."""
     raise NotImplementedError
 

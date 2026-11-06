@@ -20,7 +20,7 @@ Hinweis zum Auftrag: Die Umgebungsvariable `SEDRA_API_KEY` gibt es in diesem Pro
 **Umfang:**
 - 83 JavaScript-Dateien mit rund 10.500 Zeilen.
 - 1.820 Zeilen CSS, verteilt auf Shells, Werkzeuge und Rahmen.
-- 8 Shell-Ordner (Cockpit, Minimal, Paperclip, KI GateWay Studio, GUPPI XP, Start, Vorlagen).
+- 8 Shell-Ordner (Cockpit, Minimal, Paperclip, KI GateWay Studio, SEDRA XP, Start, Vorlagen).
 - 28 Werkzeuge.
 - Zwei Einstiegsseiten: `desk.html` und `retro_desktop.html`.
 - Keine Webfonts. Fünf Vorschaubilder.
@@ -92,7 +92,7 @@ Zwei Punkte zur Entscheidung:
 - Die Ansicht „KI Labor“ wird zum Referenzbild für das Kartenraster.
 
 **Später:**
-- Minimal, Paperclip, KI GateWay Studio, GUPPI XP, Start-Übersicht.
+- Minimal, Paperclip, KI GateWay Studio, SEDRA XP, Start-Übersicht.
 - Desktop-Oberfläche (`retro_desktop.html`), die bewusst retro bleiben könnte. Das ist eine Frage an dich.
 
 ## 6. Technische Umsetzung

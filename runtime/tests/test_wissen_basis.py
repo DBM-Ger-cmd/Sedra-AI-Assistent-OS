@@ -6,9 +6,9 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import vorgabe
-from guppi_runtime.wissen import desk_basis
-from guppi_runtime.wissen.speicher import leser
+from sedra_runtime.desk import vorgabe
+from sedra_runtime.wissen import desk_basis
+from sedra_runtime.wissen.speicher import leser
 from test_wissen_desk import Basis
 
 LANG = "# Lager\n\n## Anfang\n\nDer Anfang der Datei.\n\n## Lease\n\nVor dem Laden die Lease holen.\n\n## Ende\n\nDas Ende der Datei.\n"
@@ -95,7 +95,7 @@ class Notizen(Basis):
 
 
 class Vorgabe(unittest.TestCase):
-    ROOT = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'shells'
+    ROOT = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'shells'
 
     def test_orte_kommen_aus_der_ortskunde(self):
         ids = vorgabe.place_ids()

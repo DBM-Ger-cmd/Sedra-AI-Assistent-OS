@@ -3,12 +3,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.local_switches import ALLOWED, LocalSwitches
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.local_switches import ALLOWED, LocalSwitches
+from sedra_runtime.runtime import SedraRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]
-ARCH = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 
 
 def write(root, text):
@@ -59,7 +59,7 @@ class RuntimeTest(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
         project = Path(tmp.name) / 'project'; project.mkdir()
         if text is not None: write(project, text)
-        return GuppiRuntime(project, architecture_root=ARCH)
+        return SedraRuntime(project, architecture_root=ARCH)
 
     def test_without_a_file_every_feature_is_off(self):
         rt = self.runtime()

@@ -2,7 +2,7 @@
 often only wrote the call as JSON text, answered empty, emitted garbage (Gemma <unused49>) or only thought. `no_call_monitor.py` classifies such an answer, extracts tool calls written
 as JSON text, and gives up to N correction messages before the run really stops. Repetition inside an answer is NOT part of it (RunawayGuard exists), nor <tool_call> tags
 (model_tools.parse_calls reads them). Ideas from little-coder (quality-monitor, output-parser) and Hermes (empty_response_guard). Pure functions and one class, no file access.
-GUPPI builds it, Claude only wrote this file and the hidden tests. Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
+SEDRA builds it, Claude only wrote this file and the hidden tests. Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
 
 NOTES = '''# Notes for no_call_monitor
 Pure Python 3 standard library (json, re), no file, process or network access, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code.

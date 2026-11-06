@@ -6,11 +6,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness.api import HarnessApi, NichtGefunden
-from guppi_runtime.harness.sitzung import Sitzungen
-from guppi_runtime.harness.strom import Stroeme
+from sedra_runtime.harness.api import HarnessApi, NichtGefunden
+from sedra_runtime.harness.sitzung import Sitzungen
+from sedra_runtime.harness.strom import Stroeme
 
-JS = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'shells' / 'harness' / 'seitenleiste.js'
+JS = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'shells' / 'harness' / 'seitenleiste.js'
 
 
 class AufraeumenTests(unittest.TestCase):

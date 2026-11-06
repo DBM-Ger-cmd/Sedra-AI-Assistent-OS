@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.jobs import slot_store
-from guppi_runtime.jobs.testlab import TestLab
+from sedra_runtime.jobs import slot_store
+from sedra_runtime.jobs.testlab import TestLab
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
 SRC = str(Path(__file__).resolve().parents[1] / "src")
@@ -60,8 +60,8 @@ class OrderTests(Base):
 RACE = r"""
 import sys
 sys.path.insert(0, sys.argv[1])
-from guppi_runtime.jobs import slot_store
-from guppi_runtime.jobs.testlab import TestLab
+from sedra_runtime.jobs import slot_store
+from sedra_runtime.jobs.testlab import TestLab
 conn = TestLab(sys.argv[2], pid=int(sys.argv[3])).connect()
 cfg = {"age_after_s": 120, "age_cap": 5, "swap": "none", "queue_max": 6, "wait_max_s": 600}
 now = "2026-10-24T00:00:00Z"

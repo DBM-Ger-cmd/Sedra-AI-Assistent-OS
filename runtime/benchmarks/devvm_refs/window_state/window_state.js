@@ -1,4 +1,4 @@
-var WINDOW_STATE_KEY = "guppi.windows.v1";
+var WINDOW_STATE_KEY = "sedra.windows.v1";
 var WINDOW_MIN = {width: 320, height: 200};
 var WINDOW_KEEP = {width: 80, height: 70};
 var CASCADE_STEP = 28;

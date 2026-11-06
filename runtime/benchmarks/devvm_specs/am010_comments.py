@@ -1,6 +1,6 @@
 """AM-010 (comment archive, 2026-10-08): the Captain wants the comments and docstrings that the models write to be saved in a log BEFORE `tidy` strips them, so the judge (arbiter, failure search) can use them later.
 This spec builds the pure part: finding every comment and docstring with its line and its owner, and writing them as JSON lines. The wiring into `tidy` is done afterwards by hand (small glue). Two small stages with hidden tests and a last stage "all".
-GUPPI builds it, Claude only wrote this file and the reference."""
+SEDRA builds it, Claude only wrote this file and the reference."""
 
 NOTES = '''# Notes for comment_archive
 Pure Python 3 standard library, no file, process or network access, never modify the arguments, no comments and no docstrings in the module itself, small private helpers instead of copied code.

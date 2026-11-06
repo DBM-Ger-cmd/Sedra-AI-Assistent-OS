@@ -70,7 +70,7 @@ class Rein(unittest.TestCase):
 
 class Server(unittest.TestCase):
     def test_r2_pruefwerkzeug_nur_mit_schalter(self):
-        from guppi_runtime.desk.gateway import Gateway
+        from sedra_runtime.desk.gateway import Gateway
         with tempfile.TemporaryDirectory() as tmp:
             g = Gateway(Path(tmp))
             m = g.manifest()
@@ -85,7 +85,7 @@ class Server(unittest.TestCase):
         from host_isolation import setUpModule, tearDownModule
         setUpModule(); self.addCleanup(tearDownModule)
         sys.path.insert(0, str(BENCH))
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         from test_wissen_desk import ARCH, switch_on
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             project = Path(tmp) / 'p'

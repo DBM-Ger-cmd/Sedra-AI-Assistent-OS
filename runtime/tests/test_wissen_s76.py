@@ -7,8 +7,8 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.wissen import ausgabe, embed, glossar, konfig, lauf, zerlegen
-from guppi_runtime.wissen import speicher as S
+from sedra_runtime.wissen import ausgabe, embed, glossar, konfig, lauf, zerlegen
+from sedra_runtime.wissen import speicher as S
 from wissen_fixture import FakeEmbedServer, alle_freigeben, oeffnen
 
 CONFIG = Path(__file__).resolve().parents[1] / "config"

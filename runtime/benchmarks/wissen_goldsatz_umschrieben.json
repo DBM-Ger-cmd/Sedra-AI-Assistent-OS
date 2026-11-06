@@ -25,7 +25,7 @@
       ],
       "quellen_datei": [
         {
-          "datei": "runtime/src/guppi_runtime/knowledge.py",
+          "datei": "runtime/src/sedra_runtime/knowledge.py",
           "abschnitt": "KnowledgeStore.add_lesson"
         }
       ],
@@ -54,7 +54,7 @@
           "abschnitt": "Spec 7 – Wissen und RAG > Anforderungen"
         },
         {
-          "datei": "runtime/src/guppi_runtime/gateway/klassen.py",
+          "datei": "runtime/src/sedra_runtime/gateway/klassen.py",
           "abschnitt": "REGELN / R-08"
         }
       ]
@@ -73,7 +73,7 @@
       ],
       "quellen_datei": [
         {
-          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "datei": "runtime/src/sedra_runtime/gateway/wissen.py",
           "abschnitt": "FEHLER / weg_offener_als_wunsch"
         }
       ]
@@ -92,7 +92,7 @@
       ],
       "quellen_datei": [
         {
-          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "datei": "runtime/src/sedra_runtime/gateway/wissen.py",
           "abschnitt": "FEHLER / mapping_fehlt"
         }
       ]
@@ -111,7 +111,7 @@
       ],
       "quellen_datei": [
         {
-          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "datei": "runtime/src/sedra_runtime/gateway/wissen.py",
           "abschnitt": "BEGRIFFE / pseudonymisierung"
         }
       ]
@@ -130,7 +130,7 @@
       ],
       "quellen_datei": [
         {
-          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "datei": "runtime/src/sedra_runtime/gateway/wissen.py",
           "abschnitt": "BEGRIFFE / recheck"
         }
       ]
@@ -154,11 +154,11 @@
       ],
       "quellen_datei": [
         {
-          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "datei": "runtime/src/sedra_runtime/gateway/wissen.py",
           "abschnitt": "BEGRIFFE / löschdatum"
         },
         {
-          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "datei": "runtime/src/sedra_runtime/gateway/wissen.py",
           "abschnitt": "LEITFADEN / Schritt 7"
         }
       ]
@@ -177,7 +177,7 @@
       ],
       "quellen_datei": [
         {
-          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "datei": "runtime/src/sedra_runtime/gateway/wissen.py",
           "abschnitt": "BEGRIFFE / schutzklasse"
         }
       ]
@@ -201,11 +201,11 @@
       ],
       "quellen_datei": [
         {
-          "datei": "runtime/src/guppi_runtime/gateway/klassen.py",
+          "datei": "runtime/src/sedra_runtime/gateway/klassen.py",
           "abschnitt": "REGELN / R-07"
         },
         {
-          "datei": "runtime/src/guppi_runtime/gateway/wissen.py",
+          "datei": "runtime/src/sedra_runtime/gateway/wissen.py",
           "abschnitt": "BEGRIFFE / hard block"
         }
       ]
@@ -224,7 +224,7 @@
       ],
       "quellen_datei": [
         {
-          "datei": "runtime/src/guppi_runtime/arbeitsumfeld_wissen.py",
+          "datei": "runtime/src/sedra_runtime/arbeitsumfeld_wissen.py",
           "abschnitt": "ORDNER_ZWECK / redesign/vorarbeiter"
         }
       ]
@@ -253,7 +253,7 @@
       ],
       "quellen_datei": [
         {
-          "datei": "runtime/src/guppi_runtime/arbeitsumfeld_wissen.py",
+          "datei": "runtime/src/sedra_runtime/arbeitsumfeld_wissen.py",
           "abschnitt": "AKTION_ZWECK / lauf_starten"
         },
         {
@@ -276,7 +276,7 @@
       ],
       "quellen_datei": [
         {
-          "datei": "runtime/src/guppi_runtime/arbeitsumfeld_wissen.py",
+          "datei": "runtime/src/sedra_runtime/arbeitsumfeld_wissen.py",
           "abschnitt": "Modul-Beschreibung"
         }
       ],
@@ -296,11 +296,11 @@
       ],
       "quellen_datei": [
         {
-          "datei": "runtime/src/guppi_runtime/knowledge.py",
+          "datei": "runtime/src/sedra_runtime/knowledge.py",
           "abschnitt": "KnowledgeStore.add_lesson"
         },
         {
-          "datei": "runtime/src/guppi_runtime/knowledge.py",
+          "datei": "runtime/src/sedra_runtime/knowledge.py",
           "abschnitt": "KnowledgeStore.lessons_for"
         }
       ],

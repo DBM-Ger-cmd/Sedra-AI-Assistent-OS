@@ -8,7 +8,7 @@ setlocal
 set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 set "RT=%ROOT%\runtime"
-set "PROJ=%ROOT%\workspace\GUPPI_OS"
+set "PROJ=%ROOT%\workspace\SEDRA_OS"
 set "PY=%RT%\portable\python\current\python.exe"
 set "PYFLAGS=-I -B"
 if exist "%PY%" goto :los
@@ -25,5 +25,5 @@ if "%~1"=="" (
   exit /b 2
 )
 cd /d "%RT%"
-"%PY%" %PYFLAGS% -m guppi_runtime.desk.freigabe_konsole --root "%PROJ%" %*
+"%PY%" %PYFLAGS% -m sedra_runtime.desk.freigabe_konsole --root "%PROJ%" %*
 exit /b %ERRORLEVEL%

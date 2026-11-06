@@ -1,7 +1,7 @@
 # Entscheidungsvorlage AM0-E1: Wie schützen wir den Code der Oberfläche vor Änderungen durch das Modell? (03.11.2026)
 
 Status: **entschieden** am 03.11.2026: O3+ (§6 mit G1, G2, G3, G6, G7), G4 sofort, AM9 mit G5. G9–G11 aus §5b am selben Tag übernommen. Verlauf: Der Captain hatte AM0-E1 zuerst zur Ausarbeitung zurückgegeben („Das müssen wir mehr ausarbeiten, was am besten und praktikabel ist“), danach das Restrisiko (§5a) und den Fall „bestätigter schädlicher Code“ (§5b) nacharbeiten lassen.
-Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
+Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für c364081.
 
 ## 1. Die Frage
 
@@ -29,7 +29,7 @@ Darf ein Modell (MasterChat, Bauagent) Dateien unter `uix/**` schreiben, und wen
 | **Bauagent** | Schreiben im Schreibbereich des Projekts, Karten der Stufe `vorarbeiter` an den Vorarbeiter | `runtime/config/harness_vorlagen/bauagent.yaml:4–7` |
 | **Claude** | direkt im Repo, nicht über die Harness | – (von Vorbehalten der Harness nicht betroffen) |
 | **Captain** | von Hand | – |
-| **GUPPI in der DevVM** | baut in einer Kopie, Übernahme per `adopt_plan` oder Handkopie | `docs/ARCHITEKTUR.md` §4, §6a (Linie L5) |
+| **SEDRA in der DevVM** | baut in einer Kopie, Übernahme per `adopt_plan` oder Handkopie | `docs/ARCHITEKTUR.md` §4, §6a (Linie L5) |
 
 Wichtig für die Einordnung: Im beschriebenen Aufbau sind **das laufende SEDRA und das Projekt, das das Modell bearbeitet, derselbe Ordner** („der Ordner, in dem runtime/ und docs/ liegen“). SEDRA ändert sich selbst, während es läuft.
 Beleg: `runtime/config/harness_projekte.beispiel.yaml:10`.
@@ -44,7 +44,7 @@ Beleg: `runtime/config/harness_projekte.beispiel.yaml:10`.
 | **O4** Siegel der Oberfläche | das Modell darf schreiben; der Server liefert aber nur einen **versiegelten** Stand aus; Änderungen werden erst nach einer Übernahme-Karte mit Gesamt-Diff wirksam | ja | ja, frei; Wirkung erst nach Übernahme | mittel bis hoch (Server muss alten Stand vorhalten, Manifeste und Arbeitsplatz-Wissen ebenfalls aus dem Siegel lesen) | wirksam, aber deckt Python nicht ab; doppelt sich mit O5 |
 | **O5** Werkstatt und Betrieb trennen | SEDRA läuft aus einem **freigegebenen Stand**; das Modell arbeitet in einem **getrennten Arbeitsordner**; in den Betrieb kommt eine Änderung nur über die Übernahme mit Prüfsummen, Rechte-Diff, Sicherung und Rückweg | ja – für Oberfläche **und** Python | ja, frei in der Werkstatt; Wirkung erst nach Übernahme | hoch, aber vieles gibt es schon (Release-Updater, DevVM, Stick) | die grundsätzliche Lösung; Baustein AM9 |
 
-Was es dafür schon gibt (O5): Der Release-Updater übernimmt nur einen vollständig geprüften Stand (`release/MANIFEST.sha256`, Prüfbereiche `runtime/src/guppi_runtime/` und `runtime/config/`), nennt jede Rechteänderung eines Moduls einzeln, braucht die Bestätigung genau dieser Liste, sichert vorher und kann zurück (`update_anwenden.py:3–11, 23–24, 89–115, 151–171`). Er holt heute aber nur Release-Tags von GitHub (`update_holen.py:1–4, 22–23`), keine lokale Werkstatt.
+Was es dafür schon gibt (O5): Der Release-Updater übernimmt nur einen vollständig geprüften Stand (`release/MANIFEST.sha256`, Prüfbereiche `runtime/src/sedra_runtime/` und `runtime/config/`), nennt jede Rechteänderung eines Moduls einzeln, braucht die Bestätigung genau dieser Liste, sichert vorher und kann zurück (`update_anwenden.py:3–11, 23–24, 89–115, 151–171`). Er holt heute aber nur Release-Tags von GitHub (`update_holen.py:1–4, 22–23`), keine lokale Werkstatt.
 
 ## 5. Empfehlung
 
@@ -100,7 +100,7 @@ Ebenso, aber schwächer: Python-Dateien unter `runtime/src/**`, die das Modell i
 Ein Fehler in einer Shell-Datei kann die Oberfläche unbenutzbar machen – auch den Posteingang. Was es heute gibt:
 - Wechsel in eine andere Shell (Start-Shell, Auswahl in `local_config/uix.yaml`). Ob der Wechsel bei einer kaputten aktiven Shell aus der Oberfläche heraus möglich ist, wurde nicht geprüft.
 - Die Karte einer Dateiänderung ist mit `rollback_available=True` angelegt (`harness/freigabe.py:240`); einen Rückweg-Mechanismus für einzelne Dateien habe ich im Harness-Code **nicht** gefunden. Der Rückweg ist heute Git (von Hand).
-- Ob die CLI (`guppi …`) Freigaben beantworten kann, wurde nicht geprüft (ARCHITEKTUR §6 nennt „Freigaben“ unter den Befehlen).
+- Ob die CLI (`sedra …`) Freigaben beantworten kann, wurde nicht geprüft (ARCHITEKTUR §6 nennt „Freigaben“ unter den Befehlen).
 
 ### 5a.5 Gegenmaßnahmen
 
@@ -157,7 +157,7 @@ Geprüft und verworfen: den Token nach dem Lesen aus der Adresse entfernen und n
 | F7 | Verben des Desk mit Gate | `desk/gated.py:145` | Freigabe eines Desk-Verbs |
 | F8 | `POST /api/update/uebernehmen` | `uix_server.py:3862` | übernimmt einen geprüften Release-Stand mit der Rechte-Bestätigung aus der Vorschau |
 | F9 | ohne Gate, nur Audit: Shell wechseln, Werkzeug an/aus, künftig App aktivieren (AM3-08) | `uix_server.py:3848–3850` | Form, keine Rechte |
-| F10 | **Konsole**: `guppi approve <mission> <gate>` | `cli.py:316–324` | ein Missions-Gate – **außerhalb des Browsers** |
+| F10 | **Konsole**: `sedra approve <mission> <gate>` | `cli.py:316–324` | ein Missions-Gate – **außerhalb des Browsers** |
 
 Alle Wege F1–F9 nimmt der Server mit dem Browser-Token an. S7 schützt F3–F6 gegen Prozesse der Harness, nicht gegen den Browser (§5a.1, K4). F10 ist der einzige Weg, den Code in der Seite nicht erreicht.
 
@@ -181,7 +181,7 @@ Alle Wege F1–F9 nimmt der Server mit dem Browser-Token an. S7 schützt F3–F6
 
 | Nr | Maßnahme | Was sie bewirkt | Aufwand | Empfehlung |
 |---|---|---|---|---|
-| **G9 (neu)** | **Bestätigung außerhalb des Browsers für Klasse H.** Antwortet die Seite auf eine Freigabe der Klasse H, führt der Server sie **nicht** aus, sondern zeigt ein Fenster des Betriebssystems (Windows: Systemdialog aus dem Server-Prozess, immer im Vordergrund) mit dem Text, den **der Kern** erzeugt (Gate-Beschreibung, Klasse, Ziel, Kennung) und „Freigeben“/„Ablehnen“. Erst das Ja dort ruft `guard.approve`. Ohne Dialog möglich (anderes System, keine Anzeige): nur über die Konsole (`guppi freigeben <kennung>`, wie F10). | Code in der Seite erreicht weder das Fenster noch die Konsole. Klasse H ist damit für ihn **gesperrt**, auch wenn er bestätigt wurde. | gering bis mittel | **ja, vor oder mit O3+** |
+| **G9 (neu)** | **Bestätigung außerhalb des Browsers für Klasse H.** Antwortet die Seite auf eine Freigabe der Klasse H, führt der Server sie **nicht** aus, sondern zeigt ein Fenster des Betriebssystems (Windows: Systemdialog aus dem Server-Prozess, immer im Vordergrund) mit dem Text, den **der Kern** erzeugt (Gate-Beschreibung, Klasse, Ziel, Kennung) und „Freigeben“/„Ablehnen“. Erst das Ja dort ruft `guard.approve`. Ohne Dialog möglich (anderes System, keine Anzeige): nur über die Konsole (`sedra freigeben <kennung>`, wie F10). | Code in der Seite erreicht weder das Fenster noch die Konsole. Klasse H ist damit für ihn **gesperrt**, auch wenn er bestätigt wurde. | gering bis mittel | **ja, vor oder mit O3+** |
 | G5 | Freigaben auf eigener Herkunft (AM9, beschlossen) | macht die Freigabe im Browser selbst vertrauenswürdig; kann G9 für viele Fälle ersetzen | hoch | ja (AM9) |
 | G10 (neu) | **Kanal im Audit**: jede Freigabe trägt `kanal` = `seite` · `systemdialog` · `konsole` · `freigabefenster` (G5) · `aufgabe` · `sitzung` · `vorarbeiter` · `katalog` | Nachweis, woher eine Freigabe kam; macht Missbrauch erkennbar | gering | ja |
 | G11 (neu) | **Vollständigkeitstest**: ein Test findet jede Stelle, die `guard.approve` ruft (heute `cli.py:322`, `harness/freigabe.py:243, 324`, `uix_server.py:2213`, `desk/gated.py:145`, `agent_manager/cli.py:74`), und jede geschützte Route, und verlangt für jede eine Klasse (H/N) | verhindert, dass ein neuer Freigabe-Weg die Klasse H umgeht | gering | ja |
@@ -206,7 +206,7 @@ Alle Wege F1–F9 nimmt der Server mit dem Browser-Token an. S7 schützt F3–F6
 - Neue Datei `desk/freigabeklasse.py`: Tabelle Entscheidungsart/Harness-Werkzeug/Route → Klasse; Vorgabe für Unbekanntes: **H**.
 - An den Stellen F1–F8: Ist die Klasse H und kam die Antwort über die Seite, wird statt `approve` ein **Wartezustand** gespeichert („wartet auf Bestätigung außerhalb des Browsers“) und der Dialog angestoßen; die Seite zeigt den Zustand.
 - Dialog: unter Windows `MessageBoxW` (ohne neue Abhängigkeit, wie `harness/herkunft.py` schon `ctypes` nutzt) mit `MB_YESNO | MB_TOPMOST | MB_SETFOREGROUND | MB_SYSTEMMODAL` in einem eigenen Thread; Antwort ruft `approve` oder `reject`; Zeitlimit 10 min, dann bleibt die Entscheidung offen. Ob ein Server ohne angemeldete Sitzung (z. B. als Dienst) Dialoge zeigen kann: nein – dann gilt nur die Konsole.
-- Konsole: `guppi freigeben <kennung>` / `guppi ablehnen <kennung>` für alle Entscheidungen (heute nur Missions-Gates, `cli.py:316`).
+- Konsole: `sedra freigeben <kennung>` / `sedra ablehnen <kennung>` für alle Entscheidungen (heute nur Missions-Gates, `cli.py:316`).
 - Audit: `FREIGABE_AUSSERHALB_BESTAETIGT {id, kanal}`, `…_ABGELEHNT`, `…_ZEIT_ABGELAUFEN`.
 - Test: Antwort der Klasse H über die Seite führt nie zu `approve` ohne Dialog-/Konsolen-Antwort (Fake-Dialog im Test); G11.
 
@@ -216,19 +216,19 @@ Alle Wege F1–F9 nimmt der Server mit dem Browser-Token an. S7 schützt F3–F6
 
 | Muster | Grund |
 |---|---|
-| `runtime/src/guppi_runtime/uix/ui/**` | Vertragscode: Lader, Brücke, Rahmen, Bus, Token-Zugang |
-| `runtime/src/guppi_runtime/uix/**/tool.yaml`, `…/uix/**/shell.yaml`, `…/uix/**/shell.vorgabe.yaml` | Manifeste: Vertrauen, Routen, neue Paket-Werkzeuge |
-| `runtime/src/guppi_runtime/uix/**/arbeitsplatz.yaml` | Arbeitsplatz-Wissen, das das Modell liest (W6) |
-| `runtime/src/guppi_runtime/uix/desk.html`, `…/uix/retro_desktop.html`, `…/uix/js/**` | Seiten des Servers; das Archiv `/retro` läuft mit `unsafe-inline` (`uix_server.py:3716`) |
+| `runtime/src/sedra_runtime/uix/ui/**` | Vertragscode: Lader, Brücke, Rahmen, Bus, Token-Zugang |
+| `runtime/src/sedra_runtime/uix/**/tool.yaml`, `…/uix/**/shell.yaml`, `…/uix/**/shell.vorgabe.yaml` | Manifeste: Vertrauen, Routen, neue Paket-Werkzeuge |
+| `runtime/src/sedra_runtime/uix/**/arbeitsplatz.yaml` | Arbeitsplatz-Wissen, das das Modell liest (W6) |
+| `runtime/src/sedra_runtime/uix/desk.html`, `…/uix/retro_desktop.html`, `…/uix/js/**` | Seiten des Servers; das Archiv `/retro` läuft mit `unsafe-inline` (`uix_server.py:3716`) |
 | die Prüfstellen aus `SPEC_APPS_v1_AM0_G2.md` Teil A (`desk/gateway.py`, `desk/install.py`, `desk/registry.py`, `desk/herkunft.py`, `uix_server.py`, `uix_clients.py`, `cloud_settings.py`, `models/cloud_api.py`, `runtime/config/cloud_providers.yaml`) | unverändert |
 
 **Weich** (neu in `vorbehalte.pruefen_weich`, für `datei_schreiben`/`datei_aendern`):
-- Muster: `runtime/src/guppi_runtime/uix/shells/**`, `…/uix/tools/**`, `…/uix/css/**` – soweit nicht hart.
+- Muster: `runtime/src/sedra_runtime/uix/shells/**`, `…/uix/tools/**`, `…/uix/css/**` – soweit nicht hart.
 - Ergebnis `{grund: 'Captain-Vorbehalt: Code der Oberfläche (läuft in der Seite mit allen Rechten)', oberflaeche: <pfad>}`.
 - Deckung: nur eine Aufgabe mit dem neuen Feld `oberflaeche: [muster …]`, in dem ein Muster den Pfad trifft – genau wie `modelle` beim weichen Vorbehalt für Modelle (`harness/aufgabe.py:302–307`). Eine Sitzungs-Erlaubnis (auch die der MasterChat-Vorlage) deckt nicht (`harness/freigabe.py:235` schließt sie bei weichem Vorbehalt schon heute aus). Der Vorarbeiter deckt nicht.
 - Die Aufgaben-Freigabe zeigt beim Feld `oberflaeche` den Satz: „Code an diesen Stellen läuft in der Oberfläche mit allen Rechten der Seite – auch Freigaben. Er wirkt nach dem nächsten Neuladen. Gib nur Pfade frei, die zu diesem Zweck gehören.“ Ein Muster breiter als ein einzelner Shell- oder Werkzeugordner (z. B. `…/uix/tools/**`) wird abgewiesen (`oberflaeche_zu_breit`).
 
-**Frei** (normaler Katalog): `runtime/src/guppi_runtime/uix/**/README.md`.
+**Frei** (normaler Katalog): `runtime/src/sedra_runtime/uix/**/README.md`.
 
 **MasterChat-Vorlage**: Der Hinweistext nennt die Ausnahme („Oberfläche nur über eine Aufgabe mit genannten Pfaden“). Die Vorlage ist selbst Vorbehalt (`runtime/config/harness_vorlagen/**`); die Änderung macht Claude.
 

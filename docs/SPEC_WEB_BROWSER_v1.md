@@ -151,7 +151,7 @@ Für den **Bau** (später, nach G2/G3), hier schon benannt:
 | Nr | Berechtigung | Begründung |
 |---|---|---|
 | WP-1 | Download und Installation von Playwright und Chromium in eine eigene Umgebung (rund 150 MB, feste Version) | Voraussetzung des Browsers (WB-04) |
-| WP-2 | Schreiben: neues Paket `runtime/src/guppi_runtime/browser/` und Tests, `uix/shells/harness/` (Browser-Reiter), Specs und Berichte | Bau |
+| WP-2 | Schreiben: neues Paket `runtime/src/sedra_runtime/browser/` und Tests, `uix/shells/harness/` (Browser-Reiter), Specs und Berichte | Bau |
 | WP-3 | Schreiben: `runtime/runtime_data/browser/**` (Profil, Seiten, Belege) | Laufdaten |
 | WP-4 | Ausführen: Tests gegen eine **lokale Attrappe-Seite** (127.0.0.1) ohne Internet | Bau ohne Außenwirkung |
 | WP-5 | Erster Lauf im echten Netz: nur auf Ansage, nur lesend, nur erlaubte Domains | Abnahme |

@@ -2,7 +2,7 @@
 
 Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen); G2 steht noch aus. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Setzt AM5 und AM3 voraus.
 Ziel: SEDRA kann einen bei Langdock eingerichteten **Agenten** fragen und die Antwort nutzen. Nur **ausgehend** (SEDRA ruft Langdock). Der umgekehrte Weg (Richtung 2b: Langdock ruft SEDRA) ist ausgeschlossen (§7).
-Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081. Langdock-Angaben: nur Suchauszüge, siehe AM5 §1.
+Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für c364081. Langdock-Angaben: nur Suchauszüge, siehe AM5 §1.
 
 ## 1. Befund
 

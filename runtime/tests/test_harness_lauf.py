@@ -7,7 +7,7 @@ import time
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import herkunft, lauf
+from sedra_runtime.harness import herkunft, lauf
 
 SKRIPT = '''import os, subprocess, sys, time
 n = int(sys.argv[1]) if len(sys.argv) > 1 else 3

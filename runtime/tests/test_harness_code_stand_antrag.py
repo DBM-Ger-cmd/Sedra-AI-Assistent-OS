@@ -9,10 +9,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from guppi_runtime.desk.freigabeklasse import ARTEN, H, ROUTEN_HARNESS, klasse
-from guppi_runtime.harness import antraege
-from guppi_runtime.harness import projekte as harness_projekte
-from guppi_runtime.harness.code_stand import CodeStand
+from sedra_runtime.desk.freigabeklasse import ARTEN, H, ROUTEN_HARNESS, klasse
+from sedra_runtime.harness import antraege
+from sedra_runtime.harness import projekte as harness_projekte
+from sedra_runtime.harness.code_stand import CodeStand
 
 GIT = shutil.which('git')
 
@@ -143,7 +143,7 @@ class Einstufung(unittest.TestCase):
         self.assertEqual(ROUTEN_HARNESS['POST code_stand/antrag'][0], 'antrag')
 
     def test_die_art_hat_einen_titel_und_der_applier_ist_registriert(self):
-        from guppi_runtime.desk import decisions
+        from sedra_runtime.desk import decisions
         self.assertEqual(decisions.REQUEST_TITLE['harness_code_stand'], 'Code-Stand übernehmen')
         self.assertIn('harness_code_stand', decisions.REQUEST_NOTE)
         registry = SimpleNamespace(frozen=False)

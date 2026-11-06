@@ -18,8 +18,8 @@ Alle Werte stammen von der RTX 4070 Ti (12 GB), Engine b11160, mit Flash Attenti
 
 ## Entfernt am 12.10.2026
 
-In der Quarantäne `<modelle>\_guppi_entfernt\RM-20261012T055725\` liegen Qwen3.6 Q4_K_M, Qwen3.8-27B (+ MTP-Datei), gpt-oss-20b,
-DeepSeek-Coder-V2-Lite und Hermes-4-14B (zusammen 71,4 GB). Zurückholen: `guppi model-restore RM-20261012T055725`. Die Begründungen stehen in der PDF.
+In der Quarantäne `<modelle>\_sedra_entfernt\RM-20261012T055725\` liegen Qwen3.6 Q4_K_M, Qwen3.8-27B (+ MTP-Datei), gpt-oss-20b,
+DeepSeek-Coder-V2-Lite und Hermes-4-14B (zusammen 71,4 GB). Zurückholen: `sedra model-restore RM-20261012T055725`. Die Begründungen stehen in der PDF.
 
 ## Bekannte Grenzen
 

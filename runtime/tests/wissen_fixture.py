@@ -8,8 +8,8 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-from guppi_runtime.wissen import konfig as konfig_mod
-from guppi_runtime.wissen import speicher as speicher_mod
+from sedra_runtime.wissen import konfig as konfig_mod
+from sedra_runtime.wissen import speicher as speicher_mod
 
 DIM = 8
 # Wortfelder: jedes Feld eine Dimension; „Videospeicher“ und „VRAM“ liegen so im selben Feld (die Wortsuche findet das nicht)
@@ -158,11 +158,11 @@ def speicher_anlegen(projekt):
     kn.parent.mkdir(parents=True, exist_ok=True)
     zeilen = [
         {"schema": 1, "id": "KN-1", "type": "note", "title": "Notiz zum Logbuch", "content": {"summary": "Jeder Eintrag im Logbuch bekommt die Uhrzeit aus date.", "data": {}},
-         "provenance": {"created_at": "2026-10-20T08:00:00Z"}, "scope": {"project": "GUPPI", "tags": ["logbuch"]}, "status": "active"},
+         "provenance": {"created_at": "2026-10-20T08:00:00Z"}, "scope": {"project": "SEDRA", "tags": ["logbuch"]}, "status": "active"},
         {"schema": 1, "id": "KN-2", "type": "coding_lesson", "title": "Regex sauber", "content": {"summary": "Use re.fullmatch for whole-string checks.", "data": {}},
-         "provenance": {"created_at": "2026-10-20T09:00:00Z"}, "scope": {"project": "GUPPI", "tags": ["re.match(", "regex"]}, "status": "active"},
+         "provenance": {"created_at": "2026-10-20T09:00:00Z"}, "scope": {"project": "SEDRA", "tags": ["re.match(", "regex"]}, "status": "active"},
         {"schema": 1, "id": "KN-3", "type": "note", "title": "Alt", "content": {"summary": "Veraltete Notiz.", "data": {}},
-         "provenance": {"created_at": "2026-10-01T09:00:00Z"}, "scope": {"project": "GUPPI", "tags": []}, "status": "retired"},
+         "provenance": {"created_at": "2026-10-01T09:00:00Z"}, "scope": {"project": "SEDRA", "tags": []}, "status": "retired"},
     ]
     kn.write_text("".join(json.dumps(z) + "\n" for z in zeilen), encoding="utf-8")
     au = projekt / "local_config" / "arbeitsumfeld" / "wissen.sqlite"

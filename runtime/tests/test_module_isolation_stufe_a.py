@@ -6,7 +6,7 @@ import subprocess
 import unittest
 from pathlib import Path
 
-UI = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'ui'
+UI = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'ui'
 NODE = shutil.which('node')
 
 
@@ -35,7 +35,7 @@ class ApiOhneToken(unittest.TestCase):
 
     def test_a_module_only_reaches_the_api_with_its_own_id(self):
         body = ("const f=ctx.sedraApi.forModule({kind:'tool',id:'gateway'});\n"
-                "f('/api/gateway/vorgaenge').then(()=>{ console.log(calls[0].h['X-SEDRA-Tool'], calls[0].h['X-GUPPI-Token']); });")
+                "f('/api/gateway/vorgaenge').then(()=>{ console.log(calls[0].h['X-SEDRA-Tool'], calls[0].h['X-SEDRA-Token']); });")
         out, err = run_node(self.harness(body))
         self.assertEqual(out, 'gateway GEHEIM', err)
 

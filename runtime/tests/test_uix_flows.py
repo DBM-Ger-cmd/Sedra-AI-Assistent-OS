@@ -48,14 +48,14 @@ class Flows(unittest.TestCase):
             page.click('.sh-min-menu-name:has-text("Fenster")'); page.wait_for_timeout(300)
             page.click('.sh-min-menu-item:has-text("Alle schließen")'); page.wait_for_timeout(500)
             left = page.evaluate("()=>[...document.querySelectorAll('.sh-min-win')].map(w=>w.dataset.object)")
-            self.assertEqual(left, ['talk:guppi'], 'alles zu – außer dem Gespräch')
+            self.assertEqual(left, ['talk:sedra'], 'alles zu – außer dem Gespräch')
             page.keyboard.press('Control+k'); page.wait_for_timeout(300)
             page.keyboard.type('logbuch'); page.keyboard.press('Enter'); page.wait_for_timeout(700)
             self.assertTrue(page.query_selector('.sh-min-win[data-object="logbook:audit"]'), 'Strg+K, Ort, Enter')
         self.run_in('minimal', flow)
 
-    def test_minimal_build19_home_own_shelf_and_guppi_moves(self):
-        """PC-Test 15.10.: kein Weg zurück, keine eigenen Felder, und GUPPI konnte kein Fenster öffnen."""
+    def test_minimal_build19_home_own_shelf_and_sedra_moves(self):
+        """PC-Test 15.10.: kein Weg zurück, keine eigenen Felder, und SEDRA konnte kein Fenster öffnen."""
         def fake_model(hub):
             class FakeServer:
                 def loaded_models(self): return [{'identifier': 'fake', 'modelKey': 'fake'}]
@@ -74,10 +74,10 @@ class Flows(unittest.TestCase):
             import yaml
             self.assertEqual(page.evaluate("()=>document.querySelectorAll('.sh-min-app svg').length"),
                              page.evaluate("()=>document.querySelectorAll('.sh-min-app').length"), 'jedes Feld hat ein Bildzeichen')
-            # GUPPI: ein Satz mit „öffnen“ ist Navigation – ohne Modell
+            # SEDRA: ein Satz mit „öffnen“ ist Navigation – ohne Modell
             page.fill('.t-talk-in input', 'kannst du mir ein fenster für maschinenraum öffnen'); page.keyboard.press('Enter'); page.wait_for_timeout(900)
             self.assertTrue(page.query_selector('.sh-min-win[data-object="machine:machine"]'), 'der Maschinenraum ist offen')
-            # GUPPI schlägt vor, der Knopf öffnet
+            # SEDRA schlägt vor, der Knopf öffnet
             page.fill('.t-talk-in input', 'was steht denn im Verlauf an'); page.keyboard.press('Enter'); page.wait_for_timeout(1500)
             page.click('.t-talk-offer button:has-text("Öffnen: Logbuch")'); page.wait_for_timeout(800)
             self.assertTrue(page.query_selector('.sh-min-win[data-object="logbook:audit"]'), 'der Knopf unter der Antwort öffnet')
@@ -128,7 +128,7 @@ class Flows(unittest.TestCase):
         def flow(page, wait):
             # SPEC_COCKPIT_BAUM_v1 T4: System ist beim ersten Start zu – erst die Gruppe aufklappen, dann die Zeile
             page.click('.ck-tree [data-key="g:System"]'); page.click('.ck-tree [role=treeitem]:has-text("Module")'); page.wait_for_timeout(900)
-            # die Zeile „Minimal“, nicht der erste Knopf: seit Build 18 steht GUPPI XP (der alte Desktop) davor
+            # die Zeile „Minimal“, nicht der erste Knopf: seit Build 18 steht SEDRA XP (der alte Desktop) davor
             page.click('.t-modules-row:has(b:text-is("Minimal")) button:has-text("Diese Shell nehmen")'); page.wait_for_timeout(900)
             self.assertTrue(page.query_selector('.t-modules-reload button'), 'der Hinweis bringt den Knopf mit')
             page.click('.t-modules-reload button'); page.wait_for_timeout(1500); wait(page); page.wait_for_timeout(1200)
@@ -150,7 +150,7 @@ class Flows(unittest.TestCase):
         def flow(page, wait):
             page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay', collection:true})")
             page.wait_for_selector('.t-gateway-schutz', timeout=15000)
-            up = page.evaluate("(d)=>fetch('/api/gateway/upload', {method:'POST', headers:{'Content-Type':'application/json','X-GUPPI-Token':decodeURIComponent(location.hash.slice(1))}, body: JSON.stringify({name:'Kundenanfrage_Test.docx', data:d})}).then(r=>r.status)", data)
+            up = page.evaluate("(d)=>fetch('/api/gateway/upload', {method:'POST', headers:{'Content-Type':'application/json','X-SEDRA-Token':decodeURIComponent(location.hash.slice(1))}, body: JSON.stringify({name:'Kundenanfrage_Test.docx', data:d})}).then(r=>r.status)", data)
             self.assertEqual(up, 200)
             page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'gateway', id:'alle', title:'KI GateWay · Dateien', collection:true, ansicht:'dateien', imBaum:true})")
             page.wait_for_selector('.t-gateway-dateien button:has-text("Vorschau")', timeout=15000)
@@ -282,7 +282,7 @@ class Build24(unittest.TestCase):
             page.click('.ck-menu-item:has-text("Projekt")'); page.wait_for_timeout(900)
             page.fill('.t-files-input', 'Zweites Projekt'); page.keyboard.press('Enter'); page.wait_for_timeout(1200)
             self.assertIn('ist angelegt', page.text_content('.t-files .s-note.ok'))
-            self.assertEqual(page.evaluate("()=>fetch('/api/projects', {headers: {'X-GUPPI-Token': decodeURIComponent(location.hash.slice(1))}}).then(r=>r.json()).then(p=>p.length)"), 2, 'der Ordner ist wirklich da')
+            self.assertEqual(page.evaluate("()=>fetch('/api/projects', {headers: {'X-SEDRA-Token': decodeURIComponent(location.hash.slice(1))}}).then(r=>r.json()).then(p=>p.length)"), 2, 'der Ordner ist wirklich da')
             page.click('.t-files .s-note.ok button:has-text("Modus und Grenzen")'); page.wait_for_timeout(900)
             self.assertTrue(page.query_selector('.dk-tab.on:has-text("Modus und Grenzen")'), 'der Knopf führt zu den Grenzen')
             # Baum → Modell hinzufügen: der Abschnitt ist offen; ein falscher Pfad gibt einen klaren Satz, kein Rezept

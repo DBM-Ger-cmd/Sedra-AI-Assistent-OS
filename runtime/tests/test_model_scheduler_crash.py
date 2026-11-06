@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 import test_job_supervisor as tjs
-from guppi_runtime.jobs.model_scheduler import SchedulerError
+from sedra_runtime.jobs.model_scheduler import SchedulerError
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 from model_scheduler_fakes import make_scheduler, resolution
 
@@ -140,7 +140,7 @@ class CrashJobTests(CrashJobs):
         return job_id, out
 
     def worker(self, role, crash):
-        from guppi_runtime.jobs.job_worker import Worker, model_text_handler
+        from sedra_runtime.jobs.job_worker import Worker, model_text_handler
         calls = []
 
         def infer(job_id, request):

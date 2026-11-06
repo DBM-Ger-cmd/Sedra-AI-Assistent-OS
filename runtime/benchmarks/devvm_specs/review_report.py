@@ -1,6 +1,6 @@
-"""G4 review_report (docs/ABLAUF_GESPRAECH_2026-10-13.md step 6, "Abnahme-Bericht"). After a build GUPPI reads the candidate and tells the Captain in the chat what was built, what is wrong with it and what to do. Three pure parts:
+"""G4 review_report (docs/ABLAUF_GESPRAECH_2026-10-13.md step 6, "Abnahme-Bericht"). After a build SEDRA reads the candidate and tells the Captain in the chat what was built, what is wrong with it and what to do. Three pure parts:
 `findings_from_source` is the automatic part of the review (the things Claude had to find by hand in every candidate of 2026-10-13: comments, docstrings, imports inside functions, imports after code, unused imports),
-`question` / `parse_answer` are the dialogue when a stage fails ("the test expects X, the code gives Y: which is right?"), `report` is the report text. No files, no clock, no model. GUPPI builds it, Claude wrote this file,
+`question` / `parse_answer` are the dialogue when a stage fails ("the test expects X, the code gives Y: which is right?"), `report` is the report text. No files, no clock, no model. SEDRA builds it, Claude wrote this file,
 the hidden tests and the reference (benchmarks/devvm_refs/review_report)."""
 
 NOTES = '''# Notes for review_report

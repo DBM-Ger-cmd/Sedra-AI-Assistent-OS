@@ -11,8 +11,8 @@ import yaml
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.local_switches import ALLOWED, LocalSwitches
-from guppi_runtime.orchestra.config import OrchestraConfig
+from sedra_runtime.local_switches import ALLOWED, LocalSwitches
+from sedra_runtime.orchestra.config import OrchestraConfig
 
 RUNTIME = Path(__file__).resolve().parents[1]
 SHIPPED = RUNTIME / 'config' / 'orchestra.yaml'
@@ -62,8 +62,8 @@ class Shipped(unittest.TestCase):
                     OrchestraConfig.from_dict(changed(section, key, value))
 
     def test_standing_is_never_wider_than_the_guard(self):
-        from guppi_runtime.core import guard
-        from guppi_runtime.orchestra import config
+        from sedra_runtime.core import guard
+        from sedra_runtime.orchestra import config
         self.assertEqual((config.STANDING_MAX_DAYS, config.STANDING_MAX_USES, config.STANDING_MAX_LEVEL),
                          (guard.STANDING_MAX_DAYS, guard.STANDING_MAX_USES, guard.STANDING_MAX_LEVEL))
         cases = {'standing.max_days': ('max_days', 31), 'standing.max_uses': ('max_uses', 51), 'standing.max_level': ('max_level', 4),
@@ -116,7 +116,7 @@ class Schema1(unittest.TestCase):
             self.assertEqual(LocalSwitches.load(path).problems, ['unknown_key:orchestra'])
 
 
-ARCH = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 ON = 'switches:\n  orchestra: {enabled: true}\n'
 
 
@@ -125,7 +125,7 @@ class Runtime(unittest.TestCase):
 
     def runtime(self, switches=None, config=None):
         from unittest import mock
-        from guppi_runtime.runtime import GuppiRuntime
+        from sedra_runtime.runtime import SedraRuntime
         tmp = tempfile.TemporaryDirectory(prefix='orchestra-rt-')
         self.addCleanup(tmp.cleanup)
         project = Path(tmp.name) / 'project'
@@ -133,10 +133,10 @@ class Runtime(unittest.TestCase):
             (project / 'local_config').mkdir(parents=True)
             (project / 'local_config' / 'switches.yaml').write_text(switches, encoding='utf-8')
         if config is None:
-            rt = GuppiRuntime(project, ARCH)
+            rt = SedraRuntime(project, ARCH)
         else:
-            with mock.patch.object(GuppiRuntime, 'ORCHESTRA_CONFIG', str(config)):
-                rt = GuppiRuntime(project, ARCH)
+            with mock.patch.object(SedraRuntime, 'ORCHESTRA_CONFIG', str(config)):
+                rt = SedraRuntime(project, ARCH)
         if rt.orchestra is not None:
             self.addCleanup(rt.orchestra.close)
         return rt
@@ -182,7 +182,7 @@ class Runtime(unittest.TestCase):
 
     def test_a_database_newer_than_the_code(self):
         import sqlite3
-        from guppi_runtime.runtime import GuppiRuntime
+        from sedra_runtime.runtime import SedraRuntime
         tmp = tempfile.TemporaryDirectory(prefix='orchestra-new-')
         self.addCleanup(tmp.cleanup)
         db = Path(tmp.name) / 'project' / 'runtime_data' / 'orchestra' / 'orchestra.db'
@@ -193,14 +193,14 @@ class Runtime(unittest.TestCase):
         conn.commit(); conn.close()
         (db.parents[2] / 'local_config').mkdir()
         (db.parents[2] / 'local_config' / 'switches.yaml').write_text(ON, encoding='utf-8')
-        rt = GuppiRuntime(db.parents[2], ARCH)
+        rt = SedraRuntime(db.parents[2], ARCH)
         self.assertEqual((rt.orchestra, rt.orchestra_error), (None, 'orchestra_db_error:schema_newer'))
 
     def test_a_failing_migration_switches_the_orchestra_off(self):
         """D1.7: Datenbank älter (Schema 1), Migration 2 scheitert: `orchestra_db_error:migration`, Orchestrierung aus, die Laufzeit startet."""
         from unittest import mock
-        from guppi_runtime.orchestra import store
-        from guppi_runtime.runtime import GuppiRuntime
+        from sedra_runtime.orchestra import store
+        from sedra_runtime.runtime import SedraRuntime
         tmp = tempfile.TemporaryDirectory(prefix='orchestra-mig-')
         self.addCleanup(tmp.cleanup)
         project = Path(tmp.name) / 'project'
@@ -209,7 +209,7 @@ class Runtime(unittest.TestCase):
         (project / 'local_config').mkdir()
         (project / 'local_config' / 'switches.yaml').write_text(ON, encoding='utf-8')
         with mock.patch.dict(store.MIGRATIONS, {2: store.MIGRATIONS[2] + ('CREATE TABLE agents (x)',)}):
-            rt = GuppiRuntime(project, ARCH)
+            rt = SedraRuntime(project, ARCH)
         self.assertEqual((rt.orchestra, rt.orchestra_error), (None, 'orchestra_db_error:migration'))
         self.assertEqual(rt.boot()['orchestra'], {'enabled': False, 'error': 'orchestra_db_error:migration', 'schema_version': None})
         self.assertEqual(rt.boot()['state'], 'READY')
@@ -221,7 +221,7 @@ class Runtime(unittest.TestCase):
         import contextlib
         import io
         import json
-        from guppi_runtime import cli
+        from sedra_runtime import cli
         with tempfile.TemporaryDirectory(prefix='orchestra-doctor-') as tmp:
             out = io.StringIO()
             with contextlib.redirect_stdout(out):

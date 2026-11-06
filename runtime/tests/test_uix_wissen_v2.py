@@ -96,7 +96,7 @@ class WissenImCockpit(Basis):
             self.assertRegex(page.evaluate("()=>(document.querySelector('.t-talk-in input, .t-talk-in textarea')||{}).value||''"), r'\[W[0-9a-f]+\]')
         # statt 800 ms: die Ablage schreibt gebündelt (höchstens einmal je Sekunde, lifecycle.js) – warten, bis die Frage auf dem Server liegt
         bis_wahr(page, "async()=>{ const r = await (await fetch('/api/ablage/lesen', {method: 'POST', body: JSON.stringify({objekt: 'wissen:speicher'}),"
-                    " headers: {'Content-Type': 'application/json', 'X-SEDRA-Tool': 'wissen', 'X-GUPPI-Token': decodeURIComponent(location.hash.slice(1))}})).json();"
+                    " headers: {'Content-Type': 'application/json', 'X-SEDRA-Tool': 'wissen', 'X-SEDRA-Token': decodeURIComponent(location.hash.slice(1))}})).json();"
                     " return JSON.stringify((r && r.werte) || {}).includes('Lease Index Abdeckung'); }")
         page.reload(); self.uix.wait_until_started(page, shell='cockpit')
         page.wait_for_selector('.t-wissen input.t-wissen-frage', timeout=WARTE_MS)

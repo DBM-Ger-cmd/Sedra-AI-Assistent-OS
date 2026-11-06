@@ -8,8 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime import arbeitsumfeld_wissen as aw
-from guppi_runtime.arbeitsumfeld_wissen import ArbeitsumfeldWissen, DATEI
+from sedra_runtime import arbeitsumfeld_wissen as aw
+from sedra_runtime.arbeitsumfeld_wissen import ArbeitsumfeldWissen, DATEI
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
 GEHEIM = 'GEHEIMER-SCHLUESSEL-123'
@@ -19,7 +19,7 @@ REGELWERK = """# Regelwerk Standardläufe
 
 ## 1. Geltungsbereich und Grundsätze
 
-1. **Sandbox statt Live-Code.** Ein Lauf schreibt nur in seinen eigenen Schreibbereich unter `workspace/GUPPI_OS/redesign/`.
+1. **Sandbox statt Live-Code.** Ein Lauf schreibt nur in seinen eigenen Schreibbereich unter `workspace/SEDRA_OS/redesign/`.
 
 ## 8. Präzedenzfälle
 
@@ -61,12 +61,12 @@ class DasArbeitsumfeld(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='arbeitsumfeld-'); self.addCleanup(self.tmp.cleanup)
         self.repo = Path(self.tmp.name) / 'repo'
-        self.project = self.repo / 'workspace' / 'GUPPI_OS'
+        self.project = self.repo / 'workspace' / 'SEDRA_OS'
         (self.repo / 'docs').mkdir(parents=True)
-        (self.repo / 'runtime' / 'src' / 'guppi_runtime').mkdir(parents=True)
+        (self.repo / 'runtime' / 'src' / 'sedra_runtime').mkdir(parents=True)
         (self.repo / 'docs' / 'REGELWERK_STANDARDLAEUFE.md').write_text(REGELWERK, encoding='utf-8')
         (self.repo / 'docs' / 'AUFTRAG_EINHEITLICHER_IMPORT_2026-10-16.md').write_text(AUFTRAG, encoding='utf-8')
-        (self.repo / 'runtime' / 'src' / 'guppi_runtime' / 'vorarbeiter.py').write_text(VORARBEITER, encoding='utf-8')
+        (self.repo / 'runtime' / 'src' / 'sedra_runtime' / 'vorarbeiter.py').write_text(VORARBEITER, encoding='utf-8')
         (self.project / 'local_config').mkdir(parents=True)
         (self.project / 'local_config' / 'cloud_keys.json').write_text(json.dumps({'key': GEHEIM}), encoding='utf-8')
         (self.project / 'local_config' / 'modell_zustand.json').write_text(json.dumps({
@@ -159,7 +159,7 @@ class DasArbeitsumfeld(unittest.TestCase):
     def test_every_action_in_the_real_source_has_a_description(self):
         # Drift-Wache: fügt der Vorarbeiter eine Aktion hinzu, muss AKTION_ZWECK sie ebenfalls kennen.
         import re
-        quelle = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'vorarbeiter.py'
+        quelle = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'vorarbeiter.py'
         namen = set(re.findall(r'name == "(\w+)"', quelle.read_text(encoding='utf-8')))
         self.assertTrue(namen)
         for n in namen:

@@ -3,7 +3,7 @@
 database not openable or newer than the code -> the text of the database error; everything valid -> an `Orchestra`. Every error is written once as audit `ORCHESTRA_OFF`.
 `boot_entry` is the entry `boot()["orchestra"]`. The read methods give the rows that the desk adapter `desk/orchestra_kinds.py` turns into objects (K0.21). Config loader,
 database opener, audit, guard, job supervisor and template reader are PASSED IN (D3.1: no import of desk, agent_manager or devvm), so the tests use fakes and their own
-sqlite tables. The domain logic (org, board, heartbeat, budget, routines) comes in Spec 1. GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the
+sqlite tables. The domain logic (org, board, heartbeat, budget, routines) comes in Spec 1. SEDRA builds it; Claude only wrote this file, the hidden tests and the
 reference (benchmarks/devvm_refs/k0_orchestra_service). Wiring into runtime.py is harness work (K0.20).
 Stages cut to at most 20 new hidden checks each (Captain, line L3, 20.10.2026)."""
 

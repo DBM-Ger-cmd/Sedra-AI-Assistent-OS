@@ -6,8 +6,8 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from guppi_runtime import update_holen as uh
-from guppi_runtime.update_anwenden import UpdateFehler
+from sedra_runtime import update_holen as uh
+from sedra_runtime.update_anwenden import UpdateFehler
 
 
 def zip_mit(eintraege):
@@ -39,9 +39,9 @@ class HolenTest(unittest.TestCase):
                 uh.herunterladen(self.root, tag, holen=lambda url: b'')
 
     def test_stand_wird_ohne_oberordner_in_den_staging_ordner_gelegt(self):
-        daten = zip_mit([('Sedra-1.22.0/runtime/src/guppi_runtime/kern.py', 'X = 1\n'), ('Sedra-1.22.0/release/MANIFEST.sha256', 'x\n')])
+        daten = zip_mit([('Sedra-1.22.0/runtime/src/sedra_runtime/kern.py', 'X = 1\n'), ('Sedra-1.22.0/release/MANIFEST.sha256', 'x\n')])
         ziel = uh.herunterladen(self.root, 'v1.22.0', holen=lambda url: daten)
-        self.assertEqual((ziel / 'runtime/src/guppi_runtime/kern.py').read_text(encoding='utf-8'), 'X = 1\n')
+        self.assertEqual((ziel / 'runtime/src/sedra_runtime/kern.py').read_text(encoding='utf-8'), 'X = 1\n')
         self.assertFalse((ziel / 'entpackt').exists())
         self.assertFalse((ziel.parent / 'v1.22.0.zip').exists())
 
@@ -52,7 +52,7 @@ class HolenTest(unittest.TestCase):
         self.assertFalse((self.root / 'evil.py').exists())
 
     def test_link_im_archiv_wird_abgelehnt(self):
-        daten = zip_mit_link('Sedra-1.22.0/runtime/src/guppi_runtime/link.py', '/etc/passwd')
+        daten = zip_mit_link('Sedra-1.22.0/runtime/src/sedra_runtime/link.py', '/etc/passwd')
         with self.assertRaisesRegex(UpdateFehler, 'archiv_link_nicht_erlaubt'):
             uh.herunterladen(self.root, 'v1.22.0', holen=lambda url: daten)
 

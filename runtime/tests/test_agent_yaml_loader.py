@@ -1,10 +1,10 @@
 import os
 import unittest
 
-from guppi_runtime.agent_manager.agent_contracts import ContractError
-from guppi_runtime.agent_manager.yaml_loader import MAX_BYTES, MAX_DEPTH, load_strict
+from sedra_runtime.agent_manager.agent_contracts import ContractError
+from sedra_runtime.agent_manager.yaml_loader import MAX_BYTES, MAX_DEPTH, load_strict
 
-ARCHIVE = r"C:\Users\<user>\AppData\Local\Temp\claude\C--Users-<user>\f0a5651b-ba8d-432f-be11-58e72b5ca9ea\scratchpad\am\GUPPI_Agent_Manager_Developer_Archive_v1.0\examples"
+ARCHIVE = r"C:\Users\<user>\AppData\Local\Temp\claude\C--Users-<user>\f0a5651b-ba8d-432f-be11-58e72b5ca9ea\scratchpad\am\SEDRA_Agent_Manager_Developer_Archive_v1.0\examples"
 
 
 class StrictYamlTest(unittest.TestCase):

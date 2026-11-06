@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.wissen import schema, wurzeln
+from sedra_runtime.wissen import schema, wurzeln
 from wissen_fixture import FakeEmbedServer, freigeben, oeffnen
 
 MD = "# Akte {n}\n\n## Vertrag\n\nLaufzeit {n} Jahre, Kündigung drei Monate.\n\n## Kontakt\n\nAnsprechpartner im Einkauf.\n"

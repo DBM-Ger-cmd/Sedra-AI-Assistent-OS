@@ -3,14 +3,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.agent_manager.agent_contracts import ContractError
-from guppi_runtime.agent_manager.agent_registry import Registry
-from guppi_runtime.agent_manager.bridge import ACTION, AgentBridge, FakeRuntime
-from guppi_runtime.core.guard import Guard
+from sedra_runtime.agent_manager.agent_contracts import ContractError
+from sedra_runtime.agent_manager.agent_registry import Registry
+from sedra_runtime.agent_manager.bridge import ACTION, AgentBridge, FakeRuntime
+from sedra_runtime.core.guard import Guard
 
 RULES = next(Path(__file__).resolve().parents[2].glob("architecture/*/core/guard/guard_rules.yaml"))
-AGENT = "guppi.agent.coder@1.0.0"
-OTHER = "guppi.agent.planner@1.0.0"
+AGENT = "sedra.agent.coder@1.0.0"
+OTHER = "sedra.agent.planner@1.0.0"
 MISSION = "M-TEST-0001"
 INPUT = "artifact://input/1"
 
@@ -63,7 +63,7 @@ class BridgeTest(unittest.TestCase):
     def test_unknown_or_unimportable_agent_is_refused_before_the_guard(self):
         token = self.token()
         with self.assertRaises(ContractError) as ctx:
-            self.bridge.submit("c1", "guppi.agent.nobody@1.0.0", MISSION, INPUT, token)
+            self.bridge.submit("c1", "sedra.agent.nobody@1.0.0", MISSION, INPUT, token)
         self.assertEqual(ctx.exception.code, "agent_unknown")
         with self.assertRaises(ContractError) as ctx:
             self.bridge.submit("c2", OTHER, MISSION, INPUT, self.token(agent=OTHER))

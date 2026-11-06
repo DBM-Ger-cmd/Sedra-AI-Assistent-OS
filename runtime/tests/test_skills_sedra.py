@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.skill_library import SkillLibrary
-from guppi_runtime.skill_library import config as skill_config
+from sedra_runtime.skill_library import SkillLibrary
+from sedra_runtime.skill_library import config as skill_config
 
 REPO = Path(__file__).resolve().parents[2]
 QUELLE = REPO / 'skills'

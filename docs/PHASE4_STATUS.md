@@ -50,7 +50,7 @@ Alles bleibt **hinter den Flags** `context_manager.enabled` und `job_supervisor.
 - Eine **Stagnation** (Heartbeat ohne Fortschritt) endet in `REWORK` mit `awaiting_change: context_manifest`. `repair_job` baut den neuen Kontext, registriert ihn (`supply_change`) und hinterlegt Attempt-ID, Manifest und Checkpoint am Job. Der nächste `claim`/`confirm_start` startet dann **denselben Job als neuen Versuch** mit genau diesen IDs (`attempt_log` zeigt `UNKNOWN`, dann `SUCCEEDED`). Das Einreihen bleibt ein bewusster `enqueue`.
 - `context_overflow` wird genauso repariert.
 - Ein **stagnierender mutierender Job ist `DEAD`** und wird weder repariert noch wiederholt (`no_change_awaited`, kein Checkpoint geschrieben). Ein mutierender Job mit **bekanntem** Überlauf (nichts im Zweifel) darf repariert werden.
-- Wird das Limit erreicht oder ein Pin unbrauchbar, **eskaliert** der Job an GUPPI, statt zu schleifen.
+- Wird das Limit erreicht oder ein Pin unbrauchbar, **eskaliert** der Job an SEDRA, statt zu schleifen.
 - Golden Path im Test: Arbeit, Stagnation, Reparatur, neuer Versuch, Verifikation, `READY_FOR_ACCEPTANCE`, Audit-Kette gültig.
 
 **Grenzen**
@@ -81,7 +81,7 @@ Alles bleibt **hinter den Flags** `context_manager.enabled` und `job_supervisor.
 | `build_manifest(job, *, parent_checkpoint, task, files, symbols, extra_pins)` | zusätzlich `budget`, `snapshot`, `decisions`, `open_questions`, `known_failures`, `artifact_refs`, `approvals`. Weiterhin ohne Verlaufs-Parameter |
 | `assemble(manifest, *, retriever)` → `AssembledContext` | liefert ein Dict (`pieces`, `text`, `tokens`, `excluded`, `missing`, `truncated`, `pins`, `allowed_artifacts`, `state`, `status`) |
 | `plan_repair` liefert den Plan | `plan_repair` ist ein Trockenlauf. `repair` führt aus und liefert den Plan mit Ergebnis |
-| 8.2 „Reparatur-Versuche je Job begrenzt, danach Eskalation an GUPPI" | Eskalation macht `repair_job` über `supervisor.escalate`. Der Context Manager selbst eskaliert nicht |
+| 8.2 „Reparatur-Versuche je Job begrenzt, danach Eskalation an SEDRA" | Eskalation macht `repair_job` über `supervisor.escalate`. Der Context Manager selbst eskaliert nicht |
 | Manifest `layers` | Deskriptoren (Art, Digest, Referenz), keine Stücke |
 
 ## Entscheidungen für den Captain

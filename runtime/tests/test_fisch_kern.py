@@ -11,11 +11,11 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.fisch import nachrichten as nw
-from guppi_runtime.fisch import transkripte as tk
-from guppi_runtime.fisch import uebersetzer as ue
+from sedra_runtime.fisch import nachrichten as nw
+from sedra_runtime.fisch import transkripte as tk
+from sedra_runtime.fisch import uebersetzer as ue
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 SRT = "1\n00:00:01,000 --> 00:00:03,500\nGuten Morgen, Frau Musterfrau.\n\n2\n00:00:04,000 --> 00:00:06,000\nDie Lieferung kommt am Montag.\n"
 
 
@@ -98,7 +98,7 @@ class Transkripte(unittest.TestCase):
 
 class ThroughTheHub(unittest.TestCase):
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='fisch-')
         self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)

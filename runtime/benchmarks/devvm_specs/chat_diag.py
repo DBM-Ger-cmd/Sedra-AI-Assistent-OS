@@ -1,5 +1,5 @@
-"""Diagnosis for the GUPPI chat window (Captain 2026-10-12: "ein richtiges Chat-Fenster, das Interface ist zu klobig fuer Fehlerbehebung"; wanted: error details visible,
-a diagnosis side bar, commands in the chat). GUPPI builds the pure parts; Claude wires them into uix_server.py and the chat window afterwards.
+"""Diagnosis for the SEDRA chat window (Captain 2026-10-12: "ein richtiges Chat-Fenster, das Interface ist zu klobig fuer Fehlerbehebung"; wanted: error details visible,
+a diagnosis side bar, commands in the chat). SEDRA builds the pure parts; Claude wires them into uix_server.py and the chat window afterwards.
 Stage 1: `diag_core.py` (python, judged in the microVM): explain_error, parse_command, status_rows. Stage 2: `diag_panel.js` (a classic browser script, judged on the host with node):
 slashCommand, rowsText, worstState. Claude wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/chat_diag)."""
 
@@ -72,8 +72,8 @@ assert status_rows({"gpu": {"used_gb": 8.0, "total_gb": 12.0}})[0]["state"] == "
 assert status_rows({"gpu": {"used_gb": 10.0, "total_gb": 12.0}})[0]["state"] == "warn"
 assert status_rows({"gpu": {"used_gb": 10.1, "total_gb": 12.0}})[0]["state"] == "bad"
 assert status_rows({"lease": {"owner": "x", "purpose": "y", "stale": True, "mine": False}})[1] == {"id": "lease", "label": "GPU-Lease", "state": "warn", "detail": "verwaist (x)"}
-assert status_rows({"lease": {"owner": "guppi-uix", "purpose": "Modell", "stale": False, "mine": True}})[1]["detail"] == "von GUPPI (diese Oberfläche)"
-assert status_rows({"lease": {"owner": "guppi-uix", "purpose": "Modell", "stale": True, "mine": True}})[1]["state"] == "ok"
+assert status_rows({"lease": {"owner": "sedra-uix", "purpose": "Modell", "stale": False, "mine": True}})[1]["detail"] == "von SEDRA (diese Oberfläche)"
+assert status_rows({"lease": {"owner": "sedra-uix", "purpose": "Modell", "stale": True, "mine": True}})[1]["state"] == "ok"
 empty = status_rows({})
 assert [x["state"] for x in empty] == ["warn", "ok", "warn", "warn", "bad"], empty
 assert empty[0]["detail"] == "keine Messung" and empty[3]["detail"] == "noch nicht gelaufen" and empty[4]["detail"] == "Fehler"
@@ -136,7 +136,7 @@ STAGES = [
  Otherwise {"cmd": name, "args": args, "confirm": c}; c is True only for name "rebind" when the first arg lower-cased is "ja" or "yes".
 3. `status_rows(snap) -> list` of five dicts {"id", "label", "state", "detail"} in this order (snap may be None or miss keys; never modify it): state is "ok", "warn" or "bad".
  - "gpu" / "Grafikkarte", from snap["gpu"] = {"used_gb", "total_gb"}: missing -> warn, "keine Messung". Else free = total - used; state bad if free < 2, warn if free < 4, else ok; detail "%.1f GB frei von %.1f GB" % (free, total).
- - "lease" / "GPU-Lease", from snap["lease"] = {"owner", "purpose", "stale", "mine"}: missing -> ok, "frei". mine -> ok, "von GUPPI (diese Oberfläche)" (checked first). stale -> warn, "verwaist (OWNER)". Else warn, "belegt von OWNER: PURPOSE".
+ - "lease" / "GPU-Lease", from snap["lease"] = {"owner", "purpose", "stale", "mine"}: missing -> ok, "frei". mine -> ok, "von SEDRA (diese Oberfläche)" (checked first). stale -> warn, "verwaist (OWNER)". Else warn, "belegt von OWNER: PURPOSE".
  - "model" / "Modell", from snap["model"] = {"running", "model"}: running -> ok, the model name; else warn, "kein Modell geladen".
  - "canary" / "GPU-Selbsttest", from snap["canary"] = {"ok", "at"}: missing or ok None -> warn, "noch nicht gelaufen"; ok True -> ok, "bestanden " + at (at None counts as ""; strip the result); ok False -> bad, "fehlgeschlagen".
  - "profile" / "Hardware-Profil", from snap["hardware_profile"] = {"ok", "error", "rebind_needed"}: missing counts as {}. ok true -> ok, "passt zu diesem PC". Else bad: rebind_needed -> "passt nicht mehr zu diesem PC: /rebind", else the error text or "Fehler" when it is empty or None.""",

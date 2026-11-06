@@ -5,10 +5,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import schleife
-from guppi_runtime.harness.api import OPTIONEN, HarnessApi
-from guppi_runtime.harness.sitzung import Sitzungen
-from guppi_runtime.harness.strom import Stroeme
+from sedra_runtime.harness import schleife
+from sedra_runtime.harness.api import OPTIONEN, HarnessApi
+from sedra_runtime.harness.sitzung import Sitzungen
+from sedra_runtime.harness.strom import Stroeme
 
 from test_harness_schleife import MISSION, Attrappe, Box, Zug
 
@@ -96,7 +96,7 @@ class OptionUndDatum(unittest.TestCase):
             self.assertIn('Heute ist der 2026-11-03', s)
             self.assertNotIn('Heute ist der', schleife.system_prompt('P', [], vorlage))
         self.assertIn('am Ende steht immer eine Antwort', schleife.system_prompt('P', [], None))
-        from guppi_runtime.harness import verbrauch
+        from sedra_runtime.harness import verbrauch
         self.assertRegex(verbrauch.heute(), r'^\d{4}-\d{2}-\d{2}$')
 
     def test_der_masterchat_nimmt_das_datum_aus_dem_systemprompt(self):

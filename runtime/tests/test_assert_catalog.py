@@ -5,10 +5,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.devenv import assert_catalog, catalog_proofs
+from sedra_runtime.devenv import assert_catalog, catalog_proofs
 
 RUNTIME = Path(__file__).resolve().parents[1]
-DEVENV = RUNTIME / "src" / "guppi_runtime" / "devenv"
+DEVENV = RUNTIME / "src" / "sedra_runtime" / "devenv"
 
 
 def load_spec():

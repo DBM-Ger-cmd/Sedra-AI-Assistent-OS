@@ -1,6 +1,6 @@
 """Beispieltyp `echo`, nur im Test (Spec 0, D1, KERN-04): ein neuer Anwendungsfall ist ein Modul mit `register(registry, hub)`
 plus eine Zeile in `desk/extensions.MODULES`; `uix_server.py` bleibt unberührt."""
-from guppi_runtime.desk.actions import Verb
+from sedra_runtime.desk.actions import Verb
 
 ITEMS = {'eins': 'Erstes Echo', 'zwei': 'Zweites Echo'}
 CALLS = []

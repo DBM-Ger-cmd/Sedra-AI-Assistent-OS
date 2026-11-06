@@ -11,10 +11,10 @@ import yaml
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import actions as desk_actions
-from guppi_runtime.desk import objects as desk_objects
+from sedra_runtime.desk import actions as desk_actions
+from sedra_runtime.desk import objects as desk_objects
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 
 SHAPE = ('type', 'id', 'title', 'state', 'summary', 'actions', 'links')
 
@@ -59,13 +59,13 @@ class Shape(unittest.TestCase):
         self.assertIn('nicht ausgeführt', plan_only['summary'])
         self.assertNotIn('fertig', plan_only['summary'])
         self.assertEqual(desk_objects.task_object(compact(phase='COMPLETE', qualification='VERIFIED_INVENTORY'))['state'], 'fertig')
-        from guppi_runtime.desk import intents
+        from sedra_runtime.desk import intents
         missions = {'M-1': compact(phase='COMPLETE', status='closed', qualification='ARTIFACT_ONLY')}
         self.assertEqual(intents.state_of({'tasks': ['M-1']}, missions)[0], 'nur Plan')
 
     def test_every_phase_the_runtime_knows_has_a_german_word(self):
         """Sonst steht Maschinensprache im Satz des Captains ('candidate_review'), und der Satz ist der Kern von Regel 6."""
-        from guppi_runtime.core.mission import ALLOWED
+        from sedra_runtime.core.mission import ALLOWED
         phases = set(ALLOWED) | {p for targets in ALLOWED.values() for p in targets}
         self.assertEqual(sorted(phases - set(desk_objects.PHASE_WORD)), [])
         self.assertIn('Kandidat liegt vor', desk_objects.task_object(compact(phase='CANDIDATE_REVIEW'))['summary'])
@@ -143,13 +143,13 @@ class ThroughTheHub(unittest.TestCase):
     """Derselbe Weg wie in der Oberfläche: Objekt lesen, Verb ausführen, Zustand hat sich geändert."""
 
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='desk-obj-')
         self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
         self.addCleanup(self.hub.close)
         project = self.hub.new_project({'name': 'Prüfprojekt'})
-        self.mission = self.hub.create_chat_mission({'intent': 'Create a GUPPI demo artifact', 'project_id': project['project_id']})['mission']['mission_id']
+        self.mission = self.hub.create_chat_mission({'intent': 'Create a SEDRA demo artifact', 'project_id': project['project_id']})['mission']['mission_id']
 
     def test_a_task_runs_through_the_one_action_route(self):
         obj = self.hub.object_view('task', self.mission)
@@ -163,7 +163,7 @@ class ThroughTheHub(unittest.TestCase):
 
     def test_a_task_is_closed_then_archived_and_leaves_the_list(self):
         # 28.10.2026: Schließen und Archivieren; das Archiv bleibt im Logbuch, nicht in der Aufgabenliste
-        from guppi_runtime.desk import builtin_kinds
+        from sedra_runtime.desk import builtin_kinds
         self.assertIn('schliessen', [a['verb'] for a in self.hub.object_view('task', self.mission)['actions']])
         self.hub.act({'type': 'task', 'id': self.mission, 'verb': 'schliessen'})
         self.assertEqual(self.hub.runtime.missions.load(self.mission)['lifecycle']['status'], 'closed')
@@ -202,7 +202,7 @@ class CandidateThroughTheHub(unittest.TestCase):
     """Ein echter Kandidat: Diff, Bericht und die Verben, die er in seinem Zustand hergibt."""
 
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='desk-cand-')
         self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)

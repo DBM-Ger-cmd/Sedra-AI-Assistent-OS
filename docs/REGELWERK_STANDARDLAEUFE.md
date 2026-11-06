@@ -5,8 +5,8 @@ Stand 16.10.2026. Gilt für alle Läufe, die ein Cloud- oder lokales Modell in d
 
 ## 1. Geltungsbereich und Grundsätze
 
-1. **Sandbox statt Live-Code.** Ein Lauf schreibt nur in seinen eigenen Schreibbereich unter `workspace/GUPPI_OS/redesign/`.
-   Der Live-Code (`runtime/src/guppi_runtime/uix/` ohne Sandbox) wird nie direkt verändert.
+1. **Sandbox statt Live-Code.** Ein Lauf schreibt nur in seinen eigenen Schreibbereich unter `workspace/SEDRA_OS/redesign/`.
+   Der Live-Code (`runtime/src/sedra_runtime/uix/` ohne Sandbox) wird nie direkt verändert.
 2. **Übernahme nur nach Prüfung und Freigabe.** Ergebnisse werden vom Vorarbeiter geprüft. Übernommen wird erst nach Freigabe des Captains.
 3. **Keine erfundenen Daten.** Ein Modell hat keinen Internetzugang. Zahlen, Quellen und Objekte kommen nur aus den bereitgestellten Eingaben.
 4. **Personenbezug** geht nicht in die Cloud. Im Testmodus werden persönliche Angaben durch eigene Begriffe ersetzt, produktiv gilt die strenge Regel (siehe KI Labor, Modus).
@@ -96,7 +96,7 @@ Das Entwurfsfenster und die KI Labor (Tab „Läufe“) lesen diese Protokolle.
 Neue Aufträge werden nicht mehr im Code festgelegt, sondern als Definition angelegt. Die sechs Präzedenzfälle bleiben fest;
 ein neuer Auftrag wie „bewerte XY“ oder „baue XYZ“ ist eine Datei.
 
-**Definition** (`workspace/GUPPI_OS/redesign/laeufe/<name>.json`, Felder aus `laufdefinition.py`):
+**Definition** (`workspace/SEDRA_OS/redesign/laeufe/<name>.json`, Felder aus `laufdefinition.py`):
 
 | Feld | Pflicht | Regel |
 |---|---|---|

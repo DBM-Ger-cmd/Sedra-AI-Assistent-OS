@@ -4,7 +4,7 @@ after every model answer (E-02, E-03, E-04, E-05). The module stays PURE: the co
 model_tools / devvm_agents and the `--coder-ext` flag are a separate step after acceptance, with the Captain's approval).
 
 Seed: the workspace starts with the ACCEPTED modules (read_tracker, fuzzy_edit, replay_log, think_guard, no_call_monitor, syntax_note, result_pruner, tool_cards) and Claude's
-data file coder_cards.py (folder benchmarks/devvm_seeds/coder_ext/, put together after acceptance). GUPPI builds coder_ext.py, Claude only wrote this file, coder_cards.py and the hidden tests.
+data file coder_cards.py (folder benchmarks/devvm_seeds/coder_ext/, put together after acceptance). SEDRA builds coder_ext.py, Claude only wrote this file, coder_cards.py and the hidden tests.
 Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
 
 NOTES = '''# Notes for coder_ext

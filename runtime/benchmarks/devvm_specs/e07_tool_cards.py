@@ -1,6 +1,6 @@
 """E-07 (coder extension "tool card after a failed call", 2026-10-10): when a tool call fails, the toolbox appends a short card that explains how to use exactly this tool for exactly
 this kind of error, but each card only once per run (little-coder: tool skill cards selected by error recovery first). `tool_cards.py` only SELECTS: the rules and the card texts are
-data given by the caller (Claude writes them for the integration). Pure, no file access. GUPPI builds it, Claude only wrote this file and the hidden tests.
+data given by the caller (Claude writes them for the integration). Pure, no file access. SEDRA builds it, Claude only wrote this file and the hidden tests.
 Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
 
 NOTES = '''# Notes for tool_cards

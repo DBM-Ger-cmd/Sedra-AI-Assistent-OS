@@ -1,4 +1,4 @@
-# Dokumentation von SEDRA (GUPPI OS) – Übersicht
+# Dokumentation von SEDRA (SEDRA OS) – Übersicht
 
 Stand 20.10.2026 (geändert 20.10.2026, Linie L6). Diese Seite hat zuerst zwei Listen: **Was gilt** und **Historie**. Danach folgt die ausführliche Übersicht nach Themen. Keine Datei wurde verschoben.
 
@@ -43,13 +43,13 @@ Stand 20.10.2026 (geändert 20.10.2026, Linie L6). Diese Seite hat zuerst zwei L
 
 **Bauweg und Selbstentwicklung:** [ANALYSE_KETTE_EINGABE_AUSFUEHRUNG.md](ANALYSE_KETTE_EINGABE_AUSFUEHRUNG.md) · [BAUSPEC_AUFGABE_DECKUNG.md](BAUSPEC_AUFGABE_DECKUNG.md) · [BAUSPEC_LAUF_FORTSCHRITT.md](BAUSPEC_LAUF_FORTSCHRITT.md) · [BAUWEG_CODING_UND_TEST_2026-10-25.md](BAUWEG_CODING_UND_TEST_2026-10-25.md) · [BUILDFLOW_2026-10-13.md](BUILDFLOW_2026-10-13.md) · [SO_WIRD_GEBAUT.md](SO_WIRD_GEBAUT.md)
 
-**Messungen und Modelle:** [BAUBERICHT_ABNAHME_NEMOTRON_2026-10-28.md](BAUBERICHT_ABNAHME_NEMOTRON_2026-10-28.md) · [BAUBERICHT_ABNAHME_NEMOTRON_WDH_2026-10-28.md](BAUBERICHT_ABNAHME_NEMOTRON_WDH_2026-10-28.md) · [MESSBERICHT_SLOTS_2026-10-23.md](MESSBERICHT_SLOTS_2026-10-23.md) · [MESSPLAN_SKILLS_2026-10-13.md](MESSPLAN_SKILLS_2026-10-13.md) · [MESSUNG_KORPUS_v0.2_GEGEN_GUPPI_b6-datenregeln-0.1_2026-10-15.md](MESSUNG_KORPUS_v0.2_GEGEN_GUPPI_b6-datenregeln-0.1_2026-10-15.md)
+**Messungen und Modelle:** [BAUBERICHT_ABNAHME_NEMOTRON_2026-10-28.md](BAUBERICHT_ABNAHME_NEMOTRON_2026-10-28.md) · [BAUBERICHT_ABNAHME_NEMOTRON_WDH_2026-10-28.md](BAUBERICHT_ABNAHME_NEMOTRON_WDH_2026-10-28.md) · [MESSBERICHT_SLOTS_2026-10-23.md](MESSBERICHT_SLOTS_2026-10-23.md) · [MESSPLAN_SKILLS_2026-10-13.md](MESSPLAN_SKILLS_2026-10-13.md) · [MESSUNG_KORPUS_v0.2_GEGEN_SEDRA_b6-datenregeln-0.1_2026-10-15.md](MESSUNG_KORPUS_v0.2_GEGEN_SEDRA_b6-datenregeln-0.1_2026-10-15.md)
 
 **Wünsche:** [ARBEITSWEG_WUNSCH_UMSETZEN.md](ARBEITSWEG_WUNSCH_UMSETZEN.md) · [SPEC_WUNSCH_ANBINDUNG_v1.md](SPEC_WUNSCH_ANBINDUNG_v1.md)
 
 **Umstieg, Übergaben, offene Punkte:** [BEOBACHTUNG_ERSTE_STUNDE_2026-10-27.md](BEOBACHTUNG_ERSTE_STUNDE_2026-10-27.md) · [NACHTRAG_OFFENE_PUNKTE_2026-10-30.md](NACHTRAG_OFFENE_PUNKTE_2026-10-30.md) · [UEBERGABE_CLOUD_2026-10-29.md](UEBERGABE_CLOUD_2026-10-29.md) · [UEBERGABE_ENTWICKLER_2026-10-14.md](UEBERGABE_ENTWICKLER_2026-10-14.md) · [UMSTIEG_A1_PLATTFORM_PLAN_2026-10-26.md](UMSTIEG_A1_PLATTFORM_PLAN_2026-10-26.md) · [UMSTIEG_INSTALLATION_PLAN_2026-10-24.md](UMSTIEG_INSTALLATION_PLAN_2026-10-24.md)
 
-**Builds, Tickets und Aufträge aus dem Oktober (historisch):** [ABLAUF_GESPRAECH_2026-10-13.md](ABLAUF_GESPRAECH_2026-10-13.md) · [AUFTRAG_EINHEITLICHER_IMPORT_2026-10-16.md](AUFTRAG_EINHEITLICHER_IMPORT_2026-10-16.md) · [AUFTRAG_GUPPI_CHAT_AUSBAU_2026-10-13.md](AUFTRAG_GUPPI_CHAT_AUSBAU_2026-10-13.md) · [AUFTRAG_PAPERCLIP_3D_PIPELINE_2026-10-16.md](AUFTRAG_PAPERCLIP_3D_PIPELINE_2026-10-16.md) · [BUILD_21_GATEWAY_ASSISTENT_2026-10-15.md](BUILD_21_GATEWAY_ASSISTENT_2026-10-15.md) · [BUILD_22_UMSCHALTER_LESBARKEIT_2026-10-15.md](BUILD_22_UMSCHALTER_LESBARKEIT_2026-10-15.md) · [BUILD_23_ZUSAMMENFUEHRUNG_ERSTSTART_2026-10-15.md](BUILD_23_ZUSAMMENFUEHRUNG_ERSTSTART_2026-10-15.md) · [BUILD_24_COCKPIT_PAPERCLIP_ARBEITSPLATZ_2026-10-15.md](BUILD_24_COCKPIT_PAPERCLIP_ARBEITSPLATZ_2026-10-15.md) · [TICKET_B6-G-01_NACHARBEIT_GATEWAY_STUDIO_BUILD20_2026-10-15.md](TICKET_B6-G-01_NACHARBEIT_GATEWAY_STUDIO_BUILD20_2026-10-15.md) · [TICKET_B6-G-03_SEDRA_GATEWAY_ASSISTENT_2026-10-15.md](TICKET_B6-G-03_SEDRA_GATEWAY_ASSISTENT_2026-10-15.md) · [TICKET_B6-G-04_UMSCHALTER_LESBARKEIT_2026-10-15.md](TICKET_B6-G-04_UMSCHALTER_LESBARKEIT_2026-10-15.md) · [TICKET_B6-G-05_ZUSAMMENFUEHRUNG_ERSTSTART_2026-10-15.md](TICKET_B6-G-05_ZUSAMMENFUEHRUNG_ERSTSTART_2026-10-15.md)
+**Builds, Tickets und Aufträge aus dem Oktober (historisch):** [ABLAUF_GESPRAECH_2026-10-13.md](ABLAUF_GESPRAECH_2026-10-13.md) · [AUFTRAG_EINHEITLICHER_IMPORT_2026-10-16.md](AUFTRAG_EINHEITLICHER_IMPORT_2026-10-16.md) · [AUFTRAG_SEDRA_CHAT_AUSBAU_2026-10-13.md](AUFTRAG_SEDRA_CHAT_AUSBAU_2026-10-13.md) · [AUFTRAG_PAPERCLIP_3D_PIPELINE_2026-10-16.md](AUFTRAG_PAPERCLIP_3D_PIPELINE_2026-10-16.md) · [BUILD_21_GATEWAY_ASSISTENT_2026-10-15.md](BUILD_21_GATEWAY_ASSISTENT_2026-10-15.md) · [BUILD_22_UMSCHALTER_LESBARKEIT_2026-10-15.md](BUILD_22_UMSCHALTER_LESBARKEIT_2026-10-15.md) · [BUILD_23_ZUSAMMENFUEHRUNG_ERSTSTART_2026-10-15.md](BUILD_23_ZUSAMMENFUEHRUNG_ERSTSTART_2026-10-15.md) · [BUILD_24_COCKPIT_PAPERCLIP_ARBEITSPLATZ_2026-10-15.md](BUILD_24_COCKPIT_PAPERCLIP_ARBEITSPLATZ_2026-10-15.md) · [TICKET_B6-G-01_NACHARBEIT_GATEWAY_STUDIO_BUILD20_2026-10-15.md](TICKET_B6-G-01_NACHARBEIT_GATEWAY_STUDIO_BUILD20_2026-10-15.md) · [TICKET_B6-G-03_SEDRA_GATEWAY_ASSISTENT_2026-10-15.md](TICKET_B6-G-03_SEDRA_GATEWAY_ASSISTENT_2026-10-15.md) · [TICKET_B6-G-04_UMSCHALTER_LESBARKEIT_2026-10-15.md](TICKET_B6-G-04_UMSCHALTER_LESBARKEIT_2026-10-15.md) · [TICKET_B6-G-05_ZUSAMMENFUEHRUNG_ERSTSTART_2026-10-15.md](TICKET_B6-G-05_ZUSAMMENFUEHRUNG_ERSTSTART_2026-10-15.md)
 
 **Wissen, Kurs, Beschreibungen:** [DOKUMENTATION_KLAUS_TORSTEN_2026-10-16.md](DOKUMENTATION_KLAUS_TORSTEN_2026-10-16.md) · [KURS_PRAESENTATION_SEDRA.md](KURS_PRAESENTATION_SEDRA.md) · [SEDRA_KERN_UND_KMU_SHELL_AUSFUEHRLICH_2026-10-20.md](SEDRA_KERN_UND_KMU_SHELL_AUSFUEHRLICH_2026-10-20.md) · [WISSEN_SEDRA_GESAMT.md](WISSEN_SEDRA_GESAMT.md)
 
@@ -59,7 +59,7 @@ Beschreibt den Stand des jeweiligen Tages; wo es dem Obigen widerspricht, gilt d
 
 - **Builds:** `BUILD_*` (Builds 2 bis 24, zuletzt [BUILD_20_FEINSCHLIFF_2026-10-19.md](BUILD_20_FEINSCHLIFF_2026-10-19.md) = Build 25 im Changelog) und [BUILD_2026-10-14.md](BUILD_2026-10-14.md); `TICKET_B6-G-*`
 - **DevVM-Aufbau:** `DEVVM_AUFTRAG`, `DEVVM_PHASE0..5_BERICHT`, `PHASE0..9_STATUS`, `PHASE8F_LLAMA_SERVER`, `REAL_RUN_STATUS`, `SANDBOX_BOUNDARY_STATUS`
-- **Entwürfe (`*_PROPOSED`):** [OFFENE_PUNKTE_GUPPI_B20_2026-10-15_PROPOSED.md](OFFENE_PUNKTE_GUPPI_B20_2026-10-15_PROPOSED.md), [PLAN_UND_PROMPT_SEDRA_ALS_GATEWAY_ASSISTENT_2026-10-15_PROPOSED.md](PLAN_UND_PROMPT_SEDRA_ALS_GATEWAY_ASSISTENT_2026-10-15_PROPOSED.md), [REGELWERK_DATENKATEGORIEN_CLOUDSPERRE_v0.1_2026-10-15_PROPOSED.md](REGELWERK_DATENKATEGORIEN_CLOUDSPERRE_v0.1_2026-10-15_PROPOSED.md), [REGISTER_NACHTRAG_v1.3.21_PROPOSED.md](REGISTER_NACHTRAG_v1.3.21_PROPOSED.md)
+- **Entwürfe (`*_PROPOSED`):** [OFFENE_PUNKTE_SEDRA_B20_2026-10-15_PROPOSED.md](OFFENE_PUNKTE_SEDRA_B20_2026-10-15_PROPOSED.md), [PLAN_UND_PROMPT_SEDRA_ALS_GATEWAY_ASSISTENT_2026-10-15_PROPOSED.md](PLAN_UND_PROMPT_SEDRA_ALS_GATEWAY_ASSISTENT_2026-10-15_PROPOSED.md), [REGELWERK_DATENKATEGORIEN_CLOUDSPERRE_v0.1_2026-10-15_PROPOSED.md](REGELWERK_DATENKATEGORIEN_CLOUDSPERRE_v0.1_2026-10-15_PROPOSED.md), [REGISTER_NACHTRAG_v1.3.21_PROPOSED.md](REGISTER_NACHTRAG_v1.3.21_PROPOSED.md)
 - **Ältere Reviews, Messungen, Recherchen, Pläne:** siehe die Abschnitte unten; dazu [historie/](historie/README.md) (v1.2 bis v1.20) und die Ordner `entwickler_archiv_*`
 
 ---
@@ -70,7 +70,7 @@ Beschreibt den Stand des jeweiligen Tages; wo es dem Obigen widerspricht, gilt d
 |---|---|
 | [ARCHITEKTUR.md](ARCHITEKTUR.md) | Aufbau: Kern, Jobs, Modelle, Selbstentwicklung, Agent Manager, Oberfläche, Ordner |
 | [BETRIEB.md](BETRIEB.md) | Einrichtung, Start, Konfiguration, Rezepte, GPU-Lease und Canary, Tests, Befehle, Störungen |
-| [ENTWICKLUNG.md](ENTWICKLUNG.md) | Wie GUPPI baut (Specs, versteckte Tests, devvm_build), Erkenntnisse, **Regeln für alle Sitzungen** |
+| [ENTWICKLUNG.md](ENTWICKLUNG.md) | Wie SEDRA baut (Specs, versteckte Tests, devvm_build), Erkenntnisse, **Regeln für alle Sitzungen** |
 | [MODELLE.md](MODELLE.md) | Welches Modell welche Rolle hat, mit Messwerten; ausführlich in [MODELLVERGLEICH_2026-10-12.pdf](MODELLVERGLEICH_2026-10-12.pdf) |
 
 Laufendes Protokoll aller Schritte: **[LOGBUCH_AGENT_MANAGER.md](LOGBUCH_AGENT_MANAGER.md)**.
@@ -92,10 +92,10 @@ Die übrigen Dokumente sind datierte Berichte, Pläne und Messungen. Sie beschre
 | [BUILD_16_INHALTSSCHUTZ_2026-10-15.md](BUILD_16_INHALTSSCHUTZ_2026-10-15.md) | Build 16: der Inhaltsschutz im Kern – jeder Modellaufruf geprüft, Entscheidungen in der einen Liste, Audit ohne Text, Schärfe aus dem Modus; was bewusst noch fehlt |
 | [SPEC_EIN_SICHERER_WEG_v1.md](SPEC_EIN_SICHERER_WEG_v1.md) | Spec: ein sicherer Weg – was SEDRA vom KI GateWay lernt und im Kern bekommt (S1–S7), wie das GateWay darauf sitzt (G1–G6), Bauplan Builds 16–18 |
 | [BUILD_19_GATEWAY_2026-10-15.md](BUILD_19_GATEWAY_2026-10-15.md) | Build 19: das KI GateWay in SEDRA – Studio Flow, Schutzklassen und Matrix, Freigabe als Gate, Rechecks, Entwürfe mit Löschdatum, Shell „KI GateWay Studio“ |
-| [BUILD_19_GUPPI_BEWEGT_SICH_2026-10-15.md](BUILD_19_GUPPI_BEWEGT_SICH_2026-10-15.md) | Build 19b (parallel, in Build 20 zusammengeführt): GUPPI öffnet Fenster und schlägt Handlungen als Knopf vor; Minimal mit Rückweg zur Übersicht, Bildzeichen und eigener Ablage |
+| [BUILD_19_SEDRA_BEWEGT_SICH_2026-10-15.md](BUILD_19_SEDRA_BEWEGT_SICH_2026-10-15.md) | Build 19b (parallel, in Build 20 zusammengeführt): SEDRA öffnet Fenster und schlägt Handlungen als Knopf vor; Minimal mit Rückweg zur Übersicht, Bildzeichen und eigener Ablage |
 | [SPEC_GATEWAY_VORGANG_v1.md](SPEC_GATEWAY_VORGANG_v1.md) | Spec: der GateWay-Vorgang in SEDRA – was die V4-Akte entscheidet, die 13 Merkmale, die Matrix, die vier Stationen, was MVP 1 nicht tut |
-| [BUILD_18_START_SEDRA_2026-10-15.md](BUILD_18_START_SEDRA_2026-10-15.md) | Build 18: START_SEDRA (Übersicht, direkt in eine Shell, --gewaehlt), Befund zur „alten Oberfläche“, GUPPI XP als Wahl im Einstieg |
-| [BUILD_17_SHELL_CREATOR_2026-10-15.md](BUILD_17_SHELL_CREATOR_2026-10-15.md) | Build 17: der Shell-Creator – Schema-Zwang am Router, der Rahmen aus Vorgabe (drei Formen 27/27 ohne Shell-Code), Satz an GUPPI oder Vorlage → Skizze → anlegen |
+| [BUILD_18_START_SEDRA_2026-10-15.md](BUILD_18_START_SEDRA_2026-10-15.md) | Build 18: START_SEDRA (Übersicht, direkt in eine Shell, --gewaehlt), Befund zur „alten Oberfläche“, SEDRA XP als Wahl im Einstieg |
+| [BUILD_17_SHELL_CREATOR_2026-10-15.md](BUILD_17_SHELL_CREATOR_2026-10-15.md) | Build 17: der Shell-Creator – Schema-Zwang am Router, der Rahmen aus Vorgabe (drei Formen 27/27 ohne Shell-Code), Satz an SEDRA oder Vorlage → Skizze → anlegen |
 | [RECHERCHE_SHELL_CREATOR_2026-10-15.md](RECHERCHE_SHELL_CREATOR_2026-10-15.md) | Recherche: Shell-Creator mit lokalem Modell – 19 Repos bewertet, kein Einbau, drei Muster (Katalog statt Code, Schema-Zwang, Layout-Modell), drei Empfehlungen |
 | [SPEC_SHELL_AUS_VORGABE_v1.md](SPEC_SHELL_AUS_VORGABE_v1.md) | Spec: eine Shell aus einer Vorgabe – Anordnung beschreiben statt programmieren; Rahmen im Vertrag; offene Frage ans Ersetzen |
 | [ABNAHME_EXTERNE_LIEFERUNG_KI_GATEWAY_2026-10-15.md](ABNAHME_EXTERNE_LIEFERUNG_KI_GATEWAY_2026-10-15.md) | Die erste Lieferung von außen durch das Gate: zwei Vertragsbefunde (eigene Objekttypen, Vertrauen aus der Datei), was fehlt, die zwei Wege |
@@ -109,7 +109,7 @@ Die übrigen Dokumente sind datierte Berichte, Pläne und Messungen. Sie beschre
 | [COCKPIT_MODUL_v1.md](COCKPIT_MODUL_v1.md) | Die festgelegte Form der ersten Shell: Zonen, 11 Regeln, Dock in der Shell, Gegenentwürfe D/E |
 | [UIX_2_RICHTUNG_C.md](UIX_2_RICHTUNG_C.md) | Herleitung der Richtung C, Logikprüfung L1–L8, Modus und Grenzen, Vorlagen |
 | [STAERKEN_INVENTUR_2026-10-14.md](STAERKEN_INVENTUR_2026-10-14.md) | S1–S12: welche Stärken der Runtime sichtbar werden müssen |
-| [BUILD_9_GRENZEN_2026-10-14.md](BUILD_9_GRENZEN_2026-10-14.md) | Build 9: Modus und die vier Grenzen, Vorhaben, Installation fremder Module, Vorlagen für GUPPI |
+| [BUILD_9_GRENZEN_2026-10-14.md](BUILD_9_GRENZEN_2026-10-14.md) | Build 9: Modus und die vier Grenzen, Vorhaben, Installation fremder Module, Vorlagen für SEDRA |
 | [BUILD_8_WERKBANK_2026-10-14.md](BUILD_8_WERKBANK_2026-10-14.md) | Build 8: Objektmodell, Verben, Live-Zeilen und die Werkbank-Werkzeuge (Kandidat, Tests, Live, Kosten) |
 | [BUILD_7_DESK_2026-10-14.md](BUILD_7_DESK_2026-10-14.md) | Build 7: Andockstelle `desk/`, UI-Vertrag `uix/ui/`, Cockpit-Shell und die 16 Werkzeuge; Abnahme und was offen bleibt |
 | [UIX_STYLE_MANIFEST_v0.2.md](UIX_STYLE_MANIFEST_v0.2.md) | Erscheinungsbild der Oberfläche, aus dem CSS abgeleitet: Charakter, Shell-Schichten, Tokens (Ist/Soll), Komponenten-Katalog, Zustandsfarben, Themes, Tickets |
@@ -130,7 +130,7 @@ Die übrigen Dokumente sind datierte Berichte, Pläne und Messungen. Sie beschre
 |---|---|
 | 2026-10-12 | [MODELLVERGLEICH_2026-10-12.pdf](MODELLVERGLEICH_2026-10-12.pdf) · [MODELL_VERGLEICH_ERGEBNISSE.md](MODELL_VERGLEICH_ERGEBNISSE.md) (automatisch erzeugt) |
 | 2026-10-10 | [QWEN_ANSCHLUSS_2026-10-10.md](QWEN_ANSCHLUSS_2026-10-10.md): Qwen Code in der Bau-Schleife |
-| 2026-10-09 | [MODELL_VERGLEICH_PLAN_2026-10-09.md](MODELL_VERGLEICH_PLAN_2026-10-09.md) · [FLASH_ATTENTION_UNTERSUCHUNG_2026-10-09.md](FLASH_ATTENTION_UNTERSUCHUNG_2026-10-09.md) · [VSCODE_MIT_GUPPI_MODELLEN_2026-10-09.md](VSCODE_MIT_GUPPI_MODELLEN_2026-10-09.md) · [CLINE_ANALYSE_2026-10-09.md](CLINE_ANALYSE_2026-10-09.md) |
+| 2026-10-09 | [MODELL_VERGLEICH_PLAN_2026-10-09.md](MODELL_VERGLEICH_PLAN_2026-10-09.md) · [FLASH_ATTENTION_UNTERSUCHUNG_2026-10-09.md](FLASH_ATTENTION_UNTERSUCHUNG_2026-10-09.md) · [VSCODE_MIT_SEDRA_MODELLEN_2026-10-09.md](VSCODE_MIT_SEDRA_MODELLEN_2026-10-09.md) · [CLINE_ANALYSE_2026-10-09.md](CLINE_ANALYSE_2026-10-09.md) |
 | 2026-10-05 | [ENGINE_TEMPO_PLAN_2026-10-05.md](ENGINE_TEMPO_PLAN_2026-10-05.md) |
 
 ## Selbstentwicklung: DevVM, Agent Manager, Workflow
@@ -147,7 +147,7 @@ Die übrigen Dokumente sind datierte Berichte, Pläne und Messungen. Sie beschre
 
 | Datum | Dokument |
 |---|---|
-| 2026-10-10 | [EXTERNE_AGENTENUMGEBUNGEN_2026-10-10.md](EXTERNE_AGENTENUMGEBUNGEN_2026-10-10.md) · [GITHUB_UEBERBLICK_2026-10-10.md](GITHUB_UEBERBLICK_2026-10-10.md) · [VERGLEICH_LITTLE_CODER_GUPPI_2026-10-10.md](VERGLEICH_LITTLE_CODER_GUPPI_2026-10-10.md) |
+| 2026-10-10 | [EXTERNE_AGENTENUMGEBUNGEN_2026-10-10.md](EXTERNE_AGENTENUMGEBUNGEN_2026-10-10.md) · [GITHUB_UEBERBLICK_2026-10-10.md](GITHUB_UEBERBLICK_2026-10-10.md) · [VERGLEICH_LITTLE_CODER_SEDRA_2026-10-10.md](VERGLEICH_LITTLE_CODER_SEDRA_2026-10-10.md) |
 
 ## Aufbau-Phasen (abgeschlossen, 2026-10-01 bis 07)
 

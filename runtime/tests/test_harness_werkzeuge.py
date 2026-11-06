@@ -6,12 +6,12 @@ import time
 import unittest
 from pathlib import Path
 
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.harness import befehl as befehl_mod
-from guppi_runtime.harness import katalog
-from guppi_runtime.harness.werkzeuge import WerkzeugFehler, Werkzeuge
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.harness import befehl as befehl_mod
+from sedra_runtime.harness import katalog
+from sedra_runtime.harness.werkzeuge import WerkzeugFehler, Werkzeuge
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 MISSION = 'M-HARNESS'
 
 
@@ -49,7 +49,7 @@ class LesenTests(Basis):
     def test_zeichengrenze_je_aufruf_und_weiterlesen(self):
         """Abnahme Nemotron C2: 200 Zeilen = 126 KB sprengten das Fenster. Jetzt höchstens LESEN_ZEICHEN_MAX je Aufruf, und
         „weiter mit ab_zeile=N“ führt lückenlos weiter."""
-        from guppi_runtime.harness.werkzeuge import LESEN_ZEICHEN_MAX
+        from sedra_runtime.harness.werkzeuge import LESEN_ZEICHEN_MAX
         (self.root / 'docs' / 'lang.md').write_text('\n'.join('x' * 500 + f' {i}' for i in range(1, 301)) + '\n', encoding='utf-8')
         erster = self.w.ausfuehren('datei_lesen', {'pfad': 'docs/lang.md', 'zeilen': 400})
         self.assertLessEqual(len(erster['ergebnis']), LESEN_ZEICHEN_MAX + 200)
@@ -62,7 +62,7 @@ class LesenTests(Basis):
         self.assertIn('Zeilen 1–5 von 1000', einzeln['ergebnis'])
 
     def test_fehlender_pfad_nennt_die_eindeutige_datei_mit_vollem_pfad(self):
-        """Log 03.11.2026: `harness/export.py` statt `runtime/src/guppi_runtime/harness/export.py` – das Modell gab auf."""
+        """Log 03.11.2026: `harness/export.py` statt `runtime/src/sedra_runtime/harness/export.py` – das Modell gab auf."""
         tief = self.root / 'runtime' / 'src' / 'harness'
         tief.mkdir(parents=True)
         (tief / 'export.py').write_text('x\n', encoding='utf-8')
@@ -194,7 +194,7 @@ class BefehlTests(Basis):
 
     def test_ruecknahme_der_aufgabe_beendet_den_befehl(self):
         # Stufe 3 G2 §4.4, Befund 7 des Bauberichts: ein `befehl` unter einer Aufgaben-Freigabe endet mit ihrer Rücknahme
-        from guppi_runtime.harness import befehl as befehl_mod
+        from sedra_runtime.harness import befehl as befehl_mod
         self.w.kontext = {'sitzung_id': 'S-00000001', 'antwort_id': None, 'aufgabe_id': 'T-TESTRUECK'}
         befehl_mod.RUECKNAHME.vergessen('T-TESTRUECK')
         threading.Timer(0.5, lambda: befehl_mod.RUECKNAHME.ausloesen('T-TESTRUECK')).start()
@@ -209,7 +209,7 @@ class BefehlTests(Basis):
         self.w.kontext = {}
 
     def test_ohne_aufgabe_kein_ruecknahme_ereignis(self):
-        from guppi_runtime.harness import befehl as befehl_mod
+        from sedra_runtime.harness import befehl as befehl_mod
         self.assertIsNone(befehl_mod.RUECKNAHME.ereignis(None))
         self.assertIsNone(befehl_mod.RUECKNAHME.ausloesen(''))
 

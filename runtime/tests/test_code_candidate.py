@@ -6,16 +6,16 @@ import tempfile
 import unittest
 import yaml
 from unittest.mock import patch
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.cli import main
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.cli import main
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ROOT=Path(__file__).resolve().parents[2];ARCH=next((ROOT/'architecture').glob('GUPPI_Architecture_v*'))
+ROOT=Path(__file__).resolve().parents[2];ARCH=next((ROOT/'architecture').glob('SEDRA_Architecture_v*'))
 
 class CandidateCase(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
-        self.rt=GuppiRuntime(Path(self.tmp.name),ARCH);self.project=self.rt.filesystem_tool.root/'demo';self.project.mkdir()
+        self.rt=SedraRuntime(Path(self.tmp.name),ARCH);self.project=self.rt.filesystem_tool.root/'demo';self.project.mkdir()
         # Own sandbox state: the runtime reads the PC's real config/sandbox.yaml (qualified once the Captain released the VM) and the
         # venv may carry the pinned SDK. Tests use the shipped unqualified default so the "VM unavailable" path holds on any machine.
         p=self.rt.sandbox.policy();p['target_qualified']=False
@@ -114,7 +114,7 @@ class CandidateCase(unittest.TestCase):
         original=self.rt.guard.evaluate
         def deny(action,**kw):return {'decision':'BLOCK'} if action=='read_project_file' else original(action,**kw)
         with patch.object(self.rt.guard,'evaluate',side_effect=deny):m=self.prepared()
-        self.assertEqual(m['lifecycle']['phase'],'PAUSED');self.assertFalse((self.rt.filesystem_tool.root/'guppi-candidates').exists())
+        self.assertEqual(m['lifecycle']['phase'],'PAUSED');self.assertFalse((self.rt.filesystem_tool.root/'sedra-candidates').exists())
     def test_candidate_review_is_not_approved_merge(self):
         m=self.prepared();mid=m['identity']['mission_id'];again=self.rt.brain.run(mid,approval_token={'status':'active','token_id':'fake'})
         self.assertEqual(again['lifecycle']['phase'],'CANDIDATE_REVIEW');self.assertEqual((self.project/'app.py').read_bytes(),self.old.encode())
@@ -126,7 +126,7 @@ class CandidateCase(unittest.TestCase):
             mid=output.call_args.args[0];self.assertEqual(main(common+['run',mid]),0)
         self.assertEqual(self.rt.missions.load(mid)['lifecycle']['phase'],'CANDIDATE_REVIEW')
     def test_stage_namespace_cannot_be_source(self):
-        req=deepcopy(self.request);req['project_path']='guppi-candidates/source'
+        req=deepcopy(self.request);req['project_path']='sedra-candidates/source'
         with self.assertRaises(ValueError):self.mission(req)
     def test_report_expansion_budget_stops_qualification(self):
         req={'project_path':'demo','files':[],'changes':[]}

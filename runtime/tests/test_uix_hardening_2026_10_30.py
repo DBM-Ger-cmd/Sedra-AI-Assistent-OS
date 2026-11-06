@@ -12,9 +12,9 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import gated, install
+from sedra_runtime.desk import gated, install
 from test_uix_contract import NODE, UIX, run_js
-from guppi_runtime.uix_server import UIXHub, make_server
+from sedra_runtime.uix_server import UIXHub, make_server
 from test_desk_install import module
 from test_uix_harness_api import ARCH
 
@@ -35,7 +35,7 @@ class ServerHaertung(unittest.TestCase):
     def anfrage(self, method, path, body=None, headers=None):
         c = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=5)
         try:
-            h = {'X-GUPPI-Token': self.token, 'Content-Type': 'application/json', **(headers or {})}
+            h = {'X-SEDRA-Token': self.token, 'Content-Type': 'application/json', **(headers or {})}
             c.request(method, path, json.dumps(body) if body is not None else None, h)
             r = c.getresponse(); data = r.read()
             try: return r.status, json.loads(data.decode('utf-8'))
@@ -73,7 +73,7 @@ class ServerHaertung(unittest.TestCase):
     def test_b6_nicht_ascii_im_token_kopf_ist_403_kein_absturz(self):
         c = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=5)
         try:
-            c.putrequest('GET', '/api/decisions'); c.putheader('X-GUPPI-Token', 'tok\xe9n\xff'); c.endheaders()
+            c.putrequest('GET', '/api/decisions'); c.putheader('X-SEDRA-Token', 'tok\xe9n\xff'); c.endheaders()
             self.assertEqual(c.getresponse().status, 403)
         finally:
             c.close()
@@ -86,7 +86,7 @@ class ServerHaertung(unittest.TestCase):
         def hole(path):
             c = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=5)
             try:
-                c.request('GET', path, headers={'X-GUPPI-Token': self.token}); r = c.getresponse(); return r.status, r.getheader('Content-Security-Policy') or '', r.read().decode('utf-8', 'replace')
+                c.request('GET', path, headers={'X-SEDRA-Token': self.token}); r = c.getresponse(); return r.status, r.getheader('Content-Security-Policy') or '', r.read().decode('utf-8', 'replace')
             finally:
                 c.close()
         for path in ('/', '/hardware', '/api/decisions'):
@@ -100,7 +100,7 @@ class ServerHaertung(unittest.TestCase):
         self.assertEqual(status, 200); self.assertIn("script-src 'self' 'unsafe-inline'", csp, 'das Archiv bleibt, wie es ist')
 
     def test_e3_rahmenseite_traegt_das_manifest_als_attribut(self):
-        from guppi_runtime.desk.gateway import Gateway
+        from sedra_runtime.desk.gateway import Gateway
         page = self.hub.gateway.frame_page('rahmen-probe')
         if page is None:
             self.skipTest('rahmen-probe nicht geladen (Schalter entwicklung aus)')
@@ -114,7 +114,7 @@ class ServerHaertung(unittest.TestCase):
         self.assertIn('code', out)
         c = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=5)
         try:
-            c.putrequest('POST', '/api/chat'); c.putheader('X-GUPPI-Token', self.token); c.putheader('Content-Length', 'abc'); c.endheaders()
+            c.putrequest('POST', '/api/chat'); c.putheader('X-SEDRA-Token', self.token); c.putheader('Content-Length', 'abc'); c.endheaders()
             r = c.getresponse(); out = json.loads(r.read().decode('utf-8'))
             self.assertEqual((r.status, out['code']), (400, 'bad_content_length'))
         finally:
@@ -127,7 +127,7 @@ class ServerHaertung(unittest.TestCase):
         with redirect_stderr(buf):
             for _ in range(3):
                 c = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=5)
-                c.putrequest('GET', '/api/strip'); c.putheader('X-GUPPI-Token', self.token); c.endheaders()
+                c.putrequest('GET', '/api/strip'); c.putheader('X-SEDRA-Token', self.token); c.endheaders()
                 c.sock.close()                                    # der Browser lädt neu, bevor die Antwort da ist
             code, _ = self.anfrage('GET', '/api/decisions')
         self.assertEqual(code, 200)
@@ -252,26 +252,26 @@ class UpdateGate(unittest.TestCase):
     ein verändertes Manifest wird abgewiesen, der Token gilt genau einmal."""
 
     def setUp(self):
-        from guppi_runtime import uix_server as us
+        from sedra_runtime import uix_server as us
         from test_update_anwenden import baum, schreibe
-        from guppi_runtime import update_anwenden as ua
+        from sedra_runtime import update_anwenden as ua
         self.tmp = tempfile.TemporaryDirectory(prefix='update-gate-'); self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name) / 'installation'
         schreibe(self.root, baum())
         self.tag = 'v1.99.0'
         self.staging = self.root / 'local_config' / 'update' / 'staging' / self.tag
-        schreibe(self.staging, dict(baum(), **{'runtime/src/guppi_runtime/kern.py': 'X = 2\n'}))
+        schreibe(self.staging, dict(baum(), **{'runtime/src/sedra_runtime/kern.py': 'X = 2\n'}))
         (self.staging / ua.MANIFEST).parent.mkdir(parents=True, exist_ok=True)
         (self.staging / ua.MANIFEST).write_text(ua.manifest_erzeugen(self.staging), encoding='utf-8')
         self.alt = us.INSTALLATION; us.INSTALLATION = self.root
         self.addCleanup(lambda: setattr(us, 'INSTALLATION', self.alt))
-        import guppi_runtime.update_holen as uh
+        import sedra_runtime.update_holen as uh
         self.alt_laden = uh.herunterladen; uh.herunterladen = lambda root, tag: self.staging
         self.addCleanup(lambda: setattr(uh, 'herunterladen', self.alt_laden))
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH); self.addCleanup(self.hub.close)
 
     def kern(self):
-        return (self.root / 'runtime/src/guppi_runtime/kern.py').read_text(encoding='utf-8')
+        return (self.root / 'runtime/src/sedra_runtime/kern.py').read_text(encoding='utf-8')
 
     def test_e1_uebernahme_nur_nach_freigabe_und_genau_einmal(self):
         v = self.hub.update_vorschau({'tag': self.tag})
@@ -294,11 +294,11 @@ class UpdateGate(unittest.TestCase):
         self.assertIn('UPDATE_UEBERNOMMEN', [r['event_type'] for r in rows])
 
     def test_e1_veraendertes_manifest_wird_abgewiesen(self):
-        from guppi_runtime import update_anwenden as ua
+        from sedra_runtime import update_anwenden as ua
         v = self.hub.update_vorschau({'tag': self.tag})
         d = next(x for x in self.hub.decisions_view()['items'] if x['mission_id'] == v['mission_id'])
         self.hub.approve_gate({'mission_id': d['mission_id'], 'gate_id': d['gate_id']})
-        (self.staging / 'runtime/src/guppi_runtime/kern.py').write_text('X = 3\n', encoding='utf-8')
+        (self.staging / 'runtime/src/sedra_runtime/kern.py').write_text('X = 3\n', encoding='utf-8')
         (self.staging / ua.MANIFEST).write_text(ua.manifest_erzeugen(self.staging), encoding='utf-8')
         with self.assertRaises(ValueError) as cm:
             self.hub.update_uebernehmen({'mission_id': v['mission_id']})
@@ -313,7 +313,7 @@ class CloudAdresseGate(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='cloud-gate-'); self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH); self.addCleanup(self.hub.close)
-        from guppi_runtime import cloud_settings
+        from sedra_runtime import cloud_settings
         self.cs = cloud_settings
 
     def cfg(self):
@@ -380,7 +380,7 @@ class VertragParagraf2(unittest.TestCase):
 
     def test_pruefzugang_nur_mit_schalter_oder_pruefung(self):
         import os
-        from guppi_runtime.desk.gateway import Gateway
+        from sedra_runtime.desk.gateway import Gateway
         g = self.__class__._gateway()
         alt = os.environ.pop('SEDRA_PRUEFZUGANG', None)
         try:
@@ -397,7 +397,7 @@ class VertragParagraf2(unittest.TestCase):
 
     @classmethod
     def _gateway(cls):
-        from guppi_runtime.desk.gateway import Gateway
+        from sedra_runtime.desk.gateway import Gateway
         cls._tmp = tempfile.TemporaryDirectory(prefix='pruefzugang-')
         return Gateway(Path(cls._tmp.name))
 

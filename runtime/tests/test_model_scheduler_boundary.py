@@ -3,7 +3,7 @@ import ast
 import unittest
 from pathlib import Path
 
-JOBS = Path(__file__).resolve().parents[1] / "src" / "guppi_runtime" / "jobs"
+JOBS = Path(__file__).resolve().parents[1] / "src" / "sedra_runtime" / "jobs"
 
 
 def imports(name):
@@ -26,7 +26,7 @@ class BoundaryTests(unittest.TestCase):
         for name in ("slotplan.py", "vramplan.py"):
             with self.subTest(module=name):
                 found = imports(name)
-                self.assertFalse({m for m in found if m.startswith(".") or "guppi_runtime" in m or m.startswith("sqlite3")}, found)
+                self.assertFalse({m for m in found if m.startswith(".") or "sedra_runtime" in m or m.startswith("sqlite3")}, found)
 
     def test_the_scheduler_modules_do_not_import_core(self):
         for name in ("model_scheduler.py", "model_scheduler_config.py", "model_scheduler_handover.py", "model_scheduler_decisions.py", "slot_store.py", "slot_db.py", "testlab.py", "testlab_slots.py"):

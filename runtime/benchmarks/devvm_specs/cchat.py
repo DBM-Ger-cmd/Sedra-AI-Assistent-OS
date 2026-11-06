@@ -1,4 +1,4 @@
-"""GUPPI Chat, steps 1 and 2 of docs/AUFTRAG_GUPPI_CHAT_AUSBAU_2026-10-13.md (Captain 2026-10-13: window like the Claude Desktop app; what is not too big, GUPPI builds).
+"""SEDRA Chat, steps 1 and 2 of docs/AUFTRAG_SEDRA_CHAT_AUSBAU_2026-10-13.md (Captain 2026-10-13: window like the Claude Desktop app; what is not too big, SEDRA builds).
 Step 1: `cchat_store.py`, sessions as files (pure logic, directory as argument; judged in the microVM). Step 2: `sse.py` (server side frames) and `cchat_stream.js` (browser side
 parser, classic script, judged on the host with node). Claude wires both into uix_server.py and claude_chat.js after acceptance. Claude wrote this file, the hidden tests and the
 references (benchmarks/devvm_refs/cchat_store, benchmarks/devvm_refs/cchat_stream)."""

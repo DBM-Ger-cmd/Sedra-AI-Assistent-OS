@@ -5,11 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.agent_manager.token_records import token_records
-from guppi_runtime.agent_manager.usage_meter import token_view
+from sedra_runtime.agent_manager.token_records import token_records
+from sedra_runtime.agent_manager.usage_meter import token_view
 
-UIX = Path(__file__).resolve().parents[1] / "src" / "guppi_runtime" / "uix"
-SERVER = Path(__file__).resolve().parents[1] / "src" / "guppi_runtime" / "uix_server.py"
+UIX = Path(__file__).resolve().parents[1] / "src" / "sedra_runtime" / "uix"
+SERVER = Path(__file__).resolve().parents[1] / "src" / "sedra_runtime" / "uix_server.py"
 
 
 class MeterWindowWiringTest(unittest.TestCase):
@@ -20,7 +20,7 @@ class MeterWindowWiringTest(unittest.TestCase):
 
     def test_start_menu_taskbar_and_the_window_exist_once(self):
         self.assertEqual(self.html.count('id="meterWindow"'), 1)
-        self.assertEqual(len(re.findall(r'onclick="openMeter\(\)', self.html)), 1)      # start menu; since Build 5 the taskbar holds Deck, GUPPI, Werkstatt, Besatzung, Projekte and the Deck row 'Token heute' opens the meter
+        self.assertEqual(len(re.findall(r'onclick="openMeter\(\)', self.html)), 1)      # start menu; since Build 5 the taskbar holds Deck, SEDRA, Werkstatt, Besatzung, Projekte and the Deck row 'Token heute' opens the meter
 
     def test_script_is_loaded_before_main(self):
         self.assertLess(self.html.index("/uix/js/meter.js"), self.html.index("/uix/js/main.js"))

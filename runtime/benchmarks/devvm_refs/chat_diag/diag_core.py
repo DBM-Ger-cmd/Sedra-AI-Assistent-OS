@@ -54,7 +54,7 @@ def lease_row(lease):
     if not lease:
         return row("lease", "ok", "frei")
     if lease.get("mine"):
-        return row("lease", "ok", "von GUPPI (diese Oberfläche)")
+        return row("lease", "ok", "von SEDRA (diese Oberfläche)")
     if lease.get("stale"):
         return row("lease", "warn", "verwaist (%s)" % lease.get("owner"))
     return row("lease", "warn", "belegt von %s: %s" % (lease.get("owner"), lease.get("purpose")))

@@ -27,9 +27,9 @@ diff --git a/docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md b/docs/SPEC_AGENTEN_ORCHESTR
  | Rezept | Eintrag in `role_routing.yaml`: Modell, Rollen, Servereinstellungen, Kontextgrenzen |
  | Gate | Freigabepunkt des Guard (ALLOW, BLOCK, CAPTAIN_REQUIRED) |
  | Shell D | Die Paperclip-Shell unter `uix/shells/paperclip/`, laut Vertrag §9 nach Cockpit (C) und Minimal (E) geplant |
-diff --git a/runtime/src/guppi_runtime/jobs/testlab.py b/runtime/src/guppi_runtime/jobs/testlab.py
---- a/runtime/src/guppi_runtime/jobs/testlab.py
-+++ b/runtime/src/guppi_runtime/jobs/testlab.py
+diff --git a/runtime/src/sedra_runtime/jobs/testlab.py b/runtime/src/sedra_runtime/jobs/testlab.py
+--- a/runtime/src/sedra_runtime/jobs/testlab.py
++++ b/runtime/src/sedra_runtime/jobs/testlab.py
 @@ -4,7 +4,10 @@
  other's measurements or crash each other. Nobody should have to guess whether the GPU is free.
  

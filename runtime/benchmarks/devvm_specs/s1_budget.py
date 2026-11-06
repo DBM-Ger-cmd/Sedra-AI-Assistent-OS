@@ -3,7 +3,7 @@ G2-S1-22): `orchestra/budget.py`, the booking of what a run used and the budget 
 (an upper bound, never a guess downwards); every booking tells whether it crossed the warning or the stop threshold (only when rising over it); an incident is opened at
 most once per agent and kind while it is unresolved, and the Captain's decision closes it. The arithmetic is budgetcalc.py (written by Claude after rule V4, part of the
 seed benchmarks/s1_schema2_seed, as is store.py with schema 2). The thresholds come from OrchestraConfig (warn_percent, stop_percent) and are arguments here.
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_budget)."""
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_budget)."""
 
 SEED = "benchmarks/s1_schema2_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 

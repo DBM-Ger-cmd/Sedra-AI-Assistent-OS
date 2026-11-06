@@ -1,7 +1,7 @@
 # SPEC Apps v1 – AM1 Leistenzellen und Verfügbarkeit je Shell – G2 Design (03.11.2026)
 
 Grundlage: `docs/SPEC_APPS_v1_AM1_ZELLEN_UND_SHELLS.md` (G1), freigegeben vom Captain am 03.11.2026 mit allen Entscheidungen wie vorgeschlagen (AM1-E1 Vorgabe-Leiste unverändert, AM1-E2 Auswahl in `leiste.json`, AM1-E3 kein Einklappen in AM1).
-Nichts gebaut; diese Datei ist G2. Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081.
+Nichts gebaut; diese Datei ist G2. Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für c364081.
 
 ## 0. Was G2 im Code geklärt hat
 

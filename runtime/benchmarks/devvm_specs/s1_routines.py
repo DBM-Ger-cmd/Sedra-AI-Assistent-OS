@@ -5,7 +5,7 @@ routine_runs (the primary key (routine_id, due_at) keeps a double tick from crea
 max_catch_up older ones; a paused or terminated agent or a still open task of the previous date skips them all. The task itself is made by the caller's make_task
 (board.create plus the wake-up), called OUTSIDE the transaction. Builds on the seed benchmarks/s1_schema2_seed (store.py schema 2, cron.py = reference of s1_cron).
 OP-S1-03: without tzdata only "UTC" works as a zone name on Windows; the tests use "UTC" and never the schema default 'Europe/Berlin'.
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_routines)."""
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_routines)."""
 
 SEED = "benchmarks/s1_schema2_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given
 

@@ -97,8 +97,8 @@ gezählt über `difflib`, nicht über Zeichen). Kleinere Änderungen laufen wie 
 
 | Nr | Berechtigung | Begründung |
 |---|---|---|
-| B-1 | Schreiben: `runtime/src/guppi_runtime/harness/werkzeuge.py`, `harness/freigabe.py` (Karte: Feld `warnung`), `harness/api.py` (nur Karten-Antwort) | Umsetzung W-1, W-2 |
-| B-2 | Schreiben: `runtime/src/guppi_runtime/uix/shells/harness/karte.js`, `shell.css` (Kasten) | Anzeige W-2 |
+| B-1 | Schreiben: `runtime/src/sedra_runtime/harness/werkzeuge.py`, `harness/freigabe.py` (Karte: Feld `warnung`), `harness/api.py` (nur Karten-Antwort) | Umsetzung W-1, W-2 |
+| B-2 | Schreiben: `runtime/src/sedra_runtime/uix/shells/harness/karte.js`, `shell.css` (Kasten) | Anzeige W-2 |
 | B-3 | Schreiben: `runtime/tests/test_harness_werkzeuge.py`, `test_uix_harness_freigabe.py`, `test_harness_schleife.py` (nur neue Fälle) | Tests oben |
 | B-4 | Schreiben: `docs/BAUBERICHT_*` (neuer Bericht), `docs/LOGBUCH_AGENT_MANAGER.md` (eine Zeile je Schritt) | Berichtspflicht |
 | B-5 | Ausführen: `python benchmarks/run_tests.py …` (Gruppen, ohne Modell) und `uix_check --shell harness` (ohne Modell) | Abnahme ohne Modell |

@@ -6,7 +6,7 @@ import subprocess
 import unittest
 from pathlib import Path
 
-HARNESS = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'shells' / 'harness'
+HARNESS = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'shells' / 'harness'
 
 KOPF = """
 function el(tag, klasse, text){

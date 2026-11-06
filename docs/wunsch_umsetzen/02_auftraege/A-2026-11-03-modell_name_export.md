@@ -4,9 +4,9 @@
 Im Markdown-Export der Harness soll unter der Zeile mit den Token-Informationen eine zusätzliche Zeile „Modell: <Name>“ stehen, sofern der aktuellen Sitzung ein Modell zugeordnet ist.
 
 **Schritte**
-1. **Analyse**: `runtime/src/guppi_runtime/harness/export.py` lesen, um die Markdown-Generierung zu finden.
+1. **Analyse**: `runtime/src/sedra_runtime/harness/export.py` lesen, um die Markdown-Generierung zu finden.
 2. **Logik-Prüfung**: Prüfen, wie der Modellname aus dem Kontext abgerufen wird.
-3. **Implementierung**: `runtime/src/guppi_runtime/harness/export.py` anpassen, um die Zeile „Modell: <Name>“ einzufügen.
+3. **Implementierung**: `runtime/src/sedra_runtime/harness/export.py` anpassen, um die Zeile „Modell: <Name>“ einzufügen.
 4. **Test-Erstellung**: Einen Test in `runtime/tests/` erstellen, der den Markdown-String für eine Sitzung mit und ohne Modell prüft.
 5. **Verifizierung**: `python -m py_compile` und `lauf_starten run_tests` ausführen.
 

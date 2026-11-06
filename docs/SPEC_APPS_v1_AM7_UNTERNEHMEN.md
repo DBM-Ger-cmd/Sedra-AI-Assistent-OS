@@ -3,7 +3,7 @@
 Status: **G1**, Entscheidungen getroffen (03.11.2026, wie vorgeschlagen: Betriebsart **A**); vor G2 wird dieses G1 auf Betriebsart A zugeschnitten. Nichts gebaut. Teil von `docs/KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md` §11. Setzt AM2 und AM3 voraus.
 Ziel: SEDRA lässt sich in einem Unternehmen so betreiben, dass ein **Betreiber** festlegt, welche Apps, Shells, Anbieter und Rechte es gibt, und **Beschäftigte** in einer kontrollierten Umgebung (KMU-Shell) mit Dokumenten und KI arbeiten – mit Nachweis.
 **AM7-E1 ist entschieden (Betriebsart A, 03.11.2026).** Nächster Schritt: dieses G1 auf Betriebsart A zuschneiden, dann G2.
-Pfade relativ zu `runtime/src/guppi_runtime/`, Zeilen für c364081. Rechtliche Begriffe sind Einordnung, keine Rechtsprüfung.
+Pfade relativ zu `runtime/src/sedra_runtime/`, Zeilen für c364081. Rechtliche Begriffe sind Einordnung, keine Rechtsprüfung.
 
 ## 1. Befund
 

@@ -31,7 +31,7 @@ def build_cases(project):
     """The two cases from files on disk: {name, expected, task, files, check, check_name, module}. Raises FileNotFoundError when the material is not there."""
     import importlib
     sys.path.insert(0, str(RUNTIME / "benchmarks"))
-    from guppi_runtime.selfdev.acceptance_suite import load_suite
+    from sedra_runtime.selfdev.acceptance_suite import load_suite
     project = Path(project)
     candidates = project / "runtime_data" / "devvm_candidates"
     spec = importlib.import_module(f"devvm_specs.{TASK_SPEC}")
@@ -90,22 +90,22 @@ def main():
     models = [m for m in args.models.split(",") if m]
 
     import devvm_agents_bench as bench
-    from guppi_runtime.selfdev.acceptance_vm import vm_runner
-    from guppi_runtime.devenv.devvm import DevWorkspace
-    from guppi_runtime.devenv.devvm_agents import DevOrchestrator, ModelHost
-    from guppi_runtime.models.gpu_preflight import clear_leftovers
-    from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
-    from guppi_runtime.jobs.run_log import RunLog
-    from guppi_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.selfdev.acceptance_vm import vm_runner
+    from sedra_runtime.devenv.devvm import DevWorkspace
+    from sedra_runtime.devenv.devvm_agents import DevOrchestrator, ModelHost
+    from sedra_runtime.models.gpu_preflight import clear_leftovers
+    from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime
+    from sedra_runtime.jobs.run_log import RunLog
+    from sedra_runtime.jobs.testlab import TestLab, default_path
 
     cases = build_cases(project)
     log = RunLog(project / "runtime_data" / "measurements", "arbiter_probe", config={"models": models, "trials": args.trials})
     run_in_vm = vm_runner(project, RUNTIME, mission="M-PROBE")
-    tool_root = Path(tempfile.mkdtemp(prefix="guppi_arbiter_probe_"))
+    tool_root = Path(tempfile.mkdtemp(prefix="sedra_arbiter_probe_"))
     policy = {"max_files": 40, "max_file_bytes": 60000, "max_input_bytes": 200000}
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml")
     config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_arbiter_probe_rt_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_arbiter_probe_rt_")))
     state = {"ws": None, "case": 0}
 
     def failing_output(case):

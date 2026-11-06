@@ -1,6 +1,6 @@
-"""Lesson proposals after a run (E-11 part 2; Captain 2026-10-13: GUPPI builds it). After a build, the error texts of its failed attempts are searched for known mistakes that repeat from run to run
+"""Lesson proposals after a run (E-11 part 2; Captain 2026-10-13: SEDRA builds it). After a build, the error texts of its failed attempts are searched for known mistakes that repeat from run to run
 (a file name the sandbox refuses, a repeated placeholder, a module that does not exist in the VM, a syntax error); each known mistake becomes ONE proposed lesson card for the Captain to approve
-(`guppi lessons approve`). Nothing is used before he approves it. Pure functions, nothing is written. GUPPI builds it; Claude only wrote this file, the hidden tests and the reference
+(`sedra lessons approve`). Nothing is used before he approves it. Pure functions, nothing is written. SEDRA builds it; Claude only wrote this file, the hidden tests and the reference
 (benchmarks/devvm_refs/lesson_proposer)."""
 
 NOTES = '''# Notes for lesson_proposer

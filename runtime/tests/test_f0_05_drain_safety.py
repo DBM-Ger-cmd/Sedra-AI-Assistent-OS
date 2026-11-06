@@ -11,9 +11,9 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from guppi_runtime.desk.orchestra_runner import WorkerPool
-from guppi_runtime.orchestra.service import Orchestra
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.desk.orchestra_runner import WorkerPool
+from sedra_runtime.orchestra.service import Orchestra
+from sedra_runtime.runtime import SedraRuntime
 
 
 class SlowPool:
@@ -126,7 +126,7 @@ class OrchestraDrainTest(unittest.TestCase):
 
 class RuntimeOwnershipTest(unittest.TestCase):
     def test_wissen_waits_when_orchestra_is_still_draining(self):
-        rt = GuppiRuntime.__new__(GuppiRuntime)
+        rt = SedraRuntime.__new__(SedraRuntime)
         rt._close_lock = threading.Lock()
         rt._closed_services = set()
         rt.orchestra = Mock()

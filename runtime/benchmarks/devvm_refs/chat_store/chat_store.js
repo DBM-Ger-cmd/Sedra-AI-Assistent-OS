@@ -1,4 +1,4 @@
-var CHAT_STORE_KEY = "guppi.chat.v1";
+var CHAT_STORE_KEY = "sedra.chat.v1";
 var CHAT_STORE_TURNS = 40;
 var CHAT_STORE_MAX_AGE_MS = 7 * 864e5;
 var CHAT_STORE_CHARS = 4000;

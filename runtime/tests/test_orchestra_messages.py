@@ -7,7 +7,7 @@ import unittest
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.orchestra import messages
+from sedra_runtime.orchestra import messages
 from test_orchestra_desk import NOW, Desk
 
 

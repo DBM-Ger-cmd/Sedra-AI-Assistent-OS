@@ -10,7 +10,7 @@ from pathlib import Path
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'benchmarks'))
-UIX = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
+UIX = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix'
 
 
 class Files(unittest.TestCase):

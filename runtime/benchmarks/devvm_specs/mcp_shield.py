@@ -1,8 +1,8 @@
-"""MCP access, stage 1 shield (Captain 2026-10-07 requirements, extra package of the model comparison 2026-10-11): before GUPPI's state goes to a Claude session over MCP,
-every text from GUPPI is marked as untrusted data (source, length cap, control and invisible characters removed, no way to close the marker early) and instruction-like spans are
+"""MCP access, stage 1 shield (Captain 2026-10-07 requirements, extra package of the model comparison 2026-10-11): before SEDRA's state goes to a Claude session over MCP,
+every text from SEDRA is marked as untrusted data (source, length cap, control and invisible characters removed, no way to close the marker early) and instruction-like spans are
 flagged; requests from Claude are checked against a schema of the read-only tools (only known fields, types, limits, patterns) and rate-limited. Pure functions; the MCP server
-that uses them comes after acceptance. GUPPI builds it, Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/mcp_shield).
-Requirements: memory guppi-agent-manager-integration, docs/LOGBUCH_AGENT_MANAGER.md 2026-10-07."""
+that uses them comes after acceptance. SEDRA builds it, Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/mcp_shield).
+Requirements: memory sedra-agent-manager-integration, docs/LOGBUCH_AGENT_MANAGER.md 2026-10-07."""
 
 NOTES = '''# Notes for mcp_shield
 Pure Python 3 standard library (re), no file, process or network access, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code.
@@ -32,7 +32,7 @@ def hidden(imports, body):
 
 
 C1 = r"""
-assert untrusted("hello", "guppi.status") == wrap("guppi.status", "hello")
+assert untrusted("hello", "sedra.status") == wrap("sedra.status", "hello")
 assert untrusted("a\x00b\x07c\td\ne\x7f", "s") == wrap("s", "abc\td\ne")
 assert untrusted("x​y‮z﻿⁦w‍", "s") == wrap("s", "xyzw")
 assert untrusted("abcdef", "s", 4) == wrap("s", "abcd\n[truncated 2 chars]")
@@ -44,7 +44,7 @@ assert untrusted("", "s") == wrap("s", "")
 assert len(untrusted("z" * 5000, "s")) == len(wrap("s", "z" * 4000 + "\n[truncated 1000 chars]"))
 raises("text", untrusted, 5, "s")
 raises("text", untrusted, None, "s")
-for bad in ("Bad Source", "", "a" * 41, None, "x/y", "Guppi"):
+for bad in ("Bad Source", "", "a" * 41, None, "x/y", "Sedra"):
     raises("source", untrusted, "t", bad)
 assert untrusted("t", "a" * 40) == wrap("a" * 40, "t")
 assert untrusted("t", "run_1.log:2-3") == wrap("run_1.log:2-3", "t")
@@ -74,12 +74,12 @@ assert flags("plain text") == [] and flags(None) == [] and flags(5) == []
 C3 = r"""
 S = {"read_status": {"project": {"type": "str", "max": 40, "required": True, "pattern": "[a-z0-9_-]+"}, "lines": {"type": "int", "max": 200}, "full": {"type": "bool"}}}
 keep = copy.deepcopy(S)
-assert check_request("read_status", {"project": "guppi"}, S) == []
-assert check_request("read_status", {"project": "guppi", "lines": 200, "full": False}, S) == []
+assert check_request("read_status", {"project": "sedra"}, S) == []
+assert check_request("read_status", {"project": "sedra", "lines": 200, "full": False}, S) == []
 assert check_request("write", {}, S) == ["unknown_tool"]
 assert check_request("read_status", [], S) == ["args"]
 assert check_request("read_status", {}, S) == ["missing:project"]
-assert check_request("read_status", {"project": "guppi", "x": 1, "a": 2}, S) == ["unknown_field:a", "unknown_field:x"]
+assert check_request("read_status", {"project": "sedra", "x": 1, "a": 2}, S) == ["unknown_field:a", "unknown_field:x"]
 assert check_request("read_status", {"project": 5}, S) == ["type:project"]
 assert check_request("read_status", {"project": "g", "lines": "5"}, S) == ["type:lines"]
 assert check_request("read_status", {"project": "g", "lines": True}, S) == ["type:lines"]
@@ -88,7 +88,7 @@ assert check_request("read_status", {"project": "a" * 41}, S) == ["too_long:proj
 assert check_request("read_status", {"project": "A" * 41}, S) == ["too_long:project"]
 assert check_request("read_status", {"project": "g", "lines": 201}, S) == ["too_large:lines"]
 assert check_request("read_status", {"project": "Bad Name"}, S) == ["pattern:project"]
-assert check_request("read_status", {"project": "guppi-x"}, S) == []
+assert check_request("read_status", {"project": "sedra-x"}, S) == []
 args = {"zz": 1, "project": "Bad", "lines": 500}
 assert check_request("read_status", args, S) == ["unknown_field:zz", "too_large:lines", "pattern:project"]
 assert args == {"zz": 1, "project": "Bad", "lines": 500} and S == keep

@@ -2,7 +2,7 @@
 
     .venv\\Scripts\\python.exe benchmarks/sandbox_boundary_check.py <project_dir>
 
-It starts GUPPI's own microVM through the same code the worker uses (`worker.run_job`, same policy from config/sandbox.yaml:
+It starts SEDRA's own microVM through the same code the worker uses (`worker.run_job`, same policy from config/sandbox.yaml:
 no network, RESTRICTED profile, tmpfs root, pull policy NEVER, guest user 65534) with a small probe as the only source. The probe
 looks for a host sentinel, tries the network and host services, reads the environment, mounts, limits and the hypervisor identity.
 A second command sleeps past the command timeout. Afterwards the sandbox list is read to confirm the VM is gone.
@@ -88,8 +88,8 @@ def write(path):
         with open(path, "w") as fh: fh.write("x")
         return "WRITTEN"
     except Exception as e: return type(e).__name__
-out["write"] = {p: write(p) for p in ("/etc/guppi_probe", "/usr/guppi_probe", "/tmp/guppi_probe", "/workspace/guppi_probe",
-                                     "/.msb/guppi_probe", "/.msb/rootfs/upperfs/guppi_probe", "/.msb/scripts/guppi_probe")}
+out["write"] = {p: write(p) for p in ("/etc/sedra_probe", "/usr/sedra_probe", "/tmp/sedra_probe", "/workspace/sedra_probe",
+                                     "/.msb/sedra_probe", "/.msb/rootfs/upperfs/sedra_probe", "/.msb/scripts/sedra_probe")}
 out["rlimit_nproc"] = resource.getrlimit(resource.RLIMIT_NPROC)
 children, err = 0, None
 pids = []
@@ -108,22 +108,22 @@ print("PROBE_JSON=" + json.dumps(out))
 
 
 def run(project: Path):
-    from guppi_runtime.sandbox.provider import MicrosandboxProvider
-    from guppi_runtime.sandbox.broker import SandboxBroker
+    from sedra_runtime.sandbox.provider import MicrosandboxProvider
+    from sedra_runtime.sandbox.broker import SandboxBroker
     import yaml
 
     policy = yaml.safe_load((RUNTIME / "config" / "sandbox.yaml").read_text(encoding="utf-8"))["sandbox"]
     data = project / "runtime_data"
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    work = Path(tempfile.mkdtemp(prefix="guppi_boundary_"))
-    sentinel_token = "GUPPI-SENTINEL-" + secrets.token_hex(12)
+    work = Path(tempfile.mkdtemp(prefix="sedra_boundary_"))
+    sentinel_token = "SEDRA-SENTINEL-" + secrets.token_hex(12)
     # The sentinel lives on the host only: next to the source, in the job root and in the project. The guest must not find it.
     sentinel_files = [work / "host_sentinel.txt", project / "runtime_data" / "acceptance" / f"sentinel_{stamp}.txt"]
     for f in sentinel_files:
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(sentinel_token, encoding="utf-8")
     source = work / "source"; source.mkdir()
-    dns_name = f"gp{secrets.token_hex(8)}.guppi-boundary.example.com"
+    dns_name = f"gp{secrets.token_hex(8)}.sedra-boundary.example.com"
     (source / "probe.py").write_text(PROBE.replace("__SENTINEL__", sentinel_token).replace("__DNSNAME__", dns_name), encoding="utf-8")
     job_root = work / "job"; job_root.mkdir()
     request = {"job_id": "boundary-" + stamp.lower(), "policy": policy, "source": str(source), "job_root": str(job_root),
@@ -196,8 +196,8 @@ def checks(probe, result, inventory, policy):
     leaked = [k for k in probe.get("env", []) if k not in image_env and any(s in k.upper() for s in ("KEY", "TOKEN", "SECRET", "PASSWORD", "PROXY", "USERPROFILE", "APPDATA"))]
     c["no_host_secrets_in_env"] = "PASS" if not leaked else f"FAIL:{leaked}"
     w = probe.get("write") or {}
-    c["system_dirs_read_only"] = "PASS" if w.get("/etc/guppi_probe") != "WRITTEN" and w.get("/usr/guppi_probe") != "WRITTEN" else "FAIL"
-    c["workspace_writable"] = "PASS" if w.get("/workspace/guppi_probe") == "WRITTEN" else "FAIL"
+    c["system_dirs_read_only"] = "PASS" if w.get("/etc/sedra_probe") != "WRITTEN" and w.get("/usr/sedra_probe") != "WRITTEN" else "FAIL"
+    c["workspace_writable"] = "PASS" if w.get("/workspace/sedra_probe") == "WRITTEN" else "FAIL"
     mem = probe.get("mem_total_kb")
     c["memory_limited"] = "PASS" if isinstance(mem, int) and mem <= policy["memory_mib"] * 1024 * 1.1 else f"FAIL:{mem}"
     c["cpu_limited"] = "PASS" if isinstance(probe.get("cpu_count"), int) and probe["cpu_count"] <= policy["cpus"] else f"FAIL:{probe.get('cpu_count')}"
@@ -207,7 +207,7 @@ def checks(probe, result, inventory, policy):
     cmds = result.get("commands", [])
     c["command_timeout_enforced"] = "PASS" if len(cmds) >= 2 and not cmds[1].get("success") else "FAIL"
     c["cleanup_confirmed_by_worker"] = "PASS" if result.get("cleanup_confirmed") is True else "FAIL"
-    c["no_sandbox_left_behind"] = "PASS" if "guppi-boundary" not in (inventory or "") and "SANDBOXES=" in (inventory or "") else "NO_EVIDENCE"
+    c["no_sandbox_left_behind"] = "PASS" if "sedra-boundary" not in (inventory or "") and "SANDBOXES=" in (inventory or "") else "NO_EVIDENCE"
     return c
 
 

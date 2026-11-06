@@ -39,7 +39,7 @@ class ProbeTests(unittest.TestCase):
             self.assertIn(name, DISABLED)
         server = confined["mcpServers"]["devvm"]
         self.assertIn("--no-vm", server["args"])
-        self.assertIn("guppi_runtime.devvm_mcp", server["args"])
+        self.assertIn("sedra_runtime.devvm_mcp", server["args"])
 
     def test_the_fake_model_answers_with_text_and_with_scripted_tool_calls_and_records_everything(self):
         records = []

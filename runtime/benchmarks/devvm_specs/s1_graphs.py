@@ -2,7 +2,7 @@
 `orchestra/graphs.py`, the pure graph rules of the orchestration: the organisation tree (one root, no cycle, a depth limit, no terminating with subordinates),
 delegation only downwards, the mapping of a template's effect to a permission level and the cycle test for task blockers. No database, no clock, no input or output;
 every refusal is ValueError('<code>') with the codes of D1.1 (the German sentences live in desk/orchestra_kinds.py). org.py and board.py import it (seed of s1_board).
-GUPPI/SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_graphs)."""
+SEDRA builds it; Claude only wrote this file, the hidden tests and the reference (benchmarks/devvm_refs/s1_graphs)."""
 
 NOTES = '''# Notes for s1_graphs
 Python 3 standard library only, and nothing is imported at all: no sqlite3, no files, no clock, no network. Every function is pure: it never modifies its arguments (rows are lists of dicts).

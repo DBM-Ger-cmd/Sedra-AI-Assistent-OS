@@ -5,14 +5,14 @@ from pathlib import Path
 from unittest import mock
 from urllib.error import HTTPError
 
-from guppi_runtime.models import cloud_api
-from guppi_runtime.models.base import ModelAdapterError
-from guppi_runtime.models.cloud_api import (CloudAnthropicAdapter, CloudOpenAICompatibleAdapter, build_cloud_adapters,
+from sedra_runtime.models import cloud_api
+from sedra_runtime.models.base import ModelAdapterError
+from sedra_runtime.models.cloud_api import (CloudAnthropicAdapter, CloudOpenAICompatibleAdapter, build_cloud_adapters,
                                             resolve_secret, require_https_url, secret_env_name)
-from guppi_runtime.models.router import ModelRouter
-from guppi_runtime.core.content_guard import ContentGuard, ContentGuardStop
+from sedra_runtime.models.router import ModelRouter
+from sedra_runtime.core.content_guard import ContentGuard, ContentGuardStop
 
-KEY = {'GUPPI_SECRET_NVIDIA_API_KEY': 'test-key-not-real'}
+KEY = {'SEDRA_SECRET_NVIDIA_API_KEY': 'test-key-not-real'}
 
 
 def openai_adapter(environ=KEY, model='m-test'):
@@ -21,12 +21,12 @@ def openai_adapter(environ=KEY, model='m-test'):
 
 def anthropic_adapter(environ=None):
     return CloudAnthropicAdapter('anthropic', 'https://api.anthropic.example.test', 'secret://anthropic/api-key', 'claude-test',
-                                 environ=environ or {'GUPPI_SECRET_ANTHROPIC_API_KEY': 'test-key-not-real'})
+                                 environ=environ or {'SEDRA_SECRET_ANTHROPIC_API_KEY': 'test-key-not-real'})
 
 
 class SecretTest(unittest.TestCase):
     def test_reference_maps_to_environment_name(self):
-        self.assertEqual(secret_env_name('secret://nvidia/api-key'), 'GUPPI_SECRET_NVIDIA_API_KEY')
+        self.assertEqual(secret_env_name('secret://nvidia/api-key'), 'SEDRA_SECRET_NVIDIA_API_KEY')
 
     def test_invalid_reference_is_refused(self):
         for bad in ('nvidia/api-key', 'secret://nvidia', 'secret://Nvidia/API KEY', '', None):
@@ -35,7 +35,7 @@ class SecretTest(unittest.TestCase):
     def test_missing_secret_names_the_variable_but_no_value(self):
         with self.assertRaises(ModelAdapterError) as ctx:
             resolve_secret('secret://nvidia/api-key', environ={})
-        self.assertEqual(str(ctx.exception), 'secret_not_set:GUPPI_SECRET_NVIDIA_API_KEY')
+        self.assertEqual(str(ctx.exception), 'secret_not_set:SEDRA_SECRET_NVIDIA_API_KEY')
 
     def test_present_secret_is_read_from_environment(self):
         self.assertEqual(resolve_secret('secret://nvidia/api-key', environ=KEY), 'test-key-not-real')
@@ -185,7 +185,7 @@ class FetchModelsTest(unittest.TestCase):
         with self.assertRaises(ValueError): cloud_api.provider_models(cfg, 'gibt-es-nicht', environ={})
         with self.assertRaises(ModelAdapterError) as ctx:
             cloud_api.provider_models(cfg, 'nvidia', environ={}, key_store=None)
-        self.assertEqual(str(ctx.exception), 'secret_not_set:GUPPI_SECRET_NVIDIA_API_KEY')
+        self.assertEqual(str(ctx.exception), 'secret_not_set:SEDRA_SECRET_NVIDIA_API_KEY')
 
 
 class RouterTest(unittest.TestCase):
@@ -239,7 +239,7 @@ class SettingsTest(unittest.TestCase):
     def setUp(self):
         import tempfile
         from pathlib import Path
-        from guppi_runtime import cloud_settings
+        from sedra_runtime import cloud_settings
         self.cs = cloud_settings
         self.root = Path(tempfile.mkdtemp(prefix='cloud-settings-'))
         self.store = cloud_settings.CloudKeyStore(cloud_settings.key_store_path(self.root))
@@ -255,7 +255,7 @@ class SettingsTest(unittest.TestCase):
         self.assertTrue(all(p['key'] == 'fehlt' for p in v['providers']))
 
     def test_env_key_is_reported_as_state_only(self):
-        v = self.cs.view(self.root, self.store, environ={'GUPPI_SECRET_NVIDIA_API_KEY': 'test-key-not-real'})
+        v = self.cs.view(self.root, self.store, environ={'SEDRA_SECRET_NVIDIA_API_KEY': 'test-key-not-real'})
         nvidia = next(p for p in v['providers'] if p['id'] == 'nvidia')
         self.assertEqual(nvidia['key'], 'umgebung')
         self.assertNotIn('test-key-not-real', repr(v))
@@ -288,7 +288,7 @@ class SettingsTest(unittest.TestCase):
         with self.assertRaises(ValueError): self.store.set('nvidia', 'abcdefgh12345')
 
     def test_module_model_needs_a_known_provider_and_a_model(self):
-        from guppi_runtime.cloud_settings import module_model
+        from sedra_runtime.cloud_settings import module_model
         cfg = {'providers': {'nvidia': {}}, 'module_models': {
             'redesign': {'provider': 'nvidia', 'model': 'nvidia/x'},
             'chat': {'provider': 'gibt-es-nicht', 'model': 'm'},
@@ -300,7 +300,7 @@ class SettingsTest(unittest.TestCase):
         self.assertIsNone(module_model(cfg, '../etc'))
 
     def test_module_model_can_be_set_and_cleared_only_for_known_providers(self):
-        from guppi_runtime.cloud_settings import set_module_model
+        from sedra_runtime.cloud_settings import set_module_model
         set_module_model(self.root, 'chat', 'nvidia', 'nvidia/x')
         self.assertEqual(self.cs.load_config(self.root)['module_models']['chat'], {'provider': 'nvidia', 'model': 'nvidia/x'})
         self.assertEqual(self.cs.view(self.root, self.store, {})['module_models']['chat']['model'], 'nvidia/x')
@@ -321,7 +321,7 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(self.cs.load_config(self.root)['module_models']['redesign']['model'], 'nvidia/x')
 
     def test_status_says_what_really_happens(self):
-        from guppi_runtime.cloud_settings import provider_status
+        from sedra_runtime.cloud_settings import provider_status
         self.assertEqual(provider_status(False, True, 'https://x.test', 'm', 'gespeichert'), ('aus', ['Hauptschalter aus']))
         self.assertEqual(provider_status(True, False, 'https://x.test', 'm', 'gespeichert'), ('aus', ['Anbieter aus']))
         self.assertEqual(provider_status(True, True, 'https://x.test', None, 'fehlt'), ('nicht bereit', ['kein Modell eingetragen', 'kein Schlüssel']))
@@ -354,7 +354,7 @@ class SchluesselAblageKaputt(unittest.TestCase):
     def test_an_unreadable_key_file_is_never_overwritten_as_if_empty(self):
         # Befund F4 (Gesamtprüfung): eine kaputte Schlüsseldatei gilt nicht als leer – das Löschen würde sonst alle Schlüssel vernichten
         import tempfile
-        from guppi_runtime import cloud_settings
+        from sedra_runtime import cloud_settings
         with tempfile.TemporaryDirectory(prefix='keys-') as d:
             path = Path(d) / 'cloud_keys.json'
             path.write_text('{kaputt', encoding='utf-8')

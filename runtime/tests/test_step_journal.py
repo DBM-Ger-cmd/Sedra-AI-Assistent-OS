@@ -6,17 +6,17 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.selfdev.candidate_lifecycle import discard
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.selfdev.candidate_lifecycle import discard
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH=sorted((Path(__file__).resolve().parents[2]/'architecture').glob('GUPPI_Architecture_v*'))[-1]
+ARCH=sorted((Path(__file__).resolve().parents[2]/'architecture').glob('SEDRA_Architecture_v*'))[-1]
 
 
 class JournalCase(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
-        self.root=Path(self.tmp.name);self.rt=GuppiRuntime(self.root,ARCH)
+        self.root=Path(self.tmp.name);self.rt=SedraRuntime(self.root,ARCH)
     def ready(self,steps=None):
         m=self.rt.brain.create_mission('Create a report');mid=m['identity']['mission_id']
         self.rt.brain.run(mid,max_steps=4);m=self.rt.missions.load(mid)
@@ -35,7 +35,7 @@ class JournalCase(unittest.TestCase):
     def test_restart_continues_second_step_without_rewrite(self):
         m=self.two();mid=m['identity']['mission_id'];self.rt.brain.step(mid)
         path=self.rt.control.workspace/mid/'ONE.txt';before=path.stat().st_mtime_ns
-        restarted=GuppiRuntime(self.root,ARCH);out=restarted.brain.run(mid)
+        restarted=SedraRuntime(self.root,ARCH);out=restarted.brain.run(mid)
         self.assertEqual(out['lifecycle']['phase'],'COMPLETE');self.assertEqual(path.stat().st_mtime_ns,before)
         self.assertEqual(len(out['execution']['results']),2)
     def test_durable_completed_response_repairs_cursor(self):
@@ -112,14 +112,14 @@ class JournalCase(unittest.TestCase):
     def test_same_mission_concurrent_lock_rejects(self):
         m=self.ready();mid=m['identity']['mission_id']
         with self.rt.missions.execution_lock(mid):
-            with self.assertRaises(RuntimeError):GuppiRuntime(self.root,ARCH).brain.step(mid)
+            with self.assertRaises(RuntimeError):SedraRuntime(self.root,ARCH).brain.step(mid)
     def test_actual_process_death_releases_lock_without_replay(self):
         m=self.ready();mid=m['identity']['mission_id']
         code='''
 import os,sys
 from pathlib import Path
-from guppi_runtime.runtime import GuppiRuntime
-rt=GuppiRuntime(Path(sys.argv[1]),Path(sys.argv[2]));send=rt.bus.send
+from sedra_runtime.runtime import SedraRuntime
+rt=SedraRuntime(Path(sys.argv[1]),Path(sys.argv[2]));send=rt.bus.send
 def crash(msg):
  result=send(msg)
  if msg.type=='execution_request':os._exit(23)
@@ -130,7 +130,7 @@ rt.brain.step(sys.argv[3])
         p=subprocess.run([sys.executable,'-c',code,str(self.root),str(ARCH),mid],capture_output=True,text=True)
         self.assertEqual(p.returncode,23,p.stderr)
         path=self.rt.control.workspace/mid/'result.txt';before=path.stat().st_mtime_ns
-        out=GuppiRuntime(self.root,ARCH).brain.run(mid)
+        out=SedraRuntime(self.root,ARCH).brain.run(mid)
         self.assertEqual(out['wait']['reason_code'],'UNKNOWN_EXECUTION_OUTCOME')
         self.assertEqual(path.stat().st_mtime_ns,before)
     def test_verifier_fail_does_not_replay_successful_step(self):
@@ -161,7 +161,7 @@ class CandidateLifecycleCase(unittest.TestCase):
     def setUp(self):
         import hashlib
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
-        self.root=Path(self.tmp.name);self.rt=GuppiRuntime(self.root,ARCH)
+        self.root=Path(self.tmp.name);self.rt=SedraRuntime(self.root,ARCH)
         self.source=self.rt.filesystem_tool.root/'demo';self.source.mkdir();(self.source/'app.py').write_bytes(b'x=1\n')  # bytes: write_text would store CRLF on Windows and break the expected hash
         req={'project_path':'demo','files':['app.py'],'changes':[{'path':'app.py','expected_sha256':hashlib.sha256(b'x=1\n').hexdigest(),'content':'x=2\n'}]}
         self.m=self.rt.brain.create_mission('Ändere Code als Kandidat',inputs=req);self.mid=self.m['identity']['mission_id']
@@ -219,7 +219,7 @@ class CandidateLifecycleCase(unittest.TestCase):
 class ManualPlanCase(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
-        self.root=Path(self.tmp.name);self.rt=GuppiRuntime(self.root,ARCH)
+        self.root=Path(self.tmp.name);self.rt=SedraRuntime(self.root,ARCH)
         self.plan={'steps':[{'id':'ONE','content':'one'},{'id':'TWO','content':'two','depends_on':['ONE']}]}
     def test_public_plan_interface_completes(self):
         m=self.rt.brain.create_mission('Create two documents',plan_request=self.plan)
@@ -229,7 +229,7 @@ class ManualPlanCase(unittest.TestCase):
     def test_public_plan_restart_keeps_completed_step(self):
         m=self.rt.brain.create_mission('Create two documents',plan_request=self.plan);mid=m['identity']['mission_id']
         self.rt.brain.run(mid,max_steps=5);p=self.rt.control.workspace/mid/'ONE.txt';before=p.stat().st_mtime_ns
-        out=GuppiRuntime(self.root,ARCH).brain.run(mid)
+        out=SedraRuntime(self.root,ARCH).brain.run(mid)
         self.assertEqual(out['lifecycle']['phase'],'COMPLETE');self.assertEqual(p.stat().st_mtime_ns,before)
     def test_manual_plan_cannot_grant_tool_permissions(self):
         self.plan['steps'][0]['action']='tool_call'

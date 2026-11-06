@@ -7,9 +7,9 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import decisions as desk
+from sedra_runtime.desk import decisions as desk
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 
 
 def gate(gid="HG-1", action="change_switch", targets=("switch:model_loader.enabled",), risks=("gilt erst nach Neustart",)):
@@ -76,7 +76,7 @@ class ThroughTheHub(unittest.TestCase):
     """The whole way: a request from the Werkstatt, seen as a decision, answered once – and the switch really changed."""
 
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix="desk-hub-")
         self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / "project", ARCH)

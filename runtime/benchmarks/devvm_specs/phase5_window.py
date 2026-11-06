@@ -1,8 +1,8 @@
 """Phase 5, part B (Captain 2026-10-06, build approved, integration not): the DevVM window of the UIX, read-only, with the live ticker as a tab.
 
-GUPPI builds `devvm.js` in a DevVM workspace (the broker allows .js now). The python microVM cannot judge JavaScript, so the acceptance tests run on the HOST with node
+SEDRA builds `devvm.js` in a DevVM workspace (the broker allows .js now). The python microVM cannot judge JavaScript, so the acceptance tests run on the HOST with node
 (`host_hidden`, see devvm_build.host_node). The view model is a pure function (no DOM) and is tested; the DOM part is checked for syntax and for the functions that must exist;
-the Captain's side (not GUPPI) looks at it in the browser afterwards. Nothing is integrated into uix/.
+the Captain's side (not SEDRA) looks at it in the browser afterwards. Nothing is integrated into uix/.
 """
 
 NOTES = '''# Notes for the DevVM window
@@ -47,7 +47,7 @@ STAGE2 = '''In the existing `devvm.js` (keep `devvmViewModel` and the export lin
     renderDevvm(box, model)   box is a DOM element, model is the result of devvmViewModel: it fills `box` with a row of four tab buttons "Dateien", "Agenten", "Ergebnisse", "Live" and one
                               list per tab (a <pre> or a list element with one line per entry); only the active tab is visible; the first tab is active at start; clicking a tab button
                               switches the visible list; the tab buttons show the counts where they exist (e.g. "Agenten (3)"); an empty list shows the line "Noch nichts."
-    openDevvm()               creates the window ONCE: a <div class="window" id="devvmWindow"> with the same structure as the other windows (a .titlebar with a span "GUPPI DevVM" and a .controls
+    openDevvm()               creates the window ONCE: a <div class="window" id="devvmWindow"> with the same structure as the other windows (a .titlebar with a span "SEDRA DevVM" and a .controls
                               block with three .ctrl buttons for minimize, maximize and close that call minimizeWindow('devvmWindow'), toggleMaximize('devvmWindow') and closeWindow('devvmWindow'),
                               and a .content area with id "devvmBody"), appends it to the element with id "desktop", shows it with showWindow('devvmWindow') and calls refreshDevvm().
     refreshDevvm()            fetches api('/api/devvm'), builds the model and shows it in #devvmBody. It must NOT redraw when nothing changed (compare the model as JSON with the last one)

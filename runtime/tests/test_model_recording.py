@@ -5,13 +5,13 @@ import unittest
 import unittest.mock
 from pathlib import Path
 
-from guppi_runtime.models.base import BaseModelAdapter, ModelAdapterError
-from guppi_runtime.models.recording import (CONTENT_CAP, MESSAGE_CAP, Recorder, ReplayAdapter, load_recordings, request_digest)
-from guppi_runtime.models.router import ModelRouter
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.models.base import BaseModelAdapter, ModelAdapterError
+from sedra_runtime.models.recording import (CONTENT_CAP, MESSAGE_CAP, Recorder, ReplayAdapter, load_recordings, request_digest)
+from sedra_runtime.models.router import ModelRouter
+from sedra_runtime.runtime import SedraRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
 MESSAGES = [{"role": "system", "content": "Reply with JSON."}, {"role": "user", "content": "write loop_guard.py"}]
 
 
@@ -173,22 +173,22 @@ class ReplayTests(unittest.TestCase):
 class RuntimeWiring(unittest.TestCase):
     def runtime(self):
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
-        return GuppiRuntime(Path(tmp.name) / "project", ARCH)
+        return SedraRuntime(Path(tmp.name) / "project", ARCH)
 
     def test_off_by_default(self):
         with unittest.mock.patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("GUPPI_RECORD_REPLIES", None)
+            os.environ.pop("SEDRA_RECORD_REPLIES", None)
             self.assertIsNone(getattr(self.runtime().model_router, "recorder", None))
 
     def test_switched_on_by_the_environment(self):
         for value in ("1", "true", "YES"):
-            with self.subTest(value=value), unittest.mock.patch.dict(os.environ, {"GUPPI_RECORD_REPLIES": value}):
+            with self.subTest(value=value), unittest.mock.patch.dict(os.environ, {"SEDRA_RECORD_REPLIES": value}):
                 rt = self.runtime()
                 self.assertIsInstance(rt.model_router.recorder, Recorder)
                 self.assertEqual(rt.model_router.recorder.directory, rt.project_root / "runtime_data" / "model_recordings")
 
     def test_other_values_do_not_switch_it_on(self):
-        with unittest.mock.patch.dict(os.environ, {"GUPPI_RECORD_REPLIES": "0"}):
+        with unittest.mock.patch.dict(os.environ, {"SEDRA_RECORD_REPLIES": "0"}):
             self.assertIsNone(getattr(self.runtime().model_router, "recorder", None))
 
 

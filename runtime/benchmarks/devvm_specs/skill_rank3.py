@@ -1,6 +1,6 @@
 """Skill search ranking, round 3 (Captain 2026-10-13: "erstmal offene punkte angehen"). After round 2 the query "write failing test first" scores `test-driven-development` and `browser-testing-with-devtools` the same (9.94): both
 descriptions hold only the word "test", and the stemmer turns "testing" and "test" into one stem, so the order was decided by the id. A name that holds the query word as it is written ("test" in test-driven-development) is a better hit
-than a name that holds only its stem ("testing"). Round 3 adds a small bonus for such exact name words to `rank` in the existing `skill_rank.py` (seed: benchmarks/skill_rank3_seed). GUPPI builds it, Claude wrote this file,
+than a name that holds only its stem ("testing"). Round 3 adds a small bonus for such exact name words to `rank` in the existing `skill_rank.py` (seed: benchmarks/skill_rank3_seed). SEDRA builds it, Claude wrote this file,
 the hidden tests and the reference (benchmarks/devvm_refs/skill_rank3). Lesson of round 2: the tests of a stage only use rules of this stage and the stages before."""
 
 SEED = "benchmarks/skill_rank3_seed"      # PIPE-10: devvm_build takes this folder as --seed when none is given

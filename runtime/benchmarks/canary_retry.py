@@ -13,18 +13,18 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.models import gpu_canary                                          # noqa: E402
-from guppi_runtime.models.gpu_preflight import clear_leftovers                       # noqa: E402
-from guppi_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
-from guppi_runtime.jobs.testlab import TestLab, default_path                         # noqa: E402
+from sedra_runtime.models import gpu_canary                                          # noqa: E402
+from sedra_runtime.models.gpu_preflight import clear_leftovers                       # noqa: E402
+from sedra_runtime.models.llama_server_runtime import LlamaServerConfig, LlamaServerRuntime  # noqa: E402
+from sedra_runtime.jobs.testlab import TestLab, default_path                         # noqa: E402
 
 
 def main(project):
     config = LlamaServerConfig.load(RUNTIME / "config" / "llama_server.yaml"); config.enabled = True
-    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="guppi_canary_retry_")))
+    runtime = LlamaServerRuntime(config, Path(tempfile.mkdtemp(prefix="sedra_canary_retry_")))
     engine = runtime.executable_dir
-    if config.canary.engine_build and config.engine_source == "guppi":
-        from guppi_runtime.models.engine_provision import DEFAULT_ROOT, engine_dir, verify_engine
+    if config.canary.engine_build and config.engine_source == "sedra":
+        from sedra_runtime.models.engine_provision import DEFAULT_ROOT, engine_dir, verify_engine
         root = Path(config.engine_root) if config.engine_root else DEFAULT_ROOT
         if not verify_engine(root, config.canary.engine_build)[0]:
             print("canary engine missing", flush=True)

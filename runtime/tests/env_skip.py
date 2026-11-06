@@ -41,7 +41,7 @@ def pc_files_present():
 
 # ---- module level: the whole file cannot run here
 def need_dulwich():
-    if not has_dulwich(): raise unittest.SkipTest("dulwich fehlt (requirements.txt; auf dem GUPPI-PC im .venv) – DevVM-Tests übersprungen")
+    if not has_dulwich(): raise unittest.SkipTest("dulwich fehlt (requirements.txt; auf dem SEDRA-PC im .venv) – DevVM-Tests übersprungen")
 
 
 def need_numpy():
@@ -53,9 +53,9 @@ def need_windows():
 
 
 # ---- single tests
-needs_dulwich = unittest.skipUnless(has_dulwich(), "dulwich fehlt (requirements.txt; auf dem GUPPI-PC im .venv)")
+needs_dulwich = unittest.skipUnless(has_dulwich(), "dulwich fehlt (requirements.txt; auf dem SEDRA-PC im .venv)")
 needs_windows = unittest.skipUnless(sys.platform == "win32", "nur unter Windows (PowerShell, Laufwerkspfade, GetTickCount64)")
-needs_pc_files = unittest.skipUnless(pc_files_present(), "braucht engines/ und workspace/ des GUPPI-PCs (Modelle, llama.cpp)")
+needs_pc_files = unittest.skipUnless(pc_files_present(), "braucht engines/ und workspace/ des SEDRA-PCs (Modelle, llama.cpp)")
 
 
 def needs_ram(gb):

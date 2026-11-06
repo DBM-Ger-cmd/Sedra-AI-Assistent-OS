@@ -14,9 +14,9 @@ if __name__ == '__main__':
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.uix_server import UIXHub
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 GOLDEN = Path(__file__).resolve().parent / 'fixtures' / 'desk_golden'
 TYPES = ('task', 'intent', 'candidate', 'model', 'skill', 'decision', 'project', 'agent', 'boundary')
 PLACEHOLDERS = ('issue', 'routine', 'budget', 'gespraech')       # Spec 4 (G2-S1-10): Platzhalter mit quelle, ersetzt orchestra_kinds
@@ -193,7 +193,7 @@ class Register(unittest.TestCase):
     """Das Register mit den eingebauten Typen (K0.10): dieselben Typen und Verben wie vorher, Beispieltyp `echo`, Fehlerfälle D5."""
 
     def test_the_builtin_types_and_verbs_are_the_ones_of_before(self):
-        from guppi_runtime.desk import actions, objects
+        from sedra_runtime.desk import actions, objects
         self.assertEqual(objects.TYPES, TYPES + PLACEHOLDERS)
         self.assertEqual({k: list(v) for k, v in actions.VERBS.items()},
                          {'task': ['ausfuehren', 'schliessen', 'beenden', 'archivieren'], 'candidate': ['testen', 'nachpruefen', 'uebernehmen', 'zuruecknehmen'],
@@ -202,7 +202,7 @@ class Register(unittest.TestCase):
 
     def test_echo_is_reached_through_extensions_only(self):
         import desk_echo_kind
-        from guppi_runtime.desk import actions, builtin_kinds, extensions
+        from sedra_runtime.desk import actions, builtin_kinds, extensions
         reg = builtin_kinds.new_registry()
         audits = []
         loaded = extensions.load(reg, None, modules=('desk_echo_kind',), audit=lambda e, p: audits.append(e))
@@ -233,7 +233,7 @@ class Register(unittest.TestCase):
         self.assertNotIn('echo', builtin_kinds.builtin().names(), 'das eingebaute Register kennt den Beispieltyp nicht')
 
     def test_a_duplicate_type_is_refused_and_the_rest_keeps_running(self):
-        from guppi_runtime.desk import builtin_kinds, extensions
+        from sedra_runtime.desk import builtin_kinds, extensions
         reg = builtin_kinds.new_registry()
         with self.assertRaisesRegex(ValueError, 'kind_already_registered'):
             reg.register(reg.Kind('task', 'Noch eine Aufgabe', lambda h, o: None, lambda h, p: []))
@@ -254,7 +254,7 @@ class Register(unittest.TestCase):
         self.assertEqual(reg.names(), sorted(TYPES + PLACEHOLDERS))
 
     def test_freeze_ends_registration(self):
-        from guppi_runtime.desk import builtin_kinds
+        from sedra_runtime.desk import builtin_kinds
         reg = builtin_kinds.new_registry()
         reg.freeze()
         with self.assertRaisesRegex(ValueError, 'kinds_frozen'):
@@ -263,7 +263,7 @@ class Register(unittest.TestCase):
             builtin_kinds.builtin().register(reg.Kind('spaet', 'Zu spät', lambda h, o: None, lambda h, p: []))
 
     def test_only_the_agent_placeholder_may_be_replaced(self):
-        from guppi_runtime.desk import builtin_kinds
+        from sedra_runtime.desk import builtin_kinds
         reg = builtin_kinds.new_registry()
         with self.assertRaisesRegex(ValueError, 'unknown_object_type'):
             reg.view(None, 'agent', 'x')
@@ -276,7 +276,7 @@ class Register(unittest.TestCase):
             reg.register(reg.Kind('task', 'X', lambda h, o: None, lambda h, p: []), replace_placeholder=True)
 
     def test_a_half_object_is_refused(self):
-        from guppi_runtime.desk import builtin_kinds
+        from sedra_runtime.desk import builtin_kinds
         reg = builtin_kinds.new_registry()
         reg.register(reg.Kind('halb', 'Halb', lambda h, o: {'type': 'halb', 'id': o}, lambda h, p: [{'type': 'halb'}]))
         for call_ in (lambda: reg.view(None, 'halb', 'x'), lambda: reg.listing(None, 'halb')):
@@ -291,7 +291,7 @@ class ListExtras(unittest.TestCase):
         return {'type': 'zaehler', 'id': oid, 'title': oid, 'state': 'da', 'summary': oid, 'actions': [], 'links': []}
 
     def registry_with(self, extra=None, type_verbs=()):
-        from guppi_runtime.desk import builtin_kinds
+        from sedra_runtime.desk import builtin_kinds
         reg = builtin_kinds.new_registry()
         reg.register(reg.Kind('zaehler', 'Zähler', lambda h, o: self.obj(o), lambda h, p: [self.obj('z1')], type_verbs=type_verbs,
                               extra=extra))
@@ -314,7 +314,7 @@ class ListExtras(unittest.TestCase):
                     reg.request(None, {'type': 'zaehler'})
 
     def test_type_verbs_are_listed_as_actions_of_the_list(self):
-        from guppi_runtime.desk.actions import Verb
+        from sedra_runtime.desk.actions import Verb
         anlegen = Verb('anlegen', 'Anlegen', lambda h, o, a: None, needs_gate=True)
         out = self.registry_with(type_verbs=[anlegen]).request(None, {'type': 'zaehler'})
         self.assertEqual(out['actions'], [{'verb': 'anlegen', 'label': 'Anlegen', 'needs_gate': True, 'confirm': None}])
@@ -322,7 +322,7 @@ class ListExtras(unittest.TestCase):
 
     def test_placeholders_say_off_or_failed_and_agent_stays_without_quelle(self):
         from types import SimpleNamespace
-        from guppi_runtime.desk import builtin_kinds
+        from sedra_runtime.desk import builtin_kinds
         reg = builtin_kinds.new_registry()
         off = SimpleNamespace(runtime=SimpleNamespace(orchestra=None, orchestra_error=None))
         failed = SimpleNamespace(runtime=SimpleNamespace(orchestra=None, orchestra_error='orchestra_db_error:migration'))
@@ -345,7 +345,7 @@ class Gated(unittest.TestCase):
         self.addCleanup(self.hub.close)
 
     def test_request_waits_for_the_captain_and_apply_runs_exactly_the_binding(self):
-        from guppi_runtime.desk import gated
+        from sedra_runtime.desk import gated
         done = []
         req = gated.request(self.hub, 'echo_test', 'echo_test_action', 'echo:eins', {'describe': 'Echo setzen', 'text': 'hallo'})
         mid = req['mission_id']
@@ -362,7 +362,7 @@ class Gated(unittest.TestCase):
         self.assertEqual(done, ['hallo'])
 
     def test_a_changed_binding_is_not_applied(self):
-        from guppi_runtime.desk import gated
+        from sedra_runtime.desk import gated
         req = gated.request(self.hub, 'echo_test', 'echo_test_action', 'echo:eins', {'describe': 'Echo setzen', 'text': 'hallo'})
         mid = req['mission_id']
         self.hub.approve_gate({'mission_id': mid, 'gate_id': req['gate']['gate_id']})
@@ -389,7 +389,7 @@ def post(url, path, body, headers=None):
     parts = urlsplit(url)
     c = http.client.HTTPConnection(parts.hostname, parts.port, timeout=30)
     try:
-        h = {'Content-Type': 'application/json', 'X-GUPPI-Token': parts.fragment, **(headers or {})}
+        h = {'Content-Type': 'application/json', 'X-SEDRA-Token': parts.fragment, **(headers or {})}
         c.request('POST', path, body=json.dumps(body), headers=h)
         res = c.getresponse()
         raw = res.read().decode('utf-8')
@@ -408,8 +408,8 @@ class ThroughTheServer(unittest.TestCase):
     def setUpClass(cls):
         import threading
         from unittest import mock
-        from guppi_runtime.desk import extensions
-        from guppi_runtime.uix_server import make_server
+        from sedra_runtime.desk import extensions
+        from sedra_runtime.uix_server import make_server
         cls.tmp = tempfile.TemporaryDirectory(prefix='desk-kinds-http-')
         with mock.patch.object(extensions, 'MODULES', extensions.MODULES + ('desk_echo_kind',)):
             cls.hub = UIXHub(Path(cls.tmp.name) / 'project', ARCH)
@@ -452,7 +452,7 @@ class ThroughTheServer(unittest.TestCase):
 
     def test_the_chat_reads_the_verbs_from_the_same_register(self):
         """K0.12: `chat_tools` kennt die Typen mit Verben nicht mehr selbst."""
-        from guppi_runtime import chat_tools
+        from sedra_runtime import chat_tools
         listed = json.loads(chat_tools.ChatTools(self.hub).call('list_actions', {'type': 'echo', 'id': 'eins'}))
         self.assertEqual([a['verb'] for a in listed['actions']], ['rufen'])
         self.assertEqual(sorted(chat_tools.VERB_TYPES), ['boundary', 'candidate', 'intent', 'model', 'task'])
@@ -473,7 +473,7 @@ class ThroughTheServer(unittest.TestCase):
     def test_uix_server_names_no_type_in_the_object_routes(self):
         import ast
         import inspect
-        from guppi_runtime import uix_server
+        from sedra_runtime import uix_server
         tree = ast.parse(inspect.getsource(uix_server.UIXHub))
         names = set(TYPES) | {'echo', 'issue', 'routine', 'budget'}
         for fn in [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name in ('object_view', 'objects_view', 'act')]:

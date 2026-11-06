@@ -4,7 +4,7 @@ import subprocess
 import unittest
 from pathlib import Path
 
-UIX = Path(__file__).resolve().parents[1] / "src" / "guppi_runtime" / "uix"
+UIX = Path(__file__).resolve().parents[1] / "src" / "sedra_runtime" / "uix"
 
 
 class AgentWindowWiringTest(unittest.TestCase):

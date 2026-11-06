@@ -5,8 +5,8 @@ import unittest
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.orchestra.runner import external_block
-from guppi_runtime.wissen import ausgabe
+from sedra_runtime.orchestra.runner import external_block
+from sedra_runtime.wissen import ausgabe
 
 ID1, ID2 = "W0123456789", "Wabcdef0123"
 

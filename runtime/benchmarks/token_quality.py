@@ -7,9 +7,9 @@ Tasks have a deterministic grader (no model judges a model). Each task runs once
     budget256    thinking_budget_tokens = 256
     budget1024   thinking_budget_tokens = 1024
 
-Calls go through GUPPI's own path (loader -> ControlMasterModule.model_call -> ModelRouter -> adapter), so what is measured is what a
+Calls go through SEDRA's own path (loader -> ControlMasterModule.model_call -> ModelRouter -> adapter), so what is measured is what a
 job would get. The model is started the way its recipe says (provider and `profile.server` from the local routing overlay), by default
-through GUPPI's own llama-server. It writes one JSON line per call and prints accuracy, output tokens, thinking and seconds per model,
+through SEDRA's own llama-server. It writes one JSON line per call and prints accuracy, output tokens, thinking and seconds per model,
 category and variant. llama-server does not report thinking tokens, so the size of the thinking text (characters) is recorded too.
 
     python benchmarks/token_quality.py <project_dir_with_local_config> <results.jsonl> [model_key ...]
@@ -108,7 +108,7 @@ TASKS = [
     ("code", "C3", "What does this Python code print? Reply with the output only at the end.\n\nprint('abc'[::-1].upper())", tail_has("CBA", width=40)),
     ("code", "C4", "What does this Python code print? Reply with the output only at the end.\n\ndef f(n):\n    return n if n < 2 else f(n - 1) + f(n - 2)\nprint(f(7))", tail_has("13", width=40)),
     # format following (tool_operator work)
-    ("format", "F1", "Reply with ONLY a JSON object with the keys name (the string GUPPI) and version (the integer 8).", json_equals({"name": "GUPPI", "version": 8})),
+    ("format", "F1", "Reply with ONLY a JSON object with the keys name (the string SEDRA) and version (the integer 8).", json_equals({"name": "SEDRA", "version": 8})),
     ("format", "F2", "Reply with ONLY a JSON array holding the three smallest prime numbers.", json_equals([2, 3, 5])),
     ("format", "F3", "Reply with ONLY a JSON object: key ok is true and key items is the list a, b, c in reverse order.", json_equals({"ok": True, "items": ["c", "b", "a"]})),
     ("format", "F4", "Reply with exactly three lines, each starting with '- ', each naming one colour. Nothing else.", three_bullets),
@@ -117,8 +117,8 @@ TASKS = [
 
 def main(project_dir, results_path, models):
     """Takes the shared GPU lease (waits up to 30 minutes for another chat's run) and records every call in the test lab database."""
-    from guppi_runtime.jobs.testlab import TestLab, default_path
-    from guppi_runtime.models.gpu_preflight import clear_leftovers
+    from sedra_runtime.jobs.testlab import TestLab, default_path
+    from sedra_runtime.models.gpu_preflight import clear_leftovers
     lab = TestLab(default_path(project_dir))
     owner = os.environ.get("TESTLAB_OWNER", "token_quality")
     with lab.lease(owner, f"token_quality {','.join(models)}", ttl_s=600, wait_s=1800, preflight=clear_leftovers):
@@ -133,12 +133,12 @@ def main(project_dir, results_path, models):
 
 
 def _run(project_dir, results_path, models, lab, run_id):
-    from guppi_runtime.runtime import GuppiRuntime
+    from sedra_runtime.runtime import SedraRuntime
     tmp = Path(tempfile.mkdtemp())
-    project = tmp / "GUPPI_OS"
+    project = tmp / "SEDRA_OS"
     shutil.copytree(Path(project_dir) / "local_config", project / "local_config")
-    arch = sorted((RUNTIME.parent / "architecture").glob("GUPPI_Architecture_v*"))[-1]
-    rt = GuppiRuntime(project, architecture_root=arch)
+    arch = sorted((RUNTIME.parent / "architecture").glob("SEDRA_Architecture_v*"))[-1]
+    rt = SedraRuntime(project, architecture_root=arch)
     if not (rt.model_loader and rt.model_loader.enabled):
         sys.exit("model_loader is not enabled by the local switches")
     rt.model_router.adapters[PROVIDER].timeout = 600

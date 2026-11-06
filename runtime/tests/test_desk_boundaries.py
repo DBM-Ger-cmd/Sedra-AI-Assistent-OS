@@ -8,9 +8,9 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import boundaries as b
+from sedra_runtime.desk import boundaries as b
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 
 
 class Rules(unittest.TestCase):
@@ -97,7 +97,7 @@ class ThroughTheHub(unittest.TestCase):
     """Der ganze Weg: Vorschlag, eine Bestätigung, Überschreitung, drei Wege."""
 
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='desk-bound-')
         self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
@@ -190,7 +190,7 @@ class ThroughTheHub(unittest.TestCase):
 
     def test_the_take_over_asks_the_boundary_before_the_gate(self):
         """Die Deckungsprüfung vor `guard.create_gate` (§10): das einzige Verb, das heute ins Projekt schreibt."""
-        from guppi_runtime.desk import actions as desk_actions
+        from sedra_runtime.desk import actions as desk_actions
         self.confirm()
         stopped = desk_actions._boundary_first(self.hub, 'projekt', 'Dateien dieses Kandidaten überschreiben')
         self.assertIsNotNone(stopped)

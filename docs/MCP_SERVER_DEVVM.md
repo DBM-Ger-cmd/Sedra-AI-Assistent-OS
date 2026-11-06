@@ -1,10 +1,10 @@
-# MCP-Server für einen DevVM-Arbeitsordner (`guppi_runtime.devvm_mcp`)
+# MCP-Server für einen DevVM-Arbeitsordner (`sedra_runtime.devvm_mcp`)
 
-Gebaut am 2026-10-10 auf Wunsch des Captains: fertige Agenten (Qwen Code, little-coder, OpenCode, Goose) sollen ihre eigene Schleife und ihre Wächter mitbringen, das Modell soll aber **nur GUPPIs Werkzeuge sehen** (Arbeitsordner und microVM), nie den Rechner.
+Gebaut am 2026-10-10 auf Wunsch des Captains: fertige Agenten (Qwen Code, little-coder, OpenCode, Goose) sollen ihre eigene Schleife und ihre Wächter mitbringen, das Modell soll aber **nur SEDRAs Werkzeuge sehen** (Arbeitsordner und microVM), nie den Rechner.
 
 ## Start
 ```
-.venv\Scripts\python.exe -m guppi_runtime.devvm_mcp --project ..\workspace\GUPPI_OS [--seed <Ordner>] [--workspace-root <Ordner>] [--journal <Datei>] [--result-file <Datei>] [--max-vm-runs 8] [--self-check full|light|none] [--no-vm]
+.venv\Scripts\python.exe -m sedra_runtime.devvm_mcp --project ..\workspace\SEDRA_OS [--seed <Ordner>] [--workspace-root <Ordner>] [--journal <Datei>] [--result-file <Datei>] [--max-vm-runs 8] [--self-check full|light|none] [--no-vm]
 ```
 (`PYTHONPATH=src`, Arbeitsordner `runtime`.) Der Server spricht MCP über Standard-Ein/Ausgabe (JSON-RPC 2.0, eine Nachricht je Zeile: `initialize`, `tools/list`, `tools/call`, `ping`), nutzt nur die Python-Standardbibliothek und bedient **einen** Arbeitsordner.
 
@@ -26,7 +26,7 @@ Installiert aus der Registry (`npm install --ignore-scripts --omit=optional @qwe
 - `permissions.allow`: nur unsere 15 Werkzeuge `mcp__devvm__*` (im nicht interaktiven Betrieb kann der Agent nicht nachfragen, ohne diese Erlaubnis lehnt er auch sie ab);
 - `tools.disabled`: alle übrigen eingebauten und gebündelten Werkzeuge (Zeitplaner, Worktrees, Nachrichten, Ziele, Unter-Agenten, Pläne, Fragen, Web, Skill **und die Brücke `tool_search` / `tool_call`**);
 - `tools.visible`: unsere Werkzeuge werden gleich im ersten Aufruf deklariert (ohne die Brücke wären sie nicht erreichbar); `tools.toolSearch.enabled: false`;
-- `mcpServers.devvm`: `python -m guppi_runtime.devvm_mcp --project ... --workspace-root ...` mit `PYTHONPATH`.
+- `mcpServers.devvm`: `python -m sedra_runtime.devvm_mcp --project ... --workspace-root ...` mit `PYTHONPATH`.
 
 **Befund der Werkzeug-Probe** (`python benchmarks/agent_tool_probe.py qwen-code --variant both|attack`; ein Fake-Modell auf 127.0.0.1 zeichnet die Anfrage auf):
 - Ohne unsere Konfiguration bietet Qwen Code dem Modell `agent, get_goal, glob, grep_search, list_agents, read_file, skill, tool_call, tool_search, update_goal` an; **weitere Werkzeuge (Schreiben, Bearbeiten, Shell, Zeitplaner, Worktrees, Artefakte, Nachrichten) liegen hinter der Brücke `tool_search` / `tool_call`** und sind darüber erreichbar. Nur `deny` allein reicht daher nicht: mit `deny` blieben `get_goal, list_agents, tool_call, tool_search, update_goal` übrig und unsere eigenen Werkzeuge waren nur über die Brücke erreichbar.

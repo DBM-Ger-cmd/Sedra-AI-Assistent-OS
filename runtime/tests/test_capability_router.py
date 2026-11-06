@@ -3,16 +3,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.runtime import SedraRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
 
 
 class CapabilityRouterCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.rt = GuppiRuntime(Path(self.tmp.name), ARCH)
+        self.rt = SedraRuntime(Path(self.tmp.name), ARCH)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -85,7 +85,7 @@ class CapabilityRouterCase(unittest.TestCase):
         self.assertNotIn('tool_not_selected_by_capability_router', str(out))
 
     def test_general_request_still_routes_safely(self):
-        route = self.rt.capability_router.route('Hallo Guppi')
+        route = self.rt.capability_router.route('Hallo Sedra')
         self.assertEqual(route['primary_intent'], 'general')
         self.assertIn('knowledge-retrieval', self.ids(route, 'skills'))
         self.assertTrue(route['enforce_tool_allowlist'])

@@ -11,8 +11,8 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime import uix_clients
-from guppi_runtime.uix_server import make_server
+from sedra_runtime import uix_clients
+from sedra_runtime.uix_server import make_server
 from test_desk_kinds import FakeHost, audit_payloads, data, post
 
 
@@ -82,7 +82,7 @@ class Client(unittest.TestCase):
         import http.client
         info = uix_clients.read(self.hub.project_root, 'cli')
         c = http.client.HTTPConnection('127.0.0.1', info['port'], timeout=10)
-        c.request('GET', '/api/strip', headers={'X-GUPPI-Token': info['token']})
+        c.request('GET', '/api/strip', headers={'X-SEDRA-Token': info['token']})
         self.assertEqual(c.getresponse().status, 403)
         c.close()
 
@@ -103,12 +103,12 @@ class Client(unittest.TestCase):
 
 
 class Cli(unittest.TestCase):
-    """K0.14: `guppi objects` und `guppi act` gehen nur über die laufende Oberfläche."""
+    """K0.14: `sedra objects` und `sedra act` gehen nur über die laufende Oberfläche."""
 
     def run_cli(self, *argv):
         import contextlib
         import io
-        from guppi_runtime import cli
+        from sedra_runtime import cli
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             code = cli.main(['--root', str(self.root), *argv])
@@ -185,7 +185,7 @@ class ClientsView(unittest.TestCase):
         parts = urlsplit(self.url)
         c = http.client.HTTPConnection(parts.hostname, parts.port, timeout=10)
         try:
-            c.request('GET', path, headers={'X-GUPPI-Token': parts.fragment})
+            c.request('GET', path, headers={'X-SEDRA-Token': parts.fragment})
             r = c.getresponse()
             return r.status, r.read().decode('utf-8')
         finally:

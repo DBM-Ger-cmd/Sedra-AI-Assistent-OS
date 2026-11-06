@@ -1,5 +1,5 @@
 """Die Importgrenze des Pakets `wissen/` (Spec 7, D7.1): reine Module importieren nur die Standardbibliothek und einander in
-fester Richtung; Harness-Module nur die erlaubten Teile von `guppi_runtime`; niemand außerhalb von `wissen/` importiert die reinen
+fester Richtung; Harness-Module nur die erlaubten Teile von `sedra_runtime`; niemand außerhalb von `wissen/` importiert die reinen
 Module; `core/` bleibt unberührt. Dazu: die Migrationen im Paket sind die Saat der Bau-Spec, Python 3.12 parst jedes Modul."""
 import ast
 import sys
@@ -8,12 +8,12 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-SRC = Path(__file__).resolve().parents[1] / "src" / "guppi_runtime"
+SRC = Path(__file__).resolve().parents[1] / "src" / "sedra_runtime"
 WISSEN = SRC / "wissen"
 REIN = {"schema": set(), "zerlegen": set(), "vektor": set(), "fusion": set(), "ausgabe": {"zerlegen"}, "glossar": set()}   # glossar: S7.6 A2
 STDLIB = {"array", "hashlib", "heapq", "json", "math", "operator", "re", "sqlite3", "unicodedata", "dataclasses", "typing", "contextlib", "sys"}
-HARNESS_ERLAUBT = {"guppi_runtime.core.audit", "guppi_runtime.core.content_policy", "guppi_runtime.core.mission_lock", "guppi_runtime.jobs.testlab",
-                   "guppi_runtime.desk.gated", "guppi_runtime.desk.actions", "guppi_runtime.orchestra.runner", "guppi_runtime.local_paths"}
+HARNESS_ERLAUBT = {"sedra_runtime.core.audit", "sedra_runtime.core.content_policy", "sedra_runtime.core.mission_lock", "sedra_runtime.jobs.testlab",
+                   "sedra_runtime.desk.gated", "sedra_runtime.desk.actions", "sedra_runtime.orchestra.runner", "sedra_runtime.local_paths"}
 
 
 def imports(path):
@@ -38,9 +38,9 @@ class Grenze(unittest.TestCase):
     def test_reine_module_nur_standardbibliothek_und_feste_richtung(self):
         for name, erlaubt in REIN.items():
             for imp, level in imports(WISSEN / f"{name}.py"):
-                ziel = absolut(imp, level, f"guppi_runtime.wissen.{name}")
-                if ziel.startswith("guppi_runtime."):
-                    self.assertIn(ziel, {f"guppi_runtime.wissen.{e}" for e in erlaubt}, f"{name} importiert {ziel}")
+                ziel = absolut(imp, level, f"sedra_runtime.wissen.{name}")
+                if ziel.startswith("sedra_runtime."):
+                    self.assertIn(ziel, {f"sedra_runtime.wissen.{e}" for e in erlaubt}, f"{name} importiert {ziel}")
                 else:
                     self.assertIn(ziel.split(".")[0], STDLIB, f"{name} importiert {ziel}")
 
@@ -51,14 +51,14 @@ class Grenze(unittest.TestCase):
             tree = ast.parse(path.read_text(encoding="utf-8"))
             for node in ast.walk(tree):                       # `from ..desk import gated` zählt als Import von desk.gated
                 if isinstance(node, ast.ImportFrom) and node.level:
-                    basis = absolut(node.module or "", node.level, f"guppi_runtime.wissen.{path.stem}")
+                    basis = absolut(node.module or "", node.level, f"sedra_runtime.wissen.{path.stem}")
                     for a in node.names:
                         ziel = basis + "." + a.name
-                        if ziel.startswith("guppi_runtime.") and not ziel.startswith("guppi_runtime.wissen"):
+                        if ziel.startswith("sedra_runtime.") and not ziel.startswith("sedra_runtime.wissen"):
                             self.assertTrue(ziel in HARNESS_ERLAUBT or ziel.rsplit(".", 1)[0] in HARNESS_ERLAUBT, f"{path.stem} importiert {ziel}")
             for imp, level in imports(path):
-                ziel = absolut(imp, level, f"guppi_runtime.wissen.{path.stem}")
-                if ziel.startswith("guppi_runtime.") and not ziel.startswith("guppi_runtime.wissen") and ziel not in ("guppi_runtime.desk", "guppi_runtime.core", "guppi_runtime.orchestra", "guppi_runtime.jobs"):
+                ziel = absolut(imp, level, f"sedra_runtime.wissen.{path.stem}")
+                if ziel.startswith("sedra_runtime.") and not ziel.startswith("sedra_runtime.wissen") and ziel not in ("sedra_runtime.desk", "sedra_runtime.core", "sedra_runtime.orchestra", "sedra_runtime.jobs"):
                     self.assertIn(ziel, HARNESS_ERLAUBT, f"{path.stem} importiert {ziel}")
                 if path.stem == "vektor_np" and ziel == "numpy":
                     continue                                      # K5-6 (G2 K5 D-K5-2 Weg A): nur hier, nur bei Bedarf geladen (Test unten)
@@ -78,7 +78,7 @@ class Grenze(unittest.TestCase):
             modul = ".".join(path.relative_to(SRC.parent).with_suffix("").parts)
             for imp, level in imports(path):
                 ziel = absolut(imp, level, modul)
-                if ziel.startswith("guppi_runtime.wissen.") and ziel.split(".")[-1] in REIN:
+                if ziel.startswith("sedra_runtime.wissen.") and ziel.split(".")[-1] in REIN:
                     bad.append(f"{modul}: {ziel}")
         self.assertEqual(bad, [])
 
@@ -93,7 +93,7 @@ class Grenze(unittest.TestCase):
             import wis_ddl
         finally:
             sys.path.pop(0)
-        from guppi_runtime.wissen import schema
+        from sedra_runtime.wissen import schema
         self.assertEqual(schema.MIGRATIONEN, wis_ddl.MIGRATIONEN)
         self.assertEqual(schema.SCHEMA_VERSION, len(wis_ddl.MIGRATIONEN))
 

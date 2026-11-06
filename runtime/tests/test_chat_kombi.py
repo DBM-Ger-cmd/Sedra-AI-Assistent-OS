@@ -4,12 +4,12 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from guppi_runtime.core.content_guard import ContentGuardStop
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.core.content_guard import ContentGuardStop
+from sedra_runtime.uix_server import UIXHub
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 import tempfile
 
-ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
 LOKAL = {'status': 'completed', 'reply': 'Lokaler Entwurf: Stand folgt.', 'model': 'stub-lokal'}
 CLOUD_OK = {'status': 'completed', 'reply': 'Geprüft: offene Punkte sind offen.'}
 

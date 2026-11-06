@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.gateway import vorgaben_text as vt
+from sedra_runtime.gateway import vorgaben_text as vt
 
 
 class GemerkteVorgaben(unittest.TestCase):
@@ -60,10 +60,10 @@ class VorschlagInDerVorschau(unittest.TestCase):
     """Eine gemerkte Vorgabe erscheint als Vorschlag in der Vorschau eines neuen Dokuments, nicht als stille Ersetzung."""
 
     def test_a_remembered_rule_is_a_suggestion_in_the_next_preview(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         tmp = tempfile.TemporaryDirectory(prefix='vorschlag-')
         self.addCleanup(tmp.cleanup)
-        arch = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+        arch = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
         hub = UIXHub(Path(tmp.name) / 'project', arch)
         self.addCleanup(hub.close)
         (hub.gateway_eingang() / 'neu.txt').write_text('Das Team von DEF ist da. Lena Beispiel schreibt.', encoding='utf-8')

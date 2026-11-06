@@ -51,7 +51,7 @@ Ziel: SEDRA führt mehrere KI-Agenten gleichzeitig wie ein kleines Team – nach
 | Verify Before Accept | Richter ist der versteckte Test, nicht das Modell |
 | Least Privilege | Selbstentwicklung erzeugt keine neuen Rechte; Werkzeuge nur mit API-Allowlist |
 | Reversible Change | Jede Übernahme rücknehmbar; Konfiguration nur mit `*.bak-<datum>-<grund>` |
-| Kern geschützt | `guppi_runtime/core/` (Stufe E3) nur mit ausdrücklicher Freigabe je Änderung; `test_core_boundary_src` bleibt grün |
+| Kern geschützt | `sedra_runtime/core/` (Stufe E3) nur mit ausdrücklicher Freigabe je Änderung; `test_core_boundary_src` bleibt grün |
 
 ### Begriffe
 
@@ -67,7 +67,7 @@ Ziel: SEDRA führt mehrere KI-Agenten gleichzeitig wie ein kleines Team – nach
 | Gate | Freigabepunkt des Guard (ALLOW, BLOCK, CAPTAIN_REQUIRED) |
 | Shell D | Die Paperclip-Shell unter `uix/shells/paperclip/`, laut Vertrag §9 nach Cockpit (C) und Minimal (E) geplant |
 
-Namensregel (Captain, 20.10.2026): Der Bauagent heißt jetzt SEDRA statt GUPPI. Im Code bleiben die technischen Namen unverändert, etwa `guppi_runtime`, `trust: GUPPI_BUILT` und der Ordner `workspace/GUPPI_OS/`.
+Namensregel (Captain, 20.10.2026): Der Bauagent heißt jetzt SEDRA statt SEDRA. Im Code bleiben die technischen Namen unverändert, etwa `sedra_runtime`, `trust: SEDRA_BUILT` und der Ordner `workspace/SEDRA_OS/`.
 
 ## Ist-Stand: Paperclip gegen SEDRA
 
@@ -88,12 +88,12 @@ Wichtig: Im Konzept `UIX_KOMMANDODECK_v1.md` hat der Captain schon entschieden, 
 | Activity & Events | `core/audit.py` (hash-verkettet), `desk/events.py` (SSE: `task.changed`, `decision.pending`, `decision.answered`, `live.line`, `model.changed`, `system.state`) | vorhanden | – |
 | Plugins | Shell-Werkzeug-Vertrag, Gate `install_module`, E1-Integration | vorhanden (Oberfläche), Backend nur E1 | – |
 | Workspaces & Sandbox | `devenv/devvm.py`, microVM über microsandbox | vorhanden für Bauten | – |
-| Secrets | Secret-Speicher: Umgebungsvariable `GUPPI_SECRET_*` oder `local_config/cloud_keys.json`, verschlüsselt mit Windows-DPAPI (`cloud_settings.py`); Verweise als `secret://anbieter/id`; Schwärzung im Audit | vorhanden für Cloud-Schlüssel (G1-S0-f); ein Speicher je Agent fehlt | 3 |
+| Secrets | Secret-Speicher: Umgebungsvariable `SEDRA_SECRET_*` oder `local_config/cloud_keys.json`, verschlüsselt mit Windows-DPAPI (`cloud_settings.py`); Verweise als `secret://anbieter/id`; Schwärzung im Audit | vorhanden für Cloud-Schlüssel (G1-S0-f); ein Speicher je Agent fehlt | 3 |
 | KI-Labor | Werkzeug `labor` (CORE) mit `labor.py`, `labor_runs.py`, 8 eigenen Routen (`/api/cloud/*`, `/api/labor/*`), Instrument `gauge-cloud` | vorhanden – Speichern, Schlüssel und Tests nur mit Audit (`CLOUD_SETTINGS_SAVED`, `CLOUD_KEY_CHANGED`, `LABOR_CONNECTION_TEST`), ohne Guard-Gate; Spezialrouten statt `POST /api/actions` | 3, 4 |
 | Oberfläche im Paperclip-Stil | Shell D `uix/shells/paperclip/` v1.1.0 (4 Skripte, 494 Zeilen), Start `START_SEDRA.bat paperclip` | teilweise – Navigation: Dashboard, Posteingang, Issues, Ziele, Agenten, Kosten, Planungstisch, Rekorder, Werkstatt, Bibliothek; es fehlen Organigramm, Routinen, Slots und KI-Labor | 4 |
 | Mehrere Organisationen, Export/Import | – | bewusst weggelassen | – |
 
-Desk-Stand (K0.3): Objekttypen `task`, `intent`, `candidate`, `model`, `skill`, `decision`, `project`, `agent`, `boundary` (`routine` fehlt; `agent` ist eingetragen, liefert aber weder Liste noch Einzelansicht). Verben nur für fünf Typen – `task`: ausfuehren; `candidate`: testen, nachpruefen, uebernehmen, zuruecknehmen; `intent`: aufgabe_machen; `boundary`: bestaetigen, aendern; `model`: laden, entladen, testen. Zugang: `POST /api/objects {type, id}` und `POST /api/actions`, Anmeldung über den Kopf `X-GUPPI-Token`; das Audit `UIX_ACTION` nennt keinen Client. Typen und Verben sind fest verdrahtet (`uix_server.objects_view`, `desk/actions.table()`). Der MCP-Server `state_mcp.py` liest nur.
+Desk-Stand (K0.3): Objekttypen `task`, `intent`, `candidate`, `model`, `skill`, `decision`, `project`, `agent`, `boundary` (`routine` fehlt; `agent` ist eingetragen, liefert aber weder Liste noch Einzelansicht). Verben nur für fünf Typen – `task`: ausfuehren; `candidate`: testen, nachpruefen, uebernehmen, zuruecknehmen; `intent`: aufgabe_machen; `boundary`: bestaetigen, aendern; `model`: laden, entladen, testen. Zugang: `POST /api/objects {type, id}` und `POST /api/actions`, Anmeldung über den Kopf `X-SEDRA-Token`; das Audit `UIX_ACTION` nennt keinen Client. Typen und Verben sind fest verdrahtet (`uix_server.objects_view`, `desk/actions.table()`). Der MCP-Server `state_mcp.py` liest nur.
 
 ## Spec 0 – Kern-Architektur und Kern-API
 
@@ -103,7 +103,7 @@ Empfehlung: Variante A. SEDRA bleibt Python, das Desk ist die Kern-API für alle
 
 | Variante | Was passiert | Aufwand | Risiko | Passung zu SEDRA |
 | --- | --- | --- | --- | --- |
-| A – Python, Desk als API (gewählt) | Paperclip-Funktionen als Paket `guppi_runtime/orchestra/`, angeboten über Desk-Objekte und Verben | mittel | gering – Kern, Guard und 187 Testdateien bleiben | hoch; entspricht „Vorbild, nicht Einbau“ |
+| A – Python, Desk als API (gewählt) | Paperclip-Funktionen als Paket `sedra_runtime/orchestra/`, angeboten über Desk-Objekte und Verben | mittel | gering – Kern, Guard und 187 Testdateien bleiben | hoch; entspricht „Vorbild, nicht Einbau“ |
 | B – Paperclip daneben | Paperclip-Server (Node 24, pnpm, Postgres) läuft neben SEDRA, spricht SEDRA über einen Adapter an | mittel bis hoch | mittel – zwei Stacks, zwei Rechtesysteme, Guard muss jeden Paperclip-Aufruf decken | gering; widerspricht der früheren Entscheidung |
 | C – Neubau in TypeScript | Kern nach Paperclip-Vorbild neu | sehr hoch | hoch – abgenommene SEDRA-Module und Testbasis gehen verloren | gering |
 
@@ -119,8 +119,8 @@ Dafür kommt KERN-07 hinzu: WENN Paperclip als Orchestrator angebunden wird, DAN
 | KERN-02 | WENN ein Verb auf einem Objekt ausgeführt wird, DANN SOLL es über `POST /api/actions` und das Gate dieses Verbs laufen. | Gleiches Verb aus Shell, Gespräch und CLI erzeugt denselben Audit-Eintrag `UIX_ACTION`; er unterscheidet sich nur im Feld `client` (`shell`, `chat`, `cli`, `mcp`; G1-S0-c) |
 | KERN-03 | Das Paket `core/` SOLL nur über einzeln freigegebene Gates geändert werden (Grundsatzfreigabe des Captains vom 20.10.2026). | Diff in `core/` nur mit Gate-ID im Logbuch; `tests.test_core_boundary_src` grün |
 | KERN-04 | WENN ein neuer Anwendungsfall dazukommt, DANN SOLL er als Objekttyp, Verben und Werkzeug ergänzt werden können, ohne `uix_server.py` zu ändern. | Ein Beispiel-Objekttyp wird nur über Registrierung eingebunden. Die Registrierung selbst ändert `uix_server.py` und `desk/` einmal (G1-S0-d); danach gilt die Anforderung ohne Ausnahme |
-| KERN-05 | Externe Clients (CLI, MCP, später ein Paperclip-Adapter) SOLLEN dieselbe API mit Token (`X-GUPPI-Token`) nutzen. | Ein Aufruf über MCP legt eine Aufgabe an, `UIX_ACTION` trägt `client: "mcp"` |
-| KERN-06 | WENN eine Konfiguration des Pakets fehlt oder ungültig ist, DANN SOLL das Paket abschalten und `boot()` den Grund melden. | `guppi doctor` zeigt `orchestra_error` mit Grund |
+| KERN-05 | Externe Clients (CLI, MCP, später ein Paperclip-Adapter) SOLLEN dieselbe API mit Token (`X-SEDRA-Token`) nutzen. | Ein Aufruf über MCP legt eine Aufgabe an, `UIX_ACTION` trägt `client: "mcp"` |
+| KERN-06 | WENN eine Konfiguration des Pakets fehlt oder ungültig ist, DANN SOLL das Paket abschalten und `boot()` den Grund melden. | `sedra doctor` zeigt `orchestra_error` mit Grund |
 | KERN-07 | WENN Paperclip als Orchestrator angebunden wird, DANN SOLL es SEDRA-Agenten nur über die Kern-API wecken und nie am Guard vorbei arbeiten. | Paperclip-Herzschlag erzeugt SEDRA-Mission mit Gate und Audit; Kosten in beiden Systemen |
 
 ### Design
@@ -182,7 +182,7 @@ Migration ohne Verhaltensänderung:
 | --- | --- |
 | `tests/test_desk_objects.py` | Form jedes Objekts, Verben nur im passenden Zustand, nicht angebotene Verben laufen nicht, unbekannte Typen und Verben abgewiesen, `UIX_ACTION` geschrieben, Listen gleicher Form |
 | `tests/test_desk_intent_stufen.py`, `tests/test_desk_boundaries.py` | Verben `aufgabe_machen`, `bestaetigen`, `aendern` mit Gates |
-| `tests/test_uix_guppi_moves.py` | Gespräch: `list_actions`, `propose_action` lesen dieselben Verben |
+| `tests/test_uix_sedra_moves.py` | Gespräch: `list_actions`, `propose_action` lesen dieselben Verben |
 | `tests/test_uix_server.py`, `tests/test_uix_flows.py` | Routen `/api/objects`, `/api/actions` über HTTP |
 | `tests/test_uix_contract.py`, `benchmarks/uix_check.py` | Werkzeuge im Browser unverändert (`result ok` für alle Shells) |
 | `tests/test_core_boundary_src.py` | Kern unberührt |
@@ -191,7 +191,7 @@ Neu in `tests/test_desk_kinds.py`: Beispieltyp `echo` (nur im Test) wird über `
 
 #### D2 Feld `client` im Audit `UIX_ACTION` (KERN-02, KERN-05, G1-S0-c)
 
-Heute gibt es genau einen Token je Serverstart (`secrets.token_urlsafe(32)` in `make_server`), er lebt nur im Speicher und erreicht die Seite über das URL-Fragment. CLI und MCP haben deshalb heute gar keinen Weg zur API (`state_mcp.py` liest Dateien direkt, `guppi doctor` ruft die Runtime im Prozess).
+Heute gibt es genau einen Token je Serverstart (`secrets.token_urlsafe(32)` in `make_server`), er lebt nur im Speicher und erreicht die Seite über das URL-Fragment. CLI und MCP haben deshalb heute gar keinen Weg zur API (`state_mcp.py` liest Dateien direkt, `sedra doctor` ruft die Runtime im Prozess).
 
 Grundsatz: Der Server setzt `client`, nie der Aufrufer. Ein Feld `client` im Körper einer Anfrage wird mit `400 client_is_set_by_server` abgewiesen und als `UIX_CLIENT_REFUSED` protokolliert, damit ein Fälschungsversuch sichtbar wird.
 
@@ -202,7 +202,7 @@ Grundsatz: Der Server setzt `client`, nie der Aufrufer. Ein Feld `client` im Kö
 | `cli` | eigener CLI-Token | wer die CLI-Tokendatei lesen kann |
 | `mcp` | eigener MCP-Token | wer die MCP-Tokendatei lesen kann |
 
-Client-Token: Beim Start erzeugt der Server je externem Client (`cli`, `mcp`) einen eigenen Zufallstoken und schreibt ihn mit Port und PID nach `workspace/GUPPI_OS/runtime_data/uix/clients/<client>.json` (atomar; der Token unter Windows mit DPAPI wie `cloud_keys.json`, sonst Datei mit Rechten 0600). Die Zuordnung Token → Client steht nur im Speicher des Servers. Beim Beenden werden die Dateien gelöscht, beim nächsten Start neu erzeugt. Anmeldung bleibt der Kopf `X-GUPPI-Token`; `_authorized()` liefert statt `True` den Client-Namen. Das ändert die Token-Semantik (Regel 6) und ist deshalb ein eigenes Gate (G2-S0-05).
+Client-Token: Beim Start erzeugt der Server je externem Client (`cli`, `mcp`) einen eigenen Zufallstoken und schreibt ihn mit Port und PID nach `workspace/SEDRA_OS/runtime_data/uix/clients/<client>.json` (atomar; der Token unter Windows mit DPAPI wie `cloud_keys.json`, sonst Datei mit Rechten 0600). Die Zuordnung Token → Client steht nur im Speicher des Servers. Beim Beenden werden die Dateien gelöscht, beim nächsten Start neu erzeugt. Anmeldung bleibt der Kopf `X-SEDRA-Token`; `_authorized()` liefert statt `True` den Client-Namen. Das ändert die Token-Semantik (Regel 6) und ist deshalb ein eigenes Gate (G2-S0-05).
 
 Vertrauensgrenze: Alle Token-Halter sind dasselbe Windows-Konto auf Loopback; `client` ist eine Herkunftsangabe für Audit und Abnahme, keine Berechtigung. Kein Verb und kein Gate hängt von `client` ab. Zwischen den Token-Klassen (Browser, CLI, MCP) ist die Angabe nicht fälschbar, ohne die Tokendatei der anderen Klasse zu lesen. Innerhalb der Browserseite (`shell` gegen `chat`) ist sie eine Selbstauskunft: Werkzeug-Code in der Seite könnte den Kopf eines anderen Werkzeugs setzen. Das ist hinnehmbar, weil Werkzeuge mit Rang `COMMUNITY` nur `GET`-Routen bekommen und `POST /api/actions` damit für sie gesperrt ist.
 
@@ -210,7 +210,7 @@ Audit: `UIX_ACTION` bekommt `payload = {type, id, verb, client}`; sonst bleibt d
 
 Externe Clients:
 
-- CLI: neue Befehle `guppi objects <typ> [<id>]` und `guppi act <typ> <id|-> <verb> [--args JSON]`; sie lesen `clients/cli.json` und rufen `POST /api/objects` bzw. `POST /api/actions` über Loopback. Läuft keine Oberfläche: Fehler `uix_not_running`, kein Weg am Desk vorbei (G2-S0-06).
+- CLI: neue Befehle `sedra objects <typ> [<id>]` und `sedra act <typ> <id|-> <verb> [--args JSON]`; sie lesen `clients/cli.json` und rufen `POST /api/objects` bzw. `POST /api/actions` über Loopback. Läuft keine Oberfläche: Fehler `uix_not_running`, kein Weg am Desk vorbei (G2-S0-06).
 - MCP: neuer Server `desk_mcp.py` mit den Werkzeugen `objects` und `act`, Prüfung der Anfragen mit `mcp_shield` wie `state_mcp.py`, Aufruf über `clients/mcp.json`. `state_mcp.py` bleibt rein lesend (G2-S0-07).
 
 #### D3 Paket `orchestra/`
@@ -229,7 +229,7 @@ Externe Clients:
 | `routines.py` | Cron-Auswertung, Nachhol-Regel, `routine_runs` (ORC-10) | `store`, `board` |
 | `service.py` | Fassade `Orchestra` für Desk und Runtime: hält die Teile, nimmt Audit, Guard, `job_supervisor` und einen Vorlagen-Leser als übergebene Objekte | alle |
 
-Importregeln (neuer Test `tests/test_orchestra_boundary.py` mit `core_boundary.violations`/`chains`): `orchestra/` darf `guppi_runtime.core` und `guppi_runtime.jobs` importieren, sonst nur Standardbibliothek und `yaml`. Verboten: `desk`, `uix_server`, `uix`, `chat_tools`, `agent_manager`, `devenv`, `devvm*`, `coder_ext`, `models.cloud_api`. Vorlagen und Instanzen des Agent Managers kommen über eine übergebene Funktion (`templates(ref) -> dict`), die der Desk-Adapter aus `agent_manager` baut; nur so bleibt `runtime.py` unter `test_core_boundary_src` grün.
+Importregeln (neuer Test `tests/test_orchestra_boundary.py` mit `core_boundary.violations`/`chains`): `orchestra/` darf `sedra_runtime.core` und `sedra_runtime.jobs` importieren, sonst nur Standardbibliothek und `yaml`. Verboten: `desk`, `uix_server`, `uix`, `chat_tools`, `agent_manager`, `devenv`, `devvm*`, `coder_ext`, `models.cloud_api`. Vorlagen und Instanzen des Agent Managers kommen über eine übergebene Funktion (`templates(ref) -> dict`), die der Desk-Adapter aus `agent_manager` baut; nur so bleibt `runtime.py` unter `test_core_boundary_src` grün.
 
 ##### D3.2 Schnittstelle zum Desk
 
@@ -248,7 +248,7 @@ Der Herzschlag braucht einen Takt. `desk/extensions.py` darf je Modul ein `start
 
 ##### D3.3 Datenmodell `orchestra.db`
 
-Ablage `workspace/GUPPI_OS/runtime_data/orchestra/orchestra.db`, WAL wie `testlab.db`. Geschrieben wird nur in Transaktionen; `core/util.atomic_write_*` gilt für Dateien, nicht für SQLite (siehe Offene Punkte). Zeiten als UTC-Text (ISO 8601, wie Audit), Geld als ganze Cent. Abgestimmt mit dem Datenmodell von Spec 1; Abweichungen stehen in der letzten Spalte.
+Ablage `workspace/SEDRA_OS/runtime_data/orchestra/orchestra.db`, WAL wie `testlab.db`. Geschrieben wird nur in Transaktionen; `core/util.atomic_write_*` gilt für Dateien, nicht für SQLite (siehe Offene Punkte). Zeiten als UTC-Text (ISO 8601, wie Audit), Geld als ganze Cent. Abgestimmt mit dem Datenmodell von Spec 1; Abweichungen stehen in der letzten Spalte.
 
 | Tabelle | Spalten (Typ, Pflicht) | Schlüssel und Indizes | gegenüber Spec 1 |
 | --- | --- | --- | --- |
@@ -296,11 +296,11 @@ Schalter: `local_switches.ALLOWED` bekommt `"orchestra": {"enabled"}`; Standard 
 | Datenbank nicht zu öffnen oder Schema neuer als der Code | `None` | `orchestra_db_error:<grund>` | wie Schalter aus |
 | alles gültig | `Orchestra` | `None` | Typen `agent`, `issue`, `routine`, `budget` registriert |
 
-`boot()` bekommt `"orchestra": {"enabled": bool, "error": str|None, "schema_version": int|None}`. Der Zustand `READY` hängt davon nicht ab (wie bei `job_supervisor`). `guppi doctor` gibt `boot()` aus und zeigt den Eintrag damit ohne Änderung an `cli.py`. Ein Fehler wird zusätzlich einmal als `ORCHESTRA_OFF` mit Grund ins Audit geschrieben.
+`boot()` bekommt `"orchestra": {"enabled": bool, "error": str|None, "schema_version": int|None}`. Der Zustand `READY` hängt davon nicht ab (wie bei `job_supervisor`). `sedra doctor` gibt `boot()` aus und zeigt den Eintrag damit ohne Änderung an `cli.py`. Ein Fehler wird zusätzlich einmal als `ORCHESTRA_OFF` mit Grund ins Audit geschrieben.
 
 #### D4 Neue Guard-Aktionen
 
-Neue Regeln kommen in `architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT/core/guard/guard_rules.yaml` (GR-029 ff.) und je ein Eintrag in `runtime/config/permission_levels.yaml`, weil eine dort fehlende Aktion als `missing_permission` gesperrt würde. Jede Zeile ist ein eigenes Gate (Regel 6). Hinweis: Der Guard behandelt eine unbekannte Aktion als `CAPTAIN_REQUIRED`; heute laufen so schon `install_module`, `set_project_boundaries`, `change_switch`, `agent.instantiate` ohne eigene Regel. Für die Orchestrierung wird jede Aktion ausdrücklich eingetragen, damit die Entscheidung im Regelwerk steht und nicht im Standard. Die Spalte „Stufe“ ist die Obergrenze aus `permission_levels.yaml` (0 READ_ONLY … 6 EXTERNAL_ACTION): Sie sagt, ab welcher Rechte-Stufe ein Agenten-Job die Aktion überhaupt anfragen darf. Verwaltungsaktionen des Captains stehen auf 5 (SYSTEM_CHANGE), damit ein Agent sie nie selbst anfragt; `tests/test_permission_levels.py` hält Regeln und Stufen gleich.
+Neue Regeln kommen in `architecture/SEDRA_Architecture_v1.20_SELF_DEVELOPMENT/core/guard/guard_rules.yaml` (GR-029 ff.) und je ein Eintrag in `runtime/config/permission_levels.yaml`, weil eine dort fehlende Aktion als `missing_permission` gesperrt würde. Jede Zeile ist ein eigenes Gate (Regel 6). Hinweis: Der Guard behandelt eine unbekannte Aktion als `CAPTAIN_REQUIRED`; heute laufen so schon `install_module`, `set_project_boundaries`, `change_switch`, `agent.instantiate` ohne eigene Regel. Für die Orchestrierung wird jede Aktion ausdrücklich eingetragen, damit die Entscheidung im Regelwerk steht und nicht im Standard. Die Spalte „Stufe“ ist die Obergrenze aus `permission_levels.yaml` (0 READ_ONLY … 6 EXTERNAL_ACTION): Sie sagt, ab welcher Rechte-Stufe ein Agenten-Job die Aktion überhaupt anfragen darf. Verwaltungsaktionen des Captains stehen auf 5 (SYSTEM_CHANGE), damit ein Agent sie nie selbst anfragt; `tests/test_permission_levels.py` hält Regeln und Stufen gleich.
 
 | Gate | Aktion | Bedeutung | Vorschlag | Stufe | Begründung |
 | --- | --- | --- | --- | --- | --- |
@@ -348,7 +348,7 @@ Abnahme je Anforderung:
 | --- | --- | --- |
 | KERN-01 | `tests/test_orchestra_desk.py` (neu) | Schalter an, Fixture-Datenbank: `POST /api/objects {type:"agent", id}` und `{type:"issue"}`, `{type:"routine"}`, `{type:"budget", id}` liefern genau die Schlüssel `SHAPE`; `{type:"task"}` liefert die Missionsliste unverändert (Golden) |
 | KERN-02 | `tests/test_desk_client.py` (neu) | dasselbe Verb (`model/laden` auf Fake-Host) mit Browser-Token, Browser-Token + `X-SEDRA-Tool: talk`, CLI-Token, MCP-Token: vier `UIX_ACTION`, Nutzlasten gleich bis auf `client` = `shell`, `chat`, `cli`, `mcp`; `client` im Körper → 400; fremder Token → 403 |
-| KERN-03 | `tests/test_core_boundary_src.py`, Durchsicht | Test grün; `git diff --stat main -- runtime/src/guppi_runtime/core` leer für Spec 0, sonst je Datei eine Gate-ID im Logbuch |
+| KERN-03 | `tests/test_core_boundary_src.py`, Durchsicht | Test grün; `git diff --stat main -- runtime/src/sedra_runtime/core` leer für Spec 0, sonst je Datei eine Gate-ID im Logbuch |
 | KERN-04 | `tests/test_desk_kinds.py` (neu) | Golden-Test der neun heutigen Typen; Typ `echo` nur über `extensions` erreichbar über beide Routen; `ast`-Prüfung: keine Typnamen in `object_view`/`objects_view`; doppelter Typ abgewiesen; `freeze()` wirkt |
 | KERN-05 | `tests/test_desk_mcp.py` (neu) | MCP-Werkzeug `act` mit `{type:"intent", id, verb:"aufgabe_machen"}` legt eine Aufgabe an; letzter `UIX_ACTION` trägt `client:"mcp"`; Anfrage ohne gültigen MCP-Token scheitert |
 | KERN-06 | `tests/test_orchestra_config.py` (neu), `tests/test_local_switches.py` | Schalter aus → `orchestra` `None`, Fehler `None`; Schalter an + Datei fehlt → `boot()["orchestra"]["error"] == "orchestra_config_missing"`; ungültige Werte je Feld → `orchestra_config_invalid:<feld>`; `state` bleibt `READY`; `cli.main(['doctor'])` druckt den Eintrag; Schalter `orchestra` wird angenommen |
@@ -358,7 +358,7 @@ KERN-07 (nur Bedingung): Ein Paperclip-Adapter ist ein weiterer externer Client 
 
 #### D6 Gate-Vorschläge für G2
 
-Änderungen an `core/`: keine. Spec 0 kommt ohne Eingriff in `guppi_runtime/core/` aus; `core/audit.py` nimmt `client` in der freien Nutzlast auf. Eine spätere Kern-Änderung ist nur vorgemerkt (Dauerfreigabe, Offene Punkte) und nicht Teil von G2.
+Änderungen an `core/`: keine. Spec 0 kommt ohne Eingriff in `sedra_runtime/core/` aus; `core/audit.py` nimmt `client` in der freien Nutzlast auf. Eine spätere Kern-Änderung ist nur vorgemerkt (Dauerfreigabe, Offene Punkte) und nicht Teil von G2.
 
 | Gate | Gegenstand | Art |
 | --- | --- | --- |
@@ -367,7 +367,7 @@ KERN-07 (nur Bedingung): Ein Paperclip-Adapter ist ein weiterer externer Client 
 | G2-S0-03 | einmalige Änderung `chat_tools.py`: `VERB_TYPES` aus dem Register | Design |
 | G2-S0-04 | Feld `client` in `UIX_ACTION`, Ermittlung im Server, Abweisung im Körper, Vertrauensgrenze wie D2 | Design |
 | G2-S0-05 | Client-Token für `cli` und `mcp` mit Dateien unter `runtime_data/uix/clients/` (Token-Semantik, Regel 6) | Regel 6 |
-| G2-S0-06 | CLI-Befehle `guppi objects`, `guppi act` über die API | Design |
+| G2-S0-06 | CLI-Befehle `sedra objects`, `sedra act` über die API | Design |
 | G2-S0-07 | neuer MCP-Server `desk_mcp.py` (schreibend über `/api/actions`); `state_mcp.py` bleibt lesend | Design |
 | G2-S0-08 | Paket `orchestra/`: Module, Schichtung, Importregeln, `test_orchestra_boundary.py` | Design |
 | G2-S0-09 | Datenmodell `orchestra.db` wie D3.3, inkl. Abweichungen zu Spec 1 (Spec 1 übernimmt es in O1.2) | Design |
@@ -414,9 +414,9 @@ Stand 20.10.2026, geschnitten aus D1 bis D6 (G2 erteilt). Wer baut: **SEDRA** he
 | K0.9 | Andocken `extensions.py`: `MODULES`, `load(registry, hub, …)` mit Rücknahme einer halben Registrierung und Audit `DESK_KIND_REFUSED`, `start(hub, loaded)` | Bau-Spec `k0_extensions` → `desk/extensions.py` | G2-S0-01 | – (Schnittstelle von K0.8 nur als Vertrag) | SEDRA |
 | K0.10 | Desk an das Register: Übernahme K0.8 und K0.9 (nach G4); `desk/builtin_kinds.py` mit den neun Typen, Leser wörtlich aus `object_view`/`objects_view` verschoben (`decision` mit `own_actions=True`, `agent` als Platzhalter); `desk/gated.py` (Antrag/Anwenden nach dem Muster `boundaries_request`/`boundaries_apply`); `objects.TYPES` und `actions.VERBS`/`table()`/`offered()`/`run()` aus dem Register, dazu `run_type()`; Tests Beispieltyp `echo`, doppelter Typ, `freeze()` | `desk/kinds.py`, `desk/extensions.py`, `desk/builtin_kinds.py`, `desk/gated.py`, `desk/objects.py`, `desk/actions.py`, `tests/test_desk_kinds.py` | G2-S0-01 | K0.7, K0.8, K0.9 | Harness |
 | K0.11 | Einmalige Änderung `uix_server.py`: `object_view` → `registry.view`, `objects_view` → `registry.request`; `act` erlaubt Verben ohne `id`, wenn der Typ ein `type_verb` dieses Namens hat; beim Start `builtin_kinds.register()`, `extensions.load()`, `extensions.start()`, `freeze()`; `ast`-Prüfung: keine Typnamen in `object_view`/`objects_view`; Golden-Test unverändert grün | `uix_server.py`, `tests/test_desk_kinds.py` | G2-S0-02 | K0.10 | Harness |
-| K0.12 | `chat_tools.VERB_TYPES` aus dem Register statt fest | `chat_tools.py`, `tests/test_uix_guppi_moves.py` (nur laufen lassen) | G2-S0-03 | K0.10 | Harness |
+| K0.12 | `chat_tools.VERB_TYPES` aus dem Register statt fest | `chat_tools.py`, `tests/test_uix_sedra_moves.py` (nur laufen lassen) | G2-S0-03 | K0.10 | Harness |
 | K0.13 | Feld `client`: `_authorized()` liefert die Token-Klasse, `client_for` setzt den Wert; `client` im Körper → `400 client_is_set_by_server` und Audit `UIX_CLIENT_REFUSED`; `UIX_ACTION` mit `payload.client`; Client-Token für `cli` und `mcp` in `runtime_data/uix/clients/<client>.json` (atomar, DPAPI unter Windows, sonst 0600; beim Beenden gelöscht) | `uix_server.py`, `tests/test_desk_client.py` (neu) | G2-S0-04, G2-S0-05 | K0.11 | Harness |
-| K0.14 | CLI `guppi objects <typ> [<id>]`, `guppi act <typ> <id\|-> <verb> [--args JSON]` über Loopback mit `clients/cli.json`; ohne Oberfläche `uix_not_running` | `cli.py`, Test in `tests/test_desk_client.py` | G2-S0-06 | K0.13 | Harness |
+| K0.14 | CLI `sedra objects <typ> [<id>]`, `sedra act <typ> <id\|-> <verb> [--args JSON]` über Loopback mit `clients/cli.json`; ohne Oberfläche `uix_not_running` | `cli.py`, Test in `tests/test_desk_client.py` | G2-S0-06 | K0.13 | Harness |
 | K0.15 | MCP-Server `desk_mcp.py` mit Werkzeugen `objects` und `act`, Prüfung mit `mcp_shield`, Aufruf über `clients/mcp.json`; `state_mcp.py` bleibt lesend | `desk_mcp.py` (neu), `tests/test_desk_mcp.py` (neu) | G2-S0-07 | K0.13 | Harness |
 | K0.16 | Konfiguration `config.py`: `OrchestraConfig.from_dict`/`load`/`database_path`/`as_dict`, Fehler `orchestra_config_missing` und `orchestra_config_invalid:<feld>` | Bau-Spec `k0_orchestra_config` → `orchestra/config.py` | G2-S0-08, G2-S0-10 | – | SEDRA |
 | K0.17 | Speicher `store.py`: Schema 1 wie D3.3, `migrate`, `schema_version`, `immediate`, `open_db` (WAL, `busy_timeout`, `foreign_keys`), Fehler `orchestra_db_error:<grund>`, `orchestra_busy` | Bau-Spec `k0_orchestra_store` → `orchestra/store.py` | G2-S0-09 | – | SEDRA |
@@ -427,7 +427,7 @@ Stand 20.10.2026, geschnitten aus D1 bis D6 (G2 erteilt). Wer baut: **SEDRA** he
 | K0.22 | Übernahme K0.21 (nach G4); Abnahme KERN-01 mit Fixture-Datenbank aus `store.open_db`: alle vier Typen über `POST /api/objects` mit genau den Schlüsseln `SHAPE`, `task` unverändert (Golden); Schalter aus → `issue` ist `unknown_object_type` | `desk/orchestra_kinds.py`, `tests/test_orchestra_desk.py` (neu), `tests/fixtures/` | G2-S0-12 | K0.11, K0.20, K0.21 | Harness |
 | K0.23 | Guard-Regeln GR-029 bis GR-038 wie D4 und Stufen in `permission_levels.yaml`; `tests/test_permission_levels.py` grün; Architekturversion von `test_desk_objects` klären (OP-11) | `architecture/…/core/guard/guard_rules.yaml`, `runtime/config/permission_levels.yaml` | G2-S0-GA-01 bis GA-10, G2-S0-14 | – (vor den Verben in Spec 1) | Harness |
 | K0.24 | Nachtrag `SHELL_WERKZEUG_VERTRAG_v1.md` §10: Registrierung, Verben ohne Objekt, neue Typen, Feld `client`, Client-Token | `docs/SHELL_WERKZEUG_VERTRAG_v1.md` | G2-S0-13 | K0.11, K0.13 | Harness |
-| K0.25 | Abnahme Spec 0: Tests aus D5 und D1 grün, `benchmarks/uix_check.py` `result ok`, `git diff --stat main -- runtime/src/guppi_runtime/core` leer, Review-Mängel und Eingriffe ins Logbuch | – | KERN-01 bis KERN-06 | alle | Harness |
+| K0.25 | Abnahme Spec 0: Tests aus D5 und D1 grün, `benchmarks/uix_check.py` `result ok`, `git diff --stat main -- runtime/src/sedra_runtime/core` leer, Review-Mängel und Eingriffe ins Logbuch | – | KERN-01 bis KERN-06 | alle | Harness |
 
 Reihenfolge: K0.7 kommt vor K0.10. Die sechs SEDRA-Bauten (K0.8, K0.9, K0.16, K0.17, K0.18, K0.21) hängen von keinem Harness-Schritt ab und können nach G3 nacheinander auf der GPU laufen (eine Lease, ein Bau zur Zeit), kleinste zuerst: `k0_extensions`, `k0_orchestra_config`, dann `k0_orchestra_service`, `k0_orchestra_kinds`, `k0_kinds`, zuletzt `k0_orchestra_store` (SQLite, Schema, Transaktionen); K0.7 und K0.23 laufen parallel dazu. Danach zwei Stränge: Desk K0.10 → K0.11 → K0.12, K0.13 → K0.14, K0.15, K0.24; Paket K0.19 → K0.20; beide treffen sich in K0.22, zuletzt K0.25.
 
@@ -472,7 +472,7 @@ Offene Punkte (K0.7 ff.):
 | G3-S0-05 | K0.11 einmalige Änderung `uix_server.py` | Harness |
 | G3-S0-06 | K0.12 `chat_tools.VERB_TYPES` aus dem Register | Harness |
 | G3-S0-07 | K0.13 Feld `client` und Client-Token | Harness |
-| G3-S0-08 | K0.14 CLI `guppi objects`, `guppi act` | Harness |
+| G3-S0-08 | K0.14 CLI `sedra objects`, `sedra act` | Harness |
 | G3-S0-09 | K0.15 MCP-Server `desk_mcp.py` | Harness |
 | G3-S0-10 | K0.16 Bau-Spec `k0_orchestra_config` und SEDRA-Bau `orchestra/config.py` | SEDRA |
 | G3-S0-11 | K0.17 Bau-Spec `k0_orchestra_store` und SEDRA-Bau `orchestra/store.py` | SEDRA |
@@ -612,11 +612,11 @@ Vorschlag für die Grenzen (Startwerte ohne Messung): nur Agenten mit Stufe ≤ 
 
 ##### Takt des Herzschlags (OP-9), Vorschlag
 
-Befund: Einen Takt für Agenten gibt es nicht. `job_worker.Worker` reapt alle `reap_every` (30 s), aber nur, solange ein Worker-Thread läuft und der Supervisor an ist. `uix_server.py` startet Daemon-Threads für Einzelaufgaben, keinen Dauertakt für die Orchestrierung (nicht im Detail geprüft). Empfehlung: **Takt in der Oberfläche** (wie in D3.2), `tick()` idempotent und durch eine Betriebssystem-Sperre (Muster `mission_lock.exclusive`, Datei `orchestra/tick.lock`) auf einen Takter begrenzt. Damit lässt sich später ein eigener Dienst (`guppi orchestra run`) hinzufügen, ohne zwei Takter zu riskieren. Ein eigener Dienst ist erst nötig, wenn Routinen nachts ohne Oberfläche laufen sollen; bis dahin trägt die Nachhol-Regel (E2E-6).
+Befund: Einen Takt für Agenten gibt es nicht. `job_worker.Worker` reapt alle `reap_every` (30 s), aber nur, solange ein Worker-Thread läuft und der Supervisor an ist. `uix_server.py` startet Daemon-Threads für Einzelaufgaben, keinen Dauertakt für die Orchestrierung (nicht im Detail geprüft). Empfehlung: **Takt in der Oberfläche** (wie in D3.2), `tick()` idempotent und durch eine Betriebssystem-Sperre (Muster `mission_lock.exclusive`, Datei `orchestra/tick.lock`) auf einen Takter begrenzt. Damit lässt sich später ein eigener Dienst (`sedra orchestra run`) hinzufügen, ohne zwei Takter zu riskieren. Ein eigener Dienst ist erst nötig, wenn Routinen nachts ohne Oberfläche laufen sollen; bis dahin trägt die Nachhol-Regel (E2E-6).
 
 ##### Rezept und Vorlage des Unterarbeiters, Vorschlag
 
-- Vorlage `guppi.orchestra.foreman` (Anzeigename Unterarbeiter), Effekt `proposal_only`, `workspace_mode: read_only`, `network_mode: deny`; gebaut im Harness (Vorlagen entstehen durch KI-Sitzungen, Datei mit Prüfsumme), Vertrauen `UNVERIFIED`.
+- Vorlage `sedra.orchestra.foreman` (Anzeigename Unterarbeiter), Effekt `proposal_only`, `workspace_mode: read_only`, `network_mode: deny`; gebaut im Harness (Vorlagen entstehen durch KI-Sitzungen, Datei mit Prüfsumme), Vertrauen `UNVERIFIED`.
 - Rolle `foreman` in `job_supervisor.yaml` (`mutates: false`, Fähigkeit `orchestration`), in `role_routing.yaml` im Rezept `coder.local_primary` gelistet (`max_level` 2), in `token_policy.yaml` zunächst wie `planner` (Denken an, 4096 Ausgabe). Die Zahlen sind Startwerte, gemessen ist nichts.
 - Das Modell bekommt die Anweisung, die Zielkette, die Liste der Agenten unter ihm (Rolle, Stufe, offene Aufgaben) und das Budget; es liefert **nur eine strukturierte Liste** (Titel, Rolle, Blocker, Akzeptanz). `orchestra` prüft und legt an (ORC-17). So bleibt das Modell ohne Verb, und Webtext aus der Recherche kann kein Verb erreichen (ORC-19).
 - Schleifenschutz: Obergrenze für Teilaufgaben je Anweisung, ein Zerlegungslauf je Elternaufgabe; `jobs/loop_guard.py` und `jobs/runaway_guard.py` sind Kandidaten (nicht auf Eignung geprüft).
@@ -624,7 +624,7 @@ Befund: Einen Takt für Agenten gibt es nicht. `job_worker.Worker` reapt alle `r
 
 ##### Recherche, Vorschlag
 
-Vorlage `guppi.orchestra.researcher`, Effekt `read_only`. Das Web-Werkzeug bleibt ein **Host-Werkzeug** (`tools/web.py`, Guard `external_read`), weil Vorlagen `network_mode: deny` erzwingen und der Import nichts anderes zulässt. Der Recherche-Lauf ist deshalb eine Brain-Mission, kein DevVM-Lauf. Die Hostliste (fünf Domains) wird für Spec 1 nicht geändert; eine Erweiterung ist eine eigene Captain-Entscheidung (G1-S1-23).
+Vorlage `sedra.orchestra.researcher`, Effekt `read_only`. Das Web-Werkzeug bleibt ein **Host-Werkzeug** (`tools/web.py`, Guard `external_read`), weil Vorlagen `network_mode: deny` erzwingen und der Import nichts anderes zulässt. Der Recherche-Lauf ist deshalb eine Brain-Mission, kein DevVM-Lauf. Die Hostliste (fünf Domains) wird für Spec 1 nicht geändert; eine Erweiterung ist eine eigene Captain-Entscheidung (G1-S1-23).
 
 ##### Abbildung Vorlage → Rechte-Stufe, Vorschlag
 
@@ -746,7 +746,7 @@ Importgrenze wie D3.1, verschärft für die reinen Module:
 | `tick.py` | Ablauf | `heartbeat`, `routines` (über die Fassade) | ORC-16 |
 | `service.py` | Fassade | alle | – |
 
-`tests/test_orchestra_boundary.py` bekommt eine zweite Regel: die sieben reinen Module importieren nichts aus `guppi_runtime` und nicht `sqlite3`. Guard, Supervisor, Brain, Modell-Router, Web-Werkzeug, Vorlagen-Leser und Auflöser für Vorhaben/Projekte werden als Objekte oder Funktionen übergeben; `orchestra/` importiert weiterhin weder `desk` noch `agent_manager` noch `models` (D3.1).
+`tests/test_orchestra_boundary.py` bekommt eine zweite Regel: die sieben reinen Module importieren nichts aus `sedra_runtime` und nicht `sqlite3`. Guard, Supervisor, Brain, Modell-Router, Web-Werkzeug, Vorlagen-Leser und Auflöser für Vorhaben/Projekte werden als Objekte oder Funktionen übergeben; `orchestra/` importiert weiterhin weder `desk` noch `agent_manager` noch `models` (D3.1).
 
 ##### `graphs.py` (rein)
 
@@ -1232,7 +1232,7 @@ Harness (Claude):
 | S1.H5 | `desk/gated.py` (mehrere Gates, Applier, `decide`, `pending`) und `uix_server.decide`/`_open_requests` | G2-S1-08, 09 |
 | S1.H6 | Fassade `service.py` erweitern, `tick.py`, Takt-Thread in `orchestra_kinds.start` | G2-S1-15 |
 | S1.H7 | `desk/orchestra_kinds.py`: Verben, Felder, Typ `gespraech`, Applier, deutsche Sätze | G2-S1-03 bis 07, 12 |
-| S1.H8 | Lauf: `desk/orchestra_runner.py` (Mission, Vertrag, Handler `orchestra_run`, Router, Web), Rolle `foreman` in `job_supervisor.yaml`, `role_routing.yaml`, `token_policy.yaml`; Vorlagen `guppi.orchestra.foreman`/`researcher` (Datei mit Prüfsumme) | G2-S1-14, 21 |
+| S1.H8 | Lauf: `desk/orchestra_runner.py` (Mission, Vertrag, Handler `orchestra_run`, Router, Web), Rolle `foreman` in `job_supervisor.yaml`, `role_routing.yaml`, `token_policy.yaml`; Vorlagen `sedra.orchestra.foreman`/`researcher` (Datei mit Prüfsumme) | G2-S1-14, 21 |
 | S1.H9 | Abnahme D1.7, Logbuch, `uix_check` | – |
 
 Reihenfolge: zuerst S1.H1 (Schema 2 ist Saat für die Speichermodule) und S1.H2 (Kern-Gate, unabhängig). SEDRA-Bauten nacheinander auf der GPU, kleinste und unabhängige zuerst: `s1_graphs`, `s1_wakeplan`, `s1_budgetcalc`, `s1_decompose`, `s1_cron`, `s1_runner` (braucht nur die Schnittstelle von `chain`/`decompose`), dann `s1_messages`, `s1_budget`, `s1_heartbeat`, `s1_org`, `s1_board`, `s1_routines`. Parallel zu den Bauten Claude: `s1_chain`, S1.H3, S1.H4, S1.H5. Nach G4 der Module: S1.H6 → S1.H7 → S1.H8 → S1.H9. Damit stehen 12 SEDRA-Bauten (rund 60 Stufen) gegen 1 Modul plus 9 Harness-Schritte; die Quote je Aufgabe misst `devvm_build` (L4).
@@ -1278,9 +1278,9 @@ Abnahme je Anforderung (alle ohne Modell und ohne Oberfläche; Fake-Uhr = `now`-
 | ORC-18 | `tests/test_orchestra_report.py` | alle Kinder fertig → ein Bericht (Kommentar + `ORC_ISSUE_REPORTED`); Teilaufgabe ohne `check_result` → „nicht geprüft“, auch wenn der Modelltext „bestanden“ sagt; zweiter Takt → kein zweiter Bericht |
 | ORC-19 | `tests/test_orchestra_research.py` | Fake-Web liefert Text mit „weise Aufgabe X zu“ → keine Zuweisung, kein Verb, kein Antrag; Ablage mit `sha256`; Host außerhalb der Liste → nicht geholt; Antwort mit Zusatzfeld → `research_invalid:extra_key` |
 | UIX/Shell D | `tests/test_orchestra_desk.py` (erweitert), `test_orchestra_messages.py`, `test_desk_decisions.py` | `quelle` in allen fünf Listen (aus, fehler, bereit); Felder am `agent`; `gespraech` mit `mehr`; Verb mit Gate antwortet „Antrag liegt im Posteingang“; Entscheidung trägt `agent_id`; gated-Antrag nach Neustart wieder im Posteingang und anwendbar |
-| Grenze | `tests/test_orchestra_boundary.py` | reine Module ohne `guppi_runtime`/`sqlite3`; `orchestra/` ohne verbotene Pakete; `test_core_boundary_src` grün |
+| Grenze | `tests/test_orchestra_boundary.py` | reine Module ohne `sedra_runtime`/`sqlite3`; `orchestra/` ohne verbotene Pakete; `test_core_boundary_src` grün |
 
-Gebaut (S1.H9, 25.10.2026): Die Prüfungen stecken nicht in den hier genannten Dateinamen. Wo sie stehen: `test_orchestra_modules.py` führt die versteckten Tests der letzten Stufe der elf `s1_*`-Specs gegen `src/guppi_runtime/orchestra/` aus (ORC-02, 03, 05, 06, 08, 10, 11, 17, 18; bekannte Abweichung `wissen_vorschlag` aus Spec 7 steht dort mit Grund); `test_orchestra_checkout_race.py` (ORC-04, 100 Durchläufe, zwei Prozesse); `test_orchestra_run.py` (ORC-07, 09, 12, 14, 17, 18, 19, Fehlerfall F6); `test_orchestra_tick.py` (ORC-16, Fehlerfälle F1 bis F3 über `quelle`); `test_orchestra_config.py` (F9); `test_orchestra_desk.py`, `_messages.py`, `_hire.py`, `_standing.py`, `test_guard_standing.py` (Verben, Anträge, Dauerfreigabe); `test_orchestra_chain.py` (ORC-13); `test_orchestra_boundary.py` (Grenze).
+Gebaut (S1.H9, 25.10.2026): Die Prüfungen stecken nicht in den hier genannten Dateinamen. Wo sie stehen: `test_orchestra_modules.py` führt die versteckten Tests der letzten Stufe der elf `s1_*`-Specs gegen `src/sedra_runtime/orchestra/` aus (ORC-02, 03, 05, 06, 08, 10, 11, 17, 18; bekannte Abweichung `wissen_vorschlag` aus Spec 7 steht dort mit Grund); `test_orchestra_checkout_race.py` (ORC-04, 100 Durchläufe, zwei Prozesse); `test_orchestra_run.py` (ORC-07, 09, 12, 14, 17, 18, 19, Fehlerfall F6); `test_orchestra_tick.py` (ORC-16, Fehlerfälle F1 bis F3 über `quelle`); `test_orchestra_config.py` (F9); `test_orchestra_desk.py`, `_messages.py`, `_hire.py`, `_standing.py`, `test_guard_standing.py` (Verben, Anträge, Dauerfreigabe); `test_orchestra_chain.py` (ORC-13); `test_orchestra_boundary.py` (Grenze).
 
 #### D1.8 Gate-Liste G2 Spec 1 und offene Punkte
 
@@ -1309,7 +1309,7 @@ Jede Zeile wird einzeln entschieden.
 | G2-S1-18 | Recherche: zwei Modellaufrufe in einer Mission, höchstens 5 URLs, Ausgabeschema ohne Verben | ja |
 | G2-S1-19 | Budget: Vorabprüfung gegen die Ausgabegrenze der Rolle, Buchung der Grenze bei fehlendem `usage`, Vorfall je Überschreitung, Antrag `set_budget` + `resume_agent` | ja |
 | G2-S1-20 | `orchestra.yaml` Schema 2: `runner`, `standing` (nur enger als Guard), `decompose`; `checkout.stall_s` entfällt, Stillstand = `stall_after_s` | ja |
-| G2-S1-21 | Rolle `foreman` und Rolle `researcher` mit Web-Host-Werkzeug in `job_supervisor.yaml`, `role_routing.yaml`, `token_policy.yaml`; Vorlagen `guppi.orchestra.foreman`, `guppi.orchestra.researcher` (Konfiguration, je Datei einzeln) | ja |
+| G2-S1-21 | Rolle `foreman` und Rolle `researcher` mit Web-Host-Werkzeug in `job_supervisor.yaml`, `role_routing.yaml`, `token_policy.yaml`; Vorlagen `sedra.orchestra.foreman`, `sedra.orchestra.researcher` (Konfiguration, je Datei einzeln) | ja |
 | G2-S1-22 | Aufteilung SEDRA/Claude und Bau-Specs wie D1.6 (12 SEDRA, `s1_chain` Claude), Reihenfolge | ja |
 | G2-S1-23 | Abnahmeplan D1.7 | ja |
 | G2-S1-24 | Quarantäne-Abgleich im Takt über den AM-Adapter `instance_status` | ja |
@@ -1363,7 +1363,7 @@ SEDRA-Bauten (Reihenfolge des Baus nach D1.6, eine GPU-Lease, ein Bau zur Zeit; 
 | 10 | `s1_board` | `orchestra/board.py` | create 20, assign 14, checkout 16, blockers 17, release 17, comment 16, chain 16, delegate 18 | ja | `devvm_refs/s1_board/board.py` (242) | result ok |
 | 11 | `s1_routines` | `orchestra/routines.py` | crud 16, change 18, fire 15, catchup 10, active 12 | ja | `devvm_refs/s1_routines/routines.py` (131) | result ok |
 
-Alle Stempel Stufe `vm` (microVM-Python 3.12.15); jede erste Stufe scheitert auf der Saat (`spec_check --seed`). Die reinen Module (1 bis 5 und `budgetcalc`) importieren weder `guppi_runtime` noch `sqlite3`.
+Alle Stempel Stufe `vm` (microVM-Python 3.12.15); jede erste Stufe scheitert auf der Saat (`spec_check --seed`). Die reinen Module (1 bis 5 und `budgetcalc`) importieren weder `sedra_runtime` noch `sqlite3`.
 
 Schnittstellen, die die Bau-Specs gegenüber D1.1 festlegen oder ergänzen (der Harness hält sich daran):
 
@@ -1394,7 +1394,7 @@ Harness (Claude):
 | S1.H3 | `orchestra.yaml` Schema 2 (`runner`, `standing`, `decompose`; `checkout.stall_s` entfällt, Schema 1 wird weiter gelesen) | `runtime/config/orchestra.yaml`, `orchestra/config.py`, `tests/test_orchestra_config.py` | G2-S1-20 | – |
 | S1.H4 | Haken `extra` im Register, Verben am Typ in `liste.actions`, `agent_id` in den Entscheidungen; `quelle` in den Platzhaltern zieht Shell D vor (`desk/builtin_kinds.py`, `replace_placeholder` in `orchestra_kinds`, Branch `spec4/bau2`) – S1.H4 baut darauf auf und plant es nicht doppelt | `desk/kinds.py`, `desk/builtin_kinds.py`, `desk/decisions.py`, `tests/test_desk_kinds.py`, `tests/test_desk_decisions.py` | G2-S1-10, G2-S1-11 | – |
 | S1.H5 | `gated.py` mit mehreren Gates, Applier-Register, `decide`, `pending`, `binding_stale`; `uix_server.decide`/`_open_requests` | `desk/gated.py`, `uix_server.py`, `tests/test_desk_gated.py` | G2-S1-08, G2-S1-09 | S1.H4 |
-| S1.H6 | Übernahme der elf SEDRA-Module (nach G4, nur Importe relativ), dazu S1.C1/S1.C2; Fassade `service.py` erweitert, `tick.py`, Takt-Thread in `orchestra_kinds.start`; zweite Regel der Importgrenze (reine Module ohne `guppi_runtime`/`sqlite3`) | `orchestra/*.py`, `desk/orchestra_kinds.py`, `tests/test_orchestra_boundary.py`, `tests/test_orchestra_tick.py` | G2-S1-01, G2-S1-15 | S1.H1, S1.H3, G4 der Module |
+| S1.H6 | Übernahme der elf SEDRA-Module (nach G4, nur Importe relativ), dazu S1.C1/S1.C2; Fassade `service.py` erweitert, `tick.py`, Takt-Thread in `orchestra_kinds.start`; zweite Regel der Importgrenze (reine Module ohne `sedra_runtime`/`sqlite3`) | `orchestra/*.py`, `desk/orchestra_kinds.py`, `tests/test_orchestra_boundary.py`, `tests/test_orchestra_tick.py` | G2-S1-01, G2-S1-15 | S1.H1, S1.H3, G4 der Module |
 | S1.H7 | Verben, Felder, Typ `gespraech`, Applier, Sätze `SAETZE` | `desk/orchestra_kinds.py`, `tests/test_orchestra_desk.py`, `tests/test_orchestra_messages.py`, `tests/test_orchestra_hire.py` | G2-S1-03 bis 07, 12, 13 | S1.H2, S1.H5, S1.H6 |
 | S1.H8 | Agentenlauf: `desk/orchestra_runner.py` (Mission, Vertrag, Handler `orchestra_run`, Router, Web), Rollen `foreman`/`researcher`, Vorlagen mit Prüfsumme | `desk/orchestra_runner.py`, `runtime/config/job_supervisor.yaml`, `role_routing.yaml`, `token_policy.yaml`, Vorlagen, `tests/test_orchestra_run.py` u. a. | G2-S1-14, 16 bis 19, 21, 24 | S1.H7 |
 | S1.H9 | Abnahme D1.7 (alle Testdateien), `uix_check` `result ok`, Logbuch | – | G2-S1-23 | alle |
@@ -1403,7 +1403,7 @@ Vertrag mit Shell D (gebaut auf `spec4/bau2`, Werkzeuge `org`, `board`, `routine
 
 | Verb (Typ) | Argumente von Shell D | Abbildung im Desk-Adapter (S1.H7) |
 | --- | --- | --- |
-| `einstellen` (`agent`, am Typ) | `{name, vorlage, reports_to, budget_tokens}` | `org.hire`: `template_id = vorlage`; `role`, `recipe_id`, `permission_level` (`graphs.level_for` aus dem Effekt der Vorlage), `can_delegate` (1 nur für Vorlage `guppi.orchestra.foreman`) kommen aus der Vorlage; `id`/`instance_id` aus der AM-Instanz; Bindung mit beiden Gates |
+| `einstellen` (`agent`, am Typ) | `{name, vorlage, reports_to, budget_tokens}` | `org.hire`: `template_id = vorlage`; `role`, `recipe_id`, `permission_level` (`graphs.level_for` aus dem Effekt der Vorlage), `can_delegate` (1 nur für Vorlage `sedra.orchestra.foreman`) kommen aus der Vorlage; `id`/`instance_id` aus der AM-Instanz; Bindung mit beiden Gates |
 | `einordnen` (`agent`) | `{reports_to}` | `org.set_org(change={reports_to})`; Rolle, Rezept, Stufe über `einordnen` nur, wenn Shell D sie später schickt (heute nicht) |
 | `anlegen` (`issue`, am Typ) | `{titel, beschreibung, vorhaben_id, bearbeiter}` | `board.create`: `title`, `description`, `goal_ref = vorhaben_id`, `assignee = bearbeiter` (mit Bearbeiter wie `zuweisen`) |
 | `zuweisen` (`issue`) | `{bearbeiter}` | `board.assign(agent_id = bearbeiter)` |
@@ -1503,7 +1503,7 @@ Befunde, die mehrere Anforderungen betreffen:
 - **B-3 `parallel` kommt aus der globalen Loader-Konfiguration, nicht aus dem Rezept.** `ModelLoader` reicht `config.parallel` (`model_loader.yaml`, Standard 1, erlaubt 1 bis 8) an `load_model` durch. `build_command` setzt `-np` und lässt 1 bis 8 zu. Die Prüfung der Rezepte (`role_routing.py`, `profile.server`) kennt weder `slots` noch `parallel`: Ein Rezept mit diesen Feldern würde mit `profile.server` abgelehnt.
 - **B-4 Gesamtkontext gegen Kontext je Slot.** `-c` ist die Summe über alle Slots; `load_model` meldet den vom Server angewendeten Wert aus `/props` (`n_ctx`) als `contextLength`. Der Loader vergleicht diesen Wert mit dem vom Router gewünschten Fenster (`want`) und lädt bei Abweichung um oder lehnt ab (`loaded_with_other_context`). Mit N Slots stimmt der Vergleich nicht mehr, wenn nicht klar festgelegt ist, ob das Rezept das Fenster je Slot oder insgesamt meint. Ob Build b11160 die Summe fest auf die Slots teilt oder einen gemeinsamen KV-Puffer nutzt, ist ungemessen (Spec nennt es schon im Design).
 - **B-5 Messwerkzeuge laden fest mit 1 Slot.** `context_ladder.py` (Zeilen 124, 208) und `connection_check.py` (Zeile 73) rufen `load_model(..., parallel=1, ...)`; `--set` ändert nur Felder aus `profile.server`, nicht den Slot-Wert. Die Messung nach Messplan Schritt 1 und 3 braucht deshalb eine Erweiterung der Werkzeuge (`--parallel`), also Harness-Code, den es noch nicht gibt. `devvm_build.py` hat `--parallel` (und `agent_manager/run_worker.py` begrenzt es auf 1 bis 2); darüber ist 2 Slots im Bau schon möglich (`parallel_check`).
-- **B-6 Sicherheitshinweis zu `gpu_preflight`.** `clear_leftovers` beendet Prozesse nach der GUPPI-Startsignatur der Kommandozeile (`--no-webui`, `--spec-type`), nicht nach eigener PID. Das ist enger als ein Namensmuster, aber nicht dasselbe wie Regel 2 („nur eigene Prozesse über ihre PID“). Mit einem dauerhaft laufenden Scheduler-Server muss die Regel eindeutig sein, sonst räumt ein Benchmark den Server des Schedulers ab. Vorschlag: Der Scheduler schreibt seine PID in die Lease; `clear_leftovers` fasst nur Prozesse an, die keiner lebenden Lease gehören.
+- **B-6 Sicherheitshinweis zu `gpu_preflight`.** `clear_leftovers` beendet Prozesse nach der SEDRA-Startsignatur der Kommandozeile (`--no-webui`, `--spec-type`), nicht nach eigener PID. Das ist enger als ein Namensmuster, aber nicht dasselbe wie Regel 2 („nur eigene Prozesse über ihre PID“). Mit einem dauerhaft laufenden Scheduler-Server muss die Regel eindeutig sein, sonst räumt ein Benchmark den Server des Schedulers ab. Vorschlag: Der Scheduler schreibt seine PID in die Lease; `clear_leftovers` fasst nur Prozesse an, die keiner lebenden Lease gehören.
 
 Zeile für Zeile:
 
@@ -1541,27 +1541,27 @@ Durch „Design Stufe 2 (Vorlage für G2)“ weiter unten ersetzt (D2.1 bis D2.1
 
 ### Messplan-Entwurf S2.1 (nicht ausgeführt)
 
-Zweck: die Zahlen für SCH-01, SCH-03, SCH-05 und die Standard-Slotzahl liefern. Der Plan ändert **kein** Rezept: Einstellungen kommen nur über `--set` (nur für diese Messung); die Rezeptdatei wird erst nach dem Bericht und nach Gate geändert (Schritt 9). Platzhalter: `<guppi>` Projektordner, `<modelle>` Modellordner, `<datum>` aus `date`, `<owner>` Name der Sitzung, `<rezept>` Rezept-ID des Hauptmodells (`coder.local_primary` im Overlay, laut `MODELLE.md`), `<klein>` Rezept-ID des Hilfsmodells (etwa `coder.llama_qwen35`).
+Zweck: die Zahlen für SCH-01, SCH-03, SCH-05 und die Standard-Slotzahl liefern. Der Plan ändert **kein** Rezept: Einstellungen kommen nur über `--set` (nur für diese Messung); die Rezeptdatei wird erst nach dem Bericht und nach Gate geändert (Schritt 9). Platzhalter: `<sedra>` Projektordner, `<modelle>` Modellordner, `<datum>` aus `date`, `<owner>` Name der Sitzung, `<rezept>` Rezept-ID des Hauptmodells (`coder.local_primary` im Overlay, laut `MODELLE.md`), `<klein>` Rezept-ID des Hilfsmodells (etwa `coder.llama_qwen35`).
 
 Voraussetzungen (alle vor Schritt 1):
 
 1. G1-S2-k erteilt; kein anderer Lauf aktiv.
 2. Messwerkzeug-Erweiterung `--parallel N` für `context_ladder.py` und `connection_check.py` sowie ein neues Werkzeug `slot_throughput.py` (sendet N gleichzeitige Anfragen, misst Token/s je Slot und gesamt, VRAM, Treiberereignisse) sind gebaut und ohne GPU getestet (unechter Server). Das ist Harness-Code der KI-Sitzung und ein eigener Schritt (M0), nicht Teil der Messung.
-3. Engine unverändert (`engine_build` laut `llama_server.yaml`, bei den stabilen Läufen b11160); `GUPPI_ENGINE_BUILD` nur setzen, wenn der Captain es für diese Messung festlegt.
+3. Engine unverändert (`engine_build` laut `llama_server.yaml`, bei den stabilen Läufen b11160); `SEDRA_ENGINE_BUILD` nur setzen, wenn der Captain es für diese Messung festlegt.
 
 Ablauf:
 
 | Schritt | Aktion | Befehl (Platzhalter) | Erwartung / Abbruch |
 | --- | --- | --- | --- |
-| 0 | Zustand lesen | `python benchmarks/testlab_cli.py --project <guppi> status` | Lease frei, keine Reservierung. Sonst **Abbruch**: warten, nichts anfassen |
-| 1 | Lauf in die Warteschlange eintragen | `python benchmarks/testlab_cli.py --project <guppi> plan --owner <owner> --kind slot-messung --what "Qwen3.6 Slots 1-4" --models <rezept>` | Eintrag mit Nummer |
-| 2 | Sicherung der Konfigurationen (nur Lesekopie, es wird nichts geändert) | `copy <guppi>\local_config\role_routing.yaml <guppi>\local_config\role_routing.yaml.bak-<datum>-slotmessung` | Datei vorhanden. Wird auch Schritt 9 später nötig, gilt Regel 3 erneut mit frischem Datum |
+| 0 | Zustand lesen | `python benchmarks/testlab_cli.py --project <sedra> status` | Lease frei, keine Reservierung. Sonst **Abbruch**: warten, nichts anfassen |
+| 1 | Lauf in die Warteschlange eintragen | `python benchmarks/testlab_cli.py --project <sedra> plan --owner <owner> --kind slot-messung --what "Qwen3.6 Slots 1-4" --models <rezept>` | Eintrag mit Nummer |
+| 2 | Sicherung der Konfigurationen (nur Lesekopie, es wird nichts geändert) | `copy <sedra>\local_config\role_routing.yaml <sedra>\local_config\role_routing.yaml.bak-<datum>-slotmessung` | Datei vorhanden. Wird auch Schritt 9 später nötig, gilt Regel 3 erneut mit frischem Datum |
 | 3 | Lease halten, Reste räumen | Die Werkzeuge nehmen sie selbst: `lab.lease(owner, purpose, ttl_s=1800, preflight=clear_leftovers)`; bei langen Läufen Wartezeit setzen (`wait_s`). Kein manuelles Beenden von Prozessen; nur eigene PID | `preflight` meldet `GpuNotClean`: **Abbruch** mit Ausgabe (andere Last auf der Karte) |
-| 4 | Verbindungsprüfung S0 je Slot-Zahl | `python benchmarks/connection_check.py <guppi> <rezept> --context 32768 --parallel N` für N = 1, 2, 3, 4 | Nur zur Einordnung: S0 war am 12.10. bei allen Modellen nicht bestanden (`MODELLE.md`, Prüfung selbst verdächtig). Erst N=1 gegen die bekannte Lage vergleichen; kippt N=1 anders als am 12.10., **Abbruch** |
-| 5 | Kontextleiter je Slot-Zahl | `python benchmarks/context_ladder.py <guppi> <rezept> --probes 2 --parallel N --tag slots<N>` für N = 1, 2, 3, 4 (Stufen 8k bis 128k je Slot) | Ergebnis `runtime_data/measurements/context_ladder_<rezept>_slots<N>_<datum>.json`. Leiter stoppt an der ersten Stufe, die scheitert; freier VRAM unter 1 GiB zählt als Fehlschlag |
-| 6 | Durchsatz je Slot-Zahl | `python benchmarks/slot_throughput.py <guppi> <rezept> --parallel N --context <je_slot_aus_5> --requests N --runs 3` | Token/s gesamt und je Slot, Überlappung der Anfragen, VRAM-Spitze, `driver_events` |
+| 4 | Verbindungsprüfung S0 je Slot-Zahl | `python benchmarks/connection_check.py <sedra> <rezept> --context 32768 --parallel N` für N = 1, 2, 3, 4 | Nur zur Einordnung: S0 war am 12.10. bei allen Modellen nicht bestanden (`MODELLE.md`, Prüfung selbst verdächtig). Erst N=1 gegen die bekannte Lage vergleichen; kippt N=1 anders als am 12.10., **Abbruch** |
+| 5 | Kontextleiter je Slot-Zahl | `python benchmarks/context_ladder.py <sedra> <rezept> --probes 2 --parallel N --tag slots<N>` für N = 1, 2, 3, 4 (Stufen 8k bis 128k je Slot) | Ergebnis `runtime_data/measurements/context_ladder_<rezept>_slots<N>_<datum>.json`. Leiter stoppt an der ersten Stufe, die scheitert; freier VRAM unter 1 GiB zählt als Fehlschlag |
+| 6 | Durchsatz je Slot-Zahl | `python benchmarks/slot_throughput.py <sedra> <rezept> --parallel N --context <je_slot_aus_5> --requests N --runs 3` | Token/s gesamt und je Slot, Überlappung der Anfragen, VRAM-Spitze, `driver_events` |
 | 7 | Hilfsmodell, gleiche Schritte 4 bis 6 | wie oben mit `<klein>`, zusätzlich mit `--set n_cpu_moe=<k>` und `--set n_gpu_layers=0` als CPU-Variante | wie oben |
-| 8 | Aufräumen und Eintrag | Lease endet mit dem Block; `plan` auf `done` setzen: `python benchmarks/testlab_cli.py --project <guppi> setstatus <nr> done` | Kein Server übrig (`status`), VRAM wieder unter der Ausgangslage |
+| 8 | Aufräumen und Eintrag | Lease endet mit dem Block; `plan` auf `done` setzen: `python benchmarks/testlab_cli.py --project <sedra> setstatus <nr> done` | Kein Server übrig (`status`), VRAM wieder unter der Ausgangslage |
 | 9 | Erst nach Bericht und Gate: Rezept ändern | Sicherung `…bak-<datum>-per-slots`, dann `context.per_slots` und `server.slots` im Overlay eintragen, danach Ladeprüfung: Datei wird vom Lader noch angenommen (Regel 3) | nicht Teil der Messung |
 
 Abbruchkriterien (jedes einzeln, danach Lease freigeben, Server über eigene PID stoppen, Befund melden):
@@ -1641,7 +1641,7 @@ Befunde aus dem Stand vom 22.10.2026, die das Design bestimmen:
 | `claim_timeout_s` ist 30 s, `startup_timeout_s` des Servers bis 180 s; `_start_attempt` prüft den Claim nach dem Laden | `job_supervisor.yaml`, `llama_server.yaml` | Ein Lauf, der den Server starten muss, kann am Claim scheitern; Grenze anheben oder nur ein Starter (D2.5) |
 | `tick._wake` ruft `orch.start_run(orch, agent, task, leader, "standing")`; `start_run` und `request_run` sind Teile der Fassade (S1.H7/H8, noch nicht gebaut); `run_alive(job_id)` fragt den Supervisor; `max_runs_per_tick` begrenzt neue Läufe | `orchestra/tick.py`, `service.py` | Schnittstelle zu Spec 1 ist der Supervisor-Job, nicht der Takt (D2.4) |
 | Der Handler `model_text_handler` erkennt Müll mit `degenerate_reason`; `HandlerError(code)` und `ctx.mutate()` entscheiden, ob ein Versuch wiederholt werden darf (`mutates` je Rolle) | `jobs/job_worker.py`, `job_supervisor.yaml` | SCH-08 braucht keinen neuen Wiederholungsmechanismus, nur die Anbindung (D2.8) |
-| Der Desk lädt Modelle über `uix_server` mit `LEASE_OWNER 'guppi-uix'` und `gpu_token`, solange das Modell geladen ist; der Job-Pfad nimmt keine Lease | `uix_server.py` 2615 bis 2790 | B-1 wird geschlossen, indem beide Wege durch denselben Besitzer gehen (D2.1, D2.6) |
+| Der Desk lädt Modelle über `uix_server` mit `LEASE_OWNER 'sedra-uix'` und `gpu_token`, solange das Modell geladen ist; der Job-Pfad nimmt keine Lease | `uix_server.py` 2615 bis 2790 | B-1 wird geschlossen, indem beide Wege durch denselben Besitzer gehen (D2.1, D2.6) |
 | `desk_snapshot()` und `events.diff` sind rein; die Erweiterungen legen Felder bei (`desk_extensions.snapshot`) | `uix_server.py` 1602, `desk/events.py` | `slot.changed` ohne neue Ereignismechanik (D2.9) |
 | Lokale Modellaufrufe laufen über `models/router.py` `chat(mission_id, …)` | `models/router.py` 42 | Haken für Direktaufrufe (D2.6); ob jeder lokale Aufruf diesen Weg nimmt, ist nicht lückenlos geprüft (OP-S2-02) |
 
@@ -1667,7 +1667,7 @@ Prozess SEDRA (uix_server / Desk)
 
 #### D2.2 Module
 
-Importgrenze wie Spec 1 D1.1: reine Module ohne `guppi_runtime`-Importe, ohne `sqlite3`, ohne Uhr (`now` als Argument); Speichermodule über die übergebene Verbindung, jede Schreibfolge in `BEGIN IMMEDIATE`; Fehler als `ValueError('<code>')`.
+Importgrenze wie Spec 1 D1.1: reine Module ohne `sedra_runtime`-Importe, ohne `sqlite3`, ohne Uhr (`now` als Argument); Speichermodule über die übergebene Verbindung, jede Schreibfolge in `BEGIN IMMEDIATE`; Fehler als `ValueError('<code>')`.
 
 | Modul | Art | Inhalt | Anforderungen |
 | --- | --- | --- | --- |
@@ -1847,7 +1847,7 @@ Abnahme je Anforderung (ohne Modell und GPU; Fake-Uhr als `now`; Fake-Server wie
 | SCH-09 | `tests/test_desk_events.py` (erweitert) | `diff` liefert `slot.changed` mit `{slot, state, run_id, priority, queue_len}`; Schlangenänderung ohne `slot`; `view()` hat genau die Form aus Spec 4 D4.2.4 |
 | SCH-10 | `tests/test_model_scheduler_handover.py` | Benchmark-Anfrage → `drain` → Server aus → Lease frei → Anfrage gelöscht → Server bleibt aus; Frist läuft ab → Anfrage steht, kein Lauf getötet; Nachtketten-Reservierung hat Vorrang |
 | SCH-11 | `tests/test_model_scheduler_lease.py` | Werkstatt, Job und Direktaufruf laden nur über den Scheduler; ohne Lease kein Start; `uix_server` hält kein eigenes `gpu_token` mehr |
-| Grenze | `tests/test_model_scheduler_boundary.py` | `slotplan.py` und `vramplan.py` ohne `guppi_runtime`/`sqlite3`; `core/` unberührt; `test_core_boundary_src` grün |
+| Grenze | `tests/test_model_scheduler_boundary.py` | `slotplan.py` und `vramplan.py` ohne `sedra_runtime`/`sqlite3`; `core/` unberührt; `test_core_boundary_src` grün |
 
 #### D2.13 Wer baut was (L4, V4), Reihenfolge, Gate-Liste G2-S2
 
@@ -1935,7 +1935,7 @@ SEDRA-Bauten (eine GPU-Lease, ein Bau zur Zeit, nach der Messung; Zahlen = neue 
 | 1 | `s2_slotplan` | `jobs/slotplan.py` | priority 20, order 13, admit 17, reason 20, offer 17 | – | `devvm_refs/s2_slotplan/slotplan.py` (100) | result ok |
 | 2 | `s2_slot_store` | `jobs/slot_store.py` | request 19, server 18, note 14, take 16, release 19, handover 19, view 15 | ja | `devvm_refs/s2_slot_store/slot_store.py` (185) | result ok; erste Stufe scheitert auf der Saat |
 
-Beide Stufenfolgen halten L3 (höchstens 20 neue Prüfungen). Die reine Bau-Spec `s2_slotplan` importiert weder `guppi_runtime` noch `sqlite3` (Prüfung `test_model_scheduler_boundary.py` nach der Übernahme).
+Beide Stufenfolgen halten L3 (höchstens 20 neue Prüfungen). Die reine Bau-Spec `s2_slotplan` importiert weder `sedra_runtime` noch `sqlite3` (Prüfung `test_model_scheduler_boundary.py` nach der Übernahme).
 
 Schnittstellen, die die Bau-Specs gegenüber D2.2/D2.3 festlegen oder ändern (der Harness hält sich daran):
 
@@ -1983,7 +1983,7 @@ Testdateien je Anforderung (Abnahme D2.12; wer sie schreibt: die Bau-Specs prüf
 | SCH-09 | `test_desk_events.py` | S2.H5 |
 | SCH-10 | `test_model_scheduler_handover.py` | S2.H5 |
 | SCH-11 | `test_model_scheduler_lease.py` | S2.H5 |
-| Grenze | `test_model_scheduler_boundary.py` (reine Module ohne `guppi_runtime`/`sqlite3`, `core/` unberührt, `test_core_boundary_src` grün) | S2.H3 |
+| Grenze | `test_model_scheduler_boundary.py` (reine Module ohne `sedra_runtime`/`sqlite3`, `core/` unberührt, `test_core_boundary_src` grün) | S2.H3 |
 
 Reihenfolge: S2.H0 zuerst (ohne GPU gebaut); dann die Messung S2.M mit eigener Freigabe samt GPU-Zeit (sie liefert `per_slots` und die Standard-Slotzahl, die SEDRA-Bauten brauchen die GPU danach). Parallel zur Messung und zu den Bauten Claude: S2.C1, S2.H1, S2.H2. SEDRA-Bauten nacheinander: `s2_slotplan`, dann `s2_slot_store`. Nach G4 der Module: S2.H3 → S2.H4a → S2.H5 → S2.H6; S2.H4b erst, wenn S1.H8 (`desk/orchestra_runner.py`) gebaut ist; danach S2.H7. Spec 2 ändert `tick.py` nicht und läuft auch ohne Spec 1 Schritt H8 bis S2.H6 (Fassade, Supervisor, Router, Oberfläche), nur der Worker-Pool und die Priorität aus der Herkunft der Aufgabe warten auf S1.H8.
 
@@ -2109,7 +2109,7 @@ Im Cockpit gibt es schon das Werkzeug „KI-Labor“ mit den API-Anbindungen. Es
 | CLD-05 | WENN ein Cloud-Budget erreicht ist – in Euro, in Anfragen pro Minute oder in Anfragen pro Tag, je Agent, je Anbieter oder gesamt –, DANN SOLL das System keine weiteren Cloud-Aufrufe zulassen; bei 80 % SOLL es warnen. | Hard-Stop greift; Lauf fällt auf lokal oder wartet |
 | CLD-06 | Die Oberfläche SOLL jede Antwort aus der Cloud sichtbar kennzeichnen. | Kennzeichen in Gespräch und Aufgabe |
 | CLD-07 | WENN die Cloud nicht erreichbar ist, DANN SOLL das System lokal weiterarbeiten oder warten; es wechselt nie still die Stufe. | Ausfall-Test ohne stillen Wechsel |
-| CLD-08 | API-Schlüssel SOLLEN nur im Secret-Speicher liegen, nie in Rezepten, Logs oder Audit. Secret-Speicher heißt: Umgebungsvariable `GUPPI_SECRET_*` oder `local_config/cloud_keys.json`, verschlüsselt mit Windows-DPAPI (G1-S0-f). | Geheimnis-Sperre findet keinen Schlüssel im Klartext in Dateien; Konfiguration nennt nur `secret://anbieter/id` |
+| CLD-08 | API-Schlüssel SOLLEN nur im Secret-Speicher liegen, nie in Rezepten, Logs oder Audit. Secret-Speicher heißt: Umgebungsvariable `SEDRA_SECRET_*` oder `local_config/cloud_keys.json`, verschlüsselt mit Windows-DPAPI (G1-S0-f). | Geheimnis-Sperre findet keinen Schlüssel im Klartext in Dateien; Konfiguration nennt nur `secret://anbieter/id` |
 | CLD-09 | WENN Cloud-Agenten wie Claude Code oder Codex eingebunden werden, DANN SOLLEN sie als Adapter hinter derselben Prüfung laufen und nur in der DevVM arbeiten. | Adapter-Lauf zeigt Gate, Einstufung und microVM |
 | CLD-10 | Ein Schalter `cloud` in `switches.yaml` SOLL die Stufe ganz abschalten; Standard ist aus. | Bei aus: Router kennt keine Cloud-Ziele |
 
@@ -2158,7 +2158,7 @@ Heute darf also **nur SK0** in die Cloud. Zusätzlich sperrt der Inhaltsschutz (
 | CLD-05 | Fehlt. Kein Zähler, kein `spend`, keine Grenze pro Minute oder Tag, kein Euro-Stand, keine 80-%-Warnung. **Risiko:** `model_test` sendet bis zu 120 Anfragen hintereinander (`MAX_MODELS_PER_RUN`), `connection_test` bis zu 4 Testnachrichten; beides läge über 30 pro Minute. Läufe starten als eigene Prozesse (`vorarbeiter.lauf_starten`), ein Zähler im Speicher reicht deshalb nicht. | fehlt | `labor.py` `model_test`, `vorarbeiter.py` |
 | CLD-06 | Im Kombi-Pfad steht „Cloud · Anbieter / Modell“ vor der Antwort. Das Ergebnis von `cloud_chat` trägt `provider`, `model`, aber kein einheitliches Kennzeichen; für Aufgaben und Issues gibt es nichts, weil Cloud-Läufe keine Aufgabe tragen. Der normale Cloud-Pfad im Gespräch wurde nicht im Browser geprüft. | teilweise | `uix/tools/talk/kombi.js`, `uix_server.py` `chat_cloud` |
 | CLD-07 | Kein stiller Wechsel: Der Router fällt nie auf Cloud zurück; bei Cloud-Fehler bleibt in `chat_kombi` der lokale Entwurf, und die Antwort sagt warum. Es gibt aber kein „warten“ (kein Wiederholen, kein Rezept-Feld `fallback`); die Gegenrichtung (lokal überlastet → Cloud, SCH-07) hängt an Spec 2. Ein Cloud-Ausfall im Lauf bricht den Lauf ab. | teilweise | `models/router.py`, `uix_server.py` `chat_kombi` |
-| CLD-08 | Weitgehend erfüllt: Verweis `secret://anbieter/id`, Umgebungsvariable `GUPPI_SECRET_*`, DPAPI-Datei `local_config/cloud_keys.json` (nur Windows), Audit ohne Wert, Fehlertexte geschwärzt, Weiterleitungen mit Schlüssel abgelehnt. Lücken: (1) Der Speicher ist nach Anbieter geschlüsselt, nicht nach Verweis; `_key_state` nimmt fest `_API_KEY`, ein Verweis mit anderer ID wird dort nicht aufgelöst. (2) Mammouth: Schlüsselformat unbekannt; `_error_detail` kennt nur `nvapi-` und `sk-`. (3) DPAPI ohne zusätzliche Entropie: jeder Prozess desselben Benutzers kann entschlüsseln, auch ein Lauf-Prozess. (4) Ein Test „kein Schlüssel im Klartext in Dateien“ wurde nicht gefunden (nicht gezielt gesucht). | erfüllt mit Lücken | `cloud_settings.py`, `models/cloud_api.py` |
+| CLD-08 | Weitgehend erfüllt: Verweis `secret://anbieter/id`, Umgebungsvariable `SEDRA_SECRET_*`, DPAPI-Datei `local_config/cloud_keys.json` (nur Windows), Audit ohne Wert, Fehlertexte geschwärzt, Weiterleitungen mit Schlüssel abgelehnt. Lücken: (1) Der Speicher ist nach Anbieter geschlüsselt, nicht nach Verweis; `_key_state` nimmt fest `_API_KEY`, ein Verweis mit anderer ID wird dort nicht aufgelöst. (2) Mammouth: Schlüsselformat unbekannt; `_error_detail` kennt nur `nvapi-` und `sk-`. (3) DPAPI ohne zusätzliche Entropie: jeder Prozess desselben Benutzers kann entschlüsseln, auch ein Lauf-Prozess. (4) Ein Test „kein Schlüssel im Klartext in Dateien“ wurde nicht gefunden (nicht gezielt gesucht). | erfüllt mit Lücken | `cloud_settings.py`, `models/cloud_api.py` |
 | CLD-09 | Fehlt. Der Anthropic-Adapter ist eine API, kein Agent-Adapter (Claude Code, Codex), und es gibt keinen DevVM-Anschluss. | fehlt | – |
 | CLD-10 | Abweichung vom Spec-Text: Der Schalter steht **nicht** in `switches.yaml` (`local_switches.ALLOWED` kennt keinen Abschnitt `cloud`), sondern als Hauptschalter `enabled` in `cloud_providers.yaml` (Standard aus). Bei aus baut `runtime._configure_cloud_providers` keinen Adapter, der Router kennt keine Cloud-Ziele: dieses Kriterium ist erfüllt. Aber Labor-Tests und Läufe lesen den Schalter zur Laufzeit aus der Datei (`labor._enabled`) und sind nicht an den Router-Stand beim Start gebunden. Zwei Wahrheiten. | abweichend | `runtime.py` `_configure_cloud_providers`, `labor.py` `_enabled` |
 
@@ -2600,7 +2600,7 @@ Sie entstehen in `desk/events.diff` (Spec 0/1 liefert die Audit-Ereignisse).
 | `routines` | **neu** | `routine` | Liste und Detail mit Cron-Text, Nachhol-Regel, letzter und nächster Ausführung; Verben `anlegen`, `aendern`, `ausschalten` (Gate `set_routine`) |
 | `slots` | **neu**, Instrument | `kind: instrument` | belegte und freie Slots, Warteschlange (SCH-09); hört `slot.changed`; zeigt das geladene Modell |
 
-Alle neuen Werkzeuge entstehen als Kopie von `tools/_template/`, mit `trust: GUPPI_BUILT` beim Bau durch SEDRA; Allowlist nur `POST /api/objects` und `POST /api/actions` (UIX-06). Vertragsnachträge: `handles` mit `agent:alle` und `agent:*` (G1-S4-04) und die vier Ereignisse (G1-S4-05). Ohne G1-S4-04 ginge es nur mit eigenen Typen für Einzelansicht und Sammlung, was den Desk-Typ `agent` zerlegt.
+Alle neuen Werkzeuge entstehen als Kopie von `tools/_template/`, mit `trust: SEDRA_BUILT` beim Bau durch SEDRA; Allowlist nur `POST /api/objects` und `POST /api/actions` (UIX-06). Vertragsnachträge: `handles` mit `agent:alle` und `agent:*` (G1-S4-04) und die vier Ereignisse (G1-S4-05). Ohne G1-S4-04 ginge es nur mit eigenen Typen für Einzelansicht und Sammlung, was den Desk-Typ `agent` zerlegt.
 
 ### Skizze der Oberfläche
 
@@ -3095,7 +3095,7 @@ Folge: Die Quote Claude zu SEDRA ist in Spec 4 bei **nur Claude**. Das widerspri
 
 S4.1 bis S4.3 und S4.9 sind unabhängig von Spec 1 bis 3 baubar; S4.4 bis S4.8 zeigen bis dahin Leerzustände und werden mit der Fixture geprüft. Das ist Absicht: so ist der Zwischenzustand selbst Teil der Abnahme.
 
-**Einbau:** Aufgabe U4.4 in der Aufgabenliste nennt „Einbau über Gate `install_module`“. Nach Linie L5 und OP-10 ist das für Werkzeuge im Paket nicht der Weg: Übernahme per `adopt_plan` oder Handkopie nach Review (G4), `trust: CORE`. Das Gate `install_module` bleibt für `local_config/`. Der Rang `GUPPI_BUILT` hätte außerdem Folgen: Ein Werkzeug außerhalb von `CORE` bekommt die Shell-API ohne `decide` (`makeContext`); die neuen Werkzeuge brauchen `decide` nicht (Entscheidungen laufen über den Posteingang), `GUPPI_BUILT` wäre also technisch möglich. Empfehlung bleibt `CORE`, weil Claude die Werkzeuge baut und sie ins Paket kommen (G2-S4-20, OP-S4-6).
+**Einbau:** Aufgabe U4.4 in der Aufgabenliste nennt „Einbau über Gate `install_module`“. Nach Linie L5 und OP-10 ist das für Werkzeuge im Paket nicht der Weg: Übernahme per `adopt_plan` oder Handkopie nach Review (G4), `trust: CORE`. Das Gate `install_module` bleibt für `local_config/`. Der Rang `SEDRA_BUILT` hätte außerdem Folgen: Ein Werkzeug außerhalb von `CORE` bekommt die Shell-API ohne `decide` (`makeContext`); die neuen Werkzeuge brauchen `decide` nicht (Entscheidungen laufen über den Posteingang), `SEDRA_BUILT` wäre also technisch möglich. Empfehlung bleibt `CORE`, weil Claude die Werkzeuge baut und sie ins Paket kommen (G2-S4-20, OP-S4-6).
 
 #### D4.6 Fehlerfälle und Abnahme
 
@@ -3168,7 +3168,7 @@ Jede Zeile entscheidet der Captain einzeln. Keine Änderung an `core/`. „Spec�
 
 | Nr | Lücke oder Frage | Vorschlag |
 | --- | --- | --- |
-| OP-S4-6 | Rang der neuen Werkzeuge: `CORE` (Claude baut, Übernahme ins Paket) oder `GUPPI_BUILT` (wie die Spec früher sagte)? | `CORE`, siehe G2-S4-20 |
+| OP-S4-6 | Rang der neuen Werkzeuge: `CORE` (Claude baut, Übernahme ins Paket) oder `SEDRA_BUILT` (wie die Spec früher sagte)? | `CORE`, siehe G2-S4-20 |
 | OP-S4-7 | Darf der Captain jedem Agenten eine Anweisung geben, oder nur dem Unterarbeiter? ORC-14 nennt nur den Unterarbeiter. | Entscheidet Spec 1 über `actions`; Shell D zeigt die Eingabe nur, wenn das Verb angeboten wird |
 | OP-S4-8 | Live-Zeilen eines laufenden Agentenlaufs im Fenster (Streaming)? | v1: nein; Link zur Mission, wo `live` die Zeilen zeigt |
 | OP-S4-9 | `pushHistory` kennt `view` im Schlüssel: das ändert den Test „Verlauf überspringt Wiederholungen“ | im Bau anpassen (S4.2), Verhalten bleibt für Objekte ohne `view` gleich |
@@ -3206,7 +3206,7 @@ Das Vorhaben gilt als fertig, wenn sechs Durchläufe von Anfang bis Ende grün s
 
 Standardprüfungen vor jeder Übernahme:
 
-- `guppi doctor` meldet READY.
+- `sedra doctor` meldet READY.
 - Betroffene Tests grün, dazu immer `tests.test_core_boundary_src`.
 - Oberfläche: `benchmarks/uix_check.py` mit `result ok`.
 - Logbuch-Eintrag über `benchmarks/logbook.py add`, Build über `benchmarks/make_build.py`, Eintrag in `docs/CHANGELOG.md`.
@@ -3243,7 +3243,7 @@ Für beide braucht es eine eigene Entwickler-App mit Datenschutzerklärung. Bei 
 
 ### Design (Vorschlag)
 
-- Paket `guppi_runtime/social/`: `accounts.py` (Konten, Verweise auf Token im Secret-Speicher), `oauth.py` (Autorisierungscode-Weg mit Rückruf an den lokalen `uix_server`), `posts.py` (Zustände: Entwurf → geprüft → freigegeben → geplant → veröffentlicht oder fehlgeschlagen), Adapter `linkedin.py` und `facebook.py`.
+- Paket `sedra_runtime/social/`: `accounts.py` (Konten, Verweise auf Token im Secret-Speicher), `oauth.py` (Autorisierungscode-Weg mit Rückruf an den lokalen `uix_server`), `posts.py` (Zustände: Entwurf → geprüft → freigegeben → geplant → veröffentlicht oder fehlgeschlagen), Adapter `linkedin.py` und `facebook.py`.
 - Desk-Objekte `social_account` und `social_post`; Verben `connect`, `reconnect`, `draft`, `approve`, `schedule`, `publish_now`, `cancel`.
 - Werkzeug `social` in Shell D: Konten mit Status (verbunden, läuft ab in n Tagen, getrennt), Kalender, Entwürfe, offene Freigaben; im Cockpit über den Vertrag ebenfalls nutzbar.
 - Vorhaben-Vorlage „Beitragsreihe“ auf den Vorhaben mit Stufen (Build 20): Thema → Entwürfe → Prüfen → Planen → Auswerten.
@@ -3350,16 +3350,16 @@ Stand 22.10.2026, Branch `spec7/design-s7.2` auf `spec/agenten-orchestrierung` (
 | 2 | `wis_chunk` (211 Z.) | `wissen/zerlegen.py` | bloecke 20, teile_block 20, markdown 20, text 20, stelle 19 | – | `devvm_refs/wis_chunk/zerlegen.py` (208) | `result ok` |
 | 3 | `wis_fuse` (230 Z.) | `wissen/fusion.py` | woerter 20, guete 11, fusioniere 20, spitzenschutz 20, darf_lesen 20, sql_filter 16 | – | `devvm_refs/wis_fuse/fusion.py` (131) | `result ok` |
 
-Prüfung bisher nur auf dem Host (Python 3.13, ohne VM, ohne Modell): `python3 -I benchmarks/spec_check.py <name>` je Spec `result ok`, zusätzlich `--host-only` mit Stempel `host`; Referenzen gegen die Syntax von Python 3.12 geparst. **Lokal nachzuholen (Captain, Ordner `runtime`):** `.venv\Scripts\python.exe benchmarks/spec_check.py wis_store --vm --project <guppi>/workspace/GUPPI_OS` (ebenso `wis_chunk`, `wis_fuse`) → erwartet `result ok` und `stamp vm`; das prüft FTS5 im Python 3.12 der VM (A-11). Bau danach: `benchmarks/devvm_build.py <projekt> --spec wis_store --profile standard` (Reihenfolge 1 → 2 → 3, ein Bau zur Zeit unter der GPU-Lease).
+Prüfung bisher nur auf dem Host (Python 3.13, ohne VM, ohne Modell): `python3 -I benchmarks/spec_check.py <name>` je Spec `result ok`, zusätzlich `--host-only` mit Stempel `host`; Referenzen gegen die Syntax von Python 3.12 geparst. **Lokal nachzuholen (Captain, Ordner `runtime`):** `.venv\Scripts\python.exe benchmarks/spec_check.py wis_store --vm --project <sedra>/workspace/SEDRA_OS` (ebenso `wis_chunk`, `wis_fuse`) → erwartet `result ok` und `stamp vm`; das prüft FTS5 im Python 3.12 der VM (A-11). Bau danach: `benchmarks/devvm_build.py <projekt> --spec wis_store --profile standard` (Reihenfolge 1 → 2 → 3, ein Bau zur Zeit unter der GPU-Lease).
 
-Die Bau-Specs sind reiner Standardbibliothek-Code ohne `guppi_runtime`-Import; die Tests benutzen eigene Fixtures, nie den Goldsatz. Schnittstellen, die die Bau-Specs gegenüber D7.2 bis D7.7 festlegen oder ändern (der Harness hält sich daran):
+Die Bau-Specs sind reiner Standardbibliothek-Code ohne `sedra_runtime`-Import; die Tests benutzen eigene Fixtures, nie den Goldsatz. Schnittstellen, die die Bau-Specs gegenüber D7.2 bis D7.7 festlegen oder ändern (der Harness hält sich daran):
 
 - Datensätze sind **dicts statt dataclasses**: Abschnitt `{"stelle", "teil", "text"}`, `AbschnittNeu` als dict mit `datei, stelle, teil, text, hash, datum[, befunde]`, Abgleich `{"neu", "geaendert": [(nr, dict)], "entfernt": [nr], "gleich": n}`, Treffer `{"nr", "punkte", "rang_wort", "rang_vektor", "guete"}`, Gewichte und Leser als dict.
 - `wende_an` gibt die Zählung `{"neu", "geaendert", "entfernt"}` zurück (statt `None`); `modellwechsel` löscht auch Vektoren mit abweichender Dimension; `offene_vektoren` liefert den Eingabetext `stelle + "\n" + text` (Format e1) schon mit.
 - `zerlegen`: beim geteilten Listen- oder Tabellenblock verliert der Absatz davor seine letzte Zeile (sie ist die Einleitung jeder Gruppe, keine Doppelung); die Titelzeile des Logbuchs zählt nicht zur Einleitung; Stücke unter 3 Zeichen entfallen; `zerlege_eintrag(stelle, text)` = `zerlege_text(text, stelle)`.
 - `fusion`: Spitzenschutz = fehlende geschützte Treffer ersetzen die schwächsten, dann neu sortiert und auf `k_aus` gekürzt; `nur_volltext` setzt `guete` auf `None`; `sql_filter` setzt für Agenten ohne Projekt nur projektlose Quellen durch; Fehlercodes `wis_liste_ungueltig`, `wis_idf_ungueltig`, `wis_leser_ungueltig`, `wis_route_ungueltig` kommen hinzu (D7.10 nachziehen in S7.4).
 
-**Harness-Skizze (Claude direkt, S7.4):** `wissen/vektor.py` mit `normiere(werte) -> list[float]` (`wis_vektor_leer`), `packe(werte) -> bytes` (float32 Little Endian, normiert), `lese(blob, dim) -> array` (`wis_vektor_dim`), `top_k(anfrage, vektoren, k=50, erlaubt=None) -> list[tuple[int, float]]` (Skalarprodukt mit `operator.mul`, `heapq.nlargest`, Gleichstand nach `nr`); Tests `tests/test_wissen_vektor.py` von einem anderen Modell. `wissen/ausgabe.py` mit `datensatz`, `datensaetze` (höchstens 5 Treffer, 1600 je Treffer, 8000 gesamt), `zitate`, `pruefe_zitate`, `schlusstext`, `KEINE_TREFFER`, `ZITAT_MUSTER` (D7.6); Tests `tests/test_wissen_ausgabe.py`. Beide ohne `guppi_runtime`-Import; `tests/test_wissen_grenze.py` prüft die Importgrenze aller reinen Module (D7.1).
+**Harness-Skizze (Claude direkt, S7.4):** `wissen/vektor.py` mit `normiere(werte) -> list[float]` (`wis_vektor_leer`), `packe(werte) -> bytes` (float32 Little Endian, normiert), `lese(blob, dim) -> array` (`wis_vektor_dim`), `top_k(anfrage, vektoren, k=50, erlaubt=None) -> list[tuple[int, float]]` (Skalarprodukt mit `operator.mul`, `heapq.nlargest`, Gleichstand nach `nr`); Tests `tests/test_wissen_vektor.py` von einem anderen Modell. `wissen/ausgabe.py` mit `datensatz`, `datensaetze` (höchstens 5 Treffer, 1600 je Treffer, 8000 gesamt), `zitate`, `pruefe_zitate`, `schlusstext`, `KEINE_TREFFER`, `ZITAT_MUSTER` (D7.6); Tests `tests/test_wissen_ausgabe.py`. Beide ohne `sedra_runtime`-Import; `tests/test_wissen_grenze.py` prüft die Importgrenze aller reinen Module (D7.1).
 
 **Testdateien je Anforderung (S7.4/S7.5):**
 
@@ -3437,7 +3437,7 @@ Stand 22.10.2026, nur auf Papier und mit der Standardbibliothek: kein Download, 
 | `wort` (Wörter der Frage, ODER, ohne Füllwörter) – **Ausgangswert** | **57,5 %** (23 von 40) | 37,5 % | 0,459 | 90,9 % | 52,6 % | 30,0 % |
 | `stamm` (Wörter ab 6 Buchstaben als Präfix) | 52,5 % | 35,0 % | 0,430 | 81,8 % | 52,6 % | 20,0 % |
 
-Lesart: Wo die Frage die Wörter der Quelle benutzt, findet die Wortsuche fast alles; bei anderen Worten fällt sie auf rund die Hälfte, bei umschriebenen Fachbegriffen auf ein Drittel. Ein grober Stamm hilft nicht. Typische Fehlgriffe: „Videospeicher“ findet kein „VRAM“, „Kreditkartennummer samt Prüfziffer“ findet nicht „Kartendaten mit Prüfwert“, deutsche Fragen finden nicht die englisch kommentierten Lektionen in `knowledge.py`. Der Lauf ist wiederholbar: `<guppi>/runtime/.venv` mit `-I benchmarks/wissen_baseline.py --rev 0155a83 [--detail] [--json Pfad]` (der Korpusstempel ändert sich mit jeder neuen Logbuchzeile, deshalb `--rev`; der Abschnitt „Vorbereitung S7.1“ bleibt draußen).
+Lesart: Wo die Frage die Wörter der Quelle benutzt, findet die Wortsuche fast alles; bei anderen Worten fällt sie auf rund die Hälfte, bei umschriebenen Fachbegriffen auf ein Drittel. Ein grober Stamm hilft nicht. Typische Fehlgriffe: „Videospeicher“ findet kein „VRAM“, „Kreditkartennummer samt Prüfziffer“ findet nicht „Kartendaten mit Prüfwert“, deutsche Fragen finden nicht die englisch kommentierten Lektionen in `knowledge.py`. Der Lauf ist wiederholbar: `<sedra>/runtime/.venv` mit `-I benchmarks/wissen_baseline.py --rev 0155a83 [--detail] [--json Pfad]` (der Korpusstempel ändert sich mit jeder neuen Logbuchzeile, deshalb `--rev`; der Abschnitt „Vorbereitung S7.1“ bleibt draußen).
 
 **3. Messplan S7.1 (GPU-Messung, braucht die Freigabe des Captains).**
 
@@ -3511,7 +3511,7 @@ Empfehlung: **BGE-M3 (Q8_0)** als Embedding-Modell für S7.2 vorsehen (G1-S7-d).
 
 ### Design Stufe 2 (Vorlage für G2)
 
-Stand 22.10.2026, Entwurf des Vorarbeiters für Spec 7, noch nicht freigegeben. Grundlage: WIS-01 bis WIS-13 (G1-S7-a bis g), Ergebnis S7.1, das Repo, Zweig `spec/agenten-orchestrierung`, Commit `4561867` (Spec 1 gebaut, Spec 2 mit G2 erteilt, Scheduler noch nicht gebaut) und zum Vergleich die Auszüge `kern/` des Übergabepakets. Pfade sind Repo-Pfade unter `runtime/src/guppi_runtime/`. Annahmen über ungesehenen Code oder ungeprüftes Verhalten sind mit **[A-n]** markiert (Liste in D7.13). Die Gate-Liste G2-S7 am Ende ist am 22.10.2026, 14:58 erteilt (a bis u; Einschränkungen bei n und d, t „später“; siehe „Entscheidungen des Captains“). Eingearbeitet ist die Entscheidung des Captains vom 22.10.2026, 14:33, zu den drei Risiken des Berichts S7.2: Goldsatz auf Adapter-Inhalte (D7.3, D7.11, G2-S7-n), Einbetten bis Spec 2 nur auf der CPU mit GPU-Stufe S7.4b (D7.4, G2-S7-h/i/j/r/t), Ziel 85 % und Mindestgrenze 80 % mit Nachmessung (D7.11, G2-S7-b). **Embedding-Modell BGE-M3 und die Schwellen sind offen (G2-S7-a, -b)**; das Design plant mit BGE-M3, hängt aber nur an der Modell-ID.
+Stand 22.10.2026, Entwurf des Vorarbeiters für Spec 7, noch nicht freigegeben. Grundlage: WIS-01 bis WIS-13 (G1-S7-a bis g), Ergebnis S7.1, das Repo, Zweig `spec/agenten-orchestrierung`, Commit `4561867` (Spec 1 gebaut, Spec 2 mit G2 erteilt, Scheduler noch nicht gebaut) und zum Vergleich die Auszüge `kern/` des Übergabepakets. Pfade sind Repo-Pfade unter `runtime/src/sedra_runtime/`. Annahmen über ungesehenen Code oder ungeprüftes Verhalten sind mit **[A-n]** markiert (Liste in D7.13). Die Gate-Liste G2-S7 am Ende ist am 22.10.2026, 14:58 erteilt (a bis u; Einschränkungen bei n und d, t „später“; siehe „Entscheidungen des Captains“). Eingearbeitet ist die Entscheidung des Captains vom 22.10.2026, 14:33, zu den drei Risiken des Berichts S7.2: Goldsatz auf Adapter-Inhalte (D7.3, D7.11, G2-S7-n), Einbetten bis Spec 2 nur auf der CPU mit GPU-Stufe S7.4b (D7.4, G2-S7-h/i/j/r/t), Ziel 85 % und Mindestgrenze 80 % mit Nachmessung (D7.11, G2-S7-b). **Embedding-Modell BGE-M3 und die Schwellen sind offen (G2-S7-a, -b)**; das Design plant mit BGE-M3, hängt aber nur an der Modell-ID.
 
 Leitlinie: kein Eingriff in `core/`, Guard, Audit-Kette, `gpu_preflight` oder Rezepte. Alles, was Spec 7 braucht, entsteht im neuen Paket `wissen/`, in einem Werkzeug unter `uix/tools/wissen/` und an drei kleinen Stellen außerhalb: ein Eintrag in `desk/extensions.MODULES`, der Anschluss im Lauf (`desk/orchestra_runner.py`, `orchestra/runner.py`, Spec 1) und eine Zeile in der Navigation von Shell D. Jede ist in der Gate-Liste genannt.
 
@@ -3521,15 +3521,15 @@ Maßgeblich ist das Repo, Zweig `spec/agenten-orchestrierung`, Commit `4561867` 
 
 | Anschluss | Repo-Pfad | Signatur, auf die Spec 7 baut |
 | --- | --- | --- |
-| Audit | `core/audit.py` | `AuditLog.append(event_type, *, component='guppi-core', mission_id=None, actor='system', payload=None)` |
+| Audit | `core/audit.py` | `AuditLog.append(event_type, *, component='sedra-core', mission_id=None, actor='system', payload=None)` |
 | Guard | `core/guard.py` | `create_gate(mission_id, action, target='', risks=None, rollback_available=False, request_binding=None)`, `approve(gate, scope=None)`, `authorize(token, *, mission_id, action, target='', request_binding=None)` – nur mittelbar über `gated` |
 | Inhaltsschutz | `core/content_guard.py`, `core/content_policy.py` | `ContentGuard.call(messages, *, model, route='local', mission_id='', complete)`; Teile tragen `trust`; fehlt er, setzt `_with_trust` ihn nach Rolle (`user` → `captain`, `tool` → `untrusted`); `scan_content(text, label='SEDRA')` → Treffer mit `rule_id`, `kind`, `start`, `end` |
 | Desk-Typen | `desk/kinds.py`, `desk/actions.py` | `Kind(name, title, read, listing, verbs=(), type_verbs=(), source='desk', placeholder=False, own_actions=False, extra=None)`; `Verb(verb, label, run, needs_gate=False, when=None, confirm=None)`, `run(hub, oid, args)`, Typ-Verb mit `oid=None` (`actions.run_type`); Routen `POST /api/objects`, `POST /api/actions` (`uix_server.objects_view`, `act`) |
-| Erweiterung | `desk/extensions.py` | `MODULES = ("guppi_runtime.desk.orchestra_kinds",)`; je Modul `register(registry, hub)`, wahlweise `start(hub)` und `snapshot(hub) -> dict` |
+| Erweiterung | `desk/extensions.py` | `MODULES = ("sedra_runtime.desk.orchestra_kinds",)`; je Modul `register(registry, hub)`, wahlweise `start(hub)` und `snapshot(hub) -> dict` |
 | Antrag mit Freigabe | `desk/gated.py` | `request(hub, kind, action, target, binding, risks=(), rollback_available=True, level='S1', gates=None, exact=False, describe=None)`, `register_applier(kind, do, on_reject=None, registry=None)`, `decide`, `reject`, `STALE = 'binding_stale'` |
 | Lauf (Spec 1) | `desk/orchestra_runner.py`, `orchestra/runner.py` | `start_run(orch, agent, task, wakeup, approval)` legt `plan` in der Mission ab; `handler(hub)` ruft `_ask(hub, orch, scope, attempt, messages_, schema, cap)` → `orch.model_router.chat(…, schema=…)`; Stufe des Laufs `level = min(task.max_level, agent.permission_level)`; Aufgaben tragen `project_id`; `runner.external_block(records, max_chars=20000)` |
 | GPU-Lease | `jobs/testlab.py` | `try_acquire(owner, purpose, *, ttl_s=300, name='gpu', priority=0) -> token|None`, `acquire(…, wait_s, poll_s, …)`, `lease(…, preflight=None, priority=0)`, `heartbeat(token)`, `release(token)`, `holder()`, `reservations()` |
-| Vorprüfung | `models/gpu_preflight.py` | `clear_leftovers(owner='', *, port=8089, baseline_max_gb=3.0, …)` **stoppt** GUPPI-Server; lesend `listener_pid(port)`, `guppi_llama_servers()`, `vram_used_gb()` |
+| Vorprüfung | `models/gpu_preflight.py` | `clear_leftovers(owner='', *, port=8089, baseline_max_gb=3.0, …)` **stoppt** SEDRA-Server; lesend `listener_pid(port)`, `sedra_llama_servers()`, `vram_used_gb()` |
 | Modell-Scheduler (Spec 2) | `jobs/vramplan.py` gebaut; `jobs/model_scheduler.py`, `slot_store.py`, Schema 2 von `testlab.db` (`slot_server`, `slot_leases`, `handover_requests`) **noch nicht gebaut** (G2-S2 erteilt, S2.5 offen) | ein Besitzer (`sedra-scheduler`) hält die Lade-Lease `gpu`, solange der Modellserver läuft; `TestLab.acquire` trägt sich künftig beim ersten Fehlversuch in `handover_requests` ein und löst damit Drain und Übergabe aus (D2.7); SCH-11: jeder Start und Aufruf eines lokalen Modells über Lade- oder Slot-Lease |
 | Speicher 1–3 | `knowledge.py`, `arbeitsumfeld_wissen.py`, `gateway/wissen.py` | JSON-Zeilen bzw. SQLite `local_config/arbeitsumfeld/wissen.sqlite` (`wissen(id, art, titel, text, quelle, version)`) und `local_config/gateway/wissen.sqlite` (`wissen(id, art, titel, text, tun, stichworte, version)`, `eigene(id, frage, antwort, erstellt)`); **beide Konstruktoren schreiben** (`aufbauen()`, `_fuellen()`) |
 
@@ -3540,7 +3540,7 @@ Befund am Rande (nicht Teil von Spec 7, Hinweis an Spec 1): `orchestra_runner._r
 #### D7.1 Paket `wissen/` und Importgrenze
 
 ```
-runtime/src/guppi_runtime/wissen/
+runtime/src/sedra_runtime/wissen/
   __init__.py      leer (keine Importe, kein Seiteneffekt)
   zerlegen.py      REIN  Quelle → Abschnitte (Markdown, Text, Logbuch), Obergrenze, Listen/Tabellen, Hash, stabile ID      wis_chunk
   schema.py        REIN  DDL, Migrationen, Nachführen (Abgleich alter/neuer Abschnitte), nur sqlite3                       wis_store
@@ -3552,13 +3552,13 @@ runtime/src/guppi_runtime/wissen/
   speicher.py      HARNESS  Fassade WissenSpeicher: Aufnahme, Suche, Vorschläge; kennt Audit, Desk, Inhaltsprüfung, Einbetten
   desk_wissen.py   HARNESS  Desk-Erweiterung: register/start/snapshot; Typen wissen, wissen_quelle, wissen_vorschlag; Applier; Takt
   lauf.py          HARNESS  Anschluss an den Lauf aus Spec 1 (Kontextblock vor dem Modellaufruf, Vorschlag aus der Antwort)
-runtime/src/guppi_runtime/uix/tools/wissen/   tool.yaml, tool.js, tool.css, README.md, test.spec.js
+runtime/src/sedra_runtime/uix/tools/wissen/   tool.yaml, tool.js, tool.css, README.md, test.spec.js
 ```
 
 Importgrenze (geprüft durch einen Test `tests/test_wissen_grenze.py`, der die `import`-Zeilen liest):
 
-- **Reine Module** (`zerlegen`, `schema`, `vektor`, `fusion`, `ausgabe`) importieren nur die Standardbibliothek (`array`, `hashlib`, `heapq`, `json`, `math`, `operator`, `re`, `sqlite3`, `unicodedata`, `dataclasses`, `typing`) und einander in dieser Richtung: `fusion` → `vektor`; `ausgabe` → nichts; `schema` → nichts. Kein `guppi_runtime`, kein Netz, keine Datei außer der übergebenen Verbindung, keine Uhr (Zeitpunkte kommen als Argument). Python 3.12 und 3.14.
-- **Harness-Module** dürfen `guppi_runtime.core.audit`, `core.content_policy` (nur `scan_content`), `core.mission_lock` (nur `exclusive`), `jobs.testlab` (nur lesend: `holder`, `reservations`, `queue`), `desk.gated`, `desk.actions` (`Verb`), `orchestra.runner` (`external_block`) und die reinen Module importieren. `core/` wird nur aufgerufen, nie geändert.
+- **Reine Module** (`zerlegen`, `schema`, `vektor`, `fusion`, `ausgabe`) importieren nur die Standardbibliothek (`array`, `hashlib`, `heapq`, `json`, `math`, `operator`, `re`, `sqlite3`, `unicodedata`, `dataclasses`, `typing`) und einander in dieser Richtung: `fusion` → `vektor`; `ausgabe` → nichts; `schema` → nichts. Kein `sedra_runtime`, kein Netz, keine Datei außer der übergebenen Verbindung, keine Uhr (Zeitpunkte kommen als Argument). Python 3.12 und 3.14.
+- **Harness-Module** dürfen `sedra_runtime.core.audit`, `core.content_policy` (nur `scan_content`), `core.mission_lock` (nur `exclusive`), `jobs.testlab` (nur lesend: `holder`, `reservations`, `queue`), `desk.gated`, `desk.actions` (`Verb`), `orchestra.runner` (`external_block`) und die reinen Module importieren. `core/` wird nur aufgerufen, nie geändert.
 - **Keine** neue Abhängigkeit (`numpy`, `sqlite-vec`) – G1-S7-e.
 - Niemand außerhalb von `wissen/` importiert die reinen Module; der Rest von SEDRA spricht nur mit `speicher.WissenSpeicher` und den Desk-Verben.
 
@@ -3566,7 +3566,7 @@ Erfüllt: Rahmen für alle WIS; WIS-04 (kein Netz außer `127.0.0.1` im Harness 
 
 #### D7.2 Datenmodell (SQLite)
 
-Eine Datei `<projekt>/local_config/wissen/wissen.sqlite` (Projekt = `workspace/GUPPI_OS`, wie `local_config/arbeitsumfeld/` und `local_config/gateway/`). WAL, `foreign_keys=ON`, `busy_timeout=30000`; FTS5 der Laufzeit-SQLite **[A-11]**. Gespeichert werden nur relative Pfade; `quellen.pfad` mit Laufwerksbuchstaben, führendem `/` oder `..` wird abgewiesen (`wis_pfad_absolut`, `wis_pfad_ausserhalb`).
+Eine Datei `<projekt>/local_config/wissen/wissen.sqlite` (Projekt = `workspace/SEDRA_OS`, wie `local_config/arbeitsumfeld/` und `local_config/gateway/`). WAL, `foreign_keys=ON`, `busy_timeout=30000`; FTS5 der Laufzeit-SQLite **[A-11]**. Gespeichert werden nur relative Pfade; `quellen.pfad` mit Laufwerksbuchstaben, führendem `/` oder `..` wird abgewiesen (`wis_pfad_absolut`, `wis_pfad_ausserhalb`).
 
 ```sql
 -- Migration 1 (schema.py, MIGRATIONEN[0])
@@ -3750,10 +3750,10 @@ Erfüllt: WIS-01, WIS-02, WIS-03, Teil von WIS-08 (Prüfung bei Aufnahme), WIS-1
 
 **Feste Reihenfolge (Entscheidung des Captains, 22.10.2026 14:33).** Bis `jobs/model_scheduler.py` (Spec 2, S2.5) gebaut und übernommen ist, läuft das Einbetten **ausschließlich auf der CPU: ohne Lease, ohne VRAM.** Die GPU-Variante ist eine eigene Stufe **S7.4b** nach dem Bau von Spec 2 und wird dort gegen den dann vorhandenen Scheduler entworfen (Platz für ein zweites, kleines Modell oder Lade-Lease-Fenster – das entscheidet S7.4b, nicht dieses Design). Damit hängt das jetzige Design an keiner Tabelle, keinem Eigner und keinem Zustand aus Spec 2.
 
-**Server.** Ein eigener `llama-server` (Engine b11160, unverändert) als getrennter Prozess, gestartet von `einbetten.EmbeddingDienst`: `-m <modelle>/…/bge-m3-q8_0.gguf --embeddings --host 127.0.0.1 --port 8094 -ngl 0 --device none -t <n> -c 8192 -b 8192 -ub 8192 -np 1 --alias wissen-embed`, Pooling laut Modell (wie S7.1) **[A-5]**, **[A-6]**. Port nie 8089. Einstellungen in `config/wissen.yaml` (ohne Pfade) und `local_config/wissen.yaml` (Engine- und Modellpfad, Prüfsumme); eingecheckt werden nur Platzhalter `<guppi>`, `<modelle>`.
+**Server.** Ein eigener `llama-server` (Engine b11160, unverändert) als getrennter Prozess, gestartet von `einbetten.EmbeddingDienst`: `-m <modelle>/…/bge-m3-q8_0.gguf --embeddings --host 127.0.0.1 --port 8094 -ngl 0 --device none -t <n> -c 8192 -b 8192 -ub 8192 -np 1 --alias wissen-embed`, Pooling laut Modell (wie S7.1) **[A-5]**, **[A-6]**. Port nie 8089. Einstellungen in `config/wissen.yaml` (ohne Pfade) und `local_config/wissen.yaml` (Engine- und Modellpfad, Prüfsumme); eingecheckt werden nur Platzhalter `<sedra>`, `<modelle>`.
 
 - **Erste Prüfung von S7.4 (A-5):** bevor irgendetwas anderes gebaut wird, ein Start des Servers mit `-ngl 0 --device none` auf dem Zielrechner, eine Minute, ohne Lease: `nvidia-smi` vor und während des Laufs (nur lesend) muss denselben VRAM zeigen, `/v1/embeddings` muss Vektoren der Dimension 1024 liefern. Schlägt das fehl (Engine kennt `--device none` nicht oder belegt trotzdem VRAM), hält S7.4 an und der Captain entscheidet (anderer Schalter, oder S7.4b vorziehen).
-- **Eigene PID:** Der Start schreibt `local_config/wissen/embed.pid` `{pid, port, alias, start}`. Beendet wird nur diese PID, und nur, wenn der Prozess lebt, auf dem eigenen Port lauscht und `--alias wissen-embed` trägt; sonst wird nichts angefasst (`wis_port_belegt`). Der Server trägt **nicht** die GUPPI-Signatur (`--no-webui`, `--spec-type`); `gpu_preflight` stoppt ihn nicht, und Spec 7 ändert weder `gpu_preflight` noch Rezepte.
+- **Eigene PID:** Der Start schreibt `local_config/wissen/embed.pid` `{pid, port, alias, start}`. Beendet wird nur diese PID, und nur, wenn der Prozess lebt, auf dem eigenen Port lauscht und `--alias wissen-embed` trägt; sonst wird nichts angefasst (`wis_port_belegt`). Der Server trägt **nicht** die SEDRA-Signatur (`--no-webui`, `--spec-type`); `gpu_preflight` stoppt ihn nicht, und Spec 7 ändert weder `gpu_preflight` noch Rezepte.
 - **Prüfung beim Start:** `/health`, dann ein Prüfsatz (Dimension = `meta.modell_dim`, Norm > 0); SHA-256 der GGUF gegen `local_config/wissen.yaml` (einmal je Dateigröße und Änderungszeit, in `meta` gemerkt). Zwei Fehlstarts → `wis_server_start`; der Dienst gilt als „nicht bereit“, die Suche fällt auf Volltext zurück (D7.5).
 - **Kein Netz:** HTTP nur an `http://127.0.0.1:<port>` über `urllib.request.build_opener(urllib.request.ProxyHandler({}))`, damit Umgebungs-Proxys nicht greifen (WIS-04). Ein Test ersetzt `socket.create_connection` und prüft, dass nur `127.0.0.1` gerufen wird.
 - **Arbeitsspeicher und Threads:** rund 1 GB RAM **[A-6]**; `cpu_threads` Vorgabe `max(2, os.cpu_count() // 2)`, damit Läufe und Oberfläche nicht leiden. Zeit aus S7.1: 141 s je 1000 Abschnitte, 2040 Abschnitte rund 5 Minuten, 50 000 Abschnitte rund 2 Stunden – als Hintergrunddienst in Stapeln tragbar.
@@ -3763,12 +3763,12 @@ Erfüllt: WIS-01, WIS-02, WIS-03, Teil von WIS-08 (Prüfung bei Aufnahme), WIS-1
 ```python
 @dataclass(frozen=True)
 class GpuLage:
-    zustand: Literal['frei', 'dienst', 'bau']      # frei: niemand; dienst: Modellserver für Chat/Agenten (Eigner guppi-uix); bau: Bau, Messung, Reservierung
+    zustand: Literal['frei', 'dienst', 'bau']      # frei: niemand; dienst: Modellserver für Chat/Agenten (Eigner sedra-uix); bau: Bau, Messung, Reservierung
     grund: str                                      # z. B. 'lease:devvm-build', 'reservierung:night-g', 'runde:7'
 class GpuZugang(Protocol):
     def lage(self) -> GpuLage
 class TestLabZugang:
-    DIENST_EIGNER: frozenset[str] = frozenset({'guppi-uix'})      # S7.4b ergänzt den Eigner des Schedulers
+    DIENST_EIGNER: frozenset[str] = frozenset({'sedra-uix'})      # S7.4b ergänzt den Eigner des Schedulers
     def __init__(self, lab: TestLab, *, dienst_eigner: AbstractSet[str] = DIENST_EIGNER) -> None
 ```
 
@@ -4025,7 +4025,7 @@ tool:
 
 Vier Ansichten im Container: **Quellen** (Pfad, Adapter, Stufe, Projekt, Personenbezug, Abschnitte, Stand; Verben „Abschalten“, „Neu beantragen“), **Index** (Modell-ID, Abdeckung, letzter Lauf, Gerät, Pause-Grund, Modus hybrid/volltext; Verb „Nachführen“), **Nachmessung** (D7.11: die Fragen der letzten vier Wochen, Bewertung „getroffen“ / „nicht getroffen“ / „ohne Antwort im Speicher“, Verb „Nachmessung abschließen“), **Suche** (Eingabe; Treffer mit `[id]`, Quelle, Stelle, Datum, Rang je Liste, Punkte, Hinweis; Klick öffnet die Quelle mit `object.open`), **Vorschläge** (offen mit Herkunft und Belegen; Freigabe läuft über das Werkzeug `decisions`, nicht hier). Das Werkzeug zeichnet nur in `el`, ruft nur die zwei Routen, sendet nur `object.open`. Desk-Typen (`desk_wissen.py`) liefern die Form `{type, id, title, state, summary, actions, links}` (`kinds.SHAPE`).
 
-Anbindung: Shell D über eine Zeile in `uix/shells/paperclip/nav.js` im Abschnitt „Werkzeuge“ (`{label: 'Wissen', object: {type: 'wissen', id: 'speicher', title: 'Wissen'}}`), dazu ein Eintrag `wissen` unter `woerter` in `arbeitsplatz.yaml`, damit SEDRA im Gespräch dorthin zeigt; Cockpit über den Vertrag (`handles`). Registrierung der Typen: `desk/extensions.MODULES` bekommt `"guppi_runtime.wissen.desk_wissen"`; `register(registry, hub)` legt die Typen an und die Applier fest (vor `freeze`), `start(hub)` den Takt, `snapshot(hub)` legt `{"wissen": stand}` dem Ereignisstrom bei. Abnahme: `benchmarks/uix_check.py --tool wissen` → `result ok`, `tests/test_uix_contract.py` grün.
+Anbindung: Shell D über eine Zeile in `uix/shells/paperclip/nav.js` im Abschnitt „Werkzeuge“ (`{label: 'Wissen', object: {type: 'wissen', id: 'speicher', title: 'Wissen'}}`), dazu ein Eintrag `wissen` unter `woerter` in `arbeitsplatz.yaml`, damit SEDRA im Gespräch dorthin zeigt; Cockpit über den Vertrag (`handles`). Registrierung der Typen: `desk/extensions.MODULES` bekommt `"sedra_runtime.wissen.desk_wissen"`; `register(registry, hub)` legt die Typen an und die Applier fest (vor `freeze`), `start(hub)` den Takt, `snapshot(hub)` legt `{"wissen": stand}` dem Ereignisstrom bei. Abnahme: `benchmarks/uix_check.py --tool wissen` → `result ok`, `tests/test_uix_contract.py` grün.
 
 Erfüllt: WIS-13.
 
@@ -4158,12 +4158,12 @@ Reihenfolge: `wis_store` → `wis_chunk` → `wis_fuse` (rein, ohne GPU baubar) 
 | G2-S7-m | Erstbestückung (G1-S7-b) als ein Antrag mit einem Gate je Quelle | ja |
 | G2-S7-n | Goldsatz-Regel (D7.3, D7.11): Feld `erwartet_ueber: adapter|datei` je Frage; die 13 Code-Fragen des Entwicklungssatzes werden auf Adapter-Inhalte umgeschrieben (Vorschlag `goldsatz_umschrieben.json`, zwei Platzhalter für lokale Lektionen) und tragen beide Erwartungen; der Abnahmesatz (120 Fragen, 10 negativ, andere Sitzung, vor dem Einfrieren versiegelt) wird von Anfang an nach der Regel in D7.11 geschrieben: Erwartung = (Adapter, Datei, Stelle) auf Adapter-Inhalt, Frage aus gelesenem Text, bei anderen Worten ohne die kennzeichnenden Wörter der Stelle | ja; die 13 Fragen gibt der Captain einzeln frei |
 | G2-S7-o | Bau-Aufteilung: Bau-Specs `wis_chunk`, `wis_store`, `wis_fuse` (SEDRA); `vektor.py` und `ausgabe.py` nach V4 von Claude direkt (wie `vramplan`); Rest Harness | ja |
-| G2-S7-p | Werkzeug `wissen` als Harness im Paket (`trust: CORE`) statt GUPPI-Bau `tool_wissen` | ja; GUPPI-Bau später als Übung möglich |
+| G2-S7-p | Werkzeug `wissen` als Harness im Paket (`trust: CORE`) statt SEDRA-Bau `tool_wissen` | ja; SEDRA-Bau später als Übung möglich |
 | G2-S7-q | Speicherort `local_config/wissen/wissen.sqlite`; freigegebene Vorschläge zusätzlich in `vorschlaege.jsonl` gesichert | ja |
-| G2-S7-r | Eigener Embedding-Server auf der CPU (`-ngl 0 --device none`): Port 8094, PID-Datei, Alias `wissen-embed`, ohne GUPPI-Signatur; `gpu_preflight` und Rezepte bleiben unverändert; erste Prüfung von S7.4 ist A-5 (kein VRAM) | ja |
+| G2-S7-r | Eigener Embedding-Server auf der CPU (`-ngl 0 --device none`): Port 8094, PID-Datei, Alias `wissen-embed`, ohne SEDRA-Signatur; `gpu_preflight` und Rezepte bleiben unverändert; erste Prüfung von S7.4 ist A-5 (kein VRAM) | ja |
 | G2-S7-s | Chat (Cockpit, Master-Chat) nutzt die Suche (offen aus G1) | erst nach der Abnahme S7.5 |
 | G2-S7-t | **später (S7.4b, nach Spec 2 S2.5):** GPU-Einbetten über den Scheduler (zweiter `GpuZugang`), Ausnahme oder Ergänzung von SCH-11 für den CPU-Server, Vorgabe für Neuaufbau auf der GPU – jetzt nicht zu entscheiden | später; jetzt nur zur Kenntnis |
-| G2-S7-u | Desk-Anschluss als Erweiterung: `"guppi_runtime.wissen.desk_wissen"` in `desk/extensions.MODULES`; Navigation Shell D: eine Zeile in `nav.js` („Werkzeuge“ → „Wissen“) und ein Eintrag in `arbeitsplatz.yaml` | ja |
+| G2-S7-u | Desk-Anschluss als Erweiterung: `"sedra_runtime.wissen.desk_wissen"` in `desk/extensions.MODULES`; Navigation Shell D: eine Zeile in `nav.js` („Werkzeuge“ → „Wissen“) und ein Eintrag in `arbeitsplatz.yaml` | ja |
 
 ## Entscheidungen des Captains (20.10.2026)
 
@@ -4176,7 +4176,7 @@ Alle acht Fragen sind beantwortet; neu offen sind nur die Fragen zur Social-Zent
 | Cloud-Anbieter | NVIDIA API Catalog (vorhanden), Mammouth (geplant) | Spec 3: ein OpenAI-kompatibler Adapter für beide |
 | Erstes Team | Unterarbeiter (oben, unter dem Captain; Nachtrag OP-6), Planer, Coder, Reviewer, Recherche | Spec 1 |
 | Reihenfolge | erst Spec 1, dann Spec 2 | Ablauf, Grafik, Prompt |
-| Wer baut | GUPPI heißt jetzt SEDRA; SEDRA baut lokal unter Anleitung von Claude | Begriffe, Arbeitsteilung, Prompt |
+| Wer baut | SEDRA heißt jetzt SEDRA; SEDRA baut lokal unter Anleitung von Claude | Begriffe, Arbeitsteilung, Prompt |
 | Ablage | als `docs/SPEC_AGENTEN_ORCHESTRIERUNG_v1.md` ins Repo | diese Datei |
 | Paperclip-Stand | lokale Kopie der verlinkten Vorlage | Vorarbeiter notiert Version und Datum |
 

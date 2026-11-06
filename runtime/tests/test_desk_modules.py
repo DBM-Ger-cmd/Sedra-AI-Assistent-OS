@@ -12,13 +12,13 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
-UIX = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
+UIX = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix'
 
 
 class Modules(unittest.TestCase):
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='desk-modules-')
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name) / 'project'
@@ -39,7 +39,7 @@ class Modules(unittest.TestCase):
         view = self.hub.modules_view()
         self.assertEqual(view['shell'], 'start', 'der Einstieg, solange nichts gewählt ist')
         self.assertTrue(view['shell_available'])
-        self.assertEqual(sorted(s['id'] for s in view['shells']), ['cockpit', 'fisch', 'gateway-kmu', 'gateway-studio', 'guppi-xp', 'harness', 'minimal', 'paperclip', 'start', 'wissensbasis'])   # harness (28.10., Harness-Shell Stufe 1), gateway-kmu (Build 19), fisch (19.10.), wissensbasis (27.10.)
+        self.assertEqual(sorted(s['id'] for s in view['shells']), ['cockpit', 'fisch', 'gateway-kmu', 'gateway-studio', 'harness', 'minimal', 'paperclip', 'sedra-xp', 'start', 'wissensbasis'])   # harness (28.10., Harness-Shell Stufe 1), gateway-kmu (Build 19), fisch (19.10.), wissensbasis (27.10.)
         self.assertTrue(next(s for s in view['shells'] if s['id'] == 'start')['enabled'])
         self.assertIn('modules', [t['id'] for t in view['tools']])
         self.assertEqual(view['rejected'], [])

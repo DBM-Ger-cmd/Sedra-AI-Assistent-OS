@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.uix_server import UIXHub
 
 
 def schreiben(pfad, ereignisse):

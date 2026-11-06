@@ -11,8 +11,8 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.harness.api import HarnessApi
-from guppi_runtime.uix_server import UIXHub, make_server
+from sedra_runtime.harness.api import HarnessApi
+from sedra_runtime.uix_server import UIXHub, make_server
 from test_uix_harness_api import ARCH, MODELL, anfrage, strom
 
 

@@ -2,7 +2,7 @@
 
 - Datum: 2026-11-03
 - Sitzung: Vorarbeiter (Claude Code), Screenshot des Start-Menüs
-- Wunsch (Worte des Captains): „Das Start-Menü muss ausgebaut werden. Guppi-Meter kann umbenannt werden in Sedra Token; darunter werden wir alles, was Token geht, sammeln und auch aufwerten und ausbauen. KI-Labor kann auch als kleine App angezeigt werden mit den wichtigsten Daten. Das machen wir mit allen Punkten, die praktikabel sind und Aufwertung brauchen.“
+- Wunsch (Worte des Captains): „Das Start-Menü muss ausgebaut werden. Sedra-Meter kann umbenannt werden in Sedra Token; darunter werden wir alles, was Token geht, sammeln und auch aufwerten und ausbauen. KI-Labor kann auch als kleine App angezeigt werden mit den wichtigsten Daten. Das machen wir mit allen Punkten, die praktikabel sind und Aufwertung brauchen.“
 - Was verstanden wurde:
   1. **Umbenennung (erledigt 03.11., ungeprüft im Browser, nicht committet):** „Guppy-Meter“ heißt in den Orten (`ui/places.js`), im Befehlsfeld, im Cockpit-Baum, in den Minimal-Symbolen und im Werkzeug `meter` jetzt „Sedra Token“. Die Kennung `meter` bleibt, damit Verknüpfungen und Reiter nicht brechen.
   2. **Gruppe „Token“:** unter „Sedra Token“ sammeln sich alle Token-Dinge: Zelle Token der Taskleiste, die Seite „Token und Gespräch“ (heute unter Einstellungen → Agent), der Tagesverbrauch und die Kosten (`costs`). Aufwertung offen (Verlauf je Sitzung, je Modell, tok/s).

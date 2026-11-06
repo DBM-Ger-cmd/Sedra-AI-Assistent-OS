@@ -5,9 +5,9 @@ const path = require('node:path');
 const vm = require('node:vm');
 const box = {crypto: require('node:crypto').webcrypto, TextEncoder};
 vm.createContext(box);
-vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/guppi_runtime/uix/ui/workflow-model.js'), 'utf8'), box);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/sedra_runtime/uix/ui/workflow-model.js'), 'utf8'), box);
 const M = box.sedraWorkflowModel;
-vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/guppi_runtime/uix/ui/workflow-process.js'), 'utf8'), box);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '../src/sedra_runtime/uix/ui/workflow-process.js'), 'utf8'), box);
 const P = box.sedraWorkflowProcess;
 const plain = x=>JSON.parse(JSON.stringify(x));
 

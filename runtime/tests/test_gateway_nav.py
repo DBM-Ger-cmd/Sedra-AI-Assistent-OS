@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 NODE = shutil.which('node')
-NAV = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'tools' / 'gateway' / 'nav.js'
+NAV = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'tools' / 'gateway' / 'nav.js'
 
 
 def run_node(script):

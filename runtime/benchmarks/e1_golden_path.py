@@ -6,13 +6,13 @@ A scenario folder holds the project files (code with the gap + its tests) and sc
 Without --scenario the demo (examples/demo-project) is used. State lives in <project>/runtime_data/e1_golden_path/[<scenario>/]state.json,
 so each stage can be repeated and the Captain's gates fit in between.
 
-  prepare   copies the demo project (examples/demo-project) into a managed GUPPI project and records the baseline: its test fails
+  prepare   copies the demo project (examples/demo-project) into a managed SEDRA project and records the baseline: its test fails
             ("Hello David" vs "Hello, David!"), which is the capability gap. A self-development job (E1) is admitted for it.
   generate  holds the GPU lease, loads the coder the role router picks (qwen3-coder-30b-a3b on this PC since 2026-10-03), asks it for the fix through
             code_generation.generate (tests may not be touched), unloads it, and lets the mission prepare the candidate
             (CANDIDATE_REVIEW). The job gets the candidate bound to it.
-  test      runs the bound test command in GUPPI's own VM (candidate_tests). The first call raises a Captain gate
-            (sandbox_execute); approve it with `guppi approve <mission> --gate-id <id>` and call `test` again.
+  test      runs the bound test command in SEDRA's own VM (candidate_tests). The first call raises a Captain gate
+            (sandbox_execute); approve it with `sedra approve <mission> --gate-id <id>` and call `test` again.
   review    the verifier model (gemma, a different family) reviews the change under the GPU lease; the deterministic VM test and
             the review become evidence; the job's verification is attached. Activation stays with the Captain.
   watch     shows the rework watch (rework_watch.py): the remembered failures and its verdict for the next generation. `generate` stops with
@@ -30,13 +30,13 @@ import sys
 from pathlib import Path
 
 RUNTIME = Path(__file__).resolve().parents[1]
-ARCH = RUNTIME.parent / "architecture" / "GUPPI_Architecture_v1.20_SELF_DEVELOPMENT"
+ARCH = RUNTIME.parent / "architecture" / "SEDRA_Architecture_v1.20_SELF_DEVELOPMENT"
 sys.path.insert(0, str(RUNTIME / "src"))
 
-from guppi_runtime.runtime import GuppiRuntime          # noqa: E402
-from guppi_runtime.projects import ProjectRegistry      # noqa: E402
-from guppi_runtime.core.util import atomic_write_json, load_json  # noqa: E402
-from guppi_runtime.jobs.rework_watch import ReworkWatch, failure_signature, same_as_earlier  # noqa: E402
+from sedra_runtime.runtime import SedraRuntime          # noqa: E402
+from sedra_runtime.projects import ProjectRegistry      # noqa: E402
+from sedra_runtime.core.util import atomic_write_json, load_json  # noqa: E402
+from sedra_runtime.jobs.rework_watch import ReworkWatch, failure_signature, same_as_earlier  # noqa: E402
 
 DEMO = {"name": "demo", "capability": "demo_greeting_format", "target_type": "skill", "source": RUNTIME / "examples" / "demo-project",
         "files": ["app.py", "tests/test_app.py"], "evidence": [],
@@ -114,18 +114,18 @@ def with_model(rt, resolution, fn):
         rt.model_loader.unload(resolution)
 
 
-REPRO_HARNESS_SOURCE = RUNTIME / "examples" / "self_dev" / "_shared" / "_guppi_repro.py"
+REPRO_HARNESS_SOURCE = RUNTIME / "examples" / "self_dev" / "_shared" / "_sedra_repro.py"
 
 
 def with_repro_harness(rt, proj, files):
-    """Put GUPPI's reproduction harness into the project's tests/ (read-only for the coder) and select it, so every VM test also
+    """Put SEDRA's reproduction harness into the project's tests/ (read-only for the coder) and select it, so every VM test also
     reports which input failed where (Captain 2026-10-03, "Reproduktionsschritt bauen"). The project copy is refreshed if it differs."""
-    target = rt.filesystem_tool.root / proj["workspace_path"] / "tests" / "_guppi_repro.py"
+    target = rt.filesystem_tool.root / proj["workspace_path"] / "tests" / "_sedra_repro.py"
     source = REPRO_HARNESS_SOURCE.read_bytes()
     if not target.is_file() or target.read_bytes() != source:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(source)
-    return list(files) + (["tests/_guppi_repro.py"] if "tests/_guppi_repro.py" not in files else [])
+    return list(files) + (["tests/_sedra_repro.py"] if "tests/_sedra_repro.py" not in files else [])
 
 
 def discard_generation(state, reason):
@@ -150,7 +150,7 @@ def refuse_repeated_candidate(state, watch):
 
 
 def generate_stage(rt, project, state):
-    from guppi_runtime.selfdev.code_generation import generate
+    from sedra_runtime.selfdev.code_generation import generate
     if state.get("mission_id"):
         return {"status": "exists", "mission_id": state["mission_id"]}
     watch = ReworkWatch.load(state)
@@ -168,7 +168,7 @@ def generate_stage(rt, project, state):
     # A Captain's per-run choice (2026-10-03: gpt-oss with deep thinking for one rework): `coder_exclude` removes models by their
     # independence key from this run's coder choice, `coder_reasoning_effort` sets its thinking. The default coder stays as it is.
     exclude = list(state.get("coder_exclude") or ())
-    # Which model writes comes from the ACTIVE ROUTING PROFILE (local_config/routing_profiles.yaml, `guppi routing-profile use <name>`):
+    # Which model writes comes from the ACTIVE ROUTING PROFILE (local_config/routing_profiles.yaml, `sedra routing-profile use <name>`):
     # purpose "coder" for the first draft, "rework" for a repair after a failed VM test (recognised by the stored test feedback), each
     # with the profile's sampling. Standard profile 2026-10-03: qwen3-coder drafts, gpt-oss repairs (effort medium, temperature 1.0).
     # `require_coder_model` in the state pins a model for one run (the Captain's choice); a fallback is then refused, not silent.
@@ -186,7 +186,7 @@ def generate_stage(rt, project, state):
     objective = SC["objective"]          # the mission's task; rework material goes to the model only (code_generation feedback=)
     feedback = ""
     if state.get("feedback"):
-        # Rework: the coder sees why its previous candidate failed in GUPPI's VM (the deterministic test output), not only the task.
+        # Rework: the coder sees why its previous candidate failed in SEDRA's VM (the deterministic test output), not only the task.
         feedback += ("\n\nYour previous attempt failed these tests in the sandbox. Fix the cause; the tests are correct and stay "
                       "unchanged:\n" + state["feedback"])
         # ... and the code it wrote then. Without it the coder only saw the untouched stub again and rewrote it from scratch with the
@@ -258,7 +258,7 @@ def generate_stage(rt, project, state):
         if job["state"] == "PLANNING":
             sd.prepare_development_environment(state["job_id"], rt.sandbox.doctor())
         changes = state["candidate"] or []
-        rec = sd.bind_candidate(state["job_id"], attempt_id=f"E1-ATT-{len(state.get('discarded_generations', [])) + 1}", stage="guppi-candidates/" + state["mission_id"], parent_version="demo-baseline",
+        rec = sd.bind_candidate(state["job_id"], attempt_id=f"E1-ATT-{len(state.get('discarded_generations', [])) + 1}", stage="sedra-candidates/" + state["mission_id"], parent_version="demo-baseline",
                                 changed_files=[c["path"] for c in changes], builder="coder",   # role name
                                 builder_key=state["coder"]["independence_key"])                # the model that really wrote it
         state["candidate_id"] = rec.get("candidate_id")
@@ -267,7 +267,7 @@ def generate_stage(rt, project, state):
 
 
 def test_stage(rt, project, state):
-    from guppi_runtime.selfdev.candidate_tests import run_candidate_tests, verify_candidate_tests
+    from sedra_runtime.selfdev.candidate_tests import run_candidate_tests, verify_candidate_tests
     out = run_candidate_tests(rt, state["mission_id"])
     m = rt.missions.load(state["mission_id"])
     state["test"] = {"status": out.get("status"), "attempt": out.get("attempt"),
@@ -287,7 +287,7 @@ def rework_after_failed_test(rt, project, state):
     receipt = json.loads(rt.sandbox.receipt(attempt["job_id"]))
     output = "\n".join((c.get("output") or "") for c in receipt.get("commands", []))
     lines = [l for l in output.splitlines() if l.strip()]
-    # REPRO lines come from GUPPI's reproduction harness: which input raised what at which line of the candidate. They go first.
+    # REPRO lines come from SEDRA's reproduction harness: which input raised what at which line of the candidate. They go first.
     repro = [l for l in lines if l.startswith("REPRO")][:40]
     keep = repro + [l for l in lines if l.startswith(("FAIL:", "ERROR:", "AssertionError", "Traceback", "  File", "    ", "-", "+", "?"))][:60]
     feedback = "\n".join(keep or lines[-40:])[:3000]
@@ -319,7 +319,7 @@ def rebind_after_block(rt, project, state):
         return {"status": "not_blocked", "job_state": job["state"]}
     sd.jobs.transition(job, "PLANNING")
     sd.prepare_development_environment(state["job_id"], rt.sandbox.doctor())
-    rec = sd.bind_candidate(state["job_id"], attempt_id="E1-ATT-2", stage="guppi-candidates/" + state["mission_id"], parent_version="demo-baseline",
+    rec = sd.bind_candidate(state["job_id"], attempt_id="E1-ATT-2", stage="sedra-candidates/" + state["mission_id"], parent_version="demo-baseline",
                             changed_files=[c["path"] for c in state["candidate"]], builder="coder", builder_key=state["coder"]["independence_key"])
     state.setdefault("superseded_candidates", []).append({"candidate_id": state.get("candidate_id"), "review": state.pop("review", None)})
     state["candidate_id"] = rec["candidate_id"]
@@ -431,7 +431,7 @@ def main():
         raise SystemExit(__doc__)
     sys.argv[1:] = args
     project = Path(sys.argv[1]).resolve()
-    rt = GuppiRuntime(project, ARCH)
+    rt = SedraRuntime(project, ARCH)
     state = load_json(state_path(project), {}) or {}
     out = stages.get(sys.argv[2], lambda *a: state)(rt, project, state)
     print(json.dumps(out, indent=2, ensure_ascii=False, default=str))

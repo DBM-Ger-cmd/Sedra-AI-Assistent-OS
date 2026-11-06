@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.wissen import vektor, vektor_np
+from sedra_runtime.wissen import vektor, vektor_np
 from wissen_fixture import FakeEmbedServer, alle_freigeben, oeffnen
 
 NP = importlib.util.find_spec('numpy') is not None
@@ -86,7 +86,7 @@ class ImSpeicher(unittest.TestCase):
         self.assertGreater(len(self.sp._matrix), vorher)
 
     def test_schalter_in_der_konfiguration(self):
-        from guppi_runtime.wissen import konfig
+        from sedra_runtime.wissen import konfig
         paket = Path(__file__).resolve().parents[1] / 'config' / 'wissen.yaml'
         self.assertEqual(konfig.load(paket).numpy, 'auto')
         with tempfile.TemporaryDirectory() as t:

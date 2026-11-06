@@ -1,7 +1,7 @@
 """E-05 (coder extension "prune old tool results", 2026-10-10): long old tool results (a file read 20 calls ago, a long test output) are sent again with every request and fill the
 32k window until compaction at 60 % cuts everything at once (compact_history). `result_pruner.py` shortens them earlier and by rule, without a model: an older result that a later call
 returned again word for word becomes a one-line note, and long results outside the last few keep head and tail. Unchanged messages stay the SAME objects (prompt cache, like stub_writes).
-Ideas from deepseek-harness (compaction-tool-result-pruner) and Hermes (read dedup). Pure function, no file access. GUPPI builds it, Claude only wrote this file and the hidden tests.
+Ideas from deepseek-harness (compaction-tool-result-pruner) and Hermes (read dedup). Pure function, no file access. SEDRA builds it, Claude only wrote this file and the hidden tests.
 Plan: <projekte>\\Guppy\\ERWEITERUNGSPLAN_CODER_2026-10-10.md."""
 
 NOTES = '''# Notes for result_pruner

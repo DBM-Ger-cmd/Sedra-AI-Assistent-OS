@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.harness import dateien, katalog, schleife, vorschau
+from sedra_runtime.harness import dateien, katalog, schleife, vorschau
 
 
 class DateienTests(unittest.TestCase):

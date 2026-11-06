@@ -13,9 +13,9 @@ from agent_import import IMPORTS
 
 SOUL = b"# SOUL\nBe careful.\n"
 GOOD = {
-    "schema_version": "guppi.agent-template/v1", "id": "guppi.agent.coder", "version": "1.0.0", "role": "Coder",
+    "schema_version": "sedra.agent-template/v1", "id": "sedra.agent.coder", "version": "1.0.0", "role": "Coder",
     "soul": {"path": "SOUL.md", "version": "1.0.0", "sha256": hashlib.sha256(SOUL).hexdigest()},
-    "capabilities": [{"id": "guppi.code.candidate", "version": "1.0.0", "side_effect": "reversible_write"}],
+    "capabilities": [{"id": "sedra.code.candidate", "version": "1.0.0", "side_effect": "reversible_write"}],
     "tools": [{"id": "workspace.read", "version": "1.0.0", "sha256": "a" * 64}, {"id": "tests.run", "version": "1.0.0", "sha256": "b" * 64}],
     "permissions": {"tools_allowed": ["workspace.read", "tests.run"], "workspace_mode": "mission_write", "network_mode": "deny", "external_write": False, "privileged": False},
     "initial_qualification": "DRAFT",
@@ -47,8 +47,8 @@ for bad in ("1.2", "1.2.3.4", "v1.2.3", "1.2.x", "", " 1.2.3", "1.2.3 ", "1.-2.3
     try: parse_semver(bad)
     except ContractError as exc: assert exc.code == "bad_version", exc.code
     else: raise AssertionError(f"accepted {bad!r}")
-assert template_ref(GOOD) == "guppi.agent.coder@1.0.0"
-assert template_ref(variant(id="ab")) is None and template_ref(variant(id="Guppi.Agent")) is None and template_ref(variant(id="1abc")) is None and template_ref(variant(id="a" * 129)) is None
+assert template_ref(GOOD) == "sedra.agent.coder@1.0.0"
+assert template_ref(variant(id="ab")) is None and template_ref(variant(id="Sedra.Agent")) is None and template_ref(variant(id="1abc")) is None and template_ref(variant(id="a" * 129)) is None
 assert template_ref(variant(id="a" * 128)) == "a" * 128 + "@1.0.0"
 assert template_ref(variant(version="1.0")) is None and template_ref(variant(id=DELETE)) is None and template_ref(variant(version=DELETE)) is None
 assert template_ref(variant(id=5)) is None and template_ref("x") is None and template_ref(None) is None and template_ref([]) is None
@@ -102,13 +102,13 @@ snap = copy.deepcopy(GOOD); check_permissions(GOOD); assert GOOD == snap
 
 T4 = r"""
 r = preview_template(GOOD, FILES)
-assert r == {"ok": True, "ref": "guppi.agent.coder@1.0.0", "trust": "UNVERIFIED", "problems": []}, r
+assert r == {"ok": True, "ref": "sedra.agent.coder@1.0.0", "trust": "UNVERIFIED", "problems": []}, r
 bad = preview_template(variant(initial_qualification="TRUSTED"), FILES)
-assert bad == {"ok": False, "ref": "guppi.agent.coder@1.0.0", "trust": "UNVERIFIED", "problems": ["claimed_trust"]}, bad
+assert bad == {"ok": False, "ref": "sedra.agent.coder@1.0.0", "trust": "UNVERIFIED", "problems": ["claimed_trust"]}, bad
 for q in ("PROVEN", "trusted", None, 5): assert preview_template(variant(initial_qualification=q), FILES)["problems"] == ["claimed_trust"], q
 for q in ("DRAFT", "UNVERIFIED"): assert preview_template(variant(initial_qualification=q), FILES)["ok"] is True
 assert preview_template(variant(initial_qualification=DELETE), FILES)["problems"] == ["claimed_trust"]
-assert preview_template(variant(schema_version="guppi.agent-template/v2"), FILES)["problems"] == ["schema_version"]
+assert preview_template(variant(schema_version="sedra.agent-template/v2"), FILES)["problems"] == ["schema_version"]
 x = preview_template(variant(id="Bad Id"), FILES); assert x["ref"] is None and x["problems"] == ["bad_id"] and x["ok"] is False
 x = preview_template(variant(version="1.x"), FILES); assert x["ref"] is None and x["problems"] == ["bad_version"]
 x = preview_template(variant(), {"SOUL.md": b"changed"}); assert x["problems"] == ["soul_hash"] and x["ok"] is False and x["trust"] == "UNVERIFIED"
@@ -152,7 +152,7 @@ If `template` is not a dict or `template["permissions"]` is missing or not a dic
      "hidden": {"hidden_u3.py": hidden("check_permissions", T3)}},
     {"name": "preview",
      "task": """In the existing `agent_import.py` (keep the other functions) add `preview_template(template, files) -> dict` that never raises and never trusts the template. If `template` is not a dict return exactly {"ok": False, "ref": None, "trust": "UNVERIFIED", "problems": ["not_a_template"]}.
-Otherwise the result is {"ok": <no problems>, "ref": template_ref(template), "trust": "UNVERIFIED", "problems": <sorted list of unique codes>} where the problems are the union of: "schema_version" when `template["schema_version"]` is not exactly "guppi.agent-template/v1"; "bad_id" when `template["id"]` is not a str fully matching `[a-z][a-z0-9_.-]{2,127}` (missing counts); "bad_version" when `template["version"]` is not accepted by `parse_semver` (missing counts);
+Otherwise the result is {"ok": <no problems>, "ref": template_ref(template), "trust": "UNVERIFIED", "problems": <sorted list of unique codes>} where the problems are the union of: "schema_version" when `template["schema_version"]` is not exactly "sedra.agent-template/v1"; "bad_id" when `template["id"]` is not a str fully matching `[a-z][a-z0-9_.-]{2,127}` (missing counts); "bad_version" when `template["version"]` is not accepted by `parse_semver` (missing counts);
 "claimed_trust" when `template["initial_qualification"]` is not "DRAFT" or "UNVERIFIED" (a missing key counts); and everything returned by `check_soul(template, files)` and `check_permissions(template)`. The trust is ALWAYS "UNVERIFIED", whatever the template claims. Reuse the helper functions, do not copy their checks.""" + STYLE + """ Add tests to `tests/test_agent_import.py`.""",
      "hidden": {"hidden_u4.py": hidden("preview_template", T4)}},
     {"name": "all",

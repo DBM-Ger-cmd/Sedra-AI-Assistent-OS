@@ -5,7 +5,7 @@ import subprocess
 import unittest
 from pathlib import Path
 
-JS = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'shells' / 'harness' / 'vorlagenhinweis.js'
+JS = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'shells' / 'harness' / 'vorlagenhinweis.js'
 
 KOPF = """
 const speicher = {};

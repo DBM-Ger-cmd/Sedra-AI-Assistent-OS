@@ -7,7 +7,7 @@ Dieses Dokument beschreibt die Schichten von SEDRA so, wie sie im Quellcode lieg
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
 │ Oberfläche (uix/)        Shells · Werkzeuge · Rahmen (frame.js)      │
-│                          Start-Shell · GUPPI XP · KI GateWay Studio  │
+│                          Start-Shell · SEDRA XP · KI GateWay Studio  │
 └───────────────┬──────────────────────────────────────────────────────┘
                 │ HTTP, nur /api/… (Routen-Tabelle im Hub)
 ┌───────────────▼──────────────────────────────────────────────────────┐
@@ -28,7 +28,7 @@ Dieses Dokument beschreibt die Schichten von SEDRA so, wie sie im Quellcode lieg
 
 Die Regel: Die Oberfläche spricht nur über HTTP mit dem Hub. Der Hub spricht mit `desk/` und `gateway/`. Jeder Modellaufruf geht über den Router, und der Router geht über den Guard. Den Kern darf nichts aus den oberen Schichten importieren; das prüft ein Grenztest (`core_boundary.py`, Test `test_core_boundary_src`).
 
-## Der Kern: `guppi_runtime/core/`
+## Der Kern: `sedra_runtime/core/`
 
 | Modul | Aufgabe |
 |---|---|
@@ -46,7 +46,7 @@ Die Regel: Die Oberfläche spricht nur über HTTP mit dem Hub. Der Hub spricht m
 - **Entscheidungen:** Ein Treffer, der eine Entscheidung braucht, erscheint in der einen Entscheidungsliste (`kind: content`) mit den Wegen *einmal* und *ablehnen*. „Einmal“ gilt für genau diesen Aufruf (Hash) für 600 Sekunden. Höchstens 50 Entscheidungen warten gleichzeitig (`MAX_PENDING`).
 - **Ein Guard-Stopp** ist kein Anbieterfehler (`ContentGuardStop`). Er wird nicht als Ausfall des Modells gezählt.
 
-## Modelle: `guppi_runtime/models/`
+## Modelle: `sedra_runtime/models/`
 
 - **`router.py` (`ModelRouter`):** Die einzige Tür zu Modellen. `chat(mission_id, messages, provider, model, schema=None, **kwargs)`. Intern: `_guarded` prüft den Aufruf, `_once` führt ihn aus, bei `schema` gibt es eine Schleife mit höchstens drei Runden.
 - **`structured.py`:** Eine flache Teilmenge von JSON Schema. `check_schema` lehnt alles ab, was die Adapter nicht sicher übersetzen. `validate` liefert deutsche Fehlersätze. `parse` entfernt Markdown-Zäune. Der Router hängt bei Bedarf einen Hinweis an den System-Prompt, setzt die Temperatur auf 0 und reicht `response_format` an den Adapter weiter.
@@ -61,14 +61,14 @@ Wer ein neues Modell einbindet, schreibt einen Adapter und tut nichts am Guard. 
 - **`desk/decisions.py`** führt alle Entscheidungen zusammen (Schalter, Routing, Schreibrouten, GateWay). `APPLY` ordnet jeder Entscheidungsart die Route zu, die sie nach dem Ja ausführt.
 - **`desk/gateway.py`** liefert die Objekte und Karten für das GateWay, `desk/vorgabe.py` den Shell-Creator, `desk/registry.py` die Shell-Wahl und die Registrierung der Werkzeuge.
 
-## Die Oberfläche: `guppi_runtime/uix/`
+## Die Oberfläche: `sedra_runtime/uix/`
 
 | Teil | Aufgabe |
 |---|---|
 | `ui/frame.js` + `frame.css` | Der Rahmen. Baut aus einer Vorgabe (`raster`) die Zonen: Leiste, Orte, Werkstück, Gespräch, Entscheidungen, leer. Vertragscode, nicht ändern ohne Test (`test_uix_frame`). |
 | `ui/schema/vorgabe.schema.json` | Das Schema der Vorgabe-Datei. Dasselbe Schema zwingt das Modell beim Shell-Creator. |
 | `ui/loader.js`, `ui/tokens.css` | Laden der Werkzeuge; Farben und Abstände nur als Token |
-| `shells/` | Shells: `start`, `cockpit`, `minimal`, `paperclip`, `guppi-xp`, `gateway-studio`, `_template`, `_vorgabe` |
+| `shells/` | Shells: `start`, `cockpit`, `minimal`, `paperclip`, `sedra-xp`, `gateway-studio`, `_template`, `_vorgabe` |
 | `tools/` | Werkzeuge, die in Shells sitzen, u. a. `gateway`, `schutz`, `modules`, `decisions`, `task`, `logbook` |
 
 Details zu Shells und Werkzeugen in `04_SHELLS_WERKZEUGE_VORGABEN.md`.
@@ -76,7 +76,7 @@ Details zu Shells und Werkzeugen in `04_SHELLS_WERKZEUGE_VORGABEN.md`.
 ## Start: `uix_start.py` und die Startdateien
 
 - `START_SEDRA.bat` (Windows) und `start_sedra.sh` (macOS/Linux) starten SEDRA. Ohne Argument öffnen sie die **Übersicht** der Oberflächen. Mit einem Namen (`cockpit`) starten sie direkt in diese Shell, nur für diesen Start. Mit `--gewaehlt` starten sie die in `uix.yaml` gewählte Shell.
-- Die alten Startdateien `ERSTER_START.bat`, `START_GUPPI.bat` und `GUPPI_EINRICHTEN_UND_STARTEN.bat` sind entfernt; `START_SEDRA.bat` ersetzt sie.
+- Die alten Startdateien `ERSTER_START.bat`, `START_SEDRA.bat` und `SEDRA_EINRICHTEN_UND_STARTEN.bat` sind entfernt; `START_SEDRA.bat` ersetzt sie.
 - Ein bereits laufender Prozess wird mit PID und Paketordner gemeldet. Ein zweiter Start neben ihm wird verweigert (Build 18).
 
 ## Abhängigkeiten zwischen den Schichten (Prüfung)

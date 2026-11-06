@@ -9,7 +9,7 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.wissen import adapter
+from sedra_runtime.wissen import adapter
 from wissen_fixture import repo_anlegen, speicher_anlegen
 
 SPEICHER = ("runtime_data/knowledge/records.jsonl", "local_config/arbeitsumfeld/wissen.sqlite", "local_config/gateway/wissen.sqlite")

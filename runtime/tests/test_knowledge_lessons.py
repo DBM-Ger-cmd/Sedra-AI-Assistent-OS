@@ -1,6 +1,6 @@
 import json, tempfile, unittest
 from pathlib import Path
-from guppi_runtime.knowledge import KnowledgeStore
+from sedra_runtime.knowledge import KnowledgeStore
 
 
 class LessonTests(unittest.TestCase):

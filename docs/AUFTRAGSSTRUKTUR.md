@@ -1,7 +1,7 @@
 # Übertragbare Auftragsstruktur
 
 Stand 16.10.2026. Gehört zum Regelwerk Standardläufe (`REGELWERK_STANDARDLAEUFE.md`), Abschnitt 11.
-Code: `runtime/src/guppi_runtime/auftrag.py`. Tests: `runtime/tests/test_auftrag.py`. Beispiel: `docs/auftrag_beispiel/`.
+Code: `runtime/src/sedra_runtime/auftrag.py`. Tests: `runtime/tests/test_auftrag.py`. Beispiel: `docs/auftrag_beispiel/`.
 
 ## Zweck
 
@@ -23,7 +23,7 @@ Keine weiteren Dateien sind Pflicht. Eingaben liegen nicht im Auftragsordner, so
 
 | Feld | Pflicht | Regel |
 |---|---|---|
-| `format` | ja | genau `guppi-auftrag` |
+| `format` | ja | genau `sedra-auftrag` |
 | `version` | ja | genau `1` |
 | `name` | ja | Kleinbuchstaben, Ziffern, Bindestrich, 2–40 Zeichen; eindeutig im Labor |
 | `art` | nein | `bewerten` (Standard) oder `bauen` |

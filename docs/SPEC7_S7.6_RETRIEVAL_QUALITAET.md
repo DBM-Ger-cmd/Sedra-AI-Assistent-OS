@@ -60,7 +60,7 @@ Diese Werte sind **zu optimistisch**: Das Glossar ist teils aus genau diesen Feh
 ## Messung auf dem PC (ersetzt den Befehl aus dem Baubericht, Schritt 5)
 
 ```
-.venv\Scripts\python.exe benchmarks\wissen_fusion_messung.py --server-url http://127.0.0.1:8094 --projekt <guppi>\workspace\GUPPI_OS ^
+.venv\Scripts\python.exe benchmarks\wissen_fusion_messung.py --server-url http://127.0.0.1:8094 --projekt <sedra>\workspace\SEDRA_OS ^
     --zerleger z2 --eingabe beide --glossar beide --listen --json benchmarks\wissen_s72f.json
 ```
 

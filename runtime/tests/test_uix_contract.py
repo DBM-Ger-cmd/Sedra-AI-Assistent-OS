@@ -9,7 +9,7 @@ import subprocess
 import unittest
 from pathlib import Path
 
-UIX = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
+UIX = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix'
 NODE = shutil.which('node')
 MAX_LINES = 400
 
@@ -351,7 +351,7 @@ class CockpitPure(unittest.TestCase):
         self.assertEqual(len(out['said']), 3)
         self.assertIn('notify, decide fehlt', out['said'][2])
 
-    def test_the_router_sends_a_place_to_the_dock_and_everything_else_to_guppi(self):
+    def test_the_router_sends_a_place_to_the_dock_and_everything_else_to_sedra(self):
         out = run_js([UIX / 'ui' / 'places.js'], """
           const p = box.sedraPlaces;
           const r = t=>{ const x = p.routeText(t); return x ? (x.kind === 'place' ? 'place:' + x.id : 'talk' + (x.order ? ':order' : '')) : 'nichts'; };

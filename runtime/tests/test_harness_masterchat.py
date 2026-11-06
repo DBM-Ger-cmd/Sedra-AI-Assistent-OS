@@ -5,18 +5,18 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.chat_tools import SCHEMAS as CHAT_SCHEMAS
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.harness import katalog
-from guppi_runtime.harness import vorlagen as harness_vorlagen
-from guppi_runtime.harness.api import HarnessApi
-from guppi_runtime.harness.erlaubnis import aktive
-from guppi_runtime.harness.freigabe import Karten, Kiste
-from guppi_runtime.harness.sitzung import Sitzungen
-from guppi_runtime.harness.vorlagen import VorlageFehler, pruefen
-from guppi_runtime.harness.werkzeuge import NAMEN as HARNESS_NAMEN, Werkzeuge
+from sedra_runtime.chat_tools import SCHEMAS as CHAT_SCHEMAS
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.harness import katalog
+from sedra_runtime.harness import vorlagen as harness_vorlagen
+from sedra_runtime.harness.api import HarnessApi
+from sedra_runtime.harness.erlaubnis import aktive
+from sedra_runtime.harness.freigabe import Karten, Kiste
+from sedra_runtime.harness.sitzung import Sitzungen
+from sedra_runtime.harness.vorlagen import VorlageFehler, pruefen
+from sedra_runtime.harness.werkzeuge import NAMEN as HARNESS_NAMEN, Werkzeuge
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 CONFIG = Path(__file__).resolve().parents[1] / 'config' / 'harness_vorlagen'
 
 
@@ -53,7 +53,6 @@ class VorlageTests(unittest.TestCase):
         self.assertIn('Pflichtsatz in der ersten Antwort', text)
         self.assertIn('Anpassung und Einrichtung von SEDRA', text)
         self.assertIn('weitreichende Befugnisse', text)
-        self.assertNotIn('GUPPI', text)
         for wort in ('Erfinde nichts', 'Feste Vorbehalte', 'docs/wunsch_umsetzen', 'Nachweis', 'Abnahme', 'git commit', 'Neustart', '400 Zeilen'):
             self.assertIn(wort, text, wort)
 
@@ -189,25 +188,25 @@ class AnlegenTests(unittest.TestCase):
         kopf = self.api.anlegen({'vorlage': 'masterchat', 'projekt': 'sedra-entwicklung', 'erlaubnisse_bestaetigt': True})
         erl = aktive(self.sitzungen.laden(kopf['id'])['eintraege'])
         wurzel = self.root / 'projekt'
-        for rel in ('runtime/src/guppi_runtime/core', 'runtime/src/guppi_runtime/harness', 'runtime/tests', 'docs', 'runtime/config/harness_vorlagen', 'runtime/config'):
+        for rel in ('runtime/src/sedra_runtime/core', 'runtime/src/sedra_runtime/harness', 'runtime/tests', 'docs', 'runtime/config/harness_vorlagen', 'runtime/config'):
             (wurzel / rel).mkdir(parents=True, exist_ok=True)
-        (wurzel / 'runtime/src/guppi_runtime/harness/api.py').write_text('a = 1\n', encoding='utf-8')
-        (wurzel / 'runtime/src/guppi_runtime/harness/freigabe.py').write_text('f = 1\n', encoding='utf-8')
-        (wurzel / 'runtime/src/guppi_runtime/core/guard.py').write_text('g = 1\n', encoding='utf-8')
+        (wurzel / 'runtime/src/sedra_runtime/harness/api.py').write_text('a = 1\n', encoding='utf-8')
+        (wurzel / 'runtime/src/sedra_runtime/harness/freigabe.py').write_text('f = 1\n', encoding='utf-8')
+        (wurzel / 'runtime/src/sedra_runtime/core/guard.py').write_text('g = 1\n', encoding='utf-8')
         (wurzel / 'runtime/config/llama_server.yaml').write_text('x: 1\n', encoding='utf-8')
         guard = Guard(ARCH / 'core' / 'guard' / 'guard_rules.yaml', None, self.root / 'tokens.json')
         regeln = katalog.mit_projekt(katalog.laden(Path('gibt-es-nicht'))['regeln'], {'schreibbereich': ['runtime/**', 'docs/**', 'redesign/**']})
         w = Werkzeuge({'id': 'p', 'name': 'P', 'wurzel': str(wurzel), 'schreibbereich': ['runtime/**', 'docs/**', 'redesign/**']}, guard=guard, mission_id='M-MC', regeln=regeln)
         kiste = Kiste(w, regeln=regeln, guard=guard, audit=None, karten=Karten(self.root / 'karten'), sitzung_id=kopf['id'], erlaubnisse=erl)
         frei = [('datei_schreiben', {'pfad': 'docs/neu.md', 'inhalt': 'a\n'}), ('datei_schreiben', {'pfad': 'runtime/tests/test_x.py', 'inhalt': 'a\n'}),
-                ('datei_aendern', {'pfad': 'runtime/src/guppi_runtime/harness/api.py', 'alt': 'a = 1', 'neu': 'a = 2'})]
+                ('datei_aendern', {'pfad': 'runtime/src/sedra_runtime/harness/api.py', 'alt': 'a = 1', 'neu': 'a = 2'})]
         for name, args in frei:
             r = kiste.aufruf(name, args)
             self.assertEqual(r['status'], 'ok', (name, args, r))
             self.assertTrue(r['stufe'] in ('sitzung', 'frei'), r)
-        self.assertEqual((wurzel / 'runtime/src/guppi_runtime/harness/api.py').read_text(encoding='utf-8'), 'a = 2\n')
-        karte = [('datei_aendern', {'pfad': 'runtime/src/guppi_runtime/harness/freigabe.py', 'alt': 'f = 1', 'neu': 'f = 2'}),        # fester Vorbehalt: Freigabe-Code
-                 ('datei_aendern', {'pfad': 'runtime/src/guppi_runtime/core/guard.py', 'alt': 'g = 1', 'neu': 'g = 2'}),               # fester Vorbehalt: Kern
+        self.assertEqual((wurzel / 'runtime/src/sedra_runtime/harness/api.py').read_text(encoding='utf-8'), 'a = 2\n')
+        karte = [('datei_aendern', {'pfad': 'runtime/src/sedra_runtime/harness/freigabe.py', 'alt': 'f = 1', 'neu': 'f = 2'}),        # fester Vorbehalt: Freigabe-Code
+                 ('datei_aendern', {'pfad': 'runtime/src/sedra_runtime/core/guard.py', 'alt': 'g = 1', 'neu': 'g = 2'}),               # fester Vorbehalt: Kern
                  ('datei_schreiben', {'pfad': 'runtime/config/harness_vorlagen/neu.md', 'inhalt': 'x\n'}),                             # fester Vorbehalt: Vorlagen
                  ('datei_aendern', {'pfad': 'runtime/config/llama_server.yaml', 'alt': 'x: 1', 'neu': 'x: 2'}),                         # keine Erlaubnis für runtime/config
                  ('befehl', {'befehl': 'git push origin main'}), ('befehl', {'befehl': 'git commit -m x'})]
@@ -215,8 +214,8 @@ class AnlegenTests(unittest.TestCase):
             r = kiste.aufruf(name, args)
             self.assertIn(r['status'], ('wartet', 'verboten', 'fehler'), (name, args, r))
             self.assertNotEqual(r.get('stufe'), 'sitzung', (name, args))
-        self.assertEqual((wurzel / 'runtime/src/guppi_runtime/harness/freigabe.py').read_text(encoding='utf-8'), 'f = 1\n')
-        self.assertEqual((wurzel / 'runtime/src/guppi_runtime/core/guard.py').read_text(encoding='utf-8'), 'g = 1\n')
+        self.assertEqual((wurzel / 'runtime/src/sedra_runtime/harness/freigabe.py').read_text(encoding='utf-8'), 'f = 1\n')
+        self.assertEqual((wurzel / 'runtime/src/sedra_runtime/core/guard.py').read_text(encoding='utf-8'), 'g = 1\n')
 
 
 if __name__ == '__main__':

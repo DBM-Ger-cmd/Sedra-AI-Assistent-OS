@@ -9,14 +9,14 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.harness import code_stand as cs_mod
-from guppi_runtime.harness import vorbehalte
-from guppi_runtime.harness.code_stand import CodeStand, ist_code, nur_pruefen
-from guppi_runtime.harness.freigabe import Karten, Kiste, beantworten, einstufung
-from guppi_runtime.harness.werkzeuge import Werkzeuge
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.harness import code_stand as cs_mod
+from sedra_runtime.harness import vorbehalte
+from sedra_runtime.harness.code_stand import CodeStand, ist_code, nur_pruefen
+from sedra_runtime.harness.freigabe import Karten, Kiste, beantworten, einstufung
+from sedra_runtime.harness.werkzeuge import Werkzeuge
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 MISSION = 'M-CODESTAND'
 
 
@@ -188,7 +188,7 @@ class Vorbehalt(unittest.TestCase):
         self.assertEqual(e['wirkt_als'], 'captain')
 
     def test_code_stand_ist_selbst_harness_code_unter_vorbehalt(self):
-        grund = vorbehalte.pruefen('datei_aendern', 'runtime/src/guppi_runtime/harness/code_stand.py', {})
+        grund = vorbehalte.pruefen('datei_aendern', 'runtime/src/sedra_runtime/harness/code_stand.py', {})
         self.assertIn('Code-Stand', grund)
 
     def test_portable_laufzeit_ist_vorbehalt(self):
@@ -290,7 +290,7 @@ class Weg(Projekt):
 
 
 class Konsole(Projekt):
-    """G4-16: `guppi code-stand <projekt> [--uebernehmen]` – außerhalb des Browsers, mit Eintrag im Audit."""
+    """G4-16: `sedra code-stand <projekt> [--uebernehmen]` – außerhalb des Browsers, mit Eintrag im Audit."""
 
     def setUp(self):
         super().setUp()
@@ -302,7 +302,7 @@ class Konsole(Projekt):
 
     def cli(self, *argv):
         import contextlib, io
-        from guppi_runtime import cli
+        from sedra_runtime import cli
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
             code = cli.main(['--root', str(self.wurzel_root), 'code-stand', *argv])
@@ -324,7 +324,7 @@ class Konsole(Projekt):
 
     def test_falscher_root_wird_abgelehnt(self):
         import contextlib, io
-        from guppi_runtime import cli
+        from sedra_runtime import cli
         leer = Path(self.tmp.name) / 'kein_projektordner'
         leer.mkdir()
         out = io.StringIO()
@@ -335,17 +335,17 @@ class Konsole(Projekt):
         self.assertFalse((leer / 'runtime_data').exists(), 'kein zweiter Stand angelegt')
 
     def test_schlanker_einstieg_wie_code_stand_bat(self):
-        """CODE_STAND.bat ruft `python -m guppi_runtime.harness.code_stand --root … <projekt>` – ohne cli.py und ohne die ganze Runtime (Stick)."""
+        """CODE_STAND.bat ruft `python -m sedra_runtime.harness.code_stand --root … <projekt>` – ohne cli.py und ohne die ganze Runtime (Stick)."""
         import subprocess, sys
         self.cs.stand()
         self.schreiben('tools/neu.py', 'x = 1\n')
         env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1] / 'src'))
         for zusatz in ([], ['--zeigen']):                                  # die Karte nennt „CODE_STAND.bat <projekt> --zeigen“
-            r = subprocess.run([sys.executable, '-m', 'guppi_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p', *zusatz],
+            r = subprocess.run([sys.executable, '-m', 'sedra_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p', *zusatz],
                                capture_output=True, text=True, encoding='utf-8', env=env, timeout=60)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn('tools/neu.py – neu', r.stdout)
-        r = subprocess.run([sys.executable, '-m', 'guppi_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p', '--uebernehmen'],
+        r = subprocess.run([sys.executable, '-m', 'sedra_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p', '--uebernehmen'],
                            capture_output=True, text=True, encoding='utf-8', env=env, timeout=60)
         self.assertEqual((r.returncode, json.loads(r.stdout)['anzahl']), (0, 1), r.stderr)
         self.assertEqual(self.cs.ungesehen(), [])
@@ -356,8 +356,8 @@ class Konsole(Projekt):
         self.cs.stand()
         (self.root / 'tools' / 'skript.py').unlink()
         env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1] / 'src'), PYTHONIOENCODING='cp1252')
-        for aufruf in (['-m', 'guppi_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p'],
-                       ['-m', 'guppi_runtime', '--root', str(self.wurzel_root), 'code-stand', 'p']):
+        for aufruf in (['-m', 'sedra_runtime.harness.code_stand', '--root', str(self.wurzel_root), 'p'],
+                       ['-m', 'sedra_runtime', '--root', str(self.wurzel_root), 'code-stand', 'p']):
             r = subprocess.run([sys.executable, *aufruf], capture_output=True, env=env, timeout=120)
             self.assertEqual(r.returncode, 0, r.stderr.decode('utf-8', 'replace'))
             self.assertIn('■ tools/skript.py – gelöscht', r.stdout.decode('utf-8'))
@@ -373,8 +373,8 @@ class Route(Projekt):
 
     def api(self, schalter=None):
         from types import SimpleNamespace
-        from guppi_runtime.harness.api import HarnessApi
-        from guppi_runtime.local_switches import LocalSwitches
+        from sedra_runtime.harness.api import HarnessApi
+        from sedra_runtime.local_switches import LocalSwitches
         self.wurzel_root = Path(self.tmp.name)
         hub = SimpleNamespace(project_root=self.wurzel_root, runtime=SimpleNamespace(switches=LocalSwitches(schalter or {}), audit=mock.Mock()))
         a = HarnessApi.__new__(HarnessApi)

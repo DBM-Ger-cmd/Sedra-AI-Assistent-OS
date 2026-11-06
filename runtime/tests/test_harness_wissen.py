@@ -8,12 +8,12 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.harness import api as harness_api
-from guppi_runtime.harness import katalog
-from guppi_runtime.harness.freigabe import Karten, Kiste
-from guppi_runtime.harness.werkzeuge import NAMEN, SCHEMAS, Werkzeuge
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.harness import api as harness_api
+from sedra_runtime.harness import katalog
+from sedra_runtime.harness.freigabe import Karten, Kiste
+from sedra_runtime.harness.werkzeuge import NAMEN, SCHEMAS, Werkzeuge
+from sedra_runtime.uix_server import UIXHub
 from test_wissen_desk import ARCH, Basis, switch_on
 
 
@@ -183,7 +183,7 @@ class GatewayInOneSedra(unittest.TestCase):
         switch_on(project)
         hub = UIXHub(project, ARCH)
         self.addCleanup(hub.close)
-        from guppi_runtime.chat_tools import ChatTools
+        from sedra_runtime.chat_tools import ChatTools
         kiste = Kiste(Werkzeuge({'id': 'p', 'name': 'P', 'wurzel': str(project), 'schreibbereich': []}, guard=hub.runtime.guard, mission_id='M-G',
                                 regeln=katalog.laden(Path('gibt-es-nicht'))['regeln']),
                       regeln=[], guard=hub.runtime.guard, audit=None, karten=Karten(Path(tmp.name) / 'k'), sitzung_id='S-1', chat=ChatTools(hub, harness_api.LESEN))

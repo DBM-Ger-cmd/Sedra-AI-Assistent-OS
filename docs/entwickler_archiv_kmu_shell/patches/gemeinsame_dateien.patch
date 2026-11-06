@@ -20,10 +20,10 @@ index bece35b..c411a4f 100644
  }
  
  
-diff --git a/runtime/src/guppi_runtime/uix/ui/tokens.css b/runtime/src/guppi_runtime/uix/ui/tokens.css
+diff --git a/runtime/src/sedra_runtime/uix/ui/tokens.css b/runtime/src/sedra_runtime/uix/ui/tokens.css
 index 6283506..007c793 100644
---- a/runtime/src/guppi_runtime/uix/ui/tokens.css
-+++ b/runtime/src/guppi_runtime/uix/ui/tokens.css
+--- a/runtime/src/sedra_runtime/uix/ui/tokens.css
++++ b/runtime/src/sedra_runtime/uix/ui/tokens.css
 @@ -160,3 +160,19 @@ button:focus-visible,[role="button"]:focus-visible,.s-row:focus-visible,input:fo
  .s-empty{color:var(--muted);padding:10px 0}
  
@@ -52,8 +52,8 @@ index 97bf594..c228211 100644
                  self.assertIsNone(choose_start_shell(hub, None))
                  with self.assertRaises(ValueError) as ctx:
                      choose_start_shell(hub, 'gibt-es-nicht')
--                self.assertIn('Vorhanden: cockpit, gateway-studio, guppi-xp, minimal, paperclip, start', str(ctx.exception))
-+                self.assertIn('Vorhanden: cockpit, gateway-kmu, gateway-studio, guppi-xp, minimal, paperclip, start', str(ctx.exception))
+-                self.assertIn('Vorhanden: cockpit, gateway-studio, sedra-xp, minimal, paperclip, start', str(ctx.exception))
++                self.assertIn('Vorhanden: cockpit, gateway-kmu, gateway-studio, sedra-xp, minimal, paperclip, start', str(ctx.exception))
                  self.assertEqual(hub.gateway.manifest()['shell']['id'], 'minimal', 'ein Fehler ändert nichts')
              finally:
                  hub.close()
@@ -61,8 +61,8 @@ index 97bf594..c228211 100644
                  errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
                  page.goto(url); wait_until_started(page); page.wait_for_timeout(1200)
                  names = page.evaluate("()=>[...document.querySelectorAll('.st-card h2')].map(h=>h.textContent)")
--                self.assertEqual(sorted(names), ['Cockpit', 'GUPPI XP', 'KI GateWay Studio', 'Minimal', 'Paperclip'], 'die Auswahl selbst steht nicht zur Wahl; der alte Desktop schon')
-+                self.assertEqual(sorted(names), ['Cockpit', 'GUPPI XP', 'KI GateWay Studio', 'KI Gateway für KMU', 'Minimal', 'Paperclip'], 'die Auswahl selbst steht nicht zur Wahl; der alte Desktop schon')
+-                self.assertEqual(sorted(names), ['Cockpit', 'SEDRA XP', 'KI GateWay Studio', 'Minimal', 'Paperclip'], 'die Auswahl selbst steht nicht zur Wahl; der alte Desktop schon')
++                self.assertEqual(sorted(names), ['Cockpit', 'SEDRA XP', 'KI GateWay Studio', 'KI Gateway für KMU', 'Minimal', 'Paperclip'], 'die Auswahl selbst steht nicht zur Wahl; der alte Desktop schon')
                  page.fill('.st-make-row input[aria-label="Name der neuen Oberfläche"]', 'meine-bruecke')
                  page.click('.st-make-row button:has-text("Anlegen")'); page.wait_for_timeout(1200)
                  names = page.evaluate("()=>[...document.querySelectorAll('.st-card h2')].map(h=>h.textContent)")

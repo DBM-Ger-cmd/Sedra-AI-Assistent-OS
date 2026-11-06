@@ -13,12 +13,12 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.uix_server import UIXHub, make_server
+from sedra_runtime.uix_server import UIXHub, make_server
 from test_uix_harness_api import ARCH, MODELL
 from test_uix_harness_freigabe import Skript
 from test_harness_lauf import SKRIPT
 from test_uix_harness_lauf import typen
-from guppi_runtime.harness import lauf
+from sedra_runtime.harness import lauf
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'benchmarks'))
 

@@ -2,8 +2,8 @@
 
 > **Wichtig (nach Sichtung von `herdr-master`):** Das Handoff nennt das Projekt „Herder" und schreibt ihm Job-Queue, Heartbeat/Lease und Cooldown zu. Der Quellcode zeigt einen Terminal-Multiplexer ohne diese Funktionen. Siehe §5.0.
 
-Stand: 2026-10-01 · Basis: GUPPI v1.20 (Self-Development Foundation)
-Methode: statische Code-Durchsicht der Module unter `runtime/src/guppi_runtime/`. **Es wurde nichts ausgeführt, nichts geändert und kein Test gelaufen.** Aussagen über Verhalten sind aus dem Quelltext abgeleitet.
+Stand: 2026-10-01 · Basis: SEDRA v1.20 (Self-Development Foundation)
+Methode: statische Code-Durchsicht der Module unter `runtime/src/sedra_runtime/`. **Es wurde nichts ausgeführt, nichts geändert und kein Test gelaufen.** Aussagen über Verhalten sind aus dem Quelltext abgeleitet.
 
 Gelesen: `self_development.py`, `development_contracts.py`, `development_evidence.py`, `context_budget.py`, `kev.py`, `audit.py`, `guard.py`, `step_journal.py`, `artifacts.py`, `knowledge.py`, `registry.py`, `message_bus.py`, `evolution.py`, `runtime.py`, `feasibility.py`, `hardware_pass.py`, `modules/control.py`, `models/router.py`, `models/runtime_control.py`, `config/self_development.yaml`, Signaturen von `hardware_manager/manager.py` und `uix_server.py`, Guard-Aktionsliste.
 Nicht im Detail gelesen: `capability_router.py`, `sandbox/*`, `candidate_*`, `tuning.py`, `benchmark.py`, `brain.py` (nur Ausschnitte). Das ist bei den Verweisen unten vermerkt.
@@ -51,7 +51,7 @@ Legende: ✅ vorhanden und nutzbar · 🟡 teilweise / nicht verdrahtet · ❌ f
 | Provider Health HEALTHY/DEGRADED/COOLDOWN/UNAVAILABLE | ❌ | `adapter.health()` ist ein bool und wird bei jedem `choose()` neu abgefragt. Kein Gedächtnis, kein Cooldown. |
 | Fallback | 🟡 | Impliziter Fallback in `choose()`, wenn **kein** Provider angegeben ist (nächster gesunder). Das ist **nicht policy-gesteuert**. Cloud-Fallback existiert nicht. Handoff-Regel „Fallback darf Policies nie umgehen" ist für Cloud heute durch Abwesenheit erfüllt, nicht durch Prüfung. |
 | Deklarative Capability-/Agent-Rezepte | 🟡 | Registry lädt Module/Services/Skills/Tools aus YAML (inkl. `capabilities`-Listen). Es fehlen `roles`, `requirements`, `permissions.max_level`, `context`, `tests`, `rollback`, `metadata.trust_level` im Schema. Das Feld `capabilities` ist eine einfache Stringliste. |
-| Herkunftsstufen BUILT_IN/KNOWN_GOOD/CAPTAIN_CUSTOM/GUPPI_GENERATED/EXTERNAL_UNVERIFIED | 🟡 | Teilweise: Learning Store kennt `GUPPI_GENERATED` → `KNOWN_GOOD` nur per Captain. Modellprofile haben eigenen Known-Good-Store. Es gibt keine einheitliche `trust_level`-Quelle. |
+| Herkunftsstufen BUILT_IN/KNOWN_GOOD/CAPTAIN_CUSTOM/SEDRA_GENERATED/EXTERNAL_UNVERIFIED | 🟡 | Teilweise: Learning Store kennt `SEDRA_GENERATED` → `KNOWN_GOOD` nur per Captain. Modellprofile haben eigenen Known-Good-Store. Es gibt keine einheitliche `trust_level`-Quelle. |
 
 ### 2.3 Hardware-aware Scheduling
 
@@ -164,11 +164,11 @@ Das Projekt liegt unter `…\herdr-master\herdr-master` und heißt **herdr** (ni
 | Concurrency-/Hardware-Regeln | Keine. Anzahl der Panes ist nicht ressourcengesteuert. |
 | Berechtigungsmodi | `permission` bezieht sich auf Dateirechte und Plattformrechte. Genehmigungen des Agents erkennt herdr nur (Zustand `blocked`), es entscheidet nicht. |
 
-Die Handoff-Zusammenfassung (§20) beruht offenbar auf einer Diskussion, nicht auf dem Code. **Das Ergebnis dieses Abschnitts ersetzt die Annahmen im Handoff:** Die in §2 gelisteten Muster müssen GUPPI-nativ entworfen werden. Herdr liefert dafür kaum Vorlage, mit den folgenden Ausnahmen.
+Die Handoff-Zusammenfassung (§20) beruht offenbar auf einer Diskussion, nicht auf dem Code. **Das Ergebnis dieses Abschnitts ersetzt die Annahmen im Handoff:** Die in §2 gelisteten Muster müssen SEDRA-nativ entworfen werden. Herdr liefert dafür kaum Vorlage, mit den folgenden Ausnahmen.
 
 **Übertragbare Ideen aus herdr (aus Quellcode und Doku belegt):**
 
-| Idee | Beleg | Nutzen für GUPPI |
+| Idee | Beleg | Nutzen für SEDRA |
 |---|---|---|
 | Fünf Zustände `working / blocked / idle / done / unknown`; **`unknown` beweist keine Fertigstellung** | `SKILL.md`, `agent-automation.mdx` | Passt zum Job-Zustand `INCONCLUSIVE` und zu `UNKNOWN_EXECUTION_OUTCOME` im `step_journal`. Bestätigt die Regel, dass unbekannt nie als Erfolg zählt. |
 | `blocked` = Freigabe-/Rückfrage-UI erkannt; `agent prompt` an einen blockierten Agent wird **abgelehnt, ohne Eingabe zu senden** (`agent_blocked`) | `agent-automation.mdx` | Vorbild für den Zustand WAITING_APPROVAL: ein Supervisor darf einen wartenden Job nicht durch neue Eingabe „weiterschieben". |
@@ -188,20 +188,20 @@ Die Handoff-Zusammenfassung (§20) beruht offenbar auf einer Diskussion, nicht a
 | Kriterium | Bewertung |
 |---|---|
 | Lizenz | Apache-2.0. Weitergabe/Einbindung erlaubt, mit Lizenztext und Hinweis. Kompatibel. |
-| Sprache/Technik | **Rust** (+ Zig für Ghostty). GUPPI ist Python und soll portabel ohne zusätzliche Installation laufen (Auftrag v1.19). Eine Einbindung würde einen Rust-Build oder eine Binärdatei erzwingen. |
+| Sprache/Technik | **Rust** (+ Zig für Ghostty). SEDRA ist Python und soll portabel ohne zusätzliche Installation laufen (Auftrag v1.19). Eine Einbindung würde einen Rust-Build oder eine Binärdatei erzwingen. |
 | Reife | Version 0.9.3, Windows nur „beta" (`windows-beta.mdx`), schneller Release-Takt (CHANGELOG 142 KB). |
 | Kopplung | Hoch: Schnittstelle ist ein eigener Server/Socket und Terminalbild-Erkennung von Agent-UIs. Das widerspricht dem Prinzip, dass der Control Master Runtimes direkt anbindet. |
-| Fit | Gering: herdr löst „mehrere interaktive CLI-Agents sichtbar halten". GUPPI braucht Job-Zustand, Lease, Retry, Budget. Das Problem ist ein anderes. |
+| Fit | Gering: herdr löst „mehrere interaktive CLI-Agents sichtbar halten". SEDRA braucht Job-Zustand, Lease, Retry, Budget. Das Problem ist ein anderes. |
 | Sicherheit | Zusatz-Prozess mit Socket-API und Schreibzugriff auf Terminals fremder Agents. Müsste in Guard/Policy eingebunden werden. Eine echte Sicherheitsprüfung wurde **nicht** durchgeführt. |
 | Wartung | Upstream-Updates mit Kompatibilitätsbrüchen vor 1.0 zu erwarten. |
 
-**Empfehlung:** Herdr **nicht** einbinden. Nur die Ideen oben übernehmen. Einziger sinnvoller späterer Einsatz wäre ein **optionaler externer Visualisierer** für CLI-Agents (z. B. falls GUPPI später CLI-Agents wie Claude Code/Codex als Worker startet). Dann als Provider-Typ hinter dem Control Master mit eigener Guard-Aktion und eigener Prüfung, nicht als Kern.
+**Empfehlung:** Herdr **nicht** einbinden. Nur die Ideen oben übernehmen. Einziger sinnvoller späterer Einsatz wäre ein **optionaler externer Visualisierer** für CLI-Agents (z. B. falls SEDRA später CLI-Agents wie Claude Code/Codex als Worker startet). Dann als Provider-Typ hinter dem Control Master mit eigener Guard-Aktion und eigener Prüfung, nicht als Kern.
 
 ### 5.1 Bewertung der Muster aus dem Handoff
 
 Die Zeilen bewerten die Muster als **Ideen**. Dort, wo Herdr keine Vorlage liefert, ist das vermerkt.
 
-| Muster | Urteil | Begründung / GUPPI-nativ |
+| Muster | Urteil | Begründung / SEDRA-nativ |
 |---|---|---|
 | Persistente Job Queue | **übernehmen** | Dateibasiert, wie der bestehende Job-Store. Keine DB-Abhängigkeit. |
 | Heartbeat/Lease/Stuck | **übernehmen** | Felder vorhanden, Reaper fehlt. |
@@ -213,7 +213,7 @@ Die Zeilen bewerten die Muster als **Ideen**. Dort, wo Herdr keine Vorlage liefe
 | Deklarative Agentenprofile | **übernehmen** | Erweiterung des Registry-Schemas, optionale Felder. |
 | Strukturierte Logs, Token-/Kostenmetriken | **übernehmen** | `ContextMetric`, getrennt vom hash-verketteten Audit (Heartbeats nicht ins Audit). |
 | Context-Grenzen, Tool-Output sparsam | **übernehmen** | Context Manager. |
-| Herder als Orchestrator über GUPPI | **nicht** | Handoff §2. |
+| Herder als Orchestrator über SEDRA | **nicht** | Handoff §2. |
 | Cloud-/CLI-Agent-Anbindung | **zurückstellen** | Es gibt keinen Adapter, `CLOUD_NOT_IMPLEMENTED`. Erst entwerfen, wenn Routing und Policies stehen. |
 | Fremdcode-Einbindung von herdr | **nicht empfohlen** | Siehe 5.0: Rust statt Python, Version 0.9.3, Windows nur Beta, hohe Kopplung, anderes Problem. Lizenz (Apache-2.0) wäre unkritisch. Eine Sicherheitsprüfung wurde nicht durchgeführt, ist aber nur nötig, falls die Einbindung doch gewünscht wird. |
 | Quelle der Muster | **Hinweis** | Die Muster „Queue, Lease, Heartbeat, Cooldown, Token-Metriken" stammen **nicht** aus herdr (5.0). Sie sind eigene Entwürfe nach gängiger Praxis. Wo möglich, sind sie hier gegen die Bestandsmechanik (`step_journal`, Guard, Audit) abgesichert statt gegen ein Vorbild. |

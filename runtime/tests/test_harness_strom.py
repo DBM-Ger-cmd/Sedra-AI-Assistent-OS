@@ -4,7 +4,7 @@ import threading
 import time
 import unittest
 
-from guppi_runtime.harness.strom import Stroeme, ZuVieleAntworten, schreiben
+from sedra_runtime.harness.strom import Stroeme, ZuVieleAntworten, schreiben
 
 
 class Uhr:

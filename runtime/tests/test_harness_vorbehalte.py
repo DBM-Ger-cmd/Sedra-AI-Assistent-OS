@@ -1,24 +1,24 @@
 """U3 der Harness-Shell Stufe 2: feste Captain-Vorbehalte (HS-28)."""
 import unittest
 
-from guppi_runtime.harness import vorbehalte
+from sedra_runtime.harness import vorbehalte
 
 
 class VorbehalteTests(unittest.TestCase):
     def test_geschuetzte_pfade(self):
-        for pfad in ('local_config/switches.yaml', 'workspace/GUPPI_OS/local_config/x.yaml', 'runtime/config/freigabe_katalog.beispiel.yaml',
-                     'runtime/src/guppi_runtime/core/guard.py', 'runtime/src/guppi_runtime/harness/freigabe.py',
-                     'runtime/src/guppi_runtime/harness/vorbehalte.py', 'runtime/src/guppi_runtime/harness/befehl.py',
-                     'runtime/src/guppi_runtime/devenv/model_tools.py', 'runtime/benchmarks/devvm_build.py',
-                     'architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT/core/guard/guard_rules.yaml', '.git/config',
-                     'RUNTIME\\SRC\\guppi_runtime\\Core\\x.py', '../anderes/datei.txt',
-                     'runtime/src/guppi_runtime/harness/erlaubnis.py', 'runtime/src/guppi_runtime/harness/katalog.py',          # Captain 05.11.2026 (U5, U7)
-                     'runtime/src/guppi_runtime/harness/bausteine.py', 'runtime/config/freigabe_bausteine.yaml', 'docs/AAR/LESSONS.md'):
+        for pfad in ('local_config/switches.yaml', 'workspace/SEDRA_OS/local_config/x.yaml', 'runtime/config/freigabe_katalog.beispiel.yaml',
+                     'runtime/src/sedra_runtime/core/guard.py', 'runtime/src/sedra_runtime/harness/freigabe.py',
+                     'runtime/src/sedra_runtime/harness/vorbehalte.py', 'runtime/src/sedra_runtime/harness/befehl.py',
+                     'runtime/src/sedra_runtime/devenv/model_tools.py', 'runtime/benchmarks/devvm_build.py',
+                     'architecture/SEDRA_Architecture_v1.20_SELF_DEVELOPMENT/core/guard/guard_rules.yaml', '.git/config',
+                     'RUNTIME\\SRC\\sedra_runtime\\Core\\x.py', '../anderes/datei.txt',
+                     'runtime/src/sedra_runtime/harness/erlaubnis.py', 'runtime/src/sedra_runtime/harness/katalog.py',          # Captain 05.11.2026 (U5, U7)
+                     'runtime/src/sedra_runtime/harness/bausteine.py', 'runtime/config/freigabe_bausteine.yaml', 'docs/AAR/LESSONS.md'):
             for w in ('datei_schreiben', 'datei_aendern'):
                 self.assertIsNotNone(vorbehalte.pruefen(w, pfad, {'inhalt': 'x'}), (w, pfad))
 
     def test_freie_pfade_haben_keinen_vorbehalt(self):
-        for pfad in ('docs/LOGBUCH_AGENT_MANAGER.md', 'runtime/src/guppi_runtime/harness/schleife.py', 'runtime/tests/test_x.py'):
+        for pfad in ('docs/LOGBUCH_AGENT_MANAGER.md', 'runtime/src/sedra_runtime/harness/schleife.py', 'runtime/tests/test_x.py'):
             self.assertIsNone(vorbehalte.pruefen('datei_aendern', pfad, {'alt': 'a', 'neu': 'b'}), pfad)
 
     def test_lesen_hat_keinen_vorbehalt(self):

@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from guppi_runtime import cli, uix_server
-from guppi_runtime.desk.events import Poller
+from sedra_runtime import cli, uix_server
+from sedra_runtime.desk.events import Poller
 
 
 class CliRuntimeLifecycle(unittest.TestCase):
@@ -107,7 +107,7 @@ class DesktopEarlyInitAndPoller(unittest.TestCase):
     def test_failed_hub_boot_closes_runtime(self):
         rt = Mock()
         rt.boot.side_effect = RuntimeError('boot failed')
-        with patch.object(uix_server, 'GuppiRuntime', return_value=rt):
+        with patch.object(uix_server, 'SedraRuntime', return_value=rt):
             with self.assertRaisesRegex(RuntimeError, 'boot failed'):
                 uix_server.UIXHub(Path('/fake'), Path('/fake-arch'))
         rt.close.assert_called_once_with()

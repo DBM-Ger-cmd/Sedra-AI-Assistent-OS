@@ -11,12 +11,12 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.desk import gateway
-from guppi_runtime.models import structured
+from sedra_runtime.desk import gateway
+from sedra_runtime.models import structured
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-UIX = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.17_RUNTIME_SYNC'
+UIX = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.17_RUNTIME_SYNC'
 NODE = shutil.which('node')
 VORGABE = {'id': 'bruecke', 'name': 'Brücke', 'raster': ['leiste', 'orte|werkstueck', 'gespraech'],
            'orte': {'breite': 220}, 'werkstueck': {'nachweise': 'seitenleiste'}, 'gespraech': {'art': 'zone', 'hoehe': 112},
@@ -96,7 +96,7 @@ class DerVermittler(unittest.TestCase):
         self.assertEqual(errors, ['vorgabe_missing'])
 
     def test_the_manifest_serves_the_frame_from_ui(self):
-        from guppi_runtime.desk.registry import Registry
+        from sedra_runtime.desk.registry import Registry
         project = Path(self.tmp.name) / 'project'
         (project / 'local_config' / 'shells').mkdir(parents=True)
         folder(project / 'local_config' / 'shells')
@@ -112,7 +112,7 @@ class DerVermittler(unittest.TestCase):
 
 class DasGeruest(unittest.TestCase):
     def setUp(self):
-        from guppi_runtime.uix_server import UIXHub
+        from sedra_runtime.uix_server import UIXHub
         self.tmp = tempfile.TemporaryDirectory(prefix='desk-frame-'); self.addCleanup(self.tmp.cleanup)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH); self.addCleanup(self.hub.close)
 

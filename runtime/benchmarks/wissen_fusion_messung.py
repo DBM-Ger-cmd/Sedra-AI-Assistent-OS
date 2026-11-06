@@ -1,6 +1,6 @@
 """Messung S7.2-F (Spec 7, D7.5; G2-S7-c, -d): Fusion und Zerlegen auf der CPU, offline über die Listen beider Suchen.
 
-    python3 benchmarks/wissen_fusion_messung.py --server-url http://127.0.0.1:8094 [--projekt <guppi>/workspace/GUPPI_OS]
+    python3 benchmarks/wissen_fusion_messung.py --server-url http://127.0.0.1:8094 [--projekt <sedra>/workspace/SEDRA_OS]
                                                 [--goldsatz benchmarks/wissen_goldsatz.json] [--zerleger z2|z1|beide] [--json Pfad] [--listen]
     python3 benchmarks/wissen_fusion_messung.py --fake          # Selbstprüfung ohne Modell (Fake-Server mit Dimension 8)
 
@@ -31,10 +31,10 @@ RUNTIME = BENCH.parent
 sys.path.insert(0, str(RUNTIME / "src"))
 sys.path.insert(0, str(BENCH))
 
-from guppi_runtime.wissen import embed, fusion, glossar, schema, vektor, zerlegen  # noqa: E402
-from guppi_runtime.wissen import konfig as konfig_mod  # noqa: E402
-from guppi_runtime.wissen import speicher as speicher_mod  # noqa: E402
-from guppi_runtime.wissen.adapter import ERSTBESTUECKUNG  # noqa: E402
+from sedra_runtime.wissen import embed, fusion, glossar, schema, vektor, zerlegen  # noqa: E402
+from sedra_runtime.wissen import konfig as konfig_mod  # noqa: E402
+from sedra_runtime.wissen import speicher as speicher_mod  # noqa: E402
+from sedra_runtime.wissen.adapter import ERSTBESTUECKUNG  # noqa: E402
 import wissen_baseline  # noqa: E402
 
 START = {"k": 60, "w_vektor": 1.0, "w_wort": 0.75, "guete": True, "spitzenschutz": False}
@@ -191,7 +191,7 @@ def auswahl(ergebnisse, fragen, arten, start_name=None):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--repo", default=str(RUNTIME.parent))
-    ap.add_argument("--projekt", help="<guppi>/workspace/GUPPI_OS: dann kommen knowledge, arbeitsumfeld und gateway als Quellen dazu")
+    ap.add_argument("--projekt", help="<sedra>/workspace/SEDRA_OS: dann kommen knowledge, arbeitsumfeld und gateway als Quellen dazu")
     ap.add_argument("--goldsatz", default=str(BENCH / "wissen_goldsatz.json"))
     ap.add_argument("--server-url", default="http://127.0.0.1:8094", help="laufender llama-server --embeddings (CPU)")
     ap.add_argument("--dim", type=int, default=1024)

@@ -14,9 +14,9 @@ from urllib.parse import urlsplit
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.uix_server import UIXHub, make_server
+from sedra_runtime.uix_server import UIXHub, make_server
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 MODELL = [{'identifier': 'coder', 'modelKey': 'coder.gguf', 'contextLength': 32768}]
 
 
@@ -24,7 +24,7 @@ def anfrage(url, method, path, body=None, headers=None, timeout=30):
     parts = urlsplit(url)
     c = http.client.HTTPConnection(parts.hostname, parts.port, timeout=timeout)
     try:
-        h = {'X-GUPPI-Token': parts.fragment, **(headers or {})}
+        h = {'X-SEDRA-Token': parts.fragment, **(headers or {})}
         data = None
         if body is not None:
             data = json.dumps(body); h['Content-Type'] = 'application/json'
@@ -43,7 +43,7 @@ def strom(url, aid, last=None):
     """Liest den SSE-Strom einer Antwort bis `ende`; [(id, event, data)]."""
     parts = urlsplit(url)
     c = http.client.HTTPConnection(parts.hostname, parts.port, timeout=20)
-    h = {'X-GUPPI-Token': parts.fragment}
+    h = {'X-SEDRA-Token': parts.fragment}
     if last is not None: h['Last-Event-ID'] = str(last)
     c.request('GET', f'/api/harness/antworten/{aid}/strom', headers=h)
     res = c.getresponse()

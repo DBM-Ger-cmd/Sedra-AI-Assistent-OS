@@ -1,6 +1,6 @@
 """Harness-Shell Stufe 2, U2: die Einstufung des Freigabe-Katalogs – der erste SEDRA-Bau (SPEC_HARNESS_SHELL_v1 HS-E5, G3 Stufe 2 U2, D-E6).
 Claude schrieb diese Datei, die versteckten Prüfungen (HIDDEN, höchstens 20, L3) und die Referenz (benchmarks/devvm_refs/harness_katalog).
-SEDRA baut `katalog_einstufen.py` nach der Aufgabe unten; besteht der Bau, ersetzt er `einstufen` in runtime/src/guppi_runtime/harness/katalog.py
+SEDRA baut `katalog_einstufen.py` nach der Aufgabe unten; besteht der Bau, ersetzt er `einstufen` in runtime/src/sedra_runtime/harness/katalog.py
 (Übernahme durch den Captain). Scheitert er, gilt V4: die Referenz bleibt, die Quote steht im Logbuch.
 Bau nur nach Ja des Captains (es lädt ein Modell): spec_check.py harness_katalog --vm, dann devvm_build.py <projekt> --spec harness_katalog --profile standard."""
 

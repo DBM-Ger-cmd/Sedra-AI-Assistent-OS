@@ -28,16 +28,16 @@ Seite brauchen einen Logbucheintrag mit Begründung.
    darüber; kein zweites Dauerfeld.
 2. **Entscheidungen haben einen Ort**: der Entscheidungsblock an der Werkbank. Instrument zählt, Gespräch verweist; eine Antwort im
    Gespräch („einmal ja“) gilt und erzeugt dasselbe Audit.
-3. **Werkzeugleiste = Handlungen des Objekts im aktuellen Zustand**, nie Navigation, nie Entscheidungen, nie „mit GUPPI besprechen“.
-   Aufgabe: *Anhalten* (läuft) · *Erneut testen*, *Rückgängig* (fertig). Datei: *Speichern*, *An GUPPI geben*. Modell: *Laden/Entladen*, *Testen*.
+3. **Werkzeugleiste = Handlungen des Objekts im aktuellen Zustand**, nie Navigation, nie Entscheidungen, nie „mit SEDRA besprechen“.
+   Aufgabe: *Anhalten* (läuft) · *Erneut testen*, *Rückgängig* (fertig). Datei: *Speichern*, *An SEDRA geben*. Modell: *Laden/Entladen*, *Testen*.
 4. **Reiter tragen Namen, Zeilen tragen Zustand.** Dateien öffnen aus dem Baum als eigener Reiter. Kein Sammelreiter „Dateien“/„Logbuch“.
 5. **Nachweise rechts, immer in dieser Reihenfolge**: Live (was gerade gebaut wird, gestreamt) · Verlauf (Seekarte klein, Spur
    aufklappbar: Zeit · Ereignis · Hash) · Tests (Tabelle, fehlgeschlagene aufgeklappt) · Kosten (Münzloch live, Token, GPU-Zeit, Modell).
 6. **Aufgaben statt Karten**: Satz, Fortschrittszeile, Ergebnis. Keine Missions-IDs und Phasen im Cockpit (nur im Logbuch).
 7. **Modus und vier Grenzen je Projekt** (Projekt · Netz · Löschen · Kosten; frei · fragt · zu). Überschreitung → Entscheidung an der Grenze:
    *Einmal öffnen · Grenze ändern … · Ablehnen*. Lesen immer frei; Konfiguration immer Gate.
-8. **＋ Neu**: Vorhaben · Projekt · Datei öffnen · Modell hinzufügen. Ein Vorhaben ist Gesprächsgegenstand; GUPPI macht Aufgaben daraus.
-9. **Vorschläge statt Dauerknöpfe**: „Als Skill festhalten“, „Lektion speichern“, „Routine anlegen“ kommen von GUPPI im Gespräch, mit Gate.
+8. **＋ Neu**: Vorhaben · Projekt · Datei öffnen · Modell hinzufügen. Ein Vorhaben ist Gesprächsgegenstand; SEDRA macht Aufgaben daraus.
+9. **Vorschläge statt Dauerknöpfe**: „Als Skill festhalten“, „Lektion speichern“, „Routine anlegen“ kommen von SEDRA im Gespräch, mit Gate.
 10. **Haut, nicht Struktur**: Tokens wie heute (`desktop.css` :root), Erscheinungsbilder Klar/Nacht; Retro nur im Archiv. Guppy klein im ersten Instrument.
 11. **Modul-Schnitt**: Shell (Leiste, Baum, Dock, Gespräch, Palette, Ereignisbus) + Werkzeuge mit `tool.yaml` (`UIX_2_RICHTUNG_C.md` §3).
     Auch Instrumente, Nachweise und das Gespräch sind Werkzeuge.
@@ -46,7 +46,7 @@ Seite brauchen einen Logbucheintrag mit Begründung.
 
 Der Captain ist unsicher, ob *Sandbox · Projekt: fragt · Netz: zu · Löschen: zu · Kosten: 100k* der richtige Standard ist. Festlegung:
 
-- **Kein fester Standard im Code.** Beim ersten Öffnen eines Projekts schlägt GUPPI Modus und Grenzen **aus dem Projekt** vor
+- **Kein fester Standard im Code.** Beim ersten Öffnen eines Projekts schlägt SEDRA Modus und Grenzen **aus dem Projekt** vor
   (leerer Ordner → Sandbox; bestehendes Repo mit fremdem Code → Beobachten; eigenes Werkzeugprojekt → Vertraut) und begründet es in
   einem Satz; der Captain bestätigt oder stellt um (ein Gate). Nichts läuft, bevor das einmal passiert ist.
 - **Die Kostengrenze wird gemessen, nicht geraten:** zwei Wochen Guppy-Meter auf dem PC (Token je Aufgabe, 90-%-Quantil), dann steht die
@@ -78,7 +78,7 @@ Folge für den Bauplan: Build 7 baut zuerst `sedra-ui` (Vertrag) und die Cockpit
 dass er trägt. Bis dahin:
 
 ```
-runtime/src/guppi_runtime/uix/
+runtime/src/sedra_runtime/uix/
   ui/        ← sedra-ui: Vertrag (tool.yaml-Schema, api.js, bus.js, tokens.css, lifecycle)
   shells/cockpit/   ← Cockpit-Shell (Leiste, Baum, Dock, Gespräch, Palette)
   shells/minimal/   ← später: Minimal-Shell
@@ -111,7 +111,7 @@ dass der Werkzeug-Vertrag trägt (Posteingang = Werkzeug „Entscheidungen“, K
 Minimale Bedienung, aber das Gefühl, dass sich alles *auf dem Desktop* abspielt: Menüleiste oben (SEDRA · Ablage · Aufgabe · Werkzeuge ·
 Fenster · Hilfe; rechts Modell, GPU, Modus, Entscheidungen, ⌘K, Uhr), **jedes Werkzeug ein eigenes Fenster** (Ampelknöpfe, Segment-
 Reiter statt Dock-Reiter: Kandidat · Live · Tests · Verlauf · Kosten), **Entscheidungen als Mitteilung** oben rechts (dieselben drei Wege),
-GUPPI als Nachrichten-Fenster mit Sprechblasen, ein **Dock** unten mit den Werkzeugen (Punkt = offen), ⌘K als Spotlight-Palette.
+SEDRA als Nachrichten-Fenster mit Sprechblasen, ein **Dock** unten mit den Werkzeugen (Punkt = offen), ⌘K als Spotlight-Palette.
 Keine Baumspalte: Projekt ist ein Fenster. Kein Apple-Markenzeichen, nur die Formensprache (Glas, Ampel, Dock, Mitteilung).
 
 Vertrag-Beweis: dieselben Werkzeuge wie im Cockpit, nur anders angeordnet – die Shell liefert Fenster statt Dock-Container, die

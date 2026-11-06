@@ -9,17 +9,17 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from guppi_runtime.hardware_manager.collector import NativeCollector, metric
-from guppi_runtime.hardware_manager.manager import HardwareManager, digest
-from guppi_runtime.hardware_manager.power import SCHEMES
-from guppi_runtime.hardware_manager.dashboard import make_server
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.tools.hardware_manager import HardwareManagerTool
-from guppi_runtime.tools.base import ToolValidationError
-from guppi_runtime.core.util import atomic_write_json, utcnow
+from sedra_runtime.hardware_manager.collector import NativeCollector, metric
+from sedra_runtime.hardware_manager.manager import HardwareManager, digest
+from sedra_runtime.hardware_manager.power import SCHEMES
+from sedra_runtime.hardware_manager.dashboard import make_server
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.tools.hardware_manager import HardwareManagerTool
+from sedra_runtime.tools.base import ToolValidationError
+from sedra_runtime.core.util import atomic_write_json, utcnow
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('GUPPI_Architecture_v*'))[-1]
+ARCH = sorted((Path(__file__).resolve().parents[2] / 'architecture').glob('SEDRA_Architecture_v*'))[-1]
 
 
 class FakeCollector:
@@ -52,7 +52,7 @@ class FakePower:
 class HardwareCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.root = Path(self.tmp.name)
-        self.rt = GuppiRuntime(self.root, ARCH)
+        self.rt = SedraRuntime(self.root, ARCH)
         self.collector = FakeCollector(); self.power = FakePower()
         self.manager = HardwareManager(self.root/'hardware', self.rt.audit, self.collector, self.power)
         self.tool = HardwareManagerTool(self.root/'tool', self.manager, self.rt.guard, self.rt.audit)
@@ -199,7 +199,7 @@ class HardwareCase(unittest.TestCase):
         self.assertEqual(profile['cpu_threads'],8)
 
     def test_model_router_admission_blocks_before_provider_chat(self):
-        from guppi_runtime.models.router import ModelRouter
+        from sedra_runtime.models.router import ModelRouter
         from unittest.mock import Mock
         router=ModelRouter(); router.hardware_manager=self.manager
         adapter=Mock(); adapter.id='test'; adapter.health.return_value=True; router.register(adapter)
@@ -208,7 +208,7 @@ class HardwareCase(unittest.TestCase):
         adapter.chat.assert_not_called()
 
     def test_recording_bounded_persistent_and_history_copy(self):
-        with patch('guppi_runtime.hardware_manager.manager.time.sleep'):
+        with patch('sedra_runtime.hardware_manager.manager.time.sleep'):
             run=self.manager.record_run(3,1)
         data=json.loads(Path(run['path']).read_text())
         self.assertEqual(data['status'],'completed'); self.assertEqual(len(data['samples']),3)
@@ -247,8 +247,8 @@ class HardwareCase(unittest.TestCase):
         self.assertEqual(metric(0,'x','fixture')['state'],'valid')
         from types import SimpleNamespace
         output='GPU-a, One, 1.0, 55, 20, 8192, 4096, 30, 99\nGPU-b, Two, 1.0, [N/A], 0, 8192, 0, [N/A], [N/A]\n'
-        with patch('guppi_runtime.hardware_manager.collector.shutil.which',return_value='nvidia-smi'), \
-             patch('guppi_runtime.hardware_manager.collector.subprocess.run',return_value=SimpleNamespace(returncode=0,stdout=output)):
+        with patch('sedra_runtime.hardware_manager.collector.shutil.which',return_value='nvidia-smi'), \
+             patch('sedra_runtime.hardware_manager.collector.subprocess.run',return_value=SimpleNamespace(returncode=0,stdout=output)):
             gpus,reason=NativeCollector(self.root)._gpu()
         self.assertIsNone(reason);self.assertEqual(len(gpus),2)
         self.assertEqual(gpus[0]['vram_available']['value'],4)
@@ -266,7 +266,7 @@ class HardwareCase(unittest.TestCase):
             {'Text': 'Kaputt', 'Type': 'Temperature', 'SensorId': '/x', 'Value': 'n/a'}]}]}]}]}
 
     def test_lhm_web_sensors_liest_die_blaetter_mit_komma_und_ohne_last(self):
-        from guppi_runtime.hardware_manager.collector import lhm_web_sensors
+        from sedra_runtime.hardware_manager.collector import lhm_web_sensors
         rows = lhm_web_sensors(self.LHM_BAUM)
         self.assertEqual([(r['name'], r['type'], r['reading']['value'], r['reading']['unit']) for r in rows],
                          [('GPU Core', 'Temperature', 35.0, '°C'), ('GPU Package', 'Power', 16.0, 'W'), ('GPU Fan 1', 'Fan', 0.0, 'RPM'),
@@ -284,7 +284,7 @@ class HardwareCase(unittest.TestCase):
             def __enter__(self): return self
             def __exit__(self, *a): return False
         roh = json.dumps(self.LHM_BAUM).encode('utf-8')
-        base = 'guppi_runtime.hardware_manager.collector.'
+        base = 'sedra_runtime.hardware_manager.collector.'
         with patch(base + 'os.name', 'nt'), patch(base + 'urllib.request.urlopen', return_value=Antwort(b'\xef\xbb\xbf' + roh)) as web, \
              patch(base + 'powershell') as ps:
             rows, reason = collector._sensors()
@@ -311,12 +311,12 @@ class HardwareCase(unittest.TestCase):
             self.assertLessEqual(datetime.fromisoformat(m['timestamp']),end)
 
     def test_windows_power_command_is_fixed_and_read_back(self):
-        from guppi_runtime.hardware_manager.power import WindowsPowerAdapter
+        from sedra_runtime.hardware_manager.power import WindowsPowerAdapter
         from types import SimpleNamespace as NS
         guid=SCHEMES['balanced']
-        with patch('guppi_runtime.hardware_manager.power.os.name','nt'), \
-             patch('guppi_runtime.hardware_manager.power.windows_exe',return_value='C:/Windows/System32/powercfg.exe'), \
-             patch('guppi_runtime.hardware_manager.power.subprocess.run',side_effect=[
+        with patch('sedra_runtime.hardware_manager.power.os.name','nt'), \
+             patch('sedra_runtime.hardware_manager.power.windows_exe',return_value='C:/Windows/System32/powercfg.exe'), \
+             patch('sedra_runtime.hardware_manager.power.subprocess.run',side_effect=[
                  NS(returncode=0,stdout='Power Scheme GUID: '+guid),NS(returncode=0,stdout=''),
                  NS(returncode=0,stdout='Power Scheme GUID: '+guid)]) as runner:
             WindowsPowerAdapter().set_guid(guid)
@@ -324,8 +324,8 @@ class HardwareCase(unittest.TestCase):
             self.assertTrue(all(x.kwargs['shell'] is False for x in runner.call_args_list))
 
     def test_windows_power_rejects_command_injection_without_subprocess(self):
-        from guppi_runtime.hardware_manager.power import WindowsPowerAdapter
-        with patch('guppi_runtime.hardware_manager.power.subprocess.run') as runner:
+        from sedra_runtime.hardware_manager.power import WindowsPowerAdapter
+        with patch('sedra_runtime.hardware_manager.power.subprocess.run') as runner:
             with self.assertRaises(ValueError): WindowsPowerAdapter().set_guid('balanced & command')
             runner.assert_not_called()
 
@@ -348,13 +348,13 @@ class DashboardCase(unittest.TestCase):
             try:
                 html=urlopen(base).read().decode()
                 self.assertIn('Maschinenraum',html)
-                req=Request(base+'api/state',headers={'X-GUPPI-Token':token})
+                req=Request(base+'api/state',headers={'X-SEDRA-Token':token})
                 self.assertIn('history',json.loads(urlopen(req).read()))
-                for headers in [{}, {'X-GUPPI-Token':'wrong'}, {'X-GUPPI-Token':token,'Host':'evil.example'},
-                                {'X-GUPPI-Token':token,'Origin':'http://evil.example'}]:
+                for headers in [{}, {'X-SEDRA-Token':'wrong'}, {'X-SEDRA-Token':token,'Host':'evil.example'},
+                                {'X-SEDRA-Token':token,'Origin':'http://evil.example'}]:
                     with self.assertRaises(HTTPError) as err: urlopen(Request(base+'api/state',headers=headers))
                     self.assertEqual(err.exception.code,403)
-                with self.assertRaises(HTTPError) as err: urlopen(Request(base+'api/state',data=b'{}',headers={'X-GUPPI-Token':token}))
+                with self.assertRaises(HTTPError) as err: urlopen(Request(base+'api/state',data=b'{}',headers={'X-SEDRA-Token':token}))
                 self.assertEqual(err.exception.code,501)
                 self.assertEqual(manager.power.calls,[])
             finally: server.shutdown();server.server_close();worker.join()
@@ -365,7 +365,7 @@ if __name__ == '__main__': unittest.main()
 
 class FreshSampleTest(unittest.TestCase):
     def test_fresh_reaches_collectors_that_accept_it_and_skips_the_slow_cache(self):
-        from guppi_runtime.hardware_manager.collector import NativeCollector
+        from sedra_runtime.hardware_manager.collector import NativeCollector
         calls = []
         class Plain:
             def sample(self): calls.append('plain'); return {'memory': {}, 'gpus': [], 'sensors': []}

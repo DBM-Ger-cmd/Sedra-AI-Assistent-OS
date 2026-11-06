@@ -30,12 +30,12 @@ Eine neue Hauptshell oder ein eigenes App-Framework wären Doppelungen. Neue App
 
 | Element | Beleg | Regel |
 |---|---|---|
-| Ordner | `runtime/src/guppi_runtime/uix/tools/<id>/` (Paket, `CORE`) oder `local_config/tools/<id>/` (installiert) | Vertrag §2; `desk/registry.py:17` (`UIX_DIR`), `:19` (`MODULE_ID` `^[a-z0-9-]{2,40}$`) |
+| Ordner | `runtime/src/sedra_runtime/uix/tools/<id>/` (Paket, `CORE`) oder `local_config/tools/<id>/` (installiert) | Vertrag §2; `desk/registry.py:17` (`UIX_DIR`), `:19` (`MODULE_ID` `^[a-z0-9-]{2,40}$`) |
 | Manifest-Schlüssel | `desk/gateway.py:65` `TOOL_KEYS` | `id, name, version, handles, kind, entry, api, events, trust, tests, needs, description, order, slot, instanzen, gedaechtnis, zweck, gruppe` |
 | Schema (für Menschen/Editoren) | `uix/ui/schema/tool.schema.json` | entscheidend ist `gateway.py` (Docstring Z. 1 ff.) |
 | Objekttypen (`handles`) | `desk/gateway.py:23–30` `OBJECT_TYPES` | Paket-Werkzeuge dürfen **nur** diese Typen nennen (`:164`, „im Paket gibt es keine Privatsprache“). Installierte dürfen eigene mitbringen. |
 | Start-Menü-Gruppe | `desk/gateway.py:46` `GRUPPEN` | `arbeit, modelle, wissen, system, pruefung` |
-| Vertrauensrang | `desk/gateway.py:52` `TRUST` | `CORE, CAPTAIN, GUPPI_BUILT, COMMUNITY`; `COMMUNITY` bekommt nur `GET` (Vertrag §6) |
+| Vertrauensrang | `desk/gateway.py:52` `TRUST` | `CORE, CAPTAIN, SEDRA_BUILT, COMMUNITY`; `COMMUNITY` bekommt nur `GET` (Vertrag §6) |
 | Routen ohne Manifest-Eintrag | `desk/gateway.py:50–51` | Arbeitsstand; Ablage nur mit `gedaechtnis: ablage` |
 | API-Allowlist | Vertrag §6 | Kopf `X-SEDRA-Tool`, sonst 403 `tool_route_not_allowed` und Audit `UIX_TOOL_DENIED` |
 | Lebenszyklus JS | `uix/tools/_template/tool.js` | nur `mount(el, ctx)` / `unmount()`; `ctx = {object, api, bus, tokens, shell, manifest}`; kein eigenes `fetch`, kein `localStorage`, kein `EventSource`; CSS nur unter `.t-<id>`; ≤ 400 Zeilen je Datei |
@@ -59,7 +59,7 @@ Eine neue Hauptshell oder ein eigenes App-Framework wären Doppelungen. Neue App
 | Aufruf beim Start | `uix_server.py:159`, `:162` | `load` → `freeze`, danach kein neuer Typ über Anfragen |
 | Verb | `desk/actions.py:16` `Verb(verb, label, run, needs_gate, when, confirm)` | ein Weg aus Gespräch, Werkzeug, Palette, CLI und MCP |
 | Verb mit Freigabe | `desk/gated.py:58` `request`, `:85` `apply`, `:132` `decide`, `:35` `register_applier` | Antrag legt eine Mission mit Gate an, Bindung am Gate, Anwenden nur mit Einmal-Token |
-| Externe Clients | Vertrag, Nachtrag Spec 0 R5 | `guppi objects/act`, `desk_mcp.py`; nur `POST /api/objects` und `/api/actions` |
+| Externe Clients | Vertrag, Nachtrag Spec 0 R5 | `sedra objects/act`, `desk_mcp.py`; nur `POST /api/objects` und `/api/actions` |
 | Referenz-Erweiterung | `workflows/desk.py:134` | Vorbild für eine App mit Kind, Typ-Verben und gated Verb (siehe MOD-02) |
 
 ### 2.4 Freigabeklassen (gesperrte Datei, nur gelesen)
@@ -136,11 +136,11 @@ Damit ist belegt, dass `9328f07` genau diese zwei Lücken schließt. Das ist ein
 ## 7. Delta `20ef720..2b13daa` im Inventarbereich (geprüft)
 
 ```bash
-git diff --stat 20ef720 2b13daa -- runtime/src/guppi_runtime/desk runtime/src/guppi_runtime/harness/api.py \
-    runtime/src/guppi_runtime/harness/antraege.py runtime/src/guppi_runtime/workflows \
-    runtime/src/guppi_runtime/uix/shells/harness runtime/src/guppi_runtime/uix/tools/workflow \
-    runtime/src/guppi_runtime/uix/tools/scenario runtime/src/guppi_runtime/uix/ui runtime/src/guppi_runtime/uix_server.py \
-    runtime/src/guppi_runtime/modules/control.py runtime/src/guppi_runtime/feasibility.py runtime/src/guppi_runtime/core
+git diff --stat 20ef720 2b13daa -- runtime/src/sedra_runtime/desk runtime/src/sedra_runtime/harness/api.py \
+    runtime/src/sedra_runtime/harness/antraege.py runtime/src/sedra_runtime/workflows \
+    runtime/src/sedra_runtime/uix/shells/harness runtime/src/sedra_runtime/uix/tools/workflow \
+    runtime/src/sedra_runtime/uix/tools/scenario runtime/src/sedra_runtime/uix/ui runtime/src/sedra_runtime/uix_server.py \
+    runtime/src/sedra_runtime/modules/control.py runtime/src/sedra_runtime/feasibility.py runtime/src/sedra_runtime/core
 ```
 
 Ergebnis: nur `desk/freigabeklasse.py` (+3/−2, `9328f07`) und `desk/orchestra_runner.py` (+16/−2, `2b13daa`, F0-05, Coder-1-Zone, nicht Teil dieses Inventars). Alle anderen Belege in §2, §3 und MOD-02 sind auf beiden Ständen gleich.

@@ -1,7 +1,7 @@
 import json, tempfile, unittest
 from pathlib import Path
-from guppi_runtime.cli import main
-from guppi_runtime.devenv.lesson_store import default_path, lesson_for, manage
+from sedra_runtime.cli import main
+from sedra_runtime.devenv.lesson_store import default_path, lesson_for, manage
 
 TEXT = "Wrap library errors in your own error class before they leave the module."
 

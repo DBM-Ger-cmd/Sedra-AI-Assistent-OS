@@ -5,12 +5,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime.core.guard import Guard
-from guppi_runtime.harness import katalog
-from guppi_runtime.harness.freigabe import Karten, Kiste
-from guppi_runtime.harness.werkzeuge import NAMEN, SCHEMAS, Werkzeuge, WerkzeugFehler
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.harness import katalog
+from sedra_runtime.harness.freigabe import Karten, Kiste
+from sedra_runtime.harness.werkzeuge import NAMEN, SCHEMAS, Werkzeuge, WerkzeugFehler
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 MISSION = 'M-OEFFNEN'
 
 
@@ -37,8 +37,8 @@ class AppOeffnen(unittest.TestCase):
         return {'projekt': {'wurzel': nutz['wurzel'], 'name': nutz.get('name') or 'Baut', 'schreibbereich': nutz.get('schreibbereich') or ['docs/**']}}
 
     def verknuepfung(self, ort, name):
-        from guppi_runtime.harness import verknuepfungen
-        from guppi_runtime.harness.werkzeuge import ORTE
+        from sedra_runtime.harness import verknuepfungen
+        from sedra_runtime.harness.werkzeuge import ORTE
         try:
             return verknuepfungen.hinzufuegen(self.root, ort, name, ORTE)
         except verknuepfungen.VerknuepfungFehler as exc:
@@ -83,7 +83,7 @@ class AppOeffnen(unittest.TestCase):
         self.assertIn('Ordner', SCHEMAS['datei_schreiben']['function']['description'])
 
     def test_verknuepfung_anlegen_legt_den_knopf_an_und_sagt_der_shell_bescheid(self):
-        from guppi_runtime.harness import verknuepfungen
+        from sedra_runtime.harness import verknuepfungen
         r = self.kiste.aufruf('app_oeffnen', {'ort': 'aufnahme', 'verknuepfung': True, 'name': 'Rekorder schnell'})
         self.assertEqual((r['status'], r['stufe'], r['regel'], r['wirkung']), ('ok', 'frei', 'app-oeffnen', False))
         self.assertEqual(r['ui'], {'oeffnen': 'aufnahme', 'titel': 'Rekorder', 'verknuepfungen': True})                 # Fenster öffnen UND Knopf anlegen
@@ -93,7 +93,7 @@ class AppOeffnen(unittest.TestCase):
         self.assertIn('mit dem Kreuz', r['ergebnis'])
 
     def test_verknuepfung_grenzen(self):
-        from guppi_runtime.harness import verknuepfungen
+        from sedra_runtime.harness import verknuepfungen
         self.assertEqual(self.kiste.aufruf('app_oeffnen', {'ort': 'gibtsnicht', 'verknuepfung': True})['status'], 'fehler')
         self.assertEqual(self.kiste.aufruf('app_oeffnen', {'ort': 'logbook', 'verknuepfung': True})['status'], 'ok')
         zweite = self.kiste.aufruf('app_oeffnen', {'ort': 'logbook', 'verknuepfung': True})                 # ein Ort nur einmal
@@ -111,7 +111,7 @@ class AppOeffnen(unittest.TestCase):
             verknuepfungen.entfernen(self.root, '../x')
 
     def test_hoechstens_zwoelf_verknuepfungen(self):
-        from guppi_runtime.harness import verknuepfungen
+        from sedra_runtime.harness import verknuepfungen
         orte = {f'o{i}': (f'Ort {i}', '') for i in range(verknuepfungen.MAX + 1)}
         for i in range(verknuepfungen.MAX):
             verknuepfungen.hinzufuegen(self.root, f'o{i}', None, orte)
@@ -126,11 +126,11 @@ class AppOeffnen(unittest.TestCase):
             r = kiste.aufruf(name, args)
             self.assertEqual((r['status'], r['wirkung']), ('verboten', False), name)
         self.assertEqual(self.antraege, [])                                              # nichts davon lief
-        from guppi_runtime.harness import verknuepfungen
+        from sedra_runtime.harness import verknuepfungen
         self.assertEqual(verknuepfungen.laden(self.root), [])
 
     def test_die_verknuepfung_nennt_im_audit_wer_sie_angelegt_hat(self):
-        from guppi_runtime.harness.api import HarnessApi
+        from sedra_runtime.harness.api import HarnessApi
         fake = type('H', (), {'project_root': self.root, 'events': None})()
         api = HarnessApi.__new__(HarnessApi)
         api.hub = fake

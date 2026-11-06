@@ -7,20 +7,20 @@ import threading
 import unittest
 from pathlib import Path
 
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.runtime import GuppiRuntime
-from guppi_runtime.selfdev.self_development import DevelopmentJobStore
-from guppi_runtime.core.util import append_lock
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.runtime import SedraRuntime
+from sedra_runtime.selfdev.self_development import DevelopmentJobStore
+from sedra_runtime.core.util import append_lock
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 SRC = str(Path(__file__).resolve().parents[1] / 'src')
 
 PROC = """
 import sys
 sys.path.insert(0, sys.argv[1])
 from pathlib import Path
-from guppi_runtime.selfdev.self_development import DevelopmentJobStore
+from sedra_runtime.selfdev.self_development import DevelopmentJobStore
 store = DevelopmentJobStore(Path(sys.argv[2]))
 for _ in range(int(sys.argv[4])):
     with store.mutate(sys.argv[3]) as job:
@@ -31,7 +31,7 @@ for _ in range(int(sys.argv[4])):
 class JobStoreCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
-        self.rt = GuppiRuntime(Path(self.tmp.name) / 'project', ARCH)
+        self.rt = SedraRuntime(Path(self.tmp.name) / 'project', ARCH)
         self.sd = self.rt.self_development
         out = self.sd.start('job_store_lock_probe', evidence=[{'source': 'test'}], target_type='skill')
         self.job_id = out['job']['job_id']

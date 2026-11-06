@@ -23,7 +23,7 @@ Werkbank (B) als Grundform, Instrumentenstreifen (A) oben, Gespräch (A) unten:
 
 Heute: ein Gate pro Aktion (Guard, Einmal-Token). Neu: **ein Plan pro Projektstart**, die Gates bleiben darunter.
 
-1. Beim Anlegen oder ersten Öffnen eines Projekts in der Sandbox schlägt GUPPI einen **Berechtigungsplan** vor (aus Machbarkeit und
+1. Beim Anlegen oder ersten Öffnen eines Projekts in der Sandbox schlägt SEDRA einen **Berechtigungsplan** vor (aus Machbarkeit und
    Aufgabe): Lesen Workspace · Schreiben Sandbox · Tests ausführen · Übernahme kleiner Änderungen (≤ n Dateien, keine Löschung) ·
    Netz aus · keine Konfigurationsänderung. Der Captain sieht ihn als eine Liste mit Schaltern und erteilt ihn **einmal** (ein Gate,
    Ziel `project:<id>:permissions`, inhaltsgebunden).
@@ -43,7 +43,7 @@ Der Captain: das Instrument „Berechtigungen“ nochmal neu denken – was brau
 Rechte, sondern **einen Modus und vier Grenzen**. Das deckt dieselben Fälle, ist aber auf einen Blick lesbar und braucht keine
 Planversionen im Kopf.
 
-- **Modus je Projekt** (ein Wort): *Beobachten* (GUPPI schlägt nur vor), **Sandbox** (Standard: arbeitet frei in der
+- **Modus je Projekt** (ein Wort): *Beobachten* (SEDRA schlägt nur vor), **Sandbox** (Standard: arbeitet frei in der
   Entwicklungsumgebung, fragt an der Grenze), *Vertraut* (schreibt auch kleine Änderungen ins Projekt). Der Modus ist eine Voreinstellung
   der Grenzen; Wechsel = ein Gate.
 - **Vier Grenzen**, jede *frei · fragt · zu*: **Projekt** (ins Projekt schreiben; Sandbox: fragt), **Netz** (Sandbox: zu), **Löschen**
@@ -56,9 +56,9 @@ Planversionen im Kopf.
   (Plan) wird dadurch ersetzt – die Gate-Mechanik bleibt identisch.
 
 **„＋ Neu“ in der Reiterleiste** (Captain: „ein + für neue Funktion, die man im Chat bespricht, sowie neue Projekte“): öffnet ein
-kleines Menü – *Neues Vorhaben* (eine Funktion/Idee; wird als Reiter „Entwurf: …“ geöffnet, das Gespräch bezieht sich darauf, GUPPI
+kleines Menü – *Neues Vorhaben* (eine Funktion/Idee; wird als Reiter „Entwurf: …“ geöffnet, das Gespräch bezieht sich darauf, SEDRA
 stellt Rückfragen und schlägt die Aufgaben vor), *Neues Projekt*, *Datei öffnen*, *Modell hinzufügen*. Daraus folgt eine Ebene im
-Baum: **Projekt → Vorhaben → Aufgaben** (plus *Routinen*). Ein Vorhaben ist das, worüber man spricht; Aufgaben sind das, was GUPPI
+Baum: **Projekt → Vorhaben → Aufgaben** (plus *Routinen*). Ein Vorhaben ist das, worüber man spricht; Aufgaben sind das, was SEDRA
 daraus macht. Die Missionen der Runtime hängen an Aufgaben, unverändert.
 
 ## 3. Oberfläche als Modul – Machbarkeit und Vorlagen
@@ -80,7 +80,7 @@ Theia/code-server (zu schwer, eigener Kern); Paperclip (zweites Steuerpult, sieh
 **Architektur „Oberfläche als Modul“:**
 
 ```
-runtime/src/guppi_runtime/uix/            ← sedra-shell (Kern-nah, klein)
+runtime/src/sedra_runtime/uix/            ← sedra-shell (Kern-nah, klein)
   shell.html, shell.js                    Pult, Baum, Dock (dockview-core), Gespräch, Kommando, Erscheinungsbild
   core.js                                 api(), Ereignisbus (sedra.on/emit: object.open, task.changed, decision.pending), Tokens
   tools/<id>/tool.yaml + tool.js + tool.css   ← ein Werkzeug je Objekttyp, im Paket (später: eigene Repos)
@@ -88,12 +88,12 @@ local_config/tools/<id>/                  ← vom Captain installierte Werkzeuge
 ```
 
 - `tool.yaml`: `id`, `name`, `handles` (file · task · candidate · model · skill · agent · instrument), `entry`, `api` (Routen-Allowlist),
-  `trust` (CORE · CAPTAIN · GUPPI_BUILT · COMMUNITY), `version`, `tests` (Browserabnahme).
+  `trust` (CORE · CAPTAIN · SEDRA_BUILT · COMMUNITY), `version`, `tests` (Browserabnahme).
 - Die Shell lädt Werkzeuge nach Manifest, registriert ihre Panels beim Dock und ihre Befehle beim Kommando; ein Objekt im Baum fragt
   „wer `handles` das?“ und bekommt die Reiter. Layout und offene Reiter werden je Browser gespeichert (dockview `toJSON`).
 - Server: `/tools/<id>/…` nur aus registrierten Werkzeugordnern; CSP bleibt `self`; ein Werkzeug darf nur Routen seiner Allowlist
   rufen (Server prüft den Werkzeug-Header). Flag-Prüfung wie bei Skills; `COMMUNITY` nie ohne Durchsicht.
-- GUPPI baut Werkzeuge auf seinem Spec-Weg; `uix_check.py` wird zur Werkzeug-Abnahme (ein Lauf je Werkzeug).
+- SEDRA baut Werkzeuge auf seinem Spec-Weg; `uix_check.py` wird zur Werkzeug-Abnahme (ein Lauf je Werkzeug).
 - Auch das Gespräch, die Instrumente und die Werkstatt sind Werkzeuge – nur der Rahmen (Shell) ist fest. So kann ein Werkzeug entfernt,
   ersetzt oder von Dritten beigesteuert werden, ohne den Kern zu berühren.
 
@@ -102,7 +102,7 @@ nie aus dem Netz geladen – der Captain-PC ist offline-fähig, die CSP erlaubt 
 
 ## 3a. Logikprüfung der Vorlage (Captain-Kommentare 18:12)
 
-Der Captain hat die Skizze kommentiert: die Knopfkette an der Werkbank neu denken („Mit GUPPI besprechen ist im Grunde der Chat“), nach
+Der Captain hat die Skizze kommentiert: die Knopfkette an der Werkbank neu denken („Mit SEDRA besprechen ist im Grunde der Chat“), nach
 solchen Logikfehlern suchen; die rechte Spalte (Verlauf · Tests · Kosten) ausbauen, die Münzloch-Ideen dort unterbringen; die Baum-
 Einteilung passt; eine Live-Ansicht dessen, was gerade gebaut wird (wie in VS Code); die Entscheidung „ungeplante Berechtigung“ passt.
 
@@ -110,12 +110,12 @@ Einteilung passt; eine Live-Ansicht dessen, was gerade gebaut wird (wie in VS Co
 
 | # | Fehler in der Skizze | Regel ab jetzt |
 | --- | --- | --- |
-| L1 | *Mit GUPPI besprechen* als Knopf – das Gespräch ist eine Handbreit darunter | Kein Knopf führt zum Chat. Stattdessen folgt das Gespräch dem gewählten Objekt (Kontextzeile „bezieht sich auf: Aufgabe CSV-Parser“); Anhänge per Ziehen. |
+| L1 | *Mit SEDRA besprechen* als Knopf – das Gespräch ist eine Handbreit darunter | Kein Knopf führt zum Chat. Stattdessen folgt das Gespräch dem gewählten Objekt (Kontextzeile „bezieht sich auf: Aufgabe CSV-Parser“); Anhänge per Ziehen. |
 | L2 | *Spur im Logbuch* als Knopf **und** Spalte *Verlauf* | Eine Spur: die Spalte. Das Logbuch ist der Nebenraum für alles, die Spur der Aufgabe steht an der Aufgabe. |
 | L3 | *Übernehmen/Verwerfen* in der Leiste **und** als Entscheidung – und im Skizzenfall ist die Übernahme vom Plan gedeckt, also gar keine Entscheidung | Entscheidungen haben genau einen Ort (den Entscheidungsblock). Die Werkzeugleiste trägt nur Objekt-Handlungen, die keine Entscheidungen sind, und nur die, die im aktuellen Zustand gelten (*Anhalten* solange es läuft; *Erneut testen*, *Rückgängig* danach). |
-| L4 | *Als Skill festhalten* als Dauerknopf | Ein Vorschlag, kein Knopf: nach einer gelungenen Aufgabe fragt GUPPI im Gespräch; der Captain sagt ja (Gate wie bei jedem eigenen Skill). |
+| L4 | *Als Skill festhalten* als Dauerknopf | Ein Vorschlag, kein Knopf: nach einer gelungenen Aufgabe fragt SEDRA im Gespräch; der Captain sagt ja (Gate wie bei jedem eigenen Skill). |
 | L5 | Zwei Eingabefelder: Kommando im Instrumentenstreifen **und** Gespräch unten | Ein Feld: das Gespräch. Es versteht Navigationsphrasen wie heute das Deck (`routeCommand`). Strg+K bleibt als Palette **über** dem Bildschirm, nicht als zweites Feld. Der Streifen wird dadurch schmaler. |
-| L6 | Dieselbe Entscheidung dreimal mit Knöpfen (Instrument, Werkbank, Chat-Frage „Einmal erlauben?“) | Instrument = Zähler (Navigation), Werkbank = die Entscheidung mit Knöpfen, Gespräch = GUPPIs Satz mit Verweis. Eine Antwort im Gespräch („einmal ja“) gilt – GUPPI ordnet sie der offenen Entscheidung zu und schreibt dasselbe Audit. |
+| L6 | Dieselbe Entscheidung dreimal mit Knöpfen (Instrument, Werkbank, Chat-Frage „Einmal erlauben?“) | Instrument = Zähler (Navigation), Werkbank = die Entscheidung mit Knöpfen, Gespräch = SEDRAs Satz mit Verweis. Eine Antwort im Gespräch („einmal ja“) gilt – SEDRA ordnet sie der offenen Entscheidung zu und schreibt dasselbe Audit. |
 | L7 | Titelzeile **und** Reiter tragen denselben Namen | Der Reiter trägt den Namen, die Zeile darunter nur den Zustand. |
 | L8 | Reiter *Dateien* neben dem Dateibaum links | Dateien öffnen aus dem Baum als eigener Reiter (`parser.py`); kein Sammelreiter. *Logbuch* ebenso: Nebenraum, kein Dauerreiter. |
 
@@ -127,8 +127,8 @@ Einteilung passt; eine Live-Ansicht dessen, was gerade gebaut wird (wie in VS Co
   nächster Aufruf wird hier bereits markiert („⟂ nicht im Plan“), bevor die Entscheidung entsteht.
 - **Verlauf**: Seekarte klein, darunter die Spur (Zeit · Ereignis · Hash) aufklappbar.
 - **Tests**: Tabelle, fehlgeschlagene aufgeklappt mit Ausgabe.
-- **Kosten mit Münzloch**: GUPPIs `coin_hole.js` zieht hier ein – Münzen fallen live mit den verbrauchten Token (Kupfer 100 · Silber 1.000 ·
-  Gold 10.000), daneben Token, GPU-Zeit, Modell. Das Meter-Fenster wird dadurch zum Reiter in der Besatzung (GUPPI-Anteil).
+- **Kosten mit Münzloch**: SEDRAs `coin_hole.js` zieht hier ein – Münzen fallen live mit den verbrauchten Token (Kupfer 100 · Silber 1.000 ·
+  Gold 10.000), daneben Token, GPU-Zeit, Modell. Das Meter-Fenster wird dadurch zum Reiter in der Besatzung (SEDRA-Anteil).
 
 Die Skizze `uix2_C.png` ist entsprechend geändert (ein Eingabefeld, zustandsabhängige Leiste, Live-Block, Münzloch in Kosten).
 
@@ -139,7 +139,7 @@ Die Skizze `uix2_C.png` ist entsprechend geändert (ein Eingabefeld, zustandsabh
 - **Build 8 – Werkbank:** Aufgabe (Fortschritt, Seekarte, Spur, Kosten mit Münzloch), **Live-Block** (SSE), Kandidat-Diff (diff2html), Tests, Dateien als Reiter mit Vorschau.
 - **Build 9 – Modus und Grenzen:** `boundaries.yaml`, Deckungsprüfung im Guard, Instrument mit vier Schaltern, Entscheidung an der Grenze
   „einmal öffnen · Grenze ändern · ablehnen“, Vorhaben-Ebene und „＋ Neu“, Routinen; Abnahme auf dem PC.
-- GUPPI parallel: Specs für die reinen Teile (Deckungsprüfung, Aufgaben-Zusammenfassung, Diff-Modell, Manifest-Prüfer).
+- SEDRA parallel: Specs für die reinen Teile (Deckungsprüfung, Aufgaben-Zusammenfassung, Diff-Modell, Manifest-Prüfer).
 
 ## 5. Noch offen
 

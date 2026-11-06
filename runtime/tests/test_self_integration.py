@@ -3,18 +3,18 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from guppi_runtime.selfdev import self_integration
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.selfdev import self_integration
+from sedra_runtime.runtime import SedraRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 QUALIFIED = {'job_id': 'SBX-x', 'report_sha256': 'f' * 64, 'test_counts': [13], 'preparation_sha256': 'e' * 64}
 
 
 class SelfIntegrationTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
-        self.rt = GuppiRuntime(Path(tmp.name) / 'project', ARCH)
+        self.rt = SedraRuntime(Path(tmp.name) / 'project', ARCH)
         self.capdir = Path(tmp.name) / 'capabilities'; self.capdir.mkdir()
         for p in (patch.object(self_integration, 'CAPABILITY_DIR', self.capdir.resolve()),
                   patch.object(self_integration, 'test_qualification', lambda rt, m: dict(QUALIFIED))):
@@ -29,7 +29,7 @@ class SelfIntegrationTests(unittest.TestCase):
         self.rt.missions.save(m)
         jid = self.sd.start(capability, evidence=[{'source': 'test'}])['job']['job_id']
         self.sd.prepare_development_environment(jid, {'execution_ready': True})
-        self.sd.bind_candidate(jid, attempt_id='a1', stage=f'guppi-candidates/{mid}', parent_version='1', candidate_hash='a' * 64,
+        self.sd.bind_candidate(jid, attempt_id='a1', stage=f'sedra-candidates/{mid}', parent_version='1', candidate_hash='a' * 64,
                                builder='coder', builder_key='gpt-oss:k1')
         cid = self.sd.jobs.load(jid)['candidate']['candidate_id']
         ev = self.rt.development_evidence.add('vm_unittest', job_id=jid, candidate_id=cid, trust_level='deterministic',

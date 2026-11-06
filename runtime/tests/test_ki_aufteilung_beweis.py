@@ -4,9 +4,9 @@ Die Prüfwerte (was verschwinden muss, was erhalten bleiben muss) stehen NUR hie
 Eingabetext, nie eine Erwartung. Die Erwartungen sind also dem Modell unbekannt – das ist der „versteckte“ Teil.
 
 Zwei Beine:
-- lokal (Pflicht, wenn der llama-server läuft): das Modell auf GUPPI_BEWEIS_LOKAL_URL (Standard 127.0.0.1:8089) bereinigt jeden Fall.
+- lokal (Pflicht, wenn der llama-server läuft): das Modell auf SEDRA_BEWEIS_LOKAL_URL (Standard 127.0.0.1:8089) bereinigt jeden Fall.
   Danach prüft ein fester Code (nicht das Modell) den Ausgabetext: keine Kennung aus dem Prüfwert darf übrig bleiben.
-- Cloud (nur mit GUPPI_BEWEIS_ANBIETER=<id> und eingeschaltetem Anbieter in config/cloud_providers.yaml): die Cloud-KI wertet
+- Cloud (nur mit SEDRA_BEWEIS_ANBIETER=<id> und eingeschaltetem Anbieter in config/cloud_providers.yaml): die Cloud-KI wertet
   NUR den bereinigten Text aus. Ohne Anbieter wird dieses Bein übersprungen – es geht nie personenbezogener Text hinaus.
 
 Ausführen (aus dem runtime-Ordner, mit PYTHONPATH=src;tests):
@@ -16,11 +16,11 @@ import os
 import re
 import unittest
 
-from guppi_runtime.models.llamacpp import LlamaCppServerAdapter
-from guppi_runtime.models.base import ModelAdapterError
+from sedra_runtime.models.llamacpp import LlamaCppServerAdapter
+from sedra_runtime.models.base import ModelAdapterError
 
-LOKAL_URL = os.environ.get('GUPPI_BEWEIS_LOKAL_URL', 'http://127.0.0.1:8089')
-CLOUD_ANBIETER = os.environ.get('GUPPI_BEWEIS_ANBIETER', '')
+LOKAL_URL = os.environ.get('SEDRA_BEWEIS_LOKAL_URL', 'http://127.0.0.1:8089')
+CLOUD_ANBIETER = os.environ.get('SEDRA_BEWEIS_ANBIETER', '')
 
 # Eingaben (synthetisch, keine echten Personen) und die verdeckten Prüfwerte
 FAELLE = [
@@ -91,7 +91,7 @@ class LokalerFilter(unittest.TestCase):
             self.assertEqual(weg, [], f'{name}: Fakt ging verloren')
 
 
-@unittest.skipUnless(CLOUD_ANBIETER, 'kein Cloud-Anbieter gesetzt (GUPPI_BEWEIS_ANBIETER): das Cloud-Bein läuft nicht')
+@unittest.skipUnless(CLOUD_ANBIETER, 'kein Cloud-Anbieter gesetzt (SEDRA_BEWEIS_ANBIETER): das Cloud-Bein läuft nicht')
 class CloudAuswertung(unittest.TestCase):
     """Nur wenn ein Anbieter ausdrücklich eingeschaltet und gesetzt ist. Die Cloud bekommt ausschließlich den bereinigten Text."""
 

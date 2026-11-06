@@ -8,9 +8,9 @@ from pathlib import Path
 
 import yaml
 
-from guppi_runtime.desk.gateway import SLOTS, check_shell
+from sedra_runtime.desk.gateway import SLOTS, check_shell
 
-ORDNER = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix' / 'shells' / 'harness'
+ORDNER = Path(__file__).resolve().parents[1] / 'src' / 'sedra_runtime' / 'uix' / 'shells' / 'harness'
 UI = ORDNER.parents[1] / 'ui'
 
 

@@ -1,7 +1,7 @@
 """Standardtest (models/standard_test.py): plan, stability, coder check and recommendation, with fake server and clock."""
 import unittest
 
-from guppi_runtime.models import standard_test as st
+from sedra_runtime.models import standard_test as st
 
 TIERS = [4096, 8192, 16384, 32768, 65536, 131072]
 

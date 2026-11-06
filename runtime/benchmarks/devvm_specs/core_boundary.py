@@ -1,12 +1,12 @@
-"""Core boundary (review 2026-10-11, finding 4, docs/REVIEW_2026-10-11.md): GUPPI's core (mission, brain, guard, audit, bus, registry, journal ...) must not import
+"""Core boundary (review 2026-10-11, finding 4, docs/REVIEW_2026-10-11.md): SEDRA's core (mission, brain, guard, audit, bus, registry, journal ...) must not import
 the DevVM, agent manager or coder-extension parts, neither directly nor through other modules. `core_boundary.py` reads the imports of Python sources with `ast` and lists
 the forbidden ones. Pure functions, nothing is imported or executed. It is the first piece of the package split (core/, jobs/, models/, devvm/): a test can then keep the
-boundary while GUPPI adds code to itself. GUPPI builds it (night chain 2026-10-11); Claude only wrote this file, the hidden tests and the reference
+boundary while SEDRA adds code to itself. SEDRA builds it (night chain 2026-10-11); Claude only wrote this file, the hidden tests and the reference
 (benchmarks/devvm_refs/core_boundary)."""
 
 NOTES = '''# Notes for core_boundary
 Pure Python 3 standard library (ast, collections), no file, process or network access, nothing is imported or executed, never modify the arguments, no comments and no docstrings, small private helpers instead of copied code.
-Module names are dotted names such as "guppi_runtime.core.brain". A name belongs to a group when it equals the group or starts with the group followed by "." ("guppi_runtime.devenv.devvm_tools" is NOT inside "guppi_runtime.devenv.devvm").
+Module names are dotted names such as "sedra_runtime.core.brain". A name belongs to a group when it equals the group or starts with the group followed by "." ("sedra_runtime.devenv.devvm_tools" is NOT inside "sedra_runtime.devenv.devvm").
 '''
 
 COMMON = r'''
@@ -56,7 +56,7 @@ C2 = r'''
 S = {
     "g.brain": "from .guard import Guard\nfrom .devvm import Vm\n",
     "g.guard": "import yaml\n",
-    "g.runtime": "from .agent_manager.cli import main\nfrom .brain import GuppiBrain\n",
+    "g.runtime": "from .agent_manager.cli import main\nfrom .brain import SedraBrain\n",
     "g.devvm": "import os\n",
     "g.devvm_tools": "import os\n",
     "g.agent_manager.cli": "from ..devvm import Vm\n",
@@ -118,7 +118,7 @@ assert T == copy
 STAGES = [
     {"name": "imports",
      "task": """Create `core_boundary.py` (Python 3 standard library only) with `imports_of(source, module) -> list[str]`: the dotted names a Python source imports. Nothing is imported or executed.
-- source: the text of one Python file. module: its dotted module name (for example "guppi_runtime.core.brain").
+- source: the text of one Python file. module: its dotted module name (for example "sedra_runtime.core.brain").
 - Parse with ast.parse; on SyntaxError raise ValueError("unparsable"). Look at EVERY import statement, also the ones inside functions (walk the whole tree).
 - `import a.b, c as d` gives "a.b" and "c" (the real name, not the alias). `from x.y import z` gives "x.y".
 - Relative imports: level n removes the last n parts of `module` to get the base; when n is greater than or equal to the number of parts of `module` raise ValueError("relative_import_beyond_top"). `from .x import z` gives base + ".x"; `from . import a, b` (no module after the dots) gives base + ".a" and base + ".b".

@@ -9,7 +9,7 @@ def sample():
 
 def process_sample():
     import json
-    from guppi_runtime.workflows.process import PREFIX
+    from sedra_runtime.workflows.process import PREFIX
     doc = sample()
     for index, node in enumerate(doc['nodes']):
         node['notes'] = PREFIX + json.dumps({'schema': 1, 'kind': 'start' if index == 0 else 'task',

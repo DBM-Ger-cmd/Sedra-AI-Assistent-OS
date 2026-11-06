@@ -1,4 +1,4 @@
-# Phase 8f: GUPPI starts and watches its own llama-server instead of going through LM Studio. Off by default.
+# Phase 8f: SEDRA starts and watches its own llama-server instead of going through LM Studio. Off by default.
 # The engine is the llama-server.exe that ships with LM Studio (extensions/backends/llama.cpp-*), pinned by version. Nothing is
 # downloaded or installed, and LM Studio's folders are only read. The model file, KV type and reasoning options of each model come
 # from its recipe (profile.server in role_routing.yaml); this file holds what is the same for every model.
@@ -19,7 +19,7 @@ llama_server:
   mtp: true
   # GPU canary (Captain 2026-10-11): before the first model load after a Windows start, and after every server crash, a small model runs the
   # sequence that used to crash with the factory overclock (3 x 16k + 30k prompt with a hidden code; about 25 s, own server on its own port).
-  # A failed canary blocks model loads with gpu_canary_failed (check the NVIDIA debug mode). Result: <GUPPI_Runtime>/runtime_data/gpu_canary.json.
+  # A failed canary blocks model loads with gpu_canary_failed (check the NVIDIA debug mode). Result: <SEDRA_Runtime>/runtime_data/gpu_canary.json.
   # Settings of the stable runs (lokale-modelle-test/qwen35-9b-q6): engine b11160, FA on, KV q8_0, ubatch 512, 1 slot.
   canary:
     enabled: true
@@ -29,7 +29,7 @@ llama_server:
     context: 32768
     timeout_s: 300
   # Router instead of an own process (2026-11-01): a llama-server in router mode that is already running (several models, one loaded at a time,
-  # loads on demand; here the one of Pi and StarNet, E:\Sedra Umgebung\Tools\pi-modellserver) is used instead of starting one. GUPPI then starts
+  # loads on demand; here the one of Pi and StarNet, E:\Sedra Umgebung\Tools\pi-modellserver) is used instead of starting one. SEDRA then starts
   # and stops nothing there, it asks the router to load and unload the recipe's model (name without vendor prefix = the router's name).
   # The window and the slots are those of the router's preset, not of the recipe. Off here; the machine turns it on in local_config/switches.yaml
   # (llama_server: {external: true}). Loopback only.
@@ -39,12 +39,12 @@ llama_server:
   external: {enabled: false, endpoint: 'http://127.0.0.1:8090', start: {enabled: true, models_max: 1, sleep_idle_s: 900}}
   log_dir: llama_server          # under runtime_data/
   # backend_dir / vendor_dir: set both to use a llama-server somewhere else (for example your own build) instead of LM Studio's.
-  # GUPPI's own engine (2026-10-03, Captain: "nicht LM Studio, nur GUPPI"): the official llama.cpp release, installed by
-  # benchmarks/engine_install.py into <GUPPI_Runtime>/engines/llama.cpp/<engine_build>/ after its zips matched these SHA256 pins
-  # (from the GitHub release API). With engine_source: guppi there is no fallback to LM Studio; a missing or changed engine shows as
+  # SEDRA's own engine (2026-10-03, Captain: "nicht LM Studio, nur SEDRA"): the official llama.cpp release, installed by
+  # benchmarks/engine_install.py into <SEDRA_Runtime>/engines/llama.cpp/<engine_build>/ after its zips matched these SHA256 pins
+  # (from the GitHub release API). With engine_source: sedra there is no fallback to LM Studio; a missing or changed engine shows as
   # "not available" (status: engine_check). Switch back to lmstudio here if the own engine has to be taken out of service.
-  engine_source: guppi
-  # Where the model files live (model_removal.py moves removed ones to <models_root>/_guppi_entfernt/).
+  engine_source: sedra
+  # Where the model files live (model_removal.py moves removed ones to <models_root>/_sedra_entfernt/).
   models_root: '<modelle>'      # the folder of this PC is in runtime/config/local_paths.yaml (not in git)
   # 2026-10-12 (Captain approval 2026-10-11): b11160 is the engine of the stable runs (FA on, KV q8_0; night run 2026-10-11: 0 crashes, 0 driver events).
   # b11371 stays installed; to go back set engine_build: b11371 (its zip pins below stay for engine_install).

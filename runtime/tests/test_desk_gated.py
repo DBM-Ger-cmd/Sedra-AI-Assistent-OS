@@ -10,10 +10,10 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.desk import gated
-from guppi_runtime.uix_server import UIXHub
+from sedra_runtime.desk import gated
+from sedra_runtime.uix_server import UIXHub
 
-ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 KIND = 'gated_test'
 GATES = [('set_budget', 'agent:A1'), ('resume_agent', 'agent:A1')]
 
@@ -188,7 +188,7 @@ class Register(unittest.TestCase):
             gated.register_applier('reg_test', lambda h, b: None)
 
     def test_only_before_the_registry_is_frozen(self):
-        from guppi_runtime.desk import builtin_kinds
+        from sedra_runtime.desk import builtin_kinds
         reg = builtin_kinds.new_registry()
         reg.freeze()
         with self.assertRaisesRegex(ValueError, 'kinds_frozen'):

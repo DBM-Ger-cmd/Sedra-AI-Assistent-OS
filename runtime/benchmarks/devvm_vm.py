@@ -62,9 +62,9 @@ class FolderTree:
 
 
 def vm_env(project, tool_root, bg_jobs=False, mission="M-BUILD", prefix="M-CHK"):
-    from guppi_runtime.devenv.devvm import DevWorkspace
-    from guppi_runtime.sandbox.broker import SandboxBroker
-    from guppi_runtime.sandbox.provider import MicrosandboxProvider
+    from sedra_runtime.devenv.devvm import DevWorkspace
+    from sedra_runtime.sandbox.broker import SandboxBroker
+    from sedra_runtime.sandbox.provider import MicrosandboxProvider
     tool_root = Path(tool_root)
     cfg_path = tool_root / "sandbox-build.yaml"; cfg_path.write_text(sandbox_text(bg_jobs), encoding="utf-8")
     broker = SandboxBroker(tool_root, tool_root / "sandbox-data", cfg_path, MicrosandboxProvider(Path(project) / "runtime_data" / "sandboxes" / "backend_home", RUNTIME), None, None)

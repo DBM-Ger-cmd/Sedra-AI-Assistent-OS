@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from guppi_runtime import laufdefinition, vorarbeiter
+from sedra_runtime import laufdefinition, vorarbeiter
 
 
 def _defn(**over):

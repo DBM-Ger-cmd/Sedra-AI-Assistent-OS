@@ -1,6 +1,6 @@
-"""Phase 5, part A (Captain 2026-10-06: "GUPPI soll es selber bauen"): the read-only data view of the DevVM window and the live ticker.
+"""Phase 5, part A (Captain 2026-10-06: "SEDRA soll es selber bauen"): the read-only data view of the DevVM window and the live ticker.
 
-GUPPI builds `devvm_view.py` (pure Python, no I/O) in a DevVM workspace; this spec holds the task text and the HIDDEN acceptance test, which the agents never see.
+SEDRA builds `devvm_view.py` (pure Python, no I/O) in a DevVM workspace; this spec holds the task text and the HIDDEN acceptance test, which the agents never see.
 The candidate is exported, never integrated (Captain: the build is approved, the integration is not).
 """
 

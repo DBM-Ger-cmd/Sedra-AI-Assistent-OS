@@ -11,7 +11,7 @@ from pathlib import Path
 
 from host_isolation import setUpModule, tearDownModule  # noqa: F401
 
-from guppi_runtime.orchestra import store
+from sedra_runtime.orchestra import store
 
 RUNTIME = Path(__file__).resolve().parents[1]
 SEED = RUNTIME / 'benchmarks' / 's1_schema2_seed' / 'store.py'

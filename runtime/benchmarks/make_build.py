@@ -4,7 +4,7 @@ r"""Package a build: clean the tree copy, write the checksum file, zip it, and (
 
 Reads BUILD.txt at the repository root (build number, date, version). --bump raises the number and sets today's date before packaging.
 Excludes what .gitignore excludes (engines, workspace, runtime_data, .venv, portable, caches, models, secrets) and .git. The zip is named
-GUPPI_Runtime_v<version>_Build_<nnn>_<date>.zip; PACKAGE_CHECKSUMS.sha256 inside lists every file. Exit code 0 when the zip verifies."""
+SEDRA_Runtime_v<version>_Build_<nnn>_<date>.zip; PACKAGE_CHECKSUMS.sha256 inside lists every file. Exit code 0 when the zip verifies."""
 import argparse
 import datetime
 import hashlib
@@ -64,8 +64,8 @@ def main(argv=None):
         info["build"] = str(int(info.get("build", "0")) + 1); info["date"] = datetime.date.today().isoformat(); write_build(build_file, info)
     number, date, version = int(info["build"]), info["date"], info.get("version", "1.20")
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
-    name = f"GUPPI_Runtime_v{version}_Build_{number:03d}_{date}"
-    with tempfile.TemporaryDirectory(prefix="guppi-build-") as tmp:
+    name = f"SEDRA_Runtime_v{version}_Build_{number:03d}_{date}"
+    with tempfile.TemporaryDirectory(prefix="sedra-build-") as tmp:
         tree = Path(tmp) / ROOT.name
         files = collect(ROOT)
         for p in files:

@@ -12,21 +12,21 @@ import env_skip
 
 import yaml
 
-from guppi_runtime.core.audit import AuditLog
-from guppi_runtime.jobs.context_budget import ContextBudgetManager
-from guppi_runtime.selfdev.development_contracts import development_contract
-from guppi_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
-from guppi_runtime.models.base import ModelAdapterError
-from guppi_runtime.models.router import ModelRouter
-from guppi_runtime.models.role_routing import (PROVIDER_FAULTS, ProviderHealth, ResolutionError, RoleRouter, RoutingConfig, check_independence,
+from sedra_runtime.core.audit import AuditLog
+from sedra_runtime.jobs.context_budget import ContextBudgetManager
+from sedra_runtime.selfdev.development_contracts import development_contract
+from sedra_runtime.jobs.job_supervisor import JobError, JobSupervisor, SupervisorConfig, SupervisorJobStore
+from sedra_runtime.models.base import ModelAdapterError
+from sedra_runtime.models.router import ModelRouter
+from sedra_runtime.models.role_routing import (PROVIDER_FAULTS, ProviderHealth, ResolutionError, RoleRouter, RoutingConfig, check_independence,
                                         independence_key)
-from guppi_runtime.runtime import GuppiRuntime
+from sedra_runtime.runtime import SedraRuntime
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 RUNTIME = Path(__file__).resolve().parents[1]
 ROUTING = RUNTIME / 'config' / 'role_routing.yaml'
 SUPERVISOR = RUNTIME / 'config' / 'job_supervisor.yaml'
-ARCH = RUNTIME.parent / 'architecture' / 'GUPPI_Architecture_v1.20_SELF_DEVELOPMENT'
+ARCH = RUNTIME.parent / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
 
 
 class Clock:
@@ -89,7 +89,7 @@ class ConfigTests(unittest.TestCase):
         self.assertIsNone(independence_key(by_id['coder.local_primary']))   # no weights id chosen: independence cannot be proven yet
 
     def test_untrusted_levels_can_never_be_allowed(self):
-        for level in ('GUPPI_GENERATED', 'EXTERNAL_UNVERIFIED'):
+        for level in ('SEDRA_GENERATED', 'EXTERNAL_UNVERIFIED'):
             with self.assertRaises(ValueError, msg=level): RoutingConfig(routing_raw(allowed_trust_levels=['BUILT_IN', level]))
 
     def test_invalid_values_refuse_start(self):
@@ -130,15 +130,15 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(len(RoutingConfig.load(ROUTING, Path(tempfile.gettempdir()) / 'no_such_overlay.yaml').recipes), 2)
 
     def test_the_overlay_is_validated_like_the_shipped_file(self):
-        bad_bodies = [{'policy': {'allowed_trust_levels': ['BUILT_IN', 'GUPPI_GENERATED']}}, {'telepathy': True}, {'capabilities': [{'no_id': 1}]},
+        bad_bodies = [{'policy': {'allowed_trust_levels': ['BUILT_IN', 'SEDRA_GENERATED']}}, {'telepathy': True}, {'capabilities': [{'no_id': 1}]},
                       {'capabilities': 'x'}, {'capabilities': [dict(recipe('x.y', ['coder'], 'p', 'f'), location='moon')]}, {'policy': 'x'}, {'enabled': 'yes'},
-                      {'capabilities': [dict(recipe('coder.local_primary', ['coder'], 'p', 'f'), metadata={'trust_level': 'GUPPI_GENERATED'})]}]
+                      {'capabilities': [dict(recipe('coder.local_primary', ['coder'], 'p', 'f'), metadata={'trust_level': 'SEDRA_GENERATED'})]}]
         for body in bad_bodies[:7]:
             with tempfile.TemporaryDirectory() as tmp:
                 with self.assertRaises(ValueError, msg=str(body)[:60]): RoutingConfig.load(ROUTING, self.overlay(tmp, body))
         with tempfile.TemporaryDirectory() as tmp:                       # an untrusted recipe loads, but the default policy still refuses to use it
             config = RoutingConfig.load(ROUTING, self.overlay(tmp, bad_bodies[7]))
-            self.assertNotIn('GUPPI_GENERATED', config.allowed_trust)
+            self.assertNotIn('SEDRA_GENERATED', config.allowed_trust)
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'broken.yaml'; path.write_text('role_routing: [unclosed', encoding='utf-8')
             with self.assertRaises(ValueError) as ctx: RoutingConfig.load(ROUTING, path)
@@ -149,11 +149,11 @@ class ConfigTests(unittest.TestCase):
             project = Path(tmp) / 'project'
             (project / 'local_config').mkdir(parents=True)
             (project / 'local_config' / 'role_routing.yaml').write_text(yaml.safe_dump({'role_routing': {'capabilities': [recipe('verifier.local_gemma', ['verifier'], 'lm-studio', 'g', 'w')]}}), encoding='utf-8')
-            rt = GuppiRuntime(project, ARCH)
+            rt = SedraRuntime(project, ARCH)
             self.assertIn('verifier.local_gemma', [c['id'] for c in rt.routing_status()['capabilities']])
             self.assertFalse(rt.role_router.enabled)                       # the overlay did not switch routing on
         with tempfile.TemporaryDirectory() as tmp:
-            self.assertNotIn('verifier.local_gemma', [c['id'] for c in GuppiRuntime(Path(tmp) / 'p2', ARCH).routing_status()['capabilities']])
+            self.assertNotIn('verifier.local_gemma', [c['id'] for c in SedraRuntime(Path(tmp) / 'p2', ARCH).routing_status()['capabilities']])
 
     def test_independence_key_and_check(self):
         self.assertEqual(independence_key(recipe('a.b', ['coder'], 'p', 'fam', 'w9')), 'fam:w9')
@@ -463,7 +463,7 @@ class PolicyTests(Base):
         self.assertEqual(opened.resolve_role('coder', {'network': 'allowed', 'data_class': 'internal'}, captain_cloud_approved=True)['location'], 'cloud')
 
     def test_untrusted_capabilities_are_refused_by_default(self):
-        for level in ('GUPPI_GENERATED', 'EXTERNAL_UNVERIFIED'):
+        for level in ('SEDRA_GENERATED', 'EXTERNAL_UNVERIFIED'):
             made = recipe('c.made', ['coder'], 'pm', 'fm', 'wm', metadata={'source': 'x', 'trust_level': level})
             code, detail = self.codes(self.router(routing_raw([made])), 'coder')
             self.assertEqual((code, detail['considered'][0]['reason']), ('policy_denied', f'trust_level_not_allowed:{level}'))
@@ -781,7 +781,7 @@ class SupervisorIntegrationTests(Base):
 
     def test_resolution_failures_follow_the_retry_rules(self):
         cases = {'provider_unavailable': ('QUEUED', None), 'hardware_pressure': ('QUEUED', None),
-                 'no_capability': ('BLOCKED', 'guppi'), 'requirements_unmet': ('BLOCKED', 'guppi'), 'policy_denied': ('BLOCKED', 'captain')}
+                 'no_capability': ('BLOCKED', 'sedra'), 'requirements_unmet': ('BLOCKED', 'sedra'), 'policy_denied': ('BLOCKED', 'captain')}
         for code, (state, escalated) in cases.items():
             with self.subTest(code=code):
                 self.setUp()
@@ -862,7 +862,7 @@ class SupervisorIntegrationTests(Base):
         job_id, started = self.verify(builder)
         # The resolver already refuses: the only verifier candidate is the builder's own model.
         self.assertEqual((started['status'], started['code']), ('resolution_failed', 'requirements_unmet'))
-        self.assertEqual(self.load(job_id)['supervisor_flags']['escalated_to'], 'guppi')
+        self.assertEqual(self.load(job_id)['supervisor_flags']['escalated_to'], 'sedra')
 
     def test_a_verifier_without_a_provable_identity_cannot_pass(self):
         self.router_ = self.router(routing_raw([recipe('c.one', ['coder'], 'p1', 'f1', 'w1'), recipe('v.one', ['verifier'], 'p3', 'f3', None)]))
@@ -904,7 +904,7 @@ class SupervisorIntegrationTests(Base):
 class RuntimeAndBoundaryTests(unittest.TestCase):
     def test_runtime_wires_routing_off_and_reports_it(self):
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
             self.assertIsNotNone(rt.role_router); self.assertFalse(rt.role_router.enabled)
             self.assertFalse(hasattr(rt.model_router, 'provider_health'))                    # the model router is untouched while routing is off
             self.assertIsNone(rt.job_supervisor.resolver)
@@ -918,7 +918,7 @@ class RuntimeAndBoundaryTests(unittest.TestCase):
     @env_skip.needs_ram(16)
     def test_enabled_routing_wires_every_hook_and_resolves_through_the_control_master(self):
         with tempfile.TemporaryDirectory() as tmp:
-            import guppi_runtime.runtime as runtime_module
+            import sedra_runtime.runtime as runtime_module
             real = runtime_module.RoutingConfig.load
 
             def enabled(path, local_path=None):
@@ -926,7 +926,7 @@ class RuntimeAndBoundaryTests(unittest.TestCase):
 
             runtime_module.RoutingConfig.load = staticmethod(enabled)
             try:
-                rt = GuppiRuntime(Path(tmp) / 'project', ARCH)
+                rt = SedraRuntime(Path(tmp) / 'project', ARCH)
             finally:
                 runtime_module.RoutingConfig.load = real
             self.assertTrue(rt.role_router.enabled)
@@ -946,12 +946,12 @@ class RuntimeAndBoundaryTests(unittest.TestCase):
             rt.routing_status()
 
     def test_dev_path_downgrades_a_pass_without_provable_independence(self):
-        from guppi_runtime.selfdev.self_development import SelfDevelopmentManager
+        from sedra_runtime.selfdev.self_development import SelfDevelopmentManager
         with tempfile.TemporaryDirectory() as tmp:
-            rt = GuppiRuntime(Path(tmp) / 'project', ARCH); sd = rt.self_development
+            rt = SedraRuntime(Path(tmp) / 'project', ARCH); sd = rt.self_development
             job_id = sd.start('independence_probe', evidence=[{'source': 't'}])['job']['job_id']
             sd.prepare_development_environment(job_id, {'execution_ready': True})
-            sd.bind_candidate(job_id, attempt_id='a1', stage=f'guppi-candidates/{job_id}/p', parent_version='1', candidate_hash='a' * 64, builder='coder')
+            sd.bind_candidate(job_id, attempt_id='a1', stage=f'sedra-candidates/{job_id}/p', parent_version='1', candidate_hash='a' * 64, builder='coder')
             cid = sd.jobs.load(job_id)['candidate']['candidate_id']
             ev = rt.development_evidence.add('t', job_id=job_id, candidate_id=cid, payload={'status': 'PASS'}, trust_level='deterministic')['evidence_id']
             calls = []
@@ -974,7 +974,7 @@ class RuntimeAndBoundaryTests(unittest.TestCase):
 
     def test_routing_source_names_no_provider_or_model(self):
         for name in ('models/role_routing.py', 'jobs/job_supervisor.py'):
-            source = (RUNTIME / 'src' / 'guppi_runtime' / name).read_text(encoding='utf-8').lower()
+            source = (RUNTIME / 'src' / 'sedra_runtime' / name).read_text(encoding='utf-8').lower()
             for word in ('lm-studio', 'lmstudio', 'llama', 'qwen', 'kev', 'openai', 'anthropic', 'gpt'):
                 self.assertNotRegex(source, rf'\b{re.escape(word)}\b', f'{name}:{word}')
 
@@ -990,7 +990,7 @@ class ProfileRouting(Base):
                 recipe('verifier.m', ['verifier'], 'prov', 'gemma', 'wm')]
 
     def test_profile_reorders_and_may_lend_a_recipe_to_another_role(self):
-        from guppi_runtime.models.routing_profiles import RoutingProfiles
+        from sedra_runtime.models.routing_profiles import RoutingProfiles
         profiles = RoutingProfiles({'active': 'p', 'profiles': {'p': {'coder': {'prefer': ['verifier.m']},
                                                                       'rework': {'prefer': ['coder.g'], 'temperature': 1.0},
                                                                       'verifier': {'prefer': ['coder.g']}}}})

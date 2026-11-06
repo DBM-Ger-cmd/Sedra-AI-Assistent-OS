@@ -5,7 +5,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from guppi_runtime.harness import aufgabe, aufgabe_deckung, katalog, vorbehalte
+from sedra_runtime.harness import aufgabe, aufgabe_deckung, katalog, vorbehalte
 
 JETZT = datetime(2026, 10, 29, 12, 0, tzinfo=timezone.utc)
 S1, S2 = 'S-11111111', 'S-22222222'
@@ -285,14 +285,14 @@ class SpeicherTests(unittest.TestCase):
 
 class VorbehaltTests(unittest.TestCase):
     def test_neue_harte_pfade(self):
-        for pfad in ('runtime/src/guppi_runtime/harness/aufgabe.py', 'runtime/src/guppi_runtime/harness/aufgabe_deckung.py',
-                     'runtime/src/guppi_runtime/harness/vorarbeiter.py', 'runtime/src/guppi_runtime/harness/lauf.py',
-                     'runtime/src/guppi_runtime/harness/lauf_huelle.py', 'runtime/src/guppi_runtime/harness/herkunft.py',
+        for pfad in ('runtime/src/sedra_runtime/harness/aufgabe.py', 'runtime/src/sedra_runtime/harness/aufgabe_deckung.py',
+                     'runtime/src/sedra_runtime/harness/vorarbeiter.py', 'runtime/src/sedra_runtime/harness/lauf.py',
+                     'runtime/src/sedra_runtime/harness/lauf_huelle.py', 'runtime/src/sedra_runtime/harness/herkunft.py',
                      'runtime/config/harness_vorlagen/vorarbeiter.md', 'runtime/config/harness_vorlagen/neu.yaml', 'runtime/config/harness_laeufe.yaml',
-                     'workspace/GUPPI_OS/runtime_data/harness/aufgaben/T-00000001.json', 'runtime_data/harness/karten/K-00000001.json'):
+                     'workspace/SEDRA_OS/runtime_data/harness/aufgaben/T-00000001.json', 'runtime_data/harness/karten/K-00000001.json'):
             for w in ('datei_schreiben', 'datei_aendern'):
                 self.assertIsNotNone(vorbehalte.pruefen(w, pfad, {'inhalt': 'x'}), (w, pfad))
-        self.assertIsNone(vorbehalte.pruefen('datei_aendern', 'runtime/src/guppi_runtime/harness/schleife.py', {'alt': 'a', 'neu': 'b'}))
+        self.assertIsNone(vorbehalte.pruefen('datei_aendern', 'runtime/src/sedra_runtime/harness/schleife.py', {'alt': 'a', 'neu': 'b'}))
 
     def test_weicher_vorbehalt(self):
         self.assertEqual(vorbehalte.pruefen_weich('modell_laden', ' coder.x ')['modell'], 'coder.x')
