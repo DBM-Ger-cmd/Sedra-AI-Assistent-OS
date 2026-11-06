@@ -1,0 +1,999 @@
+"""Bau-Spec factory_sdk_grundlage: 4 Stufen, Abnahme je Stufe (versteckt). Format: STAGES wie in devvm_build.py."""
+
+NOTES = '''# Notizen factory_sdk
+Nur Python-Standardbibliothek. Kein Dateizugriff, kein Netz, keine Ausführung von Inhalten.
+Fehler sind ValueError mit Feld `code` (nicht leer) und `field` (Feldname oder "").
+Keine übergebenen Objekte verändern (kopieren, wenn nötig).
+Regeln: docs/FACTORY_SDK_SPEC.md Abschnitt 6 (fail-closed FC-1 bis FC-10).
+Unbekannte Statuswerte werden abgelehnt, nicht ignoriert.
+'''
+
+TASK_S1 = '''Lege das Paket factory_sdk an. common.py: Fehlerklasse FabrikFehler(ValueError) mit code und field, Hilfsfunktionen für Pflichtfelder, Aufzählungen und Muster, abgeleitet aus docs/factory_sdk/schemas/common.schema.json.
+projekt.py: pruefe_project(daten) nach project.schema.json. workflow.py: pruefe_workflow(daten) nach workflow.schema.json; ein Prozessmodell mit execution.executable=true wird abgelehnt.
+Nur diese Dateien anlegen. Keine Tests.'''
+
+TASK_S2 = '''Ergänze factory_sdk/task_run.py: pruefe_task_run(daten) nach task_run.schema.json. Ein Lauf im Status RUNNING ohne outcome wird abgelehnt (FC-6). Nur diese Datei.'''
+
+TASK_S3 = '''Ergänze factory_sdk/artifact.py: pruefe_artifact(daten) nach artifact.schema.json; ein Pfad mit ".." wird abgelehnt (FC-9). factory_sdk/evidence.py: pruefe_evidence(daten) nach evidence.schema.json; NOT_RUN ohne Begründung wird abgelehnt (FC-8). Nur diese Dateien.'''
+
+TASK_S4 = '''Ergänze factory_sdk/approval.py: pruefe_approval(daten) nach approval.schema.json; token_id im Objekt wird abgelehnt (FC-10). Ergänze factory_sdk/__init__.py: exportiere alle sechs pruefe_* Funktionen und FabrikFehler.'''
+
+HIDDEN_S1 = '''EXAMPLES = {
+ "project.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.project",
+  "backing": {
+   "store": "project_registry",
+   "project_id": "PRJ-3f9a1c2b7d4e",
+   "workspace_path": "projects/PRJ-3f9a1c2b7d4e",
+   "qualification": "MANAGED_WORKSPACE_NOT_VM",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "display_name": "Beispiel Software Factory",
+  "status": "ACTIVE"
+ },
+ "project.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.project",
+  "backing": {
+   "store": "project_registry",
+   "project_id": "PRJ-3f9a1c2b7d4e",
+   "workspace_path": "projects/PRJ-3f9a1c2b7d4e",
+   "qualification": "MANAGED_WORKSPACE_NOT_VM",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "display_name": "Beispiel Software Factory",
+  "status": "ARCHIVED"
+ },
+ "workflow.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.workflow",
+  "workflow_id": "WF-55cf1725549ddc93e4855595",
+  "revision": 2,
+  "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3",
+  "record_digest": "8e4284462977901081a032495c0de1253dcd7fde585c6eeeaf82292ea4a382a5",
+  "previous_revision": 1,
+  "name": "Anfrage prüfen",
+  "change_note": "IF-Bedingung ergänzt",
+  "process_model": false,
+  "execution": {
+   "executable": true,
+   "profile": "n8n-local-data-v1",
+   "reason": null
+  }
+ },
+ "workflow.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.workflow",
+  "workflow_id": "WF-55cf1725549ddc93e4855595",
+  "revision": 2,
+  "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3",
+  "record_digest": "8e4284462977901081a032495c0de1253dcd7fde585c6eeeaf82292ea4a382a5",
+  "previous_revision": 1,
+  "name": "Anfrage prüfen",
+  "change_note": "IF-Bedingung ergänzt",
+  "process_model": true,
+  "execution": {
+   "executable": true,
+   "profile": "n8n-local-data-v1",
+   "reason": null
+  }
+ },
+ "task_run.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.task_run",
+  "mission_id": "M-1A2B3C4D",
+  "phase": "CAPTAIN_REVIEW",
+  "status": "active",
+  "project_refs": [
+   {
+    "project_id": "PRJ-3f9a1c2b7d4e"
+   }
+  ],
+  "workflow_ref": {
+   "workflow_id": "WF-55cf1725549ddc93e4855595",
+   "revision": 2,
+   "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  },
+  "steps": [
+   {
+    "step_id": "N8N-1",
+    "status": "GATE",
+    "attempts": 1,
+    "outcome": "known"
+   }
+  ],
+  "result": {
+   "qualification": "PENDING",
+   "accepted": false
+  }
+ },
+ "task_run.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.task_run",
+  "mission_id": "M-1A2B3C4D",
+  "phase": "CAPTAIN_REVIEW",
+  "status": "active",
+  "project_refs": [
+   {
+    "project_id": "PRJ-3f9a1c2b7d4e"
+   }
+  ],
+  "workflow_ref": {
+   "workflow_id": "WF-55cf1725549ddc93e4855595",
+   "revision": 2,
+   "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  },
+  "steps": [
+   {
+    "step_id": "N8N-1",
+    "status": "RUNNING",
+    "attempts": 1
+   }
+  ],
+  "result": {
+   "qualification": "PENDING",
+   "accepted": false
+  }
+ },
+ "artifact.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.artifact",
+  "artifact_id": "ART-9C0FFEE1",
+  "mission_id": "M-1A2B3C4D",
+  "path": "M-1A2B3C4D/n8n-result.json",
+  "artifact_type": "file",
+  "integrity": {
+   "algorithm": "sha256",
+   "hash": "454c30c8423b41114a22f00d2dd857b7116cee24cf0227e3b8b003b91d16bf91"
+  },
+  "provenance": {
+   "created_by": "system",
+   "source_component": "workflows:n8n",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "status": "active"
+ },
+ "artifact.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.artifact",
+  "artifact_id": "ART-9C0FFEE1",
+  "mission_id": "M-1A2B3C4D",
+  "path": "../M-9F9F9F9F/n8n-result.json",
+  "artifact_type": "file",
+  "integrity": {
+   "algorithm": "sha256",
+   "hash": "454c30c8423b41114a22f00d2dd857b7116cee24cf0227e3b8b003b91d16bf91"
+  },
+  "provenance": {
+   "created_by": "system",
+   "source_component": "workflows:n8n",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "status": "active"
+ },
+ "evidence.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.evidence",
+  "subject": {
+   "kind": "factory.task_run",
+   "id": "M-1A2B3C4D"
+  },
+  "source": {
+   "type": "audit_event",
+   "event_id": "EVT-004211",
+   "event_hash": "d0844b3f61f934dab66ea59bcee18599463595abdaf4ed3608eda5dce1e51633"
+  },
+  "claim": "n8n-Lauf nach Freigabe genau einmal ausgelöst",
+  "outcome": "PASS",
+  "recorded_at": "2026-11-06T11:40:12.345678+00:00",
+  "evidence_digest": "8705ae7fba307117d0c18a765a24f6caf3d9a935544249381822608cf62988cd"
+ },
+ "evidence.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.evidence",
+  "subject": {
+   "kind": "factory.task_run",
+   "id": "M-1A2B3C4D"
+  },
+  "source": {
+   "type": "audit_event",
+   "event_id": "EVT-004211",
+   "event_hash": "d0844b3f61f934dab66ea59bcee18599463595abdaf4ed3608eda5dce1e51633"
+  },
+  "claim": "Live-Lauf gegen echte n8n-Instanz",
+  "outcome": "NOT_RUN",
+  "recorded_at": "2026-11-06T11:40:12.345678+00:00",
+  "evidence_digest": "da7b2aafbbafb191244748003e38ca1aaa5d9ed07391de936855fa41ce84e2e4"
+ },
+ "approval.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.approval",
+  "gate_id": "HG-5E6F7A8B",
+  "mission_id": "M-1A2B3C4D",
+  "action": "run_n8n_workflow",
+  "targets": [
+   "http://127.0.0.1:5678/sedra-workflow/068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  ],
+  "request_digest": "80f70afeef3caa57646fd20afb95be9c3f2c03d38e091906de31838813dcc22e",
+  "risks": [
+   "Lokale n8n-Testinstanz; nur Datenprofil v1, keine Außenaktionen."
+  ],
+  "rollback_available": false,
+  "status": "pending",
+  "decision": null,
+  "decided_at": null,
+  "single_use": true
+ },
+ "approval.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.approval",
+  "gate_id": "HG-5E6F7A8B",
+  "mission_id": "M-1A2B3C4D",
+  "action": "run_n8n_workflow",
+  "targets": [
+   "http://127.0.0.1:5678/sedra-workflow/068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  ],
+  "request_digest": "80f70afeef3caa57646fd20afb95be9c3f2c03d38e091906de31838813dcc22e",
+  "risks": [
+   "Lokale n8n-Testinstanz; nur Datenprofil v1, keine Außenaktionen."
+  ],
+  "rollback_available": false,
+  "status": "resolved",
+  "decision": "APPROVE_ONCE",
+  "decided_at": "2026-11-06T11:40:12.345678+00:00",
+  "single_use": true,
+  "token_id": "APR-0BADF00D"
+ }
+}
+
+# Abnahme S1 (versteckt). Gueltige Beispiele: keine Ausnahme. Ungueltige: ValueError mit code und field.
+from factory_sdk import pruefe_project, pruefe_workflow, FabrikFehler
+import copy
+for name, fn in [("project", pruefe_project), ("workflow", pruefe_workflow)]:
+    ok = EXAMPLES[name + ".gueltig"]
+    fn(copy.deepcopy(ok))
+    bad = EXAMPLES[name + ".ungueltig"]
+    try:
+        fn(copy.deepcopy(bad))
+    except FabrikFehler as exc:
+        assert exc.code and isinstance(exc.field, str), (name, exc.code)
+    else:
+        raise AssertionError(name + " ungueltig wurde angenommen")
+print("ok S1")
+'''
+
+HIDDEN_S2 = '''EXAMPLES = {
+ "project.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.project",
+  "backing": {
+   "store": "project_registry",
+   "project_id": "PRJ-3f9a1c2b7d4e",
+   "workspace_path": "projects/PRJ-3f9a1c2b7d4e",
+   "qualification": "MANAGED_WORKSPACE_NOT_VM",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "display_name": "Beispiel Software Factory",
+  "status": "ACTIVE"
+ },
+ "project.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.project",
+  "backing": {
+   "store": "project_registry",
+   "project_id": "PRJ-3f9a1c2b7d4e",
+   "workspace_path": "projects/PRJ-3f9a1c2b7d4e",
+   "qualification": "MANAGED_WORKSPACE_NOT_VM",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "display_name": "Beispiel Software Factory",
+  "status": "ARCHIVED"
+ },
+ "workflow.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.workflow",
+  "workflow_id": "WF-55cf1725549ddc93e4855595",
+  "revision": 2,
+  "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3",
+  "record_digest": "8e4284462977901081a032495c0de1253dcd7fde585c6eeeaf82292ea4a382a5",
+  "previous_revision": 1,
+  "name": "Anfrage prüfen",
+  "change_note": "IF-Bedingung ergänzt",
+  "process_model": false,
+  "execution": {
+   "executable": true,
+   "profile": "n8n-local-data-v1",
+   "reason": null
+  }
+ },
+ "workflow.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.workflow",
+  "workflow_id": "WF-55cf1725549ddc93e4855595",
+  "revision": 2,
+  "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3",
+  "record_digest": "8e4284462977901081a032495c0de1253dcd7fde585c6eeeaf82292ea4a382a5",
+  "previous_revision": 1,
+  "name": "Anfrage prüfen",
+  "change_note": "IF-Bedingung ergänzt",
+  "process_model": true,
+  "execution": {
+   "executable": true,
+   "profile": "n8n-local-data-v1",
+   "reason": null
+  }
+ },
+ "task_run.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.task_run",
+  "mission_id": "M-1A2B3C4D",
+  "phase": "CAPTAIN_REVIEW",
+  "status": "active",
+  "project_refs": [
+   {
+    "project_id": "PRJ-3f9a1c2b7d4e"
+   }
+  ],
+  "workflow_ref": {
+   "workflow_id": "WF-55cf1725549ddc93e4855595",
+   "revision": 2,
+   "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  },
+  "steps": [
+   {
+    "step_id": "N8N-1",
+    "status": "GATE",
+    "attempts": 1,
+    "outcome": "known"
+   }
+  ],
+  "result": {
+   "qualification": "PENDING",
+   "accepted": false
+  }
+ },
+ "task_run.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.task_run",
+  "mission_id": "M-1A2B3C4D",
+  "phase": "CAPTAIN_REVIEW",
+  "status": "active",
+  "project_refs": [
+   {
+    "project_id": "PRJ-3f9a1c2b7d4e"
+   }
+  ],
+  "workflow_ref": {
+   "workflow_id": "WF-55cf1725549ddc93e4855595",
+   "revision": 2,
+   "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  },
+  "steps": [
+   {
+    "step_id": "N8N-1",
+    "status": "RUNNING",
+    "attempts": 1
+   }
+  ],
+  "result": {
+   "qualification": "PENDING",
+   "accepted": false
+  }
+ },
+ "artifact.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.artifact",
+  "artifact_id": "ART-9C0FFEE1",
+  "mission_id": "M-1A2B3C4D",
+  "path": "M-1A2B3C4D/n8n-result.json",
+  "artifact_type": "file",
+  "integrity": {
+   "algorithm": "sha256",
+   "hash": "454c30c8423b41114a22f00d2dd857b7116cee24cf0227e3b8b003b91d16bf91"
+  },
+  "provenance": {
+   "created_by": "system",
+   "source_component": "workflows:n8n",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "status": "active"
+ },
+ "artifact.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.artifact",
+  "artifact_id": "ART-9C0FFEE1",
+  "mission_id": "M-1A2B3C4D",
+  "path": "../M-9F9F9F9F/n8n-result.json",
+  "artifact_type": "file",
+  "integrity": {
+   "algorithm": "sha256",
+   "hash": "454c30c8423b41114a22f00d2dd857b7116cee24cf0227e3b8b003b91d16bf91"
+  },
+  "provenance": {
+   "created_by": "system",
+   "source_component": "workflows:n8n",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "status": "active"
+ },
+ "evidence.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.evidence",
+  "subject": {
+   "kind": "factory.task_run",
+   "id": "M-1A2B3C4D"
+  },
+  "source": {
+   "type": "audit_event",
+   "event_id": "EVT-004211",
+   "event_hash": "d0844b3f61f934dab66ea59bcee18599463595abdaf4ed3608eda5dce1e51633"
+  },
+  "claim": "n8n-Lauf nach Freigabe genau einmal ausgelöst",
+  "outcome": "PASS",
+  "recorded_at": "2026-11-06T11:40:12.345678+00:00",
+  "evidence_digest": "8705ae7fba307117d0c18a765a24f6caf3d9a935544249381822608cf62988cd"
+ },
+ "evidence.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.evidence",
+  "subject": {
+   "kind": "factory.task_run",
+   "id": "M-1A2B3C4D"
+  },
+  "source": {
+   "type": "audit_event",
+   "event_id": "EVT-004211",
+   "event_hash": "d0844b3f61f934dab66ea59bcee18599463595abdaf4ed3608eda5dce1e51633"
+  },
+  "claim": "Live-Lauf gegen echte n8n-Instanz",
+  "outcome": "NOT_RUN",
+  "recorded_at": "2026-11-06T11:40:12.345678+00:00",
+  "evidence_digest": "da7b2aafbbafb191244748003e38ca1aaa5d9ed07391de936855fa41ce84e2e4"
+ },
+ "approval.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.approval",
+  "gate_id": "HG-5E6F7A8B",
+  "mission_id": "M-1A2B3C4D",
+  "action": "run_n8n_workflow",
+  "targets": [
+   "http://127.0.0.1:5678/sedra-workflow/068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  ],
+  "request_digest": "80f70afeef3caa57646fd20afb95be9c3f2c03d38e091906de31838813dcc22e",
+  "risks": [
+   "Lokale n8n-Testinstanz; nur Datenprofil v1, keine Außenaktionen."
+  ],
+  "rollback_available": false,
+  "status": "pending",
+  "decision": null,
+  "decided_at": null,
+  "single_use": true
+ },
+ "approval.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.approval",
+  "gate_id": "HG-5E6F7A8B",
+  "mission_id": "M-1A2B3C4D",
+  "action": "run_n8n_workflow",
+  "targets": [
+   "http://127.0.0.1:5678/sedra-workflow/068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  ],
+  "request_digest": "80f70afeef3caa57646fd20afb95be9c3f2c03d38e091906de31838813dcc22e",
+  "risks": [
+   "Lokale n8n-Testinstanz; nur Datenprofil v1, keine Außenaktionen."
+  ],
+  "rollback_available": false,
+  "status": "resolved",
+  "decision": "APPROVE_ONCE",
+  "decided_at": "2026-11-06T11:40:12.345678+00:00",
+  "single_use": true,
+  "token_id": "APR-0BADF00D"
+ }
+}
+
+from factory_sdk import pruefe_task_run, FabrikFehler
+import copy
+pruefe_task_run(copy.deepcopy(EXAMPLES["task_run.gueltig"]))
+try:
+    pruefe_task_run(copy.deepcopy(EXAMPLES["task_run.ungueltig"]))
+except FabrikFehler as exc:
+    assert exc.code
+else:
+    raise AssertionError("task_run ungueltig wurde angenommen")
+print("ok S2")
+'''
+
+HIDDEN_S3 = '''EXAMPLES = {
+ "project.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.project",
+  "backing": {
+   "store": "project_registry",
+   "project_id": "PRJ-3f9a1c2b7d4e",
+   "workspace_path": "projects/PRJ-3f9a1c2b7d4e",
+   "qualification": "MANAGED_WORKSPACE_NOT_VM",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "display_name": "Beispiel Software Factory",
+  "status": "ACTIVE"
+ },
+ "project.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.project",
+  "backing": {
+   "store": "project_registry",
+   "project_id": "PRJ-3f9a1c2b7d4e",
+   "workspace_path": "projects/PRJ-3f9a1c2b7d4e",
+   "qualification": "MANAGED_WORKSPACE_NOT_VM",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "display_name": "Beispiel Software Factory",
+  "status": "ARCHIVED"
+ },
+ "workflow.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.workflow",
+  "workflow_id": "WF-55cf1725549ddc93e4855595",
+  "revision": 2,
+  "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3",
+  "record_digest": "8e4284462977901081a032495c0de1253dcd7fde585c6eeeaf82292ea4a382a5",
+  "previous_revision": 1,
+  "name": "Anfrage prüfen",
+  "change_note": "IF-Bedingung ergänzt",
+  "process_model": false,
+  "execution": {
+   "executable": true,
+   "profile": "n8n-local-data-v1",
+   "reason": null
+  }
+ },
+ "workflow.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.workflow",
+  "workflow_id": "WF-55cf1725549ddc93e4855595",
+  "revision": 2,
+  "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3",
+  "record_digest": "8e4284462977901081a032495c0de1253dcd7fde585c6eeeaf82292ea4a382a5",
+  "previous_revision": 1,
+  "name": "Anfrage prüfen",
+  "change_note": "IF-Bedingung ergänzt",
+  "process_model": true,
+  "execution": {
+   "executable": true,
+   "profile": "n8n-local-data-v1",
+   "reason": null
+  }
+ },
+ "task_run.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.task_run",
+  "mission_id": "M-1A2B3C4D",
+  "phase": "CAPTAIN_REVIEW",
+  "status": "active",
+  "project_refs": [
+   {
+    "project_id": "PRJ-3f9a1c2b7d4e"
+   }
+  ],
+  "workflow_ref": {
+   "workflow_id": "WF-55cf1725549ddc93e4855595",
+   "revision": 2,
+   "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  },
+  "steps": [
+   {
+    "step_id": "N8N-1",
+    "status": "GATE",
+    "attempts": 1,
+    "outcome": "known"
+   }
+  ],
+  "result": {
+   "qualification": "PENDING",
+   "accepted": false
+  }
+ },
+ "task_run.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.task_run",
+  "mission_id": "M-1A2B3C4D",
+  "phase": "CAPTAIN_REVIEW",
+  "status": "active",
+  "project_refs": [
+   {
+    "project_id": "PRJ-3f9a1c2b7d4e"
+   }
+  ],
+  "workflow_ref": {
+   "workflow_id": "WF-55cf1725549ddc93e4855595",
+   "revision": 2,
+   "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  },
+  "steps": [
+   {
+    "step_id": "N8N-1",
+    "status": "RUNNING",
+    "attempts": 1
+   }
+  ],
+  "result": {
+   "qualification": "PENDING",
+   "accepted": false
+  }
+ },
+ "artifact.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.artifact",
+  "artifact_id": "ART-9C0FFEE1",
+  "mission_id": "M-1A2B3C4D",
+  "path": "M-1A2B3C4D/n8n-result.json",
+  "artifact_type": "file",
+  "integrity": {
+   "algorithm": "sha256",
+   "hash": "454c30c8423b41114a22f00d2dd857b7116cee24cf0227e3b8b003b91d16bf91"
+  },
+  "provenance": {
+   "created_by": "system",
+   "source_component": "workflows:n8n",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "status": "active"
+ },
+ "artifact.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.artifact",
+  "artifact_id": "ART-9C0FFEE1",
+  "mission_id": "M-1A2B3C4D",
+  "path": "../M-9F9F9F9F/n8n-result.json",
+  "artifact_type": "file",
+  "integrity": {
+   "algorithm": "sha256",
+   "hash": "454c30c8423b41114a22f00d2dd857b7116cee24cf0227e3b8b003b91d16bf91"
+  },
+  "provenance": {
+   "created_by": "system",
+   "source_component": "workflows:n8n",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "status": "active"
+ },
+ "evidence.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.evidence",
+  "subject": {
+   "kind": "factory.task_run",
+   "id": "M-1A2B3C4D"
+  },
+  "source": {
+   "type": "audit_event",
+   "event_id": "EVT-004211",
+   "event_hash": "d0844b3f61f934dab66ea59bcee18599463595abdaf4ed3608eda5dce1e51633"
+  },
+  "claim": "n8n-Lauf nach Freigabe genau einmal ausgelöst",
+  "outcome": "PASS",
+  "recorded_at": "2026-11-06T11:40:12.345678+00:00",
+  "evidence_digest": "8705ae7fba307117d0c18a765a24f6caf3d9a935544249381822608cf62988cd"
+ },
+ "evidence.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.evidence",
+  "subject": {
+   "kind": "factory.task_run",
+   "id": "M-1A2B3C4D"
+  },
+  "source": {
+   "type": "audit_event",
+   "event_id": "EVT-004211",
+   "event_hash": "d0844b3f61f934dab66ea59bcee18599463595abdaf4ed3608eda5dce1e51633"
+  },
+  "claim": "Live-Lauf gegen echte n8n-Instanz",
+  "outcome": "NOT_RUN",
+  "recorded_at": "2026-11-06T11:40:12.345678+00:00",
+  "evidence_digest": "da7b2aafbbafb191244748003e38ca1aaa5d9ed07391de936855fa41ce84e2e4"
+ },
+ "approval.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.approval",
+  "gate_id": "HG-5E6F7A8B",
+  "mission_id": "M-1A2B3C4D",
+  "action": "run_n8n_workflow",
+  "targets": [
+   "http://127.0.0.1:5678/sedra-workflow/068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  ],
+  "request_digest": "80f70afeef3caa57646fd20afb95be9c3f2c03d38e091906de31838813dcc22e",
+  "risks": [
+   "Lokale n8n-Testinstanz; nur Datenprofil v1, keine Außenaktionen."
+  ],
+  "rollback_available": false,
+  "status": "pending",
+  "decision": null,
+  "decided_at": null,
+  "single_use": true
+ },
+ "approval.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.approval",
+  "gate_id": "HG-5E6F7A8B",
+  "mission_id": "M-1A2B3C4D",
+  "action": "run_n8n_workflow",
+  "targets": [
+   "http://127.0.0.1:5678/sedra-workflow/068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  ],
+  "request_digest": "80f70afeef3caa57646fd20afb95be9c3f2c03d38e091906de31838813dcc22e",
+  "risks": [
+   "Lokale n8n-Testinstanz; nur Datenprofil v1, keine Außenaktionen."
+  ],
+  "rollback_available": false,
+  "status": "resolved",
+  "decision": "APPROVE_ONCE",
+  "decided_at": "2026-11-06T11:40:12.345678+00:00",
+  "single_use": true,
+  "token_id": "APR-0BADF00D"
+ }
+}
+
+from factory_sdk import pruefe_artifact, pruefe_evidence, FabrikFehler
+import copy
+for name, fn in [("artifact", pruefe_artifact), ("evidence", pruefe_evidence)]:
+    fn(copy.deepcopy(EXAMPLES[name + ".gueltig"]))
+    try:
+        fn(copy.deepcopy(EXAMPLES[name + ".ungueltig"]))
+    except FabrikFehler as exc:
+        assert exc.code
+    else:
+        raise AssertionError(name + " ungueltig wurde angenommen")
+print("ok S3")
+'''
+
+HIDDEN_S4 = '''EXAMPLES = {
+ "project.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.project",
+  "backing": {
+   "store": "project_registry",
+   "project_id": "PRJ-3f9a1c2b7d4e",
+   "workspace_path": "projects/PRJ-3f9a1c2b7d4e",
+   "qualification": "MANAGED_WORKSPACE_NOT_VM",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "display_name": "Beispiel Software Factory",
+  "status": "ACTIVE"
+ },
+ "project.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.project",
+  "backing": {
+   "store": "project_registry",
+   "project_id": "PRJ-3f9a1c2b7d4e",
+   "workspace_path": "projects/PRJ-3f9a1c2b7d4e",
+   "qualification": "MANAGED_WORKSPACE_NOT_VM",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "display_name": "Beispiel Software Factory",
+  "status": "ARCHIVED"
+ },
+ "workflow.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.workflow",
+  "workflow_id": "WF-55cf1725549ddc93e4855595",
+  "revision": 2,
+  "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3",
+  "record_digest": "8e4284462977901081a032495c0de1253dcd7fde585c6eeeaf82292ea4a382a5",
+  "previous_revision": 1,
+  "name": "Anfrage prüfen",
+  "change_note": "IF-Bedingung ergänzt",
+  "process_model": false,
+  "execution": {
+   "executable": true,
+   "profile": "n8n-local-data-v1",
+   "reason": null
+  }
+ },
+ "workflow.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.workflow",
+  "workflow_id": "WF-55cf1725549ddc93e4855595",
+  "revision": 2,
+  "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3",
+  "record_digest": "8e4284462977901081a032495c0de1253dcd7fde585c6eeeaf82292ea4a382a5",
+  "previous_revision": 1,
+  "name": "Anfrage prüfen",
+  "change_note": "IF-Bedingung ergänzt",
+  "process_model": true,
+  "execution": {
+   "executable": true,
+   "profile": "n8n-local-data-v1",
+   "reason": null
+  }
+ },
+ "task_run.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.task_run",
+  "mission_id": "M-1A2B3C4D",
+  "phase": "CAPTAIN_REVIEW",
+  "status": "active",
+  "project_refs": [
+   {
+    "project_id": "PRJ-3f9a1c2b7d4e"
+   }
+  ],
+  "workflow_ref": {
+   "workflow_id": "WF-55cf1725549ddc93e4855595",
+   "revision": 2,
+   "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  },
+  "steps": [
+   {
+    "step_id": "N8N-1",
+    "status": "GATE",
+    "attempts": 1,
+    "outcome": "known"
+   }
+  ],
+  "result": {
+   "qualification": "PENDING",
+   "accepted": false
+  }
+ },
+ "task_run.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.task_run",
+  "mission_id": "M-1A2B3C4D",
+  "phase": "CAPTAIN_REVIEW",
+  "status": "active",
+  "project_refs": [
+   {
+    "project_id": "PRJ-3f9a1c2b7d4e"
+   }
+  ],
+  "workflow_ref": {
+   "workflow_id": "WF-55cf1725549ddc93e4855595",
+   "revision": 2,
+   "digest": "068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  },
+  "steps": [
+   {
+    "step_id": "N8N-1",
+    "status": "RUNNING",
+    "attempts": 1
+   }
+  ],
+  "result": {
+   "qualification": "PENDING",
+   "accepted": false
+  }
+ },
+ "artifact.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.artifact",
+  "artifact_id": "ART-9C0FFEE1",
+  "mission_id": "M-1A2B3C4D",
+  "path": "M-1A2B3C4D/n8n-result.json",
+  "artifact_type": "file",
+  "integrity": {
+   "algorithm": "sha256",
+   "hash": "454c30c8423b41114a22f00d2dd857b7116cee24cf0227e3b8b003b91d16bf91"
+  },
+  "provenance": {
+   "created_by": "system",
+   "source_component": "workflows:n8n",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "status": "active"
+ },
+ "artifact.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.artifact",
+  "artifact_id": "ART-9C0FFEE1",
+  "mission_id": "M-1A2B3C4D",
+  "path": "../M-9F9F9F9F/n8n-result.json",
+  "artifact_type": "file",
+  "integrity": {
+   "algorithm": "sha256",
+   "hash": "454c30c8423b41114a22f00d2dd857b7116cee24cf0227e3b8b003b91d16bf91"
+  },
+  "provenance": {
+   "created_by": "system",
+   "source_component": "workflows:n8n",
+   "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "status": "active"
+ },
+ "evidence.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.evidence",
+  "subject": {
+   "kind": "factory.task_run",
+   "id": "M-1A2B3C4D"
+  },
+  "source": {
+   "type": "audit_event",
+   "event_id": "EVT-004211",
+   "event_hash": "d0844b3f61f934dab66ea59bcee18599463595abdaf4ed3608eda5dce1e51633"
+  },
+  "claim": "n8n-Lauf nach Freigabe genau einmal ausgelöst",
+  "outcome": "PASS",
+  "recorded_at": "2026-11-06T11:40:12.345678+00:00",
+  "evidence_digest": "8705ae7fba307117d0c18a765a24f6caf3d9a935544249381822608cf62988cd"
+ },
+ "evidence.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.evidence",
+  "subject": {
+   "kind": "factory.task_run",
+   "id": "M-1A2B3C4D"
+  },
+  "source": {
+   "type": "audit_event",
+   "event_id": "EVT-004211",
+   "event_hash": "d0844b3f61f934dab66ea59bcee18599463595abdaf4ed3608eda5dce1e51633"
+  },
+  "claim": "Live-Lauf gegen echte n8n-Instanz",
+  "outcome": "NOT_RUN",
+  "recorded_at": "2026-11-06T11:40:12.345678+00:00",
+  "evidence_digest": "da7b2aafbbafb191244748003e38ca1aaa5d9ed07391de936855fa41ce84e2e4"
+ },
+ "approval.gueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.approval",
+  "gate_id": "HG-5E6F7A8B",
+  "mission_id": "M-1A2B3C4D",
+  "action": "run_n8n_workflow",
+  "targets": [
+   "http://127.0.0.1:5678/sedra-workflow/068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  ],
+  "request_digest": "80f70afeef3caa57646fd20afb95be9c3f2c03d38e091906de31838813dcc22e",
+  "risks": [
+   "Lokale n8n-Testinstanz; nur Datenprofil v1, keine Außenaktionen."
+  ],
+  "rollback_available": false,
+  "status": "pending",
+  "decision": null,
+  "decided_at": null,
+  "single_use": true
+ },
+ "approval.ungueltig": {
+  "schema_version": "1.0.0",
+  "kind": "factory.approval",
+  "gate_id": "HG-5E6F7A8B",
+  "mission_id": "M-1A2B3C4D",
+  "action": "run_n8n_workflow",
+  "targets": [
+   "http://127.0.0.1:5678/sedra-workflow/068f057d54567dadeb470598e469e7f6064d9e3ef69ccfd4c756f492098d8ad3"
+  ],
+  "request_digest": "80f70afeef3caa57646fd20afb95be9c3f2c03d38e091906de31838813dcc22e",
+  "risks": [
+   "Lokale n8n-Testinstanz; nur Datenprofil v1, keine Außenaktionen."
+  ],
+  "rollback_available": false,
+  "status": "resolved",
+  "decision": "APPROVE_ONCE",
+  "decided_at": "2026-11-06T11:40:12.345678+00:00",
+  "single_use": true,
+  "token_id": "APR-0BADF00D"
+ }
+}
+
+from factory_sdk import pruefe_approval, FabrikFehler
+import copy, factory_sdk
+for f in ["pruefe_project", "pruefe_workflow", "pruefe_task_run", "pruefe_artifact", "pruefe_evidence", "pruefe_approval", "FabrikFehler"]:
+    assert hasattr(factory_sdk, f), f
+pruefe_approval(copy.deepcopy(EXAMPLES["approval.gueltig"]))
+try:
+    pruefe_approval(copy.deepcopy(EXAMPLES["approval.ungueltig"]))
+except FabrikFehler as exc:
+    assert exc.code
+else:
+    raise AssertionError("approval ungueltig wurde angenommen")
+print("ok S4")
+'''
+
+STAGES = [
+    {"name": "S1", "task": TASK_S1, "hidden": HIDDEN_S1},
+    {"name": "S2", "task": TASK_S2, "hidden": HIDDEN_S2},
+    {"name": "S3", "task": TASK_S3, "hidden": HIDDEN_S3},
+    {"name": "S4", "task": TASK_S4, "hidden": HIDDEN_S4},
+]
+TASK = TASK_S1
+HIDDEN = HIDDEN_S1
