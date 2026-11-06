@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:sedra:factory-sdk:1:artifact",
   "title": "Factory SDK 1 - Artifact",
-  "description": "Sicht auf genau einen Eintrag aus ArtifactStore (runtime/src/guppi_runtime/artifacts.py register). Der Store fuehrt den Pfad absolut; das SDK-Objekt fuehrt ihn nur relativ zum Arbeitsbereich der Mission (Umrechnung ist Luecke L-A2). Typisierte Artefakte gibt es im Bestand nicht: artifact_type ist in Version 1 immer 'file' (Luecke L-A1).",
+  "description": "Sicht auf genau einen Eintrag aus ArtifactStore (runtime/src/sedra_runtime/artifacts.py register). Der Store fuehrt den Pfad absolut; das SDK-Objekt fuehrt ihn nur relativ zum Arbeitsbereich der Mission (Umrechnung ist Luecke L-A2). Typisierte Artefakte gibt es im Bestand nicht: artifact_type ist in Version 1 immer 'file' (Luecke L-A1).",
   "type": "object",
   "additionalProperties": false,
   "required": [

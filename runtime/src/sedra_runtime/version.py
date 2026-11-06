@@ -1,3 +1,3 @@
 """Die Version dieser Installation. Wird bei jedem Release angehoben (Tag vX.Y.Z auf GitHub)."""
-VERSION = '1.22.3'
+VERSION = '1.23.0'
 REPO = 'DBM-Ger-cmd/Sedra-AI-Assistent-OS'

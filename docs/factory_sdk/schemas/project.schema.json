@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:sedra:factory-sdk:1:project",
   "title": "Factory SDK 1 - Project",
-  "description": "Sicht auf genau ein vorhandenes Projekt. Kein eigener Speicher: Quelle ist ProjectRegistry (runtime/src/guppi_runtime/projects.py) oder ein Harness-Projekt (harness/projekte.py). Welche Quelle Factory nutzt, ist offen (Luecke L-P1).",
+  "description": "Sicht auf genau ein vorhandenes Projekt. Kein eigener Speicher: Quelle ist ProjectRegistry (runtime/src/sedra_runtime/projects.py) oder ein Harness-Projekt (harness/projekte.py). Welche Quelle Factory nutzt, ist offen (Luecke L-P1).",
   "type": "object",
   "additionalProperties": false,
   "required": [

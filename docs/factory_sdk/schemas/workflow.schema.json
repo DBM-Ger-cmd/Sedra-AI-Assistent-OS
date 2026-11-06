@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:sedra:factory-sdk:1:workflow",
   "title": "Factory SDK 1 - Workflow (eine Revision)",
-  "description": "Sicht auf genau eine unveraenderliche Revision aus WorkflowStore (runtime/src/guppi_runtime/workflows/store.py). Die Definition selbst bleibt im Store; das SDK-Objekt traegt nur Kennung, Digests und die Bewertung von workflows/policy.py assessment. Ausfuehrbar heisst nur: das Profil wuerde den Lauf zur Freigabe zulassen.",
+  "description": "Sicht auf genau eine unveraenderliche Revision aus WorkflowStore (runtime/src/sedra_runtime/workflows/store.py). Die Definition selbst bleibt im Store; das SDK-Objekt traegt nur Kennung, Digests und die Bewertung von workflows/policy.py assessment. Ausfuehrbar heisst nur: das Profil wuerde den Lauf zur Freigabe zulassen.",
   "type": "object",
   "additionalProperties": false,
   "required": [
