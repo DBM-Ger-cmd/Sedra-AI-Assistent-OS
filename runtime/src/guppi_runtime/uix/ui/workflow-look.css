@@ -131,7 +131,3 @@
 .t-scenario .t-wf-act .t-wf-icon{stroke:var(--wf-icon)}
 .t-workflow .t-wf-act:hover .t-wf-act-box{stroke:var(--accent)}
 .t-workflow .t-wf-act.danger:hover .t-wf-act-box{stroke:var(--bad)}
-.t-workflow .t-wf-top{flex-wrap:wrap}
-.t-workflow .t-wf-top select[aria-label="Gespeicherte Workflows"]{max-width:150px}
-.t-workflow .t-wf-top input[aria-label="Änderungsgrund"]{flex:1 1 120px;min-width:110px}
-.t-workflow .t-wf-top .t-wf-hint{white-space:nowrap}
