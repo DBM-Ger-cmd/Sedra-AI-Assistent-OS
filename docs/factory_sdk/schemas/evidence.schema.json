@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sedra:factory-sdk:1:evidence",
+  "title": "Factory SDK 1 - Evidence",
+  "description": "Ein Nachweis zu genau einem Gegenstand. Einen eigenen Nachweis-Speicher gibt es im Bestand nicht (Luecke L-E1). Version 1 verweist deshalb nur auf vorhandene Quellen: einen Audit-Eintrag (core/audit.py, Hash-Kette), einen Eintrag in mission.verification.evidence (modules/verification.py) oder ein Artefakt mit einem Testbericht. Die Kennung ist der Digest des Inhalts (core/request_binding.py digest), damit entsteht kein neuer Zaehler. Ein Nachweis erteilt nie ein Recht.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "evidence_digest",
+    "subject",
+    "source",
+    "claim",
+    "outcome",
+    "recorded_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/schema_version"
+    },
+    "kind": {
+      "const": "factory.evidence"
+    },
+    "evidence_digest": {
+      "description": "digest() ueber das Objekt ohne dieses Feld. Wer liest, rechnet nach; Abweichung = ungueltig.",
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/sha256"
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "factory.task_run",
+            "factory.artifact",
+            "factory.workflow"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "factory.task_run"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "id": {
+                "$ref": "urn:sedra:factory-sdk:1:common#/$defs/mission_id"
+              }
+            },
+            "not": {
+              "required": [
+                "revision"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "factory.artifact"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "id": {
+                "$ref": "urn:sedra:factory-sdk:1:common#/$defs/artifact_id"
+              }
+            },
+            "not": {
+              "required": [
+                "revision"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "factory.workflow"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "id": {
+                "$ref": "urn:sedra:factory-sdk:1:common#/$defs/workflow_id"
+              }
+            },
+            "required": [
+              "revision"
+            ]
+          }
+        }
+      ]
+    },
+    "source": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "event_id",
+            "event_hash"
+          ],
+          "properties": {
+            "type": {
+              "const": "audit_event"
+            },
+            "event_id": {
+              "$ref": "urn:sedra:factory-sdk:1:common#/$defs/audit_event_id"
+            },
+            "event_hash": {
+              "$ref": "urn:sedra:factory-sdk:1:common#/$defs/sha256"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "mission_id",
+            "index"
+          ],
+          "properties": {
+            "type": {
+              "const": "verification"
+            },
+            "mission_id": {
+              "$ref": "urn:sedra:factory-sdk:1:common#/$defs/mission_id"
+            },
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "artifact_id",
+            "hash"
+          ],
+          "properties": {
+            "type": {
+              "const": "test_report"
+            },
+            "artifact_id": {
+              "$ref": "urn:sedra:factory-sdk:1:common#/$defs/artifact_id"
+            },
+            "hash": {
+              "$ref": "urn:sedra:factory-sdk:1:common#/$defs/sha256"
+            }
+          }
+        }
+      ]
+    },
+    "claim": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/short_text"
+    },
+    "outcome": {
+      "description": "Ergebnisbegriffe aus 03_PROZESS/TESTS_UND_ABNAHMEGATES.md. Nur PASS ist ein bestandener Nachweis; SKIPPED und NOT_RUN sind es nie.",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "SKIPPED",
+        "NOT_RUN",
+        "BLOCKED"
+      ]
+    },
+    "reason": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/short_text"
+    },
+    "recorded_at": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/timestamp"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "SKIPPED",
+              "NOT_RUN",
+              "BLOCKED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "reason"
+        ]
+      }
+    }
+  ]
+}

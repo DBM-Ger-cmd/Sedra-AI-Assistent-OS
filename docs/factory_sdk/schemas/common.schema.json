@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sedra:factory-sdk:1:common",
+  "title": "SEDRA Factory SDK 1 - gemeinsame Bausteine",
+  "description": "Gemeinsame Typen aller Factory-SDK-Objekte. Muster wie im Quellcode auf c6960fa (Fundstellen in docs/FACTORY_SDK_SPEC.md). Validierung erteilt nie ein Recht.",
+  "$defs": {
+    "schema_version": {
+      "description": "SemVer des Vertrags. Diese Fassung kennt nur 1.0.0; ein anderer Wert wird abgewiesen (fail-closed).",
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "sha256": {
+      "description": "SHA-256 als Hex in Kleinbuchstaben (core/util.py sha256_file, core/request_binding.py digest).",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "description": "UTC-Zeit wie core/util.py utcnow() (datetime.isoformat mit +00:00).",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?\\+00:00$"
+    },
+    "relative_path": {
+      "description": "Pfad relativ zum Arbeitsbereich: kein fuehrender Schraegstrich, kein Laufwerksbuchstabe, kein Backslash, kein '..'-Segment.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400,
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*\\\\)(?!(.*/)?\\.\\.(/|$)).+$"
+    },
+    "registry_project_id": {
+      "type": "string",
+      "pattern": "^PRJ-[0-9a-f]{12}$"
+    },
+    "harness_project_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,39}$"
+    },
+    "workflow_id": {
+      "type": "string",
+      "pattern": "^WF-[a-f0-9]{24}$"
+    },
+    "mission_id": {
+      "type": "string",
+      "pattern": "^M-[A-Za-z0-9_-]{1,64}$"
+    },
+    "artifact_id": {
+      "type": "string",
+      "pattern": "^ART-[0-9A-F]{8}$"
+    },
+    "gate_id": {
+      "type": "string",
+      "pattern": "^HG-[0-9A-F]{8}$"
+    },
+    "audit_event_id": {
+      "type": "string",
+      "pattern": "^EVT-[0-9]{6,}$"
+    },
+    "step_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+    },
+    "short_text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    }
+  }
+}

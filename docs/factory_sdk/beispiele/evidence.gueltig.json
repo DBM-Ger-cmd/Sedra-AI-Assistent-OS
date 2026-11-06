@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "kind": "factory.evidence",
+  "subject": {
+    "kind": "factory.task_run",
+    "id": "M-1A2B3C4D"
+  },
+  "source": {
+    "type": "audit_event",
+    "event_id": "EVT-004211",
+    "event_hash": "d0844b3f61f934dab66ea59bcee18599463595abdaf4ed3608eda5dce1e51633"
+  },
+  "claim": "n8n-Lauf nach Freigabe genau einmal ausgelöst",
+  "outcome": "PASS",
+  "recorded_at": "2026-11-06T11:40:12.345678+00:00",
+  "evidence_digest": "8705ae7fba307117d0c18a765a24f6caf3d9a935544249381822608cf62988cd"
+}

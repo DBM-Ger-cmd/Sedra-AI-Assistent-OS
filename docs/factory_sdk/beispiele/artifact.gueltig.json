@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "kind": "factory.artifact",
+  "artifact_id": "ART-9C0FFEE1",
+  "mission_id": "M-1A2B3C4D",
+  "path": "M-1A2B3C4D/n8n-result.json",
+  "artifact_type": "file",
+  "integrity": {
+    "algorithm": "sha256",
+    "hash": "454c30c8423b41114a22f00d2dd857b7116cee24cf0227e3b8b003b91d16bf91"
+  },
+  "provenance": {
+    "created_by": "system",
+    "source_component": "workflows:n8n",
+    "created_at": "2026-11-06T11:40:12.345678+00:00"
+  },
+  "status": "active"
+}

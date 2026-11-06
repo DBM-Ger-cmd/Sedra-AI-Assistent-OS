@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sedra:factory-sdk:1:approval",
+  "title": "Factory SDK 1 - Approval",
+  "description": "Sicht auf genau ein Gate des Guard (core/guard.py create_gate, approve, reject), wie es desk/gated.py request in mission.human_gates anlegt. Das SDK-Objekt ist eine Anzeige: es enthaelt nie den Einmal-Token und kann nichts freigeben. Ausfuehren darf nur, wer den Token ueber guard.authorize gegen Aktion, Ziel und request_digest einloest. Dauerfreigaben (kind standing) sind in Version 1 nicht abgebildet.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "gate_id",
+    "mission_id",
+    "action",
+    "targets",
+    "request_digest",
+    "risks",
+    "rollback_available",
+    "status",
+    "decision",
+    "single_use"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/schema_version"
+    },
+    "kind": {
+      "const": "factory.approval"
+    },
+    "gate_id": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/gate_id"
+    },
+    "mission_id": {
+      "$ref": "urn:sedra:factory-sdk:1:common#/$defs/mission_id"
+    },
+    "request_kind": {
+      "description": "Antragsart aus mission.context.gated_request.kind (desk/gated.py), z. B. harness_prozess. Fehlt bei Gates ohne gated-Antrag (etwa run_n8n_workflow). Neue Factory-Arten brauchen zuerst einen Eintrag in desk/freigabeklasse.py (Captain-Auftrag, IF-MOD-01 Z3).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,39}$"
+    },
+    "action": {
+      "description": "gate.request.exact_action. Im Bestand klein (run_n8n_workflow, change_objective) und gross (HARNESS_PROZESS_ENTWURF).",
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{1,63}$"
+    },
+    "targets": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 400
+      }
+    },
+    "request_digest": {
+      "oneOf": [
+        {
+          "$ref": "urn:sedra:factory-sdk:1:common#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "risks": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "$ref": "urn:sedra:factory-sdk:1:common#/$defs/short_text"
+      }
+    },
+    "rollback_available": {
+      "type": "boolean"
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "resolved"
+      ]
+    },
+    "decision": {
+      "enum": [
+        null,
+        "APPROVE_ONCE",
+        "DENY"
+      ]
+    },
+    "decided_at": {
+      "oneOf": [
+        {
+          "$ref": "urn:sedra:factory-sdk:1:common#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "single_use": {
+      "const": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "pending"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "const": null
+          },
+          "decided_at": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "resolved"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "enum": [
+              "APPROVE_ONCE",
+              "DENY"
+            ]
+          },
+          "decided_at": {
+            "$ref": "urn:sedra:factory-sdk:1:common#/$defs/timestamp"
+          }
+        },
+        "required": [
+          "decided_at"
+        ]
+      }
+    }
+  ],
+  "not": {
+    "anyOf": [
+      {
+        "required": [
+          "token"
+        ]
+      },
+      {
+        "required": [
+          "token_id"
+        ]
+      },
+      {
+        "required": [
+          "approval_token"
+        ]
+      }
+    ]
+  }
+}
