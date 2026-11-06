@@ -96,8 +96,33 @@ Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzei
 
 **Offen (Stand 05.11.2026):** Freigaben S4; Funktionen der anderen Shells als Apps in One Sedra holen (Reihenfolge nennt der Captain, Vorschlag Translator oder Wissensbasis); Richtlinie für Betreiber (Stufe 4 des Apps-Modells); Lernsystem und Cache-Zahl im echten Sedra ausprobieren (Anträge für Betriebslog und gute Antworten im Posteingang freigeben); E1–E5 des Plans CPU-Hilfswerkzeuge, MasterChat-Probelauf, Stick-Branch `claude/usb-stick-minimal-3c1b19`.
 
+## 11. Arbeit im Chat vom 05.–06.11.2026 (Claude Code: Prozess-Apps, Updates, Skills)
+**Stand:** `main` = `226c8ba`, lokal, 34 Commits vor `origin/main` (`d51083a`), nichts gepusht. SEDRA 1.22.2. Vorab-Prüfung des Pushs: keine Schlüssel im Verlauf; vier Beispielpfade stehen noch in `aacf07e` (Verlauf unverändert gelassen, Beispiele im aktuellen Stand durch Platzhalter ersetzt).
+
+**Gebaut (Ort und Test in Klammern):**
+- **Update 1.22.2 Prozess-Apps** eingespielt (Updater-Weg des Pakets, Sicherung vorhanden). Das Paket enthielt weder Tests noch Paketier-Skript; die Tests kamen aus der Entwicklungskopie (`test_n8n_*`, `test_process_*`, `n8n_model.test.cjs`).
+- **UIX der Prozess-Apps** (`runtime/src/guppi_runtime/uix/ui/workflow-*.js`, Plan `docs/PLAN_PROZESS_APPS_UIX.md`): helles und dunkles Thema (Farben in `tokens.css`), Symbolsatz des Workflow-Diagramms (Oval, Raute, Parallelogramm, Zylinder), Seitenleiste (einklappbar) mit Startseite, Vorlagen Muster A/B/C, Knotenauswahl mit gesperrten n8n-Knoten, Folgeschritt per „+“, Schnellleiste am Knoten, Leiste an der Verbindung (einfügen, löschen), Aufräumen, Haftnotiz, Minimap, geführtes Einrichten, Parameteransicht (Eingabe, Parameter, lokale Vorschau der Ausgabe), Marke des letzten Laufs. Nach dem Vorbild von n8n und Make, ohne deren Code (n8n: Sustainable Use License).
+- **Selbstabbild** (`config/selbstabbild.yaml`, `workflows/selbstabbild.py`, `test_selbstabbild`): sechs SEDRA-Abläufe als nicht ausführbare Prozessmodelle, jeder Schritt mit Quelle; der Test schlägt bei Abweichung fehl.
+- **Prozess-Entwurf durch SEDRA:** Werkzeug `prozess_beantragen` (nur Antrag im Posteingang, Entwurf erst nach dem Ja des Captains), Vorlage `prozessmodellierer`; aus den Apps startet „Von SEDRA entwerfen lassen“ eine Harness-Sitzung, die links unter „Sitzungen“ erscheint.
+- **Bauablauf angepasst:** Testgruppe `workflow` und `runtime` in `run_tests.py`, Lauf `workflow_js`, `belohnungen_lesen` für Prüfer und Vorarbeiter.
+- **Übernommene Übergaben:** Wissen im Kern K1/K2 (v2) und K5 (v4, als Delta zu v2), F0-01 Startfix, F0-02 Shutdown/SQLite, F0-03 Verbindungen, F0-04 Boot und Service-Bereitschaft. Wissen ist dadurch Standard an.
+- **Skills** (Quelle `skills/`, Kopien in `.claude/skills/`, eigene SEDRA-Bibliothek `sedra`, Test `test_skills_sedra`): `update-einspielen`, `sedra-tests-windows`, `sedra-ui-vertrag`, `selbstabbild-erweitern`, `chat-sichern`.
+- **Unterchats:** „Updates einspielen und prüfen“ (spielt künftig Pakete ein, testet, berichtet) und „Aufräumen der Umgebung“ (Bericht, gruppenweise Freigabe, Verschieben in ein Archiv statt Löschen).
+
+**Entscheidungen des Captains:** Prozess-Apps ohne Marken der Vorlagen, aber nah an deren Funktion und Aussehen; helles Thema zusätzlich zum dunklen; SEDRA bildet seine Abläufe selbst ab und kann Prozesse vorschlagen (Antrag); Updates nur über den Update-Chat und nie direkt auf `main`; Skills im Projekt und für SEDRA; Worktrees und Branches bleiben vorerst stehen.
+
+**Fallen und Praxiswissen:**
+- Heredocs und Backslashes: Skripte mit dem Write-Werkzeug anlegen (siehe Skill `sedra-tests-windows`).
+- Wissen ist Standard an und hält `wissen.sqlite` in Temp-Ordnern offen, Windows verweigert dann das Aufräumen: der Testlauf setzt `SEDRA_WISSEN_STANDARD=aus`, Tests mit Hub oder Runtime schließen sie, Wissens-Tests schalten es selbst ein.
+- Vertragstest der Oberfläche: höchstens 400 Zeilen je Datei, Farben nur in `tokens.css`, Routen in `tool.yaml` samt Eintrag im Allowlist-Test.
+- Unsichtbare SVG-Trefferflächen brauchen sichtbare Geometrie, sonst findet Playwright sie nicht; schmale Felder in der oberen Leiste machten Export-Tests instabil.
+- Update-Pakete bauen aufeinander (F0-01 bis F0-04 in Reihenfolge); Übergaben gegen alten Basisstand als Delta über zwei Detached-Worktrees bilden.
+
+**Offen (Stand 06.11.2026):** Push nach GitHub nur auf ausdrückliches Ja (Entscheidung, ob der Verlauf mit den vier Beispielpfaden bleibt); Paket 1.22.3 (Paketier-Skript fehlt im Repo); echter Windows-Lauf der F0-Updates (Erst-/Zweitstart, `--replace`); offene SQLite-Warnungen in Orchestra, Scheduler und Job-Supervisor; Worktrees `A1-wt-prozess-apps-uix`, `A1-wt-wissen-k5-v4` und die Branches `feat/prozess-apps-uix`, `f0-runtime-updates`, `wissen-k5-v4`, `wissen-kern-k1k2` entfernen, sobald der Captain abgenommen hat; Anbindung der Startseite an den Chat bleibt bei „Sitzung starten“ (kein eigener Chat-Dialog in den Apps).
+
 ## 9. Alle Chats (Sitzungen), nach Datum
 **Sedra Vorarbeiter (Gruppe):**
+- 05.–06.11. Claude Code, Chat „Prozess-Apps einspielen und überarbeiten“: Update 1.22.2, UIX der Prozess-Apps, Selbstabbild, F0-01 bis F0-04, Wissen K1/K2/K5, Skills; Unterchats „Updates einspielen und prüfen“ und „Aufräumen der Umgebung“ (siehe Abschnitt 11).
 - 04.–05.11. Claude Code, Vorarbeiter-Sitzung „VORARBEITER“: One Sedra, Desktop Builder, Lernsystem, Cache-Messung (siehe Abschnitt 10).
 - 31.10. Sedra Minimal USB-Stick Arbeitsumgebung (läuft); Sedra USB-Stick auf K:\ einrichten; SEDRA: minimale USB-Version auf K:\ einrichten (Worktree `claude/usb-stick-minimal-3c1b19`).
 - 30.10. Test: Bonsai und Nemotron gleichzeitig (Worktree `claude/test-bonsai-nemotron-ac86cc`); Earth 2140 DOS-zu-Windows AI-Integration (archiviert); Start-Prompt für Seadra-Vorarbeiter (Vorarbeiter-Sitzung, startete die Harness-Sitzungen).
