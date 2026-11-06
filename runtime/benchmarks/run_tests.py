@@ -30,6 +30,7 @@ AREAS = {
     'wissen': ('test_wissen_*',),
     'uix': ('test_uix_*',),
     'workflow': ('test_n8n_*', 'test_process_*', 'test_selbstabbild', 'test_workflow_*', 'test_pc_workflow'),   # Prozess-Apps (n8n Workflows, Szenario Studio), Selbstabbild; Browser-Teile laufen in der langsamen Bahn
+    'runtime': ('test_runtime*', 'test_f0_*', 'test_uix_start*'),   # Runtime-Lebenszyklus und Start (F0-01 bis F0-04)
     'harness': ('test_harness_*', 'test_uix_harness_*'),          # SPEC_HARNESS_SHELL_v1 Stufen 1 bis 3 (Glob nimmt neue Dateien auf)
 }
 SLOW_FILES = ('test_uix_browser', 'test_uix_flows', 'test_uix_shell_start', 'test_uix_kommandodeck', 'test_uix_rekorder', 'test_n8n_browser', 'test_process_browser')   # starten einen Browser

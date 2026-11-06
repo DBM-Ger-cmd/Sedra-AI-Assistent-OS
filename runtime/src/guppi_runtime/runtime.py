@@ -83,12 +83,88 @@ def _find_architecture_root(project_root: Path) -> Path:
         raise FileNotFoundError('architecture root required')
     return max(candidates, key=_architecture_version)
 
+def _readiness_from_boot(report):
+    """Summarize already collected status, without probing services or authorizing work.
+
+    Core READY is *not* a promise that models, sandboxes or jobs can run.  A
+    CONFIGURED service has passed no independent end-to-end acceptance test.
+    """
+    def configured(view, *, key="enabled"):
+        if not isinstance(view, dict):
+            return {"state": "UNKNOWN", "reason": "status_unavailable"}
+        if view.get("error"):
+            return {"state": "ERROR", "reason": str(view["error"])}
+        if view.get("corrupt_records", 0):
+            return {"state": "BLOCKED", "reason": "corrupt_records"}
+        if view.get(key) is True:
+            return {"state": "CONFIGURED", "reason": "execution_not_verified"}
+        if view.get(key) is False:
+            return {"state": "DISABLED", "reason": "not_enabled"}
+        return {"state": "UNKNOWN", "reason": "status_unavailable"}
+
+    llama_server = report.get("llama_server")
+    if not isinstance(llama_server, dict):
+        llama_entry = {"state": "UNKNOWN", "reason": "status_unavailable"}
+    elif llama_server.get("error"):
+        llama_entry = {"state": "ERROR", "reason": str(llama_server["error"])}
+    elif llama_server.get("enabled") is False:
+        llama_entry = {"state": "DISABLED", "reason": "not_enabled"}
+    elif llama_server.get("running") is True:
+        llama_entry = {"state": "RUNNING_UNVERIFIED", "reason": "no_inference_test"}
+    elif llama_server.get("available") is True:
+        llama_entry = {"state": "AVAILABLE_NOT_RUNNING", "reason": "no_inference_test"}
+    elif llama_server.get("available") is False:
+        llama_entry = {"state": "UNAVAILABLE", "reason": "runtime_not_available"}
+    else:
+        llama_entry = {"state": "UNKNOWN", "reason": "status_unavailable"}
+
+    sandbox = report.get("sandbox")
+    if not isinstance(sandbox, dict):
+        sandbox_entry = {"state": "UNKNOWN", "reason": "status_unavailable"}
+    elif sandbox.get("blockers") or sandbox.get("execution_ready") is False:
+        sandbox_entry = {"state": "BLOCKED", "reason": "sandbox_preflight_blocked"}
+    elif sandbox.get("execution_ready") is True:
+        sandbox_entry = {"state": "PREFLIGHT_PASS", "reason": "guest_execution_not_verified"}
+    else:
+        sandbox_entry = {"state": "UNKNOWN", "reason": "status_unavailable"}
+
+    return {
+        "schema_version": 1,
+        "scope": "snapshot_only; no live model, guest, worker or factory acceptance",
+        "core": {"state": report.get("state", "UNKNOWN"), "meaning": "core_observability_only"},
+        "services": {
+            "job_supervisor": configured(report.get("job_supervisor")),
+            "model_scheduler": configured(report.get("model_scheduler")),
+            "role_routing": configured(report.get("role_routing")),
+            "model_loader": configured(report.get("model_loader")),
+            "llama_server": llama_entry,
+            "orchestra": configured(report.get("orchestra")),
+            "wissen": configured(report.get("wissen")),
+            "permissions": configured(report.get("permissions"), key="available"),
+            "sandbox": sandbox_entry,
+        },
+        "factory": {"state": "NOT_EVALUATED", "reason": "factory_acceptance_required"},
+    }
+
+
 class GuppiRuntime:
     ORCHESTRA_CONFIG="orchestra.yaml"      # unter config_root; die Paket-Vorgabe (Spec 0, D3.4)
 
     def __init__(self,project_root: Path, architecture_root: Path|None=None):
         self._close_lock = threading.Lock()
         self._closed_services = set()
+        try:
+            self._initialize(project_root, architecture_root)
+        except BaseException as exc:
+            # A construction failure has no complete runtime for the caller
+            # to close. Release only services that were already acquired.
+            try:
+                self.close()
+            except BaseException as cleanup_exc:
+                exc.add_note("SEDRA partial startup cleanup failed: " + type(cleanup_exc).__name__)
+            raise
+
+    def _initialize(self,project_root: Path, architecture_root: Path|None=None):
         self.project_root=Path(project_root).resolve(); self.project_root.mkdir(parents=True,exist_ok=True)
         if architecture_root is None:
             architecture_root=_find_architecture_root(self.project_root)
@@ -552,7 +628,7 @@ class GuppiRuntime:
             portable=pool.submit(self.model_runtime.status)
             resources=pool.submit(self.resource_status)
             capabilities,portable,resources=capabilities.result(),portable.result(),resources.result()
-        return {
+        result = {
             "state":"READY" if status=="HEALTHY" else "SAFE_MODE",
             "health":self.observability.report(),
             "registry":self.registry.health(),
@@ -579,6 +655,8 @@ class GuppiRuntime:
             "orchestra":orchestra_service.boot_entry(self.orchestra,self.orchestra_error),
             "wissen":self.wissen_status(),
         }
+        result["service_readiness"] = _readiness_from_boot(result)
+        return result
 
 
 # Public SEDRA name during the compatibility migration; legacy imports remain valid.
