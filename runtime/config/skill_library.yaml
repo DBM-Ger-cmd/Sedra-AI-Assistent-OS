@@ -20,3 +20,9 @@ skill_library:
       note: 366 skills of claude-skills (A. Rezvani), all domains; for lookups, not the default of the coder
       sources:
         claude-skills: <skillsets>/claude-skills-main/claude-skills-main
+    sedra:
+      output: runtime_data/skill_library_sedra
+      license: eigen
+      note: eigene Skills von SEDRA (Update einspielen, Tests unter Windows, UI-Vertrag, Selbstabbild); die Quelle liegt im Repo unter skills/, Kopien für Claude Code unter .claude/skills/
+      sources:
+        sedra: ../skills

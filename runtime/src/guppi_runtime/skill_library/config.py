@@ -47,9 +47,12 @@ def build_configured(name, config=None, runtime=RUNTIME, paths=None):
         expanded = local_paths.expand(folder, paths)
         if local_paths.unresolved(expanded):
             raise ValueError(f"source {label}: the folder placeholder in {folder!r} is not set in config/local_paths.yaml")
-        if not Path(expanded).is_dir():
-            raise ValueError(f"source {label}: folder not found ({expanded})")
-        sources[label] = expanded
+        place = Path(expanded)
+        if not place.is_absolute():
+            place = (Path(runtime) / place).resolve()      # a folder inside the repository (e.g. ../skills) counts from the runtime folder
+        if not place.is_dir():
+            raise ValueError(f"source {label}: folder not found ({place})")
+        sources[label] = str(place)
     if not sources:
         raise ValueError("no sources")
     return build_library(sources, Path(runtime) / entry["output"], source_name=name, license_name=entry.get("license", ""),
