@@ -68,7 +68,7 @@
       item('Exportieren', ()=>this.export(false));item('Bereinigter Export', ()=>this.export(true));item('Prüfen', ()=>this.safe(()=>this.check()));
       this.picker = el('select');this.picker.setAttribute('aria-label', 'Gespeicherte Workflows');
       this.picker.onchange = ()=>{if(this.picker.value)this.safe(()=>this.load(this.picker.value));};
-      top.append(this.title, this.version, this.changeNote, (()=>{const b = button('Speichern', ()=>this.safe(()=>this.save()));b.className = 't-wf-primary';return b;})(), button('Zurück', ()=>this.undo(false)), button('Wiederholen', ()=>this.undo(true)), this.picker, menu);
+      top.append(this.title, this.version, this.changeNote, (()=>{const b = button('Speichern', ()=>this.safe(()=>this.save()));b.className = 't-wf-primary';return b;})(), button('Zurück', ()=>this.undo(false)), button('Wiederholen', ()=>this.undo(true)), menu);
       // Reiter
       this.tabButtons = {};this.panels = {};
       const tabs = el('div', 't-wf-tabs');tabs.setAttribute('role', 'tablist');
@@ -82,10 +82,19 @@
       this.templateBox = el('div', 't-wf-cards');
       this.selfBox = el('div', 't-wf-selfbox');this.selfStatus = el('p', 't-wf-hint', 'SEDRA kann seine eigenen Abläufe als Prozessmodelle zeigen: aus den Quellen im Code erzeugt, nur Darstellung, nie ausführbar.');
       this.selfBox.append(this.selfStatus, button('Selbstabbild prüfen', ()=>this.safe(()=>this.selfCheck())), button('Abläufe von SEDRA anlegen oder aktualisieren', ()=>this.safe(()=>this.selfCreate())));
-      this.panels.overview.append(el('div', 't-wf-toolbar', ''), this.cards, el('h3', '', 'Abläufe von SEDRA (Selbstabbild)'), this.selfBox);
+      // Startseite: Begrüßung, drei Wege zum Anfangen, gespeicherte Arbeit mit Suche, Abläufe von SEDRA
+      const hero = el('div', 't-wf-hero');hero.append(el('h2', '', 'Was automatisieren wir heute?'), el('p', 't-wf-hint', 'Von vorn beginnen, mit einer Vorlage starten oder gespeicherte Arbeit öffnen. Läufe starten nur mit Freigabe des Captains.'));
+      const starts = el('div', 't-wf-starts');
+      const start = (title, text, fn, primary)=>{const b = button('', fn);b.className = 't-wf-start' + (primary ? ' t-wf-primary' : '');b.append(el('strong', '', title), el('span', '', text));return b;};
+      starts.append(start(options.newTitle || 'Neuer Workflow', 'Leere Fläche mit einem Auslöser', ()=>{if(this.discard()){this.adopt(this.blank(), null, null);this.setTab('editor');this.notice('Neuer Entwurf. Erster Schritt: „Knoten hinzufügen“.');}}, true),
+        start('Aus Vorlage beginnen', 'Muster A, B und C mit geführtem Einrichten', ()=>this.setTab('templates')),
+        start('Abläufe von SEDRA', 'SEDRA bildet seine eigenen Abläufe ab', ()=>{this.selfBox.scrollIntoView({block: 'center'});this.selfBox.classList.add('t-wf-flash');}));
+      this.picker = el('select');this.picker.setAttribute('aria-label', 'Gespeicherte Workflows');
+      this.picker.onchange = ()=>{if(this.picker.value)this.safe(async()=>{await this.load(this.picker.value);this.setTab('editor');});};
+      this.panels.overview.append(hero, starts, el('h3', '', 'Zuletzt gespeichert'), el('div', 't-wf-toolbar', ''), this.cards, el('h3', '', 'Abläufe von SEDRA (Selbstabbild)'), this.selfBox);
       this.panels.templates.append(el('p', 't-wf-hint', 'Eigene Startvorlagen von SEDRA. Muster A: Auslöser, dann Aktion. Muster B: mit Bedingung. Muster C: mit KI-Schritt (nur als Prozessmodell). Nach dem Anlegen führt das geführte Einrichten durch die Schritte.'), this.templateBox);
       this.renderTemplates();
-      this.panels.overview.firstChild.append(find, button(options.newTitle || 'Neuer Workflow', ()=>{if(this.discard()){this.adopt(this.blank(), null, null);this.setTab('editor');this.notice('Neuer Entwurf. Erster Schritt: „Knoten hinzufügen“.');}}));
+      this.panels.overview.querySelector('.t-wf-toolbar').append(find, this.picker);
       // Editor
       const views = el('div', 't-wf-toolbar');
       this.viewSelect = el('select');this.viewSelect.setAttribute('aria-label', 'Prozessansicht');
@@ -123,8 +132,11 @@
         button('Aktualisieren', ()=>this.safe(()=>this.refreshRuns())));
       this.runs = el('div', 't-wf-runs');this.output = el(options.renderRun ? 'div' : 'pre', 't-wf-output');this.output.setAttribute('aria-label', 'Laufergebnis');run.append(this.runs, this.output);
       this.panels.runs.append(run);
-      this.el.replaceChildren(head, this.engine, top, this.message, this.panels.overview, this.panels.templates, this.panels.editor, this.panels.versions, this.panels.runs, this.file);
-      head.insertBefore(tabs, this.themeButton);      // Reiter in der Kopfzeile (wie n8n: Name links, Reiter in der Mitte, Schalter rechts)
+            // Seitenleiste links (Übersicht, Vorlagen, Editor, Versionen, Ausführungen), rechts die Fläche; die obere Leiste gehört zur Arbeit am Prozess
+      this.top = top;tabs.setAttribute('aria-orientation', 'vertical');tabs.className = 't-wf-rail t-wf-tabs';
+      const content = el('div', 't-wf-content');content.append(top, this.panels.overview, this.panels.templates, this.panels.editor, this.panels.versions, this.panels.runs);
+      const body = el('div', 't-wf-body');body.append(tabs, content);
+      this.el.replaceChildren(head, this.engine, this.message, body, this.file);
       this.setTab(this.tab || 'editor');
       this.el.addEventListener('keydown', event=>{
         if((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)){
@@ -150,7 +162,7 @@
     setTab(name){
       const model = this.state && P().has(this.state.doc);
       if(name === 'runs' && model) name = 'editor';
-      this.tab = name;
+      this.tab = name;if(this.top)this.top.hidden = name === 'overview' || name === 'templates';
       Object.entries(this.panels).forEach(([key, panel])=>{panel.hidden = key !== name;});
       Object.entries(this.tabButtons).forEach(([key, b])=>{b.setAttribute('aria-selected', String(key === name));b.classList.toggle('active', key === name);});
     },

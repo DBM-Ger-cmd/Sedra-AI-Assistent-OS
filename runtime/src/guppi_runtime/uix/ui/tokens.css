@@ -237,5 +237,5 @@ html[data-theme="nacht"], :root:not([data-theme="klar"]){
 }
 .t-workflow[data-wf-theme="dark"]{color-scheme:dark}
 .t-scenario{--wf-edge:var(--scenario-accent)}
-.t-scenario[data-wf-theme="light"]{--wf-canvas:#f4f4f6}
+.t-scenario[data-wf-theme="light"]{--wf-canvas:#f4f4f6;--accent:var(--scenario-accent)}
 

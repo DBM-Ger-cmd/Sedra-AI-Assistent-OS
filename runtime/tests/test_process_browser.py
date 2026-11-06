@@ -79,6 +79,7 @@ class ProcessBrowser(unittest.TestCase):
             app.locator('.t-wf-history').get_by_text('Feldzuordnung geändert', exact=True).wait_for(state='attached')
             page.reload();page.wait_for_function('()=>window.sedraBoot && window.sedraBoot.ctx')
             app = self.open(page, 'workflow')
+            app.get_by_role('tab', name='Übersicht').click()
             app.get_by_label('Gespeicherte Workflows').select_option(index=1)
             page.wait_for_function("()=>document.querySelector('.t-n8n-workflow .t-wf-hint').textContent || true")
             app.locator('.t-wf-history').get_by_text('Feldzuordnung geändert', exact=True).wait_for(state='attached')
