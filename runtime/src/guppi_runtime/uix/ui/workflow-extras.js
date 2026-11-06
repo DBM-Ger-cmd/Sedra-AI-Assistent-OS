@@ -72,6 +72,34 @@
         card.setAttribute('aria-label', 'Vorlage ' + t.title);this.templateBox.append(card);
       });
     },
+    // Eine Sitzung aus der App: SEDRA entwirft den Prozess in einer eigenen Harness-Sitzung (Vorlage „Prozessmodellierer“). Sie erscheint links unter „Sitzungen“;
+    // der Entwurf kommt als Antrag in den Posteingang und wird erst nach der Freigabe des Captains angelegt.
+    async sedraEntwerfen(text){
+      const beschreibung = String(text || '').trim();
+      if(beschreibung.length < 10)throw new Error('Bitte den Prozess mit ein paar Sätzen beschreiben.');
+      const kopf = await this.ctx.api('/api/harness/sitzungen', {method: 'POST', body: {vorlage: 'prozessmodellierer', titel: ('Prozess: ' + beschreibung).slice(0, 60)}});
+      const wunsch = 'Entwirf aus dieser Beschreibung einen Prozess für die Prozess-Apps und schlage ihn mit prozess_beantragen vor.\n\nBeschreibung:\n' + beschreibung;
+      const out = await this.ctx.api('/api/harness/sitzungen/' + kopf.id + '/nachricht', {method: 'POST', body: {text: wunsch}});
+      if(this.dead)return;
+      if(out.status === 'kein_modell')this.notice('Sitzung ' + kopf.id + ' ist angelegt (links unter „Sitzungen“), aber es ist kein Modell geladen: ' + (out.grund || 'Modell in der Harness laden und die Nachricht dort senden.'), true);
+      else this.notice('Sitzung ' + kopf.id + ' gestartet, sie steht links unter „Sitzungen“. Der Entwurf kommt als Antrag in den Posteingang (Freigaben); angelegt wird er erst nach deinem Ja.');
+      return kopf.id;
+    },
+    edgeDelete(source, kind, index, target){
+      this.change(()=>{const zweige = ((this.state.doc.connections[source] || {})[kind]) || [], z = zweige[index] || [];for(let k = z.length - 1; k >= 0; k--)if(z[k].node === target)z.splice(k, 1);});
+      this.notice('Verbindung ' + source + ' nach ' + target + ' gelöscht. „Zurück“ stellt sie wieder her.');
+    },
+    // Aufräumen wie „Tidy up“ im n8n-Editor: Spalten nach Abstand vom Auslöser, Zeilen nach Reihenfolge; Notizen bleiben stehen
+    tidy(){
+      const doc = this.state.doc, byName = new Map(doc.nodes.map(n=>[n.name, n])), start = doc.nodes.find(n=>n.type.endsWith('.manualTrigger')) || doc.nodes[0];
+      if(!start)return;
+      const tiefe = new Map([[start.id, 0]]), reihe = [start];
+      for(const n of reihe)Object.values(doc.connections[n.name] || {}).forEach(zweige=>zweige.forEach(z=>z.forEach(e=>{const t = byName.get(e.node);if(t && !tiefe.has(t.id)){tiefe.set(t.id, tiefe.get(n.id) + 1);reihe.push(t);}})));
+      doc.nodes.filter(n=>!tiefe.has(n.id) && !n.type.endsWith('.stickyNote')).forEach(n=>{tiefe.set(n.id, 0);reihe.push(n);});
+      const sz = options.style === 'scenario' ? [240, 200] : [224, 170], zeilen = new Map();
+      this.change(()=>{reihe.forEach(n=>{const d = tiefe.get(n.id), z = zeilen.get(d) || 0;zeilen.set(d, z + 1);n.position = [d * sz[0], z * sz[1]];});});
+      this.notice('Knoten geordnet. „Zurück“ stellt die alte Anordnung wieder her.');
+    },
     nodeAction(what, id){
       const node = this.state.doc.nodes.find(n=>n.id === id);if(!node)return;
       if(what === 'open'){this.state.selected = id;this.inspectorOpen = true;this.inspect();return;}

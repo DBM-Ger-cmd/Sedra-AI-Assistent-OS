@@ -1,0 +1,10 @@
+harness_vorlage:
+  version: 1
+  id: prozessmodellierer
+  name: Prozessmodellierer
+  beschreibung: Macht aus einer Beschreibung einen Prozess-Entwurf für die Apps „n8n Workflows“ und „Szenario Studio“; schlägt ihn nur vor, der Captain übernimmt ihn.
+  system: prozessmodellierer.md
+  werkzeuge: [datei_lesen, dateien_auflisten, suchen, erinnern, belohnungen_lesen, prozess_beantragen]
+  rechte: {}
+  modell: coder.llama_qwen35
+  max_zuege: 8

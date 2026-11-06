@@ -4,7 +4,8 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const NS = 'http://www.w3.org/2000/svg';
   // Maße je Darstellung: Kante des Knotens, Lage der Ausgänge (n Ausgänge, Nr.) und des Eingangs, relativ zur linken oberen Ecke.
-  const TILE = {w: 72, h: 72, out: (i, n)=>[72, n === 2 ? 24 + i * 24 : 36], inn: [0, 36], pad: [90, 70, 100, 90], center: [36, 36]};
+  // Maße nach dem Vorbild des n8n-Editors (Raster 16, Knoten 6 Rasterfelder = 96)
+  const TILE = {w: 96, h: 96, out: (i, n)=>[96, n === 2 ? 32 + i * 32 : 48], inn: [0, 48], pad: [90, 70, 140, 130], center: [48, 48]};
   const CIRCLE = {w: 120, h: 120, out: (i, n)=>[118, n === 2 ? 40 + i * 40 : 60], inn: [2, 60], pad: [70, 40, 130, 110], center: [60, 60]};
   function element(tag, attrs, text){
     const el = document.createElementNS(NS, tag);
@@ -27,14 +28,14 @@
     const hint = document.createElement('p'); hint.className = 't-wf-hint';
     hint.textContent = handlers.readOnly ? 'Verdichtete Kernübersicht. Verbindungen fassen Zwischenschritte zusammen. Bearbeiten in der Gesamtansicht.' : 'Module ziehen, Hintergrund zum Verschieben ziehen, Mausrad zum Zoomen. Ausgang anklicken, dann Ziel wählen.';
     const controls = document.createElement('div'); controls.className = 't-wf-zoom'; controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', 'Ansicht');
-    [['Ansicht einpassen', '⤢', ()=>api.fit()], ['Zoom +', '+', ()=>api.zoom(1.2)], ['Zoom −', '−', ()=>api.zoom(1 / 1.2)], ['Auf Auswahl zentrieren', '◎', ()=>api.focus()]].forEach(([label, text, fn])=>{
+    [['Ansicht einpassen', '⤢', ()=>api.fit()], ['Zoom +', '+', ()=>api.zoom(1.2)], ['Zoom −', '−', ()=>api.zoom(1 / 1.2)], ['Auf Auswahl zentrieren', '◎', ()=>api.focus()], ['Aufräumen: Knoten ordnen', '⌗', ()=>{if(handlers.tidy && !handlers.readOnly)handlers.tidy();}]].forEach(([label, text, fn])=>{
       const b = document.createElement('button'); b.type = 'button'; b.className = 't-wf-zoom-btn'; b.textContent = text; b.setAttribute('aria-label', label); b.title = label; b.onclick = fn; controls.append(b);
     });
     const mini = document.createElement('div'); mini.className = 't-wf-minimap';
     const msvg = element('svg', {class: 't-wf-minimap-svg', role: 'img', 'aria-label': 'Minimap: Übersicht des ganzen Prozesses, anklicken zum Springen', preserveAspectRatio: 'xMidYMid meet'}); mini.append(msvg);
     wrapEl.append(svg, controls, mini);
     container.replaceChildren(hint, wrapEl);
-    let lastDown = null, drag = null, pending = null, offset = [0, 0], zoom = 1, frame = null;
+    let edgeSel = null, edgeBars = [], lastDown = null, drag = null, pending = null, offset = [0, 0], zoom = 1, frame = null;
     const uid = Math.random().toString(16).slice(2), marker = 'wf-arrow-' + uid, grid = 'wf-grid-' + uid;
     function point(event){
       const pt = svg.createSVGPoint(); pt.x = event.clientX; pt.y = event.clientY;
@@ -51,12 +52,13 @@
       const defs = element('defs');
       const arrow = element('marker', {id: marker, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse'});
       arrow.append(element('path', {d: 'M 0 0 L 10 5 L 0 10 z', class: 't-wf-arrow'})); defs.append(arrow);
-      const pattern = element('pattern', {id: grid, width: 20, height: 20, patternUnits: 'userSpaceOnUse'});
+      const pattern = element('pattern', {id: grid, width: 16, height: 16, patternUnits: 'userSpaceOnUse'});
       pattern.append(element('circle', {cx: 1, cy: 1, r: 1, class: 't-wf-grid-dot'})); defs.append(pattern);
       svg.replaceChildren(defs);
       const view = svg.viewBox.baseVal;
       if(!scenario) svg.append(element('rect', {x: view.x, y: view.y, width: view.width, height: view.height, fill: 'url(#' + grid + ')', class: 't-wf-grid', 'pointer-events': 'none'}));
       const byName = new Map(nodes.map(n=>[n.name, n]));
+      edgeBars = [];
       Object.entries(doc.connections).forEach(([source, out])=>Object.entries(out).forEach(([kind, branches])=>branches.forEach((branch, index)=>branch.forEach(edge=>{
         const a = byName.get(source), b = byName.get(edge.node); if(!a || !b) return;
         const count = a.type.endsWith('.if') ? 2 : 1, o = G.out(Math.min(index, count - 1), count);
@@ -66,6 +68,25 @@
         const d = Math.max(40, Math.abs(tx - x) / 2);
         const path = element('path', {d: `M ${x} ${y} C ${x + d} ${y}, ${tx - d} ${ty}, ${tx} ${ty}`, class: 't-wf-edge' + (scenario ? ' scenario' : ''), 'marker-end': scenario ? 'none' : 'url(#' + marker + ')'});
         path.append(element('title', {}, source + ' → ' + edge.node + ' (' + kind + ':' + index + ')')); svg.append(path);
+        const key = source + '|' + kind + '|' + index + '|' + edge.node, chosen = edgeSel === key;
+        if(chosen) path.classList.add('selected');
+        if(!handlers.readOnly && handlers.edgeDelete){
+          const hit = element('g', {class: 't-wf-edge-hitbox', 'aria-label': source + ' nach ' + edge.node + ' Verbindung wählen', role: 'button', tabindex: 0});
+          hit.append(element('path', {d: path.getAttribute('d'), class: 't-wf-edge-hit'}), element('circle', {cx: (x + tx) / 2, cy: (y + ty) / 2, r: 9, class: 't-wf-edge-dot'}));
+          const choose = event=>{event.stopPropagation();event.preventDefault();edgeSel = chosen ? null : key;draw();};
+          hit.addEventListener('pointerdown', event=>event.stopPropagation());hit.addEventListener('click', choose);hit.addEventListener('keydown', event=>{if(event.key === 'Enter' || event.key === ' ')choose(event);});
+          svg.append(hit);
+          if(chosen){
+            const mx = (x + tx) / 2, my = (y + ty) / 2, bar = element('g', {class: 't-wf-actions t-wf-edgebar', transform: `translate(${mx - 29} ${my - 13})`});
+            [['plus', 'Schritt einfügen', ()=>handlers.edgeAdd && handlers.edgeAdd(source, index, edge.node)], ['trash', 'Verbindung löschen', ()=>handlers.edgeDelete(source, kind, index, edge.node)]].forEach(([icon, label, run], k)=>{
+              const b = element('g', {class: 't-wf-act' + (icon === 'trash' ? ' danger' : ''), role: 'button', tabindex: 0, 'aria-label': source + ' nach ' + edge.node + ': ' + label, transform: `translate(${k * 32} 0)`});
+              b.append(element('rect', {width: 26, height: 26, rx: 7, class: 't-wf-act-box'}));if(root.sedraWorkflowIcons)root.sedraWorkflowIcons.append(b, icon, 13, 13, 14);b.append(element('title', {}, label));
+              const go = event=>{event.stopPropagation();event.preventDefault();edgeSel = null;run();};
+              b.addEventListener('pointerdown', event=>event.stopPropagation());b.addEventListener('click', go);b.addEventListener('keydown', event=>{if(event.key === 'Enter' || event.key === ' ')go(event);});bar.append(b);
+            });
+            edgeBars.push(bar);
+          }
+        }
         if(a.type.endsWith('.if'))svg.append(element('text', {x: (x + tx) / 2, y: (y + ty) / 2 - 8, 'text-anchor': 'middle', class: 't-wf-edge-label'}, index === 0 ? 'Ja' : 'Nein'));
       }))));
       nodes.forEach((node, order)=>{
@@ -85,20 +106,31 @@
           const last = lines[lines.length - 1], bx = cx + last.length * 4.4 + 14, by = 142 + (lines.length - 1) * 18;
           g.append(element('rect', {x: bx - 9, y: by - 13, width: 20, height: 18, rx: 4, class: 't-wf-badge-rect'}), element('text', {x: bx + 1, y: by + 1, 'text-anchor': 'middle', class: 't-wf-badge-text'}, String(order + 1)));
           g.append(element('text', {x: cx, y: 142 + lines.length * 18 + 4, 'text-anchor': 'middle', class: 't-wf-node-type'}, subtitle));
+        }else if(node.type.endsWith('.stickyNote')){
+          // Haftnotiz wie im n8n-Editor: Fläche in der Größe der Parameter, Text aus `content`
+          const w = Math.max(120, Math.min(600, Number(node.parameters.width) || 240)), h = Math.max(60, Math.min(500, Number(node.parameters.height) || 120));
+          g.append(element('rect', {width: w, height: h, rx: 6, class: 't-wf-sticky'}));
+          const per = Math.max(8, Math.floor((w - 20) / 6.6)), rows = Math.max(1, Math.floor((h - 18) / 16)), lines = [''];
+          String(node.parameters.content || '').replace(/[#*_`]/g, '').split(/\s+/).forEach(wd=>{if((lines[lines.length - 1] + ' ' + wd).trim().length > per)lines.push('');lines[lines.length - 1] = (lines[lines.length - 1] + ' ' + wd).trim();});
+          lines.slice(0, rows).forEach((line, i)=>g.append(element('text', {x: 10, y: 22 + i * 16, class: 't-wf-sticky-text'}, line)));
         }else{
           // Symbolsatz des Workflow-Diagramms: Oval = Start/Ende, Rechteck = Schritt, Raute = Entscheidung, Parallelogramm = Ein-/Ausgabe, Zylinder = Datenspeicher.
-          const shape = meta ? meta.kind : '';
-          if(shape === 'start' || shape === 'end') g.append(element('rect', {x: 0, y: 10, width: 72, height: 52, rx: 26, class: 't-wf-tile'}));
-          else if(shape === 'decision') g.append(element('polygon', {points: '36,0 72,36 36,72 0,36', class: 't-wf-tile'}));
-          else if(shape === 'data') g.append(element('polygon', {points: '16,10 72,10 56,62 0,62', class: 't-wf-tile'}));
-          else if(shape === 'store') g.append(element('path', {d: 'M 6 18 C 6 6, 66 6, 66 18 L 66 54 C 66 66, 6 66, 6 54 Z M 6 18 C 6 30, 66 30, 66 18', class: 't-wf-tile'}));
-          else g.append(element('rect', {width: 72, height: 72, rx: 14, class: 't-wf-tile'}));
-          if(meta && meta.mode === 'automatable') g.append(element('circle', {cx: 66, cy: 6, r: 9, class: 't-wf-candidate'}), element('text', {x: 66, y: 10, 'text-anchor': 'middle', class: 't-wf-candidate-text'}, 'A'));
-          if(I) I.append(g, kindKey, cx, cy, 34);
-          if(!['manualTrigger', 'start'].includes(kindKey) && !node.type.endsWith('.stickyNote')) g.append(element('circle', {cx: 0, cy: 36, r: 4, class: 't-wf-in'}));
-          const lines = wrap(node.name, 20, 2);
-          lines.forEach((line, i)=>g.append(element('text', {x: cx, y: 94 + i * 15, 'text-anchor': 'middle', class: 't-wf-node-title'}, line)));
-          g.append(element('text', {x: cx, y: 94 + lines.length * 15 + 2, 'text-anchor': 'middle', class: 't-wf-node-type'}, subtitle));
+          // Ein Auslöser hat links die große Rundung und den Blitz davor (wie im n8n-Editor).
+          const shape = meta ? meta.kind : '', trigger = !meta && kindKey === 'manualTrigger';
+          if(state.selected === node.id) g.append(element('rect', {x: -6, y: -6, width: 108, height: 108, rx: 20, class: 't-wf-ring'}));
+          if(shape === 'start' || shape === 'end') g.append(element('rect', {x: 0, y: 14, width: 96, height: 68, rx: 34, class: 't-wf-tile'}));
+          else if(shape === 'decision') g.append(element('polygon', {points: '48,0 96,48 48,96 0,48', class: 't-wf-tile'}));
+          else if(shape === 'data') g.append(element('polygon', {points: '20,14 96,14 76,82 0,82', class: 't-wf-tile'}));
+          else if(shape === 'store') g.append(element('path', {d: 'M 8 24 C 8 8, 88 8, 88 24 L 88 72 C 88 88, 8 88, 8 72 Z M 8 24 C 8 40, 88 40, 88 24', class: 't-wf-tile'}));
+          else if(trigger) g.append(element('path', {d: 'M 40 0 H 82 A 14 14 0 0 1 96 14 V 82 A 14 14 0 0 1 82 96 H 40 A 40 48 0 0 1 40 0 Z', class: 't-wf-tile'}));
+          else g.append(element('rect', {width: 96, height: 96, rx: 14, class: 't-wf-tile'}));
+          if(trigger && I){const bolt = I.append(g, 'bolt', -16, 48, 20);bolt.setAttribute('class', 't-wf-icon t-wf-bolt');}
+          if(meta && meta.mode === 'automatable') g.append(element('circle', {cx: 90, cy: 6, r: 9, class: 't-wf-candidate'}), element('text', {x: 90, y: 10, 'text-anchor': 'middle', class: 't-wf-candidate-text'}, 'A'));
+          if(I) I.append(g, kindKey, cx, cy, 44);
+          if(!['manualTrigger', 'start'].includes(kindKey)) g.append(element('circle', {cx: 0, cy: 48, r: 4, class: 't-wf-in'}));
+          const lines = wrap(node.name, 22, 2);
+          lines.forEach((line, i)=>g.append(element('text', {x: cx, y: 118 + i * 16, 'text-anchor': 'middle', class: 't-wf-node-title'}, line)));
+          g.append(element('text', {x: cx, y: 118 + lines.length * 16 + 2, 'text-anchor': 'middle', class: 't-wf-node-type'}, subtitle));
         }
         g.append(element('title', {}, node.name + '\n' + node.type));
         g.addEventListener('pointerdown', event=>{
@@ -156,6 +188,7 @@
         }
         svg.append(g);
       });
+      edgeBars.forEach(bar=>svg.append(bar));      // die Leiste einer gewählten Verbindung liegt über allem
       drawMini();
       if(handlers.drawn) handlers.drawn();
     }
@@ -182,6 +215,7 @@
     msvg.addEventListener('pointercancel', ()=>{miniDrag = false;});
     svg.addEventListener('pointerdown', event=>{
       if(event.button !== 0 || event.target.closest('.t-wf-node'))return;
+      if(edgeSel){edgeSel = null;draw();}
       const view = svg.viewBox.baseVal;
       drag = {pan: true, x: event.clientX, y: event.clientY, original: offset.slice(), sx: view.width / svg.clientWidth, sy: view.height / svg.clientHeight};
       svg.setPointerCapture(event.pointerId);

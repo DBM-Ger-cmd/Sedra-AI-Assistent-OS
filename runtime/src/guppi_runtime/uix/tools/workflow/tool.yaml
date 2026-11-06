@@ -13,6 +13,8 @@ tool:
   api:
     - POST /api/objects
     - POST /api/actions
+    - POST /api/harness/sitzungen
+    - POST /api/harness/sitzungen/*
   events:
     emits: []
     listens: [task.changed, decision.answered]

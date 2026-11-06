@@ -17,13 +17,14 @@
     end: ['M5 12l5 5 9-10'],
     data: ['M7 5h14l-4 14H3z'],
     store: ['M5 6c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3z', 'M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6', 'M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3'],
+    plus: ['M12 5v14', 'M5 12h14'],
     copy: ['M9 9h11v11H9z', 'M5 15V4h11'],
     trash: ['M4 7h16', 'M9 7V4h6v3', 'M6 7l1 13h10l1-13'],
     bolt: ['M13 3L5 13h6l-1 8 8-10h-6z'],
     unknown: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 'M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7', 'M12 17h.01']
   };
   const LABELS = {manualTrigger: 'Auslöser', start: 'Start', clock: 'Zeit', set: 'Daten', if: 'Bedingung', router: 'Router', decision: 'Entscheidung', noOp: 'Weitergabe',
-    stickyNote: 'Notiz', human: 'Mensch', task: 'Aufgabe', end: 'Ende', data: 'Daten', store: 'Speicher', copy: 'Duplizieren', trash: 'Löschen', bolt: 'Auslöser', unknown: 'Unbekannt'};
+    stickyNote: 'Notiz', human: 'Mensch', task: 'Aufgabe', end: 'Ende', data: 'Daten', store: 'Speicher', plus: 'Hinzufügen', copy: 'Duplizieren', trash: 'Löschen', bolt: 'Auslöser', unknown: 'Unbekannt'};
   const known = key => Object.prototype.hasOwnProperty.call(ICONS, key);
   // Symbolschlüssel für einen Knoten; meta ist die Prozessangabe, falls vorhanden.
   function key(node, meta){

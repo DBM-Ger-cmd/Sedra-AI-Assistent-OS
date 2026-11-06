@@ -173,6 +173,57 @@ class ProcessBrowser(unittest.TestCase):
             app.get_by_role('status').filter(has_text='Workflow zuerst speichern.').wait_for()
         self.session(run)
 
+    def test_sitzung_aus_der_app_und_einklappbare_seitenleiste(self):
+        def run(page, url):
+            app = self.open(page, 'workflow')
+            # Seitenleiste einklappen: nur Symbole, Namen bleiben als Beschriftung für Hilfsmittel, Zustand wird gemerkt
+            fold = app.get_by_role('button', name='Seitenleiste einklappen')
+            self.assertTrue(app.get_by_role('tab', name='Versionen').locator('.t-wf-tab-label').is_visible())
+            fold.click()
+            self.assertFalse(app.get_by_role('tab', name='Versionen').locator('.t-wf-tab-label').is_visible())
+            self.assertEqual(app.get_by_role('button', name='Seitenleiste ausklappen').get_attribute('aria-expanded'), 'false')
+            self.assertEqual(page.evaluate("()=>localStorage.getItem('sedra.wf.rail')"), 'zu')
+            app.get_by_role('tab', name='Editor').click()       # bedienbar bleibt sie auch eingeklappt
+            app.get_by_role('button', name='Seitenleiste ausklappen').click()
+            self.assertTrue(app.get_by_role('tab', name='Versionen').locator('.t-wf-tab-label').is_visible())
+            # Sitzung aus der App: SEDRA entwirft in einer eigenen Harness-Sitzung (links unter „Sitzungen“)
+            app.get_by_role('tab', name='Übersicht').click()
+            app.get_by_role('button', name='Von SEDRA entwerfen lassen').click()
+            app.get_by_role('status').filter(has_text='mit ein paar Sätzen').wait_for()      # zu kurz: nichts wird angelegt
+            app.get_by_label('Prozess beschreiben').fill('Eine Event-Anfrage kommt per Formular, wird geprüft und bei Standardgröße bestätigt, sonst an einen Menschen gegeben.')
+            app.get_by_role('button', name='Von SEDRA entwerfen lassen').click()
+            app.get_by_role('status').filter(has_text='Sitzung S-').wait_for()
+            liste = page.evaluate("()=>window.sedraBoot.ctx.api('/api/harness/sitzungen').then(r=>r.sitzungen.map(s=>[s.titel,s.vorlage]))")
+            self.assertTrue(any(str(t).startswith('Prozess: Eine Event-Anfrage') and v == 'prozessmodellierer' for t, v in liste), liste)
+        self.session(run)
+
+    def test_verbindung_einfuegen_loeschen_aufraeumen_und_haftnotiz(self):
+        def run(page, url):
+            app = self.open(page, 'workflow')
+            kanten = lambda: app.locator('path.t-wf-edge').count()
+            n0, k0 = app.locator('.t-wf-node').count(), kanten()
+            # Verbindung wählen, Schritt einfügen: aus einer Kante werden zwei, nachfolgende Knoten rücken nach rechts
+            app.get_by_role('button', name='Manueller Start nach Felder setzen Verbindung wählen').click()
+            app.get_by_role('button', name='Manueller Start nach Felder setzen: Schritt einfügen').click()
+            app.get_by_label('Knoten suchen').fill('noop'); app.get_by_label('Knoten suchen').press('Enter')
+            page.wait_for_function("n=>document.querySelectorAll('.t-n8n-workflow .t-wf-node').length===n", arg=n0 + 1)
+            self.assertEqual(kanten(), k0 + 1)
+            # Verbindung löschen: der Ausgang ist wieder frei und zeigt das „+“
+            app.get_by_role('button', name='Bedingung prüfen nach Treffer anzeigen Verbindung wählen').click()
+            app.get_by_role('button', name='Bedingung prüfen nach Treffer anzeigen: Verbindung löschen').click()
+            self.assertEqual(kanten(), k0)
+            # Aufräumen: Auslöser steht danach bei 0/0, jede Spalte hat feste Abstände
+            app.get_by_role('button', name='Aufräumen: Knoten ordnen').click()
+            self.assertIn('translate(0 0)', app.locator('.t-wf-node').first.get_attribute('transform'))
+            # Haftnotiz mit Text aus den Parametern
+            app.get_by_role('button', name='Knoten hinzufügen', exact=True).click()
+            app.get_by_label('Knoten suchen').fill('stickynote'); app.get_by_label('Knoten suchen').press('Enter')
+            page.wait_for_function("()=>document.querySelectorAll('.t-n8n-workflow .t-wf-sticky').length===1")
+            self.assertIn('Prozess vor Tool', ' '.join(t.text_content() for t in app.locator('.t-wf-sticky-text').all()))
+            # Auslöser hat die eigene Form (große Rundung links)
+            self.assertEqual(app.locator('path.t-wf-tile').count(), 1)
+        self.session(run)
+
     def test_course_symbols_and_pattern_c(self):
         def run(page, url):
             from guppi_runtime.workflows.process import PREFIX

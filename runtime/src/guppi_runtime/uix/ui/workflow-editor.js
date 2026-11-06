@@ -66,14 +66,12 @@
       item('Importieren', ()=>{this.importRevision = false;this.file.click();});
       item('Als neue Version importieren', ()=>{if(!this.wid){this.notice('Zuerst die Ausgangsfassung speichern oder laden.', true);return;}this.importRevision = true;this.file.click();});
       item('Exportieren', ()=>this.export(false));item('Bereinigter Export', ()=>this.export(true));item('Prüfen', ()=>this.safe(()=>this.check()));
-      this.picker = el('select');this.picker.setAttribute('aria-label', 'Gespeicherte Workflows');
-      this.picker.onchange = ()=>{if(this.picker.value)this.safe(()=>this.load(this.picker.value));};
       top.append(this.title, this.version, this.changeNote, (()=>{const b = button('Speichern', ()=>this.safe(()=>this.save()));b.className = 't-wf-primary';return b;})(), button('Zurück', ()=>this.undo(false)), button('Wiederholen', ()=>this.undo(true)), menu);
       // Reiter
       this.tabButtons = {};this.panels = {};
       const tabs = el('div', 't-wf-tabs');tabs.setAttribute('role', 'tablist');
       [['overview', options.overviewTitle || 'Übersicht'], ['templates', 'Vorlagen'], ['editor', 'Editor'], ['versions', 'Versionen'], ['runs', options.runTitle || 'Ausführungen']].forEach(([key, text])=>{
-        const b = button(text, ()=>this.setTab(key));b.setAttribute('role', 'tab');b.className = 't-wf-tab';this.tabButtons[key] = b;tabs.append(b);
+        const b = button('', ()=>this.setTab(key));b.append(el('span', 't-wf-tab-label', text));b.dataset.icon = {overview: '⌂', templates: '▦', editor: '✎', versions: '⟲', runs: '▶'}[key];b.setAttribute('aria-label', text);b.title = text;b.setAttribute('role', 'tab');b.className = 't-wf-tab';this.tabButtons[key] = b;tabs.append(b);
         this.panels[key] = el('section', 't-wf-panel');this.panels[key].setAttribute('role', 'tabpanel');
       });
       // Übersicht
@@ -89,9 +87,13 @@
       starts.append(start(options.newTitle || 'Neuer Workflow', 'Leere Fläche mit einem Auslöser', ()=>{if(this.discard()){this.adopt(this.blank(), null, null);this.setTab('editor');this.notice('Neuer Entwurf. Erster Schritt: „Knoten hinzufügen“.');}}, true),
         start('Aus Vorlage beginnen', 'Muster A, B und C mit geführtem Einrichten', ()=>this.setTab('templates')),
         start('Abläufe von SEDRA', 'SEDRA bildet seine eigenen Abläufe ab', ()=>{this.selfBox.scrollIntoView({block: 'center'});this.selfBox.classList.add('t-wf-flash');}));
+      const ask = el('div', 't-wf-ask');const askText = el('textarea');askText.rows = 3;askText.maxLength = 3000;askText.setAttribute('aria-label', 'Prozess beschreiben');
+      askText.placeholder = 'Beschreibe den Prozess in ein paar Sätzen, z. B. „Eine Event-Anfrage kommt per Formular, wird geprüft, bei Standardgröße bestätigt, sonst an einen Menschen weitergegeben.“';
+      const askBtn = button('Von SEDRA entwerfen lassen', ()=>this.safe(async()=>{await this.sedraEntwerfen(askText.value);askText.value = '';}));askBtn.className = 't-wf-primary';
+      ask.append(askText, el('p', 't-wf-hint', 'SEDRA startet dafür eine eigene Sitzung (links unter „Sitzungen“). Der Entwurf wartet im Posteingang auf dein Ja und ist nie ausführbar.'), askBtn);
       this.picker = el('select');this.picker.setAttribute('aria-label', 'Gespeicherte Workflows');
       this.picker.onchange = ()=>{if(this.picker.value)this.safe(async()=>{await this.load(this.picker.value);this.setTab('editor');});};
-      this.panels.overview.append(hero, starts, el('h3', '', 'Zuletzt gespeichert'), el('div', 't-wf-toolbar', ''), this.cards, el('h3', '', 'Abläufe von SEDRA (Selbstabbild)'), this.selfBox);
+      this.panels.overview.append(hero, ask, starts, el('h3', '', 'Zuletzt gespeichert'), el('div', 't-wf-toolbar', ''), this.cards, el('h3', '', 'Abläufe von SEDRA (Selbstabbild)'), this.selfBox);
       this.panels.templates.append(el('p', 't-wf-hint', 'Eigene Startvorlagen von SEDRA. Muster A: Auslöser, dann Aktion. Muster B: mit Bedingung. Muster C: mit KI-Schritt (nur als Prozessmodell). Nach dem Anlegen führt das geführte Einrichten durch die Schritte.'), this.templateBox);
       this.renderTemplates();
       this.panels.overview.querySelector('.t-wf-toolbar').append(find, this.picker);
@@ -135,7 +137,12 @@
             // Seitenleiste links (Übersicht, Vorlagen, Editor, Versionen, Ausführungen), rechts die Fläche; die obere Leiste gehört zur Arbeit am Prozess
       this.top = top;tabs.setAttribute('aria-orientation', 'vertical');tabs.className = 't-wf-rail t-wf-tabs';
       const content = el('div', 't-wf-content');content.append(top, this.panels.overview, this.panels.templates, this.panels.editor, this.panels.versions, this.panels.runs);
-      const body = el('div', 't-wf-body');body.append(tabs, content);
+      const body = el('div', 't-wf-body'), railbox = el('div', 't-wf-railbox');
+      const fold = button('«', ()=>{const zu = !body.classList.contains('t-wf-collapsed');body.classList.toggle('t-wf-collapsed', zu);setFold(zu);try{root.localStorage.setItem('sedra.wf.rail', zu ? 'zu' : 'auf');}catch(e){}});
+      const setFold = zu=>{fold.textContent = zu ? '»' : '«';fold.setAttribute('aria-label', zu ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen');fold.setAttribute('aria-expanded', String(!zu));fold.title = fold.getAttribute('aria-label');};
+      let gemerkt = null;try{gemerkt = root.localStorage.getItem('sedra.wf.rail');}catch(e){}
+      body.classList.toggle('t-wf-collapsed', gemerkt === 'zu');setFold(gemerkt === 'zu');fold.className = 't-wf-fold';
+      railbox.append(fold, tabs);body.append(railbox, content);
       this.el.replaceChildren(head, this.engine, this.message, body, this.file);
       this.setTab(this.tab || 'editor');
       this.el.addEventListener('keydown', event=>{
@@ -177,7 +184,7 @@
         card.append(button('Öffnen', ()=>this.safe(async()=>{await this.load(r.id);this.setTab('editor');})));this.cards.append(card);
       });
     },
-    openPicker(after){
+    openPicker(after, insert){
       if(this.view !== 'canvas')return;
       const CAT = {manualTrigger: 'Auslöser', set: 'Daten', if: 'Ablauf', noOp: 'Ablauf', stickyNote: 'Notiz'};
       const HINT = {manualTrigger: 'Startet den Ablauf von Hand', set: 'Felder setzen oder ändern', if: 'Verzweigt nach einer Bedingung', noOp: 'Reicht die Daten unverändert weiter', stickyNote: 'Notiz ohne Wirkung'};
@@ -186,6 +193,16 @@
       root.sedraWorkflowPicker.open({host: this.stage, items, title: 'Knoten hinzufügen', onPick: choice=>{
         const entry = choice.entry;
         this.change(()=>{const n = entry.make ? entry.make(this.state.doc.nodes) : M().node(entry.kind, this.state.doc.nodes);this.state.doc.nodes.push(n);this.state.selected = n.id;this.view = 'canvas';
+          if(insert){const src = this.state.doc.nodes.find(x=>x.name === insert.from), dst = this.state.doc.nodes.find(x=>x.name === insert.to);
+            if(src && dst && !n.type.endsWith('.stickyNote')){
+              const schritt = options.style === 'scenario' ? 240 : 224, x = dst.position[0];
+              this.state.doc.nodes.forEach(o=>{if(o !== n && o.position[0] >= x)o.position = [o.position[0] + schritt, o.position[1]];});      // nachfolgende Knoten rücken nach rechts (wie im n8n-Editor)
+              n.position = [x, dst.position[1]];
+              const zweig = ((this.state.doc.connections[src.name] || {}).main || [])[insert.branch] || [];
+              for(let k = zweig.length - 1; k >= 0; k--)if(zweig[k].node === dst.name)zweig.splice(k, 1);
+              M().connect(this.state.doc, src.name, n.name, insert.branch);M().connect(this.state.doc, n.name, dst.name, 0);
+            }
+          }
           if(after){const src = this.state.doc.nodes.find(x=>x.name === after.name);if(src){n.position = [src.position[0] + (options.style === 'scenario' ? 210 : 170), src.position[1] + after.branch * 90];if(!n.type.endsWith('.stickyNote'))M().connect(this.state.doc, src.name, n.name, after.branch);}}
         });
       }});
@@ -223,7 +240,7 @@
       const visual = core ? {doc: P().coreProjection(this.state.doc), selected: this.state.selected} : this.state;
       this.canvas = root.sedraWorkflowCanvas.mount(this.surface, visual, {
         style: this.style, readOnly: core,
-        select: id=>{this.state.selected = id;this.inspect();}, open: id=>{this.state.selected = id;this.inspectorOpen = true;this.inspect();}, addAfter: (name, branch)=>this.openPicker({name, branch}), act: (what, id)=>this.nodeAction(what, id), drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
+        select: id=>{this.state.selected = id;this.inspect();}, open: id=>{this.state.selected = id;this.inspectorOpen = true;this.inspect();}, addAfter: (name, branch)=>this.openPicker({name, branch}), edgeAdd: (from, branch, to)=>this.openPicker(null, {from, branch, to}), edgeDelete: (a, k, i, b)=>this.edgeDelete(a, k, i, b), tidy: ()=>this.tidy(), act: (what, id)=>this.nodeAction(what, id), drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
         change: ()=>{this.version.textContent = 'Ungespeicherte Änderungen';this.inspect();},
         connect: (a, b, branch)=>{try{this.change(()=>M().connect(this.state.doc, a, b, branch));}catch(e){this.notice(e.message, true);}}
       });this.inspect();

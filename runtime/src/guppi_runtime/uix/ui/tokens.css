@@ -222,8 +222,8 @@ html[data-theme="nacht"], :root:not([data-theme="klar"]){
 /* Prozess-Apps (n8n Workflows, Szenario Studio): Farben des hellen und dunklen Themas, nur im Geltungsbereich .t-workflow.
    Verschoben aus workflow-look.css, damit die Farbregel (ein Wert gehört in diese Datei) für die ganze Oberfläche gilt. */
 .t-workflow{
-  --wf-canvas:var(--bg);--wf-dot:rgba(255,255,255,.16);--wf-edge:var(--accent);--wf-tile:var(--panel);--wf-tile-line:var(--line);
-  --wf-icon:var(--text);--wf-shadow:0 1px 3px rgba(0,0,0,.4);--wf-on-color:#ffffff;
+  --wf-canvas:var(--bg);--wf-dot:rgba(255,255,255,.16);--wf-edge:var(--muted);--wf-tile:var(--panel);--wf-tile-line:var(--line);
+  --wf-icon:var(--text);--wf-shadow:0 1px 3px rgba(0,0,0,.4);--wf-on-color:#ffffff;--wf-sticky:#4a4222;--wf-sticky-line:#7a6b2c;--wf-sticky-text:#f3e9b8;
   --mod-manualTrigger:#7b5cd6;--mod-start:#7b5cd6;--mod-set:#1f9d8a;--mod-if:#d9822b;--mod-router:#d9822b;--mod-decision:#d9822b;--mod-noOp:#5b6b86;
   --mod-stickyNote:#b59a2e;--mod-human:#c2547a;--mod-task:#3b82c4;--mod-end:#2e9e5a;--mod-unknown:#7a7f8a;
 }
@@ -232,7 +232,7 @@ html[data-theme="nacht"], :root:not([data-theme="klar"]){
   --text:#1f2430;--muted:#566070;--heading:#111827;
   --accent:#0d8a6a;--accent-text:#ffffff;--scenario-accent:#7a2fe0;
   --ok:#15803d;--ok-bg:#e8f6ee;--ok-line:#a7d9bb;--warn:#a85a00;--warn-bg:#fff3de;--warn-line:#f0cf9a;--bad:#c0362c;--bad-bg:#fdeceb;--bad-line:#f0b8b3;
-  --wf-canvas:#f7f7f9;--wf-dot:rgba(30,36,48,.20);--wf-tile:#ffffff;--wf-tile-line:#c9ced8;--wf-icon:#1f2430;--wf-shadow:0 1px 4px rgba(20,30,50,.18);
+  --wf-canvas:#f7f7f9;--wf-dot:rgba(30,36,48,.20);--wf-tile:#ffffff;--wf-tile-line:#c9ced8;--wf-icon:#1f2430;--wf-sticky:#fff3c4;--wf-sticky-line:#e0c96a;--wf-sticky-text:#4a4222;--wf-shadow:0 1px 4px rgba(20,30,50,.18);
   color-scheme:light;
 }
 .t-workflow[data-wf-theme="dark"]{color-scheme:dark}

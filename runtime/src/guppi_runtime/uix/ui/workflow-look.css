@@ -154,3 +154,35 @@
   .t-workflow .t-wf-rail .t-wf-tab.active{border-bottom-color:var(--accent)}
 }
 .t-workflow .t-wf-header .t-wf-theme{margin-left:auto}
+
+.t-workflow .t-wf-ask{display:flex;flex-direction:column;gap:8px;padding:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px}
+.t-workflow .t-wf-ask textarea{width:100%;font-family:inherit}
+.t-workflow .t-wf-ask button{align-self:flex-start}
+
+/* Seitenleiste einklappbar: Kasten statt Leiste, nur Symbole im eingeklappten Zustand */
+.t-workflow .t-wf-railbox{flex:0 0 168px;display:flex;flex-direction:column;gap:4px;padding:8px;background:var(--panel-2);border-radius:10px;position:sticky;top:0}
+.t-workflow .t-wf-rail{flex:1 1 auto;width:auto;padding:0;background:transparent;position:static}
+.t-workflow .t-wf-fold{align-self:flex-end;min-width:32px;padding:2px 8px;border-color:transparent;background:transparent;color:var(--muted)}
+.t-workflow .t-wf-tab::before{content:attr(data-icon);display:inline-block;width:1.6em;color:var(--muted)}
+.t-workflow .t-wf-tab.active::before{color:var(--accent)}
+.t-workflow .t-wf-collapsed .t-wf-railbox{flex-basis:54px;align-items:center}
+.t-workflow .t-wf-collapsed .t-wf-tab-label{display:none}
+.t-workflow .t-wf-collapsed .t-wf-rail .t-wf-tab{padding:9px 8px;text-align:center}
+.t-workflow .t-wf-collapsed .t-wf-tab::before{width:auto;font-size:16px}
+@media (max-width:1100px){
+  .t-workflow .t-wf-railbox,.t-workflow .t-wf-collapsed .t-wf-railbox{flex:none;width:100%;flex-direction:row;align-items:center;position:static}
+  .t-workflow .t-wf-fold{order:2}
+  .t-workflow .t-wf-collapsed .t-wf-tab-label{display:inline}
+}
+
+/* Vorbild n8n-Editor: Auswahlring, Auslöser-Blitz, Haftnotiz, neutrale Verbindungen, Leiste an der Verbindung */
+.t-workflow .t-wf-ring{fill:none;stroke:var(--accent);stroke-opacity:.28;stroke-width:6}
+.t-workflow .t-wf-bolt{stroke:var(--accent)}
+.t-workflow .t-wf-sticky{fill:var(--wf-sticky);stroke:var(--wf-sticky-line);stroke-width:1.5}
+.t-workflow .t-wf-sticky-text{fill:var(--wf-sticky-text);font-size:12px}
+.t-workflow .t-wf-node.selected .t-wf-sticky{stroke:var(--accent);stroke-width:3}
+.t-workflow .t-wf-edge:hover,.t-workflow .t-wf-edge.selected{stroke:var(--accent);opacity:1}
+.t-workflow .t-wf-edge-hit{fill:none;stroke:transparent;stroke-width:16;cursor:pointer;pointer-events:stroke}
+.t-workflow .t-wf-edge-dot{fill:var(--accent);fill-opacity:0;cursor:pointer}
+.t-workflow .t-wf-edge-hitbox:hover .t-wf-edge-dot,.t-workflow .t-wf-edge-hitbox:focus .t-wf-edge-dot{fill-opacity:.35}
+.t-workflow .t-wf-edge-hitbox:focus{outline:none}
