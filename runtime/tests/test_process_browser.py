@@ -145,6 +145,33 @@ class ProcessBrowser(unittest.TestCase):
             self.assertNotEqual(before, app.locator('.t-wf-svg').get_attribute('viewBox'))
         self.session(run)
 
+    def test_folgeschritt_plus_schnellleiste_und_testleiste(self):
+        def run(page, url):
+            app = self.open(page, 'workflow')
+            n0 = app.locator('.t-wf-node').count()
+            # „+“ am freien Ausgang: Folgeschritt entsteht und ist verbunden
+            plus = app.get_by_role('button', name='Treffer anzeigen Folgeschritt hinzufügen')
+            plus.click()
+            app.get_by_label('Knoten suchen').fill('noop')
+            app.get_by_label('Knoten suchen').press('Enter')
+            page.wait_for_function("n=>document.querySelectorAll('.t-n8n-workflow .t-wf-node').length===n", arg=n0 + 1)
+            self.assertEqual(app.get_by_role('button', name='Treffer anzeigen Folgeschritt hinzufügen').count(), 0, 'der Ausgang ist nicht mehr frei')
+            # Schnellleiste am gewählten Knoten: duplizieren, dann löschen
+            app.locator('.t-wf-node', has_text='Felder setzen').first.click()
+            app.get_by_role('button', name='Felder setzen: Duplizieren').click()
+            page.wait_for_function("n=>document.querySelectorAll('.t-n8n-workflow .t-wf-node').length===n", arg=n0 + 2)
+            self.assertTrue(app.locator('.t-wf-node', has_text='Felder setzen Kopie').count())
+            app.get_by_role('button', name='Felder setzen Kopie: Löschen').click()
+            page.wait_for_function("n=>document.querySelectorAll('.t-n8n-workflow .t-wf-node').length===n", arg=n0 + 1)
+            app.get_by_role('button', name='Zurück', exact=True).click()
+            page.wait_for_function("n=>document.querySelectorAll('.t-n8n-workflow .t-wf-node').length===n", arg=n0 + 2)
+            # Testleiste wie bei n8n: Workflow testen legt nur einen Lauf zur Freigabe vor
+            self.assertTrue(app.get_by_role('button', name='Workflow testen').is_visible())
+            self.assertEqual(app.get_by_role('button', name='Zeitplan: aus').count(), 0)
+            app.get_by_role('button', name='Workflow testen').click()
+            app.get_by_role('status').filter(has_text='Workflow zuerst speichern.').wait_for()
+        self.session(run)
+
     def test_course_symbols_and_pattern_c(self):
         def run(page, url):
             from guppi_runtime.workflows.process import PREFIX

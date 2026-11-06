@@ -102,7 +102,7 @@
         }
         g.append(element('title', {}, node.name + '\n' + node.type));
         g.addEventListener('pointerdown', event=>{
-          if(event.button !== 0 || event.target.classList.contains('t-wf-port')) return;
+          if(event.button !== 0 || event.target.classList.contains('t-wf-port') || event.target.closest('.t-wf-act, .t-wf-plus')) return;
           event.preventDefault();
           if(pending){ handlers.connect(pending.name, node.name, pending.branch); pending = null; hint.textContent = 'Verbindung angelegt.'; return; }
           const now = Date.now();
@@ -125,6 +125,34 @@
             const begin = event=>{event.stopPropagation();pending = {name: node.name, branch: i};hint.textContent = 'Ziel für „' + node.name + '“ wählen (Escape bricht ab).';};
             port.addEventListener('click', begin); port.addEventListener('keydown', event=>{if(event.key === 'Enter')begin(event);});g.append(port);
           }
+        }
+        if(!handlers.readOnly && !node.type.endsWith('.stickyNote') && (!meta || meta.kind !== 'end')){
+          // „+“ an jedem freien Ausgang: Folgeschritt anhängen (n8n und Make: der nächste Schritt entsteht direkt am Ende des letzten)
+          const count = node.type.endsWith('.if') ? 2 : 1, main = (doc.connections[node.name] || {}).main || [];
+          for(let i = 0; i < count; i++){
+            if((main[i] || []).length) continue;
+            const [px, py] = G.out(i, count), plus = element('g', {class: 't-wf-plus', role: 'button', tabindex: 0, 'aria-label': node.name + ' Folgeschritt hinzufügen'});
+            const bx = px + (scenario ? 40 : 34);
+            plus.append(element('path', {d: `M ${px + (scenario ? 14 : 8)} ${py} L ${bx - 14} ${py}`, class: 't-wf-plus-line'}));
+            plus.append(scenario ? element('circle', {cx: bx, cy: py, r: 17, class: 't-wf-plus-box'}) : element('rect', {x: bx - 14, y: py - 14, width: 28, height: 28, rx: 7, class: 't-wf-plus-box'}));
+            plus.append(element('text', {x: bx, y: py + 6, 'text-anchor': 'middle', class: 't-wf-plus-text'}, '+'));
+            plus.append(element('title', {}, 'Folgeschritt hinzufügen'));
+            const add = event=>{event.stopPropagation();event.preventDefault();handlers.addAfter && handlers.addAfter(node.name, i);};
+            plus.addEventListener('pointerdown', event=>event.stopPropagation());plus.addEventListener('click', add);plus.addEventListener('keydown', event=>{if(event.key === 'Enter' || event.key === ' ')add(event);});
+            g.append(plus);
+          }
+        }
+        if(!handlers.readOnly && state.selected === node.id && handlers.act){
+          // Schnellleiste am gewählten Knoten: Eigenschaften, Duplizieren, Löschen
+          const bar = element('g', {class: 't-wf-actions', transform: `translate(${G.center[0] - 43} ${scenario ? -6 : -34})`});
+          [['set', 'Eigenschaften öffnen', 'open'], ['copy', 'Duplizieren', 'duplicate'], ['trash', 'Löschen', 'delete']].forEach(([icon, label, what], k)=>{
+            const b = element('g', {class: 't-wf-act' + (what === 'delete' ? ' danger' : ''), role: 'button', tabindex: 0, 'aria-label': node.name + ': ' + label, transform: `translate(${k * 30} 0)`});
+            b.append(element('rect', {width: 26, height: 26, rx: 7, class: 't-wf-act-box'}));if(I)I.append(b, icon, 13, 13, 14);b.append(element('title', {}, label));
+            const run = event=>{event.stopPropagation();event.preventDefault();handlers.act(what, node.id);};
+            b.addEventListener('pointerdown', event=>event.stopPropagation());b.addEventListener('click', run);b.addEventListener('keydown', event=>{if(event.key === 'Enter' || event.key === ' ')run(event);});
+            bar.append(b);
+          });
+          g.append(bar);
         }
         svg.append(g);
       });
@@ -167,7 +195,10 @@
     });
     svg.addEventListener('pointerup', ()=>{if(drag){const changed = !drag.pan;drag = null;if(changed)handlers.change();draw();}});
     svg.addEventListener('pointercancel', ()=>{drag = null;draw();});
-    svg.addEventListener('keydown', e=>{if(e.key === 'Escape'){pending = null;hint.textContent = 'Verbindung abgebrochen.';}});
+    svg.addEventListener('keydown', e=>{
+      if(e.key === 'Escape'){pending = null;hint.textContent = 'Verbindung abgebrochen.';}
+      if((e.key === 'Delete') && !handlers.readOnly && state.selected && handlers.act && e.target.closest && e.target.closest('.t-wf-node')){e.preventDefault();handlers.act('delete', state.selected);}
+    });
     function setZoom(value){
       const previous = zoom;zoom = Math.max(0.5, Math.min(8, value));
       if(frame){offset = [offset[0] + frame.width / previous / 2 - frame.width / zoom / 2, offset[1] + frame.height / previous / 2 - frame.height / zoom / 2];}draw();

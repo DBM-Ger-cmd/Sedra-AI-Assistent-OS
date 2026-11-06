@@ -111,3 +111,27 @@
 .t-workflow .t-wf-guide-step{font-weight:600;color:var(--heading)}
 .t-workflow .t-wf-guide[hidden]{display:none!important}
 .t-workflow .t-wf-guide button.t-wf-primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+
+/* Kopfzeile mit Reitern, Hauptknopf, „+“ am Ausgang, Schnellleiste am Knoten */
+.t-workflow .t-wf-header{flex-wrap:nowrap;gap:12px}
+.t-workflow .t-wf-header .t-wf-tabs{border:0;margin:0 auto}
+.t-workflow .t-wf-header .t-wf-theme{margin-left:0}
+.t-workflow .t-wf-header .t-wf-badge{white-space:nowrap}
+.t-workflow button.t-wf-primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:600}
+.t-workflow button.t-wf-primary:hover{filter:brightness(1.08)}
+.t-workflow .t-wf-plus{cursor:pointer}
+.t-workflow .t-wf-plus-line{stroke:var(--wf-edge);stroke-width:2;opacity:.8}
+.t-workflow .t-wf-plus-box{fill:var(--wf-tile);stroke:var(--wf-edge);stroke-width:2}
+.t-workflow .t-wf-plus:hover .t-wf-plus-box,.t-workflow .t-wf-plus:focus .t-wf-plus-box{fill:var(--accent)}
+.t-workflow .t-wf-plus:hover .t-wf-plus-text,.t-workflow .t-wf-plus:focus .t-wf-plus-text{fill:var(--accent-text)}
+.t-workflow .t-wf-plus-text{fill:var(--text);font-size:20px;font-weight:600;pointer-events:none}
+.t-workflow .t-wf-act{cursor:pointer}
+.t-workflow .t-wf-act-box{fill:var(--wf-tile);stroke:var(--wf-tile-line);stroke-width:1.5;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
+.t-workflow .t-wf-act .t-wf-icon{stroke:var(--wf-icon)}
+.t-scenario .t-wf-act .t-wf-icon{stroke:var(--wf-icon)}
+.t-workflow .t-wf-act:hover .t-wf-act-box{stroke:var(--accent)}
+.t-workflow .t-wf-act.danger:hover .t-wf-act-box{stroke:var(--bad)}
+.t-workflow .t-wf-top{flex-wrap:wrap}
+.t-workflow .t-wf-top select[aria-label="Gespeicherte Workflows"]{max-width:150px}
+.t-workflow .t-wf-top input[aria-label="Änderungsgrund"]{flex:1 1 120px;min-width:110px}
+.t-workflow .t-wf-top .t-wf-hint{white-space:nowrap}

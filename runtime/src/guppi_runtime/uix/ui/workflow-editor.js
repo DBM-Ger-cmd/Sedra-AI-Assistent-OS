@@ -67,7 +67,7 @@
       item('Exportieren', ()=>this.export(false));item('Bereinigter Export', ()=>this.export(true));item('Prüfen', ()=>this.safe(()=>this.check()));
       this.picker = el('select');this.picker.setAttribute('aria-label', 'Gespeicherte Workflows');
       this.picker.onchange = ()=>{if(this.picker.value)this.safe(()=>this.load(this.picker.value));};
-      top.append(this.title, this.version, this.changeNote, button('Speichern', ()=>this.safe(()=>this.save())), button('Zurück', ()=>this.undo(false)), button('Wiederholen', ()=>this.undo(true)), this.picker, menu);
+      top.append(this.title, this.version, this.changeNote, (()=>{const b = button('Speichern', ()=>this.safe(()=>this.save()));b.className = 't-wf-primary';return b;})(), button('Zurück', ()=>this.undo(false)), button('Wiederholen', ()=>this.undo(true)), this.picker, menu);
       // Reiter
       this.tabButtons = {};this.panels = {};
       const tabs = el('div', 't-wf-tabs');tabs.setAttribute('role', 'tablist');
@@ -104,10 +104,10 @@
       this.stage.addEventListener('keydown', event=>{if(event.key === 'Escape' && this.inspectorOpen && !event.defaultPrevented){this.inspectorOpen = false;this.inspect();}});
       this.report = el('pre', 't-wf-report');this.report.setAttribute('aria-label', 'Kompatibilitätsbericht');
       this.bottom = el('div', 't-wf-bottombar');this.bottom.hidden = !options.runBar;
-      const once = button('Einmal ausführen', ()=>this.submitRun());once.title = 'Legt einen Lauf zur Freigabe vor. Ausgeführt wird erst nach Captain-Freigabe.';
+      const once = button(options.runLabel || 'Einmal ausführen', ()=>this.submitRun());once.className = 't-wf-primary';once.title = 'Legt einen Lauf zur Freigabe vor. Ausgeführt wird erst nach Captain-Freigabe.';
       const plan = button('Zeitplan: aus', ()=>{});plan.disabled = true;plan.title = 'Zeitpläne gibt es im Adapter nicht. Läufe starten nur von Hand und mit Freigabe.';
       const settings = button('Einstellungen', ()=>{this.inspectorOpen = !this.inspectorOpen;this.inspect();});
-      this.bottom.append(once, plan, settings, button('Posteingang', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'})));
+      this.bottom.append(...[once, options.noSchedule ? null : plan, settings].filter(Boolean), button('Posteingang', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'})));
       this.panels.editor.append(views, this.processBanner, this.stage, this.bottom, this.report);
       // Versionen
       const history = el('details', 't-wf-history');history.open = true;history.append(el('summary', '', 'Versionshistorie und Vergleich'));this.historyBox = el('div');history.append(this.historyBox);
@@ -122,13 +122,29 @@
         button('Aktualisieren', ()=>this.safe(()=>this.refreshRuns())));
       this.runs = el('div', 't-wf-runs');this.output = el(options.renderRun ? 'div' : 'pre', 't-wf-output');this.output.setAttribute('aria-label', 'Laufergebnis');run.append(this.runs, this.output);
       this.panels.runs.append(run);
-      this.el.replaceChildren(head, this.engine, top, this.message, tabs, this.panels.overview, this.panels.templates, this.panels.editor, this.panels.versions, this.panels.runs, this.file);
+      this.el.replaceChildren(head, this.engine, top, this.message, this.panels.overview, this.panels.templates, this.panels.editor, this.panels.versions, this.panels.runs, this.file);
+      head.insertBefore(tabs, this.themeButton);      // Reiter in der Kopfzeile (wie n8n: Name links, Reiter in der Mitte, Schalter rechts)
       this.setTab(this.tab || 'editor');
       this.el.addEventListener('keydown', event=>{
         if((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)){
           event.preventDefault();this.undo(event.shiftKey);
         }
       });
+    },
+    nodeAction(what, id){
+      const node = this.state.doc.nodes.find(n=>n.id === id);if(!node)return;
+      if(what === 'open'){this.state.selected = id;this.inspectorOpen = true;this.inspect();return;}
+      if(what === 'delete'){this.change(()=>{M().remove(this.state.doc, node.name);this.state.selected = null;});this.notice('Knoten „' + node.name + '“ entfernt. „Zurück“ stellt ihn wieder her.');return;}
+      if(what === 'duplicate'){
+        this.change(()=>{
+          const copy = M().clone(node);copy.id = 'n-' + Date.now().toString(36) + Math.random().toString(16).slice(2, 8);
+          let name = node.name + ' Kopie', k = 2;while(this.state.doc.nodes.some(x=>x.name === name))name = node.name + ' Kopie ' + k++;
+          copy.name = name;copy.position = [node.position[0] + 40, node.position[1] + 70];
+          const meta = P().get(copy);if(meta){meta.core_step = 0;P().set(copy, meta);}
+          this.state.doc.nodes.push(copy);this.state.selected = copy.id;
+        });
+        this.notice('Knoten dupliziert (ohne Verbindungen).');
+      }
     },
     submitRun(){return this.safe(async()=>{
       if(!this.wid || this.dirty())throw new Error('Workflow zuerst speichern.');
@@ -227,7 +243,7 @@
         card.append(button('Öffnen', ()=>this.safe(async()=>{await this.load(r.id);this.setTab('editor');})));this.cards.append(card);
       });
     },
-    openPicker(){
+    openPicker(after){
       if(this.view !== 'canvas')return;
       const CAT = {manualTrigger: 'Auslöser', set: 'Daten', if: 'Ablauf', noOp: 'Ablauf', stickyNote: 'Notiz'};
       const HINT = {manualTrigger: 'Startet den Ablauf von Hand', set: 'Felder setzen oder ändern', if: 'Verzweigt nach einer Bedingung', noOp: 'Reicht die Daten unverändert weiter', stickyNote: 'Notiz ohne Wirkung'};
@@ -235,7 +251,9 @@
       const items = palette.map(entry=>({label: entry.label, category: entry.make ? 'Mensch' : CAT[entry.kind] || 'Weitere', hint: entry.make ? 'Menschliche Entscheidung, keine Automatik' : HINT[entry.kind], keywords: entry.kind || '', entry}));
       root.sedraWorkflowPicker.open({host: this.stage, items, title: 'Knoten hinzufügen', onPick: choice=>{
         const entry = choice.entry;
-        this.change(()=>{const n = entry.make ? entry.make(this.state.doc.nodes) : M().node(entry.kind, this.state.doc.nodes);this.state.doc.nodes.push(n);this.state.selected = n.id;this.view = 'canvas';});
+        this.change(()=>{const n = entry.make ? entry.make(this.state.doc.nodes) : M().node(entry.kind, this.state.doc.nodes);this.state.doc.nodes.push(n);this.state.selected = n.id;this.view = 'canvas';
+          if(after){const src = this.state.doc.nodes.find(x=>x.name === after.name);if(src){n.position = [src.position[0] + (options.style === 'scenario' ? 210 : 170), src.position[1] + after.branch * 90];if(!n.type.endsWith('.stickyNote'))M().connect(this.state.doc, src.name, n.name, after.branch);}}
+        });
       }});
     },
     storedTheme(){try{const v = root.localStorage.getItem('sedra.wf.theme');return v === 'light' || v === 'dark' ? v : null;}catch(e){return null;}},
@@ -271,7 +289,7 @@
       const visual = core ? {doc: P().coreProjection(this.state.doc), selected: this.state.selected} : this.state;
       this.canvas = root.sedraWorkflowCanvas.mount(this.surface, visual, {
         style: this.style, readOnly: core,
-        select: id=>{this.state.selected = id;this.inspect();}, open: id=>{this.state.selected = id;this.inspectorOpen = true;this.inspect();}, drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
+        select: id=>{this.state.selected = id;this.inspect();}, open: id=>{this.state.selected = id;this.inspectorOpen = true;this.inspect();}, addAfter: (name, branch)=>this.openPicker({name, branch}), act: (what, id)=>this.nodeAction(what, id), drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
         change: ()=>{this.version.textContent = 'Ungespeicherte Änderungen';this.inspect();},
         connect: (a, b, branch)=>{try{this.change(()=>M().connect(this.state.doc, a, b, branch));}catch(e){this.notice(e.message, true);}}
       });this.inspect();
