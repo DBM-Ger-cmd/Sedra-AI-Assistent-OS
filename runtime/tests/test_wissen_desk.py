@@ -150,7 +150,7 @@ class Quellen(Basis):
         m = self.hub.runtime.missions.load(out['decision_id'][len('request:'):])
         self.assertEqual((q[0]['freigabe_gate'], self.sp.quelle(q[0]['id'])['freigabe_mission']), (m['human_gates']['resolved'][0]['gate_id'], m['identity']['mission_id']))
         self.assertEqual(self.audit('WIS_QUELLE_AUFGENOMMEN')[0]['quelle'], q[0]['id'])
-        self.assertEqual([v['verb'] for v in q[0]['actions']], ['abschalten', 'stufe_heraufsetzen', 'neu_beantragen'])
+        self.assertEqual([v['verb'] for v in q[0]['actions']], ['abschalten', 'dateien', 'entfernen', 'stufe_heraufsetzen', 'neu_beantragen'])     # dateien/entfernen: K5
 
     def test_falsche_pfade_werden_vor_dem_antrag_abgewiesen(self):
         out = self.beantrage(pfad='/etc/passwd')
@@ -170,7 +170,10 @@ class Quellen(Basis):
         self.decide(out)
         self.assertEqual(self.sp.quelle(qid)['stufe'], 1)
         self.assertEqual(self.act('wissen_quelle', qid, 'abschalten')['quelle']['state'], 'aus')
-        self.assertEqual(self.objects(type='wissen_quelle', id=qid)['actions'], [{'verb': 'neu_beantragen', 'label': 'Neu beantragen', 'needs_gate': True, 'confirm': None}])
+        self.assertEqual(self.objects(type='wissen_quelle', id=qid)['actions'], [{'verb': 'dateien', 'label': 'Dateien ansehen', 'needs_gate': False, 'confirm': None},     # K5: Stand je Datei und Entfernen bleiben auch nach dem Abschalten
+                          {'verb': 'entfernen', 'label': 'Aus dem Wissen entfernen', 'needs_gate': False,
+                           'confirm': 'Diese Quelle mit allen Abschnitten aus dem Wissen nehmen? Die Dateien auf der Platte bleiben.'},
+                          {'verb': 'neu_beantragen', 'label': 'Neu beantragen', 'needs_gate': True, 'confirm': None}])
 
     def test_erstbestueckung_ist_ein_antrag_mit_einem_gate_je_quelle(self):
         out = self.act('wissen', None, 'erstbestueckung')

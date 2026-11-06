@@ -11,7 +11,8 @@ werkzeuge:
   - {id: silero-vad, name: "Silero VAD", art: paket, name_im_system: silero_vad, zweck: "Stille vor dem Whisper-Lauf abschneiden", install: "pip install silero-vad", plan: W2}
   - {id: piper, name: Piper, art: programm, name_im_system: piper, zweck: "Antworten vorlesen (Sprachausgabe auf der CPU)", install: "pip install piper-tts", plan: W6}
   # Dokumente und Bilder
-  - {id: markitdown, name: MarkItDown, art: paket, name_im_system: markitdown, zweck: "PDF, Excel, PowerPoint zu Markdown", install: "pip install markitdown", plan: W4}
+  - {id: markitdown, name: MarkItDown, art: paket, name_im_system: markitdown, zweck: "PDF, Excel, PowerPoint zu Markdown (Wissen, K5-4)", install: "pip install \"markitdown[pdf,xlsx,pptx]\"", plan: W4}
+  - {id: pypdf, name: pypdf, art: paket, name_im_system: pypdf, zweck: "Text aus PDF, wenn MarkItDown fehlt (Wissen, K5-4)", install: "pip install pypdf", plan: W4}
   - {id: docling, name: Docling, art: paket, name_im_system: docling, zweck: "Dokumente mit Layout zu Markdown", install: "pip install docling", plan: W4}
   - {id: rapidocr, name: RapidOCR, art: paket, name_im_system: rapidocr_onnxruntime, zweck: "Text aus Bildern und Scans", install: "pip install rapidocr-onnxruntime", plan: W5}
   - {id: tesseract, name: Tesseract, art: programm, name_im_system: tesseract, zweck: "Text aus Bildern und Scans", install: "Tesseract installieren (Paketverwaltung des Systems)", plan: W5}

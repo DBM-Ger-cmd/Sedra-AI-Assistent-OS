@@ -14,10 +14,13 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
+from . import wurzeln as wurzeln_mod
 from . import zerlegen
 
-NAMEN = ("markdown", "text", "logbuch", "knowledge", "arbeitsumfeld", "gateway", "vorschlag")
+NAMEN = ("markdown", "text", "logbuch", "knowledge", "arbeitsumfeld", "gateway", "vorschlag", "dokumente")
 DATEIARTEN = {"*.md", "*.txt"}                                               # G1-S7-c
+DOKUMENTARTEN = {"*.md", "*.txt", "*.docx", "*.csv", "*.pdf", "*.xlsx", "*.pptx"}   # K5-3/K5-4 (WK-20); pdf/xlsx/pptx über die Hilfswerkzeuge
+GRENZEN_VORGABE = {"md": 20_000_000, "txt": 20_000_000, "csv": 50_000_000, "docx": 50_000_000}   # K5-5 (D-K5-5), Bytes je Datei
 AUSGELASSEN = {".git", ".venv", "node_modules", "__pycache__", "runtime_data"}
 LOGBUCH = "docs/LOGBUCH_AGENT_MANAGER.md"
 KNOWLEDGE = "runtime_data/knowledge/records.jsonl"
@@ -58,14 +61,25 @@ def _unter(pfad, wurzel_echt):
 class _Basis:
     name = ""
 
-    def __init__(self, repo_root, projekt_root, *, datei_max_bytes=2_000_000, ziel=zerlegen.ZIEL_ZEICHEN, grenze=zerlegen.MAX_ZEICHEN):
+    def __init__(self, repo_root, projekt_root, *, datei_max_bytes=2_000_000, ziel=zerlegen.ZIEL_ZEICHEN, grenze=zerlegen.MAX_ZEICHEN, wurzeln=None, je_art=None):
+        self.je_art = dict(je_art or {})                           # K5-5 (WK-25): Grenze je Dateiart; fehlt eine Art, gilt datei_max_bytes
         self.repo_root = Path(repo_root).resolve()
         self.projekt_root = Path(projekt_root).resolve()
         self.datei_max_bytes = datei_max_bytes
         self.ziel, self.grenze = ziel, grenze
+        self.wurzeln = dict(wurzeln or {})                         # K5 (WK-21): freigegebene Ordner, Kennung → Pfad (wissen/wurzeln.py)
 
     def wurzel(self, quelle):
-        return self.repo_root if quelle.get("wurzel") == "repo" else self.projekt_root
+        """`repo`, `projekt` oder ein freigegebener Ordner `w:<id>`; ein unbekannter Ordner ist `wis_wurzel_unbekannt` (die Quelle wird übersprungen, nie geleert)."""
+        w = quelle.get("wurzel")
+        if w == "repo":
+            return self.repo_root
+        if w in ("projekt", None, ""):
+            return self.projekt_root
+        wid = wurzeln_mod.kennung(w)
+        if wid and wid in self.wurzeln:
+            return Path(self.wurzeln[wid]).resolve()
+        raise ValueError("wis_wurzel_unbekannt")
 
     def pruefe_pfad(self, wurzel, pfad, muster=""):
         """Relativer Pfad mit '/' unter der Wurzel; Laufwerksbuchstabe oder führender Schrägstrich → `wis_pfad_absolut`,
@@ -93,10 +107,21 @@ class _Basis:
         path = Path(path)
         return path.is_symlink() or bool(getattr(path, "is_junction", lambda: False)())
 
-    def _lies_text(self, path):
-        """UTF-8 streng, höchstens `datei_max_bytes`; sonst `wis_datei_zu_gross` / `wis_text_kein_utf8` / `wis_speicher_nicht_lesbar`."""
+    def grenze_fuer(self, path):
+        """Die Grenze in Bytes für diese Datei: je Art (K5-5), sonst `datei_max_bytes`."""
+        return int(self.je_art.get(path.suffix.lower().lstrip("."), self.datei_max_bytes))
+
+    def _pruefe_groesse(self, path):
         try:
-            if path.stat().st_size > self.datei_max_bytes:
+            if path.stat().st_size > self.grenze_fuer(path):
+                raise ValueError("wis_datei_zu_gross")
+        except OSError:
+            raise ValueError("wis_speicher_nicht_lesbar") from None
+
+    def _lies_text(self, path):
+        """UTF-8 streng, höchstens die Grenze der Art; sonst `wis_datei_zu_gross` / `wis_text_kein_utf8` / `wis_speicher_nicht_lesbar`."""
+        try:
+            if path.stat().st_size > self.grenze_fuer(path):
                 raise ValueError("wis_datei_zu_gross")
             return path.read_bytes().decode("utf-8")
         except UnicodeDecodeError:
@@ -113,10 +138,12 @@ class DateiAdapter(_Basis):
         super().__init__(*args, **kw)
         self.name = name
 
+    arten = DATEIARTEN
+
     def pruefe_pfad(self, wurzel, pfad, muster="*.md"):
         rel = super().pruefe_pfad(wurzel, pfad, muster)
         for m in str(muster or "*.md").split(","):
-            if m.strip() not in DATEIARTEN:
+            if m.strip() not in self.arten:
                 raise ValueError("wis_dateiart_nicht_erlaubt")
         return rel
 
@@ -126,7 +153,7 @@ class DateiAdapter(_Basis):
         if not self._bleibt_drin(start, wurzel):
             raise ValueError("wis_pfad_ausserhalb")
         if start.is_file():
-            if "*" + start.suffix.lower() not in DATEIARTEN:
+            if "*" + start.suffix.lower() not in self.arten:
                 raise ValueError("wis_dateiart_nicht_erlaubt")
             return [start]
         if not start.is_dir():
@@ -151,23 +178,63 @@ class DateiAdapter(_Basis):
         wurzel = self.wurzel(quelle)
         return _sha((p.relative_to(wurzel).as_posix(), _datei_hash(p)) for p in dateien)
 
+    def datei_liste(self, quelle):
+        """K5 (Abgleich je Datei): [(relativer Pfad, Pfad, Hash „Größe:mtime_ns“)] der Dateien dieser Quelle."""
+        wurzel = self.wurzel(quelle)
+        return [(p.relative_to(wurzel).as_posix(), p, _datei_hash(p)) for p in self._dateien(quelle)]
+
+    def stuecke_datei(self, quelle, path):
+        """Die Abschnitte EINER Datei als [(rel, datum, stück)]; nicht lesbar → ValueError mit Code (der Abgleich vermerkt die Datei als übersprungen)."""
+        rel = path.relative_to(self.wurzel(quelle)).as_posix()
+        text = self._lies_text(path)
+        datum = _iso(path.stat().st_mtime)
+        if self.name == "markdown" and path.suffix.lower() == ".md":
+            teile = zerlegen.zerlege_markdown(text, path.name, ziel=self.ziel, grenze=self.grenze)
+        else:
+            teile = zerlegen.zerlege_text(text, path.name, ziel=self.ziel, grenze=self.grenze)
+        return [(rel, datum, s) for s in teile]
+
     def stuecke(self, quelle, melde=None):
         wurzel = self.wurzel(quelle)
         for p in self._dateien(quelle):
-            rel = p.relative_to(wurzel).as_posix()
             try:
-                text = self._lies_text(p)
+                teile = self.stuecke_datei(quelle, p)
             except ValueError as exc:
                 if melde:
-                    melde(rel, str(exc))
+                    melde(p.relative_to(wurzel).as_posix(), str(exc))
                 continue
-            datum = _iso(p.stat().st_mtime)
-            if self.name == "markdown" and p.suffix.lower() == ".md":
-                teile = zerlegen.zerlege_markdown(text, p.name, ziel=self.ziel, grenze=self.grenze)
-            else:
-                teile = zerlegen.zerlege_text(text, p.name, ziel=self.ziel, grenze=self.grenze)
-            for s in teile:
-                yield rel, datum, s
+            yield from teile
+
+
+class DokumenteAdapter(DateiAdapter):
+    """`dokumente` (K5-3, WK-20): ein Ordner oder eine Datei mit Markdown, Text, Word und CSV. Jede Art wird zu Markdown (wissen/leser),
+    dann wie eine Markdown-Datei zerlegt; die Grenze gilt je Art (K5-5)."""
+    name = "dokumente"
+    arten = DOKUMENTARTEN
+
+    def __init__(self, repo_root, projekt_root, *, umwandeln_s=60.0, **kw):
+        super().__init__(repo_root, projekt_root, name="dokumente", **kw)
+        self.umwandeln_s = umwandeln_s                             # K5-4 (D-K5-3): Zeitgrenze für das Umwandeln im eigenen Prozess
+
+    def stuecke_datei(self, quelle, path):
+        endung = path.suffix.lower()
+        if endung in (".md", ".txt"):
+            self.name = "markdown"                                 # Markdown zerlegt nach Köpfen, Text nach Absätzen (wie bisher)
+            try:
+                return super().stuecke_datei(quelle, path)
+            finally:
+                self.name = "dokumente"
+        from .leser import docx as docx_leser, extern, tabelle
+        rel = path.relative_to(self.wurzel(quelle)).as_posix()
+        self._pruefe_groesse(path)
+        if endung in extern.ARTEN:                                 # K5-4: PDF, Excel, PowerPoint – MarkItDown, für PDF sonst pypdf, im eigenen Prozess
+            text = extern.markdown(path, zeitgrenze=self.umwandeln_s)
+        else:
+            text = docx_leser.markdown(path) if endung == ".docx" else tabelle.markdown(path) if endung == ".csv" else None
+        if text is None:
+            raise ValueError("wis_dateiart_nicht_erlaubt")
+        datum = _iso(path.stat().st_mtime)
+        return [(rel, datum, s) for s in zerlegen.zerlege_markdown(text, path.name, ziel=self.ziel, grenze=self.grenze)]
 
 
 class LogbuchAdapter(DateiAdapter):
@@ -177,21 +244,16 @@ class LogbuchAdapter(DateiAdapter):
     def __init__(self, *args, **kw):
         super().__init__(*args, name="logbuch", **kw)
 
-    def stuecke(self, quelle, melde=None):
-        wurzel = self.wurzel(quelle)
-        for p in self._dateien(quelle):
-            rel = p.relative_to(wurzel).as_posix()
-            try:
-                text = self._lies_text(p)
-            except ValueError as exc:
-                if melde:
-                    melde(rel, str(exc))
-                continue
-            datum = _iso(p.stat().st_mtime)
-            for s in zerlegen.zerlege_logbuch(text, p.name):
-                zeile = s["stelle"].split(" > Zeile ", 1)
-                stempel = zeile[1][:16].strip() if len(zeile) == 2 else ""
-                yield rel, (stempel.replace(" ", "T") if stempel[:4].isdigit() else datum), s
+    def stuecke_datei(self, quelle, path):
+        rel = path.relative_to(self.wurzel(quelle)).as_posix()
+        text = self._lies_text(path)
+        datum = _iso(path.stat().st_mtime)
+        out = []
+        for s in zerlegen.zerlege_logbuch(text, path.name):
+            zeile = s["stelle"].split(" > Zeile ", 1)
+            stempel = zeile[1][:16].strip() if len(zeile) == 2 else ""
+            out.append((rel, (stempel.replace(" ", "T") if stempel[:4].isdigit() else datum), s))
+        return out
 
 
 class KnowledgeAdapter(_Basis):
@@ -360,6 +422,8 @@ def adapter_fuer(name, *, repo_root, projekt_root, **kw):
         return DateiAdapter(repo_root, projekt_root, name="markdown", **kw)
     if name == "text":
         return DateiAdapter(repo_root, projekt_root, name="text", **kw)
+    if name == "dokumente":
+        return DokumenteAdapter(repo_root, projekt_root, **kw)
     if name == "logbuch":
         return LogbuchAdapter(repo_root, projekt_root, **kw)
     if name == "knowledge":

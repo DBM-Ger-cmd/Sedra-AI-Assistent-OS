@@ -11,7 +11,9 @@ class VorbehalteTests(unittest.TestCase):
                      'runtime/src/guppi_runtime/harness/vorbehalte.py', 'runtime/src/guppi_runtime/harness/befehl.py',
                      'runtime/src/guppi_runtime/devenv/model_tools.py', 'runtime/benchmarks/devvm_build.py',
                      'architecture/GUPPI_Architecture_v1.20_SELF_DEVELOPMENT/core/guard/guard_rules.yaml', '.git/config',
-                     'RUNTIME\\SRC\\guppi_runtime\\Core\\x.py', '../anderes/datei.txt'):
+                     'RUNTIME\\SRC\\guppi_runtime\\Core\\x.py', '../anderes/datei.txt',
+                     'runtime/src/guppi_runtime/harness/erlaubnis.py', 'runtime/src/guppi_runtime/harness/katalog.py',          # Captain 05.11.2026 (U5, U7)
+                     'runtime/src/guppi_runtime/harness/bausteine.py', 'runtime/config/freigabe_bausteine.yaml', 'docs/AAR/LESSONS.md'):
             for w in ('datei_schreiben', 'datei_aendern'):
                 self.assertIsNotNone(vorbehalte.pruefen(w, pfad, {'inhalt': 'x'}), (w, pfad))
 

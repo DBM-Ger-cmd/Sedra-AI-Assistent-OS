@@ -12,6 +12,9 @@ from host_isolation import setUpModule, tearDownModule  # noqa: F401
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'benchmarks'))
 UIX = Path(__file__).resolve().parents[1] / 'src' / 'guppi_runtime' / 'uix'
 SHELL = UIX / 'shells' / 'fisch'
+# Unter Last (run_tests --jobs 4 --slow auf 2 Kernen) reichten feste Pausen nicht (UIX-Check 05.11.2026): gewartet wird auf Zustände
+# bis WARTE_MS; den Start meldet uix_check.wait_until_started selbst, wenn er ausbleibt. Die Prüfungen danach sind unverändert.
+WARTE_MS = 20000
 SRT = "1\n00:00:01,000 --> 00:00:03,500\nGuten Morgen, Frau Musterfrau.\n\n2\n00:00:04,000 --> 00:00:06,000\nDie Lieferung kommt am Montag.\n"
 
 
@@ -24,6 +27,14 @@ class Files(unittest.TestCase):
             self.assertIn(f"type: '{t}'", js)
             manifests = [p for p in (UIX / 'tools').glob('*/tool.yaml') if f'[{t}]' in p.read_text(encoding='utf-8')]
             self.assertEqual(len(manifests), 1, f'genau ein Werkzeug zeichnet {t}')
+
+
+def warte(page, bedingung, ms=WARTE_MS):
+    """Wartet, bis `bedingung` (JS) gilt; bleibt sie aus, entscheidet die folgende Prüfung mit ihrer eigenen Meldung."""
+    try:
+        page.wait_for_function(bedingung, timeout=ms)
+    except Exception:
+        pass
 
 
 class InTheBrowser(unittest.TestCase):
@@ -47,11 +58,12 @@ class InTheBrowser(unittest.TestCase):
             with sync_playwright() as pw:
                 b = pw.chromium.launch(); page = b.new_page(viewport={'width': 1400, 'height': 860})
                 errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
-                page.goto(url); wait_until_started(page); page.wait_for_timeout(1200)
+                page.goto(url); wait_until_started(page, shell='fisch')
                 for sel in ('.fi-glas', '.fi-fisch', '.fi-wolke textarea', '.fi-modus-btn[data-modus="news"]'):
+                    warte(page, f"()=>!!document.querySelector('{sel}')")         # statt 1200 ms
                     self.assertTrue(page.query_selector(sel), sel)
                 # Übersetzen: der Satz aus der Wolke geht ins Werkzeug und läuft sofort
-                page.wait_for_selector('.fi-blase [data-tool="uebersetzer"]', timeout=15000)
+                page.wait_for_selector('.fi-blase [data-tool="uebersetzer"]', timeout=WARTE_MS)
                 page.fill('.fi-wolke textarea', 'Das Zeug kommt Montag, wann genau weiß ich nicht'); page.keyboard.press('Enter')
                 page.wait_for_selector('.t-ue-ergebnis', timeout=20000)
                 self.assertIn('Wir liefern am Montag', page.text_content('.t-ue-text'))
@@ -60,26 +72,32 @@ class InTheBrowser(unittest.TestCase):
                 self.assertIn(page.get_attribute('.fi-fisch', 'data-zustand'), ('thinking', 'answering'))
                 # Transkript: importieren, dann aus der Wolke suchen
                 page.click('.fi-modus-btn[data-modus="transkript"]')
-                page.wait_for_selector('.t-tk-import', timeout=15000)
+                page.wait_for_selector('.t-tk-import', timeout=WARTE_MS)
                 page.fill('.t-tk-import input', 'Kundengespräch'); page.fill('.t-tk-import textarea', SRT)
                 page.click('.t-tk-import button:has-text("Importieren")')
-                page.wait_for_selector('.t-tk-cue', timeout=15000)
+                page.wait_for_selector('.t-tk-cue', timeout=WARTE_MS)
                 self.assertEqual(page.locator('.t-tk-cue').count(), 2)
                 page.fill('.fi-wolke textarea', 'Montag'); page.keyboard.press('Enter')
-                page.wait_for_selector('.t-tk-cue.hit', timeout=15000)
+                page.wait_for_selector('.t-tk-cue.hit', timeout=WARTE_MS)
                 self.assertEqual(page.locator('.t-tk-cue.hit').count(), 1)
                 # der Record: pseudonymisieren, prüfen, freigeben
+                # statt 1200/1000/1200 ms: jeder Schritt wartet, bis der Record neu gezeichnet ist (neue Fassung, neuer Status)
                 page.on('dialog', lambda d: d.accept())
-                page.click('.t-tk-verbs button:has-text("Pseudonymisieren")'); page.wait_for_timeout(1200)
+                page.click('.t-tk-verbs button:has-text("Pseudonymisieren")')
+                warte(page, "()=>{ const c = document.querySelector('.t-tk-cues'); return !!c && !c.textContent.includes('Musterfrau'); }")
                 self.assertNotIn('Musterfrau', page.text_content('.t-tk-cues'))
-                page.click('.t-tk-verbs button:has-text("Als geprüft markieren")'); page.wait_for_timeout(1000)
-                page.click('.t-tk-verbs button:has-text("Freigeben")'); page.wait_for_timeout(1200)
+                page.click('.t-tk-verbs button:has-text("Als geprüft markieren")')
+                page.wait_for_selector('.t-tk-verbs button:has-text("Freigeben")', timeout=WARTE_MS)    # den Knopf gibt es erst im Status „geprüft“
+                page.click('.t-tk-verbs button:has-text("Freigeben")')
+                warte(page, "()=>{ const k = document.querySelector('.t-tk-kopf'); return !!k && k.textContent.includes('Golden Record'); }")
                 self.assertIn('Golden Record', page.text_content('.t-tk-kopf'))
                 # der Modus übersteht ein Neuladen (Layout der Shell)
-                page.reload(); wait_until_started(page); page.wait_for_timeout(1200)
+                page.reload(); wait_until_started(page, shell='fisch')
+                warte(page, """()=>!!document.querySelector('.fi-modus-btn.on[data-modus="transkript"]')""")    # statt 1200 ms
                 self.assertTrue(page.query_selector('.fi-modus-btn.on[data-modus="transkript"]'), 'der Modus bleibt gemerkt')
                 # das Gespräch ist eine Schublade
-                page.click('.fi-fab'); page.wait_for_timeout(400)
+                page.click('.fi-fab')
+                warte(page, """()=>!document.querySelector('.fi-drawer').hidden && !!document.querySelector('.fi-drawer [data-tool="talk"]')""")    # statt 400 ms
                 self.assertFalse(page.evaluate("()=>document.querySelector('.fi-drawer').hidden"))
                 self.assertTrue(page.query_selector('.fi-drawer [data-tool="talk"]'))
                 self.assertEqual(errors, [])

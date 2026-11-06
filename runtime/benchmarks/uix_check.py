@@ -29,6 +29,7 @@ import os
 import sys
 import tempfile
 import threading
+import time
 from pathlib import Path
 
 RUNTIME = Path(__file__).resolve().parents[1]
@@ -380,15 +381,77 @@ def launch(pw, browser, headed):
     raise RuntimeError(f'no browser could be started ({last}); run `python -m playwright install chromium` or use --browser msedge')
 
 
-def wait_until_started(page, ms=15000):
+# Wartegrenze für den Start einer Shell im Browser. 15 s reichten unter Last nicht (U9/UIX-Check 05.11.2026: `run_tests.py --jobs 4 --slow`
+# auf 2 Kernen, dazu CPU-Last); 60 s sind die Grenze, ab der „startet nicht“ ein Befund ist und nicht mehr „ist langsam“. Einstellbar über
+# die Umgebung (SEDRA_UIX_START_MS, Millisekunden), z. B. auf einem sehr langsamen PC; auf einem schnellen kostet die Grenze nichts.
+try:
+    START_MS = max(1000, int(os.environ.get('SEDRA_UIX_START_MS') or 60000))
+except ValueError:
+    START_MS = 60000
+
+# Gestartet heißt: der Kontext der Shell steht mit ihrem Manifest – und, wenn verlangt, ist es die erwartete Shell (nach einem Wechsel
+# steht sonst noch die alte Seite da und das Warten kehrte zu früh zurück).
+_GESTARTET = "(s)=>!!(window.sedraBoot && window.sedraBoot.ctx && window.sedraBoot.ctx.manifest) && (!s || window.sedraBoot.ctx.manifest.shell.id === s)"
+_ZEIGT = """()=>{ const B = window.sedraBoot, c = B && B.ctx, m = c && c.manifest;
+  return {url: location.pathname, titel: document.title, bereit: document.readyState, sedraBoot: !!B, ctx: !!c,
+          shell: m && m.shell ? m.shell.id : null, probleme: (B && B.problems) || [],
+          text: ((document.body && document.body.innerText) || '').replace(/\\s+/g, ' ').trim().slice(0, 240)}; }"""
+
+
+class StartAusgeblieben(AssertionError):
+    """Die Shell ist in der Wartegrenze nicht gestartet. Ein AssertionError: im Test ist das ein Befund (FAIL), kein Programmfehler.
+    `grund` sagt, worauf gewartet wurde, `zeigt` was die Seite in dem Moment zeigte."""
+
+    def __init__(self, grund, zeigt):
+        self.grund, self.zeigt = grund, zeigt
+        super().__init__(f'Start der Shell ausgeblieben: {grund}; die Seite zeigt: {json.dumps(zeigt, ensure_ascii=False)}')
+
+
+def seite_zeigt(page):
+    """Was die Seite gerade zeigt (für die Meldung eines ausbleibenden Starts); nie selbst ein Fehler."""
+    try:
+        if page.is_closed():
+            return {'seite': 'geschlossen'}
+        return page.evaluate(_ZEIGT)
+    except Exception as exc:
+        return {'seite': 'nicht lesbar', 'fehler': str(exc).splitlines()[0][:160]}
+
+
+def wait_until_started(page, ms=None, shell=None, strict=True):
     """Warten, bis die Shell wirklich steht – nicht eine feste Zahl Millisekunden.
 
     Ein fester Wert war ein Rennen: mit vielen wiederhergestellten Fenstern war die Minimal-Shell nach 2,5 s noch nicht fertig,
-    und die Prüfung brach mit einem TypeError ab statt einen Befund zu melden (15.10.2026)."""
-    try:
-        page.wait_for_function('()=>!!(window.sedraBoot && window.sedraBoot.ctx)', timeout=ms)
-    except Exception:
-        pass            # kein Abbruch: die Prüfung `load` meldet gleich selbst, dass keine Shell da ist
+    und die Prüfung brach mit einem TypeError ab statt einen Befund zu melden (15.10.2026).
+    Bleibt der Start aus, meldet das Warten das selbst (StartAusgeblieben mit Grund und dem, was die Seite zeigt), statt still
+    weiterzumachen – vorher scheiterten die Tests danach mit Folgefehlern („null“, „ctx undefined“), U9 05.11.2026.
+
+    ms: Wartegrenze (Standard START_MS). shell: die erwartete Shell (nach einem Wechsel). strict=False: kein Abbruch, sondern
+    True/False zurück – für Aufrufer, die den Befund selbst melden (run_checks). Ein Neuladen während des Wartens (der Kontext der Seite
+    geht weg) ist kein Fehler: es wird bis zur Grenze weiter gewartet."""
+    from playwright.sync_api import TimeoutError as Zeitueberschreitung
+    grenze = START_MS if ms is None else ms
+    ende = time.monotonic() + grenze / 1000
+    grund = f'nach {grenze / 1000:g} s kein window.sedraBoot.ctx.manifest' + (f" der Shell '{shell}'" if shell else '')
+    zwischendurch = ''
+    while True:
+        rest = int((ende - time.monotonic()) * 1000)
+        if rest <= 0:
+            break
+        try:
+            page.wait_for_function(_GESTARTET, arg=shell, timeout=rest)
+            return True
+        except Zeitueberschreitung:
+            break
+        except Exception as exc:                  # z. B. „Execution context was destroyed“ beim Neuladen: neu ansetzen
+            if page.is_closed():
+                grund = 'die Seite wurde geschlossen'
+                break
+            zwischendurch = f' (zwischendurch: {str(exc).splitlines()[0][:120]})'
+            time.sleep(0.1)
+    grund += zwischendurch
+    if not strict:
+        return False
+    raise StartAusgeblieben(grund, seite_zeigt(page))
 
 
 def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=None, shell='cockpit', fixture=None, viewport=(1400, 860)):
@@ -403,6 +466,14 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
         results.append((name, None if ok is None else bool(ok), detail))
         say(f'{name:<22} {"–" if ok is None else ("ok" if ok else "FAIL")}  {detail}'.rstrip())
 
+    def started(page):
+        # run_checks meldet Befunde als Zeilen, statt abzubrechen: ein ausbleibender Start nach einem Neuladen ist eine eigene FAIL-Zeile
+        try:
+            return wait_until_started(page)
+        except StartAusgeblieben as exc:
+            check('start', False, str(exc)[:300])
+            return False
+
     with sync_playwright() as pw:
         b = launch(pw, browser, headed)
         page = b.new_page(viewport={'width': viewport[0], 'height': viewport[1]})
@@ -415,7 +486,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
         # GUPPI XP (shells/guppi-xp): die Shell führt auf den archivierten Desktop. Dort gibt es keinen Vertrag – geprüft wird nur,
         # dass die alte Seite mit Desktop und Token lädt; alles andere heißt ehrlich „nicht geprüft“.
         try:
-            page.wait_for_function("()=>location.pathname === '/retro' || !!(window.sedraBoot && window.sedraBoot.ctx)", timeout=15000)
+            page.wait_for_function("()=>location.pathname === '/retro' || !!(window.sedraBoot && window.sedraBoot.ctx)", timeout=START_MS)
         except Exception:
             pass
         try:
@@ -541,7 +612,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
 
         if profile.get('team') and not only:      # Spec 4: Navigation, Fensterstapel, Leerlauf (Shell D)
             import uix_check_team
-            uix_check_team.run(page, check, errors, console, calls, wait_until_started)
+            uix_check_team.run(page, check, errors, console, calls, started)
             check('fixture', True if fixture == 'orchestra' else None,
                   f'Team aus der Fixture ({fixture})' if fixture == 'orchestra' else
                   f'nur Leerzustand geprüft ({fixture or "ohne Fixture"}) – mit Daten: --fixture orchestra')
@@ -595,7 +666,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
             if profile.get('before_layout'):
                 page.evaluate(profile['before_layout']); page.wait_for_timeout(600)
             tabs_before = page.evaluate(profile['count'])
-            page.reload(); wait_until_started(page); page.wait_for_timeout(1500)
+            page.reload(); started(page); page.wait_for_timeout(1500)
             tabs_after = page.evaluate(profile['count'])
             check('layout', tabs_after >= tabs_before and tabs_after >= profile.get('layout_min', 2),
                   f"{tabs_before} {profile['count_word']} vorher, {tabs_after} nach dem Neuladen")
@@ -612,7 +683,7 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
         check('console', not console and not errors, '; '.join(console + errors)[:300])
 
         # last, because it provokes the 403s on purpose: no tool reaches a route its manifest does not list (§6)
-        page.goto(url); wait_until_started(page); page.wait_for_timeout(1000)
+        page.goto(url); started(page); page.wait_for_timeout(1000)
         probe = page.evaluate("""async (tools)=>{
           const out = {};
           for(const t of tools){

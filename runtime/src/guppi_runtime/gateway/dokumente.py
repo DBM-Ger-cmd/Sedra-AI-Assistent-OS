@@ -7,13 +7,10 @@ Makros, Verknüpfungen, Bilder und Kopf-/Fußzeilen werden nicht gelesen. Alles,
 """
 from __future__ import annotations
 
-import xml.etree.ElementTree as ET
-import zipfile
 from pathlib import Path
 
 ENDUNGEN = ('.md', '.txt', '.docx')
-MAX_XML_BYTES = 20 * 1024 * 1024          # entpackt; schützt vor übergroßen Archiven
-W = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+# Grenzen und Lesen des Word-Archivs: wissen/leser/docx.py (MAX_XML_BYTES, nur word/document.xml)
 
 
 class DokumentFehler(ValueError):
@@ -37,24 +34,10 @@ def lies_datei(path: Path) -> str:
 
 
 def lies_docx(path: Path) -> str:
-    """Absätze untereinander, Tabulator und Zeilenumbruch wie im Dokument. Kein Layout, keine Tabellenstruktur."""
+    """Absätze untereinander, Tabulator und Zeilenumbruch wie im Dokument. Kein Layout, keine Tabellenstruktur.
+    Der Leser liegt seit SPEC_WISSEN_KERN_v1 K5-3 im Kern (`wissen/leser/docx.py`); hier nur der Fehler des GateWay."""
+    from ..wissen.leser import docx as docx_leser
     try:
-        with zipfile.ZipFile(path) as archiv:
-            info = archiv.getinfo('word/document.xml')
-            if info.file_size > MAX_XML_BYTES:
-                raise DokumentFehler()
-            wurzel = ET.fromstring(archiv.read('word/document.xml'))
-    except (zipfile.BadZipFile, KeyError, ET.ParseError, OSError, RuntimeError, ValueError):   # RuntimeError: verschlüsseltes ZIP
-        raise DokumentFehler()
-    absaetze = []
-    for absatz in wurzel.iter(W + 'p'):
-        teile = []
-        for el in absatz.iter():
-            if el.tag == W + 't':
-                teile.append(el.text or '')
-            elif el.tag == W + 'tab':
-                teile.append('\t')
-            elif el.tag == W + 'br':
-                teile.append('\n')
-        absaetze.append(''.join(teile))
-    return '\n'.join(absaetze).strip()
+        return docx_leser.text(path)
+    except ValueError:
+        raise DokumentFehler() from None

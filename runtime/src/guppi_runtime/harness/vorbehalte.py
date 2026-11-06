@@ -24,6 +24,13 @@ PFADE = (
     ('runtime/src/guppi_runtime/harness/lauf_huelle.py', 'Harness-Code: Hülle der Läufe'),
     ('runtime/src/guppi_runtime/harness/herkunft.py', 'Harness-Code: Herkunft der Antworten'),
     ('runtime/src/guppi_runtime/harness/code_stand.py', 'Harness-Code: gesehener Code-Stand (G4)'),
+    # Captain 05.11.2026 (Befunde U5 und U7): was Erlaubnisse, Katalog und Bausteine regelt, und die gelernten Regeln im Systemprompt –
+    # sonst öffnete „Für diese Sitzung erlauben“ für einen Nachbarn im Ordner auch diese Dateien
+    ('runtime/src/guppi_runtime/harness/erlaubnis.py', 'Harness-Code: Sitzungs-Erlaubnisse'),
+    ('runtime/src/guppi_runtime/harness/katalog.py', 'Harness-Code: Freigabe-Katalog und Einstufung'),
+    ('runtime/src/guppi_runtime/harness/bausteine.py', 'Harness-Code: Bausteine der Freigaben'),
+    ('runtime/config/freigabe_bausteine.yaml', 'die Bausteine der Freigaben'),
+    ('docs/AAR/**', 'gelernte Regeln (stehen im Systemprompt jeder Sitzung)'),
     ('runtime/src/guppi_runtime/hardware_manager/dashboard.html', 'Seite des Servers (Hardware-Fenster, eigener Hardware-Server; E9)'),
     ('runtime/src/guppi_runtime/desk/bestaetigung.py', 'Prüfstelle: Bestätigungen außerhalb des Browsers (G9)'),
     ('runtime/src/guppi_runtime/desk/systemdialog.py', 'Prüfstelle: Fenster des Betriebssystems für Freigaben (G9)'),

@@ -300,6 +300,22 @@ def _abschalten(hub, oid, args):
         return _fehler(exc)
 
 
+def _dateien(hub, oid, args):
+    """K5 (WK-22): der Stand je Datei einer Quelle (nur lesen)."""
+    try:
+        return {"status": "erledigt", **_need(hub).dateien_stand(oid, zustand=args.get("zustand"), limit=args.get("limit") or 100)}
+    except (TypeError, ValueError) as exc:
+        return _fehler(exc if isinstance(exc, ValueError) else "wis_zustand_ungueltig")
+
+
+def _entfernen(hub, oid, args):
+    """K5 (WK-27): Quelle aus dem Wissen nehmen; die Dateien auf der Platte bleiben."""
+    try:
+        return {"status": "erledigt", **_need(hub).quelle_entfernen(oid)}
+    except ValueError as exc:
+        return _fehler(exc)
+
+
 def _stufe_herauf(hub, oid, args):
     sp = _need(hub)
     try:
@@ -434,6 +450,8 @@ def register(registry, hub):
         registry.Kind(KIND_ABSCHNITT, TITLES[KIND_ABSCHNITT], abschnitt_read, abschnitt_listing, source="wissen", extra=_extra),
         registry.Kind(KIND_QUELLE, TITLES[KIND_QUELLE], quelle_read, quelle_listing, source="wissen", extra=_extra, verbs=[
             Verb("abschalten", "Abschalten", _abschalten, when=lambda o: o.get("aktiv")),
+            Verb("dateien", "Dateien ansehen", _dateien),                                       # K5 (WK-22), nur lesen
+            Verb("entfernen", "Aus dem Wissen entfernen", _entfernen, confirm="Diese Quelle mit allen Abschnitten aus dem Wissen nehmen? Die Dateien auf der Platte bleiben."),                           # K5 (WK-27), ohne Gate: nur enger
             Verb("stufe_heraufsetzen", "Stufe heraufsetzen", _stufe_herauf, when=lambda o: o.get("aktiv") and o.get("stufe", 6) < 6),
             Verb("neu_beantragen", "Neu beantragen", _neu_beantragen, needs_gate=True)]),
         registry.Kind(KIND_VORSCHLAG, TITLES[KIND_VORSCHLAG], vorschlag_read, vorschlag_listing, source="wissen", extra=_extra, verbs=[

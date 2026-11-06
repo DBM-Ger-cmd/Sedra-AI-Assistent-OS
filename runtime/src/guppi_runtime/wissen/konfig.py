@@ -52,6 +52,9 @@ class Konfig:
     titel_max: int = 160
     text_max: int = 4000
     datei_max_bytes: int = 2_000_000
+    umwandeln_s: float = 60.0                     # K5-4 (D-K5-3): Zeitgrenze je Datei für PDF, Excel, PowerPoint
+    je_art: dict = field(default_factory=dict)    # K5-5 (D-K5-5): Grenze in Bytes je Dateiart; lokal nur senkbar
+    dateien_je_schritt: int = 200                 # K5 (D-K5-6): höchstens so viele Dateien je Abgleich einer Quelle
     engine: str | None = None                                # local_config: Pfad der Engine (llama-server)
     modell: str | None = None                                # local_config: Pfad der GGUF
     modell_sha256: str = ""
@@ -143,6 +146,9 @@ def load(config_path, local_path=None):
     k.titel_max = _zahl(v, "titel_max", int, k.titel_max, mindestens=1)
     k.text_max = _zahl(v, "text_max", int, k.text_max, mindestens=1)
     k.datei_max_bytes = _zahl(w.get("aufnahme") or {}, "datei_max_bytes", int, k.datei_max_bytes, mindestens=1)
+    k.dateien_je_schritt = _zahl(w.get("aufnahme") or {}, "dateien_je_schritt", int, k.dateien_je_schritt, mindestens=1)
+    k.je_art = _je_art((w.get("aufnahme") or {}).get("je_art"), {})
+    k.umwandeln_s = _zahl(w.get("aufnahme") or {}, "umwandeln_s", float, k.umwandeln_s, mindestens=1)
     if local_path is not None and Path(local_path).is_file():
         lw = _lies(local_path)
         for key in ("engine", "modell"):
@@ -160,8 +166,24 @@ def load(config_path, local_path=None):
             k.cpu_threads = _zahl(lw, "cpu_threads", int, None, mindestens=1)
         if "pooling" in lw:
             k.pooling = str(lw.get("pooling") or "")
+        lokal = _je_art((lw.get("aufnahme") or {}).get("je_art"), {})
+        k.je_art = {art: min(wert, lokal.get(art, wert)) for art, wert in k.je_art.items()}   # nur senken, nie heben
     k.glossar = lade_glossar(Path(config_path).parent / GLOSSAR, Path(local_path).parent / GLOSSAR if local_path is not None else None)
     return k
+
+
+def _je_art(roh, vorgabe):
+    """{art: bytes} mit art aus a-z0-9 (ohne Punkt) und bytes ≥ 1; sonst `wissen_config_invalid:je_art`."""
+    if roh is None:
+        return dict(vorgabe)
+    if not isinstance(roh, dict):
+        raise ValueError("wissen_config_invalid:je_art")
+    out = {}
+    for art, wert in roh.items():
+        if not isinstance(art, str) or not art.isalnum() or not art.islower() or type(wert) is not int or wert < 1:
+            raise ValueError("wissen_config_invalid:je_art")
+        out[art] = wert
+    return out
 
 
 def lade_glossar(paket, lokal=None):

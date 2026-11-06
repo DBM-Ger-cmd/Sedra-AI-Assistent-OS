@@ -1107,6 +1107,8 @@ class HarnessApi:
         from ..wissen import ausgabe, desk_basis, dienst
         from ..wissen.speicher import CAPTAIN, satz
         args = args if isinstance(args, dict) else {}
+        if isinstance(args.get('stand'), str) and args['stand'].strip():
+            return self._wissen_stand(args['stand'].strip())
         frage = str(args.get('frage') or '').strip()[:dienst.MAX_FRAGE]
         roh = {}
         for von, nach in (('quelle', 'quellen'), ('art', 'arten')):
@@ -1197,6 +1199,32 @@ class HarnessApi:
         return {'ids': ids, 'belegt': list(dict.fromkeys(belegt)), 'fremd': list(dict.fromkeys(fremd)),
                 'hinweis': (a.hinweis if a is not None and a.art in ('hybrid', 'volltext') else None)}
 
+    def _wissen_stand(self, was):
+        """`wissen_suchen(stand=…)` (K5-8): freigegebene Ordner (nur Kennung und Name), alle Quellen, oder der Stand je Datei einer Quelle."""
+        from ..wissen import dienst
+        from ..wissen.speicher import satz
+        sp = self._wissen_speicher()
+        if sp is None:
+            return dienst.SATZ_AUS
+        if was == 'wurzeln':
+            liste, probleme = sp.wurzeln()
+            zeilen = [f"{w.schluessel}: {w.name} (Stufe ab {w.stufe}{', Personenbezug' if w.personenbezug else ''})" for w in liste.values()]
+            return ('Freigegebene Ordner:\n' + '\n'.join(zeilen) if zeilen else 'Keine freigegebenen Ordner (local_config/wissen_wurzeln.yaml legt der Captain an).') + \
+                   ('\nProbleme in der Liste: ' + '; '.join(probleme[:5]) if probleme else '')
+        if was == 'quellen':
+            qs = sp.quellen()
+            if not qs:
+                return 'Das Wissen hat noch keine Quellen.'
+            return 'Quellen im Wissen:\n' + '\n'.join(f"{q['id']}: {q['wurzel']}/{q['pfad']} ({q['adapter']}, {'aktiv' if q['aktiv'] else 'aus'}, {q['abschnitte']} Abschnitte)" for q in qs[:50])
+        try:
+            st = sp.dateien_stand(was, zustand='uebersprungen', limit=20)
+        except ValueError as exc:
+            raise ValueError(satz(str(exc))) from None
+        s = st['summen']
+        zeilen = [f"Quelle {was}: {s['aufgenommen']} Dateien aufgenommen, {s['uebersprungen']} übersprungen, {s['offen'] if s['offen'] is not None else '?'} offen, {s['abschnitte']} Abschnitte, {s['gesperrt']} gesperrt."]
+        zeilen += [f"übersprungen: {d['datei']} – {satz(d['grund'] or '')}" for d in st['dateien']]
+        return '\n'.join(zeilen)
+
     def wissen_ids_nehmen(self, antwort_id):
         """Die Kennungen, die das Werkzeug in dieser Antwort lieferte – einmal abholen (danach vergessen)."""
         return sorted(self._wissen_ids.pop(antwort_id, set()))
@@ -1208,12 +1236,21 @@ class HarnessApi:
         if self._wissen_speicher() is None:
             raise ValueError(dienst.SATZ_AUS)
         nutz = nutz if isinstance(nutz, dict) else {}
+        from ..wissen import wurzeln as wurzeln_mod
         wurzel = str(nutz.get('wurzel') or 'projekt').strip()
         pfad = str(nutz.get('pfad') or '').strip().replace(chr(92), '/')
-        if wurzel not in ('projekt', 'repo') or pfad.startswith('/') or ':' in pfad:
-            raise ValueError('Heute nur Pfade im SEDRA-Ordner (wurzel projekt oder repo, Pfad relativ). Ordner außerhalb kommen mit den freigegebenen Ordnern (Spec Wissen K5).')
-        bindung = {'adapter': 'markdown', 'wurzel': wurzel, 'pfad': pfad, 'muster': str(nutz.get('muster') or '*.md'), 'stufe': 1,
-                   'personenbezug': 1 if nutz.get('personenbezug') is True else 0}
+        aussen = None
+        if wurzel not in ('projekt', 'repo'):                      # K5-8: ein freigegebener Ordner w:<id>
+            wid = wurzeln_mod.kennung(wurzel)
+            aussen = self._wissen_speicher().wurzeln()[0].get(wid) if wid else None
+            if aussen is None:
+                raise ValueError('Dieser Ordner ist nicht freigegeben. Erlaubt: projekt, repo oder ein freigegebener Ordner w:<id> (Liste: wissen_suchen mit stand=wurzeln).')
+        if pfad.startswith('/') or ':' in pfad:
+            raise ValueError('Der Pfad muss relativ zur Wurzel sein (z. B. docs oder Vertraege/2026).')
+        muster = str(nutz.get('muster') or '*.md')
+        nur_text = all(m.strip() in ('*.md', '*.txt') for m in muster.split(','))
+        bindung = {'adapter': 'markdown' if (nur_text and aussen is None) else 'dokumente', 'wurzel': wurzel, 'pfad': pfad or '.', 'muster': muster,
+                   'stufe': max(1, aussen.stufe) if aussen else 1, 'personenbezug': 1 if (nutz.get('personenbezug') is True or (aussen and aussen.personenbezug)) else 0}
         pruefung = desk_wissen._quelle_pruefen(self.hub, None, bindung)
         if pruefung.get('status') == 'fehler':
             raise ValueError(pruefung.get('satz') or pruefung.get('code') or 'wissen_antrag_fehlgeschlagen')

@@ -81,6 +81,43 @@ CREATE TABLE laeufe (
   pause_grund TEXT, status TEXT NOT NULL CHECK (status IN ('laeuft','fertig','pausiert','abgebrochen'))
 );
 """),
+    (2, "K5: Wurzeln w:<id> und Adapter dokumente in quellen, Tabelle dateien (SPEC_WISSEN_KERN_v1 G2 K5 §2.2)", """
+CREATE TABLE quellen_neu (
+  id TEXT PRIMARY KEY,
+  art TEXT NOT NULL CHECK (art IN ('datei','ordner','speicher','vorschlaege')),
+  adapter TEXT NOT NULL CHECK (adapter IN ('markdown','text','logbuch','knowledge','arbeitsumfeld','gateway','vorschlag','dokumente')),
+  wurzel TEXT NOT NULL CHECK (wurzel IN ('repo','projekt') OR wurzel GLOB 'w:[a-z0-9]*'),
+  pfad TEXT NOT NULL,
+  muster TEXT NOT NULL DEFAULT '*.md',
+  freigabe_gate TEXT NOT NULL,
+  freigabe_mission TEXT NOT NULL,
+  stufe INTEGER NOT NULL CHECK (stufe BETWEEN 0 AND 6),
+  projekt TEXT,
+  personenbezug INTEGER NOT NULL CHECK (personenbezug IN (0,1)),
+  aktiv INTEGER NOT NULL DEFAULT 1,
+  stand TEXT,
+  quell_hash TEXT,
+  erstellt TEXT NOT NULL
+);
+INSERT INTO quellen_neu (id, art, adapter, wurzel, pfad, muster, freigabe_gate, freigabe_mission, stufe, projekt, personenbezug, aktiv, stand, quell_hash, erstellt)
+  SELECT id, art, adapter, wurzel, pfad, muster, freigabe_gate, freigabe_mission, stufe, projekt, personenbezug, aktiv, stand, quell_hash, erstellt FROM quellen;
+DROP TABLE quellen;
+ALTER TABLE quellen_neu RENAME TO quellen;
+CREATE TABLE dateien (
+  quelle TEXT NOT NULL REFERENCES quellen(id) ON DELETE CASCADE,
+  datei TEXT NOT NULL,
+  hash TEXT NOT NULL,
+  art TEXT NOT NULL,
+  zustand TEXT NOT NULL CHECK (zustand IN ('aufgenommen','uebersprungen')),
+  grund TEXT,
+  abschnitte INTEGER NOT NULL DEFAULT 0,
+  gesperrt INTEGER NOT NULL DEFAULT 0,
+  groesse INTEGER NOT NULL DEFAULT 0,
+  geprueft TEXT NOT NULL,
+  PRIMARY KEY (quelle, datei)
+);
+CREATE INDEX dateien_zustand ON dateien(quelle, zustand);
+""", True),
 )
 SCHEMA_VERSION = len(MIGRATIONEN)
 FELDER = ("datei", "stelle", "teil", "text", "hash", "datum")
@@ -120,13 +157,27 @@ def migriere(db, *, jetzt):
     if stand > SCHEMA_VERSION:
         raise ValueError("wis_schema_neuer")
     angewendet = []
-    for version, beschreibung, sql in MIGRATIONEN:
+    for eintrag in MIGRATIONEN:
+        version, beschreibung, sql = eintrag[:3]
+        ohne_fk = len(eintrag) > 3 and eintrag[3] is True          # K5 (Migration 2): eine Tabelle neu aufbauen – DROP darf die Abschnitte nicht mitlöschen
         if version <= stand:
             continue
-        db.executescript("BEGIN IMMEDIATE;" + sql)
-        db.execute("INSERT INTO migrationen (version, angewendet, beschreibung) VALUES (?, ?, ?)", (version, jetzt, beschreibung))
-        db.execute("INSERT OR REPLACE INTO meta (schluessel, wert) VALUES ('schema_version', ?)", (str(version),))
-        db.execute("COMMIT")
+        if ohne_fk:
+            db.execute("PRAGMA foreign_keys = OFF")                # geht nur außerhalb einer Transaktion
+        try:
+            db.executescript("BEGIN IMMEDIATE;" + sql)
+            if ohne_fk and db.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                raise ValueError("wis_schema_fremdschluessel")
+            db.execute("INSERT INTO migrationen (version, angewendet, beschreibung) VALUES (?, ?, ?)", (version, jetzt, beschreibung))
+            db.execute("INSERT OR REPLACE INTO meta (schluessel, wert) VALUES ('schema_version', ?)", (str(version),))
+            db.execute("COMMIT")
+        except BaseException:
+            if db.in_transaction:
+                db.execute("ROLLBACK")
+            raise
+        finally:
+            if ohne_fk:
+                db.execute("PRAGMA foreign_keys = ON")
         angewendet.append(version)
     return angewendet
 
@@ -169,6 +220,34 @@ def vergleiche(db, quelle_id, abschnitte):
     neu, geaendert, gesehen, gleich = [], [], set(), 0
     for a in abschnitte:
         key = _pruefe(a)
+        if key in gesehen:
+            raise ValueError("wis_abschnitt_doppelt")
+        gesehen.add(key)
+        if key not in alt:
+            neu.append(a)
+        elif alt[key][1] != a["hash"]:
+            geaendert.append((alt[key][0], a))
+        else:
+            gleich += 1
+    entfernt = sorted(nr for key, (nr, _) in alt.items() if key not in gesehen)
+    return {"neu": neu, "geaendert": geaendert, "entfernt": entfernt, "gleich": gleich}
+
+
+def vergleiche_dateien(db, quelle_id, abschnitte, dateien):
+    """Wie `vergleiche`, aber nur für die Dateien in `dateien` (K5, Abgleich je Datei): alte Abschnitte anderer Dateien bleiben unberührt.
+    Ein neuer Abschnitt einer Datei außerhalb der Menge ist `wis_abschnitt_ungueltig`."""
+    dateien = set(dateien)
+    alt = {}
+    liste = sorted(dateien)
+    for i in range(0, len(liste), 500):
+        teil = liste[i:i + 500]
+        for r in db.execute("SELECT nr, datei, stelle, teil, hash FROM abschnitte WHERE quelle = ? AND datei IN (" + ",".join("?" * len(teil)) + ")", (quelle_id, *teil)):
+            alt[(r["datei"], r["stelle"], r["teil"])] = (r["nr"], r["hash"])
+    neu, geaendert, gesehen, gleich = [], [], set(), 0
+    for a in abschnitte:
+        key = _pruefe(a)
+        if key[0] not in dateien:
+            raise ValueError("wis_abschnitt_ungueltig")
         if key in gesehen:
             raise ValueError("wis_abschnitt_doppelt")
         gesehen.add(key)

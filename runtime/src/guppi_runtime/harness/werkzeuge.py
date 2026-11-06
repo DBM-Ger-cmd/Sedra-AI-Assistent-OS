@@ -107,11 +107,12 @@ SCHEMAS = {
                          'Nenne Fundstellen in der Antwort als [W…] mit der Kennung aus dem Treffer; erfinde keine Kennung. Nur lesen.',
                          {'frage': dict(S, description='Frage oder Stichworte, höchstens 500 Zeichen'), 'quelle': dict(S, description='optional: Kennung einer Quelle (aus einem früheren Treffer)'),
                           'art': dict(S, description='optional: Art der Quelle, z. B. markdown, text, logbuch'), 'seit': dict(S, description='optional: nur Abschnitte ab diesem Tag, JJJJ-MM-TT'),
-                          'k': dict(I, description='höchstens so viele Treffer, Vorgabe 5, höchstens 10')}, ['frage']),
+                          'k': dict(I, description='höchstens so viele Treffer, Vorgabe 5, höchstens 10'),
+                          'stand': dict(S, description='statt zu suchen: wurzeln (freigegebene Ordner), quellen (alle Quellen) oder eine Quell-Kennung (Stand je Datei)')}, []),
     'wissen_beantragen': _fn('wissen_beantragen', 'Schlägt einen Ordner oder eine Datei als Quelle für das Wissen vor. Es entsteht nur ein Antrag im Posteingang; aufgenommen wird erst nach der Freigabe des Captains. '
-                             'Heute nur Pfade im SEDRA-Ordner (wurzel projekt = Arbeitsordner von SEDRA, repo = Code und docs/).',
+                             'wurzel: projekt (Arbeitsordner von SEDRA), repo (Code und docs/) oder ein freigegebener Ordner w:<id> (Liste: wissen_suchen mit stand=wurzeln).',
                              {'pfad': dict(S, description='Pfad relativ zur Wurzel, z. B. docs oder notizen/kunde.md'), 'wurzel': dict(S, description='projekt (Vorgabe) oder repo'),
-                              'muster': dict(S, description='Dateimuster, Vorgabe *.md (erlaubt *.md, *.txt, durch Komma getrennt)'),
+                              'muster': dict(S, description='Dateimuster, Vorgabe *.md (erlaubt *.md, *.txt, *.docx, *.csv, durch Komma getrennt)'),
                               'personenbezug': {'type': 'boolean', 'description': 'true, wenn die Dateien Personendaten enthalten (dann nie in die Cloud)'},
                               'grund': dict(S, description='kurz, wozu die Quelle dient')}, ['pfad']),
     'belohnungen_lesen': _fn('belohnungen_lesen', 'Liest die Antworten, die der Captain gelobt (★, ★★ besonders gut) oder korrigiert (⚑) hat, mit Frage, Antwort-Auszug, bei Code den geänderten Dateien und bei einer Korrektur seinen Worten. '
@@ -224,10 +225,10 @@ class Werkzeuge:
             elif name == 'wissen_suchen':
                 if not callable(self.wissen):
                     raise WerkzeugFehler('wissen_nicht_verfuegbar')
-                frage = self._text(args, 'frage').strip()
-                if not frage:
-                    raise WerkzeugFehler('argument_fehlt: frage')
-                ziel, was = 'wissen/' + frage[:80], 'Im Wissen suchen'
+                frage, stand = (str(args.get(n) or '').strip() if isinstance(args.get(n), (str, type(None))) else '' for n in ('frage', 'stand'))
+                if not frage and not stand:
+                    raise WerkzeugFehler('argument_fehlt: frage oder stand')
+                ziel, was = ('wissen_stand/' + stand[:40], 'Stand des Wissens lesen') if stand else ('wissen/' + frage[:80], 'Im Wissen suchen')
             elif name == 'wissen_beantragen':
                 if not callable(self.wissen_antrag):
                     raise WerkzeugFehler('wissen_antrag_nicht_verfuegbar')
@@ -518,7 +519,7 @@ class Werkzeuge:
             if name == 'wissen_suchen':
                 k = self.kontext or {}
                 try:
-                    text = self.wissen(k.get('sitzung_id'), k.get('antwort_id'), {n: args.get(n) for n in ('frage', 'quelle', 'art', 'seit', 'k')})
+                    text = self.wissen(k.get('sitzung_id'), k.get('antwort_id'), {n: args.get(n) for n in ('frage', 'quelle', 'art', 'seit', 'k', 'stand')})
                 except ValueError as exc:
                     return {'status': 'fehler', 'ergebnis': f'error: {exc}', 'wirkung': False}
                 return {'status': 'ok', 'wirkung': False, 'ergebnis': text}

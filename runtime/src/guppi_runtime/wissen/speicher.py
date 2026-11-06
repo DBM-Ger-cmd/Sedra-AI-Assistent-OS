@@ -17,6 +17,8 @@ from pathlib import Path
 
 from . import adapter as adapter_mod
 from . import embed, fusion, schema, zerlegen
+from . import wurzeln as wurzeln_mod
+from .dateien import DateienTeil
 from .einbetten import EinbettTeil
 from .hilfen import HART, _sha, befunde_von  # noqa: F401  (HART: bisheriger Ort)
 from .nachmessung import NACHMESSUNG, URTEILE, NachmessungTeil  # noqa: F401
@@ -71,6 +73,16 @@ SAETZE = {
     "wissen_aus": "Der Wissensspeicher ist ausgeschaltet (Schalter „wissen“).",
     "wis_antrag_unbekannt": "Zu dieser Freigabe gibt es keinen offenen Antrag mit Gate; angelegt wurde nichts.",
     "wis_testlab_nicht_lesbar": "Das Testlabor ist nicht lesbar; der Wissensspeicher bleibt aus.",
+    "wis_wurzel_unbekannt": "Dieser Ordner ist nicht freigegeben (local_config/wissen_wurzeln.yaml).",
+    "wis_stufe_unter_wurzel": "Die Stufe liegt unter der Vorgabe des freigegebenen Ordners.",
+    "wis_zustand_ungueltig": "Zustand: aufgenommen oder uebersprungen.",
+    "wis_hilfswerkzeug_fehlt": 'Zum Lesen fehlt ein Hilfswerkzeug: pip install "markitdown[pdf,xlsx,pptx]" (für PDF reicht auch pip install pypdf); danach Sedra neu starten.',
+    "wis_kein_text": "Das Dokument hat keine Textschicht (z. B. eine gescannte PDF); Texterkennung kommt mit W5.",
+    "wis_umwandeln_zeitgrenze": "Das Umwandeln hat länger als die Zeitgrenze gedauert; die Datei wurde übersprungen.",
+    "wis_umwandeln_fehler": "Das Hilfswerkzeug konnte die Datei nicht lesen.",
+    "wis_docx_nicht_lesbar": "Die Word-Datei ist beschädigt oder verschlüsselt.",
+    "wis_csv_nicht_lesbar": "Die CSV-Datei lässt sich nicht lesen.",
+    "wis_schema_fremdschluessel": "Die Migration des Wissensspeichers hätte Bezüge zerstört; nichts wurde geändert.",
 }
 
 
@@ -91,7 +103,7 @@ def utc_now():
     return datetime.now(timezone.utc).strftime(TIME)
 
 
-class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil):
+class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil, DateienTeil):
     """Die eine Instanz je Runtime; `oeffnen` baut sie aus der Konfiguration und fängt Datenbankfehler als `ValueError`."""
 
     def __init__(self, konfig, *, projekt_root, repo_root, audit, uhr=None, gpu=None, starter=None, dienst=None):
@@ -106,6 +118,8 @@ class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil):
         self.db = schema.oeffne_db(self.pfad, check_same_thread=False)
         self.db.execute("PRAGMA journal_mode = WAL")
         vorher = schema.lies_meta(self.db).get("schema_version") if self._tabelle("meta") else None
+        if vorher is not None and int(vorher) < schema.SCHEMA_VERSION:
+            self._sichern(int(vorher))                                # K5 (§2.2): vor einer Migration eine Kopie der Datei
         angewendet = schema.migriere(self.db, jetzt=self.uhr())
         if angewendet:
             self.audit("WIS_SCHEMA_MIGRIERT", {"von": int(vorher or 0), "nach": angewendet[-1]})
@@ -113,6 +127,7 @@ class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil):
         if meta.get("zerleger_version") not in (None, zerlegen.ZERLEGER_VERSION):      # neue Zerleger-Version: alles neu zerlegen (D7.3)
             with schema._immediate(self.db):
                 self.db.execute("UPDATE quellen SET quell_hash = NULL")
+                self.db.execute("UPDATE dateien SET hash = ''")          # K5: auch je Datei neu zerlegen
         schema.setze_meta(self.db, {"zerleger_version": zerlegen.ZERLEGER_VERSION, "fusion_version": fusion.FUSION_VERSION})
         self.dienst = dienst or embed.EmbeddingDienst(embed.einstellung_aus(konfig), gpu=gpu or embed.OhneGpuZugang(), audit=self.audit,
                                                       pid_datei=self.pfad.parent / "embed.pid", starter=starter,
@@ -126,6 +141,21 @@ class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil):
         self._einbett_lock = threading.Lock()                         # ein Einbett-Schritt zur Zeit (Takt und Verb)
         self._vektor_fehler = set()                                   # (nr, hash), die der Server allein ablehnt (Prüfung F2)
         self._start_thread = None
+
+    def _sichern(self, version):
+        """Eine Kopie vor der Migration: `wissen.sqlite.bak-v<n>` neben der Datei (eine je Version, nie überschrieben)."""
+        ziel = self.pfad.with_name(self.pfad.name + f".bak-v{version}")
+        if ziel.exists():
+            return
+        kopie = sqlite3.connect(str(ziel))
+        try:
+            self.db.backup(kopie)
+        finally:
+            kopie.close()
+
+    def wurzeln(self):
+        """Die freigegebenen Ordner dieses Rechners (K5, WK-21): (dict id → Wurzel, Probleme); bei jedem Aufruf frisch gelesen (kleine Datei)."""
+        return wurzeln_mod.lesen(self.projekt_root)
 
     @classmethod
     def oeffnen(cls, konfig, **kw):
@@ -156,7 +186,9 @@ class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil):
 
     def _adapter(self, name):
         return adapter_mod.adapter_fuer(name, repo_root=self.repo_root, projekt_root=self.projekt_root, datei_max_bytes=self.konfig.datei_max_bytes,
-                                        ziel=self.konfig.ziel, grenze=self.konfig.grenze)
+                                        ziel=self.konfig.ziel, grenze=self.konfig.grenze, wurzeln={k: w.pfad for k, w in self.wurzeln()[0].items()},
+                                        je_art=getattr(self.konfig, 'je_art', None),
+                                        **({'umwandeln_s': self.konfig.umwandeln_s} if name == 'dokumente' else {}))
 
     def pruefe_quelle(self, bindung):
         """Die Bindung eines Antrags prüfen und normieren: {wurzel, pfad, adapter, muster, stufe, projekt, personenbezug, art}."""
@@ -164,15 +196,27 @@ class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil):
         name = str(b.get("adapter") or "")
         ad = self._adapter(name)
         wurzel = str(b.get("wurzel") or "")
-        if wurzel not in ("repo", "projekt"):
-            raise ValueError("wis_pfad_ausserhalb")
-        root = self.repo_root if wurzel == "repo" else self.projekt_root
+        aussen = None
+        if wurzel in ("repo", "projekt"):
+            root = self.repo_root if wurzel == "repo" else self.projekt_root
+        else:                                                     # K5 (WK-21): ein freigegebener Ordner `w:<id>`, nur für Datei-Adapter
+            wid = wurzeln_mod.kennung(wurzel)
+            aussen = self.wurzeln()[0].get(wid) if wid else None
+            if aussen is None:
+                raise ValueError("wis_wurzel_unbekannt" if wid else "wis_pfad_ausserhalb")
+            if name not in ("markdown", "text", "dokumente"):
+                raise ValueError("wis_adapter_unbekannt")
+            root = aussen.pfad
         roh = str(b.get("pfad") or "")
         kern, _, teil = roh.partition("#")
         pfad = ad.pruefe_pfad(root, kern, b.get("muster") or "*.md") + ("#" + teil if teil else "")
         stufe = b.get("stufe")
         if type(stufe) is not int or not 0 <= stufe <= 6:
             raise ValueError("wis_stufe_ungueltig")
+        if aussen is not None and stufe < aussen.stufe:             # die Vorgabe der Wurzel ist eine Untergrenze (§2.9)
+            raise ValueError("wis_stufe_unter_wurzel")
+        if aussen is not None and aussen.personenbezug:
+            b["personenbezug"] = 1
         art = str(b.get("art") or ("speicher" if name in ("knowledge", "arbeitsumfeld", "gateway") else "vorschlaege" if name == "vorschlag"
                                    else "ordner" if (root / Path(*kern.split("/"))).is_dir() else "datei"))
         projekt = b.get("projekt")
@@ -221,6 +265,19 @@ class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil):
                 self.audit("WIS_QUELLE_GEAENDERT", {"quelle": quelle_id, **felder})
             return self.quelle(quelle_id)
 
+    def quelle_entfernen(self, quelle_id):
+        """WK-27: Quelle mit Dateien, Abschnitten und Vektoren löschen – ohne Gate, das Wissen wird nur enger. Die Dateien auf der Platte bleiben."""
+        with self.lock:
+            q = self.quelle(quelle_id)
+            if q is None:
+                raise ValueError("wis_quelle_unbekannt")
+            with schema._immediate(self.db):
+                n = self.db.execute("SELECT count(*) FROM abschnitte WHERE quelle = ?", (quelle_id,)).fetchone()[0]
+                self.db.execute("DELETE FROM quellen WHERE id = ?", (quelle_id,))
+            self._vektoren_stempel = None
+            self.audit("WIS_QUELLE_ENTFERNT", {"quelle": quelle_id, "abschnitte": n})
+            return {"quelle": quelle_id, "abschnitte": n}
+
     def quelle(self, quelle_id):
         with self.lock:
             return self._quelle(quelle_id)
@@ -257,6 +314,15 @@ class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil):
                     qh += ":aus:" + _sha("|".join(sorted(ausschluss)))[:12]
                 if q["stand"] and qh == q["quell_hash"]:
                     summe["uebersprungen"] += 1
+                    continue
+                if hasattr(ad, "datei_liste"):                        # K5 (§2.4): Datei-Adapter je Datei, nur Neues und Geändertes
+                    try:
+                        zahl = self._abgleich_je_datei(q, ad, qh, ausschluss, summe)
+                    except ValueError as exc:
+                        self._ueberspringe(q, str(exc), summe)
+                        continue
+                    for k in ("neu", "geaendert", "entfernt", "gesperrt"):
+                        summe[k] += zahl[k]
                     continue
                 neue, gesperrt, gesehen, uebersprungen = [], 0, {}, set()
 

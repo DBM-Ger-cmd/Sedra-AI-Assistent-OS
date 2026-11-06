@@ -11,6 +11,28 @@ from test_uix_contract import NODE, UIX, run_js
 
 COCKPIT = UIX / 'shells' / 'cockpit'
 BENCH = Path(__file__).resolve().parents[1] / 'benchmarks'
+# Unter Last (run_tests --jobs 4 --slow auf 2 Kernen) reichten feste Pausen nicht (UIX-Check 05.11.2026): gewartet wird auf Zustände,
+# bis WARTE_MS; den Start meldet uix_check.wait_until_started selbst, wenn er ausbleibt. Danach stehen die Prüfungen unverändert.
+WARTE_MS = 20000
+TABS = "()=>[...document.querySelectorAll('.dk-tab span')].map(s=>s.textContent)"
+
+
+def bis_wahr(page, js, arg=None, ms=WARTE_MS, takt=0.25):
+    """Wartet, bis `js` (darf async sein) wahr liefert – über page.evaluate, das ein Promise abwartet.
+    page.wait_for_function wartet ein Promise NICHT ab: ein async-Prädikat ist sofort „wahr“ (ein Promise-Objekt). So kehrte das
+    Warten auf den Arbeitsstand bisher sofort zurück und nur die festen Pausen davor hielten den Test grün (UIX-Check 05.11.2026).
+    Bleibt der Zustand aus, kehrt es nach `ms` zurück; die folgende Prüfung meldet dann mit ihrer eigenen Meldung."""
+    import time
+    ende = time.monotonic() + ms / 1000
+    while True:
+        try:
+            if page.evaluate(js, arg):
+                return True
+        except Exception:
+            pass                       # z. B. während eines Neuladens: weiter versuchen
+        if time.monotonic() >= ende:
+            return False
+        time.sleep(takt)
 
 
 @unittest.skipUnless(NODE, 'node fehlt')
@@ -97,19 +119,26 @@ class Basis(unittest.TestCase):
 
     def seite(self):
         page = self.browser.new_page(viewport={'width': 1400, 'height': 900})
+        self.addCleanup(page.close)
         self.fehler = []
         page.on('pageerror', lambda e: self.fehler.append(str(e)))
-        page.goto(self.url); self.uix.wait_until_started(page)
+        page.goto(self.url); self.uix.wait_until_started(page, shell='cockpit')
         # jeder Test beginnt leer: Arbeitsstand und Ablage auf dem Server, Layout und Sitzung im Browser
         page.evaluate("""async()=>{ await fetch('/api/arbeitsstand/leeren', {method: 'POST', body: '{}', headers: {'Content-Type': 'application/json',
                          'X-GUPPI-Token': decodeURIComponent(location.hash.slice(1))}}); localStorage.clear(); sessionStorage.clear(); }""")
-        page.reload(); self.uix.wait_until_started(page); page.wait_for_timeout(1200)
-        self.addCleanup(page.close)
+        page.reload(); self.uix.wait_until_started(page, shell='cockpit')
+        # statt 1200 ms: der Start hat das Dock gefüllt (leer: die Aufgaben), wenn ein Reiter steht
+        page.wait_for_function("()=>document.querySelectorAll('.dk-tab').length >= 1", timeout=WARTE_MS)
         return page
 
     def oeffnen(self, page, obj, gruppe=None):
         page.evaluate("([o, g])=>window.sedra.shells.get('cockpit').dock.open(o, g || undefined)", [obj, gruppe])
-        page.wait_for_timeout(700)
+        # statt 700 ms: der Reiter des Objekts steht und ist in seiner Gruppe vorn
+        page.wait_for_function("""(t)=>[...document.querySelectorAll('.dk-tab.on span')].some(s=>s.textContent === t)""", arg=obj['title'], timeout=WARTE_MS)
+
+    def vorn(self, page, gruppe, titel):
+        """Wartet, bis in der Gruppe `gruppe` (Locator) der Reiter `titel` vorn ist."""
+        gruppe.locator('.dk-tab.on', has_text=titel).wait_for(state='attached', timeout=WARTE_MS)
 
     def aufgaben(self, page):
         return page.evaluate("async()=>(await window.sedraBoot.ctx.api('/api/missions')).filter(m=>m.status==='active').map(m=>m.mission_id)")
@@ -130,13 +159,16 @@ class ImBrowser(Basis):
         """A3/A6: geteilt, rechts das Logbuch; links zwischen Grenzen und Modulen wechseln → rechts keine Einhängung."""
         page = self.seite()
         self.oeffnen(page, {'type': 'boundary', 'id': 'projekt', 'title': 'Modus und Grenzen'})
-        page.locator('.dk-split-btn').first.click(); page.wait_for_timeout(400)
+        page.locator('.dk-split-btn').first.click()
+        page.wait_for_function("()=>document.querySelectorAll('.dk-group').length >= 2", timeout=WARTE_MS)
         self.oeffnen(page, {'type': 'logbook', 'id': 'audit', 'title': 'Logbuch'}, 'g2')
         self.oeffnen(page, {'type': 'module', 'id': 'alle', 'title': 'Module', 'collection': True}, 'g1')
         self.zaehlen(page)
         links = page.locator('.dk-group').first
-        links.locator('.dk-tab', has_text='Modus und Grenzen').click(); page.wait_for_timeout(600)
-        links.locator('.dk-tab', has_text='Module').click(); page.wait_for_timeout(600)
+        # Erst der Zustand (der Reiter ist vorn), dann die alten 600 ms als Beobachtungszeit: geprüft wird, dass rechts NICHTS
+        # eingehängt wird – ein Ausbleiben lässt sich nicht abwarten, also bleibt die Zeit, in der eine falsche Einhängung auffiele.
+        links.locator('.dk-tab', has_text='Modus und Grenzen').click(); self.vorn(page, links, 'Modus und Grenzen'); page.wait_for_timeout(600)
+        links.locator('.dk-tab', has_text='Module').click(); self.vorn(page, links, 'Module'); page.wait_for_timeout(600)
         m = page.evaluate('window.__m')
         self.assertFalse([x for x in m if x.startswith('logbook')], m)           # die rechte Gruppe bleibt, wie sie ist
         self.assertLessEqual(len(m), 2, m)                                       # ≤ 1 je Wechsel
@@ -148,7 +180,7 @@ class ImBrowser(Basis):
         page.wait_for_function("""(i)=>{ const t = [...document.querySelectorAll('.dk-group')].map(g=>{
             const b = g.querySelector('.dk-body > .dk-pane-box:not([hidden])'); return b ? b.innerText.slice(0, 200) : ''; });
             return t.length >= 2 && t[i].includes('nur ein Objekt zugleich') && !t[1 - i].includes('nur ein Objekt zugleich'); }""",
-                               arg=gruppe, timeout=15000)
+                               arg=gruppe, timeout=WARTE_MS)
 
     def test_ein_einzelstueck_zeichnet_nie_in_zwei_gruppen(self):
         """A5/D2-3: zwei Aufgaben nebeneinander → eine zeigt die Aufgabe, die andere den Hinweis; „Hierher holen“ tauscht."""
@@ -156,7 +188,7 @@ class ImBrowser(Basis):
         a, b = self.aufgaben(page)[:2]
         self.oeffnen(page, {'type': 'task', 'id': a, 'title': 'Erste'})
         page.locator('.dk-split-btn').first.click()
-        page.wait_for_function("()=>document.querySelectorAll('.dk-group').length >= 2", timeout=15000)
+        page.wait_for_function("()=>document.querySelectorAll('.dk-group').length >= 2", timeout=WARTE_MS)
         self.oeffnen(page, {'type': 'task', 'id': b, 'title': 'Zweite'}, 'g2')
         self.warte_hinweis(page, 0)
         links, rechts = self.sichtbar(page)
@@ -174,15 +206,15 @@ class ImBrowser(Basis):
         self.oeffnen(page, {'type': 'logbook', 'id': 'audit', 'title': 'Logbuch'})
         self.oeffnen(page, {'type': 'module', 'id': 'alle', 'title': 'Module', 'collection': True})
         # Warten auf den Zustand: das Melden ist gebündelt (500 ms), also bis der Arbeitsstand beide Reiter hat
-        page.wait_for_function("async()=>{ const s = await window.sedraBoot.ctx.api('/api/arbeitsstand');"
-                               " return s.offen.some(o=>o.type === 'logbook') && s.offen.some(o=>o.type === 'module'); }", timeout=15000)
+        bis_wahr(page, "async()=>{ const s = await window.sedraBoot.ctx.api('/api/arbeitsstand');"
+                       " return s.offen.some(o=>o.type === 'logbook') && s.offen.some(o=>o.type === 'module'); }")
         stand = page.evaluate("()=>window.sedraBoot.ctx.api('/api/arbeitsstand')")
         keys = [o['type'] + ':' + o['id'] for o in stand['offen']]
         self.assertIn('logbook:audit', keys); self.assertEqual(stand['vorn'], 'module:alle')
         page.evaluate("()=>localStorage.removeItem('sedra.cockpit.layout')")     # wie eine andere Shell vorher: kein eigenes Layout
-        page.reload(); self.uix.wait_until_started(page)
-        page.wait_for_function("()=>[...document.querySelectorAll('.dk-tab span')].map(s=>s.textContent).includes('Module')", timeout=15000)
-        tabs = page.evaluate("()=>[...document.querySelectorAll('.dk-tab span')].map(s=>s.textContent)")
+        page.reload(); self.uix.wait_until_started(page, shell='cockpit')
+        page.wait_for_function("()=>[...document.querySelectorAll('.dk-tab span')].map(s=>s.textContent).includes('Module')", timeout=WARTE_MS)
+        tabs = page.evaluate(TABS)
         self.assertIn('Logbuch', tabs); self.assertIn('Module', tabs)
         self.assertEqual(page.evaluate("()=>(document.querySelector('.dk-tab.on span')||{}).textContent"), 'Module')
 
@@ -190,7 +222,9 @@ class ImBrowser(Basis):
         """A14 im Browser: Unsinn in localStorage → die Werkbank startet, ohne Fehler auf der Seite."""
         page = self.seite()
         page.evaluate("()=>localStorage.setItem('sedra.cockpit.layout', JSON.stringify({layout:{kind:'split', children:[{kind:'group', panes:[{object:{type:'<x>'}}]}]}, v:1}))")
-        page.reload(); self.uix.wait_until_started(page); page.wait_for_timeout(1500)
+        page.reload(); self.uix.wait_until_started(page, shell='cockpit')
+        page.wait_for_function("()=>document.querySelectorAll('.dk-tab').length >= 1", timeout=WARTE_MS)
+        page.wait_for_timeout(1500)          # Beobachtungszeit, kein Warten auf Bereitschaft: ein später Fehler auf der Seite fiele hier auf
         self.assertGreaterEqual(page.evaluate("()=>document.querySelectorAll('.dk-tab').length"), 1)
         self.assertEqual(self.fehler, [])
 
@@ -198,8 +232,12 @@ class ImBrowser(Basis):
         """A11 im Browser: Schließen sendet object.close und nimmt das Objekt aus dem Arbeitsstand."""
         page = self.seite()
         self.oeffnen(page, {'type': 'logbook', 'id': 'audit', 'title': 'Logbuch'})
+        # erst muss der Arbeitsstand das Logbuch kennen (gebündelt, 500 ms) – sonst prüfte „vergisst“ unten nichts
+        bis_wahr(page, "async()=>(await window.sedraBoot.ctx.api('/api/arbeitsstand')).offen.some(o=>o.type === 'logbook')")
         page.evaluate("()=>{ window.__zu = []; window.sedraBoot.ctx.bus.on('object.close', e=>window.__zu.push(e.type + ':' + e.id)); }")
-        page.locator('.dk-tab', has_text='Logbuch').locator('.dk-x').click(); page.wait_for_timeout(900)
+        page.locator('.dk-tab', has_text='Logbuch').locator('.dk-x').click()
+        # statt 900 ms: das Schließen ist gemeldet und im Arbeitsstand angekommen
+        bis_wahr(page, "async()=>window.__zu.length > 0 && !(await window.sedraBoot.ctx.api('/api/arbeitsstand')).offen.some(o=>o.type === 'logbook' && o.id === 'audit')")
         self.assertEqual(page.evaluate('window.__zu'), ['logbook:audit'])
         stand = page.evaluate("()=>window.sedraBoot.ctx.api('/api/arbeitsstand')")
         self.assertNotIn('logbook:audit', [o['type'] + ':' + o['id'] for o in stand['offen']])
@@ -211,18 +249,27 @@ class UeberDenWechsel(Basis):
     def wechseln(self, page, shell):
         page.evaluate("""async(s)=>{ await fetch('/api/uix/shell', {method: 'POST', body: JSON.stringify({shell: s}), headers: {'Content-Type': 'application/json',
                          'X-GUPPI-Token': decodeURIComponent(location.hash.slice(1))}}); await window.sedraWechsel.vorDemWechsel(); }""", shell)
-        page.reload(); self.uix.wait_until_started(page); page.wait_for_timeout(1800)
+        # statt 1800 ms: auf den Start genau dieser Shell warten; ein ausbleibender Start ist ein eigener Befund (uix_check)
+        page.reload(); self.uix.wait_until_started(page, shell=shell)
         self.assertEqual(page.evaluate("()=>window.sedraBoot.ctx.manifest.shell.id"), shell)
+
+    def stand_hat(self, page, typ):
+        bis_wahr(page, "async(t)=>(await window.sedraBoot.ctx.api('/api/arbeitsstand')).offen.some(o=>o.type === t)", typ)
 
     def test_cockpit_paperclip_cockpit(self):
         page = self.seite()
         self.oeffnen(page, {'type': 'logbook', 'id': 'audit', 'title': 'Logbuch'})
         self.wechseln(page, 'paperclip')
+        page.wait_for_function("()=>{ const t = document.querySelector('.pc-top'); return !!t && t.innerText.includes('Logbuch'); }", timeout=WARTE_MS)
         self.assertIn('Logbuch', page.evaluate("()=>document.querySelector('.pc-top').innerText"))     # was vorn lag, ist die Seite
         page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open', {type:'boundary', id:'projekt', title:'Modus und Grenzen'})")
-        page.wait_for_timeout(900)
+        self.stand_hat(page, 'boundary')                 # statt 900 ms: das neue Objekt steht im Arbeitsstand
         self.wechseln(page, 'cockpit')
-        tabs = page.evaluate("()=>[...document.querySelectorAll('.dk-tab span')].map(s=>s.textContent)")
+        page.wait_for_function("""()=>{ const t = [...document.querySelectorAll('.dk-tab span')].map(s=>s.textContent), on = document.querySelector('.dk-tab.on span'),
+            talk = document.querySelector('.ck-talk');
+            return t.includes('Logbuch') && t.includes('Modus und Grenzen') && !!on && on.textContent === 'Modus und Grenzen' && !!talk && talk.innerText.includes('mitgenommen'); }""",
+                               timeout=WARTE_MS)
+        tabs = page.evaluate(TABS)
         self.assertIn('Logbuch', tabs); self.assertIn('Modus und Grenzen', tabs)                        # beide Objekte sind da
         self.assertEqual(page.evaluate("()=>(document.querySelector('.dk-tab.on span')||{}).textContent"), 'Modus und Grenzen')
         self.assertIn('mitgenommen', page.evaluate("()=>document.querySelector('.ck-talk').innerText"))
@@ -233,14 +280,20 @@ class UeberDenWechsel(Basis):
         page = self.seite()
         hub = self.uix.LAST_HUB
         hub._verlauf('reply', {'text': 'Wo steht der Index?'}, {'status': 'completed', 'reply': 'In der Messung, Abschnitt Index.', 'model': 'probe'})
-        page.reload(); self.uix.wait_until_started(page); page.wait_for_timeout(1500)
+        page.reload(); self.uix.wait_until_started(page, shell='cockpit')
+        # statt 1500 ms: das Gespräch hat den Verlauf vom Server geholt
+        page.wait_for_function("()=>{ const l = document.querySelector('.t-talk-log'); return !!l && l.innerText.includes('Abschnitt Index'); }", timeout=WARTE_MS)
         log = page.evaluate("()=>document.querySelector('.t-talk-log').innerText")
         self.assertIn('Bisher im Gespräch', log); self.assertIn('Wo steht der Index?', log); self.assertIn('Abschnitt Index', log)
         gespeichert = page.evaluate("()=>JSON.stringify(Object.assign({}, localStorage)) + JSON.stringify(Object.assign({}, sessionStorage))")
         self.assertNotIn('Wo steht der Index', gespeichert)
-        page.locator('.t-talk-in button', has_text='Leeren').click(); page.wait_for_timeout(300)
+        page.locator('.t-talk-in button', has_text='Leeren').click()
+        # statt 300 ms: der erste Klick hat geantwortet (er fragt nach); erst dann sagt „nicht geleert“ etwas
+        page.locator('.t-talk-in button', has_text='Wirklich leeren?').wait_for(state='visible', timeout=WARTE_MS)
         self.assertNotEqual(hub.gedaechtnis.verlauf()['eintraege'], [], 'ein Klick leert nicht (Stufe 6, B1)')
-        page.locator('.t-talk-in button', has_text='Wirklich leeren?').click(); page.wait_for_timeout(700)
+        page.locator('.t-talk-in button', has_text='Wirklich leeren?').click()
+        # statt 700 ms: das Leeren ist auf der Seite angekommen (der Text ist fort), dann gilt die Prüfung auf dem Server
+        page.wait_for_function("()=>!document.querySelector('.t-talk-log').innerText.includes('Wo steht der Index')", timeout=WARTE_MS)
         self.assertEqual(hub.gedaechtnis.verlauf()['eintraege'], [])
         self.assertNotIn('Wo steht der Index', page.evaluate("()=>document.querySelector('.t-talk-log').innerText"))
         self.assertEqual(self.fehler, [])

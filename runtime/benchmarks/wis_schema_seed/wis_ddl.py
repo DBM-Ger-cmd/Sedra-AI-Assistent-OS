@@ -72,6 +72,43 @@ CREATE TABLE laeufe (
   pause_grund TEXT, status TEXT NOT NULL CHECK (status IN ('laeuft','fertig','pausiert','abgebrochen'))
 );
 """),
+    (2, "K5: Wurzeln w:<id> und Adapter dokumente in quellen, Tabelle dateien (SPEC_WISSEN_KERN_v1 G2 K5 §2.2)", """
+CREATE TABLE quellen_neu (
+  id TEXT PRIMARY KEY,
+  art TEXT NOT NULL CHECK (art IN ('datei','ordner','speicher','vorschlaege')),
+  adapter TEXT NOT NULL CHECK (adapter IN ('markdown','text','logbuch','knowledge','arbeitsumfeld','gateway','vorschlag','dokumente')),
+  wurzel TEXT NOT NULL CHECK (wurzel IN ('repo','projekt') OR wurzel GLOB 'w:[a-z0-9]*'),
+  pfad TEXT NOT NULL,
+  muster TEXT NOT NULL DEFAULT '*.md',
+  freigabe_gate TEXT NOT NULL,
+  freigabe_mission TEXT NOT NULL,
+  stufe INTEGER NOT NULL CHECK (stufe BETWEEN 0 AND 6),
+  projekt TEXT,
+  personenbezug INTEGER NOT NULL CHECK (personenbezug IN (0,1)),
+  aktiv INTEGER NOT NULL DEFAULT 1,
+  stand TEXT,
+  quell_hash TEXT,
+  erstellt TEXT NOT NULL
+);
+INSERT INTO quellen_neu (id, art, adapter, wurzel, pfad, muster, freigabe_gate, freigabe_mission, stufe, projekt, personenbezug, aktiv, stand, quell_hash, erstellt)
+  SELECT id, art, adapter, wurzel, pfad, muster, freigabe_gate, freigabe_mission, stufe, projekt, personenbezug, aktiv, stand, quell_hash, erstellt FROM quellen;
+DROP TABLE quellen;
+ALTER TABLE quellen_neu RENAME TO quellen;
+CREATE TABLE dateien (
+  quelle TEXT NOT NULL REFERENCES quellen(id) ON DELETE CASCADE,
+  datei TEXT NOT NULL,
+  hash TEXT NOT NULL,
+  art TEXT NOT NULL,
+  zustand TEXT NOT NULL CHECK (zustand IN ('aufgenommen','uebersprungen')),
+  grund TEXT,
+  abschnitte INTEGER NOT NULL DEFAULT 0,
+  gesperrt INTEGER NOT NULL DEFAULT 0,
+  groesse INTEGER NOT NULL DEFAULT 0,
+  geprueft TEXT NOT NULL,
+  PRIMARY KEY (quelle, datei)
+);
+CREATE INDEX dateien_zustand ON dateien(quelle, zustand);
+""", True),
 )
 
 

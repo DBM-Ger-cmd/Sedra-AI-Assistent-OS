@@ -55,12 +55,56 @@ class AmHub(Basis):
         self.assertEqual(r['status'], 'beantragt')
         self.assertTrue(r['decision_id'].startswith('request:'))
         self.assertEqual(self.api.wissen_antrag({'pfad': 'notizen/werkbank.md'})['status'], 'schon_aufgenommen')
-        for schlecht in ({'pfad': 'C:/Daten'}, {'pfad': '/etc'}, {'pfad': 'x', 'wurzel': 'D:/Daten'}):
+        for schlecht, satz in (({'pfad': 'C:/Daten'}, 'relativ'), ({'pfad': '/etc'}, 'relativ'), ({'pfad': 'x', 'wurzel': 'D:/Daten'}, 'nicht freigegeben'),
+                               ({'pfad': 'x', 'wurzel': 'w:gibtsnicht'}, 'nicht freigegeben')):
             with self.assertRaises(ValueError) as ctx:
                 self.api.wissen_antrag(schlecht)
-            self.assertIn('K5', str(ctx.exception))
+            self.assertIn(satz, str(ctx.exception))
         offene = [d for d in self.hub.decisions_view()['items'] if d.get('id') == r['decision_id']]
         self.assertEqual(len(offene), 1, 'der Antrag wartet im Posteingang')
+
+
+class FreigegebeneOrdner(Basis):
+    """K5-8: Antrag unter einem freigegebenen Ordner (Adapter dokumente, Untergrenzen der Wurzel), Stand im Chat, Entfernen und Dateien am Desk."""
+
+    def setUp(self):
+        super().setUp()
+        self.ablage = self.project.parent / 'ablage'
+        self.ablage.mkdir(exist_ok=True)
+        (self.ablage / 'akte.md').write_text('# Akte\n\n## Vertrag\n\nLaufzeit drei Jahre.\n', encoding='utf-8')
+        (self.ablage / 'liste.csv').write_text('Kunde;Ort\nKranich;Bremen\n', encoding='utf-8')
+        (self.project / 'local_config' / 'wissen_wurzeln.yaml').write_text(
+            f"wurzeln:\n  - {{id: ablage, pfad: '{self.ablage.as_posix()}', name: Ablage, personenbezug: 1, stufe: 2}}\n", encoding='utf-8')
+        self.api = self.hub.harness
+
+    def test_antrag_unter_freigegebenem_ordner(self):
+        r = self.api.wissen_antrag({'pfad': '.', 'wurzel': 'w:ablage', 'muster': '*.md, *.csv'})
+        self.assertEqual(r['status'], 'beantragt')
+        self.decide(r)
+        q = [q for q in self.sp.quellen() if q['wurzel'] == 'w:ablage'][0]
+        self.assertEqual((q['adapter'], q['stufe'], q['personenbezug']), ('dokumente', 2, 1), 'Untergrenzen der Wurzel')
+        self.sp.abgleich()
+        stand = self.api.wissen_werkzeug('S-1', None, {'stand': q['id']})
+        self.assertIn('2 Dateien aufgenommen', stand)
+        self.assertIn('w:ablage: Ablage (Stufe ab 2, Personenbezug)', self.api.wissen_werkzeug('S-1', None, {'stand': 'wurzeln'}))
+        self.assertNotIn(str(self.ablage), self.api.wissen_werkzeug('S-1', None, {'stand': 'wurzeln'}), 'kein Pfad für das Modell')
+        self.assertIn(q['id'], self.api.wissen_werkzeug('S-1', None, {'stand': 'quellen'}))
+        with self.assertRaises(ValueError):
+            self.api.wissen_werkzeug('S-1', None, {'stand': 'Q-gibtsnicht'})
+
+    def test_dateien_und_entfernen_am_desk(self):
+        r = self.api.wissen_antrag({'pfad': '.', 'wurzel': 'w:ablage', 'muster': '*.md'})
+        self.decide(r)
+        q = [q for q in self.sp.quellen() if q['wurzel'] == 'w:ablage'][0]
+        self.sp.abgleich()
+        out = self.hub.act({'type': 'wissen_quelle', 'id': q['id'], 'verb': 'dateien', 'args': {}})['result']
+        self.assertEqual((out['status'], out['summen']['aufgenommen']), ('erledigt', 1))
+        out = self.hub.act({'type': 'wissen_quelle', 'id': q['id'], 'verb': 'entfernen', 'args': {}})['result']
+        self.assertEqual(out['status'], 'erledigt')
+        self.assertGreater(out['abschnitte'], 0)
+        self.assertNotIn(q['id'], [x['id'] for x in self.sp.quellen()])
+        self.assertEqual(self.sp.db.execute("SELECT count(*) FROM dateien WHERE quelle = ?", (q['id'],)).fetchone()[0], 0)
+        self.assertTrue((self.ablage / 'akte.md').is_file(), 'die Datei auf der Platte bleibt')
 
 
 class Aus(Basis):
