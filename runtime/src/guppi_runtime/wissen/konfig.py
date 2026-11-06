@@ -35,6 +35,7 @@ class Konfig:
     leerlauf_s: float = 900.0
     anfrage_timeout_s: float = 5.0
     eingabeformat: str = "e1"
+    numpy: str = "auto"                                      # K5-6 (D-K5-2): auto = Matrix, wenn numpy installiert ist; aus = immer reines Python
     glossar_an: bool = False                                 # S7.6 A2: erst nach der Messung S7.2-F einschalten
     glossar: list = field(default_factory=list)              # Gruppen aus config/ und local_config/ (wissen_glossar.yaml)
     datamarking: bool = False                                # S7.6 A4: erst nach dem Einschleus-Test mit dem lokalen Modell
@@ -125,6 +126,9 @@ def load(config_path, local_path=None):
     if not isinstance(s.get("glossar", False), bool):
         raise ValueError("wissen_config_invalid:glossar")
     k.glossar_an = s.get("glossar", False)
+    k.numpy = str(s.get("numpy", "auto"))
+    if k.numpy not in ("auto", "aus"):
+        raise ValueError("wissen_config_invalid:numpy")
     f = w.get("fusion") or {}
     if not isinstance(f, dict):
         raise ValueError("wissen_config_invalid:fusion")

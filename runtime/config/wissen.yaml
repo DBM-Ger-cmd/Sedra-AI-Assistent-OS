@@ -20,7 +20,7 @@ wissen:
     anfrage_timeout_s: 5.0
     eingabeformat: e1                   # e1: Stelle + Text; e2: Dokument > Stelle + Text, Tabellen als „Spalte: Wert“ (S7.6 A1, Wechsel = Neuaufbau)
     dim: 1024                           # BGE-M3
-  suche: {tiefe: 50, k: 5, abdeckung_min: 0.5, glossar: false}   # D7.5; glossar: S7.6 A2 (wissen_glossar.yaml), an erst nach S7.2-F
+  suche: {tiefe: 50, k: 5, abdeckung_min: 0.5, glossar: false, numpy: auto}   # D7.5; glossar: S7.6 A2; numpy: K5-6 (auto = Matrix, wenn numpy installiert ist; aus = reines Python)
   fusion: {k: 60, w_vektor: 1.0, w_wort: 0.75, guete: true, spitzenschutz: false}   # f1, Startwerte bis S7.2-F
   zerlegen: {ziel: 1200, grenze: 1600}                   # z2 (G2-S7-e)
   kontext: {je_treffer: 1600, gesamt: 8000, treffer: 5, datamarking: false}  # D7.6; datamarking: S7.6 A4, an erst nach dem Einschleus-Test

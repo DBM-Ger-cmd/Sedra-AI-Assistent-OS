@@ -12,6 +12,7 @@ werkzeuge:
   - {id: piper, name: Piper, art: programm, name_im_system: piper, zweck: "Antworten vorlesen (Sprachausgabe auf der CPU)", install: "pip install piper-tts", plan: W6}
   # Dokumente und Bilder
   - {id: markitdown, name: MarkItDown, art: paket, name_im_system: markitdown, zweck: "PDF, Excel, PowerPoint zu Markdown (Wissen, K5-4)", install: "pip install \"markitdown[pdf,xlsx,pptx]\"", plan: W4}
+  - {id: numpy, name: numpy, art: paket, name_im_system: numpy, zweck: "schnelle Vektorsuche im Wissen bei großen Mengen (K5-6)", install: "pip install numpy", plan: K5}
   - {id: pypdf, name: pypdf, art: paket, name_im_system: pypdf, zweck: "Text aus PDF, wenn MarkItDown fehlt (Wissen, K5-4)", install: "pip install pypdf", plan: W4}
   - {id: docling, name: Docling, art: paket, name_im_system: docling, zweck: "Dokumente mit Layout zu Markdown", install: "pip install docling", plan: W4}
   - {id: rapidocr, name: RapidOCR, art: paket, name_im_system: rapidocr_onnxruntime, zweck: "Text aus Bildern und Scans", install: "pip install rapidocr-onnxruntime", plan: W5}

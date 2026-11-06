@@ -133,6 +133,6 @@ class VorschlagTeil:
             with schema._immediate(self.db):
                 self.db.execute("DELETE FROM abschnitte WHERE datei = ?", ("vorschlag:" + vid,))
                 self.db.execute("UPDATE vorschlaege SET status = 'veraltet', entschieden = ? WHERE id = ?", (self.uhr(), vid))
-            self._vektoren_stempel = None
+            self._vektoren_stempel = self._matrix_stempel = None
             self.audit("WIS_VORSCHLAG_ZURUECKGENOMMEN", {"id": vid})
             return {"id": vid, "status": "veraltet"}

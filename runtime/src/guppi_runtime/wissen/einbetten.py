@@ -20,7 +20,7 @@ class EinbettTeil:
             self.db.execute("INSERT INTO laeufe (art, start, geraet, status) VALUES ('neuaufbau', ?, 'cpu', 'laeuft')", (self.uhr(),))
         if alt is not None:
             self.audit("WIS_MODELL_WECHSEL", {"alt": alt, "neu": mid, "geloescht": geloescht})
-        self._vektoren_stempel = None
+        self._vektoren_stempel = self._matrix_stempel = None
         return geloescht
 
     def _offene(self, mid, n):
@@ -65,7 +65,7 @@ class EinbettTeil:
                 if out["ende"] == "fertig" and not self._offene(mid, 1):
                     with schema._immediate(self.db):
                         self.db.execute("UPDATE laeufe SET status = 'fertig', ende = ? WHERE art = 'neuaufbau' AND status = 'laeuft'", (self.uhr(),))
-                self._vektoren_stempel = None
+                self._vektoren_stempel = self._matrix_stempel = None
                 self._letzter_schritt = out
             return out
         finally:

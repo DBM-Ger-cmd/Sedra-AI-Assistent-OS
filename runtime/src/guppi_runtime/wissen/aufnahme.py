@@ -1,7 +1,9 @@
 """Der Takt der Aufnahme (Spec 7, D7.3, G2-S7-j): ein Thread je Prozess unter der Betriebssystem-Sperre
 `local_config/wissen/takt.lock` (`core.mission_lock.exclusive`, nur benutzt); alle `intervall_s` (Vorgabe 600) ein Abgleich und
 ein Einbett-Schritt über `WissenSpeicher.nachfuehren` – nur über freigegebene Quellen, nur CPU (D7.4). Wer die Sperre nicht
-bekommt, taktet nicht (`wis_takt_busy`). Das Verb `wissen.nachfuehren` ruft dieselbe Funktion sofort."""
+bekommt, taktet nicht (`wis_takt_busy`). Das Verb `wissen.nachfuehren` ruft dieselbe Funktion sofort.
+K5-7: jeder Durchgang nimmt zusätzlich die kurze Sperre `aufnahme.lock` (ohne zu warten); hält sie der Lauf `wissen_aufnahme`
+(`aufnahme_lauf.py`) für die Erstaufnahme, entfällt der Durchgang (`{"uebersprungen": "aufnahme_lauf"}`)."""
 from __future__ import annotations
 
 import threading
@@ -10,15 +12,26 @@ from contextlib import ExitStack
 from ..core.mission_lock import exclusive
 
 LOCK = "takt.lock"
+SPERRE = "aufnahme.lock"
 
 
 def nachfuehren(speicher):
     """Ein Durchlauf: Abgleich aller aktiven Quellen und ein Einbett-Schritt; Fehler landen im Audit, nicht im Aufrufer."""
+    sperre = exclusive(speicher.pfad.parent / SPERRE)
+    try:
+        sperre.__enter__()
+    except RuntimeError as exc:
+        if str(exc) == "mission_execution_busy":                 # der Lauf `wissen_aufnahme` ist dran
+            return {"uebersprungen": "aufnahme_lauf"}
+        speicher.audit("WIS_TAKT_FEHLER", {"error": str(exc)[:200]})
+        return {"fehler": str(exc)}
     try:
         return speicher.nachfuehren()
     except Exception as exc:                                     # der Takt stirbt nicht an einem Durchlauf
         speicher.audit("WIS_TAKT_FEHLER", {"error": (str(exc) or type(exc).__name__)[:200]})
         return {"fehler": str(exc) or type(exc).__name__}
+    finally:
+        sperre.__exit__(None, None, None)
 
 
 def start(speicher, lock_path, intervall_s, *, sofort=False):

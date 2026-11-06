@@ -60,7 +60,15 @@ class Grenze(unittest.TestCase):
                 ziel = absolut(imp, level, f"guppi_runtime.wissen.{path.stem}")
                 if ziel.startswith("guppi_runtime.") and not ziel.startswith("guppi_runtime.wissen") and ziel not in ("guppi_runtime.desk", "guppi_runtime.core", "guppi_runtime.orchestra", "guppi_runtime.jobs"):
                     self.assertIn(ziel, HARNESS_ERLAUBT, f"{path.stem} importiert {ziel}")
-                self.assertFalse(ziel.startswith(("numpy", "sqlite_vec")), ziel)
+                if path.stem == "vektor_np" and ziel == "numpy":
+                    continue                                      # K5-6 (G2 K5 D-K5-2 Weg A): nur hier, nur bei Bedarf geladen (Test unten)
+                self.assertFalse(ziel.startswith(("numpy", "sqlite_vec")), f"{path.stem} importiert {ziel}")
+
+    def test_numpy_nur_in_vektor_np_und_nicht_beim_laden(self):
+        tree = ast.parse((WISSEN / "vektor_np.py").read_text(encoding="utf-8"))
+        oben = [a.name for n in tree.body if isinstance(n, ast.Import) for a in n.names]
+        oben += [n.module for n in tree.body if isinstance(n, ast.ImportFrom)]
+        self.assertNotIn("numpy", oben, "numpy wird erst geladen, wenn die Matrix gebraucht wird; ohne numpy läuft alles weiter")
 
     def test_niemand_draussen_importiert_die_reinen_module(self):
         bad = []

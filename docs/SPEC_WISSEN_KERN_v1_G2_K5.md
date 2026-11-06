@@ -28,6 +28,13 @@ Baut auf K1/K2 auf (`docs/SPEC_WISSEN_KERN_v1_G2_K1K2.md`, gebaut, Übergabe v2)
 | B8 | Personenbezug und Stufe gelten heute schon je Quelle. „Sammlung“ heißt in K5 einfach Quelle mit `art: ordner`. | `quellen.personenbezug`, `stufe` | WK-26 ist größtenteils schon da. |
 | B9 | Abschalten gibt es (`quelle_aendern aktiv=0`, ohne Gate), Entfernen nicht. Die Fremdschlüssel löschen Abschnitte mit (`ON DELETE CASCADE`). | `speicher.quelle_aendern`, `schema.py` | WK-27: das Verb `entfernen` |
 
+**Korrektur 06.11.2026 zu B4 (Messung ohne Last):** Die 2,7 s für 10 000 Vektoren stammten aus einer Messung, während fünf Unterchats den Rechner
+voll belasteten. Ohne Last braucht reines Python hier **0,17 s für 10 000 und 0,84 s für 50 000 Vektoren**, hochgerechnet **≈ 3 s für 200 000**
+(0,9 GB). Mit numpy: **52 ms für 200 000** (Matrix 821 MB, Aufbau 0,4 s), mit Filter gleich schnell, gleiche Reihenfolge wie reines Python.
+Folge für §2.6: Weg A (numpy) ist gebaut; den **Grobindex (Weg B) baue ich nicht**. Reines Python liegt bei 200 000 Abschnitten etwa am Ziel,
+und ein k-means in reinem Python über 200 000 × 1 024 wäre beim Aufbau nicht machbar. Liegt reines Python auf dem PC des Captains deutlich über 3 s,
+heißt die Antwort numpy (ein `pip install numpy`), nicht B.
+
 ## 2. Design
 
 ### 2.1 Freigegebene Ordner (F2, WK-21)

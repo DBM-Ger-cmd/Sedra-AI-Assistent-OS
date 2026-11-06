@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import time
 
-from . import ausgabe, fusion, glossar, schema, vektor
+from . import ausgabe, fusion, glossar, schema, vektor, vektor_np
 from .hilfen import _sha
 
 MAX_FRAGE = 500
@@ -43,6 +43,27 @@ class SucheTeil:
             return 1.0, 0, 0
         v = self.db.execute("SELECT count(*) FROM vektoren v JOIN abschnitte a ON a.nr = v.abschnitt WHERE v.modell_id = ? AND v.hash = a.hash", (mid,)).fetchone()[0]
         return v / n, n, v
+
+    def vektorsuche(self):
+        """'numpy' (Matrix, K5-6 Weg A) oder 'python' (vektor.py, ohne numpy oder mit suche.numpy: aus)."""
+        return "numpy" if getattr(self.konfig, "numpy", "auto") != "aus" and vektor_np.verfuegbar() else "python"
+
+    def _matrix_laden(self, mid):
+        stempel = self.db.execute("SELECT count(*), max(abschnitt) FROM vektoren WHERE modell_id = ?", (mid,)).fetchone()
+        key = (mid, tuple(stempel))
+        if getattr(self, "_matrix_stempel", None) != key or self._matrix is None:
+            dim = self.konfig.dim
+            self._matrix = vektor_np.Matrix([(r[0], r[1]) for r in self.db.execute(
+                "SELECT v.abschnitt, v.blob FROM vektoren v JOIN abschnitte a ON a.nr = v.abschnitt WHERE v.modell_id = ? AND v.dim = ? AND v.hash = a.hash ORDER BY v.abschnitt",
+                (mid, dim))], dim)
+            self._matrix_stempel = key
+        return self._matrix
+
+    def _vektor_top(self, anfrage, mid, tiefe, erlaubt):
+        """Top-`tiefe` der Vektorsuche unter den erlaubten Abschnitten – mit numpy als Matrix, sonst in reinem Python (gleiches Ergebnis)."""
+        if self.vektorsuche() == "numpy":
+            return self._matrix_laden(mid).top_k(anfrage, tiefe, erlaubt=erlaubt)
+        return vektor.top_k(anfrage, self._vektoren_laden(mid), tiefe, erlaubt=lambda nr: nr in erlaubt)
 
     def _vektoren_laden(self, mid):
         stempel = self.db.execute("SELECT count(*), max(abschnitt) FROM vektoren WHERE modell_id = ?", (mid,)).fetchone()
@@ -108,7 +129,7 @@ class SucheTeil:
             self._rueckfall_melden(grund)
             if grund is None:
                 erlaubt = {r[0] for r in self.db.execute("SELECT a.nr FROM abschnitte a JOIN quellen q ON q.id = a.quelle WHERE " + where + befund_sql, params)}
-                vek = [nr for nr, _ in vektor.top_k(anfrage, self._vektoren_laden(mid), tiefe, erlaubt=lambda nr: nr in erlaubt)]
+                vek = [nr for nr, _ in self._vektor_top(anfrage, mid, tiefe, erlaubt)]
                 g = self._guete(woerter, wort, n_alle, alt)
                 treffer = fusion.fusioniere(wort, vek, g, self.konfig.gewichte, k_aus=k)
                 modus = "hybrid"

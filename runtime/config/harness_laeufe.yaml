@@ -52,6 +52,15 @@ harness_laeufe:
       modell: coder.local_primary
       fortschritt: {art: text}
       zeitlimit_min: 120
+    - id: wissen_aufnahme
+      name: Wissen – Erstaufnahme einer Quelle
+      argv: [python, benchmarks/wissen_aufnahme.py, --project, ../workspace/GUPPI_OS, --quelle, '{quelle}']
+      ordner: runtime
+      parameter:
+        quelle: {muster: 'Q-[0-9a-f]{8}'}
+      gpu: keine
+      fortschritt: {art: zeilen, regex: 'Stand (\d+)/(\d+)'}
+      zeitlimit_min: 600
     - id: harness_abnahme
       name: Abnahme der Harness mit echtem Modell
       argv: [python, benchmarks/harness_abnahme.py, --url, '{url}']

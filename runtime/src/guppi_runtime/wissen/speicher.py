@@ -135,7 +135,8 @@ class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil, Dat
                                                       merke_schreiben=lambda w: schema.setze_meta(self.db, {"gguf_pruefung": w}))
         self.beantrage = None                                             # setzt desk_wissen: Vorschlag → Antrag (D7.8)
         self._vektoren = None
-        self._vektoren_stempel = None
+        self._matrix = None                                      # K5-6 (D-K5-2 A): die Vektoren als numpy-Matrix, wenn numpy da ist
+        self._vektoren_stempel = self._matrix_stempel = None
         self._rueckfall = None
         self._letzter_schritt = None
         self._einbett_lock = threading.Lock()                         # ein Einbett-Schritt zur Zeit (Takt und Verb)
@@ -274,7 +275,7 @@ class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil, Dat
             with schema._immediate(self.db):
                 n = self.db.execute("SELECT count(*) FROM abschnitte WHERE quelle = ?", (quelle_id,)).fetchone()[0]
                 self.db.execute("DELETE FROM quellen WHERE id = ?", (quelle_id,))
-            self._vektoren_stempel = None
+            self._vektoren_stempel = self._matrix_stempel = None
             self.audit("WIS_QUELLE_ENTFERNT", {"quelle": quelle_id, "abschnitte": n})
             return {"quelle": quelle_id, "abschnitte": n}
 
@@ -362,7 +363,7 @@ class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil, Dat
                     summe[k] += zahl[k]
                 summe["gesperrt"] += gesperrt
                 self.audit("WIS_ABGLEICH", {"quelle": q["id"], **zahl, "gesperrt": gesperrt, "dauer_s": round(time.monotonic() - t0, 3)})
-            self._vektoren_stempel = None
+            self._vektoren_stempel = self._matrix_stempel = None
         summe["dauer_s"] = round(time.monotonic() - t0, 3)
         return summe
 
@@ -391,7 +392,7 @@ class WissenSpeicher(EinbettTeil, SucheTeil, VorschlagTeil, NachmessungTeil, Dat
             offen = self.db.execute("SELECT count(*) FROM vorschlaege WHERE status = 'offen'").fetchone()[0]
             modus = "hybrid" if bereit and meta.get("modell_id") == mid and abdeckung >= self.konfig.abdeckung_min else "volltext"
             return {"modell_id": mid, "modell_in_datei": meta.get("modell_id"), "bereit": bereit, "grund": grund or None, "abschnitte": n, "vektoren": v,
-                    "abdeckung": round(abdeckung, 4), "modus": modus, "neuaufbau": neuaufbau or meta.get("modell_id") != mid, "server_laeuft": self.dienst.laeuft(),
+                    "abdeckung": round(abdeckung, 4), "modus": modus, "vektorsuche": self.vektorsuche(), "neuaufbau": neuaufbau or meta.get("modell_id") != mid, "server_laeuft": self.dienst.laeuft(),
                     "letzter_lauf": dict(lauf) if lauf else None, "pause_grund": (dict(lauf).get("pause_grund") if lauf and lauf["status"] == "pausiert" else None),
                     "quellen": len(self.quellen()), "vorschlaege_offen": offen, "zerleger": meta.get("zerleger_version"), "fusion": meta.get("fusion_version"),
                     "geraet": "cpu", "lage": self.dienst.gpu.lage().zustand}
