@@ -67,7 +67,7 @@
       this.fehler = null; this.hinweis = null; this.laedt = false; this.frisch = false;   // frisch: Treffer dieser Sitzung (sonst „Treffer von HH:MM“)
       // der Zustand: aus dem Memo (dieselbe Seite), sonst Sitzung und Ablage (nach Neuladen oder Shell-Wechsel)
       const s = {ansicht: 'suche', abschnitt: null, k: 5, aufgeklappt: [], filterQuellen: 'alle', filterVorschlaege: 'offen', markiertQuelle: null,
-                 frage: '', ergebnis: null, ergebnisZeit: null, antrag: null, markiert: null, aktiv: null, menu: null, stufeForm: null,
+                 frage: '', ergebnis: null, ergebnisZeit: null, antrag: null, plus: null, markiert: null, aktiv: null, menu: null, stufeForm: null,
                  entwurf: null, loeschen: null, filter: null, filterOffen: false};
       const vorher = this.memo.get('zustand', null);
       if(vorher) Object.assign(s, vorher);

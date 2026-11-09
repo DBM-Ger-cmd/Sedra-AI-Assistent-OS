@@ -149,6 +149,62 @@ def _extra(hub, payload):
                        "takt": {"laeuft": bool(sp is not None and getattr(sp, "takt_thread", None) is not None and sp.takt_thread.is_alive())}}}
 
 
+# ---- Verben am Typ wissen: der Eingang (Ziehen und Windows-Dialog), siehe eingang.py
+def _eingang_antwort(sp, sitzung, **mehr):
+    from . import eingang
+    out = {"status": "erledigt", **eingang.stand(sp.projekt_root, sitzung), "sitzung": sitzung}
+    out.update(mehr)
+    if out["dateien"] == 0:
+        return dict(_fehler("wis_eingang_leer"), sitzung=sitzung)
+    return out
+
+
+def _eingang_ablegen(hub, oid, args):
+    """Ein Teilstück einer gezogenen Datei. Ohne `sitzung` wird eine neue angelegt."""
+    from . import eingang
+    sp = _need(hub)
+    try:
+        sitzung = args.get("sitzung") or eingang.neue_sitzung()
+        teil = eingang.ablegen(sp.projekt_root, sp.konfig, sitzung=sitzung, name=args.get("name"), offset=args.get("offset"),
+                               daten=args.get("daten"), ende=bool(args.get("ende")))
+        return {"status": "erledigt", "sitzung": sitzung, **teil}
+    except ValueError as exc:
+        return _fehler(exc)
+
+
+def _eingang_fertig(hub, oid, args):
+    sp = _need(hub)
+    try:
+        return _eingang_antwort(sp, args.get("sitzung"))
+    except ValueError as exc:
+        return _fehler(exc)
+
+
+def _eingang_verwerfen(hub, oid, args):
+    from . import eingang
+    sp = _need(hub)
+    try:
+        return {"status": "erledigt", **eingang.verwerfen(sp.projekt_root, args.get("sitzung"))}
+    except ValueError as exc:
+        return _fehler(exc)
+
+
+def _explorer_waehlen(hub, oid, args):
+    """Der Windows-Dialog (art: ordner | dateien), danach werden die gewählten Dateien in einen neuen Eingang kopiert."""
+    from . import eingang
+    sp = _need(hub)
+    try:
+        pfade = eingang.dialog(str(args.get("art") or ""))
+        if not pfade:
+            return {"status": "abgebrochen", "satz": "Nichts gewählt."}
+        sitzung = eingang.neue_sitzung()
+        eingang.ordner(sp.projekt_root, sitzung).mkdir(parents=True, exist_ok=True)
+        z = eingang.kopieren(sp.projekt_root, sp.konfig, pfade, sitzung)
+        return _eingang_antwort(sp, sitzung, **z)
+    except ValueError as exc:
+        return _fehler(exc)
+
+
 # ---- Verben am Typ wissen
 def _suche(hub, oid, args):
     sp = _need(hub)
@@ -442,6 +498,8 @@ def register(registry, hub):
             Verb("quelle_beantragen", "Quelle beantragen", _quelle_beantragen, needs_gate=True),
             Verb("quelle_pruefen", "Quelle prüfen", _quelle_pruefen),          # SPEC_WERKZEUG_WISSEN_v2 §3.4: Vorprüfung, nur lesen
             Verb("erstbestueckung", "Erstbestückung beantragen", _erstbestueckung, needs_gate=True),
+            Verb("eingang_ablegen", "Datei in den Eingang legen", _eingang_ablegen), Verb("eingang_fertig", "Eingang abschließen", _eingang_fertig),
+            Verb("eingang_verwerfen", "Eingang verwerfen", _eingang_verwerfen), Verb("explorer_waehlen", "Im Explorer wählen", _explorer_waehlen),
             Verb("nachmessung", "Nachmessung lesen", _nachmessung), Verb("nachmessung_bewerten", "Nachmessung bewerten", _nachmessung_bewerten),
             Verb("nachmessung_abschliessen", "Nachmessung abschließen", _nachmessung_abschliessen),
             # SPEC_SHELL_WISSEN_v1 §4.4 (W-E3): das eigene Wissen des Captains – einmal freigegeben, danach ohne Gate

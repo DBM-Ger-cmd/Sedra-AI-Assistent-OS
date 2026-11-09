@@ -84,6 +84,7 @@ SAETZE = {
     "wis_csv_nicht_lesbar": "Die CSV-Datei lässt sich nicht lesen.",
     "wis_schema_fremdschluessel": "Die Migration des Wissensspeichers hätte Bezüge zerstört; nichts wurde geändert.",
 }
+from .eingang import SAETZE as _EINGANG; SAETZE.update(_EINGANG)  # noqa: E402,E702 (die Sätze des Eingangs stehen bei ihm)
 
 
 def satz(code):

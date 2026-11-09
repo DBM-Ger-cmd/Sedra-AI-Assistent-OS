@@ -6,6 +6,7 @@ arbeitsplatz:
   - id: wissen_quelle
     titel: Eine Wissensquelle freigeben
     schritte:
+    - Am einfachsten über das „+“ im Reiter „Quellen“ (Wissen hinzufügen): Dateien oder Ordner ins Fenster ziehen, oder „Im Explorer wählen …“ (öffnet den Windows-Dialog). Die Dateien werden ins Projekt kopiert, dann geht es im Antrag bei „Wer darf es lesen?“ weiter.
     - Navigation „Bibliothek · Wissen“, Reiter „Quellen“, „Quelle beantragen …“ (auch in der Werkbank-Zeile).
     - Geführt in vier Schritten – was soll SEDRA lernen (Vorlage), wo genau (die Vorprüfung zählt Dateien und Abschnitte), wer darf es lesen, Zusammenfassung; „Antrag stellen“ – der Antrag steht im Posteingang.
     - Im Posteingang „Freigeben und anwenden“; erst dann wird die Quelle zerlegt und aufgenommen. „Erstbestückung beantragen“ stellt Doku, Logbuch und die drei Speicher in einem Antrag.

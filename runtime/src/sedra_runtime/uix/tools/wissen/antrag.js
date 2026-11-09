@@ -117,7 +117,7 @@
     const pb = d().el('input'); pb.type = 'checkbox'; pb.checked = !!w.personenbezug;
     const pbRow = d().el('label', 's-row s-small'); pbRow.append(pb, d().el('span', null, 'Personenbezug – bleibt lokal, geht nie in eine Cloud')); form.append(pbRow);
     const row = d().el('div', 's-row');
-    row.append(d().button('Zurück', ()=>{ a.schritt = 2; return t.draw(); }),
+    row.append(d().button('Zurück', ()=>{ if(a.eingang){ if(t.s.antrag){ t.verb('eingang_verwerfen', {sitzung: a.eingang}); t.s.antrag = null; t.s.plus = {text: '', bad: false, laeuft: false}; } return t.draw(); } a.schritt = 2; return t.draw(); }),
                d().button('Weiter', ()=>{ w.stufe = Number(stufe.value); w.projekt = projekt.value.trim() || null; w.personenbezug = !!pb.checked; a.schritt = 4; return t.draw(); }, 'p', {absenden: true}));
     form.append(row);
     box.append(form);
@@ -148,9 +148,10 @@
     const box = d().el('section', 's-card s-col t-wissen-antrag'); box.setAttribute('aria-label', 'Quelle beantragen');
     const kopf = d().el('div', 's-row');
     kopf.append(d().el('b', null, 'Quelle beantragen'), d().el('small', 's-muted', 'Schritt ' + a.schritt + ' von 4'));
-    const zu = d().button('Abbrechen', ()=>{ t.s.antrag = null; return t.draw(); }); zu.style.marginLeft = 'auto'; kopf.append(zu);
+    const weg = ()=>{ if(a.eingang) t.verb('eingang_verwerfen', {sitzung: a.eingang}); t.s.antrag = null; return t.draw(); };   // ein Eingang ohne Antrag bleibt nicht liegen
+    const zu = d().button('Abbrechen', weg); zu.style.marginLeft = 'auto'; kopf.append(zu);
     box.append(kopf);
-    box.onkeydown = e=>{ if(e.key === 'Escape'){ e.preventDefault(); t.s.antrag = null; t.draw(); } };
+    box.onkeydown = e=>{ if(e.key === 'Escape'){ e.preventDefault(); weg(); } };
     [schritt1, schritt2, schritt3, schritt4][Math.max(0, Math.min(3, (a.schritt || 1) - 1))](t, box);
     return box;
   }

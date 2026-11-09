@@ -85,6 +85,9 @@
     async laden(t){ if(!t.d.quellen) t.d.quellen = (await t.post({type: 'wissen_quelle'})).items || []; },
     zeichnen(t){
       const s = t.s, box = d().el('div', 's-col');
+      const P = root.sedraWissenPlus;
+      if(P){ const kopf = d().el('div', 's-row t-wissen-plus-kopf'); kopf.append(P.knopf(t), d().el('small', 's-muted', s.plus ? '' : 'Wissen hinzufügen – Dateien ziehen oder im Explorer wählen')); box.append(kopf); }
+      if(s.plus && P) box.append(P.zeichnen(t));
       if(s.antrag && root.sedraWissenAntrag) box.append(root.sedraWissenAntrag.zeichnen(t));
       const alle = t.d.quellen || [];
       if(!alle.length){

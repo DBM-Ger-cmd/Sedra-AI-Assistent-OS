@@ -78,3 +78,11 @@
 .t-wissen .t-wissen-tab{font-size:var(--size-small)}
 .t-wissen .t-wissen-tab.on{border-color:var(--accent);color:var(--heading);font-weight:600;box-shadow:inset 0 -2px 0 var(--accent)}
 .t-wissen .t-wissen-tab.warn:not(.on){color:var(--warn)}
+
+/* Plus: Wissen hinzufügen (Ziehen oder Explorer) */
+.t-wissen .t-wissen-plus-kopf{align-items:center;gap:var(--gap)}
+.t-wissen .t-wissen-plus-knopf{min-width:2.4em;font-size:var(--size-l);line-height:1}
+.t-wissen .t-wissen-plus{border-left:3px solid var(--accent)}
+.t-wissen .t-wissen-drop{border:2px dashed var(--line);align-items:center;justify-content:center;text-align:center;padding:calc(var(--gap) * 3);background:var(--panel-2)}
+.t-wissen .t-wissen-drop.on{border-color:var(--accent);background:var(--panel)}
+
