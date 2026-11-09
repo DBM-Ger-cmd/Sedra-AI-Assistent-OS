@@ -72,3 +72,218 @@ ablaeufe:
       - {abschluss: Entscheidung getroffen, arbeitsweise: manual, art: decision, eingabe: Start von SEDRA, empfaenger: Updater, ergebnis: behalten oder zurück, id: ok, lieferant: Installation, nachweis: Beobachtung, name: 'Läuft nach Neustart?', quelle: {datei: runtime/src/sedra_runtime/update_anwenden.py, suche: def zurueck(}, rolle: Captain, weiter: [fertig, zurueck]}
       - {abschluss: Alter Stand wiederhergestellt, arbeitsweise: automatable, art: end, eingabe: letzte Sicherung, empfaenger: Installation, ergebnis: alter Stand, id: zurueck, lieferant: Sicherung, nachweis: Rückbericht, name: Auf die Sicherung zurück, quelle: {datei: runtime/src/sedra_runtime/update_anwenden.py, suche: def zurueck(}, rolle: Updater, weiter: []}
       - {abschluss: Update abgeschlossen, arbeitsweise: manual, art: end, eingabe: laufendes System, empfaenger: Betrieb, ergebnis: neuer Stand, id: fertig, lieferant: Installation, nachweis: Version in der Anzeige, name: Update bleibt, quelle: {datei: runtime/src/sedra_runtime/update_anwenden.py, suche: def anwenden(}, rolle: Captain, weiter: []}
+
+  - id: factory-bau
+    name: Factory-Bau stufenweise mit Fehlerschleife
+    zweck: 'Wie die Software-Fabrik gebaut wird: Stufe für Stufe, jede Stufe gegen versteckte Tests. Scheitert eine Stufe, schreibt SEDRA einen Fehlerbericht und baut weiter, bis der Versuchsvorrat aufgebraucht
+      ist.'
+    schritte:
+    - id: auftrag
+      name: Bauauftrag mit Spec wählen
+      art: start
+      arbeitsweise: manual
+      rolle: Captain
+      lieferant: Captain
+      eingabe: Wunsch und Spec-Name
+      ergebnis: Bauauftrag
+      empfaenger: Spec-Prüfung
+      nachweis: Auftrag im Chat
+      abschluss: Auftrag übergeben
+      quelle:
+        datei: runtime/benchmarks/spec_check.py
+        suche: def main(argv=None
+      weiter:
+      - spec-pruefen
+    - id: spec-pruefen
+      name: Spec in der microVM prüfen
+      art: task
+      arbeitsweise: automatable
+      rolle: Spec-Prüfung
+      lieferant: Bauauftrag
+      eingabe: Spec mit Regeln je Objekt
+      ergebnis: Lint und Referenz ok oder Befund
+      empfaenger: Entscheidung
+      nachweis: Stempel der Spec
+      abschluss: Prüfung beendet
+      quelle:
+        datei: runtime/benchmarks/spec_check.py
+        suche: def run_in_vm(
+      weiter:
+      - spec-ok
+    - id: spec-ok
+      name: Spec in Ordnung?
+      art: decision
+      arbeitsweise: manual
+      rolle: Captain
+      lieferant: Spec-Prüfung
+      eingabe: Prüfbefund
+      ergebnis: bauen oder überarbeiten
+      empfaenger: Bau oder Captain
+      nachweis: Entscheidung im Verlauf
+      abschluss: Weg gewählt
+      quelle:
+        datei: runtime/benchmarks/regeln_aus_schema.py
+        suche: def regeln(
+      weiter:
+      - bauen
+      - ueberarbeiten
+    - id: ueberarbeiten
+      name: Spec überarbeiten
+      art: end
+      arbeitsweise: manual
+      rolle: Captain
+      lieferant: Entscheidung
+      eingabe: Befund
+      ergebnis: neue Spec-Fassung
+      empfaenger: Spec-Prüfung
+      nachweis: Spec-Datei
+      abschluss: Überarbeitung abgegeben
+      quelle:
+        datei: runtime/benchmarks/regeln_aus_schema.py
+        suche: def regeln(
+      weiter: []
+    - id: bauen
+      name: Stufe bauen
+      art: task
+      arbeitsweise: assisted
+      rolle: Bauagent
+      lieferant: Spec
+      eingabe: Aufgabe der Stufe, Startstand, Fehlerbericht
+      ergebnis: Kandidat im Arbeitsbereich
+      empfaenger: Stufenprüfung
+      nachweis: Versuchslog
+      abschluss: Versuch beendet
+      quelle:
+        datei: runtime/benchmarks/devvm_build.py
+        suche: def apply_mode_defaults(
+      weiter:
+      - stufe-pruefen
+    - id: stufe-pruefen
+      name: Versteckten Test der Stufe laufen lassen
+      art: task
+      arbeitsweise: automatable
+      rolle: Prüfer
+      lieferant: Kandidat
+      eingabe: Kandidat und versteckter Test
+      ergebnis: bestanden oder Ausgabe
+      empfaenger: Entscheidung
+      nachweis: Ergebnis in der microVM
+      abschluss: Test beendet
+      quelle:
+        datei: runtime/benchmarks/devvm_build.py
+        suche: def hidden_report(
+      weiter:
+      - stufe-ok
+    - id: stufe-ok
+      name: Stufe besteht?
+      art: decision
+      arbeitsweise: automatable
+      rolle: Prüfer
+      lieferant: Stufenprüfung
+      eingabe: Testergebnis
+      ergebnis: weiter oder Fehlerbericht
+      empfaenger: nächste Stufe oder Fehlerbericht
+      nachweis: Eintrag im Versuchslog
+      abschluss: Weg gewählt
+      quelle:
+        datei: runtime/benchmarks/devvm_build.py
+        suche: def hidden_report(
+      weiter:
+      - naechste
+      - fehlerbericht
+    - id: fehlerbericht
+      name: Fehlerbericht schreiben
+      art: task
+      arbeitsweise: automatable
+      rolle: Harness
+      lieferant: Testausgabe
+      eingabe: fehlgeschlagener Test
+      ergebnis: Aufgabe, was schiefging, was tun
+      empfaenger: nächster Versuch
+      nachweis: Berichtsdatei
+      abschluss: Bericht geschrieben
+      quelle:
+        datei: runtime/benchmarks/devvm_build.py
+        suche: def hidden_report(
+      weiter:
+      - versuche
+    - id: versuche
+      name: Versuche verbraucht?
+      art: decision
+      arbeitsweise: automatable
+      rolle: Harness
+      lieferant: Fehlerbericht
+      eingabe: Zahl der Versuche je Modell
+      ergebnis: Eskalation oder neuer Versuch
+      empfaenger: Captain oder Bauagent
+      nachweis: Eintrag im Statusfile
+      abschluss: Weg gewählt
+      quelle:
+        datei: runtime/benchmarks/devvm_build.py
+        suche: def apply_mode_defaults(
+      weiter:
+      - eskalation
+      - bauen
+    - id: eskalation
+      name: Eskalation an den Captain
+      art: end
+      arbeitsweise: manual
+      rolle: Captain
+      lieferant: Versuche
+      eingabe: Bericht und Logs
+      ergebnis: Entscheidung über den Weg
+      empfaenger: Captain
+      nachweis: Meldung im Chat
+      abschluss: Captain informiert
+      quelle:
+        datei: runtime/benchmarks/devvm_build.py
+        suche: def hidden_report(
+      weiter: []
+    - id: naechste
+      name: Stufe übernehmen, nächste Stufe vorbereiten
+      art: task
+      arbeitsweise: automatable
+      rolle: Harness
+      lieferant: Stufenprüfung
+      eingabe: bestandener Kandidat
+      ergebnis: Startstand der nächsten Stufe
+      empfaenger: letzte Stufe?
+      nachweis: Snapshot der Stufe
+      abschluss: Startstand bereit
+      quelle:
+        datei: runtime/benchmarks/devvm_build.py
+        suche: def hidden_report(
+      weiter:
+      - letzte
+    - id: letzte
+      name: Letzte Stufe bestanden?
+      art: decision
+      arbeitsweise: automatable
+      rolle: Harness
+      lieferant: Startstand
+      eingabe: Stufennummer
+      ergebnis: weiter oder fertig
+      empfaenger: Bauen oder Ende
+      nachweis: Eintrag im Statusfile
+      abschluss: Weg gewählt
+      quelle:
+        datei: runtime/benchmarks/devvm_build.py
+        suche: def apply_mode_defaults(
+      weiter:
+      - bauen
+      - ende
+    - id: ende
+      name: Bau abgeschlossen
+      art: end
+      arbeitsweise: manual
+      rolle: Captain
+      lieferant: Letzte Stufe
+      eingabe: Kandidat aller Stufen
+      ergebnis: Kandidat zur Übernahme
+      empfaenger: Captain
+      nachweis: Freigabe im Chat
+      abschluss: Übernahme entschieden
+      quelle:
+        datei: runtime/benchmarks/devvm_build.py
+        suche: def apply_mode_defaults(
+      weiter: []
