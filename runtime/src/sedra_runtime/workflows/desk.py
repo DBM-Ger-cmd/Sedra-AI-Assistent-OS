@@ -97,7 +97,35 @@ def _fabrik(hub, oid, args):
         offen = h.entscheidungen()
     out = fabrik.uebersicht(laeufe, aufgaben, offen, h.laeufe.belegt())
     out['status'] = 'erledigt'
+    out['angehalten'] = fabrik.angehalten(hub.project_root)
     return out
+
+
+def _fabrik_status(hub, oid, args):
+    """Nur die Haltemarke (billig genug für eine Abfrage alle paar Sekunden aus jedem Reiter)."""
+    from . import fabrik
+    return {'status': 'erledigt', 'angehalten': fabrik.angehalten(hub.project_root)}
+
+
+def _fabrik_stopp(hub, oid, args):
+    """Der rote Knopf: Fabrik sofort anhalten (workflows/fabrik.py `notaus`). Kein Gate: Anhalten ist immer erlaubt; nur das Freigeben ist die Entscheidung des Captains."""
+    from . import fabrik
+    h = getattr(hub, 'harness', None)
+    if h is None:
+        return {'status': 'erledigt', 'marke': fabrik.anhalten(hub.project_root), 'laeufe': [], 'aufgaben': [], 'antworten': [], 'bau': None, 'prozesse': [], 'fehler': []}
+    return dict(fabrik.notaus(h, hub.project_root, 'Notaus durch den Captain (roter Knopf)'), status='erledigt')
+
+
+def _fabrik_freigeben(hub, oid, args):
+    from . import fabrik
+    war = fabrik.freigeben(hub.project_root)
+    h = getattr(hub, 'harness', None)
+    if war and h is not None:
+        try:
+            h._audit('FABRIK_FREIGEGEBEN', {'von': 'captain'})
+        except Exception:
+            pass
+    return {'status': 'erledigt', 'war_angehalten': war}
 
 
 def _run_read(hub, mid):
@@ -177,7 +205,8 @@ def register(registry, hub):
                     Verb('selbstabbild_pruefen', 'Selbstabbild gegen die Quellen prüfen', _selbstabbild_pruefen),
                     Verb('selbstabbild_anlegen', 'Abläufe von SEDRA aus den Quellen anlegen', _selbstabbild_anlegen),
                     Verb('live', 'Laufende Prozesse', _live),
-                    Verb('fabrik', 'Die Fabrikhalle', _fabrik)]))
+                    Verb('fabrik', 'Die Fabrikhalle', _fabrik), Verb('fabrik_status', 'Fabrik: angehalten?', _fabrik_status),
+                    Verb('fabrik_stopp', 'Fabrik anhalten (roter Knopf)', _fabrik_stopp), Verb('fabrik_freigeben', 'Fabrik wieder freigeben', _fabrik_freigeben)]))
     canonical = registry.get('workflow')
     registry.register(registry.Kind('scenario', 'Szenario Studio',
         lambda h, oid: dict(_read(h, oid), type='scenario'),

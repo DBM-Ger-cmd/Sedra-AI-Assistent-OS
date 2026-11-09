@@ -59,7 +59,8 @@
     const belegt = el('p', 't-wf-fabrik-belegt'), laeufeBox = el('ul', 't-wf-fabrik-laeufe'), aufgBox = el('ul', 't-wf-fabrik-aufgaben'), freiBox = el('ul', 't-wf-fabrik-freigaben');
     laeufeBox.setAttribute('aria-label', 'Läufe'); aufgBox.setAttribute('aria-label', 'Aktive Aufgaben'); freiBox.setAttribute('aria-label', 'Wartende Freigaben');
     halle.append(kacheln, belegt, laeufeBox, aufgBox, freiBox);
-    panel.append(kopf, halle, liste, leer);
+    const band = el('div', 't-wf-live-halt'); band.hidden = true; band.setAttribute('role', 'alert');
+    panel.append(kopf, band, halle, liste, leer);
     const karten = new Map();
     let timer = null, laeuft = false, tot = false;
 
@@ -139,11 +140,12 @@
         summe.textContent = zusammenfassung(out.zaehler);
         leer.hidden = !!(out.prozesse || []).length;
         const fab = await fabAnfrage;
-        if(!tot && fab) fabrik(fab);
+        if(!tot && fab){ fabrik(fab); api.angehalten(fab.angehalten); }
       }catch(e){ summe.textContent = 'Die Live-Ansicht konnte nicht lesen: ' + String(e && e.message || e).slice(0, 120); }
       finally{ laeuft = false; }
     }
     const api = {
+      angehalten(marke){ band.hidden = !marke; band.textContent = marke ? 'Die Fabrik ist angehalten – Läufe sind gestoppt, nichts startet neu, bis du sie freigibst (links unter den Reitern).' : ''; },
       start(){ if(timer) return; takt(); timer = setInterval(takt, TAKT); },
       stop(){ if(timer) clearInterval(timer); timer = null; },
       destroy(){ tot = true; api.stop(); karten.forEach(k=>{ if(k.canvas) k.canvas.destroy(); }); karten.clear(); },

@@ -26,6 +26,7 @@
   --warn-bg:#2e2412;
   --warn-line:#5c4620;
   --bad:#ff6b5e;
+  --notaus:#d4160c;--notaus-line:#ff8a80;--notaus-text:#ffffff;
   --bad-bg:#33191a;
   --bad-line:#5e2c2c;
   --add-bg:#0f2a1c;
@@ -227,7 +228,7 @@ html[data-theme="nacht"], :root:not([data-theme="klar"]){
   --mod-manualTrigger:#7b5cd6;--mod-start:#7b5cd6;--mod-set:#1f9d8a;--mod-if:#d9822b;--mod-router:#d9822b;--mod-decision:#d9822b;--mod-noOp:#5b6b86;
   --mod-stickyNote:#b59a2e;--mod-human:#c2547a;--mod-task:#3b82c4;--mod-end:#2e9e5a;--mod-unknown:#7a7f8a;
 }
-.t-workflow[data-wf-theme="light"]{
+.t-workflow[data-wf-theme="light"]{--notaus:#c4130a;--notaus-line:#7a0c06;--notaus-text:#ffffff;
   --bg:#f5f6f8;--panel:#ffffff;--panel-2:#eef0f3;--line:#d5d9e0;--line-soft:#e6e9ee;
   --text:#1f2430;--muted:#566070;--heading:#111827;
   --accent:#0d8a6a;--accent-text:#ffffff;--scenario-accent:#7a2fe0;

@@ -293,6 +293,11 @@ class Laeufe:
 
     def starten(self, typ, argv_info, *, sitzung_id=None, antwort_id=None, aufgabe_id=None, karte_id=None, parameter=None, andere_antworten=0):
         """Startet einen Lauf. Grenzen: höchstens MAX_LAUFEND je Projekt, `exklusiv` höchstens einer und nur ohne andere laufende Antwort."""
+        from ..workflows import fabrik as _fabrik
+        projekt = self.ordner.parents[2] if len(self.ordner.parents) > 2 else self.ordner
+        halt = _fabrik.angehalten(projekt)                          # Haltemarke des roten Knopfes: nichts startet, bis der Captain die Fabrik freigibt
+        if halt:
+            raise LaufFehler('fabrik_angehalten: Die Fabrik ist angehalten (' + str(halt.get('grund') or 'Notaus') + '); der Captain gibt sie wieder frei.')
         with self._sperre:
             laufend = self.laufende()
             if len(laufend) >= MAX_LAUFEND:

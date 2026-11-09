@@ -283,3 +283,17 @@
 .t-workflow .t-wf-fabrik-text{color:var(--muted);flex-basis:100%}
 .t-workflow .t-wf-fabrik-balken{width:160px;height:8px}
 .t-workflow .t-wf-fabrik-karte{border-color:var(--warn-line);background:var(--warn-bg)}
+
+/* Der rote Knopf */
+.t-workflow .t-wf-notaus{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.t-workflow .t-wf-notaus-stopp{width:100%;padding:14px 10px;font-size:15px;font-weight:800;letter-spacing:.08em;color:var(--notaus-text);background:var(--notaus);border:2px solid var(--notaus-line);border-radius:8px;cursor:pointer;box-shadow:0 0 0 2px var(--notaus-line) inset}
+.t-workflow .t-wf-notaus-stopp:hover:not(:disabled){filter:brightness(1.15)}
+.t-workflow .t-wf-notaus-stopp:focus-visible{outline:3px solid var(--text);outline-offset:2px}
+.t-workflow .t-wf-notaus-aus{display:flex;flex-direction:column;gap:6px;padding:10px;border:2px solid var(--bad);border-radius:8px;background:var(--bad-bg);color:var(--bad)}
+.t-workflow .t-wf-notaus-aus[hidden],.t-workflow .t-wf-notaus-stopp[hidden],.t-workflow .t-wf-notaus-meldung[hidden],.t-workflow .t-wf-notaus-rueckfrage[hidden],.t-workflow .t-wf-live-halt[hidden]{display:none}
+.t-workflow .t-wf-notaus-titel{letter-spacing:.05em}
+.t-workflow .t-wf-notaus-zeile{color:var(--text)}
+.t-workflow .t-wf-notaus-rueckfrage{display:flex;flex-direction:column;gap:6px;color:var(--text);font-size:12px}
+.t-workflow .t-wf-notaus-meldung{margin:0;font-size:12px;color:var(--muted)}
+.t-workflow .t-wf-notaus-meldung.schlecht{color:var(--bad)}
+.t-workflow .t-wf-live-halt{padding:10px 12px;margin:8px 0;border:2px solid var(--bad);border-radius:8px;background:var(--bad-bg);color:var(--bad);font-weight:600}

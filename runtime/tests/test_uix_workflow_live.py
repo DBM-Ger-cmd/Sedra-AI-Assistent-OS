@@ -191,6 +191,70 @@ class LiveImBrowser(unittest.TestCase):
             self.assertFalse(halle.locator('[data-art=freigaben]').evaluate("e=>e.classList.contains('wartet')"))
         self.session(run)
 
+    def test_roter_knopf_stoppt_den_lauf_haelt_die_fabrik_an_und_gibt_sie_mit_rueckfrage_frei(self):
+        import subprocess
+        from sedra_runtime.workflows import fabrik
+        kind = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)'])
+        self.addCleanup(lambda: kind.poll() is None and kind.kill())
+        jetzt = datetime.now(timezone.utc)
+
+        def hub_vorbereiten(hub):
+            lauf_anlegen(hub.project_root, 'L-BBBB0001', 'laeuft', (jetzt - timedelta(minutes=4)).isoformat(timespec='seconds'), name='Bau Stufe S2', log='Versuch 3 von 6\n', pid=kind.pid)
+
+        def run(page, root):
+            app = self.live_tab(page)
+            stopp = app.get_by_role('button', name='Fabrik anhalten (Notaus)')
+            app.locator('.t-wf-fabrik-lauf.aktiv').wait_for(timeout=20000)
+            self.assertTrue(stopp.is_visible())
+            self.assertIsNone(fabrik.angehalten(root))
+            stopp.click()
+            app.locator('.t-wf-notaus-aus').wait_for(timeout=40000)
+            self.assertIn('FABRIK ANGEHALTEN', app.locator('.t-wf-notaus-aus').inner_text())
+            self.assertIn('1 Lauf gestoppt', app.locator('.t-wf-notaus-meldung').inner_text())
+            self.assertFalse(stopp.is_visible(), 'der rote Knopf weicht dem Zustand')
+            self.assertIsNotNone(fabrik.angehalten(root), 'die Haltemarke liegt im Projekt')
+            self.assertTrue(kind.poll() is not None)
+            app.locator('.t-wf-live-halt').wait_for(timeout=15000)
+            page.wait_for_function("()=>!document.querySelector('.t-wf-fabrik-lauf.aktiv')", timeout=15000)
+            # Freigeben verlangt eine Rückfrage; Abbrechen lässt die Fabrik angehalten
+            app.get_by_role('button', name='Fabrik freigeben …').click()
+            self.assertIn('Wirklich freigeben?', app.locator('.t-wf-notaus-rueckfrage').inner_text())
+            app.get_by_role('button', name='Abbrechen', exact=True).last.click()
+            self.assertIsNotNone(fabrik.angehalten(root))
+            app.get_by_role('button', name='Fabrik freigeben …').click()
+            app.get_by_role('button', name='Ja, freigeben').click()
+            stopp.wait_for(state='visible', timeout=20000)
+            self.assertIsNone(fabrik.angehalten(root))
+            self.assertIn('wieder freigegeben', app.locator('.t-wf-notaus-meldung').inner_text())
+            page.wait_for_function("()=>document.querySelector('.t-wf-live-halt').hidden", timeout=15000)
+        self.session(run, mit_hub=hub_vorbereiten)
+
+    def test_der_knopf_ist_in_jedem_reiter_und_im_szenario_studio_da(self):
+        def run(page, root):
+            app = self.live_tab(page)
+            stopp = app.get_by_role('button', name='Fabrik anhalten (Notaus)')
+            for reiter in ('Übersicht', 'Vorlagen', 'Editor', 'Versionen', 'Ausführungen', 'Live'):
+                app.get_by_role('tab', name=reiter).click()
+                self.assertTrue(stopp.is_visible(), 'im Reiter ' + reiter)
+            page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open',{type:'scenario',id:'alle',title:'Szenario Studio'})")
+            sz = page.locator('.t-scenario').first
+            sz.locator('.t-wf-svg').wait_for()
+            self.assertTrue(sz.get_by_role('button', name='Fabrik anhalten (Notaus)').is_visible())
+        self.session(run)
+
+    def test_eine_schon_angehaltene_fabrik_zeigt_es_gleich_beim_oeffnen(self):
+        from sedra_runtime.workflows import fabrik
+
+        def hub_vorbereiten(hub):
+            fabrik.anhalten(hub.project_root, 'Vorher angehalten')
+
+        def run(page, root):
+            app = self.live_tab(page)
+            app.locator('.t-wf-notaus-aus').wait_for(timeout=20000)
+            self.assertIn('Vorher angehalten', app.locator('.t-wf-notaus-aus').inner_text())
+            self.assertFalse(app.get_by_role('button', name='Fabrik anhalten (Notaus)').is_visible())
+        self.session(run, mit_hub=hub_vorbereiten)
+
 
 if __name__ == '__main__':
     unittest.main()

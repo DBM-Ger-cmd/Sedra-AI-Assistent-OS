@@ -13,6 +13,7 @@
       this.state = {doc: M().example(), selected: null}; this.wid = null; this.revision = null; this.saved = null; this.records = [];this.view = 'canvas';this.style = options.style;
       this.el.classList.add('t-workflow', options.className); this.build(); this.draw();
       if(root.sedraWorkflowLive)this.live = root.sedraWorkflowLive.attach(this);
+      if(root.sedraWorkflowNotaus)this.notaus = root.sedraWorkflowNotaus.attach(this);      // der rote Knopf (workflow-notaus.js)
       if(root.sedraWorkflowChat)this.chat = root.sedraWorkflowChat.attach(this);      // Chat zum Prozess (workflow-chat.js)
       this.busy = true;this.el.inert = true;this.el.setAttribute('aria-busy', 'true');
       this.off.push(ctx.bus.on('task.changed', ()=>this.refreshRuns()));
@@ -22,7 +23,7 @@
         if(ctx.object && ctx.object.type === 'workflow_run') return this.showRun(ctx.object.id);
       }).finally(()=>{this.busy = false;if(!this.dead){this.el.inert = false;this.el.removeAttribute('aria-busy');}});
     },
-    unmount(){this.dead = true;this.off.forEach(fn=>fn());if(this.chat)this.chat.destroy();if(this.live)this.live.destroy();if(this.canvas)this.canvas.destroy();this.el.replaceChildren();this.el.classList.remove('t-workflow', options.className);this.el.removeAttribute('data-wf-theme');},
+    unmount(){this.dead = true;this.off.forEach(fn=>fn());if(this.chat)this.chat.destroy();if(this.live)this.live.destroy();if(this.notaus)this.notaus.destroy();if(this.canvas)this.canvas.destroy();this.el.replaceChildren();this.el.classList.remove('t-workflow', options.className);this.el.removeAttribute('data-wf-theme');},
     shown(){if(this.wid && !this.dirty())this.safe(()=>this.load(this.wid, true));},
     async call(type, id, verb, args){
       const out = await this.ctx.api('/api/actions', {method: 'POST', body: {type, id, verb, args: args || {}}}); return out.result;

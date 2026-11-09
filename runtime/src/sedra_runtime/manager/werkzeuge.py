@@ -96,6 +96,10 @@ def bau_starten(projekt, auftrag):
     if not isinstance(auftrag, str) or not auftrag.strip() or len(auftrag) > 200:
         raise ValueError("auftrag_ungueltig")
     projekt = Path(projekt)
+    from ..workflows import fabrik
+    halt = fabrik.angehalten(projekt)                                # roter Knopf: bei angehaltener Fabrik startet kein Bau
+    if halt:
+        return {"gestartet": False, "grund": "Die Fabrik ist angehalten (" + str(halt.get("grund") or "Notaus") + "); der Captain gibt sie wieder frei."}
     sperre = projekt / "runtime_data" / "bau_schleife.lock"
     if sperre.exists():
         alt = sperre.read_text(encoding="utf-8", errors="replace").strip()

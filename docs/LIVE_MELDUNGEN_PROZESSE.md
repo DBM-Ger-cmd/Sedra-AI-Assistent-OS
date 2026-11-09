@@ -46,3 +46,29 @@ Noch niemand. Der Bau (`runtime/benchmarks/bau_schleife.py`) soll vor und nach j
 - **Aktive Aufgaben** mit Zweck und Restzeit, und die drei neuesten wartenden Freigaben.
 - Befehl, Pfade und Parameter der Läufe gehen nie an die Oberfläche. Es wird nichts gestartet, gestoppt oder freigegeben.
 - Läufe und Aufgaben stehen in der Fabrikhalle auch ohne Meldungen. Die Karten mit dem leuchtenden Schritt erscheinen nur für Prozesse, die selbst melden.
+
+## Der rote Knopf: Fabrik anhalten (Notaus)
+
+Unter den Reitern der Workflow-Apps sitzt in jedem Reiter ein roter Knopf **■ STOPP**. Ein Klick hält die Fabrik sofort an, ohne Rückfrage und ohne Gate (Anhalten ist immer erlaubt). Reihenfolge:
+
+1. **Haltemarke setzen** (`runtime_data/fabrik/angehalten.json`: `seit`, `grund`, `von`). Ab jetzt startet nichts Neues.
+2. **Läufe der Harness stoppen**, alle gleichzeitig (Prozessbaum), **aktive Aufgaben zurücknehmen**, **laufende Antworten abbrechen**.
+3. **Den Bau beenden** (`bau_schleife.py` läuft als eigener Prozess des Managers): die PID aus `runtime_data/bau_schleife.lock` zählt nur, wenn der Prozess dahinter wirklich `bau_schleife` in der Befehlszeile trägt. Eine tote oder weitergegebene PID trifft nie einen fremden Prozess.
+4. **Prozesse im Live-Reiter**, die noch „läuft“ melden, stehen danach als „Fehler: Fabrik angehalten“ da.
+5. Ein Eintrag `FABRIK_NOTAUS` im Audit-Log, ein Bericht im Fenster. Ein Fehler bei einem Teil hält die anderen nicht auf und steht im Bericht.
+
+Solange die Marke steht, lehnt `Laeufe.starten` jeden Lauf mit `fabrik_angehalten` ab, und `manager.werkzeuge.bau_starten` startet keinen Bau. **Freigeben** ist die Entscheidung des Captains und fragt noch einmal nach („Wirklich freigeben?“).
+
+### Wer sonst startet oder läuft, prüft selbst
+
+Prozesse außerhalb der Harness (der Bau, Skripte) fragen vor jedem Schritt:
+
+```python
+from sedra_runtime.workflows import fabrik
+if fabrik.angehalten(projekt_root):
+    raise SystemExit('Die Fabrik ist angehalten.')
+```
+
+oder prüfen, ob `<projekt>/runtime_data/fabrik/angehalten.json` existiert. `bau_schleife.py` sollte das zwischen den Stufen und Versuchen tun (Sache der Bau-Sitzung); der Notaus beendet den Bau-Prozess ohnehin hart.
+
+Prüfung: `runtime/tests/test_fabrik_notaus.py` (Marke, Sperre beim Start, Reihenfolge, Gleichzeitigkeit, Fehler, Bau-Prozess, Manager) und im Browser `test_uix_workflow_live.py` (echter Prozess wird beendet, Rückfrage beim Freigeben, Knopf in jedem Reiter und im Szenario Studio, schon angehaltener Zustand).

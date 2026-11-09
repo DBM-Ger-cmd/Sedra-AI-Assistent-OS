@@ -77,6 +77,7 @@ class VerbAmEchtenHarness(unittest.TestCase):
 
             class Hub:
                 harness = Harness()
+                project_root = Path(tmp)
             out = desk._fabrik(Hub, None, {})
         self.assertEqual(out['status'], 'erledigt')
         self.assertEqual(out['laeufe'], {'laufend': [], 'zuletzt': []})
@@ -86,7 +87,7 @@ class VerbAmEchtenHarness(unittest.TestCase):
         from sedra_runtime.workflows import desk
 
         class Hub:
-            pass
+            project_root = Path('.')
         out = desk._fabrik(Hub, None, {})
         self.assertEqual((out['status'], out['zaehler']['laeuft'], out['freigaben']['anzahl']), ('erledigt', 0, 0))
 
