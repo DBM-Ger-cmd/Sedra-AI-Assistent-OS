@@ -161,8 +161,60 @@ Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzei
 - Die Baulogs enthalten keine Zeile mit dem Namen des fehlgeschlagenen Tests. Die Testausgabe steht im Kandidatenordner.
 - Der Bau schreibt die BAU-Zeile im Logbuch selbst (außer mit `--no-logbook`). Diese Zeilen nicht doppelt von Hand eintragen.
 
+## 13. Arbeit im Chat vom 08.–09.11.2026 (Claude Code: Fabrik-Bau, Cloud-Modelle, Manager, Prozess-Live-Ansicht)
+**Stand (13:01):** `main` = `467460f`, lokal eine Änderung voraus: `740749e` (Live-Meldungen der Schleife), **nicht gepusht**. Nicht committet: `docs/LOGBUCH_AGENT_MANAGER.md` (BAU-Zeilen aus den Läufen) und `runtime/config/cloud_providers.yaml.bak_vor_nvidia_20261109` (Sicherung, bleibt draußen).
+
+**Gebaut bzw. integriert (Ort und Beleg in Klammern):**
+- **F0-05C-Abgabe** als docs-Commit `6250384` (Spec Shutdown-Reihenfolge, Analyse F0-06A, Testplan GATE-01/VER-01). Logbuch `f8575e1`.
+- **Factory SDK 1** (`cd5b774`, Paket `runtime/src/factory_sdk`): Prüfung von project, workflow, task_run, artifact, evidence, approval gegen die Schemata. Die Schemata sind als Daten in `schemas_data.py` eingebettet. Lokal und in der microVM bestanden S1 bis S4. Register `SEDRA-FSDK-01` MERGED.
+- **Ursache der Fehlläufe v4/v5 (Modelle):** Der Coder hat ein erfundenes task_run-Schema verwendet (`task_run_id`, `execution`), weil die Schemata nicht im Arbeitsbereich lagen. Der handgeschriebene Kandidat `manuell_01` (eigene Prüfung gegen die Schemata) besteht alle vier Stufen.
+- **Spec v5** (`4270d70`): Regelblätter je Objekt in den NOTES (aus `regeln_aus_schema.py`), 35 Negativfälle je Schemaregel. Stempel vm ok. Referenz `devvm_refs/factory_sdk_grundlage_v5`.
+- **Bau-Schleife** (`ebe89ca`, `514b148`, `42cd72a`, `740749e` lokal, `runtime/benchmarks/bau_schleife.py`): Einzelbetrieb per Sperrdatei, Fortsetzen nach Abbruch (Stand `bau_schleife_stand.json`), Vorprüfung (spec_check --vm plus GPU: kein Modellserver, höchstens 3 GiB belegt), vier Parametersätze, Fehler-Fingerabdruck und bekannte Fehler (`bekannte_fehler.json`), Wissensdatenbank-Treffer im Fehlerbericht, automatisches Merken geänderter Dateien, Regressionsprüfung (Bereiche workflow und runtime) vor dem Produktbericht, Vorlauf-Fehler brechen sofort ab, Live-Meldungen an die Prozessansicht (ohne Modul ein No-op).
+- **Prozesse im Selbstabbild** (`selbstabbild.yaml`, Commit `4270d70`/`514b148`): `factory-bau`, `wissensbasis`, `vollautomatischer-bau`. Im Workflow-Speicher angelegt: `WF-3e50882b2ad94f95aca0c1e4` (factory-bau), `WF-f871d588444b41ad9f5f5d0e` (wissensbasis), `WF-626c29dd21a34c0eb09a809b` (vollautomatischer-bau).
+- **Prozessprüfung** (`7092d33`, `runtime/benchmarks/prozess_pruefung.py`, Skill `sedra-schnellpruefung`): liest laufende SEDRA-Prozesse und gibt je Prozess ein Urteil (AKTIV, ROUTER, STILL, JUNG_STILL), beendet nichts.
+- **Cloud (NVIDIA):** Hauptschalter und Anbieter eingeschaltet (Captain-Ja), Schlüssel im Schlüssel-Speicher von SEDRA (Status bereit), Zeitlimit 120 s (`cloud_providers.yaml`, Commit `42cd72a`). Der Schlüsselwert wurde nie gelesen oder eingetragen.
+- **Fähigkeitstest** (`benchmarks/modell_faehigkeiten.py`, Bericht `workspace/SEDRA_OS/wissen_quellen/modelle/faehigkeiten_2026-11-09_1214.md`): drei kurze Aufgaben (Folgen, Code, JSON) für 22 Textmodelle. Bestanden haben nur drei: `nvidia/nemotron-3.5-lightning-30b-a3b`, `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning`, `poolside/laguna-xs-2.1`. 19 Modelle: 404 (nicht freigeschaltet) oder Zeitlimit. Der 3D-Test (OBJ-Würfel) ist am festen Berater-Modell nicht bestanden (leere Antwort). Im NVIDIA-Katalog (84 Modelle) gibt es kein 3D-Erzeugungsmodell.
+- **Manager** (`runtime/src/sedra_runtime/manager/`, Commit `42cd72a` und `340f159`, `config/manager/`): Verfassung (`verfassung.md`), Gesetze (`gesetze.yaml`: Cloud-Aufgabentypen, Captain-Rechte, Untergebene höchstens zwei Ebenen, Werkzeuge, Tagesbudget), Prüfung je Entscheidung mit Journal (`runtime_data/manager/journal.jsonl`). Werkzeuge: Taschenrechner, Notizblock, Dashboard-Stand, Journal, Modellwahl, Wissenssuche, Dokumente lesen, Prozess beantragen, Laufstatus, Sitzungen, Bau starten. Die Harness führt die Werkzeuge noch nicht über den Manager aus.
+- **Berater** (`benchmarks/berater.py`): ein Cloud-Modell, nur Text, Antwort wird in einen neuen Kandidaten geschrieben und in der microVM geprüft. Das feste Modell ist `nvidia/nemotron-3.5-lightning-30b-a3b` (`config/manager/berater.yaml`). Ein echter Lauf war erfolgreich (4 s).
+- **Vorarbeiter-Kanal** (`manager/kanal.py`, `verteile`): nimmt Aufträge, prüft sie gegen die Gesetze, wählt das Modell aus den Tests, gibt Ergebnis oder Grund zurück. Getestet mit verbotenem, erlaubtem und leerem Auftrag.
+- **Wissensquelle:** Modellliste und Fähigkeitsbericht in die Eingangssitzung `E-20261109-122349-1394` kopiert, Antrag über `benchmarks/wissen_antrag.py` (Doppelschutz). Der Captain hat in der App freigegeben. Quelle `Q-f6cce280` aktiv, 6 Abschnitte, keine Dopplung. Die Dopplung im Repo (vier identische Platzhalter-README) ist bereinigt: drei entfernt, Kopien archiviert in `E:\Sedra Umgebung\Updates\_archiv_doppelte_readme_2026-11-09\`, Commit `07436b6`.
+- **Register:** `SEDRA-FSDK-01`, `SEDRA-WORKFLOW-A-01`, `B-01`, `D-01`, `SEDRA-WISSEN-PLUS-01`, `SEDRA-HILF-01` auf MERGED (jeweils Captain-Ja im Chat). `SEDRA-WORKFLOW-E-01` (Live-Reiter, Sitzung VORARBEITER, `467460f`) ist nach Captain-Ja im Chat auf MERGED gesetzt (Stand 09.11., 13:04, auch im Koordinator-Dashboard).
+
+**Entscheidungen des Captains (08.–09.11.):**
+- NVIDIA ja. Cloud für Code und Spec des Baus, Texte und Recherche ohne Personenbezug, 3D nur wenn der Anbieter es kann.
+- Der Manager entscheidet selbst im Rahmen von Verfassung und Gesetzen. Quellen, Ausgabe und Freigaben werden bei der Einrichtung im Chat festgelegt.
+- Berater fest auf das Nemotron-Modell. Zeitlimit erhöht, langsame Modelle nicht im bevorzugten Modus.
+- Harness-Werkzeuge und Bau-Start durch den Manager ja. Vorarbeiter-Kanal ja. Modellkatalog und Testbericht als Wissensquelle ja.
+- Nachtlauf-Sitzung ausgesetzt, bis der Captain sie wieder freigibt.
+
+**Fallen und Praxiswissen dieser Sitzung:**
+- Das Cloud-Modell lehnt Werkzeugaufrufe ab (`tools` in `UNSUPPORTED_OPTIONS`). Die Bau-Agenten brauchen Werkzeuge, daher nutzt der Berater nur Text.
+- `labor.cloud_chat` liefert die Antwort im Feld `reply`, nicht `content`. Der Inhaltsschutz braucht ein Audit-Objekt mit `.append`, ein Lambda blockiert den Aufruf (`SG_AUDIT_FAILED`).
+- Nicht freigeschaltete Modelle antworten sofort mit 404, nicht mit Zeitüberschreitung. Beim Test sind das zwei verschiedene Fehler.
+- Ein Wissens-Antrag entsteht nur, wenn der Runtime-Hub vorhanden ist. Ohne ihn bleibt die Posteingangsliste leer. Der Antrag wird erst durch die Freigabe in der App wirksam.
+- Ein Duplikat-Schutz muss vor dem ersten Antrag stehen. Sonst landen zwei gleiche Anträge im Posteingang.
+- Das Monitor-Werkzeug läuft nach 30 Minuten ab, auch wenn der Prozess noch läuft. Dann neu starten.
+- Die Grafikkarte hat 12 GB. Der Bau belegt fast 10 GB, ein zweiter Modellslot passt nicht dazu.
+- Ein Bau, der mit altem Code gestartet wurde, nutzt die neuen Meldungen und Prüfungen erst beim nächsten Start.
+- Vor jedem Push: auf Schlüssel und Tokens prüfen (Muster-Suche auf dem Diff, ohne Treffer bei 340f159).
+
+**Unterchats (Gruppe „Sedra Vorarbeiter“):**
+- `nachtlauf-sedra-bau-berw` (Nachtlauf, ausgesetzt, hat nichts laufen), `nachtlauf-sedra` (älter, 08.11.), `neustart-sedra` (06.11.), `k3-sedra` und `k3-nachricht` (K3-Nachricht, 06.11.), `updater-uebergabe` (06.11.), `tester-f05b-main` und `tester-main-verif` (Testläufe F0-05B und F0-05A, 06.11.).
+
+**Erledigt (Stand 09.11., 13:04):**
+- `SEDRA-WORKFLOW-E-01`: MERGED nach Bestätigung des Captains hier im Chat.
+- `main` nach `origin/main` gepusht (`467460f..2cd20ed`), enthält `740749e` (Live-Meldungen der Schleife).
+- Branch `workflow-live` (Commit `c160112`, Live-Ansicht) war bereits per Fast-Forward in `main` gemergt. Der Branch existiert nicht mehr.
+
+**Offen (Stand 09.11., 13:04):**
+- Verfassung des Managers: Bestätigung durch den Captain (Entwurf).
+- Harness-Werkzeuge über den Manager ausführen (Verbindung fehlt).
+- Lokale Slots: erst nach dem Bau, mit Speicherprüfung.
+- Factory-Bau v5: Stand nach S3 nicht geprüft; Logbuch-Zeilen dazu liegen unversioniert in `docs/LOGBUCH_AGENT_MANAGER.md`.
+
 ## 9. Alle Chats (Sitzungen), nach Datum
 **Sedra Vorarbeiter (Gruppe):**
+- 08.–09.11. Claude Code, Chat „Fabrik-Bau, Cloud-Modelle, Manager“: Factory SDK, Bau-Schleife, Berater, Fähigkeitstest, Manager mit Verfassung und Werkzeugen, Vorarbeiter-Kanal, Wissensquelle (siehe Abschnitt 13). Unterchats: nachtlauf-sedra-bau-berw (ausgesetzt), nachtlauf-sedra, neustart-sedra, k3-sedra, k3-nachricht, updater-uebergabe, tester-f05b-main, tester-main-verif.
 - 08.–09.11. Claude Code, Chat „Nachtlauf SEDRA“ (Koordinator): F0-05C-Abgabe in `main` übernommen, Factory-Bau v5 und Wiederholung (nicht bestanden), Register-Notizen, Dashboard; Sitzung „Nachtlauf SEDRA: Bau überwachen, Dashboard abarbeiten“ (siehe Abschnitt 12).
 - 05.–06.11. Claude Code, Chat „Prozess-Apps einspielen und überarbeiten“: Update 1.22.2, UIX der Prozess-Apps, Selbstabbild, F0-01 bis F0-04, Wissen K1/K2/K5, Skills; Unterchats „Updates einspielen und prüfen“ und „Aufräumen der Umgebung“ (siehe Abschnitt 11).
 - 04.–05.11. Claude Code, Vorarbeiter-Sitzung „VORARBEITER“: One Sedra, Desktop Builder, Lernsystem, Cache-Messung (siehe Abschnitt 10).
@@ -181,3 +233,27 @@ Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzei
 **Hermes Agent Optimierung (Gruppe):** 28.10. Hermes-Einrichtung starten (`E:\HermesAgentOrdner\Hermes Arbeits ordner`).
 
 Nur die Titel und Orte der Sitzungen sind hier erfasst. Inhalte einzelner Sitzungen stehen im jeweiligen Verlauf oder in den Berichten unter `docs/` (zum Beispiel `BAUBERICHT_*`, `docs/UEBERGABE_CLOUD_2026-10-29.md`).
+
+## 14. Nachbesprechung 09.11.2026: Factory-Bau v5 und Manager (4 W)
+
+**Was war geplant:** Factory SDK Grundlage v5 in vier Stufen (S1 bis S4) durch die Bau-Schleife bauen. Dazu den Manager mit Verfassung, Gesetzen, Werkzeugen und Journal aufbauen und seine Werkzeuge über die Harness ausführen.
+
+**Was ist passiert (belegt):**
+- Lauf v4 (08.11., 21:24) endete mit `BAU_ENDE exit=127`. Lauf v5 (08.11., 21:45 bis 21:53) scheiterte in Stufe 2 am Hidden-Test. Die Wiederholung mit vier Versuchen am 08.11. scheiterte ebenfalls. Ursache: Der Coder verwendete ein erfundenes task_run-Schema, weil die Schemata nicht im Arbeitsbereich lagen. Quelle: Abschnitt 12 und 13 dieser Datei.
+- Spec v5 (`4270d70`) mit Regelblättern und 35 Negativfällen. Lauf v5 am 09.11.: S1 bestanden (11:16, 2. Versuch), S2 bestanden (11:27), S3 bestanden (13:04, 2. Versuch). S4 startete um 13:04. Der Agent meldete um 13:12 nach 33 Aufrufen in 453 s. Ergebnis von S4 offen. Quelle: `runtime_data\bau_schleife_status.log`, `devvm_build_factory_sdk_grundlage_v5_2026-11-09_130433.log`.
+- Im S4-Log steht zu Beginn `S0 connection check: coder.local_primary missing`. Der Lauf ging trotzdem weiter. Ob das ein Fehlalarm ist, ist nicht geprüft.
+- Manager gebaut (`42cd72a`, `340f159`): Verfassung, Gesetze, Journal, elf Werkzeuge. Berater einmal erfolgreich (4 s). Harness-Werkzeuge noch nicht über den Manager angeschlossen. Verfassung noch nicht vom Captain bestätigt.
+- Die Angabe „Bau bestanden“ in Abschnitt 13 gilt für Factory SDK 1 (`cd5b774`). Der Lauf v5 ist nicht abgeschlossen.
+
+**Wie können wir es besser machen:**
+1. Vor jedem Coder-Lauf prüfen, dass Schemata und Referenzdateien im Arbeitsbereich liegen. Fehlen sie, startet der Lauf nicht.
+2. Den Vorlauf-Fehler `coder.local_primary missing` klären, bevor der nächste Lauf startet.
+3. Manager-Werkzeuge erst freigeben, wenn die Verfassung bestätigt und die Harness-Anbindung getestet ist.
+4. Eine Aussage über Ergebnisse nur mit Beleg (Log, Commit, Pfad). Sonst „nicht geprüft“.
+5. Die beiden offenen Verfassungsfragen klären: Rolle „Planer“ und Schutz personenbezogener Daten in den Gesetzen.
+
+**Was lernen wir:**
+- Ein Fehlschlag des Modells war oft ein Eingabefehler: Fehlende Vorgaben führten zu erfundenen Strukturen. Zuerst die Eingabe prüfen, dann das Modell wechseln.
+- Ein Bau gilt erst als bestanden, wenn alle Stufen bestanden und der Produktbericht vorliegt.
+- Regeln gehören in den Code, nicht nur in den Text. Die Gesetze prüfen heute den Aufgabentyp, nicht den Inhalt.
+- Cloud-Modelle lehnen Werkzeugaufrufe ab (siehe Abschnitt 13).

@@ -41,6 +41,14 @@ gesetze:
       # Bau: der Manager darf einen Bau-Lauf starten. Übernahme in runtime bleibt beim Captain (in_main_uebernehmen).
       - bau_starten
 
+  # Nachbesprechung (Entwurf, vom Captain noch nicht bestätigt). Jeder Bau- oder Manager-Lauf wird danach
+  # mit vier Fragen festgehalten, bestanden oder nicht. So lernen Sedra, Workflows und Agenten aus jedem Lauf.
+  nachbesprechung:
+    pflicht_nach: [bau_lauf, manager_auftrag]
+    fragen: [was_war_geplant, was_ist_passiert, wie_besser, was_lernen]
+    ziel: docs/WISSEN_SEDRA_GESAMT.md   # Wissensdatei; App-Wissen nur über einen Antrag, den der Captain freigibt
+    nur_belegt: true                    # jede Aussage nennt Quelle (Log, Commit, Pfad); sonst "nicht geprüft"
+
   # Budget je Tag, damit die Cloud nicht ausufert (Anfragen)
   budget:
     cloud_anfragen_pro_tag: 200
