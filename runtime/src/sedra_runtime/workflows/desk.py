@@ -65,6 +65,23 @@ def _selbstabbild_anlegen(hub, oid, args):
     return {'ergebnis': out}
 
 
+def _live(hub, oid, args):
+    """Laufende Prozesse (workflows/live.py): was die Prozesse selbst melden, mit dem Diagramm dazu. Nur lesen."""
+    from . import live
+    records = _store(hub).listing()
+    out = []
+    for satz in live.lesen(hub.project_root):
+        prefix = 'sa-%s-' % satz['prozess']
+        rec = next((r for r in records if any(str(n.get('id', '')).startswith(prefix) for n in r['workflow'].get('nodes', []))), None)
+        namen = {n['id']: n['name'] for n in rec['workflow']['nodes']} if rec else {}
+        name = lambda schritt: namen.get('%s%s' % (prefix, schritt)) if schritt else None
+        satz['verlauf'] = [dict(e, schritt_name=name(e.get('schritt'))) for e in satz['verlauf'][-12:]]
+        out.append(dict(satz, workflow_id=rec['id'] if rec else None, titel=rec['workflow']['name'] if rec else satz['prozess'], schritt_name=name(satz.get('schritt'))))
+    zaehler = {z: sum(1 for p in out if p['zustand'] == z and not p['veraltet']) for z in live.ZUSTAENDE}
+    zaehler['veraltet'] = sum(1 for p in out if p['veraltet'])
+    return {'status': 'erledigt', 'prozesse': out, 'zaehler': zaehler}
+
+
 def _run_read(hub, mid):
     m = hub.runtime.missions.load(mid)
     ref = (m.get('context') or {}).get('n8n_workflow')
@@ -140,7 +157,8 @@ def register(registry, hub):
                     Verb('revision_lesen', 'Frühere Revision lesen', lambda h, o, a: _workflow(_store(h).read(a.get('id'), a.get('revision')))),
                     Verb('pruefen', 'Kompatibilität prüfen', _check),
                     Verb('selbstabbild_pruefen', 'Selbstabbild gegen die Quellen prüfen', _selbstabbild_pruefen),
-                    Verb('selbstabbild_anlegen', 'Abläufe von SEDRA aus den Quellen anlegen', _selbstabbild_anlegen)]))
+                    Verb('selbstabbild_anlegen', 'Abläufe von SEDRA aus den Quellen anlegen', _selbstabbild_anlegen),
+                    Verb('live', 'Laufende Prozesse', _live)]))
     canonical = registry.get('workflow')
     registry.register(registry.Kind('scenario', 'Szenario Studio',
         lambda h, oid: dict(_read(h, oid), type='scenario'),

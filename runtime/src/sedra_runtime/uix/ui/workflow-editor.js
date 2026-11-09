@@ -12,6 +12,7 @@
       this.el = container; this.ctx = ctx; this.dead = false; this.history = []; this.future = []; this.off = [];
       this.state = {doc: M().example(), selected: null}; this.wid = null; this.revision = null; this.saved = null; this.records = [];this.view = 'canvas';this.style = options.style;
       this.el.classList.add('t-workflow', options.className); this.build(); this.draw();
+      if(root.sedraWorkflowLive)this.live = root.sedraWorkflowLive.attach(this);
       if(root.sedraWorkflowChat)this.chat = root.sedraWorkflowChat.attach(this);      // Chat zum Prozess (workflow-chat.js)
       this.busy = true;this.el.inert = true;this.el.setAttribute('aria-busy', 'true');
       this.off.push(ctx.bus.on('task.changed', ()=>this.refreshRuns()));
@@ -21,7 +22,7 @@
         if(ctx.object && ctx.object.type === 'workflow_run') return this.showRun(ctx.object.id);
       }).finally(()=>{this.busy = false;if(!this.dead){this.el.inert = false;this.el.removeAttribute('aria-busy');}});
     },
-    unmount(){this.dead = true;this.off.forEach(fn=>fn());if(this.chat)this.chat.destroy();if(this.canvas)this.canvas.destroy();this.el.replaceChildren();this.el.classList.remove('t-workflow', options.className);this.el.removeAttribute('data-wf-theme');},
+    unmount(){this.dead = true;this.off.forEach(fn=>fn());if(this.chat)this.chat.destroy();if(this.live)this.live.destroy();if(this.canvas)this.canvas.destroy();this.el.replaceChildren();this.el.classList.remove('t-workflow', options.className);this.el.removeAttribute('data-wf-theme');},
     shown(){if(this.wid && !this.dirty())this.safe(()=>this.load(this.wid, true));},
     async call(type, id, verb, args){
       const out = await this.ctx.api('/api/actions', {method: 'POST', body: {type, id, verb, args: args || {}}}); return out.result;
@@ -71,8 +72,8 @@
       // Reiter
       this.tabButtons = {};this.panels = {};
       const tabs = el('div', 't-wf-tabs');tabs.setAttribute('role', 'tablist');
-      [['overview', options.overviewTitle || 'Übersicht'], ['templates', 'Vorlagen'], ['editor', 'Editor'], ['versions', 'Versionen'], ['runs', options.runTitle || 'Ausführungen']].forEach(([key, text])=>{
-        const b = button('', ()=>this.setTab(key));b.append(el('span', 't-wf-tab-label', text));b.dataset.icon = {overview: '⌂', templates: '▦', editor: '✎', versions: '⟲', runs: '▶'}[key];b.setAttribute('aria-label', text);b.title = text;b.setAttribute('role', 'tab');b.className = 't-wf-tab';this.tabButtons[key] = b;tabs.append(b);
+      [['overview', options.overviewTitle || 'Übersicht'], ['templates', 'Vorlagen'], ['editor', 'Editor'], ['versions', 'Versionen'], ['runs', options.runTitle || 'Ausführungen'], ['live', 'Live']].forEach(([key, text])=>{
+        const b = button('', ()=>this.setTab(key));b.append(el('span', 't-wf-tab-label', text));b.dataset.icon = {overview: '⌂', templates: '▦', editor: '✎', versions: '⟲', runs: '▶', live: '◉'}[key];b.setAttribute('aria-label', text);b.title = text;b.setAttribute('role', 'tab');b.className = 't-wf-tab';this.tabButtons[key] = b;tabs.append(b);
         this.panels[key] = el('section', 't-wf-panel');this.panels[key].setAttribute('role', 'tabpanel');
       });
       // Übersicht
@@ -138,7 +139,7 @@
       this.panels.runs.append(run);
             // Seitenleiste links (Übersicht, Vorlagen, Editor, Versionen, Ausführungen), rechts die Fläche; die obere Leiste gehört zur Arbeit am Prozess
       this.top = top;tabs.setAttribute('aria-orientation', 'vertical');tabs.className = 't-wf-rail t-wf-tabs';
-      const content = el('div', 't-wf-content');content.append(top, this.panels.overview, this.panels.templates, this.panels.editor, this.panels.versions, this.panels.runs);
+      const content = el('div', 't-wf-content');content.append(top, this.panels.overview, this.panels.templates, this.panels.editor, this.panels.versions, this.panels.runs, this.panels.live);
       const body = el('div', 't-wf-body'), railbox = el('div', 't-wf-railbox');
       const fold = button('«', ()=>{const zu = !body.classList.contains('t-wf-collapsed');body.classList.toggle('t-wf-collapsed', zu);setFold(zu);try{root.localStorage.setItem('sedra.wf.rail', zu ? 'zu' : 'auf');}catch(e){}});
       const setFold = zu=>{fold.textContent = zu ? '»' : '«';fold.setAttribute('aria-label', zu ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen');fold.setAttribute('aria-expanded', String(!zu));fold.title = fold.getAttribute('aria-label');};
@@ -173,6 +174,7 @@
       if(name === 'runs' && model) name = 'editor';
       this.tab = name;if(this.top)this.top.hidden = name === 'overview' || name === 'templates';
       Object.entries(this.panels).forEach(([key, panel])=>{panel.hidden = key !== name;});
+      if(this.live){if(name === 'live')this.live.start();else this.live.stop();}      // Live-Reiter fragt nur, solange er offen ist (workflow-live.js)
       Object.entries(this.tabButtons).forEach(([key, b])=>{b.setAttribute('aria-selected', String(key === name));b.classList.toggle('active', key === name);});
     },
     renderCards(filter){

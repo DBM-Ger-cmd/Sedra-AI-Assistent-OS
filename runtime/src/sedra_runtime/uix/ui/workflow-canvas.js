@@ -26,7 +26,7 @@
     const wrapEl = document.createElement('div'); wrapEl.className = 't-wf-canvas' + (scenario ? ' scenario' : '');
     const svg = element('svg', {class: 't-wf-svg' + (scenario ? ' scenario' : ''), role: 'group', 'aria-label': scenario ? 'Szenarioansicht' : 'Workflow-Canvas'});
     const hint = document.createElement('p'); hint.className = 't-wf-hint';
-    hint.textContent = handlers.readOnly ? 'Verdichtete Kernübersicht. Verbindungen fassen Zwischenschritte zusammen. Bearbeiten in der Gesamtansicht.' : 'Module ziehen, Hintergrund zum Verschieben ziehen, Mausrad zum Zoomen. Ausgang anklicken, dann Ziel wählen.';
+    hint.textContent = handlers.hint !== undefined ? handlers.hint : handlers.readOnly ? 'Verdichtete Kernübersicht. Verbindungen fassen Zwischenschritte zusammen. Bearbeiten in der Gesamtansicht.' : 'Module ziehen, Hintergrund zum Verschieben ziehen, Mausrad zum Zoomen. Ausgang anklicken, dann Ziel wählen.';
     const controls = document.createElement('div'); controls.className = 't-wf-zoom'; controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', 'Ansicht');
     [['Ansicht einpassen', '⤢', ()=>api.fit()], ['Zoom +', '+', ()=>api.zoom(1.2)], ['Zoom −', '−', ()=>api.zoom(1 / 1.2)], ['Auf Auswahl zentrieren', '◎', ()=>api.focus()], ['Aufräumen: Knoten ordnen', '⌗', ()=>{if(handlers.tidy && !handlers.readOnly)handlers.tidy();}]].forEach(([label, text, fn])=>{
       const b = document.createElement('button'); b.type = 'button'; b.className = 't-wf-zoom-btn'; b.textContent = text; b.setAttribute('aria-label', label); b.title = label; b.onclick = fn; controls.append(b);
@@ -105,7 +105,7 @@
         const known = root.sedraWorkflowModel.types.some(t=>'n8n-nodes-base.' + t[0] === node.type && t[2] === node.typeVersion);
         const P = root.sedraWorkflowProcess, meta = P && P.get(node), I = root.sedraWorkflowIcons;
         const kindKey = I ? I.key(node, meta) : 'unknown';
-        const g = element('g', {transform: `translate(${node.position[0]} ${node.position[1]})`, class: 't-wf-node mod-' + kindKey + (state.selected === node.id ? ' selected' : '') + (!known ? ' unsupported' : '') + (meta ? ' process ' + meta.mode : ''), tabindex: 0, role: 'button', 'aria-label': node.name});
+        const g = element('g', {transform: `translate(${node.position[0]} ${node.position[1]})`, class: 't-wf-node mod-' + kindKey + (state.live && state.live[node.id] ? ' live live-' + state.live[node.id] : '') + (state.selected === node.id ? ' selected' : '') + (!known ? ' unsupported' : '') + (meta ? ' process ' + meta.mode : ''), tabindex: 0, role: 'button', 'aria-label': node.name});
         const subtitle = meta ? P.labels[meta.mode] : known ? (I ? I.label(kindKey) : node.type.split('.').pop()) : 'Erhalten · nicht ausführbar';
         const [cx, cy] = G.center;
         if(scenario){
