@@ -233,3 +233,27 @@ Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzei
 **Hermes Agent Optimierung (Gruppe):** 28.10. Hermes-Einrichtung starten (`E:\HermesAgentOrdner\Hermes Arbeits ordner`).
 
 Nur die Titel und Orte der Sitzungen sind hier erfasst. Inhalte einzelner Sitzungen stehen im jeweiligen Verlauf oder in den Berichten unter `docs/` (zum Beispiel `BAUBERICHT_*`, `docs/UEBERGABE_CLOUD_2026-10-29.md`).
+
+## 14. Nachbesprechung 09.11.2026: Factory-Bau v5 und Manager (4 W)
+
+**Was war geplant:** Factory SDK Grundlage v5 in vier Stufen (S1 bis S4) durch die Bau-Schleife bauen. Dazu den Manager mit Verfassung, Gesetzen, Werkzeugen und Journal aufbauen und seine Werkzeuge über die Harness ausführen.
+
+**Was ist passiert (belegt):**
+- Lauf v4 (08.11., 21:24) endete mit `BAU_ENDE exit=127`. Lauf v5 (08.11., 21:45 bis 21:53) scheiterte in Stufe 2 am Hidden-Test. Die Wiederholung mit vier Versuchen am 08.11. scheiterte ebenfalls. Ursache: Der Coder verwendete ein erfundenes task_run-Schema, weil die Schemata nicht im Arbeitsbereich lagen. Quelle: Abschnitt 12 und 13 dieser Datei.
+- Spec v5 (`4270d70`) mit Regelblättern und 35 Negativfällen. Lauf v5 am 09.11.: S1 bestanden (11:16, 2. Versuch), S2 bestanden (11:27), S3 bestanden (13:04, 2. Versuch). S4 startete um 13:04. Der Agent meldete um 13:12 nach 33 Aufrufen in 453 s. Ergebnis von S4 offen. Quelle: `runtime_data\bau_schleife_status.log`, `devvm_build_factory_sdk_grundlage_v5_2026-11-09_130433.log`.
+- Im S4-Log steht zu Beginn `S0 connection check: coder.local_primary missing`. Der Lauf ging trotzdem weiter. Ob das ein Fehlalarm ist, ist nicht geprüft.
+- Manager gebaut (`42cd72a`, `340f159`): Verfassung, Gesetze, Journal, elf Werkzeuge. Berater einmal erfolgreich (4 s). Harness-Werkzeuge noch nicht über den Manager angeschlossen. Verfassung noch nicht vom Captain bestätigt.
+- Die Angabe „Bau bestanden“ in Abschnitt 13 gilt für Factory SDK 1 (`cd5b774`). Der Lauf v5 ist nicht abgeschlossen.
+
+**Wie können wir es besser machen:**
+1. Vor jedem Coder-Lauf prüfen, dass Schemata und Referenzdateien im Arbeitsbereich liegen. Fehlen sie, startet der Lauf nicht.
+2. Den Vorlauf-Fehler `coder.local_primary missing` klären, bevor der nächste Lauf startet.
+3. Manager-Werkzeuge erst freigeben, wenn die Verfassung bestätigt und die Harness-Anbindung getestet ist.
+4. Eine Aussage über Ergebnisse nur mit Beleg (Log, Commit, Pfad). Sonst „nicht geprüft“.
+5. Die beiden offenen Verfassungsfragen klären: Rolle „Planer“ und Schutz personenbezogener Daten in den Gesetzen.
+
+**Was lernen wir:**
+- Ein Fehlschlag des Modells war oft ein Eingabefehler: Fehlende Vorgaben führten zu erfundenen Strukturen. Zuerst die Eingabe prüfen, dann das Modell wechseln.
+- Ein Bau gilt erst als bestanden, wenn alle Stufen bestanden und der Produktbericht vorliegt.
+- Regeln gehören in den Code, nicht nur in den Text. Die Gesetze prüfen heute den Aufgabentyp, nicht den Inhalt.
+- Cloud-Modelle lehnen Werkzeugaufrufe ab (siehe Abschnitt 13).
