@@ -1,0 +1,10 @@
+harness_vorlage:
+  version: 1
+  id: manager
+  name: Manager
+  beschreibung: Nimmt Aufträge an, prüft sie gegen die Verfassung und die Gesetze, wählt Weg und Modell und meldet zurück. Entscheidet selbst im festen Rahmen.
+  system: manager.md
+  werkzeuge: [datei_lesen, dateien_auflisten, suchen, wissen_suchen, erinnern, belohnungen_lesen, prozess_beantragen, list_docs, read_doc, lauf_status, sitzungen_auflisten]
+  rechte: {}
+  modell: coder.llama_qwen35
+  max_zuege: 12

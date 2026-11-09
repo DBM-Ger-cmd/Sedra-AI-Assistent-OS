@@ -49,8 +49,10 @@ def berater_status(root=SEDRA_ROOT):
         return False, f"Anbieter {PROVIDER} aus"
     if eintrag.get("status") != "bereit":
         return False, f"Anbieter {PROVIDER} nicht bereit: {', '.join(eintrag.get('reasons') or []) or eintrag.get('status')}"
-    fest = _festes_modell()
-    modell = os.environ.get("SEDRA_BAU_BERATER_MODELL", "").strip() or fest or eintrag.get("default_model")
+    # Reihenfolge: Umgebungsvariable (zum Testen), dann die Wahl aus den Fähigkeitstests (Manager), dann das feste Modell, dann der Standard
+    from sedra_runtime.manager.modellwahl import waehle_modell
+    gewaehlt = waehle_modell(AUFGABE_TYP, Path(root) / "wissen_quellen" / "modelle")
+    modell = os.environ.get("SEDRA_BAU_BERATER_MODELL", "").strip() or gewaehlt or _festes_modell() or eintrag.get("default_model")
     return (True, modell) if modell else (False, "kein Modell eingestellt")
 
 
