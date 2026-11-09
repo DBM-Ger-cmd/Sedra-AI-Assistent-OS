@@ -486,7 +486,22 @@ def produkt_pruefen(projekt, kandidat, spec_mod, auftrag):
     return bericht, gesamt
 
 
+def manager_erlaubt_bau(projekt):
+    """Schritt 2 der Manager-Verfassung: jeder Bau-Start geht durch den Manager. Ohne Recht 'bau_starten' startet nichts."""
+    sys.path.insert(0, str(RUNTIME / "src"))
+    from sedra_runtime.manager import Manager, VerfassungsVerstoss
+    manager = Manager("bau-schleife", set(), journal=projekt / "runtime_data" / "manager" / "journal.jsonl")
+    try:
+        manager.nutze_werkzeug("bau_starten")
+    except VerfassungsVerstoss as exc:
+        log(projekt, f"Bau-Start verweigert durch den Manager: {exc}")
+        return False
+    return True
+
+
 def schleife(projekt, auftrag="(nicht angegeben)", neu=False):
+    if not manager_erlaubt_bau(projekt):
+        return 1
     sperre = sperre_setzen(projekt)
     try:
         if not vorpruefung(projekt):

@@ -36,9 +36,11 @@ def waehle_modell(aufgabe_typ, ordner):
     pruefung = PRUEFUNG.get(aufgabe_typ)
     if pruefung is None:
         return None
-    bestanden = [e["modell"] for e in letzter_bericht(ordner)
-                 if e.get("aufgaben", {}).get(pruefung, {}).get("ok")]
-    if not bestanden:
+    passend = [e for e in letzter_bericht(ordner) if e.get("aufgaben", {}).get(pruefung, {}).get("ok")]
+    if not passend:
         return None
+    # Der bevorzugte Modus: die schnellsten Modelle zuerst. Langsame (Zeitlimit erreicht) kommen nur zum Zug, wenn es nicht anders geht.
+    passend.sort(key=lambda e: sum(float(v.get("sekunden", 0)) for v in e["aufgaben"].values()))
+    bestanden = [e["modell"] for e in passend]
     fest = festes_modell()
     return fest if fest in bestanden else bestanden[0]
