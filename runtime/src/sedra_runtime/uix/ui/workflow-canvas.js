@@ -34,6 +34,7 @@
     const mini = document.createElement('div'); mini.className = 't-wf-minimap';
     const msvg = element('svg', {class: 't-wf-minimap-svg', role: 'img', 'aria-label': 'Minimap: Übersicht des ganzen Prozesses, anklicken zum Springen', preserveAspectRatio: 'xMidYMid meet'}); mini.append(msvg);
     wrapEl.append(svg, controls, mini);
+    if(root.sedraWorkflowMinimap) root.sedraWorkflowMinimap.ziehbar(mini, wrapEl, 'sedra.wf.minimap.' + (scenario ? 'szenario' : 'n8n'));   // verschiebbar (workflow-minimap.js)
     container.replaceChildren(hint, wrapEl);
     let edgeSel = null, edgeBars = [], lastDown = null, drag = null, pending = null, offset = [0, 0], zoom = 1, frame = null;
     const uid = Math.random().toString(16).slice(2), marker = 'wf-arrow-' + uid, grid = 'wf-grid-' + uid;

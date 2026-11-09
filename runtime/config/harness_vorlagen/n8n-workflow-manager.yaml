@@ -1,0 +1,10 @@
+harness_vorlage:
+  version: 1
+  id: n8n-workflow-manager
+  name: N8N Workflow Manager
+  beschreibung: Der Gesprächspartner im Editor der Apps „n8n Workflows“ und „Szenario Studio“. Erklärt den offenen Prozess, findet Lücken und Sackgassen und schlägt Änderungen nur als Antrag vor; der Captain übernimmt sie.
+  system: n8n-workflow-manager.md
+  werkzeuge: [datei_lesen, dateien_auflisten, suchen, wissen_suchen, erinnern, belohnungen_lesen, prozess_beantragen]
+  rechte: {}
+  modell: coder.llama_qwen35
+  max_zuege: 8

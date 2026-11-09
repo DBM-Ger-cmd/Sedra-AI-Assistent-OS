@@ -213,3 +213,25 @@
 .t-wf-picker-item.disabled{opacity:.55;cursor:not-allowed}
 .t-wf-picker-item.disabled:hover{background:transparent;border-color:transparent}
 @media (max-width:1100px){.t-workflow .t-ndv-cols{grid-template-columns:1fr}.t-workflow .t-ndv-col{border-right:0;border-bottom:1px solid var(--line)}}
+
+/* Teil B und D: Chat zum Prozess, verschiebbare Minimap, Hinweis mit Chat-Knopf */
+.t-workflow .t-wf-fab .t-wf-chat-auf{font-size:12px;padding:0 6px}
+.t-workflow .t-wf-chat{position:absolute;right:64px;top:44px;z-index:6;width:min(320px,calc(100% - 90px));max-height:calc(100% - 180px);min-height:260px;display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--wf-shadow)}
+.t-workflow .t-wf-chat[hidden]{display:none!important}
+.t-workflow .t-wf-chat-kopf{display:flex;align-items:center;gap:6px}
+.t-workflow .t-wf-chat-kopf b{margin-right:auto}
+.t-workflow .t-wf-chat-liste{flex:1;min-height:90px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.t-workflow .t-wf-chat-nachricht{padding:6px 8px;border:1px solid var(--line);border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}
+.t-workflow .t-wf-chat-nachricht.captain{background:var(--panel-2)}
+.t-workflow .t-wf-chat-nachricht.modell{border-left:3px solid var(--accent)}
+.t-workflow .t-wf-chat-nachricht.fehler,.t-workflow .t-wf-chat-hinweis.fehler{border-color:var(--bad-line);background:var(--bad-bg);color:var(--bad)}
+.t-workflow .t-wf-chat-leer,.t-workflow .t-wf-chat-wartet,.t-workflow .t-wf-chat-hinweis,.t-workflow .t-wf-chat-fuss{margin:0;font-size:12px;color:var(--muted)}
+.t-workflow .t-wf-chat-hinweis{padding:6px 8px;border:1px solid var(--line);border-radius:8px}
+.t-workflow .t-wf-chat-anregungen{display:flex;flex-wrap:wrap;gap:4px}
+.t-workflow .t-wf-chat-anregung{font-size:11px;padding:2px 6px}
+.t-workflow .t-wf-chat-reihe{display:flex;gap:6px;align-items:flex-end}
+.t-workflow .t-wf-chat-feld{flex:1;resize:vertical;min-height:2.6em;max-height:8em}
+.t-workflow .t-wf-minimap .t-wf-mini-grip{position:absolute;right:2px;top:2px;z-index:2;width:22px;height:20px;padding:0;line-height:1;font-size:14px;cursor:grab;background:var(--panel);border:1px solid var(--line);border-radius:5px;opacity:.85}
+.t-workflow .t-wf-minimap .t-wf-mini-grip:active{cursor:grabbing}
+.t-workflow .t-wf-process-banner .t-wf-banner-chat{margin-left:6px;padding:2px 8px;font-size:12px}
+

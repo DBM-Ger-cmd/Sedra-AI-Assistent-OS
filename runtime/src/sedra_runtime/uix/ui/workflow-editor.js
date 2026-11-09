@@ -12,6 +12,7 @@
       this.el = container; this.ctx = ctx; this.dead = false; this.history = []; this.future = []; this.off = [];
       this.state = {doc: M().example(), selected: null}; this.wid = null; this.revision = null; this.saved = null; this.records = [];this.view = 'canvas';this.style = options.style;
       this.el.classList.add('t-workflow', options.className); this.build(); this.draw();
+      if(root.sedraWorkflowChat)this.chat = root.sedraWorkflowChat.attach(this);      // Chat zum Prozess (workflow-chat.js)
       this.busy = true;this.el.inert = true;this.el.setAttribute('aria-busy', 'true');
       this.off.push(ctx.bus.on('task.changed', ()=>this.refreshRuns()));
       this.off.push(ctx.bus.on('decision.answered', ()=>this.refreshRuns()));
@@ -20,7 +21,7 @@
         if(ctx.object && ctx.object.type === 'workflow_run') return this.showRun(ctx.object.id);
       }).finally(()=>{this.busy = false;if(!this.dead){this.el.inert = false;this.el.removeAttribute('aria-busy');}});
     },
-    unmount(){this.dead = true;this.off.forEach(fn=>fn());if(this.canvas)this.canvas.destroy();this.el.replaceChildren();this.el.classList.remove('t-workflow', options.className);this.el.removeAttribute('data-wf-theme');},
+    unmount(){this.dead = true;this.off.forEach(fn=>fn());if(this.chat)this.chat.destroy();if(this.canvas)this.canvas.destroy();this.el.replaceChildren();this.el.classList.remove('t-workflow', options.className);this.el.removeAttribute('data-wf-theme');},
     shown(){if(this.wid && !this.dirty())this.safe(()=>this.load(this.wid, true));},
     async call(type, id, verb, args){
       const out = await this.ctx.api('/api/actions', {method: 'POST', body: {type, id, verb, args: args || {}}}); return out.result;
@@ -106,7 +107,7 @@
         if(this.dirty()){this.notice('Für den Wechsel zuerst speichern. Beide Apps teilen gespeicherte Versionen.', true);return;}
         this.ctx.shell.open({type: options.otherType, id: this.wid || 'alle', title: options.otherTitle});
       }));
-      this.processBanner = el('p', 't-wf-process-banner');
+      this.processBanner = el('p', 't-wf-process-banner');this.bannerText = el('span');this.bannerChat = button('Im Chat besprechen', ()=>{if(this.chat)this.chat.open('Erkläre mir diesen Hinweis zum Prozess und was ich als Nächstes tun sollte: ' + this.bannerText.textContent);});this.bannerChat.className = 't-wf-banner-chat';this.bannerChat.title = 'Den Hinweis mit SEDRA besprechen';this.processBanner.append(this.bannerText, ' ', this.bannerChat);
       this.stage = el('div', 't-wf-stage');this.surface = el('section', 't-wf-surface');this.inspector = el('aside', 't-wf-inspector');this.inspector.hidden = true;
       this.fab = el('div', 't-wf-fab');
       this.addButton = button('+', ()=>this.openPicker());this.addButton.setAttribute('aria-label', 'Knoten hinzufügen');this.addButton.title = 'Knoten hinzufügen';
@@ -229,7 +230,7 @@
       this.viewSelect.value = this.view;
       this.runSection.hidden = model;this.tabButtons.runs.hidden = model;if(model && this.tab === 'runs')this.setTab('editor');this.processBanner.hidden = !model;
       this.engine.hidden = model;this.addButton.hidden = (model && core) || this.view !== 'canvas';this.bottom.hidden = !options.runBar || model;this.report.hidden = model;
-      this.processBanner.textContent = 'Prozessmodell · ' + P().cores(this.state.doc).length + ' Kernschritte · ' + P().rows(this.state.doc).filter(r=>r.meta.source === 'proposal').length + ' ergänzte Vorschläge. ' + (() => {const g = P().gaps(this.state.doc);return g.missing ? 'Lücken: ' + g.missing + ' Angaben fehlen in ' + g.steps + ' Schritten (z. B. ' + g.items[0].name + ': ' + g.items[0].fields.join(', ') + '). ' : 'Alle Pflichtangaben sind ausgefüllt. ';})() + 'Fachliche und technische Ausführung sind noch nicht eingerichtet.';
+      this.bannerText.textContent = 'Prozessmodell · ' + P().cores(this.state.doc).length + ' Kernschritte · ' + P().rows(this.state.doc).filter(r=>r.meta.source === 'proposal').length + ' ergänzte Vorschläge. ' + (() => {const g = P().gaps(this.state.doc);return g.missing ? 'Lücken: ' + g.missing + ' Angaben fehlen in ' + g.steps + ' Schritten (z. B. ' + g.items[0].name + ': ' + g.items[0].fields.join(', ') + '). ' : 'Alle Pflichtangaben sind ausgefüllt. ';})() + 'Fachliche und technische Ausführung sind noch nicht eingerichtet.';
       this.version.textContent = (this.wid ? 'Revision ' + this.revision : 'Neuer Entwurf') + (this.dirty() ? ' · ungespeichert' : ' · gespeichert');
       if(this.canvas)this.canvas.destroy();
       this.canvas = null;
