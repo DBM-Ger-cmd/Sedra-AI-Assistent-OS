@@ -88,6 +88,7 @@
       const starts = el('div', 't-wf-starts');
       const start = (title, text, fn, primary)=>{const b = button('', fn);b.className = 't-wf-start' + (primary ? ' t-wf-primary' : '');b.append(el('strong', '', title), el('span', '', text));return b;};
       starts.append(start(options.newTitle || 'Neuer Workflow', 'Leere Fläche mit einem Auslöser', ()=>{if(this.discard()){this.adopt(this.blank(), null, null);this.setTab('editor');this.notice('Neuer Entwurf. Erster Schritt: „Knoten hinzufügen“.');}}, true),
+        start('n8n-Workflow importieren', 'Datei, Ziehen oder Einfügen, mit Vorschau', ()=>{this.importBox.el.scrollIntoView({block: 'center'});this.importBox.el.classList.add('t-wf-flash');}),
         start('Aus Vorlage beginnen', 'Muster A, B und C mit geführtem Einrichten', ()=>this.setTab('templates')),
         start('Abläufe von SEDRA', 'SEDRA bildet seine eigenen Abläufe ab', ()=>{this.selfBox.scrollIntoView({block: 'center'});this.selfBox.classList.add('t-wf-flash');}));
       const ask = el('div', 't-wf-ask');const askText = el('textarea');askText.rows = 3;askText.maxLength = 3000;askText.setAttribute('aria-label', 'Prozess beschreiben');
@@ -96,7 +97,8 @@
       ask.append(askText, el('p', 't-wf-hint', 'SEDRA startet dafür eine eigene Sitzung (links unter „Sitzungen“). Der Entwurf wartet im Posteingang auf dein Ja und ist nie ausführbar.'), askBtn);
       this.picker = el('select');this.picker.setAttribute('aria-label', 'Gespeicherte Workflows');
       this.picker.onchange = ()=>{if(this.picker.value)this.safe(async()=>{await this.load(this.picker.value);this.setTab('editor');});};
-      this.panels.overview.append(hero, ask, starts, el('h3', '', 'Zuletzt gespeichert'), el('div', 't-wf-toolbar', ''), this.cards, el('h3', '', 'Abläufe von SEDRA (Selbstabbild)'), this.selfBox);
+      this.importBox = root.sedraWorkflowImport.attach(this);
+      this.panels.overview.append(hero, ask, starts, this.importBox.el, el('h3', '', 'Zuletzt gespeichert'), el('div', 't-wf-toolbar', ''), this.cards, el('h3', '', 'Abläufe von SEDRA (Selbstabbild)'), this.selfBox);
       this.panels.templates.append(el('p', 't-wf-hint', 'Eigene Startvorlagen von SEDRA. Muster A: Auslöser, dann Aktion. Muster B: mit Bedingung. Muster C: mit KI-Schritt (nur als Prozessmodell). Nach dem Anlegen führt das geführte Einrichten durch die Schritte.'), this.templateBox);
       this.renderTemplates();
       this.panels.overview.querySelector('.t-wf-toolbar').append(find, this.picker);

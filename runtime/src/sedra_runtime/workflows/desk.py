@@ -82,6 +82,12 @@ def _live(hub, oid, args):
     return {'status': 'erledigt', 'prozesse': out, 'zaehler': zaehler}
 
 
+def _import_vorschau(hub, oid, args):
+    """Die Vorschau eines n8n-Imports (workflows/vorschau.py): nur lesen, nichts wird gespeichert oder gestartet."""
+    from . import vorschau
+    return dict(vorschau.vorschau(args.get('text'), args.get('dateiname')), status='erledigt')
+
+
 def _fabrik(hub, oid, args):
     """Was die Harness gerade tut (workflows/fabrik.py): Läufe, aktive Aufgaben, offene Freigaben. Nur lesen; ohne Harness eine leere Übersicht."""
     from . import fabrik
@@ -205,7 +211,7 @@ def register(registry, hub):
                     Verb('selbstabbild_pruefen', 'Selbstabbild gegen die Quellen prüfen', _selbstabbild_pruefen),
                     Verb('selbstabbild_anlegen', 'Abläufe von SEDRA aus den Quellen anlegen', _selbstabbild_anlegen),
                     Verb('live', 'Laufende Prozesse', _live),
-                    Verb('fabrik', 'Die Fabrikhalle', _fabrik), Verb('fabrik_status', 'Fabrik: angehalten?', _fabrik_status),
+                    Verb('import_vorschau', 'Vorschau eines n8n-Imports', _import_vorschau), Verb('fabrik', 'Die Fabrikhalle', _fabrik), Verb('fabrik_status', 'Fabrik: angehalten?', _fabrik_status),
                     Verb('fabrik_stopp', 'Fabrik anhalten (roter Knopf)', _fabrik_stopp), Verb('fabrik_freigeben', 'Fabrik wieder freigeben', _fabrik_freigeben)]))
     canonical = registry.get('workflow')
     registry.register(registry.Kind('scenario', 'Szenario Studio',
