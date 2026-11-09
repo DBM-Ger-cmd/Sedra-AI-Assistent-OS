@@ -178,7 +178,7 @@ Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzei
 - **Berater** (`benchmarks/berater.py`): ein Cloud-Modell, nur Text, Antwort wird in einen neuen Kandidaten geschrieben und in der microVM geprüft. Das feste Modell ist `nvidia/nemotron-3.5-lightning-30b-a3b` (`config/manager/berater.yaml`). Ein echter Lauf war erfolgreich (4 s).
 - **Vorarbeiter-Kanal** (`manager/kanal.py`, `verteile`): nimmt Aufträge, prüft sie gegen die Gesetze, wählt das Modell aus den Tests, gibt Ergebnis oder Grund zurück. Getestet mit verbotenem, erlaubtem und leerem Auftrag.
 - **Wissensquelle:** Modellliste und Fähigkeitsbericht in die Eingangssitzung `E-20261109-122349-1394` kopiert, Antrag über `benchmarks/wissen_antrag.py` (Doppelschutz). Der Captain hat in der App freigegeben. Quelle `Q-f6cce280` aktiv, 6 Abschnitte, keine Dopplung. Die Dopplung im Repo (vier identische Platzhalter-README) ist bereinigt: drei entfernt, Kopien archiviert in `E:\Sedra Umgebung\Updates\_archiv_doppelte_readme_2026-11-09\`, Commit `07436b6`.
-- **Register:** `SEDRA-FSDK-01`, `SEDRA-WORKFLOW-A-01`, `B-01`, `D-01`, `SEDRA-WISSEN-PLUS-01`, `SEDRA-HILF-01` auf MERGED (jeweils Captain-Ja im Chat). `SEDRA-WORKFLOW-E-01` (Live-Reiter, Sitzung VORARBEITER, `467460f`) wartet auf die Bestätigung des Captains hier im Chat.
+- **Register:** `SEDRA-FSDK-01`, `SEDRA-WORKFLOW-A-01`, `B-01`, `D-01`, `SEDRA-WISSEN-PLUS-01`, `SEDRA-HILF-01` auf MERGED (jeweils Captain-Ja im Chat). `SEDRA-WORKFLOW-E-01` (Live-Reiter, Sitzung VORARBEITER, `467460f`) ist nach Captain-Ja im Chat auf MERGED gesetzt (Stand 09.11., 13:04, auch im Koordinator-Dashboard).
 
 **Entscheidungen des Captains (08.–09.11.):**
 - NVIDIA ja. Cloud für Code und Spec des Baus, Texte und Recherche ohne Personenbezug, 3D nur wenn der Anbieter es kann.
@@ -201,10 +201,12 @@ Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzei
 **Unterchats (Gruppe „Sedra Vorarbeiter“):**
 - `nachtlauf-sedra-bau-berw` (Nachtlauf, ausgesetzt, hat nichts laufen), `nachtlauf-sedra` (älter, 08.11.), `neustart-sedra` (06.11.), `k3-sedra` und `k3-nachricht` (K3-Nachricht, 06.11.), `updater-uebergabe` (06.11.), `tester-f05b-main` und `tester-main-verif` (Testläufe F0-05B und F0-05A, 06.11.).
 
-**Offen (Stand 09.11., 13:01):**
+**Erledigt (Stand 09.11., 13:04):**
 - `SEDRA-WORKFLOW-E-01`: MERGED nach Bestätigung des Captains hier im Chat.
-- Push von `740749e` (Live-Meldungen der Schleife).
-- Der Merge des Branches `workflow-live` (Commit `c160112`, Live-Ansicht) liegt beim Captain.
+- `main` nach `origin/main` gepusht (`467460f..2cd20ed`), enthält `740749e` (Live-Meldungen der Schleife).
+- Branch `workflow-live` (Commit `c160112`, Live-Ansicht) war bereits per Fast-Forward in `main` gemergt. Der Branch existiert nicht mehr.
+
+**Offen (Stand 09.11., 13:04):**
 - Verfassung des Managers: Bestätigung durch den Captain (Entwurf).
 - Harness-Werkzeuge über den Manager ausführen (Verbindung fehlt).
 - Lokale Slots: erst nach dem Bau, mit Speicherprüfung.
