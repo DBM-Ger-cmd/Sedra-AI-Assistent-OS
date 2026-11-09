@@ -93,6 +93,23 @@ def log(projekt, text):
         f.write(zeile + "\n")
 
 
+PROZESS_LIVE = "vollautomatischer-bau"       # Prozessname für die Live-Ansicht (workflows/live.py, Branch workflow-live)
+
+
+def melde(projekt, schritt, zustand, text=""):
+    """Meldung an die Live-Ansicht der Prozesse. Fehlt das Modul (noch nicht in main), passiert nichts.
+    Die Meldung gibt kein Recht und startet nichts."""
+    try:
+        sys.path.insert(0, str(RUNTIME / "src"))
+        from sedra_runtime.workflows import live
+    except ImportError:
+        return
+    try:
+        live.melde(projekt, PROZESS_LIVE, schritt, zustand, text=text)
+    except Exception:
+        pass
+
+
 def lade_spec():
     spec = importlib.util.spec_from_file_location("spec_v5", SPEC_FILE)
     mod = importlib.util.module_from_spec(spec)
@@ -391,6 +408,7 @@ def stufe_bauen(projekt, stufe, seed, spec_mod):
     letzter_fehler = None      # (fingerabdruck, gescheiterter Kandidat) fuer das automatische Merken
     for nr, satz in enumerate(SAETZE, 1):
         log(projekt, f"start {stufe} Versuch {nr}/{len(SAETZE)}: {satz['name']} ({satz['coder']})")
+        melde(projekt, "bauen", "laeuft", f"Stufe {stufe}, Versuch {nr} von {len(SAETZE)}")
         erfolg, kandidat, lauf_log, infra = bau_versuch(projekt, stufe, seed, bericht, satz)
         if erfolg:
             log(projekt, f"ERFOLG {stufe} Versuch {nr}; Kandidat {kandidat}; Log {lauf_log}")
@@ -409,6 +427,8 @@ def stufe_bauen(projekt, stufe, seed, spec_mod):
             log(projekt, f"ESKALATION: Vorlauf-Fehler bei {stufe}, kein Versuch gelaufen: {erste[:200]}")
             return None
         log(projekt, f"fehlgeschlagen {stufe} Versuch {nr}; Log {lauf_log}")
+        melde(projekt, "stufe-ok", "fehler", f"Stufe {stufe}, Versuch {nr}")
+        melde(projekt, "fehlerbericht", "laeuft", f"Stufe {stufe}")
         if kandidat.is_dir():
             text, fp = fehlerbericht(projekt, kandidat, stufe, f"{nr} ({satz['name']})", spec_mod, fingerabdruecke)
             fingerabdruecke.append(fp)
@@ -483,6 +503,8 @@ def produkt_pruefen(projekt, kandidat, spec_mod, auftrag):
     ])
     bericht.write_text(text, encoding="utf-8")
     log(projekt, f"produktbericht {bericht} ({'ok' if gesamt else 'nicht bestanden'})")
+    melde(projekt, "produktpruefung", "fertig", "Produktprüfung abgeschlossen")
+    melde(projekt, "pruefung", "wartet", "Captain prüft das Produkt")
     return bericht, gesamt
 
 
