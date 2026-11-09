@@ -287,3 +287,334 @@ ablaeufe:
         datei: runtime/benchmarks/devvm_build.py
         suche: def apply_mode_defaults(
       weiter: []
+
+  - id: wissensbasis
+    name: 'Wissensbasis: Quelle aufnehmen, einbetten, suchen'
+    zweck: Wie SEDRA Wissen lokal aufnimmt, als Vektoren ablegt und einem KI-Knoten zur Verfügung stellt. Keine externe Datenbank, keine Schlüssel.
+    schritte:
+    - id: quelle-beantragen
+      name: Wissensquelle beantragen
+      art: start
+      arbeitsweise: manual
+      rolle: Captain
+      lieferant: Captain
+      eingabe: Ordner oder Dateien
+      ergebnis: Antrag auf Quelle
+      empfaenger: Quellenprüfung
+      nachweis: Antrag im Posteingang
+      abschluss: Antrag gestellt
+      quelle:
+        datei: runtime/src/sedra_runtime/wissen/desk_wissen.py
+        suche: def _quelle_beantragen(
+      weiter:
+      - quelle-pruefen
+    - id: quelle-pruefen
+      name: Quelle prüfen
+      art: task
+      arbeitsweise: automatable
+      rolle: Wissensdienst
+      lieferant: Antrag
+      eingabe: Pfad und Dateien
+      ergebnis: Prüfbefund zur Quelle
+      empfaenger: Freigabe
+      nachweis: Prüfeintrag
+      abschluss: Prüfung beendet
+      quelle:
+        datei: runtime/src/sedra_runtime/wissen/desk_wissen.py
+        suche: def _quelle_pruefen(
+      weiter:
+      - freigabe
+    - id: freigabe
+      name: Quelle freigegeben?
+      art: decision
+      arbeitsweise: manual
+      rolle: Captain
+      lieferant: Prüfbefund
+      eingabe: Prüfbefund
+      ergebnis: aufnehmen oder ablehnen
+      empfaenger: Aufnahme oder Ablehnung
+      nachweis: Entscheidung im Verlauf
+      abschluss: Weg gewählt
+      quelle:
+        datei: runtime/src/sedra_runtime/wissen/desk_wissen.py
+        suche: def _quelle_freigeben(
+      weiter:
+      - aufnehmen
+      - ablehnen
+    - id: ablehnen
+      name: Quelle ablehnen
+      art: end
+      arbeitsweise: manual
+      rolle: Captain
+      lieferant: Entscheidung
+      eingabe: Ablehnung
+      ergebnis: keine Aufnahme
+      empfaenger: Antragsteller
+      nachweis: Vermerk im Antrag
+      abschluss: Ablehnung vermerkt
+      quelle:
+        datei: runtime/src/sedra_runtime/wissen/desk_wissen.py
+        suche: def _verweigert(
+      weiter: []
+    - id: aufnehmen
+      name: Quelle aufnehmen
+      art: task
+      arbeitsweise: automatable
+      rolle: Aufnahmelauf
+      lieferant: Freigabe
+      eingabe: freigegebene Quelle
+      ergebnis: Abschnitte und Dateien
+      empfaenger: Einbettung
+      nachweis: Lauf-Zeile mit Zählern
+      abschluss: Aufnahme beendet
+      quelle:
+        datei: runtime/src/sedra_runtime/wissen/aufnahme_lauf.py
+        suche: def laufen(
+      weiter:
+      - einbetten
+    - id: einbetten
+      name: Abschnitte einbetten (Vektoren)
+      art: task
+      arbeitsweise: automatable
+      rolle: Einbettungsdienst
+      lieferant: Aufnahmelauf
+      eingabe: Abschnitte
+      ergebnis: Vektoren je Abschnitt
+      empfaenger: Suche
+      nachweis: Vektoren in der Datenbank
+      abschluss: Einbettung beendet
+      quelle:
+        datei: runtime/src/sedra_runtime/wissen/embed.py
+        suche: 'class EmbeddingDienst:'
+      weiter:
+      - suche
+    - id: suche
+      name: Nach Bedeutung suchen
+      art: task
+      arbeitsweise: automatable
+      rolle: Wissensdienst
+      lieferant: Frage
+      eingabe: Frage oder Stichwort
+      ergebnis: passende Abschnitte
+      empfaenger: KI-Knoten
+      nachweis: Trefferliste
+      abschluss: Suche beendet
+      quelle:
+        datei: runtime/src/sedra_runtime/wissen/desk_wissen.py
+        suche: def _suche(
+      weiter:
+      - lesen
+    - id: lesen
+      name: KI-Knoten liest Abschnitte
+      art: task
+      arbeitsweise: automatable
+      rolle: KI-Knoten
+      lieferant: Suche
+      eingabe: Abschnitte mit Quelle
+      ergebnis: Kontext für die Antwort
+      empfaenger: Antwort
+      nachweis: Verweis auf die Quelle
+      abschluss: Kontext übergeben
+      quelle:
+        datei: runtime/src/sedra_runtime/wissen/desk_wissen.py
+        suche: def wissen_read(
+      weiter:
+      - antwort
+    - id: antwort
+      name: Antwort mit Quellenangabe
+      art: end
+      arbeitsweise: automatable
+      rolle: KI-Knoten
+      lieferant: Kontext
+      eingabe: Kontext
+      ergebnis: Antwort mit Quelle
+      empfaenger: Captain
+      nachweis: Antwort mit Verweis
+      abschluss: Antwort gegeben
+      quelle:
+        datei: runtime/src/sedra_runtime/wissen/desk_wissen.py
+        suche: def wissen_read(
+      weiter: []
+
+  - id: vollautomatischer-bau
+    name: 'Vollautomatischer Bau: Auftrag rein, Produkt zur Prüfung raus'
+    zweck: Der Captain gibt den Auftrag. SEDRA baut Stufe für Stufe, prüft gegen versteckte Tests, schreibt bei Fehlern einen Bericht und prüft das Produkt in der microVM. Übernahme in runtime nur mit Freigabe
+      des Captains.
+    schritte:
+    - id: auftrag
+      name: Auftrag eingeben
+      art: start
+      arbeitsweise: manual
+      rolle: Captain
+      lieferant: Captain
+      eingabe: Auftrag mit Spec-Name
+      ergebnis: Startauftrag
+      empfaenger: Spec-Prüfung
+      nachweis: Auftrag im Chat
+      abschluss: Auftrag gestartet
+      quelle:
+        datei: runtime/benchmarks/bau_schleife.py
+        suche: def schleife(
+      weiter:
+      - spec
+    - id: spec
+      name: Spec in der microVM prüfen
+      art: task
+      arbeitsweise: automatable
+      rolle: Spec-Prüfung
+      lieferant: Startauftrag
+      eingabe: Spec
+      ergebnis: Lint und Referenz ok oder Abbruch
+      empfaenger: Stufenbau
+      nachweis: Ergebnis der Spec-Prüfung
+      abschluss: Spec geprüft
+      quelle:
+        datei: runtime/benchmarks/spec_check.py
+        suche: def run_in_vm(
+      weiter:
+      - bauen
+    - id: bauen
+      name: Stufe bauen (Schleife, Modellfolge)
+      art: task
+      arbeitsweise: automatable
+      rolle: Bauagent
+      lieferant: Spec oder Startstand
+      eingabe: Aufgabe der Stufe, Startstand, Fehlerbericht
+      ergebnis: Kandidat im Arbeitsbereich
+      empfaenger: Stufenprüfung
+      nachweis: Versuchslog je Versuch
+      abschluss: Versuch beendet
+      quelle:
+        datei: runtime/benchmarks/bau_schleife.py
+        suche: def stufe_bauen(
+      weiter:
+      - stufe-ok
+    - id: stufe-ok
+      name: Stufe besteht den versteckten Test?
+      art: decision
+      arbeitsweise: automatable
+      rolle: Prüfer
+      lieferant: Kandidat
+      eingabe: Testergebnis der Stufe
+      ergebnis: weiter oder Fehlerbericht
+      empfaenger: nächste Stufe oder Fehlerbericht
+      nachweis: Eintrag im Statusfile
+      abschluss: Weg gewählt
+      quelle:
+        datei: runtime/benchmarks/bau_schleife.py
+        suche: def stufe_bauen(
+      weiter:
+      - naechste
+      - fehlerbericht
+    - id: fehlerbericht
+      name: Fehlerbericht schreiben
+      art: task
+      arbeitsweise: automatable
+      rolle: Schleife
+      lieferant: Testausgabe aus der microVM
+      eingabe: fehlgeschlagener Test
+      ergebnis: Aufgabe, was schiefging, was tun
+      empfaenger: nächster Versuch
+      nachweis: Berichtsdatei
+      abschluss: Bericht geschrieben
+      quelle:
+        datei: runtime/benchmarks/bau_schleife.py
+        suche: def fehlerbericht(
+      weiter:
+      - versuche
+    - id: versuche
+      name: Versuche übrig?
+      art: decision
+      arbeitsweise: automatable
+      rolle: Schleife
+      lieferant: Fehlerbericht
+      eingabe: Zahl der Versuche je Modell
+      ergebnis: neuer Versuch oder Eskalation
+      empfaenger: Bauen oder Captain
+      nachweis: Eintrag im Statusfile
+      abschluss: Weg gewählt
+      quelle:
+        datei: runtime/benchmarks/bau_schleife.py
+        suche: def stufe_bauen(
+      weiter:
+      - bauen
+      - eskalation
+    - id: eskalation
+      name: Eskalation an den Captain
+      art: end
+      arbeitsweise: manual
+      rolle: Captain
+      lieferant: Schleife
+      eingabe: Berichte und Logs
+      ergebnis: Entscheidung über den Weg
+      empfaenger: Captain
+      nachweis: Meldung im Chat
+      abschluss: Captain informiert
+      quelle:
+        datei: runtime/benchmarks/bau_schleife.py
+        suche: def stufe_bauen(
+      weiter: []
+    - id: naechste
+      name: Stufe übernehmen, nächste vorbereiten
+      art: task
+      arbeitsweise: automatable
+      rolle: Schleife
+      lieferant: bestandene Stufe
+      eingabe: Kandidat
+      ergebnis: Startstand der nächsten Stufe
+      empfaenger: letzte Stufe?
+      nachweis: Snapshot
+      abschluss: Startstand bereit
+      quelle:
+        datei: runtime/benchmarks/bau_schleife.py
+        suche: def schleife(
+      weiter:
+      - letzte
+    - id: letzte
+      name: Letzte Stufe bestanden?
+      art: decision
+      arbeitsweise: automatable
+      rolle: Schleife
+      lieferant: Startstand
+      eingabe: Stufennummer
+      ergebnis: weiter bauen oder Produktprüfung
+      empfaenger: Bauen oder Produktprüfung
+      nachweis: Eintrag im Statusfile
+      abschluss: Weg gewählt
+      quelle:
+        datei: runtime/benchmarks/bau_schleife.py
+        suche: def schleife(
+      weiter:
+      - bauen
+      - produktpruefung
+    - id: produktpruefung
+      name: Produkt in der microVM prüfen
+      art: task
+      arbeitsweise: automatable
+      rolle: Prüfer
+      lieferant: Kandidat aller Stufen
+      eingabe: Kandidat
+      ergebnis: Produktbericht
+      empfaenger: Captain
+      nachweis: Produktbericht in runtime_data
+      abschluss: Prüfung beendet
+      quelle:
+        datei: runtime/benchmarks/bau_schleife.py
+        suche: def produkt_pruefen(
+      weiter:
+      - pruefung
+    - id: pruefung
+      name: Captain prüft das Produkt
+      art: end
+      arbeitsweise: manual
+      rolle: Captain
+      lieferant: Produktbericht
+      eingabe: Produktbericht und Kandidat
+      ergebnis: Übernahme oder Nacharbeit
+      empfaenger: runtime nur mit Freigabe im Chat
+      nachweis: Freigabe im Chat
+      abschluss: Entscheidung getroffen
+      quelle:
+        datei: runtime/benchmarks/bau_schleife.py
+        suche: def produkt_pruefen(
+      weiter: []

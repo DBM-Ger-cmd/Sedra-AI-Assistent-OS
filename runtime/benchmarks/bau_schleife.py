@@ -153,17 +153,53 @@ def stufe_bauen(projekt, stufe, seed, spec_mod):
     return None
 
 
-def schleife(projekt):
+def produkt_pruefen(projekt, kandidat, spec_mod, auftrag):
+    """Abschlusspruefung des Produkts in der microVM: Lint und alle Stufen gegen die versteckten Tests.
+    Schreibt einen Produktbericht fuer den Captain. Uebernahme nach runtime erfolgt NUR mit seiner Freigabe."""
+    sys.path.insert(0, str(BENCH))
+    sys.path.insert(0, str(RUNTIME / "src"))
+    import spec_check  # noqa: E402
+
+    python, probleme, zeilen = spec_check.run_in_vm(str(projekt), kandidat, spec_mod)
+    alle_ok = bool(zeilen) and not probleme and all(ok for _, ok, _ in zeilen) and len(zeilen) == len(STUFEN)
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    bericht = projekt / "runtime_data" / f"produktbericht_{stamp}.md"
+    zeilen_md = [f"- {name}: {'bestanden' if ok else 'NICHT bestanden'}" for name, ok, _ in zeilen]
+    text = "\n".join([
+        "# Produktbericht Factory-Bau",
+        "",
+        f"Auftrag: {auftrag}",
+        f"Spec: {SPEC_NAME}",
+        f"Python in der microVM: {python or 'unbekannt'}",
+        f"Lint: {'ohne Befund' if not probleme else 'Befunde: ' + '; '.join(probleme)}",
+        "Stufen in der microVM:",
+        *zeilen_md,
+        f"Kandidat: {kandidat}",
+        "",
+        "Ergebnis: " + ("ALLE STUFEN BESTANDEN" if alle_ok else "NICHT BESTANDEN"),
+        "",
+        "Nächster Schritt: Der Captain prüft das Produkt. Übernahme in runtime nur mit ausdrücklicher Freigabe im Chat.",
+        "",
+    ])
+    bericht.write_text(text, encoding="utf-8")
+    log(projekt, f"produktbericht {bericht} ({'ok' if alle_ok else 'nicht bestanden'})")
+    return bericht, alle_ok
+
+
+def schleife(projekt, auftrag="(nicht angegeben)"):
     spec_mod = lade_spec()
     seed = None                          # jede Stufe startet aus dem Stand der Vorstufe, S1 ohne Startstand
+    kandidat = None
     for stufe in STUFEN:
         kandidat = stufe_bauen(projekt, stufe, seed, spec_mod)
         if kandidat is None:
             log(projekt, f"ende: Stufe {stufe} nicht bestanden, Stopp")
             return 1
         seed = kandidat
-    log(projekt, "ende: alle Stufen S1 bis S4 bestanden")
-    return 0
+    log(projekt, "alle Stufen S1 bis S4 bestanden, Produktpruefung startet")
+    bericht, ok = produkt_pruefen(projekt, kandidat, spec_mod, auftrag)
+    log(projekt, f"ende: Produktpruefung {'ok' if ok else 'nicht bestanden'}; Bericht {bericht}")
+    return 0 if ok else 1
 
 
 def main(argv):
@@ -177,7 +213,8 @@ def main(argv):
         return 0
     projekt = projekt_pfad(projekt_angabe)
     if argv[0] == "start":
-        return schleife(projekt)
+        auftrag = argv[1] if len(argv) > 1 else "(nicht angegeben)"
+        return schleife(projekt, auftrag)
     if len(argv) < 2:
         raise SystemExit("bericht braucht den Kandidatenordner")
     stufe = argv[2] if len(argv) > 2 else "S2"
