@@ -16,7 +16,9 @@ set "PROJ=%ROOT%\workspace\SEDRA_OS"
 set "ARCH=%ROOT%\architecture\SEDRA_Architecture_v1.20_SELF_DEVELOPMENT"
 set "PS=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 set "PY=%RT%\portable\python\current\python.exe"
-set "PYFLAGS=-I -B"
+set "PYFLAGS=-I -B -X utf8"
+rem UTF-8 auch fuer Kindprozesse (z. B. whisper-ctranslate2 bricht in der cp1252-Konsole ab); -I ignoriert die Variable, darum zusaetzlich -X utf8
+set "PYTHONUTF8=1"
 set "SHELLARG="
 set "REST="
 set "GEWAEHLT=0"
@@ -79,7 +81,7 @@ goto :pruefen
 :entwickler
 rem Entwicklerpfad: eine vorhandene runtime\.venv, ohne portables Python.
 set "PY=%RT%\.venv\Scripts\python.exe"
-set "PYFLAGS=-B"
+set "PYFLAGS=-B -X utf8"
 set "PYTHONPATH=%RT%\src"
 goto :wahl
 

@@ -41,6 +41,7 @@ fi
 cd "$RUNTIME"
 PYTHONPATH="$RUNTIME/src${PYTHONPATH:+:$PYTHONPATH}"
 export PYTHONPATH
+export PYTHONUTF8=1          # Kindprozesse (z. B. whisper-ctranslate2) schreiben UTF-8
 "$RUNTIME/.venv/bin/python" -B -m sedra_runtime.umzug --root "$HERE" || true
 # shellcheck disable=SC2086
 exec "$RUNTIME/.venv/bin/python" -B -m sedra_runtime.uix_start --root "$PROJECT" --architecture "$ARCH" $SHELLARG $REST
