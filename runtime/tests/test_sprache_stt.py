@@ -40,6 +40,15 @@ class Provider(unittest.TestCase):
         self.assertEqual(cmd[cmd.index('--language') + 1], 'de')
         self.assertNotIn('--fp16', cmd)
 
+    def test_threads_der_cpu_erkennung(self):
+        p = stt.provider_finden(gefunden('whisper-ctranslate2'))
+        cmd = stt.befehl(p, 'a.wav', 'de', 'ziel')
+        self.assertEqual(int(cmd[cmd.index('--threads') + 1]), stt.standard_threads())
+        self.assertTrue(4 <= stt.standard_threads() <= 12)
+        sieben = stt.befehl(dict(p, threads=7), 'a.wav', 'de', 'ziel')
+        self.assertEqual(sieben[sieben.index('--threads') + 1], '7')
+        self.assertNotIn('--threads', stt.befehl(dict(p, geraet='cuda'), 'a.wav', 'de', 'ziel'))
+
     def test_eigener_befehl_zaehlt_nur_mit_passendem_namen(self):
         e = {'befehl': '/opt/x/whisper-ctranslate2'}
         p = stt.provider_finden(gefunden('whisper-ctranslate2', '/opt/x/whisper-ctranslate2'), e)

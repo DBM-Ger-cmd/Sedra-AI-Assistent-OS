@@ -6,6 +6,7 @@ Die Sprecher-Trennung von WhisperX (pyannote, Hugging-Face-Token, Netz) wird nic
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -40,7 +41,14 @@ def einstellung(project_root):
     if out['modell'] not in MODELLE: out['modell'] = STANDARD['modell']
     if out['geraet'] not in ('cpu', 'cuda'): out['geraet'] = 'cpu'
     if out['rechenart'] not in ('int8', 'float16', 'float32'): out['rechenart'] = 'int8'
+    t = roh.get('threads')
+    if isinstance(t, int) and not isinstance(t, bool) and 1 <= t <= 64: out['threads'] = t
     return out
+
+
+def standard_threads():
+    """Threads der CPU-Erkennung: die Kerne ohne Hyperthreads (logische ÷ 2), mindestens 4, höchstens 12 (Ryzen 9 9900X: 12; vorher nutzte der Provider seinen eigenen kleinen Standard)."""
+    return max(4, min(12, (os.cpu_count() or 8) // 2))
 
 
 def provider_finden(which=shutil.which, e=None):
@@ -66,6 +74,7 @@ def befehl(p, datei, sprache, ziel):
     if sprache not in SPRACHEN: raise ValueError('sprache_unbekannt')
     exe = p.get('befehl') or p['provider']
     gemeinsam = [exe, str(datei), '--model', p['modell'], '--language', sprache, '--output_format', 'srt', '--output_dir', str(ziel), '--device', p['geraet']]
+    if p['geraet'] == 'cpu': gemeinsam += ['--threads', str(p.get('threads') or standard_threads())]
     if p['provider'] in ('whisperx', 'faster-whisper'):
         return gemeinsam + ['--compute_type', p['rechenart']]
     if p['provider'] == 'whisper':

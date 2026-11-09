@@ -150,7 +150,7 @@ def main(argv=None):
     ap.add_argument('--changed', action='store_true', help='nur Tests zu geänderten Dateien')
     ap.add_argument('--base', default='HEAD', help='Stand für --changed (Standard HEAD)')
     ap.add_argument('--slow', action='store_true', help='auch die Browser-Bahn')
-    ap.add_argument('--jobs', type=int, default=max(1, min(6, (os.cpu_count() or 2) // 2)))
+    ap.add_argument('--jobs', type=int, default=max(1, min(12, (os.cpu_count() or 2) // 2)))
     ap.add_argument('--timeout', type=int, default=1800)
     ap.add_argument('--update-known', action='store_true', help='tests/known_red.txt aus diesem Lauf schreiben')
     ap.add_argument('--list', action='store_true', help='nur die gewählten Dateien zeigen')
