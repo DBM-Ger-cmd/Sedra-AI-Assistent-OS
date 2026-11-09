@@ -27,17 +27,22 @@ def _ps(skript):
 
 
 def liste():
+    """Zeilen mit festem Trennzeichen statt JSON: Befehlszeilen koennen Zeichen enthalten, die JSON-Ausgabe bricht."""
     skript = (
         "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine -notmatch 'Get-CimInstance' -and ("
         + " -or ".join(f"$_.CommandLine -match '{m}'" for m in MUSTER)
-        + ") } | Select-Object ProcessId,Name,@{n='AlterMin';e={[int]((Get-Date)-$_.CreationDate).TotalMinutes}},"
-        "@{n='MB';e={[int]($_.WorkingSetSize/1MB)}},CommandLine | ConvertTo-Json -Depth 2"
+        + ") } | ForEach-Object { $alt = [int]((Get-Date)-$_.CreationDate).TotalMinutes; "
+        "$mb = [int]($_.WorkingSetSize/1MB); $cmd = ($_.CommandLine -replace '[\\r\\n\\t|]', ' '); "
+        "\"$($_.ProcessId)|$($_.Name)|$alt|$mb|$cmd\" }"
     )
-    text = _ps(skript)
-    if not text:
-        return []
-    daten = json.loads(text)
-    return [daten] if isinstance(daten, dict) else daten
+    prozesse = []
+    for zeile in _ps(skript).splitlines():
+        teile = zeile.split("|", 4)
+        if len(teile) != 5 or not teile[0].strip().isdigit():
+            continue
+        prozesse.append({"ProcessId": int(teile[0]), "Name": teile[1], "AlterMin": int(teile[2] or 0),
+                         "MB": int(teile[3] or 0), "CommandLine": teile[4]})
+    return prozesse
 
 
 def cpu_stand(pids):

@@ -1,0 +1,7 @@
+# Fester Berater des Bau-Laufs (Captain-Entscheidung 09.11.2026): ein Cloud-Modell, nur Text, ohne Werkzeuge.
+# Anbieter und Schluessel kommen aus den Einstellungen von SEDRA (cloud_providers / Schluessel-Speicher).
+# Die Umgebungsvariable SEDRA_BAU_BERATER_MODELL, falls gesetzt, hat Vorrang vor diesem Wert (zum Testen).
+berater:
+  anbieter: nvidia
+  modell: nvidia/nemotron-3.5-lightning-30b-a3b   # im Test in 4 s geantwortet, korrigierte Datei geliefert
+  max_tokens: 8000

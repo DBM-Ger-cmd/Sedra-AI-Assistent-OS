@@ -1,0 +1,46 @@
+# Gesetze des Managers. Harte Grenzen, die der Code prüft (src/sedra_runtime/manager/verfassung.py).
+# Die Verfassung (verfassung.md) gibt den Rahmen; die Gesetze sind das, was nicht verhandelbar ist.
+gesetze:
+  schema: 1
+
+  # Aufgabentypen, die in die Cloud dürfen. Jede weitere Aufgabe bleibt lokal oder geht an den Captain.
+  cloud_aufgaben:
+    - code_und_spec_des_baus        # ja, nach Freigabe des Managers und des Planers
+    - text_und_recherche_ohne_personenbezug
+    - 3d_anfrage                # nur wenn der Anbieter es kann; bisher kein 3D-Modell im NVIDIA-Katalog
+
+  # Rechte, die nur der Captain vergeben kann. Der Manager und seine Untergebenen haben sie nie.
+  nur_captain:
+    - freigabe_erteilen
+    - in_main_uebernehmen
+    - schluessel_aendern
+    - loeschen
+    - force_push
+
+  # Untergebene
+  untergebene:
+    hoechste_tiefe: 2               # Manager -> Untergebener -> dessen Untergebener, mehr nicht
+    rechte_erben: nie_mehr          # ein Untergebener hat höchstens die Rechte des Managers
+
+  # Werkzeuge des Managers. Ein Untergebener bekommt höchstens diese (Teilmenge).
+  werkzeuge:
+    erlaubt:
+      - taschenrechner          # Grundrechenarten, kein eval
+      - notizblock_schreiben    # nur anhängen
+      - notizblock_lesen
+      - dashboard_stand         # nur lesen (Register)
+      - journal_lesen           # nur lesen
+      - modell_wahl             # nur lesen (Fähigkeitstests)
+      # Harness-Werkzeuge (Ausführung über die Harness; der Manager darf sie nur mit diesem Eintrag nutzen)
+      - wissen_suchen           # nur lesen
+      - read_doc                # nur lesen
+      - list_docs               # nur lesen
+      - lauf_status             # nur lesen
+      - sitzungen_auflisten     # nur lesen
+      - prozess_beantragen      # Antrag an den Captain, keine Ausführung
+      # Bau: der Manager darf einen Bau-Lauf starten. Übernahme in runtime bleibt beim Captain (in_main_uebernehmen).
+      - bau_starten
+
+  # Budget je Tag, damit die Cloud nicht ausufert (Anfragen)
+  budget:
+    cloud_anfragen_pro_tag: 200

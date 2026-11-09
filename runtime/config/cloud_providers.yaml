@@ -12,16 +12,16 @@
 # bleiben lokal, Zugangsdaten werden nie gesendet. Jeder Cloudaufruf steht im Audit-Log (SG_MODEL_CALL, route=cloud).
 cloud_providers:
   schema: 1
-  enabled: false                     # Hauptschalter. Aus = keine Cloud, egal was unten steht.
+  enabled: true                      # Hauptschalter (Captain-Ja 09.11.2026: nur Anbieter nvidia). Aus = keine Cloud, egal was unten steht.
 
   providers:
     nvidia:
-      enabled: false
+      enabled: true                  # Captain-Ja 09.11.2026
       kind: openai_compatible        # NVIDIA-API (OpenAI-kompatibel)
       base_url: https://integrate.api.nvidia.com/v1
       api_key: secret://nvidia/api-key
       default_model: null            # Modellname des Anbieters eintragen, z. B. eine Llama-Kennung aus dem NVIDIA-Katalog
-      timeout_s: 60
+      timeout_s: 120                 # 09.11.2026: von 60 erhöht, weil langsame Modelle im Test in 60 s nicht antworten
 
     openai:
       enabled: false
