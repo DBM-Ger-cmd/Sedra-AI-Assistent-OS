@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wissensdatenbank Übersicht - SEDRA</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+        header {
+            border-bottom: 3px solid #2c3e50;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+        }
+        h1 { color: #2c3e50; }
+        .category {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #e67e22;
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        ul { list-style-type: none; padding: 0; }
+        li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+        li::before {
+            content: "•";
+            color: #e67e22;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        .description {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        footer {
+            text-align: center;
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Wissensdatenbank Übersicht</h1>
+        <p>Struktur der Dokumentation im Projektverzeichnis <code>docs/</code></p>
+    </header>
+
+    <section class="category">
+        <h2>1. Spezifikationen & Architektur (Das "Was" und "Wie")</h2>
+        <p class="description">Definieren Leitplanken, technische Anforderungen und das strukturelle Design.</p>
+        <ul>
+            <li><strong>Architektur:</strong> ARCHITEKTUR.md, ARCHITECTURE_GAP_REPORT.md</li>
+            <li><strong>Spezifikationen:</strong> SPEC_AGENTEN_ORCHESTRIERUNG_v1.md, FACTORY_SDK_SPEC.md, SPEC7_S7.6_RETRIEVAL_QUALITAET.md</li>
+            <li><strong>Konzepte:</strong> KONZEPT_APPS_UND_ERWEITERUNGEN_v1.md, KONZEPT_MOD-04_FACTORY_STUDIO.md</li>
+            <li><strong>Regelwerke:</strong> REGELWERK_DATENKATEGORIEN_CLOUDSPERRE_v0.1, REGELWERK_STANDARDLAEUFE.md</li>
+        </ul>
+    </section>
+
+    <section class="category">
+        <h2>2. Bauberichte & Status (Der Fortschritt)</h2>
+        <p class="description">Dokumentation des Fortschritts, der Ergebnisse und des aktuellen Stands.</p>
+        <ul>
+            <li><strong>Bauberichte:</strong> BAUBERICHT_HARNESS_BAU_2026-11-01.md, BAUBERICHT_WISSEN_K5_1_2_2026-11-05.md</li>
+            <li><strong>Status-Updates:</strong> PHASE0_STATUS.md bis PHASE9_STATUS.md</li>
+            <li><strong>Bestände:</strong> BESTANDSAUFNAHME_v1.22.0_2026-11-03.md, BESTAND_MOD_01_APPS.md</li>
+        </ul>
+    </section>
+
+    <section class="category">
+        <h2>3. Analysen & Prüfungen (Qualitätssicherung)</h2>
+        <p class="description">Dokumentation von Problemanalysen, Tests und Evaluierungen.</p>
+        <ul>
+            <li><strong>Analysen:</strong> ANALYSE_BAUABLAUF_2026-10-20.md, ANALYSE_WISSEN_IM_KERN_2026-11-05.md, AM_BAU_FEHLERANALYSE_2026-10-07.md</li>
+            <li><strong>Prüfberichte:</strong> PRUEFBERICHT_KI_GATEWAY_KMU_2026-10-20.md, PRUEFUNG_SPEC7_CODE_2026-10-23.md</li>
+            <li><strong>Modellvergleiche:</strong> MODELL_VERGLEICH_ERGEBNISSE.md</li>
+        </ul>
+    </section>
+
+    <section class="category">
+        <h2>4. Planung & Roadmaps (Die Zukunft)</h2>
+        <p class="description">Strategische Ausrichtung und operative Planung für kommende Schritte.</p>
+        <ul>
+            <li><strong>Roadmaps:</strong> ROADMAP_ONE_SEDRA_APPS_KERN_SHELL_2026-11-05.md, ROADMAP_ONE_SEDRA_RENEW_2026-11-05.md</li>
+            <li><strong>Pläne:</strong> PLAN_PROZESS_APPS_UIX.md, PLAN_CPU_HILFSWERKZEUGE_2026-11-04.md, REDESIGN_PLAN.md</li>
+            <li><strong>Aufträge:</strong> AUFTRAG_WERKZEUGKETTE_CHAT_AKTIONEN_2026-11-02.md, DEVVM_AUFTRAG_2026-10-05.md</li>
+        </ul>
+    </section>
+
+    <section class="category">
+        <h2>5. Betrieb & Logistik (Der Kontext)</h2>
+        <p class="description">Allgemeine Informationen zum Betriebssystem und zur Umgebung.</p>
+        <ul>
+            <li><strong>Betrieb:</strong> BETRIEB.md</li>
+            <li><strong>Logbücher:</strong> LOGBUCH_AGENT_MANAGER.md</li>
+            <li><strong>Changelogs:</strong> CHANGELOG.md</li>
+        </ul>
+    </section>
+
+    <footer>
+        Generiert von SEDRA am 2026-11-09
+    </footer>
+</body>
+</html>
