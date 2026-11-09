@@ -59,25 +59,36 @@
       if(!scenario) svg.append(element('rect', {x: view.x, y: view.y, width: view.width, height: view.height, fill: 'url(#' + grid + ')', class: 't-wf-grid', 'pointer-events': 'none'}));
       const byName = new Map(nodes.map(n=>[n.name, n]));
       edgeBars = [];
+      // Kantenführung (workflow-layout.js): rechtwinklig an den Knoten vorbei, Rücksprünge in eigenen Bahnen unter dem Graphen
+      const Lay = root.sedraWorkflowLayout, hoehe = G.h + 34, kisten = nodes.filter(n=>!/\.stickyNote$/.test(n.type)).map(n=>({n: n.name, r: [n.position[0], n.position[1], G.w, hoehe]}));
+      const boden = kisten.length ? Math.max(...kisten.map(k=>k.r[1] + hoehe)) + 28 : 0;
+      const zeilenY = [...new Set(kisten.map(k=>k.r[1]))].sort((p, q)=>p - q), quer = [];
+      zeilenY.forEach((y, i)=>{ const next = zeilenY[i + 1]; if(next !== undefined && next - (y + hoehe) >= 16) quer.push((y + hoehe + next) / 2); });
+      if(zeilenY.length) quer.push(zeilenY[0] - 24);
+      let bahnen = 0;
+      const gassen = new Map();       // je Spalte: wie viele Kanten ihre senkrechte Gasse schon nutzen (jede bekommt eine eigene, sonst fallen sie zusammen)
       Object.entries(doc.connections).forEach(([source, out])=>Object.entries(out).forEach(([kind, branches])=>branches.forEach((branch, index)=>branch.forEach(edge=>{
         const a = byName.get(source), b = byName.get(edge.node); if(!a || !b) return;
         const count = a.type.endsWith('.if') ? 2 : 1, o = G.out(Math.min(index, count - 1), count);
         const gap = scenario ? 12 : 0;
         const x = a.position[0] + o[0] + gap, y = a.position[1] + o[1];
         const tx = b.position[0] + G.inn[0] - (scenario ? 14 : 0), ty = b.position[1] + G.inn[1];
-        const d = Math.max(40, Math.abs(tx - x) / 2);
-        const path = element('path', {d: `M ${x} ${y} C ${x + d} ${y}, ${tx - d} ${ty}, ${tx} ${ty}`, class: 't-wf-edge' + (scenario ? ' scenario' : ''), 'marker-end': scenario ? 'none' : 'url(#' + marker + ')'});
+        const dx = Math.max(40, Math.abs(tx - x) / 2), rueck = tx - x < (Lay ? Lay.VORWAERTS : 48);
+        const gasse = gassen.get(Math.round(x)) || 0; gassen.set(Math.round(x), gasse + 1);
+        const weg = Lay ? Lay.fuehren([x, y], [tx, ty], kisten.filter(k=>k.n !== source && k.n !== edge.node).map(k=>k.r), {boden, bahn: rueck ? bahnen++ : 0, querbahnen: quer, stub: (count === 2 ? 40 : 20) + gasse * 9, versatz: gasse * 7}) : null;
+        const mid = weg ? Lay.mitte(weg) : [(x + tx) / 2, (y + ty) / 2];
+        const path = element('path', {d: weg ? Lay.pfad(weg) : `M ${x} ${y} C ${x + dx} ${y}, ${tx - dx} ${ty}, ${tx} ${ty}`, class: 't-wf-edge' + (scenario ? ' scenario' : ''), 'marker-end': scenario ? 'none' : 'url(#' + marker + ')'});
         path.append(element('title', {}, source + ' → ' + edge.node + ' (' + kind + ':' + index + ')')); svg.append(path);
         const key = source + '|' + kind + '|' + index + '|' + edge.node, chosen = edgeSel === key;
         if(chosen) path.classList.add('selected');
         if(!handlers.readOnly && handlers.edgeDelete){
           const hit = element('g', {class: 't-wf-edge-hitbox', 'aria-label': source + ' nach ' + edge.node + ' Verbindung wählen', role: 'button', tabindex: 0});
-          hit.append(element('path', {d: path.getAttribute('d'), class: 't-wf-edge-hit'}), element('circle', {cx: (x + tx) / 2, cy: (y + ty) / 2, r: 9, class: 't-wf-edge-dot'}));
+          hit.append(element('path', {d: path.getAttribute('d'), class: 't-wf-edge-hit'}), element('circle', {cx: mid[0], cy: mid[1], r: 9, class: 't-wf-edge-dot'}));
           const choose = event=>{event.stopPropagation();event.preventDefault();edgeSel = chosen ? null : key;draw();};
           hit.addEventListener('pointerdown', event=>event.stopPropagation());hit.addEventListener('click', choose);hit.addEventListener('keydown', event=>{if(event.key === 'Enter' || event.key === ' ')choose(event);});
           svg.append(hit);
           if(chosen){
-            const mx = (x + tx) / 2, my = (y + ty) / 2, bar = element('g', {class: 't-wf-actions t-wf-edgebar', transform: `translate(${mx - 29} ${my - 13})`});
+            const mx = mid[0], my = mid[1], bar = element('g', {class: 't-wf-actions t-wf-edgebar', transform: `translate(${mx - 29} ${my - 13})`});
             [['plus', 'Schritt einfügen', ()=>handlers.edgeAdd && handlers.edgeAdd(source, index, edge.node)], ['trash', 'Verbindung löschen', ()=>handlers.edgeDelete(source, kind, index, edge.node)]].forEach(([icon, label, run], k)=>{
               const b = element('g', {class: 't-wf-act' + (icon === 'trash' ? ' danger' : ''), role: 'button', tabindex: 0, 'aria-label': source + ' nach ' + edge.node + ': ' + label, transform: `translate(${k * 32} 0)`});
               b.append(element('rect', {width: 26, height: 26, rx: 7, class: 't-wf-act-box'}));if(root.sedraWorkflowIcons)root.sedraWorkflowIcons.append(b, icon, 13, 13, 14);b.append(element('title', {}, label));
@@ -87,7 +98,7 @@
             edgeBars.push(bar);
           }
         }
-        if(a.type.endsWith('.if'))svg.append(element('text', {x: (x + tx) / 2, y: (y + ty) / 2 - 8, 'text-anchor': 'middle', class: 't-wf-edge-label'}, index === 0 ? 'Ja' : 'Nein'));
+        if(a.type.endsWith('.if'))svg.append(element('text', {x: weg ? x + 8 : (x + tx) / 2, y: weg ? y + (index === 0 ? -9 : 17) : (y + ty) / 2 - 8, 'text-anchor': weg ? 'start' : 'middle', class: 't-wf-edge-label'}, index === 0 ? 'Ja' : 'Nein'));
       }))));
       nodes.forEach((node, order)=>{
         const known = root.sedraWorkflowModel.types.some(t=>'n8n-nodes-base.' + t[0] === node.type && t[2] === node.typeVersion);

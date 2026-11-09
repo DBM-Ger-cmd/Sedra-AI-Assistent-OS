@@ -89,16 +89,15 @@
       this.change(()=>{const zweige = ((this.state.doc.connections[source] || {})[kind]) || [], z = zweige[index] || [];for(let k = z.length - 1; k >= 0; k--)if(z[k].node === target)z.splice(k, 1);});
       this.notice('Verbindung ' + source + ' nach ' + target + ' gelöscht. „Zurück“ stellt sie wieder her.');
     },
-    // Aufräumen wie „Tidy up“ im n8n-Editor: Spalten nach Abstand vom Auslöser, Zeilen nach Reihenfolge; Notizen bleiben stehen
+    // Aufräumen (workflow-layout.js): Ebenen von links nach rechts, Rücksprünge herausgenommen, der Hauptweg auf einer Zeile, „Nein“ darunter;
+    // Notizen bleiben stehen. Ein Schritt in „Zurück“.
     tidy(){
-      const doc = this.state.doc, byName = new Map(doc.nodes.map(n=>[n.name, n])), start = doc.nodes.find(n=>n.type.endsWith('.manualTrigger')) || doc.nodes[0];
-      if(!start)return;
-      const tiefe = new Map([[start.id, 0]]), reihe = [start];
-      for(const n of reihe)Object.values(doc.connections[n.name] || {}).forEach(zweige=>zweige.forEach(z=>z.forEach(e=>{const t = byName.get(e.node);if(t && !tiefe.has(t.id)){tiefe.set(t.id, tiefe.get(n.id) + 1);reihe.push(t);}})));
-      doc.nodes.filter(n=>!tiefe.has(n.id) && !n.type.endsWith('.stickyNote')).forEach(n=>{tiefe.set(n.id, 0);reihe.push(n);});
-      const sz = options.style === 'scenario' ? [240, 200] : [224, 170], zeilen = new Map();
-      this.change(()=>{reihe.forEach(n=>{const d = tiefe.get(n.id), z = zeilen.get(d) || 0;zeilen.set(d, z + 1);n.position = [d * sz[0], z * sz[1]];});});
-      this.notice('Knoten geordnet. „Zurück“ stellt die alte Anordnung wieder her.');
+      const doc = this.state.doc, L = root.sedraWorkflowLayout;
+      if(!L || !doc.nodes.length)return;
+      const sz = options.style === 'scenario' ? [240, 200] : [224, 170], o = L.anordnen(doc, {dx: sz[0], dy: sz[1]});
+      this.change(()=>{doc.nodes.forEach(n=>{if(o.pos[n.name])n.position = o.pos[n.name].slice();});});
+      if(this.canvas && this.canvas.fit)this.canvas.fit();
+      this.notice('Knoten geordnet, Rücksprünge laufen unter dem Ablauf. „Zurück“ stellt die alte Anordnung wieder her.');
     },
     // Parameteransicht (Eingabe, Parameter, Ausgabe) für die n8n-Darstellung; übernimmt Name und Parameter erst mit „Übernehmen“ als eine Änderung
     openNdv(id){
