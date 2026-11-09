@@ -12,9 +12,21 @@ from sedra_runtime.workflows import live  # noqa: E402
 P = 'vollautomatischer-bau'
 
 
+def lauf_anlegen(root, lid, status, gestartet, ende=None, name='Tests', log='', pid=None):
+    """Einen Eintrag im Register der Harness-Läufe schreiben (so, wie ihn die Harness anlegt)."""
+    import json
+    ordner = Path(root) / 'runtime_data' / 'harness' / 'laeufe' / lid
+    ordner.mkdir(parents=True, exist_ok=True)
+    (ordner / 'lauf.json').write_text(json.dumps({'id': lid, 'lauf': 'run_tests', 'name': name, 'parameter': {}, 'argv': ['python', 'x'], 'ordner_abs': str(root), 'zeitlimit_min': 30,
+                                                 'gpu': 'keine', 'modell_weg': False, 'sitzung_id': None, 'antwort_id': None, 'aufgabe_id': None, 'karte_id': None, 'projekt': 'p',
+                                                 'pid': pid, 'start_zeit_pid': None, 'gestartet': gestartet, 'ende': ende, 'exit': 0 if status == 'ok' else (None if status == 'laeuft' else 1),
+                                                 'status': status, 'grund': None, 'fortschritt': None, 'fortschritt_regel': {'art': 'text'}}), encoding='utf-8')
+    (ordner / 'ausgabe.log').write_text(log, encoding='utf-8')
+
+
 @unittest.skipUnless(os.environ.get('SEDRA_BROWSER') == '1', 'Set SEDRA_BROWSER=1')
 class LiveImBrowser(unittest.TestCase):
-    def session(self, run, melden=None):
+    def session(self, run, melden=None, mit_hub=None):
         from playwright.sync_api import sync_playwright
         from uix_check import start_server
         from sedra_runtime.workflows import selbstabbild
@@ -26,6 +38,8 @@ class LiveImBrowser(unittest.TestCase):
             stand['root'] = hub.project_root
             if melden:
                 melden(hub.project_root)
+            if mit_hub:
+                mit_hub(hub)
         url, stop = start_server(lambda *a: None, shell='harness', prepare=vorbereiten)
         try:
             with sync_playwright() as pw:
@@ -136,6 +150,45 @@ class LiveImBrowser(unittest.TestCase):
             n0 = page.evaluate('()=>window.__n')
             page.wait_for_timeout(6000)
             self.assertEqual(page.evaluate('()=>window.__n'), n0, 'im Editor-Reiter wird nicht mehr abgefragt')
+        self.session(run)
+
+    def test_fabrikhalle_zeigt_laeufe_und_die_wartende_freigabe(self):
+        jetzt = datetime.now(timezone.utc)
+        iso = lambda d: d.isoformat(timespec='seconds')
+
+        def hub_vorbereiten(hub):
+            root = hub.project_root
+            lauf_anlegen(root, 'L-AAAA0001', 'laeuft', iso(jetzt - timedelta(minutes=3)), name='Tests der Fabrik', log='Gruppe 3 von 6\n', pid=os.getpid())
+            lauf_anlegen(root, 'L-AAAA0002', 'ok', iso(jetzt - timedelta(hours=1)), iso(jetzt - timedelta(minutes=50)), name='Selbsttest')
+            lauf_anlegen(root, 'L-AAAA0003', 'fehler', iso(jetzt - timedelta(hours=2)), iso(jetzt - timedelta(hours=1, minutes=55)), name='Spec prüfen')
+            hub.act({'type': 'wissen', 'verb': 'quelle_beantragen', 'args': {'adapter': 'markdown', 'wurzel': 'repo', 'pfad': 'docs', 'stufe': 1}})
+
+        def run(page, root):
+            app = self.live_tab(page)
+            halle = app.locator('.t-wf-fabrik')
+            halle.locator('[data-art=laeufe]').filter(has_text='1 Lauf läuft').wait_for(timeout=20000)
+            self.assertIn('1 Freigabe wartet auf dich', halle.locator('[data-art=freigaben]').inner_text())
+            aktiv = halle.locator('.t-wf-fabrik-lauf.aktiv')
+            self.assertIn('Tests der Fabrik · läuft', aktiv.inner_text())
+            self.assertIn('Gruppe 3 von 6', aktiv.inner_text())
+            self.assertEqual(halle.locator('.t-wf-fabrik-lauf[data-status=ok]').count(), 1)
+            self.assertEqual(halle.locator('.t-wf-fabrik-lauf[data-status=fehler]').count(), 1)
+            self.assertIn('fertig', halle.locator('.t-wf-fabrik-lauf[data-status=ok]').inner_text())
+            self.assertNotIn('python', halle.inner_text(), 'Befehl und Pfade bleiben draußen')
+            self.assertEqual(halle.locator('.t-wf-fabrik-karte').count(), 1)
+            # ein Klick auf die Freigabe führt in den Posteingang
+            halle.locator('[data-art=freigaben]').click()
+            page.get_by_text('Wissensquelle freigeben', exact=False).first.wait_for(timeout=20000)
+        self.session(run, mit_hub=hub_vorbereiten)
+
+    def test_fabrikhalle_ohne_laeufe_sagt_es(self):
+        def run(page, root):
+            app = self.live_tab(page)
+            halle = app.locator('.t-wf-fabrik')
+            halle.locator('[data-art=laeufe]').filter(has_text='0 Läufe laufen').wait_for(timeout=20000)
+            self.assertIn('Gerade läuft kein Lauf.', halle.inner_text())
+            self.assertIn('0 Freigaben warten auf dich', halle.locator('[data-art=freigaben]').inner_text())
+            self.assertFalse(halle.locator('[data-art=freigaben]').evaluate("e=>e.classList.contains('wartet')"))
         self.session(run)
 
 

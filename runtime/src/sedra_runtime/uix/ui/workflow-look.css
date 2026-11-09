@@ -267,3 +267,19 @@
 .t-workflow .t-wf-node.live-fehler{filter:drop-shadow(0 0 7px var(--bad))}
 @media (prefers-reduced-motion:reduce){.t-workflow .t-wf-node.live-laeuft .t-wf-tile,.t-workflow .t-wf-node.live-laeuft .t-wf-module-ring,.t-workflow .t-wf-node.live-wartet .t-wf-tile,.t-workflow .t-wf-node.live-wartet .t-wf-module-ring{animation:none}}
 
+/* Teil E1: Fabrikhalle im Live-Reiter */
+.t-workflow .t-wf-fabrik{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px}
+.t-workflow .t-wf-fabrik-kacheln{display:flex;flex-wrap:wrap;gap:10px}
+.t-workflow .t-wf-fabrik-kachel{flex:1 1 180px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);font:inherit;color:var(--text);text-align:left}
+.t-workflow .t-wf-fabrik-frei{cursor:pointer}
+.t-workflow .t-wf-fabrik-frei.wartet{border-color:var(--warn-line);background:var(--warn-bg);color:var(--warn);font-weight:600}
+.t-workflow .t-wf-fabrik-belegt{margin:0;font-size:12px;color:var(--muted)}
+.t-workflow .t-wf-fabrik ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.t-workflow .t-wf-fabrik-lauf,.t-workflow .t-wf-fabrik-aufgabe,.t-workflow .t-wf-fabrik-karte,.t-workflow .t-wf-fabrik-leer{padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.t-workflow .t-wf-fabrik-lauf.aktiv{border-color:var(--ok-line);background:var(--ok-bg)}
+.t-workflow .t-wf-fabrik-lauf.fehler,.t-workflow .t-wf-fabrik-lauf.verloren{border-color:var(--bad-line);color:var(--bad)}
+.t-workflow .t-wf-fabrik-leer{color:var(--muted)}
+.t-workflow .t-wf-fabrik-name{font-weight:600}
+.t-workflow .t-wf-fabrik-text{color:var(--muted);flex-basis:100%}
+.t-workflow .t-wf-fabrik-balken{width:160px;height:8px}
+.t-workflow .t-wf-fabrik-karte{border-color:var(--warn-line);background:var(--warn-bg)}

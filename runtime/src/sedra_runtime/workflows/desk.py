@@ -82,6 +82,24 @@ def _live(hub, oid, args):
     return {'status': 'erledigt', 'prozesse': out, 'zaehler': zaehler}
 
 
+def _fabrik(hub, oid, args):
+    """Was die Harness gerade tut (workflows/fabrik.py): Läufe, aktive Aufgaben, offene Freigaben. Nur lesen; ohne Harness eine leere Übersicht."""
+    from . import fabrik
+    h = getattr(hub, 'harness', None)
+    if h is None:
+        return dict(fabrik.uebersicht([], [], []), status='erledigt')
+    from ..harness import aufgabe as harness_aufgabe
+    laeufe = h.laeufe.alle()
+    aufgaben = [harness_aufgabe.oeffentlich(a, lauf_namen=h._lauf_namen()) for a in h.aufgaben.alle('aktiv')]
+    try:
+        offen = hub.decisions_view()['items']                          # alles im Posteingang: Missionen, Anträge, Harness-Karten
+    except (AttributeError, KeyError, TypeError):
+        offen = h.entscheidungen()
+    out = fabrik.uebersicht(laeufe, aufgaben, offen, h.laeufe.belegt())
+    out['status'] = 'erledigt'
+    return out
+
+
 def _run_read(hub, mid):
     m = hub.runtime.missions.load(mid)
     ref = (m.get('context') or {}).get('n8n_workflow')
@@ -158,7 +176,8 @@ def register(registry, hub):
                     Verb('pruefen', 'Kompatibilität prüfen', _check),
                     Verb('selbstabbild_pruefen', 'Selbstabbild gegen die Quellen prüfen', _selbstabbild_pruefen),
                     Verb('selbstabbild_anlegen', 'Abläufe von SEDRA aus den Quellen anlegen', _selbstabbild_anlegen),
-                    Verb('live', 'Laufende Prozesse', _live)]))
+                    Verb('live', 'Laufende Prozesse', _live),
+                    Verb('fabrik', 'Die Fabrikhalle', _fabrik)]))
     canonical = registry.get('workflow')
     registry.register(registry.Kind('scenario', 'Szenario Studio',
         lambda h, oid: dict(_read(h, oid), type='scenario'),

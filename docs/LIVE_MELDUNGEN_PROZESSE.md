@@ -36,3 +36,13 @@ Noch niemand. Der Bau (`runtime/benchmarks/bau_schleife.py`) soll vor und nach j
 ## Prüfung
 
 `runtime/tests/test_workflow_live.py` (Datei, Zustände, Veralten, Eingaben, Befehlszeile, Verb) und `runtime/tests/test_uix_workflow_live.py` (Browser: Leerzustand, Schritt leuchtet und folgt der Meldung, wartet, Fehler, „keine Meldung“, beide Apps, Abfrage nur bei offenem Reiter).
+
+## Die Fabrikhalle (E1)
+
+Über den Prozesskarten zeigt der Reiter Live, was die Harness tut und was auf den Captain wartet. Das Verb `fabrik` (workflows/fabrik.py, nur lesen) fasst zusammen:
+
+- **Drei Kacheln:** Läufe, Aufgaben, Freigaben. Die Kachel mit wartenden Freigaben ist gelb und führt per Klick in den Posteingang. Gezählt wird alles, was im Posteingang auf den Captain wartet (Missionen, Anträge, Harness-Karten).
+- **Läufe:** die laufenden mit Dauer, Fortschrittsbalken und letzter Zeile, darunter die letzten sechs beendeten (fertig, Fehler, gestoppt, verloren). Wer das Modell gerade hält, steht darüber.
+- **Aktive Aufgaben** mit Zweck und Restzeit, und die drei neuesten wartenden Freigaben.
+- Befehl, Pfade und Parameter der Läufe gehen nie an die Oberfläche. Es wird nichts gestartet, gestoppt oder freigegeben.
+- Läufe und Aufgaben stehen in der Fabrikhalle auch ohne Meldungen. Die Karten mit dem leuchtenden Schritt erscheinen nur für Prozesse, die selbst melden.
