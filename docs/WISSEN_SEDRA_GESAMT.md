@@ -120,8 +120,50 @@ Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzei
 
 **Offen (Stand 06.11.2026):** Push nach GitHub nur auf ausdrückliches Ja (Entscheidung, ob der Verlauf mit den vier Beispielpfaden bleibt); Paket 1.22.3 (Paketier-Skript fehlt im Repo); echter Windows-Lauf der F0-Updates (Erst-/Zweitstart, `--replace`); offene SQLite-Warnungen in Orchestra, Scheduler und Job-Supervisor; Worktrees `A1-wt-prozess-apps-uix`, `A1-wt-wissen-k5-v4` und die Branches `feat/prozess-apps-uix`, `f0-runtime-updates`, `wissen-k5-v4`, `wissen-kern-k1k2` entfernen, sobald der Captain abgenommen hat; Anbindung der Startseite an den Chat bleibt bei „Sitzung starten“ (kein eigener Chat-Dialog in den Apps).
 
+## 12. Arbeit im Chat vom 08.–09.11.2026 (Claude Code: Nachtlauf, Bau-Wiederholung, Register)
+**Stand:** `main` = `f8575e1`, gleich `origin/main` (nach GitHub gepusht: `6250384` und `f8575e1`). Offen im Arbeitsbaum: nur die automatisch geschriebenen BAU-Zeilen im Logbuch (21:53 bis 22:54), siehe unten.
+
+**Gebaut bzw. integriert (Ort und Beleg in Klammern):**
+- **F0-05C-Nachtlauf** als docs-only-Commit `6250384` auf `main`: `docs/SPEC_F0_05C_SHUTDOWN_REIHENFOLGE.md`, `docs/ANALYSE_F0_06A_RESOURCEWARNINGS.md`, `docs/TESTPLAN_GATE-01_VER-01.md` (Prüfsummen OK, `git apply --check` OK gegen `52f33f3`, `git ls-remote` bestätigt).
+- **Logbuch** `f8575e1`: zwei BAU-Zeilen zum Bau vom 17:16 und 17:54 (beide nicht bestanden).
+- **Register** `04_REGISTER/auftraege.json` (Quelle außerhalb des Repos, im Koordinator-Paket): Notizen zu SEDRA-F0-05C, SEDRA-F0-06A, SEDRA-GATE-01, SEDRA-VER-01 mit Verweis auf die integrierten Dateien. Keine Statusänderung. Sicherungen `auftraege.json.bak_vor_f005c_20261108` und `auftraege.json.bak_vor_nachtlauf_f006a_20261108`. Validator: 35 Aufträge, OK. Dashboard neu gerendert und nach `E:\Sedra Umgebung\KOORDINATOR_DASHBOARD.html` kopiert.
+- **Korrektur:** SEDRA-F0-05B steht bereits auf `MAIN_VERIFIED` (Integrationscommit `e83d0af`, Testbericht PASS mit Vorbehalt). Eine Notiz der Nachtlauf-Sitzung sagte fälschlich `SPEC_APPROVED`; das Register wurde deshalb nicht geändert.
+- **Korrektur:** SEDRA-F0-06A existierte bereits im Register. Meine Suche hatte nur `F0-06A` statt `SEDRA-F0-06A` gesucht und einen fehlenden Eintrag gemeldet.
+
+**Factory-Bau `factory_sdk_grundlage` (Ergebnis: nicht bestanden):**
+- Lauf v4 (21:24) endete mit `BAU_ENDE exit=127`. Der Lauf wurde mit `Stop-Process` angehalten (Captain-Auftrag), danach keine `devvm_build`-Prozesse.
+- Lauf v5 ab Stufe 2 vom Snapshot `after_S1` (21:45 bis 21:53): Stufe 2 „hidden FAILED“, S3 und S4 nicht gebaut. Kandidat `attempt_01_20261108_215340`. Log `runtime_data\bau_factory_sdk_grundlage_v5_ab_S2.log`.
+- Wiederholung (Skript `runtime_data\bau_wiederholung_s2_status.log` und `bau_wiederholung_s2.sh`, außerhalb des Repos): `coder.local_primary` Versuch 1 (22:09), Versuch 2 (22:19), dann `qwen3coder` Versuch 1 (bis 22:41), Versuch 2 (bis 22:54). Alle vier fehlgeschlagen. Kandidaten `attempt_01_20261108_220936`, `_221909`, `_224153`, `_225422`.
+- In den Versuchen 2 (beide Modelle) steht `SERVER CRASH … ConnectionResetError` im Log. Diese Versuche sind damit keine saubere Modellprüfung.
+- Nicht geprüft: welcher Hidden-Test in Stufe 2 scheitert. Die Log-Zeilen nennen den Test nicht; die Ursache steht in den Kandidatenordnern.
+
+**Nachtlauf-Sitzung** (`nachtlauf-sedra-bau-berw`, Gruppe „Sedra Vorarbeiter“): Bau überwacht; GATE-01-Test 17/17 grün (Angabe der Sitzung, im Register belegt); REL-02-Verifier bricht ab (Angabe der Sitzung); VER-01 nicht gelaufen; keine Commits.
+
+**Entscheidungen des Captains (08.–09.11.):**
+- F0-05C und F0-06A-Analyse, GATE-01/VER-01-Testplan in `main` übernehmen (ja).
+- Logbuch-Änderung committen (ja, Quelle vertrauenswürdig).
+- Factory-Bau ab Stufe 2 fortsetzen (ja); F0-06A-Eintrag und GATE-01/VER-01 erfassen (ja).
+- Dashboard-Abarbeitung durch die Nachtlauf-Sitzung: Freigabe nur für Dokumentation und Register, ohne Integration.
+- VER-01 „ja soll jetzt“ in diesem Chat. Die Nachtlauf-Sitzung verlangt ein „ja“ in ihrem eigenen Chat, weil dort zuvor „Nein, später“ stand. Eine Weitergabe zwischen Sitzungen gilt nicht als Freigabe.
+
+**Offen (Stand 09.11.2026):**
+- VER-01 (Windows-Live-Lauf): braucht „ja“ in der Nachtlauf-Sitzung und einen Stopp des SEDRA-Routers (`llama-server`, PID 13908, Port 8090), weil der Testplan „kein laufender Modellserver“ verlangt. Entscheidung des Captains offen.
+- REL-02: Verifier bricht ab (Nachtlauf-Sitzung). Ursache nicht untersucht.
+- Factory-Bau: Entscheidung offen, ob der Bau mit anderer Einstellung neu versucht wird. Vorschlag: zuerst die Testfehler in den Kandidatenordnern lesen, dann Server-Abbrüche prüfen (`--context` senken oder Modellserver stabilisieren), danach erst erneut bauen.
+- Arbeitsbaum: `docs/LOGBUCH_AGENT_MANAGER.md` mit den BAU-Zeilen 21:53 bis 22:54 (automatisch geschrieben).
+- Worktrees und Branches unverändert: `A1-wt-f0-05-drain`, `A1-wt-freigabe-luecken`, `A1-wt-wissen-k5-v5` sowie `claude/usb-stick-minimal-3c1b19` und `codex/n8n-workflow-app`. Löschen nur auf Ja.
+
+**Fallen und Praxiswissen dieser Sitzung:**
+- Wiederholung ohne Ursachenanalyse war ein Fehler. Vor einer Wiederholung zuerst den Fehler im Testlog oder Kandidatenordner lesen und dem Captain eine Alternative vorschlagen.
+- Eine Freigabe, die im Chat einer Sitzung gegeben wird, gilt nur dort. Eine Weitergabe per Nachricht an eine andere Sitzung ist keine Freigabe.
+- `Monitor` mit `until`-Schleife läuft 30 Minuten und endet dann von selbst. Bei noch laufendem Prozess neu starten.
+- Ein `sleep 60` im Bash-Tool wurde blockiert. Warten über Monitor oder `run_in_background`.
+- Die Baulogs enthalten keine Zeile mit dem Namen des fehlgeschlagenen Tests. Die Testausgabe steht im Kandidatenordner.
+- Der Bau schreibt die BAU-Zeile im Logbuch selbst (außer mit `--no-logbook`). Diese Zeilen nicht doppelt von Hand eintragen.
+
 ## 9. Alle Chats (Sitzungen), nach Datum
 **Sedra Vorarbeiter (Gruppe):**
+- 08.–09.11. Claude Code, Chat „Nachtlauf SEDRA“ (Koordinator): F0-05C-Abgabe in `main` übernommen, Factory-Bau v5 und Wiederholung (nicht bestanden), Register-Notizen, Dashboard; Sitzung „Nachtlauf SEDRA: Bau überwachen, Dashboard abarbeiten“ (siehe Abschnitt 12).
 - 05.–06.11. Claude Code, Chat „Prozess-Apps einspielen und überarbeiten“: Update 1.22.2, UIX der Prozess-Apps, Selbstabbild, F0-01 bis F0-04, Wissen K1/K2/K5, Skills; Unterchats „Updates einspielen und prüfen“ und „Aufräumen der Umgebung“ (siehe Abschnitt 11).
 - 04.–05.11. Claude Code, Vorarbeiter-Sitzung „VORARBEITER“: One Sedra, Desktop Builder, Lernsystem, Cache-Messung (siehe Abschnitt 10).
 - 31.10. Sedra Minimal USB-Stick Arbeitsumgebung (läuft); Sedra USB-Stick auf K:\ einrichten; SEDRA: minimale USB-Version auf K:\ einrichten (Worktree `claude/usb-stick-minimal-3c1b19`).
