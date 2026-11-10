@@ -5,6 +5,7 @@
 - dashboard_stand:     liest das Register und fasst den Stand zusammen (nur lesen)
 - journal_lesen:       liest die letzten Einträge des Journals (nur lesen)
 - modell_wahl:         wählt ein Cloud-Modell aus den Fähigkeitstests (nur lesen)
+- auftraege_verteilen: gibt Teilaufträge an den Vorarbeiter-Kanal, der sie an das Cloud-Modell (Hilfs-Coder) weitergibt; je Auftrag prüft er Gesetze, Tagesbudget und Inhaltsschutz
 """
 import ast
 import json
@@ -86,6 +87,26 @@ def modell_wahl(aufgabe_typ, ordner):
     """Modell für einen Aufgabentyp aus den Fähigkeitstests (siehe modellwahl.py). Nur lesen."""
     from .modellwahl import waehle_modell
     return waehle_modell(aufgabe_typ, ordner)
+
+
+MAX_AUFTRAEGE = 5            # Teilaufträge je Aufruf
+MAX_AUFTRAG_TEXT = 12000     # Zeichen je Teilauftrag
+
+
+def auftraege_verteilen(manager, sedra_root, auftraege):
+    """Der Manager gibt Teilaufträge an den Hilfs-Coder in der Cloud (Vorarbeiter-Kanal, manager/kanal.py). Jeder Auftrag: {typ, text}.
+    Erlaubnis kommt aus gesetze.yaml; der Kanal prüft je Auftrag Aufgabentyp (cloud_aufgaben), Tagesbudget und Inhaltsschutz. Ein abgelehnter Auftrag
+    steht mit seinem Grund im Ergebnis, er stoppt die anderen nicht. Das Ergebnis ist nur Text: nichts wird geschrieben oder übernommen."""
+    manager.nutze_werkzeug("auftraege_verteilen")
+    if not isinstance(auftraege, list) or not 1 <= len(auftraege) <= MAX_AUFTRAEGE:
+        raise ValueError("auftraege_ungueltig")
+    sauber = []
+    for a in auftraege:
+        if not isinstance(a, dict) or not isinstance(a.get("typ"), str) or not isinstance(a.get("text"), str) or len(a["text"]) > MAX_AUFTRAG_TEXT:
+            raise ValueError("auftrag_ungueltig")
+        sauber.append({"typ": a["typ"], "text": a["text"]})
+    from .kanal import verteile
+    return verteile(manager, sedra_root, sauber)
 
 
 def bau_starten(projekt, auftrag, spec=None, rezept=None, kontext=None):

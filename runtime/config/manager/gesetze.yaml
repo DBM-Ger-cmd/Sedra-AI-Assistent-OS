@@ -31,6 +31,7 @@ gesetze:
       - dashboard_stand         # nur lesen (Register)
       - journal_lesen           # nur lesen
       - modell_wahl             # nur lesen (Fähigkeitstests)
+      - auftraege_verteilen     # Teilaufträge an den Hilfs-Coder in der Cloud (Vorarbeiter-Kanal); je Auftrag Gesetze, Tagesbudget, Inhaltsschutz; Ergebnis nur Text
       # Harness-Werkzeuge (Ausführung über die Harness; der Manager darf sie nur mit diesem Eintrag nutzen)
       - wissen_suchen           # nur lesen
       - read_doc                # nur lesen
