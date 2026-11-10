@@ -191,13 +191,20 @@ def antwort_zeigen(client, antwort_id, karte_beantworten, ausgabe=print):
     return 'fertig'
 
 
-def karte_per_tastatur(karte):
-    """Nur ein Mensch am Terminal entscheidet: j = erlauben, s = erlauben und für die Sitzung merken, sonst ablehnen."""
-    try:
-        eingabe = input('Erlauben? [j]a / [s]itzung / [n]ein: ').strip().lower()
-    except EOFError:
-        return 'ablehnen'
-    return {'j': 'erlauben', 'ja': 'erlauben', 's': 'sitzung', 'sitzung': 'sitzung'}.get(eingabe, 'ablehnen')
+def karte_per_tastatur(karte, eingabe=input):
+    """Nur ein Mensch am Terminal entscheidet: j = erlauben, s = erlauben und für die Sitzung merken, n = ablehnen. Eine Leerzeile (etwa ein übrig
+    gebliebenes Enter) und jede andere Eingabe zählt nicht: es wird nachgefragt. Nur das Ende der Eingabe lehnt ab."""
+    while True:
+        try:
+            antwort = eingabe('Erlauben? [j]a / [s]itzung / [n]ein: ').strip().lower()
+        except EOFError:
+            return 'ablehnen'
+        if antwort in ('j', 'ja'):
+            return 'erlauben'
+        if antwort in ('s', 'sitzung'):
+            return 'sitzung'
+        if antwort in ('n', 'nein'):
+            return 'ablehnen'
 
 
 def karte_immer_ablehnen(karte):

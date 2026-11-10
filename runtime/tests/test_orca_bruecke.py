@@ -41,5 +41,22 @@ class Antwort(unittest.TestCase):
         self.assertIn('fertig', ''.join(zeilen))
 
 
+class Tastatur(unittest.TestCase):
+    def _wahl(self, eingaben):
+        it = iter(eingaben)
+        return ob.karte_per_tastatur({}, lambda _p: next(it))
+
+    def test_leerzeile_und_unbekanntes_fragen_nach(self):
+        self.assertEqual(self._wahl(['', 'vielleicht', 'J']), 'erlauben')
+        self.assertEqual(self._wahl(['', 's']), 'sitzung')
+
+    def test_nein_und_ende_der_eingabe_lehnen_ab(self):
+        self.assertEqual(self._wahl(['', 'n']), 'ablehnen')
+
+        def eof(_p):
+            raise EOFError
+        self.assertEqual(ob.karte_per_tastatur({}, eof), 'ablehnen')
+
+
 if __name__ == '__main__':
     unittest.main()
