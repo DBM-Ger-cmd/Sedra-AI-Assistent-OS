@@ -857,6 +857,7 @@ class HarnessApi:
                 continue
             eintrag = {'id': r['id'], 'modell': r.get('model'), 'groesse_gb': r.get('model_size_gb'), 'min_vram_gb': r.get('min_vram_gb'),
                        'dynamisch': bool((r.get('profile') or {}).get('dynamisch')), 'geladen': r.get('model') in geladen_ids,
+                       'slots': int(((r.get('profile') or {}).get('server') or {}).get('slots') or 1),
                        'passt': None, 'grund': None, 'bedarf_vram_gb': None, 'bedarf_ram_gb': None, 'auswahl': None, 'gemessen': r.get('measured_vram_gb') is not None}
             ctx = (r.get('profile') or {}).get('context') or {}
             grenze = int(ctx.get('measured_maximum') or ctx.get('maximum') or 0) or None            # die Stufen, die das Rezept hergibt (die Hardware kann sie noch kuerzen: der Server sagt es beim Laden)

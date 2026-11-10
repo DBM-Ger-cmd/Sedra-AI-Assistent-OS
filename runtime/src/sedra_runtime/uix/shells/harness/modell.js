@@ -30,6 +30,8 @@
   const GRUENDE = {host_ram_below_minimum: 'zu wenig Arbeitsspeicher auf diesem Rechner', host_vram_below_minimum: 'zu wenig Grafikspeicher auf diesem Rechner',
     hardware_incompatible: 'passt nicht zu dieser Hardware', context_capacity: 'das Kontextfenster reicht nicht', slots_not_measured: 'Slots nicht gemessen',
     recipe_disabled: 'Rezept ausgeschaltet', provider_unavailable: 'der Server ist nicht erreichbar', provider_cooldown: 'der Server erholt sich gerade',
+    vram_insufficient: 'zu wenig freier Grafikspeicher', ram_measured: 'zu wenig freier Arbeitsspeicher', ram_ledger: 'Arbeitsspeicher ist anderweitig vergeben', hardware_pressure: 'zu wenig freier Speicher',
+    gpu_lease_busy: 'die Grafikkarte ist gerade belegt', job_limit: 'es laufen schon zu viele Aufträge',
     location_not_local: 'kein lokales Modell', hardware_profile_changed: 'die Hardware hat sich geändert – Rezepte neu prüfen'};
   function grundtext(g){
     const s = String(g || '');
@@ -48,6 +50,32 @@
 
   // Wofuer ein Fenster taugt, in Worten (die Zahl allein sagt dem Nutzer nichts): Kurztest, kleine Aufgabe, Standard, grosse Aufgabe, Bau.
   function fensterZweck(t){ t = Number(t); return t <= 8192 ? 'Kurztest' : t <= 16384 ? 'kleine Aufgabe' : t <= 32768 ? 'Standard' : t <= 65536 ? 'große Aufgabe' : 'Bau, sehr großer Auftrag'; }
+  // Kurzname und feste Reihenfolge eines Rezepts in der Liste: ohne sie sähen vier Rezepte desselben Modells gleich aus. Aus der Rezept-ID und den Kanälen abgeleitet;
+  // die Captain-Datei bleibt unberührt. Reihenfolge je Gruppe: Power, Team, Bau nach Kanälen aufsteigend, Standard, Rest.
+  function kurzname(r){
+    const id = String((r && r.id) || ''), ende = id.split('.').pop();
+    const nk = ende.match(/(\d+)x(\d+)k/);
+    if(/power/.test(ende)) return {name: 'Power', rang: 0};
+    if(/team/.test(ende)) return {name: 'Team', rang: 1};
+    if(nk) return {name: nk[1] + ' × ' + nk[2] + 'k', rang: 2 + Number(nk[1]) / 100};
+    if(/gemma|verifier/.test(id)) return {name: 'Prüfer', rang: 5};
+    if(/primary|e4b$|qwen35$/.test(ende)) return {name: 'Standard', rang: 3};
+    const q = ende.match(/(q\d_k\w*)/i);
+    if(q) return {name: q[1].toUpperCase(), rang: 4};
+    return {name: ende.replace(/^local_|^llama_/, '').replace(/_/g, ' ') || id, rang: 6};
+  }
+  const kanaeleText = n=>Number(n) === 1 ? '1 Kanal' : n ? n + ' Kanäle' : '';
+  const fensterKurz = t=>t ? 'bis ' + Math.round(Number(t) / 1024) + 'k' : '';
+  // Die Zeile einer Option als reiner Text: Kurzname – Modell · Kanäle · Fenster · Urteil (Urteil vom Aufrufer, damit diese Funktion ohne Seite prüfbar bleibt).
+  function optionsText(r, urteil){
+    const k = kurzname(r), fenster = fensterKurz([...(r.kontexte || [])].sort((a, b)=>b - a)[0]);
+    return [k.name + ' – ' + (r.modell || r.id), kanaeleText(r.slots), fenster, urteil + (r.geladen ? ' (geladen)' : '')].filter(Boolean).join(' · ');
+  }
+  // Reihenfolge innerhalb einer Gruppe: geladen, dann was passt, dann nach Rang, dann nach Name – gleichbleibend, unabhängig vom Speicherstand.
+  function reihenfolge(a, b){
+    return (b.geladen ? 1 : 0) - (a.geladen ? 1 : 0) || (b.passt === true ? 1 : 0) - (a.passt === true ? 1 : 0)
+      || kurzname(a).rang - kurzname(b).rang || String(a.id).localeCompare(String(b.id));
+  }
   // Reihenfolge der Gruppen in der Modellwahl nach Einsatz; unbekannte Einsätze stehen dahinter, Rezepte ohne Einsatz unter „Weitere“.
   const EINSATZ = ['Bau und Agenten', 'Prüfen', 'Schnelltest und Werkzeuge', 'Hilfsmodell'];
 
@@ -87,7 +115,7 @@
     const zahl = (x, n)=>Number(x).toLocaleString('de-DE', {maximumFractionDigits: n});
     const urteil = m=>{
       if(m.passt === true) return '✓ passt' + (m.bedarf_vram_gb ? ' · ≈ ' + zahl(m.bedarf_vram_gb, 1) + ' GB VRAM' : '') + (m.auswahl && typeof m.auswahl.lagen === 'number' ? ', ' + m.auswahl.lagen + ' Lagen im RAM' : '');
-      if(m.passt === false) return '✗ ' + grundtext(m.grund);
+      if(m.passt === false) return '✗ passt nicht: ' + grundtext(m.grund);
       return '';
     };
     async function auffrischen(){
@@ -100,18 +128,18 @@
         const vorher = wahl.value, fensterVorher = fenster.value;
         const option = r=>{
           const o = document.createElement('option'); o.value = r.id;
-          o.textContent = (r.modell || r.id) + (r.groesse_gb ? ' · ' + zahl(r.groesse_gb, 1) + ' GB' : '') + ' · ' + urteil(r) + (r.geladen ? ' (geladen)' : '');
-          o.title = (r.beschreibung ? r.beschreibung + ' – ' : '') + r.id + (r.grund ? ' – ' + r.grund : '') + (r.gemessen ? ' – gemessene Werte' : '');
+          o.textContent = optionsText(r, urteil(r));
+          o.title = (r.beschreibung ? r.beschreibung + ' – ' : '') + (r.groesse_gb ? zahl(r.groesse_gb, 1) + ' GB Gewichte – ' : '') + r.id + (r.grund ? ' – ' + r.grund : '') + (r.gemessen ? ' – gemessene Werte' : '');
           o.dataset.passt = r.passt === true ? 'ja' : r.passt === false ? 'nein' : '';
           return o;
         };
         const gruppen = [...EINSATZ, ...new Set(rezepte.map(r=>r.einsatz).filter(e=>e && !EINSATZ.includes(e))), ''];
         wahl.replaceChildren(...gruppen.map(g=>{
-          const dazu = rezepte.filter(r=>(r.einsatz || '') === g); if(!dazu.length) return null;
+          const dazu = rezepte.filter(r=>(r.einsatz || '') === g).sort(reihenfolge); if(!dazu.length) return null;
           const og = document.createElement('optgroup'); og.label = g || 'Weitere'; og.append(...dazu.map(option)); return og;
         }).filter(Boolean));
         const vorgabe = S.vorgaben && S.vorgaben.rezept_standard;                                   // P0 M3: die Vorgabe vor „zuletzt“
-        const erstes = rezepte.find(r=>r.passt) || rezepte[0];
+        const erstes = [...rezepte].sort(reihenfolge).find(r=>r.passt) || rezepte[0];
         wahl.value = rezepte.some(r=>r.id === vorher) ? vorher : (geladen ? geladen.id : (rezepte.some(r=>r.id === vorgabe) ? vorgabe : (erstes ? erstes.id : '')));
         merken.hidden = !wahl.value || vorgabe === wahl.value;
         fensterFuellen(wahl.value === vorher && fensterVorher ? fensterVorher : undefined);
@@ -245,5 +273,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.modell = {steuerung, menue, routerMenue, schliessen, fehlertext, auswahlText, autoLaden, grundtext};
+  root.sedraHarness.modell = {steuerung, menue, routerMenue, schliessen, fehlertext, auswahlText, autoLaden, grundtext, kurzname, optionsText, reihenfolge};
 })();
