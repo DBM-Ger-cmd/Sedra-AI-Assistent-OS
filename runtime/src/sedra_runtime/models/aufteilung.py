@@ -53,7 +53,7 @@ def pruefen(dyn):
     _punkte(dyn)
 
 
-def bedarf(dyn, lagen, kontext, kv_rate_gb_je_1k, groesse_gb, slots=1):
+def bedarf(dyn, lagen, kontext, kv_rate_gb_je_1k, groesse_gb, slots=1, pool_zusatz=None):
     punkte, bei, fix, aufschlag, boden, von, bis = _punkte(dyn)
     lagen = _ganz(lagen, "lagen")
     kontext = _ganz(kontext, "kontext")
@@ -63,12 +63,14 @@ def bedarf(dyn, lagen, kontext, kv_rate_gb_je_1k, groesse_gb, slots=1):
     rate = 0.0 if kv_rate_gb_je_1k is None else _zahl(kv_rate_gb_je_1k, "kv_rate")
     groesse = _zahl(groesse_gb, "groesse_gb")
     tabelle = _linie(punkte, lagen, 1)
-    unterschied = rate * (kontext * slots - bei) / 1000
+    # Pool (kv_unified): der KV-Speicher ist Fenster des Managers + Zusatz der weiteren Slots, nicht Fenster x Slots (models/kv_pool.py)
+    tokens = kontext * slots if pool_zusatz is None else kontext + _ganz(pool_zusatz, "pool_zusatz")
+    unterschied = rate * (tokens - bei) / 1000
     unterschied = max(unterschied, -fix)
     return {"vram_gb": round(tabelle + unterschied, 3), "ram_gb": round(max(boden, groesse - (tabelle - fix) + aufschlag), 3)}
 
 
-def waehlen(dyn, kontexte, frei_vram_gb, frei_ram_gb, reserve_vram_gb, reserve_ram_gb, kv_rate_gb_je_1k, groesse_gb, slots=1, gemessen=None):
+def waehlen(dyn, kontexte, frei_vram_gb, frei_ram_gb, reserve_vram_gb, reserve_ram_gb, kv_rate_gb_je_1k, groesse_gb, slots=1, gemessen=None, pool_zusatz=None):
     punkte, bei, fix, aufschlag, boden, von, bis = _punkte(dyn)
     budget_vram = _zahl(frei_vram_gb, "frei_vram") - _zahl(reserve_vram_gb, "reserve_vram")
     budget_ram = _zahl(frei_ram_gb, "frei_ram") - _zahl(reserve_ram_gb, "reserve_ram")
@@ -80,7 +82,7 @@ def waehlen(dyn, kontexte, frei_vram_gb, frei_ram_gb, reserve_vram_gb, reserve_r
         for lagen in range(von, bis + 1):
             wert, quelle = gemessen.get((lagen, kontext)), "gemessen"
             if wert is None:
-                wert, quelle = bedarf(dyn, lagen, kontext, kv_rate_gb_je_1k, groesse_gb, slots), "gerechnet"
+                wert, quelle = bedarf(dyn, lagen, kontext, kv_rate_gb_je_1k, groesse_gb, slots, pool_zusatz), "gerechnet"
             vram, ram = float(wert["vram_gb"]), float(wert["ram_gb"])
             fehlt_vram, fehlt_ram = max(0.0, vram - budget_vram), max(0.0, ram - budget_ram)
             if fehlt_vram == 0 and fehlt_ram == 0:

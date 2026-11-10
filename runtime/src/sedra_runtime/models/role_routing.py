@@ -18,7 +18,7 @@ from pathlib import Path
 
 import yaml
 
-from ..models import aufteilung
+from ..models import aufteilung, kv_pool
 from ..models.hardware_pass import HardwareModelPass
 from ..core.util import append_lock, atomic_write_json, load_json, utcnow
 
@@ -140,7 +140,7 @@ class RoutingConfig:
         server = profile.get("server")
         if server is not None:
             # How a SEDRA-managed local server is started for this recipe (see its runtime module). Structured, never free-form.
-            if (not isinstance(server, dict) or set(server) - {"gguf", "kv_cache_type", "mmproj", "reasoning", "reasoning_budget", "mtp", "cache_ram", "ctx_checkpoints", "n_cpu_moe", "n_gpu_layers", "reasoning_format", "jinja", "ubatch", "mmap", "flash_attn", "slots"}
+            if (not isinstance(server, dict) or set(server) - {"gguf", "kv_cache_type", "mmproj", "reasoning", "reasoning_budget", "mtp", "cache_ram", "ctx_checkpoints", "n_cpu_moe", "n_gpu_layers", "reasoning_format", "jinja", "ubatch", "mmap", "flash_attn", "slots", "kv_unified", "kv_pool_je_angestellter"}
                     or server.get("reasoning_format", "auto") not in {"none", "deepseek", "deepseek-legacy", "auto"}
                     or not isinstance(server.get("jinja", True), bool)
                     or not isinstance(server.get("gguf"), str) or not server["gguf"]
@@ -152,6 +152,9 @@ class RoutingConfig:
                     or (server.get("n_gpu_layers") is not None and (type(server["n_gpu_layers"]) is not int or not 0 <= server["n_gpu_layers"] <= 999))
                     or (server.get("n_cpu_moe") is not None and (type(server["n_cpu_moe"]) is not int or not 0 <= server["n_cpu_moe"] <= 999))
                     or (server.get("slots") is not None and (type(server["slots"]) is not int or not 1 <= server["slots"] <= 8))
+                    or not isinstance(server.get("kv_unified", False), bool)
+                    or (server.get("kv_pool_je_angestellter") is not None and (type(server["kv_pool_je_angestellter"]) is not int or not 1024 <= server["kv_pool_je_angestellter"] <= 262144))
+                    or (server.get("kv_unified") and (server.get("slots") or 1) > 1 and not server.get("kv_pool_je_angestellter"))
                     or not isinstance(server.get("mmap", True), bool)
                     or server.get("flash_attn", "on") not in {"on", "off", "auto"}
                     or (server.get("ubatch") is not None and (type(server["ubatch"]) is not int or not 64 <= server["ubatch"] <= 8192))
@@ -498,7 +501,7 @@ class RoleRouter:
                 return None, no("unavailable", f"provider_{state.lower()}")
         rate = recipe["kv_cache_gb_per_1k_tokens"]
         kv_context = (loaded_context or working_context)
-        kv_context = kv_context * slots if kv_context else kv_context       # every slot holds its own window in the KV cache
+        kv_context = kv_pool.gesamt(recipe["profile"].get("server"), kv_context, slots) if kv_context else kv_context       # every slot holds its own window in the KV cache; kv_unified: ein Pool
         kv = round(rate * (kv_context or 0) / 1000, 3) if rate is not None and kv_context else None
         measured_context = recipe["measured_context"]
         if recipe["measured_vram_gb"] is not None and rate is not None and measured_context and kv_context:
@@ -530,7 +533,7 @@ class RoleRouter:
             # Eine gewählte Stufe ist ein Wunsch nach „höchstens so viel“: passt sie nicht (der freie Speicher schwankt von Start zu Start), nimmt der Router die nächstkleinere, die passt,
             # statt das Laden abzulehnen (Captain 05.11.2026: nach einem Update oder Neustart soll das Laden nicht plötzlich scheitern). Die Antwort sagt es (`fenster_angepasst`).
             def _schaetzen(fenster):
-                kc = fenster * slots if fenster else fenster
+                kc = kv_pool.gesamt(recipe["profile"].get("server"), fenster, slots) if fenster else fenster
                 kv_ = round(rate * (kc or 0) / 1000, 3) if rate is not None and kc else None
                 if recipe["measured_vram_gb"] is not None and rate is not None and measured_context and kc:
                     kv_ = round(max(0.0, rate * (kc - measured_context) / 1000), 3)
@@ -565,12 +568,12 @@ class RoleRouter:
                 kontexte = sorted({t for t in (tiers or []) if untergrenze <= t <= wunsch}, reverse=True) or [wunsch]
                 gemessen = self.messwerte(recipe["id"]) if self.messwerte is not None else None
                 wahl = aufteilung.waehlen(dyn, kontexte, stand["frei_vram_gb"], stand["frei_ram_gb"], stand["reserve_vram_gb"], stand["reserve_ram_gb"],
-                                          rate, recipe["model_size_gb"], slots, gemessen)
+                                          rate, recipe["model_size_gb"], slots, gemessen, kv_pool.zusatz(recipe["profile"].get("server"), slots))
                 if not wahl["ok"]:
                     return None, no("pressure", wahl["vorschlag"])
                 loaded_context = wahl["kontext"]
                 estimated = dict(estimated, ram_gb=wahl["ram_gb"], vram_gb=wahl["vram_gb"], complete=True, auswahl=wahl)
-                plan = {"dyn": dyn, "kontexte": kontexte, "kv_rate": rate, "groesse_gb": recipe["model_size_gb"], "slots": slots}
+                plan = {"dyn": dyn, "kontexte": kontexte, "kv_rate": rate, "groesse_gb": recipe["model_size_gb"], "slots": slots, "pool_zusatz": kv_pool.zusatz(recipe["profile"].get("server"), slots)}
         if self.load_check is not None:
             reason = self.load_check(recipe, estimated, req)
             if reason:

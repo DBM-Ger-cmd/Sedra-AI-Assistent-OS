@@ -17,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from ..models import aufteilung
+from ..models import aufteilung, kv_pool
 from ..models.runtime_control import RuntimeControlError
 
 GPU_ALL = {"max", "all", "99", "100"}
@@ -277,7 +277,7 @@ class ModelLoader:
         extra = {"server": profile["server"]} if profile.get("server") else {}       # a managed server needs to know the model file etc.
         try:
             # `-c` is the SUM over the slots; the window the Router asked for (`want`) is the window of ONE slot (build b11160, measurement S2.1).
-            ctl.load_model(key, context_length=want * slots, gpu=gpu_argument(profile.get("gpu_layers")), identifier=key, yes=True,
+            ctl.load_model(key, context_length=kv_pool.gesamt(profile.get("server"), want, slots), gpu=gpu_argument(profile.get("gpu_layers")), identifier=key, yes=True,
                            parallel=slots, mtp=self.config.mtp, **extra)
         except (RuntimeControlError, ValueError, OSError) as exc:
             # The reason is the point: a bare "ValueError" hid whether the GGUF, the canary or a setting was at fault (16.10.2026).
@@ -316,7 +316,7 @@ class ModelLoader:
             return (resolution.get("estimated_resources") or {}).get("auswahl")
         gemessen = self.messwerte(resolution.get("capability_id")) if self.messwerte is not None else None
         wahl = aufteilung.waehlen(plan["dyn"], plan["kontexte"], stand["frei_vram_gb"], stand["frei_ram_gb"], stand["reserve_vram_gb"], stand["reserve_ram_gb"],
-                                  plan["kv_rate"], plan["groesse_gb"], plan["slots"], gemessen)
+                                  plan["kv_rate"], plan["groesse_gb"], plan["slots"], gemessen, plan.get("pool_zusatz"))
         if not wahl["ok"]:
             raise LoadError("hardware_pressure", wahl["vorschlag"])
         return wahl

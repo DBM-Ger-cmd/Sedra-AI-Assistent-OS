@@ -28,7 +28,7 @@ from pathlib import Path
 
 import yaml
 
-from ..models import gpu_canary
+from ..models import gpu_canary, kv_pool
 from ..models.base import ModelAdapterError, require_loopback_url
 from ..models.runtime_control import RuntimeControlError
 from .router_verwaltung import abschnitt_aus_argv
@@ -171,7 +171,7 @@ def discover_backend(config, home=None):
 
 def build_command(executable, *, gguf, context, host, port, alias, gpu_layers=99, parallel=1, kv_type="f16", flash_attn="on",
                   spec_type="none", reasoning="auto", reasoning_budget=None, mmproj=None, cache_ram=None, ctx_checkpoints=None, n_cpu_moe=None,
-                  reasoning_format=None, jinja=None, ubatch=None, mmap=None, kv_type_k=None, kv_type_v=None):
+                  reasoning_format=None, jinja=None, ubatch=None, mmap=None, kv_type_k=None, kv_type_v=None, kv_unified=None):
     """The argument list for one llama-server. Pure: validates and builds, starts nothing. kv_type_k / kv_type_v: the key and the value cache can differ (2026-10-09: a quantized V cache needs flash attention, a quantized K cache does not)."""
     if mmap is not None and not isinstance(mmap, bool):
         raise ValueError("invalid_mmap")
@@ -213,6 +213,8 @@ def build_command(executable, *, gguf, context, host, port, alias, gpu_layers=99
         argv += ["--reasoning-format", reasoning_format]
     if jinja is False:
         argv += ["--no-jinja"]
+    if kv_unified:
+        argv += ["--kv-unified"]          # ein gemeinsamer KV-Pool fuer alle Slots (models/kv_pool.py): -c ist dann der Pool, nicht Fenster x Slots
     if cache_ram is not None:
         argv += ["--cache-ram", str(cache_ram)]          # host-RAM prompt cache in MiB: 0 = off, -1 = unlimited, unset = the server's default (8192)
     if ctx_checkpoints is not None:
@@ -303,6 +305,7 @@ class LlamaServerRuntime:
         self.executable_dir, self.vendor_dir = discover_backend(config, home)
         self._proc = None
         self._info = None
+        self._pool_zusatz = {}          # Router-ID -> Token der Angestellten im Pool (kv_unified), damit das gemeldete Fenster das des Managers ist
         self.last_exit = None
         self.router = None
         if config.external_endpoint and config.router_start is not None and self.executable_dir is not None:
@@ -393,7 +396,7 @@ class LlamaServerRuntime:
                              reasoning_budget=server.get("reasoning_budget"), mmproj=server.get("mmproj"), cache_ram=server.get("cache_ram"),
                              ctx_checkpoints=server.get("ctx_checkpoints"), n_cpu_moe=server.get("n_cpu_moe"),
                              reasoning_format=server.get("reasoning_format"), jinja=server.get("jinja"), ubatch=server.get("ubatch"),
-                             mmap=server.get("mmap"))
+                             mmap=server.get("mmap"), kv_unified=bool(server.get("kv_unified")) or None)
 
     def router_abschnitte(self, recipes):
         """Die Modellliste des Sedra-Routers aus den Rezepten: je Rezept mit Server-Profil ein Abschnitt mit dem groessten Fenster, das das Rezept hergibt."""
@@ -411,7 +414,8 @@ class LlamaServerRuntime:
             fenster = min([x for x in (max(stufen) if stufen else ctx.get("recommended"), je_slot) if x] or [8192])
             rid = router_id(r["model"])
             try:
-                out[rid] = abschnitt_aus_argv(self._server_argv(server, context_length=fenster * slots, parallel=slots, alias=rid))
+                out[rid] = abschnitt_aus_argv(self._server_argv(server, context_length=kv_pool.gesamt(server, fenster, slots), parallel=slots, alias=rid))
+                self._pool_zusatz[rid] = kv_pool.zusatz(server, slots) or 0
             except Exception:
                 continue                                  # ein Rezept mit fehlender Datei darf die Liste der anderen nicht verhindern
         return out
@@ -465,6 +469,8 @@ class LlamaServerRuntime:
             per_slot = applied // slots if slots > 1 and context_length is not None and applied == context_length else applied
         else:
             per_slot = context_length // slots if context_length is not None else None
+        if kv_pool.aktiv(server) and type(per_slot) is int:
+            per_slot = kv_pool.fenster_aus_gesamt(server, context_length if context_length is not None else per_slot, slots)       # Pool: gemeldet wird das Fenster des Managers
         self._info = {"modelKey": model_key, "identifier": alias, "contextLength": per_slot, "slots": slots,
                       "pid": self._proc.pid, "kv_cache_type": server.get("kv_cache_type", "f16"), "spec_type": "draft-mtp" if use_mtp else "none"}
         self._write_state()
@@ -486,6 +492,8 @@ class LlamaServerRuntime:
         applied = (props.get("default_generation_settings") or {}).get("n_ctx")
         slots = props.get("total_slots") if type(props.get("total_slots")) is int else (parallel or 1)
         per_slot = applied if type(applied) is int else (context_length // slots if context_length is not None else None)
+        if type(per_slot) is int and self._pool_zusatz.get(rid):
+            per_slot -= self._pool_zusatz[rid]            # kv_unified: n_ctx ist der Pool; das Fenster des Managers ist der Pool ohne den Anteil der Angestellten
         return {"modelKey": model_key or rid, "identifier": rid, "contextLength": per_slot, "slots": slots, "pid": None,
                 "kv_cache_type": (server or {}).get("kv_cache_type"), "spec_type": "none", "external": True}
 
@@ -511,6 +519,8 @@ class LlamaServerRuntime:
 
     def _load_external(self, model_key, *, context_length, identifier, parallel, server):
         self._reap()
+        if isinstance(server, dict):
+            self._pool_zusatz[router_id(identifier or model_key)] = kv_pool.zusatz(server, parallel) or 0
         if self.router is not None and isinstance(server, dict) and server.get("gguf"):
             # Sedra-Modell-Router: laeuft er nicht (oder hat sich der Abschnitt dieses Modells geaendert), startet Sedra ihn mit der aktuellen Modellliste
             rid0 = router_id(identifier or model_key)
