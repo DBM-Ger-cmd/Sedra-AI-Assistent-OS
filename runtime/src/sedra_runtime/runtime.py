@@ -317,6 +317,15 @@ class SedraRuntime:
         except Exception as exc: return {"enabled":True,"error":str(exc) or type(exc).__name__}
         return {"enabled":True,"error":None,"modus":stand["modus"],"abschnitte":stand["abschnitte"],"abdeckung":stand["abdeckung"],"quellen":stand["quellen"]}
 
+    def _speicher_stand(self,**kw):
+        """Der freie Speicher fuer die Wahl der Aufteilung, gedeckelt auf die VRAM-Grenze des Modell-Schedulers (`vram_limit_gb`, enthaelt die Reserve): die Wahl
+        darf nicht mehr Grafikspeicher planen, als der Scheduler beim Start zulaesst (10.11.2026: mit 12 GB frei plante sie 11,2 GB, der Scheduler liess 10,8 zu)."""
+        stand=self.resource_scheduler.stand(**kw)
+        sched=getattr(self,"model_scheduler",None)
+        if stand and not kw.get("nur_messung") and sched is not None and getattr(sched,"enabled",False):
+            stand=dict(stand,frei_vram_gb=min(stand["frei_vram_gb"],float(sched.config.vram_limit_gb)))
+        return stand
+
     def _resource_load_check(self,recipe,estimated,req):
         """Advisory room check of the role resolution. The running model-scheduler server of the very same recipe is no rival: its
         ledger entry is left out (a second job takes a slot of it, not a second copy), its VRAM is credited as resident."""
@@ -349,7 +358,7 @@ class SedraRuntime:
             # Advisory only. A model that is already loaded holds its own room (reused as it is, or unloaded and reloaded by the
             # model loader); the binding reservation checks again afterwards.
             self.role_router.load_check=self._resource_load_check
-            self.role_router.speicher_stand=self.resource_scheduler.stand      # dynamische Rezepte: der freie Speicher jetzt
+            self.role_router.speicher_stand=self._speicher_stand      # dynamische Rezepte: der freie Speicher jetzt
             self.role_router.messwerte=self.messwerte.fuer
         # No gate (missing or invalid config) means the supervisor can check no action, so it allows none.
         self._optional("permission_gate",lambda: PermissionGate(PermissionConfig.load(self.config_root/"permission_levels.yaml"),self.guard,audit=self.audit),
@@ -370,7 +379,7 @@ class SedraRuntime:
                 self.model_loader=ModelLoader(loader_config,controller,audit=self.audit,controllers={"llama-cpp-server":managed} if managed else None)
                 self.job_supervisor.loader=self.model_loader
                 if self.resource_scheduler is not None and self.resource_scheduler.enabled:
-                    self.model_loader.speicher_stand=self.resource_scheduler.stand
+                    self.model_loader.speicher_stand=self._speicher_stand
                 self.model_loader.messwerte=self.messwerte.fuer
         except (ValueError,OSError) as exc:
             self.model_loader_error=str(exc)

@@ -572,7 +572,7 @@ class RoleRouter:
                 if not wahl["ok"]:
                     return None, no("pressure", wahl["vorschlag"])
                 loaded_context = wahl["kontext"]
-                estimated = dict(estimated, ram_gb=wahl["ram_gb"], vram_gb=wahl["vram_gb"], complete=True, auswahl=wahl)
+                estimated = dict(estimated, ram_gb=wahl["ram_gb"], vram_gb=wahl["vram_gb"], kv_cache_gb=0.0, complete=True, auswahl=wahl)   # vram_gb der Auswahl enthaelt den KV-Cache schon (aufteilung.bedarf): ihn nicht noch einmal aufschlagen (sonst lehnte die Pruefung 10.11.2026 vier 35B-Rezepte mit vram_insufficient ab, obwohl sie passen)
                 plan = {"dyn": dyn, "kontexte": kontexte, "kv_rate": rate, "groesse_gb": recipe["model_size_gb"], "slots": slots, "pool_zusatz": kv_pool.zusatz(recipe["profile"].get("server"), slots)}
         if self.load_check is not None:
             reason = self.load_check(recipe, estimated, req)

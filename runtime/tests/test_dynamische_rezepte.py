@@ -60,6 +60,26 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(res['context_window'], 32768)
         self.assertEqual(res['dynamisch_plan']['kontexte'], [32768, 16384, 8192])         # nie größer als gewünscht, nie unter dem Mindestkontext (hier die kleinste Stufe)
 
+    def test_der_kv_cache_wird_nicht_ein_zweites_mal_aufgeschlagen(self):
+        # vram_gb der Auswahl enthaelt den KV-Cache schon; mit einem zweiten Aufschlag lehnte die Pruefung vier 35B-Rezepte ab (10.11.2026)
+        res = self.router().resolve_recipe('coder.moe')
+        self.assertEqual(res['estimated_resources']['kv_cache_gb'], 0.0)
+        from sedra_runtime.jobs.resource_scheduler import need_of
+        self.assertAlmostEqual(need_of(res['estimated_resources'])['vram_gb'], res['estimated_resources']['vram_gb'], places=3)
+
+    def test_speicherstand_wird_auf_die_vram_grenze_des_schedulers_gedeckelt(self):
+        from sedra_runtime.runtime import SedraRuntime
+        stand = {"frei_vram_gb": 11.994, "frei_ram_gb": 17.0, "reserve_vram_gb": 0.7, "reserve_ram_gb": 1.5}
+        fake = SimpleNamespace(resource_scheduler=SimpleNamespace(stand=lambda **kw: dict(stand)),
+                               model_scheduler=SimpleNamespace(enabled=True, config=SimpleNamespace(vram_limit_gb=11.5)))
+        self.assertEqual(SedraRuntime._speicher_stand(fake)['frei_vram_gb'], 11.5)
+        self.assertEqual(SedraRuntime._speicher_stand(fake, nur_messung=True)['frei_vram_gb'], 11.994)     # die Messung bleibt unverfaelscht
+        fake.model_scheduler.enabled = False
+        self.assertEqual(SedraRuntime._speicher_stand(fake)['frei_vram_gb'], 11.994)
+        fake.model_scheduler = SimpleNamespace(enabled=True, config=SimpleNamespace(vram_limit_gb=11.5))
+        fake.resource_scheduler = SimpleNamespace(stand=lambda **kw: dict(stand, frei_vram_gb=9.0))
+        self.assertEqual(SedraRuntime._speicher_stand(fake)['frei_vram_gb'], 9.0)                       # ein kleinerer freier Wert bleibt
+
     def test_zu_wenig_ram_nimmt_zuerst_mehr_lagen_dann_kleineren_kontext(self):
         res = self.router(stand=dict(STAND, frei_vram_gb=8.3, frei_ram_gb=16.0)).resolve_recipe('coder.moe')      # budget 7,6: 36 Lagen passen bei 32 768
         self.assertEqual((res['estimated_resources']['auswahl']['lagen'], res['context_window']), (36, 32768))
