@@ -42,6 +42,11 @@ class OpenAICompatibleLocalAdapter(BaseModelAdapter):
         payload={"model":model,"messages":messages,"stream":False}
         for key in ("temperature","max_tokens","top_p"):
             if key in kwargs and kwargs[key] is not None: payload[key]=kwargs[key]
+        slot=kwargs.get("id_slot")
+        if slot is not None:
+            # llama-server: feste Slot-Nummer (Manager/Angestellte im gemeinsamen KV-Pool); ohne Angabe waehlt der Server selbst.
+            if type(slot) is not int or not 0<=slot<=63: raise ModelAdapterError("invalid_id_slot")
+            payload["id_slot"]=slot
         fmt=kwargs.get("response_format")
         if fmt is not None:
             # Strukturierte Antwort (models/structured.py): LM Studio, llama-server und Ollama (/v1) erzwingen das Schema serverseitig.

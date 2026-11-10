@@ -107,13 +107,16 @@ def pruefen(doc, system_text, bekannt=None):
     modell = v.get('modell')
     if modell is not None and not isinstance(modell, str):
         raise VorlageFehler(f'{vid}_modell_ungueltig')
+    slot = v.get('slot')
+    if slot is not None and (not isinstance(slot, int) or isinstance(slot, bool) or not 0 <= slot <= 63):
+        raise VorlageFehler(f'{vid}_slot_ungueltig: 0 bis 63 (fester Slot des Modellservers, Pool: Manager 0, Angestellte 1 und 2)')
     hinweis = v.get('hinweis')
     if hinweis is not None and (not isinstance(hinweis, str) or len(hinweis) > HINWEIS_MAX):
         raise VorlageFehler(f'{vid}_hinweis_ungueltig: Text, höchstens {HINWEIS_MAX} Zeichen')
     erlaubnisse = _erlaubnisse(vid, v.get('erlaubnisse'), werkzeuge)
     return {'id': vid, 'name': v['name'].strip(), 'beschreibung': str(v.get('beschreibung') or '').strip(), 'system': system_text.strip(),
             'werkzeuge': list(dict.fromkeys(werkzeuge)), 'rechte': {k: bool(rechte.get(k, False)) for k in RECHTE},
-            'modell': modell, 'max_zuege': zuege, 'frist_min': frist, 'bremse_pro_stunde': bremse,
+            'modell': modell, 'slot': slot, 'max_zuege': zuege, 'frist_min': frist, 'bremse_pro_stunde': bremse,
             'hinweis': ' '.join(str(hinweis or '').split()), 'erlaubnisse': erlaubnisse}
 
 
@@ -167,7 +170,7 @@ def liste(projekt_root, repo_dir=VORLAGEN_DIR):
     for vid in sorted(ids):
         try:
             v = laden(projekt_root, vid, repo_dir)
-            out.append({k: v[k] for k in ('id', 'name', 'beschreibung', 'hinweis', 'erlaubnisse', 'werkzeuge', 'rechte', 'modell', 'max_zuege', 'hash', 'quelle')} | {'fehler': None})
+            out.append({k: v[k] for k in ('id', 'name', 'beschreibung', 'hinweis', 'erlaubnisse', 'werkzeuge', 'rechte', 'modell', 'slot', 'max_zuege', 'hash', 'quelle')} | {'fehler': None})
         except VorlageFehler as exc:
             out.append({'id': vid, 'name': vid, 'fehler': str(exc)})
     return out

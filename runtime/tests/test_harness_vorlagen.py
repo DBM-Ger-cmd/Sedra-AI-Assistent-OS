@@ -35,6 +35,12 @@ class PruefenTests(unittest.TestCase):
         self.assertIn('rechte_ungueltig', fehler(lambda v: v.update(rechte={'alles': True})))
         self.assertIn('rechte_ungueltig', fehler(lambda v: v.update(rechte={'vorarbeiter_freigabe': 'ja'})))
         self.assertIn('max_zuege_ungueltig', fehler(lambda v: v.update(max_zuege=99)))
+        self.assertIn('slot_ungueltig', fehler(lambda v: v.update(slot=64)))
+        self.assertIn('slot_ungueltig', fehler(lambda v: v.update(slot=True)))
+        self.assertIn('slot_ungueltig', fehler(lambda v: v.update(slot='1')))
+        self.assertIsNone(vorlagen.pruefen(GUT, 'Text')['slot'])
+        doc = json.loads(json.dumps(GUT)); doc['harness_vorlage']['slot'] = 2
+        self.assertEqual(vorlagen.pruefen(doc, 'Text')['slot'], 2)
         self.assertIn('system_leer', fehler(lambda v: None, '  '))
         self.assertIn('system_zu_lang', fehler(lambda v: None, 'x' * (vorlagen.SYSTEM_MAX + 1)))
 
@@ -145,6 +151,18 @@ class SitzungMitVorlageTests(unittest.TestCase):
         self.assertEqual(sorted(v['id'] for v in out['vorlagen']), ['bauagent', 'desktop-designer', 'manager', 'masterchat', 'modellierer', 'n8n-workflow-manager', 'prozessmodellierer', 'pruefer', 'rueckblick', 'vorarbeiter'])
         code, body = anfrage(self.url, 'POST', '/api/harness/sitzungen', {'projekt': 'pruef', 'vorlage': 'gibt-es-nicht'})
         self.assertEqual((code, body['code']), (400, 'vorlage_unbekannt'))
+
+    def test_slot_aus_vorlage_und_aus_der_wahl(self):
+        kopf = self.neu([], 'manager')
+        code, s = anfrage(self.url, 'GET', '/api/harness/sitzungen/' + kopf['id'])
+        self.assertEqual((code, s['slot']), (200, 0))                                       # die Manager-Vorlage legt Slot 0 fest
+        code, kopf2 = anfrage(self.url, 'POST', '/api/harness/sitzungen', {'projekt': 'pruef', 'slot': 2})
+        self.assertEqual(code, 200, kopf2)
+        self.assertEqual(anfrage(self.url, 'GET', '/api/harness/sitzungen/' + kopf2['id'])[1]['slot'], 2)
+        code, s = anfrage(self.url, 'PATCH', '/api/harness/sitzungen/' + kopf2['id'], {'slot': None})
+        self.assertEqual((code, s['slot']), (200, None))
+        code, body = anfrage(self.url, 'PATCH', '/api/harness/sitzungen/' + kopf2['id'], {'slot': 99})
+        self.assertEqual(code, 400)
 
     def test_kopf_prompt_whitelist_und_ablehnung(self):
         kopf = self.neu([('calls', [('datei_schreiben', {'pfad': 'docs/x.md', 'inhalt': 'a'})]), ('text', 'Nicht erlaubt.')], 'pruefer')

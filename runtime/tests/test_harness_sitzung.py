@@ -125,6 +125,18 @@ class SitzungTests(unittest.TestCase):
         self.assertEqual(self.s.laden(sid)['modell'], 'b')
         self.assertTrue(ID.fullmatch(sid))
 
+    def test_slot_wahl(self):
+        sid = self.s.anlegen('p')['id']
+        self.assertIsNone(self.s.laden(sid)['slot'])
+        self.s.slot_waehlen(sid, 2)
+        self.assertEqual(self.s.laden(sid)['slot'], 2)
+        self.assertEqual(Sitzungen(self.ordner).laden(sid)['slot'], 2)            # nach Neustart noch da
+        self.s.slot_waehlen(sid, None)
+        self.assertIsNone(self.s.laden(sid)['slot'])
+        for schlecht in (-1, 64, '1', True, 1.5):
+            with self.assertRaises(SitzungFehler, msg=repr(schlecht)):
+                self.s.slot_waehlen(sid, schlecht)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -60,6 +60,7 @@ class ControlMasterModule(BaseModule):
         try:
             extra={"on_delta":on_delta} if on_delta is not None else {}          # ohne Rückruf ruft der Router genau wie bisher
             if request.get("slot_owner"): extra["slot_owner"]=request["slot_owner"]
+            if request.get("id_slot") is not None: extra["id_slot"]=request["id_slot"]
             result=self.model_router.chat(mid,request.get("messages") or [],provider=request.get("provider"),model=request.get("model"),temperature=request.get("temperature"),max_tokens=request.get("max_tokens"),top_p=request.get("top_p"),reasoning_effort=request.get("reasoning_effort"),thinking_budget_tokens=request.get("thinking_budget_tokens"),stream_guard=request.get("stream_guard"),tools=request.get("tools"),tool_choice=request.get("tool_choice"),**extra)
             out={"status":"completed","model_result":result,"artifacts":[]}
             self._record_context_usage(mid,request,result)

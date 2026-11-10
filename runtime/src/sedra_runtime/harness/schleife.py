@@ -148,7 +148,7 @@ def guard_grund(fehler):
 
 
 def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-cpp-server', sitzungen=None, sitzung_id=None,
-           max_zuege=MAX_ZUEGE, fenster=None, live_text=True, max_tokens=2048, temperature=0.7, wirkung=(), bisher=(), clock=time.monotonic, sicherung='normal', denk_modus='standard', nachbereiten=None):
+           max_zuege=MAX_ZUEGE, fenster=None, live_text=True, max_tokens=2048, temperature=0.7, wirkung=(), bisher=(), clock=time.monotonic, sicherung='normal', denk_modus='standard', nachbereiten=None, id_slot=None):
     """Führt die Schleife für eine Antwort aus, schreibt Werkzeug- und Modellzeile in die Sitzung und sendet zuletzt `ende`.
 
     `execute(mission, request)` ist `control.execute`; `box` hat `schemas()` und `call(name, args)` (wie ChatTools); `antwort` ist eine
@@ -222,6 +222,8 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
         request = {'action': 'model_inference', 'provider': provider, 'model': modell, 'messages': messages, 'temperature': temperature,
                    'max_tokens': zug_tokens, 'slot_owner': 'captain-chat', 'stream': on_delta,
                    'stream_guard': True}                   # Log 03.11.2026: ein Zug erzeugte 8 000 Token, die Eingabe stand 4½ Minuten auf Stopp – wiederholt sich das Modell nur noch, schließt der Wächter (runaway_guard.py) die Verbindung
+        if id_slot is not None:
+            request['id_slot'] = id_slot                  # fester llama-Slot dieser Sitzung (Pool: Manager = 0, Angestellte = 1, 2)
         if denk_jetzt == 'aus':                           # Denken begrenzen (Token und Gespräch): gemessen wurde `none` mit LM Studio (docs: jobs/token_policy.py), nicht mit dem Router
             request['reasoning_effort'] = 'none'
         elif denk_jetzt == 'begrenzt':

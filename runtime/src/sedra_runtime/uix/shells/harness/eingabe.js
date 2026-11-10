@@ -6,7 +6,7 @@
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
-  const BEFEHLE = [['/neu', 'neue Sitzung'], ['/stopp', 'laufende Antwort abbrechen'], ['/titel Name', 'Sitzung umbenennen'], ['/seite', 'Seitenleiste ein/aus'], ['/start', 'Start-Menü (Apps, Oberflächen)'], ['/einstellungen', 'Einstellungen'], ['/export', 'Sitzung als Markdown speichern']];
+  const BEFEHLE = [['/neu', 'neue Sitzung'], ['/stopp', 'laufende Antwort abbrechen'], ['/titel Name', 'Sitzung umbenennen'], ['/slot 0|1|2|auto', 'Platz im Modellserver (Pool: Manager 0, Angestellte 1 und 2)'], ['/seite', 'Seitenleiste ein/aus'], ['/start', 'Start-Menü (Apps, Oberflächen)'], ['/einstellungen', 'Einstellungen'], ['/export', 'Sitzung als Markdown speichern']];
 
   function mount(S){
     const box = S.el.eingabe;
@@ -104,6 +104,14 @@
     if(b === '/export'){                                                               // V6 (1.11.)
       if(!a || !/^S-/.test(a.id)){ S.hinweis('Erst eine Nachricht senden – dann gibt es die Sitzung.'); return true; }
       await root.sedraHarness.seite.exportieren(S, a.id); return true;
+    }
+    if(b === '/slot'){                                                                 // Pool: feste Plätze für Manager (0) und Angestellte (1, 2); auto = der Server wählt
+      if(!a || !/^S-/.test(a.id)){ S.hinweis('Erst eine Nachricht senden – dann gibt es die Sitzung.'); return true; }
+      const w = (rest[0] || '').toLowerCase();
+      if(w !== 'auto' && !/^\d{1,2}$/.test(w)){ S.hinweis('Benutzung: /slot 0, /slot 1, /slot 2 oder /slot auto.', 'bad'); return true; }
+      await S.api('/api/harness/sitzungen/' + a.id, {method: 'PATCH', body: {slot: w === 'auto' ? null : Number(w)}});
+      S.hinweis(w === 'auto' ? 'Slot: der Server wählt.' : 'Slot ' + w + ' gilt ab der nächsten Nachricht.');
+      return true;
     }
     if(b === '/titel'){
       if(!a || !/^S-/.test(a.id)){ S.hinweis('Erst eine Nachricht senden – dann gibt es die Sitzung.'); return true; }

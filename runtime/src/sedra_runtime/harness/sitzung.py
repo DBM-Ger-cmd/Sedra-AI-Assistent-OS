@@ -110,12 +110,13 @@ class Sitzungen:
                 eintraege.append(wert)
         if kopf is None:
             raise SitzungFehler('sitzung_ohne_kopf')
-        titel, modell, wissen_zuerst = kopf.get('titel') or '', kopf.get('modell'), None
+        titel, modell, wissen_zuerst, slot = kopf.get('titel') or '', kopf.get('modell'), None, None
         for e in eintraege:
             if e.get('typ') == 'titel': titel = str(e.get('titel') or '')
             if e.get('typ') == 'wahl' and 'modell' in e: modell = e.get('modell')
+            if e.get('typ') == 'wahl' and 'slot' in e: slot = e.get('slot')           # fester llama-Slot (Pool: Manager 0, Angestellte 1, 2); None = der Server waehlt
             if e.get('typ') == 'wahl' and 'wissen_zuerst' in e: wissen_zuerst = e.get('wissen_zuerst')     # None = die Vorgabe der Einstellungen
-        return {'kopf': kopf, 'eintraege': eintraege, 'kaputt': kaputt, 'titel': titel, 'modell': modell, 'erlaubnisse': aktive(eintraege), 'wissen_zuerst': wissen_zuerst}
+        return {'kopf': kopf, 'eintraege': eintraege, 'kaputt': kaputt, 'titel': titel, 'modell': modell, 'erlaubnisse': aktive(eintraege), 'wissen_zuerst': wissen_zuerst, 'slot': slot}
 
     def liste(self, projekt=None):
         """Kopf und letzte Zeit je Sitzung, neueste zuerst; mit `projekt` nur die dieses Projekts."""
@@ -161,6 +162,12 @@ class Sitzungen:
 
     def modell_waehlen(self, sid, modell):
         return self.anhaengen(sid, {'typ': 'wahl', 'modell': (str(modell)[:200] if modell else None)})
+
+    def slot_waehlen(self, sid, slot):
+        """Bindet die Sitzung an einen festen Slot des Modellservers (`id_slot`, Pool mit Manager und Angestellten); None loest die Bindung."""
+        if slot is not None and (type(slot) is not int or not 0 <= slot <= 63):
+            raise SitzungFehler('slot_ungueltig: 0 bis 63 oder null')
+        return self.anhaengen(sid, {'typ': 'wahl', 'slot': slot})
 
     def wissen_zuerst_waehlen(self, sid, wert):
         """SPEC_WISSEN_KERN_v1 WK-13: „Wissen zuerst“ für diese Sitzung an, aus oder wieder nach der Vorgabe (None)."""

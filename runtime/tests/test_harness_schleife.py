@@ -69,6 +69,16 @@ class SchleifeTests(unittest.TestCase):
         self.antwort = Stroeme().anlegen(self.sid)
         self.box = Box()
 
+    def test_slot_geht_in_die_anfrage(self):
+        a = Attrappe([Zug('Fertig.')])
+        self.lauf(a, id_slot=1)
+        self.assertEqual(a.requests[0]['id_slot'], 1)
+
+    def test_ohne_slot_keine_angabe(self):
+        a = Attrappe([Zug('Fertig.')])
+        self.lauf(a)
+        self.assertNotIn('id_slot', a.requests[0])
+
     def lauf(self, attrappe, **kw):
         return schleife.laufen(attrappe, MISSION, self.box, [{'role': 'user', 'content': 'Hallo'}], self.antwort, modell='m',
                                sitzungen=self.sitzungen, sitzung_id=self.sid, **kw)

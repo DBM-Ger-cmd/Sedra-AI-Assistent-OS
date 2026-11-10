@@ -397,6 +397,9 @@ class HarnessApi:
                                       vorlage_hash=vorlage['hash'] if vorlage else None)
         self._audit('HARNESS_SITZUNG_ANGELEGT', {'sitzung_id': kopf['id'], 'projekt': projekt['id'], 'mission_id': kopf['mission_id'],
                                                  'vorlage': kopf.get('vorlage'), 'vorlage_hash': kopf.get('vorlage_hash')})
+        slot = payload.get('slot') if payload.get('slot') is not None else (vorlage or {}).get('slot')      # die Wahl beim Anlegen geht vor der Vorlage; Pool: Manager 0, Angestellte 1 und 2
+        if slot is not None:
+            self.sitzungen.slot_waehlen(kopf['id'], slot)
         def gewaehren():
             for n, e in enumerate(erlaubnisse, 1):                                   # als Sitzungs-Erlaubnisse; nicht rückwirkend, zurücknehmbar wie jede andere
                 self.sitzungen.erlauben(kopf['id'], f"V-{vorlage['id']}-{n}", e['werkzeug'], e['muster'], regel='vorlage-' + vorlage['id'])
@@ -438,6 +441,8 @@ class HarnessApi:
             self.sitzungen.titel_aendern(sid, payload.get('titel'))
         if 'modell' in payload:
             self.sitzungen.modell_waehlen(sid, payload.get('modell'))
+        if 'slot' in payload:                                               # fester Slot im Modellserver (Manager 0, Angestellte 1, 2) oder null
+            self.sitzungen.slot_waehlen(sid, payload.get('slot'))
         if 'wissen_zuerst' in payload:                                      # WK-13: an, aus oder null (= Vorgabe)
             self.sitzungen.wissen_zuerst_waehlen(sid, payload.get('wissen_zuerst'))
         if payload.get('erlaubnis_zuruecknehmen'):
@@ -1356,7 +1361,7 @@ class HarnessApi:
                 schleife.laufen(self.execute, mission, box, messages, antwort, modell=modell, provider=PROVIDER, sitzungen=self.sitzungen,
                                 sitzung_id=sid, fenster=fenster, live_text=live, wirkung=getattr(box, 'wirkung', ()), bisher=bisher, max_zuege=zuege,
                                 sicherung=self._option('kontext_sicherung'), denk_modus=self._option('denken'), max_tokens=int(self._option('antwort_budget')),
-                                nachbereiten=lambda text: self._wissen_nachbereiten(antwort.id, wissen, text, mission_id))
+                                id_slot=s.get('slot'), nachbereiten=lambda text: self._wissen_nachbereiten(antwort.id, wissen, text, mission_id))
             except Exception as exc:                  # nie still: der Strom endet mit Grund, die Sitzung bekommt eine Zeile
                 grund = f'{type(exc).__name__}: {exc}'[:300]
                 antwort.senden('fehler', {'grund': grund})
