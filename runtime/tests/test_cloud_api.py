@@ -243,9 +243,20 @@ class SettingsTest(unittest.TestCase):
         self.cs = cloud_settings
         self.root = Path(tempfile.mkdtemp(prefix='cloud-settings-'))
         self.store = cloud_settings.CloudKeyStore(cloud_settings.key_store_path(self.root))
+        # Die Tests pruefen den Auslieferungszustand "alles aus", unabhaengig von der Freigabe in config/ (Captain-Ja 09.11.).
+        self._default_config = cloud_settings.DEFAULT_CONFIG
+        aus = self.root / 'standard_aus.yaml'
+        import yaml
+        cfg = yaml.safe_load(Path(self._default_config).read_text(encoding='utf-8'))
+        cfg['cloud_providers']['enabled'] = False
+        for eintrag in cfg['cloud_providers']['providers'].values():
+            eintrag['enabled'] = False
+        aus.write_text(yaml.safe_dump(cfg), encoding='utf-8')
+        cloud_settings.DEFAULT_CONFIG = aus
 
     def tearDown(self):
         import shutil
+        self.cs.DEFAULT_CONFIG = self._default_config
         shutil.rmtree(self.root, ignore_errors=True)
 
     def test_default_view_is_off_and_shows_no_key(self):
