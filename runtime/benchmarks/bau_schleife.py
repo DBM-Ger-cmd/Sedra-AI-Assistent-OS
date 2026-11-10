@@ -18,7 +18,10 @@ Ablauf:
 Ordner: der Bau-Projektordner kommt aus --projekt oder SEDRA_BAU_PROJEKT. Keine festen Laufwerkspfade im Code.
 
 Aufruf (aus dem Ordner runtime):
-  python benchmarks/bau_schleife.py --projekt <Projektordner> start [<Auftrag>] [--neu]
+  python benchmarks/bau_schleife.py --projekt <Projektordner> start [<Auftrag>] [--neu] [--spec <name>]
+  --rezept <id> [--kontext <n>]: statt coder.local_primary ein anderes Rezept des Hauptmodells (z. B. coder.local_primary_1x80k) und ein Fenster in Token
+  --spec: eine andere Spec mit den Stufen S1 bis S4 (devvm_specs/<name>.py); die Produktpruefung gibt es nur fuer factory_sdk_grundlage_v5,
+          bei anderen Specs endet der Lauf nach S4 mit einem Kurzbericht (Kandidat bleibt zur Durchsicht, nichts wird uebernommen).
   python benchmarks/bau_schleife.py --projekt <Projektordner> bericht <kandidatenordner> [<stufe>]
   python benchmarks/bau_schleife.py --projekt <Projektordner> wissen speichern|suchen ...
 """
@@ -37,6 +40,7 @@ RUNTIME = Path(__file__).resolve().parents[1]
 BENCH = RUNTIME / "benchmarks"
 PY = Path(sys.executable)
 SPEC_NAME = "factory_sdk_grundlage_v5"
+STANDARD_SPEC = SPEC_NAME                 # die Spec mit Produktpruefung (factory_sdk); jede andere Spec endet nach S4 ohne Produktpruefung
 SPEC_FILE = BENCH / "devvm_specs" / f"{SPEC_NAME}.py"
 STUFEN = ["S1", "S2", "S3", "S4"]
 INFRA_MAX = 3
@@ -508,6 +512,17 @@ def produkt_pruefen(projekt, kandidat, spec_mod, auftrag):
     return bericht, gesamt
 
 
+def kurzbericht(projekt, stufen_stand, auftrag):
+    """Bericht fuer Specs ohne Produktpruefung: welche Stufen bestanden, wo der Kandidat liegt. Uebernahme nur mit Freigabe des Captains."""
+    ziel = projekt / "runtime_data" / f"bau_bericht_{SPEC_NAME}_{datetime.now():%Y%m%d_%H%M%S}.md"
+    zeilen = [f"# Bau-Kurzbericht {SPEC_NAME}", "", f"Auftrag: {auftrag}", f"Zeit: {datetime.now():%Y-%m-%d %H:%M:%S}", ""]
+    zeilen += [f"- Stufe {s}: bestanden, Kandidat {stufen_stand[s]}" for s in STUFEN if s in stufen_stand]
+    zeilen += ["", "Keine Produktpruefung fuer diese Spec. Der Kandidat bleibt in runtime_data/devvm_candidates; Uebernahme nur mit Freigabe des Captains.", ""]
+    ziel.parent.mkdir(parents=True, exist_ok=True)
+    ziel.write_text("\n".join(zeilen), encoding="utf-8")
+    return ziel
+
+
 def manager_erlaubt_bau(projekt):
     """Schritt 2 der Manager-Verfassung: jeder Bau-Start geht durch den Manager. Ohne Recht 'bau_starten' startet nichts."""
     sys.path.insert(0, str(RUNTIME / "src"))
@@ -547,6 +562,11 @@ def schleife(projekt, auftrag="(nicht angegeben)", neu=False):
             stufen_stand[stufe] = str(kandidat)
             stand_schreiben(projekt, stufen_stand)
             seed = kandidat
+        if SPEC_NAME != STANDARD_SPEC:
+            bericht = kurzbericht(projekt, stufen_stand, auftrag)
+            stand_schreiben(projekt, stufen_stand, fertig=True)
+            log(projekt, f"ende: alle Stufen bestanden; Kurzbericht {bericht} (keine Produktpruefung fuer diese Spec)")
+            return 0
         log(projekt, "alle Stufen S1 bis S4 bestanden, Regressionsprüfung und Produktprüfung starten")
         bericht, ok = produkt_pruefen(projekt, seed, spec_mod, auftrag)
         stand_schreiben(projekt, stufen_stand, fertig=True)
@@ -561,6 +581,32 @@ def main(argv):
     if "--projekt" in argv:
         i = argv.index("--projekt")
         projekt_angabe = argv[i + 1]
+        argv = argv[:i] + argv[i + 2:]
+    global SPEC_NAME, SPEC_FILE
+    if "--rezept" in argv:
+        i = argv.index("--rezept")
+        rezept = argv[i + 1] if i + 1 < len(argv) else ""
+        if not re.fullmatch(r"[a-z][a-z0-9_.]{1,60}", rezept):
+            raise SystemExit(f"--rezept: ungueltige Angabe {rezept!r}")
+        argv = argv[:i] + argv[i + 2:]
+        kontext = None
+        if "--kontext" in argv:
+            j = argv.index("--kontext")
+            kontext = argv[j + 1] if j + 1 < len(argv) else ""
+            if not kontext.isdigit() or not 4096 <= int(kontext) <= 262144:
+                raise SystemExit(f"--kontext: ungueltige Angabe {kontext!r}")
+            argv = argv[:j] + argv[j + 2:]
+        for satz in SAETZE:
+            if satz["coder"] == "coder.local_primary":
+                satz["coder"] = rezept
+                if kontext:
+                    satz["args"] = list(satz["args"]) + ["--context", kontext]
+    if "--spec" in argv:
+        i = argv.index("--spec")
+        name = argv[i + 1] if i + 1 < len(argv) else ""
+        if not re.fullmatch(r"[a-z][a-z0-9_]{1,60}", name) or not (BENCH / "devvm_specs" / f"{name}.py").is_file():
+            raise SystemExit(f"--spec: unbekannte Spec {name!r} (devvm_specs/<name>.py muss es geben)")
+        SPEC_NAME, SPEC_FILE = name, BENCH / "devvm_specs" / f"{name}.py"
         argv = argv[:i] + argv[i + 2:]
     neu = "--neu" in argv
     argv = [a for a in argv if a != "--neu"]
