@@ -88,13 +88,20 @@ def modell_wahl(aufgabe_typ, ordner):
     return waehle_modell(aufgabe_typ, ordner)
 
 
-def bau_starten(projekt, auftrag):
+def bau_starten(projekt, auftrag, spec=None, rezept=None, kontext=None):
     """Startet einen vollautomatischen Bau-Lauf (benchmarks/bau_schleife.py start). Übernahme in runtime bleibt beim Captain.
     Läuft schon ein Bau (Sperrdatei mit lebender PID), startet nichts."""
     import subprocess
     import sys
     if not isinstance(auftrag, str) or not auftrag.strip() or len(auftrag) > 200:
         raise ValueError("auftrag_ungueltig")
+    import re
+    if spec is not None and (not isinstance(spec, str) or not re.fullmatch(r"[a-z][a-z0-9_]{1,60}", spec)):
+        raise ValueError("spec_ungueltig")
+    if rezept is not None and (not isinstance(rezept, str) or not re.fullmatch(r"[a-z][a-z0-9_.]{1,60}", rezept)):
+        raise ValueError("rezept_ungueltig")
+    if kontext is not None and (isinstance(kontext, bool) or not isinstance(kontext, int) or not 4096 <= kontext <= 262144):
+        raise ValueError("kontext_ungueltig")
     projekt = Path(projekt)
     from ..workflows import fabrik
     halt = fabrik.angehalten(projekt)                                # roter Knopf: bei angehaltener Fabrik startet kein Bau
@@ -108,6 +115,6 @@ def bau_starten(projekt, auftrag):
             if alt in lauf:
                 return {"gestartet": False, "grund": f"Bau läuft schon (PID {alt})"}
     runtime = Path(__file__).resolve().parents[3]
-    proc = subprocess.Popen([sys.executable, "benchmarks/bau_schleife.py", "--projekt", str(projekt), "start", auftrag.strip()],
+    proc = subprocess.Popen([sys.executable, "benchmarks/bau_schleife.py", "--projekt", str(projekt)] + (["--spec", spec] if spec else []) + (["--rezept", rezept] if rezept else []) + (["--kontext", str(kontext)] if rezept and kontext else []) + ["start", auftrag.strip()],
                             cwd=str(runtime), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return {"gestartet": True, "pid": proc.pid}
