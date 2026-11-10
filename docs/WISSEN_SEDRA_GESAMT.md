@@ -262,8 +262,42 @@ Stand beim Sichern: `main` = `1ceff20`, gepusht (Abstand zu `origin/main` 0/0). 
 7. Worktrees `cpu-nutzung` (in `main`, kann gelöscht werden), `nachtlauf` (noch gebraucht), `f0-05-drain`, `freigabe-luecken`, `wissen-k5-v5` (fremde Sitzungen, nicht angefasst).
 8. Nicht geprüft: Zen-optimierter Motor (nur wenn die Messung der CPU-Variante einen Gewinn zeigt), echter Lauf von Tinas Workflow in n8n, MTP mit 3 bis 4 Kanälen im Bau.
 
+## 16. Arbeit im Chat vom 10.11.2026 (Claude Code, Vorarbeiter: Specs, Postfach zum Coder, GPU-Messung)
+
+Der Chat war die Vorarbeiter-Sitzung. Rolle laut Captain: planen, verteilen, überwachen; programmiert wird von einem anderen Agenten. Leitplanke ist die Manager-Vorlage (`runtime/config/harness_vorlagen/manager.md`: keine Freigaben, nichts nach `main` ohne den Captain, nichts löschen, kein Force-Push). Die Specs und das Postfach liegen lokal in `<sedra>/KOORDINATION_SEDRA/` (Ordner nicht im Repo, enthält lokale Pfade).
+
+**Specs geschrieben (alle Entwurf, Freigabe zum Bau noch nicht erteilt, außer wo genannt):**
+- `01_ARCHITEKTUR/SPEZ_FABRIK_CONTROL_NACHTLAEUFE_V2.md` ersetzt die V1. Die V1 nahm falsche Wege an: die Fabrik-Verben stehen im Workflow-Desk (`workflows/desk.py`: `fabrik`, `fabrik_status`, `fabrik_stopp`, `fabrik_freigeben`), nicht unter `/api/factory/`; `bau_starten` braucht ein Pflichtfeld `auftrag`; `bau_schleife.py` meldet schon an `live.melde` (Prozess `vollautomatischer-bau`); `n8n_lokal.umstellen` liegt nur als Referenz in `benchmarks/devvm_refs`, nicht in `src/`. Entscheidung des Captains: echter Bau-Abbruch (weicher Halt über Marke, harter Halt nur mit zweiter Bestätigung), n8n-Vorschau ausbauen.
+- `SPEZ_VORSCHAU_AUSBAU_UEBERGABE.md`: n8n-Vorschau in drei Stufen (P1b-1 Zusammenfassung, Sicherheitsprüfung, Modellknoten; P1b-2 Struktur und Knotendetails; P1b-3 Vergleich und Prüfen von Gespeichertem). Klartext-Schlüssel nur warnen, nie ausgeben.
+- `SPEZ_VORARBEITER_KANAL.md` (V1.1): dritter Client `vorarbeiter` in `uix_clients.py` mit eigenem Token (12 h), Positivliste (Sitzungen lesen, Nachricht senden), Ziele `bauagent` und `pruefer`, Schalter `vorarbeiter_kanal` (aus, lesen, lesen_und_senden), `vorarbeiter_cloud_ziele` (Standard aus), Absendertyp `vorarbeiter`, Herkunft fail-closed für diesen Client. Belegt im Code: `datei_lesen` ist für `runtime_data/uix/clients/` schon fest gesperrt (`harness/vorbehalte.py`), die Herkunftsprüfung lässt aber bei nicht auflösbarer Gegenstelle durch (`harness/herkunft.py`), `befehl` prüft Pfade in der Zeile nicht. Captain-Entscheidungen: lesen dauerhaft, senden nur während gemeinsamer Arbeit; Token 12 h; keine PID-Bindung; Cloud-Prüfer darf begrenzt schreiben (Vorlage `pruefer-cloud`, ohne `befehl`).
+- `SPEZ_MODELL_MENUE_AUSBAU.md`: Rezeptliste unterscheidbar (die drei Nemotron- und die vier 35B-Rezepte hießen alle gleich), Kontextstufen je Kanal, Fehlertext mit Zahlen aus `fehlt`, Profile im Menü, Router-Text mit Herkunft.
+- `SPEZ_RAM_FREIMACHEN.md`: `tools/ram_freimachen.py` (anzeigen, verkleinern, beenden mit Freigabeliste und Bestätigung), RF-2 GPU-Zuweisung (Windows-Grafikeinstellung pro Programm, mit Sicherung und Rückweg).
+
+**Postfach zum Coder-Agenten:** Orca-Chat-Tabs lassen sich von außen nicht ansprechen (die Orca-CLI kann sie nur umbenennen). Deshalb zwei Dateien mit je einem Schreiber (`02_POSTFACH/vorarbeiter_an_agent.md`, `agent_an_vorarbeiter.md`); der Agent liest sie, wenn der Captain ihn anstößt. Der Coder ist die Pi-CLI (nicht Pi Agent Desktop) mit `qwen3.6-35b-a3b` über den Router auf Port 8090 (`~/.pi/agent/models.json`, Anbieter `llamacpp`). V-001 bis V-003 liegen im Postfach.
+
+**Stand beim Coder (belegt am 10.11.):** Er hat P1b-1 gebaut, obwohl V-001 „noch nicht bauen“ sagte, und auf dem Branch `p1b-1-vorschau-ausbau` (Commit `dcf8dde`, Worktree `<sedra>-wt-p1b-1-vorschau`) committet: 3 Dateien, **keine Tests**. Probelauf mit erfundenen Daten: Schlüssel in `Authorization: Bearer …` wird nicht gemeldet; `modell` bleibt leer (liest `modelName` statt `model`); Knoten mit Zugang „SEDRA lokal“ gilt als Cloud (Zugangsname am falschen Ort gelesen); `nutzer` immer leer; Agent als Modell gelistet; Zeitplan geraten. Nichts davon ist in `main`. V-002 listet die neun Mängel. A-001/A-002 stehen aus.
+
+**Befunde zu Modell und RAM (belegt):** Sedra misst VRAM nur über `nvidia-smi`, RAM über `GlobalMemoryStatusEx` (verfügbar inklusive Cache). `models/aufteilung.py: waehlen` liefert bei Mangel `fehlt: {vram_gb, ram_gb}`; das Menü zeigte davon nur den Satz. Der Router (`--models-max 1`) wird von Sedra und Pi geteilt; Pis Modellliste enthält `qwen3.6-35b-a3b-q4km`, das Sedras Router nicht kennt. Sedras Sperre „Modell belegt“ kennt Pis Anfragen nicht (aus der Konfiguration abgeleitet, nicht getestet).
+
+**GPU-Messung (10.11.):** RTX 4070 Ti (12 GB) und AMD-Grafik in der CPU (0,5 GB eigen, Rest aus dem RAM). Beide Monitore wurden an den Mainboard-Ausgang gesteckt; laut Geräteliste hängen beide am AMD-Adapter. Die NVIDIA belegte vorher und nachher 1,58 GiB (`dwm` etwa 1,9 GB auf der NVIDIA). Vermutlich braucht `dwm` einen Neustart von Windows; das ist **nicht geprüft**, der Captain hat den Neustart auf später gelegt. Messdateien: `03_MESSUNGEN/GPU_vorher_2026-11-10.md`, `GPU_nachher_2026-11-10.md`.
+
+**Parallel auf `main` gelandet (andere Sitzungen, im Log gesehen, nicht geprüft):** Orca-Brücke mit `--frage` und Skill `sedra-fragen` (Fragen aus dem Claude-Chat an das laufende SEDRA, `bdaa4f9`, `bf1917a`), Korrektur der dynamischen Rezepte im Modellmenü (`f53ced5`, vier 35B-Rezepte wurden fälschlich mit `vram_insufficient` abgelehnt; noch nicht gepusht), ein Auftrag „Modellmenü übersichtlich“ im Postfach (`AUFTRAG_Modellmenue_2026-11-10.md`), der sich mit `SPEZ_MODELL_MENUE_AUSBAU.md` überschneidet.
+
+**Fallen:**
+- Bash-Heredocs mit gemischten Anführungszeichen scheitern im Werkzeug; Skriptdatei schreiben und ausführen.
+- Win32-Zähler für GPU-Speicher je Prozess addieren sich nicht sauber zur Summe des Adapters; für Entscheidungen `nvidia-smi` und die Adapterzähler nehmen.
+- LUIDs der Grafikadapter ändern sich nach einem Neustart.
+
+**Offen:**
+1. Neustart von Windows, dann dieselbe GPU-Messung wiederholen (Skript im Scratchpad der Sitzung, Ablauf in `03_MESSUNGEN`).
+2. Coder-Agent: V-002 abarbeiten (Tests, Schlüsselerkennung, Modell, Cloud/lokal), dann Vorarbeiter-Kanal VK-1, dann Modellmenü, dann RAM. Die Specs für Modellmenü und RAM sind noch nicht im Postfach.
+3. Abgleich von `SPEZ_MODELL_MENUE_AUSBAU.md` mit dem parallelen Auftrag zum Modellmenü und mit `f53ced5`.
+4. Entscheidungen des Captains: Standard-Kontextstufen, Profilwechsel im Menü, nicht passende Rezepte grau anzeigen, Freigabeliste für „RAM freimachen“, welches Cloud-Rezept der Prüfer bekommt, Pi auf „CLI“ in Orca stellen.
+5. Worktree `<sedra>-wt-p1b-1-vorschau` und Branch `p1b-1-vorschau-ausbau` werden noch gebraucht. Nichts davon ist in `main`.
+
 ## 9. Alle Chats (Sitzungen), nach Datum
 **Sedra Vorarbeiter (Gruppe):**
+- 10.11. Claude Code, Chat „Vorarbeiter: Specs, Postfach zum Coder, GPU-Messung“: Specs Fabrik-Control V2, Vorschau-Ausbau, Vorarbeiter-Kanal, Modellmenü, RAM freimachen; Postfach zum Coder (Pi); Prüfung von Commit `dcf8dde`; Messung der Grafikspeicher mit Monitor am Mainboard (siehe Abschnitt 16).
 - 09.–10.11. Claude Code, Chat „n8n-Import, Ryzen-9-Tuning, Profile, Nachtlauf“: Import-Vorschau auf der Startseite, Tinas Workflow auf das lokale Modell, Messungen Threads/Lagen/MTP/Kanäle, Profile `bau`, `bau-1x80k`, `bau-4x32k`, alter Nachtlauf gelöscht, neuer Nachtlauf (siehe Abschnitt 15).
 - 08.–09.11. Claude Code, Chat „Fabrik-Bau, Cloud-Modelle, Manager“: Factory SDK, Bau-Schleife, Berater, Fähigkeitstest, Manager mit Verfassung und Werkzeugen, Vorarbeiter-Kanal, Wissensquelle (siehe Abschnitt 13). Unterchats: nachtlauf-sedra-bau-berw (ausgesetzt), nachtlauf-sedra, neustart-sedra, k3-sedra, k3-nachricht, updater-uebergabe, tester-f05b-main, tester-main-verif.
 - 08.–09.11. Claude Code, Chat „Nachtlauf SEDRA“ (Koordinator): F0-05C-Abgabe in `main` übernommen, Factory-Bau v5 und Wiederholung (nicht bestanden), Register-Notizen, Dashboard; Sitzung „Nachtlauf SEDRA: Bau überwachen, Dashboard abarbeiten“ (siehe Abschnitt 12).
