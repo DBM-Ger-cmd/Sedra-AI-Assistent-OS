@@ -212,8 +212,59 @@ Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzei
 - Lokale Slots: erst nach dem Bau, mit Speicherprüfung.
 - Factory-Bau v5: Stand nach S3 nicht geprüft; Logbuch-Zeilen dazu liegen unversioniert in `docs/LOGBUCH_AGENT_MANAGER.md`.
 
+## 15. Arbeit im Chat vom 09.–10.11.2026 (Claude Code: n8n-Import, Ryzen-9-Tuning des Hauptmodells, Profile, Nachtlauf)
+Stand beim Sichern: `main` = `1ceff20`, gepusht (Abstand zu `origin/main` 0/0). Worktree `nachtlauf` (Branch `nachtlauf`) enthält ungemergte Änderungen, siehe unten.
+
+**Gebaut und gepusht (alles in `main`)**
+- `ee9f450` n8n-Import auf der Startseite beider Workflow-Apps: Karte „n8n-Workflow importieren“ (Datei, Ziehen, Einfügen), Vorschau mit Urteil, Funden, Bild und Schrittliste; Server-Teil `workflows/vorschau.py` mit Verb `import_vorschau` (nur lesen), Oberfläche `uix/ui/workflow-import.js`. Tests: 20 (`test_workflow_vorschau`) und 1 Browser-Test (`test_workflow_import_browser`), dazu die bestehenden Import-Tests grün (59 + 21 im Lauf). Das Dateifeld entsteht erst beim Klick, damit der Testweg `input[type=file]` des Editors eindeutig bleibt.
+- `8556f21` Referenz für den Standardtest `bench_std` (5 Dateien in `devvm_refs/bench_std`); besteht alle vier Stufen auf dem Host und in der microVM.
+- `1ceff20` Testläufer: Voreinstellung 12 statt 6 parallele Gruppen; voller Lauf mit 4.618 Tests **274 s statt 397 s**, in beiden Läufen dieselben 4 roten Tests (zwei Cloud-Einstellungen, ein Gateway-Test, alte Namen; Ursache nicht untersucht, nicht von dieser Änderung). Whisper-Threads: Standard sind die Kerne ohne Hyperthreads (4 bis 12), einstellbar mit `threads` in `local_config/sprache.stt.json`. VM-Kerne 2 → 4 bringen nichts (6 s gegen 7 s) und wurden verworfen.
+- Gelöscht (Captain-Ja): Worktrees und Branches `workflow-import` und `fabrik-notaus` (vorher vollständig in `main`).
+
+**Tinas Rechnungsprüfung (n8n-Paket)**
+- Das Paket `Rechnungspruefung_Tina_n8n_Importpaket.zip` (am 10.11. erneut gesendet) ist unverändert gegenüber dem ersten Stand. Workflow 01: 20 Schritte, 22 Verbindungen, davon nur 3 (If-Knoten) in SEDRA ausführbar; Workflow 02: 11 Schritte, 1 ausführbar. Dateien 03 und 05 sind keine Workflows (Daten, Prüfbericht) und werden mit klarem Satz abgelehnt.
+- Lokale Fassung von Workflow 01 auf Qwen3.6-35B-A3B (neue Datei im Ausgabeordner des Pakets, Unterordner `n8n_lokal_qwen36`, das Original bleibt): beide Modell-Knoten auf `lmChatOpenAi`, Temperatur 0 (Extractor) und 0,1 (Agent), Token-Grenzen 512 und 1024, Zugang „SEDRA lokal“ (Basis-URL der OpenAI-Schnittstelle des Routers, Port 8090 mit `/v1`). Der Extractor-Prompt von Tina (Schutzzeile gegen Anweisungen im Text, `{format_instructions}`) bleibt, dazu Regeln für Datum, Betragsbasis und Währung und ein Datumsmuster im Schema. Test gegen das lokale Modell (Werkzeugaufruf wie n8n, Denken aus): Extractor 28 von 28 Feldern bei vier Rechnungen (Grundprompt: 25 von 28), Agent ruft das Werkzeug auf und liefert das JSON mit den drei Feldern, drei gleichzeitige Anfragen je etwa 5 s. Kein echter Lauf in n8n selbst.
+
+**Messungen am Ryzen 9 9900X (12 Kerne, 24 Threads; 12 GB VRAM; 31 GB RAM), Motor b11160, FA an, KV q8_0, ubatch 512** (Messdateien lagen im Scratchpad der Sitzung, nicht im Repo)
+- Qwen3.5-9B Q6_K (ganz im VRAM): Threads 6 bis 22 ohne Wirkung (60,1 bis 61,8 Token/s).
+- Qwen3.6-35B-A3B UD-IQ4_XS, 1 Kanal: Threads ohne Wirkung; der Hebel ist `n_cpu_moe`. Bei 32k: 16 Lagen 72,1 Token/s (0,5 GiB frei, zu knapp), 18: 69,0, 20: 65,4, 24: 60,4; 14 und weniger laufen in den VRAM-Überlauf (21 bis 30 Token/s). Bei 80k (81.920): 18 Lagen 68,5 (0,37 GiB frei), 19: 66,7 (0,71), 20: 66,0 (1,06). Der alte Stand (28 Lagen) lag bei etwa 40 Token/s. KV-Rate gemessen: 0,0144 GiB je 1.000 Token (vorher 0,0125 im Rezept).
+- Mehrere Kanäle ohne MTP: 3 × 48k mit 22 Lagen 36,7 bis 40,9 Token/s je Strom (zusammen etwa 74); 4 × 32k mit 22 Lagen 24,9 je Strom (zusammen etwa 100 reine Erzeugung); mit 21 Lagen bleiben nur 0,46 GiB frei.
+- MTP (neue Datei `Qwen3.6-35B-A3B-MTP-GGUF`, UD-IQ4_XS, 18.209.036.576 Byte, SHA-256 `df27a780…f7adf` geprüft, im Modellordner unter `unsloth`): 1 Kanal 80k: ohne MTP 65,4, **mit MTP 93,4 (20 Lagen, 0,37 GiB frei) und 90,1 (22 Lagen, 0,8 GiB frei)**, Annahmequote etwa 90 %. Dauertest bis 71k im Prompt: 20 Lagen stabil (9/9 Stufen), 0,39 GiB frei, Tempo fällt von 76 auf 49 Token/s; **21 Lagen stabil, 0,48 GiB frei, 68 bis 71 Token/s bei vollem Kontext**. 2 × 64k mit MTP und 24 Lagen: 61,0 je Strom, zusammen etwa 97, 0,65 GiB frei; 3 × 48k mit MTP und 24 Lagen: 49,2 je Strom, zusammen 96, 0,45 GiB frei; 3 × 48k mit MTP und 22 Lagen wird langsamer (29,7). Unter etwa 0,45 GiB frei bricht das Tempo ein.
+- Standardbau `bench_std` (4 Stufen): 96,9 s (1 Slot, 18 Lagen), 109,2 s (2 Slots mit Prüfer gleichzeitig), 98,4 s (80k, feste 20 Lagen), 100,7 s (MTP, 22 Lagen): der Bau ist zu klein für den Tempogewinn, die microVM-Tests machen rund 90 s aus.
+
+**Entscheidungen des Captains (10.11.)**: 18 Lagen sind bei Einbruch von 16 der Sweet Spot; 80k Kontext für den Einzelkanal anzielen (dann 20 bis 21 Lagen); 0,37 GiB frei sind akzeptabel, wenn es stabil läuft (Dauertest bestätigt es für 21 Lagen); Profil 3 × 48k eintragen; MTP-Modell laden; Wechsel auf `bau-1x80k`; Referenz committen und pushen; alten Nachtlauf löschen.
+
+**Einstellungen in `local_config` (nicht in git; Sicherungen `*.bak-2026-11-10-*` daneben)**
+- `role_routing.yaml`: Rezept `coder.local_primary` = 3 × 48k, 22 Lagen fest, kein MTP; `coder.local_primary_1x80k` = 1 Kanal, 81.920, **MTP-Datei, 21 Lagen**, Untergrenze 21, Stufe 81920 in der Kontext-Leiter; `coder.local_primary_4x32k` = 4 × 32k, 22 Lagen. Tabelle der dynamischen Auswahl neu (18, 20, 24 Lagen mit korrigierter Grundlast 0,26 GiB), `kv_cache_gb_per_1k_tokens` 0,0144.
+- `routing_profiles.yaml`: Profile `bau` (3 × 48k), `bau-1x80k` (**aktiv**), `bau-4x32k`.
+- Die Profile mit 2 und 3 Kanälen und MTP (24 Lagen) sind gemessen, aber noch nicht eingetragen.
+
+**Fallen und Befunde**
+- **`devvm_build.py` und die Bau-Schleife umgehen die dynamische Auswahl** (eigener Server-Start): sie nehmen `n_cpu_moe` fest aus dem Server-Block des Rezepts. Darum steht die Lagenzahl der Profile dort fest. Erkannt an der VRAM-Spitze (8,5 GiB statt 11,2 GiB).
+- Testprojekte außerhalb des echten Projektordners haben keinen Sandbox-Unterbau: die microVM scheitert (`VM run failed`), auch mit einer richtigen Referenz. Bauläufe immer mit dem echten Projekt.
+- Der Spec-Stempel kann nach einem Commit ungültig werden (`spec_changed_since_check`): `spec_check.py <spec> --vm --project <Projekt>` erneuert ihn.
+- Beim Einbau eines Prompts den bestehenden Wert vorher lesen: Ich habe Tinas Extractor-Prompt überschrieben und musste ihn aus dem Original wiederherstellen.
+- Fremde `llama-server` auf der GPU verfälschen Messungen; die Messskripte brechen jetzt ab, wenn einer auftaucht.
+- `START_SEDRA.bat --replace` aus einer Hilfsshell ersetzte die laufende Sitzung nicht; die alte Sitzung musste beendet und `START_SEDRA.bat` neu gestartet werden.
+
+**Alter Nachtlauf gelöscht**: die zwei geplanten Windows-Aufgaben „GUPPI Nachtkette 2026-10-13“ und „SEDRA Nachtkette A1 2026-10-26“ (beide schon deaktiviert) und die Auftragsliste `nacht_auftraege.json` (jetzt leer). Die Skripte `night_chain.py` und `start_nachtkette.ps1` liegen noch im Repository.
+
+**Nachtlauf 10.11., 01:15 bis 07:00** (Läufer `benchmarks/nachtlauf.py`, Protokoll im Koordinationsordner unter `09_PLAN/NACHTPROTOKOLL_2026-11-10.md`, Plan `NACHTPLAN_2026-11-10_ENTWURF.md`): Schritt 2 Factory-Bau der neuen Spec `n8n_modell_umstellen` (Modell-Knoten eines n8n-Workflows auf das lokale Modell umstellen, Stufen S1 bis S4, Referenz in der microVM bestanden) über den Manager (`bau_starten` mit Spec, Rezept `coder.local_primary_1x80k`, 81.920); Schritt 3 Messung KV-Cache f16 gegen q8_0 mit Auslesen der geladenen CPU-Variante; Schritt 4 volle Testsuite. Ergebnisse standen beim Sichern noch aus (**nicht geprüft**). Nichts wird integriert, gemergt oder gepusht.
+- Dafür im Worktree `nachtlauf` (Branch `nachtlauf`, **nicht committet**): `bau_schleife.py` mit `--spec`, `--rezept`, `--kontext` (andere Specs enden nach S4 mit Kurzbericht statt Produktprüfung), `manager/werkzeuge.py` (`bau_starten` reicht die drei Angaben durch), neue Spec, Referenz, `nachtlauf.py`, `tests/test_bau_schleife_spec.py` (7 Tests grün; 35 mit `test_fabrik_notaus` und `test_manager_verfassung`). Junction `engines` im Worktree zeigt auf die Engines des Hauptordners.
+
+**Offene Punkte**
+1. Ergebnis des Nachtlaufs auswerten (Protokoll, Kandidat in `devvm_candidates`, Kurzbericht, KV-Messung, Testsuite) und die Änderungen im Worktree `nachtlauf` nach Prüfung committen, mergen und pushen (nur mit Ja des Captains).
+2. Profile mit 2 und 3 Kanälen und MTP (24 Lagen) eintragen; den normalen Bau-Standard (`coder.local_primary`) über die Schleife ggf. auf das MTP-Rezept stellen.
+3. Register und Dashboard nachziehen (Einträge für n8n-Import, CPU/Tuning, Nachtlauf; Status nur durch den Koordinator).
+4. Knopf „Auf lokales Modell umstellen“ in der Import-Vorschau (die Funktion dafür entsteht gerade im Nachtbau).
+5. MOD-02 (n8n-Adapter, Gap-Analyse) und MOD-01 sind laut Dashboard offen und ohne Abhängigkeit; F2-01 hängt an der Kette F0-05C bis F0-05E, F0-06A/B, F1-01, F1-02 und MOD-03.
+6. Bau-Schleife soll die Haltemarke (roter Knopf) zwischen Stufen prüfen und Live-Meldungen schreiben (offen aus früherer Sitzung).
+7. Worktrees `cpu-nutzung` (in `main`, kann gelöscht werden), `nachtlauf` (noch gebraucht), `f0-05-drain`, `freigabe-luecken`, `wissen-k5-v5` (fremde Sitzungen, nicht angefasst).
+8. Nicht geprüft: Zen-optimierter Motor (nur wenn die Messung der CPU-Variante einen Gewinn zeigt), echter Lauf von Tinas Workflow in n8n, MTP mit 3 bis 4 Kanälen im Bau.
+
 ## 9. Alle Chats (Sitzungen), nach Datum
 **Sedra Vorarbeiter (Gruppe):**
+- 09.–10.11. Claude Code, Chat „n8n-Import, Ryzen-9-Tuning, Profile, Nachtlauf“: Import-Vorschau auf der Startseite, Tinas Workflow auf das lokale Modell, Messungen Threads/Lagen/MTP/Kanäle, Profile `bau`, `bau-1x80k`, `bau-4x32k`, alter Nachtlauf gelöscht, neuer Nachtlauf (siehe Abschnitt 15).
 - 08.–09.11. Claude Code, Chat „Fabrik-Bau, Cloud-Modelle, Manager“: Factory SDK, Bau-Schleife, Berater, Fähigkeitstest, Manager mit Verfassung und Werkzeugen, Vorarbeiter-Kanal, Wissensquelle (siehe Abschnitt 13). Unterchats: nachtlauf-sedra-bau-berw (ausgesetzt), nachtlauf-sedra, neustart-sedra, k3-sedra, k3-nachricht, updater-uebergabe, tester-f05b-main, tester-main-verif.
 - 08.–09.11. Claude Code, Chat „Nachtlauf SEDRA“ (Koordinator): F0-05C-Abgabe in `main` übernommen, Factory-Bau v5 und Wiederholung (nicht bestanden), Register-Notizen, Dashboard; Sitzung „Nachtlauf SEDRA: Bau überwachen, Dashboard abarbeiten“ (siehe Abschnitt 12).
 - 05.–06.11. Claude Code, Chat „Prozess-Apps einspielen und überarbeiten“: Update 1.22.2, UIX der Prozess-Apps, Selbstabbild, F0-01 bis F0-04, Wissen K1/K2/K5, Skills; Unterchats „Updates einspielen und prüfen“ und „Aufräumen der Umgebung“ (siehe Abschnitt 11).
