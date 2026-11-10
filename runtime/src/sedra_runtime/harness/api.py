@@ -856,6 +856,11 @@ class HarnessApi:
             ctx = (r.get('profile') or {}).get('context') or {}
             grenze = int(ctx.get('measured_maximum') or ctx.get('maximum') or 0) or None            # die Stufen, die das Rezept hergibt (die Hardware kann sie noch kuerzen: der Server sagt es beim Laden)
             eintrag['kontexte'] = sorted(t for t in (ctx.get('tiers') or []) if type(t) is int and (grenze is None or t <= grenze))
+            eintrag['beschreibung'] = r.get('beschreibung') or ''
+            eintrag['einsatz'] = r.get('einsatz') or ''
+            maximum = int(ctx.get('maximum') or 0) or None                  # Stufen ueber der Messgrenze: sichtbar, aber nicht waehlbar, mit dem Grund
+            eintrag['kontexte_ungemessen'] = sorted(t for t in (ctx.get('tiers') or []) if type(t) is int and grenze is not None and t > grenze and (maximum is None or t <= maximum))
+            eintrag['kontext_gemessen_bis'] = grenze
             eintrag['kontext_wahl'] = getattr(self.hub, '_last_kontext', lambda _i: 'auto')(r['id'])
             try:
                 ok, why = router._evaluate(r, router.normalize(None), exclude=set(), independent_of=[], captain_cloud_approved=False, now=router._clock(),

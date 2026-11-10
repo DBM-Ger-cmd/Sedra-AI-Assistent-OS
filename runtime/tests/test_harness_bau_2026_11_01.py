@@ -214,6 +214,9 @@ class SitzungsErlaubnisServer(unittest.TestCase):
         for m in v['modelle']:
             self.assertIn(m['passt'], (True, False, None))
             if m['passt'] is False: self.assertTrue(m['grund'])
+            for feld in ('beschreibung', 'einsatz', 'kontexte_ungemessen', 'kontext_gemessen_bis'): self.assertIn(feld, m)
+            self.assertTrue(all(t > (m['kontext_gemessen_bis'] or 0) for t in m['kontexte_ungemessen']), 'ungemessen = ueber der Messgrenze')
+            self.assertFalse(set(m['kontexte_ungemessen']) & set(m['kontexte']), 'eine Stufe ist waehlbar oder ungemessen, nie beides')
         self.assertEqual(v['modelle'], sorted(v['modelle'], key=lambda e: (not e['geladen'], not e['passt'], not e['gemessen'], e['bedarf_vram_gb'] or 0, e['id'])))
 
     def test_herkunft_auch_auf_nachricht_patch_delete_stopp(self):

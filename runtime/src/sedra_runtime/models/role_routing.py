@@ -188,6 +188,8 @@ class RoutingConfig:
                 "measured_context": measured_context,
                 "max_level": level, "network_allowed": bool(network.get("allowed", False)), "tests": list(item.get("tests") or []),
                 "rollback": bool((item.get("rollback") or {}).get("supported", False)), "source": str(metadata.get("source", "")),
+                # Anzeige in der Modellwahl (Harness): ein Satz zum Rezept und der Einsatzzweck als Gruppe; nur Text, ohne Wirkung auf die Pruefung.
+                "beschreibung": str(metadata.get("beschreibung", ""))[:400], "einsatz": str(metadata.get("einsatz", ""))[:40],
                 "trust_level": trust}
 
     @classmethod

@@ -61,6 +61,17 @@ class KIGateWayEndeZuEnde(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='gw-e2e-')
         self.addCleanup(self.tmp.cleanup)
+        # Auslieferungszustand "Cloud aus", unabhaengig von der Freigabe in config/cloud_providers.yaml (Captain-Ja 09.11.).
+        import yaml
+        from sedra_runtime import cloud_settings
+        cfg = yaml.safe_load(Path(cloud_settings.DEFAULT_CONFIG).read_text(encoding='utf-8'))
+        cfg['cloud_providers']['enabled'] = False
+        for eintrag in cfg['cloud_providers']['providers'].values(): eintrag['enabled'] = False
+        aus = Path(self.tmp.name) / 'cloud_standard_aus.yaml'
+        aus.write_text(yaml.safe_dump(cfg), encoding='utf-8')
+        patcher = mock.patch.object(cloud_settings, 'DEFAULT_CONFIG', aus)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.hub = UIXHub(Path(self.tmp.name) / 'project', ARCH)
         self.addCleanup(self.hub.close)
         self.lokal = StubLokal()

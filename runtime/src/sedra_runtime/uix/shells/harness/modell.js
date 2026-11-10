@@ -46,6 +46,11 @@
     return treffer ? GRUND[treffer] + ' (' + m + ')' : m;
   }
 
+  // Wofuer ein Fenster taugt, in Worten (die Zahl allein sagt dem Nutzer nichts): Kurztest, kleine Aufgabe, Standard, grosse Aufgabe, Bau.
+  function fensterZweck(t){ t = Number(t); return t <= 8192 ? 'Kurztest' : t <= 16384 ? 'kleine Aufgabe' : t <= 32768 ? 'Standard' : t <= 65536 ? 'große Aufgabe' : 'Bau, sehr großer Auftrag'; }
+  // Reihenfolge der Gruppen in der Modellwahl nach Einsatz; unbekannte Einsätze stehen dahinter, Rezepte ohne Einsatz unter „Weitere“.
+  const EINSATZ = ['Bau und Agenten', 'Prüfen', 'Schnelltest und Werkzeuge', 'Hilfsmodell'];
+
   // Die Steuerung: Rezeptwahl, Laden/Wechseln, Entladen, Zustand. `nachher` läuft nach Erfolg (Anzeige auffrischen).
   function steuerung(S, nachher){
     const box = d().el('div', 'hs-modell-steuer');
@@ -58,18 +63,22 @@
     const merken = d().el('button', 'hs-knopf hs-vorgabe-knopf', 'Als Vorgabe merken'); merken.type = 'button'; merken.title = 'Dieses Rezept ist dann der Standard (und wird beim Senden geladen, wenn der Katalog es erlaubt)';
     merken.onclick = ()=>root.sedraHarness.projekt.setzen(S, {rezept_standard: wahl.value || null}, merken).then(auffrischen);
     let geladen = null;
-    box.append(wahl, fenster, laden, weg, merken, stand);
+    const beschr = d().el('div', 'hs-leise hs-modell-beschr', '');
+    box.append(wahl, fenster, laden, weg, merken, stand, beschr);
     let liste = [];
     // Kontextfenster zum Rezept: „Auto“ (das größte, das passt) und die Stufen des Rezepts; ohne Stufen gibt es nur „Auto“
     function fensterFuellen(vorwahl){
       const r = liste.find(x=>x.id === wahl.value) || {};
       const stufen = r.kontexte || [];
-      fenster.replaceChildren(...[['auto', 'Fenster: Auto (größtes)']].concat(stufen.map(t=>[String(t), 'Fenster: ' + Number(t).toLocaleString('de-DE') + ' Token'])).map(([v, t])=>{
-        const o = document.createElement('option'); o.value = v; o.textContent = t; return o;
-      }));
+      const ungemessen = r.kontexte_ungemessen || [];
+      const zeile = (v, t, aus)=>{ const o = document.createElement('option'); o.value = v; o.textContent = t; if(aus){ o.disabled = true; o.title = 'Für dieses Fenster fehlt die Messung (gemessen bis ' + Number(r.kontext_gemessen_bis || 0).toLocaleString('de-DE') + ' Token). Messlauf starten, dann steht die Stufe hier frei.'; } return o; };
+      fenster.replaceChildren(zeile('auto', 'Fenster: Auto (größtes, das passt)'),
+        ...stufen.map(t=>zeile(String(t), 'Fenster: ' + Number(t).toLocaleString('de-DE') + ' · ' + fensterZweck(t))),
+        ...ungemessen.map(t=>zeile(String(t), 'Fenster: ' + Number(t).toLocaleString('de-DE') + ' · ' + fensterZweck(t) + ' (nicht gemessen)', true)));
       const w = vorwahl !== undefined ? String(vorwahl) : (r.kontext_wahl !== undefined ? String(r.kontext_wahl) : 'auto');
       fenster.value = [...fenster.options].some(o=>o.value === w) ? w : 'auto';
       fenster.disabled = !stufen.length;
+      beschr.textContent = (r.beschreibung || '') + (r.beschreibung && ungemessen.length ? ' ' : '') + (ungemessen.length ? 'Fenster ab ' + Number(ungemessen[0]).toLocaleString('de-DE') + ' warten auf eine Messung.' : '');
     }
     const fensterWert = ()=>fenster.value === 'auto' || !fenster.value ? 'auto' : Number(fenster.value);
     wahl.addEventListener('change', ()=>{ merken.hidden = !wahl.value || (S.vorgaben && S.vorgaben.rezept_standard) === wahl.value; fensterFuellen(); });
@@ -89,13 +98,18 @@
         liste = rezepte;
         geladen = rezepte.find(r=>r.geladen) || null;
         const vorher = wahl.value, fensterVorher = fenster.value;
-        wahl.replaceChildren(...rezepte.map(r=>{
+        const option = r=>{
           const o = document.createElement('option'); o.value = r.id;
           o.textContent = (r.modell || r.id) + (r.groesse_gb ? ' · ' + zahl(r.groesse_gb, 1) + ' GB' : '') + ' · ' + urteil(r) + (r.geladen ? ' (geladen)' : '');
-          o.title = r.id + (r.grund ? ' – ' + r.grund : '') + (r.gemessen ? ' – gemessene Werte' : '');
+          o.title = (r.beschreibung ? r.beschreibung + ' – ' : '') + r.id + (r.grund ? ' – ' + r.grund : '') + (r.gemessen ? ' – gemessene Werte' : '');
           o.dataset.passt = r.passt === true ? 'ja' : r.passt === false ? 'nein' : '';
           return o;
-        }));
+        };
+        const gruppen = [...EINSATZ, ...new Set(rezepte.map(r=>r.einsatz).filter(e=>e && !EINSATZ.includes(e))), ''];
+        wahl.replaceChildren(...gruppen.map(g=>{
+          const dazu = rezepte.filter(r=>(r.einsatz || '') === g); if(!dazu.length) return null;
+          const og = document.createElement('optgroup'); og.label = g || 'Weitere'; og.append(...dazu.map(option)); return og;
+        }).filter(Boolean));
         const vorgabe = S.vorgaben && S.vorgaben.rezept_standard;                                   // P0 M3: die Vorgabe vor „zuletzt“
         const erstes = rezepte.find(r=>r.passt) || rezepte[0];
         wahl.value = rezepte.some(r=>r.id === vorher) ? vorher : (geladen ? geladen.id : (rezepte.some(r=>r.id === vorgabe) ? vorgabe : (erstes ? erstes.id : '')));

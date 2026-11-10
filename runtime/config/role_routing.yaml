@@ -33,7 +33,7 @@ role_routing:
       network: {allowed: false}
       tests: [capability_smoke_test, syntax_test, deterministic_task_test]
       rollback: {supported: true}
-      metadata: {source: builtin, trust_level: BUILT_IN}
+      metadata: {beschreibung: "Hauptmodell fuer Bau und Agenten (Vorlage; die Werte stehen in der lokalen Konfiguration des Rechners).", einsatz: "Bau und Agenten", source: builtin, trust_level: BUILT_IN}
 
     # The local verification layer. Disabled on purpose: no Kev server or weights are bundled, so nothing may claim to
     # verify with it until a qualified local server exists and the Captain enables this recipe.
@@ -53,4 +53,4 @@ role_routing:
       network: {allowed: false}
       tests: [capability_smoke_test]
       rollback: {supported: true}
-      metadata: {source: captain_custom, trust_level: CAPTAIN_CUSTOM}
+      metadata: {beschreibung: "Prueft unabhaengig vom Bau-Modell (Vorlage).", einsatz: "Prüfen", source: captain_custom, trust_level: CAPTAIN_CUSTOM}
