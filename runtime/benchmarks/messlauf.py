@@ -56,11 +56,11 @@ def auswerten(runden):
 
 
 def gpu_belegt():
-    return int(subprocess.run(["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"], capture_output=True, text=True).stdout.strip())
+    return int(subprocess.run(["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"], capture_output=True, text=True, errors="replace").stdout.strip())
 
 
 def fremde_server():
-    ausgabe = subprocess.run(["tasklist", "/FI", "IMAGENAME eq llama-server.exe"], capture_output=True, text=True).stdout
+    ausgabe = subprocess.run(["tasklist", "/FI", "IMAGENAME eq llama-server.exe"], capture_output=True, text=True, errors="replace").stdout or ""
     return ausgabe.lower().count("llama-server.exe")
 
 
