@@ -58,5 +58,32 @@ class Tastatur(unittest.TestCase):
         self.assertEqual(ob.karte_per_tastatur({}, eof), 'ablehnen')
 
 
+class Dienst(unittest.TestCase):
+    def test_frage_lehnt_karten_ab_und_vermerkt_es(self):
+        import threading
+        c = FakeClient()
+        c.aufruf = lambda m, p, n=None, timeout=60: (200, {'antwort_id': 'A-1'}) if p.endswith('/nachricht') else (200, {'antwort_id': 'A-2'})
+        out = ob.frage_stellen(c, 'S-1', 'schreibe', threading.Lock())
+        self.assertEqual(out['abgelehnt'], ['datei_schreiben → x.txt'])
+        self.assertIn('Freigabe nötig, abgelehnt', out['antwort'])
+        self.assertIn('fertig', out['antwort'])
+
+    def test_dienst_antwortet_ueber_loopback_und_raeumt_auf(self):
+        import tempfile, threading
+        c = FakeClient()
+        c.aufruf = lambda m, p, n=None, timeout=60: (200, {'antwort_id': 'A-2'})
+        wurzel = tempfile.mkdtemp()
+        srv, aufraeumen = ob.dienst(c, 'S-1', wurzel, port=0, sperre=threading.Lock(), blockieren=False)
+        try:
+            self.assertEqual(ob.frage_an_dienst(wurzel, 'hallo', timeout=10), 'fertig')
+        finally:
+            srv.shutdown(); srv.server_close(); aufraeumen()
+        self.assertFalse(ob.relay_datei(wurzel).exists())
+
+    def test_ohne_dienst_keine_antwort(self):
+        import tempfile
+        self.assertIsNone(ob.frage_an_dienst(tempfile.mkdtemp(), 'hallo', port=1, timeout=2))
+
+
 if __name__ == '__main__':
     unittest.main()

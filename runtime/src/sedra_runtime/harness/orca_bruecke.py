@@ -258,15 +258,129 @@ def nachricht_senden(client, sid, text, karte_beantworten, ausgabe=print, wieder
     return antwort_zeigen(client, out['antwort_id'], karte_beantworten, ausgabe)
 
 
+RELAY_PORT = 47635
+RELAY_HOST = '127.0.0.1'
+
+
+def relay_datei(wurzel):
+    return Path(wurzel) / 'runtime_data' / 'orca_bruecke.json'
+
+
+def frage_stellen(client, sid, text, sperre):
+    """Eine Frage über die offene Sitzung; Freigabekarten werden abgelehnt und im Text vermerkt (die Entscheidung bleibt dem Captain im Terminal-Chat)."""
+    zeilen, abgelehnt = [], []
+
+    def sammeln(*a, end=chr(10), flush=False):
+        zeilen.append(''.join(str(x) for x in a) + end)
+
+    def ablehnen(karte):
+        abgelehnt.append(f"{karte.get('werkzeug')} → {karte.get('ziel')}")
+        return 'ablehnen'
+
+    with sperre:
+        ende = nachricht_senden(client, sid, text, ablehnen, sammeln)
+    antwort = ''.join(zeilen).strip()
+    if abgelehnt:
+        antwort += (chr(10) * 2 + '[Freigabe nötig, abgelehnt: ' + '; '.join(abgelehnt)
+                    + ' – nur der Captain im Terminal-Chat (SEDRA_AGENT.bat) kann das erlauben.]')
+    return {'antwort': antwort, 'ende': ende, 'abgelehnt': abgelehnt}
+
+
+def dienst(client, sid, wurzel, port=RELAY_PORT, sperre=None, blockieren=True):
+    """Ein kleiner Loopback-Dienst vor der Sitzung: POST /frage {text} → {antwort}; GET /status. Das Token des SEDRA-Servers verlässt diesen Prozess nie;
+    der Dienst nimmt keine Freigaben an. Jeder lokale Prozess kann dem Modell Fragen stellen, nicht mehr."""
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    sperre = sperre or threading.Lock()
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *_a):
+            pass
+
+        def _senden(self, code, daten):
+            roh = json.dumps(daten, ensure_ascii=False).encode('utf-8')
+            self.send_response(code)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', str(len(roh)))
+            self.end_headers()
+            self.wfile.write(roh)
+
+        def do_GET(self):
+            if self.path == '/status':
+                self._senden(200, {'sitzung': sid, 'beschaeftigt': sperre.locked()})
+            else:
+                self._senden(404, {'fehler': 'unbekannt'})
+
+        def do_POST(self):
+            try:
+                laenge = int(self.headers.get('Content-Length') or 0)
+                nutzlast = json.loads(self.rfile.read(laenge) or b'{}') if 0 <= laenge <= 65536 else {}
+            except ValueError:
+                nutzlast = {}
+            if self.path == '/frage' and isinstance(nutzlast.get('text'), str) and nutzlast['text'].strip():
+                self._senden(200, frage_stellen(client, sid, nutzlast['text'], sperre))
+            elif self.path == '/modell' and isinstance(nutzlast.get('id'), str):
+                with sperre:
+                    ok = modell_laden(client, nutzlast['id'], lambda *a, **k: None)
+                self._senden(200, {'geladen': ok})
+            else:
+                self._senden(400, {'fehler': 'text_fehlt'})
+
+    srv = ThreadingHTTPServer((RELAY_HOST, port), H)
+    datei = relay_datei(wurzel)
+    datei.parent.mkdir(parents=True, exist_ok=True)
+    datei.write_text(json.dumps({'port': srv.server_port, 'pid': os.getpid()}), encoding='utf-8')
+    def aufraeumen():
+        try:
+            datei.unlink()
+        except OSError:
+            pass
+
+    if not blockieren:
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        return srv, aufraeumen
+    try:
+        srv.serve_forever()
+    finally:
+        aufraeumen()
+
+
+def frage_an_dienst(wurzel, text, port=None, timeout=1800):
+    """Der Client zum Dienst: die Antwort als Text; None, wenn der Dienst nicht läuft."""
+    if port is None:
+        try:
+            port = int(json.loads(relay_datei(wurzel).read_text(encoding='utf-8'))['port'])
+        except (OSError, ValueError, KeyError):
+            port = RELAY_PORT
+    k = http.client.HTTPConnection(RELAY_HOST, port, timeout=timeout)
+    try:
+        k.request('POST', '/frage', body=json.dumps({'text': text}).encode('utf-8'), headers={'Content-Type': 'application/json'})
+        r = k.getresponse()
+        return json.loads(r.read().decode('utf-8', 'replace')).get('antwort', '')
+    except (OSError, ValueError):
+        return None
+    finally:
+        k.close()
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog='sedra-orca-bruecke', description='SEDRA als Agent im Terminal (Orca)')
     p.add_argument('--root', default=None, help='SEDRA-Ordner (Standard: der Ordner dieses Pakets)')
     p.add_argument('--projekt', default=None, help='Harness-Projekt (Standard: das Standardprojekt)')
     p.add_argument('--titel', default='Orca-Sitzung')
     p.add_argument('--einmal', metavar='TEXT', help='eine Nachricht senden, Antwort ausgeben, beenden (Karten werden abgelehnt)')
+    p.add_argument('--dienst', action='store_true', help='Dauerdienst: Server und Sitzung offen halten, Fragen über --frage (Loopback, keine Freigaben)')
+    p.add_argument('--frage', metavar='TEXT', help='eine Frage an den laufenden Dienst stellen und die Antwort ausgeben')
+    p.add_argument('--modell', metavar='ID', help='mit --dienst: dieses Rezept beim Start laden')
     p.add_argument('--replace', action='store_true', help='ein bereits laufendes SEDRA vorher beenden')
     p.add_argument('--python', default=None, help='Python für den Server (Standard: dieses)')
     a = p.parse_args(argv)
+    if a.frage:
+        antwort = frage_an_dienst(a.root or paket_wurzel(), a.frage)
+        if antwort is None:
+            print('Kein SEDRA-Dienst erreichbar. Starten mit: SEDRA_AGENT.bat --dienst', file=sys.stderr)
+            return 3
+        print(antwort)
+        return 0
     try:
         server = Server(a.root or paket_wurzel(), python=a.python, ersetzen=a.replace)
     except RuntimeError as exc:
@@ -275,10 +389,25 @@ def main(argv=None):
     try:
         client = Client(server.port, server.token)
         sid = sitzung_anlegen(client, a.projekt, a.titel)
+        if a.dienst:
+            if a.modell:
+                modell_laden(client, a.modell)
+            print(f'SEDRA-Dienst bereit · Sitzung {sid} · Port {RELAY_PORT} · Strg+C beendet (Server und Modell werden mit beendet)', flush=True)
+            try:
+                dienst(client, sid, a.root or paket_wurzel())
+            except KeyboardInterrupt:
+                pass
+            return 0
         if a.einmal:
             ende = nachricht_senden(client, sid, a.einmal, karte_immer_ablehnen)
             return 1 if ende in ('fehler', 'abgebrochen', 'kein_modell') else 0
-        print(f'SEDRA im Terminal · Sitzung {sid} · /modell zeigt und lädt Modelle, /ende beendet, Strg+C bricht eine Antwort ab')
+        sperre, aufraeumen = threading.Lock(), None
+        try:                                    # dieselbe Sitzung ist auch für Fragen von außen offen (Loopback, ohne Freigaben)
+            _srv, aufraeumen = dienst(client, sid, a.root or paket_wurzel(), sperre=sperre, blockieren=False)
+            relay = f' · Fragen von außen: SEDRA_AGENT.bat --frage "…" (Port {RELAY_PORT})'
+        except OSError:
+            relay = ' · Port für Fragen von außen belegt (ein anderer SEDRA-Chat läuft)'
+        print(f'SEDRA im Terminal · Sitzung {sid}{relay} · /modell zeigt und lädt Modelle, /ende beendet, Strg+C bricht eine Antwort ab')
         while True:
             try:
                 text = input('\nDu › ').strip()
@@ -294,10 +423,13 @@ def main(argv=None):
                 continue
             if text:
                 try:
-                    print('SEDRA › ', end='', flush=True)
-                    nachricht_senden(client, sid, text, karte_per_tastatur)
+                    with sperre:
+                        print('SEDRA › ', end='', flush=True)
+                        nachricht_senden(client, sid, text, karte_per_tastatur)
                 except KeyboardInterrupt:
                     print('\n[abgebrochen]')
+        if aufraeumen:
+            aufraeumen()
         return 0
     finally:
         server.beenden()
