@@ -18,7 +18,7 @@ VORLAGE = Path(__file__).resolve().parents[3] / 'config' / 'freigabe_katalog.bei
 STUFEN = ('frei', 'vorarbeiter', 'captain', 'verboten')          # von mild nach streng; `einstufen` nimmt bei Gleichstand die strengere
 DATEI_WERKZEUGE = ('datei_lesen', 'dateien_auflisten', 'suchen', 'datei_schreiben', 'datei_aendern')
 OHNE_KARTE = ('app_oeffnen', 'projekt_beantragen', 'erinnern', 'sitzungen_auflisten', 'youtube_transkript', 'vorlage_beantragen', 'desktop_lesen', 'belohnungen_lesen', 'prozess_beantragen', 'wissen_suchen', 'wissen_beantragen')      # laufen ohne Karte (wissen_*: SPEC_WISSEN_KERN_v1 WK-10/11); eine Regel kann sie nur mit `verboten` abschalten. Ziel: Ort · verknuepfung/Ort · Ordner · denken/Antwort-ID · suche/Stichworte
-WERKZEUGE = DATEI_WERKZEUGE + ('befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen') + OHNE_KARTE      # Stufe 3: Läufe und Modelle (Ziel = Lauf-ID bzw. Rezept-ID)
+WERKZEUGE = DATEI_WERKZEUGE + ('befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen', 'auftraege_verteilen') + OHNE_KARTE      # Stufe 3: Läufe und Modelle (Ziel = Lauf-ID bzw. Rezept-ID)
 ID = re.compile(r'[a-z0-9][a-z0-9-]{0,47}')
 
 

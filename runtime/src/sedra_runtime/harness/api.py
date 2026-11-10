@@ -954,9 +954,17 @@ class HarnessApi:
                          projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz), lese_grenze=lambda: self._option('lese_grenze'), sitzungen_liste=self.sitzungen_fuer_modell, sitzungen_weg=lambda ids: self.aufraeumen({'ids': ids}), verknuepfung=lambda ort, name: self.verknuepfung_anlegen(ort, name, von='modell'), gedanken=self.gedanken_lesen, gedaechtnis=self.gedaechtnis_suchen,
                          code_stand=self.code_stand(projekt),
                          vorlage_antrag=lambda nutz: harness_antraege.vorlage_neu_antrag(self.hub, nutz), prozess_antrag=lambda nutz: harness_antraege.prozess_antrag(self.hub, nutz), desktop_stand=self.desktop_stand, lernen_lesen=self.lernen_lesen,
-                         wissen=self.wissen_werkzeug, wissen_antrag=self.wissen_antrag,
+                         wissen=self.wissen_werkzeug, wissen_antrag=self.wissen_antrag, cloud_verteilen=self.cloud_verteilen,
                          uebersetzer=lambda text, ziel, quelle: self.text_uebersetzen(mission_id, text, ziel, quelle),
                          web_transkript=lambda video, sprachen: self.hub.runtime.web_tool.execute(mission_id, 'youtube_transcript', {'video': video, 'languages': sprachen}))
+
+    def cloud_verteilen(self, auftraege):
+        """Für `auftraege_verteilen`: die Teilaufträge gehen über den Vorarbeiter-Kanal des Managers an die Cloud (Gesetze, Tagesbudget, Inhaltsschutz, Journal dort). Aufgerufen wird erst nach der Karte des Captains."""
+        from ..manager import Manager
+        from ..manager import werkzeuge as manager_werkzeuge
+        wurzel = self.hub.project_root
+        manager = Manager('manager', set(), journal=wurzel / 'runtime_data' / 'manager' / 'journal.jsonl')
+        return manager_werkzeuge.auftraege_verteilen(manager, wurzel, auftraege)
 
     def text_uebersetzen(self, mission_id, text, ziel, quelle):
         """Für `youtube_transkript` mit uebersetzen_nach: das geladene Modell übersetzt Teil für Teil; das Ergebnis liegt wie jeder Webtext unter runtime_data/external/."""
