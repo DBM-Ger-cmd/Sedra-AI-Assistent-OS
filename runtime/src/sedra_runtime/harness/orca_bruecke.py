@@ -65,7 +65,7 @@ class Server:
         proj = self.wurzel / 'workspace' / 'SEDRA_OS'
         proj.mkdir(parents=True, exist_ok=True)
         befehl = [python or sys.executable, '-B', '-X', 'utf8', '-m', 'sedra_runtime.uix_start', '--root', str(proj),
-                  '--architecture', str(arch), '--shell', shell]
+                  '--architecture', str(arch), '--shell', shell, '--ohne-fenster']
         if ersetzen:
             befehl.append('--replace')
         env = dict(os.environ, PYTHONUTF8='1', PYTHONPATH=str(rt / 'src'))
@@ -106,8 +106,8 @@ class Client:
     def _verbindung(self, timeout=60):
         return http.client.HTTPConnection('127.0.0.1', self.port, timeout=timeout)
 
-    def aufruf(self, methode, pfad, nutzlast=None):
-        k = self._verbindung()
+    def aufruf(self, methode, pfad, nutzlast=None, timeout=60):
+        k = self._verbindung(timeout)
         try:
             kopf = {'X-SEDRA-Token': self.token}
             body = None
@@ -214,13 +214,39 @@ def sitzung_anlegen(client, projekt, titel):
     return out['id']
 
 
-def nachricht_senden(client, sid, text, karte_beantworten, ausgabe=print):
+def modelle_zeigen(client, ausgabe=print):
+    status, out = client.aufruf('GET', '/api/harness/modelle')
+    if status != 200:
+        ausgabe(f"Modelle nicht lesbar ({status}): {out.get('message') or out}")
+        return
+    for m in out.get('modelle', []):
+        marke = 'geladen' if m.get('geladen') else ('passt' if m.get('passt') else 'passt nicht: ' + str(m.get('grund') or '')[:80])
+        ausgabe(f"  {m.get('id')}  [{marke}]")
+    ausgabe('Laden mit: /modell <id>')
+
+
+def modell_laden(client, rezept, ausgabe=print):
+    """Dieselbe Tür wie die Harness-Shell (POST /api/model/load); Speicherprüfung und Fehlertexte kommen vom Server. Dauert bis zu Minuten."""
+    ausgabe(f'Lade Modell „{rezept}“ … das kann einige Minuten dauern.')
+    status, out = client.aufruf('POST', '/api/model/load', {'recipe_id': rezept}, timeout=1800)
+    if status != 200:
+        ausgabe(f"Modell nicht geladen ({status}): {out.get('message') or out}")
+        return False
+    ausgabe('Modell geladen.')
+    return True
+
+
+def nachricht_senden(client, sid, text, karte_beantworten, ausgabe=print, wiederholt=False):
     status, out = client.aufruf('POST', f'/api/harness/sitzungen/{sid}/nachricht', {'text': text})
     if status != 200:
         ausgabe(f"Nachricht abgelehnt ({status}): {out.get('message') or out}")
         return 'fehler'
     if out.get('status') == 'kein_modell' or not out.get('antwort_id'):
+        auto = out.get('auto_laden') or {}
+        if auto.get('rezept') and not wiederholt and modell_laden(client, auto['rezept'], ausgabe):       # Auto-Laden nur, wenn der Katalog es für dieses Rezept freistellt (wie die Shell)
+            return nachricht_senden(client, sid, text, karte_beantworten, ausgabe, wiederholt=True)
         ausgabe(str(out.get('grund') or out.get('message') or out))
+        ausgabe('Modelle ansehen: /modell, laden: /modell <id>')
         return 'kein_modell'
     return antwort_zeigen(client, out['antwort_id'], karte_beantworten, ausgabe)
 
@@ -245,7 +271,7 @@ def main(argv=None):
         if a.einmal:
             ende = nachricht_senden(client, sid, a.einmal, karte_immer_ablehnen)
             return 1 if ende in ('fehler', 'abgebrochen', 'kein_modell') else 0
-        print(f'SEDRA im Terminal · Sitzung {sid} · /ende beendet, Strg+C bricht eine Antwort ab')
+        print(f'SEDRA im Terminal · Sitzung {sid} · /modell zeigt und lädt Modelle, /ende beendet, Strg+C bricht eine Antwort ab')
         while True:
             try:
                 text = input('\nDu › ').strip()
@@ -253,6 +279,12 @@ def main(argv=None):
                 break
             if text in ('/ende', '/exit', '/quit'):
                 break
+            if text == '/modell':
+                modelle_zeigen(client)
+                continue
+            if text.startswith('/modell '):
+                modell_laden(client, text.split(None, 1)[1].strip())
+                continue
             if text:
                 try:
                     print('SEDRA › ', end='', flush=True)

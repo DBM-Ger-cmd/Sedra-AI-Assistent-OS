@@ -176,6 +176,7 @@ def main(argv=None):
     p.add_argument('--architecture')
     p.add_argument('--open', action='store_true', help='open in the normal browser instead of SEDRA\'s own window')
     p.add_argument('--replace', action='store_true', help='stop an already running UIX first')
+    p.add_argument('--ohne-fenster', action='store_true', help='serve without any window or browser (for clients such as the Orca bridge); stop with Ctrl+C or by ending the process')
     p.add_argument('--shell', help='start directly in this shell (this start only; the choice in uix.yaml stays)')
     p.add_argument('--uebersicht', action='store_true', help='start in the shell overview (Start), whatever uix.yaml says')
     p.add_argument('--als-standard', help='write this shell into uix.yaml as the default, then exit (no start)')
@@ -201,7 +202,7 @@ def main(argv=None):
     code = preflight(rows, {os.getpid(), os.getppid()}, replace=args.replace)
     if code: return code
     show_lease()
-    return serve(Path(args.root), Path(args.architecture), 0, args.open, not args.open, shell=shell) or 0
+    return serve(Path(args.root), Path(args.architecture), 0, args.open, not (args.open or args.ohne_fenster), shell=shell) or 0
 
 
 if __name__ == '__main__':
