@@ -92,6 +92,94 @@
       const kennzahlen = el('p', 't-wf-hint', z.knoten + ' Schritte · ' + z.verbindungen + ' Verbindungen · ' + z.ausloeser + ' Auslöser · ' + z.notizen + ' Notizen · ' + z.unbekannt + ' ohne Ausführung in SEDRA' + (z.zugang ? ' · ' + z.zugang + ' mit Zugangsdaten' : ''));
       d.append(kennzahlen);
       if(v.aenderungen && v.aenderungen.length){const a = el('ul', 't-wf-imp-aend');v.aenderungen.forEach(x=>a.append(el('li', '', x)));d.append(el('p', 't-wf-hint', 'Beim Übernehmen ergänzt SEDRA fehlende Angaben:'), a);}
+      // Zusammenfassung
+      if(v.zusammenfassung){d.append(el('p', 't-wf-imp-saetze', 'Zusammenfassung: ' + v.zusammenfassung));}
+      // Kategorien
+      if(v.kategorien){
+        const kate = el('details', 't-wf-imp-kategorien');
+        const katz = Object.entries(v.kategorien).filter(([,n])=>n.length>0).sort((a,b)=>b[1].length-a[1].length);
+        if(katz.length){
+          const tl = el('p', 't-wf-hint');
+          tl.textContent = 'Kategorien: ' + katz.map(([k,n])=>n.length+' '+((k==='ki'?'KI/Modell':k==='ausloeser'?'Auslöser':k==='daten'?'Daten':k==='code'?'Code':k==='netzwerk'?'Netzwerk':k==='ablauf'?'Ablauf':k)) + '('+n.join(', ')+')').join(' · ');
+          kate.append(el('summary', '', 'Kategorien (' + katz.length + ')'));kate.append(tl);
+        }else{kate.append(el('summary', '', 'Kategorien: keine'));}
+        d.append(kate);
+      }
+      // Auslöser-Info
+      if(v.ausloeser_info && v.ausloeser_info.length){
+        const aInfo = el('details', 't-wf-imp-kategorien');
+        aInfo.append(el('summary', '', 'Auslöser (' + v.ausloeser_info.length + ')'));
+        v.ausloeser_info.forEach(a=>{
+          const p = el('p', 't-wf-hint');
+          p.textContent = a.name + ' (' + a.art + ')' + (a.zeitplan ? ' · Zeitplan: ' + a.zeitplan : '');
+          aInfo.append(p);
+        });
+        d.append(aInfo);
+      }
+      // Cloud-Knoten
+      if(v.cloud_knoten && v.cloud_knoten.length){
+        const cl = el('details', 't-wf-imp-kategorien');
+        cl.append(el('summary', '', 'Cloud-Knoten (' + v.cloud_knoten.length + ')'));
+        v.cloud_knoten.forEach(c=>{
+          const p = el('p', 't-wf-hint');
+          p.textContent = c.name + ' · ' + c.anbieter + (c.modell ? ' · ' + c.modell : '') + ' · ' + c.ort;
+          cl.append(p);
+        });
+        d.append(cl);
+      }
+      // Modell-Knoten (SPEZ-04a D)
+      if(v.modellknoten && v.modellknoten.length){
+        const mk = el('details', 't-wf-imp-kategorien');
+        mk.append(el('summary', '', 'KI-Modellknoten (' + v.modellknoten.length + ')'));
+        v.modellknoten.forEach(m=>{
+          const p = el('p', 't-wf-hint');
+          p.textContent = m.name + ' · ' + m.anbieter + (m.modell ? ' · ' + m.modell : '') + ' · ' + m.ort + (m.umstellbar ? ' · umstellbar' : ' · nicht umstellbar');
+          mk.append(p);
+        });
+        d.append(mk);
+      }
+      // Code-Knoten
+      if(v.code_knoten && v.code_knoten.length){
+        const ck = el('details', 't-wf-imp-kategorien');
+        ck.append(el('summary', '', 'Code-Knoten (' + v.code_knoten.length + ')'));
+        v.code_knoten.forEach(c=>{
+          const p = el('p', 't-wf-hint');
+          let txt = c.name + ' · ' + c.sprache + ' · ' + c.zeilen + ' Zeilen';
+          if(c.gefaehrliche_muster && c.gefaehrliche_muster.length){
+            p.setAttribute('class', 't-wf-imp-fund warn');
+            txt += ' ⚠ Gefahr: ' + c.gefaehrliche_muster.join(', ');
+          }
+          p.textContent = txt;ck.append(p);
+        });
+        d.append(ck);
+      }
+      // Externe Ziele
+      if(v.externe_ziele && (v.externe_ziele.domains.length || v.externe_ziele.dienste.length)){
+        const ez = el('details', 't-wf-imp-kategorien');
+        ez.append(el('summary', '', 'Externe Ziele'));
+        if(v.externe_ziele.domains.length){
+          const dp = el('p', 't-wf-hint');
+          dp.textContent = 'Domains: ' + v.externe_ziele.domains.join(', ');
+          ez.append(dp);
+        }
+        if(v.externe_ziele.dienste.length){
+          const sp = el('p', 't-wf-hint');
+          sp.textContent = 'Dienste: ' + v.externe_ziele.dienste.join(', ');
+          ez.append(sp);
+        }
+        d.append(ez);
+      }
+      // Geheimnisse (Security - SPEZ-04a B)
+      if(v.pruefung && v.pruefung.geheimnisse && v.pruefung.geheimnisse.length){
+        const sec = el('details', 't-wf-imp-kategorien');
+        sec.append(el('summary', 't-wf-imp-fund warn', '⚠ Sicherheit (' + v.pruefung.geheimnisse.length + ' Funde)'));
+        v.pruefung.geheimnisse.forEach(g=>{
+          const p = el('p', 't-wf-imp-fund ' + g.stufe);
+          p.textContent = g.knoten + ' (' + g.ort + '): ' + g.text;
+          sec.append(p);
+        });
+        d.append(sec);
+      }
       v.funde.forEach(f=>d.append(el('p', 't-wf-imp-fund ' + f.stufe, f.text)));
       d.append(bild(v));
       const det = el('details', 't-wf-imp-liste');det.append(el('summary', '', 'Alle Schritte (' + v.knoten.length + ')'), liste(v));d.append(det);
