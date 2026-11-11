@@ -78,6 +78,23 @@ class Differenztest(unittest.TestCase):
         self.assertGreater(d["faelle"], 150)
         self.assertEqual(d["abweichungen"], [])
 
+    def test_jede_differenzdatei_passt_zu_ihrer_referenz(self):
+        """Faelle, bei denen schon die Referenz mit etwas anderem als dem vereinbarten Fehler scheitert, waeren ein Fehler des Tests, nicht des Kandidaten."""
+        dateien = sorted((RUNTIME / "benchmarks" / "ab_diff").glob("*.py"))
+        self.assertGreaterEqual(len(dateien), 4)
+        for datei in dateien:
+            with self.subTest(datei.stem):
+                cfg = ab_bau.modul_laden(datei, "ab_diff_test_" + datei.stem)
+                ordner = RUNTIME / "benchmarks" / "devvm_refs" / datei.stem
+                d = ab_bau.differenz(datei.stem, ordner)
+                self.assertGreater(d["faelle"], 100)
+                self.assertEqual(d["abweichungen"], [])
+                ref = ab_bau.modul_laden(ordner / f"{cfg.MODUL}.py", "ref_test_" + datei.stem)
+                for fn, liste in cfg.faelle(ref).items():
+                    for args in liste:
+                        erg = ab_bau._ruf(getattr(ref, fn), *args)
+                        self.assertTrue(erg[0] == "ok" or "ValueError" in str(erg[1]), (fn, args, erg))
+
     def test_ein_fehler_im_kandidaten_wird_gefunden(self):
         d = ab_bau.differenz("am3_rechte_diff", self._kandidat(lambda t: t + "\n_orig = stufe\ndef stufe(f):\n    return 'A'\n"))
         self.assertTrue(d["abweichungen"])
