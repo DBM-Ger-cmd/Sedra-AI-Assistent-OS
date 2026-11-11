@@ -1,0 +1,20 @@
+# Prüf-Modul für die Angriffs-Probe des Rahmens (SPEC_APPS_v1_AM0_G2 §9, AM0-10, G3 S10). Es liegt bewusst NICHT im Paket: der Vertragstest verbietet `fetch(` in jedem Paket-Werkzeug.
+# Der Browser-Test (test_stufe_c_rahmen) legt es vor dem Start in local_config/tools/ des Prüfprojekts ab. Jeder Versuch muss scheitern.
+tool:
+  id: rahmen-angriff
+  name: "Rahmen-Angriff"
+  description: "Versucht aus dem abgeschotteten Rahmen heraus Netz, Speicher, Fenster und Seite zu erreichen. Nur zum Prüfen."
+  version: 1.0.0
+  kind: instrument
+  zweck: pruefung
+  handles: []
+  order: 991
+  entry: {js: tool.js}
+  api:
+    - GET /api/status            # nur die Gegenprobe: was das Manifest nennt, geht über die Brücke
+  events:
+    emits: []
+    listens: []
+  trust: CAPTAIN
+  tests: []
+  needs: {ui: ">=1.0 <2"}

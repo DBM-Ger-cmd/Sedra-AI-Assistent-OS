@@ -84,6 +84,80 @@ class Rahmen(unittest.TestCase):
         finally:
             stop()
 
+    def test_angriffe_aus_dem_rahmen_scheitern(self):
+        """AM0-10 (G3 S10): ein Prüf-Modul versucht aus dem Rahmen heraus Netz, Speicher, Fenster und Seite zu erreichen. Jeder Versuch muss scheitern; die Gegenproben müssen gelingen,
+        sonst wäre der Rahmen nur kaputt. Wo es eine CSP-Verletzung gibt, nennt der Rahmen die Richtlinie – so ist belegt, dass die CSP blockiert hat und nicht ein fehlendes Netz."""
+        sync_playwright = browser_or_skip()
+        import shutil
+        from uix_check import start_server, wait_until_started
+        fixture = Path(__file__).resolve().parent / 'fixtures' / 'rahmen_angriff'
+
+        def vorbereiten(hub):
+            shutil.copytree(fixture, hub.project_root / 'local_config' / 'tools' / 'rahmen-angriff')      # nicht im Paket: der Vertragstest verbietet fetch( dort
+
+        url, stop = start_server(lambda *a: None, shell='cockpit', switches={'entwicklung': True}, prepare=vorbereiten)
+        try:
+            with sync_playwright() as pw:
+                browser = pw.chromium.launch()
+                page = browser.new_page(viewport={'width': 1400, 'height': 860})
+                fehler = []
+                page.on('pageerror', lambda e: fehler.append(str(e)))
+                antworten, gescheitert = [], []                           # Anfragen an die fremde Adresse: Chromium meldet auch eine von der CSP blockierte als Anfrage – wichtig ist, dass keine Antwort kam
+                page.on('response', lambda r: antworten.append(r.url) if 'example.org' in r.url else None)
+                page.on('requestfailed', lambda r: gescheitert.append((r.url, r.failure)) if 'example.org' in r.url else None)
+                page.on('dialog', lambda d: d.accept())
+                page.goto(url); wait_until_started(page)
+                try:
+                    page.wait_for_selector('iframe.sx-rahmen[title="Rahmen-Angriff"]', timeout=15000)
+                    rahmen = None
+                    for _ in range(100):
+                        rahmen = next((f for f in page.frames if '/uix/frame/rahmen-angriff' in f.url), None)
+                        if rahmen:
+                            break
+                        page.wait_for_timeout(100)
+                    self.assertIsNotNone(rahmen, 'der Rahmen lädt die Seite /uix/frame/rahmen-angriff')
+                    rahmen.wait_for_selector('button', timeout=15000)
+
+                    def versuch(name, erwartet):
+                        rahmen.get_by_role('button', name=name, exact=True).click()
+                        text = ''
+                        for _ in range(120):
+                            text = rahmen.evaluate('document.body.innerText')
+                            zeilen = [z for z in text.splitlines() if z.startswith(name + ':')]
+                            if zeilen:
+                                self.assertIn(erwartet, zeilen[-1], zeilen[-1])
+                                self.assertNotIn('GELUNGEN', zeilen[-1], zeilen[-1])
+                                return zeilen[-1]
+                            rahmen.wait_for_timeout(100)
+                        self.fail(f'„{name}“ ergibt keine Zeile im Rahmen: {text!r}')
+
+                    # Gegenproben: was erlaubt ist, geht
+                    self.assertIn('erlaubt', versuch('Gegenprobe Status lesen', 'erlaubt, '))
+                    self.assertIn('erlaubt', versuch('Gegenprobe Bild aus data', 'erlaubt, Bild geladen'))
+                    # Netz: die CSP des Rahmens (connect-src, img-src) blockiert, nicht ein fehlendes Netz
+                    versuch('fetch eigene Adresse', 'connect-src')
+                    versuch('fetch Manifest', 'connect-src')
+                    versuch('fetch fremde Adresse', 'connect-src')
+                    versuch('Bild von fremder Adresse', 'img-src')
+                    versuch('WebSocket zur eigenen Adresse', 'blockiert')
+                    # Fenster und Seite: die Sandbox (ohne allow-popups, allow-top-navigation, allow-same-origin, allow-forms)
+                    versuch('Fenster öffnen', 'blockiert – kein Fenster')
+                    versuch('Seite der Shell wechseln', 'blockiert')
+                    versuch('Seite der Shell lesen', 'blockiert')
+                    versuch('Speicher der Seite lesen', 'blockiert')
+                    versuch('Formular absenden', 'blockiert – Seite blieb stehen')
+
+                    self.assertEqual(antworten, [], 'von einer fremden Adresse kam nie eine Antwort')
+                    for adresse, grund in gescheitert:
+                        self.assertIn('csp', str(grund).lower(), (adresse, grund))                 # jede Anfrage dorthin endete an der CSP, nicht am fehlenden Netz
+                    self.assertEqual(page.evaluate('() => location.hostname'), '127.0.0.1', 'die Seite der Shell wurde nicht weggeleitet')
+                    self.assertEqual(len(page.context.pages), 1, 'es wurde kein zweites Fenster geöffnet')
+                    self.assertEqual(fehler, [], 'keine Seitenfehler')
+                finally:
+                    browser.close()
+        finally:
+            stop()
+
 
 if __name__ == '__main__':
     unittest.main()
