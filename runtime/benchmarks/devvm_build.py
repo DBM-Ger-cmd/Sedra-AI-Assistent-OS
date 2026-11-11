@@ -148,10 +148,17 @@ def own_text(verdict):
     return "UNJUDGED" if verdict is None else str(verdict)
 
 
-def acceptance(vm_copy, ws, stage):
+def acceptance(vm_copy, ws, stage, earlier=()):
+    """The hidden test of the stage and, with `earlier`, the hidden tests of the stages before it on the CURRENT workspace: a later stage must not break what an earlier one built
+    (finding 2026-11-11, am0_shell_regeln 4_ohne: stage 2 rewrote the path check, stage 1 would have failed, the build reported PASSED because every test ran only right after its own stage)."""
     results = []
-    if stage.get("hidden"): results.append(vm_copy(ws, *hidden_plan(stage["hidden"])))
-    if stage.get("host_hidden"): results.append(host_node(ws, stage["host_hidden"]))
+    for s in (*earlier, stage):
+        found = []
+        if s.get("hidden"): found.append(vm_copy(ws, *hidden_plan(s["hidden"])))
+        if s.get("host_hidden"): found.append(host_node(ws, s["host_hidden"]))
+        if s is not stage:
+            found = [r if r["status"] == "completed" else {**r, "output": f"REGRESSION: the hidden test of the earlier stage {s['name']} fails on the current workspace." + NL + r["output"]} for r in found]
+        results.extend(found)
     bad = [r for r in results if r["status"] != "completed"]
     return {"status": "completed" if results and not bad else "failed", "output": NL.join(r["output"] for r in (bad or results))}
 
@@ -367,6 +374,7 @@ def build_parser():
     ap.add_argument("--step-syntax-check", action="store_true", help="with --plan-steps: a Python file that does not parse after a step goes back to the developer (at most twice)")
     ap.add_argument("--fresh-rework", action="store_true", help="solo mode: a rework starts a NEW conversation (complete task, map of the workspace, bug report) instead of continuing the old one")
     ap.add_argument("--self-check", choices=["full", "light", "none"], default="full", help="solo mode: how much the developer checks his own work (full: a check script and up to 8 VM runs; light: one small check, 2 runs; none: he cannot run code)")
+    ap.add_argument("--no-regression-check", action="store_true", help="after a stage, do NOT run the hidden tests of the earlier stages again (default: they run, a later stage must not break an earlier one)")
     ap.add_argument("--no-own-tests", action="store_true", help="the tasks lose their duty to write own tests (the hidden test judges); on by default with --mode solo")
     ap.add_argument("--all-models", help="a model key or recipe id for EVERY role (coder, checker, strong coder, reviewer, arbiter): a pure comparison of one model against the reference build")
     ap.add_argument("--hidden-feedback", action="store_true", help="a rework round gets a bug report (what the hidden test expects and what the work gives, first 2 failing assertions) instead of the raw traceback")
@@ -500,7 +508,9 @@ def main():
                     try:
                         out = team.run(stage["task"] + addendum, lessons)
                         outs.append(out)
-                        check = acceptance(vm_copy, ws, stage)
+                        names = [s["name"] for s in all_stages]
+                        earlier = [] if args.no_regression_check or stage["name"] not in names else all_stages[:names.index(stage["name"])]
+                        check = acceptance(vm_copy, ws, stage, earlier)
                         reworks = 0
                         while check["status"] != "completed" and reworks < args.rework:
                             reworks += 1
@@ -511,7 +521,7 @@ def main():
                                 team._agent("coder", REWORK_TASK.format(task=stage["task"] + addendum, output=(hidden_report(vm_copy, ws, stage) if args.hidden_feedback else "") or check["output"][-1500:]), f"coder (rework {reworks})", model_role="coder_strong", exclude=("git_commit",))
                                 team.tidy_files(before, stage["task"])
                             if any(ws.status().values()): ws.commit(f"rework {reworks}: {stage['name']}")
-                            check = acceptance(vm_copy, ws, stage)
+                            check = acceptance(vm_copy, ws, stage, earlier)
                     except Exception as exc:
                         # A stage that raised (model host gave up, VM broker error ...) used to end the whole build without a result row or an exported
                         # workspace. Now it is a failed stage with the error, and the attempt is saved like any other.
