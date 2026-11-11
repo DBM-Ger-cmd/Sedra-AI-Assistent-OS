@@ -16,11 +16,11 @@ from __future__ import annotations
 APPLY = {'switch': '/api/switch/apply', 'routing': '/api/routing-config/apply',
          'model_add': '/api/model/add/apply', 'skill': '/api/library/custom/apply',
          'boundaries': '/api/boundaries/apply', 'install': '/api/uix/install/apply',
-         'trust': '/api/uix/trust/apply', 'gateway': '/api/gateway/apply', 'update': '/api/update/uebernehmen', 'cloud_url': '/api/cloud/base-url/apply'}   # Härtung E1/E2 (30.10.)
+         'trust': '/api/uix/trust/apply', 'apps_rechte': '/api/uix/apps/rechte/apply', 'gateway': '/api/gateway/apply', 'update': '/api/update/uebernehmen', 'cloud_url': '/api/cloud/base-url/apply'}   # Härtung E1/E2 (30.10.)
 REQUEST_TITLE = {'switch': 'Schalter umstellen', 'routing': 'Modell-Einstellung ändern',
                  'model_add': 'Neues Modell hinzufügen', 'skill': 'Eigenen Skill schreiben',
                  'boundaries': 'Modus und Grenzen festlegen', 'install': 'Modul installieren',
-                 'trust': 'Schreibrouten freigeben', 'gateway': 'GateWay-Vorgang freigeben', 'orchestra': 'Agenten-Team ändern', 'standing': 'Dauerfreigabe',
+                 'trust': 'Schreibrouten freigeben', 'apps_rechte': 'App-Rechte gewähren', 'gateway': 'GateWay-Vorgang freigeben', 'orchestra': 'Agenten-Team ändern', 'standing': 'Dauerfreigabe',
                  'wissen_quelle': 'Wissensquelle freigeben', 'wissen_vorschlag': 'Wissen aufnehmen',          # Spec 7 (D7.3, D7.8)
                  'harness_katalog': 'Freigabe-Katalog schreiben', 'harness_vorlage': 'Vorlage anlegen oder Grenze ändern',   # Harness Stufe 5 (D-U2, D-U4)
                  'harness_projekt': 'Ordner als Projekt öffnen',                                                       # Harness P0 M3 (1.11.)
@@ -30,6 +30,7 @@ REQUEST_NOTE = {'switch': 'Schalter · gilt nach dem Neustart der Oberfläche', 
                 'model_add': 'Neues Modell · sofort nutzbar', 'skill': 'Bibliothek · die Datei wird vorher gesichert',
                 'boundaries': 'Gilt für alles, was in diesem Projekt passiert', 'install': 'Ein fremdes Modul · erst nach deiner Durchsicht',
                 'trust': 'Ein fremdes Modul darf danach schreiben – genau diese Routen, nichts sonst',
+                'apps_rechte': 'Eine fremde App darf danach genau diese Fähigkeiten nutzen – gilt nur für diese Fassung ihres Manifests',
                 'gateway': 'Gilt genau für diesen Vorgang in diesem Stand – ändert sich Anfrage, Dokument oder Weg, ist die Freigabe hinfällig. Kein Versand.',
                 'orchestra': 'Agenten-Team · gilt genau für diesen Stand – hat sich Agent, Aufgabe oder Routine geändert, wird nichts ausgeführt',
                 'standing': 'Dauerfreigabe · der Agent darf ohne weitere Frage geweckt werden, bis Ablauf, letzte Nutzung, Änderung oder Widerruf',

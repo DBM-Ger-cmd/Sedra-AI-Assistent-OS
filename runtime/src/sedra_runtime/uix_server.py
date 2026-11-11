@@ -73,6 +73,8 @@ from .desk import vorgabe as desk_vorgabe
 from .desk import gateway as desk_gateway
 from .desk import install as desk_install
 from .desk import herkunft as desk_herkunft
+from .desk import app_speicher, berechtigung as app_berechtigung, rechte_diff as app_rechte_diff
+from .desk.gateway import check_tool
 from .desk import gate_texte as desk_gate_texte
 from .desk.shell_regeln import pruefe_einbau
 from .desk import intents as desk_intents
@@ -433,7 +435,7 @@ class UIXHub:
                 apply = {'/api/switch/apply': self.switch_apply, '/api/routing-config/apply': self.routing_apply,
                          '/api/model/add/apply': self.model_add_apply, '/api/library/custom/apply': self.library.custom_apply,
                          '/api/boundaries/apply': self.boundaries_apply, '/api/uix/install/apply': self.install_apply,
-                         '/api/uix/trust/apply': self.trust_apply, '/api/gateway/apply': self.gateway_apply,
+                         '/api/uix/trust/apply': self.trust_apply, '/api/uix/apps/rechte/apply': self.apps_rechte_apply, '/api/gateway/apply': self.gateway_apply,
                          '/api/update/uebernehmen': self.update_uebernehmen, '/api/cloud/base-url/apply': self.cloud_base_url_apply}.get(decision['apply'])
                 if apply is None:
                     raise ValueError('decision_cannot_be_applied')
@@ -617,6 +619,7 @@ class UIXHub:
                 desk_herkunft.entfernen(self.project_root, area, binding['id'])
                 raise
             herkunft_datei = desk_herkunft.pfad(self.project_root, area, binding['id'])
+            self._app_eintrag_anlegen(area, binding['id'])
             m['execution'].pop('approval_token', None)
             m['result'] = {'kind': 'install', 'id': binding['id'], 'area': area, 'files': len(binding['files'])}
             m['lifecycle']['status'] = 'closed'
@@ -628,6 +631,136 @@ class UIXHub:
         self.events.publish('tools.refresh', {})
         return {'status': 'installed', 'id': binding['id'], 'area': area, 'files': len(binding['files']),
                 'note': 'Das Modul liegt jetzt unter local_config – die Oberfläche lädt es beim nächsten Öffnen.'}
+
+    # ---- AM3: Gewährung und Aktivierung fremder Apps (SPEC_APPS_v1_AM3_BERECHTIGUNG §2.2)
+    def _app_eintrag_anlegen(self, area, mid):
+        """Nach dem Einbau (AM3-07, AM3-28): nur die Werkseinstellung (Stufe A), inaktiv. Ohne Schalter oder ohne `rechte` geschieht nichts."""
+        if area != 'tools' or not self.gateway.app_berechtigung:
+            return
+        pfad = self.project_root / 'local_config' / 'tools' / mid / 'tool.yaml'
+        try:
+            doc = yaml.safe_load(pfad.read_text(encoding='utf-8'))['tool']
+            man, fehler = check_tool({'tool': doc}, pfad.parent, 'local')
+        except (OSError, KeyError, TypeError, yaml.YAMLError):
+            return
+        if not man or man.get('rechte') is None:
+            return
+        eintrag = app_berechtigung.eintrag_neu(app_speicher.manifest_hash(pfad), 'COMMUNITY',
+                                               app_berechtigung.werkseinstellung(man['faehigkeiten'], man.get('own_types') or []))
+        app_speicher.aendern(self.project_root, mid, lambda _alt: eintrag)
+        self.runtime.audit.append('UIX_APP_RIGHTS_SET', component='desk', payload={'id': mid, 'gewaehrt': eintrag['gewaehrt']})
+
+    def apps_view(self, payload=None):
+        return {'schalter': bool(self.gateway.app_berechtigung), 'apps': self.gateway.apps_uebersicht()}
+
+    def _app_id(self, payload):
+        mid = str((payload or {}).get('id') or '').strip()
+        if not re.fullmatch(r'[a-z0-9][a-z0-9-]{1,39}', mid):
+            raise ValueError('id_invalid')
+        return mid
+
+    RECHTE_ACTION = 'grant_app_rights'
+
+    def apps_rechte_request(self, payload):
+        """AM3-07: Fähigkeiten, die die App beantragt hat, dem Captain vorlegen – einzeln mit Stufe. Stufe C wird ohne Gate abgewiesen, schon Gewährtes nicht noch einmal gefragt."""
+        mid = self._app_id(payload)
+        wunsch = (payload or {}).get('faehigkeiten')
+        if not isinstance(wunsch, list) or not wunsch or not all(isinstance(f, str) for f in wunsch):
+            raise ValueError('faehigkeiten_invalid')
+        app = next((a for a in self.gateway.apps_uebersicht() if a['id'] == mid), None)
+        if app is None:
+            raise ValueError('app_unknown')
+        beantragt = {b['faehigkeit']: b for b in app['beantragt']}
+        fremd = sorted(f for f in set(wunsch) if f not in beantragt)
+        if fremd:
+            raise ValueError('nicht_beantragt:' + ','.join(fremd))
+        stufe_c = sorted(f for f in set(wunsch) if beantragt[f]['stufe'] == 'C')
+        if stufe_c:
+            raise ValueError('stufe_c_abgewiesen:' + ','.join(stufe_c))
+        offen = sorted(f for f in set(wunsch) if not beantragt[f]['gewaehrt'])
+        if not offen:
+            raise ValueError('schon_gewaehrt')
+        pfad = self.project_root / 'local_config' / 'tools' / mid / 'tool.yaml'
+        describe = f'„{app["name"]}“ ({mid}) darf danach: ' + ', '.join(f'{f} (Stufe {beantragt[f]["stufe"]})' for f in offen)
+        binding = {'id': mid, 'faehigkeiten': offen, 'manifest_sha256': app_speicher.manifest_hash(pfad),
+                   'rechte_schluessel': app_rechte_diff.rechte_schluessel(offen), 'describe': describe}
+        with self.lock:
+            m = self.runtime.brain.create_mission(describe[:160], None, 'S1')
+            self._guard_vor_gate(m, self.RECHTE_ACTION, f'app:{mid}')
+            gate = self.runtime.guard.create_gate(m['identity']['mission_id'], self.RECHTE_ACTION, f'app:{mid}',
+                                                  risks=['fremder Code nutzt danach diese Fähigkeiten'] + [f'{f} (Stufe {beantragt[f]["stufe"]})' for f in offen],
+                                                  rollback_available=True, request_binding=binding)
+            m['human_gates']['pending'].append(gate)
+            m['context']['apps_rechte_request'] = binding
+            self.runtime.missions.save(m)
+        self.runtime.audit.append('UIX_APP_RIGHTS_REQUESTED', component='desk', payload={'id': mid, 'faehigkeiten': offen, 'rechte_schluessel': binding['rechte_schluessel']})
+        return self._remember('apps_rechte', {'mission_id': m['identity']['mission_id'], 'gate': gate, 'binding': binding})
+
+    def apps_rechte_apply(self, payload):
+        """Nach der Freigabe: genau die Liste aus dem Gate gewähren – nur, wenn das Manifest noch dasselbe ist (AM3-06). Eine veraltete Gewährung wird hier nicht erneuert (das ist das Update, AM3-14)."""
+        mission_id = str((payload or {}).get('mission_id') or '').strip()
+        if not mission_id:
+            raise ValueError('mission_id_required')
+        rt = self.runtime
+        with rt.missions.execution_lock(mission_id):
+            m = rt.missions.load(mission_id)
+            binding = (m.get('context') or {}).get('apps_rechte_request')
+            token = (m.get('execution') or {}).get('approval_token')
+            if not binding:
+                raise ValueError('not_an_app_rights_request')
+            if not token:
+                raise ValueError('captain_approval_required')
+            if not rt.guard.authorize(token, mission_id=mission_id, action=self.RECHTE_ACTION, target=f"app:{binding['id']}", request_binding=binding)['authorized']:
+                raise ValueError('captain_approval_invalid')
+            pfad = self.project_root / 'local_config' / 'tools' / binding['id'] / 'tool.yaml'
+            hash_jetzt = app_speicher.manifest_hash(pfad)
+            if hash_jetzt is None or hash_jetzt != binding['manifest_sha256']:
+                raise ValueError('manifest_changed_since_the_request')
+            if app_rechte_diff.rechte_schluessel(binding['faehigkeiten']) != binding['rechte_schluessel']:
+                raise ValueError('rechteliste_changed_since_the_request')
+
+            def neu(alt):
+                if alt is None:
+                    return app_berechtigung.eintrag_neu(hash_jetzt, 'COMMUNITY', binding['faehigkeiten'])
+                if alt.get('manifest_sha256') != hash_jetzt:
+                    raise ValueError('gewaehrung_veraltet')
+                return app_berechtigung.gewaehren(alt, binding['faehigkeiten'])
+            app_speicher.aendern(self.project_root, binding['id'], neu)
+            m['execution'].pop('approval_token', None)
+            m['result'] = {'kind': 'apps_rechte', 'id': binding['id'], 'faehigkeiten': binding['faehigkeiten']}
+            m['lifecycle']['status'] = 'closed'
+            rt.missions.save(m)
+            rt.audit.append('UIX_APP_RIGHTS_GRANTED', component='desk', mission_id=mission_id, payload={'id': binding['id'], 'faehigkeiten': binding['faehigkeiten'], 'rechte_schluessel': binding['rechte_schluessel']})
+        self.events.publish('tools.refresh', {})
+        return {'status': 'granted', 'id': binding['id'], 'faehigkeiten': binding['faehigkeiten'], 'note': 'Die App darf diese Fähigkeiten jetzt nutzen, sobald sie aktiviert ist.'}
+
+    def apps_aktivieren(self, payload):
+        """AM3-08: aktivieren oder deaktivieren; kein Gate. Aktivieren geht nur mit einer vorhandenen Gewährung. Wirkt ab der nächsten Anfrage (AM3-09)."""
+        mid = self._app_id(payload)
+        aktiv = (payload or {}).get('aktiv', True)
+        if aktiv is not True and aktiv is not False:
+            raise ValueError('aktiv_invalid')
+        if not any(a['id'] == mid for a in self.gateway.apps_uebersicht()):
+            raise ValueError('app_unknown')
+        if mid not in app_speicher.lesen(self.project_root):
+            raise ValueError('keine_gewaehrung')
+        app_speicher.aendern(self.project_root, mid, lambda alt: app_berechtigung.aktivieren(alt, aktiv))
+        self.runtime.audit.append('UIX_APP_ACTIVATED' if aktiv else 'UIX_APP_DEACTIVATED', component='desk', payload={'id': mid})
+        self.events.publish('tools.refresh', {})
+        return {'status': 'activated' if aktiv else 'deactivated', 'id': mid}
+
+    def apps_entziehen(self, payload):
+        """AM3-09: Fähigkeiten entziehen, ohne Gate, sofort wirksam (die App lädt nicht mehr, wenn sie mehr beantragt, als gewährt ist)."""
+        mid = self._app_id(payload)
+        liste = (payload or {}).get('faehigkeiten')
+        if not isinstance(liste, list) or not liste or not all(isinstance(f, str) for f in liste):
+            raise ValueError('faehigkeiten_invalid')
+        if mid not in app_speicher.lesen(self.project_root):
+            raise ValueError('keine_gewaehrung')
+        app_speicher.aendern(self.project_root, mid, lambda alt: app_berechtigung.entziehen(alt, liste))
+        self.runtime.audit.append('UIX_APP_RIGHTS_REVOKED', component='desk', payload={'id': mid, 'faehigkeiten': liste[:20]})
+        self.events.publish('tools.refresh', {})
+        return {'status': 'revoked', 'id': mid, 'faehigkeiten': liste}
 
     # ---- Build 12: die Module sichtbar machen (Spec SHELL_E_UND_MODULE §2.3)
     # Diese vier schreiben nur `local_config` – nie den Projektordner. Sie berühren deshalb keine Grenze aus Build 9, und das
@@ -3751,9 +3884,26 @@ def make_server(hub: UIXHub, port=0):
                 if not hub.gateway.allowed(kind, module, method, path):
                     hub.runtime.audit.append('UIX_TOOL_DENIED', component='desk',
                                              payload={'kind': kind, 'module': module[:40], 'method': method, 'path': path[:120]})
+                    grund = hub.gateway.abgelehnt_grund(kind, module) if hub.gateway.app_berechtigung else None
+                    if grund == 'app_inaktiv':
+                        self._send(403, {'error': 'app_inaktiv', 'message': f'Die App „{module[:40]}“ ist nicht aktiviert.'})
+                        return False
                     self._send(403, {'error': 'tool_route_not_allowed', 'message': f'Das Werkzeug „{module[:40]}“ darf {method} {path} nicht aufrufen.'})
                     return False
             return True
+
+        def _app_rechte(self, path, payload):
+            modul = self.headers.get('X-SEDRA-Tool')
+            if not modul:
+                return True
+            fehler = hub.gateway.app_pruefung(modul, path, payload)
+            if fehler is None:
+                return True
+            p = payload if isinstance(payload, dict) else {}
+            hub.runtime.audit.append('UIX_APP_VERB_DENIED', component='desk',
+                                     payload={'app': modul[:40], 'path': path, 'type': str(p.get('type') or '')[:40], 'verb': str(p.get('verb') or '')[:40], 'grund': fehler})
+            self._send(403, {'error': fehler, 'message': f'Die App „{modul[:40]}“ hat dafür keine Berechtigung.'})
+            return False
 
         def _module_file(self, path):
             """Serves a file of ui/, a shell or a tool; returns True when it answered."""
@@ -3988,6 +4138,7 @@ def make_server(hub: UIXHub, port=0):
                     '/api/routing': hub.runtime.routing_status,             # read-only
                     '/api/permissions': hub.runtime.permission_status,      # read-only
                     '/api/resources': hub.runtime.resource_status,          # read-only
+                    '/api/uix/apps': hub.apps_view,                          # read-only: fremde Apps mit beantragten und gewährten Rechten (AM3)
                     '/api/uix/modules': hub.modules_view,                   # read-only: Shell, Werkzeuge, Abgelehnte, Vorlagen
                     '/api/uix/shelf': hub.shelf_view,                       # read-only: die eigenen Ablagen je Shell (Build 19)
                     '/api/uix/clients': hub.clients_view,                   # read-only: CLI/MCP-Client vorhanden, Port, PID – nie der Token (Harness Stufe 5)
@@ -4011,6 +4162,8 @@ def make_server(hub: UIXHub, port=0):
                 return
             try:
                 payload = self._json_body()
+                if not self._app_rechte(path, payload):                 # AM3-11: Lesen und Verben einer fremden App gegen ihre gewährten Rechte
+                    return
                 if path.startswith('/api/harness/'):      # sitzungen, sitzungen/<id>/nachricht, antworten/<id>/stopp (harness/api.py)
                     self._harness('POST', path, payload)
                     return
@@ -4066,6 +4219,10 @@ def make_server(hub: UIXHub, port=0):
                     '/api/uix/install/apply': hub.install_apply,
                     '/api/uix/trust': hub.trust_request,            # Schreibrouten freigeben: Gate, kein Häkchen
                     '/api/uix/trust/apply': hub.trust_apply,
+                    '/api/uix/apps/rechte': hub.apps_rechte_request,        # AM3-07: Rechte beantragen: Gate grant_app_rights, kein Häkchen
+                    '/api/uix/apps/rechte/apply': hub.apps_rechte_apply,
+                    '/api/uix/apps/aktivieren': hub.apps_aktivieren,        # AM3-08: kein Gate, Audit
+                    '/api/uix/apps/entziehen': hub.apps_entziehen,          # AM3-09: kein Gate, Audit, sofort
                     '/api/uix/remove': hub.install_remove,
                     '/api/project/create': hub.new_project,
                     '/api/standard-test/start': hub.standard_test_start,

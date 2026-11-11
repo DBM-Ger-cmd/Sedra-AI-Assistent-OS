@@ -24,7 +24,7 @@ ARTEN = {
     'request:harness_katalog': H, 'request:harness_vorlage': H,                          # Regeln der Harness
     'request:harness_prozess': H,                                                        # Prozess-Entwurf in den Bestand (nie ausführbar; wie eine Vorlage)
     'request:harness_code_stand': H,                                                     # Code gilt als gesehen: Läufe und Befehle ohne Karte (G4, 04.11.2026)
-    'request:install': H, 'request:trust': H, 'request:update': H,                       # Code und Rechte in den Betrieb
+    'request:install': H, 'request:trust': H, 'request:apps_rechte': H, 'request:update': H,                       # Code und Rechte in den Betrieb
     'request:model_add': H, 'request:skill': H,                                          # neues Modell; Skill = Text für das Modell
     'request:cloud_url': H,                                                              # Daten nach außen
     'request:gateway': SONDER,                                                           # H außer LOCAL_ONLY
@@ -174,6 +174,10 @@ ROUTEN_SERVER = {
     '/api/uix/install/apply': ('anwenden', None, ''),
     '/api/uix/trust': ('antrag', None, 'request:trust'),
     '/api/uix/trust/apply': ('anwenden', None, ''),
+    '/api/uix/apps/rechte': ('antrag', None, 'request:apps_rechte'),
+    '/api/uix/apps/rechte/apply': ('anwenden', None, ''),
+    '/api/uix/apps/aktivieren': ('handlung', N, 'AM3-08: schaltet eine bereits gewährte App an oder aus, nur Audit'),
+    '/api/uix/apps/entziehen': ('zurueck', None, 'AM3-09: nimmt Rechte weg, nichts wird erteilt'),
     '/api/uix/remove': ('zurueck', None, 'Modul entfernen (§6: was weg ist, kann nichts mehr tun)'),
     '/api/project/create': ('handlung', N, ''),
     '/api/standard-test/start': ('handlung', N, 'Modelltest'),

@@ -325,6 +325,16 @@ def route_allowed(routes, method, path):
     return False
 
 
+def abgeleitete_routen(wirksam):
+    """AM3-02: die Routen, die zu den wirksamen Fähigkeiten gehören (Ablage-Routen folgen mit AM3-Ablage)."""
+    routen = []
+    if any(f.startswith('lesen:') for f in wirksam):
+        routen.append('POST /api/objects')
+    if any(f.startswith('verb:') for f in wirksam):
+        routen.append('POST /api/actions')
+    return routen
+
+
 class Gateway:
     def __init__(self, project_root: Path, registry: Registry | None = None):
         self.registry = registry or Registry(project_root)
@@ -365,6 +375,60 @@ class Gateway:
         eintrag = app_speicher.lesen(self.project_root).get(man['id'])
         return ladeentscheidung(eintrag, man.get('faehigkeiten') or [], app_speicher.manifest_hash(folder / 'tool.yaml'))
 
+    def app_pruefung(self, module, path, payload):
+        """AM3-11: der Körper einer Anfrage einer fremden App gegen ihre wirksamen Rechte. None = in Ordnung, sonst der Fehlercode
+        (`typ_nicht_gewaehrt`, `verb_nicht_gewaehrt`). Ohne Schalter oder für eine App ohne `rechte` prüft das Gateway hier nichts."""
+        if not self.app_berechtigung:
+            return None
+        eintrag = self.tools().get(module)
+        if eintrag is None:
+            return None
+        man = eintrag[1]
+        if man.get('trust') != 'COMMUNITY' or man.get('rechte') is None:
+            return None
+        wirksam = set(man.get('wirksam') or [])
+        p = payload if isinstance(payload, dict) else {}
+        typ = str(p.get('type') or '').strip()
+        if path == '/api/objects':
+            if 'lesen:' + typ in wirksam or typ in (man.get('own_types') or []):       # AM3-12: eigene Typen gelten als gewährtes Lesen
+                return None
+            return 'typ_nicht_gewaehrt'
+        if path == '/api/actions':
+            verb = str(p.get('verb') or '').strip()
+            return None if 'verb:' + typ + '.' + verb in wirksam else 'verb_nicht_gewaehrt'
+        return None
+
+    def abgelehnt_grund(self, kind, module):
+        """Der Grund, warum ein Modul nicht geladen ist (für die Antwort 403), oder None."""
+        for r in self._load('tools' if kind == 'tool' else 'shells')[1]:
+            if r['id'] == module and r['reasons']:
+                return r['reasons'][0]
+        return None
+
+    def apps_uebersicht(self):
+        """Die fremden Apps mit `rechte`: beantragt (mit Stufe), gewährt, aktiv und der Grund, falls sie nicht laden (AM3-26, Seite „Module“)."""
+        geladen, abgelehnt = self._load('tools')
+        speicher = app_speicher.lesen(self.project_root)
+        liste = []
+        for folder, origin, problem in self.registry.module_dirs('tools'):
+            if problem or origin != 'local' or not (folder / 'tool.yaml').is_file():
+                continue
+            try:
+                doc = yaml.safe_load((folder / 'tool.yaml').read_text(encoding='utf-8'))
+                man, fehler = check_tool(doc, folder, origin)
+            except (yaml.YAMLError, UnicodeDecodeError, OSError):
+                continue
+            t = doc.get('tool') if isinstance(doc, dict) else None
+            if not isinstance(t, dict) or t.get('trust') != 'COMMUNITY' or t.get('rechte') is None:
+                continue
+            eintrag = speicher.get(folder.name)
+            beantragt = (man or {}).get('faehigkeiten') or []
+            urteil = ladeentscheidung(eintrag, beantragt, app_speicher.manifest_hash(folder / 'tool.yaml')) if man else {'laden': False, 'grund': (fehler or ['ungueltig'])[0]}
+            liste.append({'id': folder.name, 'name': (man or t).get('name'), 'version': (man or t).get('version'),
+                          'beantragt': [{'faehigkeit': f, 'stufe': rechte_stufe(f), 'gewaehrt': f in ((eintrag or {}).get('gewaehrt') or [])} for f in beantragt],
+                          'aktiv': bool(eintrag and eintrag.get('aktiv') is True), 'laedt': folder.name in geladen, 'grund': urteil.get('grund')})
+        return sorted(liste, key=lambda a: a['id'])
+
     def _load(self, kind):
         """{id: (folder, manifest)} and the rejected folders with their reasons."""
         name, check = ('tool.yaml', check_tool) if kind == 'tools' else ('shell.yaml', check_shell)
@@ -397,6 +461,7 @@ class Gateway:
                     rejected.append({'kind': 'tool', 'id': folder.name, 'origin': origin, 'reasons': [urteil['grund']]})
                     continue
                 man['wirksam'] = urteil['wirksam']
+                man['api'] = list(man['api']) + abgeleitete_routen(urteil['wirksam'])      # AM3-02: lesen → POST /api/objects, verben → POST /api/actions
             ok[man['id']] = (folder, man)
         return ok, rejected
 
