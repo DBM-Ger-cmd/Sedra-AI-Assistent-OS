@@ -18,6 +18,10 @@ tool:
     - POST /api/uix/install
     - POST /api/uix/trust
     - POST /api/uix/remove
+    - GET /api/uix/apps
+    - POST /api/uix/apps/aktivieren
+    - POST /api/uix/apps/entziehen
+    - POST /api/uix/apps/rechte
   events:
     emits: []
     listens: [tools.refresh, decision.answered]

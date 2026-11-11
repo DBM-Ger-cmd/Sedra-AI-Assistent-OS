@@ -19,6 +19,24 @@
     COMMUNITY: 'von außen – bekommt nur Leserouten'
   };
 
+  // Schutzstufen der Fähigkeiten einer fremden App in einem Satz (rein)
+  const STUFE = {A: 'harmlos (Stufe A)', B: 'braucht deine Freigabe (Stufe B)', C: 'für Apps nie (Stufe C)'};
+  const GRUND = {
+    keine_gewaehrung: 'noch nichts gewährt',
+    app_inaktiv: 'nicht aktiviert',
+    gewaehrung_veraltet: 'die App wurde geändert – Rechte neu gewähren',
+    rechte_nicht_gewaehrt: 'sie beantragt mehr, als gewährt ist'
+  };
+  function appGrund(text){
+    if(!text) return '';
+    const key = String(text).split(':')[0];
+    return GRUND[key] || text;
+  }
+  // Was beim Anfragen noch zu gewähren ist: beantragt, nicht gewährt, nicht Stufe C (rein)
+  function offeneRechte(app){
+    return ((app && app.beantragt) || []).filter(b=>!b.gewaehrt && b.stufe !== 'C').map(b=>b.faehigkeit);
+  }
+
   // Aus einer abgelehnten Begründung einen Satz machen, damit niemand Code lesen muss (rein)
   const WHY = {
     id_must_match_folder: 'die id im Manifest ist nicht der Ordnername',
@@ -51,7 +69,10 @@
 
     async refresh(){
       if(!this.el) return;
-      try{ this.view = await this.ctx.api('/api/uix/modules'); }
+      try{
+        this.view = await this.ctx.api('/api/uix/modules');
+        try{ this.apps = await this.ctx.api('/api/uix/apps'); }catch(e){ this.apps = {schalter: false, apps: []}; }
+      }
       catch(err){ this.el.replaceChildren(d().el('div', 's-note bad', 'Module nicht lesbar: ' + err.message)); return; }
       const box = d().el('div', 's-col');
       if(this.pendingReload){
@@ -105,6 +126,7 @@
       const sections = [
         ['shells', 'Shells · ' + this.view.shells.length, ()=>this.shells()],
         ['tools', 'Werkzeuge · ' + this.view.tools.length, ()=>this.tools()],
+        ['apps', 'Apps · ' + ((this.apps && this.apps.apps) || []).length, ()=>this.appsSeite()],
         ['rejected', 'Nicht geladen · ' + this.view.rejected.length, ()=>this.rejected()],
         ['add', 'Dazubauen', ()=>this.add()]
       ];
@@ -178,6 +200,43 @@
         }
         row.append(buttons);
         return row;
+    },
+
+    // ---- Apps: fremde Apps mit ihren Rechten (AM3-25) – beantragt/gewährt je Fähigkeit mit Stufe, aktivieren, entziehen, beantragen
+    appsSeite(){
+      const box = d().el('div', 's-col');
+      const v = this.apps || {schalter: false, apps: []};
+      if(!v.schalter) box.append(d().el('div', 's-note warn', 'Die Berechtigung für Apps ist ausgeschaltet (Schalter app_berechtigung). Fremde Apps laden dann wie bisher.'));
+      if(!v.apps.length){ box.append(d().el('small', 's-muted', 'Keine fremde App mit Rechten eingebaut.')); return box; }
+      v.apps.forEach(a=>{
+        const row = d().el('div', 't-modules-row' + (a.aktiv ? ' on' : ''));
+        const head = d().el('div');
+        head.append(d().el('b', null, a.name), d().el('small', 's-muted', ' · ' + a.id + ' · Version ' + a.version + ' · ' + (a.aktiv ? 'aktiv' : 'nicht aktiv')));
+        if(a.grund) head.append(d().el('div', 's-muted', 'Lädt nicht: ' + appGrund(a.grund)));
+        a.beantragt.forEach(b=>{
+          const zeile = d().el('div', 's-row');
+          zeile.append(d().el('code', null, b.faehigkeit), d().el('small', 's-muted', ' ' + (STUFE[b.stufe] || b.stufe) + ' · ' + (b.gewaehrt ? 'gewährt' : 'nicht gewährt')));
+          if(b.gewaehrt) zeile.append(d().button('Entziehen', async()=>{
+            await this.ctx.api('/api/uix/apps/entziehen', {method: 'POST', body: {id: a.id, faehigkeiten: [b.faehigkeit]}});
+            await this.refresh();
+          }));
+          head.append(zeile);
+        });
+        row.append(head);
+        const buttons = d().el('div', 's-row');
+        const offen = offeneRechte(a);
+        if(offen.length) buttons.append(d().button('Rechte beantragen …', async()=>{
+          await this.ctx.api('/api/uix/apps/rechte', {method: 'POST', body: {id: a.id, faehigkeiten: offen}});
+          this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Entscheidungen', collection: true});
+        }));
+        buttons.append(d().button(a.aktiv ? 'Deaktivieren' : 'Aktivieren', async()=>{
+          await this.ctx.api('/api/uix/apps/aktivieren', {method: 'POST', body: {id: a.id, aktiv: !a.aktiv}});
+          await this.refresh();
+        }));
+        row.append(buttons);
+        box.append(row);
+      });
+      return box;
     },
 
     // ---- Abgelehnt: der Grund im Klartext, damit niemand raten muss
@@ -260,6 +319,6 @@
   };
 
   if(root.sedra) root.sedra.registerTool(tool);
-  root.sedraModulesPure = {TRUST, WHY, reason};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {TRUST, WHY, reason};
+  root.sedraModulesPure = {TRUST, WHY, reason, STUFE, appGrund, offeneRechte};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {TRUST, WHY, reason, STUFE, appGrund, offeneRechte};
 })();
