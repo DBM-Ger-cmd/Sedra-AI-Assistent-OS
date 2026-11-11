@@ -962,6 +962,7 @@ class HarnessApi:
                          vorlage_antrag=lambda nutz: harness_antraege.vorlage_neu_antrag(self.hub, nutz), prozess_antrag=lambda nutz: harness_antraege.prozess_antrag(self.hub, nutz), desktop_stand=self.desktop_stand, orte=self._orte_aktiv, lernen_lesen=self.lernen_lesen,
                          wissen=self.wissen_werkzeug, wissen_antrag=self.wissen_antrag, cloud_verteilen=self.cloud_verteilen,
                          uebersetzer=lambda text, ziel, quelle: self.text_uebersetzen(mission_id, text, ziel, quelle),
+                         text_antwort=lambda text, **kw: self.text_antwort(mission_id, text, **kw),
                          web_transkript=lambda video, sprachen: self.hub.runtime.web_tool.execute(mission_id, 'youtube_transcript', {'video': video, 'languages': sprachen}))
 
     def cloud_verteilen(self, auftraege):
@@ -972,8 +973,8 @@ class HarnessApi:
         manager = Manager('manager', set(), journal=wurzel / 'runtime_data' / 'manager' / 'journal.jsonl')
         return manager_werkzeuge.auftraege_verteilen(manager, wurzel, auftraege)
 
-    def text_uebersetzen(self, mission_id, text, ziel, quelle):
-        """Für `youtube_transkript` mit uebersetzen_nach: das geladene Modell übersetzt Teil für Teil; das Ergebnis liegt wie jeder Webtext unter runtime_data/external/."""
+    def _modell_fragen(self, mission_id):
+        """Ein Modellaufruf als Funktion `fragen([{role, content}]) -> str` für das geladene Modell (Übersetzen im Chat); bricht ab, wenn ein Lauf das Modell hat oder keins geladen ist."""
         belegt = self.laeufe.belegt()
         if belegt:
             raise ValueError(f"modell_belegt: Lauf {belegt['id']} ({belegt['name']}) hat das Modell")
@@ -989,6 +990,28 @@ class HarnessApi:
             if out.get('status') != 'completed':
                 raise ValueError('modell_fehler: ' + str(out.get('error') or out.get('reason_code') or out.get('status'))[:200])
             return (out.get('model_result') or {}).get('content')
+        return fragen
+
+    def text_antwort(self, mission_id, text, sprache=None, rolle=None, von=None, ton=None, tiefe=None):
+        """Für das Chat-Werkzeug `uebersetzen` (TR-40): in eine Sprache oder für eine Rolle; antwortet nur, legt nichts ab. Audit ohne Text."""
+        fragen = self._modell_fragen(mission_id)
+        if sprache:
+            antwort = harness_uebersetzen.uebersetzen(text, sprache, fragen)
+        else:
+            antwort = harness_uebersetzen.fuer_rolle(text, rolle, fragen, von=von, ton=ton, tiefe=tiefe)
+        self._audit('HARNESS_UEBERSETZT', {'art': 'sprache' if sprache else 'rolle', 'ziel': sprache or rolle, 'zeichen_ein': len(text), 'zeichen_aus': len(antwort)})
+        return antwort
+
+    def text_uebersetzen(self, mission_id, text, ziel, quelle):
+        """Für `youtube_transkript` mit uebersetzen_nach: das geladene Modell übersetzt Teil für Teil; das Ergebnis liegt wie jeder Webtext unter runtime_data/external/."""
+        belegt = self.laeufe.belegt()
+        if belegt:
+            raise ValueError(f"modell_belegt: Lauf {belegt['id']} ({belegt['name']}) hat das Modell")
+        loaded, grund = self.geladen()
+        if not loaded:
+            raise ValueError('kein_modell: erst ein Modell laden' + (f' ({grund})' if grund else ''))
+        modell = loaded[0].get('identifier') or loaded[0].get('modelKey')
+        fragen = self._modell_fragen(mission_id)
         uebersetzt = harness_uebersetzen.uebersetzen(text, ziel, fragen)
         rec = self.hub.runtime.web_tool._store(mission_id, quelle or '', 'youtube_transcript_' + ziel, uebersetzt)
         self._audit('HARNESS_UEBERSETZT', {'quelle': str(quelle)[:200], 'ziel': ziel, 'zeichen': len(uebersetzt), 'sha256': rec['sha256']})

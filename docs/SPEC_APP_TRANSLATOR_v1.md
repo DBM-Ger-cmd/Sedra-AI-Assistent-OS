@@ -144,5 +144,5 @@ Entscheidungen des Captains vom 11.11.2026: alle Vorschläge TR-E1 bis TR-E6 üb
 | TR-33 | unverändert: nur Text, keine neue Route | Code |
 | TR-50 | `uix/shells/fisch/` unverändert | `git diff` |
 | TR-E5 | gebaut: „Interessen“ statt „Profil“ in der Anzeige von Nachrichten | Browser-Test |
-| TR-40 bis 42 | später | – |
+| TR-40 bis 42 | gebaut (12.11.): Chat-Werkzeug `uebersetzen` – Text oder Datei, Sprache oder Rolle, ohne Karte (`OHNE_KARTE`), legt nichts ab, durch `verboten` abschaltbar, Audit `HARNESS_UEBERSETZT` ohne Text | `test_harness_uebersetzen_werkzeug`, `test_harness_werkzeug_vollstaendig` |
 | TR-51 | offen: Gleichstandsliste vom Captain im echten Sedra durchzuklicken (nach Neustart und Strg+F5) | Captain |
