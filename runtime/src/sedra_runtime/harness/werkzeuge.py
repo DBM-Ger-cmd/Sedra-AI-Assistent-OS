@@ -162,8 +162,9 @@ SCHEMAS = {
 
 
 class Werkzeuge:
-    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None, desktop_stand=None, lernen_lesen=None, wissen=None, wissen_antrag=None, prozess_antrag=None, cloud_verteilen=None, orte=None, text_antwort=None):
+    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None, desktop_stand=None, lernen_lesen=None, wissen=None, wissen_antrag=None, prozess_antrag=None, cloud_verteilen=None, orte=None, text_antwort=None, oberflaeche=None):
         self.text_antwort = text_antwort         # vom Server gereicht: (text, sprache=, rolle=, von=, ton=, tiefe=) -> Text; das geladene Modell, nichts wird abgelegt (TR-40)
+        self.oberflaeche = oberflaeche           # O3 G2: der Baustein `harness/oberflaeche.py` des Betriebsservers (oder None); die Kiste hält Schreibvorgänge unter einer Aufgabe zurück
         self.orte = orte                         # vom Server gereicht: () -> {ort_id: (label, hint)} der aktiven Shell (AM2-05: Kernorte plus Orte der Apps); ohne: die Kernorte
         self.cloud_verteilen = cloud_verteilen   # vom Server gereicht: ([{typ, text}]) -> [Ergebnis je Auftrag] über den Vorarbeiter-Kanal des Managers (manager/werkzeuge.py `auftraege_verteilen`)
         self.wissen = wissen                     # vom Server gereicht: (sitzung_id, antwort_id, args) -> Text der Treffer (SPEC_WISSEN_KERN_v1 WK-10, über wissen.dienst.fragen); Leser und Route setzt der Server

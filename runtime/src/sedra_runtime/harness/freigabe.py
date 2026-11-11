@@ -250,6 +250,10 @@ class Kiste:
             treffer = sitzungs_erlaubnis.deckt(self.erlaubnisse, name, plan['ziel'])
             if treffer:
                 via_sitzung = treffer['karte_id']
+        if via_aufgabe and name in vorbehalte.SCHREIBEN and getattr(self.w, 'oberflaeche', None) is not None:      # O3 G2-01: unter einer Aufgabe geschriebener Code der Oberfläche wirkt erst nach der Übernahme
+            from pathlib import Path as _Pfad
+            if self.w.oberflaeche.zurueckhalten(_Pfad(self.w.wurzel) / plan['ziel'], self.sitzung_id, via_aufgabe) is None:
+                via_aufgabe = None                                    # zu groß für die Ablage: die Schreibaktion wird zur Karte (G2-08)
         self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id, 'aufgabe_id': via_aufgabe}
         gate = self.guard.create_gate(self.w.mission_id, plan['gate']['aktion'], plan['gate']['ziel'], request_binding=plan['gate']['bindung'],
                                       risks=[e['begruendung']], rollback_available=name in ('datei_schreiben', 'datei_aendern'))

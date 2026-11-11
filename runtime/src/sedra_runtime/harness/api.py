@@ -962,7 +962,7 @@ class HarnessApi:
                          vorlage_antrag=lambda nutz: harness_antraege.vorlage_neu_antrag(self.hub, nutz), prozess_antrag=lambda nutz: harness_antraege.prozess_antrag(self.hub, nutz), desktop_stand=self.desktop_stand, orte=self._orte_aktiv, lernen_lesen=self.lernen_lesen,
                          wissen=self.wissen_werkzeug, wissen_antrag=self.wissen_antrag, cloud_verteilen=self.cloud_verteilen,
                          uebersetzer=lambda text, ziel, quelle: self.text_uebersetzen(mission_id, text, ziel, quelle),
-                         text_antwort=lambda text, **kw: self.text_antwort(mission_id, text, **kw),
+                         text_antwort=lambda text, **kw: self.text_antwort(mission_id, text, **kw), oberflaeche=self._oberflaeche_fuer(projekt),
                          web_transkript=lambda video, sprachen: self.hub.runtime.web_tool.execute(mission_id, 'youtube_transcript', {'video': video, 'languages': sprachen}))
 
     def cloud_verteilen(self, auftraege):
@@ -972,6 +972,13 @@ class HarnessApi:
         wurzel = self.hub.project_root
         manager = Manager('manager', set(), journal=wurzel / 'runtime_data' / 'manager' / 'journal.jsonl')
         return manager_werkzeuge.auftraege_verteilen(manager, wurzel, auftraege)
+
+    def _oberflaeche_fuer(self, projekt):
+        """G2-01: der Baustein der Zurückhalte-Logik, wenn der Schalter `oberflaeche_abnahme` an ist (Standard) – sonst None (es wird nichts Neues zurückgehalten, G2-10)."""
+        switches = getattr(self.hub.runtime, 'switches', None)
+        if switches is not None and switches.apply('oberflaeche_abnahme', 'enabled', True) is False:
+            return None
+        return getattr(self.hub, 'oberflaeche', None)
 
     def _modell_fragen(self, mission_id):
         """Ein Modellaufruf als Funktion `fragen([{role, content}]) -> str` für das geladene Modell (Übersetzen im Chat); bricht ab, wenn ein Lauf das Modell hat oder keins geladen ist."""

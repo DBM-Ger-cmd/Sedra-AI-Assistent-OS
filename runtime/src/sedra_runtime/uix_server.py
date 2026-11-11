@@ -158,6 +158,9 @@ class UIXHub:
         # The desk (Build 7): manifests and allowlist for the desktop modules, one decision list, one event stream instead of a poll per window.
         self.gateway = Gateway(self.project_root)
         self.gateway.entwicklung = self.runtime.switches.apply('entwicklung', 'enabled', False) is True    # Stufe 6 (S6-E4)
+        from .harness.oberflaeche import Oberflaeche                                   # O3 G2: Abnahme vor Wirkung – nur dieser Betriebsserver liest den Zurückhalte-Stand
+        self.oberflaeche = Oberflaeche(self.project_root / 'runtime_data' / 'harness' / 'oberflaeche', Path(__file__).resolve().parent / 'uix',
+                                       audit=lambda e, p: self.runtime.audit.append(e, component='harness', payload=p))
         self.gateway.app_berechtigung = self.runtime.switches.apply('app_berechtigung', 'enabled', False) is True    # AM3, Standard aus
         self.gateway.herkunft_pruefen = self.runtime.switches.apply('herkunft_pruefen', 'enabled', True) is not False    # AM0-02
         self.gateway.melden = self._herkunft_melden
@@ -4034,7 +4037,11 @@ def make_server(hub: UIXHub, port=0):
                 self.send_error(404)
                 return True
             from .desk.gateway import SERVE_TYPES
-            self._send(200, file.read_bytes(), SERVE_TYPES[file.suffix.lstrip('.')])
+            gehalten, bestaetigt = hub.oberflaeche.gehalten(file)       # G2-03: eine zurückgehaltene Datei liefert der Server in der bestätigten Fassung (neu = 404)
+            if gehalten and bestaetigt is None:
+                self.send_error(404)
+                return True
+            self._send(200, bestaetigt if gehalten else file.read_bytes(), SERVE_TYPES[file.suffix.lstrip('.')])
             return True
 
         def _events(self):
@@ -4173,10 +4180,11 @@ def make_server(hub: UIXHub, port=0):
             static = STATIC_FILE.fullmatch(path)
             if static:           # the page's own styles and scripts (uix/css, uix/js): code only, no data, read at request time
                 file = Path(__file__).parent / 'uix' / static.group(1) / (static.group(2) + '.' + static.group(1))
-                if not file.is_file():
+                gehalten, bestaetigt = hub.oberflaeche.gehalten(file)       # G2-03 auch für uix/css und uix/js
+                if (not file.is_file() and not gehalten) or (gehalten and bestaetigt is None):
                     self.send_error(404)
                     return
-                self._send(200, file.read_bytes(), STATIC_TYPES[static.group(1)])
+                self._send(200, bestaetigt if gehalten else file.read_bytes(), STATIC_TYPES[static.group(1)])
                 return
             if path == '/hardware':          # the page itself carries no data; its reads need the token like every other API call
                 self._send(200, hardware_html, 'text/html; charset=utf-8', frame_self=True)
