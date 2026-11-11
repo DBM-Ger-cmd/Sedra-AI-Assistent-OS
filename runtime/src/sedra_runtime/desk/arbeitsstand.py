@@ -121,6 +121,11 @@ class Gedaechtnis:
             e['zeit'] = self.uhr()
             return {'werte': json.loads(json.dumps(e['werte'])), 'zeit': e['zeit']}
 
+    def ablage_summe(self, werkzeug, ohne=None):
+        """Die Größe aller Einträge dieses Werkzeugs in Byte (ohne den Schlüssel `ohne`) – für die Grenze einer App."""
+        with self.lock:
+            return sum(e['groesse'] for (w, k), e in self._ablage.items() if w == werkzeug and k != ohne)
+
     def ablage_schreiben(self, werkzeug, key, werte):
         """Ersetzt die Werte dieses Werkzeugs an diesem Objekt. Zu groß → `ablage_zu_gross`; ist die ganze Ablage voll, fallen die
         ältesten Einträge anderer Objekte heraus (die Rückgabe nennt, wie viele)."""

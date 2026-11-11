@@ -361,8 +361,10 @@ def route_allowed(routes, method, path):
 
 
 def abgeleitete_routen(wirksam):
-    """AM3-02: die Routen, die zu den wirksamen Fähigkeiten gehören (Ablage-Routen folgen mit AM3-Ablage)."""
+    """AM3-02: die Routen, die zu den wirksamen Fähigkeiten gehören (`ablage:<n>` → die beiden Ablage-Routen)."""
     routen = []
+    if any(f.startswith('ablage:') for f in wirksam):
+        routen.extend(ABLAGE_ROUTES)
     if any(f.startswith('lesen:') for f in wirksam):
         routen.append('POST /api/objects')
     if any(f.startswith('verb:') for f in wirksam):
@@ -438,6 +440,17 @@ class Gateway:
             if a['id'] == mid:
                 return [b['faehigkeit'] for b in a['beantragt']]
         return []
+
+    def _rechte_app(self, man):
+        return bool(self.app_berechtigung and man.get('trust') == 'COMMUNITY' and man.get('rechte') is not None)
+
+    def ablage_grenze(self, module):
+        """AM3: die Größe der Ablage einer App in Byte (höchstens 1 MB, die gewährte Fähigkeit `ablage:<n>`); None, wenn das Werkzeug keine App mit `rechte` ist (dann gelten die Grenzen des Kerns)."""
+        man = (self.tools().get(module) or (None, {}))[1]
+        if not man or not self._rechte_app(man):
+            return None
+        zahlen = [int(f[7:]) for f in man.get('wirksam') or [] if f.startswith('ablage:') and f[7:].isdigit()]
+        return min(max(zahlen), 1048576) if zahlen else 0
 
     def abgelehnt_grund(self, kind, module):
         """Der Grund, warum ein Modul nicht geladen ist (für die Antwort 403), oder None."""
@@ -666,6 +679,6 @@ class Gateway:
         man = loaded[module][1]
         if kind == 'shell' and route_allowed(SHELL_VERTRAG_ROUTES, method, path):
             return True
-        if kind == 'tool' and 'ablage' in (man.get('gedaechtnis') or []) and route_allowed(ABLAGE_ROUTES, method, path):
+        if kind == 'tool' and 'ablage' in (man.get('gedaechtnis') or []) and not self._rechte_app(man) and route_allowed(ABLAGE_ROUTES, method, path):      # eine App mit `rechte` bekommt die Ablage nur über `ablage:<n>`
             return True
         return route_allowed(man['api'], method, path)

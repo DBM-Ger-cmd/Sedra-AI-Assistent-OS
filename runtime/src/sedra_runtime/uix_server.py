@@ -716,8 +716,52 @@ class UIXHub:
         app_speicher.aendern(self.project_root, mid, f)
         self.runtime.audit.append('UIX_APP_UPDATED', component='desk', payload={'id': mid, 'von': update['von'], 'nach': update['nach'], 'rechte_schluessel': update['rechte_schluessel']})
 
+    AUDIT_APP = 20                                              # AM3-25: die letzten 20 Einträge je App
+
+    def _app_audit(self, ids):
+        """Die letzten Audit-Einträge je App (nur Art, Zeit und Listen aus der Nutzlast – nie Inhalte): {id: [..]}. Liest den Schwanz der Audit-Datei."""
+        erg = {i: [] for i in ids}
+        try:
+            pfad = self.runtime.audit.path
+            groesse = pfad.stat().st_size
+            with pfad.open('rb') as f:
+                f.seek(max(0, groesse - 1048576))
+                zeilen = f.read().decode('utf-8', errors='ignore').splitlines()
+        except OSError:
+            return erg
+        for z in reversed(zeilen):
+            if not z.startswith('{'):
+                continue
+            try:
+                e = json.loads(z)
+            except ValueError:
+                continue
+            art = e.get('event_type') or ''
+            if not (art.startswith('UIX_APP_') or art.startswith('UIX_MODULE_')):
+                continue
+            nutz = e.get('payload') or {}
+            wer = nutz.get('id') or nutz.get('app')
+            if wer in erg and len(erg[wer]) < self.AUDIT_APP:
+                erg[wer].append({'zeit': e.get('timestamp'), 'art': art, 'grund': nutz.get('grund'), 'faehigkeiten': (nutz.get('faehigkeiten') or [])[:10]})
+        return erg
+
     def apps_view(self, payload=None):
-        return {'schalter': bool(self.gateway.app_berechtigung), 'apps': self.gateway.apps_uebersicht()}
+        apps = self.gateway.apps_uebersicht()
+        audit = self._app_audit([a['id'] for a in apps])
+        for a in apps:
+            a['audit'] = audit.get(a['id'], [])
+        return {'schalter': bool(self.gateway.app_berechtigung), 'apps': apps}
+
+    def apps_verzeichnis(self, payload=None):
+        """AM3-26: alle fremden Apps mit ihren Gewährungen als JSON (Nachweis, später AM7/AM8). Nur die Shell-Seite: eine App kann die Route nicht aufrufen (`/api/uix/` ist gesperrt)."""
+        speicher = app_speicher.lesen(self.project_root)
+        apps = []
+        for a in self.gateway.apps_uebersicht():
+            e = speicher.get(a['id']) or {}
+            apps.append({'id': a['id'], 'name': a['name'], 'version': a['version'], 'vertrauen': e.get('vertrauen') or 'COMMUNITY', 'aktiv': a['aktiv'],
+                         'manifest_sha256': e.get('manifest_sha256'), 'beantragt': [b['faehigkeit'] for b in a['beantragt']], 'gewaehrt': sorted(e.get('gewaehrt') or []),
+                         'laedt': a['laedt'], 'grund': a['grund']})
+        return {'schalter': bool(self.gateway.app_berechtigung), 'apps': apps}
 
     def _app_id(self, payload):
         mid = str((payload or {}).get('id') or '').strip()
@@ -3174,6 +3218,14 @@ class UIXHub:
         """POST /api/ablage/schreiben {objekt, werte} – ersetzt die Werte des rufenden Werkzeugs an diesem Objekt (§10.3)."""
         if not werkzeug: raise ValueError('ablage_nur_fuer_werkzeuge')
         p = payload or {}
+        grenze = self.gateway.ablage_grenze(werkzeug)
+        if grenze is not None:                                       # AM3: eine App mit `rechte` darf höchstens so viel ablegen, wie ihr gewährt ist (höchstens 1 MB)
+            try:
+                neu = len(json.dumps(p.get('werte') or {}, ensure_ascii=False).encode('utf-8'))
+            except (TypeError, ValueError):
+                raise ValueError('ablage_ungueltig')
+            if self.gedaechtnis.ablage_summe(werkzeug, str(p.get('objekt') or '')) + neu > grenze:
+                raise ValueError('ablage_zu_gross')
         return self.gedaechtnis.ablage_schreiben(werkzeug, str(p.get('objekt') or ''), p.get('werte'))
 
     def chat_verlauf(self):
@@ -4205,6 +4257,7 @@ def make_server(hub: UIXHub, port=0):
                     '/api/routing': hub.runtime.routing_status,             # read-only
                     '/api/permissions': hub.runtime.permission_status,      # read-only
                     '/api/resources': hub.runtime.resource_status,          # read-only
+                    '/api/uix/apps/verzeichnis': hub.apps_verzeichnis,      # AM3-26: Nachweis aller Apps mit Gewährungen
                     '/api/uix/apps': hub.apps_view,                          # read-only: fremde Apps mit beantragten und gewährten Rechten (AM3)
                     '/api/uix/modules': hub.modules_view,                   # read-only: Shell, Werkzeuge, Abgelehnte, Vorlagen
                     '/api/uix/shelf': hub.shelf_view,                       # read-only: die eigenen Ablagen je Shell (Build 19)

@@ -240,6 +240,11 @@
           }));
           head.append(zeile);
         });
+        if((a.audit || []).length){                                   // AM3-25: die letzten Einträge dieser App aus dem Audit (nur Art, Zeit, Listen – nie Inhalte)
+          const det = d().el('details', 't-modules-audit'); det.append(d().el('summary', null, 'Letzte Einträge · ' + a.audit.length));
+          a.audit.forEach(e=>det.append(d().el('small', 's-muted', String(e.zeit || '').slice(0, 19).replace('T', ' ') + ' · ' + e.art + ((e.faehigkeiten || []).length ? ' · ' + e.faehigkeiten.join(', ') : ''))));
+          head.append(det);
+        }
         row.append(head);
         const buttons = d().el('div', 's-row');
         const offen = offeneRechte(a);
