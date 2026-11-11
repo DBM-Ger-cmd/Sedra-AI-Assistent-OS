@@ -959,7 +959,7 @@ class HarnessApi:
                          lauf_typen=self.lauf_typen, modelle=self._modell_op, andere_antworten=self._andere_antworten,
                          projekt_antrag=lambda nutz: harness_antraege.projekt_antrag(self.hub, nutz), lese_grenze=lambda: self._option('lese_grenze'), sitzungen_liste=self.sitzungen_fuer_modell, sitzungen_weg=lambda ids: self.aufraeumen({'ids': ids}), verknuepfung=lambda ort, name: self.verknuepfung_anlegen(ort, name, von='modell'), gedanken=self.gedanken_lesen, gedaechtnis=self.gedaechtnis_suchen,
                          code_stand=self.code_stand(projekt),
-                         vorlage_antrag=lambda nutz: harness_antraege.vorlage_neu_antrag(self.hub, nutz), prozess_antrag=lambda nutz: harness_antraege.prozess_antrag(self.hub, nutz), desktop_stand=self.desktop_stand, lernen_lesen=self.lernen_lesen,
+                         vorlage_antrag=lambda nutz: harness_antraege.vorlage_neu_antrag(self.hub, nutz), prozess_antrag=lambda nutz: harness_antraege.prozess_antrag(self.hub, nutz), desktop_stand=self.desktop_stand, orte=self._orte_aktiv, lernen_lesen=self.lernen_lesen,
                          wissen=self.wissen_werkzeug, wissen_antrag=self.wissen_antrag, cloud_verteilen=self.cloud_verteilen,
                          uebersetzer=lambda text, ziel, quelle: self.text_uebersetzen(mission_id, text, ziel, quelle),
                          web_transkript=lambda video, sprachen: self.hub.runtime.web_tool.execute(mission_id, 'youtube_transcript', {'video': video, 'languages': sprachen}))
@@ -1103,6 +1103,11 @@ class HarnessApi:
         if tag:
             out['tag'] = {'tag': tag, 'text': harness_betriebslog.tag_lesen(self.hub.project_root, tag)}
         return out
+
+    def _orte_aktiv(self):
+        """AM2-05: die Orte der aktiven Shell (Kernorte plus Orte geladener Apps) für `app_oeffnen`."""
+        orte, _w = self.hub.gateway.orte()
+        return {o['id']: (o['label'], o.get('hint', '')) for o in orte}
 
     def desktop_stand(self, profil=None):
         """Für das Chat-Werkzeug `desktop_lesen`: der Zuschnitt der Oberfläche (oder ein Profil) mit den festen Angaben, die ein Vorschlag kennen muss. Nur lesen."""

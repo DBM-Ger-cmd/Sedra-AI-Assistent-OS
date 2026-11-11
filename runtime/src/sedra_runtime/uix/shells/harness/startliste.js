@@ -50,7 +50,7 @@
       if(!zeichner.length) return;
       bekannt.add(ort.object.type);
       const pruefung = zeichner.every(w=>w.zweck === 'pruefung');     // nur ein reiner Prüf-Ort landet unter „Prüfung“ – Aufgaben bleiben Aufgaben, auch wenn eine Probe sie mitzeichnet
-      apps.push({id: ort.id, label: ort.label, hint: ort.hint || '', words: ort.words || [], object: ort.object,
+      apps.push({id: ort.id, label: ort.label, hint: ort.hint || '', words: ort.words || [], object: ort.object, symbol: ort.symbol,
                  gruppe: pruefung ? 'pruefung' : gruppeVon(ort, zeichner, k.zuordnung), werkzeuge: zeichner.map(w=>w.id)});
     });
     // Werkzeuge ohne Ort: ein eigener Ort aus dem ersten Objekttyp (UIX-10: nichts fehlt, auch ein eigener Typ nicht)
@@ -70,7 +70,7 @@
       if(u.label) a.label = u.label; if(u.hint) a.hint = u.hint;
       a.words = (u.words || []).concat(a.words);
     });
-    apps.forEach(a=>{ a.symbol = k.symbole[a.gruppe] || SYMBOLE.arbeit; });
+    apps.forEach(a=>{ a.symbol = a.symbol || k.symbole[a.gruppe] || SYMBOLE.arbeit; });      // AM2-02: ein Ort kann sein Zeichen aus der festen Liste mitbringen
     const gruppen = k.gruppen.map(g=>({id: g, titel: TITEL[g], symbol: k.symbole[g], apps: apps.filter(a=>a.gruppe === g)})).filter(g=>g.apps.length);
     const jeId = {};
     apps.forEach(a=>{ jeId[a.id] = a; });

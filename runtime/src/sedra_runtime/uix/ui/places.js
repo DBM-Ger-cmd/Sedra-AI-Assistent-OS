@@ -124,6 +124,17 @@
     return rows;
   }
 
-  root.sedraPlaces = {PLACES, routeText, matchPlaces, paletteRows, normalize, wantsOpen, ORDER_WORDS, QUESTION_WORDS, OPEN_WORDS};
+  // AM2-01/04: die Orte kommen vom Server (`/uix/manifest` → `orte`: Kernorte plus Orte der Apps dieser Shell). Die eingebaute Liste oben bleibt als Rückfall und für Node-Tests
+  // (ein Test hält sie gleich `orte_kern.json`). Die Liste wird an Ort und Stelle ersetzt, damit Shells, die `PLACES` schon halten, die neue sehen.
+  function setzen(liste){
+    if(!Array.isArray(liste) || !liste.length) return false;
+    const gut = liste.filter(p=>p && typeof p.id === 'string' && typeof p.label === 'string' && Array.isArray(p.words) && p.object && typeof p.object === 'object');
+    if(!gut.length) return false;
+    PLACES.splice(0, PLACES.length, ...gut.map(p=>({id: p.id, label: p.label, hint: typeof p.hint === 'string' ? p.hint : '', words: p.words.filter(w=>typeof w === 'string'),
+                                                   object: p.object, symbol: p.symbol, app: p.app})));
+    return true;
+  }
+
+  root.sedraPlaces = {PLACES, setzen, routeText, matchPlaces, paletteRows, normalize, wantsOpen, ORDER_WORDS, QUESTION_WORDS, OPEN_WORDS};
   if(typeof module !== 'undefined' && module.exports) module.exports = root.sedraPlaces;
 })();

@@ -1,0 +1,591 @@
+{
+ "orte": [
+  {
+   "id": "tasks",
+   "label": "Aufgaben",
+   "hint": "was läuft und was wartet",
+   "words": [
+    "aufgabe",
+    "aufgaben",
+    "karte",
+    "karten",
+    "mission",
+    "missionen"
+   ],
+   "object": {
+    "type": "task",
+    "id": "alle",
+    "title": "Aufgaben",
+    "collection": true
+   }
+  },
+  {
+   "id": "intents",
+   "label": "Vorhaben",
+   "hint": "worum es geht – daraus werden Aufgaben",
+   "words": [
+    "vorhaben",
+    "ziel",
+    "ziele",
+    "plan"
+   ],
+   "object": {
+    "type": "intent",
+    "id": "alle",
+    "title": "Vorhaben",
+    "collection": true
+   }
+  },
+  {
+   "id": "boundary",
+   "label": "Modus und Grenzen",
+   "hint": "Projekt · Netz · Löschen · Kosten",
+   "words": [
+    "modus",
+    "grenze",
+    "grenzen",
+    "sandbox",
+    "erlaubnis",
+    "rechte"
+   ],
+   "object": {
+    "type": "boundary",
+    "id": "projekt",
+    "title": "Modus und Grenzen"
+   }
+  },
+  {
+   "id": "decisions",
+   "label": "Entscheidungen",
+   "hint": "Freigaben und Grenzen",
+   "words": [
+    "entscheidung",
+    "entscheidungen",
+    "freigabe",
+    "freigaben",
+    "gate"
+   ],
+   "object": {
+    "type": "decision",
+    "id": "alle",
+    "title": "Entscheidungen",
+    "collection": true
+   }
+  },
+  {
+   "id": "models",
+   "label": "Werkstatt: Modelle",
+   "hint": "laden, wechseln, testen",
+   "words": [
+    "modell",
+    "modelle",
+    "werkstatt",
+    "laden",
+    "entladen",
+    "teststrecke",
+    "gguf"
+   ],
+   "object": {
+    "type": "model",
+    "id": "alle",
+    "title": "Werkstatt",
+    "collection": true
+   }
+  },
+  {
+   "id": "library",
+   "label": "Bibliothek",
+   "hint": "Skills ansehen und schreiben",
+   "words": [
+    "bibliothek",
+    "skill",
+    "skills",
+    "nachschlagen"
+   ],
+   "object": {
+    "type": "skill",
+    "id": "own",
+    "title": "Bibliothek"
+   }
+  },
+  {
+   "id": "crew",
+   "label": "Besatzung",
+   "hint": "Rollen und Agenten",
+   "words": [
+    "besatzung",
+    "agent",
+    "agenten",
+    "crew",
+    "rollen"
+   ],
+   "object": {
+    "type": "agent",
+    "id": "rollen",
+    "title": "Agenten",
+    "collection": true
+   }
+  },
+  {
+   "id": "meter",
+   "label": "Sedra Token",
+   "hint": "Verbrauch, Kosten und Zeilen, Gespräch",
+   "words": [
+    "meter",
+    "token",
+    "kosten",
+    "budget",
+    "zeilen",
+    "münzloch",
+    "muenzloch"
+   ],
+   "object": {
+    "type": "meter",
+    "id": "meter",
+    "title": "Sedra Token"
+   }
+  },
+  {
+   "id": "logbook",
+   "label": "Logbuch",
+   "hint": "Audit-Kette und Verlauf",
+   "words": [
+    "logbuch",
+    "audit",
+    "verlauf",
+    "protokoll"
+   ],
+   "object": {
+    "type": "logbook",
+    "id": "audit",
+    "title": "Logbuch"
+   }
+  },
+  {
+   "id": "hardware",
+   "label": "Hardware",
+   "hint": "GPU, Speicher, Profil",
+   "words": [
+    "hardware",
+    "gpu",
+    "grafikkarte",
+    "vram",
+    "speicher"
+   ],
+   "object": {
+    "type": "hardware",
+    "id": "hardware",
+    "title": "Hardware"
+   }
+  },
+  {
+   "id": "machine",
+   "label": "Maschinenraum",
+   "hint": "Zustand der Runtime, GPU und Speicher",
+   "words": [
+    "maschinenraum",
+    "runtime",
+    "system",
+    "status",
+    "entwicklungsumgebung"
+   ],
+   "object": {
+    "type": "machine",
+    "id": "machine",
+    "title": "Maschinenraum"
+   }
+  },
+  {
+   "id": "modules",
+   "label": "Module",
+   "hint": "Shell, Werkzeuge, Vorlagen",
+   "words": [
+    "modul",
+    "module",
+    "werkzeuge",
+    "shell",
+    "shells",
+    "erweiterung",
+    "plugin"
+   ],
+   "object": {
+    "type": "module",
+    "id": "alle",
+    "title": "Module",
+    "collection": true
+   }
+  },
+  {
+   "id": "gateway",
+   "label": "KI GateWay",
+   "hint": "Anfrage prüfen, Entwurf, Prüfung",
+   "words": [
+    "gateway",
+    "datenschutz",
+    "pseudonym",
+    "pseudonymisieren",
+    "anfrage",
+    "kundenanfrage"
+   ],
+   "object": {
+    "type": "gateway",
+    "id": "alle",
+    "title": "KI GateWay",
+    "collection": true
+   }
+  },
+  {
+   "id": "project",
+   "label": "Projekt und Dateien",
+   "hint": "Dateien des Projekts",
+   "words": [
+    "projekt",
+    "projekte",
+    "datei",
+    "dateien",
+    "ordner"
+   ],
+   "object": {
+    "type": "project",
+    "id": "projekt",
+    "title": "Projekt"
+   }
+  },
+  {
+   "id": "uebersetzung",
+   "label": "Übersetzer",
+   "hint": "eine Nachricht für eine andere Rolle (Translator)",
+   "words": [
+    "übersetzer",
+    "uebersetzer",
+    "übersetzen",
+    "uebersetzen",
+    "übersetzung",
+    "uebersetzung"
+   ],
+   "object": {
+    "type": "uebersetzung",
+    "id": "wolke",
+    "title": "Übersetzen"
+   }
+  },
+  {
+   "id": "transkript",
+   "label": "Transkripte",
+   "hint": "importieren, suchen, freigeben, exportieren (Translator)",
+   "words": [
+    "transkript",
+    "transkripte",
+    "untertitel",
+    "srt",
+    "vtt"
+   ],
+   "object": {
+    "type": "transkript",
+    "id": "alle",
+    "title": "Transkripte"
+   }
+  },
+  {
+   "id": "aufnahme",
+   "label": "Rekorder",
+   "hint": "aufnehmen, abspielen, Sprache → Text (Kern)",
+   "words": [
+    "rekorder",
+    "aufnahme",
+    "aufnahmen",
+    "aufnehmen",
+    "mikrofon",
+    "diktat",
+    "diktieren",
+    "sprachaufnahme"
+   ],
+   "object": {
+    "type": "aufnahme",
+    "id": "rekorder",
+    "title": "Rekorder"
+   }
+  },
+  {
+   "id": "planung",
+   "label": "Planungstisch",
+   "hint": "mit einem Assistenten Ziele und Aufträge festlegen",
+   "words": [
+    "planungstisch",
+    "planung",
+    "planen",
+    "assistent",
+    "assistenten"
+   ],
+   "object": {
+    "type": "planung",
+    "id": "tisch",
+    "title": "Planungstisch"
+   }
+  },
+  {
+   "id": "org",
+   "label": "Organigramm",
+   "hint": "das Team: Vorgesetzte, Rolle, Budget",
+   "words": [
+    "organigramm",
+    "team",
+    "hierarchie"
+   ],
+   "object": {
+    "type": "agent",
+    "id": "alle",
+    "title": "Organigramm",
+    "collection": true
+   }
+  },
+  {
+   "id": "routines",
+   "label": "Routinen",
+   "hint": "wiederkehrende Aufgaben nach Zeitplan",
+   "words": [
+    "routine",
+    "routinen",
+    "zeitplan",
+    "cron"
+   ],
+   "object": {
+    "type": "routine",
+    "id": "alle",
+    "title": "Routinen",
+    "collection": true
+   }
+  },
+  {
+   "id": "slots",
+   "label": "Modelle und Slots",
+   "hint": "belegte Plätze und Warteschlange",
+   "words": [
+    "slot",
+    "slots",
+    "parallel",
+    "warteschlange"
+   ],
+   "object": {
+    "type": "model",
+    "id": "alle",
+    "title": "Modelle und Slots",
+    "collection": true
+   }
+  },
+  {
+   "id": "wissen",
+   "label": "Wissen",
+   "hint": "suchen, Quellen, Vorschläge – der Wissensspeicher",
+   "words": [
+    "wissen",
+    "wissensspeicher",
+    "wissensdatenbank",
+    "wissensbasis",
+    "quelle",
+    "quellen",
+    "rag"
+   ],
+   "object": {
+    "type": "wissen",
+    "id": "speicher",
+    "title": "Wissen"
+   }
+  },
+  {
+   "id": "wissen-suche",
+   "label": "Wissen · Suche",
+   "hint": "eine Frage an den Wissensspeicher",
+   "words": [
+    "wissenssuche",
+    "fundstelle",
+    "fundstellen"
+   ],
+   "object": {
+    "type": "wissen",
+    "id": "speicher",
+    "title": "Wissen",
+    "view": "suche"
+   }
+  },
+  {
+   "id": "wissen-quellen",
+   "label": "Wissen · Quellen",
+   "hint": "was SEDRA lesen darf, und wer",
+   "words": [
+    "wissensquellen",
+    "wissensquelle"
+   ],
+   "object": {
+    "type": "wissen",
+    "id": "speicher",
+    "title": "Wissen",
+    "view": "quellen"
+   }
+  },
+  {
+   "id": "wissen-vorschlaege",
+   "label": "Wissen · Vorschläge",
+   "hint": "Wissen, das Agenten vorschlagen",
+   "words": [
+    "wissensvorschlag",
+    "wissensvorschläge",
+    "wissensvorschlaege"
+   ],
+   "object": {
+    "type": "wissen",
+    "id": "speicher",
+    "title": "Wissen",
+    "view": "vorschlaege"
+   }
+  },
+  {
+   "id": "wissen-eigenes",
+   "label": "Wissen · Eigenes",
+   "hint": "eigene Notizen für den Speicher",
+   "words": [
+    "notiz",
+    "notizen",
+    "eigenes wissen"
+   ],
+   "object": {
+    "type": "wissen",
+    "id": "speicher",
+    "title": "Wissen",
+    "view": "eigenes"
+   }
+  },
+  {
+   "id": "wissen-messung",
+   "label": "Wissen · Messung",
+   "hint": "Index und Nachmessung: wie gut findet der Speicher",
+   "words": [
+    "nachmessung",
+    "wissensindex",
+    "abdeckung"
+   ],
+   "object": {
+    "type": "wissen",
+    "id": "speicher",
+    "title": "Wissen",
+    "view": "messung"
+   }
+  },
+  {
+   "id": "wissen-index",
+   "label": "Wissen · Index",
+   "hint": "Stand des Index, Nachführen",
+   "words": [
+    "einbetten",
+    "embedding"
+   ],
+   "object": {
+    "type": "wissen",
+    "id": "speicher",
+    "title": "Wissen",
+    "view": "index"
+   }
+  },
+  {
+   "id": "wissen-nachmessung",
+   "label": "Wissen · Nachmessung",
+   "hint": "deine Fragen bewerten",
+   "words": [],
+   "object": {
+    "type": "wissen",
+    "id": "speicher",
+    "title": "Wissen",
+    "view": "nachmessung"
+   }
+  },
+  {
+   "id": "labor",
+   "label": "KI-Labor",
+   "hint": "Anbieter, Schlüssel, Modelle, Tests",
+   "words": [
+    "labor",
+    "ki-labor",
+    "cloud",
+    "anbieter"
+   ],
+   "object": {
+    "type": "labor",
+    "id": "labor",
+    "title": "KI-Labor"
+   }
+  }
+ ],
+ "woerter": {
+  "order": [
+   "erstelle",
+   "erstell",
+   "baue",
+   "bau",
+   "schreibe",
+   "schreib",
+   "implementiere",
+   "programmiere",
+   "entwickle",
+   "ändere",
+   "aendere",
+   "repariere",
+   "behebe",
+   "füge",
+   "fuege",
+   "lege",
+   "teste",
+   "prüfe",
+   "pruefe",
+   "refaktoriere",
+   "optimiere",
+   "erweitere",
+   "generiere",
+   "migriere",
+   "dokumentiere"
+  ],
+  "question": [
+   "was",
+   "wie",
+   "warum",
+   "wieso",
+   "weshalb",
+   "welche",
+   "welcher",
+   "welches",
+   "wer",
+   "wann",
+   "wo",
+   "wozu",
+   "erkläre",
+   "erklär",
+   "erklaere",
+   "beschreibe",
+   "sag",
+   "sage",
+   "zeig",
+   "zeige",
+   "kannst",
+   "kann",
+   "ist",
+   "sind",
+   "hat",
+   "gibt",
+   "soll",
+   "hilf",
+   "hilfe"
+  ],
+  "open": [
+   "öffne",
+   "oeffne",
+   "öffnen",
+   "oeffnen",
+   "öffnest",
+   "oeffnest",
+   "aufmachen",
+   "aufrufen",
+   "geh",
+   "gehe",
+   "wechsle"
+  ]
+ }
+}

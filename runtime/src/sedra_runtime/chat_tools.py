@@ -104,33 +104,14 @@ SCHEMAS = {
 }
 
 
-# Die Orte der Oberfläche – dieselben ids wie `uix/ui/places.js` (ein Test vergleicht beide). Das Objekt dazu kennt nur der Browser.
-PLACES = {
-    'tasks': ('Aufgaben', 'was läuft und was wartet'), 'intents': ('Vorhaben', 'worum es geht – daraus werden Aufgaben'),
-    'boundary': ('Modus und Grenzen', 'Projekt · Netz · Löschen · Kosten'), 'decisions': ('Entscheidungen', 'Freigaben und Grenzen'),
-    'models': ('Werkstatt: Modelle', 'laden, wechseln, testen'), 'library': ('Bibliothek', 'Skills ansehen und schreiben'),
-    'crew': ('Besatzung', 'Rollen und Agenten'), 'meter': ('Guppy-Meter', 'Token, Zeilen, Kosten'),
-    'logbook': ('Logbuch', 'Audit-Kette und Verlauf'), 'hardware': ('Hardware', 'GPU, Speicher, Profil'),
-    'machine': ('Maschinenraum', 'Zustand der Runtime'), 'modules': ('Module', 'Shell, Werkzeuge, Vorlagen'),
-    'project': ('Projekt und Dateien', 'Dateien des Projekts'),
-    'gateway': ('KI GateWay', 'Anfrage prüfen, Entwurf, Prüfung'),
-    'planung': ('Planungstisch', 'mit einem Assistenten Ziele und Aufträge festlegen'),
-    'uebersetzung': ('Übersetzer', 'eine Nachricht für eine andere Rolle (Translator)'),
-    'transkript': ('Transkripte', 'importieren, suchen, freigeben, exportieren (Translator)'),
-    'aufnahme': ('Rekorder', 'aufnehmen, abspielen, Sprache → Text (Kern)'),
-    # Spec 4 (G2-S4-21): das Agenten-Team
-    'org': ('Organigramm', 'das Team: Vorgesetzte, Rolle, Budget'), 'routines': ('Routinen', 'wiederkehrende Aufgaben nach Zeitplan'),
-    'slots': ('Modelle und Slots', 'belegte Plätze und Warteschlange'), 'labor': ('KI-Labor', 'Anbieter, Schlüssel, Modelle, Tests'),
-    # Spec 7 / SPEC_DOCK_OHNE_NEUAUFBAU_v1 §9.7: der Wissensspeicher und seine Ansichten
-    'wissen': ('Wissen', 'suchen, Quellen, Vorschläge – der Wissensspeicher'),
-    'wissen-suche': ('Wissen · Suche', 'eine Frage an den Wissensspeicher'),
-    'wissen-quellen': ('Wissen · Quellen', 'was SEDRA lesen darf, und wer'),
-    'wissen-vorschlaege': ('Wissen · Vorschläge', 'Wissen, das Agenten vorschlagen'),
-    'wissen-eigenes': ('Wissen · Eigenes', 'eigene Notizen für den Speicher'),
-    'wissen-messung': ('Wissen · Messung', 'Index und Nachmessung: wie gut findet der Speicher'),
-    'wissen-index': ('Wissen · Index', 'Stand des Index, Nachführen'),
-    'wissen-nachmessung': ('Wissen · Nachmessung', 'deine Fragen bewerten'),
-}
+# Die Orte der Oberfläche (AM2-01): eine Quelle, `uix/ui/orte_kern.json`; `ui/places.js` trägt eine Kopie für Node-Tests (ein Test vergleicht sie).
+
+def _kernorte():
+    from .desk.orte import kern
+    return {o['id']: (o['label'], o['hint']) for o in kern()}
+
+
+PLACES = _kernorte()
 # Der Planungstisch (19.10.2026): nur die Werkzeuge, mit denen ein Assistent plant – lesen, wo die Firma steht, und vorschlagen
 PLANUNG_TOOLS = ('propose_intent', 'propose_task', 'list_missions', 'list_decisions', 'arbeitsplatz_stand', 'list_actions', 'propose_action', 'open_object')
 OBJECT_TYPES = ('task', 'candidate', 'model', 'intent', 'project', 'gateway')
@@ -204,11 +185,12 @@ class ChatTools:
             if name == "read_doc":
                 return self.hub.chat_doc(args.get("name"))
             if name == "list_places":
-                return json.dumps([{"id": k, "label": v[0], "hint": v[1]} for k, v in PLACES.items()], ensure_ascii=False)
+                return json.dumps([{"id": k, "label": v[0], "hint": v[1]} for k, v in self._places().items()], ensure_ascii=False)
             if name == "open_place":
                 place = str(args.get("place") or "").strip()
-                if place not in PLACES: raise ValueError("unknown_place: use an id from list_places")
-                return self._offer({"kind": "open", "place": place, "title": PLACES[place][0]}, f"Fenster {PLACES[place][0]}")
+                orte = self._places()
+                if place not in orte: raise ValueError("unknown_place: use an id from list_places")
+                return self._offer({"kind": "open", "place": place, "title": orte[place][0]}, f"Fenster {orte[place][0]}")
             if name == "open_object":
                 kind, oid = str(args.get("type") or ""), str(args.get("id") or "").strip()
                 if kind not in OBJECT_TYPES or not oid: raise ValueError("unknown_object_type")
@@ -306,6 +288,14 @@ class ChatTools:
     def _verbs(self, obj):
         from .desk import actions as desk_actions
         return desk_actions.offered(obj, desk_actions._registry(self.hub))   # fresh from the state – the same list the window shows
+
+    def _places(self):
+        """AM2-05: die Orte der aktiven Shell – Kernorte plus die Orte geladener Apps; ohne Gateway (Prüfstand) die Kernorte."""
+        try:
+            orte, _w = self.hub.gateway.orte()
+            return {o['id']: (o['label'], o.get('hint', '')) for o in orte}
+        except Exception:                                  # kein Gateway (Prüfstand) oder nicht lesbar: die Kernorte genügen, das Öffnen darf daran nicht scheitern
+            return dict(PLACES)
 
     def _offer(self, action, describe):
         """A button for the Captain, never a deed. The model is told so in its own result."""

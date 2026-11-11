@@ -140,6 +140,7 @@
     const manifest = await kern.api('/uix/manifest');
     if(!manifest || typeof manifest !== 'object') throw new Error('Das Manifest der Oberfläche ist nicht lesbar – uix.yaml prüfen.');
     if(!manifest.shell) throw new Error('Keine Shell verfügbar: ' + ((manifest.rejected || []).map(r=>r.id + ' (' + (r.reasons || []).join(', ') + ')').join('; ') || 'uix.yaml prüfen'));
+    if(root.sedraPlaces && root.sedraPlaces.setzen) root.sedraPlaces.setzen(manifest.orte);          // AM2-04: Kernorte plus Orte der Apps dieser Shell
     if(!Array.isArray(manifest.tools)) throw new Error('Das Manifest nennt keine Werkzeuge – uix.yaml prüfen.');     // Härtung 30.10. (HU-L14): ein deutscher Satz statt TypeError
     (manifest.rejected || []).forEach(r=>say('Modul abgelehnt', new Error(r.kind + ' ' + r.id + ': ' + (r.reasons || []).join(', '))));
 

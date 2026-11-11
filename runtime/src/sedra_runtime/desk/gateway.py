@@ -20,6 +20,7 @@ import yaml
 from .registry import MODULE_ID, Registry
 from .herkunft import HerkunftsPruefer, lesen as herkunft_lesen
 from . import app_speicher
+from . import orte as orte_mod
 from .berechtigung import ladeentscheidung
 from .rechte_diff import rechte_zu_faehigkeiten, stufe as rechte_stufe
 from .manifest_felder import filtere, pruefe_profile, pruefe_shells, pruefe_zelle
@@ -70,7 +71,7 @@ VERSION = re.compile(r'^\d+\.\d+\.\d+$')
 NEED = re.compile(r'^(>=|<=|>|<|==)?(\d+)(?:\.(\d+))?$')
 
 TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot', 'instanzen', 'gedaechtnis', 'zweck', 'gruppe',
-             'shells', 'profile', 'zelle', 'rechte'}       # Vertrag 1.1 (AM1); `rechte` AM3-01
+             'shells', 'profile', 'zelle', 'rechte', 'ort'}       # Vertrag 1.1 (AM1); `rechte` AM3-01
 SHELL_KEYS = {'id', 'name', 'version', 'entry', 'provides', 'layout', 'trust', 'needs', 'api', 'description', 'vorgabe', 'umschalter'}
 # Eine Shell aus einer Vorgabe (SPEC_SHELL_AUS_VORGABE_v1): kein Code im Ordner, nur `shell.vorgabe.yaml`; den Bildschirm baut der
 # Rahmen `ui/frame.js`. Was er darf, steht hier – nicht in der Datei des Autors –, denn der Rahmen ist Vertragscode.
@@ -223,6 +224,7 @@ def check_tool(doc, folder: Path, origin='package'):
                 errors.append('rechte_stufe_c:' + ','.join(stufe_c))
     errors.extend(pruefe_shells(t.get('shells'))[0])                  # Vertrag 1.1 (AM1): Verfügbarkeit je Shell und Profil, Zelle der Taskleiste
     errors.extend(pruefe_profile(t.get('profile'))[0])
+    errors.extend(orte_mod.pruefe_ort(t.get('ort'), handles, t.get('id')))        # AM2-02/03: Ort der App
     from .. import chat_tools
     errors.extend(pruefe_zelle(t.get('zelle'), kind, list(chat_tools.PLACES)))
     if errors:
@@ -231,7 +233,7 @@ def check_tool(doc, folder: Path, origin='package'):
             'origin': origin, 'order': order, 'slot': slot, 'description': str(t.get('description') or ''),
             'own_types': own_types, 'instanzen': instanzen, 'gedaechtnis': list(dict.fromkeys(gedaechtnis)), 'zweck': zweck, 'gruppe': gruppe,
             'events': {'emits': list(events.get('emits') or []), 'listens': list(events.get('listens') or [])},
-            'shells': t.get('shells'), 'profile': t.get('profile'), 'zelle': t.get('zelle'), 'rechte': t.get('rechte'), 'faehigkeiten': faehigkeiten,
+            'shells': t.get('shells'), 'profile': t.get('profile'), 'zelle': t.get('zelle'), 'ort': t.get('ort'), 'rechte': t.get('rechte'), 'faehigkeiten': faehigkeiten,
             'js': js, 'css': css, 'api': routes, 'tests': tests}, []
 
 
@@ -469,6 +471,16 @@ class Gateway:
                 man['wirksam'] = urteil['wirksam']
                 man['api'] = list(man['api']) + abgeleitete_routen(urteil['wirksam'])      # AM3-02: lesen → POST /api/objects, verben → POST /api/actions
             ok[man['id']] = (folder, man)
+        if kind == 'tools':                                           # AM2-03: dieselbe Ort-id bei zwei Apps – beide abgewiesen, wie bei `id_doppelt`
+            belegt = {}
+            for tid, (_f, m) in ok.items():
+                if m.get('ort'):
+                    belegt.setdefault(m['ort']['id'], []).append(tid)
+            for oid, tids in belegt.items():
+                if len(tids) > 1:
+                    for tid in tids:
+                        ok.pop(tid, None)
+                        rejected.append({'kind': 'tool', 'id': tid, 'origin': 'local', 'reasons': ['ort_id_belegt']})
         return ok, rejected
 
     def tools(self):
@@ -476,6 +488,16 @@ class Gateway:
 
     def shells(self):
         return self._load('shells')[0]
+
+    def orte(self, shell=None):
+        """AM2-04: Kernorte plus die Orte der Apps, die in dieser Shell verfügbar und geladen sind. (orte, warnungen); ohne Angabe die aktive Shell."""
+        cfg = self.registry.config()
+        tools = self.tools()
+        shell = shell or cfg['shell']
+        disabled = set(cfg['disabled'])
+        apps = [(t, m['ort']) for t, (_f, m) in sorted(tools.items(), key=lambda kv: (kv[1][1]['order'], kv[0]))
+                if m.get('ort') and t not in disabled and (m.get('shells') is None or shell in m['shells'])]
+        return orte_mod.zusammensetzen(apps)
 
     def manifest(self):
         cfg = self.registry.config()
@@ -505,6 +527,9 @@ class Gateway:
             for w in pruefe_shells(man.get('shells'), sorted(shells))[1] + pruefe_profile(man.get('profile'), None, t in grund)[1]:
                 warnungen.append({'id': t, 'grund': w})
 
+        orte, orte_warnungen = self.orte(active) if active else (orte_mod.kern(), [])
+        warnungen.extend({'id': 'orte', 'grund': w} for w in orte_warnungen)
+
         def public(kind, man):
             pub = {k: v for k, v in man.items() if k not in ('api', 'js', 'css')}
             pub['js'] = [f'/uix/{kind}/{man["id"]}/{f}' for f in man['js']]
@@ -524,6 +549,7 @@ class Gateway:
                 'tools': [public('tools', tools[t][1]) for t in ids],
                 'disabled': sorted(disabled & set(tools)),
                 'pruefung': sorted(pruefung),
+                'orte': orte,
                 'nicht_in_dieser_shell': nicht_shell,
                 'nicht_in_diesem_profil': nicht_profil,
                 'warnungen': warnungen,

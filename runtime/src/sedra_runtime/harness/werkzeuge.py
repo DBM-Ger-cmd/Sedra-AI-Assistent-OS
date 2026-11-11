@@ -153,7 +153,8 @@ SCHEMAS = {
 
 
 class Werkzeuge:
-    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None, desktop_stand=None, lernen_lesen=None, wissen=None, wissen_antrag=None, prozess_antrag=None, cloud_verteilen=None):
+    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None, desktop_stand=None, lernen_lesen=None, wissen=None, wissen_antrag=None, prozess_antrag=None, cloud_verteilen=None, orte=None):
+        self.orte = orte                         # vom Server gereicht: () -> {ort_id: (label, hint)} der aktiven Shell (AM2-05: Kernorte plus Orte der Apps); ohne: die Kernorte
         self.cloud_verteilen = cloud_verteilen   # vom Server gereicht: ([{typ, text}]) -> [Ergebnis je Auftrag] über den Vorarbeiter-Kanal des Managers (manager/werkzeuge.py `auftraege_verteilen`)
         self.wissen = wissen                     # vom Server gereicht: (sitzung_id, antwort_id, args) -> Text der Treffer (SPEC_WISSEN_KERN_v1 WK-10, über wissen.dienst.fragen); Leser und Route setzt der Server
         self.wissen_antrag = wissen_antrag       # vom Server gereicht: (nutz) -> {status, …} – Antrag „Quelle für das Wissen“ im Posteingang (WK-11)
@@ -283,11 +284,12 @@ class Werkzeuge:
                     raise WerkzeugFehler('argument_fehlt: wurzel')
             else:                                                    # app_oeffnen, auch mit Verknüpfung
                 ort = self._text(args, 'ort').strip()
-                if ort not in ORTE:
-                    raise WerkzeugFehler('ort_unbekannt: ' + ort + ' – erlaubt: ' + ', '.join(ORTE))
+                orte = self._orte()
+                if ort not in orte:
+                    raise WerkzeugFehler('ort_unbekannt: ' + ort + ' – erlaubt: ' + ', '.join(orte))
                 mit = args.get('verknuepfung') is True
                 ziel, was = ('verknuepfung/' + ort if mit else ort), ('Fenster öffnen und Verknüpfung anlegen' if mit else 'Fenster öffnen')
-            return {'ziel': ziel, 'ort': ort, 'vorhanden': True, 'vorschau': f'{was}: {ORTE[ort][0] if ort else ziel}', 'kurz': ziel,
+            return {'ziel': ziel, 'ort': ort, 'vorhanden': True, 'vorschau': f'{was}: {self._orte()[ort][0] if ort else ziel}', 'kurz': ziel,
                     'gate': {'aktion': AKTION_LESEN, 'ziel': ziel, 'bindung': {'werkzeug': name, 'args': args}}}
         if name == 'sitzungen_aufraeumen':
             return self._vorbereiten_sitzungen(args)
@@ -415,6 +417,12 @@ class Werkzeuge:
             else:
                 teile.append(f"Auftrag {i} ({e.get('typ')}) nicht ausgeführt: {e.get('grund')}")
         return {'status': 'ok', 'ergebnis': '\n\n'.join(teile), 'wirkung': True}
+
+    def _orte(self):
+        try:
+            return (self.orte() if callable(self.orte) else None) or ORTE
+        except Exception:
+            return ORTE
 
     # ---- Stufe 3: Läufe und Modelle
     def _typ(self, lid):
@@ -639,7 +647,7 @@ class Werkzeuge:
                 return {'status': 'ok', 'wirkung': False, 'ergebnis': text}
             if name == 'app_oeffnen':
                 ort = plan['ort']
-                titel = ORTE[ort][0]
+                titel = self._orte().get(ort, ORTE.get(ort, (ort,)))[0]
                 ui = {'oeffnen': ort, 'titel': titel}
                 zusatz = ''
                 if args.get('verknuepfung') is True:
