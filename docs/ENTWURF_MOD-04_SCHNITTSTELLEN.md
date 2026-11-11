@@ -64,5 +64,5 @@ Projektbrowser, Workflow-Graph, Run-Monitor, Nachweise und Captain-Gates. Alles 
 
 1. IF-MOD-01 umgesetzt (Register: Variante 1 bestätigt; Z1/Z2 reserviert der Updater erst für MOD-04). Für Variante 3 reicht die Bestätigung, dass Z1/Z2 **nicht** gebraucht werden.
 2. Antwort von One Sedra K3 zu den Sitzungsrouten.
-3. Eigene Freigabe G1 für MOD-04 mit Dateireservierung für `runtime/src/guppi_runtime/uix/tools/factory-studio/` (neu). Den Ort und die Gruppe `uix/tools/` reserviert der Updater.
+3. Eigene Freigabe G1 für MOD-04 mit Dateireservierung für `runtime/src/sedra_runtime/uix/tools/factory-studio/` (neu). Den Ort und die Gruppe `uix/tools/` reserviert der Updater.
 4. Abstimmung des Bedienflusses mit dem One-Sedra-Chat (C2-3).

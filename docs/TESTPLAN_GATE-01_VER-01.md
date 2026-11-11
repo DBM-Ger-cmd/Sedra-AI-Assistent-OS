@@ -14,8 +14,8 @@
 
 ### A1. Lesen (kein Lauf)
 
-1. `runtime/src/guppi_runtime/desk/freigabeklasse.py` – Klasse von `request:harness_prozess` und Eintrag `APPROVE_STELLEN`.
-2. `runtime/src/guppi_runtime/desk/cli.py` (Funktionen `_execute_runtime_command` und `main`) – prüfen, ob jede Freigabe-Stelle wirklich nur über den dort genannten Pfad erreicht wird.
+1. `runtime/src/sedra_runtime/desk/freigabeklasse.py` – Klasse von `request:harness_prozess` und Eintrag `APPROVE_STELLEN`.
+2. `runtime/src/sedra_runtime/desk/cli.py` (Funktionen `_execute_runtime_command` und `main`) – prüfen, ob jede Freigabe-Stelle wirklich nur über den dort genannten Pfad erreicht wird.
 3. Suche nach allen Aufrufern von `approve`, die nicht über `_execute_runtime_command` laufen (Grep über `runtime/src`).
 
 ### A2. Gezielter Test (Branch, keine Integration)

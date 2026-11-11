@@ -22,7 +22,9 @@ class OrchestraGuard(unittest.TestCase):
     def test_the_rules_and_levels_are_table_d4(self):
         rules = yaml.safe_load(RULES.read_text(encoding='utf-8'))['guard_rules']['rules']
         perms = yaml.safe_load(PERMS.read_text(encoding='utf-8'))['permission_levels']['actions']
-        self.assertEqual([(r['id'], r['action'], r['decision']) for r in rules[-10:]], [row[:3] for row in D4])
+        ids = {row[0] for row in D4}
+        # nach D4 kamen weitere Regeln (GR-039 ff.): geprueft wird GR-029 bis GR-038 an ihrer Stelle, nicht "die letzten zehn"
+        self.assertEqual([(r['id'], r['action'], r['decision']) for r in rules if r['id'] in ids], [row[:3] for row in D4])
         for rid, action, _, level in D4:
             with self.subTest(rid):
                 self.assertEqual(perms[action], {'level': level, 'path_scoped': False})
