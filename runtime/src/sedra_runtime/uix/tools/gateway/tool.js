@@ -34,6 +34,11 @@
     return out;
   }
 
+  // A3 (App Gateway): der Ablauf-Kopf zeigt nur, wo der Vorgang steht (keine Schaltfläche); dieselben fünf Schritte wie im Kopf der KMU-Shell. Rein: Zustand → Schritt (0 abgebrochen, 6 erledigt).
+  const ABLAUF = ['Aufgabe eingeben', 'Schutz prüfen', 'Entwurf erzeugen', 'Ergebnis prüfen', 'selbst entscheiden'];
+  const SCHRITT_VON_ZUSTAND = {NEU: 1, GESPERRT: 2, WARTET: 3, ENTWURF: 4, GEPRUEFT: 5, ABGESCHLOSSEN: 6, VERWORFEN: 0, FEHLER: 0};
+  function ablaufSchritt(zustand){ const n = SCHRITT_VON_ZUSTAND[zustand]; return Number.isInteger(n) ? n : 1; }
+
   const tool = {
     id: 'gateway',
 
@@ -104,7 +109,7 @@
         d().clickable(row, ()=>this.ctx.shell.open({type: 'gateway', id: v.id, title: v.titel}));
         rows.append(row);
       });
-      box.append(rows, this.leitfaden(list, null), this.mvpNote(list));
+      box.append(this.ablaufKopf(null), rows, this.leitfaden(list, null), this.mvpNote(list));
       return box;
     },
 
@@ -123,6 +128,18 @@
       });
       det.append(ol);
       return det;
+    },
+
+    ablaufKopf(v){
+      const aktuell = v ? ablaufSchritt(v.zustand) : 1;
+      const ol = d().el('ol', 't-gateway-ablauf'); ol.setAttribute('aria-label', 'Ablauf');
+      ABLAUF.forEach((text, i)=>{
+        const li = d().el('li', i + 1 < aktuell ? 'fertig' : (i + 1 === aktuell ? 'jetzt' : ''), text);
+        if(i + 1 === aktuell) li.setAttribute('aria-current', 'step');
+        ol.append(li);
+      });
+      if(v && aktuell === 0) ol.classList.add('abgebrochen');
+      return ol;
     },
 
     tone(v){ return v.zustand === 'GESPERRT' || v.zustand === 'FEHLER' ? 'bad' : v.zustand === 'ENTWURF' || v.zustand === 'WARTET' ? 'warn' : v.zustand === 'ABGESCHLOSSEN' ? 'ok' : ''; },
@@ -150,7 +167,7 @@
                   d().el('small', 's-muted', v.id + ' · ' + (v.erstellt || '').replace('T', ' ').slice(0, 16)));
       // Zurück in das Menü: der Vorgang bleibt, die Liste kommt wieder in die Ansicht Überblick
       head.append(d().button('← Zur Übersicht', ()=>{ this.ansicht = 'uebersicht'; this.ctx.object = {type: 'gateway', id: 'alle', collection: true}; this.refresh(); }));
-      box.append(head);
+      box.append(head, this.ablaufKopf(v));
       this.list = list;
       box.append(this.station01(v, list), this.station02(v, list), this.station03(v), this.station04(v));
       box.append(this.leitfaden(list, v), root.sedraGatewayNav.frageSedra(this, v));
@@ -378,6 +395,6 @@
   };
 
   if(root.sedra) root.sedra.registerTool(tool);
-  root.sedraGatewayPure = {tokenize, markup};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {tokenize, markup};
+  root.sedraGatewayPure = {tokenize, markup, ablaufSchritt, ABLAUF};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {tokenize, markup, ablaufSchritt, ABLAUF};
 })();

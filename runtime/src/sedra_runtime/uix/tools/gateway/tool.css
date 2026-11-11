@@ -122,3 +122,11 @@
 .t-gateway-tile-zahl{font-size:var(--size-head)}
 .t-gateway-vorgaenge,.t-gateway-try,.t-gateway-verlauf-liste,.t-gateway-ueb{display:flex;flex-direction:column;gap:var(--gap-2);min-width:0}
 @media (max-width: 640px){.t-gateway-layout{grid-template-columns:minmax(0,1fr)}}
+
+/* A3: Ablauf-Kopf – zeigt, wo der Vorgang steht; keine Schaltfläche */
+.t-gateway-ablauf{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;padding:0;list-style:none;counter-reset:schritt}
+.t-gateway-ablauf li{counter-increment:schritt;padding:4px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel-2);color:var(--muted);font-size:var(--size-small)}
+.t-gateway-ablauf li::before{content:counter(schritt) ' · ';font-weight:600}
+.t-gateway-ablauf li.fertig{color:var(--text);border-color:var(--ok-line);background:var(--ok-bg)}
+.t-gateway-ablauf li.jetzt{color:var(--heading);border-color:var(--warn-line);background:var(--warn-bg);font-weight:600}
+.t-gateway-ablauf.abgebrochen li{opacity:.55}
