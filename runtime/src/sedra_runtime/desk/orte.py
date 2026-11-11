@@ -39,6 +39,11 @@ def kern_ids() -> set:
     return {o['id'] for o in _lesen()['orte']}
 
 
+def _ueberdeckt(typ) -> bool:
+    from .grundfunktionen import ueberdeckt                     # AM2-18: kein App-Ort mit dem Objekttyp einer Grundfunktion
+    return ueberdeckt(typ)
+
+
 def pruefe_ort(ort, handles, tool_id) -> list:
     """AM2-02/03: Fehlercodes des Feldes `ort` (leer = in Ordnung)."""
     if ort is None:
@@ -70,6 +75,8 @@ def pruefe_ort(ort, handles, tool_id) -> list:
     obj = ort.get('object')
     if not isinstance(obj, dict) or set(obj) - OBJECT_KEYS or not isinstance(obj.get('type'), str) or not isinstance(obj.get('id'), str):
         fehler.append('ort_object_ungueltig')
+    elif _ueberdeckt(obj['type']):
+        fehler.append('grundfunktion_ueberdeckt')
     elif not any(isinstance(h, str) and h.partition(':')[0] == obj['type'] for h in (handles or [])):
         fehler.append('ort_object_nicht_in_handles')
     elif any(not isinstance(obj.get(k), str) for k in ('title', 'view') if k in obj):

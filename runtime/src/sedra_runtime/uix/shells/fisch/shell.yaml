@@ -9,6 +9,14 @@ shell:
   entry: {js: shell.js, css: shell.css}
   provides: [dock, talk, notify]
   layout: {persist: browser}
+  grundfunktionen:   # AM2-14: wie die Shell die sieben Grundfunktionen erreichbar macht – nach provides, im Browser noch nicht geprüft
+    entscheidungen: ort
+    gespraech: slot:talk
+    aufgaben: ort
+    logbuch: ort
+    modus_grenzen: ort
+    module_berechtigungen: ort
+    einstellungen_zustand: ort
   api:
     - POST /api/decisions/answer   # Freigabe aus dem Fisch-Modus – derselbe Weg wie in den anderen Oberflächen
   trust: CORE

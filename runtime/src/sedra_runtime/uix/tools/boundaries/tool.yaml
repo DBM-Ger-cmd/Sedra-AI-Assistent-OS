@@ -3,6 +3,7 @@ tool:
   name: "Modus und Grenzen"
   description: "Die vier Stellen, an denen der Mensch steht – je Projekt, einmal bestätigt."
   version: 1.0.0
+  grundfunktion: modus_grenzen
   kind: object
   handles: [boundary]
   order: 12

@@ -37,6 +37,19 @@
     return ((app && app.beantragt) || []).filter(b=>!b.gewaehrt && b.stufe !== 'C').map(b=>b.faehigkeit);
   }
 
+  // Grundfunktionen (AM2-15): was eine Shell nicht erklärt oder nicht trägt, in einem Satz (rein)
+  const GF_NAMEN = {entscheidungen: 'Entscheidungen', gespraech: 'Gespräch', aufgaben: 'Aufgaben', logbuch: 'Logbuch', modus_grenzen: 'Modus und Grenzen',
+                    module_berechtigungen: 'Module und Berechtigungen', einstellungen_zustand: 'Einstellungen und Zustand'};
+  function grundfunktionenSatz(warnungen){
+    const liste = Array.isArray(warnungen) ? warnungen : [];
+    const teile = [];
+    const fehlt = liste.filter(w=>String(w).startsWith('grundfunktion_nicht_erklaert:')).map(w=>GF_NAMEN[String(w).split(':')[1]] || String(w).split(':')[1]);
+    const traegt = liste.filter(w=>String(w).startsWith('grundfunktion_nicht_erreichbar:')).map(w=>GF_NAMEN[String(w).split(':')[1]] || String(w).split(':')[1]);
+    if(fehlt.length) teile.push('nicht erklärt: ' + fehlt.join(', '));
+    if(traegt.length) teile.push('erklärt, aber nicht erreichbar: ' + traegt.join(', '));
+    return teile.length ? 'Grundfunktionen · ' + teile.join(' · ') : '';
+  }
+
   // Aus einer abgelehnten Begründung einen Satz machen, damit niemand Code lesen muss (rein)
   const WHY = {
     id_must_match_folder: 'die id im Manifest ist nicht der Ordnername',
@@ -98,6 +111,8 @@
         const row = d().el('div', 't-modules-row' + (s.enabled ? ' on' : ''));
         const head = d().el('div');
         head.append(d().el('b', null, s.name), d().el('small', 's-muted', ' · ' + s.description));
+        const gfSatz = grundfunktionenSatz(s.gf_warnungen);
+        if(gfSatz) head.append(d().el('div', 's-muted', gfSatz));
         row.append(head);
         const buttons = d().el('div', 's-row');
         if(s.enabled) buttons.append(d().el('span', 's-note ok', 'läuft gerade'));
@@ -319,6 +334,6 @@
   };
 
   if(root.sedra) root.sedra.registerTool(tool);
-  root.sedraModulesPure = {TRUST, WHY, reason, STUFE, appGrund, offeneRechte};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {TRUST, WHY, reason, STUFE, appGrund, offeneRechte};
+  root.sedraModulesPure = {TRUST, WHY, reason, STUFE, appGrund, offeneRechte, grundfunktionenSatz};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {TRUST, WHY, reason, STUFE, appGrund, offeneRechte, grundfunktionenSatz};
 })();

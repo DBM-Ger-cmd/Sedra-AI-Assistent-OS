@@ -7,6 +7,7 @@ shell:
   entry: {js: shell.js, css: shell.css}
   provides: [chooser, talk, notify, inbox]
   layout: {persist: none}
+  einstieg: true               # AM2-17: Einstieg, keine Arbeitsoberfläche – muss nur module_berechtigungen erreichbar machen
   api:
     - GET /api/uix/modules
     - POST /api/uix/standard   # Härtung 30.10. (HU-S1): der Knopf „Zum Standard machen“ war ohne diesen Eintrag tot (403)

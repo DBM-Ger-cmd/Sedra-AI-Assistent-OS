@@ -13,6 +13,14 @@ shell:
     css: [shell.css, einstellungen.css, vorschau.css, startmenue.css, kontext.css]
   provides: [seite, reiter, flaeche, eingabe, taskleiste]
   layout: {persist: browser}
+  grundfunktionen:   # AM2-14: wie die Shell die sieben Grundfunktionen erreichbar macht – Posteingang der Seitenleiste, Start-Menü; im Browser noch nicht geprüft
+    entscheidungen: eigen
+    gespraech: eigen
+    aufgaben: eigen
+    logbuch: ort
+    modus_grenzen: ort
+    module_berechtigungen: ort
+    einstellungen_zustand: eigen
   umschalter: menue           # Stufe 4 (D-S1): kein Alt+S-Chip, kein Mini-Hub – das Start-Menü der Shell; Alt+S ruft es
   api:
     - GET /api/harness/*

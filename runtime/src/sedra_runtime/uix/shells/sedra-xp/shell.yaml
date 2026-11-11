@@ -8,6 +8,7 @@ shell:
   entry: {js: shell.js}
   provides: [chooser]          # Härtung 30.10. (HU-S14): die Shell leitet nur auf /retro um – sie öffnet keine Objekte (nicht windows)
   layout: {persist: browser}
+  archiv: true                 # AM2-17: Archiv (leitet auf /retro), keine Arbeitsoberfläche
   api: []
   trust: CORE
   needs: {ui: ">=1.0 <2"}

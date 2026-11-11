@@ -6,6 +6,8 @@ shell:
   entry: {js: shell.js, css: shell.css}
   provides: [dock, talk]
   layout: {persist: browser}
+  grundfunktionen:   # AM2-14: wie die Shell die sieben Grundfunktionen erreichbar macht – nur das Gespräch; Entscheidungen laufen über die Antwortroute, der Rest folgt mit AM7 (verwaltung)
+    gespraech: slot:talk
   api:
     - POST /api/decisions/answer   # Freigabe „Jetzt freigeben“ / „Ablehnen“ – derselbe Weg wie in den anderen Oberflächen
   trust: CAPTAIN

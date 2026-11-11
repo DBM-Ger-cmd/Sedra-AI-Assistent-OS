@@ -850,6 +850,7 @@ class UIXHub:
                     'gruppe': man.get('gruppe'), 'zweck': man.get('zweck'),        # Stufe 4: das Start-Menü der Harness ordnet danach ein
                     'umschalter': man.get('umschalter'),
                     'shells': man.get('shells'), 'profile': man.get('profile'), 'zelle': man.get('zelle'),       # Vertrag 1.1 (AM1)
+                    'grundfunktionen': man.get('grundfunktionen'), 'grundfunktion': man.get('grundfunktion'), 'gf_warnungen': man.get('grundfunktionen_warnungen') or [],   # AM2-14/15
                     'preview': (Path(folder) / 'preview.png').is_file()}      # die Start-Shell fragt nicht ins Leere
         disabled = set(config['disabled'])
         return {'shell': manifest['config']['shell'],

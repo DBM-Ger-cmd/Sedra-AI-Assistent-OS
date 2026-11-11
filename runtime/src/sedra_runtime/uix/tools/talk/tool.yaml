@@ -3,6 +3,7 @@ tool:
   name: "Gespräch"
   description: "Das eine Eingabefeld – Antwort, Auftrag, Navigation, „einmal ja“."
   version: 1.3.0
+  grundfunktion: gespraech
   kind: panel
   handles: []
   order: 10

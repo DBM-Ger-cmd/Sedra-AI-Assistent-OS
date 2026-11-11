@@ -3,6 +3,7 @@ tool:
   name: "Aufgabe"
   description: "Aufgaben als Satz, Fortschrittszeile und Ergebnis – keine Karten, keine IDs."
   version: 1.0.0
+  grundfunktion: aufgaben
   kind: object
   handles: [task]
   order: 15

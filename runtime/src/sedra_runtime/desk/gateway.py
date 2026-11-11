@@ -21,6 +21,7 @@ from .registry import MODULE_ID, Registry
 from .herkunft import HerkunftsPruefer, lesen as herkunft_lesen
 from . import app_speicher
 from . import orte as orte_mod
+from . import grundfunktionen as gf
 from .berechtigung import ladeentscheidung
 from .rechte_diff import rechte_zu_faehigkeiten, stufe as rechte_stufe
 from .manifest_felder import filtere, pruefe_profile, pruefe_shells, pruefe_zelle
@@ -71,8 +72,8 @@ VERSION = re.compile(r'^\d+\.\d+\.\d+$')
 NEED = re.compile(r'^(>=|<=|>|<|==)?(\d+)(?:\.(\d+))?$')
 
 TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot', 'instanzen', 'gedaechtnis', 'zweck', 'gruppe',
-             'shells', 'profile', 'zelle', 'rechte', 'ort'}       # Vertrag 1.1 (AM1); `rechte` AM3-01
-SHELL_KEYS = {'id', 'name', 'version', 'entry', 'provides', 'layout', 'trust', 'needs', 'api', 'description', 'vorgabe', 'umschalter'}
+             'shells', 'profile', 'zelle', 'rechte', 'ort', 'grundfunktion'}       # Vertrag 1.1 (AM1); `rechte` AM3-01
+SHELL_KEYS = {'id', 'name', 'version', 'entry', 'provides', 'layout', 'trust', 'needs', 'api', 'description', 'vorgabe', 'umschalter', 'grundfunktionen', 'archiv', 'einstieg'}
 # Eine Shell aus einer Vorgabe (SPEC_SHELL_AUS_VORGABE_v1): kein Code im Ordner, nur `shell.vorgabe.yaml`; den Bildschirm baut der
 # Rahmen `ui/frame.js`. Was er darf, steht hier – nicht in der Datei des Autors –, denn der Rahmen ist Vertragscode.
 VORGABE_FILE = 'shell.vorgabe.yaml'
@@ -225,6 +226,7 @@ def check_tool(doc, folder: Path, origin='package'):
     errors.extend(pruefe_shells(t.get('shells'))[0])                  # Vertrag 1.1 (AM1): Verfügbarkeit je Shell und Profil, Zelle der Taskleiste
     errors.extend(pruefe_profile(t.get('profile'))[0])
     errors.extend(orte_mod.pruefe_ort(t.get('ort'), handles, t.get('id')))        # AM2-02/03: Ort der App
+    errors.extend(gf.pruefe_tool_feld(t.get('grundfunktion'), t.get('trust'), origin))      # AM2-13
     from .. import chat_tools
     errors.extend(pruefe_zelle(t.get('zelle'), kind, list(chat_tools.PLACES)))
     if errors:
@@ -233,7 +235,7 @@ def check_tool(doc, folder: Path, origin='package'):
             'origin': origin, 'order': order, 'slot': slot, 'description': str(t.get('description') or ''),
             'own_types': own_types, 'instanzen': instanzen, 'gedaechtnis': list(dict.fromkeys(gedaechtnis)), 'zweck': zweck, 'gruppe': gruppe,
             'events': {'emits': list(events.get('emits') or []), 'listens': list(events.get('listens') or [])},
-            'shells': t.get('shells'), 'profile': t.get('profile'), 'zelle': t.get('zelle'), 'ort': t.get('ort'), 'rechte': t.get('rechte'), 'faehigkeiten': faehigkeiten,
+            'shells': t.get('shells'), 'profile': t.get('profile'), 'zelle': t.get('zelle'), 'ort': t.get('ort'), 'grundfunktion': t.get('grundfunktion'), 'rechte': t.get('rechte'), 'faehigkeiten': faehigkeiten,
             'js': js, 'css': css, 'api': routes, 'tests': tests}, []
 
 
@@ -256,11 +258,20 @@ def check_shell(doc, folder: Path, origin='package'):
     umschalter = s.get('umschalter', 'chip')
     if umschalter not in UMSCHALTER:
         errors.append('umschalter_invalid')
+    erklaerung = s.get('grundfunktionen')
+    errors.extend(gf.pruefe_erklaerung(erklaerung, provides if isinstance(provides, list) else []))        # AM2-14
+    for flag in ('archiv', 'einstieg'):
+        if flag in s and not isinstance(s[flag], bool):
+            errors.append(flag + '_invalid')
+    if s.get('archiv') is True and s.get('einstieg') is True:
+        errors.append('archiv_und_einstieg')
     if errors:
         return None, errors
+    erklaerung = dict(erklaerung or {})
     return {'id': s['id'], 'name': s['name'], 'version': s['version'], 'provides': provides, 'layout': layout, 'trust': s['trust'],
             'origin': origin, 'description': str(s.get('description') or ''), 'js': js, 'css': css, 'api': routes,
-            'umschalter': umschalter}, []
+            'umschalter': umschalter, 'grundfunktionen': erklaerung, 'archiv': s.get('archiv') is True, 'einstieg': s.get('einstieg') is True,
+            'grundfunktionen_warnungen': gf.warnungen(erklaerung, provides, s.get('archiv') is True, s.get('einstieg') is True)}, []
 
 
 def read_vorgabe(folder: Path):
@@ -304,7 +315,8 @@ def _check_frame_shell(s, folder, origin, errors):
     css = ['shell.css'] if (folder / 'shell.css').is_file() else []
     return {'id': s['id'], 'name': s['name'], 'version': s['version'], 'provides': provides, 'layout': layout, 'trust': s['trust'],
             'origin': origin, 'description': str(s.get('description') or ''), 'js': [], 'css': css, 'api': list(FRAME_API),
-            'frame': True, 'vorgabe': vorgabe}, []
+            'frame': True, 'vorgabe': vorgabe, 'grundfunktionen': gf.aus_rahmen(provides), 'archiv': False, 'einstieg': False,
+            'grundfunktionen_warnungen': gf.warnungen(gf.aus_rahmen(provides), provides)}, []
 
 
 EVENTS_NUR_STROM = frozenset({'task.changed', 'model.changed', 'system.state', 'desk.error', 'desk.resync', 'tools.refresh',
@@ -514,7 +526,7 @@ class Gateway:
         ids.sort(key=lambda t: (tools[t][1]['order'], t))
         ids = self.registry.ordered(ids) if cfg['order'] else ids
         # Vertrag 1.1 (AM1): Sichtbarkeit je Shell und Profil – kein Recht, `allowed` lädt über `_load` und bleibt unberührt
-        grund = self._grundfunktionen()
+        grund = self._grundfunktionen() | {t for t in tools if tools[t][1].get('grundfunktion')}       # AM2-13: immer verfügbar, `shells` gilt nicht
         liste = [{'id': t, 'name': tools[t][1]['name'], 'shells': tools[t][1].get('shells'), 'profile': tools[t][1].get('profile')} for t in ids]
         profil = self._aktives_profil() if any(e['profile'] for e in liste) else None
         sichtbar, nicht_shell, nicht_profil = filtere(liste, active, profil, grund)
@@ -528,6 +540,8 @@ class Gateway:
                 warnungen.append({'id': t, 'grund': w})
 
         orte, orte_warnungen = self.orte(active) if active else (orte_mod.kern(), [])
+        for sid, (_f, sman) in shells.items():                       # AM2-15: im Vertrag 1.1 nur Warnungen, sichtbar im Werkzeug „Module“
+            warnungen.extend({'id': sid, 'grund': w} for w in sman.get('grundfunktionen_warnungen') or [])
         warnungen.extend({'id': 'orte', 'grund': w} for w in orte_warnungen)
 
         def public(kind, man):

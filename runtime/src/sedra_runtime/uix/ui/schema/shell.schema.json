@@ -138,7 +138,15 @@
             "menue"
           ],
           "description": "Vertrag Nachtrag N3 (Harness Stufe 4): chip = Alt+S-Chip und Mini-Hub der Seite (Vorgabe); menue = die Shell hat ein eigenes Start-Menü, Alt+S ruft ihren Haken."
-        }
+        },
+        "grundfunktionen": {
+          "type": "object",
+          "propertyNames": {"enum": ["entscheidungen", "gespraech", "aufgaben", "logbuch", "modus_grenzen", "module_berechtigungen", "einstellungen_zustand"]},
+          "additionalProperties": {"type": "string", "pattern": "^(ort|eigen|verwaltung|slot:[a-z]+)$"},
+          "description": "AM2-14: wie die Shell jede der sieben Grundfunktionen erreichbar macht: ort (über einen Ort, das Start-Menü oder die Palette), slot:<name> (eigener Slot), eigen (eigene Fläche mit data-grundfunktion), verwaltung (nur Verwaltungszugang, ab AM7). Fehlt eine, warnt der Kern (Vertrag 1.1)."
+        },
+        "archiv": {"type": "boolean", "description": "AM2-17: Archiv-Shell (z. B. sedra-xp) – muss nur module_berechtigungen und den Wechsel in eine andere Shell erreichbar machen."},
+        "einstieg": {"type": "boolean", "description": "AM2-17: Einstiegs-Shell (z. B. start) – muss nur module_berechtigungen und den Wechsel erreichbar machen."}
       }
     }
   }

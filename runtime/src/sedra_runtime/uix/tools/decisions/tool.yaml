@@ -3,6 +3,7 @@ tool:
   name: "Entscheidungen"
   description: "Gates, Änderungsanträge und (ab Build 9) Grenzen – an einem Ort beantwortet."
   version: 1.0.0
+  grundfunktion: entscheidungen
   kind: object
   handles: [decision]
   order: 20

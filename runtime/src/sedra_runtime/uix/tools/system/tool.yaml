@@ -3,6 +3,7 @@ tool:
   name: "System"
   description: "Maschinenraum und Hardware: Teile, Entwicklungsumgebung, GPU."
   version: 1.0.0
+  grundfunktion: einstellungen_zustand
   kind: object
   handles: [machine, hardware]
   order: 80

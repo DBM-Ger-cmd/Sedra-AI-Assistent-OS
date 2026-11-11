@@ -3,6 +3,7 @@ tool:
   name: "Logbuch"
   description: "Die Audit-Kette: Zeit, Ereignis, Teil."
   version: 1.0.0
+  grundfunktion: logbuch
   kind: object
   handles: [logbook]
   order: 70
