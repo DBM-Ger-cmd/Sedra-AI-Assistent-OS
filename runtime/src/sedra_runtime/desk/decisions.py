@@ -24,6 +24,7 @@ REQUEST_TITLE = {'switch': 'Schalter umstellen', 'routing': 'Modell-Einstellung 
                  'wissen_quelle': 'Wissensquelle freigeben', 'wissen_vorschlag': 'Wissen aufnehmen',          # Spec 7 (D7.3, D7.8)
                  'harness_katalog': 'Freigabe-Katalog schreiben', 'harness_vorlage': 'Vorlage anlegen oder Grenze ändern',   # Harness Stufe 5 (D-U2, D-U4)
                  'harness_projekt': 'Ordner als Projekt öffnen',                                                       # Harness P0 M3 (1.11.)
+                 'harness_oberflaeche': 'Oberflächen-Änderungen übernehmen',                                           # O3 G2-05
                  'harness_code_stand': 'Code-Stand übernehmen',                                                        # Harness G4 (4.11.)
                  'update': 'Update übernehmen', 'cloud_url': 'Cloud-Adresse ändern'}
 REQUEST_NOTE = {'switch': 'Schalter · gilt nach dem Neustart der Oberfläche', 'routing': 'Modell-Einstellung · gilt nach dem Neustart',
@@ -38,6 +39,7 @@ REQUEST_NOTE = {'switch': 'Schalter · gilt nach dem Neustart der Oberfläche', 
                 'wissen_vorschlag': 'Wissensspeicher · Text eines Agenten wird Wissen für diese Stufe; ändert sich der Vorschlag, wird nichts ausgeführt',
                 'harness_katalog': 'Harness · die Datei des Captains wird vorher gesichert; hat sich der Katalog seit dem Antrag geändert, wird nichts geschrieben',
                 'harness_vorlage': 'Harness · neue Vorlage oder Kopie mit neuer Grenze, jeweils in local_config; die Dateien im Repo bleiben',
+                'harness_oberflaeche': 'Harness · genau diese Oberflächen-Dateien in dieser Fassung laufen danach in deiner Seite; hat sich eine seit der Karte geändert, wird nichts übernommen',
                 'harness_code_stand': 'Harness · genau diese Dateien in dieser Fassung gelten danach als gesehen; hat sich eine seit dem Antrag geändert, wird nichts übernommen',
                 'harness_projekt': 'Harness · der Ordner steht danach in der Projektwahl (Laufzeitdatei runtime_data/harness/projekte.yaml, nicht local_config); kein Neustart nötig',
                 'update': 'Programmdateien werden ersetzt · Sicherung liegt daneben, Rückweg über „Zurück zur Sicherung“ · wirkt nach dem Neustart',

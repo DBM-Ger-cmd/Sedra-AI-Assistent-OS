@@ -25,6 +25,8 @@ PROZESS_ANTRAEGE_MAX = 5
 KIND_PROJEKT = 'harness_projekt'            # P0 M3 (1.11.): „Ordner öffnen“ → Laufzeitdatei, nie local_config
 KIND_CODE_STAND = 'harness_code_stand'      # 04.11.: „Code-Stand übernehmen“ → gesehener Stand unter runtime_data/harness/code_stand
 ZIEL_CODE_STAND = 'runtime_data/harness/code_stand'
+KIND_OBERFLAECHE = 'harness_oberflaeche'     # O3 G2-05: „Oberflächen-Änderungen übernehmen“
+ZIEL_OBERFLAECHE = 'runtime_data/harness/oberflaeche'
 ZIEL_KATALOG = 'local_config/' + harness_katalog.DATEI
 ZIEL_PROJEKTE = harness_projekte.LAUFZEIT.as_posix()
 
@@ -319,9 +321,42 @@ def _code_stand_anwenden(hub, binding):
     return {'projekt': pid, 'anzahl': n}
 
 
+# ---- Oberflächen-Änderungen übernehmen (O3 G2-05 bis G2-07): die Sammelkarte
+def oberflaeche_antrag(hub):
+    """POST oberflaeche/vorlegen: eine Sammelkarte im Posteingang für genau die jetzt zurückgehaltenen Dateien in genau ihrer Fassung. Höchstens eine offene; eine neue ersetzt die alte
+    (die alte Mission bleibt offen, bis sie jemand beantwortet – sie wird dann hinfällig, weil die Bindung nicht mehr stimmt). Der Captain bestätigt einmal (Klasse H, Freigabe-Tür)."""
+    ob = hub.oberflaeche
+    liste = [e for e in ob.liste() if e['geaendert']]
+    if not liste:
+        raise ValueError('nichts_zurueckgehalten: es gibt keine Oberflächen-Änderung, die auf die Übernahme wartet')
+    bindung = ob.bindung(liste)
+    for r in [r for r in (getattr(hub, '_open_requests', lambda: [])() or []) if r.get('kind') == KIND_OBERFLAECHE]:
+        if (r.get('binding') or {}).get('dateien') == bindung:
+            return {'mission_id': r.get('mission_id'), 'anzahl': len(liste), 'schon_offen': True}
+    text, zu_gross = ob.vorschau(liste)
+    if zu_gross:
+        raise ValueError(gated.REFUSED + 'zu_gross_fuer_eine_karte: ' + str(len(liste)) + ' Dateien – ansehen und übernehmen nur über die Konsole (CODE_STAND.bat <projekt> --oberflaeche)')
+    neu = sum(1 for e in liste if e['neu'])
+    risks = [f'{len(liste)} Oberflächen-Dateien ({neu} neu, {len(liste) - neu} geändert) laufen danach in deiner Seite – mit allen Rechten der Seite, auch Freigaben',
+             'Bis jetzt liefert der Server die bestätigte Fassung; mit „Freigeben“ gilt genau die gezeigte neue Fassung. Jede spätere Änderung wird wieder zurückgehalten und braucht eine neue Karte',
+             'Zum Beispiel: ' + ', '.join(e['rel'] for e in liste[:5]) + (' …' if len(liste) > 5 else '')] + text.splitlines()
+    req = gated.request(hub, KIND_OBERFLAECHE, 'HARNESS_OBERFLAECHE_UEBERNEHMEN', ZIEL_OBERFLAECHE, {'dateien': bindung}, risks=risks, exact=True,
+                        describe=f'Oberflächen-Änderungen übernehmen: {len(liste)} Dateien')
+    return {'mission_id': req['mission_id'], 'anzahl': len(liste), 'schon_offen': False}
+
+
+def _oberflaeche_anwenden(hub, binding):
+    r = hub.harness.oberflaeche_uebernehmen(binding.get('dateien') or [], kanal='posteingang')
+    if not r['uebernommen'] and r['veraltet']:
+        raise ValueError(gated.STALE)                  # seit der Karte hat sich eine Datei geändert: nichts wird übernommen
+    hub.events.publish('harness.oberflaeche', {'ereignis': 'HARNESS_OBERFLAECHE_UEBERNOMMEN', 'anzahl': len(r['uebernommen'])})
+    return {'u': r['u'], 'uebernommen': len(r['uebernommen']), 'veraltet': len(r['veraltet'])}
+
+
 def registrieren(registry):
     """Vor `kinds.freeze()` in uix_server: die Applier aller Arten."""
     gated.register_applier(KIND_CODE_STAND, _code_stand_anwenden, registry=registry)
+    gated.register_applier(KIND_OBERFLAECHE, _oberflaeche_anwenden, registry=registry)
     gated.register_applier(KIND_KATALOG, _katalog_anwenden, registry=registry)
     gated.register_applier(KIND_VORLAGE, _grenzen_anwenden, registry=registry)
     gated.register_applier(KIND_PROJEKT, _projekt_anwenden, registry=registry)

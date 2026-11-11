@@ -23,6 +23,7 @@ ARTEN = {
     'request:switch': H, 'request:routing': H, 'request:boundaries': H,                 # Regeln
     'request:harness_katalog': H, 'request:harness_vorlage': H,                          # Regeln der Harness
     'request:harness_prozess': H,                                                        # Prozess-Entwurf in den Bestand (nie ausführbar; wie eine Vorlage)
+    'request:harness_oberflaeche': H,                                                    # Code der Oberfläche läuft danach in der Seite (O3 G2-07)
     'request:harness_code_stand': H,                                                     # Code gilt als gesehen: Läufe und Befehle ohne Karte (G4, 04.11.2026)
     'request:install': H, 'request:trust': H, 'request:apps_rechte': H, 'request:update': H,                       # Code und Rechte in den Betrieb
     'request:model_add': H, 'request:skill': H,                                          # neues Modell; Skill = Text für das Modell
@@ -269,6 +270,9 @@ ROUTEN_HARNESS = {
     'POST desktop': ('handlung', N, 'Desktop Builder: Anordnung von Start-Menü und Taskleiste, eine Wahl und keine Erlaubnis'),
     'POST info/wissen': ('antrag', None, 'request:wissen_quelle (Betriebslog als Quelle der Wissensdatenbank)'),
     'POST code_stand/antrag': ('antrag', None, 'request:harness_code_stand'),
+    'POST oberflaeche/vorlegen': ('antrag', None, 'request:harness_oberflaeche (O3 G2-05)'),
+    'POST oberflaeche/zuruecksetzen': ('zurueck', None, 'O3 G2-07: stellt die bestätigten Fassungen wieder her, verschiebt Neues nach verworfen/'),
+    'POST oberflaeche/zuruecknehmen': ('zurueck', None, 'O3 G7-05: stellt einen schon bestätigten Stand wieder her'),
     'POST einstufen': ('liest', None, 'Vorschau der Einstufung'),
     'POST vorarbeiter': ('freigabe', H, 'Vorarbeiter ernennen (F5)'),
     'DELETE vorarbeiter': ('zurueck', None, 'Ernennung entziehen'),
@@ -293,8 +297,8 @@ ROUTEN_HARNESS = {
 # stehen zusätzlich oben in ROUTEN_HARNESS. Die übrigen lesen nur (GET).
 HARNESS_WEGE = frozenset({'projekte', 'sitzungen', 'antworten', 'karten', 'katalog', 'einstufen', 'werkzeuge', 'vorlagen', 'vorarbeiter',
                           'vorschau', 'dateien', 'vorgaben', 'modelle', 'router', 'verknuepfungen', 'gedaechtnis', 'token', 'aufraeumen',
-                          'code_stand', 'aufgaben', 'laeufe', 'hilfswerkzeuge', 'bausteine', 'info', 'desktop', 'vorschlaege'})
-HARNESS_UNTERWEGE = frozenset({'nachricht', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen', 'wissen'})
+                          'code_stand', 'oberflaeche', 'aufgaben', 'laeufe', 'hilfswerkzeuge', 'bausteine', 'info', 'desktop', 'vorschlaege'})
+HARNESS_UNTERWEGE = frozenset({'nachricht', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen', 'wissen', 'vorlegen', 'zuruecksetzen'})
 # In GESCHUETZT (S7), aber heute nur mit GET geroutet – keine schreibende Route (harness/api.py, Weg `token`)
 HARNESS_GESCHUETZT_OHNE_SCHREIBEN = {'token': 'nur GET token_stand'}
 

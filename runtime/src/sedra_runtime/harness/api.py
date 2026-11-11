@@ -50,6 +50,7 @@ import os
 import re
 from datetime import datetime, timedelta
 import threading
+from pathlib import Path
 import time
 from urllib.parse import parse_qs
 
@@ -96,10 +97,10 @@ LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand',
          'gateway_status', 'gateway_vorgang', 'gateway_regel')        # SPEC_WISSEN_KERN_v1 WK-12: die GateWay-Auskunft auch in One Sedra (nur lesen)
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|hilfswerkzeuge|bausteine|info|desktop|vorschlaege)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|oberflaeche|hilfswerkzeuge|bausteine|info|desktop|vorschlaege)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen|vorlegen|zuruecksetzen|zuruecknehmen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
-                        r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)|info/wissen|desktop'
+                        r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)|info/wissen|desktop|oberflaeche/(?:vorlegen|zuruecksetzen|zuruecknehmen)'
                         r'|verknuepfungen|gedaechtnis|token|aufraeumen|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
 # Gedanken und Modelle (Captain 02.11.2026): Sedra speichert die Gedanken je Antwort; ans Modell geht je nach Modus nur wenig zurück.
 #   aus  – nichts, nur Text und Ergebnisse        spur – (Standard) eine Zeile je frühere Antwort: was lief, wie viel Gedanken gespeichert sind; abrufbar mit `erinnern`
@@ -283,6 +284,14 @@ class HarnessApi:
             return 200, harness_antraege.grenzen_antrag(self.hub, payload.get('vorlage'), payload.get('max_zuege'))
         if fest == 'code_stand' and method == 'POST' and unter == 'antrag':
             return 200, self.code_stand_antrag(payload)
+        if fest == 'oberflaeche' and method == 'GET' and not unter:
+            return 200, self.oberflaeche_sicht()
+        if fest == 'oberflaeche' and method == 'POST' and unter == 'vorlegen':
+            return 200, harness_antraege.oberflaeche_antrag(self.hub)
+        if fest == 'oberflaeche' and method == 'POST' and unter == 'zuruecksetzen':
+            return 200, self.oberflaeche_zuruecksetzen()
+        if fest == 'oberflaeche' and method == 'POST' and unter == 'zuruecknehmen':
+            return 200, self.oberflaeche_zuruecknehmen(payload)
         if fest == 'einstufen' and method == 'POST':
             return 200, self.einstufen(payload)
         if fest == 'vorschau' and method == 'GET' and not unter:
@@ -1043,6 +1052,47 @@ class HarnessApi:
         if os.name == 'nt':
             return f'CODE_STAND.bat {pid}'
         return f'python -m sedra_runtime.harness.code_stand --root "{self.hub.project_root}" {pid}'
+
+    # ---- O3 G2/G7: Oberflächen-Änderungen
+    def oberflaeche_sicht(self):
+        """GET oberflaeche: was zurückgehalten ist, die letzten Übernahmen, ob der Schalter an ist. Nur lesen."""
+        ob = self.hub.oberflaeche
+        return {'aktiv': self._oberflaeche_fuer({}) is not None, 'dateien': ob.liste(), 'uebernahmen': ob.uebernahmen()}
+
+    def _oberflaeche_gesehen(self, rels):
+        """G2-07/G7-02: Code-Dateien der Oberfläche gelten im G4-Code-Stand des Projekts, das das laufende Programm enthält, als gesehen (in der jetzigen Fassung)."""
+        from . import code_stand as cs_mod
+        uix = self.hub.oberflaeche.uix
+        for projekt in harness_projekte.laden(self.hub.project_root):
+            try:
+                wurzel = Path(projekt['wurzel']).resolve()
+                uix.relative_to(wurzel)
+            except (ValueError, OSError):
+                continue
+            cs = self.code_stand(projekt)
+            if cs is None:
+                continue
+            eintraege = []
+            for rel in rels:
+                p = uix / rel
+                if cs_mod.ist_code(rel) and p.is_file():
+                    eintraege.append([p.relative_to(wurzel).as_posix(), cs_mod._sha_datei(p)])
+            if eintraege:
+                cs.gesehen_setzen(eintraege)
+
+    def oberflaeche_uebernehmen(self, bindung, kanal='posteingang'):
+        return self.hub.oberflaeche.uebernehmen(bindung, kanal=kanal, gesehen=self._oberflaeche_gesehen)
+
+    def oberflaeche_zuruecksetzen(self):
+        """POST oberflaeche/zuruecksetzen (Klasse N): stellt die bestätigten Fassungen her."""
+        return self.hub.oberflaeche.zuruecksetzen(kanal='seite')
+
+    def oberflaeche_zuruecknehmen(self, payload):
+        """POST oberflaeche/zuruecknehmen {u} (G7-05, Klasse N): stellt den Stand vor einer Übernahme wieder her."""
+        u = str((payload or {}).get('u') or '').strip()
+        if not u:
+            raise ValueError('u_fehlt')
+        return self.hub.oberflaeche.zuruecknehmen(u, kanal='seite', gesehen=self._oberflaeche_gesehen)
 
     def code_stand_antrag(self, payload):
         """POST code_stand/antrag {projekt} (04.11.2026): ein Antrag im Posteingang für genau den jetzt ungesehenen Code; übernommen wird erst nach der Bestätigung (Klasse H)."""
