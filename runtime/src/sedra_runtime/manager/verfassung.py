@@ -5,6 +5,7 @@ Der Manager darf frei entscheiden, aber jede Entscheidung läuft durch `pruefe_a
 VerfassungsVerstoss; der Grund steht im Journal (runtime_data/manager/journal.jsonl).
 """
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -25,6 +26,83 @@ def lade_gesetze(pfad=None):
         return yaml.safe_load(f)["gesetze"]
 
 
+TYP = re.compile(r"[a-z0-9_]{1,60}")          # nur ASCII: str.isalnum ließe auch "²" oder Umlaute durch
+KOPF_ERLAUBT = {"typ", "werkzeuge", "cloud", "sprache", "quelle_sha256", "text_sha256", "freigegeben", "quelle", "uebersetzt_von"}
+MAX_DATEI = 20000                              # Bytes; eine Anweisung ist kurz, ein langer Text würde den Kontext der Modelle fressen
+MAX_TEXT = 8000                                # Zeichen im Text
+
+
+def lade_arbeitsanweisung(typ, gesetze=None, pfad=None, pflicht=True):
+    """Lädt die Arbeitsanweisung eines Aufgabentyps (dritte Ebene) und prüft, dass sie nur einschränkt.
+
+    Rückgabe: {"typ", "werkzeuge" (Menge oder None), "cloud" (bool), "text"}.
+    Fehlt die Datei und ist `pflicht` falsch, kommt None zurück. Wirft VerfassungsVerstoss, wenn sie Werkzeuge außerhalb der Gesetze nennt,
+    die Cloud für einen nicht freigegebenen Typ öffnet, Rechte vergeben will, unbekannte Kopf-Felder oder falsche Typen hat oder zu groß ist.
+    """
+    g = gesetze or lade_gesetze()
+    if not isinstance(typ, str) or not TYP.fullmatch(typ):
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"Ungültiger Aufgabentyp '{typ}'.")
+    datei = Path(pfad) if pfad else CONFIG / g["arbeitsanweisungen"]["ordner"] / f"{typ}.md"
+    if not datei.is_file():
+        if not pflicht:
+            return None
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"Keine Arbeitsanweisung für '{typ}'.")
+    if datei.stat().st_size > MAX_DATEI:
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"Arbeitsanweisung '{typ}' ist größer als {MAX_DATEI} Bytes.")
+    try:
+        roh = datei.read_text(encoding="utf-8").replace("\r\n", "\n")
+        kopf, text = {}, roh
+        if roh.startswith("---\n"):
+            ende = roh.find("\n---\n", 4)
+            if ende != -1:
+                kopf = yaml.safe_load(roh[4:ende]) or {}
+                text = roh[ende + 5:]
+    except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"Arbeitsanweisung '{typ}' ist nicht lesbar: {type(exc).__name__}.") from exc
+    if not isinstance(kopf, dict):
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"Der Kopf von '{typ}' muss eine Zuordnung sein.")
+    if any(k in kopf for k in ("rechte", "nur_captain")):
+        raise VerfassungsVerstoss("arbeitsanweisungen", "Eine Arbeitsanweisung kann keine Rechte vergeben.")
+    unbekannt = set(kopf) - KOPF_ERLAUBT
+    if unbekannt:
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"Arbeitsanweisung '{typ}' hat unbekannte Kopf-Felder: {sorted(map(str, unbekannt))}.")
+    if "typ" in kopf and kopf["typ"] != typ:
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"Der Kopf nennt den Typ '{kopf['typ']}', die Datei heißt '{typ}'.")
+    wz = kopf.get("werkzeuge")
+    if wz is not None:
+        if not isinstance(wz, list) or not all(isinstance(w, str) for w in wz):
+            raise VerfassungsVerstoss("arbeitsanweisungen", f"'werkzeuge' in '{typ}' muss eine Liste von Namen sein.")
+        mehr = set(wz) - set(g["werkzeuge"]["erlaubt"])
+        if mehr:
+            raise VerfassungsVerstoss("arbeitsanweisungen", f"Arbeitsanweisung '{typ}' nennt Werkzeuge außerhalb der Gesetze: {sorted(mehr)}.")
+        wz = set(wz)
+    cloud = kopf.get("cloud", False)
+    if not isinstance(cloud, bool):
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"'cloud' in '{typ}' muss wahr oder falsch sein (kein Text).")
+    if cloud and typ not in g["cloud_aufgaben"]:
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"Arbeitsanweisung '{typ}' öffnet die Cloud für einen nicht freigegebenen Typ.")
+    text = text.strip()
+    if not text:
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"Arbeitsanweisung '{typ}' hat keinen Text.")
+    if len(text) > MAX_TEXT:
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"Der Text von '{typ}' ist länger als {MAX_TEXT} Zeichen.")
+    return {"typ": typ, "werkzeuge": wz, "cloud": cloud, "text": text}
+
+
+def lade_arbeitsanweisung_fuer_modell(typ, gesetze=None):
+    """Die Arbeitsanweisung in der Sprache für Modelle: die freigegebene englische Fassung, wenn sie gültig ist (Hash der deutschen Quelle,
+    Freigabe, Struktur, gleicher Kopf), sonst die deutsche. Rückgabe: (Anweisung, "en" oder "de", Gründe gegen die englische Fassung)."""
+    from . import uebersetzung
+    g = gesetze or lade_gesetze()
+    a = lade_arbeitsanweisung(typ, gesetze=g)                       # die deutsche Fassung muss immer gültig sein (Gesetze)
+    ordner = CONFIG / g["arbeitsanweisungen"]["ordner"]
+    gruende = uebersetzung.pruefe_fassung(typ, ordner)
+    if gruende:
+        return a, "de", gruende
+    _, text_en = uebersetzung.teile((ordner / f"{typ}.en.md").read_text(encoding="utf-8"))
+    return {**a, "text": text_en.strip()}, "en", []
+
+
 class Manager:
     """Ein Akteur mit Rechten. Der Manager hat die Rechte, die ihm der Captain gibt; Untergebene erben höchstens diese."""
 
@@ -42,6 +120,21 @@ class Manager:
             self._notiere(f"werkzeug:{name}", False, "nicht erlaubt")
             raise VerfassungsVerstoss("werkzeuge", f"Das Werkzeug '{name}' ist für {self.name} nicht erlaubt.")
         self._notiere(f"werkzeug:{name}", True, "erlaubt")
+
+    def arbeitsanweisung(self, typ, pflicht=True):
+        """Arbeitsanweisung für den Aufgabentyp laden; sie darf die Werkzeuge dieses Akteurs nur verkleinern.
+        Rückgabe: (Anweisung, Werkzeugmenge für diesen Auftrag); ohne Datei und ohne `pflicht` (None, alle Werkzeuge).
+        Verstöße kommen ins Journal."""
+        try:
+            a = lade_arbeitsanweisung(typ, gesetze=self.g, pflicht=pflicht)
+        except VerfassungsVerstoss as exc:
+            self._notiere(f"arbeitsanweisung:{typ}", False, str(exc))
+            raise
+        if a is None:
+            return None, set(self.werkzeuge)
+        wz = self.werkzeuge if a["werkzeuge"] is None else self.werkzeuge & a["werkzeuge"]
+        self._notiere(f"arbeitsanweisung:{typ}", True, "nur eingeschränkt, im Rahmen der Gesetze")
+        return a, wz
 
     def _notiere(self, entscheidung, ok, grund, cloud=False):
         if not self.journal:

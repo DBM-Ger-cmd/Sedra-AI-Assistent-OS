@@ -4,6 +4,7 @@ harness_vorlage:
   name: Rückblick
   beschreibung: Lernendes System nach dem Hermes-Muster - Rückblick mit vier Fragen nach einem Auftrag oder einer Korrektur des Captains, aus gelobten und korrigierten Antworten; Maßnahmen nur mit Zustimmung, gelernte Regeln in docs/AAR/LESSONS.md.
   system: rueckblick.md
+  arbeitsanweisung: [grundregeln]
   werkzeuge: [datei_lesen, dateien_auflisten, suchen, datei_schreiben, datei_aendern, befehl, belohnungen_lesen, erinnern]
   rechte: {}
   modell: coder.llama_qwen35

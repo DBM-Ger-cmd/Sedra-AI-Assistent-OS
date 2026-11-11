@@ -2,7 +2,8 @@
 wählt das Modell aus den Fähigkeitstests und gibt das Ergebnis mit Herkunft zurück. Er entscheidet nichts über Freigaben.
 
 Ablauf je Auftrag:
-  1. Manager.pruefe_auftrag(typ, cloud=True): Gesetze, Tagesbudget, Journal.
+  1. Manager.pruefe_auftrag(typ, cloud=True): Gesetze, Tagesbudget, Journal. Dann die Arbeitsanweisung des Typs (falls vorhanden)
+     vor den Auftrag setzen; sie muss die Cloud selbst erlauben.
   2. modellwahl.waehle_modell(typ, ordner): ein Modell, das den Test für diesen Typ bestanden hat.
   3. labor.cloud_chat(...): Inhaltsschutz und Audit wie bei jedem Cloudaufruf.
   4. Ergebnis mit Modell, Zeit und Grund zurück; Fehler werden als solche gemeldet, nie als Erfolg.
@@ -26,6 +27,14 @@ class Vorarbeiter:
             self.manager.pruefe_auftrag(typ, cloud=True)
         except VerfassungsVerstoss as exc:
             return {"ok": False, "grund": f"Gesetz: {exc}"}
+        try:
+            anweisung, _ = self.manager.arbeitsanweisung(typ, pflicht=False)
+        except VerfassungsVerstoss as exc:
+            return {"ok": False, "grund": f"Arbeitsanweisung: {exc}"}
+        if anweisung:
+            if not anweisung["cloud"]:
+                return {"ok": False, "grund": f"Die Arbeitsanweisung '{typ}' erlaubt die Cloud nicht."}
+            nachricht = f"Arbeitsanweisung (verbindlich, ändert keine Gesetze):\n{anweisung['text']}\n\n---\nAuftrag:\n{nachricht}"
         modell = waehle_modell(typ, self.ordner)
         if not modell:
             return {"ok": False, "grund": f"Kein Modell hat den Test für '{typ}' bestanden."}

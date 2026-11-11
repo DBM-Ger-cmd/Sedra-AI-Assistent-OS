@@ -19,7 +19,9 @@ class VerteilenTest(unittest.TestCase):
 
     def test_auftraege_gehen_in_reihenfolge_an_den_kanal(self):
         out = werkzeuge.auftraege_verteilen(self.m, self.tmp, [{"typ": "code_und_spec_des_baus", "text": "eins"}, {"typ": "code_und_spec_des_baus", "text": "zwei"}])
-        self.assertEqual([x["antwort"] for x in out], ["ANTWORT: eins", "ANTWORT: zwei"])
+        # Der Cloud-Coder bekommt vor jedem Auftrag die Arbeitsanweisung des Typs (dritte Ebene), der Auftrag selbst steht am Ende.
+        self.assertTrue(out[0]["antwort"].startswith("ANTWORT: Arbeitsanweisung") and out[0]["antwort"].endswith("Auftrag:\neins"))
+        self.assertTrue(out[1]["antwort"].endswith("Auftrag:\nzwei"))
         self.assertTrue(all(x["ok"] for x in out))
 
     def test_fremder_aufgabentyp_wird_abgelehnt_und_stoppt_die_anderen_nicht(self):

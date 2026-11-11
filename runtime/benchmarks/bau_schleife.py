@@ -40,6 +40,7 @@ RUNTIME = Path(__file__).resolve().parents[1]
 BENCH = RUNTIME / "benchmarks"
 PY = Path(sys.executable)
 SPEC_NAME = "factory_sdk_grundlage_v5"
+ARBEITSANWEISUNG = "bau_coder"                # dritte Ebene: config/manager/arbeitsanweisungen/bau_coder.md, der Entwickler der Pipeline bekommt sie bei jeder Aufgabe
 STANDARD_SPEC = SPEC_NAME                 # die Spec mit Produktpruefung (factory_sdk); jede andere Spec endet nach S4 ohne Produktpruefung
 SPEC_FILE = BENCH / "devvm_specs" / f"{SPEC_NAME}.py"
 STUFEN = ["S1", "S2", "S3", "S4"]
@@ -354,7 +355,7 @@ def bau_versuch(projekt, stufe, seed, bericht, satz):
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     lauf_log = projekt / "runtime_data" / f"bau_schleife_{stufe}_{satz['coder']}_{stamp}.log"
     befehl = [str(PY), "benchmarks/devvm_build.py", str(projekt), "--spec", SPEC_NAME, "--profile", "standard",
-              "--coder", satz["coder"], "--only", stufe] + satz["args"]
+              "--coder", satz["coder"], "--only", stufe, "--arbeitsanweisung", ARBEITSANWEISUNG] + satz["args"]
     if seed:
         befehl += ["--seed", str(seed)]
     if bericht:

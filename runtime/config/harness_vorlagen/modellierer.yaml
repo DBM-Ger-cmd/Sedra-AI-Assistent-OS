@@ -4,6 +4,7 @@ harness_vorlage:
   name: Modellierer
   beschreibung: Baut druckbare 3D-Modelle (STL) mit OpenSCAD im Schreibbereich des Projekts; kurze Skripte, jede Version wird exportiert und geprüft.
   system: modellierer.md
+  arbeitsanweisung: [grundregeln]
   werkzeuge: [datei_lesen, dateien_auflisten, suchen, datei_schreiben, datei_aendern, befehl, youtube_transkript]
   rechte: {}
   modell: coder.local_primary

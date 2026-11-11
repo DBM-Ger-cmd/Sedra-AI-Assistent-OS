@@ -374,6 +374,7 @@ def build_parser():
     ap.add_argument("--only", help="run only this stage")
     ap.add_argument("--from-stage", help="run this stage and every stage after it (continue a stopped build, usually with --seed <snapshot of the last passed stage>)")
     ap.add_argument("--keep-going", action="store_true", help="build the next stages even after a stage failed its hidden test (the old behaviour; night 2026-10-11 it cost about 80 GPU minutes on a broken base)")
+    ap.add_argument("--arbeitsanweisung", metavar="TYP", help="work instruction of the third level (config/manager/arbeitsanweisungen/<TYP>.md, checked against the laws: it may only restrict); its text is appended to every task of the developer and to the rework task")
     ap.add_argument("--review", help="a text file with the Captain's review of the seed; it is appended to the task as defects to fix")
     ap.add_argument("--context", default="32768", help="window of the models in tokens (a 450-line file overflowed 16k: stop reason error), or max for the maximum of each model's recipe (larger packages); always capped at the recipe maximum of the model (Jan and SWE: 16384, Qwen3-Coder: 49152)")
     ap.add_argument("--require-s0", action="store_true", help="refuse to start when a model of the run has no passing S0 connection check for exactly these settings (benchmarks/connection_check.py)")
@@ -476,6 +477,13 @@ def main():
             outs, stage_rows = [], []
             last_snapshot = Path(args.seed) if args.seed else None
             try:
+                addendum = ""
+                if args.arbeitsanweisung:
+                    from sedra_runtime.manager import lade_arbeitsanweisung_fuer_modell      # an invalid German instruction stops the run (VerfassungsVerstoss); the English version is used only when it is approved, fresh and structure-checked
+                    anweisung, sprache, gruende = lade_arbeitsanweisung_fuer_modell(args.arbeitsanweisung)
+                    if gruende: log.say(f"   work instruction {args.arbeitsanweisung}: English version not used ({'; '.join(gruende)[:200]}), German text appended")
+                    addendum = NL * 2 + "WORK INSTRUCTION (binding for how you work; it never changes the task or the rules above):" + NL + anweisung["text"]
+                    log.say(f"   work instruction {args.arbeitsanweisung} ({sprache}): {len(anweisung['text'])} characters appended to every task")
                 if args.review: stages = [{**s, "task": s["task"] + NL * 2 + "The existing code in the workspace was reviewed. These defects must be fixed (keep everything else):" + NL + Path(args.review).read_text(encoding="utf-8")} for s in stages]
                 for index, stage in enumerate(stages):  # stages build on the same workspace; every stage has its own hidden test
                     if args.no_own_tests or args.mode == "solo": stage = {**stage, "task": without_test_duty(stage["task"])}
@@ -489,7 +497,7 @@ def main():
                     if lessons: log.say(f"   lesson for stage {stage['name']}: {lessons[0][:70]}...")
                     stage_t0 = time.monotonic()
                     try:
-                        out = team.run(stage["task"], lessons)
+                        out = team.run(stage["task"] + addendum, lessons)
                         outs.append(out)
                         check = acceptance(vm_copy, ws, stage)
                         reworks = 0
@@ -499,7 +507,7 @@ def main():
                             if args.mode == "solo":       # the SAME developer continues his conversation with the bug report (he remembers what he did)
                                 team.continue_solo(hidden_report(vm_copy, ws, stage) or check["output"][-1500:], f"solo developer (rework {reworks})")
                             else:
-                                team._agent("coder", REWORK_TASK.format(task=stage["task"], output=(hidden_report(vm_copy, ws, stage) if args.hidden_feedback else "") or check["output"][-1500:]), f"coder (rework {reworks})", model_role="coder_strong", exclude=("git_commit",))
+                                team._agent("coder", REWORK_TASK.format(task=stage["task"] + addendum, output=(hidden_report(vm_copy, ws, stage) if args.hidden_feedback else "") or check["output"][-1500:]), f"coder (rework {reworks})", model_role="coder_strong", exclude=("git_commit",))
                                 team.tidy_files(before, stage["task"])
                             if any(ws.status().values()): ws.commit(f"rework {reworks}: {stage['name']}")
                             check = acceptance(vm_copy, ws, stage)

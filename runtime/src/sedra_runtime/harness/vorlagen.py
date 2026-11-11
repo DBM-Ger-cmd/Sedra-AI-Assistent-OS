@@ -71,6 +71,24 @@ def _erlaubnisse(vid, roh, werkzeuge):
     return out
 
 
+def _arbeitsanweisung(vid, typ):
+    """Dritte Ebene (Verfassung, Gesetze, Arbeitsanweisung): der Text der Arbeitsanweisung folgt dem System-Text. Sie darf nur einschränken;
+    der Lader des Managers prüft das gegen die Gesetze. Ohne Feld bleibt alles wie es war."""
+    if typ is None:
+        return ''
+    typen = [typ] if isinstance(typ, str) else typ        # ein Typ oder eine Liste: zuerst die Grundregeln für alle Rollen, dann die der Rolle
+    if not isinstance(typen, list) or not 1 <= len(typen) <= 3 or not all(isinstance(t, str) for t in typen) or len(set(typen)) != len(typen):
+        raise VorlageFehler(f'{vid}_arbeitsanweisung_ungueltig: ein Aufgabentyp oder eine Liste von höchstens 3 verschiedenen')
+    from ..manager import VerfassungsVerstoss, lade_arbeitsanweisung
+    texte = []
+    for t in typen:
+        try:
+            texte.append(lade_arbeitsanweisung(t)['text'])
+        except VerfassungsVerstoss as exc:
+            raise VorlageFehler(f'{vid}_arbeitsanweisung_ungueltig: {exc.grund}') from exc
+    return '\n\n---\n\n## Arbeitsanweisung (dritte Ebene, gilt unter Verfassung und Gesetzen)\n\n' + '\n\n'.join(texte)
+
+
 def pruefen(doc, system_text, bekannt=None):
     """Die Vorlage als Dict – oder VorlageFehler mit Grund."""
     v = doc.get('harness_vorlage') if isinstance(doc, dict) else None
@@ -114,7 +132,8 @@ def pruefen(doc, system_text, bekannt=None):
     if hinweis is not None and (not isinstance(hinweis, str) or len(hinweis) > HINWEIS_MAX):
         raise VorlageFehler(f'{vid}_hinweis_ungueltig: Text, höchstens {HINWEIS_MAX} Zeichen')
     erlaubnisse = _erlaubnisse(vid, v.get('erlaubnisse'), werkzeuge)
-    return {'id': vid, 'name': v['name'].strip(), 'beschreibung': str(v.get('beschreibung') or '').strip(), 'system': system_text.strip(),
+    system = system_text.strip() + _arbeitsanweisung(vid, v.get('arbeitsanweisung'))
+    return {'id': vid, 'name': v['name'].strip(), 'beschreibung': str(v.get('beschreibung') or '').strip(), 'system': system,
             'werkzeuge': list(dict.fromkeys(werkzeuge)), 'rechte': {k: bool(rechte.get(k, False)) for k in RECHTE},
             'modell': modell, 'slot': slot, 'max_zuege': zuege, 'frist_min': frist, 'bremse_pro_stunde': bremse,
             'hinweis': ' '.join(str(hinweis or '').split()), 'erlaubnisse': erlaubnisse}
@@ -138,7 +157,8 @@ def _lesen(yaml_pfad: Path):
     vorlage = pruefen(doc, system_text)
     if vorlage['id'] != yaml_pfad.stem:
         raise VorlageFehler(f'{yaml_pfad.stem}_id_passt_nicht: Dateiname und id müssen gleich sein')
-    vorlage['hash'] = hashlib.sha256((text + '\n--\n' + system_text).encode('utf-8')).hexdigest()
+    zusatz = vorlage['system'][len(system_text.strip()):]      # Text der Arbeitsanweisung: ändert er sich, ändert sich der Hash (Freigaben und Sitzungen hängen daran)
+    vorlage['hash'] = hashlib.sha256((text + '\n--\n' + system_text + (('\n--\n' + zusatz) if zusatz else '')).encode('utf-8')).hexdigest()
     return vorlage
 
 

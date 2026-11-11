@@ -42,6 +42,13 @@ gesetze:
       # Bau: der Manager darf einen Bau-Lauf starten. Übernahme in runtime bleibt beim Captain (in_main_uebernehmen).
       - bau_starten
 
+  # Arbeitsanweisungen: dritte Ebene unter Verfassung und Gesetzen. Nur einschränken, nie erweitern.
+  arbeitsanweisungen:
+    ordner: arbeitsanweisungen
+    rangfolge: [verfassung, gesetze, arbeitsanweisung]
+    nur_einschraenken: true             # Werkzeuge muessen Teilmenge von werkzeuge.erlaubt sein; cloud nur fuer cloud_aufgaben
+    aenderung: nur_mit_freigabe_captain
+
   # Nachbesprechung (Entwurf, vom Captain noch nicht bestätigt). Jeder Bau- oder Manager-Lauf wird danach
   # mit vier Fragen festgehalten, bestanden oder nicht. So lernen Sedra, Workflows und Agenten aus jedem Lauf.
   nachbesprechung:
