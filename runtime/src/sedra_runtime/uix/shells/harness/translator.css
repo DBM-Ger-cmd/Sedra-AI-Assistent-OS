@@ -1,0 +1,9 @@
+.hs-tr-wolke{
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 44px; max-height: 160px;
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; font: inherit;
+  background: var(--panel); color: var(--text);
+}
+.hs-tr-wolke:focus{ outline: 2px solid var(--focus, var(--line)); }
+.hs-tr-buehne{ display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.hs-tr-pane{ display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.hs-tr-pane[hidden]{ display: none; }

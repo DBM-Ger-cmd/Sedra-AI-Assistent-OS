@@ -49,8 +49,13 @@
     const name = NAME[objekt.type + ':' + objekt.id];
     if(name){ objekt.title = name; ort = Object.assign({}, ort, {label: name}); }
     if(!objekt.title) objekt.title = ort.label || objekt.type;
-    const id = reiterId(objekt);
     const R = root.sedraHarness.reiter;
+    const T = root.sedraHarness.translator;
+    const uebergeben = T && T.uebergeben(S, objekt);                  // A3 Translator (TR-30/32): ein Objekt eines Modus kommt im offenen Translator an
+    if(uebergeben) return uebergeben;
+    const id = reiterId(objekt);
+    const schon = apps(S).get(id);
+    if(objekt.frage && schon && R.liste(S).indexOf(id) >= 0 && schon.objekt.frage !== objekt.frage) R.schliessen(S, id);   // TR-31 (B10): eine neue `frage` auf einen offenen Reiter geht nicht verloren – er wird neu eingehängt
     if(!apps(S).has(id)) apps(S).set(id, {objekt, titel: ort.label || objekt.title, gruppe: ort.gruppe || null, symbol: ort.symbol || null, seit: Date.now()});
     if(R.liste(S).indexOf(id) < 0){
       const offen = liste(S);
@@ -146,7 +151,11 @@
     const f = flaeche(S, objekt);
     box.append(kopf, f.verben, f.koerper);
     if(objekt.type === 'meter') tokenReiter(S, box, f);
-    const a = root.sedraHarness.reiter.stub(id, box, S, {objekt, mounts: f.mounts, abbauen: f.abbauen, verben: f.zeichnen});
+    const T = root.sedraHarness.translator;
+    const tr = objekt.type === 'translator' && T && !f.leer ? T.ansicht(S, box, f) : null;       // A3: die App „Translator“ mit vier Modi
+    if(tr) S._translatorAnsicht = tr;
+    const abbauen = ()=>{ f.abbauen(); if(tr){ tr.abbauen(); if(S._translatorAnsicht === tr) S._translatorAnsicht = null; } };
+    const a = root.sedraHarness.reiter.stub(id, box, S, {objekt, mounts: f.mounts, abbauen, verben: tr ? tr.zeichnen : f.zeichnen});
     kopf.append(d().el('b', 'hs-app-titel', eintrag.titel), d().el('code', 'hs-app-objekt', objekt.type + ' · ' + objekt.id + (objekt.view ? ' · ' + objekt.view : '')));
     if(f.rechts.length){
       const knopf = d().el('button', 'hs-app-nachweis-knopf', 'Nachweise (' + f.rechts.length + ')'); knopf.type = 'button';

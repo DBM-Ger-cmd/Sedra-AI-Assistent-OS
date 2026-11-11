@@ -121,3 +121,28 @@ Abhängig: nichts Neues im Kern. U12 (Manifest v1.1, `profile:`) kann später `p
 | TR-E4 | Chat-Werkzeug `uebersetzen` jetzt oder später? Sprache, Rolle oder beides? | **Später als Schritt 5, beides** (ein Werkzeug, zwei Zweige); vorher W1 (U10) abschließen. |
 | TR-E5 | Name „News-Profil“ vs. Oberflächen-Profil (B14)? | Im Werkzeug Nachrichten „**Interessen**“ statt „Profil“ anzeigen; Datei und Route bleiben. |
 | TR-E6 | Ab wann gilt die alte Shell `fisch` als ersetzt? | Nach Abnahme TR-51 durch den Captain; bis dahin unverändert, danach eingefroren (nicht gelöscht). |
+
+## 7. Stand des Baus (11.11.2026, Schritt 1 bis 4)
+
+Entscheidungen des Captains vom 11.11.2026: alle Vorschläge TR-E1 bis TR-E6 übernommen; Schritt 5 (Chat-Werkzeug `uebersetzen`) später.
+
+| ID | Stand | Beleg |
+|---|---|---|
+| TR-01 | gebaut: Paket `uix/tools/translator/` (Platzhalter, `handles: [translator]`, `api: []`), Ort `translator` (Wörter „translator“, „news“; die Einzelwörter „übersetzen“, „transkript“ bleiben bei den Werkzeugen, sonst wären sie doppelt belegt), Objekttyp `translator` in `OBJECT_TYPES` | `test_uix_translator_app` |
+| TR-02 | teilweise: die Modus-Reiter stehen in `shells/harness/translator.js`, der Sonderfall `meter` bleibt (allgemeines Feld `reiter:` erst mit dem App-Rahmen, TR-E1) | Code |
+| TR-03, TR-E2 | gebaut: nur der Translator im Start-Menü (`ausblenden` für `uebersetzung`, `transkript`, `aufnahme`, `werkzeug-nachrichten`), `nachrichten` zugeordnet | Test |
+| TR-10 | gebaut, Liste gleich `sedraFischPure.MODI` | Node-Test |
+| TR-11, TR-12 | gebaut: Wolke (Enter, Umschalt+Enter), Strg+K nur bei vorderem Reiter | Browser-Test |
+| TR-13 | gebaut: `textContent`, keine Hex-Farben, Dateien unter 400 Zeilen, kein `setInterval` | Test |
+| TR-20 | gebaut: Modus beim ersten Öffnen eingehängt, beim Wechsel versteckt | Browser-Test |
+| TR-21 | gebaut: `sedra.harness.translator.modus`, nie ein Text | Browser-Test |
+| TR-22 | gebaut: Werkbank-Zeile je Fläche, nur die des aktiven Modus ist sichtbar | Code, Browser-Test indirekt |
+| TR-23 | **abweichend**: der Translator meldet sich als ein Objekt `translator:app`, nicht `translator:<modus>` (die Reiter-ID trägt das Objekt; ein Reiter je Modus wäre ein loser Reiter). Der Modus wird je Browser gemerkt (TR-21). In Cockpit, Minimal, Paperclip öffnet das Paket-Werkzeug mit vier Knöpfen | Code |
+| TR-30 | gebaut: ein `open` auf einen der vier Objekttypen kommt im offenen Translator an, auch wenn der Modus eingehängt ist (nur dieser Modus wird neu eingehängt, TR-E3) | Browser-Test |
+| TR-31 | gebaut: eine neue `frage` auf einen offenen Einzelreiter hängt ihn neu ein | Browser-Test |
+| TR-32 | gebaut über denselben Weg wie TR-30 (Rekorder → „Transkript öffnen“); nicht mit Fake-Mikrofon im Browser geprüft | Code |
+| TR-33 | unverändert: nur Text, keine neue Route | Code |
+| TR-50 | `uix/shells/fisch/` unverändert | `git diff` |
+| TR-E5 | gebaut: „Interessen“ statt „Profil“ in der Anzeige von Nachrichten | Browser-Test |
+| TR-40 bis 42 | später | – |
+| TR-51 | offen: Gleichstandsliste vom Captain im echten Sedra durchzuklicken (nach Neustart und Strg+F5) | Captain |

@@ -19,6 +19,8 @@
     "crew": "arbeit",
     "gateway": "arbeit",
     "labor": "arbeit",
+    "translator": "arbeit",
+    "nachrichten": "arbeit",
     "uebersetzung": "arbeit",
     "transkript": "arbeit",
     "aufnahme": "arbeit",
@@ -59,7 +61,7 @@
     "pruefung": "✓",
     "token": "◎"
   },
-  "ausblenden": ["hardware"],
+  "ausblenden": ["hardware", "uebersetzung", "transkript", "aufnahme", "werkzeug-nachrichten"],
   "umbenennen": {"decisions": {"label": "Posteingang", "hint": "alles, was auf dich wartet: Freigaben, Anträge, Vorschläge", "words": ["posteingang", "antrag", "anträge", "antraege"]}},
   "zuletzt_max": 6
 }

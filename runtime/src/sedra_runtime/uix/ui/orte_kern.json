@@ -307,6 +307,20 @@
    }
   },
   {
+   "id": "translator",
+   "label": "Translator",
+   "hint": "übersetzen, News, Aufnahme, Transkript – eine App",
+   "words": [
+    "translator",
+    "news"
+   ],
+   "object": {
+    "type": "translator",
+    "id": "app",
+    "title": "Translator"
+   }
+  },
+  {
    "id": "planung",
    "label": "Planungstisch",
    "hint": "mit einem Assistenten Ziele und Aufträge festlegen",

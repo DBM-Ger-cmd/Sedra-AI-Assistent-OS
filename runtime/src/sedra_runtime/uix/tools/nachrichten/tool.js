@@ -28,7 +28,7 @@
     build(frage){
       // Profil
       const profil = d().el('details', 't-nw-profil'); profil.open = !!frage || true;
-      profil.append(d().el('summary', null, 'Profil – wofür der Brief gemacht wird'));
+      profil.append(d().el('summary', null, 'Interessen – wofür der Brief gemacht wird'));
       this.interessen = d().el('input'); this.interessen.placeholder = 'Interessen, durch Komma: Local AI, Automatisierung, Handwerk';
       this.ausschluss = d().el('input'); this.ausschluss.placeholder = 'Weniger oder gar nicht: Promi, Sport …';
       this.region = d().el('input'); this.region.placeholder = 'DE/EU';
@@ -40,7 +40,7 @@
                   feld('Tiefe', this.tiefe), feld('Meldungen', this.anzahl), feld('Briefart', this.brief));
       this.profilStand = d().el('small', 's-muted', '');
       const prow = d().el('div', 't-nw-row');
-      prow.append(d().button('Profil speichern', ()=>this.profilSpeichern(), ''), this.profilStand);
+      prow.append(d().button('Interessen speichern', ()=>this.profilSpeichern(), ''), this.profilStand);
       profil.append(grid, prow);
       if(frage) this.interessen.value = frage;
 

@@ -1,0 +1,20 @@
+# App „Translator“ (A3, SPEC_APP_TRANSLATOR_v1): Übersetzen · News · Aufnahme · Transkript in einem App-Reiter.
+# Das Paket ist der Platzhalter für den Objekttyp `translator`; die Modi zeichnet die Harness-Shell (One Sedra) mit den vier vorhandenen Werkzeugen.
+# In anderen Shells zeigt es vier Knöpfe, die die Werkzeuge einzeln öffnen. Es ruft selbst keine Route.
+tool:
+  id: translator
+  name: "Translator"
+  description: "Übersetzen, News, Aufnahme und Transkript in einer App – in One Sedra mit Wolke und Modus-Reitern."
+  version: 1.0.0
+  kind: object
+  handles: [translator]
+  order: 39
+  slot: inhalt
+  entry: {js: tool.js}
+  api: []
+  events:
+    emits: []
+    listens: []
+  trust: CORE
+  tests: []
+  needs: {ui: ">=1.0 <2"}
