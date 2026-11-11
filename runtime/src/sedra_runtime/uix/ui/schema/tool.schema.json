@@ -190,6 +190,11 @@
             "ui": {
               "type": "string",
               "description": "range against the contract version, e.g. '>=1.0 <2'"
+            },
+            "apps": {
+              "type": "object",
+              "additionalProperties": {"type": "string", "pattern": "^(?:(?:>=|<=|>|<|==)?\\d+(?:\\.\\d+)?)(?: (?:>=|<=|>|<|==)?\\d+(?:\\.\\d+)?)*$"},
+              "description": "AM2-19: andere Apps, die geladen sein müssen, mit Versionsbereich je id. Fehlt eine oder passt die Version nicht, wird diese App nicht geladen (needs_app_fehlt / needs_app_version)."
             }
           }
         },
@@ -231,6 +236,12 @@
             "quelle": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,30}$"}
           },
           "description": "Vertrag 1.1 (AM1): die Taskleisten-Zelle eines Instruments (nur kind: instrument). Shells, die Datenzellen selbst zeichnen, lesen sie."
+        },
+        "rollen": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,29}$"},
+          "description": "AM2-20: für welche Rollen die App gedacht ist. Bis AM7 ohne Wirkung; das Werkzeug Module zeigt es an."
         },
         "grundfunktion": {
           "enum": ["entscheidungen", "gespraech", "aufgaben", "logbuch", "modus_grenzen", "module_berechtigungen", "einstellungen_zustand"],

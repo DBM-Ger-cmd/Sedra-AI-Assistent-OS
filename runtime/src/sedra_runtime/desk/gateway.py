@@ -72,7 +72,7 @@ VERSION = re.compile(r'^\d+\.\d+\.\d+$')
 NEED = re.compile(r'^(>=|<=|>|<|==)?(\d+)(?:\.(\d+))?$')
 
 TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot', 'instanzen', 'gedaechtnis', 'zweck', 'gruppe',
-             'shells', 'profile', 'zelle', 'rechte', 'ort', 'grundfunktion'}       # Vertrag 1.1 (AM1); `rechte` AM3-01
+             'shells', 'profile', 'zelle', 'rechte', 'ort', 'grundfunktion', 'rollen'}       # Vertrag 1.1 (AM1); `rechte` AM3-01
 SHELL_KEYS = {'id', 'name', 'version', 'entry', 'provides', 'layout', 'trust', 'needs', 'api', 'description', 'vorgabe', 'umschalter', 'grundfunktionen', 'archiv', 'einstieg'}
 # Eine Shell aus einer Vorgabe (SPEC_SHELL_AUS_VORGABE_v1): kein Code im Ordner, nur `shell.vorgabe.yaml`; den Bildschirm baut der
 # Rahmen `ui/frame.js`. Was er darf, steht hier – nicht in der Datei des Autors –, denn der Rahmen ist Vertragscode.
@@ -151,8 +151,13 @@ def _common(doc, kind, folder, origin, errors):
     return js, css, routes
 
 
-def check_tool(doc, folder: Path, origin='package'):
-    """(manifest, errors) for a tool.yaml document."""
+ROLLE = re.compile(r'^[a-z][a-z0-9-]{1,29}$')
+APP_ID = re.compile(r'^[a-z0-9-]{2,40}$')
+NEED_RANGE = re.compile(r'^(?:(?:>=|<=|>|<|==)?\d+(?:\.\d+)?)(?: (?:>=|<=|>|<|==)?\d+(?:\.\d+)?)*$')
+
+
+def check_tool(doc, folder: Path, origin='package', shell=None):
+    """(manifest, errors) for a tool.yaml document. `shell`: der Name der Shell, wenn die App aus `…/shells/<shell>/apps/` kommt (AM2-07)."""
     errors = []
     if not isinstance(doc, dict) or not isinstance(doc.get('tool'), dict):
         return None, ['tool_mapping_required']
@@ -227,6 +232,21 @@ def check_tool(doc, folder: Path, origin='package'):
     errors.extend(pruefe_profile(t.get('profile'))[0])
     errors.extend(orte_mod.pruefe_ort(t.get('ort'), handles, t.get('id')))        # AM2-02/03: Ort der App
     errors.extend(gf.pruefe_tool_feld(t.get('grundfunktion'), t.get('trust'), origin))      # AM2-13
+    needs_apps = {}
+    roh = (t.get('needs') or {}).get('apps') if isinstance(t.get('needs'), dict) else None
+    if roh is not None:                                                    # AM2-19: needs.apps {<id>: "<bereich>"} – geprüft wird beim Laden aller Werkzeuge
+        if not isinstance(roh, dict) or not all(isinstance(k, str) and APP_ID.match(k) and isinstance(v, str) and NEED_RANGE.match(v.strip()) for k, v in roh.items()):
+            errors.append('needs_apps_invalid')
+        else:
+            needs_apps = dict(roh)
+    rollen = t.get('rollen')
+    if rollen is not None and (not isinstance(rollen, list) or len(rollen) > 20 or not all(isinstance(r, str) and ROLLE.match(r) for r in rollen)):
+        errors.append('rollen_invalid')                                    # AM2-20: erlaubt, bis AM7 ohne Wirkung
+    if shell is not None:                                                   # AM2-07/09: eine Shell-App gilt nur in ihrer Shell; eingebaut ist sie COMMUNITY, auch wenn die Shell CAPTAIN ist
+        if t.get('shells') not in (None, [shell]):
+            errors.append('shell_app_shells_fest')
+        if origin == 'local' and t.get('trust') != 'COMMUNITY':
+            errors.append('shell_app_vertrauen_community')
     from .. import chat_tools
     errors.extend(pruefe_zelle(t.get('zelle'), kind, list(chat_tools.PLACES)))
     if errors:
@@ -235,7 +255,7 @@ def check_tool(doc, folder: Path, origin='package'):
             'origin': origin, 'order': order, 'slot': slot, 'description': str(t.get('description') or ''),
             'own_types': own_types, 'instanzen': instanzen, 'gedaechtnis': list(dict.fromkeys(gedaechtnis)), 'zweck': zweck, 'gruppe': gruppe,
             'events': {'emits': list(events.get('emits') or []), 'listens': list(events.get('listens') or [])},
-            'shells': t.get('shells'), 'profile': t.get('profile'), 'zelle': t.get('zelle'), 'ort': t.get('ort'), 'grundfunktion': t.get('grundfunktion'), 'rechte': t.get('rechte'), 'faehigkeiten': faehigkeiten,
+            'shells': [shell] if shell is not None else t.get('shells'), 'shell_app': shell, 'profile': t.get('profile'), 'zelle': t.get('zelle'), 'ort': t.get('ort'), 'grundfunktion': t.get('grundfunktion'), 'rollen': list(rollen or []), 'needs_apps': needs_apps, 'rechte': t.get('rechte'), 'faehigkeiten': faehigkeiten,
             'js': js, 'css': css, 'api': routes, 'tests': tests}, []
 
 
@@ -453,7 +473,15 @@ class Gateway:
         """{id: (folder, manifest)} and the rejected folders with their reasons."""
         name, check = ('tool.yaml', check_tool) if kind == 'tools' else ('shell.yaml', check_shell)
         ok, rejected = {}, []
-        for folder, origin, problem in self.registry.module_dirs(kind):
+        kandidaten = [(f, o, p, None) for f, o, p in self.registry.module_dirs(kind)]
+        if kind == 'tools':                                          # AM2-07/08: Apps, die Shells mitbringen; ihre id ist global eindeutig – eine Shell-App verdrängt nie ein Werkzeug
+            namen = [f.name for f, _o, _p, _s in kandidaten]
+            for f, o, s in self.registry.shell_app_dirs():
+                namen.append(f.name)
+                kandidaten.append((f, o, None, s))
+            doppelt = {n for n in namen if namen.count(n) > 1}
+            kandidaten = [(f, o, ('id_doppelt' if s is not None and f.name in doppelt else p), s) for f, o, p, s in kandidaten]
+        for folder, origin, problem, shell_app in kandidaten:
             if problem:
                 rejected.append({'kind': kind[:-1], 'id': folder.name, 'origin': origin, 'reasons': [problem]}); continue
             path = folder / name
@@ -463,7 +491,7 @@ class Gateway:
                 doc = yaml.safe_load(path.read_text(encoding='utf-8'))
             except (yaml.YAMLError, UnicodeDecodeError) as exc:
                 rejected.append({'kind': kind[:-1], 'id': folder.name, 'origin': origin, 'reasons': [f'yaml_unreadable:{type(exc).__name__}']}); continue
-            man, errors = check(doc, folder, origin)
+            man, errors = check(doc, folder, origin) if shell_app is None else check_tool(doc, folder, origin, shell_app)
             if errors:
                 rejected.append({'kind': kind[:-1], 'id': folder.name, 'origin': origin, 'reasons': errors}); continue
             if origin == 'local' and man.get('trust') == 'COMMUNITY' and self.herkunft_pruefen:
@@ -483,6 +511,22 @@ class Gateway:
                 man['wirksam'] = urteil['wirksam']
                 man['api'] = list(man['api']) + abgeleitete_routen(urteil['wirksam'])      # AM3-02: lesen → POST /api/objects, verben → POST /api/actions
             ok[man['id']] = (folder, man)
+        if kind == 'tools':                                           # AM2-19: needs.apps – fehlt die App oder passt die Version nicht, wird die abhängige abgewiesen (bis nichts mehr wegfällt)
+            geaendert = True
+            while geaendert:
+                geaendert = False
+                for tid, (_f, m) in list(ok.items()):
+                    for dep, bereich in (m.get('needs_apps') or {}).items():
+                        if dep not in ok:
+                            grund = 'needs_app_fehlt:' + dep
+                        else:
+                            v = ok[dep][1]['version'].split('.')
+                            grund = None if needs_ok(bereich, (int(v[0]), int(v[1]))) else 'needs_app_version:' + dep
+                        if grund:
+                            ok.pop(tid)
+                            rejected.append({'kind': 'tool', 'id': tid, 'origin': m['origin'], 'reasons': [grund]})
+                            geaendert = True
+                            break
         if kind == 'tools':                                           # AM2-03: dieselbe Ort-id bei zwei Apps – beide abgewiesen, wie bei `id_doppelt`
             belegt = {}
             for tid, (_f, m) in ok.items():

@@ -202,6 +202,22 @@ class Registry:
             raise ValueError('unknown_module_kind')
         return [(self.package_dir / kind, 'package'), (self.project_root / 'local_config' / kind, 'local')]
 
+    def shell_app_dirs(self):
+        """AM2-07: Apps, die eine Shell mitbringt – `uix/shells/<shell>/apps/<id>/` (Paket) und `local_config/shells/<shell>/apps/<id>/` (eingebaut mit der Shell).
+        (folder, origin, shell); Ordner mit `_` oder `.` am Anfang und Verknüpfungen zählen nicht."""
+        out = []
+        for root, origin in self.roots('shells'):
+            if not root.is_dir():
+                continue
+            for shell in sorted(root.iterdir()):
+                apps = shell / 'apps'
+                if not shell.is_dir() or shell.name.startswith(('_', '.')) or not apps.is_dir() or apps.is_symlink():
+                    continue
+                for d in sorted(apps.iterdir()):
+                    if d.is_dir() and not d.name.startswith(('_', '.')) and not d.is_symlink():
+                        out.append((d, origin, shell.name))
+        return out
+
     def module_dirs(self, kind: str):
         """Every candidate folder with its origin; a local module never replaces a package module of the same id."""
         seen, out = set(), []

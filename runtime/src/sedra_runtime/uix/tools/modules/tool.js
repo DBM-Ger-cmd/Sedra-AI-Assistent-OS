@@ -190,6 +190,9 @@
         head.append(d().el('b', null, t.name),
                     d().el('small', 's-muted', ' · ' + (TRUST[t.trust] || t.trust) + ' · ' + (t.routes.length || 'keine') + ' Route(n)'));
         if(t.description) head.append(d().el('div', 's-muted', t.description));
+        if(t.shell_app) head.append(d().el('small', 's-muted', 'App der Shell „' + t.shell_app + '“ – gilt nur dort. '));
+        if((t.rollen || []).length) head.append(d().el('small', 's-muted', 'Rollen: ' + t.rollen.join(', ') + ' – noch ohne Wirkung. '));
+        if(Object.keys(t.needs_apps || {}).length) head.append(d().el('small', 's-muted', 'braucht: ' + Object.entries(t.needs_apps).map(([k, v])=>k + ' ' + v).join(', ')));
         if((t.own_types || []).length) head.append(d().el('div', 's-note warn', 'Bringt eigene Objekttypen mit: ' + t.own_types.join(', ') + ' – Baum und Palette kennen sie nicht; das Werkzeug öffnet sie selbst.'));
         if(t.trust === 'COMMUNITY') head.append(d().el('small', 's-muted', 'Von außen: nur Leserouten. Schreiben darf es erst nach einer Freigabe, die genau seine Routen nennt.'));
         row.append(head);
