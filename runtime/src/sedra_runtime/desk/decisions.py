@@ -83,6 +83,14 @@ def request_decision(req):
             'agent_id': binding.get('agent_id')}
 
 
+def startbericht_decision(b):
+    """G6-02 (SPEC_APPS_v1_O3PLUS_G9_G2): der Start-Bericht – nur zur Kenntnis (Klasse N). Er macht nichts gesehen; Läufe brauchen weiter die Code-Karte."""
+    return {'id': 'startbericht', 'kind': 'startbericht', 'title': 'Start-Bericht: Programmdateien geändert', 'describe': b['text'], 'mission_id': None, 'gate_id': None,
+            'risks': list(b.get('pfade') or []), 'rollback': True,
+            'note': 'Nur zur Kenntnis · macht nichts gesehen · ' + str(b.get('konsole') or ''), 'created_at': b.get('zeit'), 'ways': ['zur_kenntnis'], 'apply': None,
+            'binding': {'anzahl_harness': b.get('anzahl_harness'), 'anzahl_sonst': b.get('anzahl_sonst')}, 'agent_id': None}
+
+
 def boundary_decision(crossing):
     """Eine Grenzüberschreitung als Entscheidung (COCKPIT_MODUL_v1 Regel 7): dieselbe Form, drei Wege – und `aendern` führt
     nicht zur Tat, sondern zu der Entscheidung, die über die Grenze selbst befindet."""
@@ -141,7 +149,7 @@ def harness_decision(k):
             'agent_id': None, 'sitzung_id': k.get('sitzung_id')}          # A18 (1.11.): die Sitzung als Feld, nicht nur im Prosa-Feld `note`
 
 
-def collect(missions, open_requests, crossings=(), contents=(), scheduled=(), harness=()):
+def collect(missions, open_requests, crossings=(), contents=(), scheduled=(), harness=(), berichte=()):
     """Every open decision, newest last. `missions` are the compact or full mission records, `open_requests` what the hub
     remembers, `crossings` the boundary crossings that wait (Build 9), `contents` the model calls the content guard holds (Build 16).
 
@@ -165,6 +173,8 @@ def collect(missions, open_requests, crossings=(), contents=(), scheduled=(), ha
         out.append(scheduler_decision(d))
     for k in harness:
         out.append(harness_decision(k))
+    for b in berichte:
+        out.append(startbericht_decision(b))
     out.sort(key=lambda d: (d.get('created_at') or '', d['id']))
     return out
 

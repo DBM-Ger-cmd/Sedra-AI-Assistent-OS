@@ -181,6 +181,10 @@ class UIXHub:
         # Harness-Shell (SPEC_HARNESS_SHELL_v1 Stufe 1): Sitzungen, Antwort-Strom, Schleife – eigene Sperren, nie self.lock (K3)
         from .harness.api import HarnessApi
         self.harness = HarnessApi(self)
+        try:
+            self.harness.startbericht_pruefen()                                  # O3 G6-01: Bericht über Programmdateien, die die Harness geändert hat
+        except Exception:                                                        # der Start darf nie an einem Bericht scheitern
+            pass
         self.bestaetigungen = Bestaetigungen()          # G9: Freigaben der Klasse H aus der Seite warten hier auf ein Ja außerhalb des Browsers
         sup = getattr(self.runtime, 'job_supervisor', None)
         if sup is not None:
@@ -320,7 +324,7 @@ class UIXHub:
     def decisions_view(self):
         """Every open decision in one shape: mission gates and the change requests of chat, Werkstatt and Bibliothek."""
         items = desk_decisions.collect(self.missions(), self._open_requests(), self._open_crossings(), self._content_decisions(), self._scheduler_decisions(),
-                                       self.harness.entscheidungen())            # Harness-Shell Stufe 2: Freigabe-Karten (HS-22)
+                                       self.harness.entscheidungen(), berichte=self.harness.startbericht_liste())            # Harness-Shell Stufe 2: Freigabe-Karten (HS-22); O3 G6: Start-Bericht
         return {'items': items, 'summary': desk_decisions.summary(items)}
 
     def _scheduler_decisions(self):
@@ -412,6 +416,10 @@ class UIXHub:
         if decision['kind'] in ('cloud_offload', 'slot_server'):
             result = self._answer_scheduler(decision, way)
             self.events.publish('decision.answered', {'id': did, 'kind': decision['kind'], 'way': way})
+            return {'status': 'answered', 'id': did, 'way': way, 'result': result}
+        if decision['kind'] == 'startbericht':                                    # O3 G6-03: nur zur Kenntnis, macht nichts gesehen
+            result = self.harness.startbericht_gelesen()
+            self.events.publish('decision.answered', {'id': did, 'kind': 'startbericht', 'way': way})
             return {'status': 'answered', 'id': did, 'way': way, 'result': result}
         if decision['kind'] in ('harness_freigabe', 'harness_aufgabe'):          # Harness-Shell Stufe 2/3 (HS-22): dieselbe Tür wie die Karte im Verlauf
             result = self.harness.beantworten(did.removeprefix('harness:'), way, payload.get('note'), ueber='posteingang')

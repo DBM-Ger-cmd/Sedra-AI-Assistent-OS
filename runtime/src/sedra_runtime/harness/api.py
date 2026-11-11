@@ -1702,6 +1702,50 @@ class HarnessApi:
             self._melden('harness.karte', {'karte_id': k['karte_id'], 'an': k['an'], 'was': 'frist_abgelaufen'})
         return geaendert
 
+    # ---- O3 G6: der Start-Bericht
+    def startbericht_pruefen(self):
+        """G6-01: beim Start den Code-Stand des Projekts fragen, dessen Wurzel das laufende Programm enthält: Hat die Harness Programmdateien unter `runtime/src/**` geändert, die der Captain in dieser Fassung
+        nicht gesehen hat, entsteht ein Eintrag im Posteingang (nur zur Kenntnis, G6-02). Audit `STARTBERICHT {anzahl_harness, anzahl_sonst}`. Gibt den Bericht zurück oder None."""
+        self._startbericht = None
+        ob = getattr(self.hub, 'oberflaeche', None)
+        if ob is None or not (self.hub.project_root / 'runtime_data' / 'harness' / 'code_stand').is_dir():
+            return None                                         # noch nie ein Code-Stand angelegt: kein „seit dem letzten Start“, und der Start scannt nicht das ganze Projekt
+        for projekt in harness_projekte.laden(self.hub.project_root):
+            try:
+                uix = ob.uix
+                uix.relative_to(Path(projekt['wurzel']).resolve())
+            except (ValueError, OSError):
+                continue
+            cs = self.code_stand(projekt)
+            if cs is None:
+                continue
+            liste = [e for e in cs.ungesehen() if e['pfad'].replace('\\', '/').startswith('runtime/src/')]
+            von_harness = [e for e in liste if e.get('herkunft')]
+            self._audit('STARTBERICHT', {'anzahl_harness': len(von_harness), 'anzahl_sonst': len(liste) - len(von_harness)})
+            if not von_harness:
+                return None
+            zeilen = [f"{e['pfad']} · Sitzung {e['herkunft'].get('sitzung_id') or '?'} · Weg {e['herkunft'].get('weg')}" for e in von_harness[:30]]
+            n = len(von_harness)
+            sonst = len(liste) - n
+            self._startbericht = {
+                'text': (f'Seit dem letzten Start hat die Harness {n} Programmdatei{"" if n == 1 else "en"} geändert, die du in dieser Fassung nicht gesehen hast. Sie laufen ab jetzt.'
+                         + (f' Daneben gibt es {sonst} weitere ungesehene Datei{"" if sonst == 1 else "en"} ohne Spur der Harness (zum Beispiel von außen oder git pull).' if sonst else '')),
+                'pfade': zeilen, 'anzahl_harness': n, 'anzahl_sonst': sonst, 'zeit': datetime.now().astimezone().isoformat(timespec='seconds'),
+                'konsole': f'Ansehen in der Konsole: CODE_STAND.bat {projekt["id"]} --zeigen'}
+            return self._startbericht
+        return None
+
+    def startbericht_liste(self):
+        b = getattr(self, '_startbericht', None)
+        return [b] if b else []
+
+    def startbericht_gelesen(self):
+        """G6-03: „Zur Kenntnis“ – macht nichts gesehen; Audit STARTBERICHT_GELESEN."""
+        b, self._startbericht = getattr(self, '_startbericht', None), None
+        if b:
+            self._audit('STARTBERICHT_GELESEN', {'anzahl_harness': b['anzahl_harness'], 'anzahl_sonst': b['anzahl_sonst']})
+        return {'status': 'zur_kenntnis'}
+
     def entscheidungen(self):
         """Die offenen Karten für den Posteingang (desk/decisions, Quelle `harness`) – auch die beim Vorarbeiter; der Captain sieht alles."""
         self.frist_pruefen()

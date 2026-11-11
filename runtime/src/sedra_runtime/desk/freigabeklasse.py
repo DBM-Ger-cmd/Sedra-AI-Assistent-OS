@@ -32,6 +32,7 @@ ARTEN = {
     'request:orchestra': H, 'request:standing': H, 'request:harness_projekt': H,         # Rechte für später
     'request:wissen_quelle': H, 'request:wissen_vorschlag': H,                           # Text wird Wissen für Agenten (E2b)
     # weitere Arten
+    'startbericht': N,                           # G6: der Start-Bericht, einziger Weg zur_kenntnis – macht nichts gesehen
     'boundary': H,                               # Grenze überschreiten (`einmal`) oder ändern (`aendern`)
     'content': SONDER,                           # Inhaltsschutz: H, wenn der Aufruf in die Cloud geht
     'cloud_offload': H,                          # Daten nach außen
