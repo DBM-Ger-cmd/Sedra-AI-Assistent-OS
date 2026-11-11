@@ -92,7 +92,7 @@ class Differenztest(unittest.TestCase):
                 ref = ab_bau.modul_laden(ordner / f"{cfg.MODUL}.py", "ref_test_" + datei.stem)
                 for fn, liste in cfg.faelle(ref).items():
                     for args in liste:
-                        erg = ab_bau._ruf(getattr(ref, fn), *args)
+                        erg = ab_bau._ruf(ab_bau.aufrufbar(cfg, ref, fn), *args)
                         self.assertTrue(erg[0] == "ok" or "ValueError" in str(erg[1]), (fn, args, erg))
 
     def test_ein_fehler_im_kandidaten_wird_gefunden(self):

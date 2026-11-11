@@ -15,6 +15,7 @@ Ergebnis: <projekt>/runtime_data/ab_bau/<spec>_<zeit>/ (ergebnis.json, bericht.m
 Ein Unterschied bei wenigen Laeufen ist ein Indiz, kein Beweis. Der Bericht nennt n und warnt unter 5 Laeufen je Arm. Keine Tests oder Messungen parallel."""
 import argparse
 import copy
+import functools
 import importlib.util
 import json
 import re
@@ -102,6 +103,12 @@ def modul_laden(pfad, name):
     return m
 
 
+def aufrufbar(cfg, mod, fn):
+    """Die Funktion `fn` des Moduls, oder eine Hilfsfunktion aus cfg.HILFEN (Signatur h(modul, *args)), wenn die Fallliste Dateien, Zeit oder Zustand braucht."""
+    hilfen = getattr(cfg, "HILFEN", {})
+    return functools.partial(hilfen[fn], mod) if fn in hilfen else getattr(mod, fn)
+
+
 def _ruf(f, *a):
     vorher = copy.deepcopy(a)
     try:
@@ -129,7 +136,7 @@ def differenz(spec, kandidat):
     for fn, liste in faelle.items():
         for args in liste:
             n += 1
-            soll, ist = _ruf(getattr(ref, fn), *args), _ruf(getattr(kand, fn), *args)
+            soll, ist = _ruf(aufrufbar(cfg, ref, fn), *args), _ruf(aufrufbar(cfg, kand, fn), *args)
             if soll != ist:
                 abw.append(f"{fn}{tuple(map(repr, args))} -> Referenz {soll[1] if soll[0] == 'ok' else soll}, Kandidat {ist[1] if ist[0] == 'ok' else ist}"[:300])
     return {"faelle": n, "abweichungen": abw}

@@ -27,10 +27,11 @@ def abdruck(spec, kandidat):
     if not ziel.is_file():
         return None
     kand = ab_bau.modul_laden(ziel, f"konsens_kand_{abs(hash(str(ziel)))}")
+    ref = ab_bau.modul_laden(ab_bau.BENCH / "devvm_refs" / spec / f"{cfg.MODUL}.py", f"konsens_ref_{spec}")    # manche Faelle bauen ihre Eingaben mit der Referenz
     ergebnis = {}
-    for fn, liste in cfg.faelle(None).items():
+    for fn, liste in cfg.faelle(ref).items():
         for i, args in enumerate(liste):
-            ergebnis[(fn, i)] = ab_bau._ruf(getattr(kand, fn), *args)
+            ergebnis[(fn, i)] = ab_bau._ruf(ab_bau.aufrufbar(cfg, kand, fn), *args)
     return ergebnis
 
 
@@ -183,7 +184,8 @@ def main():
         print("  Streit", fall, "->", {k[1][:60] if k[0] == 'ok' else k: v for k, v in antworten.items()})
     if a.vorschlaege:
         cfg = ab_bau.modul_laden(ab_bau.BENCH / "ab_diff" / f"{a.spec}.py", f"konsens_cfg2_{a.spec}")
-        eingaben = {(fn, i): args for fn, liste in cfg.faelle(None).items() for i, args in enumerate(liste)}
+        ref0 = ab_bau.modul_laden(ab_bau.BENCH / "devvm_refs" / a.spec / f"{cfg.MODUL}.py", f"konsens_ref2_{a.spec}")
+        eingaben = {(fn, i): args for fn, liste in cfg.faelle(ref0).items() for i, args in enumerate(liste)}
 
         def beschreiber(fall):
             return "(" + ", ".join(repr(x) for x in eingaben[fall]) + ")"
