@@ -398,6 +398,12 @@ class Gateway:
             return None if 'verb:' + typ + '.' + verb in wirksam else 'verb_nicht_gewaehrt'
         return None
 
+    def apps_uebersicht_beantragt(self, mid):
+        for a in self.apps_uebersicht():
+            if a['id'] == mid:
+                return [b['faehigkeit'] for b in a['beantragt']]
+        return []
+
     def abgelehnt_grund(self, kind, module):
         """Der Grund, warum ein Modul nicht geladen ist (für die Antwort 403), oder None."""
         for r in self._load('tools' if kind == 'tool' else 'shells')[1]:

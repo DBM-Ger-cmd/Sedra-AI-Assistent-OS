@@ -73,7 +73,7 @@ from .desk import vorgabe as desk_vorgabe
 from .desk import gateway as desk_gateway
 from .desk import install as desk_install
 from .desk import herkunft as desk_herkunft
-from .desk import app_speicher, berechtigung as app_berechtigung, rechte_diff as app_rechte_diff
+from .desk import app_speicher, app_update, berechtigung as app_berechtigung, rechte_diff as app_rechte_diff
 from .desk.gateway import check_tool
 from .desk import gate_texte as desk_gate_texte
 from .desk.shell_regeln import pruefe_einbau
@@ -537,19 +537,28 @@ class UIXHub:
         manifest, errors = check(doc, folder, 'local')
         if errors:
             raise ValueError('Das Manifest wurde abgelehnt: ' + ', '.join(errors)[:300] + '. Die Angaben in ' + kind + '.yaml korrigieren und erneut vorlegen.')
-        if manifest['id'] in (self.gateway.tools() if kind == 'tool' else self.gateway.shells()):
+        update = None
+        if kind == 'tool' and self.gateway.app_berechtigung and (self.project_root / 'local_config' / 'tools' / manifest['id'] / 'tool.yaml').is_file():
+            update = self._app_update_vorbereiten(folder, manifest, read)                # AM3-13/14: gleiche id eines eingebauten Moduls = Update
+        elif manifest['id'] in (self.gateway.tools() if kind == 'tool' else self.gateway.shells()):
             raise ValueError(f'Die Kennung „{manifest["id"]}“ ist schon vergeben (eingebaute {"Shell" if kind == "shell" else "Werkzeug"} oder früherer Import). '
                              f'Im Manifest eine andere id setzen oder die alte Fassung zuerst entfernen.')
-        describe = (f'Modul „{manifest["name"]}“ ({manifest["id"]}) einbauen · {len(read["files"])} Datei(en) · '
+        describe = (f'Update von „{manifest["name"]}“ ({manifest["id"]}) {update["von"]} → {update["nach"]} · {len(update["datei_diff"])} Datei(en) geändert, '
+                    f'{sum(1 for r in update["rechte_diff"] if r["richtung"] == "neu")} Recht(e) neu, {sum(1 for r in update["rechte_diff"] if r["richtung"] == "entfallen")} entfallen · {desk_install.summary(read["findings"])}'
+                    if update else f'Modul „{manifest["name"]}“ ({manifest["id"]}) einbauen · {len(read["files"])} Datei(en) · '
                     f'als COMMUNITY, Leserouten: {len(manifest["api"])} · {desk_install.summary(read["findings"])}'
                     + (' · bringt eigene Objekttypen: ' + ', '.join(manifest.get('own_types') or []) if manifest.get('own_types') else ''))
         binding = {'kind': kind, 'id': manifest['id'], 'source': str(folder), 'trust': manifest['trust'],
                    'files': read['files'], 'routes': manifest['api'], 'findings': read['findings'], 'describe': describe}
+        if update:
+            binding['update'] = update
         with self.lock:
             m = self.runtime.brain.create_mission(describe[:160], None, 'S1')
             self._guard_vor_gate(m, self.INSTALL_ACTION, f'{area}:{manifest["id"]}')
             gate = self.runtime.guard.create_gate(m['identity']['mission_id'], self.INSTALL_ACTION, f'{area}:{manifest["id"]}',
-                                                  risks=desk_gate_texte.risiken(kind, manifest['api'], [f['flag'] + ' in ' + f['file'] for f in read['findings'][:6]]),     # AM0-07
+                                                  risks=desk_gate_texte.risiken(kind, manifest['api'], [f['flag'] + ' in ' + f['file'] for f in read['findings'][:6]])     # AM0-07
+                                                  + ([f'Update {update["von"]} → {update["nach"]}: ' + ', '.join(d['art'] + ' ' + d['pfad'] for d in update['datei_diff'][:8])]
+                                                     + [f'Recht {r["richtung"]}: {r["faehigkeit"]} (Stufe {r["stufe"]})' for r in update['rechte_diff'][:12]] if update else []),
                                                   rollback_available=True, request_binding=binding)
             m['human_gates']['pending'].append(gate)
             m['context']['install_request'] = binding
@@ -591,7 +600,11 @@ class UIXHub:
                 if not path.is_file() or desk_install.sha256(path) != record['sha256']:
                     raise ValueError('module_changed_since_the_request:' + record['path'])
             target = self.project_root / 'local_config' / area / binding['id']
-            if target.exists():
+            update = binding.get('update')
+            if update:
+                if not target.is_dir() or app_speicher.manifest_hash(target / 'tool.yaml') != update['alt_manifest_sha256']:
+                    raise ValueError('app_changed_since_the_request')                       # die alte Fassung ist nicht mehr die, die das Gate sah
+            elif target.exists():
                 raise ValueError('module_id_already_installed')
             # Erst daneben bauen, dann an seinen Platz rücken: bricht etwas ab, bleibt kein halbes Modul liegen, das beim
             # nächsten Öffnen geladen würde. Und nach dem Kopieren wird noch einmal gehasht – geprüft ist, was jetzt dort steht.
@@ -613,13 +626,31 @@ class UIXHub:
                 (staging / man_name).write_text(yaml.safe_dump(man_doc, allow_unicode=True, sort_keys=False), encoding='utf-8')
                 # AM0-02: die Herkunft über die Dateien, wie sie danach liegen (mit dem umgeschriebenen Manifest), außerhalb des Modulordners
                 desk_herkunft.schreiben(self.project_root, area, binding['id'], staging, quelle=binding['source'], mission_id=mission_id, vertrauen='COMMUNITY')
-                staging.replace(target)
+                if update:                                                                  # AM3-15: die alte Fassung bleibt als <id> unter local_config/apps/vorher bis zum nächsten Update
+                    vorher = self.project_root / 'local_config' / 'apps' / 'vorher' / binding['id']
+                    vorher.parent.mkdir(parents=True, exist_ok=True)
+                    if vorher.exists():
+                        shutil.rmtree(vorher)
+                    shutil.move(str(target), str(vorher))
+                    try:
+                        staging.replace(target)
+                    except BaseException:
+                        shutil.move(str(vorher), str(target))
+                        raise
+                else:
+                    staging.replace(target)
             except BaseException:
                 shutil.rmtree(staging, ignore_errors=True)
-                desk_herkunft.entfernen(self.project_root, area, binding['id'])
+                if update and target.is_dir():                                              # die Herkunft der alten Fassung wieder herstellen
+                    desk_herkunft.schreiben(self.project_root, area, binding['id'], target, quelle=binding['source'], mission_id=mission_id, vertrauen='COMMUNITY')
+                else:
+                    desk_herkunft.entfernen(self.project_root, area, binding['id'])
                 raise
             herkunft_datei = desk_herkunft.pfad(self.project_root, area, binding['id'])
-            self._app_eintrag_anlegen(area, binding['id'])
+            if update:
+                self._app_eintrag_aktualisieren(binding['id'], update)
+            else:
+                self._app_eintrag_anlegen(area, binding['id'])
             m['execution'].pop('approval_token', None)
             m['result'] = {'kind': 'install', 'id': binding['id'], 'area': area, 'files': len(binding['files'])}
             m['lifecycle']['status'] = 'closed'
@@ -629,7 +660,7 @@ class UIXHub:
                                      'files': len(binding['files']), 'findings': len(binding['findings']),
                                      'herkunft_sha256': desk_install.sha256(herkunft_datei)})
         self.events.publish('tools.refresh', {})
-        return {'status': 'installed', 'id': binding['id'], 'area': area, 'files': len(binding['files']),
+        return {'status': 'updated' if update else 'installed', 'id': binding['id'], 'area': area, 'files': len(binding['files']),
                 'note': 'Das Modul liegt jetzt unter local_config – die Oberfläche lädt es beim nächsten Öffnen.'}
 
     # ---- AM3: Gewährung und Aktivierung fremder Apps (SPEC_APPS_v1_AM3_BERECHTIGUNG §2.2)
@@ -649,6 +680,41 @@ class UIXHub:
                                                app_berechtigung.werkseinstellung(man['faehigkeiten'], man.get('own_types') or []))
         app_speicher.aendern(self.project_root, mid, lambda _alt: eintrag)
         self.runtime.audit.append('UIX_APP_RIGHTS_SET', component='desk', payload={'id': mid, 'gewaehrt': eintrag['gewaehrt']})
+
+    def _app_update_vorbereiten(self, quelle, manifest, read):
+        """AM3-13/14: das Update einer eingebauten App – Version, Datei-Diff, Rechte-Diff. Schreibt nichts."""
+        alt = self.project_root / 'local_config' / 'tools' / manifest['id']
+        try:
+            alt_doc = yaml.safe_load((alt / 'tool.yaml').read_text(encoding='utf-8'))['tool']
+        except (OSError, KeyError, TypeError, yaml.YAMLError):
+            raise ValueError('update_alte_fassung_unlesbar')
+        if alt_doc.get('trust') != 'COMMUNITY':
+            raise ValueError('update_nur_fuer_fremde_apps')
+        if not app_update.version_hoeher(alt_doc.get('version'), manifest['version']):
+            raise ValueError('update_version_nicht_hoeher')
+        alt_read = desk_install.read_module(alt, 'tools')
+        diff = app_update.datei_diff(alt, quelle, alt_read['files'], read['files'])
+        rdiff = app_rechte_diff.rechte_diff(alt_doc.get('rechte'), (manifest.get('rechte')))
+        return {'von': alt_doc.get('version'), 'nach': manifest['version'], 'alt_manifest_sha256': app_speicher.manifest_hash(alt / 'tool.yaml'),
+                'datei_diff': diff, 'rechte_diff': rdiff,
+                'rechte_schluessel': app_rechte_diff.rechte_schluessel([r['faehigkeit'] for r in rdiff if r['richtung'] == 'neu'])}
+
+    def _app_eintrag_aktualisieren(self, mid, update):
+        """AM3-15: nach dem Update gilt die Gewährung für die neue Fassung: Entfallenes weg, neu Beantragtes (das Gate nannte es) dazu, `aktiv` bleibt."""
+        pfad = self.project_root / 'local_config' / 'tools' / mid / 'tool.yaml'
+        neu_hash = app_speicher.manifest_hash(pfad)
+        beantragt = set(self.gateway.apps_uebersicht_beantragt(mid))
+        neu = [r['faehigkeit'] for r in update['rechte_diff'] if r['richtung'] == 'neu']
+
+        def f(alt):
+            if alt is None:
+                return app_berechtigung.eintrag_neu(neu_hash, 'COMMUNITY', neu)
+            e = dict(alt)
+            e['manifest_sha256'] = neu_hash
+            e['gewaehrt'] = sorted({x for x in (alt.get('gewaehrt') or []) if x in beantragt} | set(neu))
+            return e
+        app_speicher.aendern(self.project_root, mid, f)
+        self.runtime.audit.append('UIX_APP_UPDATED', component='desk', payload={'id': mid, 'von': update['von'], 'nach': update['nach'], 'rechte_schluessel': update['rechte_schluessel']})
 
     def apps_view(self, payload=None):
         return {'schalter': bool(self.gateway.app_berechtigung), 'apps': self.gateway.apps_uebersicht()}
