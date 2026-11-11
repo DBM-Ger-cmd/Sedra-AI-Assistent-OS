@@ -2,6 +2,8 @@
 rem SEDRA - Code, den du in dieser Fassung noch nicht gesehen hast (SPEC_APPS_v1 G4), ausserhalb des Browsers ansehen und uebernehmen.
 rem   CODE_STAND.bat <projekt> [--zeigen]     -> zeigt ihn (mit Diff, wo die gesehene Fassung vorliegt); --zeigen ist der Standard
 rem   CODE_STAND.bat <projekt> --uebernehmen  -> der aktuelle Stand gilt als gesehen (z. B. nach eigener Arbeit oder git pull)
+rem   CODE_STAND.bat <projekt> --oberflaeche             -> O3: zurueckgehaltene Oberflaechen-Dateien und die letzten Uebernahmen
+rem   CODE_STAND.bat <projekt> --uebernehmen-oberflaeche  -> O3: sie uebernehmen (wenn die Sammelkarte zu gross ist); --zuruecksetzen, --zuruecknehmen U-...
 rem Projekt-ID wie in der Harness, Standard: sedra-entwicklung. Gleiche Ablage wie die Oberflaeche (workspace\SEDRA_OS\runtime_data\harness\code_stand).
 rem Pfade und Python wie START_SEDRA.bat; schlanker Einstieg ohne die ganze Runtime (laeuft auch auf dem USB-Stick).
 setlocal

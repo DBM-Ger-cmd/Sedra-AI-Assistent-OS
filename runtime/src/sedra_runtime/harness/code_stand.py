@@ -343,6 +343,63 @@ def konsole(root, projekt_id, uebernehmen=False):
     return 0, (cs.vorschau(liste, begrenzt=False)[0] if liste else f"Kein ungesehener Code im Projekt {projekt['id']}.")
 
 
+def konsole_oberflaeche(root, projekt_id, art, u=None, uix=None):
+    """(Exitcode, Text) – G7-03/G7-04: die Oberflächen-Änderungen **ohne Oberfläche**: `art` ist `zeigen` (zurückgehaltene Dateien und die letzten Übernahmen), `uebernehmen`, `zuruecksetzen`
+    oder `zuruecknehmen` (mit `u`). Dieselbe Ablage und dieselbe Audit-Kette wie der Server (`runtime_data/harness/oberflaeche`); der Server muss nicht laufen. `uix` ist der uix-Ordner des
+    Programms, das diese Konsole startet (Standard: der des Pakets). Audit mit `kanal: konsole`."""
+    import json as _json
+    from ..core.audit import AuditLog
+    from . import projekte as harness_projekte
+    from .oberflaeche import Oberflaeche
+    root = Path(root).resolve()
+    if not (root / 'runtime_data' / 'harness').is_dir():
+        return 2, _json.dumps({'status': 'refused', 'error': 'root_ist_nicht_der_projektordner'}, ensure_ascii=False)
+    try:
+        projekte = harness_projekte.laden(root)
+    except harness_projekte.ProjektFehler as exc:
+        return 2, _json.dumps({'status': 'refused', 'error': str(exc)}, ensure_ascii=False)
+    projekt = next((p for p in projekte if p['id'] == projekt_id), None)
+    if projekt is None:
+        return 2, _json.dumps({'status': 'refused', 'error': 'projekt_unbekannt', 'projekte': [p['id'] for p in projekte]}, ensure_ascii=False)
+    audit = AuditLog(root / 'runtime_data' / 'audit' / 'events.jsonl')
+    ob = Oberflaeche(root / 'runtime_data' / 'harness' / 'oberflaeche', uix or (Path(__file__).resolve().parents[1] / 'uix'),
+                     audit=lambda e, p: audit.append(e, component='harness', payload=p))
+    wurzel = Path(projekt['wurzel']).resolve()
+
+    def gesehen(rels):                                         # Code-Dateien der Oberfläche gelten im Code-Stand des Projekts als gesehen (G2-07, G7-02)
+        try:
+            ob.uix.relative_to(wurzel)
+        except ValueError:
+            return
+        cs = CodeStand(root / 'runtime_data' / 'harness' / 'code_stand', projekt['wurzel'], projekt['id'])
+        eintraege = [[(ob.uix / r).relative_to(wurzel).as_posix(), _sha_datei(ob.uix / r)] for r in rels if ist_code(r) and (ob.uix / r).is_file()]
+        if eintraege:
+            cs.gesehen_setzen(eintraege)
+    if art == 'zeigen':
+        liste = [e for e in ob.liste() if e['geaendert']]
+        zeilen = [f'Zurückgehalten: {len(liste)} Datei{"" if len(liste) == 1 else "en"} (der Server liefert die bestätigte Fassung):'] + [
+            f"  {'neu ' if e['neu'] else 'geändert '}{e['rel']} · Sitzung {e['sitzung'] or '?'} · {e['zeit'] or ''}" for e in liste]
+        letzte = ob.uebernahmen()[:5]
+        zeilen.append('Letzte Übernahmen (zurücknehmen mit --zuruecknehmen <U-…>):' if letzte else 'Keine Übernahme zum Zurücknehmen.')
+        zeilen += [f"  {x['id']} · {x['zeit']} · {len(x['dateien'])} Dateien · Kanal {x.get('kanal')}" for x in letzte]
+        if liste:
+            zeilen += ['', ob.vorschau(liste)[0]]
+        return 0, '\n'.join(zeilen)
+    if art == 'uebernehmen':
+        r = ob.uebernehmen(ob.bindung(), kanal='konsole', gesehen=gesehen)
+        return 0, _json.dumps({'status': 'uebernommen', 'u': r['u'], 'anzahl': len(r['uebernommen']), 'veraltet': r['veraltet']}, ensure_ascii=False)
+    if art == 'zuruecksetzen':
+        r = ob.zuruecksetzen(kanal='konsole')
+        return 0, _json.dumps({'status': 'zurueckgesetzt', **r}, ensure_ascii=False)
+    if art == 'zuruecknehmen':
+        try:
+            r = ob.zuruecknehmen(str(u or ''), kanal='konsole', gesehen=gesehen)
+        except ValueError as exc:
+            return 2, _json.dumps({'status': 'refused', 'error': str(exc), 'uebernahmen': [x['id'] for x in ob.uebernahmen()[:5]]}, ensure_ascii=False)
+        return 0, _json.dumps({'status': 'zurueckgenommen', **r, 'seit_der_uebernahme_geaendert': r['geaendert']}, ensure_ascii=False)
+    return 2, _json.dumps({'status': 'refused', 'error': 'art_unbekannt'}, ensure_ascii=False)
+
+
 def utf8_ausgabe():
     """Unter Windows ist eine Pipe cp1252: „■“ der Vorschau ließ den Aufruf abstürzen. Gilt für beide Einstiege (main und `sedra code-stand`)."""
     import sys
@@ -362,8 +419,17 @@ def main(argv=None):
     art = p.add_mutually_exclusive_group()
     art.add_argument('--zeigen', action='store_true', help='ungesehenen Code mit Diff zeigen (Standard)')
     art.add_argument('--uebernehmen', action='store_true', help='den aktuellen Stand als gesehen übernehmen')
+    art.add_argument('--oberflaeche', action='store_true', help='O3 G7: zurückgehaltene Oberflächen-Dateien und die letzten Übernahmen zeigen')
+    art.add_argument('--uebernehmen-oberflaeche', action='store_true', help='O3 G7-04: die zurückgehaltenen Oberflächen-Dateien übernehmen (der Weg, wenn die Sammelkarte zu groß ist)')
+    art.add_argument('--zuruecksetzen', action='store_true', help='O3 G7-03: die bestätigten Fassungen der Oberfläche wiederherstellen')
+    art.add_argument('--zuruecknehmen', metavar='U-…', help='O3 G7-03: eine Übernahme zurücknehmen')
     a = p.parse_args(argv)
     utf8_ausgabe()
+    for flag, was in ((a.oberflaeche, 'zeigen'), (a.uebernehmen_oberflaeche, 'uebernehmen'), (a.zuruecksetzen, 'zuruecksetzen'), (bool(a.zuruecknehmen), 'zuruecknehmen')):
+        if flag:
+            code, text = konsole_oberflaeche(a.root, a.projekt, was, a.zuruecknehmen)
+            print(text)
+            return code
     code, text = konsole(a.root, a.projekt, a.uebernehmen)
     print(text)
     return code
