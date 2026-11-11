@@ -111,6 +111,8 @@ assert stufe(5) == "C"
 assert stufe(":x") == "C"
 assert stufe("verb:a:b") == "B"
 assert stufe("Lesen:x") == "C"
+assert stufe("ablage:\\u00b2") == "C"
+assert stufe("ablage:\\u0663") == "C"
 ''', "from rechte_diff import stufe\n")
 
 C3 = hidden('''
@@ -147,6 +149,9 @@ nur_alt = rechte_diff({"verben": ["x.y"], "dienst": "host"}, None)
 assert rechte_urteil(nur_alt) == {"braucht_gate": False, "abgewiesen": []}
 nur_a = rechte_diff(None, {"lesen": ["a"], "ereignisse": ["system.state"]})
 assert rechte_urteil(nur_a) == {"braucht_gate": False, "abgewiesen": []}
+assert rechte_urteil([{"richtung": "neu", "stufe": "B", "faehigkeit": "lesen:a"}]) == {"braucht_gate": True, "abgewiesen": []}
+assert rechte_urteil([{"richtung": "neu", "stufe": "C", "faehigkeit": "lesen:b"}]) == {"braucht_gate": False, "abgewiesen": ["lesen:b"]}
+assert rechte_urteil([{"richtung": "neu", "stufe": "A", "faehigkeit": "verb:x.y"}]) == {"braucht_gate": False, "abgewiesen": []}
 zwei_c = [{"richtung": "neu", "stufe": "C", "faehigkeit": "q:2"}, {"richtung": "neu", "stufe": "C", "faehigkeit": "q:1"}]
 assert rechte_urteil(zwei_c) == {"braucht_gate": False, "abgewiesen": ["q:2", "q:1"]}
 ''', "from rechte_diff import rechte_diff, rechte_urteil\n")

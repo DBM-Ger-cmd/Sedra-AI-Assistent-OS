@@ -70,6 +70,10 @@
   // what a shell must hand every tool (§4): a way to open, to notify, to decide. A shell that hands something else breaks every
   // tool silently – the Cockpit did exactly that for two builds (dock.js passed its api function). So the loader checks.
   const SHELL_API = ['open', 'notify', 'decide'];
+  // Eine fremde Shell (COMMUNITY) ist nur eine Vorgabe: ohne Rahmen (`frame`) wird ihr Code nie geladen. '' = darf laden, sonst der Satz.
+  function shellSperre(shell){
+    return shell && shell.trust === 'COMMUNITY' && !shell.frame ? 'Eine fremde Shell ohne Vorgabe wird nicht geladen.' : '';
+  }
   const RAHMEN_SANDBOX = 'allow-scripts';      // AM0-05: genau dieser Wert; nie allow-same-origin, allow-top-navigation, allow-popups, allow-forms, allow-modals (ein Test hält das fest)
   function checkShellApi(shell, manifest, say){
     const missing = SHELL_API.filter(name=>!shell || typeof shell[name] !== 'function');
@@ -171,6 +175,8 @@
         entries.push({manifest: t, mod});
       }catch(err){ say('Werkzeug ' + t.id, err); }
     }
+    const sperre = shellSperre(manifest.shell);                  // AM0-06: zweite Sicherung – der Server weist so eine Shell schon ab, hier wird sie nie geladen
+    if(sperre) throw new Error(sperre);
     manifest.shell.css.forEach(addStyle);
     for(const js of manifest.shell.js) await addScript(js);
     // eine Shell aus Vorgabe hat keinen eigenen Code: der Rahmen (ui/frame.js) registriert sie aus dem Manifest
@@ -188,6 +194,6 @@
     return ctx;
   }
 
-  root.sedraLoader = {boot, makeRegistry, makeContext, connectEvents, checkShellApi, SHELL_API, handlesMatch, handleType};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {checkShellApi, SHELL_API, handlesMatch, handleType, makeRegistry, RAHMEN_SANDBOX};
+  root.sedraLoader = {boot, makeRegistry, makeContext, connectEvents, checkShellApi, SHELL_API, handlesMatch, handleType, shellSperre};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {checkShellApi, SHELL_API, handlesMatch, handleType, makeRegistry, RAHMEN_SANDBOX, shellSperre};
 })();

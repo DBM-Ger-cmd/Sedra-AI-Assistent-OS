@@ -121,6 +121,12 @@ assert wirft(schreiben, root, "apps", "ab", d, quelle="q", mission_id="m", vertr
 assert not (pathlib.Path(root) / "local_config" / "uix_herkunft" / "apps").exists()
 datei.write_text("kein json", encoding="utf-8")
 assert wirft(lesen, root, "tools", "rechnung")
+try:
+    lesen(root, "tools", "rechnung")
+except ValueError as e:
+    assert str(e) == "herkunft_unlesbar"
+else:
+    raise AssertionError("kein ValueError")
 datei.write_text("[1, 2]", encoding="utf-8")
 assert wirft(lesen, root, "tools", "rechnung")
 datei.write_text('{"schema": 2}', encoding="utf-8")

@@ -42,6 +42,9 @@ assert route_zu_breit("GET /api") is False
 assert route_zu_breit("GET /api/") is False
 assert route_zu_breit("GET /apix/*") is False
 assert route_zu_breit("GET /api/**") is False
+assert route_zu_breit("GET /api/x/api/*") is False
+assert route_zu_breit("GET /xapi/*") is False
+assert route_zu_breit("GET /api/x/uix/*") is False
 assert route_zu_breit("/api/*") is False
 assert route_zu_breit("") is False
 assert route_zu_breit(None) is False

@@ -84,7 +84,7 @@
     const f = {koerper, verben, inhalt, nachweis, mounts, werkzeuge, links, rechts, leer: !werkzeuge.length,
                abbauen(){ mounts.splice(0).forEach(e=>{ try{ L().unmountTool(e, S.ctx.onProblem); }catch(_err){} }); }};
     if(!werkzeuge.length){
-      inhalt.append(d().el('div', 'hs-app-satz', 'Für „' + objekt.type + '“ ist kein Werkzeug geladen. Das Werkzeug „Module“ zeigt, was fehlt.'));
+      inhalt.append(d().el('div', 'hs-app-satz', leerSatz(S.ctx.manifest, objekt)));
       f.zeichnen = ()=>{}; verben.hidden = true;
       return f;
     }
@@ -212,5 +212,18 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.app = {MAX, reiterId, objektVon, titel, liste, oeffnen, ansicht, flaeche, geschlossen, melden, uebernehmen, KEY: NACHWEIS_KEY};
+  // S15 (AM1-04): der Leerzustand einer App sagt, warum kein Werkzeug da ist – in dieser Oberfläche nicht verfügbar (und wo doch), in diesem Profil nicht verfügbar, oder gar nicht geladen.
+  function leerSatz(manifest, objekt){
+    const m = manifest || {}, typ = objekt && objekt.type;
+    const trifft = x=>Array.isArray(x.handles) && x.handles.indexOf(typ) >= 0;
+    const weg = (m.nicht_in_dieser_shell || []).find(trifft);
+    if(weg){
+      const wo = (weg.shells || []).filter(s=>typeof s === 'string');
+      return 'In dieser Oberfläche nicht verfügbar' + (wo.length ? ' – verfügbar in: ' + wo.join(', ') : '') + '.';
+    }
+    if((m.nicht_in_diesem_profil || []).some(trifft)) return 'In diesem Profil nicht verfügbar.';
+    return 'Für „' + typ + '“ ist kein Werkzeug geladen. Das Werkzeug „Module“ zeigt, was fehlt.';
+  }
+
+  root.sedraHarness.app = {MAX, reiterId, objektVon, titel, liste, oeffnen, ansicht, flaeche, geschlossen, melden, uebernehmen, leerSatz, KEY: NACHWEIS_KEY};
 })();

@@ -55,7 +55,7 @@ def pruefe_zelle(wert, kind, orte):
     label = wert.get('label')
     if not (isinstance(label, str) and 1 <= len(label) <= 20):
         fehler.append('zelle_label_invalid')
-    if 'ort' in wert and wert['ort'] not in set(orte):
+    if 'ort' in wert and wert['ort'] not in list(orte):
         fehler.append('zelle_ort_unbekannt')
     if 'aktion' in wert:
         aktion = wert['aktion']

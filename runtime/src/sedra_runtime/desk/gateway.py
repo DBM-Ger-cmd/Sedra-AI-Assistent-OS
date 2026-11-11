@@ -399,6 +399,8 @@ class Gateway:
         liste = [{'id': t, 'name': tools[t][1]['name'], 'shells': tools[t][1].get('shells'), 'profile': tools[t][1].get('profile')} for t in ids]
         profil = self._aktives_profil() if any(e['profile'] for e in liste) else None
         sichtbar, nicht_shell, nicht_profil = filtere(liste, active, profil, grund)
+        for e in nicht_shell + nicht_profil:                         # S15: die Shell sagt im Leerzustand, wo ein Objekttyp verfügbar ist – dazu braucht sie die Typen des Werkzeugs
+            e['handles'] = list(tools[e['id']][1].get('handles') or [])
         ids = [e['id'] for e in sichtbar]
         warnungen = []
         for t in tools:

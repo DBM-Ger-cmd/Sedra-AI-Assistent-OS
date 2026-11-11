@@ -326,3 +326,27 @@ Freigegeben mit G2-S0-13; Wortlaut aus `SPEC_AGENTEN_ORCHESTRIERUNG_v1.md`, D1 b
 - **Routen und Allowlist (§6 geprüft).** Jede Route, die eine Shell oder ein Werkzeug ruft, steht in seiner `api`-Liste, und die Liste
   nennt nichts, was der Code nicht ruft (`RoutenImManifest`; Helfer aus `ui/` zählen für den Rufer: `sedraStand.entscheiden`,
   `sedraVorgabe.block`). `sedraStand.entscheiden(api, bus, id, way)` ist der eine Weg einer Shell, eine Entscheidung zu beantworten.
+
+## Nachtrag 11.11.2026 (Apps v1, AM0/AM1/AM3): Vertrag 1.1, Härtung fremder Module
+
+Gilt seit `UI_VERSION` 1.1 (Commit `9d75efc`). Ein Modul mit `needs.ui: "==1.0"` lädt nicht mehr; `">=1.0 <2"` bleibt gültig.
+
+- **Felder (nur Werkzeuge).** `shells: [<shell-id>, …]` (1 bis 20, je `[a-z0-9-]{2,40}`): in welchen Shells das Werkzeug verfügbar ist, fehlt = alle. `profile: [<profil-id>, …]`
+  (1 bis 40): in welchen Profilen des Desktop Builders (One Sedra) es verfügbar ist, `standard` = kein Profil gewählt, fehlt = alle; Grundfunktionen (`decisions`, `tasks`, `wissen`,
+  Zelle Freigaben) ignorieren das Feld. `zelle: {feld, label, ort?, aktion?, quelle?}` (nur `kind: instrument`): die Zelle in der Taskleiste von One Sedra; `aktion` ist `freigaben`,
+  `modellmenue`, `routermenue` oder `einstellungen:<gruppe>[/<punkt>]` und geht dem `ort` vor; `quelle` nennt ein Feld von `/api/strip`, aus dem die Shell den Wert ableitet (`temp`,
+  `vram` aus `gpu`). Das Manifest meldet `nicht_in_dieser_shell`, `nicht_in_diesem_profil` und `warnungen` (`shells_unbekannt:<id>`, `grundfunktion_ignoriert_profil`).
+  **Sichtbarkeit, kein Recht:** `Gateway.allowed` ändert sich nicht.
+- **Zellen aus Manifesten.** `uix/shells/harness/leiste.json` (Vorgabe der Shell) nennt die Instrumente der Taskleiste in ihrer Reihenfolge; `zellen.js` baut daraus die Zellen
+  (`zellenAusManifest`), fehlt die Datei oder ergibt sie nichts, gilt `ZELLEN_RUECKFALL` mit einer Meldung. Die Token-Zelle gehört der Shell; die Wahl im Desktop Builder liegt darüber.
+- **Routen fremder Module (AM0-03).** Für Module aus `local_config` ist `GET /api/*` und `GET /uix/*` zu breit (`api_route_too_broad`); für `COMMUNITY` gilt zusätzlich die Sperrliste
+  (`api_route_sensitive`, 18 Präfixe, u. a. `/api/chat/`, `/api/harness/`, `/api/audit`, `/api/missions`).
+- **Herkunft (AM0-02).** Der Einbau schreibt `local_config/uix_herkunft/<tools|shells>/<id>.json` (Hashes nach dem Umschreiben des Manifests). `Gateway._load` weist ein
+  `COMMUNITY`-Modul ab, dessen Dateien abweichen, fehlen oder dazugekommen sind (`herkunft_abweichung:`, `herkunft_datei_fehlt:`, `herkunft_datei_neu:`, `herkunft_fehlt`,
+  `herkunft_unlesbar`) und schreibt `UIX_MODULE_TAMPERED` ins Audit. Schalter `herkunft_pruefen` (Standard an). Eigene `CAPTAIN`-Module brauchen keine Datei.
+- **Fremde Shells (AM0-06).** Eine Shell mit `trust: COMMUNITY` ist nur eine Vorgabe: kein `entry`, kein `shell.css`; der Einbau einer Code-Shell wird vor dem Gate abgewiesen, der Lader
+  (`shellSperre`) lädt sie nie. Eigene `CAPTAIN`-Shells behalten ihren Code.
+- **Rahmen (AM0-04, AM0-05).** Die Rahmenseite hat eine eigene CSP (`RAHMEN_CSP`: `default-src 'none'`, `connect-src 'none'`); das Sandbox-Attribut ist die Konstante
+  `RAHMEN_SANDBOX = 'allow-scripts'`. Anfragen mit `Origin: null` lehnt der Server ab (Test `test_apps_am0_origin`).
+- **Brücke (AM3-17, -18, -20).** Eine fremde App (`COMMUNITY`) bekommt Ereignisse gefiltert (`ui/bruecke_filter.js`): öffentliche unverändert, andere auf feste Schlüssel gekürzt,
+  `live.line`, `talk.context`, `desk.error` und `harness.*` nie; `shell.notify` trägt den Namen der App, höchstens 200 Zeichen, Ton `note`, einer je 5 s. Eigene `CAPTAIN`-Module bleiben unverändert.

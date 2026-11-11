@@ -106,5 +106,30 @@ class Leiste(unittest.TestCase):
         self.assertTrue((HARNESS / "leiste.json").is_file())
 
 
+@unittest.skipUnless(NODE, "node fehlt")
+class Leerzustand(unittest.TestCase):
+    """S15 (AM1-04): der Leerzustand einer App in One Sedra sagt, warum kein Werkzeug da ist."""
+
+    MANIFEST = {"nicht_in_dieser_shell": [{"id": "x", "name": "X", "shells": ["cockpit", "xp"], "handles": ["rechnung"]}],
+                "nicht_in_diesem_profil": [{"id": "y", "name": "Y", "profile": ["kmu"], "handles": ["kunde"]}]}
+
+    def satz(self, manifest, typ):
+        skript = ("require(process.argv[1]);const a=globalThis.sedraHarness.app;"
+                  "process.stdout.write(JSON.stringify(a.leerSatz(JSON.parse(process.argv[2]), {type: process.argv[3]})))")
+        out = subprocess.run([NODE, "-e", skript, str(HARNESS / "app.js"), json.dumps(manifest), typ], capture_output=True, text=True, encoding="utf-8", timeout=60)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        return json.loads(out.stdout)
+
+    def test_nicht_in_dieser_oberflaeche_nennt_die_shells(self):
+        self.assertEqual(self.satz(self.MANIFEST, "rechnung"), "In dieser Oberfläche nicht verfügbar – verfügbar in: cockpit, xp.")
+
+    def test_nicht_in_diesem_profil(self):
+        self.assertEqual(self.satz(self.MANIFEST, "kunde"), "In diesem Profil nicht verfügbar.")
+
+    def test_sonst_der_alte_satz(self):
+        self.assertEqual(self.satz(self.MANIFEST, "task"), "Für „task“ ist kein Werkzeug geladen. Das Werkzeug „Module“ zeigt, was fehlt.")
+        self.assertEqual(self.satz(None, "task"), "Für „task“ ist kein Werkzeug geladen. Das Werkzeug „Module“ zeigt, was fehlt.")
+
+
 if __name__ == "__main__":
     unittest.main()

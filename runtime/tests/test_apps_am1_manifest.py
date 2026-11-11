@@ -104,6 +104,12 @@ class Manifest(unittest.TestCase):
         self.assertNotIn("nur-cockpit", ids)
         self.assertIn("nur-cockpit", [t["id"] for t in man["nicht_in_dieser_shell"]])
 
+    def test_nicht_in_dieser_shell_nennt_die_objekttypen_fuer_den_leerzustand(self):
+        lege(self.root, "nur-cockpit", shells=["cockpit"], kind="object", handles=["task"])
+        eintrag = next(t for t in Gateway(self.root).manifest()["nicht_in_dieser_shell"] if t["id"] == "nur-cockpit")
+        self.assertEqual(eintrag["handles"], ["task"])
+        self.assertEqual(eintrag["shells"], ["cockpit"])
+
     def test_filter_aendert_die_allowlist_nicht(self):
         lege(self.root, "nur-cockpit", shells=["cockpit"], api=["GET /api/strip"])
         gw = Gateway(self.root)

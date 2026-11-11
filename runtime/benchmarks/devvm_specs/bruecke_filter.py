@@ -60,6 +60,8 @@ assert.deepStrictEqual(plain(f("budget.warning", {agent_id: "A-1", stufe: 2, bet
 assert.deepStrictEqual(plain(f("task.changed", {id: {x: 1}, phase: [1], extra: true})), {});
 assert.deepStrictEqual(plain(f("task.changed", {id: null, phase: undefined})), {});
 assert.deepStrictEqual(plain(f("task.changed", {id: 0, phase: false})), {id: 0, phase: false});
+assert.deepStrictEqual(plain(f("task.changed", {hasOwnProperty: 5, id: "x"})), {id: "x"});
+assert.deepStrictEqual(plain(box.filterEreignis("task.changed", vm.runInContext("Object.assign(Object.create(null), {id: 'x', phase: 'p', geheim: 1})", box))), {id: "x", phase: "p"});
 assert.deepStrictEqual(plain(f("task.changed", null)), {});
 assert.deepStrictEqual(plain(f("task.changed", "text")), {});
 assert.deepStrictEqual(plain(f("task.changed", undefined)), {});

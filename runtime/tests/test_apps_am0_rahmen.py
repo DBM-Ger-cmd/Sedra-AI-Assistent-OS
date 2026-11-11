@@ -38,6 +38,30 @@ class Sandbox(unittest.TestCase):
         self.assertEqual(json.loads(out.stdout), "allow-scripts", out.stderr)
 
 
+@unittest.skipUnless(node(), "node fehlt")
+class Lader(unittest.TestCase):
+    def sperre(self, shell):
+        out = subprocess.run([node(), "-e", f"const m=require({json.dumps(str(LOADER))});process.stdout.write(JSON.stringify(m.shellSperre({json.dumps(shell)})))"],
+                             capture_output=True, text=True, encoding="utf-8", timeout=60)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        return json.loads(out.stdout)
+
+    def test_fremde_shell_ohne_vorgabe_wird_nie_geladen(self):
+        self.assertEqual(self.sperre({"trust": "COMMUNITY"}), "Eine fremde Shell ohne Vorgabe wird nicht geladen.")
+
+    def test_fremde_vorgabe_shell_laedt(self):
+        self.assertEqual(self.sperre({"trust": "COMMUNITY", "frame": True}), "")
+
+    def test_eigene_und_kern_shells_laden_wie_bisher(self):
+        for trust in ("CORE", "CAPTAIN", "SEDRA_BUILT"):
+            self.assertEqual(self.sperre({"trust": trust}), "", trust)
+        self.assertEqual(self.sperre(None), "")
+
+    def test_boot_ruft_die_sperre_vor_dem_laden_auf(self):
+        text = LOADER.read_text(encoding="utf-8")
+        self.assertLess(text.index("shellSperre(manifest.shell)"), text.index("manifest.shell.js) await addScript"))
+
+
 class Csp(unittest.TestCase):
     def test_rahmenrichtlinie(self):
         teile = {t.split(" ", 1)[0]: t.split(" ", 1)[1] for t in uix_server.RAHMEN_CSP.split("; ")}

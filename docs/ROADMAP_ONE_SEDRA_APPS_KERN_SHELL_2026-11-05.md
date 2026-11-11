@@ -49,7 +49,8 @@ id: translator
 name: Übersetzer
 kind: app            # app | instrument | dienst
 trust: PACKAGE       # CORE nur Kern
-zelle: {gruppe: werkzeuge, ort: start}
+gruppe: werkzeuge                    # Platz im Start-Menue (besteht)
+zelle: {feld: ram, label: "RAM frei", ort: hardware}   # Taskleisten-Zelle eines Instruments (Vertrag 1.1, AM1)
 shells: [harness]                 # bleibt
 profile: [standard, kmu, stick]   # neu, daneben
 rechte: [datei_lesen, modell_nutzen]   # Stufe A; B nur auf Antrag

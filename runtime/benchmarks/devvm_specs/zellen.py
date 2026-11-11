@@ -106,6 +106,8 @@ assert.strictEqual(msg(() => box.pruefeAuswahl(ctx({zellen: ["a"]}))), "Leiste: 
 assert.strictEqual(msg(() => box.pruefeAuswahl(ctx({zellen: ["ab", "cd", "ab"]}))), "Leiste: Kennung doppelt: ab");
 assert.strictEqual(msg(() => box.pruefeAuswahl(ctx({zellen: ["ab", "ab", 7]}))), "Leiste: Kennung doppelt: ab");
 assert.strictEqual(msg(() => box.pruefeAuswahl(ctx({zellen: ["ab", null]}))), "Leiste: ungueltige Kennung null");
+assert.deepStrictEqual(plain(box.pruefeAuswahl(ctx({zellen: ["constructor", "ab", "valueof"]}))), {zellen: ["constructor", "ab", "valueof"]});
+assert.strictEqual(msg(() => box.pruefeAuswahl(ctx({zellen: ["constructor", "constructor"]}))), "Leiste: Kennung doppelt: constructor");
 '''
 
 JS2 = r'''

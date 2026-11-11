@@ -120,6 +120,8 @@ for schlecht in ("", "oeffnen", "einstellungen:", "einstellungen:a/b/c", "einste
     assert pruefe_zelle({"feld": "ram", "label": "R", "aktion": schlecht}, "instrument", O) == ["zelle_aktion_invalid"]
 assert pruefe_zelle({"feld": "ram", "label": "R", "quelle": "gpu"}, "instrument", O) == []
 assert pruefe_zelle({"feld": "ram", "label": "R", "quelle": "GPU"}, "instrument", O) == ["zelle_quelle_invalid"]
+assert pruefe_zelle({"feld": "ram", "label": "R", "ort": ["a"]}, "instrument", {"models"}) == ["zelle_ort_unbekannt"]
+assert pruefe_zelle({"feld": "ram", "label": "R", "ort": {"a": 1}}, "instrument", {"models"}) == ["zelle_ort_unbekannt"]
 assert pruefe_zelle({"feld": "ram", "label": "R", "zebra": 1, "alpha": 2}, "instrument", O) == ["zelle_unbekannt:alpha", "zelle_unbekannt:zebra"]
 assert pruefe_zelle({"feld": "R", "label": "", "ort": "x", "aktion": "y", "quelle": "Z", "b": 1}, "instrument", O) == ["zelle_feld_invalid", "zelle_label_invalid", "zelle_ort_unbekannt", "zelle_aktion_invalid", "zelle_quelle_invalid", "zelle_unbekannt:b"]
 ''', "from manifest_felder import pruefe_zelle\n")
