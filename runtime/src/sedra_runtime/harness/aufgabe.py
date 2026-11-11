@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from . import aufgabe_deckung, vorbehalte
-from .katalog import WERKZEUGE, genauigkeit, passt
+from .katalog import WERKZEUGE, genauigkeit, passt, pfad_normal
 
 ID = re.compile(r'T-[0-9A-F]{8}')
 SITZUNG = re.compile(r'S-[0-9A-F]{8}')
@@ -33,6 +33,9 @@ STATUS = ('aktiv', 'erledigt', 'abgelaufen', 'erschoepft', 'zurueckgenommen')
 TITEL_MAX = 120
 ZWECK_MAX = 160
 KLARTEXT_TEILE = 4
+OBERFLAECHE_ORDNER = re.compile(r'(runtime/src/sedra_runtime/uix/(?:shells|tools)/[a-z0-9-]{2,40}/|runtime/src/sedra_runtime/uix/css/)(.*)')
+OBERFLAECHE_HINWEIS = ('Code an diesen Stellen läuft in der Oberfläche mit allen Rechten der Seite – auch Freigaben. '
+                       'Gib nur Pfade frei, die zu diesem Zweck gehören.')          # G1-06; der Satz zur Sammelkarte folgt mit G2 (Zurückhalten), das es noch nicht gibt
 
 
 class AufgabeFehler(ValueError):
@@ -69,6 +72,32 @@ def _interpreter_offen(muster):
         return False
     rest = [t for t in teile[1:] if not (t.startswith('-') or (t.startswith('/') and len(t) <= 3)) and t != '*']      # Schalter wie -File und /c
     return not rest or muster.strip().casefold().startswith(teile[0] + ' *')
+
+
+def _oberflaeche(doc, eintraege, vorschlag):
+    """O3 G1 (SPEC_APPS_v1_O3PLUS_G9_G2 §2.2): `oberflaeche: [muster …]` – die Pfade, an denen die Aufgabe den weichen Vorbehalt der Oberfläche decken darf. Eng: nur der Captain trägt es ein
+    (G1-04), alle Muster liegen in genau einem Ordner `…/uix/shells/<id>/`, `…/uix/tools/<id>/` oder `…/uix/css/` ohne Platzhalter im `<id>`-Teil (G1-02), und jedes wird von einem
+    `erlaubt`-Eintrag für datei_schreiben oder datei_aendern getroffen (G1-01)."""
+    roh = doc.get('oberflaeche') or []
+    if not isinstance(roh, list) or not all(isinstance(x, str) and x.strip() for x in roh):
+        raise AufgabeFehler('oberflaeche_ungueltig: eine Liste von Pfadmustern')
+    if not roh:
+        return []
+    if vorschlag:
+        raise AufgabeFehler('oberflaeche_nur_captain: Code der Oberfläche gibt nur der Captain frei, ein Vorschlag darf kein „oberflaeche“ enthalten')
+    muster = list(dict.fromkeys(x.strip() for x in roh))
+    ordner = set()
+    for m in muster:
+        treffer = OBERFLAECHE_ORDNER.fullmatch(pfad_normal(m))
+        if not treffer or '..' in pfad_normal(m).split('/'):
+            raise AufgabeFehler(f'oberflaeche_zu_breit: „{m}“ liegt nicht in genau einem Ordner uix/shells/<id>/, uix/tools/<id>/ oder uix/css/')
+        ordner.add(treffer.group(1))
+        probe = _probe(m)
+        if not any(e['werkzeug'] in SCHREIBEN and passt(e['muster'], e['werkzeug'], probe) for e in eintraege):
+            raise AufgabeFehler(f'oberflaeche_nicht_erlaubt: „{m}“ wird von keinem erlaubt-Eintrag für datei_schreiben oder datei_aendern getroffen')
+    if len(ordner) > 1:
+        raise AufgabeFehler('oberflaeche_mehrere_ordner: alle Muster müssen in einem Ordner liegen (' + ', '.join(sorted(ordner)) + ')')
+    return muster
 
 
 def pruefen_neu(doc, *, jetzt_z=None, vorschlag=False, verbotene_sitzungen=()):
@@ -120,6 +149,7 @@ def pruefen_neu(doc, *, jetzt_z=None, vorschlag=False, verbotene_sitzungen=()):
     modelle = doc.get('modelle') or []
     if not isinstance(modelle, list) or not all(isinstance(x, str) and x.strip() for x in modelle):
         raise AufgabeFehler('modelle_ungueltig: eine Liste von Rezept-IDs')
+    oberflaeche = _oberflaeche(doc, eintraege, vorschlag)
     ende = doc.get('ende')
     if not isinstance(ende, dict) or (ende.get('bis') is None and ende.get('max_aufrufe') is None):
         raise AufgabeFehler('ende_fehlt: mindestens eins von „bis“ und „max_aufrufe“ (D-G4)')
@@ -143,7 +173,7 @@ def pruefen_neu(doc, *, jetzt_z=None, vorschlag=False, verbotene_sitzungen=()):
         out_ende['max_aufrufe'] = mx
     wunsch = doc.get('wunsch_id')
     return {'titel': titel.strip()[:TITEL_MAX], 'zweck': zweck.strip(), 'projekt': projekt.strip(), 'sitzungen': list(dict.fromkeys(sitzungen)), 'erlaubt': eintraege,
-            'modelle': list(dict.fromkeys(m.strip() for m in modelle)), 'ende': out_ende,
+            'modelle': list(dict.fromkeys(m.strip() for m in modelle)), 'oberflaeche': oberflaeche, 'ende': out_ende,
             'wunsch_id': wunsch if isinstance(wunsch, str) else None}, warnungen
 
 
@@ -199,6 +229,7 @@ def oeffentlich(a, jetzt_z=None, lauf_namen=None):
     jetzt_z = jetzt_z or jetzt()
     out = dict(a)
     out['klartext'] = klartext(a.get('erlaubt'), lauf_namen)
+    out['oberflaeche_hinweis'] = OBERFLAECHE_HINWEIS if a.get('oberflaeche') else None
     out['zweck_anzeige'] = a.get('zweck') or out['klartext']        # alte Aufgaben ohne Zweck zeigen den Klartext (HS-62)
     mx = (a.get('ende') or {}).get('max_aufrufe')
     out['rest_aufrufe'] = None if mx is None else max(0, mx - int(a.get('aufrufe') or 0))
@@ -261,6 +292,10 @@ class Aufgaben:
         jetzt_z = jetzt_z or jetzt()
         a, warnungen = pruefen_neu(doc, jetzt_z=jetzt_z, vorschlag=bool(vorschlag_von), verbotene_sitzungen=verbotene_sitzungen)
         with self._sperre:
+            if a.get('oberflaeche'):                                   # G1-03: höchstens eine aktive Aufgabe mit `oberflaeche` je Projekt
+                laufende = [x for x in self.alle('aktiv', jetzt_z) if x.get('projekt') == a['projekt'] and x.get('oberflaeche')]
+                if laufende:
+                    raise AufgabeFehler('oberflaeche_schon_aktiv: ' + str(laufende[0].get('id')))
             while True:
                 tid = 'T-' + secrets.token_hex(4).upper()
                 if not self._pfad(tid).exists():
@@ -303,7 +338,9 @@ class Aufgaben:
         """{aufgabe_id, eintrag} der deckenden Aufgabe – oder None. `weich` (aus vorbehalte.pruefen_weich): nur eine Aufgabe, die das Modell nennt, deckt."""
         jetzt_z = jetzt_z or jetzt()
         aktive = self.alle('aktiv', jetzt_z)
-        if weich:
+        if weich and weich.get('oberflaeche'):                          # O3: nur eine Aufgabe, die den Pfad in `oberflaeche` nennt
+            aktive = [a for a in aktive if any(passt(m, 'datei_aendern', weich['oberflaeche']) for m in (a.get('oberflaeche') or []))]
+        elif weich:
             aktive = [a for a in aktive if weich.get('modell') in (a.get('modelle') or [])]
         return aufgabe_deckung.deckt(aktive, sitzung_id, werkzeug, ziel, jetzt_z, passt)
 

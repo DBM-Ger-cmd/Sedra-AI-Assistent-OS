@@ -412,3 +412,20 @@ Vorschlag für die Entscheidung des Captains (E12): Diese vier Routen bekommen i
 - Am PC nicht geprüft: ob das Fenster unter `START_SEDRA.bat` im Vordergrund erscheint; `FREIGABE.bat` unter Windows.
 - Stick-Liste: `FREIGABE.bat` und `desk/freigabe_konsole.py` noch nicht eingetragen.
 - O3 (hart/weich, weich vor Katalog), G1, G2, G3, G6, G7: nicht gebaut (§11 Schritte 4–6).
+
+### 13.4 O3 weicher Teil und G1 gebaut (11.11.2026)
+
+| Teil | Datei | Stand |
+|---|---|---|
+| O3-03 weich | `harness/vorbehalte.py` `pruefen_weich`: `uix/shells/**`, `uix/tools/**`, `uix/css/**` (ohne `README.md`, ohne was schon hart ist) → `{grund, oberflaeche: <Pfad>}` | gebaut |
+| O3-04 weich vor Katalog | `harness/freigabe.py` `einstufung`: ein `frei` oder `vorarbeiter` im Katalog wird für die Oberfläche zur Karte an den Captain (Regel `vorbehalt-weich`); nur eine aktive Aufgabe deckt; Sitzungs-Erlaubnis und Vorarbeiter nie (schließt N2 **für die Oberfläche**) | gebaut |
+| O3-05 frei | `README.md` unter `uix/**` bleibt im normalen Katalog | gebaut |
+| G1-01 bis G1-04 | `harness/aufgabe.py`: Feld `oberflaeche`, ein Ordner (`oberflaeche_zu_breit`, `oberflaeche_mehrere_ordner`), jedes Muster von einem `erlaubt`-Eintrag für Schreiben getroffen (`oberflaeche_nicht_erlaubt`), nur der Captain (`oberflaeche_nur_captain`), höchstens eine aktive je Projekt (`oberflaeche_schon_aktiv: T-…`); die Deckung vergleicht den Pfad mit `oberflaeche` | gebaut |
+| G1-06 Hinweis | `oeffentlich(aufgabe)['oberflaeche_hinweis']` mit dem Satz (ohne den Satz zur Sammelkarte, die es noch nicht gibt) | Satz da, **Formular der Oberfläche nicht angepasst** |
+
+**Absichtlich nicht gebaut:** O3-04 für **Modelle**. Dort steht im Katalog des Captains (`local_config/freigabe_katalog.yaml`) ein ausdrückliches `frei` für `modell_laden` der Rezepte `coder.local_primary_team` und `coder.local_primary_power` (Captain-Ja 10.11.2026). „Weich vor Katalog“ für Modelle würde das aufheben und jedes Laden zur Karte oder zur Aufgabe mit `modelle` machen; das braucht eine Entscheidung des Captains (Rest von N2).
+
+**Offen (Schritt 5 aus §11):** Zurückhalten und Ausliefern der bestätigten Fassung (G2), Sammelkarte, Hinweise im Diff (G3), Rückweg (G7), Startbericht (G6), Formular für `oberflaeche`. Bis dahin wirkt eine gedeckte oder per Karte freigegebene Änderung an `uix/shells/**` sofort, weil der Server die Dateien bei jeder Anfrage liest.
+
+**Tests:** `tests/test_harness_oberflaeche_weich.py` (25): weich/hart/frei je Pfad, `einstufung` mit Katalog `frei` und `vorarbeiter`, das Feld mit allen Fehlern, höchstens eine aktive Aufgabe, Deckung nur für den genannten Pfad (und die der Modelle unverändert), ganzer Weg mit echtem Guard und Kiste (Karte statt Schreiben, Aufgabe deckt nur den Pfad, Sitzungs-Erlaubnis deckt nie).
+

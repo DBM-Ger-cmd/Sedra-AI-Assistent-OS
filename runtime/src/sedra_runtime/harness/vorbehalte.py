@@ -92,11 +92,23 @@ def pruefen_lesen(werkzeug, ziel):
     return None
 
 
+WEICH_OBERFLAECHE = ('runtime/src/sedra_runtime/uix/shells/**', 'runtime/src/sedra_runtime/uix/tools/**', 'runtime/src/sedra_runtime/uix/css/**')
+
+
 def pruefen_weich(werkzeug, ziel, args=None):
-    """Der **weiche** Vorbehalt (HS-28, K10): Modelle laden/entladen. Er macht den Aufruf zu `captain`, außer eine Aufgabe nennt das Modell
-    ausdrücklich in `modelle` – sonst hilft keine Aufgabe. Ergebnis {grund, modell} oder None. (Lauf-Typen mit `modell_weg` kommen mit N7.)"""
+    """Der **weiche** Vorbehalt (HS-28, K10; O3-03): Modelle laden/entladen und der Code der Oberfläche. Er macht den Aufruf zu `captain`, außer eine Aufgabe
+    nennt das Modell in `modelle` beziehungsweise den Pfad in `oberflaeche` – sonst hilft keine Aufgabe, und weder Sitzungs-Erlaubnis noch Vorarbeiter decken ihn.
+    Ergebnis {grund, modell} (Modelle) oder {grund, oberflaeche: <Pfad>} (Oberfläche: `uix/shells/**`, `uix/tools/**`, `uix/css/**`, soweit nicht schon hart
+    und ohne `README.md`, die frei bleibt) oder None. (Lauf-Typen mit `modell_weg` kommen mit N7.)"""
     if werkzeug in ('modell_laden', 'modell_entladen'):
         return {'grund': 'Captain-Vorbehalt: Modelle laden und entladen (nur eine Aufgabe, die das Modell nennt, deckt es)', 'modell': str(ziel or '').strip()}
+    if werkzeug in SCHREIBEN:
+        rel = pfad_normal(ziel)
+        if rel.split('/')[0] == '..' or rel.rsplit('/', 1)[-1] == 'readme.md' or pruefen(werkzeug, ziel, args):
+            return None                                               # außerhalb, README oder schon hart (dann gilt der harte Vorbehalt)
+        if any(passt(muster, werkzeug, rel) for muster in WEICH_OBERFLAECHE):
+            return {'grund': 'Captain-Vorbehalt: Code der Oberfläche (läuft in der Seite mit allen Rechten; nur eine Aufgabe, die den Pfad in „oberflaeche“ nennt, deckt es)',
+                    'oberflaeche': rel}
     return None
 
 

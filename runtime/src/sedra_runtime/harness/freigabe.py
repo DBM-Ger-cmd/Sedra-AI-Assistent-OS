@@ -45,6 +45,11 @@ def einstufung(regeln, name, args, plan):
     if grund:
         return {'stufe': 'captain', 'wirkt_als': 'captain', 'regel': 'vorbehalt', 'begruendung': grund, 'vorbehalt': True}
     e = einstufen(regeln, name, plan['ziel'])
+    weich = vorbehalte.pruefen_weich(name, plan['ziel'], args)
+    if weich and weich.get('oberflaeche') and e['stufe'] in ('frei', 'vorarbeiter'):
+        # O3-04 (schließt N2): der weiche Vorbehalt der Oberfläche gilt vor dem Katalog – ein `frei` oder `vorarbeiter` darunter ändert daran nichts. Es bleibt die Karte an den Captain,
+        # außer eine aktive Aufgabe nennt den Pfad in `oberflaeche` (Deckung weiter unten in `Kiste.aufruf`); Sitzungs-Erlaubnis und Vorarbeiter decken nie.
+        return {'stufe': 'captain', 'wirkt_als': 'captain', 'regel': 'vorbehalt-weich', 'begruendung': weich['grund'], 'vorbehalt': False}
     return dict(e, wirkt_als='captain' if e['stufe'] == 'vorarbeiter' else e['stufe'], vorbehalt=False)
 
 
