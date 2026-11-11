@@ -38,6 +38,8 @@ Die versteckten Tests liegen nie im Arbeitsbereich des Modells.
 - **Eine Prüfung je `assert`.** Keine Ketten mit `and`: der Fehlerbericht nennt sonst nicht, welcher Teil falsch war. Kein `or`: das ist ein schwacher Test, `spec_check` lehnt ihn ab.
 - **Rückgabewerte prüfen**, nicht nur, dass ein Aufruf nicht abbricht. Ein Bau hat schwache Prüfungen bestanden und die geschärften nicht.
 - **Fehlerfälle und Grenzen:** leere Eingabe, `None`, falscher Typ, unbekannte Schlüssel. Bei Schemaregeln ein Negativfall je Regel.
+- **Die Randfälle nennen, die der Coder sonst übersieht** (Katalog in `docs/CODER_PROFIL_UND_WORKFLOW_2026-11-11.md` §4): ein Wert im Eintrag, der vom berechneten abweicht (sonst fällt „neu berechnen“ nicht auf); `²` und `٣` wo Ziffern geprüft werden; dasselbe Muster mitten im Pfad und als Vorsilbe; Namen wie `constructor`, `__proto__`, `hasOwnProperty` als Schlüssel; Objekte ohne Prototyp (JavaScript); Listen und dicts, wo ein Text erwartet wird; die eigene Fehlermeldung wörtlich. Im Nachtlauf bestanden 6 von 9 Kandidaten die ungeschärften Tests mit genau diesen Fehlern.
+- **Gegenprobe vor dem Stempel:** die Tests gegen bewusst naive Varianten laufen lassen (`--tree`); sie müssen durchfallen.
 - **Keine Regel einer späteren Stufe voraussetzen.** Der Test von Stufe 2 muss auf dem Stand nach Stufe 2 bestehen.
 - **Die Saat muss an Stufe 1 scheitern.** Sonst beweist der Bau nichts.
 - Der Test läuft als `python <datei>` im Arbeitsbereich; Exit-Code 0 heißt bestanden.

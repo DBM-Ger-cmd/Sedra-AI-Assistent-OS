@@ -67,6 +67,9 @@ Nach einer gescheiterten Stufe nicht weiterbauen. Das kostet nur GPU-Zeit.
 ## Nach dem Bau
 
 - Die BAU-Zeile im Logbuch schreibt der Bau selbst. Nicht von Hand doppelt eintragen.
-- Den Kandidaten Zeile für Zeile lesen und `benchmarks/REVIEW_VORLAGE.md` ausfüllen. Mängel mit Datei, Zeile und genauer Ersetzung.
+- Den Kandidaten Zeile für Zeile lesen und `benchmarks/REVIEW_VORLAGE.md` ausfüllen. Mängel mit Datei, Zeile und genauer Ersetzung. **Bestanden heißt nicht richtig:** Im Nachtlauf 10./11.11. hatten 6 von 9 Kandidaten Fehler, die die versteckten Tests nicht fanden. Die Checkliste (neu berechnet statt gelesen, `isdigit` mit Unicode, Ende statt ganzer Pfad, unhashbare Werte, Objekt als Menge, fremder Fehlertext, unbegrenzter Speicher) steht in `docs/CODER_PROFIL_UND_WORKFLOW_2026-11-11.md` §3.
+- **Rezept:** Für Bauaufträge `--rezept coder.local_primary_1x80k --kontext 81920` (bei JavaScript schneller und ohne Wiederholung gemessen); `coder.local_primary_team` nur, wenn Manager und Angestellte parallel arbeiten sollen.
+- **Vergleiche:** Vor jedem Vergleichslauf `runtime_data/bau_schleife_stand.json` beiseite legen oder `--neu` nehmen, sonst setzt die Schleife nur fort. Keine Tests oder Messungen parallel zu einem Lauf, dessen Zeit zählt.
+- **Eigenheiten der Schleife:** Sie geht von vier Stufen aus; bei einer Spec mit drei Stufen meldet sie `unknown stage 'S4'`, obwohl alles bestand (die Stufen S1 bis S3 stehen dann im Statuslog als ERFOLG). Verweigert die Vorprüfung den Start (laufender Router oder Modellserver), steht das nur im Statuslog (`ESKALATION: Vorprüfung fehlgeschlagen`), der Aufrufer bekommt „gestartet: true“.
 - Übernommen wird nichts ohne Gate G4 des Captains. Danach gelten `sedra-git-uebernahme` und `sedra-register-dashboard`.
 - Am Ende mit `nvidia-smi` prüfen, ob ein llama-server übrig geblieben ist. Beenden nur mit Ja.

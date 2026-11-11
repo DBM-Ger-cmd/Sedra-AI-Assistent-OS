@@ -38,6 +38,10 @@ Eine Freigabe aus einer anderen Sitzung zählt nicht. Steht in der Nachtsitzung 
 - Nur gemessene und stabile Einstellungen. Keine Kontext-Leiter und keine neue Quantisierung ohne Aufsicht.
 - Nach einem Neustart des PC ist der Debug-Modus der NVIDIA-App aus. Vor der Nacht fragen, ob er an ist.
 - Jeder Schritt hat ein Zeitlimit. Scheitert ein Schritt, geht es mit dem nächsten weiter, ohne Wiederholung.
+- **Läuft ein Modellserver oder der Router, startet der Bau nicht** (Vorprüfung der Schleife). Vor der Nacht mit dem Captain klären, ob er entladen werden darf; `nachtlauf.py` meldet seit 11.11. „Bau nicht angelaufen“ mit dem Grund aus `bau_schleife_status.log`, statt „Bau beendet“ mit altem Stand.
+- Das Rezept für Bauten ist `coder.local_primary_1x80k` (`--rezept`, `--kontext 81920`); mehrere Specs nacheinander mit `--specs a,b,c`. Ein zweiter Lauf derselben Spec setzt fort und baut nichts, außer der Stand wird vorher beiseite gelegt.
+- Tests und Messungen des Einbaus nicht parallel zu den Bauten fahren, wenn deren Zeit verglichen wird.
+- Die Kandidaten der Nacht sind erst nach dem Lesen etwas wert (`sedra-bau-starten` §Nach dem Bau): bestanden heißt nicht richtig.
 
 ## Start
 
