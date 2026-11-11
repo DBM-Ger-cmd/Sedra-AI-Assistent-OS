@@ -65,6 +65,45 @@ FLAG_WORD = {
 }
 
 
+# G3 (SPEC_APPS_v1_O3PLUS_G9_G2 §2.4): Wege, auf denen eine Freigabe zustande kommt. Eine hinzukommende Zeile, die einen nennt, bekommt in einem Diff einen Hinweis – Code der Oberfläche
+# läuft in der Seite des Captains und könnte so an ihm vorbei freigeben. Die Liste steht hier einmal und wird von den Karten gelesen.
+FREIGABE_WEGE = (
+    ('Freigabe-Weg decisions/answer', re.compile(r'decisions/answer')),
+    ('Freigabe-Weg mission/approve', re.compile(r'/api/mission/approve')),
+    ('Freigabe-Weg harness/karten', re.compile(r'/api/harness/karten')),
+    ('Freigabe-Weg harness/aufgaben', re.compile(r'/api/harness/aufgaben')),
+    ('Freigabe-Weg harness/vorarbeiter', re.compile(r'/api/harness/vorarbeiter')),
+    ('Sitzungs-Erlaubnis', re.compile(r'erlaubnisse_bestaetigt')),
+    ('Einbau von Modulen', re.compile(r'/api/uix/install')),
+    ('Schreibrechte für Module', re.compile(r'/api/uix/trust\b|\btrust\s*:')),
+)
+HINWEIS_SATZ = 'Hinweise sind eine Lesehilfe. Sie finden nicht alles, und ein Treffer ist kein Beweis.'
+
+
+def hinweis_fuer_zeile(text):
+    """Die Hinweise (Liste von Wörtern) für den Text einer hinzukommenden Zeile (rein): Muster aus FLAGS und FREIGABE_WEGE."""
+    erg = []
+    for name, muster in FLAGS:
+        if muster.search(text):
+            erg.append(FLAG_WORD.get(name) or name)
+    for name, muster in FREIGABE_WEGE:
+        if muster.search(text):
+            erg.append(name)
+    return list(dict.fromkeys(erg))
+
+
+def hinweise_im_diff(zeilen):
+    """G3-01: in einem Diff (Liste von Zeilen) tragen **hinzukommende** Zeilen (`+…`, nicht `+++`) hinten `  ⚠ <Hinweis; Hinweis>`, wenn sie ein Muster treffen."""
+    aus = []
+    for z in zeilen:
+        if z.startswith('+') and not z.startswith('+++'):
+            h = hinweis_fuer_zeile(z[1:])
+            if h:
+                z = z + '  ⚠ ' + '; '.join(h)
+        aus.append(z)
+    return aus
+
+
 def inside(base: Path, path: Path):
     """Ob `path` wirklich unter `base` liegt: kein Teil des Weges darf eine Verknüpfung sein, und aufgelöst muss er drinbleiben."""
     base, path = Path(base).resolve(), Path(path)

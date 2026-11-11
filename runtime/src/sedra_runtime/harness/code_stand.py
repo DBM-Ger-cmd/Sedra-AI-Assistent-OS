@@ -24,6 +24,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ..core.util import atomic_write_json
+from ..desk.install import HINWEIS_SATZ, hinweise_im_diff
 
 CODE_ENDUNGEN = frozenset({'.py', '.pyw', '.pth', '.js', '.mjs', '.cjs', '.ps1', '.psm1', '.bat', '.cmd', '.sh', '.vbs', '.exe', '.dll'})
 CODE_NAMEN = frozenset({'pyproject.toml', 'setup.cfg', 'setup.py', 'tox.ini', 'pytest.ini', 'package.json', 'conftest.py',
@@ -294,10 +295,10 @@ class CodeStand:
         sortiert = sorted(liste, key=lambda e: (e.get('herkunft') is None, e['pfad']))
         n = len(sortiert)
         kopf = (f'Code, den du noch nicht gesehen hast ({n} Datei{"" if n == 1 else "en"}). '
-                'Mit „Erlauben“ gilt genau diese Fassung als gesehen; danach laufen Läufe und Befehle wieder ohne diese Karte, bis sich Code ändert.')
+                'Mit „Erlauben“ gilt genau diese Fassung als gesehen; danach laufen Läufe und Befehle wieder ohne diese Karte, bis sich Code ändert. ' + HINWEIS_SATZ)
         zeilen, zu_gross = [kopf], begrenzt and n > KARTE_DATEIEN_MAX
         for e in (sortiert[:KARTE_DATEIEN_MAX] if begrenzt else sortiert):
-            stueck = self._eintrag(e)
+            stueck = hinweise_im_diff(self._eintrag(e))                    # G3-02: Hinweise auch auf dieser Karte
             if begrenzt and len(zeilen) + len(stueck) > KARTE_ZEILEN_MAX:
                 zu_gross = True
                 break
