@@ -19,8 +19,8 @@ Keine Kommentare, keine Docstrings, keine eigenen Tests.'''
 
 TASK_S2 = '''Ergaenze shell_regeln.py (alles andere bleibt) so, dass pruefe_shell auch mit ungewoehnlichen Eingaben richtig arbeitet:
 - Ist doc bei "COMMUNITY" kein dict, ist das Ergebnis genau ["community_shell_needs_vorgabe"].
-- dateien darf eine Liste, ein Tupel oder eine Menge sein; ist es etwas anderes (zum Beispiel None oder ein Text), gilt es als leer, es gibt dann keine Meldung 3.
-- Gesetzt ist: jeder Wert ausser None, "", False, {} und []. Also ist "vorgabe": {"titel": "x"} gesetzt, "vorgabe": 1 und "vorgabe": True ebenfalls, "vorgabe": None nicht gesetzt.
+- dateien darf eine Liste, ein Tupel oder eine Menge sein; ist es etwas anderes (zum Beispiel None oder ein Text), gilt es als leer, es gibt dann keine Meldung 3. Eintraege in dateien, die keine Texte sind (zum Beispiel None, Zahlen oder Listen), werden ueberlesen: keine Ausnahme, und sie loesen keine Meldung aus.
+- Gesetzt ist: jeder Wert ausser None, "", False, {} und []. Also ist "vorgabe": {"titel": "x"} gesetzt, "vorgabe": 1 und "vorgabe": True ebenfalls, "vorgabe": None nicht gesetzt. Auch ein leeres Tupel () ist gesetzt: "entry": () loest "community_shell_no_entry" aus.
 - Die Eingaben werden nicht veraendert. Bei trust "CORE", "CAPTAIN", "SEDRA_BUILT", None, 5 oder jedem anderen Wert ausser "COMMUNITY" ist das Ergebnis [] egal wie doc aussieht.
 Keine Kommentare, keine Docstrings, keine eigenen Tests.'''
 
@@ -67,6 +67,11 @@ assert pruefe_shell({"vorgabe": True}, "COMMUNITY", []) == []
 assert pruefe_shell({"vorgabe": False}, "COMMUNITY", []) == ["community_shell_needs_vorgabe"]
 assert pruefe_shell({"vorgabe": [1]}, "COMMUNITY", []) == []
 assert pruefe_shell({"vorgabe": []}, "COMMUNITY", []) == ["community_shell_needs_vorgabe"]
+assert pruefe_shell({"vorgabe": 1}, "COMMUNITY", [1, None, "shell.css"]) == ["community_shell_no_css"]
+assert pruefe_shell({"vorgabe": 1}, "COMMUNITY", [None]) == []
+assert pruefe_shell({"vorgabe": 1}, "COMMUNITY", [["shell.css"], 5]) == []
+assert pruefe_shell({"vorgabe": 1, "entry": ()}, "COMMUNITY", []) == ["community_shell_no_entry"]
+assert pruefe_shell({"vorgabe": 1, "entry": ""}, "COMMUNITY", []) == []
 assert pruefe_shell({}, None, []) == []
 assert pruefe_shell({}, 5, []) == []
 assert pruefe_shell({}, "community", []) == []
