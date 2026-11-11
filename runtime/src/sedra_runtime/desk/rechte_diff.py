@@ -6,6 +6,7 @@ fassten: `rechte_urteil` berechnete die Stufe neu statt die des Diff-Eintrags zu
 Deshalb steht hier die Referenzfassung der Spec."""
 import hashlib
 
+VERBEN_NIE = ('candidate.uebernehmen', 'candidate.zuruecknehmen', 'boundary.bestaetigen', 'boundary.aendern')   # die vier Verben mit Gate: für Apps nie (Captain 11.11.)
 OEFFENTLICH = ('system.state', 'model.changed', 'desk.resync', 'tools.refresh', 'slot.changed')
 ABLAGE_FREI = 1048576
 _SCHLUESSEL = ('lesen', 'verben', 'ereignisse', 'zelle', 'ablage', 'dienst')
@@ -56,7 +57,7 @@ def stufe(faehigkeit):
     if art == 'lesen':
         return 'A'
     if art == 'verb':
-        return 'B'
+        return 'C' if rest in VERBEN_NIE else 'B'
     if art == 'ereignis':
         return 'A' if rest in OEFFENTLICH else 'B'
     if art == 'zelle':

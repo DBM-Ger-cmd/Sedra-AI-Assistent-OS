@@ -19,6 +19,9 @@ import yaml
 
 from .registry import MODULE_ID, Registry
 from .herkunft import HerkunftsPruefer, lesen as herkunft_lesen
+from . import app_speicher
+from .berechtigung import ladeentscheidung
+from .rechte_diff import rechte_zu_faehigkeiten, stufe as rechte_stufe
 from .manifest_felder import filtere, pruefe_profile, pruefe_shells, pruefe_zelle
 from .routen_pruefung import pruefe_routen
 from .shell_regeln import pruefe_shell
@@ -67,7 +70,7 @@ VERSION = re.compile(r'^\d+\.\d+\.\d+$')
 NEED = re.compile(r'^(>=|<=|>|<|==)?(\d+)(?:\.(\d+))?$')
 
 TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot', 'instanzen', 'gedaechtnis', 'zweck', 'gruppe',
-             'shells', 'profile', 'zelle'}       # Vertrag 1.1 (AM1)
+             'shells', 'profile', 'zelle', 'rechte'}       # Vertrag 1.1 (AM1); `rechte` AM3-01
 SHELL_KEYS = {'id', 'name', 'version', 'entry', 'provides', 'layout', 'trust', 'needs', 'api', 'description', 'vorgabe', 'umschalter'}
 # Eine Shell aus einer Vorgabe (SPEC_SHELL_AUS_VORGABE_v1): kein Code im Ordner, nur `shell.vorgabe.yaml`; den Bildschirm baut der
 # Rahmen `ui/frame.js`. Was er darf, steht hier – nicht in der Datei des Autors –, denn der Rahmen ist Vertragscode.
@@ -206,6 +209,18 @@ def check_tool(doc, folder: Path, origin='package'):
     gruppe = t.get('gruppe')
     if gruppe is not None and gruppe not in GRUPPEN:
         errors.append('gruppe_invalid')
+    faehigkeiten = []
+    if t.get('rechte') is not None:                                  # AM3-01: nur fremde Module; Schlüssel und Werte prüft rechte_diff, Stufe C wird abgewiesen
+        if t.get('trust') == 'CORE' or origin == 'package':
+            errors.append('rechte_nur_fremd')
+        else:
+            try:
+                faehigkeiten = rechte_zu_faehigkeiten(t.get('rechte'))
+            except ValueError as exc:
+                errors.append(str(exc))
+            stufe_c = [f for f in faehigkeiten if rechte_stufe(f) == 'C']
+            if stufe_c:
+                errors.append('rechte_stufe_c:' + ','.join(stufe_c))
     errors.extend(pruefe_shells(t.get('shells'))[0])                  # Vertrag 1.1 (AM1): Verfügbarkeit je Shell und Profil, Zelle der Taskleiste
     errors.extend(pruefe_profile(t.get('profile'))[0])
     from .. import chat_tools
@@ -216,7 +231,7 @@ def check_tool(doc, folder: Path, origin='package'):
             'origin': origin, 'order': order, 'slot': slot, 'description': str(t.get('description') or ''),
             'own_types': own_types, 'instanzen': instanzen, 'gedaechtnis': list(dict.fromkeys(gedaechtnis)), 'zweck': zweck, 'gruppe': gruppe,
             'events': {'emits': list(events.get('emits') or []), 'listens': list(events.get('listens') or [])},
-            'shells': t.get('shells'), 'profile': t.get('profile'), 'zelle': t.get('zelle'),
+            'shells': t.get('shells'), 'profile': t.get('profile'), 'zelle': t.get('zelle'), 'rechte': t.get('rechte'), 'faehigkeiten': faehigkeiten,
             'js': js, 'css': css, 'api': routes, 'tests': tests}, []
 
 
@@ -314,6 +329,7 @@ class Gateway:
     def __init__(self, project_root: Path, registry: Registry | None = None):
         self.registry = registry or Registry(project_root)
         self.project_root = Path(project_root)
+        self.app_berechtigung = False                         # AM3: Schalter `app_berechtigung` (local_config/switches.yaml), Standard aus bis zur Abnahme
         self.herkunft_pruefen = True                          # AM0-02: Schalter `herkunft_pruefen` (local_config/switches.yaml), Standard an
         self.melden = None                                    # der Hub setzt eine Funktion (kind, id, gruende), die UIX_MODULE_TAMPERED ins Audit schreibt
         self._pruefer = HerkunftsPruefer()
@@ -345,6 +361,10 @@ class Gateway:
             return ['herkunft_fehlt']
         return self._pruefer.pruefen(folder, area, eintrag)
 
+    def _berechtigung(self, folder, man):
+        eintrag = app_speicher.lesen(self.project_root).get(man['id'])
+        return ladeentscheidung(eintrag, man.get('faehigkeiten') or [], app_speicher.manifest_hash(folder / 'tool.yaml'))
+
     def _load(self, kind):
         """{id: (folder, manifest)} and the rejected folders with their reasons."""
         name, check = ('tool.yaml', check_tool) if kind == 'tools' else ('shell.yaml', check_shell)
@@ -371,6 +391,12 @@ class Gateway:
                         self._gemeldet.add(schluessel)
                         self.melden(kind[:-1], folder.name, list(gruende))
                     continue
+            if kind == 'tools' and self.app_berechtigung and man.get('trust') == 'COMMUNITY' and man.get('rechte') is not None:
+                urteil = self._berechtigung(folder, man)                  # AM3-06/08: gewährt, aktiv und zur Fassung passend – sonst nicht geladen
+                if not urteil['laden']:
+                    rejected.append({'kind': 'tool', 'id': folder.name, 'origin': origin, 'reasons': [urteil['grund']]})
+                    continue
+                man['wirksam'] = urteil['wirksam']
             ok[man['id']] = (folder, man)
         return ok, rejected
 

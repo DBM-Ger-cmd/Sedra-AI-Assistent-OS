@@ -231,6 +231,19 @@
             "quelle": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,30}$"}
           },
           "description": "Vertrag 1.1 (AM1): die Taskleisten-Zelle eines Instruments (nur kind: instrument). Shells, die Datenzellen selbst zeichnen, lesen sie."
+        },
+        "rechte": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "lesen": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "verben": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "ereignisse": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "zelle": {"enum": ["nein", "text"]},
+            "ablage": {"type": "integer", "minimum": 0},
+            "dienst": {"enum": ["nein", "host", "microvm"]}
+          },
+          "description": "AM3-01: was eine fremde App beantragt (nicht CORE). Wirksam ist, was der Captain gewährt hat; ohne Gewährung wird die App nicht geladen."
         }
       }
     }

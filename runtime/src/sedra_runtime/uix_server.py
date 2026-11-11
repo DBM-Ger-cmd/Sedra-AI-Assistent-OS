@@ -156,6 +156,7 @@ class UIXHub:
         # The desk (Build 7): manifests and allowlist for the desktop modules, one decision list, one event stream instead of a poll per window.
         self.gateway = Gateway(self.project_root)
         self.gateway.entwicklung = self.runtime.switches.apply('entwicklung', 'enabled', False) is True    # Stufe 6 (S6-E4)
+        self.gateway.app_berechtigung = self.runtime.switches.apply('app_berechtigung', 'enabled', False) is True    # AM3, Standard aus
         self.gateway.herkunft_pruefen = self.runtime.switches.apply('herkunft_pruefen', 'enabled', True) is not False    # AM0-02
         self.gateway.melden = self._herkunft_melden
         self.events = EventStream()
