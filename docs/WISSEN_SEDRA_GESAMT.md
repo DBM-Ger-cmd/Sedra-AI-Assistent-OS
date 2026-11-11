@@ -295,8 +295,51 @@ Der Chat war die Vorarbeiter-Sitzung. Rolle laut Captain: planen, verteilen, üb
 4. Entscheidungen des Captains: Standard-Kontextstufen, Profilwechsel im Menü, nicht passende Rezepte grau anzeigen, Freigabeliste für „RAM freimachen“, welches Cloud-Rezept der Prüfer bekommt, Pi auf „CLI“ in Orca stellen.
 5. Worktree `<sedra>-wt-p1b-1-vorschau` und Branch `p1b-1-vorschau-ausbau` werden noch gebraucht. Nichts davon ist in `main`.
 
+## 17. Arbeit im Chat vom 10.–11.11.2026 (Claude Code: KV-Pool, Team, Manager-Werkzeug, Wiederherstellungs-ZIP)
+
+Der Chat lief zuerst als Morgenbericht und Aufräumen, dann als Arbeit am lokalen Team (Manager plus Angestellte auf einem Modell). Alles Genannte liegt in `main` (gepusht, `ls-remote` bestätigt für `5b2e687`), außer wo „local_config“ steht.
+
+**Gebaut (Commits):**
+- `a826152` Gemeinsamer KV-Pool: Schalter `kv_unified` und `kv_pool_je_angestellter` im Server-Block des Rezepts. Pool = Fenster des Managers + (Slots − 1) × Anteil je Angestellter. Code in `runtime/src/sedra_runtime/models/kv_pool.py`, Anpassung von Lader, Router-Liste und Speicherprüfung (`role_routing.py`, `aufteilung.py`, `model_loader.py`, `llama_server_runtime.py`), Tests `runtime/tests/test_kv_pool.py` (8).
+- `f6bb543` Manager-Werkzeug `auftraege_verteilen` (bis 5 Teilaufträge {typ, text} über den Vorarbeiter-Kanal an die Cloud-Helferin; Gesetz in `runtime/config/manager/gesetze.yaml`), Tests `test_manager_verteilen.py` (5).
+- `5b2e687` Dasselbe als Harness-Werkzeug: immer eine Freigabekarte (Klasse H in `desk/freigabeklasse.py`, nie über den Vorarbeiter), im Katalog (`katalog.WERKZEUGE`) bekannt, Vorlage `manager`, Tests `test_harness_cloud_verteilen.py` (8). Geänderte Tests: 1933, 0 rot (`benchmarks/run_tests.py --changed`).
+- Davor am selben Tag: 2 rote Cloud-Tests behoben (Tests nutzen eine eigene Konfiguration ohne Cloud-Freigabe), `nachtlauf` gemergt, Modellauswahl nach Einsatzzweck gruppiert, Stufen 32k/60k/100k für alle Rezepte.
+- local_config (nicht im Git, Sicherungen `*.bak-2026-11-10-*`): Rezepte `harness.nemotron_e4b`, `harness.nemotron_e4b_3x80k`, `harness.nemotron_e4b_team`, `coder.local_primary_team`; Profil `team-35b` (Team als Hauptmodell, Gemma prüft); aktiv blieb `bau-1x80k`.
+
+**Messwerte (eigener llama-server, 10.11.):**
+- 35B-Team: 29 Lagen im RAM, 3 Slots, MTP, Pool 163840 (Manager 98304 + 2 × 32768), 0,78 GiB VRAM frei.
+- Probe: Manager (60k Prompt) und zwei Angestellte (je 20k) gleichzeitig, ohne `id_slot`. Sie liefen auf den Slots 0, 1 und 2, ohne Fehler, in etwa 128 s. Das Erzeugungstempo in der Probe (3 bis 21 Token/s) ist nicht sauber, weil die Prompts der anderen noch verarbeitet wurden. VRAM 11,7 von 12,3 GB mit leerem Router.
+- Nemotron 3 × 60k zeigte 65 Token/s (vermutlich Ausreißer, nicht neu gemessen). Unter etwa 0,45 GiB freiem VRAM bricht das Tempo ein.
+
+**Entscheidungen des Captains (10.11.):**
+- Stufen 32k/60k/100k reichen für das meiste; bei Nemotron den Bereich 60 bis 100k mit 2 und 3 Agenten ausmessen.
+- Team mit 1 Manager und 2 Angestellten, der Manager braucht mehr Kontext als die Angestellten.
+- Manager und Coder lokal, die Cloud nur als Hilfs-Coderin; der Manager verteilt die Aufträge. Schritt 1 (Werkzeug) und die Harness-Anbindung genehmigt; Commit und Push jeweils nach seinem Ja.
+- Im Ablauf kein kompletter Wechsel der Modelle, alles lokal. Die Cloud bleibt ein optionaler Text-Helfer.
+- Ein Entwickler-ZIP, mit dem die Arbeit nach einem kritischen Fehler wieder aufgenommen werden kann, ohne Engines und Modelle, mit Roadmaps und Fortschrittsdashboard.
+
+**Fallen und Befunde:**
+- Harness-Anfragen tragen keinen Slot; `llama-server` verteilt selbst. Eine Slot-Bindung (`id_slot`) ist nicht nötig. Eine andere Sitzung baute sie trotzdem (uncommittet, später in `main`); ich habe sie nicht mit eigenen Commits vermischt.
+- Ich habe einmal einen Messlauf bei belegter GPU gestartet (Router und 35B liefen) und die Werte verworfen; danach sauber gemessen. Vor Messläufen die Prozessliste lesen.
+- Direkte Änderung der Dashboard-HTML geht beim Rendern verloren: drei Einträge (`SEDRA-N8N-IMP-01`, `SEDRA-CPU-01`, `SEDRA-NACHT-01`) standen nur dort und wurden ins Register nachgetragen. Register nur über `auftraege.json` ändern.
+- Beim Bau des Wiederherstellungs-ZIP fand die Prüfung in `runtime_data/uix/clients/` den Anfang eines Cloud-Schlüssels; der Ordner wurde vom ZIP ausgeschlossen. Die Dateien selbst wurden nicht gelesen. Nicht geprüft: ob dort ein Schlüssel im Klartext liegt.
+- Den Server von Sedra kann nur der Captain bedienen (Token); Modelle lädt er im Fenster.
+
+**Register und Dashboard:** `SEDRA-POOL-01` (`a826152`) und `SEDRA-VERTEILEN-01` (`f6bb543`, `5b2e687`), beide MERGED; 49 Aufträge, Validator OK.
+
+**Backup und ZIP:** Backup des Captains `<archiv>/Back Up/Backup_2026-11-11/` (Git-Bundle aller Refs, lokale Daten, Notizen; ohne Modelle, Engines, Sprachmodelle, Sandboxes). Neues Entwickler-ZIP `<updates>/Uebergabe_Entwickler_2026-11-11/UEBERGABE_ENTWICKLER_2026-11-11.zip` (113,5 MB, 11174 Dateien, SHA256 beginnt mit `bd03eebb`): Code von `main` (Stand `aaf3b2c`), Notizen, Git-Bundle, nicht committete Dateien, lokale Konfiguration, Laufdaten, Koordination mit Roadmaps, Register und Fortschrittsdashboard, Anleitung `WIEDERHERSTELLEN.md`. Ohne Engines, Modelle, Sandboxes, NVIDIA-Schlüssel, Freigabe-Tokens und Client-Anmeldungen. Eine Wiederherstellung wurde nicht ausprobiert; geprüft sind Prüfsumme, Inhalt und das Git-Bundle (`git bundle verify`).
+
+**Offen:**
+1. Echter Harness-Lauf mit Manager und Unterchats auf dem Team-Modell (Laden nur durch den Captain im UI).
+2. 100k-Prompt-Test des 35B-Pools; Nemotron 3 × 60k neu messen.
+3. NVIDIA-Zugang: ein Schlüssel liegt im Schlüsselspeicher, die Umgebungsvariable war nicht gesetzt; ein echter Cloud-Aufruf mit `auftraege_verteilen` wurde nie probiert.
+4. Katalogeinträge der Captain-Datei für `coder.local_primary_team`, `harness.nemotron_e4b`, `harness.nemotron_e4b_team` (nur `modell-laden-nemotron-3x80k` ist frei).
+5. Wiederherstellung aus dem ZIP einmal auf einem leeren Ordner üben.
+6. Worktrees `<sedra>-wt-nachtlauf` und `cpu-nutzung` löschen (Ja nötig); `<sedra>-wt-roadmap-s10` und `claude/usb-stick-minimal-3c1b19` werden noch gebraucht.
+
 ## 9. Alle Chats (Sitzungen), nach Datum
 **Sedra Vorarbeiter (Gruppe):**
+- 10.–11.11. Claude Code, Chat „KV-Pool, Team, Manager-Werkzeug, Wiederherstellungs-ZIP“: gemeinsamer KV-Pool, Team-Rezepte und Profil `team-35b`, Werkzeug `auftraege_verteilen` (Manager und Harness mit Karte), Register und Dashboard, Backup-Stand und Entwickler-ZIP mit Wiederherstellung (siehe Abschnitt 17).
 - 10.11. Claude Code, Chat „Vorarbeiter: Specs, Postfach zum Coder, GPU-Messung“: Specs Fabrik-Control V2, Vorschau-Ausbau, Vorarbeiter-Kanal, Modellmenü, RAM freimachen; Postfach zum Coder (Pi); Prüfung von Commit `dcf8dde`; Messung der Grafikspeicher mit Monitor am Mainboard (siehe Abschnitt 16).
 - 09.–10.11. Claude Code, Chat „n8n-Import, Ryzen-9-Tuning, Profile, Nachtlauf“: Import-Vorschau auf der Startseite, Tinas Workflow auf das lokale Modell, Messungen Threads/Lagen/MTP/Kanäle, Profile `bau`, `bau-1x80k`, `bau-4x32k`, alter Nachtlauf gelöscht, neuer Nachtlauf (siehe Abschnitt 15).
 - 08.–09.11. Claude Code, Chat „Fabrik-Bau, Cloud-Modelle, Manager“: Factory SDK, Bau-Schleife, Berater, Fähigkeitstest, Manager mit Verfassung und Werkzeugen, Vorarbeiter-Kanal, Wissensquelle (siehe Abschnitt 13). Unterchats: nachtlauf-sedra-bau-berw (ausgesetzt), nachtlauf-sedra, neustart-sedra, k3-sedra, k3-nachricht, updater-uebergabe, tester-f05b-main, tester-main-verif.
