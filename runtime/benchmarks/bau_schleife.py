@@ -18,7 +18,7 @@ Ablauf:
 Ordner: der Bau-Projektordner kommt aus --projekt oder SEDRA_BAU_PROJEKT. Keine festen Laufwerkspfade im Code.
 
 Aufruf (aus dem Ordner runtime):
-  python benchmarks/bau_schleife.py --projekt <Projektordner> start [<Auftrag>] [--neu] [--spec <name>]
+  python benchmarks/bau_schleife.py --projekt <Projektordner> start [<Auftrag>] [--neu] [--spec <name>] [--arbeitsanweisung <typ>]
   --rezept <id> [--kontext <n>]: statt coder.local_primary ein anderes Rezept des Hauptmodells (z. B. coder.local_primary_1x80k) und ein Fenster in Token
   --spec: eine andere Spec mit den Stufen S1 bis S4 (devvm_specs/<name>.py); die Produktpruefung gibt es nur fuer factory_sdk_grundlage_v5,
           bei anderen Specs endet der Lauf nach S4 mit einem Kurzbericht (Kandidat bleibt zur Durchsicht, nichts wird uebernommen).
@@ -40,7 +40,7 @@ RUNTIME = Path(__file__).resolve().parents[1]
 BENCH = RUNTIME / "benchmarks"
 PY = Path(sys.executable)
 SPEC_NAME = "factory_sdk_grundlage_v5"
-ARBEITSANWEISUNG = "bau_coder"                # dritte Ebene: config/manager/arbeitsanweisungen/bau_coder.md, der Entwickler der Pipeline bekommt sie bei jeder Aufgabe
+ARBEITSANWEISUNG = None                   # dritte Ebene, AUS bis sie sich bewaehrt (A/B 11.11.: kein messbarer Nutzen, +21 % Prompt-Token). Ein: --arbeitsanweisung <typ>, zum Beispiel bau_coder
 STANDARD_SPEC = SPEC_NAME                 # die Spec mit Produktpruefung (factory_sdk); jede andere Spec endet nach S4 ohne Produktpruefung
 SPEC_FILE = BENCH / "devvm_specs" / f"{SPEC_NAME}.py"
 STUFEN = ["S1", "S2", "S3", "S4"]
@@ -355,7 +355,9 @@ def bau_versuch(projekt, stufe, seed, bericht, satz):
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     lauf_log = projekt / "runtime_data" / f"bau_schleife_{stufe}_{satz['coder']}_{stamp}.log"
     befehl = [str(PY), "benchmarks/devvm_build.py", str(projekt), "--spec", SPEC_NAME, "--profile", "standard",
-              "--coder", satz["coder"], "--only", stufe, "--arbeitsanweisung", ARBEITSANWEISUNG] + satz["args"]
+              "--coder", satz["coder"], "--only", stufe] + satz["args"]
+    if ARBEITSANWEISUNG:
+        befehl += ["--arbeitsanweisung", ARBEITSANWEISUNG]
     if seed:
         befehl += ["--seed", str(seed)]
     if bericht:
@@ -583,7 +585,14 @@ def main(argv):
         i = argv.index("--projekt")
         projekt_angabe = argv[i + 1]
         argv = argv[:i] + argv[i + 2:]
-    global SPEC_NAME, SPEC_FILE
+    global SPEC_NAME, SPEC_FILE, ARBEITSANWEISUNG
+    if "--arbeitsanweisung" in argv:
+        i = argv.index("--arbeitsanweisung")
+        typ = argv[i + 1] if i + 1 < len(argv) else ""
+        if not re.fullmatch(r"[a-z0-9_]{1,60}", typ):
+            raise SystemExit(f"--arbeitsanweisung: ungueltige Angabe {typ!r}")
+        ARBEITSANWEISUNG = typ
+        argv = argv[:i] + argv[i + 2:]
     if "--rezept" in argv:
         i = argv.index("--rezept")
         rezept = argv[i + 1] if i + 1 < len(argv) else ""

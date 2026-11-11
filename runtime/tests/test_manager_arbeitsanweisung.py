@@ -93,8 +93,8 @@ class Anschluss(unittest.TestCase):
         bench = Path(__file__).resolve().parents[1] / "benchmarks"
         schleife = (bench / "bau_schleife.py").read_text(encoding="utf-8")
         bau = (bench / "devvm_build.py").read_text(encoding="utf-8")
-        self.assertIn('"--arbeitsanweisung", ARBEITSANWEISUNG', schleife)
-        self.assertIn('ARBEITSANWEISUNG = "bau_coder"', schleife)
+        self.assertIn('befehl += ["--arbeitsanweisung", ARBEITSANWEISUNG]', schleife)     # nur wenn gewaehlt: Standard der Schleife ist AUS (siehe test_ab_bau)
+        self.assertIn("ARBEITSANWEISUNG = None", schleife)
         self.assertEqual(lade_arbeitsanweisung("bau_coder")["typ"], "bau_coder")
         self.assertIn('team.run(stage["task"] + addendum, lessons)', bau)
         self.assertIn('REWORK_TASK.format(task=stage["task"] + addendum', bau)

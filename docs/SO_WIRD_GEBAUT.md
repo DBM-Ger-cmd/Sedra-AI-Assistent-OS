@@ -32,6 +32,12 @@ cd runtime
 
 **Feld `SEED`** (geändert 21.10.2026, PIPE-10): Baut eine Spec auf einer Saat auf, trägt sie `SEED = "benchmarks/<ordner>"` (Pfad relativ zu `runtime/`). `devvm_build.py` nimmt den Ordner als `--seed`, wenn keiner angegeben ist (ein angegebenes `--seed` gewinnt, mit Zeile im Log); fehlt der Ordner: Abbruch `seed_missing`. Der Stempel bindet den Hash des Saat-Ordners (`seed_sha256`); `spec_check` meldet die Zeile `seed <ordner> (<n> Dateien)`. Stempel von vor dem 21.10.2026 sind damit ungültig (`spec_changed_since_check`): einmal neu prüfen.
 
+## Vergleichslauf (A/B) und Arbeitsanweisung
+
+**Arbeitsanweisung** (dritte Ebene, `config/manager/arbeitsanweisungen/<typ>.md`, 11.11.2026): `devvm_build.py --arbeitsanweisung <typ> [--anweisung-sprache auto|de|en]` hängt ihren Text an jede Aufgabe des Entwicklers und an die Nacharbeit. In der Bau-Schleife ist sie **standardmäßig aus** (`bau_schleife.py ... --arbeitsanweisung bau_coder` schaltet sie ein), weil der erste A/B-Lauf (am3_rechte_diff, 3 Paare) keinen messbaren Nutzen und rund 21 % mehr Prompt-Token zeigte. Zweiter Vergleich (am3_berechtigung, 1044 Differenzfälle, je 5 Läufe, 11.11.2026): Dauer im Median ohne 167 s, deutsch 129 und 134 s, englisch 146 s; bei der Qualität (Läufe ohne Abweichung 3/5, 3/5 und 1/5, 3/5) kein Signal, Englisch nicht besser als Deutsch. Der Tempogewinn gilt erst nach mehr Läufen und einer dritten Spec als belegt. `:en` bricht ab, wenn die englische Fassung nicht gilt (kein stiller Rückfall auf Deutsch).
+
+**Standardvergleich:** `python benchmarks/ab_bau.py <spec> [--paare 3] [--arme ohne,bau_coder:de]` zeigt ohne `--start` nur den Plan und prüft Stempel, GPU (höchstens 3 GiB), Prozesse, Sperrdatei und RAM. Mit `--start` (Ja des Captains) laufen die Läufe abwechselnd nacheinander; Ergebnis unter `<projekt>/runtime_data/ab_bau/<spec>_<zeit>/` (`bericht.md`, `ergebnis.json`, Logs). Gemessen werden Stufen, Dauer, Aufrufe, Nacharbeiten, Token und der **Differenztest** gegen die Referenz (`benchmarks/ab_diff/<spec>.py` mit `MODUL` und `faelle(ref)`): Bestanden beweist wenig, Abweichungen bei Randfällen zeigen die Qualität. Unter 5 Läufen je Arm warnt der Bericht. Eine Spec ohne Differenzfälle wird nur nach Stufen und Aufwand verglichen.
+
 ## Abbruchgrenzen
 
 - **Kein Stempel:** `spec_not_checked`. Spec, Referenz oder Saat nach der Prüfung geändert: `spec_changed_since_check`. Stempel nur vom Host (`spec_check --host-only`): `spec_stamp_host_only`.

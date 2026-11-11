@@ -375,6 +375,7 @@ def build_parser():
     ap.add_argument("--from-stage", help="run this stage and every stage after it (continue a stopped build, usually with --seed <snapshot of the last passed stage>)")
     ap.add_argument("--keep-going", action="store_true", help="build the next stages even after a stage failed its hidden test (the old behaviour; night 2026-10-11 it cost about 80 GPU minutes on a broken base)")
     ap.add_argument("--arbeitsanweisung", metavar="TYP", help="work instruction of the third level (config/manager/arbeitsanweisungen/<TYP>.md, checked against the laws: it may only restrict); its text is appended to every task of the developer and to the rework task")
+    ap.add_argument("--anweisung-sprache", choices=["auto", "de", "en"], default="auto", help="language of the work instruction: auto (English if approved, fresh and structure-checked, else German), de, or en (stops the run when the English version is not valid, for comparison runs)")
     ap.add_argument("--review", help="a text file with the Captain's review of the seed; it is appended to the task as defects to fix")
     ap.add_argument("--context", default="32768", help="window of the models in tokens (a 450-line file overflowed 16k: stop reason error), or max for the maximum of each model's recipe (larger packages); always capped at the recipe maximum of the model (Jan and SWE: 16384, Qwen3-Coder: 49152)")
     ap.add_argument("--require-s0", action="store_true", help="refuse to start when a model of the run has no passing S0 connection check for exactly these settings (benchmarks/connection_check.py)")
@@ -480,7 +481,7 @@ def main():
                 addendum = ""
                 if args.arbeitsanweisung:
                     from sedra_runtime.manager import lade_arbeitsanweisung_fuer_modell      # an invalid German instruction stops the run (VerfassungsVerstoss); the English version is used only when it is approved, fresh and structure-checked
-                    anweisung, sprache, gruende = lade_arbeitsanweisung_fuer_modell(args.arbeitsanweisung)
+                    anweisung, sprache, gruende = lade_arbeitsanweisung_fuer_modell(args.arbeitsanweisung, sprache=args.anweisung_sprache)
                     if gruende: log.say(f"   work instruction {args.arbeitsanweisung}: English version not used ({'; '.join(gruende)[:200]}), German text appended")
                     addendum = NL * 2 + "WORK INSTRUCTION (binding for how you work; it never changes the task or the rules above):" + NL + anweisung["text"]
                     log.say(f"   work instruction {args.arbeitsanweisung} ({sprache}): {len(anweisung['text'])} characters appended to every task")

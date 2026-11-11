@@ -89,14 +89,21 @@ def lade_arbeitsanweisung(typ, gesetze=None, pfad=None, pflicht=True):
     return {"typ": typ, "werkzeuge": wz, "cloud": cloud, "text": text}
 
 
-def lade_arbeitsanweisung_fuer_modell(typ, gesetze=None):
-    """Die Arbeitsanweisung in der Sprache für Modelle: die freigegebene englische Fassung, wenn sie gültig ist (Hash der deutschen Quelle,
-    Freigabe, Struktur, gleicher Kopf), sonst die deutsche. Rückgabe: (Anweisung, "en" oder "de", Gründe gegen die englische Fassung)."""
+def lade_arbeitsanweisung_fuer_modell(typ, gesetze=None, sprache="auto"):
+    """Die Arbeitsanweisung in der Sprache für Modelle. `auto`: die freigegebene englische Fassung, wenn sie gültig ist (Hash der deutschen Quelle,
+    Freigabe, Struktur, gleicher Kopf), sonst die deutsche. `de`: immer deutsch. `en`: nur englisch; ist sie nicht gültig, VerfassungsVerstoss (für Vergleichsläufe,
+    damit ein stiller Rückfall auf Deutsch das Ergebnis nicht verfälscht). Rückgabe: (Anweisung, "en" oder "de", Gründe gegen die englische Fassung)."""
     from . import uebersetzung
+    if sprache not in ("auto", "de", "en"):
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"Unbekannte Sprache '{sprache}'.")
     g = gesetze or lade_gesetze()
     a = lade_arbeitsanweisung(typ, gesetze=g)                       # die deutsche Fassung muss immer gültig sein (Gesetze)
+    if sprache == "de":
+        return a, "de", []
     ordner = CONFIG / g["arbeitsanweisungen"]["ordner"]
     gruende = uebersetzung.pruefe_fassung(typ, ordner)
+    if gruende and sprache == "en":
+        raise VerfassungsVerstoss("arbeitsanweisungen", f"Die englische Fassung von '{typ}' gilt nicht: {'; '.join(gruende)}.")
     if gruende:
         return a, "de", gruende
     _, text_en = uebersetzung.teile((ordner / f"{typ}.en.md").read_text(encoding="utf-8"))
