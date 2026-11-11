@@ -429,3 +429,22 @@ Vorschlag für die Entscheidung des Captains (E12): Diese vier Routen bekommen i
 
 **Tests:** `tests/test_harness_oberflaeche_weich.py` (25): weich/hart/frei je Pfad, `einstufung` mit Katalog `frei` und `vorarbeiter`, das Feld mit allen Fehlern, höchstens eine aktive Aufgabe, Deckung nur für den genannten Pfad (und die der Modelle unverändert), ganzer Weg mit echtem Guard und Kiste (Karte statt Schreiben, Aufgabe deckt nur den Pfad, Sitzungs-Erlaubnis deckt nie).
 
+
+## 14. Stand des Baus (11.11.2026): O3 G2, G3, G6, G7 und das Formular G1-06
+
+| ID | Stand | Beleg |
+|---|---|---|
+| G2-01, G2-02, G2-04 | gebaut: unter einer Aufgabe geschriebener Code unter `uix/` des laufenden Programms wird zurückgehalten (`harness/oberflaeche.py`, Haken in `harness/freigabe.py`); über eine Karte, ohne Aufgabe und in anderen Projekten nicht; die Platte hat die neue Fassung | `test_harness_oberflaeche_weg` |
+| G2-03 | gebaut: der Betriebsserver liefert die bestätigte Fassung (`_module_file`, `STATIC_FILE`), neue Dateien als 404 | `test_harness_oberflaeche_weg` (HTTP) |
+| G2-05, G2-06, G2-07 | gebaut als Antrag `harness_oberflaeche` im Posteingang (Klasse H, Bestätigung außerhalb des Browsers): Weg **Freigeben = übernehmen**, **Ablehnen** = Karte zu. **Abweichung:** das Zurücksetzen (Klasse N) ist kein dritter Weg der Karte, sondern eine eigene Route `POST oberflaeche/zuruecksetzen` mit Knopf in den Einstellungen. Die Karte entsteht am Ende einer Aufgabe oder auf Wunsch (`POST oberflaeche/vorlegen`); mehr als 30 Dateien nur über die Konsole | `test_harness_oberflaeche_karte`, `test_uix_oberflaeche_ui` |
+| G2-08 | gebaut: `runtime_data/harness/oberflaeche/` (`stand.json`, `inhalt/<sha>`, `verworfen/`); die Grenze von 1 MB ist gleich `DATEI_MAX` des Werkzeugs, größere Dateien lehnt schon das Werkzeug ab | Test |
+| G2-09 | **nicht gebaut:** die Vorschau mit eigenem Prüfserver-Prozess (`POST oberflaeche/vorschau`) | – |
+| G2-10 | gebaut: Schalter `oberflaeche_abnahme` (Standard an, nur in der Datei) | Test |
+| G3-01 bis 03 | gebaut: Hinweise `⚠` auf hinzukommenden Zeilen (`desk/install.py` `hinweise_im_diff`, `FREIGABE_WEGE`), auf der Sammelkarte und auf der G4-Karte, mit dem Satz „Hinweise sind eine Lesehilfe …“ | `test_harness_oberflaeche_hinweise` |
+| G6-01 bis 03 | gebaut: Start-Bericht (`startbericht`, einziger Weg `zur_kenntnis`, Klasse N), Audit `STARTBERICHT` und `STARTBERICHT_GELESEN`; scannt beim Start nur, wenn es schon einen Code-Stand im Projekt gibt | `test_harness_startbericht` |
+| G7-01, G7-02 | gebaut: Übernahme-Sätze `U-…`, Zurücknehmen mit Prüfung `seit_der_uebernahme_geaendert`, neue Dateien nach `verworfen/` | `test_harness_oberflaeche` |
+| G7-03, G7-04 | gebaut: `CODE_STAND.bat <projekt> --oberflaeche`, `--uebernehmen-oberflaeche`, `--zuruecksetzen`, `--zuruecknehmen U-…`, Audit `kanal: konsole` | `test_harness_oberflaeche_konsole` |
+| G7-05 | gebaut: Einstellungen → Freigabe-Modus: Liste, „Sammelkarte vorlegen“, „Alles zurücksetzen“, „Übernahme zurücknehmen“ | `test_uix_oberflaeche_ui` |
+| G1-06 | gebaut: Feld „Oberfläche“ im Aufgabenformular mit dem Satz aus AM0-E1 §6 | `test_uix_oberflaeche_ui` |
+
+Offen: G2-09 (Vorschau mit Prüfserver), die Abnahme am PC (eine echte Aufgabe mit `oberflaeche` durchspielen, die Sammelkarte über den Systemdialog bestätigen), und die Entscheidung „weich vor Katalog für Modelle“.
