@@ -13,14 +13,14 @@ Fehlerhafte area oder mid fuehren zu ValueError (Text "area" beziehungsweise "id
 TASK_S1 = '''Lege herkunft_kern.py an mit:
 - ORDNER = "uix_herkunft".
 - pfad(project_root, area, mid) -> pathlib.Path: project_root / "local_config" / ORDNER / area / (mid + ".json"). Prueft area und mid zuerst (ValueError).
-- erfassen(folder, area) -> dict: Schluessel ist der relative Pfad jeder Datei im Ordner und in allen Unterordnern, geschrieben mit "/" als Trenner (zum Beispiel "sub/x.js"), Wert ist der sha256-Hex der Dateibytes. Das dict ist nach Schluessel sortiert. Ein leerer Ordner ergibt {}.
+- erfassen(folder, area) -> dict: Schluessel ist der relative Pfad jeder Datei im Ordner und in allen Unterordnern, geschrieben mit "/" als Trenner, auch bei mehreren Unterordnern (zum Beispiel "sub/x.js" und "a/b/c/d.txt", nie mit "\\\\" und nie gemischt), Wert ist der sha256-Hex der Dateibytes. Das dict ist nach Schluessel sortiert. Ein leerer Ordner ergibt {}.
   Fehler (ValueError): area ungueltig (Text "area"); folder ist kein vorhandener Ordner (Text "ordner"); irgendein Teil eines relativen Pfades, auch ein Ordnername, beginnt mit einem Punkt (Text "punkt_pfad").
 Keine Kommentare, keine Docstrings, keine eigenen Tests.'''
 
 TASK_S2 = '''Ergaenze herkunft_kern.py:
 - schreiben(project_root, area, mid, folder, *, quelle, mission_id, vertrauen) -> dict: legt die Datei pfad(project_root, area, mid) an (fehlende Ordner werden erzeugt, eine vorhandene Datei wird ersetzt) und gibt denselben Inhalt als dict zurueck. Inhalt (JSON, UTF-8): "schema": 1, "art": area, "id": mid, "vertrauen_beim_einbau": vertrauen, "quelle": str(quelle), "commit": None, "mission_id": mission_id, "eingebaut_am": Zeitpunkt jetzt in UTC im Format "2026-11-10T22:30:00Z" (JJJJ-MM-TTTHH:MM:SSZ), "dateien": erfassen(folder, area).
   Die Datei wird atomar geschrieben: erst in eine Datei mit dem Namen der Zieldatei plus ".tmp" im selben Ordner, dann ersetzen; nach dem Schreiben bleibt keine ".tmp"-Datei zurueck. Ist area oder mid ungueltig, wird nichts angelegt (ValueError).
-- lesen(project_root, area, mid) -> dict oder None: None, wenn die Datei nicht existiert. Sonst der Inhalt als dict. Ist die Datei kein gueltiges JSON, kein JSON-Objekt (dict) oder hat "schema" nicht den Wert 1, wird ValueError("herkunft_unlesbar") geworfen.
+- lesen(project_root, area, mid) -> dict oder None: None, wenn die Datei nicht existiert. Sonst der Inhalt als dict. Ist die Datei kein gueltiges JSON, ist ihr Inhalt kein gueltiger UTF-8-Text (zum Beispiel Binaerdaten), ist es kein JSON-Objekt (dict) oder hat "schema" nicht den Wert 1, wird ValueError("herkunft_unlesbar") geworfen, nie ein anderer Fehler.
 - entfernen(project_root, area, mid) -> None: loescht die Datei; gibt es sie nicht, passiert nichts und es gibt keinen Fehler. Andere Dateien bleiben.
 Keine Kommentare, keine Docstrings, keine eigenen Tests.'''
 
@@ -88,6 +88,17 @@ assert wirft(erfassen, k, "tools")
 n = modul()
 schreib(n, "sub/.versteckt", b"x")
 assert wirft(erfassen, n, "tools")
+o = modul()
+(pathlib.Path(o) / ".leer").mkdir()
+assert wirft(erfassen, o, "tools")
+o2 = modul()
+(pathlib.Path(o2) / "sub" / ".leer").mkdir()
+assert wirft(erfassen, o2, "tools")
+t = tempfile.mkdtemp()
+schreib(t, "a/b/c/d.txt", b"d")
+schreib(t, "a/z.txt", b"z")
+assert list(erfassen(t, "tools")) == ["a/b/c/d.txt", "a/z.txt"]
+assert all("\\\\" not in k for k in erfassen(t, "tools"))
 ''', "from herkunft_kern import pfad, erfassen, ORDNER\n" + HEAD)
 
 C2 = hidden('''
@@ -121,6 +132,13 @@ assert wirft(schreiben, root, "apps", "ab", d, quelle="q", mission_id="m", vertr
 assert not (pathlib.Path(root) / "local_config" / "uix_herkunft" / "apps").exists()
 datei.write_text("kein json", encoding="utf-8")
 assert wirft(lesen, root, "tools", "rechnung")
+try:
+    lesen(root, "tools", "rechnung")
+except ValueError as e:
+    assert str(e) == "herkunft_unlesbar"
+else:
+    raise AssertionError("kein ValueError")
+datei.write_bytes(b"\\xff\\xfe\\x00")
 try:
     lesen(root, "tools", "rechnung")
 except ValueError as e:
@@ -168,6 +186,17 @@ assert pruefen(tempfile.mkdtemp(), "tools", {"dateien": {}}) == []
 p = modul()
 schreib(p, ".env", b"x")
 assert pruefen(p, "tools", e) == ["herkunft_pfad_ungueltig"]
+p2 = modul()
+(pathlib.Path(p2) / ".leer").mkdir()
+assert pruefen(p2, "tools", e) == ["herkunft_pfad_ungueltig"]
+tief = tempfile.mkdtemp()
+schreib(tief, "a/b/c/d.txt", b"d")
+et = {"dateien": erfassen(tief, "tools")}
+assert pruefen(tief, "tools", et) == []
+os.remove(pathlib.Path(tief) / "a" / "b" / "c" / "d.txt")
+assert pruefen(tief, "tools", et) == ["herkunft_datei_fehlt:a/b/c/d.txt"]
+schreib(tief, "a/b/c/e.txt", b"e")
+assert pruefen(tief, "tools", et) == ["herkunft_datei_fehlt:a/b/c/d.txt", "herkunft_datei_neu:a/b/c/e.txt"]
 vorher = json.dumps(e, sort_keys=True)
 pruefen(d, "tools", e)
 assert json.dumps(e, sort_keys=True) == vorher
