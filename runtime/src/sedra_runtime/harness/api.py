@@ -203,6 +203,19 @@ class HarnessApi:
         events = getattr(self.hub, 'events', None)
         if events is not None:
             events.publish(name, daten)
+        if name == 'harness.aufgabe' and (daten or {}).get('zustand') in ('erledigt', 'abgelaufen', 'erschoepft', 'zurueckgenommen'):
+            self._oberflaeche_vorlegen_am_ende()
+
+    def _oberflaeche_vorlegen_am_ende(self):
+        """G2-05: Endet eine Aufgabe (erledigt, abgelaufen, erschöpft, zurückgenommen) und sind Oberflächen-Dateien zurückgehalten, entsteht die Sammelkarte im Posteingang.
+        Fehler (zu viele Dateien, kein Antrag möglich) bleiben still: dann geht es über die Einstellungen oder die Konsole."""
+        ob = getattr(self.hub, 'oberflaeche', None)
+        if ob is None or not any(e['geaendert'] for e in ob.liste()):
+            return
+        try:
+            harness_antraege.oberflaeche_antrag(self.hub)
+        except Exception:
+            pass
 
     def _audit_roh(self, event, payload, **_kw):
         self._audit(event, payload)

@@ -221,7 +221,8 @@
   function freigabe(S, box){
     const k = H().katalogEditor.flaeche(S, box);
     const e = H().erlaubnisse ? H().erlaubnisse.flaeche(S, box) : null;          // P0 M1: Sitzungs-Erlaubnisse unter dem Katalog
-    return {abbauen(){ if(k && k.abbauen) k.abbauen(); if(e) e.abbauen(); }};
+    const o = H().oberflaeche ? H().oberflaeche.flaeche(S, box) : null;         // O3 G2/G7-05: Oberflächen-Änderungen übernehmen, zurücksetzen, zurücknehmen
+    return {abbauen(){ if(k && k.abbauen) k.abbauen(); if(e) e.abbauen(); if(o) o.abbauen(); }};
   }
 
   // D-U4: max_zuege je Vorlage → Antrag mit Gate; max_tokens/temperature nur Anzeige

@@ -100,6 +100,7 @@
     box.append(kopf, zweckZeilen(a), d().el('div', 'hs-leise', (a.status === 'aktiv' ? rest : a.status + (a.grund ? ' – ' + a.grund : '')) + ' · ' + a.aufrufe + ' benutzt' + (a.vorschlag_von ? ' · Vorschlag des Vorarbeiters' : '')),
                d().el('div', 'hs-leise', 'Sitzungen: ' + a.sitzungen.map(id=>sitzungsName(S, id)).join(', ')), technisch(a.erlaubt));
     if((a.modelle || []).length) box.append(d().el('div', 'hs-leise', 'Modelle: ' + a.modelle.join(', ')));
+    if((a.oberflaeche || []).length) box.append(d().el('div', 'hs-leise', 'Oberfläche: ' + a.oberflaeche.join(', ') + (a.oberflaeche_hinweis ? ' – ' + a.oberflaeche_hinweis : '')));
     (a.warnungen || []).forEach(w=>box.append(d().el('div', 'hs-karte-warnung', '⚠ ' + w)));
     if(a.status !== 'aktiv') return box;
     const laeufe = d().el('input'); laeufe.type = 'checkbox'; laeufe.checked = true; laeufe.setAttribute('aria-label', 'Läufe der Aufgabe mit stoppen');
@@ -214,7 +215,11 @@
     const titel = d().el('input', 'hs-karte-notiz'); titel.placeholder = 'Titel (leer = aus den Bausteinen)'; titel.setAttribute('aria-label', 'Titel');
     const zweck = d().el('input', 'hs-karte-notiz'); zweck.maxLength = 160; zweck.setAttribute('aria-label', 'Zweck'); zweck.placeholder = 'Wofür? Ein Satz (leer = aus den Bausteinen)';
     const modelle = d().el('input', 'hs-karte-notiz'); modelle.placeholder = 'Modelle (Rezept-IDs, durch Komma) – nur für Läufe mit Modell'; modelle.setAttribute('aria-label', 'Modelle');
-    const mehr = d().el('details', 'hs-auf-erweitert'); mehr.append(d().el('summary', 'hs-leise', 'Erweitert: Titel, Zweck, eigene Zeilen, Modelle'), titel, zweck, erlaubt, modelle);
+    // G1-06 (O3): Code der Oberfläche gibt nur eine Aufgabe frei, die den Pfad nennt – ein Ordner, vom Captain; der Satz steht dabei
+    const oberflaeche = d().el('input', 'hs-karte-notiz'); oberflaeche.placeholder = 'Oberfläche (Pfadmuster, durch Komma, ein Ordner uix/shells/<id>/ oder uix/tools/<id>/) – nur wenn die Aufgabe Code der Oberfläche ändern soll'; oberflaeche.setAttribute('aria-label', 'Oberfläche');
+    const oberflaecheSatz = d().el('div', 'hs-karte-warnung', 'Code an diesen Stellen läuft in der Oberfläche mit allen Rechten der Seite – auch Freigaben. Er wirkt erst, wenn du ihn übernimmst (Einstellungen → Freigabe-Modus). Gib nur Pfade frei, die zu diesem Zweck gehören.'); oberflaecheSatz.hidden = true;
+    oberflaeche.oninput = ()=>{ oberflaecheSatz.hidden = !oberflaeche.value.trim(); };
+    const mehr = d().el('details', 'hs-auf-erweitert'); mehr.append(d().el('summary', 'hs-leise', 'Erweitert: Titel, Zweck, eigene Zeilen, Modelle, Oberfläche'), titel, zweck, erlaubt, modelle, oberflaeche, oberflaecheSatz);
     const meldung = d().el('div', 'hs-auf-meldung'); meldung.setAttribute('role', 'status');
     const ok = d().el('button', 'hs-senden', 'Freigeben'); ok.type = 'submit';
     ok.onclick = async()=>{
@@ -229,9 +234,10 @@
       try{
         const out = await S.api('/api/harness/aufgaben', {method: 'POST', body: {titel: titel.value.trim() || namen.join(', ').slice(0, 60) || 'Aufgabe',
           zweck: zweck.value.trim() || ('Erlaubt: ' + (namen.join(', ') || liste.map(x=>x.werkzeug).join(', '))).slice(0, 160), projekt: projekt.value,
-          sitzungen: [...gewaehlt], erlaubt: liste, modelle: modelle.value.split(',').map(m=>m.trim()).filter(Boolean), ende}});
+          sitzungen: [...gewaehlt], erlaubt: liste, modelle: modelle.value.split(',').map(m=>m.trim()).filter(Boolean),
+          oberflaeche: oberflaeche.value.split(',').map(m=>m.trim()).filter(Boolean), ende}});
         S.hinweis('Aufgabe ' + out.id + ' freigegeben.' + ((out.warnungen || []).length ? ' Achtung: ' + out.warnungen.length + ' Warnung(en).' : ''), (out.warnungen || []).length ? 'warn' : 'note');
-        ok.disabled = false; titel.value = zweck.value = modelle.value = erlaubt.value = ''; gewaehlteBausteine.clear(); zeichneBausteine(); werte();
+        ok.disabled = false; titel.value = zweck.value = modelle.value = erlaubt.value = oberflaeche.value = ''; oberflaecheSatz.hidden = true; gewaehlteBausteine.clear(); zeichneBausteine(); werte();
         gewaehlt.clear(); vorgewaehlt = false; zeichneSitzungen(); zeigeSumme();
         neuLaden(true);
       }catch(err){
