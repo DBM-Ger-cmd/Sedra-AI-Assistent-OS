@@ -1,0 +1,4 @@
+{
+  "_hinweis": "Taskleiste von One Sedra (SPEC_APPS_v1_AM1): welche Instrumente als Zelle erscheinen und in welcher Reihenfolge. Die Token-Zelle gehört der Shell und steht immer an zweiter Stelle. Die Wahl im Desktop Builder (ausblenden, Reihenfolge) liegt darüber; fehlt diese Datei, gilt die eingebaute Liste.",
+  "zellen": ["gauge-decisions", "gauge-model", "gauge-temp", "gauge-vram", "gauge-ram", "gauge-server", "gauge-scheduler", "gauge-state"]
+}

@@ -18,6 +18,7 @@
 
   const tool = {
     id: 'gauge-slots',
+    field: 'slots',
 
     mount(el, ctx){
       this.el = el; this.ctx = ctx;

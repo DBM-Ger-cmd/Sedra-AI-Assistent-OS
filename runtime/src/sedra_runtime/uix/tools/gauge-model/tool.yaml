@@ -13,3 +13,4 @@ tool:
     listens: [task.changed, decision.pending, decision.answered, model.changed, system.state]
   trust: CORE
   needs: {ui: ">=1.0 <2"}
+  zelle: {feld: model, label: "Modell", ort: models, aktion: modellmenue}           # Vertrag 1.1 (AM1): die Zelle in der Taskleiste von One Sedra

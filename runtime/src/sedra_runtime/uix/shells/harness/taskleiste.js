@@ -11,9 +11,27 @@
   const ABSTAND_MS = 2000;
   const GESEHEN_KEY = 'sedra.harness.gesehen';
   const GESEHEN_MAX = 300;
-  // Zelle → Beschriftung und die App, die ein Klick öffnet (Ort-ID aus ui/places.js)
-  const ZELLEN = [['decisions', 'Freigaben', null], ['model', 'Modell', 'models'], ['temp', 'Temp', 'hardware'], ['vram', 'VRAM belegt', 'hardware'], ['ram', 'RAM frei', 'hardware'],
-                  ['server', 'Modellserver', 'models'], ['scheduler', 'Scheduler', 'slots'], ['state', 'Zustand', 'machine']];
+  const LEISTE_URL = '/uix/shells/harness/leiste.json';
+  // Die Zellen (Feld, Beschriftung, Ort, Klick) kommen aus den Manifesten der Instrumente, in der Reihenfolge von leiste.json (zellen.js, SPEC_APPS_v1_AM1);
+  // fehlt die Datei, ist sie kaputt oder ergibt sie nichts, gilt die eingebaute Liste ZELLEN_RUECKFALL – mit einer Meldung, nicht still.
+  function zellenListe(S){
+    const Z = root.sedraZellen;
+    if(S._zellenListe) return S._zellenListe;
+    let liste = Z.ZELLEN_RUECKFALL;
+    if(S._leisteAuswahl && S.ctx && S.ctx.tools){
+      const erg = Z.zellenAusManifest(S.ctx.tools.byKind('instrument'), S._leisteAuswahl);
+      if(erg.zellen.length) liste = erg.zellen;
+      else melden(S, 'keine Zelle aus den Instrumenten');
+    }
+    S._zellenListe = liste;
+    return liste;
+  }
+  function melden(S, grund){ if(S.ctx && S.ctx.onProblem && !S._leisteGemeldet){ S._leisteGemeldet = true; S.ctx.onProblem('Taskleiste', new Error('Leiste aus der eingebauten Liste: ' + grund)); } }
+  function leisteLaden(S){
+    fetch(LEISTE_URL, {cache: 'no-store'}).then(res=>{ if(!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+      .then(json=>{ S._leisteAuswahl = root.sedraZellen.pruefeAuswahl(json); S._zellenListe = null; status(S); })
+      .catch(err=>melden(S, err.message));
+  }
   // Temperatur, Grafikspeicher und Arbeitsspeicher sind drei Zellen (Captain 05.11.2026; am 03.11. waren es eine, „40 °C · 1.5/12 GB · RAM 15.4/31 GB“ wurde abgeschnitten).
   // Der Server liefert Temperatur und Grafikspeicher in einem Wert („42 °C · 10.7/12 GB“); hier wird er getrennt. VRAM zeigt belegt/gesamt, RAM frei/gesamt – die Beschriftung sagt es.
   function trennen(v){
@@ -41,6 +59,7 @@
     const sc = root.sedraHarness.schnell;
     bar.append(start, mitte, ...(sc ? [sc.knopf(S)] : []), status, uhr);          // der Aufnahme-Knopf steht fest in der Taskleiste (Captain 04.11.2026)
     S._leiste = {mitte, status, uhr, zuletzt: 0, wartet: null};
+    leisteLaden(S);
     const ticken = ()=>{ uhr.textContent = new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'}); };
     ticken();
     setInterval(()=>{ ticken(); zeichnen(S); if(!document.hidden) root.sedraHarness.taskleiste.status(S); }, 15000);      // A7 (1.11.): Statuszellen frischen auch während langer Antworten auf (HS-52: höchstens alle 2 s bleibt)
@@ -183,21 +202,22 @@
       const sm = root.sedraHarness.startmenue; if(sm && sm.stripNeu) sm.stripNeu(S, roh);
       const v = trennen(roh);
       // HS-32: eine Zelle ohne Wert (– und Ton off) wird ausgeblendet – kleine Bildschirme, Stick an fremdem PC
-      const da = ZELLEN.filter(([k])=>v[k] && !(String(v[k].value ?? '–') === '–' && (v[k].tone || 'off') === 'off'));
-      const zellen = da.map(([k, label, ort])=>{
-        const g = v[k];
+      const da = zellenListe(S).filter(z=>v[z.feld] && !(String(v[z.feld].value ?? '–') === '–' && (v[z.feld].tone || 'off') === 'off'));
+      const zellen = da.map(z=>{
+        const k = z.feld, label = z.label, g = v[k];
+        const ziel = root.sedraZellen.aktionZiel(z);                                                     // die Aktion aus dem Manifest zuerst, dann der Ort
         const zelle = d().el('span', 'hs-zelle ' + (g.tone || 'off'));
         zelle.dataset.zelle = k;
         zelle.title = label + ': ' + (g.hint || '');
         let wert = String(g.value === undefined || g.value === null ? '–' : g.value);
-        if(k === 'decisions') wert = freigabenZelle(S, zelle, g, wert);
-        else if(ort){
-          const modellzelle = k === 'model' || k === 'server';
+        if(ziel.art === 'freigaben') wert = freigabenZelle(S, zelle, g, wert);
+        else if(ziel.art !== 'keine'){
+          const modellzelle = ziel.art === 'modellmenue' || ziel.art === 'routermenue';
           zelle.tabIndex = 0; zelle.setAttribute('role', 'button'); zelle.title += modellzelle ? (k === 'server' ? ' – Klick: Modell-Menü, unten der Modellserver (Sedra-Modell-Router) starten, beenden, Optionen' : ' – Klick: Modell laden, wechseln oder entladen; unten der Modellserver') : ' – Klick öffnet die App';
           const oeffnen = ()=>{
-            if(k === 'state'){ root.sedraHarness.einstellungen.oeffnen(S, 'system'); return; }          // Stufe 5 (D-U6): Zustand → Einstellungen (System)
+            if(ziel.art === 'einstellungen'){ root.sedraHarness.einstellungen.oeffnen(S, ziel.punkt ? ziel.gruppe + '/' + ziel.punkt : ziel.gruppe); return; }          // Stufe 5 (D-U6): Zustand → Einstellungen (System)
             if(modellzelle){ root.sedraHarness.modell.menue(S); return; }                                // 1.11. (Captain): die Modellsteuerung hängt an der Statusleiste, nicht an der Werkstatt
-            const o = root.sedraPlaces.PLACES.find(p=>p.id === ort); if(o) root.sedraHarness.app.oeffnen(S, o);
+            const o = root.sedraPlaces.PLACES.find(p=>p.id === ziel.ort); if(o) root.sedraHarness.app.oeffnen(S, o);
           };
           zelle.onclick = oeffnen;
           zelle.onkeydown = e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); oeffnen(); } };

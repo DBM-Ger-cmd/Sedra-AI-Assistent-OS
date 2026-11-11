@@ -1,0 +1,17 @@
+tool:
+  id: gauge-scheduler
+  name: "Scheduler"
+  description: "Belegte Plätze und Warteschlange der Modelle."
+  version: 1.0.0
+  kind: instrument
+  handles: []
+  order: 21
+  entry: {js: tool.js}
+  api: []                    # ein Instrument ruft keine Route – die Leiste der Shell liest /api/strip
+  events:
+    emits: []
+    listens: [task.changed, decision.pending, decision.answered, model.changed, system.state]
+  trust: CORE
+  needs: {ui: ">=1.1 <2"}
+  shells: [harness]          # Datenzelle der Taskleiste von One Sedra; das Cockpit zeichnet sie nicht
+  zelle: {feld: scheduler, label: "Scheduler", ort: slots}

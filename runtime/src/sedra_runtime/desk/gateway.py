@@ -18,8 +18,12 @@ import re
 import yaml
 
 from .registry import MODULE_ID, Registry
+from .herkunft import HerkunftsPruefer, lesen as herkunft_lesen
+from .manifest_felder import filtere, pruefe_profile, pruefe_shells, pruefe_zelle
+from .routen_pruefung import pruefe_routen
+from .shell_regeln import pruefe_shell
 
-UI_VERSION = (1, 0)
+UI_VERSION = (1, 1)
 OBJECT_TYPES = ('project', 'intent', 'task', 'candidate', 'file', 'model', 'skill', 'agent', 'decision', 'routine', 'boundary', 'planung',
                 'uebersetzung', 'nachrichten', 'transkript',       # Fisch (19.10.2026)
                 'aufnahme',                                        # Kern Sprache (19.10.2026): der Rekorder, für jede Shell
@@ -62,7 +66,8 @@ ROUTE = re.compile(r'^(GET|POST|PATCH|DELETE) (/(api|uix)(/[A-Za-z0-9_.-]+)*(/\*
 VERSION = re.compile(r'^\d+\.\d+\.\d+$')
 NEED = re.compile(r'^(>=|<=|>|<|==)?(\d+)(?:\.(\d+))?$')
 
-TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot', 'instanzen', 'gedaechtnis', 'zweck', 'gruppe'}
+TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot', 'instanzen', 'gedaechtnis', 'zweck', 'gruppe',
+             'shells', 'profile', 'zelle'}       # Vertrag 1.1 (AM1)
 SHELL_KEYS = {'id', 'name', 'version', 'entry', 'provides', 'layout', 'trust', 'needs', 'api', 'description', 'vorgabe', 'umschalter'}
 # Eine Shell aus einer Vorgabe (SPEC_SHELL_AUS_VORGABE_v1): kein Code im Ordner, nur `shell.vorgabe.yaml`; den Bildschirm baut der
 # Rahmen `ui/frame.js`. Was er darf, steht hier – nicht in der Datei des Autors –, denn der Rahmen ist Vertragscode.
@@ -135,6 +140,7 @@ def _common(doc, kind, folder, origin, errors):
     if not isinstance(routes, list) or not all(isinstance(r, str) and ROUTE.match(r) for r in routes):
         errors.append('api_route_invalid')
         routes = []
+    errors.extend(pruefe_routen(routes, origin, trust))                  # AM0-03: zu breite Platzhalter, Sperrliste für fremde Module (vor dem GET-Filter)
     if trust == 'COMMUNITY':
         routes = [r for r in routes if r.startswith('GET ')]           # foreign modules read; writing needs the Captain's review
     return js, css, routes
@@ -200,12 +206,17 @@ def check_tool(doc, folder: Path, origin='package'):
     gruppe = t.get('gruppe')
     if gruppe is not None and gruppe not in GRUPPEN:
         errors.append('gruppe_invalid')
+    errors.extend(pruefe_shells(t.get('shells'))[0])                  # Vertrag 1.1 (AM1): Verfügbarkeit je Shell und Profil, Zelle der Taskleiste
+    errors.extend(pruefe_profile(t.get('profile'))[0])
+    from .. import chat_tools
+    errors.extend(pruefe_zelle(t.get('zelle'), kind, list(chat_tools.PLACES)))
     if errors:
         return None, errors
     return {'id': t['id'], 'name': t['name'], 'version': t['version'], 'kind': kind, 'handles': handles, 'trust': t['trust'],
             'origin': origin, 'order': order, 'slot': slot, 'description': str(t.get('description') or ''),
             'own_types': own_types, 'instanzen': instanzen, 'gedaechtnis': list(dict.fromkeys(gedaechtnis)), 'zweck': zweck, 'gruppe': gruppe,
             'events': {'emits': list(events.get('emits') or []), 'listens': list(events.get('listens') or [])},
+            'shells': t.get('shells'), 'profile': t.get('profile'), 'zelle': t.get('zelle'),
             'js': js, 'css': css, 'api': routes, 'tests': tests}, []
 
 
@@ -215,6 +226,8 @@ def check_shell(doc, folder: Path, origin='package'):
         return None, ['shell_mapping_required']
     s = doc['shell']
     js, css, routes = _common(s, 'shell', folder, origin, errors)
+    if s.get('trust') == 'COMMUNITY':                               # AM0-06: eine fremde Shell ist nur eine Vorgabe – kein Code, kein eigenes CSS
+        errors.extend(pruefe_shell(s, 'COMMUNITY', [p.relative_to(folder).as_posix() for p in folder.rglob('*') if p.is_file()]))
     if s.get('vorgabe') is not None:
         return _check_frame_shell(s, folder, origin, errors)
     provides = s.get('provides') or []
@@ -300,6 +313,37 @@ def route_allowed(routes, method, path):
 class Gateway:
     def __init__(self, project_root: Path, registry: Registry | None = None):
         self.registry = registry or Registry(project_root)
+        self.project_root = Path(project_root)
+        self.herkunft_pruefen = True                          # AM0-02: Schalter `herkunft_pruefen` (local_config/switches.yaml), Standard an
+        self.melden = None                                    # der Hub setzt eine Funktion (kind, id, gruende), die UIX_MODULE_TAMPERED ins Audit schreibt
+        self._pruefer = HerkunftsPruefer()
+        self._gemeldet = set()
+
+    def _aktives_profil(self):
+        """Das Profil des Desktop Builders (`runtime_data/harness/desktop.json`); ohne Wahl oder bei einem Lesefehler None (= 'standard')."""
+        try:
+            from ..harness import desktop
+            return desktop.laden(self.project_root).get('profil') or None
+        except (ImportError, OSError, ValueError, KeyError, AttributeError):
+            return None
+
+    def _grundfunktionen(self):
+        """Werkzeuge, die eine Grundfunktion tragen: in jedem Profil sichtbar (ENTWURF_APPS_MODELL §2.2a). Gelesen aus dem Desktop Builder."""
+        try:
+            from ..harness import desktop
+            return set(desktop.GRUND_START) | {'gauge-' + z for z in desktop.GRUND_ZELLEN}
+        except ImportError:
+            return {'decisions', 'tasks', 'wissen', 'gauge-decisions'}
+
+    def _herkunft(self, area, folder):
+        """Gründe, warum die Herkunft eines COMMUNITY-Moduls nicht stimmt (leer = in Ordnung)."""
+        try:
+            eintrag = herkunft_lesen(self.project_root, area, folder.name)
+        except ValueError:
+            return ['herkunft_unlesbar']
+        if eintrag is None:
+            return ['herkunft_fehlt']
+        return self._pruefer.pruefen(folder, area, eintrag)
 
     def _load(self, kind):
         """{id: (folder, manifest)} and the rejected folders with their reasons."""
@@ -318,6 +362,15 @@ class Gateway:
             man, errors = check(doc, folder, origin)
             if errors:
                 rejected.append({'kind': kind[:-1], 'id': folder.name, 'origin': origin, 'reasons': errors}); continue
+            if origin == 'local' and man.get('trust') == 'COMMUNITY' and self.herkunft_pruefen:
+                gruende = self._herkunft(kind, folder)
+                if gruende:
+                    rejected.append({'kind': kind[:-1], 'id': folder.name, 'origin': origin, 'reasons': gruende})
+                    schluessel = (kind, folder.name, tuple(gruende))
+                    if self.melden is not None and schluessel not in self._gemeldet:
+                        self._gemeldet.add(schluessel)
+                        self.melden(kind[:-1], folder.name, list(gruende))
+                    continue
             ok[man['id']] = (folder, man)
         return ok, rejected
 
@@ -341,6 +394,17 @@ class Gateway:
         ids = [t for t in tools if t not in disabled and t not in pruefung]
         ids.sort(key=lambda t: (tools[t][1]['order'], t))
         ids = self.registry.ordered(ids) if cfg['order'] else ids
+        # Vertrag 1.1 (AM1): Sichtbarkeit je Shell und Profil – kein Recht, `allowed` lädt über `_load` und bleibt unberührt
+        grund = self._grundfunktionen()
+        liste = [{'id': t, 'name': tools[t][1]['name'], 'shells': tools[t][1].get('shells'), 'profile': tools[t][1].get('profile')} for t in ids]
+        profil = self._aktives_profil() if any(e['profile'] for e in liste) else None
+        sichtbar, nicht_shell, nicht_profil = filtere(liste, active, profil, grund)
+        ids = [e['id'] for e in sichtbar]
+        warnungen = []
+        for t in tools:
+            man = tools[t][1]
+            for w in pruefe_shells(man.get('shells'), sorted(shells))[1] + pruefe_profile(man.get('profile'), None, t in grund)[1]:
+                warnungen.append({'id': t, 'grund': w})
 
         def public(kind, man):
             pub = {k: v for k, v in man.items() if k not in ('api', 'js', 'css')}
@@ -361,6 +425,9 @@ class Gateway:
                 'tools': [public('tools', tools[t][1]) for t in ids],
                 'disabled': sorted(disabled & set(tools)),
                 'pruefung': sorted(pruefung),
+                'nicht_in_dieser_shell': nicht_shell,
+                'nicht_in_diesem_profil': nicht_profil,
+                'warnungen': warnungen,
                 'rejected': rejected,
                 'config': {'shell': cfg['shell'], 'from_file': cfg['from_file']}}
 

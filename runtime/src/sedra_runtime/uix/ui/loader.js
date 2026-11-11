@@ -70,6 +70,7 @@
   // what a shell must hand every tool (§4): a way to open, to notify, to decide. A shell that hands something else breaks every
   // tool silently – the Cockpit did exactly that for two builds (dock.js passed its api function). So the loader checks.
   const SHELL_API = ['open', 'notify', 'decide'];
+  const RAHMEN_SANDBOX = 'allow-scripts';      // AM0-05: genau dieser Wert; nie allow-same-origin, allow-top-navigation, allow-popups, allow-forms, allow-modals (ein Test hält das fest)
   function checkShellApi(shell, manifest, say){
     const missing = SHELL_API.filter(name=>!shell || typeof shell[name] !== 'function');
     if(missing.length && say) say('Shell', new Error('Die Shell gibt dem Werkzeug ' + manifest.id + ' keine vollständige Shell-API: ' + missing.join(', ') + ' fehlt'));
@@ -148,7 +149,7 @@
         mount(){}, unmount(){}, actions(){ return []; },
         mountFrame(el, ctx){
           const fenster = document.createElement('iframe');
-          fenster.setAttribute('sandbox', 'allow-scripts');
+          fenster.setAttribute('sandbox', RAHMEN_SANDBOX);
           fenster.className = 'sx-rahmen';
           fenster.title = t.name || t.id;
           fenster.src = '/uix/frame/' + encodeURIComponent(t.id);
@@ -188,5 +189,5 @@
   }
 
   root.sedraLoader = {boot, makeRegistry, makeContext, connectEvents, checkShellApi, SHELL_API, handlesMatch, handleType};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {checkShellApi, SHELL_API, handlesMatch, handleType, makeRegistry};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {checkShellApi, SHELL_API, handlesMatch, handleType, makeRegistry, RAHMEN_SANDBOX};
 })();

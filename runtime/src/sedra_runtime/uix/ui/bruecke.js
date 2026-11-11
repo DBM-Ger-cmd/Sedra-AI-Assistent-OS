@@ -42,6 +42,10 @@
   function makeBruecke({kern, shell, bus, onProblem}){
     const eintraege = [];
     const weg = [];
+    let hinweisDrossel = null;
+    const F = ()=>root.sedraBrueckeFilter;                                  // ui/bruecke_filter.js; fehlt es, bekommt eine fremde App nichts (null)
+    const fremd = manifest=>!!manifest && manifest.trust === 'COMMUNITY';      // eigene Module des Captains (CAPTAIN) bleiben, wie sie waren
+    const hinweisErlaubt = id=>{ if(!hinweisDrossel) hinweisDrossel = F().drossel(5000); return hinweisDrossel(id, Date.now()); };
 
     function finde(source){
       return eintraege.find(e=>e.fenster === source) || null;
@@ -72,6 +76,11 @@
         const sh = e.shell || shell;
         if(!sh || typeof sh[msg.name] !== 'function') throw new Error('shell_fehlt:' + msg.name);
         const args = Array.isArray(msg.args) ? msg.args.slice(0, 2) : [];
+        if(msg.name === 'notify' && fremd(e.manifest)){            // AM3-20: Hinweis einer fremden App – gekennzeichnet, gekürzt, ohne Steuerzeichen, Ton nur note, höchstens einer je 5 s
+          const h = F() ? F().bereinigeHinweis(e.manifest.name || e.manifest.id, args[0], args[1]) : null;
+          if(!h || !hinweisErlaubt(e.manifest.id)){ antworte(e, msg.id, {ok: true, daten: null}); return; }
+          args[0] = h.text; args[1] = h.ton;
+        }
         // Härtung HU-1: ein abgeschottetes Werkzeug öffnet Objekte, keine Oberflächen – `open({type:'shell'})` wäre ein Shell-Wechsel mit Neuladen
         if(msg.name === 'open'){
           const o = args[0];
@@ -91,7 +100,12 @@
         const hoert = (manifest.events && manifest.events.listens) || [];
         hoert.forEach(name=>{
           const off = bus.on(name, data=>{
-            try{ fenster.postMessage({ereignis: name, daten: data || {}}, '*'); }catch(_err){}
+            let daten = data || {};
+            if(fremd(manifest)){                       // AM3-17/18: eine fremde App sieht nur öffentliche Ereignisse und die erlaubten Schlüssel der anderen – der Filter sitzt hier, nicht in der App
+              daten = F() ? F().filterEreignis(name, data) : null;
+              if(daten === null) return;
+            }
+            try{ fenster.postMessage({ereignis: name, daten}, '*'); }catch(_err){}
           });
           if(typeof off === 'function') e.abos.push(off);
         });

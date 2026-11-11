@@ -34,6 +34,7 @@ ALLOWED = {
     "wissen": {"enabled"},             # Spec 7 (G2-S7-q): Wissensspeicher; seit SPEC_WISSEN_KERN_v1 (05.11.2026) Standard AN, `enabled: false` schaltet es ab (nur der Captain)
     "entwicklung": {"enabled"},        # SPEC_UIX_STUFE6 §2.2 (S6-E4): Prüfwerkzeuge (zweck: pruefung) der Oberfläche laden; Standard aus
     "code_sicht": {"enabled"},
+    "herkunft_pruefen": {"enabled"},      # SPEC_APPS_v1 AM0-02: Hashprüfung eingebauter Fremd-Module beim Laden; Standard AN, `enabled: false` schaltet nur die Prüfung ab
     "freigabe_ausserhalb": {"enabled"},   # SPEC_APPS_v1 G9: Freigaben der Klasse H nur über Systemdialog oder Konsole; Standard AN, `enabled: false` schaltet es ab         # SPEC_APPS_v1 G4: Läufe und Befehle der Harness nur nach Sicht auf geänderten Code; Standard AN, `enabled: false` schaltet es ab
 }
 

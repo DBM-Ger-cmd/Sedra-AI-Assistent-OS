@@ -72,6 +72,9 @@ from .desk import boundaries as desk_boundaries
 from .desk import vorgabe as desk_vorgabe
 from .desk import gateway as desk_gateway
 from .desk import install as desk_install
+from .desk import herkunft as desk_herkunft
+from .desk import gate_texte as desk_gate_texte
+from .desk.shell_regeln import pruefe_einbau
 from .desk import intents as desk_intents
 from .desk import decisions as desk_decisions
 from .desk import registry as desk_registry
@@ -113,6 +116,12 @@ def _compact_mission(m):
     }
 
 
+# AM0-04 (SPEC_APPS_v1_AM0_G2 §4): die Rahmenseite eines abgeschotteten Werkzeugs darf den Server nicht anfragen (connect-src none), nichts absenden,
+# nichts einbetten, keine Worker – sie lädt nur ihre eigenen Dateien. `style-src 'unsafe-inline'` bleibt, weil Werkzeuge `style=` setzen.
+RAHMEN_CSP = ("default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; "
+              "form-action 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; frame-ancestors 'self'")
+
+
 class UIXHub:
     def __init__(self, project_root: Path, architecture_root: Path):
         self.project_root = Path(project_root).resolve()
@@ -147,6 +156,8 @@ class UIXHub:
         # The desk (Build 7): manifests and allowlist for the desktop modules, one decision list, one event stream instead of a poll per window.
         self.gateway = Gateway(self.project_root)
         self.gateway.entwicklung = self.runtime.switches.apply('entwicklung', 'enabled', False) is True    # Stufe 6 (S6-E4)
+        self.gateway.herkunft_pruefen = self.runtime.switches.apply('herkunft_pruefen', 'enabled', True) is not False    # AM0-02
+        self.gateway.melden = self._herkunft_melden
         self.events = EventStream()
         self.poller = Poller(self, self.events)
         # Gedächtnis der Oberfläche (SPEC_DOCK_OHNE_NEUAUFBAU_v1 §9.2, §10): Arbeitsstand, Ablage der Werkzeuge, Gesprächsverlauf.
@@ -512,6 +523,9 @@ class UIXHub:
         read = desk_install.read_module(folder, area)
         doc = yaml.safe_load((folder / (f'{kind}.yaml')).read_text(encoding='utf-8'))
         check = desk_gateway.check_tool if kind == 'tool' else desk_gateway.check_shell
+        vorab = pruefe_einbau(kind, doc.get(kind) if isinstance(doc, dict) else None)      # AM0-06: eine fremde Shell kommt nur als Vorgabe durch das Gate
+        if vorab:
+            raise ValueError('Das Manifest wurde abgelehnt: ' + ', '.join(vorab) + '. Eine fremde Shell ist nur eine Vorgabe (vorgabe: in shell.yaml), ohne eigenen Code.')
         # Was durch das Gate kommt, hat nicht der Captain geschrieben: es ist COMMUNITY, egal was das Manifest behauptet.
         # Bis zum 15.10.2026 galt das Vertrauen aus der Datei – ein fremdes Modul mit `trust: CAPTAIN` hätte seine Schreibrouten
         # behalten. Gefunden mit der ersten externen Lieferung. Wer es hochstufen will, tut das bewusst in der Datei.
@@ -524,15 +538,14 @@ class UIXHub:
             raise ValueError(f'Die Kennung „{manifest["id"]}“ ist schon vergeben (eingebaute {"Shell" if kind == "shell" else "Werkzeug"} oder früherer Import). '
                              f'Im Manifest eine andere id setzen oder die alte Fassung zuerst entfernen.')
         describe = (f'Modul „{manifest["name"]}“ ({manifest["id"]}) einbauen · {len(read["files"])} Datei(en) · '
-                    f'als COMMUNITY, nur Leserouten ({len(manifest["api"])}) · {desk_install.summary(read["findings"])}'
+                    f'als COMMUNITY, Leserouten: {len(manifest["api"])} · {desk_install.summary(read["findings"])}'
                     + (' · bringt eigene Objekttypen: ' + ', '.join(manifest.get('own_types') or []) if manifest.get('own_types') else ''))
         binding = {'kind': kind, 'id': manifest['id'], 'source': str(folder), 'trust': manifest['trust'],
                    'files': read['files'], 'routes': manifest['api'], 'findings': read['findings'], 'describe': describe}
         with self.lock:
             m = self.runtime.brain.create_mission(describe[:160], None, 'S1')
             gate = self.runtime.guard.create_gate(m['identity']['mission_id'], self.INSTALL_ACTION, f'{area}:{manifest["id"]}',
-                                                  risks=['fremder Code läuft danach in derselben Seite wie die Shell']
-                                                        + ([f['flag'] + ' in ' + f['file'] for f in read['findings'][:6]] if read['findings'] else []),
+                                                  risks=desk_gate_texte.risiken(kind, manifest['api'], [f['flag'] + ' in ' + f['file'] for f in read['findings'][:6]]),     # AM0-07
                                                   rollback_available=True, request_binding=binding)
             m['human_gates']['pending'].append(gate)
             m['context']['install_request'] = binding
@@ -583,17 +596,22 @@ class UIXHub:
                 man_doc = yaml.safe_load((staging / man_name).read_text(encoding='utf-8'))
                 man_doc[binding['kind']]['trust'] = 'COMMUNITY'
                 (staging / man_name).write_text(yaml.safe_dump(man_doc, allow_unicode=True, sort_keys=False), encoding='utf-8')
+                # AM0-02: die Herkunft über die Dateien, wie sie danach liegen (mit dem umgeschriebenen Manifest), außerhalb des Modulordners
+                desk_herkunft.schreiben(self.project_root, area, binding['id'], staging, quelle=binding['source'], mission_id=mission_id, vertrauen='COMMUNITY')
                 staging.replace(target)
             except BaseException:
                 shutil.rmtree(staging, ignore_errors=True)
+                desk_herkunft.entfernen(self.project_root, area, binding['id'])
                 raise
+            herkunft_datei = desk_herkunft.pfad(self.project_root, area, binding['id'])
             m['execution'].pop('approval_token', None)
             m['result'] = {'kind': 'install', 'id': binding['id'], 'area': area, 'files': len(binding['files'])}
             m['lifecycle']['status'] = 'closed'
             rt.missions.save(m)
             rt.audit.append('UIX_MODULE_INSTALLED', component='desk', mission_id=mission_id,
                             payload={'kind': binding['kind'], 'id': binding['id'], 'trust': binding['trust'],
-                                     'files': len(binding['files']), 'findings': len(binding['findings'])})
+                                     'files': len(binding['files']), 'findings': len(binding['findings']),
+                                     'herkunft_sha256': desk_install.sha256(herkunft_datei)})
         self.events.publish('tools.refresh', {})
         return {'status': 'installed', 'id': binding['id'], 'area': area, 'files': len(binding['files']),
                 'note': 'Das Modul liegt jetzt unter local_config – die Oberfläche lädt es beim nächsten Öffnen.'}
@@ -619,6 +637,7 @@ class UIXHub:
                     'own_types': man.get('own_types') or [],
                     'gruppe': man.get('gruppe'), 'zweck': man.get('zweck'),        # Stufe 4: das Start-Menü der Harness ordnet danach ein
                     'umschalter': man.get('umschalter'),
+                    'shells': man.get('shells'), 'profile': man.get('profile'), 'zelle': man.get('zelle'),       # Vertrag 1.1 (AM1)
                     'preview': (Path(folder) / 'preview.png').is_file()}      # die Start-Shell fragt nicht ins Leere
         disabled = set(config['disabled'])
         return {'shell': manifest['config']['shell'],
@@ -1444,6 +1463,7 @@ class UIXHub:
             tmp = folder / (name + '.tmp')
             tmp.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding='utf-8')
             tmp.replace(folder / name)
+            desk_herkunft.aktualisieren(self.project_root, binding['kind'], binding['id'], folder)       # AM0-02: das Manifest hat sich geändert, die Herkunft zieht im selben Schritt nach
             m['execution'].pop('approval_token', None)
             m['result'] = {'kind': 'trust', 'id': binding['id'], 'routes': binding['routes']}
             m['lifecycle']['status'] = 'closed'
@@ -1453,6 +1473,10 @@ class UIXHub:
         self.events.publish('tools.refresh', {})
         return {'status': 'granted', 'id': binding['id'], 'routes': binding['routes'],
                 'note': 'Das Modul darf jetzt über diese Routen schreiben – beim nächsten Laden der Seite.'}
+
+    def _herkunft_melden(self, kind, mid, gruende):
+        """AM0-02: ein eingebautes Modul wurde nach dem Einbau verändert – einmal je Prozess und Grund ins Audit (nur Namen, nie Inhalt)."""
+        self.runtime.audit.append('UIX_MODULE_TAMPERED', component='desk', payload={'kind': kind, 'id': mid, 'gruende': gruende})
 
     def install_remove(self, payload):
         """Entfernen ist kein Gate (§6), nur Audit – was weg ist, kann nichts mehr tun."""
@@ -1469,6 +1493,7 @@ class UIXHub:
         if kind == 'shells' and mid in (self.gateway.registry.config()['shell'], gewaehlt):
             raise ValueError('shell_is_active')      # erst eine andere nehmen – sonst steht die Seite beim nächsten Laden leer
         shutil.rmtree(folder)
+        desk_herkunft.entfernen(self.project_root, kind, mid)
         self.runtime.audit.append('UIX_MODULE_REMOVED', component='desk', payload={'kind': kind, 'id': mid})
         self.events.publish('tools.refresh', {})
         return {'status': 'removed', 'id': mid}
@@ -3815,7 +3840,7 @@ def make_server(hub: UIXHub, port=0):
         def do_DELETE(self):
             self._harness_write('DELETE')
 
-        def _send(self, code, body, kind='application/json; charset=utf-8', frame_self=False, inline_script=False):
+        def _send(self, code, body, kind='application/json; charset=utf-8', frame_self=False, inline_script=False, csp=None):
             if isinstance(body, (dict, list)):
                 body = json.dumps(body, ensure_ascii=False, allow_nan=False).encode('utf-8')
             elif isinstance(body, str):
@@ -3827,8 +3852,11 @@ def make_server(hub: UIXHub, port=0):
             self.send_header('X-Content-Type-Options', 'nosniff')
             self.send_header('Referrer-Policy', 'no-referrer')
             # Härtung E3 (30.10.): kein Inline-Script mehr (Vertrag §6) – nur der archivierte Desktop (/retro) hat noch onclick-Attribute
-            self.send_header('Content-Security-Policy', "default-src 'self' blob: data:; script-src 'self'" + (" 'unsafe-inline'" if inline_script else "")
-                             + "; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; frame-ancestors '" + ("self" if frame_self else "none") + "'; base-uri 'none'")
+            if csp is not None:            # AM0-04: die Rahmenseite eines abgeschotteten Werkzeugs bekommt eine eigene, strenge Richtlinie (kein connect-src)
+                self.send_header('Content-Security-Policy', csp)
+            else:
+                self.send_header('Content-Security-Policy', "default-src 'self' blob: data:; script-src 'self'" + (" 'unsafe-inline'" if inline_script else "")
+                                 + "; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; frame-ancestors '" + ("self" if frame_self else "none") + "'; base-uri 'none'")
             try:
                 self.end_headers()
                 self.wfile.write(body)
@@ -3883,7 +3911,7 @@ def make_server(hub: UIXHub, port=0):
                 if page is None:
                     self.send_error(404)
                     return
-                self._send(200, page, 'text/html; charset=utf-8', frame_self=True)
+                self._send(200, page, 'text/html; charset=utf-8', frame_self=True, csp=RAHMEN_CSP)
                 return
             if self._authorized() != 'browser':          # CLI- und MCP-Token öffnen keine GET-Route (uix_clients.ROUTES)
                 self.send_error(403)

@@ -16,6 +16,7 @@
 
   const tool = {
     id: 'gauge-wissen',
+    field: 'wissen',
 
     mount(el, ctx){
       this.el = el; this.ctx = ctx;

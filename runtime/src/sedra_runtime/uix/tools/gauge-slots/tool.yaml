@@ -15,3 +15,4 @@ tool:
   trust: CORE
   tests: [test.spec.js]
   needs: {ui: ">=1.0 <2"}
+  zelle: {feld: slots, label: "Slots", ort: slots}           # Vertrag 1.1 (AM1): die Zelle in der Taskleiste von One Sedra

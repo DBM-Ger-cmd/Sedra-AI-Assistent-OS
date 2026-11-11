@@ -1,0 +1,17 @@
+tool:
+  id: gauge-server
+  name: "Modellserver"
+  description: "Läuft der Modellserver, und welches Modell trägt er."
+  version: 1.0.0
+  kind: instrument
+  handles: []
+  order: 20
+  entry: {js: tool.js}
+  api: []                    # ein Instrument ruft keine Route – die Leiste der Shell liest /api/strip
+  events:
+    emits: []
+    listens: [task.changed, decision.pending, decision.answered, model.changed, system.state]
+  trust: CORE
+  needs: {ui: ">=1.1 <2"}
+  shells: [harness]          # Datenzelle der Taskleiste von One Sedra; das Cockpit zeichnet sie nicht
+  zelle: {feld: server, label: "Modellserver", ort: models, aktion: modellmenue}

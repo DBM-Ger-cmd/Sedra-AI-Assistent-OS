@@ -141,12 +141,13 @@ class ManifestRules(unittest.TestCase):
     def test_a_captains_module_cannot_claim_to_be_core_and_a_community_module_only_reads(self):
         _, errors = self.check({"trust": "CORE"})
         self.assertIn("local_module_cannot_be_core", errors)
-        man, errors = self.check({"trust": "COMMUNITY", "api": ["GET /api/missions", "POST /api/mission/run"]})
+        man, errors = self.check({"trust": "COMMUNITY", "api": ["GET /api/strip", "POST /api/mission/run"]})       # /api/missions steht seit AM0-03 auf der Sperrliste
         self.assertEqual(errors, [])
-        self.assertEqual(man["api"], ["GET /api/missions"], "a foreign module gets its write routes stripped, not an error")
+        self.assertEqual(man["api"], ["GET /api/strip"], "a foreign module gets its write routes stripped, not an error")
 
     def test_needs_ranges(self):
-        for spec, ok in ((">=1.0 <2", True), ("==1.0", True), (">=1.1", False), ("<1", False), ("", False), ("egal", False)):
+        # Vertrag 1.1 (AM1): UI_VERSION ist 1.1 – ein Modul, das genau "==1.0" verlangt, lädt nicht mehr; ">=1.0 <2" (alle Module des Pakets) bleibt gültig
+        for spec, ok in ((">=1.0 <2", True), ("==1.1", True), ("==1.0", False), (">=1.1", True), (">=1.2", False), ("<1", False), ("", False), ("egal", False)):
             self.assertEqual(needs_ok(spec), ok, spec)
 
 

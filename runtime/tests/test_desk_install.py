@@ -21,7 +21,7 @@ MANIFEST = '''tool:
   handles: [task]
   entry: {js: tool.js}
   api:
-    - GET /api/missions
+    - GET /api/strip
     - POST /api/mission/run
   events: {emits: [object.open], listens: [task.changed]}
   trust: COMMUNITY
@@ -101,9 +101,11 @@ class ThroughTheHub(unittest.TestCase):
         binding = request['binding']
         self.assertEqual(len(binding['files']), 2)
         self.assertTrue(all(len(f['sha256']) == 64 for f in binding['files']))
-        self.assertEqual(binding['routes'], ['GET /api/missions'], 'ein fremdes Modul bekommt nur Leserouten')
+        self.assertEqual(binding['routes'], ['GET /api/strip'], 'ein fremdes Modul bekommt nur Leserouten')
         risks = request['gate']['request']['risks']
-        self.assertIn('fremder Code läuft danach in derselben Seite wie die Shell', risks)
+        self.assertIn('läuft abgeschottet in einem eigenen Rahmen: ohne Token, ohne Netz, ohne Zugriff auf die Seite', risks)     # AM0-07 (Rahmen seit Stufe C)
+        self.assertIn('nicht begrenzt: Rechenzeit und Speicher im Browser', risks)
+        self.assertIn('Leserouten: /api/strip', risks)
         self.assertTrue(any('eval' in r for r in risks), risks)
 
     def test_the_whole_way_is_one_decision(self):
@@ -114,7 +116,7 @@ class ThroughTheHub(unittest.TestCase):
         self.assertTrue((self.installed / 'tool.js').is_file())
         manifest = self.hub.gateway.manifest()
         self.assertIn('fremd', [t['id'] for t in manifest['tools']])
-        self.assertTrue(self.hub.gateway.allowed('tool', 'fremd', 'GET', '/api/missions'))
+        self.assertTrue(self.hub.gateway.allowed('tool', 'fremd', 'GET', '/api/strip'))
         self.assertFalse(self.hub.gateway.allowed('tool', 'fremd', 'POST', '/api/mission/run'))
         self.assertIn('UIX_MODULE_INSTALLED', [e['event_type'] for e in self.hub.audit_view()['events']])
 
@@ -272,7 +274,7 @@ class Hardening(unittest.TestCase):
         source = module(Path(self.tmp.name) / 'quelle' / 'fremd', CODE, claims)
         request = hub.install_request({'kind': 'tool', 'source': str(source)})
         self.assertEqual(request['binding']['trust'], 'COMMUNITY')
-        self.assertEqual(request['binding']['routes'], ['GET /api/missions'], 'die POST-Route ist weg, bevor der Captain entscheidet')
+        self.assertEqual(request['binding']['routes'], ['GET /api/strip'], 'die POST-Route ist weg, bevor der Captain entscheidet')
         self.assertIn('als COMMUNITY', request['binding']['describe'])
         item = next(d for d in hub.decisions_view()['items'] if d['kind'] == 'request:install')
         hub.decide({'id': item['id'], 'way': 'freigeben_und_anwenden'})

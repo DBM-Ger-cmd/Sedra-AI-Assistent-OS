@@ -9,15 +9,18 @@ from sedra_runtime.uix_server import UIXHub, quelle_pruefen
 from host_isolation import setUpModule, tearDownModule  # noqa: F401  no real nvidia-smi / lms / powercfg / PowerShell in tests
 
 ARCH = Path(__file__).resolve().parents[2] / "architecture/SEDRA_Architecture_v1.17_RUNTIME_SYNC"
-MINIMAL = Path(__file__).resolve().parents[1] / "src/sedra_runtime/uix/shells/minimal"
+MINIMAL = Path(__file__).resolve().parents[1] / "src/sedra_runtime/uix/shells/_vorgabe"      # seit AM0-06 kommt eine fremde Shell nur als Vorgabe (ohne Code) durch das Gate
 
 
 def _kopie(ziel, neue_id):
-    """Eine Kopie der Shell minimal unter neuer Kennung, damit sie nicht mit der eingebauten zusammenstößt."""
+    """Eine Kopie der Vorgabe-Shell `_vorgabe` unter neuer Kennung, damit sie nicht mit einer eingebauten zusammenstößt."""
     shutil.copytree(MINIMAL, ziel)
     doc = yaml.safe_load((ziel / "shell.yaml").read_text(encoding="utf-8"))
     doc["shell"]["id"] = neue_id
     (ziel / "shell.yaml").write_text(yaml.safe_dump(doc, allow_unicode=True), encoding="utf-8")
+    vorgabe = yaml.safe_load((ziel / "shell.vorgabe.yaml").read_text(encoding="utf-8"))
+    vorgabe["id"] = neue_id                                           # die Vorgabe trägt dieselbe Kennung wie die Shell
+    (ziel / "shell.vorgabe.yaml").write_text(yaml.safe_dump(vorgabe, allow_unicode=True), encoding="utf-8")
     return ziel
 
 
