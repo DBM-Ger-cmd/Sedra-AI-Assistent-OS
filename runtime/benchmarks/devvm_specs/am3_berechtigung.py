@@ -15,7 +15,7 @@ TASK_S1 = '''Lege berechtigung.py an mit zwei Funktionen.
 1. wirksam(beantragt, gewaehrt, obergrenze=None) -> list[str]: die Faehigkeiten, die in beantragt UND in gewaehrt stehen, und, wenn obergrenze nicht None ist, auch in obergrenze. Alle drei Argumente sind Listen, Tupel oder Mengen von Texten; ist eines davon etwas anderes oder enthaelt es einen Eintrag, der kein Text ist, ValueError("faehigkeiten_ungueltig").
 2. ladeentscheidung(eintrag, beantragt, manifest_sha256) -> dict mit genau den Schluesseln "laden" (bool), "grund" (Text oder None), "wirksam" (Liste). beantragt wie oben (sonst ValueError("faehigkeiten_ungueltig")). Es gilt die erste zutreffende Zeile:
    - eintrag ist kein dict: laden False, grund "keine_gewaehrung", wirksam [].
-   - eintrag["manifest_sha256"] ist nicht gleich dem Argument manifest_sha256 (oder fehlt): laden False, grund "gewaehrung_veraltet", wirksam [].
+   - eintrag["manifest_sha256"] ist nicht gleich dem Argument manifest_sha256, fehlt oder ist kein Text (also auch, wenn beide None sind): laden False, grund "gewaehrung_veraltet", wirksam [].
    - eintrag["aktiv"] ist nicht genau True: laden False, grund "app_inaktiv", wirksam [].
    - es gibt beantragte Faehigkeiten, die nicht in eintrag["gewaehrt"] stehen (fehlt "gewaehrt" oder ist es keine Liste, gilt es als leer; Eintraege dort, die keine Texte sind, zaehlen nicht): laden False, grund "rechte_nicht_gewaehrt:" gefolgt von diesen fehlenden Faehigkeiten, sortiert und mit "," ohne Leerzeichen verbunden, wirksam [].
    - sonst: laden True, grund None, wirksam = beantragt sortiert und ohne Doppelte.
@@ -69,6 +69,9 @@ assert ladeentscheidung(None, ["lesen:a"], "h1") == {"laden": False, "grund": "k
 assert ladeentscheidung("x", [], "h1")["grund"] == "keine_gewaehrung"
 assert ladeentscheidung(E, ["lesen:a"], "h2") == {"laden": False, "grund": "gewaehrung_veraltet", "wirksam": []}
 assert ladeentscheidung({"aktiv": True, "gewaehrt": []}, [], "h1")["grund"] == "gewaehrung_veraltet"
+assert ladeentscheidung({"aktiv": True, "gewaehrt": []}, [], None)["grund"] == "gewaehrung_veraltet"
+assert ladeentscheidung({"manifest_sha256": None, "aktiv": True, "gewaehrt": []}, [], None)["grund"] == "gewaehrung_veraltet"
+assert ladeentscheidung({"manifest_sha256": 5, "aktiv": True, "gewaehrt": []}, [], 5)["grund"] == "gewaehrung_veraltet"
 assert ladeentscheidung(dict(E, aktiv=False), ["lesen:a"], "h1") == {"laden": False, "grund": "app_inaktiv", "wirksam": []}
 assert ladeentscheidung(dict(E, aktiv="ja"), ["lesen:a"], "h1")["grund"] == "app_inaktiv"
 assert ladeentscheidung({"manifest_sha256": "h1", "gewaehrt": []}, [], "h1")["grund"] == "app_inaktiv"

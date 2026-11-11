@@ -25,7 +25,8 @@ def ladeentscheidung(eintrag, beantragt, manifest_sha256):
     wanted = _liste(beantragt)
     if not isinstance(eintrag, dict):
         return {'laden': False, 'grund': 'keine_gewaehrung', 'wirksam': []}
-    if eintrag.get('manifest_sha256') != manifest_sha256:
+    hash_alt = eintrag.get('manifest_sha256')
+    if not isinstance(hash_alt, str) or hash_alt != manifest_sha256:
         return {'laden': False, 'grund': 'gewaehrung_veraltet', 'wirksam': []}
     if eintrag.get('aktiv') is not True:
         return {'laden': False, 'grund': 'app_inaktiv', 'wirksam': []}

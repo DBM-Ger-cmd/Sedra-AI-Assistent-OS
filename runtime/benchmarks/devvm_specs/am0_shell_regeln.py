@@ -14,7 +14,7 @@ TASK_S1 = '''Lege shell_regeln.py an mit pruefe_shell(doc, trust, dateien) -> li
 - Bei "COMMUNITY" kommen diese Meldungen in dieser Reihenfolge, jede nur wenn sie zutrifft:
   1. "community_shell_needs_vorgabe": doc["vorgabe"] fehlt oder ist nicht gesetzt.
   2. "community_shell_no_entry": doc["entry"] ist gesetzt.
-  3. "community_shell_no_css": der Pfad "shell.css" steht in dateien (genau diese Schreibweise; ein Pfad wie "sub/shell.css" zaehlt nicht).
+  3. "community_shell_no_css": einer der Pfade in dateien lautet "shell.css", ohne Ruecksicht auf Gross- und Kleinschreibung (auch "SHELL.CSS" und "Shell.css", denn unter Windows ist es dieselbe Datei); ein Pfad wie "sub/shell.css" oder "sub/SHELL.CSS" zaehlt nicht.
 Keine Kommentare, keine Docstrings, keine eigenen Tests.'''
 
 TASK_S2 = '''Ergaenze shell_regeln.py (alles andere bleibt) so, dass pruefe_shell auch mit ungewoehnlichen Eingaben richtig arbeitet:
@@ -43,7 +43,9 @@ assert pruefe_shell({"vorgabe": {"a": 1}, "entry": {"js": ["shell.js"]}}, "COMMU
 assert pruefe_shell({"vorgabe": {"a": 1}}, "COMMUNITY", ["shell.css"]) == ["community_shell_no_css"]
 assert pruefe_shell({"vorgabe": {"a": 1}}, "COMMUNITY", ["shell.yaml", "shell.css", "README.md"]) == ["community_shell_no_css"]
 assert pruefe_shell({"vorgabe": {"a": 1}}, "COMMUNITY", ["sub/shell.css"]) == []
-assert pruefe_shell({"vorgabe": {"a": 1}}, "COMMUNITY", ["Shell.css"]) == []
+assert pruefe_shell({"vorgabe": {"a": 1}}, "COMMUNITY", ["Shell.css"]) == ["community_shell_no_css"]
+assert pruefe_shell({"vorgabe": {"a": 1}}, "COMMUNITY", ["SHELL.CSS"]) == ["community_shell_no_css"]
+assert pruefe_shell({"vorgabe": {"a": 1}}, "COMMUNITY", ["sub/SHELL.CSS"]) == []
 assert pruefe_shell({"entry": {"js": ["x.js"]}}, "COMMUNITY", ["shell.css"]) == ["community_shell_needs_vorgabe", "community_shell_no_entry", "community_shell_no_css"]
 assert pruefe_shell({"entry": {"js": ["x.js"]}}, "CAPTAIN", ["shell.css"]) == []
 assert pruefe_shell({}, "CORE", []) == []

@@ -93,6 +93,10 @@ class Berechtigung(unittest.TestCase):
         e = entziehen(e, ["verb:x.y"])
         self.assertEqual(ladeentscheidung(e, ["lesen:a", "verb:x.y"], "h1")["laden"], False)
 
+    def test_fehlender_hash_gilt_als_veraltet_auch_bei_none_gegen_none(self):
+        self.assertEqual(ladeentscheidung({"aktiv": True, "gewaehrt": []}, [], None)["grund"], "gewaehrung_veraltet")
+        self.assertEqual(ladeentscheidung({"manifest_sha256": None, "aktiv": True, "gewaehrt": []}, [], None)["grund"], "gewaehrung_veraltet")
+
     def test_wirksam_ist_der_schnitt(self):
         self.assertEqual(wirksam(["a", "b"], ["b", "c"], ["b"]), ["b"])
 

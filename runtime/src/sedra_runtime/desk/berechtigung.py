@@ -1,7 +1,8 @@
 """Gewährung, Aktivierung und Ladeentscheidung einer fremden App (AM3-05, AM3-06, AM3-08, AM3-09, AM3-28, SPEC_APPS_v1_AM3_BERECHTIGUNG): der reine Kern auf dicts,
 noch ohne Anbindung (Berechtigungsdatei local_config/apps/berechtigung.yaml und Gateway kommen mit AM3).
 
-Gebaut als Kandidat von SEDRAs Factory-Bau (`am3_berechtigung`, 11.11.2026), unverändert übernommen."""
+Gebaut als Kandidat von SEDRAs Factory-Bau (`am3_berechtigung`, 11.11.2026). Nachgearbeitet am 11.11.: ein fehlender oder kein Text seiender Hash gilt als veraltet
+(der Kandidat verglich nur auf Gleichheit, `None == None` hätte die Gewährung durchgelassen)."""
 def _check_faehigkeiten(obj):
     if not isinstance(obj, (list, tuple, set)):
         raise ValueError("faehigkeiten_ungueltig")
@@ -27,7 +28,8 @@ def ladeentscheidung(eintrag, beantragt, manifest_sha256):
     _check_faehigkeiten(beantragt)
     if not isinstance(eintrag, dict):
         return {"laden": False, "grund": "keine_gewaehrung", "wirksam": []}
-    if eintrag.get("manifest_sha256") != manifest_sha256:
+    hash_alt = eintrag.get("manifest_sha256")
+    if not isinstance(hash_alt, str) or hash_alt != manifest_sha256:       # fehlt der Hash oder ist keiner, gilt die Gewährung als veraltet (auch wenn beide None sind)
         return {"laden": False, "grund": "gewaehrung_veraltet", "wirksam": []}
     if eintrag.get("aktiv") is not True:
         return {"laden": False, "grund": "app_inaktiv", "wirksam": []}

@@ -21,6 +21,7 @@ def shell_ordner(root, doc, dateien=()):
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "shell.yaml").write_text(yaml.safe_dump(doc), encoding="utf-8")
     for name in dateien:
+        (folder / name).parent.mkdir(parents=True, exist_ok=True)
         (folder / name).write_text("// x\n", encoding="utf-8")
     return folder
 
@@ -43,6 +44,14 @@ class Regeln(unittest.TestCase):
 
     def test_fremde_vorgabe_mit_css_wird_abgewiesen(self):
         self.assertIn("community_shell_no_css", self.fehler(VORGABE, ["shell.vorgabe.yaml", "shell.css"]))
+
+    def test_css_in_anderer_schreibweise_wird_abgewiesen(self):
+        """Windows: `SHELL.CSS` ist dieselbe Datei wie `shell.css`; `_check_frame_shell` lädt sie als shell.css. Vor dem 11.11. kam sie am Verbot vorbei."""
+        for name in ("SHELL.CSS", "Shell.css", "shell.CSS"):
+            self.assertIn("community_shell_no_css", self.fehler(VORGABE, ["shell.vorgabe.yaml", name]), name)
+
+    def test_css_in_einem_unterordner_zaehlt_nicht(self):
+        self.assertNotIn("community_shell_no_css", self.fehler(VORGABE, ["shell.vorgabe.yaml", "sub/shell.css"]))
 
 
 class Gate(unittest.TestCase):

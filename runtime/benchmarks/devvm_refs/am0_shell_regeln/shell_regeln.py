@@ -12,7 +12,7 @@ def pruefe_shell(doc, trust, dateien):
         fehler.append('community_shell_needs_vorgabe')
     if _gesetzt(doc.get('entry')):
         fehler.append('community_shell_no_entry')
-    if isinstance(dateien, (list, tuple, set)) and 'shell.css' in dateien:
+    if isinstance(dateien, (list, tuple, set)) and any(isinstance(d, str) and d.casefold() == 'shell.css' for d in dateien):
         fehler.append('community_shell_no_css')
     return fehler
 
