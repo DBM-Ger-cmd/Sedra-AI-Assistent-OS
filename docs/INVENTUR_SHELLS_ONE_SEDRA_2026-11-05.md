@@ -115,3 +115,9 @@ Sofort klein und gefahrlos (eigener Mini-Auftrag): Strg+K-Hinweis in `startmenue
 1. Welche App zuerst: Translator (Vorschlag) oder Wissensbasis?
 2. Paperclip-Ersatz als App „Team“ benennen?
 3. Strg+K: Hinweis streichen oder auf das Start-Menü legen?
+
+## 6. Stand 11.11.2026
+
+- **Translator:** als App gebaut und auf `main` (`SPEC_APP_TRANSLATOR_v1.md` §7), Gleichstandsliste TR-51 beim Captain.
+- **Wissensbasis:** die zwei Lücken der Tabelle oben sind geschlossen (Leistenzelle `gauge-wissen`; Chat-Werkzeuge `wissen_suchen`, `wissen_beantragen` mit Fundstellen `[W…]`). Das Werkzeug `wissen` ist schon die Sammel-App mit den Ansichten Suche, Quellen, Vorschläge, Eigenes, Messung und der Fundstelle als Nachweis. Im Start-Menü steht jetzt nur noch „Wissen“; die Ansichts-Orte bleiben für Suche und Chat. Test `test_uix_wissensbasis_app`. Die alte Shell `wissensbasis` bleibt unverändert, bis der Captain den Gleichstand abnimmt.
+- **Weiter:** Gateway, dann Team (Paperclip), Übersicht (Cockpit).
