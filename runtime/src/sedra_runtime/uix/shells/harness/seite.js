@@ -229,7 +229,7 @@
     const antraege = S.antraege || [];
     const offene = antraege.length + (S.entscheidungen || []).length;
     const blinkt = S._blinken && S._blinken.has('posteingang');
-    const post = d().el('button', 's-btn hs-einstellungen' + (offene ? ' neu' : '') + (blinkt ? ' blinkt' : ''), '✉ Posteingang' + (offene ? ' (' + offene + ')' : '')); post.type = 'button';
+    const post = d().el('button', 's-btn hs-einstellungen' + (offene ? ' neu' : '') + (blinkt ? ' blinkt' : ''), '✉ Posteingang' + (offene ? ' (' + offene + ')' : '')); post.type = 'button'; post.dataset.grundfunktion = 'entscheidungen';      // AM2-16: der Posteingang
     post.title = offene ? offene + ' warten auf deine Freigabe – Klick klappt sie auf' : 'Keine Anträge offen – hier erscheinen Anträge, die auf deine Freigabe warten';
     post.dataset.marke = 'hs-posteingang';
     post.setAttribute('aria-expanded', S._postOffen ? 'true' : 'false');
@@ -276,8 +276,10 @@
       });
     }
     const aufgaben = d().el('button', 's-btn hs-einstellungen', '⛨ Freigaben'); aufgaben.type = 'button';
+    aufgaben.dataset.grundfunktion = 'aufgaben';                            // AM2-16: der Kernweg „Aufgaben“ (Reiter aufgaben:)
     aufgaben.title = 'Ein Ort für alles rund um Freigaben: was wartet, was gerade gilt (Aufgaben, Erlaubnisse) und die Regeln des Katalogs'; aufgaben.onclick = ()=>root.sedraHarness.reiter.oeffnen(S, 'aufgaben:');
     const einst = d().el('button', 's-btn hs-einstellungen', 'Einstellungen');
+    einst.dataset.grundfunktion = 'einstellungen_zustand';                  // AM2-16
     einst.type = 'button';
     einst.title = 'Einstellungen (HS-42): Allgemein, Agent, Sprache, Integrationen, Lokale Modelle, System'; einst.dataset.marke = 'hs-einstellungen';
     einst.onclick = ()=>root.sedraHarness.einstellungen.oeffnen(S);           // Stufe 5

@@ -9,7 +9,7 @@ shell:
     css: shell.css
   provides: [tree, dock, windows, talk, notify, palette, inbox]   # windows: der Stapel der Agentenfenster (Spec 4)
   layout: {persist: browser}
-  grundfunktionen:   # AM2-14: wie die Shell die sieben Grundfunktionen erreichbar macht – nach provides, im Browser noch nicht geprüft
+  grundfunktionen:   # AM2-14: wie die Shell die sieben Grundfunktionen erreichbar macht – nach provides; im Browser geprüft (test_uix_grundfunktionen_browser)
     entscheidungen: slot:inbox
     gespraech: slot:talk
     aufgaben: ort

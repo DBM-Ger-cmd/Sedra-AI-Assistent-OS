@@ -169,6 +169,7 @@
 
       win.el = d().el('div', 'sh-min-win');
       win.el.dataset.object = key(object);
+      if(object.type === 'talk') win.el.dataset.slot = 'talk';           // AM2-16: Vertragsmarke des Slots
       const bar = d().el('div', 'sh-min-bar');
       if(win.closable){
         const dot = d().el('span', 'sh-min-close');

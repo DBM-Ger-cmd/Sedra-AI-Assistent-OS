@@ -107,7 +107,7 @@
       close.onclick = ()=>this.toggleTalk(false);
       head.append(close);
       const slot = d().el('div', 'pc-drawer-body pc-tool');
-      slot.dataset.tool = 'talk';
+      slot.dataset.tool = 'talk'; slot.dataset.slot = 'talk';             // AM2-16: Vertragsmarke des Slots
       this.el.drawer.append(head, slot);
       this.talkState = root.sedraLifecycle.mountTool(this.ctx.tools.mod('talk'), slot, this.ctx.makeContext(manifest, null, this.shellApi), this.onProblem);
     },

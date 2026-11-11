@@ -92,6 +92,7 @@
       NAV.forEach((n, i)=>{
         if(n.section !== undefined){ if(n.section) host.append(d().el('small', 'pc-nav-section', n.section)); rows[i] = null; return; }
         const row = d().el('div', 'pc-nav-row');
+        if(n.badge === 'decisions') row.dataset.slot = 'inbox';              // AM2-16: Vertragsmarke des Slots (Posteingang mit Badge)
         row.append(d().el('span', null, n.label));
         if(n.badge){ const b = d().el('span', 'pc-badge'); b.hidden = true; b.dataset.badge = n.badge; row.append(b); row.badge = b; }
         d().clickable(row, ()=>shell.openObject(target(n, shell.ctx.tools)));

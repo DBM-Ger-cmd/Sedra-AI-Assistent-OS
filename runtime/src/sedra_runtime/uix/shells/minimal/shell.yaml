@@ -9,7 +9,7 @@ shell:
     css: shell.css
   provides: [menubar, windows, talk, notify]
   layout: {persist: browser}
-  grundfunktionen:   # AM2-14: wie die Shell die sieben Grundfunktionen erreichbar macht – nach provides, im Browser noch nicht geprüft
+  grundfunktionen:   # AM2-14: wie die Shell die sieben Grundfunktionen erreichbar macht – nach provides; im Browser geprüft (test_uix_grundfunktionen_browser)
     entscheidungen: ort
     gespraech: slot:talk
     aufgaben: ort

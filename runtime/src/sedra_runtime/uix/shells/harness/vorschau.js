@@ -47,7 +47,7 @@
     const t = {S, a, obj: null, n: 0, z: zustand(a.id), zeige: 'gespraech', hinweisGezeigt: false};
     t.el = d().el('div', 'hs-teilung hs-fl-ohne');
     t.leiste = d().el('div', 'hs-fl-leiste');
-    t.gesp = d().el('div', 'hs-fl-gespraech'); t.gesp.append(a.box);
+    t.gesp = d().el('div', 'hs-fl-gespraech'); t.gesp.dataset.grundfunktion = 'gespraech'; t.gesp.append(a.box);
     t.balken = d().el('div', 'hs-fl-balken'); t.balken.setAttribute('role', 'separator'); t.balken.setAttribute('aria-orientation', 'vertical');
     t.balken.setAttribute('aria-label', 'Breite der Vorschau'); t.balken.tabIndex = 0;
     t.vor = d().el('div', 'hs-fl-vorschau'); t.vor.setAttribute('aria-label', 'Vorschau');

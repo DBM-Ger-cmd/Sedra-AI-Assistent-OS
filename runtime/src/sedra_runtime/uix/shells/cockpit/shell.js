@@ -88,6 +88,7 @@
 
     // ---- the Gespräch, bottom, always there (rule 1)
     mountTalk(){
+      this.el.talk.dataset.slot = 'talk';                                  // AM2-16: Vertragsmarke des Slots
       const manifest = this.ctx.tools.all().find(t=>t.kind === 'panel' && t.id === 'talk');
       if(!manifest){
         this.el.talk.append(d().empty('Das Werkzeug „Gespräch“ fehlt – ohne es gibt es kein Eingabefeld. uix.yaml prüfen.'));
