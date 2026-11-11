@@ -1,6 +1,6 @@
 # Permission levels 0-6 as a CEILING on Guard actions (docs/JOB_SUPERVISOR_CONTRACTS.md section 9).
 # This file grants nothing. The Guard still decides every action (ALLOW / CAPTAIN_REQUIRED / BLOCK); a job's level only
-# says which actions it may ask for at all. Derived from guard_rules.yaml v1.20 (all 38 rules read; GR-029 to GR-038 since 2026-10-21, Spec 0 D4).
+# says which actions it may ask for at all. Derived from guard_rules.yaml v1.20 (all 41 rules read; GR-029 to GR-038 since 2026-10-21, Spec 0 D4; GR-039 to GR-041 since 2026-11-11, Apps v1 AM0).
 # tests/test_permission_levels.py fails if this file and the Guard rules drift apart.
 permission_levels:
   schema: 1
@@ -48,6 +48,10 @@ permission_levels:
     terminate_agent:          {level: 5, path_scoped: false}
     set_budget:               {level: 5, path_scoped: false}
     set_routine:              {level: 5, path_scoped: false}
+    # Apps v1 AM0 (G3 S9, 2026-11-11): fremde Module einbauen, ihnen Schreibrouten oder Rechte geben. Level 5: ein Agent fragt sie nie selbst an.
+    install_module:           {level: 5, path_scoped: false}
+    grant_module_write_routes: {level: 5, path_scoped: false}
+    grant_app_rights:         {level: 5, path_scoped: false}
     external_write:           {level: 6, path_scoped: false}
     deployment:               {level: 6, path_scoped: false}
     credential_access:        {level: 6, path_scoped: false}

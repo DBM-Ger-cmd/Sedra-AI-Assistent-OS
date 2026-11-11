@@ -544,6 +544,7 @@ class UIXHub:
                    'files': read['files'], 'routes': manifest['api'], 'findings': read['findings'], 'describe': describe}
         with self.lock:
             m = self.runtime.brain.create_mission(describe[:160], None, 'S1')
+            self._guard_vor_gate(m, self.INSTALL_ACTION, f'{area}:{manifest["id"]}')
             gate = self.runtime.guard.create_gate(m['identity']['mission_id'], self.INSTALL_ACTION, f'{area}:{manifest["id"]}',
                                                   risks=desk_gate_texte.risiken(kind, manifest['api'], [f['flag'] + ' in ' + f['file'] for f in read['findings'][:6]]),     # AM0-07
                                                   rollback_available=True, request_binding=binding)
@@ -551,6 +552,17 @@ class UIXHub:
             m['context']['install_request'] = binding
             self.runtime.missions.save(m)
         return self._remember('install', {'mission_id': m['identity']['mission_id'], 'gate': gate, 'binding': binding})
+
+    def _guard_vor_gate(self, m, action, target):
+        """Apps v1 AM0-08 (G3 S9): `create_gate` wertet keine Regel aus. Hier läuft die Auswertung des Guard für die Aktion vor dem Gate: ein BLOCK bricht ab (die Mission wird geschlossen,
+        es entsteht kein Gate), sonst – CAPTAIN_REQUIRED, ebenso ein ALLOW, das jemand der Regel gäbe – geht es zum Gate; der Einbau und jede Rechte-Erhöhung brauchen immer den Captain.
+        Das Audit bekommt so je Antrag eine Zeile mit der Regel (GR-039, GR-040)."""
+        ergebnis = self.runtime.guard.evaluate(action, mission_id=m['identity']['mission_id'], target=target)
+        if ergebnis['decision'] == 'BLOCK':
+            m['lifecycle']['status'] = 'closed'
+            self.runtime.missions.save(m)
+            raise ValueError('guard_blocked:' + str(ergebnis.get('rule_id')))
+        return ergebnis
 
     def install_apply(self, payload):
         """Nach der Freigabe: die Dateien kopieren – aber nur, wenn jede noch genau den Hash hat, der im Gate stand."""
@@ -1428,6 +1440,7 @@ class UIXHub:
         binding = {'kind': kind, 'id': mid, 'routes': wanted, 'manifest_sha256': desk_install.sha256(folder / name), 'describe': describe}
         with self.lock:
             m = self.runtime.brain.create_mission(describe[:160], None, 'S1')
+            self._guard_vor_gate(m, self.TRUST_ACTION, f'{kind}:{mid}')
             gate = self.runtime.guard.create_gate(m['identity']['mission_id'], self.TRUST_ACTION, f'{kind}:{mid}',
                                                   risks=['fremder Code schreibt danach über diese Routen in die Runtime'] + wanted,
                                                   rollback_available=True, request_binding=binding)

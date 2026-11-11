@@ -125,6 +125,16 @@ guard_rules:
   - id: GR-038
     action: fire_routine
     decision: ALLOW
+  # 2026-11-11 Apps v1 AM0 (G3 S9): Einbau und Rechte-Erhoehung fremder Module nennen die Regel ausdruecklich; vorher griffen sie ueber unknown_action.
+  - id: GR-039
+    action: install_module
+    decision: CAPTAIN_REQUIRED
+  - id: GR-040
+    action: grant_module_write_routes
+    decision: CAPTAIN_REQUIRED
+  - id: GR-041
+    action: grant_app_rights
+    decision: CAPTAIN_REQUIRED
   precedence:
   - BLOCK
   - CAPTAIN_REQUIRED
