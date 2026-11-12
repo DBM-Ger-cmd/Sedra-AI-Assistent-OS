@@ -1,0 +1,20 @@
+# App „Team“ (A3, SPEC_APP_TEAM_v1): Überblick · Issues · Vorhaben · Organigramm · Routinen · Kosten in einem App-Reiter.
+# Das Paket ist der Platzhalter für den Objekttyp `team`; die Modi zeichnet die Harness-Shell (One Sedra) mit den vorhandenen Werkzeugen.
+# In anderen Shells zeigt es Knöpfe, die die Werkzeuge einzeln öffnen. Es ruft selbst keine Route.
+tool:
+  id: team
+  name: "Team"
+  description: "Überblick, Issues, Vorhaben, Organigramm, Routinen und Kosten in einer App – in One Sedra mit Modus-Reitern und einem Überblick aus mehreren Werkzeugen."
+  version: 1.0.0
+  kind: object
+  handles: [team]
+  order: 38
+  slot: inhalt
+  entry: {js: tool.js}
+  api: []
+  events:
+    emits: []
+    listens: []
+  trust: CORE
+  tests: []
+  needs: {ui: ">=1.0 <2"}

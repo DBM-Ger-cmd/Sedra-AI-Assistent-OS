@@ -321,6 +321,20 @@
    }
   },
   {
+   "id": "team",
+   "label": "Team",
+   "hint": "Überblick, Issues, Organigramm, Routinen, Kosten – eine App",
+   "words": [
+    "team",
+    "paperclip"
+   ],
+   "object": {
+    "type": "team",
+    "id": "app",
+    "title": "Team"
+   }
+  },
+  {
    "id": "planung",
    "label": "Planungstisch",
    "hint": "mit einem Assistenten Ziele und Aufträge festlegen",
@@ -343,7 +357,6 @@
    "hint": "das Team: Vorgesetzte, Rolle, Budget",
    "words": [
     "organigramm",
-    "team",
     "hierarchie"
    ],
    "object": {

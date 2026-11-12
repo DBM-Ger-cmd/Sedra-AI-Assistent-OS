@@ -45,7 +45,7 @@
   // Welches Zeichen ein Objekttyp oder ein Ort bekommt, wenn der Captain keines wählt (rein)
   const BY_TYPE = {task: 'aufgaben', intent: 'vorhaben', project: 'projekt', model: 'werkstatt', agent: 'besatzung', skill: 'bibliothek',
                    logbook: 'logbuch', decision: 'entscheidung', machine: 'maschine', hardware: 'hardware', meter: 'meter',
-                   module: 'module', boundary: 'grenzen', candidate: 'kandidat', talk: 'gespraech', gateway: 'gateway', planung: 'planung', uebersetzung: 'fisch', translator: 'fisch', transkript: 'transkript', aufnahme: 'aufnahme',
+                   module: 'module', boundary: 'grenzen', candidate: 'kandidat', talk: 'gespraech', gateway: 'gateway', planung: 'planung', uebersetzung: 'fisch', translator: 'fisch', team: 'besatzung', transkript: 'transkript', aufnahme: 'aufnahme',
                    routine: 'uhr', labor: 'test', wissen: 'wissen'};      // Spec 4 (G2-S4-21): Orte Routinen und KI-Labor
 
   function typeIcon(type){ return BY_TYPE[type] || 'stern'; }

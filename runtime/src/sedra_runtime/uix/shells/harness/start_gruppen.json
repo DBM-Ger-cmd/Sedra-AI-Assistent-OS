@@ -20,6 +20,7 @@
     "gateway": "arbeit",
     "labor": "arbeit",
     "translator": "arbeit",
+    "team": "arbeit",
     "nachrichten": "arbeit",
     "uebersetzung": "arbeit",
     "transkript": "arbeit",
@@ -61,7 +62,7 @@
     "pruefung": "✓",
     "token": "◎"
   },
-  "ausblenden": ["hardware", "uebersetzung", "transkript", "aufnahme", "werkzeug-nachrichten", "wissen-suche", "wissen-quellen", "wissen-vorschlaege", "wissen-eigenes", "wissen-messung", "wissen-index", "wissen-nachmessung"],
+  "ausblenden": ["org", "routines", "intents", "werkzeug-board", "hardware", "uebersetzung", "transkript", "aufnahme", "werkzeug-nachrichten", "wissen-suche", "wissen-quellen", "wissen-vorschlaege", "wissen-eigenes", "wissen-messung", "wissen-index", "wissen-nachmessung"],
   "umbenennen": {"decisions": {"label": "Posteingang", "hint": "alles, was auf dich wartet: Freigaben, Anträge, Vorschläge", "words": ["posteingang", "antrag", "anträge", "antraege"]}},
   "zuletzt_max": 6
 }

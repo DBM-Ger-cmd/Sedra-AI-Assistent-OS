@@ -1,0 +1,7 @@
+.hs-tm-buehne{ display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.hs-tm-pane{ display: flex; flex-direction: column; min-height: 0; flex: 1; overflow: auto; }
+.hs-tm-pane[hidden]{ display: none; }
+.hs-tm-pane.raster{ display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 12px; align-content: start; padding-top: 8px; }
+.hs-tm-zelle{ display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 8px; }
+.hs-tm-pane.raster .hs-tm-zelle{ max-height: 26rem; overflow: auto; }
+.hs-tm-zellenkopf{ margin: 0 0 6px; font-size: 0.95em; color: var(--muted, var(--text)); }
