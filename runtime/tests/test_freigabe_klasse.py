@@ -33,6 +33,12 @@ class Tabelle(unittest.TestCase):
             self.assertEqual(klasse(art, 'freigeben_und_anwenden', {}), H, art)
             self.assertEqual(klasse(art, 'einmal', {}), H, art)
 
+    def test_nur_der_eigenablauf_ist_als_gate_klasse_n(self):
+        """12.11.2026, ausdrücklich vom Captain: der Lauf des SEDRA-Eigenablaufs braucht nur das Fenster in der Seite. Jedes andere Gate bleibt H."""
+        self.assertEqual(klasse('gate', 'einmal', {'aktion': 'run_sedra_workflow'}), N)
+        for binding in ({}, None, {'aktion': 'run_n8n_workflow'}, {'aktion': 'change_switch'}, {'gate_id': 'HG-1'}):
+            self.assertEqual(klasse('gate', 'einmal', binding), H, binding)
+
     def test_grenze_und_cloud(self):
         self.assertEqual(klasse('boundary', 'einmal', {}), H)
         self.assertEqual(klasse('boundary', 'aendern', {}), H)

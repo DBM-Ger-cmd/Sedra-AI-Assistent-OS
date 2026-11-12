@@ -10,7 +10,7 @@
     if(root.sedraWorkflowIcons)root.sedraWorkflowIcons.append(svg, name, 12, 12, 24);
     return svg;
   }
-  const LAUFEND = ['CAPTAIN_REVIEW', 'READY', 'EXECUTE', 'VERIFY', 'PAUSED'];
+  const LAUFEND = ['CAPTAIN_REVIEW', 'READY', 'EXECUTE', 'VERIFY'];      // PAUSED = abgelehnt oder angehalten: dafür gibt es kein „Fortsetzen“
   root.sedraWorkflowSchritte = function(){return {
     buildSchritte(run){
       [...run.children].forEach((c, i)=>{if(i > 0 && !c.classList.contains('t-wf-lokal'))c.classList.add('t-wf-classic');});      // die alten Knöpfe, solange die Schritte führen
@@ -19,8 +19,8 @@
       this.advanced = button('Erweitert: Eingaben als JSON und alle Knöpfe', ()=>{this.erweitert = !this.erweitert;this.updateSteps();});this.advanced.className = 't-wf-linkbtn';
       run.insertBefore(this.stepsNext, run.children[1]);run.insertBefore(this.steps, run.children[2]);run.insertBefore(this.advanced, run.children[3]);
     },
-    // Freigabe als Fenster: öffnet sich, sobald ein Lauf auf den Captain wartet. „Jetzt freigeben“ löst die Bestätigung von SEDRA aus (Klasse H: Windows-Fenster
-    // oder FREIGABE.bat, nie nur ein Klick im Browser); danach läuft der Lauf von selbst weiter. Das Fenster gibt nichts frei, es fragt nur.
+    // Freigabe als Fenster: öffnet sich, sobald ein Lauf auf den Captain wartet. „Jetzt freigeben“ ist die einzige Bestätigung (Klasse N, freigabeklasse.KLASSE_N_GATES);
+    // danach läuft der Lauf von selbst weiter. Wäre ein Gate Klasse H, wartet das Fenster auf die Bestätigung außerhalb des Browsers (Windows-Fenster, FREIGABE.bat).
     async pruefeFreigabe(run){
       if(!run || run.state !== 'CAPTAIN_REVIEW' || this.gefragt === run.id || this.freigabeFenster || !(this.exec && this.exec.profile === 'sedra-lokal-v1'))return;
       this.gefragt = run.id;
@@ -39,19 +39,19 @@
         };
         setTimeout(tick, 2000);
       };
+      const knoepfe = el('div', 't-wf-step-actions'), sperre = ein=>knoepfe.querySelectorAll('button').forEach(b=>{b.disabled = !ein;});
       const antwort = way=>this.safe(async()=>{
-        status.textContent = way === 'einmal' ? 'Freigabe wird angefordert …' : 'Wird abgelehnt …';
+        sperre(false);status.textContent = way === 'einmal' ? 'Freigabe wird angefordert …' : 'Wird abgelehnt …';
         try{
           await this.ctx.shell.decide(item.id, way);
           if(way === 'einmal')return weiter();
           zu();await this.showRun(run.id);
         }catch(e){
           const text = String(e && e.message || e);
-          if(/wartet_auf_bestaetigung/.test(text)){status.textContent = 'Bestätige jetzt im Fenster von SEDRA (Windows) oder mit FREIGABE.bat. Dieses Fenster wartet und setzt den Lauf danach fort.';warten();}
-          else status.textContent = text;
+          if(/wartet_auf_bestaetigung/.test(text)){status.textContent = 'Bestätige jetzt im Fenster von SEDRA (Windows) oder mit FREIGABE.bat. Dieses Fenster wartet und setzt den Lauf danach fort.';warten();setTimeout(()=>{if(this.freigabeFenster === dlg){sperre(true);status.textContent = 'Noch keine Antwort. Ein neues Windows-Fenster kannst du mit „Jetzt freigeben“ anfordern.';}}, 60000);}
+          else{status.textContent = text;sperre(true);}
         }
       });
-      const knoepfe = el('div', 't-wf-step-actions');
       knoepfe.append(button('Jetzt freigeben', ()=>antwort('einmal'), true), button('Ablehnen', ()=>antwort('ablehnen')), button('Später', zu));
       dlg.append(kopf, el('p', '', item.title || 'Lauf freigeben'), risiken, el('p', 't-wf-hint', item.note || ''), status, knoepfe);
       dlg.addEventListener('cancel', ()=>{this.freigabeFenster = null;});
@@ -66,7 +66,8 @@
       const brauch = ex.liest || [], haben = (this.tabellenListe || []).filter(t=>t.zeilen > 0).map(t=>kurz(t.name)), fehlt = brauch.filter(n=>!haben.includes(kurz(n)));
       const felder = ex.dateifelder || [];let ref = null;try{ref = JSON.parse(this.input.value);}catch(e){}
       const hatDatei = !felder.length || felder.every(l=>ref && ref[l] && ref[l].datei);
-      const phase = this.runId && this.runWf === this.wid ? this.runState : null, laufend = LAUFEND.includes(phase), ende = phase === 'COMPLETE' || phase === 'FAILED';
+      const phase = this.runId && this.runWf === this.wid ? this.runState : null, laufend = LAUFEND.includes(phase), pausiert = phase === 'PAUSED', ende = phase === 'COMPLETE' || phase === 'FAILED';
+      const neu = ()=>{this.runId = null;this.runState = null;this.input.value = '{}';this.fileBox.value = '';this.fileState.textContent = '';this.output.replaceChildren();this.updateSteps();};
       const bereit = !fehlt.length && hatDatei && !this.dirty();
       const S = [
         {icon: 'dataTable', titel: 'Daten bereit', fertig: !fehlt.length,
@@ -79,14 +80,14 @@
           sag: this.dirty() ? 'Der Workflow hat ungespeicherte Änderungen. Erst speichern, dann vorlegen.' : 'SEDRA legt den Lauf dem Captain vor. Dabei läuft noch nichts.',
           tun: ()=>{const b = button('Lauf zur Freigabe vorlegen', ()=>this.submitRun(), true);b.disabled = !bereit;return [b];}},
         {icon: 'human', titel: 'Freigeben und fortsetzen', fertig: ende,
-          sag: laufend ? 'Die Freigabe erscheint als Fenster. Mit „Jetzt freigeben“ bestätigst du sie im Windows-Fenster von SEDRA (oder mit FREIGABE.bat freigeben B-XXXX); der Lauf geht danach von selbst weiter. Sie steht auch im Posteingang.' : 'Wartet auf den Lauf.',
+          sag: laufend ? 'Die Freigabe erscheint als Fenster. Mit „Jetzt freigeben“ gibst du diesen Lauf einmal frei; er startet sofort. Die Freigabe steht auch im Posteingang.' : pausiert ? 'Die Freigabe wurde abgelehnt, der Lauf ist angehalten. Es ist nichts gelaufen und nichts geschrieben worden. Lege den Lauf neu vor.' : 'Wartet auf den Lauf.',
           tun: ()=>laufend ? [button('Jetzt freigeben …', ()=>{this.gefragt = null;this.pruefeFreigabe({id: this.runId, state: phase});}, phase === 'CAPTAIN_REVIEW'),
             button('Posteingang öffnen', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'})),
             button('Nach Freigabe fortsetzen', ()=>this.safe(async()=>{await this.call('workflow_run', this.runId, 'fortsetzen');await this.showRun(this.runId);}), phase !== 'CAPTAIN_REVIEW'),
-            button('Lauf beenden', ()=>this.safe(async()=>{await this.call('workflow_run', this.runId, 'abbrechen');await this.showRun(this.runId);}))] : []},
+            button('Lauf beenden', ()=>this.safe(async()=>{await this.call('workflow_run', this.runId, 'abbrechen');await this.showRun(this.runId);}))] : pausiert ? [button('Neu vorlegen', neu, true)] : []},
         {icon: 'end', titel: 'Ergebnis', fertig: ende,
           sag: phase === 'FAILED' ? 'Der Lauf ist fehlgeschlagen. Der Grund steht unten beim betroffenen Knoten.' : ende ? 'Fertig. Das Ergebnis steht unten, jeder Knoten ist aufklappbar.' : 'Erscheint hier, sobald der Lauf fertig ist.',
-          tun: ()=>ende ? [button('Neuer Lauf', ()=>{this.runId = null;this.runState = null;this.input.value = '{}';this.fileBox.value = '';this.fileState.textContent = '';this.output.replaceChildren();this.updateSteps();}, true)] : []}
+          tun: ()=>ende ? [button('Neuer Lauf', neu, true)] : []}
       ];
       const jetzt = S.findIndex(s=>!s.fertig);
       this.stepsNext.textContent = jetzt < 0 ? 'Fertig. Der Lauf ist abgeschlossen.' : 'Jetzt: Schritt ' + (jetzt + 1) + ' von ' + S.length + ' · ' + S[jetzt].titel;

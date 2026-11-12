@@ -34,6 +34,12 @@ def _jetzt():
     return datetime.now(timezone.utc).isoformat(timespec='seconds')
 
 
+def prozess_fuer(workflow_id):
+    """Die Prozesskennung der Live-Datei eines gespeicherten Workflows (Eigenablauf): `wf-<kennung>`."""
+    kennung = re.sub(r'[^a-z0-9]+', '-', str(workflow_id).lower()).strip('-')[:58]
+    return kennung if kennung.startswith('wf-') else 'wf-' + kennung
+
+
 def _pfad(projekt_root, prozess):
     if not isinstance(prozess, str) or not KENNUNG.fullmatch(prozess):
         raise ValueError('live_prozess_ungueltig')
@@ -48,8 +54,10 @@ def _lesen(pfad):
     return wert if isinstance(wert, dict) and wert.get('schema') == 1 else None
 
 
-def melde(projekt_root, prozess, schritt, zustand='laeuft', *, text=None, lauf=None, neu=False, zeit=None):
-    """Den aktuellen Schritt melden (atomar geschrieben). `schritt` None nur bei `fertig` oder `fehler` ohne Schritt."""
+def melde(projekt_root, prozess, schritt, zustand='laeuft', *, text=None, lauf=None, neu=False, zeit=None, ids=None, workflow_id=None, captain=None):
+    """Den aktuellen Schritt melden (atomar geschrieben). `schritt` None nur bei `fertig` oder `fehler` ohne Schritt.
+    Für Läufe des SEDRA-Eigenablaufs: `ids` ordnet jeden Schritt einem Knoten des Workflows zu ({schritt: Knotenkennung}), `workflow_id` ist der gespeicherte Workflow,
+    `captain=True` heißt: die Meldung wartet auf eine Freigabe des Captains und gilt deshalb nicht nach drei Minuten als veraltet."""
     pfad = _pfad(projekt_root, prozess)
     if zustand not in ZUSTAENDE:
         raise ValueError('live_zustand_ungueltig')
@@ -67,6 +75,10 @@ def melde(projekt_root, prozess, schritt, zustand='laeuft', *, text=None, lauf=N
         eintrag['text'] = str(text)[:MAX_TEXT]
     satz['verlauf'] = (satz['verlauf'] + [eintrag])[-MAX_VERLAUF:]
     satz.update(schritt=schritt, zustand=zustand, text=eintrag.get('text'), lauf=lauf if lauf is not None else (alt or {}).get('lauf'), aktualisiert=jetzt)
+    for feld, wert in (('ids', {k: str(v) for k, v in (ids or {}).items()} or (alt or {}).get('ids')), ('workflow_id', workflow_id or (alt or {}).get('workflow_id'))):
+        if wert:
+            satz[feld] = wert
+    satz['wartet_captain'] = bool(captain) if captain is not None else (bool((alt or {}).get('wartet_captain')) and zustand == 'wartet')
     pfad.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix='.live-', suffix='.tmp', dir=str(pfad.parent))
     try:
@@ -91,8 +103,11 @@ def _zeit(text):
 
 def knoten(satz, prozess=None):
     """{Knotenkennung: Zustand} für das Diagramm (rein): besuchte Schritte sind fertig, sobald ein anderer folgt; der aktuelle trägt den gemeldeten
-    Zustand; ein Schritt, dessen letzte Meldung `fehler` war, bleibt fehler. Die Knotenkennung ist die des Selbstabbilds (`sa-<prozess>-<schritt>`)."""
+    Zustand; ein Schritt, dessen letzte Meldung `fehler` war, bleibt fehler. Die Knotenkennung ist die des Selbstabbilds (`sa-<prozess>-<schritt>`), bei einem Lauf
+    des Eigenablaufs die aus `ids`."""
     p = prozess or satz.get('prozess')
+    ids = satz.get('ids') or {}
+    kennung = lambda s: ids.get(s) or 'sa-%s-%s' % (p, s)
     letzter, reihenfolge = {}, []
     for e in satz.get('verlauf') or []:
         s = e.get('schritt')
@@ -106,11 +121,11 @@ def knoten(satz, prozess=None):
     for s in reihenfolge:
         z = letzter[s]
         if s == aktuell and satz.get('zustand') != 'fertig':
-            out['sa-%s-%s' % (p, s)] = satz.get('zustand')
+            out[kennung(s)] = satz.get('zustand')
         elif z == 'fehler':
-            out['sa-%s-%s' % (p, s)] = 'fehler'
+            out[kennung(s)] = 'fehler'
         else:
-            out['sa-%s-%s' % (p, s)] = 'fertig'
+            out[kennung(s)] = 'fertig'
     return out
 
 
@@ -127,7 +142,7 @@ def lesen(projekt_root, *, jetzt=None, veraltet_s=VERALTET_S):
             continue
         t = _zeit(satz.get('aktualisiert'))
         alter = int((jetzt - t).total_seconds()) if t else None
-        out.append(dict(satz, knoten=knoten(satz), alter_s=alter, veraltet=bool(alter is not None and alter > veraltet_s and satz['zustand'] in ('laeuft', 'wartet'))))
+        out.append(dict(satz, knoten=knoten(satz), alter_s=alter, veraltet=bool(alter is not None and alter > veraltet_s and satz['zustand'] in ('laeuft', 'wartet') and not (satz['zustand'] == 'wartet' and satz.get('wartet_captain')))))
     return sorted(out, key=lambda s: str(s.get('aktualisiert') or ''), reverse=True)
 
 

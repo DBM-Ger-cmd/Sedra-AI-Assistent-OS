@@ -60,7 +60,10 @@ def gate_decision(mission, gate):
             'risks': [r for r in (request.get('risks') or []) if isinstance(r, str)],
             'rollback': bool(request.get('rollback_available')),
             'note': 'gilt nur einmal · Rücknahme ' + ('möglich' if request.get('rollback_available') else 'nicht möglich'),
-            'created_at': gate.get('created_at'), 'ways': ['einmal', 'ablehnen'], 'apply': None, 'binding': request.get('request_binding'),
+            'created_at': gate.get('created_at'), 'ways': ['einmal', 'ablehnen'], 'apply': None,
+            # Ohne Bindung hielte die Bestätigung außerhalb des Browsers jede Antwort für „hinfällig“ (bestaetigung.nehmen: None = weg). Ein Gate ohne eigene
+            # Bindung wird darum an seine Kennung und die Prüfsumme der Anfrage gebunden: ändert sich die Anfrage, gilt die Bestätigung nicht mehr.
+            'binding': request.get('request_binding') or {'gate_id': gate.get('gate_id'), 'request_digest': request.get('request_digest'), 'aktion': action},
             'agent_id': None}
 
 
@@ -156,7 +159,7 @@ def _offene_gates(m, mid):
     if isinstance(m.get('human_gates'), dict):
         return m, (m['human_gates'].get('pending') or [])
     gates = [{'gate_id': g.get('gate_id'), 'request': {'exact_action': g.get('action'), 'targets': g.get('targets') or [], 'risks': g.get('risks') or [],
-                                                        'rollback_available': bool(g.get('rollback'))}}
+                                                        'rollback_available': bool(g.get('rollback')), 'request_digest': g.get('request_digest')}}
              for g in (m.get('gates') or []) if isinstance(g, dict)]
     voll = {'identity': {'mission_id': mid}, 'captain_intent': {'original': m.get('intent')}, 'objective': {'current': m.get('objective')}}
     return voll, gates

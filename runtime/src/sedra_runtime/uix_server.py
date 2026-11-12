@@ -106,7 +106,8 @@ def _compact_mission(m):
         'pending_gates': len(m.get('human_gates', {}).get('pending', [])),
         # the Deck shows the gates and the sea chart without loading the whole record (Build 6)
         'gates': [{'gate_id': g.get('gate_id'), 'action': (g.get('request') or {}).get('exact_action'), 'targets': (g.get('request') or {}).get('targets', []),
-                   'risks': (g.get('request') or {}).get('risks', []), 'rollback': bool((g.get('request') or {}).get('rollback_available'))}
+                   'risks': (g.get('request') or {}).get('risks', []), 'rollback': bool((g.get('request') or {}).get('rollback_available')),
+                   'request_digest': (g.get('request') or {}).get('request_digest')}
                   for g in m.get('human_gates', {}).get('pending', []) if isinstance(g, dict)],
         'steps': [str(st.get('description') or st.get('action') or st.get('id') or '') for st in ((m.get('plan') or {}).get('steps') or []) if isinstance(st, dict)][:12],
         'steps_done': len(((m.get('execution') or {}).get('results') or [])),

@@ -131,6 +131,73 @@ class Freigabe(unittest.TestCase):
         self.assertEqual(out['result']['tabellen_geschrieben'], ['Kosten bersicht'])
         self.assertEqual(Tabellen(self.hub.project_root).lesen('Kostenübersicht')['anzahl'], 1)
 
+    def _vorgelegt(self):
+        import base64
+        from sedra_runtime.desk import systemdialog
+        from sedra_runtime.workflows.desk import _save, _start, _eingabe_hochladen
+        systemdialog.setzen(lambda titel, text: None)           # kein echtes Windows-Fenster im Test
+        self.addCleanup(systemdialog.setzen, None)
+        rec = _save(self.hub, None, {'workflow': WF})
+        up = _eingabe_hochladen(self.hub, None, {'name': 'r.pdf', 'data': base64.b64encode(pdf(RECHNUNG)).decode()})
+        run = _start(self.hub, rec['id'], {'revision': 1, 'inputs': {'Rechnung': {'datei': up['datei'], 'name': 'r.pdf'}}})
+        [eintrag] = [d for d in self.hub.decisions_view()['items'] if d.get('mission_id') == run['id']]
+        return run, eintrag
+
+    def test_freigabe_im_fenster_der_seite_genuegt(self):
+        """Klasse N (12.11.2026): "einmal" aus der Seite gibt den Lauf frei, ohne zweites Windows-Fenster; danach läuft er bis zum Ergebnis."""
+        from sedra_runtime.workflows.desk import _run_read
+        run, eintrag = self._vorgelegt()
+        self.hub.decide({'id': eintrag['id'], 'way': 'einmal'})
+        self.assertEqual(self.hub.bestaetigungen.offen(), [])
+        self.assertEqual(self.hub.runtime.missions.load(run['id'])['human_gates']['pending'], [])
+        self.hub.run_mission({'mission_id': run['id']})
+        self.assertEqual(_run_read(self.hub, run['id'])['state'], 'COMPLETE')
+
+    def test_live_wartet_laeuft_fertig(self):
+        """Reiter Live: der Lauf meldet "wartet auf Freigabe" (nie veraltet), dann jeden Knoten, am Ende fertig - mit den Knoten des gespeicherten Workflows."""
+        from datetime import datetime, timedelta, timezone
+        from sedra_runtime.workflows import live
+        from sedra_runtime.workflows.desk import _live
+        run, eintrag = self._vorgelegt()
+        [p] = _live(self.hub, None, {})['prozesse']
+        self.assertEqual((p['zustand'], p['schritt_name'], p['titel']), ('wartet', 'Rechnungsprüfung', 'Rechnungsprüfung'))
+        spaet = datetime.now(timezone.utc) + timedelta(hours=1)
+        self.assertFalse(live.lesen(self.hub.project_root, jetzt=spaet)[0]['veraltet'])          # wartet auf den Captain: nicht "ohne Meldung"
+        self.hub.decide({'id': eintrag['id'], 'way': 'einmal'})
+        self.hub.run_mission({'mission_id': run['id']})
+        [p] = _live(self.hub, None, {})['prozesse']
+        self.assertEqual(p['zustand'], 'fertig')
+        ids = {n['name']: n['id'] for n in WF['nodes']}
+        self.assertEqual(p['knoten'][ids['Kostenübersicht']], 'fertig')
+        self.assertEqual(p['knoten'][ids['Rechnungspositionen auslesen']], 'fertig')
+        self.assertNotIn(ids['Klärung erforderlich'], p['knoten'])                                # der Nein-Zweig lief nicht
+        self.assertEqual([e['schritt_name'] for e in p['verlauf']][:3], ['Rechnungsprüfung', 'Rechnungsprüfung', 'Extract from File'])
+
+    def test_live_abgelehnte_freigabe_ist_ein_fehler(self):
+        from sedra_runtime.workflows.desk import _live
+        run, eintrag = self._vorgelegt()
+        self.hub.decide({'id': eintrag['id'], 'way': 'ablehnen'})
+        [p] = _live(self.hub, None, {})['prozesse']
+        self.assertEqual(p['zustand'], 'fehler')
+        self.assertIn('abgelehnt', p['text'])
+
+    def test_klasse_h_bestaetigung_gilt_nicht_als_hinfaellig(self):
+        """Der Weg außerhalb des Browsers (Klasse H, hier erzwungen): ohne Bindung am Gate hielt SEDRA jede Bestätigung für hinfällig
+        (FREIGABE_DIALOG_FEHLER bestaetigung_hinfaellig), und das Gate blieb ewig offen."""
+        from unittest.mock import patch
+        from sedra_runtime.desk import freigabeklasse
+        from sedra_runtime.workflows.desk import _run_read
+        with patch.object(freigabeklasse, 'KLASSE_N_GATES', frozenset()):
+            run, eintrag = self._vorgelegt()
+            self.assertTrue(eintrag['binding'])
+            with self.assertRaisesRegex(Exception, 'wartet_auf_bestaetigung'):
+                self.hub.decide({'id': eintrag['id'], 'way': 'einmal'})
+            [offen] = self.hub.bestaetigungen.offen()
+            self.hub.freigabe_bestaetigen(offen['bid'], True, 'konsole')                 # darf nicht bestaetigung_hinfaellig werfen
+        self.assertEqual(self.hub.runtime.missions.load(run['id'])['human_gates']['pending'], [])
+        self.hub.run_mission({'mission_id': run['id']})
+        self.assertEqual(_run_read(self.hub, run['id'])['state'], 'COMPLETE')
+
     def test_fehlende_datei_wird_vor_dem_gate_abgelehnt(self):
         from sedra_runtime.workflows.desk import _save, _start
         rec = _save(self.hub, None, {'workflow': WF})

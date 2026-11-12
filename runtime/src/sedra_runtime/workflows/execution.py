@@ -4,7 +4,7 @@ from pathlib import Path
 from ..core.request_binding import digest
 from .engine import LocalN8n, configuration, inputs
 from .policy import executable, PROFILE
-from . import lokal
+from . import lokal, live
 
 
 def context(control, mission, request):
@@ -38,6 +38,19 @@ def _modell(control, mission_id):
         antwort = router.chat(mission_id, nachrichten, provider='llama-cpp-server', schema=schema, temperature=0, max_tokens=700)
         return antwort.get('parsed')
     return fragen
+
+
+def _live_melder(project, mission, workflow):
+    """Meldet jeden Schritt eines Laufs für den Reiter Live (workflows/live.py); None, wenn der Workflow nicht gespeichert ist. Nur Anzeige."""
+    wid = ((mission.get('context') or {}).get('n8n_workflow') or {}).get('id')
+    if not wid:
+        return None
+    ids, _, _ = lokal.schritte(workflow)
+    prozess, mid = live.prozess_fuer(wid), mission['identity']['mission_id']
+
+    def melden(i, name, zustand, text):
+        live.melde(project, prozess, None if i is None else 's%d' % i, zustand, text=text, lauf=mid, workflow_id=wid, ids=ids, captain=False)
+    return melden
 
 
 def execute(control, mission, request, token=None):
@@ -77,7 +90,7 @@ def execute(control, mission, request, token=None):
                          payload={'step_id': request.get('id'), 'binding_digest': digest(binding), 'profile': PROFILE})
     try:
         if eigen:
-            result = lokal.ausfuehren(request['workflow'], data, control.workspace.parents[1], modell=_modell(control, mid))
+            result = lokal.ausfuehren(request['workflow'], data, control.workspace.parents[1], modell=_modell(control, mid), live=_live_melder(control.workspace.parents[1], mission, request['workflow']))
         else:
             result = LocalN8n(cfg).run(request['workflow'], data)
     except Exception:

@@ -18,7 +18,7 @@ IMMER_N = frozenset({'ablehnen', 'zuruecknehmen', 'zur_kenntnis'})          # ve
 # Wert: Klasse für jeden erteilenden Weg, oder ein Wörterbuch Weg → Klasse, oder SONDER (hängt an der Bindung, siehe klasse()).
 SONDER = 'sonder'
 ARTEN = {
-    'gate': H,                                   # Missions-Gate allgemein: Wirkung unbekannt (E2a)
+    'gate': SONDER,                              # Missions-Gate: H, außer eine einzelne, ausdrücklich genannte Aktion (KLASSE_N_GATES)
     # Anträge (request:<art>, desk/decisions.REQUEST_TITLE)
     'request:switch': H, 'request:routing': H, 'request:boundaries': H,                 # Regeln
     'request:harness_katalog': H, 'request:harness_vorlage': H,                          # Regeln der Harness
@@ -76,6 +76,12 @@ def _harness(binding, weg):
     return H
 
 
+# Gates, die der Captain ausdrücklich als Klasse N eingestuft hat (12.11.2026): ihr Fenster in der Seite ist die einzige Bestätigung, kein zweites
+# Windows-Fenster. `run_sedra_workflow` = ein Lauf des SEDRA-Eigenablaufs: geschlossenes Profil, Code nur in der abgeschotteten Node-Umgebung ohne
+# Datei- und Netzzugriff, keine Cloud, schreibt nur in lokale Tabellen. Jede weitere Aktion hier braucht dieselbe ausdrückliche Entscheidung.
+KLASSE_N_GATES = frozenset({'run_sedra_workflow'})
+
+
 def klasse(art, weg, binding=None):
     """'H' oder 'N' für eine Antwort `weg` auf eine Entscheidung der Art `art` mit ihrer Bindung (G9-01)."""
     weg = str(weg or '')
@@ -97,6 +103,8 @@ def klasse(art, weg, binding=None):
         return N if b.get('route') == 'local' else H          # die Bindung der Entscheidung trägt `route` erst mit G9; bis dahin H
     if art == 'harness_freigabe':
         return _harness(b, weg)
+    if art == 'gate':
+        return N if b.get('aktion') in KLASSE_N_GATES else H
     return H
 
 

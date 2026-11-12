@@ -793,8 +793,24 @@ def _kuerzen(wert, tiefe=0):
     return wert
 
 
-def ausfuehren(workflow, eingabe, project, modell=None):
-    """Führt einen geprüften Workflow aus. Wirft nie: Fehler stehen im Ergebnis (status failed, error, fehler_knoten)."""
+def schritte(workflow):
+    """Die Schritte eines Laufs für die Live-Ansicht: ({schritt: Knotenkennung}, [Knotenname], Name des Starts). Schritt `s<n>` ist der n-te Knoten der Laufreihenfolge."""
+    plan = _plan(workflow)
+    ids = {'s%d' % i: plan['knoten'][name]['id'] for i, name in enumerate(plan['reihe'])}
+    return ids, list(plan['reihe']), plan['start']
+
+
+def ausfuehren(workflow, eingabe, project, modell=None, live=None):
+    """Führt einen geprüften Workflow aus. Wirft nie: Fehler stehen im Ergebnis (status failed, error, fehler_knoten).
+    `live(index, name, zustand, text)` (optional) meldet jeden Schritt für die Live-Ansicht; ein Fehler dort stört den Lauf nie. index None = Ende des Laufs."""
+    def melden(i, name, zustand, text=None):
+        if live is None:
+            return
+        try:
+            live(i, name, zustand, text)
+        except Exception:
+            pass
+
     start = time.time()
     ergebnis = {'status': 'failed', 'profile': PROFILE, 'knoten': [], 'output': None, 'tabellen_geschrieben': [], 'hinweise': []}
     try:
@@ -805,10 +821,10 @@ def ausfuehren(workflow, eingabe, project, modell=None):
     lauf = Lauf(Tabellen(project), Eingaben(project), eingabe, modell)
     eingang = {name: {0: [], 1: []} for name in plan['reihe']}
     ergebnis['uebersprungen'] = plan['uebersprungen']
-    aktuell = None
+    aktuell, aktuell_nr = None, None
     try:
-        for name in plan['reihe']:
-            aktuell = name
+        for nr, name in enumerate(plan['reihe']):
+            aktuell, aktuell_nr = name, nr
             n = plan['knoten'][name]
             art = _kurz(n['type'])
             ist_start = name == plan['start']
@@ -816,6 +832,7 @@ def ausfuehren(workflow, eingabe, project, modell=None):
                 lauf.ausgaben[name] = [[] for _ in range(_ausgaenge(n))]
                 ergebnis['knoten'].append({'name': name, 'art': LABEL.get(art, art), 'status': 'uebersprungen', 'eingang': 0, 'ausgang': []})
                 continue
+            melden(nr, name, 'laeuft', LABEL.get(art, art) + ('' if ist_start else ' · %d Einträge' % sum(len(v) for v in eingang[name].values())))
             zweige = HANDLER[art](lauf, n, eingang[name] if art == 'merge' else eingang[name][0])
             if any(len(z) > MAX_ITEMS for z in zweige):
                 raise LokalFehler('Zu viele Einträge')
@@ -833,14 +850,18 @@ def ausfuehren(workflow, eingabe, project, modell=None):
         if plan['uebersprungen']:
             ergebnis['hinweise'].append('Nicht im Ablauf angeschlossen, läuft nicht: ' + ', '.join(plan['uebersprungen']) + '.')
         ergebnis['status'] = 'completed'
+        gelaufen = sum(1 for k in ergebnis['knoten'] if k['status'] == 'ok')
+        melden(None, None, 'fertig', 'Lauf abgeschlossen: %d Knoten gelaufen%s' % (gelaufen, (', %d ohne Daten übersprungen' % (len(plan['reihe']) - gelaufen)) if len(plan['reihe']) > gelaufen else ''))
     except LokalFehler as exc:
         ergebnis['error'] = 'knoten_fehler'
         ergebnis['fehler_knoten'] = aktuell
         ergebnis['fehler_text'] = str(exc)
+        melden(aktuell_nr, aktuell, 'fehler', str(exc)[:200])
     except Exception as exc:                                    # nichts darf den Lauf unkontrolliert beenden
         ergebnis['error'] = 'lauf_abgebrochen'
         ergebnis['fehler_knoten'] = aktuell
         ergebnis['fehler_text'] = type(exc).__name__
+        melden(aktuell_nr, aktuell, 'fehler', type(exc).__name__)
     ergebnis['tabellen_geschrieben'] = list(lauf.geschrieben)
     ergebnis['dauer_ms'] = int((time.time() - start) * 1000)
     return ergebnis

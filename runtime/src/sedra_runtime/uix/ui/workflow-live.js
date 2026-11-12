@@ -33,7 +33,7 @@
   const laufZeile = l=>(l.name || l.lauf || 'Lauf') + ' · ' + laufText(l.status) + (l.dauer_s !== null && l.dauer_s !== undefined ? ' · ' + dauerText(l.dauer_s) : '');
   // Eine wartende Freigabe in einer Zeile (rein): „request:…“ ist ein Rohname des Posteingangs und bleibt weg
   function kartenText(k){
-    const art = k && k.werkzeug && !/^request:/.test(k.werkzeug) ? k.werkzeug : '';
+    const art = k && k.werkzeug && !/^(request:|gate$)/.test(k.werkzeug) ? k.werkzeug : '';
     return [art, (k && k.ziel) || (k && k.werkzeug) || 'Freigabe'].filter(Boolean).join(' · ') + (k && k.begruendung && k.begruendung !== k.ziel ? ' – ' + k.begruendung : '');
   }
   // die drei Zahlen der Fabrikhalle (rein)
@@ -48,7 +48,7 @@
     const panel = c.panels.live;
     const kopf = el('div', 't-wf-live-kopf'), summe = el('p', 't-wf-live-summe', 'Lade …'), liste = el('div', 't-wf-live-karten');
     kopf.append(el('h3', '', 'Live – was gerade geschieht'), summe);
-    const leer = el('p', 't-wf-hint t-wf-live-leer', 'Ein Prozess erscheint hier, sobald er meldet, in welchem Schritt er ist. Die Meldung schreibt der laufende Prozess selbst (workflows/live.py); gerechnet oder geraten wird hier nichts.');
+    const leer = el('p', 't-wf-hint t-wf-live-leer', 'Ein Prozess erscheint hier, sobald er meldet, in welchem Schritt er ist. Läufe deiner Workflows melden sich von selbst: nach dem Vorlegen wartet der Lauf auf dich, danach leuchtet jeder Knoten. Gerechnet oder geraten wird hier nichts.');
     // Fabrikhalle (E1): was die Harness tut und was auf den Captain wartet
     const halle = el('section', 't-wf-fabrik'); halle.setAttribute('aria-label', 'Fabrikhalle');
     const kacheln = el('div', 't-wf-fabrik-kacheln'), kLauf = el('div', 't-wf-fabrik-kachel'), kAufg = el('div', 't-wf-fabrik-kachel');
@@ -75,6 +75,19 @@
       }catch(e){ k.bild.textContent = 'Das Diagramm ließ sich nicht laden.'; }
     }
 
+    // Knöpfe einer Karte (nur für Läufe des SEDRA-Eigenablaufs, die ihren Workflow kennen): zur Freigabe oder zum Ergebnis springen
+    function aktionen(k, p){
+      k.aktion.replaceChildren();
+      if(!p.workflow_id || !p.lauf) return;
+      const springe = (text, primaer)=>{
+        const b = el('button', primaer ? 't-wf-primary' : '', text); b.type = 'button';
+        b.onclick = ()=>c.safe(async()=>{ await c.load(p.workflow_id); c.setTab('runs'); c.gefragt = null; await c.showRun(p.lauf); });
+        k.aktion.append(b);
+      };
+      if(p.zustand === 'wartet' && !p.veraltet) springe('Jetzt freigeben …', true);
+      else springe(p.zustand === 'fertig' ? 'Ergebnis ansehen' : 'Lauf ansehen', false);
+    }
+
     function karte(p){
       const key = karteKey(p);
       let k = karten.get(key);
@@ -83,9 +96,10 @@
         const kopfZeile = el('div', 't-wf-live-kartenkopf'), titel = el('b', '', ''), chip = el('span', 't-wf-live-chip', '');
         const schritt = el('p', 't-wf-live-schritt', ''), text = el('p', 't-wf-live-text', '');
         const bild = el('div', 't-wf-live-bild'); const verlauf = el('ol', 't-wf-live-verlauf'); verlauf.setAttribute('aria-label', 'Verlauf der letzten Schritte');
-        kopfZeile.append(titel, chip); box.append(kopfZeile, schritt, text, bild, verlauf);
+        const aktion = el('div', 't-wf-live-aktion');
+        kopfZeile.append(titel, chip); box.append(kopfZeile, schritt, text, aktion, bild, verlauf);
         liste.append(box);
-        k = {box, titel, chip, schritt, text, bild, verlauf, doc: null, canvas: null, state: null, laedt: false};
+        k = {box, titel, chip, schritt, text, aktion, bild, verlauf, doc: null, canvas: null, state: null, laedt: false};
         karten.set(key, k);
       }
       k.box.setAttribute('aria-label', 'Prozess ' + p.titel + ': ' + zustandText(p));
@@ -95,6 +109,7 @@
       k.schritt.textContent = p.schritt ? 'Schritt: ' + (p.schritt_name || p.schritt) + (p.workflow_id && !p.schritt_name ? ' (im Diagramm nicht bekannt)' : '') + (p.veraltet ? ' (zuletzt gemeldet vor ' + dauerText(p.alter_s) + ')' : '') : (p.zustand === 'fertig' ? 'Der Lauf ist zu Ende.' : '');
       k.text.textContent = p.text || '';
       k.text.hidden = !p.text;
+      aktionen(k, p);
       k.verlauf.replaceChildren();
       (p.verlauf || []).slice().reverse().forEach(e=>{
         const li = el('li', 't-wf-live-eintrag ' + (e.zustand || ''), (String(e.zeit || '').slice(11, 19)) + ' · ' + (e.schritt_name || e.schritt || 'Ende') + ' · ' + (TEXTE[e.zustand] || e.zustand) + (e.text ? ' – ' + e.text : ''));

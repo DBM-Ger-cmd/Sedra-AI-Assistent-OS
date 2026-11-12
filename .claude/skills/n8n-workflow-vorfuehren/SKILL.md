@@ -18,8 +18,12 @@ description: Einen n8n-Workflow in SEDRA importieren, im Projekt speichern, mit 
 ## 3. Die Kette (Schritte der Oberfläche)
 Daten bereit - Datei wählen - zur Freigabe vorlegen - freigeben und fortsetzen - Ergebnis.
 - Vorlegen legt eine Mission an (Phase `CAPTAIN_REVIEW`, Gate `run_sedra_workflow`). Es läuft noch nichts.
-- Freigabe ist **Klasse H**: im Browser "einmal" wählen, dann im Fenster von SEDRA bestätigen oder `FREIGABE.bat liste` und `FREIGABE.bat freigeben B-XXXX`. **Nie selbst freigeben**, das ist die Entscheidung des Captains.
+- Nach dem Vorlegen öffnet sich ein Freigabe-Fenster in der Seite (Risiken, "Jetzt freigeben"). Der Lauf des Eigenablaufs (`run_sedra_workflow`) ist seit 12.11. ausdrücklich **Klasse N** (`freigabeklasse.KLASSE_N_GATES`): dieses Fenster ist die einzige Bestätigung, danach läuft er sofort. Alle anderen Gates bleiben Klasse H (Windows-Fenster oder `FREIGABE.bat freigeben B-XXXX`). **Nie selbst freigeben**, das ist die Entscheidung des Captains; weitere Aktionen nur mit seiner ausdrücklichen Einstufung in die Liste aufnehmen.
+- Wird ein Windows-Fenster mit `bestaetigung_hinfaellig` verworfen, fehlt dem Gate die Bindung (`gate_decision.binding`); "Nein" im Windows-Fenster lehnt das Gate ab und pausiert die Mission (kein "Fortsetzen" mehr, neu vorlegen).
 - Danach im Editor "Nach Freigabe fortsetzen". Das Ergebnis erscheint je Knoten aufklappbar.
+
+## Reiter Live
+Läufe des Eigenablaufs melden sich selbst (`workflows/live.py`, Prozess `wf-<workflowkennung>`): beim Vorlegen "wartet auf deine Freigabe" (`captain=True`, wird nie "ohne Meldung"), dann jeder Knoten, am Ende fertig oder Fehler. `ids` ordnet Schritt `s<n>` dem Knoten des Workflows zu, `workflow_id` dem gespeicherten Workflow; `desk._live` findet das Diagramm darüber. Eine abgelehnte Freigabe (Mission PAUSED) zeigt die Karte als Fehler. Die Karte hat "Jetzt freigeben …" beziehungsweise "Ergebnis ansehen".
 
 ## 4. Wenn der Posteingang leer bleibt
 1. Läuft SEDRA überhaupt? `Get-NetTCPConnection -State Listen` (PowerShell) auf den Serverport; Git-Bash-`netstat` zeigt hier oft nichts.

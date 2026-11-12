@@ -76,16 +76,36 @@ def _selbstabbild_anlegen(hub, oid, args):
     return {'ergebnis': out}
 
 
+def _abgelehnt_abgleichen(hub, satz):
+    """Eine Meldung "wartet auf den Captain", deren Mission inzwischen angehalten oder beendet ist (Freigabe abgelehnt), zeigt die Live-Ansicht als Fehler statt ewig wartend."""
+    from . import live
+    if not (satz.get('zustand') == 'wartet' and satz.get('wartet_captain') and str(satz.get('lauf') or '').startswith('M-')):
+        return satz
+    try:
+        phase = hub.runtime.missions.load(satz['lauf'])['lifecycle']['phase']
+    except Exception:
+        return satz
+    if phase not in ('PAUSED', 'FAILED', 'CANCELLED', 'CLOSED'):
+        return satz
+    live.melde(hub.project_root, satz['prozess'], None, 'fehler', text='Freigabe abgelehnt, der Lauf ist angehalten')
+    return next((s for s in live.lesen(hub.project_root) if s['prozess'] == satz['prozess']), satz)
+
+
 def _live(hub, oid, args):
     """Laufende Prozesse (workflows/live.py): was die Prozesse selbst melden, mit dem Diagramm dazu. Nur lesen."""
     from . import live
     records = _store(hub).listing()
     out = []
     for satz in live.lesen(hub.project_root):
+        satz = _abgelehnt_abgleichen(hub, satz)
         prefix = 'sa-%s-' % satz['prozess']
-        rec = next((r for r in records if any(str(n.get('id', '')).startswith(prefix) for n in r['workflow'].get('nodes', []))), None)
+        ids = satz.get('ids') or {}
+        if satz.get('workflow_id'):                                          # Lauf des Eigenablaufs: gespeicherter Workflow und Knoten stehen in der Meldung
+            rec = next((r for r in records if r['id'] == satz['workflow_id']), None)
+        else:
+            rec = next((r for r in records if any(str(n.get('id', '')).startswith(prefix) for n in r['workflow'].get('nodes', []))), None)
         namen = {n['id']: n['name'] for n in rec['workflow']['nodes']} if rec else {}
-        name = lambda schritt: namen.get('%s%s' % (prefix, schritt)) if schritt else None
+        name = lambda schritt: (namen.get(ids.get(schritt)) if ids else namen.get('%s%s' % (prefix, schritt))) if schritt else None
         satz['verlauf'] = [dict(e, schritt_name=name(e.get('schritt'))) for e in satz['verlauf'][-12:]]
         out.append(dict(satz, workflow_id=rec['id'] if rec else None, titel=rec['workflow']['name'] if rec else satz['prozess'], schritt_name=name(satz.get('schritt'))))
     zaehler = {z: sum(1 for p in out if p['zustand'] == z and not p['veraltet']) for z in live.ZUSTAENDE}
@@ -194,6 +214,13 @@ def _start(hub, oid, args):
             rt.missions.transition(m, phase)
         # This only reaches the mandatory gate. Nothing is approved here.
         rt.brain.run(mid, max_steps=2)
+        if check['profile'] == lokal.PROFILE:                               # Reiter Live: der Lauf wartet auf die Freigabe des Captains
+            try:
+                from . import live as live_modul
+                ids, _reihe, _start = lokal.schritte(record['workflow'])
+                live_modul.melde(hub.project_root, live_modul.prozess_fuer(oid), 's0', 'wartet', text='Wartet auf deine Freigabe', lauf=mid, neu=True, ids=ids, workflow_id=oid, captain=True)
+            except Exception:
+                pass
         hub.events.publish('task.changed', {'id': mid})
         return _run_read(hub, mid)
 
