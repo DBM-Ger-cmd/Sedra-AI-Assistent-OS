@@ -23,7 +23,7 @@ class Seiten(unittest.TestCase):
         self.assertEqual(fehler, [])
         for r in ("GET /api/uix/dienste", "POST /api/uix/dienste/start", "POST /api/uix/dienste/stopp"):
             self.assertIn(r, man["api"])
-        self.assertEqual(man["js"], ["dienste.js", "tool.js"])
+        self.assertIn("dienste.js", man["js"])
         sman, fehler = check_shell(yaml.safe_load((HARNESS / "shell.yaml").read_text(encoding="utf-8")), HARNESS, "package")
         self.assertEqual(fehler, [])
         self.assertIn("GET /api/uix/zugaenge", sman["api"])
@@ -54,6 +54,32 @@ class Seiten(unittest.TestCase):
         self.assertIn("microVM", r[5])
         self.assertIn("dienst_start_pfad", r[5])
         self.assertLessEqual(len((MODULES / "tool.js").read_text(encoding="utf-8").splitlines()), 400)
+
+
+
+class BetriebSeite(unittest.TestCase):
+    def test_manifest_nennt_die_betrieb_wege_und_laedt_die_datei(self):
+        man, fehler = check_tool(yaml.safe_load((MODULES / "tool.yaml").read_text(encoding="utf-8")), MODULES, "package")
+        self.assertEqual(fehler, [])
+        for r in ("GET /api/uix/betrieb", "GET /api/uix/betrieb/export", "GET /api/uix/betrieb/eingaben"):
+            self.assertIn(r, man["api"])
+        self.assertEqual(man["js"], ["dienste.js", "betrieb.js", "tool.js"])
+        text = (MODULES / "betrieb.js").read_text(encoding="utf-8")
+        self.assertNotIn("innerHTML", text)
+        self.assertNotIn("method: 'POST'", text, "AM7-06: es gibt keinen Weg, die Richtlinie über SEDRA zu ändern")
+
+    @unittest.skipUnless(NODE, "node fehlt")
+    def test_saetze(self):
+        skript = ("const m = require(%s); process.stdout.write(JSON.stringify([m.richtlinieSatz(null), m.richtlinieSatz({schalter: true, richtlinie: {aktiv: true, rolle: 'pruefung', person: 'X', hash: 'abcdef1234567890'}}),"
+                  "m.richtlinieSatz({schalter: true, richtlinie: {aktiv: false, vorhanden: true, fehler: ['richtlinie_rolle_ungueltig']}}), m.richtlinieSatz({schalter: true, richtlinie: {}})]));")
+        out = subprocess.run([NODE, "-e", skript % json.dumps(str(MODULES / "betrieb.js"))], capture_output=True, text=True, encoding="utf-8", timeout=60)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        r = json.loads(out.stdout)
+        self.assertIn("Einzelplatzbetrieb", r[0])
+        self.assertEqual(r[1], "Richtlinie aktiv · Prüfung · X · Prüfsumme abcdef123456")
+        self.assertIn("nicht gültig", r[2])
+        self.assertIn("richtlinie_rolle_ungueltig", r[2])
+        self.assertIn("Keine Richtlinie", r[3])
 
 
 if __name__ == "__main__":

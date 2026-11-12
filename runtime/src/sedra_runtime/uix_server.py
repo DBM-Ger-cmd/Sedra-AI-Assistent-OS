@@ -166,6 +166,11 @@ class UIXHub:
         from .desk.dienste import Dienste, KIND_DIENST                                  # AM4: Dienst-Apps; der Port kommt, sobald der Server hört
         self.dienste = Dienste(self.project_root, 0, audit=lambda e, p: self.runtime.audit.append(e, component='desk', payload=p))
         self.dienste_an = self.runtime.switches.apply('dienste', 'enabled', False) is True               # Standard aus
+        from .desk import richtlinie as desk_richtlinie                               # AM7: die Richtlinie des Betreibers (Betriebsart A); Schalter betrieb_unternehmen, Standard aus
+        self.betrieb_an = self.runtime.switches.apply('betrieb_unternehmen', 'enabled', False) is True
+        self.richtlinie = desk_richtlinie.Richtlinie()
+        if self.betrieb_an:
+            self._richtlinie_laden()
         self.zugang_an = self.runtime.switches.apply('zugang_berechtigung', 'enabled', False) is True    # Standard aus (Übergang)
         self.gateway.herkunft_pruefen = self.runtime.switches.apply('herkunft_pruefen', 'enabled', True) is not False    # AM0-02
         self.gateway.melden = self._herkunft_melden
@@ -875,6 +880,46 @@ class UIXHub:
             rt.audit.append('UIX_APP_RIGHTS_GRANTED', component='desk', mission_id=mission_id, payload={'id': binding['id'], 'faehigkeiten': binding['faehigkeiten'], 'rechte_schluessel': binding['rechte_schluessel']})
         self.events.publish('tools.refresh', {})
         return {'status': 'granted', 'id': binding['id'], 'faehigkeiten': binding['faehigkeiten'], 'note': 'Die App darf diese Fähigkeiten jetzt nutzen, sobald sie aktiviert ist.'}
+
+    # ---- AM7: Betrieb im Unternehmen (Betriebsart A)
+    def _richtlinie_laden(self):
+        """Liest die Richtlinie, protokolliert eine Änderung (AM7-06), lässt sie über der Gewährung gelten (AM7-05) und setzt Person und Rolle in jeden Audit-Eintrag (AM7-12).
+        Eine ungültige Datei lässt SEDRA nicht abstürzen, wird aber protokolliert (RICHTLINIE_UNGUELTIG) und in der Anzeige genannt."""
+        from .desk import richtlinie as desk_richtlinie
+        rl = desk_richtlinie.laden(self.project_root)
+        self.richtlinie = rl
+        desk_richtlinie.aenderung_pruefen(self.project_root, rl, audit=lambda e, p: self.runtime.audit.append(e, component='desk', payload=p))
+        if rl.vorhanden and not rl.aktiv:
+            self.runtime.audit.append('RICHTLINIE_UNGUELTIG', component='desk', payload={'fehler': rl.fehler[:10]})
+        self.gateway.richtlinie = rl
+        if rl.aktiv:
+            start = rl.start_shell()
+            if start and start in self.gateway.shells():
+                self.gateway.registry.shell_override = start
+            audit = self.runtime.audit
+            if not getattr(audit, '_mit_person', False):
+                original = audit.append
+                person, rolle = rl.person, rl.rolle
+
+                def mit_person(event_type, *, component='sedra-core', mission_id=None, actor='system', payload=None):
+                    p = dict(payload or {})
+                    p.setdefault('person', person)             # AM7-12: aus der Richtlinie, nie vom Aufrufer (ein mitgegebener Wert wird überschrieben)
+                    p['person'], p['rolle'] = person, rolle
+                    return original(event_type, component=component, mission_id=mission_id, actor=actor, payload=p)
+                audit.append = mit_person
+                audit._mit_person = True
+
+    def betrieb_view(self, payload=None):
+        from .desk import betrieb
+        return betrieb.ansicht(self)
+
+    def betrieb_export(self, payload=None):
+        from .desk import betrieb
+        return betrieb.export(self)
+
+    def betrieb_eingaben(self, payload=None):
+        from .desk import betrieb
+        return betrieb.eingaben_text(self)
 
     # ---- AM4: Zugänge (mcp, cli) und Dienste
     def zugang_view(self, payload=None):
@@ -1682,7 +1727,7 @@ class UIXHub:
                 v.wunsch = p['wunsch']
             self.gw.pruefen(vid, p.get('anfrage'), dokument, manuell=[str(m) for m in (p.get('manuell') or [])],
                             zweck=(str(p['zweck']) if p.get('zweck') is not None else None),
-                            verantwortlich=(str(p['verantwortlich']) if p.get('verantwortlich') is not None else None))
+                            verantwortlich=(self.richtlinie.person if self.richtlinie.aktiv else (str(p['verantwortlich']) if p.get('verantwortlich') is not None else None)))      # AM7-03: bei aktiver Richtlinie die Person aus der Richtlinie, nicht frei eingebbar
         except Exception as exc:
             self._gw_error(exc)
         return self.gateway_get(vid)
@@ -4418,6 +4463,9 @@ def make_server(hub: UIXHub, port=0):
                     '/api/resources': hub.runtime.resource_status,          # read-only
                     '/api/erweiterungen': hub.erweiterungen_view,            # AM8-01: das Verzeichnis aller Erweiterungen (nur lesen, nur die Shell-Seite)
                     '/api/erweiterungen/export': hub.erweiterungen_export,   # AM8-04: JSON und lesbarer Text für Nachweis und Prüfung
+                    '/api/uix/betrieb': hub.betrieb_view,                    # AM7: Zustand der Richtlinie (nur lesen; es gibt keine Route, sie zu ändern, AM7-06)
+                    '/api/uix/betrieb/export': hub.betrieb_export,           # AM7-13: Nachweis für die Prüfung (JSON und Text, ohne Inhalte)
+                    '/api/uix/betrieb/eingaben': hub.betrieb_eingaben,       # AM7-14: Was SEDRA mit deinen Eingaben tut
                     '/api/uix/zugaenge': hub.zugang_view,                    # AM4-01/04: Berechtigung der Zugänge mcp und cli
                     '/api/uix/dienste': hub.dienste_view,                    # AM4: Dienst-Apps mit Zustand
                     '/api/uix/apps/verzeichnis': hub.apps_verzeichnis,      # AM3-26: Nachweis aller Apps mit Gewährungen

@@ -387,6 +387,7 @@ class Gateway:
     def __init__(self, project_root: Path, registry: Registry | None = None):
         self.registry = registry or Registry(project_root)
         self.project_root = Path(project_root)
+        self.richtlinie = None                                # AM7: die aktive Richtlinie des Betreibers (desk/richtlinie.py) oder None
         self.app_berechtigung = False                         # AM3: Schalter `app_berechtigung` (local_config/switches.yaml), Standard aus bis zur Abnahme
         self.herkunft_pruefen = True                          # AM0-02: Schalter `herkunft_pruefen` (local_config/switches.yaml), Standard an
         self.melden = None                                    # der Hub setzt eine Funktion (kind, id, gruende), die UIX_MODULE_TAMPERED ins Audit schreibt
@@ -418,6 +419,33 @@ class Gateway:
         if eintrag is None:
             return ['herkunft_fehlt']
         return self._pruefer.pruefen(folder, area, eintrag)
+
+    def _richtlinie_grund(self, kind, folder, man, origin):
+        """AM7-05: der Grund, warum die Richtlinie ein Modul nicht laden lässt, oder None. Paket-Werkzeuge (CORE) bleiben, die Grundfunktionen gehören dazu."""
+        rl = self.richtlinie
+        if rl is None or not rl.aktiv:
+            return None
+        if kind == 'shells':
+            return None if rl.shell_erlaubt(man['id']) else 'richtlinie_shell_nicht_erlaubt'
+        if origin == 'package' and man.get('trust') == 'CORE':
+            return None
+        if man.get('trust') == 'COMMUNITY' and rl.verboten('community'):
+            return 'richtlinie_community_verboten'
+        if man.get('kind') == 'dienst' and rl.verboten('dienste'):
+            return 'richtlinie_dienste_verboten'
+        return rl.app_erlaubt(man['id'], man.get('version'), app_speicher.manifest_hash(folder / 'tool.yaml'))
+
+    def _richtlinie_wirksam(self, wirksam):
+        rl = self.richtlinie
+        if rl is None or not rl.aktiv:
+            return wirksam
+        from .richtlinie import OEFFENTLICH
+        erg = list(wirksam)
+        if rl.verboten('zellen_fremd'):
+            erg = [f for f in erg if not f.startswith('zelle:')]
+        if rl.verboten('ereignisse_inhalt'):
+            erg = [f for f in erg if not (f.startswith('ereignis:') and f[9:] not in OEFFENTLICH)]
+        return erg
 
     def _berechtigung(self, folder, man):
         eintrag = app_speicher.lesen(self.project_root).get(man['id'])
@@ -528,12 +556,16 @@ class Gateway:
                         self._gemeldet.add(schluessel)
                         self.melden(kind[:-1], folder.name, list(gruende))
                     continue
+            grund_rl = self._richtlinie_grund(kind, folder, man, origin)
+            if grund_rl:                                                  # AM7-05: nicht auf der Liste, Obergrenze verletzt, Shell nicht erlaubt → nicht geladen
+                rejected.append({'kind': kind[:-1], 'id': folder.name, 'origin': origin, 'reasons': [grund_rl]})
+                continue
             if kind == 'tools' and self.app_berechtigung and man.get('trust') == 'COMMUNITY' and man.get('rechte') is not None:
                 urteil = self._berechtigung(folder, man)                  # AM3-06/08: gewährt, aktiv und zur Fassung passend – sonst nicht geladen
                 if not urteil['laden']:
                     rejected.append({'kind': 'tool', 'id': folder.name, 'origin': origin, 'reasons': [urteil['grund']]})
                     continue
-                man['wirksam'] = urteil['wirksam']
+                man['wirksam'] = self._richtlinie_wirksam(urteil['wirksam'])      # AM7-05: Obergrenzen nehmen Fähigkeiten die Wirkung
                 man['api'] = list(man['api']) + abgeleitete_routen(urteil['wirksam'])      # AM3-02: lesen → POST /api/objects, verben → POST /api/actions
             ok[man['id']] = (folder, man)
         if kind == 'tools':                                           # AM2-19: needs.apps – fehlt die App oder passt die Version nicht, wird die abhängige abgewiesen (bis nichts mehr wegfällt)

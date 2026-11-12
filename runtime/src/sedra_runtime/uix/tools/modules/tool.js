@@ -152,6 +152,7 @@
         ['tools', 'Werkzeuge · ' + this.view.tools.length, ()=>this.tools()],
         ['apps', 'Apps · ' + ((this.apps && this.apps.apps) || []).length, ()=>this.appsSeite()],
         ['verzeichnis', 'Verzeichnis', ()=>this.verzeichnisSeite()],
+        ['betrieb', 'Betrieb', ()=>{ const b = d().el('div', 's-col'); if(root.sedraModulesBetrieb) root.sedraModulesBetrieb.zeichnen(this.ctx, b); return b; }],
         ['rejected', 'Nicht geladen · ' + this.view.rejected.length, ()=>this.rejected()],
         ['add', 'Dazubauen', ()=>this.add()]
       ];

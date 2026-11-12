@@ -8,7 +8,7 @@ tool:
   handles: [module]
   order: 13
   slot: inhalt
-  entry: {js: [dienste.js, tool.js], css: tool.css}
+  entry: {js: [dienste.js, betrieb.js, tool.js], css: tool.css}
   api:
     - GET /api/uix/modules
     - POST /api/uix/shell
@@ -21,6 +21,9 @@ tool:
     - POST /api/uix/remove
     - GET /api/uix/apps
     - GET /api/uix/dienste
+    - GET /api/uix/betrieb
+    - GET /api/uix/betrieb/export
+    - GET /api/uix/betrieb/eingaben
     - POST /api/uix/dienste/start
     - POST /api/uix/dienste/stopp
     - GET /api/erweiterungen

@@ -35,6 +35,7 @@ ALLOWED = {
     "entwicklung": {"enabled"},        # SPEC_UIX_STUFE6 §2.2 (S6-E4): Prüfwerkzeuge (zweck: pruefung) der Oberfläche laden; Standard aus
     "code_sicht": {"enabled"},
     "oberflaeche_abnahme": {"enabled"},   # O3 G2-10: Code der Oberfläche, den die Harness unter einer Aufgabe schreibt, wirkt erst nach der Übernahme; Standard AN, `enabled: false` nur in der Datei
+    "betrieb_unternehmen": {"enabled"},   # SPEC_APPS_v1_AM7: die Richtlinie des Betreibers (local_config/richtlinie.yaml) gilt; Standard AUS = Einzelplatzbetrieb wie heute
     "dienste": {"enabled"},               # SPEC_APPS_v1_AM4: Dienst-Apps (eigener Prozess) starten und stoppen; Standard AUS
     "zugang_berechtigung": {"enabled"},   # SPEC_APPS_v1_AM4 AM4-02: der MCP-Zugang ruft nur gewährte Verben (Übergang: aus = wie bisher, Verben alle); Standard AUS
     "app_berechtigung": {"enabled"},      # SPEC_APPS_v1_AM3: Gewährung und Aktivierung fremder Apps; Standard AUS bis zur Abnahme am PC

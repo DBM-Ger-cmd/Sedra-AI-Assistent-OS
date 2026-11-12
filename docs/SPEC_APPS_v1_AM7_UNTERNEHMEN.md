@@ -122,3 +122,27 @@ Erst nach AM7-E1. Voraussichtlich: `desk/` (Richtlinie), `uix_server.py`, `gatew
 ## 11. Nächste Gates
 
 AM7-E1 → G1 überarbeiten → G2 → G3 → Pilot.
+
+## 11. Stand des Baus (12.11.2026): Betriebsart A, was gebaut ist und was nicht
+
+Schalter `betrieb_unternehmen` (Standard aus = Einzelplatzbetrieb wie heute). Bei aus ändert sich nichts.
+
+| ID | Stand | Beleg |
+|---|---|---|
+| AM7-01 | gebaut: feste Rollen `betreiber`, `pruefung`, `sachbearbeitung` | `test_apps_betrieb` |
+| AM7-02 | gebaut: die Rolle steht in der Richtlinie der Installation; eine eigene Installation für den Betreiber (AM7-E2) | Test |
+| AM7-03 | gebaut: bei aktiver Richtlinie setzt sie die verantwortliche Person im Gateway-Vorgang, ein mitgegebener Name wird überschrieben | Test |
+| AM7-04 | gebaut: `local_config/richtlinie.yaml` mit strenger Prüfung (`desk/richtlinie.py`); ein Schema als JSON-Datei (`richtlinie.schema.json`) fehlt noch, die Prüfung steht im Code | Test |
+| AM7-05 | gebaut: Positivliste der Apps (mit Versionsbereich und Prüfsumme), Obergrenzen `community`, `dienste`, `zellen_fremd`, `ereignisse_inhalt`, erlaubte Shells (Start-Shell setzt die Voreinstellung); Paket-Werkzeuge und Grundfunktionen bleiben. Nicht durchgesetzt: `anbieter`, `agenten` (Anbieter-Prüfung folgt mit AM5/AM6; die Fragen `anbieter_erlaubt` gibt es) | Test |
+| AM7-06 | gebaut: keine Route, die Richtlinie zu ändern; Änderung per Hash erkannt, Audit `RICHTLINIE_GEAENDERT {alt_hash, neu_hash}` beim Start | Test |
+| AM7-07 | nicht gebaut (AM7-E3: Signatur nicht in v1) | – |
+| AM7-08, AM7-09 | **nicht gebaut:** die Rollen-Sicht der KMU-Shell und der Zugang „Verwaltung“; die sichtbaren Grundfunktionen je Rolle stehen in der Richtlinie und werden von `Richtlinie.grundfunktionen()` geliefert, die Shell wertet sie noch nicht aus | – |
+| AM7-10 | nicht gebaut (jede Fach-App bekommt eine eigene Spec) | – |
+| AM7-12 | gebaut: bei aktiver Richtlinie trägt jeder Audit-Eintrag `person` und `rolle` aus der Richtlinie (der Hub setzt sie in `audit.append`, ohne `core/audit.py` zu ändern), ohne Inhalt | Test |
+| AM7-13 | gebaut: `GET /api/uix/betrieb/export` – Kette geprüft, Apps mit Gewährungen, Erweiterungen, Anbieter, Vorgänge ohne Inhalte; JSON und lesbarer Text. Das Empfängerverzeichnis (AM5-08) gibt es noch nicht, bis dahin die Anbieterliste | Test |
+| AM7-14 | gebaut: `GET /api/uix/betrieb/eingaben`, erzeugt aus Richtlinie, Anbieterliste und Aufbewahrung, mit dem Satz „keine Rechtsauskunft“ | Test |
+| AM7-15 | **nicht gebaut:** Vorgänge mit Treffer A01 an die Rolle `pruefung` | – |
+| AM7-16 | gebaut: die Richtlinie hat kein Feld für die KI-Kennzeichnung, ein unbekanntes Feld macht sie ungültig | Test |
+| AM7-18 | **nicht gebaut:** tägliches Löschen nach der Aufbewahrung (die Werte stehen in der Richtlinie und in der Seite für Beschäftigte) | – |
+
+Gesprächs-Vorgabe (AM7-E4): das Feld `gespraech` (`nur_gateway` oder `frei`) wird geprüft und gespeichert, aber noch nicht von der KMU-Shell ausgewertet. Eine ungültige Richtlinie wird protokolliert (`RICHTLINIE_UNGUELTIG`) und gilt nicht – SEDRA startet dann wie im Einzelplatzbetrieb; ein Betreiber, der das nicht will, muss die Datei vor Änderungen schützen (Betriebssystem). Nicht von dieser Spec beantwortet bleiben die Themen aus §4 (Rechtsfragen).
