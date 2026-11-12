@@ -178,6 +178,12 @@ class UIXHub:
         from .harness import antraege as harness_antraege               # Stufe 5: Katalog und Grenzen nur über einen Antrag mit Gate
         harness_antraege.registrieren(self.kinds)
         self.kinds.freeze()
+        try:                                                                       # AM8-07: Verben ohne Wirkungsklasse werden beim Start gemeldet (nur Anzeige, nichts wird verweigert)
+            fehlend = desk_actions.ohne_wirkungsklasse(self.kinds.table())
+            if fehlend:
+                self.runtime.audit.append('WIRKUNGSKLASSE_FEHLT', component='desk', payload={'verben': fehlend[:40]})
+        except Exception:
+            pass
         self._extensions_started = None
         # Harness-Shell (SPEC_HARNESS_SHELL_v1 Stufe 1): Sitzungen, Antwort-Strom, Schleife – eigene Sperren, nie self.lock (K3)
         from .harness.api import HarnessApi
@@ -763,6 +769,14 @@ class UIXHub:
         for a in apps:
             a['audit'] = audit.get(a['id'], [])
         return {'schalter': bool(self.gateway.app_berechtigung), 'apps': apps}
+
+    def erweiterungen_view(self, payload=None):
+        from .desk import verzeichnis
+        return verzeichnis.verzeichnis(self)
+
+    def erweiterungen_export(self, payload=None):
+        from .desk import verzeichnis
+        return verzeichnis.export(self)
 
     def apps_verzeichnis(self, payload=None):
         """AM3-26: alle fremden Apps mit ihren Gewährungen als JSON (Nachweis, später AM7/AM8). Nur die Shell-Seite: eine App kann die Route nicht aufrufen (`/api/uix/` ist gesperrt)."""
@@ -4274,6 +4288,8 @@ def make_server(hub: UIXHub, port=0):
                     '/api/routing': hub.runtime.routing_status,             # read-only
                     '/api/permissions': hub.runtime.permission_status,      # read-only
                     '/api/resources': hub.runtime.resource_status,          # read-only
+                    '/api/erweiterungen': hub.erweiterungen_view,            # AM8-01: das Verzeichnis aller Erweiterungen (nur lesen, nur die Shell-Seite)
+                    '/api/erweiterungen/export': hub.erweiterungen_export,   # AM8-04: JSON und lesbarer Text für Nachweis und Prüfung
                     '/api/uix/apps/verzeichnis': hub.apps_verzeichnis,      # AM3-26: Nachweis aller Apps mit Gewährungen
                     '/api/uix/apps': hub.apps_view,                          # read-only: fremde Apps mit beantragten und gewährten Rechten (AM3)
                     '/api/uix/modules': hub.modules_view,                   # read-only: Shell, Werkzeuge, Abgelehnte, Vorlagen

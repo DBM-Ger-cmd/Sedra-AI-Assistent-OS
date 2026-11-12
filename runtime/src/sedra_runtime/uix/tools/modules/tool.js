@@ -50,6 +50,14 @@
     return teile.length ? 'Grundfunktionen · ' + teile.join(' · ') : '';
   }
 
+  // Verzeichnis der Erweiterungen (AM8-03): Filter nach Art, Herkunft, Wirkungsklasse (rein)
+  const ART_NAMEN = {werkzeug: 'Werkzeug', shell: 'Shell', kern_erweiterung: 'Kern-Erweiterung', architektur_modul: 'Architektur-Modul', faehigkeit: 'Fähigkeit',
+                     agenten_vorlage: 'Agenten-Vorlage', harness_vorlage: 'Harness-Vorlage', daten: 'Daten'};
+  function verzeichnisFiltern(eintraege, f){
+    return (eintraege || []).filter(e=>(!f.art || e.art === f.art) && (!f.herkunft || e.herkunft === f.herkunft)
+      && (!f.klasse || (e.faehigkeiten || []).some(x=>x.wirkungsklasse === f.klasse)));
+  }
+
   // Aus einer abgelehnten Begründung einen Satz machen, damit niemand Code lesen muss (rein)
   const WHY = {
     id_must_match_folder: 'die id im Manifest ist nicht der Ordnername',
@@ -142,6 +150,7 @@
         ['shells', 'Shells · ' + this.view.shells.length, ()=>this.shells()],
         ['tools', 'Werkzeuge · ' + this.view.tools.length, ()=>this.tools()],
         ['apps', 'Apps · ' + ((this.apps && this.apps.apps) || []).length, ()=>this.appsSeite()],
+        ['verzeichnis', 'Verzeichnis', ()=>this.verzeichnisSeite()],
         ['rejected', 'Nicht geladen · ' + this.view.rejected.length, ()=>this.rejected()],
         ['add', 'Dazubauen', ()=>this.add()]
       ];
@@ -262,6 +271,46 @@
       return box;
     },
 
+    // ---- Verzeichnis: alle acht Erweiterungswege in einer Liste (AM8-03); die Wirkungsklasse ist nur eine Anzeige
+    verzeichnisSeite(){
+      const box = d().el('div', 's-col');
+      const v = this.verz;
+      if(!v){
+        box.append(d().el('small', 's-muted', 'Wird geladen …'));
+        this.ctx.api('/api/erweiterungen').then(r=>{ this.verz = r; this.refresh(); }, err=>{ this.verz = {eintraege: [], arten: {}, klassen: {}, unlesbar: [{quelle: 'Verzeichnis', grund: err.message}]}; this.refresh(); });
+        return box;
+      }
+      const f = this.vFilter || (this.vFilter = {});
+      const wahl = (label, schluessel, optionen)=>{
+        const s = d().el('select'); s.setAttribute('aria-label', label);
+        [['', label + ': alle'], ...optionen].forEach(([w, t])=>{ const o = d().el('option', null, t); o.value = w; s.append(o); });
+        s.value = f[schluessel] || ''; s.onchange = ()=>{ f[schluessel] = s.value; this.refresh(); };
+        return s;
+      };
+      const zeile = d().el('div', 's-row');
+      zeile.append(wahl('Art', 'art', Object.keys(ART_NAMEN).map(a=>[a, ART_NAMEN[a] + ' · ' + (v.arten[a] || 0)])),
+                   wahl('Herkunft', 'herkunft', ['paket', 'captain', 'eingebaut', 'selbst_gebaut', 'importiert'].map(h=>[h, h])),
+                   wahl('Wirkung', 'klasse', Object.keys(v.klassen || {}).map(k=>[k, k])));
+      box.append(zeile);
+      if((v.klassen || {})[f.klasse]) box.append(d().el('small', 's-muted', f.klasse + ': ' + v.klassen[f.klasse].bedeutung + ' (entspricht ungefähr: ' + v.klassen[f.klasse].entspricht_ungefaehr + ') – nur eine Anzeige, entschieden wird weiter von Guard und Katalog.'));
+      (v.unlesbar || []).forEach(u=>box.append(d().el('div', 's-note warn', 'Quelle nicht lesbar: ' + u.quelle + ' – ' + u.grund)));
+      const liste = verzeichnisFiltern(v.eintraege, f);
+      box.append(d().el('small', 's-muted', liste.length + ' von ' + v.eintraege.length + ' Einträgen'));
+      liste.forEach(e=>{
+        const row = d().el('div', 't-modules-row' + (e.zustand === 'aktiv' ? ' on' : ' off'));
+        const head = d().el('div');
+        head.append(d().el('b', null, e.name), d().el('small', 's-muted', ' · ' + (ART_NAMEN[e.art] || e.art) + ' · ' + e.herkunft + (e.vertrauen ? ' · ' + e.vertrauen : '') + (e.version ? ' · ' + e.version : '') + ' · ' + e.zustand));
+        if(e.grund) head.append(d().el('div', 's-muted', e.grund));
+        const klassen = [...new Set((e.faehigkeiten || []).map(x=>x.wirkungsklasse))];
+        if(klassen.length) head.append(d().el('div', 's-muted', 'Wirkung: ' + klassen.join(', ')));
+        if((e.abhaengigkeiten || []).length) head.append(d().el('div', 's-muted', 'braucht: ' + e.abhaengigkeiten.join(', ')));
+        if(e.stelle) head.append(d().el('small', 's-muted', 'zu finden: ' + e.stelle));
+        row.append(head); box.append(row);
+      });
+      box.append(d().button('Export (Text)', async()=>{ const x = await this.ctx.api('/api/erweiterungen/export'); const w = d().el('pre', 's-muted', x.text); box.append(w); }));
+      return box;
+    },
+
     // ---- Abgelehnt: der Grund im Klartext, damit niemand raten muss
     rejected(){
       const box = d().el('div', 's-col');
@@ -342,6 +391,6 @@
   };
 
   if(root.sedra) root.sedra.registerTool(tool);
-  root.sedraModulesPure = {TRUST, WHY, reason, STUFE, appGrund, offeneRechte, grundfunktionenSatz};
-  if(typeof module !== 'undefined' && module.exports) module.exports = {TRUST, WHY, reason, STUFE, appGrund, offeneRechte, grundfunktionenSatz};
+  root.sedraModulesPure = {TRUST, WHY, reason, STUFE, appGrund, offeneRechte, grundfunktionenSatz, verzeichnisFiltern, ART_NAMEN};
+  if(typeof module !== 'undefined' && module.exports) module.exports = {TRUST, WHY, reason, STUFE, appGrund, offeneRechte, grundfunktionenSatz, verzeichnisFiltern, ART_NAMEN};
 })();

@@ -31,7 +31,7 @@ class Funktionen(unittest.TestCase):
         self.assertTrue(route_sensibel("GET /api/fisch/*"))
         self.assertTrue(route_sensibel("GET /api/fisch/transkripte"))
         self.assertFalse(route_sensibel("GET /api/strip"))
-        self.assertEqual(len(SENSIBEL_COMMUNITY), 18)
+        self.assertEqual(len(SENSIBEL_COMMUNITY), 19)             # AM8: dazu /api/erweiterungen (das Verzeichnis ist nichts für fremde Apps)
 
     def test_pruefe_routen(self):
         self.assertEqual(pruefe_routen(["GET /api/*"], "local", "COMMUNITY"), ["api_route_too_broad:GET /api/*", "api_route_sensitive:GET /api/*"])

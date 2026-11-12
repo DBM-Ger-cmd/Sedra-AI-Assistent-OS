@@ -20,6 +20,8 @@ tool:
     - POST /api/uix/trust
     - POST /api/uix/remove
     - GET /api/uix/apps
+    - GET /api/erweiterungen
+    - GET /api/erweiterungen/export
     - POST /api/uix/apps/aktivieren
     - POST /api/uix/apps/entziehen
     - POST /api/uix/apps/rechte

@@ -29,6 +29,27 @@ class Verb:
         return {'verb': self.verb, 'label': self.label, 'needs_gate': self.needs_gate, 'confirm': self.confirm}
 
 
+# AM8-07 (SPEC_APPS_v1_AM8_VERZEICHNIS): die Wirkungsklasse jedes Desk-Verbs – nur zur ANZEIGE (Verzeichnis, Werkbank); das Gate darunter bleibt. Verben ohne Eintrag meldet `ohne_wirkungsklasse`.
+WIRKUNGSKLASSE = {
+    ('task', 'ausfuehren'): 'reversible_write', ('task', 'schliessen'): 'reversible_write', ('task', 'beenden'): 'reversible_write', ('task', 'archivieren'): 'reversible_write',
+    ('intent', 'aufgabe_machen'): 'proposal_only',
+    ('candidate', 'nachpruefen'): 'read_only', ('candidate', 'testen'): 'preview', ('candidate', 'uebernehmen'): 'reversible_write', ('candidate', 'zuruecknehmen'): 'reversible_write',
+    ('model', 'laden'): 'reversible_write', ('model', 'entladen'): 'reversible_write', ('model', 'testen'): 'preview',
+    ('boundary', 'aendern'): 'privileged', ('boundary', 'bestaetigen'): 'privileged',
+}
+
+
+def wirkungsklasse(kind, verb):
+    """Die Wirkungsklasse eines Verbs oder None (AM8-07)."""
+    return WIRKUNGSKLASSE.get((kind, verb))
+
+
+def ohne_wirkungsklasse(tabelle=None):
+    """Die Verben der Tabelle (Standard: das Register der eingebauten Typen), die noch keine Wirkungsklasse tragen: ['typ.verb', …]."""
+    t = tabelle if tabelle is not None else table()
+    return sorted(f'{k}.{v}' for k, verben in t.items() for v in verben if (k, v) not in WIRKUNGSKLASSE)
+
+
 LAUFEND = ('EXECUTE', 'VERIFY', 'REWORK')      # hier läuft noch etwas: schließen würde mitten hinein gehen
 
 

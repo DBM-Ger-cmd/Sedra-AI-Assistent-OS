@@ -1,0 +1,36 @@
+# Die gemeinsame Anzeigesprache für Wirkungen (SPEC_APPS_v1_AM8_VERZEICHNIS AM8-05, AM8-09).
+#
+# Sieben Klassen aus den Agenten-Vorlagen (agent_manager/agent_import.py). Sie werden NUR ANGEZEIGT: im Verzeichnis der Erweiterungen, an Harness-Werkzeugen und Desk-Verben.
+# Sie ersetzen keine Entscheidung – Guard, Freigabe-Katalog und Permission-Stufen bleiben, wie sie sind.
+# „entspricht ungefähr“ ist eine Lesehilfe zu den Schutzstufen A/B/C der Apps (AM3) und den Permission-Stufen; es ist keine Umrechnung.
+wirkungsklassen:
+  schema: 1
+  klassen:
+    read_only:
+      reihenfolge: 1
+      bedeutung: Liest nur. Ändert nichts am Rechner, im Projekt oder im Netz.
+      entspricht_ungefaehr: Schutzstufe A; Permission-Stufe 0 bis 1
+    proposal_only:
+      reihenfolge: 2
+      bedeutung: Macht einen Vorschlag oder stellt einen Antrag. Es geschieht erst etwas, wenn der Captain im Posteingang freigibt.
+      entspricht_ungefaehr: Schutzstufe B mit Gate; Permission-Stufe 2
+    preview:
+      reihenfolge: 3
+      bedeutung: Zeigt, was geschähe, oder prüft in einer Sandbox. Das Projekt bleibt unverändert.
+      entspricht_ungefaehr: Schutzstufe A; Permission-Stufe 1 bis 2
+    reversible_write:
+      reihenfolge: 4
+      bedeutung: Schreibt oder ändert etwas, das sich zurücknehmen lässt (Sicherung, Verschieben statt Löschen, Rückweg im Gate).
+      entspricht_ungefaehr: Schutzstufe B; Permission-Stufe 3
+    destructive_write:
+      reihenfolge: 5
+      bedeutung: Kann Daten unwiederbringlich ändern oder löschen, oder führt ein Programm aus, das alles tun kann, was der Katalog nicht verbietet.
+      entspricht_ungefaehr: Schutzstufe C für Apps; Permission-Stufe 4
+    external_side_effect:
+      reihenfolge: 6
+      bedeutung: Wirkt über den Rechner hinaus (Netz, Cloud, fremde Dienste). Was einmal gesendet ist, lässt sich nicht zurückholen.
+      entspricht_ungefaehr: Schutzstufe C für Apps; Permission-Stufe 4 bis 5
+    privileged:
+      reihenfolge: 7
+      bedeutung: Ändert Regeln, Rechte, Grenzen oder den Kern. Nur der Captain, nur mit Gate.
+      entspricht_ungefaehr: Schutzstufe C für Apps; Permission-Stufe 5

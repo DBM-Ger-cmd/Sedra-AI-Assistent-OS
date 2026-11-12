@@ -44,6 +44,21 @@ FREI_OHNE_KATALOG = OHNE_KARTE
 SITZUNGEN = ('sitzungen_aufraeumen',)       # Chat-Liste aufräumen: immer eine Karte mit der Liste (fester Vorbehalt, harness/vorbehalte.py); `sitzungen_auflisten` (lesen) steht in OHNE_KARTE
 CLOUD = ('auftraege_verteilen',)       # Teilaufträge des Managers an den Hilfs-Coder in der Cloud: der Text verlässt den Rechner, darum immer eine Karte (nicht in OHNE_KARTE); Gesetze und Tagesbudget prüft manager/kanal.py
 NAMEN = LESEN + WIRKUNG + LAUF + SITZUNGEN + CLOUD + FREI_OHNE_KATALOG
+# AM8-06 (SPEC_APPS_v1_AM8_VERZEICHNIS): die Wirkungsklasse jedes Chat-Werkzeugs – nur zur ANZEIGE (Verzeichnis der Erweiterungen); entschieden wird weiter von Guard, Katalog und Vorbehalten.
+# Maßstab ist die Obergrenze dessen, was das Werkzeug tun kann (AM8-E2: `befehl` ist `destructive_write`, der Katalog entscheidet im Einzelfall). Ein Test hält die Liste gleich NAMEN.
+WIRKUNGSKLASSE = {
+    'datei_lesen': 'read_only', 'dateien_auflisten': 'read_only', 'suchen': 'read_only',
+    'datei_schreiben': 'reversible_write', 'datei_aendern': 'reversible_write',            # die vorige Fassung bleibt (Code-Stand, Gate mit Rückweg)
+    'befehl': 'destructive_write',
+    'lauf_starten': 'reversible_write', 'lauf_stoppen': 'reversible_write', 'lauf_status': 'read_only',
+    'modell_laden': 'reversible_write', 'modell_entladen': 'reversible_write',
+    'sitzungen_aufraeumen': 'reversible_write',                                              # verschiebt nach geloescht/, nichts wird endgültig gelöscht
+    'auftraege_verteilen': 'external_side_effect',                                           # der Text verlässt den Rechner
+    'app_oeffnen': 'read_only', 'projekt_beantragen': 'proposal_only', 'erinnern': 'read_only', 'sitzungen_auflisten': 'read_only',
+    'youtube_transkript': 'external_side_effect',                                            # holt Untertitel aus dem Netz
+    'vorlage_beantragen': 'proposal_only', 'desktop_lesen': 'read_only', 'belohnungen_lesen': 'read_only', 'prozess_beantragen': 'proposal_only',
+    'wissen_suchen': 'read_only', 'wissen_beantragen': 'proposal_only', 'uebersetzen': 'read_only',
+}
 AKTION_CLOUD = 'harness_cloud'
 CLOUD_AUFTRAEGE_MAX = 5
 CLOUD_TEXT_MAX = 12000

@@ -7,7 +7,7 @@ from __future__ import annotations
 SENSIBEL_COMMUNITY = (
     '/api/chat/', '/api/harness/', '/api/arbeitsstand', '/api/audit', '/api/missions', '/api/decisions', '/api/uix/',
     '/api/cloud', '/api/switches', '/api/processes', '/api/gateway/', '/api/fisch/', '/api/sprache/', '/api/projects',
-    '/api/diagnose', '/api/context', '/api/permissions', '/api/supervisor',
+    '/api/diagnose', '/api/context', '/api/permissions', '/api/supervisor', '/api/erweiterungen',
 )
 
 
