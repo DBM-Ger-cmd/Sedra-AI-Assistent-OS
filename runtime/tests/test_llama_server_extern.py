@@ -315,6 +315,33 @@ class RouterNichtErreichbarTests(unittest.TestCase):
             m._http_json = alt; m._ABGELEHNT.clear()
 
 
+class SchedulerAliveTests(unittest.TestCase):
+    """server_aus series (1.11. to 12.11.): a failed /health of another thread cleared `_info` right after the load, the scheduler took the
+    server for gone and stopped it. `_alive` asks the router again before it decides."""
+    def _alive(self, rt):
+        import types
+        from sedra_runtime.jobs.model_scheduler import ModelScheduler
+        return ModelScheduler._alive(types.SimpleNamespace(runtime=rt))
+
+    def test_one_failed_health_does_not_make_the_router_server_gone(self):
+        router = FakeRouter()
+        rt = runtime(router)
+        rt.load_model("qwen3.5-9b-q6_k", context_length=65536, server={"gguf": "x.gguf"})
+        router.up = False; rt.loaded_models(); router.up = True              # another thread asked while the router was busy
+        self.assertFalse(rt.status()["running"])
+        self.assertTrue(self._alive(rt))
+        self.assertTrue(rt.status()["running"])
+
+    def test_router_really_down_or_model_gone_is_gone(self):
+        router = FakeRouter()
+        rt = runtime(router)
+        rt.load_model("qwen3.5-9b-q6_k", context_length=65536, server={"gguf": "x.gguf"})
+        router.up = False
+        self.assertFalse(self._alive(rt))
+        router.up = True; router.states["qwen3.5-9b-q6_k"] = "unloaded"
+        self.assertFalse(self._alive(rt))
+
+
 class RouterAdapterTests(unittest.TestCase):
     def test_vendor_prefix_removed_in_the_request(self):
         sent = []

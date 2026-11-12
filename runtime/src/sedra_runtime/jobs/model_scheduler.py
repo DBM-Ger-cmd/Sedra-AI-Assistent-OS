@@ -209,7 +209,16 @@ class ModelScheduler(HandoverMixin, DecisionMixin):
         if self.runtime is None:
             return True                       # nothing to ask; the request itself will fail if the server is gone
         try:
-            return bool(self.runtime.status().get("running"))
+            status = self.runtime.status()
+            if status.get("external"):
+                # Router: the process is not ours and `_info` is only a cache. A failed /health of another thread clears it right after the
+                # load (series server_aus), so ask the router itself, twice before it counts as gone; this takes the loaded model over again.
+                for _ in range(2):
+                    self.runtime.loaded_models()
+                    status = self.runtime.status()
+                    if status.get("running"):
+                        break
+            return bool(status.get("running"))
         except Exception:
             return False
 
