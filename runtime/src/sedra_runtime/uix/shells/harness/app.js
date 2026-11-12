@@ -156,8 +156,10 @@
     if(tr) S._translatorAnsicht = tr;
     const M = root.sedraHarness.team;
     const tm = objekt.type === 'team' && M && !f.leer ? M.ansicht(S, box, f) : null;                 // A3: die App „Team“ (Überblick, Issues, Organigramm …)
-    const abbauen = ()=>{ f.abbauen(); if(tm) tm.abbauen(); if(tr){ tr.abbauen(); if(S._translatorAnsicht === tr) S._translatorAnsicht = null; } };
-    const a = root.sedraHarness.reiter.stub(id, box, S, {objekt, mounts: f.mounts, abbauen, verben: tm ? tm.zeichnen : tr ? tr.zeichnen : f.zeichnen});
+    const U = root.sedraHarness.uebersicht;
+    const ue = objekt.type === 'uebersicht' && U && !f.leer ? U.ansicht(S, box, f) : null;            // A3: die App „Übersicht“ (Baum der Gesamtlage)
+    const abbauen = ()=>{ f.abbauen(); if(ue) ue.abbauen(); if(tm) tm.abbauen(); if(tr){ tr.abbauen(); if(S._translatorAnsicht === tr) S._translatorAnsicht = null; } };
+    const a = root.sedraHarness.reiter.stub(id, box, S, {objekt, mounts: f.mounts, abbauen, verben: ue ? ue.zeichnen : tm ? tm.zeichnen : tr ? tr.zeichnen : f.zeichnen});
     kopf.append(d().el('b', 'hs-app-titel', eintrag.titel), d().el('code', 'hs-app-objekt', objekt.type + ' · ' + objekt.id + (objekt.view ? ' · ' + objekt.view : '')));
     if(f.rechts.length){
       const knopf = d().el('button', 'hs-app-nachweis-knopf', 'Nachweise (' + f.rechts.length + ')'); knopf.type = 'button';

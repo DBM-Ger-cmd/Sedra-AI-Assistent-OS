@@ -321,6 +321,22 @@
    }
   },
   {
+   "id": "uebersicht",
+   "label": "Übersicht",
+   "hint": "alle Apps nach Gruppen mit Zustand – der Baum der Gesamtlage",
+   "words": [
+    "übersicht",
+    "uebersicht",
+    "baum",
+    "gesamtlage"
+   ],
+   "object": {
+    "type": "uebersicht",
+    "id": "app",
+    "title": "Übersicht"
+   }
+  },
+  {
    "id": "team",
    "label": "Team",
    "hint": "Überblick, Issues, Organigramm, Routinen, Kosten – eine App",

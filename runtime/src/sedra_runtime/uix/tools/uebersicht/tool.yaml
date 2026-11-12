@@ -1,0 +1,20 @@
+# App „Übersicht“ (A3 Cockpit als App, SPEC_APP_UEBERSICHT_v1): der Baum der Gesamtlage – alle Apps nach Gruppen, klappbar, mit Zustand je Zeile.
+# Das Paket ist der Platzhalter für den Objekttyp `uebersicht`; den Baum zeichnet die Harness-Shell (One Sedra) aus der Liste des Start-Menüs.
+# In anderen Shells zeigt es einen Satz mit Hinweis auf die Shell „cockpit“. Es ruft selbst keine Route.
+tool:
+  id: uebersicht
+  name: "Übersicht"
+  description: "Alle Apps nach Gruppen mit Zustand je Zeile – der Baum der Gesamtlage; eine Zeile öffnet die App."
+  version: 1.0.0
+  kind: object
+  handles: [uebersicht]
+  order: 37
+  slot: inhalt
+  entry: {js: tool.js}
+  api: []
+  events:
+    emits: []
+    listens: []
+  trust: CORE
+  tests: []
+  needs: {ui: ">=1.0 <2"}

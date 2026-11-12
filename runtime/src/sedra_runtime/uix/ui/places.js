@@ -32,6 +32,8 @@
     {id: 'aufnahme',  label: 'Rekorder',              hint: 'aufnehmen, abspielen, Sprache → Text (Kern)', words: ['rekorder', 'aufnahme', 'aufnahmen', 'aufnehmen', 'mikrofon', 'diktat', 'diktieren', 'sprachaufnahme'], object: {type: 'aufnahme', id: 'rekorder', title: 'Rekorder'}},
     // A3 (Translator): die App mit den vier Modi Übersetzen · News · Aufnahme · Transkript; die Einzelwörter gehören weiter den vier Werkzeugen
     {id: 'translator', label: 'Translator',          hint: 'übersetzen, News, Aufnahme, Transkript – eine App', words: ['translator', 'news'],                       object: {type: 'translator', id: 'app', title: 'Translator'}},
+    // A3 (Übersicht): der Baum der Gesamtlage – alle Apps nach Gruppen mit Zustand; die alte Shell „cockpit“ bleibt bis zum Gleichstand
+    {id: 'uebersicht', label: 'Übersicht',            hint: 'alle Apps nach Gruppen mit Zustand – der Baum der Gesamtlage', words: ['übersicht', 'uebersicht', 'baum', 'gesamtlage'], object: {type: 'uebersicht', id: 'app', title: 'Übersicht'}},
     // A3 (Team): die App mit den Modi Überblick · Issues · Vorhaben · Organigramm · Routinen · Kosten; die Einzelwörter gehören weiter den Werkzeugen
     {id: 'team',      label: 'Team',                  hint: 'Überblick, Issues, Organigramm, Routinen, Kosten – eine App', words: ['team', 'paperclip'], object: {type: 'team', id: 'app', title: 'Team'}},
     {id: 'planung',   label: 'Planungstisch',         hint: 'mit einem Assistenten Ziele und Aufträge festlegen', words: ['planungstisch', 'planung', 'planen', 'assistent', 'assistenten'], object: {type: 'planung', id: 'tisch', title: 'Planungstisch'}},

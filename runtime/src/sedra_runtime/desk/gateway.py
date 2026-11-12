@@ -35,6 +35,7 @@ OBJECT_TYPES = ('project', 'intent', 'task', 'candidate', 'file', 'model', 'skil
                 'module', 'logbook', 'meter', 'hardware', 'machine', 'gateway', 'labor', 'entwurf')   # the last six are places of the system; gateway since Build 19; labor: KI Labor (Werkstatt, 16.10.2026)
 OBJECT_TYPES += ('issue', 'budget', 'gespraech')                   # Spec 0 D3.2 (issue, budget) und Nachtrag N7 (gespraech)
 OBJECT_TYPES += ('wissen',)                                        # Spec 7 D7.9: der Wissensspeicher (Werkzeug wissen, Objekt wissen:speicher)
+OBJECT_TYPES += ('uebersicht',)                                  # A3: die App Übersicht (SPEC_APP_UEBERSICHT_v1), der Baum der Gesamtlage
 OBJECT_TYPES += ('team',)                                        # A3: die App Team (SPEC_APP_TEAM_v1); ihre Modi nutzen die schon bekannten Typen
 OBJECT_TYPES += ('translator',)                                  # A3: die App Translator (SPEC_APP_TRANSLATOR_v1); ihre vier Modi nutzen die schon bekannten Typen
 OBJECT_TYPES += ('workflow',)                                      # n8n interchange app; execution stays in the mission core

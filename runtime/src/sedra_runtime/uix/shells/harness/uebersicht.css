@@ -1,0 +1,11 @@
+.hs-ue-buehne{ display: flex; flex-direction: column; min-height: 0; flex: 1; gap: 8px; }
+.hs-ue-leiste{ display: flex; align-items: center; gap: 12px; }
+.hs-ue-hinweis{ color: var(--muted, var(--text)); font-size: 0.9em; }
+.hs-ue-baum{ display: flex; flex-direction: column; min-height: 0; overflow: auto; }
+.hs-ue-zeile{ display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 6px 10px; cursor: pointer; border-radius: var(--radius); }
+.hs-ue-zeile:hover, .hs-ue-zeile:focus-visible{ background: var(--panel); outline: 1px solid var(--line); }
+.hs-ue-zeile.kopf{ font-weight: 600; margin-top: 6px; }
+.hs-ue-gruppe .hs-ue-zeile{ padding-left: 1.6em; }
+.hs-ue-note{ color: var(--muted, var(--text)); text-align: right; }
+.hs-ue-note.warn, .hs-ue-zeile.warn .hs-ue-note{ color: var(--warn, var(--text)); font-weight: 600; }
+.hs-ue-leer{ padding: 12px; color: var(--muted, var(--text)); }
