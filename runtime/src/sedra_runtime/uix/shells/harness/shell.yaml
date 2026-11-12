@@ -47,4 +47,7 @@ shell:
     - POST /api/sprache/kern/stopp
     - GET /api/cloud            # Startseite der Einstellungen: Stand der Kachel KI-Labor (nur lesen)
   trust: CORE
-  needs: {ui: ">=1.0 <2"}
+  needs:
+    ui: ">=1.0 <2"
+    kern: [core, harness, fisch, sprache]        # AM8-10: Kern-Pakete unter sedra_runtime/, die die Shell braucht
+    dateien: [ui/, js/, css/]                    # AM8-10: Vertragsdateien unter uix/ (`needs.ui` bleibt der Versionsbereich)

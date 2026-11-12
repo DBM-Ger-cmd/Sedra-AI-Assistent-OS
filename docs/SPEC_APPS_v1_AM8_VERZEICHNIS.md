@@ -84,3 +84,11 @@ Schreiben `desk/verzeichnis.py`, `auslieferung.py`, `harness/werkzeuge.py` (nur 
 ## 10. Nächste Gates
 
 G1 → G2 (Lesen von `desk/actions.py`, Agenten-Register, Wissensquellen) → G3 → G4.
+
+## 11. Stand der Umsetzung (AM8-10 bis AM8-12, 12.11.2026)
+
+| ID | Stand | Prüfung |
+|---|---|---|
+| AM8-10 | gebaut mit **einer Abweichung**: `needs.ui` ist im Paket schon der Versionsbereich der Oberfläche (`">=1.0 <2"`), deshalb heißt die Liste der Vertragsdateien `needs.dateien` (Pfade unter `uix/`, Ordner mit `/`). `needs.kern` und `needs.apps` wie in der Spec. Das Gateway prüft beide Listen (`needs_kern_invalid`, `needs_dateien_invalid`); die Harness-Shell nennt Kern und Dateien. | `test_stick_ableitung` (Schema über alle Manifeste des Pakets) |
+| AM8-11 | gebaut: `stick_paket.py` liest `shell <id>` und `app <id>`, leitet Ordner, Apps (Grundfunktionen, `slot:`, Start-Gruppen, Taskleiste, `needs.apps` rekursiv), Kern-Pakete und Dateien ab; `--pruefen` und das Kopieren brechen bei fehlenden Pfaden ab. `stick_liste.txt` ist unverändert (keine neuen Zeilen). | `test_stick_ableitung` |
+| AM8-12 | gebaut: `--gegenprobe` nennt Zeilen `repo` der Liste (Werkzeuge, Shells, Kern-Pakete), die die Ableitung aus `shell harness` nicht deckt. Befund heute (nicht angeglichen): Shells `cockpit`, `fisch`, `paperclip` und Werkzeuge `rekorder`, `uebersetzer` (die Harness nennt sie unter den IDs `aufnahme` und `uebersetzung` in den Start-Gruppen, die Ordner heißen anders). Kern und Dateien der Liste deckt die Harness-Shell. | `test_stick_ableitung` |

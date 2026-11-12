@@ -7,9 +7,12 @@ Die Liste steht in `stick_liste.txt` neben diesem Skript. Zeilen:
     modul <name>       ein Python-Modul mit allen statischen Importen (sedra_runtime.*)
     profil <art>       (SPEC_STICK_AUS_PROFIL_v1 ST-01) alle Werkzeuge, deren tool.yaml `profile:` die Art nennt, dazu alle Werkzeuge mit `grundfunktion:` und die Instrumente
                        der Taskleiste (leiste.json) – je Werkzeug der ganze Ordner uix/tools/<id>/. `--pruefen` meldet vorher, was fehlt (ST-04).
+    shell <id>         (SPEC_APPS_v1_AM8 AM8-11) der Ordner der Shell samt ihren Apps (Grundfunktionen, `slot:`, Start-Gruppen, Taskleiste) und allem, was die Manifeste unter `needs` nennen
+    app <id>           (AM8-11) der Ordner des Werkzeugs samt `needs.apps` (rekursiv), `needs.kern` (Kern-Pakete) und `needs.dateien` (Dateien oder Ordner unter uix/)
     <quelle> <pfad> -> <ziel>   umbenannt kopieren
 Aufruf (Bau-PC):  python -I -B runtime/benchmarks/stick_paket.py --repo <worktree> --bestand <hauptcheckout> --ziel K:\\SEDRA
 Nur pruefen:      ... --pruefen        (fehlende Importe und fehlende Dateien melden, nichts kopieren)
+Gegenprobe:       ... --gegenprobe     (AM8-12: was die Zeilen `repo` der Liste haben, die Ableitung aus den Manifesten aber nicht; nur Befund, nichts wird angeglichen)
 """
 from __future__ import annotations
 
@@ -41,8 +44,8 @@ def liste(pfad):
         teile = zeile.split()
         if teile[0] == "modul":
             eintraege.append(("modul", teile[1], teile[1]))
-        elif teile[0] == "profil" and len(teile) == 2:
-            eintraege.append(("profil", teile[1], teile[1]))
+        elif teile[0] in ("profil", "shell", "app") and len(teile) == 2:
+            eintraege.append((teile[0], teile[1], teile[1]))
         elif teile[0] in ("repo", "bestand") and len(teile) in (2, 4):
             ziel = teile[3] if len(teile) == 4 and teile[2] == "->" else teile[1]
             eintraege.append((teile[0], teile[1], ziel))
@@ -186,6 +189,110 @@ def pruefen_vollstaendig(repo, art, paare):
     return sorted(set(fehlt))
 
 
+SRC = Path("runtime", "src", PAKET)
+UIX = SRC / "uix"
+SHELLS = UIX / "shells"
+
+
+def _ordner(pfad):
+    return Path(pfad).as_posix().rstrip("/") + "/"
+
+
+def _yaml_block(datei, schluessel):
+    try:
+        return (yaml.safe_load(Path(datei).read_text(encoding="utf-8")) or {}).get(schluessel) or {}
+    except (yaml.YAMLError, OSError, UnicodeDecodeError):
+        return {}
+
+
+def _json(datei):
+    try:
+        daten = json.loads(Path(datei).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return daten if isinstance(daten, dict) else {}
+
+
+def _needs(man):
+    n = man.get("needs") if isinstance(man, dict) else None
+    return n if isinstance(n, dict) else {}
+
+
+def ableitung(repo, art, ident):
+    """AM8-11: {repo-relativer Pfad: Grund} fuer `app <id>` oder `shell <id>` aus den Manifesten. Ein Pfad ohne Ordner steht trotzdem drin (dann meldet `--pruefen` ihn).
+    App: Ordner, `needs.apps` rekursiv, `needs.kern` -> Kern-Paket, `needs.dateien` -> Datei oder Ordner unter uix/.
+    Shell: Ordner, Apps aus `grundfunktionen: slot:<id>`, den Start-Gruppen und der Taskleiste der Shell, Werkzeuge mit `grundfunktion:`, dazu die `needs` der Shell."""
+    erg, offen, gesehen = {}, [(art, ident, f"Zeile {art} {ident}")], set()
+    manifeste = werkzeug_manifeste(repo)
+    while offen:
+        a, i, grund = offen.pop()
+        if (a, i) in gesehen:
+            continue
+        gesehen.add((a, i))
+        if a == "app":
+            erg.setdefault(_ordner(TOOLS / i), grund)
+            man = manifeste.get(i) or {}
+        else:
+            erg.setdefault(_ordner(SHELLS / i), grund)
+            man = _yaml_block(Path(repo, SHELLS, i, "shell.yaml"), "shell")
+            for wert in (man.get("grundfunktionen") or {}).values():
+                if isinstance(wert, str) and wert.startswith("slot:"):
+                    offen.append(("app", wert[5:], f"Grundfunktion der Shell {i}"))
+            for tid, tman in manifeste.items():
+                if tman.get("grundfunktion"):
+                    offen.append(("app", tid, "Grundfunktion " + str(tman["grundfunktion"])))
+            for tid in sorted(_json(Path(repo, SHELLS, i, "start_gruppen.json")).get("zuordnung") or {}):
+                if tid in manifeste:
+                    offen.append(("app", tid, f"Start-Gruppe der Shell {i}"))
+            for zelle in _json(Path(repo, SHELLS, i, "leiste.json")).get("zellen") or []:
+                if isinstance(zelle, str):
+                    offen.append(("app", zelle, f"Taskleiste der Shell {i}"))
+        n = _needs(man)
+        for dep in n["apps"] if isinstance(n.get("apps"), dict) else []:
+            offen.append(("app", dep, f"needs.apps von {i}"))
+        for k in n.get("kern") or []:
+            if isinstance(k, str):
+                erg.setdefault(_ordner(SRC / k), f"needs.kern von {i}")
+        for d in n.get("dateien") or []:
+            if isinstance(d, str):
+                pfad = (UIX / d).as_posix()
+                erg.setdefault(_ordner(pfad) if d.endswith("/") else pfad, f"needs.dateien von {i}")
+    return erg
+
+
+def _ableitungen(repo, eintraege):
+    erg = {}
+    for art, ident, _ in eintraege:
+        if art in ("shell", "app"):
+            for pfad, grund in ableitung(repo, art, ident).items():
+                erg.setdefault(pfad, grund)
+    return erg
+
+
+def pruefen_ableitung(repo, eintraege):
+    """AM8-11: Zeilen „fehlt: …“ fuer jeden abgeleiteten Pfad, den es im Repository nicht gibt (leer = vollstaendig)."""
+    return sorted(f"fehlt: {pfad} ({grund})" for pfad, grund in _ableitungen(repo, eintraege).items() if not Path(repo, pfad).exists())
+
+
+def gegenprobe(repo, eintraege):
+    """AM8-12: Zeilen `repo` der Liste (Werkzeuge, Shells, Kern-Pakete, uix-Ordner), die die Ableitung aus den Manifesten NICHT deckt, als Befund „nur in der Liste: …“.
+    Ohne Zeilen `shell`/`app` in der Liste gilt `shell harness` (der Stick ist die Harness). Nichts wird angeglichen."""
+    ziele = [e for e in eintraege if e[0] in ("shell", "app")] or [("shell", "harness", "harness")]
+    abgeleitet = [_ordner(p) if p.endswith("/") else p for p in _ableitungen(repo, ziele)]
+    praefixe = (TOOLS.as_posix() + "/", SHELLS.as_posix() + "/")
+    heutige = []
+    for art, pfad, _ in eintraege:
+        rel = Path(pfad).as_posix()
+        if art != "repo":
+            continue
+        if rel.startswith(praefixe) or (rel.startswith(SRC.as_posix() + "/") and pfad.endswith("/")):
+            heutige.append(rel.rstrip("/") + "/")
+
+    def gedeckt(rel):
+        return any(rel == a or rel.startswith(a) for a in abgeleitet)
+    return sorted(f"nur in der Liste: {rel}" for rel in heutige if not gedeckt(rel))
+
+
 def profil_info(eintraege, repo):
     """{art, apps: [ids], grundfunktionen: [namen]} für das Manifest (ST-05); leer, wenn die Liste keine Zeile `profil` hat."""
     arten = [e[1] for e in eintraege if e[0] == "profil"]
@@ -207,6 +314,8 @@ def plan(eintraege, repo, bestand):
         if art == "profil":
             erweitert += [("repo", (TOOLS / tid).as_posix() + "/", (TOOLS / tid).as_posix() + "/") for tid in sorted(profil_werkzeuge(repo, pfad))
                           if Path(repo, TOOLS, tid).is_dir()]
+        elif art in ("shell", "app"):                           # AM8-11: aus den Manifesten abgeleitet
+            erweitert += [("repo", p, p) for p in sorted(ableitung(repo, art, pfad)) if Path(repo, p).exists()]
         else:
             erweitert.append((art, pfad, ziel))
     for art, pfad, ziel in erweitert:
@@ -272,11 +381,19 @@ def main(argv=None):
     p.add_argument("--ziel", required=True)
     p.add_argument("--liste", default=str(HERE / "stick_liste.txt"))
     p.add_argument("--pruefen", action="store_true")
+    p.add_argument("--gegenprobe", action="store_true")
     a = p.parse_args(argv)
     eintraege = liste(a.liste)
+    if a.gegenprobe:                                           # AM8-12: nur Befund, nichts wird angeglichen
+        befund = gegenprobe(a.repo, eintraege)
+        print(f"{len(befund)} Zeilen der Liste ohne Deckung durch die Manifeste")
+        for zeile in befund:
+            print(zeile)
+        return 0
     paare = plan(eintraege, a.repo, a.bestand)
     info = profil_info(eintraege, a.repo)
     fehlt = pruefen_vollstaendig(a.repo, info["art"], paare) if info else []
+    fehlt = sorted(set(fehlt + pruefen_ableitung(a.repo, eintraege)))
     if a.pruefen:
         print(f"{len(paare)} Dateien im Plan")
         for schluessel in sorted(paare):

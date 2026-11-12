@@ -130,6 +130,11 @@ def _common(doc, kind, folder, origin, errors):
         errors.append('local_module_cannot_be_core')
     if not needs_ok((doc.get('needs') or {}).get('ui') if isinstance(doc.get('needs'), dict) else None):
         errors.append('needs_ui_not_met')
+    if isinstance(doc.get('needs'), dict):                          # AM8-10: needs.kern (Kern-Pakete) und needs.dateien (Pfade unter uix/) – nur für die Auslieferung
+        for feld in ('kern', 'dateien'):
+            wert = doc['needs'].get(feld)
+            if wert is not None and not (isinstance(wert, list) and all(isinstance(x, str) and x and '..' not in x and ':' not in x and not x.startswith(('/', '\\')) for x in wert)):
+                errors.append(f'needs_{feld}_invalid')
     entry = doc.get('entry')
     js = css = []
     if entry is None and (doc.get('vorgabe') is not None or doc.get('kind') == 'dienst'):
