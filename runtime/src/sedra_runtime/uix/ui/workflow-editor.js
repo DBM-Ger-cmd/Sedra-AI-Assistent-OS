@@ -308,7 +308,7 @@
       if(this.dead)return;this.records = data.items || [];this.picker.replaceChildren(new Option('Gespeicherten Workflow wählen', ''));
       this.records.forEach(r=>this.picker.append(new Option(r.title + ' · r' + r.revision, r.id)));this.picker.value = this.wid || '';
       this.engine.textContent = data.engine.enabled ? 'Lokale n8n-Verbindung konfiguriert: ' + data.engine.base_url : 'n8n-Ausführung aus. Import, Editor, Versionen und Export sind verfügbar.' + (data.eigenablauf ? (data.eigenablauf.node ? ' Der SEDRA-Eigenablauf läuft lokal, ohne n8n.' : ' Für den SEDRA-Eigenablauf fehlt Node.js.') : '');
-      if(this.tableList)this.tableList.textContent = (data.tabellen || []).length ? 'Tabellen: ' + data.tabellen.map(t=>t.name + ' (' + t.zeilen + ' Zeilen)').join(', ') : 'Noch keine Tabellen.';
+      this.listeTabellen(data.tabellen);
       this.renderRuns(data.runs || []);this.updateRunChip(data.runs || []);this.renderCards();
       await this.loadHistory();
     },
@@ -358,7 +358,7 @@
       const run = await this.ctx.api('/api/objects', {method: 'POST', body: {type: 'workflow_run', id}});
       if(this.dead)return;this.runId = id;
       if(options.renderRun)options.renderRun(this.output, run);
-      else if(this.lokalText(run))this.output.textContent = this.lokalText(run);
+      else if(this.lokalRender(run)){}
       else this.output.textContent = JSON.stringify({mission: id, revision: run.revision, phase: run.state, steps: run.steps, wait: run.wait, result: run.result, artifacts: run.artifacts}, null, 2);
     }
   };}

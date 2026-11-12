@@ -29,10 +29,15 @@ MAX_AUSDRUCK = 20000
 MAX_ANTWORT = 12_000_000
 NB = 'n8n-nodes-base.'
 VERSIONEN = {NB + 'manualTrigger': [1], NB + 'formTrigger': [2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6], NB + 'extractFromFile': [1, 1.1, 1.2],
-             NB + 'set': [3.3, 3.4, 3.5], NB + 'code': [2], NB + 'if': [2, 2.1, 2.2, 2.3, 2.4], NB + 'dataTable': [1, 1.1], NB + 'noOp': [1], NB + 'stickyNote': [1]}
+             NB + 'set': [3.3, 3.4, 3.5], NB + 'code': [2], NB + 'if': [2, 2.1, 2.2, 2.3, 2.4], NB + 'dataTable': [1, 1.1], NB + 'noOp': [1], NB + 'stickyNote': [1],
+             NB + 'filter': [2, 2.1, 2.2, 2.3], NB + 'switch': [3, 3.1, 3.2, 3.3], NB + 'merge': [3, 3.1], NB + 'aggregate': [1], NB + 'splitOut': [1],
+             '@n8n/n8n-nodes-langchain.informationExtractor': [1, 1.1, 1.2]}
 LABEL = {'manualTrigger': 'Manueller Start', 'formTrigger': 'Formular', 'extractFromFile': 'PDF lesen', 'set': 'Felder setzen', 'code': 'Code',
-         'if': 'Bedingung', 'dataTable': 'Tabelle', 'noOp': 'Nichts tun'}
+         'if': 'Bedingung', 'dataTable': 'Tabelle', 'noOp': 'Nichts tun', 'filter': 'Filter', 'switch': 'Mehrere Wege', 'merge': 'Zusammenführen',
+         'aggregate': 'Zusammenfassen', 'splitOut': 'Aufteilen', 'informationExtractor': 'Informationen ziehen (lokales Modell)'}
 LANGCHAIN = '@n8n/n8n-nodes-langchain.'
+MODELL_ENDUNG = ('lmChatAnthropic', 'lmChatOpenAi', 'lmChatOllama', 'lmChatGoogleGemini', 'lmChatMistralCloud', 'lmChatGroq', 'lmChatAzureOpenAi')
+MAX_KI_EINTRAEGE = 20
 UNSICHER = {'__proto__', 'prototype', 'constructor'}
 AUSLOESER = (NB + 'manualTrigger', NB + 'formTrigger')
 OPTIONEN = ('credentials',)
@@ -178,7 +183,72 @@ def _pruefe_formular(p):
             raise ValueError('unsupported_form_field')
 
 
-PRUEFER = {'set': _pruefe_set, 'if': _pruefe_if, 'code': _pruefe_code, 'dataTable': _pruefe_tabelle, 'extractFromFile': _pruefe_extrahieren, 'formTrigger': _pruefe_formular}
+def _pruefe_filter(p):
+    _schluessel(p, {'conditions', 'options'})
+    _pruefe_if(p)
+
+
+def _pruefe_switch(p):
+    _schluessel(p, {'mode', 'rules', 'options', 'numberOutputs', 'output'})
+    if p.get('mode', 'rules') != 'rules':
+        raise ValueError('unsupported_switch_mode')
+    regeln = (p.get('rules') or {}).get('values')
+    if not isinstance(regeln, list) or not 1 <= len(regeln) <= 16:
+        raise ValueError('switch_rules_required')
+    for r in regeln:
+        _schluessel(r, {'conditions', 'renameOutput', 'outputKey'})
+        _pruefe_if({'conditions': r.get('conditions')})
+    _schluessel(p.get('options', {}), {'fallbackOutput', 'allMatchingOutputs', 'ignoreCase', 'looseTypeValidation'})
+    if p.get('options', {}).get('fallbackOutput', 'none') not in ('none', 'extra'):
+        raise ValueError('unsupported_switch_fallback')
+
+
+def _pruefe_merge(p):
+    _schluessel(p, {'mode', 'combineBy', 'options', 'numberInputs'})
+    if p.get('mode', 'append') not in ('append', 'combine') or (p.get('mode') == 'combine' and p.get('combineBy') != 'combineByPosition') or p.get('options', {}) != {}:
+        raise ValueError('unsupported_merge_mode')
+
+
+def _pruefe_aggregate(p):
+    _schluessel(p, {'aggregate', 'destinationFieldName', 'fieldsToAggregate', 'options'})
+    if p.get('aggregate', 'aggregateIndividualFields') not in ('aggregateAllItemData', 'aggregateIndividualFields') or p.get('options', {}) != {}:
+        raise ValueError('unsupported_aggregate_mode')
+    felder = (p.get('fieldsToAggregate') or {}).get('fieldToAggregate', [])
+    if p.get('aggregate') == 'aggregateIndividualFields' and (not isinstance(felder, list) or not felder or not all(isinstance(f, dict) and isinstance(f.get('fieldToAggregate'), str) for f in felder)):
+        raise ValueError('aggregate_fields_required')
+
+
+def _pruefe_aufteilen(p):
+    _schluessel(p, {'fieldToSplitOut', 'include', 'options'})
+    if not isinstance(p.get('fieldToSplitOut'), str) or not p['fieldToSplitOut'].strip() or p.get('include', 'noOtherFields') not in ('noOtherFields', 'allOtherFields') or p.get('options', {}) != {}:
+        raise ValueError('unsupported_split_out')
+
+
+def _pruefe_extraktor(p):
+    _schluessel(p, {'text', 'attributes', 'options', 'schemaType'})
+    attribute = (p.get('attributes') or {}).get('attributes')
+    if not isinstance(attribute, list) or not 1 <= len(attribute) <= 24 or p.get('options', {}) != {} or p.get('schemaType', 'fromAttributes') != 'fromAttributes':
+        raise ValueError('extractor_attributes_required')
+    _ausdruck_ok(p.get('text'))
+    for a in attribute:
+        _schluessel(a, {'name', 'type', 'description', 'required'})
+        if not isinstance(a.get('name'), str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,63}', a['name']) or a.get('type', 'string') not in ('string', 'number', 'boolean', 'date'):
+            raise ValueError('unsupported_extractor_attribute')
+
+
+PRUEFER = {'set': _pruefe_set, 'if': _pruefe_if, 'code': _pruefe_code, 'dataTable': _pruefe_tabelle, 'extractFromFile': _pruefe_extrahieren, 'formTrigger': _pruefe_formular,
+           'filter': _pruefe_filter, 'switch': _pruefe_switch, 'merge': _pruefe_merge, 'aggregate': _pruefe_aggregate, 'splitOut': _pruefe_aufteilen,
+           'informationExtractor': _pruefe_extraktor}
+
+
+def _ausgaenge(n):
+    art = _kurz(n['type'])
+    if art == 'if':
+        return 2
+    if art == 'switch':
+        p = n['parameters']
+        return len((p.get('rules') or {}).get('values') or []) + (1 if p.get('options', {}).get('fallbackOutput') == 'extra' else 0)
+    return 1
 
 
 def _plan(value):
@@ -193,30 +263,40 @@ def _plan(value):
     if len(start) != 1:
         raise ValueError('one_form_or_manual_start_required')
     kanten = {name: [] for name in knoten}
+    anhang = {}
     for quelle, ausgaenge in doc['connections'].items():
         if quelle not in knoten:
             raise ValueError('unsupported_connection')
         for art, zweige in ausgaenge.items():
+            if art == 'ai_languageModel':
+                for zweig in zweige:
+                    for e in zweig:
+                        if e['node'] in knoten and knoten[quelle]['type'].startswith(LANGCHAIN) and _kurz(knoten[quelle]['type']) in MODELL_ENDUNG:
+                            anhang.setdefault(e['node'], []).append(quelle)
+                continue
             if art != 'main':
                 continue
-            if len(zweige) > (2 if knoten[quelle]['type'].endswith('.if') else 1):
+            if len(zweige) > _ausgaenge(knoten[quelle]):
                 raise ValueError('unsupported_output_index')
             for ast, zweig in enumerate(zweige):
                 for e in zweig:
-                    if e['node'] not in knoten or e['type'] != 'main' or e['index'] != 0:
+                    if e['node'] not in knoten or e['type'] != 'main' or e['index'] not in ((0, 1) if _kurz(knoten[e['node']]['type']) == 'merge' else (0,)):
                         raise ValueError('unsupported_connection')
-                    kanten[quelle].append((ast, e['node']))
+                    kanten[quelle].append((ast, e['node'], e['index']))
     erreicht, offen = set(), [start[0]]
     while offen:
         name = offen.pop()
         if name not in erreicht:
             erreicht.add(name)
-            offen.extend(ziel for _, ziel in kanten[name])
-    uebersprungen = []
+            offen.extend(ziel for _, ziel, _i in kanten[name])
+    uebersprungen, modelle = [], []
+    angehaengt = {m for ziel, ms in anhang.items() if ziel in erreicht for m in ms}
     for name, n in knoten.items():
         if name in erreicht:
             continue
-        if n['type'].startswith(LANGCHAIN) or n['type'].endswith('.stickyNote'):
+        if name in angehaengt:
+            modelle.append(name)
+        elif n['type'].startswith(LANGCHAIN) or n['type'].endswith('.stickyNote'):
             uebersprungen.append(name)
         else:
             raise ValueError('unreachable_nodes:' + name)
@@ -228,6 +308,8 @@ def _plan(value):
             raise ValueError('only_main_connections_supported')
         if n.get('credentials') or any(n.get(k) for k in ('disabled', 'retryOnFail', 'alwaysOutputData', 'continueOnFail', 'executeOnce')) or n.get('onError', 'stopWorkflow') != 'stopWorkflow':
             raise ValueError('unsupported_node_execution_options:' + name)
+        if _kurz(n['type']) == 'informationExtractor' and not anhang.get(name):
+            raise ValueError('model_node_missing:' + name)
         pruefer = PRUEFER.get(_kurz(n['type']))
         if pruefer:
             pruefer(n['parameters'])
@@ -237,21 +319,21 @@ def _plan(value):
         raise ValueError('too_many_nodes')
     eingang = {name: 0 for name in erreicht}
     for name in erreicht:
-        for _, ziel in kanten[name]:
+        for _, ziel, _i in kanten[name]:
             eingang[ziel] += 1
     reihe, warte = [], [name for name in erreicht if not eingang[name]]
     while warte:
         name = warte.pop(0)
         reihe.append(name)
-        for _, ziel in kanten[name]:
+        for _, ziel, _i in kanten[name]:
             eingang[ziel] -= 1
             if not eingang[ziel]:
                 warte.append(ziel)
-    if len(reihe) != len(erreicht) or any(start[0] == z for k in kanten.values() for _, z in k):
+    if len(reihe) != len(erreicht) or any(start[0] == k[1] for ks in kanten.values() for k in ks):
         raise ValueError('cycles_not_supported')
     schreibt = sorted({_tabellenname(knoten[n]['parameters']) for n in erreicht if _kurz(knoten[n]['type']) == 'dataTable' and knoten[n]['parameters'].get('operation') == 'upsert'})
     liest = sorted({_tabellenname(knoten[n]['parameters']) for n in erreicht if _kurz(knoten[n]['type']) == 'dataTable' and knoten[n]['parameters'].get('operation') == 'get'})
-    return {'doc': doc, 'knoten': knoten, 'kanten': kanten, 'reihe': reihe, 'start': start[0], 'uebersprungen': uebersprungen, 'schreibt': schreibt, 'liest': liest}
+    return {'doc': doc, 'knoten': knoten, 'kanten': kanten, 'reihe': reihe, 'start': start[0], 'uebersprungen': uebersprungen, 'schreibt': schreibt, 'liest': liest, 'modelle': modelle}
 
 
 def bewerten(value):
@@ -263,7 +345,7 @@ def bewerten(value):
     start = plan['knoten'][plan['start']]
     dateien = [f['fieldLabel'] for f in ((start['parameters'].get('formFields') or {}).get('values') or []) if f.get('fieldType') == 'file']
     return {'executable': True, 'profile': PROFILE, 'reason': None, 'uebersprungen': plan['uebersprungen'], 'schreibt': plan['schreibt'], 'liest': plan['liest'],
-            'dateifelder': dateien, 'knoten_gesamt': len(plan['knoten']), 'knoten_lauffaehig': len(plan['reihe'])}
+            'dateifelder': dateien, 'modelle': plan['modelle'], 'braucht_modell': any(_kurz(n['type']) == 'informationExtractor' for nm, n in plan['knoten'].items() if nm in plan['reihe']), 'knoten_gesamt': len(plan['knoten']), 'knoten_lauffaehig': len(plan['reihe'])}
 
 
 def bekannte_knoten(nodes):
@@ -347,8 +429,8 @@ def _vorbereiten(wert):
 class Lauf:
     """Der Zustand eines Laufs: Eingaben, Tabellen und die Ausgaben aller Knoten (für $('Name'))."""
 
-    def __init__(self, tabellen, eingaben, eingabe):
-        self.tabellen, self.eingaben, self.eingabe = tabellen, eingaben, eingabe
+    def __init__(self, tabellen, eingaben, eingabe, modell=None):
+        self.tabellen, self.eingaben, self.eingabe, self.modell = tabellen, eingaben, eingabe, modell
         self.ausgaben = {}
         self.geschrieben = []
 
@@ -459,15 +541,15 @@ def _bedingung_typ(wert, art, streng, rolle):
     return _typ(wert, art, rolle) if art != 'string' else str(wert)
 
 
-def knoten_if(lauf, n, items):
-    c = n['parameters']['conditions']
+def _bedingungen_pro_item(lauf, c, items):
+    """Wertet n8n-Bedingungen (If, Filter, Switch-Regeln) je Eintrag aus: Liste von True/False."""
     opts = c.get('options', {})
     gross, streng = opts.get('caseSensitive', True), opts.get('typeValidation', 'strict') == 'strict'
     zeilen = c['conditions']
     wuensche = [(i, z.get(s)) for i in range(len(items)) for z in zeilen for s in ('leftValue', 'rightValue')]
     werte = lauf.auswerten(items, wuensche)
-    ja, nein = [], []
-    for i, item in enumerate(items):
+    aus = []
+    for i in range(len(items)):
         ergebnisse = []
         for k, z in enumerate(zeilen):
             art, op = z['operator']['type'], z['operator']['operation']
@@ -475,8 +557,122 @@ def knoten_if(lauf, n, items):
             links = _bedingung_typ(links, art, streng, 'linke')
             rechts = _bedingung_typ(rechts, art, streng, 'rechte') if op not in ('empty', 'notEmpty', 'true', 'false') else rechts
             ergebnisse.append(_vergleiche(art, op, links, rechts, gross))
-        (ja if (all(ergebnisse) if c.get('combinator', 'and') == 'and' else any(ergebnisse)) else nein).append(_kopie(item))
-    return [ja, nein]
+        aus.append(all(ergebnisse) if c.get('combinator', 'and') == 'and' else any(ergebnisse))
+    return aus
+
+
+def knoten_if(lauf, n, items):
+    treffer = _bedingungen_pro_item(lauf, n['parameters']['conditions'], items)
+    return [[_kopie(i) for i, t in zip(items, treffer) if t], [_kopie(i) for i, t in zip(items, treffer) if not t]]
+
+
+def knoten_filter(lauf, n, items):
+    treffer = _bedingungen_pro_item(lauf, n['parameters']['conditions'], items)
+    return [[_kopie(i) for i, t in zip(items, treffer) if t]]
+
+
+def knoten_switch(lauf, n, items):
+    p = n['parameters']
+    regeln = p['rules']['values']
+    opts = p.get('options', {})
+    extra = opts.get('fallbackOutput') == 'extra'
+    zweige = [[] for _ in range(len(regeln) + (1 if extra else 0))]
+    pro_regel = []
+    for r in regeln:
+        c = dict(r['conditions'])
+        if opts.get('ignoreCase'):
+            c['options'] = dict(c.get('options', {}), caseSensitive=False)
+        pro_regel.append(_bedingungen_pro_item(lauf, c, items))
+    for i, item in enumerate(items):
+        gefunden = False
+        for k in range(len(regeln)):
+            if pro_regel[k][i]:
+                zweige[k].append(_kopie(item))
+                gefunden = True
+                if not opts.get('allMatchingOutputs'):
+                    break
+        if not gefunden and extra:
+            zweige[-1].append(_kopie(item))
+    return zweige
+
+
+def knoten_merge(lauf, n, eingaenge):
+    p = n['parameters']
+    a, b = eingaenge.get(0, []), eingaenge.get(1, [])
+    if p.get('mode', 'append') == 'append':
+        return [[_kopie(i) for i in a + b]]
+    aus = []
+    for k in range(max(len(a), len(b))):
+        neu = _item({})
+        for quelle in (a, b):
+            if k < len(quelle):
+                neu['json'].update(deepcopy(quelle[k]['json']))
+        aus.append(neu)
+    return [aus]
+
+
+def knoten_aggregate(lauf, n, items):
+    p = n['parameters']
+    if p.get('aggregate') == 'aggregateAllItemData':
+        return [[_item({p.get('destinationFieldName') or 'data': [deepcopy(i['json']) for i in items]})]]
+    out = {}
+    for f in (p.get('fieldsToAggregate') or {}).get('fieldToAggregate', []):
+        name = f['fieldToAggregate']
+        ziel = (f.get('outputFieldName') if f.get('renameField') else None) or name
+        out[ziel] = [deepcopy(i['json'].get(name)) for i in items]
+    return [[_item(out)]]
+
+
+def knoten_aufteilen(lauf, n, items):
+    p = n['parameters']
+    felder = [f.strip() for f in p['fieldToSplitOut'].split(',') if f.strip()]
+    aus = []
+    for item in items:
+        listen = [item['json'].get(f) for f in felder]
+        if not all(isinstance(x, list) for x in listen):
+            raise LokalFehler("Das Feld '%s' ist keine Liste" % p['fieldToSplitOut'])
+        for k in range(max(len(x) for x in listen)):
+            neu = _kopie(item) if p.get('include') == 'allOtherFields' else _item({})
+            for f, x in zip(felder, listen):
+                neu['json'][f] = deepcopy(x[k]) if k < len(x) else None
+            aus.append(neu)
+    return [aus]
+
+
+def _schema_aus_attributen(attribute):
+    art = {'string': 'string', 'date': 'string', 'number': 'number', 'boolean': 'boolean'}
+    return {'type': 'object', 'properties': {a['name']: {'type': [art[a.get('type', 'string')], 'null']} for a in attribute}, 'required': [a['name'] for a in attribute]}
+
+
+def knoten_extraktor(lauf, n, items):
+    """Information Extractor über das lokale Modell (nie Cloud): das angeschlossene Chat-Modell des Exports wird nicht benutzt, nur sein Platz im Bild."""
+    if lauf.modell is None:
+        raise LokalFehler('kein_lokales_modell: erst ein Modell laden')
+    if len(items) > MAX_KI_EINTRAEGE:
+        raise LokalFehler('Zu viele Einträge für das Modell (höchstens %d)' % MAX_KI_EINTRAEGE)
+    p = n['parameters']
+    attribute = p['attributes']['attributes']
+    schema = _schema_aus_attributen(attribute)
+    texte = lauf.auswerten(items, [(i, p.get('text')) for i in range(len(items))])
+    beschreibung = '\n'.join('- %s (%s)%s' % (a['name'], a.get('type', 'string'), ': ' + a['description'] if a.get('description') else '') for a in attribute)
+    aus = []
+    for item, text in zip(items, texte):
+        if not isinstance(text, str) or not text.strip():
+            raise LokalFehler('Der Text für die Informationsextraktion ist leer (Feld "text" des Eintrags prüfen)')
+        nachrichten =[{'role': 'system', 'content': 'Du ziehst Angaben aus einem Text. Übernimm nur, was im Text steht. Fehlt ein Wert oder ist er nicht eindeutig, setze null. Erfinde nichts.\nGesuchte Felder:\n' + beschreibung},
+                       {'role': 'user', 'content': str(text)[:60000]}]
+        try:
+            wert = lauf.modell(nachrichten, schema)
+        except LokalFehler:
+            raise
+        except Exception as exc:
+            raise LokalFehler('Modell: ' + str(exc)[:200]) from exc
+        if not isinstance(wert, dict):
+            raise LokalFehler('Das Modell lieferte keine Felder')
+        neu = _kopie(item)
+        neu['json'] = {'output': {a['name']: wert.get(a['name']) for a in attribute}}
+        aus.append(neu)
+    return [aus]
 
 
 def knoten_code(lauf, n, items):
@@ -581,7 +777,8 @@ def knoten_start(lauf, n, items):
 
 
 HANDLER = {'manualTrigger': knoten_start, 'formTrigger': knoten_start, 'set': knoten_set, 'if': knoten_if, 'code': knoten_code, 'extractFromFile': knoten_pdf,
-           'dataTable': knoten_tabelle, 'noOp': lambda lauf, n, items: [[_kopie(i) for i in items]], 'stickyNote': lambda lauf, n, items: [[]]}
+           'dataTable': knoten_tabelle, 'filter': knoten_filter, 'switch': knoten_switch, 'merge': knoten_merge, 'aggregate': knoten_aggregate, 'splitOut': knoten_aufteilen,
+           'informationExtractor': knoten_extraktor, 'noOp': lambda lauf, n, items: [[_kopie(i) for i in items]], 'stickyNote': lambda lauf, n, items: [[]]}
 
 
 # ------------------------------------------------------------------------------------------------------------------------- Lauf
@@ -596,7 +793,7 @@ def _kuerzen(wert, tiefe=0):
     return wert
 
 
-def ausfuehren(workflow, eingabe, project):
+def ausfuehren(workflow, eingabe, project, modell=None):
     """Führt einen geprüften Workflow aus. Wirft nie: Fehler stehen im Ergebnis (status failed, error, fehler_knoten)."""
     start = time.time()
     ergebnis = {'status': 'failed', 'profile': PROFILE, 'knoten': [], 'output': None, 'tabellen_geschrieben': [], 'hinweise': []}
@@ -605,8 +802,8 @@ def ausfuehren(workflow, eingabe, project):
     except ValueError as exc:
         ergebnis['error'] = str(exc)
         return ergebnis
-    lauf = Lauf(Tabellen(project), Eingaben(project), eingabe)
-    eingang = {name: [] for name in plan['reihe']}
+    lauf = Lauf(Tabellen(project), Eingaben(project), eingabe, modell)
+    eingang = {name: {0: [], 1: []} for name in plan['reihe']}
     ergebnis['uebersprungen'] = plan['uebersprungen']
     aktuell = None
     try:
@@ -615,18 +812,18 @@ def ausfuehren(workflow, eingabe, project):
             n = plan['knoten'][name]
             art = _kurz(n['type'])
             ist_start = name == plan['start']
-            if not ist_start and not eingang[name]:
-                lauf.ausgaben[name] = [[], []] if art == 'if' else [[]]
+            if not ist_start and not any(eingang[name].values()):
+                lauf.ausgaben[name] = [[] for _ in range(_ausgaenge(n))]
                 ergebnis['knoten'].append({'name': name, 'art': LABEL.get(art, art), 'status': 'uebersprungen', 'eingang': 0, 'ausgang': []})
                 continue
-            zweige = HANDLER[art](lauf, n, eingang[name])
+            zweige = HANDLER[art](lauf, n, eingang[name] if art == 'merge' else eingang[name][0])
             if any(len(z) > MAX_ITEMS for z in zweige):
                 raise LokalFehler('Zu viele Einträge')
             lauf.ausgaben[name] = zweige
-            for ast, ziel in plan['kanten'][name]:
-                eingang[ziel].extend(_kopie(i) for i in (zweige[ast] if ast < len(zweige) else []))
+            for ast, ziel, idx in plan['kanten'][name]:
+                eingang[ziel][idx].extend(_kopie(i) for i in (zweige[ast] if ast < len(zweige) else []))
             erstes = next((z[0] for z in zweige if z), None)
-            ergebnis['knoten'].append({'name': name, 'art': LABEL.get(art, art), 'status': 'ok', 'eingang': len(eingang[name]) if not ist_start else 0, 'ausgang': [len(z) for z in zweige],
+            ergebnis['knoten'].append({'name': name, 'art': LABEL.get(art, art), 'status': 'ok', 'eingang': sum(len(v) for v in eingang[name].values()) if not ist_start else 0, 'ausgang': [len(z) for z in zweige],
                                        'beispiel': _kuerzen(erstes['json']) if erstes else None})
         ende = [nm for nm in plan['reihe'] if not plan['kanten'][nm] and any(lauf.ausgaben.get(nm, []))]
         ergebnis['output'] = {nm: [i['json'] for z in lauf.ausgaben[nm] for i in z] for nm in ende}

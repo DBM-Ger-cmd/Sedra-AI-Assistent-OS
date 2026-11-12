@@ -28,6 +28,18 @@ def context(control, mission, request):
     return doc, data, cfg, binding
 
 
+def _modell(control, mission_id):
+    """Der Weg zum lokalen Modell für KI-Knoten des Eigenablaufs: immer der lokale llama-Server, mit erzwungenem Schema (geprüftes JSON), nie ein Cloud-Anbieter."""
+    router = getattr(control, 'model_router', None)
+    if router is None:
+        return None
+
+    def fragen(nachrichten, schema):
+        antwort = router.chat(mission_id, nachrichten, provider='llama-cpp-server', schema=schema, temperature=0, max_tokens=700)
+        return antwort.get('parsed')
+    return fragen
+
+
 def execute(control, mission, request, token=None):
     mid = mission['identity']['mission_id']
     try:
@@ -44,8 +56,12 @@ def execute(control, mission, request, token=None):
         risiken = ['Lokale n8n-Testinstanz; nur Datenprofil v1, keine Außenaktionen.']
         if eigen:
             bew = lokal.bewerten(request['workflow'])
-            risiken = ['SEDRA-Eigenablauf, ganz lokal: kein Netz, keine Cloud, keine KI-Knoten.',
-                       'Eigener Code läuft in einer abgeschotteten Node-Umgebung ohne Datei- und Netzzugriff.'] +                       (['Schreibt in lokale Tabellen: ' + ', '.join(bew['schreibt']) + '.'] if bew.get('schreibt') else [])
+            risiken = ['SEDRA-Eigenablauf, ganz lokal: kein Netz, keine Cloud.',
+                       'Eigener Code läuft in einer abgeschotteten Node-Umgebung ohne Datei- und Netzzugriff.']
+            if bew.get('schreibt'):
+                risiken.append('Schreibt in lokale Tabellen: ' + ', '.join(bew['schreibt']) + '.')
+            if bew.get('braucht_modell'):
+                risiken.append('Fragt das lokale Sprachmodell von SEDRA (nie ein Cloud-Modell); der Rechnungstext verlässt den Rechner nicht.')
         gate = control.guard.create_gate(mid, action, target, request_binding=binding, risks=risiken, rollback_available=False)
         return {'status': 'captain_required', 'gate': gate, 'artifacts': []}
     folder = control.workspace / mid
@@ -61,7 +77,7 @@ def execute(control, mission, request, token=None):
                          payload={'step_id': request.get('id'), 'binding_digest': digest(binding), 'profile': PROFILE})
     try:
         if eigen:
-            result = lokal.ausfuehren(request['workflow'], data, control.workspace.parents[1])
+            result = lokal.ausfuehren(request['workflow'], data, control.workspace.parents[1], modell=_modell(control, mid))
         else:
             result = LocalN8n(cfg).run(request['workflow'], data)
     except Exception:

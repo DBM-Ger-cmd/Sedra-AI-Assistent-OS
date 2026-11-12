@@ -166,6 +166,38 @@ class Tabellen:
     def _passt(zeile, bedingungen):
         return all(_vergleich(zeile.get(b['spalte']), b.get('art'), b['wert']) for b in bedingungen)
 
+    def zeile_speichern(self, name, zeile_id, werte):
+        """Eine Zeile ändern (mit id) oder neu anlegen (ohne id). Die Felder id, createdAt und updatedAt setzt die Tabelle selbst."""
+        if not isinstance(werte, dict) or not werte or len(werte) > 64 or not all(isinstance(k, str) and 0 < len(k) <= 64 for k in werte):
+            raise ValueError('tabelle_zeile_ungueltig')
+        werte = {k: v for k, v in werte.items() if k not in ('id', 'createdAt', 'updatedAt')}
+        pfad, doc = self._doc(name)
+        if zeile_id is None:
+            zeile = self._neu(doc, werte)
+            doc['zeilen'].append(zeile)
+        else:
+            zeile = next((z for z in doc['zeilen'] if z.get('id') == zeile_id), None)
+            if zeile is None:
+                raise ValueError('tabelle_zeile_nicht_gefunden')
+            zeile.update(werte)
+            zeile['updatedAt'] = utcnow()
+        doc['spalten'] = _spalten(doc)
+        self._speichern(pfad, doc)
+        return dict(zeile)
+
+    def zeile_loeschen(self, name, zeile_id):
+        gefunden = self._finden(name)
+        if not gefunden:
+            raise ValueError('tabelle_nicht_gefunden')
+        pfad, doc = gefunden
+        vorher = len(doc['zeilen'])
+        doc['zeilen'] = [z for z in doc['zeilen'] if z.get('id') != zeile_id]
+        if len(doc['zeilen']) == vorher:
+            raise ValueError('tabelle_zeile_nicht_gefunden')
+        doc['spalten'] = _spalten(doc)
+        self._speichern(pfad, doc)
+        return {'name': doc['name'], 'zeilen': len(doc['zeilen'])}
+
     def suchen(self, name, bedingungen, limit=1000):
         gefunden = self._finden(name)
         if not gefunden:
