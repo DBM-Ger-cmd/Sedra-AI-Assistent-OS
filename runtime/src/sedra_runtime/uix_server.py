@@ -1510,7 +1510,13 @@ class UIXHub:
                                                  'loeschen_am': e.loeschen_am, 'pruefung': e.pruefung, 'rechecks': e.rechecks,
                                                  'kennzeichnung': e.kennzeichnung or e.kennzeichnen()}
         out['freigabe_offen'] = v.mission_id if v.zustand == 'WARTET' else None
+        out['an_rolle'] = 'pruefung' if self._a01_an_pruefung(v) else None             # AM7-15: wer hier entscheidet
         return out
+
+    def _a01_an_pruefung(self, v):
+        """AM7-15: wahr, wenn eine Richtlinie die Rolle `sachbearbeitung` setzt und der Vorgang den Merkmal A01 trägt (R-13, von Hand gesetzt). Die Rolle `pruefung` (und `betreiber`) entscheidet selbst."""
+        rl = self.richtlinie
+        return bool(rl.aktiv and rl.rolle == 'sachbearbeitung' and v.einstufung and any(m.get('id') == 'A01' for m in v.einstufung.get('merkmale') or []))
 
     def gateway_new(self, payload):
         try:
@@ -1745,6 +1751,9 @@ class UIXHub:
         except Exception as exc:
             self._gw_error(exc)
         e = v.einstufung
+        if self._a01_an_pruefung(v):                         # AM7-15: Hochrisiko-Kontext (R-13) entscheidet die Rolle pruefung, nicht die Sachbearbeitung
+            self.runtime.audit.append('GW_AN_PRUEFUNG', component='gateway', payload={'vorgang': vid, 'regel': 'R-13'})
+            raise ValueError('a01_an_rolle_pruefung')
         review = e['review'] == 'PENDING'
         cloud = self.gateway_cloud()
         if weg != 'LOCAL_ONLY' and cloud['modus'] == 'anbieter' and not cloud['bereit']:

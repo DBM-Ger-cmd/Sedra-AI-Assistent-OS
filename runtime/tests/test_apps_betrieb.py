@@ -323,6 +323,56 @@ class HubTests(unittest.TestCase):
         out = hub2.gateway_pruefen({"id": vid, "anfrage": "Bitte eine kurze Antwort auf die Anfrage zur Lieferung vorbereiten.", "zweck": "antwortentwurf", "verantwortlich": "Torsten"})
         self.assertEqual(out["verantwortlich"], "Torsten")
 
+    # ---- AM7-15: Hochrisiko-Kontext (A01, R-13) geht an die Rolle pruefung
+    ANFRAGE = "Bitte eine kurze Antwort auf die Anfrage zur Lieferung vorbereiten."
+
+    def _vorgang(self, hub, manuell=()):
+        vid = hub.gateway_new({"titel": "Hochrisiko", "wunsch": "local"})["id"]
+        hub.gateway_pruefen({"id": vid, "anfrage": self.ANFRAGE, "zweck": "antwortentwurf", "manuell": list(manuell)})
+        return vid
+
+    def _audit_arten(self, hub):
+        return [json.loads(z).get("event_type") for z in hub.runtime.audit.path.read_text(encoding="utf-8").splitlines() if z.strip()]
+
+    def _hub_mit_rolle(self, rolle):
+        self.hub.close()
+        (self.root / "local_config" / "richtlinie.yaml").write_text(yaml.safe_dump(kopie(rolle=rolle)), encoding="utf-8")
+        hub2 = UIXHub(self.root, ARCH)
+        self.addCleanup(hub2.close)
+        return hub2
+
+    def test_a01_geht_bei_der_sachbearbeitung_an_die_pruefung(self):
+        vid = self._vorgang(self.hub, ["A01"])
+        self.assertEqual(self.hub.gateway_get(vid)["an_rolle"], "pruefung")
+        with self.assertRaises(ValueError) as fehler:
+            self.hub.gateway_freigabe({"id": vid, "weg": "LOCAL_ONLY"})
+        self.assertEqual(str(fehler.exception), "a01_an_rolle_pruefung")
+        self.assertIn("GW_AN_PRUEFUNG", self._audit_arten(self.hub))
+        self.assertEqual(self.hub.gateway_get(vid)["zustand"], "GEPRUEFT", "nichts wurde vorgemerkt")
+
+    def test_a01_entscheidet_die_rolle_pruefung_selbst(self):
+        hub2 = self._hub_mit_rolle("pruefung")
+        vid = self._vorgang(hub2, ["A01"])
+        self.assertIsNone(hub2.gateway_get(vid)["an_rolle"])
+        hub2.gateway_freigabe({"id": vid, "weg": "LOCAL_ONLY"})
+        self.assertEqual(hub2.gateway_get(vid)["zustand"], "WARTET")
+        self.assertNotIn("GW_AN_PRUEFUNG", self._audit_arten(hub2))
+
+    def test_ohne_a01_bleibt_alles_wie_bisher(self):
+        vid = self._vorgang(self.hub)
+        self.assertIsNone(self.hub.gateway_get(vid)["an_rolle"])
+        self.hub.gateway_freigabe({"id": vid, "weg": "LOCAL_ONLY"})
+        self.assertEqual(self.hub.gateway_get(vid)["zustand"], "WARTET")
+
+    def test_a01_ohne_richtlinie_wird_nicht_umgeleitet(self):
+        self.hub.close()
+        (self.root / "local_config" / "switches.yaml").write_text("switches:\n  betrieb_unternehmen: {enabled: false}\n", encoding="utf-8")
+        hub2 = UIXHub(self.root, ARCH)
+        self.addCleanup(hub2.close)
+        vid = self._vorgang(hub2, ["A01"])
+        self.assertIsNone(hub2.gateway_get(vid)["an_rolle"])
+        hub2.gateway_freigabe({"id": vid, "weg": "LOCAL_ONLY"})
+
 
 if __name__ == "__main__":
     unittest.main()
