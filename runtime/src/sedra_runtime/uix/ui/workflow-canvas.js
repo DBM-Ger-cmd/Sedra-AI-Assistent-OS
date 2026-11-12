@@ -102,7 +102,8 @@
         if(a.type.endsWith('.if'))svg.append(element('text', {x: weg ? x + 8 : (x + tx) / 2, y: weg ? y + (index === 0 ? -9 : 17) : (y + ty) / 2 - 8, 'text-anchor': weg ? 'start' : 'middle', class: 't-wf-edge-label'}, index === 0 ? 'Ja' : 'Nein'));
       }))));
       nodes.forEach((node, order)=>{
-        const known = root.sedraWorkflowModel.types.some(t=>'n8n-nodes-base.' + t[0] === node.type && t[2] === node.typeVersion);
+        const own = (root.sedraWorkflowLokalTypen || {})[node.type];      // Typen des SEDRA-Eigenablaufs (workflow-lokal.js); leere Liste = jede Version
+        const known = root.sedraWorkflowModel.types.some(t=>'n8n-nodes-base.' + t[0] === node.type && t[2] === node.typeVersion) || (!!own && (!own.length || own.includes(node.typeVersion)));
         const P = root.sedraWorkflowProcess, meta = P && P.get(node), I = root.sedraWorkflowIcons;
         const kindKey = I ? I.key(node, meta) : 'unknown';
         const g = element('g', {transform: `translate(${node.position[0]} ${node.position[1]})`, class: 't-wf-node mod-' + kindKey + (state.live && state.live[node.id] ? ' live live-' + state.live[node.id] : '') + (state.selected === node.id ? ' selected' : '') + (!known ? ' unsupported' : '') + (meta ? ' process ' + meta.mode : ''), tabindex: 0, role: 'button', 'aria-label': node.name});

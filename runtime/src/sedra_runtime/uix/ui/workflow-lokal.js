@@ -2,20 +2,26 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   function el(tag, cls, text){const x = document.createElement(tag);if(cls)x.className = cls;if(text !== undefined)x.textContent = text;return x;}
   function button(text, fn){const b = el('button', '', text);b.type = 'button';b.onclick = fn;return b;}
+  // Knotentypen, die der SEDRA-Eigenablauf ausführt (Spiegel von VERSIONEN in workflows/lokal.py); [] = jede Version (Chat-Modelle: das lokale Modell ersetzt sie).
+  const NB = 'n8n-nodes-base.', LC = '@n8n/n8n-nodes-langchain.';
+  root.sedraWorkflowLokalTypen = {[NB + 'formTrigger']: [2, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6], [NB + 'extractFromFile']: [1, 1.1, 1.2], [NB + 'set']: [3.3, 3.4, 3.5], [NB + 'code']: [2],
+    [NB + 'if']: [2, 2.1, 2.2, 2.3, 2.4], [NB + 'dataTable']: [1, 1.1], [NB + 'filter']: [2, 2.1, 2.2, 2.3], [NB + 'switch']: [3, 3.1, 3.2, 3.3], [NB + 'merge']: [3, 3.1],
+    [NB + 'aggregate']: [1], [NB + 'splitOut']: [1], [LC + 'informationExtractor']: [1, 1.1, 1.2], [LC + 'lmChatAnthropic']: [], [LC + 'lmChatOpenAi']: [], [LC + 'lmChatOllama']: []};
   // Methoden, die der Editor in seinen Regler übernimmt (this = Regler).
   root.sedraWorkflowLokal = function(){return {
     // SEDRA-Eigenablauf: Datei für den Formular-Start hochladen und lokale Tabellen füllen (ohne n8n).
     buildLokal(run){
-      const box = el('details', 't-wf-lokal');box.append(el('summary', '', 'Eingabedatei und Tabellen (SEDRA-Eigenablauf)'));
+      const box = el('details', 't-wf-lokal');box.append(el('summary', '', 'Tabellen verwalten (lokale Ersatz-Tabellen für n8n)'));
       this.fileBox = el('input');this.fileBox.type = 'file';this.fileBox.accept = '.pdf,application/pdf';this.fileBox.setAttribute('aria-label', 'PDF für den Formular-Start');
-      this.fileState = el('p', 't-wf-hint', 'Hat der Workflow ein Formular mit Dateifeld, hier die Datei wählen. Sie wird lokal abgelegt und beim Freigeben Byte für Byte festgeschrieben.');
+      this.fileBox.hidden = true;
+      this.fileState = el('p', 't-wf-hint', '');
       this.fileBox.onchange = ()=>this.safe(async()=>{
         const f = this.fileBox.files[0];if(!f)return;if(f.size > 700000)throw new Error('Die Datei ist größer als 700 KB.');
         const label = this.fileLabel();if(!label)throw new Error('Dieser Workflow hat kein Formular mit Dateifeld.');
         const bytes = new Uint8Array(await f.arrayBuffer());let bin = '';for(let i = 0; i < bytes.length; i += 8192)bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
         const up = await this.call('workflow', null, 'eingabe_hochladen', {name: f.name, data: root.btoa(bin)});
-        const inputs = {};inputs[label] = {datei: up.datei, name: up.name};this.input.value = JSON.stringify(inputs);
-        this.fileState.textContent = f.name + ' · ' + up.groesse + ' Bytes abgelegt, Kennung ' + up.datei.slice(0, 12) + ' … Jetzt „Lauf zur Freigabe vorlegen“.';
+        const inputs = {};inputs[label] = {datei: up.datei, name: up.name};this.input.value = JSON.stringify(inputs);this.updateSteps();
+        this.fileState.textContent = f.name + ' · ' + up.groesse + ' Bytes abgelegt, Kennung ' + up.datei.slice(0, 12) + ' …';
       });
       this.tableName = el('input');this.tableName.placeholder = 'Tabellenname, z. B. Auftraege';this.tableName.setAttribute('aria-label', 'Tabellenname');
       this.tableFile = el('input');this.tableFile.type = 'file';this.tableFile.accept = '.csv,.json,text/csv,application/json';this.tableFile.setAttribute('aria-label', 'CSV- oder JSON-Datei für die Tabelle');
@@ -25,12 +31,14 @@
         const out = await this.call('workflow', null, 'tabelle_importieren', {name: this.tableName.value.trim(), text: await f.text(), ersetzen: true});
         this.notice('Tabelle ' + out.name + ': ' + out.zeilen + ' Zeilen geladen.');await this.refresh();
       }));
-      box.append(el('h3', '', 'Eingabedatei'), this.fileBox, this.fileState, el('h3', '', 'Lokale Tabellen'),
+      this.lokalBox = box;
+      box.append(el('h3', '', 'Lokale Tabellen'),
         el('p', 't-wf-hint', 'Ersatz für n8n-„Data tables“ (Aufträge, Positionen, Kostenübersicht …). CSV mit Semikolon oder Komma, oder JSON als Liste von Objekten.'), this.tableName, this.tableFile, load, this.tableList, this.tableView);
       run.append(box);
     },
     // Liste der Tabellen als Knöpfe; ein Klick zeigt die Zeilen zum Ansehen und Bearbeiten.
     listeTabellen(tabellen){
+      this.tabellenListe = tabellen || [];if(this.updateSteps)this.updateSteps();
       if(!this.tableList)return;this.tableList.replaceChildren();
       if(!(tabellen || []).length){this.tableList.append(el('p', 't-wf-hint', 'Noch keine Tabellen.'));return;}
       tabellen.forEach(t=>this.tableList.append(button(t.name + ' (' + t.zeilen + ' Zeilen)', ()=>this.safe(()=>this.zeigeTabelle(t.name)))));

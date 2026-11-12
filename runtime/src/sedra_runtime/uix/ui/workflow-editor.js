@@ -8,6 +8,7 @@
   function controller(options){return {
     id: options.id,
     ...root.sedraWorkflowLokal(),      // Eingabedatei und lokale Tabellen des SEDRA-Eigenablaufs (workflow-lokal.js)
+    ...root.sedraWorkflowSchritte(),      // geführte Schritte der Seite „Ausführungen“ (workflow-schritte.js)
     ...root.sedraWorkflowExtras(options),      // Geführtes Einrichten, Vorlagen, Selbstabbild und Schnellaktionen (workflow-extras.js)
     mount(container, ctx){
       this.el = container; this.ctx = ctx; this.dead = false; this.history = []; this.future = []; this.off = [];
@@ -139,7 +140,7 @@
         button('Nach Freigabe fortsetzen', ()=>this.safe(async()=>{if(!this.runId)throw new Error('Zuerst einen Lauf wählen.');await this.call('workflow_run', this.runId, 'fortsetzen');await this.showRun(this.runId);})),
         button('Lauf beenden', ()=>this.safe(async()=>{if(!this.runId)throw new Error('Zuerst einen Lauf wählen.');await this.call('workflow_run', this.runId, 'abbrechen');await this.showRun(this.runId);})),
         button('Aktualisieren', ()=>this.safe(()=>this.refreshRuns())));
-      this.buildLokal(run);
+      this.buildLokal(run);this.buildSchritte(run);
       this.runs = el('div', 't-wf-runs');this.output = el(options.renderRun ? 'div' : 'pre', 't-wf-output');this.output.setAttribute('aria-label', 'Laufergebnis');run.append(this.runs, this.output);
       this.panels.runs.append(run);
             // Seitenleiste links (Übersicht, Vorlagen, Editor, Versionen, Ausführungen), rechts die Fläche; die obere Leiste gehört zur Arbeit am Prozess
@@ -329,6 +330,7 @@
     },
     async check(){const checked = await this.call('workflow', null, 'pruefen', {workflow: this.state.doc});if(!this.dead)this.showCheck(checked, checked.execution);},
     showCheck(info, execution){
+      this.exec = execution;this.updateSteps();
       const reason = execution.reason === 'process_model_requires_implementation' ? 'Prozessmodell: menschliche Schritte und Freigaben müssen erst angebunden werden.' : execution.reason;
       this.report.textContent = (execution.executable ? 'Ausführungsprofil erfüllt. Captain-Freigabe bleibt erforderlich.' : 'Nur Austausch / Modellierung: ' + reason) + '\n' + (info.warnings || []).join('\n');
     },
@@ -356,7 +358,7 @@
     },
     async showRun(id){
       const run = await this.ctx.api('/api/objects', {method: 'POST', body: {type: 'workflow_run', id}});
-      if(this.dead)return;this.runId = id;
+      if(this.dead)return;this.runId = id;this.runState = run.state;this.runWf = run.workflow_id;this.updateSteps();
       if(options.renderRun)options.renderRun(this.output, run);
       else if(this.lokalRender(run)){}
       else this.output.textContent = JSON.stringify({mission: id, revision: run.revision, phase: run.state, steps: run.steps, wait: run.wait, result: run.result, artifacts: run.artifacts}, null, 2);
