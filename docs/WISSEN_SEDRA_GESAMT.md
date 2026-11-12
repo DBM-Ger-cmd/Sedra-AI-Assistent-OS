@@ -337,8 +337,36 @@ Der Chat lief zuerst als Morgenbericht und Aufräumen, dann als Arbeit am lokale
 5. Wiederherstellung aus dem ZIP einmal auf einem leeren Ordner üben.
 6. Worktrees `<sedra>-wt-nachtlauf` und `cpu-nutzung` löschen (Ja nötig); `<sedra>-wt-roadmap-s10` und `claude/usb-stick-minimal-3c1b19` werden noch gebraucht.
 
+## 18. Arbeit im Chat vom 11.–12.11.2026 (Claude Code: Roadmap-Paket Apps, Kern, Shell)
+
+Der Chat setzte `docs/ROADMAP_ONE_SEDRA_APPS_KERN_SHELL_2026-11-05.md` aus einem gemeinsamen Worktree `roadmap-paket` um. Ablauf je Teil: bauen, testen, committen, Ja des Captains, Fast-Forward-Merge, Ja, Push, Register und Dashboard. Alles Genannte liegt in `main` und `origin/main` (Stand `5b7c530`, `ls-remote` gleich `rev-parse`).
+
+**Gebaut und freigegeben (Ja aufsetzen, Ja mergen, Ja pushen, 12.11.):**
+- A5 Verzeichnis (`2910331`): `/api/erweiterungen`, Wirkungsklassen, Seite Verzeichnis in Module.
+- A6 Dienste und Zugänge (`61e0be5`): Dienst-Apps als eigener Prozess mit Gate, Berechtigung des MCP-Zugangs (Schalter `dienste`, `zugang_berechtigung`, Standard aus). Nicht gebaut: microVM (AM4 Teil C).
+- A8 Unternehmen (`d395314`): Richtlinie des Betreibers, Person und Rolle im Audit, Nachweis-Export, Seite Betrieb (Schalter `betrieb_unternehmen`, Standard aus). Nicht gebaut: AM7-07/08/09/10/15/18.
+- A9 Stick aus Profil (`98bd47f`): Zeile `profil <art>`, Prüfung vor dem Kopieren, Manifest mit Profil. `stick_liste.txt` unverändert, kein Stick geschrieben.
+- A7 Langdock (`efdd384`, nur mit Attrappe): `models/langdock.py`, feste EU-Region, Modellliste und Empfängerverzeichnis des Betreibers, Fehlersätze 429/504/401/403. Nicht geprüft: echtes Verhalten von api.langdock.com. Nicht gebaut: AM6 (Agenten, Format der Agents-API unbekannt).
+- A3 App Team (`5b7c530`): Überblick aus vier Werkzeugen und fünf Modi in einem Reiter der Harness-Shell, Ort `team`, `docs/SPEC_APP_TEAM_v1.md`. Nicht gebaut: A3 Übersicht (Cockpit-Baum), Minimal-Profil.
+
+**Tests:** Gesamtlauf nach Rebase mit drei bekannten Wacklern (`test_uix_workflow_live` id_required und `test_uix_shell_start` auch auf main rot; `test_uix_harness_browser` nur mit `SEDRA_BROWSER=1`). Neue Tests: `test_stick_profil` (12), `test_apps_am5_langdock`, `test_uix_team_app` (6).
+
+**Fallen:**
+- ff-only-Merge scheiterte zweimal, weil main durch andere Sitzungen weiterlief: `git rebase main`, neu testen, neu fragen.
+- Worktree ohne `.venv`: `test_workflow_lokal` rot mit `pypdf_fehlt`; mit dem Python der Hauptumgebung grün.
+- ContentGuard (Route cloud) braucht ein Audit, sonst `SG_AUDIT_FAILED`; im Test ein Mock-Audit übergeben.
+
+**Fehler `ModelAdapterError:server_aus` (offen, nicht behoben):** Im Audit-Log folgt auf `LLAMA_SERVER_EXTERNAL_LOADED` und `SLOT_SERVER_STARTED` (pid None, Router-Modus, Modell `qwen3.5-9b-mtp`) sofort `SLOT_SERVER_STOPPED` mit `server_exited`, dann `EXECUTION_FAILED server_aus`. Dasselbe Muster am 03.11., 06.11., 10.11., 11.11. und 12.11., also vermutlich vorbestehend und nicht aus dem Merge. Verdacht (nicht bestätigt): `_alive()` in `jobs/model_scheduler.py` nutzt `runtime.status().get("running")`, das bei externem Router-Server False liefert; `_poll()` in `jobs/model_scheduler_handover.py` meldet dann „Server beendet“. Die Diagnose liegt in der Sitzung „server_aus klären, Paket abschließen“.
+
+**Offen:**
+1. `server_aus` klären und beheben (eigener Branch, Test).
+2. Worktree `<sedra>-wt-roadmap-paket` und Branch `roadmap-paket` löschen (Ja nötig; Junction `engines` zuerst lösen). `<sedra>-wt-roadmap-a3-wissen` ist nicht freigegeben.
+3. Abnahme am PC für alle Schalter (`app_berechtigung`, `dienste`, `zugang_berechtigung`, `betrieb_unternehmen`).
+4. A3 Übersicht, Minimal-Profil, AM6, G2-09, AM7-07/08/09/10/15/18, AM8-10..12, microVM.
+
 ## 9. Alle Chats (Sitzungen), nach Datum
 **Sedra Vorarbeiter (Gruppe):**
+- 11.–12.11. Claude Code, Chat „Roadmap-Paket Apps, Kern, Shell“: A5 bis A9 und A3 Team gebaut, gemergt, gepusht (`main` bis `5b7c530`), Fehler `server_aus` untersucht, Fortsetzung in Sitzung „server_aus klären, Paket abschließen“ (siehe Abschnitt 18).
 - 10.–11.11. Claude Code, Chat „KV-Pool, Team, Manager-Werkzeug, Wiederherstellungs-ZIP“: gemeinsamer KV-Pool, Team-Rezepte und Profil `team-35b`, Werkzeug `auftraege_verteilen` (Manager und Harness mit Karte), Register und Dashboard, Backup-Stand und Entwickler-ZIP mit Wiederherstellung (siehe Abschnitt 17).
 - 10.11. Claude Code, Chat „Vorarbeiter: Specs, Postfach zum Coder, GPU-Messung“: Specs Fabrik-Control V2, Vorschau-Ausbau, Vorarbeiter-Kanal, Modellmenü, RAM freimachen; Postfach zum Coder (Pi); Prüfung von Commit `dcf8dde`; Messung der Grafikspeicher mit Monitor am Mainboard (siehe Abschnitt 16).
 - 09.–10.11. Claude Code, Chat „n8n-Import, Ryzen-9-Tuning, Profile, Nachtlauf“: Import-Vorschau auf der Startseite, Tinas Workflow auf das lokale Modell, Messungen Threads/Lagen/MTP/Kanäle, Profile `bau`, `bau-1x80k`, `bau-4x32k`, alter Nachtlauf gelöscht, neuer Nachtlauf (siehe Abschnitt 15).
