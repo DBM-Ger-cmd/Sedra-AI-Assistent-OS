@@ -203,6 +203,7 @@ class UIXHub:
             self.harness.startbericht_pruefen()                                  # O3 G6-01: Bericht über Programmdateien, die die Harness geändert hat
         except Exception:                                                        # der Start darf nie an einem Bericht scheitern
             pass
+        self._aufbewahrung()                                                     # AM7-18: Aufbewahrung der Richtlinie (höchstens einmal je 24 Stunden)
         self.bestaetigungen = Bestaetigungen()          # G9: Freigaben der Klasse H aus der Seite warten hier auf ein Ja außerhalb des Browsers
         sup = getattr(self.runtime, 'job_supervisor', None)
         if sup is not None:
@@ -909,8 +910,23 @@ class UIXHub:
                 audit.append = mit_person
                 audit._mit_person = True
 
+    def _aufbewahrung(self):
+        """AM7-18: ein Lauf der Aufbewahrung; scheitert er, bleibt es beim Start und beim Blick auf den Betrieb ohne Folgen (der Fehler steht im Audit)."""
+        if not getattr(self, 'betrieb_an', False):
+            return None
+        try:
+            from .desk import aufbewahrung
+            return aufbewahrung.lauf(self)
+        except Exception as exc:
+            try:
+                self.runtime.audit.append('AUFBEWAHRUNG_FEHLER', component='desk', payload={'art': type(exc).__name__})
+            except Exception:
+                pass
+            return None
+
     def betrieb_view(self, payload=None):
         from .desk import betrieb
+        self._aufbewahrung()
         return betrieb.ansicht(self)
 
     def betrieb_export(self, payload=None):
@@ -1293,6 +1309,7 @@ class UIXHub:
         if store is None:
             from .gateway.vorgang import GateWay
             store = self.__dict__['_gateway'] = GateWay(self.project_root, self.runtime.audit)
+            store.entwuerfe_max_stunden = lambda: (self.richtlinie.daten['aufbewahrung'].get('entwuerfe_stunden') if self.richtlinie.aktiv else None)    # AM7-18: die Richtlinie ist die Obergrenze
         return store
 
     @property

@@ -265,7 +265,8 @@ class HubTests(unittest.TestCase):
         self.assertEqual(t["titel"], "Was SEDRA mit deinen Eingaben tut")
         text = " ".join(t["absaetze"])
         self.assertIn("nach 12 Stunden gelöscht", text)
-        self.assertIn("nach 30 Tagen", text)
+        self.assertIn("länger als 30 Tage nicht berührt", text)
+        self.assertIn("nach geloescht/", text, "AM7-18: ehrlich – verschoben, nicht endgültig gelöscht")
         self.assertIn("Erika Muster, Rolle sachbearbeitung", text)
         self.assertIn("keine Rechtsauskunft", text)
 

@@ -97,7 +97,7 @@ def eingaben_text(hub):
         'SEDRA läuft auf diesem Rechner. Was du eingibst, wird hier verarbeitet; der Server hört nur auf diesem Rechner (Loopback).',
         ('Eine Cloud-KI wird nur genutzt, wenn der Cloud-Weg für den Anbieter eingeschaltet ist und der Inhaltsschutz den Aufruf zulässt. Zurzeit eingeschaltet: '
          + (', '.join(an) if an else 'kein Anbieter') + '. Personenbezug und besondere Daten bleiben nach dem Regelwerk des Inhaltsschutzes lokal; jeder Cloud-Aufruf steht im Audit (ohne Inhalt).'),
-        f'Entwürfe im GateWay werden nach {ent_h} Stunden gelöscht.' + (f" Gesprächsverläufe nach {auf['gespraeche_tage']} Tagen." if 'gespraeche_tage' in auf else ' Für Gesprächsverläufe nennt die Richtlinie keine Frist.'),
+        f'Entwürfe im GateWay werden nach {ent_h} Stunden gelöscht.' + (f" Gesprächsverläufe, die länger als {auf['gespraeche_tage']} Tage nicht berührt wurden, werden aus der Liste genommen und nach geloescht/ auf diesem Rechner verschoben; dort bleiben sie liegen, bis der Betreiber den Ordner leert." if 'gespraeche_tage' in auf else ' Für Gesprächsverläufe nennt die Richtlinie keine Frist.'),
         'Das Audit-Protokoll hält fest, dass etwas geschah (Art, Zeit' + (', Person und Rolle' if rl.aktiv else '') + '), aber nie, was du geschrieben hast.',
         ('Diese Installation gehört zu: ' + (f'{rl.person}, Rolle {rl.rolle}.' if rl.aktiv else 'keiner Richtlinie des Betreibers (Einzelplatzbetrieb).')),
         'Das ist eine Information aus der Konfiguration dieser Installation, keine Rechtsauskunft.',

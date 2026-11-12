@@ -132,6 +132,7 @@ class GateWay:
     def __init__(self, root: Path, audit=None, clock=time.time):
         self.root = Path(root) / 'local_config' / 'gateway'
         self.audit, self.clock = audit, clock
+        self.entwuerfe_max_stunden = None          # AM7-18: Obergrenze des Betreibers (Richtlinie) für die Frist der Entwürfe; Stunden oder ein Aufruf, der Stunden oder None liefert
         self._lock = threading.RLock()
         self._vaults = {}                         # vorgang_id -> mapping (nur hier, nie auf der Platte)
         self.vorgaenge = {}
@@ -211,7 +212,14 @@ class GateWay:
         """Löschzeitpunkt eines neuen Entwurfs: jetzt + Frist in Stunden; ein festes Datum in den Vorgaben ist die Obergrenze (P5)."""
         from datetime import timedelta
         vg = self.vorgaben()
-        bis = datetime.now(timezone.utc).astimezone() + timedelta(hours=float(vg['entwuerfe_loeschen_nach_stunden']))
+        stunden = float(vg['entwuerfe_loeschen_nach_stunden'])
+        try:
+            grenze = self.entwuerfe_max_stunden() if callable(self.entwuerfe_max_stunden) else self.entwuerfe_max_stunden
+        except Exception:
+            grenze = None
+        if isinstance(grenze, (int, float)) and not isinstance(grenze, bool) and grenze > 0:
+            stunden = min(stunden, float(grenze))             # AM7-18: die Richtlinie kann die Frist nur verkürzen
+        bis = datetime.now(timezone.utc).astimezone() + timedelta(hours=stunden)
         fest = vg.get('entwuerfe_loeschen_am')
         if fest:
             try:
