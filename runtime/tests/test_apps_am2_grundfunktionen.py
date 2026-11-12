@@ -102,8 +102,7 @@ class Paket(unittest.TestCase):
 
     def test_luecken_sind_sichtbar_kmu_start_und_xp(self):
         kmu, _ = check_shell(yaml.safe_load((UIX / "shells" / "gateway-kmu" / "shell.yaml").read_text(encoding="utf-8")), UIX / "shells" / "gateway-kmu", "package")
-        self.assertIn("grundfunktion_nicht_erklaert:logbuch", kmu["grundfunktionen_warnungen"])
-        self.assertNotIn("grundfunktion_nicht_erklaert:gespraech", kmu["grundfunktionen_warnungen"])
+        self.assertEqual(kmu["grundfunktionen_warnungen"], [], "AM7-08/09: die KMU-Shell erklärt seit der Rollen-Sicht alle sieben (Verwaltung)")
         for shell in ("start", "sedra-xp"):
             man, _ = check_shell(yaml.safe_load((UIX / "shells" / shell / "shell.yaml").read_text(encoding="utf-8")), UIX / "shells" / shell, "package")
             self.assertEqual(man["grundfunktionen_warnungen"], ["grundfunktion_nicht_erklaert:module_berechtigungen"], shell)
@@ -140,7 +139,7 @@ class Gateway_(unittest.TestCase):
     def test_manifest_meldet_die_warnungen_der_shells(self):
         gw = Gateway(self.root)
         grund = {(w["id"], w["grund"]) for w in gw.manifest()["warnungen"]}
-        self.assertIn(("gateway-kmu", "grundfunktion_nicht_erklaert:logbuch"), grund)
+        self.assertFalse([g for g in grund if g[0] == "gateway-kmu" and g[1].startswith("grundfunktion")], "AM7-08/09: die KMU-Shell erklärt alle sieben")
         self.assertIn(("start", "grundfunktion_nicht_erklaert:module_berechtigungen"), grund)
         self.assertFalse([g for g in grund if g[0] == "harness" and g[1].startswith("grundfunktion")])
 

@@ -72,7 +72,12 @@
 
       const talk = ctx.tools.all().find(t=>t.id === 'talk');
       const gespraech = d().el('footer', 'sh-gateway-kmu-talk');
-      host.append(kopf, this.body, gespraech);
+      this.gespraech = gespraech;
+      // AM7-08/09: die Leiste unter dem Kopf – was die Rolle sehen darf; „Verwaltung“ nur für betreiber und pruefung
+      this.leiste = d().el('nav', 'sh-gateway-kmu-leiste'); this.leiste.setAttribute('aria-label', 'Bereiche');
+      this.verwaltung = d().el('div', 'sh-gateway-kmu-verwaltung'); this.verwaltung.hidden = true;
+      host.append(kopf, this.leiste, this.verwaltung, this.body, gespraech);
+      this.rollenAnwenden(null);                         // bis der Zustand da ist: wie bisher alles
       if(talk){
         root.sedraLifecycle.mountTool(ctx.tools.mod('talk'), gespraech, ctx.makeContext(talk, null, this.shellApi()), ctx.onProblem);
       }
@@ -85,6 +90,34 @@
       const stand = await this.melder.holen();
       const vorn = ((stand && stand.offen) || []).find(o=>root.sedraStand.schluessel(o) === (stand && stand.vorn));
       this.open(vorn && this.werkzeuge(vorn).length ? vorn : {type: 'gateway', id: 'alle', title: 'KI Gateway', collection: true});
+      let betrieb = null;
+      try{ betrieb = await ctx.api('/api/uix/betrieb'); }catch(_e){ /* nicht lesbar: wie ohne Richtlinie (Einzelplatz) */ }
+      this.rollenAnwenden(betrieb);
+    },
+
+    // AM7-08/09: zeichnet die Leiste aus dem Zustand des Betriebs (Zuschnitt: rollen.js). Eine Anzeige, kein Zugriffsschutz.
+    rollenAnwenden(betrieb){
+      const R = root.sedraKmuRollen, z = R.zugaenge(betrieb), P = (root.sedraPlaces && root.sedraPlaces.PLACES) || [];
+      this.leiste.replaceChildren(); this.verwaltung.replaceChildren(); this.verwaltung.hidden = true;
+      this.leiste.dataset.rolle = (betrieb && betrieb.rolle) || '';
+      this.gespraech.hidden = !z.gespraech;
+      const zeige = (name, ziel)=>{
+        const p = P.find(x=>x.id === R.ORT[name]);
+        const knopf = d().button(R.TITEL[name], ()=>{ if(p) this.open(p.object); });
+        knopf.dataset.grundfunktion = name;
+        ziel.append(knopf);
+      };
+      const vorgaenge = d().button('Vorgänge', ()=>this.open({type: 'gateway', id: 'alle', title: 'KI Gateway', collection: true}));
+      vorgaenge.dataset.leiste = 'vorgaenge';
+      this.leiste.append(vorgaenge);
+      if(z.entscheidungen) zeige('entscheidungen', this.leiste);
+      if(z.aufgaben) zeige('aufgaben', this.leiste);
+      if(z.verwaltung.length){
+        const tor = d().button('Verwaltung', ()=>{ this.verwaltung.hidden = !this.verwaltung.hidden; tor.setAttribute('aria-expanded', String(!this.verwaltung.hidden)); });
+        tor.dataset.leiste = 'verwaltung'; tor.setAttribute('aria-expanded', 'false');
+        this.leiste.append(tor);
+        z.verwaltung.forEach(n=>zeige(n, this.verwaltung));
+      }
     },
 
     werkzeuge(object){ return this.ctx.tools.forObject(object).filter(m=>m.slot !== 'nachweis'); },

@@ -3,12 +3,19 @@ shell:
   name: "KI Gateway für KMU"
   description: "Das KI Gateway im Design der Präsentation: Kopf mit dem Ablauf, das Werkstück in der Mitte, das Gespräch unten."
   version: 1.0.0
-  entry: {js: shell.js, css: shell.css}
+  entry: {js: [rollen.js, shell.js], css: shell.css}       # shell.js zuletzt: es registriert
   provides: [dock, talk]
   layout: {persist: browser}
-  grundfunktionen:   # AM2-14: wie die Shell die sieben Grundfunktionen erreichbar macht – nur das Gespräch; Entscheidungen laufen über die Antwortroute, der Rest folgt mit AM7 (verwaltung)
+  grundfunktionen:   # AM2-14: wie die Shell die sieben Grundfunktionen erreichbar macht; AM7-08/09: Entscheidungen und Aufgaben als Knöpfe der Leiste, der Rest hinter „Verwaltung“ (nur betreiber, pruefung)
+    entscheidungen: eigen
     gespraech: slot:talk
+    aufgaben: eigen
+    logbuch: verwaltung
+    modus_grenzen: verwaltung
+    module_berechtigungen: verwaltung
+    einstellungen_zustand: verwaltung
   api:
     - POST /api/decisions/answer   # Freigabe „Jetzt freigeben“ / „Ablehnen“ – derselbe Weg wie in den anderen Oberflächen
+    - GET /api/uix/betrieb         # AM7-08/09: Rolle und sichtbare Grundfunktionen (nur lesen)
   trust: CAPTAIN
   needs: {ui: ">=1.0 <2"}
