@@ -342,6 +342,35 @@ class SchedulerAliveTests(unittest.TestCase):
         self.assertFalse(self._alive(rt))
 
 
+class SchedulerAliveAblehnungTests(unittest.TestCase):
+    """server_aus, Rest nach 9a6cc07: `_http_json_router` merkt EINE abgelehnte Verbindung 5 s lang fuer jeden Aufrufer. Der Test davor gab
+    dem Runtime `router.get_json` direkt mit und umging so diese Merkliste; im echten Prozess scheiterten auch die zwei Wiederholungen von `_alive`
+    (12.11., SLOT_SERVER_STOPPED server_exited 2,7 s nach dem Laden)."""
+    def _alive(self, rt):
+        import types
+        from sedra_runtime.jobs.model_scheduler import ModelScheduler
+        return ModelScheduler._alive(types.SimpleNamespace(runtime=rt))
+
+    def test_one_cached_refusal_does_not_make_the_router_server_gone(self):
+        from sedra_runtime.models import llama_server_runtime as m
+        router = FakeRouter()
+        def roh(url, timeout=3):
+            if not router.up: raise m.urllib.error.URLError(ConnectionRefusedError("refused"))
+            return router.get_json(url, timeout)
+        alt = m._http_json
+        m._http_json = roh; m._ABGELEHNT.clear()
+        try:
+            config = LlamaServerConfig({"enabled": True, "external": {"endpoint": ENDPOINT}})
+            rt = LlamaServerRuntime(config, ".", get_json=m._http_json_router, post_json=router.post_json, sleep=lambda s: None)   # der Router-Weg mit Merkliste
+            rt.load_model("qwen3.5-9b-q6_k", context_length=65536, server={"gguf": "x.gguf"})
+            router.up = False; rt.loaded_models(); router.up = True              # ein anderer Aufrufer wird abgelehnt, die Merkliste haelt 5 s
+            self.assertFalse(rt.status()["running"])
+            self.assertTrue(self._alive(rt))
+            self.assertTrue(rt.status()["running"])
+        finally:
+            m._http_json = alt; m._ABGELEHNT.clear()
+
+
 class RouterAdapterTests(unittest.TestCase):
     def test_vendor_prefix_removed_in_the_request(self):
         sent = []

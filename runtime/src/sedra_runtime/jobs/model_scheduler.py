@@ -213,7 +213,12 @@ class ModelScheduler(HandoverMixin, DecisionMixin):
             if status.get("external"):
                 # Router: the process is not ours and `_info` is only a cache. A failed /health of another thread clears it right after the
                 # load (series server_aus), so ask the router itself, twice before it counts as gone; this takes the loaded model over again.
-                for _ in range(2):
+                # The first look may be a cached refusal (`_http_json_router` remembers one refused connection for 5 s for EVERY caller, so
+                # two quick retries fail alike): the retries forget it and really ask, with a short pause.
+                for attempt in range(3):
+                    if attempt:
+                        getattr(self.runtime, "frisch_fragen", lambda: None)()
+                        time.sleep(0.5)
                     self.runtime.loaded_models()
                     status = self.runtime.status()
                     if status.get("running"):

@@ -266,6 +266,11 @@ def _http_json_router(url, timeout=3, _jetzt=time.monotonic):
         raise
 
 
+def router_ablehnung_vergessen(url):
+    """Die gemerkte Ablehnung dieses Routers streichen: wer wissen muss, ob der Router wirklich weg ist (der Scheduler vor `server_exited`), fragt wirklich."""
+    _ABGELEHNT.pop(urllib.parse.urlsplit(url).netloc, None)
+
+
 def _http_post_json(url, payload, timeout=30):
     """(status, body) of a POST. An HTTP error status is returned, not raised: the router answers 400 "model is already running"."""
     req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), method="POST", headers={"Content-Type": "application/json"})
@@ -339,6 +344,10 @@ class LlamaServerRuntime:
             return status == 200
         except Exception:
             return False
+
+    def frisch_fragen(self):
+        """Der naechste Zugriff auf den Router fragt wirklich und glaubt keiner gemerkten Ablehnung (Router-Weg, siehe _http_json_router)."""
+        if self.external: router_ablehnung_vergessen(self.endpoint)
 
     def _props(self):
         try:
