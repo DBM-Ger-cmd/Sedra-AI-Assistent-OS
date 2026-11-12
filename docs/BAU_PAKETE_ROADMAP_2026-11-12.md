@@ -97,3 +97,9 @@ Mit dem Skill `sedra-bau-starten`: Vorprüfung GPU und RAM (mindestens 12 GB fre
 **Gegenprobe** (bewusst fehlerhafte Referenzen, Test muss rot werden): 71 Änderungen, 5 überlebten. Davon waren 3 gleichwertig oder schwach: `rueckblick_antrag` `\d` statt `[0-9]` (gleichwertig, die Zeichenklasse trägt schon), `vorschau_prozess` Präfix mitten in der Zeile (gleichwertig, die Adresse wird dann ungültig), `syntax_hinweis` Text vor dem Übersetzen mit strip() (schwach: eingerückter Code würde nicht mehr auffallen; nicht nachgeschärft). Zwei echte Lücken (Sortierung ohne Beachtung der Großschreibung in `betrieb_uebersichten`, Fremdurteil nach einer Korrektur in `vorschlag_filter`) wurden geschärft; die beiden Specs danach neu geprüft und gestempelt (Host und VM ok), die Gegenprobe selbst wurde für diese zwei Änderungen nicht wiederholt.
 
 **Nicht geprüft:** kein Bau durch ein Modell (also unbekannt, ob und in wie vielen Läufen SEDRA die Stufen besteht; Aufwandsschätzungen sind Schätzungen); `--seed` entfällt (keine Saat, die Aufgaben bauen neue Module); `--snapshots` nicht möglich ohne Bau; der Node-Test von `palette_rang` läuft nur auf dem Host (die microVM führt kein JavaScript aus, `vm ref` ist dort leer); keine Einbauten, keine Tests des Gesamtprojekts.
+
+## 9. Bauergebnis (12.11.2026, nach dem Ja des Captains)
+
+Alle sieben Pakete gebaut mit `devvm_build.py --profile standard`, nacheinander, ein Lauf je Spec: 28 von 28 Stufen `hidden PASSED`, Dauer 110 bis 502 s je Spec, Nacharbeiten 0 bis 3, keine Eskalation, kein Serverabsturz (Zeilen im Logbuch). Kandidaten unter `workspace/SEDRA_OS/runtime_data/devvm_candidates/<spec>/`.
+
+**Nicht geprüft:** die Kandidaten sind nicht Zeile für Zeile gelesen (Checkliste `CODER_PROFIL_UND_WORKFLOW` §3) und nicht mit dem Differenztest gegen die Referenz verglichen; nichts ist eingebaut. Vor jeder Übernahme Gate G4 des Captains.
