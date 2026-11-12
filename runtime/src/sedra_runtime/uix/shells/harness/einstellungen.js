@@ -259,7 +259,14 @@
         zeile(box, c.toUpperCase(), i.vorhanden ? 'vorhanden · Port ' + i.port + ' · PID ' + i.pid : 'keine Datei', i.vorhanden && i.zeit ? 'seit ' + d().fmtTime(new Date(i.zeit * 1000).toISOString()) + ' · ' + i.schutz : '');
       });
       zeile(box, 'Ordner', out.ordner || '–', 'der Token steht nur in der Datei, nie hier');
-      box.append(d().el('div', 'hs-app-satz', 'Aufruf: python -m sedra_runtime.desk_mcp (Client „mcp“), die CLI nimmt „cli“. Zu konfigurieren gibt es nichts (K7).'));
+      box.append(d().el('div', 'hs-app-satz', 'Aufruf: python -m sedra_runtime.desk_mcp (Client „mcp“), die CLI nimmt „cli“.'));
+      S.api('/api/uix/zugaenge').then(z=>{                                          // AM4-04: Berechtigung der Zugänge und der Satz zur Grenze auf dem Host
+        const m = (z.zugaenge || {}).mcp || {};
+        zeile(box, 'Berechtigung mcp', 'lesen: ' + (m.lesen === 'alle' ? 'alle Typen' : (m.lesen || []).join(', ') || 'nichts') + ' · Verben: ' + ((m.verben || []).length ? m.verben.join(', ') : 'keine') + (m.vorgabe ? ' (Vorgabe)' : ''),
+              z.schalter ? 'gilt jetzt' : 'gilt erst mit dem Schalter zugang_berechtigung (switches.yaml); bis dahin ruft mcp Verben wie bisher');
+        zeile(box, 'Berechtigung cli', 'lesen alle · Verben alle', 'du tippst selbst');
+        box.append(d().el('div', 'hs-app-satz warn', z.satz || ''));
+      }).catch(()=>{});
     }).catch(err=>box.append(d().el('div', 'hs-app-satz warn', 'Clients: ' + err.message)));
   }
 

@@ -93,6 +93,7 @@
       try{
         this.view = await this.ctx.api('/api/uix/modules');
         try{ this.apps = await this.ctx.api('/api/uix/apps'); }catch(e){ this.apps = {schalter: false, apps: []}; }
+        try{ this.dienste = await this.ctx.api('/api/uix/dienste'); }catch(e){ this.dienste = null; }
       }
       catch(err){ this.el.replaceChildren(d().el('div', 's-note bad', 'Module nicht lesbar: ' + err.message)); return; }
       const box = d().el('div', 's-col');
@@ -234,7 +235,8 @@
       const box = d().el('div', 's-col');
       const v = this.apps || {schalter: false, apps: []};
       if(!v.schalter) box.append(d().el('div', 's-note warn', 'Die Berechtigung für Apps ist ausgeschaltet (Schalter app_berechtigung). Fremde Apps laden dann wie bisher.'));
-      if(!v.apps.length){ box.append(d().el('small', 's-muted', 'Keine fremde App mit Rechten eingebaut.')); return box; }
+      const dienste = ()=>{ if(root.sedraModulesDienste) root.sedraModulesDienste.zeichnen(this.ctx, box, this.dienste, ()=>this.refresh()); return box; };
+      if(!v.apps.length){ box.append(d().el('small', 's-muted', 'Keine fremde App mit Rechten eingebaut.')); return dienste(); }
       v.apps.forEach(a=>{
         const row = d().el('div', 't-modules-row' + (a.aktiv ? ' on' : ''));
         const head = d().el('div');
@@ -268,7 +270,7 @@
         row.append(buttons);
         box.append(row);
       });
-      return box;
+      return dienste();
     },
 
     // ---- Verzeichnis: alle acht Erweiterungswege in einer Liste (AM8-03); die Wirkungsklasse ist nur eine Anzeige

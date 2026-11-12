@@ -16,10 +16,11 @@
         "name",
         "version",
         "kind",
-        "entry",
         "trust",
         "needs"
       ],
+      "if": {"properties": {"kind": {"not": {"const": "dienst"}}}},
+      "then": {"required": ["entry"]},
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -42,6 +43,7 @@
         },
         "kind": {
           "enum": [
+            "dienst",
             "object",
             "instrument",
             "panel"
@@ -246,6 +248,18 @@
         "grundfunktion": {
           "enum": ["entscheidungen", "gespraech", "aufgaben", "logbuch", "modus_grenzen", "module_berechtigungen", "einstellungen_zustand"],
           "description": "AM2-13: das Werkzeug trägt diese Grundfunktion (nur im Paket, trust CORE). Es ist in jeder Shell verfügbar, `shells` und `profile` gelten nicht."
+        },
+        "dienst": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start"],
+          "properties": {
+            "start": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"type": "string", "maxLength": 200}},
+            "ort": {"enum": ["host", "microvm"]},
+            "neustart": {"enum": ["nie", "bei_fehler"]},
+            "protokoll_max": {"type": "integer", "minimum": 16, "maximum": 4096}
+          },
+          "description": "AM4-05: nur bei kind: dienst. start[0] ist eine .py-Datei im Ordner der App; auf dem Host läuft nur Code des Captains oder von SEDRA Gebautes, ein fremder Dienst nur in der microVM (in v1 nicht angebunden)."
         },
         "rechte": {
           "type": "object",

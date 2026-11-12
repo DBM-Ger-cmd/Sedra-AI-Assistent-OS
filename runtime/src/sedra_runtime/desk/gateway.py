@@ -40,7 +40,7 @@ OBJECT_TYPES += ('workflow',)                                      # n8n interch
 OBJECT_TYPES += ('scenario',)                                      # scenario app shares the process store, not the editor surface
 # Nachtrag N1: ein Eintrag in `handles` ist der Typ, `typ:alle`, `typ:*` oder `typ:<id>` (dasselbe Muster wie ui/schema/tool.schema.json).
 HANDLE = re.compile(r'^[a-z0-9-]{2,40}(:(\*|[a-z0-9-]{1,40}))?$')
-TOOL_KINDS = ('object', 'instrument', 'panel')
+TOOL_KINDS = ('object', 'instrument', 'panel', 'dienst')
 # Ein Hinweis für die Shell, kein Befehl: das Cockpit stellt „inhalt“ nach links und „nachweis“ nach rechts (COCKPIT_MODUL_v1 §1).
 # Eine Shell ohne zwei Spalten ignoriert ihn – deshalb ist er ein Wort im Manifest und keine Vorschrift im Vertrag.
 SLOTS_TOOL = ('inhalt', 'nachweis')
@@ -73,7 +73,7 @@ VERSION = re.compile(r'^\d+\.\d+\.\d+$')
 NEED = re.compile(r'^(>=|<=|>|<|==)?(\d+)(?:\.(\d+))?$')
 
 TOOL_KEYS = {'id', 'name', 'version', 'handles', 'kind', 'entry', 'api', 'events', 'trust', 'tests', 'needs', 'description', 'order', 'slot', 'instanzen', 'gedaechtnis', 'zweck', 'gruppe',
-             'shells', 'profile', 'zelle', 'rechte', 'ort', 'grundfunktion', 'rollen'}       # Vertrag 1.1 (AM1); `rechte` AM3-01
+             'shells', 'profile', 'zelle', 'rechte', 'ort', 'grundfunktion', 'rollen', 'dienst'}       # Vertrag 1.1 (AM1); `rechte` AM3-01
 SHELL_KEYS = {'id', 'name', 'version', 'entry', 'provides', 'layout', 'trust', 'needs', 'api', 'description', 'vorgabe', 'umschalter', 'grundfunktionen', 'archiv', 'einstieg'}
 # Eine Shell aus einer Vorgabe (SPEC_SHELL_AUS_VORGABE_v1): kein Code im Ordner, nur `shell.vorgabe.yaml`; den Bildschirm baut der
 # Rahmen `ui/frame.js`. Was er darf, steht hier – nicht in der Datei des Autors –, denn der Rahmen ist Vertragscode.
@@ -130,8 +130,8 @@ def _common(doc, kind, folder, origin, errors):
         errors.append('needs_ui_not_met')
     entry = doc.get('entry')
     js = css = []
-    if entry is None and doc.get('vorgabe') is not None:
-        pass                                                        # eine Shell aus Vorgabe hat keinen eigenen Code
+    if entry is None and (doc.get('vorgabe') is not None or doc.get('kind') == 'dienst'):
+        pass                                                        # eine Shell aus Vorgabe und ein Dienst (AM4-05) haben keine Fläche
     elif not isinstance(entry, dict) or 'js' not in entry:
         errors.append('entry_js_required')
     else:
@@ -233,6 +233,17 @@ def check_tool(doc, folder: Path, origin='package', shell=None):
     errors.extend(pruefe_profile(t.get('profile'))[0])
     errors.extend(orte_mod.pruefe_ort(t.get('ort'), handles, t.get('id')))        # AM2-02/03: Ort der App
     errors.extend(gf.pruefe_tool_feld(t.get('grundfunktion'), t.get('trust'), origin))      # AM2-13
+    dienst = None
+    if kind == 'dienst':                                                    # AM4-05/07: ein Dienst hat keine Fläche und keinen Ort; der Block `dienst` wird streng geprüft
+        from .dienste import pruefe_dienst
+        dienst, d_fehler = pruefe_dienst(t.get('dienst'), t.get('trust'), folder)
+        errors.extend(d_fehler)
+        if t.get('ort') is not None:
+            errors.append('dienst_hat_keinen_ort')
+        if t.get('instanzen') is not None or t.get('slot') is not None:
+            errors.append('dienst_hat_keine_flaeche')
+    elif t.get('dienst') is not None:
+        errors.append('dienst_nur_bei_kind_dienst')
     needs_apps = {}
     roh = (t.get('needs') or {}).get('apps') if isinstance(t.get('needs'), dict) else None
     if roh is not None:                                                    # AM2-19: needs.apps {<id>: "<bereich>"} – geprüft wird beim Laden aller Werkzeuge
@@ -256,7 +267,7 @@ def check_tool(doc, folder: Path, origin='package', shell=None):
             'origin': origin, 'order': order, 'slot': slot, 'description': str(t.get('description') or ''),
             'own_types': own_types, 'instanzen': instanzen, 'gedaechtnis': list(dict.fromkeys(gedaechtnis)), 'zweck': zweck, 'gruppe': gruppe,
             'events': {'emits': list(events.get('emits') or []), 'listens': list(events.get('listens') or [])},
-            'shells': [shell] if shell is not None else t.get('shells'), 'shell_app': shell, 'profile': t.get('profile'), 'zelle': t.get('zelle'), 'ort': t.get('ort'), 'grundfunktion': t.get('grundfunktion'), 'rollen': list(rollen or []), 'needs_apps': needs_apps, 'rechte': t.get('rechte'), 'faehigkeiten': faehigkeiten,
+            'shells': [shell] if shell is not None else t.get('shells'), 'shell_app': shell, 'profile': t.get('profile'), 'zelle': t.get('zelle'), 'ort': t.get('ort'), 'grundfunktion': t.get('grundfunktion'), 'dienst': dienst, 'rollen': list(rollen or []), 'needs_apps': needs_apps, 'rechte': t.get('rechte'), 'faehigkeiten': faehigkeiten,
             'js': js, 'css': css, 'api': routes, 'tests': tests}, []
 
 
@@ -580,7 +591,7 @@ class Gateway:
         disabled = set(cfg['disabled'])
         # Stufe 6 (S6-E4): Prüfwerkzeuge nur mit dem Schalter `entwicklung` (Hub setzt `entwicklung`); sonst stehen sie unter `pruefung`
         pruefung = {t for t in tools if tools[t][1].get('zweck') == 'pruefung'} if not getattr(self, 'entwicklung', False) else set()
-        ids = [t for t in tools if t not in disabled and t not in pruefung]
+        ids = [t for t in tools if t not in disabled and t not in pruefung and tools[t][1].get('kind') != 'dienst']       # ein Dienst hat keine Fläche: er steht nicht in der Oberfläche
         ids.sort(key=lambda t: (tools[t][1]['order'], t))
         ids = self.registry.ordered(ids) if cfg['order'] else ids
         # Vertrag 1.1 (AM1): Sichtbarkeit je Shell und Profil – kein Recht, `allowed` lädt über `_load` und bleibt unberührt

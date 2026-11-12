@@ -40,13 +40,43 @@ def lesen(project_root) -> dict:
     return {k: v for k, v in apps.items() if isinstance(k, str) and APP_ID.match(k) and isinstance(v, dict)}
 
 
+def _doc(project_root) -> dict:
+    try:
+        doc = yaml.safe_load(datei(project_root).read_text(encoding='utf-8'))
+    except (OSError, UnicodeDecodeError, yaml.YAMLError):
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
 def schreiben(project_root, apps: dict) -> None:
     ziel = datei(project_root)
     ziel.parent.mkdir(parents=True, exist_ok=True)
-    text = yaml.safe_dump({'apps': apps}, allow_unicode=True, sort_keys=True)
+    rest = {k: v for k, v in _doc(project_root).items() if k != 'apps'}          # `zugaenge` (AM4) bleibt erhalten
+    text = yaml.safe_dump({**rest, 'apps': apps}, allow_unicode=True, sort_keys=True)
     tmp = ziel.with_name(ziel.name + '.tmp')
     with _SPERRE:
         tmp.write_text(text, encoding='utf-8')
+        os.replace(tmp, ziel)
+
+
+def zugaenge_lesen(project_root) -> dict:
+    """AM4-01: {zugang: {lesen, verben}} (`mcp`, `cli`); fehlt die Datei oder der Schlüssel, ist es leer."""
+    z = _doc(project_root).get('zugaenge')
+    return {k: v for k, v in z.items() if k in ('mcp', 'cli') and isinstance(v, dict)} if isinstance(z, dict) else {}
+
+
+def zugang_schreiben(project_root, name: str, eintrag: dict) -> None:
+    if name not in ('mcp', 'cli'):
+        raise ValueError('zugang_unbekannt')
+    doc = _doc(project_root)
+    z = doc.get('zugaenge') if isinstance(doc.get('zugaenge'), dict) else {}
+    z[name] = eintrag
+    doc['zugaenge'] = z
+    ziel = datei(project_root)
+    ziel.parent.mkdir(parents=True, exist_ok=True)
+    with _SPERRE:
+        tmp = ziel.with_name(ziel.name + '.tmp')
+        tmp.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=True), encoding='utf-8')
         os.replace(tmp, ziel)
 
 

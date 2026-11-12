@@ -16,7 +16,7 @@ from __future__ import annotations
 APPLY = {'switch': '/api/switch/apply', 'routing': '/api/routing-config/apply',
          'model_add': '/api/model/add/apply', 'skill': '/api/library/custom/apply',
          'boundaries': '/api/boundaries/apply', 'install': '/api/uix/install/apply',
-         'trust': '/api/uix/trust/apply', 'apps_rechte': '/api/uix/apps/rechte/apply', 'gateway': '/api/gateway/apply', 'update': '/api/update/uebernehmen', 'cloud_url': '/api/cloud/base-url/apply'}   # Härtung E1/E2 (30.10.)
+         'trust': '/api/uix/trust/apply', 'apps_rechte': '/api/uix/apps/rechte/apply', 'zugang_rechte': '/api/uix/zugaenge/rechte/apply', 'gateway': '/api/gateway/apply', 'update': '/api/update/uebernehmen', 'cloud_url': '/api/cloud/base-url/apply'}   # Härtung E1/E2 (30.10.)
 REQUEST_TITLE = {'switch': 'Schalter umstellen', 'routing': 'Modell-Einstellung ändern',
                  'model_add': 'Neues Modell hinzufügen', 'skill': 'Eigenen Skill schreiben',
                  'boundaries': 'Modus und Grenzen festlegen', 'install': 'Modul installieren',
@@ -24,6 +24,7 @@ REQUEST_TITLE = {'switch': 'Schalter umstellen', 'routing': 'Modell-Einstellung 
                  'wissen_quelle': 'Wissensquelle freigeben', 'wissen_vorschlag': 'Wissen aufnehmen',          # Spec 7 (D7.3, D7.8)
                  'harness_katalog': 'Freigabe-Katalog schreiben', 'harness_vorlage': 'Vorlage anlegen oder Grenze ändern',   # Harness Stufe 5 (D-U2, D-U4)
                  'harness_projekt': 'Ordner als Projekt öffnen',                                                       # Harness P0 M3 (1.11.)
+                 'dienst_start': 'Dienst starten', 'zugang_rechte': 'Zugang: Verben gewähren',                         # AM4
                  'harness_oberflaeche': 'Oberflächen-Änderungen übernehmen',                                           # O3 G2-05
                  'harness_code_stand': 'Code-Stand übernehmen',                                                        # Harness G4 (4.11.)
                  'update': 'Update übernehmen', 'cloud_url': 'Cloud-Adresse ändern'}
@@ -39,6 +40,8 @@ REQUEST_NOTE = {'switch': 'Schalter · gilt nach dem Neustart der Oberfläche', 
                 'wissen_vorschlag': 'Wissensspeicher · Text eines Agenten wird Wissen für diese Stufe; ändert sich der Vorschlag, wird nichts ausgeführt',
                 'harness_katalog': 'Harness · die Datei des Captains wird vorher gesichert; hat sich der Katalog seit dem Antrag geändert, wird nichts geschrieben',
                 'harness_vorlage': 'Harness · neue Vorlage oder Kopie mit neuer Grenze, jeweils in local_config; die Dateien im Repo bleiben',
+                'dienst_start': 'Ein Programm startet auf deinem Rechner, mit den Rechten deines Kontos – nur diese Fassung; es spricht danach nur über Objekte und Verben des Desk',
+                'zugang_rechte': 'Der Zugang darf danach genau diese Verben rufen – jedes Programm unter deinem Konto, das den Token liest, kann ihn nutzen',
                 'harness_oberflaeche': 'Harness · genau diese Oberflächen-Dateien in dieser Fassung laufen danach in deiner Seite; hat sich eine seit der Karte geändert, wird nichts übernommen',
                 'harness_code_stand': 'Harness · genau diese Dateien in dieser Fassung gelten danach als gesehen; hat sich eine seit dem Antrag geändert, wird nichts übernommen',
                 'harness_projekt': 'Harness · der Ordner steht danach in der Projektwahl (Laufzeitdatei runtime_data/harness/projekte.yaml, nicht local_config); kein Neustart nötig',

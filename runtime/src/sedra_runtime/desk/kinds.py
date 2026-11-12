@@ -152,7 +152,7 @@ CHAT_TOOLS = frozenset({"talk", "planung"})
 
 
 def client_for(token_class, tool=None, tool_ok=False):
-    if token_class in ("cli", "mcp"):
+    if token_class in ("cli", "mcp") or str(token_class).startswith("dienst:"):
         return token_class
     if token_class == "browser":
         if tool_ok and tool in CHAT_TOOLS:

@@ -163,6 +163,10 @@ class UIXHub:
         self.oberflaeche = Oberflaeche(self.project_root / 'runtime_data' / 'harness' / 'oberflaeche', Path(__file__).resolve().parent / 'uix',
                                        audit=lambda e, p: self.runtime.audit.append(e, component='harness', payload=p))
         self.gateway.app_berechtigung = self.runtime.switches.apply('app_berechtigung', 'enabled', False) is True    # AM3, Standard aus
+        from .desk.dienste import Dienste, KIND_DIENST                                  # AM4: Dienst-Apps; der Port kommt, sobald der Server hört
+        self.dienste = Dienste(self.project_root, 0, audit=lambda e, p: self.runtime.audit.append(e, component='desk', payload=p))
+        self.dienste_an = self.runtime.switches.apply('dienste', 'enabled', False) is True               # Standard aus
+        self.zugang_an = self.runtime.switches.apply('zugang_berechtigung', 'enabled', False) is True    # Standard aus (Übergang)
         self.gateway.herkunft_pruefen = self.runtime.switches.apply('herkunft_pruefen', 'enabled', True) is not False    # AM0-02
         self.gateway.melden = self._herkunft_melden
         self.events = EventStream()
@@ -177,6 +181,8 @@ class UIXHub:
         self.extensions = desk_extensions.load(self.kinds, self, desk_extensions.MODULES, audit=self._desk_audit)
         from .harness import antraege as harness_antraege               # Stufe 5: Katalog und Grenzen nur über einen Antrag mit Gate
         harness_antraege.registrieren(self.kinds)
+        from .desk import dienste as desk_dienste                        # AM4-06: der Start eines Dienstes ist ein Antrag mit Gate
+        desk_gated.register_applier(desk_dienste.KIND_DIENST, desk_dienste.anwenden, registry=self.kinds)
         self.kinds.freeze()
         try:                                                                       # AM8-07: Verben ohne Wirkungsklasse werden beim Start gemeldet (nur Anzeige, nichts wird verweigert)
             fehlend = desk_actions.ohne_wirkungsklasse(self.kinds.table())
@@ -453,7 +459,7 @@ class UIXHub:
                 apply = {'/api/switch/apply': self.switch_apply, '/api/routing-config/apply': self.routing_apply,
                          '/api/model/add/apply': self.model_add_apply, '/api/library/custom/apply': self.library.custom_apply,
                          '/api/boundaries/apply': self.boundaries_apply, '/api/uix/install/apply': self.install_apply,
-                         '/api/uix/trust/apply': self.trust_apply, '/api/uix/apps/rechte/apply': self.apps_rechte_apply, '/api/gateway/apply': self.gateway_apply,
+                         '/api/uix/trust/apply': self.trust_apply, '/api/uix/zugaenge/rechte/apply': self.zugang_rechte_apply, '/api/uix/apps/rechte/apply': self.apps_rechte_apply, '/api/gateway/apply': self.gateway_apply,
                          '/api/update/uebernehmen': self.update_uebernehmen, '/api/cloud/base-url/apply': self.cloud_base_url_apply}.get(decision['apply'])
                 if apply is None:
                     raise ValueError('decision_cannot_be_applied')
@@ -869,6 +875,123 @@ class UIXHub:
             rt.audit.append('UIX_APP_RIGHTS_GRANTED', component='desk', mission_id=mission_id, payload={'id': binding['id'], 'faehigkeiten': binding['faehigkeiten'], 'rechte_schluessel': binding['rechte_schluessel']})
         self.events.publish('tools.refresh', {})
         return {'status': 'granted', 'id': binding['id'], 'faehigkeiten': binding['faehigkeiten'], 'note': 'Die App darf diese Fähigkeiten jetzt nutzen, sobald sie aktiviert ist.'}
+
+    # ---- AM4: Zugänge (mcp, cli) und Dienste
+    def zugang_view(self, payload=None):
+        """AM4-01/04: je Zugang, was er lesen und rufen darf – und der Satz zur Grenze auf dem Host."""
+        from .desk import zugang
+        gewaehrt = app_speicher.zugaenge_lesen(self.project_root)
+        mcp = zugang.eintrag_normal(gewaehrt.get('mcp', zugang.MCP_VORGABE))
+        return {'schalter': bool(self.zugang_an), 'satz': zugang.SATZ_HOST,
+                'zugaenge': {'mcp': dict(mcp, vorgabe='mcp' not in gewaehrt, wirkt=bool(self.zugang_an)),
+                             'cli': {'lesen': zugang.ALLE, 'verben': 'alle', 'vorgabe': True, 'wirkt': True}}}
+
+    def zugang_pruefung(self, token_class, path, payload):
+        """AM4-02/03/08: der Körper einer Anfrage mit Client-Token gegen die Berechtigung. `cli` unbeschränkt, `mcp` nur mit dem Schalter, `dienst:<id>` immer (nach seinem Manifest). None = in Ordnung."""
+        from .desk import zugang
+        if token_class == 'mcp' and self.zugang_an:
+            return zugang.pruefe(app_speicher.zugaenge_lesen(self.project_root).get('mcp', zugang.MCP_VORGABE), path, payload)
+        if str(token_class).startswith('dienst:'):
+            d = self.dienste.dienst_von_klasse(token_class)
+            if d is None:
+                return 'dienst_token_ungueltig'
+            man = (self.gateway.tools().get(str(token_class)[7:]) or (None, {}))[1]
+            return zugang.pruefe(zugang.aus_rechten(man.get('rechte')), path, payload)
+        return None
+
+    ZUGANG_ACTION = 'grant_app_rights'
+
+    def zugang_rechte_request(self, payload):
+        """AM4-02: Verben für den Zugang `mcp` beantragen – Gate `grant_app_rights`, je `typ.verb` (`verb:typ.verb`); die vier Verben mit Gate bleiben Stufe C."""
+        from .desk import zugang
+        name = str((payload or {}).get('zugang') or '')
+        if name != 'mcp':
+            raise ValueError('zugang_unbekannt: nur mcp hat eine Berechtigung (cli ist unbeschränkt)')
+        wunsch = (payload or {}).get('faehigkeiten')
+        if not isinstance(wunsch, list) or not wunsch or not all(isinstance(f, str) and f.startswith('verb:') and '.' in f for f in wunsch):
+            raise ValueError('faehigkeiten_invalid: verb:<typ.verb>')
+        stufe_c = sorted(f for f in set(wunsch) if app_rechte_diff.stufe(f) == 'C')
+        if stufe_c:
+            raise ValueError('stufe_c_abgewiesen:' + ','.join(stufe_c))
+        aktuell = zugang.eintrag_normal(app_speicher.zugaenge_lesen(self.project_root).get('mcp', zugang.MCP_VORGABE))
+        offen = sorted(f for f in set(wunsch) if f[5:] not in aktuell['verben'])
+        if not offen:
+            raise ValueError('schon_gewaehrt')
+        binding = {'zugang': 'mcp', 'faehigkeiten': offen, 'rechte_schluessel': app_rechte_diff.rechte_schluessel(offen),
+                   'describe': 'Zugang mcp darf danach: ' + ', '.join(f'{f} (Stufe B)' for f in offen)}
+        with self.lock:
+            m = self.runtime.brain.create_mission(binding['describe'][:160], None, 'S1')
+            self._guard_vor_gate(m, self.ZUGANG_ACTION, 'zugang:mcp')
+            gate = self.runtime.guard.create_gate(m['identity']['mission_id'], self.ZUGANG_ACTION, 'zugang:mcp', risks=['jedes Programm unter deinem Konto kann diesen Zugang nutzen'] + [f'{f} (Stufe B)' for f in offen],
+                                                  rollback_available=True, request_binding=binding)
+            m['human_gates']['pending'].append(gate)
+            m['context']['zugang_rechte_request'] = binding
+            self.runtime.missions.save(m)
+        self.runtime.audit.append('UIX_ZUGANG_RIGHTS_REQUESTED', component='desk', payload={'zugang': 'mcp', 'faehigkeiten': offen})
+        return self._remember('zugang_rechte', {'mission_id': m['identity']['mission_id'], 'gate': gate, 'binding': binding})
+
+    def zugang_rechte_apply(self, payload):
+        from .desk import zugang
+        mission_id = str((payload or {}).get('mission_id') or '').strip()
+        if not mission_id:
+            raise ValueError('mission_id_required')
+        rt = self.runtime
+        with rt.missions.execution_lock(mission_id):
+            m = rt.missions.load(mission_id)
+            binding = (m.get('context') or {}).get('zugang_rechte_request')
+            token = (m.get('execution') or {}).get('approval_token')
+            if not binding:
+                raise ValueError('not_a_zugang_request')
+            if not token:
+                raise ValueError('captain_approval_required')
+            if not rt.guard.authorize(token, mission_id=mission_id, action=self.ZUGANG_ACTION, target='zugang:mcp', request_binding=binding)['authorized']:
+                raise ValueError('captain_approval_invalid')
+            if app_rechte_diff.rechte_schluessel(binding['faehigkeiten']) != binding['rechte_schluessel']:
+                raise ValueError('rechteliste_changed_since_the_request')
+            alt = zugang.eintrag_normal(app_speicher.zugaenge_lesen(self.project_root).get('mcp', zugang.MCP_VORGABE))
+            neu = {'lesen': alt['lesen'], 'verben': sorted(set(alt['verben']) | {f[5:] for f in binding['faehigkeiten']})}
+            app_speicher.zugang_schreiben(self.project_root, 'mcp', neu)
+            m['execution'].pop('approval_token', None)
+            m['result'] = {'kind': 'zugang_rechte', 'zugang': 'mcp', 'verben': neu['verben']}
+            m['lifecycle']['status'] = 'closed'
+            rt.missions.save(m)
+            rt.audit.append('UIX_ZUGANG_RIGHTS_GRANTED', component='desk', mission_id=mission_id, payload={'zugang': 'mcp', 'faehigkeiten': binding['faehigkeiten']})
+        return {'status': 'granted', 'zugang': 'mcp', 'verben': neu['verben'], 'note': 'Wirkt, solange der Schalter zugang_berechtigung an ist.'}
+
+    def dienste_view(self, payload=None):
+        """AM4: die Dienst-Apps (kind: dienst) mit Zustand; die abgewiesenen mit Grund."""
+        ok, abgelehnt = self.gateway._load('tools')
+        zustand = self.dienste.zustand()
+        liste = [{'id': mid, 'name': man.get('name'), 'version': man.get('version'), 'vertrauen': man.get('trust'), 'ort': (man.get('dienst') or {}).get('ort'),
+                  'neustart': (man.get('dienst') or {}).get('neustart'), **zustand.get(mid, {'laeuft': False, 'pid': None, 'seit': None, 'grund': None})}
+                 for mid, (_f, man) in sorted(ok.items()) if man.get('kind') == 'dienst']
+        return {'schalter': bool(self.dienste_an), 'dienste': liste,
+                'abgewiesen': [{'id': r['id'], 'gruende': r['reasons']} for r in abgelehnt if any(str(g).startswith('dienst_') for g in r['reasons'])]}
+
+    def dienst_start_antrag(self, payload):
+        """AM4-06: Start nur mit Gate (Klasse H) – ein Programm auf dem Rechner. Gebunden an die Fassung des Manifests."""
+        from .desk.dienste import KIND_DIENST
+        if not self.dienste_an:
+            raise ValueError('dienste_aus: der Schalter dienste steht auf aus (switches.yaml)')
+        mid = str((payload or {}).get('id') or '').strip()
+        eintrag = self.gateway._load('tools')[0].get(mid)
+        if eintrag is None or eintrag[1].get('kind') != 'dienst':
+            raise ValueError('dienst_unbekannt')
+        if mid in self.dienste.laufend:
+            raise ValueError('dienst_laeuft_schon')
+        folder, man = eintrag
+        binding = {'id': mid, 'manifest_sha256': app_speicher.manifest_hash(folder / 'tool.yaml'), 'start': man['dienst']['start'], 'vertrauen': man['trust'],
+                   'describe': f'Dienst „{man["name"]}“ ({mid}) starten: ' + ' '.join(man['dienst']['start'])}
+        risks = ['ein Programm läuft auf deinem Rechner mit den Rechten deines Windows-Kontos', 'es spricht danach nur über Objekte und Verben des Desk, mit eigenem Token',
+                 'Befehl: ' + ' '.join(man['dienst']['start']), 'Neustart: ' + man['dienst']['neustart'], 'du stoppst es jederzeit; ohne Stopp endet es mit dem Server']
+        req = desk_gated.request(self, KIND_DIENST, 'DIENST_STARTEN', 'dienst:' + mid, binding, risks=risks, exact=True, describe=binding['describe'])
+        return {'mission_id': req['mission_id']}
+
+    def dienst_stopp(self, payload):
+        mid = str((payload or {}).get('id') or '').strip()
+        if not self.dienste.stop(mid, 'captain'):
+            raise ValueError('dienst_laeuft_nicht')
+        return {'status': 'gestoppt', 'id': mid}
 
     def apps_aktivieren(self, payload):
         """AM3-08: aktivieren oder deaktivieren; kein Gate. Aktivieren geht nur mit einer vorhandenen Gewährung. Wirkt ab der nächsten Anfrage (AM3-09)."""
@@ -3937,6 +4060,10 @@ class UIXHub:
     def close(self):
         """Window closed: a model this UIX loaded is not left on the GPU, and the lease goes back."""
         self.poller.stop()
+        try:
+            self.dienste.stop_alle('ende')                                      # AM4: ein Dienst überlebt den Server nicht
+        except Exception:
+            pass
         sched = self._scheduler()
         if sched is not None:                                # the scheduler's server does not outlive the window while no run needs it
             try: sched.stop_server(owner='werkstatt-close')
@@ -4011,7 +4138,8 @@ def make_server(hub: UIXHub, port=0):
             geliefert = supplied.encode('utf-8', 'surrogateescape')          # Härtung 30.10.: Nicht-ASCII im Kopf darf keinen TypeError werfen
             if hmac.compare_digest(geliefert, token.encode('utf-8')):
                 return 'browser'
-            return next((c for c, t in client_tokens.items() if hmac.compare_digest(geliefert, t.encode('utf-8'))), None)
+            klasse = next((c for c, t in client_tokens.items() if hmac.compare_digest(geliefert, t.encode('utf-8'))), None)
+            return klasse or hub.dienste.klasse(supplied)                    # AM4-08: der Token eines laufenden Dienstes (`dienst:<id>`) oder None
 
         def _client(self, token_class):
             """Die Herkunft für das Audit: `shell`, `chat`, `cli` oder `mcp`. Gerufen erst nach `_module_allowed`: ein Kopf
@@ -4290,6 +4418,8 @@ def make_server(hub: UIXHub, port=0):
                     '/api/resources': hub.runtime.resource_status,          # read-only
                     '/api/erweiterungen': hub.erweiterungen_view,            # AM8-01: das Verzeichnis aller Erweiterungen (nur lesen, nur die Shell-Seite)
                     '/api/erweiterungen/export': hub.erweiterungen_export,   # AM8-04: JSON und lesbarer Text für Nachweis und Prüfung
+                    '/api/uix/zugaenge': hub.zugang_view,                    # AM4-01/04: Berechtigung der Zugänge mcp und cli
+                    '/api/uix/dienste': hub.dienste_view,                    # AM4: Dienst-Apps mit Zustand
                     '/api/uix/apps/verzeichnis': hub.apps_verzeichnis,      # AM3-26: Nachweis aller Apps mit Gewährungen
                     '/api/uix/apps': hub.apps_view,                          # read-only: fremde Apps mit beantragten und gewährten Rechten (AM3)
                     '/api/uix/modules': hub.modules_view,                   # read-only: Shell, Werkzeuge, Abgelehnte, Vorlagen
@@ -4317,6 +4447,13 @@ def make_server(hub: UIXHub, port=0):
                 payload = self._json_body()
                 if not self._app_rechte(path, payload):                 # AM3-11: Lesen und Verben einer fremden App gegen ihre gewährten Rechte
                     return
+                if token_class not in ('browser', 'cli') and path in ('/api/objects', '/api/actions'):          # AM4-02/08: mcp und Dienste gegen ihre Berechtigung
+                    fehler = hub.zugang_pruefung(token_class, path, payload)
+                    if fehler:
+                        p = payload if isinstance(payload, dict) else {}
+                        hub.runtime.audit.append('UIX_APP_VERB_DENIED', component='desk', payload={'app': str(token_class)[:60], 'path': path, 'type': str(p.get('type') or '')[:40], 'verb': str(p.get('verb') or '')[:40], 'grund': fehler})
+                        self._send(403, {'error': fehler, 'message': f'Der Zugang „{str(token_class)[:60]}“ hat dafür keine Berechtigung.'})
+                        return
                 if path.startswith('/api/harness/'):      # sitzungen, sitzungen/<id>/nachricht, antworten/<id>/stopp (harness/api.py)
                     self._harness('POST', path, payload)
                     return
@@ -4374,6 +4511,9 @@ def make_server(hub: UIXHub, port=0):
                     '/api/uix/trust/apply': hub.trust_apply,
                     '/api/uix/apps/rechte': hub.apps_rechte_request,        # AM3-07: Rechte beantragen: Gate grant_app_rights, kein Häkchen
                     '/api/uix/apps/rechte/apply': hub.apps_rechte_apply,
+                    '/api/uix/zugaenge/rechte': hub.zugang_rechte_request,   # AM4-02: Verben für mcp beantragen (Gate grant_app_rights)
+                    '/api/uix/dienste/start': hub.dienst_start_antrag,       # AM4-06: Start nur mit Gate
+                    '/api/uix/dienste/stopp': hub.dienst_stopp,              # AM4-06: stoppt sofort, entzieht den Token
                     '/api/uix/apps/aktivieren': hub.apps_aktivieren,        # AM3-08: kein Gate, Audit
                     '/api/uix/apps/entziehen': hub.apps_entziehen,          # AM3-09: kein Gate, Audit, sofort
                     '/api/uix/remove': hub.install_remove,
@@ -4481,6 +4621,7 @@ def make_server(hub: UIXHub, port=0):
     server.daemon_threads = True
     hub.start_extensions()
     server.desk_stop = threading.Event()          # set when the server stops: open event streams end instead of hanging
+    hub.dienste.port = server.server_port                                   # AM4-08: `SEDRA_DESK_PORT` der Dienste
     for c, t in client_tokens.items():
         uix_clients.write(hub.project_root, c, t, server.server_port)
     _close = server.server_close

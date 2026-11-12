@@ -23,6 +23,7 @@ ARTEN = {
     'request:switch': H, 'request:routing': H, 'request:boundaries': H,                 # Regeln
     'request:harness_katalog': H, 'request:harness_vorlage': H,                          # Regeln der Harness
     'request:harness_prozess': H,                                                        # Prozess-Entwurf in den Bestand (nie ausführbar; wie eine Vorlage)
+    'request:dienst_start': H, 'request:zugang_rechte': H,                               # AM4: ein Programm starten; Verben eines Zugangs gewähren
     'request:harness_oberflaeche': H,                                                    # Code der Oberfläche läuft danach in der Seite (O3 G2-07)
     'request:harness_code_stand': H,                                                     # Code gilt als gesehen: Läufe und Befehle ohne Karte (G4, 04.11.2026)
     'request:install': H, 'request:trust': H, 'request:apps_rechte': H, 'request:update': H,                       # Code und Rechte in den Betrieb
@@ -186,6 +187,9 @@ ROUTEN_SERVER = {
     '/api/uix/trust/apply': ('anwenden', None, ''),
     '/api/uix/apps/rechte': ('antrag', None, 'request:apps_rechte'),
     '/api/uix/apps/rechte/apply': ('anwenden', None, ''),
+    '/api/uix/dienste/start': ('antrag', None, 'request:dienst_start (AM4-06)'),
+    '/api/uix/dienste/stopp': ('zurueck', None, 'AM4-06: stoppt den Prozess und entzieht den Token, nichts wird erteilt'),
+    '/api/uix/zugaenge/rechte': ('antrag', None, 'request:zugang_rechte (AM4-02)'),
     '/api/uix/apps/aktivieren': ('handlung', N, 'AM3-08: schaltet eine bereits gewährte App an oder aus, nur Audit'),
     '/api/uix/apps/entziehen': ('zurueck', None, 'AM3-09: nimmt Rechte weg, nichts wird erteilt'),
     '/api/uix/remove': ('zurueck', None, 'Modul entfernen (§6: was weg ist, kann nichts mehr tun)'),

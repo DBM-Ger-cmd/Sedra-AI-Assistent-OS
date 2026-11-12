@@ -36,6 +36,7 @@ shell:
     - GET /api/uix/modules      # Stufe 4: Apps ohne Ort, Oberflächen
     - GET /api/uix/shelf        # Stufe 4: „zuletzt benutzt“ auf dem Rechner
     - POST /api/uix/shelf
+    - GET /api/uix/zugaenge     # AM4-04: Berechtigung der Zugänge mcp und cli (nur lesen)
     - GET /api/uix/clients      # Stufe 5: MCP/CLI-Clients (nie der Token)
     - GET /api/switches         # Stufe 5: Schalter lesen; Änderung als Antrag mit Gate
     - POST /api/switch/request

@@ -27,7 +27,9 @@ ROUTEN_JE_CLIENT = {'cli': ROUTES + NUR_KONSOLE, 'mcp': ROUTES}
 
 
 def erlaubt(client, path):
-    """Darf dieser externe Client diese Route aufrufen?"""
+    """Darf dieser externe Client diese Route aufrufen? Ein Dienst (`dienst:<id>`, AM4-08) nur `objects` und `actions`."""
+    if str(client).startswith('dienst:'):
+        return path in ROUTES
     return path in ROUTEN_JE_CLIENT.get(client, ())
 
 

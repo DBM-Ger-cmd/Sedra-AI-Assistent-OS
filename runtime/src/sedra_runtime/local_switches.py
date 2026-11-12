@@ -35,6 +35,8 @@ ALLOWED = {
     "entwicklung": {"enabled"},        # SPEC_UIX_STUFE6 §2.2 (S6-E4): Prüfwerkzeuge (zweck: pruefung) der Oberfläche laden; Standard aus
     "code_sicht": {"enabled"},
     "oberflaeche_abnahme": {"enabled"},   # O3 G2-10: Code der Oberfläche, den die Harness unter einer Aufgabe schreibt, wirkt erst nach der Übernahme; Standard AN, `enabled: false` nur in der Datei
+    "dienste": {"enabled"},               # SPEC_APPS_v1_AM4: Dienst-Apps (eigener Prozess) starten und stoppen; Standard AUS
+    "zugang_berechtigung": {"enabled"},   # SPEC_APPS_v1_AM4 AM4-02: der MCP-Zugang ruft nur gewährte Verben (Übergang: aus = wie bisher, Verben alle); Standard AUS
     "app_berechtigung": {"enabled"},      # SPEC_APPS_v1_AM3: Gewährung und Aktivierung fremder Apps; Standard AUS bis zur Abnahme am PC
     "herkunft_pruefen": {"enabled"},      # SPEC_APPS_v1 AM0-02: Hashprüfung eingebauter Fremd-Module beim Laden; Standard AN, `enabled: false` schaltet nur die Prüfung ab
     "freigabe_ausserhalb": {"enabled"},   # SPEC_APPS_v1 G9: Freigaben der Klasse H nur über Systemdialog oder Konsole; Standard AN, `enabled: false` schaltet es ab         # SPEC_APPS_v1 G4: Läufe und Befehle der Harness nur nach Sicht auf geänderten Code; Standard AN, `enabled: false` schaltet es ab
