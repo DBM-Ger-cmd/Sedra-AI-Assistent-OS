@@ -152,15 +152,29 @@ def _key_state(provider_id, store, environ):
     return "fehlt"
 
 
-def provider_status(master: bool, enabled: bool, base_url: str, model, key: str):
+def anbieter_url_erlaubt(provider_id: str, url) -> bool:
+    """AM5-03: für Langdock nur die feste EU-Adresse (die Prüfung sitzt hier im Kern, nicht in der Oberfläche); für alle anderen Anbieter gilt nur https."""
+    if provider_id == "langdock":
+        from .models.langdock import url_erlaubt
+        return url_erlaubt(url)
+    return True
+
+
+def _url_pruefen(provider_id: str, url) -> str:
+    if not anbieter_url_erlaubt(provider_id, url): raise ValueError(f"langdock_region_nicht_erlaubt:{provider_id}")
+    return url
+
+
+def provider_status(master: bool, enabled: bool, base_url: str, model, key: str, extra=()):
     """Was mit einem Anbieter gerade los ist, in einem Wort und den Gründen dazu. Gespeichert heißt „bereit“, nicht „läuft“:
-    ob er läuft, sagt der laufende Server (`live`)."""
+    ob er läuft, sagt der laufende Server (`live`). `extra`: weitere Gründe des Anbieters (Langdock: Region, Empfängerverzeichnis)."""
     if not master: return "aus", ["Hauptschalter aus"]
     if not enabled: return "aus", ["Anbieter aus"]
     reasons = []
     if not model: reasons.append("kein Modell eingetragen")
     if key == "fehlt": reasons.append("kein Schlüssel")
     if not (base_url or "").startswith("https://"): reasons.append("Adresse ist nicht https")
+    reasons.extend(extra)
     return ("nicht bereit" if reasons else "bereit"), reasons
 
 
@@ -172,10 +186,16 @@ def view(project_root: Path, store: CloudKeyStore, environ=None) -> dict:
         entry = entry or {}
         enabled = bool(entry.get("enabled", False))
         key = _key_state(pid, store, environ)
-        status, reasons = provider_status(master, enabled, entry.get("base_url") or "", entry.get("default_model"), key)
+        extra, empfaenger = (), None
+        if pid == "langdock":                      # AM5-03/AM5-08: Region und Empfängerverzeichnis gehören zum Zustand
+            from .models import langdock
+            extra = langdock.zusatzgruende(project_root, entry.get("base_url"))
+            empfaenger = langdock.empfaenger_status(project_root)
+        status, reasons = provider_status(master, enabled, entry.get("base_url") or "", entry.get("default_model"), key, extra)
         providers.append({"id": pid, "kind": entry.get("kind"), "enabled": enabled,
                           "base_url": entry.get("base_url") or "", "default_model": entry.get("default_model"),
-                          "key": key, "key_store_available": CloudKeyStore.available(), "status": status, "reasons": reasons})
+                          "key": key, "key_store_available": CloudKeyStore.available(), "status": status, "reasons": reasons,
+                          **({"empfaenger": empfaenger} if empfaenger else {})})
     return {"enabled": master, "providers": providers, "path": str(settings_path(project_root)),
             "module_models": {m: {"provider": e.get("provider"), "model": e.get("model")} for m, e in (cfg.get("module_models") or {}).items()
                               if isinstance(e, dict)}}
@@ -226,7 +246,7 @@ def save(project_root: Path, payload: dict) -> dict:
             url = change["base_url"]
             parsed = urlparse(url if isinstance(url, str) else "")
             if parsed.scheme != "https" or not parsed.hostname or len(url) > 200: raise ValueError(f"base_url_must_be_https:{pid}")
-            entry["base_url"] = url.rstrip("/")
+            entry["base_url"] = _url_pruefen(pid, url.rstrip("/"))
         out["providers"][pid] = entry
     if set(wanted) - set(known): raise ValueError("unknown_provider")
     path = settings_path(project_root)
@@ -256,7 +276,7 @@ def base_url_aenderungen(project_root: Path, payload: dict) -> list:
         url = change["base_url"]
         parsed = urlparse(url if isinstance(url, str) else "")
         if parsed.scheme != "https" or not parsed.hostname or len(url) > 200: raise ValueError(f"base_url_must_be_https:{pid}")
-        neu = url.rstrip("/")
+        neu = _url_pruefen(pid, url.rstrip("/"))             # AM5-03: auch ein Antrag mit falscher Region wird abgewiesen, bevor er ein Gate bekommt
         alt = (known[pid] or {}).get("base_url")
         if neu != alt: out.append({"provider": pid, "alt": alt, "neu": neu})
     return out

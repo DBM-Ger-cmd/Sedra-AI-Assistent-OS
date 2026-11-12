@@ -1,0 +1,20 @@
+# Vorlage (AM5-08): das Empfängerverzeichnis – wer Daten aus SEDRA bekommt. Kopie nach local_config/empfaenger.yaml, dann eintragen.
+# Ohne vollständigen Eintrag lässt sich Langdock nicht einschalten (empfaenger_fehlt / empfaenger_unvollstaendig). Älter als 12 Monate
+# (geprueft_am): SEDRA zeigt „Angaben prüfen“. Alle Werte unten sind Platzhalter – der Betreiber trägt ein, was der Vertrag und
+# die schriftliche Bestätigung von Langdock wirklich sagen (AM5-01), nichts Geratenes.
+empfaenger:
+  langdock:
+    name: Langdock
+    rolle: Auftragsverarbeiter
+    region: eu                                   # andere Werte als eu verhindern das Einschalten
+    aufbewahrung: "<laut Bestätigung>"
+    zweck: "<wofür SEDRA Langdock nutzt>"
+    gepflegt_von: "<Name des Betreibers>"
+    geprueft_am: "<JJJJ-MM-TT>"
+    vertrag:
+      fassung: "<Fassung des DPA>"
+      datum: "<JJJJ-MM-TT>"
+      fundstelle: "<wo der Vertrag liegt>"
+    unterauftragsverarbeiter:
+      datum: "<JJJJ-MM-TT>"
+      liste: ["<Unterauftragsverarbeiter 1>"]

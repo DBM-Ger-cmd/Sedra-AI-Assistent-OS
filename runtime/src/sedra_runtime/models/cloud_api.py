@@ -204,37 +204,64 @@ class CloudAnthropicAdapter(_CloudAdapter):
 KINDS = {"openai_compatible": CloudOpenAICompatibleAdapter, "anthropic": CloudAnthropicAdapter}
 
 
-def provider_adapter(config, provider_id, environ=None, key_store=None):
+def _adapter_class(provider_id, kind_name):
+    """Langdock (AM5) ist OpenAI-kompatibel, hat aber feste Region, Modellliste des Betreibers und eigene Fehlersätze (models/langdock.py)."""
+    if provider_id == "langdock" and kind_name == "openai_compatible":
+        from .langdock import LangdockAdapter
+        return LangdockAdapter
+    return KINDS.get(kind_name)
+
+
+def _build(provider_id, entry, environ, key_store, project_root):
+    kind = _adapter_class(provider_id, entry.get("kind"))
+    if kind is None: raise ValueError("cloud_provider_kind_unknown")
+    extra = {}
+    if provider_id == "langdock":
+        from .langdock import modelle_laden
+        extra["modelle"] = modelle_laden(project_root)
+    return kind(provider_id, entry.get("base_url") or "", entry.get("api_key") or "", entry.get("default_model"),
+                timeout=entry.get("timeout_s", 60), environ=environ, key_store=key_store, **extra)
+
+
+def provider_adapter(config, provider_id, environ=None, key_store=None, project_root=None):
     """Der Adapter eines Anbieters aus der gespeicherten Konfiguration, eingeschaltet oder nicht. Für Abfragen und Tests."""
     entry = (config.get("providers") or {}).get(provider_id) if isinstance(config, dict) else None
     if not isinstance(entry, dict): raise ValueError("unknown_provider")
-    kind = KINDS.get(entry.get("kind"))
-    if kind is None: raise ValueError("cloud_provider_kind_unknown")
     try:
-        return kind(provider_id, entry.get("base_url") or "", entry.get("api_key") or "", entry.get("default_model"),
-                    timeout=entry.get("timeout_s", 60), environ=environ, key_store=key_store)
+        return _build(provider_id, entry, environ, key_store, project_root)
+    except ValueError as exc:
+        if str(exc) == "cloud_provider_kind_unknown": raise
+        raise ValueError(f"cloud_provider_invalid:{exc}") from None
     except ModelAdapterError as exc:
         raise ValueError(f"cloud_provider_invalid:{exc}") from None
 
 
-def provider_models(config, provider_id, environ=None, key_store=None):
+def provider_models(config, provider_id, environ=None, key_store=None, project_root=None):
     """Die Modellliste eines Anbieters vom Anbieter selbst. Ob der Anbieter eingeschaltet ist, spielt hier keine Rolle:
     man soll das Modell wählen können, bevor man ihn einschaltet. Fehler kommen ohne Schlüssel zurück."""
-    return provider_adapter(config, provider_id, environ, key_store).fetch_models()
+    return provider_adapter(config, provider_id, environ, key_store, project_root).fetch_models()
 
 
-def build_cloud_adapters(config, environ=None, key_store=None):
-    """Aus dem Abschnitt `cloud_providers` der YAML-Datei die eingeschalteten Adapter bauen. Ausgeschaltet heißt: gar nicht gebaut."""
+def build_cloud_adapters(config, environ=None, key_store=None, project_root=None, ausgelassen=None):
+    """Aus dem Abschnitt `cloud_providers` der YAML-Datei die eingeschalteten Adapter bauen. Ausgeschaltet heißt: gar nicht gebaut.
+    Langdock (AM5-03, AM5-08) wird ausgelassen – nicht der ganze Cloudweg –, wenn Region oder Empfängerverzeichnis nicht stimmen;
+    der Grund steht in `ausgelassen` ([(Anbieter, Grund)])."""
     if not isinstance(config, dict): raise ValueError("cloud_providers_invalid")
     if not config.get("enabled", False): return []
     adapters = []
     for provider_id, entry in (config.get("providers") or {}).items():
         if not isinstance(entry, dict) or not entry.get("enabled", False): continue
-        kind = KINDS.get(entry.get("kind"))
-        if kind is None: raise ValueError(f"cloud_provider_kind_unknown:{provider_id}")
+        if provider_id == "langdock":
+            from .langdock import einschaltpruefung
+            gruende = einschaltpruefung(project_root, entry.get("base_url"))
+            if gruende:
+                if ausgelassen is not None: ausgelassen.extend((provider_id, g) for g in gruende)
+                continue
         try:
-            adapters.append(kind(provider_id, entry.get("base_url") or "", entry.get("api_key") or "", entry.get("default_model"),
-                                 timeout=entry.get("timeout_s", 60), environ=environ, key_store=key_store))
+            adapters.append(_build(provider_id, entry, environ, key_store, project_root))
+        except ValueError as exc:
+            if str(exc) == "cloud_provider_kind_unknown": raise ValueError(f"cloud_provider_kind_unknown:{provider_id}") from None
+            raise
         except ModelAdapterError as exc:
             raise ValueError(f"cloud_provider_invalid:{provider_id}:{exc}") from None
     return adapters

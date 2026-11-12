@@ -3306,10 +3306,14 @@ class UIXHub:
         cfg = cloud_settings.load_config(self.runtime.project_root)
         if not isinstance(pid, str) or pid not in (cfg.get('providers') or {}) or not cloud_settings.PROVIDER_ID.match(pid):
             raise ValueError('unknown_provider')
-        models = provider_models(cfg, pid, os.environ, self.runtime.cloud_key_store)
+        models = provider_models(cfg, pid, os.environ, self.runtime.cloud_key_store, self.runtime.project_root)
         self.runtime.audit.append('CLOUD_MODELS_QUERIED', component='desk', payload={'provider': pid, 'count': len(models)})
         from . import modell_zustand
-        return {'provider': pid, 'models': models, 'zustand': modell_zustand.fuer_anbieter(self.runtime.project_root, pid)}
+        out = {'provider': pid, 'models': models, 'zustand': modell_zustand.fuer_anbieter(self.runtime.project_root, pid)}
+        if pid == 'langdock':                    # AM5-04: was Langdock anbietet, gegen die Liste des Betreibers – der Rest gilt als „nicht geprüft“
+            from .models import langdock
+            out['abgleich'] = langdock.abgleich(langdock.modelle_laden(self.runtime.project_root), models)
+        return out
 
     def _labor_provider(self, payload):
         pid = payload.get('provider') if isinstance(payload, dict) else None

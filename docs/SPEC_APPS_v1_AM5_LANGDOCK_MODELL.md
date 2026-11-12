@@ -104,3 +104,26 @@ Schreiben `runtime/config/cloud_providers.yaml`, `cloud_settings.py`, `models/cl
 ## 11. Nächste Gates
 
 AM5-01 erledigen → G2 → G3 → G4 am PC mit Test-Workspace.
+
+## 12. Stand des Baus (12.11.2026, Branch roadmap-paket)
+
+Gebaut **nur mit Attrappe**, ohne Zugangsdaten und ohne Netz (Captain 10.11.2026: „wir haben keine Langdock-Zugangsdaten“).
+
+| ID | Stand | Wo |
+|---|---|---|
+| AM5-02 | gebaut: Eintrag `langdock`, aus | `runtime/config/cloud_providers.yaml` |
+| AM5-03 | gebaut: feste EU-Adresse, Prüfung im Kern beim Speichern und beim Antrag | `models/langdock.py`, `cloud_settings.anbieter_url_erlaubt` |
+| AM5-04 | gebaut: Modellliste des Betreibers, Aufbewahrung, Abgleich mit `GET /models` (Antwort von `cloud_models` enthält `abgleich`) | `models/langdock.py`, `uix_server.cloud_models` |
+| AM5-05 | gebaut: nur `model, messages, stream, temperature, max_tokens, top_p` gehen hinaus (Test) | Adapter |
+| AM5-06 | gebaut: Sätze für 429, 504, 401/403; kein Wiederholen | `LangdockAdapter._post` |
+| AM5-07 | Test: kein Wechsel auf anderen Anbieter | Tests |
+| AM5-08 | gebaut: Verzeichnis, Pflichtfelder, Region eu, Hinweis nach 12 Monaten; ohne Eintrag wird nur Langdock ausgelassen (Audit `CLOUD_PROVIDER_AUSGELASSEN`), die übrigen Anbieter laufen weiter. Anzeige: im Zustand des Anbieters (`reasons`, `empfaenger`); eine eigene Seite im Verzeichnis (AM8) fehlt | `cloud_settings.view`, `runtime._configure_cloud_providers` |
+| AM5-09 | Test: Personenbezug wird lokal gesperrt, kein Netzaufruf; `gateway/klassen.py` unverändert | Tests |
+| AM5-10 | unverändert (Gateway-Vorgang bleibt `simuliert`) | – |
+| AM5-11 | Funktion `kosten_eur` (nur mit eingetragenen Preisen); Anzeige im Meter **nicht** gebaut, Token zählt der Meter wie bei jedem Cloud-Anbieter | `models/langdock.py` |
+| AM5-12 | nicht gebaut (Schlüsselablage wie bei anderen Anbietern; „nur der Betreiber setzt ihn“ gehört zu AM7/A8) | – |
+| AM5-13 | gebaut: Attrappen per `mock`, kein Netz, keine echten Schlüssel | `tests/test_apps_am5_langdock.py` |
+
+**Nicht geprüft (ohne Zugang):** das echte Verhalten von `api.langdock.com` (Schnittstelle, Fehlercodes, Limits, Modellliste), die Richtigkeit der Suchauszüge in §1, AM5-01 (Volltexte und schriftliche Bestätigung), Abnahme am PC (§5). Vorlagen für die Betreiberdateien: `runtime/config/cloud_modelle.beispiel.yaml`, `runtime/config/empfaenger.beispiel.yaml` (nur Platzhalter).
+
+**AM6 (Agenten fragen)** ist **nicht** gebaut: das Nachrichtenformat der Agents-API (UIMessage) ist nur aus einem Suchauszug bekannt; ein Adapter dafür wäre erfunden. Erst nach AM6-01 (Volltext der Agents-API).

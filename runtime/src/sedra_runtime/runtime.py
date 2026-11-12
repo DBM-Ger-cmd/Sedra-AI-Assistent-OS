@@ -577,9 +577,10 @@ class SedraRuntime:
         und jeder Aufruf prüft das Regelwerk. Der Router wählt Cloud nie von selbst (models/router.py choose)."""
         self.cloud_providers_error=None
         self.cloud_key_store=CloudKeyStore(cloud_settings.key_store_path(self.project_root))
+        ausgelassen=[]                                                 # AM5: ein Anbieter, der nicht einschaltbar ist, nimmt die anderen nicht mit
         try:
             cfg=cloud_settings.load_config(self.project_root)          # local_config (Einstellungen-Fenster) vor config/
-            adapters=build_cloud_adapters(cfg,key_store=self.cloud_key_store)
+            adapters=build_cloud_adapters(cfg,key_store=self.cloud_key_store,project_root=self.project_root,ausgelassen=ausgelassen)
         except (ValueError,OSError,yaml.YAMLError) as exc:
             self.cloud_providers_error=str(exc); adapters=[]           # fail-closed: ein kaputter Eintrag schaltet nichts ein
         self.cloud_boot_signature=cloud_settings.signature(self.project_root,self.cloud_key_store)
@@ -587,6 +588,8 @@ class SedraRuntime:
         self.content_guard.cloud_enabled=bool(adapters)
         if self.audit and adapters:
             self.audit.append("CLOUD_PROVIDERS_ENABLED",component="runtime",payload={"providers":[a.id for a in adapters]})
+        if self.audit and ausgelassen:
+            self.audit.append("CLOUD_PROVIDER_AUSGELASSEN",component="runtime",payload={"gruende":[{"provider":p,"grund":g} for p,g in ausgelassen]})
 
     def _open_candidate_bindings(self):
         """(project root, [{"mission_id", "host_root"}]) for path_health: the folder each open candidate (CANDIDATE_REVIEW) was

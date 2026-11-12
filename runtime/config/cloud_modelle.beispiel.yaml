@@ -1,0 +1,13 @@
+# Vorlage (AM5-04): die Modelle, die der Betreiber bei Langdock freigibt. Kopie nach local_config/cloud_modelle.yaml, dann eintragen.
+# Nur hier eingetragene Modelle sind für Langdock wählbar. Alle Werte unten sind Platzhalter – nichts davon ist eine Aussage über Langdock.
+#
+# aufbewahrung: "keine" oder die Zahl der Tage, die der Anbieter die Daten behält (laut Vertrag/Bestätigung von Langdock, nicht geraten).
+# Ist sie nicht „keine“, ist das Modell nur mit erlaubt_trotz_aufbewahrung: true wählbar (eigener, bewusster Eintrag).
+# preis_eur_je_million_token ist freiwillig; ohne Preis zeigt SEDRA nur Token.
+langdock:
+  "<modellname-bei-langdock>":
+    aufbewahrung: "<keine oder Tage>"
+    erlaubt_trotz_aufbewahrung: false
+    geprueft_am: "<JJJJ-MM-TT>"
+    quelle: "<Fundstelle der Bestätigung>"
+    # preis_eur_je_million_token: {eingabe: 0.0, ausgabe: 0.0}

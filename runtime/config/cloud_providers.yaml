@@ -38,3 +38,11 @@ cloud_providers:
       api_key: secret://anthropic/api-key
       default_model: null            # z. B. die Claude-Modellkennung aus der Anthropic-Dokumentation
       timeout_s: 60
+
+    langdock:                        # AM5 (Spec Apps v1): Langdock als Modellquelle, AUS. Region fest EU; ohne Empfängerverzeichnis und Modellliste
+      enabled: false                 # des Betreibers (local_config/empfaenger.yaml, local_config/cloud_modelle.yaml; Vorlagen *.beispiel.yaml) nicht einschaltbar.
+      kind: openai_compatible        # laut Suchauszug OpenAI-kompatibel – vor dem ersten Einsatz im Volltext prüfen (Spec AM5 §1, AM5-01)
+      base_url: https://api.langdock.com/openai/eu/v1
+      api_key: secret://langdock/api-key
+      default_model: null
+      timeout_s: 100                 # Langdock bricht nicht gestreamte Anfragen nach 105 s ab
