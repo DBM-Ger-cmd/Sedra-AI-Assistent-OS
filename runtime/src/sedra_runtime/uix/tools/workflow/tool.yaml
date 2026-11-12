@@ -12,6 +12,7 @@ tool:
   entry: {js: tool.js, css: tool.css}
   api:
     - POST /api/objects
+    - GET /api/decisions
     - POST /api/actions
     - POST /api/harness/sitzungen
     - POST /api/harness/sitzungen/*

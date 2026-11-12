@@ -358,7 +358,7 @@
     },
     async showRun(id){
       const run = await this.ctx.api('/api/objects', {method: 'POST', body: {type: 'workflow_run', id}});
-      if(this.dead)return;this.runId = id;this.runState = run.state;this.runWf = run.workflow_id;this.updateSteps();
+      if(this.dead)return;this.runId = id;this.runState = run.state;this.runWf = run.workflow_id;this.updateSteps();this.pruefeFreigabe(run);
       if(options.renderRun)options.renderRun(this.output, run);
       else if(this.lokalRender(run)){}
       else this.output.textContent = JSON.stringify({mission: id, revision: run.revision, phase: run.state, steps: run.steps, wait: run.wait, result: run.result, artifacts: run.artifacts}, null, 2);

@@ -118,6 +118,9 @@ class Freigabe(unittest.TestCase):
         m = self.hub.runtime.missions.load(run['id'])
         gate = m['human_gates']['pending'][0]
         self.assertEqual(gate['request']['exact_action'], 'run_sedra_workflow')
+        eintrag = [d for d in self.hub.decisions_view()['items'] if d.get('mission_id') == run['id']]        # die Freigabe liegt im Posteingang
+        self.assertEqual([(d['gate_id'], d['ways']) for d in eintrag], [(gate['gate_id'], ['einmal', 'ablehnen'])])
+        self.assertIn('Rechnungsprüfung', eintrag[0]['title'])
         self.assertFalse(Tabellen(self.hub.project_root)._finden('Kostenübersicht'))      # vor dem Ja ist nichts passiert
         m['execution']['approval_token'] = self.hub.runtime.guard.approve(gate)
         m['human_gates']['pending'] = []

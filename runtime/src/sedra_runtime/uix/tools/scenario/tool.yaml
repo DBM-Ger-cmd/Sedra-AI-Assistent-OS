@@ -10,7 +10,7 @@ tool:
   instanzen: viele
   gruppe: arbeit
   entry: {js: [forms.js, tool.js], css: tool.css}
-  api: [POST /api/objects, POST /api/actions, POST /api/harness/sitzungen, POST /api/harness/sitzungen/*, GET /api/harness/sitzungen/*]
+  api: [GET /api/decisions, POST /api/objects, POST /api/actions, POST /api/harness/sitzungen, POST /api/harness/sitzungen/*, GET /api/harness/sitzungen/*]
   events: {emits: [], listens: [task.changed, decision.answered]}
   trust: CORE
   tests: []

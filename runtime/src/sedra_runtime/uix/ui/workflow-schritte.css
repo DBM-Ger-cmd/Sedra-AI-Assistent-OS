@@ -21,3 +21,8 @@
 .t-workflow .t-wf-linkbtn{flex-basis:100%;text-align:left;background:none;border:0;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;padding:2px 0}
 .t-workflow .t-wf-run.t-wf-gefuehrt>.t-wf-classic{display:none}
 .t-workflow .t-wf-lokal{flex-basis:100%}
+.t-workflow dialog.t-wf-freigabe{max-width:min(520px,92vw);padding:20px 22px;border:1px solid var(--accent);border-radius:12px;background:var(--panel);color:var(--text);box-shadow:var(--wf-shadow)}
+.t-workflow dialog.t-wf-freigabe::backdrop{background:rgba(0,0,0,.55)}
+.t-workflow .t-wf-freigabe-kopf{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.t-workflow .t-wf-freigabe-kopf h3{margin:0}
+.t-workflow dialog.t-wf-freigabe ul{margin:8px 0;padding-left:20px;line-height:1.5}

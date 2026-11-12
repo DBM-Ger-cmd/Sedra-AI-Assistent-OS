@@ -21,6 +21,22 @@ def mission(mid="M-1", gates=(), intent="Parser bauen"):
     return {"identity": {"mission_id": mid}, "captain_intent": {"original": intent}, "human_gates": {"pending": list(gates)}}
 
 
+class Kompakt(unittest.TestCase):
+    """Der Hub reicht die kompakte Mission (nur `gates`, kein `human_gates`): ihre Gates dürfen nicht verschluckt werden."""
+
+    def test_kompakte_mission_zeigt_ihr_gate(self):
+        kompakt = {"mission_id": "M-9", "intent": "n8n: Rechnungsprüfung", "objective": "n8n: Rechnungsprüfung", "pending_gates": 1,
+                   "gates": [{"gate_id": "HG-9", "action": "run_sedra_workflow", "targets": ["sedra-lokal://workflow/x"], "risks": ["Schreibt in lokale Tabellen: K."], "rollback": False}]}
+        [d] = desk.collect([kompakt], [])
+        self.assertEqual((d["id"], d["mission_id"], d["gate_id"], d["title"]), ("gate:HG-9", "M-9", "HG-9", "n8n: Rechnungsprüfung"))
+        self.assertEqual(d["describe"], "run_sedra_workflow → sedra-lokal://workflow/x")
+        self.assertEqual(d["risks"], ["Schreibt in lokale Tabellen: K."])
+        self.assertEqual(d["ways"], ["einmal", "ablehnen"])
+
+    def test_kompakte_mission_ohne_gate_zeigt_nichts(self):
+        self.assertEqual(desk.collect([{"mission_id": "M-8", "gates": []}], []), [])
+
+
 class Shape(unittest.TestCase):
     def test_a_mission_gate_becomes_a_decision_with_two_ways(self):
         [d] = desk.collect([mission(gates=[gate()])], [])

@@ -149,6 +149,19 @@ def harness_decision(k):
             'agent_id': None, 'sitzung_id': k.get('sitzung_id')}          # A18 (1.11.): die Sitzung als Feld, nicht nur im Prosa-Feld `note`
 
 
+def _offene_gates(m, mid):
+    """Die offenen Gates einer Mission. Der Hub reicht die KOMPAKTE Mission (uix_server._compact_mission: nur die Kurzliste `gates`, kein
+    `human_gates`); die volle Mission trägt `human_gates.pending`. Beide Formen zählen: früher fielen die kompakten Gates still weg, und
+    eine vorgelegte Freigabe erschien nie im Posteingang."""
+    if isinstance(m.get('human_gates'), dict):
+        return m, (m['human_gates'].get('pending') or [])
+    gates = [{'gate_id': g.get('gate_id'), 'request': {'exact_action': g.get('action'), 'targets': g.get('targets') or [], 'risks': g.get('risks') or [],
+                                                        'rollback_available': bool(g.get('rollback'))}}
+             for g in (m.get('gates') or []) if isinstance(g, dict)]
+    voll = {'identity': {'mission_id': mid}, 'captain_intent': {'original': m.get('intent')}, 'objective': {'current': m.get('objective')}}
+    return voll, gates
+
+
 def collect(missions, open_requests, crossings=(), contents=(), scheduled=(), harness=(), berichte=()):
     """Every open decision, newest last. `missions` are the compact or full mission records, `open_requests` what the hub
     remembers, `crossings` the boundary crossings that wait (Build 9), `contents` the model calls the content guard holds (Build 16).
@@ -160,7 +173,8 @@ def collect(missions, open_requests, crossings=(), contents=(), scheduled=(), ha
         mid = (m.get('identity') or {}).get('mission_id') or m.get('mission_id')
         if mid in request_missions:
             continue
-        for gate in ((m.get('human_gates') or {}).get('pending') or []):
+        m, pending = _offene_gates(m, mid)
+        for gate in pending:
             if isinstance(gate, dict):
                 out.append(gate_decision(m, gate))
     for req in open_requests:

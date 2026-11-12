@@ -19,6 +19,44 @@
       this.advanced = button('Erweitert: Eingaben als JSON und alle Knöpfe', ()=>{this.erweitert = !this.erweitert;this.updateSteps();});this.advanced.className = 't-wf-linkbtn';
       run.insertBefore(this.stepsNext, run.children[1]);run.insertBefore(this.steps, run.children[2]);run.insertBefore(this.advanced, run.children[3]);
     },
+    // Freigabe als Fenster: öffnet sich, sobald ein Lauf auf den Captain wartet. „Jetzt freigeben“ löst die Bestätigung von SEDRA aus (Klasse H: Windows-Fenster
+    // oder FREIGABE.bat, nie nur ein Klick im Browser); danach läuft der Lauf von selbst weiter. Das Fenster gibt nichts frei, es fragt nur.
+    async pruefeFreigabe(run){
+      if(!run || run.state !== 'CAPTAIN_REVIEW' || this.gefragt === run.id || this.freigabeFenster || !(this.exec && this.exec.profile === 'sedra-lokal-v1'))return;
+      this.gefragt = run.id;
+      const offen = async()=>{const d = await this.ctx.api('/api/decisions').catch(()=>null);return d ? (d.items || []).find(x=>x.mission_id === run.id && x.kind === 'gate') : null;};
+      const item = await offen();if(!item || this.dead)return;
+      const dlg = el('dialog', 't-wf-freigabe'), status = el('p', 't-wf-hint');status.setAttribute('role', 'status');this.freigabeFenster = dlg;
+      const kopf = el('div', 't-wf-freigabe-kopf'), sym = el('span', 't-wf-step-ico');sym.append(ico('human'));kopf.append(sym, el('h3', '', 'Freigabe erforderlich'));
+      const risiken = el('ul');(item.risks || []).forEach(r=>risiken.append(el('li', '', r)));
+      const zu = ()=>{if(dlg.open)dlg.close();dlg.remove();this.freigabeFenster = null;};
+      const weiter = async()=>{zu();await this.call('workflow_run', run.id, 'fortsetzen');await this.showRun(run.id);this.notice('Freigegeben, der Lauf wurde fortgesetzt.');};
+      const warten = ()=>{
+        const bis = Date.now() + 300000, tick = async()=>{
+          if(this.dead || !this.freigabeFenster)return;
+          if(!(await offen()))return this.safe(weiter);
+          if(Date.now() < bis)setTimeout(tick, 2000);else status.textContent = 'Keine Bestätigung erhalten. „Später“ wählen und im Posteingang freigeben.';
+        };
+        setTimeout(tick, 2000);
+      };
+      const antwort = way=>this.safe(async()=>{
+        status.textContent = way === 'einmal' ? 'Freigabe wird angefordert …' : 'Wird abgelehnt …';
+        try{
+          await this.ctx.shell.decide(item.id, way);
+          if(way === 'einmal')return weiter();
+          zu();await this.showRun(run.id);
+        }catch(e){
+          const text = String(e && e.message || e);
+          if(/wartet_auf_bestaetigung/.test(text)){status.textContent = 'Bestätige jetzt im Fenster von SEDRA (Windows) oder mit FREIGABE.bat. Dieses Fenster wartet und setzt den Lauf danach fort.';warten();}
+          else status.textContent = text;
+        }
+      });
+      const knoepfe = el('div', 't-wf-step-actions');
+      knoepfe.append(button('Jetzt freigeben', ()=>antwort('einmal'), true), button('Ablehnen', ()=>antwort('ablehnen')), button('Später', zu));
+      dlg.append(kopf, el('p', '', item.title || 'Lauf freigeben'), risiken, el('p', 't-wf-hint', item.note || ''), status, knoepfe);
+      dlg.addEventListener('cancel', ()=>{this.freigabeFenster = null;});
+      this.el.append(dlg);dlg.showModal();
+    },
     updateSteps(){
       if(!this.steps || this.dead)return;
       const ex = this.exec || {}, own = ex.profile === 'sedra-lokal-v1';
@@ -41,8 +79,9 @@
           sag: this.dirty() ? 'Der Workflow hat ungespeicherte Änderungen. Erst speichern, dann vorlegen.' : 'SEDRA legt den Lauf dem Captain vor. Dabei läuft noch nichts.',
           tun: ()=>{const b = button('Lauf zur Freigabe vorlegen', ()=>this.submitRun(), true);b.disabled = !bereit;return [b];}},
         {icon: 'human', titel: 'Freigeben und fortsetzen', fertig: ende,
-          sag: laufend ? 'Jetzt du: 1. Posteingang öffnen. 2. Den Eintrag „n8n: …“ mit „einmal“ freigeben. 3. Das Fenster von SEDRA bestätigen (oder FREIGABE.bat freigeben B-XXXX). 4. Hier „Fortsetzen“.' : 'Wartet auf den Lauf.',
-          tun: ()=>laufend ? [button('Posteingang öffnen', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'}), phase === 'CAPTAIN_REVIEW'),
+          sag: laufend ? 'Die Freigabe erscheint als Fenster. Mit „Jetzt freigeben“ bestätigst du sie im Windows-Fenster von SEDRA (oder mit FREIGABE.bat freigeben B-XXXX); der Lauf geht danach von selbst weiter. Sie steht auch im Posteingang.' : 'Wartet auf den Lauf.',
+          tun: ()=>laufend ? [button('Jetzt freigeben …', ()=>{this.gefragt = null;this.pruefeFreigabe({id: this.runId, state: phase});}, phase === 'CAPTAIN_REVIEW'),
+            button('Posteingang öffnen', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'})),
             button('Nach Freigabe fortsetzen', ()=>this.safe(async()=>{await this.call('workflow_run', this.runId, 'fortsetzen');await this.showRun(this.runId);}), phase !== 'CAPTAIN_REVIEW'),
             button('Lauf beenden', ()=>this.safe(async()=>{await this.call('workflow_run', this.runId, 'abbrechen');await this.showRun(this.runId);}))] : []},
         {icon: 'end', titel: 'Ergebnis', fertig: ende,
