@@ -5,6 +5,8 @@ Die Liste steht in `stick_liste.txt` neben diesem Skript. Zeilen:
     repo <pfad>        aus diesem Repository (Ordner mit / am Ende)
     bestand <pfad>     aus dem Hauptcheckout (nicht in git: Engine, portables Python)
     modul <name>       ein Python-Modul mit allen statischen Importen (sedra_runtime.*)
+    profil <art>       (SPEC_STICK_AUS_PROFIL_v1 ST-01) alle Werkzeuge, deren tool.yaml `profile:` die Art nennt, dazu alle Werkzeuge mit `grundfunktion:` und die Instrumente
+                       der Taskleiste (leiste.json) – je Werkzeug der ganze Ordner uix/tools/<id>/. `--pruefen` meldet vorher, was fehlt (ST-04).
     <quelle> <pfad> -> <ziel>   umbenannt kopieren
 Aufruf (Bau-PC):  python -I -B runtime/benchmarks/stick_paket.py --repo <worktree> --bestand <hauptcheckout> --ziel K:\\SEDRA
 Nur pruefen:      ... --pruefen        (fehlende Importe und fehlende Dateien melden, nichts kopieren)
@@ -20,6 +22,8 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+import yaml
 
 PAKET = "sedra_runtime"
 AUSSCHLUSS = {"__pycache__", ".pytest_cache", "local_paths.yaml", "local_config", ".git"}
@@ -37,6 +41,8 @@ def liste(pfad):
         teile = zeile.split()
         if teile[0] == "modul":
             eintraege.append(("modul", teile[1], teile[1]))
+        elif teile[0] == "profil" and len(teile) == 2:
+            eintraege.append(("profil", teile[1], teile[1]))
         elif teile[0] in ("repo", "bestand") and len(teile) in (2, 4):
             ziel = teile[3] if len(teile) == 4 and teile[2] == "->" else teile[1]
             eintraege.append((teile[0], teile[1], ziel))
@@ -121,12 +127,89 @@ def _sammeln(quelle_wurzel, rel):
     return ausgabe
 
 
+TOOLS = Path("runtime", "src", PAKET, "uix", "tools")
+LEISTE = Path("runtime", "src", PAKET, "uix", "shells", "harness", "leiste.json")
+
+
+def werkzeug_manifeste(repo):
+    """{id: tool-Block} aller Paket-Werkzeuge (uix/tools/<id>/tool.yaml); ein nicht lesbares steht mit leerem Block da."""
+    erg = {}
+    for ordner in sorted(Path(repo, TOOLS).glob("*")):
+        datei = ordner / "tool.yaml"
+        if not datei.is_file() or ordner.name.startswith("_"):
+            continue
+        try:
+            erg[ordner.name] = (yaml.safe_load(datei.read_text(encoding="utf-8")) or {}).get("tool") or {}
+        except (yaml.YAMLError, OSError, UnicodeDecodeError):
+            erg[ordner.name] = {}
+    return erg
+
+
+def taskleisten_zellen(repo):
+    try:
+        return [z for z in json.loads(Path(repo, LEISTE).read_text(encoding="utf-8")).get("zellen", []) if isinstance(z, str)]
+    except (OSError, ValueError):
+        return []
+
+
+def profil_werkzeuge(repo, art):
+    """ST-01: {id: Grund} der Werkzeuge des Profils – `profile` nennt die Art, Grundfunktionen, Instrumente der Taskleiste. Die Instrumente stehen auch dann da, wenn ihr Ordner fehlt (dann meldet `--pruefen` es)."""
+    erg = {}
+    for tid, man in werkzeug_manifeste(repo).items():
+        if art in (man.get("profile") or []):
+            erg[tid] = f"profile: [{art}]"
+        elif man.get("grundfunktion"):
+            erg[tid] = "Grundfunktion " + str(man["grundfunktion"])
+    for zelle in taskleisten_zellen(repo):
+        erg.setdefault(zelle, "Zelle der Taskleiste")
+    return erg
+
+
+def pruefen_vollstaendig(repo, art, paare):
+    """ST-04: was dem Profil fehlt, als Zeilen „fehlt: …“ (leer = vollständig): (a) ein Werkzeug des Profils ohne Ordner oder ohne seine `needs.apps`, (b) eine Zelle der Taskleiste ohne `gauge-*`-Ordner,
+    (c) eine Grundfunktion ohne Werkzeug im Plan."""
+    fehlt = []
+    manifeste = werkzeug_manifeste(repo)
+    gewaehlt = profil_werkzeuge(repo, art)
+    im_plan = {Path(k).parts[len(TOOLS.parts)] for k in paare if Path(k).parts[:len(TOOLS.parts)] == TOOLS.parts and len(Path(k).parts) > len(TOOLS.parts)}
+    for tid, grund in sorted(gewaehlt.items()):
+        if tid not in manifeste:
+            fehlt.append(f"fehlt: Werkzeug {tid} ({grund}) – kein Ordner uix/tools/{tid}/")
+        elif tid not in im_plan:
+            fehlt.append(f"fehlt: Werkzeug {tid} ({grund}) steht nicht im Plan")
+        for dep in ((manifeste.get(tid) or {}).get("needs") or {}).get("apps", {}) or {}:
+            if dep not in im_plan:
+                fehlt.append(f"fehlt: {dep} (braucht {tid})")
+    for tid, man in manifeste.items():
+        if man.get("grundfunktion") and tid not in im_plan:
+            fehlt.append(f"fehlt: Werkzeug {tid} der Grundfunktion {man['grundfunktion']}")
+    return sorted(set(fehlt))
+
+
+def profil_info(eintraege, repo):
+    """{art, apps: [ids], grundfunktionen: [namen]} für das Manifest (ST-05); leer, wenn die Liste keine Zeile `profil` hat."""
+    arten = [e[1] for e in eintraege if e[0] == "profil"]
+    if not arten:
+        return None
+    art = arten[0]
+    manifeste = werkzeug_manifeste(repo)
+    gewaehlt = profil_werkzeuge(repo, art)
+    return {"art": art, "apps": sorted(gewaehlt), "grundfunktionen": sorted({str(m["grundfunktion"]) for m in manifeste.values() if m.get("grundfunktion")})}
+
+
 def plan(eintraege, repo, bestand):
     """{ziel_relativ: quelldatei} fuer alle Eintraege. Module kommen aus dem Repository unter runtime/src."""
     quelle = {"repo": Path(repo), "bestand": Path(bestand)}
     paare = {}
     modul_namen = [e[1] for e in eintraege if e[0] == "modul"]
-    for art, pfad, ziel in eintraege:
+    erweitert = []
+    for art, pfad, ziel in eintraege:                         # `profil <art>` wird zu einer Zeile je Werkzeug-Ordner
+        if art == "profil":
+            erweitert += [("repo", (TOOLS / tid).as_posix() + "/", (TOOLS / tid).as_posix() + "/") for tid in sorted(profil_werkzeuge(repo, pfad))
+                          if Path(repo, TOOLS, tid).is_dir()]
+        else:
+            erweitert.append((art, pfad, ziel))
+    for art, pfad, ziel in erweitert:
         if art == "modul":
             continue
         wurzel = quelle[art]
@@ -142,13 +225,15 @@ def plan(eintraege, repo, bestand):
     return {k: v for k, v in paare.items() if _kopierbar(Path(k))}
 
 
-def manifest(ziel, eintraege_dateien, stand):
-    """STICK_MANIFEST.json: Pfad, Groesse, SHA-256 je Datei."""
+def manifest(ziel, eintraege_dateien, stand, profil=None):
+    """STICK_MANIFEST.json: Pfad, Groesse, SHA-256 je Datei; mit Profil (ST-05) dazu `profil {art, apps, grundfunktionen}`."""
     eintraege = []
     for rel in sorted(eintraege_dateien):
         pfad = Path(ziel, rel)
         eintraege.append({"pfad": rel.replace(os.sep, "/"), "groesse": pfad.stat().st_size, "sha256": _hash(pfad)})
     daten = {"schema": 1, "stand": stand, "dateien": eintraege}
+    if profil:
+        daten["profil"] = profil
     Path(ziel, "STICK_MANIFEST.json").write_text(json.dumps(daten, indent=1, ensure_ascii=False), encoding="utf-8")
     return daten
 
@@ -188,14 +273,24 @@ def main(argv=None):
     p.add_argument("--liste", default=str(HERE / "stick_liste.txt"))
     p.add_argument("--pruefen", action="store_true")
     a = p.parse_args(argv)
-    paare = plan(liste(a.liste), a.repo, a.bestand)
+    eintraege = liste(a.liste)
+    paare = plan(eintraege, a.repo, a.bestand)
+    info = profil_info(eintraege, a.repo)
+    fehlt = pruefen_vollstaendig(a.repo, info["art"], paare) if info else []
     if a.pruefen:
         print(f"{len(paare)} Dateien im Plan")
         for schluessel in sorted(paare):
             print(schluessel)
-        return 0
+        for zeile in fehlt:
+            print(zeile)
+        return 1 if fehlt else 0
+    if fehlt:                                                  # ST-04: vor dem Kopieren abbrechen
+        print("Abbruch, dem Profil fehlt etwas:")
+        for zeile in fehlt:
+            print(zeile)
+        return 1
     rel = kopieren(paare, a.ziel)
-    daten = manifest(a.ziel, rel, _stand(a.repo))
+    daten = manifest(a.ziel, rel, _stand(a.repo), info)
     print(f"{len(daten['dateien'])} Dateien, {sum(d['groesse'] for d in daten['dateien'])} Byte, Manifest STICK_MANIFEST.json")
     return 0
 
