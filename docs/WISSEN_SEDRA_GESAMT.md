@@ -364,8 +364,55 @@ Der Chat setzte `docs/ROADMAP_ONE_SEDRA_APPS_KERN_SHELL_2026-11-05.md` aus einem
 3. Abnahme am PC für alle Schalter (`app_berechtigung`, `dienste`, `zugang_berechtigung`, `betrieb_unternehmen`).
 4. A3 Übersicht, Minimal-Profil, AM6, G2-09, AM7-07/08/09/10/15/18, AM8-10..12, microVM.
 
+## 19. Arbeit im Chat vom 11.–12.11.2026 (Claude Code: Dritte Ebene Arbeitsanweisung, A/B-Bau, Konsens)
+
+Der Chat baute zuerst die dritte Ebene „Arbeitsanweisung“ unter Verfassung und Gesetzen, prüfte sie dann mit echten Sedra-Bauten (A/B mit und ohne Anweisung) und entwarf daraus den Konsens-Bau (mehrere Läufe, Mehrheit über das Verhalten). Alles liegt auf `main` und ist gepusht (bis `ca92f19`), bis auf die Versuchsfassung `bau_coder_b.md`.
+
+**Gebaut (Commits auf `main`):**
+- Dritte Ebene (`70f6918`, Logbuch `e3fd38e`): `lade_arbeitsanweisung` mit Härtung (nur einschränken: Werkzeuge ⊆ Gesetze, Cloud nur für Cloud-Aufgaben, keine Rechte; ASCII-Typ, höchstens 20000 Byte Datei und 8000 Zeichen Text), `Manager.arbeitsanweisung`, Anschluss an den Cloud-Coder (`kanal.py`), alle 10 Harness-Vorlagen mit Feld `arbeitsanweisung` (Hash der Vorlage nimmt den Text auf), Dateien unter `runtime/config/manager/arbeitsanweisungen/` (`grundregeln`, `bau`, `manager`, `code_und_spec_des_baus`, `bau_coder`), englische `verfassung.en.md` und `gesetze.en.md` (Hash der Quelle im Kopf, `gesetze.en.md` noch nicht freigegeben), Übersetzer `manager/uebersetzung.py` mit Strukturprüfung und `benchmarks/anweisung_uebersetzen.py` (erzeugen, status, freigeben; nur der Captain gibt frei).
+- A/B-Werkzeug (`705a1df`, Logbuch `23a0e69`): `benchmarks/ab_bau.py` (Plan ohne `--start`, Vorprüfung GPU und RAM, abwechselnde Paare, Differenztest gegen die Referenz), `benchmarks/ab_diff/<spec>.py`, `--anweisung-sprache` in `devvm_build.py`, Anweisung in `bau_schleife.py` standardmäßig AUS, `bau_coder.en.md` (vom Captain freigegeben).
+- Rote Tests (`337b475`): `test_keine_alten_namen` mit begründeter Ausnahmeliste, `test_orchestra_guard` prüft GR-029 bis GR-038 statt der letzten zehn Regeln.
+- Konsens (`d0f6e85`, `c91228b`, `a9bfd4e`, `0b8cad9`, Logbuch `ca92f19`): `docs/KONZEPT_KONSENS_BAU_2026-11-11.md`, `benchmarks/konsens.py` (Mehrheit je Fall, Streitfälle, Befunde, gemeinsame Fehler als Antrag), `HILFEN` in den Differenzdateien (für Dateien, Zeit, Zustand), Differenzfälle für `am0_shell_regeln` (8430), `am0_gate_texte` (1462), `am0_herkunft` (554).
+- Spec-Schärfungen: `am0_shell_regeln` (`e2c448f`), `am0_herkunft` (`d819543`), je mit neuen Randfällen im versteckten Test, Referenz besteht, Stempel erneuert.
+- Regressionsprobe (`584f7dd`): `devvm_build.py` führt nach jeder Stufe die versteckten Tests der früheren Stufen auf dem aktuellen Arbeitsbereich aus (Ausgabe `REGRESSION`), Abschalten mit `--no-regression-check`.
+- Register (außerhalb des Repos): `SEDRA-ANWEISUNG-01`, `SEDRA-AB-BAU-01`, `SEDRA-KONSENS-01`, Dashboard neu gerendert.
+
+**Messungen (je 5 Läufe je Arm, alle Bauten mit `ab_bau.py`, Ergebnisse unter `<sedra>/workspace/SEDRA_OS/runtime_data/ab_bau/<spec>_<zeit>/`):**
+- `am3_rechte_diff` (3 Paare): kein Unterschied, +21 % Prompt-Token.
+- `am3_berechtigung` (1044 Fälle): Dauer im Median ohne 167 s, `bau_coder:de` 129 und 134 s, `bau_coder:en` 146 s; Läufe ohne Abweichung 3/5, 3/5, 1/5, 3/5. Kein Qualitätssignal, Englisch nicht besser.
+- `am0_shell_regeln` (8430 Fälle): Dauer im Mittel ohne 147 s, Deutsch 111 s (in 5 von 5 Paaren schneller); Abweichungen Median beide 72; 0/5 saubere Läufe.
+- `am0_herkunft` (4 Stufen, 554 Fälle): mit Anweisung schlechter. Abweichungen im Mittel 38,6 gegen 3,0, Nacharbeiten 2,2 gegen 1,0. Neumessung auf der geschärften Spec: ohne 5 von 5 bestanden, mit Anweisung 2 von 5 (drei scheitern in Stufe 1 an Punkt-Namen trotz drei Nacharbeiten), Dauer im Median 213 gegen 298 s.
+- Ursache (aus den Gesprächen unter `runtime_data/devvm_replays/`): Ohne Anweisung geht das Modell die Aufgabe vor der Abgabe Punkt für Punkt noch einmal durch (20,2 und 29,0 Prüfwörter je Lauf wie Haken, „re-read“, „verify“), mit Anweisung 0,0 und 0,0. Vermutung, nicht geprüft: Regel 6 („Datei lesen, kompilieren, Import geht“) engt das Prüfen auf Syntax ein.
+- Konsens-Rückblick (Wahl nach Mehrheit gegen zufällige Wahl, ohne GPU): `am3_berechtigung` N=5 58 %, N=3 38 % weniger Abweichungen; `am0_herkunft` N=5 49 %, N=3 31 %; `am0_shell_regeln` nur 14 bis 17 %, weil 8 von 10 Kandidaten denselben Fehler teilen. Hinweis, kein Beweis (wenige Specs, überlappende Teilmengen).
+- Befund: Ein Endkandidat (`am0_shell_regeln`, `4_ohne`) verletzte in Stufe 2 die Pfadprüfung aus Stufe 1, der Bau meldete trotzdem „bestanden“. Daraus die Regressionsprobe.
+
+**Entscheidungen des Captains:**
+- 11.11.: Arbeitsanweisung als dritte Ebene unter Verfassung und Gesetzen; Anschluss an Manager-Lauf, Coder und Bau-Pipeline; englische Fassung von Verfassung und Gesetzen und ein Übersetzer, der auch schärft, mit Strukturprüfungen; alle Vorlagen auf ein einheitliches System; echter Sedra-Bau-Test statt Attrappe; Standardtest für A/B-Vergleiche; `bau_coder.en.md` freigegeben; mehrfach Ja für Merge und Push.
+- 11.11.: Idee Self-Consistency (mehrere Ausgaben, Mehrheit); Reihenfolge der Umsetzung bestätigt; Hinweis, dass es sich eher bei größeren Aufgaben lohnt.
+- 12.11.: Es gibt keine Langdock-Zugangsdaten (an die Roadmap-Sitzung weitergegeben: A7 nur mit Attrappe); Messlauf der Variante wegen eines Termins um 8:45 abgebrochen und verschoben; vor dem Testlauf den Coder überarbeiten.
+
+**Fallen und Praxiswissen:**
+- Skripte in Bash-Heredocs mit Backslash, Umlauten oder Anführungszeichen schrieben echte Zeilenumbrüche in den Quelltext: Datei-Werkzeuge (Write, Edit) benutzen.
+- Python mit `-I` blendet das Arbeitsverzeichnis aus; ein Test, der das Modul des Kandidaten importiert, scheitert dann mit `ModuleNotFoundError`.
+- Die Strukturprüfung der Übersetzung sieht keine Wortbedeutung (zwei Bedeutungsfehler fand erst die Rückübersetzung); Rückübersetzung und Durchsicht des Captains bleiben nötig.
+- „Bestanden“ heißt nicht richtig: Der Differenztest fand Abweichungen, die alle versteckten Tests bestanden; die Tests prüften Punkt-Namen nur an Dateien, nicht an Ordnern.
+- Der Differenztest sortiert Wörterbücher beim Vergleich: Eine Sortier-Anforderung braucht eine Hilfe, die eine Liste von Paaren zurückgibt.
+- `bekannte_fehler.json` greift nur, wenn eine Stufe mit genau diesem Fehlertext scheitert; Fehler, die nur der Differenztest findet, gehören in die Spec.
+- Die RAM-Sperre der Vorprüfung (mindestens 12 GB frei) schwankt (10,8 bis 13,9 GB gemessen); der Modellserver belegt rund 8,5 GB, die `node`-Prozesse der MCP-Server je 40 bis 60 MB, die NVIDIA-Prozesse zusammen rund 0,9 GB.
+- Einen Messlauf nur über die eigene Prozesskette stoppen (PID-Datei, dann `ab_bau`, `devvm_build`, `llama-server` von oben nach unten), nie per Namensmuster; der Router (`llama-server --models-preset`) und Server anderer Sitzungen bleiben unberührt.
+
+**Tests (zuletzt 12.11.):** `test_konsens` 18, `test_ab_bau` 16, `test_devvm_regression` 6; zusammen mit `test_manager_arbeitsanweisung`, `_uebersetzung`, `_haertung` 65 Tests grün. Die volle Suite wurde nach den letzten Änderungen nicht neu gefahren.
+
+**Offen:**
+1. Messung der Variante `bau_coder_b` (Regel 6: geschriebene Prüfliste, Regel 9 nennt das Geprüfte; bewusst ohne Hinweise auf Fälle einer Spec): `python benchmarks/ab_bau.py am0_herkunft --paare 5 --arme ohne,bau_coder_b:de --start`, etwa 40 Minuten, Vorprüfung vorher (GPU frei, RAM ab 12 GB). Danach Gegenprobe auf `am0_shell_regeln`. Wirkt sie nicht, bleibt die Anweisung aus.
+2. Konsens Punkt 4 und 5 (Manager und Übersetzer, Wissensabfragen mit Rangfusion), Vorlagenfeld `konsens`, Schleifen-Option `--konsens`; Messung an einer größeren Aufgabe (`n8n_modell_umstellen` braucht noch Differenzfälle).
+3. `gesetze.en.md` nicht freigegeben; weitere englische Fassungen (`bau`, `grundregeln`, `manager`, `code_und_spec_des_baus`) nicht erzeugt.
+4. Register: `MAIN_VERIFIED` nicht gesetzt (kein Testerbericht).
+5. Nicht angefasst, gehören anderen Sitzungen: `KOORDINATION_SEDRA/`, `runtime/config/cloud_providers.yaml.bak_vor_nvidia_20261109`, `PROJEKT_DASHBOARD.html`, `INDEX.md`, `build_index.py`, `dashboard_data.json`.
+
 ## 9. Alle Chats (Sitzungen), nach Datum
 **Sedra Vorarbeiter (Gruppe):**
+- 11.–12.11. Claude Code, Chat „Dritte Ebene Arbeitsanweisung, A/B-Bau, Konsens“: Arbeitsanweisung unter Verfassung und Gesetzen mit englischer Fassung und Übersetzer, A/B-Messungen auf vier Specs (Anweisung schadet bei größerer Aufgabe), Konsens-Bau (Konzept, `konsens.py`), Regressionsprobe früherer Stufen, geschärfte Specs; `main` bis `ca92f19` (siehe Abschnitt 19), Variante `bau_coder_b` noch nicht gemessen.
 - 11.–12.11. Claude Code, Chat „Roadmap-Paket Apps, Kern, Shell“: A5 bis A9 und A3 Team gebaut, gemergt, gepusht (`main` bis `5b7c530`), Fehler `server_aus` untersucht, Fix für `server_aus` auf Branch `fix-router-alive`, drei neue Skills `sedra-app-anlegen`, `sedra-paket-ablauf`, Sammelskript-Vorlage (siehe Abschnitt 18).
 - 10.–11.11. Claude Code, Chat „KV-Pool, Team, Manager-Werkzeug, Wiederherstellungs-ZIP“: gemeinsamer KV-Pool, Team-Rezepte und Profil `team-35b`, Werkzeug `auftraege_verteilen` (Manager und Harness mit Karte), Register und Dashboard, Backup-Stand und Entwickler-ZIP mit Wiederherstellung (siehe Abschnitt 17).
 - 10.11. Claude Code, Chat „Vorarbeiter: Specs, Postfach zum Coder, GPU-Messung“: Specs Fabrik-Control V2, Vorschau-Ausbau, Vorarbeiter-Kanal, Modellmenü, RAM freimachen; Postfach zum Coder (Pi); Prüfung von Commit `dcf8dde`; Messung der Grafikspeicher mit Monitor am Mainboard (siehe Abschnitt 16).
