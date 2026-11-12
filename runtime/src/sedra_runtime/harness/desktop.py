@@ -56,6 +56,9 @@ def _profile(projekt_root):
     return Path(projekt_root).joinpath(*ORDNER, 'profile')
 
 
+VORLAGEN = Path(__file__).resolve().parents[1] / 'uix' / 'shells' / 'harness' / 'profile'     # PR-30: die Vorlagen liegen im Paket, nur lesen
+
+
 def _schreiben(pfad, daten):
     pfad.parent.mkdir(parents=True, exist_ok=True)
     tmp = pfad.with_suffix('.tmp')
@@ -202,12 +205,12 @@ def laden(projekt_root):
         profil = roh.get('profil') if isinstance(roh.get('profil'), str) and PROFIL_ID.match(roh['profil']) else None
     except (OSError, ValueError, AttributeError):
         wahl, profil = _leer(), None
-    return dict(wahl, profil=profil, profile=profile_liste(projekt_root))
+    return dict(wahl, profil=profil, profile=profile_liste(projekt_root), vorlagen=vorlagen_liste())
 
 
 def _sichern(projekt_root, wahl, profil):
     _schreiben(_datei(projekt_root), dict(wahl, profil=profil))
-    return dict(wahl, profil=profil, profile=profile_liste(projekt_root))
+    return dict(wahl, profil=profil, profile=profile_liste(projekt_root), vorlagen=vorlagen_liste())
 
 
 def speichern(projekt_root, aenderung):
@@ -285,6 +288,38 @@ def profil_loeschen(projekt_root, pid):
     return jetzt
 
 
+# ---- Vorlagen (SPEC_PROFILE_v1 PR-30, PR-34): ein Profil, das im Paket liegt. Übernehmen kopiert es einmal in die Profile des Projekts und wendet die Kopie an;
+# eine vorhandene Kopie bleibt, wie sie ist (PR-E2: ein Update ändert die Vorlage, nie das Profil des Nutzers).
+def vorlagen_liste():
+    out = []
+    for p in sorted(VORLAGEN.glob('*.json')):
+        try:
+            d = json.loads(p.read_text(encoding='utf-8'))
+            pruefen(bereinigt({k: d.get(k) for k in TEILE}))
+            if PROFIL_ID.match(p.stem) and isinstance(d, dict):
+                out.append({'id': p.stem, 'name': str(d.get('name') or p.stem)[:60], 'beschreibung': str(d.get('beschreibung') or '')[:200]})
+        except (OSError, ValueError):
+            continue
+    return out
+
+
+def vorlage_lesen(vid):
+    vid = _profil_id(vid)
+    try:
+        d = json.loads((VORLAGEN / (vid + '.json')).read_text(encoding='utf-8'))
+        return dict(pruefen(bereinigt({k: d.get(k) for k in TEILE})), id=vid, name=str(d.get('name') or vid)[:60], auftraggeber=str(d.get('auftraggeber') or '')[:60],
+                    beschreibung=str(d.get('beschreibung') or '')[:200])
+    except (OSError, ValueError, AttributeError):
+        raise ValueError('vorlage_unbekannt')
+
+
+def vorlage_uebernehmen(projekt_root, vid):
+    v = vorlage_lesen(vid)
+    if v['id'] not in [p['id'] for p in profile_liste(projekt_root)]:
+        profil_speichern(projekt_root, v['id'], v['name'], v['auftraggeber'], v['beschreibung'], {k: v[k] for k in TEILE})
+    return profil_anwenden(projekt_root, v['id'])
+
+
 def aktion(projekt_root, payload):
     """Die Profil-Aktionen des POST: profil_speichern {id, name, auftraggeber?, beschreibung?} · profil_anwenden {id} · profil_loeschen {id} · profil_importieren {profil: {...}}."""
     a = payload.get('aktion')
@@ -296,10 +331,12 @@ def aktion(projekt_root, payload):
         return profil_anwenden(projekt_root, payload.get('id'))
     if a == 'profil_loeschen':
         return profil_loeschen(projekt_root, payload.get('id'))
+    if a == 'vorlage_uebernehmen':
+        return vorlage_uebernehmen(projekt_root, payload.get('id'))
     if a == 'profil_importieren':
         p = payload.get('profil')
         if not isinstance(p, dict):
             raise ValueError('profil_fehlt')
         profil_speichern(projekt_root, p.get('id'), p.get('name'), p.get('auftraggeber'), p.get('beschreibung'), {k: p.get(k) for k in TEILE})
         return laden(projekt_root)
-    raise ValueError('aktion_unbekannt: profil_speichern, profil_anwenden, profil_loeschen, profil_importieren')
+    raise ValueError('aktion_unbekannt: profil_speichern, profil_anwenden, profil_loeschen, profil_importieren, vorlage_uebernehmen')

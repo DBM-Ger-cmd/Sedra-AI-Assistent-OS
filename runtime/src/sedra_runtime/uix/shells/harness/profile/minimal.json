@@ -1,0 +1,62 @@
+{
+ "name": "Minimal",
+ "auftraggeber": "",
+ "beschreibung": "Ersatz der Minimal-Shell: acht Felder und die Grundfunktionen, Taskleiste nur Freigaben und Modell.",
+ "start": {
+  "ausblenden": [
+   "meter",
+   "hardware",
+   "gateway",
+   "uebersetzung",
+   "transkript",
+   "aufnahme",
+   "translator",
+   "uebersicht",
+   "team",
+   "planung",
+   "org",
+   "routines",
+   "slots",
+   "wissen-suche",
+   "wissen-quellen",
+   "wissen-vorschlaege",
+   "wissen-eigenes",
+   "wissen-messung",
+   "wissen-index",
+   "wissen-nachmessung",
+   "labor"
+  ],
+  "zuordnung": {}
+ },
+ "zellen": {
+  "ausblenden": [
+   "gauge-temp",
+   "gauge-vram",
+   "gauge-ram",
+   "gauge-server",
+   "gauge-scheduler",
+   "gauge-state"
+  ],
+  "reihenfolge": []
+ },
+ "marke": {
+  "name": "",
+  "akzent": "",
+  "logo": "",
+  "schrift": ""
+ },
+ "startseite": {
+  "ort": "",
+  "titel": "",
+  "text": ""
+ },
+ "layout": {
+  "menue": {
+   "reihenfolge": [],
+   "ausblenden": [
+    "zuletzt",
+    "blick"
+   ]
+  }
+ }
+}

@@ -160,6 +160,13 @@
     const neu = d().el('div', 'hs-einst-zeile'); neu.append(pid, pn, pa, pb, d().button('Als Profil speichern',
       tun('Profil gespeichert.', ()=>D.aktion(S, {aktion: 'profil_speichern', id: pid.value.trim(), name: pn.value, auftraggeber: pa.value, beschreibung: pb.value}))));
     feld.append(neu);
+    // Vorlagen aus dem Paket (nur lesen): Übernehmen kopiert sie einmal in die Profile und wendet sie an
+    (w.vorlagen || []).forEach(v=>{
+      const z = d().el('div', 'hs-einst-zeile hs-builder-vorlage'); z.dataset.vorlage = v.id;
+      z.append(d().el('b', 'hs-einst-label', 'Vorlage ' + v.name), d().el('small', 'hs-leise', v.beschreibung),
+        d().button('Übernehmen', tun('Die Vorlage gilt jetzt.', ()=>D.aktion(S, {aktion: 'vorlage_uebernehmen', id: v.id}))));
+      feld.append(z);
+    });
     // Vorhandene Profile
     feld.append(d().el('h3', 'hs-ueber', 'Profile (' + w.profile.length + ')' + (w.profil ? ' · gilt: ' + w.profil : '')));
     const text = d().el('textarea', 'hs-builder-json'); text.rows = 8; text.placeholder = 'Hier erscheint ein exportiertes Profil; zum Importieren ein Profil einfügen.'; text.setAttribute('aria-label', 'Profil als JSON');
