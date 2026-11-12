@@ -28,6 +28,10 @@ Das Register liegt außerhalb des Repos. Eine Registeränderung ist kein Commit.
 6. **Kopieren.** `KOORDINATOR_DASHBOARD.html` aus dem Paketordner nach `<umgebung>\` kopieren und mit `cmp` vergleichen.
 7. **Melden.** ID, alter und neuer Status, Beleg, voller Pfad des Dashboards.
 
+## Mehrere Aufträge auf einmal
+
+Nach einem Paket (mehrere Teile gemergt und gepusht) nicht Eintrag für Eintrag ändern, sondern die Vorlage `sammelskript_vorlage.py` in diesem Ordner kopieren und ausfüllen. Sie sichert zuerst, überspringt vorhandene IDs, setzt `MERGED` mit Commit und Freigabetext und aktualisiert die Baseline (`last_reported_local_main`, `origin_main`, `live_verification_evidence`). In `notes` stehen "Nicht gebaut" und "Nicht am PC geprüft" für jeden Teil. Danach Schritt 4 bis 7 wie oben. Der Ablauf des Pakets steht im Skill `sedra-paket-ablauf`.
+
 ## Felder eines Eintrags
 
 `id`, `title`, `track`, `owner`, `priority` (P0 bis P3), `status`, `depends_on`, `scope`, `acceptance`, `source`, `notes`, `candidate_paths`, `assigned_coder`, `base_commit`, `integration_commit`, `tester_report`, `captain_approval`, `last_verified_at`.
