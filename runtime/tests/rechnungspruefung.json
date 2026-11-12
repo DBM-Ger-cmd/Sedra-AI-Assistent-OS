@@ -1,0 +1,508 @@
+{
+  "name": "Rechnungsprüfung",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "18de56f7-850a-4c91-8b2c-181d2f336064",
+              "leftValue": "={{ $json.gesamtstatus }}",
+              "rightValue": "=ALLE POSITIONEN STIMMEN ÜBEREIN",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3aa4a699-0833-439d-8f41-5a0c50a8ec8b",
+      "name": "Prüfung",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1584,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "84e8d2c2-6f62-421a-ae2b-547bdf1b3951",
+              "name": "Prüfstatus",
+              "value": "MANUELLE PRÜFUNG ERFORDERLICH",
+              "type": "string"
+            },
+            {
+              "id": "d7e04b9c-1b5b-4a3b-b0d9-4851583584f8",
+              "name": "Rechnungsnummer",
+              "value": "={{ $('Rechnungstext vorbereiten').first().json.Rechnungsnummer }}",
+              "type": "string"
+            },
+            {
+              "id": "2a9df013-b0fc-418e-ba80-16929e50a301",
+              "name": "Benachrichtigung",
+              "value": "Sachbearbeitung informieren: Abweichung zwischen Rechnung und Auftrag festgestellt.",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "5ad4704b-77ff-48c1-8776-552523e5f48c",
+      "name": "Klärung erforderlich",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1808,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Rechnungsprüfung",
+        "formDescription": "Bitte lade eine Rechnung als PDF-Datei hoch.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Rechnung",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        96
+      ],
+      "id": "19fce0c4-69ba-4fb8-8c2d-133592d53dfe",
+      "name": "Rechnungsprüfung",
+      "webhookId": "570328a5-59d9-4c16-88cf-3343e2faab68"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "Rechnung",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        96
+      ],
+      "id": "6e45ad36-6a20-416b-8589-84ad8fc8349e",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "Rechnungsnummer",
+              "description": "Rechnungsnummer des Dokuments, Nur Angaben aus der Rechnung übernehmen. Fehlende oder nicht eindeutig erkennbare Werte nicht erfinden"
+            },
+            {
+              "name": "Rechnungsbetrag",
+              "type": "number",
+              "description": "Gesamter Rechnungsbetrag brutto in Euro"
+            },
+            {
+              "name": "Rechnungsdatum",
+              "description": "Rechnungsdatum im Format JJJJ-MM-TT"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        528,
+        304
+      ],
+      "id": "f6735c3a-8a7a-4d0e-b1eb-b3148d0316c1",
+      "name": "Information Extractor"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "42e571d6-7bec-4903-a3be-442d16670c7b",
+              "name": "Rechnungstext",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "ec61f671-a6cd-4446-a1a2-3d785d18584d",
+              "name": "Rechnungsnummer",
+              "value": "={{ ($json.text.match(/RE-(?:ST|NO)-\\d{4}-\\d+/) || [])[0] || 'Nicht erkannt' }}",
+              "type": "string"
+            },
+            {
+              "id": "fffcbfdb-5455-46b5-8441-e910406f52db",
+              "name": "Rechnungsbetrag",
+              "value": "={{ (() => { const m = $json.text.match(/Gesamt\\s+brutto\\s*:?\\s*([\\d.]+,\\d{2})/i); return m ? Number(m[1].replace(/\\./g, '').replace(',', '.')) : null; })() }}",
+              "type": "number"
+            },
+            {
+              "id": "6d1b2744-589b-4e65-905f-9acebfa07c0e",
+              "name": "Auftragsnummer",
+              "value": "={{ ($json.text.match(/AUF-\\d{4}-[A-Z]+-\\d+/) || [])[0] || 'Nicht erkannt' }}",
+              "type": "string"
+            },
+            {
+              "id": "551da289-e9ff-4428-878e-94f6108fb5ed",
+              "name": "Rechnungspositionen",
+              "value": "={{ [...new Set(($json.text.match(/\\b\\d{2}\\.\\d{2}\\.\\d{4}\\b/g) || []).filter(v => !/^\\d{2}\\.\\d{2}\\.20\\d{2}$/.test(v)))] }}",
+              "type": "string"
+            },
+            {
+              "id": "e5a1865b-2653-4900-b484-1fee323ef984",
+              "name": "Positionsdetails",
+              "value": "={{ [...$json.text.matchAll(/(\\d{2}\\.\\d{2}\\.\\d{4})\\s+(\\d+)\\s+(psch\\.|Stk\\.|m²|m)\\s+([\\d.]+,\\d{2})\\s+([\\d.]+,\\d{2})/g)].map(m => ({ position: m[1], menge: Number(m[2]), einheit: m[3], einzelpreis: Number(m[4].replace(/\\./g,'').replace(',','.')), gesamtpreis: Number(m[5].replace(/\\./g,'').replace(',','.')) })) }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        96
+      ],
+      "id": "072ef770-3c94-4ee0-a90e-6f156d41f79b",
+      "name": "Rechnungstext vorbereiten"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        624,
+        464
+      ],
+      "id": "67fd07e7-9693-4d7f-9b52-4012954bbe20",
+      "name": "Anthropic Chat Model"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "6d2hfWppKmkE3yoR",
+          "mode": "list",
+          "cachedResultName": "Kosten bersicht",
+          "cachedResultUrl": "/projects/nQH835Idno6bTSIn/datatables/6d2hfWppKmkE3yoR"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "rechnungsnummer",
+              "keyValue": "={{ $('Rechnungstext vorbereiten').first().json.Rechnungsnummer }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "rechnungsnummer": "={{ $('Rechnungstext vorbereiten').first().json.Rechnungsnummer }}",
+            "rechnungsbetrag": "={{ $('Rechnungstext vorbereiten').first().json.Rechnungsbetrag }}",
+            "auftragsbetrag": "={{ $('Auftragsdaten abrufen').first().json.gesamt_brutto }}",
+            "pruefstatus": "={{ $json.gesamtstatus }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "rechnungsnummer",
+              "displayName": "rechnungsnummer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "rechnungsbetrag",
+              "displayName": "rechnungsbetrag",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "auftragsbetrag",
+              "displayName": "auftragsbetrag",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "pruefstatus",
+              "displayName": "pruefstatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f3f01956-1aba-4e44-9848-7f8ec148df0b",
+      "name": "Kostenübersicht",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1808,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst text = $('Rechnungstext vorbereiten').first().json.Rechnungstext;\n\nconst zahl = s => Number(s.replace(/\\./g, '').replace(',', '.'));\n\nconst starts = [...text.matchAll(\n  /^(\\d{2}\\.\\d{2}\\.\\d{4})(?=\\s|$)/gm\n)].filter(m => !/^\\d{2}\\.\\d{2}\\.20\\d{2}$/.test(m[1]));\n\nconst positionen = [];\nconst lesefehler = [];\n\nfor (let i = 0; i < starts.length; i++) {\n  const position = starts[i][1];\n  const beginn = starts[i].index + starts[i][0].length;\n  const ende = i + 1 < starts.length\n    ? starts[i + 1].index\n    : text.length;\n\n  const abschnitt = text.slice(beginn, ende);\n\n  const zahlen = [...abschnitt.matchAll(\n    /(\\d+)\\s+(psch\\.|Stk\\.|m²|m)\\s+([\\d.]+,\\d{2})\\s+([\\d.]+,\\d{2})(?=\\s|$)/g\n  )];\n\n  if (zahlen.length !== 1) {\n    lesefehler.push({\n      position,\n      grund: 'Zahlen nicht eindeutig erkannt'\n    });\n    continue;\n  }\n\n  const m = zahlen[0];\n  const menge = Number(m[1]);\n  const einzelpreis = zahl(m[3]);\n  const gesamtpreis = zahl(m[4]);\n  const berechnet = Math.round(menge * einzelpreis * 100) / 100;\n\n  positionen.push({\n    position,\n    menge,\n    einzelpreis,\n    gesamtpreis,\n    berechnet,\n    korrekt: Math.abs(berechnet - gesamtpreis) < 0.01\n  });\n}\n\nreturn [{\n  json: {\n    anzahl: positionen.length,\n    positionen,\n    lesefehler,\n    status: lesefehler.length === 0 && positionen.length > 0\n      ? 'Positionen ausgelesen'\n      : 'MANUELLE PRÜFUNG ERFORDERLICH'\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        96
+      ],
+      "id": "553c9d20-c3d7-4276-b512-faf9370bb8ec",
+      "name": "Rechnungspositionen auslesen"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst rechnung = $('Rechnungspositionen auslesen').first().json.positionen;\nconst auftrag = $('Auftragspositionen abrufen').all().map(item => item.json);\n\nconst cent = n => Math.round(Number(n) * 100);\n\nconst ergebnisse = rechnung.map(r => {\n  const a = auftrag.find(p => p.lv_position === r.position);\n\n  if (!a) {\n    return {\n      position: r.position,\n      status: 'NICHT IM AUFTRAG'\n    };\n  }\n\n  const mengenOK = r.menge === Number(a.menge);\n  const preisOK = cent(r.einzelpreis) === cent(a.einzelpreis_netto);\n  const summeOK = cent(r.gesamtpreis) === cent(a.gesamtpreis_netto);\n  const rechnungOK = r.korrekt === true;\n\n  return {\n    position: r.position,\n    menge_rechnung: r.menge,\n    menge_auftrag: Number(a.menge),\n    einzelpreis_rechnung: r.einzelpreis,\n    einzelpreis_auftrag: Number(a.einzelpreis_netto),\n    summe_rechnung: r.gesamtpreis,\n    summe_auftrag: Number(a.gesamtpreis_netto),\n    status: mengenOK && preisOK && summeOK && rechnungOK\n      ? 'OK'\n      : 'ABWEICHUNG'\n  };\n});\n\nconst fehlendePositionen = auftrag\n  .filter(a => !rechnung.some(r => r.position === a.lv_position))\n  .map(a => a.lv_position);\n\nreturn [{\n  json: {\n    gepruefte_positionen: ergebnisse.length,\n    ergebnisse,\n    fehlende_auftragspositionen: fehlendePositionen,\n    gesamtstatus:\n      ergebnisse.length === auftrag.length &&\n      ergebnisse.every(e => e.status === 'OK') &&\n      fehlendePositionen.length === 0\n        ? 'ALLE POSITIONEN STIMMEN ÜBEREIN'\n        : 'PRÜFUNG ERFORDERLICH'\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        96
+      ],
+      "id": "a9a37053-f029-4106-b1f9-76f079738821",
+      "name": "Rechnung mit Auftrag vergleichen"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "OLYQwZYR84HcK95S",
+          "mode": "list",
+          "cachedResultName": "Auftraege",
+          "cachedResultUrl": "/projects/nQH835Idno6bTSIn/datatables/OLYQwZYR84HcK95S"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "auftragsnummer",
+              "keyValue": "={{ $('Rechnungstext vorbereiten').first().json.Auftragsnummer.trim() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        96
+      ],
+      "id": "c43d0cb3-4af9-4af9-951f-a74bcd2708ea",
+      "name": "Auftragsdaten abrufen"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "DZb8EAF0WxXl1e9v",
+          "mode": "list",
+          "cachedResultName": "Auftragspositionen",
+          "cachedResultUrl": "/projects/nQH835Idno6bTSIn/datatables/DZb8EAF0WxXl1e9v"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "auftragsnummer",
+              "keyValue": "={{ $json.auftragsnummer }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        96
+      ],
+      "id": "587dbb96-d59f-4981-a668-1f4fc5338425",
+      "name": "Auftragspositionen abrufen"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Prüfung": {
+      "main": [
+        [
+          {
+            "node": "Kostenübersicht",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Klärung erforderlich",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rechnungsprüfung": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Rechnungstext vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rechnungstext vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Rechnungspositionen auslesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rechnungspositionen auslesen": {
+      "main": [
+        [
+          {
+            "node": "Auftragsdaten abrufen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rechnung mit Auftrag vergleichen": {
+      "main": [
+        [
+          {
+            "node": "Prüfung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auftragsdaten abrufen": {
+      "main": [
+        [
+          {
+            "node": "Auftragspositionen abrufen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auftragspositionen abrufen": {
+      "main": [
+        [
+          {
+            "node": "Rechnung mit Auftrag vergleichen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0c87ae47-8451-4f7b-b55e-006cc8617844",
+  "meta": {
+    "instanceId": "89355bad4b10d03d8f338abec1917564543290ecc761f3c5f3c2fb336c8b91f6"
+  },
+  "nodeGroups": [],
+  "id": "s88QK2tPWj0iPN8Y",
+  "tags": []
+}

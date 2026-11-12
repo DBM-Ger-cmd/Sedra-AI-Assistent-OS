@@ -11,6 +11,7 @@ import uuid
 from copy import deepcopy
 
 from .policy import assessment
+from . import lokal
 from .schema import MAX_BYTES, MAX_NODES, VERSIONS, report, strict_json
 
 SAETZE = {
@@ -544,6 +545,7 @@ def vorschau(text, dateiname=None):
     except ValueError as exc:
         return dict(leer, name=(doc.get('name') if isinstance(doc, dict) else '') or '', aenderungen=aenderungen, fehler={'code': str(exc), 'satz': SAETZE.get(str(exc), 'Die Datei ließ sich nicht prüfen (' + str(exc) + ').')})
     nodes = doc['nodes']
+    eigen = lokal.bewerten(doc)
     funde, zeilen = [], []
     zugang = []
     # --- Neue Analyse ---
@@ -568,7 +570,7 @@ def vorschau(text, dateiname=None):
             funde.append({'stufe': 'warn', 'text': 'Geheimnis-Erkennung: %d Einträge mit verdächtigen Werten (%s). Werte werden nicht angezeigt und nicht gespeichert.' % (len(funde_knoten), ', '.join(set(g['knoten'] for g in funde_knoten))[:120])})
     for n in nodes:
         notiz = str(n['type']).endswith('stickyNote')
-        unterstuetzt = n['typeVersion'] in VERSIONS.get(n['type'], [])
+        unterstuetzt = n['typeVersion'] in VERSIONS.get(n['type'], []) or n['typeVersion'] in lokal.VERSIONEN.get(n['type'], [])
         hat_zugang = bool(n.get('credentials'))
         if hat_zugang:
             zugang.append(n['name'])
@@ -577,7 +579,7 @@ def vorschau(text, dateiname=None):
             hinweise.append('in n8n ausgeschaltet')
         if hat_zugang:
             hinweise.append('verweist auf Zugangsdaten (ohne Werte)')
-        if _ist_ausloeser(n['type']) and not str(n['type']).endswith('manualTrigger'):
+        if _ist_ausloeser(n['type']) and not str(n['type']).endswith('manualTrigger') and not eigen['executable']:
             hinweise.append('startet in n8n von außen; hier nur ein Bild, nichts läuft')
         # Kategorie und KI-Typ in Hinweisen
         kat = _kategorie(n.get('type', ''))
@@ -619,7 +621,11 @@ def vorschau(text, dateiname=None):
         funde.append({'stufe': 'info', 'text': 'Das ist ein Prozessmodell von SEDRA (Beschreibung ohne Ausführung).'})
     # Urteil
     ass = assessment(doc)
-    if erhalten or zugang or not ass['executable']:
+    if eigen['executable']:
+        extra = (' Schreibt in die lokale Tabelle: %s.' % ', '.join(eigen['schreibt'])) if eigen['schreibt'] else ''
+        extra += (' Nicht angeschlossen und ohne Wirkung: %s.' % ', '.join(eigen['uebersprungen'])) if eigen['uebersprungen'] else ''
+        urteil = {'stufe': 'ok', 'satz': 'Läuft in SEDRA als Eigenablauf, lokal und ohne n8n (%d von %d Knoten im Ablauf).%s Ausgeführt wird nur nach der Freigabe des Captains.' % (eigen['knoten_lauffaehig'], len(echte), extra)}
+    elif erhalten or zugang or not ass['executable']:
         urteil = {'stufe': 'teilweise', 'satz': 'Wird übernommen und bleibt vollständig erhalten. Ausführen lässt sich davon in SEDRA nur, was die Engine kennt; hier sind es %d von %d Knoten.' % (len(echte) - len(erhalten), len(echte))}
     else:
         urteil = {'stufe': 'ok', 'satz': 'Alle Knoten sind bekannt. Ausgeführt wird nur nach der Freigabe des Captains.'}
@@ -630,7 +636,7 @@ def vorschau(text, dateiname=None):
         kategorien, kategorie_list
     )
     return {'ok': True, 'fehler': None, 'name': doc['name'], 'knoten': zeilen, 'verbindungen': verb, 'funde': funde, 'urteil': urteil, 'aenderungen': aenderungen,
-            'layout_noetig': _alle_null_oder_gleich(nodes), 'ausfuehrbar': ass['executable'],
+            'layout_noetig': _alle_null_oder_gleich(nodes), 'ausfuehrbar': ass['executable'] or eigen['executable'], 'eigenablauf': eigen,
             'zaehler': {'knoten': len(echte), 'notizen': len(zeilen) - len(echte), 'verbindungen': len(verb), 'unbekannt': len(erhalten), 'zugang': len(zugang),
                         'ausloeser': sum(1 for z in echte if z['ausloeser'])},
             'zusammenfassung': zusammenfassung, 'kategorien': kategorien,

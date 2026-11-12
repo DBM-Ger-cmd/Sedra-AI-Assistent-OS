@@ -5,6 +5,8 @@ from .store import WorkflowStore
 from .schema import report, strict_json
 from .policy import assessment
 from .engine import configuration, inputs
+from . import lokal
+from .lokal_daten import Eingaben, Tabellen
 from .versions import compare
 
 
@@ -16,10 +18,19 @@ def _object(kind, oid, title, state, **extra):
     return dict(type=kind, id=oid, title=title, state=state, summary=title, actions=[], links=[], **extra)
 
 
-def _workflow(record):
+def _bewertung(hub, workflow):
+    """Wie sich der Workflow ausführen lässt: n8n (wenn eingerichtet), der SEDRA-Eigenablauf oder gar nicht (mit Grund)."""
+    try:
+        bereit = bool(configuration(hub.project_root).get('enabled'))
+    except ValueError:
+        bereit = False
+    return lokal.gesamt_bewertung(workflow, bereit)
+
+
+def _workflow(record, hub):
     return _object('workflow', record['id'], record['workflow']['name'], 'gespeichert',
                    revision=record['revision'], digest=record['digest'], workflow=record['workflow'],
-                   compatibility=report(record['workflow']), execution=assessment(record['workflow']))
+                   compatibility=report(record['workflow']), execution=_bewertung(hub, record['workflow']))
 
 
 def _read(hub, oid):
@@ -29,17 +40,17 @@ def _read(hub, oid):
         except ValueError:
             engine = {'enabled': False, 'error': 'invalid_n8n_configuration'}
         return _object('workflow', 'alle', 'Workflows', 'bereit', items=_listing(hub, {}),
-                       engine=engine, runs=_runs(hub, {}))
-    return dict(_workflow(_store(hub).read(oid)), revisions=_store(hub).revisions(oid))
+                       engine=engine, runs=_runs(hub, {}), eigenablauf={'node': bool(lokal.shutil.which('node'))}, tabellen=Tabellen(hub.project_root).liste())
+    return dict(_workflow(_store(hub).read(oid), hub), revisions=_store(hub).revisions(oid))
 
 
 def _listing(hub, payload):
-    return [_workflow(record) for record in _store(hub).listing()]
+    return [_workflow(record, hub) for record in _store(hub).listing()]
 
 
 def _check(hub, oid, args):
     value = strict_json(args['text']) if 'text' in args else args.get('workflow')
-    return dict(report(value), workflow=value, execution=assessment(value))
+    return dict(report(value), workflow=value, execution=_bewertung(hub, value))
 
 
 def _save(hub, oid, args):
@@ -48,7 +59,7 @@ def _save(hub, oid, args):
         hub.runtime.audit.append('WORKFLOW_REVISION_SAVED', component='workflows',
                                  payload={'workflow_id': record['id'], 'revision': record['revision'], 'digest': record['digest'],
                                           'record_digest': record['record_digest'], 'previous_revision': record['previous_revision']})
-    return dict(_workflow(record), revisions=_store(hub).revisions(record['id']))
+    return dict(_workflow(record, hub), revisions=_store(hub).revisions(record['id']))
 
 
 def _selbstabbild_pruefen(hub, oid, args):
@@ -139,7 +150,7 @@ def _run_read(hub, mid):
     ref = (m.get('context') or {}).get('n8n_workflow')
     if not ref:
         raise ValueError('not_a_workflow_mission')
-    result = next((r.get('n8n_result') for r in reversed(m['execution']['results']) if r.get('n8n_result')), None)
+    result = next((r.get('n8n_result') or r.get('lokal_result') for r in reversed(m['execution']['results']) if r.get('n8n_result') or r.get('lokal_result')), None)
     return _object('workflow_run', mid, 'Lauf: ' + ref['name'], m['lifecycle']['phase'],
                    workflow_id=ref['id'], revision=ref['revision'], result=result, wait=m.get('wait'),
                    mission_id=mid, artifacts=m['execution']['artifacts'],
@@ -157,19 +168,24 @@ def _start(hub, oid, args):
         record = _store(hub).read(oid)
         if args.get('revision') != record['revision']:
             raise ValueError('workflow_revision_conflict')
-        check = assessment(record['workflow'])
+        check = _bewertung(hub, record['workflow'])
         if not check['executable']:
             raise ValueError(check['reason'])
-        cfg = configuration(hub.project_root)
-        if not cfg.get('enabled'):
-            raise ValueError('n8n_not_configured')
         data = inputs(args.get('inputs', {}))
+        if check['profile'] == lokal.PROFILE:
+            for label in check.get('dateifelder', []):
+                ref = data.get(label)
+                if not isinstance(ref, dict):
+                    raise ValueError('eingabe_datei_fehlt:' + label)
+                Eingaben(hub.project_root).lesen(ref.get('datei'))
+        elif not configuration(hub.project_root).get('enabled'):
+            raise ValueError('n8n_not_configured')
         rt = hub.runtime
         m = rt.brain.create_mission('n8n: ' + record['workflow']['name'])
         mid = m['identity']['mission_id']
         m['context']['n8n_workflow'] = {'id': oid, 'revision': record['revision'], 'name': record['workflow']['name'], 'digest': record['digest']}
         m['plan_revision'] = 1
-        m['plan'] = {'version': 1, 'revision': 1, 'status': 'ready', 'workflow': 'n8n-local-data-v1',
+        m['plan'] = {'version': 1, 'revision': 1, 'status': 'ready', 'workflow': check['profile'],
                      'steps': [{'id': 'N8N-1', 'action': 'n8n_workflow', 'workflow': record['workflow'], 'inputs': data,
                                 'execution_requirements': {'allowed_execution_locations': ['local'], 'data_class': 'internal', 'context_min_tokens': 0}}],
                      'dependencies': [], 'acceptance_criteria': [{'type': 'artifact_exists', 'min_count': 1}]}
@@ -180,6 +196,34 @@ def _start(hub, oid, args):
         rt.brain.run(mid, max_steps=2)
         hub.events.publish('task.changed', {'id': mid})
         return _run_read(hub, mid)
+
+
+def _tabellen(hub, oid, args):
+    return {'status': 'erledigt', 'tabellen': Tabellen(hub.project_root).liste()}
+
+
+def _tabelle_lesen(hub, oid, args):
+    return dict(Tabellen(hub.project_root).lesen(args.get('name'), 200), status='erledigt')
+
+
+def _tabelle_importieren(hub, oid, args):
+    with hub.lock:
+        out = Tabellen(hub.project_root).importieren(args.get('name'), args.get('text'), args.get('art', 'auto'), args.get('ersetzen', True) is not False)
+        hub.runtime.audit.append('WORKFLOW_TABELLE_IMPORTIERT', component='workflows', payload={'tabelle': out['name'], 'zeilen': out['zeilen']})
+    return dict(out, status='erledigt')
+
+
+def _eingabe_hochladen(hub, oid, args):
+    import base64
+    import binascii
+    try:
+        raw = base64.b64decode(str(args.get('data') or ''), validate=True)
+    except (binascii.Error, ValueError):
+        raise ValueError('eingabe_daten_ungueltig') from None
+    summe = Eingaben(hub.project_root).speichern(raw)
+    name = str(args.get('name') or 'datei')[-120:]
+    hub.runtime.audit.append('WORKFLOW_EINGABE_GESPEICHERT', component='workflows', payload={'sha256': summe, 'groesse': len(raw)})
+    return {'status': 'erledigt', 'datei': summe, 'name': name, 'groesse': len(raw)}
 
 
 def _continue(hub, mid, args):
@@ -206,7 +250,9 @@ def register(registry, hub):
                Verb('starten', 'Lauf zur Freigabe vorlegen', _start, needs_gate=True)],
         type_verbs=[Verb('importieren', 'Workflow speichern', _save),
                     Verb('versionen', 'Versionshistorie lesen', _history), Verb('vergleichen', 'Versionen vergleichen', _compare),
-                    Verb('revision_lesen', 'Frühere Revision lesen', lambda h, o, a: _workflow(_store(h).read(a.get('id'), a.get('revision')))),
+                    Verb('revision_lesen', 'Frühere Revision lesen', lambda h, o, a: _workflow(_store(h).read(a.get('id'), a.get('revision')), h)),
+                    Verb('tabellen', 'Lokale Tabellen auflisten', _tabellen), Verb('tabelle_lesen', 'Tabelle lesen', _tabelle_lesen),
+                    Verb('tabelle_importieren', 'Tabelle aus CSV oder JSON laden', _tabelle_importieren), Verb('eingabe_hochladen', 'Datei für einen Lauf hochladen', _eingabe_hochladen),
                     Verb('pruefen', 'Kompatibilität prüfen', _check),
                     Verb('selbstabbild_pruefen', 'Selbstabbild gegen die Quellen prüfen', _selbstabbild_pruefen),
                     Verb('selbstabbild_anlegen', 'Abläufe von SEDRA aus den Quellen anlegen', _selbstabbild_anlegen),
