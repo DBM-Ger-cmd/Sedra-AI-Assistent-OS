@@ -101,7 +101,7 @@ Abbruchregeln: Besteht eine Runde nach 2 Nacharbeiten nicht, nicht weiterbauen (
 ## 5. Zweites Modell: LFM3-1.7B (vom Captain bestätigt 12.11.2026)
 
 - Datei: `I:\KI-Daten\modelle\liquid\LFM3-1.7B-GGUF\LFM3-1.7B-Q8_0.gguf` (1,85 GB, geladen 12.11.).
-- Läuft nur mit llama.cpp ab b11960 (Modellkarte). SEDRAs Engines sind b11160/b11371, zu alt. Unsloths Build `C:\Users\David\.unsloth\llama.cpp` (12284) kann es. **Für den Test ein eigener Server mit diesem Build**, `engines/` bleibt unberührt.
+- Läuft nur mit llama.cpp ab b11960 (Modellkarte). SEDRAs Engines sind b11160/b11371, zu alt. Unsloths Build `<benutzer>\.unsloth\llama.cpp` (12284) kann es. **Für den Test ein eigener Server mit diesem Build**, `engines/` bleibt unberührt.
 - 12 GB VRAM reichen nicht für den 35B (Power-Modus belegt 11,8 GiB) **und** LFM3 auf der GPU. Zwei Wege: (a) LFM3 auf der **CPU** (`-ngl 0`); Nachteil: die Experten des 35B liegen schon auf der CPU, beide konkurrieren um die Kerne; (b) **nacheinander** mit Modellwechsel (Ladezeit). Der Test misst beides.
 - Rolle: laut Modellkarte stark bei Tool-Aufrufen und Anweisungsbefolgung (BFCL V4 71,39, IFEval 96,66, Herstellerangaben), **nicht** für Coding-Agenten. Darum nur Prüfer B (mechanische Checkliste, Befundformat) und gegebenenfalls Auswahl-Protokoll, **nicht** Coder.
 - Alternative Kandidaten: MiMo-V2.6-Distill-Qwen-9B (ein Qwen3.5-9B-Ableger, also teils gleiche blinde Flecken), Gemma (im Profil `team-35b` schon Prüfer).

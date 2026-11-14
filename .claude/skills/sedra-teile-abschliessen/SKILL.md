@@ -66,7 +66,7 @@ Dieser Ablauf ist der Weg, wie offene Arbeit aus dem Arbeitsbaum in `main` kommt
 
 ## 10. Gleichzeitige Agenten
 
-- Andere Agenten (Hermes, Pi, ChatGPT-Sitzungen) können im selben Repo arbeiten. Vor dem Merge `git fetch` und Stand prüfen. Ihre Logs liegen unter `C:\Users\David\AppData\Local\hermes\logs\` (agent.log, errors.log) und `C:\Users\David\.pi\agent\`. Abgelehnte Schreibversuche dort sind ein Warnzeichen: Dateien nicht parallel anfassen.
+- Andere Agenten (Hermes, Pi, ChatGPT-Sitzungen) können im selben Repo arbeiten. Vor dem Merge `git fetch` und Stand prüfen. Ihre Logs liegen unter `<benutzer>\AppData\Local\hermes\logs\` (agent.log, errors.log) und `<benutzer>\.pigent\`. Abgelehnte Schreibversuche dort sind ein Warnzeichen: Dateien nicht parallel anfassen.
 - Dateien, die gerade ein anderer Agent bearbeitet, nicht mit committen.
 
 ## 11. Bericht
