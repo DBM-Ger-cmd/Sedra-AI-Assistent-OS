@@ -145,10 +145,10 @@
             mat.color.set(textColor);
           }
         });
-      });
+      }
     });
   }
-  
+
   function animate() {
     animationId = requestAnimationFrame(animate);
     

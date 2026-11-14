@@ -332,7 +332,8 @@ def start_server(say, shell=None, prepare=None, switches=None):
     thread = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': 0.25}, daemon=True); thread.start()
 
     def stop():
-        server.shutdown(); server.server_close(); hub.close(); tmp.cleanup()
+        server.shutdown(); thread.join(timeout=10)   # den Server-Thread abwarten, sonst haelt er beim Aufraeumen noch Dateien offen (WinError 32)
+        server.server_close(); hub.close(); tmp.cleanup()
     return url, stop
 
 
