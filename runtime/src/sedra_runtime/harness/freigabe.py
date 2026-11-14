@@ -159,7 +159,7 @@ class Kiste:
         self.vorarbeiter, self.extra = vorarbeiter, extra        # Stufe 3: Ernennung (Karten `an: vorarbeiter`) und die Werkzeuge des Vorarbeiters
         self.aufgaben, self.lokal = aufgaben, lokal        # Stufe 3: Aufgaben-Freigabe gilt nur für lokale Modelle (HS-27)
         self.names = tuple(HARNESS_WERKZEUGE) + (tuple(chat.names) if chat is not None else ()) + (tuple(extra.names) if extra is not None else ())
-        self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen', 'auftraege_verteilen', 'desktop_aendern', 'profil_wechseln')
+        self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen', 'auftraege_verteilen', 'desktop_aendern', 'profil_wechseln', 'rueckblick_schreiben', 'vorschlaege_pflegen')
         self._gewarnt = set()            # Nachtrag 434b108: welche Ersetzungen dem Modell schon einen Hinweis bekamen
 
     def chat_namen(self):

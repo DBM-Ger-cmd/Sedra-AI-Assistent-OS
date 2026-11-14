@@ -22,6 +22,7 @@ ARTEN = {
     # Anträge (request:<art>, desk/decisions.REQUEST_TITLE)
     'request:switch': H, 'request:routing': H, 'request:boundaries': H,                 # Regeln
     'request:harness_katalog': H, 'request:harness_vorlage': H,                          # Regeln der Harness
+    'request:harness_rueckblick': H, 'request:harness_vorschlag': H,   # W4: erst nach Freigabe in Dokument/Liste
     'request:harness_prozess': H,                                                        # Prozess-Entwurf in den Bestand (nie ausführbar; wie eine Vorlage)
     'request:dienst_start': H, 'request:zugang_rechte': H,                               # AM4: ein Programm starten; Verben eines Zugangs gewähren
     'request:harness_oberflaeche': H,                                                    # Code der Oberfläche läuft danach in der Seite (O3 G2-07)
@@ -52,7 +53,7 @@ ARTEN = {
 WEGE = frozenset({'einmal', 'freigeben_und_anwenden', 'aendern', 'ablehnen', 'cloud_diesen_lauf', 'bestaetigen',
                   'erlauben', 'sitzung', 'uebernehmen', 'zuruecksetzen', 'zur_kenntnis', 'zuruecknehmen'})
 
-HARNESS_AUSFUEHREN = frozenset({'befehl', 'lauf_starten', 'auftraege_verteilen', 'desktop_aendern', 'profil_wechseln'})      # auftraege_verteilen: der Text geht in die Cloud (Daten nach außen, wie cloud_offload) – nie über den Vorarbeiter
+HARNESS_AUSFUEHREN = frozenset({'befehl', 'lauf_starten', 'auftraege_verteilen', 'desktop_aendern', 'profil_wechseln', 'rueckblick_schreiben', 'vorschlaege_pflegen'})      # auftraege_verteilen: der Text geht in die Cloud (Daten nach außen, wie cloud_offload) – nie über den Vorarbeiter
 HARNESS_SCHREIBEN = frozenset({'datei_schreiben', 'datei_aendern'})
 HARNESS_N = frozenset({'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen', 'lauf_stoppen'})
 

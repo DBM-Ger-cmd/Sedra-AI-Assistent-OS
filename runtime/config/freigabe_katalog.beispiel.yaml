@@ -94,7 +94,17 @@ freigabe_katalog:
       stufe: captain
       begruendung: "Ändert den Oberflächen-Zuschnitt – der Captain sieht die Diff-Vorschau."
     - id: profil-wechseln
-      werkzeug: profil_wechseln
+      werkzeug: [profil_wechseln]
       muster: ['*']
       stufe: captain
       begruendung: "Wendet ein Profil oder eine Vorlage an – der Captain sieht die Diff-Vorschau."
+    - id: rueckblick-schreiben
+      werkzeug: [rueckblick_schreiben]
+      muster: ['*']
+      stufe: captain
+      begruendung: "Legt einen Rückblick-Antrag an – der Captain entscheidet über die Maßnahmen."
+    - id: vorschlaege-pflegen
+      werkzeug: [vorschlaege_pflegen]
+      muster: ['*']
+      stufe: captain
+      begruendung: "Pflegt Verbesserungsvorschläge – jede Änderung braucht die Freigabe des Captains."

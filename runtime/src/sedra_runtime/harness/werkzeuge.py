@@ -43,7 +43,7 @@ LAUF = ('lauf_starten', 'lauf_stoppen', 'lauf_status', 'modell_laden', 'modell_e
 FREI_OHNE_KATALOG = OHNE_KARTE
 SITZUNGEN = ('sitzungen_aufraeumen',)       # Chat-Liste aufräumen: immer eine Karte mit der Liste (fester Vorbehalt, harness/vorbehalte.py); `sitzungen_auflisten` (lesen) steht in OHNE_KARTE
 CLOUD = ('auftraege_verteilen',)       # Teilaufträge des Managers an den Hilfs-Coder in der Cloud: der Text verlässt den Rechner, darum immer eine Karte (nicht in OHNE_KARTE); Gesetze und Tagesbudget prüft manager/kanal.py
-NAMEN = LESEN + WIRKUNG + LAUF + SITZUNGEN + CLOUD + FREI_OHNE_KATALOG + ('desktop_aendern', 'profil_wechseln')
+NAMEN = LESEN + WIRKUNG + LAUF + SITZUNGEN + CLOUD + FREI_OHNE_KATALOG + ('desktop_aendern', 'profil_wechseln', 'rueckblick_schreiben', 'vorschlaege_pflegen')
 # AM8-06 (SPEC_APPS_v1_AM8_VERZEICHNIS): die Wirkungsklasse jedes Chat-Werkzeugs – nur zur ANZEIGE (Verzeichnis der Erweiterungen); entschieden wird weiter von Guard, Katalog und Vorbehalten.
 # Maßstab ist die Obergrenze dessen, was das Werkzeug tun kann (AM8-E2: `befehl` ist `destructive_write`, der Katalog entscheidet im Einzelfall). Ein Test hält die Liste gleich NAMEN.
 WIRKUNGSKLASSE = {
@@ -56,6 +56,8 @@ WIRKUNGSKLASSE = {
     'auftraege_verteilen': 'external_side_effect',                                           # der Text verlässt den Rechner
     'desktop_aendern': 'reversible_write',
     'profil_wechseln': 'reversible_write',
+    'rueckblick_schreiben': 'proposal_only',
+    'vorschlaege_pflegen': 'proposal_only',
     'app_oeffnen': 'read_only', 'projekt_beantragen': 'proposal_only', 'erinnern': 'read_only', 'sitzungen_auflisten': 'read_only',
     'youtube_transkript': 'external_side_effect',                                            # holt Untertitel aus dem Netz
     'vorlage_beantragen': 'proposal_only', 'desktop_lesen': 'read_only', 'belohnungen_lesen': 'read_only', 'prozess_beantragen': 'proposal_only',
@@ -249,13 +251,26 @@ SCHEMAS = {
          'vorlage': {'description': 'ID einer Vorlage (aus harness/uix/shells/harness/profile/)',
                      'type': 'string'}},
         []),
-
-
+    'rueckblick_schreiben': _fn('rueckblick_schreiben',
+        'Erfasst einen strukturierten Rückblick (Antrag für docs/AAR/LESSONS.md mit Maßnahmen); wirkt erst nach Captain-Freigabe, nie direkt.',
+        {'titel': {'type': 'string'}, 'sitzung_id': {'type': 'string'}, 'datum': {'type': 'string'},
+         'was_gelaufen_ist': {'type': 'string'}, 'was_schief_lief': {'type': 'string'},
+         'massnahmen': {'type': 'array', 'items': {'type': 'object', 'properties': {'beschreibung': {'type': 'string'}, 'verantwortlich': {'type': 'string'}, 'frist?': {'type': 'string'}}, 'required': ['beschreibung']}},
+         'dokument_ziel': {'type': 'string'}},
+        ['titel', 'was_gelaufen_ist']),
+    'vorschlaege_pflegen': _fn('vorschlaege_pflegen',
+        'Pflegt eine Liste von Verbesserungsvorschlägen (anlegen/ändern/status_setzen); wirkt erst nach Captain-Freigabe, nie automatisch.',
+        {'aktion': {'enum': ['anlegen', 'aendern', 'status_setzen'], 'type': 'string'}, 'titel': {'type': 'string'},
+         'beschreibung': {'type': 'string'}, 'quelle': {'enum': ['rueckblick', 'chat', 'test'], 'type': 'string'},
+         'status': {'enum': ['offen', 'geprüft', 'umgesetzt', 'abgelehnt'], 'type': 'string'},
+         'prioritaet': {'enum': ['niedrig', 'mittel', 'hoch'], 'type': 'string'},
+         'captain_zustimmung': {'type': 'boolean'}},
+        ['titel', 'aktion']),
     }
 
 
 class Werkzeuge:
-    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None, desktop_stand=None, lernen_lesen=None, wissen=None, wissen_antrag=None, prozess_antrag=None, cloud_verteilen=None, orte=None, text_antwort=None, oberflaeche=None):
+    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None, desktop_stand=None, lernen_lesen=None, wissen=None, wissen_antrag=None, prozess_antrag=None, cloud_verteilen=None, orte=None,                         text_antwort=None, oberflaeche=None, rueckblick_antrag=None, vorschlag_antrag=None):
         self.text_antwort = text_antwort         # vom Server gereicht: (text, sprache=, rolle=, von=, ton=, tiefe=) -> Text; das geladene Modell, nichts wird abgelegt (TR-40)
         self.oberflaeche = oberflaeche           # O3 G2: der Baustein `harness/oberflaeche.py` des Betriebsservers (oder None); die Kiste hält Schreibvorgänge unter einer Aufgabe zurück
         self.orte = orte                         # vom Server gereicht: () -> {ort_id: (label, hint)} der aktiven Shell (AM2-05: Kernorte plus Orte der Apps); ohne: die Kernorte
@@ -278,10 +293,14 @@ class Werkzeuge:
         self.laeufe, self.lauf_typen, self.modelle, self.andere_antworten = laeufe, lauf_typen, modelle, andere_antworten    # Stufe 3 (N7), vom Server gereicht
         self.kontext = {}                       # Sitzung, Antwort, Aufgabe, Karte des Aufrufs – setzt der Server (Kiste, beantworten), nie das Modell
         self.code_stand = code_stand            # G4 (SPEC_APPS_v1): gesehener Code-Stand des Projekts (harness/code_stand.py); None = keine Prüfung
+        self.rueckblick_antrag = rueckblick_antrag
+        self.vorschlag_antrag = vorschlag_antrag
         self.projekt, self.guard, self.mission_id, self.regeln = projekt, guard, mission_id, regeln
         self.wurzel = Path(projekt['wurzel']).resolve()
         from .werkzeug_desktop import WerkzeugDesktop  # W3, eigene Datei (<400 Zeilen)
         self._desktop = WerkzeugDesktop(self)
+        from .werkzeug_lernen import WerkzeugLernen  # W4, eigene Datei (<400 Zeilen)
+        self._lernen = WerkzeugLernen(self)
         self.fs = FilesystemTool(self.wurzel, guard=guard, audit=audit)
 
     def schemas(self):
@@ -438,6 +457,8 @@ class Werkzeuge:
                     'gate': {'aktion': AKTION_LESEN, 'ziel': rel, 'bindung': {'werkzeug': name, 'args': args}}}
         if name in ('desktop_aendern', 'profil_wechseln'):
             return self._desktop.vorbereiten(name, args)
+        if name in ('rueckblick_schreiben', 'vorschlaege_pflegen'):
+            return self._lernen.vorbereiten(name, args)
         p, rel = self._rel(self._text(args, 'pfad'))
         if not harness_projekte.im_schreibbereich(self.projekt, p):
             raise WerkzeugFehler(f'ausserhalb_schreibbereich: {rel} – schreiben nur in {", ".join(self.projekt["schreibbereich"])}')
@@ -659,6 +680,8 @@ class Werkzeuge:
         plan = plan or self.vorbereiten(name, args)
         if name in ('desktop_aendern', 'profil_wechseln'):
             return self._desktop.ausfuehren(name, args, token=token, plan=plan)
+        if name in ('rueckblick_schreiben', 'vorschlaege_pflegen'):
+            return self._lernen.ausfuehren(name, args, token=token, plan=plan)
         try:
             if name == 'datei_lesen':
                 return self._lesen(args, plan)

@@ -58,6 +58,7 @@ from urllib.parse import parse_qs
 import yaml
 
 from . import antraege as harness_antraege
+from . import antraege_lernen as harness_antraege_lernen
 from . import auszug as harness_auszug
 from . import aufgabe as harness_aufgabe
 from . import erlaubnisse_sicht as harness_erlaubnisse
@@ -989,6 +990,8 @@ class HarnessApi:
                          wissen=self.wissen_werkzeug, wissen_antrag=self.wissen_antrag, cloud_verteilen=self.cloud_verteilen,
                          uebersetzer=lambda text, ziel, quelle: self.text_uebersetzen(mission_id, text, ziel, quelle),
                          text_antwort=lambda text, **kw: self.text_antwort(mission_id, text, **kw), oberflaeche=self._oberflaeche_fuer(projekt),
+                         rueckblick_antrag=lambda nutz: harness_antraege_lernen.rueckblick_antrag(self.hub, nutz),
+                         vorschlag_antrag=lambda nutz: harness_antraege_lernen.vorschlag_antrag(self.hub, nutz),
                          web_transkript=lambda video, sprachen: self.hub.runtime.web_tool.execute(mission_id, 'youtube_transcript', {'video': video, 'languages': sprachen}))
 
     def cloud_verteilen(self, auftraege):
