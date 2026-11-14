@@ -88,3 +88,13 @@ freigabe_katalog:
       muster: ['*']
       stufe: vorarbeiter
       begruendung: Anhalten eines Laufs ist ungefährlich.
+    - id: desktop-aendern
+      werkzeug: desktop_aendern
+      muster: ['*']
+      stufe: captain
+      begruendung: "Ändert den Oberflächen-Zuschnitt – der Captain sieht die Diff-Vorschau."
+    - id: profil-wechseln
+      werkzeug: profil_wechseln
+      muster: ['*']
+      stufe: captain
+      begruendung: "Wendet ein Profil oder eine Vorlage an – der Captain sieht die Diff-Vorschau."

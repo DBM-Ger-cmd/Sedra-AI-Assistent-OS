@@ -219,5 +219,140 @@ class BefehlTests(Basis):
         self.assertLess(len(out['ergebnis']), 20_200)
 
 
+# ---- W3: desktop_aendern und profil_wechseln
+import difflib
+import json
+import tempfile
+from pathlib import Path
+
+from sedra_runtime.core.guard import Guard
+from sedra_runtime.harness import katalog
+from sedra_runtime.harness.werkzeuge import Werkzeuge, WerkzeugFehler
+from sedra_runtime.harness import desktop as dt
+
+ARCH = Path(__file__).resolve().parents[2] / 'architecture' / 'SEDRA_Architecture_v1.20_SELF_DEVELOPMENT'
+MISSION = 'M-HARNESS'
+
+class WBasis(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        root = Path(self.tmp.name) / 'projekt'
+        (root / 'docs').mkdir(parents=True)
+        (root / 'runtime').mkdir()
+        self.root = root
+        self.guard = Guard(ARCH / 'core' / 'guard' / 'guard_rules.yaml', None, Path(self.tmp.name) / 'tokens.json')
+        self.projekt = {'id': 'p', 'name': 'P', 'wurzel': str(root), 'schreibbereich': ['docs/**', 'runtime/**']}
+        self.w = Werkzeuge(self.projekt, guard=self.guard, mission_id=MISSION, regeln=katalog.laden(Path('fehlt'))['regeln'],
+                          desktop_stand=lambda profil=None: dt.laden(str(root)))
+
+    def token(self, plan):
+        g = self.guard.create_gate(MISSION, plan['gate']['aktion'], plan['gate']['ziel'], request_binding=plan['gate']['bindung'])
+        return self.guard.approve(g)
+
+class DesktopAendernTest(WBasis):
+    def test_schema_gueltig(self):
+        # schemas() returns list of schema dicts for all tools in NAMEN
+        schema_names = [s['function']['name'] for s in self.w.schemas()]
+        self.assertIn('desktop_aendern', schema_names)
+        schema = next(s for s in self.w.schemas() if s['function']['name'] == 'desktop_aendern')
+        self.assertEqual(schema['function']['description'], 'Ändert den Zuschnitt der Oberfläche (Profil/Layout). Liefert einen Vorschlag mit Diff-Vorschau; der Captain entscheidet per Freigabe. Teile: start, zellen, marke, startseite, layout. null setzt einen Teil auf die Vorgabe der Shell zurück.')
+
+    def test_vorbereiten_erzeugt_diff_und_gate(self):
+        # Erste Wahl speichern
+        dt.speichern(str(self.root), {'marke': {'name': 'Alt GmbH', 'akzent': '#111111'}})
+        plan = self.w.vorbereiten('desktop_aendern', {'marke': {'name': 'Neu GmbH', 'akzent': '#ff0000'}})
+        self.assertEqual(plan['ziel'], 'desktop/marke')
+        self.assertIn('diff', plan)
+        self.assertIn('Neu GmbH', plan['diff'])
+        self.assertIn('Alt GmbH', plan['diff'])  # alte Marke im Diff
+        self.assertEqual(plan['gate']['aktion'], 'update_desktop')
+        self.assertEqual(plan['teile'], ['marke'])
+        self.assertEqual(plan['neu_wahl']['marke']['name'], 'Neu GmbH')
+
+    def test_vorbereiten_leere_aenderung_fehler(self):
+        with self.assertRaises(WerkzeugFehler) as ctx:
+            self.w.vorbereiten('desktop_aendern', {})
+        self.assertIn('argument_fehlt', str(ctx.exception))
+
+    def test_vorbereiten_ungueltiger_teil_fehler(self):
+        # desktop_aendern prüft, dass mindestens ein gültiger TEIL übergeben wird
+        with self.assertRaises(WerkzeugFehler) as ctx:
+            self.w.vorbereiten('desktop_aendern', {'fremd': {}})
+        self.assertIn('argument_fehlt', str(ctx.exception))
+
+    def test_ausfuehren_nach_freigabe_speichert_und_publiziert(self):
+        dt.speichern(str(self.root), {'marke': {'name': 'Alt', 'akzent': '#111111'}})
+        plan = self.w.vorbereiten('desktop_aendern', {'marke': {'name': 'Neu', 'akzent': '#222222'}})
+        t = self.token(plan)
+        out = self.w.ausfuehren('desktop_aendern', {'marke': {'name': 'Neu', 'akzent': '#222222'}}, token=t, plan=plan)
+        self.assertEqual(out['status'], 'ok')
+        self.assertTrue(out['wirkung'])
+        self.assertIn('Desktop aktualisiert', out['ergebnis'])
+        # Wahl wurde gespeichert
+        wahl = dt.laden(str(self.root))
+        self.assertEqual(wahl['marke']['name'], 'Neu')
+
+class ProfilWechselnTest(WBasis):
+    def setUp(self):
+        super().setUp()
+        # Profil anlegen
+        dt.speichern(str(self.root), {'marke': {'name': 'Aktiv'}})
+        dt.profil_speichern(str(self.root), 'test-profil', 'Test Profil', 'Test', 'Beschreibung')
+
+    def test_schema_gueltig(self):
+        # schemas() returns list of schema dicts for all tools in NAMEN
+        schema_names = [s['function']['name'] for s in self.w.schemas()]
+        self.assertIn('profil_wechseln', schema_names)
+        schema = next(s for s in self.w.schemas() if s['function']['name'] == 'profil_wechseln')
+        self.assertEqual(schema['function']['description'], 'Wendet ein gespeichertes Profil oder eine Vorlage als aktiven Zuschnitt an. Liefert Vorschau (Diff aktuelle Wahl vs. Profil/Vorlage); Captain entscheidet per Freigabe.')
+
+    def test_vorbereiten_profil_erzeugt_diff(self):
+        # Profil anlegen
+        dt.speichern(str(self.root), {'marke': {'name': 'Aktiv'}})
+        dt.profil_speichern(str(self.root), 'test-profil', 'Test Profil', 'Test', 'Beschreibung')
+        plan = self.w.vorbereiten('profil_wechseln', {'profil': 'test-profil'})
+        self.assertEqual(plan['ziel'], 'profil/test-profil')
+        self.assertIn('diff', plan)
+        self.assertEqual(plan['quelle'], 'profil')
+        self.assertEqual(plan['profil_id'], 'test-profil')
+        self.assertEqual(plan['gate']['aktion'], 'update_desktop')
+
+    def test_vorbereiten_vorlage_erzeugt_diff(self):
+        plan = self.w.vorbereiten('profil_wechseln', {'vorlage': 'minimal'})
+        self.assertEqual(plan['ziel'], 'vorlage/minimal')
+        self.assertEqual(plan['quelle'], 'vorlage')
+
+    def test_vorbereiten_ohne_profil_und_vorlage_fehler(self):
+        with self.assertRaises(WerkzeugFehler) as ctx:
+            self.w.vorbereiten('profil_wechseln', {})
+        self.assertIn('argument_fehlt', str(ctx.exception))
+
+    def test_vorbereiten_beides_gesetzt_fehler(self):
+        with self.assertRaises(WerkzeugFehler) as ctx:
+            self.w.vorbereiten('profil_wechseln', {'profil': 'a', 'vorlage': 'b'})
+        self.assertIn('argument_fehlt', str(ctx.exception))
+
+    def test_ausfuehren_profil_nach_freigabe_wendet_an(self):
+        plan = self.w.vorbereiten('profil_wechseln', {'profil': 'test-profil'})
+        t = self.token(plan)
+        out = self.w.ausfuehren('profil_wechseln', {'profil': 'test-profil'}, token=t, plan=plan)
+        self.assertEqual(out['status'], 'ok')
+        self.assertTrue(out['wirkung'])
+        self.assertIn('Profil test-profil angewendet', out['ergebnis'])
+        wahl = dt.laden(str(self.root))
+        self.assertEqual(wahl['profil'], 'test-profil')
+
+    def test_ausfuehren_vorlage_nach_freigabe_wendet_an(self):
+        # Vorlage 'minimal' existiert im Paket
+        plan = self.w.vorbereiten('profil_wechseln', {'vorlage': 'minimal'})
+        t = self.token(plan)
+        out = self.w.ausfuehren('profil_wechseln', {'vorlage': 'minimal'}, token=t, plan=plan)
+        self.assertEqual(out['status'], 'ok')
+        self.assertTrue(out['wirkung'])
+        self.assertIn('Profil minimal angewendet', out['ergebnis'])
+        wahl = dt.laden(str(self.root))
+        self.assertEqual(wahl['profil'], 'minimal')
+
 if __name__ == '__main__':
     unittest.main()

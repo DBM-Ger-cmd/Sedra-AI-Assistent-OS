@@ -305,5 +305,52 @@ class Weg(unittest.TestCase):
         self.assertEqual(lines.count('"HARNESS_DESKTOP"'), 2)
 
 
+# ---- W3: Integrationstest DesktopAendernIntegrationTest
+class DesktopAendernIntegrationTest(unittest.TestCase):
+    """Ganzheitlich: Werkzeug → Karte → Freigabe → desktop.laden spiegelt neue Wahl, harness.desktop Event."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        root = Path(self.tmp.name) / 'projekt'
+        (root / 'docs').mkdir(parents=True)
+        (root / 'runtime').mkdir()
+        (root / 'local_config').mkdir(parents=True)
+        self.root = root
+        self.guard = Guard(ARCH / 'core' / 'guard' / 'guard_rules.yaml', None, Path(self.tmp.name) / 'tokens.json')
+        self.projekt = {'id': 'p', 'name': 'P', 'wurzel': str(root), 'schreibbereich': ['docs/**', 'runtime/**']}
+        self.regeln = katalog.laden(Path('gibt-es-nicht'))['regeln']
+        self.w = Werkzeuge(self.projekt, guard=self.guard, mission_id='M-INT', regeln=self.regeln,
+                          desktop_stand=lambda profil=None: dt.laden(str(root)))
+        self.karten = Karten(Path(self.tmp.name) / 'karten')
+        self.kiste = Kiste(self.w, regeln=self.regeln, guard=self.guard, audit=None, karten=self.karten, sitzung_id='S-00000001')
+        self.events = []
+        def melde(name, daten):
+            self.events.append((name, daten))
+        self.w.melden = melde
+
+    def test_werkzeug_karte_freigabe_laden_event(self):
+        # 1. desktop_aendern aufrufen -> Karte
+        r = self.kiste.aufruf('desktop_aendern', {'marke': {'name': 'Integration GmbH', 'akzent': '#444444'}})
+        self.assertEqual(r['status'], 'wartet')
+        karte_id = r['karte']['karte_id']
+
+        # 2. Captain erlaubt
+        from sedra_runtime.harness.freigabe import beantworten
+        out = beantworten(self.karten, karte_id, 'erlauben', von='captain', guard=self.guard, werkzeuge_fuer=lambda k: self.w)
+        self.assertEqual(out['status'], 'ok')
+        self.assertTrue(out['wirkung'])
+
+        # 3. desktop.laden spiegelt neue Wahl
+        wahl = dt.laden(str(self.root))
+        self.assertEqual(wahl['marke']['name'], 'Integration GmbH')
+        self.assertEqual(wahl['marke']['akzent'], '#444444')
+
+        # 4. Event harness.desktop wurde publiziert
+        self.assertTrue(any(e[0] == 'harness.desktop' for e in self.events))
+        event_daten = [e[1] for e in self.events if e[0] == 'harness.desktop'][0]
+        self.assertEqual(event_daten['marke']['name'], 'Integration GmbH')
+
+
 if __name__ == '__main__':
     unittest.main()

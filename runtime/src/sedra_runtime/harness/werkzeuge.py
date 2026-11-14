@@ -43,7 +43,7 @@ LAUF = ('lauf_starten', 'lauf_stoppen', 'lauf_status', 'modell_laden', 'modell_e
 FREI_OHNE_KATALOG = OHNE_KARTE
 SITZUNGEN = ('sitzungen_aufraeumen',)       # Chat-Liste aufräumen: immer eine Karte mit der Liste (fester Vorbehalt, harness/vorbehalte.py); `sitzungen_auflisten` (lesen) steht in OHNE_KARTE
 CLOUD = ('auftraege_verteilen',)       # Teilaufträge des Managers an den Hilfs-Coder in der Cloud: der Text verlässt den Rechner, darum immer eine Karte (nicht in OHNE_KARTE); Gesetze und Tagesbudget prüft manager/kanal.py
-NAMEN = LESEN + WIRKUNG + LAUF + SITZUNGEN + CLOUD + FREI_OHNE_KATALOG
+NAMEN = LESEN + WIRKUNG + LAUF + SITZUNGEN + CLOUD + FREI_OHNE_KATALOG + ('desktop_aendern', 'profil_wechseln')
 # AM8-06 (SPEC_APPS_v1_AM8_VERZEICHNIS): die Wirkungsklasse jedes Chat-Werkzeugs – nur zur ANZEIGE (Verzeichnis der Erweiterungen); entschieden wird weiter von Guard, Katalog und Vorbehalten.
 # Maßstab ist die Obergrenze dessen, was das Werkzeug tun kann (AM8-E2: `befehl` ist `destructive_write`, der Katalog entscheidet im Einzelfall). Ein Test hält die Liste gleich NAMEN.
 WIRKUNGSKLASSE = {
@@ -54,6 +54,8 @@ WIRKUNGSKLASSE = {
     'modell_laden': 'reversible_write', 'modell_entladen': 'reversible_write',
     'sitzungen_aufraeumen': 'reversible_write',                                              # verschiebt nach geloescht/, nichts wird endgültig gelöscht
     'auftraege_verteilen': 'external_side_effect',                                           # der Text verlässt den Rechner
+    'desktop_aendern': 'reversible_write',
+    'profil_wechseln': 'reversible_write',
     'app_oeffnen': 'read_only', 'projekt_beantragen': 'proposal_only', 'erinnern': 'read_only', 'sitzungen_auflisten': 'read_only',
     'youtube_transkript': 'external_side_effect',                                            # holt Untertitel aus dem Netz
     'vorlage_beantragen': 'proposal_only', 'desktop_lesen': 'read_only', 'belohnungen_lesen': 'read_only', 'prozess_beantragen': 'proposal_only',
@@ -173,7 +175,83 @@ SCHEMAS = {
     'befehl': _fn('befehl', 'Startet ein Programm im Projekt (eine Zeile, ohne Pipes und Umleitungen). Es gibt keine Shell: Befehle der Eingabeaufforderung wie mkdir, dir, copy, del oder start sind keine Programme und gehen nicht – einen Ordner legt datei_schreiben an, ein Fenster öffnet app_oeffnen. Lesende Git-Befehle und die Tests sind frei, sonst Freigabe.',
                   {'befehl': S, 'ordner': dict(S, description='Ordner relativ zur Projektwurzel, Standard „.“'),
                    'zeitlimit_s': dict(I, description='höchstens 600')}, ['befehl']),
-}
+    'desktop_aendern': _fn('desktop_aendern',
+        'Ändert den Zuschnitt der Oberfläche (Profil/Layout). Liefert einen Vorschlag mit Diff-Vorschau; der Captain entscheidet per Freigabe. '
+        'Teile: start, zellen, marke, startseite, layout. null setzt einen Teil auf die Vorgabe der Shell zurück.',
+        {'layout': {'properties': {'blick': {'properties': {'ausblenden': {'items': {'type': 'string'},
+                                                                           'type': 'array'},
+                                                            'reihenfolge': {'items': {'type': 'string'},
+                                                                            'type': 'array'}},
+                                             'type': 'object'},
+                                   'menue': {'properties': {'ausblenden': {'items': {'type': 'string'},
+                                                                           'type': 'array'},
+                                                            'reihenfolge': {'items': {'type': 'string'},
+                                                                            'type': 'array'}},
+                                             'type': 'object'},
+                                   'start': {'type': 'object'},
+                                   'werkzeuge': {'properties': {'ausblenden': {'items': {'type': 'string'},
+                                                                               'type': 'array'},
+                                                                'reihenfolge': {'items': {'type': 'string'},
+                                                                                'type': 'array'}},
+                                                 'type': 'object'},
+                                   'zeile': {'properties': {'ausblenden': {'items': {'type': 'string'},
+                                                                           'type': 'array'},
+                                                            'reihenfolge': {'items': {'type': 'string'},
+                                                                            'type': 'array'}},
+                                             'type': 'object'},
+                                   'zonen': {'properties': {'eingabe': {'properties': {'breite': {'maximum': 1400,
+                                                                                                  'minimum': 0,
+                                                                                                  'type': 'integer'},
+                                                                                       'platz': {'enum': ['unten',
+                                                                                                          'oben'],
+                                                                                                 'type': 'string'}},
+                                                                        'type': 'object'},
+                                                            'seite': {'properties': {'breite': {'maximum': 480,
+                                                                                                'minimum': 0,
+                                                                                                'type': 'integer'},
+                                                                                     'platz': {'enum': ['links',
+                                                                                                        'rechts'],
+                                                                                               'type': 'string'}},
+                                                                      'type': 'object'},
+                                                            'taskleiste': {'properties': {'platz': {'enum': ['unten',
+                                                                                                             'oben'],
+                                                                                                    'type': 'string'}},
+                                                                           'type': 'object'}},
+                                             'type': 'object'}},
+                    'type': 'object'},
+         'marke': {'properties': {'akzent': {'pattern': '^#[0-9a-fA-F]{6}$', 'type': 'string'},
+                                  'logo': {'type': 'string'},
+                                  'name': {'maxLength': 40, 'type': 'string'},
+                                  'schrift': {'enum': ['', 'serif', 'mono', 'humanist', 'breit'],
+                                              'type': 'string'}},
+                   'type': 'object'},
+         'start': {'properties': {'ausblenden': {'items': {'type': 'string'}, 'type': 'array'},
+                                  'zuordnung': {'additionalProperties': {'enum': ['arbeit',
+                                                                                  'modelle',
+                                                                                  'token',
+                                                                                  'wissen',
+                                                                                  'system',
+                                                                                  'pruefusion'],
+                                                                         'type': 'string'},
+                                                'type': 'object'}},
+                   'type': 'object'},
+         'startseite': {'properties': {'ort': {'type': 'string'},
+                                       'text': {'maxLength': 300, 'type': 'string'},
+                                       'titel': {'maxLength': 60, 'type': 'string'}},
+                        'type': 'object'},
+         'zellen': {'properties': {'ausblenden': {'items': {'type': 'string'}, 'type': 'array'},
+                                   'reihenfolge': {'items': {'type': 'string'}, 'type': 'array'}},
+                    'type': 'object'}},
+        []),
+    'profil_wechseln': _fn('profil_wechseln',
+        'Wendet ein gespeichertes Profil oder eine Vorlage als aktiven Zuschnitt an. Liefert Vorschau (Diff aktuelle Wahl vs. Profil/Vorlage); Captain entscheidet per Freigabe.',
+        {'profil': {'description': 'ID eines gespeicherten Profils (profile/<id>.json)', 'type': 'string'},
+         'vorlage': {'description': 'ID einer Vorlage (aus harness/uix/shells/harness/profile/)',
+                     'type': 'string'}},
+        []),
+
+
+    }
 
 
 class Werkzeuge:
@@ -202,6 +280,8 @@ class Werkzeuge:
         self.code_stand = code_stand            # G4 (SPEC_APPS_v1): gesehener Code-Stand des Projekts (harness/code_stand.py); None = keine Prüfung
         self.projekt, self.guard, self.mission_id, self.regeln = projekt, guard, mission_id, regeln
         self.wurzel = Path(projekt['wurzel']).resolve()
+        from .werkzeug_desktop import WerkzeugDesktop  # W3, eigene Datei (<400 Zeilen)
+        self._desktop = WerkzeugDesktop(self)
         self.fs = FilesystemTool(self.wurzel, guard=guard, audit=audit)
 
     def schemas(self):
@@ -356,6 +436,8 @@ class Werkzeuge:
             p, rel = self._rel(args.get('pfad') or '.', muss_da=True)
             return {'ziel': rel, 'vorhanden': True, 'vorschau': f'{name} {rel}', 'kurz': rel,
                     'gate': {'aktion': AKTION_LESEN, 'ziel': rel, 'bindung': {'werkzeug': name, 'args': args}}}
+        if name in ('desktop_aendern', 'profil_wechseln'):
+            return self._desktop.vorbereiten(name, args)
         p, rel = self._rel(self._text(args, 'pfad'))
         if not harness_projekte.im_schreibbereich(self.projekt, p):
             raise WerkzeugFehler(f'ausserhalb_schreibbereich: {rel} – schreiben nur in {", ".join(self.projekt["schreibbereich"])}')
@@ -575,6 +657,8 @@ class Werkzeuge:
     def ausfuehren(self, name, args, *, token=None, abbruch=None, plan=None):
         """{status: ok|fehler|abgebrochen, ergebnis: Text, wirkung: bool}. `plan` ist das Ergebnis von `vorbereiten` (sonst neu)."""
         plan = plan or self.vorbereiten(name, args)
+        if name in ('desktop_aendern', 'profil_wechseln'):
+            return self._desktop.ausfuehren(name, args, token=token, plan=plan)
         try:
             if name == 'datei_lesen':
                 return self._lesen(args, plan)

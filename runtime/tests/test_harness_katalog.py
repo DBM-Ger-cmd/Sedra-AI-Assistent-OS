@@ -54,5 +54,36 @@ class KatalogLadenTests(unittest.TestCase):
         self.assertEqual(katalog.laden(self.root)['regeln'][0]['muster'], ['python ../x.py *'])
 
 
+# ---- W3: Einstufung für desktop_aendern und profil_wechseln
+class EinstufenDesktopTest(unittest.TestCase):
+    def test_einstufen_desktop_aendern_default_captain(self):
+        # Ohne Regel im Katalog -> captain (HS-21)
+        regeln = katalog.laden(Path('gibt-es-nicht'))['regeln']
+        e = katalog.einstufen(regeln, 'desktop_aendern', 'desktop/start,marke')
+        self.assertEqual(e['stufe'], 'captain')
+        self.assertIsNone(e['regel'])
+
+    def test_einstufen_profil_wechseln_default_captain(self):
+        regeln = katalog.laden(Path('gibt-es-nicht'))['regeln']
+        e = katalog.einstufen(regeln, 'profil_wechseln', 'profil/test-profil')
+        self.assertEqual(e['stufe'], 'captain')
+        self.assertIsNone(e['regel'])
+
+    def test_einstufen_verboten_greift(self):
+        # Mit lokaler Regel verboten
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'projekt'
+            root.mkdir()
+            (root / 'local_config').mkdir()
+            (root / 'local_config' / katalog.DATEI).write_text(
+                "freigabe_katalog:\n  regeln:\n    - {id: desktop-verboten, werkzeug: [desktop_aendern, profil_wechseln], muster: ['**'], stufe: verboten, begruendung: Test}\n",
+                encoding='utf-8')
+            regeln = katalog.laden(root)['regeln']
+            e = katalog.einstufen(regeln, 'desktop_aendern', 'desktop/marke')
+            self.assertEqual(e['stufe'], 'verboten')
+            self.assertEqual(e['regel'], 'desktop-verboten')
+
 if __name__ == '__main__':
     unittest.main()

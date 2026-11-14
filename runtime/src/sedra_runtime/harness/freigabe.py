@@ -159,7 +159,7 @@ class Kiste:
         self.vorarbeiter, self.extra = vorarbeiter, extra        # Stufe 3: Ernennung (Karten `an: vorarbeiter`) und die Werkzeuge des Vorarbeiters
         self.aufgaben, self.lokal = aufgaben, lokal        # Stufe 3: Aufgaben-Freigabe gilt nur für lokale Modelle (HS-27)
         self.names = tuple(HARNESS_WERKZEUGE) + (tuple(chat.names) if chat is not None else ()) + (tuple(extra.names) if extra is not None else ())
-        self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen', 'auftraege_verteilen')
+        self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen', 'auftraege_verteilen', 'desktop_aendern', 'profil_wechseln')
         self._gewarnt = set()            # Nachtrag 434b108: welche Ersetzungen dem Modell schon einen Hinweis bekamen
 
     def chat_namen(self):
@@ -256,7 +256,7 @@ class Kiste:
                 via_aufgabe = None                                    # zu groß für die Ablage: die Schreibaktion wird zur Karte (G2-08)
         self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id, 'aufgabe_id': via_aufgabe}
         gate = self.guard.create_gate(self.w.mission_id, plan['gate']['aktion'], plan['gate']['ziel'], request_binding=plan['gate']['bindung'],
-                                      risks=[e['begruendung']], rollback_available=name in ('datei_schreiben', 'datei_aendern'))
+                                              risks=[e['begruendung']], rollback_available=name in ('datei_schreiben', 'datei_aendern', 'desktop_aendern', 'profil_wechseln'))
         if e['wirkt_als'] == 'frei' or via_aufgabe or via_sitzung:
             token = self.guard.approve(gate)
             von = f'aufgabe:{via_aufgabe}' if via_aufgabe else f'sitzung:{via_sitzung}' if via_sitzung else f"katalog:{e['regel']}"
