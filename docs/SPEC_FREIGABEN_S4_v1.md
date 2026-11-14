@@ -3,6 +3,12 @@
 Stand: `main` `d51083a`. Gate **G1** (Anforderungen); Design (G2) und Bau (G3) erst nach Freigabe durch den Captain.
 Herkunft: `ANALYSE_FREIGABEN_VEREINFACHEN_2026-11-04.md` §3–§4 (S1–S3 gebaut, S4 offen), `ROADMAP_ONE_SEDRA_RENEW_2026-11-05.md` (Phase R3, Unterchat U5, offene Entscheidung 2 „Schutzcode bei Freigaben S4: ja/nein?“), `WISSEN_SEDRA_GESAMT.md` §8 Punkt 2 („Wiederholungs-Deckel“).
 
+> **Entscheidungsstand (Captain, 14.11.2026, bedingte Freigabe):** „Freigaben S4 (Schutzcode) … wenn alles sauber ist, Freigabe erteilt.“ Der Koordinator liest das als Freigabe von G1 mit den Vorschlägen dieses Dokuments, Stufe für Stufe, jeweils erst nach sauberem Testlauf (Gate je Stufe):
+> - **E1 Schutzcode als Geheimzahl: nein** (Vorschlag a). FS-45 bis FS-48 bleiben unbebaut; als Anforderung für R4/AM7 vorgemerkt. *Das ist die Lesart des Koordinators; wer eine Geheimzahl will, widerspricht jetzt.*
+> - **E2 Wiederholungs-Deckel:** Vorschlag c) mit Wert 2. **E3 Vorbehalt-Lücken:** ja, aber schon erledigt (S4.0, siehe unten). **E4 Ablage:** a) nur Sicht. **E5 Cloud-Modelle:** nein. **E6 „Immer“ auf der Karte:** ja, nur als Antrag.
+> - **S4.0 ist erledigt:** `erlaubnis.py`, `katalog.py`, `bausteine.py` und `freigabe_bausteine.yaml` stehen seit dem 05.11.2026 in `vorbehalte.PFADE`. Offen bleibt nur die neue Deckungsdatei aus FS-10 (kommt mit S4.2).
+> - **Reihenfolge:** S4.1 jetzt; S4.2 bis S4.5 (verhaltensändernd, Prüfdateien) je Stufe mit eigenem Testbericht und Rückfall; S4.6 entfällt (E1 = nein). Änderungen an Prüfdateien macht nur der Koordinator (Claude), nicht die Hilfsagenten.
+
 **Kurz:** Heute gibt es fünf Wege, auf denen der Satz „Werkzeug + Muster darf laufen“ entsteht, mit drei Ablagen, drei Prüfungen und drei Wortschätzen. S4 macht daraus **ein Modell „Erlaubnis mit Dauer“** (einmal · diese Sitzung · befristet · immer), mit **einer** Deckungsprüfung und **einer** Liste „Gilt gerade“. Der Schutz wird nicht schwächer. Drei Fragen entscheidet der Captain vor G2: Schutzcode (E1), Wiederholungs-Deckel (E2), Lücken in den festen Vorbehalten (E3).
 
 ## 1. Befund (im Code gelesen)
