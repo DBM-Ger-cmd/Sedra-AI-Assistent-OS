@@ -165,3 +165,112 @@ function paletteKey(e){
   else if(e.key === 'Enter'){ e.preventDefault(); palettePick(); }
   else if(e.key === 'Escape'){ closePalette(); }
 }
+
+// ---- X4: Kürzel-Tabelle (globale + Builder-Kürzel), keine Doppelbelegung ----
+var KUERZEL = [
+  {kuerzel:'Strg+K', key:'k', ctrl:true, aktion:'palette öffnen', beschreibung:'Befehlspalette öffnen', builder:false},
+  {kuerzel:'Esc', key:'Escape', aktion:'palette schließen', beschreibung:'Befehlspalette schließen', builder:false},
+  {kuerzel:'Strg+S', key:'s', ctrl:true, aktion:'speichern', beschreibung:'Aktuellen Kontext speichern', builder:false},
+  {kuerzel:'Strg+Z', key:'z', ctrl:true, aktion:'rückgängig', beschreibung:'Letzte Aktion rückgängig machen (nur Builder)', builder:true},
+  {kuerzel:'Strg+Y', key:'y', ctrl:true, aktion:'wiederholen', beschreibung:'Letzte Aktion wiederholen (nur Builder)', builder:true}
+];
+
+function kuerzelString(k){ return (k.ctrl ? 'Strg+' : '') + (k.meta ? 'Cmd+' : '') + k.key.toUpperCase(); }
+
+// Prüft die Kürzel-Tabelle auf Doppelbelegungen und gibt die Konflikte zurück (leer = OK).
+function kuerzelPruefen(kuerzelListe){
+  const kuerzelListeIntern = kuerzelListe || KUERZEL;
+  const gesehen = {};
+  const konflikte = [];
+  kuerzelListeIntern.forEach(k=>{
+    const ks = kuerzelString(k);
+    if(gesehen[ks]) konflikte.push({kuerzel:ks, erstes:gesehen[ks], zweites:k.aktion});
+    else gesehen[ks] = k.aktion;
+  });
+  return konflikte;
+}
+
+// ---- X4: Befehls-Historie (max. 10 Einträge, pro Sitzung, nur im Speicher) ----
+var HISTORIE_MAX = 10;
+var HISTORIE = [];
+
+function histHinzufuegen(befehlId){
+  if(!befehlId) return;
+  HISTORIE = HISTORIE.filter(h=>h !== befehlId);
+  HISTORIE.unshift(befehlId);
+  if(HISTORIE.length > HISTORIE_MAX) HISTORIE.length = HISTORIE_MAX;
+}
+
+function historie(){
+  return HISTORIE.slice();
+}
+
+// ---- X4: Schreibwerkzeuge brauchen immer eine Freigabe (Gate), nie direkte Wirkung aus der Palette ----
+var SCHREIBWERKZEUGE = ['datei_schreiben', 'datei_aendern', 'desktop_aendern'];
+
+function befehlIstSchreibwerkzeug(befehlId){
+  return SCHREIBWERKZEUGE.includes(befehlId);
+}
+
+// Erzeugt einen Antrag (Karte) für ein Schreibwerkzeug, statt es direkt auszuführen.
+// Rückgabe: {gate_required: true, befehlId, text, hinweis}
+function schreibwerkzeugAntrag(befehlId, text){
+  return {gate_required: true, befehlId: befehlId, text: text||'', hinweis: 'Captain-Freigabe erforderlich für Schreibwerkzeug aus der Befehlspalette.'};
+}
+
+// Führt ein Schreibwerkzeug erst nach Captain-Entscheidung aus. genehmigt=true → Ausführung über Kiste.aufruf.
+// Rückgabe: {ausgefuehrt: true/false, befehlId, gate_required}
+function schreibwerkzeugAusfuehren(befehlId, genehmigt){
+  if(!genehmigt) return {ausgefuehrt: false, befehlId: befehlId, gate_required: true, hinweis: 'Freigabe verweigert oder nicht erteilt.'};
+  return {ausgefuehrt: true, befehlId: befehlId, gate_required: false, hinweis: 'Nach Captain-Freigabe ausgeführt.'};
+}
+
+// ---- X4: Vorschläge aus Dateien und Vorlagen für die Palette ----
+var VORLAGEN = ['bauagent','modellierer','pruefer','vorarbeiter','masterchat','desktop-designer','rueckblick'];
+
+function vorschlaege(text){
+  const q = (text||'').toLowerCase().trim();
+  const out = [];
+  if(!q) return out;
+  VORLAGEN.forEach(v=>{
+    if(v.includes(q)) out.push({typ:'vorlage', id:v, titel: v.charAt(0).toUpperCase() + v.slice(1), vorschau: 'Vorlage laden: '+v, aktion:'vorlage_laden'});
+  });
+  return out.slice(0, 6);
+}
+
+// ---- X4: erweiterte paletteRows – Historie oben, Vorschläge, Schreibwerkzeug-Markierung ----
+const _paletteRowsOrig = paletteRows;
+function paletteRows(text){
+  const rows = _paletteRowsOrig(text);
+  const t = (text||'').trim();
+  const out = [];
+  if(!t){
+    historie().forEach(h=>out.push({id:'hist:'+h, label: 'Zuletzt: '+h, hint: 'Letzte Befehle', kuerzel_anzeige: ''}));
+  }
+  out.push(...rows);
+  const vs = vorschlaege(t);
+  vs.forEach(v=>out.push({id:'vorschlag:'+v.id, label: v.titel, hint: v.vorschau, kuerzel_anzeige: ''}));
+  return out;
+}
+
+// ---- X4: erweiterte palettePick – Schreibwerkzeug-Gating, Historie, Vorschläge ----
+const _palettePickOrig = palettePick;
+function palettePick(){
+  const input = document.getElementById('paletteInput');
+  const rows = paletteRows(input.value);
+  const r = rows[paletteIndex];
+  if(!r) return;
+  const text = input.value.trim();
+  closePalette();
+  if(r.id.startsWith('hist:')){ histHinzufuegen(r.id.slice(5)); return runCommandId(r.id.slice(5), text); }
+  if(r.id.startsWith('vorschlag:')){ return runCommandId('chat', 'Vorlage laden: '+r.id.slice(10)); }
+  if(r.id === '__chat'){ openSedra(); return sendText(text, true, []); }
+  if(r.id === '__plan'){ openSedra(); return planCard(text); }
+  if(befehlIstSchreibwerkzeug(r.id)){
+    const antrag = schreibwerkzeugAntrag(r.id, text);
+    histHinzufuegen(r.id);
+    return antrag;
+  }
+  histHinzufuegen(r.id);
+  return _palettePickOrig();
+}
