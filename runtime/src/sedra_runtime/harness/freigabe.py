@@ -162,6 +162,7 @@ class Kiste:
         self.names = tuple(HARNESS_WERKZEUGE) + (tuple(chat.names) if chat is not None else ()) + (tuple(extra.names) if extra is not None else ())
         self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen', 'auftraege_verteilen', 'desktop_aendern', 'profil_wechseln', 'rueckblick_schreiben', 'vorschlaege_pflegen')
         self._gewarnt = set()            # Nachtrag 434b108: welche Ersetzungen dem Modell schon einen Hinweis bekamen
+        self._wiederholung = harness_deckung.Wiederholung()      # S4.5: derselbe gedeckte Aufruf ohne Schreiben dazwischen höchstens so oft (FS-40 bis FS-42)
 
     def chat_namen(self):
         return tuple(self.chat.names) if self.chat is not None else ()
@@ -249,6 +250,15 @@ class Kiste:
             aufgabe_zaehlen=self.aufgaben.zaehlen if self.aufgaben is not None else None,
             sitzung_treffer=lambda: sitzungs_erlaubnis.deckt(self.erlaubnisse, name, plan['ziel'], datetime.now().astimezone()), lokal=bool(self.lokal))
         via_aufgabe, via_sitzung = gedeckt['via_aufgabe'], gedeckt['via_sitzung']
+        wdh_schluessel = harness_deckung.Wiederholung.schluessel(name, plan['ziel'], args)
+        if via_aufgabe or via_sitzung:
+            if self._wiederholung.erreicht(wdh_schluessel):          # S4.5 FS-41: gleicher Aufruf zu oft ohne Änderung → wieder die Karte
+                self._audit('HARNESS_ERLAUBNIS', harness_deckung.ereignis('gedeckelt', via_aufgabe or via_sitzung, 'befristet' if via_aufgabe else 'sitzung',
+                                                                       'aufgabe' if via_aufgabe else 'karte', 'aufruf'))
+                e = dict(e, begruendung=f"{self._wiederholung.deckel}-mal ohne Änderung wiederholt – der Captain entscheidet. " + str(e.get('begruendung') or ''))
+                via_aufgabe, via_sitzung = None, None
+            else:
+                self._wiederholung.zaehlen(wdh_schluessel)
         if via_aufgabe and name in vorbehalte.SCHREIBEN and getattr(self.w, 'oberflaeche', None) is not None:      # O3 G2-01: unter einer Aufgabe geschriebener Code der Oberfläche wirkt erst nach der Übernahme
             from pathlib import Path as _Pfad
             if self.w.oberflaeche.zurueckhalten(_Pfad(self.w.wurzel) / plan['ziel'], self.sitzung_id, via_aufgabe) is None:
@@ -263,6 +273,8 @@ class Kiste:
                                                 'kanal': 'aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else 'katalog'})     # G10
             alt = _code_vorher(self.w, name, plan)
             out = ausfuehren(self.w, self.guard, name, args, plan, token, abbruch)
+            if name in vorbehalte.SCHREIBEN and out.get('status') == 'ok':
+                self._wiederholung.schreibe()                        # S4.5 FS-40: ein Schreiben beginnt eine neue Runde
             _code_nachher(self.w, name, plan, out, sitzung_id=self.sitzung_id, weg='aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else 'katalog', alt=alt)
             stufe = 'aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else e['stufe']
             return dict(out, stufe=stufe, regel=von if (via_aufgabe or via_sitzung) else e['regel'])

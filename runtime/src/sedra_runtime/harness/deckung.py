@@ -51,3 +51,49 @@ def ereignis(aktion, erlaubnis_id, dauer, herkunft, kanal):
     if dauer not in DAUERN:
         raise ValueError(f'erlaubnis_dauer_unbekannt: {dauer}')
     return {'aktion': aktion, 'id': str(erlaubnis_id), 'dauer': dauer, 'herkunft': str(herkunft), 'kanal': str(kanal)}
+
+
+DECKEL_FEST = 2      # S4.5 FS-42 (E2 = Wert 2): fest im Code; eine Einstellung darf ihn nur enger stellen
+
+
+def deckel_wert(einstellung=None):
+    """Der geltende Deckel: ohne Einstellung der feste Wert; eine engere Einstellung (1 oder 2) gilt, eine weitere wird abgelehnt (FS-42)."""
+    if einstellung is None:
+        return DECKEL_FEST
+    if isinstance(einstellung, bool) or not isinstance(einstellung, int) or einstellung < 1:
+        raise ValueError(f'deckel_ungueltig: {einstellung!r}')
+    if einstellung > DECKEL_FEST:
+        raise ValueError(f'deckel_zu_weit: {einstellung} (hoechstens {DECKEL_FEST})')
+    return einstellung
+
+
+class Wiederholung:
+    """S4.5 (FS-40/41): Wie oft hat eine Erlaubnis **denselben Aufruf** schon gedeckt, ohne dass dazwischen etwas geschrieben wurde?
+    Derselbe Aufruf = gleiche Bindung (Werkzeug, Ziel, Hash der Argumente). Ein Schreiben (`schreibe()`) beginnt eine neue Runde: ein Testlauf nach
+    einer Korrektur am Code zählt nicht als Wiederholung. Ist der Deckel erreicht, geht der nächste gleiche Aufruf als Karte an den Captain; die
+    Erlaubnis selbst bleibt bestehen. Rein im Speicher, je Kiste (also je Zug der Sitzung)."""
+
+    def __init__(self, deckel=DECKEL_FEST):
+        self.deckel = deckel_wert(deckel)
+        self._runde = 0
+        self._stand = {}
+
+    @staticmethod
+    def schluessel(werkzeug, ziel, args):
+        import hashlib
+        import json
+        roh = json.dumps([werkzeug, str(ziel), args], ensure_ascii=False, sort_keys=True, default=str)
+        return hashlib.sha256(roh.encode('utf-8')).hexdigest()
+
+    def _anzahl(self, schluessel):
+        runde, n = self._stand.get(schluessel, (self._runde, 0))
+        return n if runde == self._runde else 0
+
+    def erreicht(self, schluessel):
+        return self._anzahl(schluessel) >= self.deckel
+
+    def zaehlen(self, schluessel):
+        self._stand[schluessel] = (self._runde, self._anzahl(schluessel) + 1)
+
+    def schreibe(self):
+        self._runde += 1
