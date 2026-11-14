@@ -17,13 +17,14 @@
   const W = (ort, nur, titel)=>({art: 'werkzeug', ort, nur, titel});
   const E = (flaeche, titel)=>({art: 'eigen', flaeche, titel});
   // G2 §3.1 – sechs Gruppen, 21 Punkte; `ort` ist die ID aus ui/places.js (dasselbe Objekt wie im Start-Menü)
+  const T = root.t || (s => s);
   const GRUPPEN = [
-    {id: 'allgemein', titel: 'Allgemein', punkte: {darstellung: E('darstellung', 'Darstellung'), benachrichtigungen: E('benachrichtigungen', 'Benachrichtigungen'), sprache: E('sprache', 'Sprache der Oberfläche')}},
-    {id: 'agent', titel: 'Agent', punkte: {vorlagen: E('vorlagen', 'Vorlagen'), freigabe: E('freigabe', 'Freigabe-Modus'), grenzen: E('grenzen', 'Züge je Vorlage'), token: E('token', 'Sedra Token (Verweis)')}},
-    {id: 'sprache', titel: 'Sprache und Ton', punkte: {rekorder: W('aufnahme', ['rekorder'], 'Rekorder'), quelle: E('quelle', 'Quelle')}},
-    {id: 'integrationen', titel: 'Integrationen', punkte: {mcp: E('mcp', 'MCP'), gateway: W('gateway', ['gateway', 'schutz'], 'KI GateWay (Guard)'), cloud: W('labor', ['labor'], 'KI-Labor'), hilfswerkzeuge: E('hilfswerkzeuge', 'Hilfswerkzeuge')}},
-    {id: 'modelle', titel: 'Lokale Modelle', punkte: {bibliothek: W('library', ['library'], 'Bibliothek'), werkstatt: W('models', ['workshop'], 'Rezepte / Werkstatt'), slots: W('slots', ['slots'], 'Slots'), laufzeit: E('laufzeit', 'Geladene Instanzen · Laufzeit')}},
-    {id: 'system', titel: 'System', punkte: {schalter: E('schalter', 'Schalter'), grenzen: W('boundary', ['boundaries'], 'Modus und Grenzen'), module: W('modules', ['modules'], 'Module'), audit: W('logbook', ['logbook'], 'Logbuch'), info: E('info', 'Info')}}
+    {id: 'allgemein', titel: () => T('einst_gruppe_allgemein'), punkte: {darstellung: E('darstellung', 'Darstellung'), benachrichtigungen: E('benachrichtigungen', 'Benachrichtigungen'), sprache: E('sprache', 'Sprache der Oberfläche')}},
+    {id: 'agent', titel: () => T('einst_gruppe_agent'), punkte: {vorlagen: E('vorlagen', 'Vorlagen'), freigabe: E('freigabe', 'Freigabe-Modus'), grenzen: E('grenzen', 'Züge je Vorlage'), token: E('token', 'Sedra Token (Verweis)')}},
+    {id: 'sprache', titel: () => T('einst_gruppe_sprache'), punkte: {rekorder: W('aufnahme', ['rekorder'], 'Rekorder'), quelle: E('quelle', 'Quelle')}},
+    {id: 'integrationen', titel: () => T('einst_gruppe_integrationen'), punkte: {mcp: E('mcp', 'MCP'), gateway: W('gateway', ['gateway', 'schutz'], 'KI GateWay (Guard)'), cloud: W('labor', ['labor'], 'KI-Labor'), hilfswerkzeuge: E('hilfswerkzeuge', 'Hilfswerkzeuge')}},
+    {id: 'modelle', titel: () => T('einst_gruppe_modelle'), punkte: {bibliothek: W('library', ['library'], 'Bibliothek'), werkstatt: W('models', ['workshop'], 'Rezepte / Werkstatt'), slots: W('slots', ['slots'], 'Slots'), laufzeit: E('laufzeit', 'Geladene Instanzen · Laufzeit')}},
+    {id: 'system', titel: () => T('einst_gruppe_system'), punkte: {schalter: E('schalter', 'Schalter'), grenzen: W('boundary', ['boundaries'], 'Modus und Grenzen'), module: W('modules', ['modules'], 'Module'), audit: W('logbook', ['logbook'], 'Logbuch'), info: E('info', 'Info')}}
   ];
 
   function stand(S){ return S._einst || (S._einst = {wahl: null, ansicht: null}); }
@@ -53,11 +54,12 @@
   function ansicht(S, id){
     const st = stand(S);
     const X = H().einstSeiten;
+    const T = root.t || (s => s);
     const box = d().el('div', 'hs-verlauf hs-einst');
     const kopfzeile = d().el('header', 'hs-einst-kopfzeile');
-    const zurueck = d().el('button', 'hs-einst-zurueck', '←'); zurueck.type = 'button'; zurueck.title = 'Zurück'; zurueck.setAttribute('aria-label', 'Zurück');
-    const suche = d().el('input', 'hs-einst-suche'); suche.type = 'search'; suche.placeholder = 'Einstellung suchen'; suche.setAttribute('aria-label', 'Einstellung suchen');
-    kopfzeile.append(zurueck, d().el('span', 'hs-einst-kopf-name', 'Einstellungen'), suche);
+    const zurueck = d().el('button', 'hs-einst-zurueck', '←'); zurueck.type = 'button'; zurueck.title = T('einst_zurueck'); zurueck.setAttribute('aria-label', T('einst_zurueck'));
+    const suche = d().el('input', 'hs-einst-suche'); suche.type = 'search'; suche.placeholder = T('einst_suche'); suche.setAttribute('aria-label', T('einst_suche'));
+    kopfzeile.append(zurueck, d().el('span', 'hs-einst-kopf-name', T('einst_titel')), suche);
     const rumpf = d().el('div', 'hs-einst-rumpf');
     const nav = d().el('nav', 'hs-einst-nav'); nav.setAttribute('aria-label', 'Einstellungen');
     const flaeche = d().el('section', 'hs-einst-flaeche');
@@ -81,13 +83,15 @@
                  else{
                    X.zuletztMerken(w.id);
                    const kopf = d().el('div', 'hs-einst-kopf');
-                   const ober = d().el('button', 'hs-einst-ober', w.gruppe.titel); ober.type = 'button'; ober.onclick = ()=>gehe(w.gruppe.id);
+                   const ober = d().el('button', 'hs-einst-ober', typeof w.gruppe.titel === 'function' ? w.gruppe.titel() : w.gruppe.titel); ober.type = 'button'; ober.onclick = ()=>gehe(w.gruppe.id);
                    kopf.append(ober, d().el('span', 'hs-leise', '›'), d().el('b', 'hs-einst-titel', w.punkt.titel));
                    seite.append(kopf);
                    offen = w.punkt.art === 'werkzeug' ? werkzeug(S, seite, w.punkt) : eigen(S, seite, w.punkt);
                  }
                  zurueck.disabled = !suchtext && w.typ === 'start';
                  navZeichnen();
+                 const kn = box.querySelector('.hs-einst-kopf-name');
+                 if(kn) kn.textContent = T('einst_titel');
                }});
     const navZeichnen = ()=>{
       const profil = d().el('div', 'hs-einst-profil');
@@ -95,11 +99,11 @@
       profil.append(d().el('span', 'hs-einst-avatar', 'C'), text);
       const jetzt = zerlegen(st.wahl);
       const aktuell = jetzt.gruppe ? jetzt.gruppe.id : 'start';
-      const eintraege = [{id: 'start', titel: 'Startseite'}].concat(GRUPPEN.map(g=>({id: g.id, titel: g.titel})));
+      const eintraege = [{id: 'start', titel: T('einst_startseite')}].concat(GRUPPEN.map(g=>({id: g.id, titel: typeof g.titel === 'function' ? g.titel() : g.titel})));
       nav.replaceChildren(profil, ...eintraege.map(p=>{
         const on = aktuell === p.id;
         const k = d().el('button', 'hs-einst-punkt' + (on ? ' on' : '')); k.type = 'button';
-        k.append(d().el('span', 'hs-einst-symbol', X.SYMBOL[p.id] || '•'), d().el('span', null, p.titel));
+        k.append(d().el('span', 'hs-einst-symbol', X.SYMBOL[p.id] || '•'), d().el('span', null, typeof p.titel === 'function' ? p.titel() : p.titel));
         k.dataset.gruppe = p.id; k.setAttribute('aria-current', on ? 'page' : 'false');
         k.onclick = ()=>gehe(p.id);
         return k;
@@ -201,7 +205,58 @@
     box.append(d().el('div', 'hs-app-satz', 'Der Hinweis sagt nur „eine Freigabe wartet“ – nie, worum es geht. Gemerkt je Browser.'));
   }
 
-  function sprache(S, box){ zeile(box, 'Sprache der Oberfläche', 'Deutsch', 'Es gibt keine zweite.'); }
+  function sprache(S, box){
+    const I = root.sedraI18n;
+    const T = root.t;
+    const lbl = T ? T('lbl_sprache_oberflaeche') : 'Sprache der Oberfläche';
+    const deLbl = T ? T('lbl_deutsch') : 'Deutsch';
+    const enLbl = T ? T('lbl_englisch') : 'English';
+    const aktuell = I ? I.spracheAktuell() : {code:'de', name:'Deutsch'};
+    const z = d().el('div', 'hs-einst-zeile');
+    z.append(d().el('span', 'hs-einst-label', lbl));
+    const seg = d().el('span', 'hs-start-seg');
+    seg.setAttribute('role', 'group');
+    seg.setAttribute('aria-label', lbl);
+    [['de', deLbl], ['en', enLbl]].forEach(([c, label])=>{
+      const b = d().el('button', 'hs-start-seg-btn' + (c === aktuell.code ? ' on' : ''), label);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', c === aktuell.code ? 'true' : 'false');
+      b.onclick = ()=>{
+        if(I) I.spracheUmschalten(c);
+        seg.querySelectorAll('button').forEach(x=>{ const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+        const st = stand(S);
+        const T = root.t || (s=>s);
+        const X = H().einstSeiten;
+        // Kopf neu zeichnen
+        const kn = box.querySelector('.hs-einst-kopf-name');
+        if(kn) kn.textContent = T('einst_titel');
+        const zb = box.querySelector('.hs-einst-zurueck');
+        if(zb){ zb.title = T('einst_zurueck'); zb.setAttribute('aria-label', T('einst_zurueck')); }
+        const su = box.querySelector('.hs-einst-suche');
+        if(su){ su.placeholder = T('einst_suche'); su.setAttribute('aria-label', T('einst_suche')); }
+        // Navigation neu zeichnen
+        const nav = box.querySelector('.hs-einst-nav');
+        if(nav){
+          const jetzt = zerlegen(st.wahl);
+          const aktuell = jetzt.gruppe ? jetzt.gruppe.id : 'start';
+          const eintraege = [{id: 'start', titel: T('einst_startseite')}].concat(GRUPPEN.map(g=>({id: g.id, titel: typeof g.titel === 'function' ? g.titel() : g.titel})));
+          nav.replaceChildren(...eintraege.map(p=>{
+            const on = aktuell === p.id;
+            const k = d().el('button', 'hs-einst-punkt' + (on ? ' on' : '')); k.type = 'button';
+            k.append(d().el('span', 'hs-einst-symbol', X.SYMBOL[p.id] || '•'), d().el('span', null, typeof p.titel === 'function' ? p.titel() : p.titel));
+            k.dataset.gruppe = p.id; k.setAttribute('aria-current', on ? 'page' : 'false');
+            k.onclick = ()=>{ st.ansicht.zeigen(p.id); };
+            return k;
+          }));
+        }
+        // Inhalt neu zeichnen (Fehler sichtbar loggen, nicht verschlucken)
+        try{ st.ansicht.zeigen(st.wahl); }catch(e){ console.warn('Einstellungen: Ansicht konnte nicht neu gezeichnet werden: ' + e.message); }
+      };
+      seg.append(b);
+    });
+    z.append(seg);
+    box.append(z);
+  }
 
   function vorlagen(S, box){
     const nach = antraege(S, box, 'harness_vorlage', 'die Vorlage entsteht erst mit der');

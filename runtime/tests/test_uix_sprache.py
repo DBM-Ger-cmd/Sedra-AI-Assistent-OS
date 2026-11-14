@@ -54,6 +54,32 @@ class SpracheTest(unittest.TestCase):
         out2 = _run(['sprache_wahl.js'], '''box.spracheUmschalten('en');console.log(JSON.stringify(box.t('lbl_sprache') + ' | ' + box.t('lbl_deutsch') + ' | ' + box.t('lbl_englisch')));''')
         self.assertEqual(out2, 'Language | German | English')
 
+    def test_string_dateien_gleiche_schluessel(self):
+        """X5-01 / X5-04: strings_de.js und strings_en.js haben identische Schlüssel."""
+        node = shutil.which('node')
+        self.assertIsNotNone(node, 'node ist nicht installiert')
+        head = "const vm=require('vm');const box={};vm.createContext(box);"
+        de_js = UIX_DIR / 'shells' / 'harness' / 'strings_de.js'
+        en_js = UIX_DIR / 'shells' / 'harness' / 'strings_en.js'
+        self.assertTrue(de_js.is_file(), 'strings_de.js fehlt')
+        self.assertTrue(en_js.is_file(), 'strings_en.js fehlt')
+        probe = (
+            "const fs=require('fs');"
+            "const de=fs.readFileSync(" + repr(str(de_js)) + ",'utf-8');"
+            "const en=fs.readFileSync(" + repr(str(en_js)) + ",'utf-8');"
+            "vm.runInContext(de,box);vm.runInContext(en,box);"
+            "const S=box.sedraI18nStrings||{};"
+            "const dk=Object.keys(S.de||{}).sort();"
+            "const ek=Object.keys(S.en||{}).sort();"
+            "console.log(JSON.stringify({de:dk,en:ek}));"
+        )
+        run = subprocess.run([node, '-e', head + probe],
+                             capture_output=True, text=True, encoding='utf-8', timeout=60)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        aus = json.loads(run.stdout)
+        self.assertEqual(aus['de'], aus['en'], 'DE und EN müssen identische Schlüssel haben')
+        self.assertGreater(len(aus['de']), 0, 'mindestens ein String muss vorhanden sein')
+
 
 if __name__ == '__main__':
     unittest.main()

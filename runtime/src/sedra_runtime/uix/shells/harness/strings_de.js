@@ -1,0 +1,29 @@
+// X5: Deutsche UI-Strings für die Harness-Shell (Skript, kein JSON-Fetch).
+// Wird von uix/shells/harness/i18n.js geladen. Name ohne Verwechslung mit uix/ui/sprache.js (Mikrofon).
+(function(){
+  const root = typeof window !== 'undefined' ? window : globalThis;
+  root.sedraI18nStrings = root.sedraI18nStrings || {};
+  root.sedraI18nStrings.de = {
+    btn_speichern:'Speichern', btn_schliessen:'Schließen', btn_öffnen:'Öffnen', btn_abbrechen:'Abbrechen',
+    btn_senden:'Senden', btn_anhangen:'Anhängen',
+    lbl_kommando:'Kommando', lbl_sprache:'Sprache', lbl_deutsch:'Deutsch', lbl_englisch:'Englisch',
+    lbl_deck:'Deck', lbl_sedra:'SEDRA', lbl_werkstatt:'Werkstatt', lbl_besatzung:'Besatzung',
+    lbl_bibliothek:'Bibliothek', lbl_einstellungen:'Einstellungen', lbl_karten:'Karten', lbl_projekte:'Projekte',
+    lbl_meter:'Guppy-Meter', lbl_logbuch:'Logbuch', lbl_hardware:'Hardware', lbl_maschinenraum:'Maschinenraum',
+    lbl_entwicklung:'Entwicklungsumgebung',
+    msg_fehler:'Fehler', msg_info:'Information', msg_warnung:'Warnung', msg_erfolg:'Erfolg',
+    msg_lädt:'Wird geladen …', msg_nichts_gefunden:'Nicht gefunden', msg_keine_verbindung:'Keine Verbindung zur Runtime',
+    msg_freigabe_erforderlich:'Captain-Freigabe erforderlich', msg_freigabe_erteilt:'Freigabe erteilt', msg_freigabe_abgelehnt:'Freigabe abgelehnt',
+    lbl_palette_platzhalter:'Was willst du tun?', lbl_palette_fuss:'↑↓ wählen · Enter ausführen · Esc schließen · Strg+K öffnet das Kommando von überall',
+    lbl_historie:'Zuletzt', lbl_vorschlag:'Vorschlag', lbl_vorlage_laden:'Vorlage laden',
+    lbl_rueckgaengig:'Rückgängig', lbl_wiederholen:'Wiederholen',
+    lbl_barrierefrei:'Barrierefreiheit', lbl_fokus:'Fokus', lbl_aria_label:'Beschriftung',
+    msg_kontrast_ok:'Kontrast OK (WCAG AA)', msg_kontrast_zu_niedrig:'Kontrast zu niedrig',
+    lbl_tab_reihenfolge:'Tab-Reihenfolge', lbl_eingabefeld:'Eingabefeld', lbl_schaltfläche:'Schaltfläche',
+    lbl_menü:'Menü', lbl_dialog:'Dialog', lbl_schließen:'Schließen', lbl_minimieren:'Minimieren', lbl_maximieren:'Maximieren',
+    lbl_sprache_oberflaeche:'Sprache der Oberfläche',
+    einst_titel:'Einstellungen', einst_suche:'Einstellung suchen', einst_zurueck:'Zurück', einst_startseite:'Startseite',
+    einst_gruppe_allgemein:'Allgemein', einst_gruppe_agent:'Agent', einst_gruppe_sprache:'Sprache und Ton',
+    einst_gruppe_integrationen:'Integrationen', einst_gruppe_modelle:'Lokale Modelle', einst_gruppe_system:'System'
+  };
+})();

@@ -8,6 +8,7 @@
   const H = ()=>root.sedraHarness;
   const ZULETZT_KEY = 'sedra.harness.einstellungen.zuletzt';
   const ZULETZT_MAX = 4;
+  const T = root.t || (s => s);
   const SYMBOL = {start: '⌂', allgemein: '◐', agent: '✦', sprache: '♪', integrationen: '⇄', modelle: '◆', system: '⚙'};
   // Symbol und ein Satz je Punkt – das, was in der Reihe unter dem Titel steht
   const PUNKT = {
@@ -65,7 +66,7 @@
   }
 
   function gruppenseite(S, seite, gruppe, gehe){
-    seite.append(d().el('h2', 'hs-einst-titel', gruppe.titel));
+    seite.append(d().el('h2', 'hs-einst-titel', typeof gruppe.titel === 'function' ? gruppe.titel() : gruppe.titel));
     const liste = d().el('div', 'hs-einst-reihen');
     Object.keys(gruppe.punkte).forEach(pid=>{
       const id = gruppe.id + '/' + pid;
