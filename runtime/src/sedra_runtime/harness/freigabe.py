@@ -247,7 +247,7 @@ class Kiste:
             weich_werkzeug=lambda: vorbehalte.pruefen_weich(name, plan['ziel'], args), weich_plan=plan.get('weich'),
             aufgabe_treffer=lambda weich: self.aufgaben.deckt(self.sitzung_id, name, plan['ziel'], weich=weich),
             aufgabe_zaehlen=self.aufgaben.zaehlen if self.aufgaben is not None else None,
-            sitzung_treffer=lambda: sitzungs_erlaubnis.deckt(self.erlaubnisse, name, plan['ziel']))
+            sitzung_treffer=lambda: sitzungs_erlaubnis.deckt(self.erlaubnisse, name, plan['ziel'], datetime.now().astimezone()), lokal=bool(self.lokal))
         via_aufgabe, via_sitzung = gedeckt['via_aufgabe'], gedeckt['via_sitzung']
         if via_aufgabe and name in vorbehalte.SCHREIBEN and getattr(self.w, 'oberflaeche', None) is not None:      # O3 G2-01: unter einer Aufgabe geschriebener Code der Oberfläche wirkt erst nach der Übernahme
             from pathlib import Path as _Pfad

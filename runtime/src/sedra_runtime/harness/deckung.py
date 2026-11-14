@@ -7,7 +7,7 @@ dieselbe wie vor S4.2 (Test `test_harness_deckung_vergleich`: Wahrheitstabelle a
 2. Vorbehalt oder Warnkarte: keine Erlaubnis deckt, nie (Vorbehalt und Warnkarte bleiben beim Captain).
 3. Aufgabe (nur lokale Modelle, HS-27): trifft eine aktive Aufgabe und lässt sich der Aufruf zählen, gilt sie; ein weicher Vorbehalt
    (Plan oder Werkzeug) gilt als Zusatz der Aufgabe.
-4. Sitzungs-Erlaubnis: nur ohne weichen Vorbehalt und nur, wenn keine Aufgabe schon gedeckt hat.
+4. Sitzungs-Erlaubnis: nur mit einem lokalen Modell (S4.3, E5), nur ohne weichen Vorbehalt und nur, wenn keine Aufgabe schon gedeckt hat.
 5. Sonst: Karte.
 
 Rein: keine Dateien, kein eigener Zustand. Die Ablagen (Aufgaben, Sitzungs-Erlaubnisse) werden über die übergebenen Funktionen gelesen;
@@ -15,7 +15,7 @@ Rein: keine Dateien, kein eigener Zustand. Die Ablagen (Aufgaben, Sitzungs-Erlau
 from __future__ import annotations
 
 
-def deckt(*, wirkt_als, vorbehalt, warnkarte, aufgaben_aktiv, weich_werkzeug, weich_plan, aufgabe_treffer, aufgabe_zaehlen, sitzung_treffer):
+def deckt(*, wirkt_als, vorbehalt, warnkarte, aufgaben_aktiv, weich_werkzeug, weich_plan, aufgabe_treffer, aufgabe_zaehlen, sitzung_treffer, lokal=True):
     """{'via_aufgabe': aufgabe_id|None, 'via_sitzung': karte_id|None}. Alle Wirkungen kommen über die übergebenen Funktionen.
 
     `aufgaben_aktiv`: gibt es Aufgaben und ein lokales Modell (HS-27)? `weich_werkzeug()`: weicher Vorbehalt des Werkzeugs (oder None);
@@ -29,7 +29,7 @@ def deckt(*, wirkt_als, vorbehalt, warnkarte, aufgaben_aktiv, weich_werkzeug, we
         treffer = aufgabe_treffer(weich)
         if treffer and aufgabe_zaehlen(treffer['aufgabe_id']):
             ergebnis['via_aufgabe'] = treffer['aufgabe_id']
-    if not ergebnis['via_aufgabe'] and not weich_werkzeug():
+    if lokal and not ergebnis['via_aufgabe'] and not weich_werkzeug():      # S4.3 FS-13 (E5 = nein): mit einem Cloud-Modell deckt keine Sitzungs-Erlaubnis
         treffer = sitzung_treffer()
         if treffer:
             ergebnis['via_sitzung'] = treffer['karte_id']

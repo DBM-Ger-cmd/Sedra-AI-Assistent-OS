@@ -9,7 +9,11 @@ Auf einer Freigabe-Karte kann der Captain statt „Erlauben“ auch **„Für di
 Rein: keine Dateien, kein Zustand – die Ablage ist der Sitzungs-JSONL (Eintrag `erlaubnis`, Rücknahme als `aktiv: false`)."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 from .katalog import befehl_normal, passt, pfad_normal
+
+HOECHSTDAUER = timedelta(hours=24)      # S4.3 FS-14: eine Sitzungs-Erlaubnis endet spätestens 24 Stunden nach der Erteilung
 
 GENAU = ('modell_laden', 'modell_entladen', 'lauf_starten', 'lauf_stoppen')
 DATEI = ('datei_schreiben', 'datei_aendern', 'datei_lesen', 'dateien_auflisten', 'suchen')
@@ -28,13 +32,24 @@ def muster_fuer(werkzeug, ziel):
         return ' '.join(kopf) + '*'
     rel = pfad_normal(ziel)
     ordner = rel.rsplit('/', 1)[0] if '/' in rel else ''
-    return ordner + '/**' if ordner else '*'
+    return ordner + '/**' if ordner else rel      # S4.3 FS-12: Datei in der Wurzel → genau diese Datei, nie `*`
 
 
-def deckt(erlaubnisse, werkzeug, ziel):
-    """Die erste aktive Erlaubnis der Sitzung, die diesen Aufruf deckt – oder None."""
+def abgelaufen(erlaubnis, jetzt):
+    """S4.3 FS-14: älter als die Höchstdauer. Ohne `jetzt` oder ohne lesbare Zeit (alte Einträge) gilt sie weiter – wie vor S4.3."""
+    if jetzt is None:
+        return False
+    try:
+        start = datetime.fromisoformat(str(erlaubnis.get('zeit')))
+        return jetzt - start > HOECHSTDAUER
+    except (TypeError, ValueError):
+        return False
+
+
+def deckt(erlaubnisse, werkzeug, ziel, jetzt=None):
+    """Die erste aktive, nicht abgelaufene Erlaubnis der Sitzung, die diesen Aufruf deckt – oder None."""
     for e in erlaubnisse or ():
-        if not isinstance(e, dict) or e.get('aktiv') is False or e.get('werkzeug') != werkzeug:
+        if not isinstance(e, dict) or e.get('aktiv') is False or e.get('werkzeug') != werkzeug or abgelaufen(e, jetzt):
             continue
         muster = e.get('muster')
         if not muster:
@@ -68,5 +83,8 @@ def erlaubt_fuer_karte(karte):
     if karte.get('vorbehalt') or karte.get('warnung') or karte.get('stufe') == 'verboten':
         return False
     if karte.get('werkzeug') in ('modell_laden', 'modell_entladen'):
+        return False
+    ziel = str(karte.get('ziel') or '').replace(chr(92), '/')      # S4.3 FS-11: Pfad nur relativ und ohne `..`
+    if karte.get('werkzeug') in DATEI and (ziel.startswith('/') or (len(ziel) > 1 and ziel[1] == ':') or '..' in ziel.split('/')):
         return False
     return bool(karte.get('werkzeug')) and karte.get('ziel') is not None

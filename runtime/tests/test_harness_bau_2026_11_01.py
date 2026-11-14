@@ -22,7 +22,7 @@ from test_uix_harness_freigabe import Skript
 class ErlaubnisRein(unittest.TestCase):
     def test_muster_fuer(self):
         self.assertEqual(erlaubnis.muster_fuer('datei_schreiben', 'lauf/test/x.py'), 'lauf/test/**')
-        self.assertEqual(erlaubnis.muster_fuer('datei_aendern', 'x.py'), '*')
+        self.assertEqual(erlaubnis.muster_fuer('datei_aendern', 'x.py'), 'x.py')      # S4.3 FS-12
         self.assertEqual(erlaubnis.muster_fuer('befehl', 'python -m unittest -v'), 'python -m unittest*')
         self.assertEqual(erlaubnis.muster_fuer('befehl', 'git commit -m "x"'), 'git commit*')
         self.assertEqual(erlaubnis.muster_fuer('befehl', 'pytest'), 'pytest*')
