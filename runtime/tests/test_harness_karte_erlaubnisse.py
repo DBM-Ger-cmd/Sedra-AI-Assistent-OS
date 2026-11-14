@@ -62,7 +62,14 @@ const v = K.mustervorschau;
 console.log(JSON.stringify([v(karte()), v(karte({ziel: 'runtime\\\\src\\\\a.py'})), v(karte({ziel: 'a.md'})), v(karte({werkzeug: 'befehl', ziel: 'python -m py_compile x.py'})),
   v(karte({werkzeug: 'befehl', ziel: 'git push origin main'})), v(karte({werkzeug: 'lauf_starten', ziel: 'run_tests'}))]));
 """)
-        self.assertEqual(out, ['docs/**', 'runtime/src/**', 'Dateien in der Projektwurzel', 'python -m py_compile …', 'git push …', 'run_tests'])
+        self.assertEqual(out, ['docs/**', 'runtime/src/**', 'a.md', 'python -m py_compile …', 'git push …', 'run_tests'])
+
+    def test_klartext_sagt_was_die_erlaubnis_oeffnet(self):                    # S4.4 FS-12
+        out = self.node("""
+const k = K.klartext;
+console.log(JSON.stringify([k(karte()), k(karte({ziel: 'a.md'})), k(karte({werkzeug: 'befehl', ziel: 'git push origin main'})), k(karte({werkzeug: 'lauf_starten', ziel: 'run_tests'}))]));
+""")
+        self.assertEqual(out, ['alle Dateien unter docs/ (datei_schreiben)', 'genau diese Datei: a.md (datei_schreiben)', 'Befehle, die so anfangen: git push …', 'genau dieses Ziel: run_tests'])
 
     def test_knoepfe_der_karte_je_nach_art(self):
         out = self.node("""
@@ -73,7 +80,7 @@ const fertig = K.karteKarte(S, a, karte(), {entscheidung: 'erlauben'});
 console.log(JSON.stringify({normal: namen(karte()), vorbehalt: namen(karte({vorbehalt: true, regel: 'vorbehalt'})), warnung: knoepfe(warn).map(b=>b.textContent), alarm: text(warn),
   warnklasse: warn.classList.contains('warnung'), fertig: knoepfe(fertig).length, fertigText: text(fertig)}));
 """)
-        self.assertEqual(out['normal'], ['Erlauben', 'Für diese Sitzung erlauben', 'Diff zeigen', 'Ablehnen'])
+        self.assertEqual(out['normal'], ['Erlauben', 'Für diese Sitzung erlauben', 'Befristet erlauben (2 Stunden, 50 Aufrufe)', 'Immer erlauben (Antrag)', 'Diff zeigen', 'Ablehnen'])      # S4.4 FS-20
         self.assertEqual(out['vorbehalt'], ['Erlauben', 'Diff zeigen', 'Ablehnen'])
         self.assertEqual(out['warnung'], ['Erlauben (ersetzt die Datei)', 'Diff zeigen', 'Ablehnen'])
         self.assertIn('Ersetzt die ganze Datei.', out['alarm'])
@@ -84,8 +91,8 @@ console.log(JSON.stringify({normal: namen(karte()), vorbehalt: namen(karte({vorb
     def test_klick_schickt_den_weg_an_die_richtige_karte_und_zeigt_die_entscheidung(self):
         out = self.node("""
 const res = {};
-for(const [name, weg] of [['Erlauben', 'erlauben'], ['Für diese Sitzung erlauben', 'sitzung'], ['Ablehnen', 'ablehnen']]){
-  const S = stand({'POST /api/harness/karten/K-1': {erlaubnis: weg === 'sitzung' ? {werkzeug: 'datei_schreiben', muster: 'docs/**'} : undefined}});
+for(const [name, weg] of [['Erlauben', 'erlauben'], ['Für diese Sitzung erlauben', 'sitzung'], ['Befristet erlauben (2 Stunden, 50 Aufrufe)', 'befristet'], ['Immer erlauben (Antrag)', 'immer'], ['Ablehnen', 'ablehnen']]){
+  const S = stand({'POST /api/harness/karten/K-1': {erlaubnis: ['sitzung', 'befristet', 'immer'].includes(weg) ? {werkzeug: 'datei_schreiben', muster: 'docs/**', hinweis: weg === 'sitzung' ? undefined : 'Hinweis ' + weg} : undefined}});
   const box = K.karteKarte(S, {}, karte());
   const knopf = knoepfe(box).find(b=>b.textContent === name);
   knopf.onclick(); await tick();
@@ -93,11 +100,15 @@ for(const [name, weg] of [['Erlauben', 'erlauben'], ['Für diese Sitzung erlaube
 }
 console.log(JSON.stringify(res));
 """)
-        for weg in ('erlauben', 'sitzung', 'ablehnen'):
+        for weg in ('erlauben', 'sitzung', 'befristet', 'immer', 'ablehnen'):
             self.assertEqual(out[weg]['post'], [{'pfad': '/api/harness/karten/K-1', 'methode': 'POST', 'body': {'weg': weg, 'notiz': None}}], weg)
             self.assertTrue(out[weg]['entschieden'], weg)
         self.assertIn('Erlaubt', out['erlauben']['text'])
         self.assertIn('Erlaubt – gilt für diese Sitzung', out['sitzung']['text'])
+        self.assertIn('Erlaubt – befristet', out['befristet']['text'])
+        self.assertIn('Hinweis befristet', out['befristet']['text'])
+        self.assertIn('Antrag „Immer“ gestellt', out['immer']['text'])
+        self.assertIn('Hinweis immer', out['immer']['text'])
         self.assertIn('datei_schreiben docs/**', out['sitzung']['text'])
         self.assertIn('Abgelehnt', out['ablehnen']['text'])
 

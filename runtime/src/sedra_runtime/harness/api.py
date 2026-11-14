@@ -1833,6 +1833,32 @@ class HarnessApi:
                               beschreibung=str(karte.get('begruendung') or '')[:300], aktuell=lambda: self._karte_offen(kid, bindung))
         return self._beantworten_jetzt(kid, weg, notiz, ueber, von, aenderungen)
 
+    BEFRISTET_STUNDEN, BEFRISTET_AUFRUFE = 2, 50        # S4.4 FS-20: Vorgabe der Leiter auf der Karte „Befristet“
+
+    def _erlaubnis_ausweiten(self, dauer, karte, sid, kid, erlaubnis, regeln):
+        """S4.4 (FS-20): Der Captain hat auf der Karte „Befristet“ oder „Immer“ gewählt (Klasse H, ging durch die Tür). Die Aktion der Karte lief schon;
+        hier entsteht die Erlaubnis für Gleichartiges: befristet = eine Aufgabe mit Frist und Aufrufzahl nur für diese Sitzung; immer = **nur ein Antrag**
+        an den Katalog (nichts wird selbst geschrieben, der Captain entscheidet im Posteingang). Rückgabe: ein Satz für die Karte (Hinweis, nie ein Fehler)."""
+        w, m = erlaubnis['werkzeug'], erlaubnis['muster']
+        try:
+            if dauer == 'befristet':
+                jetzt_z = datetime.now().astimezone()
+                doc = {'titel': f'Befristet: {w} {m}'[:100], 'zweck': 'Befristete Erlaubnis von der Freigabe-Karte (S4.4)', 'projekt': karte['projekt'],
+                       'sitzungen': [sid], 'erlaubt': [{'werkzeug': w, 'muster': m}],
+                       'ende': {'bis': (jetzt_z + timedelta(hours=self.BEFRISTET_STUNDEN)).isoformat(timespec='seconds'), 'max_aufrufe': self.BEFRISTET_AUFRUFE}}
+                a, _warn = self.aufgaben.anlegen(doc, von='captain')
+                # das Ereignis HARNESS_ERLAUBNIS (erteilt, befristet, Herkunft aufgabe) schreibt aufgabe.anlegen selbst
+                return f"Befristet erlaubt: {self.BEFRISTET_STUNDEN} Stunden, höchstens {self.BEFRISTET_AUFRUFE} Aufrufe ({w} {m})."
+            if dauer == 'immer':
+                regel = {'id': ('immer-' + w.replace('_', '-') + '-' + kid.lower())[:60], 'werkzeug': [w], 'muster': [m], 'stufe': 'frei',
+                         'begruendung': 'Dauer-Erlaubnis von der Freigabe-Karte (S4.4); nur nach deiner Freigabe im Posteingang'}
+                antrag = harness_antraege.katalog_antrag(self.hub, list(regeln or []) + [regel])
+                self._audit('HARNESS_ERLAUBNIS', harness_deckung.ereignis('erteilt', regel['id'], 'immer', 'karte', 'karte'))
+                return f"Antrag „Immer erlauben“ liegt im Posteingang ({w} {m}); erst deine Freigabe dort macht ihn gültig."
+        except Exception as exc:
+            return f"Die Aufgabe selbst ist erlaubt und gelaufen, aber die Erlaubnis „{dauer}“ konnte nicht angelegt werden: {exc}"
+        return None
+
     def _beantworten_jetzt(self, kid, weg, notiz, ueber, von, aenderungen):
         try:
             karte = self.karten.laden(kid)
@@ -1848,9 +1874,13 @@ class HarnessApi:
                                  werkzeuge_fuer=lambda k: self._werkzeuge(k['projekt'], k['mission_id'], harness_katalog.mit_projekt(regeln or [], self._projekt(k['projekt']))))
         karte = r['karte']
         if r.get('erlaubnis'):
-            self.sitzungen.erlauben(sid, kid, r['erlaubnis']['werkzeug'], r['erlaubnis']['muster'], regel=r['erlaubnis'].get('regel'))
-            self._audit('HARNESS_SITZUNG_ERLAUBT', {'sitzung_id': sid, 'karte_id': kid, **r['erlaubnis']})
-            self._audit('HARNESS_ERLAUBNIS', harness_deckung.ereignis('erteilt', kid, 'sitzung', 'karte', 'karte'))
+            dauer = r['erlaubnis'].get('dauer') or 'sitzung'
+            if dauer == 'sitzung':
+                self.sitzungen.erlauben(sid, kid, r['erlaubnis']['werkzeug'], r['erlaubnis']['muster'], regel=r['erlaubnis'].get('regel'))
+                self._audit('HARNESS_SITZUNG_ERLAUBT', {'sitzung_id': sid, 'karte_id': kid, **r['erlaubnis']})
+                self._audit('HARNESS_ERLAUBNIS', harness_deckung.ereignis('erteilt', kid, 'sitzung', 'karte', 'karte'))
+            else:
+                r['erlaubnis']['hinweis'] = self._erlaubnis_ausweiten(dauer, karte, sid, kid, r['erlaubnis'], regeln)
             weg = 'erlauben'
             s = self.sitzungen.laden(sid)                          # die Fortsetzung bekommt die neue Erlaubnis schon mit
         satz = {'typ': 'werkzeug', 'antwort_id': karte.get('antwort_id'), 'name': karte['werkzeug'], 'args': karte['args'], 'stufe': karte['stufe'],

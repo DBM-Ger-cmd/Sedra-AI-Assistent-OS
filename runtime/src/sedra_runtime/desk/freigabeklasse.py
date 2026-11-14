@@ -51,7 +51,7 @@ ARTEN = {
 
 # Jeder Weg, den eine Entscheidung anbieten kann (desk/decisions.WAYS, Harness-Karte, G2/G6). Ein unbekannter Weg ist H.
 WEGE = frozenset({'einmal', 'freigeben_und_anwenden', 'aendern', 'ablehnen', 'cloud_diesen_lauf', 'bestaetigen',
-                  'erlauben', 'sitzung', 'uebernehmen', 'zuruecksetzen', 'zur_kenntnis', 'zuruecknehmen'})
+                  'erlauben', 'sitzung', 'befristet', 'immer', 'uebernehmen', 'zuruecksetzen', 'zur_kenntnis', 'zuruecknehmen'})
 
 HARNESS_AUSFUEHREN = frozenset({'befehl', 'lauf_starten', 'auftraege_verteilen', 'desktop_aendern', 'profil_wechseln', 'rueckblick_schreiben', 'vorschlaege_pflegen'})      # auftraege_verteilen: der Text geht in die Cloud (Daten nach außen, wie cloud_offload) – nie über den Vorarbeiter
 HARNESS_SCHREIBEN = frozenset({'datei_schreiben', 'datei_aendern'})
@@ -59,7 +59,7 @@ HARNESS_N = frozenset({'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen'
 
 
 def _harness(binding, weg):
-    if weg == 'sitzung':                                  # Sitzungs-Erlaubnis: Rechte für später
+    if weg in ('sitzung', 'befristet', 'immer'):          # Sitzungs-Erlaubnis, befristete Erlaubnis, Dauer-Regel: Rechte für später (S4.4, FS-21)
         return H
     werkzeug = str(binding.get('werkzeug') or '')
     if werkzeug in HARNESS_AUSFUEHREN:

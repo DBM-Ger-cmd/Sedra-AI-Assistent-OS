@@ -30,7 +30,7 @@ from .werkzeuge import AKTION_LESEN, FREI_OHNE_KATALOG, LAUF, LESEN, NAMEN as HA
 from .befehl import BefehlFehler
 
 KARTE_ID = re.compile(r'K-[0-9A-F]{8}')
-WEGE = ('erlauben', 'ablehnen', 'sitzung')        # `sitzung` (P0 M1): erlauben und für diese Sitzung merken
+WEGE = ('erlauben', 'ablehnen', 'sitzung', 'befristet', 'immer')        # `sitzung` (P0 M1): erlauben und für diese Sitzung merken; S4.4 (FS-20): `befristet` (Aufgabe 2 h, 50 Aufrufe) und `immer` (Antrag an den Katalog)
 
 
 def jetzt():
@@ -382,13 +382,14 @@ def beantworten(karten, karte_id, weg, *, notiz=None, von='captain', ueber='kart
     if weg not in WEGE:
         raise ValueError('weg_unbekannt')
     erlaubnis = None
-    if weg == 'sitzung':
+    if weg in ('sitzung', 'befristet', 'immer'):
+        dauer = weg
         vorab = karten.laden(karte_id)
         if von != 'captain':
             raise ValueError('sitzung_nur_captain')
         if not sitzungs_erlaubnis.erlaubt_fuer_karte(vorab):
             raise ValueError('sitzung_nicht_moeglich: Vorbehalt, Warnkasten oder Aufgabe – nur einzeln erlauben')
-        erlaubnis = {'werkzeug': vorab['werkzeug'], 'muster': sitzungs_erlaubnis.muster_fuer(vorab['werkzeug'], vorab['ziel']), 'regel': vorab.get('regel')}
+        erlaubnis = {'werkzeug': vorab['werkzeug'], 'muster': sitzungs_erlaubnis.muster_fuer(vorab['werkzeug'], vorab['ziel']), 'regel': vorab.get('regel'), 'dauer': dauer}
         weg = 'erlauben'
     karte = karten.uebernehmen(karte_id)
     gate = karte.get('gate') or {}
@@ -424,7 +425,7 @@ def beantworten(karten, karte_id, weg, *, notiz=None, von='captain', ueber='kart
         karte['status'] = 'offen'                                   # nichts entschieden: die Karte bleibt offen
         karten.speichern(karte)
         raise
-    karte.update(status='beantwortet', entscheidung='sitzung' if erlaubnis else weg, von=von, ueber=ueber, notiz=notiz, beantwortet=jetzt(), gate=gate,
+    karte.update(status='beantwortet', entscheidung=erlaubnis['dauer'] if erlaubnis else weg, von=von, ueber=ueber, notiz=notiz, beantwortet=jetzt(), gate=gate,
                  ergebnis_kurz=str(out['ergebnis'])[:300], ergebnis_status=out['status'], erlaubnis=erlaubnis)
     karten.speichern(karte)
     if audit is not None:

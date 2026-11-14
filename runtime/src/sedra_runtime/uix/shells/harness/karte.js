@@ -20,12 +20,19 @@
     if(!k || (k.art && k.art !== 'werkzeug') || k.vorbehalt || k.warnung || k.stufe === 'verboten') return false;
     return !!k.werkzeug && k.werkzeug !== 'modell_laden' && k.werkzeug !== 'modell_entladen';
   }
+  // FS-12: in Klartext, was die Erlaubnis öffnet (steht vor dem Klick am Knopf)
+  function klartext(k){
+    const m = mustervorschau(k);
+    if(k.werkzeug === 'befehl') return 'Befehle, die so anfangen: ' + m;
+    if(/^(lauf_)/.test(k.werkzeug)) return 'genau dieses Ziel: ' + m;
+    return /\*\*$/.test(m) ? 'alle Dateien unter ' + m.slice(0, -2) + ' (' + k.werkzeug + ')' : 'genau diese Datei: ' + m + ' (' + k.werkzeug + ')';
+  }
   // Nur Anzeige (der Server bildet das Muster selbst): Ordner der Datei, Anfang des Befehls, sonst das Ziel.
   function mustervorschau(k){
     if(k.werkzeug === 'befehl'){ const w = String(k.ziel || '').trim().split(/\s+/); return (w[1] === '-m' ? w.slice(0, 3) : w.slice(0, 2)).join(' ') + ' …'; }
     if(/^(lauf_)/.test(k.werkzeug)) return String(k.ziel || '');
     const rel = String(k.ziel || '').replace(/\\/g, '/'); const i = rel.lastIndexOf('/');
-    return i > 0 ? rel.slice(0, i) + '/**' : 'Dateien in der Projektwurzel';
+    return i > 0 ? rel.slice(0, i) + '/**' : rel;      // S4.4 (FS-12): eine Datei in der Wurzel öffnet nur genau diese Datei
   }
 
   function karteKarte(S, a, k, entscheidung){
@@ -59,11 +66,12 @@
     const fuss = d().el('div', 'hs-karte-fuss');
     box.append(fuss);
     const zeigeEntscheidung = e=>{
-      const sitzung = e.entscheidung === 'sitzung';
-      const erlaubt = e.entscheidung === 'erlauben' || sitzung;
+      const sitzung = e.entscheidung === 'sitzung', befristet = e.entscheidung === 'befristet', immer = e.entscheidung === 'immer';
+      const erlaubt = e.entscheidung === 'erlauben' || sitzung || befristet || immer;
       const vorarbeiter = String(e.von || '').startsWith('vorarbeiter:');
-      fuss.replaceChildren(d().el('span', 'hs-ende ' + (erlaubt ? 'ok' : 'warn'), (sitzung ? 'Erlaubt – gilt für diese Sitzung' : erlaubt ? 'Erlaubt' : 'Abgelehnt') + (vorarbeiter ? ' (Vorarbeiter)' : (e.ueber === 'posteingang' ? ' (Posteingang)' : ''))),
+      fuss.replaceChildren(d().el('span', 'hs-ende ' + (erlaubt ? 'ok' : 'warn'), (sitzung ? 'Erlaubt – gilt für diese Sitzung' : befristet ? 'Erlaubt – befristet' : immer ? 'Erlaubt – Antrag „Immer“ gestellt' : erlaubt ? 'Erlaubt' : 'Abgelehnt') + (vorarbeiter ? ' (Vorarbeiter)' : (e.ueber === 'posteingang' ? ' (Posteingang)' : ''))),
                            ...(sitzung && e.erlaubnis ? [d().el('small', 'hs-leise', 'Ohne Karte bis zum Schließen: ' + e.erlaubnis.werkzeug + ' ' + e.erlaubnis.muster + ' (Einstellungen → Freigabe)')] : []),
+                           ...((befristet || immer) && e.erlaubnis && e.erlaubnis.hinweis ? [d().el('small', 'hs-leise', e.erlaubnis.hinweis)] : []),
                            ...(e.notiz ? [d().el('small', 'hs-leise', (vorarbeiter ? 'Begründung: ' : '') + e.notiz)] : []),
                            ...(e.zurueckgenommen ? [d().el('small', 'hs-karte-an', 'Vom Captain zurückgenommen: ' + (e.zurueckgenommen.grund || ''))] : []));
       box.classList.add('entschieden'); an.hidden = true;            // entschieden: kein „beim Vorarbeiter“ mehr
@@ -97,6 +105,15 @@
       sitzung.title = 'Gleichartige Aufrufe (' + mustervorschau(k) + ') laufen bis zum Schließen der Sitzung ohne Karte. Zurücknehmen: Einstellungen → Freigabe.';
       sitzung.onclick = ()=>antworten('sitzung');
       fuss.append(sitzung);
+      // S4.4 (FS-20): die Leiter Einmal · Diese Sitzung · Befristet · Immer. „Immer“ schreibt nichts selbst: es stellt einen Antrag in den Posteingang.
+      const befristet = d().el('button', 'hs-knopf', 'Befristet erlauben (2 Stunden, 50 Aufrufe)'); befristet.type = 'button'; befristet.dataset.weg = 'befristet';
+      befristet.title = 'Öffnet ' + klartext(k) + ' für diese Sitzung, 2 Stunden lang und höchstens 50 Aufrufe. Zurücknehmen: Einstellungen → Freigabe.';
+      befristet.onclick = ()=>antworten('befristet');
+      const immer = d().el('button', 'hs-knopf', 'Immer erlauben (Antrag)'); immer.type = 'button'; immer.dataset.weg = 'immer';
+      immer.title = 'Stellt einen Antrag in den Posteingang: Regel „frei“ für ' + klartext(k) + '. Erst deine Freigabe dort macht sie gültig.';
+      immer.onclick = ()=>antworten('immer');
+      fuss.append(befristet, immer);
+      sitzung.title = 'Öffnet ' + klartext(k) + ' bis zum Schließen der Sitzung (höchstens 24 Stunden), ohne Karte. Zurücknehmen: Einstellungen → Freigabe.';
     }
     fuss.append(diff, ablehnen, notiz);
     return box;
@@ -124,5 +141,5 @@
     try{ eintrag.aktualisieren(await S.api('/api/harness/karten/' + kartenId)); }catch(_err){}
   }
 
-  root.sedraHarness.karte = {diffZeilen, karteKarte, diffAnsicht, aktualisieren, sitzungMoeglich, mustervorschau};
+  root.sedraHarness.karte = {diffZeilen, karteKarte, diffAnsicht, aktualisieren, sitzungMoeglich, mustervorschau, klartext};
 })();

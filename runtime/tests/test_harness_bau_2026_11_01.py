@@ -151,7 +151,7 @@ class SitzungsErlaubnisServer(unittest.TestCase):
         code, out = anfrage(self.url, 'POST', f'/api/harness/karten/{kid}', {'weg': 'sitzung'})
         self.assertEqual(code, 200, out)
         self.assertEqual((out['weg'], out['ergebnis_status'], out['fortsetzung']), ('sitzung', 'ok', 'laeuft'))
-        self.assertEqual(out['erlaubnis'], {'werkzeug': 'datei_schreiben', 'muster': 'docs/**', 'regel': 'schreiben-docs'})
+        self.assertEqual(out['erlaubnis'], {'werkzeug': 'datei_schreiben', 'muster': 'docs/**', 'regel': 'schreiben-docs', 'dauer': 'sitzung'})
         ev2 = strom(self.url, out['antwort_id'])
         # zweite Datei im selben Ordner: ohne Karte; datei_aendern ist ein anderes Werkzeug → wieder Karte
         enden = [e[2] for e in ev2 if e[1] == 'werkzeug.ende']
