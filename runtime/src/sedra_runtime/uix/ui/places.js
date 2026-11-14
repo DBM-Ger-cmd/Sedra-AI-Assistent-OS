@@ -50,7 +50,8 @@
     {id: 'wissen-messung',     label: 'Wissen · Messung',     hint: 'Index und Nachmessung: wie gut findet der Speicher', words: ['nachmessung', 'wissensindex', 'abdeckung'], object: {type: 'wissen', id: 'speicher', title: 'Wissen', view: 'messung'}},
     {id: 'wissen-index',       label: 'Wissen · Index',       hint: 'Stand des Index, Nachführen', words: ['einbetten', 'embedding'], object: {type: 'wissen', id: 'speicher', title: 'Wissen', view: 'index'}},
     {id: 'wissen-nachmessung', label: 'Wissen · Nachmessung', hint: 'deine Fragen bewerten', words: [], object: {type: 'wissen', id: 'speicher', title: 'Wissen', view: 'nachmessung'}},
-    {id: 'labor',     label: 'KI-Labor',              hint: 'Anbieter, Schlüssel, Modelle, Tests',       words: ['labor', 'ki-labor', 'cloud', 'anbieter'],                                  object: {type: 'labor', id: 'labor', title: 'KI-Labor'}}
+    {id: 'labor',     label: 'KI-Labor',              hint: 'Anbieter, Schlüssel, Modelle, Tests',       words: ['labor', 'ki-labor', 'cloud', 'anbieter'],                                  object: {type: 'labor', id: 'labor', title: 'KI-Labor'}},
+    {id: 'factory-studio', label: 'Factory Studio',   hint: 'Projekt Browser und Status Dashboard (lesend) für Factory-Operationen', words: ['fabrik', 'factory', 'build', 'benchmark'], object: {type: 'factory-studio', id: 'app', title: 'Factory Studio'}}
   ];
 
   const ORDER_WORDS = ['erstelle', 'erstell', 'baue', 'bau', 'schreibe', 'schreib', 'implementiere', 'programmiere', 'entwickle', 'ändere', 'aendere',

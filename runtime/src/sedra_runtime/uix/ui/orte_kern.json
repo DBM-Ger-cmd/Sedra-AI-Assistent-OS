@@ -556,6 +556,13 @@
     "id": "labor",
     "title": "KI-Labor"
    }
+  },
+  {
+   "id": "factory-studio",
+   "label": "Factory Studio",
+   "hint": "Projekt Browser und Status Dashboard (lesend) für Factory-Operationen",
+   "words": ["fabrik", "factory", "build", "benchmark"],
+   "object": {"type": "factory-studio", "id": "app", "title": "Factory Studio"}
   }
  ],
  "woerter": {

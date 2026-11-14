@@ -40,6 +40,7 @@ OBJECT_TYPES += ('team',)                                        # A3: die App T
 OBJECT_TYPES += ('translator',)                                  # A3: die App Translator (SPEC_APP_TRANSLATOR_v1); ihre vier Modi nutzen die schon bekannten Typen
 OBJECT_TYPES += ('workflow',)                                      # n8n interchange app; execution stays in the mission core
 OBJECT_TYPES += ('scenario',)                                      # scenario app shares the process store, not the editor surface
+OBJECT_TYPES += ('factory-studio',)  # F3-01: die App Factory Studio (SPEC_F3_01_FACTORY_STUDIO_APP); Project Browser und Status Dashboard (lesend)
 # Nachtrag N1: ein Eintrag in `handles` ist der Typ, `typ:alle`, `typ:*` oder `typ:<id>` (dasselbe Muster wie ui/schema/tool.schema.json).
 HANDLE = re.compile(r'^[a-z0-9-]{2,40}(:(\*|[a-z0-9-]{1,40}))?$')
 TOOL_KINDS = ('object', 'instrument', 'panel', 'dienst')
