@@ -19,6 +19,7 @@ import webbrowser
 
 import yaml
 
+from . import factory_lesen
 from . import uix_diag
 from .models import gpu_preflight
 from .jobs.job_supervisor import FINAL_STATES, JobError
@@ -1086,6 +1087,19 @@ class UIXHub:
     # Diese vier schreiben nur `local_config` – nie den Projektordner. Sie berühren deshalb keine Grenze aus Build 9, und das
     # steht auch im Werkzeug. Fremder Code bleibt ein Gate; eigene Form (Shell wechseln, an/aus, Vorlage) ist Audit
     # (Captain-Entscheidung 14.10.2026): ein Gate an dieser Stelle würde die Freigabe zur Gewohnheit machen.
+
+    # ---- Factory Studio (F3-01): nur lesen, aus der Registry und dem Evidence Store (factory_lesen.py)
+    def factory_health(self, payload=None):
+        return factory_lesen.health(self.project_root)
+
+    def factory_typen(self, payload=None):
+        return factory_lesen.typen(self.project_root)
+
+    def factory_runs(self, payload=None):
+        return factory_lesen.runs(self.project_root)
+
+    def factory_benchmarks(self, payload=None):
+        return factory_lesen.benchmarks(self.project_root)
 
     def modules_view(self, payload=None):
         """Was geladen ist, was abgelehnt wurde und warum, welche Shell läuft – die eine Liste, die das Werkzeug zeichnet."""
@@ -4542,6 +4556,10 @@ def make_server(hub: UIXHub, port=0):
                     '/api/uix/apps/verzeichnis': hub.apps_verzeichnis,      # AM3-26: Nachweis aller Apps mit Gewährungen
                     '/api/uix/apps': hub.apps_view,                          # read-only: fremde Apps mit beantragten und gewährten Rechten (AM3)
                     '/api/uix/modules': hub.modules_view,                   # read-only: Shell, Werkzeuge, Abgelehnte, Vorlagen
+                    '/api/uix/factory/health': hub.factory_health,           # F3-01: Registry und Evidence Store erreichbar? (nur lesen)
+                    '/api/uix/factory/typen': hub.factory_typen,             # F3-01: die registrierten Factory-Typen (nur lesen)
+                    '/api/uix/factory/runs': hub.factory_runs,               # F3-01: die letzten Läufe aus dem Evidence Store (nur lesen)
+                    '/api/uix/factory/benchmarks': hub.factory_benchmarks,   # F3-01: gespeicherte Benchmark-Vergleiche (nur lesen)
                     '/api/uix/shelf': hub.shelf_view,                       # read-only: die eigenen Ablagen je Shell (Build 19)
                     '/api/uix/clients': hub.clients_view,                   # read-only: CLI/MCP-Client vorhanden, Port, PID – nie der Token (Harness Stufe 5)
                 }
