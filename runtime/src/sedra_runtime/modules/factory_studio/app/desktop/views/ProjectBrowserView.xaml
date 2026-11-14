@@ -1,0 +1,147 @@
+<!-- 
+Factory Studio ProjectBrowser View (WinUI 3 XAML)
+Datei: Views/ProjectBrowserView.xaml
+Namespace: Sedra.FactoryStudio.Views
+ViewModel: ProjectBrowserViewModel
+-->
+
+<Page
+    x:Class="Sedra.FactoryStudio.Views.ProjectBrowserView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:Sedra.FactoryStudio.ViewModels"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    xmlns:converters="using:Sedra.FactoryStudio.Converters"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        
+        <!-- Project Node Template -->
+        <DataTemplate x:Key="ProjectNodeTemplate" x:DataType="vm:ProjectNode">
+            <StackPanel Orientation="Horizontal" Spacing="8" Padding="4" 
+                        Background="{x:Bind is_selected, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=selected, Mode=OneWay}">
+                <!-- Expand/Collapse Chevron -->
+                <FontIcon Glyph="&#xE70D;" FontSize="12" 
+                          Visibility="{x:Bind children.Count > 0, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                
+                <!-- Status Indicator -->
+                <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
+                         Fill="{x:Bind status, Converter={StaticResource StatusToColorConverter}, Mode=OneWay}"/>
+                
+                <!-- Project Name -->
+                <TextBlock Text="{x:Bind display_name, Mode=OneWay}" 
+                           VerticalAlignment="Center" FontWeight="Medium"/>
+                
+                <!-- Module Count Badge -->
+                <controls:InfoBadge Value="{x:Bind modules_count, Mode=OneWay}" 
+                                    Visibility="{x:Bind modules_count > 0, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                                    Margin="8,0,0,0"/>
+                
+                <!-- Last Build Status -->
+                <FontIcon Glyph="{x:Bind last_build_status, Converter={StaticResource BuildStatusToGlyphConverter}, Mode=OneWay}"
+                          FontSize="12" Foreground="{x:Bind last_build_status, Converter={StaticResource BuildStatusToColorConverter}, Mode=OneWay}"
+                          Visibility="{x:Bind last_build_status, Converter={StaticResource StringToVisibilityConverter}, Mode=OneWay}"
+                          Margin="8,0,0,0"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- TreeView Item Style -->
+        <Style TargetType="TreeViewItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TreeViewItem">
+                        <Grid x:Name="RootGrid" Background="{TemplateBinding Background}">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal"/>
+                                    <VisualState x:Name="PointerOver">
+                                        <VisualState.Setters>
+                                            <Setter Target="RootGrid.Background" Value="{ThemeResource SystemControlHighlightListLowBrush}"/>
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Selected">
+                                        <VisualState.Setters>
+                                            <Setter Target="RootGrid.Background" Value="{ThemeResource SystemControlHighlightAccentBrush}"/>
+                                            <Setter Target="ContentPresenter.Foreground" Value="{ThemeResource SystemControlHighlightAltBaseHighBrush}"/>
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <ContentPresenter x:Name="ContentPresenter" 
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              Content="{TemplateBinding Content}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Page.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Toolbar -->
+        <CommandBar Grid.Row="0" DefaultLabelPosition="Right" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <AppBarButton Icon="Add" Label="Neues Projekt" 
+                          Command="{x:Bind ViewModel.create_project_command, Mode=OneWay}"
+                          ToolTipService.ToolTip="Neues Factory-Projekt erstellen (Ctrl+N)"/>
+            <AppBarButton Icon="Refresh" Label="Aktualisieren" 
+                          Command="{x:Bind ViewModel.refresh_command, Mode=OneWay}"
+                          ToolTipService.ToolTip="Projektliste aktualisieren (F5)"/>
+            <AppBarButton Icon="Delete" Label="Löschen" 
+                          Command="{x:Bind ViewModel.delete_project_command, Mode=OneWay}"
+                          Visibility="{x:Bind ViewModel.selected_project, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                          ToolTipService.ToolTip="Ausgewähltes Projekt löschen"/>
+            <CommandBar.Content>
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="12,0">
+                    <TextBlock Text="Factory Studio — Projekte" 
+                               Style="{StaticResource TitleTextBlockStyle}" 
+                               VerticalAlignment="Center"/>
+                    <ProgressRing IsActive="{x:Bind ViewModel.is_loading, Mode=OneWay}" 
+                                  Width="20" Height="20" Margin="12,0,0,0"/>
+                    <TextBlock Text="{x:Bind ViewModel.error_message, Mode=OneWay}" 
+                               Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                               Visibility="{x:Bind ViewModel.error_message, Converter={StaticResource StringToVisibilityConverter}, Mode=OneWay}"
+                               VerticalAlignment="Center" Margin="12,0,0,0"/>
+                </StackPanel>
+            </CommandBar.Content>
+        </CommandBar>
+
+        <!-- TreeView -->
+        <TreeView Grid.Row="1" x:Name="ProjectTreeView"
+                  ItemsSource="{x:Bind ViewModel.projects, Mode=OneWay}"
+                  SelectedItem="{x:Bind ViewModel.selected_project, Mode=TwoWay}"
+                  ItemTemplate="{StaticResource ProjectNodeTemplate}"
+                  CanDragItems="True" AllowDrop="True"
+                  DragItemsStarting="ProjectTreeView_DragItemsStarting"
+                  Drop="ProjectTreeView_Drop"
+                  ContextRequested="ProjectTreeView_ContextRequested"
+                  Margin="0,4,0,0">
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="{x:Bind is_expanded, Mode=TwoWay}"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                </Style>
+            </TreeView.ItemContainerStyle>
+        </TreeView>
+
+        <!-- Status Bar -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" 
+                    Padding="12,8" Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
+            <TextBlock Text="{x:Bind ViewModel.status_message, Mode=OneWay}" 
+                       Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+            <TextBlock Text="{x:Bind ViewModel.projects.Count, Mode=OneWay, Converter={StaticResource IntToStringConverter}, ConverterParameter='Projekte: {0}'}" 
+                       Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+        </StackPanel>
+    </Grid>
+</Page>

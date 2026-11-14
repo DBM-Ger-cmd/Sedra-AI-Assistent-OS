@@ -1,0 +1,148 @@
+<!-- 
+Factory Studio GraphView View (WinUI 3 XAML)
+Datei: Views/GraphView.xaml
+Namespace: Sedra.FactoryStudio.Views
+ViewModel: GraphViewViewModel
+Uses: GraphX for WinUI (NuGet: GraphX.WPF / GraphX.UWP - adapt for WinUI 3)
+-->
+
+<Page
+    x:Class="Sedra.FactoryStudio.Views.GraphView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:Sedra.FactoryStudio.ViewModels"
+    xmlns:graphx="using:GraphX.Controls"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    xmlns:converters="using:Sedra.FactoryStudio.Converters"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <converters:NodeTypeToColorConverter x:Key="NodeTypeToColorConverter"/>
+        <converters:NodeTypeToIconConverter x:Key="NodeTypeToIconConverter"/>
+        
+        <!-- Vertex Template (Graph Node) -->
+        <DataTemplate x:Key="VertexTemplate" x:DataType="vm:GraphNodeViewModel">
+            <Border x:Name="VertexBorder" 
+                    Background="{x:Bind node_type, Converter={StaticResource NodeTypeToColorConverter}, Mode=OneWay}"
+                    CornerRadius="8" Padding="12,8" MinWidth="120" MaxWidth="200"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    CornerRadius="8" Effect="{StaticResource DropShadowEffect}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Header: Icon + Type Badge -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                        <FontIcon Glyph="{x:Bind node_type, Converter={StaticResource NodeTypeToIconConverter}, Mode=OneWay}" 
+                                  FontSize="16" Foreground="White" VerticalAlignment="Center"/>
+                        <controls:InfoBadge Value="{x:Bind node_type, Mode=OneWay}" 
+                                            Foreground="White" Background="Transparent"/>
+                    </StackPanel>
+                    
+                    <!-- Label -->
+                    <TextBlock Grid.Row="1" Text="{x:Bind label, Mode=OneWay}" 
+                               FontWeight="SemiBold" Foreground="White" 
+                               TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"/>
+                    
+                    <!-- Status Badge -->
+                    <controls:InfoBadge Grid.Row="2" Value="{x:Bind status, Mode=OneWay}" 
+                                        Margin="0,8,0,0" HorizontalAlignment="Left"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- Edge Template (Graph Edge) -->
+        <DataTemplate x:Key="EdgeTemplate" x:DataType="vm:GraphEdgeViewModel">
+            <graphx:EdgeControl x:Name="EdgeControl" 
+                                Stroke="{ThemeResource TextFillColorSecondaryBrush}" 
+                                StrokeThickness="2" StrokeDashArray="4,2"
+                                ArrowHead="Arrow" ArrowHeadSize="8,6"
+                                ShowArrows="True" ArrowPlacement="Target"/>
+        </DataTemplate>
+    </Page.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Toolbar -->
+        <CommandBar Grid.Row="0" DefaultLabelPosition="Right" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <AppBarButton Icon="ZoomIn" Label="Vergrößern" 
+                          Command="{x:Bind ViewModel.zoom_in_command, Mode=OneWay}"
+                          ToolTipService.ToolTip="Zoom In (Ctrl++)"/>
+            <AppBarButton Icon="ZoomOut" Label="Verkleinern" 
+                          Command="{x:Bind ViewModel.zoom_out_command, Mode=OneWay}"
+                          ToolTipService.ToolTip="Zoom Out (Ctrl+-)"/>
+            <AppBarButton Icon="Rotate" Label="Layout neu berechnen" 
+                          Command="{x:Bind ViewModel.relayout_command, Mode=OneWay}"
+                          ToolTipService.ToolTip="Graph-Layout neu berechnen"/>
+            <AppBarButton Icon="Filter" Label="Filter" 
+                          Command="{x:Bind ViewModel.show_filter_command, Mode=OneWay}"
+                          ToolTipService.ToolTip="Knoten/Filter einblenden"/>
+            <CommandBar.Content>
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="12,0">
+                    <TextBlock Text="Dependency Graph" 
+                               Style="{StaticResource TitleTextBlockStyle}" 
+                               VerticalAlignment="Center"/>
+                    <ComboBox x:Name="LayoutAlgorithmCombo" 
+                              ItemsSource="{x:Bind ViewModel.layout_algorithms, Mode=OneWay}"
+                              SelectedItem="{x:Bind ViewModel.selected_layout, Mode=TwoWay}"
+                              Width="200" Margin="12,0,0,0" VerticalAlignment="Center"
+                              PlaceholderText="Layout-Algorithmus"/>
+                    <ProgressRing IsActive="{x:Bind ViewModel.is_layouting, Mode=OneWay}" 
+                                  Width="20" Height="20" Margin="12,0,0,0"/>
+                </StackPanel>
+            </CommandBar.Content>
+        </CommandBar>
+
+        <!-- Graph Area -->
+        <Border Grid.Row="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" Margin="4">
+            <graphx:GraphArea x:Name="GraphArea" 
+                              VertexTemplate="{StaticResource VertexTemplate}"
+                              EdgeTemplate="{StaticResource EdgeTemplate}"
+                              Graph="{x:Bind ViewModel.graph, Mode=OneWay}"
+                              ZoomControl="{x:Bind ViewModel.zoom_control, Mode=OneWay}"
+                              EnableZoom="True" EnablePan="True"
+                              Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+                <graphx:GraphArea.LayoutAlgorithm>
+                    <graphx:SugiyamaLayoutAlgorithm x:Name="SugiyamaLayout" 
+                                                    Orientation="TopToBottom" 
+                                                    LayerDistance="80" VertexDistance="60"/>
+                </graphx:GraphArea.LayoutAlgorithm>
+            </graphx:GraphArea>
+        </Border>
+
+        <!-- Legend & Status -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="24" 
+                    Padding="12,8" Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBlock Text="Legende:" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,0,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Ellipse Width="12" Height="12" Fill="#0078D7" VerticalAlignment="Center"/>
+                        <TextBlock Text="Projekt" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Ellipse Width="12" Height="12" Fill="#107C10" VerticalAlignment="Center"/>
+                        <TextBlock Text="Modul" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Ellipse Width="12" Height="12" Fill="#FF8C00" VerticalAlignment="Center"/>
+                        <TextBlock Text="Service" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+            
+            <StackPanel Orientation="Horizontal" Spacing="16" Margin="24,0,0,0">
+                <TextBlock Text="{x:Bind ViewModel.node_count, Mode=OneWay, Converter={StaticResource IntToStringConverter}, ConverterParameter='Knoten: {0}'}" 
+                           Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+                <TextBlock Text="{x:Bind ViewModel.edge_count, Mode=OneWay, Converter={StaticResource IntToStringConverter}, ConverterParameter='Kanten: {0}'}" 
+                           Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Page>

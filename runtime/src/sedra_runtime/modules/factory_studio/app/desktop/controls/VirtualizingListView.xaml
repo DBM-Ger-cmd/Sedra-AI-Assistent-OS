@@ -1,0 +1,112 @@
+<!-- 
+VirtualizingListView — ListView mit Virtualisierung für große flache Listen.
+Verwendet ItemsRepeater + VirtualizingStackLayout für performantes Rendering.
+Datei: Controls/VirtualizingListView.xaml
+Namespace: Sedra.FactoryStudio.Controls
+-->
+
+<UserControl
+    x:Class="Sedra.FactoryStudio.Controls.VirtualizingListView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DesignHeight="400" d:DesignWidth="800">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Header/Filter -->
+            <RowDefinition Height="*"/>     <!-- List -->
+            <RowDefinition Height="Auto"/>  <!-- Footer/Pager -->
+        </Grid.RowDefinitions>
+        
+        <!-- Filter/Header Bar -->
+        <Border Grid.Row="0" Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                Padding="12,8" BorderThickness="0,0,0,1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <AutoSuggestBox x:Name="FilterBox" PlaceholderText="Filtern..." Width="300"
+                                QueryIcon="Find" QuerySubmitted="FilterBox_QuerySubmitted"/>
+                <ComboBox x:Name="SortCombo" PlaceholderText="Sortieren" Width="180" Margin="12,0,0,0"
+                          ItemsSource="{x:Bind ViewModel.SortOptions, Mode=OneWay}"
+                          SelectedItem="{x:Bind ViewModel.SelectedSort, Mode=TwoWay}"/>
+                <ComboBox x:Name="GroupByCombo" PlaceholderText="Gruppieren" Width="180" Margin="12,0,0,0"
+                          ItemsSource="{x:Bind ViewModel.GroupByOptions, Mode=OneWay}"
+                          SelectedItem="{x:Bind ViewModel.SelectedGroupBy, Mode=TwoWay}"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Virtualized List -->
+        <ScrollViewer Grid.Row="1" x:Name="ScrollViewer"
+                      VerticalScrollMode="Auto" HorizontalScrollMode="Auto"
+                      ViewChanged="ScrollViewer_ViewChanged">
+            
+            <ItemsRepeater x:Name="ItemsRepeater" 
+                           ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}">
+                
+                <ItemsRepeater.Layout>
+                    <VirtualizingStackLayout Orientation="Vertical" Spacing="0"/>
+                </ItemsRepeater.Layout>
+                
+                <ItemsRepeater.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ListItemViewModel">
+                        <Border x:Name="ItemBorder" 
+                                Background="{x:Bind IsSelected, Converter={StaticResource BoolToBackgroundConverter}, Mode=OneWay}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1"
+                                Padding="12,8" Margin="0"
+                                PointerPressed="ItemBorder_PointerPressed"
+                                RightTapped="ItemBorder_RightTapped">
+                            
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                                <!-- Status Icon -->
+                                <FontIcon Grid.Column="0" 
+                                          Glyph="{x:Bind Status, Converter={StaticResource StatusToGlyphConverter}, Mode=OneWay}"
+                                          FontSize="16" 
+                                          Foreground="{x:Bind Status, Converter={StaticResource StatusToColorConverter}, Mode=OneWay}"
+                                          VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                
+                                <!-- Main Content -->
+                                <StackPanel Grid.Column="1" Orientation="Vertical" Spacing="2" Margin="0,0,12,0">
+                                    <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{x:Bind Subtitle, Mode=OneWay}" 
+                                               Style="{StaticResource CaptionTextBlockStyle}" 
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               Visibility="{x:Bind Subtitle, Converter={StaticResource StringToVisibilityConverter}, Mode=OneWay}"/>
+                                </StackPanel>
+                                
+                                <!-- Metrics -->
+                                <TextBlock Grid.Column="2" Text="{x:Bind Score, Mode=OneWay, Converter={StaticResource DoubleToPercentConverter}, ConverterParameter='P1'}" 
+                                           FontWeight="SemiBold" Foreground="{x:Bind Score, Converter={StaticResource ScoreToColorConverter}, Mode=OneWay}"
+                                           VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Grid.Column="3" Text="{x:Bind Duration, Mode=OneWay, Converter={StaticResource DurationConverter}, Mode=OneWay}" 
+                                           Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                
+                                <!-- Actions -->
+                                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <controls:InfoBadge Value="{x:Bind ArtifactsCount, Mode=OneWay}" 
+                                                        Visibility="{x:Bind ArtifactsCount > 0, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"/>
+                                    <Button Content="..." Style="{StaticResource ButtonRevealStyle}" 
+                                            Click="MoreActions_Click" Margin="8,0,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+        </ScrollViewer>
+        
+        <!-- Footer / Load More -->
+        <Border Grid.Row="2" Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                Padding="12,8" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                Visibility="{x:Bind ViewModel.HasMoreItems, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                <ProgressRing x:Name="LoadMoreProgress" IsActive="{x:Bind ViewModel.IsLoadingMore, Mode=OneWay}" Width="20" Height="20"/>
+                <Button x:Name="LoadMoreButton" Content="Mehr laden" 
+                        Command="{x:Bind ViewModel.LoadMoreCommand, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.IsLoadingMore, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=inverted, Mode=OneWay}"/>
+                <TextBlock Text="{x:Bind ViewModel.LoadedCount, Mode=OneWay, Converter={StaticResource IntToStringConverter}, ConverterParameter='Geladen: {0}'}" 
+                           Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

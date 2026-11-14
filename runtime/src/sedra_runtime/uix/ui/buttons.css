@@ -1,0 +1,222 @@
+/* Buttons – Basis & Varianten (Token-only, Dark/Light ready) */
+/* Einbindung: nach tokens.css, vor Shell-spezifischem CSS */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap);
+  padding: 6px 12px;
+  font: inherit;
+  font-size: var(--size-small);
+  font-weight: 500;
+  line-height: 1.4;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.btn:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--panel-2);
+  border-color: var(--hs-on-line);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Primary – Hauptaktion */
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-2);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--accent-2);
+}
+
+/* Secondary – Alternative Aktion */
+.btn-secondary {
+  background: var(--panel-2);
+  border-color: var(--line);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--hs-hover);
+  border-color: var(--hs-on-line);
+}
+
+/* Ghost – Subtil, für Toolbar/Leisten */
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--hs-hover);
+  border-color: transparent;
+}
+
+/* Danger – Zerstörerische Aktionen */
+.btn-danger {
+  background: var(--bad-bg);
+  color: var(--bad);
+  border-color: var(--bad-line);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--bad);
+  color: var(--accent-text);
+  border-color: var(--bad);
+}
+
+/* Icon-Only Buttons */
+.btn-icon {
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  min-width: 32px;
+  height: 32px;
+}
+
+.btn-icon-sm {
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  min-width: 24px;
+  height: 24px;
+}
+
+.btn-icon-lg {
+  padding: 10px;
+  border-radius: var(--radius);
+  min-width: 44px;
+  height: 44px;
+}
+
+/* Button mit Icon + Text */
+.btn .icon {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+}
+
+/* Button-Gruppen (z.B. Rekorder) */
+.btn-group {
+  display: inline-flex;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.btn-group .btn {
+  border-radius: 0;
+  border: none;
+  border-right: 1px solid var(--line);
+}
+
+.btn-group .btn:first-child {
+  border-top-left-radius: var(--radius);
+  border-bottom-left-radius: var(--radius);
+}
+
+.btn-group .btn:last-child {
+  border-right: none;
+  border-top-right-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+}
+
+/* Segmented Control (Theme, Schrift, Menü-Seite) */
+.seg {
+  display: inline-flex;
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.seg-btn {
+  padding: 4px 12px;
+  font: inherit;
+  font-size: var(--size-xs);
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--line);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.seg-btn:last-child {
+  border-right: none;
+}
+
+.seg-btn:hover:not(.on):not(:disabled) {
+  background: var(--hs-hover);
+  color: var(--text);
+}
+
+.seg-btn.on {
+  background: var(--hs-on);
+  color: var(--text);
+  border-color: var(--hs-on-line);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.seg-btn:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+/* Pill Button (für Chips/Filter) */
+.btn-pill {
+  border-radius: var(--radius-pill);
+  padding: 4px 12px;
+}
+
+/* Loading State */
+.btn.loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn.loading::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

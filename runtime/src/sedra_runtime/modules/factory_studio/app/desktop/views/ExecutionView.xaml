@@ -1,0 +1,248 @@
+<!-- 
+Factory Studio ExecutionView View (WinUI 3 XAML)
+Datei: Views/ExecutionView.xaml
+Namespace: Sedra.FactoryStudio.Views
+ViewModel: ExecutionViewViewModel
+-->
+
+<Page
+    x:Class="Sedra.FactoryStudio.Views.ExecutionView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:Sedra.FactoryStudio.ViewModels"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    xmlns:charts="using:ScottPlot.WinUI"
+    xmlns:converters="using:Sedra.FactoryStudio.Converters"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <converters:BuildStatusToColorConverter x:Key="BuildStatusToColorConverter"/>
+        <converters:BuildStatusToGlyphConverter x:Key="BuildStatusToGlyphConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        
+        <!-- Benchmark Run Item Template -->
+        <DataTemplate x:Key="RunItemTemplate" x:DataType="vm:RunItemViewModel">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" Padding="8,4" 
+                  Background="{x:Bind is_selected, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=selected, Mode=OneWay}"
+                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                
+                <!-- Status Icon -->
+                <FontIcon Grid.Column="0" Glyph="{x:Bind status, Converter={StaticResource BuildStatusToGlyphConverter}, Mode=OneWay}"
+                          FontSize="16" Foreground="{x:Bind status, Converter={StaticResource BuildStatusToColorConverter}, Mode=OneWay}"
+                          VerticalAlignment="Center" Margin="0,0,12,0"/>
+                
+                <!-- Run Info -->
+                <StackPanel Grid.Column="1" Orientation="Vertical" Spacing="2" Margin="0,0,12,0">
+                    <TextBlock Text="{x:Bind name, Mode=OneWay}" FontWeight="Medium"/>
+                    <TextBlock Text="{x:Bind variant, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+                
+                <!-- Score -->
+                <TextBlock Grid.Column="2" Text="{x:Bind score, Mode=OneWay, Converter={StaticResource DoubleToPercentConverter}, ConverterParameter='P2'}" 
+                           FontWeight="SemiBold" Foreground="{x:Bind score, Converter={StaticResource ScoreToColorConverter}, Mode=OneWay}"
+                           VerticalAlignment="Center" Margin="0,0,12,0"/>
+                
+                <!-- Duration -->
+                <TextBlock Grid.Column="3" Text="{x:Bind duration_ms, Mode=OneWay, Converter={StaticResource DurationConverter}, Mode=OneWay}" 
+                           Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                
+                <!-- Artifacts -->
+                <controls:InfoBadge Grid.Column="4" Value="{x:Bind artifacts_count, Mode=OneWay}" VerticalAlignment="Center"/>
+            </Grid>
+        </DataTemplate>
+        
+        <!-- Benchmark Comparison Item -->
+        <DataTemplate x:Key="VariantCompareTemplate" x:DataType="vm:VariantComparisonViewModel">
+            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="{x:Bind variant, Mode=OneWay}" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                        <controls:InfoBadge Value="{x:Bind score, Mode=OneWay, Converter={StaticResource DoubleToPercentConverter}, ConverterParameter='P2'}" 
+                                            Foreground="{x:Bind score, Converter={StaticResource ScoreToColorConverter}, Mode=OneWay}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="24">
+                        <StackPanel>
+                            <TextBlock Text="Success Rate" Style="{StaticResource CaptionTextBlockStyle}"/>
+                            <TextBlock Text="{x:Bind success_rate, Mode=OneWay, Converter={StaticResource DoubleToPercentConverter}, ConverterParameter='P1'}" FontWeight="Medium"/>
+                        </StackPanel>
+                        <StackPanel Margin="24,0,0,0">
+                            <TextBlock Text="Duration (Median)" Style="{StaticResource CaptionTextBlockStyle}"/>
+                            <TextBlock Text="{x:Bind duration_median, Mode=OneWay, Converter={StaticResource DurationConverter}, Mode=OneWay}" FontWeight="Medium"/>
+                        </StackPanel>
+                        <StackPanel Margin="24,0,0,0">
+                            <TextBlock Text="Artifacts" Style="{StaticResource CaptionTextBlockStyle}"/>
+                            <TextBlock Text="{x:Bind artifacts_mean, Mode=OneWay, Converter={StaticResource DoubleToStringConverter}, ConverterParameter='F1'}" FontWeight="Medium"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </Page.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Toolbar -->
+        <CommandBar Grid.Row="0" DefaultLabelPosition="Right" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <AppBarButton Icon="Play" Label="Benchmark starten" 
+                          Command="{x:Bind ViewModel.run_benchmark_command, Mode=OneWay}"
+                          ToolTipService.ToolTip="Neuen Benchmark für ausgewähltes Projekt starten"/>
+            <AppBarButton Icon="Compare" Label="Varianten vergleichen" 
+                          Command="{x:Bind ViewModel.compare_variants_command, Mode=OneWay}"
+                          ToolTipService.ToolTip="Verschiedene Varianten vergleichen"/>
+            <AppBarButton Icon="OpenFile" Label="Logs" 
+                          Command="{x:Bind ViewModel.open_logs_command, Mode=OneWay}"
+                          ToolTipService.ToolTip="Build-Logs anzeigen"/>
+            <AppBarButton Icon="Download" Label="Export" 
+                          Command="{x:Bind ViewModel.export_command, Mode=OneWay}"
+                          ToolTipService.ToolTip="Daten exportieren (JSONL/CSV)"/>
+            <CommandBar.Content>
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="12,0">
+                    <TextBlock Text="Execution — Benchmarks & Runs" 
+                               Style="{StaticResource TitleTextBlockStyle}" 
+                               VerticalAlignment="Center"/>
+                    <ProgressRing IsActive="{x:Bind ViewModel.is_loading, Mode=OneWay}" 
+                                  Width="20" Height="20" Margin="12,0,0,0"/>
+                </StackPanel>
+            </CommandBar.Content>
+        </CommandBar>
+
+        <!-- Main Content -->
+        <Pivot Grid.Row="1" x:Name="ExecutionPivot">
+            <!-- Runs Tab -->
+            <PivotItem Header="Runs">
+                <Grid RowDefinitions="Auto,*">
+                    <!-- Filter Bar -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Padding="12,8" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                        <AutoSuggestBox x:Name="RunFilterBox" PlaceholderText="Runs filtern..." Width="300"
+                                        QueryIcon="Find" QuerySubmitted="RunFilterBox_QuerySubmitted"/>
+                        <ComboBox x:Name="StatusFilterCombo" PlaceholderText="Status" Width="150"
+                                  ItemsSource="{x:Bind ViewModel.status_filters, Mode=OneWay}"
+                                  SelectedItem="{x:Bind ViewModel.selected_status_filter, Mode=TwoWay}"
+                                  Margin="12,0,0,0"/>
+                        <ComboBox x:Name="TypeFilterCombo" PlaceholderText="Typ" Width="150"
+                                  ItemsSource="{x:Bind ViewModel.type_filters, Mode=OneWay}"
+                                  SelectedItem="{x:Bind ViewModel.selected_type_filter, Mode=TwoWay}"
+                                  Margin="12,0,0,0"/>
+                        <DatePicker x:Name="FromDatePicker" Header="Von" Width="180" Margin="12,0,0,0"/>
+                        <DatePicker x:Name="ToDatePicker" Header="Bis" Width="180" Margin="12,0,0,0"/>
+                    </StackPanel>
+                    
+                    <!-- Runs List -->
+                    <ListView Grid.Row="1" x:Name="RunsListView"
+                              ItemsSource="{x:Bind ViewModel.runs, Mode=OneWay}"
+                              ItemTemplate="{StaticResource RunItemTemplate}"
+                              SelectedItem="{x:Bind ViewModel.selected_run, Mode=TwoWay}"
+                              SelectionMode="Single"
+                              IsItemClickEnabled="True"
+                              ItemClick="RunsListView_ItemClick">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                    </ListView>
+                </Grid>
+            </PivotItem>
+            
+            <!-- Benchmarks Tab -->
+            <PivotItem Header="Benchmarks">
+                <Grid RowDefinitions="Auto,*">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Padding="12,8" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                        <TextBlock Text="Benchmarks" Style="{StaticResource TitleTextBlockStyle}" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="BenchmarkTypeFilter" PlaceholderText="Typ filtern" Width="200"
+                                  ItemsSource="{x:Bind ViewModel.benchmark_types, Mode=OneWay}"
+                                  SelectedItem="{x:Bind ViewModel.selected_benchmark_type, Mode=TwoWay}"/>
+                    </StackPanel>
+                    
+                    <ListView Grid.Row="1" x:Name="BenchmarksListView"
+                              ItemsSource="{x:Bind ViewModel.benchmarks, Mode=OneWay}"
+                              ItemTemplate="{StaticResource RunItemTemplate}"
+                              SelectionMode="Single">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                    </ListView>
+                </Grid>
+            </PivotItem>
+            
+            <!-- Compare Tab -->
+            <PivotItem Header="Vergleich">
+                <Grid RowDefinitions="Auto,*">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Padding="12,8" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                        <TextBlock Text="Varianten vergleichen" Style="{StaticResource TitleTextBlockStyle}" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="CompareTypeCombo" PlaceholderText="Factory-Typ" Width="250"
+                                  ItemsSource="{x:Bind ViewModel.benchmark_types, Mode=OneWay}"
+                                  SelectedItem="{x:Bind ViewModel.compare_type, Mode=TwoWay}"/>
+                        <TextBox x:Name="VariantsTextBox" PlaceholderText="Varianten (kommagetrennt)" Width="300" Margin="12,0,0,0"
+                                 Text="{x:Bind ViewModel.compare_variants_text, Mode=TwoWay}"/>
+                        <AppBarButton Icon="Compare" Label="Vergleichen" 
+                                      Command="{x:Bind ViewModel.compare_variants_command, Mode=OneWay}"/>
+                    </StackPanel>
+                    
+                    <ScrollViewer Grid.Row="1" VerticalScrollMode="Auto">
+                        <ItemsControl x:Name="ComparisonItems"
+                                      ItemsSource="{x:Bind ViewModel.comparisons, Mode=OneWay}"
+                                      ItemTemplate="{StaticResource VariantCompareTemplate}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Vertical" Spacing="8"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </PivotItem>
+            
+            <!-- Charts Tab -->
+            <PivotItem Header="Charts">
+                <Grid RowDefinitions="Auto,*">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Padding="12,8" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                        <ComboBox x:Name="ChartTypeCombo" PlaceholderText="Chart-Typ" Width="200"
+                                  ItemsSource="{x:Bind ViewModel.chart_types, Mode=OneWay}"
+                                  SelectedItem="{x:Bind ViewModel.selected_chart_type, Mode=TwoWay}"/>
+                        <ComboBox x:Name="ChartMetricCombo" PlaceholderText="Metrik" Width="200" Margin="12,0,0,0"
+                                  ItemsSource="{x:Bind ViewModel.chart_metrics, Mode=OneWay}"
+                                  SelectedItem="{x:Bind ViewModel.selected_chart_metric, Mode=TwoWay}"/>
+                        <ComboBox x:Name="ChartGroupByCombo" PlaceholderText="Gruppieren nach" Width="200" Margin="12,0,0,0"
+                                  ItemsSource="{x:Bind ViewModel.chart_group_by, Mode=OneWay}"
+                                  SelectedItem="{x:Bind ViewModel.selected_chart_group_by, Mode=TwoWay}"/>
+                    </StackPanel>
+                    
+                    <Border Grid.Row="1" Margin="12" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                        <!-- ScottPlot Chart -->
+                        <charts:PlotControl x:Name="BenchmarkChart" />
+                    </Border>
+                </Grid>
+            </PivotItem>
+        </Pivot>
+        
+        <!-- Detail Pane (Bottom) - collapsible -->
+        <Grid Grid.Row="2" x:Name="DetailPane" Height="0" VerticalAlignment="Bottom">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Header -->
+            <Border Grid.Row="0" Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="12" BorderThickness="0,1,0,0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock x:Name="DetailTitle" Text="Run Details" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center"/>
+                    <Button x:Name="CloseDetailButton" Content="✕" Style="{StaticResource ButtonRevealStyle}" 
+                            Click="CloseDetailButton_Click" Margin="12,0,0,0"/>
+                </StackPanel>
+            </Border>
+            
+            <!-- Content -->
+            <ScrollViewer Grid.Row="1" VerticalScrollMode="Auto" MaxHeight="300">
+                <StackPanel x:Name="DetailContent" Padding="12" Spacing="8">
+                    <!-- Dynamisch befüllt basierend auf selected_run -->
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Page>
