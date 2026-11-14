@@ -208,6 +208,7 @@ class StructureTests(unittest.TestCase):
         "uix_server.py": "Standardtest of the workshop: a model the Captain loaded by hand, one test at a time",
         "labor.py": "cloud adapters (provider test)", "redesign_agent.py": "cloud adapter",
         "models/benchmark.py": "benchmark_managed_llamacpp takes the GPU lease before it starts a server (OP-S2-02, decided 26.10.2026; see the test below)",
+        "modules/factory_studio/infrastructure/external.py": "HTTP clients of the Factory Studio for registry, evidence and gate services (its own _request helper); no model server, no chat/completions",
     }
 
     def test_only_listed_files_talk_to_a_local_model_server_directly(self):
