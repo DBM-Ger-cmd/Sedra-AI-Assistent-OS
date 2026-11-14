@@ -19,6 +19,7 @@ from . import slot_store, vramplan
 from .model_scheduler_config import ModelSchedulerConfig  # noqa: F401  (re-exported: callers import it from here)
 from .model_scheduler_decisions import DecisionMixin
 from .model_scheduler_handover import HandoverMixin
+from .model_scheduler_views import ViewMixin
 from .slotplan import decide_reason
 from .testlab import SCHEMA_VERSION, utc_text
 
@@ -39,7 +40,7 @@ class SchedulerError(Exception):
 
 # --------------------------------------------------------------------------- the scheduler
 
-class ModelScheduler(HandoverMixin, DecisionMixin):
+class ModelScheduler(HandoverMixin, DecisionMixin, ViewMixin):
     def __init__(self, config, lab, *, loader=None, runtime=None, resources=None, audit=None, profile=None, owner=OWNER,
                  lease_ttl_s=600, beat_every_s=30):
         """`lab` TestLab (schema 2), `loader` ModelLoader (starts the server with the recipe's slots), `runtime` LlamaServerRuntime (status,
@@ -384,31 +385,3 @@ class ModelScheduler(HandoverMixin, DecisionMixin):
         if state == "gesperrt":
             self._audit("SLOT_SERVER_GESPERRT", restarts=count, window_s=self.config.restart_window_s)
         return state
-
-    # ---- views
-    def view(self):
-        """The shape of Spec 4 D4.2.4 plus server, exklusiv, warnung. Never raises."""
-        if not self.config.enabled:
-            return {"enabled": False, "error": None}
-        try:
-            now = self._now()
-            with self._conn() as conn:
-                out = slot_store.view(conn, now, self.config.plan())
-                server = self._server(conn)
-                pending = slot_store.handover_pending(conn, now)
-                enqueued = {r["run_id"]: r["enqueued"] for r in conn.execute("SELECT run_id, enqueued FROM slot_leases WHERE state = 'wartend'")}
-        except Exception as exc:
-            return {"enabled": True, "error": type(exc).__name__}
-        warn = out.get("warnung")
-        out["warnung"] = {"art": warn["grund"], "run_id": warn["run_id"], "seit": enqueued.get(warn["run_id"])} if warn else None
-        exclusive = None
-        if server["state"] in ("drain", "exklusiv") and (server["reason"] or "").startswith("exklusiv:"):
-            req = next((p for p in pending if p["owner"] == server["owner"]), None)
-            exclusive = {"eigner": server["owner"], "zweck": req["purpose"] if req else None, "seit": req["since"] if req else server["since"]}
-        out.update(enabled=True, error=None, modell=server["recipe"], warte_max_s=self.config.wait_max_s, exklusiv=exclusive,
-                   lease=self._token is not None, slots_cap=self._cap(), standard_slots=dict(self.config.standard_slots))
-        return out
-
-    def events(self, limit=20):
-        with self._conn() as conn:
-            return slot_store.events(conn, limit)
