@@ -5,10 +5,14 @@
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
+  const T = (k, ...a) => (root.t ? root.t(k, ...a) : k);
   const KEY = 'sedra.harness.seitenleiste';
-  const SORTEN = [['neu', 'Neueste zuerst'], ['alt', 'Älteste zuerst'], ['titel', 'Titel A–Z']];
-  const TAGE = [[3, '3 Tage'], [7, '7 Tage'], [14, '14 Tage'], [30, '30 Tage'], [0, 'nie']];
-  const SCHNELL = [['dubletten', 'Gleiche Titel (die neueste bleibt)'], ['alt', 'Älter als die Einklapp-Grenze'], ['leer', 'Fast leer (höchstens 2 Nachrichten)'], ['alle', 'Alle sichtbaren']];
+  const SORTEN_KEYS = [['neu', 'sl_neueste_zuerst'], ['alt', 'sl_aelteste_zuerst'], ['titel', 'sl_titel_a_z']];
+  const TAGE_KEYS = [[3, 'sl_3_tage'], [7, 'sl_7_tage'], [14, 'sl_14_tage'], [30, 'sl_30_tage'], [0, 'sl_nie']];
+  const SCHNELL_KEYS = [['dubletten', 'sl_gleiche_titel'], ['alt', 'sl_aelter_als_grenze'], ['leer', 'sl_fast_leer'], ['alle', 'sl_alle_sichtbaren']];
+  function SORTEN(){ return SORTEN_KEYS.map(([w, k]) => [w, T(k)]); }
+  function TAGE(){ return TAGE_KEYS.map(([v, k]) => [v, T(k)]); }
+  function SCHNELL(){ return SCHNELL_KEYS.map(([w, k]) => [w, T(k)]); }
 
   function einst(){
     try{ return Object.assign({sort: 'neu', alt: 7}, JSON.parse(localStorage.getItem(KEY) || '{}')); }catch(_e){ return {sort: 'neu', alt: 7}; }
@@ -107,8 +111,8 @@
         z.append(d().el('span', 'hs-leise', titel), sel); return z;
       };
       const e = einst();
-      m.append(wahl('Sortierung', SORTEN, e.sort, v=>speichern(Object.assign(einst(), {sort: v}))),
-               wahl('Ältere einklappen ab', TAGE, e.alt, v=>speichern(Object.assign(einst(), {alt: Number(v)}))));
+      m.append(wahl(T('sl_sortierung'), SORTEN(), e.sort, v=>speichern(Object.assign(einst(), {sort: v}))),
+               wahl(T('sl_aeltere_einklappen_ab'), TAGE(), e.alt, v=>speichern(Object.assign(einst(), {alt: Number(v)}))));
       box.append(m);
     }
     if(a.an){
@@ -116,7 +120,7 @@
       leiste.append(d().el('b', null, a.ids.size + ' gewählt'));
       const schnell = d().el('select', 'hs-projektwahl'); schnell.setAttribute('aria-label', 'Schnellauswahl');
       const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Schnellauswahl …'; schnell.append(o0);
-      SCHNELL.forEach(([w, n])=>{ const o = document.createElement('option'); o.value = w; o.textContent = n + ' (' + kandidaten(S, w).length + ')'; schnell.append(o); });
+      SCHNELL().forEach(([w, k])=>{ const o = document.createElement('option'); o.value = w; o.textContent = T(k) + ' (' + kandidaten(S, w).length + ')'; schnell.append(o); });
       schnell.onchange = ()=>{ if(schnell.value) kandidaten(S, schnell.value).forEach(id=>a.ids.add(id)); neuZeichnen(); };
       const keine = d().el('button', 'hs-knopf hs-klein', 'Keine'); keine.type = 'button'; keine.onclick = ()=>{ a.ids.clear(); neuZeichnen(); };
       const weg = d().el('button', 'hs-knopf hs-klein warn', 'Löschen (' + a.ids.size + ')'); weg.type = 'button'; weg.disabled = !a.ids.size;

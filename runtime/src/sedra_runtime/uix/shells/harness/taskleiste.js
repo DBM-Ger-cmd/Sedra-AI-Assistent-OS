@@ -8,6 +8,7 @@
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
+  const T = (k, ...a) => (root.t ? root.t(k, ...a) : k);
   const ABSTAND_MS = 2000;
   const GESEHEN_KEY = 'sedra.harness.gesehen';
   const GESEHEN_MAX = 300;
@@ -49,8 +50,8 @@
 
   function mount(S){
     const bar = S.el.taskleiste;
-    const start = d().el('button', 'hs-start-knopf', 'Start'); start.type = 'button';
-    start.title = 'Start-Menü: Apps, Oberflächen, Darstellung und Schrift (Alt+S)';
+    const start = d().el('button', 'hs-start-knopf', T('tl_start')); start.type = 'button';
+    start.title = T('tl_start_titel');
     start.setAttribute('aria-haspopup', 'dialog'); start.setAttribute('aria-expanded', 'false');
     start.onclick = e=>{ e.stopPropagation(); root.sedraHarness.startmenue.umschalten(S); };
     const mitte = d().el('div', 'hs-apps');
@@ -126,7 +127,7 @@
     const k = d().el('button', 'hs-app lauf' + (key === aktiv ? ' on' : '') + (l.status === 'laeuft' ? ' laeuft' : '') + (neu ? ' neu' : '') + (pruefe(S, key) ? ' blinkt' : ''));
     k.type = 'button'; k.dataset.lauf = l.id;
     k.append(d().el('span', 'hs-app-icon', l.status === 'laeuft' ? '●' : (ENDE_ICON[l.status] || '■')), d().el('span', 'hs-app-name', laufName(l)));
-    if(l.status === 'laeuft' && l.modell_weg) k.append(d().el('small', 'hs-leise', 'Modell belegt'));
+    if(l.status === 'laeuft' && l.modell_weg) k.append(d().el('small', 'hs-leise', T('tl_modell_belegt')));
     k.title = l.name + ' (' + l.id + ') – ' + l.status + ((l.fortschritt && l.fortschritt.text) ? ' · ' + l.fortschritt.text : '') + (neu ? ' · beendet, noch nicht angesehen' : '');
     k.onclick = ()=>{ gesehen(S, key); root.sedraHarness.reiter.oeffnen(S, key); };
     return k;
@@ -144,7 +145,7 @@
       text = (ph ? ph.text + ' · ' + dauer(performance.now() - ph.seit) + ' · ' : '') + dauer(performance.now() - (a._seit || (a._seit = performance.now())));
     }
     else if(a) a._seit = null;
-    if(wartet) text = 'wartet auf Freigabe';
+    if(wartet) text = T('tl_wartet_freigabe');
     return {laeuft, neu: wartet, blinkt: !!pruefe(S, 'sitzung:' + id), text};
   }
   function sitzungGesehen(S, id){
@@ -177,13 +178,13 @@
     const zelle = d().el('span', 'hs-zelle ' + ton);
     zelle.dataset.zelle = 'token';
     const wert = s ? zahl(s.ein) + ' ↑ ' + zahl(s.aus) + ' ↓' : (h && h.antworten ? 'heute ' + zahl(h.ein) + ' ↑ ' + zahl(h.aus) + ' ↓' : '–');
-    zelle.title = 'Token' + (s ? ' dieser Sitzung' : ' heute') + ': ↑ eingehend ' + (s ? s.ein : h ? h.ein : 0).toLocaleString('de-DE') + ' (jeder Zug zählt den Verlauf neu), ↓ erzeugt ' + (s ? s.aus : h ? h.aus : 0).toLocaleString('de-DE')
-      + (s && s.tok_s ? ' · Ø ' + String(s.tok_s).replace('.', ',') + ' Token/s' : '') + (pro !== null ? ' · Kontext ' + pro + ' %' : '') + (s && s.cache_zuege ? ' · Cache ' + s.cache_anteil + ' %' : '') + ' – Klick: App Sedra Token (Verbrauch, Kosten, Gespräch)';
+    zelle.title = T('tl_token') + (s ? ' ' + T('tl_token_dieser_sitzung') : ' ' + T('tl_token_heute')) + ': ↑ eingehend ' + (s ? s.ein : h ? h.ein : 0).toLocaleString('de-DE') + ' (jeder Zug zählt den Verlauf neu), ↓ erzeugt ' + (s ? s.aus : h ? h.aus : 0).toLocaleString('de-DE')
+      + (s && s.tok_s ? ' · ' + T('tl_token_tempo').replace('{s}', String(s.tok_s).replace('.', ',')) : '') + (pro !== null ? ' · ' + T('tl_token_kontext').replace('{p}', String(pro)) : '') + (s && s.cache_zuege ? ' · ' + T('tl_token_cache').replace('{c}', String(s.cache_anteil)) : '') + ' – Klick: App Sedra Token (Verbrauch, Kosten, Gespräch)';
     zelle.tabIndex = 0; zelle.setAttribute('role', 'button');
     const oeffnen = ()=>root.sedraHarness.tokenseite.oeffnen(S);
     zelle.onclick = oeffnen;
     zelle.onkeydown = e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); oeffnen(); } };
-    zelle.append(d().el('small', null, 'Token'), d().el('b', null, wert));
+    zelle.append(d().el('small', null, T('tl_token')), d().el('b', null, wert));
     return zelle;
   }
 
@@ -222,13 +223,13 @@
           zelle.onclick = oeffnen;
           zelle.onkeydown = e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); oeffnen(); } };
         }
-        zelle.append(d().el('small', null, label), d().el('b', null, wert));
+        zelle.append(d().el('small', null, T(label)), d().el('b', null, wert));
         return zelle;
       });
       zellen.splice(Math.min(1, zellen.length), 0, tokenZelle(S));            // 02.11.2026: Token gleich hinter den Freigaben, vor Modell und GPU
       l.status.replaceChildren(...(root.sedraHarness.desktop ? root.sedraHarness.desktop.zellenAnwenden(S, zellen) : zellen));      // Desktop Builder: Auswahl und Reihenfolge des Captains
     }).catch(err=>{
-      l.status.replaceChildren(d().el('span', 'hs-zelle warn', 'Status nicht lesbar'));
+      l.status.replaceChildren(d().el('span', 'hs-zelle warn', T('tl_status_nicht_lesbar')));
       l.status.title = err.message;
     });
   }
@@ -242,7 +243,7 @@
     if(neu.length) zelle.classList.add('neu');
     if(pruefe(S, 'freigaben')) zelle.classList.add('blinkt');
     zelle.tabIndex = 0; zelle.setAttribute('role', 'button');
-    zelle.title = 'Freigaben: ' + (g.hint || '') + (beim ? ' – ' + beim + ' beim Vorarbeiter' : '') + ' – Klick öffnet den Posteingang bzw. die Stelle, an der es wartet';
+    zelle.title = T('tl_freigaben_titel') + (g.hint || '') + (beim ? ' – ' + beim + ' beim Vorarbeiter' : '') + ' – Klick öffnet den Posteingang bzw. die Stelle, an der es wartet';
     const oeffnen = ()=>{
       alle.forEach(x=>gesehenMenge(S).add('frg:' + x.id)); gesehenSpeichern(S);
       const aufgabe = alle.find(x=>x.kind === 'harness_aufgabe');
@@ -250,7 +251,7 @@
       if(aufgabe) root.sedraHarness.reiter.oeffnen(S, 'aufgaben:');
       else if(sitzung) root.sedraHarness.reiter.oeffnen(S, sitzung);
       else if(alle.length) root.sedraHarness.app.oeffnen(S, {object: {type: 'decision', id: 'alle', title: 'Posteingang', collection: true}, label: 'Posteingang'});   // Stufe 4: der Posteingang als App
-      else S.hinweis('Nichts wartet.');
+      else S.hinweis(T('tl_nichts_wartet'));
       zeichnen(S); status(S);
     };
     zelle.onclick = oeffnen;

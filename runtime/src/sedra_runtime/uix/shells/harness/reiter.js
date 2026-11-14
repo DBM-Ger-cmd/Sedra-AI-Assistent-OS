@@ -5,6 +5,7 @@
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
+  const T = (k, ...a) => (root.t ? root.t(k, ...a) : k);
   const KEY = 'sedra.harness.reiter';
   const ID = /^S-[0-9A-F]{8}$/;
   let zaehler = 0;
@@ -19,14 +20,14 @@
 
   function titel(S, id){
     if(String(id).startsWith('diff:')) return 'Diff ' + id.slice(5);
-    if(String(id).startsWith('aufgaben:')) return 'Freigaben';
+    if(String(id).startsWith('aufgaben:')) return T('sl_titel_freigaben');
     if(String(id).startsWith('lauf:')){ const l = (S.laeufe || []).find(x=>x.id === id.slice(5)); return 'Lauf ' + (l ? l.name : id.slice(5)); }
     if(String(id).startsWith('app:')) return root.sedraHarness.app.titel(S, id);                   // Stufe 4
-    if(String(id).startsWith('einstellungen:')) return 'Einstellungen';
+    if(String(id).startsWith('einstellungen:')) return T('sl_titel_einstellungen');
     if(String(id).startsWith('builder:')) return 'Desktop Builder';                            // Stufe 5
-    if(!ID.test(id)) return 'Neue Sitzung';
+    if(!ID.test(id)) return T('sl_titel_neue_sitzung');
     const s = S.sitzung(id);
-    return (s && s.titel) || 'Ohne Titel';
+    return (s && s.titel) || T('sl_ohne_titel');
   }
 
   function zeichnen(S){
@@ -43,7 +44,7 @@
       if((s && s.laeuft) || (a && a.laeuft())) tab.classList.add('laeuft');
       const name = d().el('span', 'hs-tab-name', titel(S, id));
       name.title = titel(S, id);
-      const zu = d().el('button', 'hs-tab-zu', '×'); zu.type = 'button'; zu.setAttribute('aria-label', 'Reiter schließen'); zu.tabIndex = -1;
+      const zu = d().el('button', 'hs-tab-zu', '×'); zu.type = 'button'; zu.setAttribute('aria-label', T('sl_reiter_schliessen')); zu.tabIndex = -1;
       zu.onclick = e=>{ e.stopPropagation(); schliessen(S, id); };
       const z = d().el('small', 'hs-tab-zustand'); z.hidden = true;                                  // A1: was der Reiter gerade tut (Phase, Zeit, Freigabe)
       tab.append(name, z, zu);
@@ -54,7 +55,7 @@
       return tab;
     });
     const plus = d().el('button', 'hs-tab-plus', '+'); plus.type = 'button';
-    plus.title = 'Neue Sitzung'; plus.setAttribute('aria-label', 'Neue Sitzung');
+    plus.title = T('sl_titel_neue_sitzung'); plus.setAttribute('aria-label', T('sl_titel_neue_sitzung'));
     plus.onclick = ()=>neu(S);
     leiste.replaceChildren(...kids, plus);
     zustandAuffrischen(S);
@@ -71,7 +72,7 @@
       tab.classList.toggle('laeuft', z.laeuft); tab.classList.toggle('neu', z.neu); tab.classList.toggle('blinkt', z.blinkt);
       const k = tab.querySelector('.hs-tab-zustand');
       if(k){ k.textContent = z.text; k.hidden = !z.text; }
-      tab.title = titel(S, id) + (z.laeuft ? ' – Antwort läuft' : '') + (z.neu ? ' – eine Freigabe wartet' : '');
+      tab.title = titel(S, id) + (z.laeuft ? T('sl_antwort_laeuft') : '') + (z.neu ? T('sl_freigabe_wartet') : '');
     });
   }
 

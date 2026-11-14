@@ -6,15 +6,16 @@
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
+const T = root.t || (s => s);
 const ZELLEN_RUECKFALL = [
-  { id: "gauge-decisions", feld: "decisions", label: "Freigaben", ort: null, aktion: "freigaben", quelle: null },
-  { id: "gauge-model", feld: "model", label: "Modell", ort: "models", aktion: "modellmenue", quelle: null },
-  { id: "gauge-temp", feld: "temp", label: "Temp", ort: "hardware", aktion: null, quelle: "gpu" },
-  { id: "gauge-vram", feld: "vram", label: "VRAM belegt", ort: "hardware", aktion: null, quelle: "gpu" },
-  { id: "gauge-ram", feld: "ram", label: "RAM frei", ort: "hardware", aktion: null, quelle: null },
-  { id: "gauge-server", feld: "server", label: "Modellserver", ort: "models", aktion: "modellmenue", quelle: null },
-  { id: "gauge-scheduler", feld: "scheduler", label: "Scheduler", ort: "slots", aktion: null, quelle: null },
-  { id: "gauge-state", feld: "state", label: "Zustand", ort: "machine", aktion: "einstellungen:system", quelle: null }
+  { id: "gauge-decisions", feld: "decisions", label: "zl_freigaben", ort: null, aktion: "freigaben", quelle: null },
+  { id: "gauge-model", feld: "model", label: "zl_modell", ort: "models", aktion: "modellmenue", quelle: null },
+  { id: "gauge-temp", feld: "temp", label: "zl_temp", ort: "hardware", aktion: null, quelle: "gpu" },
+  { id: "gauge-vram", feld: "vram", label: "zl_vram_belegt", ort: "hardware", aktion: null, quelle: "gpu" },
+  { id: "gauge-ram", feld: "ram", label: "zl_ram_frei", ort: "hardware", aktion: null, quelle: null },
+  { id: "gauge-server", feld: "server", label: "zl_modellserver", ort: "models", aktion: "modellmenue", quelle: null },
+  { id: "gauge-scheduler", feld: "scheduler", label: "zl_scheduler", ort: "slots", aktion: null, quelle: null },
+  { id: "gauge-state", feld: "state", label: "zl_zustand", ort: "machine", aktion: "einstellungen:system", quelle: null }
 ];
 
 function pruefeAuswahl(roh) {

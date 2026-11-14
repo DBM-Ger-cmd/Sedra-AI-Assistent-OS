@@ -6,7 +6,7 @@
 // Benachrichtigungen (K9), Sprache, Vorlagen, Freigabe-Modus (→ katalog_editor.js), Grenzen (Antrag mit Gate, D-U4), Quelle, MCP,
 // Laufzeit und Schalter (Antrag mit Gate, wie im Werkzeug Modelle). Nichts hier schreibt ohne Gate auf den Rechner (§3.2); im Browser
 // bleibt nur der gewählte Punkt und die Wahl der Benachrichtigung (Komfort).
-
+// Alle festen Beschriftungen laufen über t() (strings_de.js / strings_en.js).
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
@@ -17,14 +17,14 @@
   const W = (ort, nur, titel)=>({art: 'werkzeug', ort, nur, titel});
   const E = (flaeche, titel)=>({art: 'eigen', flaeche, titel});
   // G2 §3.1 – sechs Gruppen, 21 Punkte; `ort` ist die ID aus ui/places.js (dasselbe Objekt wie im Start-Menü)
-  const T = root.t || (s => s);
+  const T = (k, ...a) => (root.t ? root.t(k, ...a) : k);
   const GRUPPEN = [
-    {id: 'allgemein', titel: () => T('einst_gruppe_allgemein'), punkte: {darstellung: E('darstellung', 'Darstellung'), benachrichtigungen: E('benachrichtigungen', 'Benachrichtigungen'), sprache: E('sprache', 'Sprache der Oberfläche')}},
-    {id: 'agent', titel: () => T('einst_gruppe_agent'), punkte: {vorlagen: E('vorlagen', 'Vorlagen'), freigabe: E('freigabe', 'Freigabe-Modus'), grenzen: E('grenzen', 'Züge je Vorlage'), token: E('token', 'Sedra Token (Verweis)')}},
-    {id: 'sprache', titel: () => T('einst_gruppe_sprache'), punkte: {rekorder: W('aufnahme', ['rekorder'], 'Rekorder'), quelle: E('quelle', 'Quelle')}},
-    {id: 'integrationen', titel: () => T('einst_gruppe_integrationen'), punkte: {mcp: E('mcp', 'MCP'), gateway: W('gateway', ['gateway', 'schutz'], 'KI GateWay (Guard)'), cloud: W('labor', ['labor'], 'KI-Labor'), hilfswerkzeuge: E('hilfswerkzeuge', 'Hilfswerkzeuge')}},
-    {id: 'modelle', titel: () => T('einst_gruppe_modelle'), punkte: {bibliothek: W('library', ['library'], 'Bibliothek'), werkstatt: W('models', ['workshop'], 'Rezepte / Werkstatt'), slots: W('slots', ['slots'], 'Slots'), laufzeit: E('laufzeit', 'Geladene Instanzen · Laufzeit')}},
-    {id: 'system', titel: () => T('einst_gruppe_system'), punkte: {schalter: E('schalter', 'Schalter'), grenzen: W('boundary', ['boundaries'], 'Modus und Grenzen'), module: W('modules', ['modules'], 'Module'), audit: W('logbook', ['logbook'], 'Logbuch'), info: E('info', 'Info')}}
+    {id: 'allgemein', titel: () => T('einst_gruppe_allgemein'), punkte: {darstellung: E('darstellung', T('esp_darstellung')), benachrichtigungen: E('benachrichtigungen', T('esp_benachrichtigungen')), sprache: E('sprache', T('esp_sprache_oberflaeche'))}},
+    {id: 'agent', titel: () => T('einst_gruppe_agent'), punkte: {vorlagen: E('vorlagen', T('esp_vorlagen')), freigabe: E('freigabe', T('esp_freigabe')), grenzen: E('grenzen', T('esp_grenzen')), token: E('token', T('esp_token'))}},
+    {id: 'sprache', titel: () => T('einst_gruppe_sprache'), punkte: {rekorder: W('aufnahme', ['rekorder'], T('esp_rekorder')), quelle: E('quelle', T('esp_quelle'))}},
+    {id: 'integrationen', titel: () => T('einst_gruppe_integrationen'), punkte: {mcp: E('mcp', T('esp_mcp')), gateway: W('gateway', ['gateway', 'schutz'], T('esp_gateway')), cloud: W('labor', ['labor'], T('esp_cloud')), hilfswerkzeuge: E('hilfswerkzeuge', T('esp_hilfswerkzeuge'))}},
+    {id: 'modelle', titel: () => T('einst_gruppe_modelle'), punkte: {bibliothek: W('library', ['library'], T('esp_bibliothek')), werkstatt: W('models', ['workshop'], T('esp_werkstatt')), slots: W('slots', ['slots'], T('esp_slots')), laufzeit: E('laufzeit', T('esp_laufzeit'))}},
+    {id: 'system', titel: () => T('einst_gruppe_system'), punkte: {schalter: E('schalter', T('esp_schalter')), grenzen: W('boundary', ['boundaries'], T('esp_grenzen2')), module: W('modules', ['modules'], T('esp_module')), audit: W('logbook', ['logbook'], T('esp_audit')), info: E('info', T('esp_info'))}}
   ];
 
   function stand(S){ return S._einst || (S._einst = {wahl: null, ansicht: null}); }
@@ -54,14 +54,14 @@
   function ansicht(S, id){
     const st = stand(S);
     const X = H().einstSeiten;
-    const T = root.t || (s => s);
+    const T = (k, ...a) => (root.t ? root.t(k, ...a) : k);
     const box = d().el('div', 'hs-verlauf hs-einst');
     const kopfzeile = d().el('header', 'hs-einst-kopfzeile');
     const zurueck = d().el('button', 'hs-einst-zurueck', '←'); zurueck.type = 'button'; zurueck.title = T('einst_zurueck'); zurueck.setAttribute('aria-label', T('einst_zurueck'));
     const suche = d().el('input', 'hs-einst-suche'); suche.type = 'search'; suche.placeholder = T('einst_suche'); suche.setAttribute('aria-label', T('einst_suche'));
     kopfzeile.append(zurueck, d().el('span', 'hs-einst-kopf-name', T('einst_titel')), suche);
     const rumpf = d().el('div', 'hs-einst-rumpf');
-    const nav = d().el('nav', 'hs-einst-nav'); nav.setAttribute('aria-label', 'Einstellungen');
+    const nav = d().el('nav', 'hs-einst-nav'); nav.setAttribute('aria-label', T('sl_einstellungen_btn'));
     const flaeche = d().el('section', 'hs-einst-flaeche');
     rumpf.append(nav, flaeche);
     box.append(kopfzeile, rumpf);
@@ -95,7 +95,7 @@
                }});
     const navZeichnen = ()=>{
       const profil = d().el('div', 'hs-einst-profil');
-      const text = d().el('div', 'hs-einst-profil-text'); text.append(d().el('b', null, 'Captain'), d().el('small', 'hs-leise', 'SEDRA · Harness'));
+      const text = d().el('div', 'hs-einst-profil-text'); text.append(d().el('b', null, T('es_captain')), d().el('small', 'hs-leise', T('es_sedra_harness')));
       profil.append(d().el('span', 'hs-einst-avatar', 'C'), text);
       const jetzt = zerlegen(st.wahl);
       const aktuell = jetzt.gruppe ? jetzt.gruppe.id : 'start';
@@ -107,8 +107,7 @@
         k.dataset.gruppe = p.id; k.setAttribute('aria-current', on ? 'page' : 'false');
         k.onclick = ()=>gehe(p.id);
         return k;
-      }));
-    };
+      }))};
     zurueck.onclick = ()=>{ if(suche.value){ suche.value = ''; a.zeigen(st.wahl); return; } const w = zerlegen(st.wahl); a.zeigen(w.typ === 'punkt' ? w.gruppe.id : 'start'); };
     suche.oninput = ()=>{ const t = suche.value.trim(); a.zeigen(st.wahl, t || undefined); };
     st.ansicht = a;
@@ -120,7 +119,7 @@
   // Ein Werkzeug des Vertrags – das Objekt des Ortes aus places.js, eingehängt wie im App-Reiter (nur die genannten Werkzeuge)
   function werkzeug(S, flaeche, punkt){
     const ort = root.sedraPlaces.PLACES.find(p=>p.id === punkt.ort);
-    if(!ort){ flaeche.append(d().el('div', 'hs-app-satz warn', 'Der Ort „' + punkt.ort + '“ ist nicht bekannt.')); return null; }
+    if(!ort){ flaeche.append(d().el('div', 'hs-app-satz warn', T('es_ort_nicht_bekannt').replace('{ort}', punkt.ort))); return null; }
     const f = H().app.flaeche(S, Object.assign({}, ort.object), punkt.nur);
     const box = d().el('div', 'hs-app-box hs-einst-werkzeug' + (f.rechts.length ? ' nachweis-auf' : '') + (f.rechts.length && !f.links.length ? ' nur-nachweis' : ''));
     box.append(f.verben, f.koerper);
@@ -129,13 +128,13 @@
   }
 
   // ---- eigene Flächen
-  const FLAECHEN = {info: (S, box)=>root.sedraHarness.infoseite.zeigen(S, box), hilfswerkzeuge: (S, box)=>root.sedraHarness.hilfswerkzeugseite.zeigen(S, box), darstellung, benachrichtigungen, sprache, vorlagen, freigabe, grenzen, token: (S, box)=>{ box.append(d().el('div', 'hs-app-satz', 'Verbrauch, Kosten, Denken, Gedächtnis und das lange Gespräch stehen in der App „Sedra Token“ (Start → Sedra Token, oder Klick auf die Zelle Token).')); box.append(d().button('Sedra Token öffnen', ()=>root.sedraHarness.tokenseite.oeffnen(S))); }, quelle, mcp, laufzeit, schalter};
+  const FLAECHEN = {info: (S, box)=>root.sedraHarness.infoseite.zeigen(S, box), hilfswerkzeuge: (S, box)=>root.sedraHarness.hilfswerkzeugseite.zeigen(S, box), darstellung, benachrichtigungen, sprache, vorlagen, freigabe, grenzen, token: (S, box)=>{ box.append(d().el('div', 'hs-app-satz', T('es_sedra_token_info'))); box.append(d().button(T('es_sedra_token_oeffnen'), ()=>root.sedraHarness.tokenseite.oeffnen(S))); }, quelle, mcp, laufzeit, schalter};
   function eigen(S, flaeche, punkt){
     const box = d().el('div', 'hs-einst-eigen'); box.dataset.flaeche = punkt.flaeche;
     flaeche.append(box);
     const r = {abbauen(){}};
     try{ const out = FLAECHEN[punkt.flaeche](S, box); if(out && out.abbauen) r.abbauen = out.abbauen; }
-    catch(err){ box.append(d().el('div', 'hs-app-satz warn', 'Die Fläche ließ sich nicht zeichnen: ' + err.message)); }
+    catch(err){ box.append(d().el('div', 'hs-app-satz warn', T('es_import_fehlgeschlagen') + err.message)); }
     return r;
   }
   function zeile(box, label, wert, hinweis){
@@ -159,17 +158,17 @@
     const laden = ()=>S.api('/api/decisions').then(e=>{
       const offen = (e.items || []).filter(x=>x.kind === 'request:' + kind);
       satz.hidden = !offen.length;
-      satz.textContent = offen.length ? offen.length + (offen.length === 1 ? ' Antrag offen – ' : ' Anträge offen – ') + text + ' Entscheidung im Posteingang (Freigaben).' : '';
+      satz.textContent = offen.length ? offen.length + (offen.length === 1 ? T('es_antrag_ein') : T('es_antrag_mehr')) + text + T('es_antrag_posteingang') : '';
     }).catch(()=>{});
     laden();
     return laden;
   }
 
   function darstellung(S, box){
-    seg(box, 'Darstellung', [['klar', 'Klar'], ['nacht', 'Nacht']], document.documentElement.dataset.theme || 'nacht', v=>root.sedraBoot.setTheme(v));
-    seg(box, 'Schrift', [['normal', 'Normal'], ['gross', 'Groß']], document.documentElement.dataset.scale || 'normal', v=>root.sedraWechsel.setScale(v));
-    const k = d().button('Start-Menü: Oberflächen und Gedächtnis', ()=>H().startmenue.oeffnen(S));
-    box.append(k, d().el('div', 'hs-app-satz', 'Dieselben Schalter wie im Start-Menü – gemerkt im Browser, nicht auf dem Rechner.'));
+    seg(box, T('es_darstellung'), [['klar', T('es_klar')], ['nacht', T('es_nacht')]], document.documentElement.dataset.theme || 'nacht', v=>root.sedraBoot.setTheme(v));
+    seg(box, T('es_schrift'), [['normal', T('es_normal')], ['gross', T('es_gross')]], document.documentElement.dataset.scale || 'normal', v=>root.sedraWechsel.setScale(v));
+    const k = d().button(T('es_startmenue_oberflaeche'), ()=>H().startmenue.oeffnen(S));
+    box.append(k, d().el('div', 'hs-app-satz', T('es_dieselben_schalter')));
   }
 
   // K9 (D-U7): Browser-Hinweis „SEDRA: eine Freigabe wartet“, wenn das Fenster nicht vorn ist; Erlaubnis nur nach Klick; nie der Karteninhalt
@@ -179,36 +178,36 @@
     const m = meldung();
     if(!m.browser || typeof Notification === 'undefined' || Notification.permission !== 'granted') return false;
     if(document.visibilityState === 'visible' && document.hasFocus()) return false;
-    try{ const n = new Notification('SEDRA: eine Freigabe wartet', {body: 'Im Posteingang von One Sedra.', tag: 'sedra-freigabe'}); n.onclick = ()=>{ root.focus(); n.close(); }; return true; }
+    try{ const n = new Notification(T('es_freigabe_wartet_titel'), {body: T('es_freigabe_wartet_text'), tag: 'sedra-freigabe'}); n.onclick = ()=>{ root.focus(); n.close(); }; return true; }
     catch(_e){ return false; }
   }
   function benachrichtigungen(S, box){
     const m = meldung();
-    const erlaubnis = ()=>typeof Notification === 'undefined' ? 'vom Browser nicht unterstützt' : Notification.permission;
+    const erlaubnis = ()=>typeof Notification === 'undefined' ? T('es_browser_nicht_unterstützt') : Notification.permission;
     const z = d().el('div', 'hs-einst-zeile');
     const sch = d().el('input'); sch.type = 'checkbox'; sch.checked = !!m.browser; sch.id = 'hs-einst-melden';
-    const lab = d().el('label', 'hs-einst-label', 'Browser-Hinweis, wenn eine Freigabe wartet und das Fenster nicht vorn ist'); lab.htmlFor = sch.id;
-    const st = d().el('small', 'hs-leise', 'Erlaubnis: ' + erlaubnis());
+    const lab = d().el('label', 'hs-einst-label', T('es_browser_hinweis')); lab.htmlFor = sch.id;
+    const st = d().el('small', 'hs-leise', T('es_erlaubnis') + erlaubnis());
     sch.onchange = async ()=>{
       if(sch.checked && typeof Notification !== 'undefined' && Notification.permission === 'default'){
         try{ await Notification.requestPermission(); }catch(_e){}                   // nur nach Klick (K9)
       }
-      meldungSetzen({browser: sch.checked}); st.textContent = 'Erlaubnis: ' + erlaubnis();
-      if(sch.checked && typeof Notification !== 'undefined' && Notification.permission !== 'granted') S.hinweis('Der Browser hat die Benachrichtigung nicht erlaubt.', 'warn');
+      meldungSetzen({browser: sch.checked}); st.textContent = T('es_erlaubnis') + erlaubnis();
+      if(sch.checked && typeof Notification !== 'undefined' && Notification.permission !== 'granted') S.hinweis(T('es_benachrichtigung_nicht_erlaubt'), 'warn');
     };
     z.append(sch, lab, st); box.append(z);
     const z2 = d().el('div', 'hs-einst-zeile');
     const bl = d().el('input'); bl.type = 'checkbox'; bl.checked = m.blinken !== false; bl.id = 'hs-einst-blinken';
-    const lab2 = d().el('label', 'hs-einst-label', 'Neue Freigaben blinken in der Taskleiste (HS-33)'); lab2.htmlFor = bl.id;
+    const lab2 = d().el('label', 'hs-einst-label', T('es_blinken_titel')); lab2.htmlFor = bl.id;
     bl.onchange = ()=>meldungSetzen({blinken: bl.checked});
     z2.append(bl, lab2); box.append(z2);
-    box.append(d().el('div', 'hs-app-satz', 'Der Hinweis sagt nur „eine Freigabe wartet“ – nie, worum es geht. Gemerkt je Browser.'));
+    box.append(d().el('div', 'hs-app-satz', T('es_blinken_text')));
   }
 
   function sprache(S, box){
     const I = root.sedraI18n;
     const T = root.t;
-    const lbl = T ? T('lbl_sprache_oberflaeche') : 'Sprache der Oberfläche';
+    const lbl = T ? T('lbl_sprache_oberflaeche') : T('esp_sprache_oberflaeche');
     const deLbl = T ? T('lbl_deutsch') : 'Deutsch';
     const enLbl = T ? T('lbl_englisch') : 'English';
     const aktuell = I ? I.spracheAktuell() : {code:'de', name:'Deutsch'};
@@ -225,7 +224,7 @@
         if(I) I.spracheUmschalten(c);
         seg.querySelectorAll('button').forEach(x=>{ const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
         const st = stand(S);
-        const T = root.t || (s=>s);
+        const T = (k, ...a) => (root.t ? root.t(k, ...a) : k);
         const X = H().einstSeiten;
         // Kopf neu zeichnen
         const kn = box.querySelector('.hs-einst-kopf-name');
@@ -251,6 +250,11 @@
         }
         // Inhalt neu zeichnen (Fehler sichtbar loggen, nicht verschlucken)
         try{ st.ansicht.zeigen(st.wahl); }catch(e){ console.warn('Einstellungen: Ansicht konnte nicht neu gezeichnet werden: ' + e.message); }
+        // Nach Sprachwechsel die ganze Shell neu zeichnen, damit Seitenleiste, Taskleiste und Reiter die neuen Übersetzungen zeigen
+        try{ root.sedraHarness.seite.zeichnen(S); }catch(e){}
+        try{ root.sedraHarness.taskleiste.zeichnen(S); }catch(e){}
+        try{ root.sedraHarness.taskleiste.status(S); }catch(e){}
+        try{ root.sedraHarness.reiter.zeichnen(S); }catch(e){}
       };
       seg.append(b);
     });
@@ -259,18 +263,18 @@
   }
 
   function vorlagen(S, box){
-    const nach = antraege(S, box, 'harness_vorlage', 'die Vorlage entsteht erst mit der');
+    const nach = antraege(S, box, 'harness_vorlage', T('es_vorlage_entsteht'));
     if(root.sedraHarness.vorlagenneu) root.sedraHarness.vorlagenneu.knopf(S, box, nach);
     (S.vorlagen || []).forEach(v=>{
-      const k = d().el('details', 'hs-einst-karte'); const s = d().el('summary'); s.append(d().el('b', null, v.name || v.id), d().el('small', 'hs-leise', ' · ' + v.id + ' · ' + (v.quelle === 'local_config' ? 'Datei des Captains' : 'Repo')));
+      const k = d().el('details', 'hs-einst-karte'); const s = d().el('summary'); s.append(d().el('b', null, v.name || v.id), d().el('small', 'hs-leise', ' · ' + v.id + ' · ' + (v.quelle === 'local_config' ? T('es_kopie_captains') : T('es_repo'))));
       k.append(s);
       if(v.fehler){ k.append(d().el('div', 'hs-app-satz warn', v.fehler)); box.append(k); return; }
-      zeile(k, 'Beschreibung', v.beschreibung || '–'); zeile(k, 'Werkzeuge', (v.werkzeuge || []).join(', ') || '–');
-      zeile(k, 'Rechte', Object.keys(v.rechte || {}).filter(r=>v.rechte[r]).join(', ') || 'keine'); zeile(k, 'Modell', v.modell || 'das geladene'); zeile(k, 'max_zuege', String(v.max_zuege));
+      zeile(k, T('es_beschreibung'), v.beschreibung || '–'); zeile(k, T('es_werkzeuge'), (v.werkzeuge || []).join(', ') || '–');
+      zeile(k, T('es_rechte'), Object.keys(v.rechte || {}).filter(r=>v.rechte[r]).join(', ') || T('es_keine')); zeile(k, T('es_modell'), v.modell || T('es_geladenes')); zeile(k, T('es_max_zuege'), String(v.max_zuege));
       box.append(k);
     });
-    if(!(S.vorlagen || []).length) box.append(d().el('div', 'hs-app-satz', 'Keine Vorlage gefunden (runtime/config/harness_vorlagen).'));
-    box.append(d().el('div', 'hs-app-satz', 'Der Systemtext (.md) liegt neben der Vorlage; die Grenzen stehen unter „Züge je Vorlage“.'));
+    if(!(S.vorlagen || []).length) box.append(d().el('div', 'hs-app-satz', T('es_keine_vorlage')));
+    box.append(d().el('div', 'hs-app-satz', T('es_systemtext')));
   }
 
   function freigabe(S, box){
@@ -282,28 +286,28 @@
 
   // D-U4: max_zuege je Vorlage → Antrag mit Gate; max_tokens/temperature nur Anzeige
   function grenzen(S, box){
-    const nach = antraege(S, box, 'harness_vorlage', 'die Kopie der Vorlage entsteht erst mit der');
+    const nach = antraege(S, box, 'harness_vorlage', T('es_vorlage_kopie_entsteht'));
     (S.vorlagen || []).filter(v=>!v.fehler).forEach(v=>{
       const z = d().el('div', 'hs-einst-zeile'); z.dataset.vorlage = v.id;
-      const feld = d().el('input', 'hs-einst-zahl'); feld.type = 'number'; feld.min = 4; feld.max = 40; feld.value = v.max_zuege; feld.setAttribute('aria-label', 'max_zuege ' + v.id);
-      const k = d().button('Antrag stellen', async ()=>{
+      const feld = d().el('input', 'hs-einst-zahl'); feld.type = 'number'; feld.min = 4; feld.max = 40; feld.value = v.max_zuege; feld.setAttribute('aria-label', T('es_max_zuege') + ' ' + v.id);
+      const k = d().button(T('es_aufforderung'), async ()=>{
         const n = Number(feld.value);
-        if(!Number.isInteger(n) || n < 4 || n > 40){ S.hinweis('max_zuege: 4 bis 40.', 'warn'); return; }
+        if(!Number.isInteger(n) || n < 4 || n > 40){ S.hinweis(T('es_max_zuege_warn'), 'warn'); return; }
         await S.api('/api/harness/vorlagen/grenzen', {method: 'POST', body: {vorlage: v.id, max_zuege: n}});
-        S.hinweis('Antrag gestellt – Freigabe im Posteingang.'); nach();
+        S.hinweis(T('es_antrag_gestellt')); nach();
       });
-      z.append(d().el('span', 'hs-einst-label', (v.name || v.id) + ' · max_zuege'), feld, d().el('small', 'hs-leise', v.quelle === 'local_config' ? 'Kopie des Captains' : 'Repo'), k);
+      z.append(d().el('span', 'hs-einst-label', (v.name || v.id) + ' · ' + T('es_max_zuege')), feld, d().el('small', 'hs-leise', v.quelle === 'local_config' ? T('es_kopie_captains') : T('es_repo')), k);
       box.append(z);
     });
-    zeile(box, 'max_tokens · temperature', 'aus dem Code der Schleife', 'Messwerte der Modelle, keine Einstellung des Captains (K4).');
+    zeile(box, T('es_max_tokens_temperature'), T('es_aus_code_der_schleife'), T('es_messwerte'));
   }
 
   function quelle(S, box){
     S.api('/api/sprache/status').then(st=>{
       const p = st.stt || {};
-      zeile(box, 'Sprache → Text', p.name || p.provider || p.id || (p.vorhanden === false ? 'kein Provider' : '–'), p.grund || p.hinweis || '');
-      zeile(box, 'Sprachen', (st.sprachen || []).join(', ') || '–'); zeile(box, 'Läuft', (st.laeuft || []).join(', ') || 'nichts');
-      box.append(d().el('div', 'hs-app-satz', 'Eine Wahl der Quelle gibt es im Kern nicht (K8) – nur die Anzeige.'));
+      zeile(box, T('es_sprache_zu_text'), p.name || p.provider || p.id || (p.vorhanden === false ? T('es_kein_provider') : '–'), p.grund || p.hinweis || '');
+      zeile(box, T('es_sprachen'), (st.sprachen || []).join(', ') || '–'); zeile(box, T('es_laeuft'), (st.laeuft || []).join(', ') || T('es_nichts'));
+      box.append(d().el('div', 'hs-app-satz', T('es_quelle_hinweis')));
     }).catch(err=>box.append(d().el('div', 'hs-app-satz warn', 'Sprache: ' + err.message)));
   }
 
@@ -311,15 +315,15 @@
     S.api('/api/uix/clients').then(out=>{
       Object.keys(out.clients || {}).forEach(c=>{
         const i = out.clients[c];
-        zeile(box, c.toUpperCase(), i.vorhanden ? 'vorhanden · Port ' + i.port + ' · PID ' + i.pid : 'keine Datei', i.vorhanden && i.zeit ? 'seit ' + d().fmtTime(new Date(i.zeit * 1000).toISOString()) + ' · ' + i.schutz : '');
+        zeile(box, c.toUpperCase(), i.vorhanden ? T('es_vorhanden') + ' · Port ' + i.port + ' · PID ' + i.pid : T('es_keine_datei'), i.vorhanden && i.zeit ? T('es_seit') + d().fmtTime(new Date(i.zeit * 1000).toISOString()) + ' · ' + i.schutz : '');
       });
-      zeile(box, 'Ordner', out.ordner || '–', 'der Token steht nur in der Datei, nie hier');
-      box.append(d().el('div', 'hs-app-satz', 'Aufruf: python -m sedra_runtime.desk_mcp (Client „mcp“), die CLI nimmt „cli“.'));
+      zeile(box, T('es_ordner'), out.ordner || '–', T('es_token_nur_datei'));
+      box.append(d().el('div', 'hs-app-satz', T('es_mcp_aufruf')));
       S.api('/api/uix/zugaenge').then(z=>{                                          // AM4-04: Berechtigung der Zugänge und der Satz zur Grenze auf dem Host
         const m = (z.zugaenge || {}).mcp || {};
-        zeile(box, 'Berechtigung mcp', 'lesen: ' + (m.lesen === 'alle' ? 'alle Typen' : (m.lesen || []).join(', ') || 'nichts') + ' · Verben: ' + ((m.verben || []).length ? m.verben.join(', ') : 'keine') + (m.vorgabe ? ' (Vorgabe)' : ''),
-              z.schalter ? 'gilt jetzt' : 'gilt erst mit dem Schalter zugang_berechtigung (switches.yaml); bis dahin ruft mcp Verben wie bisher');
-        zeile(box, 'Berechtigung cli', 'lesen alle · Verben alle', 'du tippst selbst');
+        zeile(box, T('es_berechtigung_mcp'), T('es_lesen') + (m.lesen === 'alle' ? T('es_alle_typen') : (m.lesen || []).join(', ') || T('es_keine')) + ' · ' + T('es_verben') + ((m.verben || []).length ? m.verben.join(', ') : T('es_keine')) + (m.vorgabe ? ' (' + T('es_vorgabe') + ')' : ''),
+              z.schalter ? T('es_gilt_jetzt') : T('es_gilt_schalter'));
+        zeile(box, T('es_berechtigung_cli'), T('es_lesen_alle'), T('es_du_tippst_selbst'));
         box.append(d().el('div', 'hs-app-satz warn', z.satz || ''));
       }).catch(()=>{});
     }).catch(err=>box.append(d().el('div', 'hs-app-satz warn', 'Clients: ' + err.message)));
@@ -328,32 +332,32 @@
   function laufzeit(S, box){
     S.api('/api/models').then(m=>{
       const s = m.server || {};
-      zeile(box, 'Modellserver', s.running ? 'läuft · ' + (s.model || '?') : 'aus', s.endpoint || '');
-      zeile(box, 'Kontext', s.context ? d().fmtNumber(s.context) + ' Token' : '–'); zeile(box, 'Slots', s.slots !== undefined ? String(s.slots) : '–');
-      zeile(box, 'Engine', s.engine_build || '–', s.engine_check && s.engine_check !== 'ok' ? 'Prüfung: ' + s.engine_check : (s.engine_check ? 'Prüfung ok' : ''));
+      zeile(box, T('es_modellserver'), s.running ? T('es_laeuft_punkt') + (s.model || T('es_fragezeichen')) : T('es_aus'), s.endpoint || '');
+      zeile(box, T('es_kontext'), s.context ? d().fmtNumber(s.context) + ' Token' : '–'); zeile(box, T('es_slots'), s.slots !== undefined ? String(s.slots) : '–');
+      zeile(box, T('es_engine'), s.engine_build || '–', s.engine_check && s.engine_check !== 'ok' ? T('es_pruefung') + s.engine_check : (s.engine_check ? T('es_pruefung_ok') : ''));
       const geladen = (m.recipes || []).filter(r=>r.loaded);
-      zeile(box, 'Geladene Rezepte', geladen.map(r=>r.id).join(', ') || 'keines');
-      if(m.lease) zeile(box, 'GPU-Lease', (m.lease.owner || '?') + (m.lease.purpose ? ' · ' + m.lease.purpose : ''), m.lease.stale ? 'veraltet' : '');
+      zeile(box, T('es_geladene_rezepte'), geladen.map(r=>r.id).join(', ') || T('es_keines'));
+      if(m.lease) zeile(box, T('es_gpu_lease'), (m.lease.owner || '?') + (m.lease.purpose ? ' · ' + m.lease.purpose : ''), m.lease.stale ? T('es_veraltet') : '');
     }).catch(err=>box.append(d().el('div', 'hs-app-satz warn', 'Modelle: ' + err.message)));
   }
 
   // K5: dieselben zwei Wege wie im Werkzeug Modelle – switch_request legt den Antrag an, das Gate entscheidet der Captain
   function schalter(S, box){
-    const nach = antraege(S, box, 'switch', 'wirkt erst nach Neustart der Oberfläche;');
+    const nach = antraege(S, box, 'switch', T('es_nach_neustart'));
     S.api('/api/switches').then(v=>{
-      if(v.error) box.append(d().el('div', 'hs-app-satz warn', 'Schalter: ' + v.error));
-      if(v.restart_needed) box.append(d().el('div', 'hs-app-satz warn', 'Ein Schalter wurde geändert – wirkt erst nach Neustart der SEDRA-Oberfläche.'));
+      if(v.error) box.append(d().el('div', 'hs-app-satz warn', T('es_schalter') + ': ' + v.error));
+      if(v.restart_needed) box.append(d().el('div', 'hs-app-satz warn', T('es_schalter_geändert')));
       (v.items || []).forEach(it=>{
         const z = d().el('div', 'hs-einst-zeile'); z.dataset.schalter = it.section + '.' + it.key;
-        const k = d().button(it.value ? 'Ausschalten beantragen' : 'Einschalten beantragen', async ()=>{
+        const k = d().button(it.value ? T('es_ausschalten_beantragen') : T('es_einschalten_beantragen'), async ()=>{
           await S.api('/api/switch/request', {method: 'POST', body: {section: it.section, key: it.key, value: !it.value}});
-          S.hinweis('Antrag gestellt – Freigabe im Posteingang.'); nach();
+          S.hinweis(T('es_antrag_gestellt')); nach();
         });
-        z.append(d().el('span', 'hs-einst-label', it.section + '.' + it.key), d().el('b', 'hs-einst-wert', it.value === null || it.value === undefined ? '–' : (it.value ? 'an' : 'aus')), k);
+        z.append(d().el('span', 'hs-einst-label', it.section + '.' + it.key), d().el('b', 'hs-einst-wert', it.value === null || it.value === undefined ? '–' : (it.value ? T('es_an') : T('es_aus'))), k);
         box.append(z);
       });
-      if(!(v.items || []).length) box.append(d().el('div', 'hs-app-satz', 'Keine Schalter freigegeben (local_switches.ALLOWED).'));
-    }).catch(err=>box.append(d().el('div', 'hs-app-satz warn', 'Schalter: ' + err.message)));
+      if(!(v.items || []).length) box.append(d().el('div', 'hs-app-satz', T('es_keine_schalter')));
+    }).catch(err=>box.append(d().el('div', 'hs-app-satz warn', T('es_schalter') + ': ' + err.message)));
   }
 
   root.sedraHarness = root.sedraHarness || {};

@@ -40,7 +40,8 @@
 
   function spracheUmschalten(neuCode){
     if(neuCode !== 'de' && neuCode !== 'en') return {ok:false, code:code};
-    code = neuCode;
+    initialisieren();                       // beide Sprachtabellen (de/en) laden, falls noch nicht gecacht
+    code = neuCode;                         // danach Zielsprache setzen (initialisieren() liest localStorage zurück)
     try{ localStorage.setItem(KEY, code); }catch(_e){}
     return {ok:true, code:code};
   }

@@ -25,6 +25,8 @@ globalThis.performance = {now: ()=>0};
 globalThis.sedraDom = {el};
 globalThis.sedraPlaces = {PLACES: []};
 globalThis.sedraHarness = {};
+require(%s);      // die Textlisten und t() der Shell (A-016): schnell.js übersetzt seine Beschriftungen über t()
+require(%s);
 require(%s);
 const SC = globalThis.sedraHarness.schnell;
 const aufrufe = [];
@@ -41,7 +43,7 @@ const alle = n=>[n].concat(...(n.kinder || []).map(alle));
 @unittest.skipUnless(shutil.which('node'), 'node fehlt')
 class AufnahmeQuelle(unittest.TestCase):
     def node(self, code, vorher=''):
-        r = subprocess.run(['node', '-e', vorher + KOPF % json.dumps(str(JS)) + '(async()=>{' + code + '})().catch(e=>{ console.error(e); process.exit(1); });'],
+        r = subprocess.run(['node', '-e', vorher + KOPF % (json.dumps(str(JS.with_name('strings_de.js'))), json.dumps(str(JS.with_name('i18n.js'))), json.dumps(str(JS))) + '(async()=>{' + code + '})().catch(e=>{ console.error(e); process.exit(1); });'],
                            capture_output=True, text=True, timeout=60, encoding='utf-8')
         self.assertEqual(r.returncode, 0, r.stderr)
         return json.loads(r.stdout)
