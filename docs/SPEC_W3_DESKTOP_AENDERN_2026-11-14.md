@@ -5,7 +5,7 @@
 **Regel für jedes neue Werkzeug:** Schema in `SCHEMAS`, Zweig in `vorbereiten`/`ausführen`, Eintrag in `HARNESS_WEGE`/`HARNESS_UNTERWEGE`/`ROUTEN_HARNESS`, Regex in `harness/api.py` (`WEG`/`GESCHUETZT`), Karte im Katalog (oder `OHNE_KARTE`), Test; Schreibwerkzeuge nie ohne Freigabe.  
 **Ziel:** Spec für zwei Werkzeuge – **kein Code**, nur Dokumentation. Dateien unter 400 Zeilen.
 
-> **Prüfvermerk des Koordinators (14.11.2026):** Entwurf von Pi (A-006), formal nachgeprüft. Bezeichner `vorbereiten`, `ausfuehren`, `speichern`, `einstufen`, `GESCHUETZT`, `SCHEMAS` existieren im Code. **Lücke:** `HARNESS_WEGE`, `HARNESS_UNTERWEGE` und `ROUTEN_HARNESS` stehen in `desk/freigabeklasse.py`, nicht in `harness/`; diese Datei gehört in die Liste der betroffenen Dateien (Abschnitt 2) und in die Implementierungsfolge (Abschnitt 8). Die vier offenen Fragen in Abschnitt 9 sind noch nicht vom Captain entschieden; vor Code keine Umsetzung.
+> **Prüfvermerk des Koordinators (14.11.2026):** Entwurf von Pi (A-006), formal nachgeprüft. Bezeichner `vorbereiten`, `ausfuehren`, `speichern`, `einstufen`, `GESCHUETZT`, `SCHEMAS` existieren im Code. **Lücke:** `HARNESS_WEGE`, `HARNESS_UNTERWEGE` und `ROUTEN_HARNESS` stehen in `desk/freigabeklasse.py`, nicht in `harness/`; diese Datei gehört in die Liste der betroffenen Dateien (Abschnitt 2) und in die Implementierungsfolge (Abschnitt 8). Die vier Fragen in Abschnitt 9 hat der Captain am 14.11.2026 entschieden: alle vier Vorschlaege uebernommen. Umsetzung: Auftrag A-007.
 
 ---
 
@@ -268,10 +268,10 @@ Schon vorhanden: `fest == 'desktop' and method == 'POST'` ruft `harness_desktop.
 
 | Frage | Vorschlag | Entscheidung |
 |---|---|---|
-| Soll `desktop_aendern` auch `profil` setzen/klaren? | Nein – `profil` wird nur durch `profil_wechseln` oder manuell im Builder gesetzt. `desktop_aendern` ändert nur die **Wahl** (`start`, `zellen`, `marke`, `startseite`, `layout`). `profil` bleibt, bis explizit gewechselt. | Offen |
-| `update_desktop` als eigene Guard-Aktion oder `write_text` wiederverwenden? | Eigene Aktion (`update_desktop`), da Ziel `desktop/...` keine Datei im Schreibbereich ist, sondern ein logischer Schlüssel. Guard prüft nur Token, Logik in `werkzeuge.py`. | Offen |
-| Diff-Format für Vorschau? | Einheitlich: `difflib.unified_diff` über JSON-Dump (sortiert, indent=1) von `alt_wahl` vs. `neu_wahl`. In Karte als Text. | Offen |
-| Sitzungs-Erlaubnis für `desktop_aendern` zulassen? | Ja (wie bei `datei_schreiben`), aber **nicht** für Vorbehaltsfälle (Grundfunktionen). | Offen |
+| Soll `desktop_aendern` auch `profil` setzen/klaren? | Nein – `profil` wird nur durch `profil_wechseln` oder manuell im Builder gesetzt. `desktop_aendern` ändert nur die **Wahl** (`start`, `zellen`, `marke`, `startseite`, `layout`). `profil` bleibt, bis explizit gewechselt. | **Entschieden** (Captain, 14.11.2026): Vorschlag uebernommen |
+| `update_desktop` als eigene Guard-Aktion oder `write_text` wiederverwenden? | Eigene Aktion (`update_desktop`), da Ziel `desktop/...` keine Datei im Schreibbereich ist, sondern ein logischer Schlüssel. Guard prüft nur Token, Logik in `werkzeuge.py`. | **Entschieden** (Captain, 14.11.2026): Vorschlag uebernommen |
+| Diff-Format für Vorschau? | Einheitlich: `difflib.unified_diff` über JSON-Dump (sortiert, indent=1) von `alt_wahl` vs. `neu_wahl`. In Karte als Text. | **Entschieden** (Captain, 14.11.2026): Vorschlag uebernommen |
+| Sitzungs-Erlaubnis für `desktop_aendern` zulassen? | Ja (wie bei `datei_schreiben`), aber **nicht** für Vorbehaltsfälle (Grundfunktionen). | **Entschieden** (Captain, 14.11.2026): Vorschlag uebernommen |
 
 ---
 
