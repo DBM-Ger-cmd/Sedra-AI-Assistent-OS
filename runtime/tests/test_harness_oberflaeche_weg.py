@@ -75,8 +75,7 @@ class Weg(unittest.TestCase):
         """Das Werkzeug lehnt Dateien über DATEI_MAX schon beim Vorbereiten ab (`datei_zu_gross`); die Grenze der Ablage ist gleich groß – Zurückhalten kann sie also nicht überschreiten."""
         from sedra_runtime.harness.werkzeuge import DATEI_MAX
         self.assertLessEqual(DATEI_MAX, INHALT_MAX)
-        (self.root / TASKLEISTE).write_bytes(b"alt
-" + b"x" * (DATEI_MAX + 1))
+        (self.root / TASKLEISTE).write_bytes(b"alt\n" + b"x" * (DATEI_MAX + 1))
         self.aufgaben.anlegen(aufgabe(oberflaeche=[TASKLEISTE]))
         out = self.aendern(self.kiste())
         self.assertEqual(out["status"], "fehler")
@@ -85,7 +84,7 @@ class Weg(unittest.TestCase):
 
     def test_ein_anderes_projekt_wird_nicht_zurueckgehalten(self):
         anderes = Path(self.tmp.name) / "anderes"
-        (anderes / S).mkdir(parents=True)
+        (anderes / TASKLEISTE).parent.mkdir(parents=True)
         (anderes / TASKLEISTE).write_bytes(b"alt\n")
         self.projekt = {"id": "p", "name": "P", "wurzel": str(anderes), "schreibbereich": ["**"]}
         self.aufgaben.anlegen(aufgabe(oberflaeche=[TASKLEISTE]))
@@ -106,6 +105,7 @@ class Ausliefern(unittest.TestCase):
         self.hub.gateway.herkunft_pruefen = False
         manifest = ('tool:\n  id: lokal\n  name: Lokal\n  version: 1.0.0\n  kind: object\n  handles: [task]\n  entry: {js: tool.js}\n  trust: CAPTAIN\n  needs: {ui: ">=1.0 <2"}\n')
         self.quelle = module(self.root / "local_config" / "tools" / "lokal", "// v1\n", manifest)
+        (self.root / "local_config" / "tools" / "lokal" / "tool.js").write_bytes(b"// v1\n")      # LF, nicht CRLF: der Test vergleicht Bytes
         self.hub.oberflaeche.uix = (self.root / "local_config").resolve()
         server, url = make_server(self.hub)
         threading.Thread(target=server.serve_forever, daemon=True).start()
