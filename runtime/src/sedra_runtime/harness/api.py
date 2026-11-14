@@ -30,6 +30,7 @@
     GET    aufgaben                           Stufe 3: Aufgaben-Freigaben mit Rest und Zustand (HS-27)
     POST   aufgaben                           {titel, zweck, projekt, sitzungen, erlaubt, modelle?, ende} → Aufgabe + warnungen (nur der Captain; Herkunftsprüfung S7)
     GET    aufgaben/<id>                      eine Aufgabe
+    GET    erlaubnisse?projekt=&sitzung=&status=   S4.1: alle Erlaubnisse (Sitzung, Aufgabe, Katalog frei) in einer Form, nur lesen (SPEC_FREIGABEN_S4_v1 FS-04)
     POST   aufgaben/<id>/zuruecknehmen        {grund?, laeufe_stoppen?=true} → Aufgabe + gestoppte_laeufe (HS-29)
     GET    vorarbeiter                        {projekt: {sitzung_id, ernannt, von}}
     POST   vorarbeiter                        {projekt, sitzung_id} ernennt (Vorlage mit Recht vorarbeiter_freigabe nötig); DELETE vorarbeiter?projekt= entzieht
@@ -59,6 +60,7 @@ import yaml
 from . import antraege as harness_antraege
 from . import auszug as harness_auszug
 from . import aufgabe as harness_aufgabe
+from . import erlaubnisse_sicht as harness_erlaubnisse
 from . import dateien as harness_dateien
 from . import export as harness_export
 from . import befehl as befehl_mod
@@ -97,7 +99,7 @@ LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand',
          'gateway_status', 'gateway_vorgang', 'gateway_regel')        # SPEC_WISSEN_KERN_v1 WK-12: die GateWay-Auskunft auch in One Sedra (nur lesen)
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|oberflaeche|hilfswerkzeuge|bausteine|info|desktop|vorschlaege)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen|vorlegen|zuruecksetzen|zuruecknehmen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|oberflaeche|hilfswerkzeuge|bausteine|info|desktop|vorschlaege|erlaubnisse)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen|vorlegen|zuruecksetzen|zuruecknehmen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)|info/wissen|desktop|oberflaeche/(?:vorlegen|zuruecksetzen|zuruecknehmen)'
@@ -285,6 +287,8 @@ class HarnessApi:
             return self.aufgaben_weg(method, tid, tak, payload)
         if laeufe:
             return self.laeufe_weg(method, lid, lak)
+        if fest == 'erlaubnisse' and method == 'GET' and not unter:
+            return 200, self.erlaubnisse(q)                           # S4.1: nur lesen, eine Antwort für alle Erlaubnisse
         if fest == 'katalog' and method == 'GET' and not unter:
             return 200, self.katalog()
         if fest == 'katalog' and method == 'POST' and unter == 'antrag':
@@ -1662,6 +1666,26 @@ class HarnessApi:
             return dict(harness_katalog.laden(self.hub.project_root), fehler=None, vorlage=vorlage)
         except harness_katalog.KatalogFehler as exc:
             return {'regeln': [], 'quelle': None, 'datei': None, 'fehler': str(exc), 'vorlage': vorlage}
+
+    def erlaubnisse(self, q):
+        """GET erlaubnisse?projekt=&sitzung=&status= (S4.1, FS-04): alle Erlaubnisse in einer Antwort – Sitzungs-Erlaubnisse, Aufgaben, Katalogregeln
+        `frei` – in einer Form (harness/erlaubnisse_sicht.py). Nur lesen; die Ablagen bleiben, wie sie sind. status: aktiv (Vorgabe), beendet, alle."""
+        projekt = (q.get('projekt') or [''])[0] or None
+        sitzung = (q.get('sitzung') or [''])[0] or None
+        status = (q.get('status') or ['aktiv'])[0] or 'aktiv'
+        if sitzung is not None and not SITZUNG_ID.fullmatch(sitzung):
+            raise ValueError('sitzung_ungueltig')
+        geladen = []
+        for zeile in self.sitzungen.liste(projekt):
+            if not zeile.get('erlaubnisse') or (sitzung and zeile['id'] != sitzung):      # ohne Erlaubnis nichts zu laden
+                continue
+            try:
+                geladen.append(self.sitzungen.laden(zeile['id']))
+            except SitzungFehler:
+                continue
+        kat = self.katalog()
+        out = harness_erlaubnisse.sammeln(geladen, self.aufgaben.alle(), kat.get('regeln'), projekt=projekt, sitzung=sitzung, status=status)
+        return dict(out, katalog_fehler=kat.get('fehler'))
 
     def dateien(self, q):
         """GET dateien?projekt=&ordner=&q= (Stufe 6, „+“ und „@“): Namen aus dem Projekt, die `datei_lesen` zulässt; kein Inhalt."""
