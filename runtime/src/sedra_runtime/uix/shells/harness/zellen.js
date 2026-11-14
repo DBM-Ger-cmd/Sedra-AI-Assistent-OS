@@ -6,7 +6,7 @@
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
-const T = root.t || (s => s);
+const T = (k, ...a) => (root.t ? root.t(k, ...a) : k);
 const ZELLEN_RUECKFALL = [
   { id: "gauge-decisions", feld: "decisions", label: "zl_freigaben", ort: null, aktion: "freigaben", quelle: null },
   { id: "gauge-model", feld: "model", label: "zl_modell", ort: "models", aktion: "modellmenue", quelle: null },

@@ -354,5 +354,10 @@
     zl_modellserver:'Modellserver',
     zl_scheduler:'Scheduler',
     zl_zustand:'Zustand',
+    // A-018: Start-Menü (startmenue.js)
+    start_treffer:'Treffer',
+    start_zuletzt_benutzt:'Zuletzt benutzt',
+    desktop_builder_label:'Desktop Builder',
+    desktop_builder_hint:'Module der Oberfläche, Start-Menü, Taskleiste, Profile und Marke'
   };
 })();

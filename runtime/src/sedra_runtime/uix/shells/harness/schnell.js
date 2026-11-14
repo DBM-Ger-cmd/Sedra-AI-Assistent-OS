@@ -6,7 +6,7 @@
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
-  const T = root.t || (s => s);
+  const T = (k, ...a) => (root.t ? root.t(k, ...a) : k);
 
   // Quelle des Knopfs (Captain 04.11.2026): Standard ist „beides“ (PC-Ton und Mikrofon in einer Spur); eine kleine Auswahl daneben wählt nur PC-Ton oder nur Mikrofon.
   // Die Wahl wird im Browser gemerkt (ohne Speicher bleibt es beim Standard). Nur eine abweichende Wahl geht als `quelle` an den Kern – so greift beim Standard dessen Rückfall auf das Mikrofon.

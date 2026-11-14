@@ -13,7 +13,19 @@
   const GESEHEN_KEY = 'sedra.harness.gesehen';
   const GESEHEN_MAX = 300;
   const LEISTE_URL = '/uix/shells/harness/leiste.json';
-  // Die Zellen (Feld, Beschriftung, Ort, Klick) kommen aus den Manifesten der Instrumente, in der Reihenfolge von leiste.json (zellen.js, SPEC_APPS_v1_AM1);
+// Deutsche Beschriftung, die ein Server-Instrument für eine Zelle liefert, auf den i18n-Schlüssel abbilden,
+// damit die Zelle nach dem Sprachwechsel umschaltet. Unbekannter Text bleibt wie er ist (F-043 Punkt 4).
+const SERVER_LABEL_ZU_KEY = {
+  'Freigaben': 'zl_freigaben',
+  'Modell': 'zl_modell',
+  'Temp': 'zl_temp',
+  'VRAM belegt': 'zl_vram_belegt',
+  'RAM frei': 'zl_ram_frei',
+  'Modellserver': 'zl_modellserver',
+  'Scheduler': 'zl_scheduler',
+  'Zustand': 'zl_zustand'
+};
+// Die Zellen (Feld, Beschriftung, Ort, Klick) kommen aus den Manifesten der Instrumente, in der Reihenfolge von leiste.json (zellen.js, SPEC_APPS_v1_AM1);
   // fehlt die Datei, ist sie kaputt oder ergibt sie nichts, gilt die eingebaute Liste ZELLEN_RUECKFALL – mit einer Meldung, nicht still.
   function zellenListe(S){
     const Z = root.sedraZellen;
@@ -205,7 +217,7 @@
       // HS-32: eine Zelle ohne Wert (– und Ton off) wird ausgeblendet – kleine Bildschirme, Stick an fremdem PC
       const da = zellenListe(S).filter(z=>v[z.feld] && !(String(v[z.feld].value ?? '–') === '–' && (v[z.feld].tone || 'off') === 'off'));
       const zellen = da.map(z=>{
-        const k = z.feld, label = z.label, g = v[k];
+        const k = z.feld, label = SERVER_LABEL_ZU_KEY[z.label] || z.label, g = v[k];
         const ziel = root.sedraZellen.aktionZiel(z);                                                     // die Aktion aus dem Manifest zuerst, dann der Ort
         const zelle = d().el('span', 'hs-zelle ' + (g.tone || 'off'));
         zelle.dataset.zelle = k;

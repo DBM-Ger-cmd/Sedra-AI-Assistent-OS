@@ -13,6 +13,7 @@
   const TITEL = {arbeit: 'Arbeit', modelle: 'Modelle', token: 'Sedra Token', wissen: 'Wissen', system: 'System', pruefung: 'Prüfung'};
   const SYMBOLE = {arbeit: '▤', modelle: '◆', token: '◎', wissen: '▣', system: '⚙', pruefung: '✓'};
   const NIE = ['talk'];
+  const T = (k, ...a) => (root.t ? root.t(k, ...a) : k);
 
   // Die Zuordnung aus start_gruppen.json – geprüft; kaputt ist ein Fehler mit Satz, kein leeres Menü
   function zuordnungPruefen(roh){
