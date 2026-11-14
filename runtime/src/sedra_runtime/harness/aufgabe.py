@@ -17,6 +17,7 @@ import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from . import deckung as harness_deckung
 from . import aufgabe_deckung, vorbehalte
 from .katalog import WERKZEUGE, genauigkeit, passt, pfad_normal
 
@@ -272,6 +273,9 @@ class Aufgaben:
         payload = {'aufgabe_id': a['id'], 'titel': a.get('titel'), 'status': a.get('status')} | (extra or {})
         if self.audit is not None:
             try: self.audit(event, payload)
+            except Exception: pass
+        if self.audit is not None and event in harness_deckung.AUFGABE_EREIGNISSE:       # S4.2 (FS-31): das eine Ereignis zusätzlich
+            try: self.audit('HARNESS_ERLAUBNIS', harness_deckung.ereignis(harness_deckung.AUFGABE_EREIGNISSE[event], a['id'], 'befristet', 'aufgabe', 'aufgabe'))
             except Exception: pass
         if self.melden is not None:
             try: self.melden('harness.aufgabe', {'id': a['id'], 'zustand': a.get('status')})

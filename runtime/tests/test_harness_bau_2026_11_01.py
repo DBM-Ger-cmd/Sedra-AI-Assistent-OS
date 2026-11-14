@@ -161,6 +161,7 @@ class SitzungsErlaubnisServer(unittest.TestCase):
         self.warte_threads()
         self.assertEqual([p['approved_by'] for p in self.audit('HARNESS_APPROVED_BY') if p['approved_by'].startswith('sitzung:')], ['sitzung:' + kid])
         self.assertEqual([(p['sitzung_id'], p['karte_id'], p['muster']) for p in self.audit('HARNESS_SITZUNG_ERLAUBT')], [(sid, kid, 'docs/**')])
+        self.assertEqual([(p['aktion'], p['id'], p['dauer'], p['herkunft']) for p in self.audit('HARNESS_ERLAUBNIS')], [('erteilt', kid, 'sitzung', 'karte')])   # S4.2 FS-31
         _c, karte = anfrage(self.url, 'GET', f'/api/harness/karten/{kid}')
         self.assertEqual((karte['entscheidung'], karte['erlaubnis']['muster']), ('sitzung', 'docs/**'))
         _c, s = anfrage(self.url, 'GET', f'/api/harness/sitzungen/{sid}')

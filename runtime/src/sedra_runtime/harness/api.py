@@ -61,6 +61,7 @@ from . import antraege as harness_antraege
 from . import antraege_lernen as harness_antraege_lernen
 from . import auszug as harness_auszug
 from . import aufgabe as harness_aufgabe
+from . import deckung as harness_deckung
 from . import erlaubnisse_sicht as harness_erlaubnisse
 from . import dateien as harness_dateien
 from . import export as harness_export
@@ -476,6 +477,7 @@ class HarnessApi:
             kid = str(payload['erlaubnis_zuruecknehmen'])
             self.sitzungen.erlaubnis_zuruecknehmen(sid, kid)             # SitzungFehler('erlaubnis_unbekannt') → 400
             self._audit('HARNESS_SITZUNG_ERLAUBNIS_ZURUECK', {'sitzung_id': sid, 'karte_id': kid})
+            self._audit('HARNESS_ERLAUBNIS', harness_deckung.ereignis('zurueckgenommen', kid, 'sitzung', 'karte', 'sitzung'))
         s = self.sitzungen.laden(sid)
         self._melden('harness.sitzung', {'id': sid, 'was': 'geaendert', 'titel': s['titel']})
         return dict(s, id=sid)
@@ -1848,6 +1850,7 @@ class HarnessApi:
         if r.get('erlaubnis'):
             self.sitzungen.erlauben(sid, kid, r['erlaubnis']['werkzeug'], r['erlaubnis']['muster'], regel=r['erlaubnis'].get('regel'))
             self._audit('HARNESS_SITZUNG_ERLAUBT', {'sitzung_id': sid, 'karte_id': kid, **r['erlaubnis']})
+            self._audit('HARNESS_ERLAUBNIS', harness_deckung.ereignis('erteilt', kid, 'sitzung', 'karte', 'karte'))
             weg = 'erlauben'
             s = self.sitzungen.laden(sid)                          # die Fortsetzung bekommt die neue Erlaubnis schon mit
         satz = {'typ': 'werkzeug', 'antwort_id': karte.get('antwort_id'), 'name': karte['werkzeug'], 'args': karte['args'], 'stufe': karte['stufe'],

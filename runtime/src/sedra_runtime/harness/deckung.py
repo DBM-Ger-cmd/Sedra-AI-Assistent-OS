@@ -34,3 +34,20 @@ def deckt(*, wirkt_als, vorbehalt, warnkarte, aufgaben_aktiv, weich_werkzeug, we
         if treffer:
             ergebnis['via_sitzung'] = treffer['karte_id']
     return ergebnis
+
+
+
+AKTIONEN = ('erteilt', 'zurueckgenommen', 'abgelaufen', 'erschoepft', 'gedeckelt')
+DAUERN = ('einmal', 'sitzung', 'befristet', 'immer')
+AUFGABE_EREIGNISSE = {'HARNESS_AUFGABE_ANGELEGT': 'erteilt', 'HARNESS_AUFGABE_ZURUECKGENOMMEN': 'zurueckgenommen',
+                      'HARNESS_AUFGABE_ABGELAUFEN': 'abgelaufen', 'HARNESS_AUFGABE_ERSCHOEPFT': 'erschoepft'}
+
+
+def ereignis(aktion, erlaubnis_id, dauer, herkunft, kanal):
+    """Payload des einen Audit-Ereignisses `HARNESS_ERLAUBNIS` (FS-31) – zusätzlich zu den alten Ereignissen, die ein Jahr bleiben.
+    Eine unbekannte Aktion oder Dauer ist ein Fehler (kein stilles Schlucken im Audit)."""
+    if aktion not in AKTIONEN:
+        raise ValueError(f'erlaubnis_aktion_unbekannt: {aktion}')
+    if dauer not in DAUERN:
+        raise ValueError(f'erlaubnis_dauer_unbekannt: {dauer}')
+    return {'aktion': aktion, 'id': str(erlaubnis_id), 'dauer': dauer, 'herkunft': str(herkunft), 'kanal': str(kanal)}
