@@ -70,6 +70,7 @@
       if(H.kontext) H.kontext.mount(this);                 // Rechtsklick-Menü der Oberfläche (kontext.js; die Module melden sich in kontextmodule.js an)
       this.tasten();
       this.breite();
+      if(H.palette) H.palette.verbinde(this);      // X4: Befehlspalette (Strg+K) mit der Shell-Instanz verbinden
       root.addEventListener('resize', ()=>{ this.breite(); this.teilungAnpassen(); });
 
       ctx.bus.on('harness.sitzung', ()=>this.sitzungenLaden());

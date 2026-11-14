@@ -1,0 +1,78 @@
+/* Harness-Shell (One Sedra) – X4 Befehlspalette Overlay.
+ *
+ * UI-Regeln: keine Hex-Farben, Farben über die Tokens der Shell (--bg, --text, --panel,
+ * --line, --muted, --accent, --hs-hover, --hs-on, --radius, --size-xs) aus shell.css.
+ * Kein setInterval. textContent wird in der JS genutzt. Datei unter 400 Zeilen.
+ */
+.hs-palette {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 48px;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
+}
+.hs-palette[hidden] { display: none !important; }
+.pal-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  width: min(520px, 92vw);
+  max-height: 70vh;
+  overflow: auto;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.pal-box input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: var(--size-small);
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.pal-box input::placeholder { color: var(--muted); }
+.pal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 40vh;
+  overflow: auto;
+  padding: 2px;
+}
+.pal-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  cursor: default;
+  user-select: none;
+  color: var(--text);
+}
+.pal-row[aria-selected="true"], .pal-row.on {
+  background: var(--hs-hover);
+  color: var(--text);
+}
+.pal-row b { font-weight: 600; }
+.pal-row small { opacity: 0.8; font-size: var(--size-xs); }
+.pal-row.zuletzt small { opacity: 0.6; font-style: italic; }
+.pal-row .pal-warn { margin-left: auto; opacity: 0.55; font-size: var(--size-xs); }
+.pal-kuerzel {
+  margin-left: auto;
+  opacity: 0.55;
+  font-size: var(--size-xs);
+  font-family: monospace;
+}
+.pal-row[aria-selected="true"] .pal-kuerzel, .pal-row.on .pal-kuerzel { opacity: 0.8; }
+.pal-row[aria-selected="true"] .pal-warn, .pal-row.on .pal-warn { opacity: 0.7; }
