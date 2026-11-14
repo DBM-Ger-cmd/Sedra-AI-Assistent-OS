@@ -1,0 +1,373 @@
+/* Harness-Shell – Eingabefeld (HS-17) */
+/* Einbindung: nach shell.verlauf.css */
+
+.hs-eingabe {
+  position: relative;
+  width: 100%;
+  max-width: var(--hs-eingabe-w);
+  margin: 0 auto;
+  padding: var(--gap-3) var(--gap-4) var(--gap-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-2);
+  min-width: 0;
+}
+
+.hs-eingabe-zeile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-2);
+  padding: var(--gap-2) var(--gap-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.hs-eingabe-zeile:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md), 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.hs-feld {
+  width: 100%;
+  min-height: 24px;
+  max-height: 40vh;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.5;
+  padding: 2px 0;
+}
+
+.hs-feld::placeholder {
+  color: var(--muted);
+}
+
+/* Leiste unter dem Feld */
+.hs-eingabe-leiste {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  flex-wrap: wrap;
+}
+
+.hs-luecke {
+  flex: 1 1 auto;
+}
+
+/* Runde Icon-Buttons */
+.hs-rund {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  font-size: var(--size-small);
+  transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.hs-rund:hover {
+  border-color: var(--accent);
+  transform: scale(1.05);
+}
+
+.hs-rund:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.hs-rund .icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Schild / Modell / Kontext Chips */
+.hs-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: var(--size-xs);
+  color: var(--muted);
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-pill);
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.hs-chip .icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.hs-chip.warn {
+  color: var(--warn);
+  border-color: var(--warn-line);
+  background: var(--warn-bg);
+}
+
+.hs-chip.bad {
+  color: var(--bad);
+  border-color: var(--bad-line);
+  background: var(--bad-bg);
+}
+
+.hs-chip.ok {
+  color: var(--ok);
+  border-color: var(--ok-line);
+  background: var(--ok-bg);
+}
+
+button.hs-schild {
+  font: inherit;
+  font-size: var(--size-xs);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: inherit;
+}
+
+button.hs-schild::after {
+  content: " ▾";
+  font-size: 0.8em;
+}
+
+button.hs-schild[aria-expanded="true"]::after {
+  content: " ▴";
+}
+
+/* Token-Verbrauch Anzeige */
+.hs-token-verbrauch {
+  display: grid;
+  grid-template-columns: max-content max-content 1fr;
+  gap: 4px 14px;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.hs-token-kopf {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: var(--size-small);
+}
+
+.hs-token-wert {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
+}
+
+/* Optionen-Panel */
+.hs-optionen {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--gap-3);
+  margin-bottom: 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.hs-opt-zeile {
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.hs-vorlage-hinweis {
+  font-size: var(--size-xs);
+  color: var(--muted);
+  padding: 6px 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+}
+
+.hs-vorlage-hinweis.warn {
+  color: var(--warn);
+  border-color: var(--warn-line);
+  background: var(--warn-bg);
+}
+
+/* Vorschläge Popup */
+.hs-vorschlag {
+  position: absolute;
+  left: var(--gap-4);
+  right: var(--gap-4);
+  bottom: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 5;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+.hs-vorschlag-zeile {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: var(--size-small);
+  transition: background var(--transition-fast);
+}
+
+.hs-vorschlag-zeile:hover {
+  background: var(--hs-hover);
+}
+
+.hs-vorschlag-zeile:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+/* Werkzeugzeile in der Eingabe (hs-sl-zeile) - Knöpfe immer sichtbar */
+.hs-sl-zeile .hs-sz-knopf {
+  visibility: visible;
+  border: 1px solid var(--line-soft);
+}
+
+/* Dialog-Haube (für Modals in Eingabe) */
+.hs-dialog-haube {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+
+.hs-dialog {
+  max-width: min(560px, 92vw);
+  max-height: 86vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  background: var(--panel);
+  border: 1px solid var(--warn-line);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-xl);
+}
+
+.hs-dialog h3 {
+  margin: 0;
+}
+
+.hs-dialog p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.hs-dialog-liste {
+  margin: 0;
+  padding-left: 18px;
+  font-family: var(--mono);
+  font-size: var(--size-small);
+  overflow-wrap: anywhere;
+}
+
+.hs-dialog-knoepfe {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* Projektwahl */
+.hs-projektzeile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.hs-projektwahl {
+  font: inherit;
+  font-size: var(--size-small);
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  max-width: 100%;
+}
+
+/* Kein Modell */
+.hs-kein-modell {
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  font-size: var(--size-small);
+  color: var(--warn);
+}
+
+/* Senden-Button */
+.hs-senden {
+  flex: 0 0 auto;
+  border: none;
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--size-small);
+  transition: all var(--transition-fast);
+}
+
+.hs-senden:hover:not(:disabled) {
+  background: var(--accent-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.hs-senden:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.hs-senden.stopp {
+  background: var(--bad);
+  color: var(--accent-text);
+}
+
+.hs-senden.stopp:hover:not(:disabled) {
+  background: var(--bad-hover);
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .hs-eingabe-zeile,
+  .hs-rund,
+  .hs-chip,
+  .hs-senden,
+  .hs-vorschlag-zeile {
+    transition: none;
+  }
+}

@@ -1,0 +1,195 @@
+/* Empty States – Token-only, Dark/Light ready */
+/* Einbindung: nach tokens.css, vor Shell-spezifischem CSS */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-3);
+  padding: var(--gap-8) var(--gap-4);
+  text-align: center;
+  color: var(--muted);
+  min-height: 200px;
+}
+
+.empty-state-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--line);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.empty-state-icon.lg {
+  width: 96px;
+  height: 96px;
+}
+
+.empty-state-icon .icon {
+  width: 100%;
+  height: 100%;
+}
+
+.empty-state-title {
+  font-size: var(--size-l);
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: var(--tracking-tight);
+}
+
+.empty-state-text {
+  font-size: var(--size-small);
+  max-width: 360px;
+  margin: 0;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.empty-state-action {
+  margin-top: var(--gap-2);
+  display: flex;
+  gap: var(--gap-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.empty-state-action .btn {
+  flex-shrink: 0;
+}
+
+/* Spezifische Empty States */
+
+/* Keine Sitzungen */
+.empty-state-sessions .empty-state-icon {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232a2a2e' stroke-width='1'%3E%3Cpath d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* Keine Projekte */
+.empty-state-projects .empty-state-icon {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232a2a2e' stroke-width='1'%3E%3Cpath d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* Keine Suchergebnisse */
+.empty-state-search .empty-state-icon {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232a2a2e' stroke-width='1'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* Keine Daten */
+.empty-state-data .empty-state-icon {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232a2a2e' stroke-width='1'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpolyline points='14 2 14 8 20 8'/%3E%3Cline x1='16' y1='13' x2='8' y2='13'/%3E%3Cline x1='16' y1='17' x2='8' y2='17'/%3E%3Cline x1='10' y1='9' x2='8' y2='9'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* Leerer Chat (Seedrache) – spezielle Klasse für den Harness-Startbildschirm */
+.hs-start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-3);
+  margin: auto auto 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+.hs-drache {
+  width: clamp(80px, 18vh, 160px);
+  height: clamp(80px, 18vh, 160px);
+  transition: transform var(--transition-slow), opacity var(--transition-base);
+}
+
+.hs-drache:hover {
+  transform: scale(1.02);
+}
+
+.hs-drache-koerper {
+  fill: var(--hs-on);
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+  transition: stroke var(--transition-fast), fill var(--transition-fast);
+}
+
+.hs-drache-flosse {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.hs-drache-auge {
+  fill: var(--text);
+  transition: fill var(--transition-fast);
+}
+
+.hs-drache-punkt {
+  fill: var(--accent);
+  opacity: .7;
+  transition: fill var(--transition-fast);
+}
+
+.hs-start-titel {
+  margin: 0;
+  font-size: var(--size-2xl);
+  font-weight: 400;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text);
+}
+
+.hs-start-text {
+  margin: 0;
+  font-size: var(--size-small);
+  max-width: 420px;
+  line-height: 1.6;
+}
+
+/* Leere Fläche mit Aktion */
+.empty-with-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-3);
+  padding: var(--gap-6) var(--gap-4);
+}
+
+.empty-with-action .empty-state-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.empty-with-action .empty-state-title {
+  font-size: var(--size);
+}
+
+.empty-with-action .empty-state-text {
+  font-size: var(--size-xs);
+  max-width: 280px;
+}
+
+/* Inline Empty State (in Listen/Karten) */
+.empty-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-2);
+  padding: var(--gap-4);
+  color: var(--muted);
+  font-size: var(--size-small);
+  text-align: center;
+}
+
+.empty-inline .icon {
+  width: 32px;
+  height: 32px;
+  opacity: 0.4;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .hs-drache {
+    transition: none;
+  }
+  .hs-drache:hover {
+    transform: none;
+  }
+}

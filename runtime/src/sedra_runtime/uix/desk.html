@@ -1,22 +1,52 @@
 <!DOCTYPE html>
-<html lang="de" data-theme="klar">
+<html lang="de" data-theme="nacht">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SEDRA</title>
-<!-- The page of the desk (Build 7). It carries no layout of its own: the UI contract loads the active shell, the shell builds
+<!-- The page of the desk. It carries no layout of its own: the UI contract loads the active shell, the shell builds
      the screen and gives the tools their containers. Everything here is code, no data; no inline script (ENTWICKLUNG, Regel:
      Top-Level-Code nur in shell.js bzw. tool.js). The Captain's old desktop stays reachable under /retro. -->
+
+<!-- ===== BASE TOKENS (ALWAYS FIRST) ===== -->
 <link rel="stylesheet" href="/uix/ui/tokens.css">
 <link rel="stylesheet" href="/uix/ui/vorgabe.css">
+<link rel="stylesheet" href="/uix/ui/icons.css">
+
+<!-- ===== SHARED UI COMPONENTS (TOKEN-ONLY) ===== -->
+<link rel="stylesheet" href="/uix/ui/buttons.css">
+<link rel="stylesheet" href="/uix/ui/inputs.css">
+<link rel="stylesheet" href="/uix/ui/cards.css">
+<link rel="stylesheet" href="/uix/ui/badges.css">
+<link rel="stylesheet" href="/uix/ui/tooltips.css">
+<link rel="stylesheet" href="/uix/ui/toasts.css">
+<link rel="stylesheet" href="/uix/ui/dialogs.css">
+<link rel="stylesheet" href="/uix/ui/empty.css">
+
+<!-- ===== HARNESS SHELL CSS (IN ORDER: LAYOUT → ZONES → OVERLAYS) ===== -->
+<link rel="stylesheet" href="/uix/shells/harness/shell.css">
+<link rel="stylesheet" href="/uix/shells/harness/shell.seite.css">
+<link rel="stylesheet" href="/uix/shells/harness/shell.reiter.css">
+<link rel="stylesheet" href="/uix/shells/harness/shell.verlauf.css">
+<link rel="stylesheet" href="/uix/shells/harness/shell.eingabe.css">
+<link rel="stylesheet" href="/uix/shells/harness/shell.taskleiste.css">
+<link rel="stylesheet" href="/uix/shells/harness/shell.startmenue.css">
+<link rel="stylesheet" href="/uix/shells/harness/shell.komponenten.css">
+
+<!-- ===== SHELL WECHSEL & LEGACY ===== -->
 <link rel="stylesheet" href="/uix/ui/wechsel.css">
+
+<!-- ===== LEGACY WORKFLOW (für andere Shells/Tools) ===== -->
 <link rel="stylesheet" href="/uix/ui/workflow.css">
 <link rel="stylesheet" href="/uix/ui/workflow-look.css">
 <link rel="stylesheet" href="/uix/ui/workflow-schritte.css">
 </head>
 <body>
-<div id="sedra-root" role="application" aria-label="SEDRA Cockpit"></div>
+<div id="sedra-root" role="application" aria-label="One Sedra"></div>
 <noscript>Diese Oberfläche braucht JavaScript. Ohne JavaScript bleibt die Kommandozeile: <code>python -m sedra_runtime.cli</code>.</noscript>
+
+<!-- ===== CORE JS (ONLY CONTRACT - ORDER MATTERS) ===== -->
+<!-- Shell-Skripte werden DYNAMISCH vom Loader (start.js) geladen, nicht hier! -->
 <script src="/uix/ui/api.js"></script>
 <script src="/uix/ui/bus.js"></script>
 <script src="/uix/ui/dom.js"></script>
@@ -48,8 +78,19 @@
 <script src="/uix/ui/leiste.js"></script>
 <script src="/uix/ui/bruecke_filter.js"></script>
 <script src="/uix/ui/bruecke.js"></script>
+
+<!-- ===== SHARED UI COMPONENTS JS ===== -->
+<script src="/uix/ui/icons.js"></script>
+<script src="/uix/ui/toast.js"></script>
+<script src="/uix/ui/dialogs.js"></script>
+
+<!-- Shell-Skripte werden DYNAMISCH vom Loader (start.js) geladen, nicht hier! -->
+
+<!-- ===== LOADER & START (lädt die aktive Shell dynamisch) ===== -->
 <script src="/uix/ui/wechsel.js"></script>
 <script src="/uix/ui/loader.js"></script>
 <script src="/uix/ui/start.js"></script>
+
+<!-- ===== LEGACY / OTHER ===== -->
 </body>
 </html>

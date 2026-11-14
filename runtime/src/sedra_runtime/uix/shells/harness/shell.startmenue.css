@@ -1,0 +1,364 @@
+/* Harness-Shell – Start-Menü (HS-40/41) */
+/* Einbindung: nach shell.taskleiste.css */
+
+.hs-start-knopf[aria-expanded="true"] {
+  background: var(--hs-on);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.hs-start-menue {
+  position: absolute;
+  left: var(--gap-3);
+  bottom: calc(var(--hs-leiste-h) + var(--gap-2));
+  width: min(680px, calc(100vw - 2 * var(--gap-3)));
+  max-height: min(75vh, 680px);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-3);
+  padding: var(--gap-4);
+  z-index: 40;
+  animation: hs-pop-in var(--transition-slow), hs-fade-in var(--transition-slow);
+}
+
+.hs-start-suche {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: var(--size);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--hs-on-line);
+  border-radius: var(--radius);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.hs-start-suche:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.hs-start-suche::placeholder {
+  color: var(--muted);
+}
+
+.hs-start-inhalt {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Zuletzt benutzt */
+.hs-start-raster.zuletzt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hs-start-raster.zuletzt .hs-start-app {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-color: var(--line);
+}
+
+.hs-start-raster.zuletzt .hs-start-app small {
+  display: none;
+}
+
+/* Kacheln (Gruppen) */
+.hs-start-kacheln {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--gap-3);
+}
+
+.hs-start-kachel {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--gap-3);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.hs-start-kachel:hover {
+  border-color: var(--hs-on-line);
+  box-shadow: var(--shadow-sm);
+}
+
+.hs-start-kachel.offen {
+  grid-column: 1 / -1;
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+
+.hs-start-kachel-kopf {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  padding: var(--gap) var(--gap-2);
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: background var(--transition-fast);
+}
+
+.hs-start-kachel-kopf:hover {
+  background: var(--hs-hover);
+}
+
+.hs-start-kachel-titel {
+  flex: 1;
+  font-weight: 600;
+  font-size: var(--size-small);
+}
+
+.hs-start-kachel-liste {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+}
+
+.hs-start-kachel.offen .hs-start-kachel-liste {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.hs-start-mehr {
+  align-self: flex-start;
+  margin: 2px 4px 0;
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--size-xs);
+  cursor: pointer;
+}
+
+.hs-start-mehr:hover {
+  color: var(--accent);
+}
+
+/* Apps in Kacheln */
+.hs-start-app {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--size-small);
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  transition: all var(--transition-fast);
+}
+
+.hs-start-app:hover,
+.hs-start-app.wahl {
+  background: var(--hs-hover);
+  border-color: var(--hs-on-line);
+}
+
+.hs-start-app .hs-start-symbol {
+  color: var(--accent);
+  font-size: var(--size);
+  flex-shrink: 0;
+}
+
+.hs-start-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.hs-start-app .hs-leise {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Blick-Kacheln (Live-Status) */
+.hs-start-blick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-2);
+}
+
+.hs-start-blick-kachel {
+  flex: 1 1 200px;
+  min-width: 180px;
+  padding: var(--gap-3);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.hs-start-blick-kachel:hover {
+  border-color: var(--hs-on-line);
+  transform: translateY(-1px);
+}
+
+.hs-start-blick-kopf {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  margin-bottom: var(--gap-2);
+}
+
+.hs-start-blick-werte {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hs-start-blick-zeile {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--size-xs);
+}
+
+.hs-start-blick-zeile small {
+  color: var(--muted);
+}
+
+.hs-start-blick-zeile b {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Footer: Oberflächen, Darstellung, Profil, Gedächtnis leeren */
+.hs-start-fuss {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.hs-start-oberflaechen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.hs-start-oberflaechen .hs-ueber {
+  margin: 0 4px 0 0;
+}
+
+.hs-start-shell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--size-small);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.hs-start-shell:hover {
+  background: var(--hs-hover);
+  border-color: var(--hs-on-line);
+}
+
+.hs-start-bild {
+  width: 28px;
+  height: 18px;
+  object-fit: cover;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+}
+
+.hs-start-look {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.hs-start-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hs-start-seg-btn,
+.hs-start-leeren {
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--size-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.hs-start-seg-btn.on {
+  background: var(--hs-on);
+  border-color: var(--hs-on-line);
+}
+
+.hs-start-seg-btn:hover:not(.on) {
+  background: var(--hs-hover);
+}
+
+.hs-start-leeren {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.hs-start-leeren:hover {
+  color: var(--bad);
+  border-color: var(--bad-line);
+}
+
+/* Profil-Wahl (Desktop Builder) */
+.hs-profilwahl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hs-profilwahl select {
+  padding: 4px 8px;
+  font: inherit;
+  font-size: var(--size-xs);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .hs-start-menue,
+  .hs-start-kachel,
+  .hs-start-app,
+  .hs-start-blick-kachel,
+  .hs-start-shell {
+    animation: none;
+    transition: none;
+  }
+}

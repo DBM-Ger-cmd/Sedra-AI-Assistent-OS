@@ -1,0 +1,314 @@
+/* Harness-Shell – Taskleiste (HS-30 bis HS-33) */
+/* Einbindung: nach shell.eingabe.css */
+
+.hs-taskleiste {
+  grid-area: leiste;
+  height: var(--hs-leiste-h);
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  padding: 0 var(--gap-3);
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  overflow: hidden;
+}
+
+/* Start-Knopf */
+.hs-start-knopf {
+  flex: 0 0 auto;
+  height: 32px;
+  padding: 0 16px;
+  font-weight: 600;
+  font-size: var(--size-small);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--transition-fast);
+}
+
+.hs-start-knopf:hover {
+  border-color: var(--accent);
+  background: var(--hs-hover);
+}
+
+.hs-start-knopf:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.hs-start-knopf[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.hs-start-knopf .icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Apps / Reiter in Taskleiste */
+.hs-apps {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.hs-apps::-webkit-scrollbar {
+  display: none;
+}
+
+.hs-app {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  min-width: 70px;
+  max-width: 180px;
+  border-radius: var(--radius);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--size-small);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.hs-app:hover {
+  background: var(--hs-hover);
+}
+
+.hs-app.on {
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.hs-app.laeuft .hs-app-icon {
+  color: var(--accent);
+  animation: hs-cursor-blink 1s steps(2) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-app.laeuft .hs-app-icon {
+    animation: none;
+  }
+}
+
+.hs-app-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+/* Status-Bereich */
+.hs-status {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  gap: 4px;
+  overflow: hidden;
+}
+
+/* Rekorder-Gruppe */
+.hs-rec {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  margin: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--size-small);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.hs-rec:hover {
+  background: var(--hs-hover);
+}
+
+.hs-rec:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.hs-rec small {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.hs-rec-gruppe {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.hs-rec-gruppe .hs-rec {
+  margin-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.hs-rec-quelle {
+  height: 28px;
+  margin: 0 6px 0 0;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-left: 0;
+  border-radius: 0 14px 14px 0;
+  background: var(--panel-2);
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--size-small);
+  cursor: pointer;
+}
+
+.hs-rec-quelle:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.hs-rec.rec {
+  background: var(--bad-bg);
+  border-color: var(--bad);
+}
+
+.hs-rec.rec .hs-rec-punkt {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bad);
+  animation: hs-puls 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-rec.rec .hs-rec-punkt {
+    animation: none;
+  }
+}
+
+.hs-rec.pause {
+  border-color: var(--warn);
+  box-shadow: inset 0 -2px 0 var(--warn);
+}
+
+/* Status-Zellen (Badges) */
+.hs-zelle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: var(--size-xs);
+  border-radius: var(--radius-pill);
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  color: var(--text);
+  white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.hs-zelle:hover {
+  background: var(--hs-hover);
+}
+
+.hs-zelle:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.hs-zelle small {
+  color: var(--muted);
+}
+
+.hs-zelle b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hs-zelle.warn {
+  background: var(--warn-bg);
+  border-color: var(--warn-line);
+  color: var(--warn);
+}
+
+.hs-zelle.bad {
+  background: var(--bad-bg);
+  border-color: var(--bad-line);
+  color: var(--bad);
+}
+
+.hs-zelle.puls {
+  animation: hs-puls 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-zelle.puls {
+    animation: none;
+  }
+}
+
+/* Neu-Indikator (Blinken einmalig) */
+.hs-app.neu,
+.hs-zelle.neu,
+.hs-einstellungen.neu {
+  box-shadow: inset 0 -2px 0 var(--warn);
+  background: var(--warn-bg);
+}
+
+.hs-app.neu .hs-app-name::after,
+.hs-zelle.neu b::after {
+  content: " ●";
+  color: var(--warn);
+}
+
+.hs-app.blinkt,
+.hs-zelle.blinkt,
+.hs-einstellungen.blinkt {
+  animation: hs-einmal 1.4s ease-out 1;
+}
+
+/* Uhr */
+.hs-uhr {
+  flex: 0 0 auto;
+  font-size: var(--size-small);
+  color: var(--muted);
+  padding: 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Toasts Container Position (über Taskleiste) */
+.toast-container {
+  bottom: calc(var(--hs-leiste-h) + 16px);
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .hs-start-knopf,
+  .hs-app,
+  .hs-rec,
+  .hs-zelle,
+  .hs-rec.rec .hs-rec-punkt,
+  .hs-app.laeuft .hs-app-icon {
+    transition: none;
+    animation: none;
+  }
+}

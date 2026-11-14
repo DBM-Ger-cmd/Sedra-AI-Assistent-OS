@@ -1,0 +1,249 @@
+/* Dialogs/Modals – Token-only, Dark/Light ready */
+/* Einbindung: nach tokens.css, vor Shell-spezifischem CSS */
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--veil-dark);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gap-4);
+  animation: fade-in var(--transition-fast);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.dialog-overlay.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dialog {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-xl);
+  max-width: 560px;
+  width: 100%;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: hs-pop-in var(--transition-base), hs-fade-in var(--transition-base);
+  transform-origin: center;
+}
+
+.dialog-sm { max-width: 360px; }
+.dialog-lg { max-width: 720px; }
+.dialog-xl { max-width: 900px; }
+.dialog-full { max-width: 95vw; max-height: 95vh; }
+
+/* Dialog Header */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-3);
+  padding: var(--gap-3) var(--gap-4);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.dialog-title {
+  font-size: var(--size-head);
+  font-weight: 600;
+  color: var(--heading);
+  margin: 0;
+}
+
+.dialog-subtitle {
+  font-size: var(--size-small);
+  color: var(--muted);
+  margin: 2px 0 0 0;
+}
+
+.dialog-close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dialog-close:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.dialog-close:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.dialog-close .icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Dialog Body */
+.dialog-body {
+  padding: var(--gap-4);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Dialog Footer */
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gap-2);
+  padding: var(--gap-3) var(--gap-4);
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.dialog-footer .btn + .btn {
+  margin-left: 0; /* gap handles spacing */
+}
+
+/* Alert Dialog (für kritische Aktionen) */
+.alert-dialog {
+  max-width: 420px;
+}
+
+.alert-dialog .dialog-body {
+  text-align: center;
+  padding: var(--gap-5) var(--gap-4);
+}
+
+.alert-dialog-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto var(--gap-3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alert-dialog-icon.warn {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.alert-dialog-icon.bad {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.alert-dialog-icon.info {
+  background: color-mix(in srgb, var(--accent) 15%, var(--panel));
+  color: var(--accent);
+}
+
+.alert-dialog-icon .icon {
+  width: 28px;
+  height: 28px;
+}
+
+.alert-dialog-message {
+  font-size: var(--size);
+  color: var(--text);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.alert-dialog .dialog-footer {
+  justify-content: center;
+}
+
+/* Confirm Dialog (z.B. Löschen) */
+.confirm-dialog {
+  max-width: 480px;
+}
+
+.confirm-dialog .dialog-body {
+  padding: var(--gap-4);
+}
+
+.confirm-dialog-title {
+  font-size: var(--size-l);
+  font-weight: 600;
+  color: var(--heading);
+  margin: 0 0 var(--gap-2) 0;
+}
+
+.confirm-dialog-text {
+  color: var(--text);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.confirm-dialog .dialog-footer {
+  justify-content: center;
+}
+
+/* Prompt Dialog (Eingabe) */
+.prompt-dialog {
+  max-width: 420px;
+}
+
+.prompt-dialog .dialog-body {
+  padding: var(--gap-4);
+}
+
+.prompt-dialog-label {
+  display: block;
+  font-size: var(--size-xs);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  margin-bottom: var(--gap);
+}
+
+.prompt-dialog-input {
+  width: 100%;
+}
+
+/* Focus Trap – wird via JS gesetzt */
+.dialog:focus-within {
+  /* Focus trap handled by JS */
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .dialog-overlay,
+  .dialog {
+    animation: none;
+  }
+}
+
+/* High Contrast */
+@media (forced-colors: active) {
+  .dialog {
+    border: 2px solid CanvasText;
+  }
+  .dialog-close:focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
+  }
+}

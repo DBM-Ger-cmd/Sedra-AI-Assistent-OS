@@ -1,0 +1,219 @@
+/* Harness-Shell – Reiterleiste (HS-03) */
+/* Einbindung: nach shell.css, shell.seite.css */
+
+.hs-reiter {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: var(--hs-reiter-h);
+  padding: 0 var(--gap-2);
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.hs-reiter::-webkit-scrollbar {
+  display: none;
+}
+
+/* Brotkrumen über Reiterleiste */
+.hs-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--gap-2);
+  height: 28px;
+  font-size: var(--size-xs);
+  color: var(--muted);
+  background: var(--panel);
+  border-bottom: 1px solid var(--line-soft);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.hs-breadcrumb-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.hs-breadcrumb-item:hover {
+  color: var(--text);
+  background: var(--hs-hover);
+}
+
+.hs-breadcrumb-item.current {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.hs-breadcrumb-separator {
+  color: var(--line);
+  flex-shrink: 0;
+}
+
+.hs-breadcrumb .icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* Reiter Tabs */
+.hs-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: calc(var(--hs-reiter-h) - 6px);
+  padding: 0 12px 0 14px;
+  min-width: 90px;
+  max-width: 220px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--size-small);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.hs-tab:hover {
+  background: var(--hs-hover);
+  color: var(--text);
+}
+
+.hs-tab.on {
+  background: var(--bg);
+  border-color: var(--line);
+  color: var(--text);
+  margin-bottom: -1px;
+  height: calc(var(--hs-reiter-h) - 5px);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.hs-tab:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.hs-tab-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hs-tab-zustand {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 16em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: var(--size-small);
+}
+
+.hs-tab.laeuft .hs-tab-name::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 6px;
+  flex-shrink: 0;
+  animation: hs-cursor-blink 1s steps(2) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-tab.laeuft .hs-tab-name::before {
+    animation: none;
+  }
+}
+
+.hs-tab.neu {
+  box-shadow: inset 0 -2px 0 var(--warn);
+  background: var(--warn-bg);
+}
+
+.hs-tab.neu .hs-tab-zustand {
+  color: var(--warn);
+}
+
+.hs-tab.blinkt {
+  animation: hs-einmal 1.4s ease-out 1;
+}
+
+@keyframes hs-einmal {
+  0%, 40% { background: var(--accent); color: var(--accent-text); }
+  100% { background: var(--warn-bg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-tab.blinkt {
+    animation: none;
+  }
+}
+
+/* Schließen-Button */
+.hs-tab-zu {
+  flex: 0 0 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-left: 4px;
+}
+
+.hs-tab-zu:hover {
+  background: var(--panel-2);
+  color: var(--bad);
+}
+
+.hs-tab-zu:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.hs-tab-zu .icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Neu-Button (+) */
+.hs-tab-plus {
+  flex: 0 0 auto;
+  align-self: center;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: var(--size-l);
+  padding: 0 10px;
+  border-radius: var(--radius);
+  transition: all var(--transition-fast);
+}
+
+.hs-tab-plus:hover {
+  background: var(--hs-hover);
+  color: var(--text);
+}
+
+.hs-tab-plus:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}

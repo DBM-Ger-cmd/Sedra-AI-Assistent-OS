@@ -1,0 +1,268 @@
+/* Harness-Shell – Seitenleiste (HS-02) */
+/* Einbindung: nach shell.css */
+
+.hs-seite {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+  min-height: 0;
+  padding: var(--gap-3) var(--gap-2);
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+}
+
+.hs-neu {
+  width: 100%;
+  justify-content: center;
+}
+
+.hs-seite-liste {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hs-ueber {
+  font-size: var(--size-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: var(--gap-2) var(--gap) var(--gap);
+}
+
+/* Gruppen-Kopf (Accordion) */
+.hs-gruppe-kopf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  font-size: var(--size-small);
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.hs-gruppe-kopf:hover {
+  background: var(--hs-hover);
+}
+
+.hs-gruppe-kopf:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.hs-gruppe-kopf .icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+
+.hs-gruppe-kopf[aria-expanded="true"] .icon {
+  transform: rotate(180deg);
+}
+
+/* Sitzungs-Liste */
+.hs-sz-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 6px;
+}
+
+/* Sitzungs-Zeile */
+.hs-sz {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  min-width: 0;
+  transition: background var(--transition-fast);
+}
+
+.hs-sz:hover {
+  background: var(--hs-hover);
+}
+
+.hs-sz.on {
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel-2));
+  border-left: 2px solid var(--accent);
+}
+
+.hs-sz:focus-within {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.hs-sz-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.hs-sz.on .hs-sz-icon {
+  color: var(--accent);
+}
+
+.hs-sz-haupt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.hs-sz-titel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--size-small);
+}
+
+.hs-sz-zeit {
+  font-size: var(--size-xs);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.hs-sz.laeuft .hs-sz-zeit {
+  color: var(--accent);
+  animation: hs-cursor-blink 1s steps(2) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-sz.laeuft .hs-sz-zeit {
+    animation: none;
+  }
+}
+
+/* Aktions-Buttons in Sitzungs-Zeile */
+.hs-sz-knopf {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--size-small);
+  visibility: hidden;
+  transition: all var(--transition-fast);
+}
+
+.hs-sz:hover .hs-sz-knopf,
+.hs-sz:focus-within .hs-sz-knopf {
+  visibility: visible;
+}
+
+.hs-sz-knopf:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+
+/* Umbenennen-Feld */
+.hs-sz-feld {
+  width: 100%;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: var(--size-small);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--hs-on-line);
+  border-radius: var(--radius);
+}
+
+/* Lösch-Bestätigung */
+.hs-sz-frage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  font-size: var(--size-small);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  border-radius: var(--radius);
+}
+
+.hs-sz-frage span {
+  flex: 1 1 100%;
+}
+
+/* Leere Gruppen */
+.hs-leise {
+  color: var(--muted);
+  font-size: var(--size-xs);
+}
+
+/* Verknüpfungen */
+.hs-verkn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hs-verkn-zeile {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.hs-verkn-zeile .hs-einstellungen {
+  flex: 1;
+}
+
+/* Posteingang */
+.hs-post {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hs-post-antrag {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hs-post-titel {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.hs-post-reihe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hs-zelle[role="button"] {
+  cursor: pointer;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .hs-gruppe-kopf,
+  .hs-sz,
+  .hs-sz-knopf {
+    transition: none;
+  }
+}

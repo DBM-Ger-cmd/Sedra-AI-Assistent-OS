@@ -14,6 +14,11 @@
     [T('sl_hilfe_flagge'), T('sl_hilfe_flagge_desc')],
     [T('sl_hilfe_aufgaben'), T('sl_hilfe_aufgaben_desc')]];
 
+  function icon(name, options = {}) {
+    if (!root.sedraIcons) return '';
+    return root.sedraIcons.html(name, options);
+  }
+
   function zeit(iso){
     if(!iso) return '';
     const t = new Date(iso);
@@ -63,6 +68,10 @@
     const row = d().el('div', 'hs-sz' + (S.aktive() && S.aktive().id === s.id ? ' on' : '') + (s.laeuft ? ' laeuft' : ''));
     row.dataset.sitzung = s.id;
     const istVorarbeiter = !!(S.vorarbeiter && S.vorarbeiter[s.projekt] && S.vorarbeiter[s.projekt].sitzung_id === s.id);
+    // Icon für Sitzung/Projekt (UIX-Redesign)
+    const iconName = s.vorlage === 'vorarbeiter' ? 'flag' : (s.projekt ? 'message-square' : 'chat');
+    const iconEl = d().el('span', 'hs-sz-icon');
+    if (root.sedraIcons && typeof root.sedraIcons.create === 'function') iconEl.appendChild(root.sedraIcons.create(iconName, {class: 'icon'}));
     const titel = d().el('span', 'hs-sz-titel', (istVorarbeiter ? '⚑ ' : '') + (s.titel || T('sl_ohne_titel')));
     titel.title = (s.titel || T('sl_ohne_titel')) + (s.nachrichten ? ' · ' + s.nachrichten + ' ' + T('sl_nachrichten') : '') + (s.vorlage ? ' · Vorlage ' + s.vorlage : '') + (istVorarbeiter ? T('sl_vorarbeiter_dieses_projekts') : '');
     const zeitEl = d().el('small', 'hs-sz-zeit', s.laeuft ? T('sl_läuft') : zeit(s.zuletzt));
@@ -74,7 +83,7 @@
     exp.title = T('sl_als_markdown_speichern'); exp.setAttribute('aria-label', T('sl_sitzung_loeschen') + ' als Markdown');
     exp.onclick = e=>{ e.stopPropagation(); exportieren(S, s.id); };
     const haupt = d().clickable(d().el('div', 'hs-sz-haupt'), ()=>root.sedraHarness.reiter.oeffnen(S, s.id));
-    haupt.append(titel, zeitEl);
+    haupt.append(iconEl, titel, zeitEl);
     const hk = root.sedraHarness.seitenleiste.haken(S, s, ()=>zeichnen(S, true));            // Auswahl-Modus: ein Haken vor der Zeile
     if(hk) row.append(hk);
     row.append(haupt);

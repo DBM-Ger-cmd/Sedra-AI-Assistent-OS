@@ -1,0 +1,190 @@
+/* Cards & Panels – Token-only, Dark/Light ready */
+/* Einbindung: nach tokens.css, vor Shell-spezifischem CSS */
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--gap-2);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.card-elevated {
+  box-shadow: var(--shadow-md);
+  border: none;
+}
+
+.card-outlined {
+  box-shadow: none;
+}
+
+.card-interactive {
+  cursor: pointer;
+}
+
+.card-interactive:hover {
+  box-shadow: var(--shadow-md);
+  transform: var(--hover-hebung);
+}
+
+.card-interactive:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Card Sections */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-2);
+  padding-bottom: var(--gap-2);
+  margin-bottom: var(--gap-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.card-title {
+  font-size: var(--size-l);
+  font-weight: 600;
+  color: var(--heading);
+  margin: 0;
+}
+
+.card-subtitle {
+  font-size: var(--size-small);
+  color: var(--muted);
+  margin: 2px 0 0 0;
+}
+
+.card-body {
+  /* content area */
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gap-2);
+  padding-top: var(--gap-2);
+  margin-top: var(--gap-2);
+  border-top: 1px solid var(--line-soft);
+}
+
+/* Card with Image/Media */
+.card-media {
+  margin: calc(-1 * var(--gap-2)) calc(-1 * var(--gap-2)) 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  overflow: hidden;
+}
+
+.card-media img,
+.card-media video {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Panel – flacher Container für Layout-Bereiche */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--gap-3);
+}
+
+.panel-elevated {
+  box-shadow: var(--shadow-md);
+  border: none;
+}
+
+.panel-transparent {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+/* Surface – noch flacher, für Inline-Bereiche */
+.surface {
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: var(--gap-2);
+}
+
+.surface-raised {
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  border: none;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: var(--line-soft);
+  border: none;
+  margin: var(--gap-2) 0;
+}
+
+.divider-vertical {
+  width: 1px;
+  height: 100%;
+  background: var(--line-soft);
+  border: none;
+  margin: 0 var(--gap-2);
+}
+
+/* Section Container */
+.section {
+  padding: var(--gap-4) 0;
+}
+
+.section-sm {
+  padding: var(--gap-3) 0;
+}
+
+.section-lg {
+  padding: var(--gap-6) 0;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gap-2);
+  margin-bottom: var(--gap-3);
+  flex-wrap: wrap;
+}
+
+.section-title {
+  font-size: var(--size-head);
+  font-weight: 600;
+  color: var(--heading);
+  margin: 0;
+}
+
+.section-description {
+  font-size: var(--size-small);
+  color: var(--muted);
+  margin: 4px 0 0 0;
+}
+
+/* Container */
+.container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 var(--gap-4);
+}
+
+.container-fluid {
+  max-width: none;
+  padding: 0 var(--gap-4);
+}
+
+.container-narrow {
+  max-width: 820px; /* var(--hs-text-w) */
+}
