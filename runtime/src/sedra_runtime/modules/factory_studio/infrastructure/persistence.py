@@ -9,13 +9,13 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-from ...domain.entities import FactoryProject, FactoryModule, FactoryBuild, FactoryBenchmark, FactoryGate, ProjectStatus, ModuleStatus, BuildStatus
-from ...domain.repositories import (
+from ..domain.entities import FactoryProject, FactoryModule, FactoryBuild, FactoryBenchmark, FactoryGate, ProjectStatus, ModuleStatus, BuildStatus
+from ..domain.repositories import (
     ProjectRepository, ModuleRepository, BuildRepository, 
     BenchmarkRepository, GateRepository, GraphRepository,
     FactoryStudioRepositories,
 )
-from ...domain.value_objects import ProjectId, ModuleId, BuildId, FactoryTypeId, GraphNode, GraphEdge
+from ..domain.value_objects import ProjectId, ModuleId, BuildId, FactoryTypeId, GraphNode, GraphEdge
 
 
 class InMemoryProjectRepository(ProjectRepository):

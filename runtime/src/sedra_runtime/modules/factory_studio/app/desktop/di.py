@@ -5,32 +5,32 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ....infrastructure.config import FactoryStudioConfig, get_config
-from ....infrastructure.external import (
+from ...infrastructure.config import FactoryStudioConfig, get_config
+from ...infrastructure.external import (
     HttpFactoryRegistryClient,
     HttpEvidenceStoreClient,
     HttpGateClient,
     ConsoleNotificationClient,
     NoOpNotificationClient,
 )
-from ....infrastructure.persistence import InMemoryFactoryStudioRepositories
-from ....application.use_cases.project_use_cases import (
+from ...infrastructure.persistence import InMemoryFactoryStudioRepositories
+from ...application.use_cases.project_use_cases import (
     CreateProjectUseCase, ListProjectsUseCase, GetProjectUseCase,
     UpdateProjectUseCase, DeleteProjectUseCase,
 )
-from ....application.use_cases.module_use_cases import (
+from ...application.use_cases.module_use_cases import (
     AddModuleUseCase, ListModulesUseCase, GetModuleUseCase,
     UpdateModuleUseCase, DeleteModuleUseCase,
 )
-from ....application.use_cases.build_benchmark_use_cases import (
+from ...application.use_cases.build_benchmark_use_cases import (
     StartBuildUseCase, ListBuildsUseCase, GetBuildUseCase,
     RunBenchmarkUseCase, CompareVariantsUseCase, ListBenchmarksUseCase,
 )
-from ....application.use_cases.gate_graph_use_cases import (
+from ...application.use_cases.gate_graph_use_cases import (
     ListGatesUseCase, ApproveGateUseCase, RejectGateUseCase,
     GetGateStatusUseCase, GetProjectGraphUseCase, GetModuleSubgraphUseCase,
 )
-from ....application.ports import (
+from ...application.ports import (
     FactoryRegistryPort, EvidenceStorePort, GateClientPort, NotificationPort,
 )
 

@@ -7,7 +7,7 @@ import sys
 from typing import Any
 
 from .di import ServiceContainer, get_container, close_container
-from ..infrastructure.config import get_config
+from ...infrastructure.config import get_config
 
 
 async def initialize_factory_studio(config: Any = None) -> ServiceContainer:
@@ -44,7 +44,7 @@ async def main():
     container = await initialize_factory_studio()
     
     # Demo: Projekt erstellen
-    from ..application.use_cases.project_use_cases import CreateProjectRequest
+    from ...application.use_cases.project_use_cases import CreateProjectRequest
     
     result = await container.create_project.execute(CreateProjectRequest(
         name="demo_project",
@@ -57,7 +57,7 @@ async def main():
         print(f"Created project: {result.project.id}")
         
         # Module hinzufügen
-        from ..application.use_cases.module_use_cases import AddModuleRequest
+        from ...application.use_cases.module_use_cases import AddModuleRequest
         
         module_result = await container.add_module.execute(AddModuleRequest(
             project_id=result.project.id,

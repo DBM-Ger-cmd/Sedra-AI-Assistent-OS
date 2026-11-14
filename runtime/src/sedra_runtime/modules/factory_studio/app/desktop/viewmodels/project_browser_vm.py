@@ -5,10 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from communitytoolkit_mvvm import ObservableObject, ObservableCollection, RelayCommand
+from sedra_runtime.modules.factory_studio._mvvm import ObservableObject, ObservableCollection, RelayCommand
 
-from ....di import ServiceContainer
-from ...use_cases.project_use_cases import CreateProjectRequest, ListProjectsResponse
+from ..di import ServiceContainer
+from ....application.use_cases.project_use_cases import CreateProjectRequest, ListProjectsResponse
 
 
 @dataclass

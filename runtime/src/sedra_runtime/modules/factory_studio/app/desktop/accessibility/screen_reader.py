@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Optional
-from communitytoolkit_mvvm import ObservableObject, RelayCommand
+from sedra_runtime.modules.factory_studio._mvvm import ObservableObject, RelayCommand
 
 
 class LiveRegionPoliteness(Enum):

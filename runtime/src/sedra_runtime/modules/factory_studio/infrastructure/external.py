@@ -5,9 +5,12 @@ from __future__ import annotations
 import json
 from typing import Any
 
-import httpx
+try:
+    import httpx
+except ImportError:  # httpx fehlt: nur die HTTP-Aufrufe scheitern, Import des Moduls bleibt moeglich
+    httpx = None
 
-from ...application.ports import FactoryRegistryPort, EvidenceStorePort, GateClientPort, NotificationPort
+from ..application.ports import FactoryRegistryPort, EvidenceStorePort, GateClientPort, NotificationPort
 
 
 class HttpFactoryRegistryClient(FactoryRegistryPort):
@@ -19,6 +22,8 @@ class HttpFactoryRegistryClient(FactoryRegistryPort):
         self._client: httpx.AsyncClient | None = None
     
     async def _get_client(self) -> httpx.AsyncClient:
+        if httpx is None:
+            raise RuntimeError("httpx fehlt: pip install httpx")
         if self._client is None:
             self._client = httpx.AsyncClient(timeout=self.timeout)
         return self._client
@@ -73,6 +78,8 @@ class HttpEvidenceStoreClient(EvidenceStorePort):
         self._client: httpx.AsyncClient | None = None
     
     async def _get_client(self) -> httpx.AsyncClient:
+        if httpx is None:
+            raise RuntimeError("httpx fehlt: pip install httpx")
         if self._client is None:
             self._client = httpx.AsyncClient(timeout=self.timeout)
         return self._client
@@ -145,6 +152,8 @@ class HttpGateClient(GateClientPort):
         self._client: httpx.AsyncClient | None = None
     
     async def _get_client(self) -> httpx.AsyncClient:
+        if httpx is None:
+            raise RuntimeError("httpx fehlt: pip install httpx")
         if self._client is None:
             self._client = httpx.AsyncClient(timeout=self.timeout)
         return self._client

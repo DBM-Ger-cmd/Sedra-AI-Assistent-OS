@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 from enum import Enum
 
-from communitytoolkit_mvvm import ObservableObject, RelayCommand
+from sedra_runtime.modules.factory_studio._mvvm import ObservableObject, RelayCommand
 
 
 class NavigationDirection(Enum):

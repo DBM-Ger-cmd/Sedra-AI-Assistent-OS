@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..domain.entities import FactoryGate
-from ..domain.repositories import FactoryStudioRepositories, GraphRepository
-from ..domain.value_objects import ProjectId, ModuleId
-from .dtos import GateDTO, GateListResponse, GraphDTO
-from .ports import GateClientPort, NotificationPort
+from ...domain.entities import FactoryGate
+from ...domain.repositories import FactoryStudioRepositories, GraphRepository
+from ...domain.value_objects import ProjectId, ModuleId
+from ..dtos import GateDTO, GateListResponse, GraphDTO
+from ..ports import GateClientPort, NotificationPort
 
 
 @dataclass

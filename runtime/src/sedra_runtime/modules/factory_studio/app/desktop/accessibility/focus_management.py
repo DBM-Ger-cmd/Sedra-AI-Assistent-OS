@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 from contextlib import contextmanager
-from communitytoolkit_mvvm import ObservableObject
+from sedra_runtime.modules.factory_studio._mvvm import ObservableObject
 
 
 @dataclass

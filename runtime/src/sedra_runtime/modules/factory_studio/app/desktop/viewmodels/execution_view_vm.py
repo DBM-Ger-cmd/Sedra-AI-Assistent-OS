@@ -5,15 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from communitytoolkit_mvvm import ObservableObject, ObservableCollection, RelayCommand
+from sedra_runtime.modules.factory_studio._mvvm import ObservableObject, ObservableCollection, RelayCommand
 
-from ....di import ServiceContainer
-from ...use_cases.build_benchmark_use_cases import (
+from ..di import ServiceContainer
+from ....application.use_cases.build_benchmark_use_cases import (
     RunBenchmarkRequest, RunBenchmarkResponse,
     CompareVariantsRequest, CompareVariantsResponse,
     ListBenchmarksResponse, ListBuildsResponse,
 )
-from ...dtos import RunRecord, BenchmarkRecord
 
 
 @dataclass

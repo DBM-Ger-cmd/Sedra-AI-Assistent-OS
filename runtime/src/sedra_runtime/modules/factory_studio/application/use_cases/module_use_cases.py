@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..domain.entities import FactoryModule, ModuleStatus
-from ..domain.repositories import FactoryStudioRepositories
-from ..domain.value_objects import ModuleId, ProjectId
-from .dtos import ModuleDTO, ModuleListResponse
-from .ports import FactoryRegistryPort
+from ...domain.entities import FactoryModule, ModuleStatus
+from ...domain.repositories import FactoryStudioRepositories
+from ...domain.value_objects import ModuleId, ProjectId
+from ..dtos import ModuleDTO, ModuleListResponse
+from ..ports import FactoryRegistryPort
 
 
 @dataclass

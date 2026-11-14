@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Generic, TypeVar
 from abc import ABC, abstractmethod
 
-from communitytoolkit_mvvm import ObservableObject, ObservableCollection, RelayCommand
+from sedra_runtime.modules.factory_studio._mvvm import ObservableObject, ObservableCollection, RelayCommand
 
 T = TypeVar('T')
 

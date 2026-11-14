@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from communitytoolkit_mvvm import ObservableObject
+from sedra_runtime.modules.factory_studio._mvvm import ObservableObject
 from datetime import datetime
 
 

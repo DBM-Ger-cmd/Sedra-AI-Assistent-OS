@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from ....di import ServiceContainer, get_container
+from ..di import ServiceContainer, get_container
 
 
 @dataclass

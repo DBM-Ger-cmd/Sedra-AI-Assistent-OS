@@ -68,8 +68,8 @@ class BenchmarkDTO:
     params: dict[str, Any]
     score: float | None
     runs_count: int
-    aggregated_metrics: dict[str, Any] = field(default_factory=dict)
     created_at: str
+    aggregated_metrics: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
