@@ -4,6 +4,7 @@ import json
 import re
 import subprocess
 import sys
+import shutil
 import tempfile
 import threading
 import unittest
@@ -124,13 +125,15 @@ class ConfigTests(unittest.TestCase):
                 self.assertEqual(ctx.exception.code, 'supervisor_disabled')
 
     def test_runtime_wires_the_supervisor_disabled_and_reports_it(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
-            self.assertIsNotNone(rt.job_supervisor)
-            self.assertFalse(rt.job_supervisor.enabled)
-            status = rt.boot()['job_supervisor']
-            self.assertFalse(status['enabled'])
-            self.assertEqual(rt.job_supervisor.view()['counts'], {})
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, True)
+        rt = SedraRuntime(Path(tmp) / 'project', ARCH)
+        self.addCleanup(rt.close)
+        self.assertIsNotNone(rt.job_supervisor)
+        self.assertFalse(rt.job_supervisor.enabled)
+        status = rt.boot()['job_supervisor']
+        self.assertFalse(status['enabled'])
+        self.assertEqual(rt.job_supervisor.view()['counts'], {})
 
     def test_v120_store_rules_are_untouched(self):
         self.assertNotIn('QUEUED', DevelopmentJobStore.ALLOWED['READY'])
@@ -741,44 +744,48 @@ class RecoveryTests(Base):
         self.assertLessEqual(len(list((self.root / 'jobs' / '_corrupt').glob(f'{path.name}.*.bak'))), 3)
 
     def test_recover_needs_the_captain_and_never_replays_mutating_work(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
-            guard = rt.guard
-            sup = self.make_supervisor(guard=guard)
-            job_id = self.running('reviewer', worker='wr')            # via self.sup, same store
-            sup.fail(job_id, 'wr', reason_code='TOOL_UNAVAILABLE', outcome_known=False, mutated=False)
-            stored = sup.store.load(job_id)
-            self.assertEqual(stored['state'], 'QUEUED')              # read-only + unknown outcome is retried
-            # build a blocked job with an unknown outcome: critical read-only job lost its worker
-            crit = self.running('reviewer', worker='wc', priority=9)
-            sup.reap(); self.clock.advance(sup.config.lease_s + sup.config.suspect_after_s + 1); sup.reap()
-            self.clock.advance(sup.config.grace_s + 1); sup.reap()
-            self.assertEqual(sup.store.load(crit)['state'], 'BLOCKED')
-            first = sup.recover(crit, 'abort')
-            self.assertEqual(first['status'], 'captain_required')
-            token = guard.approve(first['gate'])
-            done = sup.recover(crit, 'abort', approval_token=token)
-            self.assertEqual((done['status'], done['job']['state']), ('completed', 'CANCELLED'))
-            with self.assertRaises(JobError): sup.recover(crit, 'abort', approval_token=token)       # no unknown outcome left to recover
-            dead = self.running('coder', worker='wd')
-            sup.fail(dead, 'wd', reason_code='TOOL_UNAVAILABLE', outcome_known=False)
-            self.assertEqual(sup.store.load(dead)['state'], 'DEAD')
-            with self.assertRaises(JobError) as ctx: sup.recover(dead, 'retry_readonly')
-            self.assertEqual(ctx.exception.code, 'mutating_job_cannot_be_replayed')
-            with self.assertRaises(JobError) as ctx: sup.recover(dead, 'rewrite_history')
-            self.assertEqual(ctx.exception.code, 'unsupported_recovery_resolution')
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, True)
+        rt = SedraRuntime(Path(tmp) / 'project', ARCH)
+        self.addCleanup(rt.close)
+        guard = rt.guard
+        sup = self.make_supervisor(guard=guard)
+        job_id = self.running('reviewer', worker='wr')            # via self.sup, same store
+        sup.fail(job_id, 'wr', reason_code='TOOL_UNAVAILABLE', outcome_known=False, mutated=False)
+        stored = sup.store.load(job_id)
+        self.assertEqual(stored['state'], 'QUEUED')              # read-only + unknown outcome is retried
+        # build a blocked job with an unknown outcome: critical read-only job lost its worker
+        crit = self.running('reviewer', worker='wc', priority=9)
+        sup.reap(); self.clock.advance(sup.config.lease_s + sup.config.suspect_after_s + 1); sup.reap()
+        self.clock.advance(sup.config.grace_s + 1); sup.reap()
+        self.assertEqual(sup.store.load(crit)['state'], 'BLOCKED')
+        first = sup.recover(crit, 'abort')
+        self.assertEqual(first['status'], 'captain_required')
+        token = guard.approve(first['gate'])
+        done = sup.recover(crit, 'abort', approval_token=token)
+        self.assertEqual((done['status'], done['job']['state']), ('completed', 'CANCELLED'))
+        with self.assertRaises(JobError): sup.recover(crit, 'abort', approval_token=token)       # no unknown outcome left to recover
+        dead = self.running('coder', worker='wd')
+        sup.fail(dead, 'wd', reason_code='TOOL_UNAVAILABLE', outcome_known=False)
+        self.assertEqual(sup.store.load(dead)['state'], 'DEAD')
+        with self.assertRaises(JobError) as ctx: sup.recover(dead, 'retry_readonly')
+        self.assertEqual(ctx.exception.code, 'mutating_job_cannot_be_replayed')
+        with self.assertRaises(JobError) as ctx: sup.recover(dead, 'rewrite_history')
+        self.assertEqual(ctx.exception.code, 'unsupported_recovery_resolution')
 
     def test_recover_token_is_bound_to_the_job_state(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            rt = SedraRuntime(Path(tmp) / 'project', ARCH)
-            sup = self.make_supervisor(guard=rt.guard)
-            crit = self.running('reviewer', worker='wc', priority=9)
-            sup.reap(); self.clock.advance(sup.config.lease_s + sup.config.suspect_after_s + 1); sup.reap()
-            self.clock.advance(sup.config.grace_s + 1); sup.reap()
-            gate = sup.recover(crit, 'abort')['gate']
-            token = rt.guard.approve(gate)
-            with sup.store.mutate(crit) as job: job['attempts'] += 1        # job changed after approval
-            self.assertEqual(sup.recover(crit, 'abort', approval_token=token)['status'], 'captain_required')
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, True)
+        rt = SedraRuntime(Path(tmp) / 'project', ARCH)
+        self.addCleanup(rt.close)
+        sup = self.make_supervisor(guard=rt.guard)
+        crit = self.running('reviewer', worker='wc', priority=9)
+        sup.reap(); self.clock.advance(sup.config.lease_s + sup.config.suspect_after_s + 1); sup.reap()
+        self.clock.advance(sup.config.grace_s + 1); sup.reap()
+        gate = sup.recover(crit, 'abort')['gate']
+        token = rt.guard.approve(gate)
+        with sup.store.mutate(crit) as job: job['attempts'] += 1        # job changed after approval
+        self.assertEqual(sup.recover(crit, 'abort', approval_token=token)['status'], 'captain_required')
 
 
 class RunNextTests(Base):
