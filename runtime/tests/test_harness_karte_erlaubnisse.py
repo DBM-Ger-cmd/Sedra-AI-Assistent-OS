@@ -1,6 +1,7 @@
 """Freigabe-Karte und Sitzungs-Erlaubnisse im Chat (04.11.2026): karte.js und erlaubnisse.js laufen mit node und einer Attrappe der Oberfläche.
 Geprüft wird, was Rechte berührt: wann „Für diese Sitzung erlauben“ erscheint, was beim Klick an den Server geht, was bei einem Fehler passiert und dass „Zurücknehmen“ die richtige Karte trifft."""
 import json
+import re
 import shutil
 import subprocess
 import unittest
@@ -130,42 +131,49 @@ console.log(JSON.stringify(pre.kinder.map(z=>[z._k.has('hs-diff-neu') ? 'neu' : 
 """)
         self.assertEqual(out, [['-', '--- a'], ['-', '+++ b'], ['ort', '@@ -1 +1 @@'], ['alt', '-alt'], ['neu', '+neu'], ['-', 'kontext']])
 
-    # ---- Erlaubnisse
+    # ---- „Gilt gerade“ (S4.1 UI, FS-22 bis FS-24)
 
     ERL = """
 const S = stand({
-  'GET /api/harness/sitzungen/S-AAAAAAA1': {titel: 'Erste', erlaubnisse: [{karte_id: 'V-masterchat-1', werkzeug: 'datei_schreiben', muster: 'docs/**', regel: 'vorlage-masterchat'}, {karte_id: 'K-7', werkzeug: 'befehl', muster: 'python -m py_compile*'}]},
-  'GET /api/harness/sitzungen/S-AAAAAAA2': {titel: 'Zweite', erlaubnisse: []},
-  'PATCH /api/harness/sitzungen/S-AAAAAAA1': {}});
-S.sitzungen = [{id: 'S-AAAAAAA1'}, {id: 'S-AAAAAAA2'}];
+  'GET /api/harness/erlaubnisse?status=aktiv': {anzahl: 3, erlaubnisse: [
+    {id: 'S-AAAAAAA1:K-7', art: 'sitzung', was: [{werkzeug: 'befehl', muster: 'git push*'}], wo: {projekt: 'p', sitzungen: ['S-AAAAAAA1']},
+     dauer: {art: 'sitzung', bis: null, max_aufrufe: null}, warum: null, herkunft: {von: 'captain', karte_id: 'K-7', vorlage: null}, seit: '2026-11-14T10:00:00+01:00', status: 'aktiv'},
+    {id: 'T-0000000A', art: 'aufgabe', was: [{werkzeug: 'datei_schreiben', muster: 'docs/**'}], wo: {projekt: 'p', sitzungen: ['S-AAAAAAA1']},
+     dauer: {art: 'befristet', bis: '2026-11-14T12:00:00+01:00', max_aufrufe: 50}, aufrufe: 8, warum: 'Doku pflegen', herkunft: {von: 'captain', karte_id: null, vorlage: null}, status: 'aktiv'},
+    {id: 'K:schreiben-docs', art: 'katalog', was: [{werkzeug: 'datei_schreiben', muster: 'docs/**'}], wo: {projekt: null, sitzungen: null},
+     dauer: {art: 'immer'}, warum: 'Regel', herkunft: {von: 'captain'}, status: 'aktiv'}]},
+  'PATCH /api/harness/sitzungen/S-AAAAAAA1': {}, 'POST /api/harness/aufgaben/T-0000000A/zuruecknehmen': {}});
 const box = el('div');
 const f = E.flaeche(S, box); await tick(); await tick();
 const liste = alle(box).find(x=>x._k.has('hs-liste'));
+const zeilen = ()=>alle(liste).filter(x=>x._k.has('hs-erlaubnis'));
 """
 
-    def test_nur_sitzungen_mit_erlaubnissen_stehen_in_der_liste(self):
+    def test_eine_liste_fuer_alle_laengen_ohne_katalogregeln(self):                    # FS-22
         out = self.node(self.ERL + """
-console.log(JSON.stringify({text: text(liste), zeilen: alle(liste).filter(x=>x._k.has('hs-erlaubnis')).map(x=>x.dataset.karte)}));
+console.log(JSON.stringify({ids: zeilen().map(x=>x.dataset.id), text: text(liste), titel: text(alle(box).find(x=>x._k.has('hs-ueber')))}));
 """)
-        self.assertEqual(out['zeilen'], ['V-masterchat-1', 'K-7'])
-        self.assertIn('Erste · S-AAAAAAA1', out['text'])
-        self.assertNotIn('Zweite', out['text'])
-        self.assertIn('statt Regel „vorlage-masterchat“ · Karte V-masterchat-1', out['text'])
+        self.assertEqual(out['ids'], ['S-AAAAAAA1:K-7', 'T-0000000A'])          # die Katalogregel steht im Katalog-Editor, nicht doppelt
+        self.assertEqual(out['titel'], 'Gilt gerade')
+        for stueck in ('befehl git push*', 'Sitzung S-AAAAAAA1', 'diese Sitzung (höchstens 24 Stunden)', 'Captain · Karte K-7',
+                       'datei_schreiben docs/**', 'befristet · bis 2026-11-14 12:00 · noch 42 von 50 Aufrufen', 'Doku pflegen'):
+            self.assertIn(stueck, out['text'])
 
-    def test_zuruecknehmen_trifft_die_gewaehlte_karte_und_laedt_neu(self):
+    def test_zuruecknehmen_geht_je_art_ueber_den_bestehenden_weg_und_laedt_neu(self):                    # FS-15, FS-22
         out = self.node(self.ERL + """
-const zeile = alle(liste).find(x=>x.dataset && x.dataset.karte === 'K-7');
-knoepfe(zeile)[0].onclick(); await tick(); await tick();
-console.log(JSON.stringify({patch: S.aufrufe.filter(x=>x.methode === 'PATCH'), geladen: S.aufrufe.filter(x=>x.pfad.endsWith('S-AAAAAAA1') && x.methode === 'GET').length}));
+knoepfe(zeilen()[0])[0].onclick(); await tick(); await tick();
+knoepfe(zeilen()[1])[0].onclick(); await tick(); await tick();
+console.log(JSON.stringify({aenderungen: S.aufrufe.filter(x=>x.methode !== 'GET'), geladen: S.aufrufe.filter(x=>x.methode === 'GET').length}));
 """)
-        self.assertEqual(out['patch'], [{'pfad': '/api/harness/sitzungen/S-AAAAAAA1', 'methode': 'PATCH', 'body': {'erlaubnis_zuruecknehmen': 'K-7'}}])
-        self.assertEqual(out['geladen'], 2)
+        self.assertEqual(out['aenderungen'], [
+            {'pfad': '/api/harness/sitzungen/S-AAAAAAA1', 'methode': 'PATCH', 'body': {'erlaubnis_zuruecknehmen': 'K-7'}},
+            {'pfad': '/api/harness/aufgaben/T-0000000A/zuruecknehmen', 'methode': 'POST', 'body': {'grund': 'zurückgenommen unter „Gilt gerade“'}}])
+        self.assertEqual(out['geladen'], 3)
 
     def test_fehler_beim_zuruecknehmen_bleibt_sichtbar_und_der_knopf_frei(self):
         out = self.node(self.ERL.replace("'PATCH /api/harness/sitzungen/S-AAAAAAA1': {}", "'PATCH /api/harness/sitzungen/S-AAAAAAA1': new Error('weg')") + """
-const zeile = alle(liste).find(x=>x.dataset && x.dataset.karte === 'K-7');
-const knopf = knoepfe(zeile)[0]; knopf.onclick(); await tick(); await tick();
-console.log(JSON.stringify({gesperrt: knopf.disabled, hinweise: S.hinweise, noch: alle(liste).filter(x=>x._k.has('hs-erlaubnis')).length}));
+const knopf = knoepfe(zeilen()[0])[0]; knopf.onclick(); await tick(); await tick();
+console.log(JSON.stringify({gesperrt: knopf.disabled, hinweise: S.hinweise, noch: zeilen().length}));
 """)
         self.assertFalse(out['gesperrt'])
         self.assertEqual(out['hinweise'], [['Nicht zurückgenommen: weg', 'bad']])
@@ -173,7 +181,7 @@ console.log(JSON.stringify({gesperrt: knopf.disabled, hinweise: S.hinweise, noch
 
     def test_ohne_erlaubnisse_steht_ein_satz_und_nach_abbauen_wird_nichts_mehr_gezeichnet(self):
         out = self.node("""
-const S = stand({}); S.sitzungen = [{id: 'S-AAAAAAA1'}];
+const S = stand({'GET /api/harness/erlaubnisse?status=aktiv': {anzahl: 0, erlaubnisse: []}});
 const box = el('div');
 const f = E.flaeche(S, box); await tick(); await tick();
 const liste = alle(box).find(x=>x._k.has('hs-liste'));
@@ -183,6 +191,22 @@ console.log(JSON.stringify({leer, nachAbbau: text(liste)}));
 """)
         self.assertIn('Keine Erlaubnis offen.', out['leer'])
         self.assertEqual(out['nachAbbau'].strip(), 'alt')
+
+    def test_gegenprobe_lesefehler_zeigt_einen_satz_statt_leer(self):
+        out = self.node("""
+const S = stand({'GET /api/harness/erlaubnisse?status=aktiv': new Error('kaputt')});
+const box = el('div');
+E.flaeche(S, box); await tick(); await tick();
+console.log(JSON.stringify(text(alle(box).find(x=>x._k.has('hs-liste')))));
+""")
+        self.assertIn('Erlaubnisse nicht lesbar: kaputt', out)
+
+    def test_wortschatz_ohne_das_wort_aufgabe_in_der_liste(self):                    # FS-24
+        js = (HARNESS / 'erlaubnisse.js').read_text(encoding='utf-8')
+        sichtbar = re.findall(r"'([^']*[A-Za-zÄÖÜäöü][^']*)'", js)
+        for satz in sichtbar:
+            if ' ' in satz:
+                self.assertNotIn('Aufgabe', satz, satz)
 
 
 if __name__ == '__main__':

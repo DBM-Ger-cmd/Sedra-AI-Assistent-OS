@@ -23,6 +23,7 @@
 .hs-erlaubnis .hs-einst-label{flex:0 0 150px;font-weight:600;color:var(--text)}
 .hs-erlaubnis code{flex:1 1 200px;font-weight:400}
 .hs-erlaubnis-sitzung{margin-top:6px}
+.hs-erlaubnis-spalte{display:inline-flex;gap:6px;align-items:baseline;margin-right:14px}.hs-erlaubnis-spalte small{min-width:0;font-size:var(--size-xs)}.hs-erlaubnis .hs-erlaubnis-spalte code{flex:0 1 auto}    /* S4.1 UI: „Gilt gerade“, Spalten nebeneinander mit Beschriftung */
 /* ---- Windows-Stil (Captain 03.11.2026, Referenzbilder): Kopfzeile mit Suche, Profil, Gruppenliste, Seiten aus Reihen und Kacheln */
 .hs-einst-kopfzeile{display:grid;grid-template-columns:minmax(0,1fr) minmax(200px,400px) minmax(0,1fr);align-items:center;gap:8px;padding:8px 12px}
 .hs-einst-zurueck{grid-column:1;grid-row:1;justify-self:start;border:0;background:transparent;color:var(--text);font:inherit;font-size:var(--size-large,1.1em);cursor:pointer;padding:2px 8px;border-radius:var(--radius)}
