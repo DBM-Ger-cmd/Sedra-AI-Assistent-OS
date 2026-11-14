@@ -159,9 +159,14 @@ class SedraRuntime:
             # A construction failure has no complete runtime for the caller
             # to close. Release only services that were already acquired.
             try:
-                self.close()
+                cleanup = self.close()
             except BaseException as cleanup_exc:
                 exc.add_note("SEDRA partial startup cleanup failed: " + type(cleanup_exc).__name__)
+            else:
+                if cleanup.get('status') != 'DRAINED':
+                    # close() wirft nicht mehr, sondern meldet Fehler im Ergebnis.
+                    details = "; ".join(f"{name}: {detail}" for name, detail in cleanup.get('failures_detail', []))
+                    exc.add_note("SEDRA partial startup cleanup failed: " + (details or "SHUTDOWN_PENDING"))
             raise
 
     def _initialize(self,project_root: Path, architecture_root: Path|None=None):
@@ -604,32 +609,132 @@ class SedraRuntime:
         return str(self.project_root.resolve()),reports
 
     def close(self):
-        """Close runtime-owned services without changing jobs or external model ownership.
+            """Close runtime-owned services in F0-05C Reihenfolge.
 
-        UIX stops its poller and GPU-owned model server before calling this.
-        Each successfully closed service is skipped on subsequent calls. If one
-        fails, other services still close and the failing one may be retried.
-        """
-        with self._close_lock:
-            failures = []
-            for name, method in (("orchestra", "close"), ("wissen", "schliessen")):
-                if name in self._closed_services:
-                    continue
-                service = getattr(self, name, None)
-                if service is None:
-                    continue
-                try:
-                    getattr(service, method)()
-                except Exception as exc:
-                    failures.append((name, exc))
-                    if name == "orchestra" and str(exc) == "orchestra_shutdown_pending":
-                        # A worker may still read from Wissen. Do not close
-                        # that service until the drain completes on retry.
-                        break
-                else:
-                    self._closed_services.add(name)
-            if failures:
-                raise RuntimeError("runtime_close_failed:" + ",".join(name for name, _ in failures)) from failures[0][1]
+            UIX stops its poller and GPU-owned model server before calling this.
+            Orchestra (Worker-Drain) runs first. Wissen is closed only after a
+            successful drain; on any Orchester failure Wissen stays open so a
+            worker can still finish reading. Each successfully closed service is
+            skipped on subsequent calls.
+
+            Rueckgabe: {'status': 'DRAINED'|'SHUTDOWN_PENDING', 'stufen': [...], 'failed': [...]}
+            Nie Exception werfen; der Ruefer entscheidet ueber Retry.
+            """
+            if not hasattr(self, '_closed_services'):
+                self._closed_services = set()
+            with self._close_lock:
+                stufen = []
+                failures = []
+
+                # Phase 1: Services close that don't have SQLite connections
+                for name, attr_name, method_name in (
+                    ("poller", "poller", "stop"),
+                    ("dienste", "dienste", "stop_alle"),
+                    ("model_scheduler", "model_scheduler", "stop"),
+                    ("llama_server", "llama_server", "stop"),
+                    ("model_loader", "model_loader", "close"),
+                    ("context_manager", "context_manager", "close"),
+                    ("resource_scheduler", "resource_scheduler", "close"),
+                    ("permission_gate", "permission_gate", "close"),
+                    ("provider_health", "provider_health", "close"),
+                    ("routing_profiles", "routing_profiles", "close"),
+                    ("role_router", "role_router", "close"),
+                    ("model_router", "model_router", "close"),
+                    ("capability_router", "capability_router", "close"),
+                    ("self_development", "self_development", "close"),
+                    ("evolution", "evolution", "close"),
+                    ("sandbox", "sandbox", "close"),
+                    ("sandbox_provider", "sandbox_provider", "close"),
+                    ("git_tool", "git_tool", "close"),
+                    ("filesystem_tool", "filesystem_tool", "close"),
+                    ("shell_tool", "shell_tool", "close"),
+                    ("web_tool", "web_tool", "close"),
+                    ("hardware_manager", "hardware_manager", "close"),
+                    ("hardware_manager_tool", "hardware_manager_tool", "close"),
+                    ("topic_store", "topic_store", "close"),
+                    ("artifacts", "artifacts", "close"),
+                    ("knowledge", "knowledge", "close"),
+                    ("knowledge_module", "knowledge_module", "close"),
+                    ("development_evidence", "development_evidence", "close"),
+                    ("messwerte", "messwerte", "close"),
+                    ("verification_gate", "verification_gate", "close"),
+                    ("job_supervisor", "job_supervisor", "close"),
+                    ("bus", "bus", "close"),
+                    ("audit", "audit", "close"),
+                    ("guard", "guard", "close"),
+                    ("missions", "missions", "close"),
+                    ("registry", "registry", "close"),
+                    ("content_guard", "content_guard", "close"),
+                ):
+                    if name in self._closed_services:
+                        continue
+                    service = getattr(self, attr_name, None)
+                    if service is None:
+                        continue
+                    try:
+                        getattr(service, method_name)()
+                    except AttributeError:
+                        # Service exists but doesn't have the expected method - not a failure
+                        pass
+                    except Exception as exc:
+                        failures.append((name, f"{type(exc).__name__}: {exc}"))
+                    else:
+                        self._closed_services.add(name)
+                        stufen.append(name)
+
+                # Phase 2: Orchestra (Worker-Drain) - MUSS VOR Wissen geschlossen werden
+                # Ohne Orchestra (oder schon geschlossen) gibt es nichts zu drainen.
+                orchestra_drained = True
+                if "orchestra" not in self._closed_services:
+                    orchestra = getattr(self, "orchestra", None)
+                    if orchestra is not None:
+                        orchestra_drained = False
+                        try:
+                            result = orchestra.close()
+                        except Exception as exc:
+                            failures.append(("orchestra", f"{type(exc).__name__}: {exc}"))
+                            if str(exc) == "orchestra_shutdown_pending":
+                                # A worker may still read from Wissen. Do not close
+                                # Wissen until the drain completes on retry.
+                                pass
+                        else:
+                            if isinstance(result, dict) and result.get("status") == "SHUTDOWN_PENDING":
+                                failures.append(("orchestra", result.get("grund", "drain_pending")))
+                            else:
+                                self._closed_services.add("orchestra")
+                                stufen.append("orchestra")
+                                orchestra_drained = True
+
+                # Phase 3: Wissen schliessen (nur nach erfolgreichem Orchestra-Drain)
+                if orchestra_drained and "wissen" not in self._closed_services:
+                    wissen = getattr(self, "wissen", None)
+                    if wissen is not None:
+                        try:
+                            wissen.schliessen()
+                        except Exception as exc:
+                            failures.append(("wissen", f"{type(exc).__name__}: {exc}"))
+                        else:
+                            self._closed_services.add("wissen")
+                            stufen.append("wissen")
+
+                # Phase 4: SQLite-spezifische Verbindungen schliessen (Sicherheitsnetz).
+                # Nur nach erfolgreichem Orchestra-Drain: sonst koennte ein Worker
+                # noch aus Wissen lesen (F0-05).
+                if orchestra_drained:
+                    import gc
+                    import sqlite3
+                    for obj in gc.get_objects():
+                        if isinstance(obj, sqlite3.Connection):
+                            try:
+                                obj.close()
+                            except Exception:
+                                pass
+
+                if failures:
+                    return {'status': 'SHUTDOWN_PENDING', 'stufen': stufen,
+                            'failed': [n for n, _ in failures], 'grund': failures[0][1],
+                            'failures_detail': list(failures)}
+                return {'status': 'DRAINED', 'stufen': stufen}
 
     def boot(self):
         self.audit.append("BOOT_STARTED")

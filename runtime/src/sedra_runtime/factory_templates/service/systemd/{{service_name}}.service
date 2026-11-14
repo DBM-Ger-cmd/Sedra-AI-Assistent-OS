@@ -1,0 +1,20 @@
+[Unit]
+Description={{service_name}} Service
+After=network.target
+
+[Service]
+Type=simple
+User=sedra
+WorkingDirectory=/opt/sedra/{{project_name}}
+ExecStart=/opt/sedra/{{project_name}}/.venv/bin/python -m {{service_name}}
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PYTHONPATH=/opt/sedra/{{project_name}}/src
+Environment=SEDRA_CONFIG_ROOT=/opt/sedra/{{project_name}}/configs
+
+[Install]
+WantedBy=multi-user.target

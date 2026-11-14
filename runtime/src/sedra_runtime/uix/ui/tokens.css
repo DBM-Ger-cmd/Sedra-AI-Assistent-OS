@@ -52,12 +52,25 @@
   --gap:8px;
   --gap-2:12px;
   --gap-3:16px;
+  --gap-4:20px;
+  --gap-5:24px;
+  --gap-6:32px;
+  --gap-7:40px;
+  --gap-8:48px;
+  --gap-9:64px;
+  --gap-10:80px;
+  --gap-11:96px;
   --radius:8px;
   --radius-2:10px;
+  --radius-sm:4px;
+  --radius-lg:12px;
+  --radius-xl:16px;
+  --radius-2xl:24px;
   --strip-h:60px;
   --tree-w:230px;
   --talk-h:104px;
-  --font:"Segoe UI",system-ui,-apple-system,sans-serif;
+  --font:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  --font-heading:"Inter","Source Sans Pro",system-ui,-apple-system,sans-serif;
   --mono:Consolas,"DejaVu Sans Mono",monospace;
   /* type scale: four steps, nothing in between – a shell picks a step, it does not invent 11.5px */
   --size-xs:11.5px;     /* B6-G-04 (Klaus 15.10.): eine Stufe größer – Beschreibungen waren zu klein */
@@ -66,7 +79,31 @@
   --size-l:16px;
   --size-head:17px;
   --size-xl:22px;
+  --size-2xl:clamp(1.5rem, 1.25rem + 1.5vw, 2.5rem);
+  --size-3xl:clamp(2rem, 1.5rem + 2.5vw, 3.5rem);
   --tracking-label:.05em;
+  --tracking-tight:-0.02em;
+  /* shadows – elevation system */
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow-md:0 4px 12px rgba(0,0,0,.4);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.55);
+  --shadow-xl:0 16px 48px rgba(0,0,0,.6);
+  /* transitions */
+  --transition-fast:0.12s ease-out;
+  --transition-base:0.15s ease-out;
+  --transition-slow:0.2s ease-out;
+  /* hover lift for floating elements */
+  --hover-hebung:translateY(-1px);
+  /* focus ring – unified */
+  --focus-ring:2px solid var(--accent);
+  --focus-ring-offset:1px;
+  /* tooltip */
+  --tooltip-bg:var(--panel-2);
+  --tooltip-text:var(--text);
+  /* second accent for hover/active */
+  --accent-2:#00e8b3;
+  /* streaming unchecked text color */
+  --streaming-unchecked:var(--muted);
   /* Platzhalter-Typen des KI GateWay (Studio Flow v1.1, Build 19): je Typ eine Fläche und eine Schrift – damit Original und Übergabe gleich markiert sind */
   --tag-person-bg:#3a2a4a; --tag-person:#d9c4ea;
   --tag-company-bg:#1f3345; --tag-company:#a9cde6;

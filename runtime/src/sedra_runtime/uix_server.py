@@ -4133,34 +4133,75 @@ class UIXHub:
         return {'status': 'hint_given', 'kind': kind, 'job_id': job_id}
 
     def close(self):
-        """Window closed: a model this UIX loaded is not left on the GPU, and the lease goes back."""
+        """Window closed: Shutdown in F0-05C Reihenfolge.
+
+        Stufen (nach SPEC F0-05C):
+          1. Annahme sperren (Quiesce, F0-05B) + Poller stoppen
+          2. Worker-Drain via runtime.close() -> DRAINED oder SHUTDOWN_PENDING
+          3. Wissen + Datenbank schliessen (erst nach DRAINED)
+          4. Modellserver + GPU freigeben (erst nach DRAINED)
+
+        Rueckgabe: {'status': 'DRAINED'|'SHUTDOWN_PENDING', 'stufen': [...]}
+        Nie vorzeitig GPU/Modell freigeben, nie Wissen vor Drain schliessen.
+        """
+        stufen = []
         self.poller.stop()
+        stufen.append('poller_stop')
         try:
-            self.dienste.stop_alle('ende')                                      # AM4: ein Dienst überlebt den Server nicht
+            self.dienste.stop_alle('ende')                                      # AM4: ein Dienst ueberlebt den Server nicht
         except Exception:
             pass
-        sched = self._scheduler()
-        if sched is not None:                                # the scheduler's server does not outlive the window while no run needs it
-            try: sched.stop_server(owner='werkstatt-close')
-            except Exception: pass
-        if self.gpu_token is not None:                       # only the path without the scheduler holds its own lease
-            try: self.unload_model({})
-            except Exception: self._release_gpu()
-        for key in ('_gw_wissen', '_arbeitsplatz'):          # die Wissensdateien sauber schließen (Build 24)
+        stufen.append('dienste_stop')
+
+        # Stufe 2: Worker-Drain zuerst. Wissen, DB, GPU werden erst danach angeruehrt.
+        try:
+            drain = self.runtime.close()
+        except Exception as exc:
+            # close() meldet Fehler im Ergebnis; diese Absicherung gilt einem Fehler davor.
+            self.runtime.audit.append('RUNTIME_SHUTDOWN_ERROR', component='uix',
+                                      payload={'fehler': type(exc).__name__})
+            return {'status': 'SHUTDOWN_PENDING', 'stufen': stufen + ['runtime_close_error'],
+                    'grund': 'runtime_close_error'}
+        stufen.append('runtime_close:' + str(drain.get('status', '?')))
+        if drain.get('status') != 'DRAINED':
+            # SHUTDOWN_PENDING: Ressourcen bleiben belegt, Zustand sichtbar machen.
+            self._audit_shutdown_pending(drain)
+            return {'status': 'SHUTDOWN_PENDING', 'stufen': stufen, 'grund': drain.get('grund')}
+
+        # Stufe 3: Wissen schliessen (erst nach DRAINED).
+        for key in ('_gw_wissen', '_arbeitsplatz'):
             w = self.__dict__.get(key)
             if w is not None:
-                try: w.close()
-                except Exception: pass
-        # The runtime owns Orchestra/Wissen resources; it closes both once.
-        try:
-            self.runtime.close()
-        except Exception as exc:
-            # Shutdown must continue, but the failure must be visible in the audit.
+                try:
+                    w.close()
+                except Exception as exc:
+                    self.runtime.audit.append('UIX_SHUTDOWN_WISSEN_FEHLER', component='uix',
+                                              payload={'key': key, 'fehler': str(exc)[:120]})
+        stufen.append('wissen_schliessen')
+
+        # Stufe 4: Modellserver und GPU freigeben (erst nach DRAINED).
+        sched = self._scheduler()
+        if sched is not None:
             try:
-                self.runtime.audit.append('RUNTIME_SHUTDOWN_ERROR', component='uix',
-                                          payload={'error': type(exc).__name__, 'reason': str(exc)[:120]})
+                sched.stop_server(owner='werkstatt-close')
+            except Exception as exc:
+                self.runtime.audit.append('UIX_SHUTDOWN_SERVER_FEHLER', component='uix',
+                                          payload={'fehler': str(exc)[:120]})
+        if self.gpu_token is not None:
+            try:
+                self.unload_model({})
             except Exception:
-                pass
+                self._release_gpu()
+        stufen.append('gpu_modell_freigegeben')
+
+        return {'status': 'DRAINED', 'stufen': stufen}
+
+    def _audit_shutdown_pending(self, drain):
+        try:
+            self.runtime.audit.append('RUNTIME_SHUTDOWN_PENDING', component='uix',
+                                      payload={'grund': drain.get('grund'), 'stufen': drain.get('stufen', [])})
+        except Exception:
+            pass
 
     def dev_environment(self):
         rt = self.runtime

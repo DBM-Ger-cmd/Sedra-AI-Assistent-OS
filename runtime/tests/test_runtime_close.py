@@ -64,12 +64,15 @@ class RuntimeTeardown(unittest.TestCase):
         dummy.close.side_effect = RuntimeError('simulated failure')
         self.rt.orchestra = dummy
         wissen = self.rt.wissen
-        with self.assertRaisesRegex(RuntimeError, 'runtime_close_failed:orchestra'):
-            self.rt.close()
+        # close() wirft nicht mehr: der Fehler steht im Ergebnis, Wissen bleibt offen, solange der Drain fehlt.
+        result = self.rt.close()
+        self.assertEqual(result['status'], 'SHUTDOWN_PENDING')
+        self.assertEqual(result['failed'], ['orchestra'])
+        wissen.db.execute('SELECT 1')
+        dummy.close.side_effect = None
+        self.assertEqual(self.rt.close()['status'], 'DRAINED')
         with self.assertRaises(sqlite3.ProgrammingError):
             wissen.db.execute('SELECT 1')
-        dummy.close.side_effect = None
-        self.rt.close()
         self.rt.close()
         self.assertEqual(dummy.close.call_count, 2)
 

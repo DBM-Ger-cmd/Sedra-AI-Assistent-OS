@@ -82,8 +82,9 @@ class OrchestraDrainTest(unittest.TestCase):
         thread = slow.start()
         orch = self.orchestra(slow.pool)
         try:
-            with self.assertRaisesRegex(RuntimeError, "orchestra_shutdown_pending"):
-                orch.close(wait_s=0.01)
+            result = orch.close(wait_s=0.01)
+            self.assertEqual(result['status'], 'SHUTDOWN_PENDING')
+            self.assertEqual(result['grund'], 'stop_tick_timeout')
             self.assertEqual(orch.conn.execute("SELECT 1").fetchone()[0], 1)
             self.assertIs(orch.worker_pool, slow.pool)
             self.assertTrue(orch._stopping)
@@ -92,7 +93,8 @@ class OrchestraDrainTest(unittest.TestCase):
                 orch.start_tick()
         finally:
             slow.finish(thread)
-        orch.close(wait_s=0.05)
+        result = orch.close(wait_s=0.05)
+        self.assertEqual(result['status'], 'DRAINED')
         self.assertIsNone(orch.worker_pool)
         with self.assertRaises(sqlite3.ProgrammingError):
             orch.conn.execute("SELECT 1")
@@ -130,17 +132,21 @@ class RuntimeOwnershipTest(unittest.TestCase):
         rt._close_lock = threading.Lock()
         rt._closed_services = set()
         rt.orchestra = Mock()
-        rt.orchestra.close.side_effect = [RuntimeError("orchestra_shutdown_pending"), None]
+        rt.orchestra.close.side_effect = [
+            {'status': 'SHUTDOWN_PENDING', 'grund': 'stop_tick_timeout'},
+            {'status': 'DRAINED'},
+        ]
         rt.wissen = Mock()
-        with self.assertRaisesRegex(RuntimeError, "runtime_close_failed:orchestra"):
-            rt.close()
+        result = rt.close()
+        self.assertEqual(result['status'], 'SHUTDOWN_PENDING')
         rt.wissen.schliessen.assert_not_called()
         self.assertEqual(rt._closed_services, set())
-        rt.close()
+        result = rt.close()
+        self.assertEqual(result['status'], 'DRAINED')
         rt.close()
         self.assertEqual(rt.orchestra.close.call_count, 2)
         rt.wissen.schliessen.assert_called_once_with()
-        self.assertEqual(rt._closed_services, {"orchestra", "wissen"})
+        self.assertEqual(rt._closed_services, {'orchestra', 'wissen'})
 
 
 if __name__ == "__main__":

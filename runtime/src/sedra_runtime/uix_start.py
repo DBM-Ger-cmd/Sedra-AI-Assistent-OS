@@ -10,8 +10,10 @@ import argparse
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from .models import gpu_preflight
@@ -87,6 +89,20 @@ def other_uix_pids(rows, own_pids):
     return matches
 
 
+def wait_port_free(port: int, host: str = "127.0.0.1", timeout: float = 10.0) -> bool:
+    """Wartet bis Port frei ist (Connection Refused)."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=1.0):
+                time.sleep(0.2)  # Port noch belegt
+        except ConnectionRefusedError:
+            return True  # Port frei
+        except OSError:
+            time.sleep(0.2)
+    return False  # Timeout
+
+
 def describe_running(rows, pid):
     """Show the package location of a detected UIX even with partial rows."""
     row = next((r for r in rows if isinstance(r, dict) and _pid(r.get('ProcessId')) == pid), {})
@@ -105,6 +121,8 @@ def preflight(rows, own_pids, *, replace=False, say=print, stop=gpu_preflight._s
     for pid in others:
         say(f'Beende laufende UIX (PID {pid}).')
         stop(pid, run)
+        # Warte kurz, damit der Prozess seinen Port freigeben kann
+        time.sleep(0.5)
     by_pid = {_pid(r.get('ProcessId')): r for r in rows
               if isinstance(r, dict) and _pid(r.get('ProcessId')) is not None}
     alive = set(by_pid) - set(others)

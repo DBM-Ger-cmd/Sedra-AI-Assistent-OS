@@ -1,0 +1,37 @@
+{
+  "name": "{{service_name}}",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// {{service_name}} workflow\n// Project: {{project_name}}\n// Factory: {{factory_name}} ({{factory_type}})\nreturn [{ json: { message: 'Hello from {{service_name}}' } }];"
+      },
+      "name": "Process",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": "1"
+}

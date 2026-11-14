@@ -238,9 +238,12 @@ class Orchestra:
     def close(self, wait_s=5):
         # A live worker may still be using this SQLite connection. Never close
         # it, or declare shutdown complete, merely because a join timed out.
+        # F0-05C: Rueckgabe statt Exception, damit der Ruefer SHUTDOWN_PENDING
+        # unterscheiden und gezielt retryen kann.
         if not self.stop_tick(wait_s=wait_s):
-            raise RuntimeError("orchestra_shutdown_pending")
+            return {'status': 'SHUTDOWN_PENDING', 'grund': 'stop_tick_timeout'}
         self.conn.close()
+        return {'status': 'DRAINED'}
 
     def agents(self):
         return _query(self.conn, "SELECT * FROM agents ORDER BY id")
