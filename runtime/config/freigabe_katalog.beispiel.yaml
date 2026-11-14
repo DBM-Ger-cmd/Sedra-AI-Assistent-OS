@@ -98,13 +98,3 @@ freigabe_katalog:
       muster: ['*']
       stufe: captain
       begruendung: "Wendet ein Profil oder eine Vorlage an – der Captain sieht die Diff-Vorschau."
-    - id: rueckblick-schreiben
-      werkzeug: [rueckblick_schreiben]
-      muster: ['*']
-      stufe: captain
-      begruendung: "Legt einen Rückblick-Antrag an – der Captain entscheidet über die Maßnahmen."
-    - id: vorschlaege-pflegen
-      werkzeug: [vorschlaege_pflegen]
-      muster: ['*']
-      stufe: captain
-      begruendung: "Pflegt Verbesserungsvorschläge – jede Änderung braucht die Freigabe des Captains."

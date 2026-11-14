@@ -160,7 +160,7 @@ class Kiste:
         self.vorarbeiter, self.extra = vorarbeiter, extra        # Stufe 3: Ernennung (Karten `an: vorarbeiter`) und die Werkzeuge des Vorarbeiters
         self.aufgaben, self.lokal = aufgaben, lokal        # Stufe 3: Aufgaben-Freigabe gilt nur für lokale Modelle (HS-27)
         self.names = tuple(HARNESS_WERKZEUGE) + (tuple(chat.names) if chat is not None else ()) + (tuple(extra.names) if extra is not None else ())
-        self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen', 'auftraege_verteilen', 'desktop_aendern', 'profil_wechseln', 'rueckblick_schreiben', 'vorschlaege_pflegen')
+        self.wirkung = ('datei_schreiben', 'datei_aendern', 'befehl', 'lauf_starten', 'lauf_stoppen', 'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen', 'auftraege_verteilen', 'desktop_aendern', 'profil_wechseln')
         self._gewarnt = set()            # Nachtrag 434b108: welche Ersetzungen dem Modell schon einen Hinweis bekamen
         self._wiederholung = harness_deckung.Wiederholung()      # S4.5: derselbe gedeckte Aufruf ohne Schreiben dazwischen höchstens so oft (FS-40 bis FS-42)
 
@@ -220,7 +220,7 @@ class Kiste:
                 return {'status': 'verboten', 'ergebnis': f"verboten: {e['begruendung']}", 'stufe': 'verboten', 'regel': e['regel'], 'wirkung': False}
             self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id}
             out = self.w.ausfuehren(name, args, plan=plan)
-            if name not in ('erinnern', 'sitzungen_auflisten', 'youtube_transkript', 'vorlage_beantragen', 'desktop_lesen', 'belohnungen_lesen', 'prozess_beantragen', 'wissen_suchen', 'wissen_beantragen', 'uebersetzen'):                  # wissen_*: eigenes Audit im Wissen, nie der Fragetext (WK-06); die Verknüpfung steht schon im Audit des Servers (mit `von`)
+            if name not in ('erinnern', 'sitzungen_auflisten', 'youtube_transkript', 'vorlage_beantragen', 'desktop_lesen', 'belohnungen_lesen', 'prozess_beantragen', 'wissen_suchen', 'wissen_beantragen', 'uebersetzen', 'rueckblick_schreiben', 'vorschlaege_pflegen'):                  # wissen_*: eigenes Audit im Wissen, nie der Fragetext (WK-06); die Verknüpfung steht schon im Audit des Servers (mit `von`)
                 self._audit('HARNESS_APP_OEFFNEN' if name == 'app_oeffnen' else 'HARNESS_PROJEKT_BEANTRAGT', {'ziel': plan['ziel'][:300], 'status': out['status']})
             return dict(out, stufe='frei', regel=name.replace('_', '-'))
         e = einstufung(self.regeln, name, args, plan)

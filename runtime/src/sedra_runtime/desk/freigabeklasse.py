@@ -53,7 +53,7 @@ ARTEN = {
 WEGE = frozenset({'einmal', 'freigeben_und_anwenden', 'aendern', 'ablehnen', 'cloud_diesen_lauf', 'bestaetigen',
                   'erlauben', 'sitzung', 'befristet', 'immer', 'uebernehmen', 'zuruecksetzen', 'zur_kenntnis', 'zuruecknehmen'})
 
-HARNESS_AUSFUEHREN = frozenset({'befehl', 'lauf_starten', 'auftraege_verteilen', 'desktop_aendern', 'profil_wechseln', 'rueckblick_schreiben', 'vorschlaege_pflegen'})      # auftraege_verteilen: der Text geht in die Cloud (Daten nach außen, wie cloud_offload) – nie über den Vorarbeiter
+HARNESS_AUSFUEHREN = frozenset({'befehl', 'lauf_starten', 'auftraege_verteilen', 'desktop_aendern', 'profil_wechseln'})      # auftraege_verteilen: der Text geht in die Cloud (Daten nach außen, wie cloud_offload) – nie über den Vorarbeiter
 HARNESS_SCHREIBEN = frozenset({'datei_schreiben', 'datei_aendern'})
 HARNESS_N = frozenset({'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen', 'lauf_stoppen'})
 

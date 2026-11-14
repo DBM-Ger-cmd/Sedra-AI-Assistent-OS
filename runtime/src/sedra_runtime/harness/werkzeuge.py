@@ -43,7 +43,7 @@ LAUF = ('lauf_starten', 'lauf_stoppen', 'lauf_status', 'modell_laden', 'modell_e
 FREI_OHNE_KATALOG = OHNE_KARTE
 SITZUNGEN = ('sitzungen_aufraeumen',)       # Chat-Liste aufräumen: immer eine Karte mit der Liste (fester Vorbehalt, harness/vorbehalte.py); `sitzungen_auflisten` (lesen) steht in OHNE_KARTE
 CLOUD = ('auftraege_verteilen',)       # Teilaufträge des Managers an den Hilfs-Coder in der Cloud: der Text verlässt den Rechner, darum immer eine Karte (nicht in OHNE_KARTE); Gesetze und Tagesbudget prüft manager/kanal.py
-NAMEN = LESEN + WIRKUNG + LAUF + SITZUNGEN + CLOUD + FREI_OHNE_KATALOG + ('desktop_aendern', 'profil_wechseln', 'rueckblick_schreiben', 'vorschlaege_pflegen')
+NAMEN = LESEN + WIRKUNG + LAUF + SITZUNGEN + CLOUD + FREI_OHNE_KATALOG + ('desktop_aendern', 'profil_wechseln')
 # AM8-06 (SPEC_APPS_v1_AM8_VERZEICHNIS): die Wirkungsklasse jedes Chat-Werkzeugs – nur zur ANZEIGE (Verzeichnis der Erweiterungen); entschieden wird weiter von Guard, Katalog und Vorbehalten.
 # Maßstab ist die Obergrenze dessen, was das Werkzeug tun kann (AM8-E2: `befehl` ist `destructive_write`, der Katalog entscheidet im Einzelfall). Ein Test hält die Liste gleich NAMEN.
 WIRKUNGSKLASSE = {
@@ -347,6 +347,8 @@ class Werkzeuge:
         if name not in NAMEN:
             raise WerkzeugFehler(f'werkzeug_unbekannt: {name}')
         args = args if isinstance(args, dict) else {}
+        if name in ('rueckblick_schreiben', 'vorschlaege_pflegen'):          # W4: eigener Zweig (werkzeug_lernen.py); steht in FREI_OHNE_KATALOG, weil es nur einen Antrag anlegt
+            return self._lernen.vorbereiten(name, args)
         if name in FREI_OHNE_KATALOG:
             ort = None
             if name == 'erinnern':
