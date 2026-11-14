@@ -1,0 +1,17 @@
+
+id: test_wf
+name: Test Workflow
+version: "1.0"
+steps:
+  - id: step1
+    name: Step 1
+    type: script
+    config:
+      script: "echo hello"
+    depends_on: []
+  - id: step2
+    name: Step 2
+    type: delay
+    config:
+      delay_ms: 100
+    depends_on: ["step1"]

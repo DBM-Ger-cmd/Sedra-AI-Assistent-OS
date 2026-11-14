@@ -1,0 +1,10 @@
+{
+  "modell": "<modelle>/unsloth/Qwen3.6-35B-A3B-MTP-GGUF/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf",
+  "gemeinsam": ["-ngl", "99", "-fa", "on", "-ctk", "q8_0", "-ctv", "q8_0", "-ub", "512", "--threads", "12", "--threads-batch", "20", "--jinja", "--reasoning", "off", "--load-mode", "none", "-b", "2048", "--cache-ram", "0"],
+  "stufen": [
+    {"name": "power_nacheinander", "ablauf": "nacheinander", "kanaele": 1, "kontext": 126976, "max_tokens": 500,
+     "args": ["--n-cpu-moe", "25", "--spec-type", "draft-mtp"]},
+    {"name": "team_gleichzeitig", "ablauf": "gleichzeitig", "kanaele": 3, "kontext": 54613, "max_tokens": 500,
+     "args": ["--n-cpu-moe", "29", "--spec-type", "draft-mtp", "--kv-unified"]}
+  ]
+}
