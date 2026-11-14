@@ -20,39 +20,39 @@ def _run(script_names, probe):
 
 
 class SpracheTest(unittest.TestCase):
+    """Die Textlisten und `t()` der Harness-Shell (shells/harness/strings_de.js, strings_en.js, i18n.js). Die alten Retro-Bausteine
+    (uix/js/sprache_wahl.js, strings_*.json) sind entfernt; der Server liefert unter /uix/js nur js und css, die JSON-Dateien wurden nie geladen."""
+
     def setUp(self):
         if not NODE:
             self.skipTest('node is not installed')
 
-    def test_keine_hardcodierten_strings(self):
-        js = (UIX_DIR / 'js' / 'sprache_wahl.js').read_text(encoding='utf-8')
-        self.assertIn('STRINGS_DE', js)
-        self.assertIn('STRINGS_EN', js)
-        self.assertIn('function t(', js)
+    def _harness(self, probe):
+        h = UIX_DIR / 'shells' / 'harness'
+        code = ("const vm=require('vm');const fs=require('fs');const box={localStorage:{getItem(){return null;},setItem(){}}};vm.createContext(box);"
+                + "".join(f"vm.runInContext(fs.readFileSync({str(h / n)!r},'utf-8'),box);" for n in ('strings_de.js', 'strings_en.js', 'i18n.js')) + probe)
+        run = subprocess.run([NODE, '-e', code], capture_output=True, text=True, encoding='utf-8', timeout=60)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        return json.loads(run.stdout)
 
-    def test_sprache_umschalten(self):
-        out = _run(['sprache_wahl.js'], '''console.log(JSON.stringify(box.spracheUmschalten('en')));''')
-        self.assertEqual(out['code'], 'en')
-        out2 = _run(['sprache_wahl.js'], '''console.log(JSON.stringify(box.t('lbl_sedra')));''')
-        self.assertEqual(out2, 'SEDRA')
-        out3 = _run(['sprache_wahl.js'], '''box.spracheUmschalten('de');console.log(JSON.stringify(box.t('lbl_sedra')));''')
-        self.assertEqual(out3, 'SEDRA')
+    def test_standard_deutsch_und_umschalten_ohne_neustart(self):
+        out = self._harness("console.log(JSON.stringify([box.t('lbl_sprache'), box.sedraI18n.spracheUmschalten('en').ok, box.t('lbl_sprache'), "
+                            "box.sedraI18n.spracheUmschalten('de').ok, box.t('lbl_sprache')]));")
+        self.assertEqual(out, ['Sprache', True, 'Language', True, 'Sprache'])
 
-    def test_standardsprache_de(self):
-        out = _run(['sprache_wahl.js'], '''console.log(JSON.stringify(box.spracheAktuell()));''')
-        self.assertEqual(out['code'], 'de')
-        self.assertEqual(out['name'], 'Deutsch')
+    def test_fehlender_schluessel_zeigt_den_deutschen_text_oder_den_schluessel(self):
+        out = self._harness("box.sedraI18n.spracheUmschalten('en');console.log(JSON.stringify([box.t('gibt_es_nicht'), box.t('lbl_sprache')]));")
+        self.assertEqual(out[0], 'gibt_es_nicht')
+        self.assertEqual(out[1], 'Language')
 
-    def test_alle_strings_bereitschaft(self):
-        out = _run(['sprache_wahl.js'], '''console.log(JSON.stringify(box.alleStringsBereit()));''')
-        self.assertTrue(out['bereit'])
-        self.assertEqual(out['fehlend'], [])
+    def test_unbekannte_sprache_wird_abgelehnt(self):
+        out = self._harness("console.log(JSON.stringify(box.sedraI18n.spracheUmschalten('fr').ok));")
+        self.assertFalse(out)
 
-    def test_sprache_in_einstellungen(self):
-        out = _run(['sprache_wahl.js'], '''console.log(JSON.stringify(box.t('lbl_sprache') + ' | ' + box.t('lbl_deutsch') + ' | ' + box.t('lbl_englisch')));''')
-        self.assertEqual(out, 'Sprache | Deutsch | Englisch')
-        out2 = _run(['sprache_wahl.js'], '''box.spracheUmschalten('en');console.log(JSON.stringify(box.t('lbl_sprache') + ' | ' + box.t('lbl_deutsch') + ' | ' + box.t('lbl_englisch')));''')
-        self.assertEqual(out2, 'Language | German | English')
+    def test_alte_retro_bausteine_sind_weg(self):
+        for name in ('sprache_wahl.js', 'strings_de.json', 'strings_en.json'):
+            self.assertFalse((UIX_DIR / 'js' / name).exists(), name)
+        self.assertNotIn('sprache_wahl', (UIX_DIR / 'retro_desktop.html').read_text(encoding='utf-8'))
 
     def test_string_dateien_gleiche_schluessel(self):
         """X5-01 / X5-04: strings_de.js und strings_en.js haben identische Schlüssel."""
