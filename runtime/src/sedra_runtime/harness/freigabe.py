@@ -21,6 +21,7 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
+from . import deckung as harness_deckung
 from . import erlaubnis as sitzungs_erlaubnis
 from . import code_stand as code_stand_mod
 from . import vorbehalte
@@ -240,16 +241,14 @@ class Kiste:
                         'stufe': e['stufe'], 'regel': e['regel'], 'wirkung': False}
             e = dict(e, wirkt_als='captain')
             warnkarte = True                                  # Kasten und Entscheidung bleiben beim Captain – keine Aufgabe deckt sie
-        via_aufgabe, via_sitzung = None, None
-        if e['wirkt_als'] != 'frei' and self.aufgaben is not None and self.lokal and not e['vorbehalt'] and not warnkarte:
-            weich = vorbehalte.pruefen_weich(name, plan['ziel'], args) or plan.get('weich')
-            treffer = self.aufgaben.deckt(self.sitzung_id, name, plan['ziel'], weich=weich)
-            if treffer and self.aufgaben.zaehlen(treffer['aufgabe_id']):
-                via_aufgabe = treffer['aufgabe_id']
-        if e['wirkt_als'] != 'frei' and not via_aufgabe and not e['vorbehalt'] and not warnkarte and not vorbehalte.pruefen_weich(name, plan['ziel'], args):
-            treffer = sitzungs_erlaubnis.deckt(self.erlaubnisse, name, plan['ziel'])
-            if treffer:
-                via_sitzung = treffer['karte_id']
+        gedeckt = harness_deckung.deckt(           # S4.2 (FS-10): eine Deckungsfunktion, Reihenfolge wie zuvor (Vergleichstest alt/neu)
+            wirkt_als=e['wirkt_als'], vorbehalt=e['vorbehalt'], warnkarte=warnkarte,
+            aufgaben_aktiv=self.aufgaben is not None and bool(self.lokal),
+            weich_werkzeug=lambda: vorbehalte.pruefen_weich(name, plan['ziel'], args), weich_plan=plan.get('weich'),
+            aufgabe_treffer=lambda weich: self.aufgaben.deckt(self.sitzung_id, name, plan['ziel'], weich=weich),
+            aufgabe_zaehlen=self.aufgaben.zaehlen if self.aufgaben is not None else None,
+            sitzung_treffer=lambda: sitzungs_erlaubnis.deckt(self.erlaubnisse, name, plan['ziel']))
+        via_aufgabe, via_sitzung = gedeckt['via_aufgabe'], gedeckt['via_sitzung']
         if via_aufgabe and name in vorbehalte.SCHREIBEN and getattr(self.w, 'oberflaeche', None) is not None:      # O3 G2-01: unter einer Aufgabe geschriebener Code der Oberfläche wirkt erst nach der Übernahme
             from pathlib import Path as _Pfad
             if self.w.oberflaeche.zurueckhalten(_Pfad(self.w.wurzel) / plan['ziel'], self.sitzung_id, via_aufgabe) is None:

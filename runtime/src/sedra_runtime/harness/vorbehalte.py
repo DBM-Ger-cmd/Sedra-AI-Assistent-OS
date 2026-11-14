@@ -19,6 +19,7 @@ PFADE = (
     # Stufe 3 (G2 §5.4 S8): die Teile, die Aufgaben, Vorarbeiter und Läufe regeln, und ihre Ablage
     ('runtime/src/sedra_runtime/harness/aufgabe.py', 'Harness-Code: Aufgaben-Freigabe'),
     ('runtime/src/sedra_runtime/harness/aufgabe_deckung.py', 'Harness-Code: Deckung der Aufgaben-Freigabe'),
+    ('runtime/src/sedra_runtime/harness/deckung.py', 'Harness-Code: die eine Deckungsfunktion (S4.2, FS-10)'),
     ('runtime/src/sedra_runtime/harness/vorarbeiter.py', 'Harness-Code: Vorarbeiter-Freigabe'),
     ('runtime/src/sedra_runtime/harness/lauf.py', 'Harness-Code: Läufe'),
     ('runtime/src/sedra_runtime/harness/lauf_huelle.py', 'Harness-Code: Hülle der Läufe'),
