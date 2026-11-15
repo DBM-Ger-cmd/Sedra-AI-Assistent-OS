@@ -82,6 +82,7 @@ from . import lauf as harness_lauf
 from . import katalog as harness_katalog
 from . import projekte as harness_projekte
 from . import schleife
+from .team_lauf import TeamLauf
 from . import verbrauch as harness_token
 from . import verbrauch as harness_verbrauch
 from . import verknuepfungen as harness_verknuepfungen
@@ -102,10 +103,12 @@ LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches
          'gateway_status', 'gateway_vorgang', 'gateway_regel')        # SPEC_WISSEN_KERN_v1 WK-12: die GateWay-Auskunft auch in One Sedra (nur lesen)
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
                  r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|oberflaeche|hilfswerkzeuge|bausteine|info|desktop|vorschlaege|erlaubnisse)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen|vorlegen|zuruecksetzen|zuruecknehmen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+HELFER_OHNE = ('team_verteilen', 'auftraege_verteilen')        # was die Kiste eines Helfers nie enthält (DG-05)
+TEAM_WEG = re.compile(r'/api/harness/team(?:/(T-[0-9A-F]{8})(?:/(stopp))?)?')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)|info/wissen|desktop|oberflaeche/(?:vorlegen|zuruecksetzen|zuruecknehmen)'
-                        r'|verknuepfungen|gedaechtnis|token|aufraeumen|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
+                        r'|verknuepfungen|gedaechtnis|token|aufraeumen|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|team/T-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
 # Gedanken und Modelle (Captain 02.11.2026): Sedra speichert die Gedanken je Antwort; ans Modell geht je nach Modus nur wenig zurück.
 #   aus  – nichts, nur Text und Ergebnisse        spur – (Standard) eine Zeile je frühere Antwort: was lief, wie viel Gedanken gespeichert sind; abrufbar mit `erinnern`
 #   kurz – Spur + das Ende der Gedanken der letzten 2 Antworten (je 800 Zeichen)        voll – Spur + die letzten 4 (je 6 000 Zeichen)
@@ -192,6 +195,7 @@ class HarnessApi:
         self.execute = lambda mission, request: hub.runtime.control.execute(mission, request)     # in Tests ersetzbar
         self.threads = {}
         self.karten = freigabe.Karten(hub.project_root / 'runtime_data' / 'harness' / 'karten')
+        self.team = TeamLauf(self)             # Delegation im Gespräch (SPEC_DELEGATION_IM_GESPRAECH_v1): der Ablauf liegt in harness/team_lauf.py
         self.herkunft = harness_herkunft.Herkunft(audit=lambda event, payload: self._audit(event, payload))
         self._lauf_typen = None
         self.laeufe = harness_lauf.Laeufe(hub.project_root / 'runtime_data' / 'harness' / 'laeufe', typen=self.lauf_typen, audit=self._audit_roh, melden=self._melden)
@@ -269,6 +273,9 @@ class HarnessApi:
     # ---- Wege
     def handle(self, method, path, query='', payload=None):
         """(status, body) – oder ('sse', antwort, ab) für den Strom. ValueError → 400, NichtGefunden → 404 (im Server)."""
+        t = TEAM_WEG.fullmatch(path)                                 # Delegation im Gespräch: eigene Wege, damit das große Muster unverändert bleibt
+        if t:
+            return self.team_weg(method, t.group(1), t.group(2), payload or {})
         m = WEG.fullmatch(path)
         if not m:
             raise NichtGefunden('weg_unbekannt')
@@ -990,11 +997,67 @@ class HarnessApi:
                          code_stand=self.code_stand(projekt),
                          vorlage_antrag=lambda nutz: harness_antraege.vorlage_neu_antrag(self.hub, nutz), prozess_antrag=lambda nutz: harness_antraege.prozess_antrag(self.hub, nutz), desktop_stand=self.desktop_stand, orte=self._orte_aktiv, lernen_lesen=self.lernen_lesen,
                          wissen=self.wissen_werkzeug, wissen_antrag=self.wissen_antrag, cloud_verteilen=self.cloud_verteilen,
+                         team_verteilen=self.team.verteilen, team_hinweis=self.team.datei_hinweis,
                          uebersetzer=lambda text, ziel, quelle: self.text_uebersetzen(mission_id, text, ziel, quelle),
                          text_antwort=lambda text, **kw: self.text_antwort(mission_id, text, **kw), oberflaeche=self._oberflaeche_fuer(projekt),
                          rueckblick_antrag=lambda nutz: harness_antraege_lernen.rueckblick_antrag(self.hub, nutz),
                          vorschlag_antrag=lambda nutz: harness_antraege_lernen.vorschlag_antrag(self.hub, nutz),
                          web_transkript=lambda video, sprachen: self.hub.runtime.web_tool.execute(mission_id, 'youtube_transcript', {'video': video, 'languages': sprachen}))
+
+    # ---- Delegation im Gespräch: was harness/team_lauf.py vom Server braucht (nur Durchreichen, die Arbeit liegt dort)
+    def helfer_sitzung(self, haupt, delegation, rolle, titel, slot):
+        """Legt die Sitzung eines Helfers an: gleiches Projekt und Modell wie die Hauptsitzung, eigene Mission, gebunden über `eltern` (DG-02)."""
+        kopf_h = haupt['kopf']
+        mission = self.hub.runtime.brain.create_mission('Harness-Helfer ' + str(rolle)[:40], None, 'S1')
+        self._mission_stand(mission, 'closed', 'schliessen')
+        kopf = self.sitzungen.anlegen(kopf_h['projekt'], f'{rolle}: {titel}', modell=haupt.get('modell'), mission_id=mission['identity']['mission_id'],
+                                      eltern=kopf_h['id'], delegation=delegation, rolle=rolle)
+        if slot is not None:
+            self.sitzungen.slot_waehlen(kopf['id'], slot)
+        self._audit('HARNESS_SITZUNG_ANGELEGT', {'sitzung_id': kopf['id'], 'projekt': kopf_h['projekt'], 'mission_id': kopf['mission_id'], 'vorlage': None, 'vorlage_hash': None,
+                                                 'eltern': kopf_h['id'], 'delegation': delegation, 'rolle': kopf['rolle']})
+        self._melden('harness.sitzung', {'id': kopf['id'], 'was': 'geaendert', 'projekt': kopf_h['projekt'], 'titel': kopf['titel']})
+        return kopf
+
+    def slots_gesamt(self):
+        """Die Plätze des geladenen Modells auf dem llama-server (Rezept `profile.server.slots`); unbekannt = 1."""
+        try:
+            loaded, _grund = self.geladen()
+            ids = {v for x in (loaded or []) for v in (x.get('identifier'), x.get('modelKey')) if v}
+            router = getattr(self.hub.runtime, 'role_router', None)
+            for r in (router.config.recipes if router is not None else []):
+                if r.get('model') in ids and r.get('provider') == 'llama-cpp-server':
+                    return int(((r.get('profile') or {}).get('server') or {}).get('slots') or 1)
+        except Exception:
+            pass
+        return 1
+
+    def belegte_slots(self, eigene):
+        """Feste Plätze der Sitzungen, die gerade antworten (ohne die eigene): ein Helfer bekommt keinen davon."""
+        out = []
+        for a in self.stroeme.laufende():
+            if a.sitzung_id == eigene:
+                continue
+            try:
+                slot = self.sitzungen.laden(a.sitzung_id).get('slot')
+            except SitzungFehler:
+                continue
+            if slot is not None:
+                out.append(slot)
+        return out
+
+    def team_weg(self, method, tid, aktion, payload):
+        """GET team → laufende Delegationen; GET team/<T-…> → ihr Stand; POST team/<T-…>/stopp {sitzung_id?} → einen Helfer oder alle anhalten (DG-09)."""
+        try:
+            if method == 'GET' and not tid:
+                return 200, {'laufende': self.team.laufende()}
+            if method == 'GET' and not aktion:
+                return 200, self.team.stand(tid)
+            if method == 'POST' and aktion == 'stopp':
+                return 200, self.team.stopp(tid, payload.get('sitzung_id'))
+        except KeyError as exc:
+            raise NichtGefunden(str(exc.args[0]) if exc.args else 'delegation_unbekannt') from exc
+        raise NichtGefunden('methode_unbekannt')
 
     def cloud_verteilen(self, auftraege):
         """Für `auftraege_verteilen`: die Teilaufträge gehen über den Vorarbeiter-Kanal des Managers an die Cloud (Gesetze, Tagesbudget, Inhaltsschutz, Journal dort). Aufgerufen wird erst nach der Karte des Captains."""
@@ -1425,9 +1488,11 @@ class HarnessApi:
     def _begrenzen(self, s, box):
         """HS-19: eine Sitzung mit Vorlage bekommt nur die Werkzeuge der Vorlage; ohne Vorlage gibt es Läufe und Modelle nicht (N7)."""
         vorlage = self._vorlage(s)
+        if s['kopf'].get('eltern'):                # ein Helfer der Delegation im Gespräch: er delegiert nicht weiter und startet keine Läufe (DG-05)
+            return harness_vorlagen.Begrenzt(box, [n for n in box.names if n not in LAUF_WERKZEUGE and n not in HELFER_OHNE])
         if vorlage:
             return harness_vorlagen.Begrenzt(box, vorlage['werkzeuge'])
-        return harness_vorlagen.Begrenzt(box, [n for n in box.names if n not in LAUF_WERKZEUGE])
+        return harness_vorlagen.Begrenzt(box, [n for n in box.names if n not in LAUF_WERKZEUGE and n != 'team_verteilen'])     # delegieren darf nur eine Vorlage, die es nennt (Captain 15.11.2026: zuerst Manager)
 
     def _kiste(self, s):
         """Die Werkzeugkiste einer Antwort: Harness-Werkzeuge mit Freigabe (Stufe 2) und die lesenden Zustandswerkzeuge. Ist der Katalog

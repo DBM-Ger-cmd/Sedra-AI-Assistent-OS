@@ -93,6 +93,12 @@ class Stroeme:
     def laufend_in(self, sitzung_id):
         return next((a for a in self.laufende() if a.sitzung_id == sitzung_id), None)
 
+    def letzte_in(self, sitzung_id):
+        """Die zuletzt begonnene Antwort einer Sitzung (laufend oder beendet, solange sie gehalten wird) – oder None."""
+        with self._sperre:
+            eigene = [a for a in self._antworten.values() if a.sitzung_id == sitzung_id]
+        return max(eigene, key=lambda a: a.begonnen) if eigene else None
+
     def aufraeumen(self):
         jetzt = self.clock()
         with self._sperre:

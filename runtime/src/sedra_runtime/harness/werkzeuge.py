@@ -25,6 +25,7 @@ from . import code_stand as code_stand_mod
 from . import lauf as lauf_mod
 from . import projekte as harness_projekte
 from . import vorbehalte
+from . import werkzeug_team
 from .katalog import OHNE_KARTE, einstufen
 
 LESEN_MAX = 400
@@ -53,6 +54,7 @@ WIRKUNGSKLASSE = {
     'lauf_starten': 'reversible_write', 'lauf_stoppen': 'reversible_write', 'lauf_status': 'read_only',
     'modell_laden': 'reversible_write', 'modell_entladen': 'reversible_write',
     'sitzungen_aufraeumen': 'reversible_write',                                              # verschiebt nach geloescht/, nichts wird endgültig gelöscht
+    'team_verteilen': 'read_only',                                                           # legt Helfer-Sitzungen an und wartet; was ein Helfer ändert, hat seine eigene Karte (SPEC_DELEGATION_IM_GESPRAECH_v1 DG-04, DG-06)
     'auftraege_verteilen': 'external_side_effect',                                           # der Text verlässt den Rechner
     'desktop_aendern': 'reversible_write',
     'profil_wechseln': 'reversible_write',
@@ -166,6 +168,7 @@ SCHEMAS = {
     'sitzungen_aufraeumen': _fn('sitzungen_aufraeumen', 'Räumt die Chat-Liste auf: verschiebt die genannten Sitzungen nach geloescht/ (nichts wird endgültig gelöscht). Immer erst sitzungen_auflisten, dann dem Captain die Liste zeigen und '
                                 'seine Zustimmung im Chat holen; dieser Aufruf legt zusätzlich eine Karte mit der Liste vor, die der Captain freigibt.',
                                 {'ids': {'type': 'array', 'items': S, 'description': 'Sitzungs-IDs S-… aus sitzungen_auflisten, höchstens 100'}}, ['ids']),
+    'team_verteilen': werkzeug_team.schema(_fn, S),
     'auftraege_verteilen': _fn('auftraege_verteilen', 'Gibt bis zu 5 Teilaufträge an den Hilfs-Coder in der Cloud; die Antworten kommen als Text zurück (nichts wird geschrieben oder übernommen, prüfen und einbauen musst du selbst). '
                                'Der Captain gibt jeden Aufruf auf einer Karte frei. Erlaubte typ-Werte: code_und_spec_des_baus, text_und_recherche_ohne_personenbezug. Keine Zugangsdaten, keine Personendaten in den Text.',
                                {'auftraege': {'type': 'array', 'items': {'type': 'object', 'properties': {'typ': S, 'text': dict(S, description='der Auftrag, höchstens 12000 Zeichen')}, 'required': ['typ', 'text']},
@@ -270,10 +273,11 @@ SCHEMAS = {
 
 
 class Werkzeuge:
-    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None, desktop_stand=None, lernen_lesen=None, wissen=None, wissen_antrag=None, prozess_antrag=None, cloud_verteilen=None, orte=None,                         text_antwort=None, oberflaeche=None, rueckblick_antrag=None, vorschlag_antrag=None):
+    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None, desktop_stand=None, lernen_lesen=None, wissen=None, wissen_antrag=None, prozess_antrag=None, cloud_verteilen=None, team_verteilen=None, team_hinweis=None, orte=None,                         text_antwort=None, oberflaeche=None, rueckblick_antrag=None, vorschlag_antrag=None):
         self.text_antwort = text_antwort         # vom Server gereicht: (text, sprache=, rolle=, von=, ton=, tiefe=) -> Text; das geladene Modell, nichts wird abgelegt (TR-40)
         self.oberflaeche = oberflaeche           # O3 G2: der Baustein `harness/oberflaeche.py` des Betriebsservers (oder None); die Kiste hält Schreibvorgänge unter einer Aufgabe zurück
         self.orte = orte                         # vom Server gereicht: () -> {ort_id: (label, hint)} der aktiven Shell (AM2-05: Kernorte plus Orte der Apps); ohne: die Kernorte
+        self.team_verteilen, self.team_hinweis = team_verteilen, team_hinweis      # vom Server gereicht: Delegation im Gespräch (harness/team_lauf.py) – (sitzung, antwort, auftraege) -> Text; (sitzung, pfad) -> Hinweis|None
         self.cloud_verteilen = cloud_verteilen   # vom Server gereicht: ([{typ, text}]) -> [Ergebnis je Auftrag] über den Vorarbeiter-Kanal des Managers (manager/werkzeuge.py `auftraege_verteilen`)
         self.wissen = wissen                     # vom Server gereicht: (sitzung_id, antwort_id, args) -> Text der Treffer (SPEC_WISSEN_KERN_v1 WK-10, über wissen.dienst.fragen); Leser und Route setzt der Server
         self.wissen_antrag = wissen_antrag       # vom Server gereicht: (nutz) -> {status, …} – Antrag „Quelle für das Wissen“ im Posteingang (WK-11)
@@ -349,6 +353,8 @@ class Werkzeuge:
         args = args if isinstance(args, dict) else {}
         if name in ('rueckblick_schreiben', 'vorschlaege_pflegen'):          # W4: eigener Zweig (werkzeug_lernen.py); steht in FREI_OHNE_KATALOG, weil es nur einen Antrag anlegt
             return self._lernen.vorbereiten(name, args)
+        if name == 'team_verteilen':                                        # Delegation im Gespräch: eigener Zweig (werkzeug_team.py), ohne Karte
+            return werkzeug_team.vorbereiten(self, args, AKTION_LESEN)
         if name in FREI_OHNE_KATALOG:
             ort = None
             if name == 'erinnern':
@@ -477,7 +483,8 @@ class Werkzeuge:
         aktion = 'overwrite_existing' if p.exists() else 'create_new_artifact'
         # Warnung (Nachtrag 434b108, Captain 29.10.2026): datei_schreiben auf eine BESTEHENDE Datei, die viele Zeilen verliert.
         warnung = ersetzung_warnung(alt_text, neu_text) if (name == 'datei_schreiben' and p.is_file()) else None
-        return {'ziel': rel, 'vorhanden': p.exists(), 'vorschau': diff(alt_text, neu_text, rel), 'kurz': rel, 'fsargs': fsargs, 'warnung': warnung,
+        doppelt = self.team_hinweis((self.kontext or {}).get('sitzung_id'), rel) if callable(self.team_hinweis) else None      # DG-15: ein anderer Helfer derselben Delegation hat diese Datei schon vorgelegt
+        return {'ziel': rel, 'vorhanden': p.exists(), 'vorschau': (doppelt + '\n\n' if doppelt else '') + diff(alt_text, neu_text, rel), 'kurz': rel, 'fsargs': fsargs, 'warnung': warnung,
                 'code': self.code_stand is not None and code_stand_mod.ist_code(rel),
                 'gate': {'aktion': aktion, 'ziel': str(p), 'bindung': file_request('write_text', fsargs, p)}}
 
@@ -684,6 +691,8 @@ class Werkzeuge:
             return self._desktop.ausfuehren(name, args, token=token, plan=plan)
         if name in ('rueckblick_schreiben', 'vorschlaege_pflegen'):
             return self._lernen.ausfuehren(name, args, token=token, plan=plan)
+        if name == 'team_verteilen':
+            return werkzeug_team.ausfuehren(self, plan)
         try:
             if name == 'datei_lesen':
                 return self._lesen(args, plan)
