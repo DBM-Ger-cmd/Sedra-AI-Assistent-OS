@@ -997,3 +997,12 @@
     transition: none;
   }
 }
+/* Sitzungsfilter in der Seitenleiste */
+.hs-sz-filter {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  min-width: 0;
+}
