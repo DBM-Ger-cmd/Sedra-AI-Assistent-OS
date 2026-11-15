@@ -153,7 +153,22 @@ Der Koordinator hat Start, Laden und Auftrag über die HTTP-Wege ausgelöst; die
 | Dauer | Helfer 74 s, 89 s, 16 s; ganze Delegation 111 s; Antwort des Managers danach 20 s |
 | Stabilität | kein Absturz des Modellservers in diesem Lauf |
 
-Nicht geprüft in diesem Lauf: Anhalten eines Helfers und aller Helfer mit echtem Modell (DG-09), der Hinweis bei doppelter Datei (DG-15),
+Anhalten mit echtem Modell (DG-09), zwei Läufe am selben Abend (`T-2A58449F` 21:28, `T-71DBD45B` 21:45), nur lesende Aufträge:
+
+| Punkt | Ergebnis |
+|---|---|
+| Einen Helfer anhalten | ja, die Route antwortet in 0,04 s; der Helfer steht auf „angehalten“, seine Antwort endet mit `abgebrochen` |
+| Der wartende Helfer rückt nach | ja, innerhalb von 4 Sekunden auf den frei gewordenen Platz |
+| Alle anhalten | ja, beide laufenden Helfer angehalten, die Delegation gilt als beendet |
+| Ergebnis an den Manager | „angehalten – Grund: vom Captain angehalten“ je Auftrag |
+| Bericht des Managers, erster Lauf | **falsch**: er meldete, alle drei Helfer hätten gelesen und zusammengefasst |
+| Bericht des Managers, zweiter Lauf (nach Commit `ec21015`) | richtig: „Alle drei Aufträge endeten mit dem Status angehalten und es liegt kein Ergebnis vor.“ |
+
+Folge aus dem ersten Lauf: Das Ergebnis des Werkzeugs beginnt jetzt mit einer Bilanzzeile („0 von 3 Helfern sind fertig geworden. NICHT fertig: …
+Von diesen Helfern liegt KEIN Ergebnis vor …“), und die Arbeitsanweisung des Managers sagt dasselbe. Belegt ist die Wirkung an einem Lauf;
+dass das Modell nie wieder ein Ergebnis erfindet, folgt daraus nicht.
+
+Weiter nicht geprüft: der Hinweis bei doppelter Datei (DG-15),
 ein gescheiterter Helfer (DG-08), das Aussehen der Delegations-Karte und der Zelle „Team“ im Fenster (DG-10, DG-12), Tempo je Helfer in Token pro Sekunde.
 
 Beobachtungen:
