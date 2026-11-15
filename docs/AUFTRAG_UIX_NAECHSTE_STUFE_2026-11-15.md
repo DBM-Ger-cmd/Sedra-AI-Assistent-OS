@@ -73,6 +73,10 @@ Statt Checkliste: ein Satz zum Zustand, Modellwahl direkt, die letzten Sitzungen
 Vorschläge für den ersten Schritt als Karten.
 
 ### D. Mehrere Agenten an einer Aufgabe (Delegation)
+Entscheidungen des Captains (15.11.): neue Delegation im Gespräch (nicht `orchestra`, nicht nur Cloud); Helfer dürfen schreiben,
+jede Änderung mit eigener Karte. Befund: `auftraege_verteilen` geht nur an die Cloud und arbeitet nacheinander; Sitzungen, Slots,
+Karten und Ströme lassen sich für lokale Helfer wiederverwenden. Spec-Entwurf mit Anforderungen DG-01 bis DG-15, Design und
+Aufgaben: `docs/SPEC_DELEGATION_IM_GESPRAECH_v1_ENTWURF.md`. Gebaut wird erst nach Freigabe (G1, G2).
 Der Captain gibt eine Aufgabe; ein Leiter zerlegt sie und verteilt Teile an Agenten, die gleichzeitig arbeiten; die
 Ergebnisse kommen zusammen zurück. Vorhanden und zu nutzen: Werkzeug `auftraege_verteilen` mit Karte, Team-Rezepte, Profil
 `team-35b` (ein Server, mehrere Kanäle), feste Slots, App „Team“, Nebensitzungen-Übersicht.
@@ -106,7 +110,7 @@ Zustand je Sitzung (läuft, wartet auf Freigabe, fertig), anheften, archivieren,
 | Paket | Wer | Inhalt | Fertig, wenn |
 |---|---|---|---|
 | P1 | Koordinator (dieser Chat) | Bausteine A und B fortsetzen, Sichtprüfung, Tests | Bilder vorher/nachher, Tests grün |
-| P2 | Pi | Spec „Delegation an der Oberfläche“ (Baustein D): Ereignisse von `auftraege_verteilen` lesen, Datenvertrag, Abnahmepunkte. Nur Dokument, kein Bau | Spec liegt vor, vom Koordinator geprüft |
+| P2 | Koordinator (erledigt 15.11.) | Spec-Entwurf „Delegation im Gespräch“ geschrieben; Pi wurde dafür nicht gebraucht | Captain gibt G1 und G2 frei |
 | P3 | Hermes | Baustein E: Zustand je Sitzung in der Seitenleiste, mit Test, im eigenen Worktree von diesem Branch | Test grün, Sichtprüfung durch Koordinator |
 | P4 | Koordinator | Baustein C nach P1 | Sichtprüfung |
 
