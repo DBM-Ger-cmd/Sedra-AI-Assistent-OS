@@ -1,6 +1,6 @@
 # Spec: Delegation im Gespräch (mehrere Agenten gleichzeitig an einer Aufgabe) – Entwurf v1
 
-Stand: 15.11.2026. **G1 (Anforderungen) und G2 (Design) vom Captain freigegeben am 15.11.2026 im Chat des Koordinators.** G3 (Aufgaben) offen. Es ist noch nichts gebaut. Gehört zu `SEDRA-UIX-3D-01`, Baustein D aus
+Stand: 15.11.2026. **G1 (Anforderungen) und G2 (Design) vom Captain freigegeben am 15.11.2026 im Chat des Koordinators.** **G3 (Aufgaben) freigegeben am 15.11.2026 („G3 frei, bauen“), mit den Vorschlägen aus Abschnitt 5.** T1 bis T6 sind gebaut (Abschnitt 7), T7 (Abnahme am PC) steht aus. Gehört zu `SEDRA-UIX-3D-01`, Baustein D aus
 `docs/AUFTRAG_UIX_NAECHSTE_STUFE_2026-11-15.md`.
 
 ## 0. Entscheidungen des Captains (15.11.2026)
@@ -102,12 +102,38 @@ Reihenfolge: T1, T2, T3, T4, T5, T6, T7. T6 kann nach T3 beginnen. T7 macht der 
 
 Nicht in dieser Spec: Cloud-Helfer, Helfer, die selbst delegieren, mehr als drei Helfer, ein dauerhaftes Team (`orchestra`).
 
-## 5. Offene Punkte für den Captain
+## 5. Entschiedene Punkte (Captain 15.11.2026: Vorschläge gelten)
 
 1. **Welche Sitzungen dürfen delegieren?** Vorschlag: nur Sitzungen mit einer Vorlage, die `team_verteilen` nennt (zuerst `manager`), nicht jede Sitzung.
 2. **Zeitlimit je Helfer:** Vorschlag 10 Minuten, einstellbar.
 3. **Cloud-Helfer:** in dieser Spec nicht enthalten; `auftraege_verteilen` bleibt daneben bestehen.
 4. **Wer baut?** Teile 1 und 2 eignen sich für einen Bau durch SEDRA mit versteckten Tests; 3 bis 5 sind Harness-Arbeit des Koordinators.
+
+## 7. Stand des Baus (15.11.2026)
+
+| Aufgabe | Stand | Wo |
+|---|---|---|
+| T1 Kern | gebaut | `runtime/src/sedra_runtime/harness/team.py`, `tests/test_harness_team.py` |
+| T2 Sitzungskopf | gebaut | `harness/sitzung.py`, `tests/test_harness_sitzung.py` |
+| T3 Ablauf, Routen, Anhalten | gebaut | `harness/team_lauf.py`, `harness/api.py`, `harness/strom.py` (`letzte_in`), `tests/test_harness_team_lauf.py`, `tests/test_uix_harness_team.py` |
+| T4 Werkzeug, Helfer-Kiste | gebaut | `harness/werkzeug_team.py`, `harness/werkzeuge.py`, `harness/katalog.py`, `config/harness_vorlagen/manager.yaml`, `tests/test_harness_team_werkzeug.py` |
+| T5 Hinweis bei doppelter Datei | gebaut | `team_lauf.datei_hinweis`, `werkzeuge.py` (Vorschau der Karte) |
+| T6 Oberfläche | gebaut | `uix/shells/harness/delegation.js`, `delegation.css`, `strings_delegation.js`, `seitenleiste.js`, `seite.js`, `shell.js`, `ui/bus.js` (Ereignis `harness.team`), `tests/test_uix_delegation.py` |
+| T7 Abnahme am PC | offen | Captain mit Koordinator |
+
+Abweichungen vom Entwurf und Befunde aus dem Bau:
+
+1. **Drei Helfer zugleich brauchen vier Plätze.** Die Hauptsitzung behält ihren Platz (ihr Zwischenspeicher bleibt warm). Mit dem Profil
+   `team-35b` (3 Plätze) arbeiten also zwei Helfer gleichzeitig, der dritte wartet und kommt danach dran. Bei einem Platz laufen alle nacheinander.
+2. **Rolle ist nur ein Name.** Eine Vorlage über die Rolle zu wählen (§3.1) ist nicht gebaut; ein Helfer hat die Werkzeuge einer Sitzung ohne
+   Vorlage, ohne Läufe, ohne `team_verteilen` und ohne `auftraege_verteilen`.
+3. **Karte nach dem Neuladen.** Eine laufende Delegation erscheint nach dem Neuladen der Seite wieder (GET `/api/harness/team`), eine beendete
+   nicht; die Helfer-Sitzungen stehen weiter in der Seitenleiste. Ist der Reiter der Hauptsitzung zu, zeigt nur die Taskleiste „Team a/n“.
+4. **Zeitlimit** ist 600 s fest im Code (`team.ZEITLIMIT_S`), noch nicht in den Vorgaben einstellbar.
+5. **Wirkungsklasse** von `team_verteilen` ist `read_only`: der Aufruf selbst ändert nichts; was ein Helfer ändert, hat seine eigene Karte.
+6. **Nebenbefund, nicht geprüft:** `ui/bus.js` lässt nur angemeldete Ereignisnamen durch. `harness.belohnung`, `harness.projekt`,
+   `harness.vorgaben`, `harness.desktop` und `harness.verknuepfungen` stehen dort nicht, die Shell hört aber darauf. Ob sie im Betrieb
+   ankommen, sollte am PC geprüft werden; diese Spec hat daran nichts geändert.
 
 ## 6. Nicht geprüft
 

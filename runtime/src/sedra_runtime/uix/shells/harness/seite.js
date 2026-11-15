@@ -65,7 +65,7 @@
   }
 
   function zeile(S, s){
-    const row = d().el('div', 'hs-sz' + (S.aktive() && S.aktive().id === s.id ? ' on' : '') + (s.laeuft ? ' laeuft' : ''));
+    const row = d().el('div', 'hs-sz' + (S.aktive() && S.aktive().id === s.id ? ' on' : '') + (s.laeuft ? ' laeuft' : '') + (s.eltern ? ' hs-sz-helfer' : ''));      // Helfer einer Delegation: eingerückt unter der Hauptsitzung
     row.dataset.sitzung = s.id;
     const istVorarbeiter = !!(S.vorarbeiter && S.vorarbeiter[s.projekt] && S.vorarbeiter[s.projekt].sitzung_id === s.id);
     // Icon für Sitzung/Projekt (UIX-Redesign)

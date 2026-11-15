@@ -76,7 +76,8 @@ Vorschläge für den ersten Schritt als Karten.
 Entscheidungen des Captains (15.11.): neue Delegation im Gespräch (nicht `orchestra`, nicht nur Cloud); Helfer dürfen schreiben,
 jede Änderung mit eigener Karte. Befund: `auftraege_verteilen` geht nur an die Cloud und arbeitet nacheinander; Sitzungen, Slots,
 Karten und Ströme lassen sich für lokale Helfer wiederverwenden. Spec-Entwurf mit Anforderungen DG-01 bis DG-15, Design und
-Aufgaben: `docs/SPEC_DELEGATION_IM_GESPRAECH_v1_ENTWURF.md`. Gebaut wird erst nach Freigabe (G1, G2).
+Aufgaben: `docs/SPEC_DELEGATION_IM_GESPRAECH_v1_ENTWURF.md`. G1, G2 und G3 vom Captain am 15.11. freigegeben; T1 bis T6 gebaut (Werkzeug
+`team_verteilen`, Helfer-Sitzungen, Routen, Delegations-Karte), Stand und Abweichungen in Abschnitt 7 der Spec. Offen: T7, die Abnahme am PC.
 Der Captain gibt eine Aufgabe; ein Leiter zerlegt sie und verteilt Teile an Agenten, die gleichzeitig arbeiten; die
 Ergebnisse kommen zusammen zurück. Vorhanden und zu nutzen: Werkzeug `auftraege_verteilen` mit Karte, Team-Rezepte, Profil
 `team-35b` (ein Server, mehrere Kanäle), feste Slots, App „Team“, Nebensitzungen-Übersicht.

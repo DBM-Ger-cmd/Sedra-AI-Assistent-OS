@@ -36,7 +36,9 @@
     'harness.aufgabe':    ['id'],
     'harness.vorarbeiter': ['projekt'],
     'harness.lauf':       ['id'],
-    'harness.karte':      ['karte_id']
+    'harness.karte':      ['karte_id'],
+    // Delegation im Gespräch (SPEC_DELEGATION_IM_GESPRAECH_v1 §3.3): der Stand einer Delegation, gesendet vom Ereignisstrom (harness/team_lauf.py)
+    'harness.team':       ['delegation']
   };
   // Härtung 30.10. (HU-L11, Nachtrag N3): diese Ereignisse sendet nur der Ereignisstrom/die Seite – ein Werkzeug darf sie nicht
   // in `events.emits` eintragen und nicht senden, auch wenn das Manifest es nennt (desk/gateway.py weist das Manifest ab).
