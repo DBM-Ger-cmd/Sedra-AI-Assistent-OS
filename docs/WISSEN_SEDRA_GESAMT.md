@@ -410,8 +410,49 @@ Der Chat baute zuerst die dritte Ebene „Arbeitsanweisung“ unter Verfassung u
 4. Register: `MAIN_VERIFIED` nicht gesetzt (kein Testerbericht).
 5. Nicht angefasst, gehören anderen Sitzungen: `KOORDINATION_SEDRA/`, `runtime/config/cloud_providers.yaml.bak_vor_nvidia_20261109`, `PROJEKT_DASHBOARD.html`, `INDEX.md`, `build_index.py`, `dashboard_data.json`.
 
+## 20. Arbeit im Chat vom 15.11.2026 (Claude Code, Koordinator: UIX nächste Stufe – 3D, Avatar, Delegation)
+
+Auftrag des Captains: Design und Bedienung von One Sedra auf die nächste Stufe, 3D integrieren, Orientierung an Unsloth, Pi und Claude, mehrere Agenten gleichzeitig an einer Aufgabe. Nur die Harness-Shell; andere Shells sind ausgelagert. Register `SEDRA-UIX-3D-01`.
+
+**Ort:** Worktree `<umgebung>\A1-wt-uix-3d`, Branch `uix-3d-naechste-stufe`, 16 Commits vor `main` (Stand `05f00dc` plus dieser Sicherung), nicht gemergt, nicht gepusht. Auf `main` und gepusht ist nur die Symbol-Korrektur `1111b8a`.
+
+**Gebaut (alles auf dem Branch):**
+- **3D ohne Bibliothek und ohne Netz:** `uix/shells/harness/buehne3d.js` liest `seedrache-web.glb` selbst (GLB, `KHR_mesh_quantization`) und zeichnet mit WebGL2. Wahl in `localStorage` `sedra.harness.buehne3d`: `hintergrund` (Vorgabe: Flug über das Fenster, zeichnet nur im Ruhezustand nach 25 s oder gelandet), `buehne`, `aus`. `desk/gateway.py` liefert `.glb` aus der Shell aus.
+- **Avatar:** `avatar.js`, `avatar.css`, `strings_avatar.js`. Vier Anlässe (Freigabe wartet, Lauf, kein Modell, leere Sitzung), ein Satz und höchstens ein Knopf, nur lesend. Abschalten: `sedra.harness.avatar` = `aus`.
+- **Tiefe:** Tokens `--glas`, `--glanz`, `--lichthof`, `--tiefe`, `--drache-blass`, `--drache-ruhe`; Start-Menü als Glas, Eingabe mit einem Rahmen.
+- **Delegation im Gespräch** (`docs/SPEC_DELEGATION_IM_GESPRAECH_v1_ENTWURF.md`, DG-01 bis DG-15, G1/G2/G3 vom Captain am 15.11. frei): Werkzeug `team_verteilen` (ohne Karte, nur Vorlage Manager), `harness/team.py` (Kern), `team_lauf.py` (Ablauf), `werkzeug_team.py`, Helfer-Sitzungen mit `eltern`/`delegation`/`rolle`, Routen `/api/harness/team`, Delegations-Karte `delegation.js`, Ereignis `harness.team` in `ui/bus.js`. Ein Helfer hat die Kiste einer Sitzung ohne Vorlage, ohne Läufe und ohne Verteil-Werkzeuge; was er schreibt, legt die gewohnte Karte vor.
+- **Fehler behoben:** rohe Textschlüssel im Start-Menü (Titel wurden vor `i18n.js` gelesen), weiße Kachelköpfe, Sitzungssymbole 300×150 Pixel (rohes SVG in `ui/icons.css` verwarf die Regel `.icon`; auf `main` als `1111b8a`), abgeschnittene Sitzungstitel, falsches Etikett des Export-Knopfs.
+
+**Abnahme am PC (T7), 15.11. abends, Prüfstart aus dem Worktree, Rezept `coder.local_primary_team`:** Manager rief `team_verteilen`; zwei Helfer gleichzeitig auf Platz 1 und 2 (74 s, 89 s), der dritte danach; Karte der Helfer-Sitzung vom Captain freigegeben; Ergebnis kam gekennzeichnet zurück. Anhalten eines Helfers und aller Helfer wirkt (0,04 s), der wartende rückt in 4 s nach. Einzelheiten in Abschnitt 8 der Spec.
+
+**Entscheidungen des Captains (15.11.2026):** nur Harness-Shell; Drache als Bildschirmschoner und Avatar; Delegation neu im Gespräch (nicht `orchestra`, nicht nur Cloud); Helfer schreiben mit Karte; nur die Vorlage Manager delegiert; Zeitlimit 10 Minuten je Helfer; der Koordinator baut. Symbol-Korrektur einzeln nach `main` und gepusht.
+
+**Befunde und Fallen:**
+1. Der Server liefert je Shell nur flache Dateien mit bekannter Endung aus (`gateway.SERVE_NAME`); Unterordner wie `assets/` nicht.
+2. `ui/bus.js` lässt nur angemeldete Ereignisnamen durch. `harness.belohnung`, `harness.projekt`, `harness.vorgaben`, `harness.desktop`, `harness.verknuepfungen` stehen nicht in der Liste, die Shell hört aber darauf. Nicht geprüft, ob sie im Betrieb ankommen.
+3. Drei Helfer zugleich brauchen vier Plätze: die Hauptsitzung behält ihren. Mit `team-35b` (3 Plätze) laufen zwei gleichzeitig.
+4. Mehrere Rezepte teilen sich ein Modell; die Zahl der Plätze kommt deshalb vom laufenden Modellserver (`slots`), nicht aus dem Rezept.
+5. Das Modell meldete drei angehaltene Helfer als erledigt. Seit `ec21015` beginnt das Werkzeug-Ergebnis mit einer Bilanzzeile; im Wiederholungslauf berichtete der Manager richtig. Ein Lauf, keine Garantie.
+6. Die Hauptumgebung startet mit `START_SEDRA.bat`; der Worktree braucht den eigenen Prüfstart (Python und Projekt der Hauptumgebung, Code des Worktrees, Kopie `local_paths.yaml`, Junction `engines`). Zwei Abnahmeversuche liefen versehentlich gegen `main`.
+7. Absturz des Modellservers am 15.11. 21:16 in der Hauptumgebung: „CUDA error: an illegal memory access“, Windows `nvlddmkm` Ereignisse 13 und 153. Ursache offen.
+8. Eine Befehlskette mit `| tail` prüft das Testergebnis nicht: ein Commit (`dc0c069`) ging mit rotem eigenem Test hinaus, `72250bd` behebt ihn. Seitdem Exit-Code prüfen, dann committen.
+9. Browser-Tests überschreiten im parallelen Gruppenlauf gelegentlich das Start-Zeitlimit (`test_uix_stufe6`, `test_uix_dock_stufe2`, `test_uix_factory_ansichten`); allein grün.
+
+**Tests:** letzter voller Gruppenlauf harness/uix/desk 1673 Tests, 23 übersprungen, 3 rot (eigener Zeittest, behoben; zwei Browser-Tests unter Last, allein grün). Nach `ec21015` nur die 57 Tests der Team-Module, kein voller Lauf.
+
+**Offen:**
+1. Aussehen von Delegations-Karte, Helfer-Zeilen der Seitenleiste und Zelle „Team“ im Fenster: der Captain hat es noch nicht bestätigt.
+2. Nicht geprüft mit echtem Modell: Hinweis bei doppelter Datei (DG-15), gescheiterter Helfer (DG-08), Tempo je Helfer.
+3. Züge und Token eines Helfers stehen bis zu seinem Ende auf 0.
+4. Schalter in den Einstellungen für Drache und Avatar; Zeitlimit einstellbar; Rolle als Vorlage.
+5. Bausteine C (Startbild als Leitstand) und E (Zustand je Sitzung, anheften, archivieren) aus `docs/AUFTRAG_UIX_NAECHSTE_STUFE_2026-11-15.md`.
+6. Verwaiste Dateien mit Netz-Bezug (`ui/seedrache-3d.js`, `ui/figur/drache.js`): Löschen braucht das Ja des Captains.
+7. Übernahme des Branches nach `main`: braucht einen vollen Gruppenlauf und das Ja des Captains.
+8. Übergabe an den neuen UIX-Koordinator: `docs/UEBERGABE_UIX_KOORDINATOR_2026-11-15.md`.
+
 ## 9. Alle Chats (Sitzungen), nach Datum
 **Sedra Vorarbeiter (Gruppe):**
+- 15.11. Claude Code, Chat „UIX nächste Stufe: 3D, Avatar, Delegation“ (Koordinator): Worktree `A1-wt-uix-3d`, Branch `uix-3d-naechste-stufe`; fliegender Seedrache, Avatar, Tiefen-Tokens, Delegation im Gespräch mit `team_verteilen`, Abnahme am PC; Symbol-Korrektur auf `main` gepusht (`1111b8a`). Abschnitt 20. Nachfolger: neuer Chat „UIX-Koordinator“ (Hermes und Pi, nur UIX).
 - 11.–12.11. Claude Code, Chat „Dritte Ebene Arbeitsanweisung, A/B-Bau, Konsens“: Arbeitsanweisung unter Verfassung und Gesetzen mit englischer Fassung und Übersetzer, A/B-Messungen auf vier Specs (Anweisung schadet bei größerer Aufgabe), Konsens-Bau (Konzept, `konsens.py`), Regressionsprobe früherer Stufen, geschärfte Specs; `main` bis `ca92f19` (siehe Abschnitt 19), Variante `bau_coder_b` noch nicht gemessen.
 - 11.–12.11. Claude Code, Chat „Roadmap-Paket Apps, Kern, Shell“: A5 bis A9 und A3 Team gebaut, gemergt, gepusht (`main` bis `5b7c530`), Fehler `server_aus` untersucht, Fix für `server_aus` auf Branch `fix-router-alive`, drei neue Skills `sedra-app-anlegen`, `sedra-paket-ablauf`, Sammelskript-Vorlage (siehe Abschnitt 18).
 - 10.–11.11. Claude Code, Chat „KV-Pool, Team, Manager-Werkzeug, Wiederherstellungs-ZIP“: gemeinsamer KV-Pool, Team-Rezepte und Profil `team-35b`, Werkzeug `auftraege_verteilen` (Manager und Harness mit Karte), Register und Dashboard, Backup-Stand und Entwickler-ZIP mit Wiederherstellung (siehe Abschnitt 17).
