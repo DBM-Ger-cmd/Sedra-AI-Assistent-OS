@@ -16,9 +16,16 @@
   const GATES = {type: 'decision', id: 'alle', title: 'Offene Gates', collection: true};
   const METER = {type: 'meter', id: 'meter', title: 'Sedra Token'};
 
+  // Zellen mit `eigene` sind eigene Lese-Ansichten dieser App (shells/harness/factory_*.js, Routen /api/uix/factory/*), alle anderen Zellen hängen ein Werkzeug ein.
+  const HEALTH = {type: 'factory-health', id: 'health', title: 'Factory Health', eigene: 'factory_health'};
+  const TYPEN = {type: 'factory-typen', id: 'typen', title: 'Factory-Typen', eigene: 'factory_typen'};
+  const LAEUFE = {type: 'factory-laeufe', id: 'laeufe', title: 'Läufe und Benchmarks', eigene: 'factory_laeufe'};
+
   const MODI = [
     {id: 'projektbrowser', label: 'Projekt Browser', zellen: [PROJEKT]},
-    {id: 'statusdashboard', label: 'Status Dashboard', zellen: [GATES, METER]}
+    {id: 'statusdashboard', label: 'Status Dashboard', zellen: [GATES, METER, HEALTH]},
+    {id: 'typen', label: 'Typen', zellen: [TYPEN]},
+    {id: 'laeufe', label: 'Läufe', zellen: [LAEUFE]}
   ];
 
   // rein
@@ -40,7 +47,8 @@
     function einhaengen(modus){
       const pane = d().el('div', 'hs-fs-pane' + (modus.zellen.length > 1 ? ' raster' : '')); pane.dataset.modus = modus.id;
       const flaechen = modus.zellen.map(objekt=>{
-        const flaeche = A.flaeche(S, objekt);
+        const eigene = objekt.eigene && root.sedraHarness[objekt.eigene];
+        const flaeche = eigene ? eigene.flaeche(S) : A.flaeche(S, objekt);
         const zelle = d().el('section', 'hs-fs-zelle'); zelle.dataset.zelle = objekt.type;
         if(modus.zellen.length > 1) zelle.append(d().el('h3', 'hs-fs-zellenkopf', objekt.title));
         zelle.append(flaeche.verben, flaeche.koerper);

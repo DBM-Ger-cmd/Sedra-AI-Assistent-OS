@@ -34,9 +34,10 @@ class Rein(unittest.TestCase):
                    "process.stdout.write(JSON.stringify({modi: T.MODI.map(m=>[m.id, m.zellen.map(z=>z.type)]), wahl: [T.modusWahl('statusdashboard'), T.modusWahl('x'), T.modusWahl(null)]}));"
                    % json.dumps(str(UIX / "shells" / "harness" / "factory_studio.js")))
         modi = dict(res["modi"])
-        self.assertEqual(list(modi), ["projektbrowser", "statusdashboard"])
+        self.assertEqual(list(modi), ["projektbrowser", "statusdashboard", "typen", "laeufe"])
         self.assertEqual(modi["projektbrowser"], ["project"])
-        self.assertEqual(modi["statusdashboard"], ["decision", "meter"])
+        self.assertEqual(modi["statusdashboard"], ["decision", "meter", "factory-health"])
+        self.assertEqual((modi["typen"], modi["laeufe"]), (["factory-typen"], ["factory-laeufe"]))
         self.assertEqual(res["wahl"], ["statusdashboard", "projektbrowser", "projektbrowser"])
 
     def test_jede_zelle_hat_ein_werkzeug(self):
@@ -85,7 +86,7 @@ class Browser(unittest.TestCase):
                 H = "window.sedraHarness"
                 page.evaluate(f"()=>{{ const S = {S}; return {H}.app.oeffnen(S, {{object: {{type: 'factory-studio', id: 'app', title: 'Factory Studio'}}, label: 'Factory Studio'}}); }}")
                 page.wait_for_selector(".hs-fs-pane", timeout=WARTE_MS)
-                self.assertEqual(page.locator(".hs-app-reiter-knopf").count(), 2)
+                self.assertEqual(page.locator(".hs-app-reiter-knopf").count(), 4)
                 # Projekt Browser hängt das files-Werkzeug für project ein
                 page.wait_for_selector('.hs-fs-pane[data-modus="projektbrowser"] [data-tool="files"]', timeout=WARTE_MS)
                 self.assertEqual(page.locator('.hs-fs-pane[data-modus="projektbrowser"] .hs-fs-zelle').count(), 1)
@@ -93,7 +94,7 @@ class Browser(unittest.TestCase):
                 page.click('.hs-app-reiter-knopf[data-modus="statusdashboard"]')
                 page.wait_for_selector('.hs-fs-pane[data-modus="statusdashboard"] [data-tool="decisions"]', timeout=WARTE_MS)
                 page.wait_for_selector('.hs-fs-pane[data-modus="statusdashboard"] [data-tool="meter"]', timeout=WARTE_MS)
-                self.assertEqual(page.locator('.hs-fs-pane[data-modus="statusdashboard"] .hs-fs-zelle').count(), 2)
+                self.assertEqual(page.locator('.hs-fs-pane[data-modus="statusdashboard"] .hs-fs-zelle').count(), 3)
                 # TM-21: der Modus wird gemerkt
                 page.click('.hs-app-reiter-knopf[data-modus="projektbrowser"]')
                 self.assertEqual(page.evaluate("()=>localStorage.getItem('sedra.harness.factory_studio.modus')"), "projektbrowser")

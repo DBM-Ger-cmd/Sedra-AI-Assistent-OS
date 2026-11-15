@@ -354,5 +354,10 @@
     zl_modellserver:'Model server',
     zl_scheduler:'Scheduler',
     zl_zustand:'State',
+    // A-018: Start menu (startmenue.js)
+    start_treffer:'Results',
+    start_zuletzt_benutzt:'Recently used',
+    desktop_builder_label:'Desktop Builder',
+    desktop_builder_hint:'Modules of the surface, start menu, taskbar, profiles and brand'
   };
 })();

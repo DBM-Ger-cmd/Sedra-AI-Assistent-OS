@@ -1,6 +1,6 @@
 # App „Factory Studio“ (F3-01, SPEC_F3_01_FACTORY_STUDIO_APP): Project Browser und Status Dashboard (lesend) in einem App-Reiter der Harness-Shell.
 # Das Paket ist der Platzhalter für den Objekttyp `factory-studio`; die lesende Oberfläche zeichnet die Harness-Shell (One Sedra) selbst.
-# In anderen Shells zeigt es einen Satz mit Hinweis auf die App. Es ruft selbst keine Route, hat keinen Speicher.
+# In anderen Shells zeigt es einen Satz mit Hinweis auf die App. Es ruft selbst keine Route, hat keinen Speicher. (Die lesenden Routen unter /api/uix/factory/ stehen im Manifest der Shell, sobald die Ansichten sie aufrufen.)
 tool:
   id: factory-studio
   name: "Factory Studio"

@@ -4,19 +4,19 @@
 // Klick außerhalb und mit jeder Auswahl. Oben die Suche (Fokus beim Öffnen; Pfeile/Enter wie die Palette), darunter „Zuletzt benutzt“
 // (aus `uix.shelf.harness` – auf dem Rechner, nicht im Browser, D-S7), die Gruppen aus start_gruppen.json, unten die Oberflächen
 // (Wechsel über sedraWechsel – derselbe Code, derselbe Audit-Eintrag) und Darstellung · Schrift. Die Liste selbst baut startliste.js (rein).
-
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
   const L = ()=>root.sedraStartliste;
+  const T = (k, ...a) => (root.t ? root.t(k, ...a) : k);
   const KONFIG_URL = '/uix/shells/harness/start_gruppen.json';
   const SCHUB_MS = 2000;
   // Stufe 5 (G2 §3.1): fester Eintrag in der Gruppe System – kein Ort, kein Werkzeug: die Shell trägt ihn ein
-  const EINSTELLUNGEN = {id: 'einstellungen', label: 'Einstellungen', hint: 'Startseite, Allgemein, Agent, Sprache, Integrationen, Modelle, System', symbol: '⚙', gruppe: 'system', fest: true, werkzeuge: []};
+  const EINSTELLUNGEN = {id: 'einstellungen', label: T('start_einstellungen'), hint: T('start_blick_startseite') + ', ' + T('einst_gruppe_allgemein') + ', ' + T('einst_gruppe_agent') + ', ' + T('einst_gruppe_sprache') + ', ' + T('einst_gruppe_integrationen') + ', ' + T('einst_gruppe_modelle') + ', ' + T('einst_gruppe_system'), symbol: '⚙', gruppe: 'system', fest: true, werkzeuge: []};
   // A3 (Captain 03.11.2026): „Token und Gespräch“ ist in die App „Sedra Token“ gewandert (Reiter Verbrauch, Kosten und Zeilen, Gespräch); feste Einträge gibt es nur noch für System
   const FEST = {};          // feste Einträge je Gruppe – kein Ort, kein Werkzeug: die Shell trägt sie ein (Einstellungen: die Kachel „Einstellungen“ oben, die Suche findet sie über FESTE)
   // Desktop Builder (Captain 05.11.2026): Module, Start-Menü, Taskleiste, Profile und Marke an einem Ort
-  const BUILDER = {id: 'desktop-builder', label: 'Desktop Builder', hint: 'Module der Oberfläche, Start-Menü, Taskleiste, Profile und Marke', words: ['builder', 'desktop', 'profil', 'marke', 'oberfläche'], symbol: '▦', gruppe: 'system', fest: true,
+  const BUILDER = {id: 'desktop-builder', label: T('desktop_builder_label'), hint: T('desktop_builder_hint'), words: ['builder', 'desktop', 'profil', 'marke', 'oberfläche'], symbol: '▦', gruppe: 'system', fest: true,
                    oeffnen: S=>root.sedraHarness.builder.oeffnen(S), werkzeuge: []};
   const FESTE = [EINSTELLUNGEN];
 
@@ -44,7 +44,7 @@
     st.liste = L().bauen(root.sedraPlaces.PLACES, werkzeuge, o=>S.ctx.tools.forObject(o), D ? D.startKonfig(S, st.konfig) : st.konfig, st.zuletzt);
     // der Desktop Builder ist ein fester Eintrag der Shell in der Gruppe System (kein Ort, kein Werkzeug) und lässt sich nicht ausblenden: wer ihn ausblendet, käme nicht zurück
     const sys = st.liste.gruppen.find(g=>g.id === 'system');
-    if(sys) sys.apps.push(BUILDER); else st.liste.gruppen.push({id: 'system', titel: 'System', symbol: BUILDER.symbol, apps: [BUILDER]});
+    if(sys) sys.apps.push(BUILDER); else st.liste.gruppen.push({id: 'system', titel: T('sg_system'), symbol: BUILDER.symbol, apps: [BUILDER]});
     st.liste.apps.push(BUILDER);
     return st.liste;
   }
@@ -65,9 +65,9 @@
   function mount(S){
     const st = stand(S);
     const panel = d().el('div', 'hs-start-menue'); panel.hidden = true;
-    panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Start-Menü');
-    const suche = d().el('input', 'hs-start-suche'); suche.type = 'search'; suche.placeholder = 'App suchen … (Strg+K sucht einen Ort)';
-    suche.setAttribute('aria-label', 'App suchen');
+    panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', T('start_aria_label'));
+    const suche = d().el('input', 'hs-start-suche'); suche.type = 'search'; suche.placeholder = T('start_suche_placeholder');
+    suche.setAttribute('aria-label', T('start_suche_aria'));
     const inhalt = d().el('div', 'hs-start-inhalt');
     const fuss = d().el('div', 'hs-start-fuss');
     panel.append(suche, inhalt, fuss);
@@ -144,7 +144,7 @@
       const box = d().el('section', 'hs-start-kachel' + (offen ? ' offen' : '')); box.dataset.gruppe = g.id;
       const umschalten = ()=>{ offen ? st.offene.delete(g.id) : st.offene.add(g.id); zeichnen(S); };
       const kopf = d().el('button', 'hs-start-kachel-kopf'); kopf.type = 'button'; kopf.setAttribute('aria-expanded', offen ? 'true' : 'false');
-      kopf.append(d().el('span', 'hs-start-symbol', g.symbol || '▤'), d().el('span', 'hs-start-kachel-titel', g.titel), d().el('small', 'hs-leise', String(apps.length)));
+      kopf.append(d().el('span', 'hs-start-symbol', g.symbol || '▤'), d().el('span', 'hs-start-kachel-titel', typeof g.titel === 'function' ? g.titel() : g.titel), d().el('small', 'hs-leise', String(apps.length)));
       kopf.onclick = umschalten;
       const liste = d().el('div', 'hs-start-kachel-liste');
       apps.forEach((a, i)=>{
@@ -155,7 +155,7 @@
       });
       box.append(kopf, liste);
       if(apps.length > VORSCHAU){
-        const mehr = d().el('button', 'hs-start-mehr', offen ? 'weniger' : '+' + (apps.length - VORSCHAU) + ' weitere'); mehr.type = 'button'; mehr.onclick = umschalten;
+        const mehr = d().el('button', 'hs-start-mehr', offen ? T('start_gedächtnis_bestaetigen') : '+' + (apps.length - VORSCHAU) + ' ' + T('start_gedächtnis')); mehr.type = 'button'; mehr.onclick = umschalten;
         box.append(mehr);
       }
       return box;
@@ -164,10 +164,10 @@
     if(q){
       const ql = q.toLowerCase();
       const treffer = L().suchen(st.liste, q).concat(FESTE.filter(f=>[f.label].concat(f.words || []).some(w=>String(w).toLowerCase().startsWith(ql))));
-      if(!treffer.length) inhalt.append(d().el('div', 'hs-app-satz', 'Keine App zu „' + q + '“. Strg+K sucht Orte und Befehle.'));
-      abschnitt('Treffer', treffer);
+      if(!treffer.length) inhalt.append(d().el('div', 'hs-app-satz', T('start_keine_app').replace('{q}', q)));
+      abschnitt(T('start_treffer'), treffer);
     }else{
-      const zuletzt = abschnitt('Zuletzt benutzt', st.liste.zuletzt, 'zuletzt');
+      const zuletzt = abschnitt(T('start_zuletzt_benutzt'), st.liste.zuletzt, 'zuletzt');
       if(zuletzt) zuletzt.dataset.baustein = 'zuletzt';                        // Baukasten (bausteine.js): Kennung je Abschnitt
       inhalt.append(blick(S));
       // die Gruppen in der Reihenfolge der Datei; System und Sedra Token gibt es auch ohne Ort, sie tragen feste Einträge
@@ -178,7 +178,7 @@
       const kacheln = d().el('div', 'hs-start-kacheln'); kacheln.dataset.baustein = 'gruppen';
       gruppen.forEach(g=>{ const k = kachel(g, g.apps.concat(FEST[g.id] || [])); if(k) kacheln.append(k); });
       inhalt.append(kacheln);
-      if(!st.liste.apps.length) inhalt.append(d().el('div', 'hs-app-satz', 'Kein Werkzeug geladen – das Werkzeug „Module“ sagt, warum.'));
+      if(!st.liste.apps.length) inhalt.append(d().el('div', 'hs-app-satz', T('start_kein_werkzeug')));
     }
     if(st.wahl >= st.sichtbar.length) st.wahl = Math.max(0, st.sichtbar.length - 1);
     inhalt.querySelectorAll('.hs-start-app').forEach(k=>k.classList.toggle('wahl', Number(k.dataset.nr) === st.wahl));
@@ -188,12 +188,12 @@
 
   // „Auf einen Blick“ (Captain 03.11.2026): kleine Apps mit den wichtigsten Werten – KI-Labor, Sedra Token, Hardware, Modelle. Nur lesend; ein Klick öffnet die App.
   const BLICK = [
-    {ort: 'tasks', titel: 'Aufgaben', symbol: '▤', werte: b=>b.arbeit ? [['Freigaben offen', String(b.arbeit.freigaben), b.arbeit.freigaben ? 'warn' : ''], ['Anträge', String(b.arbeit.antraege), b.arbeit.antraege ? 'warn' : ''], ['Aufgaben aktiv', String(b.arbeit.aufgaben)], ['Läufe', String(b.arbeit.laeufe)]] : null},
-    {ort: 'labor', titel: 'KI-Labor', symbol: '☁', werte: b=>b.labor ? [['Cloud', b.labor.enabled ? 'an' : 'aus', b.labor.enabled ? 'ok' : ''], ['Anbieter bereit', b.labor.bereit + ' von ' + b.labor.gesamt], ['Aktiv', b.labor.live || 'keiner']] : null},
-    {ort: 'meter', titel: 'Sedra Token', symbol: '◎', werte: b=>b.token ? [['Antworten heute', String(b.token.antworten)], ['Eingehend ↑', zahl(b.token.ein)], ['Erzeugt ↓', zahl(b.token.aus)], ['Tempo', b.token.tok_s ? b.token.tok_s + ' Token/s' : '–']] : null},
-    {ort: 'hardware', titel: 'Hardware', symbol: '▦', werte: b=>b.strip ? [['GPU', wertVon(b.strip.gpu), tonVon(b.strip.gpu)], ['RAM', wertVon(b.strip.ram), tonVon(b.strip.ram)]] : null},
-    {ort: 'models', titel: 'Modelle', symbol: '◆', werte: b=>b.strip ? [['Modell', wertVon(b.strip.model), tonVon(b.strip.model)], ['Server', b.modelle ? (b.modelle.laeuft ? 'läuft' : 'aus') : wertVon(b.strip.server), b.modelle && b.modelle.laeuft ? 'ok' : tonVon(b.strip.server)]].concat(b.modelle ? [['Kontext', b.modelle.kontext ? zahl(b.modelle.kontext) + ' Token' : '–'], ['Slots', b.modelle.slots !== undefined ? String(b.modelle.slots) : '–']] : []) : null},
-    {einst: true, titel: 'Einstellungen', symbol: '⚙'}
+    {ort: 'tasks', titel: T('start_blick_aufgaben'), symbol: '▤', werte: b=>b.arbeit ? [['Freigaben offen', String(b.arbeit.freigaben), b.arbeit.freigaben ? 'warn' : ''], ['Anträge', String(b.arbeit.antraege), b.arbeit.antraege ? 'warn' : ''], ['Aufgaben aktiv', String(b.arbeit.aufgaben)], ['Läufe', String(b.arbeit.laeufe)]] : null},
+    {ort: 'labor', titel: T('start_blick_kilabor'), symbol: '☁', werte: b=>b.labor ? [['Cloud', b.labor.enabled ? 'an' : 'aus', b.labor.enabled ? 'ok' : ''], ['Anbieter bereit', b.labor.bereit + ' von ' + b.labor.gesamt], ['Aktiv', b.labor.live || 'keiner']] : null},
+    {ort: 'meter', titel: T('start_blick_token'), symbol: '◎', werte: b=>b.token ? [['Antworten heute', String(b.token.antworten)], ['Eingehend ↑', zahl(b.token.ein)], ['Erzeugt ↓', zahl(b.token.aus)], ['Tempo', b.token.tok_s ? b.token.tok_s + ' Token/s' : '–']] : null},
+    {ort: 'hardware', titel: T('start_blick_hardware'), symbol: '▦', werte: b=>b.strip ? [['GPU', wertVon(b.strip.gpu), tonVon(b.strip.gpu)], ['RAM', wertVon(b.strip.ram), tonVon(b.strip.ram)]] : null},
+    {ort: 'models', titel: T('start_blick_modelle'), symbol: '◆', werte: b=>b.strip ? [['Modell', wertVon(b.strip.model), tonVon(b.strip.model)], ['Server', b.modelle ? (b.modelle.laeuft ? 'läuft' : 'aus') : wertVon(b.strip.server), b.modelle && b.modelle.laeuft ? 'ok' : tonVon(b.strip.server)]].concat(b.modelle ? [['Kontext', b.modelle.kontext ? zahl(b.modelle.kontext) + ' Token' : '–'], ['Slots', b.modelle.slots !== undefined ? String(b.modelle.slots) : '–']] : []) : null},
+    {einst: true, titel: T('einst_titel'), symbol: '⚙'}
   ];
   const zahl = n=>Number(n || 0).toLocaleString('de-DE');
   const wertVon = g=>String((g && g.value !== undefined && g.value !== null) ? g.value : '–');
@@ -208,11 +208,11 @@
         const E = root.sedraHarness.einstellungen;
         const kachel = d().el('section', 'hs-start-blick-kachel hs-start-blick-einst'); kachel.dataset.blick = 'einstellungen'; kachel.dataset.baustein = 'einstellungen';
         const kopf = d().el('button', 'hs-start-blick-kopf'); kopf.type = 'button';
-        kopf.append(d().el('span', 'hs-start-symbol', k.symbol), d().el('b', null, k.titel), d().el('small', 'hs-leise', 'Startseite'));
+        kopf.append(d().el('span', 'hs-start-symbol', k.symbol), d().el('b', null, k.titel), d().el('small', 'hs-leise', T('einst_startseite')));
         kopf.onclick = ()=>{ schliessen(S); E.oeffnen(S); };
         const gruppen = d().el('span', 'hs-start-blick-gruppen');
         (E.GRUPPEN || []).forEach(g=>{
-          const c = d().el('button', 'hs-start-chip', g.titel); c.type = 'button'; c.dataset.gruppe = g.id;
+          const c = d().el('button', 'hs-start-chip', typeof g.titel === 'function' ? g.titel() : g.titel); c.type = 'button'; c.dataset.gruppe = g.id;
           c.onclick = ()=>{ schliessen(S); E.oeffnen(S, g.id); };
           gruppen.append(c);
         });
@@ -298,9 +298,9 @@
     const st = stand(S);
     const f = st.el.fuss; f.replaceChildren();
     const shells = ((st.module && st.module.shells) || []).filter(s=>s.id !== 'start' && s.id !== 'harness');
-    const zeile = d().el('div', 'hs-start-oberflaechen'); zeile.setAttribute('role', 'group'); zeile.setAttribute('aria-label', 'Oberflächen');
+    const zeile = d().el('div', 'hs-start-oberflaechen'); zeile.setAttribute('role', 'group'); zeile.setAttribute('aria-label', T('start_oberflaechen'));
     zeile.dataset.baustein = 'oberflaechen';
-    zeile.append(d().el('span', 'hs-ueber', 'Oberflächen'));
+    zeile.append(d().el('span', 'hs-ueber', T('start_oberflaechen')));
     shells.forEach(s=>{
       const k = d().el('button', 'hs-start-shell'); k.type = 'button'; k.dataset.shell = s.id;
       if(s.preview){ const img = d().el('img', 'hs-start-bild'); img.src = '/uix/shells/' + s.id + '/preview.png'; img.alt = ''; k.append(img); }
@@ -310,23 +310,23 @@
       k.onclick = ()=>{ schliessen(S); root.sedraWechsel.wechseln({shell: s.id}).catch(err=>S.hinweis('Wechsel nicht möglich: ' + err.message, 'warn')); };
       zeile.append(k);
     });
-    if(!shells.length) zeile.append(d().el('small', 'hs-leise', st.moduleFehler ? 'Oberflächen nicht lesbar: ' + st.moduleFehler : 'keine andere Oberfläche im Paket'));
+    if(!shells.length) zeile.append(d().el('small', 'hs-leise', st.moduleFehler ? 'Oberflächen nicht lesbar: ' + st.moduleFehler : T('start_keine_oberflaeche')));
     const look = d().el('div', 'hs-start-look'); look.dataset.baustein = 'darstellung';
     // Darstellung und Schrift gibt es nur noch in den Einstellungen (Allgemein); hier führt ein Knopf hin (Captain 03.11.2026: nicht zweimal dieselben Schalter)
-    const dar = d().el('button', 'hs-start-leeren hs-start-dar', 'Darstellung und Schrift …'); dar.type = 'button';
-    dar.title = 'Klar oder Nacht, Normal oder Groß – unter Einstellungen → Allgemein';
+    const dar = d().el('button', 'hs-start-leeren hs-start-dar', T('start_darstellung')); dar.type = 'button';
+    dar.title = T('start_darstellung_titel');
     dar.onclick = ()=>{ schliessen(S); root.sedraHarness.einstellungen.oeffnen(S, 'allgemein/darstellung'); };
     look.append(dar);
     const profilwahl = root.sedraHarness.desktop && root.sedraHarness.desktop.profilWahl(S, ()=>zeichnen(S));         // Profil wechseln (Desktop Builder), nur wenn es Profile gibt
     if(profilwahl) look.append(profilwahl);
-    const leeren = d().el('button', 'hs-start-leeren', 'Gedächtnis leeren'); leeren.type = 'button';
-    leeren.title = 'offene Apps, Ablage der Werkzeuge, Gesprächsverlauf – zweimal klicken';
+    const leeren = d().el('button', 'hs-start-leeren', T('start_gedächtnis')); leeren.type = 'button';
+    leeren.title = T('start_gedächtnis_titel');
     let scharf = null;
     leeren.onclick = e=>{
       e.stopPropagation();
-      if(!scharf){ leeren.textContent = 'Wirklich leeren? Noch einmal klicken'; scharf = setTimeout(()=>{ scharf = null; leeren.textContent = 'Gedächtnis leeren'; }, 5000); return; }
+      if(!scharf){ leeren.textContent = T('start_gedächtnis_bestaetigen'); scharf = setTimeout(()=>{ scharf = null; leeren.textContent = T('start_gedächtnis'); }, 5000); return; }
       clearTimeout(scharf); scharf = null;
-      root.sedraWechsel.leeren().then(()=>{ leeren.textContent = 'Gedächtnis geleert'; }).catch(err=>{ leeren.textContent = 'Nicht geleert: ' + err.message; });
+      root.sedraWechsel.leeren().then(()=>{ leeren.textContent = T('start_gedächtnis_geleert'); }).catch(err=>{ leeren.textContent = T('start_gedächtnis_fehler').replace('{err}', err.message); });
     };
     look.append(leeren);
     f.append(zeile, look);

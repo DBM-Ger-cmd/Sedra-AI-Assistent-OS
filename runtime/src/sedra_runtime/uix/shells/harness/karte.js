@@ -1,10 +1,10 @@
 // Harness-Shell – die Freigabe-Karte (SPEC_HARNESS_SHELL_v1 HS-22, G3 Stufe 2 U9): Werkzeug, Ziel, Stufe und Regel, Diff oder Befehlszeile;
 // Erlauben · Für diese Sitzung erlauben (P0 M1, 1.11.) · Diff zeigen · Ablehnen. Dieselbe Karte steht im Posteingang; beantwortet wird über POST /api/harness/karten/<id> – dieselbe
 // Tür, dasselbe Audit (harness/freigabe.beantworten). Dazu der Reiter „Diff“ und die Färbung des Diffs. Daten werden nie zu HTML.
-
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;
+  const DE_KARTE = {karte_aria:'Freigabe {id}',karte_freigabe:'Freigabe',karte_wcaptain:'Entscheidet der Captain',karte_wvorarbeiter:'Entscheidet der Vorarbeiter',karte_wfrei:'Frei nach Katalog',karte_wverboten:'Verboten',karte_vorbehalt:'fester Vorbehalt',karte_regel:'Regel "{regel}"',karte_keine_regel:'keine Regel passt',karte_vorarbeiter1:'Beim Vorarbeiter – er entscheidet diese Karte mit Begründung. Du kannst sie übersteuern.',karte_vorarbeiter2:'Vom Vorarbeiter vorgelegt',karte_vorarbeiter3:'Der Vorarbeiter hat nicht rechtzeitig entschieden – jetzt beim Captain.',karte_erlaubt_sitzung:'Erlaubt – gilt für diese Sitzung',karte_erlaubt_befristet:'Erlaubt – befristet',karte_erlaubt_immer:'Erlaubt – Antrag „Immer“ gestellt',karte_erlaubt:'Erlaubt',karte_abgelehnt:'Abgelehnt',karte_vorarbeiter:'(Vorarbeiter)',karte_posteingang:'(Posteingang)',karte_notiz:'Begründung (optional)',karte_erlauben:'Erlauben',karte_erlauben_ersetzt:'Erlauben (ersetzt die Datei)',karte_diff:'Diff zeigen',karte_ablehnen:'Ablehnen',karte_sitzung:'Für diese Sitzung erlauben',karte_sitzung_titel:'Öffnet {muster} bis zum Schließen der Sitzung (höchstens 24 Stunden), ohne Karte. Zurücknehmen: Einstellungen → Freigabe.',karte_befristet:'Befristet erlauben (2 Stunden, 50 Aufrufe)',karte_befristet_titel:'Öffnet {muster} für diese Sitzung, 2 Stunden lang und höchstens 50 Aufrufe. Zurücknehmen: Einstellungen → Freigabe.',karte_immer:'Immer erlauben (Antrag)',karte_immer_titel:'Stellt einen Antrag in den Posteingang: Regel „frei“ für {muster}. Erst deine Freigabe dort macht sie gültig.',karte_befehle:'Befehle, die so anfangen: ',karte_ziel:'genau dieses Ziel: ',karte_ordner:'alle Dateien unter ',karte_datei:'genau diese Datei: ',karte_karte:'Karte ',karte_wartet:'wartet auf Freigabe',karte_nicht_lesbar:'Karte nicht lesbar: '}; const T = (k, ...a) => (root.t ? root.t(k, ...a) : (DE_KARTE[k] || k));
 
   function diffZeilen(text){
     const pre = d().el('pre', 'hs-pre hs-diff');
@@ -20,45 +20,40 @@
     if(!k || (k.art && k.art !== 'werkzeug') || k.vorbehalt || k.warnung || k.stufe === 'verboten') return false;
     return !!k.werkzeug && k.werkzeug !== 'modell_laden' && k.werkzeug !== 'modell_entladen';
   }
-  // FS-12: in Klartext, was die Erlaubnis öffnet (steht vor dem Klick am Knopf)
   function klartext(k){
     const m = mustervorschau(k);
-    if(k.werkzeug === 'befehl') return 'Befehle, die so anfangen: ' + m;
-    if(/^(lauf_)/.test(k.werkzeug)) return 'genau dieses Ziel: ' + m;
-    return /\*\*$/.test(m) ? 'alle Dateien unter ' + m.slice(0, -2) + ' (' + k.werkzeug + ')' : 'genau diese Datei: ' + m + ' (' + k.werkzeug + ')';
+    if(k.werkzeug === 'befehl') return T('karte_befehle') + m;
+    if(/^(lauf_)/.test(k.werkzeug)) return T('karte_ziel') + m;
+    return /\*\*$/.test(m) ? T('karte_ordner') + m.slice(0, -2) + ' (' + k.werkzeug + ')' : T('karte_datei') + m + ' (' + k.werkzeug + ')';
   }
-  // Nur Anzeige (der Server bildet das Muster selbst): Ordner der Datei, Anfang des Befehls, sonst das Ziel.
   function mustervorschau(k){
     if(k.werkzeug === 'befehl'){ const w = String(k.ziel || '').trim().split(/\s+/); return (w[1] === '-m' ? w.slice(0, 3) : w.slice(0, 2)).join(' ') + ' …'; }
     if(/^(lauf_)/.test(k.werkzeug)) return String(k.ziel || '');
     const rel = String(k.ziel || '').replace(/\\/g, '/'); const i = rel.lastIndexOf('/');
-    return i > 0 ? rel.slice(0, i) + '/**' : rel;      // S4.4 (FS-12): eine Datei in der Wurzel öffnet nur genau diese Datei
+    return i > 0 ? rel.slice(0, i) + '/**' : rel;
   }
 
   function karteKarte(S, a, k, entscheidung){
     const box = d().el('div', 'hs-karte');
     box.dataset.karte = k.karte_id;
     box.setAttribute('role', 'group');
-    box.setAttribute('aria-label', 'Freigabe ' + k.karte_id);
+    box.setAttribute('aria-label', T('karte_aria').replace('{id}', k.karte_id));
     const kopf = d().el('div', 'hs-karte-kopf');
-    kopf.append(d().el('span', 'hs-karte-icon', '⛨'), d().el('b', null, 'Freigabe: ' + (k.werkzeug || '')), d().el('code', 'hs-karte-ziel', k.ziel || ''));
-    // A21 (1.11.): ein Satz statt „Stufe captain · Regel keine“ – wer entscheidet und warum
-    const WER = {captain: 'Entscheidet der Captain', vorarbeiter: 'Entscheidet der Vorarbeiter', frei: 'Frei nach Katalog', verboten: 'Verboten'};
-    const warum = k.regel === 'vorbehalt' ? 'fester Vorbehalt' : k.regel ? 'Regel „' + k.regel + '“' : 'keine Regel passt';
-    const meta = d().el('div', 'hs-karte-meta hs-leise', (WER[k.stufe] || 'Entscheidet der Captain') + ' · ' + warum + (k.begruendung ? ' · ' + k.begruendung : ''));
-    // Warnkasten (Nachtrag 434b108, W-2): die Ersetzung der ganzen Datei ist nicht zu übersehen – oben, vor dem Diff, in Warnfarbe.
+    kopf.append(d().el('span', 'hs-karte-icon', '⛨'), d().el('b', null, T('karte_freigabe') + ': ' + (k.werkzeug || '')), d().el('code', 'hs-karte-ziel', k.ziel || ''));
+    const WER = {captain: T('karte_wcaptain'), vorarbeiter: T('karte_wvorarbeiter'), frei: T('karte_wfrei'), verboten: T('karte_wverboten')};
+    const warum = k.regel === 'vorbehalt' ? T('karte_vorbehalt') : k.regel ? T('karte_regel').replace('{regel}', k.regel) : T('karte_keine_regel');
+    const meta = d().el('div', 'hs-karte-meta hs-leise', (WER[k.stufe] || T('karte_wcaptain')) + ' · ' + warum + (k.begruendung ? ' · ' + k.begruendung : ''));
     if(k.warnung){
-      const kasten = d().el('div', 'hs-karte-warnung', '⚠ ' + (k.warnung.text || 'Ersetzt die ganze Datei.'));
+      const kasten = d().el('div', 'hs-karte-warnung', '⚠ ' + (k.warnung.text || T('karte_erlauben_ersetzt')));
       kasten.setAttribute('role', 'alert');
       box.append(kasten);
       box.classList.add('warnung');
     }
-    // Stufe 3: wer entscheidet diese Karte? (HS-26) – beim Vorarbeiter, vorgelegt, Frist abgelaufen
     const an = d().el('div', 'hs-karte-an'); an.hidden = true;
     const anZeigen = x=>{
-      const text = x.an === 'vorarbeiter' ? 'Beim Vorarbeiter – er entscheidet diese Karte mit Begründung. Du kannst sie übersteuern.'
-                 : (x.vorgelegt ? 'Vom Vorarbeiter vorgelegt' + (x.vorgelegt.notiz ? ': ' + x.vorgelegt.notiz : '.')
-                 : (x.frist_abgelaufen ? 'Der Vorarbeiter hat nicht rechtzeitig entschieden – jetzt beim Captain.' : ''));
+      const text = x.an === 'vorarbeiter' ? T('karte_vorarbeiter1')
+                 : (x.vorgelegt ? T('karte_vorarbeiter2') + (x.vorgelegt.notiz ? ': ' + x.vorgelegt.notiz : '.')
+                 : (x.frist_abgelaufen ? T('karte_vorarbeiter3') : ''));
       an.textContent = text; an.hidden = !text; box.classList.toggle('beim-vorarbeiter', x.an === 'vorarbeiter');
     };
     anZeigen(k);
@@ -69,20 +64,20 @@
       const sitzung = e.entscheidung === 'sitzung', befristet = e.entscheidung === 'befristet', immer = e.entscheidung === 'immer';
       const erlaubt = e.entscheidung === 'erlauben' || sitzung || befristet || immer;
       const vorarbeiter = String(e.von || '').startsWith('vorarbeiter:');
-      fuss.replaceChildren(d().el('span', 'hs-ende ' + (erlaubt ? 'ok' : 'warn'), (sitzung ? 'Erlaubt – gilt für diese Sitzung' : befristet ? 'Erlaubt – befristet' : immer ? 'Erlaubt – Antrag „Immer“ gestellt' : erlaubt ? 'Erlaubt' : 'Abgelehnt') + (vorarbeiter ? ' (Vorarbeiter)' : (e.ueber === 'posteingang' ? ' (Posteingang)' : ''))),
-                           ...(sitzung && e.erlaubnis ? [d().el('small', 'hs-leise', 'Ohne Karte bis zum Schließen: ' + e.erlaubnis.werkzeug + ' ' + e.erlaubnis.muster + ' (Einstellungen → Freigabe)')] : []),
+      fuss.replaceChildren(d().el('span', 'hs-ende ' + (erlaubt ? 'ok' : 'warn'), (sitzung ? T('karte_erlaubt_sitzung') : befristet ? T('karte_erlaubt_befristet') : immer ? T('karte_erlaubt_immer') : erlaubt ? T('karte_erlaubt') : T('karte_abgelehnt')) + (vorarbeiter ? ' (' + T('karte_vorarbeiter') + ')' : (e.ueber === 'posteingang' ? ' (' + T('karte_posteingang') + ')' : ''))),
+                           ...(sitzung && e.erlaubnis ? [d().el('small', 'hs-leise', 'Ohne Karte bis zum Schließen: ' + e.erlaubnis.werkzeug + ' ' + e.erlaubnis.muster + ' (' + T('einst_gruppe_agent') + ' → ' + T('esp_freigabe') + ')')] : []),
                            ...((befristet || immer) && e.erlaubnis && e.erlaubnis.hinweis ? [d().el('small', 'hs-leise', e.erlaubnis.hinweis)] : []),
                            ...(e.notiz ? [d().el('small', 'hs-leise', (vorarbeiter ? 'Begründung: ' : '') + e.notiz)] : []),
                            ...(e.zurueckgenommen ? [d().el('small', 'hs-karte-an', 'Vom Captain zurückgenommen: ' + (e.zurueckgenommen.grund || ''))] : []));
-      box.classList.add('entschieden'); an.hidden = true;            // entschieden: kein „beim Vorarbeiter“ mehr
+      box.classList.add('entschieden'); an.hidden = true;
     };
     (S._karten || (S._karten = new Map())).set(k.karte_id, {aktualisieren: x=>{
       if(x.status !== 'beantwortet') anZeigen(x);
       if(x.status === 'beantwortet') zeigeEntscheidung({entscheidung: x.entscheidung, notiz: x.notiz, ueber: x.ueber, von: x.von, zurueckgenommen: x.zurueckgenommen, erlaubnis: x.erlaubnis});
     }});
     if(entscheidung){ zeigeEntscheidung(entscheidung); return box; }
-    setTimeout(()=>aktualisieren(S, k.karte_id), 0);              // eine Karte aus dem Verlauf: Empfänger und Stand vom Server holen
-    const notiz = d().el('input', 'hs-karte-notiz'); notiz.placeholder = 'Begründung (optional)'; notiz.setAttribute('aria-label', 'Begründung');
+    setTimeout(()=>aktualisieren(S, k.karte_id), 0);
+    const notiz = d().el('input', 'hs-karte-notiz'); notiz.placeholder = T('karte_notiz'); notiz.setAttribute('aria-label', T('karte_notiz'));
     const antworten = async weg=>{
       fuss.querySelectorAll('button').forEach(b=>{ b.disabled = true; });
       try{
@@ -95,31 +90,28 @@
         S.hinweis('Freigabe nicht gesendet: ' + err.message, 'bad');
       }
     };
-    const erlauben = d().el('button', 'hs-senden', k.warnung ? 'Erlauben (ersetzt die Datei)' : 'Erlauben'); erlauben.type = 'button'; erlauben.onclick = ()=>antworten('erlauben');
-    const diff = d().el('button', 'hs-knopf', 'Diff zeigen'); diff.type = 'button'; diff.onclick = ()=>root.sedraHarness.reiter.oeffnen(S, 'diff:' + k.karte_id);
-    const ablehnen = d().el('button', 'hs-knopf', 'Ablehnen'); ablehnen.type = 'button'; ablehnen.onclick = ()=>antworten('ablehnen');
+    const erlauben = d().el('button', 'hs-senden', k.warnung ? T('karte_erlauben_ersetzt') : T('karte_erlauben')); erlauben.type = 'button'; erlauben.onclick = ()=>antworten('erlauben');
+    const diff = d().el('button', 'hs-knopf', T('karte_diff')); diff.type = 'button'; diff.onclick = ()=>root.sedraHarness.reiter.oeffnen(S, 'diff:' + k.karte_id);
+    const ablehnen = d().el('button', 'hs-knopf', T('karte_ablehnen')); ablehnen.type = 'button'; ablehnen.onclick = ()=>antworten('ablehnen');
     fuss.append(erlauben);
-    // P0 M1: „Für diese Sitzung erlauben“ – nicht bei Vorbehalt, Warnkasten, Aufgabenkarte oder Modellen (der Server prüft dasselbe)
     if(sitzungMoeglich(k)){
-      const sitzung = d().el('button', 'hs-knopf', 'Für diese Sitzung erlauben'); sitzung.type = 'button'; sitzung.dataset.weg = 'sitzung';
-      sitzung.title = 'Gleichartige Aufrufe (' + mustervorschau(k) + ') laufen bis zum Schließen der Sitzung ohne Karte. Zurücknehmen: Einstellungen → Freigabe.';
+      const sitzung = d().el('button', 'hs-knopf', T('karte_sitzung')); sitzung.type = 'button'; sitzung.dataset.weg = 'sitzung';
+      sitzung.title = T('karte_sitzung_titel').replace('{muster}', mustervorschau(k));
       sitzung.onclick = ()=>antworten('sitzung');
       fuss.append(sitzung);
-      // S4.4 (FS-20): die Leiter Einmal · Diese Sitzung · Befristet · Immer. „Immer“ schreibt nichts selbst: es stellt einen Antrag in den Posteingang.
-      const befristet = d().el('button', 'hs-knopf', 'Befristet erlauben (2 Stunden, 50 Aufrufe)'); befristet.type = 'button'; befristet.dataset.weg = 'befristet';
-      befristet.title = 'Öffnet ' + klartext(k) + ' für diese Sitzung, 2 Stunden lang und höchstens 50 Aufrufe. Zurücknehmen: Einstellungen → Freigabe.';
+      const befristet = d().el('button', 'hs-knopf', T('karte_befristet')); befristet.type = 'button'; befristet.dataset.weg = 'befristet';
+      befristet.title = T('karte_befristet_titel').replace('{muster}', mustervorschau(k));
       befristet.onclick = ()=>antworten('befristet');
-      const immer = d().el('button', 'hs-knopf', 'Immer erlauben (Antrag)'); immer.type = 'button'; immer.dataset.weg = 'immer';
-      immer.title = 'Stellt einen Antrag in den Posteingang: Regel „frei“ für ' + klartext(k) + '. Erst deine Freigabe dort macht sie gültig.';
+      const immer = d().el('button', 'hs-knopf', T('karte_immer')); immer.type = 'button'; immer.dataset.weg = 'immer';
+      immer.title = T('karte_immer_titel').replace('{muster}', klartext(k));
       immer.onclick = ()=>antworten('immer');
       fuss.append(befristet, immer);
-      sitzung.title = 'Öffnet ' + klartext(k) + ' bis zum Schließen der Sitzung (höchstens 24 Stunden), ohne Karte. Zurücknehmen: Einstellungen → Freigabe.';
+      sitzung.title = T('karte_sitzung_titel').replace('{muster}', mustervorschau(k));
     }
     fuss.append(diff, ablehnen, notiz);
     return box;
   }
 
-  // ---- ein Reiter mit dem Diff einer Karte (HS-22 „Diff zeigen“)
   function diffAnsicht(S, id){
     const kid = id.slice(5);
     const box = d().el('div', 'hs-verlauf');
@@ -127,14 +119,13 @@
     box.append(liste);
     S.api('/api/harness/karten/' + kid).then(k=>{
       liste.replaceChildren(d().el('h2', 'hs-diff-titel', (k.werkzeug || '') + ' · ' + (k.ziel || '')),
-                            d().el('div', 'hs-leise', 'Karte ' + kid + ' · ' + (k.status === 'offen' ? 'wartet auf Freigabe' : 'beantwortet: ' + (k.entscheidung || ''))),
+                            d().el('div', 'hs-leise', T('karte_karte') + kid + ' · ' + (k.status === 'offen' ? T('karte_wartet') : 'beantwortet: ' + (k.entscheidung || ''))),
                             diffZeilen(k.vorschau || ''));
-    }).catch(err=>liste.replaceChildren(d().el('div', 's-note bad', 'Karte nicht lesbar: ' + err.message)));
+    }).catch(err=>liste.replaceChildren(d().el('div', 's-note bad', T('karte_nicht_lesbar') + err.message)));
     return root.sedraHarness.reiter.stub(id, box, S);
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  // Eine Karte wurde anderswo entschieden (Vorarbeiter, Posteingang) oder hat den Empfänger gewechselt: die Anzeige nachziehen.
   async function aktualisieren(S, kartenId){
     const eintrag = S._karten && S._karten.get(kartenId);
     if(!eintrag) return;
