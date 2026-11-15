@@ -62,6 +62,22 @@ class SitzungTests(unittest.TestCase):
         self.assertEqual({x['id'] for x in self.s.liste()}, {a, b, c})
         self.assertIn('zuletzt', eins[0])
 
+    def test_helfer_sitzung_traegt_eltern_delegation_und_rolle(self):       # SPEC_DELEGATION_IM_GESPRAECH_v1 DG-02
+        haupt = self.s.anlegen('p', 'Haupt')
+        helfer = self.s.anlegen('p', 'Teil', eltern=haupt['id'], delegation='T-0000ABCD', rolle='Prüfer')
+        self.assertEqual((helfer['eltern'], helfer['delegation'], helfer['rolle']), (haupt['id'], 'T-0000ABCD', 'Prüfer'))
+        self.assertEqual(self.s.laden(helfer['id'])['kopf']['eltern'], haupt['id'])
+        zeilen = {z['id']: z for z in self.s.liste('p')}
+        self.assertEqual(zeilen[helfer['id']]['eltern'], haupt['id'])
+        self.assertEqual(zeilen[helfer['id']]['rolle'], 'Prüfer')
+        self.assertNotIn('eltern', zeilen[haupt['id']], 'eine gewöhnliche Sitzung bleibt, wie sie war')
+        self.assertNotIn('eltern', haupt)
+
+    def test_helfer_felder_nur_zusammen_und_gueltig(self):
+        for kw in ({'eltern': 'S-00000001'}, {'delegation': 'T-00000001'}, {'eltern': 'x', 'delegation': 'T-00000001'}, {'eltern': 'S-00000001', 'delegation': '../x'}):
+            with self.assertRaises(SitzungFehler, msg=str(kw)):
+                self.s.anlegen('p', **kw)
+
     def test_titel_aendern_haengt_eine_zeile_an(self):
         sid = self.s.anlegen('p', 'alt')['id']
         self.s.titel_aendern(sid, 'neu')

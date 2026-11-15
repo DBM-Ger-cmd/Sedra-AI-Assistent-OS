@@ -16,6 +16,7 @@ from pathlib import Path
 from .erlaubnis import aktive
 
 ID = re.compile(r'S-[0-9A-F]{8}')
+DELEGATION = re.compile(r'T-[0-9A-F]{8}')        # Kennung einer Delegation im Gespräch (harness/team.py)
 TITEL_MAX = 60
 TYPEN = ('captain', 'modell', 'werkzeug', 'karte', 'titel', 'wahl', 'erlaubnis', 'zusammenfassung', 'belohnung', 'wissen')     # `wissen`: Trefferliste ohne Modell (SPEC_WISSEN_KERN_v1 WK-15)     # `wahl`: Modell geändert (PATCH); `erlaubnis`: Sitzungs-Erlaubnis (P0 M1)
 
@@ -60,13 +61,20 @@ class Sitzungen:
             os.fsync(datei.fileno())
 
     # ---- öffentlich
-    def anlegen(self, projekt, titel='', modell=None, mission_id=None, vorlage=None, vorlage_hash=None):
+    def anlegen(self, projekt, titel='', modell=None, mission_id=None, vorlage=None, vorlage_hash=None, eltern=None, delegation=None, rolle=None):
+        """`eltern`, `delegation`, `rolle`: nur bei einer Helfer-Sitzung der Delegation im Gespräch (SPEC_DELEGATION_IM_GESPRAECH_v1 DG-02) – sie
+        gehört zur Hauptsitzung `eltern` und steht in der Liste unter ihr. Ohne die drei Felder ist es eine gewöhnliche Sitzung."""
+        if (eltern is None) != (delegation is None):
+            raise SitzungFehler('helfer_unvollstaendig: eltern und delegation gehören zusammen')
+        if eltern is not None and (not ID.fullmatch(str(eltern)) or not DELEGATION.fullmatch(str(delegation))):
+            raise SitzungFehler('helfer_ungueltig: eltern S-…, delegation T-…')
+        helfer = {'eltern': eltern, 'delegation': delegation, 'rolle': str(rolle or '')[:40]} if eltern is not None else {}
         self.ordner.mkdir(parents=True, exist_ok=True)
         for _ in range(20):
             sid = 'S-' + secrets.token_hex(4).upper()
             pfad = self._pfad(sid)
             kopf = {'typ': 'kopf', 'version': 1, 'id': sid, 'titel': titel_aus(titel), 'projekt': str(projekt), 'vorlage': vorlage, 'vorlage_hash': vorlage_hash,
-                    'modell': modell, 'mission_id': mission_id, 'angelegt': jetzt()}
+                    'modell': modell, 'mission_id': mission_id, 'angelegt': jetzt(), **helfer}
             try:
                 self._schreiben(pfad, kopf, modus='x')        # 'x': eine schon vergebene ID wird nie überschrieben
                 return kopf
@@ -144,7 +152,8 @@ class Sitzungen:
                 zeile = {'id': pfad.stem, 'titel': s['titel'], 'projekt': s['kopf'].get('projekt'), 'modell': s['modell'],
                          'vorlage': s['kopf'].get('vorlage'), 'angelegt': s['kopf'].get('angelegt'), 'zuletzt': zuletzt,
                          'nachrichten': sum(1 for e in s['eintraege'] if e.get('typ') in ('captain', 'modell')),
-                         'erlaubnisse': len(s['erlaubnisse'])}
+                         'erlaubnisse': len(s['erlaubnisse']),
+                         **{k: s['kopf'][k] for k in ('eltern', 'delegation', 'rolle') if s['kopf'].get('eltern')}}       # nur Helfer-Sitzungen tragen die drei Felder (DG-02)
                 self._liste_cache[pfad] = (marke, zeile)
             if projekt is not None and zeile['projekt'] != projekt:
                 continue
