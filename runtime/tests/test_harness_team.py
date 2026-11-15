@@ -118,6 +118,25 @@ class Ergebnis(unittest.TestCase):
         self.assertIn('Alles gut.', t)
         self.assertIn('Auftrag 2 (Leser', t); self.assertIn('gescheitert – Grund: Zeitlimit erreicht', t); self.assertIn('halb', t)
         self.assertIn('Auftrag 3 (Helfer 3', t); self.assertIn('angehalten – Grund: vom Captain angehalten', t)
+        erste = t.split('\n')[0]                                         # die Bilanz steht ganz oben (Abnahme am PC 15.11.2026)
+        self.assertIn('1 von 3 Helfern sind fertig geworden', erste)
+        self.assertIn('NICHT fertig: Auftrag 2 (Leser): gescheitert, Auftrag 3 (Helfer 3): angehalten', erste)
+        self.assertIn('KEIN Ergebnis', erste)
+
+    def test_bilanz_ohne_warnung_wenn_alle_fertig_sind(self):
+        d = team.Delegation('S-00000001', team.pruefe_auftraege(A[:2]))
+        for nr in (1, 2):
+            d.starten(nr, 'S-0000000' + 'AB'[nr - 1]); d.enden(nr, team.FERTIG, 'ok')
+        erste = team.ergebnis_text(d).split('\n')[0]
+        self.assertTrue(erste.endswith('2 von 2 Helfern sind fertig geworden.'))
+        self.assertNotIn('NICHT', erste)
+
+    def test_alle_angehalten_null_von_drei(self):
+        d = team.Delegation('S-00000001', team.pruefe_auftraege(A))
+        d.anhalten()
+        erste = team.ergebnis_text(d).split('\n')[0]
+        self.assertIn('0 von 3 Helfern sind fertig geworden', erste)
+        self.assertIn('behaupte nicht, diese Aufträge seien erledigt', erste)
 
 
 class Merkliste(unittest.TestCase):

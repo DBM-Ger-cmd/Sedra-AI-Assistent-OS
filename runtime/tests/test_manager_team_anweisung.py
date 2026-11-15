@@ -20,6 +20,7 @@ class ManagerTeamAnweisung(unittest.TestCase):
         self.assertIn('Das ist kein Erfinden', s)
         self.assertIn('du gibst nichts frei', s)
         self.assertIn('ungeprüft', s)
+        self.assertIn('erfinde kein Ergebnis für die übrigen', s)
 
     def test_vorlage_bietet_das_werkzeug_an_das_die_anweisung_nennt(self):
         self.assertIn('team_verteilen', self.vorlage['werkzeuge'])

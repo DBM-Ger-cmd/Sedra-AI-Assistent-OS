@@ -120,7 +120,7 @@ class TeamLaufTest(unittest.TestCase):
         text = self.lauf.verteilen(self.haupt, None, self.auftraege('A', 'B', 'C'))
         z = self.api.zeiten
         self.assertGreaterEqual(z['C'][0], min(z['A'][1], z['B'][1]) - 0.02, 'C startet erst, wenn ein Platz frei ist')
-        self.assertEqual(text.count('fertig'), 3)
+        self.assertEqual(text.count('): fertig –'), 3); self.assertIn('3 von 3 Helfern sind fertig geworden.', text)
         slots = sorted(self.api.sitzungen.laden(s['id'])['slot'] for s in self.api.sitzungen.liste('p') if s.get('eltern'))
         self.assertEqual(set(slots), {1, 2}, 'Platz 0 bleibt der Hauptsitzung')
 
@@ -130,7 +130,7 @@ class TeamLaufTest(unittest.TestCase):
         text = self.lauf.verteilen(self.haupt, None, self.auftraege('A', 'B', 'C'))
         z = self.api.zeiten
         self.assertGreaterEqual(z['B'][0], z['A'][1] - 0.02); self.assertGreaterEqual(z['C'][0], z['B'][1] - 0.02)
-        self.assertEqual(text.count('fertig'), 3)
+        self.assertEqual(text.count('): fertig –'), 3); self.assertIn('3 von 3 Helfern sind fertig geworden.', text)
 
     def test_ein_gescheiterter_helfer_stoppt_die_anderen_nicht(self):                  # DG-08
         self.api.verhalten = {'A': scheitert, 'B': antwortet('Text B')}
