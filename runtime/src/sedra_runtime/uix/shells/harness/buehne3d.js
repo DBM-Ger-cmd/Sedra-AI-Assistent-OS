@@ -5,7 +5,7 @@
 // Ruhe-Regeln: zeichnet nur, wenn die Bühne sichtbar und der Reiter vorn ist; bei „weniger Bewegung“ genau ein Standbild;
 // Auflösung gedeckelt (Pixelverhältnis höchstens 1,5), damit die Anzeige neben einem laufenden Modell nichts kostet.
 // Die Bühne liest nur, sie entscheidet nichts. Wahl in localStorage `sedra.harness.buehne3d`: `hintergrund` (Vorgabe: der Drache
-// läuft leise hinter der Arbeitsfläche), `buehne` (nur im Startbild über dem Titel), `aus`.
+// fliegt als Bildschirmschoner – er zeichnet nur im Ruhezustand oder wenn er als Avatar gelandet ist, nie während der Arbeit), `buehne` (nur im Startbild über dem Titel), `aus`.
 
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
@@ -183,7 +183,7 @@ void main(){
     if(!gl) return false;
     const {p, u} = programm(gl), teile = hochladen(gl, modell), rand = akzent();
     const quer = Math.hypot(modell.halb[0], modell.halb[2]), hoch = modell.halb[1] * 1.25;      // das Modell dreht sich um die Hochachse: quer zählt die Diagonale
-    const st = {zeiger: [0, 0], ziel: [0, 0], lauf: 0, sichtbar: true, ende: false, t0: 0, winkel: -0.3, zeit: 0, kurs: 0, letzte: 0, ruhe: false, ferne: FLUG_FERNE, ort: [0, 0], platz: null};
+    const st = {zeiger: [0, 0], ziel: [0, 0], lauf: 0, sichtbar: true, ende: false, t0: 0, winkel: -0.3, zeit: 0, kurs: 0, letzte: 0, ruhe: false, ferne: FLUG_FERNE, ort: [0, 0], platz: null, uhr: 0};
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE); gl.clearColor(0, 0, 0, 0);
 
     const bild = ()=>{
@@ -222,7 +222,7 @@ void main(){
     };
     const aufraeumen = ()=>{
       if(st.ende) return;
-      st.ende = true; cancelAnimationFrame(st.lauf); if(st.blick) st.blick.disconnect(); if(weit) flug = null;
+      st.ende = true; cancelAnimationFrame(st.lauf); clearTimeout(st.uhr); if(st.blick) st.blick.disconnect(); if(weit) flug = null;
       document.removeEventListener('visibilitychange', wecken); REGUNG.forEach(n=>root.removeEventListener(n, regung));
       const weg = gl.getExtension('WEBGL_lose_context'); if(weg) weg.loseContext();
     };
@@ -231,8 +231,12 @@ void main(){
       if(st.ende) return;
       if(!rahmenEl.isConnected){ aufraeumen(); return; }
       if(st.t0){ st.zeit += Math.min(zeit - st.t0, 100) / 1000; st.winkel = -0.3 + Math.sin(st.zeit * 0.4) * 0.5; }     // ruhiges Wiegen statt Kreiseln: die Seite bleibt zu sehen
-      st.t0 = zeit;
       if(weit && !st.ruhe && zeit - st.letzte > RUHE_MS){ st.ruhe = true; rahmenEl.classList.add('ruhe'); }       // niemand rührt etwas an: der Drache tritt hervor
+      if(weit && !st.ruhe && !st.platz){                     // der Captain arbeitet: nichts zeichnen (kostet keine Grafikleistung), nur einmal je Sekunde nachsehen
+        st.t0 = 0; clearTimeout(st.uhr); st.uhr = setTimeout(()=>{ st.uhr = 0; wecken(); }, 1000);
+        return;
+      }
+      st.t0 = zeit;
       bild();
       if(st.sichtbar && document.visibilityState === 'visible') st.lauf = requestAnimationFrame(schritt); else st.t0 = 0;
     };
@@ -249,7 +253,7 @@ void main(){
     }
     if(weit){
       regung(); REGUNG.forEach(n=>root.addEventListener(n, regung, {passive: true}));
-      flug = {landen(x, y){ st.platz = [x, y]; rahmenEl.classList.add('gelandet'); }, abheben(){ st.platz = null; rahmenEl.classList.remove('gelandet'); }};
+      flug = {landen(x, y){ st.platz = [x, y]; rahmenEl.classList.add('gelandet'); clearTimeout(st.uhr); st.uhr = 0; wecken(); }, abheben(){ st.platz = null; rahmenEl.classList.remove('gelandet'); }};
     }
     else { rahmenEl.addEventListener('pointermove', zeigen); rahmenEl.addEventListener('pointerleave', ()=>{ st.ziel = [0, 0]; }); }
     if(root.IntersectionObserver){ st.blick = new IntersectionObserver(e=>{ st.sichtbar = e[0].isIntersecting; wecken(); }); st.blick.observe(rahmenEl); }

@@ -2,6 +2,8 @@
 /* Einmalig in desk.html oder per JS injiziert – alle Icons über <use href="#icon-name"/> */
 /* Quelle: Heroicons/Material Design angepasst, Theme-fähig via currentColor */
 
+/* Das Sprite steht in einem Kommentar: icons.js liest es aus dem Text dieser Datei. Ohne den Kommentar verwarf der Browser
+   die Regel `.icon` direkt dahinter (Symbole 300x150 Pixel und schwarz, Sichtprüfung 15.11.2026).
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
   <!-- Navigation -->
   <symbol id="icon-home" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></symbol>
@@ -77,6 +79,7 @@
   <symbol id="icon-pyramid" viewBox="0 0 24 24"><path d="M12 2L2 12h20L12 2zm0 2.5L19.5 12H4.5L12 4.5z"/></symbol>
   <symbol id="icon-pyramid-3d" viewBox="0 0 24 24"><path d="M12 2L2 12h20L12 2zm0 2.5L19.5 12H4.5L12 4.5z"/><path d="M12 4.5v7.5M4.5 12h15" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.5"/></symbol>
 </svg>
+*/
 
 /* Helper-Klassen für Icons */
 .icon {
@@ -85,6 +88,7 @@
   height: 1em;
   flex-shrink: 0;
   vertical-align: -0.125em;
+  fill: currentColor;
 }
 
 .icon-sm { width: 0.875em; height: 0.875em; }   /* 14px bei 16px base */
