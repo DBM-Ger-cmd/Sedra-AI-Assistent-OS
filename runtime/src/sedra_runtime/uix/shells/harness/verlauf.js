@@ -40,7 +40,7 @@
     const D = root.sedraHarness.desktop, gruss = D ? D.begruessung(S) : {logo: '', titel: 'SEDRA', text: '', marke: ''};
     const grussEl = d().el('div', 'hs-start-block');                                          // Baustein „gruss“ (bausteine.js): Logo, Titel, Text
     if(gruss.logo){ const bild = d().el('img', 'hs-start-logo'); bild.src = gruss.logo; bild.alt = gruss.marke || 'Logo'; grussEl.append(bild); }       // Logo des Profils statt des Drachen (nur eine Daten-Adresse, vom Server geprüft)
-    else grussEl.append(drache());
+    else { const z = drache(), B3 = root.sedraHarness.buehne3d; grussEl.append(B3 ? B3.rahmen(z) : z); }   // 3D-Bühne um die Zeichnung (buehne3d.js), die Zeichnung bleibt der Rückfall
     grussEl.append(d().el('h1', 'hs-start-titel', gruss.titel));
     if(gruss.text) grussEl.append(d().el('p', 'hs-start-gruss', gruss.text));
     const schritte = d().el('ol', 'hs-start-schritte');

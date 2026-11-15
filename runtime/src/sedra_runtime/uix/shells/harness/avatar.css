@@ -1,0 +1,17 @@
+/* Harness-Shell – die Sprechblase des Avatars (avatar.js). Ebene „Schwebend“: Glas, über dem fliegenden Drachen (z 60), unter Dialogen. Nur Tokens. */
+.hs-avatar{position:fixed;z-index:65;width:300px;display:flex;flex-direction:column;gap:var(--gap);padding:var(--gap-2) var(--gap-6) var(--gap-2) var(--gap-3);
+  color:var(--text);font-size:var(--size-small);line-height:1.45;text-align:left;
+  background:var(--glas);-webkit-backdrop-filter:blur(var(--glas-unschaerfe));backdrop-filter:blur(var(--glas-unschaerfe));
+  border:1px solid var(--hs-on-line);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg),var(--glanz);
+  animation:hs-avatar-auf .35s ease-out}
+.hs-avatar.warn{border-color:var(--warn-line)}
+.hs-avatar.mit-drache{padding-top:var(--gap-4)}
+.hs-avatar-zeile{display:flex;gap:var(--gap)}
+.hs-avatar-zeile:empty{display:none}
+.hs-avatar-zu{position:absolute;top:4px;right:6px;width:24px;height:24px;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--muted);font:inherit;font-size:var(--size-l);line-height:1;cursor:pointer}
+.hs-avatar-zu:hover{color:var(--text);background:var(--hs-hover)}
+.hs-avatar-zu:focus-visible,.hs-avatar-knopf:focus-visible{outline:var(--focus-ring)}
+/* der gelandete Drache ist deutlich zu sehen, auch während der Captain arbeitet */
+.hs-grund.bereit.gelandet{opacity:var(--drache-ruhe);transition-duration:.8s}
+@keyframes hs-avatar-auf{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.hs-avatar{animation:none}}

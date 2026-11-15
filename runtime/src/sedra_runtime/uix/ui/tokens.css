@@ -89,6 +89,14 @@
   --shadow-md:0 4px 12px rgba(0,0,0,.4);
   --shadow-lg:0 8px 24px rgba(0,0,0,.55);
   --shadow-xl:0 16px 48px rgba(0,0,0,.6);
+  /* depth (UIX nächste Stufe, 15.11.2026): glass, glow and perspective – built from the tokens above, so every theme follows */
+  --glas:color-mix(in srgb,var(--panel) 80%,transparent);
+  --glas-unschaerfe:18px;
+  --glanz:0 0 0 1px color-mix(in srgb,var(--accent) 38%,transparent),0 10px 36px color-mix(in srgb,var(--accent) 16%,transparent);
+  --lichthof:radial-gradient(closest-side,color-mix(in srgb,var(--accent) 20%,transparent),transparent);
+  --tiefe:900px;
+  --drache-blass:.2;      /* the flying dragon while the Captain works */
+  --drache-ruhe:.85;      /* … and after a while without input (screen saver) */
   /* transitions */
   --transition-fast:0.12s ease-out;
   --transition-base:0.15s ease-out;
