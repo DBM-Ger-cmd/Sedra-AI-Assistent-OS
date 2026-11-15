@@ -1,6 +1,6 @@
 # Spec: Delegation im Gespräch (mehrere Agenten gleichzeitig an einer Aufgabe) – Entwurf v1
 
-Stand: 15.11.2026. Entwurf für G1 und G2. Es ist noch nichts gebaut. Gehört zu `SEDRA-UIX-3D-01`, Baustein D aus
+Stand: 15.11.2026. **G1 (Anforderungen) und G2 (Design) vom Captain freigegeben am 15.11.2026 im Chat des Koordinators.** G3 (Aufgaben) offen. Es ist noch nichts gebaut. Gehört zu `SEDRA-UIX-3D-01`, Baustein D aus
 `docs/AUFTRAG_UIX_NAECHSTE_STUFE_2026-11-15.md`.
 
 ## 0. Entscheidungen des Captains (15.11.2026)
@@ -83,14 +83,24 @@ Beide Routen liegen unter dem vorhandenen Muster `/api/harness/*` der Shell.
 | Server-Neustart während einer Delegation | Helfer-Sitzungen bleiben als Sitzungen erhalten; die Delegation gilt als abgebrochen, das steht im Verlauf. |
 | Zwei Helfer wollen dieselbe Datei ändern | Heute nicht abgesichert: `datei_aendern` scheitert nur, wenn die Stelle `alt` nicht mehr genau einmal vorkommt; `datei_schreiben` würde die Fassung des anderen ersetzen. Neu zu bauen: `team.py` merkt je Delegation, welche Datei ein Helfer zur Änderung vorgelegt hat; eine zweite Karte für dieselbe Datei trägt den Hinweis „auch von Helfer X geändert“ (DG-15). |
 
-## 4. Aufgaben (für G3, Reihenfolge)
+## 4. Aufgaben (für G3)
 
-1. `harness/team.py` rein: Grenzen, Slot-Vergabe, Zustandsmodell, Ergebnistext. Mit Tests ohne Modell.
-2. Sitzungskopf `eltern`, `delegation`, `rolle`; Sitzungsliste gibt sie aus.
-3. `werkzeug_team.py` und Einhängen in Kiste und Katalog (`WIRKUNGSKLASSE`, `NAMEN`, Vorlage `manager.yaml` und eine neue Vorlage oder Freischaltung je Projekt).
-4. Routen und Bus-Ereignis.
-5. Oberfläche: Delegations-Karte, Seitenleiste, Taskleiste. Sichtprüfung.
-6. Echter Lauf am PC mit Profil `team-35b` (3 Slots): eine Aufgabe, drei Helfer, ein Schreibvorgang mit Karte.
+Jede Aufgabe endet mit grünen Tests und einem eigenen Commit auf dem Branch `uix-3d-naechste-stufe`. Nach `main` geht nichts ohne
+eigenes Ja. Kein Schritt ändert `core/` oder den Guard.
+
+| Nr | Aufgabe | Dateien | Deckt | Fertig, wenn |
+|---|---|---|---|---|
+| T1 | Kern, rein und ohne Server: Aufträge prüfen (Anzahl, Länge, Rolle), Slots vergeben (freie Plätze, Rest in die Warteschlange), Zustandsmodell je Helfer, Ergebnistext, Merkliste „Datei von Helfer X vorgelegt“. | `harness/team.py` (neu), `tests/test_harness_team.py` (neu) | DG-03, DG-07, DG-08, DG-13, DG-15 (Kern) | Tests ohne Modell grün |
+| T2 | Sitzungskopf mit `eltern`, `delegation`, `rolle`; die Sitzungsliste gibt die drei Felder aus. Alte Sitzungen ohne die Felder bleiben lesbar. | `harness/sitzung.py`, Test dazu | DG-02 | Test: anlegen, laden, Liste |
+| T3 | Ablauf im Server: Helfer-Sitzungen anlegen, Auftrag über den Weg von `nachricht()` geben, auf das Ende warten, Zeitlimit, Anhalten, Audit. Die Arbeit liegt in einer eigenen Datei, `api.py` reicht nur durch (sie hat schon 1920 Zeilen). | `harness/team_lauf.py` (neu), `harness/api.py` (Durchreichen, Routen `team/<T-…>` und `…/stopp`), Test mit Schein-Modell | DG-01, DG-06, DG-08, DG-09, DG-14 | Test: 3 Aufträge überlappen; Stopp wirkt |
+| T4 | Werkzeug `team_verteilen` in der Kiste, Wirkungsklasse, Namensliste; in der Kiste eines Helfers fehlen `team_verteilen` und `auftraege_verteilen`. Freischaltung über die Vorlage. | `harness/werkzeug_team.py` (neu), `harness/werkzeuge.py`, `config/harness_vorlagen/manager.yaml`, Tests | DG-04, DG-05 | Test: Schreibversuch eines Helfers erzeugt Karte mit seiner `sitzung_id` |
+| T5 | Hinweis auf der zweiten Karte, wenn zwei Helfer dieselbe Datei vorlegen. | `harness/team_lauf.py`, Kartentext, Test | DG-15 | Test mit zwei Vorlagen |
+| T6 | Oberfläche: Delegations-Karte im Verlauf, reine Funktion `zeilen(stand)`, Helfer eingerückt in der Seitenleiste, Zelle „Team“ in der Taskleiste, Texte DE/EN. | `shells/harness/delegation.js`, `delegation.css`, `strings_delegation.js` (neu), `seitenleiste.js`, `taskleiste.js`, `shell.yaml`, Tests | DG-10, DG-11, DG-12 | node-Test, Vertragstest, Sichtprüfung im Wegwerf-Projekt |
+| T7 | Abnahme am PC: Profil `team-35b`, eine Aufgabe, drei Helfer, ein Schreibvorgang mit Karte, einmal Anhalten. Messung Token pro Sekunde je Helfer. | keine | alle | Captain sieht es am PC |
+
+Reihenfolge: T1, T2, T3, T4, T5, T6, T7. T6 kann nach T3 beginnen. T7 macht der Captain mit dem Koordinator.
+
+Nicht in dieser Spec: Cloud-Helfer, Helfer, die selbst delegieren, mehr als drei Helfer, ein dauerhaftes Team (`orchestra`).
 
 ## 5. Offene Punkte für den Captain
 
