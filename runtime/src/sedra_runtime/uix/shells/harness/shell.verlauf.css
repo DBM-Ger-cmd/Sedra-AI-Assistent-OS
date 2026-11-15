@@ -610,14 +610,14 @@
 .hs-md hr {
   border: 0;
   border-top: 1px solid var(--line);
-  margin: 16px 0.
+  margin: 16px 0;
 }
 
 .hs-md table {
   border-collapse: collapse;
   font-size: var(--size-small);
   width: 100%;
-  overflow-x: auto.
+  overflow-x: auto;
 }
 
 .hs-md th,
@@ -625,91 +625,91 @@
   border: 1px solid var(--line);
   padding: 8px 12px;
   text-align: left;
-  vertical-align: top.
+  vertical-align: top;
 }
 
 .hs-md th {
   background: var(--panel-2);
   font-weight: 600;
-  color: var(--heading).
+  color: var(--heading);
 }
 
 /* Code Blocks mit Header */
 .hs-md-code {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  overflow: hidden.
-  margin: 12px 0.
-  background: var(--bg).
+  overflow: hidden;
+  margin: 12px 0;
+  background: var(--bg);
 }
 
 .hs-md-code-kopf {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px.
+  padding: 8px 12px;
   background: var(--panel-2);
-  font-size: var(--size-xs).
-  color: var(--muted).
-  border-bottom: 1px solid var(--line).
+  font-size: var(--size-xs);
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
 }
 
 .hs-md-code pre {
-  margin: 0.
-  padding: 12px.
-  overflow-x: auto.
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
 }
 
 .hs-md-code code {
-  background: transparent.
-  padding: 0.
-  white-space: pre.
+  background: transparent;
+  padding: 0;
+  white-space: pre;
 }
 
 /* Copy Button für Code */
 .hs-md-copy {
-  padding: 4px 8px.
-  font-size: var(--size-xs).
-  background: transparent.
-  border: 1px solid var(--line).
-  border-radius: var(--radius-sm).
-  color: var(--muted).
-  cursor: pointer.
-  transition: all var(--transition-fast).
+  padding: 4px 8px;
+  font-size: var(--size-xs);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .hs-md-copy:hover {
-  background: var(--hs-hover).
-  color: var(--text).
-  border-color: var(--hs-on-line).
+  background: var(--hs-hover);
+  color: var(--text);
+  border-color: var(--hs-on-line);
 }
 
 /* Buttons in Nachrichten */
 .hs-knopf {
-  border: 1px solid var(--line).
-  background: var(--panel).
-  color: var(--text).
-  border-radius: var(--radius).
-  cursor: pointer.
-  font: inherit.
-  font-size: var(--size-small).
-  padding: 6px 12px.
-  transition: all var(--transition-fast).
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--size-small);
+  padding: 6px 12px;
+  transition: all var(--transition-fast);
 }
 
 .hs-knopf:hover {
-  background: var(--panel-2).
-  border-color: var(--hs-on-line).
+  background: var(--panel-2);
+  border-color: var(--hs-on-line);
 }
 
 .hs-knopf:focus-visible {
-  outline: var(--focus-ring).
-  outline-offset: 2px.
+  outline: var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .hs-klein {
-  font-size: var(--size-xs).
-  padding: 4px 8px.
+  font-size: var(--size-xs);
+  padding: 4px 8px;
 }
 
 /* Reduced Motion */
@@ -721,6 +721,6 @@
   
   .hs-denken > summary::before,
   .hs-wz > summary::before {
-    transition: none.
+    transition: none;
   }
 }

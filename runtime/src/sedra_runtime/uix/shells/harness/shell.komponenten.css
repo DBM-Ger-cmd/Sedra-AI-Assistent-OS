@@ -538,7 +538,7 @@
 }
 
 /* ---- Einstellungen (HS-42) ---- */
-.hs-einstellungen {
+.hs-einstellungen:not(.s-btn) {
   display: flex;
   flex-direction: column;
   height: 100%;
