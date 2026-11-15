@@ -97,7 +97,7 @@
     const ids = zuletzt().concat(['agent/freigabe', 'agent/token', 'modelle/werkstatt', 'integrationen/cloud']).filter((x, i, a)=>PUNKT[x] && a.indexOf(x) === i).slice(0, 3);
     ids.forEach(id=>{
       const g = gruppen.find(x=>x.id === id.split('/')[0]); if(!g || !g.punkte[id.split('/')[1]]) return;
-      const r = reihe(symbolVon(id), titelVonPunkt(id), g.titel, ()=>gehe(id)); r.dataset.punkt = id; liste.append(r);
+      const r = reihe(symbolVon(id), titelVonPunkt(id), (typeof g.titel === 'function' ? g.titel() : g.titel), ()=>gehe(id)); r.dataset.punkt = id; liste.append(r);
     });
     empf.append(liste); links.append(empf);
 
@@ -142,7 +142,7 @@
     const out = [];
     gruppen.forEach(g=>Object.keys(g.punkte).forEach(pid=>{
       const id = g.id + '/' + pid, titel = titelVonPunkt(id);
-      if((titel + ' ' + satzVon(id) + ' ' + g.titel).toLowerCase().indexOf(q) >= 0) out.push({id, titel, gruppe: g.titel});
+      if((titel + ' ' + satzVon(id) + ' ' + (typeof g.titel === 'function' ? g.titel() : g.titel)).toLowerCase().indexOf(q) >= 0) out.push({id, titel, gruppe: (typeof g.titel === 'function' ? g.titel() : g.titel)});
     }));
     return out;
   }
