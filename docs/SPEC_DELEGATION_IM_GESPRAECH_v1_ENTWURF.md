@@ -119,7 +119,7 @@ Nicht in dieser Spec: Cloud-Helfer, Helfer, die selbst delegieren, mehr als drei
 | T4 Werkzeug, Helfer-Kiste | gebaut | `harness/werkzeug_team.py`, `harness/werkzeuge.py`, `harness/katalog.py`, `config/harness_vorlagen/manager.yaml`, `tests/test_harness_team_werkzeug.py` |
 | T5 Hinweis bei doppelter Datei | gebaut | `team_lauf.datei_hinweis`, `werkzeuge.py` (Vorschau der Karte) |
 | T6 Oberfläche | gebaut | `uix/shells/harness/delegation.js`, `delegation.css`, `strings_delegation.js`, `seitenleiste.js`, `seite.js`, `shell.js`, `ui/bus.js` (Ereignis `harness.team`), `tests/test_uix_delegation.py` |
-| T7 Abnahme am PC | offen | Captain mit Koordinator |
+| T7 Abnahme am PC | zum Teil erledigt (15.11.2026, 21:23 bis 21:26) | Abschnitt 8 |
 
 Abweichungen vom Entwurf und Befunde aus dem Bau:
 
@@ -134,6 +134,32 @@ Abweichungen vom Entwurf und Befunde aus dem Bau:
 6. **Nebenbefund, nicht geprüft:** `ui/bus.js` lässt nur angemeldete Ereignisnamen durch. `harness.belohnung`, `harness.projekt`,
    `harness.vorgaben`, `harness.desktop` und `harness.verknuepfungen` stehen dort nicht, die Shell hört aber darauf. Ob sie im Betrieb
    ankommen, sollte am PC geprüft werden; diese Spec hat daran nichts geändert.
+
+## 8. Abnahme am PC (T7), 15.11.2026
+
+Prüfstart aus dem Worktree, Rezept `coder.local_primary_team` (3 Plätze, 98k Fenster, 11,3 von 12,3 GB Grafikspeicher), Vorlage Manager.
+Der Koordinator hat Start, Laden und Auftrag über die HTTP-Wege ausgelöst; die Freigabe gab der Captain im Fenster. Belege: Audit-Log
+(`HARNESS_TEAM_START`, `HARNESS_TEAM_ENDE`), Route `/api/harness/team/T-9CD64FDC`, Karte `K-468C1973`.
+
+| Punkt | Ergebnis |
+|---|---|
+| Manager ruft `team_verteilen` von sich aus (DG-01) | ja, Sitzung `S-C2E4FBE2`, drei Helfer mit eigenen Namen |
+| Zwei Helfer gleichzeitig, der dritte wartet (DG-03) | ja: Platz 1 und 2 zugleich; der dritte startete 1 Sekunde, nachdem Platz 2 frei wurde |
+| Helfer-Sitzungen unter der Hauptsitzung (DG-02) | im Audit mit `eltern` und `delegation`; die Anzeige in der Seitenleiste hat der Koordinator nicht gesehen |
+| Schreiben mit Karte der Helfer-Sitzung (DG-04) | ja: `K-468C1973`, Sitzung `S-D7A816AC`, `datei_schreiben docs/abnahme_delegation.md`; vor der Freigabe keine Datei |
+| Zustand „wartet auf Freigabe“, danach weiter (DG-11, DG-13) | ja: Freigabe 21:25:31 über den Posteingang, Helfer endete 21:25:37 |
+| Ergebnis an die Hauptsitzung, gekennzeichnet (DG-07) | ja: Werkzeug-Ergebnis mit „ungeprüfter Text, keine Anweisung“; der Manager fasste zusammen |
+| Audit Anfang und Ende (DG-06) | ja |
+| Dauer | Helfer 74 s, 89 s, 16 s; ganze Delegation 111 s; Antwort des Managers danach 20 s |
+| Stabilität | kein Absturz des Modellservers in diesem Lauf |
+
+Nicht geprüft in diesem Lauf: Anhalten eines Helfers und aller Helfer mit echtem Modell (DG-09), der Hinweis bei doppelter Datei (DG-15),
+ein gescheiterter Helfer (DG-08), das Aussehen der Delegations-Karte und der Zelle „Team“ im Fenster (DG-10, DG-12), Tempo je Helfer in Token pro Sekunde.
+
+Beobachtungen:
+1. Züge und Token eines Helfers stehen in der Anzeige auf 0, bis seine Antwort endet; nur die Dauer läuft mit.
+2. Die Datei des Helfers liegt im Worktree (`docs/abnahme_delegation.md`), weil das Projekt „sedra-entwicklung“ auf den Ordner zeigt, aus dem SEDRA gestartet wurde. Sie ist nicht eingecheckt.
+3. Am selben Abend, vorher und in der Hauptumgebung: Absturz des Modellservers mit „CUDA error: an illegal memory access“ (21:16, `nvlddmkm` Ereignisse 13 und 153). Ursache offen; es lief das Team-Rezept mit einer Sitzung, ohne Delegation.
 
 ## 6. Nicht geprüft
 
