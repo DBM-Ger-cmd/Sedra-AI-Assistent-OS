@@ -80,7 +80,7 @@
     const weg = d().el('button', 'hs-sz-knopf', '×'); weg.type = 'button';
     weg.title = T('sl_loeschen_titel'); weg.setAttribute('aria-label', T('sl_sitzung_loeschen'));
     const exp = d().el('button', 'hs-sz-knopf', '↓'); exp.type = 'button';                  // V6 (1.11.): als Markdown speichern
-    exp.title = T('sl_als_markdown_speichern'); exp.setAttribute('aria-label', T('sl_sitzung_loeschen') + ' als Markdown');
+    exp.title = T('sl_als_markdown_speichern'); exp.setAttribute('aria-label', T('sl_als_markdown_speichern'));
     exp.onclick = e=>{ e.stopPropagation(); exportieren(S, s.id); };
     const haupt = d().clickable(d().el('div', 'hs-sz-haupt'), ()=>root.sedraHarness.reiter.oeffnen(S, s.id));
     haupt.append(iconEl, titel, zeitEl);

@@ -102,7 +102,7 @@ class TeamLaufTest(unittest.TestCase):
 
     def test_drei_helfer_arbeiten_gleichzeitig_und_liefern_ihren_text(self):          # DG-01, DG-02, DG-07
         self.api.slots = 4                                # Platz 0 behält die Hauptsitzung: drei Helfer zugleich brauchen vier Plätze
-        self.api.verhalten = {'A': antwortet('Text A'), 'B': antwortet('Text B'), 'C': antwortet('Text C')}
+        self.api.verhalten = {r: antwortet('Text ' + r, 1.0) for r in 'ABC'}          # lang genug, dass der Vergleich auch unter Last trägt
         text = self.lauf.verteilen(self.haupt, None, self.auftraege('A', 'B', 'C'))
         for r in 'ABC':
             self.assertIn('Text ' + r, text)
