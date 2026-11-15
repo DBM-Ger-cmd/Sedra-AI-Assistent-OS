@@ -1020,14 +1020,18 @@ class HarnessApi:
         return kopf
 
     def slots_gesamt(self):
-        """Die Plätze des geladenen Modells auf dem llama-server (Rezept `profile.server.slots`); unbekannt = 1."""
+        """Die Plätze des geladenen Modells: zuerst, was der laufende llama-server selbst meldet (`slots`). Mehrere Rezepte teilen sich ein
+        Modell (Team, Power …), darum ist das Rezept nur der Rückfall und nur, wenn genau eines zum geladenen Modell passt. Unbekannt = 1."""
         try:
             loaded, _grund = self.geladen()
+            gemeldet = next((x.get('slots') for x in (loaded or []) if isinstance(x.get('slots'), int) and not isinstance(x.get('slots'), bool)), None)
+            if gemeldet:
+                return max(int(gemeldet), 1)
             ids = {v for x in (loaded or []) for v in (x.get('identifier'), x.get('modelKey')) if v}
             router = getattr(self.hub.runtime, 'role_router', None)
-            for r in (router.config.recipes if router is not None else []):
-                if r.get('model') in ids and r.get('provider') == 'llama-cpp-server':
-                    return int(((r.get('profile') or {}).get('server') or {}).get('slots') or 1)
+            passend = [r for r in (router.config.recipes if router is not None else []) if r.get('model') in ids and r.get('provider') == 'llama-cpp-server']
+            if len(passend) == 1:
+                return int(((passend[0].get('profile') or {}).get('server') or {}).get('slots') or 1)
         except Exception:
             pass
         return 1

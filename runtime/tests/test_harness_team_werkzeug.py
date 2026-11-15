@@ -125,5 +125,32 @@ class HelferKiste(unittest.TestCase):
         self.assertEqual(n, {'datei_lesen', 'team_verteilen'})
 
 
+class Plaetze(unittest.TestCase):
+    """`HarnessApi.slots_gesamt`: der laufende Server zählt, nicht ein Rezept mit demselben Modell (Befund vor der Abnahme, 15.11.2026)."""
+
+    class Server:
+        def __init__(self, loaded, rezepte):
+            from types import SimpleNamespace as N
+            self.loaded = loaded
+            self.hub = N(runtime=N(role_router=N(config=N(recipes=rezepte))))
+
+        def geladen(self):
+            return self.loaded, None
+
+    R = lambda rid, slots: {'id': rid, 'model': 'qwen', 'provider': 'llama-cpp-server', 'profile': {'server': {'slots': slots}}}       # noqa: E731
+
+    def zahl(self, loaded, rezepte):
+        return harness_api.HarnessApi.slots_gesamt(self.Server(loaded, rezepte))
+
+    def test_server_meldet_seine_plaetze(self):
+        self.assertEqual(self.zahl([{'modelKey': 'qwen', 'slots': 3}], [self.R('power', 1), self.R('team', 3)]), 3)
+        self.assertEqual(self.zahl([{'modelKey': 'qwen', 'slots': 1}], [self.R('team', 3)]), 1)
+
+    def test_ohne_meldung_nur_ein_eindeutiges_rezept(self):
+        self.assertEqual(self.zahl([{'modelKey': 'qwen'}], [self.R('team', 3)]), 3)
+        self.assertEqual(self.zahl([{'modelKey': 'qwen'}], [self.R('power', 1), self.R('team', 3)]), 1, 'mehrdeutig: lieber nacheinander als ein falscher Platz')
+        self.assertEqual(self.zahl([], []), 1)
+
+
 if __name__ == '__main__':
     unittest.main()
