@@ -25,7 +25,7 @@ class Avatar(unittest.TestCase):
     def test_shell_laedt_texte_vor_der_sprache_und_das_skript_vor_der_shell(self):
         text = (SHELL / 'shell.yaml').read_text(encoding='utf-8')
         self.assertLess(text.index('strings_avatar.js'), text.index('i18n.js'))
-        self.assertIn('avatar.js, shell.js]', text)
+        self.assertLess(text.index(' avatar.js,'), text.index(' shell.js]'))          # vor shell.js, das zuletzt lädt; dazwischen dürfen weitere Skripte stehen
         self.assertIn('avatar.css', text)
         self.assertIn('H.avatar.mount(this)', (SHELL / 'shell.js').read_text(encoding='utf-8'))
 
