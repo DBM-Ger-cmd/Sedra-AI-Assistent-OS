@@ -137,7 +137,7 @@ class Plaetze(unittest.TestCase):
         def geladen(self):
             return self.loaded, None
 
-    R = lambda rid, slots: {'id': rid, 'model': 'qwen', 'provider': 'llama-cpp-server', 'profile': {'server': {'slots': slots}}}       # noqa: E731
+    R = staticmethod(lambda rid, slots: {'id': rid, 'model': 'qwen', 'provider': 'llama-cpp-server', 'profile': {'server': {'slots': slots}}})
 
     def zahl(self, loaded, rezepte):
         return harness_api.HarnessApi.slots_gesamt(self.Server(loaded, rezepte))
