@@ -39,7 +39,8 @@ TEAM_AGENT = 'A-UA'                                                 # der Untera
 ALLOWED_FAILURES = ('/api/processes',)
 # Werkzeuge, deren Objekt im Prüfprojekt wirklich Verben hat: dort muss die Werkbank-Zeile welche zeigen (Cockpit-Regel 3).
 # Ein Nachweis, eine Liste oder ein Objekt ohne mögliche Handlung (die Werkstatt ohne geladenes Modell) ist richtig so.
-VERB_TOOLS = ('candidate',)      # PowerShell is missing on a non-Windows host; the window says so and goes on
+WARTE_BIS_GEFUELLT_MS = 8000      # so lange sieht die Prüfung nach, ob ein Werkzeug-Container sich noch füllt (nach der festen Wartezeit), bevor sie „Container leer“ meldet
+VERB_TOOLS = ('candidate',)     # PowerShell is missing on a non-Windows host; the window says so and goes on
 
 # which object each tool is opened with (the dock asks the registry, this is the object the Captain would pick)
 OBJECTS = {
@@ -576,6 +577,11 @@ def run_checks(url, say=print, shots=None, browser='auto', headed=False, only=No
                 page.evaluate(profile['segment'], tid)
                 page.wait_for_timeout(1200)
             m = page.evaluate(profile['pane'], tid)
+            gewartet = 0                      # Ein Werkzeug holt seine Daten vom Server: unter Last (viele Agenten, parallele Testläufe) kommen sie nach der festen Wartezeit.
+            while not m.get('missing') and not (m['filled'] and m['text'] >= 10) and gewartet < WARTE_BIS_GEFUELLT_MS:       # Nachsehen statt sofort zu urteilen; ein wirklich leeres Werkzeug fällt nach der Frist durch
+                page.wait_for_timeout(500)
+                gewartet += 500
+                m = page.evaluate(profile['pane'], tid)
             if shots: page.screenshot(path=str(Path(shots) / f'{i:02d}_{tid}.png'))
             # Jeder Aufruf nennt seinen Absender: ohne Kopf kann der Server die Allowlist nicht anwenden (§6).
             # Dass in diesem Fenster auch andere Werkzeuge rufen, ist richtig so – in einem Reiter stehen Werkstück und Nachweise nebeneinander.
