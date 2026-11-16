@@ -69,6 +69,7 @@ from . import befehl as befehl_mod
 from . import code_stand as harness_code_stand
 from . import freigabe
 from . import gedaechtnis as harness_gedaechtnis
+from . import master as harness_master
 from . import uebersetzen as harness_uebersetzen
 from . import herkunft as harness_herkunft
 from . import bausteine as harness_bausteine
@@ -100,12 +101,12 @@ PROVIDER = 'llama-cpp-server'
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand',
          'gateway_status', 'gateway_vorgang', 'gateway_regel')        # SPEC_WISSEN_KERN_v1 WK-12: die GateWay-Auskunft auch in One Sedra (nur lesen)
-WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
+WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export|master))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
                  r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|oberflaeche|hilfswerkzeuge|bausteine|info|desktop|vorschlaege|erlaubnisse)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen|vorlegen|zuruecksetzen|zuruecknehmen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)|info/wissen|desktop|oberflaeche/(?:vorlegen|zuruecksetzen|zuruecknehmen)'
-                        r'|verknuepfungen|gedaechtnis|token|aufraeumen|sitzungen/S-[0-9A-F]{8}(?:/nachricht)?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
+                        r'|verknuepfungen|gedaechtnis|token|aufraeumen|sitzungen/S-[0-9A-F]{8}(?:/(?:nachricht|master))?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
 # Gedanken und Modelle (Captain 02.11.2026): Sedra speichert die Gedanken je Antwort; ans Modell geht je nach Modus nur wenig zurück.
 #   aus  – nichts, nur Text und Ergebnisse        spur – (Standard) eine Zeile je frühere Antwort: was lief, wie viel Gedanken gespeichert sind; abrufbar mit `erinnern`
 #   kurz – Spur + das Ende der Gedanken der letzten 2 Antworten (je 800 Zeichen)        voll – Spur + die letzten 4 (je 6 000 Zeichen)
@@ -197,6 +198,7 @@ class HarnessApi:
         self.laeufe = harness_lauf.Laeufe(hub.project_root / 'runtime_data' / 'harness' / 'laeufe', typen=self.lauf_typen, audit=self._audit_roh, melden=self._melden)
         self.vorarbeiter = harness_vorarbeiter.Vorarbeiter(hub.project_root / 'runtime_data' / 'harness' / 'vorarbeiter.json')
         self.aufgaben = harness_aufgabe.Aufgaben(hub.project_root / 'runtime_data' / 'harness' / 'aufgaben', audit=self._audit_roh, melden=self._melden)
+        self.master = harness_master.Zustand(audit=self._audit_roh, melden=self._melden)      # Master-Modus je Sitzung: nur im Speicher, endet mit dem Neustart (MM-03)
         self._code_staende = {}                # G4: je Projekt ein gesehener Code-Stand (harness/code_stand.py), der Zwischenspeicher bleibt erhalten
         self._aktiv = {}                       # P0 M2: Antwort-ID → Modell, solange die Antwort läuft
         self._zuletzt = (0.0, None)            # (monotonic, Modell) der zuletzt beendeten Antwort
@@ -388,6 +390,10 @@ class HarnessApi:
                 return 200, self.loeschen(sid)
         if nachricht == 'nachricht' and method == 'POST':
             return 200, self.nachricht(sid, payload)
+        if nachricht == 'master' and method == 'GET':
+            return 200, self.master_stand(sid)
+        if nachricht == 'master' and method == 'POST':
+            return 200, self.master_schalten(sid, payload)
         if nachricht == 'export' and method == 'GET':
             s = self._sitzung(sid)
             projekt = next((p['name'] for p in self.projekte()['projekte'] if p['id'] == s['kopf'].get('projekt')), None)
@@ -549,6 +555,7 @@ class HarnessApi:
         if self.stroeme.laufend_in(sid):
             raise ValueError('antwort_laeuft')
         ziel = self.sitzungen.loeschen(sid)
+        self.master.aus(sid, 'sitzung_weg')                              # MM-03: der Master-Modus endet mit der Sitzung
         if s['kopf'].get('mission_id'):
             self._mission_stand(s['kopf']['mission_id'], 'archived', 'archivieren')
         self._audit('HARNESS_SITZUNG_VERSCHOBEN', {'sitzung_id': sid, 'nach': 'geloescht/' + ziel.name})
@@ -1444,7 +1451,7 @@ class HarnessApi:
         w = self._werkzeuge(projekt['id'], s['kopf'].get('mission_id'), regeln)
         return self._begrenzen(s, freigabe.Kiste(w, regeln=regeln, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, karten=self.karten,
                               sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'], aufgaben=self.aufgaben,
-                              vorarbeiter=self.vorarbeiter, extra=self._vorarbeiter_werkzeuge(s), erlaubnisse=s.get('erlaubnisse'),
+                              vorarbeiter=self.vorarbeiter, extra=self._vorarbeiter_werkzeuge(s), erlaubnisse=s.get('erlaubnisse'), master=self.master,
                               projekte=lambda: self.projekte_fuer_modell(projekt['id']))), projekt
 
     def projekte_fuer_modell(self, aktuell):
@@ -1546,6 +1553,43 @@ class HarnessApi:
         return self._tuer('harness:aufgabe_anlegen', 'aufgabe:neu', 'einmal', {'nutzlast': payload}, anlegen,
                           titel=f"Aufgabe anlegen: {str(payload.get('titel') or '')[:100]}",
                           beschreibung=f"Zweck: {str(payload.get('zweck') or '')[:160]} · erlaubt: {erlaubt[:300]}")
+
+    # ---- Master-Modus (docs/SPEC_MASTER_MODUS_v1_ENTWURF.md MM-02, MM-04, MM-11)
+    def master_stand(self, sid):
+        """GET sitzungen/<id>/master: {aktiv, seit, bis, aufrufe, gesperrt, projekt, muster, moeglich, sperrliste}. `moeglich`: das Projekt der Sitzung hat das Feld `master`."""
+        s = self._sitzung(sid)
+        projekt = next((p for p in self.projekte()['projekte'] if p['id'] == s['kopf'].get('projekt')), None)
+        muster = list((projekt or {}).get('master') or [])
+        stand = self.master.stand(sid)
+        return dict(stand, sitzung_id=sid, moeglich=bool(muster), muster=stand.get('muster') or muster, projekt=stand.get('projekt') or (projekt or {}).get('id'),
+                    sperrliste=harness_master.sperrliste_klartext())
+
+    def master_schalten(self, sid, payload):
+        """POST sitzungen/<id>/master {an: true|false}. Ein: Klasse H, hinter der Tür (Ja außerhalb des Browsers) und mit Herkunftsprüfung (GESCHUETZT);
+        nur der Captain, nie ein Werkzeug des Modells. Aus: Klasse N, sofort; Befehle und Läufe unter dem Master enden."""
+        s = self._sitzung(sid)
+        an = (payload or {}).get('an')
+        if an is False:
+            alt = self.master.aus(sid, 'captain')
+            gestoppt = []
+            for l in self.laeufe.laufende():
+                if l.get('aufgabe_id') == harness_master.schluessel(sid):
+                    gestoppt.append(self.laeufe.stoppen(l['id'], grund='Master-Modus ausgeschaltet', status_wunsch='abgebrochen')['id'])
+            return dict(self.master_stand(sid), war_an=alt is not None, gestoppte_laeufe=gestoppt)
+        if an is not True:
+            raise ValueError('an_fehlt: {an: true} oder {an: false}')
+        projekt = self._projekt(str(s['kopf'].get('projekt') or ''))
+        muster = list(projekt.get('master') or [])
+        if not muster:
+            raise ValueError('master_nicht_moeglich: das Projekt hat kein Feld „master“ in local_config/harness_projekte.yaml')
+
+        def einschalten():
+            self.master.an(sid, projekt['id'], muster)
+            return self.master_stand(sid)
+        return self._tuer('harness:master_schalten', f'master:{sid}', 'einmal', {'sitzung_id': sid, 'projekt': projekt['id'], 'muster': muster}, einschalten,
+                          titel=f"Master-Modus einschalten: {projekt['name']}"[:200],
+                          beschreibung=(f"Dateien, Läufe, Modelle und Befehle in {', '.join(muster)} ohne Karte, nur für diese Sitzung, höchstens 24 Stunden. "
+                                        'Sperrliste: ' + harness_master.sperrliste_klartext())[:600])
 
     # ---- Stufe 3: Läufe (N7)
     def lauf_typen(self):

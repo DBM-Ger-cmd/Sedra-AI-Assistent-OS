@@ -51,6 +51,11 @@ class MasterFehler(ValueError):
     """Ungültiges Feld `master` oder ungültige Eingabe; der Text nennt den Grund."""
 
 
+def schluessel(sitzung_id):
+    """Der Schlüssel, unter dem Befehle und Läufe unter dem Master laufen (`kontext['aufgabe_id']`) und mit dem Aus sie beendet."""
+    return f'master:{sitzung_id}'
+
+
 def jetzt():
     return datetime.now().astimezone()
 
@@ -211,6 +216,13 @@ def sperre_befehl(zeile, ordner_rel, wurzel, muster):
     return None
 
 
+def sperrliste_klartext():
+    """Die Sperrliste in einem Satz für die Oberfläche und die Tür (MM-11): was der Master-Modus nicht deckt."""
+    return ('Netz (curl, wget, git fetch/pull …), Installieren (pip, npm, winget …), Git-Verlauf und Zweige (push, merge, rebase, Wechsel auf main …), '
+            'Löschen (bleibt Karte), Shells und Systemwerkzeuge (powershell, cmd, python -c …), jeder Pfad außerhalb der Wurzel; dazu bleiben alle festen Vorbehalte, '
+            'Code der Oberfläche und ungesehener Code bei der Karte')
+
+
 # ---------------------------------------------------------------- MM-05, MM-06: Deckung (rein)
 def pruefen_deckung(muster, wurzel, werkzeug, ziel, args, *, schreibbereich=None):
     """Der Grund der Nicht-Deckung – oder None, wenn der Master diesen Aufruf deckt. Reine Funktion; sie kennt keine Sitzung und keine Vorbehalte
@@ -254,6 +266,7 @@ class Zustand:
         if not muster:
             raise MasterFehler('master_nicht_moeglich: das Projekt hat kein Feld „master“ in local_config/harness_projekte.yaml')
         jetzt_z = jetzt_z or jetzt()
+        befehl_mod.RUECKNAHME.vergessen(schluessel(sitzung_id))          # ein früheres Aus soll nicht den nächsten Befehl abbrechen
         with self._sperre:
             e = {'projekt': projekt, 'muster': muster, 'seit': _iso(jetzt_z), 'bis': _iso(jetzt_z + HOECHSTDAUER), 'aufrufe': 0, 'gesperrt': 0}
             self._an[str(sitzung_id)] = e
@@ -266,6 +279,7 @@ class Zustand:
         with self._sperre:
             e = self._an.pop(str(sitzung_id), None)
         if e is not None:
+            befehl_mod.RUECKNAHME.ausloesen(schluessel(sitzung_id))        # MM-04: ein laufender `befehl` unter dem Master endet jetzt
             self._sagen('HARNESS_MASTER_AUS', {'sitzung_id': sitzung_id, 'grund': grund, 'aufrufe': e['aufrufe'], 'gesperrt': e['gesperrt']})
             self._melden(sitzung_id, False)
         return e
@@ -277,6 +291,7 @@ class Zustand:
         try:
             if jetzt_z >= datetime.fromisoformat(e['bis']):
                 self._an.pop(str(sitzung_id), None)
+                befehl_mod.RUECKNAHME.ausloesen(schluessel(sitzung_id))
                 self._sagen('HARNESS_MASTER_AUS', {'sitzung_id': sitzung_id, 'grund': 'ablauf', 'aufrufe': e['aufrufe'], 'gesperrt': e['gesperrt']})
                 self._melden(sitzung_id, False)
                 return None

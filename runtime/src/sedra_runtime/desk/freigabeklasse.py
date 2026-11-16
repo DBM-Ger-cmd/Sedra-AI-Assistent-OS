@@ -45,6 +45,7 @@ ARTEN = {
     'startbericht': N,                           # G6 (noch nicht gebaut): nur zur Kenntnis
     # Harness-Wege, die ohne Karte erteilen (F4, F5, F11)
     'harness:aufgabe_anlegen': H, 'harness:vorarbeiter_ernennen': H, 'harness:sitzung_erlaubnisse': H,
+    'harness:master_schalten': H,                  # Master-Modus einschalten: Rechte für später (nur die laufende Sitzung); Aus ist N (IMMER_N via `zuruecknehmen` gibt es dafür nicht: Aus ist keine Entscheidung)
     # Routen, die vor G9 ohne Gate etwas der Klasse H taten (Befund N6, E12)
     'route:cloud_save': H, 'route:cloud_key': H, 'route:cloud_module_model': H, 'route:candidate_test': H,
 }
@@ -302,6 +303,7 @@ ROUTEN_HARNESS = {
     'PATCH sitzungen': ('handlung', N, 'Titel, Modell; Sitzungs-Erlaubnis zurücknehmen'),
     'DELETE sitzungen': ('zurueck', None, 'nach geloescht/ verschieben'),
     'POST sitzungen/nachricht': ('handlung', N, 'Nachricht an das Modell'),
+    'POST sitzungen/master': ('freigabe', H, 'Master-Modus: Ein = Klasse H hinter der Tür (harness:master_schalten), Aus = Klasse N, sofort (MM-02, MM-04)'),
     'POST antworten/stopp': ('zurueck', None, ''),
     'POST aufgaben': ('freigabe', H, 'Aufgabe = Freigabe im Voraus (F4)'),
     'POST aufgaben/zuruecknehmen': ('zurueck', None, ''),
@@ -313,7 +315,7 @@ HARNESS_WEGE = frozenset({'projekte', 'sitzungen', 'antworten', 'karten', 'katal
                           'vorschau', 'dateien', 'vorgaben', 'modelle', 'router', 'verknuepfungen', 'gedaechtnis', 'token', 'aufraeumen',
                           'code_stand', 'oberflaeche', 'aufgaben', 'laeufe', 'hilfswerkzeuge', 'bausteine', 'info', 'desktop', 'vorschlaege',
                           'erlaubnisse'})
-HARNESS_UNTERWEGE = frozenset({'nachricht', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen', 'wissen', 'vorlegen', 'zuruecksetzen'})
+HARNESS_UNTERWEGE = frozenset({'nachricht', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen', 'wissen', 'vorlegen', 'zuruecksetzen', 'master'})
 # In GESCHUETZT (S7), aber heute nur mit GET geroutet – keine schreibende Route (harness/api.py, Weg `token`)
 HARNESS_GESCHUETZT_OHNE_SCHREIBEN = {'token': 'nur GET token_stand'}
 
