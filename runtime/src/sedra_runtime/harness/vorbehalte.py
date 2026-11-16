@@ -5,6 +5,8 @@ immer Stufe `captain` – die Karte geht an den Captain. Diese Datei ist Harness
 ändert nur Claude mit Captain-Gate. Ein Treffer liefert den Grund, sonst None."""
 from __future__ import annotations
 
+import re
+
 from .katalog import befehl_normal, passt, pfad_normal
 
 PFADE = (
@@ -114,6 +116,89 @@ def pruefen_weich(werkzeug, ziel, args=None):
     return None
 
 
+# O-1 (Hardening 16.11.2026, M-1): ein Befehl, der Dateien schreibt, darf nicht in einen geschützten Pfad schreiben, auch wenn Katalog, Aufgabe oder Sitzungs-Erlaubnis das Muster
+# der Zeile freigeben (`xcopy*`). Nur Programme, die Dateien schreiben oder ändern; was ein Skript tut, deckt die Regel G4 (ungesehener Code). Ohne Dateisystem: die Pfade
+# werden **lexikalisch** gegen den Arbeitsordner aufgelöst (Verknüpfungen sieht erst `master.py`).
+BEFEHL_SCHREIBT = frozenset({'copy', 'xcopy', 'robocopy', 'move', 'ren', 'rename', 'mkdir', 'md', 'mklink', 'attrib', 'icacls', 'cacls', 'takeown',
+                             'cp', 'mv', 'ln', 'touch', 'tee', 'install', 'sed', 'tar', 'unzip', 'expand', '7z', 'rsync'})
+GIT_SCHREIBT = frozenset({'checkout', 'restore', 'apply', 'mv', 'rm', 'clean', 'am', 'cherry-pick', 'switch', 'revert'})
+
+
+def _pfad_kandidaten_befehl(argumente):
+    """Die Wörter, die ein Pfad sein können: Argumente ohne Schalter, dazu der Wert hinter `--option=` und `/option:` sowie der angehängte Wert eines Kurzschalters (`-oC:\\x`)."""
+    out = []
+    for a in argumente:
+        if a.startswith('--') or (a.startswith('/') and len(a) > 1 and '/' not in a[1:] and '\\' not in a):
+            if '=' in a:
+                out.append(a.split('=', 1)[1])
+            elif ':' in a and a.startswith('/'):
+                out.append(a.split(':', 1)[1])
+        elif a.startswith('-') and len(a) > 1:
+            if len(a) > 2:
+                out.append(a[2:])
+        else:
+            out.append(a)
+    return [t for t in out if t]
+
+
+def _relativ_aufloesen(ordner, kandidat):
+    """Pfad relativ zur Projektwurzel (klein geschrieben, `..` aufgelöst) – oder None, wenn er absolut ist oder die Wurzel verlässt (das prüft der Rest des Systems)."""
+    k = str(kandidat).replace('\\', '/').strip().strip('"\'')
+    if not k or k.startswith('/') or (len(k) > 1 and k[1] == ':') or k.startswith('~') or '%' in k or '$' in k:
+        return None
+    teile = [t for t in (str(ordner or '.').replace('\\', '/') + '/' + k).split('/') if t and t != '.']
+    aus = []
+    for t in teile:
+        if t == '..':
+            if not aus:
+                return None
+            aus.pop()
+        else:
+            aus.append(t)
+    return '/'.join(aus).casefold()
+
+
+def pruefen_befehl_pfade(zeile, args=None):
+    """Grund (Captain-Vorbehalt), wenn ein schreibendes Programm einen geschützten Pfad als Argument bekommt – sonst None. Wörter mit Platzhaltern (`*`, `?`) gelten über ihren
+    festen Anfang (`local_config\\*` → `local_config`)."""
+    from . import befehl as befehl_mod                                  # erst hier: befehl.py importiert diese Datei nicht, aber die Reihenfolge beim Laden bleibt so frei
+    try:
+        teile = befehl_mod.zerlegen(zeile)
+    except befehl_mod.BefehlFehler:
+        return None                                                    # unlesbare Zeilen weist befehl.py selbst ab
+    if not teile:
+        return None
+    name = teile[0].replace('\\', '/').rsplit('/', 1)[-1].casefold()
+    for endung in ('.exe', '.cmd', '.bat', '.com'):
+        name = name.removesuffix(endung)
+    argumente = teile[1:]
+    ordner = (args or {}).get('ordner') if isinstance(args, dict) else None
+    if name == 'git':
+        i = 0
+        while i < len(argumente) and argumente[i].startswith('-'):      # allgemeine Git-Schalter vor dem Unterbefehl; `-C <ordner>` ändert den Arbeitsordner
+            if argumente[i] in ('-C', '-c', '--git-dir', '--work-tree', '--namespace') and i + 1 < len(argumente):
+                if argumente[i] == '-C':
+                    ordner = str(ordner or '.').replace('\\', '/') + '/' + argumente[i + 1].replace('\\', '/')
+                i += 2
+            else:
+                i += 1
+        if i >= len(argumente) or argumente[i].casefold() not in GIT_SCHREIBT:
+            return None
+        argumente = argumente[i + 1:]
+    elif name not in BEFEHL_SCHREIBT:
+        return None
+    for kandidat in _pfad_kandidaten_befehl(argumente):
+        fest = re.split(r'[*?]', kandidat, maxsplit=1)[0]
+        rel = _relativ_aufloesen(ordner, fest if fest else '.')
+        if rel is None:
+            continue
+        for probe in ('' if rel == '' else rel, ('' if rel == '' else rel + '/') + 'x'):
+            for muster, was in PFADE:
+                if passt(muster, 'datei_schreiben', probe):
+                    return f'Captain-Vorbehalt: Befehl „{name}“ schreibt in einen geschützten Pfad ({was}); keine Aufgabe und keine Sitzungs-Erlaubnis deckt das'
+    return None
+
+
 def pruefen(werkzeug, ziel, args=None, vorhanden=False, ungesehen=None):
     """Der Grund des Vorbehalts – oder None. `ziel` ist der Pfad relativ zur Wurzel bzw. die Befehlszeile; `vorhanden` sagt, ob die Datei
     schon da ist (für „leer überschreiben“). `ungesehen` (G4, harness/code_stand.py): Code im Projekt, den der Captain in dieser Fassung
@@ -131,7 +216,7 @@ def pruefen(werkzeug, ziel, args=None, vorhanden=False, ungesehen=None):
         for b in BEFEHLE:
             if zeile == b or zeile.startswith(b + ' '):
                 return f'Captain-Vorbehalt: Befehl „{b}“ (Löschen, Netz, Installieren oder Git-Verlauf ändern)'
-        return None
+        return pruefen_befehl_pfade(ziel, args)
     if werkzeug not in SCHREIBEN:
         return None
     rel = pfad_normal(ziel)

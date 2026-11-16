@@ -125,10 +125,10 @@ LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand',
          'gateway_status', 'gateway_vorgang', 'gateway_regel')        # SPEC_WISSEN_KERN_v1 WK-12: die GateWay-Auskunft auch in One Sedra (nur lesen)
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export|master|post))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|oberflaeche|hilfswerkzeuge|bausteine|info|desktop|vorschlaege|erlaubnisse)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen|vorlegen|zuruecksetzen|zuruecknehmen|index))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|oberflaeche|hilfswerkzeuge|bausteine|info|desktop|vorschlaege|erlaubnisse)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen|vorlegen|zuruecksetzen|zuruecknehmen|index|vorschau|vorschau_ende))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
-                        r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)|info/wissen|desktop|oberflaeche/(?:vorlegen|zuruecksetzen|zuruecknehmen)'
+                        r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)|info/wissen|desktop|oberflaeche/(?:vorlegen|zuruecksetzen|zuruecknehmen|vorschau|vorschau_ende)'
                         r'|verknuepfungen|gedaechtnis(?:/index)?|token|aufraeumen|sitzungen/S-[0-9A-F]{8}(?:/(?:nachricht|master|post))?|antworten/A-[0-9A-F]{8}/stopp|team/T-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
 HELFER_OHNE = ('team_verteilen', 'auftraege_verteilen')        # was die Kiste eines Helfers nie enthält (DG-05)
 TEAM_WEG = re.compile(r'/api/harness/team(?:/(T-[0-9A-F]{8})(?:/(stopp))?)?')
@@ -348,6 +348,12 @@ class HarnessApi:
             return 200, self.oberflaeche_zuruecksetzen()
         if fest == 'oberflaeche' and method == 'POST' and unter == 'zuruecknehmen':
             return 200, self.oberflaeche_zuruecknehmen(payload)
+        if fest == 'oberflaeche' and unter == 'vorschau' and method == 'GET':
+            return 200, self.pruefserver.status()
+        if fest == 'oberflaeche' and unter == 'vorschau' and method == 'POST':
+            return 200, self.oberflaeche_vorschau(payload)
+        if fest == 'oberflaeche' and unter == 'vorschau_ende' and method == 'POST':
+            return 200, {'beendet': self.pruefserver.beenden('wunsch')}
         if fest == 'einstufen' and method == 'POST':
             return 200, self.einstufen(payload)
         if fest == 'vorschau' and method == 'GET' and not unter:
@@ -1304,11 +1310,36 @@ class HarnessApi:
             if eintraege:
                 cs.gesehen_setzen(eintraege)
 
+    @property
+    def pruefserver(self):
+        """G2-09: der Prüfserver der Vorschau (harness/pruefserver.py), einer zugleich; entsteht beim ersten Gebrauch."""
+        ps = self.__dict__.get('_pruefserver')
+        if ps is None:
+            from .pruefserver import Pruefserver
+            ps = self.__dict__['_pruefserver'] = Pruefserver(self.hub.project_root / 'runtime_data' / 'harness' / 'oberflaeche' / 'pruef', self.hub.architecture_root,
+                                                            Path(__file__).resolve().parents[2],
+                                                            audit=lambda e, p: self.hub.runtime.audit.append(e, component='harness', payload=p))
+        return ps
+
+    def oberflaeche_vorschau(self, payload):
+        """POST oberflaeche/vorschau {shell?} (G2-09): startet den Prüfserver als eigenen Prozess mit leerem Prüfprojekt und nennt die Adresse."""
+        from .pruefserver import PruefserverFehler
+        try:
+            return self.pruefserver.starten((payload or {}).get('shell') or None)
+        except PruefserverFehler as exc:
+            raise ValueError(str(exc)) from exc
+
+    def vorschau_beenden(self, grund='ende'):
+        ps = self.__dict__.get('_pruefserver')
+        return ps.beenden(grund) if ps is not None else False
+
     def oberflaeche_uebernehmen(self, bindung, kanal='posteingang'):
+        self.vorschau_beenden('sammelkarte')                      # G2-09: mit der Antwort auf die Sammelkarte endet die Vorschau
         return self.hub.oberflaeche.uebernehmen(bindung, kanal=kanal, gesehen=self._oberflaeche_gesehen)
 
     def oberflaeche_zuruecksetzen(self):
         """POST oberflaeche/zuruecksetzen (Klasse N): stellt die bestätigten Fassungen her."""
+        self.vorschau_beenden('sammelkarte')
         return self.hub.oberflaeche.zuruecksetzen(kanal='seite')
 
     def oberflaeche_zuruecknehmen(self, payload):
