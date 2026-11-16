@@ -1,0 +1,87 @@
+/* Sedra IDE: Editorgruppen, Reiter, Brotkrumen, Textflaeche, Minimap, Willkommen. */
+.gruppe { flex: 1 1 0; display: flex; flex-direction: column; min-width: 120px; min-height: 0; }
+.gruppe + .gruppe { border-left: 1px solid var(--rand); }
+.gruppe-kopf { flex: none; display: flex; height: var(--h-reiter); background: var(--bg-reiter); border-bottom: 1px solid var(--rand); }
+.reiter-leiste { flex: 1; display: flex; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.reiter {
+  flex: none; display: flex; align-items: center; gap: 6px; max-width: 240px; padding: 0 6px 0 10px;
+  border-right: 1px solid var(--rand); border-top: 1px solid transparent; color: var(--text-leise); cursor: pointer;
+}
+.reiter:hover { color: var(--text); }
+.reiter.aktiv { background: var(--bg-reiter-aktiv); color: var(--text-stark); margin-bottom: -1px; }
+.gruppe.im-fokus .reiter.aktiv { border-top-color: var(--akzent); }
+.reiter-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reiter-zu { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--rund); color: inherit; }
+.reiter-zu:hover { background: var(--bg-hover); }
+.reiter-zu .punkt { display: none; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.reiter.ungespeichert .reiter-zu .punkt { display: block; }
+.reiter.ungespeichert .reiter-zu .sym { display: none; }
+.reiter.ungespeichert .reiter-zu:hover .punkt { display: none; }
+.reiter.ungespeichert .reiter-zu:hover .sym { display: block; }
+.gruppe-aktionen { flex: none; display: flex; align-items: center; gap: 2px; padding: 0 6px; }
+
+.git { font-size: var(--gr-klein); font-weight: 600; }
+.git-U { color: var(--git-neu); }
+.git-M { color: var(--git-geaendert); }
+.git-punkt { width: 6px; height: 6px; border-radius: 50%; background: var(--git-neu); opacity: 0.8; }
+.name-U { color: var(--git-neu); }
+.name-M { color: var(--git-geaendert); }
+
+.brotkrumen {
+  flex: none; height: 22px; display: flex; align-items: center; gap: 2px; padding: 0 12px;
+  color: var(--text-leise); font-size: 12px; white-space: nowrap; overflow: hidden;
+}
+.brotkrumen .stueck:last-of-type { color: var(--text); }
+
+.ed-koerper { flex: 1; display: flex; min-height: 0; background: var(--bg); }
+.ed-roll { flex: 1; display: flex; align-items: stretch; min-width: 0; overflow: auto; font: var(--gr-mono)/var(--ed-zeile) var(--mono); }
+.ed-zeilen {
+  flex: none; position: sticky; left: 0; z-index: 2; min-width: 52px; padding: 0 14px 0 10px;
+  background: var(--bg); color: var(--zeilennummer); text-align: right; user-select: none;
+}
+.ed-zeilen div { height: var(--ed-zeile); }
+.ed-zeilen div.hier { color: var(--text-stark); }
+.ed-flaeche { position: relative; flex: 1 0 auto; min-height: 100%; }
+.ed-aktiv { position: absolute; left: 0; right: 0; height: var(--ed-zeile); background: var(--zeile-aktiv); pointer-events: none; }
+.ed-farbe, .ed-eingabe {
+  margin: 0; padding: 0 12px 0 0; border: 0; font: inherit; white-space: pre; tab-size: 2; letter-spacing: 0;
+}
+.ed-farbe { position: relative; min-height: 100%; color: var(--text); pointer-events: none; padding-bottom: 120px; }
+.ed-eingabe {
+  position: absolute; inset: 0; width: 100%; height: 100%; resize: none; overflow: hidden; outline: none;
+  background: transparent; color: transparent; caret-color: var(--text-stark);
+}
+.ed-eingabe::selection { background: var(--bg-wahl); color: transparent; }
+.ed-mini {
+  flex: none; width: 84px; margin: 0; padding: 2px 4px; overflow: hidden; border-left: 1px solid var(--rand);
+  font: 2px/3px var(--mono); white-space: pre; color: var(--text-leise); user-select: none; cursor: pointer; opacity: 0.85;
+}
+
+.syn-kommentar { color: var(--syn-kommentar); }
+.syn-text { color: var(--syn-text); }
+.syn-zahl { color: var(--syn-zahl); }
+.syn-wort { color: var(--syn-wort); }
+.syn-funktion { color: var(--syn-funktion); }
+.syn-typ { color: var(--syn-typ); }
+.syn-schluessel { color: var(--syn-schluessel); }
+.syn-titel { color: var(--syn-wort); font-weight: 600; }
+
+/* Willkommen */
+.willkommen { flex: 1; overflow: auto; padding: 48px 24px; }
+.wk-innen { max-width: 760px; margin: 0 auto; }
+.wk-innen h1 { margin: 0; font-size: 26px; font-weight: 500; color: var(--text-stark); }
+.wk-unter { margin: 2px 0 28px; font-size: 16px; color: var(--text-leise); }
+.wk-spalten { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.wk-innen h2 { margin: 0 0 8px; font-size: 16px; font-weight: 500; color: var(--text-stark); }
+.wk-liste { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 22px; }
+.wk-verweis { display: inline-flex; align-items: center; gap: 8px; color: var(--akzent-hell); text-align: left; }
+.wk-verweis:hover { text-decoration: underline; }
+.wk-verweis .neben { color: var(--text-leise); }
+.wk-karte {
+  width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; margin-bottom: 8px; text-align: left;
+  background: var(--bg-karte); border: 1px solid var(--rand); border-radius: 6px;
+}
+.wk-karte:hover { border-color: var(--rand-stark); background: var(--bg-hover); }
+.wk-karte strong { color: var(--text-stark); font-weight: 600; }
+.wk-karte span { color: var(--text-leise); }
+@media (max-width: 900px) { .wk-spalten { grid-template-columns: 1fr; } }

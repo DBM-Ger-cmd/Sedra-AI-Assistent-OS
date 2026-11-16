@@ -1,0 +1,135 @@
+/* Sedra IDE: Grundaufbau (Kopf, Leisten, Teiler, Status, Palette, Menue). */
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg); color: var(--text);
+  font: var(--gr)/1.4 var(--schrift);
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+:focus-visible { outline: 1px solid var(--fokus); outline-offset: -1px; }
+[hidden] { display: none !important; }
+svg.sym { flex: none; display: block; }
+
+.sprung {
+  position: absolute; left: 8px; top: -40px; z-index: 50; padding: 6px 10px;
+  background: var(--akzent); color: var(--akzent-text); border-radius: var(--rund);
+}
+.sprung:focus { top: 4px; }
+
+/* Kopf */
+#kopf {
+  flex: none; height: var(--h-kopf); display: flex; align-items: center; gap: 4px;
+  padding: 0 8px; background: var(--bg-kopf); border-bottom: 1px solid var(--rand);
+}
+.marke { display: flex; align-items: center; gap: 6px; padding: 0 6px 0 2px; color: var(--akzent-hell); font-weight: 600; }
+.menue-leiste { display: flex; }
+.menue-knopf { padding: 3px 8px; border-radius: var(--rund); }
+.menue-knopf:hover, .menue-knopf[aria-expanded="true"] { background: var(--bg-hover); color: var(--text-stark); }
+.kopf-mitte { flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; }
+.kopf-suche {
+  width: min(520px, 100%); height: 24px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: var(--bg-eingabe); border: 1px solid var(--rand-stark); border-radius: 6px; color: var(--text-leise);
+}
+.kopf-suche:hover { color: var(--text); border-color: var(--text-leise); }
+.kopf-rechts { display: flex; gap: 2px; }
+.sym-knopf {
+  width: 26px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--rund); color: var(--text-leise);
+}
+.sym-knopf:hover { background: var(--bg-hover); color: var(--text-stark); }
+.sym-knopf[aria-pressed="true"] { color: var(--text-stark); }
+.sym-knopf:disabled { opacity: 0.4; cursor: default; }
+
+/* Menue (Aufklappliste) */
+.menue {
+  position: fixed; z-index: 40; min-width: 240px; padding: 4px;
+  background: var(--bg-schwebend); border: 1px solid var(--rand-stark); border-radius: 6px;
+  box-shadow: 0 6px 18px var(--schatten);
+}
+.menue-punkt {
+  width: 100%; display: flex; justify-content: space-between; gap: 24px;
+  padding: 4px 10px; border-radius: var(--rund); text-align: left;
+}
+.menue-punkt:hover, .menue-punkt:focus { background: var(--akzent); color: var(--akzent-text); outline: none; }
+.menue-punkt .kuerzel { opacity: 0.75; }
+.menue-trenner { height: 1px; margin: 4px 0; background: var(--rand-stark); }
+
+/* Hauptbereich */
+#haupt { flex: 1; display: flex; min-height: 0; }
+#aktivleiste {
+  flex: none; width: var(--b-aktiv); display: flex; flex-direction: column; justify-content: space-between;
+  background: var(--bg-leiste); border-right: 1px solid var(--rand);
+}
+.aktiv-gruppe { display: flex; flex-direction: column; }
+.aktiv-knopf {
+  position: relative; width: var(--b-aktiv); height: 42px; display: flex; align-items: center; justify-content: center;
+  color: var(--text-leise);
+}
+.aktiv-knopf:hover { color: var(--text-stark); }
+.aktiv-knopf.aktiv { color: var(--text-stark); }
+.aktiv-knopf.aktiv::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; background: var(--akzent); }
+.marke-zahl {
+  position: absolute; right: 6px; bottom: 6px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 8px; background: var(--akzent); color: var(--akzent-text);
+  font-size: 10px; line-height: 16px; text-align: center;
+}
+#seite-links, #seite-rechts {
+  flex: none; display: flex; flex-direction: column; min-width: 0; overflow: hidden; background: var(--bg-seite);
+}
+#seite-links { border-right: 1px solid var(--rand); }
+#seite-rechts { border-left: 1px solid var(--rand); }
+#mitte { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#editorbereich { flex: 1; display: flex; min-height: 0; }
+#panel { flex: none; display: flex; flex-direction: column; min-height: 0; border-top: 1px solid var(--rand); background: var(--bg); }
+
+.teiler { flex: none; position: relative; z-index: 5; background: transparent; }
+.teiler-v { width: 4px; margin: 0 -2px; cursor: col-resize; }
+.teiler-h { height: 4px; margin: -2px 0; cursor: row-resize; }
+.teiler:hover, .teiler.zieht, .teiler:focus-visible { background: var(--akzent); outline: none; }
+body.zieht { user-select: none; }
+
+/* Status */
+#status {
+  flex: none; height: var(--h-status); display: flex; justify-content: space-between; align-items: stretch;
+  padding: 0 6px; background: var(--bg-kopf); border-top: 1px solid var(--rand);
+  font-size: 12px; color: var(--text-leise);
+}
+.status-teil { display: flex; align-items: stretch; }
+.status-zelle { display: flex; align-items: center; gap: 4px; padding: 0 7px; white-space: nowrap; }
+button.status-zelle:hover { background: var(--bg-hover); color: var(--text-stark); }
+.status-zelle.hinweis { color: var(--warnung); }
+
+/* Befehlspalette */
+#palette { position: fixed; inset: 0; z-index: 30; display: flex; justify-content: center; align-items: flex-start; background: var(--schleier); }
+.palette-kasten {
+  width: min(600px, 92vw); margin-top: 6px; padding: 6px;
+  background: var(--bg-schwebend); border: 1px solid var(--rand-stark); border-radius: 8px;
+  box-shadow: 0 8px 28px var(--schatten);
+}
+.palette-feld {
+  width: 100%; height: 28px; padding: 0 8px; background: var(--bg-eingabe);
+  border: 1px solid var(--akzent); border-radius: var(--rund); outline: none;
+}
+.palette-liste { max-height: 320px; margin-top: 6px; overflow-y: auto; }
+.palette-zeile { display: flex; justify-content: space-between; gap: 16px; padding: 4px 8px; border-radius: var(--rund); cursor: pointer; }
+.palette-zeile.gewaehlt { background: var(--bg-wahl); color: var(--text-stark); }
+.palette-zeile .neben { color: var(--text-leise); white-space: nowrap; }
+.palette-leer { padding: 8px; color: var(--text-leise); }
+.treffer { color: var(--akzent-hell); font-weight: 600; }
+
+/* Meldung */
+#meldung {
+  position: fixed; right: 16px; bottom: 34px; z-index: 35; max-width: 420px; padding: 8px 12px;
+  background: var(--bg-schwebend); border: 1px solid var(--rand-stark); border-left: 3px solid var(--akzent);
+  border-radius: var(--rund); box-shadow: 0 6px 18px var(--schatten);
+}
+#meldung:empty { display: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .teiler, .sym-knopf, .aktiv-knopf, .menue-knopf { transition: background-color 0.12s, color 0.12s; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}

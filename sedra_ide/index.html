@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="de" data-theme="dunkel">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sedra IDE</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/editor.css">
+  <link rel="stylesheet" href="css/teile.css">
+</head>
+<body>
+  <a class="sprung" id="sprung" href="#editorbereich">Zum Editor springen</a>
+  <header id="kopf"></header>
+  <div id="haupt">
+    <nav id="aktivleiste"></nav>
+    <aside id="seite-links"></aside>
+    <div class="teiler teiler-v" id="teiler-links" role="separator" aria-orientation="vertical" tabindex="0"></div>
+    <main id="mitte">
+      <div id="editorbereich" tabindex="-1"></div>
+      <div class="teiler teiler-h" id="teiler-panel" role="separator" aria-orientation="horizontal" tabindex="0"></div>
+      <section id="panel"></section>
+    </main>
+    <div class="teiler teiler-v" id="teiler-rechts" role="separator" aria-orientation="vertical" tabindex="0"></div>
+    <aside id="seite-rechts"></aside>
+  </div>
+  <footer id="status"></footer>
+  <div id="palette" hidden></div>
+  <div id="meldung" role="status" aria-live="polite"></div>
+
+  <!-- Klassische Skripte in fester Reihenfolge: laeuft auch bei file: (Module sind dort gesperrt). -->
+  <script src="js/dom.js"></script>
+  <script src="js/zustand.js"></script>
+  <script src="js/texte_de.js"></script>
+  <script src="js/texte_en.js"></script>
+  <script src="js/daten.js"></script>
+  <script src="js/daten_agenten.js"></script>
+  <script src="js/syntax.js"></script>
+  <script src="js/willkommen.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/seitenleiste.js"></script>
+  <script src="js/explorer.js"></script>
+  <script src="js/ansichten.js"></script>
+  <script src="js/agenten.js"></script>
+  <script src="js/rechts.js"></script>
+  <script src="js/panel.js"></script>
+  <script src="js/befehle.js"></script>
+  <script src="js/palette.js"></script>
+  <script src="js/kopf.js"></script>
+  <script src="js/start.js"></script>
+</body>
+</html>
