@@ -378,3 +378,15 @@
   color: var(--warn, #f2c879);
   font-size: var(--size-small);
 }
+
+/* Einstellungen-Kachel in „Auf einen Blick“: der Knopf im Kopf bleibt transparent (sonst weißer Standardknopf) */
+.hs-start-blick-einst { cursor: default; grid-column: 1 / -1; }
+.hs-start-blick-einst:hover { background: var(--bg); border-color: var(--line); }
+.hs-start-blick-einst .hs-start-blick-kopf {
+  border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 0; text-align: left;
+}
+.hs-start-blick-einst .hs-start-blick-kopf:hover b { color: var(--accent); }
+/* Lage-Überschrift über den Kacheln (Designvorlage: „Was liegt an?“) */
+.hs-start-lage { margin: 0 0 6px; font-size: var(--size-small); color: var(--muted, var(--text)); }
+.hs-start-hinweis { margin-top: 6px; font-size: var(--size-xs, 11px); color: var(--muted, var(--text)); opacity: .8; text-align: center; }
+.hs-start-blick > .hs-start-lage { flex: 0 0 100%; width: 100%; }

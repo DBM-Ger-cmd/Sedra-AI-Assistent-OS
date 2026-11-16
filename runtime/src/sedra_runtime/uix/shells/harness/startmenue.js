@@ -183,9 +183,9 @@
         });
         box.append(raster); inhalt.append(box);
       }
+      inhalt.append(blick(S));                                                  // Lage kommt vor „Zuletzt benutzt“ (Designvorlage: erst was anliegt)
       const zuletzt = abschnitt(T('start_zuletzt_benutzt'), st.liste.zuletzt, 'zuletzt');
       if(zuletzt) zuletzt.dataset.baustein = 'zuletzt';                        // Baukasten (bausteine.js): Kennung je Abschnitt
-      inhalt.append(blick(S));
       // die Gruppen in der Reihenfolge der Datei; System und Sedra Token gibt es auch ohne Ort, sie tragen feste Einträge
       const jeId = {};
       st.liste.gruppen.forEach(g=>{ jeId[g.id] = g; });
@@ -195,6 +195,7 @@
       gruppen.forEach(g=>{ const k = kachel(g, g.apps.concat(FEST[g.id] || [])); if(k) kacheln.append(k); });
       inhalt.append(kacheln);
       if(!st.liste.apps.length) inhalt.append(d().el('div', 'hs-app-satz', T('start_kein_werkzeug')));
+      inhalt.append(d().el('div', 'hs-start-hinweis', T('start_hinweis')));   // Komfort: die Tasten auf einen Blick
     }
     if(st.wahl >= st.sichtbar.length) st.wahl = Math.max(0, st.sichtbar.length - 1);
     inhalt.querySelectorAll('.hs-start-app').forEach(k=>k.classList.toggle('wahl', Number(k.dataset.nr) === st.wahl));
@@ -219,6 +220,7 @@
     const st = stand(S);
     const box = d().el('section', 'hs-start-blick'); box.setAttribute('aria-label', 'Auf einen Blick'); box.dataset.baustein = 'blick';
     st.blickEl = box;
+    box.append(d().el('div', 'hs-start-lage', T('start_lage')));
     BLICK.forEach(k=>{
       if(k.einst){
         const E = root.sedraHarness.einstellungen;

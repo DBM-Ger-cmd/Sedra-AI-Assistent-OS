@@ -15,6 +15,9 @@
     start_keine_oberflaeche:'no other surface in the package',
     start_darstellung:'Display and font …',
     start_darstellung_titel:'Clear or Night, Normal or Large – under Settings → General',
+    start_lage:'Situation – what runs, what waits',
+    start_hinweis:'Arrows select · Enter opens · Esc closes · Ctrl+K searches',
+
     start_einstieg:'Start',
     start_einstieg_freigaben:'View only – decision goes through the guard',
     start_mehr_weitere:'+{n} more',

@@ -15,6 +15,9 @@
     start_keine_oberflaeche:'keine andere Oberfläche im Paket',
     start_darstellung:'Darstellung und Schrift …',
     start_darstellung_titel:'Klar oder Nacht, Normal oder Groß – unter Einstellungen → Allgemein',
+    start_lage:'Lage – was läuft, was wartet',
+    start_hinweis:'Pfeile wählen · Enter öffnet · Esc schließt · Strg+K sucht',
+
     start_einstieg:'Einstieg',
     start_einstieg_freigaben:'Nur Anzeige – Entscheidung über den Guard',
     start_mehr_weitere:'+{n} weitere',
