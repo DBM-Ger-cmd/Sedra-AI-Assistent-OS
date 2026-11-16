@@ -31,7 +31,7 @@ def _lade(pfade):
 class WorkflowStudioApp(unittest.TestCase):
     @unittest.skipUnless(NODE, "node fehlt")
     def test_modi_und_wahl(self):
-        res = node(_lade(["shells/harness/workflow_studio.js"]) +
+        res = node(_lade(["shells/harness/workflow_studio_geteilt.js", "shells/harness/workflow_studio_assist.js", "shells/harness/workflow_studio_live.js", "shells/harness/workflow_studio.js"]) +
                    "const W = globalThis.sedraHarness.workflow_studio;"
                    "process.stdout.write(JSON.stringify({modi: W.MODI.map(m=>[m.id, m.zellen.map(z=>z.type)]), wahl: [W.modusWahl('factory'), W.modusWahl('x'), W.modusWahl(null)], gruppen: W.GRUPPEN}));")
         modi = dict(res["modi"])
@@ -44,7 +44,7 @@ class WorkflowStudioApp(unittest.TestCase):
                          "die Gruppen der Vorlage, ohne leere Gruppe")
 
     def test_notaus_und_design_sind_echt_verdrahtet(self):
-        js = (UIX / "shells" / "harness" / "workflow_studio.js").read_text(encoding="utf-8")
+        js = "".join((UIX / "shells" / "harness" / n).read_text(encoding="utf-8") for n in ("workflow_studio_geteilt.js", "workflow_studio_assist.js", "workflow_studio_live.js", "workflow_studio.js"))
         # derselbe Notaus wie im Editor: dieselben Verben, kein eigener Weg
         for verb in ("fabrik_stopp", "fabrik_status", "fabrik_freigeben"):
             self.assertIn(verb, js)
@@ -59,7 +59,7 @@ class WorkflowStudioApp(unittest.TestCase):
     @unittest.skipUnless(NODE, "node fehlt")
     def test_startassistent_erkennt_und_schliesst_offene_angaben(self):
         """Der Kern des Startassistenten: offene Angaben je Schritt werden gefunden, und nach dem Ausfüllen (so wie er es speichert) bleibt keine offen."""
-        res = node(_lade(["ui/workflow-model.js", "ui/workflow-process.js", "shells/harness/workflow_studio.js"]) +
+        res = node(_lade(["ui/workflow-model.js", "ui/workflow-process.js"] + ["shells/harness/workflow_studio_geteilt.js", "shells/harness/workflow_studio_assist.js", "shells/harness/workflow_studio_live.js", "shells/harness/workflow_studio.js"]) +
                    "const W = globalThis.sedraHarness.workflow_studio; const P = globalThis.sedraWorkflowProcess; const M = globalThis.sedraWorkflowModel;"
                    "const doc = M.example(); const vorher = W.luecken(doc);"
                    "const doc2 = JSON.parse(JSON.stringify(doc));"
@@ -94,6 +94,8 @@ class WorkflowStudioApp(unittest.TestCase):
     def test_verdrahtung_in_der_harness_shell(self):
         shell = (UIX / "shells" / "harness" / "shell.yaml").read_text(encoding="utf-8")
         self.assertIn("workflow_studio.js", shell)
+        for teil in ("workflow_studio_geteilt.js", "workflow_studio_assist.js", "workflow_studio_live.js"):
+            self.assertIn(teil, shell)
         self.assertLess(shell.index("workflow_studio.js"), shell.index("shell.js]"), "shell.js muss zuletzt stehen")
         app = (UIX / "shells" / "harness" / "app.js").read_text(encoding="utf-8")
         self.assertIn("objekt.type === 'workflow-studio'", app)

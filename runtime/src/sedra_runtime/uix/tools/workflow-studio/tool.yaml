@@ -11,13 +11,11 @@ tool:
   order: 18
   slot: inhalt
   entry: {js: tool.js}
-  api:
-    - POST /api/objects
-    - POST /api/actions
+  api: []
   events:
     emits: []
     listens: []
-  trust: CORE
+  trust: COMMUNITY
   gruppe: arbeit
   profile: [standard, kmu, stick]
   shells: [harness]
