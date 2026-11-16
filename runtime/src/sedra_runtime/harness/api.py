@@ -1,4 +1,4 @@
-﻿"""Die Wege der Harness-Shell unter /api/harness/ (G2 §4, Stufe 1), eingebunden in uix_server.
+"""Die Wege der Harness-Shell unter /api/harness/ (G2 §4, Stufe 1), eingebunden in uix_server.
 
     GET    projekte                           Harness-Projekte (Datei des Captains + Laufzeitdatei)
     POST   projekte                           P0 M3: {wurzel, name?, schreibbereich?} → Antrag mit Gate (HARNESS_PROJEKT_ADD, Herkunft S7); geschrieben wird erst nach Freigabe

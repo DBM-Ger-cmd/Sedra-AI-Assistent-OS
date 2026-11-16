@@ -1,4 +1,4 @@
-﻿"""Die Werkzeugkiste der Harness-Shell (SPEC_HARNESS_SHELL_v1 HS-20, G2 §3.4, D-E5, G3 Stufe 2 U4–U6).
+"""Die Werkzeugkiste der Harness-Shell (SPEC_HARNESS_SHELL_v1 HS-20, G2 §3.4, D-E5, G3 Stufe 2 U4–U6).
 
 `datei_lesen` (≤ 400 Zeilen, mit Nummern), `dateien_auflisten` (≤ 300), `suchen` (ripgrep, sonst Python; ≤ 200 Treffer), `datei_schreiben`,
 `datei_aendern` (genau einmal ersetzen) und `befehl` (harness/befehl.py). Je Projekt eine eigene `FilesystemTool`-Instanz mit Wurzel =

@@ -313,6 +313,7 @@ ROUTEN_HARNESS = {
     'POST aufgaben': ('freigabe', H, 'Aufgabe = Freigabe im Voraus (F4)'),
     'POST aufgaben/zuruecknehmen': ('zurueck', None, ''),
     'POST laeufe/stopp': ('zurueck', None, ''),
+    'POST team/stopp': ('zurueck', None, 'Delegation DG-09: haelt einen Helfer oder alle eines Team-Laufs an; erteilt nichts, verengt nur'),
 }
 # Alle Wege und Unterwege aus harness/api.WEG. Der Test vergleicht sie mit dem Muster, damit ein neuer Weg auffällt; Wege, die schreiben,
 # stehen zusätzlich oben in ROUTEN_HARNESS. Die übrigen lesen nur (GET).

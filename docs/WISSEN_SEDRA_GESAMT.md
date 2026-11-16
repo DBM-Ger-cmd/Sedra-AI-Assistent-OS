@@ -1,4 +1,4 @@
-﻿# SEDRA – Wissensdatei (alle Chats zusammengeführt)
+# SEDRA – Wissensdatei (alle Chats zusammengeführt)
 
 Stand: 31.10.2026. Quellen: Gedächtnisdateien von Claude (Memory), die Sitzungsliste des Cockpits (alle Chats, auch archivierte), das Logbuch `docs/LOGBUCH_AGENT_MANAGER.md`, der Git-Verlauf (527 Commits auf `main`) und der Arbeitschat vom 27. bis 31.10.2026. Kein Inhalt ist erfunden; was nur vermutet ist, steht als Vermutung da. Der Captain ist der Nutzer (David); er entscheidet alle Freigaben.
 

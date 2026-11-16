@@ -1,4 +1,4 @@
-﻿"""Der Freigabe-Katalog der Harness-Shell (SPEC_HARNESS_SHELL_v1 HS-25, G2 §3.5, G3 Stufe 2 U1/U2).
+"""Der Freigabe-Katalog der Harness-Shell (SPEC_HARNESS_SHELL_v1 HS-25, G2 §3.5, G3 Stufe 2 U1/U2).
 
 Laden (U1): `local_config/freigabe_katalog.yaml` des SEDRA-Projekts, falls vorhanden – die Datei legt nur der Captain an (D-F2); sonst die
 Vorlage `runtime/config/freigabe_katalog.beispiel.yaml` (nur lesen). Eine ungültige Datei ist ein Fehler mit Grund, nie ein stiller Rückfall.

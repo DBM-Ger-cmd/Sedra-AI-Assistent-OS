@@ -1,4 +1,4 @@
-﻿"""Freigabe der Harness-Shell (SPEC_HARNESS_SHELL_v1 HS-21, HS-22, HS-28, HS-29; G2 §3.5, §3.6; G3 Stufe 2 U7).
+"""Freigabe der Harness-Shell (SPEC_HARNESS_SHELL_v1 HS-21, HS-22, HS-28, HS-29; G2 §3.5, §3.6; G3 Stufe 2 U7).
 
 Für jeden Aufruf eines Harness-Werkzeugs: **Vorbehalt** (harness/vorbehalte.py, fest) → **Katalog** (`einstufen`) → **Guard**.
 - `frei`: Gate beim Guard anlegen, die Harness ruft `approve` (Audit `HARNESS_APPROVED_BY katalog:<regel>`), das Werkzeug läuft mit genau diesem Token.

@@ -1,4 +1,4 @@
-﻿# Logbuch: Agent Manager (Integrationsprojekt)
+# Logbuch: Agent Manager (Integrationsprojekt)
 
 Fortlaufend, neueste Einträge unten. Je Eintrag: Zeit, Art (ENTSCHEIDUNG, BAU, MESSUNG, FEHLER, ÄNDERUNG, INTEGRATION), was, Beleg. Die Messprotokolle der Bauläufe liegen zusätzlich unter `workspace/GUPPI_OS/runtime_data/measurements/logs/devvm_build_*`.
 

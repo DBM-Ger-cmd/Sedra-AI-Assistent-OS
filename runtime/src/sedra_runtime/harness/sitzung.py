@@ -1,4 +1,4 @@
-﻿"""Sitzungen der Harness-Shell (G2 §3.7, HS-18): eine JSONL-Datei je Sitzung, erste Zeile Kopf, danach eine Zeile je Ereignis.
+"""Sitzungen der Harness-Shell (G2 §3.7, HS-18): eine JSONL-Datei je Sitzung, erste Zeile Kopf, danach eine Zeile je Ereignis.
 
 Nur anhängen, nie umschreiben. Jede Zeile wird mit `fsync` geschrieben, damit ein Absturz höchstens die letzte Zeile kostet; eine kaputte
 Zeile wird beim Laden übersprungen und gezählt. Löschen verschiebt die Datei nach `geloescht/` (kein echtes Löschen, Regel des Captains).
