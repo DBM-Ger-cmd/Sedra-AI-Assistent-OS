@@ -49,6 +49,27 @@ class ProjekteTests(unittest.TestCase):
             with self.assertRaises(projekte.ProjektFehler, msg=muster):
                 projekte.laden(self.root)
 
+    def test_master_feld_mm01(self):
+        """MM-01: `master` ist eine Liste relativer Muster; fehlt es, gibt es keinen Master; ein ungültiges Feld nennt den Grund."""
+        kopf = f"projekte:\n  - id: eigen\n    name: Eigen\n    wurzel: '{self.tmp.name}'\n    schreibbereich: [docs/**]\n"
+        self.schreibe(kopf)
+        self.assertNotIn('master', projekte.laden(self.root)[0])
+        self.schreibe(kopf + '    master: [runtime/**, docs/**]\n')
+        self.assertEqual(projekte.laden(self.root)[0]['master'], ['runtime/**', 'docs/**'])
+        for roh in ('"runtime/**"', '["../x/**"]', '["C:/x"]', '[""]'):
+            self.schreibe(kopf + f'    master: {roh}\n')
+            with self.assertRaises(projekte.ProjektFehler) as k:
+                projekte.laden(self.root)
+            self.assertIn('master_ungueltig', str(k.exception), roh)
+
+    def test_master_feld_bleibt_beim_schreiben_der_laufzeitdatei(self):
+        daten = {'projekte': [{'id': 'a', 'name': 'A', 'wurzel': str(self.root), 'schreibbereich': ['docs/**'], 'master': ['docs/**']},
+                              {'id': 'b', 'name': 'B', 'wurzel': str(self.root), 'schreibbereich': ['docs/**']}], 'vorgaben': {}}
+        projekte.laufzeit_schreiben(self.root, daten)
+        zurueck = projekte.laufzeit_laden(self.root)['projekte']
+        self.assertEqual(zurueck[0]['master'], ['docs/**'])
+        self.assertNotIn('master', zurueck[1])
+
     def test_pfade_ausserhalb_der_wurzel(self):
         p = {'id': 'a', 'wurzel': str(self.root), 'schreibbereich': ['docs/**', 'runtime/**']}
         self.assertTrue(projekte.im_schreibbereich(p, 'docs/LOGBUCH.md'))

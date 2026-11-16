@@ -4,6 +4,9 @@
 #   id              kleine Buchstaben, Ziffern, Bindestrich
 #   wurzel          vollständiger Pfad eines vorhandenen Ordners
 #   schreibbereich  Muster relativ zur Wurzel (ohne „..“); alles andere in der Wurzel nur lesen. Wirkt ab Stufe 2 (Werkzeuge mit Wirkung).
+#   master          optional: Muster relativ zur Wurzel (ohne „..“), in denen der Master-Modus dieses Projekts Dateien und Befehle ohne Karte deckt
+#                   (docs/SPEC_MASTER_MODUS_v1_ENTWURF.md). Das Feld erlaubt und begrenzt nur; eingeschaltet wird der Master-Modus vom Captain je Sitzung
+#                   in der Oberfläche und endet mit der Sitzung. Fehlt das Feld, gibt es für dieses Projekt keinen Master-Modus.
 projekte:
   - id: sedra-entwicklung
     name: Sedra Entwicklung
@@ -12,3 +15,6 @@ projekte:
       - runtime/**
       - docs/**
       - redesign/**
+    # master:
+    #   - runtime/**
+    #   - docs/**

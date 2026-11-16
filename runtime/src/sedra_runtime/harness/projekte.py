@@ -15,6 +15,8 @@ from pathlib import Path, PurePosixPath
 
 import yaml
 
+from . import master as harness_master
+
 DATEI = 'harness_projekte.yaml'
 REPO = Path(__file__).resolve().parents[4]          # harness → sedra_runtime → src → runtime → Repo
 STANDARD = {'id': 'sedra-entwicklung', 'name': 'Sedra Entwicklung', 'wurzel': str(REPO),
@@ -53,8 +55,12 @@ def pruefen(doc):
         bereich = p.get('schreibbereich') or []
         if not isinstance(bereich, list) or not all(_muster_ok(m) for m in bereich):
             raise ProjektFehler(f'projekt_{pid}_schreibbereich_ungueltig: nur Muster relativ zur Wurzel, ohne „..“')
+        try:
+            master = harness_master.muster_pruefen(p.get('master'))          # Master-Modus (MM-01): Erlaubnis und Eingrenzung, nie der Schalter
+        except harness_master.MasterFehler as exc:
+            raise ProjektFehler(f'projekt_{pid}_{exc}') from exc
         out.append({'id': pid, 'name': str(p.get('name') or pid)[:80], 'wurzel': str(Path(wurzel).resolve()),
-                    'schreibbereich': [m.replace('\\', '/') for m in bereich]})
+                    'schreibbereich': [m.replace('\\', '/') for m in bereich]} | ({'master': master} if master else {}))
     return out
 
 
@@ -119,7 +125,7 @@ def laufzeit_schreiben(projekt_root: Path, daten):
     if pfad.is_file():
         sicherung = pfad.with_name(pfad.name + '.bak-' + datetime.now().strftime('%Y%m%d-%H%M%S'))
         sicherung.write_bytes(pfad.read_bytes())
-    doc = {'projekte': [{'id': p['id'], 'name': p['name'], 'wurzel': p['wurzel'], 'schreibbereich': list(p['schreibbereich'])} for p in daten.get('projekte') or []],
+    doc = {'projekte': [{'id': p['id'], 'name': p['name'], 'wurzel': p['wurzel'], 'schreibbereich': list(p['schreibbereich'])} | ({'master': list(p['master'])} if p.get('master') else {}) for p in daten.get('projekte') or []],
            'vorgaben': {k: (daten.get('vorgaben') or {}).get(k) for k in VORGABEN}}
     text = '# Laufzeitdatei der Harness (P0 M3): über „Ordner öffnen“ hinzugefügte Projekte und Vorgaben. Geschrieben vom Server nach Freigabe; nicht von Hand nötig.\n' + \
            yaml.safe_dump(doc, allow_unicode=True, sort_keys=False)
