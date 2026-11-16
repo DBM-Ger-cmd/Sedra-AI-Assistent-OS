@@ -37,7 +37,7 @@ class ProcessBrowser(unittest.TestCase):
         return app
 
     def import_doc(self, app, doc):
-        app.locator('input[type=file]').set_input_files({'name': 'process.json', 'mimeType': 'application/json', 'buffer': json.dumps(doc).encode()})
+        app.locator('input[type=file][accept=".json,application/json"]').set_input_files({'name': 'process.json', 'mimeType': 'application/json', 'buffer': json.dumps(doc).encode()})
         app.get_by_role('status').filter(has_text='Importiert.').wait_for()
 
     def save(self, app, revision, note):

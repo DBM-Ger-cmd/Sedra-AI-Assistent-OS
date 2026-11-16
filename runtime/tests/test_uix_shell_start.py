@@ -54,7 +54,7 @@ class DirectStart(unittest.TestCase):
                 self.assertIsNone(choose_start_shell(hub, None))
                 with self.assertRaises(ValueError) as ctx:
                     choose_start_shell(hub, 'gibt-es-nicht')
-                self.assertIn('Vorhanden: cockpit, fisch, gateway-kmu, gateway-studio, sedra-xp, harness, minimal, paperclip, start, wissensbasis', str(ctx.exception))
+                self.assertIn('Vorhanden: cockpit, fisch, gateway-kmu, gateway-studio, harness, minimal, paperclip, sedra-xp, start, wissensbasis', str(ctx.exception))
                 self.assertEqual(hub.gateway.manifest()['shell']['id'], 'minimal', 'ein Fehler ändert nichts')
             finally:
                 hub.close()

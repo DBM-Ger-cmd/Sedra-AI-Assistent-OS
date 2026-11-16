@@ -1,4 +1,4 @@
-"""W4-Werkzeuge `rueckblick_schreiben` und `vorschlaege_pflegen` (Spec W4, 14.11.2026).
+r"""W4-Werkzeuge `rueckblick_schreiben` und `vorschlaege_pflegen` (Spec W4, 14.11.2026).
 
 Tests nach Spec §2 (Spalte "Prüfbar durch"), Gegenproben aus Spec §5 und
 F-027 (echter Antrag im Posteingang via gated.request, entscheide über decide/reject).
