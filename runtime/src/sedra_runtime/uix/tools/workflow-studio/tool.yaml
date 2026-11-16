@@ -1,0 +1,25 @@
+# App „Workflow Studio“: Platzhalter für den Objekttyp `workflow-studio`. Die Fläche zeichnet die Harness-Shell (One Sedra) selbst
+# (shells/harness/workflow_studio.js) und bündelt n8n Workflows, Szenario Studio, Factory, Live und Freigaben in einem App-Reiter.
+# Das Paket ruft keine Route, hat keinen Speicher und öffnet nichts. Es bleibt leer, damit der Ort einen Werkzeugeintrag hat.
+tool:
+  id: workflow-studio
+  name: "Workflow Studio"
+  description: "Bündelt n8n Workflows, Szenario Studio, Factory, Live und Freigaben in einer App – im App-Rahmen der Harness-Shell."
+  version: 1.0.0
+  kind: object
+  handles: [workflow-studio]
+  order: 18
+  slot: inhalt
+  entry: {js: tool.js}
+  api:
+    - POST /api/objects
+    - POST /api/actions
+  events:
+    emits: []
+    listens: []
+  trust: CORE
+  gruppe: arbeit
+  profile: [standard, kmu, stick]
+  shells: [harness]
+  tests: []
+  needs: {ui: ">=1.0 <2"}

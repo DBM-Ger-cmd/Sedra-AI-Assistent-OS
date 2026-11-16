@@ -51,7 +51,8 @@
     {id: 'wissen-index',       label: 'Wissen · Index',       hint: 'Stand des Index, Nachführen', words: ['einbetten', 'embedding'], object: {type: 'wissen', id: 'speicher', title: 'Wissen', view: 'index'}},
     {id: 'wissen-nachmessung', label: 'Wissen · Nachmessung', hint: 'deine Fragen bewerten', words: [], object: {type: 'wissen', id: 'speicher', title: 'Wissen', view: 'nachmessung'}},
     {id: 'labor',     label: 'KI-Labor',              hint: 'Anbieter, Schlüssel, Modelle, Tests',       words: ['labor', 'ki-labor', 'cloud', 'anbieter'],                                  object: {type: 'labor', id: 'labor', title: 'KI-Labor'}},
-    {id: 'factory-studio', label: 'Factory Studio',   hint: 'Projekt Browser und Status Dashboard (lesend) für Factory-Operationen', words: ['fabrik', 'factory', 'build', 'benchmark'], object: {type: 'factory-studio', id: 'app', title: 'Factory Studio'}}
+    {id: 'factory-studio', label: 'Factory Studio',   hint: 'Projekt Browser und Status Dashboard (lesend) für Factory-Operationen', words: ['fabrik', 'factory', 'build', 'benchmark'], object: {type: 'factory-studio', id: 'app', title: 'Factory Studio'}},
+    {id: 'workflow-studio', label: 'Workflow Studio', hint: 'n8n-Workflows, Szenarien und Factory – eine App', words: ['workflow', 'workflows', 'n8n', 'szenario', 'szenarien'], object: {type: 'workflow-studio', id: 'app', title: 'Workflow Studio'}}
   ];
 
   const ORDER_WORDS = ['erstelle', 'erstell', 'baue', 'bau', 'schreibe', 'schreib', 'implementiere', 'programmiere', 'entwickle', 'ändere', 'aendere',

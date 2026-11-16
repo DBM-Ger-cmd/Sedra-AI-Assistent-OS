@@ -24,6 +24,7 @@
     "team": "arbeit",
     "uebersicht": "arbeit",
     "factory-studio": "arbeit",
+    "workflow-studio": "arbeit",
     "nachrichten": "arbeit",
     "uebersetzung": "arbeit",
     "transkript": "arbeit",
@@ -65,7 +66,7 @@
     "pruefung": "✓",
     "token": "◎"
   },
-  "ausblenden": ["org", "routines", "intents", "werkzeug-board", "hardware", "uebersetzung", "transkript", "aufnahme", "werkzeug-nachrichten", "wissen-suche", "wissen-quellen", "wissen-vorschlaege", "wissen-eigenes", "wissen-messung", "wissen-index", "wissen-nachmessung"],
+  "ausblenden": ["workflow", "scenario", "factory-studio", "org", "routines", "intents", "werkzeug-board", "hardware", "uebersetzung", "transkript", "aufnahme", "werkzeug-nachrichten", "wissen-suche", "wissen-quellen", "wissen-vorschlaege", "wissen-eigenes", "wissen-messung", "wissen-index", "wissen-nachmessung"],
   "umbenennen": {"decisions": {"label": "Posteingang", "hint": "alles, was auf dich wartet: Freigaben, Anträge, Vorschläge", "words": ["posteingang", "antrag", "anträge", "antraege"]}},
   "zuletzt_max": 6
 }

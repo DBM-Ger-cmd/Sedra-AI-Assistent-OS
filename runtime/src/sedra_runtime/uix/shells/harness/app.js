@@ -160,8 +160,10 @@
     const ue = objekt.type === 'uebersicht' && U && !f.leer ? U.ansicht(S, box, f) : null;            // A3: die App „Übersicht“ (Baum der Gesamtlage)
     const FS = root.sedraHarness.factory_studio;
     const fs = objekt.type === 'factory-studio' && FS && !f.leer ? FS.ansicht(S, box, f) : null;    // F3-01: die App Factory Studio (Project Browser und Status Dashboard, lesend)
-    const abbauen = ()=>{ f.abbauen(); if(ue) ue.abbauen(); if(tm) tm.abbauen(); if(tr){ tr.abbauen(); if(S._translatorAnsicht === tr) S._translatorAnsicht = null; } if(fs) fs.abbauen(); };
-    const a = root.sedraHarness.reiter.stub(id, box, S, {objekt, mounts: f.mounts, abbauen, verben: ue ? ue.zeichnen : tm ? tm.zeichnen : tr ? tr.zeichnen : fs ? fs.zeichnen : f.zeichnen});
+    const WS = root.sedraHarness.workflow_studio;
+    const ws = objekt.type === 'workflow-studio' && WS && !f.leer ? WS.ansicht(S, box, f) : null;   // die App Workflow Studio (n8n, Szenario, Factory, Live, Freigaben)
+    const abbauen = ()=>{ f.abbauen(); if(ue) ue.abbauen(); if(tm) tm.abbauen(); if(tr){ tr.abbauen(); if(S._translatorAnsicht === tr) S._translatorAnsicht = null; } if(fs) fs.abbauen(); if(ws) ws.abbauen(); };
+    const a = root.sedraHarness.reiter.stub(id, box, S, {objekt, mounts: f.mounts, abbauen, verben: ue ? ue.zeichnen : tm ? tm.zeichnen : tr ? tr.zeichnen : fs ? fs.zeichnen : ws ? ws.zeichnen : f.zeichnen});
     kopf.append(d().el('b', 'hs-app-titel', eintrag.titel), d().el('code', 'hs-app-objekt', objekt.type + ' · ' + objekt.id + (objekt.view ? ' · ' + objekt.view : '')));
     if(f.rechts.length){
       const knopf = d().el('button', 'hs-app-nachweis-knopf', 'Nachweise (' + f.rechts.length + ')'); knopf.type = 'button';
