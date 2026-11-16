@@ -188,3 +188,22 @@ Teil A: Master aus = Verhalten wie heute, Ausnahme in `master.py` = Karte (MM-14
 - **Teil B:** O-B1 (Sedras Ablage), O-B2 (nur Struktur, **nichts aus den Claude-Notizen übernommen**), O-B3 (strikt je Projekt), O-B4 (Cloud-Modelle bekommen den Index nicht, weil es sie in der Harness noch nicht gibt) wie vorgeschlagen.
 - **Nicht gebaut / offen:** GN-03 „halbe Kappe bei Fenster unter 16 000 Token“ ist in `kontext_text(zeilen, fenster)` umgesetzt und getestet, wird aber in `api.nachricht` mit `fenster=None` aufgerufen (die Fenstergröße ist dort nicht zur Hand); GN-09/GN-10 „Index aus je Projekt“ als Einstellung fehlt (ein kaputter oder fehlender Index = Sitzung ohne Block ist getestet); „Als Notiz vorschlagen“ aus einer Zusammenfassung (GN-08) bleibt später; die Oberfläche (B6) ist nur beschrieben.
 - Das Werkzeug `gedaechtnis_lesen` und `gedaechtnis_vorschlagen` stehen in `OHNE_KARTE` (wie `erinnern`); `gedaechtnis_vorschlagen` legt nur einen Antrag an. Notizen werden nur durch den Captain (Weg) oder nach seiner Freigabe des Antrags geschrieben.
+
+## 12. Entscheidungen des Captains (16.11.2026)
+
+Antwort im Chat (über den Vorarbeiter gemeldet, wörtlich): „so, alle Vorschläge übernehmen“ – Gate G1 für Teil A und Teil B. Es gelten genau die Vorschläge dieser Spec:
+
+| Nr | Entscheidung |
+|---|---|
+| O-1 | Nein, G4 (ungesehener Code) bleibt |
+| O-2 | Löschen bleibt in v1 Karte |
+| O-3 | Die Datei trägt Erlaubnis und Eingrenzung, der Schalter je Sitzung sitzt in der Oberfläche |
+| O-4 | v1 nur lokal für Sedras eigene Harness; fremde Harnesses entscheidet der Captain beim Anschluss |
+| O-5 | Höchstdauer 24 Stunden |
+| O-6 | Wiederholungsdeckel auch unter dem Master |
+| O-B1 | Sedras Ablage, mit „Ordner öffnen“ und Export im Reiter |
+| O-B2 | Variante (2): nur die Struktur, nichts aus den Claude-Notizen, bis der Captain (3) ausdrücklich will |
+| O-B3 | Notizen strikt je Projekt |
+| O-B4 | Cloud-Modelle bekommen den Index nur mit ausdrücklicher Option |
+
+**G4** (`freigabe.py`, `deckung.py`, `vorbehalte.py`, `desk/freigabeklasse.py`): der Captain hat es **direkt in dieser Sitzung** erteilt („ja“, 16.11.2026, nach der Liste der Dateien in der Rückfrage der Sitzung), vor der ersten Änderung dort. Der Stand der Änderungen steht in §11 und in den Commits `e753971` bis `47c5fec`.
