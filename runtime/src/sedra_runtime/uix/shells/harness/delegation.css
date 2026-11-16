@@ -1,0 +1,30 @@
+/* Harness-Shell – die Delegations-Karte im Gespräch (delegation.js, SPEC_DELEGATION_IM_GESPRAECH_v1 DG-10 bis DG-12). Ebene „Arbeit“. Nur Tokens. */
+.hs-team{align-self:stretch;width:100%;max-width:var(--hs-text-w);margin:var(--gap-2) auto;padding:var(--gap-3);display:flex;flex-direction:column;gap:var(--gap-2);
+  background:var(--panel);border:1px solid var(--hs-on-line);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);text-align:left}
+.hs-team.fertig{border-color:var(--line);box-shadow:var(--shadow-sm)}
+.hs-team-kopf{display:flex;align-items:center;gap:var(--gap-2);flex-wrap:wrap}
+.hs-team-kopf .hs-leise{flex:1 1 auto}
+.hs-team-liste{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--gap)}
+.hs-team-zeile{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--gap-2);align-items:start;padding:var(--gap) var(--gap-2);
+  background:var(--panel-2);border:1px solid var(--line-soft);border-radius:var(--radius)}
+.hs-team-punkt{width:10px;height:10px;margin-top:5px;border-radius:50%;background:var(--muted)}
+.hs-team-zeile.aktiv .hs-team-punkt{background:var(--accent);animation:hs-team-puls 1.4s ease-in-out infinite}
+.hs-team-zeile.warn{border-color:var(--warn-line);background:var(--warn-bg)}
+.hs-team-zeile.warn .hs-team-punkt{background:var(--warn)}
+.hs-team-zeile.ok .hs-team-punkt{background:var(--ok)}
+.hs-team-zeile.bad .hs-team-punkt{background:var(--bad)}
+.hs-team-mitte{min-width:0;display:flex;flex-direction:column;gap:2px}
+.hs-team-erste{display:flex;gap:var(--gap);align-items:baseline;flex-wrap:wrap}
+.hs-team-zustand{font-size:var(--size-small);color:var(--muted)}
+.hs-team-zeile.warn .hs-team-zustand{color:var(--warn)}
+.hs-team-zeile.bad .hs-team-zustand{color:var(--bad)}
+.hs-team-zeile.ok .hs-team-zustand{color:var(--ok)}
+.hs-team-auftrag{font-size:var(--size-small);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs-team-tun{display:flex;gap:var(--gap);flex-wrap:wrap;justify-content:flex-end}
+/* die Zelle der Taskleiste, nur solange Helfer arbeiten */
+.hs-team-zelle{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;margin-left:var(--gap);font-size:var(--size-small);font-weight:600;color:var(--accent);
+  border:1px solid var(--hs-on-line);border-radius:999px;background:var(--hs-on)}
+/* ein Helfer in der Seitenleiste: eingerückt unter seiner Hauptsitzung (DG-02) */
+.hs-sz.hs-sz-helfer{margin-left:var(--gap-3);border-left:2px solid var(--hs-on-line)}
+@keyframes hs-team-puls{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){.hs-team-zeile.aktiv .hs-team-punkt{animation:none}}

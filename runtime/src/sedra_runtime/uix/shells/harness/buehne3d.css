@@ -1,0 +1,38 @@
+/* Harness-Shell – Tiefe und 3D-Bühne (UIX nächste Stufe, 15.11.2026). Nur Tokens (ui/tokens.css: --glas, --glanz, --lichthof, --tiefe).
+   Drei Ebenen: Grund (Fläche), Arbeit (Karten, Eingabe), Schwebend (Start-Menü). Tiefe zeigt Rang, nie Schmuck allein. */
+
+/* ---- die Bühne des Startbilds: Lichthof, Bodenschatten, Modell über der Zeichnung */
+.hs-buehne{position:relative;display:grid;place-items:center;width:clamp(220px,40vh,400px);height:clamp(110px,19vh,190px);isolation:isolate}
+.hs-buehne::before{content:"";position:absolute;inset:0 12%;z-index:-1;background:var(--lichthof);filter:blur(10px)}
+.hs-buehne::after{content:"";position:absolute;left:26%;right:26%;bottom:2%;height:8%;z-index:-1;border-radius:50%;background:var(--veil-dark);filter:blur(9px)}
+.hs-buehne .hs-drache{grid-area:1/1}
+.hs-buehne.klein{width:auto;height:auto}
+.hs-buehne-leinwand{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .6s ease-out}
+.hs-buehne.bereit .hs-buehne-leinwand{opacity:1}
+.hs-buehne.bereit .hs-drache{animation:none;opacity:0}
+/* ---- der Drache als Bildschirmschoner (Wahl „hintergrund“): eine Ebene über dem ganzen Fenster, auch über den Menüs; nimmt keine Klicks.
+   Blass, solange der Captain arbeitet; nach einer Weile ohne Regung (Klasse „ruhe“) tritt er hervor. */
+.hs-grund{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:0;transition:opacity 2.5s ease-in-out}
+.hs-grund.bereit{opacity:var(--drache-blass)}
+.hs-grund.bereit.ruhe{opacity:var(--drache-ruhe)}
+.hs-grund .hs-buehne-leinwand{opacity:1}
+
+/* ---- Ebene „Schwebend“: das Start-Menü als Glas über der Arbeit */
+.hs-start-menue{background:var(--glas);-webkit-backdrop-filter:blur(var(--glas-unschaerfe)) saturate(1.3);backdrop-filter:blur(var(--glas-unschaerfe)) saturate(1.3)}
+
+/* ---- Ebene „Arbeit“: Kacheln heben sich beim Zeigen leicht an (CSS-Perspektive, kein WebGL) */
+.hs-start-blick,.hs-start-kacheln{perspective:var(--tiefe)}
+.hs-start-blick-kachel,.hs-start-kachel{transition:transform var(--transition-base),box-shadow var(--transition-base),border-color var(--transition-fast)}
+.hs-start-blick-kachel:not(.hs-start-blick-einst):hover,.hs-start-blick-kachel:not(.hs-start-blick-einst):focus-visible{transform:translateY(-2px) rotateX(4deg);box-shadow:var(--glanz)}
+
+/* Der Kopf einer Kategorie-Kachel ist ein Knopf: ohne diese Zeile zeigte der Browser ihn weiß (Sichtprüfung 15.11.) */
+.hs-start-kachel-kopf{width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left}
+
+/* ---- die Eingabe: ein Rahmen statt zwei, mit Glanz, wenn der Captain schreibt */
+.hs-eingabe-zeile .hs-feld,.hs-eingabe-zeile .hs-feld:focus,.hs-eingabe-zeile .hs-feld:focus-visible{outline:none;border:0;box-shadow:none}
+.hs-eingabe-zeile:focus-within{box-shadow:var(--shadow-md),var(--glanz)}
+
+@media (prefers-reduced-motion: reduce){
+  .hs-start-blick-kachel:hover,.hs-start-blick-kachel:focus-visible{transform:none}
+  .hs-buehne-leinwand{transition:none}
+}

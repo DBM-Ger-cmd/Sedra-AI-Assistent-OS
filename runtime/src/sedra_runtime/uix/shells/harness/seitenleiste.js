@@ -23,6 +23,16 @@
   function filterText(S){ return String(S._filter || '').trim().toLowerCase(); }
   const titelVon = s=>String(s.titel || 'Ohne Titel');
 
+  // Helfer einer Delegation (Feld `eltern`) stehen direkt unter ihrer Hauptsitzung, in der Reihenfolge der Liste; ohne die Hauptsitzung in der Liste bleiben sie, wo sie sind (rein)
+  function helferEinordnen(liste){
+    const ids = new Set(liste.map(s=>s.id)), unter = new Map();
+    liste.forEach(s=>{ if(s.eltern && ids.has(s.eltern)) (unter.get(s.eltern) || unter.set(s.eltern, []).get(s.eltern)).push(s); });
+    if(!unter.size) return liste;
+    const out = [];
+    liste.forEach(s=>{ if(s.eltern && ids.has(s.eltern)) return; out.push(s); (unter.get(s.id) || []).forEach(h=>out.push(h)); });
+    return out;
+  }
+
   // die Sitzungen eines Blocks: gefiltert und sortiert (der Server liefert neueste zuerst)
   function ordnen(S, liste){
     const f = filterText(S);
@@ -30,7 +40,7 @@
     const art = einst().sort;
     if(art === 'alt') out = out.slice().sort((a, b)=>String(a.zuletzt || '').localeCompare(String(b.zuletzt || '')));
     else if(art === 'titel') out = out.slice().sort((a, b)=>titelVon(a).localeCompare(titelVon(b), 'de'));
-    return out;
+    return helferEinordnen(out);
   }
 
   function normal(s){ return titelVon(s).toLowerCase().replace(/\s+/g, ' ').trim(); }
@@ -143,5 +153,5 @@
   }
 
   root.sedraHarness = root.sedraHarness || {};
-  root.sedraHarness.seitenleiste = {werkzeugzeile, ordnen, haken, altTage, filterText, auswahl, kandidaten};
+  root.sedraHarness.seitenleiste = {werkzeugzeile, ordnen, helferEinordnen, haken, altTage, filterText, auswahl, kandidaten};
 })();

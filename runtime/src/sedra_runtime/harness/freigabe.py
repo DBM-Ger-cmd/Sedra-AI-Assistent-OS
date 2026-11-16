@@ -1,4 +1,4 @@
-"""Freigabe der Harness-Shell (SPEC_HARNESS_SHELL_v1 HS-21, HS-22, HS-28, HS-29; G2 §3.5, §3.6; G3 Stufe 2 U7).
+﻿"""Freigabe der Harness-Shell (SPEC_HARNESS_SHELL_v1 HS-21, HS-22, HS-28, HS-29; G2 §3.5, §3.6; G3 Stufe 2 U7).
 
 Für jeden Aufruf eines Harness-Werkzeugs: **Vorbehalt** (harness/vorbehalte.py, fest) → **Katalog** (`einstufen`) → **Guard**.
 - `frei`: Gate beim Guard anlegen, die Harness ruft `approve` (Audit `HARNESS_APPROVED_BY katalog:<regel>`), das Werkzeug läuft mit genau diesem Token.
@@ -222,7 +222,7 @@ class Kiste:
                 return {'status': 'verboten', 'ergebnis': f"verboten: {e['begruendung']}", 'stufe': 'verboten', 'regel': e['regel'], 'wirkung': False}
             self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id}
             out = self.w.ausfuehren(name, args, plan=plan)
-            if name not in ('erinnern', 'sitzungen_auflisten', 'youtube_transkript', 'vorlage_beantragen', 'desktop_lesen', 'belohnungen_lesen', 'prozess_beantragen', 'wissen_suchen', 'wissen_beantragen', 'uebersetzen', 'rueckblick_schreiben', 'vorschlaege_pflegen', 'gedaechtnis_lesen', 'gedaechtnis_vorschlagen'):                  # wissen_*: eigenes Audit im Wissen, nie der Fragetext (WK-06); die Verknüpfung steht schon im Audit des Servers (mit `von`)
+            if name not in ('team_verteilen', 'erinnern', 'sitzungen_auflisten', 'youtube_transkript', 'vorlage_beantragen', 'desktop_lesen', 'belohnungen_lesen', 'prozess_beantragen', 'wissen_suchen', 'wissen_beantragen', 'uebersetzen', 'rueckblick_schreiben', 'vorschlaege_pflegen', 'gedaechtnis_lesen', 'gedaechtnis_vorschlagen'):                  # wissen_*: eigenes Audit im Wissen, nie der Fragetext (WK-06); die Verknüpfung steht schon im Audit des Servers (mit `von`)
                 self._audit('HARNESS_APP_OEFFNEN' if name == 'app_oeffnen' else 'HARNESS_PROJEKT_BEANTRAGT', {'ziel': plan['ziel'][:300], 'status': out['status']})
             return dict(out, stufe='frei', regel=name.replace('_', '-'))
         e = einstufung(self.regeln, name, args, plan)

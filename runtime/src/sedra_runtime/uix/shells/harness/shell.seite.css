@@ -170,6 +170,17 @@
   visibility: visible;
 }
 
+/* Die Knöpfe einer Sitzungszeile belegen ohne Zeigen keinen Platz: der Titel hat die ganze Breite.
+   Vorher blieben vom Titel fünf Zeichen („Auftr…“), weil drei unsichtbare Knöpfe ihren Platz behielten (Sichtprüfung 15.11.2026). */
+.hs-sz > .hs-sz-knopf {
+  display: none;
+}
+
+.hs-sz:hover > .hs-sz-knopf,
+.hs-sz:focus-within > .hs-sz-knopf {
+  display: inline-block;
+}
+
 .hs-sz-knopf:hover {
   color: var(--text);
   background: var(--panel-2);

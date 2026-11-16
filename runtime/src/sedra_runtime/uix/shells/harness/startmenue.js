@@ -188,12 +188,12 @@
 
   // „Auf einen Blick“ (Captain 03.11.2026): kleine Apps mit den wichtigsten Werten – KI-Labor, Sedra Token, Hardware, Modelle. Nur lesend; ein Klick öffnet die App.
   const BLICK = [
-    {ort: 'tasks', titel: T('start_blick_aufgaben'), symbol: '▤', werte: b=>b.arbeit ? [['Freigaben offen', String(b.arbeit.freigaben), b.arbeit.freigaben ? 'warn' : ''], ['Anträge', String(b.arbeit.antraege), b.arbeit.antraege ? 'warn' : ''], ['Aufgaben aktiv', String(b.arbeit.aufgaben)], ['Läufe', String(b.arbeit.laeufe)]] : null},
-    {ort: 'labor', titel: T('start_blick_kilabor'), symbol: '☁', werte: b=>b.labor ? [['Cloud', b.labor.enabled ? 'an' : 'aus', b.labor.enabled ? 'ok' : ''], ['Anbieter bereit', b.labor.bereit + ' von ' + b.labor.gesamt], ['Aktiv', b.labor.live || 'keiner']] : null},
-    {ort: 'meter', titel: T('start_blick_token'), symbol: '◎', werte: b=>b.token ? [['Antworten heute', String(b.token.antworten)], ['Eingehend ↑', zahl(b.token.ein)], ['Erzeugt ↓', zahl(b.token.aus)], ['Tempo', b.token.tok_s ? b.token.tok_s + ' Token/s' : '–']] : null},
-    {ort: 'hardware', titel: T('start_blick_hardware'), symbol: '▦', werte: b=>b.strip ? [['GPU', wertVon(b.strip.gpu), tonVon(b.strip.gpu)], ['RAM', wertVon(b.strip.ram), tonVon(b.strip.ram)]] : null},
-    {ort: 'models', titel: T('start_blick_modelle'), symbol: '◆', werte: b=>b.strip ? [['Modell', wertVon(b.strip.model), tonVon(b.strip.model)], ['Server', b.modelle ? (b.modelle.laeuft ? 'läuft' : 'aus') : wertVon(b.strip.server), b.modelle && b.modelle.laeuft ? 'ok' : tonVon(b.strip.server)]].concat(b.modelle ? [['Kontext', b.modelle.kontext ? zahl(b.modelle.kontext) + ' Token' : '–'], ['Slots', b.modelle.slots !== undefined ? String(b.modelle.slots) : '–']] : []) : null},
-    {einst: true, titel: T('einst_titel'), symbol: '⚙'}
+    {ort: 'tasks', titel: ()=>T('start_blick_aufgaben'), symbol: '▤', werte: b=>b.arbeit ? [['Freigaben offen', String(b.arbeit.freigaben), b.arbeit.freigaben ? 'warn' : ''], ['Anträge', String(b.arbeit.antraege), b.arbeit.antraege ? 'warn' : ''], ['Aufgaben aktiv', String(b.arbeit.aufgaben)], ['Läufe', String(b.arbeit.laeufe)]] : null},
+    {ort: 'labor', titel: ()=>T('start_blick_kilabor'), symbol: '☁', werte: b=>b.labor ? [['Cloud', b.labor.enabled ? 'an' : 'aus', b.labor.enabled ? 'ok' : ''], ['Anbieter bereit', b.labor.bereit + ' von ' + b.labor.gesamt], ['Aktiv', b.labor.live || 'keiner']] : null},
+    {ort: 'meter', titel: ()=>T('start_blick_token'), symbol: '◎', werte: b=>b.token ? [['Antworten heute', String(b.token.antworten)], ['Eingehend ↑', zahl(b.token.ein)], ['Erzeugt ↓', zahl(b.token.aus)], ['Tempo', b.token.tok_s ? b.token.tok_s + ' Token/s' : '–']] : null},
+    {ort: 'hardware', titel: ()=>T('start_blick_hardware'), symbol: '▦', werte: b=>b.strip ? [['GPU', wertVon(b.strip.gpu), tonVon(b.strip.gpu)], ['RAM', wertVon(b.strip.ram), tonVon(b.strip.ram)]] : null},
+    {ort: 'models', titel: ()=>T('start_blick_modelle'), symbol: '◆', werte: b=>b.strip ? [['Modell', wertVon(b.strip.model), tonVon(b.strip.model)], ['Server', b.modelle ? (b.modelle.laeuft ? 'läuft' : 'aus') : wertVon(b.strip.server), b.modelle && b.modelle.laeuft ? 'ok' : tonVon(b.strip.server)]].concat(b.modelle ? [['Kontext', b.modelle.kontext ? zahl(b.modelle.kontext) + ' Token' : '–'], ['Slots', b.modelle.slots !== undefined ? String(b.modelle.slots) : '–']] : []) : null},
+    {einst: true, titel: ()=>T('einst_titel'), symbol: '⚙'}
   ];
   const zahl = n=>Number(n || 0).toLocaleString('de-DE');
   const wertVon = g=>String((g && g.value !== undefined && g.value !== null) ? g.value : '–');
@@ -208,7 +208,7 @@
         const E = root.sedraHarness.einstellungen;
         const kachel = d().el('section', 'hs-start-blick-kachel hs-start-blick-einst'); kachel.dataset.blick = 'einstellungen'; kachel.dataset.baustein = 'einstellungen';
         const kopf = d().el('button', 'hs-start-blick-kopf'); kopf.type = 'button';
-        kopf.append(d().el('span', 'hs-start-symbol', k.symbol), d().el('b', null, k.titel), d().el('small', 'hs-leise', T('einst_startseite')));
+        kopf.append(d().el('span', 'hs-start-symbol', k.symbol), d().el('b', null, k.titel()), d().el('small', 'hs-leise', T('einst_startseite')));
         kopf.onclick = ()=>{ schliessen(S); E.oeffnen(S); };
         const gruppen = d().el('span', 'hs-start-blick-gruppen');
         (E.GRUPPEN || []).forEach(g=>{
@@ -223,7 +223,7 @@
       if(!ort) return;
       const b = d().el('button', 'hs-start-blick-kachel'); b.type = 'button'; b.dataset.blick = k.ort; b.dataset.baustein = {tasks: 'aufgaben', labor: 'labor', meter: 'token', hardware: 'hardware', models: 'modelle'}[k.ort] || k.ort;
       b.append(d().el('span', 'hs-start-blick-kopf'), d().el('span', 'hs-start-blick-werte'));
-      b.firstChild.append(d().el('span', 'hs-start-symbol', k.symbol), d().el('b', null, k.titel));
+      b.firstChild.append(d().el('span', 'hs-start-symbol', k.symbol), d().el('b', null, k.titel()));
       const werte = k.werte(st.blick || {});
       const ziel = b.lastChild;
       (werte || [['Stand', 'wird geladen …']]).forEach(([label, wert, ton])=>{ const z = d().el('span', 'hs-start-blick-zeile'); z.append(d().el('small', 'hs-leise', label), d().el('b', ton ? 'hs-start-ton ' + ton : null, wert)); ziel.append(z); });

@@ -1,4 +1,4 @@
-# Logbuch: Agent Manager (Integrationsprojekt)
+﻿# Logbuch: Agent Manager (Integrationsprojekt)
 
 Fortlaufend, neueste Einträge unten. Je Eintrag: Zeit, Art (ENTSCHEIDUNG, BAU, MESSUNG, FEHLER, ÄNDERUNG, INTEGRATION), was, Beleg. Die Messprotokolle der Bauläufe liegen zusätzlich unter `workspace/GUPPI_OS/runtime_data/measurements/logs/devvm_build_*`.
 
@@ -789,3 +789,4 @@ acht_frei.txt bewusst NICHT angelegt (ohne sie startet nie ein Lauf). Festlegung
 | 2026-11-12 20:42 | BAU | Bau palette_rang: bestanden, Stufen 2/2, Dauer 110 s, GPU-Lease 110 s, 12 Modellaufrufe in 2 Agentenläufen, Nacharbeiten 0, Eskalationen 0, Zeilen SEDRA (Kandidat) 0, Zeilen Claude (Spec + Referenz) 131, Quote Claude/SEDRA - | devvm_candidates/palette_rang |
 | 2026-11-12 20:51 | BAU | Bau langdock_agenten: bestanden, Stufen 6/6, Dauer 502 s, GPU-Lease 502 s, 55 Modellaufrufe in 9 Agentenläufen, Nacharbeiten 3, Eskalationen 0, Zeilen SEDRA (Kandidat) 205, Zeilen Claude (Spec + Referenz) 391, Quote Claude/SEDRA 1.9 | devvm_candidates/langdock_agenten |
 | 2026-11-16 09:18 | BAU | Chat gesichert 12.11.: Roadmap Gruppe 1 (AM8-10..12, AM7-08/09/15/18, main 74bf792 gepusht, 5 rote Tests schon vorher rot) und Bau-Pakete (Sitzung roadmap-bau-pakete: 7 Specs, 28 von 28 Stufen bestanden, Branch claude/roadmap-bau-pakete-25ea20 noch nicht auf main) (Wissensdatei Abschnitt 20). | docs/WISSEN_SEDRA_GESAMT.md |
+| 2026-11-15 21:50 | BAU | Chat gesichert 15.11.: UIX naechste Stufe auf Branch uix-3d-naechste-stufe (3D-Buehne ohne Bibliothek, fliegender Seedrache, Avatar, Tiefen-Tokens, Delegation im Gespraech mit team_verteilen, DG-01 bis DG-15); Abnahme am PC mit Team-Rezept bestanden (zwei Helfer gleichzeitig, Karte, Anhalten); Symbol-Korrektur 1111b8a auf main gepusht; letzter voller Gruppenlauf 1673 Tests, 3 rot (eigener Zeittest behoben, zwei Browser-Tests unter Last); Uebergabe an neuen UIX-Koordinator. | docs/WISSEN_SEDRA_GESAMT.md Abschnitt 20, docs/UEBERGABE_UIX_KOORDINATOR_2026-11-15.md |
