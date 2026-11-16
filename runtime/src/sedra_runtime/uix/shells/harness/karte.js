@@ -64,7 +64,7 @@
       const sitzung = e.entscheidung === 'sitzung', befristet = e.entscheidung === 'befristet', immer = e.entscheidung === 'immer';
       const erlaubt = e.entscheidung === 'erlauben' || sitzung || befristet || immer;
       const vorarbeiter = String(e.von || '').startsWith('vorarbeiter:');
-      fuss.replaceChildren(d().el('span', 'hs-ende ' + (erlaubt ? 'ok' : 'warn'), (sitzung ? T('karte_erlaubt_sitzung') : befristet ? T('karte_erlaubt_befristet') : immer ? T('karte_erlaubt_immer') : erlaubt ? T('karte_erlaubt') : T('karte_abgelehnt')) + (vorarbeiter ? ' (' + T('karte_vorarbeiter') + ')' : (e.ueber === 'posteingang' ? ' (' + T('karte_posteingang') + ')' : ''))),
+      fuss.replaceChildren(d().el('span', 'hs-ende ' + (erlaubt ? 'ok' : 'warn'), (sitzung ? T('karte_erlaubt_sitzung') : befristet ? T('karte_erlaubt_befristet') : immer ? T('karte_erlaubt_immer') : erlaubt ? T('karte_erlaubt') : T('karte_abgelehnt')) + (vorarbeiter ? ' ' + T('karte_vorarbeiter') : (e.ueber === 'posteingang' ? ' ' + T('karte_posteingang') : ''))),     // die Klammern stehen schon in den Texten (strings_de2.js, strings_en2.js)
                            ...(sitzung && e.erlaubnis ? [d().el('small', 'hs-leise', 'Ohne Karte bis zum Schließen: ' + e.erlaubnis.werkzeug + ' ' + e.erlaubnis.muster + ' (' + T('einst_gruppe_agent') + ' → ' + T('esp_freigabe') + ')')] : []),
                            ...((befristet || immer) && e.erlaubnis && e.erlaubnis.hinweis ? [d().el('small', 'hs-leise', e.erlaubnis.hinweis)] : []),
                            ...(e.notiz ? [d().el('small', 'hs-leise', (vorarbeiter ? 'Begründung: ' : '') + e.notiz)] : []),

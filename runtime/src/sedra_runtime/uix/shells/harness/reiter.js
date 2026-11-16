@@ -65,10 +65,10 @@
 
   // Zustand in die Reiter schreiben, ohne die Leiste neu zu bauen (die Taskleiste ruft das im Sekundentakt, solange etwas läuft)
   function zustandAuffrischen(S){
-    const T = root.sedraHarness.taskleiste;
-    if(!T || !T.zustand || !S.el || !S.el.reiter) return;
+    const TL = root.sedraHarness.taskleiste;                 // nicht `T`: das ist die Übersetzungsfunktion von oben (sonst „T is not a function“ bei jedem Neuzeichnen)
+    if(!TL || !TL.zustand || !S.el || !S.el.reiter) return;
     S.el.reiter.querySelectorAll('.hs-tab').forEach(tab=>{
-      const id = tab.dataset.reiter, z = T.zustand(S, id);
+      const id = tab.dataset.reiter, z = TL.zustand(S, id);
       tab.classList.toggle('laeuft', z.laeuft); tab.classList.toggle('neu', z.neu); tab.classList.toggle('blinkt', z.blinkt);
       const k = tab.querySelector('.hs-tab-zustand');
       if(k){ k.textContent = z.text; k.hidden = !z.text; }
