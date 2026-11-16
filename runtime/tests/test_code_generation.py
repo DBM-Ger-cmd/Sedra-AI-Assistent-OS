@@ -1,4 +1,4 @@
-﻿import unittest,tempfile,json
+import unittest,tempfile,json
 from pathlib import Path
 from unittest.mock import patch
 from sedra_runtime.runtime import SedraRuntime

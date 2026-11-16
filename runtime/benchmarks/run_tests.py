@@ -4,6 +4,8 @@ der bekannten roten Tests vergleichen. Nur NEUE Fehlschläge machen den Lauf rot
     python benchmarks/run_tests.py orchestra            # ein Bereich (siehe AREAS), ohne die langsamen Browser-Tests
     python benchmarks/run_tests.py --changed            # nur Tests, die zu den geänderten Dateien passen (gegen HEAD, dazu unversioniert)
     python benchmarks/run_tests.py --changed --base origin/spec/agenten-orchestrierung    # gegen einen Stand
+    python benchmarks/run_tests.py integration          # NACH jeder Integration, jedem Merge mit Konflikten und vor jedem Push von Harness-, Desk- oder Server-Code (siehe PRUEFSTELLEN)
+    python benchmarks/run_tests.py pruefstellen         # nur die Prüfstellen der Freigabe-Tür, die Hardening-Gegenproben und die Kodierungsprüfung (schnell)
     python benchmarks/run_tests.py all --slow           # alles, auch die Browser-Bahn (test_uix_*)
     python benchmarks/run_tests.py test_orchestra_run test_orchestra_tick                 # einzelne Dateien
     python benchmarks/run_tests.py all --jobs 6 --update-known                            # Liste der bekannten roten Tests neu schreiben (nur mit Absicht)
@@ -23,16 +25,25 @@ from pathlib import Path
 RUNTIME = Path(__file__).resolve().parents[1]
 TESTS = RUNTIME / 'tests'
 KNOWN = TESTS / 'known_red.txt'
+# Die Prüfstellen: sie halten die Freigabe-Tür fest (jede Stelle mit `approve`, jede geschützte Route, jede Entscheidungsart ist eingeordnet), die Gegenproben der Hardening-Runden und die
+# Kodierung der Quellen (kein BOM, alles lesbar). Sie gehören in JEDE Gruppe, die Harness-, Desk- oder Server-Code berührt; 16.11.2026 blieben drei rote Prüfstellen unbemerkt, weil die Gruppen
+# `harness` und `desk` sie nicht enthielten.
+PRUEFSTELLEN = ('test_freigabe_*', 'test_hardening_*', 'test_repo_kodierung')
 AREAS = {
     'orchestra': ('test_orchestra_*', 'test_guard_standing', 'test_desk_gated', 'test_desk_decisions', 'test_job_*', 'test_wissen_desk'),
-    'desk': ('test_desk_*', 'test_orchestra_desk', 'test_orchestra_messages', 'test_orchestra_hire'),
+    'desk': ('test_desk_*', 'test_orchestra_desk', 'test_orchestra_messages', 'test_orchestra_hire') + PRUEFSTELLEN,
     'scheduler': ('test_model_scheduler*', 'test_slot*', 'test_vramplan*', 'test_testlab', 'test_job_*', 'test_role_routing', 'test_model_loader'),
     'wissen': ('test_wissen_*',),
     'uix': ('test_uix_*',),
     'workflow': ('test_n8n_*', 'test_process_*', 'test_selbstabbild', 'test_workflow_*', 'test_pc_workflow'),   # Prozess-Apps (n8n Workflows, Szenario Studio), Selbstabbild; Browser-Teile laufen in der langsamen Bahn
     'runtime': ('test_runtime*', 'test_f0_*', 'test_uix_start*', 'test_skills_sedra'),   # Runtime-Lebenszyklus und Start (F0-01 bis F0-04)
-    'harness': ('test_harness_*', 'test_uix_harness_*'),          # SPEC_HARNESS_SHELL_v1 Stufen 1 bis 3 (Glob nimmt neue Dateien auf)
+    'harness': ('test_harness_*', 'test_uix_harness_*') + PRUEFSTELLEN,          # SPEC_HARNESS_SHELL_v1 Stufen 1 bis 3 (Glob nimmt neue Dateien auf)
+    'pruefstellen': PRUEFSTELLEN,
+    'integration': ('test_harness_*', 'test_uix_harness_*', 'test_desk_*', 'test_orchestra_desk', 'test_orchestra_messages', 'test_orchestra_hire', 'test_uix_gateway_*', 'test_gateway*') + PRUEFSTELLEN,
 }
+# Geänderte Quellen, bei denen die Prüfstellen immer mitlaufen (`--changed`): Harness, Desk, Kern, Server der Oberfläche, Cloud-Zugang, Manifeste und der Oberflächen-Vertrag.
+PRUEFSTELLEN_BEI = ('sedra_runtime/harness/', 'sedra_runtime/desk/', 'sedra_runtime/core/', 'sedra_runtime/uix/ui/', 'sedra_runtime/models/cloud_api.py', 'sedra_runtime/uix_server.py',
+                    'sedra_runtime/uix_clients.py', 'sedra_runtime/cloud_settings.py', 'runtime/portable/', '/tool.yaml', '/shell.yaml', 'freigabe_katalog')
 SLOW_FILES = ('test_uix_browser', 'test_uix_flows', 'test_uix_shell_start', 'test_uix_kommandodeck', 'test_uix_rekorder', 'test_n8n_browser', 'test_process_browser')   # starten einen Browser
 
 
@@ -81,6 +92,8 @@ def tests_for_changes(base):
     for stem in stems:
         word = re.compile(r'\b' + re.escape(stem) + r'\b')
         chosen.update(f for f, text in texts.items() if word.search(text))
+    if any(teil in name.replace('\\', '/') for name in files for teil in PRUEFSTELLEN_BEI):
+        chosen.update(match(PRUEFSTELLEN))                  # eine Änderung an Freigabe-, Desk-, Kern- oder Server-Code: die Prüfstellen laufen immer mit
     return sorted(chosen), files
 
 
@@ -155,6 +168,11 @@ def main(argv=None):
     ap.add_argument('--update-known', action='store_true', help='tests/known_red.txt aus diesem Lauf schreiben')
     ap.add_argument('--list', action='store_true', help='nur die gewählten Dateien zeigen')
     args = ap.parse_args(argv)
+    for strom in (sys.stdout, sys.stderr):                   # Windows (cp1252): ein Zeichen wie U+FFFD in der Testausgabe darf den Lauf nicht mit einem Traceback beenden
+        try:
+            strom.reconfigure(encoding='utf-8', errors='replace')
+        except (AttributeError, ValueError):
+            pass
     modules, why = [], ''
     if args.changed:
         modules, files = tests_for_changes(args.base)

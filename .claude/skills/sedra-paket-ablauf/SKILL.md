@@ -11,7 +11,7 @@ Gelernt in der Strecke A5 bis A9 und A3 Team (11. bis 12.11.2026). Die Einzelsch
 
 1. **Umfang klären.** Roadmap-Zeile und Spec lesen. Was nicht gebaut wird (zum Beispiel wegen unbekannter Schnittstelle oder fehlender Zugangsdaten), vorab festhalten und später im Register als "nicht gebaut" eintragen.
 2. **Bauen** im gemeinsamen Worktree `roadmap-paket` (ein Branch, ein Commit je Teil). Neue Schalter standardmäßig aus.
-3. **Testen:** neue Tests, dann die betroffenen Gruppen. Rot zählt nur, was nicht in `tests/known_red.txt` steht. Bekannte Wackler: `test_uix_workflow_live` (`id_required`) und `test_uix_shell_start` stehen auch auf `main` rot, `test_uix_harness_browser` läuft nur mit `SEDRA_BROWSER=1`. Einzeln wiederholen, bevor etwas als Fehler gilt.
+3. **Testen:** neue Tests, dann die betroffenen Gruppen **und die Prüfstellen** (`python benchmarks/run_tests.py pruefstellen`; nach einer Integration oder einem Merge mit Konflikten den ganzen Bereich `integration`, siehe `sedra-tests-windows`). Rot zählt nur, was nicht in `tests/known_red.txt` steht. Bekannte Wackler: `test_uix_workflow_live` (`id_required`) und `test_uix_shell_start` stehen auch auf `main` rot, `test_uix_harness_browser` läuft nur mit `SEDRA_BROWSER=1`. Einzeln wiederholen, bevor etwas als Fehler gilt.
 4. **Committen** auf dem Branch (Prüfung auf lokale Pfade und Schlüssel, siehe `sedra-git-uebernahme`).
 5. **Fragen:** "Mergen?" Erst nach einem Ja im Chat `git checkout main` und `git merge --ff-only roadmap-paket`.
 6. **Fragen:** "Pushen?" Nach dem Ja `git push origin main`, Beleg `git ls-remote origin main` gleich `git rev-parse main`.
@@ -27,6 +27,7 @@ Merge und Push brauchen je ein eigenes Ja. Ein Ja gilt nur für diesen Schritt u
 - **ContentGuard** (Route cloud) braucht ein Audit, sonst `SG_AUDIT_FAILED`. Im Test ein Mock-Audit übergeben.
 - **Lange Läufe** in den Hintergrund legen und mit einem Monitor warten, ein blockierendes `sleep` lehnt die Umgebung ab.
 - **Heredocs und Backslash-Pfade** verstümmeln Skripte: Skripte mit dem Write-Werkzeug anlegen.
+- **BOM nach einer Konfliktlösung:** ein Schreibwerkzeug kann Dateien als UTF-8 mit BOM speichern. Python startet damit, aber die Prüfstellen (`ast.parse`) brechen ab und verdecken weitere Fehler. Nach dem Lösen von Konflikten `python benchmarks/run_tests.py pruefstellen` (der Test `test_repo_kodierung` findet es) und die Anfangsbytes der geänderten Dateien ansehen.
 
 ## Ehrlich melden
 

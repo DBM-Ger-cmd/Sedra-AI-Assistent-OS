@@ -20,7 +20,7 @@ Nie ohne ausdrückliche Anweisung: Force-Push, `reset --hard`, Umschreiben verö
 3. `git diff --cached` lesen.
 4. **Lokale Pfade:** `git diff --cached | grep -nE "[A-Za-z]:\\\\|/Users/"`. Treffer durch die Platzhalter `<sedra>`, `<modelle>`, `<projekte>` und den Platzhalter für den Benutzerordner ersetzen (`docs/ENTWICKLUNG.md` Regel 10). Das gilt auch für das Logbuch.
 5. **Schlüssel:** `git diff --cached | grep -niE "api[_-]?key|token|secret|passw|bearer "`. Jeden Treffer ansehen.
-6. **Tests:** betroffene Gruppen mit dem Skill `sedra-tests-windows`. Rot zählt nur, was nicht in `tests/known_red.txt` steht.
+6. **Tests:** betroffene Gruppen mit dem Skill `sedra-tests-windows`, **dazu immer die Prüfstellen** (`run_tests.py pruefstellen`: Freigabe-Tür, Hardening-Gegenproben, Kodierung). Bei Integration oder Merge mit Konflikten den Bereich `integration` und den **Exit-Code** lesen. Rot zählt nur, was nicht in `tests/known_red.txt` steht.
 
 ## Commit
 
