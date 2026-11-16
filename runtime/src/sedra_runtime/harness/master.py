@@ -291,6 +291,13 @@ class Zustand:
             e = self._aktuell(sitzung_id, jetzt_z or jetzt())
             return dict(e, aktiv=True) if e else {'aktiv': False}
 
+    def letzter_grund(self, sitzung_id, werkzeug, ziel):
+        """Warum der Master genau diesen Aufruf (Werkzeug und Ziel) zuletzt nicht gedeckt hat (für die Karte) – oder None."""
+        with self._sperre:
+            e = self._an.get(str(sitzung_id))
+            l = e.get('letzter') if e else None
+            return l[2] if l and l[0] == werkzeug and l[1] == str(ziel) else None
+
     def aktiv(self, sitzung_id, jetzt_z=None):
         return bool(self.stand(sitzung_id, jetzt_z).get('aktiv'))
 
@@ -307,6 +314,7 @@ class Zustand:
                 if e is None or e['projekt'] != projekt:
                     return None
                 grund = pruefen_deckung(e['muster'], wurzel, werkzeug, ziel, args, schreibbereich=schreibbereich)
+                e['letzter'] = (werkzeug, str(ziel), grund)
                 if grund:
                     if werkzeug in DECKT:
                         e['gesperrt'] += 1

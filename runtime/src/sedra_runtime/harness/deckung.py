@@ -7,6 +7,7 @@ dieselbe wie vor S4.2 (Test `test_harness_deckung_vergleich`: Wahrheitstabelle a
 2. Vorbehalt oder Warnkarte: keine Erlaubnis deckt, nie (Vorbehalt und Warnkarte bleiben beim Captain).
 3. Aufgabe (nur lokale Modelle, HS-27): trifft eine aktive Aufgabe und lässt sich der Aufruf zählen, gilt sie; ein weicher Vorbehalt
    (Plan oder Werkzeug) gilt als Zusatz der Aufgabe.
+3b. Master-Modus (nur wenn die Sitzung ihn an hat; siehe master.py): deckt nie bei weichem Vorbehalt der Oberfläche.
 4. Sitzungs-Erlaubnis: nur mit einem lokalen Modell (S4.3, E5), nur ohne weichen Vorbehalt und nur, wenn keine Aufgabe schon gedeckt hat.
 5. Sonst: Karte.
 
@@ -15,13 +16,19 @@ Rein: keine Dateien, kein eigener Zustand. Die Ablagen (Aufgaben, Sitzungs-Erlau
 from __future__ import annotations
 
 
-def deckt(*, wirkt_als, vorbehalt, warnkarte, aufgaben_aktiv, weich_werkzeug, weich_plan, aufgabe_treffer, aufgabe_zaehlen, sitzung_treffer, lokal=True):
-    """{'via_aufgabe': aufgabe_id|None, 'via_sitzung': karte_id|None}. Alle Wirkungen kommen über die übergebenen Funktionen.
+def deckt(*, wirkt_als, vorbehalt, warnkarte, aufgaben_aktiv, weich_werkzeug, weich_plan, aufgabe_treffer, aufgabe_zaehlen, sitzung_treffer, lokal=True,
+          master_treffer=None):
+    """{'via_aufgabe': aufgabe_id|None, 'via_sitzung': karte_id|None} – mit `master_treffer` zusätzlich `via_master`. Alle Wirkungen kommen über die übergebenen Funktionen.
 
     `aufgaben_aktiv`: gibt es Aufgaben und ein lokales Modell (HS-27)? `weich_werkzeug()`: weicher Vorbehalt des Werkzeugs (oder None);
     `weich_plan`: weicher Vorbehalt aus dem Plan. `aufgabe_treffer(weich)`: Treffer-Datensatz mit `aufgabe_id` oder None;
-    `aufgabe_zaehlen(aufgabe_id)`: bool; `sitzung_treffer()`: Datensatz mit `karte_id` oder None."""
+    `aufgabe_zaehlen(aufgabe_id)`: bool; `sitzung_treffer()`: Datensatz mit `karte_id` oder None.
+    Master-Modus (docs/SPEC_MASTER_MODUS_v1_ENTWURF.md MM-12, Quelle 3b): `master_treffer()` liefert einen Datensatz mit `sitzung_id` oder None; er wird nur gefragt,
+    wenn keine Aufgabe gedeckt hat, das Modell lokal ist und kein weicher Vorbehalt der Oberfläche vorliegt (ein weicher Vorbehalt „Modell“ deckt er). Ohne `master_treffer`
+    ist alles wie vor dem Master-Modus (Vergleichstest) und das Ergebnis hat keinen Schlüssel `via_master`."""
     ergebnis = {'via_aufgabe': None, 'via_sitzung': None}
+    if master_treffer is not None:
+        ergebnis['via_master'] = None
     if wirkt_als == 'frei' or vorbehalt or warnkarte:
         return ergebnis
     if aufgaben_aktiv:
@@ -29,6 +36,13 @@ def deckt(*, wirkt_als, vorbehalt, warnkarte, aufgaben_aktiv, weich_werkzeug, we
         treffer = aufgabe_treffer(weich)
         if treffer and aufgabe_zaehlen(treffer['aufgabe_id']):
             ergebnis['via_aufgabe'] = treffer['aufgabe_id']
+    if master_treffer is not None and lokal and not ergebnis['via_aufgabe']:
+        weich = weich_werkzeug() or weich_plan
+        if not (isinstance(weich, dict) and weich.get('oberflaeche')):
+            treffer = master_treffer()
+            if treffer:
+                ergebnis['via_master'] = treffer['sitzung_id']
+                return ergebnis
     if lokal and not ergebnis['via_aufgabe'] and not weich_werkzeug():      # S4.3 FS-13 (E5 = nein): mit einem Cloud-Modell deckt keine Sitzungs-Erlaubnis
         treffer = sitzung_treffer()
         if treffer:

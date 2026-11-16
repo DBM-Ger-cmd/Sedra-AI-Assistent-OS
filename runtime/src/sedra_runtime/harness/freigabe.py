@@ -23,6 +23,7 @@ from pathlib import Path
 
 from . import deckung as harness_deckung
 from . import erlaubnis as sitzungs_erlaubnis
+from . import master as harness_master
 from . import code_stand as code_stand_mod
 from . import vorbehalte
 from .katalog import einstufen
@@ -152,8 +153,9 @@ class Kiste:
     Die Schleife ruft `aufruf`; bei `wartet` hält sie mit `festhalten` ihren Zustand an der Karte fest."""
 
     def __init__(self, werkzeuge, *, regeln, guard, audit, karten, sitzung_id, chat=None, projekt_id=None, aufgaben=None, lokal=True, vorarbeiter=None, extra=None,
-                 erlaubnisse=None, projekte=None):
-        self.projekte = projekte      # () -> die Projekte des Harness (nicht die des SEDRA-Kerns), das der Sitzung markiert; für `list_projects`
+                 erlaubnisse=None, projekte=None, master=None):
+        self.master = master          # Master-Modus (harness/master.py, `Zustand`): Quelle 3b der Deckung; None = nie
+        self.projekte = projekte     # () -> die Projekte des Harness (nicht die des SEDRA-Kerns), das der Sitzung markiert; für `list_projects`
         self.w, self.regeln, self.guard, self.audit, self.karten = werkzeuge, regeln, guard, audit, karten
         self.erlaubnisse = list(erlaubnisse or ())        # P0 M1: Sitzungs-Erlaubnisse („Für diese Sitzung erlauben“), gelten nicht bei Vorbehalt/Warnkarte
         self.sitzung_id, self.chat, self.projekt_id = sitzung_id, chat, projekt_id
@@ -248,36 +250,46 @@ class Kiste:
             weich_werkzeug=lambda: vorbehalte.pruefen_weich(name, plan['ziel'], args), weich_plan=plan.get('weich'),
             aufgabe_treffer=lambda weich: self.aufgaben.deckt(self.sitzung_id, name, plan['ziel'], weich=weich),
             aufgabe_zaehlen=self.aufgaben.zaehlen if self.aufgaben is not None else None,
-            sitzung_treffer=lambda: sitzungs_erlaubnis.deckt(self.erlaubnisse, name, plan['ziel'], datetime.now().astimezone()), lokal=bool(self.lokal))
-        via_aufgabe, via_sitzung = gedeckt['via_aufgabe'], gedeckt['via_sitzung']
+            sitzung_treffer=lambda: sitzungs_erlaubnis.deckt(self.erlaubnisse, name, plan['ziel'], datetime.now().astimezone()), lokal=bool(self.lokal),
+            master_treffer=(lambda: self.master.deckt(self.sitzung_id, self.projekt_id, self.w.wurzel, name, plan['ziel'], args,
+                                                       schreibbereich=(getattr(self.w, 'projekt', None) or {}).get('schreibbereich'))) if self.master is not None else None)
+        via_aufgabe, via_sitzung, via_master = gedeckt['via_aufgabe'], gedeckt['via_sitzung'], gedeckt.get('via_master')
         wdh_schluessel = harness_deckung.Wiederholung.schluessel(name, plan['ziel'], args)
-        if via_aufgabe or via_sitzung:
-            if self._wiederholung.erreicht(wdh_schluessel):          # S4.5 FS-41: gleicher Aufruf zu oft ohne Änderung → wieder die Karte
-                self._audit('HARNESS_ERLAUBNIS', harness_deckung.ereignis('gedeckelt', via_aufgabe or via_sitzung, 'befristet' if via_aufgabe else 'sitzung',
-                                                                       'aufgabe' if via_aufgabe else 'karte', 'aufruf'))
+        if via_aufgabe or via_sitzung or via_master:
+            if self._wiederholung.erreicht(wdh_schluessel):          # S4.5 FS-41: gleicher Aufruf zu oft ohne Änderung → wieder die Karte (MM-15: auch unter dem Master)
+                self._audit('HARNESS_ERLAUBNIS', harness_deckung.ereignis('gedeckelt', via_aufgabe or via_sitzung or via_master, 'befristet' if via_aufgabe else 'sitzung',
+                                                                       'aufgabe' if via_aufgabe else 'master' if via_master else 'karte', 'aufruf'))
                 e = dict(e, begruendung=f"{self._wiederholung.deckel}-mal ohne Änderung wiederholt – der Captain entscheidet. " + str(e.get('begruendung') or ''))
-                via_aufgabe, via_sitzung = None, None
+                via_aufgabe, via_sitzung, via_master = None, None, None
             else:
                 self._wiederholung.zaehlen(wdh_schluessel)
+        elif self.master is not None and name in harness_master.DECKT and e['wirkt_als'] != 'frei' and not e['vorbehalt'] and not warnkarte:
+            grund = self.master.letzter_grund(self.sitzung_id, name, plan['ziel'])       # MM-10/§5: die Karte sagt, warum der Master-Modus nicht gedeckt hat
+            if grund:
+                e = dict(e, begruendung=f'Master-Modus deckt nicht: {grund}. ' + str(e.get('begruendung') or ''))
         if via_aufgabe and name in vorbehalte.SCHREIBEN and getattr(self.w, 'oberflaeche', None) is not None:      # O3 G2-01: unter einer Aufgabe geschriebener Code der Oberfläche wirkt erst nach der Übernahme
             from pathlib import Path as _Pfad
             if self.w.oberflaeche.zurueckhalten(_Pfad(self.w.wurzel) / plan['ziel'], self.sitzung_id, via_aufgabe) is None:
                 via_aufgabe = None                                    # zu groß für die Ablage: die Schreibaktion wird zur Karte (G2-08)
-        self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id, 'aufgabe_id': via_aufgabe}
-        gate = self.guard.create_gate(self.w.mission_id, plan['gate']['aktion'], plan['gate']['ziel'], request_binding=plan['gate']['bindung'],
+        self.w.kontext = {'sitzung_id': self.sitzung_id, 'antwort_id': antwort_id, 'aufgabe_id': via_aufgabe or (f'master:{self.sitzung_id}' if via_master else None)}      # Aus (MM-04) beendet Befehle und Läufe unter diesem Schlüssel
+        gate =self.guard.create_gate(self.w.mission_id, plan['gate']['aktion'], plan['gate']['ziel'], request_binding=plan['gate']['bindung'],
                                               risks=[e['begruendung']], rollback_available=name in ('datei_schreiben', 'datei_aendern', 'desktop_aendern', 'profil_wechseln'))
-        if e['wirkt_als'] == 'frei' or via_aufgabe or via_sitzung:
+        if e['wirkt_als'] == 'frei' or via_aufgabe or via_sitzung or via_master:
             token = self.guard.approve(gate)
-            von = f'aufgabe:{via_aufgabe}' if via_aufgabe else f'sitzung:{via_sitzung}' if via_sitzung else f"katalog:{e['regel']}"
+            von = (f'aufgabe:{via_aufgabe}' if via_aufgabe else f'sitzung:{via_sitzung}' if via_sitzung else f'master:{via_master}' if via_master
+                   else f"katalog:{e['regel']}")
             self._audit('HARNESS_APPROVED_BY', {'approved_by': von, 'werkzeug': name, 'gate_id': gate['gate_id'],
-                                                'kanal': 'aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else 'katalog'})     # G10
+                                                'kanal': 'aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else 'master' if via_master else 'katalog'})     # G10
+            if via_master:                                                   # MM-10: je automatisch freigegebenem Aufruf, Kennzeichen master
+                self._audit('HARNESS_MASTER_AUFRUF', {'sitzung_id': self.sitzung_id, 'werkzeug': name, 'ziel': plan['ziel'][:300], 'gate_id': gate['gate_id'],
+                                                      'regel': 'master', 'master': True})
             alt = _code_vorher(self.w, name, plan)
             out = ausfuehren(self.w, self.guard, name, args, plan, token, abbruch)
             if name in vorbehalte.SCHREIBEN and out.get('status') == 'ok':
                 self._wiederholung.schreibe()                        # S4.5 FS-40: ein Schreiben beginnt eine neue Runde
-            _code_nachher(self.w, name, plan, out, sitzung_id=self.sitzung_id, weg='aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else 'katalog', alt=alt)
-            stufe = 'aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else e['stufe']
-            return dict(out, stufe=stufe, regel=von if (via_aufgabe or via_sitzung) else e['regel'])
+            _code_nachher(self.w, name, plan, out, sitzung_id=self.sitzung_id, weg='aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else 'master' if via_master else 'katalog', alt=alt)
+            stufe = 'aufgabe' if via_aufgabe else 'sitzung' if via_sitzung else 'master' if via_master else e['stufe']
+            return dict(out, stufe=stufe, regel=von if (via_aufgabe or via_sitzung or via_master) else e['regel'])
         an = 'captain'
         if e['stufe'] == 'vorarbeiter' and not e['vorbehalt'] and not warnkarte and self.vorarbeiter is not None:
             zustaendig = self.vorarbeiter.zustaendig(self.projekt_id)
