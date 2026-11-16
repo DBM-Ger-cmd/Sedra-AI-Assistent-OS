@@ -29,3 +29,19 @@ Platz des Knopfs, Farbe/Token der Warnanzeige, ob die Taskleiste den Eintrag zei
 
 - Der Schalter gilt nur für die eine Sitzung und endet mit ihr, nach 24 Stunden und mit dem Neustart des Servers; die Oberfläche darf ihn nie „merken“ oder beim Start wieder einschalten.
 - Löschbefehle, ungesehener Code (G4), Code der Oberfläche und alle festen Vorbehalte bleiben Karte (O-1, O-2 der Spec).
+
+---
+
+# Gedächtnis-Notizen (Teil B, B6): was die Oberfläche bekommt
+
+Die Harness ist fertig; die Seite „Gedächtnis“ im Reiter baut der UIX-Koordinator.
+
+| Weg (Basis `/api/harness`) | Wirkung |
+|---|---|
+| `GET gedaechtnis/index?projekt=<id>` | `{projekt, notizen: [{name, description, typ}], index: [Zeilen von MEMORY.md], max}` – nur dieses Projekt |
+| `GET gedaechtnis/index?projekt=<id>&name=<name>` | eine Notiz `{name, description, typ, text}` |
+| `POST gedaechtnis/index` `{projekt, typ, name, description, text}` | der **Captain** legt an oder ändert (Klasse N, Herkunftsprüfung; Form wird geprüft, Fehler `400` mit Grund) |
+| `DELETE gedaechtnis/index?projekt=<id>&name=<name>` | Notiz löschen |
+
+Anträge des Modells (`gedaechtnis_vorschlagen`) kommen als Antrag der Art `harness_gedaechtnis` in den **Posteingang** (Klasse H, „Freigeben und anwenden“). Anzeige: Typ, Name, Hinweis, Text, ob „neu“ oder „ändert eine vorhandene“.
+Der Index wird beim **Start einer Sitzung** eingefroren (`kopf.gedaechtnis`); Änderungen gelten ab der nächsten Sitzung – die Seite sollte das sagen. Ordner der Dateien: `runtime_data/harness/gedaechtnis/<projekt>/` („Ordner öffnen“ ist ein Wunsch an die Seite).

@@ -1,6 +1,6 @@
 # SPEC Master-Modus und Gedächtnis für neue Chats v1 – ENTWURF (16.11.2026)
 
-Status: **G1 und G4 vom Captain erteilt (16.11.2026, in der Sitzung: „ja“); O-1 bis O-6 gelten wie vorgeschlagen.** Teil A gebaut (A1 bis A6), Teil B folgt. Schreibt: Claude (Sitzung „Master-Modus“), Branch `claude/master-modus-927426` (Worktree `master-modus-927426`), kein Merge, kein Push.
+Status: **G1 und G4 vom Captain erteilt (16.11.2026, in der Sitzung: „ja“); O-1 bis O-6 gelten wie vorgeschlagen.** Teil A gebaut (A1 bis A6), Teil B gebaut (B1 bis B6) – Abweichungen siehe §11. Schreibt: Claude (Sitzung „Master-Modus“), Branch `claude/master-modus-927426` (Worktree `master-modus-927426`), kein Merge, kein Push.
 Quellen gelesen: `SPEC_HARNESS_SHELL_v1.md` (HS-17, HS-21 bis HS-29), `SPEC_HARNESS_SHELL_v1_G2.md` §3.5, `harness/freigabe.py`, `katalog.py`, `befehl.py`, `vorbehalte.py`, `aufgabe.py`, `aufgabe_deckung.py`, `deckung.py`, `erlaubnis.py`, `code_stand.py`, `harness/gedaechtnis.py`, `desk/freigabeklasse.py`, `tests/test_freigabe_vollstaendig.py`, `projekte.py`, `config/harness_projekte.beispiel.yaml`. Keine lokalen Pfade in dieser Datei: `<sedra>` = Wurzel des Repos.
 
 ## 0. Ergebnis in Kürze
@@ -181,3 +181,10 @@ Teil A: Master aus = Verhalten wie heute, Ausnahme in `master.py` = Karte (MM-14
 1. Diese Spec vom Captain freigegeben (**G1**); die Änderungen an den Prüfstellen aus §4.3 mit **G4** in der Sitzung.
 2. Teil A als A1 bis A6, Teil B als B1 bis B6, je Schritt Tests der Gruppen aus `benchmarks/run_tests.py` (Exit-Code geprüft, bekannte rote Tests verglichen), je Teil ein eigener Commit auf dem Branch; `test_freigabe_vollstaendig` und `test_harness_deckung_vergleich` grün.
 3. Bericht mit Zahlen, was nicht geprüft wurde, was am PC abzunehmen ist (Einschalten über die Tür, Aus-Knopf, Karte bei Sperre, ein Lauf mit Modell unter dem Master, Neustart des Servers).
+
+## 11. Bauergebnis und Abweichungen (16.11.2026)
+
+- **Teil A:** wie in §3/§4 gebaut. Abweichung: `Kiste.lokal` wird in `_kiste` nirgends gesetzt (Standard `True`); die Harness kennt heute nur lokale Modelle, die Prüfung „nur lokale Modelle“ (MM-06) greift also erst, wenn `lokal` gesetzt wird.
+- **Teil B:** O-B1 (Sedras Ablage), O-B2 (nur Struktur, **nichts aus den Claude-Notizen übernommen**), O-B3 (strikt je Projekt), O-B4 (Cloud-Modelle bekommen den Index nicht, weil es sie in der Harness noch nicht gibt) wie vorgeschlagen.
+- **Nicht gebaut / offen:** GN-03 „halbe Kappe bei Fenster unter 16 000 Token“ ist in `kontext_text(zeilen, fenster)` umgesetzt und getestet, wird aber in `api.nachricht` mit `fenster=None` aufgerufen (die Fenstergröße ist dort nicht zur Hand); GN-09/GN-10 „Index aus je Projekt“ als Einstellung fehlt (ein kaputter oder fehlender Index = Sitzung ohne Block ist getestet); „Als Notiz vorschlagen“ aus einer Zusammenfassung (GN-08) bleibt später; die Oberfläche (B6) ist nur beschrieben.
+- Das Werkzeug `gedaechtnis_lesen` und `gedaechtnis_vorschlagen` stehen in `OHNE_KARTE` (wie `erinnern`); `gedaechtnis_vorschlagen` legt nur einen Antrag an. Notizen werden nur durch den Captain (Weg) oder nach seiner Freigabe des Antrags geschrieben.

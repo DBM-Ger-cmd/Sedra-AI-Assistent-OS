@@ -60,13 +60,15 @@ class Sitzungen:
             os.fsync(datei.fileno())
 
     # ---- öffentlich
-    def anlegen(self, projekt, titel='', modell=None, mission_id=None, vorlage=None, vorlage_hash=None):
+    def anlegen(self, projekt, titel='', modell=None, mission_id=None, vorlage=None, vorlage_hash=None, gedaechtnis=None):
         self.ordner.mkdir(parents=True, exist_ok=True)
         for _ in range(20):
             sid = 'S-' + secrets.token_hex(4).upper()
             pfad = self._pfad(sid)
             kopf = {'typ': 'kopf', 'version': 1, 'id': sid, 'titel': titel_aus(titel), 'projekt': str(projekt), 'vorlage': vorlage, 'vorlage_hash': vorlage_hash,
                     'modell': modell, 'mission_id': mission_id, 'angelegt': jetzt()}
+            if gedaechtnis:                                   # eingefrorener Index der Gedächtnis-Notizen (Teil B der Spec Master-Modus und Gedächtnis): Zeilen, neueste zuerst
+                kopf['gedaechtnis'] = [str(z)[:300] for z in gedaechtnis][:60]
             try:
                 self._schreiben(pfad, kopf, modus='x')        # 'x': eine schon vergebene ID wird nie überschrieben
                 return kopf

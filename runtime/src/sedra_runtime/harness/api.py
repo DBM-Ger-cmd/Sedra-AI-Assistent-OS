@@ -70,6 +70,8 @@ from . import code_stand as harness_code_stand
 from . import freigabe
 from . import gedaechtnis as harness_gedaechtnis
 from . import master as harness_master
+from . import gedaechtnis_notizen as harness_notizen
+from . import antraege_gedaechtnis as harness_antraege_gedaechtnis
 from . import uebersetzen as harness_uebersetzen
 from . import herkunft as harness_herkunft
 from . import bausteine as harness_bausteine
@@ -102,11 +104,11 @@ LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand',
          'gateway_status', 'gateway_vorgang', 'gateway_regel')        # SPEC_WISSEN_KERN_v1 WK-12: die GateWay-Auskunft auch in One Sedra (nur lesen)
 WEG = re.compile(r'/api/harness/(?:(projekte)|(sitzungen)(?:/(S-[0-9A-F]{8})(?:/(nachricht|export|master))?)?|antworten/(A-[0-9A-F]{8})/(strom|stopp)'
-                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|oberflaeche|hilfswerkzeuge|bausteine|info|desktop|vorschlaege|erlaubnisse)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen|vorlegen|zuruecksetzen|zuruecknehmen))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
+                 r'|karten/(K-[0-9A-F]{8})(?:/(zuruecknehmen))?|(katalog|einstufen|werkzeuge|vorlagen|vorarbeiter|vorschau|dateien|vorgaben|modelle|router|verknuepfungen|gedaechtnis|token|aufraeumen|code_stand|oberflaeche|hilfswerkzeuge|bausteine|info|desktop|vorschlaege|erlaubnisse)(?:/(antrag|entfernen|grenzen|neu|notizen|export|wissen|vorlegen|zuruecksetzen|zuruecknehmen|index))?|(aufgaben)(?:/(T-[0-9A-F]{8})(?:/(zuruecknehmen))?)?|(laeufe)(?:/(L-[0-9A-F]{8})(?:/(stopp))?)?)')
 # Wege, mit denen man Freigaben beantwortet, Rechte vergibt oder zurücknimmt: sie prüfen zusätzlich die Herkunft der Anfrage (S7, harness/herkunft.py)
 GESCHUETZT = re.compile(r'/api/harness/(?:karten/K-[0-9A-F]{8}(?:/zuruecknehmen)?|aufgaben(?:/T-[0-9A-F]{8}/zuruecknehmen)?|vorarbeiter|laeufe/L-[0-9A-F]{8}/stopp'
                         r'|katalog/(?:antrag|entfernen)|vorlagen/(?:grenzen|neu)|info/wissen|desktop|oberflaeche/(?:vorlegen|zuruecksetzen|zuruecknehmen)'
-                        r'|verknuepfungen|gedaechtnis|token|aufraeumen|sitzungen/S-[0-9A-F]{8}(?:/(?:nachricht|master))?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
+                        r'|verknuepfungen|gedaechtnis(?:/index)?|token|aufraeumen|sitzungen/S-[0-9A-F]{8}(?:/(?:nachricht|master))?|antworten/A-[0-9A-F]{8}/stopp|projekte|vorgaben|router)')      # A2 (1.11.): auch Nachricht, Sitzung ändern/verschieben, Stopp
 # Gedanken und Modelle (Captain 02.11.2026): Sedra speichert die Gedanken je Antwort; ans Modell geht je nach Modus nur wenig zurück.
 #   aus  – nichts, nur Text und Ergebnisse        spur – (Standard) eine Zeile je frühere Antwort: was lief, wie viel Gedanken gespeichert sind; abrufbar mit `erinnern`
 #   kurz – Spur + das Ende der Gedanken der letzten 2 Antworten (je 800 Zeichen)        voll – Spur + die letzten 4 (je 6 000 Zeichen)
@@ -335,6 +337,8 @@ class HarnessApi:
             return 200, self.aufraeumen(payload)
         if fest == 'token' and not unter and method == 'GET':
             return 200, self.token_stand((q.get('sitzung') or [''])[0])
+        if fest == 'gedaechtnis' and unter == 'index':
+            return 200, self.notizen_weg(method, q, payload)
         if fest == 'gedaechtnis' and unter in (None, '', 'notizen', 'export'):
             return 200, self.gedaechtnis_weg(method, q, payload, unter)
         if fest == 'verknuepfungen' and not unter:
@@ -428,7 +432,8 @@ class HarnessApi:
         self._mission_stand(mission, 'closed', 'schliessen')
         kopf = self.sitzungen.anlegen(projekt['id'], titel, modell=(str(payload['modell'])[:200] if payload.get('modell') else None),
                                       mission_id=mission['identity']['mission_id'], vorlage=vorlage['id'] if vorlage else None,
-                                      vorlage_hash=vorlage['hash'] if vorlage else None)
+                                      vorlage_hash=vorlage['hash'] if vorlage else None,
+                                      gedaechtnis=harness_notizen.index_fuer_sitzung(self.hub.project_root, projekt['id']))
         self._audit('HARNESS_SITZUNG_ANGELEGT', {'sitzung_id': kopf['id'], 'projekt': projekt['id'], 'mission_id': kopf['mission_id'],
                                                  'vorlage': kopf.get('vorlage'), 'vorlage_hash': kopf.get('vorlage_hash')})
         slot = payload.get('slot') if payload.get('slot') is not None else (vorlage or {}).get('slot')      # die Wahl beim Anlegen geht vor der Vorlage; Pool: Manager 0, Angestellte 1 und 2
@@ -596,7 +601,8 @@ class HarnessApi:
         messages = [{'role': 'system', 'content': schleife.system_prompt((f"{projekt['name']} (Ordner {projekt['wurzel']}, Schreibbereich {', '.join(projekt['schreibbereich'])})" if projekt else None), box.names, vorlage['system'] if vorlage else None,
                                                                          (letzte_zusammenfassung(s['eintraege']) or {}).get('text'), harness_verbrauch.heute(),
                                                                          harness_belohnung.lessons(projekt['wurzel']) if projekt else None,
-                                                                         wissen['satz'] if wissen else None)},
+                                                                         wissen['satz'] if wissen else None,
+                                                                         notizen=harness_notizen.kontext_text(s['kopf'].get('gedaechtnis')))},
                     *verlauf, {'role': 'user', 'content': (wissen['block'] + '\n\n' + text) if wissen and wissen['block'] else text}]   # §3.4: Block und Frage in EINER Nachricht (manche Vorlagen verlangen den Wechsel der Rollen)
         with self._start:
             antwort = self._antwort_anlegen(sid)
@@ -727,6 +733,30 @@ class HarnessApi:
             ids = [p['id'] for p in self.projekte()['projekte']] or [projekt]
             return harness_gedaechtnis.text_aus(harness_gedaechtnis.suchen(self.hub.project_root, ids, frage), mehrere=True)
         return harness_gedaechtnis.text_aus(harness_gedaechtnis.suchen(self.hub.project_root, projekt, frage))
+
+    def notizen_weg(self, method, q, payload):
+        """gedaechtnis/index (Teil B, GN-02/GN-05): die kuratierten Notizen eines Projekts. GET ?projekt[&name]: Liste und Index (oder eine Notiz) · POST {projekt, typ, name,
+        description, text, neu?}: der Captain legt an oder ändert (kein Antrag nötig; Herkunftsprüfung im Server) · DELETE ?projekt&name. Jedes Projekt nur für sich."""
+        pid = str((q.get('projekt') or [''])[0] or (payload or {}).get('projekt') or '')
+        self._projekt(pid)
+        wurzel = self.hub.project_root
+        try:
+            if method == 'GET':
+                name = (q.get('name') or [''])[0]
+                if name:
+                    return harness_notizen.lesen(wurzel, pid, name)
+                return {'projekt': pid, 'notizen': harness_notizen.liste(wurzel, pid), 'index': harness_notizen.index_zeilen(wurzel, pid), 'max': harness_notizen.NOTIZEN_MAX}
+            if method == 'DELETE':
+                out = harness_notizen.loeschen(wurzel, pid, (q.get('name') or [''])[0])
+                self._audit('HARNESS_GEDAECHTNIS_NOTIZ_GELOESCHT', {'projekt': pid, 'name': out['geloescht']})
+                return out
+            p = payload or {}
+            vorhanden = any(n['name'] == str(p.get('name') or '').strip().lower() for n in harness_notizen.liste(wurzel, pid))
+            n = harness_notizen.speichern(wurzel, pid, p.get('typ'), p.get('name'), p.get('description'), p.get('text'), neu=not vorhanden)
+            self._audit('HARNESS_GEDAECHTNIS_NOTIZ', {'projekt': pid, 'name': n['name'], 'typ': n['typ'], 'geaendert': vorhanden, 'von': 'captain'})
+            return dict(n, geaendert=vorhanden)
+        except harness_notizen.NotizFehler as exc:
+            raise ValueError(str(exc)) from exc
 
     def gedaechtnis_weg(self, method, q, payload, unter=None):
         """GET: je Projekt Zahl der Notizen, noch nicht zusammengefasste und Zusammenfassungen · POST {projekt}: fasst die ältesten neuen Notizen mit dem geladenen Modell
@@ -1002,6 +1032,8 @@ class HarnessApi:
                          text_antwort=lambda text, **kw: self.text_antwort(mission_id, text, **kw), oberflaeche=self._oberflaeche_fuer(projekt),
                          rueckblick_antrag=lambda nutz: harness_antraege_lernen.rueckblick_antrag(self.hub, nutz),
                          vorschlag_antrag=lambda nutz: harness_antraege_lernen.vorschlag_antrag(self.hub, nutz),
+                         notiz_lesen=lambda pid, name, frage: harness_notizen.lese_text(self.hub.project_root, pid, name=name, frage=frage),
+                         notiz_antrag=lambda pid, nutz: harness_antraege_gedaechtnis.notiz_antrag(self.hub, pid, nutz),
                          web_transkript=lambda video, sprachen: self.hub.runtime.web_tool.execute(mission_id, 'youtube_transcript', {'video': video, 'languages': sprachen}))
 
     def cloud_verteilen(self, auftraege):

@@ -17,6 +17,7 @@ from . import projekte as harness_projekte
 from . import vorlagen as harness_vorlagen
 from . import vorlagen_neu as harness_vorlagen_neu
 from .antraege_lernen import rueckblick_anwenden, vorschlag_anwenden
+from .antraege_gedaechtnis import notiz_anwenden
 
 KIND_KATALOG = 'harness_katalog'
 KIND_VORLAGE = 'harness_vorlage'
@@ -24,6 +25,7 @@ PROJEKT_ANTRAEGE_MAX = 5                 # offene „Ordner öffnen“-Anträge 
 KIND_PROZESS = 'harness_prozess'            # 05.11.: „Prozess anlegen“ (von SEDRA vorgeschlagen) → Entwurf im Prozessbestand, nie ausführbar
 KIND_RUECKBLICK = 'harness_rueckblick'
 KIND_VORSCHLAG = 'harness_vorschlag'
+KIND_NOTIZ = 'harness_gedaechtnis'          # Teil B: Antrag „Gedächtnis-Notiz“ (antraege_gedaechtnis.py)
 PROZESS_ANTRAEGE_MAX = 5
 KIND_PROJEKT = 'harness_projekt'            # P0 M3 (1.11.): „Ordner öffnen“ → Laufzeitdatei, nie local_config
 KIND_CODE_STAND = 'harness_code_stand'      # 04.11.: „Code-Stand übernehmen“ → gesehener Stand unter runtime_data/harness/code_stand
@@ -366,3 +368,4 @@ def registrieren(registry):
     gated.register_applier(KIND_PROZESS, _prozess_anwenden, registry=registry)
     gated.register_applier(KIND_RUECKBLICK, rueckblick_anwenden, registry=registry)
     gated.register_applier(KIND_VORSCHLAG, vorschlag_anwenden, registry=registry)
+    gated.register_applier(KIND_NOTIZ, notiz_anwenden, registry=registry)

@@ -22,6 +22,7 @@ ARTEN = {
     # Anträge (request:<art>, desk/decisions.REQUEST_TITLE)
     'request:switch': H, 'request:routing': H, 'request:boundaries': H,                 # Regeln
     'request:harness_katalog': H, 'request:harness_vorlage': H,                          # Regeln der Harness
+    'request:harness_gedaechtnis': H,                     # Teil B: Notiz im Index jeder neuen Sitzung (Text, der spätere Chats steuert)
     'request:harness_rueckblick': H, 'request:harness_vorschlag': H,   # W4: erst nach Freigabe in Dokument/Liste
     'request:harness_prozess': H,                                                        # Prozess-Entwurf in den Bestand (nie ausführbar; wie eine Vorlage)
     'request:dienst_start': H, 'request:zugang_rechte': H,                               # AM4: ein Programm starten; Verben eines Zugangs gewähren
@@ -293,6 +294,8 @@ ROUTEN_HARNESS = {
     'DELETE vorarbeiter': ('zurueck', None, 'Ernennung entziehen'),
     'POST vorgaben': ('handlung', N, 'Standard für Rezept und Projekt'),
     'POST aufraeumen': ('handlung', N, 'Sitzungen nach geloescht/ verschieben'),
+    'POST gedaechtnis/index': ('handlung', N, 'Gedächtnis-Notiz des Captains (Teil B): Text für künftige Sitzungen, vergibt keine Rechte; das Modell legt Notizen nur über request:harness_gedaechtnis an'),
+    'DELETE gedaechtnis/index': ('zurueck', None, ''),
     'POST gedaechtnis': ('handlung', N, 'Gedächtnis des Modells: dauerhafter Text, vergibt keine Rechte (offen: wie Skill und arbeitsplatz.yaml H?)'),
     'DELETE gedaechtnis': ('zurueck', None, ''),
     'POST verknuepfungen': ('handlung', N, ''),
@@ -315,7 +318,7 @@ HARNESS_WEGE = frozenset({'projekte', 'sitzungen', 'antworten', 'karten', 'katal
                           'vorschau', 'dateien', 'vorgaben', 'modelle', 'router', 'verknuepfungen', 'gedaechtnis', 'token', 'aufraeumen',
                           'code_stand', 'oberflaeche', 'aufgaben', 'laeufe', 'hilfswerkzeuge', 'bausteine', 'info', 'desktop', 'vorschlaege',
                           'erlaubnisse'})
-HARNESS_UNTERWEGE = frozenset({'nachricht', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen', 'wissen', 'vorlegen', 'zuruecksetzen', 'master'})
+HARNESS_UNTERWEGE = frozenset({'nachricht', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen', 'wissen', 'vorlegen', 'zuruecksetzen', 'master', 'index'})
 # In GESCHUETZT (S7), aber heute nur mit GET geroutet – keine schreibende Route (harness/api.py, Weg `token`)
 HARNESS_GESCHUETZT_OHNE_SCHREIBEN = {'token': 'nur GET token_stand'}
 

@@ -76,12 +76,14 @@ def cache_messung(usage, timings):
 WISSEN_KOPF = '\n\nWissen zuerst: Vor der Frage des Captains kann ein Block mit Fundstellen aus dem Wissen von SEDRA stehen. '
 
 
-def system_prompt(projekt, werkzeuge, vorlage_text=None, zusammenfassung=None, heute=None, regeln=None, wissen=None):
+def system_prompt(projekt, werkzeuge, vorlage_text=None, zusammenfassung=None, heute=None, regeln=None, wissen=None, notizen=None):
     """Der Systemprompt; mit einer Vorlage (HS-19) steht ihr Text vorn, danach Projekt und Werkzeuge. `regeln`: die gelernten Regeln des Projekts (Lernsystem, harness/belohnung.py `lessons`).
     `wissen`: der feste Satz über den Wissensblock (SPEC_WISSEN_KERN_v1 WK-13) – steht bei eingeschaltetem „Wissen zuerst“ in **jedem** Zug, auch ohne Treffer, damit der Anfang gleich bleibt (Cache)."""
     basis = _system_basis(projekt, werkzeuge, vorlage_text, heute)
     basis += (WISSEN_KOPF + wissen.strip()) if wissen and wissen.strip() else ''
-    return mit_zusammenfassung(basis + (GELERNT_KOPF + regeln.strip() if regeln and regeln.strip() else ''), zusammenfassung)
+    basis += (GELERNT_KOPF + regeln.strip() if regeln and regeln.strip() else '')
+    basis += notizen if isinstance(notizen, str) else ''          # Gedächtnis-Notizen des Projekts (harness/gedaechtnis_notizen.py `kontext_text`), eingefroren beim Start der Sitzung
+    return mit_zusammenfassung(basis, zusammenfassung)
 
 
 def _system_basis(projekt, werkzeuge, vorlage_text, heute):
