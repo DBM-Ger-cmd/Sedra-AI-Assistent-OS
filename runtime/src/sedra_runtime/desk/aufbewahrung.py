@@ -10,6 +10,7 @@ Es gibt keinen Hintergrunddienst: der Lauf kommt beim Start und bei jedem Blick 
 from __future__ import annotations
 
 import json
+import math
 import time
 from datetime import datetime
 from pathlib import Path
@@ -36,6 +37,8 @@ def lauf(hub, jetzt=None, erzwingen=False):
         return None
     jetzt = time.time() if jetzt is None else jetzt
     vorher = zuletzt(hub.project_root)
+    if vorher is not None and (not math.isfinite(vorher) or vorher > jetzt):
+        vorher = None                                  # ein Zeitpunkt in der Zukunft (Uhr zurückgestellt, Datei von Hand) darf den Lauf nicht auf Dauer sperren
     if not erzwingen and vorher is not None and jetzt - vorher < INTERVALL_S:
         return None
     auf = (rl.daten or {}).get('aufbewahrung') or {}

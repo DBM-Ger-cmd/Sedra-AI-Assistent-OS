@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 import re
 import threading
+import unicodedata
 from pathlib import Path
 
 import yaml
@@ -41,6 +42,17 @@ ANWEISUNG = re.compile(r'(?i)(ignoriere (alle |die )?(vorigen |bisherigen |obige
                        r'vergiss (alle|deine) (anweisungen|regeln)|du bist (jetzt|ab jetzt) |system ?prompt (lautet|ist)|gib (dem captain )?keine rueckfrage)')
 
 
+GERAETENAMEN = frozenset({'con', 'prn', 'aux', 'nul'} | {f'com{i}' for i in range(1, 10)} | {f'lpt{i}' for i in range(1, 10)})     # unter Windows (je nach Stand) auch mit Endung Geräte
+
+
+def _normal(text):
+    """Die Fassung, gegen die die Filter prüfen (Hardening 16.11.2026): Unicode NFKC (volle Breite, Ligaturen), Zeichen der Klasse Cf (unsichtbar: Nullbreite, Richtungszeichen) entfernt,
+    jede Folge von Leerraum (Tab, Umbruch, geschütztes Leerzeichen) ein Leerzeichen. Der gespeicherte Text bleibt unverändert."""
+    s = unicodedata.normalize('NFKC', str(text or ''))
+    s = ''.join(c for c in s if unicodedata.category(c) != 'Cf')
+    return ' '.join(s.split())
+
+
 class NotizFehler(ValueError):
     """Ungültige Notiz oder Anfrage; der Text nennt den Grund (auch für das Modell)."""
 
@@ -60,7 +72,7 @@ def ordner(projekt_root, projekt_id):
 
 def _name(name):
     n = str(name or '').strip().lower()
-    if not NAME.fullmatch(n) or n == 'memory':
+    if not NAME.fullmatch(n) or n == 'memory' or n in GERAETENAMEN:
         raise NotizFehler('name_ungueltig: kleine Buchstaben, Ziffern und Bindestrich (höchstens 48 Zeichen), nicht „memory“')
     return n
 
@@ -97,7 +109,7 @@ def pruefen(typ, name, description, text):
         raise NotizFehler('warum_wann_fehlen: Notizen vom Typ feedback und project brauchen die Zeilen „Warum:“ und „Wann anwenden:“')
     for was, muster in (('ein Schlüssel oder Zugangsdaten', SCHLUESSEL), ('ein lokaler Pfad (Platzhalter wie <sedra> nehmen)', PFAD),
                         ('Text, der wie eine Anweisung an das System aussieht', ANWEISUNG)):
-        if muster.search(description) or muster.search(text):
+        if muster.search(description) or muster.search(text) or muster.search(_normal(description)) or muster.search(_normal(text)):
             raise NotizFehler(f'inhalt_abgelehnt: enthält {was}')
     return typ, name, description, text
 
@@ -113,7 +125,10 @@ def lesen_datei(pfad):
         roh = Path(pfad).read_text(encoding='utf-8')
         if not roh.startswith('---'):
             return None
-        _, kopf, rest = roh.split('---', 2)
+        kopfteil = re.match(r'---\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)', roh, re.DOTALL)          # nur die erste Zeile `---` bis zur nächsten Zeile `---` ist der Kopf (ein `---` im Hinweis bricht ihn nicht)
+        if not kopfteil:
+            return None
+        kopf, rest = kopfteil.group(1), roh[kopfteil.end():]
         d = yaml.safe_load(kopf) or {}
         typ = ((d.get('metadata') or {}).get('type') if isinstance(d.get('metadata'), dict) else None) or d.get('type')
         if not isinstance(d.get('name'), str) or not isinstance(d.get('description'), str) or typ not in TYPEN:
