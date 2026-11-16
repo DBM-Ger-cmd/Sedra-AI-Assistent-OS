@@ -362,3 +362,19 @@
     transition: none;
   }
 }
+/* Einstieg (Designvorlage v1.6): vier Hauptwege oben im Startmenü */
+.hs-start-einstieg { margin: 0 0 10px; }
+.hs-start-raster.einstieg {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px;
+}
+.hs-start-app.einstieg-weg {
+  min-height: 64px;
+  border-color: var(--line);
+  background: var(--panel-2, transparent);
+}
+.hs-start-tag {
+  color: var(--warn, #f2c879);
+  font-size: var(--size-small);
+}

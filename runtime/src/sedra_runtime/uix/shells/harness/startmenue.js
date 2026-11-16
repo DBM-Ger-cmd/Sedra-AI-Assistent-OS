@@ -138,6 +138,7 @@
     // Kategorie als Kachel: Kopf (Symbol, Titel, Anzahl) und eine kleine Vorschau der ersten Apps; „+N weitere“ klappt die Kachel auf.
     // Alle Apps stehen im DOM (die versteckten nur mit hidden), die Pfeiltasten gehen über die sichtbaren.
     const VORSCHAU = 4;
+    const EINSTIEG_STD = ['tasks', 'decisions', 'project', 'uebersicht'];
     const kachel = (g, apps)=>{
       if(!apps.length) return null;
       const offen = st.offene.has(g.id);
@@ -155,7 +156,7 @@
       });
       box.append(kopf, liste);
       if(apps.length > VORSCHAU){
-        const mehr = d().el('button', 'hs-start-mehr', offen ? T('start_gedächtnis_bestaetigen') : '+' + (apps.length - VORSCHAU) + ' ' + T('start_gedächtnis')); mehr.type = 'button'; mehr.onclick = umschalten;
+        const mehr = d().el('button', 'hs-start-mehr', offen ? T('start_mehr_weniger') : T('start_mehr_weitere').replace('{n}', String(apps.length - VORSCHAU))); mehr.type = 'button'; mehr.onclick = umschalten;
         box.append(mehr);
       }
       return box;
@@ -167,6 +168,21 @@
       if(!treffer.length) inhalt.append(d().el('div', 'hs-app-satz', T('start_keine_app').replace('{q}', q)));
       abschnitt(T('start_treffer'), treffer);
     }else{
+      // Einstieg (Designvorlage v1.6): vier Hauptwege oben, Reihenfolge in start_gruppen.json („einstieg“). Freigaben nur Anzeige – die Entscheidung läuft über den Guard.
+      const wegIds = (st.konfig && st.konfig.einstieg) || EINSTIEG_STD;
+      const jeOrt = {}; st.liste.apps.forEach(a=>{ jeOrt[a.id] = a; });
+      const wege = wegIds.map(id=>jeOrt[id]).filter(Boolean);
+      if(wege.length){
+        const box = d().el('section', 'hs-start-einstieg'); box.dataset.baustein = 'einstieg';
+        box.append(d().el('div', 'hs-ueber', T('start_einstieg')));
+        const raster = d().el('div', 'hs-start-raster einstieg');
+        wege.forEach(a=>{
+          const k = appKnopf(S, a, nr++); k.classList.add('einstieg-weg');
+          if(a.id === 'decisions') k.append(d().el('small', 'hs-start-tag', T('start_einstieg_freigaben')));
+          st.sichtbar.push(a); raster.append(k);
+        });
+        box.append(raster); inhalt.append(box);
+      }
       const zuletzt = abschnitt(T('start_zuletzt_benutzt'), st.liste.zuletzt, 'zuletzt');
       if(zuletzt) zuletzt.dataset.baustein = 'zuletzt';                        // Baukasten (bausteine.js): Kennung je Abschnitt
       inhalt.append(blick(S));

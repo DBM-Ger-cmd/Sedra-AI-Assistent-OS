@@ -8,6 +8,7 @@
     "system",
     "pruefung"
   ],
+  "einstieg": ["tasks", "decisions", "project", "uebersicht"],
   "zuordnung": {
     "tasks": "arbeit",
     "intents": "arbeit",
