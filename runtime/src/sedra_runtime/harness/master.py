@@ -8,16 +8,19 @@ Das entscheidet `deckung.deckt` (Quelle 3b) und `freigabe.Kiste.aufruf`; hier li
 Der Zustand lebt **nur im Speicher** des Servers (je Sitzung): er endet mit dem Aus-Knopf, mit der Sitzung, nach 24 Stunden und mit dem Neustart.
 Jeder Fehler in dieser Datei heißt „nicht gedeckt“ (Karte), nie ein stilles Freigeben (MM-14).
 
-Die Sperrliste ist eine Prüfung der **Befehlszeile**, kein Käfig: was ein gestartetes Skript selbst tut, sieht sie nicht (Spec §6).
+Die Sperrliste ist eine Prüfung der **Befehlszeile**, kein Käfig: was ein gestartetes Skript selbst tut, sieht sie nicht (Spec §6). Seit der Härtung vom 16.11.2026
+(docs/HARDENING_2026-11-16_MASTER.md) gilt dazu eine positive Programmliste: was nicht darauf steht, bleibt Karte.
 Harness-Code (Vorbehalt): SEDRA ändert diese Datei nicht an sich selbst."""
 from __future__ import annotations
 
+import os
 import re
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path, PurePosixPath
 
 from . import befehl as befehl_mod
+from . import vorbehalte
 from .katalog import passt, pfad_normal
 
 HOECHSTDAUER = timedelta(hours=24)          # MM-03 / O-5: gleiche Grenze wie die Sitzungs-Erlaubnis (FS-14)
@@ -42,6 +45,21 @@ GIT_GESPERRT = frozenset({'push', 'fetch', 'pull', 'clone', 'remote', 'merge', '
                           'cherry-pick', 'revert', 'am', 'apply', 'submodule', 'worktree'})
 GIT_ZWEIGE = frozenset({'main', 'master'})
 PY_MODULE = frozenset({'pip', 'ensurepip', 'http.server', 'urllib', 'urllib.request', 'webbrowser', 'ftplib', 'smtplib', 'socketserver', 'xmlrpc', 'venv', 'zipapp'})
+# Härtung 16.11.2026 (docs/HARDENING_2026-11-16_MASTER.md, Funde M-1 bis M-5): die Sperrliste allein ist eine Verbotsliste und lässt jedes Programm durch, das niemand bedacht hat.
+# Darum gilt zusätzlich eine **positive Liste**: der Master deckt nur Befehle dieser Programme (mit den Regeln unten); jedes andere Programm bleibt Karte. Enger stellen ist frei, weiter nur mit G4.
+PROGRAMME = frozenset({'python', 'python3', 'py', 'pythonw', 'pytest', 'git', 'node', 'nodejs', 'npm', 'pip', 'pip3', 'tsc', 'ruff', 'mypy', 'black', 'flake8', 'eslint',
+                       'prettier', 'pyflakes', 'findstr', 'where', 'tree', 'rg', 'grep'})
+LESEND_PROGRAMME = frozenset({'findstr', 'where', 'tree', 'rg', 'grep'})                    # schreiben nichts: ihre Argumente dürfen auch auf geschützte Pfade zeigen
+PY_MODUL_OK = frozenset({'unittest', 'pytest', 'py_compile', 'compileall', 'json', 'doctest', 'coverage', 'mypy', 'flake8', 'black', 'isort', 'ruff', 'pyflakes', 'pylint',
+                         'pycodestyle', 'tokenize'})
+PIP_LESEN = frozenset({'list', 'freeze', 'show', 'check'})
+NPM_OK = frozenset({'run', 'test', 'ls', 'list'})
+NODE_OPTION_OK = frozenset({'--check', '-c', '--version', '-v', '--test', '--no-warnings', '--trace-warnings'})
+GIT_OK = frozenset({'status', 'diff', 'log', 'show', 'add', 'commit', 'checkout', 'switch', 'branch', 'tag', 'blame', 'rev-parse', 'ls-files', 'grep', 'describe', 'shortlog', 'stash'})
+GIT_LESEN = frozenset({'status', 'diff', 'log', 'show', 'blame', 'rev-parse', 'ls-files', 'grep', 'describe', 'shortlog'})
+PY_KURZ_OHNE_WERT = frozenset('bBdEiIOPqRsSuvx?hV')              # Python-Schalter ohne Wert (dürfen gebündelt stehen: -Ic); c und m nehmen den Rest oder das nächste Wort, W und X einen Wert
+PY_LANG_OK = frozenset({'--version', '--help'})
+PY_LAUNCHER = re.compile(r'-(?:\d+(?:\.\d+)?(?:-\d+)?|v:\S+)$', re.I)
 PROGRAMM_ENDUNG = re.compile(r'\.(exe|cmd|bat|ps1|com)$')
 LAUFWERK = re.compile(r'^[A-Za-z]:')
 SCHEMA = re.compile(r'^[A-Za-z][A-Za-z0-9+.-]*://')
@@ -140,6 +158,105 @@ def loeschziele_anzahl(teile, ordner_abs, wurzel):
     return n
 
 
+def _python_grund(args, launcher=False):
+    """Liest die Optionen vor dem Skript so, wie Python selbst es tut (gebündelte Schalter `-Ic`, angehängtes `-mpip` und `-cX`, Optionen mit Wert `-W`, `-X`).
+    Rückgabe (Grund, Modul): Grund, wenn Programmtext oder ein nicht freigegebenes Modul gestartet würde – sonst None und das freigegebene Modul (oder None bei einem Skript, dessen Pfade der Aufrufer prüft)."""
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if launcher and PY_LAUNCHER.match(a):
+            i += 1
+            continue
+        if a == '-':
+            return 'Programmtext von der Standardeingabe (python -)', None
+        if not a.startswith('-') or a == '--':
+            return None, None                                        # das Skript: ab hier gehören die Wörter ihm
+        if a.startswith('--'):
+            if a.split('=', 1)[0].lower() not in PY_LANG_OK:
+                return f'Python-Option nicht geprüft ({a[:30]})', None
+            i += 1
+            continue
+        j = 1
+        while j < len(a):
+            ch = a[j]
+            if ch == 'c':
+                return 'Programmtext auf der Befehlszeile (python -c)', None
+            if ch == 'm':
+                modul = (a[j + 1:] or (args[i + 1] if i + 1 < len(args) else '')).lower()
+                return (None, modul.split('.')[0]) if modul.split('.')[0] in PY_MODUL_OK else (f'Python-Modul nicht freigegeben (python -m {modul[:40]})', None)
+            if ch in 'WX':
+                if not a[j + 1:]:
+                    i += 1                                           # der Wert steht im nächsten Wort
+                break
+            if ch not in PY_KURZ_OHNE_WERT:
+                return f'Python-Option nicht geprüft (-{ch})', None
+            j += 1
+        i += 1
+    return None, None
+
+
+def _git_grund(args, ordner_abs):
+    """(Grund oder None, Unterbefehl) für `git …` – positive Liste der Unterbefehle, dazu die Formen, die Zweige, Tags oder Dateien verlieren."""
+    i = 0
+    while i < len(args) and args[i].startswith('-'):                 # globale Schalter: -C <pfad> hat ein Argument, -c setzt eine Einstellung
+        if args[i] == '-c' or args[i].startswith(('--exec-path', '--git-dir', '--work-tree')):
+            return 'Git mit eigener Einstellung oder fremdem Ordner', ''
+        i += 2 if args[i] == '-C' else 1
+    sub = args[i].lower() if i < len(args) else ''
+    rest = [a.lower() for a in args[i + 1:]]
+    kurz = lambda wanted: any(a.startswith('-') and not a.startswith('--') and set(a[1:]) & set(wanted) for a in rest)      # gebündelte Kurzschalter: -Df, -fd, -dx
+    if sub in GIT_GESPERRT:
+        return f'Git ({sub}): Verlauf, Zweige oder Netz', sub
+    if sub not in GIT_OK:
+        return f'Git ({sub or "ohne Unterbefehl"}) nicht auf der Liste des Master-Modus', sub
+    if sub in ('checkout', 'switch'):
+        if any(a.removeprefix('origin/') in GIT_ZWEIGE for a in rest):
+            return 'Git: Wechsel auf main', sub
+        if any(a in ('.', '--', '--force', '--orphan', '--detach') for a in rest) or kurz('fBCf'):
+            return f'Git ({sub}): Dateien zurücksetzen, erzwingen oder Zweig überschreiben', sub
+        for a in args[i + 1:]:                                        # `git checkout <datei>` stellt die Datei zurück und verwirft Änderungen
+            if not a.startswith('-') and (ordner_abs / a).exists():
+                return f'Git ({sub}) auf eine vorhandene Datei: verwirft Änderungen', sub
+    if sub == 'branch' and (kurz('dDmMcCfu') or any(a in ('--delete', '--move', '--copy', '--force', '--set-upstream-to', '--unset-upstream', '--edit-description') for a in rest)):
+        return 'Git (branch): Zweig löschen, umbenennen, kopieren oder verschieben', sub
+    if sub == 'tag' and (kurz('df') or any(a in ('--delete', '--force') for a in rest)):
+        return 'Git (tag): Tag löschen oder verschieben', sub
+    if sub == 'commit' and '--amend' in rest:
+        return 'Git (commit --amend): schreibt den Verlauf um', sub
+    if sub == 'stash' and (not rest or rest[0] not in ('list', 'show')):
+        return 'Git (stash): nur list und show', sub
+    return None, sub
+
+
+def _geschuetzt(ziel_abs, wurzel):
+    """Der Vorbehalt-Grund (harness/vorbehalte.PFADE: local_config, Katalog, Kern, Harness-Code, Prüfstellen, Ablage der Harness, .git), wenn dieser Pfad darunter liegt – sonst None."""
+    try:
+        rel = ziel_abs.relative_to(wurzel).as_posix()
+    except ValueError:
+        return None
+    for probe in ('' if rel == '.' else rel, ('' if rel == '.' else rel) + '/x'):
+        grund = vorbehalte.pruefen('datei_schreiben', probe, {'inhalt': 'x'}, True)
+        if grund:
+            return grund
+    return None
+
+
+def _pfad_kandidaten(args):
+    """Jedes Wort, das ein Pfad sein kann: die Argumente, die Werte hinter `--option=`, `/option:` und die angehängten Werte der Kurzschalter (`-oC:\\x`, `-o..\\x`)."""
+    out = []
+    for a in args:
+        if _schalter(a):
+            if '=' in a:
+                out.append(a.split('=', 1)[1])
+            elif ':' in a and a.startswith('/'):
+                out.append(a.split(':', 1)[1])
+            elif a.startswith('-') and not a.startswith('--') and len(a) > 2:
+                out.append(a[2:])
+            continue
+        out.append(a)
+    return [t for t in out if t]
+
+
 def sperre_befehl(zeile, ordner_rel, wurzel, muster):
     """Der Grund, warum der Master diese Befehlszeile **nicht** deckt – oder None (MM-07, MM-08). Jede Ausnahme gilt als Sperre."""
     try:
@@ -173,54 +290,70 @@ def sperre_befehl(zeile, ordner_rel, wurzel, muster):
         return 'Installieren (pip)'
     if prog in ('npm', 'npm.cmd') and any(a in NPM for a in kleinbuchstaben[:1]):
         return 'Installieren (npm)'
-    if prog in ('python', 'python3', 'py', 'pythonw') or re.fullmatch(r'python[0-9.]+', prog):
-        if '-c' in kleinbuchstaben or '-' in kleinbuchstaben:
-            return 'Programmtext auf der Befehlszeile (python -c)'
-        if '-m' in kleinbuchstaben:
-            i = kleinbuchstaben.index('-m')
-            modul = kleinbuchstaben[i + 1] if i + 1 < len(kleinbuchstaben) else ''
-            if modul in PY_MODULE or modul.split('.')[0] in ('urllib', 'http', 'ftplib', 'smtplib'):
-                return f'Netz oder Installieren (python -m {modul})'
-    if prog in ('node', 'nodejs') and any(a in ('-e', '--eval', '-p', '--print') for a in kleinbuchstaben):
-        return 'Programmtext auf der Befehlszeile (node -e)'
-    if prog == 'git':
-        i = 0
-        while i < len(args) and args[i].startswith('-'):            # globale Schalter: -C <pfad> hat ein Argument, -c setzt eine Einstellung
-            if args[i] == '-c' or args[i].startswith('--exec-path') or args[i].startswith('--git-dir') or args[i].startswith('--work-tree'):
-                return 'Git mit eigener Einstellung oder fremdem Ordner'
-            i += 2 if args[i] == '-C' else 1
-        sub = kleinbuchstaben[i] if i < len(kleinbuchstaben) else ''
-        rest = kleinbuchstaben[i + 1:]
-        if sub in GIT_GESPERRT:
-            return f'Git ({sub}): Verlauf, Zweige oder Netz'
-        if sub in ('checkout', 'switch') and any(a.removeprefix('origin/') in GIT_ZWEIGE for a in rest):
-            return 'Git: Wechsel auf main'
-        if sub == 'branch' and any(a in ('-d', '-m', '-f', '--delete', '--move', '--force') or (a.startswith('-') and not a.startswith('--') and any(c in a for c in 'dmf') and a.lower() in ('-d', '-m', '-f')) for a in rest):
-            return 'Git (branch): Zweig löschen, umbenennen oder verschieben'
-        if sub == 'reset' and '--hard' in rest:
-            return 'Git (reset --hard)'
-        if sub == 'tag' and any(a in ('-d', '--delete', '-f', '--force') for a in rest):
-            return 'Git (tag): Tag löschen oder verschieben'
-    # Pfade: das Programm selbst (falls mit Pfad) und jedes Argument, auch hinter `--option=`
-    kandidaten = [teile[0].strip('"\'')]
-    for a in args:
-        if _schalter(a):
-            if '=' in a:
-                kandidaten.append(a.split('=', 1)[1])
-            continue
-        kandidaten.append(a)
+    ist_python = prog in ('python', 'python3', 'py', 'pythonw') or re.fullmatch(r'python[0-9.]+', prog) is not None
+    lesend = prog in LESEND_PROGRAMME
+    if ist_python:
+        grund, modul = _python_grund(args, launcher=(prog == 'py'))
+        if grund:
+            return grund
+        if any(re.split(r'[\/]', a.lower())[-1] == 'setup.py' for a in args):
+            return 'Installieren (python setup.py)'
+        lesend = modul == 'py_compile'
+    elif prog in ('node', 'nodejs'):
+        for a in kleinbuchstaben:                                    # Optionen vor dem Skript: nur Prüfen und Testen; --eval, -p, --require, --import, --loader … bleiben Karte
+            if not a.startswith('-'):
+                break
+            if a not in NODE_OPTION_OK:
+                return f'Node mit Option ({a[:30]}): Programmtext oder Vorladen'
+        lesend = any(a in ('--check', '-c') for a in kleinbuchstaben)
+    elif prog in ('pip', 'pip3'):
+        if not args or (kleinbuchstaben[0] not in PIP_LESEN and args[0] not in ('--version', '-V')):
+            return 'Installieren oder Einstellen (pip): nur list, freeze, show, check'
+        lesend = True
+    elif prog == 'npm':
+        if not kleinbuchstaben or kleinbuchstaben[0] not in NPM_OK:
+            return 'npm: nur run, test, ls, list (Schalter vor dem Befehl und alles andere bleiben Karte)'
+    elif prog == 'git':
+        grund, sub = _git_grund(args, ordner_abs)
+        if grund:
+            return grund
+        lesend = sub in GIT_LESEN
+    elif prog not in PROGRAMME:
+        return f'Programm nicht auf der Liste des Master-Modus ({prog[:40]})'
+    p0 = teile[0].strip('"\'')
+    if '/' in p0 or '\\' in p0 or os.path.splitext(p0)[1].lower() not in ('', '.exe') or prog not in PROGRAMME:
+        return f'Programm mit Pfad oder Skript-Endung ({p0[:40]})'
+    # Pfade: das Programm selbst und jedes Argument, auch hinter `--option=`, `/option:` und `-oWert`
+    kandidaten = [p0] + _pfad_kandidaten(args)
     for t in kandidaten:
         grund = _ausserhalb(t, ordner_abs, wurzel, muster)
         if grund:
             return f'{grund}: {t[:80]}'
+    if not lesend:                                                    # Härtung: geschützte Pfade (local_config, Katalog, Kern, Harness-Code, .git …) sind für den Master auch über Befehlsargumente tabu
+        grund = _geschuetzt(ordner_abs, wurzel)
+        if grund:
+            return f'Arbeitsordner: {grund}'
+        for t in _pfad_kandidaten(args):
+            if SCHEMA.match(t) or '%' in t or t.startswith(('$', '~')):
+                continue
+            try:
+                ziel = ordner_abs / t
+                orte = [ziel.resolve()] if not any(c in t for c in '*?') else [p.resolve() for p in ziel.parent.glob(ziel.name)] + [ziel.parent.resolve()]
+            except (OSError, ValueError):
+                continue
+            for ort in orte:
+                grund = _geschuetzt(ort, wurzel)
+                if grund:
+                    return f'{grund}: {t[:80]}'
     return None
 
 
 def sperrliste_klartext():
     """Die Sperrliste in einem Satz für die Oberfläche und die Tür (MM-11): was der Master-Modus nicht deckt."""
-    return ('Netz (curl, wget, git fetch/pull …), Installieren (pip, npm, winget …), Git-Verlauf und Zweige (push, merge, rebase, Wechsel auf main …), '
-            'Löschen (bleibt Karte), Shells und Systemwerkzeuge (powershell, cmd, python -c …), jeder Pfad außerhalb der Wurzel; dazu bleiben alle festen Vorbehalte, '
-            'Code der Oberfläche und ungesehener Code bei der Karte')
+    return ('nur Befehle von python (Tests, Skripte), git (status, diff, log, add, commit, einfache Zweige), pytest, node, npm run/test, pip list und Linter; '
+            'jedes andere Programm bleibt Karte. Gesperrt bleiben auch Netz (curl, git fetch/pull …), Installieren, Git-Verlauf und Zweige (push, merge, rebase, Wechsel auf main …), '
+            'Löschen, Shells und Systemwerkzeuge (powershell, cmd, python -c …), jeder Pfad außerhalb der Wurzel und alle geschützten Pfade (local_config, Katalog, Kern, Harness-Code, .git); '
+            'dazu bleiben alle festen Vorbehalte, Code der Oberfläche und ungesehener Code bei der Karte')
 
 
 # ---------------------------------------------------------------- MM-05, MM-06: Deckung (rein)
