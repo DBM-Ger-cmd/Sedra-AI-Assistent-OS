@@ -1,6 +1,6 @@
 # SPEC Master-Modus und Gedächtnis für neue Chats v1 – ENTWURF (16.11.2026)
 
-Status: **G1-Entwurf, wartet auf die Freigabe des Captains.** Gebaut wird erst danach. Schreibt: Claude (Sitzung „Master-Modus“), Branch `claude/master-modus-927426` (Worktree `master-modus-927426`), kein Merge, kein Push.
+Status: **G1 und G4 vom Captain erteilt (16.11.2026, in der Sitzung: „ja“); O-1 bis O-6 gelten wie vorgeschlagen.** Teil A gebaut (A1 bis A6), Teil B folgt. Schreibt: Claude (Sitzung „Master-Modus“), Branch `claude/master-modus-927426` (Worktree `master-modus-927426`), kein Merge, kein Push.
 Quellen gelesen: `SPEC_HARNESS_SHELL_v1.md` (HS-17, HS-21 bis HS-29), `SPEC_HARNESS_SHELL_v1_G2.md` §3.5, `harness/freigabe.py`, `katalog.py`, `befehl.py`, `vorbehalte.py`, `aufgabe.py`, `aufgabe_deckung.py`, `deckung.py`, `erlaubnis.py`, `code_stand.py`, `harness/gedaechtnis.py`, `desk/freigabeklasse.py`, `tests/test_freigabe_vollstaendig.py`, `projekte.py`, `config/harness_projekte.beispiel.yaml`. Keine lokalen Pfade in dieser Datei: `<sedra>` = Wurzel des Repos.
 
 ## 0. Ergebnis in Kürze

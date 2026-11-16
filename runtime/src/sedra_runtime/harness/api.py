@@ -555,7 +555,8 @@ class HarnessApi:
         if self.stroeme.laufend_in(sid):
             raise ValueError('antwort_laeuft')
         ziel = self.sitzungen.loeschen(sid)
-        self.master.aus(sid, 'sitzung_weg')                              # MM-03: der Master-Modus endet mit der Sitzung
+        if getattr(self, 'master', None) is not None:
+            self.master.aus(sid, 'sitzung_weg')                              # MM-03: der Master-Modus endet mit der Sitzung
         if s['kopf'].get('mission_id'):
             self._mission_stand(s['kopf']['mission_id'], 'archived', 'archivieren')
         self._audit('HARNESS_SITZUNG_VERSCHOBEN', {'sitzung_id': sid, 'nach': 'geloescht/' + ziel.name})
@@ -1451,7 +1452,7 @@ class HarnessApi:
         w = self._werkzeuge(projekt['id'], s['kopf'].get('mission_id'), regeln)
         return self._begrenzen(s, freigabe.Kiste(w, regeln=regeln, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, karten=self.karten,
                               sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'], aufgaben=self.aufgaben,
-                              vorarbeiter=self.vorarbeiter, extra=self._vorarbeiter_werkzeuge(s), erlaubnisse=s.get('erlaubnisse'), master=self.master,
+                              vorarbeiter=self.vorarbeiter, extra=self._vorarbeiter_werkzeuge(s), erlaubnisse=s.get('erlaubnisse'), master=getattr(self, 'master', None),
                               projekte=lambda: self.projekte_fuer_modell(projekt['id']))), projekt
 
     def projekte_fuer_modell(self, aktuell):
