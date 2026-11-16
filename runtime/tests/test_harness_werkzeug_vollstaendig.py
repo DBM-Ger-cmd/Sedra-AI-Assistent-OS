@@ -41,6 +41,7 @@ LAEUFE = RUNTIME / 'config' / 'harness_laeufe.yaml'
 # 2. Ohne Katalog-Regel: Werkzeuge, die der Katalog nicht kennt (katalog.WERKZEUGE), und warum das richtig ist.
 OHNE_KATALOG_REGEL = {
     'lauf_status': 'liest nur; Kiste.aufruf führt es immer frei aus, vor jeder Einstufung (harness/freigabe.py, `if name == \'lauf_status\'`)',
+    'sitzung_nachricht': 'fester Vorbehalt: immer eine Karte mit Ziel und Text (harness/vorbehalte.py); eine Katalog-Regel könnte nichts lockern',
     'sitzungen_aufraeumen': 'fester Vorbehalt: immer eine Karte mit der Liste (harness/vorbehalte.py); eine Katalog-Regel könnte nichts lockern',
 }
 # 3. Default-Zweige: Werkzeuge, die `vorbereiten` (samt Helfern) nicht beim Namen nennt, weil sie im letzten Zweig landen.

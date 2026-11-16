@@ -17,7 +17,13 @@ from .erlaubnis import aktive
 
 ID = re.compile(r'S-[0-9A-F]{8}')
 TITEL_MAX = 60
-TYPEN = ('captain', 'modell', 'werkzeug', 'karte', 'titel', 'wahl', 'erlaubnis', 'zusammenfassung', 'belohnung', 'wissen')     # `wissen`: Trefferliste ohne Modell (SPEC_WISSEN_KERN_v1 WK-15)     # `wahl`: Modell geändert (PATCH); `erlaubnis`: Sitzungs-Erlaubnis (P0 M1)
+TYPEN = ('captain', 'modell', 'werkzeug', 'karte', 'titel', 'wahl', 'erlaubnis', 'zusammenfassung', 'belohnung', 'wissen', 'post')     # `post`: Sitzungspost (SPEC_SITZUNGSPOST_v1), nie ein Zug; `wissen`: Trefferliste ohne Modell (SPEC_WISSEN_KERN_v1 WK-15)     # `wahl`: Modell geändert (PATCH); `erlaubnis`: Sitzungs-Erlaubnis (P0 M1)
+
+
+def ungelesene_post(eintraege):
+    """Die Posteinträge (typ `post`), die noch in keinem Zug der Sitzung gelesen wurden (kein Captain-Eintrag nennt ihre `post_id` in `post_ids`)."""
+    gelesen = {i for e in eintraege if e.get('typ') == 'captain' for i in (e.get('post_ids') or [])}
+    return [e for e in eintraege if e.get('typ') == 'post' and e.get('post_id') not in gelesen]
 
 
 class SitzungFehler(ValueError):
@@ -144,7 +150,7 @@ class Sitzungen:
                 zeile = {'id': pfad.stem, 'titel': s['titel'], 'projekt': s['kopf'].get('projekt'), 'modell': s['modell'],
                          'vorlage': s['kopf'].get('vorlage'), 'angelegt': s['kopf'].get('angelegt'), 'zuletzt': zuletzt,
                          'nachrichten': sum(1 for e in s['eintraege'] if e.get('typ') in ('captain', 'modell')),
-                         'erlaubnisse': len(s['erlaubnisse'])}
+                         'erlaubnisse': len(s['erlaubnisse']), 'post_ungelesen': len(ungelesene_post(s['eintraege']))}
                 self._liste_cache[pfad] = (marke, zeile)
             if projekt is not None and zeile['projekt'] != projekt:
                 continue

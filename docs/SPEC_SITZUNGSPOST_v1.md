@@ -1,7 +1,7 @@
 # SPEC Sitzungspost – Nachrichten von Chat-Fenster zu Chat-Fenster (G1, Entwurf) – 16.11.2026
 
 Wunsch des Captains (Master-Modus-Sitzung): Chat-Fenster der Harness-Shell sollen sich Nachrichten senden können – (1) per Rechtsklick-Befehl „Nachricht an Sitzung …“, (2) per Prompt (Captain oder Modell löst es im Chat aus).
-Stand: **nur Spec, nichts gebaut.** Wartet auf **G1** (Anforderungen) des Captains. Eingriffe in `freigabe.py`, `vorbehalte.py`, `deckung.py`, `desk/freigabeklasse.py` brauchen zusätzlich **G4** in der Bau-Sitzung.
+Stand 16.11.2026: **G1 und G4 vom Captain erteilt, F1 bis F8 wie vorgeschlagen. Stufe 1 und 2 gebaut (Daten, Weg `post`, Verlaufsblock, Werkzeug `sitzung_nachricht` mit Karte, Klasse N); Gruppe harness grün (1002 Tests). Offen: Stufe 3 (Oberfläche, mit dem UIX-Koordinator).**
 
 ## 1. Befund: was schon da ist und was nicht
 

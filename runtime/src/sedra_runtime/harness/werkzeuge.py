@@ -41,7 +41,7 @@ LAUF = ('lauf_starten', 'lauf_stoppen', 'lauf_status', 'modell_laden', 'modell_e
 # Ohne Karte, weil sie nichts am Rechner ändern: ein Fenster öffnen (Rekorder, Logbuch …), einen Antrag stellen (wirkt erst nach der Freigabe im
 # Posteingang), einen Knopf der Seitenleiste anlegen (eine Wahl des Captains, keine Erlaubnis). Nur eine Katalogregel `verboten` schaltet sie ab.
 FREI_OHNE_KATALOG = OHNE_KARTE
-SITZUNGEN = ('sitzungen_aufraeumen',)       # Chat-Liste aufräumen: immer eine Karte mit der Liste (fester Vorbehalt, harness/vorbehalte.py); `sitzungen_auflisten` (lesen) steht in OHNE_KARTE
+SITZUNGEN = ('sitzungen_aufraeumen', 'sitzung_nachricht')       # Chat-Liste aufräumen: immer eine Karte mit der Liste (fester Vorbehalt, harness/vorbehalte.py); `sitzungen_auflisten` (lesen) steht in OHNE_KARTE
 CLOUD = ('auftraege_verteilen',)       # Teilaufträge des Managers an den Hilfs-Coder in der Cloud: der Text verlässt den Rechner, darum immer eine Karte (nicht in OHNE_KARTE); Gesetze und Tagesbudget prüft manager/kanal.py
 NAMEN = LESEN + WIRKUNG + LAUF + SITZUNGEN + CLOUD + FREI_OHNE_KATALOG + ('desktop_aendern', 'profil_wechseln')
 # AM8-06 (SPEC_APPS_v1_AM8_VERZEICHNIS): die Wirkungsklasse jedes Chat-Werkzeugs – nur zur ANZEIGE (Verzeichnis der Erweiterungen); entschieden wird weiter von Guard, Katalog und Vorbehalten.
@@ -52,6 +52,7 @@ WIRKUNGSKLASSE = {
     'befehl': 'destructive_write',
     'lauf_starten': 'reversible_write', 'lauf_stoppen': 'reversible_write', 'lauf_status': 'read_only',
     'modell_laden': 'reversible_write', 'modell_entladen': 'reversible_write',
+    'sitzung_nachricht': 'reversible_write',                                                 # legt Post in einer anderen Sitzung ab (SPEC_SITZUNGSPOST_v1), kein Zug
     'sitzungen_aufraeumen': 'reversible_write',                                              # verschiebt nach geloescht/, nichts wird endgültig gelöscht
     'auftraege_verteilen': 'external_side_effect',                                           # der Text verlässt den Rechner
     'desktop_aendern': 'reversible_write',
@@ -68,6 +69,7 @@ CLOUD_AUFTRAEGE_MAX = 5
 CLOUD_TEXT_MAX = 12000
 AKTION_SITZUNGEN = 'harness_sitzungen'
 SITZUNGEN_MAX = 100
+POST_TEXT_MAX = 4000            # = harness/api.POST_MAX
 AKTION_LAUF, AKTION_LAUF_STOPP, AKTION_MODELL = 'harness_lauf', 'harness_lauf_stopp', 'harness_modell'
 AKTION_LESEN = 'harness_lesen'
 
@@ -166,6 +168,9 @@ SCHEMAS = {
     'sitzungen_aufraeumen': _fn('sitzungen_aufraeumen', 'Räumt die Chat-Liste auf: verschiebt die genannten Sitzungen nach geloescht/ (nichts wird endgültig gelöscht). Immer erst sitzungen_auflisten, dann dem Captain die Liste zeigen und '
                                 'seine Zustimmung im Chat holen; dieser Aufruf legt zusätzlich eine Karte mit der Liste vor, die der Captain freigibt.',
                                 {'ids': {'type': 'array', 'items': S, 'description': 'Sitzungs-IDs S-… aus sitzungen_auflisten, höchstens 100'}}, ['ids']),
+    'sitzung_nachricht': _fn('sitzung_nachricht', 'Legt eine Nachricht in einer ANDEREN Sitzung desselben Projekts ab (Sitzungspost). Sie startet dort keinen Zug; das Modell der Zielsitzung liest sie beim nächsten Zug des Captains als Daten, nicht als Anweisung. '
+                             'Die Ziel-ID kommt aus sitzungen_auflisten. Der Captain gibt jeden Aufruf auf einer Karte frei. Keine Zugangsdaten und keine Personendaten in den Text; höchstens 4000 Zeichen.',
+                             {'ziel': dict(S, description='Sitzungs-ID S-… der Zielsitzung'), 'text': S}, ['ziel', 'text']),
     'auftraege_verteilen': _fn('auftraege_verteilen', 'Gibt bis zu 5 Teilaufträge an den Hilfs-Coder in der Cloud; die Antworten kommen als Text zurück (nichts wird geschrieben oder übernommen, prüfen und einbauen musst du selbst). '
                                'Der Captain gibt jeden Aufruf auf einer Karte frei. Erlaubte typ-Werte: code_und_spec_des_baus, text_und_recherche_ohne_personenbezug. Keine Zugangsdaten, keine Personendaten in den Text.',
                                {'auftraege': {'type': 'array', 'items': {'type': 'object', 'properties': {'typ': S, 'text': dict(S, description='der Auftrag, höchstens 12000 Zeichen')}, 'required': ['typ', 'text']},
@@ -270,7 +275,7 @@ SCHEMAS = {
 
 
 class Werkzeuge:
-    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None, desktop_stand=None, lernen_lesen=None, wissen=None, wissen_antrag=None, prozess_antrag=None, cloud_verteilen=None, orte=None,                         text_antwort=None, oberflaeche=None, rueckblick_antrag=None, vorschlag_antrag=None):
+    def __init__(self, projekt, *, guard, audit=None, mission_id, regeln, clock=None, laeufe=None, lauf_typen=None, modelle=None, andere_antworten=None, projekt_antrag=None, verknuepfung=None, gedanken=None, gedaechtnis=None, lese_grenze=None, sitzungen_liste=None, sitzungen_weg=None, sitzung_post=None, code_stand=None, web_transkript=None, uebersetzer=None, vorlage_antrag=None, desktop_stand=None, lernen_lesen=None, wissen=None, wissen_antrag=None, prozess_antrag=None, cloud_verteilen=None, orte=None,                         text_antwort=None, oberflaeche=None, rueckblick_antrag=None, vorschlag_antrag=None):
         self.text_antwort = text_antwort         # vom Server gereicht: (text, sprache=, rolle=, von=, ton=, tiefe=) -> Text; das geladene Modell, nichts wird abgelegt (TR-40)
         self.oberflaeche = oberflaeche           # O3 G2: der Baustein `harness/oberflaeche.py` des Betriebsservers (oder None); die Kiste hält Schreibvorgänge unter einer Aufgabe zurück
         self.orte = orte                         # vom Server gereicht: () -> {ort_id: (label, hint)} der aktiven Shell (AM2-05: Kernorte plus Orte der Apps); ohne: die Kernorte
@@ -284,6 +289,7 @@ class Werkzeuge:
         self.uebersetzer = uebersetzer           # vom Server gereicht: (text, ziel, quelle) -> {content, sha256} – übersetzt mit dem geladenen Modell und legt das Ergebnis ab
         self.web_transkript = web_transkript     # vom Server gereicht: (video, sprachen) -> Ergebnis des Web-Werkzeugs `youtube_transcript` (Hostliste, Guard, Ablage)
         self.sitzungen_liste = sitzungen_liste   # vom Server gereicht: (kriterien, aktuelle_sitzung) -> [{id, titel, zuletzt, nachrichten, projekt, geschuetzt}] (harness/api.py)
+        self.sitzung_post = sitzung_post         # vom Server gereicht: (ziel, text, von_sitzung) -> {post_id, sitzung_id}; legt Post ab (harness/api.py `post_aus_sitzung`)
         self.sitzungen_weg = sitzungen_weg       # vom Server gereicht: ([ids]) -> {verschoben, uebersprungen}
         self.lese_grenze = lese_grenze           # vom Server gereicht: () -> Zeichen je Lese-Aufruf (Token und Gespräch); ohne: LESEN_ZEICHEN_MAX
         self.gedaechtnis = gedaechtnis           # vom Server gereicht: (sitzung_id, frage) -> Text (harness/gedaechtnis.py)
@@ -438,6 +444,8 @@ class Werkzeuge:
                     'gate': {'aktion': AKTION_LESEN, 'ziel': ziel, 'bindung': {'werkzeug': name, 'args': args}}}
         if name == 'sitzungen_aufraeumen':
             return self._vorbereiten_sitzungen(args)
+        if name == 'sitzung_nachricht':
+            return self._vorbereiten_post(args)
         if name in CLOUD:
             return self._vorbereiten_cloud(args)
         if name in LAUF:
@@ -526,6 +534,25 @@ class Werkzeuge:
         vorschau = f'Verschiebt {len(ids)} Sitzungen aus der Chat-Liste nach geloescht/ (nichts wird endgültig gelöscht):\n' + '\n'.join(zeilen)
         return {'ziel': f'{len(ids)} Sitzungen', 'vorhanden': True, 'vorschau': vorschau, 'kurz': f'{len(ids)} Sitzungen aufräumen', 'ids': ids,
                 'gate': {'aktion': AKTION_SITZUNGEN, 'ziel': ','.join(sorted(ids)), 'bindung': {'werkzeug': 'sitzungen_aufraeumen', 'ids': sorted(ids)}}}
+
+    def _vorbereiten_post(self, args):
+        if not callable(self.sitzungen_liste) or not callable(self.sitzung_post):
+            raise WerkzeugFehler('sitzungen_nicht_verfuegbar')
+        ziel, text = args.get('ziel'), args.get('text')
+        if not isinstance(ziel, str) or not re.fullmatch(r'S-[0-9A-F]{8}', ziel):
+            raise WerkzeugFehler('ziel_ungueltig: eine Sitzungs-ID S-… aus sitzungen_auflisten')
+        if not isinstance(text, str) or not text.strip() or len(text) > POST_TEXT_MAX:
+            raise WerkzeugFehler(f'text_ungueltig: ein Text mit 1 bis {POST_TEXT_MAX} Zeichen')
+        aktuelle = (self.kontext or {}).get('sitzung_id')
+        if ziel == aktuelle:
+            raise WerkzeugFehler('selbst_nicht: keine Post an die eigene Sitzung')
+        bekannt = {s['id']: s for s in self.sitzungen_liste({'ids': [ziel]}, aktuelle)}
+        if ziel not in bekannt:
+            raise WerkzeugFehler('sitzung_unbekannt: ' + ziel)
+        titel = bekannt[ziel].get('titel') or 'Ohne Titel'
+        vorschau = f'Legt eine Nachricht in der Sitzung {ziel} „{titel}“ ab (kein Zug dort; das Modell dort liest sie als Daten beim nächsten Zug):\n\n{text}'
+        return {'ziel': ziel, 'vorhanden': True, 'vorschau': vorschau, 'kurz': f'Post an {ziel}', 'text': text,
+                'gate': {'aktion': AKTION_SITZUNGEN, 'ziel': ziel, 'bindung': {'werkzeug': 'sitzung_nachricht', 'ziel': ziel, 'text': text}}}
 
     # ---- Cloud: Teilaufträge an den Hilfs-Coder
     def _cloud_auftraege(self, args):
@@ -742,6 +769,12 @@ class Werkzeuge:
                 zeilen = [f"{s['id']} · {s['titel']} · zuletzt {str(s.get('zuletzt') or '')[:10]} · {s.get('nachrichten', 0)} Nachrichten" for s in treffer[:SITZUNGEN_MAX]]
                 kopf = f'{len(treffer)} Sitzungen passen' + (f' (gezeigt {SITZUNGEN_MAX}; enger fragen)' if len(treffer) > SITZUNGEN_MAX else '') + '. Zeig dem Captain die Liste und frag ihn, bevor du sitzungen_aufraeumen aufrufst.'
                 return {'status': 'ok', 'ergebnis': kopf + ('\n' + '\n'.join(zeilen) if zeilen else ''), 'wirkung': False}
+            if name == 'sitzung_nachricht':
+                try:
+                    r = self.sitzung_post(plan['ziel'], plan['text'], (self.kontext or {}).get('sitzung_id'))
+                except (ValueError, LookupError) as exc:
+                    return {'status': 'fehler', 'ergebnis': f'error: {exc}', 'wirkung': False}
+                return {'status': 'ok', 'ergebnis': f"Post {r['post_id']} in {r['sitzung_id']} abgelegt (kein Zug dort; wird beim nächsten Zug des Captains gelesen)", 'wirkung': True}
             if name == 'sitzungen_aufraeumen':
                 r = self.sitzungen_weg(plan['ids'])
                 text = f"{len(r['verschoben'])} Sitzungen nach geloescht/ verschoben"

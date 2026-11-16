@@ -55,7 +55,7 @@ WEGE = frozenset({'einmal', 'freigeben_und_anwenden', 'aendern', 'ablehnen', 'cl
 
 HARNESS_AUSFUEHREN = frozenset({'befehl', 'lauf_starten', 'auftraege_verteilen', 'desktop_aendern', 'profil_wechseln'})      # auftraege_verteilen: der Text geht in die Cloud (Daten nach außen, wie cloud_offload) – nie über den Vorarbeiter
 HARNESS_SCHREIBEN = frozenset({'datei_schreiben', 'datei_aendern'})
-HARNESS_N = frozenset({'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen', 'lauf_stoppen'})
+HARNESS_N = frozenset({'modell_laden', 'modell_entladen', 'sitzungen_aufraeumen', 'lauf_stoppen', 'sitzung_nachricht'})
 
 
 def _harness(binding, weg):
@@ -313,7 +313,7 @@ HARNESS_WEGE = frozenset({'projekte', 'sitzungen', 'antworten', 'karten', 'katal
                           'vorschau', 'dateien', 'vorgaben', 'modelle', 'router', 'verknuepfungen', 'gedaechtnis', 'token', 'aufraeumen',
                           'code_stand', 'oberflaeche', 'aufgaben', 'laeufe', 'hilfswerkzeuge', 'bausteine', 'info', 'desktop', 'vorschlaege',
                           'erlaubnisse'})
-HARNESS_UNTERWEGE = frozenset({'nachricht', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen', 'wissen', 'vorlegen', 'zuruecksetzen'})
+HARNESS_UNTERWEGE = frozenset({'nachricht', 'post', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen', 'wissen', 'vorlegen', 'zuruecksetzen'})
 # In GESCHUETZT (S7), aber heute nur mit GET geroutet – keine schreibende Route (harness/api.py, Weg `token`)
 HARNESS_GESCHUETZT_OHNE_SCHREIBEN = {'token': 'nur GET token_stand'}
 
