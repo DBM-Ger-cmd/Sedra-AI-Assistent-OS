@@ -1,0 +1,148 @@
+/* Sedra IDE: Grundaufbau (Kopf, Leisten, Teiler, Status, Palette, Menue). */
+.t-coder,
+.t-coder * { box-sizing: border-box; }
+.t-coder {
+  position: relative; height: 100vh; margin: 0;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg); color: var(--text);
+  font: var(--gr)/1.4 var(--schrift);
+}
+.t-coder button,
+.t-coder input,
+.t-coder textarea,
+.t-coder select { font: inherit; color: inherit; }
+.t-coder button { background: none; border: 0; padding: 0; cursor: pointer; }
+.t-coder :focus-visible { outline: 1px solid var(--fokus); outline-offset: -1px; }
+.t-coder [hidden] { display: none !important; }
+.t-coder svg.sym { flex: none; display: block; }
+
+.t-coder .sprung {
+  position: absolute; left: 8px; top: -40px; z-index: 50; padding: 6px 10px;
+  background: var(--akzent); color: var(--akzent-text); border-radius: var(--rund);
+}
+.t-coder .sprung:focus { top: 4px; }
+
+/* Kopf */
+.t-coder #kopf {
+  flex: none; height: var(--h-kopf); display: flex; align-items: center; gap: 4px;
+  padding: 0 8px; background: var(--bg-kopf); border-bottom: 1px solid var(--rand);
+}
+.t-coder .marke { display: flex; align-items: center; gap: 6px; padding: 0 6px 0 2px; color: var(--akzent-hell); font-weight: 600; }
+.t-coder .menue-leiste { display: flex; }
+.t-coder .menue-knopf { padding: 3px 8px; border-radius: var(--rund); }
+.t-coder .menue-knopf:hover,
+.t-coder .menue-knopf[aria-expanded="true"] { background: var(--bg-hover); color: var(--text-stark); }
+.t-coder .kopf-mitte { flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; }
+.t-coder .kopf-suche {
+  width: min(520px, 100%); height: 24px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: var(--bg-eingabe); border: 1px solid var(--rand-stark); border-radius: 6px; color: var(--text-leise);
+}
+.t-coder .kopf-suche:hover { color: var(--text); border-color: var(--text-leise); }
+.t-coder .kopf-rechts { display: flex; gap: 2px; }
+.t-coder .sym-knopf {
+  width: 26px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--rund); color: var(--text-leise);
+}
+.t-coder .sym-knopf:hover { background: var(--bg-hover); color: var(--text-stark); }
+.t-coder .sym-knopf[aria-pressed="true"] { color: var(--text-stark); }
+.t-coder .sym-knopf:disabled { opacity: 0.4; cursor: default; }
+
+/* Menue (Aufklappliste) */
+.t-coder .menue {
+  position: fixed; z-index: 40; min-width: 240px; padding: 4px;
+  background: var(--bg-schwebend); border: 1px solid var(--rand-stark); border-radius: 6px;
+  box-shadow: 0 6px 18px var(--schatten);
+}
+.t-coder .menue-punkt {
+  width: 100%; display: flex; justify-content: space-between; gap: 24px;
+  padding: 4px 10px; border-radius: var(--rund); text-align: left;
+}
+.t-coder .menue-punkt:hover,
+.t-coder .menue-punkt:focus { background: var(--akzent); color: var(--akzent-text); outline: none; }
+.t-coder .menue-punkt .kuerzel { opacity: 0.75; }
+.t-coder .menue-trenner { height: 1px; margin: 4px 0; background: var(--rand-stark); }
+
+/* Hauptbereich */
+.t-coder #haupt { flex: 1; display: flex; min-height: 0; }
+.t-coder #aktivleiste {
+  flex: none; width: var(--b-aktiv); display: flex; flex-direction: column; justify-content: space-between;
+  background: var(--bg-leiste); border-right: 1px solid var(--rand);
+}
+.t-coder .aktiv-gruppe { display: flex; flex-direction: column; }
+.t-coder .aktiv-knopf {
+  position: relative; width: var(--b-aktiv); height: 42px; display: flex; align-items: center; justify-content: center;
+  color: var(--text-leise);
+}
+.t-coder .aktiv-knopf:hover { color: var(--text-stark); }
+.t-coder .aktiv-knopf.aktiv { color: var(--text-stark); }
+.t-coder .aktiv-knopf.aktiv::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; background: var(--akzent); }
+.t-coder .marke-zahl {
+  position: absolute; right: 6px; bottom: 6px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 8px; background: var(--akzent); color: var(--akzent-text);
+  font-size: 10px; line-height: 16px; text-align: center;
+}
+.t-coder #seite-links,
+.t-coder #seite-rechts {
+  flex: none; display: flex; flex-direction: column; min-width: 0; overflow: hidden; background: var(--bg-seite);
+}
+.t-coder #seite-links { border-right: 1px solid var(--rand); }
+.t-coder #seite-rechts { border-left: 1px solid var(--rand); }
+.t-coder #mitte { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.t-coder #editorbereich { flex: 1; display: flex; min-height: 0; }
+.t-coder #panel { flex: none; display: flex; flex-direction: column; min-height: 0; border-top: 1px solid var(--rand); background: var(--bg); }
+
+.t-coder .teiler { flex: none; position: relative; z-index: 5; background: transparent; }
+.t-coder .teiler-v { width: 4px; margin: 0 -2px; cursor: col-resize; }
+.t-coder .teiler-h { height: 4px; margin: -2px 0; cursor: row-resize; }
+.t-coder .teiler:hover,
+.t-coder .teiler.zieht,
+.t-coder .teiler:focus-visible { background: var(--akzent); outline: none; }
+.t-coder.zieht { user-select: none; }
+
+/* Status */
+.t-coder #status {
+  flex: none; height: var(--h-status); display: flex; justify-content: space-between; align-items: stretch;
+  padding: 0 6px; background: var(--bg-kopf); border-top: 1px solid var(--rand);
+  font-size: 12px; color: var(--text-leise);
+}
+.t-coder .status-teil { display: flex; align-items: stretch; }
+.t-coder .status-zelle { display: flex; align-items: center; gap: 4px; padding: 0 7px; white-space: nowrap; }
+.t-coder button.status-zelle:hover { background: var(--bg-hover); color: var(--text-stark); }
+.t-coder .status-zelle.hinweis { color: var(--warnung); }
+
+/* Befehlspalette */
+.t-coder #palette { position: fixed; inset: 0; z-index: 30; display: flex; justify-content: center; align-items: flex-start; background: var(--schleier); }
+.t-coder .palette-kasten {
+  width: min(600px, 92vw); margin-top: 6px; padding: 6px;
+  background: var(--bg-schwebend); border: 1px solid var(--rand-stark); border-radius: 8px;
+  box-shadow: 0 8px 28px var(--schatten);
+}
+.t-coder .palette-feld {
+  width: 100%; height: 28px; padding: 0 8px; background: var(--bg-eingabe);
+  border: 1px solid var(--akzent); border-radius: var(--rund); outline: none;
+}
+.t-coder .palette-liste { max-height: 320px; margin-top: 6px; overflow-y: auto; }
+.t-coder .palette-zeile { display: flex; justify-content: space-between; gap: 16px; padding: 4px 8px; border-radius: var(--rund); cursor: pointer; }
+.t-coder .palette-zeile.gewaehlt { background: var(--bg-wahl); color: var(--text-stark); }
+.t-coder .palette-zeile .neben { color: var(--text-leise); white-space: nowrap; }
+.t-coder .palette-leer { padding: 8px; color: var(--text-leise); }
+.t-coder .treffer { color: var(--akzent-hell); font-weight: 600; }
+
+/* Meldung */
+.t-coder #meldung {
+  position: fixed; right: 16px; bottom: 34px; z-index: 35; max-width: 420px; padding: 8px 12px;
+  background: var(--bg-schwebend); border: 1px solid var(--rand-stark); border-left: 3px solid var(--akzent);
+  border-radius: var(--rund); box-shadow: 0 6px 18px var(--schatten);
+}
+.t-coder #meldung:empty { display: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .t-coder .teiler,
+.t-coder .sym-knopf,
+.t-coder .aktiv-knopf,
+.t-coder .menue-knopf { transition: background-color 0.12s, color 0.12s; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-coder,
+.t-coder * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
