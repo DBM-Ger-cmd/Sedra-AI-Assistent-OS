@@ -70,8 +70,9 @@ const SERVER_LABEL_ZU_KEY = {
     const status = d().el('div', 'hs-status');
     const uhr = d().el('span', 'hs-uhr');
     const sc = root.sedraHarness.schnell;
-    bar.append(start, mitte, ...(sc ? [sc.knopf(S)] : []), status, uhr);          // der Aufnahme-Knopf steht fest in der Taskleiste (Captain 04.11.2026)
-    S._leiste = {mitte, status, uhr, zuletzt: 0, wartet: null};
+    const drache = root.sedraHarness.leben ? root.sedraHarness.leben.knopf(S) : null;          // der Drache zeigt den echten Zustand der Arbeit (leben.js)
+    bar.append(start, mitte, ...(sc ? [sc.knopf(S)] : []), ...(drache ? [drache] : []), status, uhr);          // der Aufnahme-Knopf steht fest in der Taskleiste (Captain 04.11.2026)
+    S._leiste = {mitte, status, uhr, drache, zuletzt: 0, wartet: null};
     leisteLaden(S);
     const ticken = ()=>{ uhr.textContent = new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'}); };
     ticken();
@@ -167,6 +168,7 @@ const SERVER_LABEL_ZU_KEY = {
 
   function zeichnen(S){
     const l = S._leiste; if(!l) return;
+    if(root.sedraHarness.leben) root.sedraHarness.leben.zeichnen(S);                  // der Drache folgt dem Zustand (leben.js)
     const reiter = root.sedraHarness.reiter;
     const aktiv = reiter.aktiv(S);
     const offeneLaeufe = new Set(reiter.liste(S).filter(id=>String(id).startsWith('lauf:')));

@@ -1,0 +1,40 @@
+/* Harness-Shell – der Drache in der Taskleiste (leben.js): jede Bewegung hängt an einem Zustand, den leben.js aus echten Ereignissen setzt.
+   Nur Transform und Opacity, keine Layout-Änderung. Ohne Bewegung bei „reduzierter Bewegung“ des Systems. Nur Tokens. */
+.hs-leben{display:inline-flex;align-items:center;justify-content:center;flex:none;gap:var(--gap);min-width:26px;height:26px;margin:0 var(--gap-2);color:var(--accent)}
+.hs-leben[hidden]{display:none}
+.hs-leben-wort{font-size:var(--size-small);color:var(--muted);white-space:nowrap}
+.hs-leben-wort:empty{display:none}
+.hs-leben-drache{width:24px;height:24px;overflow:visible;transform-origin:50% 60%}
+.hs-leben-drache .hs-drache-flosse{transform-box:fill-box;transform-origin:50% 50%}
+/* Ruhe: langsames Atmen, ohne Anlass */
+.hs-leben[data-stimmung="ruhe"] .hs-leben-drache{animation:hs-leben-atmen 4.2s ease-in-out infinite}
+/* Warten: wiegt den Kopf – eine Anfrage läuft, das Modell hat noch nichts gemeldet, oder eine Freigabe wartet auf dich */
+.hs-leben[data-stimmung="warten"] .hs-leben-drache{animation:hs-leben-wiegen 2.4s ease-in-out infinite}
+/* Denken: die Flossen schlagen, der Körper atmet schneller (Phase „denkt“) */
+.hs-leben[data-stimmung="denken"] .hs-leben-drache{animation:hs-leben-atmen 1.6s ease-in-out infinite}
+.hs-leben[data-stimmung="denken"] .hs-drache-flosse{animation:hs-leben-flattern .9s ease-in-out infinite}
+/* Schreiben: leichtes Nicken bei Antwort und Werkzeug */
+.hs-leben[data-stimmung="schreiben"] .hs-leben-drache{animation:hs-leben-nicken .7s ease-in-out infinite}
+/* Fertig: einmal hüpfen, danach Ruhe; Fehler: einmal schütteln, Auge in der Warnfarbe */
+.hs-leben[data-stimmung="fertig"] .hs-leben-drache{animation:hs-leben-huepfen .9s ease-out 1}
+.hs-leben[data-stimmung="fehler"] .hs-leben-drache{animation:hs-leben-schuetteln .5s ease-in-out 2}
+.hs-leben[data-stimmung="fehler"] .hs-drache-auge{fill:var(--warn)}
+@keyframes hs-leben-atmen{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes hs-leben-wiegen{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+@keyframes hs-leben-flattern{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.55)}}
+@keyframes hs-leben-nicken{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+@keyframes hs-leben-huepfen{0%{transform:translateY(0) scale(1)}35%{transform:translateY(-4px) scale(1.12)}70%{transform:translateY(0) scale(.97)}100%{transform:none}}
+@keyframes hs-leben-schuetteln{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+/* Der Begleiter am rechten Rand: schwebt über der Arbeit, fängt keine Klicks, verschwindet auf schmalen Fenstern */
+.hs-randdrache{position:fixed;right:var(--gap-2);top:50%;transform:translateY(-50%);z-index:50;pointer-events:none;
+  flex-direction:column;gap:var(--gap);margin:0;padding:var(--gap) var(--gap-2);min-width:0;height:auto;
+  background:var(--glas);-webkit-backdrop-filter:blur(var(--glas-unschaerfe));backdrop-filter:blur(var(--glas-unschaerfe));
+  border:1px solid var(--hs-on-line);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)}
+.hs-randdrache[hidden]{display:none}
+.hs-randdrache .hs-leben-wort{text-align:center}
+.hs-randdrache .hs-leben-drache{width:96px;height:96px}
+.hs-leben-3d{display:block}
+@media (max-width: 700px){.hs-randdrache{display:none}}
+@media (prefers-reduced-motion: reduce){
+  .hs-leben-drache,.hs-leben-drache .hs-drache-flosse{animation:none !important}
+}

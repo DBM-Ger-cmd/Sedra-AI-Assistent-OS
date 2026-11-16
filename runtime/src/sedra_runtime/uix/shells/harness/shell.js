@@ -72,6 +72,7 @@
       this.breite();
       if(H.delegation) H.delegation.mount(this);   // Delegation im Gespräch: Karte im Verlauf, Zelle in der Taskleiste (delegation.js)
       if(H.avatar) H.avatar.mount(this);           // der Drache als Avatar mit Hilfestellungen (avatar.js)
+      if(H.leben) H.leben.mount(this);             // der Drache in der Taskleiste zeigt den echten Zustand (leben.js)
       if(H.palette) H.palette.verbinde(this);      // X4: Befehlspalette (Strg+K) mit der Shell-Instanz verbinden
       root.addEventListener('resize', ()=>{ this.breite(); this.teilungAnpassen(); });
 
