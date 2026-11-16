@@ -289,6 +289,8 @@ ROUTEN_HARNESS = {
     'POST oberflaeche/vorlegen': ('antrag', None, 'request:harness_oberflaeche (O3 G2-05)'),
     'POST oberflaeche/zuruecksetzen': ('zurueck', None, 'O3 G2-07: stellt die bestätigten Fassungen wieder her, verschiebt Neues nach verworfen/'),
     'POST oberflaeche/zuruecknehmen': ('zurueck', None, 'O3 G7-05: stellt einen schon bestätigten Stand wieder her'),
+    'POST oberflaeche/vorschau': ('handlung', N, 'O3 G2-09: startet den Prüfserver als eigenen Prozess (leeres Projekt, eigener Port und Token), vergibt keine Rechte und erreicht nichts Echtes'),
+    'POST oberflaeche/vorschau_ende': ('zurueck', None, 'O3 G2-09: beendet den Prüfserver'),
     'POST einstufen': ('liest', None, 'Vorschau der Einstufung'),
     'POST vorarbeiter': ('freigabe', H, 'Vorarbeiter ernennen (F5)'),
     'DELETE vorarbeiter': ('zurueck', None, 'Ernennung entziehen'),
@@ -318,7 +320,7 @@ HARNESS_WEGE = frozenset({'projekte', 'sitzungen', 'antworten', 'karten', 'katal
                           'vorschau', 'dateien', 'vorgaben', 'modelle', 'router', 'verknuepfungen', 'gedaechtnis', 'token', 'aufraeumen',
                           'code_stand', 'oberflaeche', 'aufgaben', 'laeufe', 'hilfswerkzeuge', 'bausteine', 'info', 'desktop', 'vorschlaege',
                           'erlaubnisse'})
-HARNESS_UNTERWEGE = frozenset({'nachricht', 'post', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen', 'wissen', 'vorlegen', 'zuruecksetzen', 'master', 'index'})
+HARNESS_UNTERWEGE = frozenset({'nachricht', 'post', 'export', 'strom', 'stopp', 'zuruecknehmen', 'antrag', 'entfernen', 'grenzen', 'neu', 'notizen', 'wissen', 'vorlegen', 'zuruecksetzen', 'master', 'index', 'vorschau', 'vorschau_ende'})
 # In GESCHUETZT (S7), aber heute nur mit GET geroutet – keine schreibende Route (harness/api.py, Weg `token`)
 HARNESS_GESCHUETZT_OHNE_SCHREIBEN = {'token': 'nur GET token_stand'}
 

@@ -4162,6 +4162,10 @@ class UIXHub:
         self.poller.stop()
         stufen.append('poller_stop')
         try:
+            self.harness.vorschau_beenden('ende')                                 # G2-09: ein Prüfserver überlebt den Betriebsserver nicht
+        except Exception:
+            pass
+        try:
             self.dienste.stop_alle('ende')                                      # AM4: ein Dienst ueberlebt den Server nicht
         except Exception:
             pass
