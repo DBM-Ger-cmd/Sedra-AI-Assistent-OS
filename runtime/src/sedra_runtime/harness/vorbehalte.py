@@ -122,6 +122,8 @@ def pruefen(werkzeug, ziel, args=None, vorhanden=False, ungesehen=None):
         n = len(ungesehen)
         return (f'Captain-Vorbehalt: Ausführung von Code, den du noch nicht gesehen hast ({n} Datei{"" if n == 1 else "en"}); '
                 'keine Aufgabe und keine Sitzungs-Erlaubnis deckt das')
+    if werkzeug == 'sitzung_nachricht':
+        return 'Captain-Vorbehalt: Post an eine andere Sitzung (der Captain sieht jede Nachricht zwischen seinen Chats; keine Erlaubnis und kein Vorarbeiter deckt sie)'
     if werkzeug == 'sitzungen_aufraeumen':
         return 'Captain-Vorbehalt: Sitzungen aufräumen (der Captain bestätigt jede Liste einzeln; nichts wird endgültig gelöscht)'
     if werkzeug == 'befehl':
