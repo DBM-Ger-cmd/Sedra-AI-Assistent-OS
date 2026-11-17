@@ -234,6 +234,7 @@
     },
     dirty(){return JSON.stringify(this.state.doc) !== this.saved;},
     discard(){return !this.dirty() || root.confirm('Nicht gespeicherte Änderungen verwerfen?');},
+    aufgeraeumt(doc){const d = M().clone(doc);return root.sedraWorkflowAufbau ? root.sedraWorkflowAufbau.beimOeffnen(d, this) : d;},   // ältere Revisionen im aktuellen Aufbau-Standard zeigen
     adopt(doc, id, revision){
       if(this.guide)this.endGuide();
       this.state.doc = M().clone(doc);this.state.selected = null;this.wid = id;this.revision = revision;if(id && root.sedraWorkflowAufbau)this.state.doc = root.sedraWorkflowAufbau.beimOeffnen(this.state.doc, this);
@@ -279,7 +280,7 @@
         box.append(versions, button('Revision als Entwurf laden', ()=>this.safe(async()=>{
           if(!this.discard())return;
           const previous = await this.call('workflow', null, 'revision_lesen', {id: this.wid, revision: Number(versions.value)});
-          this.change(()=>{this.state.doc = M().clone(previous.workflow);this.state.selected = null;});this.changeNote.value = 'Revision ' + previous.revision + ' als neuen Entwurf übernommen';
+          this.change(()=>{this.state.doc = this.aufgeraeumt(previous.workflow);this.state.selected = null;});this.changeNote.value = 'Revision ' + previous.revision + ' als neuen Entwurf übernommen';
           this.notice('Frühere Fassung als Entwurf geladen. Speichern legt eine neue Revision an.');
         })));
       }
@@ -358,7 +359,7 @@
         const out = await this.call('workflow', null, 'vergleichen', {id, from_revision: a, to_revision: b});PV().diff(box, out.changes);
       }), rev=>this.safe(async()=>{
         if(!this.discard())return;const previous = await this.call('workflow', null, 'revision_lesen', {id, revision: rev});
-        this.change(()=>{this.state.doc = M().clone(previous.workflow);this.state.selected = null;});this.changeNote.value = 'Revision ' + rev + ' als neuen Entwurf übernommen';
+        this.change(()=>{this.state.doc = this.aufgeraeumt(previous.workflow);this.state.selected = null;});this.changeNote.value = 'Revision ' + rev + ' als neuen Entwurf übernommen';
       }));
     },
     export(clean){
