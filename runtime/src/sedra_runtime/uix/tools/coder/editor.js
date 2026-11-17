@@ -3,7 +3,7 @@
   'use strict';
   const S = root.SIDE, el = S.el, T = S.T;
   const E = S.editor = {};
-  const LH = 19; /* gleich --ed-zeile */
+  function LHW() { return S.zeilenHoehe || 19; } /* gleich --ed-zeile */
   let felder = []; /* je Gruppe: {pfad, ta, male, zeiger, roll} oder null */
   let tabFrei = false;
 
@@ -83,16 +83,16 @@
       const vor = ta.value.slice(0, ta.selectionStart);
       const z = vor.split('\n').length;
       const sp = vor.length - vor.lastIndexOf('\n');
-      aktiv.style.top = ((z - 1) * LH) + 'px';
+      aktiv.style.top = ((z - 1) * LHW()) + 'px';
       if (hier !== z) {
         if (zeilen.children[hier - 1]) zeilen.children[hier - 1].classList.remove('hier');
         if (zeilen.children[z - 1]) zeilen.children[z - 1].classList.add('hier');
         hier = z;
       }
       if (!ohneRollen) {
-        const oben = (z - 1) * LH;
+        const oben = (z - 1) * LHW();
         if (oben < roll.scrollTop) roll.scrollTop = oben;
-        else if (oben + LH > roll.scrollTop + roll.clientHeight) roll.scrollTop = oben + LH - roll.clientHeight;
+        else if (oben + LHW() > roll.scrollTop + roll.clientHeight) roll.scrollTop = oben + LHW() - roll.clientHeight;
       }
       S.melde('zeiger', { zeile: z, spalte: sp, gi: gi, auswahl: ta.selectionEnd - ta.selectionStart });
     }
@@ -190,7 +190,7 @@
     f.ta.focus();
     f.ta.setSelectionRange(pos, pos);
     f.zeiger();
-    f.roll.scrollTop = Math.max(0, (z - 1) * LH - f.roll.clientHeight / 3);
+    f.roll.scrollTop = Math.max(0, (z - 1) * LHW() - f.roll.clientHeight / 3);
     return true;
   };
 

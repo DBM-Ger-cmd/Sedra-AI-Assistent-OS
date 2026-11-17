@@ -26,6 +26,7 @@
     try {
       const r = await S.ctx.api(API, { method: 'POST', body: { projekt: S.echt.projekt.id, pfad: pfad, inhalt: d.inhalt } });
       S.antraege[pfad] = { id: r.mission_id, inhalt: d.inhalt };
+      if (S.sichere) S.sichere();
       S.sag(T(r.neu ? 'sp_antrag_neu' : 'sp_antrag', d.name, r.hinzu, r.weg));
       S.melde('dateien');
       planeTakt();
@@ -37,6 +38,7 @@
     try {
       const r = await S.ctx.api(APIV, { method: 'POST', body: { projekt: S.echt.projekt.id, art: art, pfad: pfad, ziel: ziel || undefined } });
       S.antraege['a:' + r.mission_id] = { id: r.mission_id, art: art, pfad: pfad, ziel: ziel || null };
+      if (S.sichere) S.sichere();
       S.sag(T('vw_antrag_' + art, pfad, ziel));
       S.melde('dateien');
       planeTakt();
@@ -49,7 +51,7 @@
     offen.forEach(function (p) { S.speichereEcht(p); });
   };
 
-  function fertig(pfad, text) { delete S.antraege[pfad]; S.sag(text); S.melde('dateien'); }
+  function fertig(pfad, text) { delete S.antraege[pfad]; S.sag(text); S.melde('dateien'); if (S.sichere) S.sichere(); }
 
   S.pruefeAntraege = async function () {
     const pfade = Object.keys(S.antraege);
@@ -61,12 +63,14 @@
         if (st.status !== 'freigegeben') continue;
         await S.ctx.api((verw ? APIV : API) + '/anwenden', { method: 'POST', body: { mission_id: a.id } });
         if (verw) { fertig(pfad, T('vw_fertig_' + a.art, a.pfad, a.ziel)); await S.nachVerwalten(a); continue; }
-        if (d) { d.gespeichert = a.inhalt; S.melde('gespeichert', pfad); }
+        if (d && a.inhalt !== undefined) { d.gespeichert = a.inhalt; S.melde('gespeichert', pfad); }
         fertig(pfad, T('sp_angewendet', d ? d.name : pfad));
         S.ladeGit();
       } catch (e) { fertig(pfad, fehlerText(e)); }
     }
   };
+
+  S.planeAntraege = function () { runden = 0; planeTakt(); };
 
   function planeTakt() {
     if (zeit !== null || !Object.keys(S.antraege).length) return;

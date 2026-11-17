@@ -5,7 +5,7 @@
   const S = root.SIDE, T = S.T;
   const API = ['', 'api', 'uix', 'coder', ''].join('/');      /* zusammengesetzt: die Vertragsprüfung liest nur ganze Routen-Literale; erlaubt sind die drei Einträge der tool.yaml */
   S.quelle = 'beispiel';          /* 'beispiel' | 'echt': gilt nur für Explorer, Editor, Suche */
-  S.echt = { projekt: null, baum: [], dateien: {}, git: {}, aenderungen: [], gitGrund: '' };
+  S.echt = { projekt: null, projekte: [], baum: [], dateien: {}, git: {}, aenderungen: [], gitGrund: '' };
   let beispiel = null;
 
   function enc(p) { return encodeURIComponent(p); }
@@ -35,6 +35,7 @@
   };
 
   S.setzeQuelle = function (q) {
+    S.antraege = S.antraege || {};
     if (q === 'beispiel' && beispiel) { S.BAUM = beispiel.baum; S.dateien = beispiel.dateien; S.ARBEITSBEREICH = beispiel.name; S.ZWEIG = beispiel.zweig; }
     if (q === 'echt') { S.BAUM = S.echt.baum; S.dateien = S.echt.dateien; S.ARBEITSBEREICH = S.echt.projekt.name; S.ZWEIG = '–'; }
     S.quelle = q;
@@ -99,15 +100,32 @@
     try {
       const p = await S.ctx.api(API + 'projekte');
       if (p.quelle !== 'ok' || !p.projekte.length) return;
-      const projekt = p.projekte[0];
-      const r = await S.ctx.api(API + 'dateien/' + enc(projekt.id));
-      S.echt.projekt = { id: projekt.id, name: String(projekt.name || projekt.id) };
-      S.echt.baum = (r.eintraege || []).map(function (e) { return knoten(e, ''); });
-      S.echt.dateien = {};
-      S.setzeQuelle('echt');
-      S.sag(T('echt_geladen', S.echt.projekt.name));
-      S.ladeWege();
-      S.ladeGit();
+      S.echt.projekte = p.projekte;
+      const z = S.holeZustand ? await S.holeZustand() : null;                /* gemerkter Zustand (Projekt, Chat, offene Anträge, Schriftgröße) */
+      const projekt = p.projekte.filter(function (x) { return z && x.id === z.projekt; })[0] || p.projekte[0];
+      await S.ladeProjekt(projekt);
+      if (z && S.stelleWiederHer) S.stelleWiederHer(z);
     } catch (e) { /* ohne Projekt oder ohne Zugriff: Beispieldateien bleiben */ }
+  };
+
+  /* Ein Projekt laden (Wurzelordner, Git, Wege). Die Editoren werden dabei neu aufgebaut. */
+  S.ladeProjekt = async function (projekt) {
+    const r = await S.ctx.api(API + 'dateien/' + enc(projekt.id));
+    S.echt.projekt = { id: projekt.id, name: String(projekt.name || projekt.id) };
+    S.echt.baum = (r.eintraege || []).map(function (e) { return knoten(e, ''); });
+    S.echt.dateien = {}; S.echt.git = {}; S.echt.aenderungen = []; S.echt.gitGrund = '';
+    S.setzeQuelle('echt');
+    S.sag(T('echt_geladen', S.echt.projekt.name));
+    S.ladeWege();
+    S.ladeGit();
+  };
+
+  S.waehleProjekt = async function (id) {
+    if (S.quelle !== 'echt' || !S.echt.projekt || id === S.echt.projekt.id) return;
+    if (Object.keys(S.dateien).some(function (p) { return S.ungespeichert(p); })) { S.sag(T('pj_ungespeichert')); return; }
+    const projekt = S.echt.projekte.filter(function (x) { return x.id === id; })[0];
+    if (!projekt) return;
+    try { await S.ladeProjekt(projekt); } catch (e) { S.sag(T('pj_fehler')); return; }
+    if (S.sichere) S.sichere();
   };
 })(window);

@@ -1,5 +1,5 @@
 # App „Coder“: die Sedra IDE (Entwurf, Runde 1 bis 4 und 6 der SPEC_SEDRA_IDE_2026-11-16, ohne Anbindung).
-# Läuft im abgeschotteten Rahmen (trust CAPTAIN → /uix/frame/coder, sandbox allow-scripts). Lese-Routen (coder_lesen.py); Speichern nur als Antrag an die Freigaben (coder_speichern.py); ohne Projekt bleiben Beispieldaten.
+# Läuft im abgeschotteten Rahmen (trust CAPTAIN → /uix/frame/coder, sandbox allow-scripts). Lese-Routen (coder_lesen.py); kleiner gemerkter Zustand (coder_zustand.py); Speichern nur als Antrag an die Freigaben (coder_speichern.py); ohne Projekt bleiben Beispieldaten.
 tool:
   id: coder
   name: "Coder"
@@ -10,7 +10,7 @@ tool:
   order: 36
   slot: inhalt
   entry:
-    js: [dom.js, zustand.js, texte_de.js, texte_en.js, daten.js, daten_agenten.js, echt.js, syntax.js, willkommen.js, editor.js, komfort.js, seitenleiste.js, explorer.js, ansichten.js, suche_echt.js, agenten.js, agent_echt.js, speichern_echt.js, verwalten_echt.js, diff.js, rechts.js, panel.js, befehle.js, palette.js, kopf.js, start.js, tool.js]
+    js: [dom.js, zustand.js, texte_de.js, texte_en.js, daten.js, daten_agenten.js, echt.js, syntax.js, willkommen.js, editor.js, komfort.js, seitenleiste.js, explorer.js, ansichten.js, suche_echt.js, agenten.js, agent_echt.js, speichern_echt.js, verwalten_echt.js, merken_echt.js, diff.js, rechts.js, panel.js, befehle.js, palette.js, kopf.js, start.js, tool.js]
     css: [tokens.css, layout.css, editor.css, teile.css]
   api:
     - GET /api/uix/coder/projekte         # R1: Projekte (Kennung, Name)
@@ -19,6 +19,8 @@ tool:
     - GET /api/uix/coder/aenderungen/*    # R4 (E2): Zweig und geänderte Dateien, nur lesen (git status, feste Form)
     - GET /api/uix/coder/original/*       # R5 (Diff-Ansicht): Stand der Datei im letzten Commit, nur lesen (git show HEAD:<pfad>)
     - GET /api/uix/coder/suche/*          # R6 (Suche im Projekt): Treffer je Zeile, nur lesen (Sperrliste, 2 s)
+    - GET /api/uix/coder/zustand          # gemerkter Zustand: Projekt, Chat, offene Anträge, Schriftgröße (nie Dateitext)
+    - POST /api/uix/coder/zustand         # Zustand merken (feste Felder mit Grenzen, eine lokale Datei)
     - GET /api/uix/coder/modelle          # Agent: welche Wege bereit sind (lokales Modell, Cloud-Anbieter), keine Schlüssel
     - POST /api/uix/coder/agent           # Agent: Frage mit Dateikontext, nur Text zurück (Sperrliste, Inhaltsschutz, kein Schreibweg)
     - POST /api/uix/coder/speichern       # E4: Speichern nur als Antrag an die Freigaben (der Captain stimmt in den Freigaben zu)

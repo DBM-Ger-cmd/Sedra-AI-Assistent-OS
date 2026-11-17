@@ -121,7 +121,10 @@
       const h = S.syntax.alleHinweise();
       const fehler = h.filter(function (x) { return x.art === 'fehler'; }).length;
       const links = el('div', { class: 'status-teil' }, [
-        zelle([S.sym('ordner', 12), S.ARBEITSBEREICH], T('st_ordner'), function () { S.fuehreAus('ansichtExplorer'); }, 'st:ordner'),
+        zelle([S.sym('ordner', 12), S.ARBEITSBEREICH], T('st_ordner'), function (ev) {
+          if (S.quelle === 'echt' && S.echt.projekte.length > 1 && S.verwalten) S.verwalten.projektMenue(ev);
+          else S.fuehreAus('ansichtExplorer');
+        }, 'st:ordner'),
         zelle([S.sym('zweig', 12), S.ZWEIG], T('st_zweig'), function () { S.fuehreAus('ansichtQuellcode'); }, 'st:zweig'),
         zelle([S.sym('fehler', 12), String(fehler), S.sym('warnung', 12), String(h.length - fehler)],
           T('st_probleme', fehler, h.length - fehler), function () { S.z.panel = true; S.z.panelReiter = 'probleme'; S.merke(); S.melde('layout'); S.melde('panel'); }, 'st:probleme'),

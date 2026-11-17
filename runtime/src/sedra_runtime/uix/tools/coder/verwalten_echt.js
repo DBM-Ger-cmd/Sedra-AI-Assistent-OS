@@ -48,6 +48,25 @@
     V.dialog(T('vw_ordner_titel'), T('vw_hinweis_antrag'), vor ? vor + '/' : '', function (name) { S.verwalteEcht('ordner', name.replace(/\\/g, '/')); });
   };
 
+  V.projektMenue = function (ev) {
+    schliesseMenue();
+    const m = el('div', { class: 'kontextmenue', role: 'menu', 'aria-label': T('pj_menue'), style: 'left:' + Math.min(ev.clientX, root.innerWidth - 220) + 'px;bottom:' + (root.innerHeight - ev.clientY + 8) + 'px' },
+      S.echt.projekte.map(function (p) {
+        return el('button', { class: 'menue-punkt', type: 'button', role: 'menuitemradio', 'aria-checked': p.id === S.echt.projekt.id ? 'true' : 'false', data: { fid: 'pj:' + p.id },
+          on: { click: function () { schliesseMenue(); S.waehleProjekt(p.id); } } }, [(p.id === S.echt.projekt.id ? '✓ ' : '') + String(p.name || p.id)]);
+      }));
+    root.document.body.appendChild(m);
+    offenesMenue = m;
+    m.firstChild.focus();
+    m.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { schliesseMenue(); return; }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      e.preventDefault();
+      const alle = Array.prototype.slice.call(m.children), i = alle.indexOf(root.document.activeElement);
+      alle[(i + (e.key === 'ArrowDown' ? 1 : alle.length - 1)) % alle.length].focus();
+    });
+  };
+
   V.menue = function (ev, pfad, istOrdner) {
     if (S.quelle !== 'echt') return;
     schliesseMenue();

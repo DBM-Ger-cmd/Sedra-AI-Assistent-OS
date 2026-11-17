@@ -24,6 +24,7 @@ from . import coder_lesen
 from . import coder_agent
 from . import coder_speichern
 from . import coder_verwalten
+from . import coder_zustand
 from . import uix_diag
 from .models import gpu_preflight
 from .jobs.job_supervisor import FINAL_STATES, JobError
@@ -1123,6 +1124,22 @@ class UIXHub:
         if not proj: raise ValueError('unknown_project')
         ws = self.runtime.filesystem_tool._resolve(proj['workspace_path'], must_exist=True)
         return coder_lesen.aenderungen(ws)
+
+    def _coder_zustand_datei(self):
+        return Path(self.runtime.project_root) / 'local_config' / 'coder_zustand.json'
+
+    def coder_zustand_lesen(self, payload=None):
+        """Gemerkter Zustand des Coders (Projekt, Chat, offene Anträge, Schriftgröße). Fehlt die Datei oder ist sie kaputt: leerer Zustand."""
+        try: roh = json.loads(self._coder_zustand_datei().read_text(encoding='utf-8'))
+        except Exception: roh = {}
+        return {'quelle': 'ok', 'zustand': coder_zustand.bereinige(roh)}
+
+    def coder_zustand_sichern(self, payload):
+        """Merkt den Zustand (nur die festen Felder, mit Grenzen). Schreibt nur diese eine lokale Datei, nie etwas im Projekt."""
+        z = coder_zustand.bereinige((payload or {}).get('zustand'))
+        with self.lock:
+            atomic_write_json(self._coder_zustand_datei(), z)
+        return {'quelle': 'ok'}
 
     def coder_original(self, projekt, pfad):
         """R5 (Diff-Ansicht): Stand der Datei im letzten Commit, nur lesen. Gesperrte Namen und Pfade mit .. werden abgewiesen."""
@@ -4572,6 +4589,7 @@ def make_server(hub: UIXHub, port=0):
             try:
                 if path == '/api/uix/coder/projekte': out = hub.coder_projekte()
                 elif path == '/api/uix/coder/modelle': out = hub.coder_modelle()
+                elif path == '/api/uix/coder/zustand': out = hub.coder_zustand_lesen()
                 elif path.startswith(coder_lesen.PRAEFIX_SUCHE + '/'): out = hub.coder_suche(*coder_lesen.zerlege(path, coder_lesen.PRAEFIX_SUCHE))
                 elif path.startswith(coder_lesen.PRAEFIX_ORIGINAL + '/'): out = hub.coder_original(*coder_lesen.zerlege(path, coder_lesen.PRAEFIX_ORIGINAL))
                 elif path.startswith(coder_lesen.PRAEFIX_SPEICHERN + '/'): out = hub.coder_speichern_stand(coder_lesen.zerlege(path, coder_lesen.PRAEFIX_SPEICHERN)[0])
@@ -4982,6 +5000,7 @@ def make_server(hub: UIXHub, port=0):
                     '/api/chat/kombi': lambda p: hub._verlauf('kombi', p, hub.chat_kombi(p)),              # Lokal + KI: erst das lokale Modell, dann die Cloud prüft (ein Fenster)
                     '/api/uix/coder/speichern': hub.coder_speichern_antrag,         # App Coder: Speichern nur als Antrag an die Freigaben (coder_speichern.py)
                     '/api/uix/coder/speichern/anwenden': hub.coder_speichern_anwenden,
+                    '/api/uix/coder/zustand': hub.coder_zustand_sichern,               # App Coder: kleiner gemerkter Zustand (coder_zustand.py)
                     '/api/uix/coder/verwalten': hub.coder_verwalten_antrag,           # App Coder: neuer Ordner, Umbenennen, Löschen nur als Antrag (coder_verwalten.py)
                     '/api/uix/coder/verwalten/anwenden': hub.coder_verwalten_anwenden,
                     '/api/uix/coder/agent': hub.coder_agent,                      # App Coder: Frage an ein Modell mit Dateikontext, nur Text zurück (coder_agent.py)

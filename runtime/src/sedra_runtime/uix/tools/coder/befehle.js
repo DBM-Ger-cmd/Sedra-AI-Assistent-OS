@@ -78,6 +78,9 @@
       S.merke(); S.melde('daten'); S.melde('editor');
       S.sag(T(S.z.beispiel ? 'bsp_an' : 'bsp_aus'));
     } },
+    { id: 'schriftGroesser', k: ['Ctrl+=', 'Ctrl++'], tun: function () { S.schriftAendern(1); } },
+    { id: 'schriftKleiner', k: ['Ctrl+-'], tun: function () { S.schriftAendern(-1); } },
+    { id: 'schriftStandard', k: ['Ctrl+0'], tun: function () { S.schriftAendern(0); } },
     { id: 'layoutStandard', k: [], tun: function () {
       S.z.seiteLinks = true; S.z.seiteRechts = true; S.z.panel = true;
       S.z.breiteLinks = 280; S.z.breiteRechts = 320; S.z.hoehePanel = 220; S.z.zugeklappt = { 'abs:zeitachse': true };
