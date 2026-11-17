@@ -581,9 +581,56 @@ Der Chat hat die drei Einzelwerkzeuge des Workflow Studios (n8n Workflows, Szena
 - Der Leitstand hat noch keine Karte „Aktive und letzte Läufe“ mit Terminen.
 - Aufräumen: Worktrees `workflow-studio-app` (Kopie vom Stand `c8e6b1c`), `factory-studio-workflow-studio-39b5e1` (Branch `claude/workflow-studio-bund`, in `main` enthalten) und Branch `claude/factory-studio-workflow-studio-39b5e1` (alter Prototyp, verworfen) nach Freigabe löschen.
 
+## 24. Arbeit im Chat vom 16.–17.11.2026 (Claude Code: Designpass Workflow Studio, Laufquelle, Lauf-Schritte 2–6)
+
+Der Chat hat den Designpass des Workflow Studios (v1.6, HTML-Vorlage) nachgeschärft, eine einheitliche Laufquelle entworfen und den Backend-Bau dafür begonnen. Die Vorlage ist eine Designsimulation mit synthetischen Daten; die Anbindung an echte Läufe ist im Bau, nicht in `main`.
+
+**Nur in Dateien, nicht committet (Downloads und Worktree):**
+- `SEDRA_Workflow_Studio_v1_6_Designpass.html` (Downloads): Entwicklungsmodus mit `?dev=1` (Designlabor, Designabgleich, „Design testen“ und „Import simulieren“ nur dort); vier getrennte Kompatibilitätskarten; Bindungszeile und Warnhinweis „SIMULATION-NO-BINDING“ im Freigabe-Detail; Lauf-Kontext-Zeile in Leitstand, Live, Freigaben, Betriebsmonitor und Editor; rechtwinklige Kantenführung mit Spurversatz; Vorzeigepfad „Rechnungsprüfung“ mit Normalfall, Gate und Fehlerfall; Laufquellen als Liste `v19Sources` (mehrere parallele Läufe, echte Quellen zuerst, Entscheidung wird an die besitzende Quelle weitergeleitet).
+- `Laufquelle_Langzeitkonzept.md`, `Produktplan_Lauf_Kontext_echter_Adapter.md`, `Befunde_Rechnungspruefung_fuer_Captain.md` (Downloads).
+- Worktree `.claude/worktrees/lauf-quelle` auf Branch `claude/lauf-quelle` (Basis `ce29d21`, nicht committet): `live.py` schreibt je Lauf `<prozess>--<lauf>.json`; wartende Captain-Gates werden nicht veraltet (`captain=True`); Workflow-Gates landen in `human_gates.pending` (`execution.py`, `_gate_merken`); `desk.py` und `fabrik.py` übergeben die Lauf-ID; neue Lese-Schicht `workflows/lauf_sicht.py` (nur lesen); Endpunkt `laeufe` (Desk-Verb).
+
+**Entscheidungen des Captains (16.–17.11.2026):**
+- Mehrere parallele Läufe: ja. Echte Läufe haben immer Vorrang vor Simulationen.
+- Der Vorzeigepfad bleibt im Produkt.
+- Backend darf für die Laufquelle geändert werden; Dateiname `<prozess>--<lauf>.json`; Gate-Quelle ist der Gate-Speicher der Mission (`human_gates`), nicht der Guard (der Guard speichert keine Gates).
+- Startmenü: das echte Harness-Startmenü anpassen, nicht den Designpass.
+- Factory Studio: nach der Vorlage v1.7 bauen und die vorhandenen Funktionen unter dem Workflow Studio bündeln, ganzer Umfang.
+- Der Merge `da7eeca` (Startmenü-Branch nach `main`) bleibt. Er war nicht ausdrücklich freigegeben; das Ja kam nachträglich.
+- Commit, Merge und Push nur auf ausdrückliches Ja.
+
+**Befunde und Fallen:**
+- Der Guard (`core/guard.py`) speichert keine Gates. Eine Liste offener Gates gibt es dort nicht. Der bestehende Gate-Speicher ist `mission['human_gates']` (`pending`, `resolved`).
+- Der Workflow-Pfad (`execution.py`) legte Gates nicht in `human_gates` ab und meldete keinen Zustand „wartet“; beides ist im Worktree behoben, aber noch nicht durch einen Lauf von Anfang bis Ende geprüft.
+- `live.py` mit einer Datei je Prozess überschrieb parallele Läufe desselben Workflows.
+- Tests: Ohne `PYTHONPATH` auf den Worktree importierte `pytest` das Paket `sedra_runtime` aus einem anderen Checkout (`sedra-uix-redesign`). Die ersten „36 bestanden“ galten deshalb nicht dem Worktree-Code. Erst mit `PYTHONPATH=<worktree>/runtime/src` zählen die Ergebnisse.
+- Rechnungsprüfung (`Rechnungsprüfung.json`, 11 Knoten, 8 Hauptverbindungen): Der Knoten „Get row(s)“ liest mit festem Schlüssel `6`. Die KI-Knoten (Information Extractor, Anthropic-Modell) hängen nicht am Hauptpfad; die lokale Laufzeit überspringt sie ohne Fehler.
+- Eine Sitzung hat einen lokalen Commit `7d572f6` (Sammel-App) und `8af211a` auf `main` gemacht, nicht freigegeben. `ae43170` (Chat-Sicherung) liegt lokal voraus, `origin/main` steht auf `45b6a3f`.
+
+**Zahlen mit Quelle:**
+- Worktree `lauf-quelle`, Testlauf vor dem Lauf-Sicht-Schritt: 41 bestanden (36 bestehende in `test_workflow_live.py`, `test_desk_live.py`, `test_uix_harness_api.py` plus 5 in `test_lauf_quelle.py`). Nach Schritt 5 und 6: 47 bestanden (plus 6 in `test_lauf_sicht.py`).
+- Breitere Auswahl der Workflow-, Desk- und Live-Tests im Worktree: 40 Fehlschläge; derselbe Stand am unveränderten Basis-Commit: dieselben 40 Fehlschläge.
+- Designpass: alle 16 Ansichten mit und ohne `?dev=1` ohne Seitenfehler (Playwright, Dateiprotokoll); der Gate-Test mit zwei wartenden Gates am Browser-Lauf und am Vorzeigepfad ist grün (ohne Seitenfehler).
+- Avatar-Sitzung (aus deren Bericht, nicht von mir nachgeprüft): breite UIX-Suite 1704 bestanden, 39 übersprungen, 9 fehlgeschlagen; alle 9 auch auf `main`.
+
+**Nicht geprüft:**
+- Ein echter Lauf mit Gate von der Freigabe bis zum Ergebnis; ein echter Notaus gegen einen laufenden Lauf.
+- Der Endpunkt `laeufe` über die Oberfläche (nur Funktionstest).
+- Die Mock-Quellen (`v19Sources`) sind noch nicht auf den Endpunkt umgestellt.
+- Die echte Harness-Oberfläche des Startmenüs: die Sitzung wartet auf die Adresse mit dem Token.
+- Die Rechnungsprüfung mit echten Daten; die Testpaket-Musterlösung wurde bewusst nicht gelesen.
+
+**Offen:**
+- Commit des Worktrees `lauf-quelle` (noch nicht entschieden) und des Ergebnisses von Schritt 4 (Gate-Speicher, Workflow-Gate).
+- Schlüssel `6` in der Rechnungsprüfung: Wer prüft ihn? (siehe `Befunde_Rechnungspruefung_fuer_Captain.md`).
+- Factory-Studio-Sitzung: Der Branch `claude/factory-studio-workflow-studio-39b5e1` hat die Fabrik nicht; die Sitzung wartet auf eine Entscheidung, ob sie auf `main` neu aufsetzt.
+- Das Ergebnis der breiten UIX-Suite der Factory-Sitzung und die 9 Fehlschläge aus der Avatar-Sitzung, die auch auf `main` auftreten.
+- Der Aufräumstand der Worktrees (`base-vergleich` lässt sich unter Windows nicht löschen).
+
 ## 9. Alle Chats (Sitzungen), nach Datum
 **Workflow Studio (Chat):**
 - 16.–17.11. Claude Code, Chat „Workflow Studio als Sammel-App“: Sammel-App in der Harness (Leitstand, Katalog, Startassistent, Live & Debugger, Plattform & Design), gepusht bis `origin/main` `45b6a3f`; Abschnitt 23.
+- 16.–17.11. Claude Code, Chat „Designpass Workflow Studio, Laufquelle, Lauf-Schritte 2–6“: Designpass v1.6 mit Vorzeigepfad, Laufquelle und Backend-Bau im Worktree `lauf-quelle` (nicht committet); Startmenü, Avatar und Factory als Unter-Sitzungen; Abschnitt 24.
 **Sedra Vorarbeiter (Gruppe):**
 - 16.11. Claude Code, Chat „Vorarbeiter: Master-Modus, Hardening, G2-09“: Bau-Pakete, Master-Modus und Gedächtnis, Sitzungspost nach `main`; unabhängige Hardening-Runde (M-1 bis M-3 hoch, behoben), zwei UIX-Fehler der Übersetzungsumstellung behoben, O-1 (Pfad-Argumente bei `befehl`), G2-09 Prüfserver mit Positivliste; Entwickler-ZIP 16.11.; Worktrees und Branches aufgeräumt; `main` = `origin/main` = `5948dba`, 94 Aufträge im Register (siehe Abschnitt 21). Unter-Sitzungen: `roadmap-bau-pakete`, `master-modus`, `chat-fenster-senden-sich`, `hardening-runde`, `vorarbeiter-fork` (mit `hermes-ide-r1`, Sedra IDE Runde 1).
 - 12.11. Claude Code, Chat „Roadmap Gruppe 1, Bau-Pakete“: AM8-10..12, AM7-08/09, AM7-15, AM7-18 gebaut, gemergt und gepusht (`main` bis `74bf792`), Register und Dashboard nachgezogen; Unter-Sitzung `roadmap-bau-pakete` (Branch `claude/roadmap-bau-pakete-25ea20`) schnitt sieben Bau-Specs und baute sie mit SEDRA (28 von 28 Stufen bestanden, Branch noch nicht auf `main`) (siehe Abschnitt 20).
