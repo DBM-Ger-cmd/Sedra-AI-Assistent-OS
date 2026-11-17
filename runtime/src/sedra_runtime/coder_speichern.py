@@ -62,7 +62,7 @@ def zaehle(alt, neu) -> tuple:
 
 def zustand(m) -> str:
     """Stand eines Antrags aus dem Auftrag: wartet | abgelehnt | freigegeben | angewendet."""
-    if (m.get('lifecycle') or {}).get('status') == 'closed' and (m.get('result') or {}).get('kind') == 'coder_speichern':
+    if (m.get('lifecycle') or {}).get('status') == 'closed' and (m.get('result') or {}).get('kind') in ('coder_speichern', 'coder_verwalten'):
         return 'angewendet'
     if (m.get('human_gates') or {}).get('pending'):
         return 'wartet'

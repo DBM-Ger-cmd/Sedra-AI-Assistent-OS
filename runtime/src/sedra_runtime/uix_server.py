@@ -23,6 +23,7 @@ from . import factory_lesen
 from . import coder_lesen
 from . import coder_agent
 from . import coder_speichern
+from . import coder_verwalten
 from . import uix_diag
 from .models import gpu_preflight
 from .jobs.job_supervisor import FINAL_STATES, JobError
@@ -1172,9 +1173,75 @@ class UIXHub:
         mid = coder_speichern.auftrag_gueltig(mission_id)
         try: m = self.runtime.missions.load(mid)
         except Exception: raise ValueError('unknown_mission')
-        req = (m.get('context') or {}).get(coder_speichern.KONTEXT)
+        ctx = m.get('context') or {}
+        req = ctx.get(coder_speichern.KONTEXT) or ctx.get(coder_verwalten.KONTEXT)
         if not req: raise ValueError('not_a_matching_request')
-        return {'status': coder_speichern.zustand(m), 'mission_id': mid, 'pfad': req['pfad']}
+        return {'status': coder_speichern.zustand(m), 'mission_id': mid, 'pfad': req['pfad'], 'art': req.get('art', 'speichern')}
+
+    def coder_verwalten_antrag(self, payload):
+        """Ausbau: neuer Ordner, Umbenennen oder Löschen nur als Antrag an die Freigaben. Gelöscht werden nur Dateien und leere Ordner. Geschrieben wird nichts."""
+        from .core.request_binding import file_request
+        art, projekt, pfad, ziel = coder_verwalten.pruefe(payload)
+        rel, parts = self._project_path({'project_id': projekt, 'path': pfad})
+        fs = self.runtime.filesystem_tool
+        p = fs._resolve(rel)
+        if art == 'ordner':
+            if p.exists(): raise ValueError('ziel_existiert')
+            op, fsargs, aktion, ziel_text, binding = 'mkdir', {'path': rel}, 'create_new_artifact', str(p), file_request('mkdir', {'path': rel}, p)
+            titel, risiken = f'Coder: Ordner {pfad} anlegen', ['legt einen neuen Ordner im Projekt an']
+        elif art == 'umbenennen':
+            rel2, parts2 = self._project_path({'project_id': projekt, 'path': ziel})
+            q = fs._resolve(rel2)
+            if not p.exists(): raise ValueError('nicht_gefunden')
+            if q.exists(): raise ValueError('ziel_existiert')
+            op, fsargs, aktion = 'move', {'src': rel, 'dst': rel2}, 'filesystem_move'
+            ziel_text, binding = f'{p}->{q}', file_request('move', fsargs, p, q)
+            titel, risiken = f'Coder: {pfad} umbenennen in {ziel}', ['benennt eine bestehende Datei oder einen Ordner um (verschiebt sie)']
+        else:
+            if not p.exists(): raise ValueError('nicht_gefunden')
+            if p.is_dir() and any(p.iterdir()): raise ValueError('ordner_nicht_leer')
+            op, fsargs, aktion, ziel_text, binding = 'delete', {'path': rel}, 'file_delete', str(p), file_request('delete', {'path': rel}, p)
+            titel, risiken = f'Coder: {pfad} löschen', ['löscht eine Datei oder einen leeren Ordner', 'nicht rückholbar']
+        res = self._gate_request(titel, aktion, ziel_text, binding, risiken, 'coder_verwalten_binding')
+        with self.runtime.missions.execution_lock(res['mission_id']):
+            m = self.runtime.missions.load(res['mission_id'])
+            m['context'][coder_verwalten.KONTEXT] = {'art': art, 'projekt': projekt, 'pfad': pfad, 'ziel': ziel, 'op': op, 'fsargs': fsargs, 'aktion': aktion, 'ziel_text': ziel_text, 'binding': binding}
+            self.runtime.missions.save(m)
+        self.runtime.audit.append('CODER_VERWALTEN_ANTRAG', component='uix', mission_id=res['mission_id'], payload={'projekt': projekt, 'art': art, 'pfad': pfad, 'ziel': ziel})
+        return {'status': 'wartet', 'mission_id': res['mission_id'], 'gate_id': res['gate']['gate_id'], 'art': art, 'pfad': pfad, 'ziel': ziel}
+
+    def coder_verwalten_anwenden(self, payload):
+        """Führt die freigegebene Änderung über das Dateiwerkzeug aus. Ohne Zustimmung, bei geändertem Zustand oder zum zweiten Mal geschieht nichts."""
+        from .tools.base import ToolError
+        mid = coder_speichern.auftrag_gueltig((payload or {}).get('mission_id'))
+        rt = self.runtime
+        with rt.missions.execution_lock(mid):
+            m = rt.missions.load(mid)
+            req = (m.get('context') or {}).get(coder_verwalten.KONTEXT)
+            if not req: raise ValueError('not_a_matching_request')
+            if coder_speichern.zustand(m) == 'angewendet': raise ValueError('already_applied')
+            token = (m.get('execution') or {}).get('approval_token')
+            if not token: raise ValueError('captain_approval_required')
+            for teil in (req['pfad'], req.get('ziel')):
+                if teil:
+                    try: coder_verwalten._pfad(teil)
+                    except ValueError: raise ValueError('access_blocked')
+            check = rt.guard.check_token(token, mission_id=mid, action=req['aktion'], target=req['ziel_text'], request_binding=req['binding'])
+            if not check['authorized']: raise ValueError('captain_approval_invalid')
+            try:
+                out = rt.filesystem_tool.execute(mid, req['op'], req['fsargs'], token)
+            except ToolError as exc:
+                text = str(exc)
+                raise ValueError('ziel_existiert' if 'target_exists' in text else 'ordner_nicht_leer' if 'not_empty' in text else 'write_failed')
+            if out.get('status') != 'completed': raise ValueError('file_changed_repeat_request')
+            if token.get('status') == 'active':
+                rt.guard.authorize(token, mission_id=mid, action=req['aktion'], target=req['ziel_text'], request_binding=req['binding'])
+            m['execution'].pop('approval_token', None)
+            m['result'] = {'kind': 'coder_verwalten', 'art': req['art'], 'pfad': req['pfad'], 'ziel': req.get('ziel')}
+            m['lifecycle']['status'] = 'closed'
+            rt.missions.save(m)
+            rt.audit.append('CODER_VERWALTEN', component='uix', mission_id=mid, payload={'projekt': req['projekt'], 'art': req['art'], 'pfad': req['pfad'], 'ziel': req.get('ziel')})
+        return {'status': 'angewendet', 'art': req['art'], 'pfad': req['pfad'], 'ziel': req.get('ziel')}
 
     def coder_speichern_anwenden(self, payload):
         """E4: schreibt die freigegebene Änderung über das Dateiwerkzeug. Ohne Zustimmung des Captains, bei geänderter Datei oder zweiten Mal geschieht nichts."""
@@ -4915,6 +4982,8 @@ def make_server(hub: UIXHub, port=0):
                     '/api/chat/kombi': lambda p: hub._verlauf('kombi', p, hub.chat_kombi(p)),              # Lokal + KI: erst das lokale Modell, dann die Cloud prüft (ein Fenster)
                     '/api/uix/coder/speichern': hub.coder_speichern_antrag,         # App Coder: Speichern nur als Antrag an die Freigaben (coder_speichern.py)
                     '/api/uix/coder/speichern/anwenden': hub.coder_speichern_anwenden,
+                    '/api/uix/coder/verwalten': hub.coder_verwalten_antrag,           # App Coder: neuer Ordner, Umbenennen, Löschen nur als Antrag (coder_verwalten.py)
+                    '/api/uix/coder/verwalten/anwenden': hub.coder_verwalten_anwenden,
                     '/api/uix/coder/agent': hub.coder_agent,                      # App Coder: Frage an ein Modell mit Dateikontext, nur Text zurück (coder_agent.py)
                     '/api/chat/cloud': lambda p: hub._verlauf('cloud', p, hub.chat_cloud(p)),              # Gespräch mit einem Cloud-Modell (Wahl neben Senden); Inhaltsschutz
                     '/api/cloud/key': hub.cloud_key_seite,

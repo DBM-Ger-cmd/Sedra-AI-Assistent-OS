@@ -128,3 +128,11 @@
 /* Suche im Projekt: Dateikopf mit Trefferzahl und Ersetzen-Knopf. */
 .t-coder .su-datei { display: flex; align-items: center; gap: 6px; padding: 2px 8px 2px 12px; font-weight: 600; }
 .t-coder .su-datei .knopf { padding: 0 8px; }
+
+/* Dateiverwaltung: Kontextmenü und kleiner Dialog (jede Aktion ist nur ein Antrag). */
+.t-coder .kontextmenue { position: fixed; z-index: 30; min-width: 170px; display: flex; flex-direction: column; padding: 4px 0; background: var(--bg-karte); border: 1px solid var(--rand); border-radius: 4px; box-shadow: 0 2px 8px var(--schatten, transparent); }
+.t-coder .menue-punkt { text-align: left; padding: 4px 14px; color: var(--text); }
+.t-coder .menue-punkt:hover, .t-coder .menue-punkt:focus-visible { background: var(--akzent); color: var(--akzent-text); outline: none; }
+.t-coder .dlg-ueber { position: fixed; inset: 0; z-index: 40; display: flex; align-items: flex-start; justify-content: center; padding-top: 18vh; background: var(--schleier, transparent); }
+.t-coder .dlg { width: min(460px, 92vw); display: flex; flex-direction: column; gap: 8px; padding: 14px; background: var(--bg-karte); border: 1px solid var(--rand); border-radius: 6px; }
+.t-coder .dlg-titel { font-weight: 600; }

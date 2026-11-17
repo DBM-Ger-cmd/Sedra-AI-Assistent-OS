@@ -56,6 +56,10 @@
     if (start) start.tabIndex = 0;
 
     kasten.addEventListener('click', function (ev) { waehle(ev.target.closest('.baum-zeile')); });
+    kasten.addEventListener('contextmenu', function (ev) {
+      const z = ev.target.closest('.baum-zeile');
+      if (z && S.quelle === 'echt' && S.verwalten && !(S.dateien[z.dataset.pfad] && S.dateien[z.dataset.pfad].neu)) { ev.preventDefault(); S.verwalten.menue(ev, z.dataset.pfad, !!z.dataset.ordner); }
+    });
     kasten.addEventListener('keydown', function (ev) {
       const z = ev.target.closest('.baum-zeile');
       if (!z) return;
@@ -66,6 +70,8 @@
       else if (ev.key === 'ArrowUp') ziel = liste[i - 1];
       else if (ev.key === 'Home') ziel = liste[0];
       else if (ev.key === 'End') ziel = liste[liste.length - 1];
+      else if (ev.key === 'F2' && S.quelle === 'echt' && S.verwalten) { ev.preventDefault(); S.verwalten.umbenennen(z.dataset.pfad); return; }
+      else if (ev.key === 'Delete' && S.quelle === 'echt' && S.verwalten) { ev.preventDefault(); S.verwalten.loeschen(z.dataset.pfad); return; }
       else if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); waehle(z); return; }
       else if (ev.key === 'ArrowRight' && z.dataset.ordner) {
         ev.preventDefault();
@@ -154,6 +160,7 @@
     return {
       titel: T('an_explorer'), inhalt: inhalt,
       aktionen: [S.symKnopf('plus', T('bf_neueDatei'), function () { S.fuehreAus('neueDatei'); }, { data: { fid: 'ex:neu' } })]
+        .concat(S.quelle === 'echt' && S.verwalten ? [S.symKnopf('ordner', T('vw_neuer_ordner'), function () { S.verwalten.neuerOrdner(''); }, { data: { fid: 'ex:ordner' } })] : [])
     };
   };
 })(window);

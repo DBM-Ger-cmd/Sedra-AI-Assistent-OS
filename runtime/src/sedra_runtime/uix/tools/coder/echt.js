@@ -16,6 +16,8 @@
     return k;
   }
 
+  S.baumKnoten = knoten;
+
   S.findeKnoten = function (pfad, liste) {
     const l = liste || S.BAUM;
     for (let i = 0; i < l.length; i++) {
