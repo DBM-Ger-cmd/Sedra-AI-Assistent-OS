@@ -163,3 +163,20 @@ class DatenschutzZugangTest(unittest.TestCase):
         self.assertEqual(zugang.pruefe({}, '/api/guard/datenschutz', {'an': False}), 'nur_captain')
         self.assertIsNone(zugang.pruefe({}, '/api/guard/datenschutz', {'an': True}))
         self.assertIsNone(zugang.pruefe({}, '/api/guard/datenschutz', {}))
+
+
+class EigenerWaechterFolgtSchalterTest(unittest.TestCase):
+    def test_wachter_ohne_state_path_liest_den_schalter_neben_dem_logbuch(self):
+        import tempfile, pathlib
+        from sedra_runtime.core.audit import AuditLog
+        from sedra_runtime.core.content_guard import ContentGuard, ContentGuardStop
+        daten = pathlib.Path(tempfile.mkdtemp())
+        audit = AuditLog(daten / 'audit' / 'events.jsonl')
+        msgs = [{'role': 'user', 'content': ADRESSE}]
+        with self.assertRaises(ContentGuardStop):                       # Standard: streng, wie bisher
+            ContentGuard(audit=audit, cloud_enabled=True).call(msgs, model='m', route='cloud', complete=lambda m: 'ok')
+        ContentGuard(audit=audit, cloud_enabled=True).set_datenschutz_eu(False)     # der Schalter der Laufzeit
+        eigener = ContentGuard(audit=audit, cloud_enabled=True)         # so bauen labor.py und redesign_*.py ihren Wächter
+        self.assertFalse(eigener.datenschutz_eu)
+        self.assertEqual(eigener.call(msgs, model='m', route='cloud', complete=lambda m: 'ok').status, 'OK')
+        self.assertTrue((daten / 'datenschutz_eu.json').exists())

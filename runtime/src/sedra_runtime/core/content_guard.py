@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
+from pathlib import Path
 import secrets
 import threading
 import time
@@ -71,6 +72,8 @@ class ContentGuard:
         self.mode = mode if mode in MODE_SHARP else 'sandbox'               # G-04: Unbekanntes ist scharf, nie beobachtet
         self.cloud_enabled = bool(cloud_enabled)
         self.clock = clock
+        if state_path is None and getattr(audit, 'path', None):      # Labor, Redesign u. a. bauen eigene Wächter: sie lesen denselben Schalter (runtime_data/datenschutz_eu.json)
+            state_path = Path(audit.path).parent.parent / 'datenschutz_eu.json'
         self.state_path = state_path
         self.datenschutz_eu = self._load_datenschutz()      # Standard: an (streng); nur ein gespeichertes 'aus' lockert
         self._lock = threading.RLock()
