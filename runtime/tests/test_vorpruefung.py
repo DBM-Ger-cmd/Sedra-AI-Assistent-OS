@@ -155,3 +155,11 @@ class LokalesModellBereitTest(unittest.TestCase):
         hub, _, ereignisse = self._hub('llama-cpp-server', fehler='recipe_id_required')
         desk._lokales_modell_bereit(hub, 'M-1')
         self.assertEqual(ereignisse, ['WORKFLOW_MODELL_NICHT_BEREIT'])
+
+
+class DatenschutzZugangTest(unittest.TestCase):
+    def test_client_darf_datenschutz_nicht_ausschalten_aber_anschalten(self):
+        from sedra_runtime.desk import zugang
+        self.assertEqual(zugang.pruefe({}, '/api/guard/datenschutz', {'an': False}), 'nur_captain')
+        self.assertIsNone(zugang.pruefe({}, '/api/guard/datenschutz', {'an': True}))
+        self.assertIsNone(zugang.pruefe({}, '/api/guard/datenschutz', {}))

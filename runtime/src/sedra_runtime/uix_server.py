@@ -956,6 +956,8 @@ class UIXHub:
     def zugang_pruefung(self, token_class, path, payload):
         """AM4-02/03/08: der Körper einer Anfrage mit Client-Token gegen die Berechtigung. `cli` unbeschränkt, `mcp` nur mit dem Schalter, `dienst:<id>` immer (nach seinem Manifest). None = in Ordnung."""
         from .desk import zugang
+        if path == '/api/guard/datenschutz' and isinstance(payload, dict) and payload.get('an') is False:
+            return 'nur_captain'                              # Datenschutz EU lockert nur der Captain in der Oberfläche, auch bei ausgeschaltetem Schalter
         if token_class == 'mcp' and self.zugang_an:
             return zugang.pruefe(app_speicher.zugaenge_lesen(self.project_root).get('mcp', zugang.MCP_VORGABE), path, payload)
         if str(token_class).startswith('dienst:'):
@@ -4871,7 +4873,7 @@ def make_server(hub: UIXHub, port=0):
                 payload = self._json_body()
                 if not self._app_rechte(path, payload):                 # AM3-11: Lesen und Verben einer fremden App gegen ihre gewährten Rechte
                     return
-                if token_class not in ('browser', 'cli') and path in ('/api/objects', '/api/actions'):          # AM4-02/08: mcp und Dienste gegen ihre Berechtigung
+                if token_class not in ('browser', 'cli') and path in ('/api/objects', '/api/actions', '/api/guard/datenschutz'):          # AM4-02/08: mcp und Dienste gegen ihre Berechtigung
                     fehler = hub.zugang_pruefung(token_class, path, payload)
                     if fehler:
                         p = payload if isinstance(payload, dict) else {}

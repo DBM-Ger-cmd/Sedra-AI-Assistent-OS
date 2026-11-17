@@ -23,6 +23,8 @@ def pruefe(eintrag, path, payload):
     e = eintrag_normal(eintrag)
     p = payload if isinstance(payload, dict) else {}
     typ = str(p.get('type') or '').strip()
+    if path == '/api/guard/datenschutz' and p.get('an') is False:
+        return 'nur_captain'          # den Datenschutz lockert nur der Captain in der Oberfläche, kein Programm und kein Dienst
     if path == '/api/objects':
         return None if e['lesen'] == ALLE or typ in e['lesen'] else 'typ_nicht_gewaehrt'
     if path == '/api/actions':
