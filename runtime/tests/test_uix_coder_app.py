@@ -44,7 +44,7 @@ class Anmeldung(unittest.TestCase):
         self.assertEqual(fehler, [])
         self.assertEqual(man["handles"], ["coder"])
         self.assertEqual(man["api"], ["GET /api/uix/coder/projekte", "GET /api/uix/coder/dateien/*", "GET /api/uix/coder/datei/*",
-                                "GET /api/uix/coder/aenderungen/*", "GET /api/uix/coder/modelle", "POST /api/uix/coder/agent",
+                                "GET /api/uix/coder/aenderungen/*", "GET /api/uix/coder/original/*", "GET /api/uix/coder/modelle", "POST /api/uix/coder/agent",
                                 "POST /api/uix/coder/speichern", "GET /api/uix/coder/speichern/*", "POST /api/uix/coder/speichern/anwenden"],
                          "Lese-Routen; Agent: Modelle lesen und eine Frage stellen (kein Schreibweg); Speichern nur als Antrag an die Freigaben (E4)")
         self.assertEqual(man["trust"], "CAPTAIN", "Rahmen-Werkzeug, nie in der Seite der Shell")

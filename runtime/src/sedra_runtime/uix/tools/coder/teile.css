@@ -110,3 +110,17 @@
 .t-coder .ereignis .wer { color: var(--akzent-hell); }
 .t-coder .eigenschaft { display: flex; justify-content: space-between; gap: 12px; padding: 3px 12px; }
 .t-coder .eigenschaft span:first-child { color: var(--text-leise); }
+
+/* Diff-Ansicht (nur lesen): zwei Spalten, Commit links, Editor rechts. */
+.t-coder .diff-ueber { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; background: var(--bg-editor, var(--bg)); }
+.t-coder .df-kopf { flex: none; display: flex; align-items: center; gap: 10px; height: var(--h-reiter); padding: 0 8px 0 12px; border-bottom: 1px solid var(--rand); }
+.t-coder .df-titel { font-weight: 600; }
+.t-coder .df-spalten { flex: none; display: grid; grid-template-columns: 1fr 1fr; color: var(--text-leise); font-size: var(--gr-klein); text-transform: uppercase; padding: 2px 8px; border-bottom: 1px solid var(--rand); }
+.t-coder .df-raster { flex: 1; overflow: auto; font-family: var(--mono); font-size: var(--gr-editor, 13px); }
+.t-coder .df-zeile { display: grid; grid-template-columns: 44px 1fr 44px 1fr; min-height: 19px; line-height: 19px; }
+.t-coder .df-nr { text-align: right; padding-right: 8px; color: var(--text-leise); user-select: none; }
+.t-coder .df-text { white-space: pre; overflow: hidden; text-overflow: clip; padding-left: 4px; }
+.t-coder .df-weg { background: color-mix(in srgb, var(--fehler) 22%, transparent); }
+.t-coder .df-neu { background: color-mix(in srgb, var(--git-neu) 22%, transparent); }
+.t-coder .df-leer { background: var(--bg-hover); }
+.t-coder .gruppe { position: relative; }

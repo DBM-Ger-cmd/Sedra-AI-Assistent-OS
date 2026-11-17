@@ -132,3 +132,43 @@ def _git_lauf(args, ordner):
     if r.returncode != 0:
         raise RuntimeError('git_failed')
     return r.stdout.decode('utf-8', errors='replace')
+
+
+# ---- R5 (Ausbau, Diff-Ansicht): der Stand einer Datei im letzten Commit (`git show HEAD:<pfad>`), nur lesen, feste Form, 2 s.
+PRAEFIX_ORIGINAL = '/api/uix/coder/original'
+ORIGINAL_MAX = 100_000
+
+
+def original(werkordner, pfad, lauf=None) -> dict:
+    """R5: Text der Datei im letzten Commit. `lauf(args, ordner)` gibt die Rohbytes von Git zurück (Standard: subprocess, 2 s).
+    `quelle: fehlt` mit Kennwort: kein_git, neu (nicht im Commit), zu_gross, binaer, git_fehler, git_zeit. Nie ein Pfad des Rechners."""
+    from pathlib import Path
+    teile = [t for t in str(pfad).replace('\\', '/').split('/') if t not in ('', '.')]
+    if not teile or '..' in teile or ':' in str(pfad) or len(str(pfad)) > PFAD_MAX or pfad_gesperrt(pfad):
+        raise ValueError('access_blocked' if teile and pfad_gesperrt(pfad) else 'invalid_path')
+    ordner = Path(werkordner)
+    if not (ordner / '.git').exists():
+        return {'quelle': 'fehlt', 'grund': 'kein_git'}
+    args = ['-c', 'core.fsmonitor=false', '-c', 'core.hooksPath=NUL', 'show', 'HEAD:' + '/'.join(teile)]
+    try:
+        roh = (lauf or _git_roh)(args, ordner)
+    except Exception as exc:
+        name = type(exc).__name__
+        return {'quelle': 'fehlt', 'grund': 'git_zeit' if name == 'TimeoutExpired' else 'neu' if name == 'LookupError' else 'git_fehler'}
+    if len(roh) > ORIGINAL_MAX:
+        return {'quelle': 'fehlt', 'grund': 'zu_gross'}
+    try:
+        text = roh.decode('utf-8')
+    except UnicodeDecodeError:
+        return {'quelle': 'fehlt', 'grund': 'binaer'}
+    return {'quelle': 'ok', 'pfad': '/'.join(teile), 'inhalt': text.replace('\r\n', '\n')}
+
+
+def _git_roh(args, ordner):
+    import os
+    import subprocess
+    env = dict(os.environ, GIT_OPTIONAL_LOCKS='0', GIT_TERMINAL_PROMPT='0')
+    r = subprocess.run(['git', '-C', str(ordner), *args], capture_output=True, timeout=GIT_ZEITLIMIT, env=env, shell=False)
+    if r.returncode != 0:
+        raise LookupError('nicht_im_commit') if b'exists on disk, but not in' in r.stderr or b'does not exist in' in r.stderr or b'bad revision' in r.stderr or b'invalid object name' in r.stderr else RuntimeError('git_failed')
+    return r.stdout

@@ -51,7 +51,7 @@
       const m = S.gitStatus(p) || 'M';
       liste.appendChild(el('div', {
         class: 'listen-zeile', role: 'listitem', tabindex: '0', title: p, data: { fid: 'qc:' + p },
-        on: { click: function () { S.oeffneDatei(p); }, keydown: function (ev) { if (ev.key === 'Enter') S.oeffneDatei(p); } }
+        on: { click: function () { (echt ? S.diff.zeige : S.oeffneDatei)(p); }, keydown: function (ev) { if (ev.key === 'Enter') (echt ? S.diff.zeige : S.oeffneDatei)(p); } }
       }, [S.sym('datei', 14), el('span', { class: 'zeile-name name-' + m, text: d.name }),
         el('span', { class: 'zeile-neben', text: p.indexOf('/') > 0 ? p.slice(0, p.lastIndexOf('/')) : '' }),
         el('span', { class: 'git git-' + m, text: m })]));

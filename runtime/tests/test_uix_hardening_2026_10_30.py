@@ -207,7 +207,7 @@ class RoutenImManifest(unittest.TestCase):
     Liste nennt nichts, was der Code nicht ruft (sonst ist die Allowlist zu weit). Helfer aus ui/ zählen mit der Kennung des Rufers."""
     ROUTE = re.compile(r"""['"`](/api/[a-z0-9_/\-]+)['"`]""")
     PRAEFIX = re.compile(r"""['"`](/api/[a-z0-9_/\-]*)['"`]\s*\+""")
-    HELFER = {'S.ladeGit = async': ['GET /api/uix/coder/aenderungen/*'], 'S.ladeWege = async': ['GET /api/uix/coder/modelle'], 'S.sende = async': ['POST /api/uix/coder/agent'], 'S.speichereEcht = async': ['POST /api/uix/coder/speichern'],
+    HELFER = {'S.ladeGit = async': ['GET /api/uix/coder/aenderungen/*'], 'S.ladeWege = async': ['GET /api/uix/coder/modelle'], 'S.sende = async': ['POST /api/uix/coder/agent'], 'D.zeige = async': ['GET /api/uix/coder/original/*'], 'S.speichereEcht = async': ['POST /api/uix/coder/speichern'],
               'S.pruefeAntraege = async': ['GET /api/uix/coder/speichern/*', 'POST /api/uix/coder/speichern/anwenden'],     # App Coder, Agent: agent_echt.js baut die Adressen aus Teilen
               'S.ladeEcht = async': ['GET /api/uix/coder/projekte', 'GET /api/uix/coder/dateien/*', 'GET /api/uix/coder/datei/*'],     # App Coder (Runde 5): echt.js baut die Adressen aus Teilen
               'sedraStand.entscheiden': ['POST /api/decisions/answer'],
