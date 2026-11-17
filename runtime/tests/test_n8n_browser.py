@@ -63,7 +63,7 @@ class WorkflowBrowser(unittest.TestCase):
                 app.get_by_role('button', name='Speichern', exact=True).click()
                 app.get_by_role('status').filter(has_text='Revision 3 gespeichert.').wait_for()
                 doc = sample();doc['future'] = {'preserve': True};doc['nodes'][1]['type'] = 'community.future'
-                app.locator('input[type=file]').set_input_files({'name': 'future.json', 'mimeType': 'application/json', 'buffer': json.dumps(doc).encode()})
+                app.locator('input[type=file][accept=".json,application/json"]').set_input_files({'name': 'future.json', 'mimeType': 'application/json', 'buffer': json.dumps(doc).encode()})
                 app.get_by_role('status').filter(has_text='Importiert.').wait_for()
                 self.assertEqual(app.locator('.unsupported').count(), 1)
                 with page.expect_download() as download:

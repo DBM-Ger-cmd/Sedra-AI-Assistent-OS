@@ -1,10 +1,24 @@
 """The ControlMaster handler: revalidation, mandatory bound gate, then one attempt."""
+import os
+import re
 import json
 from pathlib import Path
 from ..core.request_binding import digest
 from .engine import LocalN8n, configuration, inputs
 from .policy import executable, PROFILE
 from . import lokal, live
+
+
+CLOUD_MODELLE = {'nvidia': re.compile(r'^[A-Za-z0-9][A-Za-z0-9._/-]{2,100}$')}
+
+
+def modell_quelle(wert):
+    """Die gewählte Quelle des KI-Schritts: None = lokales Modell (Standard). Cloud nur ausdrücklich, nur NVIDIA, nur mit Modellname."""
+    if not wert:
+        return None
+    if not isinstance(wert, dict) or wert.get('anbieter') not in CLOUD_MODELLE or not isinstance(wert.get('modell'), str) or not CLOUD_MODELLE[wert['anbieter']].match(wert['modell']):
+        raise ValueError('modell_quelle_ungueltig')
+    return {'anbieter': wert['anbieter'], 'modell': wert['modell']}
 
 
 def context(control, mission, request):
@@ -25,10 +39,40 @@ def context(control, mission, request):
                'plan_revision': mission.get('plan_revision', 0), 'workflow_digest': digest(request['workflow']),
                'inputs_digest': digest(data), 'profile': profil, 'config': cfg,
                'guard_rules_digest': digest({'rules': control.guard.rules, 'defaults': control.guard.defaults})}
+    quelle = modell_quelle(request.get('modell_quelle'))
+    if quelle:
+        binding['modell_quelle'] = quelle      # die Freigabe gilt für genau diese Quelle
     return doc, data, cfg, binding
 
 
-def _modell(control, mission_id):
+def _cloud_modell(control, mission_id, quelle):
+    """KI-Schritt über einen Cloud-Anbieter, nur wenn die Freigabe diese Quelle ausdrücklich nennt. Der Schlüssel bleibt im Schlüsselspeicher von SEDRA
+    und wird nur im Speicher des Aufrufs benutzt; der Inhaltsschutz (labor.cloud_chat) prüft jeden Aufruf und blockiert Personenbezug im Produktivmodus."""
+    from .. import cloud_settings, labor
+    project = control.workspace.parents[1]
+    config = cloud_settings.load_config(project)
+    store = cloud_settings.CloudKeyStore(cloud_settings.key_store_path(project))
+
+    def fragen(nachrichten, schema):
+        nachrichten = [dict(m) for m in nachrichten]
+        nachrichten[0]['content'] += '\nAntworte ausschließlich mit einem JSON-Objekt ohne weiteren Text, passend zu diesem Schema:\n' + json.dumps(schema)
+        antwort = labor.cloud_chat(config, quelle['anbieter'], quelle['modell'], nachrichten, environ=os.environ, key_store=store, audit=control.audit)
+        if antwort.get('status') != 'completed':
+            raise ValueError('Cloud blockiert: ' + ', '.join(antwort.get('reasons') or ['unbekannt']))
+        text = re.sub(r'^```(?:json)?\s*|\s*```$', '', (antwort.get('reply') or '').strip())
+        try:
+            return json.loads(text)
+        except ValueError:
+            m = re.search(r'\{.*\}', text, re.S)
+            if not m:
+                raise ValueError('Das Cloud-Modell lieferte kein JSON')
+            return json.loads(m.group(0))
+    return fragen
+
+
+def _modell(control, mission_id, quelle=None):
+    if quelle:
+        return _cloud_modell(control, mission_id, quelle)
     """Der Weg zum lokalen Modell für KI-Knoten des Eigenablaufs: immer der lokale llama-Server, mit erzwungenem Schema (geprüftes JSON), nie ein Cloud-Anbieter."""
     router = getattr(control, 'model_router', None)
     if router is None:
@@ -69,12 +113,16 @@ def execute(control, mission, request, token=None):
         risiken = ['Lokale n8n-Testinstanz; nur Datenprofil v1, keine Außenaktionen.']
         if eigen:
             bew = lokal.bewerten(request['workflow'])
-            risiken = ['SEDRA-Eigenablauf, ganz lokal: kein Netz, keine Cloud.',
+            risiken = ['SEDRA-Eigenablauf' + (' mit Cloud-KI-Schritt.' if binding.get('modell_quelle') else ', ganz lokal: kein Netz, keine Cloud.'),
                        'Eigener Code läuft in einer abgeschotteten Node-Umgebung ohne Datei- und Netzzugriff.']
             if bew.get('schreibt'):
                 risiken.append('Schreibt in lokale Tabellen: ' + ', '.join(bew['schreibt']) + '.')
             if bew.get('braucht_modell'):
-                risiken.append('Fragt das lokale Sprachmodell von SEDRA (nie ein Cloud-Modell); der Rechnungstext verlässt den Rechner nicht.')
+                quelle = binding.get('modell_quelle')
+                if quelle:
+                    risiken.append('CLOUD: Der Text der KI-Schritte wird an %s (Modell %s) gesendet und verlässt den Rechner. Nur für Testdaten; der Inhaltsschutz prüft jeden Aufruf.' % (quelle['anbieter'], quelle['modell']))
+                else:
+                    risiken.append('Fragt das lokale Sprachmodell von SEDRA (nie ein Cloud-Modell); der Rechnungstext verlässt den Rechner nicht.')
         gate = control.guard.create_gate(mid, action, target, request_binding=binding, risks=risiken, rollback_available=False)
         return {'status': 'captain_required', 'gate': gate, 'artifacts': []}
     folder = control.workspace / mid
@@ -90,7 +138,7 @@ def execute(control, mission, request, token=None):
                          payload={'step_id': request.get('id'), 'binding_digest': digest(binding), 'profile': PROFILE})
     try:
         if eigen:
-            result = lokal.ausfuehren(request['workflow'], data, control.workspace.parents[1], modell=_modell(control, mid), live=_live_melder(control.workspace.parents[1], mission, request['workflow']))
+            result = lokal.ausfuehren(request['workflow'], data, control.workspace.parents[1], modell=_modell(control, mid, modell_quelle(request.get('modell_quelle'))), live=_live_melder(control.workspace.parents[1], mission, request['workflow']))
         else:
             result = LocalN8n(cfg).run(request['workflow'], data)
     except Exception:

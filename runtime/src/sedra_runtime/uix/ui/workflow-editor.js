@@ -1,4 +1,5 @@
 (function(){
+  const KI_MODELL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
   const root = typeof window !== 'undefined' ? window : globalThis;
   const M = ()=>root.sedraWorkflowModel;
   const P = ()=>root.sedraWorkflowProcess;
@@ -125,9 +126,10 @@
       this.report = el('pre', 't-wf-report');this.report.setAttribute('aria-label', 'Kompatibilitätsbericht');
       this.bottom = el('div', 't-wf-bottombar');this.bottom.hidden = !options.runBar;
       const once = button(options.runLabel || 'Einmal ausführen', ()=>this.submitRun());once.className = 't-wf-primary';once.title = 'Legt einen Lauf zur Freigabe vor. Ausgeführt wird erst nach Captain-Freigabe.';
+      const kiTest = button('Workflow mit KI testen', ()=>this.submitRun(true));kiTest.title = 'Startet den Test mit NVIDIA Nemotron über die API. Der Klick ist die Freigabe für genau diesen Lauf; der Text der KI-Schritte verlässt den Rechner (nur Testdaten).';
       const plan = button('Zeitplan: aus', ()=>{});plan.disabled = true;plan.title = 'Zeitpläne gibt es im Adapter nicht. Läufe starten nur von Hand und mit Freigabe.';
       const settings = button('Einstellungen', ()=>{this.inspectorOpen = !this.inspectorOpen;this.inspect();});
-      this.bottom.append(...[once, options.noSchedule ? null : plan, settings].filter(Boolean), button('Posteingang', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'})));
+      this.bottom.append(...[once, options.runBar && options.noSchedule ? kiTest : null, options.noSchedule ? null : plan, settings].filter(Boolean), button('Posteingang', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'})));
       this.panels.editor.append(views, this.processBanner, this.stage, this.bottom, this.report);
       // Versionen
       const history = el('details', 't-wf-history');history.open = true;history.append(el('summary', '', 'Versionshistorie und Vergleich'));this.historyBox = el('div');history.append(this.historyBox);
@@ -160,11 +162,25 @@
         }
       });
     },
-    submitRun(){return this.safe(async()=>{
+    submitRun(ki){return this.safe(async()=>{
       if(!this.wid || this.dirty())throw new Error('Workflow zuerst speichern.');
-      const out = await this.call('workflow', this.wid, 'starten', {revision: this.revision, inputs: JSON.parse(this.input.value)});
-      this.runId = out.id;await this.showRun(out.id);this.notice('Mission angelegt. Freigabe im Posteingang prüfen, dann hier fortsetzen.');
+      const out = await this.call('workflow', this.wid, 'starten', Object.assign({revision: this.revision, inputs: JSON.parse(this.input.value)}, ki ? {modell_quelle: {anbieter: 'nvidia', modell: KI_MODELL}, auto_freigabe: true} : this.quelle && this.quelle.value ? {modell_quelle: {anbieter: 'nvidia', modell: this.quelle.value}} : {}));
+      this.runId = out.id;await this.showRun(out.id);this.notice(ki ? 'Test mit KI läuft (NVIDIA Nemotron, freigegeben durch den Klick). Ergebnis unter Ausführungen.' : 'Mission angelegt. Sobald du im Posteingang freigibst, läuft der Test hier von selbst weiter.');
+      if(!ki || this.runState !== 'COMPLETE')this.followRun(out.id, ki);
     });},
+    // Nach „Workflow testen“: auf die Freigabe warten (bis zu 5 Minuten, alle 3 Sekunden) und den Lauf dann ausdrücklich fortsetzen, bis er fertig ist.
+    async followRun(id, ki){
+      const gen = this.followId = (this.followId || 0) + 1;
+      for(let i = 0; i < 100 && !this.dead && gen === this.followId; i++){
+        await new Promise(r=>root.setTimeout(r, i ? 3000 : 500));
+        if(this.dead || gen !== this.followId || this.runId !== id)return;
+        try{
+          if(this.runState === 'CAPTAIN_REVIEW' || this.runState === 'READY' || this.runState === 'EXECUTE' || this.runState === 'VERIFY')await this.call('workflow_run', id, 'fortsetzen');
+          await this.showRun(id);
+        }catch(e){return;}
+        if(['COMPLETE', 'FAILED', 'CLOSED', 'CANCELLED', 'ABORTED'].includes(this.runState)){this.notice('Test beendet: ' + this.runState + '. Ergebnis unter Ausführungen.', this.runState !== 'COMPLETE');return;}
+      }
+    },
     placeInspector(){
       const box = this.inspector;if(!box)return;
       const reset = ()=>{box.style.left = '';box.style.top = '';box.style.right = '';};

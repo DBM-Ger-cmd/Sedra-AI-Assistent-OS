@@ -131,6 +131,21 @@ class Freigabe(unittest.TestCase):
         self.assertEqual(out['result']['tabellen_geschrieben'], ['Kosten bersicht'])
         self.assertEqual(Tabellen(self.hub.project_root).lesen('Kostenübersicht')['anzahl'], 1)
 
+    def test_knopf_mit_ki_gibt_genau_diesen_lauf_frei(self):
+        import base64
+        from sedra_runtime.workflows.desk import _save, _start, _eingabe_hochladen
+        rec = _save(self.hub, None, {'workflow': WF})
+        up = _eingabe_hochladen(self.hub, None, {'name': 'r.pdf', 'data': base64.b64encode(pdf(RECHNUNG)).decode()})
+        run = _start(self.hub, rec['id'], {'revision': 1, 'auto_freigabe': True, 'inputs': {'Rechnung': {'datei': up['datei'], 'name': 'r.pdf'}}})
+        self.assertEqual(run['state'], 'COMPLETE', run)
+        m = self.hub.runtime.missions.load(run['id'])
+        self.assertEqual(m['human_gates']['pending'], [])
+        self.assertEqual(len(m['human_gates']['resolved']), 1)
+        # ohne den Knopf bleibt es bei der Freigabe im Posteingang
+        up2 = _eingabe_hochladen(self.hub, None, {'name': 'r2.pdf', 'data': base64.b64encode(pdf(RECHNUNG)).decode()})
+        offen = _start(self.hub, rec['id'], {'revision': 1, 'inputs': {'Rechnung': {'datei': up2['datei'], 'name': 'r2.pdf'}}})
+        self.assertEqual(offen['state'], 'CAPTAIN_REVIEW')
+
     def _vorgelegt(self):
         import base64
         from sedra_runtime.desk import systemdialog
