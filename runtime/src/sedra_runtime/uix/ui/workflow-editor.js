@@ -264,7 +264,7 @@
       const visual = core ? {doc: P().coreProjection(this.state.doc), selected: this.state.selected} : this.state;
       this.canvas = root.sedraWorkflowCanvas.mount(this.surface, visual, {
         style: this.style, readOnly: core,
-        select: id=>{this.state.selected = id;this.inspect();}, open: id=>this.nodeAction('open', id), addAfter: (name, branch)=>this.openPicker({name, branch}), edgeAdd: (from, branch, to)=>this.openPicker(null, {from, branch, to}), edgeDelete: (a, k, i, b)=>this.edgeDelete(a, k, i, b), tidy: ()=>this.tidy(), act: (what, id)=>this.nodeAction(what, id), drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
+        select: id=>{this.state.selected = id;this.inspect();}, open: id=>this.nodeAction('open', id), addAfter: (name, branch)=>this.openPicker({name, branch}), edgeAdd: (from, branch, to)=>this.openPicker(null, {from, branch, to}), edgeDelete: (a, k, i, b)=>this.edgeDelete(a, k, i, b), tidy: ()=>this.tidy(), act: (what, id)=>this.nodeAction(what, id), many: (what, ids)=>{this.nodesAction(what, ids);if(this.canvas && this.canvas.fokus)this.canvas.fokus();}, drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
         change: ()=>{this.version.textContent = 'Ungespeicherte Änderungen';this.inspect();},
         connect: (a, b, branch)=>{try{this.change(()=>M().connect(this.state.doc, a, b, branch));}catch(e){this.notice(e.message, true);}}
       });this.inspect();
