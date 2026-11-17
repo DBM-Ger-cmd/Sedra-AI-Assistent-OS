@@ -47,11 +47,10 @@
     { id: 'neueDatei', k: ['Alt+N'], tun: function () { S.neueDatei(); } },
     { id: 'suchenDatei', k: ['Ctrl+F'], tun: function () { if (!(S.komfort && S.aktiveDatei() && S.komfort.finde())) suchen(); } },
     { id: 'suchen', k: ['Ctrl+Shift+F'], tun: suchen },
-    { id: 'allesWaehlen', k: [], tun: function () {
-      S.editor.fokus();
-      const a = document.activeElement;
-      if (a && a.select) a.select();
-    } },
+    { id: 'allesWaehlen', k: [], tun: function () { S.editor.fokus(); S.editor.alleWaehlen(); } },
+    { id: 'umbruch', k: [], tun: function () { S.editor.umbruchUm(); } },
+    { id: 'faltAlleZu', k: [], tun: function () { S.editor.faltAlle(true); } },
+    { id: 'faltAlleAuf', k: [], tun: function () { S.editor.faltAlle(false); } },
     { id: 'ansichtExplorer', k: ['Ctrl+Shift+E'], tun: ansicht('explorer') },
     { id: 'ansichtQuellcode', k: ['Ctrl+Shift+G'], tun: ansicht('quellcode') },
     { id: 'ansichtAusfuehren', k: ['Ctrl+Shift+D'], tun: ansicht('ausfuehren') },

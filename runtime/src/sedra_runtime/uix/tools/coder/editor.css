@@ -34,25 +34,32 @@
 .t-coder .brotkrumen .stueck:last-of-type { color: var(--text); }
 
 .t-coder .ed-koerper { flex: 1; display: flex; min-height: 0; background: var(--bg); }
-.t-coder .ed-roll { flex: 1; display: flex; align-items: stretch; min-width: 0; overflow: auto; font: var(--gr-mono)/var(--ed-zeile) var(--mono); }
-.t-coder .ed-zeilen {
-  flex: none; position: sticky; left: 0; z-index: 2; min-width: 52px; padding: 0 14px 0 10px;
-  background: var(--bg); color: var(--zeilennummer); text-align: right; user-select: none;
+.t-coder .kn-wurzel { flex: 1; display: flex; min-width: 0; min-height: 0; }
+.t-coder .kn-roll { flex: 1; position: relative; min-width: 0; overflow: auto; font: var(--gr-mono)/var(--ed-zeile) var(--mono); background: var(--bg); }
+.t-coder .kn-hoehe { position: relative; }
+.t-coder .kn-fenster { position: absolute; left: 0; top: 0; right: 0; will-change: transform; }
+.t-coder .kn-ueber, .t-coder .kn-unter { position: absolute; inset: 0; pointer-events: none; }
+.t-coder .kn-zeile { display: flex; align-items: flex-start; }
+.t-coder .kn-nr {
+  flex: none; position: sticky; left: 0; z-index: 2; box-sizing: border-box; padding-right: 10px; text-align: right;
+  background: var(--bg); color: var(--zeilennummer); user-select: none; cursor: default;
 }
-.t-coder .ed-zeilen div { height: var(--ed-zeile); }
-.t-coder .ed-zeilen div.hier { color: var(--text-stark); }
-.t-coder .ed-flaeche { position: relative; flex: 1 0 auto; min-height: 100%; }
-.t-coder .ed-aktiv { position: absolute; left: 0; right: 0; height: var(--ed-zeile); background: var(--zeile-aktiv); pointer-events: none; }
-.t-coder .ed-farbe,
-.t-coder .ed-eingabe {
-  margin: 0; padding: 0 12px 0 0; border: 0; font: inherit; white-space: pre; tab-size: 2; letter-spacing: 0;
+.t-coder .kn-nr.hier { color: var(--text-stark); }
+.t-coder .kn-falz { position: absolute; left: 6px; width: 14px; padding: 0; color: var(--text-leise); opacity: 0; font-size: 11px; line-height: inherit; }
+.t-coder .kn-zeile:hover .kn-falz, .t-coder .kn-falz.zu { opacity: 1; }
+.t-coder .kn-text { flex: none; padding-left: 8px; white-space: pre; color: var(--text); tab-size: 4; }
+.t-coder .kn-text.kn-umbruch { white-space: pre-wrap; word-break: break-all; box-sizing: content-box; }
+.t-coder .kn-punkte { cursor: pointer; padding: 0 4px; border-radius: 3px; background: var(--bg-hover); color: var(--text-leise); }
+.t-coder .kn-wahl { position: absolute; background: var(--bg-wahl); }
+.t-coder .kn-aktiv { position: absolute; left: 0; right: 0; background: var(--zeile-aktiv); }
+.t-coder .kn-cursor { position: absolute; width: 2px; margin-left: -1px; background: var(--text-stark); animation: kn-blink 1.1s steps(1) infinite; }
+@keyframes kn-blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .t-coder .kn-cursor { animation: none; } }
+.t-coder .kn-probe { position: absolute; visibility: hidden; white-space: pre; }
+.t-coder .kn-eingabe {
+  position: absolute; z-index: 3; width: 2px; height: 19px; padding: 0; margin: 0; border: 0; opacity: 0; resize: none; overflow: hidden;
+  outline: none; background: transparent; color: transparent; font: inherit; pointer-events: none;
 }
-.t-coder .ed-farbe { position: relative; min-height: 100%; color: var(--text); pointer-events: none; padding-bottom: 120px; }
-.t-coder .ed-eingabe {
-  position: absolute; inset: 0; width: 100%; height: 100%; resize: none; overflow: hidden; outline: none;
-  background: transparent; color: transparent; caret-color: var(--text-stark);
-}
-.t-coder .ed-eingabe::selection { background: var(--bg-wahl); color: transparent; }
 .t-coder .ed-mini {
   flex: none; width: 84px; margin: 0; padding: 2px 4px; overflow: hidden; border-left: 1px solid var(--rand);
   font: 2px/3px var(--mono); white-space: pre; color: var(--text-leise); user-select: none; cursor: pointer; opacity: 0.85;

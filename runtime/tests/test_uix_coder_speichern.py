@@ -186,3 +186,40 @@ class Http(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Gross(unittest.TestCase):
+    """Entscheidung des Captains 17.11.: Dateien bis 2 MB öffnen und als Antrag speichern."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.hub = UIXHub(Path(self.tmp.name) / "project", ARCH)
+        self.addCleanup(self.hub.close)
+        self.pid = self.hub.new_project({"name": "Gross"})["project_id"]
+        self.ws = self.hub.runtime.filesystem_tool._resolve(self.hub.projects.get(self.pid)["workspace_path"])
+        self.ws.mkdir(parents=True, exist_ok=True)
+
+    def test_lesen_bis_2_mb_und_darueber_nicht(self):
+        (self.ws / "mittel.txt").write_bytes(b"zeile\n" * 100_000)            # 600 KB
+        out = self.hub.coder_datei(self.pid, "mittel.txt")
+        self.assertEqual((out["quelle"], len(out["inhalt"])), ("ok", 600_000))
+        (self.ws / "riesig.txt").write_bytes(b"x" * (cs.INHALT_MAX + 10))
+        self.assertTrue(self.hub.coder_datei(self.pid, "riesig.txt").get("too_large"))
+        # andere Ansichten der Harness behalten ihre 100-KB-Vorschau
+        self.assertTrue(self.hub.project_file({"project_id": self.pid, "path": "mittel.txt"}).get("too_large"))
+
+    def test_speichern_einer_grossen_datei_als_antrag(self):
+        (self.ws / "gross.txt").write_bytes(b"alt\n" * 200_000)               # 800 KB
+        neu = "neu\n" * 200_000
+        res = self.hub.coder_speichern_antrag({"projekt": self.pid, "pfad": "gross.txt", "inhalt": neu})
+        self.assertEqual(res["status"], "wartet")
+        self.assertEqual((self.ws / "gross.txt").read_bytes()[:4], b"alt\n")
+        self.hub.approve_gate({"mission_id": res["mission_id"], "gate_id": res["gate_id"]})
+        self.hub.coder_speichern_anwenden({"mission_id": res["mission_id"]})
+        self.assertEqual((self.ws / "gross.txt").read_bytes(), neu.encode("utf-8"))
+
+    def test_ueber_2_mb_wird_abgewiesen(self):
+        with self.assertRaises(ValueError) as r:
+            self.hub.coder_speichern_antrag({"projekt": self.pid, "pfad": "x.txt", "inhalt": "ä" * (cs.INHALT_MAX // 2 + 1)})     # zählt in Bytes
+        self.assertEqual(str(r.exception), "content_too_large")

@@ -15,7 +15,7 @@
     seiteLinks: true, seiteRechts: true, panel: true,
     ansicht: 'explorer', panelReiter: 'terminal', rechtsReiter: 'chat',
     breiteLinks: 280, breiteRechts: 320, hoehePanel: 220,
-    zugeklappt: { 'abs:zeitachse': true }, offen: null, agentModus: 'plan', autoFreigabe: false
+    zugeklappt: { 'abs:zeitachse': true }, offen: null, agentModus: 'plan', autoFreigabe: false, umbruch: false
   };
   const alt = {};
   const z = S.z = {};

@@ -1,13 +1,22 @@
-/* Sedra IDE: Editorgruppen mit Reitern, Brotkrumen, eigenem Texteditor (textarea ueber gefaerbter Ebene), Minimap. */
+/* Sedra IDE: Editorgruppen mit Reitern, Brotkrumen und dem eigenen Editorkern (kern_*.js), Minimap. */
 (function (root) {
   'use strict';
-  const S = root.SIDE, el = S.el, T = S.T;
+  const S = root.SIDE, el = S.el, T = S.T, K = S.kern;
   const E = S.editor = {};
-  function LHW() { return S.zeilenHoehe || 19; } /* gleich --ed-zeile */
-  let felder = []; /* je Gruppe: {pfad, ta, male, zeiger, roll} oder null */
-  let tabFrei = false;
+  const MINI_MAX = 4000;       /* größere Dateien bekommen keine Minimap */
+  let felder = []; /* je Gruppe: {pfad, v, male, zeiger, roll, ta} oder null */
 
   function nameVon(p) { return p === 'willkommen' ? T('wk_reiter') : S.dateien[p].name; }
+
+  /* Die Datei bekommt ein Textmodell. d.inhalt bleibt als Text lesbar und setzbar (Speichern, Suche, Agent lesen ihn unverändert). */
+  function bindeDatei(d) {
+    if (d.doc) return d.doc;
+    const doc = K.neu(d.inhalt);
+    d.doc = doc;
+    Object.defineProperty(d, 'inhalt', { get: function () { return doc.text(); }, set: function (t) { if (t !== doc.text()) doc.setzeText(t); }, enumerable: true, configurable: true });
+    doc.an(function () { E.markiere(d.pfad); S.melde('inhalt', d.pfad); });
+    return doc;
+  }
 
   function reiter(g, gi, p) {
     const d = S.dateien[p];
@@ -59,77 +68,50 @@
     for (let i = 0; i < alle.length; i++) alle[i].classList.toggle('im-fokus', i === gi);
   }
 
+  /* Anzahl der gewählten Zeichen der Hauptauswahl (ohne den Text zusammenzusetzen). */
+  function gewaehlt(doc, s) {
+    const b = K.bereich(s);
+    if (b.von.z === b.bis.z) return b.bis.s - b.von.s;
+    let n = doc.zeilen[b.von.z].length - b.von.s + 1;
+    for (let z = b.von.z + 1; z < b.bis.z; z++) n += doc.zeilen[z].length + 1;
+    return n + b.bis.s;
+  }
+
   function baueEditor(gi, d) {
-    const zeilen = el('div', { class: 'ed-zeilen', 'aria-hidden': 'true' });
-    const farbe = el('pre', { class: 'ed-farbe', 'aria-hidden': 'true' });
-    const aktiv = el('div', { class: 'ed-aktiv' });
-    const ta = el('textarea', {
-      class: 'ed-eingabe', spellcheck: 'false', autocomplete: 'off', autocapitalize: 'off', wrap: 'off',
-      'aria-label': T('ed_eingabe', d.name), 'aria-multiline': 'true'
+    const doc = bindeDatei(d);
+    const v = K.ansicht({
+      doc: doc, sprache: d.sprache, name: T('ed_eingabe', d.name), sel: d.auswahl, umbruch: !!S.z.umbruch,
+      melde: function (ansicht) {
+        const k = ansicht.sel[ansicht.sel.length - 1];
+        d.auswahl = ansicht.sel;
+        S.melde('zeiger', { zeile: k.k.z + 1, spalte: k.k.s + 1, gi: gi, auswahl: gewaehlt(doc, k), cursor: ansicht.sel.length });
+      }
     });
-    ta.value = d.inhalt;
+    K.eingabe(v);
+    v.eingabe.addEventListener('focus', function () { fokusGruppe(gi); E_zeiger(); });
+    function E_zeiger() { const k = v.sel[v.sel.length - 1]; S.melde('zeiger', { zeile: k.k.z + 1, spalte: k.k.s + 1, gi: gi, auswahl: gewaehlt(doc, k), cursor: v.sel.length }); }
+
     const mini = el('pre', { class: 'ed-mini', 'aria-hidden': 'true', title: T('ed_minimap') });
-    const roll = el('div', { class: 'ed-roll' }, [zeilen, el('div', { class: 'ed-flaeche' }, [aktiv, farbe, ta])]);
-    let hier = -1;
-
-    function male() {
-      S.syntax.faerbe(farbe, ta.value + '\n', d.sprache);
-      S.syntax.faerbe(mini, ta.value, d.sprache);
-      const n = ta.value.split('\n').length;
-      while (zeilen.childElementCount < n) zeilen.appendChild(el('div', { text: String(zeilen.childElementCount + 1) }));
-      while (zeilen.childElementCount > n) zeilen.removeChild(zeilen.lastChild);
+    let miniZeit = null;
+    function miniMale() {
+      miniZeit = null;
+      if (!mini.isConnected) return;
+      if (doc.zeilen.length > MINI_MAX) { mini.style.display = 'none'; return; }
+      mini.style.display = '';
+      S.syntax.faerbe(mini, doc.text(), d.sprache);
     }
-    function zeiger(ohneRollen) {
-      const vor = ta.value.slice(0, ta.selectionStart);
-      const z = vor.split('\n').length;
-      const sp = vor.length - vor.lastIndexOf('\n');
-      aktiv.style.top = ((z - 1) * LHW()) + 'px';
-      if (hier !== z) {
-        if (zeilen.children[hier - 1]) zeilen.children[hier - 1].classList.remove('hier');
-        if (zeilen.children[z - 1]) zeilen.children[z - 1].classList.add('hier');
-        hier = z;
-      }
-      if (!ohneRollen) {
-        const oben = (z - 1) * LHW();
-        if (oben < roll.scrollTop) roll.scrollTop = oben;
-        else if (oben + LHW() > roll.scrollTop + roll.clientHeight) roll.scrollTop = oben + LHW() - roll.clientHeight;
-      }
-      S.melde('zeiger', { zeile: z, spalte: sp, gi: gi, auswahl: ta.selectionEnd - ta.selectionStart });
-    }
-    function geaendert() {
-      d.inhalt = ta.value;
-      male();
-      zeiger();
-      felder.forEach(function (f, i) {
-        if (f && i !== gi && f.pfad === d.pfad) { f.ta.value = d.inhalt; f.male(); }
-      });
-      E.markiere(d.pfad);
-      S.melde('inhalt', d.pfad);
-    }
-
-    ta.addEventListener('input', geaendert);
-    ta.addEventListener('focus', function () { fokusGruppe(gi); zeiger(true); });
-    ['keyup', 'click', 'select'].forEach(function (n) { ta.addEventListener(n, function () { zeiger(); }); });
-    ta.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Escape') { tabFrei = true; S.sag(T('ed_tab_frei')); return; }
-      if (ev.key !== 'Tab' || ev.ctrlKey || ev.altKey || ev.metaKey) return;
-      if (tabFrei) { tabFrei = false; return; }
-      ev.preventDefault();
-      if (ev.shiftKey) {
-        const anfang = ta.value.lastIndexOf('\n', ta.selectionStart - 1) + 1;
-        if (ta.value.substr(anfang, 2) === '  ') ta.setRangeText('', anfang, anfang + 2, 'preserve');
-      } else ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end');
-      geaendert();
-    });
+    const hoerer = function () { if (miniZeit) root.clearTimeout(miniZeit); miniZeit = root.setTimeout(miniMale, 300); };
+    doc.an(hoerer);
+    const weg = v.zerstoere;
+    v.zerstoere = function () { const i = doc.hoerer.indexOf(hoerer); if (i >= 0) doc.hoerer.splice(i, 1); if (miniZeit) root.clearTimeout(miniZeit); weg(); };
     mini.addEventListener('click', function (ev) {
       const r = mini.getBoundingClientRect();
-      const z = Math.max(1, Math.round((ev.clientY - r.top - 2) / 3) + 1);
-      E.geheZu(z, gi);
+      E.geheZu(Math.max(1, Math.round((ev.clientY - r.top - 2) / 3) + 1), gi);
     });
+    root.setTimeout(miniMale, 0);
 
-    male();
-    felder[gi] = { pfad: d.pfad, ta: ta, male: male, zeiger: zeiger, roll: roll };
-    return el('div', { class: 'ed-koerper', role: 'tabpanel', 'aria-label': d.name }, [roll, mini]);
+    felder[gi] = { pfad: d.pfad, v: v, ta: v.eingabe, roll: v.roll, zeiger: E_zeiger, male: function () { v.neuAufbauen(); } };
+    return el('div', { class: 'ed-koerper', role: 'tabpanel', 'aria-label': d.name }, [v.element, mini]);
   }
 
   function gruppe(g, gi) {
@@ -157,9 +139,11 @@
   }
 
   E.zeichnen = function (mitFokus) {
+    felder.forEach(function (f) { if (f && f.v) f.v.zerstoere(); });
     const kasten = S.leere(S.q('editorbereich'));
     felder = [];
     S.gruppen.forEach(function (g, gi) { kasten.appendChild(gruppe(g, gi)); });
+    felder.forEach(function (f) { if (f) f.v.neuAufbauen(); });
     if (S.fokusReiter) {
       const fr = S.fokusReiter;
       S.fokusReiter = null;
@@ -168,7 +152,7 @@
       if (r) { r.focus(); S.melde('aktiv'); return; }
     }
     const f = felder[S.aktiveGruppe];
-    if (f) { if (mitFokus) f.ta.focus(); f.zeiger(true); }
+    if (f) { if (mitFokus) f.ta.focus(); f.zeiger(); }
     else S.melde('zeiger', null);
     S.melde('aktiv');
   };
@@ -180,17 +164,16 @@
     for (let i = 0; i < alle.length; i++) if (alle[i].dataset.pfad === pfad) alle[i].classList.toggle('ungespeichert', offen);
   };
 
+  E.ansicht = function (gi) { const f = felder[gi == null ? S.aktiveGruppe : gi]; return f ? f.v : null; };
+
   E.geheZu = function (zeile, gi) {
     const f = felder[gi == null ? S.aktiveGruppe : gi];
     if (!f) return false;
-    const zeilen = f.ta.value.split('\n');
-    const z = Math.min(Math.max(1, zeile | 0), zeilen.length);
-    let pos = 0;
-    for (let i = 0; i < z - 1; i++) pos += zeilen[i].length + 1;
+    const v = f.v, z = Math.min(Math.max(1, zeile | 0), v.doc.zeilen.length) - 1;
+    v.entfalteBei(z);
+    v.setzeAuswahl([K.auswahl({ z: z, s: 0 })], false);
     f.ta.focus();
-    f.ta.setSelectionRange(pos, pos);
-    f.zeiger();
-    f.roll.scrollTop = Math.max(0, (z - 1) * LHW() - f.roll.clientHeight / 3);
+    v.roll.scrollTop = Math.max(0, v.zeilenY(z) - v.roll.clientHeight / 3);
     return true;
   };
 
@@ -199,8 +182,15 @@
     E.geheZu(zeile);
   };
 
+  E.alleWaehlen = function () {
+    const v = E.ansicht();
+    if (v) v.setzeAuswahl([K.auswahl({ z: 0, s: 0 }, { z: v.doc.zeilen.length - 1, s: v.doc.zeilen[v.doc.zeilen.length - 1].length })], false);
+  };
+  E.umbruchUm = function () { S.z.umbruch = !S.z.umbruch; S.merke(); S.melde('editor'); S.sag(T(S.z.umbruch ? 'ed_umbruch_an' : 'ed_umbruch_aus')); };
+  E.faltAlle = function (zu) { const v = E.ansicht(); if (v) v.faltAlle(zu); };
+
   E.fokus = function () { const f = felder[S.aktiveGruppe]; if (f) f.ta.focus(); };
-  E.zeilenZahl = function () { const f = felder[S.aktiveGruppe]; return f ? f.ta.value.split('\n').length : 0; };
+  E.zeilenZahl = function () { const f = felder[S.aktiveGruppe]; return f ? f.v.doc.zeilen.length : 0; };
 
   S.an('editor', function () { E.zeichnen(true); });
   S.an('gespeichert', function (p) { E.markiere(p); });

@@ -10,7 +10,7 @@ import re
 
 from . import coder_lesen
 
-INHALT_MAX = 100_000          # Zeichen, wie die Lesegrenze der Dateivorschau
+INHALT_MAX = 2_000_000        # Bytes (UTF-8): wie die Lesegrenze des Coders; das Dateiwerkzeug schreibt bis 4 MB
 PFAD_MAX = coder_lesen.PFAD_MAX
 AUFTRAG_RE = re.compile(r'^[A-Za-z0-9_-]{3,60}$')
 KONTEXT = 'coder_speichern'
@@ -27,7 +27,7 @@ def pruefe(payload) -> tuple:
         raise ValueError('invalid_path')
     if not isinstance(inhalt, str) or '\x00' in inhalt:
         raise ValueError('invalid_content')
-    if len(inhalt) > INHALT_MAX:
+    if len(inhalt.encode('utf-8', errors='replace')) > INHALT_MAX:
         raise ValueError('content_too_large')
     if coder_lesen.pfad_gesperrt(pfad):
         raise ValueError('access_blocked')
@@ -48,16 +48,16 @@ def zeilenenden(alt, neu) -> str:
 
 
 def zaehle(alt, neu) -> tuple:
-    """(hinzu, weg): Zeilen, die neu dazukommen oder wegfallen (für den Hinweis in der Freigabe)."""
-    a, n = alt.splitlines(), neu.splitlines()
-    rest = list(a)
+    """(hinzu, weg): Zeilen, die neu dazukommen oder wegfallen (für den Hinweis in der Freigabe). Linear, auch für Dateien mit Hunderttausenden Zeilen."""
+    from collections import Counter
+    rest = Counter(alt.splitlines())
     hinzu = 0
-    for z in n:
-        if z in rest:
-            rest.remove(z)
+    for z in neu.splitlines():
+        if rest[z] > 0:
+            rest[z] -= 1
         else:
             hinzu += 1
-    return hinzu, len(rest)
+    return hinzu, sum(rest.values())
 
 
 def zustand(m) -> str:

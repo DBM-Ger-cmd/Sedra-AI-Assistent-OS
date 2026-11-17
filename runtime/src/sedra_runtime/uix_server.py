@@ -1116,7 +1116,7 @@ class UIXHub:
 
     def coder_datei(self, projekt, pfad):
         if not pfad or coder_lesen.pfad_gesperrt(pfad): raise ValueError('access_blocked' if pfad else 'invalid_path')
-        return coder_lesen.datei(pfad, self.project_file({'project_id': projekt, 'path': pfad}))
+        return coder_lesen.datei(pfad, self.project_file({'project_id': projekt, 'path': pfad, 'grenze': self.CODER_DATEI_BYTES}))
 
     def coder_aenderungen(self, projekt):
         """R4 (E2): Zweig und geänderte Dateien, nur lesen (`git status`, feste Form, 2 s). Gesperrte Namen erscheinen nicht."""
@@ -1165,7 +1165,7 @@ class UIXHub:
         alt = ''
         if p.exists():
             if not p.is_file(): raise ValueError('ziel_ist_ordner')
-            if p.stat().st_size > self.FILE_PREVIEW_BYTES: raise ValueError('datei_zu_gross')
+            if p.stat().st_size > self.CODER_DATEI_BYTES: raise ValueError('datei_zu_gross')
             try: alt = p.read_bytes().decode('utf-8')          # Bytes, damit CRLF erkennbar bleibt
             except (UnicodeDecodeError, OSError): raise ValueError('datei_nicht_lesbar')
         inhalt = coder_speichern.zeilenenden(alt, inhalt)
@@ -3838,6 +3838,7 @@ class UIXHub:
     # ---- project files (read-only view through the filesystem tool: confined to the project root, guarded, audited)
     HIDDEN_NAMES = frozenset({'__pycache__', '.git', 'node_modules', '.venv', '.mypy_cache', '.pytest_cache'})
     FILE_PREVIEW_BYTES = 100_000
+    CODER_DATEI_BYTES = 2_000_000          # Coder (Entscheidung des Captains 17.11.): Dateien bis 2 MB öffnen und als Antrag speichern
 
     def _project_path(self, payload):
         project = self.projects.get(payload.get('project_id'))
@@ -3865,7 +3866,7 @@ class UIXHub:
         rel, parts = self._project_path(payload)
         if not parts: raise ValueError('invalid_path')
         try:
-            out = self.runtime.filesystem_tool.execute('M-UIX-VIEW', 'read_text', {'path': rel, 'max_bytes': self.FILE_PREVIEW_BYTES})
+            out = self.runtime.filesystem_tool.execute('M-UIX-VIEW', 'read_text', {'path': rel, 'max_bytes': int(payload.get('grenze') or self.FILE_PREVIEW_BYTES)})
         except ToolError as exc:
             if str(exc) == 'file_not_decodable': return {'path': '/'.join(parts), 'binary': True}
             if str(exc) == 'file_too_large': return {'path': '/'.join(parts), 'too_large': True}

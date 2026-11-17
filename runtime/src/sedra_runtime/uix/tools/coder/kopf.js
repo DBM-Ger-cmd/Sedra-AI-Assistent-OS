@@ -133,7 +133,7 @@
       const rechts = el('div', { class: 'status-teil' });
       if (d) {
         const z = zeiger || { zeile: 1, spalte: 1, auswahl: 0 };
-        rechts.appendChild(zelle(T('st_zeile', z.zeile, z.spalte) + (z.auswahl ? ' ' + T('st_auswahl', z.auswahl) : ''), T('bf_geheZeile'),
+        rechts.appendChild(zelle(T('st_zeile', z.zeile, z.spalte) + (z.auswahl ? ' ' + T('st_auswahl', z.auswahl) : '') + (z.cursor > 1 ? ' · ' + T('ed_cursor', z.cursor) : ''), T('bf_geheZeile'),
           function () { S.fuehreAus('geheZeile'); }, 'st:zeile'));
         rechts.appendChild(zelle(T('st_einrueckung'), null));
         rechts.appendChild(zelle('UTF-8', T('st_kodierung')));

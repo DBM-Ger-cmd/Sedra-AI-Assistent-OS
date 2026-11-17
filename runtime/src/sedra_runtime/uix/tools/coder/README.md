@@ -2,8 +2,9 @@
 
 Die Sedra IDE: Aktivitätsleiste, Seitenleiste (Explorer, Suche, Quellcode, Ausführen, Erweiterungen, Agenten), Editor mit Reitern und geteilten Gruppen, Panel unten (Terminal, Ausgabe, Probleme, Debug, Live-Logs), Chat-Leiste rechts, Befehlspalette, Hell und Dunkel, Deutsch und Englisch.
 
-- **Läuft im Rahmen** (`trust: CAPTAIN`, `/uix/frame/coder`, `sandbox="allow-scripts"`): kein Token, keine Route, kein Netz. Ohne `localStorage` im Rahmen merkt sie sich nichts; sie läuft trotzdem.
-- **Eigener Editor** statt Monaco (Entscheidung des Captains 16.11.2026): `textarea` über einer gefärbten Ebene, Syntaxfarben für JS, Python, YAML, Markdown.
-- **Alle Daten sind Beispieldaten** (`daten.js`, `daten_agenten.js`) und so gekennzeichnet. Terminal, Chat, Quellcode, Erweiterungen sind Attrappen.
-- Nicht gebaut: Anbindung an Dateien, Terminal und Agenten (Runde 5 der Spec: nur Entwurf der Lese-Routen).
-- Regeln: jede Datei höchstens 400 Zeilen, Farben nur in `tokens.css`, kein `eval`, kein `innerHTML`. Test: `tests/test_uix_coder_app.py`.
+- **Läuft im Rahmen** (`trust: CAPTAIN`, `/uix/frame/coder`, `sandbox="allow-scripts"`): nur die Routen der `tool.yaml`, kein Netz, kein Browserspeicher. Was gemerkt wird (Projekt, Chat, offene Anträge, Schriftgröße), liegt in einer kleinen lokalen Datei auf dem Server (`coder_zustand.py`), nie Dateitext.
+- **Eigener Editorkern** statt Monaco (Entscheidung des Captains 16.11.2026, Ausbau 17.11.2026): `kern_modell.js` (Zeilenmodell, Rückgängig), `kern_auswahl.js` (Auswahlen, Mehrfach-Cursor, Zeilenwerkzeuge), `kern_ansicht.js` (nur sichtbare Zeilen werden gezeichnet, Zeilenumbruch, Falten nach Einrückung, Cursor), `kern_eingabe.js` (Tastatur, Maus, Zwischenablage, Eingabemethoden). Modell und Auswahlen laufen ohne Oberfläche und werden in Node geprüft (`tests/kern_pruefung.js`). Syntaxfarben für JS, Python, YAML, Markdown.
+- **Dateien bis 2 MB** lassen sich öffnen und als Antrag speichern. Größer: gesperrt, mit Hinweis.
+- **Schreiben nur als Antrag an die Freigaben:** Speichern, neuer Ordner, Umbenennen, Löschen (`coder_speichern.py`, `coder_verwalten.py`). Lesen: Dateien, Git-Stand, Diff, Projektsuche (`coder_lesen.py`, Sperrliste). Agent: nur Antworten als Text (`coder_agent.py`). Das Terminal führt nichts aus.
+- Ohne Projekt bleiben Beispieldaten (`daten.js`, `daten_agenten.js`), so gekennzeichnet.
+- Regeln: jede Datei höchstens 400 Zeilen, Farben nur in `tokens.css`, kein `eval`, kein `innerHTML`. Tests: `tests/test_uix_coder_*.py`.

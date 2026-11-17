@@ -136,7 +136,7 @@ def _git_lauf(args, ordner):
 
 # ---- R5 (Ausbau, Diff-Ansicht): der Stand einer Datei im letzten Commit (`git show HEAD:<pfad>`), nur lesen, feste Form, 2 s.
 PRAEFIX_ORIGINAL = '/api/uix/coder/original'
-ORIGINAL_MAX = 100_000
+ORIGINAL_MAX = 2_000_000
 
 
 def original(werkordner, pfad, lauf=None) -> dict:
@@ -179,7 +179,7 @@ PRAEFIX_SUCHE = '/api/uix/coder/suche'
 SUCHE_ZEIT = 2.0
 SUCHE_TREFFER_MAX = 200
 SUCHE_DATEIEN_MAX = 3000
-SUCHE_DATEI_BYTES = 100_000
+SUCHE_DATEI_BYTES = 2_000_000
 SUCHE_ZEILE_MAX = 200
 SUCHE_FRAGE_MAX = 200
 SUCHE_UEBERSPRUNGEN = frozenset({'__pycache__', '.git', 'node_modules', '.venv', '.mypy_cache', '.pytest_cache'})
