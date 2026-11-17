@@ -10,7 +10,7 @@
 
   function chat() {
     const liste = el('div', { class: 'chat-liste', role: 'log', 'aria-live': 'polite', 'aria-label': T('re_chat') });
-    const zeilen = S.z.beispiel ? S.CHAT : S.CHAT.filter(function (c, i) { return i > 0; });
+    const zeilen = (S.z.beispiel && S.quelle !== 'echt') ? S.CHAT : S.CHAT.filter(function (c, i) { return i > 0; });
     if (!zeilen.length) liste.appendChild(leer('leer_chat'));
     zeilen.forEach(function (c) {
       liste.appendChild(el('div', { class: 'blase' + (c.ich ? ' ich' : '') }, [el('span', { class: 'von', text: c.von }), c.text]));

@@ -36,8 +36,18 @@
 
   S.ansichten.agenten = function () {
     const agenten = el('div', { role: 'list' });
-    (S.z.beispiel ? S.AGENTEN : []).forEach(function (a) { agenten.appendChild(agentZeile(a)); });
-    if (!agenten.childElementCount) agenten.appendChild(el('div', { class: 'leer', text: T('leer_agenten') }));
+    if (S.quelle === 'echt') {
+      S.wege.forEach(function (w) {
+        agenten.appendChild(el('div', {
+          class: 'listen-zeile' + (w.id === S.wegGewaehlt ? ' gewaehlt' : ''), role: 'listitem', tabindex: '0', data: { fid: 'weg:' + w.id },
+          on: { click: function () { S.waehleWeg(w.id); }, keydown: function (ev) { if (ev.key === 'Enter') S.waehleWeg(w.id); } }
+        }, [S.sym('agent', 14), el('span', { class: 'zeile-name', text: w.name }), el('span', { class: 'zustand aktiv', text: T('weg_bereit') })]));
+      });
+      if (!S.wege.length) agenten.appendChild(el('div', { class: 'leer', text: T(S.wegeGeladen ? 'weg_keine' : 'weg_laedt') }));
+    } else {
+      (S.z.beispiel ? S.AGENTEN : []).forEach(function (a) { agenten.appendChild(agentZeile(a)); });
+      if (!agenten.childElementCount) agenten.appendChild(el('div', { class: 'leer', text: T('leer_agenten') }));
+    }
 
     const letzte = el('div', { role: 'list' });
     (S.z.beispiel ? S.SITZUNGEN : []).forEach(function (s) {
@@ -91,7 +101,7 @@
     const inhalt = el('div', { class: 'seite-inhalt' }, [
       el('div', { class: 'agent-kopf' }, [S.sym('agent', 44), el('span', { text: T('ag_frage') }),
         S.z.beispiel ? el('span', { class: 'beispiel-marke', text: T('beispiel') }) : null]),
-      S.abschnitt('abs:agenten', T('ag_liste'), agenten, el('span', { class: 'zahl', text: String(S.z.beispiel ? S.AGENTEN.length : 0) })),
+      S.abschnitt('abs:agenten', T('ag_liste'), agenten, el('span', { class: 'zahl', text: String(S.quelle === 'echt' ? S.wege.length : (S.z.beispiel ? S.AGENTEN.length : 0)) })),
       S.abschnitt('abs:letzte', T('ag_letzte'), letzte)
     ]);
     return { titel: T('an_agenten'), inhalt: inhalt, fuss: fuss };

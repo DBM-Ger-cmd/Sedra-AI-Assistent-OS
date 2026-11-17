@@ -10,12 +10,14 @@ tool:
   order: 36
   slot: inhalt
   entry:
-    js: [dom.js, zustand.js, texte_de.js, texte_en.js, daten.js, daten_agenten.js, echt.js, syntax.js, willkommen.js, editor.js, seitenleiste.js, explorer.js, ansichten.js, agenten.js, rechts.js, panel.js, befehle.js, palette.js, kopf.js, start.js, tool.js]
+    js: [dom.js, zustand.js, texte_de.js, texte_en.js, daten.js, daten_agenten.js, echt.js, syntax.js, willkommen.js, editor.js, seitenleiste.js, explorer.js, ansichten.js, agenten.js, agent_echt.js, rechts.js, panel.js, befehle.js, palette.js, kopf.js, start.js, tool.js]
     css: [tokens.css, layout.css, editor.css, teile.css]
   api:
     - GET /api/uix/coder/projekte         # R1: Projekte (Kennung, Name)
     - GET /api/uix/coder/dateien/*        # R2: Ordnerinhalt, /dateien/<projekt>[/<pfad url-codiert>]
     - GET /api/uix/coder/datei/*          # R3: Text einer Datei, /datei/<projekt>/<pfad url-codiert>
+    - GET /api/uix/coder/modelle          # Agent: welche Wege bereit sind (lokales Modell, Cloud-Anbieter), keine Schlüssel
+    - POST /api/uix/coder/agent           # Agent: Frage mit Dateikontext, nur Text zurück (Sperrliste, Inhaltsschutz, kein Schreibweg)
   events:
     emits: []
     listens: []

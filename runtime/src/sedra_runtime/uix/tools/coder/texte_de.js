@@ -91,6 +91,12 @@
     pl_feld: 'Befehl oder Datei', pl_platz: 'Dateiname, ">" für Befehle, ":" für Zeile', pl_nichts: 'Keine Treffer.',
     pl_keine_datei: 'Keine Datei geöffnet.', pl_gehe_zeile: 'Gehe zu Zeile {0}', pl_zeile_hinweis: 'Zeilennummer zwischen 1 und {0} eingeben.',
 
+    weg_lokal: 'Lokales Modell ({0})', weg_cloud: 'Cloud: {0} ({1})', weg_bereit: 'bereit', weg_laedt: 'Verfügbare Modelle werden gesucht …',
+    weg_keine: 'Kein Modell bereit: lokales Modell starten oder in den Einstellungen einen Cloud-Anbieter einschalten.',
+    ag_denkt: 'Denkt nach …', ag_hinweis: 'Hinweis', ag_laeuft: 'Es läuft noch eine Frage.', ag_kein_weg: 'Kein Modell gewählt oder bereit. Der Agent kann nur antworten, nichts speichern.',
+    ag_kein_modell: 'Kein lokales Modell geladen.', ag_gesperrt_schutz: 'Vom Inhaltsschutz gestoppt ({0}). Es wurde nichts an die Cloud gesendet.', ag_fehler: 'Das Modell hat nicht geantwortet ({0}).',
+    ag_kontext: '{0} Datei(en) als Kontext', ag_ohne_kontext: 'ohne Dateikontext', ag_ausgelassen: 'Nicht mitgesendet: {0}.',
+    ag_grund_gesperrt: 'gesperrt', ag_grund_binaer: 'keine Textdatei', ag_grund_zu_gross: 'zu groß', ag_grund_nicht_lesbar: 'nicht lesbar', ag_grund_kein_platz: 'kein Platz mehr',
     st_ordner: 'Arbeitsbereich', st_zweig: 'Zweig (Beispiel)', st_probleme: '{0} Fehler, {1} Warnungen', st_zeile: 'Zeile {0}, Spalte {1}',
     st_zeile_kurz: 'Zeile {0}', st_auswahl: '({0} ausgewählt)', st_einrueckung: 'Leerzeichen: 2', st_kodierung: 'Kodierung', st_zeilenende: 'Zeilenende',
     st_sprache: 'Sprache der Datei', st_text: 'Text',

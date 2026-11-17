@@ -91,6 +91,12 @@
     pl_feld: 'Command or file', pl_platz: 'File name, ">" for commands, ":" for line', pl_nichts: 'No results.',
     pl_keine_datei: 'No file opened.', pl_gehe_zeile: 'Go to line {0}', pl_zeile_hinweis: 'Enter a line number between 1 and {0}.',
 
+    weg_lokal: 'Local model ({0})', weg_cloud: 'Cloud: {0} ({1})', weg_bereit: 'ready', weg_laedt: 'Looking for available models …',
+    weg_keine: 'No model ready: start the local model or switch on a cloud provider in the settings.',
+    ag_denkt: 'Thinking …', ag_hinweis: 'Note', ag_laeuft: 'A question is still running.', ag_kein_weg: 'No model chosen or ready. The agent can only answer, not save anything.',
+    ag_kein_modell: 'No local model loaded.', ag_gesperrt_schutz: 'Stopped by content protection ({0}). Nothing was sent to the cloud.', ag_fehler: 'The model did not answer ({0}).',
+    ag_kontext: '{0} file(s) as context', ag_ohne_kontext: 'no file context', ag_ausgelassen: 'Not sent: {0}.',
+    ag_grund_gesperrt: 'blocked', ag_grund_binaer: 'not a text file', ag_grund_zu_gross: 'too large', ag_grund_nicht_lesbar: 'not readable', ag_grund_kein_platz: 'no room left',
     st_ordner: 'Workspace', st_zweig: 'Branch (sample)', st_probleme: '{0} errors, {1} warnings', st_zeile: 'Ln {0}, Col {1}',
     st_zeile_kurz: 'Ln {0}', st_auswahl: '({0} selected)', st_einrueckung: 'Spaces: 2', st_kodierung: 'Encoding', st_zeilenende: 'End of line',
     st_sprache: 'Language of the file', st_text: 'Text',

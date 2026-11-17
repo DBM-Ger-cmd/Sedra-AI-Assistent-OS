@@ -207,7 +207,8 @@ class RoutenImManifest(unittest.TestCase):
     Liste nennt nichts, was der Code nicht ruft (sonst ist die Allowlist zu weit). Helfer aus ui/ zählen mit der Kennung des Rufers."""
     ROUTE = re.compile(r"""['"`](/api/[a-z0-9_/\-]+)['"`]""")
     PRAEFIX = re.compile(r"""['"`](/api/[a-z0-9_/\-]*)['"`]\s*\+""")
-    HELFER = {'S.ladeEcht = async': ['GET /api/uix/coder/projekte', 'GET /api/uix/coder/dateien/*', 'GET /api/uix/coder/datei/*'],     # App Coder (Runde 5): echt.js baut die Adressen aus Teilen
+    HELFER = {'S.ladeWege = async': ['GET /api/uix/coder/modelle'], 'S.sende = async': ['POST /api/uix/coder/agent'],     # App Coder, Agent: agent_echt.js baut die Adressen aus Teilen
+              'S.ladeEcht = async': ['GET /api/uix/coder/projekte', 'GET /api/uix/coder/dateien/*', 'GET /api/uix/coder/datei/*'],     # App Coder (Runde 5): echt.js baut die Adressen aus Teilen
               'sedraStand.entscheiden': ['POST /api/decisions/answer'],
               'sedraVorgabe.block': ['GET /api/uix/vorgaben', 'POST /api/uix/vorgabe', 'POST /api/uix/scaffold'],
               'sedraWorkflowEditor.create': ['POST /api/actions', 'POST /api/objects', 'GET /api/decisions', 'POST /api/harness/sitzungen', 'POST /api/harness/sitzungen/*']}   # n8n Workflows und Szenario Studio: der gemeinsame Editor ruft Objekte und Aktionen

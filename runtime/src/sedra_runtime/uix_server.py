@@ -21,6 +21,7 @@ import yaml
 
 from . import factory_lesen
 from . import coder_lesen
+from . import coder_agent
 from . import uix_diag
 from .models import gpu_preflight
 from .jobs.job_supervisor import FINAL_STATES, JobError
@@ -1113,6 +1114,50 @@ class UIXHub:
     def coder_datei(self, projekt, pfad):
         if not pfad or coder_lesen.pfad_gesperrt(pfad): raise ValueError('access_blocked' if pfad else 'invalid_path')
         return coder_lesen.datei(pfad, self.project_file({'project_id': projekt, 'path': pfad}))
+
+    def coder_modelle(self, payload=None):
+        """Welche Wege der Coder-Agent hat (lokales Modell geladen, Cloud-Anbieter bereit). Nur lesen, keine Schlüssel."""
+        server = getattr(self.runtime, 'llama_server', None)
+        geladen = server.loaded_models() if server is not None else []
+        return coder_agent.modelle(cloud_settings.view(self.runtime.project_root, self.runtime.cloud_key_store, os.environ), geladen)
+
+    def coder_agent(self, payload):
+        """Eine Frage an ein Modell mit Dateien des Projekts als Kontext (Sperrliste gilt). Nur Text zurück, kein Schreibweg.
+        Lokal über den Control Master, Cloud über den Inhaltsschutz (nur wenn der Captain den Anbieter eingeschaltet hat).
+        Ins Audit kommen Weg, Anbieter, Modell, Zahl der Dateien und Ausgang, nie Fragen- oder Dateitext."""
+        p = coder_agent.pruefe(payload)
+        text, belegt, ausgelassen = coder_agent.kontext(p['dateien'], lambda pf: self.coder_datei(p['projekt'], pf))
+        messages = coder_agent.nachrichten(p, text)
+        kopf = {'route': p['route'], 'modus': p['modus'], 'kontext': belegt, 'ausgelassen': ausgelassen}
+        if p['route'] == 'cloud':
+            from . import labor
+            cfg, pid = self._labor_provider({'provider': p['provider']})
+            res = labor.cloud_chat(cfg, pid, p['model'], messages, os.environ, self.runtime.cloud_key_store, audit=self.runtime.audit, max_tokens=coder_agent.ANTWORT_TOKEN)
+            out = {**kopf, 'status': res.get('status'), 'modell': res.get('model') or p['model'], 'anbieter': pid}
+            if res.get('status') == 'completed': out['antwort'] = res.get('reply') or ''
+            else: out['gruende'] = [str(x)[:60] for x in (res.get('reasons') or [])]
+        else:
+            rt = self.runtime
+            server = getattr(rt, 'llama_server', None)
+            geladen = server.loaded_models() if server is not None else []
+            if not geladen:
+                out = {**kopf, 'status': 'no_model', 'modell': None}
+            else:
+                modell = geladen[0].get('identifier') or geladen[0].get('modelKey')
+                with self.lock:
+                    mission = rt.brain.create_mission('Coder-Agent: Frage an das lokale Modell', None, 'S1')
+                    res = rt.control.execute(mission, {'action': 'model_inference', 'provider': 'llama-cpp-server', 'model': modell, 'temperature': 0.3,
+                                                       'max_tokens': coder_agent.ANTWORT_TOKEN, 'messages': messages})
+                if res.get('status') != 'completed':
+                    out = {**kopf, 'status': 'failed', 'modell': modell, 'gruende': [str(res.get('reason_code') or res.get('error') or res.get('status'))[:60]]}
+                else:
+                    r = res['model_result']
+                    antwort = str(r.get('content') or (r.get('message') or {}).get('content') or '').strip()
+                    out = {**kopf, 'status': 'completed' if antwort else 'failed', 'modell': modell, 'antwort': antwort,
+                           **({} if antwort else {'gruende': ['model_answer_empty']})}
+        self.runtime.audit.append('CODER_AGENT', component='uix', payload={'route': p['route'], 'anbieter': out.get('anbieter'), 'modell': out.get('modell'),
+                                                                          'dateien': len(belegt), 'ausgelassen': len(ausgelassen), 'status': out.get('status'), 'modus': p['modus']})
+        return out
 
     def modules_view(self, payload=None):
         """Was geladen ist, was abgelehnt wurde und warum, welche Shell läuft – die eine Liste, die das Werkzeug zeichnet."""
@@ -4346,6 +4391,7 @@ def make_server(hub: UIXHub, port=0):
             """/api/uix/coder/projekte, …/dateien/<projekt>[/<pfad>], …/datei/<projekt>/<pfad> (Pfad url-codiert). Fehler nur als Kennwort, nie ein Pfad des Rechners."""
             try:
                 if path == '/api/uix/coder/projekte': out = hub.coder_projekte()
+                elif path == '/api/uix/coder/modelle': out = hub.coder_modelle()
                 elif path.startswith(coder_lesen.PRAEFIX_DATEIEN + '/'): out = hub.coder_dateien(*coder_lesen.zerlege(path, coder_lesen.PRAEFIX_DATEIEN))
                 elif path.startswith(coder_lesen.PRAEFIX_DATEI + '/'): out = hub.coder_datei(*coder_lesen.zerlege(path, coder_lesen.PRAEFIX_DATEI))
                 else:
@@ -4748,6 +4794,7 @@ def make_server(hub: UIXHub, port=0):
                     '/api/entwurf/read': hub.entwurf_read,
                     '/api/entwurf/list': hub.entwurf_list,
                     '/api/chat/kombi': lambda p: hub._verlauf('kombi', p, hub.chat_kombi(p)),              # Lokal + KI: erst das lokale Modell, dann die Cloud prüft (ein Fenster)
+                    '/api/uix/coder/agent': hub.coder_agent,                       # App Coder: Frage an ein Modell mit Dateikontext, nur Text zurück (coder_agent.py)
                     '/api/chat/cloud': lambda p: hub._verlauf('cloud', p, hub.chat_cloud(p)),              # Gespräch mit einem Cloud-Modell (Wahl neben Senden); Inhaltsschutz
                     '/api/cloud/key': hub.cloud_key_seite,
                     '/api/cloud/module-model': hub.cloud_module_model_seite,   # welches Modell ein Modul nutzt (KI Labor)                        # Schlüssel verschlüsselt ablegen oder löschen; nie zurückgeben

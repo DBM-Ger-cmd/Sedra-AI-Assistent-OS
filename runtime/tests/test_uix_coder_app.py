@@ -43,8 +43,9 @@ class Anmeldung(unittest.TestCase):
         man, fehler = check_tool(yml, TOOL, "package")
         self.assertEqual(fehler, [])
         self.assertEqual(man["handles"], ["coder"])
-        self.assertEqual(man["api"], ["GET /api/uix/coder/projekte", "GET /api/uix/coder/dateien/*", "GET /api/uix/coder/datei/*"],
-                         "Runde 5: nur diese drei Lese-Routen, nie POST")
+        self.assertEqual(man["api"], ["GET /api/uix/coder/projekte", "GET /api/uix/coder/dateien/*", "GET /api/uix/coder/datei/*",
+                                "GET /api/uix/coder/modelle", "POST /api/uix/coder/agent"],
+                         "Runde 5: drei Lese-Routen; Agent: Modelle lesen und eine Frage stellen, sonst nichts (kein Schreibweg)")
         self.assertEqual(man["trust"], "CAPTAIN", "Rahmen-Werkzeug, nie in der Seite der Shell")
         for name in man["js"] + man["css"]:
             self.assertTrue((TOOL / Path(name).name).is_file(), name)

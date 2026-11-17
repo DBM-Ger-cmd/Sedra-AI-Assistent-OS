@@ -80,6 +80,7 @@
       S.echt.dateien = {};
       S.setzeQuelle('echt');
       S.sag(T('echt_geladen', S.echt.projekt.name));
+      S.ladeWege();
     } catch (e) { /* ohne Projekt oder ohne Zugriff: Beispieldateien bleiben */ }
   };
 })(window);
