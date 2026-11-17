@@ -87,8 +87,14 @@ def _abgelehnt_abgleichen(hub, satz):
         return satz
     if phase not in ('PAUSED', 'FAILED', 'CANCELLED', 'CLOSED'):
         return satz
-    live.melde(hub.project_root, satz['prozess'], None, 'fehler', text='Freigabe abgelehnt, der Lauf ist angehalten')
-    return next((s for s in live.lesen(hub.project_root) if s['prozess'] == satz['prozess']), satz)
+    live.melde(hub.project_root, satz['prozess'], None, 'fehler', text='Freigabe abgelehnt, der Lauf ist angehalten', lauf=satz.get('lauf'))
+    return next((s for s in live.lesen(hub.project_root) if s['prozess'] == satz['prozess'] and s.get('lauf') == satz.get('lauf')), satz)
+
+
+def _laeufe(hub, oid, args):
+    """Alle Läufe (Live-Dateien je Lauf) und alle offenen Gates (Gate-Speicher der Missionen). Nur lesen; Entscheidungen laufen über den Guard."""
+    from . import lauf_sicht
+    return lauf_sicht.sicht(hub.project_root, hub.runtime.missions.list())
 
 
 def _live(hub, oid, args):
@@ -298,7 +304,7 @@ def register(registry, hub):
                     Verb('pruefen', 'Kompatibilität prüfen', _check),
                     Verb('selbstabbild_pruefen', 'Selbstabbild gegen die Quellen prüfen', _selbstabbild_pruefen),
                     Verb('selbstabbild_anlegen', 'Abläufe von SEDRA aus den Quellen anlegen', _selbstabbild_anlegen),
-                    Verb('live', 'Laufende Prozesse', _live),
+                    Verb('live', 'Laufende Prozesse', _live), Verb('laeufe', 'Alle Läufe und offenen Gates (nur lesen)', _laeufe),
                     Verb('import_vorschau', 'Vorschau eines n8n-Imports', _import_vorschau), Verb('fabrik', 'Die Fabrikhalle', _fabrik), Verb('fabrik_status', 'Fabrik: angehalten?', _fabrik_status),
                     Verb('fabrik_stopp', 'Fabrik anhalten (roter Knopf)', _fabrik_stopp), Verb('fabrik_freigeben', 'Fabrik wieder freigeben', _fabrik_freigeben)]))
     canonical = registry.get('workflow')
