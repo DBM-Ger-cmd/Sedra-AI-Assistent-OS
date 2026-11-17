@@ -59,12 +59,11 @@ class LiveImBrowser(unittest.TestCase):
             host_isolation.tearDownModule()
 
     def live_tab(self, page, kind='workflow'):
-        page.evaluate("kind=>window.sedraBoot.ctx.bus.emit('object.open',{type:kind,id:'alle',title:kind==='scenario'?'Szenario Studio':'n8n Workflows'})", kind)
-        sel = '.t-scenario' if kind == 'scenario' else '.t-n8n-workflow'
-        app = page.locator(sel).first
-        app.locator('.t-wf-svg').wait_for()
-        page.wait_for_function("s=>{const e=document.querySelector(s);return e && !e.inert;}", arg=sel)
-        app.get_by_role('tab', name='Live').click()
+        """Live & Debugger im Workflow Studio: die frueheren Einzel-Apps (n8n Workflows, Szenario Studio) oeffnen dieselbe Flaeche."""
+        page.evaluate("kind=>window.sedraBoot.ctx.bus.emit('object.open',{type:kind,id:'alle',mode:'live',title:kind==='scenario'?'Szenario Studio':'n8n Workflows'})", kind)
+        app = page.locator('.hs-ws-arbeitsflaeche').first
+        app.locator('.t-wf-live-summe').wait_for()
+        page.wait_for_function("()=>{const e=document.querySelector('.hs-ws-arbeitsflaeche');return e && !e.inert;}")
         return app
 
     def test_ohne_meldung_steht_ein_klarer_leerzustand(self):
@@ -136,7 +135,7 @@ class LiveImBrowser(unittest.TestCase):
         def run(page, root):
             app = self.live_tab(page, 'scenario')
             app.locator('.t-wf-live-karte').wait_for(timeout=20000)
-            page.wait_for_function("()=>document.querySelectorAll('.t-scenario .t-wf-live-karte .t-wf-node.live-laeuft').length===1", timeout=20000)
+            page.wait_for_function("()=>document.querySelectorAll('.hs-ws-arbeitsflaeche .t-wf-live-karte .t-wf-node.live-laeuft').length===1", timeout=20000)
         self.session(run, melden)
 
     def test_der_reiter_fragt_nur_solange_er_offen_ist(self):
@@ -145,7 +144,7 @@ class LiveImBrowser(unittest.TestCase):
             app.locator('.t-wf-live-summe').filter(has_text='Gerade läuft nichts').wait_for(timeout=15000)
             page.evaluate("""()=>{window.__n = 0; const f = window.fetch;
                 window.fetch = function(u, o){ if(o && o.body && String(o.body).indexOf('"verb":"live"') >= 0) window.__n++; return f.apply(this, arguments); }; }""")
-            app.get_by_role('tab', name='Editor').click()
+            app.get_by_role('tab', name='Bearbeiten').click()
             page.wait_for_timeout(500)
             n0 = page.evaluate('()=>window.__n')
             page.wait_for_timeout(6000)
@@ -233,13 +232,11 @@ class LiveImBrowser(unittest.TestCase):
         def run(page, root):
             app = self.live_tab(page)
             stopp = app.get_by_role('button', name='Fabrik anhalten (Notaus)')
-            for reiter in ('Übersicht', 'Vorlagen', 'Editor', 'Versionen', 'Ausführungen', 'Live'):
+            for reiter in ('Einstieg & Gespeichert', 'Vorlagen', 'Bearbeiten', 'Versionen', 'Startassistent', 'Live & Debugger'):
                 app.get_by_role('tab', name=reiter).click()
                 self.assertTrue(stopp.is_visible(), 'im Reiter ' + reiter)
-            page.evaluate("()=>window.sedraBoot.ctx.bus.emit('object.open',{type:'scenario',id:'alle',title:'Szenario Studio'})")
-            sz = page.locator('.t-scenario').first
-            sz.locator('.t-wf-svg').wait_for()
-            self.assertTrue(sz.get_by_role('button', name='Fabrik anhalten (Notaus)').is_visible())
+            sz = self.live_tab(page, 'scenario')
+            self.assertTrue(sz.get_by_role('button', name='Fabrik anhalten (Notaus)').first.is_visible())
         self.session(run)
 
     def test_eine_schon_angehaltene_fabrik_zeigt_es_gleich_beim_oeffnen(self):

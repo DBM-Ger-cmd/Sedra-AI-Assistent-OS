@@ -40,6 +40,10 @@
       async prepare(r,doc){if(c.wid!==r.workflow_id)return false;lastRun=r;replay.disabled=!(r.result && r.result.knoten && r.result.knoten.length);c.state.doc=root.sedraWorkflowModel.clone(doc);c.revision=r.revision;c.saved=JSON.stringify(c.state.doc);c.view='canvas';return true;},
       onInspect(fn){inspectLive=fn;c.inspectorOpen=!!c.state.selected;c.inspector.hidden=!c.inspectorOpen;},draw(){if(c.canvas)c.canvas.draw();},redraw(){c.draw();}});
     dock.append(laeufe.box);c.panels.editor.append(dock);
+    // Live-Karten und Fabrikhalle (ui/workflow-live.js) hängen unter den Läufen im selben Dock; die Studio-Fläche bleibt Besitzer des Notaus.
+    const liveFlaeche=D.el('div','hs-ws-live-karten');dock.append(liveFlaeche);
+    const liveC=Object.create(c);liveC.panels=Object.assign({},c.panels,{live:liveFlaeche});
+    const liveAnsicht=root.sedraWorkflowLive?root.sedraWorkflowLive.attach(liveC):null;if(liveAnsicht)c.live=liveAnsicht;   // der Editor startet, stoppt und baut sie ab; der Notaus meldet die Haltemarke darüber
     c.panels.editor.prepend(kontext);kontext.hidden=true;
     const sourceSummary=D.el('p','hs-ws-quellenstand');c.panels.editor.prepend(sourceSummary);
     const vorpruefung=D.el('p','hs-ws-vorpruefung');vorpruefung.setAttribute('role','status');vorpruefung.hidden=true;sourceSummary.after(vorpruefung);
@@ -80,7 +84,7 @@
       if(contextMenu){contextMenu.close();contextMenu=null;}
       if(live&&!snapshot)snapshot={doc:root.sedraWorkflowModel.clone(c.state.doc),wid:c.wid,revision:c.revision,saved:c.saved,selected:c.state.selected,history:c.history.slice(),future:c.future.slice()};
       if(!live)restore();
-      c.editorMode=live?'live':'edit';c.el.dataset.studioMode=c.editorMode;dock.hidden=!live;
+      c.editorMode=live?'live':'edit';c.el.dataset.studioMode=c.editorMode;dock.hidden=!live;if(liveAnsicht){if(live)liveAnsicht.start();else liveAnsicht.stop();}
       kontext.hidden=!live;updateContext();
       if(live){c.inspector.removeAttribute('style');kontext.textContent=c.wid?c.state.doc.name+' · Revision '+c.revision+' · Wähle einen Lauf dieses Workflows. Dein Entwurf bleibt erhalten.':'Kein gespeicherter Workflow geöffnet. Wähle einen im Workflow-Katalog; Live und Startassistent bleiben an ihn gebunden.';laeufe.aktualisieren();}
       if(name==='runs'){empty.hidden=!!c.wid;modelBox.hidden=!c.wid;modelle();assist.box.hidden=!c.wid||!root.sedraWorkflowProcess.has(c.state.doc);if(!assist.box.hidden)assist.oeffne(c.wid);}
