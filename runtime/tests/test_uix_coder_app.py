@@ -43,13 +43,25 @@ class Anmeldung(unittest.TestCase):
         man, fehler = check_tool(yml, TOOL, "package")
         self.assertEqual(fehler, [])
         self.assertEqual(man["handles"], ["coder"])
-        self.assertEqual(man["api"], [], "die IDE ruft keine Route")
+        self.assertEqual(man["api"], ["GET /api/uix/coder/projekte", "GET /api/uix/coder/dateien/*", "GET /api/uix/coder/datei/*"],
+                         "Runde 5: nur diese drei Lese-Routen, nie POST")
         self.assertEqual(man["trust"], "CAPTAIN", "Rahmen-Werkzeug, nie in der Seite der Shell")
         for name in man["js"] + man["css"]:
             self.assertTrue((TOOL / Path(name).name).is_file(), name)
         self.assertEqual(man["js"][-1].rsplit("/", 1)[-1], "tool.js", "tool.js zuletzt: es startet die IDE")
         eingebunden = {Path(n).name for n in man["js"] + man["css"]}
         self.assertEqual({p.name for p in dateien()}, eingebunden, "jede Datei ist eingebunden, keine fehlt")
+
+
+class Lader(unittest.TestCase):
+    def test_rahmen_in_losem_container_wird_nach_dem_einhaengen_angemeldet(self):
+        """Die Harness-Shell mountet Apps in losen Containern: der Rahmen hat dann noch kein contentWindow. Ohne späte Anmeldung
+        kennt die Brücke ihn nicht ('Nachricht aus unbekannter Quelle abgelehnt') und jede Route im Rahmen läuft in die Zeitgrenze."""
+        text = (UIX / "ui" / "loader.js").read_text(encoding="utf-8")
+        self.assertIn("MutationObserver", text)
+        self.assertIn("fenster.isConnected", text)
+        self.assertIn("bruecke.abmelden(fenstergriff)", text)
+        self.assertNotIn("bruecke.register(fenster.contentWindow", text, "nie mit einem möglicherweise leeren Fenster anmelden")
 
 
 class Regeln(unittest.TestCase):

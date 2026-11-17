@@ -1,5 +1,5 @@
 # App „Coder“: die Sedra IDE (Entwurf, Runde 1 bis 4 und 6 der SPEC_SEDRA_IDE_2026-11-16, ohne Anbindung).
-# Läuft im abgeschotteten Rahmen (trust CAPTAIN → /uix/frame/coder, sandbox allow-scripts). Keine Route, kein Speicher auf dem Server; Inhalte sind Beispieldaten.
+# Läuft im abgeschotteten Rahmen (trust CAPTAIN → /uix/frame/coder, sandbox allow-scripts). Nur Lese-Routen (coder_lesen.py), kein Schreibweg; ohne Projekt bleiben Beispieldaten.
 tool:
   id: coder
   name: "Coder"
@@ -10,9 +10,12 @@ tool:
   order: 36
   slot: inhalt
   entry:
-    js: [dom.js, zustand.js, texte_de.js, texte_en.js, daten.js, daten_agenten.js, syntax.js, willkommen.js, editor.js, seitenleiste.js, explorer.js, ansichten.js, agenten.js, rechts.js, panel.js, befehle.js, palette.js, kopf.js, start.js, tool.js]
+    js: [dom.js, zustand.js, texte_de.js, texte_en.js, daten.js, daten_agenten.js, echt.js, syntax.js, willkommen.js, editor.js, seitenleiste.js, explorer.js, ansichten.js, agenten.js, rechts.js, panel.js, befehle.js, palette.js, kopf.js, start.js, tool.js]
     css: [tokens.css, layout.css, editor.css, teile.css]
-  api: []
+  api:
+    - GET /api/uix/coder/projekte         # R1: Projekte (Kennung, Name)
+    - GET /api/uix/coder/dateien/*        # R2: Ordnerinhalt, /dateien/<projekt>[/<pfad url-codiert>]
+    - GET /api/uix/coder/datei/*          # R3: Text einer Datei, /datei/<projekt>/<pfad url-codiert>
   events:
     emits: []
     listens: []

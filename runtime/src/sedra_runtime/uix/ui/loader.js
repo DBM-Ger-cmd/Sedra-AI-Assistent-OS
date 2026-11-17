@@ -159,8 +159,16 @@
           fenster.title = t.name || t.id;
           fenster.src = '/uix/frame/' + encodeURIComponent(t.id);
           el.replaceChildren(fenster);
-          bruecke.register(fenster.contentWindow, t, ctx.shell);
-          return {id: t.id, el, ctx, mod: this, mounted: true, ready: Promise.resolve(), abbau(){ bruecke.abmelden(fenster.contentWindow); }};
+          // Ein Rahmen in einem noch losen Container hat kein contentWindow (null): dann wird er angemeldet, sobald er in der Seite hängt –
+          // der Beobachter läuft vor dem ersten Task des Rahmens, seine erste Nachricht kommt also nie vor der Anmeldung (Harness: Apps mounten lose).
+          let fenstergriff = null;
+          const anmelden = ()=>{ if(!fenstergriff && fenster.contentWindow){ fenstergriff = fenster.contentWindow; bruecke.register(fenstergriff, t, ctx.shell); } return !!fenstergriff; };
+          let beobachter = null;
+          if(!anmelden() && typeof MutationObserver !== 'undefined'){
+            beobachter = new MutationObserver(()=>{ if(fenster.isConnected && anmelden()){ beobachter.disconnect(); beobachter = null; } });
+            beobachter.observe(document.documentElement, {childList: true, subtree: true});
+          }
+          return {id: t.id, el, ctx, mod: this, mounted: true, ready: Promise.resolve(), abbau(){ if(beobachter) beobachter.disconnect(); if(fenstergriff) bruecke.abmelden(fenstergriff); }};
         }
       };
     }

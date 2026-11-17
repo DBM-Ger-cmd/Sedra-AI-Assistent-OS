@@ -7,7 +7,7 @@
     titel: 'Sedra IDE',
     sprung: 'Skip to editor',
     beispiel: 'Sample data',
-    quelle_beispiel: 'Source: sample data, no connection to SEDRA.',
+    quelle_beispiel: 'Source: sample data for agents, terminal, chat and extensions. Files come from the project when there is one.',
     taste_strg: 'Ctrl', taste_umschalt: 'Shift',
 
     mn_leiste: 'Main menu', mn_datei: 'File', mn_bearbeiten: 'Edit', mn_auswahl: 'Selection', mn_ansicht: 'View',
@@ -71,6 +71,11 @@
     db_eingabe: 'Debug input', db_attrappe: 'Mock-up: expressions are not evaluated.',
     pb_todo: 'Open item (TODO)', pb_leerraum: 'Trailing whitespace', pb_tab_yaml: 'Tab character in YAML',
 
+    echt_marke: 'Project, read only', echt_geladen: 'Project “{0}” loaded (read only).',
+    echt_fehler_lesen: '“{0}” could not be read.', echt_fehler_binaer: '“{0}” is not a text file and is not shown.',
+    echt_fehler_gross: '“{0}” is too large for the preview (over 100 kB).', echt_fehler_gesperrt: '“{0}” is blocked (keys and local configuration are never shown).',
+    ed_speichern_gesperrt: 'Saving to disk is not released yet (decision E4). The file stays unsaved.',
+    su_hinweis_echt: 'Enter a search term. Only files that are already open are searched.', qc_echt_hinweis: 'Git status is not connected yet (decision E2).',
     ed_reiter: 'Tabs of editor group {0}', ed_schliessen: 'Close {0}', ed_brotkrumen: 'Path', ed_eingabe: 'Editor {0}', ed_minimap: 'Minimap',
     ed_tab_frei: 'Tab now leaves the editor once.', ed_gruppe_zu: 'Close group', ed_teilen_voll: 'At most three editor groups.',
     ed_gespeichert: '{0} saved (in page memory only).', ed_alle_gespeichert: 'All files saved (in page memory only).',

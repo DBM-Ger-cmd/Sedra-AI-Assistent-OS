@@ -20,6 +20,7 @@ import webbrowser
 import yaml
 
 from . import factory_lesen
+from . import coder_lesen
 from . import uix_diag
 from .models import gpu_preflight
 from .jobs.job_supervisor import FINAL_STATES, JobError
@@ -1100,6 +1101,18 @@ class UIXHub:
 
     def factory_benchmarks(self, payload=None):
         return factory_lesen.benchmarks(self.project_root)
+
+    # ---- App Coder (Runde 5, R1 bis R3): Projekte, Ordner und Dateitext nur lesen; die Sperrliste steht in coder_lesen.py
+    def coder_projekte(self, payload=None):
+        return coder_lesen.projekte(self.projects.list())
+
+    def coder_dateien(self, projekt, pfad):
+        if coder_lesen.pfad_gesperrt(pfad): raise ValueError('access_blocked')
+        return coder_lesen.dateien(pfad, self.project_files({'project_id': projekt, 'path': pfad}))
+
+    def coder_datei(self, projekt, pfad):
+        if not pfad or coder_lesen.pfad_gesperrt(pfad): raise ValueError('access_blocked' if pfad else 'invalid_path')
+        return coder_lesen.datei(pfad, self.project_file({'project_id': projekt, 'path': pfad}))
 
     def modules_view(self, payload=None):
         """Was geladen ist, was abgelehnt wurde und warum, welche Shell läuft – die eine Liste, die das Werkzeug zeichnet."""
@@ -4329,6 +4342,24 @@ def make_server(hub: UIXHub, port=0):
             self._send(200, bestaetigt if gehalten else file.read_bytes(), SERVE_TYPES[file.suffix.lstrip('.')])
             return True
 
+        def _coder(self, path):
+            """/api/uix/coder/projekte, …/dateien/<projekt>[/<pfad>], …/datei/<projekt>/<pfad> (Pfad url-codiert). Fehler nur als Kennwort, nie ein Pfad des Rechners."""
+            try:
+                if path == '/api/uix/coder/projekte': out = hub.coder_projekte()
+                elif path.startswith(coder_lesen.PRAEFIX_DATEIEN + '/'): out = hub.coder_dateien(*coder_lesen.zerlege(path, coder_lesen.PRAEFIX_DATEIEN))
+                elif path.startswith(coder_lesen.PRAEFIX_DATEI + '/'): out = hub.coder_datei(*coder_lesen.zerlege(path, coder_lesen.PRAEFIX_DATEI))
+                else:
+                    self.send_error(404)
+                    return
+            except ValueError as exc:
+                text = str(exc)
+                self._send(400, {'error': text if re.fullmatch(r'[a-z_]{3,40}', text) else 'read_failed'})
+                return
+            except Exception as exc:
+                self._send(503, {'error': type(exc).__name__})
+                return
+            self._send(200, out)
+
         def _events(self):
             """/api/events: one Server-Sent-Events stream for every tool (§10.4). Reconnect with Last-Event-ID."""
             try:
@@ -4499,6 +4530,9 @@ def make_server(hub: UIXHub, port=0):
                 return
             if path.startswith('/api/harness/'):          # projekte, sitzungen[/<id>], antworten/<id>/strom (harness/api.py)
                 self._harness('GET', path)
+                return
+            if path.startswith('/api/uix/coder/'):         # App Coder: nur lesen (coder_lesen.py)
+                self._coder(path)
                 return
             try:
                 routes = {
