@@ -124,3 +124,7 @@
 .t-coder .df-neu { background: color-mix(in srgb, var(--git-neu) 22%, transparent); }
 .t-coder .df-leer { background: var(--bg-hover); }
 .t-coder .gruppe { position: relative; }
+
+/* Suche im Projekt: Dateikopf mit Trefferzahl und Ersetzen-Knopf. */
+.t-coder .su-datei { display: flex; align-items: center; gap: 6px; padding: 2px 8px 2px 12px; font-weight: 600; }
+.t-coder .su-datei .knopf { padding: 0 8px; }

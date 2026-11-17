@@ -172,3 +172,68 @@ def _git_roh(args, ordner):
     if r.returncode != 0:
         raise LookupError('nicht_im_commit') if b'exists on disk, but not in' in r.stderr or b'does not exist in' in r.stderr or b'bad revision' in r.stderr or b'invalid object name' in r.stderr else RuntimeError('git_failed')
     return r.stdout
+
+
+# ---- R6 (Ausbau, Suche im Projekt): Textsuche über die Projektdateien, nur lesen. Gesperrte Namen, Binärdateien und große Dateien bleiben draußen.
+PRAEFIX_SUCHE = '/api/uix/coder/suche'
+SUCHE_ZEIT = 2.0
+SUCHE_TREFFER_MAX = 200
+SUCHE_DATEIEN_MAX = 3000
+SUCHE_DATEI_BYTES = 100_000
+SUCHE_ZEILE_MAX = 200
+SUCHE_FRAGE_MAX = 200
+SUCHE_UEBERSPRUNGEN = frozenset({'__pycache__', '.git', 'node_modules', '.venv', '.mypy_cache', '.pytest_cache'})
+
+
+def suche_frage(frage) -> str:
+    """Die Suchfrage (reiner Text, keine Muster): 1 bis 200 Zeichen, ohne Steuerzeichen. Sonst ValueError."""
+    f = str(frage or '')
+    if not f.strip() or len(f) > SUCHE_FRAGE_MAX or any(ord(c) < 32 for c in f):
+        raise ValueError('invalid_query')
+    return f
+
+
+def suche(wurzel, frage, uhr=None) -> dict:
+    """R6: Treffer je Zeile {pfad, zeile, text}, Groß-/Kleinschreibung egal. `uhr` ist die Zeitquelle (Tests). Nie ein Pfad des Rechners."""
+    import os
+    import time
+    from pathlib import Path
+    q = suche_frage(frage).lower()
+    uhr = uhr or time.monotonic
+    ende = uhr() + SUCHE_ZEIT
+    wurzel = Path(wurzel)
+    treffer, dateien, gekuerzt = [], 0, False
+    for ordner, namen, dateinamen in os.walk(wurzel, followlinks=False):
+        namen[:] = sorted(n for n in namen if n not in SUCHE_UEBERSPRUNGEN and not gesperrt(n))
+        for name in sorted(dateinamen):
+            if gesperrt(name):
+                continue
+            p = Path(ordner) / name
+            if uhr() > ende or dateien >= SUCHE_DATEIEN_MAX:
+                gekuerzt = True
+                break
+            try:
+                if p.is_symlink() or p.stat().st_size > SUCHE_DATEI_BYTES:
+                    continue
+                roh = p.read_bytes()
+            except OSError:
+                continue
+            dateien += 1
+            if b'\x00' in roh[:8000]:
+                continue
+            try:
+                text = roh.decode('utf-8')
+            except UnicodeDecodeError:
+                continue
+            rel = p.relative_to(wurzel).as_posix()
+            for i, zeile in enumerate(text.splitlines(), 1):
+                if q in zeile.lower():
+                    if len(treffer) >= SUCHE_TREFFER_MAX:
+                        gekuerzt = True
+                        break
+                    treffer.append({'pfad': rel, 'zeile': i, 'text': zeile.strip()[:SUCHE_ZEILE_MAX]})
+            if len(treffer) >= SUCHE_TREFFER_MAX:
+                gekuerzt = True
+        if gekuerzt:
+            break
+    return {'quelle': 'ok', 'treffer': treffer, 'anzahl': len(treffer), 'gekuerzt': gekuerzt, 'dateien': dateien}

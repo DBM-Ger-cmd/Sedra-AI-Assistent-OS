@@ -1130,6 +1130,13 @@ class UIXHub:
         ws = self.runtime.filesystem_tool._resolve(proj['workspace_path'])
         return coder_lesen.original(ws, pfad)
 
+    def coder_suche(self, projekt, frage):
+        """R6 (Suche im Projekt): Treffer je Zeile, nur lesen. Gesperrte Dateien, Binärdateien und große Dateien erscheinen nicht; 2 s Obergrenze."""
+        proj = self.projects.get(projekt)
+        if not proj: raise ValueError('unknown_project')
+        ws = self.runtime.filesystem_tool._resolve(proj['workspace_path'])
+        return coder_lesen.suche(ws, frage)
+
     def coder_speichern_antrag(self, payload):
         """E4: Speichern nur als Antrag. Legt einen Auftrag mit einer Freigabe an (genau diese Änderung an genau dieser Datei); geschrieben wird nichts."""
         from .core.request_binding import file_request
@@ -4498,6 +4505,7 @@ def make_server(hub: UIXHub, port=0):
             try:
                 if path == '/api/uix/coder/projekte': out = hub.coder_projekte()
                 elif path == '/api/uix/coder/modelle': out = hub.coder_modelle()
+                elif path.startswith(coder_lesen.PRAEFIX_SUCHE + '/'): out = hub.coder_suche(*coder_lesen.zerlege(path, coder_lesen.PRAEFIX_SUCHE))
                 elif path.startswith(coder_lesen.PRAEFIX_ORIGINAL + '/'): out = hub.coder_original(*coder_lesen.zerlege(path, coder_lesen.PRAEFIX_ORIGINAL))
                 elif path.startswith(coder_lesen.PRAEFIX_SPEICHERN + '/'): out = hub.coder_speichern_stand(coder_lesen.zerlege(path, coder_lesen.PRAEFIX_SPEICHERN)[0])
                 elif path.startswith(coder_lesen.PRAEFIX_AENDERUNGEN + '/'): out = hub.coder_aenderungen(coder_lesen.zerlege(path, coder_lesen.PRAEFIX_AENDERUNGEN)[0])
