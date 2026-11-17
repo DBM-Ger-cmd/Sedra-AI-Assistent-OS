@@ -197,7 +197,7 @@ def notaus(h, projekt_root, grund='Notaus durch den Captain', warten_s=STOPP_WAR
         from . import live
         for satz in live.lesen(projekt_root):
             if satz['zustand'] in ('laeuft', 'wartet') and satz.get('schritt'):
-                live.melde(projekt_root, satz['prozess'], satz['schritt'], 'fehler', text='Fabrik angehalten (Notaus)')
+                live.melde(projekt_root, satz['prozess'], satz['schritt'], 'fehler', text='Fabrik angehalten (Notaus)', lauf=satz.get('lauf'))
                 bericht['prozesse'].append(satz['prozess'])
     except Exception as exc:
         bericht['fehler'].append('Live-Meldungen: %s' % str(exc)[:100])

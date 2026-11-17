@@ -19,6 +19,9 @@
     start_hinweis:'Pfeile wählen · Enter öffnet · Esc schließt · Strg+K sucht',
 
     start_einstieg:'Einstieg',
+    start_laedt:'Das Menü wird geladen …',
+    start_laden_fehler:'Das Menü konnte nicht aufgebaut werden: {err}',
+    start_app_fehler:'Die App „{app}“ lässt sich nicht öffnen: {err}',
     start_einstieg_freigaben:'Nur Anzeige – Entscheidung über den Guard',
     start_mehr_weitere:'+{n} weitere',
     start_mehr_weniger:'Weniger zeigen',

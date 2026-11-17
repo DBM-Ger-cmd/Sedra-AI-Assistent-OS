@@ -1,8 +1,7 @@
 (function(){
+  const KI_MODELL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
   const root = typeof window !== 'undefined' ? window : globalThis;
-  const M = ()=>root.sedraWorkflowModel;
-  const P = ()=>root.sedraWorkflowProcess;
-  const PV = ()=>root.sedraWorkflowProcessView;
+  const M = ()=>root.sedraWorkflowModel, P = ()=>root.sedraWorkflowProcess, PV = ()=>root.sedraWorkflowProcessView;
   const mounted = new WeakMap();
   function el(tag, cls, text){const x = document.createElement(tag);if(cls)x.className = cls;if(text !== undefined)x.textContent = text;return x;}
   function button(text, fn){const b = el('button', '', text);b.type = 'button';b.onclick = fn;return b;}
@@ -132,11 +131,11 @@
       this.stage.addEventListener('keydown', event=>{if(event.key === 'Escape' && this.inspectorOpen && !event.defaultPrevented){this.inspectorOpen = false;this.inspect();}});
       this.report = el('pre', 't-wf-report');this.report.setAttribute('aria-label', 'Kompatibilitätsbericht');
       this.bottom = el('div', 't-wf-bottombar');this.bottom.hidden = !options.runBar;
-      const once = button(this.isUnified?'Workflow starten':options.runLabel || 'Einmal ausführen', ()=>this.unifiedWorkspace?this.unifiedWorkspace.start():this.submitRun());once.className = 't-wf-primary';once.title = 'Legt einen Lauf zur Freigabe vor. Ausgeführt wird erst nach Captain-Freigabe.';
-      this.startButton=once;
+      const once = button(this.isUnified?'Workflow starten':options.runLabel || 'Einmal ausführen', ()=>this.unifiedWorkspace?this.unifiedWorkspace.start():this.submitRun());once.className = 't-wf-primary';once.title = 'Legt einen Lauf zur Freigabe vor. Ausgeführt wird erst nach Captain-Freigabe.';this.startButton=once;
+      const kiTest = button('Workflow mit KI testen', ()=>this.submitRun(true));kiTest.title = 'Startet den Test mit NVIDIA Nemotron über die API. Der Klick ist die Freigabe für genau diesen Lauf; der Text der KI-Schritte verlässt den Rechner (nur Testdaten).';
       const plan = button('Zeitplan: aus', ()=>{});plan.disabled = true;plan.title = 'Zeitpläne gibt es im Adapter nicht. Läufe starten nur von Hand und mit Freigabe.';
       const settings = button('Einstellungen', ()=>{this.inspectorOpen = !this.inspectorOpen;this.inspect();});
-      this.bottom.append(...[once, options.noSchedule ? null : plan, settings].filter(Boolean), button('Posteingang', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'})));
+      this.bottom.append(...[once, options.runBar && options.noSchedule ? kiTest : null, options.noSchedule ? null : plan, settings].filter(Boolean), button('Posteingang', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'})));
       this.panels.editor.append(views, this.processBanner, this.stage, this.bottom, this.report);
       // Versionen
       const history = el('details', 't-wf-history');history.open = true;history.append(el('summary', '', 'Versionshistorie und Vergleich'));this.historyBox = el('div');history.append(this.historyBox);
@@ -169,10 +168,11 @@
         }
       });
     },
-    submitRun(){return this.safe(async()=>{
+    submitRun(ki){return this.safe(async()=>{
       if(!this.wid || this.dirty())throw new Error('Workflow zuerst speichern.');
-      const out = await this.call('workflow', this.wid, 'starten', {revision: this.revision, inputs: JSON.parse(this.input.value)});
-      this.runId = out.id;await this.showRun(out.id);this.notice('Mission angelegt. Freigabe im Posteingang prüfen, dann hier fortsetzen.');
+      const out = await this.call('workflow', this.wid, 'starten', Object.assign({revision: this.revision, inputs: JSON.parse(this.input.value)}, ki ? {modell_quelle: {anbieter: 'nvidia', modell: KI_MODELL}, auto_freigabe: true} : this.quelle && this.quelle.value ? {modell_quelle: {anbieter: 'nvidia', modell: this.quelle.value}} : {}));
+      this.runId = out.id;await this.showRun(out.id);this.notice(ki ? 'Test mit KI läuft (NVIDIA Nemotron, freigegeben durch den Klick). Ergebnis unter Ausführungen.' : 'Mission angelegt. Sobald du im Posteingang freigibst, läuft der Test hier von selbst weiter.');
+      if(!ki || this.runState !== 'COMPLETE')this.followRun(out.id, ki);
     });},
     placeInspector(){
       if(this.editorMode==='live')return;
@@ -264,7 +264,7 @@
       const logical=this.isUnified && (this.view==='logical' || live),visual = logical ? Object.assign(Object.create(this.state),{doc:root.sedraWorkflowLayout.logisch(this.state.doc)}) : core ? {doc: P().coreProjection(this.state.doc), selected: this.state.selected} : this.state;
       this.canvas = root.sedraWorkflowCanvas.mount(this.surface, visual, {
         style: this.style, logical, readOnly: core || live || logical,hint:logical?'Logischer Ablauf · Hauptweg von links nach rechts · KI-Zulieferung gestrichelt · Rechtsklick zum Einrichten':undefined,context:this.unifiedWorkspace?(id,p)=>this.unifiedWorkspace.context(id,p):null,
-        select: id=>{this.state.selected = id;this.inspect();}, open: id=>this.nodeAction('open', id), addAfter: (name, branch)=>this.openPicker({name, branch}), edgeAdd: (from, branch, to)=>this.openPicker(null, {from, branch, to}), edgeDelete: (a, k, i, b)=>this.edgeDelete(a, k, i, b), tidy: ()=>this.tidy(), act: (what, id)=>this.nodeAction(what, id), drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
+        select: id=>{this.state.selected = id;this.inspect();}, open: id=>this.nodeAction('open', id), addAfter: (name, branch)=>this.openPicker({name, branch}), edgeAdd: (from, branch, to)=>this.openPicker(null, {from, branch, to}), edgeDelete: (a, k, i, b)=>this.edgeDelete(a, k, i, b), tidy: ()=>this.tidy(), act: (what, id)=>this.nodeAction(what, id), many: (what, ids)=>{this.nodesAction(what, ids);if(this.canvas && this.canvas.fokus)this.canvas.fokus();}, drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
         change: ()=>{this.version.textContent = 'Ungespeicherte Änderungen';this.inspect();},
         connect: (a, b, branch)=>{try{this.change(()=>M().connect(this.state.doc, a, b, branch));}catch(e){this.notice(e.message, true);}}
       });this.inspect();if(root.sedraWorkflowAufbau && !core)root.sedraWorkflowAufbau.zeige(this, visual.doc || this.state.doc);

@@ -31,6 +31,11 @@
         const out = await this.call('workflow', null, 'tabelle_importieren', {name: this.tableName.value.trim(), text: await f.text(), ersetzen: true});
         this.notice('Tabelle ' + out.name + ': ' + out.zeilen + ' Zeilen geladen.');await this.refresh();
       }));
+      // Quelle des KI-Schritts: Standard lokal; Cloud (NVIDIA) nur ausdrücklich gewählt, für Testdaten, mit Freigabe
+      this.quelle = el('select');this.quelle.setAttribute('aria-label', 'Modell für KI-Schritte');
+      this.quelle.append(new Option('KI-Schritte: lokales Modell (Standard)', ''), new Option('KI-Schritte: NVIDIA Nemotron über API (Cloud, nur Testdaten)', 'nvidia/nemotron-3.5-lightning-30b-a3b'));
+      this.quelle.title = 'Cloud: der Text der KI-Schritte verlässt den Rechner. Die Freigabe nennt es ausdrücklich.';
+      run.append(this.quelle);
       this.lokalBox = box;
       box.append(el('h3', '', 'Lokale Tabellen'),
         el('p', 't-wf-hint', 'Ersatz für n8n-„Data tables“ (Aufträge, Positionen, Kostenübersicht …). CSV mit Semikolon oder Komma, oder JSON als Liste von Objekten.'), this.tableName, this.tableFile, load, this.tableList, this.tableView);

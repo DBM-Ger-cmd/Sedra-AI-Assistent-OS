@@ -1,0 +1,88 @@
+/* Sedra IDE: Editorgruppen, Reiter, Brotkrumen, Textflaeche, Minimap, Willkommen. */
+.t-coder .gruppe { flex: 1 1 0; display: flex; flex-direction: column; min-width: 120px; min-height: 0; }
+.t-coder .gruppe + .gruppe { border-left: 1px solid var(--rand); }
+.t-coder .gruppe-kopf { flex: none; display: flex; height: var(--h-reiter); background: var(--bg-reiter); border-bottom: 1px solid var(--rand); }
+.t-coder .reiter-leiste { flex: 1; display: flex; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.t-coder .reiter {
+  flex: none; display: flex; align-items: center; gap: 6px; max-width: 240px; padding: 0 6px 0 10px;
+  border-right: 1px solid var(--rand); border-top: 1px solid transparent; color: var(--text-leise); cursor: pointer;
+}
+.t-coder .reiter:hover { color: var(--text); }
+.t-coder .reiter.aktiv { background: var(--bg-reiter-aktiv); color: var(--text-stark); margin-bottom: -1px; }
+.t-coder .gruppe.im-fokus .reiter.aktiv { border-top-color: var(--akzent); }
+.t-coder .reiter-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-coder .reiter-zu { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--rund); color: inherit; }
+.t-coder .reiter-zu:hover { background: var(--bg-hover); }
+.t-coder .reiter-zu .punkt { display: none; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.t-coder .reiter.ungespeichert .reiter-zu .punkt { display: block; }
+.t-coder .reiter.ungespeichert .reiter-zu .sym { display: none; }
+.t-coder .reiter.ungespeichert .reiter-zu:hover .punkt { display: none; }
+.t-coder .reiter.ungespeichert .reiter-zu:hover .sym { display: block; }
+.t-coder .gruppe-aktionen { flex: none; display: flex; align-items: center; gap: 2px; padding: 0 6px; }
+
+.t-coder .git { font-size: var(--gr-klein); font-weight: 600; }
+.t-coder .git-U { color: var(--git-neu); }
+.t-coder .git-M { color: var(--git-geaendert); }
+.t-coder .git-punkt { width: 6px; height: 6px; border-radius: 50%; background: var(--git-neu); opacity: 0.8; }
+.t-coder .name-U { color: var(--git-neu); }
+.t-coder .name-M { color: var(--git-geaendert); }
+
+.t-coder .brotkrumen {
+  flex: none; height: 22px; display: flex; align-items: center; gap: 2px; padding: 0 12px;
+  color: var(--text-leise); font-size: 12px; white-space: nowrap; overflow: hidden;
+}
+.t-coder .brotkrumen .stueck:last-of-type { color: var(--text); }
+
+.t-coder .ed-koerper { flex: 1; display: flex; min-height: 0; background: var(--bg); }
+.t-coder .ed-roll { flex: 1; display: flex; align-items: stretch; min-width: 0; overflow: auto; font: var(--gr-mono)/var(--ed-zeile) var(--mono); }
+.t-coder .ed-zeilen {
+  flex: none; position: sticky; left: 0; z-index: 2; min-width: 52px; padding: 0 14px 0 10px;
+  background: var(--bg); color: var(--zeilennummer); text-align: right; user-select: none;
+}
+.t-coder .ed-zeilen div { height: var(--ed-zeile); }
+.t-coder .ed-zeilen div.hier { color: var(--text-stark); }
+.t-coder .ed-flaeche { position: relative; flex: 1 0 auto; min-height: 100%; }
+.t-coder .ed-aktiv { position: absolute; left: 0; right: 0; height: var(--ed-zeile); background: var(--zeile-aktiv); pointer-events: none; }
+.t-coder .ed-farbe,
+.t-coder .ed-eingabe {
+  margin: 0; padding: 0 12px 0 0; border: 0; font: inherit; white-space: pre; tab-size: 2; letter-spacing: 0;
+}
+.t-coder .ed-farbe { position: relative; min-height: 100%; color: var(--text); pointer-events: none; padding-bottom: 120px; }
+.t-coder .ed-eingabe {
+  position: absolute; inset: 0; width: 100%; height: 100%; resize: none; overflow: hidden; outline: none;
+  background: transparent; color: transparent; caret-color: var(--text-stark);
+}
+.t-coder .ed-eingabe::selection { background: var(--bg-wahl); color: transparent; }
+.t-coder .ed-mini {
+  flex: none; width: 84px; margin: 0; padding: 2px 4px; overflow: hidden; border-left: 1px solid var(--rand);
+  font: 2px/3px var(--mono); white-space: pre; color: var(--text-leise); user-select: none; cursor: pointer; opacity: 0.85;
+}
+
+.t-coder .syn-kommentar { color: var(--syn-kommentar); }
+.t-coder .syn-text { color: var(--syn-text); }
+.t-coder .syn-zahl { color: var(--syn-zahl); }
+.t-coder .syn-wort { color: var(--syn-wort); }
+.t-coder .syn-funktion { color: var(--syn-funktion); }
+.t-coder .syn-typ { color: var(--syn-typ); }
+.t-coder .syn-schluessel { color: var(--syn-schluessel); }
+.t-coder .syn-titel { color: var(--syn-wort); font-weight: 600; }
+
+/* Willkommen */
+.t-coder .willkommen { flex: 1; overflow: auto; padding: 48px 24px; }
+.t-coder .wk-innen { max-width: 760px; margin: 0 auto; }
+.t-coder .wk-innen h1 { margin: 0; font-size: 26px; font-weight: 500; color: var(--text-stark); }
+.t-coder .wk-unter { margin: 2px 0 28px; font-size: 16px; color: var(--text-leise); }
+.t-coder .wk-spalten { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.t-coder .wk-innen h2 { margin: 0 0 8px; font-size: 16px; font-weight: 500; color: var(--text-stark); }
+.t-coder .wk-liste { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 22px; }
+.t-coder .wk-verweis { display: inline-flex; align-items: center; gap: 8px; color: var(--akzent-hell); text-align: left; }
+.t-coder .wk-verweis:hover { text-decoration: underline; }
+.t-coder .wk-verweis .neben { color: var(--text-leise); }
+.t-coder .wk-karte {
+  width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; margin-bottom: 8px; text-align: left;
+  background: var(--bg-karte); border: 1px solid var(--rand); border-radius: 6px;
+}
+.t-coder .wk-karte:hover { border-color: var(--rand-stark); background: var(--bg-hover); }
+.t-coder .wk-karte strong { color: var(--text-stark); font-weight: 600; }
+.t-coder .wk-karte span { color: var(--text-leise); }
+@media (max-width: 900px) { .t-coder .wk-spalten { grid-template-columns: 1fr; } }

@@ -37,6 +37,7 @@ OBJECT_TYPES += ('issue', 'budget', 'gespraech')                   # Spec 0 D3.2
 OBJECT_TYPES += ('wissen',)                                        # Spec 7 D7.9: der Wissensspeicher (Werkzeug wissen, Objekt wissen:speicher)
 OBJECT_TYPES += ('uebersicht',)                                  # A3: die App Übersicht (SPEC_APP_UEBERSICHT_v1), der Baum der Gesamtlage
 OBJECT_TYPES += ('team',)                                        # A3: die App Team (SPEC_APP_TEAM_v1); ihre Modi nutzen die schon bekannten Typen
+OBJECT_TYPES += ('coder',)                                       # die App Coder (Sedra IDE, Rahmen-Werkzeug ohne Routen)
 OBJECT_TYPES += ('translator',)                                  # A3: die App Translator (SPEC_APP_TRANSLATOR_v1); ihre vier Modi nutzen die schon bekannten Typen
 OBJECT_TYPES += ('workflow',)                                      # n8n interchange app; execution stays in the mission core
 OBJECT_TYPES += ('scenario',)                                      # scenario app shares the process store, not the editor surface

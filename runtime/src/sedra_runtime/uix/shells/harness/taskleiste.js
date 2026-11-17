@@ -70,12 +70,13 @@ const SERVER_LABEL_ZU_KEY = {
     const status = d().el('div', 'hs-status');
     const uhr = d().el('span', 'hs-uhr');
     const sc = root.sedraHarness.schnell;
-    bar.append(start, mitte, ...(sc ? [sc.knopf(S)] : []), status, uhr);          // der Aufnahme-Knopf steht fest in der Taskleiste (Captain 04.11.2026)
-    S._leiste = {mitte, status, uhr, zuletzt: 0, wartet: null};
+    const drache = root.sedraHarness.leben ? root.sedraHarness.leben.knopf(S) : null;          // der Drache zeigt den echten Zustand der Arbeit (leben.js)
+    bar.append(start, mitte, ...(sc ? [sc.knopf(S)] : []), ...(drache ? [drache] : []), status, uhr);          // der Aufnahme-Knopf steht fest in der Taskleiste (Captain 04.11.2026)
+    S._leiste = {mitte, status, uhr, drache, zuletzt: 0, wartet: null};
     leisteLaden(S);
     const ticken = ()=>{ uhr.textContent = new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'}); };
     ticken();
-    setInterval(()=>{ ticken(); zeichnen(S); if(!document.hidden) root.sedraHarness.taskleiste.status(S); }, 15000);      // A7 (1.11.): Statuszellen frischen auch während langer Antworten auf (HS-52: höchstens alle 2 s bleibt)
+    setInterval(()=>{ ticken(); try{ zeichnen(S); }catch(err){ melden(S, 'Läufe nicht zeichenbar: ' + err.message); } if(!document.hidden) root.sedraHarness.taskleiste.status(S); }, 15000);      // A7 (1.11.): Statuszellen frischen auch während langer Antworten auf (HS-52: höchstens alle 2 s bleibt)
   }
 
   function dauer(ms){
@@ -126,11 +127,14 @@ const SERVER_LABEL_ZU_KEY = {
 
   // ---- Läufe
   function laufName(l){
+    l = l || {};                                                              // Härtung 17.11.: kein „NaN min“ bei kaputter Startzeit, kein „undefined“ ohne Namen oder Status
+    const name = l.name === undefined || l.name === null ? '' : String(l.name);
     const p = l.fortschritt && l.fortschritt.prozent;
     if(l.status === 'laeuft'){
-      return l.name + ' ' + (p !== null && p !== undefined ? p + ' %' : dauer(Date.now() - Date.parse(l.gestartet || new Date().toISOString())));
+      const seit = Date.parse(l.gestartet || '');
+      return (name + ' ' + (p !== null && p !== undefined ? p + ' %' : (Number.isFinite(seit) ? dauer(Date.now() - seit) : ''))).trim();
     }
-    return l.name + ' ' + (ENDE_ICON[l.status] || l.status);
+    return (name + ' ' + (ENDE_ICON[l.status] || (l.status === undefined || l.status === null ? '' : l.status))).trim();
   }
 
   function laufKnopf(S, l, aktiv){
@@ -140,7 +144,7 @@ const SERVER_LABEL_ZU_KEY = {
     k.type = 'button'; k.dataset.lauf = l.id;
     k.append(d().el('span', 'hs-app-icon', l.status === 'laeuft' ? '●' : (ENDE_ICON[l.status] || '■')), d().el('span', 'hs-app-name', laufName(l)));
     if(l.status === 'laeuft' && l.modell_weg) k.append(d().el('small', 'hs-leise', T('tl_modell_belegt')));
-    k.title = l.name + ' (' + l.id + ') – ' + l.status + ((l.fortschritt && l.fortschritt.text) ? ' · ' + l.fortschritt.text : '') + (neu ? ' · beendet, noch nicht angesehen' : '');
+    k.title = String(l.name || '') + ' (' + l.id + ') – ' + String(l.status || '') + ((l.fortschritt && l.fortschritt.text) ? ' · ' + l.fortschritt.text : '') + (neu ? ' · beendet, noch nicht angesehen' : '');
     k.onclick = ()=>{ gesehen(S, key); root.sedraHarness.reiter.oeffnen(S, key); };
     return k;
   }
@@ -167,6 +171,7 @@ const SERVER_LABEL_ZU_KEY = {
 
   function zeichnen(S){
     const l = S._leiste; if(!l) return;
+    if(root.sedraHarness.leben) root.sedraHarness.leben.zeichnen(S);                  // der Drache folgt dem Zustand (leben.js)
     const reiter = root.sedraHarness.reiter;
     const aktiv = reiter.aktiv(S);
     const offeneLaeufe = new Set(reiter.liste(S).filter(id=>String(id).startsWith('lauf:')));
@@ -190,7 +195,8 @@ const SERVER_LABEL_ZU_KEY = {
     const zelle = d().el('span', 'hs-zelle ' + ton);
     zelle.dataset.zelle = 'token';
     const wert = s ? zahl(s.ein) + ' ↑ ' + zahl(s.aus) + ' ↓' : (h && h.antworten ? 'heute ' + zahl(h.ein) + ' ↑ ' + zahl(h.aus) + ' ↓' : '–');
-    zelle.title = T('tl_token') + (s ? ' ' + T('tl_token_dieser_sitzung') : ' ' + T('tl_token_heute')) + ': ↑ eingehend ' + (s ? s.ein : h ? h.ein : 0).toLocaleString('de-DE') + ' (jeder Zug zählt den Verlauf neu), ↓ erzeugt ' + (s ? s.aus : h ? h.aus : 0).toLocaleString('de-DE')
+    const lokal = n=>(Number(n) || 0).toLocaleString('de-DE');                // Härtung 17.11.: ein Stand ohne Zahlen lässt nicht die ganze Statuszeile ausfallen
+    zelle.title = T('tl_token') + (s ? ' ' + T('tl_token_dieser_sitzung') : ' ' + T('tl_token_heute')) + ': ↑ eingehend ' + lokal(s ? s.ein : h ? h.ein : 0) + ' (jeder Zug zählt den Verlauf neu), ↓ erzeugt ' + lokal(s ? s.aus : h ? h.aus : 0)
       + (s && s.tok_s ? ' · ' + T('tl_token_tempo').replace('{s}', String(s.tok_s).replace('.', ',')) : '') + (pro !== null ? ' · ' + T('tl_token_kontext').replace('{p}', String(pro)) : '') + (s && s.cache_zuege ? ' · ' + T('tl_token_cache').replace('{c}', String(s.cache_anteil)) : '') + ' – Klick: App Sedra Token (Verbrauch, Kosten, Gespräch)';
     zelle.tabIndex = 0; zelle.setAttribute('role', 'button');
     const oeffnen = ()=>root.sedraHarness.tokenseite.oeffnen(S);
@@ -211,6 +217,7 @@ const SERVER_LABEL_ZU_KEY = {
     l.zuletzt = jetzt;
     if(root.sedraHarness.schnell) root.sedraHarness.schnell.lesen(S);                      // Stand der Sprachaufnahme mit dem Status (läuft sie auch aus der App oder dem Mikrofon-Knopf?)
     S.api('/api/strip').then(roh=>{
+      roh = roh && typeof roh === 'object' ? roh : {};
       S.strip = roh;                                                                             // die Kacheln des Start-Menüs nehmen dasselbe Ergebnis (HS-52a): eine Abfrage für beide
       const sm = root.sedraHarness.startmenue; if(sm && sm.stripNeu) sm.stripNeu(S, roh);
       const v = trennen(roh);

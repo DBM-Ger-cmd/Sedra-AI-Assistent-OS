@@ -40,10 +40,18 @@ def prozess_fuer(workflow_id):
     return kennung if kennung.startswith('wf-') else 'wf-' + kennung
 
 
-def _pfad(projekt_root, prozess):
+def _lauf_teil(lauf):
+    """Dateiname-Teil einer Lauf-ID (rein): `M-12AA9782` wird zu `m-12aa9782`, nur a-z, 0-9 und Bindestrich."""
+    return re.sub(r'[^a-z0-9]+', '-', str(lauf).lower()).strip('-')[:40]
+
+
+def _pfad(projekt_root, prozess, lauf=None):
+    """Datei eines Prozesses. Mit `lauf`: `<prozess>--<lauf>.json`, damit parallele Läufe desselben Prozesses sich nicht überschreiben.
+    Ohne `lauf`: die alte Datei `<prozess>.json` (Kompatibilität)."""
     if not isinstance(prozess, str) or not KENNUNG.fullmatch(prozess):
         raise ValueError('live_prozess_ungueltig')
-    return Path(projekt_root).joinpath(*ORDNER) / (prozess + '.json')
+    name = prozess if not lauf else prozess + '--' + _lauf_teil(lauf)
+    return Path(projekt_root).joinpath(*ORDNER) / (name + '.json')
 
 
 def _lesen(pfad):
@@ -58,7 +66,7 @@ def melde(projekt_root, prozess, schritt, zustand='laeuft', *, text=None, lauf=N
     """Den aktuellen Schritt melden (atomar geschrieben). `schritt` None nur bei `fertig` oder `fehler` ohne Schritt.
     Für Läufe des SEDRA-Eigenablaufs: `ids` ordnet jeden Schritt einem Knoten des Workflows zu ({schritt: Knotenkennung}), `workflow_id` ist der gespeicherte Workflow,
     `captain=True` heißt: die Meldung wartet auf eine Freigabe des Captains und gilt deshalb nicht nach drei Minuten als veraltet."""
-    pfad = _pfad(projekt_root, prozess)
+    pfad = _pfad(projekt_root, prozess, lauf)
     if zustand not in ZUSTAENDE:
         raise ValueError('live_zustand_ungueltig')
     if schritt is not None and (not isinstance(schritt, str) or not KENNUNG.fullmatch(schritt)):

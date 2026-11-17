@@ -6,6 +6,7 @@ from .schema import report, strict_json
 from .policy import assessment
 from .engine import configuration, inputs
 from . import lokal
+from .execution import modell_quelle
 from .lokal_daten import Eingaben, Tabellen
 from .versions import compare
 
@@ -87,8 +88,14 @@ def _abgelehnt_abgleichen(hub, satz):
         return satz
     if phase not in ('PAUSED', 'FAILED', 'CANCELLED', 'CLOSED'):
         return satz
-    live.melde(hub.project_root, satz['prozess'], None, 'fehler', text='Freigabe abgelehnt, der Lauf ist angehalten')
-    return next((s for s in live.lesen(hub.project_root) if s['prozess'] == satz['prozess']), satz)
+    live.melde(hub.project_root, satz['prozess'], None, 'fehler', text='Freigabe abgelehnt, der Lauf ist angehalten', lauf=satz.get('lauf'))
+    return next((s for s in live.lesen(hub.project_root) if s['prozess'] == satz['prozess'] and s.get('lauf') == satz.get('lauf')), satz)
+
+
+def _laeufe(hub, oid, args):
+    """Alle Läufe (Live-Dateien je Lauf) und alle offenen Gates (Gate-Speicher der Missionen). Nur lesen; Entscheidungen laufen über den Guard."""
+    from . import lauf_sicht
+    return lauf_sicht.sicht(hub.project_root, hub.runtime.missions.list())
 
 
 def _live(hub, oid, args):
@@ -204,14 +211,29 @@ def _dashboard_read(hub, mid, args):
     return {'filename': FILENAME, 'html': raw.decode('utf-8')}
 
 
+def _freigeben(hub, mid):
+    """Gibt das offene Gate der Mission frei, wie der Posteingang es tut (guard.approve, Token an der Mission)."""
+    rt = hub.runtime
+    with rt.missions.execution_lock(mid):
+        m = rt.missions.load(mid)
+        pending = m.get('human_gates', {}).get('pending', [])
+        if not pending:
+            raise ValueError('no_pending_human_gate')
+        gate = pending[0]
+        m['execution']['approval_token'] = rt.guard.approve(gate)
+        m['human_gates']['pending'] = pending[1:]
+        m['human_gates']['resolved'].append(gate)
+        rt.missions.save(m)
+        rt.audit.append('N8N_AUTO_FREIGABE', component='workflows', mission_id=mid, payload={'gate_id': gate.get('gate_id'), 'quelle': 'knopf_workflow_mit_ki_testen'})
+
+
 def _start(hub, oid, args):
     with hub.lock:
-        # Eine ausdrücklich gewählte, unveränderliche Revision bleibt ausführbar,
-        # auch wenn inzwischen eine neuere gespeichert wurde. Das Gate bindet
-        # weiterhin den exakten Workflow- und Eingabe-Digest dieses Laufes.
+        # Eine ausdrücklich gewählte, unveränderliche Revision bleibt ausführbar, auch wenn inzwischen eine neuere gespeichert wurde.
+        # Das Gate bindet den exakten Workflow- und Eingabe-Digest dieses Laufes. Eine ungültige Nummer ist ein Revisionskonflikt (Vertrag von main).
         revision = args.get('revision')
         if type(revision) is not int or revision < 1:
-            raise ValueError('invalid_workflow_revision')
+            raise ValueError('workflow_revision_conflict')
         record = _store(hub).read(oid, revision)
         check = _bewertung(hub, record['workflow'])
         if not check['executable']:
@@ -225,13 +247,16 @@ def _start(hub, oid, args):
                 Eingaben(hub.project_root).lesen(ref.get('datei'))
         elif not configuration(hub.project_root).get('enabled'):
             raise ValueError('n8n_not_configured')
+        quelle = modell_quelle(args.get('modell_quelle'))
+        if quelle and not check.get('braucht_modell'):
+            raise ValueError('modell_quelle_ohne_ki_schritt')
         rt = hub.runtime
         m = rt.brain.create_mission('n8n: ' + record['workflow']['name'])
         mid = m['identity']['mission_id']
         m['context']['n8n_workflow'] = {'id': oid, 'revision': record['revision'], 'name': record['workflow']['name'], 'digest': record['digest']}
         m['plan_revision'] = 1
         m['plan'] = {'version': 1, 'revision': 1, 'status': 'ready', 'workflow': check['profile'],
-                     'steps': [{'id': 'N8N-1', 'action': 'n8n_workflow', 'workflow': record['workflow'], 'inputs': data,
+                     'steps': [{'id': 'N8N-1', 'action': 'n8n_workflow', 'workflow': record['workflow'], 'inputs': data, **({'modell_quelle': quelle} if quelle else {}),
                                 'execution_requirements': {'allowed_execution_locations': ['local'], 'data_class': 'internal', 'context_min_tokens': 0}}],
                      'dependencies': [], 'acceptance_criteria': [{'type': 'artifact_exists', 'min_count': 1}]}
         rt.missions.save(m)
@@ -239,6 +264,10 @@ def _start(hub, oid, args):
             rt.missions.transition(m, phase)
         # This only reaches the mandatory gate. Nothing is approved here.
         rt.brain.run(mid, max_steps=2)
+        if args.get('auto_freigabe') and check['profile'] == lokal.PROFILE:
+            # Knopf „Workflow mit KI testen“: der Klick des Captains ist die Freigabe dieses einen Laufs (genau sein Gate, gebunden an Workflow, Eingaben und Modellquelle)
+            _freigeben(hub, mid)
+            hub.run_mission({'mission_id': mid, 'max_steps': 4})
         if check['profile'] == lokal.PROFILE:                               # Reiter Live: der Lauf wartet auf die Freigabe des Captains
             try:
                 from . import live as live_modul
@@ -342,7 +371,7 @@ def register(registry, hub):
                     Verb('pruefen', 'Kompatibilität prüfen', _check),
                     Verb('selbstabbild_pruefen', 'Selbstabbild gegen die Quellen prüfen', _selbstabbild_pruefen),
                     Verb('selbstabbild_anlegen', 'Abläufe von SEDRA aus den Quellen anlegen', _selbstabbild_anlegen),
-                    Verb('live', 'Laufende Prozesse', _live),
+                    Verb('live', 'Laufende Prozesse', _live), Verb('laeufe', 'Alle Läufe und offenen Gates (nur lesen)', _laeufe),
                     Verb('import_vorschau', 'Vorschau eines n8n-Imports', _import_vorschau), Verb('fabrik', 'Die Fabrikhalle', _fabrik), Verb('fabrik_status', 'Fabrik: angehalten?', _fabrik_status),
                     Verb('fabrik_stopp', 'Fabrik anhalten (roter Knopf)', _fabrik_stopp), Verb('fabrik_freigeben', 'Fabrik wieder freigeben', _fabrik_freigeben)]))
     canonical = registry.get('workflow')

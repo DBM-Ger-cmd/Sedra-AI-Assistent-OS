@@ -28,27 +28,51 @@
     const hint = document.createElement('p'); hint.className = 't-wf-hint';
     hint.textContent = handlers.hint !== undefined ? handlers.hint : handlers.readOnly ? 'Verdichtete Kernübersicht. Verbindungen fassen Zwischenschritte zusammen. Bearbeiten in der Gesamtansicht.' : 'Module ziehen, Hintergrund zum Verschieben ziehen, Mausrad zum Zoomen. Ausgang anklicken, dann Ziel wählen.';
     const controls = document.createElement('div'); controls.className = 't-wf-zoom'; controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', 'Ansicht');
-    [['Ansicht einpassen', '⤢', ()=>api.fit()], ['Zoom +', '+', ()=>api.zoom(1.2)], ['Zoom −', '−', ()=>api.zoom(1 / 1.2)], ['Auf Auswahl zentrieren', '◎', ()=>api.focus()], ['Aufräumen: Knoten ordnen', '⌗', ()=>{if(handlers.tidy && !handlers.readOnly)handlers.tidy();}]].forEach(([label, text, fn])=>{
+    [['Ansicht einpassen', '⤢', ()=>api.fit()], ['Zoom +', '+', ()=>api.zoom(1.2)], ['Zoom −', '−', ()=>api.zoom(1 / 1.2)], ['Auf Auswahl zentrieren', '◎', ()=>api.focus()], ['Aufräumen: Knoten ordnen', '⌗', ()=>{if(handlers.tidy && !handlers.readOnly)handlers.tidy();}], ['Vollbild ein/aus (Taste F)', '⛶', ()=>api.vollbild()], ['Alles auswählen (Strg+A)', '▣', ()=>api.alle()], ['Auswahl kopieren (Strg+C)', '⧉', ()=>api.many('copy')], ['Einfügen (Strg+V)', '⎘', ()=>api.many('paste')]].forEach(([label, text, fn])=>{
       const b = document.createElement('button'); b.type = 'button'; b.className = 't-wf-zoom-btn'; b.textContent = text; b.setAttribute('aria-label', label); b.title = label; b.onclick = fn; controls.append(b);
     });
     const mini = document.createElement('div'); mini.className = 't-wf-minimap';
     const msvg = element('svg', {class: 't-wf-minimap-svg', role: 'img', 'aria-label': 'Minimap: Übersicht des ganzen Prozesses, anklicken zum Springen', preserveAspectRatio: 'xMidYMid meet'}); mini.append(msvg);
-    wrapEl.append(svg, controls, mini);
+    const multibar = document.createElement('div'); multibar.className = 't-wf-multibar'; multibar.hidden = true; multibar.setAttribute('role', 'toolbar'); multibar.setAttribute('aria-label', 'Auswahl bearbeiten');
+    wrapEl.append(svg, controls, mini, multibar);
+    svg.setAttribute('tabindex', '0');
+    if(!state.multi) state.multi = new Set();
     if(root.sedraWorkflowMinimap) root.sedraWorkflowMinimap.ziehbar(mini, wrapEl, 'sedra.wf.minimap.' + (scenario ? 'szenario' : 'n8n'));   // verschiebbar (workflow-minimap.js)
     container.replaceChildren(hint, wrapEl);
-    let edgeSel = null, edgeBars = [], lastDown = null, drag = null, pending = null, offset = [0, 0], zoom = 1, frame = null;
+    let edgeSel = null, edgeBars = [], lastDown = null, drag = null, pending = null, offset = [0, 0], zoom = 1, frame = null, home = null, homeCount = -1;
     const uid = Math.random().toString(16).slice(2), marker = 'wf-arrow-' + uid, grid = 'wf-grid-' + uid;
     function point(event){
       const pt = svg.createSVGPoint(); pt.x = event.clientX; pt.y = event.clientY;
       return pt.matrixTransform(svg.getScreenCTM().inverse());
     }
+    const ids = ()=>state.multi.size ? [...state.multi] : state.selected ? [state.selected] : [];
+    const inSel = id=>state.multi.has(id) || state.selected === id;
+    function multibarZeichnen(){
+      multibar.replaceChildren();
+      const n = state.multi.size; multibar.hidden = handlers.readOnly || n < 2; if(multibar.hidden) return;
+      const t = document.createElement('span'); t.textContent = n + ' ausgewählt'; multibar.append(t);
+      [['Kopieren', 'copy', 'Strg+C'], ['Duplizieren', 'duplicate', 'Strg+D'], ['Links', 'left', 'Links ausrichten'], ['Oben', 'top', 'Oben ausrichten'], ['Verteilen', 'distribute', 'Waagerecht gleichmäßig verteilen'], ['Löschen', 'delete', 'Entf']].forEach(([label, what, tip])=>{
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.title = tip; if(what === 'delete') b.className = 'danger'; b.onclick = ()=>api.many(what); multibar.append(b);
+      });
+    }
     function draw(){
       const doc = state.doc, nodes = doc.nodes;
-      const minX = Math.min(0, ...nodes.map(n=>n.position[0])) - G.pad[1];
-      const minY = Math.min(0, ...nodes.map(n=>n.position[1])) - G.pad[1];
-      const width = Math.max(640, ...nodes.map(n=>n.position[0] - minX + G.pad[2] + 80));
-      const height = Math.max(360, ...nodes.map(n=>n.position[1] - minY + G.pad[3] + 40));
-      frame = {minX, minY, width, height};
+      [...state.multi].forEach(i=>{ if(!nodes.some(n=>n.id === i)) state.multi.delete(i); });
+      // Grundansicht: enge Hülle um alle Knoten, an das Seitenverhältnis der Fläche angepasst, damit der Prozess die Fläche füllt.
+      // Sie wird nur beim Öffnen, bei „Ansicht einpassen“, bei neuen/gelöschten Knoten und bei Größenänderung neu bestimmt, nicht beim Ziehen.
+      const cw = svg.clientWidth, ch = svg.clientHeight;
+      if(!home || homeCount !== nodes.length || (cw && home.cw !== cw) || (ch && home.ch !== ch)){
+        const lab = scenario ? 70 : 34, boxes = nodes.map(n=>[n.position[0], n.position[1], n.position[0] + G.w, n.position[1] + G.h + lab]);
+        const x0 = boxes.length ? Math.min(...boxes.map(b=>b[0])) : 0, y0 = boxes.length ? Math.min(...boxes.map(b=>b[1])) : 0;
+        const x1 = boxes.length ? Math.max(...boxes.map(b=>b[2])) : 640, y1 = boxes.length ? Math.max(...boxes.map(b=>b[3])) : 360;
+        let w = Math.max(320, x1 - x0 + 220), h = Math.max(200, y1 - y0 + 180);   // rechts Platz für die Knöpfe, unten für Zoom und Minimap
+        const aspect = cw && ch ? cw / ch : 16 / 9;
+        if(w / h < aspect) w = h * aspect; else h = w / aspect;
+        home = {minX: x0 - 60 - (w - (x1 - x0 + 220)) / 2, minY: y0 - 50 - (h - (y1 - y0 + 180)) / 2, width: w, height: h, cw, ch};
+        homeCount = nodes.length;
+      }
+      const minX = home.minX, minY = home.minY, width = home.width, height = home.height;
+      frame = home;
       if(!drag || drag.pan) svg.setAttribute('viewBox', [minX + offset[0], minY + offset[1], width / zoom, height / zoom].join(' '));
       const defs = element('defs');
       const arrow = element('marker', {id: marker, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse'});
@@ -108,7 +132,7 @@
         const known = root.sedraWorkflowModel.types.some(t=>'n8n-nodes-base.' + t[0] === node.type && t[2] === node.typeVersion) || (!!own && (!own.length || own.includes(node.typeVersion)));
         const P = root.sedraWorkflowProcess, meta = P && P.get(node), I = root.sedraWorkflowIcons;
         const kindKey = I ? I.key(node, meta) : 'unknown';
-        const g = element('g', {transform: `translate(${node.position[0]} ${node.position[1]})`, class: 't-wf-node mod-' + kindKey + (state.live && state.live[node.id] ? ' live live-' + state.live[node.id] : '') + (state.selected === node.id ? ' selected' : '') + (!known ? ' unsupported' : '') + (meta ? ' process ' + meta.mode : ''), tabindex: 0, role: 'button', 'aria-label': node.name});
+        const g = element('g', {transform: `translate(${node.position[0]} ${node.position[1]})`, class: 't-wf-node mod-' + kindKey + (state.live && state.live[node.id] ? ' live live-' + state.live[node.id] : '') + (inSel(node.id) ? ' selected' : '') + (!known ? ' unsupported' : '') + (meta ? ' process ' + meta.mode : ''), tabindex: 0, role: 'button', 'aria-label': node.name});
         const subtitle = meta ? P.labels[meta.mode] : known ? (I ? I.label(kindKey) : node.type.split('.').pop()) : 'Erhalten · nicht ausführbar';
         const [cx, cy] = G.center;
         if(scenario){
@@ -132,7 +156,7 @@
           // Symbolsatz des Workflow-Diagramms: Oval = Start/Ende, Rechteck = Schritt, Raute = Entscheidung, Parallelogramm = Ein-/Ausgabe, Zylinder = Datenspeicher.
           // Ein Auslöser hat links die große Rundung und den Blitz davor (wie im n8n-Editor).
           const shape = meta ? meta.kind : '', trigger = !meta && kindKey === 'manualTrigger';
-          if(state.selected === node.id) g.append(element('rect', {x: -6, y: -6, width: 108, height: 108, rx: 20, class: 't-wf-ring'}));
+          if(inSel(node.id)) g.append(element('rect', {x: -6, y: -6, width: 108, height: 108, rx: 20, class: 't-wf-ring'}));
           if(shape === 'start' || shape === 'end') g.append(element('rect', {x: 0, y: 14, width: 96, height: 68, rx: 34, class: 't-wf-tile'}));
           else if(shape === 'decision') g.append(element('polygon', {points: '48,0 96,48 48,96 0,48', class: 't-wf-tile'}));
           else if(shape === 'data') g.append(element('polygon', {points: '20,14 96,14 76,82 0,82', class: 't-wf-tile'}));
@@ -154,10 +178,17 @@
           if(pending){ handlers.connect(pending.name, node.name, pending.branch); pending = null; hint.textContent = 'Verbindung angelegt.'; return; }
           const now = Date.now();
           if(lastDown && lastDown.id === node.id && now - lastDown.t < 400 && handlers.open && !handlers.readOnly){lastDown = null;handlers.open(node.id);}else lastDown = {id: node.id, t: now};
+          if(!handlers.readOnly && (event.shiftKey || event.ctrlKey || event.metaKey)){
+            if(!state.multi.size && state.selected) state.multi.add(state.selected);
+            if(state.multi.has(node.id)) state.multi.delete(node.id); else state.multi.add(node.id);
+            handlers.select(state.multi.has(node.id) ? node.id : ([...state.multi][0] || null)); draw(); return;
+          }
+          if(!state.multi.has(node.id)) state.multi.clear();
           handlers.select(node.id);
           if(handlers.readOnly){draw();return;}
           handlers.checkpoint();
-          const pt = point(event); drag = {node, x: pt.x, y: pt.y, original: node.position.slice()}; svg.setPointerCapture(event.pointerId);
+          const group = state.multi.size > 1 ? state.doc.nodes.filter(m=>state.multi.has(m.id)) : [node];
+          const pt = point(event); drag = {node, x: pt.x, y: pt.y, original: node.position.slice(), group: group.map(m=>({m, o: m.position.slice()}))}; svg.setPointerCapture(event.pointerId);
         });
         g.addEventListener('contextmenu',event=>{if(handlers.context&&!event.shiftKey){event.preventDefault();event.stopPropagation();handlers.select(node.id);handlers.context(node.id,{x:event.clientX,y:event.clientY});}});
         g.addEventListener('keydown', event=>{
@@ -191,7 +222,7 @@
             g.append(plus);
           }
         }
-        if(!handlers.readOnly && state.selected === node.id && handlers.act){
+        if(!handlers.readOnly && state.selected === node.id && state.multi.size < 2 && handlers.act){
           // Schnellleiste am gewählten Knoten: Eigenschaften, Duplizieren, Löschen
           const bar = element('g', {class: 't-wf-actions', transform: `translate(${G.center[0] - 43} ${scenario ? -6 : -34})`});
           [['set', 'Eigenschaften öffnen', 'open'], ['copy', 'Duplizieren', 'duplicate'], ['trash', 'Löschen', 'delete']].forEach(([icon, label, what], k)=>{
@@ -205,6 +236,8 @@
         }
         svg.append(g);
       });
+      if(drag && drag.band){ const b = drag.band; svg.append(element('rect', {x: Math.min(b.a[0], b.b[0]), y: Math.min(b.a[1], b.b[1]), width: Math.abs(b.a[0] - b.b[0]), height: Math.abs(b.a[1] - b.b[1]), class: 't-wf-band', 'pointer-events': 'none'})); }
+      multibarZeichnen();
       edgeBars.forEach(bar=>svg.append(bar));      // die Leiste einer gewählten Verbindung liegt über allem
       drawMini();
       if(handlers.drawn) handlers.drawn();
@@ -215,7 +248,7 @@
       const v = svg.viewBox.baseVal;
       msvg.setAttribute('viewBox', [frame.minX, frame.minY, frame.width, frame.height].join(' '));
       msvg.replaceChildren();
-      state.doc.nodes.forEach(n=>msvg.append(element('rect', {x: n.position[0], y: n.position[1], width: G.w, height: G.h, rx: 10, class: 't-wf-mini-node' + (state.selected === n.id ? ' selected' : '')})));
+      state.doc.nodes.forEach(n=>msvg.append(element('rect', {x: n.position[0], y: n.position[1], width: G.w, height: G.h, rx: 10, class: 't-wf-mini-node' + (inSel(n.id) ? ' selected' : '')})));
       msvg.append(element('rect', {x: v.x, y: v.y, width: v.width, height: v.height, class: 't-wf-mini-view'}));
     }
     let miniDrag = false;
@@ -233,33 +266,61 @@
     svg.addEventListener('pointerdown', event=>{
       if(event.button !== 0 || event.target.closest('.t-wf-node'))return;
       if(edgeSel){edgeSel = null;draw();}
+      svg.focus({preventScroll: true});
+      if(event.shiftKey && !handlers.readOnly){ event.preventDefault(); const a = point(event); drag = {band: {a: [a.x, a.y], b: [a.x, a.y]}}; svg.setPointerCapture(event.pointerId); return; }
       const view = svg.viewBox.baseVal;
-      drag = {pan: true, x: event.clientX, y: event.clientY, original: offset.slice(), sx: view.width / svg.clientWidth, sy: view.height / svg.clientHeight};
+      drag = {pan: true, moved: false, x: event.clientX, y: event.clientY, original: offset.slice(), sx: view.width / svg.clientWidth, sy: view.height / svg.clientHeight};
       svg.setPointerCapture(event.pointerId);
     });
     svg.addEventListener('pointermove', event=>{
       if(!drag) return;
-      if(drag.pan){offset = [drag.original[0] - (event.clientX - drag.x) * drag.sx, drag.original[1] - (event.clientY - drag.y) * drag.sy];draw();return;}
+      if(drag.band){ const q = point(event); drag.band.b = [q.x, q.y]; draw(); return; }
+      if(drag.pan){ if(Math.abs(event.clientX - drag.x) + Math.abs(event.clientY - drag.y) > 3) drag.moved = true; offset = [drag.original[0] - (event.clientX - drag.x) * drag.sx, drag.original[1] - (event.clientY - drag.y) * drag.sy];draw();return;}
       const pt = point(event);
-      drag.node.position = [drag.original[0] + pt.x - drag.x, drag.original[1] + pt.y - drag.y].map(v=>Math.max(-100000, Math.min(100000, Math.round(v))));
+      const raster = event.altKey ? 1 : 16;   // Rasterfang wie im n8n-Editor (Alt = frei)
+      const np = [drag.original[0] + pt.x - drag.x, drag.original[1] + pt.y - drag.y].map(v=>Math.max(-100000, Math.min(100000, Math.round(v / raster) * raster)));
+      drag.group.forEach(g=>{ g.m.position = [g.o[0] + np[0] - drag.original[0], g.o[1] + np[1] - drag.original[1]]; });
       draw();
     });
-    svg.addEventListener('pointerup', ()=>{if(drag){const changed = !drag.pan;drag = null;if(changed)handlers.change();draw();}});
+    svg.addEventListener('pointerup', ()=>{
+      if(!drag) return;
+      if(drag.band){
+        const b = drag.band, x0 = Math.min(b.a[0], b.b[0]), x1 = Math.max(b.a[0], b.b[0]), y0 = Math.min(b.a[1], b.b[1]), y1 = Math.max(b.a[1], b.b[1]);
+        state.multi.clear(); state.doc.nodes.forEach(n=>{ if(n.position[0] < x1 && n.position[0] + G.w > x0 && n.position[1] < y1 && n.position[1] + G.h > y0) state.multi.add(n.id); });
+        drag = null; handlers.select([...state.multi][0] || null); draw(); return;
+      }
+      const changed = !drag.pan, leer = drag.pan && !drag.moved && state.multi.size;
+      drag = null; if(leer) state.multi.clear(); if(changed) handlers.change(); draw();
+    });
     svg.addEventListener('pointercancel', ()=>{drag = null;draw();});
     svg.addEventListener('keydown', e=>{
-      if(e.key === 'Escape'){pending = null;hint.textContent = 'Verbindung abgebrochen.';}
-      if((e.key === 'Delete') && !handlers.readOnly && state.selected && handlers.act && e.target.closest && e.target.closest('.t-wf-node')){e.preventDefault();handlers.act('delete', state.selected);}
+      if(!e.ctrlKey && !e.metaKey && !e.altKey){
+        if(e.key === 'f' || e.key === 'F'){e.preventDefault();api.vollbild();}
+        else if(e.key === '1' || e.key === 'Home'){e.preventDefault();api.fit();}
+        else if(e.key === '+' || e.key === '='){e.preventDefault();api.zoom(1.2);}
+        else if(e.key === '-'){e.preventDefault();api.zoom(1 / 1.2);}
+      }
+      if((e.ctrlKey || e.metaKey) && !handlers.readOnly && !(e.target.closest && e.target.closest('input, textarea'))){
+        const was = {a: 'alle', c: 'copy', v: 'paste', d: 'duplicate'}[e.key.toLowerCase()];
+        if(was){ e.preventDefault(); if(was === 'alle') api.alle(); else api.many(was); }
+      }
+      if(e.key === 'Escape'){pending = null;if(state.multi.size){state.multi.clear();draw();}hint.textContent = 'Verbindung abgebrochen.';}
+      if((e.key === 'Delete') && !handlers.readOnly && ids().length && handlers.act && e.target.closest && e.target.closest('.t-wf-node, .t-wf-svg')){e.preventDefault();if(ids().length > 1)api.many('delete');else handlers.act('delete', ids()[0]);}
     });
     function setZoom(value){
-      const previous = zoom;zoom = Math.max(0.5, Math.min(8, value));
+      const previous = zoom;zoom = Math.max(0.25, Math.min(8, value));
       if(frame){offset = [offset[0] + frame.width / previous / 2 - frame.width / zoom / 2, offset[1] + frame.height / previous / 2 - frame.height / zoom / 2];}draw();
     }
     svg.addEventListener('wheel', event=>{event.preventDefault();setZoom(zoom * (event.deltaY < 0 ? 1.15 : 1 / 1.15));}, {passive: false});
     svg.addEventListener('contextmenu',event=>{if(handlers.context&&!event.shiftKey&&!event.defaultPrevented){event.preventDefault();event.stopPropagation();handlers.context(null,{x:event.clientX,y:event.clientY});}});
-    const api = {draw, zoom(value){setZoom(zoom * value);}, fit(){zoom = 1;offset = [0, 0];draw();},
+    const api = {draw, alle(){ state.doc.nodes.forEach(n=>state.multi.add(n.id)); if(!state.selected && state.doc.nodes[0]) handlers.select(state.doc.nodes[0].id); draw(); },
+      fokus(){ svg.focus({preventScroll: true}); },
+      many(what){ if(handlers.many && !handlers.readOnly) handlers.many(what, ids()); }, zoom(value){setZoom(zoom * value);}, fit(){zoom = 1;offset = [0, 0];home = null;draw();},
+      vollbild(){const host = wrapEl.closest('.t-wf-stage') || wrapEl;if(document.fullscreenElement){document.exitFullscreen();}else if(host.requestFullscreen){host.requestFullscreen();}},
       focus(){const n = state.doc.nodes.find(x=>x.id === state.selected);if(!n || !frame)return;zoom = Math.min(8, Math.max(1, frame.width / 550));offset = [n.position[0] - frame.minX - frame.width / zoom / 2 + G.center[0], n.position[1] - frame.minY - frame.height / zoom / 2 + G.center[1]];draw();},
       destroy(){container.replaceChildren();}};
     draw();
+    if(typeof ResizeObserver !== 'undefined'){const ro = new ResizeObserver(()=>{if(svg.isConnected && !drag)draw();});ro.observe(svg);const d = api.destroy;api.destroy = ()=>{ro.disconnect();d();};}
     return api;
   }
   root.sedraWorkflowCanvas = {mount};

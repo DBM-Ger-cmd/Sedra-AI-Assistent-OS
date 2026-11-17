@@ -130,6 +130,81 @@
       this.runChip.textContent = 'Letzter Lauf: ' + (TEXT[last.state] || String(last.state).toLowerCase());
       this.runChip.className = 't-wf-runchip ' + (last.state === 'COMPLETE' ? 'ok' : last.state === 'FAILED' ? 'bad' : 'wait');
     },
+    // Nach „Workflow testen“: auf die Freigabe warten (bis zu 5 Minuten, alle 3 Sekunden) und den Lauf dann ausdrücklich fortsetzen, bis er fertig ist.
+    async followRun(id, ki){
+      const gen = this.followId = (this.followId || 0) + 1;
+      for(let i = 0; i < 100 && !this.dead && gen === this.followId; i++){
+        await new Promise(r=>root.setTimeout(r, i ? 3000 : 500));
+        if(this.dead || gen !== this.followId || this.runId !== id)return;
+        try{
+          if(this.runState === 'CAPTAIN_REVIEW' || this.runState === 'READY' || this.runState === 'EXECUTE' || this.runState === 'VERIFY')await this.call('workflow_run', id, 'fortsetzen');
+          await this.showRun(id);
+        }catch(e){return;}
+        if(['COMPLETE', 'FAILED', 'CLOSED', 'CANCELLED', 'ABORTED'].includes(this.runState)){this.notice('Test beendet: ' + this.runState + '. Ergebnis unter Ausführungen.', this.runState !== 'COMPLETE');return;}
+      }
+    },
+    // Mehrfachauswahl: Kopieren, Einfügen, Duplizieren, Löschen, Ausrichten. Die Zwischenablage ist für alle Editoren der Seite gemeinsam
+    // (so lässt sich zwischen Workflows kopieren); Verbindungen innerhalb der Auswahl werden mitkopiert, nach außen nicht.
+    nodesAction(what, ids){
+      const doc = this.state.doc, multi = this.state.multi || (this.state.multi = new Set());
+      const nodes = doc.nodes.filter(n=>ids.includes(n.id));
+      const neueId = ()=>'n-' + Date.now().toString(36) + Math.random().toString(16).slice(2, 8);
+      const kopieren = ()=>{
+        if(!nodes.length){this.notice('Nichts ausgewählt. Mit Umschalt+Klick oder Umschalt+Aufziehen mehrere Knoten wählen.', true);return false;}
+        const namen = new Set(nodes.map(n=>n.name)), conns = {};
+        Object.entries(doc.connections).filter(([q])=>namen.has(q)).forEach(([q, out])=>{
+          conns[q] = {};Object.entries(out).forEach(([kind, branches])=>{conns[q][kind] = branches.map(b=>b.filter(e=>namen.has(e.node)));});
+        });
+        root.sedraWorkflowClip = {nodes: M().clone(nodes), connections: M().clone(conns), n: 0};
+        try{if(root.navigator && root.navigator.clipboard)root.navigator.clipboard.writeText(JSON.stringify({nodes: root.sedraWorkflowClip.nodes, connections: conns}, null, 2)).catch(()=>{});}catch(_e){}
+        return true;
+      };
+      const einfuegen = (clip, versatz)=>{
+        const karte = new Map(), neu = [];
+        clip.nodes.forEach(orig=>{
+          const c = M().clone(orig);c.id = neueId();
+          let name = orig.name, k = 2;while(doc.nodes.some(x=>x.name === name) || neu.some(x=>x.name === name))name = orig.name + ' Kopie' + (k > 2 ? ' ' + k : '') , k++;
+          c.name = name;c.position = [orig.position[0] + versatz, orig.position[1] + versatz];
+          const meta = P().get(c);if(meta){meta.core_step = 0;P().set(c, meta);}
+          karte.set(orig.name, c.name);neu.push(c);
+        });
+        doc.nodes.push(...neu);
+        Object.entries(clip.connections || {}).forEach(([q, out])=>{
+          const nq = karte.get(q);if(!nq)return;doc.connections[nq] = {};
+          Object.entries(out).forEach(([kind, branches])=>{doc.connections[nq][kind] = branches.map(b=>b.filter(e=>karte.has(e.node)).map(e=>Object.assign({}, e, {node: karte.get(e.node)})));});
+        });
+        multi.clear();neu.forEach(n=>multi.add(n.id));this.state.selected = neu[0] ? neu[0].id : null;
+        return neu.length;
+      };
+      if(what === 'copy'){if(kopieren())this.notice(nodes.length + ' Knoten kopiert. Mit Strg+V oder ⎘ einfügen, auch in einem anderen Workflow.');return;}
+      if(what === 'paste'){
+        const clip = root.sedraWorkflowClip;
+        if(!clip || !clip.nodes.length){this.notice('Nichts zum Einfügen: erst Knoten kopieren (Strg+C).', true);return;}
+        clip.n = (clip.n || 0) + 1;let count = 0;
+        this.change(()=>{count = einfuegen(clip, 48 * clip.n);});this.notice(count + ' Knoten eingefügt. „Zurück“ macht es rückgängig.');return;
+      }
+      if(!nodes.length)return;
+      if(what === 'duplicate'){
+        const clip = {nodes: M().clone(nodes), connections: {}};
+        const namen = new Set(nodes.map(n=>n.name));Object.entries(doc.connections).filter(([q])=>namen.has(q)).forEach(([q, out])=>{clip.connections[q] = {};Object.entries(out).forEach(([kind, branches])=>{clip.connections[q][kind] = branches.map(b=>b.filter(e=>namen.has(e.node)));});});
+        let count = 0;this.change(()=>{count = einfuegen(clip, 48);});this.notice(count + ' Knoten dupliziert (Verbindungen untereinander bleiben).');return;
+      }
+      if(what === 'delete'){
+        this.change(()=>{nodes.forEach(n=>M().remove(doc, n.name));multi.clear();this.state.selected = null;});this.notice(nodes.length + ' Knoten entfernt. „Zurück“ stellt sie wieder her.');return;
+      }
+      if(['left', 'top', 'distribute'].includes(what)){
+        if(nodes.length < 2)return;
+        this.change(()=>{
+          if(what === 'left'){const x = Math.min(...nodes.map(n=>n.position[0]));nodes.forEach(n=>{n.position = [x, n.position[1]];});}
+          else if(what === 'top'){const y = Math.min(...nodes.map(n=>n.position[1]));nodes.forEach(n=>{n.position = [n.position[0], y];});}
+          else{
+            const s = nodes.slice().sort((p, q)=>p.position[0] - q.position[0]), a = s[0].position[0], z = s[s.length - 1].position[0];
+            s.forEach((n, i)=>{n.position = [Math.round((a + (z - a) * i / (s.length - 1)) / 16) * 16, n.position[1]];});
+          }
+        });
+        this.notice('Ausgerichtet. „Zurück“ macht es rückgängig.');
+      }
+    },
     nodeAction(what, id){
       const node = this.state.doc.nodes.find(n=>n.id === id);if(!node)return;
       if(what === 'open' && options.ndv && !P().get(node)){this.openNdv(id);return;}

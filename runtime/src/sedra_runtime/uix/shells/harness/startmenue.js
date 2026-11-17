@@ -34,7 +34,8 @@
       const ablage = ((await S.api('/api/uix/shelf')).shelf || {}).harness || [];
       st.zuletzt = ablage.filter(e=>e.kind === 'place').map(e=>e.place);
     }catch(_err){ st.zuletzt = []; }
-    bauen(S);
+    try{ bauen(S); st.ladeFehler = null; }catch(err){ st.ladeFehler = err && err.message ? err.message : String(err); }       // Härtung 17.11.: ein Fehler beim Bauen lässt kein stummes, leeres Menü zurück
+    if(st.offen) zeichnen(S);                                                // wer das Menü vor dem Ende des Ladens öffnete, sieht jetzt die Liste
   }
 
   function bauen(S){
@@ -64,6 +65,7 @@
   // ---- das Menü
   function mount(S){
     const st = stand(S);
+    if(st.el && st.el.panel.isConnected) return;                              // Härtung 17.11.: ein zweites mount hängt weder ein zweites Menü noch zweite Lauscher an
     const panel = d().el('div', 'hs-start-menue'); panel.hidden = true;
     panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', T('start_aria_label'));
     const suche = d().el('input', 'hs-start-suche'); suche.type = 'search'; suche.placeholder = T('start_suche_placeholder');
@@ -75,7 +77,15 @@
     st.el = {panel, suche, inhalt, fuss};
     suche.oninput = ()=>zeichnen(S);
     suche.onkeydown = e=>tasten(S, e);
-    document.addEventListener('click', e=>{ if(st.offen && !panel.contains(e.target) && !(e.target.closest && e.target.closest('.hs-start-knopf'))) schliessen(S); });
+    // Härtung 17.11.: ein Klick im Menü, der es neu zeichnet, entfernt den angeklickten Knoten schon vor diesem Lauscher – `panel.contains(e.target)` wäre dann falsch;
+    // der Weg des Ereignisses (composedPath) wurde beim Auslösen festgehalten und stimmt weiter.
+    document.addEventListener('click', e=>{
+      if(!st.offen) return;
+      const weg = typeof e.composedPath === 'function' ? e.composedPath() : [];
+      const innen = weg.includes(panel) || panel.contains(e.target);
+      const aufKnopf = weg.some(n=>n && n.classList && n.classList.contains('hs-start-knopf')) || !!(e.target.closest && e.target.closest('.hs-start-knopf'));
+      if(!innen && !aufKnopf) schliessen(S);
+    });
     document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && st.offen){ e.preventDefault(); schliessen(S); } });
     if(root.sedraWechsel && root.sedraWechsel.menueHaken) root.sedraWechsel.menueHaken(()=>umschalten(S));
     Object.keys(EREIGNISSE).forEach(n=>S.ctx.bus.on(n, ()=>{ if(st.offen) vormerken(S, EREIGNISSE[n]); }));
@@ -113,14 +123,20 @@
 
   function waehlen(S, app){
     schliessen(S);
-    if(app.oeffnen){ app.oeffnen(S); return; }
-    if(app.fest){ root.sedraHarness.einstellungen.oeffnen(S, app.fest === true ? undefined : app.fest); return; }
-    root.sedraHarness.app.oeffnen(S, app);
-    benutzt(S, app);
+    try{                                                                      // Härtung 17.11.: wirft das Öffnen, steht ein Hinweis da statt eines stillen Fehlers in der Konsole
+      if(app.oeffnen){ app.oeffnen(S); return; }
+      if(app.fest){ root.sedraHarness.einstellungen.oeffnen(S, app.fest === true ? undefined : app.fest); return; }
+      root.sedraHarness.app.oeffnen(S, app);
+      benutzt(S, app);
+    }catch(err){ S.hinweis(T('start_app_fehler').replace('{app}', String(app.label || app.id)).replace('{err}', String(err && err.message || err)), 'warn'); }
   }
 
   function zeichnen(S){
-    const st = stand(S); if(!st.el || !st.liste) return;
+    const st = stand(S); if(!st.el) return;
+    if(!st.liste){                                                            // Härtung 17.11.: vor dem Ende des Ladens (oder nach einem Fehler) sagt das Menü es
+      st.el.inhalt.replaceChildren(d().el('div', 'hs-app-satz hs-start-laedt', st.ladeFehler ? T('start_laden_fehler').replace('{err}', st.ladeFehler) : T('start_laedt')));
+      return;
+    }
     const q = st.el.suche.value.trim();
     const inhalt = st.el.inhalt;
     inhalt.replaceChildren();
@@ -137,7 +153,7 @@
     };
     // Kategorie als Kachel: Kopf (Symbol, Titel, Anzahl) und eine kleine Vorschau der ersten Apps; „+N weitere“ klappt die Kachel auf.
     // Alle Apps stehen im DOM (die versteckten nur mit hidden), die Pfeiltasten gehen über die sichtbaren.
-    const VORSCHAU = 4;
+    const VORSCHAU = 99;   // Captain 17.11.2026: jede App ist im Start-Menü sofort sichtbar (höchstens zwei Klicks: Start, App); „+N weitere“ erscheint erst bei mehr als 99 Apps in einer Gruppe
     const EINSTIEG_STD = ['tasks', 'decisions', 'project', 'uebersicht'];
     const kachel = (g, apps)=>{
       if(!apps.length) return null;
@@ -353,6 +369,7 @@
   function tasten(S, e){
     const st = stand(S);
     const n = (st.sichtbar || []).length;
+    if((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && st.el.suche.value !== '') return;      // Härtung 17.11.: im Suchtext bewegen links/rechts die Schreibmarke
     if(e.key === 'ArrowDown' || e.key === 'ArrowRight'){ e.preventDefault(); st.wahl = n ? (st.wahl + 1) % n : 0; zeichnen(S); }
     else if(e.key === 'ArrowUp' || e.key === 'ArrowLeft'){ e.preventDefault(); st.wahl = n ? (st.wahl - 1 + n) % n : 0; zeichnen(S); }
     else if(e.key === 'Enter'){ e.preventDefault(); const a = (st.sichtbar || [])[st.wahl]; if(a) waehlen(S, a); }

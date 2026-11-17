@@ -351,6 +351,20 @@
    }
   },
   {
+   "id": "coder",
+   "label": "Coder",
+   "hint": "Entwicklungsoberfläche mit Editor, Explorer und Agenten-Leiste (Entwurf, Beispieldaten)",
+   "words": [
+    "coder",
+    "ide"
+   ],
+   "object": {
+    "type": "coder",
+    "id": "app",
+    "title": "Coder"
+   }
+  },
+  {
    "id": "planung",
    "label": "Planungstisch",
    "hint": "mit einem Assistenten Ziele und Aufträge festlegen",

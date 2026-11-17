@@ -87,7 +87,7 @@ def connection_test(config, provider_id, environ=None, key_store=None, audit=Non
     return {"provider": provider_id, "ok": False, "steps": steps}
 
 
-def cloud_chat(config, provider_id, model, messages, environ=None, key_store=None, audit=None):
+def cloud_chat(config, provider_id, model, messages, environ=None, key_store=None, audit=None, max_tokens=None):
     """Eine Gesprächsantwort aus der Cloud, für das Gespräch im Cockpit. Geht durch den Inhaltsschutz wie jeder Cloudaufruf:
     Personenbezug wird pseudonymisiert und anonymisiert, die Antwort bleibt mit Platzhaltern. Nur eingeschaltet."""
     if not _enabled(config, provider_id):
@@ -107,7 +107,7 @@ def cloud_chat(config, provider_id, model, messages, environ=None, key_store=Non
                 return {"status": "blocked", "reasons": ["SG_PERSONAL_CLOUD"], "provider": provider_id, "model": model}
     try:
         result = guard.call(messages, model=model, route="cloud",
-                            complete=lambda msgs: adapter.chat(msgs, model=model, max_tokens=CHAT_MAX_TOKENS)["content"])
+                            complete=lambda msgs: adapter.chat(msgs, model=model, max_tokens=max_tokens or CHAT_MAX_TOKENS)["content"])
     except ContentGuardStop as exc:
         return {"status": "blocked", "reasons": list(exc.result.reasons), "provider": provider_id, "model": model}
     return {"status": "completed", "reply": result.text or "", "provider": provider_id, "model": model}

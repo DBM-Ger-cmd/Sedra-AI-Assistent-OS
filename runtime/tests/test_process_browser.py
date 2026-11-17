@@ -168,6 +168,7 @@ class ProcessBrowser(unittest.TestCase):
             page.wait_for_function("n=>document.querySelectorAll('.t-n8n-workflow .t-wf-node').length===n", arg=n0 + 2)
             # Testleiste wie bei n8n: Workflow testen legt nur einen Lauf zur Freigabe vor
             self.assertTrue(app.get_by_role('button', name='Workflow testen').is_visible())
+            self.assertTrue(app.get_by_role('button', name='Workflow mit KI testen').is_visible())       # daneben: Test mit NVIDIA Nemotron, der Klick ist die Freigabe
             self.assertEqual(app.get_by_role('button', name='Zeitplan: aus').count(), 0)
             app.get_by_role('button', name='Workflow testen').click()
             app.get_by_role('status').filter(has_text='Workflow zuerst speichern.').wait_for()

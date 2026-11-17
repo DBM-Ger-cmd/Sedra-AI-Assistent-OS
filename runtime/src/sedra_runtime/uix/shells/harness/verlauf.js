@@ -2,7 +2,6 @@
 // Werkzeugzeilen aufklappbar. Eine laufende Antwort kommt über ihren eigenen Strom (GET /api/harness/antworten/<id>/strom, G2 §5):
 // Text erscheint grau („ungeprüft“), bis der Inhaltsschutz geurteilt hat; dann normal oder durch den Grund ersetzt (K2, D-E2).
 // Der Strom wird mit fetch gelesen (EventSource kann keinen Kopf senden); bricht er ab, geht es ab der letzten Nummer weiter.
-
 (function(){
   const root = typeof window !== 'undefined' ? window : globalThis;
   const d = ()=>root.sedraDom;

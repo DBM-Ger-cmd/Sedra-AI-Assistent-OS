@@ -8,7 +8,7 @@
     "system",
     "pruefung"
   ],
-  "einstieg": ["tasks", "decisions", "project", "uebersicht"],
+  "einstieg": ["tasks", "decisions", "project", "uebersicht", "coder"],
   "zuordnung": {
     "tasks": "arbeit",
     "intents": "arbeit",
@@ -22,6 +22,7 @@
     "labor": "arbeit",
     "translator": "arbeit",
     "team": "arbeit",
+    "coder": "arbeit",
     "uebersicht": "arbeit",
     "factory-studio": "arbeit",
     "workflow-studio": "arbeit",

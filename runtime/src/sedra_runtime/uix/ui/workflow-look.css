@@ -1,6 +1,9 @@
 /* Zeichenfläche */
 .t-workflow .t-wf-canvas{position:relative;border-radius:10px;overflow:hidden;background:var(--wf-canvas)}
-.t-workflow .t-wf-svg{height:clamp(420px,62vh,780px);background:var(--wf-canvas)}
+.t-workflow .t-wf-svg{height:clamp(420px,calc(100vh - 340px),1200px);background:var(--wf-canvas)}
+.t-workflow .t-wf-stage:fullscreen{background:var(--bg);padding:0}
+.t-workflow .t-wf-stage:fullscreen .t-wf-svg{height:100vh}
+.t-workflow .t-wf-stage:fullscreen .t-wf-surface,.t-workflow .t-wf-stage:fullscreen .t-wf-canvas{height:100vh;border-radius:0}
 .t-workflow .t-wf-grid-dot{fill:var(--wf-dot)}
 .t-workflow .t-wf-edge{stroke:var(--wf-edge);stroke-width:2.2;opacity:.9}
 .t-workflow .t-wf-arrow{fill:var(--wf-edge)}
@@ -321,3 +324,13 @@
 .t-workflow .t-wf-imp-kategorien{margin:4px 0}
 .t-workflow .t-wf-imp-kategorien summary{cursor:pointer;color:var(--heading);font-size:13px;font-weight:600;padding:4px 0}
 .t-workflow .t-wf-imp-kategorien p{margin:4px 0 2px;font-size:12px;color:var(--text)}
+
+/* Mehrfachauswahl: Leiste oben in der Mitte, Auswahlrahmen beim Aufziehen (Umschalt + Ziehen) */
+.t-workflow .t-wf-multibar{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--panel);border:1px solid var(--accent);border-radius:10px;box-shadow:var(--wf-shadow);font-size:13px}
+.t-workflow .t-wf-multibar[hidden]{display:none}
+.t-workflow .t-wf-multibar span{padding:0 6px;font-weight:600}
+.t-workflow .t-wf-multibar button{padding:4px 10px}
+.t-workflow .t-wf-multibar button.danger{color:var(--bad, #e5484d)}
+.t-workflow .t-wf-band{fill:var(--accent);fill-opacity:.12;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:6 4}
+.t-workflow .t-wf-svg:focus{outline:none}
+.t-workflow .t-wf-canvas{user-select:none;-webkit-user-select:none}
