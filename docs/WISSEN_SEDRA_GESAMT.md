@@ -493,7 +493,7 @@ Der Chat führte die Arbeit von Abschnitt 20 weiter: die zwei Branches der Unter
 
 **Offen:**
 1. ~~Delegation Weg 1~~ erledigt (16.11. nachmittags, siehe „Nach dem Sichern“): `uix-3d-naechste-stufe` ist in `main` integriert. Offen bleibt die **Abnahme am PC** nach der Integration (Delegation, 3D-Bühne, Master-Modus zusammen mit der Delegation) und die Rebase-Reste der Branches `hermes-a021`, `hermes-a022`, `pi-a023` (rebased auf `integration-uix`, WIP `9efdc91`, `317f98b`, `bdc0097`, nicht gepusht).
-2. **Hardening:** O-2 (Wiederholungsdeckel mit geändertem Argument umgehbar, G4 für `deckung.py`), O-3 (`Kiste.lokal` wird in `api._kiste` nicht gesetzt, die Cloud-Sperre des Masters greift erst mit einem Cloud-Modell in der Harness; `api.py` ist nicht geschützt), O-4 bis O-7 (Skripte decken nur G4, Aus-Knopf-Fenster, Anweisungsfilter ist eine Heuristik, Positivliste kann Karten häufen).
+2. **Hardening:** O-2 (Wiederholungsdeckel mit geändertem Argument umgehbar, G4 für `deckung.py`), ~~O-3~~ erledigt 17.11. (`6a4279d`, siehe Abschnitt 25; ursprünglich: `Kiste.lokal` wird in `api._kiste` nicht gesetzt, die Cloud-Sperre des Masters greift erst mit einem Cloud-Modell in der Harness; `api.py` ist nicht geschützt), O-4 bis O-7 (Skripte decken nur G4, Aus-Knopf-Fenster, Anweisungsfilter ist eine Heuristik, Positivliste kann Karten häufen).
 3. **Tests:** `test_uix_shell_start.InTheBrowser.test_an_own_shell_from_the_template_gets_an_honest_acceptance` rot (Ursache nicht gesucht); `test_harness_lauf.test_toter_prozess_ohne_ende_ist_verloren_nie_ok` und `test_uix_harness_wege` flaky.
 4. **Abnahme am PC:** Master-Modus (Ein-Schalter und Aus-Knopf in der Oberfläche, echtes Modell; Ja für Modell und GPU-Lauf nötig), Gedächtnis (Seite, Ablage), Sitzungspost-Oberfläche (A-026, A-027), Vorschau-Prüfserver aus der Oberfläche, die vier Schalter von Abschnitt 18. Oberflächenteile des Masters (Schild, Taskleiste, Aus-Knopf, Gedächtnis-Seite) liegen beim UIX-Koordinator (Übergabe `docs/MASTER_MODUS_OBERFLAECHE_UEBERGABE.md`).
 5. **UIX-Koordinator:** Planung und Vergleichs-HTML stehen aus; der Cloud-Lauf braucht das Ja des Captains in seinem Chat.
@@ -626,6 +626,19 @@ Der Chat hat den Designpass des Workflow Studios (v1.6, HTML-Vorlage) nachgesch�
 - Factory-Studio-Sitzung: Der Branch `claude/factory-studio-workflow-studio-39b5e1` hat die Fabrik nicht; die Sitzung wartet auf eine Entscheidung, ob sie auf `main` neu aufsetzt.
 - Das Ergebnis der breiten UIX-Suite der Factory-Sitzung und die 9 Fehlschläge aus der Avatar-Sitzung, die auch auf `main` auftreten.
 - Der Aufräumstand der Worktrees (`base-vergleich` lässt sich unter Windows nicht löschen).
+
+## 25. Arbeit im Chat vom 17.11.2026 (Claude Code, Vorarbeiter: Hardening O-3, Register, Aufräumen)
+**Gebaut und gepusht:** O-3 aus der Hardening (Commit `6a4279d` auf `origin/main`, Auftrag `SEDRA-HARDENING-O3-01`). `harness/api.py` kennt `LOKALE_PROVIDER = {'llama-cpp-server'}`; `_kiste` übergibt `lokal=PROVIDER in LOKALE_PROVIDER` an `freigabe.Kiste` (vorher Standard `True`). Ein unbekannter oder Cloud-Anbieter gilt damit als nicht lokal (fail-closed): Master-Modus, Aufgaben-Freigabe (HS-27) und Sitzungs-Erlaubnis (FS-13) decken dann nicht, es kommt eine Karte. Test `tests/test_uix_harness_kiste_lokal.py` (4 Fälle, grün). G4 für `harness/api.py` erteilte der Captain im Chat.
+
+**Belege:** Nach dem Rebase auf `origin/main` `45b6a3f` liefen `run_tests.py harness`, `desk` und `pruefstellen` je mit Exit 0. Im ersten Lauf war `test_harness_team_lauf.test_zeitlimit_haelt_einen_helfer_an` einmal rot; einzeln auf Branch und `main` je 3-mal grün, zweiter Gruppenlauf grün (vermutlich zeitabhängig unter Last, nicht belegt). **Nicht geprüft:** Gegenprobe ohne die Änderung, Gruppe `integration`, der ganze Testbestand.
+
+**Register und Aufräumen (jeweils nach Ja):** Register um `SEDRA-HARDENING-O3-01` ergänzt (99 Aufträge, Baseline `origin_main` = `6a4279d`), Dashboard neu erzeugt und kopiert (`cmp` gleich). Worktree `A1-wt-o3` und Branch `o3-kiste-lokal` gelöscht (Commit steckt in `origin/main`).
+
+**Weiteres:** Der Captain bat darum, das Workflow Studio auf Monitor 1 zu prüfen. Auf beiden Monitoren (LG ULTRAWIDE, LG FHD) zeigte die Aufnahme nur leeren Hintergrund; das Fenster gehörte zu keiner freigegebenen Anwendung (nur Edge und Chrome zum Ansehen). **Nicht geprüft**; offen, in welchem Programm das Studio läuft, oder eigener Sichtprüfungs-Durchlauf.
+
+**Fallen:** `origin/main` läuft während der Arbeit weiter (Workflow Studio, Startmenü): vor dem Push `fetch`, Abstand prüfen, rebasen, Gruppen neu laufen lassen, nur den eigenen Commit mit `git push origin <branch>:main` schicken. Der Haupt-Checkout steht auf einem fremden Branch (`codex/studio-bedienung-20261117`) mit fremden uncommitteten Änderungen: Sicherungen im Wegwerf-Worktree auf `main`.
+
+**Offen:** Hardening O-2 (Wiederholungsdeckel, G4 für `deckung.py`), O-4 bis O-7; Vergleichs-HTML des UIX-Koordinators (Cloud-Lauf nur mit Ja im Koordinator-Chat); Abnahme am PC durch den Captain; Prüfung des Workflow Studios (siehe oben); Entwickler-ZIP-Wiederherstellung einmal üben.
 
 ## 9. Alle Chats (Sitzungen), nach Datum
 **Workflow Studio (Chat):**
