@@ -73,24 +73,35 @@
     });
     const kennzahlen = d().el('div', 'hs-ws-kennzahlen'); kpiWerte.forEach(x=>kennzahlen.append(x.k));
     const wichtigListe = d().el('div', 'hs-ws-liste');
-    const wichtig = d().el('div', 'hs-ws-karte'); wichtig.append(d().el('h4', 'hs-ws-karten-titel', 'Jetzt wichtig'), wichtigListe,
-      d().el('p', 'hs-ws-hinweis', 'Echte Zahlen aus den gespeicherten Workflows. Keine Simulation.'));
-    const was = d().el('div', 'hs-ws-was');
-    was.append(d().el('h4', 'hs-ws-sektion', 'Was liegt an?'));
-    was.append(d().el('p', 'hs-ws-hinweis', 'Erst Entscheidungen und Störungen, dann laufende Arbeit.'));
-    was.append(d().el('div', 'hs-ws-knoepfe'));
-    was.lastChild.append(aktion('Workflow-Katalog', ()=>zumModus('katalog')), aktion('Startassistent', ()=>zumModus('startassistent')), aktion('Live & Debugger', ()=>zumModus('live')), aktion('Freigaben', ()=>zumModus('freigaben')));
-    box.append(d().el('p', 'hs-ws-kicker', 'SEDRA / WORKFLOW STUDIO'), d().el('h3', 'hs-ws-leit-titel', 'Startseite / Leitstand'), chips, banner, was, kennzahlen, d().el('div', 'hs-ws-spalten', ''));
-    box.querySelector('.hs-ws-spalten').append(wichtig);
+    const wichtig = d().el('div', 'hs-ws-karte hs-ws-wichtig'); wichtig.append(d().el('h4', 'hs-ws-karten-titel', 'Jetzt wichtig'),
+      d().el('p', 'hs-ws-hinweis', 'Workflows mit offenen Angaben, die meisten zuerst.'), wichtigListe,
+      d().el('p', 'hs-ws-hinweis hs-ws-fuss', 'Echte Zahlen aus den gespeicherten Workflows. Keine Simulation.'));
+    const was = d().el('div', 'hs-ws-karte hs-ws-was');
+    was.append(d().el('h4', 'hs-ws-karten-titel', 'Dein nächster Schritt'), d().el('p', 'hs-ws-hinweis', 'Erst Entscheidungen und Störungen, dann laufende Arbeit.'));
+    const wege = d().el('div', 'hs-ws-wege');
+    [['Workflow-Katalog', 'Alle gespeicherten Workflows', 'katalog'], ['Startassistent', 'Offene Angaben ausfüllen, Lauf starten', 'startassistent'],
+     ['Live & Debugger', 'Läufe verfolgen, Notaus', 'live'], ['Freigaben', 'Entscheidungen des Captains', 'freigaben']].forEach(([t, h, id])=>{
+      const k = d().el('button', 'hs-ws-weg'); k.type = 'button'; k.onclick = ()=>zumModus(id);
+      k.append(d().el('b', '', t), d().el('span', '', h)); wege.append(k);
+    });
+    was.append(wege);
+    const kopf = d().el('div', 'hs-ws-leitkopf'); const titelbox = d().el('div', 'hs-ws-titelbox');
+    titelbox.append(d().el('p', 'hs-ws-kicker', 'SEDRA / WORKFLOW STUDIO'), d().el('h3', 'hs-ws-leit-titel', 'Startseite / Leitstand')); kopf.append(titelbox, chips);
+    const spalten = d().el('div', 'hs-ws-spalten'); spalten.append(wichtig, was);
+    box.append(kopf, banner, kennzahlen, spalten);
     workflowsZaehlen(api).then(liste=>{
       const laufbar = liste.filter(w=>w.laufbar).length, offen = liste.filter(w=>w.offen > 0).length;
       kpiWerte[0].w.textContent = String(liste.length); kpiWerte[1].w.textContent = String(laufbar); kpiWerte[2].w.textContent = String(offen);
       chips.replaceChildren(...['Workflows: ' + liste.length, 'Ausführbar: ' + laufbar, 'Offene Angaben: ' + offen].map(t=>d().el('span', 'hs-ws-chip', t)));
       bannerText.textContent = !liste.length ? 'Noch kein Workflow gespeichert.'
         : (offen ? offen + ' Workflow(s) mit offenen Angaben. ' : 'Alle gespeicherten Workflows sind vollständig beschrieben. ') + laufbar + ' ausführbar.';
-      wichtigListe.replaceChildren(...liste.filter(w=>w.offen > 0).map(w=>{
-        const z = d().el('div', 'hs-ws-liste-zeile'); z.append(d().el('span', '', w.title + ' · ' + w.offen + ' offen'), aktion('Öffnen', ()=>zumAssistent(w.id))); return z;
+      kpiWerte[2].k.classList.toggle('warn', offen > 0); kennzahlen.dataset.geladen = '1';
+      const mitOffen = liste.filter(w=>w.offen > 0).sort((x, y)=>y.offen - x.offen);
+      wichtigListe.replaceChildren(...mitOffen.slice(0, 8).map(w=>{
+        const z = d().el('div', 'hs-ws-liste-zeile'); const t = d().el('span', 'hs-ws-liste-titel', w.title); t.title = w.title;
+        z.append(t, d().el('span', 'hs-ws-pille', w.offen + ' offen'), aktion('Öffnen', ()=>zumAssistent(w.id))); return z;
       }));
+      if(mitOffen.length > 8) wichtigListe.append(d().el('p', 'hs-ws-hinweis', '+ ' + (mitOffen.length - 8) + ' weitere im Workflow-Katalog.'));
       if(!wichtigListe.childNodes.length) wichtigListe.append(d().el('p', 'hs-ws-hinweis', 'Nichts Dringendes.'));
     }).catch(err=>{ bannerText.textContent = 'Workflows nicht geladen: ' + (err.message || err); kpiWerte.forEach(x=>{ x.w.textContent = '–'; }); });
     api('/api/actions', {method: 'POST', body: {type: 'workflow', id: null, verb: 'fabrik_status', args: {}}})

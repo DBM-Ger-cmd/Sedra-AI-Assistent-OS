@@ -114,3 +114,29 @@
 @container (max-width:760px){
   .hs-ws-buehne .t-workflow .t-wf-top{flex-wrap:wrap;overflow:visible}
 }
+
+/* ── Leitstand: volle Breite, Kennzahlen oben, darunter „Jetzt wichtig“ und die nächsten Schritte, unten Freigaben und Live ─────────── */
+.hs-ws-pane.raster>.hs-ws-leitstand{grid-column:1/-1}
+.hs-ws-pane.raster{grid-template-columns:repeat(auto-fit,minmax(min(100%,26rem),1fr));gap:16px}
+.hs-ws-pane.raster .hs-ws-zelle{max-height:none;min-height:14rem;max-height:30rem}
+.hs-ws-leitstand{gap:16px}
+.hs-ws-leitkopf{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 20px}
+.hs-ws-titelbox{display:flex;flex-direction:column;gap:2px}
+.hs-ws-leit-titel{font-size:1.6em;line-height:1.2}
+.hs-ws-kennzahlen{margin:0;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))}
+.hs-ws-kennzahl{padding:14px 16px;gap:6px;border-top:3px solid var(--line)}
+.hs-ws-kennzahl-wert{font-size:2em;line-height:1.1;font-variant-numeric:tabular-nums}
+.hs-ws-kennzahl.warn{border-top-color:var(--warn, #d9a400)}
+.hs-ws-spalten{grid-template-columns:minmax(0,3fr) minmax(0,2fr);align-items:stretch}
+.hs-ws-spalten>.hs-ws-karte{padding:14px 16px;gap:10px}
+.hs-ws-liste{gap:0}
+.hs-ws-liste-zeile{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.hs-ws-liste-zeile:last-child{border-bottom:0}
+.hs-ws-liste-titel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs-ws-pille{font-size:0.78em;padding:2px 9px;border:1px solid var(--warn, #d9a400);border-radius:999px;color:var(--text);white-space:nowrap}
+.hs-ws-fuss{margin-top:auto;font-size:0.8em}
+.hs-ws-wege{display:grid;grid-template-columns:1fr;gap:8px}
+.hs-ws-weg{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);background:transparent;color:var(--text);cursor:pointer;font:inherit}
+.hs-ws-weg:hover{background:var(--hs-hover, transparent)}
+.hs-ws-weg span{font-size:0.85em;color:var(--muted, var(--text))}
+@media (max-width:1100px){.hs-ws-spalten{grid-template-columns:1fr}}
