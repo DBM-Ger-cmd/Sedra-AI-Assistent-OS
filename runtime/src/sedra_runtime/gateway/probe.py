@@ -62,7 +62,7 @@ def probe(guard, text, trust='untrusted', route='local'):
     hits = scan_content(clean)
     seg = SegmentScan(0, 'user', trust, '', len(clean), hits)
     verdict = evaluate([seg], route, 'probe', guard.cloud_enabled)
-    outcome, sharp, watched = effective(verdict, lambda g: guard.enforced(g, route))
+    outcome, sharp, watched = effective(verdict, lambda g: guard.enforced(g, route), getattr(guard, 'datenschutz_eu', True))
     spans = []
     for h in hits:
         level, code = judge(h.rule_id, trust, route)

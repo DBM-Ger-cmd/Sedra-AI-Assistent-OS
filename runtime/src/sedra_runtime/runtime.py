@@ -226,7 +226,7 @@ class SedraRuntime:
         self.model_router.hardware_manager=self.hardware_manager
         # Build 16 (SPEC_EIN_SICHERER_WEG S1/S2): jeder Modellaufruf geht durch den Inhaltsschutz; der Modus kommt vom Desk (S5).
         from .core.content_guard import ContentGuard
-        self.content_guard=ContentGuard(audit=self.audit,mode='sandbox')      # G-04 (Ticket B6-G-01, 15.10.2026): Standard ist scharf
+        self.content_guard=ContentGuard(audit=self.audit,mode='sandbox',state_path=data/'datenschutz_eu.json')      # G-04 (Ticket B6-G-01, 15.10.2026): Standard ist scharf
         self.model_router.content_guard=self.content_guard
         if os.environ.get("SEDRA_RECORD_REPLIES","").strip().lower() in {"1","true","yes"}:   # off by default; local files only (models/recording.py)
             from .models.recording import Recorder

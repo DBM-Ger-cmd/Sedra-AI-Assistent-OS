@@ -1302,6 +1302,29 @@ class UIXHub:
         self.runtime.audit.append('UIX_VORGABE_PROPOSED', component='desk', payload={'id': mid, 'rounds': out['rounds'], 'chars': len(str(p.get('text') or ''))})
         return out
 
+    def guard_datenschutz(self, payload):
+        """POST /api/guard/datenschutz {an} – Modus „Datenschutz EU“ an/aus. Ohne `an` nur der Zustand. Aus = Personenbezug und besondere
+        Daten gehen für die Cloud nicht mehr in die Sperre (Logbuch zählt weiter); Schlüssel und Fremdanweisungen bleiben gesperrt."""
+        guard = self.content_guard
+        if guard is None:
+            raise ValueError('no_guard')
+        p = payload or {}
+        if 'an' in p:
+            if not isinstance(p['an'], bool):
+                raise ValueError('an_bool_required')
+            guard.set_datenschutz_eu(p['an'], wer='captain')
+        return {'datenschutz_eu': guard.datenschutz_eu,
+                'satz': ('Datenschutz EU ist an: Personenbezug und besondere Daten gehen nicht in die Cloud.' if guard.datenschutz_eu else
+                         'Datenschutz EU ist aus: Personenbezug wird für die Cloud nur gezählt, nicht gesperrt. Schlüssel und Fremdanweisungen bleiben gesperrt.')}
+
+    def vorpruefung(self, payload):
+        """POST /api/guard/vorpruefung {text, route, model} – beratend, blockt nie, liefert nie den Text zurück."""
+        from .core.vorpruefung import vorpruefen
+        guard = self.content_guard
+        p = payload or {}
+        return vorpruefen(p.get('text'), str(p.get('route') or 'local'), str(p.get('model') or ''),
+                          datenschutz_eu=getattr(guard, 'datenschutz_eu', True))
+
     def guard_probe(self, payload):
         """POST /api/guard/probe {text, trust, route} – was der Inhaltsschutz täte. Kein Modell, kein Speicher, keine Zählung."""
         from .gateway.probe import probe
@@ -4624,6 +4647,8 @@ def make_server(hub: UIXHub, port=0):
                     '/api/uix/shelf': hub.shelf_save,               # eigene Ablage: Audit, kein Gate (Build 19)
                     '/api/uix/scaffold': hub.module_scaffold,
                     '/api/uix/vorgabe': hub.vorgabe_propose,        # SEDRA schlägt eine Vorgabe vor – legt nichts an
+                    '/api/guard/datenschutz': hub.guard_datenschutz,   # Modus Datenschutz EU an/aus: Audit, im Logbuch
+                    '/api/guard/vorpruefung': hub.vorpruefung,         # beratend, blockt nie
                     '/api/guard/probe': hub.guard_probe,            # read-only in der Sache: prüft nur, ruft kein Modell, speichert nichts
                     '/api/gateway/vorgang': lambda p: hub.gateway_get(str((p or {}).get('id') or '')),   # read-only: ein Vorgang mit Entwurf
                     '/api/gateway/neu': hub.gateway_new,

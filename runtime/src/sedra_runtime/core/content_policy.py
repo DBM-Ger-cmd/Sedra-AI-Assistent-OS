@@ -169,11 +169,18 @@ class Verdict:
     levels: tuple = ()           # (Grundcode, Stufe) für jede wirkende Regel
 
 
-def effective(verdict, is_enforced):
+# Modus „Datenschutz EU“ (Captain 17.11.2026): aus = Personenbezug und besondere Daten werden für die Cloud nur beobachtet und im
+# Logbuch gezählt, nicht gesperrt. Schlüssel, Passwörter, versteckte Zeichen und Fremdanweisungen bleiben davon unberührt:
+# das ist Sicherheit, nicht Datenschutz.
+PRIVACY_CODES = frozenset({'SG_PERSONAL_CLOUD', 'SG_SENSITIVE_CLOUD'})
+
+
+def effective(verdict, is_enforced, privacy_on=True):
     """Teilt die wirkenden Gründe in scharf und nur beobachtet. Ergebnis: (Ergebnis, scharfe Gründe, beobachtete)."""
     sharp, watched = [], []
     for code, level in verdict.levels:
-        (sharp if is_enforced(group_of(code)) else watched).append((code, level))
+        scharf = is_enforced(group_of(code)) and (privacy_on or code not in PRIVACY_CODES)
+        (sharp if scharf else watched).append((code, level))
     top = max((lvl for _, lvl in sharp), key=_ORDER.get, default=NOTE)
     return ('ALLOW' if top == NOTE else top, tuple(c for c, _ in sharp), tuple(c for c, _ in watched))
 

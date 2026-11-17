@@ -254,6 +254,24 @@ def _tabelle_zeile_loeschen(hub, oid, args):
     return dict(out, status='erledigt')
 
 
+def _vorpruefung(hub, oid, args):
+    """Beratend und lesend: liest die abgelegte PDF, fragt den Vorprüfer, was der Inhaltsschutz mit dem Text täte, und gibt nur
+    Fundarten, Anzahlen und eine Empfehlung zurück – nie den Text. Blockt nie; der Start bleibt Sache des Captains."""
+    from ..core.vorpruefung import vorpruefen
+    provider = str(args.get('provider') or 'llama-cpp-server')
+    route = 'cloud' if provider == 'nvidia' else 'local'
+    try:
+        text = str(lokal.pdf_lesen(Eingaben(hub.project_root).lesen(str(args.get('datei') or ''))).get('text') or '')
+    except Exception as exc:
+        return {'stufe': 'hinweis', 'beratend': True, 'kurz': 'Vorprüfung nicht möglich: ' + str(exc)[:80], 'funde': [], 'gruende': [],
+                'empfehlung': 'Du kannst trotzdem starten; der Inhaltsschutz prüft beim Senden erneut.', 'blockt_spaeter': False, 'route': route}
+    guard = getattr(hub, 'content_guard', None)
+    erg = vorpruefen(text, route, str(args.get('model') or ''), datenschutz_eu=getattr(guard, 'datenschutz_eu', True))
+    hub.runtime.audit.append('WORKFLOW_VORPRUEFUNG', component='workflows',
+                             payload={'stufe': erg['stufe'], 'route': route, 'funde': sum(f['anzahl'] for f in erg['funde']), 'zeichen': len(text)})
+    return erg
+
+
 def _eingabe_hochladen(hub, oid, args):
     import base64
     import binascii
@@ -294,7 +312,7 @@ def register(registry, hub):
                     Verb('revision_lesen', 'Frühere Revision lesen', lambda h, o, a: _workflow(_store(h).read(a.get('id'), a.get('revision')), h)),
                     Verb('tabellen', 'Lokale Tabellen auflisten', _tabellen), Verb('tabelle_lesen', 'Tabelle lesen', _tabelle_lesen),
                     Verb('tabelle_importieren', 'Tabelle aus CSV oder JSON laden', _tabelle_importieren),
-                    Verb('tabelle_zeile_speichern', 'Tabellenzeile ändern oder anlegen', _tabelle_zeile_speichern), Verb('tabelle_zeile_loeschen', 'Tabellenzeile löschen', _tabelle_zeile_loeschen), Verb('eingabe_hochladen', 'Datei für einen Lauf hochladen', _eingabe_hochladen),
+                    Verb('tabelle_zeile_speichern', 'Tabellenzeile ändern oder anlegen', _tabelle_zeile_speichern), Verb('tabelle_zeile_loeschen', 'Tabellenzeile löschen', _tabelle_zeile_loeschen), Verb('eingabe_hochladen', 'Datei für einen Lauf hochladen', _eingabe_hochladen), Verb('vorpruefung', 'Eingabe vor dem Start beraten prüfen (blockt nie)', _vorpruefung),
                     Verb('pruefen', 'Kompatibilität prüfen', _check),
                     Verb('selbstabbild_pruefen', 'Selbstabbild gegen die Quellen prüfen', _selbstabbild_pruefen),
                     Verb('selbstabbild_anlegen', 'Abläufe von SEDRA aus den Quellen anlegen', _selbstabbild_anlegen),

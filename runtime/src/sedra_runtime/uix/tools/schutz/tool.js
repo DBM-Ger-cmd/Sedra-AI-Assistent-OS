@@ -96,6 +96,20 @@
         function (err) { self.body.replaceChildren(el('p', { cls: 't-schutz-error', text: 'Das KI GateWay antwortet nicht: ' + err.message })); });
     },
 
+    /* Modus „Datenschutz EU“: an = Personenbezug und besondere Daten gehen nicht in die Cloud; aus = nur gezählt, nicht gesperrt.
+       Schlüssel und Fremdanweisungen bleiben in beiden Fällen gesperrt. Umschalten fragt nach und steht im Logbuch. */
+    euSwitch: function (st) {
+      var self = this, an = st.datenschutz_eu !== false;
+      return el('button', { type: 'button', cls: 't-schutz-eu' + (an ? ' on' : ' off'), role: 'switch', 'aria-checked': String(an),
+        title: an ? 'Personenbezug geht nicht in die Cloud. Zum Ausschalten klicken.' : 'Personenbezug wird nur gezählt, nicht gesperrt. Zum Einschalten klicken.',
+        text: 'Datenschutz EU: ' + (an ? 'an' : 'aus'),
+        onclick: function () {
+          if (an && !window.confirm('Datenschutz EU ausschalten? – Personenbezogene und besondere Daten werden dann für die Cloud nicht mehr gesperrt, nur noch gezählt. Schlüssel und Fremdanweisungen bleiben gesperrt. Die Änderung steht im Logbuch.')) return;
+          self.ctx.api('/api/guard/datenschutz', { method: 'POST', body: { an: !an } }).then(function () { return self.refresh(); },
+            function (err) { window.alert('Umschalten nicht möglich: ' + err.message); });
+        } });
+    },
+
     render: function () {
       var st = this.state, m = MODE[st.mode] || MODE.beobachtet, self = this;
       this.head.replaceChildren(
@@ -103,7 +117,8 @@
           el('div', null, el('h2', { text: 'KI GateWay' }),
             el('p', { text: 'Jede Anfrage an die KI und jede Antwort geht hier durch. Der Assistent denkt, das GateWay prüft.' }))),
         el('div', { cls: 't-schutz-state' }, pill(m[0] + ' · ' + st.sharp + ' von ' + st.of + ' Regeln scharf', m[1]),
-          el('span', { cls: 't-schutz-hint', text: m[2] })));
+          el('span', { cls: 't-schutz-hint', text: m[2] }),
+          this.euSwitch(st)));
       this.tabs.replaceChildren.apply(this.tabs, TABS.map(function (t) {
         var n = t[0] === 'ueberblick' ? (st.pending || []).length : 0;
         return el('button', { type: 'button', role: 'tab', cls: 't-schutz-tab' + (self.tab === t[0] ? ' on' : ''), 'aria-selected': String(self.tab === t[0]),

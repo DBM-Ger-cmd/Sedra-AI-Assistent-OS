@@ -66,11 +66,13 @@ class ContentGuardStop(RuntimeError):
 
 
 class ContentGuard:
-    def __init__(self, audit=None, mode='sandbox', cloud_enabled=False, clock=time.time):     # G-04: Standard scharf
+    def __init__(self, audit=None, mode='sandbox', cloud_enabled=False, clock=time.time, state_path=None):     # G-04: Standard scharf
         self.audit = audit
         self.mode = mode if mode in MODE_SHARP else 'sandbox'               # G-04: Unbekanntes ist scharf, nie beobachtet
         self.cloud_enabled = bool(cloud_enabled)
         self.clock = clock
+        self.state_path = state_path
+        self.datenschutz_eu = self._load_datenschutz()      # Standard: an (streng); nur ein gespeichertes 'aus' lockert
         self._lock = threading.RLock()
         self.pending = {}                 # id -> Entscheidung (ohne Text)
         self.once = {}                    # binding -> Zeitpunkt der Einmal-Erlaubnis
@@ -82,6 +84,30 @@ class ContentGuard:
     # ---------------------------------------------------------------- Schärfe aus dem Modus
     def set_mode(self, mode):
         self.mode = mode if mode in MODE_SHARP else 'sandbox'               # G-04: Unbekanntes ist scharf, nie beobachtet
+
+    # ---------------------------------------------------------------- Modus Datenschutz EU
+    def _load_datenschutz(self):
+        try:
+            import json
+            from pathlib import Path
+            return bool(json.loads(Path(self.state_path).read_text(encoding='utf-8')).get('an', True)) if self.state_path else True
+        except Exception:
+            return True                                                      # unlesbar oder fehlt = an
+
+    def set_datenschutz_eu(self, an, wer='captain'):
+        """An/aus, gespeichert und im Logbuch. Gibt den neuen Zustand zurück. Ohne Logbuch-Eintrag wird nicht gelockert."""
+        an = bool(an)
+        if self.audit is None:
+            if not an:
+                raise RuntimeError('SG_AUDIT_FAILED')
+        else:
+            self.audit.append('SG_DATENSCHUTZ_EU_SET', component='content-guard', payload={'an': an, 'wer': str(wer)[:40]})
+        self.datenschutz_eu = an
+        if self.state_path:
+            import json
+            from pathlib import Path
+            Path(self.state_path).write_text(json.dumps({'an': an}), encoding='utf-8')
+        return an
 
     def enforced(self, group, route='local'):
         return route == 'cloud' or group not in GROUPS or MODE_SHARP.get(self.mode, False)
@@ -104,7 +130,7 @@ class ContentGuard:
         except ScanFailure as exc:
             raise ContentGuardStop(self._stop('BLOCKED', base, (str(exc),), event='SG_BLOCKED', route=route))
         verdict = evaluate(scans, route, model, self.cloud_enabled)
-        outcome, sharp, watched = effective(verdict, lambda g: self.enforced(g, route))
+        outcome, sharp, watched = effective(verdict, lambda g: self.enforced(g, route), self.datenschutz_eu)
         segs = [{'i': s.index, 'role': s.role, 'trust': s.trust, 'sha256': s.sha256, 'chars': s.chars, 'rules': list(s.rule_ids)} for s in scans]
         info = dict(base, binding=verdict.binding, outcome=outcome, reasons=list(sharp), observed=list(watched),
                     rules=list(verdict.rule_ids), notes=list(verdict.notes), segments=segs)
@@ -172,7 +198,7 @@ class ContentGuard:
                         'task': d.get('mission_id', ''), 'text': f"Modell {d['model']} · Weg {d['route']} · {len(d['segments'])} Teil(e)",
                         'describe': list(d['describe'])} for d in self.pending.values()]
             return {'policy': POLICY_VERSION, 'mode': 'schuetzt' if sharp else 'beobachtet', 'project_mode': self.mode,
-                    'sharp': len(GROUPS) if sharp else 0, 'of': len(GROUPS), 'cloud_enabled': self.cloud_enabled,
+                    'sharp': len(GROUPS) if sharp else 0, 'of': len(GROUPS), 'cloud_enabled': self.cloud_enabled, 'datenschutz_eu': self.datenschutz_eu,
                     'groups': {g: {'name': n, 'hint': h, 'sharp': self.enforced(g)} for g, (n, h) in GROUPS.items()},
                     'always': {g: {'name': n, 'hint': h} for g, (n, h) in ALWAYS.items()},
                     'count': dict(self.stats), 'rules': rules, 'events': events, 'pending': pending,
