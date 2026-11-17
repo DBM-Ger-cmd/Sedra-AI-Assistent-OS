@@ -96,7 +96,7 @@
         }, [
           S.sym(p === 'willkommen' ? 'marke' : 'datei', 14),
           el('span', { class: 'zeile-name', text: name }),
-          S.ungespeichert(p) ? el('span', { class: 'zeile-neben', text: T('ex_ungespeichert') }) : null,
+          S.ungespeichert(p) ? el('span', { class: 'zeile-neben', text: T(S.antragOffen && S.antragOffen(p) ? 'sp_neben' : 'ex_ungespeichert') }) : null,
           S.gruppen.length > 1 ? el('span', { class: 'zeile-neben', text: T('ex_gruppe', gi + 1) }) : null
         ]));
       });

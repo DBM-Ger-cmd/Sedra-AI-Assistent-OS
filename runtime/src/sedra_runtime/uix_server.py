@@ -22,6 +22,7 @@ import yaml
 from . import factory_lesen
 from . import coder_lesen
 from . import coder_agent
+from . import coder_speichern
 from . import uix_diag
 from .models import gpu_preflight
 from .jobs.job_supervisor import FINAL_STATES, JobError
@@ -1121,6 +1122,74 @@ class UIXHub:
         if not proj: raise ValueError('unknown_project')
         ws = self.runtime.filesystem_tool._resolve(proj['workspace_path'], must_exist=True)
         return coder_lesen.aenderungen(ws)
+
+    def coder_speichern_antrag(self, payload):
+        """E4: Speichern nur als Antrag. Legt einen Auftrag mit einer Freigabe an (genau diese Änderung an genau dieser Datei); geschrieben wird nichts."""
+        from .core.request_binding import file_request
+        projekt, pfad, inhalt = coder_speichern.pruefe(payload)
+        rel, parts = self._project_path({'project_id': projekt, 'path': pfad})
+        if not parts: raise ValueError('invalid_path')
+        p = self.runtime.filesystem_tool._resolve(rel)
+        alt = ''
+        if p.exists():
+            if not p.is_file(): raise ValueError('ziel_ist_ordner')
+            if p.stat().st_size > self.FILE_PREVIEW_BYTES: raise ValueError('datei_zu_gross')
+            try: alt = p.read_bytes().decode('utf-8')          # Bytes, damit CRLF erkennbar bleibt
+            except (UnicodeDecodeError, OSError): raise ValueError('datei_nicht_lesbar')
+        inhalt = coder_speichern.zeilenenden(alt, inhalt)
+        if p.exists() and alt == inhalt: raise ValueError('keine_aenderung')
+        fsargs = {'path': rel, 'content': inhalt}
+        if p.exists(): fsargs['expected_sha256'] = hashlib.sha256(p.read_bytes()).hexdigest()
+        aktion = 'overwrite_existing' if p.exists() else 'create_new_artifact'
+        hinzu, weg = coder_speichern.zaehle(alt, inhalt)
+        name = '/'.join(parts)
+        binding = file_request('write_text', fsargs, p)
+        risiken = [f'{"ändert" if p.exists() else "legt neu an"}: {name} (+{hinzu} / −{weg} Zeilen)', 'Der Coder hat die Datei im Editor geändert; geschrieben wird erst nach deiner Freigabe']
+        res = self._gate_request(f'Coder: {name} speichern', aktion, str(p), binding, risiken, 'coder_speichern_binding')
+        with self.runtime.missions.execution_lock(res['mission_id']):
+            m = self.runtime.missions.load(res['mission_id'])
+            m['context'][coder_speichern.KONTEXT] = {'projekt': projekt, 'pfad': name, 'fsargs': fsargs, 'aktion': aktion, 'ziel': str(p), 'binding': binding, 'hinzu': hinzu, 'weg': weg}
+            self.runtime.missions.save(m)
+        self.runtime.audit.append('CODER_SPEICHERN_ANTRAG', component='uix', mission_id=res['mission_id'], payload={'projekt': projekt, 'pfad': name, 'aktion': aktion, 'hinzu': hinzu, 'weg': weg})
+        return {'status': 'wartet', 'mission_id': res['mission_id'], 'gate_id': res['gate']['gate_id'], 'pfad': name, 'neu': aktion == 'create_new_artifact', 'hinzu': hinzu, 'weg': weg}
+
+    def coder_speichern_stand(self, mission_id):
+        """Stand eines Antrags (wartet, abgelehnt, freigegeben, angewendet). Nur lesen, kein Dateitext."""
+        mid = coder_speichern.auftrag_gueltig(mission_id)
+        try: m = self.runtime.missions.load(mid)
+        except Exception: raise ValueError('unknown_mission')
+        req = (m.get('context') or {}).get(coder_speichern.KONTEXT)
+        if not req: raise ValueError('not_a_matching_request')
+        return {'status': coder_speichern.zustand(m), 'mission_id': mid, 'pfad': req['pfad']}
+
+    def coder_speichern_anwenden(self, payload):
+        """E4: schreibt die freigegebene Änderung über das Dateiwerkzeug. Ohne Zustimmung des Captains, bei geänderter Datei oder zweiten Mal geschieht nichts."""
+        from .tools.base import ToolError
+        mid = coder_speichern.auftrag_gueltig((payload or {}).get('mission_id'))
+        rt = self.runtime
+        with rt.missions.execution_lock(mid):
+            m = rt.missions.load(mid)
+            req = (m.get('context') or {}).get(coder_speichern.KONTEXT)
+            if not req: raise ValueError('not_a_matching_request')
+            if coder_speichern.zustand(m) == 'angewendet': raise ValueError('already_applied')
+            token = (m.get('execution') or {}).get('approval_token')
+            if not token: raise ValueError('captain_approval_required')
+            if coder_lesen.pfad_gesperrt(req['pfad']): raise ValueError('access_blocked')
+            check = rt.guard.check_token(token, mission_id=mid, action=req['aktion'], target=req['ziel'], request_binding=req['binding'])
+            if not check['authorized']: raise ValueError('captain_approval_invalid')
+            try:
+                out = rt.filesystem_tool.execute(mid, 'write_text', req['fsargs'], token)
+            except ToolError as exc:
+                raise ValueError('file_changed_repeat_request' if 'precondition' in str(exc) else 'write_failed')
+            if out.get('status') != 'completed': raise ValueError('file_changed_repeat_request')
+            if token.get('status') == 'active':          # die Regel hätte ohne Freigabe erlaubt: die Freigabe trotzdem verbrauchen
+                rt.guard.authorize(token, mission_id=mid, action=req['aktion'], target=req['ziel'], request_binding=req['binding'])
+            m['execution'].pop('approval_token', None)
+            m['result'] = {'kind': coder_speichern.KONTEXT, 'pfad': req['pfad'], 'hinzu': req['hinzu'], 'weg': req['weg']}
+            m['lifecycle']['status'] = 'closed'
+            rt.missions.save(m)
+            rt.audit.append('CODER_SPEICHERN', component='uix', mission_id=mid, payload={'projekt': req['projekt'], 'pfad': req['pfad'], 'hinzu': req['hinzu'], 'weg': req['weg']})
+        return {'status': 'angewendet', 'pfad': req['pfad']}
 
     def coder_modelle(self, payload=None):
         """Welche Wege der Coder-Agent hat (lokales Modell geladen, Cloud-Anbieter bereit). Nur lesen, keine Schlüssel."""
@@ -4422,6 +4491,7 @@ def make_server(hub: UIXHub, port=0):
             try:
                 if path == '/api/uix/coder/projekte': out = hub.coder_projekte()
                 elif path == '/api/uix/coder/modelle': out = hub.coder_modelle()
+                elif path.startswith(coder_lesen.PRAEFIX_SPEICHERN + '/'): out = hub.coder_speichern_stand(coder_lesen.zerlege(path, coder_lesen.PRAEFIX_SPEICHERN)[0])
                 elif path.startswith(coder_lesen.PRAEFIX_AENDERUNGEN + '/'): out = hub.coder_aenderungen(coder_lesen.zerlege(path, coder_lesen.PRAEFIX_AENDERUNGEN)[0])
                 elif path.startswith(coder_lesen.PRAEFIX_DATEIEN + '/'): out = hub.coder_dateien(*coder_lesen.zerlege(path, coder_lesen.PRAEFIX_DATEIEN))
                 elif path.startswith(coder_lesen.PRAEFIX_DATEI + '/'): out = hub.coder_datei(*coder_lesen.zerlege(path, coder_lesen.PRAEFIX_DATEI))
@@ -4827,7 +4897,9 @@ def make_server(hub: UIXHub, port=0):
                     '/api/entwurf/read': hub.entwurf_read,
                     '/api/entwurf/list': hub.entwurf_list,
                     '/api/chat/kombi': lambda p: hub._verlauf('kombi', p, hub.chat_kombi(p)),              # Lokal + KI: erst das lokale Modell, dann die Cloud prüft (ein Fenster)
-                    '/api/uix/coder/agent': hub.coder_agent,                       # App Coder: Frage an ein Modell mit Dateikontext, nur Text zurück (coder_agent.py)
+                    '/api/uix/coder/speichern': hub.coder_speichern_antrag,         # App Coder: Speichern nur als Antrag an die Freigaben (coder_speichern.py)
+                    '/api/uix/coder/speichern/anwenden': hub.coder_speichern_anwenden,
+                    '/api/uix/coder/agent': hub.coder_agent,                      # App Coder: Frage an ein Modell mit Dateikontext, nur Text zurück (coder_agent.py)
                     '/api/chat/cloud': lambda p: hub._verlauf('cloud', p, hub.chat_cloud(p)),              # Gespräch mit einem Cloud-Modell (Wahl neben Senden); Inhaltsschutz
                     '/api/cloud/key': hub.cloud_key_seite,
                     '/api/cloud/module-model': hub.cloud_module_model_seite,   # welches Modell ein Modul nutzt (KI Labor)                        # Schlüssel verschlüsselt ablegen oder löschen; nie zurückgeben

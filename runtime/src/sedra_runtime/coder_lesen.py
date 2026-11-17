@@ -80,6 +80,7 @@ def datei(pfad, antwort) -> dict:
 
 # ---- R4 (E2): Git-Status, nur lesen. Eine feste Form, kein Schreibweg, kein Aufruf mit Eingaben von außen.
 PRAEFIX_AENDERUNGEN = '/api/uix/coder/aenderungen'
+PRAEFIX_SPEICHERN = '/api/uix/coder/speichern'          # E4: GET …/speichern/<auftrag> = Stand eines Antrags (coder_speichern.py)
 GIT_ZEITLIMIT = 2.0
 GIT_ZEILEN_MAX = 300
 # feste Argumente: -z (Pfade unverändert), --no-renames, keine Sperrdatei im Index; fsmonitor und Hooks bleiben aus (eine fremde .git/config führt nichts aus)

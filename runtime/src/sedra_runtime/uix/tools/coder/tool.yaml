@@ -1,5 +1,5 @@
 # App „Coder“: die Sedra IDE (Entwurf, Runde 1 bis 4 und 6 der SPEC_SEDRA_IDE_2026-11-16, ohne Anbindung).
-# Läuft im abgeschotteten Rahmen (trust CAPTAIN → /uix/frame/coder, sandbox allow-scripts). Nur Lese-Routen (coder_lesen.py), kein Schreibweg; ohne Projekt bleiben Beispieldaten.
+# Läuft im abgeschotteten Rahmen (trust CAPTAIN → /uix/frame/coder, sandbox allow-scripts). Lese-Routen (coder_lesen.py); Speichern nur als Antrag an die Freigaben (coder_speichern.py); ohne Projekt bleiben Beispieldaten.
 tool:
   id: coder
   name: "Coder"
@@ -10,7 +10,7 @@ tool:
   order: 36
   slot: inhalt
   entry:
-    js: [dom.js, zustand.js, texte_de.js, texte_en.js, daten.js, daten_agenten.js, echt.js, syntax.js, willkommen.js, editor.js, seitenleiste.js, explorer.js, ansichten.js, agenten.js, agent_echt.js, rechts.js, panel.js, befehle.js, palette.js, kopf.js, start.js, tool.js]
+    js: [dom.js, zustand.js, texte_de.js, texte_en.js, daten.js, daten_agenten.js, echt.js, syntax.js, willkommen.js, editor.js, seitenleiste.js, explorer.js, ansichten.js, agenten.js, agent_echt.js, speichern_echt.js, rechts.js, panel.js, befehle.js, palette.js, kopf.js, start.js, tool.js]
     css: [tokens.css, layout.css, editor.css, teile.css]
   api:
     - GET /api/uix/coder/projekte         # R1: Projekte (Kennung, Name)
@@ -19,6 +19,9 @@ tool:
     - GET /api/uix/coder/aenderungen/*    # R4 (E2): Zweig und geänderte Dateien, nur lesen (git status, feste Form)
     - GET /api/uix/coder/modelle          # Agent: welche Wege bereit sind (lokales Modell, Cloud-Anbieter), keine Schlüssel
     - POST /api/uix/coder/agent           # Agent: Frage mit Dateikontext, nur Text zurück (Sperrliste, Inhaltsschutz, kein Schreibweg)
+    - POST /api/uix/coder/speichern       # E4: Speichern nur als Antrag an die Freigaben (der Captain stimmt in den Freigaben zu)
+    - GET /api/uix/coder/speichern/*      # E4: Stand eines Antrags (wartet, freigegeben, abgelehnt, angewendet)
+    - POST /api/uix/coder/speichern/anwenden   # E4: schreibt die freigegebene Änderung (ohne Zustimmung geschieht nichts)
   events:
     emits: []
     listens: []
