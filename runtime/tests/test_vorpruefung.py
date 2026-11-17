@@ -121,3 +121,37 @@ class StudioVerbTest(unittest.TestCase):
         from sedra_runtime.workflows import desk
         out = desk._vorpruefung(self._hub(pathlib.Path(tempfile.mkdtemp()), []), None, {'datei': 'x' * 64, 'provider': 'nvidia'})
         self.assertEqual(out['stufe'], 'hinweis')
+
+
+class LokalesModellBereitTest(unittest.TestCase):
+    def _hub(self, workflow_provider, fehler=None):
+        from types import SimpleNamespace
+        from sedra_runtime.workflows import lokal
+        gerufen, ereignisse = [], []
+        meta = {'sedra_model': {'provider': workflow_provider, 'model': 'nvidia/x' if workflow_provider == 'nvidia' else None}}
+        mission = {'plan': {'workflow': lokal.PROFILE, 'steps': [{'workflow': {'meta': meta}}]}}
+        def laden(payload):
+            gerufen.append(payload)
+            if fehler: raise ValueError(fehler)
+        hub = SimpleNamespace(load_model=laden, runtime=SimpleNamespace(
+            missions=SimpleNamespace(load=lambda mid: mission),
+            audit=SimpleNamespace(append=lambda *a, **k: ereignisse.append(a[0]))))
+        return hub, gerufen, ereignisse
+
+    def test_lokaler_lauf_uebernimmt_den_laufenden_modellserver(self):
+        from sedra_runtime.workflows import desk
+        hub, gerufen, _ = self._hub('llama-cpp-server')
+        desk._lokales_modell_bereit(hub, 'M-1')
+        self.assertEqual(gerufen, [{}])
+
+    def test_nvidia_lauf_laedt_kein_lokales_modell(self):
+        from sedra_runtime.workflows import desk
+        hub, gerufen, _ = self._hub('nvidia')
+        desk._lokales_modell_bereit(hub, 'M-1')
+        self.assertEqual(gerufen, [])
+
+    def test_fehlschlag_wird_protokolliert_und_stoppt_den_lauf_nicht(self):
+        from sedra_runtime.workflows import desk
+        hub, _, ereignisse = self._hub('llama-cpp-server', fehler='recipe_id_required')
+        desk._lokales_modell_bereit(hub, 'M-1')
+        self.assertEqual(ereignisse, ['WORKFLOW_MODELL_NICHT_BEREIT'])

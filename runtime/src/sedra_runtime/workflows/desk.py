@@ -339,7 +339,28 @@ def _eingabe_hochladen(hub, oid, args):
     return {'status': 'erledigt', 'datei': summe, 'name': name, 'groesse': len(raw)}
 
 
+def _lokales_modell_bereit(hub, mid):
+    """Vor einem Lauf mit lokalem Modell: nach einem Neustart von SEDRA kennt der Scheduler den schon laufenden Modellserver nicht
+    (Lauf scheitert mit 'Modell: server_aus', bis jemand in der Werkstatt das Modell lädt). Dasselbe tut hier 'Modell laden' mit dem
+    zuletzt geladenen Rezept: läuft der Server schon, wird er nur übernommen (MODEL_LOAD_REUSED). Scheitert es, steht der Grund im
+    Logbuch und der Lauf sagt es selbst; ein NVIDIA-Workflow wird nicht berührt."""
+    try:
+        plan = (hub.runtime.missions.load(mid).get('plan') or {})
+        if plan.get('workflow') != lokal.PROFILE:
+            return
+        from .modellwahl import selection
+        if selection(((plan.get('steps') or [{}])[0]).get('workflow') or {})['provider'] != 'llama-cpp-server':
+            return
+        hub.load_model({})
+    except Exception as exc:
+        try:
+            hub.runtime.audit.append('WORKFLOW_MODELL_NICHT_BEREIT', component='workflows', mission_id=mid, payload={'grund': str(exc)[:160]})
+        except Exception:
+            pass
+
+
 def _continue(hub, mid, args):
+    _lokales_modell_bereit(hub, mid)
     hub.run_mission({'mission_id': mid, 'max_steps': 4})
     hub.events.publish('task.changed', {'id': mid})
     return _run_read(hub, mid)
