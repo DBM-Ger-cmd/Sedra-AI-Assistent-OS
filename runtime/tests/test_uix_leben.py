@@ -80,6 +80,17 @@ class Einbau(unittest.TestCase):
     def test_keine_dauerschleife_in_der_zustandsanzeige(self):
         self.assertNotIn('setInterval', SKRIPT.read_text(encoding='utf-8'))
 
+    def test_rechtsklick_menue_steuert_begleiter_und_bewegung(self):
+        js = SKRIPT.read_text(encoding='utf-8')
+        self.assertIn("addEventListener('contextmenu'", js)                  # Rechtsklick öffnet das Menü
+        self.assertIn('sedra.harness.begleiter', js)                         # immer | arbeit | aus
+        self.assertIn('sedra.harness.bewegung', js)                          # an | aus
+        self.assertIn("'Escape'", js)                                        # Esc schließt
+        self.assertIn("'hs-still'", js)                                      # Bewegung aus = Klasse auf der Shell
+        css = (SHELL / 'leben.css').read_text(encoding='utf-8')
+        self.assertIn('.hs.hs-still', css)
+        self.assertIn('.hs-leben-menu', css)
+
     def test_reduzierte_bewegung_und_abschalten(self):
         css = (SHELL / 'leben.css').read_text(encoding='utf-8')
         self.assertIn('prefers-reduced-motion: reduce', css)
@@ -87,7 +98,8 @@ class Einbau(unittest.TestCase):
 
     def test_texte_in_beiden_sprachen(self):
         text = (SHELL / 'strings_avatar.js').read_text(encoding='utf-8')
-        for schluessel in ['lb_ruhe', 'lb_warten', 'lb_denken', 'lb_schreiben', 'lb_fertig', 'lb_fehler', 'lw_denken', 'lw_schreiben', 'lw_warten', 'lw_fertig', 'lw_fehler']:
+        for schluessel in ['lb_ruhe', 'lb_warten', 'lb_denken', 'lb_schreiben', 'lb_fertig', 'lb_fehler', 'lw_denken', 'lw_schreiben', 'lw_warten', 'lw_fertig', 'lw_fehler',
+                          'lm_titel', 'lm_begleiter', 'lm_immer', 'lm_arbeit', 'lm_aus', 'lm_bewegung_an', 'lm_bewegung_aus']:
             self.assertEqual(text.count(schluessel + ':'), 2, schluessel)
 
 

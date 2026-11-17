@@ -23,7 +23,14 @@
     lw_schreiben:'schreibt',
     lw_warten:'wartet',
     lw_fertig:'fertig',
-    lw_fehler:'Fehler'
+    lw_fehler:'Fehler',
+    lm_titel:'Der Drache',
+    lm_begleiter:'Am rechten Rand',
+    lm_immer:'Immer zeigen',
+    lm_arbeit:'Nur bei Arbeit zeigen',
+    lm_aus:'Ausblenden',
+    lm_bewegung_an:'Bewegung: an',
+    lm_bewegung_aus:'Bewegung: aus'
   });
   root.sedraI18nStrings.en = Object.assign(root.sedraI18nStrings.en || {}, {
     av_freigabe_eine:'One approval is waiting for you.',
@@ -46,6 +53,13 @@
     lw_schreiben:'writing',
     lw_warten:'waiting',
     lw_fertig:'done',
-    lw_fehler:'error'
+    lw_fehler:'error',
+    lm_titel:'The dragon',
+    lm_begleiter:'On the right edge',
+    lm_immer:'Always show',
+    lm_arbeit:'Show only while working',
+    lm_aus:'Hide',
+    lm_bewegung_an:'Motion: on',
+    lm_bewegung_aus:'Motion: off'
   });
 })();

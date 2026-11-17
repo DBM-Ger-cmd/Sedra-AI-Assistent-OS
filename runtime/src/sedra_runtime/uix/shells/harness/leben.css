@@ -26,7 +26,7 @@
 @keyframes hs-leben-huepfen{0%{transform:translateY(0) scale(1)}35%{transform:translateY(-4px) scale(1.12)}70%{transform:translateY(0) scale(.97)}100%{transform:none}}
 @keyframes hs-leben-schuetteln{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
 /* Der Begleiter am rechten Rand: schwebt über der Arbeit, fängt keine Klicks, verschwindet auf schmalen Fenstern */
-.hs-randdrache{position:fixed;right:var(--gap-2);top:50%;transform:translateY(-50%);z-index:50;pointer-events:none;
+.hs-randdrache{position:fixed;right:var(--gap-2);top:50%;transform:translateY(-50%);z-index:50;pointer-events:auto;cursor:context-menu;
   flex-direction:column;gap:var(--gap);margin:0;padding:var(--gap) var(--gap-2);min-width:0;height:auto;
   background:var(--glas);-webkit-backdrop-filter:blur(var(--glas-unschaerfe));backdrop-filter:blur(var(--glas-unschaerfe));
   border:1px solid var(--hs-on-line);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)}
@@ -35,6 +35,18 @@
 .hs-randdrache .hs-leben-drache{width:96px;height:96px}
 .hs-leben-3d{display:block}
 @media (max-width: 700px){.hs-randdrache{display:none}}
+/* „Bewegung aus“ im Menü: die Klasse sitzt auf der Shell, die Bilder bleiben, nur die Animation steht still */
+.hs.hs-still .hs-leben-drache,.hs.hs-still .hs-leben-drache .hs-drache-flosse{animation:none !important}
+/* Das Menü am Rechtsklick: kleine Glas-Liste über der Arbeit, mit Tastatur bedienbar */
+.hs-leben-menu{position:fixed;z-index:70;min-width:200px;display:flex;flex-direction:column;gap:2px;padding:var(--gap);
+  color:var(--text);font-size:var(--size-small);background:var(--glas);-webkit-backdrop-filter:blur(var(--glas-unschaerfe));backdrop-filter:blur(var(--glas-unschaerfe));
+  border:1px solid var(--hs-on-line);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg)}
+.hs-leben-menu-kopf{padding:var(--gap) var(--gap-2) var(--gap);font-weight:600;color:var(--muted)}
+.hs-leben-menu-gruppe{padding:var(--gap) var(--gap-2) 2px;color:var(--muted);font-size:var(--size-small)}
+.hs-leben-menu-trenner{height:1px;margin:var(--gap) 0;background:var(--line)}
+.hs-leben-menu-punkt{display:block;width:100%;text-align:left;padding:var(--gap) var(--gap-2);border:0;border-radius:var(--radius-sm);background:transparent;color:inherit;font:inherit;cursor:pointer}
+.hs-leben-menu-punkt:hover,.hs-leben-menu-punkt:focus-visible{background:var(--hs-hover);outline:var(--focus-ring)}
+.hs-leben-menu-punkt.on{color:var(--accent)}
 @media (prefers-reduced-motion: reduce){
   .hs-leben-drache,.hs-leben-drache .hs-drache-flosse{animation:none !important}
 }
