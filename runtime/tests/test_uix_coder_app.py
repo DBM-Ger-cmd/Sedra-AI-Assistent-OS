@@ -44,7 +44,7 @@ class Anmeldung(unittest.TestCase):
         self.assertEqual(fehler, [])
         self.assertEqual(man["handles"], ["coder"])
         self.assertEqual(man["api"], ["GET /api/uix/coder/projekte", "GET /api/uix/coder/dateien/*", "GET /api/uix/coder/datei/*",
-                                "GET /api/uix/coder/modelle", "POST /api/uix/coder/agent"],
+                                "GET /api/uix/coder/aenderungen/*", "GET /api/uix/coder/modelle", "POST /api/uix/coder/agent"],
                          "Runde 5: drei Lese-Routen; Agent: Modelle lesen und eine Frage stellen, sonst nichts (kein Schreibweg)")
         self.assertEqual(man["trust"], "CAPTAIN", "Rahmen-Werkzeug, nie in der Seite der Shell")
         for name in man["js"] + man["css"]:

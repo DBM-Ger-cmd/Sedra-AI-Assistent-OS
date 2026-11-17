@@ -1115,6 +1115,13 @@ class UIXHub:
         if not pfad or coder_lesen.pfad_gesperrt(pfad): raise ValueError('access_blocked' if pfad else 'invalid_path')
         return coder_lesen.datei(pfad, self.project_file({'project_id': projekt, 'path': pfad}))
 
+    def coder_aenderungen(self, projekt):
+        """R4 (E2): Zweig und geänderte Dateien, nur lesen (`git status`, feste Form, 2 s). Gesperrte Namen erscheinen nicht."""
+        proj = self.projects.get(projekt)
+        if not proj: raise ValueError('unknown_project')
+        ws = self.runtime.filesystem_tool._resolve(proj['workspace_path'], must_exist=True)
+        return coder_lesen.aenderungen(ws)
+
     def coder_modelle(self, payload=None):
         """Welche Wege der Coder-Agent hat (lokales Modell geladen, Cloud-Anbieter bereit). Nur lesen, keine Schlüssel."""
         server = getattr(self.runtime, 'llama_server', None)
@@ -4415,6 +4422,7 @@ def make_server(hub: UIXHub, port=0):
             try:
                 if path == '/api/uix/coder/projekte': out = hub.coder_projekte()
                 elif path == '/api/uix/coder/modelle': out = hub.coder_modelle()
+                elif path.startswith(coder_lesen.PRAEFIX_AENDERUNGEN + '/'): out = hub.coder_aenderungen(coder_lesen.zerlege(path, coder_lesen.PRAEFIX_AENDERUNGEN)[0])
                 elif path.startswith(coder_lesen.PRAEFIX_DATEIEN + '/'): out = hub.coder_dateien(*coder_lesen.zerlege(path, coder_lesen.PRAEFIX_DATEIEN))
                 elif path.startswith(coder_lesen.PRAEFIX_DATEI + '/'): out = hub.coder_datei(*coder_lesen.zerlege(path, coder_lesen.PRAEFIX_DATEI))
                 else:

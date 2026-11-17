@@ -76,3 +76,58 @@ def datei(pfad, antwort) -> dict:
         aus['inhalt'] = antwort.get('content', '')
         aus['bytes'] = antwort.get('bytes', 0)
     return aus
+
+
+# ---- R4 (E2): Git-Status, nur lesen. Eine feste Form, kein Schreibweg, kein Aufruf mit Eingaben von außen.
+PRAEFIX_AENDERUNGEN = '/api/uix/coder/aenderungen'
+GIT_ZEITLIMIT = 2.0
+GIT_ZEILEN_MAX = 300
+# feste Argumente: -z (Pfade unverändert), --no-renames, keine Sperrdatei im Index; fsmonitor und Hooks bleiben aus (eine fremde .git/config führt nichts aus)
+GIT_ARGS = ['-c', 'core.fsmonitor=false', '-c', 'core.hooksPath=NUL', 'status', '--porcelain=v1', '-b', '-z', '--no-renames', '--untracked-files=normal']
+
+
+def git_zeilen(roh) -> tuple:
+    """Ausgabe von `git status --porcelain=v1 -b -z` -> (zweig, [(code, pfad)]). Der Code ist 'U' (neu) oder 'M' (geändert, gelöscht, …)."""
+    teile = [t for t in str(roh).split('\x00') if t]
+    zweig, eintraege = '', []
+    for t in teile:
+        if t.startswith('## '):
+            kopf = t[3:]
+            zweig = kopf.split('...')[0].split(' ')[0]
+            if kopf.startswith('No commits yet on '):
+                zweig = kopf[len('No commits yet on '):].split('...')[0]
+            elif kopf.startswith('HEAD (no branch)'):
+                zweig = 'HEAD'
+            continue
+        if len(t) < 4:
+            continue
+        xy, pfad = t[:2], t[3:]
+        eintraege.append(('U' if xy in ('??', 'A ', ' A', 'AM') else 'M', pfad))
+    return zweig, eintraege
+
+
+def aenderungen(werkordner, lauf=None) -> dict:
+    """R4: Zweig und geänderte Dateien des Projektordners. `lauf(args, ordner)` führt Git aus (Standard: subprocess, fester Aufruf, 2 s).
+    Kein Git-Ordner, Git fehlt, Zeitüberschreitung oder Fehler: `quelle: fehlt` mit Kennwort, nie ein Pfad des Rechners."""
+    from pathlib import Path
+    ordner = Path(werkordner)
+    if not (ordner / '.git').exists():
+        return {'quelle': 'fehlt', 'grund': 'kein_git', 'eintraege': [], 'anzahl': 0, 'zweig': ''}
+    try:
+        roh = (lauf or _git_lauf)(GIT_ARGS, ordner)
+    except Exception as exc:
+        return {'quelle': 'fehlt', 'grund': 'git_zeit' if type(exc).__name__ == 'TimeoutExpired' else 'git_fehler', 'eintraege': [], 'anzahl': 0, 'zweig': ''}
+    zweig, alle = git_zeilen(roh)
+    sichtbar = [{'pfad': p.replace('\\', '/'), 'status': c} for c, p in alle if not pfad_gesperrt(p)]
+    return {'quelle': 'ok', 'zweig': zweig[:80], 'eintraege': sichtbar[:GIT_ZEILEN_MAX], 'anzahl': len(sichtbar),
+            'gekuerzt': len(sichtbar) > GIT_ZEILEN_MAX, 'ausgeblendet': len(alle) - len(sichtbar)}
+
+
+def _git_lauf(args, ordner):
+    import os
+    import subprocess
+    env = dict(os.environ, GIT_OPTIONAL_LOCKS='0', GIT_TERMINAL_PROMPT='0')
+    r = subprocess.run(['git', '-C', str(ordner), *args], capture_output=True, timeout=GIT_ZEITLIMIT, env=env, shell=False)
+    if r.returncode != 0:
+        raise RuntimeError('git_failed')
+    return r.stdout.decode('utf-8', errors='replace')

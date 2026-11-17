@@ -41,6 +41,7 @@
   };
 
   function geaenderteZahl() {
+    if (S.quelle === 'echt') return S.echt.aenderungen.length;
     return Object.keys(S.dateien).filter(function (p) { return S.dateien[p].git || S.ungespeichert(p); }).length;
   }
 

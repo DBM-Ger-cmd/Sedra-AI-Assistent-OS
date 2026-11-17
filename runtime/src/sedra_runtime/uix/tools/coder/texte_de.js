@@ -75,7 +75,7 @@
     echt_fehler_lesen: '„{0}“ konnte nicht gelesen werden.', echt_fehler_binaer: '„{0}“ ist keine Textdatei und wird nicht angezeigt.',
     echt_fehler_gross: '„{0}“ ist für die Vorschau zu groß (über 100 kB).', echt_fehler_gesperrt: '„{0}“ ist gesperrt (Schlüssel und lokale Konfiguration werden nie angezeigt).',
     ed_speichern_gesperrt: 'Speichern auf die Platte ist noch nicht freigegeben (Entscheidung E4). Die Datei bleibt ungespeichert.',
-    su_hinweis_echt: 'Suchbegriff eingeben. Gesucht wird nur in bereits geöffneten Dateien.', qc_echt_hinweis: 'Git-Status ist noch nicht angebunden (Entscheidung E2).',
+    su_hinweis_echt: 'Suchbegriff eingeben. Gesucht wird nur in bereits geöffneten Dateien.', qc_git_fehlt: 'Kein Git-Ordner im Projekt oder Git nicht erreichbar.', qc_aktualisieren: 'Aktualisieren', qc_echt_hinweis: 'Keine Änderungen im Projekt (nur lesen).',
     ed_reiter: 'Reiter der Editorgruppe {0}', ed_schliessen: '{0} schließen', ed_brotkrumen: 'Pfad', ed_eingabe: 'Editor {0}', ed_minimap: 'Minimap',
     ed_tab_frei: 'Tabulator verlässt jetzt einmal den Editor.', ed_gruppe_zu: 'Gruppe schließen', ed_teilen_voll: 'Höchstens drei Editorgruppen.',
     ed_gespeichert: '{0} gespeichert (nur im Speicher der Seite).', ed_alle_gespeichert: 'Alle Dateien gespeichert (nur im Speicher der Seite).',

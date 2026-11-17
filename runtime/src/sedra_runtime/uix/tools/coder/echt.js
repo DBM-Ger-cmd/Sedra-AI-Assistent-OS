@@ -5,7 +5,7 @@
   const S = root.SIDE, T = S.T;
   const API = ['', 'api', 'uix', 'coder', ''].join('/');      /* zusammengesetzt: die Vertragsprüfung liest nur ganze Routen-Literale; erlaubt sind die drei Einträge der tool.yaml */
   S.quelle = 'beispiel';          /* 'beispiel' | 'echt': gilt nur für Explorer, Editor, Suche */
-  S.echt = { projekt: null, baum: [], dateien: {} };
+  S.echt = { projekt: null, baum: [], dateien: {}, git: {}, aenderungen: [], gitGrund: '' };
   let beispiel = null;
 
   function enc(p) { return encodeURIComponent(p); }
@@ -42,6 +42,30 @@
     S.melde('dateien'); S.melde('editor'); S.melde('seite');
   };
 
+  /* Git-Status (nur lesen, Entscheidung E2): Status je Pfad, Ordner mit Änderungen, Zweig in der Statusleiste. */
+  S.gitStatus = function (pfad) {
+    const d = S.dateien[pfad];
+    if (d && d.git) return d.git;
+    return S.quelle === 'echt' ? (S.echt.git[pfad] || '') : '';
+  };
+  S.gitInOrdner = function (pfad) {
+    if (S.quelle !== 'echt') return false;
+    return Object.keys(S.echt.git).some(function (p) { return p.indexOf(pfad + '/') === 0; });
+  };
+  S.ladeGit = async function () {
+    if (S.quelle !== 'echt' || !S.ctx || !S.ctx.api) return;
+    try {
+      const r = await S.ctx.api(API + 'aenderungen/' + enc(S.echt.projekt.id));
+      S.echt.git = {}; S.echt.aenderungen = []; S.echt.gitGrund = '';
+      if (r.quelle === 'ok') {
+        S.echt.aenderungen = r.eintraege || [];
+        S.echt.aenderungen.forEach(function (e) { S.echt.git[e.pfad] = e.status; if (S.dateien[e.pfad]) S.dateien[e.pfad].git = e.status; });
+        S.ZWEIG = r.zweig || '–';
+      } else { S.echt.gitGrund = r.grund || 'git_fehler'; S.ZWEIG = '–'; }
+    } catch (e) { S.echt.gitGrund = 'git_fehler'; }
+    S.melde('dateien'); S.melde('seite'); S.melde('layout');
+  };
+
   S.ladeOrdner = async function (k) {
     if (!S.echt.projekt || !k.ordner || k.kinder) return;
     try {
@@ -60,7 +84,7 @@
       if (r.binary) { S.sag(T('echt_fehler_binaer', name)); return; }
       if (r.too_large) { S.sag(T('echt_fehler_gross', name)); return; }
       const text = String(r.inhalt || '').replace(/\r\n/g, '\n');
-      S.dateien[pfad] = { pfad: pfad, name: name, inhalt: text, gespeichert: text, sprache: S.sprachVon(name), git: '' };
+      S.dateien[pfad] = { pfad: pfad, name: name, inhalt: text, gespeichert: text, sprache: S.sprachVon(name), git: S.echt.git[pfad] || '' };
       S.melde('dateien');
       S.oeffne(pfad);
     } catch (e) { S.sag(T(/access_blocked/.test(String(e && e.message)) ? 'echt_fehler_gesperrt' : 'echt_fehler_lesen', name)); }
@@ -81,6 +105,7 @@
       S.setzeQuelle('echt');
       S.sag(T('echt_geladen', S.echt.projekt.name));
       S.ladeWege();
+      S.ladeGit();
     } catch (e) { /* ohne Projekt oder ohne Zugriff: Beispieldateien bleiben */ }
   };
 })(window);

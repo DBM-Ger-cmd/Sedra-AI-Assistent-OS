@@ -16,6 +16,7 @@ tool:
     - GET /api/uix/coder/projekte         # R1: Projekte (Kennung, Name)
     - GET /api/uix/coder/dateien/*        # R2: Ordnerinhalt, /dateien/<projekt>[/<pfad url-codiert>]
     - GET /api/uix/coder/datei/*          # R3: Text einer Datei, /datei/<projekt>/<pfad url-codiert>
+    - GET /api/uix/coder/aenderungen/*    # R4 (E2): Zweig und geänderte Dateien, nur lesen (git status, feste Form)
     - GET /api/uix/coder/modelle          # Agent: welche Wege bereit sind (lokales Modell, Cloud-Anbieter), keine Schlüssel
     - POST /api/uix/coder/agent           # Agent: Frage mit Dateikontext, nur Text zurück (Sperrliste, Inhaltsschutz, kein Schreibweg)
   events:

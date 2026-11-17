@@ -42,18 +42,21 @@
 
   S.ansichten.quellcode = function () {
     const liste = el('div', { role: 'list' });
-    const pfade = S.z.beispiel ? Object.keys(S.dateien).sort().filter(function (p) { return S.dateien[p].git || S.ungespeichert(p); }) : [];
+    const echt = S.quelle === 'echt';
+    if (echt) liste.appendChild(el('button', { class: 'knopf', type: 'button', data: { fid: 'qc:neu' }, on: { click: function () { S.ladeGit(); } } }, [T('qc_aktualisieren')]));
+    const pfade = echt ? S.echt.aenderungen.map(function (e) { return e.pfad; })
+      : (S.z.beispiel ? Object.keys(S.dateien).sort().filter(function (p) { return S.dateien[p].git || S.ungespeichert(p); }) : []);
     pfade.forEach(function (p) {
-      const d = S.dateien[p];
-      const m = d.git || 'M';
+      const d = { name: p.split('/').pop() };
+      const m = S.gitStatus(p) || 'M';
       liste.appendChild(el('div', {
         class: 'listen-zeile', role: 'listitem', tabindex: '0', title: p, data: { fid: 'qc:' + p },
-        on: { click: function () { S.oeffne(p); }, keydown: function (ev) { if (ev.key === 'Enter') S.oeffne(p); } }
+        on: { click: function () { S.oeffneDatei(p); }, keydown: function (ev) { if (ev.key === 'Enter') S.oeffneDatei(p); } }
       }, [S.sym('datei', 14), el('span', { class: 'zeile-name name-' + m, text: d.name }),
         el('span', { class: 'zeile-neben', text: p.indexOf('/') > 0 ? p.slice(0, p.lastIndexOf('/')) : '' }),
         el('span', { class: 'git git-' + m, text: m })]));
     });
-    if (!pfade.length) liste.appendChild(el('div', { class: 'leer', text: T(S.quelle === 'echt' ? 'qc_echt_hinweis' : 'leer_aenderungen') }));
+    if (!pfade.length) liste.appendChild(el('div', { class: 'leer', text: T(echt ? (S.echt.gitGrund ? 'qc_git_fehlt' : 'qc_echt_hinweis') : 'leer_aenderungen') }));
     const text = el('input', { class: 'feld', type: 'text', placeholder: T('qc_nachricht'), 'aria-label': T('qc_nachricht'), data: { fid: 'qc:feld' } });
     const kopf = el('div', { class: 'feld-rand' }, [
       text,

@@ -4,14 +4,14 @@
   const S = root.SIDE, el = S.el, T = S.T;
 
   function hatGit(k) {
-    if (!k.kinder) { const d = S.dateien[k.pfad]; return !!(d && d.git); }
-    return k.kinder.some(hatGit);
+    if (!k.kinder) return !!(k.ordner ? S.gitInOrdner(k.pfad) : S.gitStatus(k.pfad));
+    return k.kinder.some(hatGit) || S.gitInOrdner(k.pfad);
   }
 
   function baumZeile(k, tiefe, aktivPfad) {
     const ordner = !!(k.kinder || k.ordner);
     const zu = ordner && !!S.z.zugeklappt['o:' + k.pfad];
-    const d = S.dateien[k.pfad];
+    const g = S.gitStatus(k.pfad);
     const z = el('div', {
       class: 'baum-zeile' + (k.pfad === aktivPfad ? ' gewaehlt' : ''), role: 'treeitem', tabindex: '-1',
       'aria-level': String(tiefe + 1), 'aria-expanded': ordner ? (zu ? 'false' : 'true') : null,
@@ -19,9 +19,9 @@
       data: { fid: 'b:' + k.pfad, pfad: k.pfad, ordner: ordner ? '1' : '' }
     }, [
       ordner ? S.sym('pfeilR', 12, 'pfeil' + (zu ? '' : ' offen')) : S.sym('datei', 14),
-      el('span', { class: 'zeile-name' + (d && d.git ? ' name-' + d.git : ''), text: k.name }),
+      el('span', { class: 'zeile-name' + (g ? ' name-' + g : ''), text: k.name }),
       ordner ? (hatGit(k) ? el('span', { class: 'git-punkt', title: T('git_enthaelt') }) : null)
-        : (d && d.git ? el('span', { class: 'git git-' + d.git, text: d.git }) : null)
+        : (g ? el('span', { class: 'git git-' + g, text: g }) : null)
     ]);
     z.style.paddingLeft = (8 + tiefe * 12) + 'px';
     return z;
