@@ -35,7 +35,7 @@ class WorkflowStudioApp(unittest.TestCase):
                    "const W = globalThis.sedraHarness.workflow_studio;"
                    "process.stdout.write(JSON.stringify({modi: W.MODI.map(m=>[m.id, m.zellen.map(z=>z.type)]), wahl: [W.modusWahl('factory'), W.modusWahl('x'), W.modusWahl(null)], gruppen: W.GRUPPEN}));")
         modi = dict(res["modi"])
-        self.assertEqual(list(modi), ["leitstand", "katalog", "n8n", "startassistent", "live", "szenario", "factory", "freigaben",
+        self.assertEqual(list(modi), ["leitstand", "katalog", "editor", "factory", "freigaben",
                                       "verbindungen", "modelle", "hardware", "design"])
         self.assertEqual(modi["leitstand"], ["decision", "task"], "der Leitstand zeigt nur echte Werkzeuge")
         self.assertEqual(modi["factory"], ["project", "factory-laeufe"])
@@ -48,7 +48,9 @@ class WorkflowStudioApp(unittest.TestCase):
         # derselbe Notaus wie im Editor: dieselben Verben, kein eigener Weg
         for verb in ("fabrik_stopp", "fabrik_status", "fabrik_freigeben"):
             self.assertIn(verb, js)
-        self.assertIn("notaus: true", js, "der Notaus sitzt im Live & Debugger")
+        editor = (UIX / 'ui' / 'workflow-editor.js').read_text(encoding='utf-8')
+        self.assertIn('unifiedWorkspace', editor)
+        self.assertIn("root.sedraWorkflowNotaus.attach(this)", editor)
         # das Design nutzt den Schlüssel und die Namen aus js/theme.js
         theme = (UIX / "js" / "theme.js").read_text(encoding="utf-8")
         self.assertIn("'sedra.theme'", theme)
@@ -81,7 +83,7 @@ class WorkflowStudioApp(unittest.TestCase):
 
     def test_ort_menue_und_werkzeug(self):
         orte = {o["id"]: o for o in json.loads((UIX / "ui" / "orte_kern.json").read_text(encoding="utf-8"))["orte"]}
-        self.assertEqual(orte["workflow-studio"]["object"], {"type": "workflow-studio", "id": "app", "title": "Workflow Studio"})
+        self.assertEqual(orte["workflow-studio"]["object"], {"type": "workflow-studio", "id": "app", "title": "SEDRA Workflow Studio"})
         gruppen = json.loads((UIX / "shells" / "harness" / "start_gruppen.json").read_text(encoding="utf-8"))
         self.assertEqual(gruppen["zuordnung"]["workflow-studio"], "arbeit")
         for alt in ("workflow", "scenario", "factory-studio"):

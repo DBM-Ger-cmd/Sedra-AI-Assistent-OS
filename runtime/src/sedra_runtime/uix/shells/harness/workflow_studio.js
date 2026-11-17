@@ -15,16 +15,13 @@
   const d = ()=>root.sedraDom;
   const G = root.sedraHarness.workflow_studio_geteilt;
   const AS = root.sedraHarness.workflow_studio_assist;
-  const LV = root.sedraHarness.workflow_studio_live;
   const luecken = G.luecken, workflowsZaehlen = G.workflowsZaehlen;
-  const baueKatalog = AS.baueKatalog, baueAssistent = AS.baueAssistent;
-  const baueNotaus = LV.baueNotaus, baueLauf = LV.baueLauf, baueLaeufe = LV.baueLaeufe;
+  const baueKatalog = AS.baueKatalog;
   const KEY = 'sedra.harness.workflow_studio.modus';
-  const OBJEKT = {type: 'workflow-studio', id: 'app', title: 'Workflow Studio'};
+  const OBJEKT = {type: 'workflow-studio', id: 'app', title: 'SEDRA Workflow Studio'};
   const THEME_KEY = 'sedra.theme';
 
-  const N8N = {type: 'workflow', id: 'alle', title: 'n8n Workflows', collection: true};
-  const SZENARIO = {type: 'scenario', id: 'alle', title: 'Szenario Studio', collection: true};
+  const EDITOR = {type: 'workflow', id: 'alle', title: 'Workflow-Editor', collection: true};
   const PROJEKT = {type: 'project', id: 'projekt', title: 'Projekte'};
   const FREIGABEN = {type: 'decision', id: 'alle', title: 'Freigaben', collection: true};
   const LIVE = {type: 'task', id: 'alle', title: 'Live', collection: true};
@@ -38,10 +35,7 @@
   const MODI = [
     {id: 'leitstand', label: 'Startseite / Leitstand', gruppe: 'Leitstand', zellen: [FREIGABEN, LIVE], kpi: true},
     {id: 'katalog', label: 'Workflow-Katalog', gruppe: 'Direkt arbeiten', zellen: [], katalog: true},
-    {id: 'n8n', label: 'n8n Workflows', gruppe: 'Direkt arbeiten', zellen: [N8N]},
-    {id: 'startassistent', label: 'Startassistent', gruppe: 'Direkt arbeiten', zellen: [], assistent: true},
-    {id: 'live', label: 'Live & Debugger', gruppe: 'Direkt arbeiten', zellen: [LIVE], notaus: true},
-    {id: 'szenario', label: 'Szenario Studio', gruppe: 'Direkt arbeiten', zellen: [SZENARIO]},
+    {id: 'editor', label: 'Arbeitsfläche', gruppe: 'Direkt arbeiten', zellen: [EDITOR]},
     {id: 'factory', label: 'Factory', gruppe: 'Vorbereitung', zellen: [PROJEKT, LAEUFE]},
     {id: 'freigaben', label: 'Freigaben', gruppe: 'Prüfen und verbessern', zellen: [FREIGABEN]},
     {id: 'verbindungen', label: 'Verbindungen', gruppe: 'Plattform & Design', zellen: [VERBINDUNGEN]},
@@ -56,7 +50,7 @@
 
 
   // rein
-  function modusWahl(gemerkt){ return MODI.some(m=>m.id === gemerkt) ? gemerkt : MODI[0].id; }
+  function modusWahl(gemerkt){ if(['n8n','szenario','live','startassistent'].includes(gemerkt)) return 'editor';return MODI.some(m=>m.id === gemerkt) ? gemerkt : MODI[0].id; }
   function lesen(){ try{ return modusWahl(localStorage.getItem(KEY)); }catch(_e){ return MODI[0].id; } }
   function merken(id){ try{ localStorage.setItem(KEY, id); }catch(_e){} }
   // Der Leitstand nach der Vorlage: Kontext, Arbeitslage, „Was liegt an?“, Kennzahlen und „Jetzt wichtig“. Alle Zahlen stammen aus den
@@ -64,7 +58,6 @@
   function baueLeitstand(api, zumModus, zumAssistent){
     const box = d().el('div', 'hs-ws-leitstand');
     const aktion = (text, fn)=>{ const b = d().el('button', 'hs-ws-knopf', text); b.type = 'button'; b.onclick = fn; return b; };
-    const chips = d().el('div', 'hs-ws-chips');
     const bannerText = d().el('span', '', 'Lade die gespeicherten Workflows …');
     const banner = d().el('div', 'hs-ws-banner'); banner.append(d().el('b', '', 'SEDRA – Arbeitslage'), bannerText);
     const kpiWerte = ['Gespeicherte Workflows', 'Ausführbar', 'Mit offenen Angaben', 'Fabrik'].map(titel=>{
@@ -73,28 +66,27 @@
     });
     const kennzahlen = d().el('div', 'hs-ws-kennzahlen'); kpiWerte.forEach(x=>kennzahlen.append(x.k));
     const wichtigListe = d().el('div', 'hs-ws-liste');
-    const wichtig = d().el('div', 'hs-ws-karte'); wichtig.append(d().el('h4', 'hs-ws-karten-titel', 'Jetzt wichtig'), wichtigListe,
-      d().el('p', 'hs-ws-hinweis', 'Echte Zahlen aus den gespeicherten Workflows. Keine Simulation.'));
+    const wichtig = d().el('div', 'hs-ws-karte'); wichtig.append(d().el('h4', 'hs-ws-karten-titel', 'Offene Vorbereitungen'), wichtigListe);
     const was = d().el('div', 'hs-ws-was');
-    was.append(d().el('h4', 'hs-ws-sektion', 'Was liegt an?'));
-    was.append(d().el('p', 'hs-ws-hinweis', 'Erst Entscheidungen und Störungen, dann laufende Arbeit.'));
+    was.append(d().el('h4', 'hs-ws-sektion', 'Dein nächster Schritt'));
+    was.append(d().el('p', 'hs-ws-hinweis', 'Workflows bearbeiten, den Start vorbereiten oder einen laufenden Prozess untersuchen.'));
     was.append(d().el('div', 'hs-ws-knoepfe'));
-    was.lastChild.append(aktion('Workflow-Katalog', ()=>zumModus('katalog')), aktion('Startassistent', ()=>zumModus('startassistent')), aktion('Live & Debugger', ()=>zumModus('live')), aktion('Freigaben', ()=>zumModus('freigaben')));
-    box.append(d().el('p', 'hs-ws-kicker', 'SEDRA / WORKFLOW STUDIO'), d().el('h3', 'hs-ws-leit-titel', 'Startseite / Leitstand'), chips, banner, was, kennzahlen, d().el('div', 'hs-ws-spalten', ''));
+    was.lastChild.append(aktion('Workflows öffnen', ()=>zumModus('katalog')), aktion('Editor öffnen', ()=>zumModus('editor')), aktion('Start vorbereiten', ()=>zumModus('startassistent')), aktion('Läufe untersuchen', ()=>zumModus('live')));
+    box.append(d().el('p', 'hs-ws-kicker', 'SEDRA WORKFLOW STUDIO'), d().el('h2', 'hs-ws-leit-titel', 'Deine Workflows im Blick'), banner, kennzahlen, was, d().el('div', 'hs-ws-spalten', ''));
     box.querySelector('.hs-ws-spalten').append(wichtig);
     workflowsZaehlen(api).then(liste=>{
       const laufbar = liste.filter(w=>w.laufbar).length, offen = liste.filter(w=>w.offen > 0).length;
       kpiWerte[0].w.textContent = String(liste.length); kpiWerte[1].w.textContent = String(laufbar); kpiWerte[2].w.textContent = String(offen);
-      chips.replaceChildren(...['Workflows: ' + liste.length, 'Ausführbar: ' + laufbar, 'Offene Angaben: ' + offen].map(t=>d().el('span', 'hs-ws-chip', t)));
+      const unbekannt=liste.filter(w=>!w.geprueft).length;
       bannerText.textContent = !liste.length ? 'Noch kein Workflow gespeichert.'
-        : (offen ? offen + ' Workflow(s) mit offenen Angaben. ' : 'Alle gespeicherten Workflows sind vollständig beschrieben. ') + laufbar + ' ausführbar.';
+        : (offen ? offen + ' Workflows mit offenen Angaben. ' : '') + laufbar + ' ausführbar.' + (unbekannt ? ' '+unbekannt+' konnten nicht geprüft werden.' : '');
       wichtigListe.replaceChildren(...liste.filter(w=>w.offen > 0).map(w=>{
         const z = d().el('div', 'hs-ws-liste-zeile'); z.append(d().el('span', '', w.title + ' · ' + w.offen + ' offen'), aktion('Öffnen', ()=>zumAssistent(w.id))); return z;
       }));
-      if(!wichtigListe.childNodes.length) wichtigListe.append(d().el('p', 'hs-ws-hinweis', 'Nichts Dringendes.'));
+      if(!wichtigListe.childNodes.length) wichtigListe.append(d().el('p', 'hs-ws-hinweis', unbekannt ? 'Einige Workflows konnten nicht geprüft werden. Öffne den Katalog für die Einzelansicht.' : 'Keine offenen Prozessangaben in den gespeicherten Workflows.'));
     }).catch(err=>{ bannerText.textContent = 'Workflows nicht geladen: ' + (err.message || err); kpiWerte.forEach(x=>{ x.w.textContent = '–'; }); });
     api('/api/actions', {method: 'POST', body: {type: 'workflow', id: null, verb: 'fabrik_status', args: {}}})
-      .then(out=>{ const r = out.result || out; kpiWerte[3].w.textContent = r.angehalten ? 'angehalten' : 'läuft'; })
+      .then(out=>{ const r = out.result || out; kpiWerte[3].w.textContent = r.angehalten ? 'angehalten' : 'freigegeben'; })
       .catch(()=>{ kpiWerte[3].w.textContent = '–'; });
     return {box, abbauen(){ box.replaceChildren(); }};
   }
@@ -132,40 +124,35 @@
     const buehne = d().el('section', 'hs-ws-buehne');
     layout.append(nav, buehne);
     box.append(layout);
-    const zustand = {modus: lesen(), felder: {}, knoepfe: {}, kontext: null, lauf: null};
+    const zustand = {modus: lesen(), felder: {}, knoepfe: {}};
 
     const aktiv = ()=>zustand.felder[zustand.modus];
     const zeichnen = ()=>{ const f = aktiv(); if(f) f.flaechen.forEach(x=>x.zeichnen()); };
     function einhaengen(modus){
-      if(modus.assistent || modus.katalog || modus.design){
-        const teil = modus.assistent
-          ? baueAssistent(api, rec=>{ zustand.kontext = rec; if(zustand.lauf) zustand.lauf.setze(rec); zeigen('live'); })
-          : modus.design ? baueDesign()
-          : baueKatalog(api, id=>{ zeigen('startassistent'); const s = zustand.felder.startassistent; if(s && s.teil) s.teil.oeffne(id); });
+      if(modus.katalog || modus.design){
+        const teil = modus.design ? baueDesign()
+          : baueKatalog(api, id=>oeffneObjekt({type:'workflow',id,mode:'runs'}), id=>oeffneObjekt({type:'workflow',id:id || 'neu'}));
         const pane = d().el('div', 'hs-ws-pane'); pane.dataset.modus = modus.id; pane.append(teil.box);
         buehne.append(pane);
         zustand.felder[modus.id] = {pane, teil, flaechen: [{zeichnen(){}, abbauen(){ teil.abbauen(); }}]};
         return;
       }
       const pane = d().el('div', 'hs-ws-pane' + (modus.zellen.length > 1 ? ' raster' : '')); pane.dataset.modus = modus.id;
+      if(!modus.kpi && modus.id!=='editor'){
+        const seitenkopf=d().el('header','hs-ws-seitenkopf');seitenkopf.append(d().el('h2','hs-ws-leit-titel',modus.label));pane.append(seitenkopf);
+      }
       const extra = [];
       if(modus.kpi){
-        const lt = baueLeitstand(api, id=>zeigen(id), id=>{ zeigen('startassistent'); const s = zustand.felder.startassistent; if(s && s.teil) s.teil.oeffne(id); });
+        const lt = baueLeitstand(api, id=>zeigen(id), id=>oeffneObjekt({type:'workflow',id,mode:'runs'}));
         pane.append(lt.box); extra.push({zeichnen(){}, abbauen(){ lt.abbauen(); }});
-      }
-      if(modus.notaus){
-        const n = baueNotaus(api); pane.append(n.box); extra.push({zeichnen(){}, abbauen(){ n.abbauen(); }});
-        const l = baueLauf(api); pane.append(l.box); extra.push({zeichnen(){}, abbauen(){ l.abbauen(); }});
-        zustand.lauf = l; l.setze(zustand.kontext);                 // zeigt den zuletzt gestarteten Workflow, falls vorhanden
-        const la = baueLaeufe(api); pane.append(la.box); extra.push({zeichnen(){}, abbauen(){ la.abbauen(); }});
-        zustand.frisch = (zustand.frisch || []).concat([n.aktualisieren, la.aktualisieren]);     // beim Anzeigen frisch lesen, kein Takt
       }
       const flaechen = modus.zellen.map(objekt=>{
         const eigene = objekt.eigene && root.sedraHarness[objekt.eigene];
         const flaeche = eigene ? eigene.flaeche(S) : A.flaeche(S, objekt);
         const zelle = d().el('section', 'hs-ws-zelle'); zelle.dataset.zelle = objekt.type;
         if(modus.zellen.length > 1) zelle.append(d().el('h3', 'hs-ws-zellenkopf', objekt.title));
-        zelle.append(flaeche.verben, flaeche.koerper);
+        if(objekt.type !== 'project') zelle.append(flaeche.verben);
+        zelle.append(flaeche.koerper);
         pane.append(zelle);
         return flaeche;
       });
@@ -173,8 +160,10 @@
       zustand.felder[modus.id] = {pane, flaechen: extra.concat(flaechen)};
     }
     function zeigen(id){
+      if(['live','startassistent'].includes(id)){zeigen('editor');return root.sedraWorkflowEditor.openWithin(zustand.felder.editor.pane,{id:'alle',mode:id==='live'?'live':'runs'});}
       const modus = MODI.find(m=>m.id === id) || MODI[0];
       zustand.modus = modus.id; merken(modus.id);
+      const vorhanden=zustand.felder[modus.id];
       if(!zustand.felder[modus.id]) einhaengen(modus);
       MODI.forEach(m=>{
         const f = zustand.felder[m.id]; if(f) f.pane.hidden = m.id !== modus.id;           // verstecken, nicht aushängen
@@ -182,7 +171,7 @@
         if(!k) return;
         k.classList.toggle('on', on); k.setAttribute('aria-current', on ? 'page' : 'false');
       });
-      if(modus.notaus && zustand.frisch) zustand.frisch.forEach(f=>{ try{ f(); }catch(_e){} });   // Notaus und Läufe beim Anzeigen frisch lesen
+      if(vorhanden && vorhanden.teil && vorhanden.teil.aktualisieren)vorhanden.teil.aktualisieren();
       zeichnen();
     }
     GRUPPEN.forEach(g=>{
@@ -197,7 +186,16 @@
       nav.append(abschnitt);
     });
     zeigen(zustand.modus);
+    async function oeffneObjekt(objekt){
+      if(objekt.type==='workflow_run'){const r=await api('/api/objects',{method:'POST',body:{type:'workflow_run',id:objekt.id}});objekt={type:'workflow',id:r.workflow_id,mode:'live',runId:r.id};}
+      zeigen('editor');
+      const feld=zustand.felder.editor;
+      if(root.sedraWorkflowEditor && root.sedraWorkflowEditor.openWithin){
+        await root.sedraWorkflowEditor.openWithin(feld.pane,objekt);
+      }
+    }
     return {
+      oeffneObjekt,
       zeichnen,
       zeigen,
       modus: ()=>zustand.modus,

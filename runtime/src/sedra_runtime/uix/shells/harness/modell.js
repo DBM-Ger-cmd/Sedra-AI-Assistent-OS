@@ -191,7 +191,9 @@
     const p = d().el('div', 'hs-modell-menue'); p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Modell');
     const kopf = d().el('div', 'hs-modell-text', S.modell ? 'Geladen: ' + S.modell.name + '.' : 'Kein Modell geladen.');
     const zu = d().el('button', 'hs-rund hs-modell-zu', '×'); zu.type = 'button'; zu.setAttribute('aria-label', 'Schließen'); zu.onclick = ()=>schliessen(S);
-    p.append(kopf, zu, steuerung(S, ()=>{ schliessen(S); if(root.sedraHarness.eingabe) root.sedraHarness.eingabe.modellZeigen(S); }), routerTeil(S));
+    p.append(kopf,zu);
+    if(root.sedraHarness.chat_modelle)p.append(root.sedraHarness.chat_modelle.auswahl(S));
+    p.append(d().el('strong','','Gemeinsamer lokaler Modellserver'),steuerung(S, ()=>{ schliessen(S); if(root.sedraHarness.eingabe) root.sedraHarness.eingabe.modellZeigen(S); }), routerTeil(S));
     document.body.append(p); S._modellMenue = p;
     const taste = e=>{ if(e.key === 'Escape') schliessen(S); };
     const aussen = e=>{ if(!p.contains(e.target) && !(e.target.closest && e.target.closest('[data-zelle=model],[data-zelle=server],.hs-modell,.hs-erststart'))) schliessen(S); };

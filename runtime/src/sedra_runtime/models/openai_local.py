@@ -30,7 +30,10 @@ class OpenAICompatibleLocalAdapter(BaseModelAdapter):
 
     def list_models(self):
         data=self._request("GET","/v1/models")
-        return [x.get("id") for x in data.get("data",[]) if x.get("id")]
+        # Router advertise unloaded presets too. Automatic selection must use an
+        # actually loaded model, rather than implicitly loading the first preset.
+        return [x.get("id") for x in data.get("data",[]) if x.get("id") and
+                (not isinstance(x.get("status"),dict) or x["status"].get("value") in ("loaded","sleeping"))]
 
     def chat(self,messages,model=None,**kwargs):
         if not isinstance(messages,list) or not messages:

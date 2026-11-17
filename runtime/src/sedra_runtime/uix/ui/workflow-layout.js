@@ -145,6 +145,17 @@
     return punkte[punkte.length - 1];
   }
 
-  root.sedraWorkflowLayout = {kanten, ebenen, anordnen, fuehren, pfad, mitte, VORWAERTS};
+  // Reine Leseprojektion: Ausführungsweg und KI-Zulieferer getrennt anordnen.
+  // Gespeicherte Revision, Parameter und tatsächliche Verbindungen bleiben unverändert.
+  function logisch(doc){
+    const out=JSON.parse(JSON.stringify(doc));
+    const auxiliary=new Set(kanten(doc).filter(k=>k.art==='ai_languageModel').map(k=>k.von));
+    const main={...doc,nodes:doc.nodes.filter(n=>!auxiliary.has(n.name)),connections:Object.fromEntries(Object.entries(doc.connections || {}).map(([name,c])=>[name,c.main?{main:c.main}:{}]))};
+    const layout=anordnen(main,{dx:180,dy:200});
+    out.nodes.forEach(n=>{if(layout.pos[n.name])n.position=layout.pos[n.name];});
+    for(const edge of kanten(doc).filter(k=>k.art==='ai_languageModel')){const model=out.nodes.find(n=>n.name===edge.von),target=out.nodes.find(n=>n.name===edge.nach);if(model&&target)model.position=[target.position[0],target.position[1]+220];}
+    return out;
+  }
+  root.sedraWorkflowLayout = {kanten, ebenen, anordnen, fuehren, pfad, mitte, logisch, VORWAERTS};
   if(typeof module !== 'undefined' && module.exports) module.exports = root.sedraWorkflowLayout;
 })();

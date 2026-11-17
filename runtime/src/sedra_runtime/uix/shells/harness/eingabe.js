@@ -173,7 +173,7 @@
 
   function fuer(S, a){
     S.el.eingabe.classList.toggle('hs-aus', !!a && /^(aufgaben|lauf|diff|app|einstellungen|builder):/.test(String(a.id)));      // in Aufgaben-, Lauf-, Diff-, App- und Einstellungs-Reitern gibt es nichts zu schreiben
-    zustand(S); fokus(S); schildZeigen(S); kontextZeigen(S);
+    zustand(S); fokus(S); schildZeigen(S); kontextZeigen(S);modellZeigen(S);
     if(S.tokenLaden) S.tokenLaden();
   }
 
@@ -225,9 +225,10 @@
 
   function modellZeigen(S){
     const e = S._eingabe; if(!e) return;
-    const m = S.modell;
+    const a=S.aktive(),wahl=a && a.modellWahl;
+    const m = wahl ? {name:(wahl.provider==='nvidia'?'NVIDIA · ':'Lokal · ')+(wahl.model || (S.modell && S.modell.name) || 'geladenes Modell')} : S.modell;
     e.modell.textContent = m ? m.name : 'kein Modell';
-    e.modell.title = m ? ('Geladen: ' + m.name + (m.kontext ? ' · Kontext ' + Number(m.kontext).toLocaleString('de-DE') : '') + ' – Klick: Modell wechseln oder entladen')
+    e.modell.title = m ? ('Modell dieses Chats: ' + m.name + (m.kontext ? ' · Kontext ' + Number(m.kontext).toLocaleString('de-DE') : '') + ' – Klick: Chat-Modell wählen')
                        : 'Kein Modell geladen – Klick: Modell laden';
     e.modell.classList.toggle('aus', !m);
     // 1.11. (Captain): die Modellsteuerung steht nicht mehr als Streifen über dem Eingabefeld (und hängt nicht an der Werkstatt), sondern öffnet als kleines

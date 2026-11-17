@@ -226,6 +226,8 @@ def laufen(execute, mission, box, messages, antwort, *, modell, provider='llama-
                    'stream_guard': True}                   # Log 03.11.2026: ein Zug erzeugte 8 000 Token, die Eingabe stand 4½ Minuten auf Stopp – wiederholt sich das Modell nur noch, schließt der Wächter (runaway_guard.py) die Verbindung
         if id_slot is not None:
             request['id_slot'] = id_slot                  # fester llama-Slot dieser Sitzung (Pool: Manager = 0, Angestellte = 1, 2)
+        if provider=='nvidia':
+            request.pop('stream',None);request.pop('stream_guard',None)
         if denk_jetzt == 'aus':                           # Denken begrenzen (Token und Gespräch): gemessen wurde `none` mit LM Studio (docs: jobs/token_policy.py), nicht mit dem Router
             request['reasoning_effort'] = 'none'
         elif denk_jetzt == 'begrenzt':

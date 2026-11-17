@@ -183,11 +183,36 @@ def _runs(hub, payload):
             if (m.get('context') or {}).get('n8n_workflow')][-50:]
 
 
+def _dashboard_read(hub, mid, args):
+    from .rechnung_dashboard import FILENAME
+    from hashlib import sha256
+    from pathlib import Path
+    run = _run_read(hub, mid)
+    result = run.get('result') or {}
+    if not result.get('rechnungsauswertung') or (result.get('dashboard') or {}).get('status') != 'created':
+        raise ValueError('invoice_dashboard_not_available')
+    record=hub.runtime.artifacts.get(result['dashboard'].get('artifact_id'))
+    if not record or record.get('mission_id')!=mid:
+        raise ValueError('invoice_dashboard_artifact_not_found')
+    path=Path(record['path'])
+    root=(hub.runtime.control.workspace / mid).resolve()
+    if path.is_symlink() or not path.resolve().is_relative_to(root):
+        raise ValueError('invoice_dashboard_path_invalid')
+    raw=path.read_bytes()
+    if len(raw)>10_000_000 or sha256(raw).hexdigest()!=record['integrity']['hash']:
+        raise ValueError('invoice_dashboard_integrity_failed')
+    return {'filename': FILENAME, 'html': raw.decode('utf-8')}
+
+
 def _start(hub, oid, args):
     with hub.lock:
-        record = _store(hub).read(oid)
-        if args.get('revision') != record['revision']:
-            raise ValueError('workflow_revision_conflict')
+        # Eine ausdrücklich gewählte, unveränderliche Revision bleibt ausführbar,
+        # auch wenn inzwischen eine neuere gespeichert wurde. Das Gate bindet
+        # weiterhin den exakten Workflow- und Eingabe-Digest dieses Laufes.
+        revision = args.get('revision')
+        if type(revision) is not int or revision < 1:
+            raise ValueError('invalid_workflow_revision')
+        record = _store(hub).read(oid, revision)
         check = _bewertung(hub, record['workflow'])
         if not check['executable']:
             raise ValueError(check['reason'])
@@ -304,10 +329,11 @@ def _compare(hub, oid, args):
 
 
 def register(registry, hub):
+    from .modellwahl import options as model_options
     registry.register(registry.Kind('workflow', 'Workflows', _read, _listing,
         verbs=[Verb('speichern', 'Neue Revision speichern', _save),
                Verb('starten', 'Lauf zur Freigabe vorlegen', _start, needs_gate=True)],
-        type_verbs=[Verb('importieren', 'Workflow speichern', _save),
+        type_verbs=[Verb('modelle', 'Workflow-Modelle lesen', model_options), Verb('importieren', 'Workflow speichern', _save),
                     Verb('versionen', 'Versionshistorie lesen', _history), Verb('vergleichen', 'Versionen vergleichen', _compare),
                     Verb('revision_lesen', 'Frühere Revision lesen', lambda h, o, a: _workflow(_store(h).read(a.get('id'), a.get('revision')), h)),
                     Verb('tabellen', 'Lokale Tabellen auflisten', _tabellen), Verb('tabelle_lesen', 'Tabelle lesen', _tabelle_lesen),
@@ -325,6 +351,7 @@ def register(registry, hub):
         lambda h, p: [dict(item, type='scenario') for item in _listing(h, p)],
         verbs=canonical.verbs, type_verbs=canonical.type_verbs, source='workflows'))
     registry.register(registry.Kind('workflow_run', 'Workflow-Lauf', _run_read, _runs,
-        verbs=[Verb('fortsetzen', 'Nach Freigabe fortsetzen', _continue, when=lambda o: o['state'] in ('CAPTAIN_REVIEW', 'READY', 'EXECUTE', 'VERIFY')),
+        verbs=[Verb('dashboard_lesen', 'HTML-Auswertung lesen', _dashboard_read, when=lambda o: bool(((o.get('result') or {}).get('dashboard') or {}).get('status') == 'created')),
+               Verb('fortsetzen', 'Nach Freigabe fortsetzen', _continue, when=lambda o: o['state'] in ('CAPTAIN_REVIEW', 'READY', 'EXECUTE', 'VERIFY')),
                Verb('abbrechen', 'Lauf beenden', lambda h, o, a: h.mission_lifecycle(o, 'beenden'),
                     when=lambda o: o['state'] in ('READY', 'CAPTAIN_REVIEW', 'PAUSED', 'EXECUTE'))]))

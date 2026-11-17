@@ -8,6 +8,7 @@ from . import lokal, live
 
 
 def context(control, mission, request):
+    from .modellwahl import selection
     project = control.workspace.parents[1]
     cfg = configuration(project)
     art = lokal.gesamt_bewertung(request.get('workflow'), bool(cfg.get('enabled')))
@@ -15,6 +16,7 @@ def context(control, mission, request):
         raise ValueError(art['reason'])
     data = inputs(request.get('inputs', {}))
     profil = art['profile']
+    modellwahl = selection(request['workflow'])
     if profil == lokal.PROFILE:
         doc, cfg = request['workflow'], {'profil': 'lokal'}
     else:
@@ -25,17 +27,21 @@ def context(control, mission, request):
                'plan_revision': mission.get('plan_revision', 0), 'workflow_digest': digest(request['workflow']),
                'inputs_digest': digest(data), 'profile': profil, 'config': cfg,
                'guard_rules_digest': digest({'rules': control.guard.rules, 'defaults': control.guard.defaults})}
+    if modellwahl['provider'] != 'llama-cpp-server' or modellwahl['model'] is not None:
+        binding['model_selection'] = modellwahl
     return doc, data, cfg, binding
 
 
-def _modell(control, mission_id):
-    """Der Weg zum lokalen Modell für KI-Knoten des Eigenablaufs: immer der lokale llama-Server, mit erzwungenem Schema (geprüftes JSON), nie ein Cloud-Anbieter."""
+def _modell(control, mission_id, workflow=None):
+    """KI-Knoten verwenden die gespeicherte lokale oder NVIDIA-Modellwahl mit geprüftem JSON-Schema."""
     router = getattr(control, 'model_router', None)
     if router is None:
         return None
+    from .modellwahl import selection
+    wahl = selection(workflow or {})
 
     def fragen(nachrichten, schema):
-        antwort = router.chat(mission_id, nachrichten, provider='llama-cpp-server', schema=schema, temperature=0, max_tokens=700)
+        antwort = router.chat(mission_id, nachrichten, provider=wahl['provider'], model=wahl['model'], schema=schema, temperature=0, max_tokens=1200)
         return antwort.get('parsed')
     return fragen
 
@@ -74,7 +80,12 @@ def execute(control, mission, request, token=None):
             if bew.get('schreibt'):
                 risiken.append('Schreibt in lokale Tabellen: ' + ', '.join(bew['schreibt']) + '.')
             if bew.get('braucht_modell'):
-                risiken.append('Fragt das lokale Sprachmodell von SEDRA (nie ein Cloud-Modell); der Rechnungstext verlässt den Rechner nicht.')
+                from .modellwahl import selection
+                wahl=selection(request['workflow'])
+                if wahl['provider']=='nvidia':
+                    risiken[0]='SEDRA führt den Workflow lokal aus; KI-Schritte senden ihren Text an die ausdrücklich gewählte NVIDIA-API.'
+                    risiken.append('NVIDIA-Modell: '+wahl['model']+'. Der Rechnungstext des KI-Schritts wird an diesen Anbieter übertragen.')
+                else:risiken.append('Fragt das lokale Sprachmodell von SEDRA; der Rechnungstext verlässt den Rechner nicht.')
         gate = control.guard.create_gate(mid, action, target, request_binding=binding, risks=risiken, rollback_available=False)
         return {'status': 'captain_required', 'gate': gate, 'artifacts': []}
     folder = control.workspace / mid
@@ -90,11 +101,26 @@ def execute(control, mission, request, token=None):
                          payload={'step_id': request.get('id'), 'binding_digest': digest(binding), 'profile': PROFILE})
     try:
         if eigen:
-            result = lokal.ausfuehren(request['workflow'], data, control.workspace.parents[1], modell=_modell(control, mid), live=_live_melder(control.workspace.parents[1], mission, request['workflow']))
+            result = lokal.ausfuehren(request['workflow'], data, control.workspace.parents[1], modell=_modell(control, mid, request['workflow']), live=_live_melder(control.workspace.parents[1], mission, request['workflow']))
         else:
             result = LocalN8n(cfg).run(request['workflow'], data)
     except Exception:
         result = {'status': 'failed', 'error': 'n8n_adapter_unavailable', 'cleanup_errors': []}
+    extra_artifacts = []
+    if result.get('rechnungsauswertung') is not None:
+        from .rechnung_dashboard import render, FILENAME, output_path
+        auswertung = result['rechnungsauswertung']
+        auswertung.update(run_id=mid, revision=((mission.get('context') or {}).get('n8n_workflow') or {}).get('revision'))
+        try:
+            dashboard_path = output_path(folder,request['workflow'])
+            dashboard_path.parent.mkdir(parents=True,exist_ok=True)
+            with dashboard_path.open('x', encoding='utf-8') as stream:
+                stream.write(render(auswertung))
+            extra_artifacts.append(control.artifacts.register(mid, dashboard_path, source_component='workflows:rechnung-dashboard'))
+            result['dashboard'] = {'status': 'created', 'filename': FILENAME, 'artifact_id': extra_artifacts[-1]['artifact_id']}
+        except Exception as exc:
+            # Ein Berichtsfehler darf bereits ausgeführte Tabellenänderungen nicht zur Wiederholung freigeben.
+            result['dashboard'] = {'status': 'failed', 'error': type(exc).__name__}
     path = folder / ('lokal-result.json' if eigen else 'n8n-result.json')
     with path.open('x', encoding='utf-8') as stream:
         json.dump(result, stream, ensure_ascii=False, allow_nan=False, indent=2)
@@ -102,4 +128,4 @@ def execute(control, mission, request, token=None):
     control.audit.append('N8N_EXECUTION_FINISHED', component='workflows', mission_id=mid,
                          payload={'status': result['status'], 'error': result.get('error'),
                                   'remote_workflow_id': result.get('remote_workflow_id'), 'cleanup_errors': result.get('cleanup_errors')})
-    return {'status': result['status'], 'error': result.get('error'), ('lokal_result' if eigen else 'n8n_result'): result, 'artifacts': [artifact]}
+    return {'status': result['status'], 'error': result.get('error'), ('lokal_result' if eigen else 'n8n_result'): result, 'artifacts': [artifact] + extra_artifacts}

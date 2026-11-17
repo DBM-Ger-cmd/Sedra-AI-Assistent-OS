@@ -107,6 +107,37 @@ class HarnessApiTests(unittest.TestCase):
         self.hub.harness.geladen = lambda: (MODELL, None)
         self.hub.models_view = lambda: {'server': {'running': True, 'model': 'coder.gguf', 'context': 32768}, 'lease': None, 'recipes': []}
 
+    def test_chatmodelle_lokal_und_nvidia_bleiben_getrennt(self):
+        from types import SimpleNamespace
+        router=self.hub.runtime.model_router
+        old=router.adapters.get('nvidia')
+        router.adapters['nvidia']=SimpleNamespace(health=lambda:True,default_model='cloud-default')
+        def reset():
+            if old is None:router.adapters.pop('nvidia',None)
+            else:router.adapters['nvidia']=old
+        self.addCleanup(reset)
+        local=self.neue_sitzung(provider='llama-cpp-server',modell='coder')['id']
+        cloud=self.neue_sitzung(provider='nvidia',modell='cloud-selected')['id']
+        seen=[]
+        def execute(mission,request):
+            seen.append((request['provider'],request['model']))
+            if request['provider']=='nvidia':
+                self.assertNotIn('stream_guard',request)
+                self.assertNotIn('stream',request)
+            return {'status':'completed','model_result':{'content':'OK','message':{'role':'assistant','content':'OK'},'usage':{},'finish_reason':'stop'}}
+        self.hub.harness.execute=execute
+        for sid in (local,cloud):
+            if sid==cloud:self.hub.harness.geladen=lambda:([], 'kein lokales Modell')
+            code,out=anfrage(self.url,'POST','/api/harness/sitzungen/'+sid+'/nachricht',{'text':'Antworte nur mit OK.'})
+            self.assertEqual(code,200,out)
+            events=strom(self.url,out['antwort_id'])
+            self.assertTrue(any(e[1]=='ende' for e in events),events)
+        self.assertIn(('llama-cpp-server','coder'),seen)
+        self.assertIn(('nvidia','cloud-selected'),seen)
+        for sid,provider,model in [(local,'llama-cpp-server','coder'),(cloud,'nvidia','cloud-selected')]:
+            code,s=anfrage(self.url,'GET','/api/harness/sitzungen/'+sid)
+            self.assertEqual((s['provider'],s['modell']),(provider,model))
+
     def neue_sitzung(self, **kw):
         code, kopf = anfrage(self.url, 'POST', '/api/harness/sitzungen', {'projekt': 'sedra-entwicklung', **kw})
         self.assertEqual(code, 200, kopf)

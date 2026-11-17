@@ -159,9 +159,15 @@ class CloudOpenAICompatibleAdapter(_CloudAdapter):
 
     def chat(self, messages, model=None, **kwargs):
         if not isinstance(messages, list) or not messages: raise ModelAdapterError("messages_required")
-        self._check_options(kwargs)
+        extras={k:kwargs.get(k) for k in ('response_format','tools','tool_choice','parallel_tool_calls') if kwargs.get(k) is not None}
+        self._check_options({k:v for k,v in kwargs.items() if k not in extras})
+        if 'response_format' in extras and (not isinstance(extras['response_format'],dict) or extras['response_format'].get('type') not in ('json_schema','json_object','text')):
+            raise ModelAdapterError('cloud_option_unsupported:response_format')
+        if 'tools' in extras and (not isinstance(extras['tools'],list) or any(not isinstance(t,dict) or t.get('type')!='function' or not isinstance(t.get('function'),dict) or not isinstance(t['function'].get('name'),str) for t in extras['tools'])):
+            raise ModelAdapterError('cloud_option_unsupported:tools')
         model = self._model(model)
         payload = {"model": model, "messages": messages, "stream": False}
+        payload.update(extras)
         for key in PASSED_OPTIONS:
             if kwargs.get(key) is not None: payload[key] = kwargs[key]
         headers = {"Authorization": "Bearer " + self._key()}
@@ -170,7 +176,10 @@ class CloudOpenAICompatibleAdapter(_CloudAdapter):
         if not choices: raise ModelAdapterError("no_completion_choice")
         message = choices[0].get("message", {}) or {}
         content = message.get("content") or ""
-        return self._result(model, content, choices[0].get("finish_reason"), data.get("usage"), data)
+        result=self._result(model, content, choices[0].get("finish_reason"), data.get("usage"), data)
+        result['message']=message
+        if message.get('tool_calls'):result['empty_answer']=False
+        return result
 
 
 class CloudAnthropicAdapter(_CloudAdapter):

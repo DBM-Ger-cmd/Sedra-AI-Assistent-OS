@@ -34,7 +34,7 @@
     const eintraege = [];
     for(const r of (liste.items || [])){
       try{
-        const rec = await api('/api/objects', {method: 'POST', body: {type: 'workflow', id: r.id}});
+        const rec = r.workflow && r.execution ? r : await api('/api/objects', {method: 'POST', body: {type: 'workflow', id: r.id}});
         const laufbar = !!(rec.execution && rec.execution.executable);
         eintraege.push({id: r.id, title: r.title, revision: r.revision, laufbar, offen: laufbar ? 0 : luecken(rec.workflow).length, geprueft: true});
       }catch(_e){ eintraege.push({id: r.id, title: r.title, revision: r.revision, offen: 0, geprueft: false}); }

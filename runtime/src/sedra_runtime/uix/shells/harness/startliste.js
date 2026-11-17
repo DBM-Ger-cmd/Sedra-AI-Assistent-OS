@@ -64,6 +64,13 @@
                  object: {type: typ, id: 'alle', title: w.name || w.id},
                  gruppe: w.zweck === 'pruefung' ? 'pruefung' : (w.gruppe || k.zuordnung[typ] || 'arbeit'), werkzeuge: [w.id]});
     });
+    // Die früheren Einzel-Apps sind auch bei angepasster Menükonfiguration keine eigenen Apps mehr.
+    const studio=apps.find(a=>a.object.type==='workflow-studio');
+    const alteStudioIds=new Set();
+    if(studio){
+      for(let i=apps.length-1;i>=0;i--) if(['workflow','scenario'].includes(apps[i].object.type)){alteStudioIds.add(apps[i].id);apps.splice(i,1);}
+      studio.label='SEDRA Workflow Studio';studio.object.title=studio.label;
+    }
     // Orte, die ein anderer Ort schon trägt (Hardware: dasselbe Werkzeug wie der Maschinenraum), stehen nicht noch einmal im Menü; Befehl und Kachel bleiben
     for(let i = apps.length - 1; i >= 0; i--) if(k.ausblenden.indexOf(apps[i].id) >= 0) apps.splice(i, 1);
     apps.forEach(a=>{                                                    // Namen der Harness-Shell (A6): „Entscheidungen“ heißt hier Posteingang, die alten Wörter bleiben für die Suche
@@ -75,7 +82,7 @@
     const gruppen = k.gruppen.map(g=>({id: g, titel: TITEL[g], symbol: k.symbole[g], apps: apps.filter(a=>a.gruppe === g)})).filter(g=>g.apps.length);
     const jeId = {};
     apps.forEach(a=>{ jeId[a.id] = a; });
-    const letzte = (zuletzt || []).map(id=>jeId[id]).filter(Boolean).slice(0, k.zuletzt_max);
+    const letzte = Array.from(new Set((zuletzt || []).map(id=>alteStudioIds.has(id) && studio ? studio.id : id))).map(id=>jeId[id]).filter(Boolean).slice(0, k.zuletzt_max);
     return {gruppen, zuletzt: letzte, apps, zuletzt_max: k.zuletzt_max};
   }
 

@@ -461,6 +461,9 @@ class HarnessApi:
         raise NichtGefunden('methode_unbekannt')
 
     def anlegen(self, payload):
+        if payload.get('provider'):
+            from .modellwahl import validate
+            validate(payload)
         vorlage = None
         if payload.get('vorlage') is not None:
             vorlage = harness_vorlagen.laden(self.hub.project_root, payload.get('vorlage'))     # VorlageFehler ist ein ValueError → 400
@@ -476,6 +479,8 @@ class HarnessApi:
                                       mission_id=mission['identity']['mission_id'], vorlage=vorlage['id'] if vorlage else None,
                                       vorlage_hash=vorlage['hash'] if vorlage else None,
                                       gedaechtnis=harness_notizen.index_fuer_sitzung(self.hub.project_root, projekt['id']))
+        if payload.get('provider'):
+            self.sitzungen.modell_waehlen(kopf['id'],payload.get('modell'),provider=payload['provider'])
         self._audit('HARNESS_SITZUNG_ANGELEGT', {'sitzung_id': kopf['id'], 'projekt': projekt['id'], 'mission_id': kopf['mission_id'],
                                                  'vorlage': kopf.get('vorlage'), 'vorlage_hash': kopf.get('vorlage_hash')})
         slot = payload.get('slot') if payload.get('slot') is not None else (vorlage or {}).get('slot')      # die Wahl beim Anlegen geht vor der Vorlage; Pool: Manager 0, Angestellte 1 und 2
@@ -520,8 +525,8 @@ class HarnessApi:
         self._sitzung(sid)
         if 'titel' in payload:
             self.sitzungen.titel_aendern(sid, payload.get('titel'))
-        if 'modell' in payload:
-            self.sitzungen.modell_waehlen(sid, payload.get('modell'))
+        if 'modell' in payload or 'provider' in payload:
+            self.sitzungen.modell_waehlen(sid, payload.get('modell'),provider=payload.get('provider'))
         if 'slot' in payload:                                               # fester Slot im Modellserver (Manager 0, Angestellte 1, 2) oder null
             self.sitzungen.slot_waehlen(sid, payload.get('slot'))
         if 'wissen_zuerst' in payload:                                      # WK-13: an, aus oder null (= Vorgabe)
@@ -618,9 +623,10 @@ class HarnessApi:
             raise ValueError('anhaenge_nicht_als_feld: Dateien werden im Text mit @pfad genannt (Stufe 6), das Modell liest sie mit datei_lesen')
         s = self._sitzung(sid)
         belegt = self.laeufe.belegt()
-        if belegt:
+        if belegt and s.get('provider','llama-cpp-server')=='llama-cpp-server':
             return {'status': 'kein_modell', 'grund': f"Modell belegt durch Lauf {belegt['id']} ({belegt['name']}) – es ist wieder da, wenn der Lauf endet."}
-        loaded, grund = self.geladen()
+        from .modellwahl import loaded as selected_models
+        loaded, grund = selected_models(self,s)
         wissen = self._wissen_fuer_zug(s, text)                          # SPEC_WISSEN_KERN_v1 WK-13: None, wenn „Wissen zuerst“ aus ist
         if not loaded:
             v = self.vorgaben()
@@ -777,7 +783,7 @@ class HarnessApi:
         v = self._laufzeit_vorgaben().get('verlauf_zusammenfassen')
         return v if v in ZUSAMMEN_MODI else 'auto'
 
-    def _verlauf_zusammenfassen(self, sid, mission, modell, antwort, messages):
+    def _verlauf_zusammenfassen(self, sid, mission, modell, antwort, messages, provider=PROVIDER):
         """Rollende Zusammenfassung: fallen mindestens ZUSAMMEN_MIN Nachrichten aus den letzten VERLAUF_MAX, fasst das Modell sie (mit der bisherigen Zusammenfassung) zusammen.
         Ein Modellaufruf vor der Antwort, nur im Modus `auto`; scheitert er, geht die Antwort ohne Zusammenfassung weiter."""
         if self._zusammenfassen_modus() != 'auto':
@@ -792,7 +798,7 @@ class HarnessApi:
                 return
             neu = sicht[bis:grenze]
             antwort.senden('verlauf.zusammenfassung', {'phase': 'start', 'nachrichten': len(neu)})
-            out = self.execute(mission, {'action': 'model_inference', 'provider': PROVIDER, 'model': modell, 'temperature': 0.2, 'max_tokens': 1200, 'reasoning_effort': 'none', 'slot_owner': 'captain-chat',
+            out = self.execute(mission, {'action': 'model_inference', 'provider': provider, 'model': modell, 'temperature': 0.2, 'max_tokens': 1200, 'reasoning_effort': 'none', 'slot_owner': 'captain-chat',
                                          'messages': zusammenfassung_nachrichten((alt or {}).get('text'), neu)})
             if out.get('status') != 'completed':
                 raise ValueError('modell_fehler: ' + str(out.get('error') or out.get('reason_code') or out.get('status'))[:160])
@@ -1153,6 +1159,8 @@ class HarnessApi:
         self._mission_stand(mission, 'closed', 'schliessen')
         kopf = self.sitzungen.anlegen(kopf_h['projekt'], f'{rolle}: {titel}', modell=haupt.get('modell'), mission_id=mission['identity']['mission_id'],
                                       eltern=kopf_h['id'], delegation=delegation, rolle=rolle)
+        if haupt.get('provider'):
+            self.sitzungen.modell_waehlen(kopf['id'],haupt.get('modell'),provider=haupt['provider'])
         if slot is not None:
             self.sitzungen.slot_waehlen(kopf['id'], slot)
         self._audit('HARNESS_SITZUNG_ANGELEGT', {'sitzung_id': kopf['id'], 'projekt': kopf_h['projekt'], 'mission_id': kopf['mission_id'], 'vorlage': None, 'vorlage_hash': None,
@@ -1481,7 +1489,7 @@ class HarnessApi:
             raise ValueError(satz(str(exc)) + ' (quelle: Kennung, art: ' + ', '.join(desk_basis.ARTEN) + ', seit: JJJJ-MM-TT)') from None
         k = args.get('k')
         k = max(1, min(10, k)) if type(k) is int else 5
-        a = dienst.fragen(self._wissen_speicher(), frage, leser=CAPTAIN, route=dienst.route_aus_anbieter(PROVIDER), filter=filt, k=k)
+        a = dienst.fragen(self._wissen_speicher(), frage, leser=CAPTAIN, route=dienst.route_aus_anbieter(self.sitzungen.laden(sitzung_id).get('provider') or PROVIDER), filter=filt, k=k)
         if a.art == 'aus':
             return a.hinweis
         if a.art == 'fehler':
@@ -1520,7 +1528,7 @@ class HarnessApi:
         from ..wissen.speicher import CAPTAIN
         sp = self._wissen_speicher()
         try:
-            a = dienst.fragen(sp, str(text)[:dienst.MAX_FRAGE], leser=CAPTAIN, route=dienst.route_aus_anbieter(PROVIDER))
+            a = dienst.fragen(sp, str(text)[:dienst.MAX_FRAGE], leser=CAPTAIN, route=dienst.route_aus_anbieter(s.get('provider') or PROVIDER))
             teile = dienst.block(sp, a, mission_id=(s.get('kopf') or {}).get('mission_id')) if a.treffer else []
         except Exception as exc:                                     # nie still, nie blockierend
             self._audit('HARNESS_WISSEN_FEHLER', {'grund': (str(exc) or type(exc).__name__)[:120]})
@@ -1678,7 +1686,7 @@ class HarnessApi:
         regeln = harness_katalog.mit_projekt(regeln, projekt)          # P0 M1: ${schreibbereich} → Schreibbereich dieses Projekts
         w = self._werkzeuge(projekt['id'], s['kopf'].get('mission_id'), regeln)
         return self._begrenzen(s, freigabe.Kiste(w, regeln=regeln, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, karten=self.karten,
-                              sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'], aufgaben=self.aufgaben,
+                              sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'], aufgaben=self.aufgaben, lokal=s.get('provider','llama-cpp-server')=='llama-cpp-server',
                               vorarbeiter=self.vorarbeiter, extra=self._vorarbeiter_werkzeuge(s), erlaubnisse=s.get('erlaubnisse'), master=getattr(self, 'master', None),
                               projekte=lambda: self.projekte_fuer_modell(projekt['id']))), projekt
 
@@ -1689,9 +1697,10 @@ class HarnessApi:
                 for p in self.projekte()['projekte']]
 
     def _starten(self, sid, s, antwort, box, messages, info, modell, bisher=(), wissen=None):
+        provider=s.get('provider') or PROVIDER
         guard = getattr(self.hub.runtime.model_router, 'content_guard', None)
         from ..core.content_guard import MODE_SHARP
-        live = guard is None or not MODE_SHARP.get(guard.mode, True)          # D-E2: im scharfen Modus kein Live-Text
+        live = provider==PROVIDER and (guard is None or not MODE_SHARP.get(guard.mode, True))
         fenster = info.get('contextLength') if isinstance(info.get('contextLength'), int) else None
         mission_id = s['kopf'].get('mission_id')
         vorlage = self._vorlage(s)
@@ -1700,11 +1709,11 @@ class HarnessApi:
         def lauf():
             try:
                 mission = self.hub.runtime.missions.load(mission_id)
-                self._verlauf_zusammenfassen(sid, mission, modell, antwort, messages)
-                schleife.laufen(self.execute, mission, box, messages, antwort, modell=modell, provider=PROVIDER, sitzungen=self.sitzungen,
+                self._verlauf_zusammenfassen(sid, mission, modell, antwort, messages,provider=provider)
+                schleife.laufen(self.execute, mission, box, messages, antwort, modell=modell, provider=provider, sitzungen=self.sitzungen,
                                 sitzung_id=sid, fenster=fenster, live_text=live, wirkung=getattr(box, 'wirkung', ()), bisher=bisher, max_zuege=zuege,
                                 sicherung=self._option('kontext_sicherung'), denk_modus=self._option('denken'), max_tokens=int(self._option('antwort_budget')),
-                                id_slot=s.get('slot'), nachbereiten=lambda text: self._wissen_nachbereiten(antwort.id, wissen, text, mission_id))
+                                id_slot=s.get('slot') if provider==PROVIDER else None, nachbereiten=lambda text: self._wissen_nachbereiten(antwort.id, wissen, text, mission_id))
             except Exception as exc:                  # nie still: der Strom endet mit Grund, die Sitzung bekommt eine Zeile
                 grund = f'{type(exc).__name__}: {exc}'[:300]
                 antwort.senden('fehler', {'grund': grund})
@@ -2165,7 +2174,8 @@ class HarnessApi:
         out = {'status': 'beantwortet', 'karte_id': kid, 'weg': karte.get('entscheidung') or weg, 'ergebnis_status': r['status'], 'ergebnis': str(r['ergebnis'])[:2000],
                'erlaubnis': r.get('erlaubnis')}
         zustand = karte.get('zustand')
-        loaded, _grund = self.geladen()
+        from .modellwahl import loaded as selected_models
+        loaded, _grund = selected_models(self,s)
         if not zustand or not loaded:
             out['fortsetzung'] = 'kein_modell' if zustand else 'kein_zustand'
             self._melden('harness.sitzung', {'id': sid, 'was': 'geaendert', 'titel': s['titel']})

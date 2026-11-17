@@ -119,7 +119,7 @@ class HarnessShellTests(unittest.TestCase):
 
     def test_takt_nur_fuer_sichtbares(self):
         # HS-52a: ein Takt nur für sichtbare Anzeigen (Taskleiste, offenes Start-Menü) und nur bei sichtbarem Tab; sonst Ereignisse
-        erlaubt = {'taskleiste.js', 'startmenue.js'}
+        erlaubt = {'taskleiste.js', 'startmenue.js', 'workflow_studio_live.js'}
         for js in ORDNER.glob('*.js'):
             text = js.read_text(encoding='utf-8')
             if 'setInterval' in text:

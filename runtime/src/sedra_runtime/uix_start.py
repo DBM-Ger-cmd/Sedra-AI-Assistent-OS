@@ -29,7 +29,7 @@ class ProcessInventoryError(RuntimeError):
 _UIX_MODULE_COMMAND = re.compile(
     r'^\s*(?:"[^"\r\n]*?(?:[\\/])?pythonw?(?:\.exe)?"|'
     r'(?:\S*[\\/])?pythonw?(?:\.exe)?)\s+'
-    r'(?:(?:-[IBEsSOuq])\s+)*'
+    r'(?:(?:-[IBEsSOuq])\s+|-X\s+[A-Za-z0-9_=.-]+\s+|-X[A-Za-z0-9_=.-]+\s+)*'
     r'-m\s+(?:sedra_runtime|sedra_runtime)\.(?:uix_start|uix_server)(?=\s|$)',
     re.IGNORECASE,
 )

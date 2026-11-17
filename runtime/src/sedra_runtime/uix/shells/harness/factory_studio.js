@@ -46,12 +46,18 @@
     const zeichnen = ()=>{ const f = aktiv(); if(f) f.flaechen.forEach(x=>x.zeichnen()); };
     function einhaengen(modus){
       const pane = d().el('div', 'hs-fs-pane' + (modus.zellen.length > 1 ? ' raster' : '')); pane.dataset.modus = modus.id;
+      if(modus.id === 'projektbrowser'){
+        pane.append(d().el('h2', 'hs-ws-leit-titel', 'Projekte'));
+        pane.append(d().el('p', 'hs-ws-hinweis', 'Öffne ein Projekt oder lege ein neues an, um mit der Factory zu arbeiten.'));
+      }
       const flaechen = modus.zellen.map(objekt=>{
         const eigene = objekt.eigene && root.sedraHarness[objekt.eigene];
         const flaeche = eigene ? eigene.flaeche(S) : A.flaeche(S, objekt);
         const zelle = d().el('section', 'hs-fs-zelle'); zelle.dataset.zelle = objekt.type;
         if(modus.zellen.length > 1) zelle.append(d().el('h3', 'hs-fs-zellenkopf', objekt.title));
-        zelle.append(flaeche.verben, flaeche.koerper);
+        // Das Projekt-Werkzeug hat „Neues Projekt“ bereits im Inhalt.
+        if(objekt.type !== 'project') zelle.append(flaeche.verben);
+        zelle.append(flaeche.koerper);
         pane.append(zelle);
         return flaeche;
       });

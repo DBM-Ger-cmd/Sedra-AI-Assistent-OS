@@ -645,7 +645,7 @@ def _schema_aus_attributen(attribute):
 
 
 def knoten_extraktor(lauf, n, items):
-    """Information Extractor über das lokale Modell (nie Cloud): das angeschlossene Chat-Modell des Exports wird nicht benutzt, nur sein Platz im Bild."""
+    """Information Extractor über die gespeicherte Modellwahl; der Export-Knoten ist der sichtbare Modellträger."""
     if lauf.modell is None:
         raise LokalFehler('kein_lokales_modell: erst ein Modell laden')
     if len(items) > MAX_KI_EINTRAEGE:
@@ -863,5 +863,9 @@ def ausfuehren(workflow, eingabe, project, modell=None, live=None):
         ergebnis['fehler_text'] = type(exc).__name__
         melden(aktuell_nr, aktuell, 'fehler', type(exc).__name__)
     ergebnis['tabellen_geschrieben'] = list(lauf.geschrieben)
+    from .rechnung_dashboard import collect
+    auswertung = collect(workflow, lauf.ausgaben, ergebnis)
+    if auswertung is not None:
+        ergebnis['rechnungsauswertung'] = auswertung
     ergebnis['dauer_ms'] = int((time.time() - start) * 1000)
     return ergebnis

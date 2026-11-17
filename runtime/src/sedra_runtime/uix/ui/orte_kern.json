@@ -566,8 +566,8 @@
   },
   {
    "id": "workflow-studio",
-   "label": "Workflow Studio",
-   "hint": "n8n-Workflows, Szenarien und Factory – eine App",
+   "label": "SEDRA Workflow Studio",
+   "hint": "Workflows erstellen, vorbereiten und live untersuchen – eine gemeinsame App",
    "words": [
     "workflow",
     "workflows",
@@ -578,7 +578,7 @@
    "object": {
     "type": "workflow-studio",
     "id": "app",
-    "title": "Workflow Studio"
+    "title": "SEDRA Workflow Studio"
    }
   }
  ],

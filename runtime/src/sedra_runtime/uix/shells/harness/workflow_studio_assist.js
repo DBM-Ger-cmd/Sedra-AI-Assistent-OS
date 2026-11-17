@@ -7,31 +7,62 @@
   const d = G.d, luecken = G.luecken, angabenVon = G.angabenVon, workflowsZaehlen = G.workflowsZaehlen;
 
   // Der Workflow-Katalog: alle gespeicherten Workflows, je mit offenen Angaben und einem Sprung in den Startassistenten.
-  function baueKatalog(api, zumAssistent){
+  function baueKatalog(api, zumAssistent, zumEditor){
     const box = d().el('div', 'hs-ws-katalog');
+    box.append(d().el('h2', 'hs-ws-leit-titel', 'Workflow-Katalog'));
+    const suche = d().el('input', 'hs-ws-eingabe'); suche.type = 'search';
+    suche.placeholder = 'Workflows suchen …'; suche.setAttribute('aria-label', 'Workflows suchen');
     const stand = d().el('p', 'hs-ws-hinweis', 'Lade die gespeicherten Workflows …');
+    stand.setAttribute('role', 'status');
     const karten = d().el('div', 'hs-ws-luecken');
-    box.append(stand, karten);
-    workflowsZaehlen(api).then(liste=>{
-      stand.textContent = liste.length ? liste.length + ' gespeicherte Workflow(s).' : 'Noch kein Workflow gespeichert. Lege einen im n8n-Editor an oder importiere ihn.';
+    const kopf=d().el('div','hs-ws-katalog-aktionen');
+    const neu=d().el('button','hs-ws-knopf primary','Neuer Workflow');neu.type='button';neu.onclick=()=>zumEditor && zumEditor(null);
+    const frisch=d().el('button','hs-ws-knopf','Aktualisieren');frisch.type='button';
+    kopf.append(suche,frisch);if(zumEditor)kopf.append(neu);
+    box.append(kopf, stand, karten);
+    let workflows = [], laedt=false, tot=false;
+    function filtern(){
+      const text = suche.value.trim().toLocaleLowerCase('de');
+      let anzahl = 0;
+      Array.from(karten.children).forEach((karte, i)=>{
+        karte.hidden = !String(workflows[i].title).toLocaleLowerCase('de').includes(text);
+        if(!karte.hidden) anzahl++;
+      });
+      stand.textContent = !workflows.length ? 'Noch kein Workflow gespeichert. Erstelle einen neuen Workflow oder importiere ihn im Editor.'
+        : text ? anzahl + ' von ' + workflows.length + ' Workflows gefunden.' : workflows.length + ' gespeicherte Workflows. Bearbeite einen Ablauf oder bereite seinen Start vor.';
+    }
+    suche.oninput = filtern;
+    async function laden(){
+      if(laedt || tot)return;laedt=true;frisch.disabled=true;stand.textContent='Lade die gespeicherten Workflows …';
+      try{const liste=await workflowsZaehlen(api);if(tot)return;
+      workflows = liste;
+      karten.replaceChildren();
       liste.forEach(w=>{
         const karte = d().el('div', 'hs-ws-karte');
         karte.append(d().el('h4', 'hs-ws-karten-titel', w.title));
-        karte.append(d().el('p', 'hs-ws-hinweis', 'Revision ' + w.revision + (w.geprueft ? ' · ' + (w.offen ? w.offen + ' offene Angabe(n)' : 'vollständig') : ' · nicht geprüft')));
-        const knopf = d().el('button', 'hs-ws-knopf', 'Im Startassistenten öffnen'); knopf.type = 'button';
+        karte.append(d().el('p', 'hs-ws-hinweis', 'Revision ' + w.revision + (w.geprueft ? ' · ' + (w.laufbar ? 'ausführbar' : w.offen ? w.offen + ' offene Angabe(n)' : 'Prozessmodell · vollständig beschrieben') : ' · nicht geprüft')));
+        const knopf = d().el('button', 'hs-ws-knopf', 'Start vorbereiten'); knopf.type = 'button';
         knopf.onclick = ()=>zumAssistent(w.id);
-        karte.append(knopf); karten.append(karte);
+        const aktionen=d().el('div','hs-ws-knoepfe');
+        if(zumEditor){const editor=d().el('button','hs-ws-knopf','Bearbeiten');editor.type='button';editor.onclick=()=>zumEditor(w.id);aktionen.append(editor);}
+        aktionen.append(knopf);karte.append(aktionen);karten.append(karte);
       });
-    }).catch(err=>{ stand.textContent = 'Workflows nicht geladen: ' + (err.message || err); });
-    return {box, abbauen(){ box.replaceChildren(); }};
+      filtern();
+      }catch(err){if(!tot)stand.textContent = 'Workflows nicht geladen: ' + (err.message || err) + '. Versuche es mit „Aktualisieren“ erneut.';}
+      finally{laedt=false;frisch.disabled=false;}
+    }
+    frisch.onclick=laden;laden();
+    return {box,aktualisieren:laden,abbauen(){tot=true;box.replaceChildren();}};
   }
 
   // Der Startassistent: wählt einen gespeicherten Workflow, zeigt seine offenen Angaben, nimmt Eingaben an und speichert sie als neue Revision.
-  function baueAssistent(api, zumLive){
+  function baueAssistent(api, zumLive, options={}){
     const box = d().el('div', 'hs-ws-assist');
+    box.append(d().el('h2', 'hs-ws-leit-titel', 'Workflow vorbereiten'));
     const kopf = d().el('p', 'hs-ws-hinweis', 'Startassistent: füllt die offenen Angaben jedes Schritts aus und speichert sie als neue Revision. Danach geht es in Live & Debugger.');
     const wahl = d().el('select', 'hs-ws-wahl'); wahl.setAttribute('aria-label', 'Workflow wählen');
     const stand = d().el('p', 'hs-ws-hinweis');
+    stand.setAttribute('role', 'status');
     const liste = d().el('div', 'hs-ws-luecken');
     const knoepfe = d().el('div', 'hs-ws-knoepfe');
     let rec = null, eingaben = [];
@@ -54,7 +85,7 @@
       const offen = rec && !laufbar ? luecken(rec.workflow) : [];
       if(!rec){ stand.textContent = 'Wähle einen gespeicherten Workflow. Der Startassistent arbeitet an jedem Workflow.'; }
       else if(laufbar){
-        stand.textContent = '„' + rec.workflow.name + '“ ist ausführbar. Keine Angaben nötig: Prozessangaben würden den Workflow zum Prozessmodell machen, das nicht läuft. Starte ihn direkt.';
+        stand.textContent = '„' + rec.workflow.name + '“ ist ausführbar. Es sind keine weiteren Angaben nötig. In Live & Debugger kannst du den Lauf zur Freigabe vorlegen.';
       }
       else if(!offen.length){
         stand.textContent = 'Keine offenen Angaben in „' + rec.workflow.name + '“. Der Workflow ist vollständig beschrieben.';
@@ -74,7 +105,7 @@
       const speichern = d().el('button', 'hs-ws-knopf', 'Angaben speichern'); speichern.type = 'button';
       speichern.disabled = !rec || !offen.length;
       speichern.onclick = ()=>sichern().catch(err=>{ stand.textContent = 'Nicht gespeichert: ' + (err.message || err); });
-      const start = d().el('button', 'hs-ws-knopf primary', 'Starten: zu Live & Debugger'); start.type = 'button';
+      const start = d().el('button', 'hs-ws-knopf primary', 'Weiter zu Live & Debugger'); start.type = 'button'; start.disabled = !rec;
       start.onclick = ()=>zumLive(rec);
       knoepfe.append(speichern, start);
     }
@@ -98,8 +129,9 @@
     }
     wahl.onchange = ()=>{ if(wahl.value) oeffnen(wahl.value).catch(err=>{ stand.textContent = 'Nicht geladen: ' + (err.message || err); }); };
     box.append(kopf, wahl, stand, liste, knoepfe);
-    zeichnen();                                                  // Starten ist sofort da, auch ohne gewählten Workflow
-    alleLaden().catch(err=>{ stand.textContent = 'Workflows nicht geladen: ' + (err.message || err); });
+    zeichnen();                                                  // Weiter erst nach der Auswahl eines Workflows
+    if(options.contextual){wahl.hidden=true;kopf.hidden=true;}
+    else alleLaden().catch(err=>{ stand.textContent = 'Workflows nicht geladen: ' + (err.message || err); });
     return {box, oeffne: id=>oeffnen(id).catch(err=>{ stand.textContent = 'Nicht geladen: ' + (err.message || err); }), abbauen(){ box.replaceChildren(); }};
   }
 

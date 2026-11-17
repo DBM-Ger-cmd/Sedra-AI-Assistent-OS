@@ -3,8 +3,8 @@
 # Das Paket ruft keine Route, hat keinen Speicher und öffnet nichts. Es bleibt leer, damit der Ort einen Werkzeugeintrag hat.
 tool:
   id: workflow-studio
-  name: "Workflow Studio"
-  description: "Bündelt n8n Workflows, Szenario Studio, Factory, Live und Freigaben in einer App – im App-Rahmen der Harness-Shell."
+  name: "SEDRA Workflow Studio"
+  description: "Gemeinsamer Workflow-Katalog, Editor, Startassistent und grafischer Live-Debugger in einer App."
   version: 1.0.0
   kind: object
   handles: [workflow-studio]

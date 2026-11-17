@@ -159,6 +159,8 @@
         let s;
         try{ s = await S.api('/api/harness/sitzungen/' + this.id); }
         catch(err){ this.zeigeLeer(); this.notiz('Sitzung nicht lesbar: ' + err.message, 'bad'); return; }
+        this.modellWahl={provider:s.provider || 'llama-cpp-server',model:s.modell || null};
+        if(root.sedraHarness.eingabe)root.sedraHarness.eingabe.modellZeigen(S);
         liste.replaceChildren();
         this.eintraege = 0;
         let block = null, letzte = null;
@@ -222,7 +224,7 @@
             const vl = vorlage ? root.sedraHarness.vorlagenhinweis.vorlage(S, vorlage) : null;
             const weit = !!(vl && (vl.erlaubnisse || []).length);                       // weitreichende Freigaben: erst das ausdrückliche Ja des Captains (MasterChat)
             if(weit && !(await root.sedraHarness.vorlagenhinweis.bestaetigen(S, vl))){ this.notiz('Abgebrochen: ohne die Freigaben legt SEDRA diese Sitzung nicht an.', 'note'); return false; }
-            const kopf = await S.api('/api/harness/sitzungen', {method: 'POST', body: Object.assign({projekt, vorlage: vorlage || undefined}, weit ? {erlaubnisse_bestaetigt: true} : {})});
+            const kopf = await S.api('/api/harness/sitzungen', {method: 'POST', body: Object.assign({projekt, vorlage: vorlage || undefined}, this.modellWahl?{provider:this.modellWahl.provider,modell:this.modellWahl.model}:{}, weit ? {erlaubnisse_bestaetigt: true} : {})});
             const alt = this.id;
             this.id = kopf.id;
             root.sedraHarness.reiter.umbenennen(S, alt, kopf.id);

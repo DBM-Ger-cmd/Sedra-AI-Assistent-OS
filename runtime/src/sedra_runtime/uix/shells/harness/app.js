@@ -44,8 +44,19 @@
   // A6 (Captain 03.11.2026): in der Harness-Shell heißt die Liste der wartenden Freigaben „Posteingang“, egal von wo sie geöffnet wird (Werkzeuge nennen sie noch „Entscheidungen“)
   const NAME = {'decision:alle': 'Posteingang'};
   function oeffnen(S, ort){
-    const objekt = Object.assign({}, ort.object || ort);
+    let objekt = Object.assign({}, ort.object || ort);
     if(!objekt.type || !objekt.id) return null;
+    // Frühere Einzel-Apps teilen denselben Editor und denselben App-Reiter.
+    const workflowZiel=['workflow','scenario','workflow_run'].includes(objekt.type) ? objekt : null;
+    if(workflowZiel){
+      S._workflowStudioZiel=workflowZiel;
+      objekt={type:'workflow-studio',id:'app',title:'SEDRA Workflow Studio'};
+      ort=Object.assign({},ort,{label:objekt.title,object:objekt});
+    }
+    if(objekt.type==='workflow-studio'){
+      objekt={type:'workflow-studio',id:'app',title:'SEDRA Workflow Studio'};
+      ort=Object.assign({},ort,{label:objekt.title,object:objekt});
+    }
     const name = NAME[objekt.type + ':' + objekt.id];
     if(name){ objekt.title = name; ort = Object.assign({}, ort, {label: name}); }
     if(!objekt.title) objekt.title = ort.label || objekt.type;
@@ -70,6 +81,10 @@
       }
     }
     R.aktivieren(S, id);
+    if(workflowZiel && S._workflowStudioZiel && S._workflowStudioAnsicht){
+      S._workflowStudioZiel=null;
+      Promise.resolve(S._workflowStudioAnsicht.oeffneObjekt(workflowZiel)).catch(err=>S.hinweis('Workflow nicht geöffnet: '+err.message,'warn'));
+    }
     melden(S);
     return id;
   }
@@ -162,7 +177,8 @@
     const fs = objekt.type === 'factory-studio' && FS && !f.leer ? FS.ansicht(S, box, f) : null;    // F3-01: die App Factory Studio (Project Browser und Status Dashboard, lesend)
     const WS = root.sedraHarness.workflow_studio;
     const ws = objekt.type === 'workflow-studio' && WS && !f.leer ? WS.ansicht(S, box, f) : null;   // die App Workflow Studio (n8n, Szenario, Factory, Live, Freigaben)
-    const abbauen = ()=>{ f.abbauen(); if(ue) ue.abbauen(); if(tm) tm.abbauen(); if(tr){ tr.abbauen(); if(S._translatorAnsicht === tr) S._translatorAnsicht = null; } if(fs) fs.abbauen(); if(ws) ws.abbauen(); };
+    if(ws){S._workflowStudioAnsicht=ws;if(S._workflowStudioZiel){const ziel=S._workflowStudioZiel;S._workflowStudioZiel=null;Promise.resolve(ws.oeffneObjekt(ziel)).catch(err=>S.hinweis('Workflow nicht geöffnet: '+err.message,'warn'));}}
+    const abbauen = ()=>{ f.abbauen(); if(ue) ue.abbauen(); if(tm) tm.abbauen(); if(tr){ tr.abbauen(); if(S._translatorAnsicht === tr) S._translatorAnsicht = null; } if(fs) fs.abbauen(); if(ws){ws.abbauen();if(S._workflowStudioAnsicht===ws)S._workflowStudioAnsicht=null;} };
     const a = root.sedraHarness.reiter.stub(id, box, S, {objekt, mounts: f.mounts, abbauen, verben: ue ? ue.zeichnen : tm ? tm.zeichnen : tr ? tr.zeichnen : fs ? fs.zeichnen : ws ? ws.zeichnen : f.zeichnen});
     kopf.append(d().el('b', 'hs-app-titel', eintrag.titel), d().el('code', 'hs-app-objekt', objekt.type + ' · ' + objekt.id + (objekt.view ? ' · ' + objekt.view : '')));
     if(f.rechts.length){

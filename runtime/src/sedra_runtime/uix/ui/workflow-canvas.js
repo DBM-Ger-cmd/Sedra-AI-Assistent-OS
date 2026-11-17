@@ -76,10 +76,12 @@
         const tx = b.position[0] + G.inn[0] - (scenario ? 14 : 0), ty = b.position[1] + G.inn[1];
         const dx = Math.max(40, Math.abs(tx - x) / 2), rueck = tx - x < (Lay ? Lay.VORWAERTS : 48);
         const gasse = gassen.get(Math.round(x)) || 0; gassen.set(Math.round(x), gasse + 1);
-        const weg = Lay ? Lay.fuehren([x, y], [tx, ty], kisten.filter(k=>k.n !== source && k.n !== edge.node).map(k=>k.r), {boden, bahn: rueck ? bahnen++ : 0, querbahnen: quer, stub: (count === 2 ? 40 : 20) + gasse * 9, versatz: gasse * 7}) : null;
+        const auxiliary=handlers.logical && kind==='ai_languageModel';
+        const weg = auxiliary ? [[a.position[0]+G.w/2,a.position[1]],[b.position[0]+G.w/2,b.position[1]+G.h]] : Lay ? Lay.fuehren([x, y], [tx, ty], kisten.filter(k=>k.n !== source && k.n !== edge.node).map(k=>k.r), {boden, bahn: rueck ? bahnen++ : 0, querbahnen: quer, stub: (count === 2 ? 40 : 20) + gasse * 9, versatz: gasse * 7}) : null;
         const mid = weg ? Lay.mitte(weg) : [(x + tx) / 2, (y + ty) / 2];
         const path = element('path', {d: weg ? Lay.pfad(weg) : `M ${x} ${y} C ${x + dx} ${y}, ${tx - dx} ${ty}, ${tx} ${ty}`, class: 't-wf-edge' + (scenario ? ' scenario' : ''), 'marker-end': scenario ? 'none' : 'url(#' + marker + ')'});
         path.append(element('title', {}, source + ' → ' + edge.node + ' (' + kind + ':' + index + ')')); svg.append(path);
+        if(auxiliary)path.classList.add('t-wf-edge-zulieferung');
         const key = source + '|' + kind + '|' + index + '|' + edge.node, chosen = edgeSel === key;
         if(chosen) path.classList.add('selected');
         if(!handlers.readOnly && handlers.edgeDelete){
@@ -114,7 +116,7 @@
           g.append(element('circle', {cx, cy, r: 50, class: 't-wf-module-ring'}));
           if(I) I.append(g, kindKey, cx, cy, 52);
           if(kindKey === 'manualTrigger' || kindKey === 'start'){const t = element('g', {class: 't-wf-trigger-mark'});t.append(element('circle', {cx: 22, cy: 96, r: 17}));if(I)I.append(t, 'bolt', 22, 96, 18);g.append(t);}
-          const lines = wrap(node.name, 22, 2);
+          const lines = wrap(node.type.includes('.lmChat') && doc.meta?.sedra_model ? (doc.meta.sedra_model.provider==='nvidia'?'NVIDIA Chat-Modell':'Lokales Chat-Modell') : node.name, 22, 2);
           lines.forEach((line, i)=>g.append(element('text', {x: cx, y: 142 + i * 18, 'text-anchor': 'middle', class: 't-wf-node-title'}, line)));
           const last = lines[lines.length - 1], bx = cx + last.length * 4.4 + 14, by = 142 + (lines.length - 1) * 18;
           g.append(element('rect', {x: bx - 9, y: by - 13, width: 20, height: 18, rx: 4, class: 't-wf-badge-rect'}), element('text', {x: bx + 1, y: by + 1, 'text-anchor': 'middle', class: 't-wf-badge-text'}, String(order + 1)));
@@ -141,7 +143,7 @@
           if(meta && meta.mode === 'automatable') g.append(element('circle', {cx: 90, cy: 6, r: 9, class: 't-wf-candidate'}), element('text', {x: 90, y: 10, 'text-anchor': 'middle', class: 't-wf-candidate-text'}, 'A'));
           if(I) I.append(g, kindKey, cx, cy, 44);
           if(!['manualTrigger', 'start'].includes(kindKey)) g.append(element('circle', {cx: 0, cy: 48, r: 4, class: 't-wf-in'}));
-          const lines = wrap(node.name, 22, 2);
+          const lines = wrap(node.type.includes('.lmChat') && doc.meta?.sedra_model ? (doc.meta.sedra_model.provider==='nvidia'?'NVIDIA Chat-Modell':'Lokales Chat-Modell') : node.name, 22, 2);
           lines.forEach((line, i)=>g.append(element('text', {x: cx, y: 118 + i * 16, 'text-anchor': 'middle', class: 't-wf-node-title'}, line)));
           g.append(element('text', {x: cx, y: 118 + lines.length * 16 + 2, 'text-anchor': 'middle', class: 't-wf-node-type'}, subtitle));
         }
@@ -151,13 +153,15 @@
           event.preventDefault();
           if(pending){ handlers.connect(pending.name, node.name, pending.branch); pending = null; hint.textContent = 'Verbindung angelegt.'; return; }
           const now = Date.now();
-          if(lastDown && lastDown.id === node.id && now - lastDown.t < 400 && handlers.open){lastDown = null;handlers.open(node.id);}else lastDown = {id: node.id, t: now};
+          if(lastDown && lastDown.id === node.id && now - lastDown.t < 400 && handlers.open && !handlers.readOnly){lastDown = null;handlers.open(node.id);}else lastDown = {id: node.id, t: now};
           handlers.select(node.id);
           if(handlers.readOnly){draw();return;}
           handlers.checkpoint();
           const pt = point(event); drag = {node, x: pt.x, y: pt.y, original: node.position.slice()}; svg.setPointerCapture(event.pointerId);
         });
+        g.addEventListener('contextmenu',event=>{if(handlers.context&&!event.shiftKey){event.preventDefault();event.stopPropagation();handlers.select(node.id);handlers.context(node.id,{x:event.clientX,y:event.clientY});}});
         g.addEventListener('keydown', event=>{
+          if(handlers.context && (event.key==='ContextMenu'||(event.shiftKey&&event.key==='F10'))){event.preventDefault();const r=g.getBoundingClientRect();handlers.select(node.id);handlers.context(node.id,{x:r.left+r.width/2,y:r.top+r.height/2});return;}
           if(['Enter', ' '].includes(event.key)){event.preventDefault();handlers.select(node.id);draw();}
           const delta = {ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10]}[event.key];
           if(delta && !handlers.readOnly){event.preventDefault();handlers.checkpoint();node.position = node.position.map((v, i)=>Math.max(-100000, Math.min(100000, v + delta[i])));handlers.change();draw();}
@@ -251,6 +255,7 @@
       if(frame){offset = [offset[0] + frame.width / previous / 2 - frame.width / zoom / 2, offset[1] + frame.height / previous / 2 - frame.height / zoom / 2];}draw();
     }
     svg.addEventListener('wheel', event=>{event.preventDefault();setZoom(zoom * (event.deltaY < 0 ? 1.15 : 1 / 1.15));}, {passive: false});
+    svg.addEventListener('contextmenu',event=>{if(handlers.context&&!event.shiftKey&&!event.defaultPrevented){event.preventDefault();event.stopPropagation();handlers.context(null,{x:event.clientX,y:event.clientY});}});
     const api = {draw, zoom(value){setZoom(zoom * value);}, fit(){zoom = 1;offset = [0, 0];draw();},
       focus(){const n = state.doc.nodes.find(x=>x.id === state.selected);if(!n || !frame)return;zoom = Math.min(8, Math.max(1, frame.width / 550));offset = [n.position[0] - frame.minX - frame.width / zoom / 2 + G.center[0], n.position[1] - frame.minY - frame.height / zoom / 2 + G.center[1]];draw();},
       destroy(){container.replaceChildren();}};

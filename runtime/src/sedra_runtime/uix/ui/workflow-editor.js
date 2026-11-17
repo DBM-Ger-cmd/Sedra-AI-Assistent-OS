@@ -3,6 +3,7 @@
   const M = ()=>root.sedraWorkflowModel;
   const P = ()=>root.sedraWorkflowProcess;
   const PV = ()=>root.sedraWorkflowProcessView;
+  const mounted = new WeakMap();
   function el(tag, cls, text){const x = document.createElement(tag);if(cls)x.className = cls;if(text !== undefined)x.textContent = text;return x;}
   function button(text, fn){const b = el('button', '', text);b.type = 'button';b.onclick = fn;return b;}
   function controller(options){return {
@@ -12,9 +13,12 @@
     ...root.sedraWorkflowExtras(options),      // Geführtes Einrichten, Vorlagen, Selbstabbild und Schnellaktionen (workflow-extras.js)
     mount(container, ctx){
       this.el = container; this.ctx = ctx; this.dead = false; this.history = []; this.future = []; this.off = [];
+      this.isUnified=!!(options.unified && root.sedraHarness && root.sedraHarness.workflow_studio_arbeitsflaeche);
       this.state = {doc: M().example(), selected: null}; this.wid = null; this.revision = null; this.saved = null; this.records = [];this.view = 'canvas';this.style = options.style;
+      this.initialSnapshot=JSON.stringify(this.state.doc);
       this.el.classList.add('t-workflow', options.className); this.build(); this.draw();
-      if(root.sedraWorkflowLive)this.live = root.sedraWorkflowLive.attach(this);
+      if(this.isUnified)this.unifiedWorkspace=root.sedraHarness.workflow_studio_arbeitsflaeche.attach(this);
+      else if(root.sedraWorkflowLive)this.live = root.sedraWorkflowLive.attach(this);
       if(root.sedraWorkflowNotaus)this.notaus = root.sedraWorkflowNotaus.attach(this);      // der rote Knopf (workflow-notaus.js)
       if(root.sedraWorkflowChat)this.chat = root.sedraWorkflowChat.attach(this);      // Chat zum Prozess (workflow-chat.js)
       this.busy = true;this.el.inert = true;this.el.setAttribute('aria-busy', 'true');
@@ -25,7 +29,7 @@
         if(ctx.object && ctx.object.type === 'workflow_run') return this.showRun(ctx.object.id);
       }).finally(()=>{this.busy = false;if(!this.dead){this.el.inert = false;this.el.removeAttribute('aria-busy');}});
     },
-    unmount(){this.dead = true;this.off.forEach(fn=>fn());if(this.chat)this.chat.destroy();if(this.live)this.live.destroy();if(this.notaus)this.notaus.destroy();if(this.canvas)this.canvas.destroy();this.el.replaceChildren();this.el.classList.remove('t-workflow', options.className);this.el.removeAttribute('data-wf-theme');},
+    unmount(){this.dead = true;this.off.forEach(fn=>fn());if(this.unifiedWorkspace)this.unifiedWorkspace.destroy();if(this.chat)this.chat.destroy();if(this.live)this.live.destroy();if(this.notaus)this.notaus.destroy();if(this.canvas)this.canvas.destroy();this.el.replaceChildren();this.el.classList.remove('t-workflow', options.className);this.el.removeAttribute('data-wf-theme');},
     shown(){if(this.wid && !this.dirty())this.safe(()=>this.load(this.wid, true));},
     async call(type, id, verb, args){
       const out = await this.ctx.api('/api/actions', {method: 'POST', body: {type, id, verb, args: args || {}}}); return out.result;
@@ -40,7 +44,7 @@
     checkpoint(){this.history.push(M().clone(this.state.doc));if(this.history.length > 50)this.history.shift();this.future = [];},
     change(fn){this.checkpoint();fn();this.draw();},
     build(){
-      const head = el('div', 't-wf-header');head.append(el('h2', '', options.title), el('span', 't-wf-badge', 'Gemeinsamer Prozessbestand · 0.2'));
+      const head = el('div', 't-wf-header');head.append(el('h2', '', options.title), el('span', 't-wf-badge', 'Gemeinsamer Workflow-Bestand'));
       this.applyTheme(this.storedTheme() || (root.document.documentElement.dataset.theme === 'klar' ? 'light' : 'dark'));
       this.themeButton = button('', ()=>{const next = this.el.dataset.wfTheme === 'light' ? 'dark' : 'light';this.applyTheme(next);try{root.localStorage.setItem('sedra.wf.theme', next);}catch(e){}});
       this.themeButton.className = 't-wf-theme';head.append(this.themeButton);this.applyTheme(this.el.dataset.wfTheme);
@@ -76,8 +80,9 @@
       this.tabButtons = {};this.panels = {};
       const tabs = el('div', 't-wf-tabs');tabs.setAttribute('role', 'tablist');
       [['overview', options.overviewTitle || 'Übersicht'], ['templates', 'Vorlagen'], ['editor', 'Editor'], ['versions', 'Versionen'], ['runs', options.runTitle || 'Ausführungen'], ['live', 'Live']].forEach(([key, text])=>{
-        const b = button('', ()=>this.setTab(key));b.append(el('span', 't-wf-tab-label', text));b.dataset.icon = {overview: '⌂', templates: '▦', editor: '✎', versions: '⟲', runs: '▶', live: '◉'}[key];b.setAttribute('aria-label', text);b.title = text;b.setAttribute('role', 'tab');b.className = 't-wf-tab';this.tabButtons[key] = b;tabs.append(b);
-        this.panels[key] = el('section', 't-wf-panel');this.panels[key].setAttribute('role', 'tabpanel');
+        const label=this.isUnified?({editor:'Bearbeiten',runs:'Startassistent',live:'Live & Debugger',overview:'Erstellen & Importieren'}[key] || text):text;
+        const b = button('', ()=>this.setTab(key));b.append(el('span', 't-wf-tab-label', label));b.dataset.icon = {overview: '⌂', templates: '▦', editor: '✎', versions: '⟲', runs: '▶', live: '◉'}[key];b.setAttribute('aria-label', label);b.title = label;b.setAttribute('role', 'tab');b.className = 't-wf-tab';this.tabButtons[key] = b;tabs.append(b);
+        this.panels[key] = el('section', 't-wf-panel');this.panels[key].setAttribute('role', 'tabpanel');this.panels[key].dataset.tab = key;
       });
       // Übersicht
       const find = el('input');find.type = 'search';find.placeholder = 'Suchen …';find.setAttribute('aria-label', 'Prozesse suchen');find.oninput = ()=>this.renderCards(find.value);
@@ -104,12 +109,15 @@
       this.panels.templates.append(el('p', 't-wf-hint', 'Eigene Startvorlagen von SEDRA. Muster A: Auslöser, dann Aktion. Muster B: mit Bedingung. Muster C: mit KI-Schritt (nur als Prozessmodell). Nach dem Anlegen führt das geführte Einrichten durch die Schritte.'), this.templateBox);
       this.renderTemplates();
       this.panels.overview.querySelector('.t-wf-toolbar').append(find, this.picker);
+      this.overviewParts={hero,ask,starts,find,importBox:this.importBox.el};
       // Editor
       const views = el('div', 't-wf-toolbar');
       this.viewSelect = el('select');this.viewSelect.setAttribute('aria-label', 'Prozessansicht');
       [['canvas', 'Gesamtprozess'], ['core', 'Kernschritte · verdichtet'], ['sipoc', 'SIPOC'], ['details', 'Alle Schritte / Prüfpunkte']].forEach(([k, v])=>this.viewSelect.append(new Option(v, k)));
+      if(this.isUnified)this.viewSelect.prepend(new Option('Logischer Ablauf','logical'));
       this.viewSelect.onchange = ()=>{this.view = this.viewSelect.value;this.draw();};
-      views.append(this.viewSelect, button('Geführt einrichten', ()=>this.startGuide()), button('In ' + options.otherTitle + ' öffnen', ()=>{
+      views.append(this.viewSelect, button('Geführt einrichten', ()=>this.startGuide()));
+      if(options.otherTitle) views.append(button('In ' + options.otherTitle + ' öffnen', ()=>{
         if(this.dirty()){this.notice('Für den Wechsel zuerst speichern. Beide Apps teilen gespeicherte Versionen.', true);return;}
         this.ctx.shell.open({type: options.otherType, id: this.wid || 'alle', title: options.otherTitle});
       }));
@@ -124,7 +132,8 @@
       this.stage.addEventListener('keydown', event=>{if(event.key === 'Escape' && this.inspectorOpen && !event.defaultPrevented){this.inspectorOpen = false;this.inspect();}});
       this.report = el('pre', 't-wf-report');this.report.setAttribute('aria-label', 'Kompatibilitätsbericht');
       this.bottom = el('div', 't-wf-bottombar');this.bottom.hidden = !options.runBar;
-      const once = button(options.runLabel || 'Einmal ausführen', ()=>this.submitRun());once.className = 't-wf-primary';once.title = 'Legt einen Lauf zur Freigabe vor. Ausgeführt wird erst nach Captain-Freigabe.';
+      const once = button(this.isUnified?'Workflow starten':options.runLabel || 'Einmal ausführen', ()=>this.unifiedWorkspace?this.unifiedWorkspace.start():this.submitRun());once.className = 't-wf-primary';once.title = 'Legt einen Lauf zur Freigabe vor. Ausgeführt wird erst nach Captain-Freigabe.';
+      this.startButton=once;
       const plan = button('Zeitplan: aus', ()=>{});plan.disabled = true;plan.title = 'Zeitpläne gibt es im Adapter nicht. Läufe starten nur von Hand und mit Freigabe.';
       const settings = button('Einstellungen', ()=>{this.inspectorOpen = !this.inspectorOpen;this.inspect();});
       this.bottom.append(...[once, options.noSchedule ? null : plan, settings].filter(Boolean), button('Posteingang', ()=>this.ctx.shell.open({type: 'decision', id: 'alle', title: 'Freigaben'})));
@@ -166,6 +175,7 @@
       this.runId = out.id;await this.showRun(out.id);this.notice('Mission angelegt. Freigabe im Posteingang prüfen, dann hier fortsetzen.');
     });},
     placeInspector(){
+      if(this.editorMode==='live')return;
       const box = this.inspector;if(!box)return;
       const reset = ()=>{box.style.left = '';box.style.top = '';box.style.right = '';};
       if(options.style !== 'scenario' || box.hidden){reset();return;}
@@ -176,12 +186,14 @@
     },
     blank(){const doc = M().example();doc.name = options.newTitle === 'Neues Szenario' ? 'Neues Szenario' : 'Neuer Workflow';doc.nodes = [M().node('manualTrigger', [])];doc.connections = {};return doc;},
     setTab(name){
+      this.el.dataset.workflowTab=name;
       const model = this.state && P().has(this.state.doc);
-      if(name === 'runs' && model) name = 'editor';
+      if(name === 'runs' && model && !this.isUnified) name = 'editor';
       this.tab = name;if(this.top)this.top.hidden = name === 'overview' || name === 'templates';
-      Object.entries(this.panels).forEach(([key, panel])=>{panel.hidden = key !== name;});
+      Object.entries(this.panels).forEach(([key, panel])=>{panel.hidden = key !== (this.isUnified && name==='live' ? 'editor' : name);});
       if(this.live){if(name === 'live')this.live.start();else this.live.stop();}      // Live-Reiter fragt nur, solange er offen ist (workflow-live.js)
       Object.entries(this.tabButtons).forEach(([key, b])=>{b.setAttribute('aria-selected', String(key === name));b.classList.toggle('active', key === name);});
+      if(this.unifiedWorkspace)this.unifiedWorkspace.mode(name);
     },
     renderCards(filter){
       if(!this.cards)return;
@@ -226,18 +238,22 @@
       if(this.guide)this.endGuide();
       this.state.doc = M().clone(doc);this.state.selected = null;this.wid = id;this.revision = revision;
       this.saved = id ? JSON.stringify(doc) : null;this.history = [];this.future = [];this.revisions = [];this.report.textContent = '';
-      this.view = P().cores(doc).length > 1 ? 'core' : 'canvas';this.changeNote.value = id ? '' : 'Erstfassung';this.draw();if(!id)PV().history(this.historyBox, [], null, null);
+      this.view = P().cores(doc).length > 1 ? 'core' : this.isUnified ? 'logical' : 'canvas';this.changeNote.value = id ? '' : 'Erstfassung';this.draw();if(!id)PV().history(this.historyBox, [], null, null);
     },
     undo(redo){
+      if(this.editorMode==='live')return;
       const from = redo ? this.future : this.history, to = redo ? this.history : this.future;
       if(!from.length)return;to.push(M().clone(this.state.doc));this.state.doc = from.pop();this.draw();
     },
     draw(){
       if(this.dead)return;this.title.value = this.state.doc.name;
+      if(this.unifiedWorkspace)this.unifiedWorkspace.updateContext();
       const model = P().has(this.state.doc), core = this.view === 'core';
       this.viewSelect.value = this.view;
-      this.runSection.hidden = model;this.tabButtons.runs.hidden = model;if(model && this.tab === 'runs')this.setTab('editor');this.processBanner.hidden = !model;
+      const live=this.editorMode==='live';
+      this.runSection.hidden = model || (this.isUnified && !this.wid);this.tabButtons.runs.hidden = model && !this.isUnified;if(model && this.tab === 'runs' && !this.isUnified)this.setTab('editor');this.processBanner.hidden = !model;
       this.engine.hidden = model;this.addButton.hidden = (model && core) || this.view !== 'canvas';this.bottom.hidden = !options.runBar || model;this.report.hidden = model;
+      if(this.isUnified){this.fab.hidden=live;this.bottom.hidden=live || model;this.report.hidden=true;this.top.hidden=live || ['overview','templates'].includes(this.tab);this.viewSelect.parentElement.hidden=live;}
       this.bannerText.textContent = 'Prozessmodell · ' + P().cores(this.state.doc).length + ' Kernschritte · ' + P().rows(this.state.doc).filter(r=>r.meta.source === 'proposal').length + ' ergänzte Vorschläge. ' + (() => {const g = P().gaps(this.state.doc);return g.missing ? 'Lücken: ' + g.missing + ' Angaben fehlen in ' + g.steps + ' Schritten (z. B. ' + g.items[0].name + ': ' + g.items[0].fields.join(', ') + '). ' : 'Alle Pflichtangaben sind ausgefüllt. ';})() + 'Fachliche und technische Ausführung sind noch nicht eingerichtet.';
       this.version.textContent = (this.wid ? 'Revision ' + this.revision : 'Neuer Entwurf') + (this.dirty() ? ' · ungespeichert' : ' · gespeichert');
       if(this.canvas)this.canvas.destroy();
@@ -245,15 +261,16 @@
       if(['sipoc', 'details'].includes(this.view)){
         PV().render(this.surface, this.state.doc, this.view, id=>{this.state.selected = id;this.inspectorOpen = true;this.inspect();});this.inspect();return;
       }
-      const visual = core ? {doc: P().coreProjection(this.state.doc), selected: this.state.selected} : this.state;
+      const logical=this.isUnified && (this.view==='logical' || live),visual = logical ? Object.assign(Object.create(this.state),{doc:root.sedraWorkflowLayout.logisch(this.state.doc)}) : core ? {doc: P().coreProjection(this.state.doc), selected: this.state.selected} : this.state;
       this.canvas = root.sedraWorkflowCanvas.mount(this.surface, visual, {
-        style: this.style, readOnly: core,
+        style: this.style, logical, readOnly: core || live || logical,hint:logical?'Logischer Ablauf · Hauptweg von links nach rechts · KI-Zulieferung gestrichelt · Rechtsklick zum Einrichten':undefined,context:this.unifiedWorkspace?(id,p)=>this.unifiedWorkspace.context(id,p):null,
         select: id=>{this.state.selected = id;this.inspect();}, open: id=>this.nodeAction('open', id), addAfter: (name, branch)=>this.openPicker({name, branch}), edgeAdd: (from, branch, to)=>this.openPicker(null, {from, branch, to}), edgeDelete: (a, k, i, b)=>this.edgeDelete(a, k, i, b), tidy: ()=>this.tidy(), act: (what, id)=>this.nodeAction(what, id), drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
         change: ()=>{this.version.textContent = 'Ungespeicherte Änderungen';this.inspect();},
         connect: (a, b, branch)=>{try{this.change(()=>M().connect(this.state.doc, a, b, branch));}catch(e){this.notice(e.message, true);}}
       });this.inspect();
     },
     inspect(){
+      if(this.editorMode==='live' && this.unifiedWorkspace){this.unifiedWorkspace.inspect(this.state.selected);return;}
       const box = this.inspector;const bar = el('div', 't-wf-inspector-head');const closeBtn = button('✕', ()=>{this.inspectorOpen = false;this.inspect();});closeBtn.setAttribute('aria-label', 'Eigenschaften schließen');bar.append(el('h3', '', 'Eigenschaften'), closeBtn);box.replaceChildren(bar);
       box.hidden = !this.inspectorOpen;root.requestAnimationFrame(()=>{if(!this.dead)this.placeInspector();});this.propsButton.setAttribute('aria-pressed', String(!!this.inspectorOpen));
       if(this.wid && this.revisions && this.revisions.length){
@@ -308,7 +325,7 @@
       const data = await this.ctx.api('/api/objects', {method: 'POST', body: {type: 'workflow', id: 'alle'}});
       if(this.dead)return;this.records = data.items || [];this.picker.replaceChildren(new Option('Gespeicherten Workflow wählen', ''));
       this.records.forEach(r=>this.picker.append(new Option(r.title + ' · r' + r.revision, r.id)));this.picker.value = this.wid || '';
-      this.engine.textContent = data.engine.enabled ? 'Lokale n8n-Verbindung konfiguriert: ' + data.engine.base_url : 'n8n-Ausführung aus. Import, Editor, Versionen und Export sind verfügbar.' + (data.eigenablauf ? (data.eigenablauf.node ? ' Der SEDRA-Eigenablauf läuft lokal, ohne n8n.' : ' Für den SEDRA-Eigenablauf fehlt Node.js.') : '');
+      this.engine.textContent = data.engine.enabled ? 'Lokale n8n-Verbindung konfiguriert: ' + data.engine.base_url : data.eigenablauf && data.eigenablauf.node ? 'SEDRA führt unterstützte Workflows lokal aus. KI-Schritte verwenden das am Workflow gewählte Modell.' : 'Workflow bereit. Die Ausführbarkeit wird für den geöffneten Workflow geprüft.';
       this.listeTabellen(data.tabellen);
       this.renderRuns(data.runs || []);this.updateRunChip(data.runs || []);this.renderCards();
       await this.loadHistory();
@@ -361,16 +378,21 @@
       if(this.dead)return;this.runId = id;this.runState = run.state;this.runWf = run.workflow_id;this.updateSteps();this.pruefeFreigabe(run);
       if(options.renderRun)options.renderRun(this.output, run);
       else if(this.lokalRender(run)){}
-      else this.output.textContent = JSON.stringify({mission: id, revision: run.revision, phase: run.state, steps: run.steps, wait: run.wait, result: run.result, artifacts: run.artifacts}, null, 2);
+      else this.output.textContent = this.isUnified ? 'Lauf '+id+' · '+root.sedraHarness.workflow_studio_debugger.statusText(run.state)+'. Ergebnis und HTML-Datei stehen in Live & Debugger auf derselben Arbeitsfläche.' : JSON.stringify({mission: id, revision: run.revision, phase: run.state, steps: run.steps, wait: run.wait, result: run.result, artifacts: run.artifacts}, null, 2);
     }
   };}
   function create(options){
-    const instances = new WeakMap();
+    const instances = mounted;
     return {id: options.id,
-      mount(el, ctx){const instance = controller(options);instances.set(el, instance);return instance.mount(el, ctx);},
+      mount(el, ctx){const instance = controller(options);instances.set(el, instance);instance.ready=Promise.resolve(instance.mount(el, ctx));return instance.ready;},
       unmount(el){const instance = instances.get(el);if(instance){instance.unmount();instances.delete(el);}},
       shown(el){const instance = instances.get(el);if(instance)instance.shown();},
       actions(){return [];}};
   }
-  root.sedraWorkflowEditor = {create};
+  async function openWithin(container, object){
+    const el=container.querySelector('.t-workflow');const instance=el && mounted.get(el);
+    if(!instance) return;
+    await root.sedraHarness.workflow_studio_arbeitsflaeche.open(instance,object);
+  }
+  root.sedraWorkflowEditor = {create,openWithin};
 })();

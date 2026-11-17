@@ -34,19 +34,21 @@
     const nein = d().el('button', 'hs-ws-knopf', 'Abbrechen'); nein.type = 'button';
     rueckfrage.append(d().el('span', 'hs-ws-hinweis', 'Wirklich freigeben? Danach darf die Fabrik wieder starten.'), ja, nein);
     box.append(stand, stopp, meldung, frei, rueckfrage);
-    let angehalten = false, arbeitet = false;
+    let angehalten = false, arbeitet = false, standLaedt = false, aktionsStand = 0;
     const verb = (name, args)=>api('/api/actions', {method: 'POST', body: {type: 'workflow', id: null, verb: name, args: args || {}}}).then(out=>out.result || out);
     function zeichnen(){
-      stand.textContent = angehalten ? 'FABRIK ANGEHALTEN – es startet nichts Neues.' : 'Die Fabrik läuft. Der Notaus hält alles sofort an.';
+      stand.textContent = angehalten ? 'FABRIK ANGEHALTEN – es startet nichts Neues.' : 'Die Fabrik ist freigegeben. Der Notaus hält alle Läufe sofort an.';
       frei.hidden = !angehalten; stopp.disabled = arbeitet;
     }
     async function lesenStand(){
-      if(!box.isConnected || box.offsetParent === null) return;   // in einem versteckten Modus nicht abfragen
-      try{ const r = await verb('fabrik_status'); angehalten = !!r.angehalten; zeichnen(); }
+      if(document.hidden || !box.isConnected || box.offsetParent === null) return;   // in einem versteckten Modus nicht abfragen
+      if(standLaedt || arbeitet) return;standLaedt=true;const version=aktionsStand;
+      try{ const r = await verb('fabrik_status'); if(version===aktionsStand){angehalten = !!r.angehalten;zeichnen();} }
       catch(err){ stand.textContent = 'Stand nicht lesbar: ' + (err.message || err); }
+      finally{standLaedt=false;}
     }
     stopp.onclick = async()=>{
-      if(arbeitet) return; arbeitet = true; zeichnen(); meldung.textContent = '';
+      if(arbeitet) return; arbeitet = true;aktionsStand++;zeichnen(); meldung.textContent = '';
       try{ const r = await verb('fabrik_stopp'); meldung.textContent = berichtText(r); angehalten = true; }
       catch(err){ meldung.textContent = 'Das Anhalten ist fehlgeschlagen: ' + String(err.message || err).slice(0, 120) + ' – noch einmal drücken.'; }
       finally{ arbeitet = false; zeichnen(); }
@@ -54,13 +56,14 @@
     frei.onclick = ()=>{ rueckfrage.hidden = false; frei.hidden = true; ja.focus(); };
     nein.onclick = ()=>{ rueckfrage.hidden = true; frei.hidden = false; };
     ja.onclick = async()=>{
-      if(arbeitet) return; arbeitet = true; ja.disabled = true;
+      if(arbeitet) return; arbeitet = true;aktionsStand++;ja.disabled = true;
       try{ await verb('fabrik_freigeben'); angehalten = false; meldung.textContent = 'Die Fabrik ist wieder freigegeben.'; rueckfrage.hidden = true; }
       catch(err){ meldung.textContent = 'Das Freigeben ist fehlgeschlagen: ' + String(err.message || err).slice(0, 120); }
       finally{ arbeitet = false; ja.disabled = false; zeichnen(); }
     };
     lesenStand();
-    return {box, aktualisieren: lesenStand, abbauen(){ box.replaceChildren(); }};
+    const timer=setInterval(lesenStand,TAKT);
+    return {box, aktualisieren: lesenStand, abbauen(){clearInterval(timer);box.replaceChildren();}};
   }
 
   // Der Lauf im Live & Debugger: zeigt den Workflow, den der Startassistent zuletzt gestartet hat, und legt ihn zur Freigabe vor.
@@ -98,7 +101,7 @@
   // Die Läufe im Live & Debugger: alle Läufe der gespeicherten Workflows, Einzelansicht mit Schritten, Warteanzeige und Ergebnis,
   // und die beiden Wege aus einem Lauf: nach der Freigabe weiterlaufen lassen (Verb fortsetzen) oder beenden (Verb abbrechen).
   // Die Verben und Felder entsprechen dem Editor. Liest alle 4 Sekunden, nur solange der Modus sichtbar ist.
-  function baueLaeufe(api){
+  function baueLaeufe(api,options={}){
     const box = d().el('section', 'hs-ws-laeufe'); box.setAttribute('aria-label', 'Läufe');
     const kopf = d().el('div', 'hs-ws-knoepfe');
     const aktualisieren = d().el('button', 'hs-ws-knopf', 'Aktualisieren'); aktualisieren.type = 'button';
@@ -106,52 +109,83 @@
     const stand = d().el('p', 'hs-ws-hinweis', 'Lade die Läufe …');
     const liste = d().el('div', 'hs-ws-liste');
     const detail = d().el('div', 'hs-ws-karte'); detail.hidden = true;
-    box.append(kopf, stand, liste, detail);
-    let gewaehlt = null;
-    const sichtbar = ()=>box.isConnected && box.offsetParent !== null;
+    const suche = d().el('input','hs-ws-eingabe'); suche.type='search';suche.placeholder='Läufe nach Name oder Kennung suchen …';suche.setAttribute('aria-label','Läufe suchen');
+    const filter = d().el('select','hs-ws-wahl');filter.setAttribute('aria-label','Laufstatus filtern');
+    [['','Alle Zustände'],['PAUSED','Pausiert'],['COMPLETE','Abgeschlossen'],['EXECUTE','In Ausführung'],['CAPTAIN_REVIEW','Freigabe erforderlich'],['FAILED','Fehlgeschlagen']].forEach(([wert,label])=>filter.append(new Option(label,wert)));
+    const werkzeuge = d().el('div','hs-ws-knoepfe');werkzeuge.append(suche,filter);
+    detail.className='hs-ws-debug-detail';
+    if(options.shared){const history=d().el('details','hs-ws-laufhistorie');history.append(d().el('summary','','Andere Läufe / Suche'),werkzeuge,stand,liste);box.append(kopf,history,detail);}else box.append(kopf,werkzeuge,stand,liste,detail);
+    stand.setAttribute('role','status');
+    let gewaehlt = null, daten = [], debuggerAnsicht = null, tot = false, anfrage = 0, letzterStand = '', laedt = false;
+    function filtern(){
+      const query=suche.value.trim().toLocaleLowerCase('de');
+      let anzahl=0;
+      Array.from(liste.children).forEach((zeile,i)=>{
+        const r=daten[i];zeile.hidden=!(r.title+' '+r.id).toLocaleLowerCase('de').includes(query)||(filter.value && r.state!==filter.value);
+        if(!zeile.hidden) anzahl++;
+      });
+      stand.textContent = daten.length ? anzahl+' von '+daten.length+' Läufen · Wähle „Untersuchen“ für Diagramm und Verlauf.' : 'Noch kein Lauf. Bereite einen Workflow im Startassistenten vor.';
+    }
+    suche.oninput=filtern;filter.onchange=filtern;
+    const sichtbar = ()=>!document.hidden && box.isConnected && box.offsetParent !== null;
     const aktion = (verb, id)=>api('/api/actions', {method: 'POST', body: {type: 'workflow_run', id, verb, args: {}}}).then(out=>out.result || out);
     async function laden(){
-      if(!sichtbar()) return;
+      if(!sichtbar() || laedt || (options.paused && options.paused())) return;
+      laedt=true;
       try{
         const data = await api('/api/objects', {method: 'POST', body: {type: 'workflow_run'}});
-        const laeufe = data.items || [];
+        if(tot) return;
+        const workflowId=options.workflowId && options.workflowId();
+        const laeufe = (data.items || []).filter(r=>!options.workflowId || (workflowId && r.workflow_id===workflowId));
         stand.textContent = laeufe.length ? laeufe.length + ' Lauf/Läufe.' : 'Noch kein Lauf. Starte einen Workflow im Startassistenten.';
-        liste.replaceChildren(...laeufe.slice().reverse().map(r=>{
+        daten=laeufe.slice().reverse();
+        liste.replaceChildren(...daten.map(r=>{
           const z = d().el('div', 'hs-ws-liste-zeile');
-          z.append(d().el('span', '', (r.title || r.id) + ' · ' + (r.state || '?')));
-          const b = d().el('button', 'hs-ws-knopf', 'Anzeigen'); b.type = 'button';
+          const name = d().el('div', 'hs-ws-lauf-name');
+          name.append(d().el('strong', '', r.title || r.id), d().el('small', 'hs-ws-hinweis', r.id));
+          const status = String(r.state || '?');
+          const badge = d().el('span', 'hs-ws-chip', root.sedraHarness.workflow_studio_debugger.statusText(status));
+          badge.dataset.state = status.toUpperCase();
+          z.append(name, badge);
+          const b = d().el('button', 'hs-ws-knopf', 'Untersuchen'); b.type = 'button';b.setAttribute('aria-label','Lauf untersuchen: '+(r.title || r.id)+' · '+r.id);
           b.onclick = ()=>zeigeLauf(r.id);
           z.append(b); return z;
         }));
-        if(gewaehlt) zeigeLauf(gewaehlt, true);
-      }catch(err){ stand.textContent = 'Läufe nicht geladen: ' + (err.message || err); }
+        filtern();
+        if(options.shared && !gewaehlt && daten.length)gewaehlt=daten[0].id;
+        if(gewaehlt) await zeigeLauf(gewaehlt, true);
+      }catch(err){ if(!tot) stand.textContent = 'Läufe nicht geladen: ' + (err.message || err); }
+      finally{laedt=false;}
     }
     async function zeigeLauf(id, leise){
       gewaehlt = id;
+      const nr=++anfrage;
       try{
         const r = await api('/api/objects', {method: 'POST', body: {type: 'workflow_run', id}});
+        if(tot || nr!==anfrage) return;
+        const signatur=JSON.stringify(r);
+        if(leise && debuggerAnsicht && letzterStand===signatur){await debuggerAnsicht.aktualisieren();return;}
+        letzterStand=signatur;
+        if(debuggerAnsicht) debuggerAnsicht.abbauen();
         detail.hidden = false; detail.replaceChildren();
-        detail.append(d().el('h4', 'hs-ws-karten-titel', 'Lauf ' + id + ' · ' + (r.state || '?')));
-        detail.append(d().el('p', 'hs-ws-hinweis', 'Workflow ' + (r.workflow_id || '–') + (r.revision ? ' · Revision ' + r.revision : '')));
-        if(r.wait) detail.append(d().el('p', 'hs-ws-hinweis', 'Wartet auf: ' + (typeof r.wait === 'string' ? r.wait : JSON.stringify(r.wait))));
-        const schritte = (r.steps || []);
-        if(schritte.length){
-          const tabelle = d().el('div', 'hs-ws-liste');
-          schritte.forEach(s=>tabelle.append(d().el('div', 'hs-ws-liste-zeile', (s.id || s.step_id || s.name || '?') + ' · ' + (s.status || '?') + (s.attempts ? ' · Versuch ' + s.attempts : ''))));
-          detail.append(tabelle);
-        }else detail.append(d().el('p', 'hs-ws-hinweis', 'Noch keine Schritte.'));
-        if(r.result) detail.append(d().el('pre', 'hs-ws-ergebnis', JSON.stringify(r.result, null, 2)));
+        if(options.workflowId && r.workflow_id!==options.workflowId())throw new Error('Der Lauf gehört zu einem anderen Workflow.');
+        debuggerAnsicht=root.sedraHarness.workflow_studio_debugger.baue(api,r,options);detail.append(debuggerAnsicht.box);
         const fort = d().el('button', 'hs-ws-knopf primary', 'Nach Freigabe fortsetzen'); fort.type = 'button';
         const abbr = d().el('button', 'hs-ws-knopf', 'Lauf beenden'); abbr.type = 'button';
+        fort.hidden=!['CAPTAIN_REVIEW','READY','EXECUTE','VERIFY'].includes(r.state);
+        abbr.hidden=!['READY','CAPTAIN_REVIEW','PAUSED','EXECUTE'].includes(r.state);
         const meldung = d().el('p', 'hs-ws-hinweis');
-        fort.onclick = async()=>{ meldung.textContent = 'Setze fort …'; try{ await aktion('fortsetzen', id); meldung.textContent = 'Fortgesetzt.'; laden(); }catch(err){ meldung.textContent = 'Nicht fortgesetzt: ' + (err.message || err); } };
-        abbr.onclick = async()=>{ meldung.textContent = 'Beende den Lauf …'; try{ await aktion('abbrechen', id); meldung.textContent = 'Beendet.'; laden(); }catch(err){ meldung.textContent = 'Nicht beendet: ' + (err.message || err); } };
+        const ausfuehren=async(verb)=>{fort.disabled=abbr.disabled=true;meldung.textContent='Bitte warten …';try{await aktion(verb,id);await laden();}catch(err){meldung.textContent='Aktion fehlgeschlagen: '+(err.message || err);}finally{fort.disabled=abbr.disabled=false;}};
+        fort.onclick = ()=>ausfuehren('fortsetzen');
+        abbr.onclick = ()=>ausfuehren('abbrechen');
         detail.append(d().el('div', 'hs-ws-knoepfe')); detail.lastChild.append(fort, abbr); detail.append(meldung);
-      }catch(err){ if(!leise){ detail.hidden = false; detail.textContent = 'Lauf nicht geladen: ' + (err.message || err); } }
+        if(!leise) detail.scrollIntoView({block:'start',behavior:'instant'});
+      }catch(err){ if(!tot && nr===anfrage && !leise){ detail.hidden = false; detail.textContent = 'Lauf nicht geladen: ' + (err.message || err); } }
     }
     aktualisieren.onclick = ()=>laden();
     laden();
-    return {box, aktualisieren: laden, abbauen(){ box.replaceChildren(); }};
+    const timer=setInterval(laden,TAKT);
+    return {box,oeffne:zeigeLauf,aktualisieren:laden,abbauen(){tot=true;anfrage++;clearInterval(timer);if(debuggerAnsicht)debuggerAnsicht.abbauen();box.replaceChildren();}};
   }
 
   root.sedraHarness = root.sedraHarness || {};

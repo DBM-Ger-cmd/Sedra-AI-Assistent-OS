@@ -87,6 +87,13 @@ class UIXStartTests(unittest.TestCase):
   self.assertEqual(code,0)
   self.assertEqual(stopped,[100,101,102,103])
 
+ def test_utf8_entrypoints_are_replaced_without_stopping_own_processes(self):
+  rows=[row(201,1,'python.exe',r'"E:\SEDRA\python.exe" -B -X utf8 -m sedra_runtime.uix_start --root x'),
+        row(202,201,'python.exe','python.exe -B -Xutf8 -m sedra_runtime.uix_start --root x'),
+        row(203,1,'python.exe','python.exe -X utf8 unrelated.py')]
+  self.assertEqual(uix_start.other_uix_pids(rows,{999}),[201,202])
+  self.assertEqual(uix_start.other_uix_pids(rows,{201,202}),[])
+
  def test_replace_only_targets_real_python_module_invocations(self):
   rows=[row(10,1,'python.exe','python.exe worker.py --text "-m sedra_runtime.uix_start"'),
         row(11,1,'powershell.exe','powershell.exe -m sedra_runtime.uix_start'),
