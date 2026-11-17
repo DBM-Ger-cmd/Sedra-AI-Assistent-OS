@@ -56,9 +56,9 @@
       });
     } else {
       const q = roh.trim();
-      Object.keys(S.dateien).sort().forEach(function (p) {
+      S.alleDateiPfade().forEach(function (p) {
         const m = P.passt(q, p);
-        if (m) aus.push({ text: p, neben: S.ungespeichert(p) ? T('ex_ungespeichert') : '', stellen: m.stellen, punkte: m.punkte, tun: function () { S.oeffne(p); } });
+        if (m) aus.push({ text: p, neben: S.ungespeichert(p) ? T('ex_ungespeichert') : '', stellen: m.stellen, punkte: m.punkte, tun: function () { S.oeffneDatei(p); } });
       });
     }
     if (roh.replace(/^>/, '').trim()) aus.sort(function (a, b) { return b.punkte - a.punkte; });

@@ -34,10 +34,12 @@
     { id: 'reiterZurueck', k: ['Alt+PageUp'], tun: function () { S.reiterWechsel(-1); } },
     { id: 'schliessen', k: ['Alt+W'], tun: function () { const g = S.gruppen[S.aktiveGruppe]; if (g && g.aktiv) S.schliesse(g.aktiv); } },
     { id: 'speichern', k: ['Ctrl+S'], tun: function () {
+      if (S.quelle === 'echt') { S.sag(T('ed_speichern_gesperrt')); return; }
       const d = S.aktiveDatei();
       if (d) { S.speichere(d.pfad); S.sag(T('ed_gespeichert', d.name)); }
     } },
     { id: 'alleSpeichern', k: ['Ctrl+Alt+S'], tun: function () {
+      if (S.quelle === 'echt') { S.sag(T('ed_speichern_gesperrt')); return; }
       Object.keys(S.dateien).forEach(function (p) { if (S.ungespeichert(p)) S.speichere(p); });
       S.sag(T('ed_alle_gespeichert'));
     } },

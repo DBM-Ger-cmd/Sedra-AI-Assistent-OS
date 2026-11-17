@@ -7,7 +7,7 @@
     titel: 'Sedra IDE',
     sprung: 'Zum Editor springen',
     beispiel: 'Beispieldaten',
-    quelle_beispiel: 'Quelle: Beispieldaten, keine Verbindung zu SEDRA.',
+    quelle_beispiel: 'Quelle: Beispieldaten für Agenten, Terminal, Chat und Erweiterungen. Dateien kommen aus dem Projekt, wenn eines da ist.',
     taste_strg: 'Strg', taste_umschalt: 'Umschalt',
 
     mn_leiste: 'Hauptmenü', mn_datei: 'Datei', mn_bearbeiten: 'Bearbeiten', mn_auswahl: 'Auswahl', mn_ansicht: 'Ansicht',
@@ -71,6 +71,11 @@
     db_eingabe: 'Debug-Eingabe', db_attrappe: 'Attrappe: Ausdrücke werden nicht ausgewertet.',
     pb_todo: 'Offener Punkt (TODO)', pb_leerraum: 'Leerraum am Zeilenende', pb_tab_yaml: 'Tabulator in YAML',
 
+    echt_marke: 'Projekt, nur lesen', echt_geladen: 'Projekt „{0}“ geladen (nur lesen).',
+    echt_fehler_lesen: '„{0}“ konnte nicht gelesen werden.', echt_fehler_binaer: '„{0}“ ist keine Textdatei und wird nicht angezeigt.',
+    echt_fehler_gross: '„{0}“ ist für die Vorschau zu groß (über 100 kB).', echt_fehler_gesperrt: '„{0}“ ist gesperrt (Schlüssel und lokale Konfiguration werden nie angezeigt).',
+    ed_speichern_gesperrt: 'Speichern auf die Platte ist noch nicht freigegeben (Entscheidung E4). Die Datei bleibt ungespeichert.',
+    su_hinweis_echt: 'Suchbegriff eingeben. Gesucht wird nur in bereits geöffneten Dateien.', qc_echt_hinweis: 'Git-Status ist noch nicht angebunden (Entscheidung E2).',
     ed_reiter: 'Reiter der Editorgruppe {0}', ed_schliessen: '{0} schließen', ed_brotkrumen: 'Pfad', ed_eingabe: 'Editor {0}', ed_minimap: 'Minimap',
     ed_tab_frei: 'Tabulator verlässt jetzt einmal den Editor.', ed_gruppe_zu: 'Gruppe schließen', ed_teilen_voll: 'Höchstens drei Editorgruppen.',
     ed_gespeichert: '{0} gespeichert (nur im Speicher der Seite).', ed_alle_gespeichert: 'Alle Dateien gespeichert (nur im Speicher der Seite).',

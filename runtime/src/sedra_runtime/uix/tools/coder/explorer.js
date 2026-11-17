@@ -9,7 +9,7 @@
   }
 
   function baumZeile(k, tiefe, aktivPfad) {
-    const ordner = !!k.kinder;
+    const ordner = !!(k.kinder || k.ordner);
     const zu = ordner && !!S.z.zugeklappt['o:' + k.pfad];
     const d = S.dateien[k.pfad];
     const z = el('div', {
@@ -37,13 +37,16 @@
   function waehle(z) {
     if (!z) return;
     const p = z.dataset.pfad;
-    if (z.dataset.ordner) { S.z.zugeklappt['o:' + p] = !S.z.zugeklappt['o:' + p]; S.merke(); S.melde('seite'); }
-    else S.oeffne(p);
+    if (z.dataset.ordner) {
+      S.z.zugeklappt['o:' + p] = !S.z.zugeklappt['o:' + p]; S.merke(); S.melde('seite');
+      const k = S.z.zugeklappt['o:' + p] ? null : S.findeKnoten(p);
+      if (k && k.ordner && !k.kinder) S.ladeOrdner(k);
+    } else S.oeffneDatei(p);
   }
 
   function baum(aktivPfad) {
     const kasten = el('div', { role: 'tree', 'aria-label': T('ex_ordner') });
-    if (!S.z.beispiel) { kasten.appendChild(el('div', { class: 'leer', text: T('leer_ordner') })); }
+    if (S.quelle === 'beispiel' && !S.z.beispiel) { kasten.appendChild(el('div', { class: 'leer', text: T('leer_ordner') })); }
     else fuelle(kasten, S.BAUM, 0, aktivPfad);
     Object.keys(S.dateien).filter(function (p) { return S.dateien[p].neu; }).forEach(function (p) {
       kasten.appendChild(baumZeile({ name: S.dateien[p].name, pfad: p }, 0, aktivPfad));
@@ -126,7 +129,7 @@
 
   function zeitachse() {
     const kasten = el('div', { role: 'list' });
-    const liste = S.z.beispiel ? S.ZEITACHSE : [];
+    const liste = S.quelle === 'beispiel' && S.z.beispiel ? S.ZEITACHSE : [];
     if (!liste.length) kasten.appendChild(el('div', { class: 'leer', text: T('leer_zeitachse') }));
     liste.forEach(function (e) {
       kasten.appendChild(el('div', { class: 'listen-zeile', role: 'listitem' }, [
@@ -143,7 +146,8 @@
     const inhalt = el('div', { class: 'seite-inhalt' }, [
       S.abschnitt('abs:offen', T('ex_offen'), offeneEditoren(aktivPfad), el('span', { class: 'zahl', text: String(offen) })),
       S.abschnitt('abs:baum', S.ARBEITSBEREICH, baum(aktivPfad),
-        S.z.beispiel ? el('span', { class: 'beispiel-marke', text: T('beispiel') }) : null),
+        S.quelle === 'echt' ? el('span', { class: 'beispiel-marke', text: T('echt_marke') })
+          : (S.z.beispiel ? el('span', { class: 'beispiel-marke', text: T('beispiel') }) : null)),
       S.abschnitt('abs:gliederung', T('ex_gliederung'), gliederung()),
       S.abschnitt('abs:zeitachse', T('ex_zeitachse'), zeitachse())
     ]);

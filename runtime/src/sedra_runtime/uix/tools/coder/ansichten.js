@@ -11,7 +11,7 @@
   function treffer(kasten) {
     S.leere(kasten);
     const q = S.sucheText.trim().toLowerCase();
-    if (!q) { kasten.appendChild(el('div', { class: 'leer', text: T('su_hinweis') })); return; }
+    if (!q) { kasten.appendChild(el('div', { class: 'leer', text: T(S.quelle === 'echt' ? 'su_hinweis_echt' : 'su_hinweis') })); return; }
     let n = 0;
     Object.keys(S.dateien).sort().forEach(function (p) {
       S.dateien[p].inhalt.split('\n').forEach(function (zeile, i) {
@@ -53,7 +53,7 @@
         el('span', { class: 'zeile-neben', text: p.indexOf('/') > 0 ? p.slice(0, p.lastIndexOf('/')) : '' }),
         el('span', { class: 'git git-' + m, text: m })]));
     });
-    if (!pfade.length) liste.appendChild(el('div', { class: 'leer', text: T('leer_aenderungen') }));
+    if (!pfade.length) liste.appendChild(el('div', { class: 'leer', text: T(S.quelle === 'echt' ? 'qc_echt_hinweis' : 'leer_aenderungen') }));
     const text = el('input', { class: 'feld', type: 'text', placeholder: T('qc_nachricht'), 'aria-label': T('qc_nachricht'), data: { fid: 'qc:feld' } });
     const kopf = el('div', { class: 'feld-rand' }, [
       text,

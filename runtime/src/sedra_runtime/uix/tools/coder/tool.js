@@ -20,13 +20,15 @@
 
   const tool = {
     id: 'coder',
-    mount(el){
+    mount(el, ctx){
       this.el = el;
+      root.SIDE.ctx = ctx;                      // die Brücke zum Kern: nur die Lese-Routen aus der tool.yaml
       el.classList.add('t-coder');            // die Rahmen-Seite ist ein eigenes Dokument: die Wurzel der IDE ist dieser Container
       document.body.style.margin = '0';
       root.SIDE.wurzel = el;
       geruest(el);
       root.SIDE.starte();
+      root.SIDE.ladeEcht();                     // echte Projektdateien, sonst bleiben die Beispiele
     },
     unmount(){ if(this.el) this.el.replaceChildren(); },
     actions(){ return []; }
