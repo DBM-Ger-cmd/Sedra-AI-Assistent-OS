@@ -137,7 +137,7 @@
     };
     // Kategorie als Kachel: Kopf (Symbol, Titel, Anzahl) und eine kleine Vorschau der ersten Apps; „+N weitere“ klappt die Kachel auf.
     // Alle Apps stehen im DOM (die versteckten nur mit hidden), die Pfeiltasten gehen über die sichtbaren.
-    const VORSCHAU = 4;
+    const VORSCHAU = 99;   // Captain 17.11.2026: jede App ist im Start-Menü sofort sichtbar (höchstens zwei Klicks: Start, App); „+N weitere“ erscheint erst bei mehr als 99 Apps in einer Gruppe
     const EINSTIEG_STD = ['tasks', 'decisions', 'project', 'uebersicht'];
     const kachel = (g, apps)=>{
       if(!apps.length) return null;
