@@ -81,7 +81,29 @@
     was.append(d().el('div', 'hs-ws-knoepfe'));
     was.lastChild.append(aktion('Workflow-Katalog', ()=>zumModus('katalog')), aktion('Startassistent', ()=>zumModus('startassistent')), aktion('Live & Debugger', ()=>zumModus('live')), aktion('Freigaben', ()=>zumModus('freigaben')));
     box.append(d().el('p', 'hs-ws-kicker', 'SEDRA / WORKFLOW STUDIO'), d().el('h3', 'hs-ws-leit-titel', 'Startseite / Leitstand'), chips, banner, was, kennzahlen, d().el('div', 'hs-ws-spalten', ''));
-    box.querySelector('.hs-ws-spalten').append(wichtig);
+    // Aktive Läufe: echte Läufe aus /api/objects (workflow_run), nur die Zustände, in denen etwas läuft oder auf dich wartet.
+    const AKTIV = ['READY', 'CAPTAIN_REVIEW', 'EXECUTE', 'VERIFY', 'RUNNING', 'WAITING', 'IN_FLIGHT', 'PENDING'];
+    const laufListe = d().el('div', 'hs-ws-liste');
+    const laufStand = d().el('p', 'hs-ws-hinweis', 'Lade die Läufe …');
+    const laufKarte = d().el('div', 'hs-ws-karte');
+    const laufAktualisieren = aktion('Aktualisieren', ()=>ladeLaeufe());
+    laufKarte.append(d().el('h4', 'hs-ws-karten-titel', 'Aktive Läufe'), laufStand, laufListe, laufAktualisieren);
+    function ladeLaeufe(){
+      laufStand.textContent = 'Lade die Läufe …';
+      api('/api/objects', {method: 'POST', body: {type: 'workflow_run'}}).then(data=>{
+        const aktiv = (data.items || []).filter(r=>AKTIV.includes(String(r.state || '').toUpperCase()));
+        const st = (root.sedraHarness.workflow_studio_debugger || {}).statusText || (x=>x || 'Unbekannt');
+        laufStand.textContent = aktiv.length ? aktiv.length + (aktiv.length === 1 ? ' Lauf läuft oder wartet.' : ' Läufe laufen oder warten.') : 'Gerade läuft nichts.';
+        laufListe.replaceChildren(...aktiv.slice(0, 5).map(r=>{
+          const z = d().el('div', 'hs-ws-liste-zeile');
+          z.append(d().el('span', '', (r.title || r.id) + ' · ' + st(r.state)), aktion('Öffnen', ()=>zumAssistent(r.workflow_id || r.id)));
+          return z;
+        }));
+        if(aktiv.length > 5) laufListe.append(d().el('p', 'hs-ws-hinweis', (aktiv.length - 5) + ' weitere im Live & Debugger.'));
+      }).catch(err=>{ laufStand.textContent = 'Läufe nicht geladen: ' + (err.message || err); laufListe.replaceChildren(); });
+    }
+    box.querySelector('.hs-ws-spalten').append(wichtig, laufKarte);
+    ladeLaeufe();
     workflowsZaehlen(api).then(liste=>{
       const laufbar = liste.filter(w=>w.laufbar).length, offen = liste.filter(w=>w.offen > 0).length;
       kpiWerte[0].w.textContent = String(liste.length); kpiWerte[1].w.textContent = String(laufbar); kpiWerte[2].w.textContent = String(offen);
