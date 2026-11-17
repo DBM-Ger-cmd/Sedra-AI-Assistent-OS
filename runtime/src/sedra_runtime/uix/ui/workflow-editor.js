@@ -236,8 +236,8 @@
     discard(){return !this.dirty() || root.confirm('Nicht gespeicherte Änderungen verwerfen?');},
     adopt(doc, id, revision){
       if(this.guide)this.endGuide();
-      this.state.doc = M().clone(doc);this.state.selected = null;this.wid = id;this.revision = revision;
-      this.saved = id ? JSON.stringify(doc) : null;this.history = [];this.future = [];this.revisions = [];this.report.textContent = '';
+      this.state.doc = M().clone(doc);this.state.selected = null;this.wid = id;this.revision = revision;if(id && root.sedraWorkflowAufbau)this.state.doc = root.sedraWorkflowAufbau.beimOeffnen(this.state.doc, this);
+      this.saved = id ? JSON.stringify(this.state.doc) : null;this.history = [];this.future = [];this.revisions = [];this.report.textContent = '';
       this.view = P().cores(doc).length > 1 ? 'core' : this.isUnified ? 'logical' : 'canvas';this.changeNote.value = id ? '' : 'Erstfassung';this.draw();if(!id)PV().history(this.historyBox, [], null, null);
     },
     undo(redo){
@@ -267,7 +267,7 @@
         select: id=>{this.state.selected = id;this.inspect();}, open: id=>this.nodeAction('open', id), addAfter: (name, branch)=>this.openPicker({name, branch}), edgeAdd: (from, branch, to)=>this.openPicker(null, {from, branch, to}), edgeDelete: (a, k, i, b)=>this.edgeDelete(a, k, i, b), tidy: ()=>this.tidy(), act: (what, id)=>this.nodeAction(what, id), drawn: ()=>this.placeInspector(), checkpoint: ()=>this.checkpoint(),
         change: ()=>{this.version.textContent = 'Ungespeicherte Änderungen';this.inspect();},
         connect: (a, b, branch)=>{try{this.change(()=>M().connect(this.state.doc, a, b, branch));}catch(e){this.notice(e.message, true);}}
-      });this.inspect();
+      });this.inspect();if(root.sedraWorkflowAufbau && !core)root.sedraWorkflowAufbau.zeige(this, visual.doc || this.state.doc);
     },
     inspect(){
       if(this.editorMode==='live' && this.unifiedWorkspace){this.unifiedWorkspace.inspect(this.state.selected);return;}

@@ -37,3 +37,10 @@
 .t-workflow .t-wf-process-fields label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
 .t-workflow .t-wf-history{border:1px solid var(--line);border-radius:8px;padding:10px}
 .t-workflow summary{cursor:pointer;color:var(--heading);padding:4px 0}
+
+/* Aufbau-Aufsicht (workflow-aufbau.js): eine ruhige Zeile über der Zeichenfläche */
+.t-wf-aufbau{margin:0 0 6px;padding:6px 12px;border-radius:8px;border:1px solid var(--line,#2c3a35);font-size:13px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.t-wf-aufbau.ok{color:var(--muted,#8fa39b)}
+.t-wf-aufbau.unruhig{color:var(--warn,#e0a030);border-color:var(--warn,#e0a030)}
+.t-wf-aufbau-knopf{font:inherit;padding:3px 12px;border-radius:999px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer}
+.t-wf-aufbau-knopf:focus-visible{outline:2px solid currentColor;outline-offset:2px}
