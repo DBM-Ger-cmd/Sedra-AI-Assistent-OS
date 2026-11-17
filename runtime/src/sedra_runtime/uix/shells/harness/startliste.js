@@ -26,7 +26,8 @@
     const umbenennen = roh.umbenennen && typeof roh.umbenennen === 'object' && !Array.isArray(roh.umbenennen) ? roh.umbenennen : {};
     const ausblenden = Array.isArray(roh.ausblenden) ? roh.ausblenden.filter(x=>typeof x === 'string') : [];
     const max = Number.isInteger(roh.zuletzt_max) && roh.zuletzt_max >= 0 ? roh.zuletzt_max : 6;
-    return {gruppen, zuordnung: z, symbole: Object.assign({}, SYMBOLE, roh.symbole && typeof roh.symbole === 'object' ? roh.symbole : {}), zuletzt_max: max, ausblenden, umbenennen};
+    const einstieg = Array.isArray(roh.einstieg) ? roh.einstieg.filter(x=>typeof x === 'string') : null;      // die vier bis fünf Hauptwege oben; null = die feste Liste der Shell
+    return {gruppen, zuordnung: z, einstieg, symbole: Object.assign({}, SYMBOLE, roh.symbole && typeof roh.symbole === 'object' ? roh.symbole : {}), zuletzt_max: max, ausblenden, umbenennen};
   }
 
   function gruppeVon(ort, werkzeuge, zuordnung){
