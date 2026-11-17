@@ -19,6 +19,9 @@
     start_hinweis:'Arrows select · Enter opens · Esc closes · Ctrl+K searches',
 
     start_einstieg:'Start',
+    start_laedt:'Loading the menu …',
+    start_laden_fehler:'The menu could not be built: {err}',
+    start_app_fehler:'The app “{app}” could not be opened: {err}',
     start_einstieg_freigaben:'View only – decision goes through the guard',
     start_mehr_weitere:'+{n} more',
     start_mehr_weniger:'Show fewer',

@@ -44,7 +44,7 @@ AREAS = {
 # Geänderte Quellen, bei denen die Prüfstellen immer mitlaufen (`--changed`): Harness, Desk, Kern, Server der Oberfläche, Cloud-Zugang, Manifeste und der Oberflächen-Vertrag.
 PRUEFSTELLEN_BEI = ('sedra_runtime/harness/', 'sedra_runtime/desk/', 'sedra_runtime/core/', 'sedra_runtime/uix/ui/', 'sedra_runtime/models/cloud_api.py', 'sedra_runtime/uix_server.py',
                     'sedra_runtime/uix_clients.py', 'sedra_runtime/cloud_settings.py', 'runtime/portable/', '/tool.yaml', '/shell.yaml', 'freigabe_katalog')
-SLOW_FILES = ('test_uix_browser', 'test_uix_flows', 'test_uix_shell_start', 'test_uix_kommandodeck', 'test_uix_rekorder', 'test_n8n_browser', 'test_process_browser')   # starten einen Browser
+SLOW_FILES = ('test_uix_browser', 'test_uix_flows', 'test_uix_shell_start', 'test_uix_hardening_start_taskleiste', 'test_uix_kommandodeck', 'test_uix_rekorder', 'test_n8n_browser', 'test_process_browser')   # starten einen Browser
 
 
 def all_files():
