@@ -136,3 +136,7 @@
 .t-coder .dlg-ueber { position: fixed; inset: 0; z-index: 40; display: flex; align-items: flex-start; justify-content: center; padding-top: 18vh; background: var(--schleier, transparent); }
 .t-coder .dlg { width: min(460px, 92vw); display: flex; flex-direction: column; gap: 8px; padding: 14px; background: var(--bg-karte); border: 1px solid var(--rand); border-radius: 6px; }
 .t-coder .dlg-titel { font-weight: 600; }
+
+/* Suchen und Ersetzen in der Datei (Strg+F). */
+.t-coder .finde-leiste { position: absolute; top: 4px; right: 18px; z-index: 6; display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--bg-karte); border: 1px solid var(--rand); border-radius: 4px; }
+.t-coder .finde-leiste .feld { width: 150px; }

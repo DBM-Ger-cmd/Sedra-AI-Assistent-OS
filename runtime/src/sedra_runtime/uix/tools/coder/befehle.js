@@ -45,7 +45,7 @@
     } },
     { id: 'teilen', k: ['Ctrl+\\', 'Ctrl+Alt+\\', 'Alt+G'], tun: function () { S.teile(); } },
     { id: 'neueDatei', k: ['Alt+N'], tun: function () { S.neueDatei(); } },
-    { id: 'suchenDatei', k: ['Ctrl+F'], tun: suchen },
+    { id: 'suchenDatei', k: ['Ctrl+F'], tun: function () { if (!(S.komfort && S.aktiveDatei() && S.komfort.finde())) suchen(); } },
     { id: 'suchen', k: ['Ctrl+Shift+F'], tun: suchen },
     { id: 'allesWaehlen', k: [], tun: function () {
       S.editor.fokus();
