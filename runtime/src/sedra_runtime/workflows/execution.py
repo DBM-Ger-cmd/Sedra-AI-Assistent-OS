@@ -56,7 +56,7 @@ def _cloud_modell(control, mission_id, quelle):
     def fragen(nachrichten, schema):
         nachrichten = [dict(m) for m in nachrichten]
         nachrichten[0]['content'] += '\nAntworte ausschließlich mit einem JSON-Objekt ohne weiteren Text, passend zu diesem Schema:\n' + json.dumps(schema)
-        antwort = labor.cloud_chat(config, quelle['anbieter'], quelle['modell'], nachrichten, environ=os.environ, key_store=store, audit=control.audit)
+        antwort = labor.cloud_chat(config, quelle['anbieter'], quelle['modell'], nachrichten, environ=os.environ, key_store=store, audit=control.audit, max_tokens=4096)
         if antwort.get('status') != 'completed':
             raise ValueError('Cloud blockiert: ' + ', '.join(antwort.get('reasons') or ['unbekannt']))
         text = re.sub(r'^```(?:json)?\s*|\s*```$', '', (antwort.get('reply') or '').strip())
