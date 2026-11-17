@@ -65,7 +65,7 @@
     dt_rolle: 'Role', dt_auftrag: 'Task', dt_datei: 'File', dt_keine: 'none', dt_schritte: 'Steps', dt_seit: 'Since', dt_oeffnen: 'Open file',
 
     pn_panel: 'Panel', pn_terminal: 'Terminal', pn_ausgabe: 'Output', pn_probleme: 'Problems', pn_debug: 'Debug console', pn_logs: 'Live logs',
-    tm_gruss: 'Sedra terminal (mock-up). "help" lists the commands. Nothing is executed on this machine.',
+    tm_gruss_echt: 'Sedra terminal (display only). "help" lists the commands. It shows what the Coder has loaded from the project and runs no commands on this computer.', tm_erst_oeffnen: 'Not opened yet: {0}. Load it with "open {0}", then cat shows the text.', tm_unbekannt_echt: 'Unknown command: {0}. This terminal runs no real commands (only help, ls, cat, open, status, echo, agenten, clear).', tm_ls_hinweis: 'Loaded folders only. Expand a folder in the Explorer to list its files.', tm_gruss: 'Sedra terminal (mock-up). "help" lists the commands. Nothing is executed on this machine.',
     tm_hilfe: 'Commands: help, ls, cat <file>, open <file>, echo <text>, status, agenten, clear',
     tm_keine_datei: 'File not found: {0}', tm_geoeffnet: 'Opened: {0}', tm_unbekannt: 'Unknown command: {0}', tm_eingabe: 'Terminal input',
     db_eingabe: 'Debug input', db_attrappe: 'Mock-up: expressions are not evaluated.',

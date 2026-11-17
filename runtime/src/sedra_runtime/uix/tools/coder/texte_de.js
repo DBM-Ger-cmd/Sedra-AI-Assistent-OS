@@ -65,7 +65,7 @@
     dt_rolle: 'Rolle', dt_auftrag: 'Auftrag', dt_datei: 'Datei', dt_keine: 'keine', dt_schritte: 'Schritte', dt_seit: 'Seit', dt_oeffnen: 'Datei öffnen',
 
     pn_panel: 'Panel', pn_terminal: 'Terminal', pn_ausgabe: 'Ausgabe', pn_probleme: 'Probleme', pn_debug: 'Debug-Konsole', pn_logs: 'Live-Logs',
-    tm_gruss: 'Sedra Terminal (Attrappe). "hilfe" zeigt die Befehle. Es wird nichts auf dem Rechner ausgeführt.',
+    tm_gruss_echt: 'Sedra Terminal (nur Anzeige). "hilfe" zeigt die Befehle. Es zeigt, was der Coder aus dem Projekt geladen hat, und führt keine Befehle auf dem Rechner aus.', tm_erst_oeffnen: 'Noch nicht geöffnet: {0}. Mit "open {0}" laden, dann zeigt cat den Text.', tm_unbekannt_echt: 'Unbekannter Befehl: {0}. Dieses Terminal führt keine echten Befehle aus (nur hilfe, ls, cat, open, status, echo, agenten, clear).', tm_ls_hinweis: 'Nur geladene Ordner. Ordner im Explorer aufklappen, dann erscheinen ihre Dateien.', tm_gruss: 'Sedra Terminal (Attrappe). "hilfe" zeigt die Befehle. Es wird nichts auf dem Rechner ausgeführt.',
     tm_hilfe: 'Befehle: hilfe, ls, cat <datei>, open <datei>, echo <text>, status, agenten, clear',
     tm_keine_datei: 'Datei nicht gefunden: {0}', tm_geoeffnet: 'Geöffnet: {0}', tm_unbekannt: 'Unbekannter Befehl: {0}', tm_eingabe: 'Terminal-Eingabe',
     db_eingabe: 'Debug-Eingabe', db_attrappe: 'Attrappe: Ausdrücke werden nicht ausgewertet.',

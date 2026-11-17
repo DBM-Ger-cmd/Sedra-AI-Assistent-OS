@@ -1,4 +1,4 @@
-/* Sedra IDE: unteres Panel (Terminal, Ausgabe, Probleme, Debug-Konsole, Live-Logs). Terminal ist eine Attrappe. */
+/* Sedra IDE: unteres Panel (Terminal, Ausgabe, Probleme, Debug-Konsole, Live-Logs). Terminal führt keine Befehle aus (Entscheidung E5): es zeigt nur, was der Coder schon geladen hat. */
 (function (root) {
   'use strict';
   const S = root.SIDE, el = S.el, T = S.T;
@@ -6,7 +6,6 @@
   const term = []; /* {art, text} */
   const eingaben = [];
   let eingabePos = 0;
-  let begruesst = false;
 
   function zeilen(liste, leerKey) {
     const k = el('div', { class: 'mono-liste', role: 'log', tabindex: '0' });
@@ -17,7 +16,7 @@
   }
   function schreib(text, art) { term.push({ art: art || '', text: text }); }
 
-  /* Befehle der Terminal-Attrappe. Es wird nichts auf dem Rechner ausgefuehrt. */
+  /* Befehle des Terminals: nur Anzeige der geladenen Daten, kein Aufruf des Servers, nichts wird auf dem Rechner ausgeführt (E5). */
   function fuehre(zeile) {
     schreib('sedra> ' + zeile, 'leise');
     const teile = zeile.trim().split(/\s+/);
@@ -25,23 +24,30 @@
     const arg = teile.slice(1).join(' ');
     if (!b) return;
     if (b === 'hilfe' || b === 'help') schreib(T('tm_hilfe'));
-    else if (b === 'ls' || b === 'dir') schreib(Object.keys(S.dateien).sort().join('\n'));
-    else if (b === 'cat' || b === 'type') {
-      if (S.dateien[arg]) schreib(S.dateien[arg].inhalt); else schreib(T('tm_keine_datei', arg), 'fehler');
+    else if (b === 'ls' || b === 'dir') {
+      const alle = S.quelle === 'echt' ? S.alleDateiPfade() : Object.keys(S.dateien).sort();
+      const l = arg ? alle.filter(function (x) { return x.indexOf(arg.replace(/\/$/, '') + '/') === 0 || x === arg; }) : alle;
+      schreib(l.length ? l.join('\n') : T('tm_keine_datei', arg));
+      if (S.quelle === 'echt') schreib(T('tm_ls_hinweis'), 'leise');
+    } else if (b === 'cat' || b === 'type') {
+      if (S.dateien[arg]) schreib(S.dateien[arg].inhalt);
+      else if (S.quelle === 'echt' && S.alleDateiPfade().indexOf(arg) >= 0) schreib(T('tm_erst_oeffnen', arg), 'warnung');
+      else schreib(T('tm_keine_datei', arg), 'fehler');
     } else if (b === 'open' || b === 'oeffne') {
-      if (S.dateien[arg]) { S.oeffne(arg); schreib(T('tm_geoeffnet', arg), 'ok'); } else schreib(T('tm_keine_datei', arg), 'fehler');
+      if (S.quelle === 'echt' && S.alleDateiPfade().indexOf(arg) >= 0) { S.oeffneDatei(arg); schreib(T('tm_geoeffnet', arg), 'ok'); }
+      else if (S.dateien[arg]) { S.oeffne(arg); schreib(T('tm_geoeffnet', arg), 'ok'); } else schreib(T('tm_keine_datei', arg), 'fehler');
     } else if (b === 'echo') schreib(arg);
     else if (b === 'status') {
-      const p = Object.keys(S.dateien).sort().filter(function (x) { return S.dateien[x].git || S.ungespeichert(x); });
-      schreib(p.length ? p.map(function (x) { return (S.dateien[x].git || 'M') + '  ' + x; }).join('\n') : T('leer_aenderungen'));
+      const p = S.quelle === 'echt' ? S.echt.aenderungen.map(function (e) { return e.pfad; }) : Object.keys(S.dateien).sort().filter(function (x) { return S.dateien[x].git || S.ungespeichert(x); });
+      schreib(p.length ? p.map(function (x) { return (S.gitStatus(x) || 'M') + '  ' + x; }).join('\n') : T('leer_aenderungen'));
     } else if (b === 'agenten') schreib(S.AGENTEN.map(function (a) { return a.name + '  ' + T('zs_' + a.zustand); }).join('\n'));
     else if (b === 'clear' || b === 'cls') term.length = 0;
-    else schreib(T('tm_unbekannt', b), 'warnung');
+    else schreib(T(S.quelle === 'echt' ? 'tm_unbekannt_echt' : 'tm_unbekannt', b), 'warnung');
   }
 
   function terminal() {
-    if (!begruesst) { begruesst = true; schreib(T('tm_gruss'), 'leise'); }
-    const liste = zeilen(S.z.beispiel ? term : term.filter(function (z, i) { return i > 0; }), 'leer_terminal');
+    const gruss = S.z.beispiel || S.quelle === 'echt' ? [{ art: 'leise', text: T(S.quelle === 'echt' ? 'tm_gruss_echt' : 'tm_gruss') }] : [];
+    const liste = zeilen(gruss.concat(term), 'leer_terminal');
     const feld = el('input', {
       type: 'text', id: 'term-feld', autocomplete: 'off', spellcheck: 'false', 'aria-label': T('tm_eingabe'), data: { fid: 'tm:feld' },
       on: { keydown: function (ev) {
