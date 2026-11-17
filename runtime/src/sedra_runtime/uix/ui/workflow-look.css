@@ -1,6 +1,9 @@
 /* Zeichenfläche */
 .t-workflow .t-wf-canvas{position:relative;border-radius:10px;overflow:hidden;background:var(--wf-canvas)}
-.t-workflow .t-wf-svg{height:clamp(420px,62vh,780px);background:var(--wf-canvas)}
+.t-workflow .t-wf-svg{height:clamp(420px,calc(100vh - 340px),1200px);background:var(--wf-canvas)}
+.t-workflow .t-wf-stage:fullscreen{background:var(--bg);padding:0}
+.t-workflow .t-wf-stage:fullscreen .t-wf-svg{height:100vh}
+.t-workflow .t-wf-stage:fullscreen .t-wf-surface,.t-workflow .t-wf-stage:fullscreen .t-wf-canvas{height:100vh;border-radius:0}
 .t-workflow .t-wf-grid-dot{fill:var(--wf-dot)}
 .t-workflow .t-wf-edge{stroke:var(--wf-edge);stroke-width:2.2;opacity:.9}
 .t-workflow .t-wf-arrow{fill:var(--wf-edge)}

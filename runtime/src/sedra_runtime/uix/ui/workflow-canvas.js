@@ -28,7 +28,7 @@
     const hint = document.createElement('p'); hint.className = 't-wf-hint';
     hint.textContent = handlers.hint !== undefined ? handlers.hint : handlers.readOnly ? 'Verdichtete Kernübersicht. Verbindungen fassen Zwischenschritte zusammen. Bearbeiten in der Gesamtansicht.' : 'Module ziehen, Hintergrund zum Verschieben ziehen, Mausrad zum Zoomen. Ausgang anklicken, dann Ziel wählen.';
     const controls = document.createElement('div'); controls.className = 't-wf-zoom'; controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', 'Ansicht');
-    [['Ansicht einpassen', '⤢', ()=>api.fit()], ['Zoom +', '+', ()=>api.zoom(1.2)], ['Zoom −', '−', ()=>api.zoom(1 / 1.2)], ['Auf Auswahl zentrieren', '◎', ()=>api.focus()], ['Aufräumen: Knoten ordnen', '⌗', ()=>{if(handlers.tidy && !handlers.readOnly)handlers.tidy();}]].forEach(([label, text, fn])=>{
+    [['Ansicht einpassen', '⤢', ()=>api.fit()], ['Zoom +', '+', ()=>api.zoom(1.2)], ['Zoom −', '−', ()=>api.zoom(1 / 1.2)], ['Auf Auswahl zentrieren', '◎', ()=>api.focus()], ['Aufräumen: Knoten ordnen', '⌗', ()=>{if(handlers.tidy && !handlers.readOnly)handlers.tidy();}], ['Vollbild ein/aus (Taste F)', '⛶', ()=>api.vollbild()]].forEach(([label, text, fn])=>{
       const b = document.createElement('button'); b.type = 'button'; b.className = 't-wf-zoom-btn'; b.textContent = text; b.setAttribute('aria-label', label); b.title = label; b.onclick = fn; controls.append(b);
     });
     const mini = document.createElement('div'); mini.className = 't-wf-minimap';
@@ -36,7 +36,7 @@
     wrapEl.append(svg, controls, mini);
     if(root.sedraWorkflowMinimap) root.sedraWorkflowMinimap.ziehbar(mini, wrapEl, 'sedra.wf.minimap.' + (scenario ? 'szenario' : 'n8n'));   // verschiebbar (workflow-minimap.js)
     container.replaceChildren(hint, wrapEl);
-    let edgeSel = null, edgeBars = [], lastDown = null, drag = null, pending = null, offset = [0, 0], zoom = 1, frame = null;
+    let edgeSel = null, edgeBars = [], lastDown = null, drag = null, pending = null, offset = [0, 0], zoom = 1, frame = null, home = null, homeCount = -1;
     const uid = Math.random().toString(16).slice(2), marker = 'wf-arrow-' + uid, grid = 'wf-grid-' + uid;
     function point(event){
       const pt = svg.createSVGPoint(); pt.x = event.clientX; pt.y = event.clientY;
@@ -44,11 +44,21 @@
     }
     function draw(){
       const doc = state.doc, nodes = doc.nodes;
-      const minX = Math.min(0, ...nodes.map(n=>n.position[0])) - G.pad[1];
-      const minY = Math.min(0, ...nodes.map(n=>n.position[1])) - G.pad[1];
-      const width = Math.max(640, ...nodes.map(n=>n.position[0] - minX + G.pad[2] + 80));
-      const height = Math.max(360, ...nodes.map(n=>n.position[1] - minY + G.pad[3] + 40));
-      frame = {minX, minY, width, height};
+      // Grundansicht: enge Hülle um alle Knoten, an das Seitenverhältnis der Fläche angepasst, damit der Prozess die Fläche füllt.
+      // Sie wird nur beim Öffnen, bei „Ansicht einpassen“, bei neuen/gelöschten Knoten und bei Größenänderung neu bestimmt, nicht beim Ziehen.
+      const cw = svg.clientWidth, ch = svg.clientHeight;
+      if(!home || homeCount !== nodes.length || (cw && home.cw !== cw) || (ch && home.ch !== ch)){
+        const lab = scenario ? 70 : 34, boxes = nodes.map(n=>[n.position[0], n.position[1], n.position[0] + G.w, n.position[1] + G.h + lab]);
+        const x0 = boxes.length ? Math.min(...boxes.map(b=>b[0])) : 0, y0 = boxes.length ? Math.min(...boxes.map(b=>b[1])) : 0;
+        const x1 = boxes.length ? Math.max(...boxes.map(b=>b[2])) : 640, y1 = boxes.length ? Math.max(...boxes.map(b=>b[3])) : 360;
+        let w = Math.max(320, x1 - x0 + 220), h = Math.max(200, y1 - y0 + 180);   // rechts Platz für die Knöpfe, unten für Zoom und Minimap
+        const aspect = cw && ch ? cw / ch : 16 / 9;
+        if(w / h < aspect) w = h * aspect; else h = w / aspect;
+        home = {minX: x0 - 60 - (w - (x1 - x0 + 220)) / 2, minY: y0 - 50 - (h - (y1 - y0 + 180)) / 2, width: w, height: h, cw, ch};
+        homeCount = nodes.length;
+      }
+      const minX = home.minX, minY = home.minY, width = home.width, height = home.height;
+      frame = home;
       if(!drag || drag.pan) svg.setAttribute('viewBox', [minX + offset[0], minY + offset[1], width / zoom, height / zoom].join(' '));
       const defs = element('defs');
       const arrow = element('marker', {id: marker, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse'});
@@ -237,24 +247,33 @@
       if(!drag) return;
       if(drag.pan){offset = [drag.original[0] - (event.clientX - drag.x) * drag.sx, drag.original[1] - (event.clientY - drag.y) * drag.sy];draw();return;}
       const pt = point(event);
-      drag.node.position = [drag.original[0] + pt.x - drag.x, drag.original[1] + pt.y - drag.y].map(v=>Math.max(-100000, Math.min(100000, Math.round(v))));
+      const raster = event.altKey ? 1 : 16;   // Rasterfang wie im n8n-Editor (Alt = frei)
+      drag.node.position = [drag.original[0] + pt.x - drag.x, drag.original[1] + pt.y - drag.y].map(v=>Math.max(-100000, Math.min(100000, Math.round(v / raster) * raster)));
       draw();
     });
     svg.addEventListener('pointerup', ()=>{if(drag){const changed = !drag.pan;drag = null;if(changed)handlers.change();draw();}});
     svg.addEventListener('pointercancel', ()=>{drag = null;draw();});
     svg.addEventListener('keydown', e=>{
+      if(!e.ctrlKey && !e.metaKey && !e.altKey){
+        if(e.key === 'f' || e.key === 'F'){e.preventDefault();api.vollbild();}
+        else if(e.key === '1' || e.key === 'Home'){e.preventDefault();api.fit();}
+        else if(e.key === '+' || e.key === '='){e.preventDefault();api.zoom(1.2);}
+        else if(e.key === '-'){e.preventDefault();api.zoom(1 / 1.2);}
+      }
       if(e.key === 'Escape'){pending = null;hint.textContent = 'Verbindung abgebrochen.';}
       if((e.key === 'Delete') && !handlers.readOnly && state.selected && handlers.act && e.target.closest && e.target.closest('.t-wf-node')){e.preventDefault();handlers.act('delete', state.selected);}
     });
     function setZoom(value){
-      const previous = zoom;zoom = Math.max(0.5, Math.min(8, value));
+      const previous = zoom;zoom = Math.max(0.25, Math.min(8, value));
       if(frame){offset = [offset[0] + frame.width / previous / 2 - frame.width / zoom / 2, offset[1] + frame.height / previous / 2 - frame.height / zoom / 2];}draw();
     }
     svg.addEventListener('wheel', event=>{event.preventDefault();setZoom(zoom * (event.deltaY < 0 ? 1.15 : 1 / 1.15));}, {passive: false});
-    const api = {draw, zoom(value){setZoom(zoom * value);}, fit(){zoom = 1;offset = [0, 0];draw();},
+    const api = {draw, zoom(value){setZoom(zoom * value);}, fit(){zoom = 1;offset = [0, 0];home = null;draw();},
+      vollbild(){const host = wrapEl.closest('.t-wf-stage') || wrapEl;if(document.fullscreenElement){document.exitFullscreen();}else if(host.requestFullscreen){host.requestFullscreen();}},
       focus(){const n = state.doc.nodes.find(x=>x.id === state.selected);if(!n || !frame)return;zoom = Math.min(8, Math.max(1, frame.width / 550));offset = [n.position[0] - frame.minX - frame.width / zoom / 2 + G.center[0], n.position[1] - frame.minY - frame.height / zoom / 2 + G.center[1]];draw();},
       destroy(){container.replaceChildren();}};
     draw();
+    if(typeof ResizeObserver !== 'undefined'){const ro = new ResizeObserver(()=>{if(svg.isConnected && !drag)draw();});ro.observe(svg);const d = api.destroy;api.destroy = ()=>{ro.disconnect();d();};}
     return api;
   }
   root.sedraWorkflowCanvas = {mount};
