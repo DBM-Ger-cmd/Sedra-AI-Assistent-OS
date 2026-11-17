@@ -63,6 +63,9 @@ Stand: 31.10.2026. Quellen: Gedächtnisdateien von Claude (Memory), die Sitzungs
 Deutsch, kurz, Ergebnis zuerst, Zahlen belegen, Unsicheres als Vermutung kennzeichnen. Nach Messläufen: Logbuch, Commit, `main` nachziehen, dann berichten. Unbeaufsichtigte/lange Läufe, Downloads und Freigaben nur auf ausdrückliches Ja; Berechtigungen zu Beginn einer Aufgabe gesammelt abholen. Entwicklung zuerst als Spec (G1 Anforderungen, G2 Design, G3 Bau), jedes Gate entscheidet der Captain; Entscheidungsfragen mit Vorschlag stellen. Oberfläche: wo gehandelt werden kann, steht die Handlung selbst, kein Verweis. Der Captain testet am Ende selbst im Cockpit; vorher Browser-Abnahme mit Playwright (`harness_abnahme.py --stufeN`, `uix_check`). Bei langem Kontext lagert er Arbeit in eigene Sitzungen aus und macht `/clear`.
 
 ## 8. Offene Punkte (Stand 31.10.2026)
+
+**Stand 17.11.2026:** Die offenen Punkte zum Workflow Studio stehen in Abschnitt 23. Die Liste unten ist vom 31.10. und nur teilweise noch gültig.
+
 1. **Nemotron-Test:** Modelldatei fehlt; Download nur mit Ja; die Sitzung `lauf-und-nemotron` wartet auf zwei Klicks im Cockpit.
 2. **Wiederholungs-Deckel:** Soll eine Dauerfreigabe Wiederholungen derselben Aufgabe decken (wie viele)? Entscheidung des Captains.
 3. **Dynamische Rezepte:** Tempo je Lagenzahl und Laden bei knappem Speicher nicht gemessen; `kv_cache_gb_per_1k_tokens` (0,0125 GiB/1k) noch nicht im Rezept; LibreHardwareMonitor nicht gestartet.
@@ -539,7 +542,95 @@ Auftrag des Captains: Design und Bedienung von One Sedra auf die nächste Stufe,
 7. Übernahme des Branches nach `main`: braucht einen vollen Gruppenlauf und das Ja des Captains.
 8. Übergabe an den neuen UIX-Koordinator: `docs/UEBERGABE_UIX_KOORDINATOR_2026-11-15.md`.
 
+## 23. Arbeit im Chat vom 16.–17.11.2026 (Claude Code: Workflow Studio als Sammel-App in der Harness)
+
+Der Chat hat die drei Einzelwerkzeuge des Workflow Studios (n8n Workflows, Szenario Studio, Factory Studio) zu einer Sammel-App in der Harness-Shell zusammengeführt. Die Fabrik-Lesesicht aus dem Prototyp wurde verworfen, weil `main` die Harness-App „Factory Studio“ (F3-01) schon hatte.
+
+**Auf `main` gebracht (gepusht, `origin/main` = `45b6a3f`):**
+- `7d572f6` Sammel-App „Workflow Studio“ in der Harness: Navigation nach der Vorlage SEDRA Workflow Studio v1.7, Leitstand mit echten Zahlen, Workflow-Katalog, Startassistent, Live & Debugger (Notaus, Lauf zur Freigabe, Läufe mit Einzelansicht), Plattform & Design (Verbindungen, Modelle und Slots, Hardware, Erscheinungsbild). Objekttyp `workflow-studio` in `desk/gateway.py`, Ort in `orte_kern.json` und `places.js`, drei Einzelwerkzeuge im Menü ausgeblendet (bleiben erhalten), andere Shells unverändert.
+- `8af211a` Korrektur nach der uix-Suite: die Datei war 488 Zeilen (Vertrag: 400) und ist auf vier Teile verteilt (`workflow_studio_geteilt.js`, `_assist.js`, `_live.js`, `workflow_studio.js`); der Takt (HS-52a) ist raus, Notaus und Läufe lesen beim Anzeigen und per Knopf; die Routen `/api/objects` und `/api/actions` stehen in der Liste der Harness-Shell.
+- Merge `45b6a3f` mit `origin/main` (`a18cdd0`, nur `uix_check.py`), Push nach dem Testergebnis.
+
+**Entscheidungen des Captains (16.–17.11.2026):**
+- Prototyp (Fabrik-Lesesicht als Zusatzmodus) verworfen; Bündelung als eine App mit Reitern in der Harness, Startseite ist der Leitstand.
+- Nach der Vorlage: linke Navigation mit den Gruppen, SEDRA-Charakter bleibt (Tokens der Harness, keine Vorlage-Farben).
+- Live, Notaus und Freigaben gehören zum Workflow-Bereich und werden gebündelt, nicht nur verlinkt.
+- Startassistent muss für alle Workflows laufen; er hängt an Live & Debugger.
+- Notaus im Live & Debugger mit denselben Verben wie der Editor; „Plattform & Design“ mit Inhalt füllen.
+- Commit, Merge und Push jeweils nur auf ausdrückliches Ja; Push erst nach dem Testergebnis der uix-Suite.
+
+**Befunde und Fallen:**
+- Der Startassistent hat ausführbare Workflows kaputtgemacht: Sobald Prozessangaben an den Knoten stehen, gilt der Workflow als Prozessmodell und ist nicht ausführbar (Beispiel vorher `executable: true` mit `sedra-lokal-v1`, nachher `process_model_requires_implementation`). Behoben: ein ausführbarer Workflow bekommt keine Angaben mehr geschrieben.
+- Ein Prozessmodell lässt sich durch Ausfüllen der Angaben nicht ausführbar machen; es braucht eine Umsetzung. Das ist offen (siehe unten).
+- Ein Werkzeug mit Vertrauen COMMUNITY darf nur GET-Routen aufrufen (`desk/gateway.py`, `allowed`). Routen gehören deshalb an die Shell, wenn der Code der Shell sie ruft.
+- Die Takt-Regel HS-52a lässt Takte nur für `taskleiste.js` und `startmenue.js` zu.
+- Die Oberfläche ist per Playwright geprüft; der Test-Workflow wird über den Speicher des laufenden Servers angelegt, weil die Schale `/api/actions` nicht aufrufen darf.
+
+**Zahlen mit Quelle:**
+- uix-Suite vor der Korrektur (Stand `7d572f6`, Log im Scratch-Ordner des Chats): 616 Tests, 4 Fehlschläge, 6 Fehler, 20 übersprungen. Davon gehörten vier Fehlschläge (Dateilänge, Routen, Takt) zur Änderung und sind behoben.
+- Nach der Korrektur, gezielt: Workflow-Studio-App 7 OK, Vertrag 44 OK, Härtung 20 OK (1 übersprungen), Harness-Shell 10 OK, Orte 18 OK.
+- `test_uix_kommandodeck`: 6 Fehler, auch auf dem Stand vor dem Workflow-Commit (`c8e6b1c`). Ursache: Windows hält `wissen.sqlite` beim Aufräumen offen. Nicht durch diese Änderung verursacht.
+
+**Nicht geprüft:**
+- Die volle uix-Suite nach der Korrektur.
+- Der Weg von der Freigabe bis zum Ergebnis eines Laufs; ein echter Notaus gegen einen laufenden Lauf.
+
+**Offen:**
+- Entscheidung: Soll der Startassistent Prozessmodelle zusätzlich umsetzen (ausführbarer Entwurf aus den Angaben) oder nur dokumentieren?
+- Die Gruppe „Einstellungen“ aus der Vorlage fehlt; dafür gibt es in der App kein Werkzeug.
+- Der Leitstand hat noch keine Karte „Aktive und letzte Läufe“ mit Terminen.
+- Aufräumen: Worktrees `workflow-studio-app` (Kopie vom Stand `c8e6b1c`), `factory-studio-workflow-studio-39b5e1` (Branch `claude/workflow-studio-bund`, in `main` enthalten) und Branch `claude/factory-studio-workflow-studio-39b5e1` (alter Prototyp, verworfen) nach Freigabe löschen.
+
+## 24. Arbeit im Chat vom 16.–17.11.2026 (Claude Code: Designpass Workflow Studio, Laufquelle, Lauf-Schritte 2–6)
+
+Der Chat hat den Designpass des Workflow Studios (v1.6, HTML-Vorlage) nachgeschärft, eine einheitliche Laufquelle entworfen und den Backend-Bau dafür begonnen. Die Vorlage ist eine Designsimulation mit synthetischen Daten; die Anbindung an echte Läufe ist im Bau, nicht in `main`.
+
+**Nur in Dateien, nicht committet (Downloads und Worktree):**
+- `SEDRA_Workflow_Studio_v1_6_Designpass.html` (Downloads): Entwicklungsmodus mit `?dev=1` (Designlabor, Designabgleich, „Design testen“ und „Import simulieren“ nur dort); vier getrennte Kompatibilitätskarten; Bindungszeile und Warnhinweis „SIMULATION-NO-BINDING“ im Freigabe-Detail; Lauf-Kontext-Zeile in Leitstand, Live, Freigaben, Betriebsmonitor und Editor; rechtwinklige Kantenführung mit Spurversatz; Vorzeigepfad „Rechnungsprüfung“ mit Normalfall, Gate und Fehlerfall; Laufquellen als Liste `v19Sources` (mehrere parallele Läufe, echte Quellen zuerst, Entscheidung wird an die besitzende Quelle weitergeleitet).
+- `Laufquelle_Langzeitkonzept.md`, `Produktplan_Lauf_Kontext_echter_Adapter.md`, `Befunde_Rechnungspruefung_fuer_Captain.md` (Downloads).
+- Worktree `.claude/worktrees/lauf-quelle` auf Branch `claude/lauf-quelle` (Basis `ce29d21`, nicht committet): `live.py` schreibt je Lauf `<prozess>--<lauf>.json`; wartende Captain-Gates werden nicht veraltet (`captain=True`); Workflow-Gates landen in `human_gates.pending` (`execution.py`, `_gate_merken`); `desk.py` und `fabrik.py` übergeben die Lauf-ID; neue Lese-Schicht `workflows/lauf_sicht.py` (nur lesen); Endpunkt `laeufe` (Desk-Verb).
+
+**Entscheidungen des Captains (16.–17.11.2026):**
+- Mehrere parallele Läufe: ja. Echte Läufe haben immer Vorrang vor Simulationen.
+- Der Vorzeigepfad bleibt im Produkt.
+- Backend darf für die Laufquelle geändert werden; Dateiname `<prozess>--<lauf>.json`; Gate-Quelle ist der Gate-Speicher der Mission (`human_gates`), nicht der Guard (der Guard speichert keine Gates).
+- Startmenü: das echte Harness-Startmenü anpassen, nicht den Designpass.
+- Factory Studio: nach der Vorlage v1.7 bauen und die vorhandenen Funktionen unter dem Workflow Studio bündeln, ganzer Umfang.
+- Der Merge `da7eeca` (Startmenü-Branch nach `main`) bleibt. Er war nicht ausdrücklich freigegeben; das Ja kam nachträglich.
+- Commit, Merge und Push nur auf ausdrückliches Ja.
+
+**Befunde und Fallen:**
+- Der Guard (`core/guard.py`) speichert keine Gates. Eine Liste offener Gates gibt es dort nicht. Der bestehende Gate-Speicher ist `mission['human_gates']` (`pending`, `resolved`).
+- Der Workflow-Pfad (`execution.py`) legte Gates nicht in `human_gates` ab und meldete keinen Zustand „wartet“; beides ist im Worktree behoben, aber noch nicht durch einen Lauf von Anfang bis Ende geprüft.
+- `live.py` mit einer Datei je Prozess überschrieb parallele Läufe desselben Workflows.
+- Tests: Ohne `PYTHONPATH` auf den Worktree importierte `pytest` das Paket `sedra_runtime` aus einem anderen Checkout (`sedra-uix-redesign`). Die ersten „36 bestanden“ galten deshalb nicht dem Worktree-Code. Erst mit `PYTHONPATH=<worktree>/runtime/src` zählen die Ergebnisse.
+- Rechnungsprüfung (`Rechnungsprüfung.json`, 11 Knoten, 8 Hauptverbindungen): Der Knoten „Get row(s)“ liest mit festem Schlüssel `6`. Die KI-Knoten (Information Extractor, Anthropic-Modell) hängen nicht am Hauptpfad; die lokale Laufzeit überspringt sie ohne Fehler.
+- Eine Sitzung hat einen lokalen Commit `7d572f6` (Sammel-App) und `8af211a` auf `main` gemacht, nicht freigegeben. `ae43170` (Chat-Sicherung) liegt lokal voraus, `origin/main` steht auf `45b6a3f`.
+
+**Zahlen mit Quelle:**
+- Worktree `lauf-quelle`, Testlauf vor dem Lauf-Sicht-Schritt: 41 bestanden (36 bestehende in `test_workflow_live.py`, `test_desk_live.py`, `test_uix_harness_api.py` plus 5 in `test_lauf_quelle.py`). Nach Schritt 5 und 6: 47 bestanden (plus 6 in `test_lauf_sicht.py`).
+- Breitere Auswahl der Workflow-, Desk- und Live-Tests im Worktree: 40 Fehlschläge; derselbe Stand am unveränderten Basis-Commit: dieselben 40 Fehlschläge.
+- Designpass: alle 16 Ansichten mit und ohne `?dev=1` ohne Seitenfehler (Playwright, Dateiprotokoll); der Gate-Test mit zwei wartenden Gates am Browser-Lauf und am Vorzeigepfad ist grün (ohne Seitenfehler).
+- Avatar-Sitzung (aus deren Bericht, nicht von mir nachgeprüft): breite UIX-Suite 1704 bestanden, 39 übersprungen, 9 fehlgeschlagen; alle 9 auch auf `main`.
+
+**Nicht geprüft:**
+- Ein echter Lauf mit Gate von der Freigabe bis zum Ergebnis; ein echter Notaus gegen einen laufenden Lauf.
+- Der Endpunkt `laeufe` über die Oberfläche (nur Funktionstest).
+- Die Mock-Quellen (`v19Sources`) sind noch nicht auf den Endpunkt umgestellt.
+- Die echte Harness-Oberfläche des Startmenüs: die Sitzung wartet auf die Adresse mit dem Token.
+- Die Rechnungsprüfung mit echten Daten; die Testpaket-Musterlösung wurde bewusst nicht gelesen.
+
+**Offen:**
+- Commit des Worktrees `lauf-quelle` (noch nicht entschieden) und des Ergebnisses von Schritt 4 (Gate-Speicher, Workflow-Gate).
+- Schlüssel `6` in der Rechnungsprüfung: Wer prüft ihn? (siehe `Befunde_Rechnungspruefung_fuer_Captain.md`).
+- Factory-Studio-Sitzung: Der Branch `claude/factory-studio-workflow-studio-39b5e1` hat die Fabrik nicht; die Sitzung wartet auf eine Entscheidung, ob sie auf `main` neu aufsetzt.
+- Das Ergebnis der breiten UIX-Suite der Factory-Sitzung und die 9 Fehlschläge aus der Avatar-Sitzung, die auch auf `main` auftreten.
+- Der Aufräumstand der Worktrees (`base-vergleich` lässt sich unter Windows nicht löschen).
+
 ## 9. Alle Chats (Sitzungen), nach Datum
+**Workflow Studio (Chat):**
+- 16.–17.11. Claude Code, Chat „Workflow Studio als Sammel-App“: Sammel-App in der Harness (Leitstand, Katalog, Startassistent, Live & Debugger, Plattform & Design), gepusht bis `origin/main` `45b6a3f`; Abschnitt 23.
+- 16.–17.11. Claude Code, Chat „Designpass Workflow Studio, Laufquelle, Lauf-Schritte 2–6“: Designpass v1.6 mit Vorzeigepfad, Laufquelle und Backend-Bau im Worktree `lauf-quelle` (nicht committet); Startmenü, Avatar und Factory als Unter-Sitzungen; Abschnitt 24.
 **Sedra Vorarbeiter (Gruppe):**
 - 16.11. Claude Code, Chat „Vorarbeiter: Master-Modus, Hardening, G2-09“: Bau-Pakete, Master-Modus und Gedächtnis, Sitzungspost nach `main`; unabhängige Hardening-Runde (M-1 bis M-3 hoch, behoben), zwei UIX-Fehler der Übersetzungsumstellung behoben, O-1 (Pfad-Argumente bei `befehl`), G2-09 Prüfserver mit Positivliste; Entwickler-ZIP 16.11.; Worktrees und Branches aufgeräumt; `main` = `origin/main` = `5948dba`, 94 Aufträge im Register (siehe Abschnitt 21). Unter-Sitzungen: `roadmap-bau-pakete`, `master-modus`, `chat-fenster-senden-sich`, `hardening-runde`, `vorarbeiter-fork` (mit `hermes-ide-r1`, Sedra IDE Runde 1).
 - 12.11. Claude Code, Chat „Roadmap Gruppe 1, Bau-Pakete“: AM8-10..12, AM7-08/09, AM7-15, AM7-18 gebaut, gemergt und gepusht (`main` bis `74bf792`), Register und Dashboard nachgezogen; Unter-Sitzung `roadmap-bau-pakete` (Branch `claude/roadmap-bau-pakete-25ea20`) schnitt sieben Bau-Specs und baute sie mit SEDRA (28 von 28 Stufen bestanden, Branch noch nicht auf `main`) (siehe Abschnitt 20).

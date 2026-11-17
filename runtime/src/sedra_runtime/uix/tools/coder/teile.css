@@ -1,0 +1,112 @@
+/* Sedra IDE: Bausteine der Seitenleisten und des unteren Panels. */
+.t-coder .seite-kopf {
+  flex: none; height: var(--h-reiter); display: flex; align-items: center; justify-content: space-between;
+  padding: 0 8px 0 16px; font-size: var(--gr-klein); letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-leise);
+}
+.t-coder .seite-inhalt { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+.t-coder .seite-fuss { flex: none; padding: 8px; border-top: 1px solid var(--rand); }
+
+.t-coder .abschnitt { display: flex; flex-direction: column; border-top: 1px solid var(--rand); }
+.t-coder .abschnitt:first-child { border-top: 0; }
+.t-coder .abschnitt-kopf {
+  flex: none; width: 100%; height: var(--zeile); display: flex; align-items: center; gap: 4px; padding: 0 8px 0 4px;
+  font-size: var(--gr-klein); font-weight: 700; text-transform: uppercase; color: var(--text); text-align: left;
+}
+.t-coder .abschnitt-kopf .pfeil { transition: transform 0.1s; }
+.t-coder .abschnitt-kopf[aria-expanded="true"] .pfeil { transform: rotate(90deg); }
+.t-coder .abschnitt-kopf .titel { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-coder .zahl { min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--bg-karte); color: var(--text); font-size: 10px; font-weight: 600; text-align: center; }
+.t-coder .zahl.blau { background: var(--akzent); color: var(--akzent-text); }
+
+.t-coder .baum-zeile,
+.t-coder .listen-zeile {
+  height: var(--zeile); display: flex; align-items: center; gap: 5px; padding-right: 12px; cursor: pointer; white-space: nowrap;
+}
+.t-coder .listen-zeile { padding-left: 20px; text-align: left; }
+.t-coder .baum-zeile:hover,
+.t-coder .listen-zeile:hover { background: var(--bg-hover); }
+.t-coder .baum-zeile.gewaehlt,
+.t-coder .listen-zeile.gewaehlt { background: var(--bg-wahl); color: var(--text-stark); }
+.t-coder .baum-zeile:focus-visible,
+.t-coder .listen-zeile:focus-visible { outline: 1px solid var(--fokus); outline-offset: -1px; }
+.t-coder .baum-zeile .pfeil.offen { transform: rotate(90deg); }
+.t-coder .zeile-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.t-coder .zeile-neben { color: var(--text-leise); font-size: var(--gr-klein); }
+.t-coder .leer { padding: 8px 20px; color: var(--text-leise); }
+.t-coder .beispiel-marke {
+  display: inline-block; padding: 0 6px; border: 1px solid var(--warnung); border-radius: 9px;
+  color: var(--warnung); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+.t-coder .feld {
+  width: 100%; height: 26px; padding: 0 8px; background: var(--bg-eingabe);
+  border: 1px solid var(--rand-stark); border-radius: var(--rund);
+}
+.t-coder .feld:focus { border-color: var(--akzent); outline: none; }
+.t-coder textarea.feld { height: 56px; padding: 6px 8px; resize: none; }
+.t-coder .feld-rand { padding: 8px 12px; }
+.t-coder .knopf {
+  display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px;
+  background: var(--akzent); color: var(--akzent-text); border-radius: var(--rund);
+}
+.t-coder .knopf:hover { filter: brightness(1.12); }
+.t-coder .knopf.still { background: var(--bg-karte); color: var(--text); border: 1px solid var(--rand-stark); }
+.t-coder .knopf-reihe { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.t-coder .umschalter { display: inline-flex; border: 1px solid var(--rand-stark); border-radius: 10px; overflow: hidden; }
+.t-coder .umschalter button { padding: 0 9px; height: 20px; font-size: var(--gr-klein); }
+.t-coder .umschalter button[aria-pressed="true"] { background: var(--akzent); color: var(--akzent-text); }
+
+.t-coder .karte { margin: 6px 10px; padding: 8px 10px; background: var(--bg-karte); border: 1px solid var(--rand); border-radius: 6px; }
+.t-coder button.karte { display: block; width: calc(100% - 20px); text-align: left; }
+.t-coder button.karte:hover { border-color: var(--rand-stark); }
+.t-coder .karte-kopf { display: flex; justify-content: space-between; gap: 8px; color: var(--text-stark); }
+.t-coder .karte-text { color: var(--text-leise); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-coder .erw { display: flex; gap: 10px; padding: 8px 12px; }
+.t-coder .erw:hover { background: var(--bg-hover); }
+.t-coder .erw-bild {
+  flex: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; background: var(--bg-karte); color: var(--akzent-hell);
+}
+.t-coder .erw-text { min-width: 0; flex: 1; }
+.t-coder .erw-text strong { display: block; color: var(--text-stark); font-weight: 600; }
+.t-coder .erw-text span { display: block; color: var(--text-leise); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-coder .zustand { display: inline-flex; align-items: center; gap: 5px; font-size: var(--gr-klein); color: var(--text-leise); }
+.t-coder .zustand::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--text-leise); }
+.t-coder .zustand.aktiv::before { background: var(--ok); }
+.t-coder .zustand.wartet::before { background: var(--warnung); }
+.t-coder .zustand.fehler::before { background: var(--fehler); }
+.t-coder .agent-kopf { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 22px 12px 14px; color: var(--text-stark); font-size: 15px; font-weight: 600; }
+
+/* Reiter in Panel und rechter Leiste */
+.t-coder .reiter-zeile { flex: none; display: flex; align-items: center; gap: 2px; height: var(--h-reiter); padding: 0 8px; }
+.t-coder .reiter-zeile .platz { flex: 1; }
+.t-coder .pr {
+  height: 100%; padding: 0 9px; font-size: var(--gr-klein); text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-leise); border-bottom: 1px solid transparent; white-space: nowrap;
+}
+.t-coder .pr:hover { color: var(--text); }
+.t-coder .pr[aria-selected="true"] { color: var(--text-stark); border-bottom-color: var(--akzent); }
+.t-coder .panel-inhalt { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.t-coder .mono-liste { flex: 1; overflow: auto; padding: 4px 14px; font: 12px/18px var(--mono); white-space: pre-wrap; }
+.t-coder .mono-liste .z-fehler { color: var(--fehler); }
+.t-coder .mono-liste .z-warnung { color: var(--warnung); }
+.t-coder .mono-liste .z-ok { color: var(--ok); }
+.t-coder .mono-liste .z-leise { color: var(--text-leise); }
+.t-coder .term-zeile { flex: none; display: flex; gap: 8px; padding: 2px 14px 6px; font: 12px/18px var(--mono); }
+.t-coder .term-zeile label { color: var(--ok); }
+.t-coder .term-zeile input { flex: 1; background: transparent; border: 0; outline: none; font: inherit; }
+.t-coder .problem { display: flex; align-items: center; gap: 8px; height: var(--zeile); padding: 0 14px; cursor: pointer; white-space: nowrap; }
+.t-coder .problem:hover { background: var(--bg-hover); }
+.t-coder .problem .fehler { color: var(--fehler); }
+.t-coder .problem .warnung { color: var(--warnung); }
+
+/* Chat */
+.t-coder .chat-liste { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.t-coder .blase { max-width: 92%; padding: 6px 10px; border-radius: 8px; background: var(--bg-karte); white-space: pre-wrap; overflow-wrap: anywhere; }
+.t-coder .blase.ich { align-self: flex-end; background: var(--bg-wahl); color: var(--text-stark); }
+.t-coder .blase .von { display: block; font-size: var(--gr-klein); color: var(--text-leise); }
+.t-coder .ereignis { display: flex; gap: 8px; padding: 3px 12px; font: 12px/18px var(--mono); }
+.t-coder .ereignis .zeit { color: var(--text-leise); }
+.t-coder .ereignis .wer { color: var(--akzent-hell); }
+.t-coder .eigenschaft { display: flex; justify-content: space-between; gap: 12px; padding: 3px 12px; }
+.t-coder .eigenschaft span:first-child { color: var(--text-leise); }

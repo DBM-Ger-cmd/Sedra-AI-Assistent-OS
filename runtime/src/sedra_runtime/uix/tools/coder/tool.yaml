@@ -1,0 +1,21 @@
+# App „Coder“: die Sedra IDE (Entwurf, Runde 1 bis 4 und 6 der SPEC_SEDRA_IDE_2026-11-16, ohne Anbindung).
+# Läuft im abgeschotteten Rahmen (trust CAPTAIN → /uix/frame/coder, sandbox allow-scripts). Keine Route, kein Speicher auf dem Server; Inhalte sind Beispieldaten.
+tool:
+  id: coder
+  name: "Coder"
+  description: "Entwicklungsoberfläche mit Explorer, Editor, Terminal-Attrappe, Agenten-Leiste und Befehlspalette – ohne Netz, mit Beispieldaten."
+  version: 0.1.0
+  kind: object
+  handles: [coder]
+  order: 36
+  slot: inhalt
+  entry:
+    js: [dom.js, zustand.js, texte_de.js, texte_en.js, daten.js, daten_agenten.js, syntax.js, willkommen.js, editor.js, seitenleiste.js, explorer.js, ansichten.js, agenten.js, rechts.js, panel.js, befehle.js, palette.js, kopf.js, start.js, tool.js]
+    css: [tokens.css, layout.css, editor.css, teile.css]
+  api: []
+  events:
+    emits: []
+    listens: []
+  trust: CAPTAIN
+  tests: []
+  needs: {ui: ">=1.0 <2"}

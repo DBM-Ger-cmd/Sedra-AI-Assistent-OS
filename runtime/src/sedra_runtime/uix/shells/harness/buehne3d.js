@@ -291,6 +291,40 @@ void main(){
     return laden().then(modell=>{ const ok = starten(el, leinwand, modell, true); if(!ok) el.remove(); return ok; }).catch(()=>{ el.remove(); return false; });
   }
 
-  root.sedraHarness.buehne3d = {rahmen, hintergrund, modus, MODI, landen: (x, y)=>!!flug && (flug.landen(x, y), true), abheben: ()=>{ if(flug) flug.abheben(); }, glbLesen, teileVon, m4, KEY, MODELL_URL};
+  // Ein Standbild des 3D-Drachen für eine kleine Fläche (leben.js, 16.11.): gezeichnet wird nur auf Anfrage – bei jeder Zustandsänderung
+  // einmal –, nie in einer Schleife. So hängt neben einem laufenden Modell nichts an der Grafikkarte. Winkel in Radiant um die Hochachse.
+  // Ergebnis: true, wenn gezeichnet wurde; false ohne WebGL2 oder ohne Modell (dann bleibt der Rückfall der Aufrufer).
+  function standbild(leinwand, winkel){
+    return laden().then(modell=>{
+      let st = leinwand._standbild;
+      if(!st){
+        const gl = leinwand.getContext('webgl2', {alpha: true, antialias: true, premultipliedAlpha: true, powerPreference: 'low-power'});
+        if(!gl) return false;
+        const {p, u} = programm(gl);
+        gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE); gl.clearColor(0, 0, 0, 0);
+        st = leinwand._standbild = {gl, p, u, teile: hochladen(gl, modell), rand: akzent(), modell};
+      }
+      const gl = st.gl, m = st.modell;
+      const dpr = Math.min(root.devicePixelRatio || 1, DPR_MAX);
+      const b = Math.max(1, Math.round(leinwand.clientWidth * dpr)), h = Math.max(1, Math.round(leinwand.clientHeight * dpr));
+      if(leinwand.width !== b || leinwand.height !== h){ leinwand.width = b; leinwand.height = h; }
+      const quer = Math.hypot(m.halb[0], m.halb[2]), hoch = m.halb[1] * 1.25;
+      const abstand = Math.max(hoch, quer / (b / h)) / Math.tan(FOV / 2) + quer, auge = [0, 0, abstand];
+      const lage = m4.mal(m4.mal(m4.drehX(0.12), m4.drehY(winkel)), m4.schieben(-m.mitte[0], -m.mitte[1], -m.mitte[2]));
+      const kamera = m4.mal(m4.sicht(FOV, b / h, abstand * 0.05, abstand * 4), m4.schieben(0, 0, -abstand));
+      gl.viewport(0, 0, b, h); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.useProgram(st.p);
+      gl.uniformMatrix4fv(st.u.uBild, false, kamera); gl.uniform3fv(st.u.uAuge, auge); gl.uniform3fv(st.u.uAkzent, st.rand);
+      st.teile.forEach(t=>{
+        gl.uniformMatrix4fv(st.u.uWelt, false, m4.mal(lage, t.welt));
+        gl.uniform3fv(st.u.uFarbe, t.farbe); gl.uniform1f(st.u.uMetall, t.metall); gl.uniform1f(st.u.uRau, t.rau);
+        gl.bindVertexArray(t.vao); gl.drawElements(gl.TRIANGLES, t.anzahl, t.art, t.ab);
+      });
+      gl.bindVertexArray(null);
+      return true;
+    }).catch(()=>false);
+  }
+
+  root.sedraHarness.buehne3d = {rahmen, hintergrund, standbild, modus, MODI, landen: (x, y)=>!!flug && (flug.landen(x, y), true), abheben: ()=>{ if(flug) flug.abheben(); }, glbLesen, teileVon, m4, KEY, MODELL_URL};
   if(typeof module !== 'undefined' && module.exports) module.exports = root.sedraHarness.buehne3d;
 })();

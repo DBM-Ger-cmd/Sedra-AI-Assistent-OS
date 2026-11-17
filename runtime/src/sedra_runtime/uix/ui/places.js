@@ -36,6 +36,7 @@
     {id: 'uebersicht', label: 'Übersicht',            hint: 'alle Apps nach Gruppen mit Zustand – der Baum der Gesamtlage', words: ['übersicht', 'uebersicht', 'baum', 'gesamtlage'], object: {type: 'uebersicht', id: 'app', title: 'Übersicht'}},
     // A3 (Team): die App mit den Modi Überblick · Issues · Vorhaben · Organigramm · Routinen · Kosten; die Einzelwörter gehören weiter den Werkzeugen
     {id: 'team',      label: 'Team',                  hint: 'Überblick, Issues, Organigramm, Routinen, Kosten – eine App', words: ['team', 'paperclip'], object: {type: 'team', id: 'app', title: 'Team'}},
+    {id: 'coder',     label: 'Coder',                 hint: 'Entwicklungsoberfläche mit Editor, Explorer und Agenten-Leiste (Entwurf, Beispieldaten)', words: ['coder', 'ide'], object: {type: 'coder', id: 'app', title: 'Coder'}},
     {id: 'planung',   label: 'Planungstisch',         hint: 'mit einem Assistenten Ziele und Aufträge festlegen', words: ['planungstisch', 'planung', 'planen', 'assistent', 'assistenten'], object: {type: 'planung', id: 'tisch', title: 'Planungstisch'}},
     // Spec 4 (G1-S4-09, G2-S4-21): Orte des Agenten-Teams – in jeder Shell, auch im Cockpit. Ohne Werkzeug zeigt die Shell den Leerzustand.
     {id: 'org',       label: 'Organigramm',           hint: 'das Team: Vorgesetzte, Rolle, Budget', words: ['organigramm', 'hierarchie'],                                   object: {type: 'agent', id: 'alle', title: 'Organigramm', collection: true}},
