@@ -114,10 +114,25 @@
   background: var(--hs-hover);
 }
 
+.hs-start-kachel-kopf .hs-start-symbol {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius);
+  background: var(--hs-on);
+  flex-shrink: 0;
+}
+
 .hs-start-kachel-titel {
   flex: 1;
   font-weight: 600;
   font-size: var(--size-small);
+}
+
+.hs-start-kachel-kopf small {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .hs-start-kachel-liste {
@@ -169,6 +184,18 @@
 .hs-start-app.wahl {
   background: var(--hs-hover);
   border-color: var(--hs-on-line);
+}
+
+/* Tastatur: die Pfeiltasten führen über die Apps, Tab zeigt den Fokus */
+.hs-start-app:focus-visible,
+.hs-start-kachel-kopf:focus-visible,
+.hs-start-mehr:focus-visible,
+.hs-start-chip:focus-visible,
+.hs-start-shell:focus-visible,
+.hs-start-leeren:focus-visible,
+.hs-start-dar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .hs-start-app .hs-start-symbol {
@@ -245,9 +272,12 @@
 .hs-start-fuss {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   border-top: 1px solid var(--line);
-  padding-top: 8px;
+  margin: 0 calc(-1 * var(--gap-4)) calc(-1 * var(--gap-4));
+  padding: var(--gap-3) var(--gap-4);
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .hs-start-oberflaechen {
