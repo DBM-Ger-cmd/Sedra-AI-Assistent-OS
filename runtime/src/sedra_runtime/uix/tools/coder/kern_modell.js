@@ -109,25 +109,10 @@
     return d;
   };
 
-  /* ---- Gliederung nach Einrückung: Faltbereiche. Eine Zeile beginnt einen Bereich, wenn die nächste nichtleere Zeile weiter eingerückt ist. */
+  /* ---- Einrückung einer Zeile (Grundlage der Faltbereiche in kern_falten.js). */
   K.einrueckung = function (zeile) {
     let n = 0;
     for (let i = 0; i < zeile.length; i++) { const c = zeile.charCodeAt(i); if (c === 32) n += 1; else if (c === 9) n += 4; else return n; }
     return -1;                                           /* leere oder nur aus Leerraum bestehende Zeile */
   };
-  K.faltEnde = function (d, z) {
-    const e0 = K.einrueckung(d.zeilen[z]);
-    if (e0 < 0) return -1;
-    let ende = -1, naechste = z + 1;
-    while (naechste < d.zeilen.length && K.einrueckung(d.zeilen[naechste]) < 0) naechste += 1;
-    if (naechste >= d.zeilen.length || K.einrueckung(d.zeilen[naechste]) <= e0) return -1;
-    for (let i = naechste; i < d.zeilen.length; i++) {
-      const e = K.einrueckung(d.zeilen[i]);
-      if (e < 0) continue;
-      if (e <= e0) break;
-      ende = i;
-    }
-    return ende;
-  };
-  K.istFaltStart = function (d, z) { return K.faltEnde(d, z) > z; };
 })(typeof window !== 'undefined' ? window : globalThis);

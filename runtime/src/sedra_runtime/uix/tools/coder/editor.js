@@ -3,7 +3,6 @@
   'use strict';
   const S = root.SIDE, el = S.el, T = S.T, K = S.kern;
   const E = S.editor = {};
-  const MINI_MAX = 4000;       /* größere Dateien bekommen keine Minimap */
   let felder = []; /* je Gruppe: {pfad, v, male, zeiger, roll, ta} oder null */
 
   function nameVon(p) { return p === 'willkommen' ? T('wk_reiter') : S.dateien[p].name; }
@@ -91,27 +90,12 @@
     v.eingabe.addEventListener('focus', function () { fokusGruppe(gi); E_zeiger(); });
     function E_zeiger() { const k = v.sel[v.sel.length - 1]; S.melde('zeiger', { zeile: k.k.z + 1, spalte: k.k.s + 1, gi: gi, auswahl: gewaehlt(doc, k), cursor: v.sel.length }); }
 
-    const mini = el('pre', { class: 'ed-mini', 'aria-hidden': 'true', title: T('ed_minimap') });
-    let miniZeit = null;
-    function miniMale() {
-      miniZeit = null;
-      if (!mini.isConnected) return;
-      if (doc.zeilen.length > MINI_MAX) { mini.style.display = 'none'; return; }
-      mini.style.display = '';
-      S.syntax.faerbe(mini, doc.text(), d.sprache);
-    }
-    const hoerer = function () { if (miniZeit) root.clearTimeout(miniZeit); miniZeit = root.setTimeout(miniMale, 300); };
-    doc.an(hoerer);
+    const mini = K.mini(v);
     const weg = v.zerstoere;
-    v.zerstoere = function () { const i = doc.hoerer.indexOf(hoerer); if (i >= 0) doc.hoerer.splice(i, 1); if (miniZeit) root.clearTimeout(miniZeit); weg(); };
-    mini.addEventListener('click', function (ev) {
-      const r = mini.getBoundingClientRect();
-      E.geheZu(Math.max(1, Math.round((ev.clientY - r.top - 2) / 3) + 1), gi);
-    });
-    root.setTimeout(miniMale, 0);
+    v.zerstoere = function () { mini.zerstoere(); weg(); };
 
     felder[gi] = { pfad: d.pfad, v: v, ta: v.eingabe, roll: v.roll, zeiger: E_zeiger, male: function () { v.neuAufbauen(); } };
-    return el('div', { class: 'ed-koerper', role: 'tabpanel', 'aria-label': d.name }, [v.element, mini]);
+    return el('div', { class: 'ed-koerper', role: 'tabpanel', 'aria-label': d.name }, [v.element, mini.element]);
   }
 
   function gruppe(g, gi) {

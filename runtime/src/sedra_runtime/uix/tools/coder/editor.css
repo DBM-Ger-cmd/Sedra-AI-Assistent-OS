@@ -60,10 +60,9 @@
   position: absolute; z-index: 3; width: 2px; height: 19px; padding: 0; margin: 0; border: 0; opacity: 0; resize: none; overflow: hidden;
   outline: none; background: transparent; color: transparent; font: inherit; pointer-events: none;
 }
-.t-coder .ed-mini {
-  flex: none; width: 84px; margin: 0; padding: 2px 4px; overflow: hidden; border-left: 1px solid var(--rand);
-  font: 2px/3px var(--mono); white-space: pre; color: var(--text-leise); user-select: none; cursor: pointer; opacity: 0.85;
-}
+.t-coder .ed-mini { flex: none; position: relative; width: 84px; overflow: hidden; border-left: 1px solid var(--rand); cursor: pointer; user-select: none; opacity: 0.9; }
+.t-coder .ed-mini-flaeche { display: block; }
+.t-coder .ed-mini-sicht { position: absolute; left: 0; right: 0; background: var(--bg-hover); border-top: 1px solid var(--rand); border-bottom: 1px solid var(--rand); opacity: 0.6; pointer-events: none; }
 
 .t-coder .syn-kommentar { color: var(--syn-kommentar); }
 .t-coder .syn-text { color: var(--syn-text); }

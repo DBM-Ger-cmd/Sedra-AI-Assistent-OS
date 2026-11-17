@@ -1,12 +1,14 @@
-/* Prüfung des Editorkerns (Textmodell und Auswahlen) in Node, ohne Browser. Aufruf: node kern_pruefung.js <Ordner der Kern-Dateien>. Beendet mit Fehlercode bei der ersten falschen Annahme. */
+/* Prüfung des Editorkerns (Textmodell, Auswahlen, Falten, Farb-Zustände, Syntax-Zerlegung) in Node, ohne Browser. Aufruf: node kern_pruefung.cjs <Ordner der Kern-Dateien>. Beendet mit Fehlercode bei der ersten falschen Annahme. */
 'use strict';
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 const ordner = process.argv[2];
 globalThis.window = globalThis;
-globalThis.SIDE = {};
-require(path.join(ordner, 'kern_modell.js'));
-require(path.join(ordner, 'kern_auswahl.js'));
+globalThis.SIDE = { leere: (x) => x };
+// Als Skripte laden (nicht als Module), damit ein package.json mit "type": "module" weiter oben im Verzeichnisbaum nicht stört.
+for (const n of ['kern_modell.js', 'kern_auswahl.js', 'kern_farbe.js', 'kern_falten.js', 'syntax.js']) vm.runInThisContext(fs.readFileSync(path.join(ordner, n), 'utf8'), { filename: n });
 const K = SIDE.kern;
 const P = (z, s) => ({ z, s });
 const tipp = (d, sel, t) => K.tippe(d, sel, t);
@@ -125,11 +127,11 @@ const Z = (d) => JSON.stringify(d.zeilen);
 // ---- Falten nach Einrückung
 {
   const d = K.neu('def a():\n  x\n\n  y\nz\n  w');
-  assert.strictEqual(K.faltEnde(d, 0), 3, 'Leerzeile mitten im Bereich gehört dazu');
-  assert.strictEqual(K.faltEnde(d, 4), 5, 'Zeile z leitet den eingerückten Rest ein');
-  assert.strictEqual(K.faltEnde(d, 1), -1);
-  assert.strictEqual(K.istFaltStart(d, 0), true);
-  assert.strictEqual(K.istFaltStart(d, 2), false, 'Leerzeile ist kein Start');
+  assert.strictEqual(K.faltEnde(d, 0, ''), 3, 'Leerzeile mitten im Bereich gehört dazu');
+  assert.strictEqual(K.faltEnde(d, 4, ''), 5, 'Zeile z leitet den eingerückten Rest ein');
+  assert.strictEqual(K.faltEnde(d, 1, ''), -1);
+  assert.strictEqual(K.istFaltStart(d, 0, ''), true);
+  assert.strictEqual(K.istFaltStart(d, 2, ''), false, 'Leerzeile ist kein Start');
 }
 
 // ---- Größe: viele Zeilen bleiben schnell
@@ -142,6 +144,68 @@ const Z = (d) => JSON.stringify(d.zeilen);
   d.text();
   assert.ok(Date.now() - t0 < 4000, 'Tippen in einer Datei mit 60000 Zeilen dauert zu lange: ' + (Date.now() - t0) + ' ms');
   assert.strictEqual(d.zeilen.length, 60000);
+}
+
+// ---- Falten je Sprache
+{
+  const F = (zeilen, z, sp) => K.faltEnde(K.neu(zeilen.join('\n')), z, sp);
+  assert.strictEqual(F(['function f() {', '  a();', '}'], 0, 'js'), 1, 'Klammer: schließende Zeile bleibt sichtbar');
+  assert.strictEqual(F(['if (x) {', '  a();', '} else {', '  b();', '}'], 0, 'js'), 1);
+  assert.strictEqual(F(['if (x) {', '  a();', '} else {', '  b();', '}'], 2, 'js'), 3, 'Zeile mit } else { beginnt einen eigenen Bereich');
+  assert.strictEqual(F(['{ a: 1 }', 'x'], 0, 'js'), -1, 'Klammer in einer Zeile');
+  assert.strictEqual(F(['a', '  b'], 0, 'js'), -1, 'JS faltet nicht nach Einrückung');
+  assert.strictEqual(F(['x = "{"', 'y'], 0, 'js'), -1, 'Klammern in Zeichenketten zählen nicht');
+  assert.strictEqual(F(['x = 1 // {', 'y'], 0, 'js'), -1, 'Klammern in Zeilenkommentaren zählen nicht');
+  assert.strictEqual(F(['f({', '  a: 1', '})'], 0, 'js'), 1, 'äußerste Klammer zuerst');
+  assert.strictEqual(F(['{', '"a": [', '1,', '2', '],', '"b": 2', '}'], 0, 'json'), 5);
+  assert.strictEqual(F(['{', '"a": [', '1,', '2', '],', '"b": 2', '}'], 1, 'json'), 3);
+  assert.strictEqual(F(['a {', '  color: red;', '}'], 0, 'css'), 1);
+  assert.strictEqual(F(['/*', ' * x', ' */', 'y'], 0, 'js'), 2, 'Blockkommentar bis einschließlich Schluss');
+  assert.strictEqual(F(['def f():', '    """doc', '    mehr', '    """', '    return 1'], 0, 'py'), 4);
+  assert.strictEqual(F(['def f():', '    """doc', '    mehr', '    """', '    return 1'], 1, 'py'), 3, 'Docstring inklusive Schlussquotes');
+  assert.strictEqual(F(['# A', 'text', '## B', 'x', '# C'], 0, 'md'), 3);
+  assert.strictEqual(F(['# A', 'text', '## B', 'x', '# C'], 2, 'md'), 3);
+  assert.strictEqual(F(['# A', '', 'x', '', '# C'], 0, 'md'), 2, 'Leerzeilen am Ende zählen nicht zum Abschnitt');
+  assert.strictEqual(F(['```', 'code', '```', 'y'], 0, 'md'), 2, 'Codeblock');
+  assert.strictEqual(F(['```', '# kein Titel', '```'], 1, 'md'), -1, 'Überschrift im Codeblock zählt nicht');
+  assert.strictEqual(F(['k:', '  a: 1', '  b: 2', 'z: 3'], 0, 'yaml'), 2, 'YAML nach Einrückung');
+  assert.strictEqual(F(['if x; then', '  echo', 'fi'], 0, 'sh'), 1, 'Shell nach Einrückung');
+  const d = K.neu('a:\n  b\nc');
+  assert.strictEqual(K.istFaltStart(d, 0, 'yaml'), true);
+  d.zeilen[1] = 'b'; d.version += 1;
+  assert.strictEqual(K.faltEnde(d, 0, 'yaml'), -1, 'Zwischenspeicher gilt nur für diese Version');
+}
+
+// ---- Farb-Zustände am Zeilenanfang
+{
+  const Z = (zeilen, sp) => { const c = K.blockZustaende(K.neu(zeilen.join('\n')), sp); return zeilen.map((x, i) => c.hole(i)); };
+  assert.deepStrictEqual(Z(['x = """a', 'b', 'c"""', 'y'], 'py'), ['', '"""', '"""', '']);
+  assert.deepStrictEqual(Z(['s = "a # b"', 'y = 1  # """', 'z'], 'py'), ['', '', ''], 'Anführungszeichen und Kommentare täuschen keinen Block vor');
+  assert.deepStrictEqual(Z(['/* a', 'b */ x', 'y'], 'js'), ['', '*/', '']);
+  assert.deepStrictEqual(Z(['x = `a', '${b}', 'c`;', 'y'], 'js'), ['', '`', '`', '']);
+  assert.deepStrictEqual(Z(['// /* kein Block', 'y'], 'js'), ['', '']);
+  assert.deepStrictEqual(Z(['/* a', 'b */', 'y'], 'css'), ['', '*/', '']);
+  assert.deepStrictEqual(Z(['<!-- a', 'b -->', '<p>'], 'html'), ['', '-->', '']);
+  assert.deepStrictEqual(Z(['text', '```py', 'x = 1', '```', 'text'], 'md'), ['', '', '```', '```', '']);
+  assert.deepStrictEqual(Z(['k: |', '  zeile', '  zeile2', 'other: 1', 'x: 2'], 'yaml'), ['', 'y0', 'y0', 'y0', ''], 'die beendende Zeile sieht den Block noch (die Färbung entscheidet dort)');
+  assert.deepStrictEqual(Z(['a:', '  k: >-', '    x', '', '    y', '  m: 2'], 'yaml'), ['', '', 'y2', 'y2', 'y2', 'y2']);
+  const dd = K.neu('x = """a\nb\nc"""'); const c = K.blockZustaende(dd, 'py');
+  assert.strictEqual(c.hole(2), '"""');
+  dd.zeilen[0] = 'x = 1'; c.ab(0);
+  assert.strictEqual(c.hole(2), '', 'nach dem Löschen der Öffnung ist nichts mehr offen');
+}
+
+// ---- Syntax: Zerlegung (ohne Oberfläche)
+{
+  const X = SIDE.syntax;
+  const arten = (sp, t) => X.zerlege(t, sp).filter((s) => s.art).map((s) => s.art + ':' + s.t);
+  assert.deepStrictEqual(arten('json', '{"a": [1, true, "x"], "b": null}'), ['schluessel:"a"', 'zahl:1', 'wort:true', 'text:"x"', 'schluessel:"b"', 'wort:null']);
+  assert.deepStrictEqual(arten('css', 'a.k { color: #fff; margin: 10px; } /* c */ @media'), ['typ:.k', 'schluessel:color', 'zahl:#fff', 'schluessel:margin', 'zahl:10px', 'kommentar:/* c */', 'wort:@media']);
+  assert.deepStrictEqual(arten('html', '<div class="x" id=y>hi &amp; <!-- c --></div>').slice(0, 4), ['wort:<div', 'schluessel:class', 'text:"x"', 'schluessel:id']);
+  assert.deepStrictEqual(arten('sh', 'if [ $X ]; then echo "hi" # c'), ['wort:if', 'typ:$X', 'wort:then', 'wort:echo', 'text:"hi"', 'kommentar:# c']);
+  assert.deepStrictEqual(arten('py', 'def f(): return None  # x'), ['wort:def', 'funktion:f', 'wort:return', 'wort:None', 'kommentar:# x']);
+  assert.deepStrictEqual(X.zerlege('irgendwas', 'txt'), [{ t: 'irgendwas', art: '' }]);
+  assert.ok(['json', 'css', 'html', 'sh', 'js', 'py', 'yaml', 'md'].every((s) => X.SPRACHEN.indexOf(s) >= 0));
 }
 
 console.log('kern ok');

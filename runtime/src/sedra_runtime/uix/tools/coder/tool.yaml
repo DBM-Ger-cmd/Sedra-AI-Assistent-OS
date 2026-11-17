@@ -10,7 +10,7 @@ tool:
   order: 36
   slot: inhalt
   entry:
-    js: [dom.js, zustand.js, texte_de.js, texte_en.js, daten.js, daten_agenten.js, echt.js, syntax.js, willkommen.js, kern_modell.js, kern_auswahl.js, kern_ansicht.js, kern_eingabe.js, editor.js, komfort.js, seitenleiste.js, explorer.js, ansichten.js, suche_echt.js, agenten.js, agent_echt.js, speichern_echt.js, verwalten_echt.js, merken_echt.js, diff.js, rechts.js, panel.js, befehle.js, palette.js, kopf.js, start.js, tool.js]
+    js: [dom.js, zustand.js, texte_de.js, texte_en.js, daten.js, daten_agenten.js, echt.js, syntax.js, willkommen.js, kern_modell.js, kern_auswahl.js, kern_farbe.js, kern_falten.js, kern_ansicht.js, kern_mini.js, kern_eingabe.js, editor.js, komfort.js, seitenleiste.js, explorer.js, ansichten.js, suche_echt.js, agenten.js, agent_echt.js, speichern_echt.js, verwalten_echt.js, merken_echt.js, diff.js, rechts.js, panel.js, befehle.js, palette.js, kopf.js, start.js, tool.js]
     css: [tokens.css, layout.css, editor.css, teile.css]
   api:
     - GET /api/uix/coder/projekte         # R1: Projekte (Kennung, Name)

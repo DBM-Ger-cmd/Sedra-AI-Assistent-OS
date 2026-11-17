@@ -4,7 +4,7 @@
 (function (root) {
   'use strict';
   const S = root.SIDE, K = S.kern, el = S.el;
-  const TAB = 4, UEBERSTAND = 12, LANG = 3000, TEXT_RAND = 8;
+  const TAB = 4, UEBERSTAND = 12, TEXT_RAND = 8;
 
   function vspalte(zeile, s) {
     if (zeile.indexOf('\t') < 0) return s;
@@ -18,62 +18,6 @@
     while (i < zeile.length) { const w = zeile.charCodeAt(i) === 9 ? TAB - (c % TAB) : 1; if (c + w / 2 > v) break; c += w; i += 1; }
     return i;
   }
-  function vtext(zeile) {
-    if (zeile.indexOf('\t') < 0) return zeile;
-    let aus = '', v = 0;
-    for (let i = 0; i < zeile.length; i++) {
-      if (zeile.charCodeAt(i) === 9) { const w = TAB - (v % TAB); aus += ' '.repeat(w); v += w; } else { aus += zeile[i]; v += 1; }
-    }
-    return aus;
-  }
-  K.vspalte = vspalte; K.sspalte = sspalte;
-
-  /* Zustand am Zeilenanfang: offener Mehrzeilentext oder -kommentar (nur Python- und JS-Blöcke), damit Docstrings richtig gefärbt werden. */
-  function blockZustaende(doc, sprache) {
-    const cache = { bis: 0, w: [''] };
-    cache.hole = function (z) {
-      while (cache.bis < z && cache.bis < doc.zeilen.length) {
-        let st = cache.w[cache.bis];
-        const t = doc.zeilen[cache.bis];
-        for (let i = 0; i < t.length; i++) {
-          if (st) {
-            if (t.startsWith(st, i)) { i += st.length - 1; st = ''; } else if (t[i] === '\\' && st !== '*/') i += 1;
-            continue;
-          }
-          if (sprache === 'py') {
-            if (t[i] === '#') break;
-            if (t.startsWith('"""', i)) { st = '"""'; i += 2; } else if (t.startsWith("'''", i)) { st = "'''"; i += 2; }
-            else if (t[i] === '"' || t[i] === "'") { const q = t[i]; i += 1; while (i < t.length && t[i] !== q) { if (t[i] === '\\') i += 1; i += 1; } }
-          } else if (sprache === 'js') {
-            if (t.startsWith('//', i)) break;
-            if (t.startsWith('/*', i)) { st = '*/'; i += 1; }
-            else if (t[i] === '"' || t[i] === "'") { const q = t[i]; i += 1; while (i < t.length && t[i] !== q) { if (t[i] === '\\') i += 1; i += 1; } }
-          }
-        }
-        cache.bis += 1;
-        cache.w[cache.bis] = st;
-      }
-      return cache.w[z] || '';
-    };
-    cache.ab = function (z) { cache.bis = Math.min(cache.bis, z); cache.w.length = cache.bis + 1; };
-    return cache;
-  }
-
-  function faerbeZeile(ziel, zeile, sprache, zustand) {
-    const t = vtext(zeile);
-    if (t.length > LANG || !S.syntax) { S.leere(ziel).appendChild(root.document.createTextNode(t)); return; }
-    if (zustand && (sprache === 'py' || sprache === 'js')) {
-      const art = zustand === '*/' ? 'kommentar' : 'text';
-      const i = t.indexOf(zustand);
-      if (i < 0) { const s = el('span', { class: 'syn-' + art, text: t }); S.leere(ziel).appendChild(s); return; }
-      const kopf = t.slice(0, i + zustand.length), rest = t.slice(i + zustand.length);
-      const teil = el('span', { class: 'syn-' + art, text: kopf }), hinten = el('span');
-      S.syntax.faerbe(hinten, rest, sprache);
-      S.leere(ziel).appendChild(teil); ziel.appendChild(hinten);
-      return;
-    }
-    S.syntax.faerbe(ziel, t, sprache);
-  }
 
   /* opts: { doc, sprache, name, umbruch, melde(zeiger) }. Liefert die Ansicht v. */
   K.ansicht = function (opts) {
@@ -81,7 +25,7 @@
     const v = { doc: doc, sel: opts.sel || [K.auswahl({ z: 0, s: 0 })], umbruch: !!opts.umbruch, gefaltet: {}, sprache: opts.sprache };
     let LH = S.zeilenHoehe || 19, charW = 8, cols = 0, nrBreite = 52;
     let sicht = [], oben = [], zeilenRows = [], gesamt = 1, breit = 0;
-    let zustaende = blockZustaende(doc, v.sprache);
+    let zustaende = K.blockZustaende(doc, v.sprache);
     let neuZeichnen = true, wache = null, fensterVon = 0, fensterBis = -1;
 
     const hoehe = el('div', { class: 'kn-hoehe' });
@@ -127,7 +71,7 @@
         const k = rows(z);
         zeilenRows[z] = k; r += k;
         if (!cols) { const l = doc.zeilen[z]; if (l.length > maxV) maxV = l.length; }
-        const ende = v.gefaltet[z] ? K.faltEnde(doc, z) : -1;
+        const ende = v.gefaltet[z] ? K.faltEnde(doc, z, v.sprache) : -1;
         z = ende > z ? ende + 1 : z + 1;
       }
       gesamt = Math.max(1, r);
@@ -154,11 +98,11 @@
       if (tc[z]) text = tc[z].cloneNode(true);
       else {
         text = el('span', { class: 'kn-text' });
-        faerbeZeile(text, l, v.sprache, zustaende.hole(z));
+        K.faerbeZeile(text, l, v.sprache, zustaende.hole(z));
         tc[z] = text.cloneNode(true);
       }
       if (cols) { text.classList.add('kn-umbruch'); text.style.width = (cols * charW) + 'px'; }
-      const faltbar = K.istFaltStart(doc, z);
+      const faltbar = K.istFaltStart(doc, z, v.sprache);
       const nr = el('span', { class: 'kn-nr' + (z === v.sel[v.sel.length - 1].k.z ? ' hier' : ''), style: 'width:' + nrBreite + 'px' }, [
         faltbar ? el('button', { class: 'kn-falz' + (v.gefaltet[z] ? ' zu' : ''), type: 'button', tabindex: '-1', 'aria-label': v.gefaltet[z] ? 'Ausklappen' : 'Einklappen',
           data: { z: String(z) } }, [v.gefaltet[z] ? '▸' : '▾']) : null, String(z + 1)]);
@@ -248,21 +192,21 @@
     v.entfalteBei = function (z) {
       let geaendert = false;
       Object.keys(v.gefaltet).forEach(function (k) {
-        const s = +k, e = K.faltEnde(doc, s);
+        const s = +k, e = K.faltEnde(doc, s, v.sprache);
         if (v.gefaltet[k] && z > s && z <= e) { delete v.gefaltet[k]; geaendert = true; }
       });
       if (geaendert) { neuZeichnen = true; aufbauen(); neuZeichnen = false; fensterZeichnen(); }
     };
     v.faltUm = function (z) {
-      if (!K.istFaltStart(doc, z)) return;
+      if (!K.istFaltStart(doc, z, v.sprache)) return;
       if (v.gefaltet[z]) delete v.gefaltet[z]; else v.gefaltet[z] = true;
       const k = v.sel[v.sel.length - 1].k;                 /* Cursor in einem nun versteckten Bereich: auf die Startzeile setzen */
-      if (v.gefaltet[z] && k.z > z && k.z <= K.faltEnde(doc, z)) v.sel = [K.auswahl({ z: z, s: Math.min(k.s, doc.zeilen[z].length) })];
+      if (v.gefaltet[z] && k.z > z && k.z <= K.faltEnde(doc, z, v.sprache)) v.sel = [K.auswahl({ z: z, s: Math.min(k.s, doc.zeilen[z].length) })];
       v.neuAufbauen();
     };
     v.faltAlle = function (zu) {
       v.gefaltet = {};
-      if (zu) for (let z = 0; z < doc.zeilen.length; z++) if (K.istFaltStart(doc, z)) { v.gefaltet[z] = true; z = K.faltEnde(doc, z); }
+      if (zu) for (let z = 0; z < doc.zeilen.length; z++) if (K.istFaltStart(doc, z, v.sprache)) { v.gefaltet[z] = true; z = K.faltEnde(doc, z, v.sprache); }
       v.sel = [K.auswahl({ z: Math.min(v.sel[0].k.z, doc.zeilen.length - 1), s: 0 })];
       v.neuAufbauen();
     };
@@ -287,7 +231,7 @@
     /* ---- Änderungen am Dokument: Fenster neu, gefaltete Zeilen nachführen */
     function beiAenderung(a) {
       v.sel = v.sel.map(function (s) { return { a: doc.klemme(s.a), k: doc.klemme(s.k), w: s.w }; });      /* Änderung aus einer anderen Ansicht derselben Datei */
-      if (a.ganz) { v.gefaltet = {}; zustaende = blockZustaende(doc, v.sprache); } else {
+      if (a.ganz) { v.gefaltet = {}; zustaende = K.blockZustaende(doc, v.sprache); } else {
         const alt = a.alt.split('\n').length, neu = a.neu.split('\n').length, dz = neu - alt;
         zustaende.ab(a.von.z);
         if (dz !== 0) {

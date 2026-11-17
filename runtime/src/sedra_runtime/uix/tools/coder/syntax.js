@@ -7,6 +7,7 @@
   function menge(t) { const m = {}; t.split(' ').forEach(function (w) { m[w] = true; }); return m; }
   const WORT = {
     js: menge('const let var function return if else for while do class new import export from default async await try catch finally throw typeof instanceof this super null true false undefined of in switch case break continue extends static get set delete void yield'),
+    sh: menge('if then else elif fi for do done while until case esac in function select time export local readonly return break continue exit set unset shift source alias echo cd test'),
     py: menge('def class return if elif else for while import from as with try except finally raise pass None True False and or not in is lambda yield async await self break continue global nonlocal assert del')
   };
 
@@ -24,6 +25,22 @@
       re: /(#[^\n]*)|("(?:\\.|[^"\\\n])*"|'[^'\n]*')|(^[ \t]*(?:- )?[A-Za-z_][\w.-]*(?=[ \t]*:))|(\b\d[\d.]*\b)|(\b(?:true|false|null|yes|no|ja|nein)\b)/gm,
       art: ['kommentar', 'text', 'schluessel', 'zahl', 'wort']
     },
+    json: {
+      re: /("(?:\\.|[^"\\\n])*"(?=\s*:))|("(?:\\.|[^"\\\n])*")|(-?\b\d[\d.eE+\-]*\b)|(\b(?:true|false|null)\b)/g,
+      art: ['schluessel', 'text', 'zahl', 'wort']
+    },
+    css: {
+      re: /(\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')|(@[\w-]+)|(#[0-9a-fA-F]{3,8}\b)|(-?\b\d[\d.]*(?:px|em|rem|%|vh|vw|ms|s|deg|fr)?)|([\w-]+)(?=\s*:)|([.#][A-Za-z_][\w-]*)/g,
+      art: ['kommentar', 'text', 'wort', 'zahl', 'zahl', 'schluessel', 'typ']
+    },
+    html: {
+      re: /(<!--[\s\S]*?-->)|("[^"\n]*"|'[^'\n]*')|(<\/?[A-Za-z][\w:-]*)|([A-Za-z_:][\w:.-]*)(?==)|(&[#\w]+;)|(\/?>)/g,
+      art: ['kommentar', 'text', 'wort', 'schluessel', 'zahl', 'wort']
+    },
+    sh: {
+      re: /(#[^\n]*)|("(?:\\.|[^"\\\n])*"|'[^'\n]*')|(\$\{[^}\n]*\}|\$[A-Za-z_]\w*|\$[0-9@#?!*$-])|(\b\d+\b)|([A-Za-z_][\w-]*)/g,
+      art: ['kommentar', 'text', 'typ', 'zahl', 'name']
+    },
     md: {
       re: /(^#{1,6} [^\n]*)|(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(^[ \t]*(?:[-*]|\d+\.) )|(\[[^\]\n]+\]\([^)\n]+\))/gm,
       art: ['titel', 'text', 'typ', 'schluessel', 'funktion']
@@ -33,10 +50,10 @@
   function stueck(ziel, text, art) {
     if (!text) return;
     if (!art) { ziel.appendChild(document.createTextNode(text)); return; }
-    const s = document.createElement('span');
-    s.className = 'syn-' + art;
-    s.textContent = text;
-    ziel.appendChild(s);
+    const sp = document.createElement('span');
+    sp.className = 'syn-' + art;
+    sp.textContent = text;
+    ziel.appendChild(sp);
   }
 
   function artVon(roh, wort, sprache) {
@@ -45,29 +62,34 @@
     if (roh === 'aufruf') return istWort ? 'wort' : 'funktion';
     if (roh === 'name') {
       if (istWort) return 'wort';
-      return /^[A-Z][a-z]/.test(wort) ? 'typ' : '';
+      return sprache !== 'sh' && /^[A-Z][a-z]/.test(wort) ? 'typ' : '';
     }
     return roh;
   }
 
+  /* Text in Stücke [{ t, art }] zerlegen (art '' = ungefärbt). Ohne Oberfläche, deshalb auch in Node prüfbar. */
+  X.zerlege = function (text, sprache) {
+    const r = REGEL[sprache], aus = [];
+    if (!r) return [{ t: text, art: '' }];
+    r.re.lastIndex = 0;
+    let pos = 0, m;
+    while ((m = r.re.exec(text)) !== null) {
+      if (m[0] === '') { r.re.lastIndex += 1; continue; }
+      if (m.index > pos) aus.push({ t: text.slice(pos, m.index), art: '' });
+      let roh = '';
+      for (let i = 1; i < m.length; i++) if (m[i] !== undefined) { roh = r.art[i - 1]; break; }
+      aus.push({ t: m[0], art: artVon(roh, m[0], sprache) });
+      pos = m.index + m[0].length;
+    }
+    if (pos < text.length) aus.push({ t: text.slice(pos), art: '' });
+    return aus;
+  };
+  X.SPRACHEN = Object.keys(REGEL);
+
   /* Faerbt text in das Element ziel (wird geleert). */
   X.faerbe = function (ziel, text, sprache) {
     const frag = document.createDocumentFragment();
-    const r = REGEL[sprache];
-    if (!r) { stueck(frag, text, ''); }
-    else {
-      r.re.lastIndex = 0;
-      let pos = 0, m;
-      while ((m = r.re.exec(text)) !== null) {
-        if (m[0] === '') { r.re.lastIndex += 1; continue; }
-        if (m.index > pos) stueck(frag, text.slice(pos, m.index), '');
-        let roh = '';
-        for (let i = 1; i < m.length; i++) if (m[i] !== undefined) { roh = r.art[i - 1]; break; }
-        stueck(frag, m[0], artVon(roh, m[0], sprache));
-        pos = m.index + m[0].length;
-      }
-      if (pos < text.length) stueck(frag, text.slice(pos), '');
-    }
+    X.zerlege(text, sprache).forEach(function (st) { stueck(frag, st.t, st.art); });
     S.leere(ziel).appendChild(frag);
   };
 

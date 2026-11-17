@@ -138,7 +138,7 @@
         rechts.appendChild(zelle(T('st_einrueckung'), null));
         rechts.appendChild(zelle('UTF-8', T('st_kodierung')));
         rechts.appendChild(zelle('LF', T('st_zeilenende')));
-        rechts.appendChild(zelle({ js: 'JavaScript', py: 'Python', yaml: 'YAML', md: 'Markdown', txt: T('st_text') }[d.sprache] || d.sprache, T('st_sprache')));
+        rechts.appendChild(zelle({ js: 'JavaScript', py: 'Python', yaml: 'YAML', md: 'Markdown', json: 'JSON', css: 'CSS', html: 'HTML', sh: 'Shell', txt: T('st_text') }[d.sprache] || d.sprache, T('st_sprache')));
       }
       rechts.appendChild(zelle(S.z.sprache.toUpperCase(), T('bf_sprache'), function () { S.fuehreAus('sprache'); }, 'st:sprache'));
       kasten.appendChild(links);

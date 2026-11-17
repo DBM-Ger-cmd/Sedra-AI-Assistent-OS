@@ -8,14 +8,14 @@ from pathlib import Path
 
 TOOL = Path(__file__).resolve().parents[1] / "src/sedra_runtime/uix/tools/coder"
 NODE = shutil.which("node")
-KERN = ("kern_modell.js", "kern_auswahl.js", "kern_ansicht.js", "kern_eingabe.js", "komfort.js")
+KERN = ("kern_modell.js", "kern_auswahl.js", "kern_farbe.js", "kern_falten.js", "kern_ansicht.js", "kern_mini.js", "kern_eingabe.js", "komfort.js")
 QUELLEN = {n: (TOOL / n).read_text(encoding="utf-8") for n in KERN}
 
 
 class Kern(unittest.TestCase):
     @unittest.skipUnless(NODE, "node nicht installiert")
     def test_modell_und_auswahlen_in_node(self):
-        r = subprocess.run([NODE, str(Path(__file__).with_name("kern_pruefung.js")), str(TOOL)], capture_output=True, text=True, timeout=120)
+        r = subprocess.run([NODE, str(Path(__file__).with_name("kern_pruefung.cjs")), str(TOOL)], capture_output=True, text=True, timeout=120)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("kern ok", r.stdout)
 
@@ -40,7 +40,7 @@ class Kern(unittest.TestCase):
         befehle = (TOOL / "befehle.js").read_text(encoding="utf-8")
         self.assertIn("S.komfort.finde()", befehle)
         yaml = (TOOL / "tool.yaml").read_text(encoding="utf-8")
-        reihe = [yaml.index(n) for n in ("kern_modell.js", "kern_auswahl.js", "kern_ansicht.js", "kern_eingabe.js", "editor.js", "komfort.js")]
+        reihe = [yaml.index(n) for n in ("syntax.js", "kern_modell.js", "kern_auswahl.js", "kern_farbe.js", "kern_falten.js", "kern_ansicht.js", "kern_mini.js", "kern_eingabe.js", "editor.js", "komfort.js")]
         self.assertEqual(reihe, sorted(reihe), "Kern vor Editor vor Suchleiste")
 
     def test_editor_hat_keine_textflaeche_mehr(self):

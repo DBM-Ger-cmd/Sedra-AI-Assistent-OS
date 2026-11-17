@@ -39,7 +39,7 @@
 
   S.sprachVon = function (name) {
     const e = (name.split('.').pop() || '').toLowerCase();
-    return { js: 'js', py: 'py', yaml: 'yaml', yml: 'yaml', md: 'md' }[e] || 'txt';
+    return { js: 'js', mjs: 'js', py: 'py', yaml: 'yaml', yml: 'yaml', md: 'md', json: 'json', css: 'css', html: 'html', htm: 'html', sh: 'sh', bash: 'sh', zsh: 'sh' }[e] || 'txt';
   };
   S.gibt = function (p) { return p === 'willkommen' || Object.prototype.hasOwnProperty.call(S.dateien, p); };
   S.ungespeichert = function (p) { const d = S.dateien[p]; return !!d && d.inhalt !== d.gespeichert; };
