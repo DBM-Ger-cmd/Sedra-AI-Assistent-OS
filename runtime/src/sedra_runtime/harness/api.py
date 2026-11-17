@@ -120,6 +120,9 @@ def post_block(posten):
     return '\n'.join(zeilen)
 VERLAUF_MAX = 20                       # so viele frühere Nachrichten gehen mit (Captain und Modell)
 PROVIDER = 'llama-cpp-server'
+# O-3 (Hardening 16.11.2026): nur diese Anbieter gelten als lokal. Die Aufgaben-Freigabe (HS-27), die Sitzungs-Erlaubnis (FS-13) und der Master-Modus (MM-12) decken nur lokale Modelle.
+# `Kiste.lokal` wird aus dem Anbieter der Sitzung abgeleitet, nicht mehr dem Standard `True` überlassen: ein neuer Anbieter (Cloud) steht hier nicht, ist also nicht lokal (fail-closed).
+LOKALE_PROVIDER = frozenset({'llama-cpp-server'})
 # Stufe 1: nur die lesenden Zustandswerkzeuge aus chat_tools (kein Vorschlag, kein Öffnen, kein Netz)
 LESEN = ('get_model_status', 'list_models', 'get_routing_profile', 'get_switches', 'list_projects', 'list_missions', 'recent_audit',
          'list_docs', 'read_doc', 'list_decisions', 'arbeitsplatz_stand',
@@ -1679,6 +1682,7 @@ class HarnessApi:
         w = self._werkzeuge(projekt['id'], s['kopf'].get('mission_id'), regeln)
         return self._begrenzen(s, freigabe.Kiste(w, regeln=regeln, guard=self.hub.runtime.guard, audit=self.hub.runtime.audit, karten=self.karten,
                               sitzung_id=s['kopf']['id'], chat=chat, projekt_id=projekt['id'], aufgaben=self.aufgaben,
+                              lokal=PROVIDER in LOKALE_PROVIDER,                 # O-3: ausdrücklich, nicht der Standard
                               vorarbeiter=self.vorarbeiter, extra=self._vorarbeiter_werkzeuge(s), erlaubnisse=s.get('erlaubnisse'), master=getattr(self, 'master', None),
                               projekte=lambda: self.projekte_fuer_modell(projekt['id']))), projekt
 
