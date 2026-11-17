@@ -92,9 +92,16 @@ def _live_melder(project, mission, workflow):
     ids, _, _ = lokal.schritte(workflow)
     prozess, mid = live.prozess_fuer(wid), mission['identity']['mission_id']
 
-    def melden(i, name, zustand, text):
-        live.melde(project, prozess, None if i is None else 's%d' % i, zustand, text=text, lauf=mid, workflow_id=wid, ids=ids, captain=False)
+    def melden(i, name, zustand, text, captain=False):
+        schritt = None if i is None else (i if isinstance(i, str) else 's%d' % i)
+        live.melde(project, prozess, schritt, zustand, text=text, lauf=mid, workflow_id=wid, ids=ids, captain=captain)
     return melden
+
+
+def _gate_merken(mission, gate):
+    """Das Gate eines Workflow-Laufs in den Gate-Speicher der Mission legen (`human_gates.pending`), damit Freigaben es zeigen. Die Entscheidung bleibt beim Guard."""
+    hg = mission.setdefault('human_gates', {'pending': [], 'resolved': []})
+    hg.setdefault('pending', []).append(gate)
 
 
 def execute(control, mission, request, token=None):
@@ -124,6 +131,10 @@ def execute(control, mission, request, token=None):
                 else:
                     risiken.append('Fragt das lokale Sprachmodell von SEDRA (nie ein Cloud-Modell); der Rechnungstext verlässt den Rechner nicht.')
         gate = control.guard.create_gate(mid, action, target, request_binding=binding, risks=risiken, rollback_available=False)
+        _gate_merken(mission, gate)
+        melder = _live_melder(control.workspace.parents[1], mission, request['workflow'])
+        if melder:
+            melder('freigabe', 'Captain-Gate', 'wartet', 'Freigabe offen, der Lauf wartet auf den Captain', captain=True)
         return {'status': 'captain_required', 'gate': gate, 'artifacts': []}
     folder = control.workspace / mid
     folder.mkdir(parents=True, exist_ok=True)
